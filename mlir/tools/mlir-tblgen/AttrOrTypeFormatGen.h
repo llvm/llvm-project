@@ -9,9 +9,7 @@
 #ifndef MLIR_TOOLS_MLIRTBLGEN_ATTRORTYPEFORMATGEN_H_
 #define MLIR_TOOLS_MLIRTBLGEN_ATTRORTYPEFORMATGEN_H_
 
-#include "llvm/Support/raw_ostream.h"
-
-#include <string>
+#include "mlir/TableGen/Class.h"
 
 namespace mlir {
 namespace tblgen {
@@ -19,14 +17,15 @@ class AttrOrTypeDef;
 
 /// Generate a parser and printer based on a custom assembly format for an
 /// attribute or type.
-void generateAttrOrTypeFormat(const AttrOrTypeDef &def, llvm::raw_ostream &os);
+void generateAttrOrTypeFormat(const AttrOrTypeDef &def, MethodBody &parser,
+                              MethodBody &printer);
 
 /// From the parameter name, get the name of the accessor function in camelcase.
 /// The first letter of the parameter is upper-cased and prefixed with "get".
 /// E.g. 'value' -> 'getValue'.
 std::string getParameterAccessorName(llvm::StringRef name);
 
-} // end namespace tblgen
-} // end namespace mlir
+} // namespace tblgen
+} // namespace mlir
 
 #endif // MLIR_TOOLS_MLIRTBLGEN_ATTRORTYPEFORMATGEN_H_

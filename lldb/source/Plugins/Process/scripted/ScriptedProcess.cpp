@@ -248,8 +248,8 @@ ArchSpec ScriptedProcess::GetArchitecture() {
   return GetTarget().GetArchitecture();
 }
 
-Status ScriptedProcess::DoGetMemoryRegionInfo(lldb::addr_t load_addr,
-                                              MemoryRegionInfo &region) {
+Status ScriptedProcess::GetMemoryRegionInfo(lldb::addr_t load_addr,
+                                            MemoryRegionInfo &region) {
   CheckInterpreterAndScriptObject();
 
   Status error;
@@ -310,6 +310,11 @@ bool ScriptedProcess::DoUpdateThreadList(ThreadList &old_thread_list,
   if (!thread_sp || error.Fail())
     return GetInterface().ErrorWithMessage<bool>(LLVM_PRETTY_FUNCTION,
                                                  error.AsCString(), error);
+
+  RegisterContextSP reg_ctx_sp = thread_sp->GetRegisterContext();
+  if (!reg_ctx_sp)
+    return GetInterface().ErrorWithMessage<bool>(
+        LLVM_PRETTY_FUNCTION, "Invalid Register Context", error);
 
   new_thread_list.AddThread(thread_sp);
 

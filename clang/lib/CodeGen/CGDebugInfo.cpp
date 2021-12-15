@@ -884,9 +884,9 @@ llvm::DIType *CGDebugInfo::CreateType(const AutoType *Ty) {
   return DBuilder.createUnspecifiedType("auto");
 }
 
-llvm::DIType *CGDebugInfo::CreateType(const ExtIntType *Ty) {
+llvm::DIType *CGDebugInfo::CreateType(const BitIntType *Ty) {
 
-  StringRef Name = Ty->isUnsigned() ? "unsigned _ExtInt" : "_ExtInt";
+  StringRef Name = Ty->isUnsigned() ? "unsigned _BitInt" : "_BitInt";
   llvm::dwarf::TypeKind Encoding = Ty->isUnsigned()
                                        ? llvm::dwarf::DW_ATE_unsigned
                                        : llvm::dwarf::DW_ATE_signed;
@@ -3531,8 +3531,8 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit,
   case Type::Atomic:
     return CreateType(cast<AtomicType>(Ty), Unit);
 
-  case Type::ExtInt:
-    return CreateType(cast<ExtIntType>(Ty));
+  case Type::BitInt:
+    return CreateType(cast<BitIntType>(Ty));
   case Type::Pipe:
     return CreateType(cast<PipeType>(Ty), Unit);
 

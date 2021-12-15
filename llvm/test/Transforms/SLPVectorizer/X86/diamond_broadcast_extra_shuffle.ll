@@ -9,8 +9,7 @@ define i32 @diamond_broadcast(i32* noalias nocapture %B, i32* noalias nocapture 
 ; CHECK-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[LD]], i32 0
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[SHUFFLE1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 undef>
-; CHECK-NEXT:    [[TMP1:%.*]] = mul <4 x i32> [[SHUFFLE]], [[SHUFFLE1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul <4 x i32> [[SHUFFLE]], [[SHUFFLE]]
 ; CHECK-NEXT:    [[ARRAYIDX21:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[B]] to <4 x i32>*
 ; CHECK-NEXT:    store <4 x i32> [[TMP1]], <4 x i32>* [[TMP2]], align 4
@@ -39,9 +38,8 @@ define i32 @diamond_broadcast2(i32* noalias nocapture %B, i32* noalias nocapture
 ; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i64 1
 ; CHECK-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[LD]], i32 0
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 undef>
-; CHECK-NEXT:    [[SHUFFLE1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = mul <4 x i32> [[SHUFFLE]], [[SHUFFLE1]]
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = mul <4 x i32> [[SHUFFLE]], [[SHUFFLE]]
 ; CHECK-NEXT:    [[ARRAYIDX21:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[B]] to <4 x i32>*
 ; CHECK-NEXT:    store <4 x i32> [[TMP1]], <4 x i32>* [[TMP2]], align 4
@@ -70,9 +68,8 @@ define i32 @diamond_broadcast3(i32* noalias nocapture %B, i32* noalias nocapture
 ; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i64 1
 ; CHECK-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[LD]], i32 0
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 undef>
-; CHECK-NEXT:    [[SHUFFLE1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 undef, i32 0>
-; CHECK-NEXT:    [[TMP1:%.*]] = mul <4 x i32> [[SHUFFLE]], [[SHUFFLE1]]
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = mul <4 x i32> [[SHUFFLE]], [[SHUFFLE]]
 ; CHECK-NEXT:    [[ARRAYIDX21:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[B]] to <4 x i32>*
 ; CHECK-NEXT:    store <4 x i32> [[TMP1]], <4 x i32>* [[TMP2]], align 4

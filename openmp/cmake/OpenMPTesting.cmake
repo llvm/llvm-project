@@ -196,14 +196,14 @@ function(add_openmp_testsuite target comment)
         ${comment}
         ${ARG_UNPARSED_ARGUMENTS}
         EXCLUDE_FROM_CHECK_ALL
-        DEPENDS clang FileCheck ${ARG_DEPENDS}
+        DEPENDS clang FileCheck not ${ARG_DEPENDS}
         ARGS ${ARG_ARGS}
       )
     else()
       add_lit_testsuite(${target}
         ${comment}
         ${ARG_UNPARSED_ARGUMENTS}
-        DEPENDS clang FileCheck ${ARG_DEPENDS}
+        DEPENDS clang FileCheck not ${ARG_DEPENDS}
         ARGS ${ARG_ARGS}
       )
     endif()

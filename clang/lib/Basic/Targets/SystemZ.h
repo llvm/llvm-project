@@ -170,7 +170,7 @@ public:
 
   const char *getLongDoubleMangling() const override { return "g"; }
 
-  bool hasExtIntType() const override { return true; }
+  bool hasBitIntType() const override { return true; }
 
   int getEHDataRegisterNumber(unsigned RegNo) const override {
     return RegNo < 4 ? 6 + RegNo : -1;

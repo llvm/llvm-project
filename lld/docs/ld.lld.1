@@ -141,7 +141,9 @@ you can specify
 .Fl O2
 to set the compression level to 6.
 .It Fl -cref
-Output cross reference table.
+Output cross reference table. If
+.Fl Map
+is specified, print to the map file.
 .It Fl -define-common , Fl d
 Assign space to common symbols.
 .It Fl -defsym Ns = Ns Ar symbol Ns = Ns Ar expression
@@ -454,6 +456,20 @@ is specified, use SHT_ANDROID_RELR instead of SHT_RELR.
 Always generate position independent thunks.
 .It Fl -pie , Fl -pic-executable
 Create a position independent executable.
+.It Fl -power10-stubs Ns = Ns Cm mode
+Whether to use Power10 instructions in call stubs for R_PPC64_REL24_NOTOC and TOC/NOTOC interworking.
+.Ar mode
+may be:
+.Pp
+.Bl -tag -width 2n -compact
+.It Cm yes
+(default) Use.
+.It Cm auto
+Currently the same as yes.
+.It Cm no
+Don't use.
+.El
+
 .It Fl -print-gc-sections
 List removed unused sections.
 .It Fl -print-icf-sections

@@ -120,10 +120,16 @@ void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
   // FIXME: Should be able to handle this with emitPseudoExpansionLowering. We
   // need to select it to the subtarget specific version, and there's no way to
   // do that with a single pseudo source operation.
-  if (Opcode == AMDGPU::S_SETPC_B64_return ||
-      Opcode == AMDGPU::S_SETPC_B64_return_gfx)
+  switch (Opcode) {
+  case AMDGPU::S_SETPC_B64_return:
+  case AMDGPU::S_SETPC_B64_return_gfx:
     Opcode = AMDGPU::S_SETPC_B64;
-  else if (Opcode == AMDGPU::SI_CALL) {
+    break;
+  case AMDGPU::SI_TCRETURN:
+    // TODO: How to use branch immediate and avoid register+add?
+    Opcode = AMDGPU::S_SETPC_B64;
+    break;
+  case AMDGPU::SI_CALL: {
     // SI_CALL is just S_SWAPPC_B64 with an additional operand to track the
     // called function (which we need to remove here).
     OutMI.setOpcode(TII->pseudoToMCOpcode(AMDGPU::S_SWAPPC_B64));
@@ -133,9 +139,37 @@ void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
     OutMI.addOperand(Dest);
     OutMI.addOperand(Src);
     return;
-  } else if (Opcode == AMDGPU::SI_TCRETURN) {
-    // TODO: How to use branch immediate and avoid register+add?
-    Opcode = AMDGPU::S_SETPC_B64;
+  }
+  case AMDGPU::V_WMMA_BF16_16X16X16_BF16_threeaddr_w32:
+  case AMDGPU::V_WMMA_BF16_16X16X16_BF16_threeaddr_w64:
+  case AMDGPU::V_WMMA_F16_16X16X16_F16_threeaddr_w32:
+  case AMDGPU::V_WMMA_F16_16X16X16_F16_threeaddr_w64:
+  case AMDGPU::V_WMMA_F32_16X16X16_BF16_threeaddr_w32:
+  case AMDGPU::V_WMMA_F32_16X16X16_BF16_threeaddr_w64:
+  case AMDGPU::V_WMMA_F32_16X16X16_F16_threeaddr_w32:
+  case AMDGPU::V_WMMA_F32_16X16X16_F16_threeaddr_w64:
+  case AMDGPU::V_WMMA_I32_16X16X16_IU4_threeaddr_w32:
+  case AMDGPU::V_WMMA_I32_16X16X16_IU4_threeaddr_w64:
+  case AMDGPU::V_WMMA_I32_16X16X16_IU8_threeaddr_w32:
+  case AMDGPU::V_WMMA_I32_16X16X16_IU8_threeaddr_w64: {
+    int MCOpcode =
+        TII->pseudoToMCOpcode(AMDGPU::mapWMMA3AddrTo2AddrOpcode(Opcode));
+    OutMI.setOpcode(MCOpcode);
+
+    for (const MachineOperand &MO : MI->explicit_operands()) {
+      // Skip extra destination added by TwoAddressInstructionPass.
+      if (MI->getOperandNo(&MO) == 1)
+        continue;
+
+      MCOperand MCOp;
+      lowerOperand(MO, MCOp);
+      OutMI.addOperand(MCOp);
+    }
+
+    return;
+  }
+  default:
+    break;
   }
 
   int MCOpcode = TII->pseudoToMCOpcode(Opcode);

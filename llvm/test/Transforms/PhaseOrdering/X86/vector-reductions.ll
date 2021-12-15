@@ -279,19 +279,26 @@ define i1 @cmp_lt_gt(double %a, double %b, double %c) {
 ; CHECK-LABEL: @cmp_lt_gt(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[FNEG:%.*]] = fneg double [[B:%.*]]
-; CHECK-NEXT:    [[ADD:%.*]] = fsub double [[C:%.*]], [[B]]
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[A:%.*]], 2.000000e+00
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv double [[ADD]], [[MUL]]
-; CHECK-NEXT:    [[SUB:%.*]] = fsub double [[FNEG]], [[C]]
-; CHECK-NEXT:    [[DIV3:%.*]] = fdiv double [[SUB]], [[MUL]]
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt double [[DIV]], 0x3EB0C6F7A0B5ED8D
-; CHECK-NEXT:    [[CMP4:%.*]] = fcmp olt double [[DIV3]], 0x3EB0C6F7A0B5ED8D
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[C:%.*]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[FNEG]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[C]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[B]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = fsub <2 x double> [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> poison, double [[MUL]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP5]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = fdiv <2 x double> [[TMP4]], [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[TMP7]], i64 1
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt double [[TMP8]], 0x3EB0C6F7A0B5ED8D
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x double> [[TMP7]], i64 0
+; CHECK-NEXT:    [[CMP4:%.*]] = fcmp olt double [[TMP9]], 0x3EB0C6F7A0B5ED8D
 ; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP]], i1 [[CMP4]], i1 false
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[CLEANUP:%.*]], label [[LOR_LHS_FALSE:%.*]]
 ; CHECK:       lor.lhs.false:
-; CHECK-NEXT:    [[CMP5:%.*]] = fcmp ule double [[DIV]], 1.000000e+00
-; CHECK-NEXT:    [[CMP7:%.*]] = fcmp ule double [[DIV3]], 1.000000e+00
-; CHECK-NEXT:    [[OR_COND1:%.*]] = select i1 [[CMP5]], i1 true, i1 [[CMP7]]
+; CHECK-NEXT:    [[TMP10:%.*]] = fcmp ule <2 x double> [[TMP7]], <double 1.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i1> [[TMP10]], i64 0
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i1> [[TMP10]], i64 1
+; CHECK-NEXT:    [[OR_COND1:%.*]] = select i1 [[TMP12]], i1 true, i1 [[TMP11]]
 ; CHECK-NEXT:    br label [[CLEANUP]]
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[OR_COND1]], [[LOR_LHS_FALSE]] ]

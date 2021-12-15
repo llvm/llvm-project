@@ -41,7 +41,7 @@ ExternalProject_Add(google-benchmark-libcxx
         EXCLUDE_FROM_ALL ON
         DEPENDS cxx cxx-headers
         PREFIX benchmark-libcxx
-        SOURCE_DIR ${LIBCXX_SOURCE_DIR}/utils/google-benchmark
+        SOURCE_DIR ${LLVM_THIRD_PARTY_DIR}/benchmark
         INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/benchmark-libcxx
         CMAKE_CACHE_ARGS
           -DCMAKE_C_COMPILER:STRING=${CMAKE_C_COMPILER}
@@ -66,7 +66,7 @@ if (LIBCXX_BENCHMARK_NATIVE_STDLIB)
   ExternalProject_Add(google-benchmark-native
         EXCLUDE_FROM_ALL ON
         PREFIX benchmark-native
-        SOURCE_DIR ${LIBCXX_SOURCE_DIR}/utils/google-benchmark
+        SOURCE_DIR ${LLVM_THIRD_PARTY_DIR}/benchmark
         INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/benchmark-native
         CMAKE_CACHE_ARGS
           -DCMAKE_C_COMPILER:STRING=${CMAKE_C_COMPILER}

@@ -205,9 +205,9 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
     return;
   }
 
-  for (unsigned i = 0, e = CSI.size(); i != e; ++i) {
-    unsigned Reg = CSI[i].getReg();
-    int FI = CSI[i].getFrameIdx();
+  for (const CalleeSavedInfo &I : CSI) {
+    unsigned Reg = I.getReg();
+    int FI = I.getFrameIdx();
     switch (Reg) {
     case ARM::R8:
     case ARM::R9:
@@ -266,10 +266,9 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
         .addCFIIndex(CFIIndex)
         .setMIFlags(MachineInstr::FrameSetup);
   }
-  for (std::vector<CalleeSavedInfo>::const_iterator I = CSI.begin(),
-         E = CSI.end(); I != E; ++I) {
-    unsigned Reg = I->getReg();
-    int FI = I->getFrameIdx();
+  for (const CalleeSavedInfo &I : CSI) {
+    unsigned Reg = I.getReg();
+    int FI = I.getFrameIdx();
     switch (Reg) {
     case ARM::R8:
     case ARM::R9:
@@ -825,8 +824,8 @@ bool Thumb1FrameLowering::spillCalleeSavedRegisters(
   ARMRegSet CopyRegs;     // Registers which can be used after pushing
                           // LoRegs for saving HiRegs.
 
-  for (unsigned i = CSI.size(); i != 0; --i) {
-    unsigned Reg = CSI[i-1].getReg();
+  for (const CalleeSavedInfo &I : llvm::reverse(CSI)) {
+    unsigned Reg = I.getReg();
 
     if (ARM::tGPRRegClass.contains(Reg) || Reg == ARM::LR) {
       LoRegsToSave[Reg] = true;
@@ -1022,8 +1021,7 @@ bool Thumb1FrameLowering::restoreCalleeSavedRegisters(
       BuildMI(MF, DL, TII.get(ARM::tPOP)).add(predOps(ARMCC::AL));
 
   bool NeedsPop = false;
-  for (unsigned i = CSI.size(); i != 0; --i) {
-    CalleeSavedInfo &Info = CSI[i-1];
+  for (CalleeSavedInfo &Info : llvm::reverse(CSI)) {
     unsigned Reg = Info.getReg();
 
     // High registers (excluding lr) have already been dealt with
@@ -1068,7 +1066,7 @@ bool Thumb1FrameLowering::restoreCalleeSavedRegisters(
   if (NeedsPop)
     MBB.insert(MI, &*MIB);
   else
-    MF.DeleteMachineInstr(MIB);
+    MF.deleteMachineInstr(MIB);
 
   return true;
 }

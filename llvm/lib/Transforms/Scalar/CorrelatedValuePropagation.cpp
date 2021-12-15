@@ -52,6 +52,11 @@ using namespace llvm;
 
 #define DEBUG_TYPE "correlated-value-propagation"
 
+static cl::opt<bool> CanonicalizeICmpPredicatesToUnsigned(
+    "canonicalize-icmp-predicates-to-unsigned", cl::init(true), cl::Hidden,
+    cl::desc("Enables canonicalization of signed relational predicates to "
+             "unsigned (e.g. sgt => ugt)"));
+
 STATISTIC(NumPhis,      "Number of phis propagated");
 STATISTIC(NumPhiCommon, "Number of phis deleted via common incoming value");
 STATISTIC(NumSelects,   "Number of selects propagated");
@@ -64,7 +69,8 @@ STATISTIC(NumSDivSRemsNarrowed,
 STATISTIC(NumSDivs,     "Number of sdiv converted to udiv");
 STATISTIC(NumUDivURemsNarrowed,
           "Number of udivs/urems whose width was decreased");
-STATISTIC(NumAShrs,     "Number of ashr converted to lshr");
+STATISTIC(NumAShrsConverted, "Number of ashr converted to lshr");
+STATISTIC(NumAShrsRemoved, "Number of ashr removed");
 STATISTIC(NumSRems,     "Number of srem converted to urem");
 STATISTIC(NumSExt,      "Number of sext converted to zext");
 STATISTIC(NumSICmps,    "Number of signed icmp preds simplified to unsigned");
@@ -297,6 +303,9 @@ static bool processMemAccess(Instruction *I, LazyValueInfo *LVI) {
 }
 
 static bool processICmp(ICmpInst *Cmp, LazyValueInfo *LVI) {
+  if (!CanonicalizeICmpPredicatesToUnsigned)
+    return false;
+
   // Only for signed relational comparisons of scalar integers.
   if (Cmp->getType()->isVectorTy() ||
       !Cmp->getOperand(0)->getType()->isIntegerTy())
@@ -376,13 +385,7 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
     // ConstantFoldTerminator() as the underlying SwitchInst can be changed.
     SwitchInstProfUpdateWrapper SI(*I);
 
-    APInt Low =
-        APInt::getSignedMaxValue(Cond->getType()->getScalarSizeInBits());
-    APInt High =
-        APInt::getSignedMinValue(Cond->getType()->getScalarSizeInBits());
-
-    SwitchInst::CaseIt CI = SI->case_begin();
-    for (auto CE = SI->case_end(); CI != CE;) {
+    for (auto CI = SI->case_begin(), CE = SI->case_end(); CI != CE;) {
       ConstantInt *Case = CI->getCaseValue();
       LazyValueInfo::Tristate State =
           LVI->getPredicateAt(CmpInst::ICMP_EQ, Cond, Case, I,
@@ -415,27 +418,8 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
         break;
       }
 
-      // Get Lower/Upper bound from switch cases.
-      Low = APIntOps::smin(Case->getValue(), Low);
-      High = APIntOps::smax(Case->getValue(), High);
-
       // Increment the case iterator since we didn't delete it.
       ++CI;
-    }
-
-    // Try to simplify default case as unreachable
-    if (CI == SI->case_end() && SI->getNumCases() != 0 &&
-        !isa<UnreachableInst>(SI->getDefaultDest()->getFirstNonPHIOrDbg())) {
-      const ConstantRange SIRange =
-          LVI->getConstantRange(SI->getCondition(), SI);
-
-      // If the numbered switch cases cover the entire range of the condition,
-      // then the default case is not reachable.
-      if (SIRange.getSignedMin() == Low && SIRange.getSignedMax() == High &&
-          SI->getNumCases() == High - Low + 1) {
-        createUnreachableSwitchDefault(SI, &DTU);
-        Changed = true;
-      }
     }
   }
 
@@ -688,7 +672,7 @@ static bool processCallSite(CallBase &CB, LazyValueInfo *LVI) {
     ArgNo++;
   }
 
-  assert(ArgNo == CB.arg_size() && "sanity check");
+  assert(ArgNo == CB.arg_size() && "Call arguments not processed correctly.");
 
   if (ArgNos.empty())
     return Changed;
@@ -954,10 +938,22 @@ static bool processAShr(BinaryOperator *SDI, LazyValueInfo *LVI) {
   if (SDI->getType()->isVectorTy())
     return false;
 
+  ConstantRange LRange = LVI->getConstantRange(SDI->getOperand(0), SDI);
+  unsigned OrigWidth = SDI->getType()->getIntegerBitWidth();
+  ConstantRange NegOneOrZero =
+      ConstantRange(APInt(OrigWidth, (uint64_t)-1, true), APInt(OrigWidth, 1));
+  if (NegOneOrZero.contains(LRange)) {
+    // ashr of -1 or 0 never changes the value, so drop the whole instruction
+    ++NumAShrsRemoved;
+    SDI->replaceAllUsesWith(SDI->getOperand(0));
+    SDI->eraseFromParent();
+    return true;
+  }
+
   if (!isNonNegative(SDI->getOperand(0), LVI, SDI))
     return false;
 
-  ++NumAShrs;
+  ++NumAShrsConverted;
   auto *BO = BinaryOperator::CreateLShr(SDI->getOperand(0), SDI->getOperand(1),
                                         SDI->getName(), SDI);
   BO->setDebugLoc(SDI->getDebugLoc());

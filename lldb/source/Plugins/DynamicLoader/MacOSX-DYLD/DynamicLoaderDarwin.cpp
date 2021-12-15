@@ -540,35 +540,18 @@ void DynamicLoaderDarwin::UpdateSpecialBinariesFromNewImageInfos(
   const size_t image_infos_size = image_infos.size();
   for (size_t i = 0; i < image_infos_size; i++) {
     if (image_infos[i].header.filetype == llvm::MachO::MH_DYLINKER) {
-      // In a "simulator" process (an x86 process that is 
-      // ios/tvos/watchos/bridgeos) we will have two dyld modules -- 
+      // In a "simulator" process we will have two dyld modules -- 
       // a "dyld" that we want to keep track of, and a "dyld_sim" which 
-      // we don't need to keep track of here. If the target is an x86 
-      // system and the OS of the dyld binary is ios/tvos/watchos/bridgeos, 
-      // then we are looking at dyld_sym.
+      // we don't need to keep track of here.  dyld_sim will have a non-macosx
+      // OS.
+      if (target_arch.GetTriple().getEnvironment() == llvm::Triple::Simulator &&
+          image_infos[i].os_type != llvm::Triple::OSType::MacOSX) {
+        continue;
+      }
 
-      // debugserver has only recently (late 2016) started sending up the os
-      // type for each binary it sees -- so if we don't have an os type, use a
-      // filename check as our next best guess.
-      if (image_infos[i].os_type == llvm::Triple::OSType::UnknownOS) {
-        if (image_infos[i].file_spec.GetFilename() != g_dyld_sim_filename) {
-          dyld_idx = i;
-        }
-      } else if (target_arch.GetTriple().getArch() == llvm::Triple::x86 ||
-                 target_arch.GetTriple().getArch() == llvm::Triple::x86_64) {
-        if (image_infos[i].os_type != llvm::Triple::OSType::IOS &&
-            image_infos[i].os_type != llvm::Triple::TvOS &&
-            image_infos[i].os_type != llvm::Triple::WatchOS) {
-            // NEED_BRIDGEOS_TRIPLE image_infos[i].os_type != llvm::Triple::BridgeOS) {
-          dyld_idx = i;
-        }
-      }
-      else {
-        // catch-all for any other environment -- trust that dyld is actually
-        // dyld
-        dyld_idx = i;
-      }
-    } else if (image_infos[i].header.filetype == llvm::MachO::MH_EXECUTE) {
+      dyld_idx = i;
+    } 
+    if (image_infos[i].header.filetype == llvm::MachO::MH_EXECUTE) {
       exe_idx = i;
     }
   }

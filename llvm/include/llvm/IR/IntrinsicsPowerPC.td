@@ -524,6 +524,20 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
   def int_ppc_altivec_vprtybq : GCCBuiltin<"__builtin_altivec_vprtybq">,
               Intrinsic<[llvm_v1i128_ty],[llvm_v1i128_ty],[IntrNoMem]>;
 
+  // BCD intrinsics.
+  def int_ppc_bcdadd : GCCBuiltin<"__builtin_ppc_bcdadd">, Intrinsic<
+    [llvm_v16i8_ty], [llvm_v16i8_ty, llvm_v16i8_ty, llvm_i32_ty],
+    [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+  def int_ppc_bcdadd_p : GCCBuiltin<"__builtin_ppc_bcdadd_p">, Intrinsic<
+    [llvm_i32_ty], [llvm_i32_ty, llvm_v16i8_ty, llvm_v16i8_ty],
+    [IntrNoMem, ImmArg<ArgIndex<0>>]>;
+  def int_ppc_bcdsub : GCCBuiltin<"__builtin_ppc_bcdsub">, Intrinsic<
+    [llvm_v16i8_ty], [llvm_v16i8_ty, llvm_v16i8_ty, llvm_i32_ty],
+    [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+  def int_ppc_bcdsub_p : GCCBuiltin<"__builtin_ppc_bcdsub_p">, Intrinsic<
+    [llvm_i32_ty], [llvm_i32_ty, llvm_v16i8_ty, llvm_v16i8_ty],
+    [IntrNoMem, ImmArg<ArgIndex<0>>]>;
+
   // P10 Vector Extract with Mask
   def int_ppc_altivec_vextractbm : GCCBuiltin<"__builtin_altivec_vextractbm">,
               Intrinsic<[llvm_i32_ty], [llvm_v16i8_ty], [IntrNoMem]>;
@@ -1071,6 +1085,10 @@ let TargetPrefix = "ppc" in {  // All PPC intrinsics start with "llvm.ppc.".
               Intrinsic<[llvm_v2i64_ty], [llvm_v2i64_ty], [IntrNoMem]>;
   def int_ppc_altivec_crypto_vpermxor :
               GCCBuiltin<"__builtin_altivec_crypto_vpermxor">,
+              Intrinsic<[llvm_v16i8_ty], [llvm_v16i8_ty,
+                         llvm_v16i8_ty, llvm_v16i8_ty], [IntrNoMem]>;
+  def int_ppc_altivec_crypto_vpermxor_be :
+              GCCBuiltin<"__builtin_altivec_crypto_vpermxor_be">,
               Intrinsic<[llvm_v16i8_ty], [llvm_v16i8_ty,
                          llvm_v16i8_ty, llvm_v16i8_ty], [IntrNoMem]>;
 

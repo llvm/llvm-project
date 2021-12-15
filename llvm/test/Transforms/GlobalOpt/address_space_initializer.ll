@@ -8,12 +8,12 @@
 @g0 = internal global i16 undef
 @g1 = internal addrspace(3) global i16 undef
 @g2 = internal addrspace(1) global i16 undef
-; CHECK: internal unnamed_addr constant i16 3
+; CHECK-NOT: @g0 =
 ; CHECK: internal unnamed_addr addrspace(3) global i16 undef
 ; CHECK: internal unnamed_addr addrspace(1) global i16 undef
-; GPU: internal unnamed_addr constant i16 3
+; GPU-NOT: @g0 =
 ; GPU: internal unnamed_addr addrspace(3) global i16 undef
-; GPU: internal unnamed_addr addrspace(1) constant i16 7
+; GPU-NOT: @g2 =
 
 define void @a() {
   store i16 3, i16* @g0, align 8

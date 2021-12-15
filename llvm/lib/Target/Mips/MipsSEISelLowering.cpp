@@ -3581,8 +3581,8 @@ MipsSETargetLowering::emitLD_F16_PSEUDO(MachineInstr &MI,
 
   MachineInstrBuilder MIB =
       BuildMI(*BB, MI, DL, TII->get(UsingMips32 ? Mips::LH : Mips::LH64), Rt);
-  for (unsigned i = 1; i < MI.getNumOperands(); i++)
-    MIB.add(MI.getOperand(i));
+  for (const MachineOperand &MO : llvm::drop_begin(MI.operands()))
+    MIB.add(MO);
 
   if(!UsingMips32) {
     Register Tmp = RegInfo.createVirtualRegister(&Mips::GPR32RegClass);

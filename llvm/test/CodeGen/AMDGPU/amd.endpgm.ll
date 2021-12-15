@@ -46,7 +46,7 @@ define amdgpu_kernel void @test2(i32* %p, i32 %x) {
 ; GFX9-NEXT:    s_load_dword s2, s[0:1], 0x2c
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_cmp_lt_i32 s2, 1
-; GFX9-NEXT:    s_cbranch_scc0 BB2_2
+; GFX9-NEXT:    s_cbranch_scc0 .LBB2_2
 ; GFX9-NEXT:  ; %bb.1: ; %else
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s2
@@ -55,7 +55,7 @@ define amdgpu_kernel void @test2(i32* %p, i32 %x) {
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-NEXT:    flat_store_dword v[0:1], v2
 ; GFX9-NEXT:    s_endpgm
-; GFX9-NEXT:  BB2_2: ; %then
+; GFX9-NEXT:  .LBB2_2: ; %then
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: test2:
@@ -63,7 +63,7 @@ define amdgpu_kernel void @test2(i32* %p, i32 %x) {
 ; GFX10-NEXT:    s_load_dword s2, s[0:1], 0x2c
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_cmp_lt_i32 s2, 1
-; GFX10-NEXT:    s_cbranch_scc0 BB2_2
+; GFX10-NEXT:    s_cbranch_scc0 .LBB2_2
 ; GFX10-NEXT:  ; %bb.1: ; %else
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; GFX10-NEXT:    v_mov_b32_e32 v2, s2
@@ -72,7 +72,7 @@ define amdgpu_kernel void @test2(i32* %p, i32 %x) {
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX10-NEXT:    flat_store_dword v[0:1], v2
 ; GFX10-NEXT:    s_endpgm
-; GFX10-NEXT:  BB2_2: ; %then
+; GFX10-NEXT:  .LBB2_2: ; %then
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: test2:
@@ -80,7 +80,7 @@ define amdgpu_kernel void @test2(i32* %p, i32 %x) {
 ; GFX11-NEXT:    s_load_b32 s2, s[0:1], 0x2c
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_cmp_lt_i32 s2, 1
-; GFX11-NEXT:    s_cbranch_scc0 BB2_2
+; GFX11-NEXT:    s_cbranch_scc0 .LBB2_2
 ; GFX11-NEXT:  ; %bb.1: ; %else
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v2, s2
@@ -88,7 +88,7 @@ define amdgpu_kernel void @test2(i32* %p, i32 %x) {
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-NEXT:    s_endpgm
-; GFX11-NEXT:  BB2_2: ; %then
+; GFX11-NEXT:  .LBB2_2: ; %then
 ; GFX11-NEXT:    s_endpgm
   %cond = icmp sgt i32 %x, 0
   br i1 %cond, label %then, label %else

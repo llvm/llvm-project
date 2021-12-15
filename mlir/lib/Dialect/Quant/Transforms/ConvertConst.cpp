@@ -32,7 +32,7 @@ struct QuantizedConstRewrite : public OpRewritePattern<QuantizeCastOp> {
                                 PatternRewriter &rewriter) const override;
 };
 
-} // end anonymous namespace
+} // namespace
 
 /// Matches a [constant] -> [qbarrier] where the qbarrier results type is
 /// quantized and the operand type is quantizable.

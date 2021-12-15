@@ -263,7 +263,7 @@ std::string syntax::Node::dumpTokens(const SourceManager &SM) const {
       OS << " ";
     }
   });
-  return OS.str();
+  return Storage;
 }
 
 void syntax::Node::assertInvariants() const {

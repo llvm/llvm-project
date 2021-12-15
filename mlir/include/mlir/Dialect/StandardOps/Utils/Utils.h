@@ -63,6 +63,8 @@ public:
     ResultTypeFunc resultTypeFunc;
     auto resultType =
         resultTypeFunc(op, mixedOffsets, mixedSizes, mixedStrides);
+    if (!resultType)
+      return failure();
     auto newOp =
         rewriter.create<OpType>(op.getLoc(), resultType, op.source(),
                                 mixedOffsets, mixedSizes, mixedStrides);
@@ -101,6 +103,6 @@ private:
   OpBuilder &b;
   Location loc;
 };
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_DIALECT_STANDARDOPS_UTILS_UTILS_H

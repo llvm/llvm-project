@@ -29,9 +29,9 @@ TEST(LlvmLibcExceptionStatusTest, RaiseAndCrash) {
   // exception and reading back to see if the exception got enabled. If the
   // exception did not get enabled, then it means that the HW does not support
   // trapping exceptions.
-  __llvm_libc::fputil::disableExcept(FE_ALL_EXCEPT);
-  __llvm_libc::fputil::enableExcept(FE_DIVBYZERO);
-  if (__llvm_libc::fputil::getExcept() == 0)
+  __llvm_libc::fputil::disable_except(FE_ALL_EXCEPT);
+  __llvm_libc::fputil::enable_except(FE_DIVBYZERO);
+  if (__llvm_libc::fputil::get_except() == 0)
     return;
 #endif // defined(LLVM_LIBC_ARCH_AARCH64)
 
@@ -50,8 +50,8 @@ TEST(LlvmLibcExceptionStatusTest, RaiseAndCrash) {
       FE_DIVBYZERO | FE_INVALID | FE_INEXACT | FE_OVERFLOW | FE_UNDERFLOW;
 
   for (int e : excepts) {
-    __llvm_libc::fputil::disableExcept(FE_ALL_EXCEPT);
-    __llvm_libc::fputil::enableExcept(e);
+    __llvm_libc::fputil::disable_except(FE_ALL_EXCEPT);
+    __llvm_libc::fputil::enable_except(e);
     ASSERT_EQ(__llvm_libc::feclearexcept(FE_ALL_EXCEPT), 0);
     // Raising all exceptions except |e| should not call the
     // SIGFPE handler. They should set the exception flag though,
@@ -69,12 +69,12 @@ TEST(LlvmLibcExceptionStatusTest, RaiseAndCrash) {
       // a death test which runs this closure in a different thread. So,
       // we enable the exception again inside this closure so that the
       // exception gets enabled for the thread running this closure.
-      __llvm_libc::fputil::enableExcept(e);
+      __llvm_libc::fputil::enable_except(e);
       __llvm_libc::feraiseexcept(e);
     });
 
     // Cleanup.
-    __llvm_libc::fputil::disableExcept(FE_ALL_EXCEPT);
+    __llvm_libc::fputil::disable_except(FE_ALL_EXCEPT);
     ASSERT_EQ(__llvm_libc::feclearexcept(FE_ALL_EXCEPT), 0);
   }
 }

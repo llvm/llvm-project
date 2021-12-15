@@ -22,7 +22,15 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 
 // Base class for all GLSL ops.
 class SPV_GLSLOp<string mnemonic, int opcode, list<OpTrait> traits = []> :
-  SPV_ExtInstOp<mnemonic, "GLSL", "GLSL.std.450", opcode, traits>;
+  SPV_ExtInstOp<mnemonic, "GLSL", "GLSL.std.450", opcode, traits> {
+
+  let availability = [
+    MinVersion<SPV_V_1_0>,
+    MaxVersion<SPV_V_1_5>,
+    Extension<[]>,
+    Capability<[SPV_C_Shader]>
+  ];
+}
 
 // Base class for GLSL unary ops.
 class SPV_GLSLUnaryOp<string mnemonic, int opcode, Type resultType,

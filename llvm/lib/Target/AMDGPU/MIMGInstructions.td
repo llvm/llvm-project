@@ -1147,8 +1147,7 @@ multiclass MIMG_IntersectRay<mimgopc op, string opcode, bit Is64, bit A16> {
   def "" : MIMGBaseOpcode {
     let BVH = 1;
   }
-  let SubtargetPredicate = HasGFX10_AEncoding,
-      AssemblerPredicate = HasGFX10_AEncoding,
+  let OtherPredicates = [HasGFX10_AEncoding],
       AsmMatchConverter = !if(A16, "cvtIntersectRay", ""),
       dmask = 0xf,
       unorm = 1,

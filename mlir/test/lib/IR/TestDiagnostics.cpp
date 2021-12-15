@@ -57,7 +57,7 @@ struct TestDiagnosticFilterPass
       llvm::cl::desc("Specifies the diagnostic file name filters.")};
 };
 
-} // end anonymous namespace
+} // namespace
 
 namespace mlir {
 namespace test {

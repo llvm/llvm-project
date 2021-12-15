@@ -59,7 +59,7 @@ ParallelLoopDimMapping getParallelLoopDimMappingAttr(Processor processor,
 /// - the mapping does not map multiple loops to the same processor.
 LogicalResult setMappingAttr(scf::ParallelOp ploopOp,
                              ArrayRef<ParallelLoopDimMapping> mapping);
-} // end namespace gpu
+} // namespace gpu
 
 /// Maps the parallel loops found in the given function to workgroups. The first
 /// loop encountered will be mapped to the global workgroup and the second loop
@@ -68,5 +68,5 @@ LogicalResult setMappingAttr(scf::ParallelOp ploopOp,
 /// mapped to sequential loops.
 void greedilyMapParallelSCFToGPU(Region &region);
 
-} // end namespace mlir
+} // namespace mlir
 #endif // MLIR_DIALECT_GPU_PARALLELLOOPMAPPER_H

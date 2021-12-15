@@ -19,49 +19,49 @@
 TEST(LlvmLibcFenvTest, GetEnvAndSetEnv) {
   // We will disable all exceptions to prevent invocation of the exception
   // handler.
-  __llvm_libc::fputil::disableExcept(FE_ALL_EXCEPT);
+  __llvm_libc::fputil::disable_except(FE_ALL_EXCEPT);
 
   int excepts[] = {FE_DIVBYZERO, FE_INVALID, FE_INEXACT, FE_OVERFLOW,
                    FE_UNDERFLOW};
 
   for (int e : excepts) {
-    __llvm_libc::fputil::clearExcept(FE_ALL_EXCEPT);
+    __llvm_libc::fputil::clear_except(FE_ALL_EXCEPT);
 
     // Save the cleared environment.
     fenv_t env;
     ASSERT_EQ(__llvm_libc::fegetenv(&env), 0);
 
-    __llvm_libc::fputil::raiseExcept(e);
+    __llvm_libc::fputil::raise_except(e);
     // Make sure that the exception is raised.
-    ASSERT_NE(__llvm_libc::fputil::testExcept(FE_ALL_EXCEPT) & e, 0);
+    ASSERT_NE(__llvm_libc::fputil::test_except(FE_ALL_EXCEPT) & e, 0);
 
     ASSERT_EQ(__llvm_libc::fesetenv(&env), 0);
-    ASSERT_EQ(__llvm_libc::fputil::testExcept(FE_ALL_EXCEPT) & e, 0);
+    ASSERT_EQ(__llvm_libc::fputil::test_except(FE_ALL_EXCEPT) & e, 0);
   }
 }
 
 TEST(LlvmLibcFenvTest, Set_FE_DFL_ENV) {
   // We will disable all exceptions to prevent invocation of the exception
   // handler.
-  __llvm_libc::fputil::disableExcept(FE_ALL_EXCEPT);
+  __llvm_libc::fputil::disable_except(FE_ALL_EXCEPT);
 
   int excepts[] = {FE_DIVBYZERO, FE_INVALID, FE_INEXACT, FE_OVERFLOW,
                    FE_UNDERFLOW};
 
   for (int e : excepts) {
-    __llvm_libc::fputil::clearExcept(FE_ALL_EXCEPT);
+    __llvm_libc::fputil::clear_except(FE_ALL_EXCEPT);
 
     // Save the cleared environment.
     fenv_t env;
     ASSERT_EQ(__llvm_libc::fegetenv(&env), 0);
 
-    __llvm_libc::fputil::raiseExcept(e);
+    __llvm_libc::fputil::raise_except(e);
     // Make sure that the exception is raised.
-    ASSERT_NE(__llvm_libc::fputil::testExcept(FE_ALL_EXCEPT) & e, 0);
+    ASSERT_NE(__llvm_libc::fputil::test_except(FE_ALL_EXCEPT) & e, 0);
 
     ASSERT_EQ(__llvm_libc::fesetenv(FE_DFL_ENV), 0);
     // Setting the default env should clear all exceptions.
-    ASSERT_EQ(__llvm_libc::fputil::testExcept(FE_ALL_EXCEPT) & e, 0);
+    ASSERT_EQ(__llvm_libc::fputil::test_except(FE_ALL_EXCEPT) & e, 0);
   }
 
   ASSERT_EQ(__llvm_libc::fesetround(FE_DOWNWARD), 0);

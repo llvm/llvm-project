@@ -17,8 +17,8 @@ namespace __llvm_libc {
 namespace internal {
 
 struct LShiftTableEntry {
-  uint32_t newDigits;
-  char const *powerOfFive;
+  uint32_t new_digits;
+  char const *power_of_five;
 };
 
 // This is based on the HPD data structure described as part of the Simple
@@ -105,20 +105,20 @@ class HighPrecisionDecimal {
   // large enough for any practical number.
   static constexpr uint32_t MAX_NUM_DIGITS = 800;
 
-  uint32_t numDigits = 0;
-  int32_t decimalPoint = 0;
+  uint32_t num_digits = 0;
+  int32_t decimal_point = 0;
   bool truncated = false;
   uint8_t digits[MAX_NUM_DIGITS];
 
 private:
-  bool shouldRoundUp(uint32_t roundToDigit) {
-    if (roundToDigit < 0 || roundToDigit >= this->numDigits) {
+  bool should_round_up(uint32_t roundToDigit) {
+    if (roundToDigit < 0 || roundToDigit >= this->num_digits) {
       return false;
     }
 
     // If we're right in the middle and there are no extra digits
     if (this->digits[roundToDigit] == 5 &&
-        roundToDigit + 1 == this->numDigits) {
+        roundToDigit + 1 == this->num_digits) {
 
       // Round up if we've truncated (since that means the result is slightly
       // higher than what's represented.)
@@ -136,99 +136,101 @@ private:
 
   // Takes an amount to left shift and returns the number of new digits needed
   // to store the result based on LEFT_SHIFT_DIGIT_TABLE.
-  uint32_t getNumNewDigits(uint32_t lShiftAmount) {
-    const char *powerOfFive = LEFT_SHIFT_DIGIT_TABLE[lShiftAmount].powerOfFive;
-    uint32_t newDigits = LEFT_SHIFT_DIGIT_TABLE[lShiftAmount].newDigits;
-    uint32_t digitIndex = 0;
-    while (powerOfFive[digitIndex] != 0) {
-      if (digitIndex >= this->numDigits) {
-        return newDigits - 1;
+  uint32_t get_num_new_digits(uint32_t lShiftAmount) {
+    const char *power_of_five =
+        LEFT_SHIFT_DIGIT_TABLE[lShiftAmount].power_of_five;
+    uint32_t new_digits = LEFT_SHIFT_DIGIT_TABLE[lShiftAmount].new_digits;
+    uint32_t digit_index = 0;
+    while (power_of_five[digit_index] != 0) {
+      if (digit_index >= this->num_digits) {
+        return new_digits - 1;
       }
-      if (this->digits[digitIndex] != powerOfFive[digitIndex] - '0') {
-        return newDigits -
-               ((this->digits[digitIndex] < powerOfFive[digitIndex] - '0') ? 1
-                                                                           : 0);
+      if (this->digits[digit_index] != power_of_five[digit_index] - '0') {
+        return new_digits -
+               ((this->digits[digit_index] < power_of_five[digit_index] - '0')
+                    ? 1
+                    : 0);
       }
-      ++digitIndex;
+      ++digit_index;
     }
-    return newDigits;
+    return new_digits;
   }
 
   // Trim all trailing 0s
-  void trimTrailingZeroes() {
-    while (this->numDigits > 0 && this->digits[this->numDigits - 1] == 0) {
-      --this->numDigits;
+  void trim_trailing_zeroes() {
+    while (this->num_digits > 0 && this->digits[this->num_digits - 1] == 0) {
+      --this->num_digits;
     }
-    if (this->numDigits == 0) {
-      this->decimalPoint = 0;
+    if (this->num_digits == 0) {
+      this->decimal_point = 0;
     }
   }
 
   // Perform a digitwise binary non-rounding right shift on this value by
   // shiftAmount. The shiftAmount can't be more than MAX_SHIFT_AMOUNT to prevent
   // overflow.
-  void rightShift(uint32_t shiftAmount) {
-    uint32_t readIndex = 0;
-    uint32_t writeIndex = 0;
+  void right_shift(uint32_t shiftAmount) {
+    uint32_t read_index = 0;
+    uint32_t write_index = 0;
 
     uint64_t accumulator = 0;
 
-    const uint64_t shiftMask = (uint64_t(1) << shiftAmount) - 1;
+    const uint64_t shift_mask = (uint64_t(1) << shiftAmount) - 1;
 
     // Warm Up phase: we don't have enough digits to start writing, so just
     // read them into the accumulator.
     while (accumulator >> shiftAmount == 0) {
-      uint64_t readDigit = 0;
+      uint64_t read_digit = 0;
       // If there are still digits to read, read the next one, else the digit is
       // assumed to be 0.
-      if (readIndex < this->numDigits) {
-        readDigit = this->digits[readIndex];
+      if (read_index < this->num_digits) {
+        read_digit = this->digits[read_index];
       }
-      accumulator = accumulator * 10 + readDigit;
-      ++readIndex;
+      accumulator = accumulator * 10 + read_digit;
+      ++read_index;
     }
 
     // Shift the decimal point by the number of digits it took to fill the
     // accumulator.
-    this->decimalPoint -= readIndex - 1;
+    this->decimal_point -= read_index - 1;
 
     // Middle phase: we have enough digits to write, as well as more digits to
     // read. Keep reading until we run out of digits.
-    while (readIndex < this->numDigits) {
-      uint64_t readDigit = this->digits[readIndex];
-      uint64_t writeDigit = accumulator >> shiftAmount;
-      accumulator &= shiftMask;
-      this->digits[writeIndex] = static_cast<uint8_t>(writeDigit);
-      accumulator = accumulator * 10 + readDigit;
-      ++readIndex;
-      ++writeIndex;
+    while (read_index < this->num_digits) {
+      uint64_t read_digit = this->digits[read_index];
+      uint64_t write_digit = accumulator >> shiftAmount;
+      accumulator &= shift_mask;
+      this->digits[write_index] = static_cast<uint8_t>(write_digit);
+      accumulator = accumulator * 10 + read_digit;
+      ++read_index;
+      ++write_index;
     }
 
     // Cool Down phase: All of the readable digits have been read, so just write
     // the remainder, while treating any more digits as 0.
     while (accumulator > 0) {
-      uint64_t writeDigit = accumulator >> shiftAmount;
-      accumulator &= shiftMask;
-      if (writeIndex < MAX_NUM_DIGITS) {
-        this->digits[writeIndex] = static_cast<uint8_t>(writeDigit);
-        ++writeIndex;
-      } else if (writeDigit > 0) {
+      uint64_t write_digit = accumulator >> shiftAmount;
+      accumulator &= shift_mask;
+      if (write_index < MAX_NUM_DIGITS) {
+        this->digits[write_index] = static_cast<uint8_t>(write_digit);
+        ++write_index;
+      } else if (write_digit > 0) {
         this->truncated = true;
       }
       accumulator = accumulator * 10;
     }
-    this->numDigits = writeIndex;
-    this->trimTrailingZeroes();
+    this->num_digits = write_index;
+    this->trim_trailing_zeroes();
   }
 
   // Perform a digitwise binary non-rounding left shift on this value by
   // shiftAmount. The shiftAmount can't be more than MAX_SHIFT_AMOUNT to prevent
   // overflow.
-  void leftShift(uint32_t shiftAmount) {
-    uint32_t newDigits = this->getNumNewDigits(shiftAmount);
+  void left_shift(uint32_t shiftAmount) {
+    uint32_t new_digits = this->get_num_new_digits(shiftAmount);
 
-    int32_t readIndex = this->numDigits - 1;
-    uint32_t writeIndex = this->numDigits + newDigits;
+    int32_t read_index = this->num_digits - 1;
+    uint32_t write_index = this->num_digits + new_digits;
 
     uint64_t accumulator = 0;
 
@@ -237,64 +239,64 @@ private:
 
     // Middle phase: while we have more digits to read, keep reading as well as
     // writing.
-    while (readIndex >= 0) {
-      accumulator += static_cast<uint64_t>(this->digits[readIndex])
+    while (read_index >= 0) {
+      accumulator += static_cast<uint64_t>(this->digits[read_index])
                      << shiftAmount;
-      uint64_t nextAccumulator = accumulator / 10;
-      uint64_t writeDigit = accumulator - (10 * nextAccumulator);
-      --writeIndex;
-      if (writeIndex < MAX_NUM_DIGITS) {
-        this->digits[writeIndex] = static_cast<uint8_t>(writeDigit);
-      } else if (writeDigit != 0) {
+      uint64_t next_accumulator = accumulator / 10;
+      uint64_t write_digit = accumulator - (10 * next_accumulator);
+      --write_index;
+      if (write_index < MAX_NUM_DIGITS) {
+        this->digits[write_index] = static_cast<uint8_t>(write_digit);
+      } else if (write_digit != 0) {
         this->truncated = true;
       }
-      accumulator = nextAccumulator;
-      --readIndex;
+      accumulator = next_accumulator;
+      --read_index;
     }
 
     // Cool Down phase: there are no more digits to read, so just write the
     // remaining digits in the accumulator.
     while (accumulator > 0) {
-      uint64_t nextAccumulator = accumulator / 10;
-      uint64_t writeDigit = accumulator - (10 * nextAccumulator);
-      --writeIndex;
-      if (writeIndex < MAX_NUM_DIGITS) {
-        this->digits[writeIndex] = static_cast<uint8_t>(writeDigit);
-      } else if (writeDigit != 0) {
+      uint64_t next_accumulator = accumulator / 10;
+      uint64_t write_digit = accumulator - (10 * next_accumulator);
+      --write_index;
+      if (write_index < MAX_NUM_DIGITS) {
+        this->digits[write_index] = static_cast<uint8_t>(write_digit);
+      } else if (write_digit != 0) {
         this->truncated = true;
       }
-      accumulator = nextAccumulator;
+      accumulator = next_accumulator;
     }
 
-    this->numDigits += newDigits;
-    if (this->numDigits > MAX_NUM_DIGITS) {
-      this->numDigits = MAX_NUM_DIGITS;
+    this->num_digits += new_digits;
+    if (this->num_digits > MAX_NUM_DIGITS) {
+      this->num_digits = MAX_NUM_DIGITS;
     }
-    this->decimalPoint += newDigits;
-    this->trimTrailingZeroes();
+    this->decimal_point += new_digits;
+    this->trim_trailing_zeroes();
   }
 
 public:
   // numString is assumed to be a string of numeric characters. It doesn't
   // handle leading spaces.
   HighPrecisionDecimal(const char *__restrict numString) {
-    bool sawDot = false;
+    bool saw_dot = false;
     while (isdigit(*numString) || *numString == '.') {
       if (*numString == '.') {
-        if (sawDot) {
+        if (saw_dot) {
           break;
         }
-        this->decimalPoint = this->numDigits;
-        sawDot = true;
+        this->decimal_point = this->num_digits;
+        saw_dot = true;
       } else {
-        if (*numString == '0' && this->numDigits == 0) {
-          --this->decimalPoint;
+        if (*numString == '0' && this->num_digits == 0) {
+          --this->decimal_point;
           ++numString;
           continue;
         }
-        if (this->numDigits < MAX_NUM_DIGITS) {
-          this->digits[this->numDigits] = *numString - '0';
-          ++this->numDigits;
+        if (this->num_digits < MAX_NUM_DIGITS) {
+          this->digits[this->num_digits] = *numString - '0';
+          ++this->num_digits;
         } else if (*numString != '0') {
           this->truncated = true;
         }
@@ -302,24 +304,24 @@ public:
       ++numString;
     }
 
-    if (!sawDot) {
-      this->decimalPoint = this->numDigits;
+    if (!saw_dot) {
+      this->decimal_point = this->num_digits;
     }
 
     if ((*numString | 32) == 'e') {
       ++numString;
       if (isdigit(*numString) || *numString == '+' || *numString == '-') {
-        int32_t addToExp = strtointeger<int32_t>(numString, nullptr, 10);
-        if (addToExp > 100000) {
-          addToExp = 100000;
-        } else if (addToExp < -100000) {
-          addToExp = -100000;
+        int32_t add_to_exp = strtointeger<int32_t>(numString, nullptr, 10);
+        if (add_to_exp > 100000) {
+          add_to_exp = 100000;
+        } else if (add_to_exp < -100000) {
+          add_to_exp = -100000;
         }
-        this->decimalPoint += addToExp;
+        this->decimal_point += add_to_exp;
       }
     }
 
-    this->trimTrailingZeroes();
+    this->trim_trailing_zeroes();
   }
 
   // Binary shift left (shiftAmount > 0) or right (shiftAmount < 0)
@@ -330,39 +332,39 @@ public:
     // Left
     else if (shiftAmount > 0) {
       while (static_cast<uint32_t>(shiftAmount) > MAX_SHIFT_AMOUNT) {
-        this->leftShift(MAX_SHIFT_AMOUNT);
+        this->left_shift(MAX_SHIFT_AMOUNT);
         shiftAmount -= MAX_SHIFT_AMOUNT;
       }
-      this->leftShift(shiftAmount);
+      this->left_shift(shiftAmount);
     }
     // Right
     else {
       while (static_cast<uint32_t>(shiftAmount) < -MAX_SHIFT_AMOUNT) {
-        this->rightShift(MAX_SHIFT_AMOUNT);
+        this->right_shift(MAX_SHIFT_AMOUNT);
         shiftAmount += MAX_SHIFT_AMOUNT;
       }
-      this->rightShift(-shiftAmount);
+      this->right_shift(-shiftAmount);
     }
   }
 
   // Round the number represented to the closest value of unsigned int type T.
   // This is done ignoring overflow.
-  template <class T> T roundToIntegerType() {
+  template <class T> T round_to_integer_type() {
     T result = 0;
-    uint32_t curDigit = 0;
+    uint32_t cur_digit = 0;
 
-    while (static_cast<int32_t>(curDigit) < this->decimalPoint &&
-           curDigit < this->numDigits) {
-      result = result * 10 + (this->digits[curDigit]);
-      ++curDigit;
+    while (static_cast<int32_t>(cur_digit) < this->decimal_point &&
+           cur_digit < this->num_digits) {
+      result = result * 10 + (this->digits[cur_digit]);
+      ++cur_digit;
     }
 
     // If there are implicit 0s at the end of the number, include those.
-    while (static_cast<int32_t>(curDigit) < this->decimalPoint) {
+    while (static_cast<int32_t>(cur_digit) < this->decimal_point) {
       result *= 10;
-      ++curDigit;
+      ++cur_digit;
     }
-    if (this->shouldRoundUp(this->decimalPoint)) {
+    if (this->should_round_up(this->decimal_point)) {
       ++result;
     }
     return result;
@@ -370,10 +372,10 @@ public:
 
   // Extra functions for testing.
 
-  uint8_t *getDigits() { return this->digits; }
-  uint32_t getNumDigits() { return this->numDigits; }
-  int32_t getDecimalPoint() { return this->decimalPoint; }
-  void setTruncated(bool trunc) { this->truncated = trunc; }
+  uint8_t *get_digits() { return this->digits; }
+  uint32_t get_num_digits() { return this->num_digits; }
+  int32_t get_decimal_point() { return this->decimal_point; }
+  void set_truncated(bool trunc) { this->truncated = trunc; }
 };
 
 } // namespace internal

@@ -2121,7 +2121,7 @@ declare <32 x i8> @llvm.masked.gather.v32i8.v32p0i8(<32 x i8*>, i32, <32 x i1>, 
 define <32 x i8> @mgather_baseidx_v32i8(i8* %base, <32 x i8> %idxs, <32 x i1> %m, <32 x i8> %passthru) {
 ; RV32-LABEL: mgather_baseidx_v32i8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi a1, zero, 32
+; RV32-NEXT:    li a1, 32
 ; RV32-NEXT:    vsetvli zero, a1, e32, m8, ta, mu
 ; RV32-NEXT:    vsext.vf4 v16, v8
 ; RV32-NEXT:    vsetvli zero, zero, e8, m2, ta, mu
@@ -2146,7 +2146,7 @@ define <32 x i8> @mgather_baseidx_v32i8(i8* %base, <32 x i8> %idxs, <32 x i1> %m
 ; RV64-NEXT:    vsetvli zero, zero, e8, m1, ta, mu
 ; RV64-NEXT:    vmv1r.v v0, v12
 ; RV64-NEXT:    vluxei64.v v10, (a0), v16, v0.t
-; RV64-NEXT:    addi a0, zero, 32
+; RV64-NEXT:    li a0, 32
 ; RV64-NEXT:    vsetvli zero, a0, e8, m2, ta, mu
 ; RV64-NEXT:    vmv.v.i v8, 0
 ; RV64-NEXT:    vsetivli zero, 16, e8, m2, tu, mu

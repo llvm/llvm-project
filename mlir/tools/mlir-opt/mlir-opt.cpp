@@ -31,7 +31,7 @@ using namespace mlir;
 namespace mlir {
 void registerConvertToTargetEnvPass();
 void registerPassManagerTestPass();
-void registerPrintOpAvailabilityPass();
+void registerPrintSpirvAvailabilityPass();
 void registerShapeFunctionTestPasses();
 void registerSideEffectTestPasses();
 void registerSliceAnalysisTestPass();
@@ -64,6 +64,7 @@ void registerTestAffineLoopParametricTilingPass();
 void registerTestAliasAnalysisPass();
 void registerTestBuiltinAttributeInterfaces();
 void registerTestCallGraphPass();
+void registerTestComprehensiveFunctionBufferize();
 void registerTestConstantFold();
 void registerTestConvVectorization();
 void registerTestGpuSerializeToCubinPass();
@@ -119,7 +120,7 @@ void registerTestDialect(DialectRegistry &);
 void registerTestPasses() {
   registerConvertToTargetEnvPass();
   registerPassManagerTestPass();
-  registerPrintOpAvailabilityPass();
+  registerPrintSpirvAvailabilityPass();
   registerShapeFunctionTestPasses();
   registerSideEffectTestPasses();
   registerSliceAnalysisTestPass();
@@ -159,6 +160,7 @@ void registerTestPasses() {
 #if MLIR_ROCM_CONVERSIONS_ENABLED
   mlir::test::registerTestGpuSerializeToHsacoPass();
 #endif
+  mlir::test::registerTestComprehensiveFunctionBufferize();
   mlir::test::registerTestConvVectorization();
   mlir::test::registerTestDecomposeCallGraphTypes();
   mlir::test::registerTestDataLayoutQuery();

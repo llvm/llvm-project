@@ -655,6 +655,9 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
     SelectMAD_64_32(N);
     return;
   }
+  case ISD::SMUL_LOHI:
+  case ISD::UMUL_LOHI:
+    return SelectMUL_LOHI(N);
   case ISD::CopyToReg: {
     const SITargetLowering& Lowering =
       *static_cast<const SITargetLowering*>(getTargetLowering());
@@ -718,6 +721,18 @@ bool AMDGPUDAGToDAGISel::isUniformBr(const SDNode *N) const {
   const Instruction *Term = BB->getTerminator();
   return Term->getMetadata("amdgpu.uniform") ||
          Term->getMetadata("structurizecfg.uniform");
+}
+
+bool AMDGPUDAGToDAGISel::isUnneededShiftMask(const SDNode *N,
+                                             unsigned ShAmtBits) const {
+  assert(N->getOpcode() == ISD::AND);
+
+  const APInt &RHS = cast<ConstantSDNode>(N->getOperand(1))->getAPIntValue();
+  if (RHS.countTrailingOnes() >= ShAmtBits)
+    return true;
+
+  const APInt &LHSKnownZeros = CurDAG->computeKnownBits(N->getOperand(0)).Zero;
+  return (LHSKnownZeros | RHS).countTrailingOnes() >= ShAmtBits;
 }
 
 static bool getBaseWithOffsetUsingSplitOR(SelectionDAG &DAG, SDValue Addr,
@@ -994,9 +1009,8 @@ void AMDGPUDAGToDAGISel::SelectDIV_SCALE(SDNode *N) {
 void AMDGPUDAGToDAGISel::SelectMAD_64_32(SDNode *N) {
   SDLoc SL(N);
   bool Signed = N->getOpcode() == AMDGPUISD::MAD_I64_I32;
-  const auto *ST = static_cast<const GCNSubtarget *>(Subtarget);
   unsigned Opc;
-  if (ST->getGeneration() == AMDGPUSubtarget::GFX11)
+  if (Subtarget->getGeneration() == AMDGPUSubtarget::GFX11)
     Opc = Signed ? AMDGPU::V_MAD_I64_I32_gfx11_e64
                  : AMDGPU::V_MAD_U64_U32_gfx11_e64;
   else
@@ -1006,6 +1020,37 @@ void AMDGPUDAGToDAGISel::SelectMAD_64_32(SDNode *N) {
   SDValue Ops[] = { N->getOperand(0), N->getOperand(1), N->getOperand(2),
                     Clamp };
   CurDAG->SelectNodeTo(N, Opc, N->getVTList(), Ops);
+}
+
+// We need to handle this here because tablegen doesn't support matching
+// instructions with multiple outputs.
+void AMDGPUDAGToDAGISel::SelectMUL_LOHI(SDNode *N) {
+  SDLoc SL(N);
+  bool Signed = N->getOpcode() == ISD::SMUL_LOHI;
+  unsigned Opc;
+  if (Subtarget->getGeneration() == AMDGPUSubtarget::GFX11)
+    Opc = Signed ? AMDGPU::V_MAD_I64_I32_gfx11_e64
+                 : AMDGPU::V_MAD_U64_U32_gfx11_e64;
+  else
+    Opc = Signed ? AMDGPU::V_MAD_I64_I32_e64 : AMDGPU::V_MAD_U64_U32_e64;
+
+  SDValue Zero = CurDAG->getTargetConstant(0, SL, MVT::i64);
+  SDValue Clamp = CurDAG->getTargetConstant(0, SL, MVT::i1);
+  SDValue Ops[] = {N->getOperand(0), N->getOperand(1), Zero, Clamp};
+  SDNode *Mad = CurDAG->getMachineNode(Opc, SL, N->getVTList(), Ops);
+  if (!SDValue(N, 0).use_empty()) {
+    SDValue Sub0 = CurDAG->getTargetConstant(AMDGPU::sub0, SL, MVT::i32);
+    SDNode *Lo = CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG, SL,
+                                        MVT::i32, SDValue(Mad, 0), Sub0);
+    ReplaceUses(SDValue(N, 0), SDValue(Lo, 0));
+  }
+  if (!SDValue(N, 1).use_empty()) {
+    SDValue Sub1 = CurDAG->getTargetConstant(AMDGPU::sub1, SL, MVT::i32);
+    SDNode *Hi = CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG, SL,
+                                        MVT::i32, SDValue(Mad, 0), Sub1);
+    ReplaceUses(SDValue(N, 1), SDValue(Hi, 0));
+  }
+  CurDAG->RemoveDeadNode(N);
 }
 
 bool AMDGPUDAGToDAGISel::isDSOffsetLegal(SDValue Base, unsigned Offset) const {
@@ -2351,13 +2396,14 @@ void AMDGPUDAGToDAGISel::SelectDSAppendConsume(SDNode *N, unsigned IntrID) {
 // We need to handle this here because tablegen doesn't support matching
 // instructions with multiple outputs.
 void AMDGPUDAGToDAGISel::SelectDSBvhStackIntrinsic(SDNode *N) {
-  SDLoc SL(N);
-
   unsigned Opc = AMDGPU::DS_BVH_STACK_RTN_B32;
   SDValue Ops[] = {N->getOperand(2), N->getOperand(3), N->getOperand(4),
                    N->getOperand(5), N->getOperand(0)};
 
-  CurDAG->SelectNodeTo(N, Opc, N->getVTList(), Ops);
+  MemIntrinsicSDNode *M = cast<MemIntrinsicSDNode>(N);
+  MachineMemOperand *MMO = M->getMemOperand();
+  SDNode *Selected = CurDAG->SelectNodeTo(N, Opc, N->getVTList(), Ops);
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(Selected), {MMO});
 }
 
 static unsigned gwsIntrinToOpcode(unsigned IntrID) {
@@ -2789,6 +2835,20 @@ bool AMDGPUDAGToDAGISel::SelectDotIUVOP3PMods(SDValue In, SDValue &Src) const {
   Src = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
   return true;
 }
+
+bool AMDGPUDAGToDAGISel::SelectWMMAOpSelVOP3PMods(SDValue In, SDValue &Src) const {
+  const ConstantSDNode *C = cast<ConstantSDNode>(In);
+  assert(C->getAPIntValue().getBitWidth() == 1 && "expected i1 value");
+
+  unsigned Mods = SISrcMods::OP_SEL_1;
+  unsigned SrcVal = C->getAPIntValue().getZExtValue();
+  if (SrcVal == 1)
+    Mods |= SISrcMods::OP_SEL_0;
+
+  Src = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
+  return true;
+}
+
 
 bool AMDGPUDAGToDAGISel::SelectVOP3OpSel(SDValue In, SDValue &Src,
                                          SDValue &SrcMods) const {

@@ -109,11 +109,11 @@ define i32 @smul(i32 %arg) {
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512F-LABEL: 'smul'
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %I64 = call i64 @llvm.smul.fix.i64(i64 undef, i64 undef, i32 3)
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %V2I64 = call <2 x i64> @llvm.smul.fix.v2i64(<2 x i64> undef, <2 x i64> undef, i32 3)
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %V4I64 = call <4 x i64> @llvm.smul.fix.v4i64(<4 x i64> undef, <4 x i64> undef, i32 3)
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 95 for instruction: %V8I64 = call <8 x i64> @llvm.smul.fix.v8i64(<8 x i64> undef, <8 x i64> undef, i32 3)
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %I32 = call i32 @llvm.smul.fix.i32(i32 undef, i32 undef, i32 3)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %I64 = call i64 @llvm.smul.fix.i64(i64 undef, i64 undef, i32 3)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %V2I64 = call <2 x i64> @llvm.smul.fix.v2i64(<2 x i64> undef, <2 x i64> undef, i32 3)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 39 for instruction: %V4I64 = call <4 x i64> @llvm.smul.fix.v4i64(<4 x i64> undef, <4 x i64> undef, i32 3)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 79 for instruction: %V8I64 = call <8 x i64> @llvm.smul.fix.v8i64(<8 x i64> undef, <8 x i64> undef, i32 3)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %I32 = call i32 @llvm.smul.fix.i32(i32 undef, i32 undef, i32 3)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V4I32 = call <4 x i32> @llvm.smul.fix.v4i32(<4 x i32> undef, <4 x i32> undef, i32 3)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V8I32 = call <8 x i32> @llvm.smul.fix.v8i32(<8 x i32> undef, <8 x i32> undef, i32 3)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: %V16I32 = call <16 x i32> @llvm.smul.fix.v16i32(<16 x i32> undef, <16 x i32> undef, i32 3)
@@ -128,11 +128,11 @@ define i32 @smul(i32 %arg) {
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512BW-LABEL: 'smul'
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %I64 = call i64 @llvm.smul.fix.i64(i64 undef, i64 undef, i32 3)
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %V2I64 = call <2 x i64> @llvm.smul.fix.v2i64(<2 x i64> undef, <2 x i64> undef, i32 3)
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %V4I64 = call <4 x i64> @llvm.smul.fix.v4i64(<4 x i64> undef, <4 x i64> undef, i32 3)
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 95 for instruction: %V8I64 = call <8 x i64> @llvm.smul.fix.v8i64(<8 x i64> undef, <8 x i64> undef, i32 3)
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %I32 = call i32 @llvm.smul.fix.i32(i32 undef, i32 undef, i32 3)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %I64 = call i64 @llvm.smul.fix.i64(i64 undef, i64 undef, i32 3)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %V2I64 = call <2 x i64> @llvm.smul.fix.v2i64(<2 x i64> undef, <2 x i64> undef, i32 3)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 39 for instruction: %V4I64 = call <4 x i64> @llvm.smul.fix.v4i64(<4 x i64> undef, <4 x i64> undef, i32 3)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 79 for instruction: %V8I64 = call <8 x i64> @llvm.smul.fix.v8i64(<8 x i64> undef, <8 x i64> undef, i32 3)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %I32 = call i32 @llvm.smul.fix.i32(i32 undef, i32 undef, i32 3)
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V4I32 = call <4 x i32> @llvm.smul.fix.v4i32(<4 x i32> undef, <4 x i32> undef, i32 3)
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V8I32 = call <8 x i32> @llvm.smul.fix.v8i32(<8 x i32> undef, <8 x i32> undef, i32 3)
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: %V16I32 = call <16 x i32> @llvm.smul.fix.v16i32(<16 x i32> undef, <16 x i32> undef, i32 3)
@@ -147,11 +147,11 @@ define i32 @smul(i32 %arg) {
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512DQ-LABEL: 'smul'
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %I64 = call i64 @llvm.smul.fix.i64(i64 undef, i64 undef, i32 3)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %V2I64 = call <2 x i64> @llvm.smul.fix.v2i64(<2 x i64> undef, <2 x i64> undef, i32 3)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %V4I64 = call <4 x i64> @llvm.smul.fix.v4i64(<4 x i64> undef, <4 x i64> undef, i32 3)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 95 for instruction: %V8I64 = call <8 x i64> @llvm.smul.fix.v8i64(<8 x i64> undef, <8 x i64> undef, i32 3)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %I32 = call i32 @llvm.smul.fix.i32(i32 undef, i32 undef, i32 3)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %I64 = call i64 @llvm.smul.fix.i64(i64 undef, i64 undef, i32 3)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %V2I64 = call <2 x i64> @llvm.smul.fix.v2i64(<2 x i64> undef, <2 x i64> undef, i32 3)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 39 for instruction: %V4I64 = call <4 x i64> @llvm.smul.fix.v4i64(<4 x i64> undef, <4 x i64> undef, i32 3)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 79 for instruction: %V8I64 = call <8 x i64> @llvm.smul.fix.v8i64(<8 x i64> undef, <8 x i64> undef, i32 3)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %I32 = call i32 @llvm.smul.fix.i32(i32 undef, i32 undef, i32 3)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V4I32 = call <4 x i32> @llvm.smul.fix.v4i32(<4 x i32> undef, <4 x i32> undef, i32 3)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V8I32 = call <8 x i32> @llvm.smul.fix.v8i32(<8 x i32> undef, <8 x i32> undef, i32 3)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %V16I32 = call <16 x i32> @llvm.smul.fix.v16i32(<16 x i32> undef, <16 x i32> undef, i32 3)
@@ -343,11 +343,11 @@ define i32 @umul(i32 %arg) {
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512F-LABEL: 'umul'
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %I64 = call i64 @llvm.umul.fix.i64(i64 undef, i64 undef, i32 3)
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %V2I64 = call <2 x i64> @llvm.umul.fix.v2i64(<2 x i64> undef, <2 x i64> undef, i32 3)
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %V4I64 = call <4 x i64> @llvm.umul.fix.v4i64(<4 x i64> undef, <4 x i64> undef, i32 3)
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 95 for instruction: %V8I64 = call <8 x i64> @llvm.umul.fix.v8i64(<8 x i64> undef, <8 x i64> undef, i32 3)
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %I32 = call i32 @llvm.umul.fix.i32(i32 undef, i32 undef, i32 3)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %I64 = call i64 @llvm.umul.fix.i64(i64 undef, i64 undef, i32 3)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %V2I64 = call <2 x i64> @llvm.umul.fix.v2i64(<2 x i64> undef, <2 x i64> undef, i32 3)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 39 for instruction: %V4I64 = call <4 x i64> @llvm.umul.fix.v4i64(<4 x i64> undef, <4 x i64> undef, i32 3)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 79 for instruction: %V8I64 = call <8 x i64> @llvm.umul.fix.v8i64(<8 x i64> undef, <8 x i64> undef, i32 3)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I32 = call i32 @llvm.umul.fix.i32(i32 undef, i32 undef, i32 3)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V4I32 = call <4 x i32> @llvm.umul.fix.v4i32(<4 x i32> undef, <4 x i32> undef, i32 3)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V8I32 = call <8 x i32> @llvm.umul.fix.v8i32(<8 x i32> undef, <8 x i32> undef, i32 3)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: %V16I32 = call <16 x i32> @llvm.umul.fix.v16i32(<16 x i32> undef, <16 x i32> undef, i32 3)
@@ -362,11 +362,11 @@ define i32 @umul(i32 %arg) {
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512BW-LABEL: 'umul'
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %I64 = call i64 @llvm.umul.fix.i64(i64 undef, i64 undef, i32 3)
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %V2I64 = call <2 x i64> @llvm.umul.fix.v2i64(<2 x i64> undef, <2 x i64> undef, i32 3)
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %V4I64 = call <4 x i64> @llvm.umul.fix.v4i64(<4 x i64> undef, <4 x i64> undef, i32 3)
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 95 for instruction: %V8I64 = call <8 x i64> @llvm.umul.fix.v8i64(<8 x i64> undef, <8 x i64> undef, i32 3)
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %I32 = call i32 @llvm.umul.fix.i32(i32 undef, i32 undef, i32 3)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %I64 = call i64 @llvm.umul.fix.i64(i64 undef, i64 undef, i32 3)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %V2I64 = call <2 x i64> @llvm.umul.fix.v2i64(<2 x i64> undef, <2 x i64> undef, i32 3)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 39 for instruction: %V4I64 = call <4 x i64> @llvm.umul.fix.v4i64(<4 x i64> undef, <4 x i64> undef, i32 3)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 79 for instruction: %V8I64 = call <8 x i64> @llvm.umul.fix.v8i64(<8 x i64> undef, <8 x i64> undef, i32 3)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I32 = call i32 @llvm.umul.fix.i32(i32 undef, i32 undef, i32 3)
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V4I32 = call <4 x i32> @llvm.umul.fix.v4i32(<4 x i32> undef, <4 x i32> undef, i32 3)
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V8I32 = call <8 x i32> @llvm.umul.fix.v8i32(<8 x i32> undef, <8 x i32> undef, i32 3)
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: %V16I32 = call <16 x i32> @llvm.umul.fix.v16i32(<16 x i32> undef, <16 x i32> undef, i32 3)
@@ -381,11 +381,11 @@ define i32 @umul(i32 %arg) {
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512DQ-LABEL: 'umul'
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %I64 = call i64 @llvm.umul.fix.i64(i64 undef, i64 undef, i32 3)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %V2I64 = call <2 x i64> @llvm.umul.fix.v2i64(<2 x i64> undef, <2 x i64> undef, i32 3)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %V4I64 = call <4 x i64> @llvm.umul.fix.v4i64(<4 x i64> undef, <4 x i64> undef, i32 3)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 95 for instruction: %V8I64 = call <8 x i64> @llvm.umul.fix.v8i64(<8 x i64> undef, <8 x i64> undef, i32 3)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %I32 = call i32 @llvm.umul.fix.i32(i32 undef, i32 undef, i32 3)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %I64 = call i64 @llvm.umul.fix.i64(i64 undef, i64 undef, i32 3)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %V2I64 = call <2 x i64> @llvm.umul.fix.v2i64(<2 x i64> undef, <2 x i64> undef, i32 3)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 39 for instruction: %V4I64 = call <4 x i64> @llvm.umul.fix.v4i64(<4 x i64> undef, <4 x i64> undef, i32 3)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 79 for instruction: %V8I64 = call <8 x i64> @llvm.umul.fix.v8i64(<8 x i64> undef, <8 x i64> undef, i32 3)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I32 = call i32 @llvm.umul.fix.i32(i32 undef, i32 undef, i32 3)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V4I32 = call <4 x i32> @llvm.umul.fix.v4i32(<4 x i32> undef, <4 x i32> undef, i32 3)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V8I32 = call <8 x i32> @llvm.umul.fix.v8i32(<8 x i32> undef, <8 x i32> undef, i32 3)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %V16I32 = call <16 x i32> @llvm.umul.fix.v16i32(<16 x i32> undef, <16 x i32> undef, i32 3)

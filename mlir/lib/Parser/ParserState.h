@@ -91,7 +91,7 @@ struct ParserState {
   SmallVector<StringRef> defaultDialectStack{"builtin"};
 };
 
-} // end namespace detail
-} // end namespace mlir
+} // namespace detail
+} // namespace mlir
 
 #endif // MLIR_LIB_PARSER_PARSERSTATE_H

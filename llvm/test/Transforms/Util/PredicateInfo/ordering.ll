@@ -1,4 +1,4 @@
-; REQUIRES: assert
+; REQUIRES: assert-but-this-is-misspelled-and-should-say-asserts-but-then-the-test-case-will-fail
 ; RUN: opt -passes=print-predicateinfo -debug < %s 2>&1 | FileCheck %s
 
 declare void @use(i32)

@@ -404,6 +404,7 @@ BUILTIN(__builtin_altivec_vbpermd, "V2ULLiV2ULLiV16Uc", "")
 // P8 Crypto built-ins.
 BUILTIN(__builtin_altivec_crypto_vsbox, "V2ULLiV2ULLi", "")
 BUILTIN(__builtin_altivec_crypto_vpermxor, "V16UcV16UcV16UcV16Uc", "")
+BUILTIN(__builtin_altivec_crypto_vpermxor_be, "V16UcV16UcV16UcV16Uc", "")
 BUILTIN(__builtin_altivec_crypto_vshasigmaw, "V4UiV4UiIiIi", "")
 BUILTIN(__builtin_altivec_crypto_vshasigmad, "V2ULLiV2ULLiIiIi", "")
 BUILTIN(__builtin_altivec_crypto_vcipher, "V2ULLiV2ULLiV2ULLi", "")
@@ -423,6 +424,12 @@ BUILTIN(__builtin_altivec_vctzb, "V16UcV16Uc", "")
 BUILTIN(__builtin_altivec_vctzh, "V8UsV8Us", "")
 BUILTIN(__builtin_altivec_vctzw, "V4UiV4Ui", "")
 BUILTIN(__builtin_altivec_vctzd, "V2ULLiV2ULLi", "")
+
+// P8 BCD builtins.
+BUILTIN(__builtin_ppc_bcdadd, "V16UcV16UcV16UcIi", "")
+BUILTIN(__builtin_ppc_bcdsub, "V16UcV16UcV16UcIi", "")
+BUILTIN(__builtin_ppc_bcdadd_p, "iiV16UcV16Uc", "")
+BUILTIN(__builtin_ppc_bcdsub_p, "iiV16UcV16Uc", "")
 
 BUILTIN(__builtin_altivec_vclzlsbb, "SiV16Uc", "")
 BUILTIN(__builtin_altivec_vctzlsbb, "SiV16Uc", "")

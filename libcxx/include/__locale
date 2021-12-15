@@ -208,10 +208,11 @@ class _LIBCPP_TYPE_VIS locale::id
     static int32_t __next_id;
 public:
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR id() :__id_(0) {}
+    void operator=(const id&) = delete;
+    id(const id&) = delete;
+
 private:
     void __init();
-    void operator=(const id&); // = delete;
-    id(const id&); // = delete;
 public:  // only needed for tests
     long __get();
 

@@ -73,7 +73,7 @@ public:
   bool IsExecutable() const override { return false; }
   ArchSpec GetArchitecture() override { return m_arch; }
   UUID GetUUID() override { return m_uuid; }
-  Symtab *GetSymtab() override { return m_symtab_up.get(); }
+  void ParseSymtab(lldb_private::Symtab &symtab) override {}
   bool IsStripped() override { return true; }
   ByteOrder GetByteOrder() const override { return m_arch.GetByteOrder(); }
 
@@ -439,8 +439,8 @@ void ProcessMinidump::BuildMemoryRegions() {
   llvm::sort(*m_memory_regions);
 }
 
-Status ProcessMinidump::DoGetMemoryRegionInfo(lldb::addr_t load_addr,
-                                              MemoryRegionInfo &region) {
+Status ProcessMinidump::GetMemoryRegionInfo(lldb::addr_t load_addr,
+                                            MemoryRegionInfo &region) {
   BuildMemoryRegions();
   region = MinidumpParser::GetMemoryRegionInfo(*m_memory_regions, load_addr);
   return Status();

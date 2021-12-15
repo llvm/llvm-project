@@ -1881,8 +1881,8 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
     if (Ty->isDependentType())
       return;
 
-    if (Ty->isExtIntType()) {
-      if (!Context.getTargetInfo().hasExtIntType()) {
+    if (Ty->isBitIntType()) {
+      if (!Context.getTargetInfo().hasBitIntType()) {
         PartialDiagnostic PD = PDiag(diag::err_target_unsupported_type);
         if (D)
           PD << D;

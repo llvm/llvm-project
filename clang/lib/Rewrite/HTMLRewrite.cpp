@@ -203,7 +203,7 @@ std::string html::EscapeText(StringRef s, bool EscapeSpaces, bool ReplaceTabs) {
     }
   }
 
-  return os.str();
+  return Str;
 }
 
 static void AddLineNumber(RewriteBuffer &RB, unsigned LineNo,

@@ -3054,6 +3054,9 @@ TEST(APIntTest, ZeroWidth) {
   EXPECT_EQ(0U, APInt(4, 3).trunc(0).getBitWidth());
   EXPECT_TRUE(ZW.isAllOnes());
 
+  // Zero extension.
+  EXPECT_EQ(0U, ZW.getZExtValue());
+
   SmallString<42> STR;
   ZW.toStringUnsigned(STR);
   EXPECT_EQ("0", STR);

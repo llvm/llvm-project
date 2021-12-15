@@ -56,7 +56,9 @@ def CoroutineMissingUnhandledException :
   DiagGroup<"coroutine-missing-unhandled-exception">;
 def DeprecatedExperimentalCoroutine :
   DiagGroup<"deprecated-experimental-coroutine">;
-def Coroutine : DiagGroup<"coroutine", [CoroutineMissingUnhandledException, DeprecatedExperimentalCoroutine]>;
+def DeprecatedCoroutine :
+  DiagGroup<"deprecated-coroutine", [DeprecatedExperimentalCoroutine]>;
+def Coroutine : DiagGroup<"coroutine", [CoroutineMissingUnhandledException, DeprecatedCoroutine]>;
 def ObjCBoolConstantConversion : DiagGroup<"objc-bool-constant-conversion">;
 def ConstantConversion : DiagGroup<"constant-conversion",
                                    [BitFieldConstantConversion,
@@ -189,6 +191,7 @@ def DeprecatedVolatile : DiagGroup<"deprecated-volatile">;
 def DeprecatedWritableStr : DiagGroup<"deprecated-writable-strings",
                                       [CXX11CompatDeprecatedWritableStr]>;
 def DeprecatedPragma : DiagGroup<"deprecated-pragma">;
+def DeprecatedType : DiagGroup<"deprecated-type">;
 // FIXME: Why is DeprecatedImplementations not in this group?
 def Deprecated : DiagGroup<"deprecated", [DeprecatedAnonEnumEnumConversion,
                                           DeprecatedArrayCompare,
@@ -206,6 +209,7 @@ def Deprecated : DiagGroup<"deprecated", [DeprecatedAnonEnumEnumConversion,
                                           DeprecatedPragma,
                                           DeprecatedRegister,
                                           DeprecatedThisCapture,
+                                          DeprecatedType,
                                           DeprecatedVolatile,
                                           DeprecatedWritableStr]>,
                  DiagCategory<"Deprecations">;
@@ -1042,6 +1046,13 @@ def : DiagGroup<"unused-local-typedefs", [UnusedLocalTypedef]>;
 def NonGCC : DiagGroup<"non-gcc",
     [SignCompare, Conversion, LiteralRange]>;
 
+def CXX14Attrs : DiagGroup<"c++14-attribute-extensions">;
+def CXX17Attrs : DiagGroup<"c++17-attribute-extensions">;
+def CXX20Attrs : DiagGroup<"c++20-attribute-extensions">;
+def FutureAttrs : DiagGroup<"future-attribute-extensions", [CXX14Attrs,
+                                                            CXX17Attrs,
+                                                            CXX20Attrs]>;
+
 // A warning group for warnings about using C++11 features as extensions in
 // earlier C++ versions.
 def CXX11 : DiagGroup<"c++11-extensions", [CXX11ExtraSemi, CXX11InlineNamespace,
@@ -1049,15 +1060,15 @@ def CXX11 : DiagGroup<"c++11-extensions", [CXX11ExtraSemi, CXX11InlineNamespace,
 
 // A warning group for warnings about using C++14 features as extensions in
 // earlier C++ versions.
-def CXX14 : DiagGroup<"c++14-extensions", [CXX14BinaryLiteral]>;
+def CXX14 : DiagGroup<"c++14-extensions", [CXX14BinaryLiteral, CXX14Attrs]>;
 
 // A warning group for warnings about using C++17 features as extensions in
 // earlier C++ versions.
-def CXX17 : DiagGroup<"c++17-extensions">;
+def CXX17 : DiagGroup<"c++17-extensions", [CXX17Attrs]>;
 
 // A warning group for warnings about using C++20 features as extensions in
 // earlier C++ versions.
-def CXX20 : DiagGroup<"c++20-extensions", [CXX20Designator]>;
+def CXX20 : DiagGroup<"c++20-extensions", [CXX20Designator, CXX20Attrs]>;
 
 // A warning group for warnings about using C++2b features as extensions in
 // earlier C++ versions.
@@ -1273,9 +1284,14 @@ def : DiagGroup<"spirv-compat", [SpirCompat]>; // Alias.
 // Warning for the GlobalISel options.
 def GlobalISel : DiagGroup<"global-isel">;
 
+// A warning group for the GNU extension to allow mixed specifier types for
+// target-clones multiversioning.
+def TargetClonesMixedSpecifiers : DiagGroup<"target-clones-mixed-specifiers">;
+
 // A warning group specifically for warnings related to function
 // multiversioning.
-def FunctionMultiVersioning : DiagGroup<"function-multiversion">;
+def FunctionMultiVersioning
+    : DiagGroup<"function-multiversion", [TargetClonesMixedSpecifiers]>;
 
 def NoDeref : DiagGroup<"noderef">;
 
@@ -1331,3 +1347,6 @@ def PedanticMacros : DiagGroup<"pedantic-macros",
                      BuiltinMacroRedefined,
                      RestrictExpansionMacro,
                      FinalMacro]>;
+
+def BranchProtection : DiagGroup<"branch-protection">;
+

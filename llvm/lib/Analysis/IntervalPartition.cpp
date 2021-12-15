@@ -36,16 +36,16 @@ INITIALIZE_PASS(IntervalPartition, "intervals",
 
 // releaseMemory - Reset state back to before function was analyzed
 void IntervalPartition::releaseMemory() {
-  for (unsigned i = 0, e = Intervals.size(); i != e; ++i)
-    delete Intervals[i];
+  for (Interval *I : Intervals)
+    delete I;
   IntervalMap.clear();
   Intervals.clear();
   RootInterval = nullptr;
 }
 
 void IntervalPartition::print(raw_ostream &O, const Module*) const {
-  for(unsigned i = 0, e = Intervals.size(); i != e; ++i)
-    Intervals[i]->print(O);
+  for (const Interval *I : Intervals)
+    I->print(O);
 }
 
 // addIntervalToPartition - Add an interval to the internal list of intervals,
@@ -87,8 +87,8 @@ bool IntervalPartition::runOnFunction(Function &F) {
 
   // Now that we know all of the successor information, propagate this to the
   // predecessors for each block.
-  for (unsigned i = 0, e = Intervals.size(); i != e; ++i)
-    updatePredecessors(Intervals[i]);
+  for (Interval *I : Intervals)
+    updatePredecessors(I);
   return false;
 }
 
@@ -113,6 +113,6 @@ IntervalPartition::IntervalPartition(IntervalPartition &IP, bool)
 
   // Now that we know all of the successor information, propagate this to the
   // predecessors for each block.
-  for (unsigned i = 0, e = Intervals.size(); i != e; ++i)
-    updatePredecessors(Intervals[i]);
+  for (Interval *I : Intervals)
+    updatePredecessors(I);
 }

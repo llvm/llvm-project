@@ -30,7 +30,7 @@ func @while_test(%arg0 : tensor<i32>) -> (tensor<i32>) {
   return %1 : tensor<i32>
 }
 
-// ----
+// -----
 
 // CHECK-LABEL: func @if_test
 // CHECK-SAME: ([[ARG0:%.+]]: tensor<f32>, [[ARG1:%.+]]: tensor<f32>, [[ARG2:%.+]]: tensor<i1>)

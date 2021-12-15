@@ -214,12 +214,12 @@ TEST(DependencyScanningFilesystem, IgnoredFilesHaveSeparateCache) {
   DependencyScanningWorkerFilesystem DepFS(SharedCache, VFS, Mappings.get());
 
   auto StatusMinimized0 = DepFS.status("/mod.h");
-  DepFS.ignoreFile("/mod.h");
+  DepFS.disableMinimization("/mod.h");
   auto StatusFull1 = DepFS.status("/mod.h");
-  DepFS.clearIgnoredFiles();
+  DepFS.enableMinimizationOfAllFiles();
 
   auto StatusMinimized2 = DepFS.status("/mod.h");
-  DepFS.ignoreFile("/mod.h");
+  DepFS.disableMinimization("/mod.h");
   auto StatusFull3 = DepFS.status("/mod.h");
 
   EXPECT_TRUE(StatusMinimized0);

@@ -1,4 +1,4 @@
-; RUN: opt -S -globalopt < %s | FileCheck %s
+; RUN: opt -S -passes=globalopt < %s | FileCheck %s
 ; rdar://11022897
 
 ; Globalopt should be able to evaluate an invoke.

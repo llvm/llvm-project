@@ -9,7 +9,7 @@ declare <8 x i7> @llvm.vp.ashr.v8i7(<8 x i7>, <8 x i7>, <8 x i1>, i32)
 define <8 x i7> @vsra_vv_v8i7(<8 x i7> %va, <8 x i7> %b, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsra_vv_v8i7:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 127
+; CHECK-NEXT:    li a1, 127
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vand.vx v9, v9, a1
 ; CHECK-NEXT:    vadd.vv v8, v8, v8

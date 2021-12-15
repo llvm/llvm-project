@@ -112,3 +112,12 @@ func @test_signature_conversion_no_converter() {
   }) : () -> ()
   return
 }
+
+// -----
+
+// CHECK-LABEL: @recursive_type_conversion
+func @recursive_type_conversion() {
+  // CHECK:  !test.test_rec<outer_converted_type, smpla>
+  "test.type_producer"() : () -> !test.test_rec<something, test_rec<something>>
+  return
+}

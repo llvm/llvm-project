@@ -28,9 +28,11 @@ namespace fir {
 
 std::unique_ptr<mlir::Pass> createAbstractResultOptPass();
 std::unique_ptr<mlir::Pass> createAffineDemotionPass();
+std::unique_ptr<mlir::Pass> createArrayValueCopyPass();
 std::unique_ptr<mlir::Pass> createFirToCfgPass();
 std::unique_ptr<mlir::Pass> createCharacterConversionPass();
 std::unique_ptr<mlir::Pass> createExternalNameConversionPass();
+std::unique_ptr<mlir::Pass> createMemDataFlowOptPass();
 std::unique_ptr<mlir::Pass> createPromoteToAffinePass();
 
 /// Support for inlining on FIR.

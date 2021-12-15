@@ -441,11 +441,12 @@ public:
     return R;
   }
 
-  static LValue MakeGlobalReg(Address Reg, QualType type) {
+  static LValue MakeGlobalReg(llvm::Value *V, CharUnits alignment,
+                              QualType type) {
     LValue R;
     R.LVType = GlobalReg;
-    R.V = Reg.getPointer();
-    R.Initialize(type, type.getQualifiers(), Reg.getAlignment(),
+    R.V = V;
+    R.Initialize(type, type.getQualifiers(), alignment,
                  LValueBaseInfo(AlignmentSource::Decl), TBAAAccessInfo());
     return R;
   }
@@ -470,12 +471,10 @@ public:
 /// An aggregate value slot.
 class AggValueSlot {
   /// The address.
-  llvm::Value *Addr;
+  Address Addr;
 
   // Qualifiers
   Qualifiers Quals;
-
-  unsigned Alignment;
 
   /// DestructedFlag - This is set to true if some external code is
   /// responsible for setting up a destructor for the slot.  Otherwise
@@ -520,6 +519,14 @@ class AggValueSlot {
   /// them.
   bool SanitizerCheckedFlag : 1;
 
+  AggValueSlot(Address Addr, Qualifiers Quals, bool DestructedFlag,
+               bool ObjCGCFlag, bool ZeroedFlag, bool AliasedFlag,
+               bool OverlapFlag, bool SanitizerCheckedFlag)
+      : Addr(Addr), Quals(Quals), DestructedFlag(DestructedFlag),
+        ObjCGCFlag(ObjCGCFlag), ZeroedFlag(ZeroedFlag),
+        AliasedFlag(AliasedFlag), OverlapFlag(OverlapFlag),
+        SanitizerCheckedFlag(SanitizerCheckedFlag) {}
+
 public:
   enum IsAliased_t { IsNotAliased, IsAliased };
   enum IsDestructed_t { IsNotDestructed, IsDestructed };
@@ -553,22 +560,8 @@ public:
                               Overlap_t mayOverlap,
                               IsZeroed_t isZeroed = IsNotZeroed,
                        IsSanitizerChecked_t isChecked = IsNotSanitizerChecked) {
-    AggValueSlot AV;
-    if (addr.isValid()) {
-      AV.Addr = addr.getPointer();
-      AV.Alignment = addr.getAlignment().getQuantity();
-    } else {
-      AV.Addr = nullptr;
-      AV.Alignment = 0;
-    }
-    AV.Quals = quals;
-    AV.DestructedFlag = isDestructed;
-    AV.ObjCGCFlag = needsGC;
-    AV.ZeroedFlag = isZeroed;
-    AV.AliasedFlag = isAliased;
-    AV.OverlapFlag = mayOverlap;
-    AV.SanitizerCheckedFlag = isChecked;
-    return AV;
+    return AggValueSlot(addr, quals, isDestructed, needsGC, isZeroed, isAliased,
+                        mayOverlap, isChecked);
   }
 
   static AggValueSlot
@@ -609,19 +602,19 @@ public:
   }
 
   llvm::Value *getPointer() const {
-    return Addr;
+    return Addr.getPointer();
   }
 
   Address getAddress() const {
-    return Address(Addr, getAlignment());
+    return Addr;
   }
 
   bool isIgnored() const {
-    return Addr == nullptr;
+    return !Addr.isValid();
   }
 
   CharUnits getAlignment() const {
-    return CharUnits::fromQuantity(Alignment);
+    return Addr.getAlignment();
   }
 
   IsAliased_t isPotentiallyAliased() const {

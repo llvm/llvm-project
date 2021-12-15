@@ -492,7 +492,7 @@ public:
                    LLVM::ModuleTranslation &moduleTranslation) const final;
 };
 
-} // end namespace
+} // namespace
 
 /// Given an OpenACC MLIR operation, create the corresponding LLVM IR
 /// (including OpenACC runtime calls).

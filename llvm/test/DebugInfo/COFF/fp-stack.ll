@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=i686-windows-msvc < %s -experimental-debug-variable-locations=false | FileCheck %s --check-prefix=ASM
-; RUN: llc -mtriple=i686-windows-msvc < %s -filetype=obj -experimental-debug-variable-locations=false | llvm-readobj --codeview - | FileCheck %s --check-prefix=OBJ
+; RUN: llc -mtriple=i686-windows-msvc < %s | FileCheck %s --check-prefix=ASM
+; RUN: llc -mtriple=i686-windows-msvc < %s -filetype=obj | llvm-readobj --codeview - | FileCheck %s --check-prefix=OBJ
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
 target triple = "i686-pc-windows-msvc18.0.0"
 

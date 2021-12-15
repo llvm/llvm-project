@@ -42,6 +42,8 @@ public:
     TEST_CONSTEXPR_CXX14 output_iterator operator++(int)
         {output_iterator tmp(*this); ++(*this); return tmp;}
 
+    friend TEST_CONSTEXPR It base(const output_iterator& i) { return i.it_; }
+
     template <class T>
     void operator,(T const &) = delete;
 };
@@ -80,6 +82,8 @@ public:
         {return x.it_ == y.it_;}
     friend TEST_CONSTEXPR_CXX14 bool operator!=(const cpp17_input_iterator& x, const cpp17_input_iterator& y)
         {return !(x == y);}
+
+    friend TEST_CONSTEXPR It base(const cpp17_input_iterator& i) { return i.it_; }
 
     template <class T>
     void operator,(T const &) = delete;
@@ -128,6 +132,8 @@ public:
         {return x.it_ == y.it_;}
     friend TEST_CONSTEXPR_CXX14 bool operator!=(const forward_iterator& x, const forward_iterator& y)
         {return !(x == y);}
+
+    friend TEST_CONSTEXPR It base(const forward_iterator& i) { return i.it_; }
 
     template <class T>
     void operator,(T const &) = delete;
@@ -229,6 +235,8 @@ public:
     TEST_CONSTEXPR_CXX14 bidirectional_iterator operator--(int)
         {bidirectional_iterator tmp(*this); --(*this); return tmp;}
 
+    friend TEST_CONSTEXPR It base(const bidirectional_iterator& i) { return i.it_; }
+
     template <class T>
     void operator,(T const &) = delete;
 };
@@ -288,6 +296,8 @@ public:
         {random_access_iterator tmp(*this); tmp -= n; return tmp;}
 
     TEST_CONSTEXPR_CXX14 reference operator[](difference_type n) const {return it_[n];}
+
+    friend TEST_CONSTEXPR It base(const random_access_iterator& i) { return i.it_; }
 
     template <class T>
     void operator,(T const &) = delete;
@@ -419,32 +429,14 @@ public:
         return x.base() != y.base();
     }
 
+    friend TEST_CONSTEXPR It base(const contiguous_iterator& i) { return i.it_; }
+
     template <class T>
     void operator,(T const &) = delete;
 };
 #endif
 
-template <class Iter>
-TEST_CONSTEXPR_CXX14 Iter base(output_iterator<Iter> i) { return i.base(); }
-
-template <class Iter>
-TEST_CONSTEXPR_CXX14 Iter base(cpp17_input_iterator<Iter> i) { return i.base(); }
-
-template <class Iter>
-TEST_CONSTEXPR_CXX14 Iter base(forward_iterator<Iter> i) { return i.base(); }
-
-template <class Iter>
-TEST_CONSTEXPR_CXX14 Iter base(bidirectional_iterator<Iter> i) { return i.base(); }
-
-template <class Iter>
-TEST_CONSTEXPR_CXX14 Iter base(random_access_iterator<Iter> i) { return i.base(); }
-
-#if TEST_STD_VER > 17
-template <class Iter>
-TEST_CONSTEXPR_CXX14 Iter base(contiguous_iterator<Iter> i) { return i.base(); }
-#endif
-
-template <class Iter>    // everything else
+template <class Iter> // ADL base() for everything else (including pointers)
 TEST_CONSTEXPR_CXX14 Iter base(Iter i) { return i; }
 
 template <typename T>
@@ -457,14 +449,15 @@ struct ThrowingIterator {
 
     enum ThrowingAction { TAIncrement, TADecrement, TADereference, TAAssignment, TAComparison };
 
-    ThrowingIterator()
+    TEST_CONSTEXPR ThrowingIterator()
         : begin_(nullptr), end_(nullptr), current_(nullptr), action_(TADereference), index_(0) {}
-    explicit ThrowingIterator(const T *first, const T *last, int index = 0, ThrowingAction action = TADereference)
+    TEST_CONSTEXPR explicit ThrowingIterator(const T* first, const T* last, int index = 0,
+                                                   ThrowingAction action = TADereference)
         : begin_(first), end_(last), current_(first), action_(action), index_(index) {}
-    ThrowingIterator(const ThrowingIterator &rhs)
+    TEST_CONSTEXPR ThrowingIterator(const ThrowingIterator &rhs)
         : begin_(rhs.begin_), end_(rhs.end_), current_(rhs.current_), action_(rhs.action_), index_(rhs.index_) {}
 
-    ThrowingIterator& operator=(const ThrowingIterator& rhs) {
+    TEST_CONSTEXPR_CXX14 ThrowingIterator& operator=(const ThrowingIterator& rhs) {
         if (action_ == TAAssignment && --index_ < 0) {
 #ifndef TEST_HAS_NO_EXCEPTIONS
             throw std::runtime_error("throw from iterator assignment");
@@ -480,7 +473,7 @@ struct ThrowingIterator {
         return *this;
     }
 
-    reference operator*() const {
+    TEST_CONSTEXPR_CXX14 reference operator*() const {
         if (action_ == TADereference && --index_ < 0) {
 #ifndef TEST_HAS_NO_EXCEPTIONS
             throw std::runtime_error("throw from iterator dereference");
@@ -491,7 +484,7 @@ struct ThrowingIterator {
         return *current_;
     }
 
-    ThrowingIterator& operator++() {
+    TEST_CONSTEXPR_CXX14 ThrowingIterator& operator++() {
         if (action_ == TAIncrement && --index_ < 0) {
 #ifndef TEST_HAS_NO_EXCEPTIONS
             throw std::runtime_error("throw from iterator increment");
@@ -503,13 +496,13 @@ struct ThrowingIterator {
         return *this;
     }
 
-    ThrowingIterator operator++(int) {
+    TEST_CONSTEXPR_CXX14 ThrowingIterator operator++(int) {
         ThrowingIterator temp = *this;
         ++(*this);
         return temp;
     }
 
-    ThrowingIterator& operator--() {
+    TEST_CONSTEXPR_CXX14 ThrowingIterator& operator--() {
         if (action_ == TADecrement && --index_ < 0) {
 #ifndef TEST_HAS_NO_EXCEPTIONS
             throw std::runtime_error("throw from iterator decrement");
@@ -521,13 +514,13 @@ struct ThrowingIterator {
         return *this;
     }
 
-    ThrowingIterator operator--(int) {
+    TEST_CONSTEXPR_CXX14 ThrowingIterator operator--(int) {
         ThrowingIterator temp = *this;
         --(*this);
         return temp;
     }
 
-    friend bool operator==(const ThrowingIterator& a, const ThrowingIterator& b) {
+    TEST_CONSTEXPR_CXX14 friend bool operator==(const ThrowingIterator& a, const ThrowingIterator& b) {
         if (a.action_ == TAComparison && --a.index_ < 0) {
 #ifndef TEST_HAS_NO_EXCEPTIONS
             throw std::runtime_error("throw from iterator comparison");
@@ -542,7 +535,7 @@ struct ThrowingIterator {
         return a.current_ == b.current_;
     }
 
-    friend bool operator!=(const ThrowingIterator& a, const ThrowingIterator& b) {
+    TEST_CONSTEXPR friend bool operator!=(const ThrowingIterator& a, const ThrowingIterator& b) {
         return !(a == b);
     }
 
@@ -628,40 +621,30 @@ private:
 
 #ifdef TEST_SUPPORTS_RANGES
 
-template <class I>
-struct cpp20_input_iterator {
-    using value_type = std::iter_value_t<I>;
-    using difference_type = std::iter_difference_t<I>;
+template <class It>
+class cpp20_input_iterator
+{
+    It it_;
+
+public:
+    using value_type = std::iter_value_t<It>;
+    using difference_type = std::iter_difference_t<It>;
     using iterator_concept = std::input_iterator_tag;
 
-    cpp20_input_iterator() = delete;
-
+    constexpr explicit cpp20_input_iterator(It it) : it_(it) {}
     cpp20_input_iterator(cpp20_input_iterator&&) = default;
     cpp20_input_iterator& operator=(cpp20_input_iterator&&) = default;
+    constexpr decltype(auto) operator*() const { return *it_; }
+    constexpr cpp20_input_iterator& operator++() { ++it_; return *this; }
+    constexpr void operator++(int) { ++it_; }
 
-    cpp20_input_iterator(cpp20_input_iterator const&) = delete;
-    cpp20_input_iterator& operator=(cpp20_input_iterator const&) = delete;
+    constexpr const It& base() const& { return it_; }
+    constexpr It base() && { return std::move(it_); }
 
-    explicit constexpr cpp20_input_iterator(I base) : base_(std::move(base)) {}
-
-    constexpr decltype(auto) operator*() const { return *base_; }
-
-    constexpr cpp20_input_iterator& operator++() {
-        ++base_;
-        return *this;
-    }
-
-    constexpr void operator++(int) { ++base_; }
-
-    constexpr const I& base() const& { return base_; }
-
-    constexpr I base() && { return std::move(base_); }
+    friend constexpr It base(const cpp20_input_iterator& i) { return i.it_; }
 
     template <class T>
     void operator,(T const &) = delete;
-
-private:
-    I base_ = I();
 };
 
 template <std::input_or_output_iterator I>
@@ -958,15 +941,15 @@ public:
 
     constexpr reference operator[](difference_type n) const {return it_[n];}
 
-    template <class T>
-    void operator,(T const &) = delete;
-
     friend constexpr
     difference_type operator-(const three_way_contiguous_iterator& x, const three_way_contiguous_iterator& y) {
         return x.base() - y.base();
     }
 
     friend auto operator<=>(const three_way_contiguous_iterator&, const three_way_contiguous_iterator&) = default;
+
+    template <class T>
+    void operator,(T const &) = delete;
 };
 
 #endif // TEST_STD_VER > 17 && defined(__cpp_lib_concepts)

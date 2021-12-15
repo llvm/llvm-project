@@ -18,20 +18,25 @@
 .Lpcrel_hi0: auipc a0, %pcrel_hi(foo)
 
 # CHECK-INST: addi a0, zero, 0
-# CHECK-ALIAS: mv a0, zero
+# CHECK-ALIAS: li a0, 0
 li x10, 0
-# CHECK-EXPAND: addi a0, zero, 1
+# CHECK-INST: addi a0, zero, 1
+# CHECK-ALIAS: li a0, 1
 li x10, 1
-# CHECK-EXPAND: addi a0, zero, -1
+# CHECK-INST: addi a0, zero, -1
+# CHECK-ALIAS: li a0, -1
 li x10, -1
-# CHECK-EXPAND: addi a0, zero, 2047
+# CHECK-INST: addi a0, zero, 2047
+# CHECK-ALIAS: li a0, 2047
 li x10, 2047
-# CHECK-EXPAND: addi a0, zero, -2047
+# CHECK-INST: addi a0, zero, -2047
+# CHECK-ALIAS: li a0, -2047
 li x10, -2047
 # CHECK-EXPAND: lui a1, 1
 # CHECK-EXPAND: addi a1, a1, -2048
 li x11, 2048
-# CHECK-EXPAND: addi a1, zero, -2048
+# CHECK-INST: addi a1, zero, -2048
+# CHECK-ALIAS: li a1, -2048
 li x11, -2048
 # CHECK-EXPAND: lui a1, 1
 # CHECK-EXPAND: addi a1, a1, -2047
@@ -68,10 +73,12 @@ li x12, -0x80000000
 
 # CHECK-EXPAND: lui a2, 524288
 li x12, 0x80000000
-# CHECK-EXPAND: addi a2, zero, -1
+# CHECK-INST: addi a2, zero, -1
+# CHECK-ALIAS: li a2, -1
 li x12, 0xFFFFFFFF
 
-# CHECK-EXPAND: addi a0, zero, 1110
+# CHECK-INST: addi a0, zero, 1110
+# CHECK-ALIAS: li a0, 1110
 li a0, %lo(0x123456)
 
 # CHECK-OBJ-NOALIAS: addi a0, zero, 0

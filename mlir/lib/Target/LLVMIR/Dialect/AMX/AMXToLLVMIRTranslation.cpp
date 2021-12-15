@@ -40,7 +40,7 @@ public:
     return failure();
   }
 };
-} // end namespace
+} // namespace
 
 void mlir::registerAMXDialectTranslation(DialectRegistry &registry) {
   registry.insert<amx::AMXDialect>();

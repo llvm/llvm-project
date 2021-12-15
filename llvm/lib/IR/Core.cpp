@@ -2266,6 +2266,14 @@ LLVMValueRef LLVMAddAlias(LLVMModuleRef M, LLVMTypeRef Ty, LLVMValueRef Aliasee,
                                   unwrap<Constant>(Aliasee), unwrap(M)));
 }
 
+LLVMValueRef LLVMAddAlias2(LLVMModuleRef M, LLVMTypeRef ValueTy,
+                           unsigned AddrSpace, LLVMValueRef Aliasee,
+                           const char *Name) {
+  return wrap(GlobalAlias::create(unwrap(ValueTy), AddrSpace,
+                                  GlobalValue::ExternalLinkage, Name,
+                                  unwrap<Constant>(Aliasee), unwrap(M)));
+}
+
 LLVMValueRef LLVMGetNamedGlobalAlias(LLVMModuleRef M,
                                      const char *Name, size_t NameLen) {
   return wrap(unwrap(M)->getNamedAlias(Name));
@@ -3004,6 +3012,10 @@ LLVMBool LLVMIsInBounds(LLVMValueRef GEP) {
 
 void LLVMSetIsInBounds(LLVMValueRef GEP, LLVMBool InBounds) {
   return unwrap<GetElementPtrInst>(GEP)->setIsInBounds(InBounds);
+}
+
+LLVMTypeRef LLVMGetGEPSourceElementType(LLVMValueRef GEP) {
+  return wrap(unwrap<GetElementPtrInst>(GEP)->getSourceElementType());
 }
 
 /*--.. Operations on phi nodes .............................................--*/

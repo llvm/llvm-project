@@ -437,6 +437,18 @@ def non_temporal_store :
          cast<MaskedStoreSDNode>(N)->isNonTemporal();
 }]>;
 
+// top16Zero - answer true if the upper 16 bits of $src are 0, false otherwise
+def top16Zero: PatLeaf<(i32 GPR32:$src), [{
+  return SDValue(N,0)->getValueType(0) == MVT::i32 &&
+         CurDAG->MaskedValueIsZero(SDValue(N,0), APInt::getHighBitsSet(32, 16));
+  }]>;
+
+// top32Zero - answer true if the upper 32 bits of $src are 0, false otherwise
+def top32Zero: PatLeaf<(i64 GPR64:$src), [{
+  return SDValue(N,0)->getValueType(0) == MVT::i64 &&
+         CurDAG->MaskedValueIsZero(SDValue(N,0), APInt::getHighBitsSet(64, 32));
+  }]>;
+
 // Node definitions.
 def AArch64adrp          : SDNode<"AArch64ISD::ADRP", SDTIntUnaryOp, []>;
 def AArch64adr           : SDNode<"AArch64ISD::ADR", SDTIntUnaryOp, []>;
@@ -2045,6 +2057,10 @@ def : InstAlias<"rev64 $Rd, $Rn", (REVXr GPR64:$Rd, GPR64:$Rn), 0>;
 // orders.
 def : Pat<(bswap (rotr GPR32:$Rn, (i64 16))), (REV16Wr GPR32:$Rn)>;
 def : Pat<(bswap (rotr GPR64:$Rn, (i64 32))), (REV32Xr GPR64:$Rn)>;
+
+// Match (srl (bswap x), C) -> revC if the upper bswap bits are known zero.
+def : Pat<(srl (bswap top16Zero:$Rn), (i64 16)), (REV16Wr GPR32:$Rn)>;
+def : Pat<(srl (bswap top32Zero:$Rn), (i64 32)), (REV32Xr GPR64:$Rn)>;
 
 //===----------------------------------------------------------------------===//
 // Bitfield immediate extraction instruction.
@@ -4158,6 +4174,21 @@ defm CMLT   : SIMDCmpTwoVector<0, 0b01010, "cmlt", AArch64cmltz>;
 defm CNT    : SIMDTwoVectorB<0, 0b00, 0b00101, "cnt", ctpop>;
 defm FABS   : SIMDTwoVectorFP<0, 1, 0b01111, "fabs", fabs>;
 
+def : Pat<(v8i8 (AArch64vashr (v8i8 V64:$Rn), (i32 7))),
+          (CMLTv8i8rz V64:$Rn)>;
+def : Pat<(v4i16 (AArch64vashr (v4i16 V64:$Rn), (i32 15))),
+          (CMLTv4i16rz V64:$Rn)>;
+def : Pat<(v2i32 (AArch64vashr (v2i32 V64:$Rn), (i32 31))),
+          (CMLTv2i32rz V64:$Rn)>;
+def : Pat<(v16i8 (AArch64vashr (v16i8 V128:$Rn), (i32 7))),
+          (CMLTv16i8rz V128:$Rn)>;
+def : Pat<(v8i16 (AArch64vashr (v8i16 V128:$Rn), (i32 15))),
+          (CMLTv8i16rz V128:$Rn)>;
+def : Pat<(v4i32 (AArch64vashr (v4i32 V128:$Rn), (i32 31))),
+          (CMLTv4i32rz V128:$Rn)>;
+def : Pat<(v2i64 (AArch64vashr (v2i64 V128:$Rn), (i32 63))),
+          (CMLTv2i64rz V128:$Rn)>;
+
 defm FCMEQ  : SIMDFPCmpTwoVector<0, 1, 0b01101, "fcmeq", AArch64fcmeqz>;
 defm FCMGE  : SIMDFPCmpTwoVector<1, 1, 0b01100, "fcmge", AArch64fcmgez>;
 defm FCMGT  : SIMDFPCmpTwoVector<0, 1, 0b01100, "fcmgt", AArch64fcmgtz>;
@@ -4809,6 +4840,9 @@ defm UQXTN  : SIMDTwoScalarMixedBHS<1, 0b10100, "uqxtn", int_aarch64_neon_scalar
 defm USQADD : SIMDTwoScalarBHSDTied< 1, 0b00011, "usqadd",
                                     int_aarch64_neon_usqadd>;
 
+def : Pat<(v1i64 (AArch64vashr (v1i64 V64:$Rn), (i32 63))),
+          (CMLTv1i64rz V64:$Rn)>;
+
 def : Pat<(v1i64 (int_aarch64_neon_fcvtas (v1f64 FPR64:$Rn))),
           (FCVTASv1i64 FPR64:$Rn)>;
 def : Pat<(v1i64 (int_aarch64_neon_fcvtau (v1f64 FPR64:$Rn))),
@@ -5271,6 +5305,16 @@ defm UZP1 : SIMDZipVector<0b001, "uzp1", AArch64uzp1>;
 defm UZP2 : SIMDZipVector<0b101, "uzp2", AArch64uzp2>;
 defm ZIP1 : SIMDZipVector<0b011, "zip1", AArch64zip1>;
 defm ZIP2 : SIMDZipVector<0b111, "zip2", AArch64zip2>;
+
+def : Pat<(v16i8 (concat_vectors (v8i8 (trunc (v8i16 V128:$Vn))),
+                                 (v8i8 (trunc (v8i16 V128:$Vm))))),
+          (UZP1v16i8 V128:$Vn, V128:$Vm)>;
+def : Pat<(v8i16 (concat_vectors (v4i16 (trunc (v4i32 V128:$Vn))),
+                                 (v4i16 (trunc (v4i32 V128:$Vm))))),
+          (UZP1v8i16 V128:$Vn, V128:$Vm)>;
+def : Pat<(v4i32 (concat_vectors (v2i32 (trunc (v2i64 V128:$Vn))),
+                                 (v2i32 (trunc (v2i64 V128:$Vm))))),
+          (UZP1v4i32 V128:$Vn, V128:$Vm)>;
 
 //----------------------------------------------------------------------------
 // AdvSIMD TBL/TBX instructions

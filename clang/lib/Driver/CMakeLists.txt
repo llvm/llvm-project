@@ -53,7 +53,9 @@ add_clang_library(clangDriver
   ToolChains/Fuchsia.cpp
   ToolChains/Gnu.cpp
   ToolChains/Haiku.cpp
-  ToolChains/HIP.cpp
+  ToolChains/HIPUtility.cpp
+  ToolChains/HIPAMD.cpp
+  ToolChains/HIPSPV.cpp
   ToolChains/Hexagon.cpp
   ToolChains/Hurd.cpp
   ToolChains/Linux.cpp
@@ -75,6 +77,7 @@ add_clang_library(clangDriver
   ToolChains/WebAssembly.cpp
   ToolChains/XCore.cpp
   ToolChains/PPCLinux.cpp
+  ToolChains/PPCFreeBSD.cpp
   ToolChains/InterfaceStubs.cpp
   ToolChains/ZOS.cpp
   Types.cpp

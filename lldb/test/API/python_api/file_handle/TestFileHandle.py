@@ -852,3 +852,19 @@ class FileHandleTestCase(lldbtest.TestBase):
         self.assertTrue(f.closed)
         with open(self.out_filename, 'r') as f:
             self.assertEqual(f.read().strip(), "Frobozz")
+
+    def test_set_sbstream(self):
+        with open(self.out_filename, 'w') as outf:
+            outsbf = lldb.SBFile(outf.fileno(), "w", False)
+            status = self.dbg.SetOutputFile(outsbf)
+            self.assertTrue(status.Success())
+            self.dbg.SetInputString("help apropos\nhelp help\n")
+
+            opts = lldb.SBCommandInterpreterRunOptions()
+            self.dbg.RunCommandInterpreter(True, False, opts, 0, False, False)
+            self.dbg.GetOutputFile().Flush()
+
+        with open(self.out_filename, 'r') as f:
+            output = f.read()
+            self.assertIn('Show a list of all debugger commands', output)
+            self.assertIn('List debugger commands related to a word', output)

@@ -296,7 +296,7 @@ inline __libcpp_timespec_t __convert_to_timespec(const chrono::nanoseconds& __ns
   return __ts;
 }
 
-}
+} // namespace __thread_detail
 
 #if defined(_LIBCPP_HAS_THREAD_API_PTHREAD)
 
@@ -643,7 +643,7 @@ namespace this_thread
 
 _LIBCPP_INLINE_VISIBILITY __thread_id get_id() _NOEXCEPT;
 
-}  // this_thread
+} // namespace this_thread
 
 template<> struct hash<__thread_id>;
 
@@ -713,7 +713,7 @@ get_id() _NOEXCEPT
     return __libcpp_thread_get_current_id();
 }
 
-}  // this_thread
+} // namespace this_thread
 
 #endif // !_LIBCPP_HAS_NO_THREADS
 

@@ -40,6 +40,7 @@ Paper Status
 
 .. note::
 
+   .. [#note-P0067] P0067: ``std::(to|from)_chars`` for integrals has been available since version 7.0. ``std::to_chars`` for ``float`` and ``double`` since version 14.0 ``std::to_chars`` for ``long double`` uses the implementation for ``double``.
    .. [#note-P0607] P0607: The parts of P0607 that are not done are the ``<regex>`` bits.
 
 

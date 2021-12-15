@@ -618,6 +618,19 @@ enum kmp_hw_t : int {
   KMP_HW_LAST
 };
 
+typedef enum kmp_hw_core_type_t {
+  KMP_HW_CORE_TYPE_UNKNOWN = 0x0,
+#if KMP_ARCH_X86 || KMP_ARCH_X86_64
+  KMP_HW_CORE_TYPE_ATOM = 0x20,
+  KMP_HW_CORE_TYPE_CORE = 0x40,
+  KMP_HW_MAX_NUM_CORE_TYPES = 3,
+#else
+  KMP_HW_MAX_NUM_CORE_TYPES = 1,
+#endif
+} kmp_hw_core_type_t;
+
+#define KMP_HW_MAX_NUM_CORE_EFFS 8
+
 #define KMP_DEBUG_ASSERT_VALID_HW_TYPE(type)                                   \
   KMP_DEBUG_ASSERT(type >= (kmp_hw_t)0 && type < KMP_HW_LAST)
 #define KMP_ASSERT_VALID_HW_TYPE(type)                                         \
@@ -629,6 +642,7 @@ enum kmp_hw_t : int {
 
 const char *__kmp_hw_get_keyword(kmp_hw_t type, bool plural = false);
 const char *__kmp_hw_get_catalog_string(kmp_hw_t type, bool plural = false);
+const char *__kmp_hw_get_core_type_string(kmp_hw_core_type_t type);
 
 /* Only Linux* OS and Windows* OS support thread affinity. */
 #if KMP_AFFINITY_SUPPORTED

@@ -105,15 +105,12 @@ Symbol *SymbolTable::find(StringRef name) {
   auto it = symMap.find(CachedHashStringRef(name));
   if (it == symMap.end())
     return nullptr;
-  Symbol *sym = symVector[it->second];
-  if (sym->isPlaceholder())
-    return nullptr;
-  return sym;
+  return symVector[it->second];
 }
 
 // A version script/dynamic list is only meaningful for a Defined symbol.
 // A CommonSymbol will be converted to a Defined in replaceCommonSymbols().
-// A lazy symbol may be made Defined if an LTO libcall fetches it.
+// A lazy symbol may be made Defined if an LTO libcall extracts it.
 static bool canBeVersioned(const Symbol &sym) {
   return sym.isDefined() || sym.isCommon() || sym.isLazy();
 }

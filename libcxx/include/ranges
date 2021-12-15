@@ -36,7 +36,7 @@ namespace std::ranges {
     inline constexpr bool enable_borrowed_range = false;
 
   template<class T>
-    using iterator_t = decltype(ranges::begin(declval<R&>()));
+    using iterator_t = decltype(ranges::begin(declval<T&>()));
   template<range R>
     using sentinel_t = decltype(ranges::end(declval<R&>()));
   template<range R>

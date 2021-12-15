@@ -123,9 +123,8 @@ void simple(float *a, float *b, float *c, float *d) {
 // CHECK: [[SIMPLE_LOOP2_END]]:
 //
 // Update linear vars after loop, as the loop was operating on a private version.
-// CHECK: [[LIN0_2:%.+]] = load i64, i64* [[LIN0]]
-// CHECK-NEXT: [[LIN_ADD2:%.+]] = add nsw i64 [[LIN0_2]], 27
-// CHECK-NEXT: store i64 [[LIN_ADD2]], i64* %{{.+}}
+// CHECK: [[LIN0_2:%.+]] = load i64, i64* [[K_PRIVATIZED]]
+// CHECK-NEXT: store i64 [[LIN0_2]], i64* %{{.+}}
 
   int lin = 12;
   #pragma omp parallel for simd linear(lin : get_val()), linear(g_ptr)
@@ -173,6 +172,7 @@ void simple(float *a, float *b, float *c, float *d) {
 // CHECK: [[LINSTART:.+]] = load i32, i32* [[LIN_START]]
 // CHECK: [[LINSTEP:.+]] = load i64, i64* [[LIN_STEP]]
 // CHECK-NOT: store i32 {{.+}}, i32* [[LIN_VAR]]
+// CHECK: store i32 {{.+}}, i32* [[LIN_PRIV:%[^,]+]],
 // CHECK: [[GLINSTART:.+]] = load double*, double** [[GLIN_START]]
 // CHECK-NEXT: [[IV3_1:%.+]] = load i64, i64* [[OMP_IV3]]
 // CHECK-NEXT: [[MUL:%.+]] = mul i64 [[IV3_1]], 1
@@ -192,11 +192,10 @@ void simple(float *a, float *b, float *c, float *d) {
 // CHECK: call void @__kmpc_for_static_fini(%struct.ident_t* {{.+}}, i32 %{{.+}})
 //
 // Linear start and step are used to calculate final value of the linear variables.
-// CHECK: [[LINSTART:.+]] = load i32, i32* [[LIN_START]]
-// CHECK: [[LINSTEP:.+]] = load i64, i64* [[LIN_STEP]]
-// CHECK: store i32 {{.+}}, i32* [[LIN_VAR]],
-// CHECK: [[GLINSTART:.+]] = load double*, double** [[GLIN_START]]
-// CHECK: store double* {{.*}}[[GLIN_VAR]]
+// CHECK: [[LIN:%.+]] = load i32, i32* [[LIN_PRIV]]
+// CHECK: store i32 [[LIN]], i32* [[LIN_VAR]],
+// CHECK: [[GLIN:%.+]] = load double*, double** [[G_PTR_CUR]]
+// CHECK: store double* [[GLIN]], double** [[GLIN_VAR]],
 
   #pragma omp parallel for simd
 // CHECK: call void @__kmpc_for_static_init_4(%struct.ident_t* {{[^,]+}}, i32 %{{[^,]+}}, i32 34, i32* %{{[^,]+}}, i32* [[LB:%[^,]+]], i32* [[UB:%[^,]+]], i32* [[STRIDE:%[^,]+]], i32 1, i32 1)

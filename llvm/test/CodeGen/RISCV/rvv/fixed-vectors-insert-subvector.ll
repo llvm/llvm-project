@@ -320,7 +320,7 @@ define void @insert_v4i16_v2i16_2(<4 x i16>* %vp, <2 x i16>* %svp) {
 define void @insert_v32i1_v8i1_0(<32 x i1>* %vp, <8 x i1>* %svp) {
 ; LMULMAX2-LABEL: insert_v32i1_v8i1_0:
 ; LMULMAX2:       # %bb.0:
-; LMULMAX2-NEXT:    addi a2, zero, 32
+; LMULMAX2-NEXT:    li a2, 32
 ; LMULMAX2-NEXT:    vsetvli zero, a2, e8, m2, ta, mu
 ; LMULMAX2-NEXT:    vlm.v v8, (a0)
 ; LMULMAX2-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
@@ -352,7 +352,7 @@ define void @insert_v32i1_v8i1_0(<32 x i1>* %vp, <8 x i1>* %svp) {
 define void @insert_v32i1_v8i1_16(<32 x i1>* %vp, <8 x i1>* %svp) {
 ; LMULMAX2-LABEL: insert_v32i1_v8i1_16:
 ; LMULMAX2:       # %bb.0:
-; LMULMAX2-NEXT:    addi a2, zero, 32
+; LMULMAX2-NEXT:    li a2, 32
 ; LMULMAX2-NEXT:    vsetvli zero, a2, e8, m2, ta, mu
 ; LMULMAX2-NEXT:    vlm.v v8, (a0)
 ; LMULMAX2-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu

@@ -745,7 +745,7 @@ void CudaToolChain::addClangTargetOptions(
 
     std::string BitcodeSuffix;
     if (DriverArgs.hasFlag(options::OPT_fopenmp_target_new_runtime,
-                           options::OPT_fno_openmp_target_new_runtime, false))
+                           options::OPT_fno_openmp_target_new_runtime, true))
       BitcodeSuffix = "new-nvptx-" + GpuArch.str();
     else
       BitcodeSuffix = "nvptx-" + GpuArch.str();

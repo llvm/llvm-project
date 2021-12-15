@@ -487,6 +487,8 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
   bool WQMOutputs = MF.getFunction().hasFnAttribute("amdgpu-ps-wqm-outputs");
   SmallVector<MachineInstr *, 4> SetInactiveInstrs;
   SmallVector<MachineInstr *, 4> SoftWQMInstrs;
+  bool HasImplicitDerivatives =
+      MF.getFunction().getCallingConv() == CallingConv::AMDGPU_PS;
 
   // We need to visit the basic blocks in reverse post-order so that we visit
   // defs before uses, in particular so that we don't accidentally mark an
@@ -497,8 +499,7 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
     MachineBasicBlock &MBB = **BI;
     BlockInfo &BBI = Blocks[&MBB];
 
-    for (auto II = MBB.begin(), IE = MBB.end(); II != IE; ++II) {
-      MachineInstr &MI = *II;
+    for (MachineInstr &MI : MBB) {
       InstrInfo &III = Instructions[&MI];
       unsigned Opcode = MI.getOpcode();
       char Flags = 0;
@@ -506,6 +507,11 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
       if (TII->isWQM(Opcode)) {
         // If LOD is not supported WQM is not needed.
         if (!ST->hasExtendedImageInsts())
+          continue;
+        // Only generate implicit WQM if implicit derivatives are required.
+        // This avoids inserting unintended WQM if a shader type without
+        // implicit derivatives uses an image sampling instruction.
+        if (!HasImplicitDerivatives)
           continue;
         // Sampling instructions don't need to produce results for all pixels
         // in a quad, they just require all inputs of a quad to have been

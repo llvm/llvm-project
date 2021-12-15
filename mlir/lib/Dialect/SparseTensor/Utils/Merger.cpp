@@ -213,7 +213,7 @@ bool Merger::hasAnyDimOf(const llvm::BitVector &bits, Dim d) const {
   return false;
 }
 
-bool Merger::isConjunction(unsigned t, unsigned e) const {
+bool Merger::isSingleCondition(unsigned t, unsigned e) const {
   switch (tensorExps[e].kind) {
   case kTensor:
     return tensorExps[e].tensor == t;
@@ -232,22 +232,30 @@ bool Merger::isConjunction(unsigned t, unsigned e) const {
   case kCastU:
   case kTruncI:
   case kBitCast:
-    return isConjunction(t, tensorExps[e].children.e0);
+    return isSingleCondition(t, tensorExps[e].children.e0);
   case kDivF: // note: x / c only
   case kDivS:
   case kDivU:
     assert(!maybeZero(tensorExps[e].children.e1));
-    return isConjunction(t, tensorExps[e].children.e0);
+    return isSingleCondition(t, tensorExps[e].children.e0);
   case kShrS: // note: x >> inv only
   case kShrU:
   case kShlI:
     assert(isInvariant(tensorExps[e].children.e1));
-    return isConjunction(t, tensorExps[e].children.e0);
+    return isSingleCondition(t, tensorExps[e].children.e0);
   case kMulF:
   case kMulI:
   case kAndI:
-    return isConjunction(t, tensorExps[e].children.e0) ||
-           isConjunction(t, tensorExps[e].children.e1);
+    if (isSingleCondition(t, tensorExps[e].children.e0))
+      return isSingleCondition(t, tensorExps[e].children.e1) ||
+             isInvariant(tensorExps[e].children.e1);
+    if (isSingleCondition(t, tensorExps[e].children.e1))
+      return isInvariant(tensorExps[e].children.e0);
+    return false;
+  case kAddF:
+  case kAddI:
+    return isSingleCondition(t, tensorExps[e].children.e0) &&
+           isSingleCondition(t, tensorExps[e].children.e1);
   default:
     return false;
   }
@@ -415,9 +423,13 @@ unsigned Merger::buildLattices(unsigned e, unsigned i) {
   case kInvariant: {
     // Either the index is really used in the tensor expression, or it is
     // set to the undefined index in that dimension. An invariant expression
-    // is set to a synthetic tensor with undefined indices only.
+    // and a truly dynamic sparse output tensor are set to a synthetic tensor
+    // with undefined indices only to ensure the iteration space is not
+    // skipped as a result of their contents.
     unsigned s = addSet();
     unsigned t = kind == kTensor ? tensorExps[e].tensor : syntheticTensor;
+    if (hasSparseOut && t == outTensor)
+      t = syntheticTensor;
     latSets[s].push_back(addLat(t, i, e));
     return s;
   }
@@ -593,8 +605,8 @@ Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
     }
   }
   // Construct binary operations if subexpressions can be built.
-  // TODO: see buildLattices() for an explanation of rejecting
-  //       certain division and shift operations
+  // See buildLattices() for an explanation of rejecting certain
+  // division and shift operations
   if (def->getNumOperands() == 2) {
     auto x = buildTensorExp(op, def->getOperand(0));
     auto y = buildTensorExp(op, def->getOperand(1));

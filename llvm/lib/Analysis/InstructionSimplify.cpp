@@ -2180,6 +2180,82 @@ Value *llvm::SimplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q) {
   return ::SimplifyAndInst(Op0, Op1, Q, RecursionLimit);
 }
 
+static Value *simplifyOrLogic(Value *X, Value *Y) {
+  assert(X->getType() == Y->getType() && "Expected same type for 'or' ops");
+  Type *Ty = X->getType();
+
+  // X | ~X --> -1
+  if (match(Y, m_Not(m_Specific(X))))
+    return ConstantInt::getAllOnesValue(Ty);
+
+  // X | ~(X & ?) = -1
+  if (match(Y, m_Not(m_c_And(m_Specific(X), m_Value()))))
+    return ConstantInt::getAllOnesValue(Ty);
+
+  // X | (X & ?) --> X
+  if (match(Y, m_c_And(m_Specific(X), m_Value())))
+    return X;
+
+  Value *A, *B;
+
+  // (A ^ B) | (A | B) --> A | B
+  // (A ^ B) | (B | A) --> B | A
+  if (match(X, m_Xor(m_Value(A), m_Value(B))) &&
+      match(Y, m_c_Or(m_Specific(A), m_Specific(B))))
+    return Y;
+
+  // ~(A ^ B) | (A | B) --> -1
+  // ~(A ^ B) | (B | A) --> -1
+  if (match(X, m_Not(m_Xor(m_Value(A), m_Value(B)))) &&
+      match(Y, m_c_Or(m_Specific(A), m_Specific(B))))
+    return ConstantInt::getAllOnesValue(Ty);
+
+  // (A & ~B) | (A ^ B) --> A ^ B
+  // (~B & A) | (A ^ B) --> A ^ B
+  // (A & ~B) | (B ^ A) --> B ^ A
+  // (~B & A) | (B ^ A) --> B ^ A
+  if (match(X, m_c_And(m_Value(A), m_Not(m_Value(B)))) &&
+      match(Y, m_c_Xor(m_Specific(A), m_Specific(B))))
+    return Y;
+
+  // (~A ^ B) | (A & B) --> ~A ^ B
+  // (B ^ ~A) | (A & B) --> B ^ ~A
+  // (~A ^ B) | (B & A) --> ~A ^ B
+  // (B ^ ~A) | (B & A) --> B ^ ~A
+  if (match(X, m_c_Xor(m_Not(m_Value(A)), m_Value(B))) &&
+      match(Y, m_c_And(m_Specific(A), m_Specific(B))))
+    return X;
+
+  // (~A | B) | (A ^ B) --> -1
+  // (~A | B) | (B ^ A) --> -1
+  // (B | ~A) | (A ^ B) --> -1
+  // (B | ~A) | (B ^ A) --> -1
+  if (match(X, m_c_Or(m_Not(m_Value(A)), m_Value(B))) &&
+      match(Y, m_c_Xor(m_Specific(A), m_Specific(B))))
+    return ConstantInt::getAllOnesValue(Ty);
+
+  // (~A & B) | ~(A | B) --> ~A
+  // (~A & B) | ~(B | A) --> ~A
+  // (B & ~A) | ~(A | B) --> ~A
+  // (B & ~A) | ~(B | A) --> ~A
+  Value *NotA;
+  if (match(X,
+            m_c_And(m_CombineAnd(m_Value(NotA), m_NotForbidUndef(m_Value(A))),
+                    m_Value(B))) &&
+      match(Y, m_Not(m_c_Or(m_Specific(A), m_Specific(B)))))
+    return NotA;
+
+  // ~(A ^ B) | (A & B) --> ~(A & B)
+  // ~(A ^ B) | (B & A) --> ~(A & B)
+  Value *NotAB;
+  if (match(X, m_CombineAnd(m_NotForbidUndef(m_Xor(m_Value(A), m_Value(B))),
+                            m_Value(NotAB))) &&
+      match(Y, m_c_And(m_Specific(A), m_Specific(B))))
+    return NotAB;
+
+  return nullptr;
+}
+
 /// Given operands for an Or, see if we can fold the result.
 /// If not, this returns null.
 static Value *SimplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
@@ -2202,100 +2278,13 @@ static Value *SimplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   if (Op0 == Op1 || match(Op1, m_Zero()))
     return Op0;
 
-  // A | ~A  =  ~A | A  =  -1
-  if (match(Op0, m_Not(m_Specific(Op1))) ||
-      match(Op1, m_Not(m_Specific(Op0))))
-    return Constant::getAllOnesValue(Op0->getType());
-
-  // (A & ?) | A = A
-  if (match(Op0, m_c_And(m_Specific(Op1), m_Value())))
-    return Op1;
-
-  // A | (A & ?) = A
-  if (match(Op1, m_c_And(m_Specific(Op0), m_Value())))
-    return Op0;
-
-  // ~(A & ?) | A = -1
-  if (match(Op0, m_Not(m_c_And(m_Specific(Op1), m_Value()))))
-    return Constant::getAllOnesValue(Op1->getType());
-
-  // A | ~(A & ?) = -1
-  if (match(Op1, m_Not(m_c_And(m_Specific(Op0), m_Value()))))
-    return Constant::getAllOnesValue(Op0->getType());
+  if (Value *R = simplifyOrLogic(Op0, Op1))
+    return R;
+  if (Value *R = simplifyOrLogic(Op1, Op0))
+    return R;
 
   if (Value *V = simplifyLogicOfAddSub(Op0, Op1, Instruction::Or))
     return V;
-
-  Value *A, *B, *NotA;
-  // (A & ~B) | (A ^ B) -> (A ^ B)
-  // (~B & A) | (A ^ B) -> (A ^ B)
-  // (A & ~B) | (B ^ A) -> (B ^ A)
-  // (~B & A) | (B ^ A) -> (B ^ A)
-  if (match(Op1, m_Xor(m_Value(A), m_Value(B))) &&
-      (match(Op0, m_c_And(m_Specific(A), m_Not(m_Specific(B)))) ||
-       match(Op0, m_c_And(m_Not(m_Specific(A)), m_Specific(B)))))
-    return Op1;
-
-  // Commute the 'or' operands.
-  // (A ^ B) | (A & ~B) -> (A ^ B)
-  // (A ^ B) | (~B & A) -> (A ^ B)
-  // (B ^ A) | (A & ~B) -> (B ^ A)
-  // (B ^ A) | (~B & A) -> (B ^ A)
-  if (match(Op0, m_Xor(m_Value(A), m_Value(B))) &&
-      (match(Op1, m_c_And(m_Specific(A), m_Not(m_Specific(B)))) ||
-       match(Op1, m_c_And(m_Not(m_Specific(A)), m_Specific(B)))))
-    return Op0;
-
-  // (A & B) | (~A ^ B) -> (~A ^ B)
-  // (B & A) | (~A ^ B) -> (~A ^ B)
-  // (A & B) | (B ^ ~A) -> (B ^ ~A)
-  // (B & A) | (B ^ ~A) -> (B ^ ~A)
-  if (match(Op0, m_And(m_Value(A), m_Value(B))) &&
-      (match(Op1, m_c_Xor(m_Specific(A), m_Not(m_Specific(B)))) ||
-       match(Op1, m_c_Xor(m_Not(m_Specific(A)), m_Specific(B)))))
-    return Op1;
-
-  // Commute the 'or' operands.
-  // (~A ^ B) | (A & B) -> (~A ^ B)
-  // (~A ^ B) | (B & A) -> (~A ^ B)
-  // (B ^ ~A) | (A & B) -> (B ^ ~A)
-  // (B ^ ~A) | (B & A) -> (B ^ ~A)
-  if (match(Op1, m_And(m_Value(A), m_Value(B))) &&
-      (match(Op0, m_c_Xor(m_Specific(A), m_Not(m_Specific(B)))) ||
-       match(Op0, m_c_Xor(m_Not(m_Specific(A)), m_Specific(B)))))
-    return Op0;
-
-  // (A | B) | (A ^ B) --> A | B
-  // (B | A) | (A ^ B) --> B | A
-  if (match(Op1, m_Xor(m_Value(A), m_Value(B))) &&
-      match(Op0, m_c_Or(m_Specific(A), m_Specific(B))))
-    return Op0;
-
-  // Commute the outer 'or' operands.
-  // (A ^ B) | (A | B) --> A | B
-  // (A ^ B) | (B | A) --> B | A
-  if (match(Op0, m_Xor(m_Value(A), m_Value(B))) &&
-      match(Op1, m_c_Or(m_Specific(A), m_Specific(B))))
-    return Op1;
-
-  // (~A & B) | ~(A | B) --> ~A
-  // (~A & B) | ~(B | A) --> ~A
-  // (B & ~A) | ~(A | B) --> ~A
-  // (B & ~A) | ~(B | A) --> ~A
-  if (match(Op0, m_c_And(m_CombineAnd(m_Value(NotA), m_Not(m_Value(A))),
-                         m_Value(B))) &&
-      match(Op1, m_Not(m_c_Or(m_Specific(A), m_Specific(B)))))
-    return NotA;
-
-  // Commute the 'or' operands.
-  // ~(A | B) | (~A & B) --> ~A
-  // ~(B | A) | (~A & B) --> ~A
-  // ~(A | B) | (B & ~A) --> ~A
-  // ~(B | A) | (B & ~A) --> ~A
-  if (match(Op1, m_c_And(m_CombineAnd(m_Value(NotA), m_Not(m_Value(A))),
-                         m_Value(B))) &&
-      match(Op0, m_Not(m_c_Or(m_Specific(A), m_Specific(B)))))
-    return NotA;
 
   // Rotated -1 is still -1:
   // (-1 << X) | (-1 >> (C - X)) --> -1
@@ -2352,6 +2341,7 @@ static Value *SimplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   }
 
   // (A & C1)|(B & C2)
+  Value *A, *B;
   const APInt *C1, *C2;
   if (match(Op0, m_And(m_Value(A), m_APInt(C1))) &&
       match(Op1, m_And(m_Value(B), m_APInt(C2)))) {
@@ -2413,6 +2403,30 @@ static Value *SimplifyXorInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   if (match(Op0, m_Not(m_Specific(Op1))) ||
       match(Op1, m_Not(m_Specific(Op0))))
     return Constant::getAllOnesValue(Op0->getType());
+
+  auto foldAndOrNot = [](Value *X, Value *Y) -> Value * {
+    Value *A, *B;
+    // (~A & B) ^ (A | B) --> A -- There are 8 commuted variants.
+    if (match(X, m_c_And(m_Not(m_Value(A)), m_Value(B))) &&
+        match(Y, m_c_Or(m_Specific(A), m_Specific(B))))
+      return A;
+
+    // (~A | B) ^ (A & B) --> ~A -- There are 8 commuted variants.
+    // The 'not' op must contain a complete -1 operand (no undef elements for
+    // vector) for the transform to be safe.
+    Value *NotA;
+    if (match(X,
+              m_c_Or(m_CombineAnd(m_NotForbidUndef(m_Value(A)), m_Value(NotA)),
+                     m_Value(B))) &&
+        match(Y, m_c_And(m_Specific(A), m_Specific(B))))
+      return NotA;
+
+    return nullptr;
+  };
+  if (Value *R = foldAndOrNot(Op0, Op1))
+    return R;
+  if (Value *R = foldAndOrNot(Op1, Op0))
+    return R;
 
   if (Value *V = simplifyLogicOfAddSub(Op0, Op1, Instruction::Xor))
     return V;
@@ -2689,15 +2703,30 @@ static Value *simplifyICmpOfBools(CmpInst::Predicate Pred, Value *LHS,
   if (!OpTy->isIntOrIntVectorTy(1))
     return nullptr;
 
-  // A boolean compared to true/false can be simplified in 14 out of the 20
-  // (10 predicates * 2 constants) possible combinations. Cases not handled here
-  // require a 'not' of the LHS, so those must be transformed in InstCombine.
+  // A boolean compared to true/false can be reduced in 14 out of the 20
+  // (10 predicates * 2 constants) possible combinations. The other
+  // 6 cases require a 'not' of the LHS.
+
+  auto ExtractNotLHS = [](Value *V) -> Value * {
+    Value *X;
+    if (match(V, m_Not(m_Value(X))))
+      return X;
+    return nullptr;
+  };
+
   if (match(RHS, m_Zero())) {
     switch (Pred) {
     case CmpInst::ICMP_NE:  // X !=  0 -> X
     case CmpInst::ICMP_UGT: // X >u  0 -> X
     case CmpInst::ICMP_SLT: // X <s  0 -> X
       return LHS;
+
+    case CmpInst::ICMP_EQ:  // not(X) ==  0 -> X != 0 -> X
+    case CmpInst::ICMP_ULE: // not(X) <=u 0 -> X >u 0 -> X
+    case CmpInst::ICMP_SGE: // not(X) >=s 0 -> X <s 0 -> X
+      if (Value *X = ExtractNotLHS(LHS))
+        return X;
+      break;
 
     case CmpInst::ICMP_ULT: // X <u  0 -> false
     case CmpInst::ICMP_SGT: // X >s  0 -> false
@@ -2715,6 +2744,13 @@ static Value *simplifyICmpOfBools(CmpInst::Predicate Pred, Value *LHS,
     case CmpInst::ICMP_UGE: // X >=u  1 -> X
     case CmpInst::ICMP_SLE: // X <=s -1 -> X
       return LHS;
+
+    case CmpInst::ICMP_NE:  // not(X) !=  1 -> X ==   1 -> X
+    case CmpInst::ICMP_ULT: // not(X) <=u 1 -> X >=u  1 -> X
+    case CmpInst::ICMP_SGT: // not(X) >s  1 -> X <=s -1 -> X
+      if (Value *X = ExtractNotLHS(LHS))
+        return X;
+      break;
 
     case CmpInst::ICMP_UGT: // X >u   1 -> false
     case CmpInst::ICMP_SLT: // X <s  -1 -> false
@@ -2935,8 +2971,10 @@ static Value *simplifyICmpWithBinOpOnLHS(
       return getFalse(ITy);
   }
 
-  // x >> y <=u x
-  // x udiv y <=u x.
+  // x >>u y <=u x --> true.
+  // x >>u y >u  x --> false.
+  // x udiv y <=u x --> true.
+  // x udiv y >u  x --> false.
   if (match(LBO, m_LShr(m_Specific(RHS), m_Value())) ||
       match(LBO, m_UDiv(m_Specific(RHS), m_Value()))) {
     // icmp pred (X op Y), X
@@ -2944,6 +2982,37 @@ static Value *simplifyICmpWithBinOpOnLHS(
       return getFalse(ITy);
     if (Pred == ICmpInst::ICMP_ULE)
       return getTrue(ITy);
+  }
+
+  // If x is nonzero:
+  // x >>u C <u  x --> true  for C != 0.
+  // x >>u C !=  x --> true  for C != 0.
+  // x >>u C >=u x --> false for C != 0.
+  // x >>u C ==  x --> false for C != 0.
+  // x udiv C <u  x --> true  for C != 1.
+  // x udiv C !=  x --> true  for C != 1.
+  // x udiv C >=u x --> false for C != 1.
+  // x udiv C ==  x --> false for C != 1.
+  // TODO: allow non-constant shift amount/divisor
+  const APInt *C;
+  if ((match(LBO, m_LShr(m_Specific(RHS), m_APInt(C))) && *C != 0) ||
+      (match(LBO, m_UDiv(m_Specific(RHS), m_APInt(C))) && *C != 1)) {
+    if (isKnownNonZero(RHS, Q.DL, 0, Q.AC, Q.CxtI, Q.DT)) {
+      switch (Pred) {
+      default:
+        break;
+      case ICmpInst::ICMP_EQ:
+      case ICmpInst::ICMP_UGE:
+        return getFalse(ITy);
+      case ICmpInst::ICMP_NE:
+      case ICmpInst::ICMP_ULT:
+        return getTrue(ITy);
+      case ICmpInst::ICMP_UGT:
+      case ICmpInst::ICMP_ULE:
+        // UGT/ULE are handled by the more general case just above
+        llvm_unreachable("Unexpected UGT/ULE, should have been handled");
+      }
+    }
   }
 
   // (x*C1)/C2 <= x for C1 <= C2.
@@ -5847,9 +5916,9 @@ static Value *simplifyIntrinsic(CallBase *Call, const SimplifyQuery &Q) {
       auto Attr = Call->getFunction()->getFnAttribute(Attribute::VScaleRange);
       if (!Attr.isValid())
         return nullptr;
-      unsigned VScaleMin, VScaleMax;
-      std::tie(VScaleMin, VScaleMax) = Attr.getVScaleRangeArgs();
-      if (VScaleMin == VScaleMax && VScaleMax != 0)
+      unsigned VScaleMin = Attr.getVScaleRangeMin();
+      Optional<unsigned> VScaleMax = Attr.getVScaleRangeMax();
+      if (VScaleMax && VScaleMin == VScaleMax)
         return ConstantInt::get(F->getReturnType(), VScaleMin);
       return nullptr;
     }

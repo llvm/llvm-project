@@ -333,6 +333,31 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
   return DesiredPeelCount;
 }
 
+/// This "heuristic" exactly matches implicit behavior which used to exist
+/// inside getLoopEstimatedTripCount.  It was added here to keep an
+/// improvement inside that API from causing peeling to become more agressive.
+/// This should probably be removed.
+static bool violatesLegacyMultiExitLoopCheck(Loop *L) {
+  BasicBlock *Latch = L->getLoopLatch();
+  if (!Latch)
+    return true;
+
+  BranchInst *LatchBR = dyn_cast<BranchInst>(Latch->getTerminator());
+  if (!LatchBR || LatchBR->getNumSuccessors() != 2 || !L->isLoopExiting(Latch))
+    return true;
+
+  assert((LatchBR->getSuccessor(0) == L->getHeader() ||
+          LatchBR->getSuccessor(1) == L->getHeader()) &&
+         "At least one edge out of the latch must go to the header");
+
+  SmallVector<BasicBlock *, 4> ExitBlocks;
+  L->getUniqueNonLatchExitBlocks(ExitBlocks);
+  return any_of(ExitBlocks, [](const BasicBlock *EB) {
+      return !EB->getTerminatingDeoptimizeCall();
+    });
+}
+
+
 // Return the number of iterations we want to peel off.
 void llvm::computePeelCount(Loop *L, unsigned LoopSize,
                             TargetTransformInfo::PeelingPreferences &PP,
@@ -436,6 +461,8 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   // We only do this in the presence of profile information, since otherwise
   // our estimates of the trip count are not reliable enough.
   if (L->getHeader()->getParent()->hasProfileData()) {
+    if (violatesLegacyMultiExitLoopCheck(L))
+      return;
     Optional<unsigned> PeelCount = getLoopEstimatedTripCount(L);
     if (!PeelCount)
       return;

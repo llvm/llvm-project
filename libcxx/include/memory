@@ -219,8 +219,20 @@ template <class ForwardIterator, class Size>
 template <class ForwardIterator>
  void uninitialized_default_construct(ForwardIterator first, ForwardIterator last);
 
+template <nothrow-forward-iterator ForwardIterator, nothrow-sentinel-for<ForwardIterator> Sentinel>
+  requires default_initializable<iter_value_t<ForwardIterator>>
+ ForwardIterator ranges::uninitialized_default_construct(ForwardIterator first, Sentinel last); // since C++20
+
+template <nothrow-forward-range ForwardRange>
+  requires default_initializable<range_value_t<ForwardRange>>
+ borrowed_iterator_t<ForwardRange> ranges::uninitialized_default_construct(ForwardRange&& r); // since C++20
+
 template <class ForwardIterator, class Size>
  ForwardIterator uninitialized_default_construct_n(ForwardIterator first, Size n);
+
+template <nothrow-forward-iterator ForwardIterator>
+  requires default_initializable<iter_value_t<ForwardIterator>>
+ ForwardIterator ranges::uninitialized_default_construct_n(ForwardIterator first, iter_difference_t<ForwardIterator> n); // since C++20
 
 template <class Y> struct auto_ptr_ref {};      // deprecated in C++11, removed in C++17
 
@@ -669,8 +681,10 @@ void* align(size_t alignment, size_t size, void*& ptr, size_t& space);
 #include <__memory/allocator_arg_t.h>
 #include <__memory/allocator_traits.h>
 #include <__memory/compressed_pair.h>
+#include <__memory/concepts.h>
 #include <__memory/construct_at.h>
 #include <__memory/pointer_traits.h>
+#include <__memory/ranges_uninitialized_algorithms.h>
 #include <__memory/raw_storage_iterator.h>
 #include <__memory/shared_ptr.h>
 #include <__memory/temporary_buffer.h>
@@ -831,9 +845,9 @@ _LIBCPP_FUNC_VIS void* align(size_t __align, size_t __sz, void*& __ptr, size_t& 
 
 // --- Helper for container swap --
 template <typename _Alloc>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
 void __swap_allocator(_Alloc & __a1, _Alloc & __a2, true_type)
-#if _LIBCPP_STD_VER >= 14
+#if _LIBCPP_STD_VER > 11
     _NOEXCEPT
 #else
     _NOEXCEPT_(__is_nothrow_swappable<_Alloc>::value)
@@ -844,13 +858,13 @@ void __swap_allocator(_Alloc & __a1, _Alloc & __a2, true_type)
 }
 
 template <typename _Alloc>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
 void __swap_allocator(_Alloc &, _Alloc &, false_type) _NOEXCEPT {}
 
 template <typename _Alloc>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
 void __swap_allocator(_Alloc & __a1, _Alloc & __a2)
-#if _LIBCPP_STD_VER >= 14
+#if _LIBCPP_STD_VER > 11
     _NOEXCEPT
 #else
     _NOEXCEPT_(__is_nothrow_swappable<_Alloc>::value)

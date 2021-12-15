@@ -30,7 +30,7 @@ struct TestLivenessPass : public PassWrapper<TestLivenessPass, FunctionPass> {
   }
 };
 
-} // end anonymous namespace
+} // namespace
 
 namespace mlir {
 namespace test {

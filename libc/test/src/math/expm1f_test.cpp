@@ -29,7 +29,7 @@ TEST(LlvmLibcExpm1fTest, SpecialNumbers) {
   EXPECT_FP_EQ(inf, __llvm_libc::expm1f(inf));
   EXPECT_EQ(errno, 0);
 
-  EXPECT_FP_EQ(-1.0f, __llvm_libc::expm1f(negInf));
+  EXPECT_FP_EQ(-1.0f, __llvm_libc::expm1f(neg_inf));
   EXPECT_EQ(errno, 0);
 
   EXPECT_FP_EQ(0.0f, __llvm_libc::expm1f(0.0f));
@@ -108,6 +108,6 @@ TEST(LlvmLibcExpm1fTest, InFloatRange) {
     // wider precision.
     if (isnan(result) || isinf(result) || errno != 0)
       continue;
-    ASSERT_MPFR_MATCH(mpfr::Operation::Expm1, x, __llvm_libc::expm1f(x), 1.5);
+    ASSERT_MPFR_MATCH(mpfr::Operation::Expm1, x, __llvm_libc::expm1f(x), 2.2);
   }
 }

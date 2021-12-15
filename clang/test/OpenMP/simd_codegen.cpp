@@ -111,9 +111,8 @@ void simple(float *a, float *b, float *c, float *d) {
 // CHECK: [[SIMPLE_LOOP2_END]]:
 //
 // Update linear vars after loop, as the loop was operating on a private version.
-// CHECK: [[LIN0_2:%.+]] = load i64, i64* [[LIN0]]
-// CHECK-NEXT: [[LIN_ADD2:%.+]] = add nsw i64 [[LIN0_2]], 27
-// CHECK-NEXT: store i64 [[LIN_ADD2]], i64* [[K_VAR]]
+// CHECK: [[LIN0_2:%.+]] = load i64, i64* [[K_PRIVATIZED]],
+// CHECK-NEXT: store i64 [[LIN0_2]], i64* [[K_VAR]]
 //
 
   int lin = 12;
@@ -147,6 +146,7 @@ void simple(float *a, float *b, float *c, float *d) {
 // CHECK: [[LINSTART:.+]] = load i32, i32* [[LIN_START]]{{.*}}!llvm.access.group
 // CHECK: [[LINSTEP:.+]] = load i64, i64* [[LIN_STEP]]{{.*}}!llvm.access.group
 // CHECK-NOT: store i32 {{.+}}, i32* [[LIN_VAR]],{{.*}}!llvm.access.group
+// CHECK: store i32 {{.+}}, i32* [[LIN_PRIV:%.+]],{{.*}}!llvm.access.group
 // CHECK: [[GLINSTART:.+]] = load double*, double** [[GLIN_START]]{{.*}}!llvm.access.group
 // CHECK-NEXT: [[IV3_1:%.+]] = load i64, i64* [[OMP_IV3]]{{.*}}!llvm.access.group
 // CHECK-NEXT: [[MUL:%.+]] = mul i64 [[IV3_1]], 1
@@ -165,11 +165,10 @@ void simple(float *a, float *b, float *c, float *d) {
 // CHECK: [[SIMPLE_LOOP3_END]]:
 //
 // Linear start and step are used to calculate final value of the linear variables.
-// CHECK: [[LINSTART:.+]] = load i32, i32* [[LIN_START]]
-// CHECK: [[LINSTEP:.+]] = load i64, i64* [[LIN_STEP]]
-// CHECK: store i32 {{.+}}, i32* [[LIN_VAR]],
-// CHECK: [[GLINSTART:.+]] = load double*, double** [[GLIN_START]]
-// CHECK: store double* {{.*}}[[GLIN_VAR]]
+// CHECK: [[LIN:%.+]] = load i32, i32* [[LIN_PRIV]]
+// CHECK-NEXT: store i32 [[LIN]], i32* [[LIN_VAR]],
+// CHECK: [[GLIN:%.+]] = load double*, double** [[G_PTR_CUR]]
+// CHECK-NEXT: store double* [[GLIN]], double** [[GLIN_VAR]]
 
   #pragma omp simd
 // CHECK: store i32 0, i32* [[OMP_IV4:%[^,]+]]
@@ -666,10 +665,9 @@ void linear(float *a) {
 // Update linear vars after loop, as the loop was operating on a private version.
 // CHECK: [[K_REF:%.+]] = load i64*, i64** [[K_ADDR_REF]],
 // CHECK: store i64* [[K_REF]], i64** [[K_PRIV_REF:%.+]],
-// CHECK: [[LIN0_2:%.+]] = load i64, i64* [[LIN0]]
-// CHECK-NEXT: [[LIN_ADD2:%.+]] = add nsw i64 [[LIN0_2]], 27
+// CHECK: [[LIN0_2:%.+]] = load i64, i64* [[K_PRIVATIZED]]
 // CHECK-NEXT: [[K_REF:%.+]] = load i64*, i64** [[K_PRIV_REF]],
-// CHECK-NEXT: store i64 [[LIN_ADD2]], i64* [[K_REF]]
+// CHECK-NEXT: store i64 [[LIN0_2]], i64* [[K_REF]]
 //
 
   #pragma omp simd linear(val(k) : 3)
@@ -711,10 +709,9 @@ void linear(float *a) {
 // Update linear vars after loop, as the loop was operating on a private version.
 // CHECK: [[K_REF:%.+]] = load i64*, i64** [[K_ADDR_REF]],
 // CHECK: store i64* [[K_REF]], i64** [[K_PRIV_REF:%.+]],
-// CHECK: [[LIN0_2:%.+]] = load i64, i64* [[LIN0]]
-// CHECK-NEXT: [[LIN_ADD2:%.+]] = add nsw i64 [[LIN0_2]], 27
+// CHECK: [[LIN0_2:%.+]] = load i64, i64* [[K_PRIVATIZED]]
 // CHECK-NEXT: [[K_REF:%.+]] = load i64*, i64** [[K_PRIV_REF]],
-// CHECK-NEXT: store i64 [[LIN_ADD2]], i64* [[K_REF]]
+// CHECK-NEXT: store i64 [[LIN0_2]], i64* [[K_REF]]
 //
   #pragma omp simd linear(uval(k) : 3)
 // CHECK: store i32 0, i32* [[OMP_IV:%[^,]+]]
@@ -750,9 +747,8 @@ void linear(float *a) {
 // CHECK: [[SIMPLE_LOOP_END]]:
 //
 // Update linear vars after loop, as the loop was operating on a private version.
-// CHECK: [[LIN0_2:%.+]] = load i64, i64* [[LIN0]]
-// CHECK-NEXT: [[LIN_ADD2:%.+]] = add nsw i64 [[LIN0_2]], 27
-// CHECK-NEXT: store i64 [[LIN_ADD2]], i64* [[VAL_ADDR]]
+// CHECK: [[LIN0_2:%.+]] = load i64, i64* [[K_PRIVATIZED]]
+// CHECK-NEXT: store i64 [[LIN0_2]], i64* [[VAL_ADDR]]
 //
 }
 

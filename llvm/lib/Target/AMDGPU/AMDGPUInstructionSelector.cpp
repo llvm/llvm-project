@@ -1804,7 +1804,8 @@ bool AMDGPUInstructionSelector::selectDSBvhStackIntrinsic(MachineInstr &MI) cons
     .addUse(Addr)
     .addUse(Data0)
     .addUse(Data1)
-    .addImm(Offset);
+    .addImm(Offset)
+    .cloneMemRefs(MI);
 
   MI.eraseFromParent();
   return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
@@ -3524,6 +3525,20 @@ AMDGPUInstructionSelector::selectDotIUVOP3PMods(MachineOperand &Root) const {
 }
 
 InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectWMMAOpSelVOP3PMods(
+    MachineOperand &Root) const {
+  assert((Root.isImm() && (Root.getImm() == -1 || Root.getImm() == 0)) &&
+         "expected i1 value");
+  unsigned Mods = SISrcMods::OP_SEL_1;
+  if (Root.getImm() == -1)
+    Mods |= SISrcMods::OP_SEL_0;
+
+  return {{
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
+  }};
+}
+
+InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectVOP3Mods_nnan(MachineOperand &Root) const {
   Register Src;
   unsigned Mods;
@@ -4058,6 +4073,22 @@ bool AMDGPUInstructionSelector::isDSOffset2Legal(Register Base, int64_t Offset0,
   // On Southern Islands instruction with a negative base value and an offset
   // don't seem to work.
   return KnownBits->signBitIsZero(Base);
+}
+
+bool AMDGPUInstructionSelector::isUnneededShiftMask(const MachineInstr &MI,
+                                                    unsigned ShAmtBits) const {
+  assert(MI.getOpcode() == TargetOpcode::G_AND);
+
+  Optional<APInt> RHS = getIConstantVRegVal(MI.getOperand(2).getReg(), *MRI);
+  if (!RHS)
+    return false;
+
+  if (RHS->countTrailingOnes() >= ShAmtBits)
+    return true;
+
+  const APInt &LHSKnownZeros =
+      KnownBits->getKnownZeroes(MI.getOperand(1).getReg());
+  return (LHSKnownZeros | *RHS).countTrailingOnes() >= ShAmtBits;
 }
 
 InstructionSelector::ComplexRendererFns

@@ -18,8 +18,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INCLUDE_CLEANER_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INCLUDE_CLEANER_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INCLUDECLEANER_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INCLUDECLEANER_H
 
 #include "Headers.h"
 #include "ParsedAST.h"
@@ -52,6 +52,7 @@ ReferencedLocations findReferencedLocations(ParsedAST &AST);
 /// The output only includes things SourceManager sees as files (not macro IDs).
 /// This can include <built-in>, <scratch space> etc that are not true files.
 llvm::DenseSet<FileID> findReferencedFiles(const ReferencedLocations &Locs,
+                                           const IncludeStructure &Includes,
                                            const SourceManager &SM);
 
 /// Maps FileIDs to the internal IncludeStructure representation (HeaderIDs).
@@ -74,4 +75,4 @@ std::vector<Diag> issueUnusedIncludesDiagnostics(ParsedAST &AST,
 } // namespace clangd
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_INCLUDE_CLEANER_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_INCLUDECLEANER_H

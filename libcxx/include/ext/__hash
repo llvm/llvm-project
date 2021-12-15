@@ -129,6 +129,6 @@ template <> struct _LIBCPP_TEMPLATE_VIS hash<unsigned long>
         return __c;
     }
 };
-}
+} // namespace __gnu_cxx
 
 #endif // _LIBCPP_EXT_HASH

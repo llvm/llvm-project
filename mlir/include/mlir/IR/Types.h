@@ -252,7 +252,7 @@ template <typename U> U Type::cast() const {
   return U(impl);
 }
 
-} // end namespace mlir
+} // namespace mlir
 
 namespace llvm {
 

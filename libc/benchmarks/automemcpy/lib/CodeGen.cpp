@@ -64,12 +64,12 @@ namespace functions {
 //                                       size_t size) {
 //   using namespace __llvm_libc::x86;
 //   if(size == 0) return;
-//   if(size == 1) return Copy<_1>(dst, src);
-//   if(size < 4) return Copy<HeadTail<_2>>(dst, src, size);
-//   if(size < 8) return Copy<HeadTail<_4>>(dst, src, size);
-//   if(size < 16) return Copy<HeadTail<_8>>(dst, src, size);
-//   if(size < 32) return Copy<HeadTail<_16>>(dst, src, size);
-//   return Copy<Accelerator>(dst, src, size);
+//   if(size == 1) return copy<_1>(dst, src);
+//   if(size < 4) return copy<HeadTail<_2>>(dst, src, size);
+//   if(size < 8) return copy<HeadTail<_4>>(dst, src, size);
+//   if(size < 16) return copy<HeadTail<_8>>(dst, src, size);
+//   if(size < 32) return copy<HeadTail<_16>>(dst, src, size);
+//   return copy<Accelerator>(dst, src, size);
 // }
 
 // The `Serialize` method turns a `NamedFunctionDescriptor` into a
@@ -114,7 +114,7 @@ struct Accelerator {
 struct Context {
   StringRef FunctionReturnType; // e.g. void* or int
   StringRef FunctionArgs;
-  StringRef ElementOp; // Copy, ThreeWayCompare, SplatSet, ...
+  StringRef ElementOp; // copy, three_way_compare, splat_set, ...
   StringRef FixedSizeArgs;
   StringRef RuntimeSizeArgs;
   StringRef AlignArg1;
@@ -140,7 +140,7 @@ static Context getCtx(FunctionType FT) {
   case FunctionType::MEMCPY:
     return {"void",
             "(char *__restrict dst, const char *__restrict src, size_t size)",
-            "Copy",
+            "copy",
             "(dst, src)",
             "(dst, src, size)",
             "Arg::Dst",
@@ -149,7 +149,7 @@ static Context getCtx(FunctionType FT) {
   case FunctionType::MEMCMP:
     return {"int",
             "(const char * lhs, const char * rhs, size_t size)",
-            "ThreeWayCompare",
+            "three_way_compare",
             "(lhs, rhs)",
             "(lhs, rhs, size)",
             "Arg::Lhs",
@@ -158,7 +158,7 @@ static Context getCtx(FunctionType FT) {
   case FunctionType::MEMSET:
     return {"void",
             "(char * dst, int value, size_t size)",
-            "SplatSet",
+            "splat_set",
             "(dst, value)",
             "(dst, value, size)",
             "Arg::Dst",
@@ -166,7 +166,7 @@ static Context getCtx(FunctionType FT) {
             ""};
   case FunctionType::BZERO:
     return {"void",           "(char * dst, size_t size)",
-            "SplatSet",       "(dst, 0)",
+            "splat_set",      "(dst, 0)",
             "(dst, 0, size)", "Arg::Dst",
             "Arg::Src",       ""};
   default:
@@ -548,6 +548,7 @@ static void Serialize(raw_ostream &Stream,
   Stream << "using llvm::libc_benchmarks::BzeroConfiguration;\n";
   Stream << "using llvm::libc_benchmarks::MemcmpOrBcmpConfiguration;\n";
   Stream << "using llvm::libc_benchmarks::MemcpyConfiguration;\n";
+  Stream << "using llvm::libc_benchmarks::MemmoveConfiguration;\n";
   Stream << "using llvm::libc_benchmarks::MemsetConfiguration;\n";
   Stream << "\n";
   Stream << "namespace __llvm_libc {\n";
@@ -599,6 +600,11 @@ template <BzeroStub Foo> void Wrap(void *dst, size_t size) {
 }
 )";
   codegen::configurations::Serialize(Stream, FunctionType::BZERO, Descriptors);
+  Stream << R"(
+llvm::ArrayRef<MemmoveConfiguration> getMemmoveConfigurations() {
+  return {};
+}
+)";
   Stream << "// Functions : " << Descriptors.size() << "\n";
 }
 

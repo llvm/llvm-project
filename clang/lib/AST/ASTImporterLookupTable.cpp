@@ -140,6 +140,11 @@ void ASTImporterLookupTable::update(NamedDecl *ND, DeclContext *OldDC) {
   add(ND);
 }
 
+void ASTImporterLookupTable::updateForced(NamedDecl *ND, DeclContext *OldDC) {
+  LookupTable[OldDC][ND->getDeclName()].remove(ND);
+  add(ND);
+}
+
 ASTImporterLookupTable::LookupResult
 ASTImporterLookupTable::lookup(DeclContext *DC, DeclarationName Name) const {
   auto DCI = LookupTable.find(DC->getPrimaryContext());

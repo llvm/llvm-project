@@ -2138,9 +2138,8 @@ bool PPCInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
 }
 
 static bool MBBDefinesCTR(MachineBasicBlock &MBB) {
-  for (MachineBasicBlock::iterator I = MBB.begin(), IE = MBB.end();
-       I != IE; ++I)
-    if (I->definesRegister(PPC::CTR) || I->definesRegister(PPC::CTR8))
+  for (MachineInstr &MI : MBB)
+    if (MI.definesRegister(PPC::CTR) || MI.definesRegister(PPC::CTR8))
       return true;
   return false;
 }
@@ -2331,8 +2330,7 @@ bool PPCInstrInfo::ClobbersPredicate(MachineInstr &MI,
       &PPC::CTRRCRegClass, &PPC::CTRRC8RegClass };
 
   bool Found = false;
-  for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-    const MachineOperand &MO = MI.getOperand(i);
+  for (const MachineOperand &MO : MI.operands()) {
     for (unsigned c = 0; c < array_lengthof(RCs) && !Found; ++c) {
       const TargetRegisterClass *RC = RCs[c];
       if (MO.isReg()) {

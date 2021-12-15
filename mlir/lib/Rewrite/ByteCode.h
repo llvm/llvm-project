@@ -19,7 +19,7 @@
 namespace mlir {
 namespace pdl_interp {
 class RecordMatchOp;
-} // end namespace pdl_interp
+} // namespace pdl_interp
 
 namespace detail {
 class PDLByteCode;
@@ -28,6 +28,7 @@ class PDLByteCode;
 /// entries. ByteCodeAddr refers to size of indices into the bytecode.
 using ByteCodeField = uint16_t;
 using ByteCodeAddr = uint32_t;
+using OwningOpRange = llvm::OwningArrayRef<Operation *>;
 
 //===----------------------------------------------------------------------===//
 // PDLByteCodePattern
@@ -80,6 +81,12 @@ private:
   std::vector<const void *> memory;
 
   /// A mutable block of memory used during the matching and rewriting phase of
+  /// the bytecode to store ranges of operations. These are always stored by
+  /// owning references, because at no point in the execution of the byte code
+  /// we get an indexed range (view) of operations.
+  std::vector<OwningOpRange> opRangeMemory;
+
+  /// A mutable block of memory used during the matching and rewriting phase of
   /// the bytecode to store ranges of types.
   std::vector<TypeRange> typeRangeMemory;
   /// A set of type ranges that have been allocated by the byte code interpreter
@@ -92,6 +99,11 @@ private:
   /// A set of value ranges that have been allocated by the byte code
   /// interpreter to provide a guaranteed lifetime.
   std::vector<llvm::OwningArrayRef<Value>> allocatedValueRangeMemory;
+
+  /// The current index of ranges being iterated over for each level of nesting.
+  /// These are always maintained at 0 for the loops that are not active, so we
+  /// do not need to have a separate initialization phase for each loop.
+  std::vector<unsigned> loopIndex;
 
   /// The up-to-date benefits of the patterns held by the bytecode. The order
   /// of this array corresponds 1-1 with the array of patterns in `PDLByteCode`.
@@ -188,11 +200,15 @@ private:
   ByteCodeField maxValueMemoryIndex = 0;
 
   /// The maximum number of different types of ranges.
+  ByteCodeField maxOpRangeCount = 0;
   ByteCodeField maxTypeRangeCount = 0;
   ByteCodeField maxValueRangeCount = 0;
+
+  /// The maximum number of nested loops.
+  ByteCodeField maxLoopLevel = 0;
 };
 
-} // end namespace detail
-} // end namespace mlir
+} // namespace detail
+} // namespace mlir
 
 #endif // MLIR_REWRITE_BYTECODE_H_

@@ -168,9 +168,14 @@ public:
                       unsigned Update, VersionTuple SDKVersion) override;
   void emitBuildVersion(unsigned Platform, unsigned Major, unsigned Minor,
                         unsigned Update, VersionTuple SDKVersion) override;
+  void emitDarwinTargetVariantBuildVersion(unsigned Platform, unsigned Major,
+                                           unsigned Minor, unsigned Update,
+                                           VersionTuple SDKVersion) override;
   void emitThumbFunc(MCSymbol *Func) override;
 
   void emitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
+  void emitConditionalAssignment(MCSymbol *Symbol,
+                                 const MCExpr *Value) override;
   void emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) override;
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
 
@@ -640,6 +645,12 @@ void MCAsmStreamer::emitBuildVersion(unsigned Platform, unsigned Major,
   EmitEOL();
 }
 
+void MCAsmStreamer::emitDarwinTargetVariantBuildVersion(
+    unsigned Platform, unsigned Major, unsigned Minor, unsigned Update,
+    VersionTuple SDKVersion) {
+  emitBuildVersion(Platform, Major, Minor, Update, SDKVersion);
+}
+
 void MCAsmStreamer::emitThumbFunc(MCSymbol *Func) {
   // This needs to emit to a temporary string to get properly quoted
   // MCSymbols when they have spaces in them.
@@ -668,6 +679,15 @@ void MCAsmStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
   }
 
   MCStreamer::emitAssignment(Symbol, Value);
+}
+
+void MCAsmStreamer::emitConditionalAssignment(MCSymbol *Symbol,
+                                              const MCExpr *Value) {
+  OS << ".lto_set_conditional ";
+  Symbol->print(OS, MAI);
+  OS << ", ";
+  Value->print(OS, MAI);
+  EmitEOL();
 }
 
 void MCAsmStreamer::emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) {
@@ -1069,16 +1089,14 @@ void MCAsmStreamer::PrintQuotedString(StringRef Data, raw_ostream &OS) const {
   OS << '"';
 
   if (MAI->hasPairedDoubleQuoteStringConstants()) {
-    for (unsigned i = 0, e = Data.size(); i != e; ++i) {
-      unsigned char C = Data[i];
+    for (unsigned char C : Data) {
       if (C == '"')
         OS << "\"\"";
       else
         OS << (char)C;
     }
   } else {
-    for (unsigned i = 0, e = Data.size(); i != e; ++i) {
-      unsigned char C = Data[i];
+    for (unsigned char C : Data) {
       if (C == '"' || C == '\\') {
         OS << '\\' << (char)C;
         continue;

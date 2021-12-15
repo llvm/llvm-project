@@ -1,0 +1,80 @@
+# RUN: llc %s -o - -experimental-debug-variable-locations=true \
+# RUN:     -run-pass=livedebugvalues  | \
+# RUN: FileCheck %s --implicit-check-not=DBG_VALUE
+#
+# Copy of follow-spill-of-live-value.mir. Test that if we have a variable
+# location with the indirect flag set (i.e. DBG_VALUE $blah, 0...) then when we
+# restore that register in the case of a clobber, we keep the indirectness flag.
+#
+## Capture variable num,
+# CHECK: ![[VARNUM:[0-9]+]] = !DILocalVariable
+#
+# CHECK-LABEL: bb.0.entry:
+# CHECK:       DBG_VALUE $r10, 0, ![[VARNUM]], !DIExpression(DW_OP_LLVM_fragment, 64, 64),
+# CHECK:       DBG_VALUE $rsp, 0, ![[VARNUM]], !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_deref, DW_OP_LLVM_fragment, 64, 64),
+# CHECK:       DBG_VALUE $r10, 0, ![[VARNUM]], !DIExpression(DW_OP_LLVM_fragment, 64, 64),
+
+--- |
+  ; ModuleID = 'missingvar.ll'
+  source_filename = "/fast/fs/llvm34/lib/Analysis/LoopPass.cpp"
+  target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-linux-gnu"
+  
+  define linkonce_odr void @_ZNSt5dequeIPN4llvm4LoopESaIS2_EE13_M_insert_auxESt15_Deque_iteratorIS2_RS2_PS2_EmRKS2_() local_unnamed_addr align 2 !dbg !3 {
+  entry:
+    call void @llvm.dbg.value(metadata i32 0, metadata !8, metadata !DIExpression()), !dbg !7
+    ret void
+  }
+
+  declare void @llvm.dbg.value(metadata, metadata, metadata)
+  
+  !llvm.module.flags = !{!0}
+  !llvm.dbg.cu = !{!1}
+  
+  !0 = !{i32 2, !"Debug Info Version", i32 3}
+  !1 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !2, producer: "beards", isOptimized: true, runtimeVersion: 4, emissionKind: FullDebug)
+  !2 = !DIFile(filename: "bees.cpp", directory: "")
+  !3 = distinct !DISubprogram(name: "nope", scope: !2, file: !2, line: 1, type: !4, spFlags: DISPFlagDefinition, unit: !1)
+  !4 = !DISubroutineType(types: !5)
+  !5 = !{!6}
+  !6 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !7 = !DILocation(line: 1, scope: !3)
+  !8 = !DILocalVariable(name: "flannel", scope: !3)
+
+...
+---
+name:            _ZNSt5dequeIPN4llvm4LoopESaIS2_EE13_M_insert_auxESt15_Deque_iteratorIS2_RS2_PS2_EmRKS2_
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+  - { reg: '$rsi' }
+  - { reg: '$rdx' }
+frameInfo:
+  stackSize:       48
+  offsetAdjustment: -48
+  maxAlignment:    8
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 48
+fixedStack:
+  - { id: 0, type: spill-slot, offset: -56, size: 8, alignment: 8, callee-saved-register: '$rbx' }
+  - { id: 1, type: spill-slot, offset: -48, size: 8, alignment: 16, callee-saved-register: '$r12' }
+  - { id: 2, type: spill-slot, offset: -40, size: 8, alignment: 8, callee-saved-register: '$r13' }
+  - { id: 3, type: spill-slot, offset: -32, size: 8, alignment: 16, callee-saved-register: '$r14' }
+  - { id: 4, type: spill-slot, offset: -24, size: 8, alignment: 8, callee-saved-register: '$r15' }
+  - { id: 5, type: spill-slot, offset: -16, size: 8, alignment: 16, callee-saved-register: '$rbp' }
+stack:
+  - { id: 0, type: spill-slot, offset: -64, size: 8, alignment: 8 }
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $rdx, $rsi, $rbp, $r15, $r14, $r13, $r12, $rbx
+  
+    renamable $r10 = MOV64rm undef renamable $rax, 1, $noreg, 0, $noreg, debug-instr-number 1, debug-location !7 :: (load 8 from `%"class.llvm::Loop"*** undef`)
+    renamable $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
+    DBG_VALUE $r10, 0, !8, !DIExpression(DW_OP_LLVM_fragment, 64, 64), debug-location !7
+    TEST8rr renamable $al, renamable $al, implicit-def $eflags, implicit killed $eax, debug-location !7
+    MOV64mr $rsp, 1, $noreg, -8, $noreg, renamable $r10 :: (store 8 into %stack.0)
+    MOV64mr $rsp, 1, $noreg, -8, $noreg, renamable $rdi :: (store 8 into %stack.0)
+    RET64
+...

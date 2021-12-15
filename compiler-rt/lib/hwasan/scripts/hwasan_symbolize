@@ -10,6 +10,10 @@
 # HWAddressSanitizer offline symbolization script.
 #
 #===------------------------------------------------------------------------===#
+
+from __future__ import print_function
+from __future__ import unicode_literals
+
 import glob
 import os
 import re
@@ -17,6 +21,12 @@ import sys
 import string
 import subprocess
 import argparse
+
+if sys.version_info.major < 3:
+  # Simulate Python 3.x behaviour of defaulting to UTF-8 for print. This is
+  # important in case any symbols are non-ASCII.
+  import codecs
+  sys.stdout = codecs.getwriter("utf-8")(sys.stdout)
 
 last_access_address = None
 last_access_tag = None
@@ -35,21 +45,26 @@ class Symbolizer:
 
   def __open_pipe(self):
     if not self.__pipe:
-      self.__pipe = subprocess.Popen([self.__path, "-inlining", "-functions"],
-                                     stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+      opt = {}
+      if sys.version_info.major > 2:
+        opt['encoding'] = 'utf-8'
+      self.__pipe = subprocess.Popen([self.__path, "--inlining", "--functions"],
+                                     stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                     **opt)
 
-  class __EOF:
+  class __EOF(Exception):
     pass
 
   def __write(self, s):
-    print >>self.__pipe.stdin, s
+    print(s, file=self.__pipe.stdin)
+    self.__pipe.stdin.flush()
     if self.__log:
-      print >>sys.stderr, ("#>>  |%s|" % (s,))
+      print("#>>  |%s|" % (s,), file=sys.stderr)
 
   def __read(self):
     s = self.__pipe.stdout.readline().rstrip()
     if self.__log:
-      print >>sys.stderr, ("# << |%s|" % (s,))
+      print("# << |%s|" % (s,), file=sys.stderr)
     if s == '':
       raise Symbolizer.__EOF
     return s
@@ -69,13 +84,18 @@ class Symbolizer:
       full_path = os.path.join(p, name)
       if os.path.exists(full_path):
         return full_path
+      apex_prefix = "apex/com.android."
+      if name.startswith(apex_prefix):
+        full_path = os.path.join(p, "apex/com.google.android." + name[len(apex_prefix):])
+        if os.path.exists(full_path):
+          return full_path
     # Try stripping extra path components as the last resort.
     for p in self.__binary_prefixes:
       full_path = os.path.join(p, os.path.basename(name))
       if os.path.exists(full_path):
         return full_path
     if name not in self.__warnings:
-      print >>sys.stderr, "Could not find symbols for", name
+      print("Could not find symbols for", name, file=sys.stderr)
       self.__warnings.add(name)
     return None
 
@@ -128,16 +148,16 @@ def symbolize_line(line, symbolizer_path):
     frames = list(symbolizer.iter_call_stack(binary, addr))
 
     if len(frames) > 0:
-      print "%s#%s%s%s in %s" % (match.group(1).encode('utf-8'), match.group(2).encode('utf-8'),
-                                 match.group(3).encode('utf-8'), frames[0][0], frames[0][1])
+      print("%s#%s%s%s in %s" % (match.group(1), match.group(2),
+                                 match.group(3), frames[0][0], frames[0][1]))
       for i in range(1, len(frames)):
         space1 = ' ' * match.end(1)
         space2 = ' ' * (match.start(4) - match.end(1) - 2)
-        print "%s->%s%s in %s" % (space1, space2, frames[i][0], frames[i][1])
+        print("%s->%s%s in %s" % (space1, space2, frames[i][0], frames[i][1]))
     else:
-      print line.rstrip().encode('utf-8')
+      print(line.rstrip())
   else:
-    print line.rstrip().encode('utf-8')
+    print(line.rstrip())
 
 def save_access_address(line):
   global last_access_address, last_access_tag
@@ -177,10 +197,10 @@ def process_stack_history(line, symbolizer, ignore_tags=False):
       tag_offset = local[5]
       if not ignore_tags and (tag_offset is None or base_tag ^ tag_offset != last_access_tag):
         continue
-      print ''
-      print 'Potentially referenced stack object:'
-      print '  %d bytes inside variable "%s" in stack frame of function "%s"' % (obj_offset, local[2], local[0])
-      print '  at %s' % (local[1],)
+      print('')
+      print('Potentially referenced stack object:')
+      print('  %d bytes inside variable "%s" in stack frame of function "%s"' % (obj_offset, local[2], local[0]))
+      print('  at %s' % (local[1],))
     return True
   return False
 
@@ -204,7 +224,7 @@ if not binary_prefixes:
 
 for p in binary_prefixes:
   if not os.path.isdir(p):
-    print >>sys.stderr, "Symbols path does not exist or is not a directory:", p
+    print("Symbols path does not exist or is not a directory:", p, file=sys.stderr)
     sys.exit(1)
 
 # Source location.
@@ -262,24 +282,25 @@ if not symbolizer_path:
       break
 
 if not os.path.exists(symbolizer_path):
-  print >>sys.stderr, "Symbolizer path does not exist:", symbolizer_path
+  print("Symbolizer path does not exist:", symbolizer_path, file=sys.stderr)
   sys.exit(1)
 
 if args.v:
-  print "Looking for symbols in:"
+  print("Looking for symbols in:")
   for s in binary_prefixes:
-    print "  %s" % (s,)
-  print "Stripping source path prefixes:"
+    print("  %s" % (s,))
+  print("Stripping source path prefixes:")
   for s in paths_to_cut:
-    print "  %s" % (s,)
-  print "Using llvm-symbolizer binary in:\n  %s" % (symbolizer_path,)
-  print
+    print("  %s" % (s,))
+  print("Using llvm-symbolizer binary in:\n  %s" % (symbolizer_path,))
+  print()
 
 symbolizer = Symbolizer(symbolizer_path, binary_prefixes, paths_to_cut)
 symbolizer.enable_logging(args.d)
 
 for line in sys.stdin:
-  line = line.decode('utf-8')
+  if sys.version_info.major < 3:
+    line = line.decode('utf-8')
   save_access_address(line)
   if process_stack_history(line, symbolizer, ignore_tags=args.ignore_tags):
     continue

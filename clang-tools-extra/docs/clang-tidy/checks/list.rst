@@ -92,6 +92,7 @@ Clang-Tidy Checks
    `bugprone-string-constructor <bugprone-string-constructor.html>`_, "Yes"
    `bugprone-string-integer-assignment <bugprone-string-integer-assignment.html>`_, "Yes"
    `bugprone-string-literal-with-embedded-nul <bugprone-string-literal-with-embedded-nul.html>`_,
+   `bugprone-stringview-nullptr <bugprone-stringview-nullptr.html>`_, "Yes"
    `bugprone-suspicious-enum-usage <bugprone-suspicious-enum-usage.html>`_,
    `bugprone-suspicious-include <bugprone-suspicious-include.html>`_,
    `bugprone-suspicious-memory-comparison <bugprone-suspicious-memory-comparison.html>`_,
@@ -260,6 +261,7 @@ Clang-Tidy Checks
    `mpi-buffer-deref <mpi-buffer-deref.html>`_, "Yes"
    `mpi-type-mismatch <mpi-type-mismatch.html>`_, "Yes"
    `objc-avoid-nserror-init <objc-avoid-nserror-init.html>`_,
+   `objc-assert-equals <objc-assert-equals.html>`_, "Yes"
    `objc-dealloc-in-category <objc-dealloc-in-category.html>`_,
    `objc-forbidden-subclassing <objc-forbidden-subclassing.html>`_,
    `objc-missing-hash <objc-missing-hash.html>`_,

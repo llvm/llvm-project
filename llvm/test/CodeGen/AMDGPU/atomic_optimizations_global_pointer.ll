@@ -4,8 +4,8 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX89,GFX9 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX10,GFX1064 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX10,GFX1032 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -amdgpu-insert-delay-alu=0 -mattr=-wavefrontsize32,+wavefrontsize64 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX1164 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -amdgpu-insert-delay-alu=0 -mattr=+wavefrontsize32,-wavefrontsize64 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX1132 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX1164 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize32,-wavefrontsize64 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX1132 %s
 
 declare i32 @llvm.amdgcn.workitem.id.x()
 
@@ -21,7 +21,7 @@ define amdgpu_kernel void @add_i32_constant(i32 addrspace(1)* %out, i32 addrspac
 ; GFX7LESS-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX7LESS-NEXT:    ; implicit-def: $vgpr1
 ; GFX7LESS-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX7LESS-NEXT:    s_cbranch_execz BB0_2
+; GFX7LESS-NEXT:    s_cbranch_execz .LBB0_2
 ; GFX7LESS-NEXT:  ; %bb.1:
 ; GFX7LESS-NEXT:    s_mov_b32 s11, 0xf000
 ; GFX7LESS-NEXT:    s_bcnt1_i32_b64 s6, s[6:7]
@@ -35,7 +35,7 @@ define amdgpu_kernel void @add_i32_constant(i32 addrspace(1)* %out, i32 addrspac
 ; GFX7LESS-NEXT:    buffer_atomic_add v1, off, s[8:11], 0 glc
 ; GFX7LESS-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7LESS-NEXT:    buffer_wbinvl1
-; GFX7LESS-NEXT:  BB0_2:
+; GFX7LESS-NEXT:  .LBB0_2:
 ; GFX7LESS-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7LESS-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7LESS-NEXT:    s_mov_b32 s3, 0xf000
@@ -54,7 +54,7 @@ define amdgpu_kernel void @add_i32_constant(i32 addrspace(1)* %out, i32 addrspac
 ; GFX89-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX89-NEXT:    ; implicit-def: $vgpr1
 ; GFX89-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX89-NEXT:    s_cbranch_execz BB0_2
+; GFX89-NEXT:    s_cbranch_execz .LBB0_2
 ; GFX89-NEXT:  ; %bb.1:
 ; GFX89-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX89-NEXT:    s_mov_b32 s8, s2
@@ -68,7 +68,7 @@ define amdgpu_kernel void @add_i32_constant(i32 addrspace(1)* %out, i32 addrspac
 ; GFX89-NEXT:    buffer_atomic_add v1, off, s[8:11], 0 glc
 ; GFX89-NEXT:    s_waitcnt vmcnt(0)
 ; GFX89-NEXT:    buffer_wbinvl1_vol
-; GFX89-NEXT:  BB0_2:
+; GFX89-NEXT:  .LBB0_2:
 ; GFX89-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX89-NEXT:    v_readfirstlane_b32 s4, v1
 ; GFX89-NEXT:    s_waitcnt lgkmcnt(0)
@@ -87,7 +87,7 @@ define amdgpu_kernel void @add_i32_constant(i32 addrspace(1)* %out, i32 addrspac
 ; GFX1064-NEXT:    v_mbcnt_hi_u32_b32 v0, s7, v0
 ; GFX1064-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX1064-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX1064-NEXT:    s_cbranch_execz BB0_2
+; GFX1064-NEXT:    s_cbranch_execz .LBB0_2
 ; GFX1064-NEXT:  ; %bb.1:
 ; GFX1064-NEXT:    s_bcnt1_i32_b64 s6, s[6:7]
 ; GFX1064-NEXT:    s_mov_b32 s11, 0x31016000
@@ -103,7 +103,7 @@ define amdgpu_kernel void @add_i32_constant(i32 addrspace(1)* %out, i32 addrspac
 ; GFX1064-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1064-NEXT:    buffer_gl0_inv
 ; GFX1064-NEXT:    buffer_gl1_inv
-; GFX1064-NEXT:  BB0_2:
+; GFX1064-NEXT:  .LBB0_2:
 ; GFX1064-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX1064-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
@@ -122,7 +122,7 @@ define amdgpu_kernel void @add_i32_constant(i32 addrspace(1)* %out, i32 addrspac
 ; GFX1032-NEXT:    v_mbcnt_lo_u32_b32 v0, s5, 0
 ; GFX1032-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX1032-NEXT:    s_and_saveexec_b32 s4, vcc_lo
-; GFX1032-NEXT:    s_cbranch_execz BB0_2
+; GFX1032-NEXT:    s_cbranch_execz .LBB0_2
 ; GFX1032-NEXT:  ; %bb.1:
 ; GFX1032-NEXT:    s_bcnt1_i32_b32 s5, s5
 ; GFX1032-NEXT:    s_mov_b32 s11, 0x31016000
@@ -138,7 +138,7 @@ define amdgpu_kernel void @add_i32_constant(i32 addrspace(1)* %out, i32 addrspac
 ; GFX1032-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1032-NEXT:    buffer_gl0_inv
 ; GFX1032-NEXT:    buffer_gl1_inv
-; GFX1032-NEXT:  BB0_2:
+; GFX1032-NEXT:  .LBB0_2:
 ; GFX1032-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX1032-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
@@ -154,11 +154,13 @@ define amdgpu_kernel void @add_i32_constant(i32 addrspace(1)* %out, i32 addrspac
 ; GFX1164-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GFX1164-NEXT:    s_mov_b64 s[6:7], exec
 ; GFX1164-NEXT:    ; implicit-def: $vgpr1
+; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-NEXT:    v_mbcnt_lo_u32_b32 v0, s6, 0
 ; GFX1164-NEXT:    v_mbcnt_hi_u32_b32 v0, s7, v0
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1164-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX1164-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX1164-NEXT:    s_cbranch_execz BB0_2
+; GFX1164-NEXT:    s_cbranch_execz .LBB0_2
 ; GFX1164-NEXT:  ; %bb.1:
 ; GFX1164-NEXT:    s_bcnt1_i32_b64 s6, s[6:7]
 ; GFX1164-NEXT:    s_mov_b32 s11, 0x31016000
@@ -174,11 +176,12 @@ define amdgpu_kernel void @add_i32_constant(i32 addrspace(1)* %out, i32 addrspac
 ; GFX1164-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1164-NEXT:    buffer_gl0_inv
 ; GFX1164-NEXT:    buffer_gl1_inv
-; GFX1164-NEXT:  BB0_2:
+; GFX1164-NEXT:  .LBB0_2:
 ; GFX1164-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX1164-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX1164-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1164-NEXT:    v_mad_u32_u24 v0, v0, 5, s2
 ; GFX1164-NEXT:    s_mov_b32 s2, -1
 ; GFX1164-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
@@ -189,10 +192,11 @@ define amdgpu_kernel void @add_i32_constant(i32 addrspace(1)* %out, i32 addrspac
 ; GFX1132-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GFX1132-NEXT:    s_mov_b32 s5, exec_lo
 ; GFX1132-NEXT:    ; implicit-def: $vgpr1
+; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132-NEXT:    v_mbcnt_lo_u32_b32 v0, s5, 0
 ; GFX1132-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX1132-NEXT:    s_and_saveexec_b32 s4, vcc_lo
-; GFX1132-NEXT:    s_cbranch_execz BB0_2
+; GFX1132-NEXT:    s_cbranch_execz .LBB0_2
 ; GFX1132-NEXT:  ; %bb.1:
 ; GFX1132-NEXT:    s_bcnt1_i32_b32 s5, s5
 ; GFX1132-NEXT:    s_mov_b32 s11, 0x31016000
@@ -208,11 +212,12 @@ define amdgpu_kernel void @add_i32_constant(i32 addrspace(1)* %out, i32 addrspac
 ; GFX1132-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1132-NEXT:    buffer_gl0_inv
 ; GFX1132-NEXT:    buffer_gl1_inv
-; GFX1132-NEXT:  BB0_2:
+; GFX1132-NEXT:  .LBB0_2:
 ; GFX1132-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GFX1132-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1132-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX1132-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1132-NEXT:    v_mad_u32_u24 v0, v0, 5, s2
 ; GFX1132-NEXT:    s_mov_b32 s2, -1
 ; GFX1132-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
@@ -234,7 +239,7 @@ define amdgpu_kernel void @add_i32_uniform(i32 addrspace(1)* %out, i32 addrspace
 ; GFX7LESS-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX7LESS-NEXT:    ; implicit-def: $vgpr1
 ; GFX7LESS-NEXT:    s_and_saveexec_b64 s[0:1], vcc
-; GFX7LESS-NEXT:    s_cbranch_execz BB1_2
+; GFX7LESS-NEXT:    s_cbranch_execz .LBB1_2
 ; GFX7LESS-NEXT:  ; %bb.1:
 ; GFX7LESS-NEXT:    s_mov_b32 s15, 0xf000
 ; GFX7LESS-NEXT:    s_bcnt1_i32_b64 s2, s[2:3]
@@ -248,7 +253,7 @@ define amdgpu_kernel void @add_i32_uniform(i32 addrspace(1)* %out, i32 addrspace
 ; GFX7LESS-NEXT:    buffer_atomic_add v1, off, s[12:15], 0 glc
 ; GFX7LESS-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7LESS-NEXT:    buffer_wbinvl1
-; GFX7LESS-NEXT:  BB1_2:
+; GFX7LESS-NEXT:  .LBB1_2:
 ; GFX7LESS-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX7LESS-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7LESS-NEXT:    s_mov_b32 s7, 0xf000
@@ -269,7 +274,7 @@ define amdgpu_kernel void @add_i32_uniform(i32 addrspace(1)* %out, i32 addrspace
 ; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX8-NEXT:    ; implicit-def: $vgpr1
 ; GFX8-NEXT:    s_and_saveexec_b64 s[0:1], vcc
-; GFX8-NEXT:    s_cbranch_execz BB1_2
+; GFX8-NEXT:    s_cbranch_execz .LBB1_2
 ; GFX8-NEXT:  ; %bb.1:
 ; GFX8-NEXT:    s_bcnt1_i32_b64 s2, s[2:3]
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
@@ -283,7 +288,7 @@ define amdgpu_kernel void @add_i32_uniform(i32 addrspace(1)* %out, i32 addrspace
 ; GFX8-NEXT:    buffer_atomic_add v1, off, s[12:15], 0 glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    buffer_wbinvl1_vol
-; GFX8-NEXT:  BB1_2:
+; GFX8-NEXT:  .LBB1_2:
 ; GFX8-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_mul_lo_u32 v0, s8, v0
@@ -304,7 +309,7 @@ define amdgpu_kernel void @add_i32_uniform(i32 addrspace(1)* %out, i32 addrspace
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX9-NEXT:    ; implicit-def: $vgpr1
 ; GFX9-NEXT:    s_and_saveexec_b64 s[0:1], vcc
-; GFX9-NEXT:    s_cbranch_execz BB1_2
+; GFX9-NEXT:    s_cbranch_execz .LBB1_2
 ; GFX9-NEXT:  ; %bb.1:
 ; GFX9-NEXT:    s_bcnt1_i32_b64 s2, s[2:3]
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -318,7 +323,7 @@ define amdgpu_kernel void @add_i32_uniform(i32 addrspace(1)* %out, i32 addrspace
 ; GFX9-NEXT:    buffer_atomic_add v1, off, s[12:15], 0 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
-; GFX9-NEXT:  BB1_2:
+; GFX9-NEXT:  .LBB1_2:
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_mul_lo_u32 v0, s8, v0
@@ -340,7 +345,7 @@ define amdgpu_kernel void @add_i32_uniform(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1064-NEXT:    v_mbcnt_hi_u32_b32 v0, s3, v0
 ; GFX1064-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX1064-NEXT:    s_and_saveexec_b64 s[0:1], vcc
-; GFX1064-NEXT:    s_cbranch_execz BB1_2
+; GFX1064-NEXT:    s_cbranch_execz .LBB1_2
 ; GFX1064-NEXT:  ; %bb.1:
 ; GFX1064-NEXT:    s_bcnt1_i32_b64 s2, s[2:3]
 ; GFX1064-NEXT:    s_mov_b32 s15, 0x31016000
@@ -356,7 +361,7 @@ define amdgpu_kernel void @add_i32_uniform(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1064-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1064-NEXT:    buffer_gl0_inv
 ; GFX1064-NEXT:    buffer_gl1_inv
-; GFX1064-NEXT:  BB1_2:
+; GFX1064-NEXT:  .LBB1_2:
 ; GFX1064-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX1064-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
@@ -378,7 +383,7 @@ define amdgpu_kernel void @add_i32_uniform(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1032-NEXT:    v_mbcnt_lo_u32_b32 v0, s3, 0
 ; GFX1032-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX1032-NEXT:    s_and_saveexec_b32 s0, vcc_lo
-; GFX1032-NEXT:    s_cbranch_execz BB1_2
+; GFX1032-NEXT:    s_cbranch_execz .LBB1_2
 ; GFX1032-NEXT:  ; %bb.1:
 ; GFX1032-NEXT:    s_bcnt1_i32_b32 s1, s3
 ; GFX1032-NEXT:    s_mov_b32 s11, 0x31016000
@@ -394,7 +399,7 @@ define amdgpu_kernel void @add_i32_uniform(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1032-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1032-NEXT:    buffer_gl0_inv
 ; GFX1032-NEXT:    buffer_gl1_inv
-; GFX1032-NEXT:  BB1_2:
+; GFX1032-NEXT:  .LBB1_2:
 ; GFX1032-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX1032-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
@@ -413,11 +418,13 @@ define amdgpu_kernel void @add_i32_uniform(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1164-NEXT:    s_load_b32 s8, s[0:1], 0x34
 ; GFX1164-NEXT:    s_mov_b64 s[2:3], exec
 ; GFX1164-NEXT:    ; implicit-def: $vgpr1
+; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-NEXT:    v_mbcnt_lo_u32_b32 v0, s2, 0
 ; GFX1164-NEXT:    v_mbcnt_hi_u32_b32 v0, s3, v0
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1164-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX1164-NEXT:    s_and_saveexec_b64 s[0:1], vcc
-; GFX1164-NEXT:    s_cbranch_execz BB1_2
+; GFX1164-NEXT:    s_cbranch_execz .LBB1_2
 ; GFX1164-NEXT:  ; %bb.1:
 ; GFX1164-NEXT:    s_bcnt1_i32_b64 s2, s[2:3]
 ; GFX1164-NEXT:    s_mov_b32 s15, 0x31016000
@@ -433,13 +440,14 @@ define amdgpu_kernel void @add_i32_uniform(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1164-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1164-NEXT:    buffer_gl0_inv
 ; GFX1164-NEXT:    buffer_gl1_inv
-; GFX1164-NEXT:  BB1_2:
+; GFX1164-NEXT:  .LBB1_2:
 ; GFX1164-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX1164-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164-NEXT:    v_mul_lo_u32 v0, s8, v0
 ; GFX1164-NEXT:    v_readfirstlane_b32 s0, v1
 ; GFX1164-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX1164-NEXT:    s_mov_b32 s6, -1
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1164-NEXT:    v_add_nc_u32_e32 v0, s0, v0
 ; GFX1164-NEXT:    buffer_store_b32 v0, off, s[4:7], 0
 ; GFX1164-NEXT:    s_endpgm
@@ -451,10 +459,11 @@ define amdgpu_kernel void @add_i32_uniform(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1132-NEXT:    s_load_b32 s0, s[0:1], 0x34
 ; GFX1132-NEXT:    s_mov_b32 s2, exec_lo
 ; GFX1132-NEXT:    ; implicit-def: $vgpr1
+; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132-NEXT:    v_mbcnt_lo_u32_b32 v0, s2, 0
 ; GFX1132-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX1132-NEXT:    s_and_saveexec_b32 s1, vcc_lo
-; GFX1132-NEXT:    s_cbranch_execz BB1_2
+; GFX1132-NEXT:    s_cbranch_execz .LBB1_2
 ; GFX1132-NEXT:  ; %bb.1:
 ; GFX1132-NEXT:    s_bcnt1_i32_b32 s2, s2
 ; GFX1132-NEXT:    s_mov_b32 s11, 0x31016000
@@ -470,13 +479,14 @@ define amdgpu_kernel void @add_i32_uniform(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1132-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1132-NEXT:    buffer_gl0_inv
 ; GFX1132-NEXT:    buffer_gl1_inv
-; GFX1132-NEXT:  BB1_2:
+; GFX1132-NEXT:  .LBB1_2:
 ; GFX1132-NEXT:    s_or_b32 exec_lo, exec_lo, s1
 ; GFX1132-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1132-NEXT:    v_mul_lo_u32 v0, s0, v0
 ; GFX1132-NEXT:    v_readfirstlane_b32 s0, v1
 ; GFX1132-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX1132-NEXT:    s_mov_b32 s6, -1
+; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1132-NEXT:    v_add_nc_u32_e32 v0, s0, v0
 ; GFX1132-NEXT:    buffer_store_b32 v0, off, s[4:7], 0
 ; GFX1132-NEXT:    s_endpgm
@@ -537,7 +547,7 @@ define amdgpu_kernel void @add_i32_varying(i32 addrspace(1)* %out, i32 addrspace
 ; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX8-NEXT:    ; implicit-def: $vgpr0
 ; GFX8-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX8-NEXT:    s_cbranch_execz BB2_2
+; GFX8-NEXT:    s_cbranch_execz .LBB2_2
 ; GFX8-NEXT:  ; %bb.1:
 ; GFX8-NEXT:    s_mov_b32 s11, 0xf000
 ; GFX8-NEXT:    s_mov_b32 s10, -1
@@ -549,7 +559,7 @@ define amdgpu_kernel void @add_i32_varying(i32 addrspace(1)* %out, i32 addrspace
 ; GFX8-NEXT:    buffer_atomic_add v0, off, s[8:11], 0 glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    buffer_wbinvl1_vol
-; GFX8-NEXT:  BB2_2:
+; GFX8-NEXT:  .LBB2_2:
 ; GFX8-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX8-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX8-NEXT:    v_mov_b32_e32 v0, v1
@@ -591,7 +601,7 @@ define amdgpu_kernel void @add_i32_varying(i32 addrspace(1)* %out, i32 addrspace
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX9-NEXT:    ; implicit-def: $vgpr0
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX9-NEXT:    s_cbranch_execz BB2_2
+; GFX9-NEXT:    s_cbranch_execz .LBB2_2
 ; GFX9-NEXT:  ; %bb.1:
 ; GFX9-NEXT:    s_mov_b32 s11, 0xf000
 ; GFX9-NEXT:    s_mov_b32 s10, -1
@@ -603,7 +613,7 @@ define amdgpu_kernel void @add_i32_varying(i32 addrspace(1)* %out, i32 addrspace
 ; GFX9-NEXT:    buffer_atomic_add v0, off, s[8:11], 0 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
-; GFX9-NEXT:  BB2_2:
+; GFX9-NEXT:  .LBB2_2:
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v1
@@ -655,7 +665,7 @@ define amdgpu_kernel void @add_i32_varying(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1064-NEXT:    s_mov_b32 s6, -1
 ; GFX1064-NEXT:    ; implicit-def: $vgpr0
 ; GFX1064-NEXT:    s_and_saveexec_b64 s[8:9], vcc
-; GFX1064-NEXT:    s_cbranch_execz BB2_2
+; GFX1064-NEXT:    s_cbranch_execz .LBB2_2
 ; GFX1064-NEXT:  ; %bb.1:
 ; GFX1064-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX1064-NEXT:    s_mov_b32 s7, 0x31016000
@@ -668,7 +678,7 @@ define amdgpu_kernel void @add_i32_varying(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1064-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1064-NEXT:    buffer_gl0_inv
 ; GFX1064-NEXT:    buffer_gl1_inv
-; GFX1064-NEXT:  BB2_2:
+; GFX1064-NEXT:  .LBB2_2:
 ; GFX1064-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX1064-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
@@ -711,7 +721,7 @@ define amdgpu_kernel void @add_i32_varying(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1032-NEXT:    s_mov_b32 s6, -1
 ; GFX1032-NEXT:    ; implicit-def: $vgpr0
 ; GFX1032-NEXT:    s_and_saveexec_b32 s8, vcc_lo
-; GFX1032-NEXT:    s_cbranch_execz BB2_2
+; GFX1032-NEXT:    s_cbranch_execz .LBB2_2
 ; GFX1032-NEXT:  ; %bb.1:
 ; GFX1032-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX1032-NEXT:    s_mov_b32 s7, 0x31016000
@@ -724,7 +734,7 @@ define amdgpu_kernel void @add_i32_varying(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1032-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1032-NEXT:    buffer_gl0_inv
 ; GFX1032-NEXT:    buffer_gl1_inv
-; GFX1032-NEXT:  BB2_2:
+; GFX1032-NEXT:  .LBB2_2:
 ; GFX1032-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX1032-NEXT:    s_or_b32 exec_lo, exec_lo, s8
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
@@ -743,17 +753,23 @@ define amdgpu_kernel void @add_i32_varying(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1164-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1164-NEXT:    s_not_b64 exec, exec
 ; GFX1164-NEXT:    s_or_saveexec_b64 s[2:3], -1
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1164-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:1 row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX1164-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX1164-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:2 row_mask:0xf bank_mask:0xf bound_ctrl:1
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:4 row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX1164-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:8 row_mask:0xf bank_mask:0xf bound_ctrl:1
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX1164-NEXT:    v_permlanex16_b32 v2, v2, -1, -1
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-NEXT:    v_add_nc_u32_dpp v1, v2, v1 quad_perm:[0,1,2,3] row_mask:0xa bank_mask:0xf
 ; GFX1164-NEXT:    v_readlane_b32 s4, v1, 31
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX1164-NEXT:    v_add_nc_u32_dpp v1, v2, v1 quad_perm:[0,1,2,3] row_mask:0xc bank_mask:0xf
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1164-NEXT:    v_readlane_b32 s6, v1, 15
 ; GFX1164-NEXT:    v_mov_b32_dpp v3, v1 row_shr:1 row_mask:0xf bank_mask:0xf
 ; GFX1164-NEXT:    s_mov_b64 exec, s[2:3]
@@ -762,12 +778,14 @@ define amdgpu_kernel void @add_i32_varying(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1164-NEXT:    v_readlane_b32 s7, v1, 31
 ; GFX1164-NEXT:    v_writelane_b32 v3, s6, 16
 ; GFX1164-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1164-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
 ; GFX1164-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; GFX1164-NEXT:    v_readlane_b32 s8, v1, 47
 ; GFX1164-NEXT:    v_readlane_b32 s9, v1, 63
 ; GFX1164-NEXT:    v_writelane_b32 v3, s7, 32
 ; GFX1164-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1164-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
 ; GFX1164-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GFX1164-NEXT:    s_mov_b32 s4, s9
@@ -777,7 +795,7 @@ define amdgpu_kernel void @add_i32_varying(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1164-NEXT:    s_mov_b32 s6, -1
 ; GFX1164-NEXT:    ; implicit-def: $vgpr0
 ; GFX1164-NEXT:    s_and_saveexec_b64 s[8:9], vcc
-; GFX1164-NEXT:    s_cbranch_execz BB2_2
+; GFX1164-NEXT:    s_cbranch_execz .LBB2_2
 ; GFX1164-NEXT:  ; %bb.1:
 ; GFX1164-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX1164-NEXT:    s_mov_b32 s7, 0x31016000
@@ -790,12 +808,13 @@ define amdgpu_kernel void @add_i32_varying(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1164-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1164-NEXT:    buffer_gl0_inv
 ; GFX1164-NEXT:    buffer_gl1_inv
-; GFX1164-NEXT:  BB2_2:
+; GFX1164-NEXT:  .LBB2_2:
 ; GFX1164-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; GFX1164-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX1164-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX1164-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1164-NEXT:    v_add_nc_u32_e32 v0, s2, v0
 ; GFX1164-NEXT:    s_mov_b32 s2, s6
 ; GFX1164-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
@@ -808,23 +827,29 @@ define amdgpu_kernel void @add_i32_varying(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1132-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1132-NEXT:    s_not_b32 exec_lo, exec_lo
 ; GFX1132-NEXT:    s_or_saveexec_b32 s2, -1
+; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:1 row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX1132-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:2 row_mask:0xf bank_mask:0xf bound_ctrl:1
+; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:4 row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX1132-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:8 row_mask:0xf bank_mask:0xf bound_ctrl:1
+; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX1132-NEXT:    v_permlanex16_b32 v2, v2, -1, -1
 ; GFX1132-NEXT:    s_mov_b32 exec_lo, s2
 ; GFX1132-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GFX1132-NEXT:    s_or_saveexec_b32 s4, -1
+; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1132-NEXT:    v_add_nc_u32_dpp v1, v2, v1 quad_perm:[0,1,2,3] row_mask:0xa bank_mask:0xf
 ; GFX1132-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX1132-NEXT:    v_readlane_b32 s5, v1, 15
 ; GFX1132-NEXT:    v_readlane_b32 s6, v1, 31
+; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1132-NEXT:    v_mov_b32_dpp v3, v1 row_shr:1 row_mask:0xf bank_mask:0xf
 ; GFX1132-NEXT:    s_mov_b32 exec_lo, s4
 ; GFX1132-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
 ; GFX1132-NEXT:    s_or_saveexec_b32 s4, -1
+; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1132-NEXT:    v_writelane_b32 v3, s5, 16
 ; GFX1132-NEXT:    s_mov_b32 exec_lo, s4
 ; GFX1132-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
@@ -832,7 +857,7 @@ define amdgpu_kernel void @add_i32_varying(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1132-NEXT:    s_mov_b32 s6, -1
 ; GFX1132-NEXT:    ; implicit-def: $vgpr0
 ; GFX1132-NEXT:    s_and_saveexec_b32 s8, vcc_lo
-; GFX1132-NEXT:    s_cbranch_execz BB2_2
+; GFX1132-NEXT:    s_cbranch_execz .LBB2_2
 ; GFX1132-NEXT:  ; %bb.1:
 ; GFX1132-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX1132-NEXT:    s_mov_b32 s7, 0x31016000
@@ -845,12 +870,13 @@ define amdgpu_kernel void @add_i32_varying(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1132-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1132-NEXT:    buffer_gl0_inv
 ; GFX1132-NEXT:    buffer_gl1_inv
-; GFX1132-NEXT:  BB2_2:
+; GFX1132-NEXT:  .LBB2_2:
 ; GFX1132-NEXT:    s_or_b32 exec_lo, exec_lo, s8
 ; GFX1132-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1132-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX1132-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX1132-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1132-NEXT:    v_add_nc_u32_e32 v0, s2, v0
 ; GFX1132-NEXT:    s_mov_b32 s2, s6
 ; GFX1132-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
@@ -872,7 +898,7 @@ define amdgpu_kernel void @add_i64_constant(i64 addrspace(1)* %out, i64 addrspac
 ; GFX7LESS-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
 ; GFX7LESS-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX7LESS-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX7LESS-NEXT:    s_cbranch_execz BB3_2
+; GFX7LESS-NEXT:    s_cbranch_execz .LBB3_2
 ; GFX7LESS-NEXT:  ; %bb.1:
 ; GFX7LESS-NEXT:    s_mov_b32 s11, 0xf000
 ; GFX7LESS-NEXT:    s_bcnt1_i32_b64 s6, s[6:7]
@@ -887,7 +913,7 @@ define amdgpu_kernel void @add_i64_constant(i64 addrspace(1)* %out, i64 addrspac
 ; GFX7LESS-NEXT:    buffer_atomic_add_x2 v[0:1], off, s[8:11], 0 glc
 ; GFX7LESS-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7LESS-NEXT:    buffer_wbinvl1
-; GFX7LESS-NEXT:  BB3_2:
+; GFX7LESS-NEXT:  .LBB3_2:
 ; GFX7LESS-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7LESS-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7LESS-NEXT:    s_mov_b32 s3, 0xf000
@@ -912,7 +938,7 @@ define amdgpu_kernel void @add_i64_constant(i64 addrspace(1)* %out, i64 addrspac
 ; GFX89-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
 ; GFX89-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX89-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX89-NEXT:    s_cbranch_execz BB3_2
+; GFX89-NEXT:    s_cbranch_execz .LBB3_2
 ; GFX89-NEXT:  ; %bb.1:
 ; GFX89-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX89-NEXT:    s_mov_b32 s8, s2
@@ -927,7 +953,7 @@ define amdgpu_kernel void @add_i64_constant(i64 addrspace(1)* %out, i64 addrspac
 ; GFX89-NEXT:    buffer_atomic_add_x2 v[0:1], off, s[8:11], 0 glc
 ; GFX89-NEXT:    s_waitcnt vmcnt(0)
 ; GFX89-NEXT:    buffer_wbinvl1_vol
-; GFX89-NEXT:  BB3_2:
+; GFX89-NEXT:  .LBB3_2:
 ; GFX89-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX89-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX89-NEXT:    v_readfirstlane_b32 s2, v0
@@ -950,7 +976,7 @@ define amdgpu_kernel void @add_i64_constant(i64 addrspace(1)* %out, i64 addrspac
 ; GFX1064-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX1064-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
 ; GFX1064-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX1064-NEXT:    s_cbranch_execz BB3_2
+; GFX1064-NEXT:    s_cbranch_execz .LBB3_2
 ; GFX1064-NEXT:  ; %bb.1:
 ; GFX1064-NEXT:    s_bcnt1_i32_b64 s6, s[6:7]
 ; GFX1064-NEXT:    v_mov_b32_e32 v1, 0
@@ -967,7 +993,7 @@ define amdgpu_kernel void @add_i64_constant(i64 addrspace(1)* %out, i64 addrspac
 ; GFX1064-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1064-NEXT:    buffer_gl0_inv
 ; GFX1064-NEXT:    buffer_gl1_inv
-; GFX1064-NEXT:  BB3_2:
+; GFX1064-NEXT:  .LBB3_2:
 ; GFX1064-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX1064-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
@@ -987,7 +1013,7 @@ define amdgpu_kernel void @add_i64_constant(i64 addrspace(1)* %out, i64 addrspac
 ; GFX1032-NEXT:    v_mbcnt_lo_u32_b32 v2, s5, 0
 ; GFX1032-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v2
 ; GFX1032-NEXT:    s_and_saveexec_b32 s4, vcc_lo
-; GFX1032-NEXT:    s_cbranch_execz BB3_2
+; GFX1032-NEXT:    s_cbranch_execz .LBB3_2
 ; GFX1032-NEXT:  ; %bb.1:
 ; GFX1032-NEXT:    s_bcnt1_i32_b32 s5, s5
 ; GFX1032-NEXT:    v_mov_b32_e32 v1, 0
@@ -1004,7 +1030,7 @@ define amdgpu_kernel void @add_i64_constant(i64 addrspace(1)* %out, i64 addrspac
 ; GFX1032-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1032-NEXT:    buffer_gl0_inv
 ; GFX1032-NEXT:    buffer_gl1_inv
-; GFX1032-NEXT:  BB3_2:
+; GFX1032-NEXT:  .LBB3_2:
 ; GFX1032-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX1032-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1020,12 +1046,14 @@ define amdgpu_kernel void @add_i64_constant(i64 addrspace(1)* %out, i64 addrspac
 ; GFX1164:       ; %bb.0: ; %entry
 ; GFX1164-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GFX1164-NEXT:    s_mov_b64 s[6:7], exec
+; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-NEXT:    v_mbcnt_lo_u32_b32 v0, s6, 0
 ; GFX1164-NEXT:    v_mbcnt_hi_u32_b32 v2, s7, v0
 ; GFX1164-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1164-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
 ; GFX1164-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX1164-NEXT:    s_cbranch_execz BB3_2
+; GFX1164-NEXT:    s_cbranch_execz .LBB3_2
 ; GFX1164-NEXT:  ; %bb.1:
 ; GFX1164-NEXT:    s_bcnt1_i32_b64 s6, s[6:7]
 ; GFX1164-NEXT:    v_mov_b32_e32 v1, 0
@@ -1042,11 +1070,12 @@ define amdgpu_kernel void @add_i64_constant(i64 addrspace(1)* %out, i64 addrspac
 ; GFX1164-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1164-NEXT:    buffer_gl0_inv
 ; GFX1164-NEXT:    buffer_gl1_inv
-; GFX1164-NEXT:  BB3_2:
+; GFX1164-NEXT:  .LBB3_2:
 ; GFX1164-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX1164-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX1164-NEXT:    v_readfirstlane_b32 s3, v1
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1164-NEXT:    v_mad_u64_u32 v[0:1], s[2:3], v2, 5, s[2:3]
 ; GFX1164-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX1164-NEXT:    s_mov_b32 s2, -1
@@ -1058,10 +1087,11 @@ define amdgpu_kernel void @add_i64_constant(i64 addrspace(1)* %out, i64 addrspac
 ; GFX1132-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GFX1132-NEXT:    s_mov_b32 s5, exec_lo
 ; GFX1132-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132-NEXT:    v_mbcnt_lo_u32_b32 v2, s5, 0
 ; GFX1132-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v2
 ; GFX1132-NEXT:    s_and_saveexec_b32 s4, vcc_lo
-; GFX1132-NEXT:    s_cbranch_execz BB3_2
+; GFX1132-NEXT:    s_cbranch_execz .LBB3_2
 ; GFX1132-NEXT:  ; %bb.1:
 ; GFX1132-NEXT:    s_bcnt1_i32_b32 s5, s5
 ; GFX1132-NEXT:    s_mov_b32 s11, 0x31016000
@@ -1077,11 +1107,12 @@ define amdgpu_kernel void @add_i64_constant(i64 addrspace(1)* %out, i64 addrspac
 ; GFX1132-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1132-NEXT:    buffer_gl0_inv
 ; GFX1132-NEXT:    buffer_gl1_inv
-; GFX1132-NEXT:  BB3_2:
+; GFX1132-NEXT:  .LBB3_2:
 ; GFX1132-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GFX1132-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1132-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX1132-NEXT:    v_readfirstlane_b32 s3, v1
+; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1132-NEXT:    v_mad_u64_u32 v[0:1], s2, v2, 5, s[2:3]
 ; GFX1132-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX1132-NEXT:    s_mov_b32 s2, -1
@@ -1104,7 +1135,7 @@ define amdgpu_kernel void @add_i64_uniform(i64 addrspace(1)* %out, i64 addrspace
 ; GFX7LESS-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
 ; GFX7LESS-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX7LESS-NEXT:    s_and_saveexec_b64 s[2:3], vcc
-; GFX7LESS-NEXT:    s_cbranch_execz BB4_2
+; GFX7LESS-NEXT:    s_cbranch_execz .LBB4_2
 ; GFX7LESS-NEXT:  ; %bb.1:
 ; GFX7LESS-NEXT:    s_mov_b32 s15, 0xf000
 ; GFX7LESS-NEXT:    s_mov_b32 s14, -1
@@ -1122,7 +1153,7 @@ define amdgpu_kernel void @add_i64_uniform(i64 addrspace(1)* %out, i64 addrspace
 ; GFX7LESS-NEXT:    buffer_atomic_add_x2 v[0:1], off, s[12:15], 0 glc
 ; GFX7LESS-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7LESS-NEXT:    buffer_wbinvl1
-; GFX7LESS-NEXT:  BB4_2:
+; GFX7LESS-NEXT:  .LBB4_2:
 ; GFX7LESS-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX7LESS-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7LESS-NEXT:    s_mov_b32 s7, 0xf000
@@ -1150,38 +1181,35 @@ define amdgpu_kernel void @add_i64_uniform(i64 addrspace(1)* %out, i64 addrspace
 ; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
 ; GFX8-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX8-NEXT:    s_and_saveexec_b64 s[2:3], vcc
-; GFX8-NEXT:    s_cbranch_execz BB4_2
+; GFX8-NEXT:    s_cbranch_execz .LBB4_2
 ; GFX8-NEXT:  ; %bb.1:
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_mov_b32 s12, s6
 ; GFX8-NEXT:    s_bcnt1_i32_b64 s6, s[8:9]
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s6
-; GFX8-NEXT:    v_mul_hi_u32 v0, s0, v0
-; GFX8-NEXT:    s_mov_b32 s13, s7
-; GFX8-NEXT:    s_mul_i32 s7, s1, s6
-; GFX8-NEXT:    s_mul_i32 s6, s0, s6
+; GFX8-NEXT:    v_mad_u64_u32 v[0:1], s[8:9], s0, v0, 0
+; GFX8-NEXT:    s_mul_i32 s6, s1, s6
 ; GFX8-NEXT:    s_mov_b32 s15, 0xf000
 ; GFX8-NEXT:    s_mov_b32 s14, -1
-; GFX8-NEXT:    v_add_u32_e32 v1, vcc, s7, v0
-; GFX8-NEXT:    v_mov_b32_e32 v0, s6
+; GFX8-NEXT:    s_mov_b32 s13, s7
+; GFX8-NEXT:    v_add_u32_e32 v1, vcc, s6, v1
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    buffer_atomic_add_x2 v[0:1], off, s[12:15], 0 glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    buffer_wbinvl1_vol
-; GFX8-NEXT:  BB4_2:
+; GFX8-NEXT:  .LBB4_2:
 ; GFX8-NEXT:    s_or_b64 exec, exec, s[2:3]
-; GFX8-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8-NEXT:    v_mul_lo_u32 v0, s1, v2
-; GFX8-NEXT:    v_mul_hi_u32 v3, s0, v2
+; GFX8-NEXT:    v_mul_lo_u32 v4, s1, v2
+; GFX8-NEXT:    v_mad_u64_u32 v[2:3], s[0:1], s0, v2, 0
+; GFX8-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX8-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX8-NEXT:    v_mul_lo_u32 v1, s0, v2
-; GFX8-NEXT:    s_mov_b32 s7, 0xf000
-; GFX8-NEXT:    v_add_u32_e32 v2, vcc, v3, v0
+; GFX8-NEXT:    v_add_u32_e32 v1, vcc, v3, v4
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s1
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, s2, v1
+; GFX8-NEXT:    v_add_u32_e32 v0, vcc, s0, v2
+; GFX8-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX8-NEXT:    s_mov_b32 s6, -1
-; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, v3, v2, vcc
+; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, v3, v1, vcc
 ; GFX8-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; GFX8-NEXT:    s_endpgm
 ;
@@ -1195,7 +1223,7 @@ define amdgpu_kernel void @add_i64_uniform(i64 addrspace(1)* %out, i64 addrspace
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
 ; GFX9-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX9-NEXT:    s_and_saveexec_b64 s[0:1], vcc
-; GFX9-NEXT:    s_cbranch_execz BB4_2
+; GFX9-NEXT:    s_cbranch_execz .LBB4_2
 ; GFX9-NEXT:  ; %bb.1:
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s12, s6
@@ -1213,20 +1241,19 @@ define amdgpu_kernel void @add_i64_uniform(i64 addrspace(1)* %out, i64 addrspace
 ; GFX9-NEXT:    buffer_atomic_add_x2 v[0:1], off, s[12:15], 0 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
-; GFX9-NEXT:  BB4_2:
+; GFX9-NEXT:  .LBB4_2:
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mul_lo_u32 v3, s3, v2
-; GFX9-NEXT:    v_mul_hi_u32 v4, s2, v2
+; GFX9-NEXT:    v_mul_lo_u32 v4, s3, v2
+; GFX9-NEXT:    v_mad_u64_u32 v[2:3], s[0:1], s2, v2, 0
 ; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX9-NEXT:    v_mul_lo_u32 v0, s2, v2
 ; GFX9-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX9-NEXT:    v_add_u32_e32 v1, v4, v3
-; GFX9-NEXT:    v_mov_b32_e32 v2, s1
-; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, s0, v0
+; GFX9-NEXT:    v_add_u32_e32 v1, v3, v4
+; GFX9-NEXT:    v_mov_b32_e32 v3, s1
+; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, s0, v2
 ; GFX9-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX9-NEXT:    s_mov_b32 s6, -1
-; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, v2, v1, vcc
+; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, v3, v1, vcc
 ; GFX9-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; GFX9-NEXT:    s_endpgm
 ;
@@ -1241,7 +1268,7 @@ define amdgpu_kernel void @add_i64_uniform(i64 addrspace(1)* %out, i64 addrspace
 ; GFX1064-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX1064-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
 ; GFX1064-NEXT:    s_and_saveexec_b64 s[0:1], vcc
-; GFX1064-NEXT:    s_cbranch_execz BB4_2
+; GFX1064-NEXT:    s_cbranch_execz .LBB4_2
 ; GFX1064-NEXT:  ; %bb.1:
 ; GFX1064-NEXT:    s_bcnt1_i32_b64 s8, s[8:9]
 ; GFX1064-NEXT:    s_mov_b32 s11, 0x31016000
@@ -1261,18 +1288,17 @@ define amdgpu_kernel void @add_i64_uniform(i64 addrspace(1)* %out, i64 addrspace
 ; GFX1064-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1064-NEXT:    buffer_gl0_inv
 ; GFX1064-NEXT:    buffer_gl1_inv
-; GFX1064-NEXT:  BB4_2:
+; GFX1064-NEXT:  .LBB4_2:
 ; GFX1064-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX1064-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1064-NEXT:    v_mul_lo_u32 v3, s3, v2
-; GFX1064-NEXT:    v_mul_hi_u32 v4, s2, v2
-; GFX1064-NEXT:    v_mul_lo_u32 v2, s2, v2
+; GFX1064-NEXT:    v_mul_lo_u32 v4, s3, v2
+; GFX1064-NEXT:    v_mad_u64_u32 v[2:3], s[0:1], s2, v2, 0
 ; GFX1064-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1064-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX1064-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX1064-NEXT:    s_mov_b32 s6, -1
-; GFX1064-NEXT:    v_add_nc_u32_e32 v1, v4, v3
+; GFX1064-NEXT:    v_add_nc_u32_e32 v1, v3, v4
 ; GFX1064-NEXT:    v_add_co_u32 v0, vcc, s0, v2
 ; GFX1064-NEXT:    v_add_co_ci_u32_e32 v1, vcc, s1, v1, vcc
 ; GFX1064-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
@@ -1288,7 +1314,7 @@ define amdgpu_kernel void @add_i64_uniform(i64 addrspace(1)* %out, i64 addrspace
 ; GFX1032-NEXT:    v_mbcnt_lo_u32_b32 v2, s8, 0
 ; GFX1032-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v2
 ; GFX1032-NEXT:    s_and_saveexec_b32 s0, vcc_lo
-; GFX1032-NEXT:    s_cbranch_execz BB4_2
+; GFX1032-NEXT:    s_cbranch_execz .LBB4_2
 ; GFX1032-NEXT:  ; %bb.1:
 ; GFX1032-NEXT:    s_bcnt1_i32_b32 s1, s8
 ; GFX1032-NEXT:    s_mov_b32 s11, 0x31016000
@@ -1308,18 +1334,17 @@ define amdgpu_kernel void @add_i64_uniform(i64 addrspace(1)* %out, i64 addrspace
 ; GFX1032-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1032-NEXT:    buffer_gl0_inv
 ; GFX1032-NEXT:    buffer_gl1_inv
-; GFX1032-NEXT:  BB4_2:
+; GFX1032-NEXT:  .LBB4_2:
 ; GFX1032-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX1032-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1032-NEXT:    v_mul_lo_u32 v3, s3, v2
-; GFX1032-NEXT:    v_mul_hi_u32 v4, s2, v2
-; GFX1032-NEXT:    v_mul_lo_u32 v2, s2, v2
+; GFX1032-NEXT:    v_mul_lo_u32 v4, s3, v2
+; GFX1032-NEXT:    v_mad_u64_u32 v[2:3], s0, s2, v2, 0
 ; GFX1032-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1032-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX1032-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX1032-NEXT:    s_mov_b32 s6, -1
-; GFX1032-NEXT:    v_add_nc_u32_e32 v1, v4, v3
+; GFX1032-NEXT:    v_add_nc_u32_e32 v1, v3, v4
 ; GFX1032-NEXT:    v_add_co_u32 v0, vcc_lo, s0, v2
 ; GFX1032-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, s1, v1, vcc_lo
 ; GFX1032-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
@@ -1331,12 +1356,14 @@ define amdgpu_kernel void @add_i64_uniform(i64 addrspace(1)* %out, i64 addrspace
 ; GFX1164-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
 ; GFX1164-NEXT:    s_load_b64 s[0:1], s[0:1], 0x34
 ; GFX1164-NEXT:    s_mov_b64 s[8:9], exec
+; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-NEXT:    v_mbcnt_lo_u32_b32 v0, s8, 0
 ; GFX1164-NEXT:    v_mbcnt_hi_u32_b32 v2, s9, v0
 ; GFX1164-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1164-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
 ; GFX1164-NEXT:    s_and_saveexec_b64 s[2:3], vcc
-; GFX1164-NEXT:    s_cbranch_execz BB4_2
+; GFX1164-NEXT:    s_cbranch_execz .LBB4_2
 ; GFX1164-NEXT:  ; %bb.1:
 ; GFX1164-NEXT:    s_bcnt1_i32_b64 s8, s[8:9]
 ; GFX1164-NEXT:    s_mov_b32 s11, 0x31016000
@@ -1356,18 +1383,19 @@ define amdgpu_kernel void @add_i64_uniform(i64 addrspace(1)* %out, i64 addrspace
 ; GFX1164-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1164-NEXT:    buffer_gl0_inv
 ; GFX1164-NEXT:    buffer_gl1_inv
-; GFX1164-NEXT:  BB4_2:
+; GFX1164-NEXT:  .LBB4_2:
 ; GFX1164-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX1164-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1164-NEXT:    v_mul_lo_u32 v3, s1, v2
-; GFX1164-NEXT:    v_mul_hi_u32 v4, s0, v2
-; GFX1164-NEXT:    v_mul_lo_u32 v2, s0, v2
+; GFX1164-NEXT:    v_mul_lo_u32 v5, s1, v2
+; GFX1164-NEXT:    v_mad_u64_u32 v[3:4], s[0:1], s0, v2, 0
 ; GFX1164-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1164-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX1164-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX1164-NEXT:    s_mov_b32 s6, -1
-; GFX1164-NEXT:    v_add_nc_u32_e32 v1, v4, v3
-; GFX1164-NEXT:    v_add_co_u32 v0, vcc, s0, v2
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX1164-NEXT:    v_add_nc_u32_e32 v1, v4, v5
+; GFX1164-NEXT:    v_add_co_u32 v0, vcc, s0, v3
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1164-NEXT:    v_add_co_ci_u32_e32 v1, vcc, s1, v1, vcc
 ; GFX1164-NEXT:    buffer_store_b64 v[0:1], off, s[4:7], 0
 ; GFX1164-NEXT:    s_endpgm
@@ -1379,10 +1407,11 @@ define amdgpu_kernel void @add_i64_uniform(i64 addrspace(1)* %out, i64 addrspace
 ; GFX1132-NEXT:    s_load_b64 s[0:1], s[0:1], 0x34
 ; GFX1132-NEXT:    s_mov_b32 s3, exec_lo
 ; GFX1132-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132-NEXT:    v_mbcnt_lo_u32_b32 v2, s3, 0
 ; GFX1132-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v2
 ; GFX1132-NEXT:    s_and_saveexec_b32 s2, vcc_lo
-; GFX1132-NEXT:    s_cbranch_execz BB4_2
+; GFX1132-NEXT:    s_cbranch_execz .LBB4_2
 ; GFX1132-NEXT:  ; %bb.1:
 ; GFX1132-NEXT:    s_bcnt1_i32_b32 s3, s3
 ; GFX1132-NEXT:    s_mov_b32 s11, 0x31016000
@@ -1391,6 +1420,7 @@ define amdgpu_kernel void @add_i64_uniform(i64 addrspace(1)* %out, i64 addrspace
 ; GFX1132-NEXT:    s_mul_hi_u32 s9, s0, s3
 ; GFX1132-NEXT:    s_mul_i32 s3, s0, s3
 ; GFX1132-NEXT:    s_add_i32 s9, s9, s8
+; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1132-NEXT:    v_dual_mov_b32 v0, s3 :: v_dual_mov_b32 v1, s9
 ; GFX1132-NEXT:    s_mov_b32 s10, -1
 ; GFX1132-NEXT:    s_mov_b32 s8, s6
@@ -1401,18 +1431,19 @@ define amdgpu_kernel void @add_i64_uniform(i64 addrspace(1)* %out, i64 addrspace
 ; GFX1132-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1132-NEXT:    buffer_gl0_inv
 ; GFX1132-NEXT:    buffer_gl1_inv
-; GFX1132-NEXT:  BB4_2:
+; GFX1132-NEXT:  .LBB4_2:
 ; GFX1132-NEXT:    s_or_b32 exec_lo, exec_lo, s2
 ; GFX1132-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1132-NEXT:    v_mul_lo_u32 v3, s1, v2
-; GFX1132-NEXT:    v_mul_hi_u32 v4, s0, v2
-; GFX1132-NEXT:    v_mul_lo_u32 v2, s0, v2
+; GFX1132-NEXT:    v_mul_lo_u32 v5, s1, v2
+; GFX1132-NEXT:    v_mad_u64_u32 v[3:4], s0, s0, v2, 0
 ; GFX1132-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1132-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX1132-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX1132-NEXT:    s_mov_b32 s6, -1
-; GFX1132-NEXT:    v_add_nc_u32_e32 v1, v4, v3
-; GFX1132-NEXT:    v_add_co_u32 v0, vcc_lo, s0, v2
+; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX1132-NEXT:    v_add_nc_u32_e32 v1, v4, v5
+; GFX1132-NEXT:    v_add_co_u32 v0, vcc_lo, s0, v3
+; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1132-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, s1, v1, vcc_lo
 ; GFX1132-NEXT:    buffer_store_b64 v[0:1], off, s[4:7], 0
 ; GFX1132-NEXT:    s_endpgm
@@ -1445,22 +1476,22 @@ define amdgpu_kernel void @add_i64_varying(i64 addrspace(1)* %out, i64 addrspace
 ;
 ; GFX89-LABEL: add_i64_varying:
 ; GFX89:       ; %bb.0: ; %entry
-; GFX89-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
-; GFX89-NEXT:    s_mov_b32 s3, 0xf000
-; GFX89-NEXT:    s_mov_b32 s2, -1
-; GFX89-NEXT:    v_mov_b32_e32 v1, 0
+; GFX89-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX89-NEXT:    s_mov_b32 s7, 0xf000
+; GFX89-NEXT:    s_mov_b32 s6, -1
+; GFX89-NEXT:    s_mov_b32 s10, s6
+; GFX89-NEXT:    s_mov_b32 s11, s7
 ; GFX89-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX89-NEXT:    s_mov_b32 s0, s4
-; GFX89-NEXT:    s_mov_b32 s1, s5
-; GFX89-NEXT:    s_mov_b32 s4, s6
-; GFX89-NEXT:    s_mov_b32 s5, s7
-; GFX89-NEXT:    s_mov_b32 s6, s2
-; GFX89-NEXT:    s_mov_b32 s7, s3
+; GFX89-NEXT:    s_mov_b32 s8, s2
+; GFX89-NEXT:    s_mov_b32 s9, s3
+; GFX89-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX89-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX89-NEXT:    buffer_atomic_add_x2 v[0:1], off, s[4:7], 0 glc
+; GFX89-NEXT:    buffer_atomic_add_x2 v[0:1], off, s[8:11], 0 glc
 ; GFX89-NEXT:    s_waitcnt vmcnt(0)
 ; GFX89-NEXT:    buffer_wbinvl1_vol
-; GFX89-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; GFX89-NEXT:    s_mov_b32 s4, s0
+; GFX89-NEXT:    s_mov_b32 s5, s1
+; GFX89-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; GFX89-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: add_i64_varying:
@@ -1524,7 +1555,7 @@ define amdgpu_kernel void @sub_i32_constant(i32 addrspace(1)* %out, i32 addrspac
 ; GFX7LESS-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX7LESS-NEXT:    ; implicit-def: $vgpr1
 ; GFX7LESS-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX7LESS-NEXT:    s_cbranch_execz BB6_2
+; GFX7LESS-NEXT:    s_cbranch_execz .LBB6_2
 ; GFX7LESS-NEXT:  ; %bb.1:
 ; GFX7LESS-NEXT:    s_mov_b32 s11, 0xf000
 ; GFX7LESS-NEXT:    s_bcnt1_i32_b64 s6, s[6:7]
@@ -1538,7 +1569,7 @@ define amdgpu_kernel void @sub_i32_constant(i32 addrspace(1)* %out, i32 addrspac
 ; GFX7LESS-NEXT:    buffer_atomic_sub v1, off, s[8:11], 0 glc
 ; GFX7LESS-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7LESS-NEXT:    buffer_wbinvl1
-; GFX7LESS-NEXT:  BB6_2:
+; GFX7LESS-NEXT:  .LBB6_2:
 ; GFX7LESS-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7LESS-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7LESS-NEXT:    s_mov_b32 s3, 0xf000
@@ -1558,7 +1589,7 @@ define amdgpu_kernel void @sub_i32_constant(i32 addrspace(1)* %out, i32 addrspac
 ; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX8-NEXT:    ; implicit-def: $vgpr1
 ; GFX8-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX8-NEXT:    s_cbranch_execz BB6_2
+; GFX8-NEXT:    s_cbranch_execz .LBB6_2
 ; GFX8-NEXT:  ; %bb.1:
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_mov_b32 s8, s2
@@ -1572,7 +1603,7 @@ define amdgpu_kernel void @sub_i32_constant(i32 addrspace(1)* %out, i32 addrspac
 ; GFX8-NEXT:    buffer_atomic_sub v1, off, s[8:11], 0 glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    buffer_wbinvl1_vol
-; GFX8-NEXT:  BB6_2:
+; GFX8-NEXT:  .LBB6_2:
 ; GFX8-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX8-NEXT:    v_readfirstlane_b32 s4, v1
 ; GFX8-NEXT:    v_mul_u32_u24_e32 v0, 5, v0
@@ -1592,7 +1623,7 @@ define amdgpu_kernel void @sub_i32_constant(i32 addrspace(1)* %out, i32 addrspac
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX9-NEXT:    ; implicit-def: $vgpr1
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX9-NEXT:    s_cbranch_execz BB6_2
+; GFX9-NEXT:    s_cbranch_execz .LBB6_2
 ; GFX9-NEXT:  ; %bb.1:
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s8, s2
@@ -1606,7 +1637,7 @@ define amdgpu_kernel void @sub_i32_constant(i32 addrspace(1)* %out, i32 addrspac
 ; GFX9-NEXT:    buffer_atomic_sub v1, off, s[8:11], 0 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
-; GFX9-NEXT:  BB6_2:
+; GFX9-NEXT:  .LBB6_2:
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    v_readfirstlane_b32 s4, v1
 ; GFX9-NEXT:    v_mul_u32_u24_e32 v0, 5, v0
@@ -1626,7 +1657,7 @@ define amdgpu_kernel void @sub_i32_constant(i32 addrspace(1)* %out, i32 addrspac
 ; GFX1064-NEXT:    v_mbcnt_hi_u32_b32 v0, s7, v0
 ; GFX1064-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX1064-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX1064-NEXT:    s_cbranch_execz BB6_2
+; GFX1064-NEXT:    s_cbranch_execz .LBB6_2
 ; GFX1064-NEXT:  ; %bb.1:
 ; GFX1064-NEXT:    s_bcnt1_i32_b64 s6, s[6:7]
 ; GFX1064-NEXT:    s_mov_b32 s11, 0x31016000
@@ -1642,7 +1673,7 @@ define amdgpu_kernel void @sub_i32_constant(i32 addrspace(1)* %out, i32 addrspac
 ; GFX1064-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1064-NEXT:    buffer_gl0_inv
 ; GFX1064-NEXT:    buffer_gl1_inv
-; GFX1064-NEXT:  BB6_2:
+; GFX1064-NEXT:  .LBB6_2:
 ; GFX1064-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX1064-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1662,7 +1693,7 @@ define amdgpu_kernel void @sub_i32_constant(i32 addrspace(1)* %out, i32 addrspac
 ; GFX1032-NEXT:    v_mbcnt_lo_u32_b32 v0, s5, 0
 ; GFX1032-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX1032-NEXT:    s_and_saveexec_b32 s4, vcc_lo
-; GFX1032-NEXT:    s_cbranch_execz BB6_2
+; GFX1032-NEXT:    s_cbranch_execz .LBB6_2
 ; GFX1032-NEXT:  ; %bb.1:
 ; GFX1032-NEXT:    s_bcnt1_i32_b32 s5, s5
 ; GFX1032-NEXT:    s_mov_b32 s11, 0x31016000
@@ -1678,7 +1709,7 @@ define amdgpu_kernel void @sub_i32_constant(i32 addrspace(1)* %out, i32 addrspac
 ; GFX1032-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1032-NEXT:    buffer_gl0_inv
 ; GFX1032-NEXT:    buffer_gl1_inv
-; GFX1032-NEXT:  BB6_2:
+; GFX1032-NEXT:  .LBB6_2:
 ; GFX1032-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX1032-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1695,11 +1726,13 @@ define amdgpu_kernel void @sub_i32_constant(i32 addrspace(1)* %out, i32 addrspac
 ; GFX1164-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GFX1164-NEXT:    s_mov_b64 s[6:7], exec
 ; GFX1164-NEXT:    ; implicit-def: $vgpr1
+; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-NEXT:    v_mbcnt_lo_u32_b32 v0, s6, 0
 ; GFX1164-NEXT:    v_mbcnt_hi_u32_b32 v0, s7, v0
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1164-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX1164-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX1164-NEXT:    s_cbranch_execz BB6_2
+; GFX1164-NEXT:    s_cbranch_execz .LBB6_2
 ; GFX1164-NEXT:  ; %bb.1:
 ; GFX1164-NEXT:    s_bcnt1_i32_b64 s6, s[6:7]
 ; GFX1164-NEXT:    s_mov_b32 s11, 0x31016000
@@ -1715,12 +1748,13 @@ define amdgpu_kernel void @sub_i32_constant(i32 addrspace(1)* %out, i32 addrspac
 ; GFX1164-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1164-NEXT:    buffer_gl0_inv
 ; GFX1164-NEXT:    buffer_gl1_inv
-; GFX1164-NEXT:  BB6_2:
+; GFX1164-NEXT:  .LBB6_2:
 ; GFX1164-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX1164-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX1164-NEXT:    v_mul_u32_u24_e32 v0, 5, v0
 ; GFX1164-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1164-NEXT:    v_sub_nc_u32_e32 v0, s2, v0
 ; GFX1164-NEXT:    s_mov_b32 s2, -1
 ; GFX1164-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
@@ -1731,10 +1765,11 @@ define amdgpu_kernel void @sub_i32_constant(i32 addrspace(1)* %out, i32 addrspac
 ; GFX1132-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GFX1132-NEXT:    s_mov_b32 s5, exec_lo
 ; GFX1132-NEXT:    ; implicit-def: $vgpr1
+; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132-NEXT:    v_mbcnt_lo_u32_b32 v0, s5, 0
 ; GFX1132-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX1132-NEXT:    s_and_saveexec_b32 s4, vcc_lo
-; GFX1132-NEXT:    s_cbranch_execz BB6_2
+; GFX1132-NEXT:    s_cbranch_execz .LBB6_2
 ; GFX1132-NEXT:  ; %bb.1:
 ; GFX1132-NEXT:    s_bcnt1_i32_b32 s5, s5
 ; GFX1132-NEXT:    s_mov_b32 s11, 0x31016000
@@ -1750,12 +1785,13 @@ define amdgpu_kernel void @sub_i32_constant(i32 addrspace(1)* %out, i32 addrspac
 ; GFX1132-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1132-NEXT:    buffer_gl0_inv
 ; GFX1132-NEXT:    buffer_gl1_inv
-; GFX1132-NEXT:  BB6_2:
+; GFX1132-NEXT:  .LBB6_2:
 ; GFX1132-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GFX1132-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1132-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX1132-NEXT:    v_mul_u32_u24_e32 v0, 5, v0
 ; GFX1132-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1132-NEXT:    v_sub_nc_u32_e32 v0, s2, v0
 ; GFX1132-NEXT:    s_mov_b32 s2, -1
 ; GFX1132-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
@@ -1777,7 +1813,7 @@ define amdgpu_kernel void @sub_i32_uniform(i32 addrspace(1)* %out, i32 addrspace
 ; GFX7LESS-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX7LESS-NEXT:    ; implicit-def: $vgpr1
 ; GFX7LESS-NEXT:    s_and_saveexec_b64 s[0:1], vcc
-; GFX7LESS-NEXT:    s_cbranch_execz BB7_2
+; GFX7LESS-NEXT:    s_cbranch_execz .LBB7_2
 ; GFX7LESS-NEXT:  ; %bb.1:
 ; GFX7LESS-NEXT:    s_mov_b32 s15, 0xf000
 ; GFX7LESS-NEXT:    s_bcnt1_i32_b64 s2, s[2:3]
@@ -1791,7 +1827,7 @@ define amdgpu_kernel void @sub_i32_uniform(i32 addrspace(1)* %out, i32 addrspace
 ; GFX7LESS-NEXT:    buffer_atomic_sub v1, off, s[12:15], 0 glc
 ; GFX7LESS-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7LESS-NEXT:    buffer_wbinvl1
-; GFX7LESS-NEXT:  BB7_2:
+; GFX7LESS-NEXT:  .LBB7_2:
 ; GFX7LESS-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX7LESS-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7LESS-NEXT:    s_mov_b32 s7, 0xf000
@@ -1812,7 +1848,7 @@ define amdgpu_kernel void @sub_i32_uniform(i32 addrspace(1)* %out, i32 addrspace
 ; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX8-NEXT:    ; implicit-def: $vgpr1
 ; GFX8-NEXT:    s_and_saveexec_b64 s[0:1], vcc
-; GFX8-NEXT:    s_cbranch_execz BB7_2
+; GFX8-NEXT:    s_cbranch_execz .LBB7_2
 ; GFX8-NEXT:  ; %bb.1:
 ; GFX8-NEXT:    s_bcnt1_i32_b64 s2, s[2:3]
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1826,7 +1862,7 @@ define amdgpu_kernel void @sub_i32_uniform(i32 addrspace(1)* %out, i32 addrspace
 ; GFX8-NEXT:    buffer_atomic_sub v1, off, s[12:15], 0 glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    buffer_wbinvl1_vol
-; GFX8-NEXT:  BB7_2:
+; GFX8-NEXT:  .LBB7_2:
 ; GFX8-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_mul_lo_u32 v0, s8, v0
@@ -1847,7 +1883,7 @@ define amdgpu_kernel void @sub_i32_uniform(i32 addrspace(1)* %out, i32 addrspace
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX9-NEXT:    ; implicit-def: $vgpr1
 ; GFX9-NEXT:    s_and_saveexec_b64 s[0:1], vcc
-; GFX9-NEXT:    s_cbranch_execz BB7_2
+; GFX9-NEXT:    s_cbranch_execz .LBB7_2
 ; GFX9-NEXT:  ; %bb.1:
 ; GFX9-NEXT:    s_bcnt1_i32_b64 s2, s[2:3]
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1861,7 +1897,7 @@ define amdgpu_kernel void @sub_i32_uniform(i32 addrspace(1)* %out, i32 addrspace
 ; GFX9-NEXT:    buffer_atomic_sub v1, off, s[12:15], 0 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
-; GFX9-NEXT:  BB7_2:
+; GFX9-NEXT:  .LBB7_2:
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_mul_lo_u32 v0, s8, v0
@@ -1883,7 +1919,7 @@ define amdgpu_kernel void @sub_i32_uniform(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1064-NEXT:    v_mbcnt_hi_u32_b32 v0, s3, v0
 ; GFX1064-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX1064-NEXT:    s_and_saveexec_b64 s[0:1], vcc
-; GFX1064-NEXT:    s_cbranch_execz BB7_2
+; GFX1064-NEXT:    s_cbranch_execz .LBB7_2
 ; GFX1064-NEXT:  ; %bb.1:
 ; GFX1064-NEXT:    s_bcnt1_i32_b64 s2, s[2:3]
 ; GFX1064-NEXT:    s_mov_b32 s15, 0x31016000
@@ -1899,7 +1935,7 @@ define amdgpu_kernel void @sub_i32_uniform(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1064-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1064-NEXT:    buffer_gl0_inv
 ; GFX1064-NEXT:    buffer_gl1_inv
-; GFX1064-NEXT:  BB7_2:
+; GFX1064-NEXT:  .LBB7_2:
 ; GFX1064-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX1064-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1921,7 +1957,7 @@ define amdgpu_kernel void @sub_i32_uniform(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1032-NEXT:    v_mbcnt_lo_u32_b32 v0, s3, 0
 ; GFX1032-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX1032-NEXT:    s_and_saveexec_b32 s0, vcc_lo
-; GFX1032-NEXT:    s_cbranch_execz BB7_2
+; GFX1032-NEXT:    s_cbranch_execz .LBB7_2
 ; GFX1032-NEXT:  ; %bb.1:
 ; GFX1032-NEXT:    s_bcnt1_i32_b32 s1, s3
 ; GFX1032-NEXT:    s_mov_b32 s11, 0x31016000
@@ -1937,7 +1973,7 @@ define amdgpu_kernel void @sub_i32_uniform(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1032-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1032-NEXT:    buffer_gl0_inv
 ; GFX1032-NEXT:    buffer_gl1_inv
-; GFX1032-NEXT:  BB7_2:
+; GFX1032-NEXT:  .LBB7_2:
 ; GFX1032-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX1032-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1956,11 +1992,13 @@ define amdgpu_kernel void @sub_i32_uniform(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1164-NEXT:    s_load_b32 s8, s[0:1], 0x34
 ; GFX1164-NEXT:    s_mov_b64 s[2:3], exec
 ; GFX1164-NEXT:    ; implicit-def: $vgpr1
+; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-NEXT:    v_mbcnt_lo_u32_b32 v0, s2, 0
 ; GFX1164-NEXT:    v_mbcnt_hi_u32_b32 v0, s3, v0
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1164-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX1164-NEXT:    s_and_saveexec_b64 s[0:1], vcc
-; GFX1164-NEXT:    s_cbranch_execz BB7_2
+; GFX1164-NEXT:    s_cbranch_execz .LBB7_2
 ; GFX1164-NEXT:  ; %bb.1:
 ; GFX1164-NEXT:    s_bcnt1_i32_b64 s2, s[2:3]
 ; GFX1164-NEXT:    s_mov_b32 s15, 0x31016000
@@ -1976,13 +2014,14 @@ define amdgpu_kernel void @sub_i32_uniform(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1164-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1164-NEXT:    buffer_gl0_inv
 ; GFX1164-NEXT:    buffer_gl1_inv
-; GFX1164-NEXT:  BB7_2:
+; GFX1164-NEXT:  .LBB7_2:
 ; GFX1164-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX1164-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164-NEXT:    v_mul_lo_u32 v0, s8, v0
 ; GFX1164-NEXT:    v_readfirstlane_b32 s0, v1
 ; GFX1164-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX1164-NEXT:    s_mov_b32 s6, -1
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1164-NEXT:    v_sub_nc_u32_e32 v0, s0, v0
 ; GFX1164-NEXT:    buffer_store_b32 v0, off, s[4:7], 0
 ; GFX1164-NEXT:    s_endpgm
@@ -1994,10 +2033,11 @@ define amdgpu_kernel void @sub_i32_uniform(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1132-NEXT:    s_load_b32 s0, s[0:1], 0x34
 ; GFX1132-NEXT:    s_mov_b32 s2, exec_lo
 ; GFX1132-NEXT:    ; implicit-def: $vgpr1
+; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132-NEXT:    v_mbcnt_lo_u32_b32 v0, s2, 0
 ; GFX1132-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX1132-NEXT:    s_and_saveexec_b32 s1, vcc_lo
-; GFX1132-NEXT:    s_cbranch_execz BB7_2
+; GFX1132-NEXT:    s_cbranch_execz .LBB7_2
 ; GFX1132-NEXT:  ; %bb.1:
 ; GFX1132-NEXT:    s_bcnt1_i32_b32 s2, s2
 ; GFX1132-NEXT:    s_mov_b32 s11, 0x31016000
@@ -2013,13 +2053,14 @@ define amdgpu_kernel void @sub_i32_uniform(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1132-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1132-NEXT:    buffer_gl0_inv
 ; GFX1132-NEXT:    buffer_gl1_inv
-; GFX1132-NEXT:  BB7_2:
+; GFX1132-NEXT:  .LBB7_2:
 ; GFX1132-NEXT:    s_or_b32 exec_lo, exec_lo, s1
 ; GFX1132-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1132-NEXT:    v_mul_lo_u32 v0, s0, v0
 ; GFX1132-NEXT:    v_readfirstlane_b32 s0, v1
 ; GFX1132-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX1132-NEXT:    s_mov_b32 s6, -1
+; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1132-NEXT:    v_sub_nc_u32_e32 v0, s0, v0
 ; GFX1132-NEXT:    buffer_store_b32 v0, off, s[4:7], 0
 ; GFX1132-NEXT:    s_endpgm
@@ -2080,7 +2121,7 @@ define amdgpu_kernel void @sub_i32_varying(i32 addrspace(1)* %out, i32 addrspace
 ; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX8-NEXT:    ; implicit-def: $vgpr0
 ; GFX8-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX8-NEXT:    s_cbranch_execz BB8_2
+; GFX8-NEXT:    s_cbranch_execz .LBB8_2
 ; GFX8-NEXT:  ; %bb.1:
 ; GFX8-NEXT:    s_mov_b32 s11, 0xf000
 ; GFX8-NEXT:    s_mov_b32 s10, -1
@@ -2092,7 +2133,7 @@ define amdgpu_kernel void @sub_i32_varying(i32 addrspace(1)* %out, i32 addrspace
 ; GFX8-NEXT:    buffer_atomic_sub v0, off, s[8:11], 0 glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    buffer_wbinvl1_vol
-; GFX8-NEXT:  BB8_2:
+; GFX8-NEXT:  .LBB8_2:
 ; GFX8-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX8-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX8-NEXT:    v_mov_b32_e32 v0, v1
@@ -2134,7 +2175,7 @@ define amdgpu_kernel void @sub_i32_varying(i32 addrspace(1)* %out, i32 addrspace
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX9-NEXT:    ; implicit-def: $vgpr0
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX9-NEXT:    s_cbranch_execz BB8_2
+; GFX9-NEXT:    s_cbranch_execz .LBB8_2
 ; GFX9-NEXT:  ; %bb.1:
 ; GFX9-NEXT:    s_mov_b32 s11, 0xf000
 ; GFX9-NEXT:    s_mov_b32 s10, -1
@@ -2146,7 +2187,7 @@ define amdgpu_kernel void @sub_i32_varying(i32 addrspace(1)* %out, i32 addrspace
 ; GFX9-NEXT:    buffer_atomic_sub v0, off, s[8:11], 0 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
-; GFX9-NEXT:  BB8_2:
+; GFX9-NEXT:  .LBB8_2:
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v1
@@ -2198,7 +2239,7 @@ define amdgpu_kernel void @sub_i32_varying(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1064-NEXT:    s_mov_b32 s6, -1
 ; GFX1064-NEXT:    ; implicit-def: $vgpr0
 ; GFX1064-NEXT:    s_and_saveexec_b64 s[8:9], vcc
-; GFX1064-NEXT:    s_cbranch_execz BB8_2
+; GFX1064-NEXT:    s_cbranch_execz .LBB8_2
 ; GFX1064-NEXT:  ; %bb.1:
 ; GFX1064-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX1064-NEXT:    s_mov_b32 s7, 0x31016000
@@ -2211,7 +2252,7 @@ define amdgpu_kernel void @sub_i32_varying(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1064-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1064-NEXT:    buffer_gl0_inv
 ; GFX1064-NEXT:    buffer_gl1_inv
-; GFX1064-NEXT:  BB8_2:
+; GFX1064-NEXT:  .LBB8_2:
 ; GFX1064-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX1064-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2254,7 +2295,7 @@ define amdgpu_kernel void @sub_i32_varying(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1032-NEXT:    s_mov_b32 s6, -1
 ; GFX1032-NEXT:    ; implicit-def: $vgpr0
 ; GFX1032-NEXT:    s_and_saveexec_b32 s8, vcc_lo
-; GFX1032-NEXT:    s_cbranch_execz BB8_2
+; GFX1032-NEXT:    s_cbranch_execz .LBB8_2
 ; GFX1032-NEXT:  ; %bb.1:
 ; GFX1032-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX1032-NEXT:    s_mov_b32 s7, 0x31016000
@@ -2267,7 +2308,7 @@ define amdgpu_kernel void @sub_i32_varying(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1032-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1032-NEXT:    buffer_gl0_inv
 ; GFX1032-NEXT:    buffer_gl1_inv
-; GFX1032-NEXT:  BB8_2:
+; GFX1032-NEXT:  .LBB8_2:
 ; GFX1032-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX1032-NEXT:    s_or_b32 exec_lo, exec_lo, s8
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2286,17 +2327,23 @@ define amdgpu_kernel void @sub_i32_varying(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1164-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1164-NEXT:    s_not_b64 exec, exec
 ; GFX1164-NEXT:    s_or_saveexec_b64 s[2:3], -1
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1164-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:1 row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX1164-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX1164-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:2 row_mask:0xf bank_mask:0xf bound_ctrl:1
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:4 row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX1164-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:8 row_mask:0xf bank_mask:0xf bound_ctrl:1
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX1164-NEXT:    v_permlanex16_b32 v2, v2, -1, -1
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-NEXT:    v_add_nc_u32_dpp v1, v2, v1 quad_perm:[0,1,2,3] row_mask:0xa bank_mask:0xf
 ; GFX1164-NEXT:    v_readlane_b32 s4, v1, 31
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX1164-NEXT:    v_add_nc_u32_dpp v1, v2, v1 quad_perm:[0,1,2,3] row_mask:0xc bank_mask:0xf
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1164-NEXT:    v_readlane_b32 s6, v1, 15
 ; GFX1164-NEXT:    v_mov_b32_dpp v3, v1 row_shr:1 row_mask:0xf bank_mask:0xf
 ; GFX1164-NEXT:    s_mov_b64 exec, s[2:3]
@@ -2305,12 +2352,14 @@ define amdgpu_kernel void @sub_i32_varying(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1164-NEXT:    v_readlane_b32 s7, v1, 31
 ; GFX1164-NEXT:    v_writelane_b32 v3, s6, 16
 ; GFX1164-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1164-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
 ; GFX1164-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; GFX1164-NEXT:    v_readlane_b32 s8, v1, 47
 ; GFX1164-NEXT:    v_readlane_b32 s9, v1, 63
 ; GFX1164-NEXT:    v_writelane_b32 v3, s7, 32
 ; GFX1164-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1164-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
 ; GFX1164-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GFX1164-NEXT:    s_mov_b32 s4, s9
@@ -2320,7 +2369,7 @@ define amdgpu_kernel void @sub_i32_varying(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1164-NEXT:    s_mov_b32 s6, -1
 ; GFX1164-NEXT:    ; implicit-def: $vgpr0
 ; GFX1164-NEXT:    s_and_saveexec_b64 s[8:9], vcc
-; GFX1164-NEXT:    s_cbranch_execz BB8_2
+; GFX1164-NEXT:    s_cbranch_execz .LBB8_2
 ; GFX1164-NEXT:  ; %bb.1:
 ; GFX1164-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX1164-NEXT:    s_mov_b32 s7, 0x31016000
@@ -2333,12 +2382,13 @@ define amdgpu_kernel void @sub_i32_varying(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1164-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1164-NEXT:    buffer_gl0_inv
 ; GFX1164-NEXT:    buffer_gl1_inv
-; GFX1164-NEXT:  BB8_2:
+; GFX1164-NEXT:  .LBB8_2:
 ; GFX1164-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; GFX1164-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX1164-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX1164-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1164-NEXT:    v_sub_nc_u32_e32 v0, s2, v0
 ; GFX1164-NEXT:    s_mov_b32 s2, s6
 ; GFX1164-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
@@ -2351,23 +2401,29 @@ define amdgpu_kernel void @sub_i32_varying(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1132-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1132-NEXT:    s_not_b32 exec_lo, exec_lo
 ; GFX1132-NEXT:    s_or_saveexec_b32 s2, -1
+; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:1 row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX1132-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:2 row_mask:0xf bank_mask:0xf bound_ctrl:1
+; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:4 row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX1132-NEXT:    v_add_nc_u32_dpp v1, v1, v1 row_shr:8 row_mask:0xf bank_mask:0xf bound_ctrl:1
+; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX1132-NEXT:    v_permlanex16_b32 v2, v2, -1, -1
 ; GFX1132-NEXT:    s_mov_b32 exec_lo, s2
 ; GFX1132-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GFX1132-NEXT:    s_or_saveexec_b32 s4, -1
+; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1132-NEXT:    v_add_nc_u32_dpp v1, v2, v1 quad_perm:[0,1,2,3] row_mask:0xa bank_mask:0xf
 ; GFX1132-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX1132-NEXT:    v_readlane_b32 s5, v1, 15
 ; GFX1132-NEXT:    v_readlane_b32 s6, v1, 31
+; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1132-NEXT:    v_mov_b32_dpp v3, v1 row_shr:1 row_mask:0xf bank_mask:0xf
 ; GFX1132-NEXT:    s_mov_b32 exec_lo, s4
 ; GFX1132-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
 ; GFX1132-NEXT:    s_or_saveexec_b32 s4, -1
+; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1132-NEXT:    v_writelane_b32 v3, s5, 16
 ; GFX1132-NEXT:    s_mov_b32 exec_lo, s4
 ; GFX1132-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
@@ -2375,7 +2431,7 @@ define amdgpu_kernel void @sub_i32_varying(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1132-NEXT:    s_mov_b32 s6, -1
 ; GFX1132-NEXT:    ; implicit-def: $vgpr0
 ; GFX1132-NEXT:    s_and_saveexec_b32 s8, vcc_lo
-; GFX1132-NEXT:    s_cbranch_execz BB8_2
+; GFX1132-NEXT:    s_cbranch_execz .LBB8_2
 ; GFX1132-NEXT:  ; %bb.1:
 ; GFX1132-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX1132-NEXT:    s_mov_b32 s7, 0x31016000
@@ -2388,12 +2444,13 @@ define amdgpu_kernel void @sub_i32_varying(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1132-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1132-NEXT:    buffer_gl0_inv
 ; GFX1132-NEXT:    buffer_gl1_inv
-; GFX1132-NEXT:  BB8_2:
+; GFX1132-NEXT:  .LBB8_2:
 ; GFX1132-NEXT:    s_or_b32 exec_lo, exec_lo, s8
 ; GFX1132-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1132-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX1132-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX1132-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1132-NEXT:    v_sub_nc_u32_e32 v0, s2, v0
 ; GFX1132-NEXT:    s_mov_b32 s2, s6
 ; GFX1132-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
@@ -2415,7 +2472,7 @@ define amdgpu_kernel void @sub_i64_constant(i64 addrspace(1)* %out, i64 addrspac
 ; GFX7LESS-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
 ; GFX7LESS-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX7LESS-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX7LESS-NEXT:    s_cbranch_execz BB9_2
+; GFX7LESS-NEXT:    s_cbranch_execz .LBB9_2
 ; GFX7LESS-NEXT:  ; %bb.1:
 ; GFX7LESS-NEXT:    s_mov_b32 s11, 0xf000
 ; GFX7LESS-NEXT:    s_bcnt1_i32_b64 s6, s[6:7]
@@ -2430,7 +2487,7 @@ define amdgpu_kernel void @sub_i64_constant(i64 addrspace(1)* %out, i64 addrspac
 ; GFX7LESS-NEXT:    buffer_atomic_sub_x2 v[0:1], off, s[8:11], 0 glc
 ; GFX7LESS-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7LESS-NEXT:    buffer_wbinvl1
-; GFX7LESS-NEXT:  BB9_2:
+; GFX7LESS-NEXT:  .LBB9_2:
 ; GFX7LESS-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7LESS-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7LESS-NEXT:    s_mov_b32 s3, 0xf000
@@ -2455,7 +2512,7 @@ define amdgpu_kernel void @sub_i64_constant(i64 addrspace(1)* %out, i64 addrspac
 ; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
 ; GFX8-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX8-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX8-NEXT:    s_cbranch_execz BB9_2
+; GFX8-NEXT:    s_cbranch_execz .LBB9_2
 ; GFX8-NEXT:  ; %bb.1:
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_mov_b32 s8, s2
@@ -2470,7 +2527,7 @@ define amdgpu_kernel void @sub_i64_constant(i64 addrspace(1)* %out, i64 addrspac
 ; GFX8-NEXT:    buffer_atomic_sub_x2 v[0:1], off, s[8:11], 0 glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    buffer_wbinvl1_vol
-; GFX8-NEXT:  BB9_2:
+; GFX8-NEXT:  .LBB9_2:
 ; GFX8-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX8-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX8-NEXT:    v_readfirstlane_b32 s5, v1
@@ -2494,7 +2551,7 @@ define amdgpu_kernel void @sub_i64_constant(i64 addrspace(1)* %out, i64 addrspac
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
 ; GFX9-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX9-NEXT:    s_cbranch_execz BB9_2
+; GFX9-NEXT:    s_cbranch_execz .LBB9_2
 ; GFX9-NEXT:  ; %bb.1:
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s8, s2
@@ -2509,7 +2566,7 @@ define amdgpu_kernel void @sub_i64_constant(i64 addrspace(1)* %out, i64 addrspac
 ; GFX9-NEXT:    buffer_atomic_sub_x2 v[0:1], off, s[8:11], 0 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
-; GFX9-NEXT:  BB9_2:
+; GFX9-NEXT:  .LBB9_2:
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX9-NEXT:    v_readfirstlane_b32 s5, v1
@@ -2533,7 +2590,7 @@ define amdgpu_kernel void @sub_i64_constant(i64 addrspace(1)* %out, i64 addrspac
 ; GFX1064-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX1064-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
 ; GFX1064-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX1064-NEXT:    s_cbranch_execz BB9_2
+; GFX1064-NEXT:    s_cbranch_execz .LBB9_2
 ; GFX1064-NEXT:  ; %bb.1:
 ; GFX1064-NEXT:    s_bcnt1_i32_b64 s6, s[6:7]
 ; GFX1064-NEXT:    v_mov_b32_e32 v1, 0
@@ -2550,7 +2607,7 @@ define amdgpu_kernel void @sub_i64_constant(i64 addrspace(1)* %out, i64 addrspac
 ; GFX1064-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1064-NEXT:    buffer_gl0_inv
 ; GFX1064-NEXT:    buffer_gl1_inv
-; GFX1064-NEXT:  BB9_2:
+; GFX1064-NEXT:  .LBB9_2:
 ; GFX1064-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX1064-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2573,7 +2630,7 @@ define amdgpu_kernel void @sub_i64_constant(i64 addrspace(1)* %out, i64 addrspac
 ; GFX1032-NEXT:    v_mbcnt_lo_u32_b32 v2, s5, 0
 ; GFX1032-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v2
 ; GFX1032-NEXT:    s_and_saveexec_b32 s4, vcc_lo
-; GFX1032-NEXT:    s_cbranch_execz BB9_2
+; GFX1032-NEXT:    s_cbranch_execz .LBB9_2
 ; GFX1032-NEXT:  ; %bb.1:
 ; GFX1032-NEXT:    s_bcnt1_i32_b32 s5, s5
 ; GFX1032-NEXT:    v_mov_b32_e32 v1, 0
@@ -2590,7 +2647,7 @@ define amdgpu_kernel void @sub_i64_constant(i64 addrspace(1)* %out, i64 addrspac
 ; GFX1032-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1032-NEXT:    buffer_gl0_inv
 ; GFX1032-NEXT:    buffer_gl1_inv
-; GFX1032-NEXT:  BB9_2:
+; GFX1032-NEXT:  .LBB9_2:
 ; GFX1032-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX1032-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2609,12 +2666,14 @@ define amdgpu_kernel void @sub_i64_constant(i64 addrspace(1)* %out, i64 addrspac
 ; GFX1164:       ; %bb.0: ; %entry
 ; GFX1164-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GFX1164-NEXT:    s_mov_b64 s[6:7], exec
+; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-NEXT:    v_mbcnt_lo_u32_b32 v0, s6, 0
 ; GFX1164-NEXT:    v_mbcnt_hi_u32_b32 v2, s7, v0
 ; GFX1164-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1164-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
 ; GFX1164-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX1164-NEXT:    s_cbranch_execz BB9_2
+; GFX1164-NEXT:    s_cbranch_execz .LBB9_2
 ; GFX1164-NEXT:  ; %bb.1:
 ; GFX1164-NEXT:    s_bcnt1_i32_b64 s6, s[6:7]
 ; GFX1164-NEXT:    v_mov_b32_e32 v1, 0
@@ -2631,13 +2690,14 @@ define amdgpu_kernel void @sub_i64_constant(i64 addrspace(1)* %out, i64 addrspac
 ; GFX1164-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1164-NEXT:    buffer_gl0_inv
 ; GFX1164-NEXT:    buffer_gl1_inv
-; GFX1164-NEXT:  BB9_2:
+; GFX1164-NEXT:  .LBB9_2:
 ; GFX1164-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX1164-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX1164-NEXT:    v_mul_u32_u24_e32 v0, 5, v2
 ; GFX1164-NEXT:    v_readfirstlane_b32 s3, v1
 ; GFX1164-NEXT:    v_mul_hi_u32_u24_e32 v1, 5, v2
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1164-NEXT:    v_sub_co_u32 v0, vcc, s2, v0
 ; GFX1164-NEXT:    v_sub_co_ci_u32_e32 v1, vcc, s3, v1, vcc
 ; GFX1164-NEXT:    s_mov_b32 s3, 0x31016000
@@ -2650,10 +2710,11 @@ define amdgpu_kernel void @sub_i64_constant(i64 addrspace(1)* %out, i64 addrspac
 ; GFX1132-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GFX1132-NEXT:    s_mov_b32 s5, exec_lo
 ; GFX1132-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132-NEXT:    v_mbcnt_lo_u32_b32 v2, s5, 0
 ; GFX1132-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v2
 ; GFX1132-NEXT:    s_and_saveexec_b32 s4, vcc_lo
-; GFX1132-NEXT:    s_cbranch_execz BB9_2
+; GFX1132-NEXT:    s_cbranch_execz .LBB9_2
 ; GFX1132-NEXT:  ; %bb.1:
 ; GFX1132-NEXT:    s_bcnt1_i32_b32 s5, s5
 ; GFX1132-NEXT:    s_mov_b32 s11, 0x31016000
@@ -2669,13 +2730,14 @@ define amdgpu_kernel void @sub_i64_constant(i64 addrspace(1)* %out, i64 addrspac
 ; GFX1132-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1132-NEXT:    buffer_gl0_inv
 ; GFX1132-NEXT:    buffer_gl1_inv
-; GFX1132-NEXT:  BB9_2:
+; GFX1132-NEXT:  .LBB9_2:
 ; GFX1132-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GFX1132-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1132-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX1132-NEXT:    v_mul_u32_u24_e32 v0, 5, v2
 ; GFX1132-NEXT:    v_readfirstlane_b32 s3, v1
 ; GFX1132-NEXT:    v_mul_hi_u32_u24_e32 v1, 5, v2
+; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1132-NEXT:    v_sub_co_u32 v0, vcc_lo, s2, v0
 ; GFX1132-NEXT:    v_sub_co_ci_u32_e32 v1, vcc_lo, s3, v1, vcc_lo
 ; GFX1132-NEXT:    s_mov_b32 s3, 0x31016000
@@ -2699,7 +2761,7 @@ define amdgpu_kernel void @sub_i64_uniform(i64 addrspace(1)* %out, i64 addrspace
 ; GFX7LESS-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
 ; GFX7LESS-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX7LESS-NEXT:    s_and_saveexec_b64 s[2:3], vcc
-; GFX7LESS-NEXT:    s_cbranch_execz BB10_2
+; GFX7LESS-NEXT:    s_cbranch_execz .LBB10_2
 ; GFX7LESS-NEXT:  ; %bb.1:
 ; GFX7LESS-NEXT:    s_mov_b32 s15, 0xf000
 ; GFX7LESS-NEXT:    s_mov_b32 s14, -1
@@ -2717,7 +2779,7 @@ define amdgpu_kernel void @sub_i64_uniform(i64 addrspace(1)* %out, i64 addrspace
 ; GFX7LESS-NEXT:    buffer_atomic_sub_x2 v[0:1], off, s[12:15], 0 glc
 ; GFX7LESS-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7LESS-NEXT:    buffer_wbinvl1
-; GFX7LESS-NEXT:  BB10_2:
+; GFX7LESS-NEXT:  .LBB10_2:
 ; GFX7LESS-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX7LESS-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7LESS-NEXT:    s_mov_b32 s7, 0xf000
@@ -2745,38 +2807,35 @@ define amdgpu_kernel void @sub_i64_uniform(i64 addrspace(1)* %out, i64 addrspace
 ; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
 ; GFX8-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX8-NEXT:    s_and_saveexec_b64 s[2:3], vcc
-; GFX8-NEXT:    s_cbranch_execz BB10_2
+; GFX8-NEXT:    s_cbranch_execz .LBB10_2
 ; GFX8-NEXT:  ; %bb.1:
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_mov_b32 s12, s6
 ; GFX8-NEXT:    s_bcnt1_i32_b64 s6, s[8:9]
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s6
-; GFX8-NEXT:    v_mul_hi_u32 v0, s0, v0
-; GFX8-NEXT:    s_mov_b32 s13, s7
-; GFX8-NEXT:    s_mul_i32 s7, s1, s6
-; GFX8-NEXT:    s_mul_i32 s6, s0, s6
+; GFX8-NEXT:    v_mad_u64_u32 v[0:1], s[8:9], s0, v0, 0
+; GFX8-NEXT:    s_mul_i32 s6, s1, s6
 ; GFX8-NEXT:    s_mov_b32 s15, 0xf000
 ; GFX8-NEXT:    s_mov_b32 s14, -1
-; GFX8-NEXT:    v_add_u32_e32 v1, vcc, s7, v0
-; GFX8-NEXT:    v_mov_b32_e32 v0, s6
+; GFX8-NEXT:    s_mov_b32 s13, s7
+; GFX8-NEXT:    v_add_u32_e32 v1, vcc, s6, v1
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    buffer_atomic_sub_x2 v[0:1], off, s[12:15], 0 glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    buffer_wbinvl1_vol
-; GFX8-NEXT:  BB10_2:
+; GFX8-NEXT:  .LBB10_2:
 ; GFX8-NEXT:    s_or_b64 exec, exec, s[2:3]
-; GFX8-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8-NEXT:    v_mul_lo_u32 v0, s1, v2
-; GFX8-NEXT:    v_mul_hi_u32 v3, s0, v2
+; GFX8-NEXT:    v_mul_lo_u32 v4, s1, v2
+; GFX8-NEXT:    v_mad_u64_u32 v[2:3], s[0:1], s0, v2, 0
+; GFX8-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX8-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX8-NEXT:    v_mul_lo_u32 v1, s0, v2
-; GFX8-NEXT:    s_mov_b32 s7, 0xf000
-; GFX8-NEXT:    v_add_u32_e32 v2, vcc, v3, v0
+; GFX8-NEXT:    v_add_u32_e32 v1, vcc, v3, v4
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s1
-; GFX8-NEXT:    v_sub_u32_e32 v0, vcc, s2, v1
+; GFX8-NEXT:    v_sub_u32_e32 v0, vcc, s0, v2
+; GFX8-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX8-NEXT:    s_mov_b32 s6, -1
-; GFX8-NEXT:    v_subb_u32_e32 v1, vcc, v3, v2, vcc
+; GFX8-NEXT:    v_subb_u32_e32 v1, vcc, v3, v1, vcc
 ; GFX8-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; GFX8-NEXT:    s_endpgm
 ;
@@ -2790,7 +2849,7 @@ define amdgpu_kernel void @sub_i64_uniform(i64 addrspace(1)* %out, i64 addrspace
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
 ; GFX9-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX9-NEXT:    s_and_saveexec_b64 s[0:1], vcc
-; GFX9-NEXT:    s_cbranch_execz BB10_2
+; GFX9-NEXT:    s_cbranch_execz .LBB10_2
 ; GFX9-NEXT:  ; %bb.1:
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s12, s6
@@ -2808,20 +2867,19 @@ define amdgpu_kernel void @sub_i64_uniform(i64 addrspace(1)* %out, i64 addrspace
 ; GFX9-NEXT:    buffer_atomic_sub_x2 v[0:1], off, s[12:15], 0 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
-; GFX9-NEXT:  BB10_2:
+; GFX9-NEXT:  .LBB10_2:
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mul_lo_u32 v3, s3, v2
-; GFX9-NEXT:    v_mul_hi_u32 v4, s2, v2
+; GFX9-NEXT:    v_mul_lo_u32 v4, s3, v2
+; GFX9-NEXT:    v_mad_u64_u32 v[2:3], s[0:1], s2, v2, 0
 ; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX9-NEXT:    v_mul_lo_u32 v0, s2, v2
 ; GFX9-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX9-NEXT:    v_add_u32_e32 v1, v4, v3
-; GFX9-NEXT:    v_mov_b32_e32 v2, s1
-; GFX9-NEXT:    v_sub_co_u32_e32 v0, vcc, s0, v0
+; GFX9-NEXT:    v_add_u32_e32 v1, v3, v4
+; GFX9-NEXT:    v_mov_b32_e32 v3, s1
+; GFX9-NEXT:    v_sub_co_u32_e32 v0, vcc, s0, v2
 ; GFX9-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX9-NEXT:    s_mov_b32 s6, -1
-; GFX9-NEXT:    v_subb_co_u32_e32 v1, vcc, v2, v1, vcc
+; GFX9-NEXT:    v_subb_co_u32_e32 v1, vcc, v3, v1, vcc
 ; GFX9-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; GFX9-NEXT:    s_endpgm
 ;
@@ -2836,7 +2894,7 @@ define amdgpu_kernel void @sub_i64_uniform(i64 addrspace(1)* %out, i64 addrspace
 ; GFX1064-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX1064-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
 ; GFX1064-NEXT:    s_and_saveexec_b64 s[0:1], vcc
-; GFX1064-NEXT:    s_cbranch_execz BB10_2
+; GFX1064-NEXT:    s_cbranch_execz .LBB10_2
 ; GFX1064-NEXT:  ; %bb.1:
 ; GFX1064-NEXT:    s_bcnt1_i32_b64 s8, s[8:9]
 ; GFX1064-NEXT:    s_mov_b32 s11, 0x31016000
@@ -2856,18 +2914,17 @@ define amdgpu_kernel void @sub_i64_uniform(i64 addrspace(1)* %out, i64 addrspace
 ; GFX1064-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1064-NEXT:    buffer_gl0_inv
 ; GFX1064-NEXT:    buffer_gl1_inv
-; GFX1064-NEXT:  BB10_2:
+; GFX1064-NEXT:  .LBB10_2:
 ; GFX1064-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX1064-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1064-NEXT:    v_mul_lo_u32 v3, s3, v2
-; GFX1064-NEXT:    v_mul_hi_u32 v4, s2, v2
-; GFX1064-NEXT:    v_mul_lo_u32 v2, s2, v2
+; GFX1064-NEXT:    v_mul_lo_u32 v4, s3, v2
+; GFX1064-NEXT:    v_mad_u64_u32 v[2:3], s[0:1], s2, v2, 0
 ; GFX1064-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1064-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX1064-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX1064-NEXT:    s_mov_b32 s6, -1
-; GFX1064-NEXT:    v_add_nc_u32_e32 v1, v4, v3
+; GFX1064-NEXT:    v_add_nc_u32_e32 v1, v3, v4
 ; GFX1064-NEXT:    v_sub_co_u32 v0, vcc, s0, v2
 ; GFX1064-NEXT:    v_sub_co_ci_u32_e32 v1, vcc, s1, v1, vcc
 ; GFX1064-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
@@ -2883,7 +2940,7 @@ define amdgpu_kernel void @sub_i64_uniform(i64 addrspace(1)* %out, i64 addrspace
 ; GFX1032-NEXT:    v_mbcnt_lo_u32_b32 v2, s8, 0
 ; GFX1032-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v2
 ; GFX1032-NEXT:    s_and_saveexec_b32 s0, vcc_lo
-; GFX1032-NEXT:    s_cbranch_execz BB10_2
+; GFX1032-NEXT:    s_cbranch_execz .LBB10_2
 ; GFX1032-NEXT:  ; %bb.1:
 ; GFX1032-NEXT:    s_bcnt1_i32_b32 s1, s8
 ; GFX1032-NEXT:    s_mov_b32 s11, 0x31016000
@@ -2903,18 +2960,17 @@ define amdgpu_kernel void @sub_i64_uniform(i64 addrspace(1)* %out, i64 addrspace
 ; GFX1032-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1032-NEXT:    buffer_gl0_inv
 ; GFX1032-NEXT:    buffer_gl1_inv
-; GFX1032-NEXT:  BB10_2:
+; GFX1032-NEXT:  .LBB10_2:
 ; GFX1032-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX1032-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1032-NEXT:    v_mul_lo_u32 v3, s3, v2
-; GFX1032-NEXT:    v_mul_hi_u32 v4, s2, v2
-; GFX1032-NEXT:    v_mul_lo_u32 v2, s2, v2
+; GFX1032-NEXT:    v_mul_lo_u32 v4, s3, v2
+; GFX1032-NEXT:    v_mad_u64_u32 v[2:3], s0, s2, v2, 0
 ; GFX1032-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1032-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX1032-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX1032-NEXT:    s_mov_b32 s6, -1
-; GFX1032-NEXT:    v_add_nc_u32_e32 v1, v4, v3
+; GFX1032-NEXT:    v_add_nc_u32_e32 v1, v3, v4
 ; GFX1032-NEXT:    v_sub_co_u32 v0, vcc_lo, s0, v2
 ; GFX1032-NEXT:    v_sub_co_ci_u32_e32 v1, vcc_lo, s1, v1, vcc_lo
 ; GFX1032-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
@@ -2926,12 +2982,14 @@ define amdgpu_kernel void @sub_i64_uniform(i64 addrspace(1)* %out, i64 addrspace
 ; GFX1164-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
 ; GFX1164-NEXT:    s_load_b64 s[0:1], s[0:1], 0x34
 ; GFX1164-NEXT:    s_mov_b64 s[8:9], exec
+; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-NEXT:    v_mbcnt_lo_u32_b32 v0, s8, 0
 ; GFX1164-NEXT:    v_mbcnt_hi_u32_b32 v2, s9, v0
 ; GFX1164-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1164-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
 ; GFX1164-NEXT:    s_and_saveexec_b64 s[2:3], vcc
-; GFX1164-NEXT:    s_cbranch_execz BB10_2
+; GFX1164-NEXT:    s_cbranch_execz .LBB10_2
 ; GFX1164-NEXT:  ; %bb.1:
 ; GFX1164-NEXT:    s_bcnt1_i32_b64 s8, s[8:9]
 ; GFX1164-NEXT:    s_mov_b32 s11, 0x31016000
@@ -2951,18 +3009,19 @@ define amdgpu_kernel void @sub_i64_uniform(i64 addrspace(1)* %out, i64 addrspace
 ; GFX1164-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1164-NEXT:    buffer_gl0_inv
 ; GFX1164-NEXT:    buffer_gl1_inv
-; GFX1164-NEXT:  BB10_2:
+; GFX1164-NEXT:  .LBB10_2:
 ; GFX1164-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX1164-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1164-NEXT:    v_mul_lo_u32 v3, s1, v2
-; GFX1164-NEXT:    v_mul_hi_u32 v4, s0, v2
-; GFX1164-NEXT:    v_mul_lo_u32 v2, s0, v2
+; GFX1164-NEXT:    v_mul_lo_u32 v5, s1, v2
+; GFX1164-NEXT:    v_mad_u64_u32 v[3:4], s[0:1], s0, v2, 0
 ; GFX1164-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1164-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX1164-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX1164-NEXT:    s_mov_b32 s6, -1
-; GFX1164-NEXT:    v_add_nc_u32_e32 v1, v4, v3
-; GFX1164-NEXT:    v_sub_co_u32 v0, vcc, s0, v2
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX1164-NEXT:    v_add_nc_u32_e32 v1, v4, v5
+; GFX1164-NEXT:    v_sub_co_u32 v0, vcc, s0, v3
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1164-NEXT:    v_sub_co_ci_u32_e32 v1, vcc, s1, v1, vcc
 ; GFX1164-NEXT:    buffer_store_b64 v[0:1], off, s[4:7], 0
 ; GFX1164-NEXT:    s_endpgm
@@ -2974,10 +3033,11 @@ define amdgpu_kernel void @sub_i64_uniform(i64 addrspace(1)* %out, i64 addrspace
 ; GFX1132-NEXT:    s_load_b64 s[0:1], s[0:1], 0x34
 ; GFX1132-NEXT:    s_mov_b32 s3, exec_lo
 ; GFX1132-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132-NEXT:    v_mbcnt_lo_u32_b32 v2, s3, 0
 ; GFX1132-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v2
 ; GFX1132-NEXT:    s_and_saveexec_b32 s2, vcc_lo
-; GFX1132-NEXT:    s_cbranch_execz BB10_2
+; GFX1132-NEXT:    s_cbranch_execz .LBB10_2
 ; GFX1132-NEXT:  ; %bb.1:
 ; GFX1132-NEXT:    s_bcnt1_i32_b32 s3, s3
 ; GFX1132-NEXT:    s_mov_b32 s11, 0x31016000
@@ -2986,6 +3046,7 @@ define amdgpu_kernel void @sub_i64_uniform(i64 addrspace(1)* %out, i64 addrspace
 ; GFX1132-NEXT:    s_mul_hi_u32 s9, s0, s3
 ; GFX1132-NEXT:    s_mul_i32 s3, s0, s3
 ; GFX1132-NEXT:    s_add_i32 s9, s9, s8
+; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1132-NEXT:    v_dual_mov_b32 v0, s3 :: v_dual_mov_b32 v1, s9
 ; GFX1132-NEXT:    s_mov_b32 s10, -1
 ; GFX1132-NEXT:    s_mov_b32 s8, s6
@@ -2996,18 +3057,19 @@ define amdgpu_kernel void @sub_i64_uniform(i64 addrspace(1)* %out, i64 addrspace
 ; GFX1132-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1132-NEXT:    buffer_gl0_inv
 ; GFX1132-NEXT:    buffer_gl1_inv
-; GFX1132-NEXT:  BB10_2:
+; GFX1132-NEXT:  .LBB10_2:
 ; GFX1132-NEXT:    s_or_b32 exec_lo, exec_lo, s2
 ; GFX1132-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1132-NEXT:    v_mul_lo_u32 v3, s1, v2
-; GFX1132-NEXT:    v_mul_hi_u32 v4, s0, v2
-; GFX1132-NEXT:    v_mul_lo_u32 v2, s0, v2
+; GFX1132-NEXT:    v_mul_lo_u32 v5, s1, v2
+; GFX1132-NEXT:    v_mad_u64_u32 v[3:4], s0, s0, v2, 0
 ; GFX1132-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1132-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX1132-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX1132-NEXT:    s_mov_b32 s6, -1
-; GFX1132-NEXT:    v_add_nc_u32_e32 v1, v4, v3
-; GFX1132-NEXT:    v_sub_co_u32 v0, vcc_lo, s0, v2
+; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX1132-NEXT:    v_add_nc_u32_e32 v1, v4, v5
+; GFX1132-NEXT:    v_sub_co_u32 v0, vcc_lo, s0, v3
+; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1132-NEXT:    v_sub_co_ci_u32_e32 v1, vcc_lo, s1, v1, vcc_lo
 ; GFX1132-NEXT:    buffer_store_b64 v[0:1], off, s[4:7], 0
 ; GFX1132-NEXT:    s_endpgm
@@ -3040,22 +3102,22 @@ define amdgpu_kernel void @sub_i64_varying(i64 addrspace(1)* %out, i64 addrspace
 ;
 ; GFX89-LABEL: sub_i64_varying:
 ; GFX89:       ; %bb.0: ; %entry
-; GFX89-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
-; GFX89-NEXT:    s_mov_b32 s3, 0xf000
-; GFX89-NEXT:    s_mov_b32 s2, -1
-; GFX89-NEXT:    v_mov_b32_e32 v1, 0
+; GFX89-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX89-NEXT:    s_mov_b32 s7, 0xf000
+; GFX89-NEXT:    s_mov_b32 s6, -1
+; GFX89-NEXT:    s_mov_b32 s10, s6
+; GFX89-NEXT:    s_mov_b32 s11, s7
 ; GFX89-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX89-NEXT:    s_mov_b32 s0, s4
-; GFX89-NEXT:    s_mov_b32 s1, s5
-; GFX89-NEXT:    s_mov_b32 s4, s6
-; GFX89-NEXT:    s_mov_b32 s5, s7
-; GFX89-NEXT:    s_mov_b32 s6, s2
-; GFX89-NEXT:    s_mov_b32 s7, s3
+; GFX89-NEXT:    s_mov_b32 s8, s2
+; GFX89-NEXT:    s_mov_b32 s9, s3
+; GFX89-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX89-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX89-NEXT:    buffer_atomic_sub_x2 v[0:1], off, s[4:7], 0 glc
+; GFX89-NEXT:    buffer_atomic_sub_x2 v[0:1], off, s[8:11], 0 glc
 ; GFX89-NEXT:    s_waitcnt vmcnt(0)
 ; GFX89-NEXT:    buffer_wbinvl1_vol
-; GFX89-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; GFX89-NEXT:    s_mov_b32 s4, s0
+; GFX89-NEXT:    s_mov_b32 s5, s1
+; GFX89-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; GFX89-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: sub_i64_varying:

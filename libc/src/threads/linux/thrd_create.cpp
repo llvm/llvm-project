@@ -52,18 +52,18 @@ LLVM_LIBC_FUNCTION(int, thrd_create,
   // TODO: Add the CLONE_SETTLS flag and setup the TLS area correctly when
   // making the clone syscall.
 
-  void *stack = __llvm_libc::mmap(nullptr, ThreadParams::DefaultStackSize,
+  void *stack = __llvm_libc::mmap(nullptr, ThreadParams::DEFAULT_STACK_SIZE,
                                   PROT_READ | PROT_WRITE,
                                   MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   if (stack == MAP_FAILED)
     return llvmlibc_errno == ENOMEM ? thrd_nomem : thrd_error;
 
   thread->__stack = stack;
-  thread->__stack_size = ThreadParams::DefaultStackSize;
+  thread->__stack_size = ThreadParams::DEFAULT_STACK_SIZE;
   thread->__retval = -1;
   FutexWord *clear_tid_address =
       reinterpret_cast<FutexWord *>(thread->__clear_tid);
-  *clear_tid_address = ThreadParams::ClearTIDValue;
+  *clear_tid_address = ThreadParams::CLEAR_TID_VALUE;
 
   // When the new thread is spawned by the kernel, the new thread gets the
   // stack we pass to the clone syscall. However, this stack is empty and does
@@ -72,7 +72,8 @@ LLVM_LIBC_FUNCTION(int, thrd_create,
   // here. So, we pack them into the new stack from where the thread can sniff
   // them out.
   uintptr_t adjusted_stack = reinterpret_cast<uintptr_t>(stack) +
-                             ThreadParams::DefaultStackSize - sizeof(StartArgs);
+                             ThreadParams::DEFAULT_STACK_SIZE -
+                             sizeof(StartArgs);
   StartArgs *start_args = reinterpret_cast<StartArgs *>(adjusted_stack);
   start_args->thread = thread;
   start_args->func = func;
@@ -83,9 +84,8 @@ LLVM_LIBC_FUNCTION(int, thrd_create,
   // architecture independent. May be implement a glibc like wrapper for clone
   // and use it here.
   long register clone_result asm("rax");
-  clone_result =
-      __llvm_libc::syscall(SYS_clone, clone_flags, adjusted_stack,
-                           &thread->__tid, clear_tid_address, 0);
+  clone_result = __llvm_libc::syscall(SYS_clone, clone_flags, adjusted_stack,
+                                      &thread->__tid, clear_tid_address, 0);
 
   if (clone_result == 0) {
     start_thread();

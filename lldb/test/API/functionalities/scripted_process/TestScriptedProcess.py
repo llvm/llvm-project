@@ -41,6 +41,42 @@ class ScriptedProcesTestCase(TestBase):
         self.expect('script dir(ScriptedProcess)',
                     substrs=["launch"])
 
+    def test_invalid_scripted_register_context(self):
+        """Test that we can launch an lldb scripted process with an invalid
+        Scripted Thread, with invalid register context."""
+        self.build()
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.assertTrue(target, VALID_TARGET)
+        log_file = self.getBuildArtifact('thread.log')
+        self.runCmd("log enable lldb thread -f " + log_file)
+        self.assertTrue(os.path.isfile(log_file))
+
+        os.environ['SKIP_SCRIPTED_PROCESS_LAUNCH'] = '1'
+        def cleanup():
+          del os.environ["SKIP_SCRIPTED_PROCESS_LAUNCH"]
+        self.addTearDownHook(cleanup)
+
+        scripted_process_example_relpath = 'invalid_scripted_process.py'
+        self.runCmd("command script import " + os.path.join(self.getSourceDir(),
+                                                            scripted_process_example_relpath))
+
+        launch_info = lldb.SBLaunchInfo(None)
+        launch_info.SetProcessPluginName("ScriptedProcess")
+        launch_info.SetScriptedProcessClassName("invalid_scripted_process.InvalidScriptedProcess")
+        error = lldb.SBError()
+
+        process = target.Launch(launch_info, error)
+
+        self.assertTrue(error.Success(), error.GetCString())
+        self.assertTrue(process, PROCESS_IS_VALID)
+        self.assertEqual(process.GetProcessID(), 666)
+        self.assertEqual(process.GetNumThreads(), 0)
+
+        with open(log_file, 'r') as f:
+            log = f.read()
+
+        self.assertIn("Failed to get scripted thread registers data.", log)
+
     @skipIf(archs=no_match(['x86_64']))
     def test_scripted_process_and_scripted_thread(self):
         """Test that we can launch an lldb scripted process using the SBAPI,
@@ -103,7 +139,6 @@ class ScriptedProcesTestCase(TestBase):
 
     @skipUnlessDarwin
     @skipIfOutOfTreeDebugserver
-    @skipIf(archs=no_match(['x86_64']))
     def test_launch_scripted_process_stack_frames(self):
         """Test that we can launch an lldb scripted process from the command
         line, check its process ID and read string from memory."""

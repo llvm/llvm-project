@@ -173,13 +173,19 @@ protected:
   /// back to this one which accepts everything.
   LogicalResult verify() { return success(); }
 
-  /// Unless overridden, the custom assembly form of an op is always rejected.
-  /// Op implementations should implement this to return failure.
-  /// On success, they should fill in result with the fields to use.
+  /// Parse the custom form of an operation. Unless overridden, this method will
+  /// first try to get an operation parser from the op's dialect. Otherwise the
+  /// custom assembly form of an op is always rejected. Op implementations
+  /// should implement this to return failure. On success, they should fill in
+  /// result with the fields to use.
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
 
-  // The fallback for the printer is to print it the generic assembly form.
-  static void print(Operation *op, OpAsmPrinter &p);
+  /// Print the operation. Unless overridden, this method will first try to get
+  /// an operation printer from the dialect. Otherwise, it prints the operation
+  /// in generic form.
+  static void print(Operation *op, OpAsmPrinter &p, StringRef defaultDialect);
+
+  /// Print an operation name, eliding the dialect prefix if necessary.
   static void printOpName(Operation *op, OpAsmPrinter &p,
                           StringRef defaultDialect);
 
@@ -339,7 +345,7 @@ struct MultiOperandTraitBase : public TraitBase<ConcreteType, TraitType> {
     return this->getOperation()->getOperandTypes();
   }
 };
-} // end namespace detail
+} // namespace detail
 
 /// This class provides the API for ops that are known to have no
 /// SSA operand.
@@ -448,7 +454,7 @@ struct MultiRegionTraitBase : public TraitBase<ConcreteType, TraitType> {
   region_iterator region_end() { return this->getOperation()->region_end(); }
   region_range getRegions() { return this->getOperation()->getRegions(); }
 };
-} // end namespace detail
+} // namespace detail
 
 /// This class provides APIs for ops that are known to have a single region.
 template <typename ConcreteType>
@@ -563,7 +569,7 @@ struct MultiResultTraitBase : public TraitBase<ConcreteType, TraitType> {
     return this->getOperation()->getResultTypes();
   }
 };
-} // end namespace detail
+} // namespace detail
 
 /// This class provides return value APIs for ops that are known to have a
 /// single result.  ResultType is the concrete type returned by getType().
@@ -712,7 +718,7 @@ struct MultiSuccessorTraitBase : public TraitBase<ConcreteType, TraitType> {
   succ_iterator succ_end() { return this->getOperation()->succ_end(); }
   succ_range getSuccessors() { return this->getOperation()->getSuccessors(); }
 };
-} // end namespace detail
+} // namespace detail
 
 /// This class provides APIs for ops that are known to have a single successor.
 template <typename ConcreteType>
@@ -1090,15 +1096,17 @@ public:
 };
 
 /// This class adds property that the operation is idempotent.
-/// This means a unary to unary operation "f" that satisfies f(f(x)) = f(x)
+/// This means a unary to unary operation "f" that satisfies f(f(x)) = f(x),
+/// or a binary operation "g" that satisfies g(x, x) = x.
 template <typename ConcreteType>
 class IsIdempotent : public TraitBase<ConcreteType, IsIdempotent> {
 public:
   static LogicalResult verifyTrait(Operation *op) {
     static_assert(ConcreteType::template hasTrait<OneResult>(),
                   "expected operation to produce one result");
-    static_assert(ConcreteType::template hasTrait<OneOperand>(),
-                  "expected operation to take one operand");
+    static_assert(ConcreteType::template hasTrait<OneOperand>() ||
+                      ConcreteType::template hasTrait<NOperands<2>::Impl>(),
+                  "expected operation to take one or two operands");
     static_assert(ConcreteType::template hasTrait<SameOperandsAndResultType>(),
                   "expected operation to preserve type");
     // Idempotent requires the operation to be side effect free as well
@@ -1416,7 +1424,7 @@ struct Tensorizable : public TraitBase<ConcreteType, Tensorizable> {
 /// behavior to vectors/tensors, and systematize conversion between these forms.
 bool hasElementwiseMappableTraits(Operation *op);
 
-} // end namespace OpTrait
+} // namespace OpTrait
 
 //===----------------------------------------------------------------------===//
 // Internal Trait Utilities
@@ -1779,7 +1787,7 @@ private:
                           OperationName::PrintAssemblyFn>
   getPrintAssemblyFnImpl() {
     return [](Operation *op, OpAsmPrinter &printer, StringRef defaultDialect) {
-      return OpState::print(op, printer);
+      return OpState::print(op, printer, defaultDialect);
     };
   }
   /// The internal implementation of `getPrintAssemblyFn` that is invoked when
@@ -1904,7 +1912,7 @@ Value foldCastOp(Operation *op);
 LogicalResult verifyCastOp(Operation *op,
                            function_ref<bool(Type, Type)> areCastCompatible);
 } // namespace impl
-} // end namespace mlir
+} // namespace mlir
 
 namespace llvm {
 
@@ -1925,6 +1933,6 @@ struct DenseMapInfo<
   static bool isEqual(T lhs, T rhs) { return lhs == rhs; }
 };
 
-} // end namespace llvm
+} // namespace llvm
 
 #endif

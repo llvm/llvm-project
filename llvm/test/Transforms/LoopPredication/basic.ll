@@ -1602,7 +1602,7 @@ define i32 @ne_latch_zext(i32* %array, i32 %length, i16 %n16) {
 ; CHECK-LABEL: @ne_latch_zext(
 ; CHECK-NEXT:  loop.preheader:
 ; CHECK-NEXT:    [[N:%.*]] = zext i16 [[N16:%.*]] to i32
-; CHECK-NEXT:    [[NPLUS1:%.*]] = add nuw nsw i32 [[N]], 1
+; CHECK-NEXT:    [[NPLUS1:%.*]] = add i32 [[N]], 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule i32 [[NPLUS1]], [[LENGTH:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 0, [[LENGTH]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[TMP1]], [[TMP0]]

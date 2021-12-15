@@ -303,7 +303,7 @@ ArraySpec ArraySpecAnalyzer::Analyze(const parser::CoarraySpec &x) {
 }
 
 void ArraySpecAnalyzer::Analyze(const parser::AssumedShapeSpec &x) {
-  arraySpec_.push_back(ShapeSpec::MakeAssumed(GetBound(x.v)));
+  arraySpec_.push_back(ShapeSpec::MakeAssumedShape(GetBound(x.v)));
 }
 void ArraySpecAnalyzer::Analyze(const parser::ExplicitShapeSpec &x) {
   MakeExplicit(std::get<std::optional<parser::SpecificationExpr>>(x.t),
@@ -605,7 +605,7 @@ bool EquivalenceSets::CheckObject(const parser::Name &name) {
         msg = "Nonsequence derived type object '%s'"
               " is not allowed in an equivalence set"_err_en_US;
       }
-    } else if (IsAutomaticObject(symbol)) {
+    } else if (IsAutomatic(symbol)) {
       msg = "Automatic object '%s'"
             " is not allowed in an equivalence set"_err_en_US;
     }

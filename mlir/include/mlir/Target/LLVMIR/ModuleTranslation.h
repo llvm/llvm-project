@@ -39,7 +39,7 @@ namespace LLVM {
 
 namespace detail {
 class DebugTranslation;
-} // end namespace detail
+} // namespace detail
 
 class LLVMFuncOp;
 

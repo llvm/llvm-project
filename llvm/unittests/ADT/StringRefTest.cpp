@@ -1092,10 +1092,14 @@ TEST(StringRefTest, DropWhileUntil) {
 TEST(StringRefTest, StringLiteral) {
   constexpr StringRef StringRefs[] = {"Foo", "Bar"};
   EXPECT_EQ(StringRef("Foo"), StringRefs[0]);
+  EXPECT_EQ(3u, (std::integral_constant<size_t, StringRefs[0].size()>::value));
+  EXPECT_EQ(false, (std::integral_constant<bool, StringRefs[0].empty()>::value));
   EXPECT_EQ(StringRef("Bar"), StringRefs[1]);
 
   constexpr StringLiteral Strings[] = {"Foo", "Bar"};
   EXPECT_EQ(StringRef("Foo"), Strings[0]);
+  EXPECT_EQ(3u, (std::integral_constant<size_t, Strings[0].size()>::value));
+  EXPECT_EQ(false, (std::integral_constant<bool, Strings[0].empty()>::value));
   EXPECT_EQ(StringRef("Bar"), Strings[1]);
 }
 

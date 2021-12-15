@@ -1033,7 +1033,7 @@ public:
     auto __p_root_name = __p.__root_name();
     auto __p_root_name_size = __p_root_name.size();
     if (__p.is_absolute() ||
-        (!__p_root_name.empty() && __p_root_name != root_name())) {
+        (!__p_root_name.empty() && __p_root_name != __string_view(root_name().__pn_))) {
       __pn_ = __p.__pn_;
       return *this;
     }
@@ -1492,22 +1492,22 @@ public:
 #endif // !_LIBCPP_HAS_NO_LOCALIZATION
 
   friend _LIBCPP_INLINE_VISIBILITY bool operator==(const path& __lhs, const path& __rhs) noexcept {
-    return __lhs.compare(__rhs) == 0;
+    return __lhs.__compare(__rhs.__pn_) == 0;
   }
   friend _LIBCPP_INLINE_VISIBILITY bool operator!=(const path& __lhs, const path& __rhs) noexcept {
-    return __lhs.compare(__rhs) != 0;
+    return __lhs.__compare(__rhs.__pn_) != 0;
   }
   friend _LIBCPP_INLINE_VISIBILITY bool operator<(const path& __lhs, const path& __rhs) noexcept {
-    return __lhs.compare(__rhs) < 0;
+    return __lhs.__compare(__rhs.__pn_) < 0;
   }
   friend _LIBCPP_INLINE_VISIBILITY bool operator<=(const path& __lhs, const path& __rhs) noexcept {
-    return __lhs.compare(__rhs) <= 0;
+    return __lhs.__compare(__rhs.__pn_) <= 0;
   }
   friend _LIBCPP_INLINE_VISIBILITY bool operator>(const path& __lhs, const path& __rhs) noexcept {
-    return __lhs.compare(__rhs) > 0;
+    return __lhs.__compare(__rhs.__pn_) > 0;
   }
   friend _LIBCPP_INLINE_VISIBILITY bool operator>=(const path& __lhs, const path& __rhs) noexcept {
-    return __lhs.compare(__rhs) >= 0;
+    return __lhs.__compare(__rhs.__pn_) >= 0;
   }
 
   friend _LIBCPP_INLINE_VISIBILITY path operator/(const path& __lhs,
@@ -3024,13 +3024,17 @@ _LIBCPP_END_NAMESPACE_FILESYSTEM
 
 #if !defined(_LIBCPP_HAS_NO_RANGES)
 template <>
+_LIBCPP_AVAILABILITY_FILESYSTEM
 inline constexpr bool _VSTD::ranges::enable_borrowed_range<_VSTD_FS::directory_iterator> = true;
 template <>
+_LIBCPP_AVAILABILITY_FILESYSTEM
 inline constexpr bool _VSTD::ranges::enable_borrowed_range<_VSTD_FS::recursive_directory_iterator> = true;
 
 template <>
+_LIBCPP_AVAILABILITY_FILESYSTEM
 inline constexpr bool _VSTD::ranges::enable_view<_VSTD_FS::directory_iterator> = true;
 template <>
+_LIBCPP_AVAILABILITY_FILESYSTEM
 inline constexpr bool _VSTD::ranges::enable_view<_VSTD_FS::recursive_directory_iterator> = true;
 #endif
 

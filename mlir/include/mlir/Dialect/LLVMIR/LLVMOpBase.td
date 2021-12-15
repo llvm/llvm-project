@@ -48,7 +48,7 @@ def LLVM_Dialect : Dialect {
     static StringRef getTargetTripleAttrName() { return "llvm.target_triple"; }
   }];
 
-  let emitAccessorPrefix = kEmitAccessorPrefix_Both;
+  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 
 //===----------------------------------------------------------------------===//
@@ -94,12 +94,12 @@ class LLVM_PointerTo<Type pointee> : Type<
   "LLVM pointer to " # pointee.summary>;
 
 // Type constraints accepting LLVM pointer type to integer of a specific width.
-class LLVM_IntPtrBase<int width> : Type<
+class LLVM_IntPtrBase<int width, int addressSpace = 0> : Type<
   LLVM_PointerTo<I<width>>.predicate,
   "LLVM pointer to " # I<width>.summary>,
   BuildableType<"::mlir::LLVM::LLVMPointerType::get("
                 "::mlir::IntegerType::get($_builder.getContext(), "
-                # width #"))">;
+                # width #"), "# addressSpace #")">;
 
 def LLVM_i8Ptr : LLVM_IntPtrBase<8>;
 

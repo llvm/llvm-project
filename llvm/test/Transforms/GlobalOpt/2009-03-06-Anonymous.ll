@@ -1,4 +1,4 @@
-; RUN: opt < %s -globalopt -S | FileCheck %s
+; RUN: opt < %s -passes=globalopt -S | FileCheck %s
 
 @0 = global i32 0
 ; CHECK-DAG: @0 = internal global i32 0

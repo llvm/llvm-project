@@ -221,7 +221,7 @@ void dereference_reinterpret_cast() {
   (void)*reinterpret_cast<void*>(&f); // expected-warning {{ISO C++ does not allow}}
 }
 
-void reinterpret_cast_whitelist () {
+void reinterpret_cast_allowlist () {
   // the dynamic type of the object
   int a;
   float b;

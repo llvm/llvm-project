@@ -59,7 +59,7 @@ struct BuiltinOpAsmDialectInterface : public OpAsmDialectInterface {
     return AliasResult::NoAlias;
   }
 };
-} // end anonymous namespace.
+} // namespace
 
 void BuiltinDialect::initialize() {
   registerTypes();

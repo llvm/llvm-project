@@ -294,7 +294,7 @@ private:
   /// Allow access to owner and constructor.
   friend BlockArgument;
 };
-} // end namespace detail
+} // namespace detail
 
 /// This class represents an argument of a Block.
 class BlockArgument : public Value {
@@ -419,7 +419,7 @@ inline unsigned OpResultImpl::getResultNumber() const {
   return cast<InlineOpResult>(this)->getResultNumber();
 }
 
-} // end namespace detail
+} // namespace detail
 
 /// This is a value defined by a result of an operation.
 class OpResult : public Value {
@@ -533,6 +533,6 @@ public:
   }
 };
 
-} // end namespace llvm
+} // namespace llvm
 
 #endif

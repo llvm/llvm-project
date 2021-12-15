@@ -154,8 +154,24 @@ public:
         }
         DebugSecInfos.push_back({&Sec, Sec.getName().substr(0, SepPos),
                                  Sec.getName().substr(SepPos + 1), 0, 0});
-      } else
+      } else {
         NonDebugSections.push_back(&Sec);
+
+        // If the first block in the section has a non-zero alignment offset
+        // then we need to add a padding block, since the section command in
+        // the header doesn't allow for aligment offsets.
+        SectionRange R(Sec);
+        if (!R.empty()) {
+          auto &FB = *R.getFirstBlock();
+          if (FB.getAlignmentOffset() != 0) {
+            auto Padding = G.allocateBuffer(FB.getAlignmentOffset());
+            memset(Padding.data(), 0, Padding.size());
+            G.createContentBlock(Sec, Padding,
+                                 FB.getAddress() - FB.getAlignmentOffset(),
+                                 FB.getAlignment(), 0);
+          }
+        }
+      }
     }
 
     // Create container block.

@@ -1311,22 +1311,6 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
   return AddressClass::eUnknown;
 }
 
-Symtab *ObjectFileMachO::GetSymtab() {
-  ModuleSP module_sp(GetModule());
-  if (module_sp) {
-    std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-    if (m_symtab_up == nullptr) {
-      ElapsedTime elapsed(module_sp->GetSymtabParseTime());
-      m_symtab_up = std::make_unique<Symtab>(this);
-      std::lock_guard<std::recursive_mutex> symtab_guard(
-          m_symtab_up->GetMutex());
-      ParseSymtab();
-      m_symtab_up->Finalize();
-    }
-  }
-  return m_symtab_up.get();
-}
-
 bool ObjectFileMachO::IsStripped() {
   if (m_dysymtab.cmd == 0) {
     ModuleSP module_sp(GetModule());
@@ -2233,12 +2217,12 @@ ParseNList(DataExtractor &nlist_data, lldb::offset_t &nlist_data_offset,
 
 enum { DebugSymbols = true, NonDebugSymbols = false };
 
-size_t ObjectFileMachO::ParseSymtab() {
+void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   LLDB_SCOPED_TIMERF("ObjectFileMachO::ParseSymtab () module = %s",
                      m_file.GetFilename().AsCString(""));
   ModuleSP module_sp(GetModule());
   if (!module_sp)
-    return 0;
+    return;
 
   Progress progress(llvm::formatv("Parsing symbol table for {0}",
                                   m_file.GetFilename().AsCString("<Unknown>")));
@@ -2288,7 +2272,7 @@ size_t ObjectFileMachO::ParseSymtab() {
       // Read in the rest of the symtab load command
       if (m_data.GetU32(&offset, &symtab_load_command.symoff, 4) ==
           nullptr) // fill in symoff, nsyms, stroff, strsize fields
-        return 0;
+        return;
       break;
 
     case LC_DYLD_INFO:
@@ -2347,12 +2331,11 @@ size_t ObjectFileMachO::ParseSymtab() {
   }
 
   if (!symtab_load_command.cmd)
-    return 0;
+    return;
 
-  Symtab *symtab = m_symtab_up.get();
   SectionList *section_list = GetSectionList();
   if (section_list == nullptr)
-    return 0;
+    return;
 
   const uint32_t addr_byte_size = m_data.GetAddressByteSize();
   const ByteOrder byte_order = m_data.GetByteOrder();
@@ -2489,7 +2472,7 @@ size_t ObjectFileMachO::ParseSymtab() {
 
     // We shouldn't have exports data from both the LC_DYLD_INFO command
     // AND the LC_DYLD_EXPORTS_TRIE command in the same binary:
-    lldbassert(!((dyld_info.export_size > 0) 
+    lldbassert(!((dyld_info.export_size > 0)
                  && (exports_trie_load_command.datasize > 0)));
     if (dyld_info.export_size > 0) {
       dyld_trie_data.SetData(m_data, dyld_info.export_off,
@@ -2881,10 +2864,10 @@ size_t ObjectFileMachO::ParseSymtab() {
 
                 // The normal nlist code cannot correctly size the Symbols
                 // array, we need to allocate it here.
-                sym = symtab->Resize(
+                sym = symtab.Resize(
                     symtab_load_command.nsyms + m_dysymtab.nindirectsyms +
                     unmapped_local_symbols_found - m_dysymtab.nlocalsym);
-                num_syms = symtab->GetNumSymbols();
+                num_syms = symtab.GetNumSymbols();
 
                 nlist_data_offset =
                     local_symbols_info.nlistOffset +
@@ -3016,7 +2999,7 @@ size_t ObjectFileMachO::ParseSymtab() {
                             // original
                             // STAB entry so we don't have
                             // to hunt for it later
-                            symtab->SymbolAtIndex(N_FUN_indexes.back())
+                            symtab.SymbolAtIndex(N_FUN_indexes.back())
                                 ->SetByteSize(nlist.n_value);
                             N_FUN_indexes.pop_back();
                             // We don't really need the end function STAB as
@@ -3096,7 +3079,7 @@ size_t ObjectFileMachO::ParseSymtab() {
                             // index of this N_SO so that we can always skip
                             // the entire N_SO if we need to navigate more
                             // quickly at the source level when parsing STABS
-                            symbol_ptr = symtab->SymbolAtIndex(N_SO_index);
+                            symbol_ptr = symtab.SymbolAtIndex(N_SO_index);
                             symbol_ptr->SetByteSize(sym_idx);
                             symbol_ptr->SetSizeIsSibling(true);
                           }
@@ -3203,7 +3186,7 @@ size_t ObjectFileMachO::ParseSymtab() {
                         // quickly at the source level when parsing STABS
                         if (!N_INCL_indexes.empty()) {
                           symbol_ptr =
-                              symtab->SymbolAtIndex(N_INCL_indexes.back());
+                              symtab.SymbolAtIndex(N_INCL_indexes.back());
                           symbol_ptr->SetByteSize(sym_idx + 1);
                           symbol_ptr->SetSizeIsSibling(true);
                           N_INCL_indexes.pop_back();
@@ -3268,7 +3251,7 @@ size_t ObjectFileMachO::ParseSymtab() {
                                                                  nlist.n_value);
                         if (!N_BRAC_indexes.empty()) {
                           symbol_ptr =
-                              symtab->SymbolAtIndex(N_BRAC_indexes.back());
+                              symtab.SymbolAtIndex(N_BRAC_indexes.back());
                           symbol_ptr->SetByteSize(sym_idx + 1);
                           symbol_ptr->SetSizeIsSibling(true);
                           N_BRAC_indexes.pop_back();
@@ -3306,7 +3289,7 @@ size_t ObjectFileMachO::ParseSymtab() {
                         // parsing STABS
                         if (!N_COMM_indexes.empty()) {
                           symbol_ptr =
-                              symtab->SymbolAtIndex(N_COMM_indexes.back());
+                              symtab.SymbolAtIndex(N_COMM_indexes.back());
                           symbol_ptr->SetByteSize(sym_idx + 1);
                           symbol_ptr->SetSizeIsSibling(true);
                           N_COMM_indexes.pop_back();
@@ -3806,8 +3789,8 @@ size_t ObjectFileMachO::ParseSymtab() {
     // symbols, create it now.
     if (sym == nullptr) {
       sym =
-          symtab->Resize(symtab_load_command.nsyms + m_dysymtab.nindirectsyms);
-      num_syms = symtab->GetNumSymbols();
+          symtab.Resize(symtab_load_command.nsyms + m_dysymtab.nindirectsyms);
+      num_syms = symtab.GetNumSymbols();
     }
 
     if (unmapped_local_symbols_found) {
@@ -3941,7 +3924,7 @@ size_t ObjectFileMachO::ParseSymtab() {
             if (!N_FUN_indexes.empty()) {
               // Copy the size of the function into the original STAB entry
               // so we don't have to hunt for it later
-              symtab->SymbolAtIndex(N_FUN_indexes.back())
+              symtab.SymbolAtIndex(N_FUN_indexes.back())
                   ->SetByteSize(nlist.n_value);
               N_FUN_indexes.pop_back();
               // We don't really need the end function STAB as it contains
@@ -4015,7 +3998,7 @@ size_t ObjectFileMachO::ParseSymtab() {
               // N_SO so that we can always skip the entire N_SO if we need
               // to navigate more quickly at the source level when parsing
               // STABS
-              symbol_ptr = symtab->SymbolAtIndex(N_SO_index);
+              symbol_ptr = symtab.SymbolAtIndex(N_SO_index);
               symbol_ptr->SetByteSize(sym_idx);
               symbol_ptr->SetSizeIsSibling(true);
             }
@@ -4109,7 +4092,7 @@ size_t ObjectFileMachO::ParseSymtab() {
           // N_EINCL so that we can always skip the entire symbol if we need
           // to navigate more quickly at the source level when parsing STABS
           if (!N_INCL_indexes.empty()) {
-            symbol_ptr = symtab->SymbolAtIndex(N_INCL_indexes.back());
+            symbol_ptr = symtab.SymbolAtIndex(N_INCL_indexes.back());
             symbol_ptr->SetByteSize(sym_idx + 1);
             symbol_ptr->SetSizeIsSibling(true);
             N_INCL_indexes.pop_back();
@@ -4168,7 +4151,7 @@ size_t ObjectFileMachO::ParseSymtab() {
           // quickly at the source level when parsing STABS
           symbol_section = section_info.GetSection(nlist.n_sect, nlist.n_value);
           if (!N_BRAC_indexes.empty()) {
-            symbol_ptr = symtab->SymbolAtIndex(N_BRAC_indexes.back());
+            symbol_ptr = symtab.SymbolAtIndex(N_BRAC_indexes.back());
             symbol_ptr->SetByteSize(sym_idx + 1);
             symbol_ptr->SetSizeIsSibling(true);
             N_BRAC_indexes.pop_back();
@@ -4202,7 +4185,7 @@ size_t ObjectFileMachO::ParseSymtab() {
           // we need to navigate more quickly at the source level when
           // parsing STABS
           if (!N_COMM_indexes.empty()) {
-            symbol_ptr = symtab->SymbolAtIndex(N_COMM_indexes.back());
+            symbol_ptr = symtab.SymbolAtIndex(N_COMM_indexes.back());
             symbol_ptr->SetByteSize(sym_idx + 1);
             symbol_ptr->SetSizeIsSibling(true);
             N_COMM_indexes.pop_back();
@@ -4658,7 +4641,7 @@ size_t ObjectFileMachO::ParseSymtab() {
 
   if (num_syms < sym_idx + trie_symbol_table_augment_count) {
     num_syms = sym_idx + trie_symbol_table_augment_count;
-    sym = symtab->Resize(num_syms);
+    sym = symtab.Resize(num_syms);
   }
   uint32_t synthetic_sym_id = symtab_load_command.nsyms;
 
@@ -4707,7 +4690,7 @@ size_t ObjectFileMachO::ParseSymtab() {
     if (num_synthetic_function_symbols > 0) {
       if (num_syms < sym_idx + num_synthetic_function_symbols) {
         num_syms = sym_idx + num_synthetic_function_symbols;
-        sym = symtab->Resize(num_syms);
+        sym = symtab.Resize(num_syms);
       }
       for (i = 0; i < function_starts_count; ++i) {
         const FunctionStarts::Entry *func_start_entry =
@@ -4762,7 +4745,7 @@ size_t ObjectFileMachO::ParseSymtab() {
   // symbols.
   if (sym_idx < num_syms) {
     num_syms = sym_idx;
-    sym = symtab->Resize(num_syms);
+    sym = symtab.Resize(num_syms);
   }
 
   // Now synthesize indirect symbols
@@ -4807,11 +4790,11 @@ size_t ObjectFileMachO::ParseSymtab() {
               if (index_pos != end_index_pos) {
                 // We have a remapping from the original nlist index to a
                 // current symbol index, so just look this up by index
-                stub_symbol = symtab->SymbolAtIndex(index_pos->second);
+                stub_symbol = symtab.SymbolAtIndex(index_pos->second);
               } else {
                 // We need to lookup a symbol using the original nlist symbol
                 // index since this index is coming from the S_SYMBOL_STUBS
-                stub_symbol = symtab->FindSymbolByID(stub_sym_id);
+                stub_symbol = symtab.FindSymbolByID(stub_sym_id);
               }
 
               if (stub_symbol) {
@@ -4834,7 +4817,7 @@ size_t ObjectFileMachO::ParseSymtab() {
                   // Make a synthetic symbol to describe the trampoline stub
                   Mangled stub_symbol_mangled_name(stub_symbol->GetMangled());
                   if (sym_idx >= num_syms) {
-                    sym = symtab->Resize(++num_syms);
+                    sym = symtab.Resize(++num_syms);
                     stub_symbol = nullptr; // this pointer no longer valid
                   }
                   sym[sym_idx].SetID(synthetic_sym_id++);
@@ -4873,7 +4856,7 @@ size_t ObjectFileMachO::ParseSymtab() {
             indirect_symbol_names.end()) {
           // Make a synthetic symbol to describe re-exported symbol.
           if (sym_idx >= num_syms)
-            sym = symtab->Resize(++num_syms);
+            sym = symtab.Resize(++num_syms);
           sym[sym_idx].SetID(synthetic_sym_id++);
           sym[sym_idx].GetMangled() = Mangled(e.entry.name);
           sym[sym_idx].SetType(eSymbolTypeReExported);
@@ -4888,18 +4871,6 @@ size_t ObjectFileMachO::ParseSymtab() {
       }
     }
   }
-
-  //        StreamFile s(stdout, false);
-  //        s.Printf ("Symbol table before CalculateSymbolSizes():\n");
-  //        symtab->Dump(&s, NULL, eSortOrderNone);
-  // Set symbol byte sizes correctly since mach-o nlist entries don't have
-  // sizes
-  symtab->CalculateSymbolSizes();
-
-  //        s.Printf ("Symbol table after CalculateSymbolSizes():\n");
-  //        symtab->Dump(&s, NULL, eSortOrderNone);
-
-  return symtab->GetNumSymbols();
 }
 
 void ObjectFileMachO::Dump(Stream *s) {
@@ -5183,17 +5154,7 @@ void ObjectFileMachO::GetAllArchSpecs(const llvm::MachO::mach_header &header,
   }
 
   if (!found_any) {
-    if (header.filetype == MH_KEXT_BUNDLE) {
-      base_triple.setVendor(llvm::Triple::Apple);
-      add_triple(base_triple);
-    } else {
-      // We didn't find a LC_VERSION_MIN load command and this isn't a KEXT
-      // so lets not say our Vendor is Apple, leave it as an unspecified
-      // unknown.
-      base_triple.setVendor(llvm::Triple::UnknownVendor);
-      base_triple.setVendorName(llvm::StringRef());
-      add_triple(base_triple);
-    }
+    add_triple(base_triple);
   }
 }
 
@@ -7012,6 +6973,23 @@ ObjectFileMachO::GetCorefileAllImageInfos() {
           }
           image_infos.all_image_infos.push_back(image_entry);
         }
+      } else if (strcmp("load binary", data_owner) == 0) {
+        uint32_t version = m_data.GetU32(&fileoff);
+        if (version == 1) {
+          uuid_t uuid;
+          memcpy(&uuid, m_data.GetData(&fileoff, sizeof(uuid_t)),
+                 sizeof(uuid_t));
+          uint64_t load_address = m_data.GetU64(&fileoff);
+          uint64_t slide = m_data.GetU64(&fileoff);
+          std::string filename = m_data.GetCStr(&fileoff);
+
+          MachOCorefileImageEntry image_entry;
+          image_entry.filename = filename;
+          image_entry.uuid = UUID::fromData(uuid, sizeof(uuid_t));
+          image_entry.load_address = load_address;
+          image_entry.slide = slide;
+          image_infos.all_image_infos.push_back(image_entry);
+        }
       }
     }
     offset = cmd_offset + lc.cmdsize;
@@ -7022,29 +7000,42 @@ ObjectFileMachO::GetCorefileAllImageInfos() {
 
 bool ObjectFileMachO::LoadCoreFileImages(lldb_private::Process &process) {
   MachOCorefileAllImageInfos image_infos = GetCorefileAllImageInfos();
-  bool added_images = false;
-  if (image_infos.IsValid()) {
-    for (const MachOCorefileImageEntry &image : image_infos.all_image_infos) {
-      ModuleSpec module_spec;
-      module_spec.GetUUID() = image.uuid;
-      module_spec.GetFileSpec() = FileSpec(image.filename.c_str());
-      if (image.currently_executing) {
-        Symbols::DownloadObjectAndSymbolFile(module_spec, true);
-        if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
-          process.GetTarget().GetOrCreateModule(module_spec, false);
-        }
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
+
+  ModuleList added_modules;
+  for (const MachOCorefileImageEntry &image : image_infos.all_image_infos) {
+    ModuleSpec module_spec;
+    module_spec.GetUUID() = image.uuid;
+    module_spec.GetFileSpec() = FileSpec(image.filename.c_str());
+    if (image.currently_executing) {
+      Symbols::DownloadObjectAndSymbolFile(module_spec, true);
+      if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
+        process.GetTarget().GetOrCreateModule(module_spec, false);
       }
-      Status error;
-      ModuleSP module_sp =
-          process.GetTarget().GetOrCreateModule(module_spec, false, &error);
-      if (!module_sp.get() || !module_sp->GetObjectFile()) {
-        if (image.load_address != LLDB_INVALID_ADDRESS) {
-          module_sp = process.ReadModuleFromMemory(module_spec.GetFileSpec(),
-                                                   image.load_address);
-        }
+    }
+    Status error;
+    ModuleSP module_sp =
+        process.GetTarget().GetOrCreateModule(module_spec, false, &error);
+    if (!module_sp.get() || !module_sp->GetObjectFile()) {
+      if (image.load_address != LLDB_INVALID_ADDRESS) {
+        module_sp = process.ReadModuleFromMemory(module_spec.GetFileSpec(),
+                                                 image.load_address);
       }
-      if (module_sp.get()) {
-        added_images = true;
+    }
+    if (module_sp.get()) {
+      // Will call ModulesDidLoad with all modules once they've all
+      // been added to the Target with load addresses.  Don't notify
+      // here, before the load address is set.
+      const bool notify = false;
+      process.GetTarget().GetImages().AppendIfNeeded(module_sp, notify);
+      added_modules.Append(module_sp, notify);
+      if (image.segment_load_addresses.size() > 0) {
+        if (log) {
+          std::string uuidstr = image.uuid.GetAsString();
+          log->Printf("ObjectFileMachO::LoadCoreFileImages adding binary '%s' "
+                      "UUID %s with section load addresses",
+                      image.filename.c_str(), uuidstr.c_str());
+        }
         for (auto name_vmaddr_tuple : image.segment_load_addresses) {
           SectionList *sectlist = module_sp->GetObjectFile()->GetSectionList();
           if (sectlist) {
@@ -7056,8 +7047,47 @@ bool ObjectFileMachO::LoadCoreFileImages(lldb_private::Process &process) {
             }
           }
         }
+      } else if (image.load_address != LLDB_INVALID_ADDRESS) {
+        if (log) {
+          std::string uuidstr = image.uuid.GetAsString();
+          log->Printf("ObjectFileMachO::LoadCoreFileImages adding binary '%s' "
+                      "UUID %s with load address 0x%" PRIx64,
+                      image.filename.c_str(), uuidstr.c_str(),
+                      image.load_address);
+        }
+        const bool address_is_slide = false;
+        bool changed = false;
+        module_sp->SetLoadAddress(process.GetTarget(), image.load_address,
+                                  address_is_slide, changed);
+      } else if (image.slide != 0) {
+        if (log) {
+          std::string uuidstr = image.uuid.GetAsString();
+          log->Printf("ObjectFileMachO::LoadCoreFileImages adding binary '%s' "
+                      "UUID %s with slide amount 0x%" PRIx64,
+                      image.filename.c_str(), uuidstr.c_str(), image.slide);
+        }
+        const bool address_is_slide = true;
+        bool changed = false;
+        module_sp->SetLoadAddress(process.GetTarget(), image.slide,
+                                  address_is_slide, changed);
+      } else {
+        if (log) {
+          std::string uuidstr = image.uuid.GetAsString();
+          log->Printf("ObjectFileMachO::LoadCoreFileImages adding binary '%s' "
+                      "UUID %s at its file address, no slide applied",
+                      image.filename.c_str(), uuidstr.c_str());
+        }
+        const bool address_is_slide = true;
+        bool changed = false;
+        module_sp->SetLoadAddress(process.GetTarget(), 0, address_is_slide,
+                                  changed);
       }
     }
   }
-  return added_images;
+  if (added_modules.GetSize() > 0) {
+    process.GetTarget().ModulesDidLoad(added_modules);
+    process.Flush();
+    return true;
+  }
+  return false;
 }

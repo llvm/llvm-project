@@ -5,6 +5,6 @@
 static int arr[10];
 void t1() {
   // CHECK: @arr = internal global [10 x i32]
-  // CHECK: call void asm sideeffect inteldialect "mov dword ptr $0[edx * $$4],edx", "=*m,{{.*}}([10 x i32]* @arr)
+  // CHECK: call void asm sideeffect inteldialect "mov dword ptr arr[edx * $$4],edx", "=*m,{{.*}}([10 x i32]* @arr)
   __asm mov  dword ptr arr[edx*4],edx
 }

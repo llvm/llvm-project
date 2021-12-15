@@ -77,25 +77,25 @@ func @condBranchDynamicType(
 // -----
 
 // CHECK-LABEL: func @dynamicRanked
-func @dynamicRanked(%tensor: tensor<*xf32>) {
-  %0 = rank %tensor : tensor<*xf32>
+func @dynamicRanked(%memref: memref<*xf32>) {
+  %0 = memref.rank %memref : memref<*xf32>
   %1 = memref.alloc(%0) : memref<?xindex>
   return
 }
 
-// CHECK-NEXT: %[[RANK:.*]] = rank
+// CHECK-NEXT: %[[RANK:.*]] = memref.rank %{{.*}} : memref<*xf32>
 // CHECK-NEXT: %[[ALLOCA:.*]] = memref.alloca(%[[RANK]])
 
 // -----
 
 // CHECK-LABEL: func @dynamicRanked2D
-func @dynamicRanked2D(%tensor: tensor<*xf32>) {
-  %0 = rank %tensor : tensor<*xf32>
+func @dynamicRanked2D(%memref: memref<*xf32>) {
+  %0 = memref.rank %memref : memref<*xf32>
   %1 = memref.alloc(%0, %0) : memref<?x?xindex>
   return
 }
 
-// CHECK-NEXT: %[[RANK:.*]] = rank
+// CHECK-NEXT: %[[RANK:.*]] = memref.rank %{{.*}} : memref<*xf32>
 //  RANK-NEXT: %[[ALLOC:.*]] = memref.alloca(%[[RANK]], %[[RANK]])
 // DEFINDEX-NEXT: %[[ALLOC:.*]] = memref.alloc(%[[RANK]], %[[RANK]])
 

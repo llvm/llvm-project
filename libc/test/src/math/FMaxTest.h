@@ -23,7 +23,7 @@ public:
 
   void testNaN(FMaxFunc func) {
     EXPECT_FP_EQ(inf, func(aNaN, inf));
-    EXPECT_FP_EQ(negInf, func(negInf, aNaN));
+    EXPECT_FP_EQ(neg_inf, func(neg_inf, aNaN));
     EXPECT_FP_EQ(0.0, func(aNaN, 0.0));
     EXPECT_FP_EQ(-0.0, func(-0.0, aNaN));
     EXPECT_FP_EQ(T(-1.2345), func(aNaN, T(-1.2345)));
@@ -32,7 +32,7 @@ public:
   }
 
   void testInfArg(FMaxFunc func) {
-    EXPECT_FP_EQ(inf, func(negInf, inf));
+    EXPECT_FP_EQ(inf, func(neg_inf, inf));
     EXPECT_FP_EQ(inf, func(inf, 0.0));
     EXPECT_FP_EQ(inf, func(-0.0, inf));
     EXPECT_FP_EQ(inf, func(inf, T(1.2345)));
@@ -40,11 +40,11 @@ public:
   }
 
   void testNegInfArg(FMaxFunc func) {
-    EXPECT_FP_EQ(inf, func(inf, negInf));
-    EXPECT_FP_EQ(0.0, func(negInf, 0.0));
-    EXPECT_FP_EQ(-0.0, func(-0.0, negInf));
-    EXPECT_FP_EQ(T(-1.2345), func(negInf, T(-1.2345)));
-    EXPECT_FP_EQ(T(1.2345), func(T(1.2345), negInf));
+    EXPECT_FP_EQ(inf, func(inf, neg_inf));
+    EXPECT_FP_EQ(0.0, func(neg_inf, 0.0));
+    EXPECT_FP_EQ(-0.0, func(-0.0, neg_inf));
+    EXPECT_FP_EQ(T(-1.2345), func(neg_inf, T(-1.2345)));
+    EXPECT_FP_EQ(T(1.2345), func(T(1.2345), neg_inf));
   }
 
   void testBothZero(FMaxFunc func) {

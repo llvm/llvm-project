@@ -340,6 +340,6 @@ private:
   inline unsigned getDimStartIndex() const { return 0; }
 };
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_IR_AFFINE_EXPR_VISITOR_H

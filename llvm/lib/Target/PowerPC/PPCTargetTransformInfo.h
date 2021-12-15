@@ -100,8 +100,8 @@ public:
   unsigned getCacheLineSize() const override;
   unsigned getPrefetchDistance() const override;
   unsigned getMaxInterleaveFactor(unsigned VF);
-  InstructionCost vectorCostAdjustment(InstructionCost Cost, unsigned Opcode,
-                                       Type *Ty1, Type *Ty2);
+  InstructionCost vectorCostAdjustmentFactor(unsigned Opcode, Type *Ty1,
+                                             Type *Ty2);
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueKind Opd1Info = TTI::OK_AnyValue,
@@ -137,6 +137,17 @@ public:
   bool areFunctionArgsABICompatible(const Function *Caller,
                                     const Function *Callee,
                                     SmallPtrSetImpl<Argument *> &Args) const;
+  bool hasActiveVectorLength(unsigned Opcode, Type *DataType,
+                             Align Alignment) const;
+  InstructionCost getVPMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
+                                    unsigned AddressSpace,
+                                    TTI::TargetCostKind CostKind,
+                                    const Instruction *I = nullptr);
+
+private:
+  // The following constant is used for estimating costs on power9.
+  static const InstructionCost::CostType P9PipelineFlushEstimate = 80;
+
   /// @}
 };
 

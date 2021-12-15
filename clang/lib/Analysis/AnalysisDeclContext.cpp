@@ -387,7 +387,7 @@ std::string AnalysisDeclContext::getFunctionName(const Decl *D) {
     OS << ' ' << OMD->getSelector().getAsString() << ']';
   }
 
-  return OS.str();
+  return Str;
 }
 
 LocationContextManager &AnalysisDeclContext::getLocationContextManager() {

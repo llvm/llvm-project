@@ -138,7 +138,15 @@ void LoadedModule::set(const char *module_name, uptr base_address,
   set(module_name, base_address);
   arch_ = arch;
   internal_memcpy(uuid_, uuid, sizeof(uuid_));
+  uuid_size_ = kModuleUUIDSize;
   instrumented_ = instrumented;
+}
+
+void LoadedModule::setUuid(const char *uuid, uptr size) {
+  if (size > kModuleUUIDSize)
+    size = kModuleUUIDSize;
+  internal_memcpy(uuid_, uuid, size);
+  uuid_size_ = size;
 }
 
 void LoadedModule::clear() {

@@ -323,14 +323,12 @@ bool R600VectorRegMerger::runOnMachineFunction(MachineFunction &Fn) {
   TII = ST.getInstrInfo();
   MRI = &Fn.getRegInfo();
 
-  for (MachineFunction::iterator MBB = Fn.begin(), MBBe = Fn.end();
-       MBB != MBBe; ++MBB) {
-    MachineBasicBlock *MB = &*MBB;
+  for (MachineBasicBlock &MB : Fn) {
     PreviousRegSeq.clear();
     PreviousRegSeqByReg.clear();
     PreviousRegSeqByUndefCount.clear();
 
-    for (MachineBasicBlock::iterator MII = MB->begin(), MIIE = MB->end();
+    for (MachineBasicBlock::iterator MII = MB.begin(), MIIE = MB.end();
          MII != MIIE; ++MII) {
       MachineInstr &MI = *MII;
       if (MI.getOpcode() != R600::REG_SEQUENCE) {

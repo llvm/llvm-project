@@ -38,6 +38,18 @@ define i8* @test_simplify2() {
   ret i8* %ret
 }
 
+; Same as test_simplify1 but with a tail call rather than vanilla call.
+define i8* @test_simplify3() {
+; CHECK-LABEL: @test_simplify3(
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 4 dereferenceable(1824) bitcast (%struct.T1* @t1 to i8*), i8* noundef nonnull align 4 dereferenceable(1824) bitcast (%struct.T2* @t2 to i8*), i64 1824, i1 false)
+; CHECK-NEXT:    ret i8* bitcast (%struct.T1* @t1 to i8*)
+;
+  %dst = bitcast %struct.T1* @t1 to i8*
+  %src = bitcast %struct.T2* @t2 to i8*
+  %ret = tail call i8* @__memcpy_chk(i8* %dst, i8* %src, i64 1824, i64 1824)
+  ret i8* %ret
+}
+
 ; Check cases where dstlen < len.
 
 define i8* @test_no_simplify1() {
@@ -59,6 +71,15 @@ define i8* @test_no_simplify2() {
   %dst = bitcast %struct.T1* @t1 to i8*
   %src = bitcast %struct.T2* @t2 to i8*
   %ret = call i8* @__memcpy_chk(i8* %dst, i8* %src, i64 1024, i64 0)
+  ret i8* %ret
+}
+
+define i8* @test_no_simplify3(i8* %dst, i8* %src, i64 %a, i64 %b) {
+; CHECK-LABEL: @test_no_simplify3(
+; CHECK-NEXT:    %ret = musttail call i8* @__memcpy_chk(i8* %dst, i8* %src, i64 1824, i64 1824)
+; CHECK-NEXT:    ret i8* %ret
+;
+  %ret = musttail call i8* @__memcpy_chk(i8* %dst, i8* %src, i64 1824, i64 1824)
   ret i8* %ret
 }
 

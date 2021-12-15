@@ -131,8 +131,8 @@ struct OpPassManagerImpl {
   /// OpPassManager.
   OpPassManager::Nesting nesting;
 };
-} // end namespace detail
-} // end namespace mlir
+} // namespace detail
+} // namespace mlir
 
 void OpPassManagerImpl::mergeInto(OpPassManagerImpl &rhs) {
   assert(name == rhs.name && "merging unrelated pass managers");
@@ -786,8 +786,8 @@ struct PassInstrumentorImpl {
   /// Set of registered instrumentations.
   std::vector<std::unique_ptr<PassInstrumentation>> instrumentations;
 };
-} // end namespace detail
-} // end namespace mlir
+} // namespace detail
+} // namespace mlir
 
 PassInstrumentor::PassInstrumentor() : impl(new PassInstrumentorImpl()) {}
 PassInstrumentor::~PassInstrumentor() {}

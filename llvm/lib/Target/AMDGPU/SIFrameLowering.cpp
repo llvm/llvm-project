@@ -1364,6 +1364,34 @@ bool SIFrameLowering::assignCalleeSavedSpillSlots(
   return false;
 }
 
+bool SIFrameLowering::allocateScavengingFrameIndexesNearIncomingSP(
+  const MachineFunction &MF) const {
+
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  uint64_t EstStackSize = MFI.estimateStackSize(MF);
+  uint64_t MaxOffset = EstStackSize - 1;
+
+  // We need the emergency stack slots to be allocated in range of the
+  // MUBUF/flat scratch immediate offset from the base register, so assign these
+  // first at the incoming SP position.
+  //
+  // TODO: We could try sorting the objects to find a hole in the first bytes
+  // rather than allocating as close to possible. This could save a lot of space
+  // on frames with alignment requirements.
+  if (ST.enableFlatScratch()) {
+    const SIInstrInfo *TII = ST.getInstrInfo();
+    if (TII->isLegalFLATOffset(MaxOffset, AMDGPUAS::PRIVATE_ADDRESS,
+                               SIInstrFlags::FlatScratch))
+      return false;
+  } else {
+    if (SIInstrInfo::isLegalMUBUFImmOffset(MaxOffset))
+      return false;
+  }
+
+  return true;
+}
+
 MachineBasicBlock::iterator SIFrameLowering::eliminateCallFramePseudoInstr(
   MachineFunction &MF,
   MachineBasicBlock &MBB,

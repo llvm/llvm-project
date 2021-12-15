@@ -1,7 +1,7 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
 # RUN: ld.lld %t.o -o %t
-# RUN: llvm-objdump -d %t | FileCheck %s --check-prefix=DISASM
+# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s --check-prefix=DISASM
 # RUN: llvm-readelf -r -s %t | FileCheck %s
 
 # RUN: ld.lld --export-dynamic %t.o -o %t
@@ -26,22 +26,21 @@
 # DISASM: Disassembly of section .text:
 # DISASM-EMPTY:
 # DISASM-NEXT: <foo>:
-# DISASM-NEXT:  201188: {{.*}} retq
 # DISASM:      <bar>:
-# DISASM-NEXT:  201189: {{.*}} retq
+# DISASM:      <unused>:
 # DISASM:      <_start>:
-# DISASM-NEXT:  20118a: {{.*}} callq 0x2011a0
-# DISASM-NEXT:  20118f: {{.*}} callq 0x2011b0
+# DISASM-NEXT:   callq 0x[[#%x,foo:]]
+# DISASM-NEXT:   callq 0x[[#%x,bar:]]
 # DISASM-EMPTY:
 # DISASM-NEXT: Disassembly of section .iplt:
 # DISASM-EMPTY:
 # DISASM-NEXT: <.iplt>:
-# DISASM-NEXT:  2011a0: {{.*}} jmpq *{{.*}}(%rip)  # 0x2021d0
-# DISASM-NEXT:  2011a6: {{.*}} pushq $0
-# DISASM-NEXT:  2011ab: {{.*}} jmp 0x0
-# DISASM-NEXT:  2011b0: {{.*}} jmpq *{{.*}}(%rip)  # 0x2021d8
-# DISASM-NEXT:  2011b6: {{.*}} pushq $1
-# DISASM-NEXT:  2011bb: {{.*}} jmp 0x0
+# DISASM-NEXT:  [[#foo]]: jmpq *{{.*}}(%rip)
+# DISASM-NEXT:            pushq $0
+# DISASM-NEXT:            jmp 0x0
+# DISASM-NEXT:  [[#bar]]: jmpq *{{.*}}(%rip)
+# DISASM-NEXT:            pushq $1
+# DISASM-NEXT:            jmp 0x0
 
 .text
 .type foo STT_GNU_IFUNC
@@ -53,6 +52,11 @@ foo:
 .globl bar
 bar:
  ret
+
+.type unused, @gnu_indirect_function
+.globl unused
+unused:
+  ret
 
 .weak __rela_iplt_start
 .weak __rela_iplt_end

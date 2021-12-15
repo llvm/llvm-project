@@ -27,11 +27,11 @@ constexpr int32_t DETAILED_POWERS_OF_TEN_MIN_EXP_10 = -348;
 constexpr int32_t DETAILED_POWERS_OF_TEN_MAX_EXP_10 = 347;
 
 // This rescales the base 10 exponent by a factor of log(10)/log(2).
-static inline int64_t exp10ToExp2(int64_t exp10) {
+static inline int64_t exp10_to_exp2(int64_t exp10) {
   return (217706 * exp10) >> 16;
 }
 
-static const uint64_t DETAILED_POWERS_OF_TEN[696][2] = {
+static constexpr uint64_t DETAILED_POWERS_OF_TEN[696][2] = {
     {0x1732C869CD60E453, 0xFA8FD5A0081C0288}, // 1e-348
     {0x0E7FBD42205C8EB4, 0x9C99E58405118195}, // 1e-347
     {0x521FAC92A873B261, 0xC3C05EE50655E1FA}, // 1e-346

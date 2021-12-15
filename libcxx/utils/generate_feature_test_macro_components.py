@@ -165,6 +165,10 @@ feature_test_macros = [ add_version_header(x) for x in [
     "values": { "c++17": 201603 },
     "headers": ["cstddef"],
   }, {
+    "name": "__cpp_lib_byteswap",
+    "values": { "c++2b": 202110 },
+    "headers": ["bit"],
+  }, {
     "name": "__cpp_lib_char8_t",
     "values": { "c++20": 201811 },
     "headers": ["atomic", "filesystem", "istream", "limits", "locale", "ostream", "string", "string_view"],
@@ -279,7 +283,7 @@ feature_test_macros = [ add_version_header(x) for x in [
     "libcxx_guard": "!defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_filesystem)"
   }, {
     "name": "__cpp_lib_format",
-    "values": { "c++20": 201907 },
+    "values": { "c++20": 202106 },
     "headers": ["format"],
     "test_suite_guard": "!defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_format)",
     "libcxx_guard": "!defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_format)",

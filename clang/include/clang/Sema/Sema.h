@@ -1296,6 +1296,11 @@ public:
       EK_Decltype, EK_TemplateArgument, EK_Other
     } ExprContext;
 
+    // A context can be nested in both a discarded statement context and
+    // an immediate function context, so they need to be tracked independently.
+    bool InDiscardedStatement;
+    bool InImmediateFunctionContext;
+
     ExpressionEvaluationContextRecord(ExpressionEvaluationContext Context,
                                       unsigned NumCleanupObjects,
                                       CleanupInfo ParentCleanup,
@@ -1303,7 +1308,8 @@ public:
                                       ExpressionKind ExprContext)
         : Context(Context), ParentCleanup(ParentCleanup),
           NumCleanupObjects(NumCleanupObjects), NumTypos(0),
-          ManglingContextDecl(ManglingContextDecl), ExprContext(ExprContext) {}
+          ManglingContextDecl(ManglingContextDecl), ExprContext(ExprContext),
+          InDiscardedStatement(false), InImmediateFunctionContext(false) {}
 
     bool isUnevaluated() const {
       return Context == ExpressionEvaluationContext::Unevaluated ||
@@ -1317,7 +1323,16 @@ public:
     }
 
     bool isImmediateFunctionContext() const {
-      return Context == ExpressionEvaluationContext::ImmediateFunctionContext;
+      return Context == ExpressionEvaluationContext::ImmediateFunctionContext ||
+             (Context == ExpressionEvaluationContext::DiscardedStatement &&
+              InImmediateFunctionContext);
+    }
+
+    bool isDiscardedStatementContext() const {
+      return Context == ExpressionEvaluationContext::DiscardedStatement ||
+             (Context ==
+                  ExpressionEvaluationContext::ImmediateFunctionContext &&
+              InDiscardedStatement);
     }
   };
 
@@ -2031,7 +2046,7 @@ public:
                          SourceLocation Loc);
   QualType BuildWritePipeType(QualType T,
                          SourceLocation Loc);
-  QualType BuildExtIntType(bool IsUnsigned, Expr *BitWidth, SourceLocation Loc);
+  QualType BuildBitIntType(bool IsUnsigned, Expr *BitWidth, SourceLocation Loc);
 
   TypeSourceInfo *GetTypeForDeclarator(Declarator &D, Scope *S);
   TypeSourceInfo *GetTypeForDeclaratorCast(Declarator &D, QualType FromTy);
@@ -2206,6 +2221,17 @@ private:
   Module *getCurrentModule() const {
     return ModuleScopes.empty() ? nullptr : ModuleScopes.back().Module;
   }
+
+  /// Helper function to judge if we are in module purview.
+  /// Return false if we are not in a module.
+  bool isCurrentModulePurview() const {
+    return getCurrentModule() ? getCurrentModule()->isModulePurview() : false;
+  }
+
+  /// Enter the scope of the global module.
+  Module *PushGlobalModuleFragment(SourceLocation BeginLoc, bool IsImplicit);
+  /// Leave the scope of the global module.
+  void PopGlobalModuleFragment();
 
   VisibleModuleSet VisibleModules;
 
@@ -4351,6 +4377,10 @@ public:
   llvm::Error isValidSectionSpecifier(StringRef Str);
   bool checkSectionName(SourceLocation LiteralLoc, StringRef Str);
   bool checkTargetAttr(SourceLocation LiteralLoc, StringRef Str);
+  bool checkTargetClonesAttrString(SourceLocation LiteralLoc, StringRef Str,
+                                   const StringLiteral *Literal,
+                                   bool &HasDefault, bool &HasCommas,
+                                   SmallVectorImpl<StringRef> &Strings);
   bool checkMSInheritanceAttrOnDefinition(
       CXXRecordDecl *RD, SourceRange Range, bool BestCase,
       MSInheritanceModel SemanticSpelling);
@@ -9150,14 +9180,7 @@ public:
   bool isImmediateFunctionContext() const {
     assert(!ExprEvalContexts.empty() &&
            "Must be in an expression evaluation context");
-    for (const ExpressionEvaluationContextRecord &context :
-         llvm::reverse(ExprEvalContexts)) {
-      if (context.isImmediateFunctionContext())
-        return true;
-      if (context.isUnevaluated())
-        return false;
-    }
-    return false;
+    return ExprEvalContexts.back().isImmediateFunctionContext();
   }
 
   /// RAII class used to determine whether SFINAE has
@@ -12760,7 +12783,7 @@ private:
   bool CheckPPCMMAType(QualType Type, SourceLocation TypeLoc);
 
   bool SemaBuiltinElementwiseMath(CallExpr *TheCall);
-  bool SemaBuiltinElementwiseMathOneArg(CallExpr *TheCall);
+  bool PrepareBuiltinElementwiseMathOneArgCall(CallExpr *TheCall);
   bool SemaBuiltinReduceMath(CallExpr *TheCall);
 
   // Matrix builtin handling.

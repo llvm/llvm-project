@@ -64,4 +64,13 @@ define i32 @PR48810() {
   ret i32 undef
 }
 
+define i8* @memcpy_no_simplify1(i8* %d, i8* nocapture readonly %s, i64 %n) {
+; CHECK-LABEL: @memcpy_no_simplify1(
+; CHECK-NEXT:    %r = musttail call i8* @mempcpy(i8* %d, i8* %s, i64 %n)
+; CHECK-NEXT:    ret i8* %r
+;
+  %r = musttail call i8* @mempcpy(i8* %d, i8* %s, i64 %n)
+  ret i8* %r
+}
+
 declare i8* @mempcpy(i8*, i8* nocapture readonly, i64)

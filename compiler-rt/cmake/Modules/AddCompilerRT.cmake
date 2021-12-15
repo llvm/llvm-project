@@ -565,13 +565,9 @@ macro(add_custom_libcxx name prefix)
                       -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER})
   endif()
 
-  set(STAMP_DIR ${prefix}-stamps/)
-  set(BINARY_DIR ${prefix}-bins/)
-
   add_custom_target(${name}-clear
-    COMMAND ${CMAKE_COMMAND} -E remove_directory ${BINARY_DIR}
-    COMMAND ${CMAKE_COMMAND} -E remove_directory ${STAMP_DIR}
-    COMMENT "Clobbering ${name} build and stamp directories"
+    COMMAND ${CMAKE_COMMAND} -E remove_directory ${prefix}
+    COMMENT "Clobbering ${name} build directories"
     USES_TERMINAL
     )
   set_target_properties(${name}-clear PROPERTIES FOLDER "Compiler-RT Misc")
@@ -579,10 +575,9 @@ macro(add_custom_libcxx name prefix)
   add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${name}-clobber-stamp
     DEPENDS ${LIBCXX_DEPS} ${toolchain_deps}
-    COMMAND ${CMAKE_COMMAND} -E touch ${BINARY_DIR}/CMakeCache.txt
-    COMMAND ${CMAKE_COMMAND} -E touch ${STAMP_DIR}/${name}-mkdir
+    COMMAND ${CMAKE_COMMAND} -E touch ${prefix}/CMakeCache.txt
     COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_BINARY_DIR}/${name}-clobber-stamp
-    COMMENT "Clobbering bootstrap build and stamp directories"
+    COMMENT "Clobbering bootstrap build directories"
     )
 
   add_custom_target(${name}-clobber
@@ -629,10 +624,9 @@ macro(add_custom_libcxx name prefix)
 
   ExternalProject_Add(${name}
     DEPENDS ${name}-clobber ${LIBCXX_DEPS}
-    PREFIX ${prefix}
-    SOURCE_DIR ${COMPILER_RT_SOURCE_DIR}/cmake/Modules/CustomLibcxx
-    STAMP_DIR ${STAMP_DIR}
-    BINARY_DIR ${BINARY_DIR}
+    PREFIX ${CMAKE_CURRENT_BINARY_DIR}/${name}
+    SOURCE_DIR ${LLVM_MAIN_SRC_DIR}/../runtimes
+    BINARY_DIR ${prefix}
     CMAKE_ARGS ${CMAKE_PASSTHROUGH_VARIABLES}
                ${compiler_args}
                -DCMAKE_C_FLAGS=${LIBCXX_C_FLAGS}
@@ -640,10 +634,16 @@ macro(add_custom_libcxx name prefix)
                -DCMAKE_BUILD_TYPE=Release
                -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY
                -DLLVM_PATH=${LLVM_MAIN_SRC_DIR}
-               -DLLVM_BINARY_DIR=${prefix}
-               -DLLVM_LIBRARY_OUTPUT_INTDIR=${prefix}/lib
-               -DCOMPILER_RT_LIBCXX_PATH=${COMPILER_RT_LIBCXX_PATH}
-               -DCOMPILER_RT_LIBCXXABI_PATH=${COMPILER_RT_LIBCXXABI_PATH}
+               -DLLVM_ENABLE_RUNTIMES=libcxx|libcxxabi
+               -DLIBCXXABI_ENABLE_SHARED=OFF
+               -DLIBCXXABI_HERMETIC_STATIC_LIBRARY=ON
+               -DLIBCXXABI_INCLUDE_TESTS=OFF
+               -DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=OFF
+               -DLIBCXX_ENABLE_SHARED=OFF
+               -DLIBCXX_HERMETIC_STATIC_LIBRARY=ON
+               -DLIBCXX_INCLUDE_BENCHMARKS=OFF
+               -DLIBCXX_INCLUDE_TESTS=OFF
+               -DLIBCXX_ENABLE_STATIC_ABI_LIBRARY=ON
                ${LIBCXX_CMAKE_ARGS}
     INSTALL_COMMAND ""
     STEP_TARGETS configure build
@@ -651,14 +651,15 @@ macro(add_custom_libcxx name prefix)
     USES_TERMINAL_CONFIGURE 1
     USES_TERMINAL_BUILD 1
     USES_TERMINAL_INSTALL 1
+    LIST_SEPARATOR |
     EXCLUDE_FROM_ALL TRUE
     BUILD_BYPRODUCTS "${prefix}/lib/libc++.a" "${prefix}/lib/libc++abi.a"
     )
 
   if (CMAKE_GENERATOR MATCHES "Make")
-    set(run_clean "$(MAKE)" "-C" "${BINARY_DIR}" "clean")
+    set(run_clean "$(MAKE)" "-C" "${prefix}" "clean")
   else()
-    set(run_clean ${CMAKE_COMMAND} --build ${BINARY_DIR} --target clean
+    set(run_clean ${CMAKE_COMMAND} --build ${prefix} --target clean
                                    --config "$<CONFIG>")
   endif()
 
@@ -667,7 +668,7 @@ macro(add_custom_libcxx name prefix)
     COMMENT "Cleaning ${name}..."
     DEPENDEES configure
     ${force_deps}
-    WORKING_DIRECTORY ${BINARY_DIR}
+    WORKING_DIRECTORY ${prefix}
     EXCLUDE_FROM_MAIN 1
     USES_TERMINAL 1
     )

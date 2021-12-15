@@ -492,10 +492,10 @@ private:
     static VarLoc CreateCopyLoc(const VarLoc &OldVL, const MachineLoc &OldML,
                                 Register NewReg) {
       VarLoc VL = OldVL;
-      for (size_t I = 0, E = VL.Locs.size(); I < E; ++I)
-        if (VL.Locs[I] == OldML) {
-          VL.Locs[I].Kind = MachineLocKind::RegisterKind;
-          VL.Locs[I].Value.RegNo = NewReg;
+      for (MachineLoc &ML : VL.Locs)
+        if (ML == OldML) {
+          ML.Kind = MachineLocKind::RegisterKind;
+          ML.Value.RegNo = NewReg;
           return VL;
         }
       llvm_unreachable("Should have found OldML in new VarLoc.");
@@ -506,10 +506,10 @@ private:
     static VarLoc CreateSpillLoc(const VarLoc &OldVL, const MachineLoc &OldML,
                                  unsigned SpillBase, StackOffset SpillOffset) {
       VarLoc VL = OldVL;
-      for (int I = 0, E = VL.Locs.size(); I < E; ++I)
-        if (VL.Locs[I] == OldML) {
-          VL.Locs[I].Kind = MachineLocKind::SpillLocKind;
-          VL.Locs[I].Value.SpillLocation = {SpillBase, SpillOffset};
+      for (MachineLoc &ML : VL.Locs)
+        if (ML == OldML) {
+          ML.Kind = MachineLocKind::SpillLocKind;
+          ML.Value.SpillLocation = {SpillBase, SpillOffset};
           return VL;
         }
       llvm_unreachable("Should have found OldML in new VarLoc.");

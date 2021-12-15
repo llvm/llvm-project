@@ -187,7 +187,7 @@ uint64_t SectionBase::getOffset(uint64_t offset) const {
   }
   case Regular:
   case Synthetic:
-    return cast<InputSection>(this)->getOffset(offset);
+    return cast<InputSection>(this)->outSecOff + offset;
   case EHFrame:
     // The file crtbeginT.o has relocations pointing to the start of an empty
     // .eh_frame that is known to be the first in the link. It does that to
@@ -196,7 +196,7 @@ uint64_t SectionBase::getOffset(uint64_t offset) const {
   case Merge:
     const MergeInputSection *ms = cast<MergeInputSection>(this);
     if (InputSection *isec = ms->getParent())
-      return isec->getOffset(ms->getParentOffset(offset));
+      return isec->outSecOff + ms->getParentOffset(offset);
     return ms->getParentOffset(offset);
   }
   llvm_unreachable("invalid section kind");
@@ -325,7 +325,7 @@ std::string InputSectionBase::getObjMsg(uint64_t off) {
 
   std::string archive;
   if (!file->archiveName.empty())
-    archive = " in archive " + file->archiveName;
+    archive = (" in archive " + file->archiveName).str();
 
   // Find a symbol that encloses a given location.
   for (Symbol *b : file->getSymbols())
@@ -992,7 +992,7 @@ static void relocateNonAllocForRelocatable(InputSection *sec, uint8_t *buf) {
 
 template <class ELFT>
 void InputSectionBase::relocate(uint8_t *buf, uint8_t *bufEnd) {
-  if (flags & SHF_EXECINSTR)
+  if ((flags & SHF_EXECINSTR) && LLVM_UNLIKELY(getFile<ELFT>()->splitStack))
     adjustSplitStackFunctionPrologues<ELFT>(buf, bufEnd);
 
   if (flags & SHF_ALLOC) {
@@ -1022,17 +1022,15 @@ void InputSectionBase::relocateAlloc(uint8_t *buf, uint8_t *bufEnd) {
       continue;
     uint64_t offset = rel.offset;
     uint8_t *bufLoc = buf + offset;
-    RelType type = rel.type;
 
     uint64_t addrLoc = getOutputSection()->addr + offset;
     if (auto *sec = dyn_cast<InputSection>(this))
       addrLoc += sec->outSecOff;
-    RelExpr expr = rel.expr;
-    uint64_t targetVA = SignExtend64(
-        getRelocTargetVA(file, type, rel.addend, addrLoc, *rel.sym, expr),
-        bits);
+    const uint64_t targetVA =
+        SignExtend64(getRelocTargetVA(file, rel.type, rel.addend, addrLoc,
+                                      *rel.sym, rel.expr), bits);
 
-    switch (expr) {
+    switch (rel.expr) {
     case R_RELAX_GOT_PC:
     case R_RELAX_GOT_PC_NOPIC:
       target->relaxGot(bufLoc, rel, targetVA);
@@ -1044,9 +1042,9 @@ void InputSectionBase::relocateAlloc(uint8_t *buf, uint8_t *bufEnd) {
       // the associated R_PPC64_GOT_PCREL34 since only the latter has an
       // associated symbol. So save the offset when relaxing R_PPC64_GOT_PCREL34
       // and only relax the other if the saved offset matches.
-      if (type == R_PPC64_GOT_PCREL34)
+      if (rel.type == R_PPC64_GOT_PCREL34)
         lastPPCRelaxedRelocOff = offset;
-      if (type == R_PPC64_PCREL_OPT && offset != lastPPCRelaxedRelocOff)
+      if (rel.type == R_PPC64_PCREL_OPT && offset != lastPPCRelaxedRelocOff)
         break;
       target->relaxGot(bufLoc, rel, targetVA);
       break;
@@ -1175,8 +1173,6 @@ static bool enclosingPrologueAttempted(uint64_t offset,
 template <class ELFT>
 void InputSectionBase::adjustSplitStackFunctionPrologues(uint8_t *buf,
                                                          uint8_t *end) {
-  if (!getFile<ELFT>()->splitStack)
-    return;
   DenseSet<Defined *> prologues;
   std::vector<Relocation *> morestackCalls;
 

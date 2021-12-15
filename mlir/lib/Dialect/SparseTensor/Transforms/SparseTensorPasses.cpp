@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
@@ -120,8 +121,9 @@ struct SparseTensorConversionPass
     target.addLegalOp<arith::CmpFOp, arith::CmpIOp, arith::ConstantOp,
                       arith::IndexCastOp, linalg::FillOp, linalg::YieldOp,
                       tensor::ExtractOp>();
-    target.addLegalDialect<LLVM::LLVMDialect, memref::MemRefDialect,
-                           scf::SCFDialect>();
+    target
+        .addLegalDialect<bufferization::BufferizationDialect, LLVM::LLVMDialect,
+                         memref::MemRefDialect, scf::SCFDialect>();
     // Populate with rules and apply rewriting rules.
     populateFuncOpTypeConversionPattern(patterns, converter);
     populateCallOpTypeConversionPattern(patterns, converter);
@@ -132,7 +134,7 @@ struct SparseTensorConversionPass
   }
 };
 
-} // end anonymous namespace
+} // namespace
 
 std::unique_ptr<Pass> mlir::createSparsificationPass() {
   return std::make_unique<SparsificationPass>();

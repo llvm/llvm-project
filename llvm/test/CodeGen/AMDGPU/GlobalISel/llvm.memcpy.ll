@@ -15,7 +15,7 @@ define amdgpu_cs void @memcpy_p1i8(i8 addrspace(1)* %dst, i8 addrspace(1)* %src)
 ; LOOP-NEXT:    v_mov_b32_e32 v7, v1
 ; LOOP-NEXT:    v_mov_b32_e32 v6, v0
 ; LOOP-NEXT:    v_mov_b32_e32 v8, s6
-; LOOP-NEXT:  BB0_1: ; %load-store-loop
+; LOOP-NEXT:  .LBB0_1: ; %load-store-loop
 ; LOOP-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; LOOP-NEXT:    buffer_load_ubyte v9, v[4:5], s[4:7], 0 addr64
 ; LOOP-NEXT:    buffer_load_ubyte v10, v[4:5], s[4:7], 0 addr64 offset:1
@@ -72,7 +72,7 @@ define amdgpu_cs void @memcpy_p1i8(i8 addrspace(1)* %dst, i8 addrspace(1)* %src)
 ; LOOP-NEXT:    v_addc_u32_e64 v7, s[0:1], 0, v7, s[0:1]
 ; LOOP-NEXT:    v_add_i32_e64 v4, s[0:1], 16, v4
 ; LOOP-NEXT:    v_addc_u32_e64 v5, s[0:1], 0, v5, s[0:1]
-; LOOP-NEXT:    s_cbranch_vccnz BB0_1
+; LOOP-NEXT:    s_cbranch_vccnz .LBB0_1
 ; LOOP-NEXT:  ; %bb.2: ; %memcpy-split
 ; LOOP-NEXT:    s_mov_b32 s2, 0
 ; LOOP-NEXT:    s_mov_b32 s3, 0xf000

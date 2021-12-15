@@ -640,7 +640,7 @@ define <vscale x 128 x i8> @vadd_vi_nxv128i8(<vscale x 128 x i8> %va, <vscale x 
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a3, a2
 ; CHECK-NEXT:  .LBB49_2:
-; CHECK-NEXT:    mv a4, zero
+; CHECK-NEXT:    li a4, 0
 ; CHECK-NEXT:    vsetvli a5, zero, e8, m8, ta, mu
 ; CHECK-NEXT:    vlm.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, mu
@@ -670,7 +670,7 @@ define <vscale x 128 x i8> @vadd_vi_nxv128i8_unmasked(<vscale x 128 x i8> %va, i
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:  .LBB50_2:
-; CHECK-NEXT:    mv a3, zero
+; CHECK-NEXT:    li a3, 0
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, mu
 ; CHECK-NEXT:    sub a1, a0, a1
 ; CHECK-NEXT:    vadd.vi v8, v8, -1
@@ -1533,7 +1533,7 @@ define <vscale x 32 x i32> @vadd_vi_nxv32i32(<vscale x 32 x i32> %va, <vscale x 
 ; CHECK-LABEL: vadd_vi_nxv32i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmv1r.v v24, v0
-; CHECK-NEXT:    mv a2, zero
+; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a4, a1, 2
 ; CHECK-NEXT:    vsetvli a3, zero, e8, mf2, ta, mu
@@ -1565,7 +1565,7 @@ define <vscale x 32 x i32> @vadd_vi_nxv32i32(<vscale x 32 x i32> %va, <vscale x 
 define <vscale x 32 x i32> @vadd_vi_nxv32i32_unmasked(<vscale x 32 x i32> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vadd_vi_nxv32i32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    mv a2, zero
+; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a4, a1, 2
 ; CHECK-NEXT:    vsetvli a3, zero, e8, m4, ta, mu
@@ -1607,7 +1607,7 @@ define <vscale x 32 x i32> @vadd_vi_nxv32i32_evl_nx8(<vscale x 32 x i32> %va, <v
 ; CHECK-LABEL: vadd_vi_nxv32i32_evl_nx8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmv1r.v v24, v0
-; CHECK-NEXT:    mv a2, zero
+; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a4, a0, 2
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, mu

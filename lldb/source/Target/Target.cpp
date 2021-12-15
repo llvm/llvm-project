@@ -616,12 +616,8 @@ lldb::BreakpointSP Target::CreateScriptedBreakpoint(
         shared_from_this());
   }
 
-  StructuredDataImpl *extra_args_impl = new StructuredDataImpl();
-  if (extra_args_sp)
-    extra_args_impl->SetObjectSP(extra_args_sp);
-
   BreakpointResolverSP resolver_sp(new BreakpointResolverScripted(
-      nullptr, class_name, depth, extra_args_impl));
+      nullptr, class_name, depth, StructuredDataImpl(extra_args_sp)));
   return CreateBreakpoint(filter_sp, resolver_sp, internal, false, true);
 }
 
@@ -3321,8 +3317,7 @@ void Target::FinalizeFileActions(ProcessLaunchInfo &info) {
                  err_file_spec);
       }
 
-      if (default_to_use_pty &&
-          (!in_file_spec || !out_file_spec || !err_file_spec)) {
+      if (default_to_use_pty) {
         llvm::Error Err = info.SetUpPtyRedirection();
         LLDB_LOG_ERROR(log, std::move(Err), "SetUpPtyRedirection failed: {0}");
       }
@@ -3485,11 +3480,7 @@ Status Target::StopHookScripted::SetScriptCallback(
   }
 
   m_class_name = class_name;
-
-  m_extra_args = new StructuredDataImpl();
-
-  if (extra_args_sp)
-    m_extra_args->SetObjectSP(extra_args_sp);
+  m_extra_args.SetObjectSP(extra_args_sp);
 
   m_implementation_sp = script_interp->CreateScriptedStopHook(
       GetTarget(), m_class_name.c_str(), m_extra_args, error);
@@ -3527,9 +3518,9 @@ void Target::StopHookScripted::GetSubclassDescription(
   // Now print the extra args:
   // FIXME: We should use StructuredData.GetDescription on the m_extra_args
   // but that seems to rely on some printing plugin that doesn't exist.
-  if (!m_extra_args->IsValid())
+  if (!m_extra_args.IsValid())
     return;
-  StructuredData::ObjectSP object_sp = m_extra_args->GetObjectSP();
+  StructuredData::ObjectSP object_sp = m_extra_args.GetObjectSP();
   if (!object_sp || !object_sp->IsValid())
     return;
 

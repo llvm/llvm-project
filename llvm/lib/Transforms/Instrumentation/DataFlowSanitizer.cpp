@@ -232,6 +232,12 @@ static cl::opt<int> ClTrackOrigins("dfsan-track-origins",
                                    cl::desc("Track origins of labels"),
                                    cl::Hidden, cl::init(0));
 
+static cl::opt<bool> ClIgnorePersonalityRoutine(
+    "dfsan-ignore-personality-routine",
+    cl::desc("If a personality routine is marked uninstrumented from the ABI "
+             "list, do not create a wrapper for it."),
+    cl::Hidden, cl::init(false));
+
 static StringRef getGlobalTypeString(const GlobalValue &G) {
   // Types of GlobalVariables are always pointer types.
   Type *GType = G.getValueType();
@@ -1357,9 +1363,24 @@ bool DataFlowSanitizer::runImpl(Module &M) {
   std::vector<Function *> FnsToInstrument;
   SmallPtrSet<Function *, 2> FnsWithNativeABI;
   SmallPtrSet<Function *, 2> FnsWithForceZeroLabel;
+  SmallPtrSet<Constant *, 1> PersonalityFns;
   for (Function &F : M)
-    if (!F.isIntrinsic() && !DFSanRuntimeFunctions.contains(&F))
+    if (!F.isIntrinsic() && !DFSanRuntimeFunctions.contains(&F)) {
       FnsToInstrument.push_back(&F);
+      if (F.hasPersonalityFn())
+        PersonalityFns.insert(F.getPersonalityFn()->stripPointerCasts());
+    }
+
+  if (ClIgnorePersonalityRoutine) {
+    for (auto *C : PersonalityFns) {
+      assert(isa<Function>(C) && "Personality routine is not a function!");
+      Function *F = cast<Function>(C);
+      if (!isInstrumented(F))
+        FnsToInstrument.erase(
+            std::remove(FnsToInstrument.begin(), FnsToInstrument.end(), F),
+            FnsToInstrument.end());
+    }
+  }
 
   // Give function aliases prefixes when necessary, and build wrappers where the
   // instrumentedness is inconsistent.

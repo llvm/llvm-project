@@ -280,6 +280,27 @@ static void replaceFallthroughCoroEnd(AnyCoroEndInst *End,
   BB->getTerminator()->eraseFromParent();
 }
 
+// Mark a coroutine as done, which implies that the coroutine is finished and
+// never get resumed.
+//
+// In resume-switched ABI, the done state is represented by storing zero in
+// ResumeFnAddr.
+//
+// NOTE: We couldn't omit the argument `FramePtr`. It is necessary because the
+// pointer to the frame in splitted function is not stored in `Shape`.
+static void markCoroutineAsDone(IRBuilder<> &Builder, const coro::Shape &Shape,
+                                Value *FramePtr) {
+  assert(
+      Shape.ABI == coro::ABI::Switch &&
+      "markCoroutineAsDone is only supported for Switch-Resumed ABI for now.");
+  auto *GepIndex = Builder.CreateStructGEP(
+      Shape.FrameTy, FramePtr, coro::Shape::SwitchFieldIndex::Resume,
+      "ResumeFn.addr");
+  auto *NullPtr = ConstantPointerNull::get(cast<PointerType>(
+      Shape.FrameTy->getTypeAtIndex(coro::Shape::SwitchFieldIndex::Resume)));
+  Builder.CreateStore(NullPtr, GepIndex);
+}
+
 /// Replace an unwind call to llvm.coro.end.
 static void replaceUnwindCoroEnd(AnyCoroEndInst *End, const coro::Shape &Shape,
                                  Value *FramePtr, bool InResume,
@@ -288,10 +309,18 @@ static void replaceUnwindCoroEnd(AnyCoroEndInst *End, const coro::Shape &Shape,
 
   switch (Shape.ABI) {
   // In switch-lowering, this does nothing in the main function.
-  case coro::ABI::Switch:
+  case coro::ABI::Switch: {
+    // In C++'s specification, the coroutine should be marked as done
+    // if promise.unhandled_exception() throws.  The frontend will
+    // call coro.end(true) along this path.
+    //
+    // FIXME: We should refactor this once there is other language
+    // which uses Switch-Resumed style other than C++.
+    markCoroutineAsDone(Builder, Shape, FramePtr);
     if (!InResume)
       return;
     break;
+  }
   // In async lowering this does nothing.
   case coro::ABI::Async:
     break;
@@ -364,13 +393,9 @@ static void createResumeEntryBlock(Function &F, coro::Shape &Shape) {
     auto *Save = S->getCoroSave();
     Builder.SetInsertPoint(Save);
     if (S->isFinal()) {
-      // Final suspend point is represented by storing zero in ResumeFnAddr.
-      auto *GepIndex = Builder.CreateStructGEP(FrameTy, FramePtr,
-                                 coro::Shape::SwitchFieldIndex::Resume,
-                                  "ResumeFn.addr");
-      auto *NullPtr = ConstantPointerNull::get(cast<PointerType>(
-          FrameTy->getTypeAtIndex(coro::Shape::SwitchFieldIndex::Resume)));
-      Builder.CreateStore(NullPtr, GepIndex);
+      // The coroutine should be marked done if it reaches the final suspend
+      // point.
+      markCoroutineAsDone(Builder, Shape, FramePtr);
     } else {
       auto *GepIndex = Builder.CreateStructGEP(
           FrameTy, FramePtr, Shape.getSwitchIndexField(), "index.addr");

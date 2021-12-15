@@ -34,7 +34,8 @@ uint64_t lprofGetLoadModuleSignature() {
   const __llvm_profile_data *FirstD = __llvm_profile_begin_data();
 
   return (NamesSize << 40) + (CounterSize << 30) + (DataSize << 20) +
-         (NumVnodes << 10) + (DataSize > 0 ? FirstD->NameRef : 0) + Version;
+         (NumVnodes << 10) + (DataSize > 0 ? FirstD->NameRef : 0) + Version +
+         __llvm_profile_get_magic();
 }
 
 /* Returns 1 if profile is not structurally compatible.  */

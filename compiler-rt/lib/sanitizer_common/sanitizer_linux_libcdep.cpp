@@ -603,6 +603,32 @@ static int AddModuleSegments(const char *module_name, dl_phdr_info *info,
       bool writable = phdr->p_flags & PF_W;
       cur_module.addAddressRange(cur_beg, cur_end, executable,
                                  writable);
+    } else if (phdr->p_type == PT_NOTE) {
+      uptr off = 0;
+      while (off < phdr->p_memsz - sizeof(ElfW(Nhdr))) {
+        auto *nhdr = reinterpret_cast<const ElfW(Nhdr) *>(info->dlpi_addr +
+                                                          phdr->p_vaddr + off);
+        constexpr auto kGnuNamesz = 4;  // "GNU" with NUL-byte.
+        static_assert(kGnuNamesz % 4 == 0, "kGnuNameSize is aligned to 4.");
+        if (nhdr->n_type == NT_GNU_BUILD_ID && nhdr->n_namesz == kGnuNamesz) {
+          if (off + sizeof(ElfW(Nhdr)) + nhdr->n_namesz + nhdr->n_descsz >
+              phdr->p_memsz) {
+            // Something is very wrong, bail out instead of reading potentially
+            // arbitrary memory.
+            break;
+          }
+          const char *name =
+              reinterpret_cast<const char *>(nhdr) + sizeof(*nhdr);
+          if (internal_memcmp(name, "GNU", 3) == 0) {
+            const char *value = reinterpret_cast<const char *>(nhdr) +
+                                sizeof(*nhdr) + kGnuNamesz;
+            cur_module.setUuid(value, nhdr->n_descsz);
+            break;
+          }
+        }
+        off += sizeof(*nhdr) + RoundUpTo(nhdr->n_namesz, 4) +
+               RoundUpTo(nhdr->n_descsz, 4);
+      }
     }
   }
   modules->push_back(cur_module);

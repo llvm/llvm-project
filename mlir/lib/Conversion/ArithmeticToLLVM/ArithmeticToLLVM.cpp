@@ -108,7 +108,7 @@ struct CmpFOpLowering : public ConvertOpToLLVMPattern<arith::CmpFOp> {
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // ConstantOpLowering
@@ -252,7 +252,7 @@ struct ConvertArithmeticToLLVMPass
       signalPassFailure();
   }
 };
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // Pattern Population

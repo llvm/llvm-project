@@ -510,14 +510,12 @@ static bool hasTocDataAttr(SDValue Val, unsigned PointerSize) {
     return false;
 
   // TODO: These asserts should be updated as more support for the toc data
-  // transformation is added (64 bit, struct support, etc.).
+  // transformation is added (struct support, etc.).
 
-  assert(PointerSize == 4 && "Only 32 Bit Codegen is currently supported by "
-                             "the toc data transformation.");
-
-  assert(PointerSize >= GV->getAlign().valueOrOne().value() &&
-         "GlobalVariables with an alignment requirement stricter then 4-bytes "
-         "not supported by the toc data transformation.");
+  assert(
+      PointerSize >= GV->getAlign().valueOrOne().value() &&
+      "GlobalVariables with an alignment requirement stricter than TOC entry "
+      "size not supported by the toc data transformation.");
 
   Type *GVType = GV->getValueType();
 
@@ -537,7 +535,7 @@ static bool hasTocDataAttr(SDValue Val, unsigned PointerSize) {
                        "supported by the toc data transformation.");
 
   assert(GVType->getPrimitiveSizeInBits() <= PointerSize * 8 &&
-         "A GlobalVariable with size larger than 32 bits is not currently "
+         "A GlobalVariable with size larger than a TOC entry is not currently "
          "supported by the toc data transformation.");
 
   if (GV->hasLocalLinkage() || GV->hasPrivateLinkage())
@@ -4466,9 +4464,10 @@ bool PPCDAGToDAGISel::trySETCC(SDNode *N) {
 bool PPCDAGToDAGISel::isOffsetMultipleOf(SDNode *N, unsigned Val) const {
   LoadSDNode *LDN = dyn_cast<LoadSDNode>(N);
   StoreSDNode *STN = dyn_cast<StoreSDNode>(N);
+  MemIntrinsicSDNode *MIN = dyn_cast<MemIntrinsicSDNode>(N);
   SDValue AddrOp;
-  if (LDN)
-    AddrOp = LDN->getOperand(1);
+  if (LDN || (MIN && MIN->getOpcode() == PPCISD::LD_SPLAT))
+    AddrOp = N->getOperand(1);
   else if (STN)
     AddrOp = STN->getOperand(2);
 
@@ -5049,16 +5048,94 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     // value for the comparison. When selecting through a .td file, a type
     // error is raised. Must check this first so we never break on the
     // !Subtarget->isISA3_1() check.
-    if (N->getConstantOperandVal(0) == Intrinsic::ppc_fsels) {
+    auto IntID = N->getConstantOperandVal(0);
+    if (IntID == Intrinsic::ppc_fsels) {
       SDValue Ops[] = {N->getOperand(1), N->getOperand(2), N->getOperand(3)};
       CurDAG->SelectNodeTo(N, PPC::FSELS, MVT::f32, Ops);
+      return;
+    }
+
+    if (IntID == Intrinsic::ppc_bcdadd_p || IntID == Intrinsic::ppc_bcdsub_p) {
+      auto Pred = N->getConstantOperandVal(1);
+      unsigned Opcode =
+          IntID == Intrinsic::ppc_bcdadd_p ? PPC::BCDADD_rec : PPC::BCDSUB_rec;
+      unsigned SubReg = 0;
+      unsigned ShiftVal = 0;
+      bool Reverse = false;
+      switch (Pred) {
+      case 0:
+        SubReg = PPC::sub_eq;
+        ShiftVal = 1;
+        break;
+      case 1:
+        SubReg = PPC::sub_eq;
+        ShiftVal = 1;
+        Reverse = true;
+        break;
+      case 2:
+        SubReg = PPC::sub_lt;
+        ShiftVal = 3;
+        break;
+      case 3:
+        SubReg = PPC::sub_lt;
+        ShiftVal = 3;
+        Reverse = true;
+        break;
+      case 4:
+        SubReg = PPC::sub_gt;
+        ShiftVal = 2;
+        break;
+      case 5:
+        SubReg = PPC::sub_gt;
+        ShiftVal = 2;
+        Reverse = true;
+        break;
+      case 6:
+        SubReg = PPC::sub_un;
+        break;
+      case 7:
+        SubReg = PPC::sub_un;
+        Reverse = true;
+        break;
+      }
+
+      EVT VTs[] = {MVT::v16i8, MVT::Glue};
+      SDValue Ops[] = {N->getOperand(2), N->getOperand(3),
+                       CurDAG->getTargetConstant(0, dl, MVT::i32)};
+      SDValue BCDOp = SDValue(CurDAG->getMachineNode(Opcode, dl, VTs, Ops), 0);
+      SDValue CR6Reg = CurDAG->getRegister(PPC::CR6, MVT::i32);
+      // On Power10, we can use SETBC[R]. On prior architectures, we have to use
+      // MFOCRF and shift/negate the value.
+      if (Subtarget->isISA3_1()) {
+        SDValue SubRegIdx = CurDAG->getTargetConstant(SubReg, dl, MVT::i32);
+        SDValue CRBit = SDValue(
+            CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG, dl, MVT::i1,
+                                   CR6Reg, SubRegIdx, BCDOp.getValue(1)),
+            0);
+        CurDAG->SelectNodeTo(N, Reverse ? PPC::SETBCR : PPC::SETBC, MVT::i32,
+                             CRBit);
+      } else {
+        SDValue Move =
+            SDValue(CurDAG->getMachineNode(PPC::MFOCRF, dl, MVT::i32, CR6Reg,
+                                           BCDOp.getValue(1)),
+                    0);
+        SDValue Ops[] = {Move, getI32Imm((32 - (4 + ShiftVal)) & 31, dl),
+                         getI32Imm(31, dl), getI32Imm(31, dl)};
+        if (!Reverse)
+          CurDAG->SelectNodeTo(N, PPC::RLWINM, MVT::i32, Ops);
+        else {
+          SDValue Shift = SDValue(
+              CurDAG->getMachineNode(PPC::RLWINM, dl, MVT::i32, Ops), 0);
+          CurDAG->SelectNodeTo(N, PPC::XORI, MVT::i32, Shift, getI32Imm(1, dl));
+        }
+      }
       return;
     }
 
     if (!Subtarget->isISA3_1())
       break;
     unsigned Opcode = 0;
-    switch (N->getConstantOperandVal(0)) {
+    switch (IntID) {
     default:
       break;
     case Intrinsic::ppc_altivec_vstribr_p:
@@ -5713,41 +5790,57 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     if (isAIXABI && CModel == CodeModel::Medium)
       report_fatal_error("Medium code model is not supported on AIX.");
 
-    // For 64-bit small code model, we allow SelectCodeCommon to handle this,
-    // selecting one of LDtoc, LDtocJTI, LDtocCPT, and LDtocBA.
-    if (isPPC64 && CModel == CodeModel::Small)
+    // For 64-bit ELF small code model, we allow SelectCodeCommon to handle
+    // this, selecting one of LDtoc, LDtocJTI, LDtocCPT, and LDtocBA. For AIX
+    // small code model, we need to check for a toc-data attribute.
+    if (isPPC64 && !isAIXABI && CModel == CodeModel::Small)
       break;
 
+    auto replaceWith = [this, &dl](unsigned OpCode, SDNode *TocEntry,
+                                   EVT OperandTy) {
+      SDValue GA = TocEntry->getOperand(0);
+      SDValue TocBase = TocEntry->getOperand(1);
+      SDNode *MN = CurDAG->getMachineNode(OpCode, dl, OperandTy, GA, TocBase);
+      transferMemOperands(TocEntry, MN);
+      ReplaceNode(TocEntry, MN);
+    };
+
     // Handle 32-bit small code model.
-    if (!isPPC64) {
+    if (!isPPC64 && CModel == CodeModel::Small) {
       // Transforms the ISD::TOC_ENTRY node to passed in Opcode, either
       // PPC::ADDItoc, or PPC::LWZtoc
-      auto replaceWith = [this, &dl](unsigned OpCode, SDNode *TocEntry) {
-        SDValue GA = TocEntry->getOperand(0);
-        SDValue TocBase = TocEntry->getOperand(1);
-        SDNode *MN = CurDAG->getMachineNode(OpCode, dl, MVT::i32, GA, TocBase);
-        transferMemOperands(TocEntry, MN);
-        ReplaceNode(TocEntry, MN);
-      };
-
       if (isELFABI) {
         assert(TM.isPositionIndependent() &&
                "32-bit ELF can only have TOC entries in position independent"
                " code.");
         // 32-bit ELF always uses a small code model toc access.
-        replaceWith(PPC::LWZtoc, N);
+        replaceWith(PPC::LWZtoc, N, MVT::i32);
         return;
       }
 
-      if (isAIXABI && CModel == CodeModel::Small) {
-        if (hasTocDataAttr(N->getOperand(0),
-                           CurDAG->getDataLayout().getPointerSize()))
-          replaceWith(PPC::ADDItoc, N);
-        else
-          replaceWith(PPC::LWZtoc, N);
+      assert(isAIXABI && "ELF ABI already handled");
 
+      if (hasTocDataAttr(N->getOperand(0),
+                         CurDAG->getDataLayout().getPointerSize())) {
+        replaceWith(PPC::ADDItoc, N, MVT::i32);
         return;
       }
+
+      replaceWith(PPC::LWZtoc, N, MVT::i32);
+      return;
+    }
+
+    if (isPPC64 && CModel == CodeModel::Small) {
+      assert(isAIXABI && "ELF ABI handled in common SelectCode");
+
+      if (hasTocDataAttr(N->getOperand(0),
+                         CurDAG->getDataLayout().getPointerSize())) {
+        replaceWith(PPC::ADDItoc8, N, MVT::i64);
+        return;
+      }
+      // Break if it doesn't have toc data attribute. Proceed with common
+      // SelectCode.
+      break;
     }
 
     assert(CModel != CodeModel::Small && "All small code models handled.");
@@ -5879,6 +5972,15 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
 
     EVT Type = N->getValueType(0);
     if (Type != MVT::v16i8 && Type != MVT::v8i16)
+      break;
+
+    // If the alignment for the load is 16 or bigger, we don't need the
+    // permutated mask to get the required value. The value must be the 0
+    // element in big endian target or 7/15 in little endian target in the
+    // result vsx register of lvx instruction.
+    // Select the instruction in the .td file.
+    if (cast<MemIntrinsicSDNode>(N)->getAlign() >= Align(16) &&
+        isOffsetMultipleOf(N, 16))
       break;
 
     SDValue ZeroReg =

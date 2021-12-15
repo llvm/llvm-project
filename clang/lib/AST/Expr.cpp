@@ -4681,6 +4681,7 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
     return 2;
 
   case AO__opencl_atomic_load:
+  case AO__hip_atomic_load:
   case AO__c11_atomic_store:
   case AO__c11_atomic_exchange:
   case AO__atomic_load:
@@ -4713,7 +4714,15 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
   case AO__atomic_fetch_max:
     return 3;
 
+  case AO__hip_atomic_exchange:
+  case AO__hip_atomic_fetch_add:
+  case AO__hip_atomic_fetch_and:
+  case AO__hip_atomic_fetch_or:
+  case AO__hip_atomic_fetch_xor:
+  case AO__hip_atomic_fetch_min:
+  case AO__hip_atomic_fetch_max:
   case AO__opencl_atomic_store:
+  case AO__hip_atomic_store:
   case AO__opencl_atomic_exchange:
   case AO__opencl_atomic_fetch_add:
   case AO__opencl_atomic_fetch_sub:
@@ -4728,9 +4737,10 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
   case AO__c11_atomic_compare_exchange_strong:
   case AO__c11_atomic_compare_exchange_weak:
     return 5;
-
+  case AO__hip_atomic_compare_exchange_strong:
   case AO__opencl_atomic_compare_exchange_strong:
   case AO__opencl_atomic_compare_exchange_weak:
+  case AO__hip_atomic_compare_exchange_weak:
   case AO__atomic_compare_exchange:
   case AO__atomic_compare_exchange_n:
     return 6;

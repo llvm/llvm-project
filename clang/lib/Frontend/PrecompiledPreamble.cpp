@@ -412,9 +412,12 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
   std::unique_ptr<PrecompilePreambleAction> Act;
   Act.reset(new PrecompilePreambleAction(
       StoreInMemory ? &Storage.asMemory().Data : nullptr, Callbacks));
-  Callbacks.BeforeExecute(*Clang);
   if (!Act->BeginSourceFile(*Clang.get(), Clang->getFrontendOpts().Inputs[0]))
     return BuildPreambleError::BeginSourceFileFailed;
+
+  // Performed after BeginSourceFile to ensure Clang->Preprocessor can be
+  // referenced in the callback.
+  Callbacks.BeforeExecute(*Clang);
 
   std::unique_ptr<PPCallbacks> DelegatedPPCallbacks =
       Callbacks.createPPCallbacks();

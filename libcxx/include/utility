@@ -227,11 +227,16 @@ template <class T>
 #include <__utility/move.h>
 #include <__utility/pair.h>
 #include <__utility/piecewise_construct.h>
+#include <__utility/priority_tag.h>
 #include <__utility/rel_ops.h>
 #include <__utility/swap.h>
 #include <__utility/to_underlying.h>
 #include <compare>
 #include <initializer_list>
 #include <version>
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#pragma GCC system_header
+#endif
 
 #endif // _LIBCPP_UTILITY

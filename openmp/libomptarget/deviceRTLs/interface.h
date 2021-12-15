@@ -220,8 +220,6 @@ typedef int32_t kmp_CriticalName[8];
 
 // parallel
 EXTERN int32_t __kmpc_global_thread_num(kmp_Ident *loc);
-EXTERN void __kmpc_push_num_threads(kmp_Ident *loc, int32_t global_tid,
-                                    int32_t num_threads);
 NOINLINE EXTERN uint8_t __kmpc_parallel_level();
 
 // proc bind
@@ -445,7 +443,8 @@ EXTERN int32_t __kmpc_target_init(ident_t *Ident, int8_t Mode,
                                   bool RequiresFullRuntime);
 EXTERN void __kmpc_target_deinit(ident_t *Ident, int8_t Mode,
                                  bool RequiresFullRuntime);
-EXTERN void __kmpc_kernel_prepare_parallel(void *WorkFn);
+EXTERN void __kmpc_kernel_prepare_parallel(void *WorkFn,
+                                           int32_t NumThreadsClause);
 EXTERN bool __kmpc_kernel_parallel(void **WorkFn);
 EXTERN void __kmpc_kernel_end_parallel();
 

@@ -148,12 +148,14 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_interceptors_ioctl_netbsd.inc
   sanitizer_interface_internal.h
   sanitizer_internal_defs.h
+  sanitizer_leb128.h
   sanitizer_lfstack.h
   sanitizer_libc.h
   sanitizer_libignore.h
   sanitizer_linux.h
   sanitizer_list.h
   sanitizer_local_address_space_view.h
+  sanitizer_lzw.h
   sanitizer_mac.h
   sanitizer_malloc_mac.inc
   sanitizer_mutex.h

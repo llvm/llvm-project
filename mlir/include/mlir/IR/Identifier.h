@@ -15,6 +15,6 @@ namespace mlir {
 /// NOTICE: Identifier is deprecated and usages of it should be replaced with
 /// StringAttr.
 using Identifier = StringAttr;
-} // end namespace mlir
+} // namespace mlir
 
 #endif

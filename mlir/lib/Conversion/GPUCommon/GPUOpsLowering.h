@@ -33,6 +33,40 @@ private:
   StringAttr kernelAttributeName;
 };
 
+/// The lowering of gpu.printf to a call to HIP hostcalls
+///
+/// Simplifies llvm/lib/Transforms/Utils/AMDGPUEmitPrintf.cpp, as we don't have
+/// to deal with %s (even if there were first-class strings in MLIR, they're not
+/// legal input to gpu.printf) or non-constant format strings
+struct GPUPrintfOpToHIPLowering : public ConvertOpToLLVMPattern<gpu::PrintfOp> {
+  using ConvertOpToLLVMPattern<gpu::PrintfOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(gpu::PrintfOp gpuPrintfOp, gpu::PrintfOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
+/// The lowering of gpu.printf to a call to an external printf() function
+///
+/// This pass will add a declaration of printf() to the GPUModule if needed
+/// and seperate out the format strings into global constants. For some
+/// runtimes, such as OpenCL on AMD, this is sufficient setup, as the compiler
+/// will lower printf calls to appropriate device-side code
+struct GPUPrintfOpToLLVMCallLowering
+    : public ConvertOpToLLVMPattern<gpu::PrintfOp> {
+  GPUPrintfOpToLLVMCallLowering(LLVMTypeConverter &converter,
+                                int addressSpace = 0)
+      : ConvertOpToLLVMPattern<gpu::PrintfOp>(converter),
+        addressSpace(addressSpace) {}
+
+  LogicalResult
+  matchAndRewrite(gpu::PrintfOp gpuPrintfOp, gpu::PrintfOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+
+private:
+  int addressSpace;
+};
+
 struct GPUReturnOpLowering : public ConvertOpToLLVMPattern<gpu::ReturnOp> {
   using ConvertOpToLLVMPattern<gpu::ReturnOp>::ConvertOpToLLVMPattern;
 

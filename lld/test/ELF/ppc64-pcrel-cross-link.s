@@ -29,7 +29,7 @@
 # NOSWAP-NEXT:    blr
 # NOSWAP-LABEL: 10030010 <__gep_setup_callee_toc>:
 # NOSWAP:         bctr
-# NOSWAP-LABEL: 10030030 <__long_branch_pcrel_callee_notoc>:
+# NOSWAP-LABEL: 10030030 <__gep_setup_callee_notoc>:
 # NOSWAP:         bctr
 # NOSWAP-LABEL: 10040000 <caller_toc>:
 # NOSWAP:         bl 0x10040020
@@ -68,7 +68,7 @@
 # SWAP-NEXT:    blr
 # SWAP-LABEL: 10040010 <__gep_setup_callee_toc>:
 # SWAP:         bctr
-# SWAP-LABEL: 10040030 <__long_branch_pcrel_callee_notoc>:
+# SWAP-LABEL: 10040030 <__gep_setup_callee_notoc>:
 # SWAP:         bctr
 
 #--- lds

@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Transforms/Bufferize.h"
+#include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "PassDetail.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Shape/Transforms/Passes.h"
 #include "mlir/Pass/Pass.h"
@@ -20,10 +21,10 @@ struct ShapeBufferizePass : public ShapeBufferizeBase<ShapeBufferizePass> {
     MLIRContext &ctx = getContext();
 
     RewritePatternSet patterns(&ctx);
-    BufferizeTypeConverter typeConverter;
+    bufferization::BufferizeTypeConverter typeConverter;
     ConversionTarget target(ctx);
 
-    populateBufferizeMaterializationLegality(target);
+    bufferization::populateBufferizeMaterializationLegality(target);
     populateShapeStructuralTypeConversionsAndLegality(typeConverter, patterns,
                                                       target);
 

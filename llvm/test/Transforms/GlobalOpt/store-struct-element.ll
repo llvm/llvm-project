@@ -1,4 +1,4 @@
-; RUN: opt < %s -globalopt -S -o - | FileCheck %s
+; RUN: opt < %s -passes=globalopt -S -o - | FileCheck %s
 
 %class.Class = type { i8, i8, i8, i8 }
 @A = local_unnamed_addr global %class.Class undef, align 4

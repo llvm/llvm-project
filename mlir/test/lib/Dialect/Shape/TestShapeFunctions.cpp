@@ -25,7 +25,7 @@ struct ReportShapeFnPass
     return "Test pass to report associated shape functions";
   }
 };
-} // end anonymous namespace
+} // namespace
 
 void ReportShapeFnPass::runOnOperation() {
   auto module = getOperation();

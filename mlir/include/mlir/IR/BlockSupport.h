@@ -171,8 +171,8 @@ public:
   /// Allow implicit conversion to the underlying block iterator.
   operator const IteratorT &() const { return this->wrapped(); }
 };
-} // end namespace detail
-} // end namespace mlir
+} // namespace detail
+} // namespace mlir
 
 namespace llvm {
 
@@ -223,7 +223,7 @@ protected:
   static pointer getValuePtr(node_type *N);
   static const_pointer getValuePtr(const node_type *N);
 };
-} // end namespace ilist_detail
+} // namespace ilist_detail
 
 template <> struct ilist_traits<::mlir::Operation> {
   using Operation = ::mlir::Operation;
@@ -257,6 +257,6 @@ private:
   mlir::Region *getParentRegion();
 };
 
-} // end namespace llvm
+} // namespace llvm
 
 #endif // MLIR_IR_BLOCK_SUPPORT_H

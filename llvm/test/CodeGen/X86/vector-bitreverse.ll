@@ -25,13 +25,13 @@ define i8 @test_bitreverse_i8(i8 %a) nounwind {
 ; SSE-NEXT:    shlb $2, %al
 ; SSE-NEXT:    shrb $2, %dil
 ; SSE-NEXT:    andb $51, %dil
-; SSE-NEXT:    orb %al, %dil
-; SSE-NEXT:    movl %edi, %eax
-; SSE-NEXT:    andb $85, %al
-; SSE-NEXT:    addb %al, %al
-; SSE-NEXT:    shrb %dil
-; SSE-NEXT:    andb $85, %dil
 ; SSE-NEXT:    orb %dil, %al
+; SSE-NEXT:    movl %eax, %ecx
+; SSE-NEXT:    andb $85, %cl
+; SSE-NEXT:    addb %cl, %cl
+; SSE-NEXT:    shrb %al
+; SSE-NEXT:    andb $85, %al
+; SSE-NEXT:    orb %cl, %al
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_bitreverse_i8:
@@ -42,13 +42,13 @@ define i8 @test_bitreverse_i8(i8 %a) nounwind {
 ; AVX-NEXT:    shlb $2, %al
 ; AVX-NEXT:    shrb $2, %dil
 ; AVX-NEXT:    andb $51, %dil
-; AVX-NEXT:    orb %al, %dil
-; AVX-NEXT:    movl %edi, %eax
-; AVX-NEXT:    andb $85, %al
-; AVX-NEXT:    addb %al, %al
-; AVX-NEXT:    shrb %dil
-; AVX-NEXT:    andb $85, %dil
 ; AVX-NEXT:    orb %dil, %al
+; AVX-NEXT:    movl %eax, %ecx
+; AVX-NEXT:    andb $85, %cl
+; AVX-NEXT:    addb %cl, %cl
+; AVX-NEXT:    shrb %al
+; AVX-NEXT:    andb $85, %al
+; AVX-NEXT:    orb %cl, %al
 ; AVX-NEXT:    retq
 ;
 ; XOP-LABEL: test_bitreverse_i8:
@@ -67,13 +67,13 @@ define i8 @test_bitreverse_i8(i8 %a) nounwind {
 ; GFNISSE-NEXT:    shlb $2, %al
 ; GFNISSE-NEXT:    shrb $2, %dil
 ; GFNISSE-NEXT:    andb $51, %dil
-; GFNISSE-NEXT:    orb %al, %dil
-; GFNISSE-NEXT:    movl %edi, %eax
-; GFNISSE-NEXT:    andb $85, %al
-; GFNISSE-NEXT:    addb %al, %al
-; GFNISSE-NEXT:    shrb %dil
-; GFNISSE-NEXT:    andb $85, %dil
 ; GFNISSE-NEXT:    orb %dil, %al
+; GFNISSE-NEXT:    movl %eax, %ecx
+; GFNISSE-NEXT:    andb $85, %cl
+; GFNISSE-NEXT:    addb %cl, %cl
+; GFNISSE-NEXT:    shrb %al
+; GFNISSE-NEXT:    andb $85, %al
+; GFNISSE-NEXT:    orb %cl, %al
 ; GFNISSE-NEXT:    retq
 ;
 ; GFNIAVX-LABEL: test_bitreverse_i8:
@@ -84,13 +84,13 @@ define i8 @test_bitreverse_i8(i8 %a) nounwind {
 ; GFNIAVX-NEXT:    shlb $2, %al
 ; GFNIAVX-NEXT:    shrb $2, %dil
 ; GFNIAVX-NEXT:    andb $51, %dil
-; GFNIAVX-NEXT:    orb %al, %dil
-; GFNIAVX-NEXT:    movl %edi, %eax
-; GFNIAVX-NEXT:    andb $85, %al
-; GFNIAVX-NEXT:    addb %al, %al
-; GFNIAVX-NEXT:    shrb %dil
-; GFNIAVX-NEXT:    andb $85, %dil
 ; GFNIAVX-NEXT:    orb %dil, %al
+; GFNIAVX-NEXT:    movl %eax, %ecx
+; GFNIAVX-NEXT:    andb $85, %cl
+; GFNIAVX-NEXT:    addb %cl, %cl
+; GFNIAVX-NEXT:    shrb %al
+; GFNIAVX-NEXT:    andb $85, %al
+; GFNIAVX-NEXT:    orb %cl, %al
 ; GFNIAVX-NEXT:    retq
 ;
 ; GFNIAVX2-LABEL: test_bitreverse_i8:
@@ -101,13 +101,13 @@ define i8 @test_bitreverse_i8(i8 %a) nounwind {
 ; GFNIAVX2-NEXT:    shlb $2, %al
 ; GFNIAVX2-NEXT:    shrb $2, %dil
 ; GFNIAVX2-NEXT:    andb $51, %dil
-; GFNIAVX2-NEXT:    orb %al, %dil
-; GFNIAVX2-NEXT:    movl %edi, %eax
-; GFNIAVX2-NEXT:    andb $85, %al
-; GFNIAVX2-NEXT:    addb %al, %al
-; GFNIAVX2-NEXT:    shrb %dil
-; GFNIAVX2-NEXT:    andb $85, %dil
 ; GFNIAVX2-NEXT:    orb %dil, %al
+; GFNIAVX2-NEXT:    movl %eax, %ecx
+; GFNIAVX2-NEXT:    andb $85, %cl
+; GFNIAVX2-NEXT:    addb %cl, %cl
+; GFNIAVX2-NEXT:    shrb %al
+; GFNIAVX2-NEXT:    andb $85, %al
+; GFNIAVX2-NEXT:    orb %cl, %al
 ; GFNIAVX2-NEXT:    retq
 ;
 ; GFNIAVX512F-LABEL: test_bitreverse_i8:
@@ -118,13 +118,13 @@ define i8 @test_bitreverse_i8(i8 %a) nounwind {
 ; GFNIAVX512F-NEXT:    shlb $2, %al
 ; GFNIAVX512F-NEXT:    shrb $2, %dil
 ; GFNIAVX512F-NEXT:    andb $51, %dil
-; GFNIAVX512F-NEXT:    orb %al, %dil
-; GFNIAVX512F-NEXT:    movl %edi, %eax
-; GFNIAVX512F-NEXT:    andb $85, %al
-; GFNIAVX512F-NEXT:    addb %al, %al
-; GFNIAVX512F-NEXT:    shrb %dil
-; GFNIAVX512F-NEXT:    andb $85, %dil
 ; GFNIAVX512F-NEXT:    orb %dil, %al
+; GFNIAVX512F-NEXT:    movl %eax, %ecx
+; GFNIAVX512F-NEXT:    andb $85, %cl
+; GFNIAVX512F-NEXT:    addb %cl, %cl
+; GFNIAVX512F-NEXT:    shrb %al
+; GFNIAVX512F-NEXT:    andb $85, %al
+; GFNIAVX512F-NEXT:    orb %cl, %al
 ; GFNIAVX512F-NEXT:    retq
 ;
 ; GFNIAVX512BW-LABEL: test_bitreverse_i8:
@@ -135,13 +135,13 @@ define i8 @test_bitreverse_i8(i8 %a) nounwind {
 ; GFNIAVX512BW-NEXT:    shlb $2, %al
 ; GFNIAVX512BW-NEXT:    shrb $2, %dil
 ; GFNIAVX512BW-NEXT:    andb $51, %dil
-; GFNIAVX512BW-NEXT:    orb %al, %dil
-; GFNIAVX512BW-NEXT:    movl %edi, %eax
-; GFNIAVX512BW-NEXT:    andb $85, %al
-; GFNIAVX512BW-NEXT:    addb %al, %al
-; GFNIAVX512BW-NEXT:    shrb %dil
-; GFNIAVX512BW-NEXT:    andb $85, %dil
 ; GFNIAVX512BW-NEXT:    orb %dil, %al
+; GFNIAVX512BW-NEXT:    movl %eax, %ecx
+; GFNIAVX512BW-NEXT:    andb $85, %cl
+; GFNIAVX512BW-NEXT:    addb %cl, %cl
+; GFNIAVX512BW-NEXT:    shrb %al
+; GFNIAVX512BW-NEXT:    andb $85, %al
+; GFNIAVX512BW-NEXT:    orb %cl, %al
 ; GFNIAVX512BW-NEXT:    retq
   %b = call i8 @llvm.bitreverse.i8(i8 %a)
   ret i8 %b

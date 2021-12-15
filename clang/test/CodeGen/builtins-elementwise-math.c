@@ -189,3 +189,19 @@ void test_builtin_elementwise_min(float f1, float f2, double d1, double d2,
   // CHECK-NEXT: call i32 @llvm.smin.i32(i32 [[IAS1]], i32 [[B]])
   int_as_one = __builtin_elementwise_min(int_as_one, b);
 }
+
+void test_builtin_elementwise_ceil(float f1, float f2, double d1, double d2,
+                                   float4 vf1, float4 vf2) {
+  // CHECK-LABEL: define void @test_builtin_elementwise_ceil(
+  // CHECK:      [[F1:%.+]] = load float, float* %f1.addr, align 4
+  // CHECK-NEXT:  call float @llvm.ceil.f32(float [[F1]])
+  f2 = __builtin_elementwise_ceil(f1);
+
+  // CHECK:      [[D1:%.+]] = load double, double* %d1.addr, align 8
+  // CHECK-NEXT: call double @llvm.ceil.f64(double [[D1]])
+  d2 = __builtin_elementwise_ceil(d1);
+
+  // CHECK:      [[VF1:%.+]] = load <4 x float>, <4 x float>* %vf1.addr, align 16
+  // CHECK-NEXT: call <4 x float> @llvm.ceil.v4f32(<4 x float> [[VF1]])
+  vf2 = __builtin_elementwise_ceil(vf1);
+}

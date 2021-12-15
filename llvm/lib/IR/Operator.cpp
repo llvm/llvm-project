@@ -39,9 +39,10 @@ bool Operator::hasPoisonGeneratingFlags() const {
     return GEP->isInBounds() || GEP->getInRangeIndex() != None;
   }
   default:
+    if (const auto *FP = dyn_cast<FPMathOperator>(this))
+      return FP->hasNoNaNs() || FP->hasNoInfs();
     return false;
   }
-  // TODO: FastMathFlags!  (On instructions, but not constexpr)
 }
 
 Type *GEPOperator::getSourceElementType() const {
@@ -225,5 +226,26 @@ bool GEPOperator::collectOffset(
     }
   }
   return true;
+}
+
+void FastMathFlags::print(raw_ostream &O) const {
+  if (all())
+    O << " fast";
+  else {
+    if (allowReassoc())
+      O << " reassoc";
+    if (noNaNs())
+      O << " nnan";
+    if (noInfs())
+      O << " ninf";
+    if (noSignedZeros())
+      O << " nsz";
+    if (allowReciprocal())
+      O << " arcp";
+    if (allowContract())
+      O << " contract";
+    if (approxFunc())
+      O << " afn";
+  }
 }
 } // namespace llvm

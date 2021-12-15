@@ -62,3 +62,9 @@ decltype(void()) (&f2)(int) = 0; // expected-error{{non-const lvalue reference t
 void (&f3)(decltype(1 + 2)) = 0; // expected-error{{non-const lvalue reference to type 'void (decltype(1 + 2))' (aka 'void (int)') cannot bind to a temporary of type 'int'}}
 decltype(1+2) (&f4)(double, decltype(1 + 2)) = 0; // expected-error{{non-const lvalue reference to type 'decltype(1 + 2) (double, decltype(1 + 2))' (aka 'int (double, int)') cannot bind to a temporary of type 'int'}}
 auto (&f5)() -> decltype(1+2) = 0; // expected-error{{non-const lvalue reference to type 'auto () -> decltype(1 + 2)' (aka 'auto () -> int') cannot bind to a temporary of type 'int'}}
+
+using C = decltype(1+2);;
+C a6[10];
+extern C a8[];
+int a9 = a6; // expected-error{{cannot initialize a variable of type 'int' with an lvalue of type 'C[10]' (aka 'int[10]')}}
+int a10 = a8; // expected-error{{cannot initialize a variable of type 'int' with an lvalue of type 'C[]' (aka 'int[]')}}

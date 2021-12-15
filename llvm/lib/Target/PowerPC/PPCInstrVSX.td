@@ -158,6 +158,11 @@ def HasP9Vector : Predicate<"Subtarget->hasP9Vector()">;
 def NoP9Altivec : Predicate<"!Subtarget->hasP9Altivec()">;
 def NoP10Vector: Predicate<"!Subtarget->hasP10Vector()">;
 
+def PPCldsplatAlign16 : PatFrag<(ops node:$ptr), (PPCldsplat node:$ptr), [{
+  return cast<MemIntrinsicSDNode>(N)->getAlign() >= Align(16) &&
+         isOffsetMultipleOf(N, 16);
+}]>;
+
 //--------------------- VSX-specific instruction formats ---------------------//
 // By default, all VSX instructions are to be selected over their Altivec
 // counter parts and they do not have unmodeled sideeffects.
@@ -2471,6 +2476,7 @@ def DblwdCmp {
 // [HasVSX, HasP8Vector, IsLittleEndian]
 // [HasVSX, HasP8Vector, NoP9Vector, IsBigEndian, IsPPC64]
 // [HasVSX, HasP8Vector, NoP9Vector, IsLittleEndian]
+// [HasVSX, HasP8Altivec]
 // [HasVSX, HasDirectMove]
 // [HasVSX, HasDirectMove, IsBigEndian]
 // [HasVSX, HasDirectMove, IsLittleEndian]
@@ -2499,6 +2505,10 @@ let Predicates = [HasVSX, IsLittleEndian, HasP8Altivec] in
 let Predicates = [HasVSX, IsBigEndian, HasP8Altivec] in
   def : Pat<(v16i8 (int_ppc_altivec_crypto_vpermxor v16i8:$a,
                                                     v16i8:$b, v16i8:$c)),
+            (v16i8 (VPERMXOR $a, $b, $c))>;
+let Predicates = [HasVSX, HasP8Altivec] in
+  def : Pat<(v16i8 (int_ppc_altivec_crypto_vpermxor_be v16i8:$a,
+                                                       v16i8:$b, v16i8:$c)),
             (v16i8 (VPERMXOR $a, $b, $c))>;
 
 let AddedComplexity = 400 in {
@@ -3175,6 +3185,12 @@ defm : ScalToVecWPermute<
   v2f64, (f64 (load ForceXForm:$src)),
   (XXPERMDIs (XFLOADf64 ForceXForm:$src), 2),
   (SUBREG_TO_REG (i64 1), (XFLOADf64 ForceXForm:$src), sub_64)>;
+
+// Splat loads.
+def : Pat<(v8i16 (PPCldsplatAlign16 ForceXForm:$A)),
+          (v8i16 (VSPLTH 7, (LVX ForceXForm:$A)))>;
+def : Pat<(v16i8 (PPCldsplatAlign16 ForceXForm:$A)),
+          (v16i8 (VSPLTB 15, (LVX ForceXForm:$A)))>;
 } // HasVSX, NoP9Vector, IsLittleEndian
 
 let Predicates = [HasVSX, NoP9Vector, IsBigEndian] in {
@@ -3182,6 +3198,12 @@ let Predicates = [HasVSX, NoP9Vector, IsBigEndian] in {
             (LXVD2X ForceXForm:$src)>;
   def : Pat<(int_ppc_vsx_stxvd2x v2f64:$rS, ForceXForm:$dst),
             (STXVD2X $rS, ForceXForm:$dst)>;
+
+  // Splat loads.
+  def : Pat<(v8i16 (PPCldsplatAlign16 ForceXForm:$A)),
+            (v8i16 (VSPLTH 0, (LVX ForceXForm:$A)))>;
+  def : Pat<(v16i8 (PPCldsplatAlign16 ForceXForm:$A)),
+            (v16i8 (VSPLTB 0, (LVX ForceXForm:$A)))>;
 } // HasVSX, NoP9Vector, IsBigEndian
 
 // Any VSX subtarget that only has loads and stores that load in big endian

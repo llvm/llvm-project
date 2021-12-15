@@ -23,7 +23,7 @@
 #include "lldb/API/SBHostOS.h"
 #include "lldb/API/SBReproducer.h"
 #include "lldb/Host/FileSystem.h"
-#include "lldb/lldb-private.h"
+#include "lldb/Version/Version.h"
 
 using namespace lldb;
 using namespace lldb_private;

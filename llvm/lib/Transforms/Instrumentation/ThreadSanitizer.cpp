@@ -110,7 +110,7 @@ namespace {
 /// the module.
 struct ThreadSanitizer {
   ThreadSanitizer() {
-    // Sanity check options and warn user.
+    // Check options and warn user.
     if (ClInstrumentReadBeforeWrite && ClCompoundReadBeforeWrite) {
       errs()
           << "warning: Option -tsan-compound-read-before-write has no effect "

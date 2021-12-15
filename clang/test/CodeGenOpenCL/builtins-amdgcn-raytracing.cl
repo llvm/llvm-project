@@ -19,7 +19,7 @@ typedef double double4 __attribute__((ext_vector_type(4)));
 typedef half half4 __attribute__((ext_vector_type(4)));
 typedef uint uint4 __attribute__((ext_vector_type(4)));
 
-// CHECK: call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i32.v4f32
+// CHECK: call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i32.v3f32
 // ISA: image_bvh_intersect_ray
 void test_image_bvh_intersect_ray(global uint4* out, uint node_ptr,
   float ray_extent, float4 ray_origin, float4 ray_dir, float4 ray_inv_dir,
@@ -29,7 +29,7 @@ void test_image_bvh_intersect_ray(global uint4* out, uint node_ptr,
            ray_origin, ray_dir, ray_inv_dir, texture_descr);
 }
 
-// CHECK: call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i32.v4f16
+// CHECK: call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i32.v3f16
 // ISA: image_bvh_intersect_ray
 void test_image_bvh_intersect_ray_h(global uint4* out, uint node_ptr,
   float ray_extent, float4 ray_origin, half4 ray_dir, half4 ray_inv_dir,
@@ -39,7 +39,7 @@ void test_image_bvh_intersect_ray_h(global uint4* out, uint node_ptr,
            ray_origin, ray_dir, ray_inv_dir, texture_descr);
 }
 
-// CHECK: call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i64.v4f32
+// CHECK: call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i64.v3f32
 // ISA: image_bvh_intersect_ray
 void test_image_bvh_intersect_ray_l(global uint4* out, ulong node_ptr,
   float ray_extent, float4 ray_origin, float4 ray_dir, float4 ray_inv_dir,
@@ -49,7 +49,7 @@ void test_image_bvh_intersect_ray_l(global uint4* out, ulong node_ptr,
            ray_origin, ray_dir, ray_inv_dir, texture_descr);
 }
 
-// CHECK: call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i64.v4f16
+// CHECK: call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i64.v3f16
 // ISA: image_bvh_intersect_ray
 void test_image_bvh_intersect_ray_lh(global uint4* out, ulong node_ptr,
   float ray_extent, float4 ray_origin, half4 ray_dir, half4 ray_inv_dir,

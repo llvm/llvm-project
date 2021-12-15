@@ -127,4 +127,4 @@ TEST(ShapedTypeTest, CloneVector) {
             VectorType::get(vectorNewShape, vectorNewType));
 }
 
-} // end namespace
+} // namespace

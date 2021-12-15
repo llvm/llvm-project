@@ -2,6 +2,12 @@
 # RUN: | not llvm-dwarfdump -v -verify - \
 # RUN: | FileCheck %s
 
+# CHECK: Verifying .debug_info Unit Header Chain...
+# CHECK-NEXT: error: Units[2] - start offset: 0x00000068
+# CHECK-NEXT: note: The length for this unit is too large for the .debug_info provided.
+# CHECK-NEXT: note: The unit type encoding is not valid.
+
+# CHECK: Verifying non-dwo Units...
 # CHECK: error: DIE has invalid DW_AT_stmt_list encoding:{{[[:space:]]}}
 # CHECK-NEXT: 0x0000000c: DW_TAG_compile_unit [1] *
 # CHECK-NEXT: DW_AT_producer [DW_FORM_strp]	( .debug_str[0x00000000] = "clang version 5.0.0 (trunk 308185) (llvm/trunk 308186)")
@@ -42,9 +48,6 @@
 # CHECK-NEXT: DW_AT_use_location [DW_FORM_ref4]	(cu + 0x0053 => {0x00000053}){{[[:space:]]}}
 # CHECK-NEXT: error: Compilation unit root DIE is not a unit DIE: DW_TAG_null.
 # CHECK-NEXT: error: Compilation unit type (DW_UT_compile) and root DIE (DW_TAG_null) do not match.
-# CHECK-NEXT: error: Units[2] - start offset: 0x00000068
-# CHECK-NEXT: note: The length for this unit is too large for the .debug_info provided.
-# CHECK-NEXT: note: The unit type encoding is not valid.
 
 
 	.section	__TEXT,__text,regular,pure_instructions

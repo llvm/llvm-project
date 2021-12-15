@@ -2586,12 +2586,31 @@ tooling::Replacements sortCppIncludes(const FormatStyle &Style, StringRef Code,
   bool MainIncludeFound = false;
   bool FormattingOff = false;
 
+  llvm::Regex RawStringRegex(
+      "R\"(([\\[A-Za-z0-9_{}#<>%:;.?*+/^&\\$|~!=,'\\-]|])*)\\(");
+  SmallVector<StringRef, 2> RawStringMatches;
+  std::string RawStringTermination = ")\"";
+
   for (;;) {
     auto Pos = Code.find('\n', SearchFrom);
     StringRef Line =
         Code.substr(Prev, (Pos != StringRef::npos ? Pos : Code.size()) - Prev);
 
     StringRef Trimmed = Line.trim();
+
+    // #includes inside raw string literals need to be ignored.
+    // or we will sort the contents of the string.
+    // Skip past until we think we are at the rawstring literal close.
+    if (RawStringRegex.match(Trimmed, &RawStringMatches)) {
+      std::string CharSequence = RawStringMatches[1].str();
+      RawStringTermination = ")" + CharSequence + "\"";
+      FormattingOff = true;
+    }
+
+    if (Trimmed.contains(RawStringTermination)) {
+      FormattingOff = false;
+    }
+
     if (Trimmed == "// clang-format off" || Trimmed == "/* clang-format off */")
       FormattingOff = true;
     else if (Trimmed == "// clang-format on" ||
@@ -2988,9 +3007,8 @@ reformat(const FormatStyle &Style, StringRef Code,
   // JSON only needs the formatting passing.
   if (Style.isJson()) {
     std::vector<tooling::Range> Ranges(1, tooling::Range(0, Code.size()));
-    auto Env =
-        Environment::make(Code, FileName, Ranges, FirstStartColumn,
-                                      NextStartColumn, LastStartColumn);
+    auto Env = Environment::make(Code, FileName, Ranges, FirstStartColumn,
+                                 NextStartColumn, LastStartColumn);
     if (!Env)
       return {};
     // Perform the actual formatting pass.
@@ -3118,9 +3136,7 @@ tooling::Replacements fixNamespaceEndComments(const FormatStyle &Style,
   auto Env = Environment::make(Code, FileName, Ranges);
   if (!Env)
     return {};
-  return NamespaceEndCommentsFixer(*Env, Style)
-      .process()
-      .first;
+  return NamespaceEndCommentsFixer(*Env, Style).process().first;
 }
 
 tooling::Replacements sortUsingDeclarations(const FormatStyle &Style,
@@ -3130,9 +3146,7 @@ tooling::Replacements sortUsingDeclarations(const FormatStyle &Style,
   auto Env = Environment::make(Code, FileName, Ranges);
   if (!Env)
     return {};
-  return UsingDeclarationsSorter(*Env, Style)
-      .process()
-      .first;
+  return UsingDeclarationsSorter(*Env, Style).process().first;
 }
 
 LangOptions getFormattingLangOpts(const FormatStyle &Style) {

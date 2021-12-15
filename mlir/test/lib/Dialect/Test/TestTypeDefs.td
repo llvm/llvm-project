@@ -14,8 +14,9 @@
 #define TEST_TYPEDEFS
 
 // To get the test dialect def.
-include "TestOps.td"
+include "TestDialect.td"
 include "TestAttrDefs.td"
+include "TestInterfaces.td"
 include "mlir/IR/BuiltinTypes.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
 
@@ -47,6 +48,29 @@ def CompoundTypeA : Test_Type<"CompoundA"> {
   let extraClassDeclaration = [{
     struct SomeCppStruct {};
   }];
+}
+
+// A more complex and nested parameterized type.
+def CompoundNestedInnerType : Test_Type<"CompoundNestedInner"> {
+  let mnemonic = "cmpnd_inner";
+  // List of type parameters.
+  let parameters = (
+    ins
+    "int":$some_int,
+    CompoundTypeA:$cmpdA
+  );
+  let assemblyFormat = "`<` $some_int $cmpdA `>`";
+}
+
+def CompoundNestedOuterType : Test_Type<"CompoundNestedOuter"> {
+  let mnemonic = "cmpnd_nested_outer";
+
+  // List of type parameters.
+  let parameters = (
+    ins
+    CompoundNestedInnerType:$inner
+  );
+  let assemblyFormat = "`<` `i`  $inner `>`";
 }
 
 // An example of how one could implement a standard integer.

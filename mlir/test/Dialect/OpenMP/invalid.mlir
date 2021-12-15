@@ -601,6 +601,47 @@ func @omp_atomic_write6(%addr : memref<i32>, %val : i32) {
 
 // -----
 
+func @omp_atomic_update1(%x: memref<i32>, %expr: i32, %foo: memref<i32>) {
+  // expected-error @below {{atomic update variable %x not found in the RHS of the assignment statement in an atomic.update operation}}
+  omp.atomic.update %x = %foo add %expr : memref<i32>, i32
+  return
+}
+
+// -----
+
+func @omp_atomic_update2(%x: memref<i32>, %expr: i32) {
+  // expected-error @below {{invalid atomic bin op in atomic update}}
+  omp.atomic.update %x = %x invalid %expr : memref<i32>, i32
+  return
+}
+
+// -----
+
+func @omp_atomic_update3(%x: memref<i32>, %expr: i32) {
+  // expected-error @below {{memory-order must not be acq_rel or acquire for atomic updates}}
+  omp.atomic.update %x = %x add %expr memory_order(acq_rel) : memref<i32>, i32
+  return
+}
+
+// -----
+
+func @omp_atomic_update4(%x: memref<i32>, %expr: i32) {
+  // expected-error @below {{memory-order must not be acq_rel or acquire for atomic updates}}
+  omp.atomic.update %x = %x add %expr memory_order(acquire) : memref<i32>, i32
+  return
+}
+
+// -----
+
+// expected-note @below {{prior use here}}
+func @omp_atomic_update5(%x: memref<i32>, %expr: i32) {
+  // expected-error @below {{use of value '%x' expects different type than prior uses: 'i32' vs 'memref<i32>'}}
+  omp.atomic.update %x = %x add %expr : i32, memref<i32>
+  return
+}
+
+// -----
+
 func @omp_sections(%data_var1 : memref<i32>, %data_var2 : memref<i32>, %data_var3 : memref<i32>) -> () {
   // expected-error @below {{operand used in both private and firstprivate clauses}}
   omp.sections private(%data_var1 : memref<i32>) firstprivate(%data_var1 : memref<i32>) {

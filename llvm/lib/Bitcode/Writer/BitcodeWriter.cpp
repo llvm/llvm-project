@@ -596,10 +596,10 @@ static void writeStringRecord(BitstreamWriter &Stream, unsigned Code,
   SmallVector<unsigned, 64> Vals;
 
   // Code: [strchar x N]
-  for (unsigned i = 0, e = Str.size(); i != e; ++i) {
-    if (AbbrevToUse && !BitCodeAbbrevOp::isChar6(Str[i]))
+  for (char C : Str) {
+    if (AbbrevToUse && !BitCodeAbbrevOp::isChar6(C))
       AbbrevToUse = 0;
-    Vals.push_back(Str[i]);
+    Vals.push_back(C);
   }
 
   // Emit the finished record.
@@ -833,8 +833,7 @@ void ModuleBitcodeWriter::writeAttributeTable() {
   Stream.EnterSubblock(bitc::PARAMATTR_BLOCK_ID, 3);
 
   SmallVector<uint64_t, 64> Record;
-  for (unsigned i = 0, e = Attrs.size(); i != e; ++i) {
-    AttributeList AL = Attrs[i];
+  for (const AttributeList &AL : Attrs) {
     for (unsigned i : AL.indexes()) {
       AttributeSet AS = AL.getAttributes(i);
       if (AS.hasAttributes())
@@ -914,8 +913,7 @@ void ModuleBitcodeWriter::writeTypeTable() {
   TypeVals.clear();
 
   // Loop over all of the types, emitting each in turn.
-  for (unsigned i = 0, e = TypeList.size(); i != e; ++i) {
-    Type *T = TypeList[i];
+  for (Type *T : TypeList) {
     int AbbrevToUse = 0;
     unsigned Code = 0;
 
@@ -1068,6 +1066,7 @@ static uint64_t getEncodedFFlags(FunctionSummary::FFlags Flags) {
   RawFlags |= (Flags.NoUnwind << 6);
   RawFlags |= (Flags.MayThrow << 7);
   RawFlags |= (Flags.HasUnknownCall << 8);
+  RawFlags |= (Flags.MustBeUnreachable << 9);
   return RawFlags;
 }
 
@@ -3343,19 +3342,18 @@ void ModuleBitcodeWriter::writeFunction(
 
   DILocation *LastDL = nullptr;
   // Finally, emit all the instructions, in order.
-  for (Function::const_iterator BB = F.begin(), E = F.end(); BB != E; ++BB)
-    for (BasicBlock::const_iterator I = BB->begin(), E = BB->end();
-         I != E; ++I) {
-      writeInstruction(*I, InstID, Vals);
+  for (const BasicBlock &BB : F)
+    for (const Instruction &I : BB) {
+      writeInstruction(I, InstID, Vals);
 
-      if (!I->getType()->isVoidTy())
+      if (!I.getType()->isVoidTy())
         ++InstID;
 
       // If the instruction has metadata, write a metadata attachment later.
-      NeedsMetadataAttachment |= I->hasMetadataOtherThanDebugLoc();
+      NeedsMetadataAttachment |= I.hasMetadataOtherThanDebugLoc();
 
       // If the instruction has a debug location, emit it.
-      DILocation *DL = I->getDebugLoc();
+      DILocation *DL = I.getDebugLoc();
       if (!DL)
         continue;
 
@@ -4429,9 +4427,9 @@ void ModuleBitcodeWriter::write() {
 
   // Emit function bodies.
   DenseMap<const Function *, uint64_t> FunctionToBitcodeIndex;
-  for (Module::const_iterator F = M.begin(), E = M.end(); F != E; ++F)
-    if (!F->isDeclaration())
-      writeFunction(*F, FunctionToBitcodeIndex);
+  for (const Function &F : M)
+    if (!F.isDeclaration())
+      writeFunction(F, FunctionToBitcodeIndex);
 
   // Need to write after the above call to WriteFunction which populates
   // the summary information in the index.

@@ -15,6 +15,7 @@ add_mlir_dialect_library(MLIRStandardOpsTransforms
 
   LINK_LIBS PUBLIC
   MLIRArithmeticTransforms
+  MLIRBufferizationTransforms
   MLIRIR
   MLIRMemRef
   MLIRPass

@@ -1727,6 +1727,41 @@ TEST_F(PatternMatchTest, VScale) {
   EXPECT_FALSE(match(PtrToInt2, m_VScale(DL)));
 }
 
+TEST_F(PatternMatchTest, NotForbidUndef) {
+  Type *ScalarTy = IRB.getInt8Ty();
+  Type *VectorTy = FixedVectorType::get(ScalarTy, 3);
+  Constant *ScalarUndef = UndefValue::get(ScalarTy);
+  Constant *ScalarOnes = Constant::getAllOnesValue(ScalarTy);
+  Constant *VectorZero = Constant::getNullValue(VectorTy);
+  Constant *VectorOnes = Constant::getAllOnesValue(VectorTy);
+
+  SmallVector<Constant *, 3> MixedElems;
+  MixedElems.push_back(ScalarOnes);
+  MixedElems.push_back(ScalarOnes);
+  MixedElems.push_back(ScalarUndef);
+  Constant *VectorMixed = ConstantVector::get(MixedElems);
+
+  Value *Not = IRB.CreateXor(VectorZero, VectorOnes);
+  Value *X;
+  EXPECT_TRUE(match(Not, m_Not(m_Value())));
+  EXPECT_TRUE(match(Not, m_NotForbidUndef(m_Value(X))));
+  EXPECT_TRUE(match(X, m_Zero()));
+
+  Value *NotCommute = IRB.CreateXor(VectorOnes, VectorZero);
+  Value *Y;
+  EXPECT_TRUE(match(NotCommute, m_Not(m_Value())));
+  EXPECT_TRUE(match(NotCommute, m_NotForbidUndef(m_Value(Y))));
+  EXPECT_TRUE(match(Y, m_Zero()));
+
+  Value *NotWithUndefs = IRB.CreateXor(VectorZero, VectorMixed);
+  EXPECT_TRUE(match(NotWithUndefs, m_Not(m_Value())));
+  EXPECT_FALSE(match(NotWithUndefs, m_NotForbidUndef(m_Value())));
+
+  Value *NotWithUndefsCommute = IRB.CreateXor(VectorMixed, VectorZero);
+  EXPECT_TRUE(match(NotWithUndefsCommute, m_Not(m_Value())));
+  EXPECT_FALSE(match(NotWithUndefsCommute, m_NotForbidUndef(m_Value(X))));
+}
+
 template <typename T> struct MutableConstTest : PatternMatchTest { };
 
 typedef ::testing::Types<std::tuple<Value*, Instruction*>,

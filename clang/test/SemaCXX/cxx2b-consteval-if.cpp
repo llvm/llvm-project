@@ -52,6 +52,5 @@ auto f() {
       return 0;
     }
   }
-  // FIXME: this error should not happen.
-  return 0.0; // expected-error {{'auto' in return type deduced as 'double' here but deduced as 'int' in earlier return statement}}
+  return 0.0;
 }

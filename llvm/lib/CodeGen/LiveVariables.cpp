@@ -58,9 +58,9 @@ void LiveVariables::getAnalysisUsage(AnalysisUsage &AU) const {
 
 MachineInstr *
 LiveVariables::VarInfo::findKill(const MachineBasicBlock *MBB) const {
-  for (unsigned i = 0, e = Kills.size(); i != e; ++i)
-    if (Kills[i]->getParent() == MBB)
-      return Kills[i];
+  for (MachineInstr *MI : Kills)
+    if (MI->getParent() == MBB)
+      return MI;
   return nullptr;
 }
 
@@ -141,8 +141,8 @@ void LiveVariables::HandleVirtRegUse(Register Reg, MachineBasicBlock *MBB,
   }
 
 #ifndef NDEBUG
-  for (unsigned i = 0, e = VRInfo.Kills.size(); i != e; ++i)
-    assert(VRInfo.Kills[i]->getParent() != MBB && "entry should be at end!");
+  for (MachineInstr *Kill : VRInfo.Kills)
+    assert(Kill->getParent() != MBB && "entry should be at end!");
 #endif
 
   // This situation can occur:
@@ -534,8 +534,7 @@ void LiveVariables::runOnInstr(MachineInstr &MI,
 
   MachineBasicBlock *MBB = MI.getParent();
   // Process all uses.
-  for (unsigned i = 0, e = UseRegs.size(); i != e; ++i) {
-    unsigned MOReg = UseRegs[i];
+  for (unsigned MOReg : UseRegs) {
     if (Register::isVirtualRegister(MOReg))
       HandleVirtRegUse(MOReg, MBB, MI);
     else if (!MRI->isReserved(MOReg))
@@ -543,12 +542,11 @@ void LiveVariables::runOnInstr(MachineInstr &MI,
   }
 
   // Process all masked registers. (Call clobbers).
-  for (unsigned i = 0, e = RegMasks.size(); i != e; ++i)
-    HandleRegMask(MI.getOperand(RegMasks[i]));
+  for (unsigned Mask : RegMasks)
+    HandleRegMask(MI.getOperand(Mask));
 
   // Process all defs.
-  for (unsigned i = 0, e = DefRegs.size(); i != e; ++i) {
-    unsigned MOReg = DefRegs[i];
+  for (unsigned MOReg : DefRegs) {
     if (Register::isVirtualRegister(MOReg))
       HandleVirtRegDef(MOReg, MI);
     else if (!MRI->isReserved(MOReg))
@@ -811,8 +809,8 @@ bool LiveVariables::isLiveOut(Register Reg, const MachineBasicBlock &MBB) {
   LiveVariables::VarInfo &VI = getVarInfo(Reg);
 
   SmallPtrSet<const MachineBasicBlock *, 8> Kills;
-  for (unsigned i = 0, e = VI.Kills.size(); i != e; ++i)
-    Kills.insert(VI.Kills[i]->getParent());
+  for (MachineInstr *MI : VI.Kills)
+    Kills.insert(MI->getParent());
 
   // Loop over all of the successors of the basic block, checking to see if
   // the value is either live in the block, or if it is killed in the block.

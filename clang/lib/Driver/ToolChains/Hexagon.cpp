@@ -226,6 +226,7 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
   StringRef CpuVer = toolchains::HexagonToolChain::GetTargetCPUVersion(Args);
 
   bool NeedsSanitizerDeps = addSanitizerRuntimes(HTC, Args, CmdArgs);
+  bool NeedsXRayDeps = addXRayRuntime(HTC, Args, CmdArgs);
 
   //----------------------------------------------------------------------------
   // Silence warnings for various options
@@ -297,6 +298,8 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
 
         CmdArgs.push_back("-lunwind");
       }
+      if (NeedsXRayDeps)
+        linkXRayRuntimeDeps(HTC, CmdArgs);
 
       CmdArgs.push_back("-lclang_rt.builtins-hexagon");
       CmdArgs.push_back("-lc");

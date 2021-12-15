@@ -58,7 +58,7 @@ define <4 x float> @insertps_0x1a_single_input(<4 x float> %v1) {
 
 define <4 x float> @insertps_0xc1(<4 x float> %v1, <4 x float> %v2) {
 ; CHECK-LABEL: @insertps_0xc1(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> [[V1:%.*]], float 0.000000e+00, i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> [[V1:%.*]], float 0.000000e+00, i64 0
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %res = call <4 x float> @llvm.x86.sse41.insertps(<4 x float> %v1, <4 x float> %v2, i8 193)

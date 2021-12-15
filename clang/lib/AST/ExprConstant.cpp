@@ -7483,7 +7483,7 @@ public:
     const Expr *Source = E->getSourceExpr();
     if (!Source)
       return Error(E);
-    if (Source == E) { // sanity checking.
+    if (Source == E) {
       assert(0 && "OpaqueValueExpr recursively refers to itself");
       return Error(E);
     }
@@ -11077,7 +11077,7 @@ EvaluateBuiltinClassifyType(QualType T, const LangOptions &LangOpts) {
   case Type::ObjCInterface:
   case Type::ObjCObjectPointer:
   case Type::Pipe:
-  case Type::ExtInt:
+  case Type::BitInt:
     // GCC classifies vectors as None. We follow its lead and classify all
     // other types that don't fit into the regular classification the same way.
     return GCCTypeClass::None;

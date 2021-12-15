@@ -295,8 +295,6 @@ void __kmpc_push_num_teams(IdentTy *Loc, int32_t TId, int32_t NumTeams,
 /// TODO
 uint16_t __kmpc_parallel_level(IdentTy *Loc, uint32_t);
 
-/// TODO
-void __kmpc_push_num_threads(IdentTy *Loc, int32_t, int32_t NumThreads);
 ///}
 
 /// Tasking

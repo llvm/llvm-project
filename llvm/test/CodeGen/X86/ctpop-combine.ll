@@ -93,14 +93,14 @@ define i8 @test4(i8 %x) nounwind readnone {
 ; NO-POPCOUNT-NEXT:    shrb %al
 ; NO-POPCOUNT-NEXT:    andb $21, %al
 ; NO-POPCOUNT-NEXT:    subb %al, %dil
-; NO-POPCOUNT-NEXT:    movl %edi, %eax
-; NO-POPCOUNT-NEXT:    andb $51, %al
+; NO-POPCOUNT-NEXT:    movl %edi, %ecx
+; NO-POPCOUNT-NEXT:    andb $51, %cl
 ; NO-POPCOUNT-NEXT:    shrb $2, %dil
 ; NO-POPCOUNT-NEXT:    andb $51, %dil
-; NO-POPCOUNT-NEXT:    addb %al, %dil
-; NO-POPCOUNT-NEXT:    movl %edi, %eax
+; NO-POPCOUNT-NEXT:    addb %dil, %cl
+; NO-POPCOUNT-NEXT:    movl %ecx, %eax
 ; NO-POPCOUNT-NEXT:    shrb $4, %al
-; NO-POPCOUNT-NEXT:    addb %dil, %al
+; NO-POPCOUNT-NEXT:    addb %cl, %al
 ; NO-POPCOUNT-NEXT:    andb $15, %al
 ; NO-POPCOUNT-NEXT:    retq
   %x2 = and i8 %x, 127

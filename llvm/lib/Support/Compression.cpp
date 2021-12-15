@@ -49,14 +49,14 @@ bool zlib::isAvailable() { return true; }
 Error zlib::compress(StringRef InputBuffer,
                      SmallVectorImpl<char> &CompressedBuffer, int Level) {
   unsigned long CompressedSize = ::compressBound(InputBuffer.size());
-  CompressedBuffer.reserve(CompressedSize);
+  CompressedBuffer.resize_for_overwrite(CompressedSize);
   int Res =
       ::compress2((Bytef *)CompressedBuffer.data(), &CompressedSize,
                   (const Bytef *)InputBuffer.data(), InputBuffer.size(), Level);
   // Tell MemorySanitizer that zlib output buffer is fully initialized.
   // This avoids a false report when running LLVM with uninstrumented ZLib.
   __msan_unpoison(CompressedBuffer.data(), CompressedSize);
-  CompressedBuffer.set_size(CompressedSize);
+  CompressedBuffer.truncate(CompressedSize);
   return Res ? createError(convertZlibCodeToString(Res)) : Error::success();
 }
 
@@ -74,10 +74,10 @@ Error zlib::uncompress(StringRef InputBuffer, char *UncompressedBuffer,
 Error zlib::uncompress(StringRef InputBuffer,
                        SmallVectorImpl<char> &UncompressedBuffer,
                        size_t UncompressedSize) {
-  UncompressedBuffer.reserve(UncompressedSize);
+  UncompressedBuffer.resize_for_overwrite(UncompressedSize);
   Error E =
       uncompress(InputBuffer, UncompressedBuffer.data(), UncompressedSize);
-  UncompressedBuffer.set_size(UncompressedSize);
+  UncompressedBuffer.truncate(UncompressedSize);
   return E;
 }
 

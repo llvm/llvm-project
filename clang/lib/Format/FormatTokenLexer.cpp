@@ -37,27 +37,40 @@ FormatTokenLexer::FormatTokenLexer(
                       getFormattingLangOpts(Style)));
   Lex->SetKeepWhitespaceMode(true);
 
-  for (const std::string &ForEachMacro : Style.ForEachMacros)
-    Macros.insert({&IdentTable.get(ForEachMacro), TT_ForEachMacro});
-  for (const std::string &IfMacro : Style.IfMacros)
-    Macros.insert({&IdentTable.get(IfMacro), TT_IfMacro});
-  for (const std::string &AttributeMacro : Style.AttributeMacros)
-    Macros.insert({&IdentTable.get(AttributeMacro), TT_AttributeMacro});
-  for (const std::string &StatementMacro : Style.StatementMacros)
-    Macros.insert({&IdentTable.get(StatementMacro), TT_StatementMacro});
-  for (const std::string &TypenameMacro : Style.TypenameMacros)
-    Macros.insert({&IdentTable.get(TypenameMacro), TT_TypenameMacro});
-  for (const std::string &NamespaceMacro : Style.NamespaceMacros)
-    Macros.insert({&IdentTable.get(NamespaceMacro), TT_NamespaceMacro});
+  for (const std::string &ForEachMacro : Style.ForEachMacros) {
+    auto Identifier = &IdentTable.get(ForEachMacro);
+    Macros.insert({Identifier, TT_ForEachMacro});
+  }
+  for (const std::string &IfMacro : Style.IfMacros) {
+    auto Identifier = &IdentTable.get(IfMacro);
+    Macros.insert({Identifier, TT_IfMacro});
+  }
+  for (const std::string &AttributeMacro : Style.AttributeMacros) {
+    auto Identifier = &IdentTable.get(AttributeMacro);
+    Macros.insert({Identifier, TT_AttributeMacro});
+  }
+  for (const std::string &StatementMacro : Style.StatementMacros) {
+    auto Identifier = &IdentTable.get(StatementMacro);
+    Macros.insert({Identifier, TT_StatementMacro});
+  }
+  for (const std::string &TypenameMacro : Style.TypenameMacros) {
+    auto Identifier = &IdentTable.get(TypenameMacro);
+    Macros.insert({Identifier, TT_TypenameMacro});
+  }
+  for (const std::string &NamespaceMacro : Style.NamespaceMacros) {
+    auto Identifier = &IdentTable.get(NamespaceMacro);
+    Macros.insert({Identifier, TT_NamespaceMacro});
+  }
   for (const std::string &WhitespaceSensitiveMacro :
        Style.WhitespaceSensitiveMacros) {
-    Macros.insert(
-        {&IdentTable.get(WhitespaceSensitiveMacro), TT_UntouchableMacroFunc});
+    auto Identifier = &IdentTable.get(WhitespaceSensitiveMacro);
+    Macros.insert({Identifier, TT_UntouchableMacroFunc});
   }
   for (const std::string &StatementAttributeLikeMacro :
-       Style.StatementAttributeLikeMacros)
-    Macros.insert({&IdentTable.get(StatementAttributeLikeMacro),
-                   TT_StatementAttributeLikeMacro});
+       Style.StatementAttributeLikeMacros) {
+    auto Identifier = &IdentTable.get(StatementAttributeLikeMacro);
+    Macros.insert({Identifier, TT_StatementAttributeLikeMacro});
+  }
 }
 
 ArrayRef<FormatToken *> FormatTokenLexer::lex() {
@@ -739,6 +752,8 @@ bool FormatTokenLexer::tryMerge_TMacro() {
   Tokens.pop_back();
   Tokens.pop_back();
   Tokens.back() = String;
+  if (FirstInLineIndex >= Tokens.size())
+    FirstInLineIndex = Tokens.size() - 1;
   return true;
 }
 

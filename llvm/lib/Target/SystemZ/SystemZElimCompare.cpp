@@ -144,8 +144,7 @@ Reference SystemZElimCompare::getRegReferences(MachineInstr &MI, unsigned Reg) {
   if (MI.isDebugInstr())
     return Ref;
 
-  for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I) {
-    const MachineOperand &MO = MI.getOperand(I);
+  for (const MachineOperand &MO : MI.operands()) {
     if (MO.isReg()) {
       if (Register MOReg = MO.getReg()) {
         if (TRI->regsOverlap(MOReg, Reg)) {

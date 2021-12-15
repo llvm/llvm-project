@@ -225,7 +225,7 @@ struct RecursivePatternMatcher {
   std::tuple<OperandMatchers...> operandMatchers;
 };
 
-} // end namespace detail
+} // namespace detail
 
 /// Matches a constant foldable operation.
 inline detail::constant_op_matcher m_Constant() {
@@ -294,6 +294,6 @@ inline auto m_Any(Value *val) { return detail::AnyCapturedValueMatcher(val); }
 inline auto m_Val(Value v) { return detail::PatternMatcherValue(v); }
 } // namespace matchers
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_MATCHERS_H

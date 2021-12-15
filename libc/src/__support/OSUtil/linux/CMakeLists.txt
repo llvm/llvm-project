@@ -1,0 +1,10 @@
+add_header_library(
+  linux_util
+  HDRS
+    io.h
+    quick_exit.h
+  DEPENDS
+    libc.config.linux.linux_syscall_h
+    libc.include.sys_syscall
+    libc.src.string.string_utils
+)

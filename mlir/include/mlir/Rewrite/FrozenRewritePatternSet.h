@@ -14,7 +14,7 @@
 namespace mlir {
 namespace detail {
 class PDLByteCode;
-} // end namespace detail
+} // namespace detail
 
 /// This class represents a frozen set of patterns that can be processed by a
 /// pattern applicator. This class is designed to enable caching pattern lists
@@ -92,6 +92,6 @@ private:
   std::shared_ptr<Impl> impl;
 };
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_REWRITE_FROZENREWRITEPATTERNSET_H

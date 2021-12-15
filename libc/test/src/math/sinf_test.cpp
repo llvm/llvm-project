@@ -42,7 +42,7 @@ TEST(LlvmLibcSinfTest, SpecialNumbers) {
   EXPECT_EQ(errno, EDOM);
 
   errno = 0;
-  EXPECT_FP_EQ(aNaN, __llvm_libc::sinf(negInf));
+  EXPECT_FP_EQ(aNaN, __llvm_libc::sinf(neg_inf));
   EXPECT_EQ(errno, EDOM);
 }
 

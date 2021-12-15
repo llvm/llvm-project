@@ -70,6 +70,10 @@ bool FormatToken::isSimpleTypeSpecifier() const {
   }
 }
 
+bool FormatToken::isTypeOrIdentifier() const {
+  return isSimpleTypeSpecifier() || Tok.isOneOf(tok::kw_auto, tok::identifier);
+}
+
 TokenRole::~TokenRole() {}
 
 void TokenRole::precomputeFormattingInfos(const FormatToken *Token) {}

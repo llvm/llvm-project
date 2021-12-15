@@ -74,8 +74,7 @@ bool PPCExpandAtomicPseudo::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
   TII = static_cast<const PPCInstrInfo *>(MF.getSubtarget().getInstrInfo());
   TRI = &TII->getRegisterInfo();
-  for (MachineFunction::iterator I = MF.begin(), E = MF.end(); I != E; ++I) {
-    MachineBasicBlock &MBB = *I;
+  for (MachineBasicBlock &MBB : MF) {
     for (MachineBasicBlock::iterator MBBI = MBB.begin(), MBBE = MBB.end();
          MBBI != MBBE;) {
       MachineInstr &MI = *MBBI;

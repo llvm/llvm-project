@@ -649,7 +649,7 @@ void SwingSchedulerDAG::schedule() {
 /// Clean up after the software pipeliner runs.
 void SwingSchedulerDAG::finishBlock() {
   for (auto &KV : NewMIs)
-    MF.DeleteMachineInstr(KV.second);
+    MF.deleteMachineInstr(KV.second);
   NewMIs.clear();
 
   // Call the superclass.
@@ -1101,17 +1101,15 @@ unsigned SwingSchedulerDAG::calculateResMII() {
   // Sort the instructions by the number of available choices for scheduling,
   // least to most. Use the number of critical resources as the tie breaker.
   FuncUnitSorter FUS = FuncUnitSorter(MF.getSubtarget());
-  for (MachineBasicBlock::iterator I = MBB->getFirstNonPHI(),
-                                   E = MBB->getFirstTerminator();
-       I != E; ++I)
-    FUS.calcCriticalResources(*I);
+  for (MachineInstr &MI :
+       llvm::make_range(MBB->getFirstNonPHI(), MBB->getFirstTerminator()))
+    FUS.calcCriticalResources(MI);
   PriorityQueue<MachineInstr *, std::vector<MachineInstr *>, FuncUnitSorter>
       FuncUnitOrder(FUS);
 
-  for (MachineBasicBlock::iterator I = MBB->getFirstNonPHI(),
-                                   E = MBB->getFirstTerminator();
-       I != E; ++I)
-    FuncUnitOrder.push(&*I);
+  for (MachineInstr &MI :
+       llvm::make_range(MBB->getFirstNonPHI(), MBB->getFirstTerminator()))
+    FuncUnitOrder.push(&MI);
 
   while (!FuncUnitOrder.empty()) {
     MachineInstr *MI = FuncUnitOrder.top();
@@ -1192,14 +1190,10 @@ unsigned SwingSchedulerDAG::calculateRecMII(NodeSetType &NodeSets) {
 /// but we do this to find the circuits, and then change them back.
 static void swapAntiDependences(std::vector<SUnit> &SUnits) {
   SmallVector<std::pair<SUnit *, SDep>, 8> DepsAdded;
-  for (unsigned i = 0, e = SUnits.size(); i != e; ++i) {
-    SUnit *SU = &SUnits[i];
-    for (SUnit::pred_iterator IP = SU->Preds.begin(), EP = SU->Preds.end();
-         IP != EP; ++IP) {
-      if (IP->getKind() != SDep::Anti)
-        continue;
-      DepsAdded.push_back(std::make_pair(SU, *IP));
-    }
+  for (SUnit &SU : SUnits) {
+    for (SDep &Pred : SU.Preds)
+      if (Pred.getKind() == SDep::Anti)
+        DepsAdded.push_back(std::make_pair(&SU, Pred));
   }
   for (std::pair<SUnit *, SDep> &P : DepsAdded) {
     // Remove this anti dependency and add one in the reverse direction.
@@ -1455,17 +1449,15 @@ void SwingSchedulerDAG::computeNodeFunctions(NodeSetType &NodeSets) {
     int asap = 0;
     int zeroLatencyDepth = 0;
     SUnit *SU = &SUnits[I];
-    for (SUnit::const_pred_iterator IP = SU->Preds.begin(),
-                                    EP = SU->Preds.end();
-         IP != EP; ++IP) {
-      SUnit *pred = IP->getSUnit();
-      if (IP->getLatency() == 0)
+    for (const SDep &P : SU->Preds) {
+      SUnit *pred = P.getSUnit();
+      if (P.getLatency() == 0)
         zeroLatencyDepth =
             std::max(zeroLatencyDepth, getZeroLatencyDepth(pred) + 1);
-      if (ignoreDependence(*IP, true))
+      if (ignoreDependence(P, true))
         continue;
-      asap = std::max(asap, (int)(getASAP(pred) + IP->getLatency() -
-                                  getDistance(pred, SU, *IP) * MII));
+      asap = std::max(asap, (int)(getASAP(pred) + P.getLatency() -
+                                  getDistance(pred, SU, P) * MII));
     }
     maxASAP = std::max(maxASAP, asap);
     ScheduleInfo[I].ASAP = asap;
@@ -1473,27 +1465,23 @@ void SwingSchedulerDAG::computeNodeFunctions(NodeSetType &NodeSets) {
   }
 
   // Compute ALAP, ZeroLatencyHeight, and MOV.
-  for (ScheduleDAGTopologicalSort::const_reverse_iterator I = Topo.rbegin(),
-                                                          E = Topo.rend();
-       I != E; ++I) {
+  for (int I : llvm::reverse(Topo)) {
     int alap = maxASAP;
     int zeroLatencyHeight = 0;
-    SUnit *SU = &SUnits[*I];
-    for (SUnit::const_succ_iterator IS = SU->Succs.begin(),
-                                    ES = SU->Succs.end();
-         IS != ES; ++IS) {
-      SUnit *succ = IS->getSUnit();
-      if (IS->getLatency() == 0)
+    SUnit *SU = &SUnits[I];
+    for (const SDep &S : SU->Succs) {
+      SUnit *succ = S.getSUnit();
+      if (S.getLatency() == 0)
         zeroLatencyHeight =
             std::max(zeroLatencyHeight, getZeroLatencyHeight(succ) + 1);
-      if (ignoreDependence(*IS, true))
+      if (ignoreDependence(S, true))
         continue;
-      alap = std::min(alap, (int)(getALAP(succ) - IS->getLatency() +
-                                  getDistance(SU, succ, *IS) * MII));
+      alap = std::min(alap, (int)(getALAP(succ) - S.getLatency() +
+                                  getDistance(SU, succ, S) * MII));
     }
 
-    ScheduleInfo[*I].ALAP = alap;
-    ScheduleInfo[*I].ZeroLatencyHeight = zeroLatencyHeight;
+    ScheduleInfo[I].ALAP = alap;
+    ScheduleInfo[I].ZeroLatencyHeight = zeroLatencyHeight;
   }
 
   // After computing the node functions, compute the summary for each node set.
@@ -1521,9 +1509,8 @@ static bool pred_L(SetVector<SUnit *> &NodeOrder,
                    SmallSetVector<SUnit *, 8> &Preds,
                    const NodeSet *S = nullptr) {
   Preds.clear();
-  for (SetVector<SUnit *>::iterator I = NodeOrder.begin(), E = NodeOrder.end();
-       I != E; ++I) {
-    for (const SDep &Pred : (*I)->Preds) {
+  for (const SUnit *SU : NodeOrder) {
+    for (const SDep &Pred : SU->Preds) {
       if (S && S->count(Pred.getSUnit()) == 0)
         continue;
       if (ignoreDependence(Pred, true))
@@ -1532,7 +1519,7 @@ static bool pred_L(SetVector<SUnit *> &NodeOrder,
         Preds.insert(Pred.getSUnit());
     }
     // Back-edges are predecessors with an anti-dependence.
-    for (const SDep &Succ : (*I)->Succs) {
+    for (const SDep &Succ : SU->Succs) {
       if (Succ.getKind() != SDep::Anti)
         continue;
       if (S && S->count(Succ.getSUnit()) == 0)
@@ -1551,9 +1538,8 @@ static bool succ_L(SetVector<SUnit *> &NodeOrder,
                    SmallSetVector<SUnit *, 8> &Succs,
                    const NodeSet *S = nullptr) {
   Succs.clear();
-  for (SetVector<SUnit *>::iterator I = NodeOrder.begin(), E = NodeOrder.end();
-       I != E; ++I) {
-    for (SDep &Succ : (*I)->Succs) {
+  for (const SUnit *SU : NodeOrder) {
+    for (const SDep &Succ : SU->Succs) {
       if (S && S->count(Succ.getSUnit()) == 0)
         continue;
       if (ignoreDependence(Succ, false))
@@ -1561,7 +1547,7 @@ static bool succ_L(SetVector<SUnit *> &NodeOrder,
       if (NodeOrder.count(Succ.getSUnit()) == 0)
         Succs.insert(Succ.getSUnit());
     }
-    for (SDep &Pred : (*I)->Preds) {
+    for (const SDep &Pred : SU->Preds) {
       if (Pred.getKind() != SDep::Anti)
         continue;
       if (S && S->count(Pred.getSUnit()) == 0)
@@ -2205,7 +2191,7 @@ bool SwingSchedulerDAG::canUseLastOffsetValue(MachineInstr *MI,
   MachineInstr *NewMI = MF.CloneMachineInstr(MI);
   NewMI->getOperand(OffsetPosLd).setImm(LoadOffset + StoreOffset);
   bool Disjoint = TII->areMemAccessesTriviallyDisjoint(*NewMI, *PrevDef);
-  MF.DeleteMachineInstr(NewMI);
+  MF.deleteMachineInstr(NewMI);
   if (!Disjoint)
     return false;
 
@@ -2546,8 +2532,7 @@ void SMSchedule::orderDependence(SwingSchedulerDAG *SSD, SUnit *SU,
   unsigned Pos = 0;
   for (std::deque<SUnit *>::iterator I = Insts.begin(), E = Insts.end(); I != E;
        ++I, ++Pos) {
-    for (unsigned i = 0, e = MI->getNumOperands(); i < e; ++i) {
-      MachineOperand &MO = MI->getOperand(i);
+    for (MachineOperand &MO : MI->operands()) {
       if (!MO.isReg() || !Register::isVirtualRegister(MO.getReg()))
         continue;
 
@@ -2889,10 +2874,8 @@ void SMSchedule::finalizeSchedule(SwingSchedulerDAG *SSD) {
          ++stage) {
       std::deque<SUnit *> &cycleInstrs =
           ScheduledInstrs[cycle + (stage * InitiationInterval)];
-      for (std::deque<SUnit *>::reverse_iterator I = cycleInstrs.rbegin(),
-                                                 E = cycleInstrs.rend();
-           I != E; ++I)
-        ScheduledInstrs[cycle].push_front(*I);
+      for (SUnit *SU : llvm::reverse(cycleInstrs))
+        ScheduledInstrs[cycle].push_front(SU);
     }
   }
 
@@ -2903,10 +2886,8 @@ void SMSchedule::finalizeSchedule(SwingSchedulerDAG *SSD) {
 
   // Change the registers in instruction as specified in the InstrChanges
   // map. We need to use the new registers to create the correct order.
-  for (int i = 0, e = SSD->SUnits.size(); i != e; ++i) {
-    SUnit *SU = &SSD->SUnits[i];
-    SSD->applyInstrChange(SU->getInstr(), *this);
-  }
+  for (const SUnit &SU : SSD->SUnits)
+    SSD->applyInstrChange(SU.getInstr(), *this);
 
   // Reorder the instructions in each cycle to fix and improve the
   // generated code.

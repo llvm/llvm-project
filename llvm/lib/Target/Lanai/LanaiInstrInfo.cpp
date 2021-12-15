@@ -467,8 +467,7 @@ static MachineInstr *canFoldIntoSelect(Register Reg,
     return nullptr;
   // Check if MI has any non-dead defs or physreg uses. This also detects
   // predicated instructions which will be reading SR.
-  for (unsigned i = 1, e = MI->getNumOperands(); i != e; ++i) {
-    const MachineOperand &MO = MI->getOperand(i);
+  for (const MachineOperand &MO : llvm::drop_begin(MI->operands(), 1)) {
     // Reject frame index operands.
     if (MO.isFI() || MO.isCPI() || MO.isJTI())
       return nullptr;

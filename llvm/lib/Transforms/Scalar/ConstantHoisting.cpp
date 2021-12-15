@@ -271,8 +271,7 @@ static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
   // subtree of BB (subtree not including the BB itself).
   DenseMap<BasicBlock *, InsertPtsCostPair> InsertPtsMap;
   InsertPtsMap.reserve(Orders.size() + 1);
-  for (auto RIt = Orders.rbegin(); RIt != Orders.rend(); RIt++) {
-    BasicBlock *Node = *RIt;
+  for (BasicBlock *Node : llvm::reverse(Orders)) {
     bool NodeInBBs = BBs.count(Node);
     auto &InsertPts = InsertPtsMap[Node].first;
     BlockFrequency &InsertPtsFreq = InsertPtsMap[Node].second;

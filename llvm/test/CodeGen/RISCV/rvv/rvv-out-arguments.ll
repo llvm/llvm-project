@@ -32,8 +32,8 @@ define dso_local void @lots_args(i32 signext %x0, i32 signext %x1, <vscale x 16 
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 80
 ; CHECK-NEXT:    ret
 entry:
@@ -86,7 +86,7 @@ define dso_local signext i32 @main() #0 {
 ; CHECK-NEXT:    sub a0, s0, a0
 ; CHECK-NEXT:    addi a0, a0, -112
 ; CHECK-NEXT:    vs8r.v v8, (a0)
-; CHECK-NEXT:    addi a0, zero, 1
+; CHECK-NEXT:    li a0, 1
 ; CHECK-NEXT:    sw a0, -68(s0)
 ; CHECK-NEXT:    sw a0, -72(s0)
 ; CHECK-NEXT:    sw a0, -76(s0)
@@ -137,12 +137,12 @@ define dso_local signext i32 @main() #0 {
 ; CHECK-NEXT:    sd t0, 0(sp)
 ; CHECK-NEXT:    call lots_args
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    mv a0, zero
+; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    add sp, sp, a1
-; CHECK-NEXT:    ld s0, 96(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld ra, 104(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 96(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 112
 ; CHECK-NEXT:    ret
 entry:

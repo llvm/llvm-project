@@ -226,6 +226,7 @@ bool XRayInstrumentation::runOnMachineFunction(MachineFunction &MF) {
     case Triple::ArchType::arm:
     case Triple::ArchType::thumb:
     case Triple::ArchType::aarch64:
+    case Triple::ArchType::hexagon:
     case Triple::ArchType::mips:
     case Triple::ArchType::mipsel:
     case Triple::ArchType::mips64:

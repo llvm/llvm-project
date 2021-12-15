@@ -843,22 +843,24 @@ bool SPIRVConversionTarget::isLegalOp(Operation *op) {
   // Make sure this op is available at the given version. Ops not implementing
   // QueryMinVersionInterface/QueryMaxVersionInterface are available to all
   // SPIR-V versions.
-  if (auto minVersion = dyn_cast<spirv::QueryMinVersionInterface>(op))
-    if (minVersion.getMinVersion() > this->targetEnv.getVersion()) {
+  if (auto minVersionIfx = dyn_cast<spirv::QueryMinVersionInterface>(op)) {
+    Optional<spirv::Version> minVersion = minVersionIfx.getMinVersion();
+    if (minVersion && *minVersion > this->targetEnv.getVersion()) {
       LLVM_DEBUG(llvm::dbgs()
                  << op->getName() << " illegal: requiring min version "
-                 << spirv::stringifyVersion(minVersion.getMinVersion())
-                 << "\n");
+                 << spirv::stringifyVersion(*minVersion) << "\n");
       return false;
     }
-  if (auto maxVersion = dyn_cast<spirv::QueryMaxVersionInterface>(op))
-    if (maxVersion.getMaxVersion() < this->targetEnv.getVersion()) {
+  }
+  if (auto maxVersionIfx = dyn_cast<spirv::QueryMaxVersionInterface>(op)) {
+    Optional<spirv::Version> maxVersion = maxVersionIfx.getMaxVersion();
+    if (maxVersion && *maxVersion < this->targetEnv.getVersion()) {
       LLVM_DEBUG(llvm::dbgs()
                  << op->getName() << " illegal: requiring max version "
-                 << spirv::stringifyVersion(maxVersion.getMaxVersion())
-                 << "\n");
+                 << spirv::stringifyVersion(*maxVersion) << "\n");
       return false;
     }
+  }
 
   // Make sure this op's required extensions are allowed to use. Ops not
   // implementing QueryExtensionInterface do not require extensions to be

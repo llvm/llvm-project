@@ -261,7 +261,7 @@ ProfiledBinary::getExpandedContext(const SmallVectorImpl<uint64_t> &Stack,
   // Replace with decoded base discriminator
   for (auto &Frame : ContextVec) {
     Frame.Location.Discriminator = ProfileGeneratorBase::getBaseDiscriminator(
-        Frame.Location.Discriminator);
+        Frame.Location.Discriminator, UseFSDiscriminator);
   }
 
   assert(ContextVec.size() && "Context length should be at least 1");
@@ -545,13 +545,17 @@ void ProfiledBinary::disassemble(const ELFObjectFileBase *Obj) {
     // Register the text section.
     TextSections.insert({SectionOffset, SectSize});
 
+    StringRef SectionName = unwrapOrError(Section.getName(), FileName);
+
     if (ShowDisassemblyOnly) {
-      StringRef SectionName = unwrapOrError(Section.getName(), FileName);
       outs() << "\nDisassembly of section " << SectionName;
       outs() << " [" << format("0x%" PRIx64, Section.getAddress()) << ", "
              << format("0x%" PRIx64, Section.getAddress() + SectSize)
              << "]:\n\n";
     }
+
+    if (SectionName == ".plt")
+      continue;
 
     // Get the section data.
     ArrayRef<uint8_t> Bytes =
@@ -564,6 +568,29 @@ void ProfiledBinary::disassemble(const ELFObjectFileBase *Obj) {
     for (std::size_t SI = 0, SE = Symbols.size(); SI != SE; ++SI) {
       if (!dissassembleSymbol(SI, Bytes, Symbols, Section))
         exitWithError("disassembling error", FileName);
+    }
+  }
+
+  // Dissassemble rodata section to check if FS discriminator symbol exists.
+  checkUseFSDiscriminator(Obj, AllSymbols);
+}
+
+void ProfiledBinary::checkUseFSDiscriminator(
+    const ELFObjectFileBase *Obj,
+    std::map<SectionRef, SectionSymbolsTy> &AllSymbols) {
+  const char *FSDiscriminatorVar = "__llvm_fs_discriminator__";
+  for (section_iterator SI = Obj->section_begin(), SE = Obj->section_end();
+       SI != SE; ++SI) {
+    const SectionRef &Section = *SI;
+    if (!Section.isData() || Section.getSize() == 0)
+      continue;
+    SectionSymbolsTy &Symbols = AllSymbols[Section];
+
+    for (std::size_t SI = 0, SE = Symbols.size(); SI != SE; ++SI) {
+      if (Symbols[SI].Name == FSDiscriminatorVar) {
+        UseFSDiscriminator = true;
+        return;
+      }
     }
   }
 }
@@ -671,15 +698,11 @@ SampleContextFrameVector ProfiledBinary::symbolize(const InstructionPointer &IP,
       FunctionName = FunctionSamples::getCanonicalFnName(FunctionName);
 
     uint32_t Discriminator = CallerFrame.Discriminator;
-    uint32_t LineOffset = CallerFrame.Line - CallerFrame.StartLine;
+    uint32_t LineOffset = (CallerFrame.Line - CallerFrame.StartLine) & 0xffff;
     if (UseProbeDiscriminator) {
       LineOffset =
           PseudoProbeDwarfDiscriminator::extractProbeIndex(Discriminator);
       Discriminator = 0;
-    } else {
-      // Filter out invalid negative(int type) lineOffset
-      if (LineOffset & 0xffff0000)
-        return SampleContextFrameVector();
     }
 
     LineLocation Line(LineOffset, Discriminator);

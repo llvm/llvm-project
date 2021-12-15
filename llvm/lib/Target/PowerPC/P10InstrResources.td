@@ -626,7 +626,9 @@ def : InstRW<[P10W_DX_5C, P10W_DISP_ANY, P10DX_Read, P10DX_Read],
 // 5 Cycles Fixed-Point and BCD operations, 3 input operands
 def : InstRW<[P10W_DX_5C, P10W_DISP_ANY, P10DX_Read, P10DX_Read, P10DX_Read],
       (instrs
+    BCDADD_rec,
     BCDS_rec,
+    BCDSUB_rec,
     BCDTRUNC_rec,
     VADDECUQ,
     VADDEUQM,
@@ -1974,7 +1976,7 @@ def : InstRW<[P10W_SX, P10W_DISP_ANY],
     ICBLQ,
     ICBTLS,
     ICCCI,
-    LA,
+    LA, LA8,
     LDMX,
     MFDCR,
     MFPMR,
@@ -2073,3 +2075,4 @@ def : InstRW<[P10W_vMU_7C, P10W_DISP_ANY, P10vMU_Read, P10vMU_Read, P10vMU_Read]
     VMSUMUHM,
     VMSUMUHS
 )>;
+

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_BACKGROUND_INDEX_LOADER_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_BACKGROUND_INDEX_LOADER_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_BACKGROUNDINDEXLOADER_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_BACKGROUNDINDEXLOADER_H
 
 #include "index/Background.h"
 #include "support/Path.h"

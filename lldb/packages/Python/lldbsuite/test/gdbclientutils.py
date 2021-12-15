@@ -339,7 +339,7 @@ class MockGDBServerResponder:
         pass
 
 
-class ServerSocket:
+class ServerChannel:
     """
     A wrapper class for TCP or pty-based server.
     """
@@ -366,21 +366,13 @@ class ServerSocket:
         """Send the data to the connected client."""
 
 
-class TCPServerSocket(ServerSocket):
-    def __init__(self):
-        family, type, proto, _, addr = socket.getaddrinfo(
-                "localhost", 0, proto=socket.IPPROTO_TCP)[0]
+class ServerSocket(ServerChannel):
+    def __init__(self, family, type, proto, addr):
         self._server_socket = socket.socket(family, type, proto)
         self._connection = None
 
         self._server_socket.bind(addr)
         self._server_socket.listen(1)
-
-    def get_connect_address(self):
-        return "[{}]:{}".format(*self._server_socket.getsockname())
-
-    def get_connect_url(self):
-        return "connect://" + self.get_connect_address()
 
     def close_server(self):
         self._server_socket.close()
@@ -410,7 +402,31 @@ class TCPServerSocket(ServerSocket):
         return self._connection.sendall(data)
 
 
-class PtyServerSocket(ServerSocket):
+class TCPServerSocket(ServerSocket):
+    def __init__(self):
+        family, type, proto, _, addr = socket.getaddrinfo(
+                "localhost", 0, proto=socket.IPPROTO_TCP)[0]
+        super().__init__(family, type, proto, addr)
+
+    def get_connect_address(self):
+        return "[{}]:{}".format(*self._server_socket.getsockname())
+
+    def get_connect_url(self):
+        return "connect://" + self.get_connect_address()
+
+
+class UnixServerSocket(ServerSocket):
+    def __init__(self, addr):
+        super().__init__(socket.AF_UNIX, socket.SOCK_STREAM, 0, addr)
+
+    def get_connect_address(self):
+        return self._server_socket.getsockname()
+
+    def get_connect_url(self):
+        return "unix-connect://" + self.get_connect_address()
+
+
+class PtyServerSocket(ServerChannel):
     def __init__(self):
         import pty
         import tty
@@ -461,18 +477,16 @@ class MockGDBServer:
     _receivedDataOffset = None
     _shouldSendAck = True
 
-    def __init__(self, socket_class):
-        self._socket_class = socket_class
+    def __init__(self, socket):
+        self._socket = socket
         self.responder = MockGDBServerResponder()
 
     def start(self):
-        self._socket = self._socket_class()
         # Start a thread that waits for a client connection.
-        self._thread = threading.Thread(target=self._run)
+        self._thread = threading.Thread(target=self.run)
         self._thread.start()
 
     def stop(self):
-        self._socket.close_server()
         self._thread.join()
         self._thread = None
 
@@ -482,12 +496,13 @@ class MockGDBServer:
     def get_connect_url(self):
         return self._socket.get_connect_url()
 
-    def _run(self):
+    def run(self):
         # For testing purposes, we only need to worry about one client
         # connecting just one time.
         try:
             self._socket.accept()
         except:
+            traceback.print_exc()
             return
         self._shouldSendAck = True
         self._receivedData = ""

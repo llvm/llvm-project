@@ -5,8 +5,8 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @load1(i8* nocapture readonly %x) {
 ; CHECK:              pushq   %rax
 ; CHECK-NOT:          push    %rbp
-; CHECK:              callq   __asan_check_load1_rn[[RN1:.*]]
-; CHECK:              callq   __asan_check_store1_rn[[RN1]]
+; CHECK:              callq   __asan_check_load_add_1_[[REG1:.*]]
+; CHECK:              callq   __asan_check_store_add_1_[[REG1]]
 ; CHECK-NOT:          pop     %rbp
 ; CHECK:              popq    %rax
   call void @llvm.asan.check.memaccess(i8* %x, i32 0)
@@ -17,8 +17,8 @@ define void @load1(i8* nocapture readonly %x) {
 define void @load2(i16* nocapture readonly %x) {
 ; CHECK:              pushq   %rax
 ; CHECK-NOT:          push    %rbp
-; CHECK:              callq   __asan_check_load2_rn[[RN2:.*]]
-; CHECK:              callq   __asan_check_store2_rn[[RN2]]
+; CHECK:              callq   __asan_check_load_add_2_[[REG2:.*]]
+; CHECK:              callq   __asan_check_store_add_2_[[REG2]]
 ; CHECK-NOT:          pop     %rbp
 ; CHECK:              popq    %rax
   %1 = ptrtoint i16* %x to i64
@@ -31,8 +31,8 @@ define void @load2(i16* nocapture readonly %x) {
 define void @load4(i32* nocapture readonly %x) {
 ; CHECK:              pushq   %rax
 ; CHECK-NOT:          push    %rbp
-; CHECK:              callq   __asan_check_load4_rn[[RN4:.*]]
-; CHECK:              callq   __asan_check_store4_rn[[RN4]]
+; CHECK:              callq   __asan_check_load_add_4_[[REG4:.*]]
+; CHECK:              callq   __asan_check_store_add_4_[[REG4]]
 ; CHECK-NOT:          pop     %rbp
 ; CHECK:              popq    %rax
   %1 = ptrtoint i32* %x to i64
@@ -44,8 +44,8 @@ define void @load4(i32* nocapture readonly %x) {
 define void @load8(i64* nocapture readonly %x) {
 ; CHECK:              pushq   %rax
 ; CHECK-NOT:          push    %rbp
-; CHECK:              callq   __asan_check_load8_rn[[RN8:.*]]
-; CHECK:              callq   __asan_check_store8_rn[[RN8]]
+; CHECK:              callq   __asan_check_load_add_8_[[REG8:.*]]
+; CHECK:              callq   __asan_check_store_add_8_[[REG8]]
 ; CHECK-NOT:          pop     %rbp
 ; CHECK:              popq    %rax
   %1 = ptrtoint i64* %x to i64
@@ -58,8 +58,8 @@ define void @load8(i64* nocapture readonly %x) {
 define void @load16(i128* nocapture readonly %x) {
 ; CHECK:              pushq   %rax
 ; CHECK-NOT:          push    %rbp
-; CHECK:              callq   __asan_check_load16_rn[[RN16:.*]]
-; CHECK:              callq   __asan_check_store16_rn[[RN16]]
+; CHECK:              callq   __asan_check_load_add_16_[[REG16:.*]]
+; CHECK:              callq   __asan_check_store_add_16_[[REG16]]
 ; CHECK-NOT:          pop     %rbp
 ; CHECK:              popq    %rax
   %1 = ptrtoint i128* %x to i64
@@ -68,191 +68,5 @@ define void @load16(i128* nocapture readonly %x) {
   call void @llvm.asan.check.memaccess(i8* %2, i32 40)
   ret void
 }
-
-; CHECK:              .type   __asan_check_load1_rn[[RN1]],@function
-; CHECK-NEXT:         .weak   __asan_check_load1_rn[[RN1]]
-; CHECK-NEXT:         .hidden __asan_check_load1_rn[[RN1]]
-; CHECK-NEXT: __asan_check_load1_rn[[RN1]]:
-; CHECK-NEXT:         movq    [[REG:.*]], %r8
-; CHECK-NEXT:         shrq    $3, %r8
-; CHECK-NEXT:         movsbl  2147450880(%r8), %r8d
-; CHECK-NEXT:         testl   %r8d, %r8d
-; CHECK-NEXT:         jne     [[EXTRA:.*]]
-; CHECK-NEXT: [[RET:.*]]:
-; CHECK-NEXT:         retq
-; CHECK-NEXT: [[EXTRA]]:
-; CHECK-NEXT:         pushq   %rcx
-; CHECK-NEXT:         movq    [[REG]], %rcx
-; CHECK-NEXT:         andl    $7, %ecx
-; CHECK-NEXT:         cmpl    %r8d, %ecx
-; CHECK-NEXT:         popq    %rcx
-; CHECK-NEXT:         jl      [[RET]]
-; CHECK-NEXT:         movq    [[REG:.*]], %rdi
-; CHECK-NEXT:         jmp     __asan_report_load1
-
-; CHECK:              .type   __asan_check_load2_rn[[RN2]],@function
-; CHECK-NEXT:         .weak   __asan_check_load2_rn[[RN2]]
-; CHECK-NEXT:         .hidden __asan_check_load2_rn[[RN2]]
-; CHECK-NEXT: __asan_check_load2_rn[[RN2]]:
-; CHECK-NEXT:         movq    [[REG:.*]], %r8
-; CHECK-NEXT:         shrq    $3, %r8
-; CHECK-NEXT:         movsbl  2147450880(%r8), %r8d
-; CHECK-NEXT:         testl   %r8d, %r8d
-; CHECK-NEXT:         jne     [[EXTRA:.*]]
-; CHECK-NEXT: [[RET:.*]]:
-; CHECK-NEXT:         retq
-; CHECK-NEXT: [[EXTRA]]:
-; CHECK-NEXT:         pushq   %rcx
-; CHECK-NEXT:         movq    [[REG]], %rcx
-; CHECK-NEXT:         andl    $7, %ecx
-; CHECK-NEXT:         addl    $1, %ecx
-; CHECK-NEXT:         cmpl    %r8d, %ecx
-; CHECK-NEXT:         popq    %rcx
-; CHECK-NEXT:         jl      [[RET]]
-; CHECK-NEXT:         movq    [[REG:.*]], %rdi
-; CHECK-NEXT:         jmp     __asan_report_load2
-
-; CHECK:              .type   __asan_check_load4_rn[[RN4]],@function
-; CHECK-NEXT:         .weak   __asan_check_load4_rn[[RN4]]
-; CHECK-NEXT:         .hidden __asan_check_load4_rn[[RN4]]
-; CHECK-NEXT: __asan_check_load4_rn[[RN4]]:
-; CHECK-NEXT:         movq    [[REG:.*]], %r8
-; CHECK-NEXT:         shrq    $3, %r8
-; CHECK-NEXT:         movsbl  2147450880(%r8), %r8d
-; CHECK-NEXT:         testl   %r8d, %r8d
-; CHECK-NEXT:         jne     [[EXTRA:.*]]
-; CHECK-NEXT: [[RET:.*]]:
-; CHECK-NEXT:         retq
-; CHECK-NEXT: [[EXTRA]]:
-; CHECK-NEXT:         pushq   %rcx
-; CHECK-NEXT:         movq    [[REG]], %rcx
-; CHECK-NEXT:         andl    $7, %ecx
-; CHECK-NEXT:         addl    $3, %ecx
-; CHECK-NEXT:         cmpl    %r8d, %ecx
-; CHECK-NEXT:         popq    %rcx
-; CHECK-NEXT:         jl      [[RET]]
-; CHECK-NEXT:         movq    [[REG:.*]], %rdi
-; CHECK-NEXT:         jmp     __asan_report_load4
-
-; CHECK:              .type   __asan_check_load8_rn[[RN8]],@function
-; CHECK-NEXT:         .weak   __asan_check_load8_rn[[RN8]]
-; CHECK-NEXT:         .hidden __asan_check_load8_rn[[RN8]]
-; CHECK-NEXT: __asan_check_load8_rn[[RN8]]:
-; CHECK-NEXT:         movq    [[REG:.*]], %r8
-; CHECK-NEXT:         shrq    $3, %r8
-; CHECK-NEXT:         cmpb    $0, 2147450880(%r8)
-; CHECK-NEXT:         jne     [[FAIL:.*]]
-; CHECK-NEXT: [[RET:.*]]:
-; CHECK-NEXT:         retq
-; CHECK-NEXT: [[FAIL]]:
-; CHECK-NEXT:         movq    [[REG:.*]], %rdi
-; CHECK-NEXT:         jmp     __asan_report_load8
-
-; CHECK:              .type   __asan_check_load16_rn[[RN16]],@function
-; CHECK-NEXT:         .weak   __asan_check_load16_rn[[RN16]]
-; CHECK-NEXT:         .hidden __asan_check_load16_rn[[RN16]]
-; CHECK-NEXT: __asan_check_load16_rn[[RN16]]:
-; CHECK-NEXT:         movq    [[REG:.*]], %r8
-; CHECK-NEXT:         shrq    $3, %r8
-; CHECK-NEXT:         cmpw    $0, 2147450880(%r8)
-; CHECK-NEXT:         jne     [[FAIL:.*]]
-; CHECK-NEXT: [[RET:.*]]:
-; CHECK-NEXT:         retq
-; CHECK-NEXT: [[FAIL]]:
-; CHECK-NEXT:         movq    [[REG:.*]], %rdi
-; CHECK-NEXT:         jmp     __asan_report_load16
-
-; CHECK:              .type   __asan_check_store1_rn[[RN1]],@function
-; CHECK-NEXT:         .weak   __asan_check_store1_rn[[RN1]]
-; CHECK-NEXT:         .hidden __asan_check_store1_rn[[RN1]]
-; CHECK-NEXT: __asan_check_store1_rn[[RN1]]:
-; CHECK-NEXT:         movq    [[REG:.*]], %r8
-; CHECK-NEXT:         shrq    $3, %r8
-; CHECK-NEXT:         movsbl  2147450880(%r8), %r8d
-; CHECK-NEXT:         testl   %r8d, %r8d
-; CHECK-NEXT:         jne     [[EXTRA:.*]]
-; CHECK-NEXT: [[RET:.*]]:
-; CHECK-NEXT:         retq
-; CHECK-NEXT: [[EXTRA]]:
-; CHECK-NEXT:         pushq   %rcx
-; CHECK-NEXT:         movq    [[REG]], %rcx
-; CHECK-NEXT:         andl    $7, %ecx
-; CHECK-NEXT:         cmpl    %r8d, %ecx
-; CHECK-NEXT:         popq    %rcx
-; CHECK-NEXT:         jl      [[RET]]
-; CHECK-NEXT:         movq    [[REG:.*]], %rdi
-; CHECK-NEXT:         jmp     __asan_report_store1@PLT
-
-; CHECK:              .type   __asan_check_store2_rn[[RN2]],@function
-; CHECK-NEXT:         .weak   __asan_check_store2_rn[[RN2]]
-; CHECK-NEXT:         .hidden __asan_check_store2_rn[[RN2]]
-; CHECK-NEXT: __asan_check_store2_rn[[RN2]]:
-; CHECK-NEXT:         movq    [[REG:.*]], %r8
-; CHECK-NEXT:         shrq    $3, %r8
-; CHECK-NEXT:         movsbl  2147450880(%r8), %r8d
-; CHECK-NEXT:         testl   %r8d, %r8d
-; CHECK-NEXT:         jne     [[EXTRA:.*]]
-; CHECK-NEXT: [[RET:.*]]:
-; CHECK-NEXT:         retq
-; CHECK-NEXT: [[EXTRA]]:
-; CHECK-NEXT:         pushq   %rcx
-; CHECK-NEXT:         movq    [[REG]], %rcx
-; CHECK-NEXT:         andl    $7, %ecx
-; CHECK-NEXT:         addl    $1, %ecx
-; CHECK-NEXT:         cmpl    %r8d, %ecx
-; CHECK-NEXT:         popq    %rcx
-; CHECK-NEXT:         jl      [[RET]]
-; CHECK-NEXT:         movq    [[REG:.*]], %rdi
-; CHECK-NEXT:         jmp     __asan_report_store2@PLT
-
-; CHECK:              .type   __asan_check_store4_rn[[RN4]],@function
-; CHECK-NEXT:         .weak   __asan_check_store4_rn[[RN4]]
-; CHECK-NEXT:         .hidden __asan_check_store4_rn[[RN4]]
-; CHECK-NEXT: __asan_check_store4_rn[[RN4]]:
-; CHECK-NEXT:         movq    [[REG:.*]], %r8
-; CHECK-NEXT:         shrq    $3, %r8
-; CHECK-NEXT:         movsbl  2147450880(%r8), %r8d
-; CHECK-NEXT:         testl   %r8d, %r8d
-; CHECK-NEXT:         jne     [[EXTRA:.*]]
-; CHECK-NEXT: [[RET:.*]]:
-; CHECK-NEXT:         retq
-; CHECK-NEXT: [[EXTRA]]:
-; CHECK-NEXT:         pushq   %rcx
-; CHECK-NEXT:         movq    [[REG]], %rcx
-; CHECK-NEXT:         andl    $7, %ecx
-; CHECK-NEXT:         addl    $3, %ecx
-; CHECK-NEXT:         cmpl    %r8d, %ecx
-; CHECK-NEXT:         popq    %rcx
-; CHECK-NEXT:         jl      [[RET]]
-; CHECK-NEXT:         movq    [[REG:.*]], %rdi
-; CHECK-NEXT:         jmp     __asan_report_store4@PLT
-
-; CHECK:              .type   __asan_check_store8_rn[[RN8]],@function
-; CHECK-NEXT:         .weak   __asan_check_store8_rn[[RN8]]
-; CHECK-NEXT:         .hidden __asan_check_store8_rn[[RN8]]
-; CHECK-NEXT: __asan_check_store8_rn[[RN8]]:
-; CHECK-NEXT:         movq    [[REG:.*]], %r8
-; CHECK-NEXT:         shrq    $3, %r8
-; CHECK-NEXT:         cmpb    $0, 2147450880(%r8)
-; CHECK-NEXT:         jne     [[FAIL:.*]]
-; CHECK-NEXT: [[RET:.*]]:
-; CHECK-NEXT:         retq
-; CHECK-NEXT: [[FAIL]]:
-; CHECK-NEXT:         movq    [[REG:.*]], %rdi
-; CHECK-NEXT:         jmp     __asan_report_store8@PLT
-
-; CHECK:              .type   __asan_check_store16_rn[[RN16]],@function
-; CHECK-NEXT:         .weak   __asan_check_store16_rn[[RN16]]
-; CHECK-NEXT:         .hidden __asan_check_store16_rn[[RN16]]
-; CHECK-NEXT: __asan_check_store16_rn[[RN16]]:
-; CHECK-NEXT:         movq    [[REG:.*]], %r8
-; CHECK-NEXT:         shrq    $3, %r8
-; CHECK-NEXT:         cmpw    $0, 2147450880(%r8)
-; CHECK-NEXT:         jne     [[FAIL:.*]]
-; CHECK-NEXT: [[RET:.*]]:
-; CHECK-NEXT:         retq
-; CHECK-NEXT: [[FAIL]]:
-; CHECK-NEXT:         movq    [[REG:.*]], %rdi
-; CHECK-NEXT:         jmp     __asan_report_store16@PLT
 
 declare void @llvm.asan.check.memaccess(i8*, i32 immarg)

@@ -97,6 +97,6 @@ public:
 
 using ResultElementTypeRange = iterator_range<ResultElementTypeIterator>;
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_SUPPORT_TYPEUTILITIES_H

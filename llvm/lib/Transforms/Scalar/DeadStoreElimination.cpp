@@ -159,51 +159,21 @@ static cl::opt<unsigned> MemorySSAPathCheckLimit(
     cl::desc("The maximum number of blocks to check when trying to prove that "
              "all paths to an exit go through a killing block (default = 50)"));
 
+// This flags allows or disallows DSE to optimize MemorySSA during its
+// traversal. Note that DSE optimizing MemorySSA may impact other passes
+// downstream of the DSE invocation and can lead to issues not being
+// reproducible in isolation (i.e. when MemorySSA is built from scratch). In
+// those cases, the flag can be used to check if DSE's MemorySSA optimizations
+// impact follow-up passes.
+static cl::opt<bool>
+    OptimizeMemorySSA("dse-optimize-memoryssa", cl::init(true), cl::Hidden,
+                      cl::desc("Allow DSE to optimize memory accesses."));
+
 //===----------------------------------------------------------------------===//
 // Helper functions
 //===----------------------------------------------------------------------===//
 using OverlapIntervalsTy = std::map<int64_t, int64_t>;
 using InstOverlapIntervalsTy = DenseMap<Instruction *, OverlapIntervalsTy>;
-
-/// Does this instruction write some memory?  This only returns true for things
-/// that we can analyze with other helpers below.
-static bool hasAnalyzableMemoryWrite(Instruction *I,
-                                     const TargetLibraryInfo &TLI) {
-  if (isa<StoreInst>(I))
-    return true;
-  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
-    switch (II->getIntrinsicID()) {
-    default:
-      return false;
-    case Intrinsic::memset:
-    case Intrinsic::memmove:
-    case Intrinsic::memcpy:
-    case Intrinsic::memcpy_inline:
-    case Intrinsic::memcpy_element_unordered_atomic:
-    case Intrinsic::memmove_element_unordered_atomic:
-    case Intrinsic::memset_element_unordered_atomic:
-    case Intrinsic::init_trampoline:
-    case Intrinsic::lifetime_end:
-    case Intrinsic::masked_store:
-      return true;
-    }
-  }
-  if (auto *CB = dyn_cast<CallBase>(I)) {
-    LibFunc LF;
-    if (TLI.getLibFunc(*CB, LF) && TLI.has(LF)) {
-      switch (LF) {
-      case LibFunc_strcpy:
-      case LibFunc_strncpy:
-      case LibFunc_strcat:
-      case LibFunc_strncat:
-        return true;
-      default:
-        return false;
-      }
-    }
-  }
-  return false;
-}
 
 /// If the value of this instruction and the memory it writes to is unused, may
 /// we delete this instruction?
@@ -214,7 +184,7 @@ static bool isRemovable(Instruction *I) {
 
   if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
     switch (II->getIntrinsicID()) {
-    default: llvm_unreachable("doesn't pass 'hasAnalyzableMemoryWrite' predicate");
+    default: llvm_unreachable("Does not have LocForWrite");
     case Intrinsic::lifetime_end:
       // Never remove dead lifetime_end's, e.g. because it is followed by a
       // free.
@@ -296,6 +266,7 @@ enum OverwriteResult {
   OW_End,
   OW_PartialEarlierWithFullLater,
   OW_MaybePartial,
+  OW_None,
   OW_Unknown
 };
 
@@ -841,7 +812,7 @@ struct DSEState {
 
   /// Keep track of instructions (partly) overlapping with killing MemoryDefs per
   /// basic block.
-  DenseMap<BasicBlock *, InstOverlapIntervalsTy> IOLs;
+  MapVector<BasicBlock *, InstOverlapIntervalsTy> IOLs;
 
   // Class contains self-reference, make sure it's not copied/moved.
   DSEState(const DSEState &) = delete;
@@ -889,6 +860,7 @@ struct DSEState {
   /// Return OW_MaybePartial if \p KillingI does not completely overwrite
   /// \p DeadI, but they both write to the same underlying object. In that
   /// case, use isPartialOverwrite to check if \p KillingI partially overwrites
+  /// \p DeadI. Returns 'OR_None' if \p KillingI is known to not overwrite the
   /// \p DeadI. Returns 'OW_Unknown' if nothing can be determined.
   OverwriteResult isOverwrite(const Instruction *KillingI,
                               const Instruction *DeadI,
@@ -951,8 +923,16 @@ struct DSEState {
 
     // If we can't resolve the same pointers to the same object, then we can't
     // analyze them at all.
-    if (DeadUndObj != KillingUndObj)
+    if (DeadUndObj != KillingUndObj) {
+      // Non aliasing stores to different objects don't overlap. Note that
+      // if the killing store is known to overwrite whole object (out of
+      // bounds access overwrites whole object as well) then it is assumed to
+      // completely overwrite any store to the same object even if they don't
+      // actually alias (see next check).
+      if (AAR == AliasResult::NoAlias)
+        return OW_None;
       return OW_Unknown;
+    }
 
     // If the KillingI store is to a recognizable object, get its size.
     uint64_t KillingUndObjSize = getPointerSize(KillingUndObj, DL, TLI, &F);
@@ -1006,9 +986,8 @@ struct DSEState {
       return OW_MaybePartial;
     }
 
-    // Can reach here only if accesses are known not to overlap. There is no
-    // dedicated code to indicate no overlap so signal "unknown".
-    return OW_Unknown;
+    // Can reach here only if accesses are known not to overlap.
+    return OW_None;
   }
 
   bool isInvisibleToCallerAfterRet(const Value *V) {
@@ -1047,41 +1026,13 @@ struct DSEState {
     if (!I->mayWriteToMemory())
       return None;
 
-    if (auto *MTI = dyn_cast<AnyMemIntrinsic>(I))
-      return {MemoryLocation::getForDest(MTI)};
-
     if (auto *CB = dyn_cast<CallBase>(I)) {
       // If the functions may write to memory we do not know about, bail out.
       if (!CB->onlyAccessesArgMemory() &&
           !CB->onlyAccessesInaccessibleMemOrArgMem())
         return None;
 
-      LibFunc LF;
-      if (TLI.getLibFunc(*CB, LF) && TLI.has(LF)) {
-        switch (LF) {
-        case LibFunc_strncpy:
-          if (const auto *Len = dyn_cast<ConstantInt>(CB->getArgOperand(2)))
-            return MemoryLocation(CB->getArgOperand(0),
-                                  LocationSize::precise(Len->getZExtValue()),
-                                  CB->getAAMetadata());
-          LLVM_FALLTHROUGH;
-        case LibFunc_strcpy:
-        case LibFunc_strcat:
-        case LibFunc_strncat:
-          return {MemoryLocation::getAfter(CB->getArgOperand(0))};
-        default:
-          break;
-        }
-      }
-      switch (CB->getIntrinsicID()) {
-      case Intrinsic::init_trampoline:
-        return {MemoryLocation::getAfter(CB->getArgOperand(0))};
-      case Intrinsic::masked_store:
-        return {MemoryLocation::getForArgument(CB, 1, TLI)};
-      default:
-        break;
-      }
-      return None;
+      return MemoryLocation::getForDest(CB, TLI);
     }
 
     return MemoryLocation::getOrNone(I);
@@ -1304,6 +1255,15 @@ struct DSEState {
     Instruction *KillingI = KillingDef->getMemoryInst();
     LLVM_DEBUG(dbgs() << "  trying to get dominating access\n");
 
+    // Only optimize defining access of KillingDef when directly starting at its
+    // defining access. The defining access also must only access KillingLoc. At
+    // the moment we only support instructions with a single write location, so
+    // it should be sufficient to disable optimizations for instructions that
+    // also read from memory.
+    bool CanOptimize = OptimizeMemorySSA &&
+                       KillingDef->getDefiningAccess() == StartAccess &&
+                       !KillingI->mayReadFromMemory();
+
     // Find the next clobbering Mod access for DefLoc, starting at StartAccess.
     Optional<MemoryLocation> CurrentLoc;
     for (;; Current = cast<MemoryDef>(Current)->getDefiningAccess()) {
@@ -1345,8 +1305,10 @@ struct DSEState {
       Instruction *CurrentI = CurrentDef->getMemoryInst();
 
       if (canSkipDef(CurrentDef, !isInvisibleToCallerBeforeRet(KillingUndObj),
-                     TLI))
+                     TLI)) {
+        CanOptimize = false;
         continue;
+      }
 
       // Before we try to remove anything, check for any extra throwing
       // instructions that block us from DSEing
@@ -1380,15 +1342,13 @@ struct DSEState {
         return None;
       }
 
-      // If Current cannot be analyzed or is not removable, check the next
-      // candidate.
-      if (!hasAnalyzableMemoryWrite(CurrentI, TLI) || !isRemovable(CurrentI))
-        continue;
-
-      // If Current does not have an analyzable write location, skip it
+      // If Current does not have an analyzable write location or is not
+      // removable, skip it.
       CurrentLoc = getLocForWriteEx(CurrentI);
-      if (!CurrentLoc)
+      if (!CurrentLoc || !isRemovable(CurrentI)) {
+        CanOptimize = false;
         continue;
+      }
 
       // AliasAnalysis does not account for loops. Limit elimination to
       // candidates for which we can guarantee they always store to the same
@@ -1396,6 +1356,7 @@ struct DSEState {
       if (!isGuaranteedLoopIndependent(CurrentI, KillingI, *CurrentLoc)) {
         LLVM_DEBUG(dbgs() << "  ... not guaranteed loop independent\n");
         WalkerStepLimit -= 1;
+        CanOptimize = false;
         continue;
       }
 
@@ -1403,16 +1364,32 @@ struct DSEState {
         // If the killing def is a memory terminator (e.g. lifetime.end), check
         // the next candidate if the current Current does not write the same
         // underlying object as the terminator.
-        if (!isMemTerminator(*CurrentLoc, CurrentI, KillingI))
+        if (!isMemTerminator(*CurrentLoc, CurrentI, KillingI)) {
+          CanOptimize = false;
           continue;
+        }
       } else {
         int64_t KillingOffset = 0;
         int64_t DeadOffset = 0;
         auto OR = isOverwrite(KillingI, CurrentI, KillingLoc, *CurrentLoc,
                               KillingOffset, DeadOffset);
+        if (CanOptimize) {
+          // CurrentDef is the earliest write clobber of KillingDef. Use it as
+          // optimized access. Do not optimize if CurrentDef is already the
+          // defining access of KillingDef.
+          if (CurrentDef != KillingDef->getDefiningAccess() &&
+              (OR == OW_Complete || OR == OW_MaybePartial))
+            KillingDef->setOptimized(CurrentDef);
+
+          // Once a may-aliasing def is encountered do not set an optimized
+          // access.
+          if (OR != OW_None)
+            CanOptimize = false;
+        }
+
         // If Current does not write to the same object as KillingDef, check
         // the next candidate.
-        if (OR == OW_Unknown)
+        if (OR == OW_Unknown || OR == OW_None)
           continue;
         else if (OR == OW_MaybePartial) {
           // If KillingDef only partially overwrites Current, check the next
@@ -1421,6 +1398,7 @@ struct DSEState {
           // which are less likely to be removable in the end.
           if (PartialLimit <= 1) {
             WalkerStepLimit -= 1;
+            LLVM_DEBUG(dbgs() << "   ... reached partial limit ... continue with next access\n");
             continue;
           }
           PartialLimit -= 1;
@@ -1723,8 +1701,7 @@ struct DSEState {
     LLVM_DEBUG(
         dbgs()
         << "Trying to eliminate MemoryDefs at the end of the function\n");
-    for (int I = MemDefs.size() - 1; I >= 0; I--) {
-      MemoryDef *Def = MemDefs[I];
+    for (MemoryDef *Def : llvm::reverse(MemDefs)) {
       if (SkipStores.contains(Def) || !isRemovable(Def->getMemoryInst()))
         continue;
 
@@ -1922,7 +1899,14 @@ struct DSEState {
       if (SkipStores.contains(Def) || MSSA.isLiveOnEntryDef(Def) ||
           !isRemovable(Def->getMemoryInst()))
         continue;
-      auto *UpperDef = dyn_cast<MemoryDef>(Def->getDefiningAccess());
+      MemoryDef *UpperDef;
+      // To conserve compile-time, we avoid walking to the next clobbering def.
+      // Instead, we just try to get the optimized access, if it exists. DSE
+      // will try to optimize defs during the earlier traversal.
+      if (Def->isOptimized())
+        UpperDef = dyn_cast<MemoryDef>(Def->getOptimized());
+      else
+        UpperDef = dyn_cast<MemoryDef>(Def->getDefiningAccess());
       if (!UpperDef || MSSA.isLiveOnEntryDef(UpperDef))
         continue;
 

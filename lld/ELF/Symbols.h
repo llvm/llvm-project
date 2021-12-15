@@ -93,7 +93,7 @@ public:
   // Symbol binding. This is not overwritten by replace() to track
   // changes during resolution. In particular:
   //  - An undefined weak is still weak when it resolves to a shared library.
-  //  - An undefined weak will not fetch archive members, but we have to
+  //  - An undefined weak will not extract archive members, but we have to
   //    remember it is weak.
   uint8_t binding;
 
@@ -216,10 +216,10 @@ public:
   void mergeProperties(const Symbol &other);
   void resolve(const Symbol &other);
 
-  // If this is a lazy symbol, fetch an input file and add the symbol
+  // If this is a lazy symbol, extract an input file and add the symbol
   // in the file to the symbol table. Calling this function on
   // non-lazy object causes a runtime error.
-  void fetch() const;
+  void extract() const;
 
   static bool isExportDynamic(Kind k, uint8_t visibility) {
     if (k == SharedKind)
@@ -245,16 +245,12 @@ protected:
         type(type), stOther(stOther), symbolKind(k), visibility(stOther & 3),
         isUsedInRegularObj(!file || file->kind() == InputFile::ObjKind),
         exportDynamic(isExportDynamic(k, visibility)), inDynamicList(false),
-        canInline(false), referenced(false), traced(false), needsPltAddr(false),
-        isInIplt(false), gotInIgot(false), isPreemptible(false),
-        used(!config->gcSections), needsTocRestore(false),
-        scriptDefined(false) {}
+        canInline(false), referenced(false), traced(false), isInIplt(false),
+        gotInIgot(false), isPreemptible(false), used(!config->gcSections),
+        needsTocRestore(false), scriptDefined(false), needsCopy(false),
+        needsGot(false), needsPlt(false), hasDirectReloc(false) {}
 
 public:
-  // True the symbol should point to its PLT entry.
-  // For SharedSymbol only.
-  uint8_t needsPltAddr : 1;
-
   // True if this symbol is in the Iplt sub-section of the Plt and the Igot
   // sub-section of the .got.plt or .got.
   uint8_t isInIplt : 1;
@@ -278,6 +274,16 @@ public:
 
   // True if this symbol is defined by a linker script.
   uint8_t scriptDefined : 1;
+
+  // True if this symbol needs a canonical PLT entry, or (during
+  // postScanRelocations) a copy relocation.
+  uint8_t needsCopy : 1;
+
+  // Temporary flags used to communicate which symbol entries need PLT and GOT
+  // entries during postScanRelocations();
+  uint8_t needsGot : 1;
+  uint8_t needsPlt : 1;
+  uint8_t hasDirectReloc : 1;
 
   // The partition whose dynamic symbol table contains this symbol's definition.
   uint8_t partition = 1;

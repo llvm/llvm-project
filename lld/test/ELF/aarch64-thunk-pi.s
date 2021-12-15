@@ -36,7 +36,7 @@ low_target2:
 // adrp calculation is (PC + signed immediate) & (!0xfff)
 // CHECK: <__AArch64ADRPThunk_high_target>:
 // CHECK-NEXT:       14:       adrp    x16, 0x10000000
-// CHECK-NEXT:                 add     x16, x16, #0x40
+// CHECK-NEXT:                 add     x16, x16, #0x50
 // CHECK-NEXT:                 br      x16
 // CHECK: <__AArch64ADRPThunk_high_target2>:
 // CHECK-NEXT:       20:       adrp    x16, 0x10000000
@@ -57,7 +57,7 @@ high_target:
  bl low_target
  ret
 // CHECK: <high_target>:
-// CHECK-NEXT: 10000000:       bl 0x10000050 <low_target@plt>
+// CHECK-NEXT: 10000000:       bl 0x10000040 <low_target@plt>
 // CHECK-NEXT:                 ret
 
  .hidden high_target2
@@ -90,13 +90,13 @@ high_target2:
 // CHECK-NEXT:                 nop
 // CHECK-NEXT:                 nop
 // CHECK-EMPTY:
-// CHECK-NEXT:   <high_target@plt>:
+// CHECK-NEXT:   <low_target@plt>:
 // CHECK-NEXT: 10000040:       adrp    x16, 0x10000000
 // CHECK-NEXT:                 ldr     x17, [x16, #0x200]
 // CHECK-NEXT:                 add     x16, x16, #0x200
 // CHECK-NEXT:                 br      x17
 // CHECK-EMPTY:
-// CHECK-NEXT:   <low_target@plt>:
+// CHECK-NEXT:   <high_target@plt>:
 // CHECK-NEXT: 10000050:       adrp    x16, 0x10000000
 // CHECK-NEXT:                 ldr     x17, [x16, #0x208]
 // CHECK-NEXT:                 add     x16, x16, #0x208

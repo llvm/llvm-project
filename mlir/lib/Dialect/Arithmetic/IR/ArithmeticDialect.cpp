@@ -27,7 +27,7 @@ struct ArithmeticInlinerInterface : public DialectInlinerInterface {
     return true;
   }
 };
-} // end anonymous namespace
+} // namespace
 
 void arith::ArithmeticDialect::initialize() {
   addOperations<

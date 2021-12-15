@@ -33,7 +33,7 @@ define void @lower_blockaddress() nounwind {
 ; RV32I-SMALL-LABEL: lower_blockaddress:
 ; RV32I-SMALL:       # %bb.0:
 ; RV32I-SMALL-NEXT:    lui a0, %hi(addr)
-; RV32I-SMALL-NEXT:    addi a1, zero, 1
+; RV32I-SMALL-NEXT:    li a1, 1
 ; RV32I-SMALL-NEXT:    sw a1, %lo(addr)(a0)
 ; RV32I-SMALL-NEXT:    ret
 ;
@@ -42,7 +42,7 @@ define void @lower_blockaddress() nounwind {
 ; RV32I-MEDIUM-NEXT:  .LBB1_1: # Label of block must be emitted
 ; RV32I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(addr)
 ; RV32I-MEDIUM-NEXT:    addi a0, a0, %pcrel_lo(.LBB1_1)
-; RV32I-MEDIUM-NEXT:    addi a1, zero, 1
+; RV32I-MEDIUM-NEXT:    li a1, 1
 ; RV32I-MEDIUM-NEXT:    sw a1, 0(a0)
 ; RV32I-MEDIUM-NEXT:    ret
   store volatile i8* blockaddress(@lower_blockaddress, %block), i8** @addr
@@ -60,7 +60,7 @@ define signext i32 @lower_blockaddress_displ(i32 signext %w) nounwind {
 ; RV32I-SMALL-NEXT:    addi sp, sp, -16
 ; RV32I-SMALL-NEXT:    lui a1, %hi(.Ltmp0)
 ; RV32I-SMALL-NEXT:    addi a1, a1, %lo(.Ltmp0)
-; RV32I-SMALL-NEXT:    addi a2, zero, 101
+; RV32I-SMALL-NEXT:    li a2, 101
 ; RV32I-SMALL-NEXT:    sw a1, 8(sp)
 ; RV32I-SMALL-NEXT:    blt a0, a2, .LBB2_3
 ; RV32I-SMALL-NEXT:  # %bb.1: # %if.then
@@ -68,11 +68,11 @@ define signext i32 @lower_blockaddress_displ(i32 signext %w) nounwind {
 ; RV32I-SMALL-NEXT:    jr a0
 ; RV32I-SMALL-NEXT:  .Ltmp0: # Block address taken
 ; RV32I-SMALL-NEXT:  .LBB2_2: # %return
-; RV32I-SMALL-NEXT:    addi a0, zero, 4
+; RV32I-SMALL-NEXT:    li a0, 4
 ; RV32I-SMALL-NEXT:    addi sp, sp, 16
 ; RV32I-SMALL-NEXT:    ret
 ; RV32I-SMALL-NEXT:  .LBB2_3: # %return.clone
-; RV32I-SMALL-NEXT:    addi a0, zero, 3
+; RV32I-SMALL-NEXT:    li a0, 3
 ; RV32I-SMALL-NEXT:    addi sp, sp, 16
 ; RV32I-SMALL-NEXT:    ret
 ;
@@ -83,7 +83,7 @@ define signext i32 @lower_blockaddress_displ(i32 signext %w) nounwind {
 ; RV32I-MEDIUM-NEXT:    # Label of block must be emitted
 ; RV32I-MEDIUM-NEXT:    auipc a1, %pcrel_hi(.Ltmp0)
 ; RV32I-MEDIUM-NEXT:    addi a1, a1, %pcrel_lo(.LBB2_4)
-; RV32I-MEDIUM-NEXT:    addi a2, zero, 101
+; RV32I-MEDIUM-NEXT:    li a2, 101
 ; RV32I-MEDIUM-NEXT:    sw a1, 8(sp)
 ; RV32I-MEDIUM-NEXT:    blt a0, a2, .LBB2_3
 ; RV32I-MEDIUM-NEXT:  # %bb.1: # %if.then
@@ -91,11 +91,11 @@ define signext i32 @lower_blockaddress_displ(i32 signext %w) nounwind {
 ; RV32I-MEDIUM-NEXT:    jr a0
 ; RV32I-MEDIUM-NEXT:  .Ltmp0: # Block address taken
 ; RV32I-MEDIUM-NEXT:  .LBB2_2: # %return
-; RV32I-MEDIUM-NEXT:    addi a0, zero, 4
+; RV32I-MEDIUM-NEXT:    li a0, 4
 ; RV32I-MEDIUM-NEXT:    addi sp, sp, 16
 ; RV32I-MEDIUM-NEXT:    ret
 ; RV32I-MEDIUM-NEXT:  .LBB2_3: # %return.clone
-; RV32I-MEDIUM-NEXT:    addi a0, zero, 3
+; RV32I-MEDIUM-NEXT:    li a0, 3
 ; RV32I-MEDIUM-NEXT:    addi sp, sp, 16
 ; RV32I-MEDIUM-NEXT:    ret
 entry:

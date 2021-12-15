@@ -320,7 +320,7 @@ public:
     });
   }
 };
-} // end anonymous namespace
+} // namespace
 
 std::unique_ptr<Pass> mlir::tosa::createTosaInferShapesPass() {
   return std::make_unique<TosaInferShapes>();

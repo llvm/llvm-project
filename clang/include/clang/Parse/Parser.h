@@ -2564,6 +2564,10 @@ private:
   /// full validation of the syntactic structure of attributes.
   bool TrySkipAttributes();
 
+  /// Diagnoses use of _ExtInt as being deprecated, and diagnoses use of
+  /// _BitInt as an extension when appropriate.
+  void DiagnoseBitIntUse(const Token &Tok);
+
 public:
   TypeResult
   ParseTypeName(SourceRange *Range = nullptr,

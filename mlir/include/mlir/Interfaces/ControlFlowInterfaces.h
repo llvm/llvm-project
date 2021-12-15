@@ -87,6 +87,10 @@ private:
   ValueRange inputs;
 };
 
+/// Return `true` if `a` and `b` are in mutually exclusive regions as per
+/// RegionBranchOpInterface.
+bool insideMutuallyExclusiveRegions(Operation *a, Operation *b);
+
 //===----------------------------------------------------------------------===//
 // RegionBranchTerminatorOpInterface
 //===----------------------------------------------------------------------===//
@@ -136,7 +140,7 @@ struct ReturnLike : public TraitBase<ConcreteType, ReturnLike> {
 };
 } // namespace OpTrait
 
-} // end namespace mlir
+} // namespace mlir
 
 //===----------------------------------------------------------------------===//
 // ControlFlow Interfaces

@@ -58,8 +58,7 @@ int ExitHook(int status) {
 
 void LockStuffAndStopTheWorld(StopTheWorldCallback callback,
                               CheckForLeaksParam *argument) {
-  LockThreadRegistry();
-  LockAllocator();
+  ScopedStopTheWorldLock lock;
 
   struct Params {
     InternalMmapVector<uptr> allocator_caches;
@@ -149,9 +148,6 @@ void LockStuffAndStopTheWorld(StopTheWorldCallback callback,
         params->callback(SuspendedThreadsListFuchsia(), params->argument);
       },
       &params);
-
-  UnlockAllocator();
-  UnlockThreadRegistry();
 }
 
 }  // namespace __lsan

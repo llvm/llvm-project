@@ -10,6 +10,7 @@
 #define LLVM_MC_MCPARSER_MCPARSEDASMOPERAND_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/SMLoc.h"
 #include <string>
 
@@ -75,6 +76,10 @@ public:
   /// variable, rather than its value?   Only valid when parsing MS-style inline
   /// assembly.
   virtual bool isOffsetOfLocal() const { return false; }
+
+  /// isMemPlaceholder - Do we need to ignore the constraint, rather than emit
+  /// code? Only valid when parsing MS-style inline assembly.
+  virtual bool isMemPlaceholder(const MCInstrDesc &Desc) const { return false; }
 
   /// getOffsetOfLoc - Get the location of the offset operator.
   virtual SMLoc getOffsetOfLoc() const { return SMLoc(); }

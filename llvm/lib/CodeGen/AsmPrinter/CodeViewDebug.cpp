@@ -611,8 +611,8 @@ static SourceLanguage MapDWLangToCVLang(unsigned DWLang) {
 void CodeViewDebug::beginModule(Module *M) {
   // If module doesn't have named metadata anchors or COFF debug section
   // is not available, skip any debug info related stuff.
-  if (!M->getNamedMetadata("llvm.dbg.cu") ||
-      !Asm->getObjFileLowering().getCOFFDebugSymbolsSection()) {
+  NamedMDNode *CUs = M->getNamedMetadata("llvm.dbg.cu");
+  if (!CUs || !Asm->getObjFileLowering().getCOFFDebugSymbolsSection()) {
     Asm = nullptr;
     return;
   }
@@ -622,7 +622,6 @@ void CodeViewDebug::beginModule(Module *M) {
   TheCPU = mapArchToCVCPUType(Triple(M->getTargetTriple()).getArch());
 
   // Get the current source language.
-  NamedMDNode *CUs = MMI->getModule()->getNamedMetadata("llvm.dbg.cu");
   const MDNode *Node = *CUs->operands().begin();
   const auto *CU = cast<DICompileUnit>(Node);
 

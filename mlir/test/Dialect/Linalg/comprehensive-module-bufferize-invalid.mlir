@@ -110,6 +110,7 @@ func @scf_yield_needs_copy(%A : tensor<?xf32> {linalg.inplaceable = true}, %iter
 
 // -----
 
+// expected-error @+1 {{memref return type is unsupported}}
 func @extract_slice_fun(%A : tensor<?xf32> {linalg.inplaceable = true})
   ->  tensor<4xf32>
 {
@@ -121,7 +122,6 @@ func @extract_slice_fun(%A : tensor<?xf32> {linalg.inplaceable = true})
   //     argument aliasing).
   %r0 = tensor.extract_slice %A[0][4][1] : tensor<?xf32> to tensor<4xf32>
 
-  // expected-error @+1 {{buffer result #0 not produced by an alloc}}
   return %r0: tensor<4xf32>
 }
 
@@ -160,10 +160,30 @@ func @mini_test_case1() -> tensor<10x20xf32> {
 // -----
 
 func @main() -> tensor<4xi32> {
-  // expected-error @+1 {{unsupported op with tensors}}
+  // expected-error @+1 {{scf.execute_region with tensor result not supported}}
   %r = scf.execute_region -> tensor<4xi32> {
     %A = arith.constant dense<[1, 2, 3, 4]> : tensor<4xi32>
     scf.yield %A: tensor<4xi32>
   }
   return %r: tensor<4xi32>
+}
+
+// -----
+
+func @to_memref_op_is_writing(
+    %t1: tensor<?xf32> {linalg.inplaceable = true}, %idx1: index,
+    %idx2: index, %idx3: index, %v1: vector<5xf32>) -> (vector<5xf32>, vector<5xf32>) {
+  // This is a RaW conflict because to_memref is an inplace write and %t1 is
+  // read further down. This will likely have to change with partial
+  // bufferization.
+
+  // expected-error @+1 {{input IR has RaW conflict}}
+  %0 = bufferization.to_memref %t1 : memref<?xf32>
+
+  // Read from both.
+  %cst = arith.constant 0.0 : f32
+  %r1 = vector.transfer_read %t1[%idx3], %cst : tensor<?xf32>, vector<5xf32>
+  %r2 = vector.transfer_read %0[%idx3], %cst : memref<?xf32>, vector<5xf32>
+
+  return %r1, %r2 : vector<5xf32>, vector<5xf32>
 }

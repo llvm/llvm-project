@@ -233,3 +233,42 @@ entry:
   call void @llvm.memmove.p0i8.p0i8.i32(i8* %x1, i8* %x2, i32 9, i1 false)
   ret void
 }
+
+define void @MemsetInBoundsCast() {
+; CHECK-LABEL: MemsetInBoundsCast dso_preemptable{{$}}
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: allocas uses:
+; CHECK-NEXT: x[4]: [0,4){{$}}
+; CHECK-NEXT: y[1]: empty-set{{$}}
+; GLOBAL-NEXT: safe accesses:
+; GLOBAL-NEXT: call void @llvm.memset.p0i8.i32(i8* %x1, i8 %yint, i32 4, i1 false)
+; CHECK-EMPTY:
+entry:
+  %x = alloca i32, align 4
+  %y = alloca i8, align 1
+  %x1 = bitcast i32* %x to i8*
+  %yint = ptrtoint i8* %y to i8
+  call void @llvm.memset.p0i8.i32(i8* %x1, i8 %yint, i32 4, i1 false)
+  ret void
+}
+
+define void @MemcpyInBoundsCast2(i8 %zint8) {
+; CHECK-LABEL: MemcpyInBoundsCast2 dso_preemptable{{$}}
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: allocas uses:
+; CHECK-NEXT: x[256]: [0,255){{$}}
+; CHECK-NEXT: y[256]: [0,255){{$}}
+; CHECK-NEXT: z[1]: empty-set{{$}}
+; GLOBAL-NEXT: safe accesses:
+; GLOBAL-NEXT: call void @llvm.memcpy.p0i8.p0i8.i32(i8* %x1, i8* %y1, i32 %zint32, i1 false)
+; CHECK-EMPTY:
+entry:
+  %x = alloca [256 x i8], align 4
+  %y = alloca [256 x i8], align 4
+  %z = alloca i8, align 1
+  %x1 = bitcast [256 x i8]* %x to i8*
+  %y1 = bitcast [256 x i8]* %y to i8*
+  %zint32 = zext i8 %zint8 to i32
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %x1, i8* %y1, i32 %zint32, i1 false)
+  ret void
+}

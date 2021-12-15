@@ -223,6 +223,6 @@ private:
   friend class DebugActionManager;
 };
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_SUPPORT_DEBUGACTION_H

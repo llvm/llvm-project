@@ -16,7 +16,6 @@
 
 #define WIN32_LEAN_AND_MEAN
 #define NOGDI
-#include <direct.h>
 #include <windows.h>
 #include <io.h>
 #include <psapi.h>
@@ -337,6 +336,11 @@ bool MprotectNoAccess(uptr addr, uptr size) {
   return VirtualProtect((LPVOID)addr, size, PAGE_NOACCESS, &old_protection);
 }
 
+bool MprotectReadOnly(uptr addr, uptr size) {
+  DWORD old_protection;
+  return VirtualProtect((LPVOID)addr, size, PAGE_READONLY, &old_protection);
+}
+
 void ReleaseMemoryPagesToOS(uptr beg, uptr end) {
   uptr beg_aligned = RoundDownTo(beg, GetPageSizeCached()),
        end_aligned = RoundDownTo(end, GetPageSizeCached());
@@ -566,7 +570,9 @@ void Abort() {
   internal__exit(3);
 }
 
-bool CreateDir(const char *pathname) { return _mkdir(pathname) == 0; }
+bool CreateDir(const char *pathname) {
+  return CreateDirectoryA(pathname, nullptr) != 0;
+}
 
 #if !SANITIZER_GO
 // Read the file to extract the ImageBase field from the PE header. If ASLR is

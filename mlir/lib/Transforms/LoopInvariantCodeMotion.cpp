@@ -32,7 +32,7 @@ struct LoopInvariantCodeMotion
     : public LoopInvariantCodeMotionBase<LoopInvariantCodeMotion> {
   void runOnOperation() override;
 };
-} // end anonymous namespace
+} // namespace
 
 // Checks whether the given op can be hoisted by checking that
 // - the op and any of its contained operations do not depend on SSA values

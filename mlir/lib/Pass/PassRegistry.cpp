@@ -111,8 +111,9 @@ void mlir::registerPass(const PassAllocatorFunction &function) {
   std::unique_ptr<Pass> pass = function();
   StringRef arg = pass->getArgument();
   if (arg.empty())
-    llvm::report_fatal_error(
-        "Trying to register a pass that does not override `getArgument()`");
+    llvm::report_fatal_error(llvm::Twine("Trying to register '") +
+                             pass->getName() +
+                             "' pass that does not override `getArgument()`");
   StringRef description = pass->getDescription();
   PassInfo passInfo(arg, description, function);
   passRegistry->try_emplace(arg, passInfo);
@@ -301,7 +302,7 @@ private:
   std::vector<PipelineElement> pipeline;
 };
 
-} // end anonymous namespace
+} // namespace
 
 /// Try to initialize this pipeline with the given pipeline text. An option is
 /// given to enable accurate error reporting.
@@ -520,7 +521,7 @@ struct PassArgData {
   /// pipeline.
   TextualPipeline pipeline;
 };
-} // end anonymous namespace
+} // namespace
 
 namespace llvm {
 namespace cl {
@@ -538,8 +539,8 @@ struct OptionValue<PassArgData> final
 
   PassArgData value;
 };
-} // end namespace cl
-} // end namespace llvm
+} // namespace cl
+} // namespace llvm
 
 namespace {
 
@@ -686,8 +687,8 @@ struct PassPipelineCLParserImpl {
   /// The set of passes and pass pipelines to run.
   llvm::cl::list<PassArgData, bool, PassNameParser> passList;
 };
-} // end namespace detail
-} // end namespace mlir
+} // namespace detail
+} // namespace mlir
 
 /// Construct a pass pipeline parser with the given command line description.
 PassPipelineCLParser::PassPipelineCLParser(StringRef arg, StringRef description)

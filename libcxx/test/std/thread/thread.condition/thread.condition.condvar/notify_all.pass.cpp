@@ -8,9 +8,6 @@
 //
 // UNSUPPORTED: libcpp-has-no-threads
 
-// TODO(ldionne): This test fails on Ubuntu Focal on our CI nodes (and only there), in 32 bit mode.
-// UNSUPPORTED: linux && 32bits-on-64bits
-
 // <condition_variable>
 
 // class condition_variable;

@@ -5714,6 +5714,7 @@ const char *SystemZTargetLowering::getTargetNodeName(unsigned Opcode) const {
     OPCODE(OC);
     OPCODE(XC);
     OPCODE(CLC);
+    OPCODE(MEMSET_MVC);
     OPCODE(STPCPY);
     OPCODE(STRCMP);
     OPCODE(SEARCH_STRING);
@@ -7860,8 +7861,10 @@ MachineBasicBlock *SystemZTargetLowering::emitExt128(MachineInstr &MI,
   return MBB;
 }
 
-MachineBasicBlock *SystemZTargetLowering::emitMemMemWrapper(
-    MachineInstr &MI, MachineBasicBlock *MBB, unsigned Opcode) const {
+MachineBasicBlock *
+SystemZTargetLowering::emitMemMemWrapper(MachineInstr &MI,
+                                         MachineBasicBlock *MBB,
+                                         unsigned Opcode, bool IsMemset) const {
   MachineFunction &MF = *MBB->getParent();
   const SystemZInstrInfo *TII =
       static_cast<const SystemZInstrInfo *>(Subtarget.getInstrInfo());
@@ -7870,18 +7873,64 @@ MachineBasicBlock *SystemZTargetLowering::emitMemMemWrapper(
 
   MachineOperand DestBase = earlyUseOperand(MI.getOperand(0));
   uint64_t DestDisp = MI.getOperand(1).getImm();
-  MachineOperand SrcBase = earlyUseOperand(MI.getOperand(2));
-  uint64_t SrcDisp = MI.getOperand(3).getImm();
-  MachineOperand &LengthMO = MI.getOperand(4);
+  MachineOperand SrcBase = MachineOperand::CreateReg(0U, false);
+  uint64_t SrcDisp;
+
+  // Fold the displacement Disp if it is out of range.
+  auto foldDisplIfNeeded = [&](MachineOperand &Base, uint64_t &Disp) -> void {
+    if (!isUInt<12>(Disp)) {
+      Register Reg = MRI.createVirtualRegister(&SystemZ::ADDR64BitRegClass);
+      unsigned Opcode = TII->getOpcodeForOffset(SystemZ::LA, Disp);
+      BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(Opcode), Reg)
+        .add(Base).addImm(Disp).addReg(0);
+      Base = MachineOperand::CreateReg(Reg, false);
+      Disp = 0;
+    }
+  };
+
+  if (!IsMemset) {
+    SrcBase = earlyUseOperand(MI.getOperand(2));
+    SrcDisp = MI.getOperand(3).getImm();
+  } else {
+    SrcBase = DestBase;
+    SrcDisp = DestDisp++;
+    foldDisplIfNeeded(DestBase, DestDisp);
+  }
+
+  MachineOperand &LengthMO = MI.getOperand(IsMemset ? 2 : 4);
   bool IsImmForm = LengthMO.isImm();
   bool IsRegForm = !IsImmForm;
 
+  // Build and insert one Opcode of Length, with special treatment for memset.
+  auto insertMemMemOp = [&](MachineBasicBlock *InsMBB,
+                            MachineBasicBlock::iterator InsPos,
+                            MachineOperand DBase, uint64_t DDisp,
+                            MachineOperand SBase, uint64_t SDisp,
+                            unsigned Length) -> void {
+    assert(Length > 0 && Length <= 256 && "Building memory op with bad length.");
+    if (IsMemset) {
+      MachineOperand ByteMO = earlyUseOperand(MI.getOperand(3));
+      if (ByteMO.isImm())
+        BuildMI(*InsMBB, InsPos, DL, TII->get(SystemZ::MVI))
+          .add(SBase).addImm(SDisp).add(ByteMO);
+      else
+        BuildMI(*InsMBB, InsPos, DL, TII->get(SystemZ::STC))
+          .add(ByteMO).add(SBase).addImm(SDisp).addReg(0);
+      if (--Length == 0)
+        return;
+    }
+    BuildMI(*MBB, InsPos, DL, TII->get(Opcode))
+      .add(DBase).addImm(DDisp).addImm(Length)
+      .add(SBase).addImm(SDisp)
+      .setMemRefs(MI.memoperands());
+  };
+
   bool NeedsLoop = false;
   uint64_t ImmLength = 0;
-  Register LenMinus1Reg = SystemZ::NoRegister;
+  Register LenAdjReg = SystemZ::NoRegister;
   if (IsImmForm) {
     ImmLength = LengthMO.getImm();
-    ImmLength++; // Add back the '1' subtracted originally.
+    ImmLength += IsMemset ? 2 : 1; // Add back the subtracted adjustment.
     if (ImmLength == 0) {
       MI.eraseFromParent();
       return MBB;
@@ -7905,7 +7954,7 @@ MachineBasicBlock *SystemZTargetLowering::emitMemMemWrapper(
       NeedsLoop = true;
   } else {
     NeedsLoop = true;
-    LenMinus1Reg = LengthMO.getReg();
+    LenAdjReg = LengthMO.getReg();
   }
 
   // When generating more than one CLC, all but the last will need to
@@ -7923,17 +7972,17 @@ MachineBasicBlock *SystemZTargetLowering::emitMemMemWrapper(
       ImmLength &= 255;
     } else {
       BuildMI(*MBB, MI, DL, TII->get(SystemZ::SRLG), StartCountReg)
-        .addReg(LenMinus1Reg)
+        .addReg(LenAdjReg)
         .addReg(0)
         .addImm(8);
     }
 
+    bool HaveSingleBase = DestBase.isIdenticalTo(SrcBase);
     auto loadZeroAddress = [&]() -> MachineOperand {
       Register Reg = MRI.createVirtualRegister(&SystemZ::ADDR64BitRegClass);
       BuildMI(*MBB, MI, DL, TII->get(SystemZ::LGHI), Reg).addImm(0);
       return MachineOperand::CreateReg(Reg, false);
     };
-    bool HaveSingleBase = DestBase.isIdenticalTo(SrcBase);
     if (DestBase.isReg() && DestBase.getReg() == SystemZ::NoRegister)
       DestBase = loadZeroAddress();
     if (SrcBase.isReg() && SrcBase.getReg() == SystemZ::NoRegister)
@@ -7968,14 +8017,41 @@ MachineBasicBlock *SystemZTargetLowering::emitMemMemWrapper(
       DoneMBB = SystemZ::emitBlockAfter(NextMBB);
 
       //  MBB:
-      //   # Jump to AllDoneMBB if LenMinus1Reg is -1, or fall thru to StartMBB.
+      //   # Jump to AllDoneMBB if LenAdjReg means 0, or fall thru to StartMBB.
       BuildMI(MBB, DL, TII->get(SystemZ::CGHI))
-        .addReg(LenMinus1Reg).addImm(-1);
+        .addReg(LenAdjReg).addImm(IsMemset ? -2 : -1);
       BuildMI(MBB, DL, TII->get(SystemZ::BRC))
         .addImm(SystemZ::CCMASK_ICMP).addImm(SystemZ::CCMASK_CMP_EQ)
         .addMBB(AllDoneMBB);
       MBB->addSuccessor(AllDoneMBB);
-      MBB->addSuccessor(StartMBB);
+      if (!IsMemset)
+        MBB->addSuccessor(StartMBB);
+      else {
+        // MemsetOneCheckMBB:
+        // # Jump to MemsetOneMBB for a memset of length 1, or
+        // # fall thru to StartMBB.
+        MachineBasicBlock *MemsetOneCheckMBB = SystemZ::emitBlockAfter(MBB);
+        MachineBasicBlock *MemsetOneMBB = SystemZ::emitBlockAfter(&*MF.rbegin());
+        MBB->addSuccessor(MemsetOneCheckMBB);
+        MBB = MemsetOneCheckMBB;
+        BuildMI(MBB, DL, TII->get(SystemZ::CGHI))
+          .addReg(LenAdjReg).addImm(-1);
+        BuildMI(MBB, DL, TII->get(SystemZ::BRC))
+          .addImm(SystemZ::CCMASK_ICMP).addImm(SystemZ::CCMASK_CMP_EQ)
+          .addMBB(MemsetOneMBB);
+        MBB->addSuccessor(MemsetOneMBB, {10, 100});
+        MBB->addSuccessor(StartMBB, {90, 100});
+
+        // MemsetOneMBB:
+        // # Jump back to AllDoneMBB after a single MVI or STC.
+        MBB = MemsetOneMBB;
+        insertMemMemOp(MBB, MBB->end(),
+                       MachineOperand::CreateReg(StartDestReg, false), DestDisp,
+                       MachineOperand::CreateReg(StartSrcReg, false), SrcDisp,
+                       1);
+        BuildMI(MBB, DL, TII->get(SystemZ::J)).addMBB(AllDoneMBB);
+        MBB->addSuccessor(AllDoneMBB);
+      }
 
       // StartMBB:
       // # Jump to DoneMBB if %StartCountReg is zero, or fall through to LoopMBB.
@@ -8032,10 +8108,10 @@ MachineBasicBlock *SystemZTargetLowering::emitMemMemWrapper(
     if (Opcode == SystemZ::MVC)
       BuildMI(MBB, DL, TII->get(SystemZ::PFD))
         .addImm(SystemZ::PFD_WRITE)
-        .addReg(ThisDestReg).addImm(DestDisp + 768).addReg(0);
-    BuildMI(MBB, DL, TII->get(Opcode))
-      .addReg(ThisDestReg).addImm(DestDisp).addImm(256)
-      .addReg(ThisSrcReg).addImm(SrcDisp);
+        .addReg(ThisDestReg).addImm(DestDisp - IsMemset + 768).addReg(0);
+    insertMemMemOp(MBB, MBB->end(),
+                   MachineOperand::CreateReg(ThisDestReg, false), DestDisp,
+                   MachineOperand::CreateReg(ThisSrcReg, false), SrcDisp, 256);
     if (EndMBB) {
       BuildMI(MBB, DL, TII->get(SystemZ::BRC))
         .addImm(SystemZ::CCMASK_ICMP).addImm(SystemZ::CCMASK_CMP_NE)
@@ -8075,7 +8151,7 @@ MachineBasicBlock *SystemZTargetLowering::emitMemMemWrapper(
       // # Make PHIs for RemDestReg/RemSrcReg as the loop may or may not run.
       // # Use EXecute Relative Long for the remainder of the bytes. The target
       //   instruction of the EXRL will have a length field of 1 since 0 is an
-      //   illegal value. The number of bytes processed becomes (%LenMinus1Reg &
+      //   illegal value. The number of bytes processed becomes (%LenAdjReg &
       //   0xff) + 1.
       // # Fall through to AllDoneMBB.
       Register RemSrcReg  = MRI.createVirtualRegister(&SystemZ::ADDR64BitRegClass);
@@ -8088,10 +8164,14 @@ MachineBasicBlock *SystemZTargetLowering::emitMemMemWrapper(
         BuildMI(MBB, DL, TII->get(SystemZ::PHI), RemSrcReg)
           .addReg(StartSrcReg).addMBB(StartMBB)
           .addReg(NextSrcReg).addMBB(NextMBB);
+      if (IsMemset)
+        insertMemMemOp(MBB, MBB->end(),
+                       MachineOperand::CreateReg(RemDestReg, false), DestDisp,
+                       MachineOperand::CreateReg(RemSrcReg, false), SrcDisp, 1);
       MachineInstrBuilder EXRL_MIB =
         BuildMI(MBB, DL, TII->get(SystemZ::EXRL_Pseudo))
           .addImm(Opcode)
-          .addReg(LenMinus1Reg)
+          .addReg(LenAdjReg)
           .addReg(RemDestReg).addImm(DestDisp)
           .addReg(RemSrcReg).addImm(SrcDisp);
       MBB->addSuccessor(AllDoneMBB);
@@ -8107,32 +8187,10 @@ MachineBasicBlock *SystemZTargetLowering::emitMemMemWrapper(
   while (ImmLength > 0) {
     uint64_t ThisLength = std::min(ImmLength, uint64_t(256));
     // The previous iteration might have created out-of-range displacements.
-    // Apply them using LAY if so.
-    if (!isUInt<12>(DestDisp)) {
-      Register Reg = MRI.createVirtualRegister(&SystemZ::ADDR64BitRegClass);
-      BuildMI(*MBB, MI, MI.getDebugLoc(), TII->get(SystemZ::LAY), Reg)
-          .add(DestBase)
-          .addImm(DestDisp)
-          .addReg(0);
-      DestBase = MachineOperand::CreateReg(Reg, false);
-      DestDisp = 0;
-    }
-    if (!isUInt<12>(SrcDisp)) {
-      Register Reg = MRI.createVirtualRegister(&SystemZ::ADDR64BitRegClass);
-      BuildMI(*MBB, MI, MI.getDebugLoc(), TII->get(SystemZ::LAY), Reg)
-          .add(SrcBase)
-          .addImm(SrcDisp)
-          .addReg(0);
-      SrcBase = MachineOperand::CreateReg(Reg, false);
-      SrcDisp = 0;
-    }
-    BuildMI(*MBB, MI, DL, TII->get(Opcode))
-        .add(DestBase)
-        .addImm(DestDisp)
-        .addImm(ThisLength)
-        .add(SrcBase)
-        .addImm(SrcDisp)
-        .setMemRefs(MI.memoperands());
+    // Apply them using LA/LAY if so.
+    foldDisplIfNeeded(DestBase, DestDisp);
+    foldDisplIfNeeded(SrcBase, SrcDisp);
+    insertMemMemOp(MBB, MI, DestBase, DestDisp, SrcBase, SrcDisp, ThisLength);
     DestDisp += ThisLength;
     SrcDisp += ThisLength;
     ImmLength -= ThisLength;
@@ -8630,6 +8688,11 @@ MachineBasicBlock *SystemZTargetLowering::EmitInstrWithCustomInserter(
   case SystemZ::CLCImm:
   case SystemZ::CLCReg:
     return emitMemMemWrapper(MI, MBB, SystemZ::CLC);
+  case SystemZ::MemsetImmImm:
+  case SystemZ::MemsetImmReg:
+  case SystemZ::MemsetRegImm:
+  case SystemZ::MemsetRegReg:
+    return emitMemMemWrapper(MI, MBB, SystemZ::MVC, true/*IsMemset*/);
   case SystemZ::CLSTLoop:
     return emitStringWrapper(MI, MBB, SystemZ::CLST);
   case SystemZ::MVSTLoop:

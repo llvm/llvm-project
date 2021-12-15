@@ -37,8 +37,8 @@ float32x4_t test_vldrwq_gather_base_wb_f32(uint32x4_t *addr)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, <2 x i64>* [[ADDR:%.*]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[P:%.*]] to i32
-// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP1]])
-// CHECK-NEXT:    [[TMP3:%.*]] = call { <2 x i64>, <2 x i64> } @llvm.arm.mve.vldr.gather.base.wb.predicated.v2i64.v2i64.v4i1(<2 x i64> [[TMP0]], i32 656, <4 x i1> [[TMP2]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 [[TMP1]])
+// CHECK-NEXT:    [[TMP3:%.*]] = call { <2 x i64>, <2 x i64> } @llvm.arm.mve.vldr.gather.base.wb.predicated.v2i64.v2i64.v2i1(<2 x i64> [[TMP0]], i32 656, <2 x i1> [[TMP2]])
 // CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[TMP3]], 1
 // CHECK-NEXT:    store <2 x i64> [[TMP4]], <2 x i64>* [[ADDR]], align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[TMP3]], 0

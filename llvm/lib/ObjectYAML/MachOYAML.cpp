@@ -164,6 +164,7 @@ void MappingTraits<MachOYAML::LinkEditData>::mapping(
     IO.mapOptional("ExportTrie", LinkEditData.ExportTrie);
   IO.mapOptional("NameList", LinkEditData.NameList);
   IO.mapOptional("StringTable", LinkEditData.StringTable);
+  IO.mapOptional("IndirectSymbols", LinkEditData.IndirectSymbols);
 }
 
 void MappingTraits<MachOYAML::RebaseOpcode>::mapping(

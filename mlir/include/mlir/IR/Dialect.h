@@ -50,7 +50,7 @@ public:
   virtual ~Dialect();
 
   /// Utility function that returns if the given string is a valid dialect
-  /// namespace.
+  /// namespace
   static bool isValidNamespace(StringRef str);
 
   MLIRContext *getContext() const { return context; }

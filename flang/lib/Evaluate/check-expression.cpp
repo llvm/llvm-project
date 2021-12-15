@@ -659,13 +659,12 @@ public:
       // simple contiguity to allow their use in contexts like
       // data targets in pointer assignments with remapping.
       return true;
-    } else if (semantics::IsPointer(ultimate)) {
+    } else if (semantics::IsPointer(ultimate) ||
+        semantics::IsAssumedShape(ultimate)) {
       return false;
     } else if (const auto *details{
                    ultimate.detailsIf<semantics::ObjectEntityDetails>()}) {
-      // N.B. ALLOCATABLEs are deferred shape, not assumed, and
-      // are obviously contiguous.
-      return !details->IsAssumedShape() && !details->IsAssumedRank();
+      return !details->IsAssumedRank();
     } else if (auto assoc{Base::operator()(ultimate)}) {
       return assoc;
     } else {

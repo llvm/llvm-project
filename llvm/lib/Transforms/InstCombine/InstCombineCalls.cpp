@@ -2472,6 +2472,12 @@ static bool isSafeToEliminateVarargsCast(const CallBase &Call,
 Instruction *InstCombinerImpl::tryOptimizeCall(CallInst *CI) {
   if (!CI->getCalledFunction()) return nullptr;
 
+  // Skip optimizing notail and musttail calls so
+  // LibCallSimplifier::optimizeCall doesn't have to preserve those invariants.
+  // LibCallSimplifier::optimizeCall should try to preseve tail calls though.
+  if (CI->isMustTailCall() || CI->isNoTailCall())
+    return nullptr;
+
   auto InstCombineRAUW = [this](Instruction *From, Value *With) {
     replaceInstUsesWith(*From, With);
   };
@@ -2641,7 +2647,7 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
     ArgNo++;
   }
 
-  assert(ArgNo == Call.arg_size() && "sanity check");
+  assert(ArgNo == Call.arg_size() && "Call arguments not processed correctly.");
 
   if (!ArgNos.empty()) {
     AttributeList AS = Call.getAttributes();

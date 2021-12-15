@@ -104,6 +104,8 @@ class MUTEX ThreadRegistry {
     return threads_.empty() ? nullptr : threads_[tid];
   }
 
+  u32 NumThreadsLocked() const { return threads_.size(); }
+
   u32 CreateThread(uptr user_id, bool detached, u32 parent_tid, void *arg);
 
   typedef void (*ThreadCallback)(ThreadContextBase *tctx, void *arg);

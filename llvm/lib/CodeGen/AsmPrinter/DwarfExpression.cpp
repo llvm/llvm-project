@@ -463,15 +463,14 @@ static bool isMemoryLocation(DIExpressionCursor ExprCursor) {
   return true;
 }
 
-void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor,
-                                    unsigned FragmentOffsetInBits) {
+void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor) {
   addExpression(std::move(ExprCursor),
                 [](unsigned Idx, DIExpressionCursor &Cursor) -> bool {
                   llvm_unreachable("unhandled opcode found in expression");
                 });
 }
 
-void DwarfExpression::addExpression(
+bool DwarfExpression::addExpression(
     DIExpressionCursor &&ExprCursor,
     llvm::function_ref<bool(unsigned, DIExpressionCursor &)> InsertArg) {
   // Entry values can currently only cover the initial register location,
@@ -496,7 +495,7 @@ void DwarfExpression::addExpression(
     case dwarf::DW_OP_LLVM_arg:
       if (!InsertArg(Op->getArg(0), ExprCursor)) {
         LocationKind = Unknown;
-        return;
+        return false;
       }
       break;
     case dwarf::DW_OP_LLVM_fragment: {
@@ -527,7 +526,7 @@ void DwarfExpression::addExpression(
       setSubRegisterPiece(0, 0);
       // Reset the location description kind.
       LocationKind = Unknown;
-      return;
+      return true;
     }
     case dwarf::DW_OP_plus_uconst:
       assert(!isRegisterLocation());
@@ -630,6 +629,8 @@ void DwarfExpression::addExpression(
   if (isImplicitLocation() && !isParameterValue())
     // Turn this into an implicit location description.
     addStackValue();
+
+  return true;
 }
 
 /// add masking operations to stencil out a subregister.

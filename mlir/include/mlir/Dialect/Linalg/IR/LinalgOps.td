@@ -133,7 +133,7 @@ def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
     [AttrSizedOperandSegments, NoSideEffect,
      DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
      DeclareOpInterfaceMethods<TilingInterface,
-         ["getDestinationOperands", "getLoopIteratorTypes", "getLoopBounds",
+         ["getDestinationOperands", "getLoopIteratorTypes", "getIterationDomain",
           "getTiledImplementation"]>]> {
   let summary = "tensor pad operation";
   let description = [{
@@ -330,166 +330,6 @@ def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
   let hasFolder = 1;
 }
 
-def Linalg_RangeOp :
-    Linalg_Op<"range", [NoSideEffect]>,
-    Arguments<(ins Index:$min, Index:$max, Index:$step)>,
-    Results<(outs Range)> {
-  let summary = "Create a `range` type value, used to create `view`s";
-  let description = [{
-    The `linalg.range` op creates a `!linalg.range` from 3 values of type
-    `index` that represent the min, max and step values of the `range`. This
-    type does not pass function boundaries at the moment.
-
-    Example:
-
-    ```mlir
-    %3 = linalg.range %0:%1:%2 : !linalg.range
-    ````
-  }];
-  let builders = [
-    OpBuilder<(ins "Value":$min, "Value":$max, "Value":$step),
-    [{
-      auto rangeType = RangeType::get($_builder.getContext());
-      build($_builder, $_state, rangeType, min, max, step);
-    }]>];
-
-  // Fully specified by traits.
-  let verifier = ?;
-  let assemblyFormat = "$min `:` $max `:` $step attr-dict `:` type(results)";
-}
-
-class Linalg_ReshapeLikeOp<string mnemonic, list<OpTrait> traits = []> :
-    Linalg_Op<mnemonic, !listconcat(traits, [NoSideEffect])> {
-  let builders = [
-    // Builders for a contracting reshape whose result type is computed from
-    // `src` and `reassociation`.
-    OpBuilder<(ins "Value":$src,
-      "ArrayRef<ReassociationIndices>":$reassociation,
-      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
-    OpBuilder<(ins "Value":$src,
-      "ArrayRef<ReassociationExprs>":$reassociation,
-      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs),
-    [{
-      auto reassociationMaps =
-          convertReassociationMapsToIndices($_builder, reassociation);
-      build($_builder, $_state, src, reassociationMaps, attrs);
-    }]>,
-
-    // Builders for a reshape whose result type is passed explicitly. This may
-    // be either a contracting or expanding reshape.
-    OpBuilder<(ins "Type":$resultType, "Value":$src,
-      "ArrayRef<ReassociationIndices>":$reassociation,
-      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs),
-    [{
-      build($_builder, $_state, resultType, src, attrs);
-      $_state.addAttribute("reassociation",
-                          getReassociationIndicesAttribute($_builder, reassociation));
-    }]>,
-    OpBuilder<(ins "Type":$resultType, "Value":$src,
-      "ArrayRef<ReassociationExprs>":$reassociation,
-      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs),
-    [{
-      auto reassociationMaps =
-          convertReassociationMapsToIndices($_builder, reassociation);
-      build($_builder, $_state, resultType, src, reassociationMaps, attrs);
-    }]>
-  ];
-
-  code commonExtraClassDeclaration = [{
-    static StringRef getReassociationAttrName() { return "reassociation"; }
-    SmallVector<AffineMap, 4> getReassociationMaps();
-    SmallVector<ReassociationExprs, 4> getReassociationExprs();
-    SmallVector<ReassociationIndices, 4> getReassociationIndices() {
-      SmallVector<ReassociationIndices, 4> reassociationIndices;
-      for (auto attr : reassociation())
-        reassociationIndices.push_back(llvm::to_vector<2>(
-            llvm::map_range(attr.cast<ArrayAttr>(), [&](Attribute indexAttr) {
-              return indexAttr.cast<IntegerAttr>().getInt();
-            })));
-      return reassociationIndices;
-    };
-  }];
-
-  let parser = [{ return ::parseReshapeLikeOp(parser, result); }];
-}
-
-def IndexListArrayAttr :
-  TypedArrayAttrBase<I64ArrayAttr, "Array of 64-bit integer array attributes">;
-
-class Linalg_TensorReshapeOp<string mnemonic> : Linalg_ReshapeLikeOp<
-    mnemonic,
-    [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>]>,
-    Arguments<(ins AnyTensor:$src,
-                   IndexListArrayAttr:$reassociation)>,
-    Results<(outs AnyTensor:$result)> {
-  let extraClassDeclaration = commonExtraClassDeclaration # [{
-    RankedTensorType getSrcType() {
-      return src().getType().cast<RankedTensorType>();
-    }
-    RankedTensorType getResultType() {
-      return result().getType().cast<RankedTensorType>();
-    }
-  }];
-  let hasFolder = 1;
-  let hasCanonicalizer = 1;
-  let printer = [{ return ::print(p, *this); }];
-  let parser = [{ return ::parseReshapeLikeOp(parser, result); }];
-}
-
-def Linalg_TensorExpandShapeOp : Linalg_TensorReshapeOp<"tensor_expand_shape"> {
-  let summary = "operation to produce a tensor with a higher rank";
-  let description = [{
-    The `linalg.tensor_expand_shape` op produces a new tensor with a higher
-    rank whose sizes are a reassociation of the original `src`.
-
-    A reassociation is defined as a continuous grouping of dimensions and is
-    represented with an array of I64ArrayAttr attribute.
-
-    The verification rule is that the reassociation maps are applied to the
-    result tensor with the higher rank to obtain the operand tensor with the
-    smaller rank.
-
-    The operand tensor type of a reshape can be zero-ranked if the result
-    tensor type is statically shaped with all dimensions being unit extent. In
-    such cases the reassociation map is empty.
-
-    Examples:
-
-    ```mlir
-    // Dimension expansion i -> (i', j') and (k) -> (k')
-    %b = linalg.tensor_expand_shape %a [[0, 1], [2]]
-        : tensor<?x?xf32> into tensor<?x?x?xf32>
-    ```
-  }];
-}
-
-def Linalg_TensorCollapseShapeOp : Linalg_TensorReshapeOp<"tensor_collapse_shape"> {
-  let summary = "operation to produce a tensor with a smaller rank";
-  let description = [{
-    The `linalg.tensor_collapse_shape` op produces a new tensor with a smaller
-    rank whose sizes are a reassociation of the original `src`.
-
-    A reassociation is defined as a continuous grouping of dimensions and is
-    represented with an array of I64ArrayAttr attribute.
-
-    The verification rule is that the reassociation maps are applied to the
-    operand tensor with the higher rank to obtain the result tensor with the
-    smaller rank.
-
-    The result tensor type of a reshape can be zero-ranked if the operand
-    tensor type is statically shaped with all dimensions being unit extent. In
-    such case the reassociation map is empty.
-
-    Examples:
-
-    ```mlir
-    // Dimension collapse (i, j) -> i' and k -> k'
-    %b = linalg.tensor_collapse_shape %a [[0, 1], [2]]
-        : tensor<?x?x?xf32> into tensor<?x?xf32>
-    ```
-  }];
-}
-
 def Linalg_YieldOp : Linalg_Op<"yield", [NoSideEffect, ReturnLike, Terminator]>,
     Arguments<(ins Variadic<AnyType>:$values)> {
   let summary = "Linalg yield operation";
@@ -658,6 +498,12 @@ def Linalg_TiledLoopOp : Linalg_Op<"tiled_loop", [
              "expected upper bounds for every loop dimension");
       for (unsigned i = 0, pos = 2 * numLoops; i < numLoops; ++i, ++pos)
         setOperand(pos, steps[i]);
+    }
+
+    /// Operand that corresponds to the `bbArg` block argument.
+    OpOperand& getTiedOperand(BlockArgument& bbArg) {
+      return getOperation()->getOpOperand(getNumControlOperands() +
+                                          bbArg.getArgNumber() - getNumLoops());
     }
 
     /// Block argument that corresponds to the `input` or `output` operand.

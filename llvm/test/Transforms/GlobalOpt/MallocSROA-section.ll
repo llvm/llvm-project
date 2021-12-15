@@ -1,4 +1,4 @@
-; RUN: opt -globalopt -S < %s | FileCheck %s
+; RUN: opt -passes=globalopt -S < %s | FileCheck %s
 ; CHECK: @Y = {{.*}} section ".foo"
 
 %struct.xyz = type { double, i32 }

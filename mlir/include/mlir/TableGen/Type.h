@@ -20,7 +20,7 @@
 namespace llvm {
 class DefInit;
 class Record;
-} // end namespace llvm
+} // namespace llvm
 
 namespace mlir {
 namespace tblgen {
@@ -72,7 +72,7 @@ public:
   Dialect getDialect() const;
 };
 
-} // end namespace tblgen
-} // end namespace mlir
+} // namespace tblgen
+} // namespace mlir
 
 #endif // MLIR_TABLEGEN_TYPE_H_

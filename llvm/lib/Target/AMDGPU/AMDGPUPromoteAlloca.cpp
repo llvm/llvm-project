@@ -939,7 +939,7 @@ bool AMDGPUPromoteAllocaImpl::handleAlloca(AllocaInst &I, bool SufficientLDS) {
       GlobalVariable::NotThreadLocal,
       AMDGPUAS::LOCAL_ADDRESS);
   GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-  GV->setAlignment(MaybeAlign(I.getAlignment()));
+  GV->setAlignment(I.getAlign());
 
   Value *TCntY, *TCntZ;
 

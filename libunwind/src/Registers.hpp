@@ -2140,6 +2140,10 @@ private:
     uint32_t __pc;    // Program counter r15
   };
 
+  struct PseudoRegisters {
+    uint32_t __pac; // Return Authentication Code (PAC)
+  };
+
   static void saveVFPWithFSTMD(void*);
   static void saveVFPWithFSTMX(void*);
   static void saveVFPv3(void*);
@@ -2156,6 +2160,7 @@ private:
 
   // ARM registers
   GPRs _registers;
+  PseudoRegisters _pseudo_registers;
 
   // We save floating point registers lazily because we can't know ahead of
   // time which ones are used. See EHABI #4.7.
@@ -2193,6 +2198,7 @@ inline Registers_arm::Registers_arm(const void *registers)
                 "arm registers do not fit into unw_context_t");
   // See __unw_getcontext() note about data.
   memcpy(&_registers, registers, sizeof(_registers));
+  memset(&_pseudo_registers, 0, sizeof(_pseudo_registers));
   memset(&_vfp_d0_d15_pad, 0, sizeof(_vfp_d0_d15_pad));
   memset(&_vfp_d16_d31, 0, sizeof(_vfp_d16_d31));
 #if defined(__ARM_WMMX)
@@ -2208,6 +2214,7 @@ inline Registers_arm::Registers_arm()
     _saved_vfp_d0_d15(false),
     _saved_vfp_d16_d31(false) {
   memset(&_registers, 0, sizeof(_registers));
+  memset(&_pseudo_registers, 0, sizeof(_pseudo_registers));
   memset(&_vfp_d0_d15_pad, 0, sizeof(_vfp_d0_d15_pad));
   memset(&_vfp_d16_d31, 0, sizeof(_vfp_d16_d31));
 #if defined(__ARM_WMMX)
@@ -2235,6 +2242,11 @@ inline bool Registers_arm::validRegister(int regNum) const {
     return true;
 #endif
 
+#ifdef __ARM_FEATURE_PAUTH
+  if (regNum == UNW_ARM_RA_AUTH_CODE)
+    return true;
+#endif
+
   return false;
 }
 
@@ -2259,6 +2271,11 @@ inline uint32_t Registers_arm::getRegister(int regNum) const {
     }
     return _iwmmx_control[regNum - UNW_ARM_WC0];
   }
+#endif
+
+#ifdef __ARM_FEATURE_PAUTH
+  if (regNum == UNW_ARM_RA_AUTH_CODE)
+    return _pseudo_registers.__pac;
 #endif
 
   _LIBUNWIND_ABORT("unsupported arm register");
@@ -2295,6 +2312,11 @@ inline void Registers_arm::setRegister(int regNum, uint32_t value) {
     return;
   }
 #endif
+
+  if (regNum == UNW_ARM_RA_AUTH_CODE) {
+    _pseudo_registers.__pac = value;
+    return;
+  }
 
   _LIBUNWIND_ABORT("unsupported arm register");
 }

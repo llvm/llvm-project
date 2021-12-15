@@ -3,19 +3,19 @@
 
 int gVar;
 void t1() {
-  // CHECK: add eax, dword ptr ${{[0-9]}}[eax]
+  // CHECK: add eax, dword ptr gVar[eax]
   __asm add eax, dword ptr gVar[eax]
-  // CHECK: add dword ptr ${{[0-9]}}[eax], eax
+  // CHECK: add dword ptr gVar[eax], eax
   __asm add dword ptr [eax+gVar], eax
-  // CHECK: add ebx, dword ptr ${{[0-9]}}[ebx + $$270]
+  // CHECK: add ebx, dword ptr gVar[ebx + $$270]
   __asm add ebx, dword ptr gVar[271 - 82 + 81 + ebx]
-  // CHECK: add dword ptr ${{[0-9]}}[ebx + $$828], ebx
+  // CHECK: add dword ptr gVar[ebx + $$828], ebx
   __asm add dword ptr [ebx + gVar + 828], ebx
-  // CHECK: add ecx, dword ptr ${{[0-9]}}[ecx + ecx * $$4 + $$4590]
+  // CHECK: add ecx, dword ptr gVar[ecx + ecx * $$4 + $$4590]
   __asm add ecx, dword ptr gVar[4590 + ecx + ecx*4]
-  // CHECK: add dword ptr ${{[0-9]}}[ecx + ecx * $$8 + $$73], ecx
+  // CHECK: add dword ptr gVar[ecx + ecx * $$8 + $$73], ecx
   __asm add dword ptr [gVar + ecx + 45 + 23 - 53 + 60 - 2 + ecx*8], ecx
-  // CHECK: add ${{[0-9]}}[ecx + ebx + $$7], eax
+  // CHECK: add gVar[ecx + ebx + $$7], eax
   __asm add 1 + 1 + 2 + 3[gVar + ecx + ebx], eax
 }
 

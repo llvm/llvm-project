@@ -18,7 +18,7 @@ typedef typeof(sizeof(int)) size_t;
 void PR12206(int x) {
   size_t comparisonSize = sizeof(1 == 1);
 
-  // Sanity check. This test is useless if size_t isn't bigger than bool.
+  // This test is useless if size_t isn't bigger than bool.
   clang_analyzer_eval(sizeof(size_t) > comparisonSize); // expected-warning{{TRUE}}
 
   // Build a SymIntExpr, dependent on x.
@@ -75,7 +75,7 @@ size_t strlen(const char *s);
 void PR12206_strlen(const char *x) {
   size_t comparisonSize = sizeof(1 == 1);
 
-  // Sanity check. This test is useless if size_t isn't bigger than bool.
+  // This test is useless if size_t isn't bigger than bool.
   clang_analyzer_eval(sizeof(size_t) > comparisonSize); // expected-warning{{TRUE}}
 
   // Create a value that requires more bits to store than a comparison result.

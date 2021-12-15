@@ -1014,12 +1014,10 @@ bool HexagonHardwareLoops::containsInvalidInstruction(MachineLoop *L,
   LLVM_DEBUG(dbgs() << "\nhw_loop head, "
                     << printMBBReference(**L->block_begin()));
   for (MachineBasicBlock *MBB : L->getBlocks()) {
-    for (MachineBasicBlock::iterator
-           MII = MBB->begin(), E = MBB->end(); MII != E; ++MII) {
-      const MachineInstr *MI = &*MII;
-      if (isInvalidLoopOperation(MI, IsInnerHWLoop)) {
+    for (const MachineInstr &MI : *MBB) {
+      if (isInvalidLoopOperation(&MI, IsInnerHWLoop)) {
         LLVM_DEBUG(dbgs() << "\nCannot convert to hw_loop due to:";
-                   MI->dump(););
+                   MI.dump(););
         return true;
       }
     }
@@ -1034,8 +1032,7 @@ bool HexagonHardwareLoops::containsInvalidInstruction(MachineLoop *L,
 bool HexagonHardwareLoops::isDead(const MachineInstr *MI,
                               SmallVectorImpl<MachineInstr *> &DeadPhis) const {
   // Examine each operand.
-  for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-    const MachineOperand &MO = MI->getOperand(i);
+  for (const MachineOperand &MO : MI->operands()) {
     if (!MO.isReg() || !MO.isDef())
       continue;
 
@@ -1089,8 +1086,7 @@ void HexagonHardwareLoops::removeIfDead(MachineInstr *MI) {
     // It is possible that some DBG_VALUE instructions refer to this
     // instruction.  Examine each def operand for such references;
     // if found, mark the DBG_VALUE as undef (but don't delete it).
-    for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-      const MachineOperand &MO = MI->getOperand(i);
+    for (const MachineOperand &MO : MI->operands()) {
       if (!MO.isReg() || !MO.isDef())
         continue;
       Register Reg = MO.getReg();
@@ -1123,7 +1119,7 @@ void HexagonHardwareLoops::removeIfDead(MachineInstr *MI) {
 bool HexagonHardwareLoops::convertToHardwareLoop(MachineLoop *L,
                                                  bool &RecL0used,
                                                  bool &RecL1used) {
-  // This is just for sanity.
+  // This is just to confirm basic correctness.
   assert(L->getHeader() && "Loop without a header?");
 
   bool Changed = false;
@@ -1877,8 +1873,7 @@ MachineBasicBlock *HexagonHardwareLoops::createPreheaderForLoop(
   if (TII->analyzeBranch(*ExitingBlock, TB, FB, Tmp1, false))
     return nullptr;
 
-  for (MBBVector::iterator I = Preds.begin(), E = Preds.end(); I != E; ++I) {
-    MachineBasicBlock *PB = *I;
+  for (MachineBasicBlock *PB : Preds) {
     bool NotAnalyzed = TII->analyzeBranch(*PB, TB, FB, Tmp1, false);
     if (NotAnalyzed)
       return nullptr;
@@ -1960,8 +1955,7 @@ MachineBasicBlock *HexagonHardwareLoops::createPreheaderForLoop(
 
   TB = FB = nullptr;
 
-  for (MBBVector::iterator I = Preds.begin(), E = Preds.end(); I != E; ++I) {
-    MachineBasicBlock *PB = *I;
+  for (MachineBasicBlock *PB : Preds) {
     if (PB != Latch) {
       Tmp2.clear();
       bool NotAnalyzed = TII->analyzeBranch(*PB, TB, FB, Tmp2, false);

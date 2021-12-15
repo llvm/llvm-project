@@ -13,26 +13,26 @@ define hidden void @_ZL3barv() #0 !dbg !1644 {
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_or_saveexec_b64 s[4:5], -1
+; CHECK-NEXT:    s_or_saveexec_b64 s[16:17], -1
 ; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s32 ; 4-byte Folded Spill
-; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
+; CHECK-NEXT:    s_mov_b64 exec, s[16:17]
 ; CHECK-NEXT:    v_writelane_b32 v40, s33, 2
 ; CHECK-NEXT:    s_mov_b32 s33, s32
 ; CHECK-NEXT:    s_add_i32 s32, s32, 0x400
-; CHECK-NEXT:  .Ltmp0:
-; CHECK-NEXT:    .loc 0 31 3 prologue_end ; lane-info.cpp:31:3
 ; CHECK-NEXT:    v_writelane_b32 v40, s30, 0
 ; CHECK-NEXT:    v_writelane_b32 v40, s31, 1
-; CHECK-NEXT:    s_getpc_b64 s[4:5]
-; CHECK-NEXT:    s_add_u32 s4, s4, _ZL13sleep_foreverv@gotpcrel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s5, s5, _ZL13sleep_foreverv@gotpcrel32@hi+12
-; CHECK-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
-; CHECK-NEXT:    s_mov_b64 s[10:11], s[2:3]
-; CHECK-NEXT:    s_mov_b64 s[8:9], s[0:1]
-; CHECK-NEXT:    s_mov_b64 s[0:1], s[8:9]
-; CHECK-NEXT:    s_mov_b64 s[2:3], s[10:11]
+; CHECK-NEXT:  .Ltmp0:
+; CHECK-NEXT:    .loc 0 31 3 prologue_end ; lane-info.cpp:31:3
+; CHECK-NEXT:    s_getpc_b64 s[16:17]
+; CHECK-NEXT:    s_add_u32 s16, s16, _ZL13sleep_foreverv@gotpcrel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s17, s17, _ZL13sleep_foreverv@gotpcrel32@hi+12
+; CHECK-NEXT:    s_load_dwordx2 s[16:17], s[16:17], 0x0
+; CHECK-NEXT:    s_mov_b64 s[22:23], s[2:3]
+; CHECK-NEXT:    s_mov_b64 s[20:21], s[0:1]
+; CHECK-NEXT:    s_mov_b64 s[0:1], s[20:21]
+; CHECK-NEXT:    s_mov_b64 s[2:3], s[22:23]
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[4:5]
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:  .Ltmp1:
 ; CHECK-NEXT:    v_readlane_b32 s30, v40, 0
 ; CHECK-NEXT:    v_readlane_b32 s31, v40, 1

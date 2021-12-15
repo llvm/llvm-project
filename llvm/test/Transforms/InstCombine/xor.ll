@@ -1231,3 +1231,120 @@ define i32 @xor_andn_commute4(i32 %pa, i32 %pb) {
   %z = xor i32 %a, %r
   ret i32 %z
 }
+
+; (~A | B) ^ A --> ~(A & B)
+
+define <2 x i64> @xor_orn(<2 x i64> %a, <2 x i64> %b) {
+; CHECK-LABEL: @xor_orn(
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i64> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = xor <2 x i64> [[TMP1]], <i64 -1, i64 -1>
+; CHECK-NEXT:    ret <2 x i64> [[Z]]
+;
+  %nota = xor <2 x i64> %a, <i64 -1, i64 -1>
+  %l = or <2 x i64> %nota, %b
+  %z = xor <2 x i64> %l, %a
+  ret <2 x i64> %z
+}
+
+; A  ^ (~A | B) --> ~(A & B)
+
+define i8 @xor_orn_commute1(i8 %pa, i8 %b) {
+; CHECK-LABEL: @xor_orn_commute1(
+; CHECK-NEXT:    [[A:%.*]] = udiv i8 42, [[PA:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[A]], [[B:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = xor i8 [[TMP1]], -1
+; CHECK-NEXT:    ret i8 [[Z]]
+;
+  %a = udiv i8 42, %pa
+  %nota = xor i8 %a, -1
+  %l = or i8 %nota, %b
+  %z = xor i8 %a, %l
+  ret i8 %z
+}
+
+; (B | ~A) ^ A --> ~(A & B)
+
+define i32 @xor_orn_commute2(i32 %a, i32 %pb,i32* %s) {
+; CHECK-LABEL: @xor_orn_commute2(
+; CHECK-NEXT:    [[B:%.*]] = udiv i32 42, [[PB:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[B]], [[A:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    ret i32 [[Z]]
+;
+  %b = udiv i32 42, %pb
+  %nota = xor i32 %a, -1
+  %l = or i32 %b, %nota
+  %z = xor i32 %l, %a
+  ret i32 %z
+}
+
+define i32 @xor_orn_commute2_1use(i32 %a, i32 %pb,i32* %s) {
+; CHECK-LABEL: @xor_orn_commute2_1use(
+; CHECK-NEXT:    [[B:%.*]] = udiv i32 42, [[PB:%.*]]
+; CHECK-NEXT:    [[NOTA:%.*]] = xor i32 [[A:%.*]], -1
+; CHECK-NEXT:    store i32 [[NOTA]], i32* [[S:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[B]], [[A]]
+; CHECK-NEXT:    [[Z:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    ret i32 [[Z]]
+;
+  %b = udiv i32 42, %pb
+  %nota = xor i32 %a, -1
+  %l = or i32 %b, %nota
+  store i32 %nota, i32* %s
+  %z = xor i32 %l, %a
+  ret i32 %z
+}
+
+; A ^ (B | ~A) --> ~(A & B)
+
+define i67 @xor_orn_commute3(i67 %pa, i67 %pb, i67* %s) {
+; CHECK-LABEL: @xor_orn_commute3(
+; CHECK-NEXT:    [[A:%.*]] = udiv i67 42, [[PA:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = udiv i67 42, [[PB:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i67 [[A]], [[B]]
+; CHECK-NEXT:    [[Z:%.*]] = xor i67 [[TMP1]], -1
+; CHECK-NEXT:    ret i67 [[Z]]
+;
+  %a = udiv i67 42, %pa
+  %b = udiv i67 42, %pb
+  %nota = xor i67 %a, -1
+  %l = or i67 %b, %nota
+  %z = xor i67 %a, %l
+  ret i67 %z
+}
+
+define i67 @xor_orn_commute3_1use(i67 %pa, i67 %pb, i67* %s) {
+; CHECK-LABEL: @xor_orn_commute3_1use(
+; CHECK-NEXT:    [[A:%.*]] = udiv i67 42, [[PA:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = udiv i67 42, [[PB:%.*]]
+; CHECK-NEXT:    [[NOTA:%.*]] = xor i67 [[A]], -1
+; CHECK-NEXT:    [[L:%.*]] = or i67 [[B]], [[NOTA]]
+; CHECK-NEXT:    store i67 [[L]], i67* [[S:%.*]], align 4
+; CHECK-NEXT:    [[Z:%.*]] = xor i67 [[A]], [[L]]
+; CHECK-NEXT:    ret i67 [[Z]]
+;
+  %a = udiv i67 42, %pa
+  %b = udiv i67 42, %pb
+  %nota = xor i67 %a, -1
+  %l = or i67 %b, %nota
+  store i67 %l, i67* %s
+  %z = xor i67 %a, %l
+  ret i67 %z
+}
+
+define i32 @xor_orn_2use(i32 %a, i32 %b, i32* %s1, i32* %s2) {
+; CHECK-LABEL: @xor_orn_2use(
+; CHECK-NEXT:    [[NOTA:%.*]] = xor i32 [[A:%.*]], -1
+; CHECK-NEXT:    store i32 [[NOTA]], i32* [[S1:%.*]], align 4
+; CHECK-NEXT:    [[L:%.*]] = or i32 [[NOTA]], [[B:%.*]]
+; CHECK-NEXT:    store i32 [[L]], i32* [[S2:%.*]], align 4
+; CHECK-NEXT:    [[Z:%.*]] = xor i32 [[L]], [[A]]
+; CHECK-NEXT:    ret i32 [[Z]]
+;
+  %nota = xor i32 %a, -1
+  store i32 %nota, i32* %s1
+  %l = or i32 %nota, %b
+  store i32 %l, i32* %s2
+  %z = xor i32 %l, %a
+  ret i32 %z
+}

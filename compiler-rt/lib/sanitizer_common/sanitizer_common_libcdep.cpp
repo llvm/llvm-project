@@ -10,25 +10,22 @@
 // run-time libraries.
 //===----------------------------------------------------------------------===//
 
+#include "sanitizer_allocator.h"
 #include "sanitizer_allocator_interface.h"
 #include "sanitizer_common.h"
 #include "sanitizer_flags.h"
 #include "sanitizer_procmaps.h"
-
+#include "sanitizer_stackdepot.h"
 
 namespace __sanitizer {
-
-static void (*SoftRssLimitExceededCallback)(bool exceeded);
-void SetSoftRssLimitExceededCallback(void (*Callback)(bool exceeded)) {
-  CHECK_EQ(SoftRssLimitExceededCallback, nullptr);
-  SoftRssLimitExceededCallback = Callback;
-}
 
 #if (SANITIZER_LINUX || SANITIZER_NETBSD) && !SANITIZER_GO
 // Weak default implementation for when sanitizer_stackdepot is not linked in.
 SANITIZER_WEAK_ATTRIBUTE StackDepotStats StackDepotGetStats() { return {}; }
+SANITIZER_WEAK_ATTRIBUTE void StackDepotStopBackgroundThread() {}
 
 void *BackgroundThread(void *arg) {
+  VPrintf(1, "%s: Started BackgroundThread\n", SanitizerToolName);
   const uptr hard_rss_limit_mb = common_flags()->hard_rss_limit_mb;
   const uptr soft_rss_limit_mb = common_flags()->soft_rss_limit_mb;
   const bool heap_profile = common_flags()->heap_profile;
@@ -66,13 +63,11 @@ void *BackgroundThread(void *arg) {
         reached_soft_rss_limit = true;
         Report("%s: soft rss limit exhausted (%zdMb vs %zdMb)\n",
                SanitizerToolName, soft_rss_limit_mb, current_rss_mb);
-        if (SoftRssLimitExceededCallback)
-          SoftRssLimitExceededCallback(true);
+        SetRssLimitExceeded(true);
       } else if (soft_rss_limit_mb >= current_rss_mb &&
                  reached_soft_rss_limit) {
         reached_soft_rss_limit = false;
-        if (SoftRssLimitExceededCallback)
-          SoftRssLimitExceededCallback(false);
+        SetRssLimitExceeded(false);
       }
     }
     if (heap_profile &&
@@ -83,6 +78,38 @@ void *BackgroundThread(void *arg) {
     }
   }
 }
+
+void MaybeStartBackgroudThread() {
+  // Need to implement/test on other platforms.
+  // Start the background thread if one of the rss limits is given.
+  if (!common_flags()->hard_rss_limit_mb &&
+      !common_flags()->soft_rss_limit_mb &&
+      !common_flags()->heap_profile) return;
+  if (!&real_pthread_create) {
+    VPrintf(1, "%s: real_pthread_create undefined\n", SanitizerToolName);
+    return;  // Can't spawn the thread anyway.
+  }
+
+  static bool started = false;
+  if (!started) {
+    started = true;
+    internal_start_thread(BackgroundThread, nullptr);
+  }
+}
+
+#  if !SANITIZER_START_BACKGROUND_THREAD_IN_ASAN_INTERNAL
+#    pragma clang diagnostic push
+// We avoid global-constructors to be sure that globals are ready when
+// sanitizers need them. This can happend before global constructors executed.
+// Here we don't mind if thread is started on later stages.
+#    pragma clang diagnostic ignored "-Wglobal-constructors"
+static struct BackgroudThreadStarted {
+  BackgroudThreadStarted() { MaybeStartBackgroudThread(); }
+} background_thread_strarter UNUSED;
+#    pragma clang diagnostic pop
+#  endif
+#else
+void MaybeStartBackgroudThread() {}
 #endif
 
 void WriteToSyslog(const char *msg) {
@@ -103,18 +130,6 @@ void WriteToSyslog(const char *msg) {
   // on Android requires plugging into the tools (ex. ASan's) Thread class.
   if (*p)
     WriteOneLineToSyslog(p);
-}
-
-void MaybeStartBackgroudThread() {
-#if (SANITIZER_LINUX || SANITIZER_NETBSD) && \
-    !SANITIZER_GO  // Need to implement/test on other platforms.
-  // Start the background thread if one of the rss limits is given.
-  if (!common_flags()->hard_rss_limit_mb &&
-      !common_flags()->soft_rss_limit_mb &&
-      !common_flags()->heap_profile) return;
-  if (!&real_pthread_create) return;  // Can't spawn the thread anyway.
-  internal_start_thread(BackgroundThread, nullptr);
-#endif
 }
 
 static void (*sandboxing_callback)();
@@ -189,6 +204,9 @@ void ProtectGap(uptr addr, uptr size, uptr zero_base_shadow_start,
 
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_sandbox_on_notify,
                              __sanitizer_sandbox_arguments *args) {
+#if (SANITIZER_LINUX || SANITIZER_NETBSD) && !SANITIZER_GO
+  __sanitizer::StackDepotStopBackgroundThread();
+#endif
   __sanitizer::PlatformPrepareForSandboxing(args);
   if (__sanitizer::sandboxing_callback)
     __sanitizer::sandboxing_callback();

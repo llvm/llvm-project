@@ -72,6 +72,7 @@ unittest("SupportTests") {
     "ReverseIterationTest.cpp",
     "SHA256.cpp",
     "ScaledNumberTest.cpp",
+    "ScopedPrinterTest.cpp",
     "SourceMgrTest.cpp",
     "SpecialCaseListTest.cpp",
     "SuffixTreeTest.cpp",

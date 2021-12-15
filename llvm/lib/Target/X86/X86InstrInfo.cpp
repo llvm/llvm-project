@@ -1163,8 +1163,7 @@ void X86InstrInfo::reMaterialize(MachineBasicBlock &MBB,
 
 /// True if MI has a condition code def, e.g. EFLAGS, that is not marked dead.
 bool X86InstrInfo::hasLiveCondCodeDef(MachineInstr &MI) const {
-  for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-    MachineOperand &MO = MI.getOperand(i);
+  for (const MachineOperand &MO : MI.operands()) {
     if (MO.isReg() && MO.isDef() &&
         MO.getReg() == X86::EFLAGS && !MO.isDead()) {
       return true;
@@ -4089,8 +4088,8 @@ bool X86InstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
 bool X86InstrInfo::isRedundantFlagInstr(const MachineInstr &FlagI,
                                         Register SrcReg, Register SrcReg2,
                                         int64_t ImmMask, int64_t ImmValue,
-                                        const MachineInstr &OI, bool *IsSwapped,
-                                        int64_t *ImmDelta) const {
+                                        const MachineInstr &OI,
+                                        bool *IsSwapped) const {
   switch (OI.getOpcode()) {
   case X86::CMP64rr:
   case X86::CMP32rr:
@@ -4141,21 +4140,10 @@ bool X86InstrInfo::isRedundantFlagInstr(const MachineInstr &FlagI,
       int64_t OIMask;
       int64_t OIValue;
       if (analyzeCompare(OI, OISrcReg, OISrcReg2, OIMask, OIValue) &&
-          SrcReg == OISrcReg && ImmMask == OIMask) {
-        if (OIValue == ImmValue) {
-          *ImmDelta = 0;
-          return true;
-        } else if (static_cast<uint64_t>(ImmValue) ==
-                   static_cast<uint64_t>(OIValue) - 1) {
-          *ImmDelta = -1;
-          return true;
-        } else if (static_cast<uint64_t>(ImmValue) ==
-                   static_cast<uint64_t>(OIValue) + 1) {
-          *ImmDelta = 1;
-          return true;
-        } else {
-          return false;
-        }
+          SrcReg == OISrcReg && ImmMask == OIMask && OIValue == ImmValue) {
+        assert(SrcReg2 == X86::NoRegister && OISrcReg2 == X86::NoRegister &&
+               "should not have 2nd register");
+        return true;
       }
     }
     return FlagI.isIdenticalTo(OI);
@@ -4405,7 +4393,6 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   bool ShouldUpdateCC = false;
   bool IsSwapped = false;
   X86::CondCode NewCC = X86::COND_INVALID;
-  int64_t ImmDelta = 0;
 
   // Search backward from CmpInstr for the next instruction defining EFLAGS.
   const TargetRegisterInfo *TRI = &getRegisterInfo();
@@ -4452,7 +4439,7 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
         //     ...           // EFLAGS not changed
         //     cmp x, y      // <-- can be removed
         if (isRedundantFlagInstr(CmpInstr, SrcReg, SrcReg2, CmpMask, CmpValue,
-                                 Inst, &IsSwapped, &ImmDelta)) {
+                                 Inst, &IsSwapped)) {
           Sub = &Inst;
           break;
         }
@@ -4486,7 +4473,7 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   // It is safe to remove CmpInstr if EFLAGS is redefined or killed.
   // If we are done with the basic block, we need to check whether EFLAGS is
   // live-out.
-  bool FlagsMayLiveOut = true;
+  bool IsSafe = false;
   SmallVector<std::pair<MachineInstr*, X86::CondCode>, 4> OpsToUpdate;
   MachineBasicBlock::iterator AfterCmpInstr =
       std::next(MachineBasicBlock::iterator(CmpInstr));
@@ -4496,7 +4483,7 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     // We should check the usage if this instruction uses and updates EFLAGS.
     if (!UseEFLAGS && ModifyEFLAGS) {
       // It is safe to remove CmpInstr if EFLAGS is updated again.
-      FlagsMayLiveOut = false;
+      IsSafe = true;
       break;
     }
     if (!UseEFLAGS && !ModifyEFLAGS)
@@ -4504,7 +4491,7 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
 
     // EFLAGS is used by this instruction.
     X86::CondCode OldCC = X86::COND_INVALID;
-    if (MI || IsSwapped || ImmDelta != 0) {
+    if (MI || IsSwapped) {
       // We decode the condition code from opcode.
       if (Instr.isBranch())
         OldCC = X86::getCondFromBranch(Instr);
@@ -4556,60 +4543,11 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
       // to be changed from r2 > r1 to r1 < r2, from r2 < r1 to r1 > r2, etc.
       // We swap the condition code and synthesize the new opcode.
       ReplacementCC = getSwappedCondition(OldCC);
-      if (ReplacementCC == X86::COND_INVALID) return false;
-      ShouldUpdateCC = true;
-    } else if (ImmDelta != 0) {
-      unsigned BitWidth = TRI->getRegSizeInBits(*MRI->getRegClass(SrcReg));
-      // Shift amount for min/max constants to adjust for 8/16/32 instruction
-      // sizes.
-      switch (OldCC) {
-      case X86::COND_L: // x <s (C + 1)  -->  x <=s C
-        if (ImmDelta != 1 || APInt::getSignedMinValue(BitWidth) == CmpValue)
-          return false;
-        ReplacementCC = X86::COND_LE;
-        break;
-      case X86::COND_B: // x <u (C + 1)  -->  x <=u C
-        if (ImmDelta != 1 || CmpValue == 0)
-          return false;
-        ReplacementCC = X86::COND_BE;
-        break;
-      case X86::COND_GE: // x >=s (C + 1)  -->  x >s C
-        if (ImmDelta != 1 || APInt::getSignedMinValue(BitWidth) == CmpValue)
-          return false;
-        ReplacementCC = X86::COND_G;
-        break;
-      case X86::COND_AE: // x >=u (C + 1)  -->  x >u C
-        if (ImmDelta != 1 || CmpValue == 0)
-          return false;
-        ReplacementCC = X86::COND_A;
-        break;
-      case X86::COND_G: // x >s (C - 1)  -->  x >=s C
-        if (ImmDelta != -1 || APInt::getSignedMaxValue(BitWidth) == CmpValue)
-          return false;
-        ReplacementCC = X86::COND_GE;
-        break;
-      case X86::COND_A: // x >u (C - 1)  -->  x >=u C
-        if (ImmDelta != -1 || APInt::getMaxValue(BitWidth) == CmpValue)
-          return false;
-        ReplacementCC = X86::COND_AE;
-        break;
-      case X86::COND_LE: // x <=s (C - 1)  -->  x <s C
-        if (ImmDelta != -1 || APInt::getSignedMaxValue(BitWidth) == CmpValue)
-          return false;
-        ReplacementCC = X86::COND_L;
-        break;
-      case X86::COND_BE: // x <=u (C - 1)  -->  x <u C
-        if (ImmDelta != -1 || APInt::getMaxValue(BitWidth) == CmpValue)
-          return false;
-        ReplacementCC = X86::COND_B;
-        break;
-      default:
+      if (ReplacementCC == X86::COND_INVALID)
         return false;
-      }
-      ShouldUpdateCC = true;
     }
 
-    if (ShouldUpdateCC && ReplacementCC != OldCC) {
+    if ((ShouldUpdateCC || IsSwapped) && ReplacementCC != OldCC) {
       // Push the MachineInstr to OpsToUpdate.
       // If it is safe to remove CmpInstr, the condition code of these
       // instructions will be modified.
@@ -4617,14 +4555,14 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     }
     if (ModifyEFLAGS || Instr.killsRegister(X86::EFLAGS, TRI)) {
       // It is safe to remove CmpInstr if EFLAGS is updated again or killed.
-      FlagsMayLiveOut = false;
+      IsSafe = true;
       break;
     }
   }
 
-  // If we have to update users but EFLAGS is live-out abort, since we cannot
-  // easily find all of the users.
-  if (ShouldUpdateCC && FlagsMayLiveOut) {
+  // If EFLAGS is not killed nor re-defined, we should check whether it is
+  // live-out. If it is live-out, do not optimize.
+  if ((MI || IsSwapped) && !IsSafe) {
     for (MachineBasicBlock *Successor : CmpMBB.successors())
       if (Successor->isLiveIn(X86::EFLAGS))
         return false;
@@ -4945,7 +4883,7 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case X86::SETB_C64r:
     return Expand2AddrUndef(MIB, get(X86::SBB64rr));
   case X86::MMX_SET0:
-    return Expand2AddrUndef(MIB, get(X86::MMX_PXORirr));
+    return Expand2AddrUndef(MIB, get(X86::MMX_PXORrr));
   case X86::V_SET0:
   case X86::FsFLD0SS:
   case X86::FsFLD0SD:
@@ -5218,12 +5156,12 @@ static bool hasUndefRegUpdate(unsigned Opcode, unsigned OpNum,
                               bool ForLoadFold = false) {
   // Set the OpNum parameter to the first source operand.
   switch (Opcode) {
-  case X86::MMX_PUNPCKHBWirr:
-  case X86::MMX_PUNPCKHWDirr:
-  case X86::MMX_PUNPCKHDQirr:
-  case X86::MMX_PUNPCKLBWirr:
-  case X86::MMX_PUNPCKLWDirr:
-  case X86::MMX_PUNPCKLDQirr:
+  case X86::MMX_PUNPCKHBWrr:
+  case X86::MMX_PUNPCKHWDrr:
+  case X86::MMX_PUNPCKHDQrr:
+  case X86::MMX_PUNPCKLBWrr:
+  case X86::MMX_PUNPCKLWDrr:
+  case X86::MMX_PUNPCKLDQrr:
   case X86::MOVHLPSrr:
   case X86::PACKSSWBrr:
   case X86::PACKUSWBrr:
@@ -5676,10 +5614,8 @@ static MachineInstr *FuseTwoAddrInst(MachineFunction &MF, unsigned Opcode,
     MachineOperand &MO = MI.getOperand(i + 2);
     MIB.add(MO);
   }
-  for (unsigned i = NumOps + 2, e = MI.getNumOperands(); i != e; ++i) {
-    MachineOperand &MO = MI.getOperand(i);
+  for (const MachineOperand &MO : llvm::drop_begin(MI.operands(), NumOps + 2))
     MIB.add(MO);
-  }
 
   updateOperandRegConstraints(MF, *NewMI, TII);
 

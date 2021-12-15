@@ -655,6 +655,14 @@ public:
                               const DbgValueProperties &Properties);
 };
 
+/// Types for recording sets of variable fragments that overlap. For a given
+/// local variable, we record all other fragments of that variable that could
+/// overlap it, to reduce search time.
+using FragmentOfVar =
+    std::pair<const DILocalVariable *, DIExpression::FragmentInfo>;
+using OverlapMap =
+    DenseMap<FragmentOfVar, SmallVector<DIExpression::FragmentInfo, 1>>;
+
 /// Collection of DBG_VALUEs observed when traversing a block. Records each
 /// variable and the value the DBG_VALUE refers to. Requires the machine value
 /// location dataflow algorithm to have run already, so that values can be
@@ -672,9 +680,12 @@ public:
   MapVector<DebugVariable, DbgValue> Vars;
   DenseMap<DebugVariable, const DILocation *> Scopes;
   MachineBasicBlock *MBB = nullptr;
+  const OverlapMap &OverlappingFragments;
+  DbgValueProperties EmptyProperties;
 
 public:
-  VLocTracker() {}
+  VLocTracker(const OverlapMap &O, const DIExpression *EmptyExpr)
+      : OverlappingFragments(O), EmptyProperties(EmptyExpr, false) {}
 
   void defVar(const MachineInstr &MI, const DbgValueProperties &Properties,
               Optional<ValueIDNum> ID) {
@@ -689,6 +700,8 @@ public:
     if (!Result.second)
       Result.first->second = Rec;
     Scopes[Var] = MI.getDebugLoc().get();
+
+    considerOverlaps(Var, MI.getDebugLoc().get());
   }
 
   void defVar(const MachineInstr &MI, const MachineOperand &MO) {
@@ -704,16 +717,37 @@ public:
     if (!Result.second)
       Result.first->second = Rec;
     Scopes[Var] = MI.getDebugLoc().get();
+
+    considerOverlaps(Var, MI.getDebugLoc().get());
+  }
+
+  void considerOverlaps(const DebugVariable &Var, const DILocation *Loc) {
+    auto Overlaps = OverlappingFragments.find(
+        {Var.getVariable(), Var.getFragmentOrDefault()});
+    if (Overlaps == OverlappingFragments.end())
+      return;
+
+    // Otherwise: terminate any overlapped variable locations.
+    for (auto FragmentInfo : Overlaps->second) {
+      // The "empty" fragment is stored as DebugVariable::DefaultFragment, so
+      // that it overlaps with everything, however its cannonical representation
+      // in a DebugVariable is as "None".
+      Optional<DIExpression::FragmentInfo> OptFragmentInfo = FragmentInfo;
+      if (DebugVariable::isDefaultFragment(FragmentInfo))
+        OptFragmentInfo = None;
+
+      DebugVariable Overlapped(Var.getVariable(), OptFragmentInfo,
+                               Var.getInlinedAt());
+      DbgValue Rec = DbgValue(EmptyProperties, DbgValue::Undef);
+
+      // Attempt insertion; overwrite if it's already mapped.
+      auto Result = Vars.insert(std::make_pair(Overlapped, Rec));
+      if (!Result.second)
+        Result.first->second = Rec;
+      Scopes[Overlapped] = Loc;
+    }
   }
 };
-
-/// Types for recording sets of variable fragments that overlap. For a given
-/// local variable, we record all other fragments of that variable that could
-/// overlap it, to reduce search time.
-using FragmentOfVar =
-    std::pair<const DILocalVariable *, DIExpression::FragmentInfo>;
-using OverlapMap =
-    DenseMap<FragmentOfVar, SmallVector<DIExpression::FragmentInfo, 1>>;
 
 // XXX XXX docs
 class InstrRefBasedLDV : public LDVImpl {
@@ -816,6 +850,16 @@ private:
   // Map of overlapping variable fragments.
   OverlapMap OverlapFragments;
   VarToFragments SeenFragments;
+
+  /// True if we need to examine call instructions for stack clobbers. We
+  /// normally assume that they don't clobber SP, but stack probes on Windows
+  /// do.
+  bool AdjustsStackInCalls = false;
+
+  /// If AdjustsStackInCalls is true, this holds the name of the target's stack
+  /// probe function, which is the function we expect will alter the stack
+  /// pointer.
+  StringRef StackProbeSymbolName;
 
   /// Tests whether this instruction is a spill to a stack slot.
   bool isSpillInstruction(const MachineInstr &MI, MachineFunction *MF);
@@ -962,7 +1006,6 @@ private:
   /// \returns true if any live-ins change value, either from value propagation
   ///          or PHI elimination.
   bool vlocJoin(MachineBasicBlock &MBB, LiveIdxT &VLOCOutLocs,
-                SmallPtrSet<const MachineBasicBlock *, 8> &InScopeBlocks,
                 SmallPtrSet<const MachineBasicBlock *, 8> &BlocksToExplore,
                 DbgValue &LiveIn);
 

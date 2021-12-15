@@ -32,7 +32,7 @@
 // CHECK:           %[[VAL_12:.*]] = sparse_tensor.pointers %[[VAL_2]], %[[VAL_8]] : tensor<64x32xf64, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK:           %[[VAL_13:.*]] = sparse_tensor.indices %[[VAL_2]], %[[VAL_8]] : tensor<64x32xf64, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK:           %[[VAL_14:.*]] = sparse_tensor.values %[[VAL_2]] : tensor<64x32xf64, #sparse_tensor.encoding<{{{.*}}}>>
-// CHECK:           %[[VAL_15:.*]] = memref.buffer_cast %[[VAL_0]] : memref<f64>
+// CHECK:           %[[VAL_15:.*]] = bufferization.to_memref %[[VAL_0]] : memref<f64>
 // CHECK:           %[[VAL_16:.*]] = tensor.extract %[[VAL_0]][] : tensor<f64>
 // CHECK:           %[[VAL_17:.*]] = scf.for %[[VAL_18:.*]] = %[[VAL_6]] to %[[VAL_7]] step %[[VAL_8]] iter_args(%[[VAL_19:.*]] = %[[VAL_16]]) -> (f64) {
 // CHECK:             %[[VAL_20:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_18]]] : memref<?xindex>
@@ -109,7 +109,7 @@
 // CHECK:             scf.yield %[[VAL_84]] : f64
 // CHECK:           }
 // CHECK:           memref.store %[[VAL_86:.*]], %[[VAL_15]][] : memref<f64>
-// CHECK:           %[[VAL_87:.*]] = memref.tensor_load %[[VAL_15]] : memref<f64>
+// CHECK:           %[[VAL_87:.*]] = bufferization.to_tensor %[[VAL_15]] : memref<f64>
 // CHECK:           return %[[VAL_87]] : tensor<f64>
 // CHECK:         }
 func @sparse_matrix_sum(%argx: tensor<f64> {linalg.inplaceable = true},

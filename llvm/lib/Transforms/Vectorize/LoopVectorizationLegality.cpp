@@ -929,7 +929,7 @@ bool LoopVectorizationLegality::canVectorizeFPMath(
   }));
 }
 
-bool LoopVectorizationLegality::isInductionPhi(const Value *V) {
+bool LoopVectorizationLegality::isInductionPhi(const Value *V) const {
   Value *In0 = const_cast<Value *>(V);
   PHINode *PN = dyn_cast_or_null<PHINode>(In0);
   if (!PN)
@@ -938,16 +938,29 @@ bool LoopVectorizationLegality::isInductionPhi(const Value *V) {
   return Inductions.count(PN);
 }
 
-bool LoopVectorizationLegality::isCastedInductionVariable(const Value *V) {
+const InductionDescriptor *
+LoopVectorizationLegality::getIntOrFpInductionDescriptor(PHINode *Phi) const {
+  if (!isInductionPhi(Phi))
+    return nullptr;
+  auto &ID = getInductionVars().find(Phi)->second;
+  if (ID.getKind() == InductionDescriptor::IK_IntInduction ||
+      ID.getKind() == InductionDescriptor::IK_FpInduction)
+    return &ID;
+  return nullptr;
+}
+
+bool LoopVectorizationLegality::isCastedInductionVariable(
+    const Value *V) const {
   auto *Inst = dyn_cast<Instruction>(V);
   return (Inst && InductionCastsToIgnore.count(Inst));
 }
 
-bool LoopVectorizationLegality::isInductionVariable(const Value *V) {
+bool LoopVectorizationLegality::isInductionVariable(const Value *V) const {
   return isInductionPhi(V) || isCastedInductionVariable(V);
 }
 
-bool LoopVectorizationLegality::isFirstOrderRecurrence(const PHINode *Phi) {
+bool LoopVectorizationLegality::isFirstOrderRecurrence(
+    const PHINode *Phi) const {
   return FirstOrderRecurrences.count(Phi);
 }
 

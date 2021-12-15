@@ -94,33 +94,11 @@ struct StdInlinerInterface : public DialectInlinerInterface {
       valuesToRepl[it.index()].replaceAllUsesWith(it.value());
   }
 };
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // StandardOpsDialect
 //===----------------------------------------------------------------------===//
-
-/// A custom binary operation printer that omits the "std." prefix from the
-/// operation names.
-static void printStandardBinaryOp(Operation *op, OpAsmPrinter &p) {
-  assert(op->getNumOperands() == 2 && "binary op should have two operands");
-  assert(op->getNumResults() == 1 && "binary op should have one result");
-
-  // If not all the operand and result types are the same, just use the
-  // generic assembly form to avoid omitting information in printing.
-  auto resultType = op->getResult(0).getType();
-  if (op->getOperand(0).getType() != resultType ||
-      op->getOperand(1).getType() != resultType) {
-    p.printGenericOp(op);
-    return;
-  }
-
-  p << ' ' << op->getOperand(0) << ", " << op->getOperand(1);
-  p.printOptionalAttrDict(op->getAttrs());
-
-  // Now we can output only one type for all operands and the result.
-  p << " : " << op->getResult(0).getType();
-}
 
 void StandardOpsDialect::initialize() {
   addOperations<
@@ -771,7 +749,7 @@ struct CondBranchTruthPropagation : public OpRewritePattern<CondBranchOp> {
     return success(replaced);
   }
 };
-} // end anonymous namespace
+} // namespace
 
 void CondBranchOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                MLIRContext *context) {
@@ -919,20 +897,6 @@ bool ConstantOp::isBuildableWith(Attribute value, Type type) {
            arrAttr[1].getType() == complexEltTy;
   }
   return value.isa<UnitAttr>();
-}
-
-//===----------------------------------------------------------------------===//
-// RankOp
-//===----------------------------------------------------------------------===//
-
-OpFoldResult RankOp::fold(ArrayRef<Attribute> operands) {
-  // Constant fold rank when the rank of the operand is known.
-  auto type = getOperand().getType();
-  if (auto shapedType = type.dyn_cast<ShapedType>())
-    if (shapedType.hasRank())
-      return IntegerAttr::get(IndexType::get(getContext()),
-                              shapedType.getRank());
-  return IntegerAttr();
 }
 
 //===----------------------------------------------------------------------===//

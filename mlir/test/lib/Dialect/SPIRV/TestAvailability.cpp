@@ -28,7 +28,7 @@ struct PrintOpAvailability
     return "Test SPIR-V op availability";
   }
 };
-} // end anonymous namespace
+} // namespace
 
 void PrintOpAvailability::runOnFunction() {
   auto f = getFunction();
@@ -43,13 +43,23 @@ void PrintOpAvailability::runOnFunction() {
     auto opName = op->getName();
     auto &os = llvm::outs();
 
-    if (auto minVersion = dyn_cast<spirv::QueryMinVersionInterface>(op))
-      os << opName << " min version: "
-         << spirv::stringifyVersion(minVersion.getMinVersion()) << "\n";
+    if (auto minVersionIfx = dyn_cast<spirv::QueryMinVersionInterface>(op)) {
+      Optional<spirv::Version> minVersion = minVersionIfx.getMinVersion();
+      os << opName << " min version: ";
+      if (minVersion)
+        os << spirv::stringifyVersion(*minVersion) << "\n";
+      else
+        os << "None\n";
+    }
 
-    if (auto maxVersion = dyn_cast<spirv::QueryMaxVersionInterface>(op))
-      os << opName << " max version: "
-         << spirv::stringifyVersion(maxVersion.getMaxVersion()) << "\n";
+    if (auto maxVersionIfx = dyn_cast<spirv::QueryMaxVersionInterface>(op)) {
+      Optional<spirv::Version> maxVersion = maxVersionIfx.getMaxVersion();
+      os << opName << " max version: ";
+      if (maxVersion)
+        os << spirv::stringifyVersion(*maxVersion) << "\n";
+      else
+        os << "None\n";
+    }
 
     if (auto extension = dyn_cast<spirv::QueryExtensionInterface>(op)) {
       os << opName << " extensions: [";
@@ -81,7 +91,7 @@ void PrintOpAvailability::runOnFunction() {
 }
 
 namespace mlir {
-void registerPrintOpAvailabilityPass() {
+void registerPrintSpirvAvailabilityPass() {
   PassRegistration<PrintOpAvailability>();
 }
 } // namespace mlir
@@ -130,7 +140,7 @@ struct ConvertToSubgroupBallot : public RewritePattern {
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override;
 };
-} // end anonymous namespace
+} // namespace
 
 void ConvertToTargetEnv::runOnFunction() {
   MLIRContext *context = &getContext();

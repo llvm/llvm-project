@@ -60,7 +60,7 @@ HexagonHazardRecognizer::getHazardType(SUnit *SU, int stalls) {
         RetVal = NoHazard;
       LLVM_DEBUG(dbgs() << "*** Try .new version? " << (RetVal == NoHazard)
                         << "\n");
-      MF->DeleteMachineInstr(NewMI);
+      MF->deleteMachineInstr(NewMI);
     }
     return RetVal;
   }
@@ -129,7 +129,7 @@ void HexagonHazardRecognizer::EmitInstruction(SUnit *SU) {
                                MI->getDebugLoc());
     assert(Resources->canReserveResources(*NewMI));
     Resources->reserveResources(*NewMI);
-    MF->DeleteMachineInstr(NewMI);
+    MF->deleteMachineInstr(NewMI);
   }
   else
     Resources->reserveResources(*MI);

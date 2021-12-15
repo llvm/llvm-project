@@ -3367,13 +3367,13 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   }
   case ISD::FSHL:
   case ISD::FSHR:
-    if (TLI.expandFunnelShift(Node, Tmp1, DAG))
-      Results.push_back(Tmp1);
+    if (SDValue Expanded = TLI.expandFunnelShift(Node, DAG))
+      Results.push_back(Expanded);
     break;
   case ISD::ROTL:
   case ISD::ROTR:
-    if (TLI.expandROT(Node, true /*AllowVectorOps*/, Tmp1, DAG))
-      Results.push_back(Tmp1);
+    if (SDValue Expanded = TLI.expandROT(Node, true /*AllowVectorOps*/, DAG))
+      Results.push_back(Expanded);
     break;
   case ISD::SADDSAT:
   case ISD::UADDSAT:
@@ -3553,9 +3553,10 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     // Node.
     Tmp1 = Node->getOperand(0);
     Tmp2 = Node->getOperand(1);
-    if (Tmp2.getOpcode() == ISD::SETCC) {
-      Tmp1 = DAG.getNode(ISD::BR_CC, dl, MVT::Other,
-                         Tmp1, Tmp2.getOperand(2),
+    if (Tmp2.getOpcode() == ISD::SETCC &&
+        TLI.isOperationLegalOrCustom(ISD::BR_CC,
+                                     Tmp2.getOperand(0).getValueType())) {
+      Tmp1 = DAG.getNode(ISD::BR_CC, dl, MVT::Other, Tmp1, Tmp2.getOperand(2),
                          Tmp2.getOperand(0), Tmp2.getOperand(1),
                          Node->getOperand(2));
     } else {

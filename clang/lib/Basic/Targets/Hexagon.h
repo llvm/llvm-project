@@ -139,7 +139,7 @@ public:
     return CPU.find('t') != std::string::npos;
   }
 
-  bool hasExtIntType() const override { return true; }
+  bool hasBitIntType() const override { return true; }
 };
 } // namespace targets
 } // namespace clang

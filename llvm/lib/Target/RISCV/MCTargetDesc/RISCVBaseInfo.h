@@ -299,6 +299,16 @@ struct SysReg {
 #include "RISCVGenSearchableTables.inc"
 } // end namespace RISCVSysReg
 
+namespace RISCVInsnOpcode {
+struct RISCVOpcode {
+  const char *Name;
+  unsigned Value;
+};
+
+#define GET_RISCVOpcodesList_DECL
+#include "RISCVGenSearchableTables.inc"
+} // end namespace RISCVInsnOpcode
+
 namespace RISCVABI {
 
 enum ABI {

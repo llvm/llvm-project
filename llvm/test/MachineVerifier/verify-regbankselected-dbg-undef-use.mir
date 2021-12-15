@@ -1,0 +1,38 @@
+# RUN: not --crash llc -verify-machineinstrs -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# REQUIRES: aarch64-registered-target
+
+--- |
+
+  target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64--"
+  define void @regbankselected_notrack() { ret void }
+  define void @regbankselected_track() { ret void }
+
+...
+
+---
+name: regbankselected_notrack
+regBankSelected: true
+tracksDebugUserValues: false
+registers:
+  - { id: 0, class: _ }
+body: |
+  bb.0:
+   ; CHECK-NOT: function: regbankselected_notrack
+   DBG_VALUE %0(s64), $noreg, $noreg, $noreg, $noreg
+...
+
+---
+name: regbankselected_track
+regBankSelected: true
+tracksDebugUserValues: true
+registers:
+  - { id: 0, class: _ }
+body: |
+  bb.0:
+   ; CHECK: *** Bad machine code: Generic virtual register must have a bank in a RegBankSelected function ***
+   ; CHECK: function: regbankselected_track
+   ; CHECK: instruction: DBG_VALUE %0:_
+   ; CHECK: operand 0: %0
+   DBG_VALUE %0(s64), $noreg, $noreg, $noreg, $noreg
+...

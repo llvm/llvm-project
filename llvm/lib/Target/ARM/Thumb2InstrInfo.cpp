@@ -261,7 +261,7 @@ void Thumb2InstrInfo::expandLoadStackGuard(
       cast<GlobalValue>((*MI->memoperands_begin())->getValue());
 
   if (MF.getSubtarget<ARMSubtarget>().isGVInGOT(GV))
-    expandLoadStackGuardBase(MI, ARM::tLDRLIT_ga_pcrel, ARM::t2LDRi12);
+    expandLoadStackGuardBase(MI, ARM::t2LDRLIT_ga_pcrel, ARM::t2LDRi12);
   else if (MF.getTarget().isPositionIndependent())
     expandLoadStackGuardBase(MI, ARM::t2MOV_ga_pcrel, ARM::t2LDRi12);
   else
@@ -634,7 +634,8 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
 
     unsigned NumBits = 0;
     unsigned Scale = 1;
-    if (AddrMode == ARMII::AddrModeT2_i8 || AddrMode == ARMII::AddrModeT2_i12) {
+    if (AddrMode == ARMII::AddrModeT2_i8neg ||
+        AddrMode == ARMII::AddrModeT2_i12) {
       // i8 supports only negative, and i12 supports only positive, so
       // based on Offset sign convert Opcode to the appropriate
       // instruction

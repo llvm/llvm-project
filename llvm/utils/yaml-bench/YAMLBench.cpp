@@ -184,12 +184,10 @@ static std::string createJSONText(size_t MemoryMB, unsigned ValueSize) {
            << "  \"key2\": \"" << std::string(ValueSize, '*') << "\",\n"
            << "  \"key3\": \"" << std::string(ValueSize, '*') << "\"\n"
            << " }";
-    Stream.flush();
     if (JSONText.size() < MemoryBytes) Stream << ",";
     Stream << "\n";
   }
   Stream << "]\n";
-  Stream.flush();
   return JSONText;
 }
 

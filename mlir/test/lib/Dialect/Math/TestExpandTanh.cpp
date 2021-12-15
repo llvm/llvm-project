@@ -23,7 +23,7 @@ struct TestExpandTanhPass
   StringRef getArgument() const final { return "test-expand-tanh"; }
   StringRef getDescription() const final { return "Test expanding tanh"; }
 };
-} // end anonymous namespace
+} // namespace
 
 void TestExpandTanhPass::runOnFunction() {
   RewritePatternSet patterns(&getContext());

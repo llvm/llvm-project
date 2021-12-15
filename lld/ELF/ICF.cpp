@@ -552,10 +552,10 @@ template <class ELFT> void ICF<ELFT>::run() {
 
   // InputSectionDescription::sections is populated by processSectionCommands().
   // ICF may fold some input sections assigned to output sections. Remove them.
-  for (BaseCommand *base : script->sectionCommands)
-    if (auto *sec = dyn_cast<OutputSection>(base))
-      for (BaseCommand *sub_base : sec->sectionCommands)
-        if (auto *isd = dyn_cast<InputSectionDescription>(sub_base))
+  for (SectionCommand *cmd : script->sectionCommands)
+    if (auto *sec = dyn_cast<OutputSection>(cmd))
+      for (SectionCommand *subCmd : sec->commands)
+        if (auto *isd = dyn_cast<InputSectionDescription>(subCmd))
           llvm::erase_if(isd->sections,
                          [](InputSection *isec) { return !isec->isLive(); });
 }

@@ -86,20 +86,10 @@ func @pad_to_static_size(%arg0: tensor<?x?xf32>, %ub0: index, %ub1: index,
 
 // -----
 
-func @range(%arg0: index, %arg1: index, %arg2: index) {
-  %0 = linalg.range %arg0:%arg1:%arg2 : !linalg.range
-  return
-}
-// CHECK-LABEL: func @range(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index) {
-//  CHECK-NEXT:  linalg.range %{{.*}} : %{{.*}} : %{{.*}} : !linalg.range
-
-// -----
-
-func @views(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4: index) {
+func @views(%arg0: index) {
   %c0 = arith.constant 0 : index
   %0 = arith.muli %arg0, %arg0 : index
   %1 = memref.alloc (%0) : memref<?xi8>
-  %2 = linalg.range %arg0:%arg1:%arg2 : !linalg.range
   %3 = memref.view %1[%c0][%arg0, %arg0] : memref<?xi8> to memref<?x?xf32>
   %4 = memref.view %1[%c0][%arg0, %arg0] : memref<?xi8> to memref<?x?xvector<4x4xf32>>
   memref.dealloc %1 : memref<?xi8>
@@ -108,7 +98,6 @@ func @views(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4: index
 // CHECK-LABEL: func @views
 //  CHECK:  arith.muli %{{.*}}, %{{.*}} : index
 //  CHECK-NEXT:  memref.alloc(%{{.*}}) : memref<?xi8>
-//  CHECK-NEXT:  range
 //  CHECK-NEXT:  memref.view %{{.*}}[%{{.*}}][%{{.*}}] :
 //  CHECK-SAME:     memref<?xi8> to memref<?x?xf32>
 //  CHECK-NEXT:  memref.view %{{.*}}[%{{.*}}][%{{.*}}] :
@@ -446,19 +435,6 @@ func @named_ops(%a3: memref<?x?x?xf32>, %b3: memref<?x?x?xf32>, %c3: memref<?x?x
 
 // -----
 
-func @tensor_reshape_zero_dim(%arg0 : tensor<1x1xf32>, %arg1 : tensor<f32>) -> (tensor<f32>, tensor<1x1xf32>)
-{
-  %0 = linalg.tensor_collapse_shape %arg0 [] : tensor<1x1xf32> into tensor<f32>
-  %1 = linalg.tensor_expand_shape %0 [] : tensor<f32> into tensor<1x1xf32>
-  return %0, %1 : tensor<f32>, tensor<1x1xf32>
-}
-// CHECK-LABEL: func @tensor_reshape_zero_dim
-//       CHECK:   linalg.tensor_collapse_shape %{{.*}} [] : tensor<1x1xf32> into tensor<f32>
-//       CHECK:   linalg.tensor_expand_shape %{{.*}} [] : tensor<f32> into tensor<1x1xf32>
-
-// -----
-
-
 func @init_tensor(%arg0 : index, %arg1 : index)
 {
   %0 = linalg.init_tensor [3, 42] : tensor<3x42xf32>
@@ -468,19 +444,6 @@ func @init_tensor(%arg0 : index, %arg1 : index)
 // CHECK-LABEL: func @init_tensor
 //       CHECK:   linalg.init_tensor [3, 42] : tensor<3x42xf32>
 //       CHECK:   linalg.init_tensor [4, %{{.*}}, %{{.*}}, 5] : tensor<4x?x?x5xf32>
-
-// -----
-
-func @legal_collapsing_reshape_dynamic_tensor
-  (%arg0: tensor<?x?x?x4x?xf32>) -> tensor<?x?x?xf32>
-{
-  %0 = linalg.tensor_collapse_shape %arg0 [[0], [1], [2, 3, 4]] :
-    tensor<?x?x?x4x?xf32> into tensor<?x?x?xf32>
-  return %0 : tensor<?x?x?xf32>
-}
-//      CHECK: func @legal_collapsing_reshape_dynamic_tensor
-//      CHECK:   linalg.tensor_collapse_shape
-// CHECK-SAME:    [0], [1], [2, 3, 4]
 
 // -----
 
@@ -592,7 +555,7 @@ func @tiled_loop_reduction(%input_3d: tensor<16x24x32xf32>,
       linalg.yield %1 : f32
     } -> tensor<4xf32>
 
-    %sum_sub = tensor.insert_slice %acc into %o_[%j][%c4][1]
+    %sum_sub = tensor.insert_slice %acc into %o_[%j][4][1]
       : tensor<4xf32> into tensor<24xf32>
     linalg.yield %sum_sub : tensor<24xf32>
   }

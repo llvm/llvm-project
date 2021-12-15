@@ -79,8 +79,7 @@ public:
 
   HardClauseType getHardClauseType(const MachineInstr &MI) {
 
-    // On current architectures we only get a benefit from clausing loads.
-    if (MI.mayLoad()) {
+    if (MI.mayLoad() || (MI.mayStore() && ST->shouldClusterStores())) {
       if (SIInstrInfo::isVMEM(MI) || SIInstrInfo::isSegmentSpecificFLAT(MI)) {
         if (ST->hasNSAClauseBug()) {
           const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(MI.getOpcode());

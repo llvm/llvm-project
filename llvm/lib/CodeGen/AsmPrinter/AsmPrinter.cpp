@@ -180,7 +180,7 @@ Align AsmPrinter::getGVAlignment(const GlobalObject *GV, const DataLayout &DL,
     Alignment = InAlign;
 
   // If the GV has a specified alignment, take it into account.
-  const MaybeAlign GVAlign(GV->getAlignment());
+  const MaybeAlign GVAlign(GV->getAlign());
   if (!GVAlign)
     return Alignment;
 
@@ -288,7 +288,11 @@ bool AsmPrinter::doInitialization(Module &M) {
   // use the directive, where it would need the same conditionalization
   // anyway.
   const Triple &Target = TM.getTargetTriple();
-  OutStreamer->emitVersionForTarget(Target, M.getSDKVersion());
+  Triple TVT(M.getDarwinTargetVariantTriple());
+  OutStreamer->emitVersionForTarget(
+      Target, M.getSDKVersion(),
+      M.getDarwinTargetVariantTriple().empty() ? nullptr : &TVT,
+      M.getDarwinTargetVariantSDKVersion());
 
   // Allow the target to emit any magic that it wants at the start of the file.
   emitStartOfAsmFile(M);
@@ -809,9 +813,9 @@ void AsmPrinter::emitFunctionHeader() {
   // so that we don't get references to undefined symbols.
   std::vector<MCSymbol*> DeadBlockSyms;
   MMI->takeDeletedSymbolsForFunction(&F, DeadBlockSyms);
-  for (unsigned i = 0, e = DeadBlockSyms.size(); i != e; ++i) {
+  for (MCSymbol *DeadBlockSym : DeadBlockSyms) {
     OutStreamer->AddComment("Address taken block that was later removed");
-    OutStreamer->emitLabel(DeadBlockSyms[i]);
+    OutStreamer->emitLabel(DeadBlockSym);
   }
 
   if (CurrentFnBegin) {
@@ -910,8 +914,7 @@ static void emitKill(const MachineInstr *MI, AsmPrinter &AP) {
   std::string Str;
   raw_string_ostream OS(Str);
   OS << "kill:";
-  for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-    const MachineOperand &Op = MI->getOperand(i);
+  for (const MachineOperand &Op : MI->operands()) {
     assert(Op.isReg() && "KILL instruction must have only register operands");
     OS << ' ' << (Op.isDef() ? "def " : "killed ")
        << printReg(Op.getReg(), AP.MF->getSubtarget().getRegisterInfo());
@@ -2150,8 +2153,7 @@ void AsmPrinter::emitJumpTableInfo() {
       SmallPtrSet<const MachineBasicBlock*, 16> EmittedSets;
       const TargetLowering *TLI = MF->getSubtarget().getTargetLowering();
       const MCExpr *Base = TLI->getPICJumpTableRelocBaseExpr(MF,JTI,OutContext);
-      for (unsigned ii = 0, ee = JTBBs.size(); ii != ee; ++ii) {
-        const MachineBasicBlock *MBB = JTBBs[ii];
+      for (const MachineBasicBlock *MBB : JTBBs) {
         if (!EmittedSets.insert(MBB).second)
           continue;
 
@@ -2177,8 +2179,8 @@ void AsmPrinter::emitJumpTableInfo() {
     MCSymbol* JTISymbol = GetJTISymbol(JTI);
     OutStreamer->emitLabel(JTISymbol);
 
-    for (unsigned ii = 0, ee = JTBBs.size(); ii != ee; ++ii)
-      emitJumpTableEntry(MJTI, JTBBs[ii], JTI);
+    for (const MachineBasicBlock *MBB : JTBBs)
+      emitJumpTableEntry(MJTI, MBB, JTI);
   }
   if (!JTInDiffSection)
     OutStreamer->emitDataRegion(MCDR_DataRegionEnd);

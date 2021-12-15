@@ -125,8 +125,10 @@ public:
   template <typename INT> constexpr INT EXPONENT() const {
     if (Exponent() == maxExponent) {
       return INT::HUGE();
+    } else if (IsZero()) {
+      return {0};
     } else {
-      return {UnbiasedExponent()};
+      return {UnbiasedExponent() + 1};
     }
   }
 
@@ -308,6 +310,8 @@ public:
 
   // Extracts unbiased exponent value.
   // Corrects the exponent value of a subnormal number.
+  // Note that the result is one less than the EXPONENT intrinsic;
+  // UnbiasedExponent(1.0) is 0, not 1.
   constexpr int UnbiasedExponent() const {
     int exponent{Exponent() - exponentBias};
     if (IsSubnormal()) {

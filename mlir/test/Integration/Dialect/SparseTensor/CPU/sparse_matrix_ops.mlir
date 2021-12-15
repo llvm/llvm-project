@@ -114,7 +114,7 @@ module {
     %d0 = arith.constant 0.0 : f64
     %c0 = arith.constant 0 : index
     %dm = sparse_tensor.convert %arg0 : tensor<?x?xf64, #DCSR> to tensor<?x?xf64>
-    %0 = memref.buffer_cast %dm : memref<?x?xf64>
+    %0 = bufferization.to_memref %dm : memref<?x?xf64>
     %1 = vector.transfer_read %0[%c0, %c0], %d0: memref<?x?xf64>, vector<4x8xf64>
     vector.print %1 : vector<4x8xf64>
     memref.dealloc %0 : memref<?x?xf64>

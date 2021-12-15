@@ -40,6 +40,7 @@
     __cpp_lib_bounded_array_traits                 201902L [C++20]
     __cpp_lib_boyer_moore_searcher                 201603L [C++17]
     __cpp_lib_byte                                 201603L [C++17]
+    __cpp_lib_byteswap                             202110L [C++2b]
     __cpp_lib_char8_t                              201811L [C++20]
     __cpp_lib_chrono                               201611L [C++17]
     __cpp_lib_chrono_udls                          201304L [C++14]
@@ -67,7 +68,7 @@
     __cpp_lib_execution                            201603L [C++17]
                                                    201902L [C++20]
     __cpp_lib_filesystem                           201703L [C++17]
-    __cpp_lib_format                               201907L [C++20]
+    __cpp_lib_format                               202106L [C++20]
     __cpp_lib_gcd_lcm                              201606L [C++17]
     __cpp_lib_generic_associative_lookup           201304L [C++14]
     __cpp_lib_generic_unordered_lookup             201811L [C++20]
@@ -249,6 +250,10 @@
 
 # ifdef __cpp_lib_byte
 #   error "__cpp_lib_byte should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_byteswap
+#   error "__cpp_lib_byteswap should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_char8_t
@@ -779,6 +784,10 @@
 
 # ifdef __cpp_lib_byte
 #   error "__cpp_lib_byte should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_byteswap
+#   error "__cpp_lib_byteswap should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_char8_t
@@ -1411,6 +1420,10 @@
 # endif
 # if __cpp_lib_byte != 201603L
 #   error "__cpp_lib_byte should have the value 201603L in c++17"
+# endif
+
+# ifdef __cpp_lib_byteswap
+#   error "__cpp_lib_byteswap should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_char8_t
@@ -2288,6 +2301,10 @@
 #   error "__cpp_lib_byte should have the value 201603L in c++20"
 # endif
 
+# ifdef __cpp_lib_byteswap
+#   error "__cpp_lib_byteswap should not be defined before c++2b"
+# endif
+
 # if defined(__cpp_char8_t)
 #   ifndef __cpp_lib_char8_t
 #     error "__cpp_lib_char8_t should be defined in c++20"
@@ -2510,8 +2527,8 @@
 #   ifndef __cpp_lib_format
 #     error "__cpp_lib_format should be defined in c++20"
 #   endif
-#   if __cpp_lib_format != 201907L
-#     error "__cpp_lib_format should have the value 201907L in c++20"
+#   if __cpp_lib_format != 202106L
+#     error "__cpp_lib_format should have the value 202106L in c++20"
 #   endif
 # else // _LIBCPP_VERSION
 #   ifdef __cpp_lib_format
@@ -3409,6 +3426,13 @@
 #   error "__cpp_lib_byte should have the value 201603L in c++2b"
 # endif
 
+# ifndef __cpp_lib_byteswap
+#   error "__cpp_lib_byteswap should be defined in c++2b"
+# endif
+# if __cpp_lib_byteswap != 202110L
+#   error "__cpp_lib_byteswap should have the value 202110L in c++2b"
+# endif
+
 # if defined(__cpp_char8_t)
 #   ifndef __cpp_lib_char8_t
 #     error "__cpp_lib_char8_t should be defined in c++2b"
@@ -3631,8 +3655,8 @@
 #   ifndef __cpp_lib_format
 #     error "__cpp_lib_format should be defined in c++2b"
 #   endif
-#   if __cpp_lib_format != 201907L
-#     error "__cpp_lib_format should have the value 201907L in c++2b"
+#   if __cpp_lib_format != 202106L
+#     error "__cpp_lib_format should have the value 202106L in c++2b"
 #   endif
 # else // _LIBCPP_VERSION
 #   ifdef __cpp_lib_format

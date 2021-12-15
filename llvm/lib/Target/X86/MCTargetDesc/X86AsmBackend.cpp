@@ -148,7 +148,7 @@ public:
       AlignBranchType.addKind(X86::AlignBranchJcc);
       AlignBranchType.addKind(X86::AlignBranchJmp);
     }
-    // Allow overriding defaults set by master flag
+    // Allow overriding defaults set by main flag
     if (X86AlignBranchBoundary.getNumOccurrences())
       AlignBoundary = assumeAligned(X86AlignBranchBoundary);
     if (X86AlignBranch.getNumOccurrences())
@@ -1452,9 +1452,7 @@ public:
     unsigned NumDefCFAOffsets = 0;
     int MinAbsOffset = std::numeric_limits<int>::max();
 
-    for (unsigned i = 0, e = Instrs.size(); i != e; ++i) {
-      const MCCFIInstruction &Inst = Instrs[i];
-
+    for (const MCCFIInstruction &Inst : Instrs) {
       switch (Inst.getOperation()) {
       default:
         // Any other CFI directives indicate a frame that we aren't prepared

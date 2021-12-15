@@ -254,7 +254,7 @@ define <vscale x 4 x i32> @spill_zvlsseg3_nxv4i32(i32* %base, i32 %vl) nounwind 
 ; SPILL-O2:       # %bb.0: # %entry
 ; SPILL-O2-NEXT:    addi sp, sp, -16
 ; SPILL-O2-NEXT:    csrr a2, vlenb
-; SPILL-O2-NEXT:    addi a3, zero, 6
+; SPILL-O2-NEXT:    li a3, 6
 ; SPILL-O2-NEXT:    mul a2, a2, a3
 ; SPILL-O2-NEXT:    sub sp, sp, a2
 ; SPILL-O2-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
@@ -279,7 +279,7 @@ define <vscale x 4 x i32> @spill_zvlsseg3_nxv4i32(i32* %base, i32 %vl) nounwind 
 ; SPILL-O2-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; SPILL-O2-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2_v10m2
 ; SPILL-O2-NEXT:    csrr a0, vlenb
-; SPILL-O2-NEXT:    addi a1, zero, 6
+; SPILL-O2-NEXT:    li a1, 6
 ; SPILL-O2-NEXT:    mul a0, a0, a1
 ; SPILL-O2-NEXT:    add sp, sp, a0
 ; SPILL-O2-NEXT:    addi sp, sp, 16

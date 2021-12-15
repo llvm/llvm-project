@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INCLUDE_FIXER_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INCLUDE_FIXER_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INCLUDEFIXER_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INCLUDEFIXER_H
 
 #include "Diagnostics.h"
 #include "Headers.h"
@@ -40,6 +40,7 @@ public:
         IndexRequestLimit(IndexRequestLimit) {}
 
   /// Returns include insertions that can potentially recover the diagnostic.
+  /// If Info is a note and fixes are returned, they should *replace* the note.
   std::vector<Fix> fix(DiagnosticsEngine::Level DiagLevel,
                        const clang::Diagnostic &Info) const;
 
@@ -54,6 +55,9 @@ private:
 
   /// Generates header insertion fixes for all symbols. Fixes are deduplicated.
   std::vector<Fix> fixesForSymbols(const SymbolSlab &Syms) const;
+
+  llvm::Optional<Fix> insertHeader(llvm::StringRef Name,
+                                   llvm::StringRef Symbol = "") const;
 
   struct UnresolvedName {
     std::string Name;   // E.g. "X" in foo::X.
@@ -95,4 +99,4 @@ private:
 } // namespace clangd
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_INCLUDE_FIXER_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_INCLUDEFIXER_H

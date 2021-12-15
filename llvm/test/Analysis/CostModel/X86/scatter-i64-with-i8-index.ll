@@ -36,18 +36,18 @@ target triple = "x86_64-unknown-linux-gnu"
 ; AVX1: LV: Found an estimated cost of 448 for VF 32 For instruction:   store i64 %valB, i64* %out, align 8
 ;
 ; AVX2-SLOWGATHER: LV: Found an estimated cost of 1 for VF 1 For instruction:   store i64 %valB, i64* %out, align 8
-; AVX2-SLOWGATHER: LV: Found an estimated cost of 26 for VF 2 For instruction:   store i64 %valB, i64* %out, align 8
-; AVX2-SLOWGATHER: LV: Found an estimated cost of 56 for VF 4 For instruction:   store i64 %valB, i64* %out, align 8
-; AVX2-SLOWGATHER: LV: Found an estimated cost of 112 for VF 8 For instruction:   store i64 %valB, i64* %out, align 8
-; AVX2-SLOWGATHER: LV: Found an estimated cost of 224 for VF 16 For instruction:   store i64 %valB, i64* %out, align 8
-; AVX2-SLOWGATHER: LV: Found an estimated cost of 448 for VF 32 For instruction:   store i64 %valB, i64* %out, align 8
+; AVX2-SLOWGATHER: LV: Found an estimated cost of 6 for VF 2 For instruction:   store i64 %valB, i64* %out, align 8
+; AVX2-SLOWGATHER: LV: Found an estimated cost of 16 for VF 4 For instruction:   store i64 %valB, i64* %out, align 8
+; AVX2-SLOWGATHER: LV: Found an estimated cost of 32 for VF 8 For instruction:   store i64 %valB, i64* %out, align 8
+; AVX2-SLOWGATHER: LV: Found an estimated cost of 64 for VF 16 For instruction:   store i64 %valB, i64* %out, align 8
+; AVX2-SLOWGATHER: LV: Found an estimated cost of 128 for VF 32 For instruction:   store i64 %valB, i64* %out, align 8
 ;
 ; AVX2-FASTGATHER: LV: Found an estimated cost of 1 for VF 1 For instruction:   store i64 %valB, i64* %out, align 8
-; AVX2-FASTGATHER: LV: Found an estimated cost of 26 for VF 2 For instruction:   store i64 %valB, i64* %out, align 8
-; AVX2-FASTGATHER: LV: Found an estimated cost of 56 for VF 4 For instruction:   store i64 %valB, i64* %out, align 8
-; AVX2-FASTGATHER: LV: Found an estimated cost of 112 for VF 8 For instruction:   store i64 %valB, i64* %out, align 8
-; AVX2-FASTGATHER: LV: Found an estimated cost of 224 for VF 16 For instruction:   store i64 %valB, i64* %out, align 8
-; AVX2-FASTGATHER: LV: Found an estimated cost of 448 for VF 32 For instruction:   store i64 %valB, i64* %out, align 8
+; AVX2-FASTGATHER: LV: Found an estimated cost of 6 for VF 2 For instruction:   store i64 %valB, i64* %out, align 8
+; AVX2-FASTGATHER: LV: Found an estimated cost of 16 for VF 4 For instruction:   store i64 %valB, i64* %out, align 8
+; AVX2-FASTGATHER: LV: Found an estimated cost of 32 for VF 8 For instruction:   store i64 %valB, i64* %out, align 8
+; AVX2-FASTGATHER: LV: Found an estimated cost of 64 for VF 16 For instruction:   store i64 %valB, i64* %out, align 8
+; AVX2-FASTGATHER: LV: Found an estimated cost of 128 for VF 32 For instruction:   store i64 %valB, i64* %out, align 8
 ;
 ; AVX512: LV: Found an estimated cost of 1 for VF 1 For instruction:   store i64 %valB, i64* %out, align 8
 ; AVX512: LV: Found an estimated cost of 6 for VF 2 For instruction:   store i64 %valB, i64* %out, align 8

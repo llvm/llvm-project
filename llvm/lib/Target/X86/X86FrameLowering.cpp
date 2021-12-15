@@ -465,13 +465,11 @@ void X86FrameLowering::emitCalleeSavedFrameMoves(
 
   // Add callee saved registers to move list.
   const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
-  if (CSI.empty()) return;
 
   // Calculate offsets.
-  for (std::vector<CalleeSavedInfo>::const_iterator
-         I = CSI.begin(), E = CSI.end(); I != E; ++I) {
-    int64_t Offset = MFI.getObjectOffset(I->getFrameIdx());
-    unsigned Reg = I->getReg();
+  for (const CalleeSavedInfo &I : CSI) {
+    int64_t Offset = MFI.getObjectOffset(I.getFrameIdx());
+    unsigned Reg = I.getReg();
     unsigned DwarfReg = MRI->getDwarfRegNum(Reg, true);
 
     if (IsPrologue) {
@@ -484,10 +482,10 @@ void X86FrameLowering::emitCalleeSavedFrameMoves(
   }
 }
 
-void X86FrameLowering::emitStackProbe(MachineFunction &MF,
-                                      MachineBasicBlock &MBB,
-                                      MachineBasicBlock::iterator MBBI,
-                                      const DebugLoc &DL, bool InProlog) const {
+void X86FrameLowering::emitStackProbe(
+    MachineFunction &MF, MachineBasicBlock &MBB,
+    MachineBasicBlock::iterator MBBI, const DebugLoc &DL, bool InProlog,
+    Optional<MachineFunction::DebugInstrOperandPair> InstrNum) const {
   const X86Subtarget &STI = MF.getSubtarget<X86Subtarget>();
   if (STI.isTargetWindowsCoreCLR()) {
     if (InProlog) {
@@ -497,8 +495,12 @@ void X86FrameLowering::emitStackProbe(MachineFunction &MF,
       emitStackProbeInline(MF, MBB, MBBI, DL, false);
     }
   } else {
-    emitStackProbeCall(MF, MBB, MBBI, DL, InProlog);
+    emitStackProbeCall(MF, MBB, MBBI, DL, InProlog, InstrNum);
   }
+}
+
+bool X86FrameLowering::stackProbeFunctionModifiesSP() const {
+  return STI.isOSWindows() && !STI.isTargetWin64();
 }
 
 void X86FrameLowering::inlineStackProbe(MachineFunction &MF,
@@ -971,11 +973,10 @@ void X86FrameLowering::emitStackProbeInlineWindowsCoreCLR64(
   }
 }
 
-void X86FrameLowering::emitStackProbeCall(MachineFunction &MF,
-                                          MachineBasicBlock &MBB,
-                                          MachineBasicBlock::iterator MBBI,
-                                          const DebugLoc &DL,
-                                          bool InProlog) const {
+void X86FrameLowering::emitStackProbeCall(
+    MachineFunction &MF, MachineBasicBlock &MBB,
+    MachineBasicBlock::iterator MBBI, const DebugLoc &DL, bool InProlog,
+    Optional<MachineFunction::DebugInstrOperandPair> InstrNum) const {
   bool IsLargeCodeModel = MF.getTarget().getCodeModel() == CodeModel::Large;
 
   // FIXME: Add indirect thunk support and remove this.
@@ -1015,6 +1016,7 @@ void X86FrameLowering::emitStackProbeCall(MachineFunction &MF,
       .addReg(SP, RegState::Define | RegState::Implicit)
       .addReg(X86::EFLAGS, RegState::Define | RegState::Implicit);
 
+  MachineInstr *ModInst = CI;
   if (STI.isTargetWin64() || !STI.isOSWindows()) {
     // MSVC x32's _chkstk and cygwin/mingw's _alloca adjust %esp themselves.
     // MSVC x64's __chkstk and cygwin/mingw's ___chkstk_ms do not adjust %rsp
@@ -1022,9 +1024,27 @@ void X86FrameLowering::emitStackProbeCall(MachineFunction &MF,
     // adjusting %rsp.
     // All other platforms do not specify a particular ABI for the stack probe
     // function, so we arbitrarily define it to not adjust %esp/%rsp itself.
-    BuildMI(MBB, MBBI, DL, TII.get(getSUBrrOpcode(Uses64BitFramePtr)), SP)
-        .addReg(SP)
-        .addReg(AX);
+    ModInst =
+        BuildMI(MBB, MBBI, DL, TII.get(getSUBrrOpcode(Uses64BitFramePtr)), SP)
+            .addReg(SP)
+            .addReg(AX);
+  }
+
+  // DebugInfo variable locations -- if there's an instruction number for the
+  // allocation (i.e., DYN_ALLOC_*), substitute it for the instruction that
+  // modifies SP.
+  if (InstrNum) {
+    if (STI.isTargetWin64() || !STI.isOSWindows()) {
+      // Label destination operand of the subtract.
+      MF.makeDebugValueSubstitution(*InstrNum,
+                                    {ModInst->getDebugInstrNum(), 0});
+    } else {
+      // Label the call. The operand number is the penultimate operand, zero
+      // based.
+      unsigned SPDefOperand = ModInst->getNumOperands() - 2;
+      MF.makeDebugValueSubstitution(
+          *InstrNum, {ModInst->getDebugInstrNum(), SPDefOperand});
+    }
   }
 
   if (InProlog) {
@@ -2476,8 +2496,8 @@ bool X86FrameLowering::assignCalleeSavedSpillSlots(
   }
 
   // Assign slots for GPRs. It increases frame size.
-  for (unsigned i = CSI.size(); i != 0; --i) {
-    unsigned Reg = CSI[i - 1].getReg();
+  for (CalleeSavedInfo &I : llvm::reverse(CSI)) {
+    unsigned Reg = I.getReg();
 
     if (!X86::GR64RegClass.contains(Reg) && !X86::GR32RegClass.contains(Reg))
       continue;
@@ -2486,15 +2506,15 @@ bool X86FrameLowering::assignCalleeSavedSpillSlots(
     CalleeSavedFrameSize += SlotSize;
 
     int SlotIndex = MFI.CreateFixedSpillStackObject(SlotSize, SpillSlotOffset);
-    CSI[i - 1].setFrameIdx(SlotIndex);
+    I.setFrameIdx(SlotIndex);
   }
 
   X86FI->setCalleeSavedFrameSize(CalleeSavedFrameSize);
   MFI.setCVBytesOfCalleeSavedRegisters(CalleeSavedFrameSize);
 
   // Assign slots for XMMs.
-  for (unsigned i = CSI.size(); i != 0; --i) {
-    unsigned Reg = CSI[i - 1].getReg();
+  for (CalleeSavedInfo &I : llvm::reverse(CSI)) {
+    unsigned Reg = I.getReg();
     if (X86::GR64RegClass.contains(Reg) || X86::GR32RegClass.contains(Reg))
       continue;
 
@@ -2513,7 +2533,7 @@ bool X86FrameLowering::assignCalleeSavedSpillSlots(
     // spill into slot
     SpillSlotOffset -= Size;
     int SlotIndex = MFI.CreateFixedSpillStackObject(Size, SpillSlotOffset);
-    CSI[i - 1].setFrameIdx(SlotIndex);
+    I.setFrameIdx(SlotIndex);
     MFI.ensureMaxAlignment(Alignment);
 
     // Save the start offset and size of XMM in stack frame for funclets.
@@ -2539,8 +2559,8 @@ bool X86FrameLowering::spillCalleeSavedRegisters(
   // Push GPRs. It increases frame size.
   const MachineFunction &MF = *MBB.getParent();
   unsigned Opc = STI.is64Bit() ? X86::PUSH64r : X86::PUSH32r;
-  for (unsigned i = CSI.size(); i != 0; --i) {
-    unsigned Reg = CSI[i - 1].getReg();
+  for (const CalleeSavedInfo &I : llvm::reverse(CSI)) {
+    unsigned Reg = I.getReg();
 
     if (!X86::GR64RegClass.contains(Reg) && !X86::GR32RegClass.contains(Reg))
       continue;
@@ -2573,8 +2593,8 @@ bool X86FrameLowering::spillCalleeSavedRegisters(
 
   // Make XMM regs spilled. X86 does not have ability of push/pop XMM.
   // It can be done by spilling XMMs to stack frame.
-  for (unsigned i = CSI.size(); i != 0; --i) {
-    unsigned Reg = CSI[i-1].getReg();
+  for (const CalleeSavedInfo &I : llvm::reverse(CSI)) {
+    unsigned Reg = I.getReg();
     if (X86::GR64RegClass.contains(Reg) || X86::GR32RegClass.contains(Reg))
       continue;
 
@@ -2587,8 +2607,7 @@ bool X86FrameLowering::spillCalleeSavedRegisters(
     MBB.addLiveIn(Reg);
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg, VT);
 
-    TII.storeRegToStackSlot(MBB, MI, Reg, true, CSI[i - 1].getFrameIdx(), RC,
-                            TRI);
+    TII.storeRegToStackSlot(MBB, MI, Reg, true, I.getFrameIdx(), RC, TRI);
     --MI;
     MI->setFlag(MachineInstr::FrameSetup);
     ++MI;
@@ -2652,8 +2671,8 @@ bool X86FrameLowering::restoreCalleeSavedRegisters(
   DebugLoc DL = MBB.findDebugLoc(MI);
 
   // Reload XMMs from stack frame.
-  for (unsigned i = 0, e = CSI.size(); i != e; ++i) {
-    unsigned Reg = CSI[i].getReg();
+  for (const CalleeSavedInfo &I : CSI) {
+    unsigned Reg = I.getReg();
     if (X86::GR64RegClass.contains(Reg) ||
         X86::GR32RegClass.contains(Reg))
       continue;
@@ -2664,13 +2683,13 @@ bool X86FrameLowering::restoreCalleeSavedRegisters(
       VT = STI.hasBWI() ? MVT::v64i1 : MVT::v16i1;
 
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg, VT);
-    TII.loadRegFromStackSlot(MBB, MI, Reg, CSI[i].getFrameIdx(), RC, TRI);
+    TII.loadRegFromStackSlot(MBB, MI, Reg, I.getFrameIdx(), RC, TRI);
   }
 
   // POP GPRs.
   unsigned Opc = STI.is64Bit() ? X86::POP64r : X86::POP32r;
-  for (unsigned i = 0, e = CSI.size(); i != e; ++i) {
-    unsigned Reg = CSI[i].getReg();
+  for (const CalleeSavedInfo &I : CSI) {
+    unsigned Reg = I.getReg();
     if (!X86::GR64RegClass.contains(Reg) &&
         !X86::GR32RegClass.contains(Reg))
       continue;

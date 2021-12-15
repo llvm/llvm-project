@@ -18,9 +18,6 @@
 // This test assumes that time is stored as a 64 bit value when on MVS it is stored as 32 bit
 // UNSUPPORTED: target={{.+}}-zos{{.*}}
 
-// TODO(ldionne): This test fails on Ubuntu Focal on our CI nodes (and only there), in 32 bit mode.
-// UNSUPPORTED: linux && 32bits-on-64bits
-
 // <filesystem>
 
 // class directory_entry

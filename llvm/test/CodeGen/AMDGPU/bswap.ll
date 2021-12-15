@@ -38,11 +38,11 @@ define amdgpu_kernel void @test_bswap_i32(i32 addrspace(1)* %out, i32 addrspace(
 ; VI-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-NEXT:    s_mov_b32 s6, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_load_dword s2, s[2:3], 0x0
 ; VI-NEXT:    s_mov_b32 s4, s0
-; VI-NEXT:    s_load_dword s0, s[2:3], 0x0
 ; VI-NEXT:    s_mov_b32 s5, s1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_perm_b32 v0, 0, s0, v0
+; VI-NEXT:    v_perm_b32 v0, 0, s2, v0
 ; VI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
   %val = load i32, i32 addrspace(1)* %in, align 4
@@ -118,20 +118,20 @@ define amdgpu_kernel void @test_bswap_v4i32(<4 x i32> addrspace(1)* %out, <4 x i
 ;
 ; VI-LABEL: test_bswap_v4i32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v0, 0x10203
-; VI-NEXT:    s_mov_b32 s3, 0xf000
-; VI-NEXT:    s_mov_b32 s2, -1
+; VI-NEXT:    s_mov_b32 s7, 0xf000
+; VI-NEXT:    s_mov_b32 s6, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_load_dwordx4 s[8:11], s[6:7], 0x0
-; VI-NEXT:    s_mov_b32 s0, s4
-; VI-NEXT:    s_mov_b32 s1, s5
+; VI-NEXT:    s_load_dwordx4 s[8:11], s[2:3], 0x0
+; VI-NEXT:    s_mov_b32 s4, s0
+; VI-NEXT:    s_mov_b32 s5, s1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_perm_b32 v3, 0, s11, v0
 ; VI-NEXT:    v_perm_b32 v2, 0, s10, v0
 ; VI-NEXT:    v_perm_b32 v1, 0, s9, v0
 ; VI-NEXT:    v_perm_b32 v0, 0, s8, v0
-; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
+; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
   %val = load <4 x i32>, <4 x i32> addrspace(1)* %in, align 16
   %bswap = call <4 x i32> @llvm.bswap.v4i32(<4 x i32> %val) nounwind readnone
@@ -179,14 +179,14 @@ define amdgpu_kernel void @test_bswap_v8i32(<8 x i32> addrspace(1)* %out, <8 x i
 ;
 ; VI-LABEL: test_bswap_v8i32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v4, 0x10203
-; VI-NEXT:    s_mov_b32 s11, 0xf000
-; VI-NEXT:    s_mov_b32 s10, -1
+; VI-NEXT:    s_mov_b32 s15, 0xf000
+; VI-NEXT:    s_mov_b32 s14, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_mov_b32 s8, s0
-; VI-NEXT:    s_mov_b32 s9, s1
-; VI-NEXT:    s_load_dwordx8 s[0:7], s[2:3], 0x0
+; VI-NEXT:    s_load_dwordx8 s[0:7], s[10:11], 0x0
+; VI-NEXT:    s_mov_b32 s12, s8
+; VI-NEXT:    s_mov_b32 s13, s9
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_perm_b32 v3, 0, s3, v4
 ; VI-NEXT:    v_perm_b32 v2, 0, s2, v4
@@ -196,8 +196,8 @@ define amdgpu_kernel void @test_bswap_v8i32(<8 x i32> addrspace(1)* %out, <8 x i
 ; VI-NEXT:    v_perm_b32 v6, 0, s6, v4
 ; VI-NEXT:    v_perm_b32 v5, 0, s5, v4
 ; VI-NEXT:    v_perm_b32 v4, 0, s4, v4
-; VI-NEXT:    buffer_store_dwordx4 v[4:7], off, s[8:11], 0 offset:16
-; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[8:11], 0
+; VI-NEXT:    buffer_store_dwordx4 v[4:7], off, s[12:15], 0 offset:16
+; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[12:15], 0
 ; VI-NEXT:    s_endpgm
   %val = load <8 x i32>, <8 x i32> addrspace(1)* %in, align 32
   %bswap = call <8 x i32> @llvm.bswap.v8i32(<8 x i32> %val) nounwind readnone
@@ -272,20 +272,20 @@ define amdgpu_kernel void @test_bswap_v2i64(<2 x i64> addrspace(1)* %out, <2 x i
 ;
 ; VI-LABEL: test_bswap_v2i64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v0, 0x10203
-; VI-NEXT:    s_mov_b32 s3, 0xf000
-; VI-NEXT:    s_mov_b32 s2, -1
+; VI-NEXT:    s_mov_b32 s7, 0xf000
+; VI-NEXT:    s_mov_b32 s6, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_load_dwordx4 s[8:11], s[6:7], 0x0
-; VI-NEXT:    s_mov_b32 s0, s4
-; VI-NEXT:    s_mov_b32 s1, s5
+; VI-NEXT:    s_load_dwordx4 s[8:11], s[2:3], 0x0
+; VI-NEXT:    s_mov_b32 s4, s0
+; VI-NEXT:    s_mov_b32 s5, s1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_perm_b32 v3, 0, s10, v0
 ; VI-NEXT:    v_perm_b32 v2, 0, s11, v0
 ; VI-NEXT:    v_perm_b32 v1, 0, s8, v0
 ; VI-NEXT:    v_perm_b32 v0, 0, s9, v0
-; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
+; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
   %val = load <2 x i64>, <2 x i64> addrspace(1)* %in, align 16
   %bswap = call <2 x i64> @llvm.bswap.v2i64(<2 x i64> %val) nounwind readnone
@@ -333,14 +333,14 @@ define amdgpu_kernel void @test_bswap_v4i64(<4 x i64> addrspace(1)* %out, <4 x i
 ;
 ; VI-LABEL: test_bswap_v4i64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v4, 0x10203
-; VI-NEXT:    s_mov_b32 s11, 0xf000
-; VI-NEXT:    s_mov_b32 s10, -1
+; VI-NEXT:    s_mov_b32 s15, 0xf000
+; VI-NEXT:    s_mov_b32 s14, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_mov_b32 s8, s0
-; VI-NEXT:    s_mov_b32 s9, s1
-; VI-NEXT:    s_load_dwordx8 s[0:7], s[2:3], 0x0
+; VI-NEXT:    s_load_dwordx8 s[0:7], s[10:11], 0x0
+; VI-NEXT:    s_mov_b32 s12, s8
+; VI-NEXT:    s_mov_b32 s13, s9
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_perm_b32 v3, 0, s2, v4
 ; VI-NEXT:    v_perm_b32 v2, 0, s3, v4
@@ -350,8 +350,8 @@ define amdgpu_kernel void @test_bswap_v4i64(<4 x i64> addrspace(1)* %out, <4 x i
 ; VI-NEXT:    v_perm_b32 v6, 0, s7, v4
 ; VI-NEXT:    v_perm_b32 v5, 0, s4, v4
 ; VI-NEXT:    v_perm_b32 v4, 0, s5, v4
-; VI-NEXT:    buffer_store_dwordx4 v[4:7], off, s[8:11], 0 offset:16
-; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[8:11], 0
+; VI-NEXT:    buffer_store_dwordx4 v[4:7], off, s[12:15], 0 offset:16
+; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[12:15], 0
 ; VI-NEXT:    s_endpgm
   %val = load <4 x i64>, <4 x i64> addrspace(1)* %in, align 32
   %bswap = call <4 x i64> @llvm.bswap.v4i64(<4 x i64> %val) nounwind readnone

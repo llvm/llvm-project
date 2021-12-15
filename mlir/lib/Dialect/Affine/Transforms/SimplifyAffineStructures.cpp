@@ -69,7 +69,7 @@ struct SimplifyAffineStructures
   DenseMap<Attribute, Attribute> simplifiedAttributes;
 };
 
-} // end anonymous namespace
+} // namespace
 
 std::unique_ptr<OperationPass<FuncOp>>
 mlir::createSimplifyAffineStructuresPass() {

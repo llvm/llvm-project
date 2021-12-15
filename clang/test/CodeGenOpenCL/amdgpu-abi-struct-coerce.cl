@@ -439,7 +439,7 @@ different_size_type_pair func_different_size_type_pair_ret()
   return s;
 }
 
-// CHECK: define{{.*}} void @func_flexible_array_ret(%struct.flexible_array addrspace(5)* noalias nocapture sret(%struct.flexible_array) align 4 %agg.result)
+// CHECK: define{{.*}} void @func_flexible_array_ret(%struct.flexible_array addrspace(5)* noalias nocapture writeonly sret(%struct.flexible_array) align 4 %agg.result)
 flexible_array func_flexible_array_ret()
 {
   flexible_array s = { 0 };

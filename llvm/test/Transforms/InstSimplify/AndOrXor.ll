@@ -554,20 +554,20 @@ define i16 @or_of_different_cast_icmps(i8 %i) {
 
 ; (A & ~B) | (A ^ B) -> A ^ B
 
-define i32 @test43(i32 %a, i32 %b) {
-; CHECK-LABEL: @test43(
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i32 [[XOR]]
+define i3 @or_xor_andn_commute0(i3 %a, i3 %b) {
+; CHECK-LABEL: @or_xor_andn_commute0(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i3 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i3 [[XOR]]
 ;
-  %neg = xor i32 %b, -1
-  %and = and i32 %a, %neg
-  %xor = xor i32 %a, %b
-  %or = or i32 %and, %xor
-  ret i32 %or
+  %neg = xor i3 %b, -1
+  %and = and i3 %a, %neg
+  %xor = xor i3 %a, %b
+  %or = or i3 %and, %xor
+  ret i3 %or
 }
 
-define i32 @test43_commuted_and(i32 %a, i32 %b) {
-; CHECK-LABEL: @test43_commuted_and(
+define i32 @or_xor_andn_commute1(i32 %a, i32 %b) {
+; CHECK-LABEL: @or_xor_andn_commute1(
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret i32 [[XOR]]
 ;
@@ -578,23 +578,20 @@ define i32 @test43_commuted_and(i32 %a, i32 %b) {
   ret i32 %or
 }
 
-; Commute operands of the 'or'.
-; (A ^ B) | (A & ~B) -> A ^ B
-
-define i32 @test44(i32 %a, i32 %b) {
-; CHECK-LABEL: @test44(
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i32 [[XOR]]
+define <2 x i32> @or_xor_andn_commute2(<2 x i32> %a, <2 x i32> %b) {
+; CHECK-LABEL: @or_xor_andn_commute2(
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret <2 x i32> [[XOR]]
 ;
-  %xor = xor i32 %a, %b
-  %neg = xor i32 %b, -1
-  %and = and i32 %a, %neg
-  %or = or i32 %xor, %and
-  ret i32 %or
+  %xor = xor <2 x i32> %a, %b
+  %neg = xor <2 x i32> %b, <i32 -1, i32 undef>
+  %and = and <2 x i32> %a, %neg
+  %or = or <2 x i32> %xor, %and
+  ret <2 x i32> %or
 }
 
-define i32 @test44_commuted_and(i32 %a, i32 %b) {
-; CHECK-LABEL: @test44_commuted_and(
+define i32 @or_xor_andn_commute3(i32 %a, i32 %b) {
+; CHECK-LABEL: @or_xor_andn_commute3(
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret i32 [[XOR]]
 ;
@@ -605,73 +602,58 @@ define i32 @test44_commuted_and(i32 %a, i32 %b) {
   ret i32 %or
 }
 
-; (~A & ~B) | (~A ^ B) -> ~A ^ B
-
-define i32 @test45(i32 %a, i32 %b) {
-; CHECK-LABEL: @test45(
-; CHECK-NEXT:    [[NEGB:%.*]] = xor i32 [[B:%.*]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[A:%.*]], [[NEGB]]
+define i32 @or_xor_andn_commute4(i32 %a, i32 %b) {
+; CHECK-LABEL: @or_xor_andn_commute4(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[B:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    ret i32 [[XOR]]
 ;
-  %nega = xor i32 %a, -1
-  %negb = xor i32 %b, -1
-  %and = and i32 %nega, %negb
-  %xor = xor i32 %a, %negb
+  %neg = xor i32 %b, -1
+  %and = and i32 %a, %neg
+  %xor = xor i32 %b, %a
   %or = or i32 %and, %xor
   ret i32 %or
 }
 
-define i32 @test45_commuted_and(i32 %a, i32 %b) {
-; CHECK-LABEL: @test45_commuted_and(
-; CHECK-NEXT:    [[NEGB:%.*]] = xor i32 [[B:%.*]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[A:%.*]], [[NEGB]]
+define i32 @or_xor_andn_commute5(i32 %a, i32 %b) {
+; CHECK-LABEL: @or_xor_andn_commute5(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[B:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    ret i32 [[XOR]]
 ;
-  %nega = xor i32 %a, -1
-  %negb = xor i32 %b, -1
-  %and = and i32 %negb, %nega
-  %xor = xor i32 %a, %negb
+  %neg = xor i32 %b, -1
+  %and = and i32 %neg, %a
+  %xor = xor i32 %b, %a
   %or = or i32 %and, %xor
   ret i32 %or
 }
 
-; Commute operands of the 'or'.
-; (~A ^ B) | (~A & ~B) -> ~A ^ B
-
-define i32 @test46(i32 %a, i32 %b) {
-; CHECK-LABEL: @test46(
-; CHECK-NEXT:    [[NEGB:%.*]] = xor i32 [[B:%.*]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[A:%.*]], [[NEGB]]
+define i32 @or_xor_andn_commute6(i32 %a, i32 %b) {
+; CHECK-LABEL: @or_xor_andn_commute6(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[B:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    ret i32 [[XOR]]
 ;
-  %nega = xor i32 %a, -1
-  %negb = xor i32 %b, -1
-  %and = and i32 %nega, %negb
-  %xor = xor i32 %a, %negb
+  %xor = xor i32 %b, %a
+  %neg = xor i32 %b, -1
+  %and = and i32 %a, %neg
   %or = or i32 %xor, %and
   ret i32 %or
 }
 
-; (~A & ~B) | (~A ^ B) -> ~A ^ B
-
-define i32 @test46_commuted_and(i32 %a, i32 %b) {
-; CHECK-LABEL: @test46_commuted_and(
-; CHECK-NEXT:    [[NEGB:%.*]] = xor i32 [[B:%.*]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[A:%.*]], [[NEGB]]
+define i32 @or_xor_andn_commute7(i32 %a, i32 %b) {
+; CHECK-LABEL: @or_xor_andn_commute7(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[B:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    ret i32 [[XOR]]
 ;
-  %nega = xor i32 %a, -1
-  %negb = xor i32 %b, -1
-  %and = and i32 %negb, %nega
-  %xor = xor i32 %a, %negb
+  %xor = xor i32 %b, %a
+  %neg = xor i32 %b, -1
+  %and = and i32 %neg, %a
   %or = or i32 %xor, %and
   ret i32 %or
 }
 
 ; (~A ^ B) | (A & B) -> ~A ^ B
 
-define i32 @test47(i32 %a, i32 %b) {
-; CHECK-LABEL: @test47(
+define i32 @or_xorn_and_commute0(i32 %a, i32 %b) {
+; CHECK-LABEL: @or_xorn_and_commute0(
 ; CHECK-NEXT:    [[NEGA:%.*]] = xor i32 [[A:%.*]], -1
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[NEGA]], [[B:%.*]]
 ; CHECK-NEXT:    ret i32 [[XOR]]
@@ -683,86 +665,34 @@ define i32 @test47(i32 %a, i32 %b) {
   ret i32 %or
 }
 
-define i32 @test48(i32 %a, i32 %b) {
-; CHECK-LABEL: @test48(
-; CHECK-NEXT:    [[NEGA:%.*]] = xor i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[B:%.*]], [[NEGA]]
-; CHECK-NEXT:    ret i32 [[XOR]]
+define i3 @or_xorn_and_commute1(i3 %a, i3 %b) {
+; CHECK-LABEL: @or_xorn_and_commute1(
+; CHECK-NEXT:    [[NEGA:%.*]] = xor i3 [[A:%.*]], -1
+; CHECK-NEXT:    [[XOR:%.*]] = xor i3 [[B:%.*]], [[NEGA]]
+; CHECK-NEXT:    ret i3 [[XOR]]
 ;
-  %nega = xor i32 %a, -1
-  %and = and i32 %a, %b
-  %xor = xor i32 %b, %nega
-  %or = or i32 %xor, %and
-  ret i32 %or
+  %nega = xor i3 %a, -1
+  %and = and i3 %a, %b
+  %xor = xor i3 %b, %nega
+  %or = or i3 %xor, %and
+  ret i3 %or
 }
 
-define i32 @test49(i32 %a, i32 %b) {
-; CHECK-LABEL: @test49(
-; CHECK-NEXT:    [[NEGA:%.*]] = xor i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[B:%.*]], [[NEGA]]
-; CHECK-NEXT:    ret i32 [[XOR]]
+define <2 x i32> @or_xorn_and_commute2(<2 x i32> %a, <2 x i32> %b) {
+; CHECK-LABEL: @or_xorn_and_commute2(
+; CHECK-NEXT:    [[NEGA:%.*]] = xor <2 x i32> [[A:%.*]], <i32 undef, i32 -1>
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i32> [[B:%.*]], [[NEGA]]
+; CHECK-NEXT:    ret <2 x i32> [[XOR]]
 ;
-  %nega = xor i32 %a, -1
-  %and = and i32 %b, %a
-  %xor = xor i32 %b, %nega
-  %or = or i32 %xor, %and
-  ret i32 %or
+  %nega = xor <2 x i32> %a, <i32 undef, i32 -1>
+  %and = and <2 x i32> %b, %a
+  %xor = xor <2 x i32> %b, %nega
+  %or = or <2 x i32> %xor, %and
+  ret <2 x i32> %or
 }
 
-define i32 @test50(i32 %a, i32 %b) {
-; CHECK-LABEL: @test50(
-; CHECK-NEXT:    [[NEGA:%.*]] = xor i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[NEGA]], [[B:%.*]]
-; CHECK-NEXT:    ret i32 [[XOR]]
-;
-  %nega = xor i32 %a, -1
-  %and = and i32 %b, %a
-  %xor = xor i32 %nega, %b
-  %or = or i32 %xor, %and
-  ret i32 %or
-}
-
-define i32 @test51(i32 %a, i32 %b) {
-; CHECK-LABEL: @test51(
-; CHECK-NEXT:    [[NEGA:%.*]] = xor i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[NEGA]], [[B:%.*]]
-; CHECK-NEXT:    ret i32 [[XOR]]
-;
-  %nega = xor i32 %a, -1
-  %and = and i32 %a, %b
-  %xor = xor i32 %nega, %b
-  %or = or i32 %and, %xor
-  ret i32 %or
-}
-
-define i32 @test52(i32 %a, i32 %b) {
-; CHECK-LABEL: @test52(
-; CHECK-NEXT:    [[NEGA:%.*]] = xor i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[B:%.*]], [[NEGA]]
-; CHECK-NEXT:    ret i32 [[XOR]]
-;
-  %nega = xor i32 %a, -1
-  %and = and i32 %a, %b
-  %xor = xor i32 %b, %nega
-  %or = or i32 %and, %xor
-  ret i32 %or
-}
-
-define i32 @test53(i32 %a, i32 %b) {
-; CHECK-LABEL: @test53(
-; CHECK-NEXT:    [[NEGA:%.*]] = xor i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[B:%.*]], [[NEGA]]
-; CHECK-NEXT:    ret i32 [[XOR]]
-;
-  %nega = xor i32 %a, -1
-  %and = and i32 %b, %a
-  %xor = xor i32 %b, %nega
-  %or = or i32 %and, %xor
-  ret i32 %or
-}
-
-define i32 @test54(i32 %a, i32 %b) {
-; CHECK-LABEL: @test54(
+define i32 @or_xorn_and_commute3(i32 %a, i32 %b) {
+; CHECK-LABEL: @or_xorn_and_commute3(
 ; CHECK-NEXT:    [[NEGA:%.*]] = xor i32 [[A:%.*]], -1
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[NEGA]], [[B:%.*]]
 ; CHECK-NEXT:    ret i32 [[XOR]]
@@ -770,75 +700,59 @@ define i32 @test54(i32 %a, i32 %b) {
   %nega = xor i32 %a, -1
   %and = and i32 %b, %a
   %xor = xor i32 %nega, %b
+  %or = or i32 %xor, %and
+  ret i32 %or
+}
+
+define i32 @or_xorn_and_commute4(i32 %a, i32 %b) {
+; CHECK-LABEL: @or_xorn_and_commute4(
+; CHECK-NEXT:    [[NEGA:%.*]] = xor i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[NEGA]], [[B:%.*]]
+; CHECK-NEXT:    ret i32 [[XOR]]
+;
+  %nega = xor i32 %a, -1
+  %and = and i32 %a, %b
+  %xor = xor i32 %nega, %b
   %or = or i32 %and, %xor
   ret i32 %or
 }
 
-; (A & B) | ~(A ^ B) -> ~(A ^ B)
-
-define i32 @test55(i32 %a, i32 %b) {
-; CHECK-LABEL: @test55(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[A]], [[B]]
-; CHECK-NEXT:    [[XNOR:%.*]] = xor i32 [[XOR]], -1
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[AND]], [[XNOR]]
-; CHECK-NEXT:    ret i32 [[OR]]
+define i32 @or_xorn_and_commute5(i32 %a, i32 %b) {
+; CHECK-LABEL: @or_xorn_and_commute5(
+; CHECK-NEXT:    [[NEGA:%.*]] = xor i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[B:%.*]], [[NEGA]]
+; CHECK-NEXT:    ret i32 [[XOR]]
 ;
+  %nega = xor i32 %a, -1
   %and = and i32 %a, %b
-  %xor = xor i32 %a, %b
-  %xnor = xor i32 %xor, -1
-  %or = or i32 %and, %xnor
+  %xor = xor i32 %b, %nega
+  %or = or i32 %and, %xor
   ret i32 %or
 }
 
-; ~(A ^ B) | (A & B) -> ~(A ^ B)
-
-define i32 @test56(i32 %a, i32 %b) {
-; CHECK-LABEL: @test56(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[A]], [[B]]
-; CHECK-NEXT:    [[XNOR:%.*]] = xor i32 [[XOR]], -1
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[XNOR]], [[AND]]
-; CHECK-NEXT:    ret i32 [[OR]]
+define i32 @or_xorn_and_commute6(i32 %a, i32 %b) {
+; CHECK-LABEL: @or_xorn_and_commute6(
+; CHECK-NEXT:    [[NEGA:%.*]] = xor i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[B:%.*]], [[NEGA]]
+; CHECK-NEXT:    ret i32 [[XOR]]
 ;
-  %and = and i32 %a, %b
-  %xor = xor i32 %a, %b
-  %xnor = xor i32 %xor, -1
-  %or = or i32 %xnor, %and
-  ret i32 %or
-}
-
-; (B & A) | ~(A ^ B) -> ~(A ^ B)
-
-define i32 @test57(i32 %a, i32 %b) {
-; CHECK-LABEL: @test57(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[B:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[A]], [[B]]
-; CHECK-NEXT:    [[XNOR:%.*]] = xor i32 [[XOR]], -1
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[AND]], [[XNOR]]
-; CHECK-NEXT:    ret i32 [[OR]]
-;
+  %nega = xor i32 %a, -1
   %and = and i32 %b, %a
-  %xor = xor i32 %a, %b
-  %xnor = xor i32 %xor, -1
-  %or = or i32 %and, %xnor
+  %xor = xor i32 %b, %nega
+  %or = or i32 %and, %xor
   ret i32 %or
 }
 
-; ~(A ^ B) | (A & B) -> ~(A ^ B)
-
-define i32 @test58(i32 %a, i32 %b) {
-; CHECK-LABEL: @test58(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[B:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[A]], [[B]]
-; CHECK-NEXT:    [[XNOR:%.*]] = xor i32 [[XOR]], -1
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[XNOR]], [[AND]]
-; CHECK-NEXT:    ret i32 [[OR]]
+define i32 @or_xorn_and_commute7(i32 %a, i32 %b) {
+; CHECK-LABEL: @or_xorn_and_commute7(
+; CHECK-NEXT:    [[NEGA:%.*]] = xor i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[NEGA]], [[B:%.*]]
+; CHECK-NEXT:    ret i32 [[XOR]]
 ;
+  %nega = xor i32 %a, -1
   %and = and i32 %b, %a
-  %xor = xor i32 %a, %b
-  %xnor = xor i32 %xor, -1
-  %or = or i32 %xnor, %and
+  %xor = xor i32 %nega, %b
+  %or = or i32 %and, %xor
   ret i32 %or
 }
 

@@ -291,15 +291,15 @@ class _LIBCPP_TEMPLATE_VIS basic_istream<_CharT, _Traits>::sentry
 {
     bool __ok_;
 
-    sentry(const sentry&); // = delete;
-    sentry& operator=(const sentry&); // = delete;
-
 public:
     explicit sentry(basic_istream<_CharT, _Traits>& __is, bool __noskipws = false);
 //    ~sentry() = default;
 
     _LIBCPP_INLINE_VISIBILITY
     explicit operator bool() const {return __ok_;}
+
+    sentry(const sentry&) = delete;
+    sentry& operator=(const sentry&) = delete;
 };
 
 template <class _CharT, class _Traits>

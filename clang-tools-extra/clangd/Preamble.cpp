@@ -23,6 +23,7 @@
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
+#include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
@@ -83,8 +84,7 @@ public:
   void AfterExecute(CompilerInstance &CI) override {
     if (ParsedCallback) {
       trace::Span Tracer("Running PreambleCallback");
-      ParsedCallback(CI.getASTContext(), CI.getPreprocessorPtr(),
-                     CanonIncludes);
+      ParsedCallback(CI.getASTContext(), CI.getPreprocessor(), CanonIncludes);
     }
 
     const SourceManager &SM = CI.getSourceManager();
@@ -98,6 +98,7 @@ public:
     CanonIncludes.addSystemHeadersMapping(CI.getLangOpts());
     LangOpts = &CI.getLangOpts();
     SourceMgr = &CI.getSourceManager();
+    Includes.collect(CI);
   }
 
   std::unique_ptr<PPCallbacks> createPPCallbacks() override {
@@ -105,10 +106,8 @@ public:
            "SourceMgr and LangOpts must be set at this point");
 
     return std::make_unique<PPChainedCallbacks>(
-        Includes.collect(*SourceMgr),
-        std::make_unique<PPChainedCallbacks>(
-            std::make_unique<CollectMainFileMacros>(*SourceMgr, Macros),
-            collectPragmaMarksCallback(*SourceMgr, Marks)));
+        std::make_unique<CollectMainFileMacros>(*SourceMgr, Macros),
+        collectPragmaMarksCallback(*SourceMgr, Marks));
   }
 
   CommentHandler *getCommentHandler() override {
@@ -283,10 +282,9 @@ scanPreamble(llvm::StringRef Contents, const tooling::CompileCommand &Cmd) {
   PreprocessOnlyAction Action;
   if (!Action.BeginSourceFile(*Clang, Clang->getFrontendOpts().Inputs[0]))
     return error("failed BeginSourceFile");
-  const auto &SM = Clang->getSourceManager();
   Preprocessor &PP = Clang->getPreprocessor();
   IncludeStructure Includes;
-  PP.addPPCallbacks(Includes.collect(SM));
+  Includes.collect(*Clang);
   ScannedPreamble SP;
   SP.Bounds = Bounds;
   PP.addPPCallbacks(

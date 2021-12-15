@@ -1,10 +1,10 @@
 ## Test writing tbe with stripped target information.
 
-# RUN: llvm-ifs --input-format=ELF --output-format=IFS --strip-ifs-target --output=- %p/Inputs/sysv_hash.so | FileCheck %s --check-prefix=NOTARGET
-# RUN: llvm-ifs --input-format=ELF --output-format=IFS --strip-ifs-arch --strip-ifs-endianness --strip-ifs-bitwidth --output=- %p/Inputs/sysv_hash.so | FileCheck %s --check-prefix=NOTARGET
-# RUN: llvm-ifs --input-format=ELF --output-format=IFS --strip-ifs-arch --output=- %p/Inputs/sysv_hash.so | FileCheck %s -DELFTARGET="ObjectFormat: ELF, Endianness: little, BitWidth: 64" --check-prefix=CHECK
-# RUN: llvm-ifs --input-format=ELF --output-format=IFS --strip-ifs-endianness --output=- %p/Inputs/sysv_hash.so | FileCheck %s -DELFTARGET="ObjectFormat: ELF, Arch: x86_64, BitWidth: 64" --check-prefix=CHECK
-# RUN: llvm-ifs --input-format=ELF --output-format=IFS --strip-ifs-bitwidth --output=- %p/Inputs/sysv_hash.so | FileCheck %s -DELFTARGET="ObjectFormat: ELF, Arch: x86_64, Endianness: little" --check-prefix=CHECK
+# RUN: llvm-ifs --input-format=ELF --strip-ifs-target --output-ifs=- %p/Inputs/sysv_hash.so | FileCheck %s --check-prefix=NOTARGET
+# RUN: llvm-ifs --input-format=ELF --strip-ifs-arch --strip-ifs-endianness --strip-ifs-bitwidth --output-ifs=- %p/Inputs/sysv_hash.so | FileCheck %s --check-prefix=NOTARGET
+# RUN: llvm-ifs --input-format=ELF --strip-ifs-arch --output-ifs=- %p/Inputs/sysv_hash.so | FileCheck %s -DELFTARGET="ObjectFormat: ELF, Endianness: little, BitWidth: 64" --check-prefix=CHECK
+# RUN: llvm-ifs --input-format=ELF --strip-ifs-endianness --output-ifs=- %p/Inputs/sysv_hash.so | FileCheck %s -DELFTARGET="ObjectFormat: ELF, Arch: x86_64, BitWidth: 64" --check-prefix=CHECK
+# RUN: llvm-ifs --input-format=ELF --strip-ifs-bitwidth --output-ifs=- %p/Inputs/sysv_hash.so | FileCheck %s -DELFTARGET="ObjectFormat: ELF, Arch: x86_64, Endianness: little" --check-prefix=CHECK
 
 
 # CHECK:      --- !ifs-v1

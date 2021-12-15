@@ -26,9 +26,9 @@ template <typename T,
           cpp::EnableIfType<cpp::IsFloatingPointType<T>::Value, int> = 0>
 static inline T frexp(T x, int &exp) {
   FPBits<T> bits(x);
-  if (bits.isInfOrNaN())
+  if (bits.is_inf_or_nan())
     return x;
-  if (bits.isZero()) {
+  if (bits.is_zero()) {
     exp = 0;
     return x;
   }
@@ -43,18 +43,18 @@ template <typename T,
           cpp::EnableIfType<cpp::IsFloatingPointType<T>::Value, int> = 0>
 static inline T modf(T x, T &iptr) {
   FPBits<T> bits(x);
-  if (bits.isZero() || bits.isNaN()) {
+  if (bits.is_zero() || bits.is_nan()) {
     iptr = x;
     return x;
-  } else if (bits.isInf()) {
+  } else if (bits.is_inf()) {
     iptr = x;
-    return bits.getSign() ? T(FPBits<T>::negZero()) : T(FPBits<T>::zero());
+    return bits.get_sign() ? T(FPBits<T>::neg_zero()) : T(FPBits<T>::zero());
   } else {
     iptr = trunc(x);
     if (x == iptr) {
       // If x is already an integer value, then return zero with the right
       // sign.
-      return bits.getSign() ? T(FPBits<T>::negZero()) : T(FPBits<T>::zero());
+      return bits.get_sign() ? T(FPBits<T>::neg_zero()) : T(FPBits<T>::zero());
     } else {
       return x - iptr;
     }
@@ -65,7 +65,7 @@ template <typename T,
           cpp::EnableIfType<cpp::IsFloatingPointType<T>::Value, int> = 0>
 static inline T copysign(T x, T y) {
   FPBits<T> xbits(x);
-  xbits.setSign(FPBits<T>(y).getSign());
+  xbits.set_sign(FPBits<T>(y).get_sign());
   return T(xbits);
 }
 
@@ -75,11 +75,11 @@ static inline int ilogb(T x) {
   // TODO: Raise appropriate floating point exceptions and set errno to the
   // an appropriate error value wherever relevant.
   FPBits<T> bits(x);
-  if (bits.isZero()) {
+  if (bits.is_zero()) {
     return FP_ILOGB0;
-  } else if (bits.isNaN()) {
+  } else if (bits.is_nan()) {
     return FP_ILOGBNAN;
-  } else if (bits.isInf()) {
+  } else if (bits.is_inf()) {
     return INT_MAX;
   }
 
@@ -102,13 +102,13 @@ template <typename T,
           cpp::EnableIfType<cpp::IsFloatingPointType<T>::Value, int> = 0>
 static inline T logb(T x) {
   FPBits<T> bits(x);
-  if (bits.isZero()) {
+  if (bits.is_zero()) {
     // TODO(Floating point exception): Raise div-by-zero exception.
     // TODO(errno): POSIX requires setting errno to ERANGE.
-    return T(FPBits<T>::negInf());
-  } else if (bits.isNaN()) {
+    return T(FPBits<T>::neg_inf());
+  } else if (bits.is_nan()) {
     return x;
-  } else if (bits.isInf()) {
+  } else if (bits.is_inf()) {
     // Return positive infinity.
     return T(FPBits<T>::inf());
   }
@@ -121,7 +121,7 @@ template <typename T,
           cpp::EnableIfType<cpp::IsFloatingPointType<T>::Value, int> = 0>
 static inline T ldexp(T x, int exp) {
   FPBits<T> bits(x);
-  if (bits.isZero() || bits.isInfOrNaN() || exp == 0)
+  if (bits.is_zero() || bits.is_inf_or_nan() || exp == 0)
     return x;
 
   // NormalFloat uses int32_t to store the true exponent value. We should ensure
@@ -130,13 +130,13 @@ static inline T ldexp(T x, int exp) {
   // early. Because the result of the ldexp operation can be a subnormal number,
   // we need to accommodate the (mantissaWidht + 1) worth of shift in
   // calculating the limit.
-  int expLimit = FPBits<T>::maxExponent + MantissaWidth<T>::value + 1;
-  if (exp > expLimit)
-    return bits.getSign() ? T(FPBits<T>::negInf()) : T(FPBits<T>::inf());
+  int exp_limit = FPBits<T>::MAX_EXPONENT + MantissaWidth<T>::VALUE + 1;
+  if (exp > exp_limit)
+    return bits.get_sign() ? T(FPBits<T>::neg_inf()) : T(FPBits<T>::inf());
 
   // Similarly on the negative side we return zero early if |exp| is too small.
-  if (exp < -expLimit)
-    return bits.getSign() ? T(FPBits<T>::negZero()) : T(FPBits<T>::zero());
+  if (exp < -exp_limit)
+    return bits.get_sign() ? T(FPBits<T>::neg_zero()) : T(FPBits<T>::zero());
 
   // For all other values, NormalFloat to T conversion handles it the right way.
   NormalFloat<T> normal(bits);
@@ -147,31 +147,31 @@ static inline T ldexp(T x, int exp) {
 template <typename T,
           cpp::EnableIfType<cpp::IsFloatingPointType<T>::Value, int> = 0>
 static inline T nextafter(T from, T to) {
-  FPBits<T> fromBits(from);
-  if (fromBits.isNaN())
+  FPBits<T> from_bits(from);
+  if (from_bits.is_nan())
     return from;
 
-  FPBits<T> toBits(to);
-  if (toBits.isNaN())
+  FPBits<T> to_bits(to);
+  if (to_bits.is_nan())
     return to;
 
   if (from == to)
     return to;
 
   using UIntType = typename FPBits<T>::UIntType;
-  UIntType intVal = fromBits.uintval();
-  UIntType signMask = (UIntType(1) << (sizeof(T) * 8 - 1));
+  UIntType int_val = from_bits.uintval();
+  UIntType sign_mask = (UIntType(1) << (sizeof(T) * 8 - 1));
   if (from != T(0.0)) {
     if ((from < to) == (from > T(0.0))) {
-      ++intVal;
+      ++int_val;
     } else {
-      --intVal;
+      --int_val;
     }
   } else {
-    intVal = (toBits.uintval() & signMask) + UIntType(1);
+    int_val = (to_bits.uintval() & sign_mask) + UIntType(1);
   }
 
-  return *reinterpret_cast<T *>(&intVal);
+  return *reinterpret_cast<T *>(&int_val);
   // TODO: Raise floating point exceptions as required by the standard.
 }
 
@@ -179,7 +179,7 @@ static inline T nextafter(T from, T to) {
 } // namespace __llvm_libc
 
 #ifdef SPECIAL_X86_LONG_DOUBLE
-#include "NextAfterLongDoubleX86.h"
+#include "x86_64/NextAfterLongDouble.h"
 #endif // SPECIAL_X86_LONG_DOUBLE
 
 #endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_MANIPULATION_FUNCTIONS_H

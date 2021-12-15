@@ -42,8 +42,15 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
       InterfaceMethod<
         /*desc=*/[{
           Return `true` if the given OpOperand bufferizes to a memory write.
+
           This method will never be called on OpOperands that do not have a
           tensor type.
+
+          This method will never be called on OpOperands that do not have an
+          aliasing OpResult. Intuitively, it does not make sense for an
+          OpOperand to bufferize to a memory write without returning an aliasing
+          tensor, because the write would have no visible effect outside of the
+          op.
 
           Note: It is always safe to consider an OpOperand as a memory write,
           even if it does actually not write; however, this can introduce
@@ -57,6 +64,8 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           // Does not have to be implemented for ops without tensor OpOperands.
+          // Does not have to be implemented for OpOperands that do not have an
+          // aliasing OpResult.
           llvm_unreachable("bufferizesToMemoryWrite not implemented");
          }]
       >,
@@ -129,6 +138,10 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           bufferized in-place. This method will never be called on OpResults
           that do not have a tensor type.
 
+          By default, this method is the inverse of `getAliasingOpResult`. Ops
+          with a region that yield values may want to override this method to
+          return the OpOperands that are yielded by the terminator.
+
           Note: This method can return multiple OpOperands, indicating that the
           given OpResult may at runtime alias with any of the OpOperands. This
           is useful for branches and for ops such as `std.select`.
@@ -138,33 +151,52 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         /*args=*/(ins "OpResult":$opResult),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
-          // Does not have to be implemented for ops without tensor OpResults.
-          llvm_unreachable("getInplaceableOpResult not implemented");
+          assert(opResult.getType().isa<TensorType>() &&
+                 "expected OpResult with tensor type");
+          SmallVector<OpOperand *> result;
+          auto bufferizableOp =
+              cast<BufferizableOpInterface>($_op.getOperation());
+          for (OpOperand &opOperand : $_op.getOperation()->getOpOperands()) {
+            if (!opOperand.get().getType().isa<TensorType>())
+              continue;
+            if (bufferizableOp.getAliasingOpResult(opOperand) == opResult)
+              result.push_back(&opOperand);
+          }
+          return result;
         }]
       >,
       InterfaceMethod<
         /*desc=*/[{
-          Return the buffer relation between the given OpOperand and its
-          aliasing OpResult when bufferized in-place. Most OpOperands have an
-          "equivalence" relation.
+          Return the buffer relation between the given OpResult and its aliasing
+          OpOperands when bufferized in-place. Most OpOperands have an
+          "equivalence" relation. This method will never be called on OpResults
+          that do not have a tensor type. It will also never be called on
+          OpResults that do not have at least one aliasing OpOperand.
 
           TODO: Support other relations such as "OpOperand is included in
           OpResult".
         }],
         /*retType=*/"BufferRelation",
         /*methodName=*/"bufferRelation",
-        /*args=*/(ins "OpOperand &":$opOperand),
+        /*args=*/(ins "OpResult":$opResult,
+                      "const BufferizationAliasInfo &":$aliasInfo),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
-          // Does not have to be implemented for ops without tensor OpOperands.
+          // Does not have to be implemented for ops without tensor OpResults
+          // that have an aliasing OpOperand.
           llvm_unreachable("bufferRelation not implemented");
         }]
       >,
       InterfaceMethod<
         /*desc=*/[{
           Bufferize this op, i.e., rewrite it into a memref-based equivalent.
-          `bvm` maps tensor values to memref values and this method should map
-          tensor results to memref results after creating/modifying ops.
+          Tensor values should be mapped to buffer values using `state`.
+
+          Implementations are required to required to bufferize nested ops
+          before returning. Otherwise, nested ops will not be bufferized.
+
+          This method will never be called on ops that do not have at least one
+          tensor operand/result or a region.
         }],
         /*retType=*/"LogicalResult",
         /*methodName=*/"bufferize",
@@ -194,7 +226,8 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         }],
         /*retType=*/"bool",
         /*methodName=*/"isWritable",
-        /*args=*/(ins "Value":$value),
+        /*args=*/(ins "Value":$value,
+                      "BufferizationState &":$state),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           return value.isa<OpResult>();
@@ -233,6 +266,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         /*methodName=*/"isNotConflicting",
         /*args=*/(ins "OpOperand *":$uRead,
                       "OpOperand *":$uWrite,
+                      "BufferizationState &":$state,
                       "const BufferizationAliasInfo &":$aliasInfo),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{

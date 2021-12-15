@@ -375,10 +375,10 @@ body: |
   bb.0:
     ; CHECK-LABEL: {{^}}if:
     ; CHECK: %bb.0:
-    ; CHECK-NEXT: s_cbranch_vccz BB23_2
+    ; CHECK-NEXT: s_cbranch_vccz .LBB23_2
     ; CHECK-NEXT: %bb.1:
     ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
-    ; CHECK-NEXT: BB23_2:
+    ; CHECK-NEXT: .LBB23_2:
     ; CHECK-NEXT: s_delay_alu instid0(VALU_DEP_1)
     ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
     S_CBRANCH_VCCZ %bb.2, implicit $vcc
@@ -394,12 +394,12 @@ body: |
   bb.0:
     ; CHECK-LABEL: {{^}}else:
     ; CHECK: %bb.0:
-    ; CHECK-NEXT: s_cbranch_vccz BB24_2
+    ; CHECK-NEXT: s_cbranch_vccz .LBB24_2
     ; CHECK-NEXT: %bb.1
-    ; CHECK-NEXT: s_branch BB24_3
-    ; CHECK-NEXT: BB24_2:
+    ; CHECK-NEXT: s_branch .LBB24_3
+    ; CHECK-NEXT: .LBB24_2:
     ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
-    ; CHECK-NEXT: BB24_3:
+    ; CHECK-NEXT: .LBB24_3:
     ; CHECK-NEXT: s_delay_alu instid0(VALU_DEP_1)
     ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
     S_CBRANCH_VCCZ %bb.2, implicit $vcc
@@ -417,14 +417,14 @@ body: |
   bb.0:
     ; CHECK-LABEL: {{^}}if_else:
     ; CHECK: %bb.0:
-    ; CHECK-NEXT: s_cbranch_vccz BB25_2
+    ; CHECK-NEXT: s_cbranch_vccz .LBB25_2
     ; CHECK-NEXT: %bb.1:
     ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
-    ; CHECK-NEXT: s_branch BB25_3
-    ; CHECK-NEXT: BB25_2:
+    ; CHECK-NEXT: s_branch .LBB25_3
+    ; CHECK-NEXT: .LBB25_2:
     ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
     ; CHECK-NEXT: v_add_nc_u32_e32 v0, v1, v1
-    ; CHECK-NEXT: BB25_3:
+    ; CHECK-NEXT: .LBB25_3:
     ; CHECK-NEXT: s_delay_alu instid0(VALU_DEP_1)
     ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
     S_CBRANCH_VCCZ %bb.2, implicit $vcc

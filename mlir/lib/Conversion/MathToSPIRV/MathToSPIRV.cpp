@@ -34,6 +34,7 @@ namespace {
 ///
 /// SPIR-V does not have a direct operations for log(1+x). Explicitly lower to
 /// these operations.
+template <typename LogOp>
 class Log1pOpPattern final : public OpConversionPattern<math::Log1pOp> {
 public:
   using OpConversionPattern<math::Log1pOp>::OpConversionPattern;
@@ -44,11 +45,11 @@ public:
     assert(adaptor.getOperands().size() == 1);
     Location loc = operation.getLoc();
     auto type =
-        this->getTypeConverter()->convertType(operation.operand().getType());
+        this->getTypeConverter()->convertType(operation.getOperand().getType());
     auto one = spirv::ConstantOp::getOne(type, operation.getLoc(), rewriter);
     auto onePlus =
         rewriter.create<spirv::FAddOp>(loc, one, adaptor.getOperands()[0]);
-    rewriter.replaceOpWithNewOp<spirv::GLSLLogOp>(operation, type, onePlus);
+    rewriter.replaceOpWithNewOp<LogOp>(operation, type, onePlus);
     return success();
   }
 };
@@ -61,8 +62,10 @@ public:
 namespace mlir {
 void populateMathToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                  RewritePatternSet &patterns) {
+
+  // GLSL patterns
   patterns.add<
-      Log1pOpPattern,
+      Log1pOpPattern<spirv::GLSLLogOp>,
       spirv::UnaryAndBinaryOpPattern<math::AbsOp, spirv::GLSLFAbsOp>,
       spirv::UnaryAndBinaryOpPattern<math::CeilOp, spirv::GLSLCeilOp>,
       spirv::UnaryAndBinaryOpPattern<math::CosOp, spirv::GLSLCosOp>,
@@ -74,6 +77,22 @@ void populateMathToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
       spirv::UnaryAndBinaryOpPattern<math::SinOp, spirv::GLSLSinOp>,
       spirv::UnaryAndBinaryOpPattern<math::SqrtOp, spirv::GLSLSqrtOp>,
       spirv::UnaryAndBinaryOpPattern<math::TanhOp, spirv::GLSLTanhOp>>(
+      typeConverter, patterns.getContext());
+
+  // OpenCL patterns
+  patterns.add<Log1pOpPattern<spirv::OCLLogOp>,
+               spirv::UnaryAndBinaryOpPattern<math::AbsOp, spirv::OCLFAbsOp>,
+               spirv::UnaryAndBinaryOpPattern<math::CeilOp, spirv::OCLCeilOp>,
+               spirv::UnaryAndBinaryOpPattern<math::CosOp, spirv::OCLCosOp>,
+               spirv::UnaryAndBinaryOpPattern<math::ErfOp, spirv::OCLErfOp>,
+               spirv::UnaryAndBinaryOpPattern<math::ExpOp, spirv::OCLExpOp>,
+               spirv::UnaryAndBinaryOpPattern<math::FloorOp, spirv::OCLFloorOp>,
+               spirv::UnaryAndBinaryOpPattern<math::LogOp, spirv::OCLLogOp>,
+               spirv::UnaryAndBinaryOpPattern<math::PowFOp, spirv::OCLPowOp>,
+               spirv::UnaryAndBinaryOpPattern<math::RsqrtOp, spirv::OCLRsqrtOp>,
+               spirv::UnaryAndBinaryOpPattern<math::SinOp, spirv::OCLSinOp>,
+               spirv::UnaryAndBinaryOpPattern<math::SqrtOp, spirv::OCLSqrtOp>,
+               spirv::UnaryAndBinaryOpPattern<math::TanhOp, spirv::OCLTanhOp>>(
       typeConverter, patterns.getContext());
 }
 

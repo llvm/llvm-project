@@ -38,6 +38,7 @@ cc_test(
         exclude = [
             # TODO: Add this file to the build.
             "Analysis/TFUtilsTest.cpp",
+            "Analysis/MLModelRunnerTest.cpp",
         ],
     ),
     deps = [
@@ -192,6 +193,17 @@ cc_test(
         "//llvm:DebugInfoPDB",
         "//llvm:ObjectYAML",
         "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//llvm:gtest",
+        "//llvm:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "debuginfod_tests",
+    srcs = glob(["Debuginfod/*.cpp"]),
+    deps = [
+        "//llvm:Debuginfod",
         "//llvm:TestingSupport",
         "//llvm:gtest",
         "//llvm:gtest_main",

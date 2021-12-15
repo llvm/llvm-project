@@ -190,24 +190,35 @@ void PassByValueCheck::check(const MatchFinder::MatchResult &Result) {
 
   auto Diag = diag(ParamDecl->getBeginLoc(), "pass by value and use std::move");
 
-  // Iterate over all declarations of the constructor.
-  for (const ParmVarDecl *ParmDecl : collectParamDecls(Ctor, ParamDecl)) {
-    auto ParamTL = ParmDecl->getTypeSourceInfo()->getTypeLoc();
-    auto RefTL = ParamTL.getAs<ReferenceTypeLoc>();
+  // If we received a `const&` type, we need to rewrite the function
+  // declarations.
+  if (ParamDecl->getType()->isLValueReferenceType()) {
+    // Check if we can succesfully rewrite all declarations of the constructor.
+    for (const ParmVarDecl *ParmDecl : collectParamDecls(Ctor, ParamDecl)) {
+      TypeLoc ParamTL = ParmDecl->getTypeSourceInfo()->getTypeLoc();
+      ReferenceTypeLoc RefTL = ParamTL.getAs<ReferenceTypeLoc>();
+      if (RefTL.isNull()) {
+        // We cannot rewrite this instance. The type is probably hidden behind
+        // some `typedef`. Do not offer a fix-it in this case.
+        return;
+      }
+    }
+    // Rewrite all declarations.
+    for (const ParmVarDecl *ParmDecl : collectParamDecls(Ctor, ParamDecl)) {
+      TypeLoc ParamTL = ParmDecl->getTypeSourceInfo()->getTypeLoc();
+      ReferenceTypeLoc RefTL = ParamTL.getAs<ReferenceTypeLoc>();
 
-    // Do not replace if it is already a value, skip.
-    if (RefTL.isNull())
-      continue;
-
-    TypeLoc ValueTL = RefTL.getPointeeLoc();
-    auto TypeRange = CharSourceRange::getTokenRange(ParmDecl->getBeginLoc(),
-                                                    ParamTL.getEndLoc());
-    std::string ValueStr = Lexer::getSourceText(CharSourceRange::getTokenRange(
-                                                    ValueTL.getSourceRange()),
-                                                SM, getLangOpts())
-                               .str();
-    ValueStr += ' ';
-    Diag << FixItHint::CreateReplacement(TypeRange, ValueStr);
+      TypeLoc ValueTL = RefTL.getPointeeLoc();
+      CharSourceRange TypeRange = CharSourceRange::getTokenRange(
+          ParmDecl->getBeginLoc(), ParamTL.getEndLoc());
+      std::string ValueStr =
+          Lexer::getSourceText(
+              CharSourceRange::getTokenRange(ValueTL.getSourceRange()), SM,
+              getLangOpts())
+              .str();
+      ValueStr += ' ';
+      Diag << FixItHint::CreateReplacement(TypeRange, ValueStr);
+    }
   }
 
   // Use std::move in the initialization list.

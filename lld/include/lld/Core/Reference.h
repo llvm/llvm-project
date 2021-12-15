@@ -42,9 +42,8 @@ class Reference {
 public:
   /// Which universe defines the kindValue().
   enum class KindNamespace {
-    all     = 0,
+    all = 0,
     testing = 1,
-    mach_o  = 2,
   };
 
   KindNamespace kindNamespace() const { return (KindNamespace)_kindNamespace; }

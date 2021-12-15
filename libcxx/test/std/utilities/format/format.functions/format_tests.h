@@ -8,6 +8,8 @@
 #ifndef TEST_STD_UTILITIES_FORMAT_FORMAT_FUNCTIONS_FORMAT_TESTS_H
 #define TEST_STD_UTILITIES_FORMAT_FORMAT_FUNCTIONS_FORMAT_TESTS_H
 
+#include <format>
+
 #include "make_string.h"
 
 // In this file the following template types are used:
@@ -16,6 +18,24 @@
 
 #define STR(S) MAKE_STRING(CharT, S)
 #define CSTR(S) MAKE_CSTRING(CharT, S)
+
+template <class T>
+struct context {};
+
+template <>
+struct context<char> {
+  using type = std::format_context;
+};
+
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+template <>
+struct context<wchar_t> {
+  using type = std::wformat_context;
+};
+#endif
+
+template <class T>
+using context_t = typename context<T>::type;
 
 template <class CharT>
 std::vector<std::basic_string<CharT>> invalid_types(std::string valid) {

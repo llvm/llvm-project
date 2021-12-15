@@ -66,7 +66,7 @@ static bool matchSimpleReduction(Block &block) {
 ///     scf.reduce.return %1
 template <
     typename CompareOpTy, typename SelectOpTy,
-    typename Predicate = decltype(std::declval<CompareOpTy>().predicate())>
+    typename Predicate = decltype(std::declval<CompareOpTy>().getPredicate())>
 static bool
 matchSelectReduction(Block &block, ArrayRef<Predicate> lessThanPredicates,
                      ArrayRef<Predicate> greaterThanPredicates, bool &isMin) {
@@ -451,7 +451,7 @@ struct SCFToOpenMPPass : public ConvertSCFToOpenMPBase<SCFToOpenMPPass> {
   }
 };
 
-} // end namespace
+} // namespace
 
 std::unique_ptr<OperationPass<ModuleOp>> mlir::createConvertSCFToOpenMPPass() {
   return std::make_unique<SCFToOpenMPPass>();

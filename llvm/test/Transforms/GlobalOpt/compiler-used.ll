@@ -1,4 +1,4 @@
-; RUN: opt < %s -globalopt -S | FileCheck %s
+; RUN: opt < %s -passes=globalopt -S | FileCheck %s
 
 ; Test that when all members of llvm.compiler.used are found to be redundant
 ; we delete it instead of crashing.

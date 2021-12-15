@@ -181,7 +181,6 @@ public:
   virtual size_t ParseVariablesForContext(const SymbolContext &sc) = 0;
   virtual Type *ResolveTypeUID(lldb::user_id_t type_uid) = 0;
 
-
   /// The characteristics of an array type.
   struct ArrayInfo {
     int64_t first_index = 0;
@@ -318,19 +317,14 @@ public:
   ///
   /// \returns 0.0 if no information has been parsed or if there is
   /// no computational cost to parsing the debug information.
-  virtual StatsDuration GetDebugInfoParseTime() {
-    return StatsDuration(0.0);
-  }
+  virtual StatsDuration GetDebugInfoParseTime() { return StatsDuration(0.0); }
 
   /// Return the time it took to index the debug information in the object
   /// file.
   ///
   /// \returns 0.0 if the file doesn't need to be indexed or if it
   /// hasn't been indexed yet, or a valid duration if it has.
-  virtual StatsDuration GetDebugInfoIndexTime() {
-    return StatsDuration(0.0);
-  }
-
+  virtual StatsDuration GetDebugInfoIndexTime() { return StatsDuration(0.0); }
 
 protected:
   void AssertModuleLock();

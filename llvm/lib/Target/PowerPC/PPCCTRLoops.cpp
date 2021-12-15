@@ -81,8 +81,7 @@ FunctionPass *llvm::createPPCCTRLoopsVerify() {
 }
 
 static bool clobbersCTR(const MachineInstr &MI) {
-  for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-    const MachineOperand &MO = MI.getOperand(i);
+  for (const MachineOperand &MO : MI.operands()) {
     if (MO.isReg()) {
       if (MO.isDef() && (MO.getReg() == PPC::CTR || MO.getReg() == PPC::CTR8))
         return true;
@@ -167,18 +166,16 @@ bool PPCCTRLoopsVerify::runOnMachineFunction(MachineFunction &MF) {
 
   // Verify that all bdnz/bdz instructions are dominated by a loop mtctr before
   // any other instructions that might clobber the ctr register.
-  for (MachineFunction::iterator I = MF.begin(), IE = MF.end();
-       I != IE; ++I) {
-    MachineBasicBlock *MBB = &*I;
-    if (!MDT->isReachableFromEntry(MBB))
+  for (MachineBasicBlock &MBB : MF) {
+    if (!MDT->isReachableFromEntry(&MBB))
       continue;
 
-    for (MachineBasicBlock::iterator MII = MBB->getFirstTerminator(),
-      MIIE = MBB->end(); MII != MIIE; ++MII) {
+    for (MachineBasicBlock::iterator MII = MBB.getFirstTerminator(),
+      MIIE = MBB.end(); MII != MIIE; ++MII) {
       unsigned Opc = MII->getOpcode();
       if (Opc == PPC::BDNZ8 || Opc == PPC::BDNZ ||
           Opc == PPC::BDZ8  || Opc == PPC::BDZ)
-        if (!verifyCTRBranch(MBB, MII))
+        if (!verifyCTRBranch(&MBB, MII))
           llvm_unreachable("Invalid PPC CTR loop!");
     }
   }

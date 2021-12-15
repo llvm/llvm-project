@@ -93,7 +93,7 @@ public:
   }
 };
 
-} // end namespace OpTrait
-} // end namespace mlir
+} // namespace OpTrait
+} // namespace mlir
 
 #endif // MLIR_DIALECT_TRAITS

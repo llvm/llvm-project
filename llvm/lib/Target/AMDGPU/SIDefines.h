@@ -18,7 +18,8 @@ namespace llvm {
 enum SIRCFlags : uint8_t {
   // For vector registers.
   HasVGPR = 1 << 0,
-  HasAGPR = 1 << 1
+  HasAGPR = 1 << 1,
+  HasSGPR = 1 << 2
 }; // enum SIRCFlags
 
 namespace SIInstrFlags {

@@ -62,7 +62,7 @@ private:
   LogicalResult verifyDominanceOfContainedRegions(Operation &op,
                                                   DominanceInfo &domInfo);
 };
-} // end anonymous namespace
+} // namespace
 
 LogicalResult OperationVerifier::verifyOpAndDominance(Operation &op) {
   SmallVector<Operation *> opsWithIsolatedRegions;

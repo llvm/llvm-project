@@ -1745,6 +1745,16 @@ uint32_t SBTarget::GetCodeByteSize() {
   return 0;
 }
 
+uint32_t SBTarget::GetMaximumNumberOfChildrenToDisplay() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(uint32_t, SBTarget, GetMaximumNumberOfChildrenToDisplay);
+
+  TargetSP target_sp(GetSP());
+  if(target_sp){
+     return target_sp->GetMaximumNumberOfChildrenToDisplay();
+  }
+  return 0;
+}
+
 uint32_t SBTarget::GetAddressByteSize() {
   LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBTarget, GetAddressByteSize);
 
@@ -2679,6 +2689,7 @@ void RegisterMethods<SBTarget>(Registry &R) {
   LLDB_REGISTER_METHOD(const char *, SBTarget, GetTriple, ());
   LLDB_REGISTER_METHOD(uint32_t, SBTarget, GetDataByteSize, ());
   LLDB_REGISTER_METHOD(uint32_t, SBTarget, GetCodeByteSize, ());
+  LLDB_REGISTER_METHOD_CONST(uint32_t, SBTarget, GetMaximumNumberOfChildrenToDisplay,());
   LLDB_REGISTER_METHOD(uint32_t, SBTarget, GetAddressByteSize, ());
   LLDB_REGISTER_METHOD(lldb::SBModule, SBTarget, GetModuleAtIndex,
                        (uint32_t));

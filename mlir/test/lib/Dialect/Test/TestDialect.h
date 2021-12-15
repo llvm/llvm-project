@@ -50,6 +50,6 @@ class RewritePatternSet;
 namespace test {
 void registerTestDialect(::mlir::DialectRegistry &registry);
 void populateTestReductionPatterns(::mlir::RewritePatternSet &patterns);
-} // end namespace test
+} // namespace test
 
 #endif // MLIR_TESTDIALECT_H

@@ -87,9 +87,9 @@ afunc:
 /// 0x20804 + 0x8 - 0x3f8 = 0x11414 = dat2
 // CHECK-NEXT: 20804: sub     r0, pc, #1016
 /// 0x20808 + 0x8 + 0x400 = 0x11c10 = dat3
-// CHECK-NEXT: 20808: add     r0, pc, #1024
+// CHECK-NEXT: 20808: add     r0, pc, #64, #28
 /// 0x2080c + 0x8 + 0x400 = 0x11c14 = dat4
-// CHECK-NEXT: 2080c: add     r0, pc, #1024
+// CHECK-NEXT: 2080c: add     r0, pc, #64, #28
 
 // CHECK:      00020c10 <dat3>:
 // CHECK-NEXT: 20c10: andeq   r0, r0, r0

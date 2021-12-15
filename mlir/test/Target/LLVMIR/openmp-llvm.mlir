@@ -458,15 +458,15 @@ llvm.func @test_omp_wsloop_auto(%lb : i64, %ub : i64, %step : i64) -> () {
 llvm.func @body(i64)
 
 llvm.func @test_omp_wsloop_runtime(%lb : i64, %ub : i64, %step : i64) -> () {
- omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(runtime) {
-  // CHECK: call void @__kmpc_dispatch_init_8u
-  // CHECK: %[[continue:.*]] = call i32 @__kmpc_dispatch_next_8u
-  // CHECK: %[[cond:.*]] = icmp ne i32 %[[continue]], 0
-  // CHECK  br i1 %[[cond]], label %omp_loop.header{{.*}}, label %omp_loop.exit{{.*}}
-   llvm.call @body(%iv) : (i64) -> ()
-   omp.yield
- }
- llvm.return
+  omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(runtime) {
+    // CHECK: call void @__kmpc_dispatch_init_8u
+    // CHECK: %[[continue:.*]] = call i32 @__kmpc_dispatch_next_8u
+    // CHECK: %[[cond:.*]] = icmp ne i32 %[[continue]], 0
+    // CHECK  br i1 %[[cond]], label %omp_loop.header{{.*}}, label %omp_loop.exit{{.*}}
+    llvm.call @body(%iv) : (i64) -> ()
+    omp.yield
+  }
+  llvm.return
 }
 
 // -----
@@ -474,15 +474,15 @@ llvm.func @test_omp_wsloop_runtime(%lb : i64, %ub : i64, %step : i64) -> () {
 llvm.func @body(i64)
 
 llvm.func @test_omp_wsloop_guided(%lb : i64, %ub : i64, %step : i64) -> () {
- omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(guided) {
-  // CHECK: call void @__kmpc_dispatch_init_8u
-  // CHECK: %[[continue:.*]] = call i32 @__kmpc_dispatch_next_8u
-  // CHECK: %[[cond:.*]] = icmp ne i32 %[[continue]], 0
-  // CHECK  br i1 %[[cond]], label %omp_loop.header{{.*}}, label %omp_loop.exit{{.*}}
-   llvm.call @body(%iv) : (i64) -> ()
-   omp.yield
- }
- llvm.return
+  omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(guided) {
+    // CHECK: call void @__kmpc_dispatch_init_8u
+    // CHECK: %[[continue:.*]] = call i32 @__kmpc_dispatch_next_8u
+    // CHECK: %[[cond:.*]] = icmp ne i32 %[[continue]], 0
+    // CHECK  br i1 %[[cond]], label %omp_loop.header{{.*}}, label %omp_loop.exit{{.*}}
+    llvm.call @body(%iv) : (i64) -> ()
+    omp.yield
+  }
+  llvm.return
 }
 
 // -----
@@ -490,15 +490,15 @@ llvm.func @test_omp_wsloop_guided(%lb : i64, %ub : i64, %step : i64) -> () {
 llvm.func @body(i64)
 
 llvm.func @test_omp_wsloop_dynamic_nonmonotonic(%lb : i64, %ub : i64, %step : i64) -> () {
- omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(dynamic, nonmonotonic) {
-  // CHECK: call void @__kmpc_dispatch_init_8u(%struct.ident_t* @{{.*}}, i32 %{{.*}}, i32 1073741859
-  // CHECK: %[[continue:.*]] = call i32 @__kmpc_dispatch_next_8u
-  // CHECK: %[[cond:.*]] = icmp ne i32 %[[continue]], 0
-  // CHECK  br i1 %[[cond]], label %omp_loop.header{{.*}}, label %omp_loop.exit{{.*}}
-   llvm.call @body(%iv) : (i64) -> ()
-   omp.yield
- }
- llvm.return
+  omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(dynamic, nonmonotonic) {
+    // CHECK: call void @__kmpc_dispatch_init_8u(%struct.ident_t* @{{.*}}, i32 %{{.*}}, i32 1073741859
+    // CHECK: %[[continue:.*]] = call i32 @__kmpc_dispatch_next_8u
+    // CHECK: %[[cond:.*]] = icmp ne i32 %[[continue]], 0
+    // CHECK  br i1 %[[cond]], label %omp_loop.header{{.*}}, label %omp_loop.exit{{.*}}
+    llvm.call @body(%iv) : (i64) -> ()
+    omp.yield
+  }
+  llvm.return
 }
 
 // -----
@@ -506,15 +506,39 @@ llvm.func @test_omp_wsloop_dynamic_nonmonotonic(%lb : i64, %ub : i64, %step : i6
 llvm.func @body(i64)
 
 llvm.func @test_omp_wsloop_dynamic_monotonic(%lb : i64, %ub : i64, %step : i64) -> () {
- omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(dynamic, monotonic) {
-  // CHECK: call void @__kmpc_dispatch_init_8u(%struct.ident_t* @{{.*}}, i32 %{{.*}}, i32 536870947
-  // CHECK: %[[continue:.*]] = call i32 @__kmpc_dispatch_next_8u
-  // CHECK: %[[cond:.*]] = icmp ne i32 %[[continue]], 0
-  // CHECK  br i1 %[[cond]], label %omp_loop.header{{.*}}, label %omp_loop.exit{{.*}}
-   llvm.call @body(%iv) : (i64) -> ()
-   omp.yield
- }
- llvm.return
+  omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(dynamic, monotonic) {
+    // CHECK: call void @__kmpc_dispatch_init_8u(%struct.ident_t* @{{.*}}, i32 %{{.*}}, i32 536870947
+    // CHECK: %[[continue:.*]] = call i32 @__kmpc_dispatch_next_8u
+    // CHECK: %[[cond:.*]] = icmp ne i32 %[[continue]], 0
+    // CHECK  br i1 %[[cond]], label %omp_loop.header{{.*}}, label %omp_loop.exit{{.*}}
+    llvm.call @body(%iv) : (i64) -> ()
+    omp.yield
+  }
+  llvm.return
+}
+
+llvm.func @test_omp_wsloop_runtime_simd(%lb : i64, %ub : i64, %step : i64) -> () {
+  omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(runtime, simd) {
+    // CHECK: call void @__kmpc_dispatch_init_8u(%struct.ident_t* @{{.*}}, i32 %{{.*}}, i32 47
+    // CHECK: %[[continue:.*]] = call i32 @__kmpc_dispatch_next_8u
+    // CHECK: %[[cond:.*]] = icmp ne i32 %[[continue]], 0
+    // CHECK  br i1 %[[cond]], label %omp_loop.header{{.*}}, label %omp_loop.exit{{.*}}
+    llvm.call @body(%iv) : (i64) -> ()
+    omp.yield
+  }
+  llvm.return
+}
+
+llvm.func @test_omp_wsloop_guided_simd(%lb : i64, %ub : i64, %step : i64) -> () {
+  omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(guided, simd) {
+    // CHECK: call void @__kmpc_dispatch_init_8u(%struct.ident_t* @{{.*}}, i32 %{{.*}}, i32 46
+    // CHECK: %[[continue:.*]] = call i32 @__kmpc_dispatch_next_8u
+    // CHECK: %[[cond:.*]] = icmp ne i32 %[[continue]], 0
+    // CHECK  br i1 %[[cond]], label %omp_loop.header{{.*}}, label %omp_loop.exit{{.*}}
+    llvm.call @body(%iv) : (i64) -> ()
+    omp.yield
+  }
+  llvm.return
 }
 
 // -----
@@ -680,5 +704,35 @@ llvm.func @omp_ordered(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i64,
     omp.yield
   }
 
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @omp_atomic_read
+// CHECK-SAME: (i32* %[[ARG0:.*]])
+llvm.func @omp_atomic_read(%arg0 : !llvm.ptr<i32>) -> () {
+  // CHECK: %{{.*}} = alloca i32, align 4
+  // CHECK: %{{.*}} = alloca i32, align 4
+  // CHECK: %{{.*}} = alloca i32, align 4
+  // CHECK: %{{.*}} = alloca i32, align 4
+
+  // CHECK: %[[X1:.*]] = load atomic i32, i32* %[[ARG0]] monotonic, align 4
+  // CHECK: store i32 %[[X1]], i32* %{{.*}}, align 4
+  %x1 = omp.atomic.read %arg0 : !llvm.ptr<i32> -> i32
+
+  // CHECK: %[[X2:.*]] = load atomic i32, i32* %[[ARG0]] seq_cst, align 4
+  // CHECK: call void @__kmpc_flush(%{{.*}})
+  // CHECK: store i32 %[[X2]], i32* %{{.*}}, align 4
+  %x2 = omp.atomic.read %arg0 memory_order(seq_cst) : !llvm.ptr<i32> -> i32
+
+  // CHECK: %[[X3:.*]] = load atomic i32, i32* %[[ARG0]] acquire, align 4
+  // CHECK: call void @__kmpc_flush(%{{.*}})
+  // CHECK: store i32 %[[X3]], i32* %{{.*}}, align 4
+  %x3 = omp.atomic.read %arg0 memory_order(acquire) : !llvm.ptr<i32> -> i32
+
+  // CHECK: %[[X4:.*]] = load atomic i32, i32* %[[ARG0]] monotonic, align 4
+  // CHECK: store i32 %[[X4]], i32* %{{.*}}, align 4
+  %x4 = omp.atomic.read %arg0 memory_order(relaxed) : !llvm.ptr<i32> -> i32
   llvm.return
 }

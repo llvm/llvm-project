@@ -69,6 +69,7 @@ class VectorType;
     CALL_PRED,   // Function call that's predicable.
     CALL_NOLINK, // Function call with branch not branch-and-link.
     tSECALL,     // CMSE non-secure function call.
+    t2CALL_BTI,  // Thumb function call followed by BTI instruction.
     BRCOND,      // Conditional branch.
     BR_JT,       // Jumptable branch.
     BR2_JT,      // Jumptable branch (2 level - jumptable entry is a jump).
@@ -735,6 +736,8 @@ class VectorType;
                                            CombineLevel Level) const override;
 
     bool preferIncOfAddToSubOfNot(EVT VT) const override;
+
+    bool shouldConvertFpToSat(unsigned Op, EVT FPVT, EVT VT) const override;
 
   protected:
     std::pair<const TargetRegisterClass *, uint8_t>

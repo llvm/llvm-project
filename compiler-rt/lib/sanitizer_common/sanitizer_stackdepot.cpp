@@ -12,8 +12,10 @@
 
 #include "sanitizer_stackdepot.h"
 
+#include "sanitizer_atomic.h"
 #include "sanitizer_common.h"
 #include "sanitizer_hash.h"
+#include "sanitizer_mutex.h"
 #include "sanitizer_stack_store.h"
 #include "sanitizer_stackdepotbase.h"
 
@@ -23,6 +25,7 @@ struct StackDepotNode {
   using hash_type = u64;
   hash_type stack_hash;
   u32 link;
+  StackStore::Id store_id;
 
   static const u32 kTabSizeLog = SANITIZER_ANDROID ? 16 : 20;
 
@@ -53,11 +56,6 @@ static StackStore stackStore;
 typedef StackDepotBase<StackDepotNode, 1, StackDepotNode::kTabSizeLog>
     StackDepot;
 static StackDepot theDepot;
-// Keep rarely accessed stack traces out of frequently access nodes to improve
-// caching efficiency.
-static TwoLevelMap<StackStore::Id, StackDepot::kNodesSize1,
-                   StackDepot::kNodesSize2>
-    storeIds;
 // Keep mutable data out of frequently access nodes to improve caching
 // efficiency.
 static TwoLevelMap<atomic_uint32_t, StackDepot::kNodesSize1,
@@ -73,17 +71,131 @@ void StackDepotHandle::inc_use_count_unsafe() {
 }
 
 uptr StackDepotNode::allocated() {
-  return stackStore.Allocated() + storeIds.MemoryUsage() +
-         useCounts.MemoryUsage();
+  return stackStore.Allocated() + useCounts.MemoryUsage();
 }
+
+static void CompressStackStore() {
+  u64 start = MonotonicNanoTime();
+  uptr diff = stackStore.Pack(static_cast<StackStore::Compression>(
+      Abs(common_flags()->compress_stack_depot)));
+  if (!diff)
+    return;
+  u64 finish = MonotonicNanoTime();
+  uptr total_before = theDepot.GetStats().allocated + diff;
+  VPrintf(1, "%s: StackDepot released %zu KiB out of %zu KiB in %llu ms\n",
+          SanitizerToolName, diff >> 10, total_before >> 10,
+          (finish - start) / 1000000);
+}
+
+namespace {
+
+class CompressThread {
+ public:
+  constexpr CompressThread() = default;
+  void NewWorkNotify();
+  void Stop();
+  void LockAndStop() NO_THREAD_SAFETY_ANALYSIS;
+  void Unlock() NO_THREAD_SAFETY_ANALYSIS;
+
+ private:
+  enum class State {
+    NotStarted = 0,
+    Started,
+    Failed,
+    Stopped,
+  };
+
+  void Run();
+
+  bool WaitForWork() {
+    semaphore_.Wait();
+    return atomic_load(&run_, memory_order_acquire);
+  }
+
+  Semaphore semaphore_ = {};
+  StaticSpinMutex mutex_ = {};
+  State state_ GUARDED_BY(mutex_) = State::NotStarted;
+  void *thread_ GUARDED_BY(mutex_) = nullptr;
+  atomic_uint8_t run_ = {};
+};
+
+static CompressThread compress_thread;
+
+void CompressThread::NewWorkNotify() {
+  int compress = common_flags()->compress_stack_depot;
+  if (!compress)
+    return;
+  if (compress > 0 /* for testing or debugging */) {
+    SpinMutexLock l(&mutex_);
+    if (state_ == State::NotStarted) {
+      atomic_store(&run_, 1, memory_order_release);
+      CHECK_EQ(nullptr, thread_);
+      thread_ = internal_start_thread(
+          [](void *arg) -> void * {
+            reinterpret_cast<CompressThread *>(arg)->Run();
+            return nullptr;
+          },
+          this);
+      state_ = thread_ ? State::Started : State::Failed;
+    }
+    if (state_ == State::Started) {
+      semaphore_.Post();
+      return;
+    }
+  }
+  CompressStackStore();
+}
+
+void CompressThread::Run() {
+  VPrintf(1, "%s: StackDepot compression thread started\n", SanitizerToolName);
+  while (WaitForWork()) CompressStackStore();
+  VPrintf(1, "%s: StackDepot compression thread stopped\n", SanitizerToolName);
+}
+
+void CompressThread::Stop() {
+  void *t = nullptr;
+  {
+    SpinMutexLock l(&mutex_);
+    if (state_ != State::Started)
+      return;
+    state_ = State::Stopped;
+    CHECK_NE(nullptr, thread_);
+    t = thread_;
+    thread_ = nullptr;
+  }
+  atomic_store(&run_, 0, memory_order_release);
+  semaphore_.Post();
+  internal_join_thread(t);
+}
+
+void CompressThread::LockAndStop() {
+  mutex_.Lock();
+  if (state_ != State::Started)
+    return;
+  CHECK_NE(nullptr, thread_);
+
+  atomic_store(&run_, 0, memory_order_release);
+  semaphore_.Post();
+  internal_join_thread(thread_);
+  // Allow to restart after Unlock() if needed.
+  state_ = State::NotStarted;
+  thread_ = nullptr;
+}
+
+void CompressThread::Unlock() { mutex_.Unlock(); }
+
+}  // namespace
 
 void StackDepotNode::store(u32 id, const args_type &args, hash_type hash) {
   stack_hash = hash;
-  storeIds[id] = stackStore.Store(args);
+  uptr pack = 0;
+  store_id = stackStore.Store(args, &pack);
+  if (LIKELY(!pack))
+    return;
+  compress_thread.NewWorkNotify();
 }
 
 StackDepotNode::args_type StackDepotNode::load(u32 id) const {
-  StackStore::Id store_id = storeIds[id];
   if (!store_id)
     return {};
   return stackStore.Load(store_id);
@@ -103,9 +215,13 @@ StackTrace StackDepotGet(u32 id) {
 
 void StackDepotLockAll() {
   theDepot.LockAll();
+  compress_thread.LockAndStop();
+  stackStore.LockAll();
 }
 
 void StackDepotUnlockAll() {
+  stackStore.UnlockAll();
+  compress_thread.Unlock();
   theDepot.UnlockAll();
 }
 
@@ -115,13 +231,14 @@ void StackDepotPrintAll() {
 #endif
 }
 
+void StackDepotStopBackgroundThread() { compress_thread.Stop(); }
+
 StackDepotHandle StackDepotNode::get_handle(u32 id) {
   return StackDepotHandle(&theDepot.nodes[id], id);
 }
 
 void StackDepotTestOnlyUnmap() {
   theDepot.TestOnlyUnmap();
-  storeIds.TestOnlyUnmap();
   stackStore.TestOnlyUnmap();
 }
 

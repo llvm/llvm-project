@@ -59,10 +59,10 @@ define <vscale x 2 x i64> @or_and_nxv2i64_fold(<vscale x 2 x i64> %a0) {
 define <vscale x 4 x i32> @combine_vec_shl_shl(<vscale x 4 x i32> %x) {
 ; CHECK-LABEL: combine_vec_shl_shl:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 2
+; CHECK-NEXT:    li a0, 2
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, mu
 ; CHECK-NEXT:    vmv.s.x v10, a0
-; CHECK-NEXT:    addi a0, zero, 4
+; CHECK-NEXT:    li a0, 4
 ; CHECK-NEXT:    vmv.s.x v12, a0
 ; CHECK-NEXT:    vsll.vv v8, v8, v10
 ; CHECK-NEXT:    vsll.vv v8, v8, v12

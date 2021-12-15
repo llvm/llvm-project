@@ -62,11 +62,6 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
   // calls.
   const bool HasCalls = F.hasFnAttribute("amdgpu-calls");
 
-  // Enable all kernel inputs if we have the fixed ABI. Don't bother if we don't
-  // have any calls.
-  const bool UseFixedABI = AMDGPUTargetMachine::EnableFixedFunctionABI &&
-                           CC != CallingConv::AMDGPU_Gfx &&
-                           (!isEntryFunction() || HasCalls);
   const bool IsKernel = CC == CallingConv::AMDGPU_KERNEL ||
                         CC == CallingConv::SPIR_KERNEL;
 
@@ -80,7 +75,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
   }
 
   if (!isEntryFunction()) {
-    if (UseFixedABI)
+    if (CC != CallingConv::AMDGPU_Gfx)
       ArgInfo = AMDGPUArgumentUsageInfo::FixedABIFunctionInfo;
 
     // TODO: Pick a high register, and shift down, similar to a kernel.
@@ -110,20 +105,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
   else if (ST.isMesaGfxShader(F))
     ImplicitBufferPtr = true;
 
-  if (UseFixedABI) {
-    DispatchPtr = true;
-    QueuePtr = true;
-    ImplicitArgPtr = true;
-    WorkGroupIDX = true;
-    WorkGroupIDY = true;
-    WorkGroupIDZ = true;
-    WorkItemIDX = true;
-    WorkItemIDY = true;
-    WorkItemIDZ = true;
-
-    // FIXME: We don't need this?
-    DispatchID = true;
-  } else if (!AMDGPU::isGraphics(CC)) {
+  if (!AMDGPU::isGraphics(CC)) {
     if (IsKernel || !F.hasFnAttribute("amdgpu-no-workgroup-id-x"))
       WorkGroupIDX = true;
 

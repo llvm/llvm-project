@@ -372,8 +372,8 @@ struct SourceMgrDiagnosticHandlerImpl {
   /// Mapping between file name and buffer ID's.
   llvm::StringMap<unsigned> filenameToBufId;
 };
-} // end namespace detail
-} // end namespace mlir
+} // namespace detail
+} // namespace mlir
 
 /// Return a processable FileLineColLoc from the given location.
 static Optional<FileLineColLoc> getFileLineColLoc(Location loc) {
@@ -610,8 +610,8 @@ struct SourceMgrDiagnosticVerifierHandlerImpl {
   llvm::Regex expected = llvm::Regex("expected-(error|note|remark|warning) "
                                      "*(@([+-][0-9]+|above|below))? *{{(.*)}}");
 };
-} // end namespace detail
-} // end namespace mlir
+} // namespace detail
+} // namespace mlir
 
 /// Given a diagnostic kind, return a human readable string for it.
 static StringRef getDiagKindStr(DiagnosticSeverity kind) {
@@ -947,8 +947,8 @@ struct ParallelDiagnosticHandlerImpl : public llvm::PrettyStackTraceEntry {
   /// The context to emit the diagnostics to.
   MLIRContext *context;
 };
-} // end namespace detail
-} // end namespace mlir
+} // namespace detail
+} // namespace mlir
 
 ParallelDiagnosticHandler::ParallelDiagnosticHandler(MLIRContext *ctx)
     : impl(new ParallelDiagnosticHandlerImpl(ctx)) {}

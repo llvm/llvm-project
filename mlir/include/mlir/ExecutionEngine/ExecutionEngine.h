@@ -97,9 +97,14 @@ public:
          bool enableGDBNotificationListener = true,
          bool enablePerfNotificationListener = true);
 
-  /// Looks up a packed-argument function with the given name and returns a
-  /// pointer to it.  Propagates errors in case of failure.
-  llvm::Expected<void (*)(void **)> lookup(StringRef name) const;
+  /// Looks up a packed-argument function wrapping the function with the given
+  /// name and returns a pointer to it. Propagates errors in case of failure.
+  llvm::Expected<void (*)(void **)> lookupPacked(StringRef name) const;
+
+  /// Looks up the original function with the given name and returns a
+  /// pointer to it. This is not necesarily a packed function. Propagates
+  /// errors in case of failure.
+  llvm::Expected<void *> lookup(StringRef name) const;
 
   /// Invokes the function with the given name passing it the list of opaque
   /// pointers to the actual arguments.
@@ -192,6 +197,6 @@ private:
   llvm::JITEventListener *perfListener;
 };
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_EXECUTIONENGINE_EXECUTIONENGINE_H_

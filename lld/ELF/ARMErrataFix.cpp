@@ -329,9 +329,8 @@ void ARMErr657417Patcher::init() {
   };
 
   // Collect mapping symbols for every executable InputSection.
-  for (InputFile *file : objectFiles) {
-    auto *f = cast<ObjFile<ELF32LE>>(file);
-    for (Symbol *s : f->getLocalSymbols()) {
+  for (ELFFileBase *file : objectFiles) {
+    for (Symbol *s : file->getLocalSymbols()) {
       auto *def = dyn_cast<Defined>(s);
       if (!def)
         continue;
@@ -525,8 +524,8 @@ bool ARMErr657417Patcher::createFixes() {
   for (OutputSection *os : outputSections) {
     if (!(os->flags & SHF_ALLOC) || !(os->flags & SHF_EXECINSTR))
       continue;
-    for (BaseCommand *bc : os->sectionCommands)
-      if (auto *isd = dyn_cast<InputSectionDescription>(bc)) {
+    for (SectionCommand *cmd : os->commands)
+      if (auto *isd = dyn_cast<InputSectionDescription>(cmd)) {
         std::vector<Patch657417Section *> patches =
             patchInputSectionDescription(*isd);
         if (!patches.empty()) {

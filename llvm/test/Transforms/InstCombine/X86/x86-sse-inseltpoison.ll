@@ -4,9 +4,9 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 define float @test_rcp_ss_0(float %a) {
 ; CHECK-LABEL: @test_rcp_ss_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[A:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x float> @llvm.x86.sse.rcp.ss(<4 x float> [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP2]], i64 0
 ; CHECK-NEXT:    ret float [[TMP3]]
 ;
   %1 = insertelement <4 x float> poison, float %a, i32 0
@@ -60,9 +60,9 @@ define float @test_sqrt_ss_2(float %a) {
 
 define float @test_rsqrt_ss_0(float %a) {
 ; CHECK-LABEL: @test_rsqrt_ss_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[A:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x float> @llvm.x86.sse.rsqrt.ss(<4 x float> [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP2]], i64 0
 ; CHECK-NEXT:    ret float [[TMP3]]
 ;
   %1 = insertelement <4 x float> poison, float %a, i32 0
@@ -273,10 +273,10 @@ define <4 x float> @test_min_ss(<4 x float> %a, <4 x float> %b) {
 
 define float @test_min_ss_0(float %a, float %b) {
 ; CHECK-LABEL: @test_min_ss_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[A:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[B:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call <4 x float> @llvm.x86.sse.min.ss(<4 x float> [[TMP1]], <4 x float> [[TMP2]])
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP3]], i64 0
 ; CHECK-NEXT:    ret float [[TMP4]]
 ;
   %1 = insertelement <4 x float> poison, float %a, i32 0
@@ -308,9 +308,9 @@ define float @test_min_ss_2(float %a, float %b) {
 
 define float @test_min_ss_3(float %a) {
 ; CHECK-LABEL: @test_min_ss_3(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> <float poison, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, float [[A:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> <float poison, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, float [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x float> @llvm.x86.sse.min.ss(<4 x float> [[TMP1]], <4 x float> [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP2]], i64 0
 ; CHECK-NEXT:    ret float [[TMP3]]
 ;
   %1 = insertelement <4 x float> zeroinitializer, float %a, i32 0
@@ -333,10 +333,10 @@ define <4 x float> @test_max_ss(<4 x float> %a, <4 x float> %b) {
 
 define float @test_max_ss_0(float %a, float %b) {
 ; CHECK-LABEL: @test_max_ss_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[A:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[B:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call <4 x float> @llvm.x86.sse.max.ss(<4 x float> [[TMP1]], <4 x float> [[TMP2]])
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP3]], i64 0
 ; CHECK-NEXT:    ret float [[TMP4]]
 ;
   %1 = insertelement <4 x float> poison, float %a, i32 0
@@ -368,9 +368,9 @@ define float @test_max_ss_3(float %a, float %b) {
 
 define float @test_max_ss_4(float %a) {
 ; CHECK-LABEL: @test_max_ss_4(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> <float poison, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, float [[A:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> <float poison, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, float [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x float> @llvm.x86.sse.max.ss(<4 x float> [[TMP1]], <4 x float> [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP2]], i64 0
 ; CHECK-NEXT:    ret float [[TMP3]]
 ;
   %1 = insertelement <4 x float> zeroinitializer, float %a, i32 0
@@ -393,10 +393,10 @@ define <4 x float> @test_cmp_ss(<4 x float> %a, <4 x float> %b) {
 
 define float @test_cmp_ss_0(float %a, float %b) {
 ; CHECK-LABEL: @test_cmp_ss_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[A:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[B:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call <4 x float> @llvm.x86.sse.cmp.ss(<4 x float> [[TMP1]], <4 x float> [[TMP2]], i8 0)
-; CHECK-NEXT:    [[R:%.*]] = extractelement <4 x float> [[TMP3]], i32 0
+; CHECK-NEXT:    [[R:%.*]] = extractelement <4 x float> [[TMP3]], i64 0
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %1 = insertelement <4 x float> poison, float %a, i32 0
@@ -428,9 +428,9 @@ define float @test_cmp_ss_1(float %a, float %b) {
 
 define float @test_cmp_ss_2(float %a) {
 ; CHECK-LABEL: @test_cmp_ss_2(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> <float poison, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, float [[A:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> <float poison, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, float [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x float> @llvm.x86.sse.cmp.ss(<4 x float> [[TMP1]], <4 x float> [[TMP1]], i8 3)
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP2]], i64 0
 ; CHECK-NEXT:    ret float [[TMP3]]
 ;
   %1 = insertelement <4 x float> zeroinitializer, float %a, i32 0
@@ -441,8 +441,8 @@ define float @test_cmp_ss_2(float %a) {
 
 define i32 @test_comieq_ss_0(float %a, float %b) {
 ; CHECK-LABEL: @test_comieq_ss_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[A:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[B:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @llvm.x86.sse.comieq.ss(<4 x float> [[TMP1]], <4 x float> [[TMP2]])
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
@@ -460,8 +460,8 @@ define i32 @test_comieq_ss_0(float %a, float %b) {
 
 define i32 @test_comige_ss_0(float %a, float %b) {
 ; CHECK-LABEL: @test_comige_ss_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[A:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[B:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @llvm.x86.sse.comige.ss(<4 x float> [[TMP1]], <4 x float> [[TMP2]])
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
@@ -479,8 +479,8 @@ define i32 @test_comige_ss_0(float %a, float %b) {
 
 define i32 @test_comigt_ss_0(float %a, float %b) {
 ; CHECK-LABEL: @test_comigt_ss_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[A:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[B:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @llvm.x86.sse.comigt.ss(<4 x float> [[TMP1]], <4 x float> [[TMP2]])
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
@@ -498,8 +498,8 @@ define i32 @test_comigt_ss_0(float %a, float %b) {
 
 define i32 @test_comile_ss_0(float %a, float %b) {
 ; CHECK-LABEL: @test_comile_ss_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[A:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[B:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @llvm.x86.sse.comile.ss(<4 x float> [[TMP1]], <4 x float> [[TMP2]])
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
@@ -517,8 +517,8 @@ define i32 @test_comile_ss_0(float %a, float %b) {
 
 define i32 @test_comilt_ss_0(float %a, float %b) {
 ; CHECK-LABEL: @test_comilt_ss_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[A:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[B:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @llvm.x86.sse.comilt.ss(<4 x float> [[TMP1]], <4 x float> [[TMP2]])
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
@@ -536,8 +536,8 @@ define i32 @test_comilt_ss_0(float %a, float %b) {
 
 define i32 @test_comineq_ss_0(float %a, float %b) {
 ; CHECK-LABEL: @test_comineq_ss_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[A:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[B:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @llvm.x86.sse.comineq.ss(<4 x float> [[TMP1]], <4 x float> [[TMP2]])
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
@@ -555,8 +555,8 @@ define i32 @test_comineq_ss_0(float %a, float %b) {
 
 define i32 @test_ucomieq_ss_0(float %a, float %b) {
 ; CHECK-LABEL: @test_ucomieq_ss_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[A:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[B:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @llvm.x86.sse.ucomieq.ss(<4 x float> [[TMP1]], <4 x float> [[TMP2]])
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
@@ -574,8 +574,8 @@ define i32 @test_ucomieq_ss_0(float %a, float %b) {
 
 define i32 @test_ucomige_ss_0(float %a, float %b) {
 ; CHECK-LABEL: @test_ucomige_ss_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[A:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[B:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @llvm.x86.sse.ucomige.ss(<4 x float> [[TMP1]], <4 x float> [[TMP2]])
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
@@ -593,8 +593,8 @@ define i32 @test_ucomige_ss_0(float %a, float %b) {
 
 define i32 @test_ucomigt_ss_0(float %a, float %b) {
 ; CHECK-LABEL: @test_ucomigt_ss_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[A:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[B:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @llvm.x86.sse.ucomigt.ss(<4 x float> [[TMP1]], <4 x float> [[TMP2]])
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
@@ -612,8 +612,8 @@ define i32 @test_ucomigt_ss_0(float %a, float %b) {
 
 define i32 @test_ucomile_ss_0(float %a, float %b) {
 ; CHECK-LABEL: @test_ucomile_ss_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[A:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[B:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @llvm.x86.sse.ucomile.ss(<4 x float> [[TMP1]], <4 x float> [[TMP2]])
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
@@ -631,8 +631,8 @@ define i32 @test_ucomile_ss_0(float %a, float %b) {
 
 define i32 @test_ucomilt_ss_0(float %a, float %b) {
 ; CHECK-LABEL: @test_ucomilt_ss_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[A:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[B:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @llvm.x86.sse.ucomilt.ss(<4 x float> [[TMP1]], <4 x float> [[TMP2]])
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
@@ -650,8 +650,8 @@ define i32 @test_ucomilt_ss_0(float %a, float %b) {
 
 define i32 @test_ucomineq_ss_0(float %a, float %b) {
 ; CHECK-LABEL: @test_ucomineq_ss_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[A:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[B:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @llvm.x86.sse.ucomineq.ss(<4 x float> [[TMP1]], <4 x float> [[TMP2]])
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;

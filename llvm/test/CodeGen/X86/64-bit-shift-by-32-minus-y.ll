@@ -284,9 +284,8 @@ define i64 @t4(i64 %val, i64 %shamt) nounwind {
 define i64 @t5_cse(i64 %val, i64 %shamt, i64*%dst) nounwind {
 ; X64-NOBMI2-LABEL: t5_cse:
 ; X64-NOBMI2:       # %bb.0:
-; X64-NOBMI2-NEXT:    movq %rsi, %rcx
 ; X64-NOBMI2-NEXT:    movq %rdi, %rax
-; X64-NOBMI2-NEXT:    addq $32, %rcx
+; X64-NOBMI2-NEXT:    leaq 32(%rsi), %rcx
 ; X64-NOBMI2-NEXT:    movq %rcx, (%rdx)
 ; X64-NOBMI2-NEXT:    negq %rcx
 ; X64-NOBMI2-NEXT:    # kill: def $cl killed $cl killed $rcx

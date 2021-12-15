@@ -312,6 +312,6 @@ auto ElementsAttr::try_value_begin() const
     return llvm::None;
   return iterator<T>(std::move(*indexer), 0);
 }
-} // end namespace mlir.
+} // namespace mlir.
 
 #endif // MLIR_IR_BUILTINATTRIBUTEINTERFACES_H

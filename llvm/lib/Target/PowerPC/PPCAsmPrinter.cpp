@@ -347,7 +347,6 @@ bool PPCAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
 // At the moment, all inline asm memory operands are a single register.
 // In any case, the output of this routine should always be just one
 // assembler operand.
-
 bool PPCAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                                           const char *ExtraCode,
                                           raw_ostream &O) {
@@ -875,18 +874,19 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     EmitToStreamer(*OutStreamer, TmpInst);
     return;
   }
-  case PPC::ADDItoc: {
+  case PPC::ADDItoc:
+  case PPC::ADDItoc8: {
     assert(IsAIX && TM.getCodeModel() == CodeModel::Small &&
-           "Operand only valid in AIX 32 bit mode");
+           "PseudoOp only valid for small code model AIX");
 
-    // Transform %rN = ADDItoc @op1, %r2.
+    // Transform %rN = ADDItoc/8 @op1, %r2.
     LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);
 
     // Change the opcode to load address.
-    TmpInst.setOpcode(PPC::LA);
+    TmpInst.setOpcode((!IsPPC64) ? (PPC::LA) : (PPC::LA8));
 
     const MachineOperand &MO = MI->getOperand(1);
-    assert(MO.isGlobal() && "Invalid operand for ADDItoc.");
+    assert(MO.isGlobal() && "Invalid operand for ADDItoc[8].");
 
     // Map the operand to its corresponding MCSymbol.
     const MCSymbol *const MOSymbol = getMCSymbolForTOCPseudoMO(MO, *this);

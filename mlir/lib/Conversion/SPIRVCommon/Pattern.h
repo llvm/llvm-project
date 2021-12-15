@@ -39,7 +39,7 @@ public:
   }
 };
 
-} // end namespace spirv
-} // end namespace mlir
+} // namespace spirv
+} // namespace mlir
 
 #endif // MLIR_CONVERSION_SPIRVCOMMON_PATTERN_H

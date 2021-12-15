@@ -38,7 +38,7 @@ struct TestLinalgHoisting
       llvm::cl::desc("Test hoisting transfer_read/transfer_write pairs"),
       llvm::cl::init(false)};
 };
-} // end anonymous namespace
+} // namespace
 
 void TestLinalgHoisting::runOnFunction() {
   if (testHoistRedundantTransfers) {

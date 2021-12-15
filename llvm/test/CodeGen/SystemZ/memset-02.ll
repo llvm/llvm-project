@@ -123,7 +123,8 @@ define void @f12(i8* %dest) {
 define void @f13(i8* %dest) {
 ; CHECK-LABEL: f13:
 ; CHECK: mvi 0(%r2), 128
-; CHECK: mvc 1(256,%r2), 0(%r2)
+; CHECK: mvc 1(255,%r2), 0(%r2)
+; CHECK: mvi 256(%r2), 128
 ; CHECK: br %r14
   call void @llvm.memset.p0i8.i32(i8* %dest, i8 128, i32 257, i1 false)
   ret void
@@ -133,7 +134,8 @@ define void @f13(i8* %dest) {
 define void @f14(i8* %dest) {
 ; CHECK-LABEL: f14:
 ; CHECK: mvi 0(%r2), 128
-; CHECK: mvc 1(256,%r2), 0(%r2)
+; CHECK: mvc 1(255,%r2), 0(%r2)
+; CHECK: mvi 256(%r2), 128
 ; CHECK: br %r14
   call void @llvm.memset.p0i8.i64(i8* %dest, i8 128, i64 257, i1 false)
   ret void
@@ -143,7 +145,8 @@ define void @f14(i8* %dest) {
 define void @f15(i8* %dest) {
 ; CHECK-LABEL: f15:
 ; CHECK: mvi 0(%r2), 128
-; CHECK: mvc 1(256,%r2), 0(%r2)
+; CHECK: mvc 1(255,%r2), 0(%r2)
+; CHECK: mvi 256(%r2), 128
 ; CHECK: mvc 257(1,%r2), 256(%r2)
 ; CHECK: br %r14
   call void @llvm.memset.p0i8.i32(i8* %dest, i8 128, i32 258, i1 false)
@@ -154,7 +157,8 @@ define void @f15(i8* %dest) {
 define void @f16(i8* %dest) {
 ; CHECK-LABEL: f16:
 ; CHECK: mvi 0(%r2), 128
-; CHECK: mvc 1(256,%r2), 0(%r2)
+; CHECK: mvc 1(255,%r2), 0(%r2)
+; CHECK: mvi 256(%r2), 128
 ; CHECK: mvc 257(1,%r2), 256(%r2)
 ; CHECK: br %r14
   call void @llvm.memset.p0i8.i64(i8* %dest, i8 128, i64 258, i1 false)

@@ -219,3 +219,44 @@ declare i8* @foo_nonlazybind()  nonlazybind
 declare i8* @objc_retainAutoreleasedReturnValue(i8*)
 declare i8* @objc_unsafeClaimAutoreleasedReturnValue(i8*)
 declare i32 @__gxx_personality_v0(...)
+
+declare i8* @fn1()
+declare i8* @fn2()
+
+define i8* @rv_marker_block_placement(i1 %c.0) {
+; CHECK-LABEL: _rv_marker_block_placement:
+; CHECK:        pushq   %rax
+; CHECK-NEXT:   .cfi_def_cfa_offset 16
+; CHECK-NEXT:   testb   $1, %dil
+; CHECK-NEXT:   je  LBB8_2
+
+; CHECK-NEXT: ## %bb.1:
+; CHECK-NEXT:   callq   _fn1
+; CHECK-NEXT:   movq    %rax, %rdi
+; CHECK-NEXT:   callq   _objc_retainAutoreleasedReturnValue
+; CHECK-NEXT:   jmp LBB8_3
+
+; CHECK-NEXT: LBB8_2:
+; CHECK-NEXT:   callq   _fn2
+; CHECK-NEXT:   movq    %rax, %rdi
+; CHECK-NEXT:   callq   _objc_retainAutoreleasedReturnValue
+
+; CHECK-NEXT: LBB8_3:
+; CHECK-NEXT:   xorl    %eax, %eax
+; CHECK-NEXT:   popq    %rcx
+; CHECK-NEXT:   retq
+;
+entry:
+  br i1 %c.0, label %then, label %else
+
+then:
+  %call.0 = notail call i8* @fn1() [ "clang.arc.attachedcall"(i8* (i8*)* @objc_retainAutoreleasedReturnValue) ]
+  br label %exit
+
+else:
+  %call.1 = notail call i8* @fn2() [ "clang.arc.attachedcall"(i8* (i8*)* @objc_retainAutoreleasedReturnValue) ]
+  br label %exit
+
+exit:
+  ret i8* null
+}

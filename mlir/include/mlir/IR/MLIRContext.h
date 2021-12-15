@@ -17,7 +17,7 @@
 
 namespace llvm {
 class ThreadPool;
-} // end namespace llvm
+} // namespace llvm
 
 namespace mlir {
 class DebugActionManager;
@@ -236,6 +236,6 @@ private:
 /// an MLIR context for initialization.
 void registerMLIRContextCLOptions();
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_IR_MLIRCONTEXT_H

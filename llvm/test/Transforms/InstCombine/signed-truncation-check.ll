@@ -425,8 +425,8 @@ define i1 @positive_trunc_base_logical(i32 %arg) {
 
 define i1 @positive_different_trunc_both(i32 %arg) {
 ; CHECK-LABEL: @positive_different_trunc_both(
-; CHECK-NEXT:    [[T1:%.*]] = trunc i32 [[ARG:%.*]] to i15
-; CHECK-NEXT:    [[T2:%.*]] = icmp sgt i15 [[T1]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[ARG:%.*]], 16384
+; CHECK-NEXT:    [[T2:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    [[T3:%.*]] = trunc i32 [[ARG]] to i16
 ; CHECK-NEXT:    [[T4:%.*]] = add i16 [[T3]], 128
 ; CHECK-NEXT:    [[T5:%.*]] = icmp ult i16 [[T4]], 256
@@ -444,8 +444,8 @@ define i1 @positive_different_trunc_both(i32 %arg) {
 
 define i1 @positive_different_trunc_both_logical(i32 %arg) {
 ; CHECK-LABEL: @positive_different_trunc_both_logical(
-; CHECK-NEXT:    [[T1:%.*]] = trunc i32 [[ARG:%.*]] to i15
-; CHECK-NEXT:    [[T2:%.*]] = icmp sgt i15 [[T1]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[ARG:%.*]], 16384
+; CHECK-NEXT:    [[T2:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    [[T3:%.*]] = trunc i32 [[ARG]] to i16
 ; CHECK-NEXT:    [[T4:%.*]] = add i16 [[T3]], 128
 ; CHECK-NEXT:    [[T5:%.*]] = icmp ult i16 [[T4]], 256
@@ -717,8 +717,8 @@ define i1 @negative_not_arg_logical(i32 %arg, i32 %arg2) {
 
 define i1 @negative_trunc_not_arg(i32 %arg, i32 %arg2) {
 ; CHECK-LABEL: @negative_trunc_not_arg(
-; CHECK-NEXT:    [[T1:%.*]] = trunc i32 [[ARG:%.*]] to i8
-; CHECK-NEXT:    [[T2:%.*]] = icmp sgt i8 [[T1]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[ARG:%.*]], 128
+; CHECK-NEXT:    [[T2:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    [[T3:%.*]] = add i32 [[ARG2:%.*]], 128
 ; CHECK-NEXT:    [[T4:%.*]] = icmp ult i32 [[T3]], 256
 ; CHECK-NEXT:    [[T5:%.*]] = and i1 [[T2]], [[T4]]
@@ -734,8 +734,8 @@ define i1 @negative_trunc_not_arg(i32 %arg, i32 %arg2) {
 
 define i1 @negative_trunc_not_arg_logical(i32 %arg, i32 %arg2) {
 ; CHECK-LABEL: @negative_trunc_not_arg_logical(
-; CHECK-NEXT:    [[T1:%.*]] = trunc i32 [[ARG:%.*]] to i8
-; CHECK-NEXT:    [[T2:%.*]] = icmp sgt i8 [[T1]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[ARG:%.*]], 128
+; CHECK-NEXT:    [[T2:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    [[T3:%.*]] = add i32 [[ARG2:%.*]], 128
 ; CHECK-NEXT:    [[T4:%.*]] = icmp ult i32 [[T3]], 256
 ; CHECK-NEXT:    [[T5:%.*]] = select i1 [[T2]], i1 [[T4]], i1 false

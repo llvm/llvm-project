@@ -34,10 +34,10 @@ private:
   using UIntType = typename FPBits::UIntType;
 
   const T zero = T(FPBits::zero());
-  const T negZero = T(FPBits::negZero());
+  const T neg_zero = T(FPBits::neg_zero());
   const T inf = T(FPBits::inf());
-  const T negInf = T(FPBits::negInf());
-  const T nan = T(FPBits::buildNaN(1));
+  const T neg_inf = T(FPBits::neg_inf());
+  const T nan = T(FPBits::build_nan(1));
 
   static inline mpfr::RoundingMode toMPFRRoundingMode(int mode) {
     switch (mode) {
@@ -57,18 +57,18 @@ private:
 public:
   void testSpecialNumbers(RIntFunc func) {
     for (int mode : roundingModes) {
-      __llvm_libc::fputil::setRound(mode);
+      __llvm_libc::fputil::set_round(mode);
       ASSERT_FP_EQ(inf, func(inf));
-      ASSERT_FP_EQ(negInf, func(negInf));
+      ASSERT_FP_EQ(neg_inf, func(neg_inf));
       ASSERT_FP_EQ(nan, func(nan));
       ASSERT_FP_EQ(zero, func(zero));
-      ASSERT_FP_EQ(negZero, func(negZero));
+      ASSERT_FP_EQ(neg_zero, func(neg_zero));
     }
   }
 
   void testRoundNumbers(RIntFunc func) {
     for (int mode : roundingModes) {
-      __llvm_libc::fputil::setRound(mode);
+      __llvm_libc::fputil::set_round(mode);
       mpfr::RoundingMode mpfrMode = toMPFRRoundingMode(mode);
       ASSERT_FP_EQ(func(T(1.0)), mpfr::Round(T(1.0), mpfrMode));
       ASSERT_FP_EQ(func(T(-1.0)), mpfr::Round(T(-1.0), mpfrMode));
@@ -81,7 +81,7 @@ public:
 
   void testFractions(RIntFunc func) {
     for (int mode : roundingModes) {
-      __llvm_libc::fputil::setRound(mode);
+      __llvm_libc::fputil::set_round(mode);
       mpfr::RoundingMode mpfrMode = toMPFRRoundingMode(mode);
       ASSERT_FP_EQ(func(T(0.5)), mpfr::Round(T(0.5), mpfrMode));
       ASSERT_FP_EQ(func(T(-0.5)), mpfr::Round(T(-0.5), mpfrMode));
@@ -95,12 +95,12 @@ public:
   void testSubnormalRange(RIntFunc func) {
     constexpr UIntType count = 1000001;
     constexpr UIntType step =
-        (FPBits::maxSubnormal - FPBits::minSubnormal) / count;
-    for (UIntType i = FPBits::minSubnormal; i <= FPBits::maxSubnormal;
+        (FPBits::MAX_SUBNORMAL - FPBits::MIN_SUBNORMAL) / count;
+    for (UIntType i = FPBits::MIN_SUBNORMAL; i <= FPBits::MAX_SUBNORMAL;
          i += step) {
       T x = T(FPBits(i));
       for (int mode : roundingModes) {
-        __llvm_libc::fputil::setRound(mode);
+        __llvm_libc::fputil::set_round(mode);
         mpfr::RoundingMode mpfrMode = toMPFRRoundingMode(mode);
         ASSERT_FP_EQ(func(x), mpfr::Round(x, mpfrMode));
       }
@@ -109,8 +109,8 @@ public:
 
   void testNormalRange(RIntFunc func) {
     constexpr UIntType count = 1000001;
-    constexpr UIntType step = (FPBits::maxNormal - FPBits::minNormal) / count;
-    for (UIntType i = FPBits::minNormal; i <= FPBits::maxNormal; i += step) {
+    constexpr UIntType step = (FPBits::MAX_NORMAL - FPBits::MIN_NORMAL) / count;
+    for (UIntType i = FPBits::MIN_NORMAL; i <= FPBits::MAX_NORMAL; i += step) {
       T x = T(FPBits(i));
       // In normal range on x86 platforms, the long double implicit 1 bit can be
       // zero making the numbers NaN. We will skip them.
@@ -119,7 +119,7 @@ public:
       }
 
       for (int mode : roundingModes) {
-        __llvm_libc::fputil::setRound(mode);
+        __llvm_libc::fputil::set_round(mode);
         mpfr::RoundingMode mpfrMode = toMPFRRoundingMode(mode);
         ASSERT_FP_EQ(func(x), mpfr::Round(x, mpfrMode));
       }

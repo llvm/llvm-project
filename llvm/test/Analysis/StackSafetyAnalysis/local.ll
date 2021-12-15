@@ -44,6 +44,53 @@ entry:
   ret void
 }
 
+define void @StoreInBoundsCond(i64 %i) {
+; CHECK-LABEL: @StoreInBoundsCond dso_preemptable{{$}}
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: allocas uses:
+; CHECK-NEXT: x[4]: full-set{{$}}
+; GLOBAL-NEXT: safe accesses:
+; GLOBAL-NEXT: store i8 0, i8* %x2, align 1
+; CHECK-EMPTY:
+entry:
+  %x = alloca i32, align 4
+  %x1 = bitcast i32* %x to i8*
+  %c1 = icmp sge i64 %i, 0
+  %c2 = icmp slt i64 %i, 4
+  br i1 %c1, label %c1.true, label %false
+
+c1.true:
+  br i1 %c2, label %c2.true, label %false
+
+c2.true:
+  %x2 = getelementptr i8, i8* %x1, i64 %i
+  store i8 0, i8* %x2, align 1
+  br label %false
+
+false:
+  ret void
+}
+
+define void @StoreInBoundsMinMax(i64 %i) {
+; CHECK-LABEL: @StoreInBoundsMinMax dso_preemptable{{$}}
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: allocas uses:
+; CHECK-NEXT: x[4]: [0,4){{$}}
+; GLOBAL-NEXT: safe accesses:
+; GLOBAL-NEXT: store i8 0, i8* %x2, align 1
+; CHECK-EMPTY:
+entry:
+  %x = alloca i32, align 4
+  %x1 = bitcast i32* %x to i8*
+  %c1 = icmp sge i64 %i, 0
+  %i1 = select i1 %c1, i64 %i, i64 0
+  %c2 = icmp slt i64 %i1, 3
+  %i2 = select i1 %c2, i64 %i1, i64 3
+  %x2 = getelementptr i8, i8* %x1, i64 %i2
+  store i8 0, i8* %x2, align 1
+  ret void
+}
+
 define void @StoreInBounds2() {
 ; CHECK-LABEL: @StoreInBounds2 dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
@@ -154,6 +201,54 @@ entry:
   %x2 = getelementptr i8, i8* %x1, i64 2
   %x3 = bitcast i8* %x2 to i32*
   store i32 0, i32* %x3, align 1
+  ret void
+}
+
+define void @StoreOutOfBoundsCond(i64 %i) {
+; CHECK-LABEL: @StoreOutOfBoundsCond dso_preemptable{{$}}
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: allocas uses:
+; CHECK-NEXT: x[4]: full-set{{$}}
+; GLOBAL-NEXT: safe accesses:
+; CHECK-EMPTY:
+entry:
+  %x = alloca i32, align 4
+  %x1 = bitcast i32* %x to i8*
+  %c1 = icmp sge i64 %i, 0
+  %c2 = icmp slt i64 %i, 5
+  br i1 %c1, label %c1.true, label %false
+
+c1.true:
+  br i1 %c2, label %c2.true, label %false
+
+c2.true:
+  %x2 = getelementptr i8, i8* %x1, i64 %i
+  store i8 0, i8* %x2, align 1
+  br label %false
+
+false:
+  ret void
+}
+
+define void @StoreOutOfBoundsCond2(i64 %i) {
+; CHECK-LABEL: @StoreOutOfBoundsCond2 dso_preemptable{{$}}
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: allocas uses:
+; CHECK-NEXT: x[4]: full-set{{$}}
+; GLOBAL-NEXT: safe accesses:
+; CHECK-EMPTY:
+entry:
+  %x = alloca i32, align 4
+  %x1 = bitcast i32* %x to i8*
+  %c2 = icmp slt i64 %i, 5
+  br i1 %c2, label %c2.true, label %false
+
+c2.true:
+  %x2 = getelementptr i8, i8* %x1, i64 %i
+  store i8 0, i8* %x2, align 1
+  br label %false
+
+false:
   ret void
 }
 

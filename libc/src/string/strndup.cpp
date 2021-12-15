@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/strndup.h"
-#include "src/string/memcpy.h"
+#include "src/string/memory_utils/memcpy_implementations.h"
 #include "src/string/string_utils.h"
 
 #include "src/__support/common.h"
@@ -23,13 +23,12 @@ LLVM_LIBC_FUNCTION(char *, strndup, (const char *src, size_t size)) {
   size_t len = internal::string_length(src);
   if (len > size)
     len = size;
-  char *dest = reinterpret_cast<char *>(::malloc(len + 1)); // NOLINT
+  char *dest = reinterpret_cast<char *>(::malloc(len + 1));
   if (dest == nullptr)
     return nullptr;
-  char *result =
-      reinterpret_cast<char *>(__llvm_libc::memcpy(dest, src, len + 1));
-  result[len] = '\0';
-  return result;
+  inline_memcpy(dest, src, len + 1);
+  dest[len] = '\0';
+  return dest;
 }
 
 } // namespace __llvm_libc

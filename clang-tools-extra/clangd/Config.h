@@ -116,6 +116,12 @@ struct Config {
     /// scopes.
     bool AllScopes = true;
   } Completion;
+
+  /// Configures hover feature.
+  struct {
+    /// Whether hover show a.k.a type.
+    bool ShowAKA = false;
+  } Hover;
 };
 
 } // namespace clangd

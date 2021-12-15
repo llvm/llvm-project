@@ -879,8 +879,6 @@ template <class LP> void ObjFile::parse() {
                        sections[i].subsections);
 
   parseDebugInfo();
-  if (config->emitDataInCodeInfo)
-    parseDataInCode();
   if (compactUnwindSection)
     registerCompactUnwind();
 }
@@ -908,19 +906,14 @@ void ObjFile::parseDebugInfo() {
   compileUnit = it->get();
 }
 
-void ObjFile::parseDataInCode() {
+ArrayRef<data_in_code_entry> ObjFile::getDataInCode() const {
   const auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   const load_command *cmd = findCommand(buf, LC_DATA_IN_CODE);
   if (!cmd)
-    return;
+    return {};
   const auto *c = reinterpret_cast<const linkedit_data_command *>(cmd);
-  dataInCodeEntries = {
-      reinterpret_cast<const data_in_code_entry *>(buf + c->dataoff),
-      c->datasize / sizeof(data_in_code_entry)};
-  assert(is_sorted(dataInCodeEntries, [](const data_in_code_entry &lhs,
-                                         const data_in_code_entry &rhs) {
-    return lhs.offset < rhs.offset;
-  }));
+  return {reinterpret_cast<const data_in_code_entry *>(buf + c->dataoff),
+          c->datasize / sizeof(data_in_code_entry)};
 }
 
 // Create pointers from symbols to their associated compact unwind entries.
@@ -1478,6 +1471,7 @@ static macho::Symbol *createBitcodeSymbol(const lto::InputFile::Symbol &objSym,
 BitcodeFile::BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
                          uint64_t offsetInArchive)
     : InputFile(BitcodeKind, mb) {
+  this->archiveName = std::string(archiveName);
   std::string path = mb.getBufferIdentifier().str();
   // ThinLTO assumes that all MemoryBufferRefs given to it have a unique
   // name. If two members with the same name are provided, this causes a

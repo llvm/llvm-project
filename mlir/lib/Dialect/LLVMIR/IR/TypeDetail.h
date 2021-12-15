@@ -426,8 +426,8 @@ struct LLVMTypeAndSizeStorage : public TypeStorage {
   unsigned numElements;
 };
 
-} // end namespace detail
-} // end namespace LLVM
-} // end namespace mlir
+} // namespace detail
+} // namespace LLVM
+} // namespace mlir
 
 #endif // DIALECT_LLVMIR_IR_TYPEDETAIL_H

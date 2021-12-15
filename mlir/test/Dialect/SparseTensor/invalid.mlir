@@ -160,6 +160,25 @@ func @sparse_unannotated_insert(%arg0: tensor<128xf64>, %arg1: memref<?xindex>, 
 
 // -----
 
+func @sparse_unannotated_expansion(%arg0: tensor<128xf64>) {
+  // expected-error@+1 {{expected a sparse tensor for expansion}}
+  %values, %filled, %added, %count = sparse_tensor.expand %arg0
+    : tensor<128xf64> to memref<?xf64>, memref<?xi1>, memref<?xindex>, index
+  return
+}
+
+// -----
+
+func @sparse_unannotated_compression(%arg0: tensor<128xf64>, %arg1: memref<?xindex>,
+                                     %arg2: memref<?xf64>, %arg3: memref<?xi1>,
+				     %arg4: memref<?xindex>, %arg5: index) {
+  // expected-error@+1 {{expected a sparse tensor for compression}}
+  sparse_tensor.compress %arg0, %arg1, %arg2, %arg3, %arg4, %arg5
+    : tensor<128xf64>, memref<?xindex>, memref<?xf64>, memref<?xi1>, memref<?xindex>, index
+}
+
+// -----
+
 func @sparse_convert_unranked(%arg0: tensor<*xf32>) -> tensor<10xf32> {
   // expected-error@+1 {{unexpected type in convert}}
   %0 = sparse_tensor.convert %arg0 : tensor<*xf32> to tensor<10xf32>

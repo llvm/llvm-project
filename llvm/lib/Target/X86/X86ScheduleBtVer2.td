@@ -888,7 +888,7 @@ def JWriteVZeroIdiomLogic : SchedWriteVariant<[
     SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [JWriteZeroLatency]>,
     SchedVar<NoSchedPred,                          [WriteVecLogic]>
 ]>;
-def : InstRW<[JWriteVZeroIdiomLogic], (instrs MMX_PXORirr, MMX_PANDNirr)>;
+def : InstRW<[JWriteVZeroIdiomLogic], (instrs MMX_PXORrr, MMX_PANDNrr)>;
 
 def JWriteVZeroIdiomLogicX : SchedWriteVariant<[
     SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [JWriteZeroLatency]>,
@@ -901,12 +901,12 @@ def JWriteVZeroIdiomALU : SchedWriteVariant<[
     SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [JWriteZeroLatency]>,
     SchedVar<NoSchedPred,                          [WriteVecALU]>
 ]>;
-def : InstRW<[JWriteVZeroIdiomALU], (instrs MMX_PSUBBirr, MMX_PSUBDirr,
-                                            MMX_PSUBQirr, MMX_PSUBWirr,
-                                            MMX_PSUBSBirr, MMX_PSUBSWirr,
-                                            MMX_PSUBUSBirr, MMX_PSUBUSWirr,
-                                            MMX_PCMPGTBirr, MMX_PCMPGTDirr,
-                                            MMX_PCMPGTWirr)>;
+def : InstRW<[JWriteVZeroIdiomALU], (instrs MMX_PSUBBrr, MMX_PSUBDrr,
+                                            MMX_PSUBQrr, MMX_PSUBWrr,
+                                            MMX_PSUBSBrr, MMX_PSUBSWrr,
+                                            MMX_PSUBUSBrr, MMX_PSUBUSWrr,
+                                            MMX_PCMPGTBrr, MMX_PCMPGTDrr,
+                                            MMX_PCMPGTWrr)>;
 
 def JWriteVZeroIdiomALUX : SchedWriteVariant<[
     SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [JWriteZeroLatency]>,
@@ -974,10 +974,10 @@ def : IsZeroIdiomFunction<[
 
   // MMX Zero-idioms.
   DepBreakingClass<[
-    MMX_PXORirr, MMX_PANDNirr, MMX_PSUBBirr,
-    MMX_PSUBDirr, MMX_PSUBQirr, MMX_PSUBWirr,
-    MMX_PSUBSBirr, MMX_PSUBSWirr, MMX_PSUBUSBirr, MMX_PSUBUSWirr,
-    MMX_PCMPGTBirr, MMX_PCMPGTDirr, MMX_PCMPGTWirr
+    MMX_PXORrr, MMX_PANDNrr, MMX_PSUBBrr,
+    MMX_PSUBDrr, MMX_PSUBQrr, MMX_PSUBWrr,
+    MMX_PSUBSBrr, MMX_PSUBSWrr, MMX_PSUBUSBrr, MMX_PSUBUSWrr,
+    MMX_PCMPGTBrr, MMX_PCMPGTDrr, MMX_PCMPGTWrr
   ], ZeroIdiomPredicate>,
 
   // SSE Zero-idioms.
@@ -1017,7 +1017,7 @@ def : IsDepBreakingFunction<[
 
   // MMX
   DepBreakingClass<[
-    MMX_PCMPEQBirr, MMX_PCMPEQDirr, MMX_PCMPEQWirr
+    MMX_PCMPEQBrr, MMX_PCMPEQDrr, MMX_PCMPEQWrr
   ], ZeroIdiomPredicate>,
 
   // SSE

@@ -36,7 +36,7 @@ struct TestMemRefDependenceCheck
   void runOnFunction() override;
 };
 
-} // end anonymous namespace
+} // namespace
 
 // Returns a result string which represents the direction vector (if there was
 // a dependence), returns the string "false" otherwise.

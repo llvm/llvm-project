@@ -1,12 +1,12 @@
-// RUN: mlir-opt %s -split-input-file -allow-unregistered-dialect -linalg-detensorize | FileCheck %s
+// RUN: mlir-opt %s -split-input-file -allow-unregistered-dialect -pass-pipeline="builtin.func(linalg-detensorize)" | FileCheck %s
 
 // TODO: Detensoring breaks if %arg0 or %arg1 are passed directly as tensors. Fix that.
 func @if_true_test(%arg0: i1, %arg1: i32) -> tensor<i32> attributes {} {
   %arg0_t = tensor.from_elements %arg0 : tensor<1xi1>
-  %arg0_t2 = linalg.tensor_collapse_shape %arg0_t [] : tensor<1xi1> into tensor<i1>
+  %arg0_t2 = tensor.collapse_shape %arg0_t [] : tensor<1xi1> into tensor<i1>
 
   %arg1_t = tensor.from_elements %arg1 : tensor<1xi32>
-  %arg1_t2 = linalg.tensor_collapse_shape %arg1_t [] : tensor<1xi32> into tensor<i32>
+  %arg1_t2 = tensor.collapse_shape %arg1_t [] : tensor<1xi32> into tensor<i32>
 
   %cst = arith.constant dense<10> : tensor<i32>
   %2 = linalg.init_tensor [] : tensor<i8>
@@ -45,5 +45,5 @@ func @if_true_test(%arg0: i1, %arg1: i32) -> tensor<i32> attributes {} {
 // CHECK-NEXT:     br ^[[bb2]](%[[add_res]] : i32)
 // CHECK-NEXT:   ^[[bb2]]
 // CHECK-NEXT:     tensor.from_elements
-// CHECK-NEXT:     %[[func_res:.*]] = linalg.tensor_collapse_shape
+// CHECK-NEXT:     %[[func_res:.*]] = tensor.collapse_shape
 // CHECK-NEXT:     return %[[func_res]]

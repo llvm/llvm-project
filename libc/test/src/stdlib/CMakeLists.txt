@@ -71,6 +71,16 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  strtold_test
+  SUITE
+    libc_stdlib_unittests
+  SRCS
+    strtold_test.cpp
+  DEPENDS
+    libc.src.stdlib.strtold
+)
+
+add_libc_unittest(
   strtoll_test
   SUITE
     libc_stdlib_unittests

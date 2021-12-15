@@ -372,8 +372,6 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
     if (ContinuedStringLiteral)
       Changes[i].Spaces += Shift;
 
-    assert(Shift >= 0);
-
     Changes[i].StartOfTokenColumn += Shift;
     if (i + 1 != Changes.size())
       Changes[i + 1].PreviousEndOfTokenColumn += Shift;
@@ -915,7 +913,8 @@ void WhitespaceManager::alignTrailingComments(unsigned Start, unsigned End,
               Changes[i].StartOfBlockComment->StartOfTokenColumn -
               Changes[i].StartOfTokenColumn;
     }
-    assert(Shift >= 0);
+    if (Shift < 0)
+      continue;
     Changes[i].Spaces += Shift;
     if (i + 1 != Changes.size())
       Changes[i + 1].PreviousEndOfTokenColumn += Shift;
@@ -1270,10 +1269,10 @@ WhitespaceManager::linkCells(CellDescriptions &&CellDesc) {
 void WhitespaceManager::generateChanges() {
   for (unsigned i = 0, e = Changes.size(); i != e; ++i) {
     const Change &C = Changes[i];
-    if (i > 0) {
-      assert(Changes[i - 1].OriginalWhitespaceRange.getBegin() !=
-                 C.OriginalWhitespaceRange.getBegin() &&
-             "Generating two replacements for the same location");
+    if (i > 0 && Changes[i - 1].OriginalWhitespaceRange.getBegin() ==
+                     C.OriginalWhitespaceRange.getBegin()) {
+      // Do not generate two replacements for the same location.
+      continue;
     }
     if (C.CreateReplacement) {
       std::string ReplacementText = C.PreviousLinePostfix;

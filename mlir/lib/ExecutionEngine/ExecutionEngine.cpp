@@ -328,8 +328,16 @@ Expected<std::unique_ptr<ExecutionEngine>> ExecutionEngine::create(
   return std::move(engine);
 }
 
-Expected<void (*)(void **)> ExecutionEngine::lookup(StringRef name) const {
-  auto expectedSymbol = jit->lookup(makePackedFunctionName(name));
+Expected<void (*)(void **)>
+ExecutionEngine::lookupPacked(StringRef name) const {
+  auto result = lookup(makePackedFunctionName(name));
+  if (!result)
+    return result.takeError();
+  return reinterpret_cast<void (*)(void **)>(result.get());
+}
+
+Expected<void *> ExecutionEngine::lookup(StringRef name) const {
+  auto expectedSymbol = jit->lookup(name);
 
   // JIT lookup may return an Error referring to strings stored internally by
   // the JIT. If the Error outlives the ExecutionEngine, it would want have a
@@ -346,7 +354,7 @@ Expected<void (*)(void **)> ExecutionEngine::lookup(StringRef name) const {
   }
 
   auto rawFPtr = expectedSymbol->getAddress();
-  auto fptr = reinterpret_cast<void (*)(void **)>(rawFPtr);
+  auto fptr = reinterpret_cast<void *>(rawFPtr);
   if (!fptr)
     return make_string_error("looked up function is null");
   return fptr;
@@ -354,7 +362,7 @@ Expected<void (*)(void **)> ExecutionEngine::lookup(StringRef name) const {
 
 Error ExecutionEngine::invokePacked(StringRef name,
                                     MutableArrayRef<void *> args) {
-  auto expectedFPtr = lookup(name);
+  auto expectedFPtr = lookupPacked(name);
   if (!expectedFPtr)
     return expectedFPtr.takeError();
   auto fptr = *expectedFPtr;

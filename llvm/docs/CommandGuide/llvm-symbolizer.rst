@@ -289,7 +289,7 @@ OPTIONS
             "FileName": "/tmp/test.cpp",
             "FunctionName": "baz()",
             "Line": 11,
-            "Source": "",
+            "StartAddress": "0x4004be",
             "StartFileName": "/tmp/test.cpp",
             "StartLine": 9
           },
@@ -299,7 +299,7 @@ OPTIONS
             "FileName": "/tmp/test.cpp",
             "FunctionName": "main",
             "Line": 15,
-            "Source": "",
+            "StartAddress": "0x4004be",
             "StartFileName": "/tmp/test.cpp",
             "StartLine": 14
           }
@@ -315,7 +315,7 @@ OPTIONS
             "FileName": "/tmp/test.cpp",
             "FunctionName": "foo()",
             "Line": 6,
-            "Source": "",
+            "StartAddress": "0x400486",
             "StartFileName": "/tmp/test.cpp",
             "StartLine": 5
           }

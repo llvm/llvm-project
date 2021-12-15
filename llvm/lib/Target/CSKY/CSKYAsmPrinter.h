@@ -26,6 +26,8 @@ public:
 
   StringRef getPassName() const override { return "CSKY Assembly Printer"; }
 
+  void EmitToStreamer(MCStreamer &S, const MCInst &Inst);
+
   /// tblgen'erated driver function for lowering simple MI->MC
   /// pseudo instructions.
   bool emitPseudoExpansionLowering(MCStreamer &OutStreamer,

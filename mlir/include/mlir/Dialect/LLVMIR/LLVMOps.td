@@ -17,6 +17,7 @@ include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Dialect/LLVMIR/LLVMOpsInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 def FMFnnan     : BitEnumAttrCase<"nnan", 0x1>;
@@ -600,8 +601,8 @@ def LLVM_ShuffleVectorOp : LLVM_Op<"shufflevector", [NoSideEffect]> {
     OpBuilder<(ins "Value":$v1, "Value":$v2, "ArrayAttr":$mask,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>];
   let verifier = [{
-    auto type1 = v1().getType();
-    auto type2 = v2().getType();
+    auto type1 = getV1().getType();
+    auto type2 = getV2().getType();
     if (::mlir::LLVM::getVectorElementType(type1) !=
             ::mlir::LLVM::getVectorElementType(type2))
       return emitOpError("expected matching LLVM IR Dialect element types");
@@ -620,11 +621,6 @@ def LLVM_SelectOp
   let arguments = (ins LLVM_ScalarOrVectorOf<I1>:$condition,
                    LLVM_Type:$trueValue, LLVM_Type:$falseValue);
   let results = (outs LLVM_Type:$res);
-  let builders = [
-    OpBuilder<(ins "Value":$condition, "Value":$lhs, "Value":$rhs),
-    [{
-      build($_builder, $_state, lhs.getType(), condition, lhs, rhs);
-    }]>];
   let assemblyFormat = "operands attr-dict `:` type($condition) `,` type($res)";
 }
 def LLVM_FreezeOp : LLVM_Op<"freeze", [SameOperandsAndResultType]> {
@@ -705,7 +701,7 @@ def LLVM_ResumeOp : LLVM_TerminatorOp<"resume", []> {
   let arguments = (ins LLVM_Type:$value);
   string llvmBuilder = [{ builder.CreateResume($value); }];
   let verifier = [{
-    if (!isa_and_nonnull<LandingpadOp>(value().getDefiningOp()))
+    if (!isa_and_nonnull<LandingpadOp>(getValue().getDefiningOp()))
       return emitOpError("expects landingpad value as operand");
     // No check for personality of function - landingpad op verifies it.
     return success();
@@ -757,13 +753,13 @@ def LLVM_SwitchOp : LLVM_TerminatorOp<"switch",
   let extraClassDeclaration = [{
     /// Return the operands for the case destination block at the given index.
     OperandRange getCaseOperands(unsigned index) {
-      return caseOperands()[index];
+      return getCaseOperands()[index];
     }
 
     /// Return a mutable range of operands for the case destination block at the
     /// given index.
     MutableOperandRange getCaseOperandsMutable(unsigned index) {
-      return caseOperandsMutable()[index];
+      return getCaseOperandsMutable()[index];
     }
   }];
 }
@@ -874,8 +870,8 @@ def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof"> {
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs),
     [{
       build($_builder, $_state,
-            LLVM::LLVMPointerType::get(global.getType(), global.addr_space()),
-            global.sym_name());
+            LLVM::LLVMPointerType::get(global.getType(), global.getAddrSpace()),
+            global.getSymName());
       $_state.addAttributes(attrs);
     }]>,
     OpBuilder<(ins "LLVMFuncOp":$func,
@@ -1130,7 +1126,7 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
     }
     /// Return the initializer attribute if it exists, or a null attribute.
     Attribute getValueOrNull() {
-      return value().getValueOr(Attribute());
+      return getValue().getValueOr(Attribute());
     }
     /// Return the initializer region. This may be empty, but if it is not it
     /// terminates in an `llvm.return` op with the initializer value.
@@ -1405,6 +1401,12 @@ class LLVM_TernarySameArgsIntrinsicOp<string func, list<OpTrait> traits = []> :
   let arguments = (ins LLVM_Type:$a, LLVM_Type:$b, LLVM_Type:$c);
 }
 
+class LLVM_CountZerosIntrinsicOp<string func, list<OpTrait> traits = []> :
+    LLVM_OneResultIntrOp<func, [], [0],
+           !listconcat([NoSideEffect], traits)> {
+  let arguments = (ins LLVM_Type:$in, I<1>:$zero_undefined);
+}
+
 def LLVM_CopySignOp : LLVM_BinarySameArgsIntrinsicOp<"copysign">;
 def LLVM_CosOp : LLVM_UnaryIntrinsicOp<"cos">;
 def LLVM_ExpOp : LLVM_UnaryIntrinsicOp<"exp">;
@@ -1425,6 +1427,8 @@ def LLVM_SinOp : LLVM_UnaryIntrinsicOp<"sin">;
 def LLVM_SqrtOp : LLVM_UnaryIntrinsicOp<"sqrt">;
 def LLVM_PowOp : LLVM_BinarySameArgsIntrinsicOp<"pow">;
 def LLVM_BitReverseOp : LLVM_UnaryIntrinsicOp<"bitreverse">;
+def LLVM_CountLeadingZerosOp : LLVM_CountZerosIntrinsicOp<"ctlz">;
+def LLVM_CountTrailingZerosOp : LLVM_CountZerosIntrinsicOp<"cttz">;
 def LLVM_CtPopOp : LLVM_UnaryIntrinsicOp<"ctpop">;
 def LLVM_MaxNumOp : LLVM_BinarySameArgsIntrinsicOp<"maxnum">;
 def LLVM_MinNumOp : LLVM_BinarySameArgsIntrinsicOp<"minnum">;

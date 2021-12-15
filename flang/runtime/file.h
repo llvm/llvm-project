@@ -39,7 +39,7 @@ public:
   bool isTerminal() const { return isTerminal_; }
   std::optional<FileOffset> knownSize() const { return knownSize_; }
 
-  bool IsOpen() const { return fd_ >= 0; }
+  bool IsConnected() const { return fd_ >= 0; }
   void Open(OpenStatus, std::optional<Action>, Position, IoErrorHandler &);
   void Predefine(int fd);
   void Close(CloseStatus, IoErrorHandler &);
@@ -66,6 +66,9 @@ public:
   void Wait(int id, IoErrorHandler &);
   void WaitAll(IoErrorHandler &);
 
+  // INQUIRE(POSITION=)
+  Position InquirePosition() const;
+
 private:
   struct Pending {
     int id;
@@ -78,6 +81,11 @@ private:
   bool RawSeek(FileOffset);
   bool RawSeekToEnd();
   int PendingResult(const Terminator &, int);
+  void SetPosition(FileOffset pos) {
+    position_ = pos;
+    openPosition_.reset();
+  }
+  void CloseFd(IoErrorHandler &);
 
   int fd_{-1};
   OwningPtr<char> path_;
@@ -86,6 +94,7 @@ private:
   bool mayWrite_{false};
   bool mayPosition_{false};
   bool mayAsynchronous_{false};
+  std::optional<Position> openPosition_; // from Open(); reset after positioning
   FileOffset position_{0};
   std::optional<FileOffset> knownSize_;
   bool isTerminal_{false};

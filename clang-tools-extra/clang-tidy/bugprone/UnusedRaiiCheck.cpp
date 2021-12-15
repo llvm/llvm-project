@@ -29,10 +29,11 @@ void UnusedRaiiCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       mapAnyOf(cxxConstructExpr, cxxUnresolvedConstructExpr)
           .with(hasParent(compoundStmt().bind("compound")),
-                anyOf(hasType(cxxRecordDecl(hasNonTrivialDestructor())),
-                      hasType(templateSpecializationType(
+                anyOf(hasType(hasCanonicalType(recordType(hasDeclaration(
+                          cxxRecordDecl(hasNonTrivialDestructor()))))),
+                      hasType(hasCanonicalType(templateSpecializationType(
                           hasDeclaration(classTemplateDecl(has(
-                              cxxRecordDecl(hasNonTrivialDestructor()))))))))
+                              cxxRecordDecl(hasNonTrivialDestructor())))))))))
           .bind("expr"),
       this);
 }

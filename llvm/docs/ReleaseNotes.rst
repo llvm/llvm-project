@@ -83,6 +83,7 @@ Changes to the ARM Backend
 --------------------------
 
 * Added support for the Armv9-A, Armv9.1-A and Armv9.2-A architectures.
+* Added support for the Armv8.1-M PACBTI-M extension.
 
 Changes to the MIPS Target
 --------------------------
@@ -152,7 +153,9 @@ During this release ...
 Changes to the LLVM tools
 ---------------------------------
 
-* ...
+* llvm-cov: `-name-allowlist` is now accepted in addition to `-name-whitelist`.
+  `-name-whitelist` is marked as deprecated and to be removed in future
+  releases.
 
 Changes to LLDB
 ---------------------------------

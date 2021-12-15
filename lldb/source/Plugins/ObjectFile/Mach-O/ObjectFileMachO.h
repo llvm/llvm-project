@@ -92,7 +92,7 @@ public:
 
   lldb_private::AddressClass GetAddressClass(lldb::addr_t file_addr) override;
 
-  lldb_private::Symtab *GetSymtab() override;
+  void ParseSymtab(lldb_private::Symtab &symtab) override;
 
   bool IsStripped() override;
 
@@ -225,7 +225,8 @@ protected:
     std::string filename;
     lldb_private::UUID uuid;
     lldb::addr_t load_address = LLDB_INVALID_ADDRESS;
-    bool currently_executing;
+    lldb::addr_t slide = 0;
+    bool currently_executing = false;
     std::vector<std::tuple<lldb_private::ConstString, lldb::addr_t>>
         segment_load_addresses;
   };

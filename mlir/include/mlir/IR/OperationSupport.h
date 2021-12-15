@@ -29,7 +29,7 @@
 
 namespace llvm {
 class BitVector;
-} // end namespace llvm
+} // namespace llvm
 
 namespace mlir {
 class Dialect;
@@ -424,7 +424,7 @@ std::pair<IteratorT, bool> findAttrSorted(IteratorT first, IteratorT last,
   return findAttrUnsorted(first, last, name);
 }
 
-} // end namespace impl
+} // namespace impl
 
 //===----------------------------------------------------------------------===//
 // NamedAttrList
@@ -688,7 +688,7 @@ private:
   /// A pointer to the operand storage.
   OpOperand *operandStorage;
 };
-} // end namespace detail
+} // namespace detail
 
 //===----------------------------------------------------------------------===//
 // OpPrintingFlags
@@ -1171,7 +1171,7 @@ struct OperationEquivalence {
 /// Enable Bitmask enums for OperationEquivalence::Flags.
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
-} // end namespace mlir
+} // namespace mlir
 
 namespace llvm {
 template <>
@@ -1223,6 +1223,6 @@ struct PointerLikeTypeTraits<mlir::RegisteredOperationName>
   }
 };
 
-} // end namespace llvm
+} // namespace llvm
 
 #endif

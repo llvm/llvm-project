@@ -2,6 +2,7 @@
 // RUN:               -async-to-async-runtime                                  \
 // RUN:               -async-runtime-ref-counting                              \
 // RUN:               -async-runtime-ref-counting-opt                          \
+// RUN:               -arith-expand                                            \
 // RUN:               -convert-async-to-llvm                                   \
 // RUN:               -convert-scf-to-std                                      \
 // RUN:               -convert-memref-to-llvm                                  \
@@ -16,6 +17,7 @@
 // RUN:   mlir-opt %s -async-parallel-for                                      \
 // RUN:               -async-to-async-runtime                                  \
 // RUN:               -async-runtime-policy-based-ref-counting                 \
+// RUN:               -arith-expand                                            \
 // RUN:               -convert-async-to-llvm                                   \
 // RUN:               -convert-scf-to-std                                      \
 // RUN:               -convert-memref-to-llvm                                  \
@@ -29,10 +31,11 @@
 
 // RUN:   mlir-opt %s -async-parallel-for="async-dispatch=false                \
 // RUN:                                    num-workers=20                      \
-// RUN:                                    min-task-size=1"                \
+// RUN:                                    min-task-size=1"                    \
 // RUN:               -async-to-async-runtime                                  \
 // RUN:               -async-runtime-ref-counting                              \
 // RUN:               -async-runtime-ref-counting-opt                          \
+// RUN:               -arith-expand                                            \
 // RUN:               -convert-async-to-llvm                                   \
 // RUN:               -convert-scf-to-std                                      \
 // RUN:               -convert-memref-to-llvm                                  \
@@ -56,13 +59,21 @@ func @entry() {
   %A = memref.alloc() : memref<8x8xf32>
   %U = memref.cast %A :  memref<8x8xf32> to memref<*xf32>
 
+  // Initialize memref with zeros because we do load and store to in every test
+  // to verify that we process each element of the iteration space once.
+  scf.parallel (%i, %j) = (%lb, %lb) to (%ub, %ub) step (%c1, %c1) {
+    memref.store %c0, %A[%i, %j] : memref<8x8xf32>
+  }
+
   // 1. (%i, %i) = (0, 8) to (8, 8) step (1, 1)
   scf.parallel (%i, %j) = (%lb, %lb) to (%ub, %ub) step (%c1, %c1) {
     %0 = arith.muli %i, %c8 : index
     %1 = arith.addi %j, %0  : index
     %2 = arith.index_cast %1 : index to i32
     %3 = arith.sitofp %2 : i32 to f32
-    memref.store %3, %A[%i, %j] : memref<8x8xf32>
+    %4 = memref.load %A[%i, %j] : memref<8x8xf32>
+    %5 = arith.addf %3, %4 : f32
+    memref.store %5, %A[%i, %j] : memref<8x8xf32>
   }
 
   // CHECK:      [0, 1, 2, 3, 4, 5, 6, 7]
@@ -85,7 +96,9 @@ func @entry() {
     %1 = arith.addi %j, %0  : index
     %2 = arith.index_cast %1 : index to i32
     %3 = arith.sitofp %2 : i32 to f32
-    memref.store %3, %A[%i, %j] : memref<8x8xf32>
+    %4 = memref.load %A[%i, %j] : memref<8x8xf32>
+    %5 = arith.addf %3, %4 : f32
+    memref.store %5, %A[%i, %j] : memref<8x8xf32>
   }
 
   // CHECK:      [0, 1, 2, 3, 4, 5, 6, 7]
@@ -108,7 +121,9 @@ func @entry() {
     %1 = arith.addi %j, %0  : index
     %2 = arith.index_cast %1 : index to i32
     %3 = arith.sitofp %2 : i32 to f32
-    memref.store %3, %A[%i, %j] : memref<8x8xf32>
+    %4 = memref.load %A[%i, %j] : memref<8x8xf32>
+    %5 = arith.addf %3, %4 : f32
+    memref.store %5, %A[%i, %j] : memref<8x8xf32>
   }
 
   // CHECK:      [0, 0, 2, 0, 4, 0, 6, 0]

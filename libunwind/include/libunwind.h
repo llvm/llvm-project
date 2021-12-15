@@ -718,7 +718,8 @@ enum {
   UNW_ARM_WR14 = 126,
   UNW_ARM_WR15 = 127,
   // 128-133 -- SPSR, SPSR_{FIQ|IRQ|ABT|UND|SVC}
-  // 134-143 -- Reserved
+  // 134-142 -- Reserved
+  UNW_ARM_RA_AUTH_CODE = 143,
   // 144-150 -- R8_USR-R14_USR
   // 151-157 -- R8_FIQ-R14_FIQ
   // 158-159 -- R13_IRQ-R14_IRQ

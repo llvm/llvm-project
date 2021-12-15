@@ -83,15 +83,19 @@ AST_MATCHER_FUNCTION_P(StatementMatcher, isConstRefReturningMethodCall,
   // variable being declared. The assumption is that the const reference being
   // returned either points to a global static variable or to a member of the
   // called object.
-  return cxxMemberCallExpr(
-      callee(cxxMethodDecl(
-                 returns(hasCanonicalType(matchers::isReferenceToConst())))
-                 .bind(MethodDeclId)),
-      on(declRefExpr(to(
-          varDecl(
-              unless(hasType(qualType(hasCanonicalType(hasDeclaration(namedDecl(
-                  matchers::matchesAnyListedName(ExcludedContainerTypes))))))))
-              .bind(ObjectArgId)))));
+  const auto MethodDecl =
+      cxxMethodDecl(returns(hasCanonicalType(matchers::isReferenceToConst())))
+          .bind(MethodDeclId);
+  const auto ReceiverExpr = declRefExpr(to(varDecl().bind(ObjectArgId)));
+  const auto ReceiverType =
+      hasCanonicalType(recordType(hasDeclaration(namedDecl(
+          unless(matchers::matchesAnyListedName(ExcludedContainerTypes))))));
+
+  return expr(anyOf(
+      cxxMemberCallExpr(callee(MethodDecl), on(ReceiverExpr),
+                        thisPointerType(ReceiverType)),
+      cxxOperatorCallExpr(callee(MethodDecl), hasArgument(0, ReceiverExpr),
+                          hasArgument(0, hasType(ReceiverType)))));
 }
 
 AST_MATCHER_FUNCTION(StatementMatcher, isConstRefReturningFunctionCall) {

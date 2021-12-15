@@ -220,7 +220,7 @@ public:
 };
 
 // Make sure that the DiagnosticWatcher is not miscounting.
-TEST(ExternalSemaSource, SanityCheck) {
+TEST(ExternalSemaSource, DiagCheck) {
   auto Installer = std::make_unique<ExternalSemaSourceInstaller>();
   DiagnosticWatcher Watcher("AAB", "BBB");
   Installer->PushWatcher(&Watcher);

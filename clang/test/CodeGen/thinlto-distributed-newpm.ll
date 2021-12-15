@@ -46,8 +46,8 @@
 ; CHECK-O: Running pass: JumpThreadingPass on main
 ; CHECK-O: Running pass: CorrelatedValuePropagationPass on main
 ; CHECK-O: Running pass: SimplifyCFGPass on main
-; CHECK-O3: Running pass: AggressiveInstCombinePass on main
 ; CHECK-O: Running pass: InstCombinePass on main
+; CHECK-O3: Running pass: AggressiveInstCombinePass on main
 ; CHECK-O: Running pass: LibCallsShrinkWrapPass on main
 ; CHECK-O: Running pass: TailCallElimPass on main
 ; CHECK-O: Running pass: SimplifyCFGPass on main

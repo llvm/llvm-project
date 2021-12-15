@@ -7,13 +7,8 @@ declare { i32, i32 } @llvm.amdgcn.ds.bvh.stack.rtn(i32, i32, <4 x i32>, i32 imma
 define amdgpu_gs void @test_ds_bvh_stack(i32 %addr, i32 %data0, <4 x i32> %data1, i32 addrspace(1)* %out) {
 ; CHECK-LABEL: test_ds_bvh_stack:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
 ; CHECK-NEXT:    ds_bvh_stack_rtn_b32 v1, v0, v1, v[2:5]
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
-; CHECK-NEXT:    buffer_gl0_inv
-; CHECK-NEXT:    buffer_gl1_inv
 ; CHECK-NEXT:    v_add_nc_u32_e32 v0, v1, v0
 ; CHECK-NEXT:    global_store_b32 v[6:7], v0, off
 ; CHECK-NEXT:    s_endpgm
@@ -28,13 +23,8 @@ define amdgpu_gs void @test_ds_bvh_stack(i32 %addr, i32 %data0, <4 x i32> %data1
 define amdgpu_gs void @test_ds_bvh_stack_1(i32 %addr, i32 %data0, <4 x i32> %data1, i32 addrspace(1)* %out) {
 ; CHECK-LABEL: test_ds_bvh_stack_1:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
 ; CHECK-NEXT:    ds_bvh_stack_rtn_b32 v1, v0, v1, v[2:5] offset:1
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
-; CHECK-NEXT:    buffer_gl0_inv
-; CHECK-NEXT:    buffer_gl1_inv
 ; CHECK-NEXT:    v_add_nc_u32_e32 v0, v1, v0
 ; CHECK-NEXT:    global_store_b32 v[6:7], v0, off
 ; CHECK-NEXT:    s_endpgm

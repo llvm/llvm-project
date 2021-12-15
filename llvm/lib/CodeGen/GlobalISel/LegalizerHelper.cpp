@@ -585,8 +585,8 @@ simpleLibcall(MachineInstr &MI, MachineIRBuilder &MIRBuilder, unsigned Size,
 
   // FIXME: What does the original arg index mean here?
   SmallVector<CallLowering::ArgInfo, 3> Args;
-  for (unsigned i = 1; i < MI.getNumOperands(); i++)
-    Args.push_back({MI.getOperand(i).getReg(), OpType, 0});
+  for (const MachineOperand &MO : llvm::drop_begin(MI.operands()))
+    Args.push_back({MO.getReg(), OpType, 0});
   return createLibcall(MIRBuilder, Libcall,
                        {MI.getOperand(0).getReg(), OpType, 0}, Args);
 }
@@ -1500,8 +1500,8 @@ LegalizerHelper::widenScalarMergeValues(MachineInstr &MI, unsigned TypeIdx,
   LLT WideDstTy = LLT::scalar(NumMerge * WideSize);
 
   // Decompose the original operands if they don't evenly divide.
-  for (int I = 1, E = MI.getNumOperands(); I != E; ++I) {
-    Register SrcReg = MI.getOperand(I).getReg();
+  for (const MachineOperand &MO : llvm::drop_begin(MI.operands())) {
+    Register SrcReg = MO.getReg();
     if (GCD == SrcSize) {
       Unmerges.push_back(SrcReg);
     } else {
@@ -4037,8 +4037,8 @@ LegalizerHelper::fewerElementsVectorMerge(MachineInstr &MI, unsigned TypeIdx,
 
   // Break into a common type
   SmallVector<Register, 16> Parts;
-  for (unsigned I = 1, E = MI.getNumOperands(); I != E; ++I)
-    extractGCDType(Parts, GCDTy, MI.getOperand(I).getReg());
+  for (const MachineOperand &MO : llvm::drop_begin(MI.operands()))
+    extractGCDType(Parts, GCDTy, MO.getReg());
 
   // Build the requested new merge, padding with undef.
   LLT LCMTy = buildLCMMergePieces(DstTy, NarrowTy, GCDTy, Parts,
@@ -7782,7 +7782,6 @@ LegalizerHelper::lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
   // of that value loaded. This can result in a sequence of loads and stores
   // mixed types, depending on what the target specifies as good types to use.
   unsigned CurrOffset = 0;
-  LLT PtrTy = MRI.getType(Src);
   unsigned Size = KnownLen;
   for (auto CopyTy : MemOps) {
     // Issuing an unaligned load / store pair  that overlaps with the previous
@@ -7800,15 +7799,19 @@ LegalizerHelper::lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
     Register LoadPtr = Src;
     Register Offset;
     if (CurrOffset != 0) {
-      Offset = MIB.buildConstant(LLT::scalar(PtrTy.getSizeInBits()), CurrOffset)
+      LLT SrcTy = MRI.getType(Src);
+      Offset = MIB.buildConstant(LLT::scalar(SrcTy.getSizeInBits()), CurrOffset)
                    .getReg(0);
-      LoadPtr = MIB.buildPtrAdd(PtrTy, Src, Offset).getReg(0);
+      LoadPtr = MIB.buildPtrAdd(SrcTy, Src, Offset).getReg(0);
     }
     auto LdVal = MIB.buildLoad(CopyTy, LoadPtr, *LoadMMO);
 
     // Create the store.
-    Register StorePtr =
-        CurrOffset == 0 ? Dst : MIB.buildPtrAdd(PtrTy, Dst, Offset).getReg(0);
+    Register StorePtr = Dst;
+    if (CurrOffset != 0) {
+      LLT DstTy = MRI.getType(Dst);
+      StorePtr = MIB.buildPtrAdd(DstTy, Dst, Offset).getReg(0);
+    }
     MIB.buildStore(LdVal, StorePtr, *StoreMMO);
     CurrOffset += CopyTy.getSizeInBytes();
     Size -= CopyTy.getSizeInBytes();
@@ -7885,7 +7888,6 @@ LegalizerHelper::lowerMemmove(MachineInstr &MI, Register Dst, Register Src,
   // Apart from that, this loop is pretty much doing the same thing as the
   // memcpy codegen function.
   unsigned CurrOffset = 0;
-  LLT PtrTy = MRI.getType(Src);
   SmallVector<Register, 16> LoadVals;
   for (auto CopyTy : MemOps) {
     // Construct MMO for the load.
@@ -7895,9 +7897,10 @@ LegalizerHelper::lowerMemmove(MachineInstr &MI, Register Dst, Register Src,
     // Create the load.
     Register LoadPtr = Src;
     if (CurrOffset != 0) {
+      LLT SrcTy = MRI.getType(Src);
       auto Offset =
-          MIB.buildConstant(LLT::scalar(PtrTy.getSizeInBits()), CurrOffset);
-      LoadPtr = MIB.buildPtrAdd(PtrTy, Src, Offset).getReg(0);
+          MIB.buildConstant(LLT::scalar(SrcTy.getSizeInBits()), CurrOffset);
+      LoadPtr = MIB.buildPtrAdd(SrcTy, Src, Offset).getReg(0);
     }
     LoadVals.push_back(MIB.buildLoad(CopyTy, LoadPtr, *LoadMMO).getReg(0));
     CurrOffset += CopyTy.getSizeInBytes();
@@ -7912,9 +7915,10 @@ LegalizerHelper::lowerMemmove(MachineInstr &MI, Register Dst, Register Src,
 
     Register StorePtr = Dst;
     if (CurrOffset != 0) {
+      LLT DstTy = MRI.getType(Dst);
       auto Offset =
-          MIB.buildConstant(LLT::scalar(PtrTy.getSizeInBits()), CurrOffset);
-      StorePtr = MIB.buildPtrAdd(PtrTy, Dst, Offset).getReg(0);
+          MIB.buildConstant(LLT::scalar(DstTy.getSizeInBits()), CurrOffset);
+      StorePtr = MIB.buildPtrAdd(DstTy, Dst, Offset).getReg(0);
     }
     MIB.buildStore(LoadVals[I], StorePtr, *StoreMMO);
     CurrOffset += CopyTy.getSizeInBytes();

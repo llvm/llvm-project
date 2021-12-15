@@ -35,6 +35,7 @@ using namespace llvm;
 #include "RISCVGenCompressInstEmitter.inc"
 
 #define GET_INSTRINFO_CTOR_DTOR
+#define GET_INSTRINFO_NAMED_OPS
 #include "RISCVGenInstrInfo.inc"
 
 static cl::opt<bool> PreferWholeRegisterMove(
@@ -1254,7 +1255,7 @@ bool RISCVInstrInfo::isFunctionSafeToOutlineFrom(
 bool RISCVInstrInfo::isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
                                             unsigned &Flags) const {
   // More accurate safety checking is done in getOutliningCandidateInfo.
-  return true;
+  return TargetInstrInfo::isMBBSafeToOutlineFrom(MBB, Flags);
 }
 
 // Enum values indicating how an outlined call should be constructed.

@@ -181,7 +181,7 @@ template<> __declspec(dllexport) int VarTmpl<ExplicitSpec_Def_Exported> = 1;
 //===----------------------------------------------------------------------===//
 
 // Export function declaration. Check different placements.
-__attribute__((dllexport)) void decl1A(); // Sanity check with __attribute__
+__attribute__((dllexport)) void decl1A(); // Correctness check with __attribute__
 __declspec(dllexport)      void decl1B();
 
 void __attribute__((dllexport)) decl2A();

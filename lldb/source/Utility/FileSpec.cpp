@@ -310,7 +310,7 @@ llvm::Optional<FileSpec::Style> FileSpec::GuessPathStyle(llvm::StringRef absolut
     return Style::posix;
   if (absolute_path.startswith(R"(\\)"))
     return Style::windows;
-  if (absolute_path.size() > 3 && llvm::isAlpha(absolute_path[0]) &&
+  if (absolute_path.size() >= 3 && llvm::isAlpha(absolute_path[0]) &&
       absolute_path.substr(1, 2) == R"(:\)")
     return Style::windows;
   return llvm::None;

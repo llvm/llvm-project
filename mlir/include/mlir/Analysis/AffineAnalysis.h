@@ -182,6 +182,6 @@ void getDependenceComponents(
     AffineForOp forOp, unsigned maxLoopDepth,
     std::vector<SmallVector<DependenceComponent, 2>> *depCompsVec);
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_ANALYSIS_AFFINE_ANALYSIS_H

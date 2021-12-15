@@ -1,3 +1,4 @@
+# XFAIL: target-arm && linux-gnu
 # REQUIRES: system-linux, lzma, xz
 
 # We want to keep the symbol "multiplyByThree" in the .dynamic section and not
@@ -59,7 +60,7 @@
 # from within the .dynsym section (multiplyByThree) and one from
 # the .symtab section embedded in the .gnu_debugdata section (multiplyByFour).
 
-# RUN: %lldb -b -o 'b multiplyByThree' -o 'b multiplyByFour' -o 'run' -o 'continue' -o 'breakpoint list -v' %t.binary | FileCheck %s
+# RUN: %lldb -b -o 'b multiplyByThree' -o 'b multiplyByFour' -o 'run' -o 'continue' -o 'breakpoint list -v' %t.binary | FileCheck %s --dump-input-context 20
 
 # CHECK: (lldb) b multiplyByThree
 # CHECK-NEXT: Breakpoint 1: where = minidebuginfo-set-and-hit-breakpoint.test.tmp.binary`multiplyByThree, address = 0x{{.*}}

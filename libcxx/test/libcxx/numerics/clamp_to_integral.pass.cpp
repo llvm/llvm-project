@@ -12,9 +12,10 @@
 // closest representable value for the specified integer type, or
 // numeric_limits<IntT>::max()/min() if the value isn't representable.
 
-#include <limits>
 #include <cassert>
 #include <cmath>
+#include <limits>
+#include <random> // for __clamp_to_integral
 
 template <class IntT>
 void test() {

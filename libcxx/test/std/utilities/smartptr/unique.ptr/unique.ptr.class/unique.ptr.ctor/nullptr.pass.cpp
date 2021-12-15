@@ -53,6 +53,11 @@ void test_basic() {
     assert(p.get() == 0);
     assert(p.get_deleter().state() == 0);
   }
+  {
+    std::unique_ptr<VT, DefaultCtorDeleter<VT> > p(nullptr);
+    assert(p.get() == 0);
+    assert(p.get_deleter().state() == 0);
+  }
 }
 
 template <class VT>

@@ -1,4 +1,4 @@
-; RUN: opt < %s -globaldce -S | FileCheck %s
+; RUN: opt < %s -passes=globaldce -S | FileCheck %s
 
 ; We currently only use llvm.type.checked.load for virtual function pointers,
 ; not any other part of the vtable, so we can't remove the RTTI pointer even if

@@ -611,7 +611,7 @@ struct Vectorize : public AffineVectorizeBase<Vectorize> {
   void runOnFunction() override;
 };
 
-} // end anonymous namespace
+} // namespace
 
 Vectorize::Vectorize(ArrayRef<int64_t> virtualVectorSize) {
   vectorSizes = virtualVectorSize;
@@ -764,7 +764,7 @@ private:
   void registerValueScalarReplacementImpl(Value replaced, Value replacement);
 };
 
-} // end namespace
+} // namespace
 
 /// Registers the vector replacement of a scalar operation and its result
 /// values. Both operations must have the same number of results.

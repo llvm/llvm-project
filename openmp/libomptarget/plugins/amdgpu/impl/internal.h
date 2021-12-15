@@ -54,7 +54,8 @@ typedef struct atl_kernel_info_s {
   uint32_t sgpr_spill_count;
   uint32_t vgpr_spill_count;
   uint32_t kernel_segment_size;
-  uint32_t num_args;
+  uint32_t explicit_argument_count;
+  uint32_t implicit_argument_count;
 } atl_kernel_info_t;
 
 typedef struct atl_symbol_info_s {

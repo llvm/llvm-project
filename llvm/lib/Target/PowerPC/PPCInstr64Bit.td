@@ -773,6 +773,11 @@ def ADDIS8 : DForm_2<15, (outs g8rc:$rD), (ins g8rc_nox0:$rA, s17imm64:$imm),
                      "addis $rD, $rA, $imm", IIC_IntSimple,
                      [(set i64:$rD, (add i64:$rA, imm16ShiftedSExt:$imm))]>;
 
+def LA8     : DForm_2<14, (outs g8rc:$rD), (ins g8rc_nox0:$rA, s16imm64:$sym),
+                     "la $rD, $sym($rA)", IIC_IntGeneral,
+                     [(set i64:$rD, (add i64:$rA,
+                                    (PPClo tglobaladdr:$sym, 0)))]>;
+
 let Defs = [CARRY] in {
 def SUBFIC8: DForm_2< 8, (outs g8rc:$rD), (ins g8rc:$rA, s16imm64:$imm),
                      "subfic $rD, $rA, $imm", IIC_IntGeneral,
@@ -1435,6 +1440,13 @@ def ADDIStocHA8: PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, tocentr
 def ADDItocL: PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, tocentry:$disp),
                      "#ADDItocL", []>, isPPC64;
 }
+
+// Local Data Transform
+def ADDItoc8 : PPCEmitTimePseudo<(outs g8rc:$rD), (ins tocentry:$disp, g8rc_nox0:$reg),
+                   "#ADDItoc8",
+                   [(set i64:$rD,
+                     (PPCtoc_entry tglobaladdr:$disp, i64:$reg))]>, isPPC64;
+
 let mayLoad = 1 in
 def LDtocL: PPCEmitTimePseudo<(outs g8rc:$rD), (ins tocentry:$disp, g8rc_nox0:$reg),
                    "#LDtocL", []>, isPPC64;

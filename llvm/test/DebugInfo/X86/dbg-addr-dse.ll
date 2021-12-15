@@ -1,4 +1,4 @@
-; RUN: llc %s -o %t.s -experimental-debug-variable-locations=false
+; RUN: llc %s -o %t.s -experimental-debug-variable-locations=true
 ; RUN: llvm-mc %t.s -filetype=obj -triple=x86_64-windows-msvc -o %t.o
 ; RUN: FileCheck %s < %t.s --check-prefix=ASM
 ; RUN: llvm-dwarfdump %t.o | FileCheck %s --check-prefix=DWARF

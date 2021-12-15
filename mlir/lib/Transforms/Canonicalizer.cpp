@@ -52,7 +52,7 @@ struct Canonicalizer : public CanonicalizerBase<Canonicalizer> {
   GreedyRewriteConfig config;
   FrozenRewritePatternSet patterns;
 };
-} // end anonymous namespace
+} // namespace
 
 /// Create a Canonicalizer pass.
 std::unique_ptr<Pass> mlir::createCanonicalizerPass() {

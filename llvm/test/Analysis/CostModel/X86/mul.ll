@@ -460,7 +460,7 @@ define i32 @mul_constnegpow2() {
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512F-LABEL: 'mul_constnegpow2'
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I64 = mul i64 undef, -16
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = mul i64 undef, -16
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2i64 = mul <2 x i64> undef, <i64 -8, i64 -16>
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4i64 = mul <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8i64 = mul <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
@@ -479,7 +479,7 @@ define i32 @mul_constnegpow2() {
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512BW-LABEL: 'mul_constnegpow2'
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I64 = mul i64 undef, -16
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = mul i64 undef, -16
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2i64 = mul <2 x i64> undef, <i64 -8, i64 -16>
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4i64 = mul <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8i64 = mul <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
@@ -636,7 +636,7 @@ define i32 @mul_uniformconstnegpow2() {
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512F-LABEL: 'mul_uniformconstnegpow2'
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I64 = mul i64 undef, -16
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = mul i64 undef, -16
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2i64 = mul <2 x i64> undef, <i64 -16, i64 -16>
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4i64 = mul <4 x i64> undef, <i64 -16, i64 -16, i64 -16, i64 -16>
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8i64 = mul <8 x i64> undef, <i64 -16, i64 -16, i64 -16, i64 -16, i64 -16, i64 -16, i64 -16, i64 -16>
@@ -655,7 +655,7 @@ define i32 @mul_uniformconstnegpow2() {
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512BW-LABEL: 'mul_uniformconstnegpow2'
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I64 = mul i64 undef, -16
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = mul i64 undef, -16
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2i64 = mul <2 x i64> undef, <i64 -16, i64 -16>
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4i64 = mul <4 x i64> undef, <i64 -16, i64 -16, i64 -16, i64 -16>
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8i64 = mul <8 x i64> undef, <i64 -16, i64 -16, i64 -16, i64 -16, i64 -16, i64 -16, i64 -16, i64 -16>

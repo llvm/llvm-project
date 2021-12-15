@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Lua.h"
+#include "SWIGLuaBridge.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Utility/FileSpec.h"
 #include "llvm/Support/Error.h"
@@ -14,30 +15,6 @@
 
 using namespace lldb_private;
 using namespace lldb;
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wreturn-type-c-linkage"
-
-// Disable warning C4190: 'LLDBSwigPythonBreakpointCallbackFunction' has
-// C-linkage specified, but returns UDT 'llvm::Expected<bool>' which is
-// incompatible with C
-#if _MSC_VER
-#pragma warning (push)
-#pragma warning (disable : 4190)
-#endif
-
-extern "C" llvm::Expected<bool> LLDBSwigLuaBreakpointCallbackFunction(
-    lua_State *L, lldb::StackFrameSP stop_frame_sp,
-    lldb::BreakpointLocationSP bp_loc_sp, StructuredDataImpl *extra_args_impl);
-
-extern "C" llvm::Expected<bool> LLDBSwigLuaWatchpointCallbackFunction(
-    lua_State *L, lldb::StackFrameSP stop_frame_sp, lldb::WatchpointSP wp_sp);
-
-#if _MSC_VER
-#pragma warning (pop)
-#endif
-
-#pragma clang diagnostic pop
 
 static int lldb_print(lua_State *L) {
   int n = lua_gettop(L);
@@ -105,13 +82,7 @@ Lua::CallBreakpointCallback(void *baton, lldb::StackFrameSP stop_frame_sp,
 
   lua_pushlightuserdata(m_lua_state, baton);
   lua_gettable(m_lua_state, LUA_REGISTRYINDEX);
-  auto *extra_args_impl = [&]() -> StructuredDataImpl * {
-    if (extra_args_sp == nullptr)
-      return nullptr;
-    auto *extra_args_impl = new StructuredDataImpl();
-    extra_args_impl->SetObjectSP(extra_args_sp);
-    return extra_args_impl;
-  }();
+  StructuredDataImpl extra_args_impl(std::move(extra_args_sp));
   return LLDBSwigLuaBreakpointCallbackFunction(m_lua_state, stop_frame_sp,
                                                bp_loc_sp, extra_args_impl);
 }

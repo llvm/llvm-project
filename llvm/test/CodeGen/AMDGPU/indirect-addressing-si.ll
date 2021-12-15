@@ -508,12 +508,12 @@ define amdgpu_kernel void @insertelement_v16f32_or_index(<16 x float> addrspace(
 ; GCN-LABEL: {{^}}broken_phi_bb:
 ; GCN: v_mov_b32_e32 [[PHIREG:v[0-9]+]], 8
 
-; GCN: {{BB[0-9]+_[0-9]+}}:
-; GCN: [[BB2:BB[0-9]+_[0-9]+]]:
+; GCN: {{.LBB[0-9]+_[0-9]+}}:
+; GCN: [[BB2:.LBB[0-9]+_[0-9]+]]:
 ; GCN: v_cmp_le_i32_e32 vcc, s{{[0-9]+}}, [[PHIREG]]
 ; GCN: buffer_load_dword
 
-; GCN: [[REGLOOP:BB[0-9]+_[0-9]+]]:
+; GCN: [[REGLOOP:.LBB[0-9]+_[0-9]+]]:
 ; MOVREL: v_movreld_b32_e32
 
 ; IDXMODE: s_set_gpr_idx_on

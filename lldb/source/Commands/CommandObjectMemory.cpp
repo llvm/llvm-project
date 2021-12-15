@@ -716,7 +716,7 @@ protected:
         if (item_byte_size == read) {
           result.AppendWarningWithFormat(
               "unable to find a NULL terminated string at 0x%" PRIx64
-              ".Consider increasing the maximum read length.\n",
+              ". Consider increasing the maximum read length.\n",
               data_addr);
           --read;
           break_on_no_NULL = true;
@@ -1222,7 +1222,15 @@ public:
             interpreter, "memory write",
             "Write to the memory of the current target process.", nullptr,
             eCommandRequiresProcess | eCommandProcessMustBeLaunched),
-        m_option_group(), m_format_options(eFormatBytes, 1, UINT64_MAX),
+        m_option_group(),
+        m_format_options(
+            eFormatBytes, 1, UINT64_MAX,
+            {std::make_tuple(
+                 eArgTypeFormat,
+                 "The format to use for each of the value to be written."),
+             std::make_tuple(
+                 eArgTypeByteSize,
+                 "The size in bytes to write from input file or each value.")}),
         m_memory_options() {
     CommandArgumentEntry arg1;
     CommandArgumentEntry arg2;
@@ -1240,6 +1248,7 @@ public:
     // Define the first (and only) variant of this arg.
     value_arg.arg_type = eArgTypeValue;
     value_arg.arg_repetition = eArgRepeatPlus;
+    value_arg.arg_opt_set_association = LLDB_OPT_SET_1;
 
     // There is only one variant this argument could be; put it into the
     // argument entry.
@@ -1275,6 +1284,12 @@ protected:
       if (argc < 1) {
         result.AppendErrorWithFormat(
             "%s takes a destination address when writing file contents.\n",
+            m_cmd_name.c_str());
+        return false;
+      }
+      if (argc > 1) {
+        result.AppendErrorWithFormat(
+            "%s takes only a destination address when writing file contents.\n",
             m_cmd_name.c_str());
         return false;
       }

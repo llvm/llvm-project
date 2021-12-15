@@ -197,7 +197,8 @@ getDispOpValue(const MCInst &MI, unsigned OpNum,
     // All instructions follow the pattern where the first displacement has a
     // 2 bytes offset, and the second one 4 bytes.
     unsigned ByteOffs = Fixups.size() == 0 ? 2 : 4;
-    Fixups.push_back(MCFixup::create(ByteOffs, MO.getExpr(), (MCFixupKind)Kind));
+    Fixups.push_back(MCFixup::create(ByteOffs, MO.getExpr(), (MCFixupKind)Kind,
+                                     MI.getLoc()));
     assert(Fixups.size() <= 2 && "More than two memory operands in MI?");
     return 0;
   }
@@ -296,6 +297,7 @@ SystemZMCCodeEmitter::getPCRelEncoding(const MCInst &MI, unsigned OpNum,
                                        SmallVectorImpl<MCFixup> &Fixups,
                                        unsigned Kind, int64_t Offset,
                                        bool AllowTLS) const {
+  SMLoc Loc = MI.getLoc();
   const MCOperand &MO = MI.getOperand(OpNum);
   const MCExpr *Expr;
   if (MO.isImm())
@@ -311,13 +313,13 @@ SystemZMCCodeEmitter::getPCRelEncoding(const MCInst &MI, unsigned OpNum,
       Expr = MCBinaryExpr::createAdd(Expr, OffsetExpr, Ctx);
     }
   }
-  Fixups.push_back(MCFixup::create(Offset, Expr, (MCFixupKind)Kind));
+  Fixups.push_back(MCFixup::create(Offset, Expr, (MCFixupKind)Kind, Loc));
 
   // Output the fixup for the TLS marker if present.
   if (AllowTLS && OpNum + 1 < MI.getNumOperands()) {
     const MCOperand &MOTLS = MI.getOperand(OpNum + 1);
-    Fixups.push_back(MCFixup::create(0, MOTLS.getExpr(),
-                                     (MCFixupKind)SystemZ::FK_390_TLS_CALL));
+    Fixups.push_back(MCFixup::create(
+        0, MOTLS.getExpr(), (MCFixupKind)SystemZ::FK_390_TLS_CALL, Loc));
   }
   return 0;
 }

@@ -3908,20 +3908,20 @@ void RegisterCoalescer::lateLiveIntervalUpdate() {
 bool RegisterCoalescer::
 copyCoalesceWorkList(MutableArrayRef<MachineInstr*> CurrList) {
   bool Progress = false;
-  for (unsigned i = 0, e = CurrList.size(); i != e; ++i) {
-    if (!CurrList[i])
+  for (MachineInstr *&MI : CurrList) {
+    if (!MI)
       continue;
     // Skip instruction pointers that have already been erased, for example by
     // dead code elimination.
-    if (ErasedInstrs.count(CurrList[i])) {
-      CurrList[i] = nullptr;
+    if (ErasedInstrs.count(MI)) {
+      MI = nullptr;
       continue;
     }
     bool Again = false;
-    bool Success = joinCopy(CurrList[i], Again);
+    bool Success = joinCopy(MI, Again);
     Progress |= Success;
     if (Success || !Again)
-      CurrList[i] = nullptr;
+      MI = nullptr;
   }
   return Progress;
 }
@@ -4067,13 +4067,13 @@ void RegisterCoalescer::joinAllIntervals() {
 
   // Coalesce intervals in MBB priority order.
   unsigned CurrDepth = std::numeric_limits<unsigned>::max();
-  for (unsigned i = 0, e = MBBs.size(); i != e; ++i) {
+  for (MBBPriorityInfo &MBB : MBBs) {
     // Try coalescing the collected local copies for deeper loops.
-    if (JoinGlobalCopies && MBBs[i].Depth < CurrDepth) {
+    if (JoinGlobalCopies && MBB.Depth < CurrDepth) {
       coalesceLocals();
-      CurrDepth = MBBs[i].Depth;
+      CurrDepth = MBB.Depth;
     }
-    copyCoalesceInMBB(MBBs[i].MBB);
+    copyCoalesceInMBB(MBB.MBB);
   }
   lateLiveIntervalUpdate();
   coalesceLocals();

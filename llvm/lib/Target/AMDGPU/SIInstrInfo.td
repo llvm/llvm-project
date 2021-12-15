@@ -289,6 +289,7 @@ class isPackedType<ValueType SrcVT> {
   bit ret = !or(!eq(SrcVT.Value, v2i16.Value),
                 !eq(SrcVT.Value, v2f16.Value),
                 !eq(SrcVT.Value, v4f16.Value),
+                !eq(SrcVT.Value, v2i32.Value),
                 !eq(SrcVT.Value, v2f32.Value),
                 !eq(SrcVT.Value, v4i32.Value),
                 !eq(SrcVT.Value, v4f32.Value),
@@ -1378,11 +1379,11 @@ def PackedI16InputMods : PackedIntInputMods<PackedI16InputModsMatchClass>;
 // Complex patterns
 //===----------------------------------------------------------------------===//
 
-def DS1Addr1Offset : ComplexPattern<i32, 2, "SelectDS1Addr1Offset">;
-def DS64Bit4ByteAligned : ComplexPattern<i32, 3, "SelectDS64Bit4ByteAligned">;
-def DS128Bit8ByteAligned : ComplexPattern<i64, 3, "SelectDS128Bit8ByteAligned">;
+def DS1Addr1Offset : ComplexPattern<iPTR, 2, "SelectDS1Addr1Offset">;
+def DS64Bit4ByteAligned : ComplexPattern<iPTR, 3, "SelectDS64Bit4ByteAligned">;
+def DS128Bit8ByteAligned : ComplexPattern<iPTR, 3, "SelectDS128Bit8ByteAligned">;
 
-def MOVRELOffset : ComplexPattern<i32, 2, "SelectMOVRELOffset">;
+def MOVRELOffset : ComplexPattern<iPTR, 2, "SelectMOVRELOffset">;
 
 def VOP3Mods0 : ComplexPattern<untyped, 4, "SelectVOP3Mods0">;
 def VOP3Mods  : ComplexPattern<untyped, 2, "SelectVOP3Mods">;
@@ -1395,6 +1396,7 @@ def VOP3OMods : ComplexPattern<untyped, 3, "SelectVOP3OMods">;
 def VOP3PMods  : ComplexPattern<untyped, 2, "SelectVOP3PMods">;
 
 def DotIUVOP3PMods  : ComplexPattern<untyped, 1, "SelectDotIUVOP3PMods">;
+def WMMAOpSelVOP3PMods  : ComplexPattern<untyped, 1, "SelectWMMAOpSelVOP3PMods">;
 
 def VOP3OpSel  : ComplexPattern<untyped, 2, "SelectVOP3OpSel">;
 
@@ -1755,19 +1757,21 @@ class getInsVOP3Base<RegisterOperand Src0RC, RegisterOperand Src1RC,
                 HasClamp, HasModifiers, HasSrc2Mods, HasOMod,
                 Src0Mod, Src1Mod, Src2Mod>.ret;
   dag opsel = (ins op_sel0:$op_sel);
-  dag vop3pFields = (ins op_sel_hi0:$op_sel_hi, neg_lo0:$neg_lo, neg_hi0:$neg_hi);
+  dag vop3pOpsel = (ins op_sel_hi0:$op_sel_hi);
+  dag vop3pFields = !con(!if(HasOpSel, vop3pOpsel, (ins)), (ins neg_lo0:$neg_lo, neg_hi0:$neg_hi));
+
   dag ret = !con(base,
                  !if(HasOpSel, opsel,(ins)),
                  !if(IsVOP3P, vop3pFields,(ins)));
 }
 
 class getInsVOP3P <RegisterOperand Src0RC, RegisterOperand Src1RC,
-                   RegisterOperand Src2RC, int NumSrcArgs, bit HasClamp,
+                   RegisterOperand Src2RC, int NumSrcArgs, bit HasClamp, bit HasOpSel,
                    Operand Src0Mod, Operand Src1Mod, Operand Src2Mod> {
   dag ret = getInsVOP3Base<Src0RC, Src1RC, Src2RC, NumSrcArgs,
                     HasClamp, 1/*HasModifiers*/, 1/*HasSrc2Mods*/,
                     0/*HasOMod*/, Src0Mod, Src1Mod, Src2Mod,
-                    1/*HasOpSel*/, 1/*IsVOP3P*/>.ret;
+                    HasOpSel, 1/*IsVOP3P*/>.ret;
 }
 
 class getInsVOP3OpSel <RegisterOperand Src0RC, RegisterOperand Src1RC,
@@ -2378,7 +2382,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableF32SrcMods = 0,
                              HasIntClamp, HasModifiers, HasSrc2Mods,
                              HasOMod, Src0Mod, Src1Mod, Src2Mod>.ret;
   field dag InsVOP3P = getInsVOP3P<Src0RC64, Src1RC64, Src2RC64,
-                                   NumSrcArgs, HasClamp,
+                                   NumSrcArgs, HasClamp, HasOpSel,
                                    Src0PackedMod, Src1PackedMod, Src2PackedMod>.ret;
   field dag InsVOP3OpSel = getInsVOP3OpSel<Src0RC64, Src1RC64, Src2RC64,
                                 NumSrcArgs, HasClamp, HasOMod,
@@ -2443,7 +2447,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableF32SrcMods = 0,
   let HasExtSDWA9 = 0;
 }
 
-class VOP_PAT_GEN <VOPProfile p, int mode=PatGenMode.Pattern> : VOPProfile <p.ArgVT> {
+class VOP_PAT_GEN <VOPProfile p, int mode=PatGenMode.NoPattern> : VOPProfile <p.ArgVT> {
   let NeedPatGen = mode;
 }
 def VOP_F16_F16 : VOPProfile <[f16, f16, untyped, untyped]>;

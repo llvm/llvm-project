@@ -177,6 +177,6 @@ private:
   std::unique_ptr<Impl> impl;
 };
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_PARSER_ASMPARSERSTATE_H

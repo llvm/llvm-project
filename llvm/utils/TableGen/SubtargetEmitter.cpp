@@ -1433,7 +1433,6 @@ static void emitPredicateProlog(const RecordKeeper &Records, raw_ostream &OS) {
   for (Record *P : Prologs)
     Stream << P->getValueAsString("Code") << '\n';
 
-  Stream.flush();
   OS << Buffer;
 }
 
@@ -1492,7 +1491,6 @@ static void emitPredicates(const CodeGenSchedTransition &T,
   }
 
   SS << "return " << T.ToClassIdx << "; // " << SC.Name << '\n';
-  SS.flush();
   OS << Buffer;
 }
 

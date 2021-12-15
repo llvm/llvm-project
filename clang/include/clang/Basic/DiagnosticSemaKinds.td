@@ -2956,6 +2956,17 @@ def err_attribute_invalid_argument : Error<
 def err_attribute_wrong_number_arguments : Error<
   "%0 attribute %plural{0:takes no arguments|1:takes one argument|"
   ":requires exactly %1 arguments}1">;
+def err_attribute_wrong_number_arguments_for : Error <
+  "%0 attribute references function %1, which %plural{0:takes no arguments|1:takes one argument|"
+  ":takes exactly %2 arguments}2">;
+def err_attribute_bounds_for_function : Error<
+  "%0 attribute references parameter %1, but the function %2 has only %3 parameters">;
+def err_attribute_no_member_function : Error<
+  "%0 attribute cannot be applied to non-static member functions">;
+def err_attribute_parameter_types : Error<
+  "%0 attribute parameter types do not match: parameter %1 of function %2 has type %3, "
+  "but parameter %4 of function %5 has type %6">;
+
 def err_attribute_too_many_arguments : Error<
   "%0 attribute takes no more than %1 argument%s1">;
 def err_attribute_too_few_arguments : Error<
@@ -2979,9 +2990,13 @@ def err_attribute_requires_opencl_version : Error<
   "attribute %0 is supported in the OpenCL version %1%select{| onwards}2">;
 def err_invalid_branch_protection_spec : Error<
   "invalid or misplaced branch protection specification '%0'">;
+def warn_unsupported_branch_protection_spec : Warning<
+  "unsupported branch protection specification '%0'">, InGroup<BranchProtection>;
+
 def warn_unsupported_target_attribute
     : Warning<"%select{unsupported|duplicate|unknown}0%select{| architecture|"
-              " tune CPU}1 '%2' in the 'target' attribute string; 'target' "
+              " tune CPU}1 '%2' in the '%select{target|target_clones}3' "
+              "attribute string; '%select{target|target_clones}3' "
               "attribute ignored">,
       InGroup<IgnoredAttributes>;
 def err_attribute_unsupported
@@ -3009,7 +3024,7 @@ def err_attribute_sizeless_type : Error<
   "%0 attribute cannot be applied to sizeless type %1">;
 def err_attribute_argument_n_type : Error<
   "%0 attribute requires parameter %1 to be %select{int or bool|an integer "
-  "constant|a string|an identifier|a constant expression}2">;
+  "constant|a string|an identifier|a constant expression|a builtin function}2">;
 def err_attribute_argument_type : Error<
   "%0 attribute requires %select{int or bool|an integer "
   "constant|a string|an identifier}1">;
@@ -8333,8 +8348,8 @@ def err_atomic_exclusive_builtin_pointer_size : Error<
   " 1,2,4 or 8 byte type (%0 invalid)">;
 def err_atomic_builtin_ext_int_size : Error<
   "Atomic memory operand must have a power-of-two size">;
-def err_atomic_builtin_ext_int_prohibit : Error<
-  "argument to atomic builtin of type '_ExtInt' is not supported">;
+def err_atomic_builtin_bit_int_prohibit : Error<
+  "argument to atomic builtin of type '_BitInt' is not supported">;
 def err_atomic_op_needs_atomic : Error<
   "address argument to atomic operation must be a pointer to _Atomic "
   "type (%0 invalid)">;
@@ -8370,8 +8385,8 @@ def err_overflow_builtin_must_be_int : Error<
 def err_overflow_builtin_must_be_ptr_int : Error<
   "result argument to overflow builtin must be a pointer "
   "to a non-const integer (%0 invalid)">;
-def err_overflow_builtin_ext_int_max_size : Error<
-  "__builtin_mul_overflow does not support signed _ExtInt operands of more "
+def err_overflow_builtin_bit_int_max_size : Error<
+  "__builtin_mul_overflow does not support 'signed _BitInt' operands of more "
   "than %0 bits">;
 
 def err_atomic_load_store_uses_lib : Error<
@@ -8622,11 +8637,11 @@ def warn_unused_volatile : Warning<
   InGroup<DiagGroup<"unused-volatile-lvalue">>;
 
 def ext_cxx14_attr : Extension<
-  "use of the %0 attribute is a C++14 extension">, InGroup<CXX14>;
+  "use of the %0 attribute is a C++14 extension">, InGroup<CXX14Attrs>;
 def ext_cxx17_attr : Extension<
-  "use of the %0 attribute is a C++17 extension">, InGroup<CXX17>;
+  "use of the %0 attribute is a C++17 extension">, InGroup<CXX17Attrs>;
 def ext_cxx20_attr : Extension<
-  "use of the %0 attribute is a C++20 extension">, InGroup<CXX20>;
+  "use of the %0 attribute is a C++20 extension">, InGroup<CXX20Attrs>;
 
 def warn_unused_comparison : Warning<
   "%select{equality|inequality|relational|three-way}0 comparison result unused">,
@@ -9807,6 +9822,8 @@ def err_ppc_builtin_only_on_arch : Error<
   "this builtin is only valid on POWER%0 or later CPUs">;
 def err_ppc_builtin_requires_vsx : Error<
   "this builtin requires VSX to be enabled">;
+def err_ppc_builtin_requires_htm : Error<
+  "this builtin requires HTM to be enabled">;
 def err_ppc_builtin_requires_abi : Error<
   "this builtin requires ABI -mabi=%0">;
 def err_ppc_invalid_use_mma_type : Error<
@@ -9864,6 +9881,8 @@ def warn_duplicate_attribute_exact : Warning<
 def warn_duplicate_attribute : Warning<
   "attribute %0 is already applied with different arguments">,
   InGroup<IgnoredAttributes>;
+def err_disallowed_duplicate_attribute : Error<
+  "attribute %0 cannot appear more than once on a declaration">;
 
 def warn_sync_fetch_and_nand_semantics_change : Warning<
   "the semantics of this intrinsic changed with GCC "
@@ -11254,9 +11273,11 @@ def err_multiversion_duplicate : Error<
   "multiversioned function redeclarations require identical target attributes">;
 def err_multiversion_noproto : Error<
   "multiversioned function must have a prototype">;
-def err_multiversion_disallowed_other_attr : Error<
-  "attribute '%select{target|cpu_specific|cpu_dispatch}0' multiversioning cannot be combined"
-  " with attribute %1">;
+def err_multiversion_disallowed_other_attr
+    : Error<"attribute "
+            "'%select{|target|cpu_specific|cpu_dispatch|target_clones}0' "
+            "multiversioning cannot be combined"
+            " with attribute %1">;
 def err_multiversion_mismatched_attrs
     : Error<"attributes on multiversioned functions must all match, attribute "
             "%0 %select{is missing|has different arguments}1">;
@@ -11264,11 +11285,14 @@ def err_multiversion_diff : Error<
   "multiversioned function declaration has a different %select{calling convention"
   "|return type|constexpr specification|inline specification|linkage|"
   "language linkage}0">;
-def err_multiversion_doesnt_support : Error<
-  "attribute '%select{target|cpu_specific|cpu_dispatch}0' multiversioned functions do not "
-  "yet support %select{function templates|virtual functions|"
-  "deduced return types|constructors|destructors|deleted functions|"
-  "defaulted functions|constexpr functions|consteval function}1">;
+def err_multiversion_doesnt_support
+    : Error<"attribute "
+            "'%select{|target|cpu_specific|cpu_dispatch|target_clones}0' "
+            "multiversioned functions do not "
+            "yet support %select{function templates|virtual functions|"
+            "deduced return types|constructors|destructors|deleted functions|"
+            "defaulted functions|constexpr functions|consteval "
+            "function|lambdas}1">;
 def err_multiversion_not_allowed_on_main : Error<
   "'main' cannot be a multiversioned function">;
 def err_multiversion_not_supported : Error<
@@ -11285,6 +11309,19 @@ def warn_multiversion_duplicate_entries : Warning<
 def warn_dispatch_body_ignored : Warning<
   "body of cpu_dispatch function will be ignored">,
   InGroup<FunctionMultiVersioning>;
+def err_target_clone_must_have_default
+    : Error<"'target_clones' multiversioning requires a default target">;
+def err_target_clone_doesnt_match
+    : Error<"'target_clones' attribute does not match previous declaration">;
+def warn_target_clone_mixed_values
+    : ExtWarn<
+          "mixing 'target_clones' specifier mechanisms is permitted for GCC "
+          "compatibility; use a comma separated sequence of string literals, "
+          "or a string literal containing a comma-separated list of versions">,
+      InGroup<TargetClonesMixedSpecifiers>;
+def warn_target_clone_duplicate_options
+    : Warning<"version list contains duplicate entries">,
+      InGroup<FunctionMultiVersioning>;
 
 // three-way comparison operator diagnostics
 def err_implied_comparison_category_type_not_found : Error<
@@ -11331,8 +11368,9 @@ def err_builtin_launder_invalid_arg : Error<
 def err_builtin_invalid_arg_type: Error <
   "%ordinal0 argument must be a "
   "%select{vector, integer or floating point type|matrix|"
-   "pointer to a valid matrix element type|"
-   "signed integer or floating point type|vector type}1 (was %2)">;
+  "pointer to a valid matrix element type|"
+  "signed integer or floating point type|vector type|"
+  "floating point type}1 (was %2)">;
 
 def err_builtin_matrix_disabled: Error<
   "matrix types extension is disabled. Pass -fenable-matrix to enable it">;
@@ -11399,9 +11437,9 @@ def warn_sycl_kernel_return_type : Warning<
   "function template with 'sycl_kernel' attribute must have a 'void' return type">,
   InGroup<IgnoredAttributes>;
 
-def err_ext_int_bad_size : Error<"%select{signed|unsigned}0 _ExtInt must "
+def err_bit_int_bad_size : Error<"%select{signed|unsigned}0 _BitInt must "
                                  "have a bit size of at least %select{2|1}0">;
-def err_ext_int_max_size : Error<"%select{signed|unsigned}0 _ExtInt of bit "
+def err_bit_int_max_size : Error<"%select{signed|unsigned}0 _BitInt of bit "
                                  "sizes greater than %1 not supported">;
 
 // errors of expect.with.probability

@@ -1,4 +1,4 @@
-; RUN: opt -S -globalopt -o - < %s | FileCheck %s
+; RUN: opt -S -passes=globalopt -o - < %s | FileCheck %s
 
 ; CHECK: [[G_INIT:@.*]] = internal unnamed_addr global i1 false
 @g = internal global i32* null, align 8

@@ -11,11 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/StandardOps/Transforms/FuncConversions.h"
 #include "mlir/Dialect/StandardOps/Transforms/Passes.h"
-#include "mlir/Transforms/Bufferize.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
@@ -27,7 +27,7 @@ struct FuncBufferizePass : public FuncBufferizeBase<FuncBufferizePass> {
     auto module = getOperation();
     auto *context = &getContext();
 
-    BufferizeTypeConverter typeConverter;
+    bufferization::BufferizeTypeConverter typeConverter;
     RewritePatternSet patterns(context);
     ConversionTarget target(*context);
 
@@ -42,7 +42,8 @@ struct FuncBufferizePass : public FuncBufferizeBase<FuncBufferizePass> {
 
     populateBranchOpInterfaceTypeConversionPattern(patterns, typeConverter);
     populateReturnOpTypeConversionPattern(patterns, typeConverter);
-    target.addLegalOp<ModuleOp, memref::TensorLoadOp, memref::BufferCastOp>();
+    target.addLegalOp<ModuleOp, bufferization::ToTensorOp,
+                      bufferization::ToMemrefOp>();
 
     target.markUnknownOpDynamicallyLegal([&](Operation *op) {
       return isNotBranchOpInterfaceOrReturnLikeOp(op) ||

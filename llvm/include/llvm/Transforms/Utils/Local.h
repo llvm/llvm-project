@@ -55,7 +55,6 @@ class MDNode;
 class MemorySSAUpdater;
 class PHINode;
 class StoreInst;
-class SwitchInst;
 class TargetLibraryInfo;
 class TargetTransformInfo;
 
@@ -89,6 +88,14 @@ bool isInstructionTriviallyDead(Instruction *I,
 /// isInstructionTriviallyDead would be true if the use count was 0.
 bool wouldInstructionBeTriviallyDead(Instruction *I,
                                      const TargetLibraryInfo *TLI = nullptr);
+
+/// Return true if the result produced by the instruction has no side effects on
+/// any paths other than where it is used. This is less conservative than 
+/// wouldInstructionBeTriviallyDead which is based on the assumption
+/// that the use count will be 0. An example usage of this API is for
+/// identifying instructions that can be sunk down to use(s).
+bool wouldInstructionBeTriviallyDeadOnUnusedPaths(
+    Instruction *I, const TargetLibraryInfo *TLI = nullptr);
 
 /// If the specified value is a trivially dead instruction, delete it.
 /// If that makes any of its operands trivially dead, delete them too,
@@ -237,10 +244,6 @@ CallInst *createCallMatchingInvoke(InvokeInst *II);
 
 /// This function converts the specified invoek into a normall call.
 void changeToCall(InvokeInst *II, DomTreeUpdater *DTU = nullptr);
-
-/// This function removes the default destination from the specified switch.
-void createUnreachableSwitchDefault(SwitchInst *Switch,
-                                    DomTreeUpdater *DTU = nullptr);
 
 ///===---------------------------------------------------------------------===//
 ///  Dbg Intrinsic utilities

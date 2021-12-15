@@ -72,7 +72,7 @@ struct AffineDataCopyGeneration
   Value zeroIndex = nullptr;
 };
 
-} // end anonymous namespace
+} // namespace
 
 /// Generates copies for memref's living in 'slowMemorySpace' into newly created
 /// buffers in 'fastMemorySpace', and replaces memory operations to the former

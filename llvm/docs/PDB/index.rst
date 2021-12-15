@@ -120,7 +120,7 @@ PDB file is as follows:
 | Public Stream      | - Contained in DBI Stream    | - Public (Exported) Symbol Records        |
 |                    |                              | - Index of Public Hash Stream             |
 +--------------------+------------------------------+-------------------------------------------+
-| Global Stream      | - Contained in DBI Stream    | - Single combined master symbol-table     |
+| Global Stream      | - Contained in DBI Stream    | - Single combined symbol-table            |
 |                    |                              | - Index of Global Hash Stream             |
 +--------------------+------------------------------+-------------------------------------------+
 | TPI Hash Stream    | - Contained in TPI Stream    | - Hash table for looking up TPI records   |

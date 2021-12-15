@@ -17,10 +17,13 @@
 #include "clang/Basic/FileEntry.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Format/Format.h"
+#include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/PPCallbacks.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/Inclusions/HeaderIncludes.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
@@ -62,6 +65,7 @@ struct Inclusion {
   int HashLine = 0;        // Line number containing the directive, 0-indexed.
   SrcMgr::CharacteristicKind FileKind = SrcMgr::C_User;
   llvm::Optional<unsigned> HeaderID;
+  bool BehindPragmaKeep = false; // Has IWYU pragma: keep right after.
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Inclusion &);
 bool operator==(const Inclusion &LHS, const Inclusion &RHS);
@@ -121,9 +125,10 @@ public:
     RealPathNames.emplace_back();
   }
 
-  // Returns a PPCallback that visits all inclusions in the main file and
-  // populates the structure.
-  std::unique_ptr<PPCallbacks> collect(const SourceManager &SM);
+  // Inserts a PPCallback and CommentHandler that visits all includes in the
+  // main file and populates the structure. It will also scan for IWYU pragmas
+  // in comments.
+  void collect(const CompilerInstance &CI);
 
   // HeaderID identifies file in the include graph. It corresponds to a
   // FileEntry rather than a FileID, but stays stable across preamble & main
@@ -136,6 +141,10 @@ public:
   StringRef getRealPath(HeaderID ID) const {
     assert(static_cast<unsigned>(ID) <= RealPathNames.size());
     return RealPathNames[static_cast<unsigned>(ID)];
+  }
+
+  bool isSelfContained(HeaderID ID) const {
+    return !NonSelfContained.contains(ID);
   }
 
   // Return all transitively reachable files.
@@ -158,6 +167,8 @@ public:
   // content of the main file changes.
   static const HeaderID MainFileID = HeaderID(0u);
 
+  class RecordHeaders;
+
 private:
   // MainFileEntry will be used to check if the queried file is the main file
   // or not.
@@ -170,6 +181,9 @@ private:
   // and RealPathName and UniqueID are not preserved in
   // the preamble.
   llvm::DenseMap<llvm::sys::fs::UniqueID, HeaderID> UIDToIndex;
+  // Contains HeaderIDs of all non self-contained entries in the
+  // IncludeStructure.
+  llvm::DenseSet<HeaderID> NonSelfContained;
 };
 
 // Calculates insertion edit for including a new header in a file.

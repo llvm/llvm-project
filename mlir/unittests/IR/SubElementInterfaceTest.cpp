@@ -32,4 +32,4 @@ TEST(SubElementInterfaceTest, Nested) {
             ArrayRef<Attribute>({trueAttr, falseAttr, boolArrayAttr}));
 }
 
-} // end namespace
+} // namespace

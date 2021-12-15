@@ -13,10 +13,13 @@
 #include "Parser.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/IntegerSet.h"
+#include "llvm/Support/SourceMgr.h"
 
 using namespace mlir;
 using namespace mlir::detail;
+using llvm::MemoryBuffer;
 using llvm::SMLoc;
+using llvm::SourceMgr;
 
 namespace {
 
@@ -96,7 +99,7 @@ private:
   unsigned numSymbolOperands;
   SmallVector<std::pair<StringRef, AffineExpr>, 4> dimsAndSymbols;
 };
-} // end anonymous namespace
+} // namespace
 
 /// Create an affine binary high precedence op expression (mul's, div's, mod).
 /// opLoc is the location of the op token to be used to report errors
@@ -716,4 +719,30 @@ Parser::parseAffineExprOfSSAIds(AffineExpr &expr,
                                 function_ref<ParseResult(bool)> parseElement) {
   return AffineParser(state, /*allowParsingSSAIds=*/true, parseElement)
       .parseAffineExprOfSSAIds(expr);
+}
+
+IntegerSet mlir::parseIntegerSet(StringRef inputStr, MLIRContext *context,
+                                 bool printDiagnosticInfo) {
+  llvm::SourceMgr sourceMgr;
+  auto memBuffer = llvm::MemoryBuffer::getMemBuffer(
+      inputStr, /*BufferName=*/"<mlir_parser_buffer>",
+      /*RequiresNullTerminator=*/false);
+  sourceMgr.AddNewSourceBuffer(std::move(memBuffer), SMLoc());
+  SymbolState symbolState;
+  ParserState state(sourceMgr, context, symbolState, /*asmState=*/nullptr);
+  Parser parser(state);
+
+  raw_ostream &os = printDiagnosticInfo ? llvm::errs() : llvm::nulls();
+  SourceMgrDiagnosticHandler handler(sourceMgr, context, os);
+  IntegerSet set;
+  if (parser.parseIntegerSetReference(set))
+    return IntegerSet();
+
+  Token endTok = parser.getToken();
+  if (endTok.isNot(Token::eof)) {
+    parser.emitError(endTok.getLoc(), "encountered unexpected token");
+    return IntegerSet();
+  }
+
+  return set;
 }

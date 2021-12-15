@@ -53,21 +53,21 @@ void ArmSVEDialect::initialize() {
 // ScalableVectorType
 //===----------------------------------------------------------------------===//
 
-Type ArmSVEDialect::parseType(DialectAsmParser &parser) const {
-  llvm::SMLoc typeLoc = parser.getCurrentLocation();
-  {
-    Type genType;
-    auto parseResult = generatedTypeParser(parser, "vector", genType);
-    if (parseResult.hasValue())
-      return genType;
-  }
-  parser.emitError(typeLoc, "unknown type in ArmSVE dialect");
-  return Type();
+void ScalableVectorType::print(AsmPrinter &printer) const {
+  printer << "<";
+  for (int64_t dim : getShape())
+    printer << dim << 'x';
+  printer << getElementType() << '>';
 }
 
-void ArmSVEDialect::printType(Type type, DialectAsmPrinter &os) const {
-  if (failed(generatedTypePrinter(type, os)))
-    llvm_unreachable("unexpected 'arm_sve' type kind");
+Type ScalableVectorType::parse(AsmParser &parser) {
+  SmallVector<int64_t> dims;
+  Type eltType;
+  if (parser.parseLess() ||
+      parser.parseDimensionList(dims, /*allowDynamic=*/false) ||
+      parser.parseType(eltType) || parser.parseGreater())
+    return {};
+  return ScalableVectorType::get(eltType.getContext(), dims, eltType);
 }
 
 //===----------------------------------------------------------------------===//

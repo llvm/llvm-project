@@ -219,6 +219,8 @@ void MIRPrinter::print(const MachineFunction &MF) {
       MachineFunctionProperties::Property::FailedISel);
   YamlMF.FailsVerification = MF.getProperties().hasProperty(
       MachineFunctionProperties::Property::FailsVerification);
+  YamlMF.TracksDebugUserValues = MF.getProperties().hasProperty(
+      MachineFunctionProperties::Property::TracksDebugUserValues);
 
   convert(YamlMF, MF.getRegInfo(), MF.getSubtarget().getRegisterInfo());
   MachineModuleSlotTracker MST(&MF);

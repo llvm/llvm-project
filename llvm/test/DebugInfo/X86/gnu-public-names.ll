@@ -77,9 +77,6 @@
 ; CHECK:   DW_AT_GNU_pubnames (true)
 ; CHECK-NOT: DW_AT_GNU_pubtypes [
 
-; CHECK:   [[STATIC_MEM_VAR:0x[0-9a-f]+]]: DW_TAG_variable
-; CHECK:     DW_AT_specification {{.*}} "static_member_variable"
-
 ; CHECK:   [[C:0x[0-9a-f]+]]: DW_TAG_structure_type
 ; CHECK:     DW_AT_name ("C")
 ; CHECK:     DW_TAG_member
@@ -98,11 +95,23 @@
 ; CHECK:     DW_AT_name ("int")
 ; CHECK:   DW_TAG_pointer_type
 
-; CHECK:   [[GLOB_VAR:0x[0-9a-f]+]]: DW_TAG_variable
-; CHECK:     DW_AT_name ("global_variable")
+; CHECK:   [[MEM_FUNC:0x[0-9a-f]+]]: DW_TAG_subprogram
+; CHECK:     DW_AT_specification {{.*}} "_ZN1C15member_functionEv"
+; CHECK:     DW_TAG_formal_parameter
+; CHECK:     NULL
+
+; CHECK:   [[STATIC_MEM_FUNC:0x[0-9a-f]+]]: DW_TAG_subprogram
+; CHECK:     DW_AT_specification {{.*}} "_ZN1C22static_member_functionEv"
+
+; CHECK:   [[GLOBAL_FUNC:0x[0-9a-f]+]]: DW_TAG_subprogram
+; CHECK:     DW_AT_linkage_name
+; CHECK:     DW_AT_name ("global_function")
 
 ; CHECK:   [[NS:0x[0-9a-f]+]]: DW_TAG_namespace
 ; CHECK:     DW_AT_name ("ns")
+; CHECK:     [[GLOB_NS_FUNC:0x[0-9a-f]+]]: DW_TAG_subprogram
+; CHECK:       DW_AT_linkage_name
+; CHECK:       DW_AT_name ("global_namespace_function")
 ; CHECK:     [[GLOB_NS_VAR:0x[0-9a-f]+]]: DW_TAG_variable
 ; CHECK:       DW_AT_name ("global_namespace_variable")
 ; CHECK-NOT:   DW_AT_specification
@@ -118,9 +127,6 @@
 ; CHECK:       DW_TAG_member
 ; CHECK:       NULL
 ; CHECK:     DW_TAG_variable
-; CHECK:     [[GLOB_NS_FUNC:0x[0-9a-f]+]]: DW_TAG_subprogram
-; CHECK:       DW_AT_linkage_name
-; CHECK:       DW_AT_name ("global_namespace_function")
 ; CHECK:     NULL
 
 ; CHECK:   DW_TAG_subprogram
@@ -129,6 +135,13 @@
 ; CHECK:       DW_AT_name ("z")
 ; CHECK:       DW_AT_location
 ; CHECK:     NULL
+
+; CHECK:   DW_TAG_subprogram
+; CHECK:   [[STATIC_MEM_VAR:0x[0-9a-f]+]]: DW_TAG_variable
+; CHECK:     DW_AT_specification {{.*}} "static_member_variable"
+
+; CHECK:   [[GLOB_VAR:0x[0-9a-f]+]]: DW_TAG_variable
+; CHECK:     DW_AT_name ("global_variable")
 
 ; CHECK:   [[ANON:.*]]: DW_TAG_namespace
 ; CHECK-NOT: DW_AT_name
@@ -171,20 +184,6 @@
 ; CHECK:     NULL
 
 ; CHECK:   DW_TAG_imported_declaration
-
-; CHECK:   [[MEM_FUNC:0x[0-9a-f]+]]: DW_TAG_subprogram
-; CHECK:     DW_AT_specification {{.*}} "_ZN1C15member_functionEv"
-; CHECK:     DW_TAG_formal_parameter
-; CHECK:     NULL
-
-; CHECK:   [[STATIC_MEM_FUNC:0x[0-9a-f]+]]: DW_TAG_subprogram
-; CHECK:     DW_AT_specification {{.*}} "_ZN1C22static_member_functionEv"
-
-; CHECK:   [[GLOBAL_FUNC:0x[0-9a-f]+]]: DW_TAG_subprogram
-; CHECK:     DW_AT_linkage_name
-; CHECK:     DW_AT_name ("global_function")
-
-; CHECK:   DW_TAG_subprogram
 ; CHECK:   DW_TAG_pointer_type
 ; CHECK:   DW_TAG_pointer_type
 ; CHECK:   NULL

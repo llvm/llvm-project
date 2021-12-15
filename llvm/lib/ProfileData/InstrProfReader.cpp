@@ -62,7 +62,6 @@ InstrProfReader::create(const Twine &Path) {
 
 Expected<std::unique_ptr<InstrProfReader>>
 InstrProfReader::create(std::unique_ptr<MemoryBuffer> Buffer) {
-  // Sanity check the buffer.
   if (uint64_t(Buffer->getBufferSize()) > std::numeric_limits<uint64_t>::max())
     return make_error<InstrProfError>(instrprof_error::too_large);
 
@@ -113,7 +112,6 @@ IndexedInstrProfReader::create(const Twine &Path, const Twine &RemappingPath) {
 Expected<std::unique_ptr<IndexedInstrProfReader>>
 IndexedInstrProfReader::create(std::unique_ptr<MemoryBuffer> Buffer,
                                std::unique_ptr<MemoryBuffer> RemappingBuffer) {
-  // Sanity check the buffer.
   if (uint64_t(Buffer->getBufferSize()) > std::numeric_limits<uint64_t>::max())
     return make_error<InstrProfError>(instrprof_error::too_large);
 
@@ -979,11 +977,10 @@ IndexedInstrProfReader::getInstrProfRecord(StringRef FuncName,
   if (Err)
     return std::move(Err);
   // Found it. Look for counters with the right hash.
-  for (unsigned I = 0, E = Data.size(); I < E; ++I) {
+  for (const NamedInstrProfRecord &I : Data) {
     // Check for a match and fill the vector if there is one.
-    if (Data[I].Hash == FuncHash) {
-      return std::move(Data[I]);
-    }
+    if (I.Hash == FuncHash)
+      return std::move(I);
   }
   return error(instrprof_error::hash_mismatch);
 }

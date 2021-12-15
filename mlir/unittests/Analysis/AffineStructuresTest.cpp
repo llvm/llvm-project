@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/AffineStructures.h"
+#include "./AffineStructuresParser.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/MLIRContext.h"
 
@@ -98,11 +99,24 @@ static void checkPermutationsSample(bool hasSample, unsigned nDim,
   } while (std::next_permutation(perm.begin(), perm.end()));
 }
 
+/// Parses a FlatAffineConstraints from a StringRef. It is expected that the
+/// string represents a valid IntegerSet, otherwise it will violate a gtest
+/// assertion.
+static FlatAffineConstraints parseFAC(StringRef str, MLIRContext *context) {
+  FailureOr<FlatAffineConstraints> fac = parseIntegerSetToFAC(str, context);
+
+  EXPECT_TRUE(succeeded(fac));
+
+  return *fac;
+}
+
 TEST(FlatAffineConstraintsTest, FindSampleTest) {
   // Bounded sets with only inequalities.
 
+  MLIRContext context;
+
   // 0 <= 7x <= 5
-  checkSample(true, makeFACFromConstraints(1, {{7, 0}, {-7, 5}}, {}));
+  checkSample(true, parseFAC("(x) : (7 * x >= 0, -7 * x + 5 >= 0)", &context));
 
   // 1 <= 5x and 5x <= 4 (no solution).
   checkSample(false, makeFACFromConstraints(1, {{5, -1}, {-5, 4}}, {}));
@@ -344,6 +358,22 @@ TEST(FlatAffineConstraintsTest, FindSampleTest) {
                                                {1, -1, 0, -1}, // y = x - 1
                                                {0, 1, -1, 0},  // z = y
                                            }}));
+
+  // Regression tests for the computation of dual coefficients.
+  checkSample(false, parseFAC("(x, y, z) : ("
+                              "6*x - 4*y + 9*z + 2 >= 0,"
+                              "x + 5*y + z + 5 >= 0,"
+                              "-4*x + y + 2*z - 1 >= 0,"
+                              "-3*x - 2*y - 7*z - 1 >= 0,"
+                              "-7*x - 5*y - 9*z - 1 >= 0)",
+                              &context));
+  checkSample(true, parseFAC("(x, y, z) : ("
+                             "3*x + 3*y + 3 >= 0,"
+                             "-4*x - 8*y - z + 4 >= 0,"
+                             "-7*x - 4*y + z + 1 >= 0,"
+                             "2*x - 7*y - 8*z - 7 >= 0,"
+                             "9*x + 8*y - 9*z - 7 >= 0)",
+                             &context));
 }
 
 TEST(FlatAffineConstraintsTest, IsIntegerEmptyTest) {
@@ -577,123 +607,31 @@ TEST(FlatAffineConstraintsTest, addConstantLowerBound) {
   EXPECT_EQ(fac.atIneq(1, 2), 2);
 }
 
-TEST(FlatAffineConstraintsTest, removeInequality) {
-  FlatAffineConstraints fac =
-      makeFACFromConstraints(1, {{0, 0}, {1, 1}, {2, 2}, {3, 3}, {4, 4}}, {});
-
-  fac.removeInequalityRange(0, 0);
-  EXPECT_EQ(fac.getNumInequalities(), 5u);
-
-  fac.removeInequalityRange(1, 3);
-  EXPECT_EQ(fac.getNumInequalities(), 3u);
-  EXPECT_THAT(fac.getInequality(0), ElementsAre(0, 0));
-  EXPECT_THAT(fac.getInequality(1), ElementsAre(3, 3));
-  EXPECT_THAT(fac.getInequality(2), ElementsAre(4, 4));
-
-  fac.removeInequality(1);
-  EXPECT_EQ(fac.getNumInequalities(), 2u);
-  EXPECT_THAT(fac.getInequality(0), ElementsAre(0, 0));
-  EXPECT_THAT(fac.getInequality(1), ElementsAre(4, 4));
-}
-
-TEST(FlatAffineConstraintsTest, removeEquality) {
-  FlatAffineConstraints fac =
-      makeFACFromConstraints(1, {}, {{0, 0}, {1, 1}, {2, 2}, {3, 3}, {4, 4}});
-
-  fac.removeEqualityRange(0, 0);
-  EXPECT_EQ(fac.getNumEqualities(), 5u);
-
-  fac.removeEqualityRange(1, 3);
-  EXPECT_EQ(fac.getNumEqualities(), 3u);
-  EXPECT_THAT(fac.getEquality(0), ElementsAre(0, 0));
-  EXPECT_THAT(fac.getEquality(1), ElementsAre(3, 3));
-  EXPECT_THAT(fac.getEquality(2), ElementsAre(4, 4));
-
-  fac.removeEquality(1);
-  EXPECT_EQ(fac.getNumEqualities(), 2u);
-  EXPECT_THAT(fac.getEquality(0), ElementsAre(0, 0));
-  EXPECT_THAT(fac.getEquality(1), ElementsAre(4, 4));
-}
-
-TEST(FlatAffineConstraintsTest, clearConstraints) {
-  FlatAffineConstraints fac = makeFACFromConstraints(1, {}, {});
-
-  fac.addInequality({1, 0});
-  EXPECT_EQ(fac.atIneq(0, 0), 1);
-  EXPECT_EQ(fac.atIneq(0, 1), 0);
-
-  fac.clearConstraints();
-
-  fac.addInequality({1, 0});
-  EXPECT_EQ(fac.atIneq(0, 0), 1);
-  EXPECT_EQ(fac.atIneq(0, 1), 0);
-}
-
 /// Check if the expected division representation of local variables matches the
 /// computed representation. The expected division representation is given as
-/// a vector of expressions set in `divisions` and the corressponding
-/// denominator in `denoms`. If expected denominator for a variable is
-/// non-positive, the local variable is expected to not have a computed
-/// representation.
+/// a vector of expressions set in `expectedDividends` and the corressponding
+/// denominator in `expectedDenominators`. The `denominators` and `dividends`
+/// obtained through `getLocalRepr` function is verified against the
+/// `expectedDenominators` and `expectedDividends` respectively.
 static void checkDivisionRepresentation(
     FlatAffineConstraints &fac,
-    const std::vector<SmallVector<int64_t, 8>> &divisions,
-    const SmallVector<int64_t, 8> &denoms) {
+    const std::vector<SmallVector<int64_t, 8>> &expectedDividends,
+    const SmallVectorImpl<unsigned> &expectedDenominators) {
 
-  assert(divisions.size() == fac.getNumLocalIds() &&
-         "Size of expected divisions does not match number of local variables");
-  assert(
-      denoms.size() == fac.getNumLocalIds() &&
-      "Size of expected denominators does not match number of local variables");
+  std::vector<SmallVector<int64_t, 8>> dividends;
+  SmallVector<unsigned, 4> denominators;
 
-  std::vector<llvm::Optional<std::pair<unsigned, unsigned>>> res(
-      fac.getNumLocalIds(), llvm::None);
-  fac.getLocalReprs(res);
+  fac.getLocalReprs(dividends, denominators);
 
-  // Check if all expected divisions are computed.
-  for (unsigned i = 0, e = fac.getNumLocalIds(); i < e; ++i)
-    if (denoms[i] > 0)
-      EXPECT_TRUE(res[i].hasValue());
-    else
-      EXPECT_FALSE(res[i].hasValue());
+  // Check that the `denominators` and `expectedDenominators` match.
+  EXPECT_TRUE(expectedDenominators == denominators);
 
-  unsigned divOffset = fac.getNumDimAndSymbolIds();
-  for (unsigned i = 0, e = fac.getNumLocalIds(); i < e; ++i) {
-    if (!res[i])
-      continue;
-
-    // Check if the bounds are of the form:
-    //      0 <= expr - divisor * id <= divisor - 1
-    // Rearranging, we have:
-    //       divisor * id - expr + (divisor - 1) >= 0  <-- Lower bound for 'id'
-    //      -divisor * id + expr                 >= 0  <-- Upper bound for 'id'
-    // where `id = expr floordiv divisor`.
-    unsigned ubPos = res[i]->first, lbPos = res[i]->second;
-    const SmallVector<int64_t, 8> &expr = divisions[i];
-
-    // Check if lower bound is of the correct form.
-    int64_t computedDivisorLb = fac.atIneq(lbPos, i + divOffset);
-    EXPECT_EQ(computedDivisorLb, denoms[i]);
-    for (unsigned c = 0, f = fac.getNumLocalIds(); c < f; ++c) {
-      if (c == i + divOffset)
-        continue;
-      EXPECT_EQ(fac.atIneq(lbPos, c), -expr[c]);
-    }
-    // Check if constant term of lower bound matches expected constant term.
-    EXPECT_EQ(fac.atIneq(lbPos, fac.getNumCols() - 1),
-              -expr.back() + (denoms[i] - 1));
-
-    // Check if upper bound is of the correct form.
-    int64_t computedDivisorUb = fac.atIneq(ubPos, i + divOffset);
-    EXPECT_EQ(computedDivisorUb, -denoms[i]);
-    for (unsigned c = 0, f = fac.getNumLocalIds(); c < f; ++c) {
-      if (c == i + divOffset)
-        continue;
-      EXPECT_EQ(fac.atIneq(ubPos, c), expr[c]);
-    }
-    // Check if constant term of upper bound matches expected constant term.
-    EXPECT_EQ(fac.atIneq(ubPos, fac.getNumCols() - 1), expr.back());
-  }
+  // Check that the `dividends` and `expectedDividends` match. If the
+  // denominator for a division is zero, we ignore its dividend.
+  EXPECT_TRUE(dividends.size() == expectedDividends.size());
+  for (unsigned i = 0, e = dividends.size(); i < e; ++i)
+    if (denominators[i] != 0)
+      EXPECT_TRUE(expectedDividends[i] == dividends[i]);
 }
 
 TEST(FlatAffineConstraintsTest, computeLocalReprSimple) {
@@ -704,7 +642,7 @@ TEST(FlatAffineConstraintsTest, computeLocalReprSimple) {
 
   std::vector<SmallVector<int64_t, 8>> divisions = {{1, 0, 0, 4},
                                                     {1, 0, 0, 100}};
-  SmallVector<int64_t, 8> denoms = {10, 10};
+  SmallVector<unsigned, 8> denoms = {10, 10};
 
   // Check if floordivs can be computed when no other inequalities exist
   // and floor divs do not depend on each other.
@@ -723,7 +661,7 @@ TEST(FlatAffineConstraintsTest, computeLocalReprConstantFloorDiv) {
 
   std::vector<SmallVector<int64_t, 8>> divisions = {{0, 0, 0, 0, 0, 0, 10},
                                                     {0, 0, 0, 0, 0, 0, 99}};
-  SmallVector<int64_t, 8> denoms = {30, 101};
+  SmallVector<unsigned, 8> denoms = {30, 101};
 
   // Check if floordivs with constant numerator can be computed.
   checkDivisionRepresentation(fac, divisions, denoms);
@@ -742,31 +680,66 @@ TEST(FlatAffineConstraintsTest, computeLocalReprRecursive) {
   fac.addInequality({1, 2, -2, 1, -5, 0, 6, 100});
   fac.addInequality({1, 2, -8, 1, 3, 7, 0, -9});
 
-  std::vector<SmallVector<int64_t, 8>> divisions = {{0, -2, 7, 2, 0, 0, 0, 10},
-                                                    {3, 0, 9, 2, 2, 0, 0, 10},
-                                                    {0, 1, -123, 2, 0, -4, 10}};
-  SmallVector<int64_t, 8> denoms = {3, 5, 3};
+  std::vector<SmallVector<int64_t, 8>> divisions = {
+      {0, -2, 7, 2, 0, 0, 0, 10},
+      {3, 0, 9, 2, 2, 0, 0, 10},
+      {0, 1, -123, 2, 0, -4, 0, 10}};
+
+  SmallVector<unsigned, 8> denoms = {3, 5, 3};
 
   // Check if floordivs which may depend on other floordivs can be computed.
   checkDivisionRepresentation(fac, divisions, denoms);
 }
 
-TEST(FlatAffineConstraintsTest, removeIdRange) {
-  FlatAffineConstraints fac(3, 2, 1);
+TEST(FlatAffineConstraintsTest, computeLocalReprTightUpperBound) {
+  MLIRContext context;
 
-  fac.addInequality({10, 11, 12, 20, 21, 30, 40});
-  fac.removeId(FlatAffineConstraints::IdKind::Symbol, 1);
-  EXPECT_THAT(fac.getInequality(0),
-              testing::ElementsAre(10, 11, 12, 20, 30, 40));
+  {
+    FlatAffineConstraints fac = parseFAC("(i) : (i mod 3 - 1 >= 0)", &context);
 
-  fac.removeIdRange(FlatAffineConstraints::IdKind::Dimension, 0, 2);
-  EXPECT_THAT(fac.getInequality(0), testing::ElementsAre(12, 20, 30, 40));
+    // The set formed by the fac is:
+    //        3q - i + 2 >= 0             <-- Division lower bound
+    //       -3q + i - 1 >= 0
+    //       -3q + i     >= 0             <-- Division upper bound
+    // We remove redundant constraints to get the set:
+    //        3q - i + 2 >= 0             <-- Division lower bound
+    //       -3q + i - 1 >= 0             <-- Tighter division upper bound
+    // thus, making the upper bound tighter.
+    fac.removeRedundantConstraints();
 
-  fac.removeIdRange(FlatAffineConstraints::IdKind::Local, 1, 1);
-  EXPECT_THAT(fac.getInequality(0), testing::ElementsAre(12, 20, 30, 40));
+    std::vector<SmallVector<int64_t, 8>> divisions = {{1, 0, 0}};
+    SmallVector<unsigned, 8> denoms = {3};
 
-  fac.removeIdRange(FlatAffineConstraints::IdKind::Local, 0, 1);
-  EXPECT_THAT(fac.getInequality(0), testing::ElementsAre(12, 20, 40));
+    // Check if the divisions can be computed even with a tighter upper bound.
+    checkDivisionRepresentation(fac, divisions, denoms);
+  }
+
+  {
+    FlatAffineConstraints fac = parseFAC(
+        "(i, j, q) : (4*q - i - j + 2 >= 0, -4*q + i + j >= 0)", &context);
+    // Convert `q` to a local variable.
+    fac.convertDimToLocal(2, 3);
+
+    std::vector<SmallVector<int64_t, 8>> divisions = {{1, 1, 0, 1}};
+    SmallVector<unsigned, 8> denoms = {4};
+
+    // Check if the divisions can be computed even with a tighter upper bound.
+    checkDivisionRepresentation(fac, divisions, denoms);
+  }
+}
+
+TEST(FlatAffineConstraintsTest, computeLocalReprNoRepr) {
+  MLIRContext context;
+  FlatAffineConstraints fac =
+      parseFAC("(x, q) : (x - 3 * q >= 0, -x + 3 * q + 3 >= 0)", &context);
+  // Convert q to a local variable.
+  fac.convertDimToLocal(1, 2);
+
+  std::vector<SmallVector<int64_t, 8>> divisions = {{0, 0, 0}};
+  SmallVector<unsigned, 8> denoms = {0};
+
+  // Check that no division is computed.
+  checkDivisionRepresentation(fac, divisions, denoms);
 }
 
 TEST(FlatAffineConstraintsTest, simplifyLocalsTest) {
@@ -793,6 +766,129 @@ TEST(FlatAffineConstraintsTest, simplifyLocalsTest) {
   fac3.addEquality({2, 1, 0});
 
   EXPECT_TRUE(fac3.isEmpty());
+}
+
+TEST(FlatAffineConstraintsTest, mergeDivisionsSimple) {
+  {
+    // (x) : (exists z, y  = [x / 2] : x = 3y and x + z + 1 >= 0).
+    FlatAffineConstraints fac1(1, 0, 1);
+    fac1.addLocalFloorDiv({1, 0, 0}, 2); // y = [x / 2].
+    fac1.addEquality({1, 0, -3, 0});     // x = 3y.
+    fac1.addInequality({1, 1, 0, 1});    // x + z + 1 >= 0.
+
+    // (x) : (exists y = [x / 2], z : x = 5y).
+    FlatAffineConstraints fac2(1);
+    fac2.addLocalFloorDiv({1, 0}, 2); // y = [x / 2].
+    fac2.addEquality({1, -5, 0});     // x = 5y.
+    fac2.appendLocalId();             // Add local id z.
+
+    fac1.mergeLocalIds(fac2);
+
+    // Local space should be same.
+    EXPECT_EQ(fac1.getNumLocalIds(), fac2.getNumLocalIds());
+
+    // 1 division should be matched + 2 unmatched local ids.
+    EXPECT_EQ(fac1.getNumLocalIds(), 3u);
+    EXPECT_EQ(fac2.getNumLocalIds(), 3u);
+  }
+
+  {
+    // (x) : (exists z = [x / 5], y = [x / 2] : x = 3y).
+    FlatAffineConstraints fac1(1);
+    fac1.addLocalFloorDiv({1, 0}, 5);    // z = [x / 5].
+    fac1.addLocalFloorDiv({1, 0, 0}, 2); // y = [x / 2].
+    fac1.addEquality({1, 0, -3, 0});     // x = 3y.
+
+    // (x) : (exists y = [x / 2], z = [x / 5]: x = 5z).
+    FlatAffineConstraints fac2(1);
+    fac2.addLocalFloorDiv({1, 0}, 2);    // y = [x / 2].
+    fac2.addLocalFloorDiv({1, 0, 0}, 5); // z = [x / 5].
+    fac2.addEquality({1, 0, -5, 0});     // x = 5z.
+
+    fac1.mergeLocalIds(fac2);
+
+    // Local space should be same.
+    EXPECT_EQ(fac1.getNumLocalIds(), fac2.getNumLocalIds());
+
+    // 2 divisions should be matched.
+    EXPECT_EQ(fac1.getNumLocalIds(), 2u);
+    EXPECT_EQ(fac2.getNumLocalIds(), 2u);
+  }
+}
+
+TEST(FlatAffineConstraintsTest, mergeDivisionsNestedDivsions) {
+  {
+    // (x) : (exists y = [x / 2], z = [x + y / 3]: y + z >= x).
+    FlatAffineConstraints fac1(1);
+    fac1.addLocalFloorDiv({1, 0}, 2);    // y = [x / 2].
+    fac1.addLocalFloorDiv({1, 1, 0}, 3); // z = [x + y / 3].
+    fac1.addInequality({-1, 1, 1, 0});   // y + z >= x.
+
+    // (x) : (exists y = [x / 2], z = [x + y / 3]: y + z <= x).
+    FlatAffineConstraints fac2(1);
+    fac2.addLocalFloorDiv({1, 0}, 2);    // y = [x / 2].
+    fac2.addLocalFloorDiv({1, 1, 0}, 3); // z = [x + y / 3].
+    fac2.addInequality({1, -1, -1, 0});  // y + z <= x.
+
+    fac1.mergeLocalIds(fac2);
+
+    // Local space should be same.
+    EXPECT_EQ(fac1.getNumLocalIds(), fac2.getNumLocalIds());
+
+    // 2 divisions should be matched.
+    EXPECT_EQ(fac1.getNumLocalIds(), 2u);
+    EXPECT_EQ(fac2.getNumLocalIds(), 2u);
+  }
+
+  {
+    // (x) : (exists y = [x / 2], z = [x + y / 3], w = [z + 1 / 5]: y + z >= x).
+    FlatAffineConstraints fac1(1);
+    fac1.addLocalFloorDiv({1, 0}, 2);       // y = [x / 2].
+    fac1.addLocalFloorDiv({1, 1, 0}, 3);    // z = [x + y / 3].
+    fac1.addLocalFloorDiv({0, 0, 1, 1}, 5); // w = [z + 1 / 5].
+    fac1.addInequality({-1, 1, 1, 0, 0});   // y + z >= x.
+
+    // (x) : (exists y = [x / 2], z = [x + y / 3], w = [z + 1 / 5]: y + z <= x).
+    FlatAffineConstraints fac2(1);
+    fac2.addLocalFloorDiv({1, 0}, 2);       // y = [x / 2].
+    fac2.addLocalFloorDiv({1, 1, 0}, 3);    // z = [x + y / 3].
+    fac2.addLocalFloorDiv({0, 0, 1, 1}, 5); // w = [z + 1 / 5].
+    fac2.addInequality({1, -1, -1, 0, 0});  // y + z <= x.
+
+    fac1.mergeLocalIds(fac2);
+
+    // Local space should be same.
+    EXPECT_EQ(fac1.getNumLocalIds(), fac2.getNumLocalIds());
+
+    // 3 divisions should be matched.
+    EXPECT_EQ(fac1.getNumLocalIds(), 3u);
+    EXPECT_EQ(fac2.getNumLocalIds(), 3u);
+  }
+}
+
+TEST(FlatAffineConstraintsTest, mergeDivisionsConstants) {
+  {
+    // (x) : (exists y = [x + 1 / 3], z = [x + 2 / 3]: y + z >= x).
+    FlatAffineConstraints fac1(1);
+    fac1.addLocalFloorDiv({1, 1}, 2);    // y = [x + 1 / 2].
+    fac1.addLocalFloorDiv({1, 0, 2}, 3); // z = [x + 2 / 3].
+    fac1.addInequality({-1, 1, 1, 0});   // y + z >= x.
+
+    // (x) : (exists y = [x + 1 / 3], z = [x + 2 / 3]: y + z <= x).
+    FlatAffineConstraints fac2(1);
+    fac2.addLocalFloorDiv({1, 1}, 2);    // y = [x + 1 / 2].
+    fac2.addLocalFloorDiv({1, 0, 2}, 3); // z = [x + 2 / 3].
+    fac2.addInequality({1, -1, -1, 0});  // y + z <= x.
+
+    fac1.mergeLocalIds(fac2);
+
+    // Local space should be same.
+    EXPECT_EQ(fac1.getNumLocalIds(), fac2.getNumLocalIds());
+
+    // 2 divisions should be matched.
+    EXPECT_EQ(fac1.getNumLocalIds(), 2u);
+    EXPECT_EQ(fac2.getNumLocalIds(), 2u);
+  }
 }
 
 } // namespace mlir

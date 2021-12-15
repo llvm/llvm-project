@@ -25,17 +25,17 @@ Using clang-tidy
 
 :program:`clang-tidy` is a `LibTooling`_-based tool, and it's easier to work
 with if you set up a compile command database for your project (for an example
-of how to do this see `How To Setup Tooling For LLVM`_). You can also specify
+of how to do this, see `How To Setup Tooling For LLVM`_). You can also specify
 compilation options on the command line after ``--``:
 
 .. code-block:: console
 
   $ clang-tidy test.cpp -- -Imy_project/include -DMY_DEFINES ...
 
-:program:`clang-tidy` has its own checks and can also run Clang static analyzer
+:program:`clang-tidy` has its own checks and can also run Clang Static Analyzer
 checks. Each check has a name and the checks to run can be chosen using the
 ``-checks=`` option, which specifies a comma-separated list of positive and
-negative (prefixed with ``-``) globs. Positive globs add subsets of checks,
+negative (prefixed with ``-``) globs. Positive globs add subsets of checks, and
 negative globs remove them. For example,
 
 .. code-block:: console
@@ -61,7 +61,7 @@ Name prefix            Description
 ``altera-``            Checks related to OpenCL programming for FPGAs.
 ``android-``           Checks related to Android.
 ``boost-``             Checks related to Boost library.
-``bugprone-``          Checks that target bugprone code constructs.
+``bugprone-``          Checks that target bug-prone code constructs.
 ``cert-``              Checks related to CERT Secure Coding Guidelines.
 ``clang-analyzer-``    Clang Static Analyzer checks.
 ``concurrency-``       Checks related to concurrent programming (including
@@ -90,11 +90,11 @@ Name prefix            Description
 
 Clang diagnostics are treated in a similar way as check diagnostics. Clang
 diagnostics are displayed by :program:`clang-tidy` and can be filtered out using
-``-checks=`` option. However, the ``-checks=`` option does not affect
+the ``-checks=`` option. However, the ``-checks=`` option does not affect
 compilation arguments, so it cannot turn on Clang warnings which are not
-already turned on in build configuration. The ``-warnings-as-errors=`` option
-upgrades any warnings emitted under the ``-checks=`` flag to errors (but it
-does not enable any checks itself).
+already turned on in the build configuration. The ``-warnings-as-errors=``
+option upgrades any warnings emitted under the ``-checks=`` flag to errors (but
+it does not enable any checks itself).
 
 Clang diagnostics have check names starting with ``clang-diagnostic-``.
 Diagnostics which have a corresponding warning option, are named
@@ -140,6 +140,12 @@ An overview of all the command-line options:
                                      When the value is empty, clang-tidy will
                                      attempt to find a file named .clang-tidy for
                                      each source file in its parent directories.
+    --config-file=<string>         - 
+                                    Specify the path of .clang-tidy or custom config file:
+                                      e.g. --config-file=/some/path/myTidyConfigFile
+                                    This option internally works exactly the same way as
+                                      --config option after reading specified config file.
+                                    Use either --config-file or --config, not both.
     --dump-config                  -
                                      Dumps configuration in the YAML format to
                                      stdout. This option can be used along with a
@@ -160,9 +166,9 @@ An overview of all the command-line options:
                                      YAML file to store suggested fixes in. The
                                      stored fixes can be applied to the input source
                                      code with clang-apply-replacements.
-    --extra-arg=<string>           - Additional argument to append to the compiler command line
+    --extra-arg=<string>           - Additional argument to append to the compiler command line.
                                      Can be used several times.
-    --extra-arg-before=<string>    - Additional argument to prepend to the compiler command line
+    --extra-arg-before=<string>    - Additional argument to prepend to the compiler command line.
                                      Can be used several times.
     --fix                          -
                                      Apply suggested fixes. Without -fix-errors
@@ -223,6 +229,12 @@ An overview of all the command-line options:
                                      format to stderr. When this option is passed,
                                      these per-TU profiles are instead stored as JSON.
     --system-headers               - Display the errors from system headers.
+    --use-color                    - 
+                                    Use colors in diagnostics. If not set, colors
+                                    will be used if the terminal connected to
+                                    standard output supports colors.
+                                    This option overrides the 'UseColor' option in
+                                    .clang-tidy file, if any.
     --vfsoverlay=<filename>        -
                                      Overlay the virtual filesystem described by file
                                      over the real file system.
@@ -301,8 +313,8 @@ mechanism to suppress diagnostics using ``NOLINT``, ``NOLINTNEXTLINE``, and
 The ``NOLINT`` comment instructs :program:`clang-tidy` to ignore warnings on the
 *same line* (it doesn't apply to a function, a block of code or any other
 language construct; it applies to the line of code it is on). If introducing the
-comment in the same line would change the formatting in an undesired way, the
-``NOLINTNEXTLINE`` comment allows to suppress clang-tidy warnings on the *next
+comment on the same line would change the formatting in an undesired way, the
+``NOLINTNEXTLINE`` comment allows suppressing clang-tidy warnings on the *next
 line*. The ``NOLINTBEGIN`` and ``NOLINTEND`` comments allow suppressing
 clang-tidy warnings on *multiple lines* (affecting all lines between the two
 comments).
@@ -320,8 +332,8 @@ For example:
     // Suppress all the diagnostics for the line
     Foo(int param); // NOLINT
 
-    // Consider explaining the motivation to suppress the warning.
-    Foo(char param); // NOLINT: Allow implicit conversion from `char`, because <some valid reason>.
+    // Consider explaining the motivation to suppress the warning
+    Foo(char param); // NOLINT: Allow implicit conversion from `char`, because <some valid reason>
 
     // Silence only the specified checks for the line
     Foo(double param); // NOLINT(google-explicit-constructor, google-runtime-int)

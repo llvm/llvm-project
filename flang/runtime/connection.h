@@ -30,8 +30,7 @@ struct ConnectionAttributes {
   Access access{Access::Sequential}; // ACCESS='SEQUENTIAL', 'DIRECT', 'STREAM'
   std::optional<bool> isUnformatted; // FORM='UNFORMATTED' if true
   bool isUTF8{false}; // ENCODING='UTF-8'
-  bool isFixedRecordLength{false}; // RECL= on OPEN
-  std::optional<std::int64_t> recordLength; // RECL= or current record
+  std::optional<std::int64_t> openRecl; // RECL= on OPEN
 };
 
 struct ConnectionState : public ConnectionAttributes {
@@ -46,6 +45,15 @@ struct ConnectionState : public ConnectionAttributes {
     furthestPositionInRecord = 0;
     leftTabLimit.reset();
   }
+
+  std::optional<std::int64_t> EffectiveRecordLength() const {
+    // When an input record is longer than an explicit RECL= from OPEN
+    // it is effectively truncated on input.
+    return openRecl && recordLength && *openRecl < *recordLength ? openRecl
+                                                                 : recordLength;
+  }
+
+  std::optional<std::int64_t> recordLength;
 
   // Positions in a record file (sequential or direct, not stream)
   std::int64_t currentRecordNumber{1}; // 1 is first

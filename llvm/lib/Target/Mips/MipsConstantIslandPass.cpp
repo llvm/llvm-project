@@ -637,8 +637,8 @@ initializeFunctionInfo(const std::vector<MachineInstr*> &CPEMIs) {
   // has any inline assembly in it. If so, we have to be conservative about
   // alignment assumptions, as we don't know for sure the size of any
   // instructions in the inline assembly.
-  for (MachineFunction::iterator I = MF->begin(), E = MF->end(); I != E; ++I)
-    computeBlockSize(&*I);
+  for (MachineBasicBlock &MBB : *MF)
+    computeBlockSize(&MBB);
 
   // Compute block offsets.
   adjustBBOffsetsAfter(&MF->front());
@@ -730,8 +730,8 @@ initializeFunctionInfo(const std::vector<MachineInstr*> &CPEMIs) {
         continue;
 
       // Scan the instructions for constant pool operands.
-      for (unsigned op = 0, e = MI.getNumOperands(); op != e; ++op)
-        if (MI.getOperand(op).isCPI()) {
+      for (const MachineOperand &MO : MI.operands())
+        if (MO.isCPI()) {
           // We found one.  The addressing mode tells us the max displacement
           // from the PC that this instruction permits.
 
@@ -759,7 +759,7 @@ initializeFunctionInfo(const std::vector<MachineInstr*> &CPEMIs) {
             break;
           }
           // Remember that this is a user of a CP entry.
-          unsigned CPI = MI.getOperand(op).getIndex();
+          unsigned CPI = MO.getIndex();
           MachineInstr *CPEMI = CPEMIs[CPI];
           unsigned MaxOffs = ((1 << Bits)-1) * Scale;
           unsigned LongFormMaxOffs = ((1 << LongFormBits)-1) * LongFormScale;
@@ -1066,9 +1066,9 @@ int MipsConstantIslands::findInRangeCPEntry(CPUser& U, unsigned UserOffset)
       // Point the CPUser node to the replacement
       U.CPEMI = CPEs[i].CPEMI;
       // Change the CPI in the instruction operand to refer to the clone.
-      for (unsigned j = 0, e = UserMI->getNumOperands(); j != e; ++j)
-        if (UserMI->getOperand(j).isCPI()) {
-          UserMI->getOperand(j).setIndex(CPEs[i].CPI);
+      for (MachineOperand &MO : UserMI->operands())
+        if (MO.isCPI()) {
+          MO.setIndex(CPEs[i].CPI);
           break;
         }
       // Adjust the refcount of the clone...
@@ -1122,9 +1122,9 @@ int MipsConstantIslands::findLongFormInRangeCPEntry
       // Point the CPUser node to the replacement
       U.CPEMI = CPEs[i].CPEMI;
       // Change the CPI in the instruction operand to refer to the clone.
-      for (unsigned j = 0, e = UserMI->getNumOperands(); j != e; ++j)
-        if (UserMI->getOperand(j).isCPI()) {
-          UserMI->getOperand(j).setIndex(CPEs[i].CPI);
+      for (MachineOperand &MO : UserMI->operands())
+        if (MO.isCPI()) {
+          MO.setIndex(CPEs[i].CPI);
           break;
         }
       // Adjust the refcount of the clone...
@@ -1392,9 +1392,9 @@ bool MipsConstantIslands::handleConstantPoolUser(unsigned CPUserIndex) {
   adjustBBOffsetsAfter(&*--NewIsland->getIterator());
 
   // Finally, change the CPI in the instruction operand to be ID.
-  for (unsigned i = 0, e = UserMI->getNumOperands(); i != e; ++i)
-    if (UserMI->getOperand(i).isCPI()) {
-      UserMI->getOperand(i).setIndex(ID);
+  for (MachineOperand &MO : UserMI->operands())
+    if (MO.isCPI()) {
+      MO.setIndex(ID);
       break;
     }
 
@@ -1633,10 +1633,10 @@ MipsConstantIslands::fixupConditionalBr(ImmBranch &Br) {
 void MipsConstantIslands::prescanForConstants() {
   unsigned J = 0;
   (void)J;
-  for (MachineFunction::iterator B =
-         MF->begin(), E = MF->end(); B != E; ++B) {
-    for (MachineBasicBlock::instr_iterator I =
-        B->instr_begin(), EB = B->instr_end(); I != EB; ++I) {
+  for (MachineBasicBlock &B : *MF) {
+    for (MachineBasicBlock::instr_iterator I = B.instr_begin(),
+                                           EB = B.instr_end();
+         I != EB; ++I) {
       switch(I->getDesc().getOpcode()) {
         case Mips::LwConstant32: {
           PrescannedForConstants = true;

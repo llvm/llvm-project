@@ -1404,18 +1404,18 @@ bool HexagonFrameLowering::insertCSRSpillsInBlock(MachineBasicBlock &MBB,
     // Add callee-saved registers as use.
     addCalleeSaveRegistersAsImpOperand(SaveRegsCall, CSI, false, true);
     // Add live in registers.
-    for (unsigned I = 0; I < CSI.size(); ++I)
-      MBB.addLiveIn(CSI[I].getReg());
+    for (const CalleeSavedInfo &I : CSI)
+      MBB.addLiveIn(I.getReg());
     return true;
   }
 
-  for (unsigned i = 0, n = CSI.size(); i < n; ++i) {
-    unsigned Reg = CSI[i].getReg();
+  for (const CalleeSavedInfo &I : CSI) {
+    unsigned Reg = I.getReg();
     // Add live in registers. We treat eh_return callee saved register r0 - r3
     // specially. They are not really callee saved registers as they are not
     // supposed to be killed.
     bool IsKill = !HRI.isEHReturnCalleeSaveReg(Reg);
-    int FI = CSI[i].getFrameIdx();
+    int FI = I.getFrameIdx();
     const TargetRegisterClass *RC = HRI.getMinimalPhysRegClass(Reg);
     HII.storeRegToStackSlot(MBB, MI, Reg, IsKill, FI, RC, &HRI);
     if (IsKill)
@@ -1478,10 +1478,10 @@ bool HexagonFrameLowering::insertCSRRestoresInBlock(MachineBasicBlock &MBB,
     return true;
   }
 
-  for (unsigned i = 0; i < CSI.size(); ++i) {
-    unsigned Reg = CSI[i].getReg();
+  for (const CalleeSavedInfo &I : CSI) {
+    unsigned Reg = I.getReg();
     const TargetRegisterClass *RC = HRI.getMinimalPhysRegClass(Reg);
-    int FI = CSI[i].getFrameIdx();
+    int FI = I.getFrameIdx();
     HII.loadRegFromStackSlot(MBB, MI, Reg, FI, RC, &HRI);
   }
 
@@ -1619,8 +1619,8 @@ bool HexagonFrameLowering::assignCalleeSavedSpillSlots(MachineFunction &MF,
   // (1) For each callee-saved register, add that register and all of its
   // sub-registers to SRegs.
   LLVM_DEBUG(dbgs() << "Initial CS registers: {");
-  for (unsigned i = 0, n = CSI.size(); i < n; ++i) {
-    unsigned R = CSI[i].getReg();
+  for (const CalleeSavedInfo &I : CSI) {
+    unsigned R = I.getReg();
     LLVM_DEBUG(dbgs() << ' ' << printReg(R, TRI));
     for (MCSubRegIterator SR(R, TRI, true); SR.isValid(); ++SR)
       SRegs[*SR] = true;
@@ -1720,10 +1720,10 @@ bool HexagonFrameLowering::assignCalleeSavedSpillSlots(MachineFunction &MF,
 
   LLVM_DEBUG({
     dbgs() << "CS information: {";
-    for (unsigned i = 0, n = CSI.size(); i < n; ++i) {
-      int FI = CSI[i].getFrameIdx();
+    for (const CalleeSavedInfo &I : CSI) {
+      int FI = I.getFrameIdx();
       int Off = MFI.getObjectOffset(FI);
-      dbgs() << ' ' << printReg(CSI[i].getReg(), TRI) << ":fi#" << FI << ":sp";
+      dbgs() << ' ' << printReg(I.getReg(), TRI) << ":fi#" << FI << ":sp";
       if (Off >= 0)
         dbgs() << '+';
       dbgs() << Off;
@@ -2634,8 +2634,8 @@ bool HexagonFrameLowering::shouldInlineCSR(const MachineFunction &MF,
   // Check if CSI only has double registers, and if the registers form
   // a contiguous block starting from D8.
   BitVector Regs(Hexagon::NUM_TARGET_REGS);
-  for (unsigned i = 0, n = CSI.size(); i < n; ++i) {
-    unsigned R = CSI[i].getReg();
+  for (const CalleeSavedInfo &I : CSI) {
+    unsigned R = I.getReg();
     if (!Hexagon::DoubleRegsRegClass.contains(R))
       return true;
     Regs[R] = true;

@@ -15,7 +15,7 @@
 // CHECK-NEXT:   SHF_WRITE
 // CHECK-NEXT: ]
 // CHECK-NEXT: Address: [[ADDR:.*]]
-// CHECK-NEXT: Offset: 0x3C0
+// CHECK-NEXT: Offset: 0x3B0
 // CHECK-NEXT: Size: 16
 // CHECK-NEXT: Link: 0
 // CHECK-NEXT: Info: 0
@@ -26,21 +26,21 @@
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section (5) .rela.dyn {
 // CHECK-NEXT:     [[ADDR]] R_X86_64_TPOFF64 tls1 0x0
-// CHECK-NEXT:     0x2023C8 R_X86_64_TPOFF64 tls0 0x0
+// CHECK-NEXT:     0x2023B8 R_X86_64_TPOFF64 tls0 0x0
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 
-// 0x2012d0 + 4329 + 7 = 0x2023C0
-// 0x2012dA + 4327 + 7 = 0x2023C8
-// 0x2012e4 + 4317 + 7 = 0x2023C8
+// 0x2012d0 + 4313 + 7 = 0x2023B0
+// 0x2012dA + 4311 + 7 = 0x2023B8
+// 0x2012e4 + 4301 + 7 = 0x2023B8
 // DISASM:      Disassembly of section .text:
 // DISASM-EMPTY:
 // DISASM-NEXT: <main>:
-// DISASM-NEXT: 2012d0: {{.*}} movq 4329(%rip), %rax
+// DISASM-NEXT: 2012d0: {{.*}} movq 4313(%rip), %rax
 // DISASM-NEXT: 2012d7: {{.*}} movl %fs:(%rax), %eax
-// DISASM-NEXT: 2012da: {{.*}} movq 4327(%rip), %rax
+// DISASM-NEXT: 2012da: {{.*}} movq 4311(%rip), %rax
 // DISASM-NEXT: 2012e1: {{.*}} movl %fs:(%rax), %eax
-// DISASM-NEXT: 2012e4: {{.*}} movq 4317(%rip), %rax
+// DISASM-NEXT: 2012e4: {{.*}} movq 4301(%rip), %rax
 // DISASM-NEXT: 2012eb: {{.*}} movl %fs:(%rax), %eax
 // DISASM-NEXT: 2012ee: {{.*}} retq
 

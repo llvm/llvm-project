@@ -195,11 +195,8 @@ void HandleLeaks() {}
 
 void LockStuffAndStopTheWorld(StopTheWorldCallback callback,
                               CheckForLeaksParam *argument) {
-  LockThreadRegistry();
-  LockAllocator();
+  ScopedStopTheWorldLock lock;
   StopTheWorld(callback, argument);
-  UnlockAllocator();
-  UnlockThreadRegistry();
 }
 
 } // namespace __lsan

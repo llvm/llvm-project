@@ -1458,10 +1458,8 @@ public:
   /// uint64_t. The bitwidth must be <= 64 or the value must fit within a
   /// uint64_t. Otherwise an assertion will result.
   uint64_t getZExtValue() const {
-    if (isSingleWord()) {
-      assert(BitWidth && "zero width values not allowed");
+    if (isSingleWord())
       return U.VAL;
-    }
     assert(getActiveBits() <= 64 && "Too many bits for uint64_t");
     return U.pVal[0];
   }

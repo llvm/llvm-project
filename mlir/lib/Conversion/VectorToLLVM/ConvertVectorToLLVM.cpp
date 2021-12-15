@@ -40,6 +40,7 @@ static Value insertOne(ConversionPatternRewriter &rewriter,
                        LLVMTypeConverter &typeConverter, Location loc,
                        Value val1, Value val2, Type llvmType, int64_t rank,
                        int64_t pos) {
+  assert(rank > 0 && "0-D vector corner case should have been handled already");
   if (rank == 1) {
     auto idxType = rewriter.getIndexType();
     auto constant = rewriter.create<LLVM::ConstantOp>(
@@ -56,7 +57,7 @@ static Value insertOne(ConversionPatternRewriter &rewriter,
 static Value extractOne(ConversionPatternRewriter &rewriter,
                         LLVMTypeConverter &typeConverter, Location loc,
                         Value val, Type llvmType, int64_t rank, int64_t pos) {
-  if (rank == 1) {
+  if (rank <= 1) {
     auto idxType = rewriter.getIndexType();
     auto constant = rewriter.create<LLVM::ConstantOp>(
         loc, typeConverter.convertType(idxType),
@@ -80,30 +81,6 @@ LogicalResult getMemRefAlignment(LLVMTypeConverter &typeConverter,
   llvm::LLVMContext llvmContext;
   align = LLVM::TypeToLLVMIRTranslator(llvmContext)
               .getPreferredAlignment(elementTy, typeConverter.getDataLayout());
-  return success();
-}
-
-// Return the minimal alignment value that satisfies all the AssumeAlignment
-// uses of `value`. If no such uses exist, return 1.
-static unsigned getAssumedAlignment(Value value) {
-  unsigned align = 1;
-  for (auto &u : value.getUses()) {
-    Operation *owner = u.getOwner();
-    if (auto op = dyn_cast<memref::AssumeAlignmentOp>(owner))
-      align = mlir::lcm(align, op.alignment());
-  }
-  return align;
-}
-
-// Helper that returns data layout alignment of a memref associated with a
-// load, store, scatter, or gather op, including additional information from
-// assume_alignment calls on the source of the transfer
-template <class OpAdaptor>
-LogicalResult getMemRefOpAlignment(LLVMTypeConverter &typeConverter,
-                                   OpAdaptor op, unsigned &align) {
-  if (failed(getMemRefAlignment(typeConverter, op.getMemRefType(), align)))
-    return failure();
-  align = std::max(align, getAssumedAlignment(op.base()));
   return success();
 }
 
@@ -144,9 +121,9 @@ public:
   LogicalResult
   matchAndRewrite(vector::BitCastOp bitCastOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    // Only 1-D vectors can be lowered to LLVM.
-    VectorType resultTy = bitCastOp.getType();
-    if (resultTy.getRank() != 1)
+    // Only 0-D and 1-D vectors can be lowered to LLVM.
+    VectorType resultTy = bitCastOp.getResultVectorType();
+    if (resultTy.getRank() > 1)
       return failure();
     Type newResultTy = typeConverter->convertType(resultTy);
     rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(bitCastOp, newResultTy,
@@ -245,8 +222,7 @@ public:
 
     // Resolve alignment.
     unsigned align;
-    if (failed(getMemRefOpAlignment(*this->getTypeConverter(), loadOrStoreOp,
-                                    align)))
+    if (failed(getMemRefAlignment(*this->getTypeConverter(), memRefTy, align)))
       return failure();
 
     // Resolve address.
@@ -275,7 +251,7 @@ public:
 
     // Resolve alignment.
     unsigned align;
-    if (failed(getMemRefOpAlignment(*getTypeConverter(), gather, align)))
+    if (failed(getMemRefAlignment(*getTypeConverter(), memRefType, align)))
       return failure();
 
     // Resolve address.
@@ -309,7 +285,7 @@ public:
 
     // Resolve alignment.
     unsigned align;
-    if (failed(getMemRefOpAlignment(*getTypeConverter(), scatter, align)))
+    if (failed(getMemRefAlignment(*getTypeConverter(), memRefType, align)))
       return failure();
 
     // Resolve address.
@@ -542,6 +518,17 @@ public:
     if (!llvmType)
       return failure();
 
+    if (vectorType.getRank() == 0) {
+      Location loc = extractEltOp.getLoc();
+      auto idxType = rewriter.getIndexType();
+      auto zero = rewriter.create<LLVM::ConstantOp>(
+          loc, typeConverter->convertType(idxType),
+          rewriter.getIntegerAttr(idxType, 0));
+      rewriter.replaceOpWithNewOp<LLVM::ExtractElementOp>(
+          extractEltOp, llvmType, adaptor.vector(), zero);
+      return success();
+    }
+
     rewriter.replaceOpWithNewOp<LLVM::ExtractElementOp>(
         extractEltOp, llvmType, adaptor.vector(), adaptor.position());
     return success();
@@ -649,6 +636,17 @@ public:
     // Bail if result type cannot be lowered.
     if (!llvmType)
       return failure();
+
+    if (vectorType.getRank() == 0) {
+      Location loc = insertEltOp.getLoc();
+      auto idxType = rewriter.getIndexType();
+      auto zero = rewriter.create<LLVM::ConstantOp>(
+          loc, typeConverter->convertType(idxType),
+          rewriter.getIntegerAttr(idxType, 0));
+      rewriter.replaceOpWithNewOp<LLVM::InsertElementOp>(
+          insertEltOp, llvmType, adaptor.dest(), adaptor.source(), zero);
+      return success();
+    }
 
     rewriter.replaceOpWithNewOp<LLVM::InsertElementOp>(
         insertEltOp, llvmType, adaptor.dest(), adaptor.source(),
@@ -963,7 +961,8 @@ public:
 
     // Unroll vector into elementary print calls.
     int64_t rank = vectorType ? vectorType.getRank() : 0;
-    emitRanks(rewriter, printOp, adaptor.source(), vectorType, printer, rank,
+    Type type = vectorType ? vectorType : eltType;
+    emitRanks(rewriter, printOp, adaptor.source(), type, printer, rank,
               conversion);
     emitCall(rewriter, printOp->getLoc(),
              LLVM::lookupOrCreatePrintNewlineFn(
@@ -982,10 +981,12 @@ private:
   };
 
   void emitRanks(ConversionPatternRewriter &rewriter, Operation *op,
-                 Value value, VectorType vectorType, Operation *printer,
-                 int64_t rank, PrintConversion conversion) const {
+                 Value value, Type type, Operation *printer, int64_t rank,
+                 PrintConversion conversion) const {
+    VectorType vectorType = type.dyn_cast<VectorType>();
     Location loc = op->getLoc();
-    if (rank == 0) {
+    if (!vectorType) {
+      assert(rank == 0 && "The scalar case expects rank == 0");
       switch (conversion) {
       case PrintConversion::ZeroExt64:
         value = rewriter.create<arith::ExtUIOp>(
@@ -1006,12 +1007,29 @@ private:
              LLVM::lookupOrCreatePrintOpenFn(op->getParentOfType<ModuleOp>()));
     Operation *printComma =
         LLVM::lookupOrCreatePrintCommaFn(op->getParentOfType<ModuleOp>());
+
+    if (rank <= 1) {
+      auto reducedType = vectorType.getElementType();
+      auto llvmType = typeConverter->convertType(reducedType);
+      int64_t dim = rank == 0 ? 1 : vectorType.getDimSize(0);
+      for (int64_t d = 0; d < dim; ++d) {
+        Value nestedVal = extractOne(rewriter, *getTypeConverter(), loc, value,
+                                     llvmType, /*rank=*/0, /*pos=*/d);
+        emitRanks(rewriter, op, nestedVal, reducedType, printer, /*rank=*/0,
+                  conversion);
+        if (d != dim - 1)
+          emitCall(rewriter, loc, printComma);
+      }
+      emitCall(
+          rewriter, loc,
+          LLVM::lookupOrCreatePrintCloseFn(op->getParentOfType<ModuleOp>()));
+      return;
+    }
+
     int64_t dim = vectorType.getDimSize(0);
     for (int64_t d = 0; d < dim; ++d) {
-      auto reducedType =
-          rank > 1 ? reducedVectorTypeFront(vectorType) : nullptr;
-      auto llvmType = typeConverter->convertType(
-          rank > 1 ? reducedType : vectorType.getElementType());
+      auto reducedType = reducedVectorTypeFront(vectorType);
+      auto llvmType = typeConverter->convertType(reducedType);
       Value nestedVal = extractOne(rewriter, *getTypeConverter(), loc, value,
                                    llvmType, rank, d);
       emitRanks(rewriter, op, nestedVal, reducedType, printer, rank - 1,

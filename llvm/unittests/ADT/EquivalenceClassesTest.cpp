@@ -111,6 +111,6 @@ using ParamTypes =
     testing::Types<EquivalenceClasses<int>,
                    EquivalenceClasses<TestStruct, TestStructComparator>>;
 INSTANTIATE_TYPED_TEST_SUITE_P(EquivalenceClassesTest, ParameterizedTest,
-                               ParamTypes);
+                               ParamTypes, );
 
 } // llvm

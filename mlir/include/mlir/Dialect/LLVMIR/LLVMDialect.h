@@ -22,6 +22,7 @@
 #include "mlir/IR/TypeSupport.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/LLVMContext.h"
@@ -49,8 +50,8 @@ class LLVMContext;
 namespace sys {
 template <bool mt_only>
 class SmartMutex;
-} // end namespace sys
-} // end namespace llvm
+} // namespace sys
+} // namespace llvm
 
 namespace mlir {
 namespace LLVM {
@@ -130,7 +131,7 @@ private:
   SmallVector<LoopOptionsAttr::OptionValuePair> options;
 };
 
-} // end namespace LLVM
-} // end namespace mlir
+} // namespace LLVM
+} // namespace mlir
 
 #endif // MLIR_DIALECT_LLVMIR_LLVMDIALECT_H_

@@ -204,7 +204,7 @@ func @dim_reshape_expansion(%arg0 : tensor<6x5x?xf32>) -> (index, index, index)
   %c1 = arith.constant 1 : index
   %c3 = arith.constant 3 : index
   %c4 = arith.constant 4 : index
-  %0 = linalg.tensor_expand_shape %arg0 [[0, 1], [2], [3, 4, 5]]
+  %0 = tensor.expand_shape %arg0 [[0, 1], [2], [3, 4, 5]]
       : tensor<6x5x?xf32> into tensor<2x3x5x4x?x7xf32>
   %1 = tensor.dim %0, %c1 : tensor<2x3x5x4x?x7xf32>
   %2 = tensor.dim %0, %c3 : tensor<2x3x5x4x?x7xf32>
@@ -227,7 +227,7 @@ func @dim_reshape_collapse(%arg0 : tensor<2x3x5x4x?x7xf32>) -> (index, index)
 {
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
-  %0 = linalg.tensor_collapse_shape %arg0 [[0, 1], [2], [3, 4, 5]]
+  %0 = tensor.collapse_shape %arg0 [[0, 1], [2], [3, 4, 5]]
       : tensor<2x3x5x4x?x7xf32> into tensor<6x5x?xf32>
   %1 = tensor.dim %0, %c1 : tensor<6x5x?xf32>
   %2 = tensor.dim %0, %c2 : tensor<6x5x?xf32>

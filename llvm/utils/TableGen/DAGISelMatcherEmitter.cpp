@@ -169,7 +169,6 @@ static std::string GetPatFromTreePatternNode(const TreePatternNode *N) {
   std::string str;
   raw_string_ostream Stream(str);
   Stream << *N;
-  Stream.str();
   return str;
 }
 
@@ -235,7 +234,6 @@ static std::string getIncludePath(const Record *R) {
 
   Stream << SrcMgr.getBufferInfo(CurBuf).Buffer->getBufferIdentifier() << ":"
          << SrcMgr.FindLineNumber(L, CurBuf);
-  Stream.str();
   return str;
 }
 

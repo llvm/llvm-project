@@ -11,6 +11,7 @@ static_library("objc") {
     "//llvm/lib/Support",
   ]
   sources = [
+    "AssertEquals.cpp",
     "AvoidNSErrorInitCheck.cpp",
     "DeallocInCategoryCheck.cpp",
     "ForbiddenSubclassingCheck.cpp",

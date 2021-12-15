@@ -1,5 +1,5 @@
-; RUN: llc -enable-shrink-wrap=true < %s -experimental-debug-variable-locations=false | FileCheck %s --check-prefix=ASM
-; RUN: llc -enable-shrink-wrap=true -filetype=obj < %s -experimental-debug-variable-locations=false | llvm-readobj --codeview - | FileCheck %s --check-prefix=OBJ
+; RUN: llc -enable-shrink-wrap=true < %s -experimental-debug-variable-locations=true | FileCheck %s --check-prefix=ASM
+; RUN: llc -enable-shrink-wrap=true -filetype=obj < %s -experimental-debug-variable-locations=true | llvm-readobj --codeview - | FileCheck %s --check-prefix=OBJ
 
 ; C source:
 ; int doSomething(int*);
@@ -33,7 +33,7 @@
 ; ASM:         popl    %ebx
 ; ASM: [[EPILOGUE]]:                                 # %return
 ; ASM:         retl    $8
-; ASM: Ltmp11:
+; ASM: Ltmp12:
 ; ASM:         .cv_fpo_endproc
 
 ; Note how RvaStart advances 7 bytes to skip the shrink-wrapped portion.

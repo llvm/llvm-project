@@ -34,7 +34,20 @@ static cl::opt<bool>
 DIBuilder::DIBuilder(Module &m, bool AllowUnresolvedNodes, DICompileUnit *CU)
     : M(m), VMContext(M.getContext()), CUNode(CU), DeclareFn(nullptr),
       ValueFn(nullptr), LabelFn(nullptr),
-      AllowUnresolvedNodes(AllowUnresolvedNodes) {}
+      AllowUnresolvedNodes(AllowUnresolvedNodes) {
+  if (CUNode) {
+    if (const auto &ETs = CUNode->getEnumTypes())
+      AllEnumTypes.assign(ETs.begin(), ETs.end());
+    if (const auto &RTs = CUNode->getRetainedTypes())
+      AllRetainTypes.assign(RTs.begin(), RTs.end());
+    if (const auto &GVs = CUNode->getGlobalVariables())
+      AllGVs.assign(GVs.begin(), GVs.end());
+    if (const auto &IMs = CUNode->getImportedEntities())
+      AllImportedModules.assign(IMs.begin(), IMs.end());
+    if (const auto &MNs = CUNode->getMacros())
+      AllMacrosPerParent.insert({nullptr, {MNs.begin(), MNs.end()}});
+  }
+}
 
 void DIBuilder::trackIfUnresolved(MDNode *N) {
   if (!N)
@@ -658,11 +671,11 @@ DIBuilder::getOrCreateMacroArray(ArrayRef<Metadata *> Elements) {
 
 DITypeRefArray DIBuilder::getOrCreateTypeArray(ArrayRef<Metadata *> Elements) {
   SmallVector<llvm::Metadata *, 16> Elts;
-  for (unsigned i = 0, e = Elements.size(); i != e; ++i) {
-    if (Elements[i] && isa<MDNode>(Elements[i]))
-      Elts.push_back(cast<DIType>(Elements[i]));
+  for (Metadata *E : Elements) {
+    if (isa_and_nonnull<MDNode>(E))
+      Elts.push_back(cast<DIType>(E));
     else
-      Elts.push_back(Elements[i]);
+      Elts.push_back(E);
   }
   return DITypeRefArray(MDNode::get(VMContext, Elts));
 }

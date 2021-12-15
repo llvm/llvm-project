@@ -19,6 +19,9 @@
 ; CHECK-NEXT: memset size is non-constant
 ; CHECK-NEXT: MemsetSizeSCEV: (4 * (sext i32 %m to i64))<nsw>
 ; CHECK-NEXT: PositiveStrideSCEV: (4 + (4 * (sext i32 %m to i64))<nsw>)<nsw>
+; CHECK-NEXT: Try to fold SCEV based on loop guard
+; CHECK-NEXT: FoldedMemsetSize: (4 * (sext i32 %m to i64))<nsw>
+; CHECK-NEXT: FoldedPositiveStride: (4 + (4 * (sext i32 %m to i64))<nsw>)<nsw>
 ; CHECK-NEXT: SCEV don't match, abort
 ; CHECK: loop-idiom Scanning: F[NonZeroAddressSpace] Countable Loop %for.cond1.preheader
 ; CHECK-NEXT: memset size is non-constant

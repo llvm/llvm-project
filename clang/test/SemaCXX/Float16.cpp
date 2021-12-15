@@ -1,8 +1,7 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -triple x86_64-linux-pc %s -DHAVE
+// RUN: %clang_cc1 -fsyntax-only -verify -triple x86_64-linux-pc %s
 // RUN: %clang_cc1 -fsyntax-only -verify -triple spir-unknown-unknown %s -DHAVE
 // RUN: %clang_cc1 -fsyntax-only -verify -triple armv7a-linux-gnu %s -DHAVE
 // RUN: %clang_cc1 -fsyntax-only -verify -triple aarch64-linux-gnu %s -DHAVE
-// RUN: %clang_cc1 -fsyntax-only -verify -triple i386-pc-linux-gnu %s
 
 #ifdef HAVE
 // expected-no-diagnostics

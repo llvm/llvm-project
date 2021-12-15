@@ -243,7 +243,7 @@ TypeEvaluationKind CodeGenFunction::getEvaluationKind(QualType type) {
     case Type::Enum:
     case Type::ObjCObjectPointer:
     case Type::Pipe:
-    case Type::ExtInt:
+    case Type::BitInt:
       return TEK_Scalar;
 
     // Complexes.
@@ -2207,7 +2207,7 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
     case Type::ObjCObject:
     case Type::ObjCInterface:
     case Type::ObjCObjectPointer:
-    case Type::ExtInt:
+    case Type::BitInt:
       llvm_unreachable("type class is never variably-modified!");
 
     case Type::Adjusted:

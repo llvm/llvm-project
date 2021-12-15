@@ -15,7 +15,7 @@ define i32 @test1(double %a, double* nocapture %b, i32 %x, i32 %y)  {
   ret i32 %cond
 }
 
-; Sanity check: no load.
+; Basic correctness check: no load.
 define i32 @test2(double %a, double %b, i32 %x, i32 %y)  {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0:

@@ -26,6 +26,14 @@ def uchar_to_float : GICombineRule<
          [{ return PostLegalizerHelper.matchUCharToFloat(*${itofp}); }]),
   (apply [{ PostLegalizerHelper.applyUCharToFloat(*${itofp}); }])>;
 
+
+def rcp_sqrt_to_rsq : GICombineRule<
+  (defs root:$rcp, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_INTRINSIC, G_FSQRT):$rcp,
+         [{ return PostLegalizerHelper.matchRcpSqrtToRsq(*${rcp}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${rcp}, ${matchinfo}); }])>;
+
+
 def cvt_f32_ubyteN_matchdata : GIDefMatchData<"AMDGPUPostLegalizerCombinerHelper::CvtF32UByteMatchInfo">;
 
 def cvt_f32_ubyteN : GICombineRule<
@@ -66,6 +74,30 @@ def int_minmax_to_med3 : GICombineRule<
          [{ return RegBankHelper.matchIntMinMaxToMed3(*${min_or_max}, ${matchinfo}); }]),
   (apply [{ RegBankHelper.applyMed3(*${min_or_max}, ${matchinfo}); }])>;
 
+def fp_minmax_to_med3 : GICombineRule<
+  (defs root:$min_or_max, med3_matchdata:$matchinfo),
+  (match (wip_match_opcode G_FMAXNUM,
+                           G_FMINNUM,
+                           G_FMAXNUM_IEEE,
+                           G_FMINNUM_IEEE):$min_or_max,
+         [{ return RegBankHelper.matchFPMinMaxToMed3(*${min_or_max}, ${matchinfo}); }]),
+  (apply [{ RegBankHelper.applyMed3(*${min_or_max}, ${matchinfo}); }])>;
+
+def fp_minmax_to_clamp : GICombineRule<
+  (defs root:$min_or_max, register_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_FMAXNUM,
+                           G_FMINNUM,
+                           G_FMAXNUM_IEEE,
+                           G_FMINNUM_IEEE):$min_or_max,
+         [{ return RegBankHelper.matchFPMinMaxToClamp(*${min_or_max}, ${matchinfo}); }]),
+  (apply [{ RegBankHelper.applyClamp(*${min_or_max}, ${matchinfo}); }])>;
+
+def fmed3_intrinsic_to_clamp : GICombineRule<
+  (defs root:$fmed3, register_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_INTRINSIC):$fmed3,
+         [{ return RegBankHelper.matchFPMed3ToClamp(*${fmed3}, ${matchinfo}); }]),
+  (apply [{ RegBankHelper.applyClamp(*${fmed3}, ${matchinfo}); }])>;
+
 def remove_fcanonicalize_matchinfo : GIDefMatchData<"Register">;
 
 def remove_fcanonicalize : GICombineRule<
@@ -96,14 +128,16 @@ def AMDGPUPreLegalizerCombinerHelper: GICombinerHelper<
 def AMDGPUPostLegalizerCombinerHelper: GICombinerHelper<
   "AMDGPUGenPostLegalizerCombinerHelper",
   [all_combines, gfx6gfx7_combines,
-   uchar_to_float, cvt_f32_ubyteN, remove_fcanonicalize, foldable_fneg]> {
+   uchar_to_float, cvt_f32_ubyteN, remove_fcanonicalize, foldable_fneg,
+   rcp_sqrt_to_rsq]> {
   let DisableRuleOption = "amdgpupostlegalizercombiner-disable-rule";
   let StateClass = "AMDGPUPostLegalizerCombinerHelperState";
   let AdditionalArguments = [];
 }
 
 def AMDGPURegBankCombinerHelper : GICombinerHelper<
-  "AMDGPUGenRegBankCombinerHelper", [zext_trunc_fold, int_minmax_to_med3, rm_uniform_wf, ptr_add_immed_chain]> {
+  "AMDGPUGenRegBankCombinerHelper", [zext_trunc_fold, int_minmax_to_med3, rm_uniform_wf,
+   ptr_add_immed_chain, fp_minmax_to_clamp, fp_minmax_to_med3, fmed3_intrinsic_to_clamp]> {
   let DisableRuleOption = "amdgpuregbankcombiner-disable-rule";
   let StateClass = "AMDGPURegBankCombinerHelperState";
   let AdditionalArguments = [];

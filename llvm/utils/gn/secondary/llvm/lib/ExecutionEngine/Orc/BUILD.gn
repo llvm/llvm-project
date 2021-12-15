@@ -39,6 +39,7 @@ static_library("Orc") {
     "LookupAndRecordAddrs.cpp",
     "MachOPlatform.cpp",
     "Mangling.cpp",
+    "ObjectFileInterface.cpp",
     "ObjectLinkingLayer.cpp",
     "ObjectTransformLayer.cpp",
     "OrcABISupport.cpp",

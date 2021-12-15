@@ -20,11 +20,11 @@ namespace __llvm_libc {
 namespace fputil {
 
 template <typename T> struct MantissaWidth {
-  static constexpr unsigned value = FloatProperties<T>::mantissaWidth;
+  static constexpr unsigned VALUE = FloatProperties<T>::MANTISSA_WIDTH;
 };
 
 template <typename T> struct ExponentWidth {
-  static constexpr unsigned value = FloatProperties<T>::exponentWidth;
+  static constexpr unsigned VALUE = FloatProperties<T>::EXPONENT_WIDTH;
 };
 
 // A generic class to represent single precision, double precision, and quad
@@ -48,49 +48,49 @@ template <typename T> union FPBits {
 
   UIntType bits;
 
-  void setMantissa(UIntType mantVal) {
-    mantVal &= (FloatProp::mantissaMask);
-    bits &= ~(FloatProp::mantissaMask);
+  void set_mantissa(UIntType mantVal) {
+    mantVal &= (FloatProp::MANTISSA_MASK);
+    bits &= ~(FloatProp::MANTISSA_MASK);
     bits |= mantVal;
   }
 
-  UIntType getMantissa() const { return bits & FloatProp::mantissaMask; }
+  UIntType get_mantissa() const { return bits & FloatProp::MANTISSA_MASK; }
 
-  void setUnbiasedExponent(UIntType expVal) {
-    expVal = (expVal << (FloatProp::mantissaWidth)) & FloatProp::exponentMask;
-    bits &= ~(FloatProp::exponentMask);
+  void set_unbiased_exponent(UIntType expVal) {
+    expVal = (expVal << (FloatProp::MANTISSA_WIDTH)) & FloatProp::EXPONENT_MASK;
+    bits &= ~(FloatProp::EXPONENT_MASK);
     bits |= expVal;
   }
 
-  uint16_t getUnbiasedExponent() const {
-    return uint16_t((bits & FloatProp::exponentMask) >>
-                    (FloatProp::mantissaWidth));
+  uint16_t get_unbiased_exponent() const {
+    return uint16_t((bits & FloatProp::EXPONENT_MASK) >>
+                    (FloatProp::MANTISSA_WIDTH));
   }
 
-  void setSign(bool signVal) {
-    bits &= ~(FloatProp::signMask);
-    UIntType sign = UIntType(signVal) << (FloatProp::bitWidth - 1);
+  void set_sign(bool signVal) {
+    bits &= ~(FloatProp::SIGN_MASK);
+    UIntType sign = UIntType(signVal) << (FloatProp::BIT_WIDTH - 1);
     bits |= sign;
   }
 
-  bool getSign() const {
-    return ((bits & FloatProp::signMask) >> (FloatProp::bitWidth - 1));
+  bool get_sign() const {
+    return ((bits & FloatProp::SIGN_MASK) >> (FloatProp::BIT_WIDTH - 1));
   }
   T val;
 
   static_assert(sizeof(T) == sizeof(UIntType),
                 "Data type and integral representation have different sizes.");
 
-  static constexpr int exponentBias = (1 << (ExponentWidth<T>::value - 1)) - 1;
-  static constexpr int maxExponent = (1 << ExponentWidth<T>::value) - 1;
+  static constexpr int EXPONENT_BIAS = (1 << (ExponentWidth<T>::VALUE - 1)) - 1;
+  static constexpr int MAX_EXPONENT = (1 << ExponentWidth<T>::VALUE) - 1;
 
-  static constexpr UIntType minSubnormal = UIntType(1);
-  static constexpr UIntType maxSubnormal =
-      (UIntType(1) << MantissaWidth<T>::value) - 1;
-  static constexpr UIntType minNormal =
-      (UIntType(1) << MantissaWidth<T>::value);
-  static constexpr UIntType maxNormal =
-      ((UIntType(maxExponent) - 1) << MantissaWidth<T>::value) | maxSubnormal;
+  static constexpr UIntType MIN_SUBNORMAL = UIntType(1);
+  static constexpr UIntType MAX_SUBNORMAL =
+      (UIntType(1) << MantissaWidth<T>::VALUE) - 1;
+  static constexpr UIntType MIN_NORMAL =
+      (UIntType(1) << MantissaWidth<T>::VALUE);
+  static constexpr UIntType MAX_NORMAL =
+      ((UIntType(MAX_EXPONENT) - 1) << MantissaWidth<T>::VALUE) | MAX_SUBNORMAL;
 
   // We don't want accidental type promotions/conversions so we require exact
   // type match.
@@ -108,43 +108,45 @@ template <typename T> union FPBits {
 
   UIntType uintval() const { return bits; }
 
-  int getExponent() const { return int(getUnbiasedExponent()) - exponentBias; }
-
-  bool isZero() const {
-    return getMantissa() == 0 && getUnbiasedExponent() == 0;
+  int get_exponent() const {
+    return int(get_unbiased_exponent()) - EXPONENT_BIAS;
   }
 
-  bool isInf() const {
-    return getMantissa() == 0 && getUnbiasedExponent() == maxExponent;
+  bool is_zero() const {
+    return get_mantissa() == 0 && get_unbiased_exponent() == 0;
   }
 
-  bool isNaN() const {
-    return getUnbiasedExponent() == maxExponent && getMantissa() != 0;
+  bool is_inf() const {
+    return get_mantissa() == 0 && get_unbiased_exponent() == MAX_EXPONENT;
   }
 
-  bool isInfOrNaN() const { return getUnbiasedExponent() == maxExponent; }
+  bool is_nan() const {
+    return get_unbiased_exponent() == MAX_EXPONENT && get_mantissa() != 0;
+  }
+
+  bool is_inf_or_nan() const { return get_unbiased_exponent() == MAX_EXPONENT; }
 
   static FPBits<T> zero() { return FPBits(); }
 
-  static FPBits<T> negZero() {
+  static FPBits<T> neg_zero() {
     return FPBits(UIntType(1) << (sizeof(UIntType) * 8 - 1));
   }
 
   static FPBits<T> inf() {
     FPBits<T> bits;
-    bits.setUnbiasedExponent(maxExponent);
+    bits.set_unbiased_exponent(MAX_EXPONENT);
     return bits;
   }
 
-  static FPBits<T> negInf() {
+  static FPBits<T> neg_inf() {
     FPBits<T> bits = inf();
-    bits.setSign(1);
+    bits.set_sign(1);
     return bits;
   }
 
-  static T buildNaN(UIntType v) {
+  static T build_nan(UIntType v) {
     FPBits<T> bits = inf();
-    bits.setMantissa(v);
+    bits.set_mantissa(v);
     return T(bits);
   }
 };
@@ -153,7 +155,7 @@ template <typename T> union FPBits {
 } // namespace __llvm_libc
 
 #ifdef SPECIAL_X86_LONG_DOUBLE
-#include "src/__support/FPUtil/LongDoubleBitsX86.h"
+#include "x86_64/LongDoubleBits.h"
 #endif
 
 #endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_FP_BITS_H

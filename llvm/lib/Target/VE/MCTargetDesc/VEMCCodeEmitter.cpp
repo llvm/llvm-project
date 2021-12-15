@@ -102,11 +102,11 @@ unsigned VEMCCodeEmitter::getMachineOpValue(const MCInst &MI,
                                             const MCSubtargetInfo &STI) const {
   if (MO.isReg())
     return Ctx.getRegisterInfo()->getEncodingValue(MO.getReg());
-
   if (MO.isImm())
-    return MO.getImm();
+    return static_cast<unsigned>(MO.getImm());
 
   assert(MO.isExpr());
+
   const MCExpr *Expr = MO.getExpr();
   if (const VEMCExpr *SExpr = dyn_cast<VEMCExpr>(Expr)) {
     MCFixupKind Kind = (MCFixupKind)SExpr->getFixupKind();
@@ -131,7 +131,7 @@ VEMCCodeEmitter::getBranchTargetOpValue(const MCInst &MI, unsigned OpNo,
     return getMachineOpValue(MI, MO, Fixups, STI);
 
   Fixups.push_back(
-      MCFixup::create(0, MO.getExpr(), (MCFixupKind)VE::fixup_ve_pc_lo32));
+      MCFixup::create(0, MO.getExpr(), (MCFixupKind)VE::fixup_ve_srel32));
   return 0;
 }
 

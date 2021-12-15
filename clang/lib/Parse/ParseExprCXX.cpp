@@ -2191,12 +2191,14 @@ void Parser::ParseCXXSimpleTypeSpecifier(DeclSpec &DS) {
     return;
   }
 
-  case tok::kw__ExtInt: {
+  case tok::kw__ExtInt:
+  case tok::kw__BitInt: {
+    DiagnoseBitIntUse(Tok);
     ExprResult ER = ParseExtIntegerArgument();
     if (ER.isInvalid())
       DS.SetTypeSpecError();
     else
-      DS.SetExtIntType(Loc, ER.get(), PrevSpec, DiagID, Policy);
+      DS.SetBitIntType(Loc, ER.get(), PrevSpec, DiagID, Policy);
 
     // Do this here because we have already consumed the close paren.
     DS.SetRangeEnd(PrevTokLocation);

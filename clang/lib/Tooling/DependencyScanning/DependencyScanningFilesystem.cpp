@@ -9,6 +9,7 @@
 #include "clang/Tooling/DependencyScanning/DependencyScanningFilesystem.h"
 #include "clang/Lex/DependencyDirectivesSourceMinimizer.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include "llvm/Support/Threading.h"
 
 using namespace clang;
@@ -43,11 +44,7 @@ CachedFileSystemEntry CachedFileSystemEntry::createFileEntry(
     // FIXME: Propage the diagnostic if desired by the client.
     CachedFileSystemEntry Result;
     Result.MaybeStat = std::move(*Stat);
-    Result.Contents.reserve(Buffer->getBufferSize() + 1);
-    Result.Contents.append(Buffer->getBufferStart(), Buffer->getBufferEnd());
-    // Implicitly null terminate the contents for Clang's lexer.
-    Result.Contents.push_back('\0');
-    Result.Contents.pop_back();
+    Result.Contents = std::move(*MaybeBuffer);
     return Result;
   }
 
@@ -60,15 +57,8 @@ CachedFileSystemEntry CachedFileSystemEntry::createFileEntry(
   // The contents produced by the minimizer must be null terminated.
   assert(MinimizedFileContents.data()[MinimizedFileContents.size()] == '\0' &&
          "not null terminated contents");
-  // Even though there's an implicit null terminator in the minimized contents,
-  // we want to temporarily make it explicit. This will ensure that the
-  // std::move will preserve it even if it needs to do a copy if the
-  // SmallString still has the small capacity.
-  MinimizedFileContents.push_back('\0');
-  Result.Contents = std::move(MinimizedFileContents);
-  // Now make the null terminator implicit again, so that Clang's lexer can find
-  // it right where the buffer ends.
-  Result.Contents.pop_back();
+  Result.Contents = std::make_unique<llvm::SmallVectorMemoryBuffer>(
+      std::move(MinimizedFileContents));
 
   // Compute the skipped PP ranges that speedup skipping over inactive
   // preprocessor blocks.
@@ -113,7 +103,7 @@ DependencyScanningFilesystemSharedCache::SingleCache::SingleCache() {
 DependencyScanningFilesystemSharedCache::SharedFileSystemEntry &
 DependencyScanningFilesystemSharedCache::SingleCache::get(StringRef Key) {
   CacheShard &Shard = CacheShards[llvm::hash_value(Key) % NumShards];
-  std::unique_lock<std::mutex> LockGuard(Shard.CacheLock);
+  std::lock_guard<std::mutex> LockGuard(Shard.CacheLock);
   auto It = Shard.Cache.try_emplace(Key);
   return It.first->getValue();
 }
@@ -129,7 +119,7 @@ DependencyScanningFilesystemSharedCache::get(StringRef Key, bool Minimized) {
 ///
 /// This is kinda hacky, it would be better if we knew what kind of file Clang
 /// was expecting instead.
-static bool shouldMinimize(StringRef Filename) {
+static bool shouldMinimizeBasedOnExtension(StringRef Filename) {
   StringRef Ext = llvm::sys::path::extension(Filename);
   if (Ext.empty())
     return true; // C++ standard library
@@ -147,26 +137,43 @@ static bool shouldCacheStatFailures(StringRef Filename) {
   StringRef Ext = llvm::sys::path::extension(Filename);
   if (Ext.empty())
     return false; // This may be the module cache directory.
-  return shouldMinimize(Filename); // Only cache stat failures on source files.
+  // Only cache stat failures on source files.
+  return shouldMinimizeBasedOnExtension(Filename);
 }
 
-void DependencyScanningWorkerFilesystem::ignoreFile(StringRef RawFilename) {
-  llvm::SmallString<256> Filename;
-  llvm::sys::path::native(RawFilename, Filename);
-  IgnoredFiles.insert(Filename);
-}
-
-bool DependencyScanningWorkerFilesystem::shouldIgnoreFile(
+void DependencyScanningWorkerFilesystem::disableMinimization(
     StringRef RawFilename) {
   llvm::SmallString<256> Filename;
   llvm::sys::path::native(RawFilename, Filename);
-  return IgnoredFiles.contains(Filename);
+  NotToBeMinimized.insert(Filename);
+}
+
+bool DependencyScanningWorkerFilesystem::shouldMinimize(StringRef RawFilename) {
+  if (!shouldMinimizeBasedOnExtension(RawFilename))
+    return false;
+
+  llvm::SmallString<256> Filename;
+  llvm::sys::path::native(RawFilename, Filename);
+  return !NotToBeMinimized.contains(Filename);
+}
+
+CachedFileSystemEntry DependencyScanningWorkerFilesystem::createFileSystemEntry(
+    llvm::ErrorOr<llvm::vfs::Status> &&MaybeStatus, StringRef Filename,
+    bool ShouldMinimize) {
+  if (!MaybeStatus)
+    return CachedFileSystemEntry(MaybeStatus.getError());
+
+  if (MaybeStatus->isDirectory())
+    return CachedFileSystemEntry::createDirectoryEntry(std::move(*MaybeStatus));
+
+  return CachedFileSystemEntry::createFileEntry(Filename, getUnderlyingFS(),
+                                                ShouldMinimize);
 }
 
 llvm::ErrorOr<const CachedFileSystemEntry *>
 DependencyScanningWorkerFilesystem::getOrCreateFileSystemEntry(
     const StringRef Filename) {
-  bool ShouldMinimize = !shouldIgnoreFile(Filename) && shouldMinimize(Filename);
+  bool ShouldMinimize = shouldMinimize(Filename);
 
   if (const auto *Entry = Cache.getCachedEntry(Filename, ShouldMinimize))
     return Entry;
@@ -178,27 +185,19 @@ DependencyScanningWorkerFilesystem::getOrCreateFileSystemEntry(
       &SharedCacheEntry = SharedCache.get(Filename, ShouldMinimize);
   const CachedFileSystemEntry *Result;
   {
-    std::unique_lock<std::mutex> LockGuard(SharedCacheEntry.ValueLock);
+    std::lock_guard<std::mutex> LockGuard(SharedCacheEntry.ValueLock);
     CachedFileSystemEntry &CacheEntry = SharedCacheEntry.Value;
 
     if (!CacheEntry.isValid()) {
-      llvm::vfs::FileSystem &FS = getUnderlyingFS();
-      auto MaybeStatus = FS.status(Filename);
-      if (!MaybeStatus) {
-        if (!shouldCacheStatFailures(Filename))
-          // HACK: We need to always restat non source files if the stat fails.
-          //   This is because Clang first looks up the module cache and module
-          //   files before building them, and then looks for them again. If we
-          //   cache the stat failure, it won't see them the second time.
-          return MaybeStatus.getError();
-        else
-          CacheEntry = CachedFileSystemEntry(MaybeStatus.getError());
-      } else if (MaybeStatus->isDirectory())
-        CacheEntry = CachedFileSystemEntry::createDirectoryEntry(
-            std::move(*MaybeStatus));
-      else
-        CacheEntry = CachedFileSystemEntry::createFileEntry(Filename, FS,
-                                                            ShouldMinimize);
+      auto MaybeStatus = getUnderlyingFS().status(Filename);
+      if (!MaybeStatus && !shouldCacheStatFailures(Filename))
+        // HACK: We need to always restat non source files if the stat fails.
+        //   This is because Clang first looks up the module cache and module
+        //   files before building them, and then looks for them again. If we
+        //   cache the stat failure, it won't see them the second time.
+        return MaybeStatus.getError();
+      CacheEntry = createFileSystemEntry(std::move(MaybeStatus), Filename,
+                                         ShouldMinimize);
     }
 
     Result = &CacheEntry;

@@ -35,6 +35,8 @@ class ExternalFileUnit : public ConnectionState,
                          public FileFrame<ExternalFileUnit> {
 public:
   explicit ExternalFileUnit(int unitNumber) : unitNumber_{unitNumber} {}
+  ~ExternalFileUnit() {}
+
   int unitNumber() const { return unitNumber_; }
   bool swapEndianness() const { return swapEndianness_; }
   bool createdForInternalChildIo() const { return createdForInternalChildIo_; }

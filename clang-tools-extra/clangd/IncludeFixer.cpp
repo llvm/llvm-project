@@ -31,7 +31,6 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/TypoCorrection.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
@@ -47,32 +46,140 @@
 
 namespace clang {
 namespace clangd {
+namespace {
+
+llvm::Optional<llvm::StringRef> getArgStr(const clang::Diagnostic &Info,
+                                          unsigned Index) {
+  switch (Info.getArgKind(Index)) {
+  case DiagnosticsEngine::ak_c_string:
+    return llvm::StringRef(Info.getArgCStr(Index));
+  case DiagnosticsEngine::ak_std_string:
+    return llvm::StringRef(Info.getArgStdStr(Index));
+  default:
+    return llvm::None;
+  }
+}
+
+std::vector<Fix> only(llvm::Optional<Fix> F) {
+  if (F)
+    return {std::move(*F)};
+  return {};
+}
+
+} // namespace
 
 std::vector<Fix> IncludeFixer::fix(DiagnosticsEngine::Level DiagLevel,
                                    const clang::Diagnostic &Info) const {
   switch (Info.getID()) {
-  case diag::err_incomplete_nested_name_spec:
-  case diag::err_incomplete_base_class:
-  case diag::err_incomplete_member_access:
-  case diag::err_incomplete_type:
-  case diag::err_typecheck_decl_incomplete_type:
-  case diag::err_typecheck_incomplete_tag:
-  case diag::err_invalid_incomplete_type_use:
-  case diag::err_sizeof_alignof_incomplete_or_sizeless_type:
+  /*
+   There are many "incomplete type" diagnostics!
+   They are almost all Sema diagnostics with "incomplete" in the name.
+
+   sed -n '/CLASS_NOTE/! s/DIAG(\\([^,]*\\).*)/  case diag::\\1:/p' \
+     tools/clang/include/clang/Basic/DiagnosticSemaKinds.inc | grep incomplete
+  */
+  // clang-format off
+  //case diag::err_alignof_member_of_incomplete_type:
+  case diag::err_array_incomplete_or_sizeless_type:
+  case diag::err_array_size_incomplete_type:
+  case diag::err_asm_incomplete_type:
+  case diag::err_assoc_type_incomplete:
+  case diag::err_bad_cast_incomplete:
+  case diag::err_call_function_incomplete_return:
+  case diag::err_call_incomplete_argument:
+  case diag::err_call_incomplete_return:
+  case diag::err_capture_of_incomplete_or_sizeless_type:
+  case diag::err_catch_incomplete:
+  case diag::err_catch_incomplete_ptr:
+  case diag::err_catch_incomplete_ref:
+  case diag::err_cconv_incomplete_param_type:
+  case diag::err_coroutine_promise_type_incomplete:
+  case diag::err_covariant_return_incomplete:
+  //case diag::err_deduced_class_template_incomplete:
+  case diag::err_delete_incomplete_class_type:
+  case diag::err_dereference_incomplete_type:
+  case diag::err_exception_spec_incomplete_type:
+  case diag::err_field_incomplete_or_sizeless:
   case diag::err_for_range_incomplete_type:
   case diag::err_func_def_incomplete_result:
-  case diag::err_field_incomplete_or_sizeless:
+  case diag::err_ice_incomplete_type:
+  case diag::err_illegal_message_expr_incomplete_type:
+  case diag::err_incomplete_base_class:
+  case diag::err_incomplete_enum:
+  case diag::err_incomplete_in_exception_spec:
+  case diag::err_incomplete_member_access:
+  case diag::err_incomplete_nested_name_spec:
+  case diag::err_incomplete_object_call:
+  case diag::err_incomplete_receiver_type:
+  case diag::err_incomplete_synthesized_property:
+  case diag::err_incomplete_type:
+  case diag::err_incomplete_type_objc_at_encode:
+  case diag::err_incomplete_type_used_in_type_trait_expr:
+  case diag::err_incomplete_typeid:
+  case diag::err_init_incomplete_type:
+  case diag::err_invalid_incomplete_type_use:
+  case diag::err_lambda_incomplete_result:
+  //case diag::err_matrix_incomplete_index:
+  //case diag::err_matrix_separate_incomplete_index:
+  case diag::err_memptr_incomplete:
+  case diag::err_new_incomplete_or_sizeless_type:
+  case diag::err_objc_incomplete_boxed_expression_type:
+  case diag::err_objc_index_incomplete_class_type:
+  case diag::err_offsetof_incomplete_type:
+  case diag::err_omp_firstprivate_incomplete_type:
+  case diag::err_omp_incomplete_type:
+  case diag::err_omp_lastprivate_incomplete_type:
+  case diag::err_omp_linear_incomplete_type:
+  case diag::err_omp_private_incomplete_type:
+  case diag::err_omp_reduction_incomplete_type:
+  case diag::err_omp_section_incomplete_type:
+  case diag::err_omp_threadprivate_incomplete_type:
+  case diag::err_second_parameter_to_va_arg_incomplete:
+  case diag::err_sizeof_alignof_incomplete_or_sizeless_type:
+  case diag::err_subscript_incomplete_or_sizeless_type:
+  case diag::err_switch_incomplete_class_type:
+  case diag::err_temp_copy_incomplete:
+  //case diag::err_template_arg_deduced_incomplete_pack:
+  case diag::err_template_nontype_parm_incomplete:
+  //case diag::err_tentative_def_incomplete_type:
+  case diag::err_throw_incomplete:
+  case diag::err_throw_incomplete_ptr:
+  case diag::err_typecheck_arithmetic_incomplete_or_sizeless_type:
+  case diag::err_typecheck_cast_to_incomplete:
+  case diag::err_typecheck_decl_incomplete_type:
+  //case diag::err_typecheck_incomplete_array_needs_initializer:
+  case diag::err_typecheck_incomplete_tag:
+  case diag::err_typecheck_incomplete_type_not_modifiable_lvalue:
+  case diag::err_typecheck_nonviable_condition_incomplete:
+  case diag::err_underlying_type_of_incomplete_enum:
+  case diag::ext_incomplete_in_exception_spec:
+  //case diag::ext_typecheck_compare_complete_incomplete_pointers:
+  case diag::ext_typecheck_decl_incomplete_type:
+  case diag::warn_delete_incomplete:
+  case diag::warn_incomplete_encoded_type:
+  //case diag::warn_printf_incomplete_specifier:
+  case diag::warn_return_value_udt_incomplete:
+  //case diag::warn_scanf_scanlist_incomplete:
+  //case diag::warn_tentative_incomplete_array:
+    //  clang-format on
     // Incomplete type diagnostics should have a QualType argument for the
     // incomplete type.
     for (unsigned Idx = 0; Idx < Info.getNumArgs(); ++Idx) {
       if (Info.getArgKind(Idx) == DiagnosticsEngine::ak_qualtype) {
         auto QT = QualType::getFromOpaquePtr((void *)Info.getRawArg(Idx));
-        if (const Type *T = QT.getTypePtrOrNull())
+        if (const Type *T = QT.getTypePtrOrNull()) {
           if (T->isIncompleteType())
             return fixIncompleteType(*T);
+          // `enum x : int;' is not formally an incomplete type.
+          // We may need a full definition anyway.
+          if (auto * ET = llvm::dyn_cast<EnumType>(T))
+            if (!ET->getDecl()->getDefinition())
+              return fixIncompleteType(*T);
+        }
       }
     }
     break;
+
   case diag::err_unknown_typename:
   case diag::err_unknown_typename_suggest:
   case diag::err_typename_nested_not_found:
@@ -102,8 +209,52 @@ std::vector<Fix> IncludeFixer::fix(DiagnosticsEngine::Level DiagLevel,
           LastUnresolvedName->Loc == Info.getLocation())
         return fixUnresolvedName();
     }
+    break;
+
+  // Cases where clang explicitly knows which header to include.
+  // (There's no fix provided for boring formatting reasons).
+  case diag::err_implied_std_initializer_list_not_found:
+    return only(insertHeader("<initializer_list>"));
+  case diag::err_need_header_before_typeid:
+    return only(insertHeader("<typeid>"));
+  case diag::err_need_header_before_ms_uuidof:
+    return only(insertHeader("<guiddef.h>"));
+  case diag::err_need_header_before_placement_new:
+  case diag::err_implicit_coroutine_std_nothrow_type_not_found:
+    return only(insertHeader("<new>"));
+  case diag::err_omp_implied_type_not_found:
+  case diag::err_omp_interop_type_not_found:
+    return only(insertHeader("<omp.h>"));
+  case diag::err_implied_coroutine_type_not_found:
+    return only(insertHeader("<coroutine>"));
+  case diag::err_implied_comparison_category_type_not_found:
+    return only(insertHeader("<compare>"));
+  case diag::note_include_header_or_declare:
+    if (Info.getNumArgs() > 0)
+      if (auto Header = getArgStr(Info, 0))
+        return only(insertHeader(("<" + *Header + ">").str(),
+                                 getArgStr(Info, 1).getValueOr("")));
+    break;
   }
+
   return {};
+}
+
+llvm::Optional<Fix> IncludeFixer::insertHeader(llvm::StringRef Spelled,
+                                               llvm::StringRef Symbol) const {
+  Fix F;
+
+  if (auto Edit = Inserter->insert(Spelled))
+    F.Edits.push_back(std::move(*Edit));
+  else
+    return llvm::None;
+
+  if (Symbol.empty())
+    F.Message = llvm::formatv("Include {0}", Spelled);
+  else
+    F.Message = llvm::formatv("Include {0} for symbol {1}", Spelled, Symbol);
+
+  return F;
 }
 
 std::vector<Fix> IncludeFixer::fixIncompleteType(const Type &T) const {
@@ -160,14 +311,11 @@ std::vector<Fix> IncludeFixer::fixesForSymbols(const SymbolSlab &Syms) const {
     for (const auto &Inc : getRankedIncludes(Sym)) {
       if (auto ToInclude = Inserted(Sym, Inc)) {
         if (ToInclude->second) {
-          auto I = InsertedHeaders.try_emplace(ToInclude->first);
-          if (!I.second)
+          if (!InsertedHeaders.try_emplace(ToInclude->first).second)
             continue;
-          if (auto Edit = Inserter->insert(ToInclude->first))
-            Fixes.push_back(Fix{std::string(llvm::formatv(
-                                    "Add include {0} for symbol {1}{2}",
-                                    ToInclude->first, Sym.Scope, Sym.Name)),
-                                {std::move(*Edit)}});
+          if (auto Fix =
+                  insertHeader(ToInclude->first, (Sym.Scope + Sym.Name).str()))
+            Fixes.push_back(std::move(*Fix));
         }
       } else {
         vlog("Failed to calculate include insertion for {0} into {1}: {2}", Inc,

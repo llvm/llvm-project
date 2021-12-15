@@ -785,6 +785,11 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .libcallFor({s128})
       .minScalar(0, MinFPScalar);
 
+  // TODO: Vector types.
+  getActionDefinitionsBuilder({G_FMAXIMUM, G_FMINIMUM})
+      .legalFor({MinFPScalar, s32, s64})
+      .minScalar(0, MinFPScalar);
+
   // TODO: Libcall support for s128.
   // TODO: s16 should be legal with full FP16 support.
   getActionDefinitionsBuilder({G_LROUND, G_LLROUND})

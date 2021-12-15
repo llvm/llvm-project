@@ -17,7 +17,7 @@ string(REPLACE ";" " " GOOGLE_BENCHMARK_TARGET_FLAGS "${GOOGLE_BENCHMARK_TARGET_
 ExternalProject_Add(google-benchmark
     EXCLUDE_FROM_ALL ON
     PREFIX google-benchmark
-    SOURCE_DIR ${LIBC_SOURCE_DIR}/../llvm/utils/benchmark
+    SOURCE_DIR ${LLVM_THIRD_PARTY_DIR}/benchmark
     INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/google-benchmark
     CMAKE_CACHE_ARGS
         -DBUILD_SHARED_LIBS:BOOL=OFF
@@ -172,11 +172,12 @@ function(add_libc_multi_impl_benchmark name)
   endforeach()
 endfunction()
 
-add_libc_multi_impl_benchmark(memcpy)
-add_libc_multi_impl_benchmark(memset)
+add_libc_multi_impl_benchmark(bcmp)
 add_libc_multi_impl_benchmark(bzero)
 add_libc_multi_impl_benchmark(memcmp)
-add_libc_multi_impl_benchmark(bcmp)
+add_libc_multi_impl_benchmark(memcpy)
+add_libc_multi_impl_benchmark(memmove)
+add_libc_multi_impl_benchmark(memset)
 
 #==============================================================================
 # Google Benchmarking tool
@@ -199,6 +200,7 @@ target_link_libraries(libc.benchmarks.memory_functions.opt_host
   libc.src.string.memcpy_opt_host
   libc.src.string.memset_opt_host
   libc.src.string.bzero_opt_host
+  libc.src.string.memmove_opt_host
   benchmark_main
 )
 

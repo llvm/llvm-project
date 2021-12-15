@@ -31,6 +31,7 @@
 #include "llvm/BinaryFormat/AMDGPUMetadataVerifier.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Demangle/Demangle.h"
+#include "llvm/Object/Archive.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ELFTypes.h"
@@ -548,6 +549,9 @@ public:
     assert(&this->W.getOStream() == &llvm::fouts());
   }
 
+  void printFileSummary(StringRef FileStr, ObjectFile &Obj,
+                        ArrayRef<std::string> InputFilenames,
+                        const Archive *A) override;
   void printFileHeaders() override;
   void printGroupSections() override;
   void printRelocations() override;
@@ -586,14 +590,6 @@ private:
     Field(StringRef S, unsigned Col) : Str(std::string(S)), Column(Col) {}
     Field(unsigned Col) : Column(Col) {}
   };
-
-  template <typename T, typename TEnum>
-  std::string printEnum(T Value, ArrayRef<EnumEntry<TEnum>> EnumValues) const {
-    for (const EnumEntry<TEnum> &EnumItem : EnumValues)
-      if (EnumItem.Value == Value)
-        return std::string(EnumItem.AltName);
-    return to_hexString(Value, false);
-  }
 
   template <typename T, typename TEnum>
   std::string printFlags(T Value, ArrayRef<EnumEntry<TEnum>> EnumValues,
@@ -705,7 +701,25 @@ private:
   void printMipsPLT(const MipsGOTParser<ELFT> &Parser) override;
   void printMipsABIFlags() override;
 
+protected:
   ScopedPrinter &W;
+};
+
+// JSONELFDumper shares most of the same implementation as LLVMELFDumper except
+// it uses a JSONScopedPrinter.
+template <typename ELFT> class JSONELFDumper : public LLVMELFDumper<ELFT> {
+public:
+  LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
+
+  JSONELFDumper(const object::ELFObjectFile<ELFT> &ObjF, ScopedPrinter &Writer)
+      : LLVMELFDumper<ELFT>(ObjF, Writer) {}
+
+  void printFileSummary(StringRef FileStr, ObjectFile &Obj,
+                        ArrayRef<std::string> InputFilenames,
+                        const Archive *A) override;
+
+private:
+  std::unique_ptr<DictScope> FileScope;
 };
 
 } // end anonymous namespace
@@ -717,6 +731,8 @@ static std::unique_ptr<ObjDumper>
 createELFDumper(const ELFObjectFile<ELFT> &Obj, ScopedPrinter &Writer) {
   if (opts::Output == opts::GNU)
     return std::make_unique<GNUELFDumper<ELFT>>(Obj, Writer);
+  else if (opts::Output == opts::JSON)
+    return std::make_unique<JSONELFDumper<ELFT>>(Obj, Writer);
   return std::make_unique<LLVMELFDumper<ELFT>>(Obj, Writer);
 }
 
@@ -3241,6 +3257,16 @@ static const EnumEntry<unsigned> *getObjectFileEnumEntry(unsigned Type) {
   return nullptr;
 }
 
+template <class ELFT>
+void GNUELFDumper<ELFT>::printFileSummary(StringRef FileStr, ObjectFile &Obj,
+                                          ArrayRef<std::string> InputFilenames,
+                                          const Archive *A) {
+  if (InputFilenames.size() > 1 || A) {
+    this->W.startLine() << "\n";
+    this->W.printString("File", FileStr);
+  }
+}
+
 template <class ELFT> void GNUELFDumper<ELFT>::printFileHeaders() {
   const Elf_Ehdr &e = this->Obj.getHeader();
   OS << "ELF Header:\n";
@@ -3249,9 +3275,9 @@ template <class ELFT> void GNUELFDumper<ELFT>::printFileHeaders() {
   for (int i = 0; i < ELF::EI_NIDENT; i++)
     OS << format(" %02x", static_cast<int>(e.e_ident[i]));
   OS << "\n";
-  Str = printEnum(e.e_ident[ELF::EI_CLASS], makeArrayRef(ElfClass));
+  Str = enumToString(e.e_ident[ELF::EI_CLASS], makeArrayRef(ElfClass));
   printFields(OS, "Class:", Str);
-  Str = printEnum(e.e_ident[ELF::EI_DATA], makeArrayRef(ElfDataEncoding));
+  Str = enumToString(e.e_ident[ELF::EI_DATA], makeArrayRef(ElfDataEncoding));
   printFields(OS, "Data:", Str);
   OS.PadToColumn(2u);
   OS << "Version:";
@@ -3260,7 +3286,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printFileHeaders() {
   if (e.e_version == ELF::EV_CURRENT)
     OS << " (current)";
   OS << "\n";
-  Str = printEnum(e.e_ident[ELF::EI_OSABI], makeArrayRef(ElfOSABI));
+  Str = enumToString(e.e_ident[ELF::EI_OSABI], makeArrayRef(ElfOSABI));
   printFields(OS, "OS/ABI:", Str);
   printFields(OS,
               "ABI Version:", std::to_string(e.e_ident[ELF::EI_ABIVERSION]));
@@ -3277,7 +3303,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printFileHeaders() {
   }
   printFields(OS, "Type:", Str);
 
-  Str = printEnum(e.e_machine, makeArrayRef(ElfMachineType));
+  Str = enumToString(e.e_machine, makeArrayRef(ElfMachineType));
   printFields(OS, "Machine:", Str);
   Str = "0x" + to_hexString(e.e_version);
   printFields(OS, "Version:", Str);
@@ -3767,14 +3793,14 @@ void GNUELFDumper<ELFT>::printSymbol(const Elf_Sym &Symbol, unsigned SymIndex,
   unsigned char SymbolType = Symbol.getType();
   if (this->Obj.getHeader().e_machine == ELF::EM_AMDGPU &&
       SymbolType >= ELF::STT_LOOS && SymbolType < ELF::STT_HIOS)
-    Fields[3].Str = printEnum(SymbolType, makeArrayRef(AMDGPUSymbolTypes));
+    Fields[3].Str = enumToString(SymbolType, makeArrayRef(AMDGPUSymbolTypes));
   else
-    Fields[3].Str = printEnum(SymbolType, makeArrayRef(ElfSymbolTypes));
+    Fields[3].Str = enumToString(SymbolType, makeArrayRef(ElfSymbolTypes));
 
   Fields[4].Str =
-      printEnum(Symbol.getBinding(), makeArrayRef(ElfSymbolBindings));
+      enumToString(Symbol.getBinding(), makeArrayRef(ElfSymbolBindings));
   Fields[5].Str =
-      printEnum(Symbol.getVisibility(), makeArrayRef(ElfSymbolVisibilities));
+      enumToString(Symbol.getVisibility(), makeArrayRef(ElfSymbolVisibilities));
 
   if (Symbol.st_other & ~0x3) {
     if (this->Obj.getHeader().e_machine == ELF::EM_AARCH64) {
@@ -3830,14 +3856,14 @@ void GNUELFDumper<ELFT>::printHashedSymbol(const Elf_Sym *Symbol,
   unsigned char SymbolType = Symbol->getType();
   if (this->Obj.getHeader().e_machine == ELF::EM_AMDGPU &&
       SymbolType >= ELF::STT_LOOS && SymbolType < ELF::STT_HIOS)
-    Fields[4].Str = printEnum(SymbolType, makeArrayRef(AMDGPUSymbolTypes));
+    Fields[4].Str = enumToString(SymbolType, makeArrayRef(AMDGPUSymbolTypes));
   else
-    Fields[4].Str = printEnum(SymbolType, makeArrayRef(ElfSymbolTypes));
+    Fields[4].Str = enumToString(SymbolType, makeArrayRef(ElfSymbolTypes));
 
   Fields[5].Str =
-      printEnum(Symbol->getBinding(), makeArrayRef(ElfSymbolBindings));
-  Fields[6].Str =
-      printEnum(Symbol->getVisibility(), makeArrayRef(ElfSymbolVisibilities));
+      enumToString(Symbol->getBinding(), makeArrayRef(ElfSymbolBindings));
+  Fields[6].Str = enumToString(Symbol->getVisibility(),
+                               makeArrayRef(ElfSymbolVisibilities));
   Fields[7].Str = getSymbolSectionNdx(*Symbol, SymIndex, ShndxTable);
   Fields[8].Str =
       this->getFullSymbolName(*Symbol, SymIndex, ShndxTable, StrTable, true);
@@ -4200,7 +4226,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printProgramHeaders() {
   Field Fields[8] = {2,         17,        26,        37 + Bias,
                      48 + Bias, 56 + Bias, 64 + Bias, 68 + Bias};
   OS << "\nElf file type is "
-     << printEnum(Header.e_type, makeArrayRef(ElfObjectFileType)) << "\n"
+     << enumToString(Header.e_type, makeArrayRef(ElfObjectFileType)) << "\n"
      << "Entry point " << format_hex(Header.e_entry, 3) << "\n"
      << "There are " << Header.e_phnum << " program headers,"
      << " starting at offset " << Header.e_phoff << "\n\n"
@@ -5341,6 +5367,13 @@ const NoteType FreeBSDNoteTypes[] = {
      "NT_FREEBSD_FEATURE_CTL (FreeBSD feature control)"},
 };
 
+const NoteType NetBSDCoreNoteTypes[] = {
+    {ELF::NT_NETBSDCORE_PROCINFO,
+     "NT_NETBSDCORE_PROCINFO (procinfo structure)"},
+    {ELF::NT_NETBSDCORE_AUXV, "NT_NETBSDCORE_AUXV (ELF auxiliary vector data)"},
+    {ELF::NT_NETBSDCORE_LWPSTATUS, "PT_LWPSTATUS (ptrace_lwpstatus structure)"},
+};
+
 const NoteType OpenBSDCoreNoteTypes[] = {
     {ELF::NT_OPENBSD_PROCINFO, "NT_OPENBSD_PROCINFO (procinfo structure)"},
     {ELF::NT_OPENBSD_AUXV, "NT_OPENBSD_AUXV (ELF auxiliary vector data)"},
@@ -5460,6 +5493,12 @@ StringRef getNoteTypeName(const typename ELFT::Note &Note, unsigned ELFType) {
     } else {
       return FindNote(FreeBSDNoteTypes);
     }
+  }
+  if (ELFType == ELF::ET_CORE && Name.startswith("NetBSD-CORE")) {
+    StringRef Result = FindNote(NetBSDCoreNoteTypes);
+    if (!Result.empty())
+      return Result;
+    return FindNote(CoreNoteTypes);
   }
   if (Name.startswith("OpenBSD") && ELFType == ELF::ET_CORE) {
     // OpenBSD also places the generic core notes in the OpenBSD namespace.
@@ -6175,7 +6214,7 @@ void GNUELFDumper<ELFT>::printMipsGOT(const MipsGOTParser<ELFT> &Parser) {
       OS.PadToColumn(31 + 2 * Bias);
       OS << to_string(format_hex_no_prefix(Sym.st_value, 8 + Bias));
       OS.PadToColumn(40 + 3 * Bias);
-      OS << printEnum(Sym.getType(), makeArrayRef(ElfSymbolTypes));
+      OS << enumToString(Sym.getType(), makeArrayRef(ElfSymbolTypes));
       OS.PadToColumn(48 + 3 * Bias);
       OS << getSymbolSectionNdx(Sym, &Sym - this->dynamic_symbols().begin(),
                                 ShndxTable);
@@ -6229,7 +6268,7 @@ void GNUELFDumper<ELFT>::printMipsPLT(const MipsGOTParser<ELFT> &Parser) {
       OS.PadToColumn(20 + 2 * Bias);
       OS << to_string(format_hex_no_prefix(Sym.st_value, 8 + Bias));
       OS.PadToColumn(29 + 3 * Bias);
-      OS << printEnum(Sym.getType(), makeArrayRef(ElfSymbolTypes));
+      OS << enumToString(Sym.getType(), makeArrayRef(ElfSymbolTypes));
       OS.PadToColumn(37 + 3 * Bias);
       OS << getSymbolSectionNdx(Sym, &Sym - this->dynamic_symbols().begin(),
                                 ShndxTable);
@@ -6276,10 +6315,10 @@ template <class ELFT> void GNUELFDumper<ELFT>::printMipsABIFlags() {
   OS << "GPR size: " << getMipsRegisterSize(Flags->gpr_size) << "\n";
   OS << "CPR1 size: " << getMipsRegisterSize(Flags->cpr1_size) << "\n";
   OS << "CPR2 size: " << getMipsRegisterSize(Flags->cpr2_size) << "\n";
-  OS << "FP ABI: " << printEnum(Flags->fp_abi, makeArrayRef(ElfMipsFpABIType))
-     << "\n";
+  OS << "FP ABI: "
+     << enumToString(Flags->fp_abi, makeArrayRef(ElfMipsFpABIType)) << "\n";
   OS << "ISA Extension: "
-     << printEnum(Flags->isa_ext, makeArrayRef(ElfMipsISAExtType)) << "\n";
+     << enumToString(Flags->isa_ext, makeArrayRef(ElfMipsISAExtType)) << "\n";
   if (Flags->ases == 0)
     OS << "ASEs: None\n";
   else
@@ -7308,4 +7347,19 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printMipsABIFlags() {
   W.printNumber("CPR2 size", getMipsRegisterSize(Flags->cpr2_size));
   W.printFlags("Flags 1", Flags->flags1, makeArrayRef(ElfMipsFlags1));
   W.printHex("Flags 2", Flags->flags2);
+}
+
+template <class ELFT>
+void JSONELFDumper<ELFT>::printFileSummary(StringRef FileStr, ObjectFile &Obj,
+                                           ArrayRef<std::string> InputFilenames,
+                                           const Archive *A) {
+  FileScope = std::make_unique<DictScope>(this->W, FileStr);
+  DictScope D(this->W, "FileSummary");
+  this->W.printString("File", FileStr);
+  this->W.printString("Format", Obj.getFileFormatName());
+  this->W.printString("Arch", Triple::getArchTypeName(Obj.getArch()));
+  this->W.printString(
+      "AddressSize",
+      std::string(formatv("{0}bit", 8 * Obj.getBytesInAddress())));
+  this->printLoadName();
 }

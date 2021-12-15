@@ -13,6 +13,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
 ; CHECK-EMPTY:
+; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT: loop:
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
 ; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule ir<%iv> vp<[[BTC]]>
@@ -73,6 +74,7 @@ exit:
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
 ; CHECK-EMPTY:
+; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT: loop:
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
 ; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule ir<%iv> vp<[[BTC]]>
@@ -146,6 +148,7 @@ exit:
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
 ; CHECK-EMPTY:
+; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT: loop:
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
 ; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule ir<%iv> vp<[[BTC]]>
@@ -221,6 +224,7 @@ define void @uniform_gep(i64 %k, i16* noalias %A, i16* noalias %B) {
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
 ; CHECK-EMPTY:
+; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT: loop:
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 21, %iv.next
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = WIDEN-CANONICAL-INDUCTION
@@ -305,6 +309,7 @@ define void @pred_cfg1(i32 %k, i32 %j) {
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
 ; CHECK-EMPTY:
+; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT: loop:
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
 ; CHECK-NEXT:   WIDEN ir<%c.1> = icmp ir<%iv>, ir<%j>
@@ -400,6 +405,7 @@ define void @pred_cfg2(i32 %k, i32 %j) {
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
 ; CHECK-EMPTY:
+; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT: loop:
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
 ; CHECK-NEXT:   WIDEN ir<%mul> = mul ir<%iv>, ir<10>
@@ -510,6 +516,7 @@ define void @pred_cfg3(i32 %k, i32 %j) {
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
 ; CHECK-EMPTY:
+; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT: loop:
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
 ; CHECK-NEXT:   WIDEN ir<%mul> = mul ir<%iv>, ir<10>
@@ -614,6 +621,7 @@ define void @merge_3_replicate_region(i32 %k, i32 %j) {
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
 ; CHECK-EMPTY:
+; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT: loop:
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
 ; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule ir<%iv> vp<[[BTC]]>
@@ -723,6 +731,7 @@ define void @update_2_uses_in_same_recipe_in_merged_block(i32 %k) {
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
 ; CHECK-EMPTY:
+; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT: loop:
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
 ; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule ir<%iv> vp<[[BTC]]>
@@ -784,6 +793,7 @@ define void @recipe_in_merge_candidate_used_by_first_order_recurrence(i32 %k) {
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
 ; CHECK-EMPTY:
+; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT: loop:
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
 ; CHECK-NEXT:   FIRST-ORDER-RECURRENCE-PHI ir<%for> = phi ir<0>, ir<%lv.a>
@@ -860,6 +870,7 @@ exit:
 define void @update_multiple_users(i16* noalias %src, i8* noalias %dst, i1 %c) {
 ; CHECK-LABEL: LV: Checking a loop in "update_multiple_users"
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT: loop.header:
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
 ; CHECK-NEXT: Successor(s): loop.then
@@ -926,6 +937,7 @@ exit:
 define void @sinking_requires_duplication(float* %addr) {
 ; CHECK-LABEL: LV: Checking a loop in "sinking_requires_duplication"
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT: loop.header:
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
 ; CHECK-NEXT:   CLONE ir<%gep> = getelementptr ir<%addr>, ir<%iv>

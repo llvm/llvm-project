@@ -20,7 +20,7 @@
 
 namespace llvm {
 class Record;
-} // end namespace llvm
+} // namespace llvm
 
 namespace mlir {
 namespace tblgen {
@@ -77,7 +77,7 @@ struct AppliedConstraint {
   std::vector<std::string> entities;
 };
 
-} // end namespace tblgen
-} // end namespace mlir
+} // namespace tblgen
+} // namespace mlir
 
 #endif // MLIR_TABLEGEN_CONSTRAINT_H_

@@ -1111,7 +1111,7 @@ struct TestType {
     static_assert(!TC.MatchesArgs<TestType *>, "");
   }
 
-  CoroMemberTag test_sanity(int *) const {
+  CoroMemberTag test_asserts(int *) const {
     auto TC = co_yield 0;
     static_assert(TC.MatchesArgs<const TestType &>, ""); // expected-error {{static_assert failed}}
     static_assert(TC.MatchesArgs<const TestType &>, ""); // expected-error {{static_assert failed}}
@@ -1203,7 +1203,7 @@ template CoroMemberTag TestType::test_static_template<void>(const char *volatile
 template <class... Args>
 struct DepTestType {
 
-  CoroMemberTag test_sanity(int *) const {
+  CoroMemberTag test_asserts(int *) const {
     auto TC = co_yield 0;
     static_assert(TC.template MatchesArgs<const DepTestType &>, ""); // expected-error {{static_assert failed}}
     static_assert(TC.template MatchesArgs<>, ""); // expected-error {{static_assert failed}}

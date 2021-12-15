@@ -156,5 +156,31 @@ bool VPlanVerifier::verifyPlanIsValid(const VPlan &Plan) {
       RecipeI++;
     }
   }
+
+  const VPRegionBlock *TopRegion = cast<VPRegionBlock>(Plan.getEntry());
+  const VPBasicBlock *Entry = dyn_cast<VPBasicBlock>(TopRegion->getEntry());
+  if (!Entry) {
+    errs() << "VPlan entry block is not a VPBasicBlock\n";
+    return false;
+  }
+  const VPBasicBlock *Exit = dyn_cast<VPBasicBlock>(TopRegion->getExit());
+  if (!Exit) {
+    errs() << "VPlan exit block is not a VPBasicBlock\n";
+    return false;
+  }
+
+  for (const VPRegionBlock *Region :
+       VPBlockUtils::blocksOnly<const VPRegionBlock>(
+           depth_first(VPBlockRecursiveTraversalWrapper<const VPBlockBase *>(
+               Plan.getEntry())))) {
+    if (Region->getEntry()->getNumPredecessors() != 0) {
+      errs() << "region entry block has predecessors\n";
+      return false;
+    }
+    if (Region->getExit()->getNumSuccessors() != 0) {
+      errs() << "region exit block has successors\n";
+      return false;
+    }
+  }
   return true;
 }

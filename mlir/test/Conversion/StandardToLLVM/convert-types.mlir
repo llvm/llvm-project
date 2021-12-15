@@ -13,8 +13,12 @@ func private @ptr_ptr() -> !llvm.ptr<!llvm.ptr<!test.smpla>>
 func private @struct_ptr() -> !llvm.struct<(ptr<!test.smpla>)>
 
 // CHECK-LABEL: @named_struct_ptr()
-// CHECK: !llvm.struct<"named", (ptr<!test.smpla>)> 
+// CHECK: !llvm.struct<"_Converted_named", (ptr<i42>)>
 func private @named_struct_ptr() -> !llvm.struct<"named", (ptr<!test.smpla>)>
+
+// CHECK-LABEL: @named_no_convert
+// CHECK: !llvm.struct<"no_convert", (ptr<struct<"no_convert">>)>
+func private @named_no_convert() -> !llvm.struct<"no_convert", (ptr<struct<"no_convert">>)>
 
 // CHECK-LABEL: @array_ptr()
 // CHECK: !llvm.array<10 x ptr<i42>> 
@@ -26,6 +30,6 @@ func private @func() -> !llvm.ptr<!llvm.func<!test.smpla (!test.smpla)>>
 
 // TODO: support conversion of recursive types in the conversion infra.
 // CHECK-LABEL: @named_recursive()
-// CHECK: !llvm.struct<"recursive", (ptr<!test.smpla>, ptr<struct<"recursive">>)> 
+// CHECK: !llvm.struct<"_Converted_recursive", (ptr<i42>, ptr<struct<"_Converted_recursive">>)>
 func private @named_recursive() -> !llvm.struct<"recursive", (ptr<!test.smpla>, ptr<struct<"recursive">>)>
 

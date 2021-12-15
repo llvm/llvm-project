@@ -1222,22 +1222,6 @@ Platform::CreateArchList(llvm::ArrayRef<llvm::Triple::ArchType> archs,
   return list;
 }
 
-bool Platform::GetSupportedArchitectureAtIndex(uint32_t idx, ArchSpec &arch) {
-  const auto &archs = GetSupportedArchitectures();
-  if (idx >= archs.size())
-    return false;
-  arch = archs[idx];
-  return true;
-}
-
-std::vector<ArchSpec> Platform::GetSupportedArchitectures() {
-  std::vector<ArchSpec> result;
-  ArchSpec arch;
-  for (uint32_t idx = 0; GetSupportedArchitectureAtIndex(idx, arch); ++idx)
-    result.push_back(arch);
-  return result;
-}
-
 /// Lets a platform answer if it is compatible with a given
 /// architecture and the target triple contained within.
 bool Platform::IsCompatibleArchitecture(const ArchSpec &arch,
@@ -1563,28 +1547,20 @@ Status
 Platform::GetCachedExecutable(ModuleSpec &module_spec,
                               lldb::ModuleSP &module_sp,
                               const FileSpecList *module_search_paths_ptr) {
-  const auto platform_spec = module_spec.GetFileSpec();
-  const auto error =
-      LoadCachedExecutable(module_spec, module_sp, module_search_paths_ptr);
-  if (error.Success()) {
-    module_spec.GetFileSpec() = module_sp->GetFileSpec();
-    module_spec.GetPlatformFileSpec() = platform_spec;
-  }
-
-  return error;
-}
-
-Status
-Platform::LoadCachedExecutable(const ModuleSpec &module_spec,
-                               lldb::ModuleSP &module_sp,
-                               const FileSpecList *module_search_paths_ptr) {
-  return GetRemoteSharedModule(
+  FileSpec platform_spec = module_spec.GetFileSpec();
+  Status error = GetRemoteSharedModule(
       module_spec, nullptr, module_sp,
       [&](const ModuleSpec &spec) {
         return ResolveRemoteExecutable(spec, module_sp,
                                        module_search_paths_ptr);
       },
       nullptr);
+  if (error.Success()) {
+    module_spec.GetFileSpec() = module_sp->GetFileSpec();
+    module_spec.GetPlatformFileSpec() = platform_spec;
+  }
+
+  return error;
 }
 
 Status Platform::GetRemoteSharedModule(const ModuleSpec &module_spec,

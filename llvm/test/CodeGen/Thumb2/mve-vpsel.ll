@@ -37,6 +37,27 @@ entry:
   ret <4 x i32> %1
 }
 
+define arm_aapcs_vfpcc <2 x i64> @vpsel_i64(<2 x i64> %mask, <2 x i64> %src1, <2 x i64> %src2) {
+; CHECK-LABEL: vpsel_i64:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov r0, r1, d0
+; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    vmov r12, r3, d1
+; CHECK-NEXT:    orrs r0, r1
+; CHECK-NEXT:    csetm r0, ne
+; CHECK-NEXT:    bfi r2, r0, #0, #8
+; CHECK-NEXT:    orrs.w r0, r12, r3
+; CHECK-NEXT:    csetm r0, ne
+; CHECK-NEXT:    bfi r2, r0, #8, #8
+; CHECK-NEXT:    vmsr p0, r2
+; CHECK-NEXT:    vpsel q0, q1, q2
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = icmp ne <2 x i64> %mask, zeroinitializer
+  %1 = select <2 x i1> %0, <2 x i64> %src1, <2 x i64> %src2
+  ret <2 x i64> %1
+}
+
 define arm_aapcs_vfpcc <8 x half> @vpsel_f16(<8 x i16> %mask, <8 x half> %src1, <8 x half> %src2) {
 ; CHECK-LABEL: vpsel_f16:
 ; CHECK:       @ %bb.0: @ %entry
@@ -59,6 +80,27 @@ entry:
   %0 = icmp ne <4 x i32> %mask, zeroinitializer
   %1 = select <4 x i1> %0, <4 x float> %src1, <4 x float> %src2
   ret <4 x float> %1
+}
+
+define arm_aapcs_vfpcc <2 x double> @vpsel_f64(<2 x i64> %mask, <2 x double> %src1, <2 x double> %src2) {
+; CHECK-LABEL: vpsel_f64:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov r0, r1, d0
+; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    vmov r12, r3, d1
+; CHECK-NEXT:    orrs r0, r1
+; CHECK-NEXT:    csetm r0, ne
+; CHECK-NEXT:    bfi r2, r0, #0, #8
+; CHECK-NEXT:    orrs.w r0, r12, r3
+; CHECK-NEXT:    csetm r0, ne
+; CHECK-NEXT:    bfi r2, r0, #8, #8
+; CHECK-NEXT:    vmsr p0, r2
+; CHECK-NEXT:    vpsel q0, q1, q2
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = icmp ne <2 x i64> %mask, zeroinitializer
+  %1 = select <2 x i1> %0, <2 x double> %src1, <2 x double> %src2
+  ret <2 x double> %1
 }
 
 define arm_aapcs_vfpcc <4 x i32> @foo(<4 x i32> %vec.ind) {

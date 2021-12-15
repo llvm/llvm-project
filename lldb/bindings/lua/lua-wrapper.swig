@@ -4,47 +4,28 @@ template <typename T>
 void
 PushSBClass(lua_State* L, T* obj);
 
-%}
-
-%runtime %{
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-void LLDBSwigLuaCallLuaLogOutputCallback(const char *str, void *baton);
-int LLDBSwigLuaCloseFileHandle(lua_State *L);
-
-#ifdef __cplusplus
-}
-#endif
-%}
-
-%wrapper %{
-
 // This function is called from Lua::CallBreakpointCallback
-SWIGEXPORT llvm::Expected<bool>
-LLDBSwigLuaBreakpointCallbackFunction
+llvm::Expected<bool>
+lldb_private::LLDBSwigLuaBreakpointCallbackFunction
 (
    lua_State *L,
    lldb::StackFrameSP stop_frame_sp,
    lldb::BreakpointLocationSP bp_loc_sp,
-   StructuredDataImpl *extra_args_impl
+   const StructuredDataImpl &extra_args_impl
 )
 {
    lldb::SBFrame sb_frame(stop_frame_sp);
    lldb::SBBreakpointLocation sb_bp_loc(bp_loc_sp);
    int nargs = 2;
 
-   llvm::Optional<lldb::SBStructuredData> extra_args;
-   if (extra_args_impl)
-      extra_args = lldb::SBStructuredData(extra_args_impl);
+   lldb::SBStructuredData extra_args(extra_args_impl);
 
    // Push the Lua wrappers
    PushSBClass(L, &sb_frame);
    PushSBClass(L, &sb_bp_loc);
 
-   if (extra_args.hasValue()) {
-      PushSBClass(L, extra_args.getPointer());
+   if (extra_args.IsValid()) {
+      PushSBClass(L, &extra_args);
       nargs++;
    }
 
@@ -67,8 +48,8 @@ LLDBSwigLuaBreakpointCallbackFunction
 }
 
 // This function is called from Lua::CallWatchpointCallback
-SWIGEXPORT llvm::Expected<bool>
-LLDBSwigLuaWatchpointCallbackFunction
+llvm::Expected<bool>
+lldb_private::LLDBSwigLuaWatchpointCallbackFunction
 (
    lua_State *L,
    lldb::StackFrameSP stop_frame_sp,
@@ -101,7 +82,7 @@ LLDBSwigLuaWatchpointCallbackFunction
    return stop;
 }
 
-SWIGEXPORT void
+static void
 LLDBSwigLuaCallLuaLogOutputCallback(const char *str, void *baton) {
    lua_State *L = (lua_State *)baton;
 
@@ -113,7 +94,7 @@ LLDBSwigLuaCallLuaLogOutputCallback(const char *str, void *baton) {
    lua_pcall(L, 1, 0, 0);
 }
 
-int LLDBSwigLuaCloseFileHandle(lua_State *L) {
+static int LLDBSwigLuaCloseFileHandle(lua_State *L) {
    return luaL_error(L, "You cannot close a file handle used by lldb.");
 }
 

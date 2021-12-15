@@ -224,17 +224,47 @@
 // CHECK-SPIRV64-DAG: #define __SPIRV64__ 1
 // CHECK-SPIRV64-NOT: #define __SPIRV32__ 1
 
-// RUN: %clang_cc1 %s -E -dM -o - -x hip -triple amdgcn-amd-amdhsa      \
+// RUN: %clang_cc1 %s -E -dM -o - -x hip -triple x86_64-unknown-linux-gnu \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-HIP
-// CHECK-HIP-NOT: #define __CUDA_ARCH__
 // CHECK-HIP: #define __HIPCC__ 1
-// CHECK-HIP-NOT: #define __HIP_DEVICE_COMPILE__ 1
 // CHECK-HIP: #define __HIP__ 1
+
+// RUN: %clang_cc1 %s -E -dM -o - -x cuda -triple x86_64-unknown-linux-gnu \
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-CUDA-NEG
+// CHECK-CUDA-NEG-NOT: #define __CLANG_RDC__ 1
+
+// RUN: %clang_cc1 %s -E -dM -o - -x hip -triple x86_64-unknown-linux-gnu \
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-HIP-NEG
+// CHECK-HIP-NEG-NOT: #define __CUDA_ARCH__
+// CHECK-HIP-NEG-NOT: #define __HIP_DEVICE_COMPILE__ 1
+// CHECK-HIP-NEG-NOT: #define __CLANG_RDC__ 1
 
 // RUN: %clang_cc1 %s -E -dM -o - -x hip -triple amdgcn-amd-amdhsa \
 // RUN:   -fcuda-is-device \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-HIP-DEV
-// CHECK-HIP-DEV-NOT: #define __CUDA_ARCH__
 // CHECK-HIP-DEV: #define __HIPCC__ 1
 // CHECK-HIP-DEV: #define __HIP_DEVICE_COMPILE__ 1
 // CHECK-HIP-DEV: #define __HIP__ 1
+
+// RUN: %clang_cc1 %s -E -dM -o - -x cuda -triple nvptx \
+// RUN:   -fcuda-is-device \
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-CUDA-DEV-NEG
+// CHECK-CUDA-DEV-NEG-NOT: #define __CLANG_RDC__ 1
+
+// RUN: %clang_cc1 %s -E -dM -o - -x hip -triple amdgcn-amd-amdhsa \
+// RUN:   -fcuda-is-device \
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-HIP-DEV-NEG
+// CHECK-HIP-DEV-NEG-NOT: #define __CUDA_ARCH__
+// CHECK-HIP-DEV-NEG-NOT: #define __CLANG_RDC__ 1
+
+// RUN: %clang_cc1 %s -E -dM -o - -x cuda -triple x86_64-unknown-linux-gnu \
+// RUN:   -fgpu-rdc | FileCheck %s --check-prefix=CHECK-RDC
+// RUN: %clang_cc1 %s -E -dM -o - -x cuda -triple nvptx \
+// RUN:   -fgpu-rdc -fcuda-is-device \
+// RUN:   | FileCheck %s --check-prefix=CHECK-RDC
+// RUN: %clang_cc1 %s -E -dM -o - -x hip -triple x86_64-unknown-linux-gnu \
+// RUN:   -fgpu-rdc | FileCheck %s --check-prefix=CHECK-RDC
+// RUN: %clang_cc1 %s -E -dM -o - -x hip -triple amdgcn-amd-amdhsa \
+// RUN:   -fgpu-rdc -fcuda-is-device \
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-RDC
+// CHECK-RDC: #define __CLANG_RDC__ 1

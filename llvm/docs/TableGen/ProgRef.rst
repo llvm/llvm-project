@@ -1398,7 +1398,7 @@ abstract records and so go through the same steps.
 
 5. Make a pass over all the fields to resolve any inter-field references.
 
-6. Add the record to the master record list.
+6. Add the record to the final record list.
 
 Because references between fields are resolved (step 5) after ``let`` bindings are
 applied (step 3), the ``let`` statement has unusual power. For example:

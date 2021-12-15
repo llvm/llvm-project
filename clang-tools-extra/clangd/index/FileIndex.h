@@ -115,8 +115,7 @@ public:
   /// Update preamble symbols of file \p Path with all declarations in \p AST
   /// and macros in \p PP.
   void updatePreamble(PathRef Path, llvm::StringRef Version, ASTContext &AST,
-                      std::shared_ptr<Preprocessor> PP,
-                      const CanonicalIncludes &Includes);
+                      Preprocessor &PP, const CanonicalIncludes &Includes);
 
   /// Update symbols and references from main file \p Path with
   /// `indexMainDecls`.
@@ -163,7 +162,7 @@ SlabTuple indexMainDecls(ParsedAST &AST);
 /// Index declarations from \p AST and macros from \p PP that are declared in
 /// included headers.
 SlabTuple indexHeaderSymbols(llvm::StringRef Version, ASTContext &AST,
-                             std::shared_ptr<Preprocessor> PP,
+                             Preprocessor &PP,
                              const CanonicalIncludes &Includes);
 
 /// Takes slabs coming from a TU (multiple files) and shards them per

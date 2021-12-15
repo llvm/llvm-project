@@ -110,19 +110,6 @@ TEST(isRowMajorMatmul, TooManyMaps) {
   EXPECT_THAT(maps, Not(Truly(isRowMajorMatmul)));
 }
 
-TEST(isRowMajorMatmul, TooFewDims) {
-  MLIRContext context;
-
-  AffineExpr m, n, k;
-  bindDims(&context, m, n, k);
-  auto mapA = AffineMapAttr::get(AffineMap::get(3, 0, {m, k}, &context));
-  auto mapB = AffineMapAttr::get(AffineMap::get(2, 0, {k, n}, &context));
-  auto mapC = AffineMapAttr::get(AffineMap::get(3, 0, {m, n}, &context));
-  auto maps = ArrayAttr::get(&context, {mapA, mapB, mapC});
-
-  EXPECT_THAT(maps, Not(Truly(isRowMajorMatmul)));
-}
-
 TEST(isRowMajorMatmul, TooFewOutputs) {
   MLIRContext context;
 

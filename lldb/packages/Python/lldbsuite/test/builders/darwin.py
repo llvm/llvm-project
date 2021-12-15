@@ -79,14 +79,22 @@ class BuilderDarwin(Builder):
         if configuration.dsymutil:
             args['DSYMUTIL'] = configuration.dsymutil
 
+        if configuration.apple_sdk and 'internal' in configuration.apple_sdk:
+            sdk_root = lldbutil.get_xcode_sdk_root(configuration.apple_sdk)
+            if sdk_root:
+                private_frameworks = os.path.join(sdk_root, 'System',
+                                                  'Library',
+                                                  'PrivateFrameworks')
+                args['FRAMEWORK_INCLUDES'] = '-F{}'.format(private_frameworks)
+
         operating_system, env = get_os_and_env()
         if operating_system and operating_system != "macosx":
             builder_dir = os.path.dirname(os.path.abspath(__file__))
             test_dir = os.path.dirname(builder_dir)
             if env == "simulator":
-              entitlements_file = 'entitlements-simulator.plist'
+                entitlements_file = 'entitlements-simulator.plist'
             else:
-              entitlements_file = 'entitlements.plist'
+                entitlements_file = 'entitlements.plist'
             entitlements = os.path.join(test_dir, 'make', entitlements_file)
             args['CODESIGN'] = 'codesign --entitlements {}'.format(
                 entitlements)

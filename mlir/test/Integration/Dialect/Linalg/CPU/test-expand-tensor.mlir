@@ -34,6 +34,6 @@ func @main() {
 func private @print_memref_f32(%ptr : tensor<*xf32>)
 
 func @expand_dynamic_shape(%arg0 : tensor<2x?x?xf32>) -> tensor<2x2x?x1x?xf32> {
-  %0 = linalg.tensor_expand_shape %arg0 [[0], [1, 2, 3], [4]]: tensor<2x?x?xf32> into tensor<2x2x?x1x?xf32>
+  %0 = tensor.expand_shape %arg0 [[0], [1, 2, 3], [4]]: tensor<2x?x?xf32> into tensor<2x2x?x1x?xf32>
   return %0 : tensor<2x2x?x1x?xf32>
 }

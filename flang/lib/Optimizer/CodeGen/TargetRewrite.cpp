@@ -100,6 +100,10 @@ public:
       } else if (auto dispatch = dyn_cast<DispatchOp>(op)) {
         if (!hasPortableSignature(dispatch.getFunctionType()))
           convertCallOp(dispatch);
+      } else if (auto addr = dyn_cast<AddrOfOp>(op)) {
+        if (addr.getType().isa<mlir::FunctionType>() &&
+            !hasPortableSignature(addr.getType()))
+          convertAddrOp(addr);
       }
     });
 
@@ -317,6 +321,55 @@ public:
     else
       for (auto &tup : specifics->complexArgumentType(cmplx.getElementType()))
         newInTys.push_back(std::get<mlir::Type>(tup));
+  }
+
+  /// Taking the address of a function. Modify the signature as needed.
+  void convertAddrOp(AddrOfOp addrOp) {
+    rewriter->setInsertionPoint(addrOp);
+    auto addrTy = addrOp.getType().cast<mlir::FunctionType>();
+    llvm::SmallVector<mlir::Type> newResTys;
+    llvm::SmallVector<mlir::Type> newInTys;
+    for (mlir::Type ty : addrTy.getResults()) {
+      llvm::TypeSwitch<mlir::Type>(ty)
+          .Case<fir::ComplexType>([&](fir::ComplexType ty) {
+            lowerComplexSignatureRes(ty, newResTys, newInTys);
+          })
+          .Case<mlir::ComplexType>([&](mlir::ComplexType ty) {
+            lowerComplexSignatureRes(ty, newResTys, newInTys);
+          })
+          .Default([&](mlir::Type ty) { newResTys.push_back(ty); });
+    }
+    llvm::SmallVector<mlir::Type> trailingInTys;
+    for (mlir::Type ty : addrTy.getInputs()) {
+      llvm::TypeSwitch<mlir::Type>(ty)
+          .Case<BoxCharType>([&](BoxCharType box) {
+            if (noCharacterConversion) {
+              newInTys.push_back(box);
+            } else {
+              for (auto &tup : specifics->boxcharArgumentType(box.getEleTy())) {
+                auto attr = std::get<CodeGenSpecifics::Attributes>(tup);
+                auto argTy = std::get<mlir::Type>(tup);
+                llvm::SmallVector<mlir::Type> &vec =
+                    attr.isAppend() ? trailingInTys : newInTys;
+                vec.push_back(argTy);
+              }
+            }
+          })
+          .Case<fir::ComplexType>([&](fir::ComplexType ty) {
+            lowerComplexSignatureArg(ty, newInTys);
+          })
+          .Case<mlir::ComplexType>([&](mlir::ComplexType ty) {
+            lowerComplexSignatureArg(ty, newInTys);
+          })
+          .Default([&](mlir::Type ty) { newInTys.push_back(ty); });
+    }
+    // append trailing input types
+    newInTys.insert(newInTys.end(), trailingInTys.begin(), trailingInTys.end());
+    // replace this op with a new one with the updated signature
+    auto newTy = rewriter->getFunctionType(newInTys, newResTys);
+    auto newOp =
+        rewriter->create<AddrOfOp>(addrOp.getLoc(), newTy, addrOp.symbol());
+    replaceOp(addrOp, newOp.getResult());
   }
 
   /// Convert the type signatures on all the functions present in the module.

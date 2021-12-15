@@ -165,7 +165,7 @@ define <2 x i64> @test_demanded_elts_pmuludq_128(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = and <2 x i64> [[TMP3]], <i64 4294967295, i64 poison>
 ; CHECK-NEXT:    [[TMP6:%.*]] = and <2 x i64> [[TMP4]], <i64 4294967295, i64 poison>
-; CHECK-NEXT:    [[TMP7:%.*]] = mul <2 x i64> [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = mul nuw <2 x i64> [[TMP5]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i64> [[TMP7]], <2 x i64> undef, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i64> [[TMP8]]
 ;

@@ -250,4 +250,4 @@ TEST(SparseElementsAttrTest, GetZero) {
   EXPECT_TRUE(zeroStringValue.getType() == stringTy);
 }
 
-} // end namespace
+} // namespace

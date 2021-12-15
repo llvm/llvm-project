@@ -8,13 +8,16 @@
 
 #include "IncludeCleaner.h"
 #include "Config.h"
+#include "Headers.h"
 #include "ParsedAST.h"
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "support/Logger.h"
 #include "support/Trace.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/Syntax/Tokens.h"
@@ -30,7 +33,9 @@ namespace {
 class ReferencedLocationCrawler
     : public RecursiveASTVisitor<ReferencedLocationCrawler> {
 public:
-  ReferencedLocationCrawler(ReferencedLocations &Result) : Result(Result) {}
+  ReferencedLocationCrawler(ReferencedLocations &Result,
+                            const SourceManager &SM)
+      : Result(Result), SM(SM) {}
 
   bool VisitDeclRefExpr(DeclRefExpr *DRE) {
     add(DRE->getDecl());
@@ -104,12 +109,34 @@ public:
     return true;
   }
 
+  // When the overload is not resolved yet, mark all candidates as used.
+  bool VisitOverloadExpr(OverloadExpr *E) {
+    for (const auto *ResolutionDecl : E->decls())
+      add(ResolutionDecl);
+    return true;
+  }
+
 private:
   using Base = RecursiveASTVisitor<ReferencedLocationCrawler>;
 
   void add(const Decl *D) {
     if (!D || !isNew(D->getCanonicalDecl()))
       return;
+    // Special case RecordDecls, as it is common for them to be forward
+    // declared multiple times. The most common cases are:
+    // - Definition available in TU, only mark that one as usage. The rest is
+    //   likely to be unnecessary. This might result in false positives when an
+    //   internal definition is visible.
+    // - There's a forward declaration in the main file, no need for other
+    //   redecls.
+    if (const auto *RD = llvm::dyn_cast<RecordDecl>(D)) {
+      if (const auto *Definition = RD->getDefinition()) {
+        Result.insert(Definition->getLocation());
+        return;
+      }
+      if (SM.isInMainFile(RD->getMostRecentDecl()->getLocation()))
+        return;
+    }
     for (const Decl *Redecl : D->redecls())
       Result.insert(Redecl->getLocation());
   }
@@ -118,6 +145,7 @@ private:
 
   ReferencedLocations &Result;
   llvm::DenseSet<const void *> Visited;
+  const SourceManager &SM;
 };
 
 // Given a set of referenced FileIDs, determines all the potentially-referenced
@@ -195,7 +223,7 @@ bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST) {
   // headers are likely to be the Standard Library headers. Until we have a
   // good support for umbrella headers and Standard Library headers, don't warn
   // about them.
-  if (Inc.Written.front() == '<')
+  if (Inc.Written.front() == '<' || Inc.BehindPragmaKeep)
     return false;
   // Headers without include guards have side effects and are not
   // self-contained, skip them.
@@ -213,12 +241,37 @@ bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST) {
   return true;
 }
 
+// In case symbols are coming from non self-contained header, we need to find
+// its first includer that is self-contained. This is the header users can
+// include, so it will be responsible for bringing the symbols from given
+// header into the scope.
+FileID headerResponsible(FileID ID, const SourceManager &SM,
+                         const IncludeStructure &Includes) {
+  // Unroll the chain of non self-contained headers until we find the one that
+  // can be included.
+  for (const FileEntry *FE = SM.getFileEntryForID(ID); ID != SM.getMainFileID();
+       FE = SM.getFileEntryForID(ID)) {
+    // If FE is nullptr, we consider it to be the responsible header.
+    if (!FE)
+      break;
+    auto HID = Includes.getID(FE);
+    assert(HID && "We're iterating over headers already existing in "
+                  "IncludeStructure");
+    if (Includes.isSelfContained(*HID))
+      break;
+    // The header is not self-contained: put the responsibility for its symbols
+    // on its includer.
+    ID = SM.getFileID(SM.getIncludeLoc(ID));
+  }
+  return ID;
+}
+
 } // namespace
 
 ReferencedLocations findReferencedLocations(ParsedAST &AST) {
   trace::Span Tracer("IncludeCleaner::findReferencedLocations");
   ReferencedLocations Result;
-  ReferencedLocationCrawler Crawler(Result);
+  ReferencedLocationCrawler Crawler(Result, AST.getSourceManager());
   Crawler.TraverseAST(AST.getASTContext());
   findReferencedMacros(AST, Result);
   return Result;
@@ -226,20 +279,27 @@ ReferencedLocations findReferencedLocations(ParsedAST &AST) {
 
 llvm::DenseSet<FileID>
 findReferencedFiles(const llvm::DenseSet<SourceLocation> &Locs,
-                    const SourceManager &SM) {
+                    const IncludeStructure &Includes, const SourceManager &SM) {
   std::vector<SourceLocation> Sorted{Locs.begin(), Locs.end()};
   llvm::sort(Sorted); // Group by FileID.
-  ReferencedFiles Result(SM);
+  ReferencedFiles Files(SM);
   for (auto It = Sorted.begin(); It < Sorted.end();) {
     FileID FID = SM.getFileID(*It);
-    Result.add(FID, *It);
+    Files.add(FID, *It);
     // Cheaply skip over all the other locations from the same FileID.
     // This avoids lots of redundant Loc->File lookups for the same file.
     do
       ++It;
     while (It != Sorted.end() && SM.isInFileID(*It, FID));
   }
-  return std::move(Result.Files);
+  // If a header is not self-contained, we consider its symbols a logical part
+  // of the including file. Therefore, mark the parents of all used
+  // non-self-contained FileIDs as used. Perform this on FileIDs rather than
+  // HeaderIDs, as each inclusion of a non-self-contained file is distinct.
+  llvm::DenseSet<FileID> Result;
+  for (FileID ID : Files.Files)
+    Result.insert(headerResponsible(ID, SM, Includes));
+  return Result;
 }
 
 std::vector<const Inclusion *>
@@ -296,12 +356,8 @@ std::vector<const Inclusion *> computeUnusedIncludes(ParsedAST &AST) {
   const auto &SM = AST.getSourceManager();
 
   auto Refs = findReferencedLocations(AST);
-  // FIXME(kirillbobyrev): Attribute the symbols from non self-contained
-  // headers to their parents while the information about respective
-  // SourceLocations and FileIDs is not lost. It is not possible to do that
-  // later when non-guarded headers included multiple times will get same
-  // HeaderID.
-  auto ReferencedFileIDs = findReferencedFiles(Refs, SM);
+  auto ReferencedFileIDs = findReferencedFiles(Refs, AST.getIncludeStructure(),
+                                               AST.getSourceManager());
   auto ReferencedHeaders =
       translateToHeaderIDs(ReferencedFileIDs, AST.getIncludeStructure(), SM);
   return getUnused(AST, ReferencedHeaders);
@@ -309,12 +365,12 @@ std::vector<const Inclusion *> computeUnusedIncludes(ParsedAST &AST) {
 
 std::vector<Diag> issueUnusedIncludesDiagnostics(ParsedAST &AST,
                                                  llvm::StringRef Code) {
-  trace::Span Tracer("IncludeCleaner::issueUnusedIncludesDiagnostics");
   const Config &Cfg = Config::current();
   if (Cfg.Diagnostics.UnusedIncludes != Config::UnusedIncludesPolicy::Strict ||
       Cfg.Diagnostics.SuppressAll ||
       Cfg.Diagnostics.Suppress.contains("unused-includes"))
     return {};
+  trace::Span Tracer("IncludeCleaner::issueUnusedIncludesDiagnostics");
   std::vector<Diag> Result;
   std::string FileName =
       AST.getSourceManager()

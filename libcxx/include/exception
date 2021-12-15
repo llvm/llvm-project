@@ -328,6 +328,6 @@ rethrow_if_nested(const _Ep&,
 {
 }
 
-}  // std
+} // namespace std
 
 #endif // _LIBCPP_EXCEPTION

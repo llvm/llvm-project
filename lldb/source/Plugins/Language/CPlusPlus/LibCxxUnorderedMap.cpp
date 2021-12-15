@@ -62,9 +62,7 @@ lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
 
 size_t lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
     CalculateNumChildren() {
-  if (m_num_elements != UINT32_MAX)
-    return m_num_elements;
-  return 0;
+  return m_num_elements;
 }
 
 lldb::ValueObjectSP lldb_private::formatters::
@@ -160,7 +158,7 @@ lldb::ValueObjectSP lldb_private::formatters::
 
 bool lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
     Update() {
-  m_num_elements = UINT32_MAX;
+  m_num_elements = 0;
   m_next_element = nullptr;
   m_elements_cache.clear();
   ValueObjectSP table_sp =
@@ -195,8 +193,13 @@ bool lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
 
   if (!num_elements_sp)
     return false;
-  m_num_elements = num_elements_sp->GetValueAsUnsigned(0);
+
   m_tree = table_sp->GetChildAtNamePath(next_path).get();
+  if (m_tree == nullptr)
+    return false;
+
+  m_num_elements = num_elements_sp->GetValueAsUnsigned(0);
+
   if (m_num_elements > 0)
     m_next_element =
         table_sp->GetChildAtNamePath(next_path).get();

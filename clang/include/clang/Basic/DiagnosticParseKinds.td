@@ -1503,6 +1503,15 @@ def warn_pragma_force_cuda_host_device_bad_arg : Warning<
 def err_pragma_cannot_end_force_cuda_host_device : Error<
   "force_cuda_host_device end pragma without matching "
   "force_cuda_host_device begin">;
+
+def warn_ext_int_deprecated : Warning<
+  "'_ExtInt' is deprecated; use '_BitInt' instead">, InGroup<DeprecatedType>;
+def ext_bit_int : Extension<
+  "'_BitInt' in %select{C17 and earlier|C++}0 is a Clang extension">,
+  InGroup<DiagGroup<"bit-int-extension">>;
+def warn_c17_compat_bit_int : Warning<
+  "'_BitInt' is incompatible with C standards before C2x">,
+  InGroup<CPre2xCompat>, DefaultIgnore;
 } // end of Parse Issue category.
 
 let CategoryName = "Modules Issue" in {
@@ -1548,6 +1557,9 @@ def note_meant_to_use_typename : Note<
 let CategoryName = "Coroutines Issue" in {
 def err_for_co_await_not_range_for : Error<
   "'co_await' modifier can only be applied to range-based for loop">;
+def warn_deprecated_for_co_await : Warning<
+  "'for co_await' belongs to CoroutineTS instead of C++20, which is deprecated">,
+  InGroup<DeprecatedCoroutine>;
 }
 
 let CategoryName = "Concepts Issue" in {

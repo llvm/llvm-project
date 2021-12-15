@@ -281,7 +281,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"acosh", {{"x", SameFloating}}, SameFloating},
     {"adjustl", {{"string", SameChar}}, SameChar},
     {"adjustr", {{"string", SameChar}}, SameChar},
-    {"aimag", {{"x", SameComplex}}, SameReal},
+    {"aimag", {{"z", SameComplex}}, SameReal},
     {"aint", {{"a", SameReal}, MatchingDefaultKIND}, KINDReal},
     {"all", {{"mask", SameLogical, Rank::array}, OptionalDIM}, SameLogical,
         Rank::dimReduced, IntrinsicClass::transformationalFunction},
@@ -1165,6 +1165,36 @@ static DynamicType GetBuiltinDerivedType(
   return DynamicType{derived};
 }
 
+// Ensure that the keywords of arguments to MAX/MIN and their variants
+// are of the form A123 with no duplicates.
+static bool CheckMaxMinArgument(std::optional<parser::CharBlock> keyword,
+    std::set<parser::CharBlock> &set, const char *intrinsicName,
+    parser::ContextualMessages &messages) {
+  if (keyword) {
+    std::size_t j{1};
+    for (; j < keyword->size(); ++j) {
+      char ch{(*keyword)[j]};
+      if (ch < '0' || ch > '9') {
+        break;
+      }
+    }
+    if (keyword->size() < 2 || (*keyword)[0] != 'a' || j < keyword->size()) {
+      messages.Say(*keyword,
+          "Argument keyword '%s=' is not known in call to '%s'"_err_en_US,
+          *keyword, intrinsicName);
+      return false;
+    }
+    auto [_, wasInserted]{set.insert(*keyword)};
+    if (!wasInserted) {
+      messages.Say(*keyword,
+          "Argument keyword '%s=' was repeated in call to '%s'"_err_en_US,
+          *keyword, intrinsicName);
+      return false;
+    }
+  }
+  return true;
+}
+
 // Intrinsic interface matching against the arguments of a particular
 // procedure reference.
 std::optional<SpecificCall> IntrinsicInterface::Match(
@@ -1182,28 +1212,32 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
   }
   // MAX and MIN (and others that map to them) allow their last argument to
   // be repeated indefinitely.  The actualForDummy vector is sized
-  // and null-initialized to the non-repeated dummy argument count,
-  // but additional actual argument pointers can be pushed on it
-  // when this flag is set.
-  bool repeatLastDummy{dummyArgPatterns > 0 &&
+  // and null-initialized to the non-repeated dummy argument count
+  // for other instrinsics.
+  bool isMaxMin{dummyArgPatterns > 0 &&
       dummy[dummyArgPatterns - 1].optionality == Optionality::repeats};
-  std::size_t nonRepeatedDummies{
-      repeatLastDummy ? dummyArgPatterns - 1 : dummyArgPatterns};
-  std::vector<ActualArgument *> actualForDummy(nonRepeatedDummies, nullptr);
+  std::vector<ActualArgument *> actualForDummy(
+      isMaxMin ? 0 : dummyArgPatterns, nullptr);
   int missingActualArguments{0};
+  std::set<parser::CharBlock> maxMinKeywords;
   for (std::optional<ActualArgument> &arg : arguments) {
     if (!arg) {
       ++missingActualArguments;
-    } else {
-      if (arg->isAlternateReturn()) {
-        messages.Say(
-            "alternate return specifier not acceptable on call to intrinsic '%s'"_err_en_US,
-            name);
+    } else if (arg->isAlternateReturn()) {
+      messages.Say(
+          "alternate return specifier not acceptable on call to intrinsic '%s'"_err_en_US,
+          name);
+      return std::nullopt;
+    } else if (isMaxMin) {
+      if (CheckMaxMinArgument(arg->keyword(), maxMinKeywords, name, messages)) {
+        actualForDummy.push_back(&*arg);
+      } else {
         return std::nullopt;
       }
+    } else {
       bool found{false};
       int slot{missingActualArguments};
-      for (std::size_t j{0}; j < nonRepeatedDummies && !found; ++j) {
+      for (std::size_t j{0}; j < dummyArgPatterns && !found; ++j) {
         if (dummy[j].optionality == Optionality::missing) {
           continue;
         }
@@ -1232,19 +1266,14 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
         }
       }
       if (!found) {
-        if (repeatLastDummy && !arg->keyword()) {
-          // MAX/MIN argument after the 2nd
-          actualForDummy.push_back(&*arg);
+        if (arg->keyword()) {
+          messages.Say(*arg->keyword(),
+              "unknown keyword argument to intrinsic '%s'"_err_en_US, name);
         } else {
-          if (arg->keyword()) {
-            messages.Say(*arg->keyword(),
-                "unknown keyword argument to intrinsic '%s'"_err_en_US, name);
-          } else {
-            messages.Say(
-                "too many actual arguments for intrinsic '%s'"_err_en_US, name);
-          }
-          return std::nullopt;
+          messages.Say(
+              "too many actual arguments for intrinsic '%s'"_err_en_US, name);
         }
+        return std::nullopt;
       }
     }
   }
@@ -1750,8 +1779,12 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     const IntrinsicDummyArgument &d{dummy[std::min(j, dummyArgPatterns - 1)]};
     if (const auto &arg{rearranged[j]}) {
       if (const Expr<SomeType> *expr{arg->UnwrapExpr()}) {
+        std::string kw{d.keyword};
+        if (isMaxMin) {
+          kw = "a"s + std::to_string(j + 1);
+        }
         auto dc{characteristics::DummyArgument::FromActual(
-            std::string{d.keyword}, *expr, context)};
+            std::move(kw), *expr, context)};
         if (!dc) {
           common::die("INTERNAL: could not characterize intrinsic function "
                       "actual argument '%s'",

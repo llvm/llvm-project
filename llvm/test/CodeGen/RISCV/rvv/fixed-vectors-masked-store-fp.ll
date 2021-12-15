@@ -325,7 +325,7 @@ declare void @llvm.masked.store.v16f64.p0v16f64(<16 x double>, <16 x double>*, i
 define void @masked_store_v32f16(<32 x half>* %val_ptr, <32 x half>* %a, <32 x half>* %m_ptr) nounwind {
 ; CHECK-LABEL: masked_store_v32f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a3, zero, 32
+; CHECK-NEXT:    li a3, 32
 ; CHECK-NEXT:    vsetvli zero, a3, e16, m4, ta, mu
 ; CHECK-NEXT:    vle16.v v8, (a2)
 ; CHECK-NEXT:    vle16.v v12, (a0)
@@ -344,7 +344,7 @@ declare void @llvm.masked.store.v32f16.p0v32f16(<32 x half>, <32 x half>*, i32, 
 define void @masked_store_v32f32(<32 x float>* %val_ptr, <32 x float>* %a, <32 x float>* %m_ptr) nounwind {
 ; CHECK-LABEL: masked_store_v32f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a3, zero, 32
+; CHECK-NEXT:    li a3, 32
 ; CHECK-NEXT:    vsetvli zero, a3, e32, m8, ta, mu
 ; CHECK-NEXT:    vle32.v v8, (a2)
 ; CHECK-NEXT:    vle32.v v16, (a0)
@@ -451,7 +451,7 @@ declare void @llvm.masked.store.v32f32.p0v32f64(<32 x double>, <32 x double>*, i
 define void @masked_store_v64f16(<64 x half>* %val_ptr, <64 x half>* %a, <64 x half>* %m_ptr) nounwind {
 ; CHECK-LABEL: masked_store_v64f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a3, zero, 64
+; CHECK-NEXT:    li a3, 64
 ; CHECK-NEXT:    vsetvli zero, a3, e16, m8, ta, mu
 ; CHECK-NEXT:    vle16.v v8, (a2)
 ; CHECK-NEXT:    vle16.v v16, (a0)
@@ -474,7 +474,7 @@ define void @masked_store_v64f32(<64 x float>* %val_ptr, <64 x float>* %a, <64 x
 ; CHECK-NEXT:    csrr a3, vlenb
 ; CHECK-NEXT:    slli a3, a3, 4
 ; CHECK-NEXT:    sub sp, sp, a3
-; CHECK-NEXT:    addi a3, zero, 32
+; CHECK-NEXT:    li a3, 32
 ; CHECK-NEXT:    vsetvli zero, a3, e32, m8, ta, mu
 ; CHECK-NEXT:    vle32.v v8, (a2)
 ; CHECK-NEXT:    addi a2, a2, 128
@@ -523,7 +523,7 @@ define void @masked_store_v128f16(<128 x half>* %val_ptr, <128 x half>* %a, <128
 ; CHECK-NEXT:    csrr a3, vlenb
 ; CHECK-NEXT:    slli a3, a3, 4
 ; CHECK-NEXT:    sub sp, sp, a3
-; CHECK-NEXT:    addi a3, zero, 64
+; CHECK-NEXT:    li a3, 64
 ; CHECK-NEXT:    vsetvli zero, a3, e16, m8, ta, mu
 ; CHECK-NEXT:    vle16.v v8, (a2)
 ; CHECK-NEXT:    addi a2, a2, 128

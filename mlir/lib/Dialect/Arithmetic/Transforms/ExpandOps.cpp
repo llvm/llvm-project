@@ -7,8 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Arithmetic/Transforms/Passes.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
 
@@ -21,8 +24,8 @@ struct CeilDivUIOpConverter : public OpRewritePattern<arith::CeilDivUIOp> {
   LogicalResult matchAndRewrite(arith::CeilDivUIOp op,
                                 PatternRewriter &rewriter) const final {
     Location loc = op.getLoc();
-    Value a = op.lhs();
-    Value b = op.rhs();
+    Value a = op.getLhs();
+    Value b = op.getRhs();
     Value zero = rewriter.create<arith::ConstantOp>(
         loc, rewriter.getIntegerAttr(a.getType(), 0));
     Value compare =
@@ -220,7 +223,7 @@ struct ArithmeticExpandOpsPass
   }
 };
 
-} // end anonymous namespace
+} // namespace
 
 void mlir::arith::populateArithmeticExpandOpsPatterns(
     RewritePatternSet &patterns) {

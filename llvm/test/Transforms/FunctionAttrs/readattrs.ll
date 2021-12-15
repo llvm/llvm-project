@@ -34,7 +34,7 @@ define void @test4_2(i8* %p) {
   ret void
 }
 
-; CHECK: define void @test5(i8** nocapture %p, i8* %q)
+; CHECK: define void @test5(i8** nocapture writeonly %p, i8* %q)
 ; Missed optz'n: we could make %q readnone, but don't break test6!
 define void @test5(i8** %p, i8* %q) {
   store i8* %q, i8** %p
@@ -42,7 +42,7 @@ define void @test5(i8** %p, i8* %q) {
 }
 
 declare void @test6_1()
-; CHECK: define void @test6_2(i8** nocapture %p, i8* %q)
+; CHECK: define void @test6_2(i8** nocapture writeonly %p, i8* %q)
 ; This is not a missed optz'n.
 define void @test6_2(i8** %p, i8* %q) {
   store i8* %q, i8** %p
@@ -68,7 +68,7 @@ entry:
   ret i32* %p
 }
 
-; CHECK: define void @test8_2(i32* %p)
+; CHECK: define void @test8_2(i32* writeonly %p)
 define void @test8_2(i32* %p) {
 entry:
   %call = call i32* @test8_1(i32* %p)

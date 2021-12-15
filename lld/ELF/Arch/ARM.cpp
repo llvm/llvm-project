@@ -140,7 +140,16 @@ RelExpr ARM::getRelExpr(RelType type, const Symbol &s,
   case R_ARM_THM_MOVT_PREL:
     return R_PC;
   case R_ARM_ALU_PC_G0:
+  case R_ARM_ALU_PC_G0_NC:
+  case R_ARM_ALU_PC_G1:
+  case R_ARM_ALU_PC_G1_NC:
+  case R_ARM_ALU_PC_G2:
   case R_ARM_LDR_PC_G0:
+  case R_ARM_LDR_PC_G1:
+  case R_ARM_LDR_PC_G2:
+  case R_ARM_LDRS_PC_G0:
+  case R_ARM_LDRS_PC_G1:
+  case R_ARM_LDRS_PC_G2:
   case R_ARM_THM_ALU_PREL_11_0:
   case R_ARM_THM_PC8:
   case R_ARM_THM_PC12:
@@ -411,56 +420,83 @@ static void stateChangeWarning(uint8_t *loc, RelType relt, const Symbol &s) {
   }
 }
 
-// Utility functions taken from ARMAddressingModes.h, only changes are LLD
-// coding style.
-
 // Rotate a 32-bit unsigned value right by a specified amt of bits.
 static uint32_t rotr32(uint32_t val, uint32_t amt) {
   assert(amt < 32 && "Invalid rotate amount");
   return (val >> amt) | (val << ((32 - amt) & 31));
 }
 
-// Rotate a 32-bit unsigned value left by a specified amt of bits.
-static uint32_t rotl32(uint32_t val, uint32_t amt) {
-  assert(amt < 32 && "Invalid rotate amount");
-  return (val << amt) | (val >> ((32 - amt) & 31));
+static std::pair<uint32_t, uint32_t> getRemAndLZForGroup(unsigned group,
+                                                         uint32_t val) {
+  uint32_t rem, lz;
+  do {
+    lz = llvm::countLeadingZeros(val) & ~1;
+    rem = val;
+    if (lz == 32) // implies rem == 0
+      break;
+    val &= 0xffffff >> lz;
+  } while (group--);
+  return {rem, lz};
 }
 
-// Try to encode a 32-bit unsigned immediate imm with an immediate shifter
-// operand, this form is an 8-bit immediate rotated right by an even number of
-// bits. We compute the rotate amount to use.  If this immediate value cannot be
-// handled with a single shifter-op, determine a good rotate amount that will
-// take a maximal chunk of bits out of the immediate.
-static uint32_t getSOImmValRotate(uint32_t imm) {
-  // 8-bit (or less) immediates are trivially shifter_operands with a rotate
-  // of zero.
-  if ((imm & ~255U) == 0)
-    return 0;
-
-  // Use CTZ to compute the rotate amount.
-  unsigned tz = llvm::countTrailingZeros(imm);
-
-  // Rotate amount must be even.  Something like 0x200 must be rotated 8 bits,
-  // not 9.
-  unsigned rotAmt = tz & ~1;
-
-  // If we can handle this spread, return it.
-  if ((rotr32(imm, rotAmt) & ~255U) == 0)
-    return (32 - rotAmt) & 31; // HW rotates right, not left.
-
-  // For values like 0xF000000F, we should ignore the low 6 bits, then
-  // retry the hunt.
-  if (imm & 63U) {
-    unsigned tz2 = countTrailingZeros(imm & ~63U);
-    unsigned rotAmt2 = tz2 & ~1;
-    if ((rotr32(imm, rotAmt2) & ~255U) == 0)
-      return (32 - rotAmt2) & 31; // HW rotates right, not left.
+static void encodeAluGroup(uint8_t *loc, const Relocation &rel, uint64_t val,
+                           int group, bool check) {
+  // ADD/SUB (immediate) add = bit23, sub = bit22
+  // immediate field carries is a 12-bit modified immediate, made up of a 4-bit
+  // even rotate right and an 8-bit immediate.
+  uint32_t opcode = 0x00800000;
+  if (val >> 63) {
+    opcode = 0x00400000;
+    val = -val;
   }
+  uint32_t imm, lz;
+  std::tie(imm, lz) = getRemAndLZForGroup(group, val);
+  uint32_t rot = 0;
+  if (lz < 24) {
+    imm = rotr32(imm, 24 - lz);
+    rot = (lz + 8) << 7;
+  }
+  if (check && imm > 0xff)
+    error(getErrorLocation(loc) + "unencodeable immediate " + Twine(val).str() +
+          " for relocation " + toString(rel.type));
+  write32le(loc, (read32le(loc) & 0xff3ff000) | opcode | rot | (imm & 0xff));
+}
 
-  // Otherwise, we have no way to cover this span of bits with a single
-  // shifter_op immediate.  Return a chunk of bits that will be useful to
-  // handle.
-  return (32 - rotAmt) & 31; // HW rotates right, not left.
+static void encodeLdrGroup(uint8_t *loc, const Relocation &rel, uint64_t val,
+                           int group) {
+  // R_ARM_LDR_PC_Gn is S + A - P, we have ((S + A) | T) - P, if S is a
+  // function then addr is 0 (modulo 2) and Pa is 0 (modulo 4) so we can clear
+  // bottom bit to recover S + A - P.
+  if (rel.sym->isFunc())
+    val &= ~0x1;
+  // LDR (literal) u = bit23
+  uint32_t opcode = 0x00800000;
+  if (val >> 63) {
+    opcode = 0x0;
+    val = -val;
+  }
+  uint32_t imm = getRemAndLZForGroup(group, val).first;
+  checkUInt(loc, imm, 12, rel);
+  write32le(loc, (read32le(loc) & 0xff7ff000) | opcode | imm);
+}
+
+static void encodeLdrsGroup(uint8_t *loc, const Relocation &rel, uint64_t val,
+                            int group) {
+  // R_ARM_LDRS_PC_Gn is S + A - P, we have ((S + A) | T) - P, if S is a
+  // function then addr is 0 (modulo 2) and Pa is 0 (modulo 4) so we can clear
+  // bottom bit to recover S + A - P.
+  if (rel.sym->isFunc())
+    val &= ~0x1;
+  // LDRD/LDRH/LDRSB/LDRSH (literal) u = bit23
+  uint32_t opcode = 0x00800000;
+  if (val >> 63) {
+    opcode = 0x0;
+    val = -val;
+  }
+  uint32_t imm = getRemAndLZForGroup(group, val).first;
+  checkUInt(loc, imm, 8, rel);
+  write32le(loc, (read32le(loc) & 0xff7ff0f0) | opcode | ((imm & 0xf0) << 4) |
+                     (imm & 0xf));
 }
 
 void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
@@ -633,45 +669,39 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
                   ((val << 4) & 0x7000) |    // imm3
                   (val & 0x00ff));           // imm8
     break;
-  case R_ARM_ALU_PC_G0: {
-    // ADR (literal) add = bit23, sub = bit22
-    // literal is a 12-bit modified immediate, made up of a 4-bit even rotate
-    // right and an 8-bit immediate. The code-sequence here is derived from
-    // ARMAddressingModes.h in llvm/Target/ARM/MCTargetDesc. In our case we
-    // want to give an error if we cannot encode the constant.
-    uint32_t opcode = 0x00800000;
-    if (val >> 63) {
-      opcode = 0x00400000;
-      val = ~val + 1;
-    }
-    if ((val & ~255U) != 0) {
-      uint32_t rotAmt = getSOImmValRotate(val);
-      // Error if we cannot encode this with a single shift
-      if (rotr32(~255U, rotAmt) & val)
-        error(getErrorLocation(loc) + "unencodeable immediate " +
-              Twine(val).str() + " for relocation " + toString(rel.type));
-      val = rotl32(val, rotAmt) | ((rotAmt >> 1) << 8);
-    }
-    write32le(loc, (read32le(loc) & 0xff0ff000) | opcode | val);
+  case R_ARM_ALU_PC_G0:
+    encodeAluGroup(loc, rel, val, 0, true);
     break;
-  }
-  case R_ARM_LDR_PC_G0: {
-    // R_ARM_LDR_PC_G0 is S + A - P, we have ((S + A) | T) - P, if S is a
-    // function then addr is 0 (modulo 2) and Pa is 0 (modulo 4) so we can clear
-    // bottom bit to recover S + A - P.
-    if (rel.sym->isFunc())
-      val &= ~0x1;
-    // LDR (literal) u = bit23
-    int64_t imm = val;
-    uint32_t u = 0x00800000;
-    if (imm < 0) {
-      imm = -imm;
-      u = 0;
-    }
-    checkUInt(loc, imm, 12, rel);
-    write32le(loc, (read32le(loc) & 0xff7ff000) | u | imm);
+  case R_ARM_ALU_PC_G0_NC:
+    encodeAluGroup(loc, rel, val, 0, false);
     break;
-  }
+  case R_ARM_ALU_PC_G1:
+    encodeAluGroup(loc, rel, val, 1, true);
+    break;
+  case R_ARM_ALU_PC_G1_NC:
+    encodeAluGroup(loc, rel, val, 1, false);
+    break;
+  case R_ARM_ALU_PC_G2:
+    encodeAluGroup(loc, rel, val, 2, true);
+    break;
+  case R_ARM_LDR_PC_G0:
+    encodeLdrGroup(loc, rel, val, 0);
+    break;
+  case R_ARM_LDR_PC_G1:
+    encodeLdrGroup(loc, rel, val, 1);
+    break;
+  case R_ARM_LDR_PC_G2:
+    encodeLdrGroup(loc, rel, val, 2);
+    break;
+  case R_ARM_LDRS_PC_G0:
+    encodeLdrsGroup(loc, rel, val, 0);
+    break;
+  case R_ARM_LDRS_PC_G1:
+    encodeLdrsGroup(loc, rel, val, 1);
+    break;
+  case R_ARM_LDRS_PC_G2:
+    encodeLdrsGroup(loc, rel, val, 2);
+    break;
   case R_ARM_THM_ALU_PREL_11_0: {
     // ADR encoding T2 (sub), T3 (add) i:imm3:imm8
     int64_t imm = val;
@@ -816,7 +846,11 @@ int64_t ARM::getImplicitAddend(const uint8_t *buf, RelType type) const {
                             ((lo & 0x7000) >> 4) |  // imm3
                             (lo & 0x00ff));         // imm8
   }
-  case R_ARM_ALU_PC_G0: {
+  case R_ARM_ALU_PC_G0:
+  case R_ARM_ALU_PC_G0_NC:
+  case R_ARM_ALU_PC_G1:
+  case R_ARM_ALU_PC_G1_NC:
+  case R_ARM_ALU_PC_G2: {
     // 12-bit immediate is a modified immediate made up of a 4-bit even
     // right rotation and 8-bit constant. After the rotation the value
     // is zero-extended. When bit 23 is set the instruction is an add, when
@@ -825,12 +859,24 @@ int64_t ARM::getImplicitAddend(const uint8_t *buf, RelType type) const {
     uint32_t val = rotr32(instr & 0xff, ((instr & 0xf00) >> 8) * 2);
     return (instr & 0x00400000) ? -val : val;
   }
-  case R_ARM_LDR_PC_G0: {
+  case R_ARM_LDR_PC_G0:
+  case R_ARM_LDR_PC_G1:
+  case R_ARM_LDR_PC_G2: {
     // ADR (literal) add = bit23, sub = bit22
     // LDR (literal) u = bit23 unsigned imm12
     bool u = read32le(buf) & 0x00800000;
     uint32_t imm12 = read32le(buf) & 0xfff;
     return u ? imm12 : -imm12;
+  }
+  case R_ARM_LDRS_PC_G0:
+  case R_ARM_LDRS_PC_G1:
+  case R_ARM_LDRS_PC_G2: {
+    // LDRD/LDRH/LDRSB/LDRSH (literal) u = bit23 unsigned imm8
+    uint32_t opcode = read32le(buf);
+    bool u = opcode & 0x00800000;
+    uint32_t imm4l = opcode & 0xf;
+    uint32_t imm4h = (opcode & 0xf00) >> 4;
+    return u ? (imm4h | imm4l) : -(imm4h | imm4l);
   }
   case R_ARM_THM_ALU_PREL_11_0: {
     // Thumb2 ADR, which is an alias for a sub or add instruction with an

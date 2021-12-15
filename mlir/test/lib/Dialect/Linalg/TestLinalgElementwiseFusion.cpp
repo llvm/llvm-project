@@ -95,13 +95,13 @@ struct TestLinalgControlFuseByExpansion
     linalg::ControlElementwiseOpsFusionFn controlReshapeFusionFn =
         [](const OpResult &producer, OpOperand &consumer) {
           if (auto collapseOp =
-                  producer.getDefiningOp<linalg::TensorCollapseShapeOp>()) {
+                  producer.getDefiningOp<tensor::CollapseShapeOp>()) {
             if (!collapseOp.src().getDefiningOp<linalg::LinalgOp>()) {
               return false;
             }
           }
           if (auto expandOp =
-                  dyn_cast<linalg::TensorExpandShapeOp>(consumer.getOwner())) {
+                  dyn_cast<tensor::ExpandShapeOp>(consumer.getOwner())) {
             if (expandOp->hasOneUse()) {
               OpOperand &use = *expandOp->getUses().begin();
               auto linalgOp = dyn_cast<linalg::LinalgOp>(use.getOwner());

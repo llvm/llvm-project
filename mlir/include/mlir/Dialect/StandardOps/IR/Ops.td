@@ -19,6 +19,7 @@ include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/VectorInterfaces.td"
 
@@ -27,7 +28,7 @@ def StandardOps_Dialect : Dialect {
   let cppNamespace = "::mlir";
   let dependentDialects = ["arith::ArithmeticDialect"];
   let hasConstantMaterializer = 1;
-  let emitAccessorPrefix = kEmitAccessorPrefix_Both;
+  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 
 // Base class for Standard dialect ops.
@@ -81,10 +82,6 @@ class ArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
   let parser = [{
     return impl::parseOneResultSameOperandTypeOp(parser, result);
   }];
-
-  let printer = [{
-    return printStandardBinaryOp(this->getOperation(), p);
-  }];
 }
 
 // Base class for standard binary arithmetic operations.
@@ -93,10 +90,6 @@ class ArithmeticBinaryOp<string mnemonic, list<OpTrait> traits = []> :
 
   let parser = [{
     return impl::parseOneResultSameOperandTypeOp(parser, result);
-  }];
-
-  let printer = [{
-    return printStandardBinaryOp(this->getOperation(), p);
   }];
 }
 
@@ -227,7 +220,7 @@ def AtomicRMWOp : Std_Op<"atomic_rmw", [
 
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
-      return memref().getType().cast<MemRefType>();
+      return getMemref().getType().cast<MemRefType>();
     }
   }];
 }
@@ -283,7 +276,7 @@ def GenericAtomicRMWOp : Std_Op<"generic_atomic_rmw", [
       return getRegion().getArgument(0);
     }
     MemRefType getMemRefType() {
-      return memref().getType().cast<MemRefType>();
+      return getMemref().getType().cast<MemRefType>();
     }
   }];
 }
@@ -562,7 +555,7 @@ def CondBranchOp : Std_Op<"cond_br",
 
     /// Erase the operand at 'index' from the true operand list.
     void eraseTrueOperand(unsigned index)  {
-      trueDestOperandsMutable().erase(index);
+      getTrueDestOperandsMutable().erase(index);
     }
 
     // Accessors for operands to the 'false' destination.
@@ -582,7 +575,7 @@ def CondBranchOp : Std_Op<"cond_br",
 
     /// Erase the operand at 'index' from the false operand list.
     void eraseFalseOperand(unsigned index) {
-      falseDestOperandsMutable().erase(index);
+      getFalseDestOperandsMutable().erase(index);
     }
 
   private:
@@ -666,38 +659,6 @@ def ConstantOp : Std_Op<"constant",
 }
 
 //===----------------------------------------------------------------------===//
-// RankOp
-//===----------------------------------------------------------------------===//
-
-def RankOp : Std_Op<"rank", [NoSideEffect]> {
-  let summary = "rank operation";
-  let description = [{
-    The `rank` operation takes a memref/tensor operand and returns its rank.
-
-    Example:
-
-    ```mlir
-    %1 = rank %arg0 : tensor<*xf32>
-    %2 = rank %arg1 : memref<*xf32>
-    ```
-  }];
-
-  let arguments = (ins AnyTypeOf<[AnyRankedOrUnrankedMemRef, AnyTensor],
-                                 "any memref or tensor type">:$memrefOrTensor);
-  let results = (outs Index);
-  let verifier = ?;
-
-  let builders = [
-    OpBuilder<(ins "Value":$tensor), [{
-      auto indexType = $_builder.getIndexType();
-      build($_builder, $_state, indexType, tensor);
-    }]>];
-
-  let hasFolder = 1;
-  let assemblyFormat = "$memrefOrTensor attr-dict `:` type($memrefOrTensor)";
-}
-
-//===----------------------------------------------------------------------===//
 // ReturnOp
 //===----------------------------------------------------------------------===//
 
@@ -775,13 +736,6 @@ def SelectOp : Std_Op<"select", [NoSideEffect,
                        AnyType:$false_value);
   let results = (outs AnyType:$result);
 
-  let builders = [
-    OpBuilder<(ins "Value":$condition, "Value":$trueValue,
-      "Value":$falseValue), [{
-      $_state.addOperands({condition, trueValue, falseValue});
-      $_state.addTypes(trueValue.getType());
-    }]>];
-
   let hasCanonicalizer = 1;
   let hasFolder = 1;
 }
@@ -822,7 +776,8 @@ def SplatOp : Std_Op<"splat", [NoSideEffect,
 
   let arguments = (ins AnyTypeOf<[AnySignlessInteger, Index, AnyFloat],
                                  "integer/index/float type">:$input);
-  let results = (outs AnyTypeOf<[AnyVector, AnyStaticShapeTensor]>:$aggregate);
+  let results = (outs AnyTypeOf<[AnyVectorOfAnyRank,
+                                 AnyStaticShapeTensor]>:$aggregate);
 
   let builders = [
     OpBuilder<(ins "Value":$element, "Type":$aggregateType),
@@ -908,13 +863,13 @@ def SwitchOp : Std_Op<"switch",
   let extraClassDeclaration = [{
     /// Return the operands for the case destination block at the given index.
     OperandRange getCaseOperands(unsigned index) {
-      return caseOperands()[index];
+      return getCaseOperands()[index];
     }
 
     /// Return a mutable range of operands for the case destination block at the
     /// given index.
     MutableOperandRange getCaseOperandsMutable(unsigned index) {
-      return caseOperandsMutable()[index];
+      return getCaseOperandsMutable()[index];
     }
   }];
 

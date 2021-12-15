@@ -23,7 +23,7 @@ class Operation;
 
 namespace detail {
 class AsmStateImpl;
-} // end namespace detail
+} // namespace detail
 
 /// This class provides management for the lifetime of the state used when
 /// printing the IR. It allows for alleviating the cost of recomputing the
@@ -66,6 +66,6 @@ private:
 /// various flags within the AsmPrinter.
 void registerAsmPrinterCLOptions();
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_IR_ASMSTATE_H_

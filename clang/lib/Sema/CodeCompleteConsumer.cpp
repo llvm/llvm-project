@@ -335,7 +335,7 @@ std::string CodeCompletionString::getAsString() const {
       break;
     }
   }
-  return OS.str();
+  return Result;
 }
 
 const char *CodeCompletionString::getTypedText() const {
@@ -640,7 +640,7 @@ static std::string getOverloadAsString(const CodeCompletionString &CCS) {
       break;
     }
   }
-  return OS.str();
+  return Result;
 }
 
 void PrintingCodeCompleteConsumer::ProcessOverloadCandidates(

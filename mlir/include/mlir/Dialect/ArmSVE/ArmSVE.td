@@ -31,6 +31,7 @@ def ArmSVE_Dialect : Dialect {
     vector operations, including a scalable vector type and intrinsics for
     some Arm SVE instructions.
   }];
+  let useDefaultTypePrinterParser = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -65,20 +66,6 @@ def ScalableVectorType : ArmSVE_Type<"ScalableVector"> {
     ArrayRefParameter<"int64_t", "Vector shape">:$shape,
     "Type":$elementType
   );
-
-  let printer = [{
-    $_printer << "<";
-    for (int64_t dim : getShape())
-      $_printer << dim << 'x';
-    $_printer << getElementType() << '>';
-  }];
-
-  let parser = [{
-    VectorType vector;
-    if ($_parser.parseType(vector))
-      return Type();
-    return get($_ctxt, vector.getShape(), vector.getElementType());
-  }];
 
   let extraClassDeclaration = [{
     bool hasStaticShape() const {

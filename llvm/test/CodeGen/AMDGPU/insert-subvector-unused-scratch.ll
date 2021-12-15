@@ -15,8 +15,8 @@ define amdgpu_kernel void @store_v3i32(<3 x i32> addrspace(3)* %out, <3 x i32> %
 }
 
 ; GCN-LABEL: store_v5i32:
-; GCN:        ds_read_b32
 ; GCN:        ds_read_b128
+; GCN:        ds_read_b32
 ; GCN:        ds_write_b32
 ; GCN:        ds_write_b128
 ; GCN: ScratchSize: 0

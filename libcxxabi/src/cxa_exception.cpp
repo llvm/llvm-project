@@ -378,6 +378,9 @@ asm("	.pushsection	.text.__cxa_end_cleanup,\"ax\",%progbits\n"
     "	.globl	__cxa_end_cleanup\n"
     "	.type	__cxa_end_cleanup,%function\n"
     "__cxa_end_cleanup:\n"
+#if defined(__ARM_FEATURE_BTI_DEFAULT)
+    "	bti\n"
+#endif
     "	push	{r1, r2, r3, lr}\n"
     "	bl	__cxa_end_cleanup_impl\n"
     "	pop	{r1, r2, r3, r4}\n"

@@ -15,6 +15,7 @@ import difflib
 import os
 from itertools import groupby
 from dex.command.StepValueInfo import StepValueInfo
+from dex.command.commands.DexExpectWatchBase import format_address
 
 
 PenaltyCommand = namedtuple('PenaltyCommand', ['pen_dict', 'max_penalty'])
@@ -101,6 +102,7 @@ class Heuristic(object):
     def __init__(self, context, steps):
         self.context = context
         self.penalties = {}
+        self.address_resolutions = {}
 
         worst_penalty = max([
             self.penalty_variable_optimized, self.penalty_irretrievable,
@@ -108,6 +110,14 @@ class Heuristic(object):
             self.penalty_missing_values, self.penalty_unreachable,
             self.penalty_missing_step, self.penalty_misordered_steps
         ])
+
+        # Before evaluating scoring commands, evaluate address values.
+        try:
+            for command in steps.commands['DexDeclareAddress']:
+                command.address_resolutions = self.address_resolutions
+                command.eval(steps)
+        except KeyError:
+            pass
 
         # Get DexExpectWatchType results.
         try:
@@ -126,6 +136,7 @@ class Heuristic(object):
         # Get DexExpectWatchValue results.
         try:
             for command in steps.commands['DexExpectWatchValue']:
+                command.address_resolutions = self.address_resolutions
                 command.eval(steps)
                 maximum_possible_penalty = min(3, len(
                     command.values)) * worst_penalty
@@ -425,6 +436,17 @@ class Heuristic(object):
     @property
     def verbose_output(self):  # noqa
         string = ''
+
+        # Add address resolutions if present.
+        if self.address_resolutions:
+            if self.resolved_addresses:
+                string += '\nResolved Addresses:\n'
+                for addr, res in self.resolved_addresses.items():
+                    string += f"  '{addr}': {res}\n"
+            if self.unresolved_addresses:
+                string += '\n'
+                string += f'Unresolved Addresses:\n  {self.unresolved_addresses}\n'
+
         string += ('\n')
         for command in sorted(self.penalties):
             pen_cmd = self.penalties[command]
@@ -455,6 +477,14 @@ class Heuristic(object):
                 string += (line)
         string += ('\n')
         return string
+
+    @property
+    def resolved_addresses(self):
+        return {addr: format_address(res) for addr, res in self.address_resolutions.items() if res is not None}
+
+    @property
+    def unresolved_addresses(self):
+        return [addr for addr, res in self.address_resolutions.items() if res is None]
 
     @property
     def penalty_variable_optimized(self):

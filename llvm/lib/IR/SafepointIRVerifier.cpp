@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Run a sanity check on the IR to ensure that Safepoints - if they've been
-// inserted - were inserted correctly.  In particular, look for use of
-// non-relocated values after a safepoint.  It's primary use is to check the
+// Run a basic correctness check on the IR to ensure that Safepoints - if
+// they've been inserted - were inserted correctly.  In particular, look for use
+// of non-relocated values after a safepoint.  It's primary use is to check the
 // correctness of safepoint insertion immediately after insertion, but it can
 // also be used to verify that later transforms have not found a way to break
 // safepoint semenatics.

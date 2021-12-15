@@ -3202,10 +3202,10 @@ unsigned AMDGPURegisterBankInfo::getMappingType(const MachineRegisterInfo &MRI,
                                                 const MachineInstr &MI) const {
   unsigned RegBank = AMDGPU::InvalidRegBankID;
 
-  for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-    if (!MI.getOperand(i).isReg())
+  for (const MachineOperand &MO : MI.operands()) {
+    if (!MO.isReg())
       continue;
-    Register Reg = MI.getOperand(i).getReg();
+    Register Reg = MO.getReg();
     if (const RegisterBank *Bank = getRegBank(Reg, MRI, *TRI)) {
       RegBank = regBankUnion(RegBank, Bank->getID());
       if (RegBank == AMDGPU::VGPRRegBankID)
@@ -3219,10 +3219,10 @@ unsigned AMDGPURegisterBankInfo::getMappingType(const MachineRegisterInfo &MRI,
 bool AMDGPURegisterBankInfo::isSALUMapping(const MachineInstr &MI) const {
   const MachineFunction &MF = *MI.getParent()->getParent();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  for (unsigned i = 0, e = MI.getNumOperands();i != e; ++i) {
-    if (!MI.getOperand(i).isReg())
+  for (const MachineOperand &MO : MI.operands()) {
+    if (!MO.isReg())
       continue;
-    Register Reg = MI.getOperand(i).getReg();
+    Register Reg = MO.getReg();
     if (const RegisterBank *Bank = getRegBank(Reg, MRI, *TRI)) {
       if (Bank->getID() != AMDGPU::SGPRRegBankID)
         return false;
@@ -4111,6 +4111,12 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_fdot2_f32_bf16:
     case Intrinsic::amdgcn_sudot4:
     case Intrinsic::amdgcn_sudot8:
+    case Intrinsic::amdgcn_wmma_bf16_16x16x16_bf16:
+    case Intrinsic::amdgcn_wmma_f16_16x16x16_f16:
+    case Intrinsic::amdgcn_wmma_f32_16x16x16_bf16:
+    case Intrinsic::amdgcn_wmma_f32_16x16x16_f16:
+    case Intrinsic::amdgcn_wmma_i32_16x16x16_iu4:
+    case Intrinsic::amdgcn_wmma_i32_16x16x16_iu8:
       return getDefaultMappingVOP(MI);
     case Intrinsic::amdgcn_sbfe:
     case Intrinsic::amdgcn_ubfe:

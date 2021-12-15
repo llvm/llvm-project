@@ -24,7 +24,7 @@ class Init;
 class ListInit;
 class Record;
 class SMLoc;
-} // end namespace llvm
+} // namespace llvm
 
 namespace mlir {
 namespace tblgen {
@@ -122,7 +122,7 @@ public:
   StringRef getSuffix() const;
 };
 
-} // end namespace tblgen
-} // end namespace mlir
+} // namespace tblgen
+} // namespace mlir
 
 #endif // MLIR_TABLEGEN_PREDICATE_H_

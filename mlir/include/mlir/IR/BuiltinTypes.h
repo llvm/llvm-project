@@ -183,7 +183,7 @@ public:
   unsigned getMemorySpaceAsInt() const;
 };
 
-} // end namespace mlir
+} // namespace mlir
 
 //===----------------------------------------------------------------------===//
 // Tablegen Type Declarations
@@ -283,12 +283,14 @@ public:
     return *this;
   }
 
-  /// Create a new RankedTensor by erasing a dim from shape @pos.
-  RankedTensorType dropDim(unsigned pos) {
+  /// Erase a dim from shape @pos.
+  Builder &dropDim(unsigned pos) {
     assert(pos < shape.size() && "overflow");
-    SmallVector<int64_t, 4> newShape(shape.begin(), shape.end());
-    newShape.erase(newShape.begin() + pos);
-    return setShape(newShape);
+    if (storage.empty())
+      storage.append(shape.begin(), shape.end());
+    storage.erase(storage.begin() + pos);
+    shape = {storage.data(), storage.size()};
+    return *this;
   }
 
   operator RankedTensorType() {
@@ -297,6 +299,8 @@ public:
 
 private:
   ArrayRef<int64_t> shape;
+  // Owning shape data for copy-on-write operations.
+  SmallVector<int64_t> storage;
   Type elementType;
   Attribute encoding;
 };
@@ -327,23 +331,29 @@ public:
     return *this;
   }
 
-  /// Create a new VectorType by erasing a dim from shape @pos.
+  /// Erase a dim from shape @pos.
+  Builder &dropDim(unsigned pos) {
+    assert(pos < shape.size() && "overflow");
+    if (storage.empty())
+      storage.append(shape.begin(), shape.end());
+    storage.erase(storage.begin() + pos);
+    shape = {storage.data(), storage.size()};
+    return *this;
+  }
+
   /// In the particular case where the vector has a single dimension that we
   /// drop, return the scalar element type.
   // TODO: unify once we have a VectorType that supports 0-D.
-  Type dropDim(unsigned pos) {
-    assert(pos < shape.size() && "overflow");
-    if (shape.size() == 1)
+  operator Type() {
+    if (shape.empty())
       return elementType;
-    SmallVector<int64_t, 4> newShape(shape.begin(), shape.end());
-    newShape.erase(newShape.begin() + pos);
-    return setShape(newShape);
+    return VectorType::get(shape, elementType);
   }
-
-  operator VectorType() { return VectorType::get(shape, elementType); }
 
 private:
   ArrayRef<int64_t> shape;
+  // Owning shape data for copy-on-write operations.
+  SmallVector<int64_t> storage;
   Type elementType;
 };
 
@@ -358,6 +368,25 @@ private:
 llvm::Optional<llvm::SmallDenseSet<unsigned>>
 computeRankReductionMask(ArrayRef<int64_t> originalShape,
                          ArrayRef<int64_t> reducedShape);
+
+/// Enum that captures information related to verifier error conditions on
+/// slice insert/extract type of ops.
+enum class SliceVerificationResult {
+  Success,
+  RankTooLarge,
+  SizeMismatch,
+  ElemTypeMismatch,
+  // Error codes to ops with a memory space and a layout annotation.
+  MemSpaceMismatch,
+  LayoutMismatch
+};
+
+/// Check if `originalType` can be rank reduced to `candidateReducedType` type
+/// by dropping some dimensions with static size `1`.
+/// Return `SliceVerificationResult::Success` on success or an appropriate error
+/// code.
+SliceVerificationResult isRankReducedType(ShapedType originalType,
+                                          ShapedType candidateReducedType);
 
 //===----------------------------------------------------------------------===//
 // Deferred Method Definitions
@@ -502,6 +531,11 @@ bool isStrided(MemRefType t);
 /// Return null if the layout is not compatible with a strided layout.
 AffineMap getStridedLinearLayoutMap(MemRefType t);
 
-} // end namespace mlir
+/// Helper determining if a memref is static-shape and contiguous-row-major
+/// layout, while still allowing for an arbitrary offset (any static or
+/// dynamic value).
+bool isStaticShapeAndContiguousRowMajor(MemRefType memrefType);
+
+} // namespace mlir
 
 #endif // MLIR_IR_BUILTINTYPES_H

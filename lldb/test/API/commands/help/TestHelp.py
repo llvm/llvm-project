@@ -225,3 +225,21 @@ class HelpCommandTestCase(TestBase):
             "help format",
             matching=True,
             substrs=['<format> -- One of the format names'])
+
+    @no_debug_info_test
+    def test_help_option_group_format_options_usage(self):
+        """Test that help on commands that use OptionGroupFormat options provide relevant help specific to that command."""
+        self.expect(
+            "help memory read",
+            matching=True,
+            substrs=[
+                "-f <format> ( --format <format> )", "Specify a format to be used for display.",
+                "-s <byte-size> ( --size <byte-size> )", "The size in bytes to use when displaying with the selected format."])
+
+        self.expect(
+            "help memory write",
+            matching=True,
+            substrs=[
+                "-f <format> ( --format <format> )", "The format to use for each of the value to be written.",
+                "-s <byte-size> ( --size <byte-size> )", "The size in bytes to write from input file or each value."])
+

@@ -86,13 +86,13 @@ bool XCOFFWriter::nameShouldBeInStringTable(StringRef SymbolName) {
 }
 
 bool XCOFFWriter::initRelocations(uint64_t &CurrentOffset) {
-  for (uint16_t I = 0, E = InitSections.size(); I < E; ++I) {
-    if (!InitSections[I].Relocations.empty()) {
-      InitSections[I].NumberOfRelocations = InitSections[I].Relocations.size();
-      InitSections[I].FileOffsetToRelocations = CurrentOffset;
+  for (XCOFFYAML::Section &InitSection : InitSections) {
+    if (!InitSection.Relocations.empty()) {
+      InitSection.NumberOfRelocations = InitSection.Relocations.size();
+      InitSection.FileOffsetToRelocations = CurrentOffset;
       uint64_t RelSize = Is64Bit ? XCOFF::RelocationSerializationSize64
                                  : XCOFF::RelocationSerializationSize32;
-      CurrentOffset += InitSections[I].NumberOfRelocations * RelSize;
+      CurrentOffset += InitSection.NumberOfRelocations * RelSize;
       if (CurrentOffset > MaxRawDataSize) {
         ErrHandler("maximum object size of" + Twine(MaxRawDataSize) +
                    "exceeded when writing relocation data");

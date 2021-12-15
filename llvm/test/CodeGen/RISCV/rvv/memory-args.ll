@@ -12,7 +12,7 @@ define <vscale x 64 x i8> @callee(<vscale x 64 x i8> %arg0, <vscale x 64 x i8> %
 ; RV64IV-LABEL: callee:
 ; RV64IV:       # %bb.0:
 ; RV64IV-NEXT:    vl8r.v v24, (a0)
-; RV64IV-NEXT:    addi a0, zero, 1024
+; RV64IV-NEXT:    li a0, 1024
 ; RV64IV-NEXT:    vsetvli zero, a0, e8, m8, tu, mu
 ; RV64IV-NEXT:    vmacc.vv v8, v16, v24
 ; RV64IV-NEXT:    ret
@@ -39,7 +39,7 @@ define <vscale x 64 x i8> @caller() {
 ; RV64IV-NEXT:    sub sp, sp, a0
 ; RV64IV-NEXT:    andi sp, sp, -64
 ; RV64IV-NEXT:    csrr a0, vlenb
-; RV64IV-NEXT:    addi a1, zero, 24
+; RV64IV-NEXT:    li a1, 24
 ; RV64IV-NEXT:    mul a0, a0, a1
 ; RV64IV-NEXT:    add a0, sp, a0
 ; RV64IV-NEXT:    addi a0, a0, 48
@@ -59,8 +59,8 @@ define <vscale x 64 x i8> @caller() {
 ; RV64IV-NEXT:    vs8r.v v24, (a1)
 ; RV64IV-NEXT:    call callee@plt
 ; RV64IV-NEXT:    addi sp, s0, -64
-; RV64IV-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
 ; RV64IV-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
+; RV64IV-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
 ; RV64IV-NEXT:    addi sp, sp, 64
 ; RV64IV-NEXT:    ret
   %local0 = alloca <vscale x 64 x i8>

@@ -1,4 +1,4 @@
-// RUN: mlir-opt -split-input-file -test-linalg-transform-patterns=test-decompose-convolution-patterns %s | FileCheck %s
+// RUN: mlir-opt -test-linalg-codegen-strategy="decompose" -split-input-file %s | FileCheck %s
 
 // CHECK-LABEL: func @conv2d_nhwc_4x1x2x8_tensor
 //  CHECK-SAME: (%[[INPUT:.+]]: tensor<4x1x6x3xf32>, %[[FILTER:.+]]: tensor<1x2x3x8xf32>, %[[INIT:.+]]: tensor<4x1x2x8xf32>)

@@ -562,11 +562,11 @@ void TypeLocWriter::VisitPipeTypeLoc(PipeTypeLoc TL) {
   Record.AddSourceLocation(TL.getKWLoc());
 }
 
-void TypeLocWriter::VisitExtIntTypeLoc(clang::ExtIntTypeLoc TL) {
+void TypeLocWriter::VisitBitIntTypeLoc(clang::BitIntTypeLoc TL) {
   Record.AddSourceLocation(TL.getNameLoc());
 }
-void TypeLocWriter::VisitDependentExtIntTypeLoc(
-    clang::DependentExtIntTypeLoc TL) {
+void TypeLocWriter::VisitDependentBitIntTypeLoc(
+    clang::DependentBitIntTypeLoc TL) {
   Record.AddSourceLocation(TL.getNameLoc());
 }
 

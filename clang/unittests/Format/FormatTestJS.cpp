@@ -2692,5 +2692,9 @@ TEST_F(FormatTestJS, NoBreakAfterAsserts) {
       "}\n");
 }
 
+TEST_F(FormatTestJS, NumericSeparators) {
+  verifyFormat("x = 1_000_000 + 12;", "x = 1_000_000   + 12;");
+}
+
 } // namespace format
 } // end namespace clang

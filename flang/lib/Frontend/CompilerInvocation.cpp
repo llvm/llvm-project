@@ -310,6 +310,11 @@ static bool ParseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
       args.hasFlag(clang::driver::options::OPT_fxor_operator,
           clang::driver::options::OPT_fno_xor_operator, false));
 
+  // -fno-automatic
+  if (args.hasArg(clang::driver::options::OPT_fno_automatic)) {
+    opts.features.Enable(Fortran::common::LanguageFeature::DefaultSave);
+  }
+
   if (args.hasArg(
           clang::driver::options::OPT_falternative_parameter_statement)) {
     opts.features.Enable(Fortran::common::LanguageFeature::OldStyleParameter);

@@ -46,16 +46,22 @@ struct HasMemberAndFunction {
 struct BadReturnType {
   BadReturnType empty() { return {}; }
 };
-static_assert(!std::is_invocable_v<RangeEmptyT, BadReturnType>);
+static_assert(!std::is_invocable_v<RangeEmptyT, BadReturnType&>);
 
 struct BoolConvertible {
-  constexpr operator bool() noexcept(false) { return true; }
+  constexpr /*TODO: explicit*/ operator bool() noexcept(false) { return true; }
 };
 struct BoolConvertibleReturnType {
   constexpr BoolConvertible empty() noexcept { return {}; }
 };
-
 static_assert(!noexcept(std::ranges::empty(BoolConvertibleReturnType())));
+
+struct InputIterators {
+  cpp17_input_iterator<int*> begin() const;
+  cpp17_input_iterator<int*> end() const;
+};
+static_assert(std::is_same_v<decltype(InputIterators().begin() == InputIterators().end()), bool>);
+static_assert(!std::is_invocable_v<RangeEmptyT, const InputIterators&>);
 
 constexpr bool testEmptyMember() {
   HasMemberAndFunction a;
@@ -77,6 +83,13 @@ struct SizeFunction {
   friend constexpr size_t size(SizeFunction sf) { return sf.size_; }
 };
 
+struct BeginEndSizedSentinel {
+  constexpr int *begin() const { return nullptr; }
+  constexpr auto end() const { return sized_sentinel<int*>(nullptr); }
+};
+static_assert(std::ranges::forward_range<BeginEndSizedSentinel>);
+static_assert(std::ranges::sized_range<BeginEndSizedSentinel>);
+
 constexpr bool testUsingRangesSize() {
   SizeMember a{1};
   assert(std::ranges::empty(a) == false);
@@ -88,82 +101,56 @@ constexpr bool testUsingRangesSize() {
   SizeFunction d{0};
   assert(std::ranges::empty(d) == true);
 
+  BeginEndSizedSentinel e;
+  assert(std::ranges::empty(e) == true);
+
   return true;
 }
 
-struct other_forward_iterator : forward_iterator<int*> { };
-
-struct sentinel {
-  constexpr bool operator==(std::input_or_output_iterator auto) const { return true; }
-};
-
 struct BeginEndNotSizedSentinel {
-  friend constexpr forward_iterator<int*> begin(BeginEndNotSizedSentinel) { return {}; }
-  friend constexpr sentinel end(BeginEndNotSizedSentinel) { return {}; }
+  constexpr int *begin() const { return nullptr; }
+  constexpr auto end() const { return sentinel_wrapper<int*>(nullptr); }
 };
-static_assert(!std::is_invocable_v<RangeSizeT, BeginEndNotSizedSentinel&>);
+static_assert( std::ranges::forward_range<BeginEndNotSizedSentinel>);
+static_assert(!std::ranges::sized_range<BeginEndNotSizedSentinel>);
 
-struct InvalidMinusBeginEnd {
-  friend constexpr random_access_iterator<int*> begin(InvalidMinusBeginEnd) { return {}; }
-  friend constexpr sentinel end(InvalidMinusBeginEnd) { return {}; }
-};
-
-// Int is integer-like, but it is not other_forward_iterator's difference_type.
-constexpr short operator-(sentinel, random_access_iterator<int*>) { return 2; }
-constexpr short operator-(random_access_iterator<int*>, sentinel) { return 2; }
-static_assert(!std::is_invocable_v<RangeSizeT, InvalidMinusBeginEnd&>);
-
-// This type will use ranges::size.
-struct IntPtrBeginAndEnd {
-  int buff[8];
-  constexpr int* begin() { return buff; }
-  constexpr int* end() { return buff + 8; }
-};
-static_assert(std::is_invocable_v<RangeSizeT, IntPtrBeginAndEnd&>);
-
-// size is disabled here, and it isn't sized_sentinel_for, so we have to compare begin
-// and end again.
+// size is disabled here, so we have to compare begin and end.
 struct DisabledSizeRangeWithBeginEnd {
-  friend constexpr forward_iterator<int*> begin(DisabledSizeRangeWithBeginEnd) { return {}; }
-  friend constexpr sentinel end(DisabledSizeRangeWithBeginEnd) { return {}; }
-  constexpr size_t size() const { return 1; }
+  constexpr int *begin() const { return nullptr; }
+  constexpr auto end() const { return sentinel_wrapper<int*>(nullptr); }
+  size_t size() const;
 };
-
-template <>
+template<>
 inline constexpr bool std::ranges::disable_sized_range<DisabledSizeRangeWithBeginEnd> = true;
-static_assert(!std::is_invocable_v<RangeSizeT, DisabledSizeRangeWithBeginEnd&>);
+static_assert(std::ranges::contiguous_range<DisabledSizeRangeWithBeginEnd>);
+static_assert(!std::ranges::sized_range<DisabledSizeRangeWithBeginEnd>);
 
 struct BeginEndAndEmpty {
-  int* begin();
-  int* end();
-  constexpr bool empty() { return true; }
+  constexpr int *begin() const { return nullptr; }
+  constexpr auto end() const { return sentinel_wrapper<int*>(nullptr); }
+  constexpr bool empty() { return false; }
 };
 
-struct BeginEndAndConstEmpty {
-  int* begin();
-  int* end();
-  constexpr bool empty() const { return true; }
+struct EvilBeginEnd {
+  bool empty() &&;
+  constexpr int *begin() & { return nullptr; }
+  constexpr int *end() & { return nullptr; }
 };
 
 constexpr bool testBeginEqualsEnd() {
   BeginEndNotSizedSentinel a;
   assert(std::ranges::empty(a) == true);
 
-  InvalidMinusBeginEnd b;
-  assert(std::ranges::empty(b) == true);
-
-  IntPtrBeginAndEnd c;
-  assert(std::ranges::empty(c) == false);
-
   DisabledSizeRangeWithBeginEnd d;
   assert(std::ranges::empty(d) == true);
 
   BeginEndAndEmpty e;
-  assert(std::ranges::empty(e) == true);
+  assert(std::ranges::empty(e) == false); // e.empty()
+  assert(std::ranges::empty(std::as_const(e)) == true); // e.begin() == e.end()
 
-  BeginEndAndConstEmpty f;
-  assert(std::ranges::empty(f) == true);
-  assert(std::ranges::empty(std::as_const(f)) == true);
+#if 0 // TODO FIXME
+  assert(std::ranges::empty(EvilBeginEnd()));
+#endif
 
   return true;
 }

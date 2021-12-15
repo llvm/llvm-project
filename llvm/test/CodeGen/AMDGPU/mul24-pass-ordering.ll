@@ -16,7 +16,7 @@ define void @lsr_order_mul24_0(i32 %arg, i32 %arg2, i32 %arg6, i32 %arg13, i32 %
 ; GFX9-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ds_write_b32 v0, v5
-; GFX9-NEXT:  BB0_1: ; %bb23
+; GFX9-NEXT:  .LBB0_1: ; %bb23
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    v_mul_u32_u24_e32 v5, v0, v2
 ; GFX9-NEXT:    v_add_u32_e32 v0, v0, v1
@@ -25,7 +25,7 @@ define void @lsr_order_mul24_0(i32 %arg, i32 %arg2, i32 %arg6, i32 %arg13, i32 %
 ; GFX9-NEXT:    v_cmp_ge_u32_e32 vcc, v5, v3
 ; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
 ; GFX9-NEXT:    s_andn2_b64 exec, exec, s[4:5]
-; GFX9-NEXT:    s_cbranch_execnz BB0_1
+; GFX9-NEXT:    s_cbranch_execnz .LBB0_1
 ; GFX9-NEXT:  ; %bb.2: ; %.loopexit
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -58,7 +58,7 @@ define void @lsr_order_mul24_1(i32 %arg, i32 %arg1, i32 %arg2, float addrspace(3
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v5
 ; GFX9-NEXT:    v_cmp_lt_u32_e64 s[4:5], v0, v1
 ; GFX9-NEXT:    s_and_saveexec_b64 s[8:9], s[4:5]
-; GFX9-NEXT:    s_cbranch_execz BB1_3
+; GFX9-NEXT:    s_cbranch_execz .LBB1_3
 ; GFX9-NEXT:  ; %bb.1: ; %bb19
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v7, v6
 ; GFX9-NEXT:    v_add_u32_e32 v4, v4, v0
@@ -68,9 +68,9 @@ define void @lsr_order_mul24_1(i32 %arg, i32 %arg1, i32 %arg2, float addrspace(3
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v8, 2, v2
 ; GFX9-NEXT:    v_add_u32_e32 v9, v17, v12
 ; GFX9-NEXT:    s_mov_b64 s[10:11], 0
-; GFX9-NEXT:    v_mov_b32_e32 v3, 0x3727c5ac
 ; GFX9-NEXT:    v_mov_b32_e32 v4, 0
-; GFX9-NEXT:  BB1_2: ; %bb23
+; GFX9-NEXT:    ; implicit-def: $vgpr3
+; GFX9-NEXT:  .LBB1_2: ; %bb23
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v3, v0
 ; GFX9-NEXT:    v_add_u32_e32 v12, v17, v0
@@ -100,8 +100,8 @@ define void @lsr_order_mul24_1(i32 %arg, i32 %arg1, i32 %arg2, float addrspace(3
 ; GFX9-NEXT:    ds_write_b32 v6, v3
 ; GFX9-NEXT:    v_add_u32_e32 v6, v6, v8
 ; GFX9-NEXT:    s_andn2_b64 exec, exec, s[10:11]
-; GFX9-NEXT:    s_cbranch_execnz BB1_2
-; GFX9-NEXT:  BB1_3: ; %Flow3
+; GFX9-NEXT:    s_cbranch_execnz .LBB1_2
+; GFX9-NEXT:  .LBB1_3: ; %Flow3
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -254,10 +254,11 @@ define void @slsr1_1(i32 %b.arg, i32 %s.arg) #0 {
   ret void
 }
 
-declare void @foo(i32) #0
+declare void @foo(i32) #2
 declare float @llvm.fmuladd.f32(float, float, float) #1
 
 attributes #0 = { nounwind willreturn "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 attributes #1 = { nounwind readnone speculatable }
+attributes #2 = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 
 !0 = !{float 2.500000e+00}

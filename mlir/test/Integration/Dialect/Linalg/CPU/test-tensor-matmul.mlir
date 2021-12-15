@@ -1,3 +1,4 @@
+// UNSUPPORTED: asan
 // RUN: mlir-opt %s -linalg-bufferize -std-bufferize -tensor-constant-bufferize \
 // RUN: -tensor-bufferize -func-bufferize -finalizing-bufferize -buffer-deallocation -convert-linalg-to-loops -convert-scf-to-std \
 // RUN: -convert-linalg-to-llvm -lower-affine -convert-scf-to-std --convert-memref-to-llvm -convert-std-to-llvm -reconcile-unrealized-casts | \

@@ -60,7 +60,7 @@ void test_builtin_elementwise_max(int i, short s, double d, float4 v, int3 iv, i
   enum f { three };
   enum f x = __builtin_elementwise_max(one, three);
 
-  _ExtInt(32) ext;
+  _BitInt(32) ext; // expected-warning {{'_BitInt' in C17 and earlier is a Clang extension}}
   ext = __builtin_elementwise_max(ext, ext);
 
   const int ci;
@@ -112,7 +112,7 @@ void test_builtin_elementwise_min(int i, short s, double d, float4 v, int3 iv, i
   enum f { three };
   enum f x = __builtin_elementwise_min(one, three);
 
-  _ExtInt(32) ext;
+  _BitInt(32) ext; // expected-warning {{'_BitInt' in C17 and earlier is a Clang extension}}
   ext = __builtin_elementwise_min(ext, ext);
 
   const int ci;
@@ -134,4 +134,25 @@ void test_builtin_elementwise_min(int i, short s, double d, float4 v, int3 iv, i
   _Complex float c1, c2;
   c1 = __builtin_elementwise_min(c1, c2);
   // expected-error@-1 {{1st argument must be a vector, integer or floating point type (was '_Complex float')}}
+}
+
+void test_builtin_elementwise_ceil(int i, float f, double d, float4 v, int3 iv, unsigned u, unsigned4 uv) {
+
+  struct Foo s = __builtin_elementwise_ceil(f);
+  // expected-error@-1 {{initializing 'struct Foo' with an expression of incompatible type 'float'}}
+
+  i = __builtin_elementwise_ceil();
+  // expected-error@-1 {{too few arguments to function call, expected 1, have 0}}
+
+  i = __builtin_elementwise_ceil(i);
+  // expected-error@-1 {{1st argument must be a floating point type (was 'int')}}
+
+  i = __builtin_elementwise_ceil(f, f);
+  // expected-error@-1 {{too many arguments to function call, expected 1, have 2}}
+
+  u = __builtin_elementwise_ceil(u);
+  // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned int')}}
+
+  uv = __builtin_elementwise_ceil(uv);
+  // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned4' (vector of 4 'unsigned int' values))}}
 }

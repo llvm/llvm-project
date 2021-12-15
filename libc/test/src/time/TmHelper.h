@@ -29,7 +29,7 @@ static inline void InitializeTmData(struct tm *tm_data, int year, int month,
                     .tm_mday = mday,
                     .tm_mon = month - 1, // tm_mon starts with 0 for Jan
                     // years since 1900
-                    .tm_year = year - TimeConstants::TimeYearBase,
+                    .tm_year = year - TimeConstants::TIME_YEAR_BASE,
                     .tm_wday = wday,
                     .tm_yday = yday};
   *tm_data = temp;

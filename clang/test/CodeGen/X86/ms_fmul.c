@@ -18,4 +18,4 @@ void __attribute__ ((naked)) foo(void)
 }}
 
 // CHECK-LABEL: foo
-// CHECK: call void asm sideeffect inteldialect "fmul qword ptr $0[edx + $$240]\0A\09ret"
+// CHECK: call void asm sideeffect inteldialect "fmul qword ptr static_const_table[edx + $$240]\0A\09ret"

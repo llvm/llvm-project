@@ -16,7 +16,7 @@ define void @ptriv(i8* %base, i32 %n) nounwind {
 ; CHECK-LABEL: @ptriv(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[N:%.*]] to i64
-; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[BASE:%.*]], i64 [[IDX_EXT]]
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr i8, i8* [[BASE:%.*]], i64 [[IDX_EXT]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i8* [[BASE]], [[ADD_PTR]]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.preheader:
@@ -63,14 +63,13 @@ for.end:
 define void @expandOuterRecurrence(i32 %arg) nounwind {
 ; CHECK-LABEL: @expandOuterRecurrence(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SUB1:%.*]] = sub nsw i32 [[ARG:%.*]], 1
+; CHECK-NEXT:    [[SUB1:%.*]] = sub i32 [[ARG:%.*]], 1
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 0, [[SUB1]]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[OUTER_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       outer.preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[ARG]], -1
 ; CHECK-NEXT:    br label [[OUTER:%.*]]
 ; CHECK:       outer:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i32 [ [[TMP0]], [[OUTER_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[OUTER_INC:%.*]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i32 [ [[SUB1]], [[OUTER_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[OUTER_INC:%.*]] ]
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_INC:%.*]], [[OUTER_INC]] ], [ 0, [[OUTER_PREHEADER]] ]
 ; CHECK-NEXT:    [[SUB2:%.*]] = sub nsw i32 [[ARG]], [[I]]
 ; CHECK-NEXT:    [[SUB3:%.*]] = sub nsw i32 [[SUB2]], 1
@@ -88,7 +87,7 @@ define void @expandOuterRecurrence(i32 %arg) nounwind {
 ; CHECK:       outer.inc:
 ; CHECK-NEXT:    [[I_INC]] = add nuw nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i32 [[INDVARS_IV]], -1
-; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[I_INC]], [[TMP0]]
+; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[I_INC]], [[SUB1]]
 ; CHECK-NEXT:    br i1 [[EXITCOND1]], label [[OUTER]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    br label [[EXIT]]

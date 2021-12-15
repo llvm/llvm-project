@@ -14,7 +14,7 @@
 #undef _HAVE_X
 #undef X__Y
 
-// whitelisted definitions
+// allowlisted definitions
 #define while while
 #define const
 #define static

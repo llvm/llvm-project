@@ -140,9 +140,9 @@ define i32 @xor_nosignbit_shl(i32 %x, i32* %dst) {
 define i32 @add_signbit_shl(i32 %x, i32* %dst) {
 ; X64-LABEL: add_signbit_shl:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    shll $8, %eax
-; X64-NEXT:    addl $-16777216, %eax # imm = 0xFF000000
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    shll $8, %edi
+; X64-NEXT:    leal -16777216(%rdi), %eax
 ; X64-NEXT:    movl %eax, (%rsi)
 ; X64-NEXT:    retq
 ;
@@ -162,9 +162,9 @@ define i32 @add_signbit_shl(i32 %x, i32* %dst) {
 define i32 @add_nosignbit_shl(i32 %x, i32* %dst) {
 ; X64-LABEL: add_nosignbit_shl:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    shll $8, %eax
-; X64-NEXT:    addl $-16777216, %eax # imm = 0xFF000000
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    shll $8, %edi
+; X64-NEXT:    leal -16777216(%rdi), %eax
 ; X64-NEXT:    movl %eax, (%rsi)
 ; X64-NEXT:    retq
 ;
@@ -322,8 +322,8 @@ define i32 @xor_nosignbit_lshr(i32 %x, i32* %dst) {
 define i32 @add_signbit_lshr(i32 %x, i32* %dst) {
 ; X64-LABEL: add_signbit_lshr:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    addl $-65536, %eax # imm = 0xFFFF0000
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    leal -65536(%rdi), %eax
 ; X64-NEXT:    shrl $8, %eax
 ; X64-NEXT:    movl %eax, (%rsi)
 ; X64-NEXT:    retq
@@ -344,8 +344,8 @@ define i32 @add_signbit_lshr(i32 %x, i32* %dst) {
 define i32 @add_nosignbit_lshr(i32 %x, i32* %dst) {
 ; X64-LABEL: add_nosignbit_lshr:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    addl $2147418112, %eax # imm = 0x7FFF0000
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    leal 2147418112(%rdi), %eax
 ; X64-NEXT:    shrl $8, %eax
 ; X64-NEXT:    movl %eax, (%rsi)
 ; X64-NEXT:    retq
@@ -503,8 +503,8 @@ define i32 @xor_nosignbit_ashr(i32 %x, i32* %dst) {
 define i32 @add_signbit_ashr(i32 %x, i32* %dst) {
 ; X64-LABEL: add_signbit_ashr:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    addl $-65536, %eax # imm = 0xFFFF0000
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    leal -65536(%rdi), %eax
 ; X64-NEXT:    sarl $8, %eax
 ; X64-NEXT:    movl %eax, (%rsi)
 ; X64-NEXT:    retq
@@ -525,8 +525,8 @@ define i32 @add_signbit_ashr(i32 %x, i32* %dst) {
 define i32 @add_nosignbit_ashr(i32 %x, i32* %dst) {
 ; X64-LABEL: add_nosignbit_ashr:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    addl $2147418112, %eax # imm = 0x7FFF0000
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    leal 2147418112(%rdi), %eax
 ; X64-NEXT:    sarl $8, %eax
 ; X64-NEXT:    movl %eax, (%rsi)
 ; X64-NEXT:    retq

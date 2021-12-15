@@ -43,9 +43,10 @@ write_lit_config("lit_site_cfg") {
   output = clang_lit_site_cfg_file
   dir = get_path_info(output, "dir")
   extra_values = [
-    "LLVM_WITH_Z3=",  # Must be empty, not 0.
+    "LLVM_WITH_Z3=0",
     "CLANG_BUILD_EXAMPLES=0",
     "CLANG_DEFAULT_CXX_STDLIB=",  # Empty string means "default value" here.
+    "CLANG_DEFAULT_PIE_ON_LINUX=0",
     "CLANG_TOOLS_DIR=" + rebase_path("$root_out_dir/bin", dir),
     "CLANG_VENDOR_UTI=org.llvm.clang",
 
@@ -157,6 +158,7 @@ group("test") {
     "//clang/utils/TableGen:clang-tblgen",
     "//clang/utils/hmaptool",
     "//llvm/tools/llc",
+    "//llvm/tools/llvm-ar:symlinks",
     "//llvm/tools/llvm-as",
     "//llvm/tools/llvm-bcanalyzer",
     "//llvm/tools/llvm-cat",

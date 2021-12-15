@@ -10,6 +10,7 @@
 
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
@@ -199,6 +200,10 @@ struct TestVectorTransposeLowering
       *this, "avx2",
       llvm::cl::desc("Lower vector.transpose to avx2-specific patterns"),
       llvm::cl::init(false)};
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<LLVM::LLVMDialect>();
+  }
 
   void runOnFunction() override {
     RewritePatternSet patterns(&getContext());
@@ -488,7 +493,7 @@ struct TestVectorTransferOpt
 struct TestVectorTransferLoweringPatterns
     : public PassWrapper<TestVectorTransferLoweringPatterns, FunctionPass> {
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<memref::MemRefDialect>();
+    registry.insert<tensor::TensorDialect, memref::MemRefDialect>();
   }
   StringRef getArgument() const final {
     return "test-vector-transfer-lowering-patterns";
@@ -578,7 +583,41 @@ struct TestVectorReduceToContractPatternsPatterns
   }
 };
 
-} // end anonymous namespace
+struct TestVectorTransferDropUnitDimsPatterns
+    : public PassWrapper<TestVectorTransferDropUnitDimsPatterns, FunctionPass> {
+  StringRef getArgument() const final {
+    return "test-vector-transfer-drop-unit-dims-patterns";
+  }
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<memref::MemRefDialect>();
+  }
+  void runOnFunction() override {
+    RewritePatternSet patterns(&getContext());
+    populateVectorTransferDropUnitDimsPatterns(patterns);
+    (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
+  }
+};
+
+struct TestFlattenVectorTransferPatterns
+    : public PassWrapper<TestFlattenVectorTransferPatterns, FunctionPass> {
+  StringRef getArgument() const final {
+    return "test-vector-transfer-flatten-patterns";
+  }
+  StringRef getDescription() const final {
+    return "Test patterns to rewrite contiguous row-major N-dimensional "
+           "vector.transfer_{read,write} ops into 1D transfers";
+  }
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<memref::MemRefDialect>();
+  }
+  void runOnFunction() override {
+    RewritePatternSet patterns(&getContext());
+    populateFlattenVectorTransferPatterns(patterns);
+    (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
+  }
+};
+
+} // namespace
 
 namespace mlir {
 namespace test {
@@ -608,6 +647,10 @@ void registerTestVectorLowerings() {
   PassRegistration<TestVectorTransferCollapseInnerMostContiguousDims>();
 
   PassRegistration<TestVectorReduceToContractPatternsPatterns>();
+
+  PassRegistration<TestVectorTransferDropUnitDimsPatterns>();
+
+  PassRegistration<TestFlattenVectorTransferPatterns>();
 }
 } // namespace test
 } // namespace mlir

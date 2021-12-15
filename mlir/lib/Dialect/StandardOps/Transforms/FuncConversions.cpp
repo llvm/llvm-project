@@ -35,7 +35,7 @@ struct CallOpSignatureConversion : public OpConversionPattern<CallOp> {
     return success();
   }
 };
-} // end anonymous namespace
+} // namespace
 
 void mlir::populateCallOpTypeConversionPattern(RewritePatternSet &patterns,
                                                TypeConverter &converter) {
@@ -85,7 +85,7 @@ public:
 private:
   function_ref<bool(BranchOpInterface, int)> shouldConvertBranchOperand;
 };
-} // end anonymous namespace
+} // namespace
 
 namespace {
 /// Only needed to support partial conversion of functions where this pattern
@@ -105,7 +105,7 @@ public:
     return success();
   }
 };
-} // end anonymous namespace
+} // namespace
 
 void mlir::populateBranchOpInterfaceTypeConversionPattern(
     RewritePatternSet &patterns, TypeConverter &typeConverter,

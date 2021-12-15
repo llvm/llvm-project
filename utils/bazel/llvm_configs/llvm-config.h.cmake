@@ -85,6 +85,9 @@
 /* Define if we have z3 and want to build it */
 #cmakedefine LLVM_WITH_Z3 ${LLVM_WITH_Z3}
 
+/* Define if we have curl and want to use it */
+#cmakedefine LLVM_ENABLE_CURL ${LLVM_ENABLE_CURL}
+
 /* Define if LLVM was built with a dependency to the libtensorflow dynamic library */
 #cmakedefine LLVM_HAVE_TF_API
 

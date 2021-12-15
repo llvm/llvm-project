@@ -124,11 +124,9 @@ SUnit* R600SchedStrategy::pickNode(bool &IsTopNode) {
     DAG->dumpNode(*SU);
   } else {
     dbgs() << "NO NODE \n";
-    for (unsigned i = 0; i < DAG->SUnits.size(); i++) {
-      const SUnit &S = DAG->SUnits[i];
+    for (const SUnit &S : DAG->SUnits)
       if (!S.isScheduled)
         DAG->dumpNode(S);
-    }
   });
 
   return SU;
@@ -330,9 +328,9 @@ SUnit *R600SchedStrategy::PopInst(std::vector<SUnit *> &Q, bool AnyALU) {
 
 void R600SchedStrategy::LoadAlu() {
   std::vector<SUnit *> &QSrc = Pending[IDAlu];
-  for (unsigned i = 0, e = QSrc.size(); i < e; ++i) {
-    AluKind AK = getAluKind(QSrc[i]);
-    AvailableAlus[AK].push_back(QSrc[i]);
+  for (SUnit *SU : QSrc) {
+    AluKind AK = getAluKind(SU);
+    AvailableAlus[AK].push_back(SU);
   }
   QSrc.clear();
 }

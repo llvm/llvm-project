@@ -237,7 +237,13 @@ bool RISCVFrameLowering::hasBP(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
 
-  return MFI.hasVarSizedObjects() && TRI->hasStackRealignment(MF);
+  // If we do not reserve stack space for outgoing arguments in prologue,
+  // we will adjust the stack pointer before call instruction. After the
+  // adjustment, we can not use SP to access the stack objects for the
+  // arguments. Instead, use BP to access these stack objects.
+  return (MFI.hasVarSizedObjects() ||
+          (!hasReservedCallFrame(MF) && MFI.getMaxCallFrameSize() != 0)) &&
+         TRI->hasStackRealignment(MF);
 }
 
 // Determines the size of the frame and maximum call frame size.
@@ -1065,10 +1071,14 @@ bool RISCVFrameLowering::restoreCalleeSavedRegisters(
   if (MI != MBB.end() && !MI->isDebugInstr())
     DL = MI->getDebugLoc();
 
-  // Manually restore values not restored by libcall. Insert in reverse order.
+  // Manually restore values not restored by libcall.
+  // Keep the same order as in the prologue. There is no need to reverse the
+  // order in the epilogue. In addition, the return address will be restored
+  // first in the epilogue. It increases the opportunity to avoid the
+  // load-to-use data hazard between loading RA and return by RA.
   // loadRegFromStackSlot can insert multiple instructions.
   const auto &NonLibcallCSI = getNonLibcallCSI(*MF, CSI);
-  for (auto &CS : reverse(NonLibcallCSI)) {
+  for (auto &CS : NonLibcallCSI) {
     Register Reg = CS.getReg();
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
     TII.loadRegFromStackSlot(MBB, MI, Reg, CS.getFrameIdx(), RC, TRI);

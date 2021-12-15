@@ -404,7 +404,7 @@ TEST(ConstantsTest, AliasCAPI) {
   Type *I16PTy = PointerType::get(I16Ty, 0);
   Constant *Aliasee = ConstantExpr::getBitCast(G, I16PTy);
   LLVMValueRef AliasRef =
-      LLVMAddAlias(wrap(M.get()), wrap(I16PTy), wrap(Aliasee), "a");
+      LLVMAddAlias2(wrap(M.get()), wrap(I16Ty), 0, wrap(Aliasee), "a");
   ASSERT_EQ(unwrap<GlobalAlias>(AliasRef)->getAliasee(), Aliasee);
 }
 
@@ -482,7 +482,12 @@ TEST(ConstantsTest, BitcastToGEP) {
       new GlobalVariable(*M, S, false, GlobalValue::ExternalLinkage, nullptr);
   auto *PtrTy = PointerType::get(i32, 0);
   auto *C = ConstantExpr::getBitCast(G, PtrTy);
-  ASSERT_EQ(cast<ConstantExpr>(C)->getOpcode(), Instruction::BitCast);
+  if (Context.supportsTypedPointers()) {
+    EXPECT_EQ(cast<ConstantExpr>(C)->getOpcode(), Instruction::BitCast);
+  } else {
+    /* With opaque pointers, no cast is necessary. */
+    EXPECT_EQ(C, G);
+  }
 }
 
 bool foldFuncPtrAndConstToNull(LLVMContext &Context, Module *TheModule,

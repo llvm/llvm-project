@@ -272,7 +272,7 @@ TEST_F(VPIntrinsicTest, VPIntrinsicDeclarationForParams) {
 
     ASSERT_NE(F.getIntrinsicID(), Intrinsic::not_intrinsic);
     auto *NewDecl = VPIntrinsic::getDeclarationForParams(
-        OutM.get(), F.getIntrinsicID(), Values);
+        OutM.get(), F.getIntrinsicID(), FuncTy->getReturnType(), Values);
     ASSERT_TRUE(NewDecl);
 
     // Check that 'old decl' == 'new decl'.
@@ -292,7 +292,7 @@ TEST_F(VPIntrinsicTest, VPIntrinsicDeclarationForParams) {
 /// Check that the HANDLE_VP_TO_CONSTRAINEDFP maps to an existing intrinsic with
 /// the right amount of metadata args.
 TEST_F(VPIntrinsicTest, HandleToConstrainedFP) {
-#define HANDLE_VP_TO_CONSTRAINEDFP(HASROUND, HASEXCEPT, CFPID)                 \
+#define VP_PROPERTY_CONSTRAINEDFP(HASROUND, HASEXCEPT, CFPID)                  \
   {                                                                            \
     SmallVector<Intrinsic::IITDescriptor, 5> T;                                \
     Intrinsic::getIntrinsicInfoTableEntries(Intrinsic::CFPID, T);              \

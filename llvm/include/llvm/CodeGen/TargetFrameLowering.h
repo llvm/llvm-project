@@ -139,10 +139,13 @@ public:
   ///
   int getOffsetOfLocalArea() const { return LocalAreaOffset; }
 
-  /// isFPCloseToIncomingSP - Return true if the frame pointer is close to
-  /// the incoming stack pointer, false if it is close to the post-prologue
-  /// stack pointer.
-  virtual bool isFPCloseToIncomingSP() const { return true; }
+  /// Control the placement of special register scavenging spill slots when
+  /// allocating a stack frame.
+  ///
+  /// If this returns true, the frame indexes used by the RegScavenger will be
+  /// allocated closest to the incoming stack pointer.
+  virtual bool allocateScavengingFrameIndexesNearIncomingSP(
+    const MachineFunction &MF) const;
 
   /// assignCalleeSavedSpillSlots - Allows target to override spill slot
   /// assignment logic.  If implemented, assignCalleeSavedSpillSlots() should
@@ -219,6 +222,9 @@ public:
   /// Replace a StackProbe stub (if any) with the actual probe code inline
   virtual void inlineStackProbe(MachineFunction &MF,
                                 MachineBasicBlock &PrologueMBB) const {}
+
+  /// Does the stack probe function call return with a modified stack pointer?
+  virtual bool stackProbeFunctionModifiesSP() const { return false; }
 
   /// Adjust the prologue to have the function use segmented stacks. This works
   /// by adding a check even before the "normal" function prologue.

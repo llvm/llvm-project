@@ -28,7 +28,7 @@ struct SymbolDCE : public SymbolDCEBase<SymbolDCE> {
                                 bool symbolTableIsHidden,
                                 DenseSet<Operation *> &liveSymbols);
 };
-} // end anonymous namespace
+} // namespace
 
 void SymbolDCE::runOnOperation() {
   Operation *symbolTableOp = getOperation();

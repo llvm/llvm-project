@@ -4,8 +4,8 @@ id makeObject1() __attribute__((ns_returns_retained));
 id makeObject2() __attribute__((ns_returns_retained));
 void releaseObject(__attribute__((ns_consumed)) id);
 
-// CHECK-LABEL: define{{.*}} void @_Z10sanityTestv
-void sanityTest() {
+// CHECK-LABEL: define{{.*}} void @_Z20basicCorrectnessTestv
+void basicCorrectnessTest() {
   // CHECK: [[X:%.*]] = alloca i8*, align 8
   // CHECK-NEXT: [[OBJ1:%.*]] = call i8* @_Z11makeObject1v()
   // CHECK-NEXT: store i8* [[OBJ1]], i8** [[X]], align 8
@@ -26,7 +26,7 @@ template <typename T>
 T makeObjectT2() __attribute__((ns_returns_retained));
 
 template <typename T>
-void releaseObjectT(__attribute__((ns_consumed)) T);  
+void releaseObjectT(__attribute__((ns_consumed)) T);
 
 // CHECK-LABEL: define{{.*}} void @_Z12templateTestv
 void templateTest() {

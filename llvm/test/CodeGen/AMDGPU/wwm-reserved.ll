@@ -144,15 +144,15 @@ define amdgpu_kernel void @call_i64(<4 x i32> inreg %tmp14, i64 inreg %arg) {
 ; GFX9-O0: s_mov_b64 s{{\[}}[[ZERO_LO:[0-9]+]]:[[ZERO_HI:[0-9]+]]{{\]}}, 0{{$}}
 ; GFX9-O0: v_mov_b32_e32 v0, s[[ARG_LO]]
 ; GFX9-O0: v_mov_b32_e32 v1, s[[ARG_HI]]
-; GFX9-O0-DAG: v_mov_b32_e32 v10, v1
-; GFX9-O0-DAG: v_mov_b32_e32 v9, v0
+; GFX9-O0-DAG: v_mov_b32_e32 v9, v1
+; GFX9-O0-DAG: v_mov_b32_e32 v8, v0
 
 ; GFX9-O3-DAG: v_mov_b32_e32 v7, s[[ARG_HI]]
 ; GFX9-O3-DAG: v_mov_b32_e32 v6, s[[ARG_LO]]
 
 ; GFX9: s_not_b64 exec, exec
-; GFX9-O0-NEXT: v_mov_b32_e32 v9, s[[ZERO_LO]]
-; GFX9-O0-NEXT: v_mov_b32_e32 v10, s[[ZERO_HI]]
+; GFX9-O0-NEXT: v_mov_b32_e32 v8, s[[ZERO_LO]]
+; GFX9-O0-NEXT: v_mov_b32_e32 v9, s[[ZERO_HI]]
 ; GFX9-O3-NEXT: v_mov_b32_e32 v6, 0
 ; GFX9-O3-NEXT: v_mov_b32_e32 v7, 0
 ; GFX9-NEXT: s_not_b64 exec, exec
@@ -338,15 +338,15 @@ define amdgpu_kernel void @strict_wwm_call_i64(<4 x i32> inreg %tmp14, i64 inreg
 ; GFX9-O0: s_mov_b64 s{{\[}}[[ZERO_LO:[0-9]+]]:[[ZERO_HI:[0-9]+]]{{\]}}, 0{{$}}
 ; GFX9-O0: v_mov_b32_e32 v0, s[[ARG_LO]]
 ; GFX9-O0: v_mov_b32_e32 v1, s[[ARG_HI]]
-; GFX9-O0-DAG: v_mov_b32_e32 v10, v1
-; GFX9-O0-DAG: v_mov_b32_e32 v9, v0
+; GFX9-O0-DAG: v_mov_b32_e32 v9, v1
+; GFX9-O0-DAG: v_mov_b32_e32 v8, v0
 
 ; GFX9-O3-DAG: v_mov_b32_e32 v7, s[[ARG_HI]]
 ; GFX9-O3-DAG: v_mov_b32_e32 v6, s[[ARG_LO]]
 
 ; GFX9: s_not_b64 exec, exec
-; GFX9-O0-NEXT: v_mov_b32_e32 v9, s[[ZERO_LO]]
-; GFX9-O0-NEXT: v_mov_b32_e32 v10, s[[ZERO_HI]]
+; GFX9-O0-NEXT: v_mov_b32_e32 v8, s[[ZERO_LO]]
+; GFX9-O0-NEXT: v_mov_b32_e32 v9, s[[ZERO_HI]]
 ; GFX9-O3-NEXT: v_mov_b32_e32 v6, 0
 ; GFX9-O3-NEXT: v_mov_b32_e32 v7, 0
 ; GFX9-NEXT: s_not_b64 exec, exec

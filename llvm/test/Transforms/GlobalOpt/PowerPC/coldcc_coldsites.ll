@@ -1,5 +1,5 @@
-; RUN: opt -globalopt -mtriple=powerpc64le-unknown-linux-gnu -ppc-enable-coldcc -S < %s | FileCheck %s -check-prefix=COLDCC
-; RUN: opt -globalopt -S < %s | FileCheck %s -check-prefix=CHECK
+; RUN: opt -passes=globalopt -mtriple=powerpc64le-unknown-linux-gnu -ppc-enable-coldcc -S < %s | FileCheck %s -check-prefix=COLDCC
+; RUN: opt -passes=globalopt -S < %s | FileCheck %s -check-prefix=CHECK
 
 define signext i32 @caller(i32 signext %a, i32 signext %b, i32 signext %lim, i32 signext %i) local_unnamed_addr #0 !prof !30 {
 entry:

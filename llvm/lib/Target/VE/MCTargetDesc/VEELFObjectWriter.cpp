@@ -9,6 +9,7 @@
 #include "VEFixupKinds.h"
 #include "VEMCExpr.h"
 #include "VEMCTargetDesc.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCObjectWriter.h"
@@ -46,16 +47,29 @@ unsigned VEELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
   if (IsPCRel) {
     switch (Fixup.getTargetKind()) {
     default:
-      llvm_unreachable("Unimplemented fixup -> relocation");
+      Ctx.reportError(Fixup.getLoc(), "Unsupported pc-relative fixup kind");
+      return ELF::R_VE_NONE;
+    case FK_Data_1:
     case FK_PCRel_1:
-      llvm_unreachable("Unimplemented fixup fk_data_1 -> relocation");
+      Ctx.reportError(Fixup.getLoc(),
+                      "1-byte pc-relative data relocation is not supported");
+      return ELF::R_VE_NONE;
+    case FK_Data_2:
     case FK_PCRel_2:
-      llvm_unreachable("Unimplemented fixup fk_data_2 -> relocation");
-    // FIXME: relative kind?
+      Ctx.reportError(Fixup.getLoc(),
+                      "2-byte pc-relative data relocation is not supported");
+      return ELF::R_VE_NONE;
+    case FK_Data_4:
     case FK_PCRel_4:
-      return ELF::R_VE_REFLONG;
+      return ELF::R_VE_SREL32;
+    case FK_Data_8:
     case FK_PCRel_8:
-      return ELF::R_VE_REFQUAD;
+      Ctx.reportError(Fixup.getLoc(),
+                      "8-byte pc-relative data relocation is not supported");
+      return ELF::R_VE_NONE;
+    case VE::fixup_ve_reflong:
+    case VE::fixup_ve_srel32:
+      return ELF::R_VE_SREL32;
     case VE::fixup_ve_pc_hi32:
       return ELF::R_VE_PC_HI32;
     case VE::fixup_ve_pc_lo32:
@@ -65,25 +79,36 @@ unsigned VEELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
 
   switch (Fixup.getTargetKind()) {
   default:
-    llvm_unreachable("Unimplemented fixup -> relocation");
+    Ctx.reportError(Fixup.getLoc(), "Unknown ELF relocation type");
+    return ELF::R_VE_NONE;
   case FK_Data_1:
-    llvm_unreachable("Unimplemented fixup fk_data_1 -> relocation");
+    Ctx.reportError(Fixup.getLoc(), "1-byte data relocation is not supported");
+    return ELF::R_VE_NONE;
   case FK_Data_2:
-    llvm_unreachable("Unimplemented fixup fk_data_2 -> relocation");
+    Ctx.reportError(Fixup.getLoc(), "2-byte data relocation is not supported");
+    return ELF::R_VE_NONE;
   case FK_Data_4:
     return ELF::R_VE_REFLONG;
   case FK_Data_8:
     return ELF::R_VE_REFQUAD;
   case VE::fixup_ve_reflong:
     return ELF::R_VE_REFLONG;
+  case VE::fixup_ve_srel32:
+    Ctx.reportError(Fixup.getLoc(),
+                    "A non pc-relative srel32 relocation is not supported");
+    return ELF::R_VE_NONE;
   case VE::fixup_ve_hi32:
     return ELF::R_VE_HI32;
   case VE::fixup_ve_lo32:
     return ELF::R_VE_LO32;
   case VE::fixup_ve_pc_hi32:
-    llvm_unreachable("Unimplemented fixup pc_hi32 -> relocation");
+    Ctx.reportError(Fixup.getLoc(),
+                    "A non pc-relative pc_hi32 relocation is not supported");
+    return ELF::R_VE_NONE;
   case VE::fixup_ve_pc_lo32:
-    llvm_unreachable("Unimplemented fixup pc_lo32 -> relocation");
+    Ctx.reportError(Fixup.getLoc(),
+                    "A non pc-relative pc_lo32 relocation is not supported");
+    return ELF::R_VE_NONE;
   case VE::fixup_ve_got_hi32:
     return ELF::R_VE_GOT_HI32;
   case VE::fixup_ve_got_lo32:

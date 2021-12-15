@@ -718,6 +718,8 @@ void VPInstruction::generateInstruction(VPTransformState &State,
 
 void VPInstruction::execute(VPTransformState &State) {
   assert(!State.Instance && "VPInstruction executing an Instance");
+  IRBuilderBase::FastMathFlagGuard FMFGuard(State.Builder);
+  State.Builder.setFastMathFlags(FMF);
   for (unsigned Part = 0; Part < State.UF; ++Part)
     generateInstruction(State, Part);
 }
@@ -760,12 +762,24 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     O << Instruction::getOpcodeName(getOpcode());
   }
 
+  O << FMF;
+
   for (const VPValue *Operand : operands()) {
     O << " ";
     Operand->printAsOperand(O, SlotTracker);
   }
 }
 #endif
+
+void VPInstruction::setFastMathFlags(FastMathFlags FMFNew) {
+  // Make sure the VPInstruction is a floating-point operation.
+  assert((Opcode == Instruction::FAdd || Opcode == Instruction::FMul ||
+          Opcode == Instruction::FNeg || Opcode == Instruction::FSub ||
+          Opcode == Instruction::FDiv || Opcode == Instruction::FRem ||
+          Opcode == Instruction::FCmp) &&
+         "this op can't take fast-math flags");
+  FMF = FMFNew;
+}
 
 /// Generate the code inside the body of the vectorized loop. Assumes a single
 /// LoopVectorBody basic-block was created for this. Introduce additional
@@ -1196,8 +1210,10 @@ void VPReductionRecipe::print(raw_ostream &O, const Twine &Indent,
   printAsOperand(O, SlotTracker);
   O << " = ";
   getChainOp()->printAsOperand(O, SlotTracker);
-  O << " + reduce." << Instruction::getOpcodeName(RdxDesc->getOpcode())
-    << " (";
+  O << " +";
+  if (isa<FPMathOperator>(getUnderlyingInstr()))
+    O << getUnderlyingInstr()->getFastMathFlags();
+  O << " reduce." << Instruction::getOpcodeName(RdxDesc->getOpcode()) << " (";
   getVecOp()->printAsOperand(O, SlotTracker);
   if (getCondOp()) {
     O << ", ";

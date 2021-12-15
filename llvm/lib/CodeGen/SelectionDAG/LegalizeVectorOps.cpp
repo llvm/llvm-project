@@ -254,69 +254,6 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
 
   SDNode *Node = DAG.UpdateNodeOperands(Op.getNode(), Ops);
 
-  if (Op.getOpcode() == ISD::LOAD) {
-    LoadSDNode *LD = cast<LoadSDNode>(Node);
-    ISD::LoadExtType ExtType = LD->getExtensionType();
-    if (LD->getMemoryVT().isVector() && ExtType != ISD::NON_EXTLOAD) {
-      LLVM_DEBUG(dbgs() << "\nLegalizing extending vector load: ";
-                 Node->dump(&DAG));
-      switch (TLI.getLoadExtAction(LD->getExtensionType(), LD->getValueType(0),
-                                   LD->getMemoryVT())) {
-      default: llvm_unreachable("This action is not supported yet!");
-      case TargetLowering::Legal:
-        return TranslateLegalizeResults(Op, Node);
-      case TargetLowering::Custom: {
-        SmallVector<SDValue, 2> ResultVals;
-        if (LowerOperationWrapper(Node, ResultVals)) {
-          if (ResultVals.empty())
-            return TranslateLegalizeResults(Op, Node);
-
-          Changed = true;
-          return RecursivelyLegalizeResults(Op, ResultVals);
-        }
-        LLVM_FALLTHROUGH;
-      }
-      case TargetLowering::Expand: {
-        Changed = true;
-        std::pair<SDValue, SDValue> Tmp = ExpandLoad(Node);
-        AddLegalizedOperand(Op.getValue(0), Tmp.first);
-        AddLegalizedOperand(Op.getValue(1), Tmp.second);
-        return Op.getResNo() ? Tmp.first : Tmp.second;
-      }
-      }
-    }
-  } else if (Op.getOpcode() == ISD::STORE) {
-    StoreSDNode *ST = cast<StoreSDNode>(Node);
-    EVT StVT = ST->getMemoryVT();
-    MVT ValVT = ST->getValue().getSimpleValueType();
-    if (StVT.isVector() && ST->isTruncatingStore()) {
-      LLVM_DEBUG(dbgs() << "\nLegalizing truncating vector store: ";
-                 Node->dump(&DAG));
-      switch (TLI.getTruncStoreAction(ValVT, StVT)) {
-      default: llvm_unreachable("This action is not supported yet!");
-      case TargetLowering::Legal:
-        return TranslateLegalizeResults(Op, Node);
-      case TargetLowering::Custom: {
-        SmallVector<SDValue, 1> ResultVals;
-        if (LowerOperationWrapper(Node, ResultVals)) {
-          if (ResultVals.empty())
-            return TranslateLegalizeResults(Op, Node);
-
-          Changed = true;
-          return RecursivelyLegalizeResults(Op, ResultVals);
-        }
-        LLVM_FALLTHROUGH;
-      }
-      case TargetLowering::Expand: {
-        Changed = true;
-        SDValue Chain = ExpandStore(Node);
-        AddLegalizedOperand(Op, Chain);
-        return Chain;
-      }
-      }
-    }
-  }
-
   bool HasVectorValueOrOp =
       llvm::any_of(Node->values(), [](EVT T) { return T.isVector(); }) ||
       llvm::any_of(Node->op_values(),
@@ -329,6 +266,22 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   switch (Op.getOpcode()) {
   default:
     return TranslateLegalizeResults(Op, Node);
+  case ISD::LOAD: {
+    LoadSDNode *LD = cast<LoadSDNode>(Node);
+    ISD::LoadExtType ExtType = LD->getExtensionType();
+    EVT LoadedVT = LD->getMemoryVT();
+    if (LoadedVT.isVector() && ExtType != ISD::NON_EXTLOAD)
+      Action = TLI.getLoadExtAction(ExtType, LD->getValueType(0), LoadedVT);
+    break;
+  }
+  case ISD::STORE: {
+    StoreSDNode *ST = cast<StoreSDNode>(Node);
+    EVT StVT = ST->getMemoryVT();
+    MVT ValVT = ST->getValue().getSimpleValueType();
+    if (StVT.isVector() && ST->isTruncatingStore())
+      Action = TLI.getTruncStoreAction(ValVT, StVT);
+    break;
+  }
   case ISD::MERGE_VALUES:
     Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
     // This operation lies about being legal: when it claims to be legal,
@@ -512,6 +465,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   switch (Action) {
   default: llvm_unreachable("This action is not supported yet!");
   case TargetLowering::Promote:
+    assert((Op.getOpcode() != ISD::LOAD && Op.getOpcode() != ISD::STORE) &&
+           "This action is not supported yet!");
     LLVM_DEBUG(dbgs() << "Promoting\n");
     Promote(Node, ResultVals);
     assert(!ResultVals.empty() && "No results for promotion?");
@@ -731,8 +686,16 @@ SDValue VectorLegalizer::ExpandStore(SDNode *N) {
 }
 
 void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
-  SDValue Tmp;
   switch (Node->getOpcode()) {
+  case ISD::LOAD: {
+    std::pair<SDValue, SDValue> Tmp = ExpandLoad(Node);
+    Results.push_back(Tmp.first);
+    Results.push_back(Tmp.second);
+    return;
+  }
+  case ISD::STORE:
+    Results.push_back(ExpandStore(Node));
+    return;
   case ISD::MERGE_VALUES:
     for (unsigned i = 0, e = Node->getNumValues(); i != e; ++i)
       Results.push_back(Node->getOperand(i));
@@ -804,15 +767,15 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     break;
   case ISD::FSHL:
   case ISD::FSHR:
-    if (TLI.expandFunnelShift(Node, Tmp, DAG)) {
-      Results.push_back(Tmp);
+    if (SDValue Expanded = TLI.expandFunnelShift(Node, DAG)) {
+      Results.push_back(Expanded);
       return;
     }
     break;
   case ISD::ROTL:
   case ISD::ROTR:
-    if (TLI.expandROT(Node, false /*AllowVectorOps*/, Tmp, DAG)) {
-      Results.push_back(Tmp);
+    if (SDValue Expanded = TLI.expandROT(Node, false /*AllowVectorOps*/, DAG)) {
+      Results.push_back(Expanded);
       return;
     }
     break;

@@ -194,6 +194,7 @@
 // MSEXT:#define _INTEGRAL_MAX_BITS 64
 // MSEXT-NOT:#define _NATIVE_WCHAR_T_DEFINED 1
 // MSEXT-NOT:#define _WCHAR_T_DEFINED 1
+// MSEXT:#define _MSVC_EXECUTION_CHARACTER_SET 65001
 //
 //
 // RUN: %clang_cc1 -x c++ -fms-extensions -triple i686-pc-win32 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix MSEXT-CXX %s

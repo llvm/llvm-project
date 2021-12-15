@@ -5,7 +5,7 @@ set(X86 i386)
 set(X86_64 x86_64)
 set(MIPS32 mips mipsel)
 set(MIPS64 mips64 mips64el)
-set(PPC32 powerpc)
+set(PPC32 powerpc powerpcspe)
 set(PPC64 powerpc64 powerpc64le)
 set(RISCV32 riscv32)
 set(RISCV64 riscv64)
@@ -73,7 +73,8 @@ set(ALL_SCUDO_STANDALONE_SUPPORTED_ARCH ${X86} ${X86_64} ${ARM32} ${ARM64}
 if(APPLE)
 set(ALL_XRAY_SUPPORTED_ARCH ${X86_64})
 else()
-set(ALL_XRAY_SUPPORTED_ARCH ${X86_64} ${ARM32} ${ARM64} ${MIPS32} ${MIPS64} powerpc64le)
+set(ALL_XRAY_SUPPORTED_ARCH ${X86_64} ${ARM32} ${ARM64} ${MIPS32} ${MIPS64}
+		powerpc64le ${HEXAGON})
 endif()
 set(ALL_SHADOWCALLSTACK_SUPPORTED_ARCH ${ARM64})
 

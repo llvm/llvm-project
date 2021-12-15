@@ -75,6 +75,27 @@ def testCallSite():
 run(testCallSite)
 
 
+# CHECK-LABEL: TEST: testFused
+def testFused():
+  with Context() as ctx:
+    loc = Location.fused(
+        [Location.name("apple"), Location.name("banana")])
+    attr = Attribute.parse('"sauteed"')
+    loc_attr = Location.fused([Location.name("carrot"),
+                               Location.name("potatoes")], attr)
+  ctx = None
+  # CHECK: file str: loc(fused["apple", "banana"])
+  print("file str:", str(loc))
+  # CHECK: file repr: loc(fused["apple", "banana"])
+  print("file repr:", repr(loc))
+  # CHECK: file str: loc(fused<"sauteed">["carrot", "potatoes"])
+  print("file str:", str(loc_attr))
+  # CHECK: file repr: loc(fused<"sauteed">["carrot", "potatoes"])
+  print("file repr:", repr(loc_attr))
+
+run(testFused)
+
+
 # CHECK-LABEL: TEST: testLocationCapsule
 def testLocationCapsule():
   with Context() as ctx:

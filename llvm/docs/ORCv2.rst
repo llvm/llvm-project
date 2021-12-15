@@ -730,8 +730,11 @@ For example, to load the whole interface of a runtime library:
     const DataLayout &DL = getDataLayout();
     auto &JD = ES.createJITDylib("main");
 
-    JD.addGenerator(DynamicLibrarySearchGenerator::Load("/path/to/lib"
-                                                        DL.getGlobalPrefix()));
+    if (auto DLSGOrErr = DynamicLibrarySearchGenerator::Load("/path/to/lib"
+                                                             DL.getGlobalPrefix()))
+      JD.addGenerator(std::move(*DLSGOrErr);
+    else
+      return DLSGOrErr.takeError();
 
     // IR added to JD can now link against all symbols exported by the library
     // at '/path/to/lib'.
@@ -753,10 +756,9 @@ Or, to expose an allowed set of symbols from the main process:
 
     // Use GetForCurrentProcess with a predicate function that checks the
     // allowed list.
-    JD.addGenerator(
-      DynamicLibrarySearchGenerator::GetForCurrentProcess(
-        DL.getGlobalPrefix(),
-        [&](const SymbolStringPtr &S) { return AllowList.count(S); }));
+    JD.addGenerator(cantFail(DynamicLibrarySearchGenerator::GetForCurrentProcess(
+          DL.getGlobalPrefix(),
+          [&](const SymbolStringPtr &S) { return AllowList.count(S); })));
 
     // IR added to JD can now link against any symbols exported by the process
     // and contained in the list.

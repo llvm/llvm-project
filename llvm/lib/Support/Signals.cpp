@@ -87,8 +87,7 @@ static CallbackAndCookie CallBacksToRun[MaxSignalHandlerCallbacks];
 
 // Signal-safe.
 void sys::RunSignalHandlers() {
-  for (size_t I = 0; I < MaxSignalHandlerCallbacks; ++I) {
-    auto &RunMe = CallBacksToRun[I];
+  for (CallbackAndCookie &RunMe : CallBacksToRun) {
     auto Expected = CallbackAndCookie::Status::Initialized;
     auto Desired = CallbackAndCookie::Status::Executing;
     if (!RunMe.Flag.compare_exchange_strong(Expected, Desired))
@@ -103,8 +102,7 @@ void sys::RunSignalHandlers() {
 // Signal-safe.
 static void insertSignalHandler(sys::SignalHandlerCallback FnPtr,
                                 void *Cookie) {
-  for (size_t I = 0; I < MaxSignalHandlerCallbacks; ++I) {
-    auto &SetMe = CallBacksToRun[I];
+  for (CallbackAndCookie &SetMe : CallBacksToRun) {
     auto Expected = CallbackAndCookie::Status::Empty;
     auto Desired = CallbackAndCookie::Status::Initializing;
     if (!SetMe.Flag.compare_exchange_strong(Expected, Desired))

@@ -20,7 +20,7 @@ class GenericMultiMapDataFormatterTestCase(TestBase):
     def setUp(self):
         TestBase.setUp(self)
         self.namespace = 'std'
-    
+
     def findVariable(self, name):
         var = self.frame().FindVariable(name)
         self.assertTrue(var.IsValid())
@@ -70,6 +70,14 @@ class GenericMultiMapDataFormatterTestCase(TestBase):
         self.addTearDownHook(cleanup)
 
         multimap = self.namespace + "::multimap"
+
+        # We expect that in some malformed cases the map shows size 0
+        self.expect('frame variable corrupt_map',
+                    substrs=[multimap, 'size=0',
+                             '{}'])
+
+        lldbutil.continue_to_breakpoint(self.process(), bkpt)
+
         self.expect('frame variable ii',
                     substrs=[multimap, 'size=0',
                              '{}'])
@@ -84,7 +92,7 @@ class GenericMultiMapDataFormatterTestCase(TestBase):
                 '[0] = (first = 0, second = 0)',
                 '[1] = (first = 1, second = 1)',
             ])
-        
+
         self.check("ii", 2)
 
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
@@ -97,7 +105,7 @@ class GenericMultiMapDataFormatterTestCase(TestBase):
                              '[3] = ',
                              'first = 3',
                              'second = 1'])
-        
+
         self.check("ii", 4)
 
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
@@ -320,10 +328,11 @@ class GenericMultiMapDataFormatterTestCase(TestBase):
         self.check("ss", 0)
 
     @add_test_categories(["libstdcxx"])
+    @skipIf(compiler="clang", compiler_version=['<', '9.0'])
     def test_with_run_command_libstdcpp(self):
         self.do_test_with_run_command(USE_LIBSTDCPP)
 
+    @skipIf(compiler="clang", compiler_version=['<', '9.0'])
     @add_test_categories(["libc++"])
     def test_with_run_command_libcpp(self):
         self.do_test_with_run_command(USE_LIBCPP)
-    

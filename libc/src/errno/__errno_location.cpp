@@ -12,11 +12,11 @@
 
 namespace __llvm_libc {
 
-static thread_local int __errno = 0;
+static thread_local int errno = 0;
 
 // __errno_location is not really an entry point but we still want it to behave
 // like an entry point because the errno macro resolves to the C symbol
 // "__errno_location".
-LLVM_LIBC_FUNCTION(int *, __errno_location, ()) { return &__errno; }
+LLVM_LIBC_FUNCTION(int *, __errno_location, ()) { return &errno; }
 
 } // namespace __llvm_libc

@@ -118,13 +118,13 @@ def SET#"p8"#cc : MxSccM<cc, MxType8.POp, MxType8.PPat, MxEncEAp_0, MxExtI16_0>;
 /// 0  1  0  0  1  1  1  0  1  1 |  MODE   |   REG
 ///------------------------------+---------+---------
 let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in
-class MxJMP<MxOperand LOCOp, ComplexPattern LOCPat, MxEncEA EA, MxEncExt EXT>
+class MxJMP<MxOperand LOCOp, MxEncEA EA, MxEncExt EXT>
     : MxInst<(outs), (ins LOCOp:$dst), "jmp\t$dst", [(brind iPTR:$dst)],
              MxEncoding<EA.Reg, EA.DA, EA.Mode, MxBead2Bits<0b11>,
                         MxBead4Bits<0b1110>, MxBead4Bits<0b0100>,
                         EXT.Imm, EXT.B8, EXT.Scale, EXT.WL, EXT.DAReg>>;
 
-def JMP32j : MxJMP<MxARI32, MxCP_ARI, MxEncEAj_0, MxExtEmpty>;
+def JMP32j : MxJMP<MxARI32, MxEncEAj_0, MxExtEmpty>;
 
 
 // FIXME Support 16 bit indirect jump.
@@ -147,17 +147,17 @@ def JMP32j : MxJMP<MxARI32, MxCP_ARI, MxEncEAj_0, MxExtEmpty>;
 ///  32-BIT DISPLACEMENT IF 8-BIT DISPLACEMENT = $FF
 /// --------------------------------------------------
 let isBranch = 1, isTerminator = 1, Uses = [CCR] in
-class MxBcc<string cc, Operand TARGET, MxType TYPE, MxEncoding ENC = MxEncEmpty>
+class MxBcc<string cc, Operand TARGET, MxEncoding ENC = MxEncEmpty>
     : MxInst<(outs), (ins TARGET:$dst), "b"#cc#"\t$dst", [], ENC>;
 
 foreach cc = [ "cc", "ls", "lt", "eq", "mi", "ne", "ge",
                "cs", "pl", "gt", "hi", "vc", "le", "vs"] in {
   def B#cc#"8"
-    : MxBcc<cc, MxBrTarget8, MxType8,
+    : MxBcc<cc, MxBrTarget8,
             MxEncoding<MxBead8Disp<0>,
                        !cast<MxBead4Bits>("MxCC"#cc), MxBead4Bits<0x6>>>;
   def B#cc#"16"
-    : MxBcc<cc, MxBrTarget16, MxType16,
+    : MxBcc<cc, MxBrTarget16,
             MxEncoding<MxBead4Bits<0x0>,
                        MxBead4Bits<0x0>, !cast<MxBead4Bits>("MxCC"#cc),
                        MxBead4Bits<0x6>, MxBead16Imm<0>>>;
@@ -179,13 +179,13 @@ def : Pat<(MxBrCond bb:$target, !cast<PatLeaf>("MxCOND"#cc), CCR),
 ///  32-BIT DISPLACEMENT IF 8-BIT DISPLACEMENT = $FF
 /// -------------------------------------------------
 let isBranch = 1, isTerminator = 1, isBarrier=1 in
-class MxBra<Operand TARGET, MxType TYPE, MxEncoding ENC = MxEncEmpty>
+class MxBra<Operand TARGET, MxEncoding ENC = MxEncEmpty>
     : MxInst<(outs), (ins TARGET:$dst), "bra\t$dst", [], ENC>;
 
-def BRA8  : MxBra<MxBrTarget8, MxType8,
+def BRA8  : MxBra<MxBrTarget8,
                   MxEncoding<MxBead8Disp<0>, MxBead4Bits<0x0>,
                              MxBead4Bits<0x6>>>;
-def BRA16 : MxBra<MxBrTarget16, MxType16,
+def BRA16 : MxBra<MxBrTarget16,
                   MxEncoding<MxBead4Bits<0x0>, MxBead4Bits<0x0>,
                              MxBead4Bits<0x0>, MxBead4Bits<0x6>,
                              MxBead16Imm<0>>>;

@@ -352,6 +352,9 @@ Constant *llvm::ConstantFoldLoadThroughBitcast(Constant *C, Type *DestTy,
                                          const DataLayout &DL) {
   do {
     Type *SrcTy = C->getType();
+    if (SrcTy == DestTy)
+      return C;
+
     TypeSize DestSize = DL.getTypeSizeInBits(DestTy);
     TypeSize SrcSize = DL.getTypeSizeInBits(SrcTy);
     if (!TypeSize::isKnownGE(SrcSize, DestSize))
@@ -2960,10 +2963,6 @@ static Constant *ConstantFoldFixedVectorCall(
     if (auto *Op = dyn_cast<ConstantInt>(Operands[0])) {
       unsigned Lanes = FVTy->getNumElements();
       uint64_t Limit = Op->getZExtValue();
-      // vctp64 are currently modelled as returning a v4i1, not a v2i1. Make
-      // sure we get the limit right in that case and set all relevant lanes.
-      if (IntrinsicID == Intrinsic::arm_mve_vctp64)
-        Limit *= 2;
 
       SmallVector<Constant *, 16> NCs;
       for (unsigned i = 0; i < Lanes; i++) {

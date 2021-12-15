@@ -46,12 +46,11 @@ int main() {
 // CHECK1:       user_code.entry:
 // CHECK1-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK1-NEXT:    call void @_Z3usePi(i32* [[TMP0]]) #[[ATTR6:[0-9]+]]
-// CHECK1-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]], i32 2)
 // CHECK1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[CAPTURED_VARS_ADDRS]], i64 0, i64 0
 // CHECK1-NEXT:    [[TMP4:%.*]] = bitcast i32* [[TMP0]] to i8*
 // CHECK1-NEXT:    store i8* [[TMP4]], i8** [[TMP3]], align 8
 // CHECK1-NEXT:    [[TMP5:%.*]] = bitcast [1 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK1-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32*)* @__omp_outlined__ to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined___wrapper to i8*), i8** [[TMP5]], i64 1)
+// CHECK1-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]], i32 1, i32 2, i32 -1, i8* bitcast (void (i32*, i32*, i32*)* @__omp_outlined__ to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined___wrapper to i8*), i8** [[TMP5]], i64 1)
 // CHECK1-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1, i1 true)
 // CHECK1-NEXT:    ret void
 // CHECK1:       worker.exit:
@@ -65,12 +64,11 @@ int main() {
 // CHECK1-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [1 x i8*], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB2:[0-9]+]])
 // CHECK1-NEXT:    store i32* [[C]], i32** [[C_ADDR]], align 8
-// CHECK1-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB2]], i32 [[TMP0]], i32 2)
 // CHECK1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[CAPTURED_VARS_ADDRS]], i64 0, i64 0
 // CHECK1-NEXT:    [[TMP2:%.*]] = bitcast i32** [[C_ADDR]] to i8*
 // CHECK1-NEXT:    store i8* [[TMP2]], i8** [[TMP1]], align 8
 // CHECK1-NEXT:    [[TMP3:%.*]] = bitcast [1 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK1-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB2]], i32 [[TMP0]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32**)* @__omp_outlined__1 to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined__1_wrapper to i8*), i8** [[TMP3]], i64 1)
+// CHECK1-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB2]], i32 [[TMP0]], i32 1, i32 2, i32 -1, i8* bitcast (void (i32*, i32*, i32**)* @__omp_outlined__1 to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined__1_wrapper to i8*), i8** [[TMP3]], i64 1)
 // CHECK1-NEXT:    ret void
 //
 //
@@ -179,12 +177,11 @@ int main() {
 // CHECK2:       user_code.entry:
 // CHECK2-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK2-NEXT:    call void @_Z3usePi(i32* [[TMP0]]) #[[ATTR6:[0-9]+]]
-// CHECK2-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]], i32 2)
 // CHECK2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[CAPTURED_VARS_ADDRS]], i32 0, i32 0
 // CHECK2-NEXT:    [[TMP4:%.*]] = bitcast i32* [[TMP0]] to i8*
 // CHECK2-NEXT:    store i8* [[TMP4]], i8** [[TMP3]], align 4
 // CHECK2-NEXT:    [[TMP5:%.*]] = bitcast [1 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK2-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32*)* @__omp_outlined__ to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined___wrapper to i8*), i8** [[TMP5]], i32 1)
+// CHECK2-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]], i32 1, i32 2, i32 -1, i8* bitcast (void (i32*, i32*, i32*)* @__omp_outlined__ to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined___wrapper to i8*), i8** [[TMP5]], i32 1)
 // CHECK2-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1, i1 true)
 // CHECK2-NEXT:    ret void
 // CHECK2:       worker.exit:
@@ -198,12 +195,11 @@ int main() {
 // CHECK2-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [1 x i8*], align 4
 // CHECK2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB2:[0-9]+]])
 // CHECK2-NEXT:    store i32* [[C]], i32** [[C_ADDR]], align 4
-// CHECK2-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB2]], i32 [[TMP0]], i32 2)
 // CHECK2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[CAPTURED_VARS_ADDRS]], i32 0, i32 0
 // CHECK2-NEXT:    [[TMP2:%.*]] = bitcast i32** [[C_ADDR]] to i8*
 // CHECK2-NEXT:    store i8* [[TMP2]], i8** [[TMP1]], align 4
 // CHECK2-NEXT:    [[TMP3:%.*]] = bitcast [1 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK2-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB2]], i32 [[TMP0]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32**)* @__omp_outlined__1 to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined__1_wrapper to i8*), i8** [[TMP3]], i32 1)
+// CHECK2-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB2]], i32 [[TMP0]], i32 1, i32 2, i32 -1, i8* bitcast (void (i32*, i32*, i32**)* @__omp_outlined__1 to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined__1_wrapper to i8*), i8** [[TMP3]], i32 1)
 // CHECK2-NEXT:    ret void
 //
 //
@@ -312,12 +308,11 @@ int main() {
 // CHECK3:       user_code.entry:
 // CHECK3-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK3-NEXT:    call void @_Z3usePi(i32* [[TMP0]]) #[[ATTR6:[0-9]+]]
-// CHECK3-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]], i32 2)
 // CHECK3-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[CAPTURED_VARS_ADDRS]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP4:%.*]] = bitcast i32* [[TMP0]] to i8*
 // CHECK3-NEXT:    store i8* [[TMP4]], i8** [[TMP3]], align 4
 // CHECK3-NEXT:    [[TMP5:%.*]] = bitcast [1 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK3-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32*)* @__omp_outlined__ to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined___wrapper to i8*), i8** [[TMP5]], i32 1)
+// CHECK3-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]], i32 1, i32 2, i32 -1, i8* bitcast (void (i32*, i32*, i32*)* @__omp_outlined__ to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined___wrapper to i8*), i8** [[TMP5]], i32 1)
 // CHECK3-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1, i1 true)
 // CHECK3-NEXT:    ret void
 // CHECK3:       worker.exit:
@@ -331,12 +326,11 @@ int main() {
 // CHECK3-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [1 x i8*], align 4
 // CHECK3-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB2:[0-9]+]])
 // CHECK3-NEXT:    store i32* [[C]], i32** [[C_ADDR]], align 4
-// CHECK3-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB2]], i32 [[TMP0]], i32 2)
 // CHECK3-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[CAPTURED_VARS_ADDRS]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP2:%.*]] = bitcast i32** [[C_ADDR]] to i8*
 // CHECK3-NEXT:    store i8* [[TMP2]], i8** [[TMP1]], align 4
 // CHECK3-NEXT:    [[TMP3:%.*]] = bitcast [1 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK3-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB2]], i32 [[TMP0]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32**)* @__omp_outlined__1 to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined__1_wrapper to i8*), i8** [[TMP3]], i32 1)
+// CHECK3-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB2]], i32 [[TMP0]], i32 1, i32 2, i32 -1, i8* bitcast (void (i32*, i32*, i32**)* @__omp_outlined__1 to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined__1_wrapper to i8*), i8** [[TMP3]], i32 1)
 // CHECK3-NEXT:    ret void
 //
 //

@@ -265,30 +265,32 @@ int internal_sysctlbyname(const char *sname, void *oldp, uptr *oldlenp,
 
 static fd_t internal_spawn_impl(const char *argv[], const char *envp[],
                                 pid_t *pid) {
-  fd_t master_fd = kInvalidFd;
-  fd_t slave_fd = kInvalidFd;
+  fd_t primary_fd = kInvalidFd;
+  fd_t secondary_fd = kInvalidFd;
 
   auto fd_closer = at_scope_exit([&] {
-    internal_close(master_fd);
-    internal_close(slave_fd);
+    internal_close(primary_fd);
+    internal_close(secondary_fd);
   });
 
   // We need a new pseudoterminal to avoid buffering problems. The 'atos' tool
   // in particular detects when it's talking to a pipe and forgets to flush the
   // output stream after sending a response.
-  master_fd = posix_openpt(O_RDWR);
-  if (master_fd == kInvalidFd) return kInvalidFd;
+  primary_fd = posix_openpt(O_RDWR);
+  if (primary_fd == kInvalidFd)
+    return kInvalidFd;
 
-  int res = grantpt(master_fd) || unlockpt(master_fd);
+  int res = grantpt(primary_fd) || unlockpt(primary_fd);
   if (res != 0) return kInvalidFd;
 
   // Use TIOCPTYGNAME instead of ptsname() to avoid threading problems.
-  char slave_pty_name[128];
-  res = ioctl(master_fd, TIOCPTYGNAME, slave_pty_name);
+  char secondary_pty_name[128];
+  res = ioctl(primary_fd, TIOCPTYGNAME, secondary_pty_name);
   if (res == -1) return kInvalidFd;
 
-  slave_fd = internal_open(slave_pty_name, O_RDWR);
-  if (slave_fd == kInvalidFd) return kInvalidFd;
+  secondary_fd = internal_open(secondary_pty_name, O_RDWR);
+  if (secondary_fd == kInvalidFd)
+    return kInvalidFd;
 
   // File descriptor actions
   posix_spawn_file_actions_t acts;
@@ -299,9 +301,9 @@ static fd_t internal_spawn_impl(const char *argv[], const char *envp[],
     posix_spawn_file_actions_destroy(&acts);
   });
 
-  res = posix_spawn_file_actions_adddup2(&acts, slave_fd, STDIN_FILENO) ||
-        posix_spawn_file_actions_adddup2(&acts, slave_fd, STDOUT_FILENO) ||
-        posix_spawn_file_actions_addclose(&acts, slave_fd);
+  res = posix_spawn_file_actions_adddup2(&acts, secondary_fd, STDIN_FILENO) ||
+        posix_spawn_file_actions_adddup2(&acts, secondary_fd, STDOUT_FILENO) ||
+        posix_spawn_file_actions_addclose(&acts, secondary_fd);
   if (res != 0) return kInvalidFd;
 
   // Spawn attributes
@@ -326,14 +328,14 @@ static fd_t internal_spawn_impl(const char *argv[], const char *envp[],
 
   // Disable echo in the new terminal, disable CR.
   struct termios termflags;
-  tcgetattr(master_fd, &termflags);
+  tcgetattr(primary_fd, &termflags);
   termflags.c_oflag &= ~ONLCR;
   termflags.c_lflag &= ~ECHO;
-  tcsetattr(master_fd, TCSANOW, &termflags);
+  tcsetattr(primary_fd, TCSANOW, &termflags);
 
-  // On success, do not close master_fd on scope exit.
-  fd_t fd = master_fd;
-  master_fd = kInvalidFd;
+  // On success, do not close primary_fd on scope exit.
+  fd_t fd = primary_fd;
+  primary_fd = kInvalidFd;
 
   return fd;
 }

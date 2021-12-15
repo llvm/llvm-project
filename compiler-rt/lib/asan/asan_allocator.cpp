@@ -210,8 +210,7 @@ struct QuarantineCallback {
       CHECK_EQ(old_chunk_state, CHUNK_QUARANTINE);
     }
 
-    PoisonShadow(m->Beg(),
-                 RoundUpTo(m->UsedSize(), SHADOW_GRANULARITY),
+    PoisonShadow(m->Beg(), RoundUpTo(m->UsedSize(), ASAN_SHADOW_GRANULARITY),
                  kAsanHeapLeftRedzoneMagic);
 
     // Statistics.
@@ -305,7 +304,6 @@ struct Allocator {
   QuarantineCache fallback_quarantine_cache;
 
   uptr max_user_defined_malloc_size;
-  atomic_uint8_t rss_limit_exceeded;
 
   // ------------------- Options --------------------------
   atomic_uint16_t min_redzone;
@@ -345,14 +343,6 @@ struct Allocator {
                                        : kMaxAllowedMallocSize;
   }
 
-  bool RssLimitExceeded() {
-    return atomic_load(&rss_limit_exceeded, memory_order_relaxed);
-  }
-
-  void SetRssLimitExceeded(bool limit_exceeded) {
-    atomic_store(&rss_limit_exceeded, limit_exceeded, memory_order_relaxed);
-  }
-
   void RePoisonChunk(uptr chunk) {
     // This could be a user-facing chunk (with redzones), or some internal
     // housekeeping chunk, like TransferBatch. Start by assuming the former.
@@ -366,7 +356,7 @@ struct Allocator {
       if (chunk < beg && beg < end && end <= chunk_end) {
         // Looks like a valid AsanChunk in use, poison redzones only.
         PoisonShadow(chunk, beg - chunk, kAsanHeapLeftRedzoneMagic);
-        uptr end_aligned_down = RoundDownTo(end, SHADOW_GRANULARITY);
+        uptr end_aligned_down = RoundDownTo(end, ASAN_SHADOW_GRANULARITY);
         FastPoisonShadowPartialRightRedzone(
             end_aligned_down, end - end_aligned_down,
             chunk_end - end_aligned_down, kAsanHeapLeftRedzoneMagic);
@@ -484,14 +474,14 @@ struct Allocator {
                  AllocType alloc_type, bool can_fill) {
     if (UNLIKELY(!asan_inited))
       AsanInitFromRtl();
-    if (RssLimitExceeded()) {
+    if (UNLIKELY(IsRssLimitExceeded())) {
       if (AllocatorMayReturnNull())
         return nullptr;
       ReportRssLimitExceeded(stack);
     }
     Flags &fl = *flags();
     CHECK(stack);
-    const uptr min_alignment = SHADOW_GRANULARITY;
+    const uptr min_alignment = ASAN_SHADOW_GRANULARITY;
     const uptr user_requested_alignment_log =
         ComputeUserRequestedAlignmentLog(alignment);
     if (alignment < min_alignment)
@@ -572,7 +562,7 @@ struct Allocator {
     m->SetAllocContext(t ? t->tid() : kMainTid, StackDepotPut(*stack));
 
     uptr size_rounded_down_to_granularity =
-        RoundDownTo(size, SHADOW_GRANULARITY);
+        RoundDownTo(size, ASAN_SHADOW_GRANULARITY);
     // Unpoison the bulk of the memory region.
     if (size_rounded_down_to_granularity)
       PoisonShadow(user_beg, size_rounded_down_to_granularity, 0);
@@ -580,7 +570,7 @@ struct Allocator {
     if (size != size_rounded_down_to_granularity && CanPoisonMemory()) {
       u8 *shadow =
           (u8 *)MemToShadow(user_beg + size_rounded_down_to_granularity);
-      *shadow = fl.poison_partial ? (size & (SHADOW_GRANULARITY - 1)) : 0;
+      *shadow = fl.poison_partial ? (size & (ASAN_SHADOW_GRANULARITY - 1)) : 0;
     }
 
     AsanStats &thread_stats = GetCurrentThreadStats();
@@ -650,8 +640,7 @@ struct Allocator {
     }
 
     // Poison the region.
-    PoisonShadow(m->Beg(),
-                 RoundUpTo(m->UsedSize(), SHADOW_GRANULARITY),
+    PoisonShadow(m->Beg(), RoundUpTo(m->UsedSize(), ASAN_SHADOW_GRANULARITY),
                  kAsanHeapFreeMagic);
 
     AsanStats &thread_stats = GetCurrentThreadStats();
@@ -1069,10 +1058,6 @@ void asan_mz_force_lock() NO_THREAD_SAFETY_ANALYSIS { instance.ForceLock(); }
 
 void asan_mz_force_unlock() NO_THREAD_SAFETY_ANALYSIS {
   instance.ForceUnlock();
-}
-
-void AsanSoftRssLimitExceededCallback(bool limit_exceeded) {
-  instance.SetRssLimitExceeded(limit_exceeded);
 }
 
 }  // namespace __asan

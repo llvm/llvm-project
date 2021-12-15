@@ -11,6 +11,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -87,6 +88,20 @@ TEST(DataLayoutTest, GlobalsAddressSpace) {
       *M, Int32, false, GlobalValue::ExternalLinkage, nullptr, "", nullptr,
       GlobalValue::NotThreadLocal, 123);
   EXPECT_EQ(ExplicitGlobal2->getAddressSpace(), 123u);
+}
+
+TEST(DataLayoutTest, VectorAlign) {
+  Expected<DataLayout> DL = DataLayout::parse("v64:64");
+  EXPECT_THAT_EXPECTED(DL, Succeeded());
+
+  LLVMContext Context;
+  Type *const FloatTy = Type::getFloatTy(Context);
+  Type *const V8F32Ty = FixedVectorType::get(FloatTy, 8);
+
+  // The alignment for a vector type larger than any specified vector type uses
+  // the natural alignment as a fallback.
+  EXPECT_EQ(Align(4 * 8), DL->getABITypeAlign(V8F32Ty));
+  EXPECT_EQ(Align(4 * 8), DL->getPrefTypeAlign(V8F32Ty));
 }
 
 } // anonymous namespace

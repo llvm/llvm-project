@@ -16,6 +16,9 @@
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
+def LLVM_i8Ptr_global : LLVM_IntPtrBase<8, 1>;
+def LLVM_i8Ptr_shared : LLVM_IntPtrBase<8, 3>;
+
 //===----------------------------------------------------------------------===//
 // NVVM dialect definitions
 //===----------------------------------------------------------------------===//
@@ -155,6 +158,56 @@ def NVVM_VoteBallotOp :
   }];
   let parser = [{ return parseNVVMVoteBallotOp(parser, result); }];
   let printer = [{ printNVVMIntrinsicOp(p, this->getOperation()); }];
+}
+
+
+def NVVM_CpAsyncOp : NVVM_Op<"cp.async.shared.global">,
+  Arguments<(ins LLVM_i8Ptr_shared:$dst,
+                 LLVM_i8Ptr_global:$src,
+                 I32Attr:$size)> {
+  string llvmBuilder = [{
+      llvm::Intrinsic::ID id;
+      switch ($size) {
+        case 4:
+          id = llvm::Intrinsic::nvvm_cp_async_ca_shared_global_4;
+          break;
+        case 8:
+          id = llvm::Intrinsic::nvvm_cp_async_ca_shared_global_8;
+          break;
+        case 16:
+          id = llvm::Intrinsic::nvvm_cp_async_ca_shared_global_16;
+          break;
+        default:
+          llvm_unreachable("unsupported async copy size");
+      }
+      createIntrinsicCall(builder, id, {$dst, $src});
+  }];
+  let verifier = [{
+    if (size() != 4 && size() != 8 && size() != 16)
+      return emitError("expected byte size to be either 4, 8 or 16.");
+    return success();
+  }];
+  let assemblyFormat = "$dst `,` $src `,` $size attr-dict";
+}
+
+def NVVM_CpAsyncCommitGroupOp : NVVM_Op<"cp.async.commit.group"> {
+  string llvmBuilder = [{
+      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_cp_async_commit_group);
+  }];
+  let assemblyFormat = "attr-dict";
+}
+
+def NVVM_CpAsyncWaitGroupOp : NVVM_Op<"cp.async.wait.group">,
+  Arguments<(ins I32Attr:$n)> {
+  string llvmBuilder = [{
+      createIntrinsicCall(
+        builder,
+        llvm::Intrinsic::nvvm_cp_async_wait_group,
+        llvm::ConstantInt::get(
+          llvm::Type::getInt32Ty(moduleTranslation.getLLVMContext()),
+          $n));
+  }];
+  let assemblyFormat = "$n attr-dict";
 }
 
 def NVVM_MmaOp :

@@ -76,6 +76,7 @@ namespace format {
   TYPE(LineComment)                                                            \
   TYPE(MacroBlockBegin)                                                        \
   TYPE(MacroBlockEnd)                                                          \
+  TYPE(ModulePartitionColon)                                                   \
   TYPE(NamespaceMacro)                                                         \
   TYPE(NonNullAssertion)                                                       \
   TYPE(NullCoalescingEqual)                                                    \
@@ -520,7 +521,9 @@ public:
   }
 
   /// Determine whether the token is a simple-type-specifier.
-  bool isSimpleTypeSpecifier() const;
+  LLVM_NODISCARD bool isSimpleTypeSpecifier() const;
+
+  LLVM_NODISCARD bool isTypeOrIdentifier() const;
 
   bool isObjCAccessSpecifier() const {
     return is(tok::at) && Next &&

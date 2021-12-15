@@ -1195,12 +1195,12 @@ public:
   QualType RebuildPipeType(QualType ValueType, SourceLocation KWLoc,
                            bool isReadPipe);
 
-   /// Build an extended int given its value type.
-  QualType RebuildExtIntType(bool IsUnsigned, unsigned NumBits,
+  /// Build a bit-precise int given its value type.
+  QualType RebuildBitIntType(bool IsUnsigned, unsigned NumBits,
                              SourceLocation Loc);
 
-  /// Build a dependent extended int given its value type.
-  QualType RebuildDependentExtIntType(bool IsUnsigned, Expr *NumBitsExpr,
+  /// Build a dependent bit-precise int given its value type.
+  QualType RebuildDependentBitIntType(bool IsUnsigned, Expr *NumBitsExpr,
                                       SourceLocation Loc);
 
   /// Build a new template name given a nested name specifier, a flag
@@ -6430,27 +6430,27 @@ QualType TreeTransform<Derived>::TransformPipeType(TypeLocBuilder &TLB,
 }
 
 template <typename Derived>
-QualType TreeTransform<Derived>::TransformExtIntType(TypeLocBuilder &TLB,
-                                                     ExtIntTypeLoc TL) {
-  const ExtIntType *EIT = TL.getTypePtr();
+QualType TreeTransform<Derived>::TransformBitIntType(TypeLocBuilder &TLB,
+                                                     BitIntTypeLoc TL) {
+  const BitIntType *EIT = TL.getTypePtr();
   QualType Result = TL.getType();
 
   if (getDerived().AlwaysRebuild()) {
-    Result = getDerived().RebuildExtIntType(EIT->isUnsigned(),
+    Result = getDerived().RebuildBitIntType(EIT->isUnsigned(),
                                             EIT->getNumBits(), TL.getNameLoc());
     if (Result.isNull())
       return QualType();
   }
 
-  ExtIntTypeLoc NewTL = TLB.push<ExtIntTypeLoc>(Result);
+  BitIntTypeLoc NewTL = TLB.push<BitIntTypeLoc>(Result);
   NewTL.setNameLoc(TL.getNameLoc());
   return Result;
 }
 
 template <typename Derived>
-QualType TreeTransform<Derived>::TransformDependentExtIntType(
-    TypeLocBuilder &TLB, DependentExtIntTypeLoc TL) {
-  const DependentExtIntType *EIT = TL.getTypePtr();
+QualType TreeTransform<Derived>::TransformDependentBitIntType(
+    TypeLocBuilder &TLB, DependentBitIntTypeLoc TL) {
+  const DependentBitIntType *EIT = TL.getTypePtr();
 
   EnterExpressionEvaluationContext Unevaluated(
       SemaRef, Sema::ExpressionEvaluationContext::ConstantEvaluated);
@@ -6463,18 +6463,18 @@ QualType TreeTransform<Derived>::TransformDependentExtIntType(
   QualType Result = TL.getType();
 
   if (getDerived().AlwaysRebuild() || BitsExpr.get() != EIT->getNumBitsExpr()) {
-    Result = getDerived().RebuildDependentExtIntType(
+    Result = getDerived().RebuildDependentBitIntType(
         EIT->isUnsigned(), BitsExpr.get(), TL.getNameLoc());
 
     if (Result.isNull())
       return QualType();
   }
 
-  if (isa<DependentExtIntType>(Result)) {
-    DependentExtIntTypeLoc NewTL = TLB.push<DependentExtIntTypeLoc>(Result);
+  if (isa<DependentBitIntType>(Result)) {
+    DependentBitIntTypeLoc NewTL = TLB.push<DependentBitIntTypeLoc>(Result);
     NewTL.setNameLoc(TL.getNameLoc());
   } else {
-    ExtIntTypeLoc NewTL = TLB.push<ExtIntTypeLoc>(Result);
+    BitIntTypeLoc NewTL = TLB.push<BitIntTypeLoc>(Result);
     NewTL.setNameLoc(TL.getNameLoc());
   }
   return Result;
@@ -14557,20 +14557,20 @@ QualType TreeTransform<Derived>::RebuildPipeType(QualType ValueType,
 }
 
 template <typename Derived>
-QualType TreeTransform<Derived>::RebuildExtIntType(bool IsUnsigned,
+QualType TreeTransform<Derived>::RebuildBitIntType(bool IsUnsigned,
                                                    unsigned NumBits,
                                                    SourceLocation Loc) {
   llvm::APInt NumBitsAP(SemaRef.Context.getIntWidth(SemaRef.Context.IntTy),
                         NumBits, true);
   IntegerLiteral *Bits = IntegerLiteral::Create(SemaRef.Context, NumBitsAP,
                                                 SemaRef.Context.IntTy, Loc);
-  return SemaRef.BuildExtIntType(IsUnsigned, Bits, Loc);
+  return SemaRef.BuildBitIntType(IsUnsigned, Bits, Loc);
 }
 
 template <typename Derived>
-QualType TreeTransform<Derived>::RebuildDependentExtIntType(
+QualType TreeTransform<Derived>::RebuildDependentBitIntType(
     bool IsUnsigned, Expr *NumBitsExpr, SourceLocation Loc) {
-  return SemaRef.BuildExtIntType(IsUnsigned, NumBitsExpr, Loc);
+  return SemaRef.BuildBitIntType(IsUnsigned, NumBitsExpr, Loc);
 }
 
 template<typename Derived>

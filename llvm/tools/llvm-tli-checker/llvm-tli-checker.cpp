@@ -39,7 +39,7 @@ enum ID {
 #include "Opts.inc"
 #undef PREFIX
 
-const opt::OptTable::Info InfoTable[] = {
+static const opt::OptTable::Info InfoTable[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
   {                                                                            \
@@ -55,7 +55,7 @@ class TLICheckerOptTable : public opt::OptTable {
 public:
   TLICheckerOptTable() : OptTable(InfoTable) {}
 };
-} // namespace
+} // end anonymous namespace
 
 // We have three levels of reporting.
 enum class ReportKind {
@@ -66,13 +66,14 @@ enum class ReportKind {
 };
 
 // Most of the ObjectFile interfaces return an Expected<T>, so make it easy
-// to ignore those.
-template <typename T> T unwrapIgnoreError(Expected<T> E) {
+// to ignore errors.
+template <typename T>
+static T unwrapIgnoreError(Expected<T> E, T Default = T()) {
   if (E)
     return std::move(*E);
   // Sink the error and return a nothing value.
   consumeError(E.takeError());
-  return T();
+  return Default;
 }
 
 static void fail(const Twine &Message) {
@@ -99,13 +100,14 @@ static void reportArchiveChildIssue(const object::Archive::Child &C, int Index,
 }
 
 // Return Name, and if Name is mangled, append "aka" and the demangled name.
-static std::string PrintableName(StringRef Name) {
+static std::string getPrintableName(StringRef Name) {
   std::string OutputName = "'";
   OutputName += Name;
   OutputName += "'";
-  if (Name.startswith("_Z") || Name.startswith("??")) {
+  std::string DemangledName(demangle(Name.str()));
+  if (Name != DemangledName) {
     OutputName += " aka ";
-    OutputName += demangle(Name.str());
+    OutputName += DemangledName;
   }
   return OutputName;
 }
@@ -119,7 +121,7 @@ struct TLINameList : std::vector<std::pair<StringRef, bool>> {
   // Print out what we found.
   void dump();
 };
-TLINameList TLINames;
+static TLINameList TLINames;
 
 void TLINameList::initialize(StringRef TargetTriple) {
   Triple T(TargetTriple);
@@ -146,7 +148,7 @@ void TLINameList::dump() {
   // output as a header.  So, for example, no need to repeat the triple.
   for (auto &TLIName : TLINames) {
     outs() << (TLIName.second ? "    " : "not ")
-           << "available: " << PrintableName(TLIName.first) << '\n';
+           << "available: " << getPrintableName(TLIName.first) << '\n';
   }
 }
 
@@ -159,24 +161,27 @@ class SDKNameMap : public StringMap<bool> {
 public:
   void populateFromFile(StringRef LibDir, StringRef LibName);
 };
-SDKNameMap SDKNames;
+static SDKNameMap SDKNames;
 
 // Given an ObjectFile, extract the global function symbols.
 void SDKNameMap::populateFromObject(ObjectFile *O) {
-  // FIXME: Support COFF.
+  // FIXME: Support other formats.
   if (!O->isELF()) {
-    WithColor::warning() << "Only ELF-format files are supported\n";
+    WithColor::warning() << O->getFileName()
+                         << ": only ELF-format files are supported\n";
     return;
   }
-  auto *ELF = cast<const ELFObjectFileBase>(O);
+  const auto *ELF = cast<ELFObjectFileBase>(O);
 
-  for (auto I = ELF->getDynamicSymbolIterators().begin();
-       I != ELF->getDynamicSymbolIterators().end(); ++I) {
-    // We want only global function symbols.
-    SymbolRef::Type Type = unwrapIgnoreError(I->getType());
-    uint32_t Flags = unwrapIgnoreError(I->getFlags());
-    StringRef Name = unwrapIgnoreError(I->getName());
-    if (Type == SymbolRef::ST_Function && (Flags & SymbolRef::SF_Global))
+  for (auto &S : ELF->getDynamicSymbolIterators()) {
+    // We want only defined global function symbols.
+    SymbolRef::Type Type = unwrapIgnoreError(S.getType());
+    uint32_t Flags = unwrapIgnoreError(S.getFlags());
+    section_iterator Section = unwrapIgnoreError(S.getSection(),
+                                                 /*Default=*/O->section_end());
+    StringRef Name = unwrapIgnoreError(S.getName());
+    if (Type == SymbolRef::ST_Function && (Flags & SymbolRef::SF_Global) &&
+        Section != O->section_end())
       insert({Name, true});
   }
 }
@@ -211,7 +216,7 @@ void SDKNameMap::populateFromFile(StringRef LibDir, StringRef LibName) {
   SmallString<255> Filepath(LibDir);
   sys::path::append(Filepath, LibName);
   if (!sys::fs::exists(Filepath)) {
-    WithColor::warning() << "Could not find '" << StringRef(Filepath) << "'\n";
+    WithColor::warning() << StringRef(Filepath) << ": not found\n";
     return;
   }
   outs() << "\nLooking for symbols in '" << StringRef(Filepath) << "'\n";
@@ -229,13 +234,12 @@ void SDKNameMap::populateFromFile(StringRef LibDir, StringRef LibName) {
   else if (ObjectFile *O = dyn_cast<ObjectFile>(&Binary))
     populateFromObject(O);
   else {
-    WithColor::warning() << "Not an Archive or ObjectFile: '"
-                         << StringRef(Filepath) << "'\n";
+    WithColor::warning() << StringRef(Filepath)
+                         << ": not an archive or object file\n";
     return;
   }
   if (Precount == size())
-    WithColor::warning() << "No symbols found in '" << StringRef(Filepath)
-                         << "'\n";
+    WithColor::warning() << StringRef(Filepath) << ": no symbols found\n";
   else
     outs() << "Found " << size() - Precount << " global function symbols in '"
            << StringRef(Filepath) << "'\n";
@@ -268,10 +272,8 @@ int main(int argc, char *argv[]) {
   }
 
   std::vector<std::string> LibList = Args.getAllArgValues(OPT_INPUT);
-  if (LibList.empty()) {
-    WithColor::error() << "No input files\n";
-    exit(EXIT_FAILURE);
-  }
+  if (LibList.empty())
+    fail("no input files\n");
   StringRef LibDir = Args.getLastArgValue(OPT_libdir_EQ);
   bool SeparateMode = Args.hasArg(OPT_separate);
 
@@ -283,10 +285,8 @@ int main(int argc, char *argv[]) {
                       .Case("discrepancy", ReportKind::Discrepancy)
                       .Case("full", ReportKind::Full)
                       .Default(ReportKind::Error);
-    if (ReportLevel == ReportKind::Error) {
-      WithColor::error() << "invalid option for --report: " << A->getValue();
-      exit(EXIT_FAILURE);
-    }
+    if (ReportLevel == ReportKind::Error)
+      fail(Twine("invalid option for --report: ", StringRef(A->getValue())));
   }
 
   for (size_t I = 0; I < LibList.size(); ++I) {
@@ -330,7 +330,8 @@ int main(int argc, char *argv[]) {
         constexpr char YesNo[2][4] = {"no ", "yes"};
         constexpr char Indicator[4][3] = {"!!", ">>", "<<", "=="};
         outs() << Indicator[Which] << " TLI " << YesNo[TLIHas] << " SDK "
-               << YesNo[SDKHas] << ": " << PrintableName(TLIName.first) << '\n';
+               << YesNo[SDKHas] << ": " << getPrintableName(TLIName.first)
+               << '\n';
       }
     }
 

@@ -227,7 +227,7 @@ private:
   friend InterfaceBase;
 };
 
-} // end namespace mlir.
+} // namespace mlir.
 
 namespace llvm {
 

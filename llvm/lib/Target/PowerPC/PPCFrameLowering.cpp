@@ -391,9 +391,8 @@ void PPCFrameLowering::replaceFPWithRealFP(MachineFunction &MF) const {
   unsigned BPReg  = HasBP ? (unsigned) RegInfo->getBaseRegister(MF) : FPReg;
   unsigned BP8Reg = HasBP ? (unsigned) PPC::X30 : FP8Reg;
 
-  for (MachineFunction::iterator BI = MF.begin(), BE = MF.end();
-       BI != BE; ++BI)
-    for (MachineBasicBlock::iterator MBBI = BI->end(); MBBI != BI->begin(); ) {
+  for (MachineBasicBlock &MBB : MF)
+    for (MachineBasicBlock::iterator MBBI = MBB.end(); MBBI != MBB.begin();) {
       --MBBI;
       for (unsigned I = 0, E = MBBI->getNumOperands(); I != E; ++I) {
         MachineOperand &MO = MBBI->getOperand(I);
@@ -1172,8 +1171,8 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
     // Describe where callee saved registers were saved, at fixed offsets from
     // CFA.
     const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
-    for (unsigned I = 0, E = CSI.size(); I != E; ++I) {
-      unsigned Reg = CSI[I].getReg();
+    for (const CalleeSavedInfo &I : CSI) {
+      unsigned Reg = I.getReg();
       if (Reg == PPC::LR || Reg == PPC::LR8 || Reg == PPC::RM) continue;
 
       // This is a bit of a hack: CR2LT, CR2GT, CR2EQ and CR2UN are just
@@ -1204,15 +1203,15 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
         continue;
       }
 
-      if (CSI[I].isSpilledToReg()) {
-        unsigned SpilledReg = CSI[I].getDstReg();
+      if (I.isSpilledToReg()) {
+        unsigned SpilledReg = I.getDstReg();
         unsigned CFIRegister = MF.addFrameInst(MCCFIInstruction::createRegister(
             nullptr, MRI->getDwarfRegNum(Reg, true),
             MRI->getDwarfRegNum(SpilledReg, true)));
         BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIRegister);
       } else {
-        int64_t Offset = MFI.getObjectOffset(CSI[I].getFrameIdx());
+        int64_t Offset = MFI.getObjectOffset(I.getFrameIdx());
         // We have changed the object offset above but we do not want to change
         // the actual offsets in the CFI instruction so we have to undo the
         // offset change here.
@@ -2085,15 +2084,15 @@ void PPCFrameLowering::processFunctionBeforeFrameFinalized(MachineFunction &MF,
   SmallVector<CalleeSavedInfo, 18> FPRegs;
   SmallVector<CalleeSavedInfo, 18> VRegs;
 
-  for (unsigned i = 0, e = CSI.size(); i != e; ++i) {
-    unsigned Reg = CSI[i].getReg();
+  for (const CalleeSavedInfo &I : CSI) {
+    unsigned Reg = I.getReg();
     assert((!MF.getInfo<PPCFunctionInfo>()->mustSaveTOC() ||
             (Reg != PPC::X2 && Reg != PPC::R2)) &&
            "Not expecting to try to spill R2 in a function that must save TOC");
     if (PPC::GPRCRegClass.contains(Reg)) {
       HasGPSaveArea = true;
 
-      GPRegs.push_back(CSI[i]);
+      GPRegs.push_back(I);
 
       if (Reg < MinGPR) {
         MinGPR = Reg;
@@ -2101,7 +2100,7 @@ void PPCFrameLowering::processFunctionBeforeFrameFinalized(MachineFunction &MF,
     } else if (PPC::G8RCRegClass.contains(Reg)) {
       HasG8SaveArea = true;
 
-      G8Regs.push_back(CSI[i]);
+      G8Regs.push_back(I);
 
       if (Reg < MinG8R) {
         MinG8R = Reg;
@@ -2109,7 +2108,7 @@ void PPCFrameLowering::processFunctionBeforeFrameFinalized(MachineFunction &MF,
     } else if (PPC::F8RCRegClass.contains(Reg)) {
       HasFPSaveArea = true;
 
-      FPRegs.push_back(CSI[i]);
+      FPRegs.push_back(I);
 
       if (Reg < MinFPR) {
         MinFPR = Reg;
@@ -2123,7 +2122,7 @@ void PPCFrameLowering::processFunctionBeforeFrameFinalized(MachineFunction &MF,
       // alignment requirements, so overload the save area for both cases.
       HasVRSaveArea = true;
 
-      VRegs.push_back(CSI[i]);
+      VRegs.push_back(I);
 
       if (Reg < MinVR) {
         MinVR = Reg;
@@ -2395,8 +2394,8 @@ bool PPCFrameLowering::spillCalleeSavedRegisters(
     }
   });
 
-  for (unsigned i = 0, e = CSI.size(); i != e; ++i) {
-    unsigned Reg = CSI[i].getReg();
+  for (const CalleeSavedInfo &I : CSI) {
+    unsigned Reg = I.getReg();
 
     // CR2 through CR4 are the nonvolatile CR fields.
     bool IsCRField = PPC::CR2 <= Reg && Reg <= PPC::CR4;
@@ -2439,11 +2438,11 @@ bool PPCFrameLowering::spillCalleeSavedRegisters(
         MBB.insert(MI, addFrameReference(BuildMI(*MF, DL, TII.get(PPC::STW))
                                          .addReg(PPC::R12,
                                                  getKillRegState(true)),
-                                         CSI[i].getFrameIdx()));
+                                         I.getFrameIdx()));
       }
     } else {
-      if (CSI[i].isSpilledToReg()) {
-        unsigned Dst = CSI[i].getDstReg();
+      if (I.isSpilledToReg()) {
+        unsigned Dst = I.getDstReg();
 
         if (Spilled[Dst])
           continue;
@@ -2478,9 +2477,9 @@ bool PPCFrameLowering::spillCalleeSavedRegisters(
         if (Subtarget.needsSwapsForVSXMemOps() &&
             !MF->getFunction().hasFnAttribute(Attribute::NoUnwind))
           TII.storeRegToStackSlotNoUpd(MBB, MI, Reg, !IsLiveIn,
-                                       CSI[i].getFrameIdx(), RC, TRI);
+                                       I.getFrameIdx(), RC, TRI);
         else
-          TII.storeRegToStackSlot(MBB, MI, Reg, !IsLiveIn, CSI[i].getFrameIdx(),
+          TII.storeRegToStackSlot(MBB, MI, Reg, !IsLiveIn, I.getFrameIdx(),
                                   RC, TRI);
       }
     }

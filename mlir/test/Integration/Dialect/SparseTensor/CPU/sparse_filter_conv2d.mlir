@@ -79,7 +79,7 @@ module {
     // CHECK-SAME: ( 0, 0, 3, 6, -3, -6 ),
     // CHECK-SAME: ( 2, -1, 3, 0, -3, 0 ) )
     //
-    %m = memref.buffer_cast %0 : memref<6x6xi32>
+    %m = bufferization.to_memref %0 : memref<6x6xi32>
     %v = vector.transfer_read %m[%c0, %c0], %i0
       : memref<6x6xi32>, vector<6x6xi32>
     vector.print %v : vector<6x6xi32>

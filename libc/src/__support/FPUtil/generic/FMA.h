@@ -24,7 +24,7 @@ static inline cpp::EnableIfType<cpp::IsSame<T, float>::Value, T> fma(T x, T y,
   double sum = prod + z_d;
   fputil::FPBits<double> bit_prod(prod), bitz(z_d), bit_sum(sum);
 
-  if (!(bit_sum.isInfOrNaN() || bit_sum.isZero())) {
+  if (!(bit_sum.is_inf_or_nan() || bit_sum.is_zero())) {
     // Since the sum is computed in double precision, rounding might happen
     // (for instance, when bitz.exponent > bit_prod.exponent + 5, or
     // bit_prod.exponent > bitz.exponent + 40).  In that case, when we round
@@ -47,17 +47,17 @@ static inline cpp::EnableIfType<cpp::IsSame<T, float>::Value, T> fma(T x, T y,
     // bit of sum, so that the sticky bits used when rounding sum to float are
     // correct (when it matters).
     fputil::FPBits<double> t(
-        (bit_prod.getUnbiasedExponent() >= bitz.getUnbiasedExponent())
+        (bit_prod.get_unbiased_exponent() >= bitz.get_unbiased_exponent())
             ? ((double(bit_sum) - double(bit_prod)) - double(bitz))
             : ((double(bit_sum) - double(bitz)) - double(bit_prod)));
 
     // Update sticky bits if t != 0.0 and the least (52 - 23 - 1 = 28) bits are
     // zero.
-    if (!t.isZero() && ((bit_sum.getMantissa() & 0xfff'ffffULL) == 0)) {
-      if (bit_sum.getSign() != t.getSign()) {
-        bit_sum.setMantissa(bit_sum.getMantissa() + 1);
-      } else if (bit_sum.getMantissa()) {
-        bit_sum.setMantissa(bit_sum.getMantissa() - 1);
+    if (!t.is_zero() && ((bit_sum.get_mantissa() & 0xfff'ffffULL) == 0)) {
+      if (bit_sum.get_sign() != t.get_sign()) {
+        bit_sum.set_mantissa(bit_sum.get_mantissa() + 1);
+      } else if (bit_sum.get_mantissa()) {
+        bit_sum.set_mantissa(bit_sum.get_mantissa() - 1);
       }
     }
   }

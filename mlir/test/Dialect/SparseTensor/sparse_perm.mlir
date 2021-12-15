@@ -23,7 +23,7 @@
 // CHECK:           %[[VAL_5:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_6:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<10x20x30xf32, #sparse_tensor.encoding<{{{.*}}}>>
-// CHECK:           %[[VAL_8:.*]] = memref.buffer_cast %[[VAL_1]] : memref<20x30x10xf32>
+// CHECK:           %[[VAL_8:.*]] = bufferization.to_memref %[[VAL_1]] : memref<20x30x10xf32>
 // CHECK:           %[[VAL_9:.*]] = memref.alloc() : memref<20x30x10xf32>
 // CHECK:           memref.copy %[[VAL_8]], %[[VAL_9]] : memref<20x30x10xf32> to memref<20x30x10xf32>
 // CHECK:           scf.for %[[VAL_10:.*]] = %[[VAL_5]] to %[[VAL_3]] step %[[VAL_6]] {
@@ -38,7 +38,7 @@
 // CHECK:               }
 // CHECK:             }
 // CHECK:           }
-// CHECK:           %[[VAL_18:.*]] = memref.tensor_load %[[VAL_9]] : memref<20x30x10xf32>
+// CHECK:           %[[VAL_18:.*]] = bufferization.to_tensor %[[VAL_9]] : memref<20x30x10xf32>
 // CHECK:           return %[[VAL_18]] : tensor<20x30x10xf32>
 // CHECK:         }
 func @sparse_static_dims(%arga: tensor<10x20x30xf32, #X>,
@@ -62,7 +62,7 @@ func @sparse_static_dims(%arga: tensor<10x20x30xf32, #X>,
 // CHECK:           %[[VAL_6:.*]] = tensor.dim %[[VAL_1]], %[[VAL_3]] : tensor<?x?x?xf32>
 // CHECK:           %[[VAL_7:.*]] = tensor.dim %[[VAL_1]], %[[VAL_4]] : tensor<?x?x?xf32>
 // CHECK:           %[[VAL_8:.*]] = tensor.dim %[[VAL_1]], %[[VAL_2]] : tensor<?x?x?xf32>
-// CHECK:           %[[VAL_9:.*]] = memref.buffer_cast %[[VAL_1]] : memref<?x?x?xf32>
+// CHECK:           %[[VAL_9:.*]] = bufferization.to_memref %[[VAL_1]] : memref<?x?x?xf32>
 // CHECK:           %[[VAL_10:.*]] = memref.alloc(%[[VAL_6]], %[[VAL_7]], %[[VAL_8]]) : memref<?x?x?xf32>
 // CHECK:           memref.copy %[[VAL_9]], %[[VAL_10]] : memref<?x?x?xf32> to memref<?x?x?xf32>
 // CHECK:           scf.for %[[VAL_11:.*]] = %[[VAL_3]] to %[[VAL_7]] step %[[VAL_4]] {
@@ -77,7 +77,7 @@ func @sparse_static_dims(%arga: tensor<10x20x30xf32, #X>,
 // CHECK:               }
 // CHECK:             }
 // CHECK:           }
-// CHECK:           %[[VAL_19:.*]] = memref.tensor_load %[[VAL_10]] : memref<?x?x?xf32>
+// CHECK:           %[[VAL_19:.*]] = bufferization.to_tensor %[[VAL_10]] : memref<?x?x?xf32>
 // CHECK:           return %[[VAL_19]] : tensor<?x?x?xf32>
 // CHECK:         }
 func @sparse_dynamic_dims(%arga: tensor<?x?x?xf32, #X>,

@@ -18,12 +18,15 @@
 #include "mlir/Dialect/Vector/VectorTransforms.h"
 #include "mlir/Dialect/X86Vector/Transforms.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Transforms/Bufferize.h"
+#include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallSet.h"
 
 namespace mlir {
+namespace bufferization {
 class BufferizeTypeConverter;
+} // namespace bufferization
+
 class FrozenRewritePatternSet;
 
 namespace linalg {
@@ -45,12 +48,6 @@ using LinalgLoops = SmallVector<Operation *, 4>;
 void populateConvVectorizationPatterns(
     MLIRContext *context, SmallVectorImpl<RewritePatternSet> &patterns,
     ArrayRef<int64_t> tileSizes);
-
-/// Populates patterns to decompose high-D convolution ops into low-D ones. This
-/// is a step in progressive lowering for convolution ops, afterwards we can
-/// vectorize the low-D convolution ops.
-void populateDecomposeConvolutionPatterns(RewritePatternSet &patterns,
-                                          PatternBenefit benefit = 1);
 
 /// Populates patterns for vectorizing low-D convolution ops. This is a step in
 /// progressive lowering for convolution ops, it assume high-D convolution ops
@@ -90,8 +87,9 @@ void populateFoldUnitDimsReshapeOpsByLinearizationPatterns(
     RewritePatternSet &patterns);
 
 /// Populates the given list with patterns to bufferize linalg ops.
-void populateLinalgBufferizePatterns(BufferizeTypeConverter &converter,
-                                     RewritePatternSet &patterns);
+void populateLinalgBufferizePatterns(
+    bufferization::BufferizeTypeConverter &converter,
+    RewritePatternSet &patterns);
 
 /// Create linalg op on buffers given the original tensor-based operation and
 /// the buffers for the outputs.
@@ -403,8 +401,14 @@ LogicalResult generalizeNamedOpPrecondition(Operation *op);
 LogicalResult promoteSubviewsPrecondition(Operation *op,
                                           LinalgPromotionOptions options);
 
-/// Rewrite a linalg.generic into a suitable vector.contraction op.
+/// Return success if the operation can be vectorized.
 LogicalResult vectorizeLinalgOpPrecondition(Operation *op);
+
+/// Return success if `op` can be vectorized assuming it is static. This allows
+/// checking if an op will be vectorizable once all the dimensions are folded to
+/// static values.
+/// It is the same as `vectorizeLinalgOpPrecondition` for static shapes.
+LogicalResult vectorizeStaticLinalgOpPrecondition(LinalgOp op);
 
 //===----------------------------------------------------------------------===//
 // Transformations exposed as rewrite patterns.
@@ -515,6 +519,13 @@ struct LinalgPaddingOptions {
     paddingHoistComputationFunction = std::move(fun);
     return *this;
   }
+};
+
+struct LinalgTilingAndFusionOptions {
+  /// Tile sizes used to tile the root operation.
+  SmallVector<int64_t> tileSizes;
+  /// Tile interchange used to permute the tile loops.
+  SmallVector<int64_t> tileInterchange;
 };
 
 struct LinalgTilingOptions {
@@ -765,6 +776,34 @@ struct LinalgTileAndFusePattern : public LinalgBaseTileAndFusePattern {
       : LinalgBaseTileAndFusePattern(
             OpTy::getOperationName(), context, dependenceGraph, tilingOptions,
             fusionOptions, filter, fusedOpMarker, originalOpMarker, benefit) {}
+};
+
+///
+/// Linalg tile and fuse tensor ops pattern.
+///
+/// Apply tiling and fusion as a pattern.
+/// `filter` controls LinalgTransformMarker matching and update when specified.
+/// See `tileConsumerAndFuseProducers` for more details.
+struct LinalgTileAndFuseTensorOpsPattern : public RewritePattern {
+  // Entry point to match any LinalgOp.
+  LinalgTileAndFuseTensorOpsPattern(
+      MLIRContext *context, LinalgTilingAndFusionOptions options,
+      LinalgTransformationFilter filter = LinalgTransformationFilter(),
+      PatternBenefit benefit = 1);
+  // Entry point to match a specific LinalgOp.
+  LinalgTileAndFuseTensorOpsPattern(
+      StringRef opName, MLIRContext *context,
+      LinalgTilingAndFusionOptions options,
+      LinalgTransformationFilter filter = LinalgTransformationFilter(),
+      PatternBenefit benefit = 1);
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override;
+
+private:
+  /// LinalgTransformMarker handles special attribute manipulations.
+  LinalgTransformationFilter filter;
+  /// Tile sizes and interchange used to tile the root operation.
+  LinalgTilingAndFusionOptions options;
 };
 
 ///
@@ -1138,6 +1177,16 @@ private:
 void populateLinalgNamedOpsGeneralizationPatterns(
     RewritePatternSet &patterns,
     LinalgTransformationFilter filter = LinalgTransformationFilter());
+
+/// Linalg decompose convolutions patterns
+
+/// Populates patterns to decompose high-D convolution ops into low-D ones. This
+/// is a step in progressive lowering for convolution ops, afterwards we can
+/// vectorize the low-D convolution ops.
+void populateDecomposeConvolutionPatterns(
+    RewritePatternSet &patterns,
+    LinalgTransformationFilter filter = LinalgTransformationFilter(),
+    PatternBenefit benefit = 1);
 
 /// Linalg distribution patterns
 //

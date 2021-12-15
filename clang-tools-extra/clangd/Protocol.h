@@ -438,6 +438,11 @@ struct ClientCapabilities {
   /// textDocument.signatureHelp.signatureInformation.parameterInformation.labelOffsetSupport
   bool OffsetsInSignatureHelp = false;
 
+  /// The documentation format that should be used for
+  /// textDocument/signatureHelp.
+  /// textDocument.signatureHelp.signatureInformation.documentationFormat
+  MarkupKind SignatureHelpDocumentationFormat = MarkupKind::PlainText;
+
   /// The supported set of CompletionItemKinds for textDocument/completion.
   /// textDocument.completion.completionItemKind.valueSet
   llvm::Optional<CompletionItemKindBitset> CompletionItemKinds;
@@ -1283,7 +1288,7 @@ struct SignatureInformation {
   std::string label;
 
   /// The documentation of this signature. Optional.
-  std::string documentation;
+  MarkupContent documentation;
 
   /// The parameters of this signature.
   std::vector<ParameterInformation> parameters;

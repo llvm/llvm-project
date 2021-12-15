@@ -184,6 +184,9 @@ namespace {
     /// base address.
     DenseMap<int, int> JumpTableUserIndices;
 
+    // Maps a MachineBasicBlock to the number of jump tables entries.
+    DenseMap<const MachineBasicBlock *, int> BlockJumpTableRefCount;
+
     /// ImmBranch - One per immediate branch, keeping the machine instruction
     /// pointer, conditional or unconditional, the max displacement,
     /// and (if isCond is true) the corresponding unconditional branch
@@ -274,7 +277,10 @@ namespace {
                               unsigned &DeadSize, bool &CanDeleteLEA,
                               bool &BaseRegKill);
     bool optimizeThumb2JumpTables();
-    MachineBasicBlock *adjustJTTargetBlockForward(MachineBasicBlock *BB,
+    void fixupBTI(unsigned JTI, MachineBasicBlock &OldBB,
+                  MachineBasicBlock &NewBB);
+    MachineBasicBlock *adjustJTTargetBlockForward(unsigned JTI,
+                                                  MachineBasicBlock *BB,
                                                   MachineBasicBlock *JTBB);
 
     unsigned getUserOffset(CPUser&) const;
@@ -518,6 +524,7 @@ bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
   CPEntries.clear();
   JumpTableEntryIndices.clear();
   JumpTableUserIndices.clear();
+  BlockJumpTableRefCount.clear();
   ImmBranches.clear();
   PushPopMIs.clear();
   T2JumpTables.clear();
@@ -720,6 +727,14 @@ Align ARMConstantIslands::getCPEAlign(const MachineInstr *CPEMI) {
   return MCP->getConstants()[CPI].getAlign();
 }
 
+// Exception landing pads, blocks that has their adress taken, and function
+// entry blocks will always be (potential) indirect jump targets, regardless of
+// whether they are referenced by or not by jump tables.
+static bool isAlwaysIndirectTarget(const MachineBasicBlock &MBB) {
+  return MBB.isEHPad() || MBB.hasAddressTaken() ||
+         &MBB == &MBB.getParent()->front();
+}
+
 /// scanFunctionJumpTables - Do a scan of the function, building up
 /// information about the sizes of each block and the locations of all
 /// the jump tables.
@@ -730,6 +745,20 @@ void ARMConstantIslands::scanFunctionJumpTables() {
           (I.getOpcode() == ARM::t2BR_JT || I.getOpcode() == ARM::tBR_JTr))
         T2JumpTables.push_back(&I);
   }
+
+  if (!MF->getInfo<ARMFunctionInfo>()->branchTargetEnforcement())
+    return;
+
+  if (const MachineJumpTableInfo *JTI = MF->getJumpTableInfo())
+    for (const MachineJumpTableEntry &JTE : JTI->getJumpTables())
+      for (const MachineBasicBlock *MBB : JTE.MBBs) {
+        if (isAlwaysIndirectTarget(*MBB))
+          // Set the reference count essentially to infinity, it will never
+          // reach zero and the BTI Instruction will never be removed.
+          BlockJumpTableRefCount[MBB] = std::numeric_limits<int>::max();
+        else
+          ++BlockJumpTableRefCount[MBB];
+      }
 }
 
 /// initializeFunctionInfo - Do the initial scan of the function, building up
@@ -1219,9 +1248,9 @@ int ARMConstantIslands::findInRangeCPEntry(CPUser& U, unsigned UserOffset) {
       // Point the CPUser node to the replacement
       U.CPEMI = CPEs[i].CPEMI;
       // Change the CPI in the instruction operand to refer to the clone.
-      for (unsigned j = 0, e = UserMI->getNumOperands(); j != e; ++j)
-        if (UserMI->getOperand(j).isCPI()) {
-          UserMI->getOperand(j).setIndex(CPEs[i].CPI);
+      for (MachineOperand &MO : UserMI->operands())
+        if (MO.isCPI()) {
+          MO.setIndex(CPEs[i].CPI);
           break;
         }
       // Adjust the refcount of the clone...
@@ -1601,9 +1630,9 @@ bool ARMConstantIslands::handleConstantPoolUser(unsigned CPUserIndex,
   BBUtils->adjustBBOffsetsAfter(&*--NewIsland->getIterator());
 
   // Finally, change the CPI in the instruction operand to be ID.
-  for (unsigned i = 0, e = UserMI->getNumOperands(); i != e; ++i)
-    if (UserMI->getOperand(i).isCPI()) {
-      UserMI->getOperand(i).setIndex(ID);
+  for (MachineOperand &MO : UserMI->operands())
+    if (MO.isCPI()) {
+      MO.setIndex(ID);
       break;
     }
 
@@ -2211,8 +2240,7 @@ bool ARMConstantIslands::optimizeThumb2JumpTables() {
     unsigned JTOffset = BBUtils->getOffsetOf(MI) + 4;
     const std::vector<MachineBasicBlock*> &JTBBs = JT[JTI].MBBs;
     BBInfoVector &BBInfo = BBUtils->getBBInfo();
-    for (unsigned j = 0, ee = JTBBs.size(); j != ee; ++j) {
-      MachineBasicBlock *MBB = JTBBs[j];
+    for (MachineBasicBlock *MBB : JTBBs) {
       unsigned DstOffset = BBInfo[MBB->getNumber()].Offset;
       // Negative offset is not ok. FIXME: We should change BB layout to make
       // sure all the branches are forward.
@@ -2405,17 +2433,16 @@ bool ARMConstantIslands::reorderThumb2JumpTables() {
     // and try to adjust them such that that's true.
     int JTNumber = MI->getParent()->getNumber();
     const std::vector<MachineBasicBlock*> &JTBBs = JT[JTI].MBBs;
-    for (unsigned j = 0, ee = JTBBs.size(); j != ee; ++j) {
-      MachineBasicBlock *MBB = JTBBs[j];
+    for (MachineBasicBlock *MBB : JTBBs) {
       int DTNumber = MBB->getNumber();
 
       if (DTNumber < JTNumber) {
         // The destination precedes the switch. Try to move the block forward
         // so we have a positive offset.
         MachineBasicBlock *NewBB =
-          adjustJTTargetBlockForward(MBB, MI->getParent());
+            adjustJTTargetBlockForward(JTI, MBB, MI->getParent());
         if (NewBB)
-          MJTI->ReplaceMBBInJumpTable(JTI, JTBBs[j], NewBB);
+          MJTI->ReplaceMBBInJumpTable(JTI, MBB, NewBB);
         MadeChange = true;
       }
     }
@@ -2424,8 +2451,40 @@ bool ARMConstantIslands::reorderThumb2JumpTables() {
   return MadeChange;
 }
 
-MachineBasicBlock *ARMConstantIslands::
-adjustJTTargetBlockForward(MachineBasicBlock *BB, MachineBasicBlock *JTBB) {
+void ARMConstantIslands::fixupBTI(unsigned JTI, MachineBasicBlock &OldBB,
+                                  MachineBasicBlock &NewBB) {
+  assert(isThumb2 && "BTI in Thumb1?");
+
+  // Insert a BTI instruction into NewBB
+  BuildMI(NewBB, NewBB.begin(), DebugLoc(), TII->get(ARM::t2BTI));
+
+  // Update jump table reference counts.
+  const MachineJumpTableInfo &MJTI = *MF->getJumpTableInfo();
+  const MachineJumpTableEntry &JTE = MJTI.getJumpTables()[JTI];
+  for (const MachineBasicBlock *MBB : JTE.MBBs) {
+    if (MBB != &OldBB)
+      continue;
+    --BlockJumpTableRefCount[MBB];
+    ++BlockJumpTableRefCount[&NewBB];
+  }
+
+  // If the old basic block reference count dropped to zero, remove
+  // the BTI instruction at its beginning.
+  if (BlockJumpTableRefCount[&OldBB] > 0)
+    return;
+
+  // Skip meta instructions
+  auto BTIPos = llvm::find_if_not(OldBB.instrs(), [](const MachineInstr &MI) {
+    return MI.isMetaInstruction();
+  });
+  assert(BTIPos->getOpcode() == ARM::t2BTI &&
+         "BasicBlock is mentioned in a jump table but does start with BTI");
+  if (BTIPos->getOpcode() == ARM::t2BTI)
+    BTIPos->eraseFromParent();
+}
+
+MachineBasicBlock *ARMConstantIslands::adjustJTTargetBlockForward(
+    unsigned JTI, MachineBasicBlock *BB, MachineBasicBlock *JTBB) {
   // If the destination block is terminated by an unconditional branch,
   // try to move it; otherwise, create a new block following the jump
   // table that branches back to the actual target. This is a very simple
@@ -2482,6 +2541,9 @@ adjustJTTargetBlockForward(MachineBasicBlock *BB, MachineBasicBlock *JTBB) {
   // Update the CFG.
   NewBB->addSuccessor(BB);
   JTBB->replaceSuccessor(BB, NewBB);
+
+  if (MF->getInfo<ARMFunctionInfo>()->branchTargetEnforcement())
+    fixupBTI(JTI, *BB, *NewBB);
 
   ++NumJTInserted;
   return NewBB;

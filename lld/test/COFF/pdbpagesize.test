@@ -10,6 +10,14 @@
 # RUN: llvm-pdbutil pdb2yaml %t.pdb | FileCheck --check-prefix=PAGE4096 %s
 # PAGE4096: BlockSize: 4096
 
-# RUN: lld-link /entry:main %t.obj /out:%t.exe /debug /pdbpagesize:8192 2>&1 \
-# RUN:     | FileCheck --check-prefix=TODO %s
-# TODO: warning: /pdbpagesize: page sizes != 4096 not yet implemented, ignoring flag
+# RUN: lld-link /entry:main %t.obj /out:%t.exe /debug /pdbpagesize:8192
+# RUN: llvm-pdbutil pdb2yaml %t.pdb | FileCheck --check-prefix=PAGE8192 %s
+# PAGE8192: BlockSize: 8192
+
+# RUN: lld-link /entry:main %t.obj /out:%t.exe /debug /pdbpagesize:16384
+# RUN: llvm-pdbutil pdb2yaml %t.pdb | FileCheck --check-prefix=PAGE16384 %s
+# PAGE16384: BlockSize: 16384
+
+# RUN: lld-link /entry:main %t.obj /out:%t.exe /debug /pdbpagesize:32768
+# RUN: llvm-pdbutil pdb2yaml %t.pdb | FileCheck --check-prefix=PAGE32768 %s
+# PAGE32768: BlockSize: 32768

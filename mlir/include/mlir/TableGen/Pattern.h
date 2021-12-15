@@ -28,7 +28,7 @@ namespace llvm {
 class DagInit;
 class Init;
 class Record;
-} // end namespace llvm
+} // namespace llvm
 
 namespace mlir {
 namespace tblgen {
@@ -508,8 +508,8 @@ private:
   RecordOperatorMap *recordOpMap;
 };
 
-} // end namespace tblgen
-} // end namespace mlir
+} // namespace tblgen
+} // namespace mlir
 
 namespace llvm {
 template <>
@@ -547,6 +547,6 @@ struct DenseMapInfo<mlir::tblgen::DagLeaf> {
     return lhs.def == rhs.def;
   }
 };
-} // end namespace llvm
+} // namespace llvm
 
 #endif // MLIR_TABLEGEN_PATTERN_H_

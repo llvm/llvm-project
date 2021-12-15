@@ -187,6 +187,10 @@ primary use is for COFF object files which explicitly specify what interfaces
 are imported from external modules. See the dllimport_ documentation on MSDN
 for more information.
 
+Note that a dllimport function may still be inlined, if its definition is
+available and it doesn't reference any non-dllimport functions or global
+variables.
+
 .. _dllimport: https://msdn.microsoft.com/en-us/library/3y1sfaz2.aspx
   }];
 }
@@ -2230,6 +2234,40 @@ example:
 All multiversioned functions must contain a ``default`` (fallback)
 implementation, otherwise usages of the function are considered invalid.
 Additionally, a function may not become multiversioned after its first use.
+}];
+}
+
+def TargetClonesDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+Clang supports the ``target_clones("OPTIONS")`` attribute. This attribute may be
+attached to a function declaration and causes function multiversioning, where
+multiple versions of the function will be emitted with different code
+generation options.  Additionally, these versions will be resolved at runtime
+based on the priority of their attribute options. All ``target_clone`` functions
+are considered multiversioned functions.
+
+All multiversioned functions must contain a ``default`` (fallback)
+implementation, otherwise usages of the function are considered invalid.
+Additionally, a function may not become multiversioned after its first use.
+
+The options to ``target_clones`` can either be a target-specific architecture
+(specified as ``arch=CPU``), or one of a list of subtarget features.
+
+Example "subtarget features" from the x86 backend include: "mmx", "sse", "sse4.2",
+"avx", "xop" and largely correspond to the machine specific options handled by
+the front end.
+
+The versions can either be listed as a comma-separated sequence of string
+literals or as a single string literal containing a comma-separated list of
+versions.  For compatibility with GCC, the two formats can be mixed.  For
+example, the following will emit 4 versions of the function:
+
+  .. code-block:: c++
+
+    __attribute__((target_clones("arch=atom,avx2","arch=ivybridge","default")))
+    void foo() {}
+
 }];
 }
 
@@ -5944,6 +5982,50 @@ attribute requires a string literal argument to identify the handle being releas
 
   zx_status_t zx_handle_close(zx_handle_t handle [[clang::release_handle("tag")]]);
   }];
+}
+
+def DiagnoseAsBuiltinDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``diagnose_as_builtin` attribute indicates that Fortify diagnostics are to
+be applied to the declared function as if it were the function specified by the
+attribute. The builtin function whose diagnostics are to be mimicked should be
+given. In addition, the order in which arguments should be applied must also
+be given.
+
+For example, the attribute can be used as follows.
+
+  .. code-block:: c
+
+    __attribute__((diagnose_as_builtin(__builtin_memset, 3, 2, 1)))
+    void *mymemset(int n, int c, void *s) {
+      // ...
+    }
+
+This indicates that calls to ``mymemset`` should be diagnosed as if they were
+calls to ``__builtin_memset``. The arguments ``3, 2, 1`` indicate by index the
+order in which arguments of ``mymemset`` should be applied to
+``__builtin_memset``. The third argument should be applied first, then the
+second, and then the first. Thus (when Fortify warnings are enabled) the call
+``mymemset(n, c, s)`` will diagnose overflows as if it were the call
+``__builtin_memset(s, c, n)``.
+
+For variadic functions, the variadic arguments must come in the same order as
+they would to the builtin function, after all normal arguments. For instance,
+to diagnose a new function as if it were `sscanf`, we can use the attribute as
+follows.
+
+  .. code-block:: c
+  __attribute__((diagnose_as_builtin(sscanf, 1, 2)))
+  int mysscanf(const char *str, const char *format, ...)  {
+    // ...
+  }
+
+Then the call `mysscanf("abc def", "%4s %4s", buf1, buf2)` will be diagnosed as
+if it were the call `sscanf("abc def", "%4s %4s", buf1, buf2)`.
+
+This attribute cannot be applied to non-static member functions.
+}];
 }
 
 def ArmSveVectorBitsDocs : Documentation {

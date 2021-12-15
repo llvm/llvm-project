@@ -14,19 +14,17 @@
 #define MLIR_DIALECT_AFFINE_UTILS_H
 
 #include "mlir/Analysis/AffineAnalysis.h"
-#include "mlir/IR/AffineExpr.h"
-#include "mlir/Support/LLVM.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallVector.h"
 
 namespace mlir {
 
 class AffineForOp;
 class AffineIfOp;
 class AffineParallelOp;
-struct LogicalResult;
-struct LoopReduction;
+class DominanceInfo;
 class Operation;
+class PostDominanceInfo;
+
+struct LogicalResult;
 
 using ReductionLoopMap = DenseMap<Operation *, SmallVector<LoopReduction, 2>>;
 
@@ -89,6 +87,12 @@ struct VectorizationStrategy {
   // reduction descriptors.
   ReductionLoopMap reductionLoops;
 };
+
+/// Replace affine store and load accesses by scalars by forwarding stores to
+/// loads and eliminate invariant affine loads; consequently, eliminate dead
+/// allocs.
+void affineScalarReplace(FuncOp f, DominanceInfo &domInfo,
+                         PostDominanceInfo &postDomInfo);
 
 /// Vectorizes affine loops in 'loops' using the n-D vectorization factors in
 /// 'vectorSizes'. By default, each vectorization factor is applied

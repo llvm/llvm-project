@@ -8,6 +8,7 @@
 
 #include "OpFormatGen.h"
 #include "FormatGen.h"
+#include "OpClass.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/TableGen/Class.h"
 #include "mlir/TableGen/Format.h"
@@ -133,7 +134,7 @@ using ResultVariable =
 /// This class represents a variable that refers to a successor.
 using SuccessorVariable =
     VariableElement<NamedSuccessor, Element::Kind::SuccessorVariable>;
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // DirectiveElement
@@ -262,7 +263,7 @@ private:
   /// The spelling of the literal for this element.
   StringRef literal;
 };
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // WhitespaceElement
@@ -305,7 +306,7 @@ public:
 private:
   bool value;
 };
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // OptionalElement
@@ -353,7 +354,7 @@ private:
   /// WhitespaceElement).
   unsigned parseStart;
 };
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // OperationFormat
@@ -423,14 +424,18 @@ struct OperationFormat {
   /// Generate the parser code for a specific format element.
   void genElementParser(Element *element, MethodBody &body,
                         FmtContext &attrTypeCtx);
-  /// Generate the c++ to resolve the types of operands and results during
+  /// Generate the C++ to resolve the types of operands and results during
   /// parsing.
   void genParserTypeResolution(Operator &op, MethodBody &body);
-  /// Generate the c++ to resolve regions during parsing.
+  /// Generate the C++ to resolve the types of the operands during parsing.
+  void genParserOperandTypeResolution(
+      Operator &op, MethodBody &body,
+      function_ref<void(TypeResolution &, StringRef)> emitTypeResolver);
+  /// Generate the C++ to resolve regions during parsing.
   void genParserRegionResolution(Operator &op, MethodBody &body);
-  /// Generate the c++ to resolve successors during parsing.
+  /// Generate the C++ to resolve successors during parsing.
   void genParserSuccessorResolution(Operator &op, MethodBody &body);
-  /// Generate the c++ to handling variadic segment size traits.
+  /// Generate the C++ to handling variadic segment size traits.
   void genParserVariadicSegmentResolution(Operator &op, MethodBody &body);
 
   /// Generate the operation printer from this format.
@@ -467,7 +472,7 @@ struct OperationFormat {
   SmallVector<const NamedAttribute *, 8> usedAttributes;
   llvm::StringSet<> inferredAttributes;
 };
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // Parser Gen
@@ -495,13 +500,25 @@ static bool shouldFormatSymbolNameAttr(const NamedAttribute *attr) {
 /// {0}: The name of the attribute.
 /// {1}: The type for the attribute.
 const char *const attrParserCode = R"(
-  if (parser.parseAttribute({0}Attr{1}, "{0}", result.attributes))
+  if (parser.parseCustomAttributeWithFallback({0}Attr, {1}, "{0}",
+          result.attributes)) {{
+    return ::mlir::failure();
+  }
+)";
+
+/// The code snippet used to generate a parser call for an attribute.
+///
+/// {0}: The name of the attribute.
+/// {1}: The type for the attribute.
+const char *const genericAttrParserCode = R"(
+  if (parser.parseAttribute({0}Attr, {1}, "{0}", result.attributes))
     return ::mlir::failure();
 )";
+
 const char *const optionalAttrParserCode = R"(
   {
     ::mlir::OptionalParseResult parseResult =
-      parser.parseOptionalAttribute({0}Attr{1}, "{0}", result.attributes);
+      parser.parseOptionalAttribute({0}Attr, {1}, "{0}", result.attributes);
     if (parseResult.hasValue() && failed(*parseResult))
       return ::mlir::failure();
   }
@@ -634,8 +651,12 @@ const char *const optionalTypeParserCode = R"(
   }
 )";
 const char *const typeParserCode = R"(
-  if (parser.parseType({0}RawTypes[0]))
-    return ::mlir::failure();
+  {
+    {0} type;
+    if (parser.parseCustomTypeWithFallback(type))
+      return ::mlir::failure();
+    {1}RawTypes[0] = type;
+  }
 )";
 
 /// The code snippet used to generate a parser call for a functional type.
@@ -778,7 +799,7 @@ enum class ArgumentLengthKind {
   /// The argument is a single element, i.e. always represents 1 element.
   Single
 };
-} // end anonymous namespace
+} // namespace
 
 /// Get the length kind for the given constraint.
 static ArgumentLengthKind
@@ -1268,12 +1289,19 @@ void OperationFormat::genElementParser(Element *element, MethodBody &body,
     std::string attrTypeStr;
     if (Optional<StringRef> typeBuilder = attr->getTypeBuilder()) {
       llvm::raw_string_ostream os(attrTypeStr);
-      os << ", " << tgfmt(*typeBuilder, &attrTypeCtx);
+      os << tgfmt(*typeBuilder, &attrTypeCtx);
+    } else {
+      attrTypeStr = "Type{}";
+    }
+    if (var->attr.isOptional()) {
+      body << formatv(optionalAttrParserCode, var->name, attrTypeStr);
+    } else {
+      if (var->attr.getStorageType() == "::mlir::Attribute")
+        body << formatv(genericAttrParserCode, var->name, attrTypeStr);
+      else
+        body << formatv(attrParserCode, var->name, attrTypeStr);
     }
 
-    body << formatv(var->attr.isOptional() ? optionalAttrParserCode
-                                           : attrParserCode,
-                    var->name, attrTypeStr);
   } else if (auto *operand = dyn_cast<OperandVariable>(element)) {
     ArgumentLengthKind lengthKind = getArgumentLengthKind(operand->getVar());
     StringRef name = operand->getVar()->name;
@@ -1333,14 +1361,23 @@ void OperationFormat::genElementParser(Element *element, MethodBody &body,
   } else if (auto *dir = dyn_cast<TypeDirective>(element)) {
     ArgumentLengthKind lengthKind;
     StringRef listName = getTypeListName(dir->getOperand(), lengthKind);
-    if (lengthKind == ArgumentLengthKind::VariadicOfVariadic)
+    if (lengthKind == ArgumentLengthKind::VariadicOfVariadic) {
       body << llvm::formatv(variadicOfVariadicTypeParserCode, listName);
-    else if (lengthKind == ArgumentLengthKind::Variadic)
+    } else if (lengthKind == ArgumentLengthKind::Variadic) {
       body << llvm::formatv(variadicTypeParserCode, listName);
-    else if (lengthKind == ArgumentLengthKind::Optional)
+    } else if (lengthKind == ArgumentLengthKind::Optional) {
       body << llvm::formatv(optionalTypeParserCode, listName);
-    else
-      body << formatv(typeParserCode, listName);
+    } else {
+      TypeSwitch<Element *>(dir->getOperand())
+          .Case<OperandVariable, ResultVariable>([&](auto operand) {
+            body << formatv(typeParserCode,
+                            operand->getVar()->constraint.getCPPClassName(),
+                            listName);
+          })
+          .Default([&](auto operand) {
+            body << formatv(typeParserCode, "Type", listName);
+          });
+    }
   } else if (auto *dir = dyn_cast<FunctionalTypeDirective>(element)) {
     ArgumentLengthKind ignored;
     body << formatv(functionalTypeParserCode,
@@ -1429,17 +1466,25 @@ void OperationFormat::genParserTypeResolution(Operator &op, MethodBody &body) {
     }
   }
 
-  // Early exit if there are no operands.
-  if (op.getNumOperands() == 0) {
-    // Handle return type inference here if there are no operands
-    if (infersResultTypes)
-      body << formatv(inferReturnTypesParserCode, op.getCppClassName());
-    return;
-  }
+  // Emit the operand type resolutions.
+  genParserOperandTypeResolution(op, body, emitTypeResolver);
 
-  // Handle the case where all operand types are in one group.
+  // Handle return type inference once all operands have been resolved
+  if (infersResultTypes)
+    body << formatv(inferReturnTypesParserCode, op.getCppClassName());
+}
+
+void OperationFormat::genParserOperandTypeResolution(
+    Operator &op, MethodBody &body,
+    function_ref<void(TypeResolution &, StringRef)> emitTypeResolver) {
+  // Early exit if there are no operands.
+  if (op.getNumOperands() == 0)
+    return;
+
+  // Handle the case where all operand types are grouped together with
+  // "types(operands)".
   if (allOperandTypes) {
-    // If we have all operands together, use the full operand list directly.
+    // If `operands` was specified, use the full operand list directly.
     if (allOperands) {
       body << "  if (parser.resolveOperands(allOperands, allOperandTypes, "
               "allOperandLoc, result.operands))\n"
@@ -1463,7 +1508,8 @@ void OperationFormat::genParserTypeResolution(Operator &op, MethodBody &body) {
          << "    return ::mlir::failure();\n";
     return;
   }
-  // Handle the case where all of the operands were grouped together.
+
+  // Handle the case where all operands are grouped together with "operands".
   if (allOperands) {
     body << "  if (parser.resolveOperands(allOperands, ";
 
@@ -1518,10 +1564,6 @@ void OperationFormat::genParserTypeResolution(Operator &op, MethodBody &body) {
       body << ", " << operand.name << "OperandsLoc";
     body << ", result.operands))\n    return ::mlir::failure();\n";
   }
-
-  // Handle return type inference once all operands have been resolved
-  if (infersResultTypes)
-    body << formatv(inferReturnTypesParserCode, op.getCppClassName());
 }
 
 void OperationFormat::genParserRegionResolution(Operator &op,
@@ -1760,7 +1802,8 @@ static void genVariadicRegionPrinter(const Twine &regionListName,
 
 /// Generate the C++ for an operand to a (*-)type directive.
 static MethodBody &genTypeOperandPrinter(Element *arg, const Operator &op,
-                                         MethodBody &body) {
+                                         MethodBody &body,
+                                         bool useArrayRef = true) {
   if (isa<OperandsDirective>(arg))
     return body << "getOperation()->getOperandTypes()";
   if (isa<ResultsDirective>(arg))
@@ -1777,8 +1820,10 @@ static MethodBody &genTypeOperandPrinter(Element *arg, const Operator &op,
                "({0}() ? ::llvm::ArrayRef<::mlir::Type>({0}().getType()) : "
                "::llvm::ArrayRef<::mlir::Type>())",
                op.getGetterName(var->name));
-  return body << "::llvm::ArrayRef<::mlir::Type>("
-              << op.getGetterName(var->name) << "().getType())";
+  if (useArrayRef)
+    return body << "::llvm::ArrayRef<::mlir::Type>("
+                << op.getGetterName(var->name) << "().getType())";
+  return body << op.getGetterName(var->name) << "().getType()";
 }
 
 /// Generate the printer for an enum attribute.
@@ -1797,7 +1842,7 @@ static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
   // keyword.
   llvm::BitVector nonKeywordCases(cases.size());
   bool hasStrCase = false;
-  for (auto it : llvm::enumerate(cases)) {
+  for (auto &it : llvm::enumerate(cases)) {
     hasStrCase = it.value().isStrCase();
     if (!canFormatStringAsKeyword(it.value().getStr()))
       nonKeywordCases.set(it.index());
@@ -1824,7 +1869,7 @@ static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
   // overlap with other cases. For simplicity sake, only allow cases with a
   // single bit value.
   if (enumAttr.isBitEnum()) {
-    for (auto it : llvm::enumerate(cases)) {
+    for (auto &it : llvm::enumerate(cases)) {
       int64_t value = it.value().getValue();
       if (value < 0 || !llvm::isPowerOf2_64(value))
         nonKeywordCases.set(it.index());
@@ -1837,7 +1882,7 @@ static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
     body << "    switch (caseValue) {\n";
     StringRef cppNamespace = enumAttr.getCppNamespace();
     StringRef enumName = enumAttr.getEnumClassName();
-    for (auto it : llvm::enumerate(cases)) {
+    for (auto &it : llvm::enumerate(cases)) {
       if (nonKeywordCases.test(it.index()))
         continue;
       StringRef symbol = it.value().getSymbol();
@@ -1977,9 +2022,15 @@ void OperationFormat::genElementPrinter(Element *element, MethodBody &body,
     if (attr->getTypeBuilder())
       body << "  _odsPrinter.printAttributeWithoutType("
            << op.getGetterName(var->name) << "Attr());\n";
-    else
+    else if (var->attr.isOptional())
+      body << "_odsPrinter.printAttribute(" << op.getGetterName(var->name)
+           << "Attr());\n";
+    else if (var->attr.getStorageType() == "::mlir::Attribute")
       body << "  _odsPrinter.printAttribute(" << op.getGetterName(var->name)
            << "Attr());\n";
+    else
+      body << "_odsPrinter.printStrippedAttrOrType("
+           << op.getGetterName(var->name) << "Attr());\n";
   } else if (auto *operand = dyn_cast<OperandVariable>(element)) {
     if (operand->getVar()->isVariadicOfVariadic()) {
       body << "  ::llvm::interleaveComma("
@@ -2032,8 +2083,29 @@ void OperationFormat::genElementPrinter(Element *element, MethodBody &body,
         return;
       }
     }
+    const NamedTypeConstraint *var = nullptr;
+    {
+      if (auto *operand = dyn_cast<OperandVariable>(dir->getOperand()))
+        var = operand->getVar();
+      else if (auto *operand = dyn_cast<ResultVariable>(dir->getOperand()))
+        var = operand->getVar();
+    }
+    if (var && !var->isVariadicOfVariadic() && !var->isVariadic() &&
+        !var->isOptional()) {
+      std::string cppClass = var->constraint.getCPPClassName();
+      body << "  {\n"
+           << "    auto type = " << op.getGetterName(var->name)
+           << "().getType();\n"
+           << "    if (auto validType = type.dyn_cast<" << cppClass << ">())\n"
+           << "      _odsPrinter.printStrippedAttrOrType(validType);\n"
+           << "   else\n"
+           << "     _odsPrinter << type;\n"
+           << "  }\n";
+      return;
+    }
     body << "  _odsPrinter << ";
-    genTypeOperandPrinter(dir->getOperand(), op, body) << ";\n";
+    genTypeOperandPrinter(dir->getOperand(), op, body, /*useArrayRef=*/false)
+        << ";\n";
   } else if (auto *dir = dyn_cast<FunctionalTypeDirective>(element)) {
     body << "  _odsPrinter.printFunctionalType(";
     genTypeOperandPrinter(dir->getInputs(), op, body) << ", ";
@@ -2242,7 +2314,7 @@ private:
   llvm::DenseSet<const NamedRegion *> seenRegions;
   llvm::DenseSet<const NamedSuccessor *> seenSuccessors;
 };
-} // end anonymous namespace
+} // namespace
 
 LogicalResult FormatParser::parse() {
   llvm::SMLoc loc = curToken.getLoc();
@@ -2723,9 +2795,12 @@ LogicalResult FormatParser::parseLiteral(std::unique_ptr<Element> &element,
   }
 
   // Check that the parsed literal is valid.
-  if (!isValidLiteral(value))
-    return emitError(literalTok.getLoc(), "expected valid literal");
-
+  if (!isValidLiteral(value, [&](Twine diag) {
+        (void)emitError(literalTok.getLoc(),
+                        "expected valid literal but got '" + value +
+                            "': " + diag);
+      }))
+    return failure();
   element = std::make_unique<LiteralElement>(value);
   return ::mlir::success();
 }

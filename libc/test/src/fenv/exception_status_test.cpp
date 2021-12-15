@@ -20,7 +20,7 @@ TEST(LlvmLibcExceptionStatusTest, RaiseAndTest) {
   // status flags are updated. The intention is really not to invoke the
   // exception handler. Hence, we will disable all exceptions at the
   // beginning.
-  __llvm_libc::fputil::disableExcept(FE_ALL_EXCEPT);
+  __llvm_libc::fputil::disable_except(FE_ALL_EXCEPT);
 
   int excepts[] = {FE_DIVBYZERO, FE_INVALID, FE_INEXACT, FE_OVERFLOW,
                    FE_UNDERFLOW};

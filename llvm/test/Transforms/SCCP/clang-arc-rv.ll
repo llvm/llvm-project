@@ -1,4 +1,4 @@
-; RUN: opt < %s -ipsccp -S | FileCheck %s
+; RUN: opt < %s -passes=ipsccp -S | FileCheck %s
 ; Return value can't be zapped if there is a call that has operand bundle
 ; "clang.arc.attachedcall".
 

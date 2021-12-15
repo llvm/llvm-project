@@ -186,12 +186,6 @@ void parsePDBPageSize(StringRef s) {
     return;
   }
 
-  // FIXME: Remove this once other page sizes work.
-  if (v != 4096) {
-    warn("/pdbpagesize: page sizes != 4096 not yet implemented, ignoring flag");
-    v = 4096;
-  }
-
   config->pdbPageSize = v;
 }
 

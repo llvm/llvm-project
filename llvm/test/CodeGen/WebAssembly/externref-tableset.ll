@@ -79,4 +79,4 @@ define void @set_externref_table_with_var_offset2(%externref %g, i32 %i) {
   ret void
 }
 
-; CHECK: .globl externref_table
+; CHECK: .tabletype externref_table, externref

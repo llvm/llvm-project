@@ -20,7 +20,7 @@ template <typename T> class FrexpTest : public __llvm_libc::testing::Test {
   DECLARE_SPECIAL_CONSTANTS(T)
 
   static constexpr UIntType HiddenBit =
-      UIntType(1) << __llvm_libc::fputil::MantissaWidth<T>::value;
+      UIntType(1) << __llvm_libc::fputil::MantissaWidth<T>::VALUE;
 
 public:
   typedef T (*FrexpFunc)(T, int *);
@@ -29,7 +29,7 @@ public:
     int exponent;
     ASSERT_FP_EQ(aNaN, func(aNaN, &exponent));
     ASSERT_FP_EQ(inf, func(inf, &exponent));
-    ASSERT_FP_EQ(negInf, func(negInf, &exponent));
+    ASSERT_FP_EQ(neg_inf, func(neg_inf, &exponent));
 
     ASSERT_FP_EQ(0.0, func(0.0, &exponent));
     ASSERT_EQ(exponent, 0);

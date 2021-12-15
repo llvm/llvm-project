@@ -86,13 +86,6 @@ bool GDBRemoteCommunicationClient::HandshakeWithServer(Status *error_ptr) {
   std::chrono::steady_clock::time_point start_of_handshake =
       std::chrono::steady_clock::now();
   if (SendAck()) {
-    // Wait for any responses that might have been queued up in the remote
-    // GDB server and flush them all
-    StringExtractorGDBRemote response;
-    PacketResult packet_result = PacketResult::Success;
-    while (packet_result == PacketResult::Success)
-      packet_result = ReadPacket(response, milliseconds(10), false);
-
     // The return value from QueryNoAckModeSupported() is true if the packet
     // was sent and _any_ response (including UNIMPLEMENTED) was received), or
     // false if no response was received. This quickly tells us if we have a
@@ -106,17 +99,15 @@ bool GDBRemoteCommunicationClient::HandshakeWithServer(Status *error_ptr) {
           std::chrono::duration<double>(end_of_handshake - start_of_handshake)
               .count();
       if (error_ptr) {
-        if (packet_result == PacketResult::ErrorDisconnected)
+        if (!IsConnected())
           error_ptr->SetErrorString("Connection shut down by remote side "
                                     "while waiting for reply to initial "
                                     "handshake packet");
-        else if (packet_result == PacketResult::ErrorReplyTimeout)
+        else
           error_ptr->SetErrorStringWithFormat(
               "failed to get reply to handshake packet within timeout of "
               "%.1f seconds",
               handshake_timeout);
-        else
-          error_ptr->SetErrorString("failed to get reply to handshake packet");
       }
     }
   } else {

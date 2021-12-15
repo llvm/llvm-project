@@ -1384,77 +1384,6 @@ public:
   }
 };
 
-class TransposeConvConverter
-    : public OpConversionPattern<tosa::TransposeConv2DOp> {
-public:
-  using OpConversionPattern<tosa::TransposeConv2DOp>::OpConversionPattern;
-  LogicalResult
-  matchAndRewrite(tosa::TransposeConv2DOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const final {
-    Location loc = op->getLoc();
-    Value input = op->getOperand(0);
-    Value weight = op->getOperand(1);
-    Value bias = op->getOperand(2);
-
-    ShapedType inputTy = input.getType().cast<ShapedType>();
-    ShapedType weightTy = weight.getType().cast<ShapedType>();
-    ShapedType biasTy = bias.getType().cast<ShapedType>();
-    ShapedType resultTy = op->getResult(0).getType().cast<ShapedType>();
-
-    llvm::SmallVector<int64_t> pad;
-    llvm::SmallVector<int64_t> stride;
-    llvm::SmallVector<int64_t> dilation;
-
-    getValuesFromIntArrayAttribute(op.out_pad().cast<ArrayAttr>(), pad);
-    getValuesFromIntArrayAttribute(op.stride().cast<ArrayAttr>(), stride);
-    getValuesFromIntArrayAttribute(op.dilation().cast<ArrayAttr>(), dilation);
-
-    // If striding is all 1 we can modify padding and reverse the kernel along
-    // the x/y direction to make it a regular convolution. This is much simpler
-    // then handling striding....
-    if (llvm::all_of(stride, [](int64_t v) { return v == 1; })) {
-      if (!inputTy.hasStaticShape() || !weightTy.hasStaticShape() ||
-          !biasTy.hasStaticShape() || !resultTy.hasStaticShape())
-        return failure();
-
-      int64_t kernelHeight = (weightTy.getDimSize(1) - 1) * dilation[0] + 1;
-      int64_t kernelWidth = (weightTy.getDimSize(2) - 1) * dilation[1] + 1;
-      int64_t requiredInputHeight = resultTy.getDimSize(1) + kernelHeight - 1;
-      int64_t requiredInputWidth = resultTy.getDimSize(2) + kernelWidth - 1;
-
-      llvm::SmallVector<int64_t> convPad(4, 0);
-      convPad[0] = kernelHeight - 1 - pad[0];
-      convPad[2] = kernelWidth - 1 - pad[1];
-      convPad[1] = requiredInputHeight - convPad[0] - inputTy.getDimSize(1);
-      convPad[3] = requiredInputWidth - convPad[2] - inputTy.getDimSize(2);
-
-      auto reverse1 = rewriter.create<tosa::ReverseOp>(
-          loc, weightTy, weight, rewriter.getI64IntegerAttr(1));
-      auto reverse2 = rewriter.create<tosa::ReverseOp>(
-          loc, weightTy, reverse1, rewriter.getI64IntegerAttr(2));
-
-      Value conv2d;
-      if (op.quantization_info().hasValue()) {
-        conv2d = rewriter.create<tosa::Conv2DOp>(
-            loc, resultTy, input, reverse2, bias,
-            rewriter.getI64ArrayAttr(convPad), rewriter.getI64ArrayAttr(stride),
-            rewriter.getI64ArrayAttr(dilation),
-            op.quantization_info().getValue());
-      } else {
-        conv2d = rewriter.create<tosa::Conv2DOp>(
-            loc, resultTy, input, reverse2, bias,
-            rewriter.getI64ArrayAttr(convPad), rewriter.getI64ArrayAttr(stride),
-            rewriter.getI64ArrayAttr(dilation));
-      }
-
-      rewriter.replaceOp(op, conv2d);
-      return success();
-    }
-
-    return failure();
-  }
-};
-
 class MatMulConverter : public OpConversionPattern<tosa::MatMulOp> {
 public:
   using OpConversionPattern<tosa::MatMulOp>::OpConversionPattern;
@@ -1677,7 +1606,7 @@ public:
           reshape, "tosa.reshape Cannot collapse into given shape");
     }
 
-    rewriter.replaceOpWithNewOp<linalg::TensorCollapseShapeOp>(
+    rewriter.replaceOpWithNewOp<tensor::CollapseShapeOp>(
         reshape, resultTy, adaptor.getOperands()[0], reassociationMap);
     return success();
   }
@@ -1720,7 +1649,7 @@ public:
       return rewriter.notifyMatchFailure(
           reshape, "tosa.reshape Cannot expand into given shape");
     }
-    rewriter.replaceOpWithNewOp<linalg::TensorExpandShapeOp>(
+    rewriter.replaceOpWithNewOp<tensor::ExpandShapeOp>(
         reshape, resultTy, adaptor.getOperands()[0], reassociationMap);
     return success();
   }
@@ -2319,8 +2248,8 @@ struct ConcatConverter : public OpConversionPattern<tosa::ConcatOp> {
 
     Location loc = op.getLoc();
     int axis = op.axis();
-    Value axisValue =
-        rewriter.create<arith::ConstantOp>(loc, rewriter.getIndexAttr(axis));
+    Value axisValue = rewriter.createOrFold<arith::ConstantOp>(
+        loc, rewriter.getIndexAttr(axis));
     int rank = resultType.getRank();
     SmallVector<Value, 3> offsets, sizes, strides;
     sizes.reserve(rank);
@@ -2328,31 +2257,41 @@ struct ConcatConverter : public OpConversionPattern<tosa::ConcatOp> {
     offsets.resize(rank, rewriter.create<arith::ConstantIndexOp>(loc, 0));
 
     for (int i = 0; i < rank; ++i) {
-      sizes.push_back(
-          rewriter.create<tensor::DimOp>(loc, adaptor.getOperands()[0], i));
+      sizes.push_back(rewriter.createOrFold<tensor::DimOp>(
+          loc, adaptor.getOperands()[0], i));
     }
 
     Value resultDimSize = sizes[axis];
     for (auto arg : adaptor.getOperands().drop_front()) {
-      auto size = rewriter.create<tensor::DimOp>(loc, arg, axisValue);
-      resultDimSize = rewriter.create<arith::AddIOp>(loc, resultDimSize, size);
+      auto size = rewriter.createOrFold<tensor::DimOp>(loc, arg, axisValue);
+      resultDimSize =
+          rewriter.createOrFold<arith::AddIOp>(loc, resultDimSize, size);
     }
     sizes[axis] = resultDimSize;
 
     Value init = rewriter.create<linalg::InitTensorOp>(
         loc, resultType.getShape(), resultType.getElementType());
 
-    Value zeroVal = rewriter.create<arith::ConstantOp>(
+    Value zeroVal = rewriter.createOrFold<arith::ConstantOp>(
         loc, rewriter.getZeroAttr(resultType.getElementType()));
     Value result =
         rewriter.create<linalg::FillOp>(loc, zeroVal, init).getResult(0);
 
+    auto toOpFoldResult = [](Value v) -> OpFoldResult {
+      auto op = v.getDefiningOp<arith::ConstantIndexOp>();
+      if (!op)
+        return v;
+      return op.getValue();
+    };
     for (auto arg : adaptor.getOperands()) {
-      sizes[axis] = rewriter.create<tensor::DimOp>(loc, arg, axisValue);
-      result = rewriter.create<tensor::InsertSliceOp>(loc, arg, result, offsets,
-                                                      sizes, strides);
+      sizes[axis] = rewriter.createOrFold<tensor::DimOp>(loc, arg, axisValue);
+      result = rewriter.createOrFold<tensor::InsertSliceOp>(
+          loc, arg, result,
+          llvm::to_vector(llvm::map_range(offsets, toOpFoldResult)),
+          llvm::to_vector(llvm::map_range(sizes, toOpFoldResult)),
+          llvm::to_vector(llvm::map_range(strides, toOpFoldResult)));
       offsets[axis] =
-          rewriter.create<arith::AddIOp>(loc, offsets[axis], sizes[axis]);
+          rewriter.createOrFold<arith::AddIOp>(loc, offsets[axis], sizes[axis]);
     }
     rewriter.replaceOp(op, result);
     return success();
@@ -3188,7 +3127,6 @@ void mlir::tosa::populateTosaToLinalgConversionPatterns(
       ConcatConverter,
       ConvConverter,
       DepthwiseConvConverter,
-      TransposeConvConverter,
       GatherConverter,
       PadConverter,
       ReshapeConverterCollapse,

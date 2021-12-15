@@ -1885,6 +1885,7 @@ private:
                                        OMPRTL___kmpc_barrier_simple_generic);
     ExternalizationRAII ThreadId(OMPInfoCache,
                                  OMPRTL___kmpc_get_hardware_thread_id_in_block);
+    ExternalizationRAII WarpSize(OMPInfoCache, OMPRTL___kmpc_get_warp_size);
 
     registerAAs(IsModulePass);
 
@@ -3727,12 +3728,37 @@ struct AAKernelInfoFunction : AAKernelInfo {
               CheckRWInst, *this, UsedAssumedInformationInCheckRWInst))
         SPMDCompatibilityTracker.indicatePessimisticFixpoint();
 
+    bool UsedAssumedInformationFromReachingKernels = false;
     if (!IsKernelEntry) {
-      updateReachingKernelEntries(A);
       updateParallelLevels(A);
+
+      bool AllReachingKernelsKnown = true;
+      updateReachingKernelEntries(A, AllReachingKernelsKnown);
+      UsedAssumedInformationFromReachingKernels = !AllReachingKernelsKnown;
 
       if (!ParallelLevels.isValidState())
         SPMDCompatibilityTracker.indicatePessimisticFixpoint();
+      else if (!ReachingKernelEntries.isValidState())
+        SPMDCompatibilityTracker.indicatePessimisticFixpoint();
+      else if (!SPMDCompatibilityTracker.empty()) {
+        // Check if all reaching kernels agree on the mode as we can otherwise
+        // not guard instructions. We might not be sure about the mode so we
+        // we cannot fix the internal spmd-zation state either.
+        int SPMD = 0, Generic = 0;
+        for (auto *Kernel : ReachingKernelEntries) {
+          auto &CBAA = A.getAAFor<AAKernelInfo>(
+              *this, IRPosition::function(*Kernel), DepClassTy::OPTIONAL);
+          if (CBAA.SPMDCompatibilityTracker.isValidState() &&
+              CBAA.SPMDCompatibilityTracker.isAssumed())
+            ++SPMD;
+          else
+            ++Generic;
+          if (!CBAA.SPMDCompatibilityTracker.isAtFixpoint())
+            UsedAssumedInformationFromReachingKernels = true;
+        }
+        if (SPMD != 0 && Generic != 0)
+          SPMDCompatibilityTracker.indicatePessimisticFixpoint();
+      }
     }
 
     // Callback to check a call instruction.
@@ -3779,7 +3805,8 @@ struct AAKernelInfoFunction : AAKernelInfo {
     // If we haven't used any assumed information for the SPMD state we can fix
     // it.
     if (!UsedAssumedInformationInCheckRWInst &&
-        !UsedAssumedInformationInCheckCallInst && AllSPMDStatesWereFixed)
+        !UsedAssumedInformationInCheckCallInst &&
+        !UsedAssumedInformationFromReachingKernels && AllSPMDStatesWereFixed)
       SPMDCompatibilityTracker.indicateOptimisticFixpoint();
 
     return StateBefore == getState() ? ChangeStatus::UNCHANGED
@@ -3788,7 +3815,8 @@ struct AAKernelInfoFunction : AAKernelInfo {
 
 private:
   /// Update info regarding reaching kernels.
-  void updateReachingKernelEntries(Attributor &A) {
+  void updateReachingKernelEntries(Attributor &A,
+                                   bool &AllReachingKernelsKnown) {
     auto PredCallSite = [&](AbstractCallSite ACS) {
       Function *Caller = ACS.getInstruction()->getFunction();
 
@@ -3808,10 +3836,9 @@ private:
       return true;
     };
 
-    bool AllCallSitesKnown;
     if (!A.checkForAllCallSites(PredCallSite, *this,
                                 true /* RequireAllCallSites */,
-                                AllCallSitesKnown))
+                                AllReachingKernelsKnown))
       ReachingKernelEntries.indicatePessimisticFixpoint();
   }
 
@@ -3937,6 +3964,9 @@ struct AAKernelInfoCallSite : AAKernelInfo {
     case OMPRTL___kmpc_master:
     case OMPRTL___kmpc_end_master:
     case OMPRTL___kmpc_barrier:
+    case OMPRTL___kmpc_nvptx_parallel_reduce_nowait_v2:
+    case OMPRTL___kmpc_nvptx_teams_reduce_nowait_v2:
+    case OMPRTL___kmpc_nvptx_end_reduce_nowait:
       break;
     case OMPRTL___kmpc_distribute_static_init_4:
     case OMPRTL___kmpc_distribute_static_init_4u:
@@ -3983,6 +4013,7 @@ struct AAKernelInfoCallSite : AAKernelInfo {
       break;
     case OMPRTL___kmpc_omp_task:
       // We do not look into tasks right now, just give up.
+      SPMDCompatibilityTracker.indicatePessimisticFixpoint();
       SPMDCompatibilityTracker.insert(&CB);
       ReachedUnknownParallelRegions.insert(&CB);
       break;
@@ -3993,6 +4024,7 @@ struct AAKernelInfoCallSite : AAKernelInfo {
     default:
       // Unknown OpenMP runtime calls cannot be executed in SPMD-mode,
       // generally. However, they do not hide parallel regions.
+      SPMDCompatibilityTracker.indicatePessimisticFixpoint();
       SPMDCompatibilityTracker.insert(&CB);
       break;
     }
@@ -4052,6 +4084,7 @@ struct AAKernelInfoCallSite : AAKernelInfo {
         SPMDCompatibilityTracker.insert(&CB);
       break;
     default:
+      SPMDCompatibilityTracker.indicatePessimisticFixpoint();
       SPMDCompatibilityTracker.insert(&CB);
     }
 

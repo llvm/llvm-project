@@ -59,3 +59,26 @@ define amdgpu_kernel void @constantexpr_select_1() {
   store i32 select (i1 icmp eq (i8 addrspace(1)* @gint, i8 addrspace(1)* inttoptr (i64 1024 to i8 addrspace(1)*)), i32 1, i32 0), i32 addrspace(1)* undef, align 4
   ret void
 }
+
+@a = external global [2 x i32], align 4
+
+define i32 @test_fcmp_constexpr() {
+  ; CHECK-LABEL: name: test_fcmp_constexpr
+  ; CHECK: bb.1.entry:
+  ; CHECK:   liveins: $sgpr30_sgpr31
+  ; CHECK:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
+  ; CHECK:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @a
+  ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
+  ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[GV]], [[C]](s64)
+  ; CHECK:   [[GV1:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var
+  ; CHECK:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[PTR_ADD]](p0), [[GV1]]
+  ; CHECK:   [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[ICMP]](s1)
+  ; CHECK:   [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 0.000000e+00
+  ; CHECK:   [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(oeq), [[UITOFP]](s32), [[C1]]
+  ; CHECK:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[FCMP]](s1)
+  ; CHECK:   $vgpr0 = COPY [[ZEXT]](s32)
+  ; CHECK:   [[COPY1:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY]]
+  ; CHECK:   S_SETPC_B64_return [[COPY1]], implicit $vgpr0
+entry:
+  ret i32 zext (i1 fcmp oeq (float uitofp (i1 icmp eq (i32* getelementptr inbounds ([2 x i32], [2 x i32]* @a, i64 0, i64 1), i32* @var) to float), float 0.000000e+00) to i32)
+}

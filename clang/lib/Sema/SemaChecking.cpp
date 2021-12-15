@@ -325,17 +325,17 @@ static bool SemaBuiltinOverflow(Sema &S, CallExpr *TheCall,
     }
   }
 
-  // Disallow signed ExtIntType args larger than 128 bits to mul function until
-  // we improve backend support.
+  // Disallow signed bit-precise integer args larger than 128 bits to mul
+  // function until we improve backend support.
   if (BuiltinID == Builtin::BI__builtin_mul_overflow) {
     for (unsigned I = 0; I < 3; ++I) {
       const auto Arg = TheCall->getArg(I);
       // Third argument will be a pointer.
       auto Ty = I < 2 ? Arg->getType() : Arg->getType()->getPointeeType();
-      if (Ty->isExtIntType() && Ty->isSignedIntegerType() &&
+      if (Ty->isBitIntType() && Ty->isSignedIntegerType() &&
           S.getASTContext().getIntWidth(Ty) > 128)
         return S.Diag(Arg->getBeginLoc(),
-                      diag::err_overflow_builtin_ext_int_max_size)
+                      diag::err_overflow_builtin_bit_int_max_size)
                << 128;
     }
   }
@@ -446,14 +446,14 @@ public:
       break;
     }
 
-    auto OptionalFW = FS.getFieldWidth();
-    if (OptionalFW.getHowSpecified() !=
+    analyze_format_string::OptionalAmount FW = FS.getFieldWidth();
+    if (FW.getHowSpecified() !=
         analyze_format_string::OptionalAmount::HowSpecified::Constant)
       return true;
 
-    unsigned SourceSize = OptionalFW.getConstantAmount() + NulByte;
+    unsigned SourceSize = FW.getConstantAmount() + NulByte;
 
-    auto DestSizeAPS = ComputeSizeArgument(FS.getArgIndex());
+    Optional<llvm::APSInt> DestSizeAPS = ComputeSizeArgument(FS.getArgIndex());
     if (!DestSizeAPS)
       return true;
 
@@ -652,20 +652,53 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
       isConstantEvaluated())
     return;
 
-  unsigned BuiltinID = FD->getBuiltinID(/*ConsiderWrappers=*/true);
+  bool UseDABAttr = false;
+  const FunctionDecl *UseDecl = FD;
+
+  const auto *DABAttr = FD->getAttr<DiagnoseAsBuiltinAttr>();
+  if (DABAttr) {
+    UseDecl = DABAttr->getFunction();
+    assert(UseDecl && "Missing FunctionDecl in DiagnoseAsBuiltin attribute!");
+    UseDABAttr = true;
+  }
+
+  unsigned BuiltinID = UseDecl->getBuiltinID(/*ConsiderWrappers=*/true);
+
   if (!BuiltinID)
     return;
 
   const TargetInfo &TI = getASTContext().getTargetInfo();
   unsigned SizeTypeWidth = TI.getTypeWidth(TI.getSizeType());
 
+  auto TranslateIndex = [&](unsigned Index) -> Optional<unsigned> {
+    // If we refer to a diagnose_as_builtin attribute, we need to change the
+    // argument index to refer to the arguments of the called function. Unless
+    // the index is out of bounds, which presumably means it's a variadic
+    // function.
+    if (!UseDABAttr)
+      return Index;
+    unsigned DABIndices = DABAttr->argIndices_size();
+    unsigned NewIndex = Index < DABIndices
+                            ? DABAttr->argIndices_begin()[Index]
+                            : Index - DABIndices + FD->getNumParams();
+    if (NewIndex >= TheCall->getNumArgs())
+      return llvm::None;
+    return NewIndex;
+  };
+
   auto ComputeExplicitObjectSizeArgument =
       [&](unsigned Index) -> Optional<llvm::APSInt> {
+    Optional<unsigned> IndexOptional = TranslateIndex(Index);
+    if (!IndexOptional)
+      return llvm::None;
+    unsigned NewIndex = IndexOptional.getValue();
     Expr::EvalResult Result;
-    Expr *SizeArg = TheCall->getArg(Index);
+    Expr *SizeArg = TheCall->getArg(NewIndex);
     if (!SizeArg->EvaluateAsInt(Result, getASTContext()))
       return llvm::None;
-    return Result.Val.getInt();
+    llvm::APSInt Integer = Result.Val.getInt();
+    Integer.setIsUnsigned(true);
+    return Integer;
   };
 
   auto ComputeSizeArgument = [&](unsigned Index) -> Optional<llvm::APSInt> {
@@ -680,7 +713,12 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
         BOSType = POS->getType();
     }
 
-    const Expr *ObjArg = TheCall->getArg(Index);
+    Optional<unsigned> IndexOptional = TranslateIndex(Index);
+    if (!IndexOptional)
+      return llvm::None;
+    unsigned NewIndex = IndexOptional.getValue();
+
+    const Expr *ObjArg = TheCall->getArg(NewIndex);
     uint64_t Result;
     if (!ObjArg->tryEvaluateObjectSize(Result, getASTContext(), BOSType))
       return llvm::None;
@@ -690,7 +728,12 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   };
 
   auto ComputeStrLenArgument = [&](unsigned Index) -> Optional<llvm::APSInt> {
-    Expr *ObjArg = TheCall->getArg(Index);
+    Optional<unsigned> IndexOptional = TranslateIndex(Index);
+    if (!IndexOptional)
+      return llvm::None;
+    unsigned NewIndex = IndexOptional.getValue();
+
+    const Expr *ObjArg = TheCall->getArg(NewIndex);
     uint64_t Result;
     if (!ObjArg->tryEvaluateStrLen(Result, getASTContext()))
       return llvm::None;
@@ -898,7 +941,8 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   }
 
   if (!SourceSize || !DestinationSize ||
-      SourceSize.getValue().ule(DestinationSize.getValue()))
+      llvm::APSInt::compareValues(SourceSize.getValue(),
+                                  DestinationSize.getValue()) <= 0)
     return;
 
   StringRef FunctionName = GetFunctionName();
@@ -2098,10 +2142,47 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     break;
   }
 
-  case Builtin::BI__builtin_elementwise_abs:
-    if (SemaBuiltinElementwiseMathOneArg(TheCall))
+  // __builtin_elementwise_abs restricts the element type to signed integers or
+  // floating point types only.
+  case Builtin::BI__builtin_elementwise_abs: {
+    if (PrepareBuiltinElementwiseMathOneArgCall(TheCall))
       return ExprError();
+
+    QualType ArgTy = TheCall->getArg(0)->getType();
+    QualType EltTy = ArgTy;
+
+    if (auto *VecTy = EltTy->getAs<VectorType>())
+      EltTy = VecTy->getElementType();
+    if (EltTy->isUnsignedIntegerType()) {
+      Diag(TheCall->getArg(0)->getBeginLoc(),
+           diag::err_builtin_invalid_arg_type)
+          << 1 << /* signed integer or float ty*/ 3 << ArgTy;
+      return ExprError();
+    }
     break;
+  }
+
+  // __builtin_elementwise_ceil restricts the element type to floating point
+  // types only.
+  case Builtin::BI__builtin_elementwise_ceil: {
+    if (PrepareBuiltinElementwiseMathOneArgCall(TheCall))
+      return ExprError();
+
+    QualType ArgTy = TheCall->getArg(0)->getType();
+    QualType EltTy = ArgTy;
+
+    if (auto *VecTy = EltTy->getAs<VectorType>())
+      EltTy = VecTy->getElementType();
+    if (!EltTy->isFloatingType()) {
+      Diag(TheCall->getArg(0)->getBeginLoc(),
+           diag::err_builtin_invalid_arg_type)
+          << 1 << /* float ty*/ 5 << ArgTy;
+
+      return ExprError();
+    }
+    break;
+  }
+
   case Builtin::BI__builtin_elementwise_min:
   case Builtin::BI__builtin_elementwise_max:
     if (SemaBuiltinElementwiseMath(TheCall))
@@ -3496,14 +3577,43 @@ bool Sema::CheckPPCBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case PPC::BI__builtin_altivec_dss:
     return SemaBuiltinConstantArgRange(TheCall, 0, 0, 3);
   case PPC::BI__builtin_tbegin:
-  case PPC::BI__builtin_tend: i = 0; l = 0; u = 1; break;
-  case PPC::BI__builtin_tsr: i = 0; l = 0; u = 7; break;
+  case PPC::BI__builtin_tend:
+    return SemaBuiltinConstantArgRange(TheCall, 0, 0, 1) ||
+           SemaFeatureCheck(*this, TheCall, "htm",
+                            diag::err_ppc_builtin_requires_htm);
+  case PPC::BI__builtin_tsr:
+    return SemaBuiltinConstantArgRange(TheCall, 0, 0, 7) ||
+           SemaFeatureCheck(*this, TheCall, "htm",
+                            diag::err_ppc_builtin_requires_htm);
   case PPC::BI__builtin_tabortwc:
-  case PPC::BI__builtin_tabortdc: i = 0; l = 0; u = 31; break;
+  case PPC::BI__builtin_tabortdc:
+    return SemaBuiltinConstantArgRange(TheCall, 0, 0, 31) ||
+           SemaFeatureCheck(*this, TheCall, "htm",
+                            diag::err_ppc_builtin_requires_htm);
   case PPC::BI__builtin_tabortwci:
   case PPC::BI__builtin_tabortdci:
-    return SemaBuiltinConstantArgRange(TheCall, 0, 0, 31) ||
-           SemaBuiltinConstantArgRange(TheCall, 2, 0, 31);
+    return SemaFeatureCheck(*this, TheCall, "htm",
+                            diag::err_ppc_builtin_requires_htm) ||
+           (SemaBuiltinConstantArgRange(TheCall, 0, 0, 31) ||
+            SemaBuiltinConstantArgRange(TheCall, 2, 0, 31));
+  case PPC::BI__builtin_tabort:
+  case PPC::BI__builtin_tcheck:
+  case PPC::BI__builtin_treclaim:
+  case PPC::BI__builtin_trechkpt:
+  case PPC::BI__builtin_tendall:
+  case PPC::BI__builtin_tresume:
+  case PPC::BI__builtin_tsuspend:
+  case PPC::BI__builtin_get_texasr:
+  case PPC::BI__builtin_get_texasru:
+  case PPC::BI__builtin_get_tfhar:
+  case PPC::BI__builtin_get_tfiar:
+  case PPC::BI__builtin_set_texasr:
+  case PPC::BI__builtin_set_texasru:
+  case PPC::BI__builtin_set_tfhar:
+  case PPC::BI__builtin_set_tfiar:
+  case PPC::BI__builtin_ttest:
+    return SemaFeatureCheck(*this, TheCall, "htm",
+                            diag::err_ppc_builtin_requires_htm);
   // According to GCC 'Basic PowerPC Built-in Functions Available on ISA 2.05',
   // __builtin_(un)pack_longdouble are available only if long double uses IBM
   // extended double representation.
@@ -5297,6 +5407,7 @@ static bool isValidOrderingForOp(int64_t Ordering, AtomicExpr::AtomicOp Op) {
 
   case AtomicExpr::AO__c11_atomic_load:
   case AtomicExpr::AO__opencl_atomic_load:
+  case AtomicExpr::AO__hip_atomic_load:
   case AtomicExpr::AO__atomic_load_n:
   case AtomicExpr::AO__atomic_load:
     return OrderingCABI != llvm::AtomicOrderingCABI::release &&
@@ -5304,6 +5415,7 @@ static bool isValidOrderingForOp(int64_t Ordering, AtomicExpr::AtomicOp Op) {
 
   case AtomicExpr::AO__c11_atomic_store:
   case AtomicExpr::AO__opencl_atomic_store:
+  case AtomicExpr::AO__hip_atomic_store:
   case AtomicExpr::AO__atomic_store:
   case AtomicExpr::AO__atomic_store_n:
     return OrderingCABI != llvm::AtomicOrderingCABI::consume &&
@@ -5380,6 +5492,8 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
                 "need to update code for modified C11 atomics");
   bool IsOpenCL = Op >= AtomicExpr::AO__opencl_atomic_init &&
                   Op <= AtomicExpr::AO__opencl_atomic_fetch_max;
+  bool IsHIP = Op >= AtomicExpr::AO__hip_atomic_load &&
+               Op <= AtomicExpr::AO__hip_atomic_fetch_max;
   bool IsC11 = (Op >= AtomicExpr::AO__c11_atomic_init &&
                Op <= AtomicExpr::AO__c11_atomic_fetch_min) ||
                IsOpenCL;
@@ -5397,6 +5511,7 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
 
   case AtomicExpr::AO__c11_atomic_load:
   case AtomicExpr::AO__opencl_atomic_load:
+  case AtomicExpr::AO__hip_atomic_load:
   case AtomicExpr::AO__atomic_load_n:
     Form = Load;
     break;
@@ -5407,11 +5522,14 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
 
   case AtomicExpr::AO__c11_atomic_store:
   case AtomicExpr::AO__opencl_atomic_store:
+  case AtomicExpr::AO__hip_atomic_store:
   case AtomicExpr::AO__atomic_store:
   case AtomicExpr::AO__atomic_store_n:
     Form = Copy;
     break;
-
+  case AtomicExpr::AO__hip_atomic_fetch_add:
+  case AtomicExpr::AO__hip_atomic_fetch_min:
+  case AtomicExpr::AO__hip_atomic_fetch_max:
   case AtomicExpr::AO__c11_atomic_fetch_add:
   case AtomicExpr::AO__c11_atomic_fetch_sub:
   case AtomicExpr::AO__opencl_atomic_fetch_add:
@@ -5426,6 +5544,9 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   case AtomicExpr::AO__c11_atomic_fetch_and:
   case AtomicExpr::AO__c11_atomic_fetch_or:
   case AtomicExpr::AO__c11_atomic_fetch_xor:
+  case AtomicExpr::AO__hip_atomic_fetch_and:
+  case AtomicExpr::AO__hip_atomic_fetch_or:
+  case AtomicExpr::AO__hip_atomic_fetch_xor:
   case AtomicExpr::AO__c11_atomic_fetch_nand:
   case AtomicExpr::AO__opencl_atomic_fetch_and:
   case AtomicExpr::AO__opencl_atomic_fetch_or:
@@ -5452,6 +5573,7 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
     break;
 
   case AtomicExpr::AO__c11_atomic_exchange:
+  case AtomicExpr::AO__hip_atomic_exchange:
   case AtomicExpr::AO__opencl_atomic_exchange:
   case AtomicExpr::AO__atomic_exchange_n:
     Form = Xchg;
@@ -5463,8 +5585,10 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
 
   case AtomicExpr::AO__c11_atomic_compare_exchange_strong:
   case AtomicExpr::AO__c11_atomic_compare_exchange_weak:
+  case AtomicExpr::AO__hip_atomic_compare_exchange_strong:
   case AtomicExpr::AO__opencl_atomic_compare_exchange_strong:
   case AtomicExpr::AO__opencl_atomic_compare_exchange_weak:
+  case AtomicExpr::AO__hip_atomic_compare_exchange_weak:
     Form = C11CmpXchg;
     break;
 
@@ -5475,7 +5599,7 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   }
 
   unsigned AdjustedNumArgs = NumArgs[Form];
-  if (IsOpenCL && Op != AtomicExpr::AO__opencl_atomic_init)
+  if ((IsOpenCL || IsHIP) && Op != AtomicExpr::AO__opencl_atomic_init)
     ++AdjustedNumArgs;
   // Check we have the right number of arguments.
   if (Args.size() < AdjustedNumArgs) {
@@ -5532,8 +5656,8 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
 
   // For an arithmetic operation, the implied arithmetic must be well-formed.
   if (Form == Arithmetic) {
-    // GCC does not enforce these rules for GNU atomics, but we do, because if
-    // we didn't it would be very confusing. FIXME:  For whom? How so?
+    // GCC does not enforce these rules for GNU atomics, but we do to help catch
+    // trivial type errors.
     auto IsAllowedValueType = [&](QualType ValType) {
       if (ValType->isIntegerType())
         return true;
@@ -5574,8 +5698,9 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   if (!IsC11 && !AtomTy.isTriviallyCopyableType(Context) &&
       !AtomTy->isScalarType()) {
     // For GNU atomics, require a trivially-copyable type. This is not part of
-    // the GNU atomics specification, but we enforce it, because if we didn't it
-    // would be very confusing. FIXME:  For whom? How so?
+    // the GNU atomics specification but we enforce it for consistency with
+    // other atomics which generally all require a trivially-copyable type. This
+    // is because atomics just copy bits.
     Diag(ExprRange.getBegin(), diag::err_atomic_op_needs_trivial_copy)
         << Ptr->getType() << Ptr->getSourceRange();
     return ExprError();
@@ -5614,7 +5739,7 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   // arguments are actually passed as pointers.
   QualType ByValType = ValType; // 'CP'
   bool IsPassedByAddress = false;
-  if (!IsC11 && !IsN) {
+  if (!IsC11 && !IsHIP && !IsN) {
     ByValType = Ptr->getType();
     IsPassedByAddress = true;
   }
@@ -5793,16 +5918,19 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   if ((Op == AtomicExpr::AO__c11_atomic_load ||
        Op == AtomicExpr::AO__c11_atomic_store ||
        Op == AtomicExpr::AO__opencl_atomic_load ||
-       Op == AtomicExpr::AO__opencl_atomic_store ) &&
+       Op == AtomicExpr::AO__hip_atomic_load ||
+       Op == AtomicExpr::AO__opencl_atomic_store ||
+       Op == AtomicExpr::AO__hip_atomic_store) &&
       Context.AtomicUsesUnsupportedLibcall(AE))
     Diag(AE->getBeginLoc(), diag::err_atomic_load_store_uses_lib)
         << ((Op == AtomicExpr::AO__c11_atomic_load ||
-             Op == AtomicExpr::AO__opencl_atomic_load)
+             Op == AtomicExpr::AO__opencl_atomic_load ||
+             Op == AtomicExpr::AO__hip_atomic_load)
                 ? 0
                 : 1);
 
-  if (ValType->isExtIntType()) {
-    Diag(Ptr->getExprLoc(), diag::err_atomic_builtin_ext_int_prohibit);
+  if (ValType->isBitIntType()) {
+    Diag(Ptr->getExprLoc(), diag::err_atomic_builtin_bit_int_prohibit);
     return ExprError();
   }
 
@@ -6199,11 +6327,11 @@ Sema::SemaBuiltinAtomicOverloaded(ExprResult TheCallResult) {
   // gracefully.
   TheCall->setType(ResultType);
 
-  // Prohibit use of _ExtInt with atomic builtins.
-  // The arguments would have already been converted to the first argument's
-  // type, so only need to check the first argument.
-  const auto *ExtIntValType = ValType->getAs<ExtIntType>();
-  if (ExtIntValType && !llvm::isPowerOf2_64(ExtIntValType->getNumBits())) {
+  // Prohibit problematic uses of bit-precise integer types with atomic
+  // builtins. The arguments would have already been converted to the first
+  // argument's type, so only need to check the first argument.
+  const auto *BitIntValType = ValType->getAs<BitIntType>();
+  if (BitIntValType && !llvm::isPowerOf2_64(BitIntValType->getNumBits())) {
     Diag(FirstArg->getExprLoc(), diag::err_atomic_builtin_ext_int_size);
     return ExprError();
   }
@@ -11231,7 +11359,7 @@ struct IntRange {
                         false/*NonNegative*/);
     }
 
-    if (const auto *EIT = dyn_cast<ExtIntType>(T))
+    if (const auto *EIT = dyn_cast<BitIntType>(T))
       return IntRange(EIT->getNumBits(), EIT->isUnsigned());
 
     const BuiltinType *BT = cast<BuiltinType>(T);
@@ -11257,7 +11385,7 @@ struct IntRange {
     if (const EnumType *ET = dyn_cast<EnumType>(T))
       T = C.getCanonicalType(ET->getDecl()->getIntegerType()).getTypePtr();
 
-    if (const auto *EIT = dyn_cast<ExtIntType>(T))
+    if (const auto *EIT = dyn_cast<BitIntType>(T))
       return IntRange(EIT->getNumBits(), EIT->isUnsigned());
 
     const BuiltinType *BT = cast<BuiltinType>(T);
@@ -16679,26 +16807,19 @@ static bool checkMathBuiltinElementType(Sema &S, SourceLocation Loc,
   return false;
 }
 
-bool Sema::SemaBuiltinElementwiseMathOneArg(CallExpr *TheCall) {
+bool Sema::PrepareBuiltinElementwiseMathOneArgCall(CallExpr *TheCall) {
   if (checkArgCount(*this, TheCall, 1))
     return true;
 
   ExprResult A = UsualUnaryConversions(TheCall->getArg(0));
-  SourceLocation ArgLoc = TheCall->getArg(0)->getBeginLoc();
   if (A.isInvalid())
     return true;
 
   TheCall->setArg(0, A.get());
   QualType TyA = A.get()->getType();
-  if (checkMathBuiltinElementType(*this, ArgLoc, TyA))
-    return true;
 
-  QualType EltTy = TyA;
-  if (auto *VecTy = EltTy->getAs<VectorType>())
-    EltTy = VecTy->getElementType();
-  if (EltTy->isUnsignedIntegerType())
-    return Diag(ArgLoc, diag::err_builtin_invalid_arg_type)
-           << 1 << /*signed integer or float ty*/ 3 << TyA;
+  if (checkMathBuiltinElementType(*this, A.get()->getBeginLoc(), TyA))
+    return true;
 
   TheCall->setType(TyA);
   return false;

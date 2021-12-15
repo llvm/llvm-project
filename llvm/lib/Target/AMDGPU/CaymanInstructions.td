@@ -48,8 +48,6 @@ def SIN_cm : SIN_Common<0x8D>;
 def COS_cm : COS_Common<0x8E>;
 } // End isVector = 1
 
-def : RsqPat<RECIPSQRT_IEEE_cm, f32>;
-
 def : SqrtPat<RECIPSQRT_IEEE_cm, RECIP_IEEE_cm>;
 
 def : POW_Common <LOG_IEEE_cm, EXP_IEEE_cm, MUL>;

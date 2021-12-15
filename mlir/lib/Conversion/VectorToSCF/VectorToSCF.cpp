@@ -52,6 +52,8 @@ struct VectorToSCFPattern : public OpRewritePattern<OpTy> {
 /// A return value of None indicates a broadcast.
 template <typename OpTy>
 static Optional<int64_t> unpackedDim(OpTy xferOp) {
+  // TODO: support 0-d corner case.
+  assert(xferOp.getTransferRank() > 0 && "unexpected 0-d transfer");
   auto map = xferOp.permutation_map();
   if (auto expr = map.getResult(0).template dyn_cast<AffineDimExpr>()) {
     return expr.getPosition();
@@ -66,6 +68,8 @@ static Optional<int64_t> unpackedDim(OpTy xferOp) {
 /// omitted.
 template <typename OpTy>
 static AffineMap unpackedPermutationMap(OpBuilder &b, OpTy xferOp) {
+  // TODO: support 0-d corner case.
+  assert(xferOp.getTransferRank() > 0 && "unexpected 0-d transfer");
   auto map = xferOp.permutation_map();
   return AffineMap::get(map.getNumDims(), 0, map.getResults().drop_front(),
                         b.getContext());
@@ -1081,6 +1085,7 @@ get1dMemrefIndices(OpBuilder &b, OpTy xferOp, Value iv,
                    SmallVector<Value, 8> &memrefIndices) {
   auto indices = xferOp.indices();
   auto map = xferOp.permutation_map();
+  assert(xferOp.getTransferRank() > 0 && "unexpected 0-d transfer");
 
   memrefIndices.append(indices.begin(), indices.end());
   assert(map.getNumResults() == 1 &&
@@ -1206,6 +1211,9 @@ struct TransferOp1dConversion : public VectorToSCFPattern<OpTy> {
 
   LogicalResult matchAndRewrite(OpTy xferOp,
                                 PatternRewriter &rewriter) const override {
+    // TODO: support 0-d corner case.
+    if (xferOp.getTransferRank() == 0)
+      return failure();
     auto map = xferOp.permutation_map();
     auto memRefType = xferOp.getShapedType().template dyn_cast<MemRefType>();
 

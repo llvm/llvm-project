@@ -39,7 +39,7 @@ func @call_sink(%arg0: tensor<f32>) {
 
 // CHECK-LABEL:   func @unconverted_op_in_body() -> memref<f32> {
 // CHECK:           %[[TENSOR:.*]] = "test.source"() : () -> tensor<f32>
-// CHECK:           %[[MEMREF:.*]] = memref.buffer_cast %[[TENSOR]] : memref<f32>
+// CHECK:           %[[MEMREF:.*]] = bufferization.to_memref %[[TENSOR]] : memref<f32>
 // CHECK:           return %[[MEMREF]] : memref<f32>
 func @unconverted_op_in_body() -> tensor<f32> {
   %0 = "test.source"() : () -> tensor<f32>

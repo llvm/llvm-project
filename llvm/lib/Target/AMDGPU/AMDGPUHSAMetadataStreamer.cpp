@@ -280,11 +280,12 @@ void MetadataStreamerV2::emitKernelAttrs(const Function &Func) {
   }
 }
 
-void MetadataStreamerV2::emitKernelArgs(const Function &Func) {
+void MetadataStreamerV2::emitKernelArgs(const Function &Func,
+                                        const GCNSubtarget &ST) {
   for (auto &Arg : Func.args())
     emitKernelArg(Arg);
 
-  emitHiddenKernelArgs(Func);
+  emitHiddenKernelArgs(Func, ST);
 }
 
 void MetadataStreamerV2::emitKernelArg(const Argument &Arg) {
@@ -381,10 +382,9 @@ void MetadataStreamerV2::emitKernelArg(const DataLayout &DL, Type *Ty,
   }
 }
 
-void MetadataStreamerV2::emitHiddenKernelArgs(const Function &Func) {
-  int HiddenArgNumBytes =
-      getIntegerAttribute(Func, "amdgpu-implicitarg-num-bytes", 0);
-
+void MetadataStreamerV2::emitHiddenKernelArgs(const Function &Func,
+                                              const GCNSubtarget &ST) {
+  unsigned HiddenArgNumBytes = ST.getImplicitArgNumBytes(Func);
   if (!HiddenArgNumBytes)
     return;
 
@@ -465,11 +465,12 @@ void MetadataStreamerV2::emitKernel(const MachineFunction &MF,
   HSAMetadata.mKernels.push_back(Kernel::Metadata());
   auto &Kernel = HSAMetadata.mKernels.back();
 
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   Kernel.mName = std::string(Func.getName());
   Kernel.mSymbolName = (Twine(Func.getName()) + Twine("@kd")).str();
   emitKernelLanguage(Func);
   emitKernelAttrs(Func);
-  emitKernelArgs(Func);
+  emitKernelArgs(Func, ST);
   HSAMetadata.mKernels.back().mCodeProps = CodeProps;
   HSAMetadata.mKernels.back().mDebugProps = DebugProps;
 }
@@ -673,13 +674,14 @@ void MetadataStreamerV3::emitKernelAttrs(const Function &Func,
 }
 
 void MetadataStreamerV3::emitKernelArgs(const Function &Func,
+                                        const GCNSubtarget &ST,
                                         msgpack::MapDocNode Kern) {
   unsigned Offset = 0;
   auto Args = HSAMetadataDoc->getArrayNode();
   for (auto &Arg : Func.args())
     emitKernelArg(Arg, Offset, Args);
 
-  emitHiddenKernelArgs(Func, Offset, Args);
+  emitHiddenKernelArgs(Func, ST, Offset, Args);
 
   Kern[".args"] = Args;
 }
@@ -791,11 +793,10 @@ void MetadataStreamerV3::emitKernelArg(
 }
 
 void MetadataStreamerV3::emitHiddenKernelArgs(const Function &Func,
+                                              const GCNSubtarget &ST,
                                               unsigned &Offset,
                                               msgpack::ArrayDocNode Args) {
-  int HiddenArgNumBytes =
-      getIntegerAttribute(Func, "amdgpu-implicitarg-num-bytes", 0);
-
+  unsigned HiddenArgNumBytes = ST.getImplicitArgNumBytes(Func);
   if (!HiddenArgNumBytes)
     return;
 
@@ -912,6 +913,7 @@ void MetadataStreamerV3::emitKernel(const MachineFunction &MF,
                                     const SIProgramInfo &ProgramInfo) {
   auto &Func = MF.getFunction();
   auto Kern = getHSAKernelProps(MF, ProgramInfo);
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
   assert(Func.getCallingConv() == CallingConv::AMDGPU_KERNEL ||
          Func.getCallingConv() == CallingConv::SPIR_KERNEL);
@@ -925,7 +927,7 @@ void MetadataStreamerV3::emitKernel(const MachineFunction &MF,
         (Twine(Func.getName()) + Twine(".kd")).str(), /*Copy=*/true);
     emitKernelLanguage(Func, Kern);
     emitKernelAttrs(Func, Kern);
-    emitKernelArgs(Func, Kern);
+    emitKernelArgs(Func, ST, Kern);
   }
 
   Kernels.push_back(Kern);

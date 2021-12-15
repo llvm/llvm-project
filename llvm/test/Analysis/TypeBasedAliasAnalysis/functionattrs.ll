@@ -15,7 +15,7 @@ define void @test0_yes(i32* %p) nounwind {
   ret void
 }
 
-; CHECK: define void @test0_no(i32* nocapture %p) #1 {
+; CHECK: define void @test0_no(i32* nocapture writeonly %p) #1 {
 define void @test0_no(i32* %p) nounwind {
   store i32 0, i32* %p, !tbaa !2
   ret void

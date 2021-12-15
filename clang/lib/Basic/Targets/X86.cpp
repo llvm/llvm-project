@@ -239,9 +239,9 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAVX512ER = true;
     } else if (Feature == "+avx512fp16") {
       HasAVX512FP16 = true;
+      HasFloat16 = true;
     } else if (Feature == "+avx512pf") {
       HasAVX512PF = true;
-      HasLegalHalfType = true;
     } else if (Feature == "+avx512dq") {
       HasAVX512DQ = true;
     } else if (Feature == "+avx512bitalg") {
@@ -369,8 +369,6 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
                          .Default(NoXOP);
     XOPLevel = std::max(XOPLevel, XLevel);
   }
-  // Turn on _float16 for x86 (feature sse2)
-  HasFloat16 = SSELevel >= SSE2;
 
   // LLVM doesn't have a separate switch for fpmath, so only accept it if it
   // matches the selected sse level.
@@ -384,12 +382,10 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   SimdDefaultAlign =
       hasFeature("avx512f") ? 512 : hasFeature("avx") ? 256 : 128;
 
-  if (!HasX87) {
-    if (LongDoubleFormat == &llvm::APFloat::x87DoubleExtended())
-      HasLongDouble = false;
-    if (getTriple().getArch() == llvm::Triple::x86)
-      HasFPReturn = false;
-  }
+  // FIXME: We should allow long double type on 32-bits to match with GCC.
+  // This requires backend to be able to lower f80 without x87 first.
+  if (!HasX87 && LongDoubleFormat == &llvm::APFloat::x87DoubleExtended())
+    HasLongDouble = false;
 
   return true;
 }

@@ -42,6 +42,7 @@ StackTrace StackDepotGet(u32 id);
 void StackDepotLockAll();
 void StackDepotUnlockAll();
 void StackDepotPrintAll();
+void StackDepotStopBackgroundThread();
 
 void StackDepotTestOnlyUnmap();
 

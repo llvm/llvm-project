@@ -1277,8 +1277,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_SRL(SDNode *N, bool IsVP) {
 
 SDValue DAGTypeLegalizer::PromoteIntRes_Rotate(SDNode *N) {
   // Lower the rotate to shifts and ORs which can be promoted.
-  SDValue Res;
-  TLI.expandROT(N, true /*AllowVectorOps*/, Res, DAG);
+  SDValue Res = TLI.expandROT(N, true /*AllowVectorOps*/, DAG);
   ReplaceValueWith(SDValue(N, 0), Res);
   return SDValue();
 }
@@ -1286,7 +1285,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_Rotate(SDNode *N) {
 SDValue DAGTypeLegalizer::PromoteIntRes_FunnelShift(SDNode *N) {
   SDValue Hi = GetPromotedInteger(N->getOperand(0));
   SDValue Lo = GetPromotedInteger(N->getOperand(1));
-  SDValue Amount = GetPromotedInteger(N->getOperand(2));
+  SDValue Amt = GetPromotedInteger(N->getOperand(2));
 
   SDLoc DL(N);
   EVT OldVT = N->getOperand(0).getValueType();
@@ -1297,21 +1296,20 @@ SDValue DAGTypeLegalizer::PromoteIntRes_FunnelShift(SDNode *N) {
   unsigned NewBits = VT.getScalarSizeInBits();
 
   // Amount has to be interpreted modulo the old bit width.
-  Amount =
-      DAG.getNode(ISD::UREM, DL, VT, Amount, DAG.getConstant(OldBits, DL, VT));
+  Amt = DAG.getNode(ISD::UREM, DL, VT, Amt, DAG.getConstant(OldBits, DL, VT));
 
   // If the promoted type is twice the size (or more), then we use the
   // traditional funnel 'double' shift codegen. This isn't necessary if the
   // shift amount is constant.
   // fshl(x,y,z) -> (((aext(x) << bw) | zext(y)) << (z % bw)) >> bw.
   // fshr(x,y,z) -> (((aext(x) << bw) | zext(y)) >> (z % bw)).
-  if (NewBits >= (2 * OldBits) && !isa<ConstantSDNode>(Amount) &&
+  if (NewBits >= (2 * OldBits) && !isa<ConstantSDNode>(Amt) &&
       !TLI.isOperationLegalOrCustom(Opcode, VT)) {
     SDValue HiShift = DAG.getConstant(OldBits, DL, VT);
     Hi = DAG.getNode(ISD::SHL, DL, VT, Hi, HiShift);
     Lo = DAG.getZeroExtendInReg(Lo, DL, OldVT);
     SDValue Res = DAG.getNode(ISD::OR, DL, VT, Hi, Lo);
-    Res = DAG.getNode(IsFSHR ? ISD::SRL : ISD::SHL, DL, VT, Res, Amount);
+    Res = DAG.getNode(IsFSHR ? ISD::SRL : ISD::SHL, DL, VT, Res, Amt);
     if (!IsFSHR)
       Res = DAG.getNode(ISD::SRL, DL, VT, Res, HiShift);
     return Res;
@@ -1324,9 +1322,9 @@ SDValue DAGTypeLegalizer::PromoteIntRes_FunnelShift(SDNode *N) {
   // Increase Amount to shift the result into the lower bits of the promoted
   // type.
   if (IsFSHR)
-    Amount = DAG.getNode(ISD::ADD, DL, VT, Amount, ShiftOffset);
+    Amt = DAG.getNode(ISD::ADD, DL, VT, Amt, ShiftOffset);
 
-  return DAG.getNode(Opcode, DL, VT, Hi, Lo, Amount);
+  return DAG.getNode(Opcode, DL, VT, Hi, Lo, Amt);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_TRUNCATE(SDNode *N) {

@@ -194,27 +194,11 @@ StringRef riscv::getRISCVABI(const ArgList &Args, const llvm::Triple &Triple) {
 
   auto ParseResult = llvm::RISCVISAInfo::parseArchString(
       Arch, /* EnableExperimentalExtension */ true);
-  if (!ParseResult) {
+  if (!ParseResult)
     // Ignore parsing error, just go 3rd step.
     consumeError(ParseResult.takeError());
-  } else {
-    auto &ISAInfo = *ParseResult;
-    bool HasD = ISAInfo->hasExtension("d");
-    unsigned XLen = ISAInfo->getXLen();
-    if (XLen == 32) {
-      bool HasE = ISAInfo->hasExtension("e");
-      if (HasD)
-        return "ilp32d";
-      if (HasE)
-        return "ilp32e";
-      return "ilp32";
-    } else if (XLen == 64) {
-      if (HasD)
-        return "lp64d";
-      return "lp64";
-    }
-    llvm_unreachable("unhandled XLen");
-  }
+  else
+    return llvm::RISCV::computeDefaultABIFromArch(**ParseResult);
 
   // 3. Choose a default based on the triple
   //

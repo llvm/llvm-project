@@ -127,11 +127,11 @@ FunctionPass *llvm::createSIFixSGPRCopiesPass() {
 static bool hasVectorOperands(const MachineInstr &MI,
                               const SIRegisterInfo *TRI) {
   const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
-  for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-    if (!MI.getOperand(i).isReg() || !MI.getOperand(i).getReg().isVirtual())
+  for (const MachineOperand &MO : MI.operands()) {
+    if (!MO.isReg() || !MO.getReg().isVirtual())
       continue;
 
-    if (TRI->hasVectorRegisters(MRI.getRegClass(MI.getOperand(i).getReg())))
+    if (TRI->hasVectorRegisters(MRI.getRegClass(MO.getReg())))
       return true;
   }
   return false;
@@ -259,7 +259,7 @@ static bool foldVGPRCopyIntoRegSequence(MachineInstr &MI,
   // VGPRz = REG_SEQUENCE VGPRx, sub0
 
   MI.getOperand(0).setReg(CopyUse.getOperand(0).getReg());
-  bool IsAGPR = TRI->hasAGPRs(DstRC);
+  bool IsAGPR = TRI->isAGPRClass(DstRC);
 
   for (unsigned I = 1, N = MI.getNumOperands(); I != N; I += 2) {
     Register SrcReg = MI.getOperand(I).getReg();
@@ -853,7 +853,7 @@ MachineBasicBlock *SIFixSGPRCopies::processPHINode(MachineInstr &MI) {
 
   Register PHIRes = MI.getOperand(0).getReg();
   const TargetRegisterClass *RC0 = MRI->getRegClass(PHIRes);
-  if (AllAGPRUses && numVGPRUses && !TRI->hasAGPRs(RC0)) {
+  if (AllAGPRUses && numVGPRUses && !TRI->isAGPRClass(RC0)) {
     LLVM_DEBUG(dbgs() << "Moving PHI to AGPR: " << MI);
     MRI->setRegClass(PHIRes, TRI->getEquivalentAGPRClass(RC0));
     for (unsigned I = 1, N = MI.getNumOperands(); I != N; I += 2) {

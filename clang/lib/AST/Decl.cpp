@@ -604,8 +604,14 @@ static LinkageInfo getExternalLinkageFor(const NamedDecl *D) {
   //   - A name declared at namespace scope that does not have internal linkage
   //     by the previous rules and that is introduced by a non-exported
   //     declaration has module linkage.
-  if (isInModulePurview(D) && !isExportedFromModuleInterfaceUnit(
-                                  cast<NamedDecl>(D->getCanonicalDecl())))
+  //
+  // [basic.namespace.general]/p2
+  //   A namespace is never attached to a named module and never has a name with
+  //   module linkage.
+  if (isInModulePurview(D) &&
+      !isExportedFromModuleInterfaceUnit(
+          cast<NamedDecl>(D->getCanonicalDecl())) &&
+      !isa<NamespaceDecl>(D))
     return LinkageInfo(ModuleLinkage, DefaultVisibility, false);
 
   return LinkageInfo::external();
@@ -1583,7 +1589,7 @@ std::string NamedDecl::getQualifiedNameAsString() const {
   std::string QualName;
   llvm::raw_string_ostream OS(QualName);
   printQualifiedName(OS, getASTContext().getPrintingPolicy());
-  return OS.str();
+  return QualName;
 }
 
 void NamedDecl::printQualifiedName(raw_ostream &OS) const {
@@ -3271,6 +3277,8 @@ MultiVersionKind FunctionDecl::getMultiVersionKind() const {
     return MultiVersionKind::CPUDispatch;
   if (hasAttr<CPUSpecificAttr>())
     return MultiVersionKind::CPUSpecific;
+  if (hasAttr<TargetClonesAttr>())
+    return MultiVersionKind::TargetClones;
   return MultiVersionKind::None;
 }
 
@@ -3284,6 +3292,10 @@ bool FunctionDecl::isCPUSpecificMultiVersion() const {
 
 bool FunctionDecl::isTargetMultiVersion() const {
   return isMultiVersion() && hasAttr<TargetAttr>();
+}
+
+bool FunctionDecl::isTargetClonesMultiVersion() const {
+  return isMultiVersion() && hasAttr<TargetClonesAttr>();
 }
 
 void

@@ -1,51 +1,68 @@
 ; Test default llvm-profgen with preinline off
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-noprobe.perfscript --binary=%S/Inputs/inline-cs-noprobe.perfbin --output=%t
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-noprobe.perfscript --binary=%S/Inputs/inline-cs-noprobe.perfbin --csspgo-preinliner=0 --output=%t
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-DEFAULT
 
 ; Test llvm-profgen with preinliner on will merge not inlinable profile into base profile.
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-noprobe.perfscript --binary=%S/Inputs/inline-cs-noprobe.perfbin --output=%t --csspgo-preinliner=1
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-noprobe.perfscript --binary=%S/Inputs/inline-cs-noprobe.perfbin --csspgo-preinliner=1 --sample-profile-hot-inline-threshold=3000 --sample-profile-cold-inline-threshold=45 --output=%t
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-PREINL
 
 ; Test preinliner threshold that prevents all possible inlining and merges everything into base profile.
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-noprobe.perfscript --binary=%S/Inputs/inline-cs-noprobe.perfbin --output=%t --csspgo-preinliner=1  -sample-profile-cold-inline-threshold=0
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-noprobe.perfscript --binary=%S/Inputs/inline-cs-noprobe.perfbin --csspgo-preinliner=1 --sample-profile-hot-inline-threshold=3000 --sample-profile-cold-inline-threshold=0 --output=%t
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-NO-PREINL
 
 ; Test cold profile trimming. Only base profiles should be dropped.
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-noprobe.perfscript --binary=%S/Inputs/inline-cs-noprobe.perfbin --output=%t --csspgo-preinliner=1  --csprof-trim-cold-context=1 --profile-summary-hot-count=250
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-noprobe.perfscript --binary=%S/Inputs/inline-cs-noprobe.perfbin --csspgo-preinliner=1 --sample-profile-hot-inline-threshold=3000 --sample-profile-cold-inline-threshold=45 --output=%t --trim-cold-profile=1 --profile-summary-hot-count=400
 
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-TRIM
 
-; CHECK-DEFAULT:     [main:1 @ foo]:44:0
+; Test llvm-profgen with preinliner on will merge not inlinable profile into base profile.
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-noprobe.perfscript --binary=%S/Inputs/inline-cs-noprobe.perfbin  --csspgo-preinliner=1 --sample-profile-hot-inline-threshold=3000 --sample-profile-cold-inline-threshold=45 --output=%t --gen-cs-nested-profile=1
+; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-PREINL-NEST
+
+; CHECK-DEFAULT:     [main:1 @ foo]:309:0
 ; CHECK-DEFAULT-NEXT: 2.1: 14
 ; CHECK-DEFAULT-NEXT: 3: 15
 ; CHECK-DEFAULT-NEXT: 3.1: 14 bar:14
 ; CHECK-DEFAULT-NEXT: 3.2: 1
+; CHECK-DEFAULT-NEXT: 65526: 14
 ; CHECK-DEFAULT-NEXT: !Attributes: 1
-; CHECK-DEFAULT-NEXT:[main:1 @ foo:3.1 @ bar]:14:0
+; CHECK-DEFAULT-NEXT:[main:1 @ foo:3.1 @ bar]:84:0
 ; CHECK-DEFAULT-NEXT: 1: 14
 ; CHECK-DEFAULT-NEXT: !Attributes: 1
 
-; CHECK-PREINL:     [foo]:44:0
+; CHECK-PREINL:     [foo]:309:0
 ; CHECK-PREINL-NEXT: 2.1: 14
 ; CHECK-PREINL-NEXT: 3: 15
 ; CHECK-PREINL-NEXT: 3.1: 14 bar:14
 ; CHECK-PREINL-NEXT: 3.2: 1
+; CHECK-PREINL-NEXT: 65526: 14
 ; CHECK-PREINL-NEXT: !Attributes: 1
-; CHECK-PREINL-NEXT:[foo:3.1 @ bar]:14:0
+; CHECK-PREINL-NEXT:[foo:3.1 @ bar]:84:0
 ; CHECK-PREINL-NEXT: 1: 14
 ; CHECK-PREINL-NEXT: !Attributes: 3
 
-; CHECK-NO-PREINL:     [foo]:44:0
+; CHECK-NO-PREINL:     [foo]:309:0
 ; CHECK-NO-PREINL-NEXT: 2.1: 14
 ; CHECK-NO-PREINL-NEXT: 3: 15
 ; CHECK-NO-PREINL-NEXT: 3.1: 14 bar:14
 ; CHECK-NO-PREINL-NEXT: 3.2: 1
+; CHECK-NO-PREINL-NEXT: 65526: 14
 ; CHECK-NO-PREINL-NEXT: !Attributes: 1
-; CHECK-NO-PREINL-NEXT:[bar]:14:0
+; CHECK-NO-PREINL-NEXT:[bar]:84:0
 ; CHECK-NO-PREINL-NEXT: 1: 14
 ; CHECK-NO-PREINL-NEXT: !Attributes: 1
 
-; CHECK-TRIM-NOT: [foo]
-; CHECK-TRIM:[foo:3.1 @ bar]:14:0
+; CHECK-TRIM-NOT: [foo]:309:0
+; CHECK-TRIM:[foo:3.1 @ bar]:84:0
 ; CHECK-TRIM-NEXT: 1: 14
 ; CHECK-TRIM-NEXT: !Attributes: 3
+
+; CHECK-PREINL-NEST:     foo:393:0
+; CHECK-PREINL-NEST-NEXT: 2.1: 14
+; CHECK-PREINL-NEST-NEXT: 3: 15
+; CHECK-PREINL-NEST-NEXT: 3.1: 14 bar:14
+; CHECK-PREINL-NEST-NEXT: 3.2: 1
+; CHECK-PREINL-NEST-NEXT: 65526: 14
+; CHECK-PREINL-NEST-NEXT: 3.1: bar:84
+; CHECK-PREINL-NEST-NEXT:  1: 14
+; CHECK-PREINL-NEST-NEXT:  !Attributes: 3

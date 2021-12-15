@@ -203,18 +203,21 @@ private:
   /// block arguments of a loopOp or forOp are used as dimensions
   MaybeAffineExpr toAffineExpr(mlir::Value value) {
     if (auto op = value.getDefiningOp<mlir::arith::SubIOp>())
-      return affineBinaryOp(mlir::AffineExprKind::Add, toAffineExpr(op.lhs()),
-                            affineBinaryOp(mlir::AffineExprKind::Mul,
-                                           toAffineExpr(op.rhs()),
-                                           toAffineExpr(-1)));
+      return affineBinaryOp(
+          mlir::AffineExprKind::Add, toAffineExpr(op.getLhs()),
+          affineBinaryOp(mlir::AffineExprKind::Mul, toAffineExpr(op.getRhs()),
+                         toAffineExpr(-1)));
     if (auto op = value.getDefiningOp<mlir::arith::AddIOp>())
-      return affineBinaryOp(mlir::AffineExprKind::Add, op.lhs(), op.rhs());
+      return affineBinaryOp(mlir::AffineExprKind::Add, op.getLhs(),
+                            op.getRhs());
     if (auto op = value.getDefiningOp<mlir::arith::MulIOp>())
-      return affineBinaryOp(mlir::AffineExprKind::Mul, op.lhs(), op.rhs());
+      return affineBinaryOp(mlir::AffineExprKind::Mul, op.getLhs(),
+                            op.getRhs());
     if (auto op = value.getDefiningOp<mlir::arith::RemUIOp>())
-      return affineBinaryOp(mlir::AffineExprKind::Mod, op.lhs(), op.rhs());
+      return affineBinaryOp(mlir::AffineExprKind::Mod, op.getLhs(),
+                            op.getRhs());
     if (auto op = value.getDefiningOp<mlir::arith::ConstantOp>())
-      if (auto intConstant = op.value().dyn_cast<IntegerAttr>())
+      if (auto intConstant = op.getValue().dyn_cast<IntegerAttr>())
         return toAffineExpr(intConstant.getInt());
     if (auto blockArg = value.dyn_cast<mlir::BlockArgument>()) {
       affineArgs.push_back(value);
@@ -227,12 +230,12 @@ private:
   }
 
   void fromCmpIOp(mlir::arith::CmpIOp cmpOp) {
-    auto lhsAffine = toAffineExpr(cmpOp.lhs());
-    auto rhsAffine = toAffineExpr(cmpOp.rhs());
+    auto lhsAffine = toAffineExpr(cmpOp.getLhs());
+    auto rhsAffine = toAffineExpr(cmpOp.getRhs());
     if (!lhsAffine.hasValue() || !rhsAffine.hasValue())
       return;
     auto constraintPair = constraint(
-        cmpOp.predicate(), rhsAffine.getValue() - lhsAffine.getValue());
+        cmpOp.getPredicate(), rhsAffine.getValue() - lhsAffine.getValue());
     if (!constraintPair)
       return;
     integerSet = mlir::IntegerSet::get(dimCount, symCount,
@@ -325,7 +328,7 @@ static mlir::AffineMap createArrayIndexAffineMap(unsigned dimensions,
 
 static Optional<int64_t> constantIntegerLike(const mlir::Value value) {
   if (auto definition = value.getDefiningOp<mlir::arith::ConstantOp>())
-    if (auto stepAttr = definition.value().dyn_cast<IntegerAttr>())
+    if (auto stepAttr = definition.getValue().dyn_cast<IntegerAttr>())
       return stepAttr.getInt();
   return {};
 }

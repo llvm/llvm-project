@@ -267,7 +267,7 @@ void MatcherGen::EmitLeafMatchCode(const TreePatternNode *N) {
       std::string S;
       raw_string_ostream OS(S);
       OS << "We expect complex pattern uses to have names: " << *N;
-      PrintFatalError(OS.str());
+      PrintFatalError(S);
     }
 
     // Remember this ComplexPattern so that we can emit it after all the other

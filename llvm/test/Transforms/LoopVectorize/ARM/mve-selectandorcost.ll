@@ -8,7 +8,7 @@ target triple = "thumbv8.1m.main-arm-none-eabi"
 
 ; CHECK-COST-LABEL: test
 ; CHECK-COST: LV: Found an estimated cost of 1 for VF 1 For instruction:   %or.cond = select i1 %cmp2, i1 true, i1 %cmp3
-; CHECK-COST: LV: Found an estimated cost of 2 for VF 2 For instruction:   %or.cond = select i1 %cmp2, i1 true, i1 %cmp3
+; CHECK-COST: LV: Found an estimated cost of 26 for VF 2 For instruction:   %or.cond = select i1 %cmp2, i1 true, i1 %cmp3
 ; CHECK-COST: LV: Found an estimated cost of 2 for VF 4 For instruction:   %or.cond = select i1 %cmp2, i1 true, i1 %cmp3
 
 define float @test(float* nocapture readonly %pA, float* nocapture readonly %pB, i32 %blockSize) #0 {
@@ -43,8 +43,8 @@ define float @test(float* nocapture readonly %pA, float* nocapture readonly %pB,
 ; CHECK-NEXT:    [[TMP8:%.*]] = fsub fast <4 x float> [[WIDE_LOAD]], [[WIDE_LOAD6]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call fast <4 x float> @llvm.fabs.v4f32(<4 x float> [[TMP8]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = fdiv fast <4 x float> [[TMP9]], [[TMP7]]
-; CHECK-NEXT:    [[TMP11:%.*]] = fadd fast <4 x float> [[TMP10]], [[VEC_PHI]]
-; CHECK-NEXT:    [[PREDPHI]] = select <4 x i1> [[TMP4]], <4 x float> [[VEC_PHI]], <4 x float> [[TMP11]]
+; CHECK-NEXT:    [[TMP11:%.*]] = select <4 x i1> [[TMP4]], <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, <4 x float> [[TMP10]]
+; CHECK-NEXT:    [[PREDPHI]] = fadd fast <4 x float> [[VEC_PHI]], [[TMP11]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]

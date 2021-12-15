@@ -205,6 +205,6 @@ getSlice(Operation *op,
 /// Returns a topologically sorted SetVector.
 SetVector<Operation *> topologicalSort(const SetVector<Operation *> &toSort);
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_ANALYSIS_SLICEANALYSIS_H_

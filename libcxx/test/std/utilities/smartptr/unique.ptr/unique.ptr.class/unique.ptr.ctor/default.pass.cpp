@@ -84,6 +84,11 @@ void test_basic() {
     p.get_deleter().set_state(5);
     assert(p.get_deleter().state() == 5);
   }
+  {
+    std::unique_ptr<ElemType, DefaultCtorDeleter<ElemType> > p;
+    assert(p.get() == 0);
+    assert(p.get_deleter().state() == 0);
+  }
 }
 
 DEFINE_AND_RUN_IS_INCOMPLETE_TEST({

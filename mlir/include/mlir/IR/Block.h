@@ -18,7 +18,7 @@
 
 namespace llvm {
 class BitVector;
-} // end namespace llvm
+} // namespace llvm
 
 namespace mlir {
 class TypeRange;
@@ -364,6 +364,6 @@ private:
 
   friend struct llvm::ilist_traits<Block>;
 };
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_IR_BLOCK_H

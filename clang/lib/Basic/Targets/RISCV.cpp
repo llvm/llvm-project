@@ -246,6 +246,9 @@ bool RISCVTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     ISAInfo = std::move(*ParseResult);
   }
 
+  if (ABI.empty())
+    ABI = llvm::RISCV::computeDefaultABIFromArch(*ISAInfo).str();
+
   return true;
 }
 

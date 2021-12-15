@@ -151,6 +151,7 @@ def : InstRW<[P9_ALU_2C, IP_EXEC_1C, DISP_1C],
     (instregex "ADD(4|8)(TLS)?(_)?$"),
     (instregex "NEG(8)?(O)?$"),
     (instregex "ADDI(S)?toc(HA|L)(8)?$"),
+    (instregex "LA(8)?$"),
     COPY,
     MCRF,
     MCRXRX,
@@ -165,7 +166,6 @@ def : InstRW<[P9_ALU_2C, IP_EXEC_1C, DISP_1C],
     SRADI_32,
     RLDIC,
     RFEBB,
-    LA,
     TBEGIN,
     TRECHKPT,
     NOP,
@@ -624,7 +624,9 @@ def : InstRW<[P9_PM_3C, IP_EXECO_1C, IP_EXECE_1C, DISP_1C],
     BCDS_rec,
     BCDTRUNC_rec,
     BCDUS_rec,
-    BCDUTRUNC_rec
+    BCDUTRUNC_rec,
+    BCDADD_rec,
+    BCDSUB_rec
 )>;
 
 // 12 Cycle DFU operation. Only one DFU unit per CPU so we use a whole

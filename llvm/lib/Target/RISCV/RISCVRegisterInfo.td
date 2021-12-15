@@ -480,6 +480,8 @@ let RegAltNameIndices = [ABIRegAltName] in {
   def VL     : RISCVReg<0, "vl", ["vl"]>;
   def VXSAT  : RISCVReg<0, "vxsat", ["vxsat"]>;
   def VXRM   : RISCVReg<0, "vxrm", ["vxrm"]>;
+  def VLENB  : RISCVReg<0, "vlenb", ["vlenb"]>,
+               DwarfRegNum<[!add(4096, SysRegVLENB.Encoding)]>;
 }
 
 foreach m = [1, 2, 4] in {
@@ -548,16 +550,15 @@ def VRM8NoV0 : VReg<[vint8m8_t, vint16m8_t, vint32m8_t, vint64m8_t,
                      vfloat16m8_t, vfloat32m8_t, vfloat64m8_t],
              (add V8M8, V16M8, V24M8), 8>;
 
-defvar VMaskVTs = [vbool64_t, vbool32_t, vbool16_t, vbool8_t,
-                   vbool4_t, vbool2_t, vbool1_t];
+defvar VMaskVTs = [vbool1_t, vbool2_t, vbool4_t, vbool8_t, vbool16_t,
+                   vbool32_t, vbool64_t];
 
 def VMV0 : RegisterClass<"RISCV", VMaskVTs, 64, (add V0)> {
   let Size = 64;
 }
 
 // The register class is added for inline assembly for vector mask types.
-def VM : VReg<[vbool1_t, vbool2_t, vbool4_t, vbool8_t, vbool16_t,
-               vbool32_t, vbool64_t],
+def VM : VReg<VMaskVTs,
            (add (sequence "V%u", 8, 31),
                 (sequence "V%u", 0, 7)), 1>;
 
@@ -576,7 +577,6 @@ foreach m = LMULList.m in {
 // Special registers
 def FFLAGS : RISCVReg<0, "fflags">;
 def FRM    : RISCVReg<0, "frm">;
-def FCSR   : RISCVReg<0, "fcsr">;
 
 // Any type register. Used for .insn directives when we don't know what the
 // register types could be.

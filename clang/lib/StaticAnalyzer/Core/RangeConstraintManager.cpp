@@ -110,6 +110,14 @@ public:
 
 RangeSet::ContainerType RangeSet::Factory::EmptySet{};
 
+RangeSet RangeSet::Factory::add(RangeSet LHS, RangeSet RHS) {
+  ContainerType Result;
+  Result.reserve(LHS.size() + RHS.size());
+  std::merge(LHS.begin(), LHS.end(), RHS.begin(), RHS.end(),
+             std::back_inserter(Result));
+  return makePersistent(std::move(Result));
+}
+
 RangeSet RangeSet::Factory::add(RangeSet Original, Range Element) {
   ContainerType Result;
   Result.reserve(Original.size() + 1);
@@ -124,6 +132,186 @@ RangeSet RangeSet::Factory::add(RangeSet Original, Range Element) {
 
 RangeSet RangeSet::Factory::add(RangeSet Original, const llvm::APSInt &Point) {
   return add(Original, Range(Point));
+}
+
+RangeSet RangeSet::Factory::unite(RangeSet LHS, RangeSet RHS) {
+  ContainerType Result = unite(*LHS.Impl, *RHS.Impl);
+  return makePersistent(std::move(Result));
+}
+
+RangeSet RangeSet::Factory::unite(RangeSet Original, Range R) {
+  ContainerType Result;
+  Result.push_back(R);
+  Result = unite(*Original.Impl, Result);
+  return makePersistent(std::move(Result));
+}
+
+RangeSet RangeSet::Factory::unite(RangeSet Original, llvm::APSInt Point) {
+  return unite(Original, Range(ValueFactory.getValue(Point)));
+}
+
+RangeSet RangeSet::Factory::unite(RangeSet Original, llvm::APSInt From,
+                                  llvm::APSInt To) {
+  return unite(Original,
+               Range(ValueFactory.getValue(From), ValueFactory.getValue(To)));
+}
+
+template <typename T>
+void swapIterators(T &First, T &FirstEnd, T &Second, T &SecondEnd) {
+  std::swap(First, Second);
+  std::swap(FirstEnd, SecondEnd);
+}
+
+RangeSet::ContainerType RangeSet::Factory::unite(const ContainerType &LHS,
+                                                 const ContainerType &RHS) {
+  if (LHS.empty())
+    return RHS;
+  if (RHS.empty())
+    return LHS;
+
+  using llvm::APSInt;
+  using iterator = ContainerType::const_iterator;
+
+  iterator First = LHS.begin();
+  iterator FirstEnd = LHS.end();
+  iterator Second = RHS.begin();
+  iterator SecondEnd = RHS.end();
+  APSIntType Ty = APSIntType(First->From());
+  const APSInt Min = Ty.getMinValue();
+
+  // Handle a corner case first when both range sets start from MIN.
+  // This helps to avoid complicated conditions below. Specifically, this
+  // particular check for `MIN` is not needed in the loop below every time
+  // when we do `Second->From() - One` operation.
+  if (Min == First->From() && Min == Second->From()) {
+    if (First->To() > Second->To()) {
+      //    [ First    ]--->
+      //    [ Second ]----->
+      // MIN^
+      // The Second range is entirely inside the First one.
+
+      // Check if Second is the last in its RangeSet.
+      if (++Second == SecondEnd)
+        //    [ First     ]--[ First + 1 ]--->
+        //    [ Second ]--------------------->
+        // MIN^
+        // The Union is equal to First's RangeSet.
+        return LHS;
+    } else {
+      // case 1: [ First ]----->
+      // case 2: [ First   ]--->
+      //         [ Second  ]--->
+      //      MIN^
+      // The First range is entirely inside or equal to the Second one.
+
+      // Check if First is the last in its RangeSet.
+      if (++First == FirstEnd)
+        //    [ First ]----------------------->
+        //    [ Second  ]--[ Second + 1 ]---->
+        // MIN^
+        // The Union is equal to Second's RangeSet.
+        return RHS;
+    }
+  }
+
+  const APSInt One = Ty.getValue(1);
+  ContainerType Result;
+
+  // This is called when there are no ranges left in one of the ranges.
+  // Append the rest of the ranges from another range set to the Result
+  // and return with that.
+  const auto AppendTheRest = [&Result](iterator I, iterator E) {
+    Result.append(I, E);
+    return Result;
+  };
+
+  while (true) {
+    // We want to keep the following invariant at all times:
+    // ---[ First ------>
+    // -----[ Second --->
+    if (First->From() > Second->From())
+      swapIterators(First, FirstEnd, Second, SecondEnd);
+
+    // The Union definitely starts with First->From().
+    // ----------[ First ------>
+    // ------------[ Second --->
+    // ----------[ Union ------>
+    // UnionStart^
+    const llvm::APSInt &UnionStart = First->From();
+
+    // Loop where the invariant holds.
+    while (true) {
+      // Skip all enclosed ranges.
+      // ---[                  First                     ]--->
+      // -----[ Second ]--[ Second + 1 ]--[ Second + N ]----->
+      while (First->To() >= Second->To()) {
+        // Check if Second is the last in its RangeSet.
+        if (++Second == SecondEnd) {
+          // Append the Union.
+          // ---[ Union      ]--->
+          // -----[ Second ]----->
+          // --------[ First ]--->
+          //         UnionEnd^
+          Result.emplace_back(UnionStart, First->To());
+          // ---[ Union ]----------------->
+          // --------------[ First + 1]--->
+          // Append all remaining ranges from the First's RangeSet.
+          return AppendTheRest(++First, FirstEnd);
+        }
+      }
+
+      // Check if First and Second are disjoint. It means that we find
+      // the end of the Union. Exit the loop and append the Union.
+      // ---[ First ]=------------->
+      // ------------=[ Second ]--->
+      // ----MinusOne^
+      if (First->To() < Second->From() - One)
+        break;
+
+      // First is entirely inside the Union. Go next.
+      // ---[ Union ----------->
+      // ---- [ First ]-------->
+      // -------[ Second ]----->
+      // Check if First is the last in its RangeSet.
+      if (++First == FirstEnd) {
+        // Append the Union.
+        // ---[ Union       ]--->
+        // -----[ First ]------->
+        // --------[ Second ]--->
+        //          UnionEnd^
+        Result.emplace_back(UnionStart, Second->To());
+        // ---[ Union ]------------------>
+        // --------------[ Second + 1]--->
+        // Append all remaining ranges from the Second's RangeSet.
+        return AppendTheRest(++Second, SecondEnd);
+      }
+
+      // We know that we are at one of the two cases:
+      // case 1: --[ First ]--------->
+      // case 2: ----[ First ]------->
+      // --------[ Second ]---------->
+      // In both cases First starts after Second->From().
+      // Make sure that the loop invariant holds.
+      swapIterators(First, FirstEnd, Second, SecondEnd);
+    }
+
+    // Here First and Second are disjoint.
+    // Append the Union.
+    // ---[ Union    ]--------------->
+    // -----------------[ Second ]--->
+    // ------[ First ]--------------->
+    //       UnionEnd^
+    Result.emplace_back(UnionStart, First->To());
+
+    // Check if First is the last in its RangeSet.
+    if (++First == FirstEnd)
+      // ---[ Union ]--------------->
+      // --------------[ Second ]--->
+      // Append all remaining ranges from the Second's RangeSet.
+      return AppendTheRest(Second, SecondEnd);
+  }
+
+  llvm_unreachable("Normally, we should not reach here");
 }
 
 RangeSet RangeSet::Factory::getRangeSet(Range From) {
@@ -153,13 +341,6 @@ RangeSet RangeSet::Factory::makePersistent(ContainerType &&From) {
 RangeSet::ContainerType *RangeSet::Factory::construct(ContainerType &&From) {
   void *Buffer = Arena.Allocate();
   return new (Buffer) ContainerType(std::move(From));
-}
-
-RangeSet RangeSet::Factory::add(RangeSet LHS, RangeSet RHS) {
-  ContainerType Result;
-  std::merge(LHS.begin(), LHS.end(), RHS.begin(), RHS.end(),
-             std::back_inserter(Result));
-  return makePersistent(std::move(Result));
 }
 
 const llvm::APSInt &RangeSet::getMinValue() const {
@@ -325,11 +506,6 @@ RangeSet RangeSet::Factory::intersect(const RangeSet::ContainerType &LHS,
   const_iterator First = LHS.begin(), Second = RHS.begin(),
                  FirstEnd = LHS.end(), SecondEnd = RHS.end();
 
-  const auto SwapIterators = [&First, &FirstEnd, &Second, &SecondEnd]() {
-    std::swap(First, Second);
-    std::swap(FirstEnd, SecondEnd);
-  };
-
   // If we ran out of ranges in one set, but not in the other,
   // it means that those elements are definitely not in the
   // intersection.
@@ -339,7 +515,7 @@ RangeSet RangeSet::Factory::intersect(const RangeSet::ContainerType &LHS,
     //    ----[ First ---------------------->
     //    --------[ Second ----------------->
     if (Second->From() < First->From())
-      SwapIterators();
+      swapIterators(First, FirstEnd, Second, SecondEnd);
 
     // Loop where the invariant holds:
     do {
@@ -373,7 +549,7 @@ RangeSet RangeSet::Factory::intersect(const RangeSet::ContainerType &LHS,
       if (Second->To() > First->To()) {
         // Here we make a decision to keep First as the "longer"
         // range.
-        SwapIterators();
+        swapIterators(First, FirstEnd, Second, SecondEnd);
       }
 
       // At this point, we have the following situation:

@@ -1,4 +1,4 @@
-; RUN: opt < %s -globalopt -S | FileCheck %s
+; RUN: opt < %s -passes=globalopt -S | FileCheck %s
 ; CHECK-NOT: %G
 
 @G = internal global i32 0              ; <i32*> [#uses=1]

@@ -21,7 +21,7 @@ namespace llvm {
 class SourceMgr;
 class SMDiagnostic;
 class StringRef;
-} // end namespace llvm
+} // namespace llvm
 
 namespace mlir {
 class AsmParserState;
@@ -71,7 +71,7 @@ inline OwningOpRef<ContainerOpT> constructContainerOpForParserIfNecessary(
     return OwningOpRef<ContainerOpT>();
   return opRef;
 }
-} // end namespace detail
+} // namespace detail
 
 /// This parses the file specified by the indicated SourceMgr and appends parsed
 /// operations to the given block. If the block is non-empty, the operations are
@@ -256,6 +256,16 @@ Type parseType(llvm::StringRef typeStr, MLIRContext *context);
 /// `typeStr`. The number of characters of `typeStr` parsed in the process is
 /// returned in `numRead`.
 Type parseType(llvm::StringRef typeStr, MLIRContext *context, size_t &numRead);
-} // end namespace mlir
+
+/// This parses a single IntegerSet to an MLIR context if it was valid. If not,
+/// an error message is emitted through a new SourceMgrDiagnosticHandler
+/// constructed from a new SourceMgr with a single MemoryBuffer wrapping
+/// `str`. If the passed `str` has additional tokens that were not part of the
+/// IntegerSet, a failure is returned. Diagnostics are printed on failure if
+/// `printDiagnosticInfo` is true.
+IntegerSet parseIntegerSet(llvm::StringRef str, MLIRContext *context,
+                           bool printDiagnosticInfo = true);
+
+} // namespace mlir
 
 #endif // MLIR_PARSER_H

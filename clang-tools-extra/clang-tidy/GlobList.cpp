@@ -9,8 +9,8 @@
 #include "GlobList.h"
 #include "llvm/ADT/SmallString.h"
 
-using namespace clang;
-using namespace tidy;
+namespace clang {
+namespace tidy {
 
 // Returns true if GlobList starts with the negative indicator ('-'), removes it
 // from the GlobList.
@@ -62,3 +62,19 @@ bool GlobList::contains(StringRef S) const {
   }
   return false;
 }
+
+bool CachedGlobList::contains(StringRef S) const {
+  switch (auto &Result = Cache[S]) {
+  case Yes:
+    return true;
+  case No:
+    return false;
+  case None:
+    Result = GlobList::contains(S) ? Yes : No;
+    return Result == Yes;
+  }
+  llvm_unreachable("invalid enum");
+}
+
+} // namespace tidy
+} // namespace clang

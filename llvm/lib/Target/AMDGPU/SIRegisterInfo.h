@@ -77,6 +77,10 @@ public:
     return 100;
   }
 
+  const TargetRegisterClass *
+  getLargestLegalSuperClass(const TargetRegisterClass *RC,
+                            const MachineFunction &MF) const override;
+
   Register getFrameRegister(const MachineFunction &MF) const override;
 
   bool hasBasePointer(const MachineFunction &MF) const;
@@ -156,6 +160,10 @@ public:
   const TargetRegisterClass *getAGPRClassForBitWidth(unsigned BitWidth) const;
 
   LLVM_READONLY
+  const TargetRegisterClass *
+  getVectorSuperClassForBitWidth(unsigned BitWidth) const;
+
+  LLVM_READONLY
   static const TargetRegisterClass *getSGPRClassForBitWidth(unsigned BitWidth);
 
   /// Return the 'base' register class for this register.
@@ -164,7 +172,7 @@ public:
 
   /// \returns true if this class contains only SGPR registers
   static bool isSGPRClass(const TargetRegisterClass *RC) {
-    return !hasVGPRs(RC) && !hasAGPRs(RC);
+    return hasSGPRs(RC) && !hasVGPRs(RC) && !hasAGPRs(RC);
   }
 
   /// \returns true if this class ID contains only SGPR registers
@@ -176,12 +184,22 @@ public:
 
   /// \returns true if this class contains only VGPR registers
   static bool isVGPRClass(const TargetRegisterClass *RC) {
-    return hasVGPRs(RC) && !hasAGPRs(RC);
+    return hasVGPRs(RC) && !hasAGPRs(RC) && !hasSGPRs(RC);
   }
 
   /// \returns true if this class contains only AGPR registers
   static bool isAGPRClass(const TargetRegisterClass *RC) {
-    return hasAGPRs(RC) && !hasVGPRs(RC);
+    return hasAGPRs(RC) && !hasVGPRs(RC) && !hasSGPRs(RC);
+  }
+
+  /// \returns true only if this class contains both VGPR and AGPR registers
+  bool isVectorSuperClass(const TargetRegisterClass *RC) const {
+    return hasVGPRs(RC) && hasAGPRs(RC) && !hasSGPRs(RC);
+  }
+
+  /// \returns true only if this class contains both VGPR and SGPR registers
+  bool isVSSuperClass(const TargetRegisterClass *RC) const {
+    return hasVGPRs(RC) && hasSGPRs(RC) && !hasAGPRs(RC);
   }
 
   /// \returns true if this class contains VGPR registers.
@@ -192,6 +210,11 @@ public:
   /// \returns true if this class contains AGPR registers.
   static bool hasAGPRs(const TargetRegisterClass *RC) {
     return RC->TSFlags & SIRCFlags::HasAGPR;
+  }
+
+  /// \returns true if this class contains SGPR registers.
+  static bool hasSGPRs(const TargetRegisterClass *RC) {
+    return RC->TSFlags & SIRCFlags::HasSGPR;
   }
 
   /// \returns true if this class contains any vector registers.

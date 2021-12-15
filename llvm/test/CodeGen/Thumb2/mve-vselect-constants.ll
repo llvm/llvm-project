@@ -170,13 +170,16 @@ define arm_aapcs_vfpcc <4 x i32> @signbit_mask_v4i32(<4 x i32> %a, <4 x i32> %b)
 define arm_aapcs_vfpcc <2 x i64> @signbit_mask_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: signbit_mask_v2i64:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov r0, s3
 ; CHECK-NEXT:    vmov r1, s1
-; CHECK-NEXT:    asrs r0, r0, #31
+; CHECK-NEXT:    movs r0, #0
+; CHECK-NEXT:    vmov.i32 q2, #0x0
 ; CHECK-NEXT:    asrs r1, r1, #31
-; CHECK-NEXT:    vmov q0[2], q0[0], r1, r0
-; CHECK-NEXT:    vmov q0[3], q0[1], r1, r0
-; CHECK-NEXT:    vand q0, q1, q0
+; CHECK-NEXT:    bfi r0, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s3
+; CHECK-NEXT:    asrs r1, r1, #31
+; CHECK-NEXT:    bfi r0, r1, #8, #8
+; CHECK-NEXT:    vmsr p0, r0
+; CHECK-NEXT:    vpsel q0, q1, q2
 ; CHECK-NEXT:    bx lr
   %cond = icmp slt <2 x i64> %a, zeroinitializer
   %r = select <2 x i1> %cond, <2 x i64> %b, <2 x i64> zeroinitializer
@@ -219,13 +222,16 @@ define arm_aapcs_vfpcc <4 x i32> @signbit_setmask_v4i32(<4 x i32> %a, <4 x i32> 
 define arm_aapcs_vfpcc <2 x i64> @signbit_setmask_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: signbit_setmask_v2i64:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov r0, s3
 ; CHECK-NEXT:    vmov r1, s1
-; CHECK-NEXT:    asrs r0, r0, #31
+; CHECK-NEXT:    movs r0, #0
+; CHECK-NEXT:    vmov.i8 q2, #0xff
 ; CHECK-NEXT:    asrs r1, r1, #31
-; CHECK-NEXT:    vmov q0[2], q0[0], r1, r0
-; CHECK-NEXT:    vmov q0[3], q0[1], r1, r0
-; CHECK-NEXT:    vorr q0, q1, q0
+; CHECK-NEXT:    bfi r0, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s3
+; CHECK-NEXT:    asrs r1, r1, #31
+; CHECK-NEXT:    bfi r0, r1, #8, #8
+; CHECK-NEXT:    vmsr p0, r0
+; CHECK-NEXT:    vpsel q0, q2, q1
 ; CHECK-NEXT:    bx lr
   %cond = icmp slt <2 x i64> %a, zeroinitializer
   %r = select <2 x i1> %cond, <2 x i64> <i64 -1, i64 -1>, <2 x i64> %b
@@ -273,13 +279,18 @@ define arm_aapcs_vfpcc <4 x i32> @not_signbit_mask_v4i32(<4 x i32> %a, <4 x i32>
 define arm_aapcs_vfpcc <2 x i64> @not_signbit_mask_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: not_signbit_mask_v2i64:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov r0, s3
 ; CHECK-NEXT:    vmov r1, s1
-; CHECK-NEXT:    mvn.w r0, r0, asr #31
-; CHECK-NEXT:    mvn.w r1, r1, asr #31
-; CHECK-NEXT:    vmov q0[2], q0[0], r1, r0
-; CHECK-NEXT:    vmov q0[3], q0[1], r1, r0
-; CHECK-NEXT:    vand q0, q1, q0
+; CHECK-NEXT:    movs r0, #0
+; CHECK-NEXT:    vmov.i32 q2, #0x0
+; CHECK-NEXT:    cmp.w r1, #-1
+; CHECK-NEXT:    csetm r1, gt
+; CHECK-NEXT:    bfi r0, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s3
+; CHECK-NEXT:    cmp.w r1, #-1
+; CHECK-NEXT:    csetm r1, gt
+; CHECK-NEXT:    bfi r0, r1, #8, #8
+; CHECK-NEXT:    vmsr p0, r0
+; CHECK-NEXT:    vpsel q0, q1, q2
 ; CHECK-NEXT:    bx lr
   %cond = icmp sgt <2 x i64> %a, <i64 -1, i64 -1>
   %r = select <2 x i1> %cond, <2 x i64> %b, <2 x i64> zeroinitializer

@@ -30,14 +30,19 @@ PYBIND11_MODULE(_mlir, m) {
       .def_property("dialect_search_modules",
                     &PyGlobals::getDialectSearchPrefixes,
                     &PyGlobals::setDialectSearchPrefixes)
-      .def("append_dialect_search_prefix",
-           [](PyGlobals &self, std::string moduleName) {
-             self.getDialectSearchPrefixes().push_back(std::move(moduleName));
-             self.clearImportCache();
-           })
+      .def(
+          "append_dialect_search_prefix",
+          [](PyGlobals &self, std::string moduleName) {
+            self.getDialectSearchPrefixes().push_back(std::move(moduleName));
+            self.clearImportCache();
+          },
+          py::arg("module_name"))
       .def("_register_dialect_impl", &PyGlobals::registerDialectImpl,
+           py::arg("dialect_namespace"), py::arg("dialect_class"),
            "Testing hook for directly registering a dialect")
       .def("_register_operation_impl", &PyGlobals::registerOperationImpl,
+           py::arg("operation_name"), py::arg("operation_class"),
+           py::arg("raw_opview_class"),
            "Testing hook for directly registering an operation");
 
   // Aside from making the globals accessible to python, having python manage
@@ -55,6 +60,7 @@ PYBIND11_MODULE(_mlir, m) {
         PyGlobals::get().registerDialectImpl(dialectNamespace, pyClass);
         return pyClass;
       },
+      py::arg("dialect_class"),
       "Class decorator for registering a custom Dialect wrapper");
   m.def(
       "register_operation",
@@ -78,7 +84,9 @@ PYBIND11_MODULE(_mlir, m) {
               return opClass;
             });
       },
-      "Class decorator for registering a custom Operation wrapper");
+      py::arg("dialect_class"),
+      "Produce a class decorator for registering an Operation class as part of "
+      "a dialect");
 
   // Define and populate IR submodule.
   auto irModule = m.def_submodule("ir", "MLIR IR Bindings");

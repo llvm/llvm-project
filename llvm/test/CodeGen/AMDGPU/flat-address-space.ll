@@ -183,7 +183,8 @@ define amdgpu_kernel void @store_flat_i8_max_offset(i8* %fptr, i8 %x) #0 {
 }
 
 ; CHECK-LABEL: {{^}}store_flat_i8_max_offset_p1:
-; CHECK: flat_store_{{byte|b8}} v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}{{$}}
+; CIVI910: flat_store_{{byte|b8}} v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}{{$}}
+; GFX11: flat_store_{{byte|b8}} v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} dlc{{$}}
 define amdgpu_kernel void @store_flat_i8_max_offset_p1(i8* %fptr, i8 %x) #0 {
   %fptr.offset = getelementptr inbounds i8, i8* %fptr, i64 4096
   store volatile i8 %x, i8* %fptr.offset

@@ -227,7 +227,7 @@ Miscellaneous Variables
     the location of additional directories to search for header files.
 
     It is highly suggested that you append to ``CFLAGS`` and ``CPPFLAGS`` as
-    opposed to overwriting them.  The master ``Makefiles`` may already have
+    opposed to overwriting them.  The LLVM ``Makefiles`` may already have
     useful options in them that you may not want to overwrite.
 
 Placement of Object Code

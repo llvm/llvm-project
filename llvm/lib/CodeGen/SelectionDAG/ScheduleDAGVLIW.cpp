@@ -169,11 +169,11 @@ void ScheduleDAGVLIW::listScheduleTopDown() {
   releaseSuccessors(&EntrySU);
 
   // All leaves to AvailableQueue.
-  for (unsigned i = 0, e = SUnits.size(); i != e; ++i) {
+  for (SUnit &SU : SUnits) {
     // It is available if it has no predecessors.
-    if (SUnits[i].Preds.empty()) {
-      AvailableQueue->push(&SUnits[i]);
-      SUnits[i].isAvailable = true;
+    if (SU.Preds.empty()) {
+      AvailableQueue->push(&SU);
+      SU.isAvailable = true;
     }
   }
 

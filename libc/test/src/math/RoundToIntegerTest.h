@@ -36,10 +36,10 @@ private:
   using UIntType = typename FPBits::UIntType;
 
   const F zero = F(__llvm_libc::fputil::FPBits<F>::zero());
-  const F negZero = F(__llvm_libc::fputil::FPBits<F>::negZero());
+  const F neg_zero = F(__llvm_libc::fputil::FPBits<F>::neg_zero());
   const F inf = F(__llvm_libc::fputil::FPBits<F>::inf());
-  const F negInf = F(__llvm_libc::fputil::FPBits<F>::negInf());
-  const F nan = F(__llvm_libc::fputil::FPBits<F>::buildNaN(1));
+  const F neg_inf = F(__llvm_libc::fputil::FPBits<F>::neg_inf());
+  const F nan = F(__llvm_libc::fputil::FPBits<F>::build_nan(1));
   static constexpr I IntegerMin = I(1) << (sizeof(I) * 8 - 1);
   static constexpr I IntegerMax = -(IntegerMin + 1);
 
@@ -49,21 +49,21 @@ private:
     errno = 0;
 #endif
 #if math_errhandling & MATH_ERREXCEPT
-    __llvm_libc::fputil::clearExcept(FE_ALL_EXCEPT);
+    __llvm_libc::fputil::clear_except(FE_ALL_EXCEPT);
 #endif
 
     ASSERT_EQ(func(input), expected);
 
     if (expectError) {
 #if math_errhandling & MATH_ERREXCEPT
-      ASSERT_EQ(__llvm_libc::fputil::testExcept(FE_ALL_EXCEPT), FE_INVALID);
+      ASSERT_EQ(__llvm_libc::fputil::test_except(FE_ALL_EXCEPT), FE_INVALID);
 #endif
 #if math_errhandling & MATH_ERRNO
       ASSERT_EQ(errno, EDOM);
 #endif
     } else {
 #if math_errhandling & MATH_ERREXCEPT
-      ASSERT_EQ(__llvm_libc::fputil::testExcept(FE_ALL_EXCEPT), 0);
+      ASSERT_EQ(__llvm_libc::fputil::test_except(FE_ALL_EXCEPT), 0);
 #endif
 #if math_errhandling & MATH_ERRNO
       ASSERT_EQ(errno, 0);
@@ -92,20 +92,20 @@ public:
     // We will disable all exceptions so that the test will not
     // crash with SIGFPE. We can still use fetestexcept to check
     // if the appropriate flag was raised.
-    __llvm_libc::fputil::disableExcept(FE_ALL_EXCEPT);
+    __llvm_libc::fputil::disable_except(FE_ALL_EXCEPT);
 #endif
   }
 
   void doInfinityAndNaNTest(RoundToIntegerFunc func) {
     testOneInput(func, inf, IntegerMax, true);
-    testOneInput(func, negInf, IntegerMin, true);
+    testOneInput(func, neg_inf, IntegerMin, true);
     testOneInput(func, nan, IntegerMax, true);
   }
 
   void testInfinityAndNaN(RoundToIntegerFunc func) {
     if (TestModes) {
       for (int mode : roundingModes) {
-        __llvm_libc::fputil::setRound(mode);
+        __llvm_libc::fputil::set_round(mode);
         doInfinityAndNaNTest(func);
       }
     } else {
@@ -115,7 +115,7 @@ public:
 
   void doRoundNumbersTest(RoundToIntegerFunc func) {
     testOneInput(func, zero, I(0), false);
-    testOneInput(func, negZero, I(0), false);
+    testOneInput(func, neg_zero, I(0), false);
     testOneInput(func, F(1.0), I(1), false);
     testOneInput(func, F(-1.0), I(-1), false);
     testOneInput(func, F(10.0), I(10), false);
@@ -135,9 +135,9 @@ public:
     // We start with 1.0 so that the implicit bit for x86 long doubles
     // is set.
     FPBits bits(F(1.0));
-    bits.setUnbiasedExponent(exponentLimit + FPBits::exponentBias);
-    bits.setSign(1);
-    bits.setMantissa(0);
+    bits.set_unbiased_exponent(exponentLimit + FPBits::EXPONENT_BIAS);
+    bits.set_sign(1);
+    bits.set_mantissa(0);
 
     F x = F(bits);
     long mpfrResult;
@@ -149,7 +149,7 @@ public:
   void testRoundNumbers(RoundToIntegerFunc func) {
     if (TestModes) {
       for (int mode : roundingModes) {
-        __llvm_libc::fputil::setRound(mode);
+        __llvm_libc::fputil::set_round(mode);
         doRoundNumbersTest(func);
       }
     } else {
@@ -176,7 +176,7 @@ public:
   void testFractions(RoundToIntegerFunc func) {
     if (TestModes) {
       for (int mode : roundingModes) {
-        __llvm_libc::fputil::setRound(mode);
+        __llvm_libc::fputil::set_round(mode);
         doFractionsTest(func, mode);
       }
     } else {
@@ -199,14 +199,15 @@ public:
     // We start with 1.0 so that the implicit bit for x86 long doubles
     // is set.
     FPBits bits(F(1.0));
-    bits.setUnbiasedExponent(exponentLimit + FPBits::exponentBias);
-    bits.setSign(1);
-    bits.setMantissa(UIntType(0x1) << (__llvm_libc::fputil::MantissaWidth<F>::value - 1));
+    bits.set_unbiased_exponent(exponentLimit + FPBits::EXPONENT_BIAS);
+    bits.set_sign(1);
+    bits.set_mantissa(UIntType(0x1)
+                      << (__llvm_libc::fputil::MantissaWidth<F>::VALUE - 1));
 
     F x = F(bits);
     if (TestModes) {
       for (int m : roundingModes) {
-        __llvm_libc::fputil::setRound(m);
+        __llvm_libc::fputil::set_round(m);
         long mpfrLongResult;
         bool erangeflag =
             mpfr::RoundToLong(x, toMPFRRoundingMode(m), mpfrLongResult);
@@ -224,8 +225,8 @@ public:
   void testSubnormalRange(RoundToIntegerFunc func) {
     constexpr UIntType count = 1000001;
     constexpr UIntType step =
-        (FPBits::maxSubnormal - FPBits::minSubnormal) / count;
-    for (UIntType i = FPBits::minSubnormal; i <= FPBits::maxSubnormal;
+        (FPBits::MAX_SUBNORMAL - FPBits::MIN_SUBNORMAL) / count;
+    for (UIntType i = FPBits::MIN_SUBNORMAL; i <= FPBits::MAX_SUBNORMAL;
          i += step) {
       F x = F(FPBits(i));
       if (x == F(0.0))
@@ -233,22 +234,22 @@ public:
       // All subnormal numbers should round to zero.
       if (TestModes) {
         if (x > 0) {
-          __llvm_libc::fputil::setRound(FE_UPWARD);
+          __llvm_libc::fputil::set_round(FE_UPWARD);
           testOneInput(func, x, I(1), false);
-          __llvm_libc::fputil::setRound(FE_DOWNWARD);
+          __llvm_libc::fputil::set_round(FE_DOWNWARD);
           testOneInput(func, x, I(0), false);
-          __llvm_libc::fputil::setRound(FE_TOWARDZERO);
+          __llvm_libc::fputil::set_round(FE_TOWARDZERO);
           testOneInput(func, x, I(0), false);
-          __llvm_libc::fputil::setRound(FE_TONEAREST);
+          __llvm_libc::fputil::set_round(FE_TONEAREST);
           testOneInput(func, x, I(0), false);
         } else {
-          __llvm_libc::fputil::setRound(FE_UPWARD);
+          __llvm_libc::fputil::set_round(FE_UPWARD);
           testOneInput(func, x, I(0), false);
-          __llvm_libc::fputil::setRound(FE_DOWNWARD);
+          __llvm_libc::fputil::set_round(FE_DOWNWARD);
           testOneInput(func, x, I(-1), false);
-          __llvm_libc::fputil::setRound(FE_TOWARDZERO);
+          __llvm_libc::fputil::set_round(FE_TOWARDZERO);
           testOneInput(func, x, I(0), false);
-          __llvm_libc::fputil::setRound(FE_TONEAREST);
+          __llvm_libc::fputil::set_round(FE_TONEAREST);
           testOneInput(func, x, I(0), false);
         }
       } else {
@@ -267,8 +268,8 @@ public:
       return;
 
     constexpr UIntType count = 1000001;
-    constexpr UIntType step = (FPBits::maxNormal - FPBits::minNormal) / count;
-    for (UIntType i = FPBits::minNormal; i <= FPBits::maxNormal; i += step) {
+    constexpr UIntType step = (FPBits::MAX_NORMAL - FPBits::MIN_NORMAL) / count;
+    for (UIntType i = FPBits::MIN_NORMAL; i <= FPBits::MAX_NORMAL; i += step) {
       F x = F(FPBits(i));
       // In normal range on x86 platforms, the long double implicit 1 bit can be
       // zero making the numbers NaN. We will skip them.
@@ -282,7 +283,7 @@ public:
           bool erangeflag =
               mpfr::RoundToLong(x, toMPFRRoundingMode(m), mpfrLongResult);
           I mpfrResult = mpfrLongResult;
-          __llvm_libc::fputil::setRound(m);
+          __llvm_libc::fputil::set_round(m);
           if (erangeflag)
             testOneInput(func, x, x > 0 ? IntegerMax : IntegerMin, true);
           else

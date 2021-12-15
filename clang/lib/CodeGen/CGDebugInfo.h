@@ -177,7 +177,7 @@ class CGDebugInfo {
   llvm::DIType *CreateType(const BuiltinType *Ty);
   llvm::DIType *CreateType(const ComplexType *Ty);
   llvm::DIType *CreateType(const AutoType *Ty);
-  llvm::DIType *CreateType(const ExtIntType *Ty);
+  llvm::DIType *CreateType(const BitIntType *Ty);
   llvm::DIType *CreateQualifiedType(QualType Ty, llvm::DIFile *Fg,
                                     TypeLoc TL = TypeLoc());
   llvm::DIType *CreateQualifiedType(const FunctionProtoType *Ty,

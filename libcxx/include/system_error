@@ -206,13 +206,11 @@ public:
     error_category() _NOEXCEPT;
 #else
     _LIBCPP_INLINE_VISIBILITY
-    _LIBCPP_CONSTEXPR_AFTER_CXX11 error_category() _NOEXCEPT _LIBCPP_DEFAULT
+    _LIBCPP_CONSTEXPR_AFTER_CXX11 error_category() _NOEXCEPT = default;
 #endif
-private:
-    error_category(const error_category&);// = delete;
-    error_category& operator=(const error_category&);// = delete;
+    error_category(const error_category&) = delete;
+    error_category& operator=(const error_category&) = delete;
 
-public:
     virtual const char* name() const _NOEXCEPT = 0;
     virtual error_condition default_error_condition(int __ev) const _NOEXCEPT;
     virtual bool equivalent(int __code, const error_condition& __condition) const _NOEXCEPT;

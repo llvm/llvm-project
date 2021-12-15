@@ -10,8 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Transforms/Bufferize.h"
+#include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "PassDetail.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
@@ -40,8 +41,9 @@ public:
 };
 } // namespace
 
-void mlir::populateStdBufferizePatterns(BufferizeTypeConverter &typeConverter,
-                                        RewritePatternSet &patterns) {
+void mlir::populateStdBufferizePatterns(
+    bufferization::BufferizeTypeConverter &typeConverter,
+    RewritePatternSet &patterns) {
   patterns.add<BufferizeSelectOp>(typeConverter, patterns.getContext());
 }
 
@@ -49,7 +51,7 @@ namespace {
 struct StdBufferizePass : public StdBufferizeBase<StdBufferizePass> {
   void runOnFunction() override {
     auto *context = &getContext();
-    BufferizeTypeConverter typeConverter;
+    bufferization::BufferizeTypeConverter typeConverter;
     RewritePatternSet patterns(context);
     ConversionTarget target(*context);
 

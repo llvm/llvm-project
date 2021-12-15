@@ -62,7 +62,7 @@ public:
       Indent = Line.Level * IndentWidth + AdditionalIndent;
     } else {
       IndentForLevel.resize(Line.Level + 1);
-      Indent = getIndent(IndentForLevel, Line.Level);
+      Indent = getIndent(Line.Level);
     }
     if (static_cast<int>(Indent) + Offset >= 0)
       Indent += Offset;
@@ -118,12 +118,12 @@ private:
   /// \p IndentForLevel must contain the indent for the level \c l
   /// at \p IndentForLevel[l], or a value < 0 if the indent for
   /// that level is unknown.
-  unsigned getIndent(ArrayRef<int> IndentForLevel, unsigned Level) {
+  unsigned getIndent(unsigned Level) const {
     if (IndentForLevel[Level] != -1)
       return IndentForLevel[Level];
     if (Level == 0)
       return 0;
-    return getIndent(IndentForLevel, Level - 1) + Style.IndentWidth;
+    return getIndent(Level - 1) + Style.IndentWidth;
   }
 
   const FormatStyle &Style;
@@ -320,9 +320,9 @@ private:
     }
     // Try to merge a control statement block with left brace wrapped
     if (I[1]->First->is(tok::l_brace) &&
-        (TheLine->First->isOneOf(tok::kw_if, tok::kw_while, tok::kw_for,
-                                 tok::kw_switch, tok::kw_try, tok::kw_do,
-                                 TT_ForEachMacro) ||
+        (TheLine->First->isOneOf(tok::kw_if, tok::kw_else, tok::kw_while,
+                                 tok::kw_for, tok::kw_switch, tok::kw_try,
+                                 tok::kw_do, TT_ForEachMacro) ||
          (TheLine->First->is(tok::r_brace) && TheLine->First->Next &&
           TheLine->First->Next->isOneOf(tok::kw_else, tok::kw_catch))) &&
         Style.BraceWrapping.AfterControlStatement ==
@@ -335,7 +335,7 @@ private:
                  ? 1
                  : 0;
     } else if (I[1]->First->is(tok::l_brace) &&
-               TheLine->First->isOneOf(tok::kw_if, tok::kw_while,
+               TheLine->First->isOneOf(tok::kw_if, tok::kw_else, tok::kw_while,
                                        tok::kw_for)) {
       return (Style.BraceWrapping.AfterControlStatement ==
               FormatStyle::BWACS_Always)
@@ -569,7 +569,7 @@ private:
 
     // Check that the current line allows merging. This depends on whether we
     // are in a control flow statements as well as several style flags.
-    if (Line.First->isOneOf(tok::kw_else, tok::kw_case) ||
+    if (Line.First->is(tok::kw_case) ||
         (Line.First->Next && Line.First->Next->is(tok::kw_else)))
       return 0;
     // default: in switch statement
@@ -578,20 +578,21 @@ private:
       if (Tok && Tok->is(tok::colon))
         return 0;
     }
-    if (Line.First->isOneOf(tok::kw_if, tok::kw_while, tok::kw_do, tok::kw_try,
-                            tok::kw___try, tok::kw_catch, tok::kw___finally,
-                            tok::kw_for, tok::r_brace, Keywords.kw___except)) {
+    if (Line.First->isOneOf(tok::kw_if, tok::kw_else, tok::kw_while, tok::kw_do,
+                            tok::kw_try, tok::kw___try, tok::kw_catch,
+                            tok::kw___finally, tok::kw_for, tok::r_brace,
+                            Keywords.kw___except)) {
       if (Style.AllowShortBlocksOnASingleLine == FormatStyle::SBS_Never)
         return 0;
       // Don't merge when we can't except the case when
       // the control statement block is empty
       if (!Style.AllowShortIfStatementsOnASingleLine &&
-          Line.startsWith(tok::kw_if) &&
+          Line.First->isOneOf(tok::kw_if, tok::kw_else) &&
           !Style.BraceWrapping.AfterControlStatement &&
           !I[1]->First->is(tok::r_brace))
         return 0;
       if (!Style.AllowShortIfStatementsOnASingleLine &&
-          Line.startsWith(tok::kw_if) &&
+          Line.First->isOneOf(tok::kw_if, tok::kw_else) &&
           Style.BraceWrapping.AfterControlStatement ==
               FormatStyle::BWACS_Always &&
           I + 2 != E && !I[2]->First->is(tok::r_brace))
@@ -676,7 +677,7 @@ private:
         // { <-- current Line
         //   baz();
         // }
-        if (Line.First == Line.Last &&
+        if (Line.First == Line.Last && Line.First->isNot(TT_FunctionLBrace) &&
             Style.BraceWrapping.AfterControlStatement ==
                 FormatStyle::BWACS_MultiLine)
           return 0;
@@ -1014,9 +1015,9 @@ private:
     QueueType Queue;
 
     // Insert start element into queue.
-    StateNode *Node =
+    StateNode *RootNode =
         new (Allocator.Allocate()) StateNode(InitialState, false, nullptr);
-    Queue.push(QueueItem(OrderedPenalty(0, Count), Node));
+    Queue.push(QueueItem(OrderedPenalty(0, Count), RootNode));
     ++Count;
 
     unsigned Penalty = 0;
@@ -1043,9 +1044,9 @@ private:
 
       FormatDecision LastFormat = Node->State.NextToken->getDecision();
       if (LastFormat == FD_Unformatted || LastFormat == FD_Continue)
-        addNextStateToQueue(Penalty, Node, /*NewLine=*/false, &Count, &Queue);
+        addNextStateToQueue(Penalty, Node, /*NewLine=*/false, Count, Queue);
       if (LastFormat == FD_Unformatted || LastFormat == FD_Break)
-        addNextStateToQueue(Penalty, Node, /*NewLine=*/true, &Count, &Queue);
+        addNextStateToQueue(Penalty, Node, /*NewLine=*/true, Count, Queue);
     }
 
     if (Queue.empty()) {
@@ -1071,7 +1072,7 @@ private:
   /// Assume the current state is \p PreviousNode and has been reached with a
   /// penalty of \p Penalty. Insert a line break if \p NewLine is \c true.
   void addNextStateToQueue(unsigned Penalty, StateNode *PreviousNode,
-                           bool NewLine, unsigned *Count, QueueType *Queue) {
+                           bool NewLine, unsigned &Count, QueueType &Queue) {
     if (NewLine && !Indenter->canBreak(PreviousNode->State))
       return;
     if (!NewLine && Indenter->mustBreak(PreviousNode->State))
@@ -1084,8 +1085,8 @@ private:
 
     Penalty += Indenter->addTokenToState(Node->State, NewLine, true);
 
-    Queue->push(QueueItem(OrderedPenalty(Penalty, *Count), Node));
-    ++(*Count);
+    Queue.push(QueueItem(OrderedPenalty(Penalty, Count), Node));
+    ++Count;
   }
 
   /// Applies the best formatting by reconstructing the path in the

@@ -1323,7 +1323,7 @@ def int_amdgcn_s_dcache_inv :
 
 def int_amdgcn_s_memtime :
   GCCBuiltin<"__builtin_amdgcn_s_memtime">,
-  Intrinsic<[llvm_i64_ty], [], [IntrWillReturn]>;
+  Intrinsic<[llvm_i64_ty], [], [IntrNoMem, IntrHasSideEffects, IntrWillReturn]>;
 
 def int_amdgcn_s_sleep :
   GCCBuiltin<"__builtin_amdgcn_s_sleep">,
@@ -1867,7 +1867,7 @@ def int_amdgcn_s_dcache_wb_vol :
 
 def int_amdgcn_s_memrealtime :
   GCCBuiltin<"__builtin_amdgcn_s_memrealtime">,
-  Intrinsic<[llvm_i64_ty], [], [IntrWillReturn]>;
+  Intrinsic<[llvm_i64_ty], [], [IntrNoMem, IntrHasSideEffects, IntrWillReturn]>;
 
 // llvm.amdgcn.ds.permute <index> <src>
 def int_amdgcn_ds_permute :
@@ -1930,9 +1930,11 @@ def int_amdgcn_global_atomic_csub : AMDGPUGlobalAtomicRtn<llvm_i32_ty>;
 
 // uint4 llvm.amdgcn.image.bvh.intersect.ray <node_ptr>, <ray_extent>, <ray_origin>,
 //                                           <ray_dir>, <ray_inv_dir>, <texture_descr>
+// <node_ptr> is i32 or i64.
+// <ray_dir> and <ray_inv_dir> are both v3f16 or both v3f32.
 def int_amdgcn_image_bvh_intersect_ray :
   Intrinsic<[llvm_v4i32_ty],
-            [llvm_anyint_ty, llvm_float_ty, llvm_v4f32_ty, llvm_anyvector_ty,
+            [llvm_anyint_ty, llvm_float_ty, llvm_v3f32_ty, llvm_anyvector_ty,
              LLVMMatchType<1>, llvm_v4i32_ty],
             [IntrReadMem, IntrWillReturn]>;
 
@@ -1966,6 +1968,59 @@ def int_amdgcn_ds_bvh_stack_rtn :
     ],
     [ImmArg<ArgIndex<3>>, IntrWillReturn]
   >;
+
+// WMMA (Wave Matrix Multiply-Accumulate) intrinsics
+//
+// These operations perform a matrix multiplication and accumulation of
+// the form: D = A * B + C .
+
+class AMDGPUWmmaIntrinsic<LLVMType AB, LLVMType CD> :
+  GCCBuiltin<!subst("int", "__builtin", NAME)>,
+  Intrinsic<
+    [CD],               // %D
+    [
+      AB,               // %A
+      AB,               // %B
+      LLVMMatchType<0>, // %C
+    ],
+    [IntrNoMem, IntrConvergent, IntrWillReturn]
+>;
+
+class AMDGPUWmmaIntrinsicOPSEL<LLVMType AB, LLVMType CD> :
+  GCCBuiltin<!subst("int", "__builtin", NAME)>,
+  Intrinsic<
+    [CD],               // %D
+    [
+      AB,               // %A
+      AB,               // %B
+      LLVMMatchType<0>, // %C
+      llvm_i1_ty,       // %high
+    ],
+    [IntrNoMem, IntrConvergent, IntrWillReturn, ImmArg<ArgIndex<3>>]
+>;
+
+class AMDGPUWmmaIntrinsicIU<LLVMType AB, LLVMType CD> :
+  GCCBuiltin<!subst("int", "__builtin", NAME)>,
+  Intrinsic<
+    [CD],               // %D
+    [
+      llvm_i1_ty,       // %A_sign
+      AB,               // %A
+      llvm_i1_ty,       // %B_sign
+      AB,               // %B
+      LLVMMatchType<0>, // %C
+      llvm_i1_ty,       // %clamp
+    ],
+    [IntrNoMem, IntrConvergent, IntrWillReturn, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<5>>]
+>;
+
+def int_amdgcn_wmma_f32_16x16x16_f16   : AMDGPUWmmaIntrinsic<llvm_v8f32_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f32_16x16x16_bf16  : AMDGPUWmmaIntrinsic<llvm_v8i32_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f16_16x16x16_f16   : AMDGPUWmmaIntrinsicOPSEL<llvm_v8f32_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_bf16_16x16x16_bf16 : AMDGPUWmmaIntrinsicOPSEL<llvm_v8i32_ty, llvm_anyint_ty>;
+def int_amdgcn_wmma_i32_16x16x16_iu8   : AMDGPUWmmaIntrinsicIU<llvm_v4i32_ty, llvm_anyint_ty>;
+def int_amdgcn_wmma_i32_16x16x16_iu4   : AMDGPUWmmaIntrinsicIU<llvm_v2i32_ty, llvm_anyint_ty>;
+
 
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.

@@ -24,12 +24,12 @@
 // divergent can help the compiler to selectively run these optimizations.
 //
 // This implementation is derived from the Vectorization Analysis of the
-// Region Vectorizer (RV). That implementation in turn is based on the approach
-// described in
+// Region Vectorizer (RV). The analysis is based on the approach described in
 //
-//   Improving Performance of OpenCL on CPUs
-//   Ralf Karrenberg and Sebastian Hack
-//   CC '12
+//   An abstract interpretation for SPMD divergence
+//       on reducible control flow graphs.
+//   Julian Rosemann, Simon Moll and Sebastian Hack
+//   POPL '21
 //
 // This implementation is generic in the sense that it does
 // not itself identify original sources of divergence.

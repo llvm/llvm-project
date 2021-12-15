@@ -14,6 +14,7 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/CmpInstAnalysis.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -1894,23 +1895,6 @@ Instruction *InstCombinerImpl::foldICmpAndConstant(ICmpInst &Cmp,
     return new ICmpInst(NewPred, X, SubOne(cast<Constant>(Cmp.getOperand(1))));
   }
 
-  // (X & C2) == 0 -> (trunc X) >= 0
-  // (X & C2) != 0 -> (trunc X) <  0
-  //   iff C2 is a power of 2 and it masks the sign bit of a legal integer type.
-  const APInt *C2;
-  if (And->hasOneUse() && C.isZero() && match(Y, m_APInt(C2))) {
-    int32_t ExactLogBase2 = C2->exactLogBase2();
-    if (ExactLogBase2 != -1 && DL.isLegalInteger(ExactLogBase2 + 1)) {
-      Type *NTy = IntegerType::get(Cmp.getContext(), ExactLogBase2 + 1);
-      if (auto *AndVTy = dyn_cast<VectorType>(And->getType()))
-        NTy = VectorType::get(NTy, AndVTy->getElementCount());
-      Value *Trunc = Builder.CreateTrunc(X, NTy);
-      auto NewPred =
-          Pred == CmpInst::ICMP_EQ ? CmpInst::ICMP_SGE : CmpInst::ICMP_SLT;
-      return new ICmpInst(NewPred, Trunc, Constant::getNullValue(NTy));
-    }
-  }
-
   return nullptr;
 }
 
@@ -2803,7 +2787,8 @@ bool InstCombinerImpl::matchThreeWayIntCompare(SelectInst *SI, Value *&LHS,
             PredB, cast<Constant>(RHS2));
     if (!FlippedStrictness)
       return false;
-    assert(FlippedStrictness->first == ICmpInst::ICMP_SGE && "Sanity check");
+    assert(FlippedStrictness->first == ICmpInst::ICMP_SGE &&
+           "basic correctness failure");
     RHS2 = FlippedStrictness->second;
     // And kind-of perform the result swap.
     std::swap(Less, Greater);
@@ -4614,7 +4599,7 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
 
 static Instruction *foldICmpWithTrunc(ICmpInst &ICmp,
                                       InstCombiner::BuilderTy &Builder) {
-  const ICmpInst::Predicate Pred = ICmp.getPredicate();
+  ICmpInst::Predicate Pred = ICmp.getPredicate();
   Value *Op0 = ICmp.getOperand(0), *Op1 = ICmp.getOperand(1);
 
   // Try to canonicalize trunc + compare-to-constant into a mask + cmp.
@@ -4624,41 +4609,31 @@ static Instruction *foldICmpWithTrunc(ICmpInst &ICmp,
   if (!match(Op0, m_OneUse(m_Trunc(m_Value(X)))) || !match(Op1, m_APInt(C)))
     return nullptr;
 
-  unsigned SrcBits = X->getType()->getScalarSizeInBits();
-  if (Pred == ICmpInst::ICMP_ULT) {
-    if (C->isPowerOf2()) {
-      // If C is a power-of-2 (one set bit):
-      // (trunc X) u< C --> (X & -C) == 0 (are all masked-high-bits clear?)
-      Constant *MaskC = ConstantInt::get(X->getType(), (-*C).zext(SrcBits));
-      Value *And = Builder.CreateAnd(X, MaskC);
-      Constant *Zero = ConstantInt::getNullValue(X->getType());
-      return new ICmpInst(ICmpInst::ICMP_EQ, And, Zero);
-    }
-    // If C is a negative power-of-2 (high-bit mask):
-    // (trunc X) u< C --> (X & C) != C (are any masked-high-bits clear?)
-    if (C->isNegatedPowerOf2()) {
-      Constant *MaskC = ConstantInt::get(X->getType(), C->zext(SrcBits));
-      Value *And = Builder.CreateAnd(X, MaskC);
-      return new ICmpInst(ICmpInst::ICMP_NE, And, MaskC);
-    }
+  // This matches patterns corresponding to tests of the signbit as well as:
+  // (trunc X) u< C --> (X & -C) == 0 (are all masked-high-bits clear?)
+  // (trunc X) u> C --> (X & ~C) != 0 (are any masked-high-bits set?)
+  APInt Mask;
+  if (decomposeBitTestICmp(Op0, Op1, Pred, X, Mask, true /* WithTrunc */)) {
+    Value *And = Builder.CreateAnd(X, Mask);
+    Constant *Zero = ConstantInt::getNullValue(X->getType());
+    return new ICmpInst(Pred, And, Zero);
   }
 
-  if (Pred == ICmpInst::ICMP_UGT) {
-    // If C is a low-bit-mask (C+1 is a power-of-2):
-    // (trunc X) u> C --> (X & ~C) != 0 (are any masked-high-bits set?)
-    if (C->isMask()) {
-      Constant *MaskC = ConstantInt::get(X->getType(), (~*C).zext(SrcBits));
-      Value *And = Builder.CreateAnd(X, MaskC);
-      Constant *Zero = ConstantInt::getNullValue(X->getType());
-      return new ICmpInst(ICmpInst::ICMP_NE, And, Zero);
-    }
+  unsigned SrcBits = X->getType()->getScalarSizeInBits();
+  if (Pred == ICmpInst::ICMP_ULT && C->isNegatedPowerOf2()) {
+    // If C is a negative power-of-2 (high-bit mask):
+    // (trunc X) u< C --> (X & C) != C (are any masked-high-bits clear?)
+    Constant *MaskC = ConstantInt::get(X->getType(), C->zext(SrcBits));
+    Value *And = Builder.CreateAnd(X, MaskC);
+    return new ICmpInst(ICmpInst::ICMP_NE, And, MaskC);
+  }
+
+  if (Pred == ICmpInst::ICMP_UGT && (~*C).isPowerOf2()) {
     // If C is not-of-power-of-2 (one clear bit):
     // (trunc X) u> C --> (X & (C+1)) == C+1 (are all masked-high-bits set?)
-    if ((~*C).isPowerOf2()) {
-      Constant *MaskC = ConstantInt::get(X->getType(), (*C + 1).zext(SrcBits));
-      Value *And = Builder.CreateAnd(X, MaskC);
-      return new ICmpInst(ICmpInst::ICMP_EQ, And, MaskC);
-    }
+    Constant *MaskC = ConstantInt::get(X->getType(), (*C + 1).zext(SrcBits));
+    Value *And = Builder.CreateAnd(X, MaskC);
+    return new ICmpInst(ICmpInst::ICMP_EQ, And, MaskC);
   }
 
   return nullptr;

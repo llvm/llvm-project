@@ -37,7 +37,7 @@ define i32 @neg_sel_special_constant(i32 signext %a) {
 ;
 ; RV64-LABEL: neg_sel_special_constant:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addi a1, zero, 1
+; RV64-NEXT:    li a1, 1
 ; RV64-NEXT:    slli a1, a1, 31
 ; RV64-NEXT:    and a0, a0, a1
 ; RV64-NEXT:    srli a0, a0, 22
@@ -81,10 +81,10 @@ define i32 @pos_sel_constants(i32 signext %a) {
 ; CHECK-LABEL: pos_sel_constants:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mv a1, a0
-; CHECK-NEXT:    addi a0, zero, 5
+; CHECK-NEXT:    li a0, 5
 ; CHECK-NEXT:    bgez a1, .LBB4_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a0, zero
+; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:  .LBB4_2:
 ; CHECK-NEXT:    ret
   %tmp.1 = icmp sgt i32 %a, -1
@@ -106,7 +106,7 @@ define i32 @pos_sel_special_constant(i32 signext %a) {
 ;
 ; RV64-LABEL: pos_sel_special_constant:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addi a1, zero, -1
+; RV64-NEXT:    li a1, -1
 ; RV64-NEXT:    slt a0, a1, a0
 ; RV64-NEXT:    slli a0, a0, 9
 ; RV64-NEXT:    ret
@@ -121,7 +121,7 @@ define i32 @pos_sel_variable_and_zero(i32 signext %a, i32 signext %b) {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    bgez a0, .LBB6_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    mv a1, zero
+; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:  .LBB6_2:
 ; RV32I-NEXT:    mv a0, a1
 ; RV32I-NEXT:    ret
@@ -130,7 +130,7 @@ define i32 @pos_sel_variable_and_zero(i32 signext %a, i32 signext %b) {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    bgez a0, .LBB6_2
 ; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    mv a1, zero
+; RV64I-NEXT:    li a1, 0
 ; RV64I-NEXT:  .LBB6_2:
 ; RV64I-NEXT:    mv a0, a1
 ; RV64I-NEXT:    ret
@@ -158,7 +158,7 @@ define i32 @not_neg_sel_same_variable(i32 signext %a) {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    bgtz a0, .LBB7_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    mv a0, zero
+; RV32I-NEXT:    li a0, 0
 ; RV32I-NEXT:  .LBB7_2:
 ; RV32I-NEXT:    ret
 ;
@@ -166,7 +166,7 @@ define i32 @not_neg_sel_same_variable(i32 signext %a) {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    bgtz a0, .LBB7_2
 ; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    mv a0, zero
+; RV64I-NEXT:    li a0, 0
 ; RV64I-NEXT:  .LBB7_2:
 ; RV64I-NEXT:    ret
 ;
@@ -191,7 +191,7 @@ define i32 @sub_clamp_zero(i32 signext %x, i32 signext %y) {
 ; RV32I-NEXT:    sub a0, a0, a1
 ; RV32I-NEXT:    bgtz a0, .LBB8_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    mv a0, zero
+; RV32I-NEXT:    li a0, 0
 ; RV32I-NEXT:  .LBB8_2:
 ; RV32I-NEXT:    ret
 ;
@@ -200,7 +200,7 @@ define i32 @sub_clamp_zero(i32 signext %x, i32 signext %y) {
 ; RV64I-NEXT:    subw a0, a0, a1
 ; RV64I-NEXT:    bgtz a0, .LBB8_2
 ; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    mv a0, zero
+; RV64I-NEXT:    li a0, 0
 ; RV64I-NEXT:  .LBB8_2:
 ; RV64I-NEXT:    ret
 ;
@@ -225,10 +225,10 @@ define i8 @sel_shift_bool_i8(i1 %t) {
 ; CHECK-LABEL: sel_shift_bool_i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a1, a0, 1
-; CHECK-NEXT:    addi a0, zero, -128
+; CHECK-NEXT:    li a0, -128
 ; CHECK-NEXT:    bnez a1, .LBB9_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a0, zero
+; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:  .LBB9_2:
 ; CHECK-NEXT:    ret
   %shl = select i1 %t, i8 128, i8 0
@@ -260,7 +260,7 @@ define i64 @sel_shift_bool_i64(i1 %t) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    andi a0, a0, 1
 ; RV32-NEXT:    slli a0, a0, 16
-; RV32-NEXT:    mv a1, zero
+; RV32-NEXT:    li a1, 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: sel_shift_bool_i64:

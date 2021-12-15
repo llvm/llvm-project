@@ -84,15 +84,12 @@ const char *ExtractTokenUpToDelimiter(const char *str, const char *delimiter,
 
 SymbolizedStack *Symbolizer::SymbolizePC(uptr addr) {
   Lock l(&mu_);
-  const char *module_name = nullptr;
-  uptr module_offset;
-  ModuleArch arch;
   SymbolizedStack *res = SymbolizedStack::New(addr);
-  if (!FindModuleNameAndOffsetForAddress(addr, &module_name, &module_offset,
-                                         &arch))
+  auto *mod = FindModuleForAddress(addr);
+  if (!mod)
     return res;
   // Always fill data about module name and offset.
-  res->info.FillModuleInfo(module_name, module_offset, arch);
+  res->info.FillModuleInfo(*mod);
   for (auto &tool : tools_) {
     SymbolizerScope sym_scope(this);
     if (tool.SymbolizePC(addr, res)) {

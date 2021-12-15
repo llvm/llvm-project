@@ -18,9 +18,11 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/NoFolder.h"
 #include "llvm/IR/Verifier.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
+using ::testing::UnorderedElementsAre;
 
 namespace {
 
@@ -889,6 +891,71 @@ TEST_F(IRBuilderTest, createArtificialSubprogram) {
   EXPECT_EQ("foo", GSP->getName());
   EXPECT_FALSE(SP->isArtificial());
   EXPECT_TRUE(GSP->isArtificial());
+}
+
+// Check that we can add debug info to an existing DICompileUnit.
+TEST_F(IRBuilderTest, appendDebugInfo) {
+  IRBuilder<> Builder(BB);
+  Builder.CreateRetVoid();
+  EXPECT_FALSE(verifyModule(*M));
+
+  auto GetNames = [](DICompileUnit *CU) {
+    SmallVector<StringRef> Names;
+    for (auto *ET : CU->getEnumTypes())
+      Names.push_back(ET->getName());
+    for (auto *RT : CU->getRetainedTypes())
+      Names.push_back(RT->getName());
+    for (auto *GV : CU->getGlobalVariables())
+      Names.push_back(GV->getVariable()->getName());
+    for (auto *IE : CU->getImportedEntities())
+      Names.push_back(IE->getName());
+    for (auto *Node : CU->getMacros())
+      if (auto *MN = dyn_cast_or_null<DIMacro>(Node))
+        Names.push_back(MN->getName());
+    return Names;
+  };
+
+  DICompileUnit *CU;
+  {
+    DIBuilder DIB(*M);
+    auto *File = DIB.createFile("main.c", "/");
+    CU = DIB.createCompileUnit(dwarf::DW_LANG_C, File, "clang",
+                               /*isOptimized=*/true, /*Flags=*/"",
+                               /*Runtime Version=*/0);
+    auto *ByteTy = DIB.createBasicType("byte0", 8, dwarf::DW_ATE_signed);
+    DIB.createEnumerationType(CU, "ET0", File, /*LineNo=*/0, /*SizeInBits=*/8,
+                              /*AlignInBits=*/8, /*Elements=*/{}, ByteTy);
+    DIB.retainType(ByteTy);
+    DIB.createGlobalVariableExpression(CU, "GV0", /*LinkageName=*/"", File,
+                                       /*LineNo=*/1, ByteTy,
+                                       /*IsLocalToUnit=*/true);
+    DIB.createImportedDeclaration(CU, nullptr, File, /*LineNo=*/2, "IM0");
+    DIB.createMacro(nullptr, /*LineNo=*/0, dwarf::DW_MACINFO_define, "M0");
+    DIB.finalize();
+  }
+  EXPECT_FALSE(verifyModule(*M));
+  EXPECT_THAT(GetNames(CU),
+              UnorderedElementsAre("ET0", "byte0", "GV0", "IM0", "M0"));
+
+  {
+    DIBuilder DIB(*M, true, CU);
+    auto *File = CU->getFile();
+    auto *ByteTy = DIB.createBasicType("byte1", 8, dwarf::DW_ATE_signed);
+    DIB.createEnumerationType(CU, "ET1", File, /*LineNo=*/0,
+                              /*SizeInBits=*/8, /*AlignInBits=*/8,
+                              /*Elements=*/{}, ByteTy);
+    DIB.retainType(ByteTy);
+    DIB.createGlobalVariableExpression(CU, "GV1", /*LinkageName=*/"", File,
+                                       /*LineNo=*/1, ByteTy,
+                                       /*IsLocalToUnit=*/true);
+    DIB.createImportedDeclaration(CU, nullptr, File, /*LineNo=*/2, "IM1");
+    DIB.createMacro(nullptr, /*LineNo=*/0, dwarf::DW_MACINFO_define, "M1");
+    DIB.finalize();
+  }
+  EXPECT_FALSE(verifyModule(*M));
+  EXPECT_THAT(GetNames(CU),
+              UnorderedElementsAre("ET0", "byte0", "GV0", "IM0", "M0", "ET1",
+                                   "byte1", "GV1", "IM1", "M1"));
 }
 
 TEST_F(IRBuilderTest, InsertExtractElement) {

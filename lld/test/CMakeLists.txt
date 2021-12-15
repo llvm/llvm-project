@@ -37,10 +37,6 @@ if (NOT LLD_BUILT_STANDALONE)
     )
 endif()
 
-if (LLVM_INCLUDE_TESTS)
-  list(APPEND LLD_TEST_DEPS LLDUnitTests)
-endif()
-
 add_lit_testsuite(check-lld "Running lld test suite"
   ${CMAKE_CURRENT_BINARY_DIR}
   DEPENDS ${LLD_TEST_DEPS}

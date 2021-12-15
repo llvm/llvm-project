@@ -1,8 +1,8 @@
-; RUN: opt < %s -mtriple=x86_64-- -inferattrs -S | FileCheck --check-prefixes=CHECK,CHECK-NOLINUX,CHECK-UNKNOWN %s
-; RUN: opt < %s -mtriple=x86_64-- -passes=inferattrs -S | FileCheck --check-prefixes=CHECK,CHECK-NOLINUX,CHECK-UNKNOWN %s
-; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -inferattrs -S | FileCheck --check-prefixes=CHECK,CHECK-KNOWN,CHECK-NOLINUX,CHECK-DARWIN %s
-; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -inferattrs -S | FileCheck --check-prefixes=CHECK,CHECK-KNOWN,CHECK-LINUX %s
-; RUN: opt < %s -mtriple=nvptx -inferattrs -S | FileCheck --check-prefixes=CHECK-NOLINUX,CHECK-NVPTX %s
+; RUN: opt < %s -mtriple=x86_64-- -inferattrs -S | FileCheck --match-full-lines --check-prefixes=CHECK,CHECK-NOLINUX,CHECK-OPEN,CHECK-UNKNOWN %s
+; RUN: opt < %s -mtriple=x86_64-- -passes=inferattrs -S | FileCheck --match-full-lines --check-prefixes=CHECK,CHECK-NOLINUX,CHECK-OPEN,CHECK-UNKNOWN %s
+; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -inferattrs -S | FileCheck --match-full-lines --check-prefixes=CHECK,CHECK-KNOWN,CHECK-NOLINUX,CHECK-OPEN,CHECK-DARWIN %s
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -inferattrs -S | FileCheck --match-full-lines --check-prefixes=CHECK,CHECK-KNOWN,CHECK-LINUX %s
+; RUN: opt < %s -mtriple=nvptx -inferattrs -S | FileCheck --match-full-lines --check-prefixes=CHECK-NOLINUX,CHECK-NVPTX %s
 
 declare i32 @__nvvm_reflect(i8*)
 ; CHECK-NVPTX: declare noundef i32 @__nvvm_reflect(i8* noundef) [[NOFREE_NOUNWIND_READNONE:#[0-9]+]]
@@ -15,58 +15,76 @@ declare i32 @__nvvm_reflect(i8*)
 ; Use an opaque pointer type for all the (possibly opaque) structs.
 %opaque = type opaque
 
-; CHECK: declare double @__acos_finite(double)
+; CHECK-LINUX: declare double @__acos_finite(double) [[NOFREE:#[0-9]+]]
+; CHECK-NOLINUX: declare double @__acos_finite(double)
 declare double @__acos_finite(double)
 
-; CHECK: declare float @__acosf_finite(float)
+; CHECK-LINUX: declare float @__acosf_finite(float) [[NOFREE]]
+; CHECK-NOLINUX: declare float @__acosf_finite(float)
 declare float @__acosf_finite(float)
 
-; CHECK: declare double @__acosh_finite(double)
+; CHECK-LINUX: declare double @__acosh_finite(double) [[NOFREE]]
+; CHECK-NOLINUX: declare double @__acosh_finite(double)
 declare double @__acosh_finite(double)
 
-; CHECK: declare float @__acoshf_finite(float)
+; CHECK-LINUX: declare float @__acoshf_finite(float) [[NOFREE]]
+; CHECK-NOLINUX: declare float @__acoshf_finite(float)
 declare float @__acoshf_finite(float)
 
-; CHECK: declare x86_fp80 @__acoshl_finite(x86_fp80)
+; CHECK-LINUX: declare x86_fp80 @__acoshl_finite(x86_fp80) [[NOFREE]]
+; CHECK-NOLINUX: declare x86_fp80 @__acoshl_finite(x86_fp80)
 declare x86_fp80 @__acoshl_finite(x86_fp80)
 
-; CHECK: declare x86_fp80 @__acosl_finite(x86_fp80)
+; CHECK-LINUX: declare x86_fp80 @__acosl_finite(x86_fp80) [[NOFREE]]
+; CHECK-NOLINUX: declare x86_fp80 @__acosl_finite(x86_fp80)
 declare x86_fp80 @__acosl_finite(x86_fp80)
 
-; CHECK: declare double @__asin_finite(double)
+; CHECK-LINUX: declare double @__asin_finite(double) [[NOFREE]]
+; CHECK-NOLINUX: declare double @__asin_finite(double)
 declare double @__asin_finite(double)
 
-; CHECK: declare float @__asinf_finite(float)
+; CHECK-LINUX: declare float @__asinf_finite(float) [[NOFREE]]
+; CHECK-NOLINUX: declare float @__asinf_finite(float)
 declare float @__asinf_finite(float)
 
-; CHECK: declare x86_fp80 @__asinl_finite(x86_fp80)
+; CHECK-LINUX: declare x86_fp80 @__asinl_finite(x86_fp80) [[NOFREE]]
+; CHECK-NOLINUX: declare x86_fp80 @__asinl_finite(x86_fp80)
 declare x86_fp80 @__asinl_finite(x86_fp80)
 
-; CHECK: declare double @__atan2_finite(double, double)
+; CHECK-LINUX: declare double @__atan2_finite(double, double) [[NOFREE]]
+; CHECK-NOLINUX: declare double @__atan2_finite(double, double)
 declare double @__atan2_finite(double, double)
 
-; CHECK: declare float @__atan2f_finite(float, float)
+; CHECK-LINUX: declare float @__atan2f_finite(float, float) [[NOFREE]]
+; CHECK-NOLINUX: declare float @__atan2f_finite(float, float)
 declare float @__atan2f_finite(float, float)
 
-; CHECK: declare x86_fp80 @__atan2l_finite(x86_fp80, x86_fp80)
+; CHECK-LINUX: declare x86_fp80 @__atan2l_finite(x86_fp80, x86_fp80) [[NOFREE]]
+; CHECK-NOLINUX: declare x86_fp80 @__atan2l_finite(x86_fp80, x86_fp80)
 declare x86_fp80 @__atan2l_finite(x86_fp80, x86_fp80)
 
-; CHECK: declare double @__atanh_finite(double)
+; CHECK-LINUX: declare double @__atanh_finite(double) [[NOFREE]]
+; CHECK-NOLINUX: declare double @__atanh_finite(double)
 declare double @__atanh_finite(double)
 
-; CHECK: declare float @__atanhf_finite(float)
+; CHECK-LINUX: declare float @__atanhf_finite(float) [[NOFREE]]
+; CHECK-NOLINUX: declare float @__atanhf_finite(float)
 declare float @__atanhf_finite(float)
 
-; CHECK: declare x86_fp80 @__atanhl_finite(x86_fp80)
+; CHECK-LINUX: declare x86_fp80 @__atanhl_finite(x86_fp80) [[NOFREE]]
+; CHECK-NOLINUX: declare x86_fp80 @__atanhl_finite(x86_fp80)
 declare x86_fp80 @__atanhl_finite(x86_fp80)
 
-; CHECK: declare double @__cosh_finite(double)
+; CHECK-LINUX: declare double @__cosh_finite(double) [[NOFREE]]
+; CHECK-NOLINUX: declare double @__cosh_finite(double)
 declare double @__cosh_finite(double)
 
-; CHECK: declare float @__coshf_finite(float)
+; CHECK-LINUX: declare float @__coshf_finite(float) [[NOFREE]]
+; CHECK-NOLINUX: declare float @__coshf_finite(float)
 declare float @__coshf_finite(float)
 
-; CHECK: declare x86_fp80 @__coshl_finite(x86_fp80)
+; CHECK-LINUX: declare x86_fp80 @__coshl_finite(x86_fp80) [[NOFREE]]
+; CHECK-NOLINUX: declare x86_fp80 @__coshl_finite(x86_fp80)
 declare x86_fp80 @__coshl_finite(x86_fp80)
 
 ; CHECK: declare double @__cospi(double)
@@ -75,76 +93,100 @@ declare double @__cospi(double)
 ; CHECK: declare float @__cospif(float)
 declare float @__cospif(float)
 
-; CHECK: declare double @__exp10_finite(double)
+; CHECK-LINUX: declare double @__exp10_finite(double) [[NOFREE]]
+; CHECK-NOLINUX: declare double @__exp10_finite(double)
 declare double @__exp10_finite(double)
 
-; CHECK: declare float @__exp10f_finite(float)
+; CHECK-LINUX: declare float @__exp10f_finite(float) [[NOFREE]]
+; CHECK-NOLINUX: declare float @__exp10f_finite(float)
 declare float @__exp10f_finite(float)
 
-; CHECK: declare x86_fp80 @__exp10l_finite(x86_fp80)
+; CHECK-LINUX: declare x86_fp80 @__exp10l_finite(x86_fp80) [[NOFREE]]
+; CHECK-NOLINUX: declare x86_fp80 @__exp10l_finite(x86_fp80)
 declare x86_fp80 @__exp10l_finite(x86_fp80)
 
-; CHECK: declare double @__exp2_finite(double)
+; CHECK-LINUX: declare double @__exp2_finite(double) [[NOFREE]]
+; CHECK-NOLINUX: declare double @__exp2_finite(double)
 declare double @__exp2_finite(double)
 
-; CHECK: declare float @__exp2f_finite(float)
+; CHECK-LINUX: declare float @__exp2f_finite(float) [[NOFREE]]
+; CHECK-NOLINUX: declare float @__exp2f_finite(float)
 declare float @__exp2f_finite(float)
 
-; CHECK: declare x86_fp80 @__exp2l_finite(x86_fp80)
+; CHECK-LINUX: declare x86_fp80 @__exp2l_finite(x86_fp80) [[NOFREE]]
+; CHECK-NOLINUX: declare x86_fp80 @__exp2l_finite(x86_fp80)
 declare x86_fp80 @__exp2l_finite(x86_fp80)
 
-; CHECK: declare double @__exp_finite(double)
+; CHECK-LINUX: declare double @__exp_finite(double) [[NOFREE]]
+; CHECK-NOLINUX: declare double @__exp_finite(double)
 declare double @__exp_finite(double)
 
-; CHECK: declare float @__expf_finite(float)
+; CHECK-LINUX: declare float @__expf_finite(float) [[NOFREE]]
+; CHECK-NOLINUX: declare float @__expf_finite(float)
 declare float @__expf_finite(float)
 
-; CHECK: declare x86_fp80 @__expl_finite(x86_fp80)
+; CHECK-LINUX: declare x86_fp80 @__expl_finite(x86_fp80) [[NOFREE]]
+; CHECK-NOLINUX: declare x86_fp80 @__expl_finite(x86_fp80)
 declare x86_fp80 @__expl_finite(x86_fp80)
 
-; CHECK: declare double @__log10_finite(double)
+; CHECK-LINUX: declare double @__log10_finite(double) [[NOFREE]]
+; CHECK-NOLINUX: declare double @__log10_finite(double)
 declare double @__log10_finite(double)
 
-; CHECK: declare float @__log10f_finite(float)
+; CHECK-LINUX: declare float @__log10f_finite(float) [[NOFREE]]
+; CHECK-NOLINUX: declare float @__log10f_finite(float)
 declare float @__log10f_finite(float)
 
-; CHECK: declare x86_fp80 @__log10l_finite(x86_fp80)
+; CHECK-LINUX: declare x86_fp80 @__log10l_finite(x86_fp80) [[NOFREE]]
+; CHECK-NOLINUX: declare x86_fp80 @__log10l_finite(x86_fp80)
 declare x86_fp80 @__log10l_finite(x86_fp80)
 
-; CHECK: declare double @__log2_finite(double)
+; CHECK-LINUX: declare double @__log2_finite(double) [[NOFREE]]
+; CHECK-NOLINUX: declare double @__log2_finite(double)
 declare double @__log2_finite(double)
 
-; CHECK: declare float @__log2f_finite(float)
+; CHECK-LINUX: declare float @__log2f_finite(float) [[NOFREE]]
+; CHECK-NOLINUX: declare float @__log2f_finite(float)
 declare float @__log2f_finite(float)
 
-; CHECK: declare x86_fp80 @__log2l_finite(x86_fp80)
+; CHECK-LINUX: declare x86_fp80 @__log2l_finite(x86_fp80) [[NOFREE]]
+; CHECK-NOLINUX: declare x86_fp80 @__log2l_finite(x86_fp80)
 declare x86_fp80 @__log2l_finite(x86_fp80)
 
-; CHECK: declare double @__log_finite(double)
+; CHECK-LINUX: declare double @__log_finite(double) [[NOFREE]]
+; CHECK-NOLINUX: declare double @__log_finite(double)
 declare double @__log_finite(double)
 
-; CHECK: declare float @__logf_finite(float)
+; CHECK-LINUX: declare float @__logf_finite(float) [[NOFREE]]
+; CHECK-NOLINUX: declare float @__logf_finite(float)
 declare float @__logf_finite(float)
 
-; CHECK: declare x86_fp80 @__logl_finite(x86_fp80)
+; CHECK-LINUX: declare x86_fp80 @__logl_finite(x86_fp80) [[NOFREE]]
+; CHECK-NOLINUX: declare x86_fp80 @__logl_finite(x86_fp80)
 declare x86_fp80 @__logl_finite(x86_fp80)
 
-; CHECK: declare double @__pow_finite(double, double)
+; CHECK-LINUX: declare double @__pow_finite(double, double) [[NOFREE]]
+; CHECK-NOLINUX: declare double @__pow_finite(double, double)
 declare double @__pow_finite(double, double)
 
-; CHECK: declare float @__powf_finite(float, float)
+; CHECK-LINUX: declare float @__powf_finite(float, float) [[NOFREE]]
+; CHECK-NOLINUX: declare float @__powf_finite(float, float)
 declare float @__powf_finite(float, float)
 
-; CHECK: declare x86_fp80 @__powl_finite(x86_fp80, x86_fp80)
+; CHECK-LINUX: declare x86_fp80 @__powl_finite(x86_fp80, x86_fp80) [[NOFREE]]
+; CHECK-NOLINUX: declare x86_fp80 @__powl_finite(x86_fp80, x86_fp80)
 declare x86_fp80 @__powl_finite(x86_fp80, x86_fp80)
 
-; CHECK: declare double @__sinh_finite(double)
+; CHECK-LINUX: declare double @__sinh_finite(double) [[NOFREE]]
+; CHECK-NOLINUX: declare double @__sinh_finite(double)
 declare double @__sinh_finite(double)
 
-; CHECK: declare float @__sinhf_finite(float)
+; CHECK-LINUX: declare float @__sinhf_finite(float) [[NOFREE]]
+; CHECK-NOLINUX: declare float @__sinhf_finite(float)
 declare float @__sinhf_finite(float)
 
-; CHECK: declare x86_fp80 @__sinhl_finite(x86_fp80)
+; CHECK-LINUX: declare x86_fp80 @__sinhl_finite(x86_fp80) [[NOFREE]]
+; CHECK-NOLINUX: declare x86_fp80 @__sinhl_finite(x86_fp80)
 declare x86_fp80 @__sinhl_finite(x86_fp80)
 
 ; CHECK: declare double @__sinpi(double)
@@ -631,7 +673,7 @@ declare i32 @memcmp(i8*, i8*, i64)
 ; CHECK: declare i8* @memcpy(i8* noalias returned writeonly, i8* noalias nocapture readonly, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
 declare i8* @memcpy(i8*, i8*, i64)
 
-; CHECK: declare i8* @__memcpy_chk(i8*, i8*, i64, i64) [[NOFREE_NOUNWIND]]
+; CHECK: declare i8* @__memcpy_chk(i8* noalias writeonly, i8* noalias nocapture readonly, i64, i64) [[ARGMEMONLY_NOFREE_NOUNWIND:#[0-9]+]]
 declare i8* @__memcpy_chk(i8*, i8*, i64, i64)
 
 ; CHECK: declare i8* @mempcpy(i8* noalias writeonly, i8* noalias nocapture readonly, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
@@ -642,6 +684,9 @@ declare i8* @memmove(i8*, i8*, i64)
 
 ; CHECK: declare i8* @memset(i8* writeonly, i32, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
 declare i8* @memset(i8*, i32, i64)
+
+; CHECK: declare i8* @__memset_chk(i8* writeonly, i32, i64, i64) [[ARGMEMONLY_NOFREE_NOUNWIND]]
+declare i8* @__memset_chk(i8*, i32, i64, i64)
 
 ; CHECK: declare noundef i32 @mkdir(i8* nocapture noundef readonly, i16 noundef zeroext) [[NOFREE_NOUNWIND]]
 declare i32 @mkdir(i8*, i16 zeroext)
@@ -667,7 +712,8 @@ declare float @nearbyintf(float)
 ; CHECK: declare x86_fp80 @nearbyintl(x86_fp80) [[NOFREE_NOUNWIND_WILLRETURN]]
 declare x86_fp80 @nearbyintl(x86_fp80)
 
-; CHECK: declare noundef i32 @open(i8* nocapture noundef readonly, i32 noundef, ...) [[NOFREE:#[0-9]+]]
+; CHECK-LINUX: declare noundef i32 @open(i8* nocapture noundef readonly, i32 noundef, ...) [[NOFREE]]
+; CHECK-OPEN: declare noundef i32 @open(i8* nocapture noundef readonly, i32 noundef, ...) [[NOFREE:#[0-9]+]]
 declare i32 @open(i8*, i32, ...)
 
 ; CHECK-LINUX: declare noundef i32 @open64(i8* nocapture noundef readonly, i32 noundef, ...) [[NOFREE]]
@@ -1008,8 +1054,12 @@ declare i32 @vsscanf(i8*, i8*, %opaque*)
 declare i64 @write(i32, i8*, i64)
 
 
-; memset_pattern16 isn't available everywhere.
-; CHECK-DARWIN: declare void @memset_pattern16(i8* nocapture writeonly, i8* nocapture readonly, i64) [[ARGMEMONLY_NOFREE:#[0-9]+]]
+; memset_pattern{4,8,16} aren't available everywhere.
+; CHECK-DARWIN: declare void @memset_pattern4(i8* nocapture writeonly, i8* nocapture readonly, i64) [[ARGMEMONLY_NOFREE:#[0-9]+]]
+declare void @memset_pattern4(i8*, i8*, i64)
+; CHECK-DARWIN: declare void @memset_pattern8(i8* nocapture writeonly, i8* nocapture readonly, i64) [[ARGMEMONLY_NOFREE]]
+declare void @memset_pattern8(i8*, i8*, i64)
+; CHECK-DARWIN: declare void @memset_pattern16(i8* nocapture writeonly, i8* nocapture readonly, i64) [[ARGMEMONLY_NOFREE]]
 declare void @memset_pattern16(i8*, i8*, i64)
 
 
@@ -1025,6 +1075,7 @@ declare void @memset_pattern16(i8*, i8*, i64)
 ; CHECK-DAG: attributes [[NOFREE]] = { nofree }
 ; CHECK-DAG: attributes [[WILLRETURN]] = { mustprogress willreturn }
 ; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGONLY_NOFREE_NOUNWIND_WILLRETURN]]  = { inaccessiblemem_or_argmemonly mustprogress nofree nounwind willreturn }
+; CHECK-DAG: attributes [[ARGMEMONLY_NOFREE_NOUNWIND]] = { argmemonly nofree nounwind }
 
 ; CHECK-DARWIN-DAG: attributes [[ARGMEMONLY_NOFREE]] = { argmemonly nofree }
 ; CHECK-NVPTX-DAG: attributes [[NOFREE_NOUNWIND_READNONE]] = { nofree nosync nounwind readnone }

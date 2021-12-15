@@ -455,6 +455,9 @@ def FeatureEL2VMSA : SubtargetFeature<"el2vmsa", "HasEL2VMSA", "true",
 def FeatureEL3 : SubtargetFeature<"el3", "HasEL3", "true",
   "Enable Exception Level 3">;
 
+def FeatureFixCortexA53_835769 : SubtargetFeature<"fix-cortex-a53-835769",
+  "FixCortexA53_835769", "true", "Mitigate Cortex-A53 Erratum 835769">;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //

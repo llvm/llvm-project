@@ -38,7 +38,7 @@ struct PipelineDataTransfer
   std::vector<AffineForOp> forOps;
 };
 
-} // end anonymous namespace
+} // namespace
 
 /// Creates a pass to pipeline explicit movement of data across levels of the
 /// memory hierarchy.

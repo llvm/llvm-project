@@ -5,7 +5,7 @@
 define <4 x i16> @shuffle_v4i16(<4 x i16> %x, <4 x i16> %y) {
 ; CHECK-LABEL: shuffle_v4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 11
+; CHECK-NEXT:    li a0, 11
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
@@ -18,7 +18,7 @@ define <4 x i16> @shuffle_v4i16(<4 x i16> %x, <4 x i16> %y) {
 define <8 x i32> @shuffle_v8i32(<8 x i32> %x, <8 x i32> %y) {
 ; CHECK-LABEL: shuffle_v8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 203
+; CHECK-NEXT:    li a0, 203
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
@@ -31,7 +31,7 @@ define <8 x i32> @shuffle_v8i32(<8 x i32> %x, <8 x i32> %y) {
 define <4 x i16> @shuffle_xv_v4i16(<4 x i16> %x) {
 ; CHECK-LABEL: shuffle_xv_v4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 9
+; CHECK-NEXT:    li a0, 9
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
@@ -44,7 +44,7 @@ define <4 x i16> @shuffle_xv_v4i16(<4 x i16> %x) {
 define <4 x i16> @shuffle_vx_v4i16(<4 x i16> %x) {
 ; CHECK-LABEL: shuffle_vx_v4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 6
+; CHECK-NEXT:    li a0, 6
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
@@ -90,7 +90,7 @@ define <4 x i16> @vrgather_shuffle_vv_v4i16(<4 x i16> %x, <4 x i16> %y) {
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
 ; CHECK-NEXT:    vle16.v v11, (a0)
 ; CHECK-NEXT:    vrgather.vv v10, v8, v11
-; CHECK-NEXT:    addi a0, zero, 8
+; CHECK-NEXT:    li a0, 8
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
@@ -104,7 +104,7 @@ define <4 x i16> @vrgather_shuffle_vv_v4i16(<4 x i16> %x, <4 x i16> %y) {
 define <4 x i16> @vrgather_shuffle_xv_v4i16(<4 x i16> %x) {
 ; CHECK-LABEL: vrgather_shuffle_xv_v4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 12
+; CHECK-NEXT:    li a0, 12
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
@@ -123,7 +123,7 @@ define <4 x i16> @vrgather_shuffle_vx_v4i16(<4 x i16> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
 ; CHECK-NEXT:    vid.v v9
-; CHECK-NEXT:    addi a0, zero, 3
+; CHECK-NEXT:    li a0, 3
 ; CHECK-NEXT:    vmul.vx v10, v9, a0
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; CHECK-NEXT:    vmv.s.x v0, a0
@@ -189,7 +189,7 @@ define <8 x i64> @vrgather_permute_shuffle_uv_v8i64(<8 x i64> %x) {
 define <8 x i64> @vrgather_shuffle_vv_v8i64(<8 x i64> %x, <8 x i64> %y) {
 ; RV32-LABEL: vrgather_shuffle_vv_v8i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi a0, zero, 5
+; RV32-NEXT:    li a0, 5
 ; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
 ; RV32-NEXT:    vmv.s.x v16, a0
 ; RV32-NEXT:    vmv.v.i v20, 2
@@ -201,7 +201,7 @@ define <8 x i64> @vrgather_shuffle_vv_v8i64(<8 x i64> %x, <8 x i64> %y) {
 ; RV32-NEXT:    vle16.v v21, (a0)
 ; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
 ; RV32-NEXT:    vrgatherei16.vv v16, v8, v21
-; RV32-NEXT:    addi a0, zero, 164
+; RV32-NEXT:    li a0, 164
 ; RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; RV32-NEXT:    vmv.s.x v0, a0
 ; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
@@ -211,7 +211,7 @@ define <8 x i64> @vrgather_shuffle_vv_v8i64(<8 x i64> %x, <8 x i64> %y) {
 ;
 ; RV64-LABEL: vrgather_shuffle_vv_v8i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addi a0, zero, 5
+; RV64-NEXT:    li a0, 5
 ; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
 ; RV64-NEXT:    vmv.s.x v16, a0
 ; RV64-NEXT:    vmv.v.i v20, 2
@@ -222,7 +222,7 @@ define <8 x i64> @vrgather_shuffle_vv_v8i64(<8 x i64> %x, <8 x i64> %y) {
 ; RV64-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
 ; RV64-NEXT:    vle64.v v24, (a0)
 ; RV64-NEXT:    vrgather.vv v16, v8, v24
-; RV64-NEXT:    addi a0, zero, 164
+; RV64-NEXT:    li a0, 164
 ; RV64-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; RV64-NEXT:    vmv.s.x v0, a0
 ; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
@@ -243,7 +243,7 @@ define <8 x i64> @vrgather_shuffle_xv_v8i64(<8 x i64> %x) {
 ; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
 ; RV32-NEXT:    vmv.v.i v20, -1
 ; RV32-NEXT:    vrgatherei16.vv v12, v20, v16
-; RV32-NEXT:    addi a0, zero, 113
+; RV32-NEXT:    li a0, 113
 ; RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; RV32-NEXT:    vmv.s.x v0, a0
 ; RV32-NEXT:    lui a0, %hi(.LCPI12_1)
@@ -257,7 +257,7 @@ define <8 x i64> @vrgather_shuffle_xv_v8i64(<8 x i64> %x) {
 ;
 ; RV64-LABEL: vrgather_shuffle_xv_v8i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addi a0, zero, 113
+; RV64-NEXT:    li a0, 113
 ; RV64-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; RV64-NEXT:    vmv.s.x v0, a0
 ; RV64-NEXT:    lui a0, %hi(.LCPI12_0)
@@ -282,7 +282,7 @@ define <8 x i64> @vrgather_shuffle_vx_v8i64(<8 x i64> %x) {
 ; RV32-NEXT:    vmv4r.v v12, v8
 ; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
 ; RV32-NEXT:    vrgatherei16.vv v8, v12, v16
-; RV32-NEXT:    addi a0, zero, 140
+; RV32-NEXT:    li a0, 140
 ; RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; RV32-NEXT:    vmv.s.x v0, a0
 ; RV32-NEXT:    lui a0, %hi(.LCPI13_1)
@@ -296,7 +296,7 @@ define <8 x i64> @vrgather_shuffle_vx_v8i64(<8 x i64> %x) {
 ;
 ; RV64-LABEL: vrgather_shuffle_vx_v8i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addi a0, zero, 115
+; RV64-NEXT:    li a0, 115
 ; RV64-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; RV64-NEXT:    vmv.s.x v0, a0
 ; RV64-NEXT:    lui a0, %hi(.LCPI13_0)
@@ -318,7 +318,7 @@ define <4 x i8> @interleave_shuffles(<4 x i8> %x) {
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
 ; CHECK-NEXT:    vrgather.vi v9, v8, 1
-; CHECK-NEXT:    addi a1, zero, 10
+; CHECK-NEXT:    li a1, 10
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; CHECK-NEXT:    vmv.s.x v0, a1
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
@@ -349,7 +349,7 @@ define <8 x i8> @splat_ve4_ins_i0ve2(<8 x i8> %v) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.i v10, 4
-; CHECK-NEXT:    addi a0, zero, 2
+; CHECK-NEXT:    li a0, 2
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, tu, mu
 ; CHECK-NEXT:    vmv.s.x v10, a0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, mu
@@ -363,7 +363,7 @@ define <8 x i8> @splat_ve4_ins_i0ve2(<8 x i8> %v) {
 define <8 x i8> @splat_ve4_ins_i1ve3(<8 x i8> %v) {
 ; CHECK-LABEL: splat_ve4_ins_i1ve3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 3
+; CHECK-NEXT:    li a0, 3
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.s.x v9, a0
 ; CHECK-NEXT:    vmv.v.i v10, 4
@@ -380,7 +380,7 @@ define <8 x i8> @splat_ve4_ins_i1ve3(<8 x i8> %v) {
 define <8 x i8> @splat_ve2_we0(<8 x i8> %v, <8 x i8> %w) {
 ; CHECK-LABEL: splat_ve2_we0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 66
+; CHECK-NEXT:    li a0, 66
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
@@ -397,12 +397,12 @@ define <8 x i8> @splat_ve2_we0_ins_i0ve4(<8 x i8> %v, <8 x i8> %w) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.i v11, 2
-; CHECK-NEXT:    addi a0, zero, 4
+; CHECK-NEXT:    li a0, 4
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, tu, mu
 ; CHECK-NEXT:    vmv.s.x v11, a0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, mu
 ; CHECK-NEXT:    vrgather.vv v10, v8, v11
-; CHECK-NEXT:    addi a0, zero, 66
+; CHECK-NEXT:    li a0, 66
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
@@ -416,7 +416,7 @@ define <8 x i8> @splat_ve2_we0_ins_i0ve4(<8 x i8> %v, <8 x i8> %w) {
 define <8 x i8> @splat_ve2_we0_ins_i0we4(<8 x i8> %v, <8 x i8> %w) {
 ; CHECK-LABEL: splat_ve2_we0_ins_i0we4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 67
+; CHECK-NEXT:    li a0, 67
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
@@ -440,7 +440,7 @@ define <8 x i8> @splat_ve2_we0_ins_i2ve4(<8 x i8> %v, <8 x i8> %w) {
 ; RV32-NEXT:    vmv.v.x v11, a0
 ; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; RV32-NEXT:    vrgather.vv v10, v8, v11
-; RV32-NEXT:    addi a0, zero, 66
+; RV32-NEXT:    li a0, 66
 ; RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; RV32-NEXT:    vmv.s.x v0, a0
 ; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
@@ -456,7 +456,7 @@ define <8 x i8> @splat_ve2_we0_ins_i2ve4(<8 x i8> %v, <8 x i8> %w) {
 ; RV64-NEXT:    vmv.v.x v11, a0
 ; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; RV64-NEXT:    vrgather.vv v10, v8, v11
-; RV64-NEXT:    addi a0, zero, 66
+; RV64-NEXT:    li a0, 66
 ; RV64-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; RV64-NEXT:    vmv.s.x v0, a0
 ; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
@@ -470,13 +470,13 @@ define <8 x i8> @splat_ve2_we0_ins_i2ve4(<8 x i8> %v, <8 x i8> %w) {
 define <8 x i8> @splat_ve2_we0_ins_i2we4(<8 x i8> %v, <8 x i8> %w) {
 ; CHECK-LABEL: splat_ve2_we0_ins_i2we4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 4
+; CHECK-NEXT:    li a0, 4
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.s.x v10, a0
 ; CHECK-NEXT:    vmv.v.i v11, 0
 ; CHECK-NEXT:    vsetivli zero, 3, e8, mf2, tu, mu
 ; CHECK-NEXT:    vslideup.vi v11, v10, 2
-; CHECK-NEXT:    addi a0, zero, 70
+; CHECK-NEXT:    li a0, 70
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
@@ -491,7 +491,7 @@ define <8 x i8> @splat_ve2_we0_ins_i2we4(<8 x i8> %v, <8 x i8> %w) {
 define <8 x i8> @splat_ve2_we0_ins_i2ve4_i5we6(<8 x i8> %v, <8 x i8> %w) {
 ; RV32-LABEL: splat_ve2_we0_ins_i2ve4_i5we6:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi a0, zero, 6
+; RV32-NEXT:    li a0, 6
 ; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; RV32-NEXT:    vmv.s.x v10, a0
 ; RV32-NEXT:    vmv.v.i v11, 0
@@ -503,7 +503,7 @@ define <8 x i8> @splat_ve2_we0_ins_i2ve4_i5we6(<8 x i8> %v, <8 x i8> %w) {
 ; RV32-NEXT:    vmv.v.x v12, a0
 ; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; RV32-NEXT:    vrgather.vv v10, v8, v12
-; RV32-NEXT:    addi a0, zero, 98
+; RV32-NEXT:    li a0, 98
 ; RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; RV32-NEXT:    vmv.s.x v0, a0
 ; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
@@ -513,7 +513,7 @@ define <8 x i8> @splat_ve2_we0_ins_i2ve4_i5we6(<8 x i8> %v, <8 x i8> %w) {
 ;
 ; RV64-LABEL: splat_ve2_we0_ins_i2ve4_i5we6:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addi a0, zero, 6
+; RV64-NEXT:    li a0, 6
 ; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; RV64-NEXT:    vmv.s.x v10, a0
 ; RV64-NEXT:    vmv.v.i v11, 0
@@ -525,7 +525,7 @@ define <8 x i8> @splat_ve2_we0_ins_i2ve4_i5we6(<8 x i8> %v, <8 x i8> %w) {
 ; RV64-NEXT:    vmv.v.x v12, a0
 ; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; RV64-NEXT:    vrgather.vv v10, v8, v12
-; RV64-NEXT:    addi a0, zero, 98
+; RV64-NEXT:    li a0, 98
 ; RV64-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; RV64-NEXT:    vmv.s.x v0, a0
 ; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu

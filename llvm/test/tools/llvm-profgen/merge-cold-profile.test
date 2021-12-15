@@ -1,17 +1,17 @@
 ; Used the data from recursion-compression.test, refer it for the unmerged output
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t1 --compress-recursion=-1 --profile-summary-hot-count=8
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t1 --compress-recursion=-1 --profile-summary-hot-count=8 --csspgo-preinliner=0
 ; RUN: FileCheck %s --input-file %t1
 
-; Test --csprof-trim-cold-context=0
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t2 --compress-recursion=-1 --profile-summary-hot-count=100 --csprof-trim-cold-context=0
+; Test --trim-cold-profile=0
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t2 --compress-recursion=-1 --profile-summary-hot-count=100 --trim-cold-profile=0 --csspgo-preinliner=0
 ; RUN: FileCheck %s --input-file %t2 --check-prefix=CHECK-KEEP-COLD
 
 ; Test --csprof-merge-cold-context=0
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t3 --compress-recursion=-1 --profile-summary-hot-count=10 --csprof-merge-cold-context=0
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t3 --compress-recursion=-1 --profile-summary-hot-count=10 --csprof-merge-cold-context=0 --csspgo-preinliner=0
 ; RUN: FileCheck %s --input-file %t3 --check-prefix=CHECK-UNMERGED
 
 ; Test --csprof-frame-depth-for-cold-context
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t2 --compress-recursion=-1 --profile-summary-hot-count=100 --csprof-trim-cold-context=0 --csprof-max-cold-context-depth=2
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t2 --compress-recursion=-1 --profile-summary-hot-count=100 --trim-cold-profile=0 --csprof-max-cold-context-depth=2 --csspgo-preinliner=0
 ; RUN: FileCheck %s --input-file %t2 --check-prefix=CHECK-COLD-CONTEXT-LENGTH
 
 ; CHECK:     [fa]:14:4
@@ -23,7 +23,6 @@
 ; CHECK-NEXT: 7: 2 fb:2
 ; CHECK-NEXT: 8: 1 fa:1
 ; CHECK-NEXT: !CFGChecksum: 563070469352221
-; CHECK-NEXT: !Attributes: 0
 ; CHECK-NEXT:[main:2 @ foo:5 @ fa:8 @ fa:7 @ fb:5 @ fb]:13:4
 ; CHECK-NEXT: 1: 4
 ; CHECK-NEXT: 2: 3
@@ -41,7 +40,6 @@
 ; CHECK-KEEP-COLD-NEXT: 5: 4 fb:4
 ; CHECK-KEEP-COLD-NEXT: 6: 3 fa:3
 ; CHECK-KEEP-COLD-NEXT: !CFGChecksum: 563022570642068
-; CHECK-KEEP-COLD-NEXT: !Attributes: 0
 ; CHECK-KEEP-COLD-NEXT:[fa]:14:4
 ; CHECK-KEEP-COLD-NEXT: 1: 4
 ; CHECK-KEEP-COLD-NEXT: 3: 4
@@ -71,7 +69,6 @@
 ; CHECK-COLD-CONTEXT-LENGTH-NEXT: 5: 4 fb:4
 ; CHECK-COLD-CONTEXT-LENGTH-NEXT: 6: 1 fa:1
 ; CHECK-COLD-CONTEXT-LENGTH-NEXT: !CFGChecksum: 563022570642068
-; CHECK-COLD-CONTEXT-LENGTH-NEXT: !Attributes: 0
 ; CHECK-COLD-CONTEXT-LENGTH-NEXT:[fb:6 @ fa]:10:3
 ; CHECK-COLD-CONTEXT-LENGTH-NEXT: 1: 3
 ; CHECK-COLD-CONTEXT-LENGTH-NEXT: 3: 3
@@ -81,7 +78,6 @@
 ; CHECK-COLD-CONTEXT-LENGTH-NEXT: 7: 1 fb:1
 ; CHECK-COLD-CONTEXT-LENGTH-NEXT: 8: 1 fa:1
 ; CHECK-COLD-CONTEXT-LENGTH-NEXT: !CFGChecksum: 563070469352221
-; CHECK-COLD-CONTEXT-LENGTH-NEXT: !Attributes: 0
 ; CHECK-COLD-CONTEXT-LENGTH-NEXT:[fa:7 @ fb]:6:2
 ; CHECK-COLD-CONTEXT-LENGTH-NEXT: 1: 2
 ; CHECK-COLD-CONTEXT-LENGTH-NEXT: 2: 0
@@ -90,7 +86,6 @@
 ; CHECK-COLD-CONTEXT-LENGTH-NEXT: 5: 0
 ; CHECK-COLD-CONTEXT-LENGTH-NEXT: 6: 2 fa:2
 ; CHECK-COLD-CONTEXT-LENGTH-NEXT: !CFGChecksum: 563022570642068
-; CHECK-COLD-CONTEXT-LENGTH-NEXT: !Attributes: 0
 ; CHECK-COLD-CONTEXT-LENGTH-NEXT:[fa:8 @ fa]:4:1
 ; CHECK-COLD-CONTEXT-LENGTH-NEXT: 1: 1
 ; CHECK-COLD-CONTEXT-LENGTH-NEXT: 3: 1
@@ -100,7 +95,6 @@
 ; CHECK-COLD-CONTEXT-LENGTH-NEXT: 7: 1 fb:1
 ; CHECK-COLD-CONTEXT-LENGTH-NEXT: 8: 0
 ; CHECK-COLD-CONTEXT-LENGTH-NEXT: !CFGChecksum: 563070469352221
-; CHECK-COLD-CONTEXT-LENGTH-NEXT: !Attributes: 0
 
 ; clang -O3 -fexperimental-new-pass-manager -fuse-ld=lld -fpseudo-probe-for-profiling
 ; -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -Xclang -mdisable-tail-calls

@@ -1,7 +1,6 @@
 ; RUN: llc --mtriple=wasm32-unknown-unknown -asm-verbose=false -mattr=+reference-types < %s | FileCheck %s
 
-%func = type void ()
-%funcref = type %func addrspace(20)* ;; addrspace 20 is nonintegral
+%funcref = type i8 addrspace(20)* ;; addrspace 20 is nonintegral
 
 @funcref_table = local_unnamed_addr addrspace(1) global [0 x %funcref] undef
 
@@ -79,4 +78,4 @@ define void @set_funcref_table_with_var_offset2(%funcref %g, i32 %i) {
   ret void
 }
 
-; CHECK: .globl funcref_table
+; CHECK: .tabletype funcref_table, funcref

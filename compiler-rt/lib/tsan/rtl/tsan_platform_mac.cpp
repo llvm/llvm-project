@@ -25,6 +25,7 @@
 #include "tsan_rtl.h"
 #include "tsan_flags.h"
 
+#include <limits.h>
 #include <mach/mach.h>
 #include <pthread.h>
 #include <signal.h>
@@ -45,75 +46,85 @@
 namespace __tsan {
 
 #if !SANITIZER_GO
-static void *SignalSafeGetOrAllocate(uptr *dst, uptr size) {
-  atomic_uintptr_t *a = (atomic_uintptr_t *)dst;
-  void *val = (void *)atomic_load_relaxed(a);
-  atomic_signal_fence(memory_order_acquire);  // Turns the previous load into
-                                              // acquire wrt signals.
-  if (UNLIKELY(val == nullptr)) {
-    val = (void *)internal_mmap(nullptr, size, PROT_READ | PROT_WRITE,
-                                MAP_PRIVATE | MAP_ANON, -1, 0);
-    CHECK(val);
-    void *cmp = nullptr;
-    if (!atomic_compare_exchange_strong(a, (uintptr_t *)&cmp, (uintptr_t)val,
-                                        memory_order_acq_rel)) {
-      internal_munmap(val, size);
-      val = cmp;
-    }
-  }
-  return val;
+static char main_thread_state[sizeof(ThreadState)] ALIGNED(
+    SANITIZER_CACHE_LINE_SIZE);
+static ThreadState *dead_thread_state;
+static pthread_key_t thread_state_key;
+
+// We rely on the following documented, but Darwin-specific behavior to keep the
+// reference to the ThreadState object alive in TLS:
+// pthread_key_create man page:
+//   If, after all the destructors have been called for all non-NULL values with
+//   associated destructors, there are still some non-NULL values with
+//   associated destructors, then the process is repeated.  If, after at least
+//   [PTHREAD_DESTRUCTOR_ITERATIONS] iterations of destructor calls for
+//   outstanding non-NULL values, there are still some non-NULL values with
+//   associated destructors, the implementation stops calling destructors.
+static_assert(PTHREAD_DESTRUCTOR_ITERATIONS == 4, "Small number of iterations");
+static void ThreadStateDestructor(void *thr) {
+  int res = pthread_setspecific(thread_state_key, thr);
+  CHECK_EQ(res, 0);
 }
 
-// On OS X, accessing TLVs via __thread or manually by using pthread_key_* is
-// problematic, because there are several places where interceptors are called
-// when TLVs are not accessible (early process startup, thread cleanup, ...).
-// The following provides a "poor man's TLV" implementation, where we use the
-// shadow memory of the pointer returned by pthread_self() to store a pointer to
-// the ThreadState object. The main thread's ThreadState is stored separately
-// in a static variable, because we need to access it even before the
-// shadow memory is set up.
-static uptr main_thread_identity = 0;
-ALIGNED(64) static char main_thread_state[sizeof(ThreadState)];
-static ThreadState *main_thread_state_loc = (ThreadState *)main_thread_state;
+static void InitializeThreadStateStorage() {
+  int res;
+  CHECK_EQ(thread_state_key, 0);
+  res = pthread_key_create(&thread_state_key, ThreadStateDestructor);
+  CHECK_EQ(res, 0);
+  res = pthread_setspecific(thread_state_key, main_thread_state);
+  CHECK_EQ(res, 0);
 
-// We cannot use pthread_self() before libpthread has been initialized.  Our
-// current heuristic for guarding this is checking `main_thread_identity` which
-// is only assigned in `__tsan::InitializePlatform`.
-static ThreadState **cur_thread_location() {
-  if (main_thread_identity == 0)
-    return &main_thread_state_loc;
-  uptr thread_identity = (uptr)pthread_self();
-  if (thread_identity == main_thread_identity)
-    return &main_thread_state_loc;
-  return (ThreadState **)MemToShadow(thread_identity);
+  auto dts = (ThreadState *)MmapOrDie(sizeof(ThreadState), "ThreadState");
+  dts->fast_state.SetIgnoreBit();
+  dts->ignore_interceptors = 1;
+  dts->is_dead = true;
+  const_cast<Tid &>(dts->tid) = kInvalidTid;
+  res = internal_mprotect(dts, sizeof(ThreadState), PROT_READ);  // immutable
+  CHECK_EQ(res, 0);
+  dead_thread_state = dts;
 }
 
 ThreadState *cur_thread() {
-  return (ThreadState *)SignalSafeGetOrAllocate(
-      (uptr *)cur_thread_location(), sizeof(ThreadState));
+  // Some interceptors get called before libpthread has been initialized and in
+  // these cases we must avoid calling any pthread APIs.
+  if (UNLIKELY(!thread_state_key)) {
+    return (ThreadState *)main_thread_state;
+  }
+
+  // We only reach this line after InitializeThreadStateStorage() ran, i.e,
+  // after TSan (and therefore libpthread) have been initialized.
+  ThreadState *thr = (ThreadState *)pthread_getspecific(thread_state_key);
+  if (UNLIKELY(!thr)) {
+    thr = (ThreadState *)MmapOrDie(sizeof(ThreadState), "ThreadState");
+    int res = pthread_setspecific(thread_state_key, thr);
+    CHECK_EQ(res, 0);
+  }
+  return thr;
 }
 
 void set_cur_thread(ThreadState *thr) {
-  *cur_thread_location() = thr;
+  int res = pthread_setspecific(thread_state_key, thr);
+  CHECK_EQ(res, 0);
 }
 
-// TODO(kuba.brecka): This is not async-signal-safe. In particular, we call
-// munmap first and then clear `fake_tls`; if we receive a signal in between,
-// handler will try to access the unmapped ThreadState.
 void cur_thread_finalize() {
-  ThreadState **thr_state_loc = cur_thread_location();
-  if (thr_state_loc == &main_thread_state_loc) {
+  ThreadState *thr = (ThreadState *)pthread_getspecific(thread_state_key);
+  CHECK(thr);
+  if (thr == (ThreadState *)main_thread_state) {
     // Calling dispatch_main() or xpc_main() actually invokes pthread_exit to
     // exit the main thread. Let's keep the main thread's ThreadState.
     return;
   }
-  internal_munmap(*thr_state_loc, sizeof(ThreadState));
-  *thr_state_loc = nullptr;
+  // Intercepted functions can still get called after cur_thread_finalize()
+  // (called from DestroyThreadState()), so put a fake thread state for "dead"
+  // threads.  An alternative solution would be to release the ThreadState
+  // object from THREAD_DESTROY (which is delivered later and on the parent
+  // thread) instead of THREAD_TERMINATE.
+  int res = pthread_setspecific(thread_state_key, dead_thread_state);
+  CHECK_EQ(res, 0);
+  UnmapOrDie(thr, sizeof(ThreadState));
 }
 #endif
-
-void FlushShadowMemory() {
-}
 
 static void RegionMemUsage(uptr start, uptr end, uptr *res, uptr *dirty) {
   vm_address_t address = start;
@@ -142,12 +153,10 @@ static void RegionMemUsage(uptr start, uptr end, uptr *res, uptr *dirty) {
 void WriteMemoryProfile(char *buf, uptr buf_size, u64 uptime_ns) {
   uptr shadow_res, shadow_dirty;
   uptr meta_res, meta_dirty;
-  uptr trace_res, trace_dirty;
   RegionMemUsage(ShadowBeg(), ShadowEnd(), &shadow_res, &shadow_dirty);
   RegionMemUsage(MetaShadowBeg(), MetaShadowEnd(), &meta_res, &meta_dirty);
-  RegionMemUsage(TraceMemBeg(), TraceMemEnd(), &trace_res, &trace_dirty);
 
-#if !SANITIZER_GO
+#  if !SANITIZER_GO
   uptr low_res, low_dirty;
   uptr high_res, high_dirty;
   uptr heap_res, heap_dirty;
@@ -166,7 +175,6 @@ void WriteMemoryProfile(char *buf, uptr buf_size, u64 uptime_ns) {
       buf, buf_size,
       "shadow   (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
       "meta     (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
-      "traces   (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
 #  if !SANITIZER_GO
       "low app  (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
       "high app (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
@@ -179,7 +187,6 @@ void WriteMemoryProfile(char *buf, uptr buf_size, u64 uptime_ns) {
       "------------------------------\n",
       ShadowBeg(), ShadowEnd(), shadow_res / 1024, shadow_dirty / 1024,
       MetaShadowBeg(), MetaShadowEnd(), meta_res / 1024, meta_dirty / 1024,
-      TraceMemBeg(), TraceMemEnd(), trace_res / 1024, trace_dirty / 1024,
 #  if !SANITIZER_GO
       LoAppMemBeg(), LoAppMemEnd(), low_res / 1024, low_dirty / 1024,
       HiAppMemBeg(), HiAppMemEnd(), high_res / 1024, high_dirty / 1024,
@@ -222,11 +229,10 @@ static void my_pthread_introspection_hook(unsigned int event, pthread_t thread,
       ThreadStart(thr, tid, GetTid(), ThreadType::Worker);
     }
   } else if (event == PTHREAD_INTROSPECTION_THREAD_TERMINATE) {
-    if (thread == pthread_self()) {
-      ThreadState *thr = cur_thread();
-      if (thr->tctx) {
-        DestroyThreadState();
-      }
+    CHECK_EQ(thread, pthread_self());
+    ThreadState *thr = cur_thread();
+    if (thr->tctx) {
+      DestroyThreadState();
     }
   }
 
@@ -253,8 +259,7 @@ void InitializePlatform() {
 #if !SANITIZER_GO
   CheckAndProtect();
 
-  CHECK_EQ(main_thread_identity, 0);
-  main_thread_identity = (uptr)pthread_self();
+  InitializeThreadStateStorage();
 
   prev_pthread_introspection_hook =
       pthread_introspection_hook_install(&my_pthread_introspection_hook);
@@ -286,24 +291,11 @@ uptr ExtractLongJmpSp(uptr *env) {
 extern "C" void __tsan_tls_initialization() {}
 
 void ImitateTlsWrite(ThreadState *thr, uptr tls_addr, uptr tls_size) {
-  // The pointer to the ThreadState object is stored in the shadow memory
-  // of the tls.
-  uptr tls_end = tls_addr + tls_size;
-  uptr thread_identity = (uptr)pthread_self();
   const uptr pc = StackTrace::GetNextInstructionPc(
       reinterpret_cast<uptr>(__tsan_tls_initialization));
-  if (thread_identity == main_thread_identity) {
-    MemoryRangeImitateWrite(thr, pc, tls_addr, tls_size);
-  } else {
-    uptr thr_state_start = thread_identity;
-    uptr thr_state_end = thr_state_start + sizeof(uptr);
-    CHECK_GE(thr_state_start, tls_addr);
-    CHECK_LE(thr_state_start, tls_addr + tls_size);
-    CHECK_GE(thr_state_end, tls_addr);
-    CHECK_LE(thr_state_end, tls_addr + tls_size);
-    MemoryRangeImitateWrite(thr, pc, tls_addr, thr_state_start - tls_addr);
-    MemoryRangeImitateWrite(thr, pc, thr_state_end, tls_end - thr_state_end);
-  }
+  // Unlike Linux, we only store a pointer to the ThreadState object in TLS;
+  // just mark the entire range as written to.
+  MemoryRangeImitateWrite(thr, pc, tls_addr, tls_size);
 }
 #endif
 

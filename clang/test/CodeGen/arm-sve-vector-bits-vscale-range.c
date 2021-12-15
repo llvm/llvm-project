@@ -10,12 +10,13 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -mvscale-min=4 -S -emit-llvm -o - %s | FileCheck %s -D#VBITS=4 --check-prefix=CHECK-NOMAX
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -mvscale-min=8 -S -emit-llvm -o - %s | FileCheck %s -D#VBITS=8 --check-prefix=CHECK-NOMAX
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -mvscale-min=16 -S -emit-llvm -o - %s | FileCheck %s -D#VBITS=16 --check-prefix=CHECK-NOMAX
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve2 -mvscale-min=0 -mvscale-max=0 -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-NONE
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -mvscale-min=0 -mvscale-max=0 -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-NONE
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve2 -mvscale-min=1 -mvscale-max=0 -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-UNBOUNDED
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -mvscale-min=1 -mvscale-max=0 -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-UNBOUNDED
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-NONE
 
 // CHECK-LABEL: @func() #0
 // CHECK: attributes #0 = { {{.*}} vscale_range([[#VBITS]],[[#VBITS]]) {{.*}} }
 // CHECK-NOMAX: attributes #0 = { {{.*}} vscale_range([[#VBITS]],0) {{.*}} }
-// CHECK-NONE: attributes #0 = { {{.*}} vscale_range(0,16) {{.*}} }
+// CHECK-UNBOUNDED: attributes #0 = { {{.*}} vscale_range(1,0) {{.*}} }
+// CHECK-NONE: attributes #0 = { {{.*}} vscale_range(1,16) {{.*}} }
 void func() {}

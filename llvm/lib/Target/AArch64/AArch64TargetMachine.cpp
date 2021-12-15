@@ -117,11 +117,6 @@ static cl::opt<bool>
                   cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
-EnableA53Fix835769("aarch64-fix-cortex-a53-835769", cl::Hidden,
-                cl::desc("Work around Cortex-A53 erratum 835769"),
-                cl::init(false));
-
-static cl::opt<bool>
     EnableGEPOpt("aarch64-enable-gep-opt", cl::Hidden,
                  cl::desc("Enable optimizations on complex GEPs"),
                  cl::init(false));
@@ -382,10 +377,9 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
   unsigned MaxSVEVectorSize = 0;
   Attribute VScaleRangeAttr = F.getFnAttribute(Attribute::VScaleRange);
   if (VScaleRangeAttr.isValid()) {
-    std::tie(MinSVEVectorSize, MaxSVEVectorSize) =
-        VScaleRangeAttr.getVScaleRangeArgs();
-    MinSVEVectorSize *= 128;
-    MaxSVEVectorSize *= 128;
+    Optional<unsigned> VScaleMax = VScaleRangeAttr.getVScaleRangeMax();
+    MinSVEVectorSize = VScaleRangeAttr.getVScaleRangeMin() * 128;
+    MaxSVEVectorSize = VScaleMax ? VScaleMax.getValue() * 128 : 0;
   } else {
     MinSVEVectorSize = SVEVectorBitsMinOpt;
     MaxSVEVectorSize = SVEVectorBitsMaxOpt;
@@ -765,8 +759,7 @@ void AArch64PassConfig::addPreEmitPass() {
   if (TM->getOptLevel() >= CodeGenOpt::Aggressive && EnableLoadStoreOpt)
     addPass(createAArch64LoadStoreOptimizationPass());
 
-  if (EnableA53Fix835769)
-    addPass(createAArch64A53Fix835769());
+  addPass(createAArch64A53Fix835769());
 
   if (EnableBranchTargets)
     addPass(createAArch64BranchTargetsPass());

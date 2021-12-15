@@ -186,8 +186,8 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}mul_v2half:
-; NOSDWA: v_lshrrev_b32_e32 v[[DST0:[0-9]+]], 16, v{{[0-9]+}}
 ; NOSDWA: v_lshrrev_b32_e32 v[[DST1:[0-9]+]], 16, v{{[0-9]+}}
+; NOSDWA: v_lshrrev_b32_e32 v[[DST0:[0-9]+]], 16, v{{[0-9]+}}
 ; NOSDWA: v_mul_f16_e32 v[[DST_MUL:[0-9]+]], v[[DST0]], v[[DST1]]
 ; NOSDWA: v_lshlrev_b32_e32 v[[DST_SHL:[0-9]+]], 16, v[[DST_MUL]]
 ; NOSDWA: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v[[DST_SHL]]
@@ -413,8 +413,8 @@ entry:
 
 
 ; GCN-LABEL: {{^}}mac_v2half:
-; NOSDWA: v_lshrrev_b32_e32 v[[DST0:[0-9]+]], 16, v{{[0-9]+}}
 ; NOSDWA: v_lshrrev_b32_e32 v[[DST1:[0-9]+]], 16, v{{[0-9]+}}
+; NOSDWA: v_lshrrev_b32_e32 v[[DST0:[0-9]+]], 16, v{{[0-9]+}}
 ; NOSDWA: v_mac_f16_e32 v[[DST_MAC:[0-9]+]], v[[DST0]], v[[DST1]]
 ; NOSDWA: v_lshlrev_b32_e32 v[[DST_SHL:[0-9]+]], 16, v[[DST_MAC]]
 ; NOSDWA: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v[[DST_SHL]]
@@ -573,8 +573,7 @@ entry:
 ;
 ; TODO: Why is the constant not peepholed into the v_or_b32_e32?
 ;
-; NOSDWA: s_mov_b32 [[CONST:s[0-9]+]], 0x10000
-; NOSDWA: v_or_b32_e32 v{{[0-9]+}}, s0,
+; NOSDWA: v_or_b32_e32 v{{[0-9]+}}, 0x10000,
 ; SDWA: v_or_b32_e32 v{{[0-9]+}}, 0x10000,
 define amdgpu_kernel void @sdwa_crash_inlineasm_def() #0 {
 bb:

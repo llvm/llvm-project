@@ -29,6 +29,12 @@ namespace tblgen {
 class Constraint;
 class DagLeaf;
 
+// Format into a std::string
+template <typename... Parameters>
+std::string strfmt(const char *fmt, Parameters &&...parameters) {
+  return llvm::formatv(fmt, std::forward<Parameters>(parameters)...).str();
+}
+
 // Simple RAII helper for defining ifdef-undef-endif scopes.
 class IfDefScope {
 public:
@@ -230,7 +236,14 @@ template <> struct stringifier<Twine> {
     return twine.str();
   }
 };
-} // end namespace detail
+template <typename OptionalT>
+struct stringifier<Optional<OptionalT>> {
+  static std::string apply(Optional<OptionalT> optional) {
+    return optional.hasValue() ? stringifier<OptionalT>::apply(*optional)
+                               : std::string();
+  }
+};
+} // namespace detail
 
 /// Generically convert a value to a std::string.
 template <typename T> std::string stringify(T &&t) {

@@ -106,9 +106,6 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
           encodeSLEB128(int64_t(MO.getImm()), OS);
           break;
         case WebAssembly::OPERAND_SIGNATURE:
-        case WebAssembly::OPERAND_HEAPTYPE:
-          OS << uint8_t(MO.getImm());
-          break;
         case WebAssembly::OPERAND_VEC_I8IMM:
           support::endian::write<uint8_t>(OS, MO.getImm(), support::little);
           break;

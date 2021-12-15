@@ -37,14 +37,16 @@ static bool defaultIsSmallAlloc(Value alloc, unsigned maximumSizeInBytes,
   if (!type || !alloc.getDefiningOp<memref::AllocOp>())
     return false;
   if (!type.hasStaticShape()) {
-    // Check if the dynamic shape dimension of the alloc is produced by RankOp.
-    // If this is the case, it is likely to be small. Furthermore, the dimension
-    // is limited to the maximum rank of the allocated memref to avoid large
-    // values by multiplying several small values.
+    // Check if the dynamic shape dimension of the alloc is produced by
+    // `memref.rank`. If this is the case, it is likely to be small.
+    // Furthermore, the dimension is limited to the maximum rank of the
+    // allocated memref to avoid large values by multiplying several small
+    // values.
     if (type.getRank() <= maxRankOfAllocatedMemRef) {
-      return llvm::all_of(
-          alloc.getDefiningOp()->getOperands(),
-          [&](Value operand) { return operand.getDefiningOp<RankOp>(); });
+      return llvm::all_of(alloc.getDefiningOp()->getOperands(),
+                          [&](Value operand) {
+                            return operand.getDefiningOp<memref::RankOp>();
+                          });
     }
     return false;
   }
@@ -418,7 +420,7 @@ private:
   std::function<bool(Value)> isSmallAlloc;
 };
 
-} // end anonymous namespace
+} // namespace
 
 std::unique_ptr<Pass> mlir::createBufferHoistingPass() {
   return std::make_unique<BufferHoistingPass>();

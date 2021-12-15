@@ -717,7 +717,7 @@ inline raw_ostream &operator<<(raw_ostream &os, const Operation &op) {
   return os;
 }
 
-} // end namespace mlir
+} // namespace mlir
 
 namespace llvm {
 /// Provide isa functionality for operation casts.
@@ -743,6 +743,6 @@ template <class T>
 struct cast_convert_val<T, ::mlir::Operation *, ::mlir::Operation *> {
   static T doit(::mlir::Operation *val) { return T(val); }
 };
-} // end namespace llvm
+} // namespace llvm
 
 #endif // MLIR_IR_OPERATION_H

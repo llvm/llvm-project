@@ -173,4 +173,4 @@ exit:
   ret void
 }
 
-attributes #0 = { vscale_range(0, 16) }
+attributes #0 = { vscale_range(1, 16) }

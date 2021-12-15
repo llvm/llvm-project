@@ -12,8 +12,8 @@
 // CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <8 x half>, <8 x half> } [[TMP0]], 0
 // CHECK-NEXT:    [[TMP2:%.*]] = insertvalue [[STRUCT_FLOAT16X8X2_T:%.*]] undef, <8 x half> [[TMP1]], 0, 0
 // CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <8 x half>, <8 x half> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = insertvalue [[STRUCT_FLOAT16X8X2_T]] %2, <8 x half> [[TMP3]], 0, 1
-// CHECK-NEXT:    ret [[STRUCT_FLOAT16X8X2_T]] %4
+// CHECK-NEXT:    [[TMP4:%.*]] = insertvalue [[STRUCT_FLOAT16X8X2_T]] [[TMP2]], <8 x half> [[TMP3]], 0, 1
+// CHECK-NEXT:    ret [[STRUCT_FLOAT16X8X2_T]] [[TMP4]]
 //
 float16x8x2_t test_vld2q_f16(const float16_t *addr)
 {
@@ -30,12 +30,12 @@ float16x8x2_t test_vld2q_f16(const float16_t *addr)
 // CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } [[TMP0]], 0
 // CHECK-NEXT:    [[TMP2:%.*]] = insertvalue [[STRUCT_UINT8X16X4_T:%.*]] undef, <16 x i8> [[TMP1]], 0, 0
 // CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } [[TMP0]], 1
-// CHECK-NEXT:    [[TMP4:%.*]] = insertvalue [[STRUCT_UINT8X16X4_T]] %2, <16 x i8> [[TMP3]], 0, 1
+// CHECK-NEXT:    [[TMP4:%.*]] = insertvalue [[STRUCT_UINT8X16X4_T]] [[TMP2]], <16 x i8> [[TMP3]], 0, 1
 // CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } [[TMP0]], 2
-// CHECK-NEXT:    [[TMP6:%.*]] = insertvalue [[STRUCT_UINT8X16X4_T]] %4, <16 x i8> [[TMP5]], 0, 2
+// CHECK-NEXT:    [[TMP6:%.*]] = insertvalue [[STRUCT_UINT8X16X4_T]] [[TMP4]], <16 x i8> [[TMP5]], 0, 2
 // CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } [[TMP0]], 3
-// CHECK-NEXT:    [[TMP8:%.*]] = insertvalue [[STRUCT_UINT8X16X4_T]] %6, <16 x i8> [[TMP7]], 0, 3
-// CHECK-NEXT:    ret [[STRUCT_UINT8X16X4_T]] %8
+// CHECK-NEXT:    [[TMP8:%.*]] = insertvalue [[STRUCT_UINT8X16X4_T]] [[TMP6]], <16 x i8> [[TMP7]], 0, 3
+// CHECK-NEXT:    ret [[STRUCT_UINT8X16X4_T]] [[TMP8]]
 //
 uint8x16x4_t test_vld4q_u8(const uint8_t *addr)
 {
@@ -48,8 +48,8 @@ uint8x16x4_t test_vld4q_u8(const uint8_t *addr)
 
 // CHECK-LABEL: @test_vst2q_u32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VALUE_COERCE_FCA_0_0_EXTRACT:%.*]] = extractvalue [[STRUCT_UINT32X4X2_T:%.*]] %value.coerce, 0, 0
-// CHECK-NEXT:    [[VALUE_COERCE_FCA_0_1_EXTRACT:%.*]] = extractvalue [[STRUCT_UINT32X4X2_T]] %value.coerce, 0, 1
+// CHECK-NEXT:    [[VALUE_COERCE_FCA_0_0_EXTRACT:%.*]] = extractvalue [[STRUCT_UINT32X4X2_T:%.*]] [[VALUE_COERCE:%.*]], 0, 0
+// CHECK-NEXT:    [[VALUE_COERCE_FCA_0_1_EXTRACT:%.*]] = extractvalue [[STRUCT_UINT32X4X2_T]] [[VALUE_COERCE]], 0, 1
 // CHECK-NEXT:    call void @llvm.arm.mve.vst2q.p0i32.v4i32(i32* [[ADDR:%.*]], <4 x i32> [[VALUE_COERCE_FCA_0_0_EXTRACT]], <4 x i32> [[VALUE_COERCE_FCA_0_1_EXTRACT]], i32 0)
 // CHECK-NEXT:    call void @llvm.arm.mve.vst2q.p0i32.v4i32(i32* [[ADDR]], <4 x i32> [[VALUE_COERCE_FCA_0_0_EXTRACT]], <4 x i32> [[VALUE_COERCE_FCA_0_1_EXTRACT]], i32 1)
 // CHECK-NEXT:    ret void
@@ -65,10 +65,10 @@ void test_vst2q_u32(uint32_t *addr, uint32x4x2_t value)
 
 // CHECK-LABEL: @test_vst4q_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VALUE_COERCE_FCA_0_0_EXTRACT:%.*]] = extractvalue [[STRUCT_INT8X16X4_T:%.*]] %value.coerce, 0, 0
-// CHECK-NEXT:    [[VALUE_COERCE_FCA_0_1_EXTRACT:%.*]] = extractvalue [[STRUCT_INT8X16X4_T]] %value.coerce, 0, 1
-// CHECK-NEXT:    [[VALUE_COERCE_FCA_0_2_EXTRACT:%.*]] = extractvalue [[STRUCT_INT8X16X4_T]] %value.coerce, 0, 2
-// CHECK-NEXT:    [[VALUE_COERCE_FCA_0_3_EXTRACT:%.*]] = extractvalue [[STRUCT_INT8X16X4_T]] %value.coerce, 0, 3
+// CHECK-NEXT:    [[VALUE_COERCE_FCA_0_0_EXTRACT:%.*]] = extractvalue [[STRUCT_INT8X16X4_T:%.*]] [[VALUE_COERCE:%.*]], 0, 0
+// CHECK-NEXT:    [[VALUE_COERCE_FCA_0_1_EXTRACT:%.*]] = extractvalue [[STRUCT_INT8X16X4_T]] [[VALUE_COERCE]], 0, 1
+// CHECK-NEXT:    [[VALUE_COERCE_FCA_0_2_EXTRACT:%.*]] = extractvalue [[STRUCT_INT8X16X4_T]] [[VALUE_COERCE]], 0, 2
+// CHECK-NEXT:    [[VALUE_COERCE_FCA_0_3_EXTRACT:%.*]] = extractvalue [[STRUCT_INT8X16X4_T]] [[VALUE_COERCE]], 0, 3
 // CHECK-NEXT:    call void @llvm.arm.mve.vst4q.p0i8.v16i8(i8* [[ADDR:%.*]], <16 x i8> [[VALUE_COERCE_FCA_0_0_EXTRACT]], <16 x i8> [[VALUE_COERCE_FCA_0_1_EXTRACT]], <16 x i8> [[VALUE_COERCE_FCA_0_2_EXTRACT]], <16 x i8> [[VALUE_COERCE_FCA_0_3_EXTRACT]], i32 0)
 // CHECK-NEXT:    call void @llvm.arm.mve.vst4q.p0i8.v16i8(i8* [[ADDR]], <16 x i8> [[VALUE_COERCE_FCA_0_0_EXTRACT]], <16 x i8> [[VALUE_COERCE_FCA_0_1_EXTRACT]], <16 x i8> [[VALUE_COERCE_FCA_0_2_EXTRACT]], <16 x i8> [[VALUE_COERCE_FCA_0_3_EXTRACT]], i32 1)
 // CHECK-NEXT:    call void @llvm.arm.mve.vst4q.p0i8.v16i8(i8* [[ADDR]], <16 x i8> [[VALUE_COERCE_FCA_0_0_EXTRACT]], <16 x i8> [[VALUE_COERCE_FCA_0_1_EXTRACT]], <16 x i8> [[VALUE_COERCE_FCA_0_2_EXTRACT]], <16 x i8> [[VALUE_COERCE_FCA_0_3_EXTRACT]], i32 2)
@@ -86,8 +86,8 @@ void test_vst4q_s8(int8_t *addr, int8x16x4_t value)
 
 // CHECK-LABEL: @test_vst2q_f16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VALUE_COERCE_FCA_0_0_EXTRACT:%.*]] = extractvalue [[STRUCT_FLOAT16X8X2_T:%.*]] %value.coerce, 0, 0
-// CHECK-NEXT:    [[VALUE_COERCE_FCA_0_1_EXTRACT:%.*]] = extractvalue [[STRUCT_FLOAT16X8X2_T]] %value.coerce, 0, 1
+// CHECK-NEXT:    [[VALUE_COERCE_FCA_0_0_EXTRACT:%.*]] = extractvalue [[STRUCT_FLOAT16X8X2_T:%.*]] [[VALUE_COERCE:%.*]], 0, 0
+// CHECK-NEXT:    [[VALUE_COERCE_FCA_0_1_EXTRACT:%.*]] = extractvalue [[STRUCT_FLOAT16X8X2_T]] [[VALUE_COERCE]], 0, 1
 // CHECK-NEXT:    call void @llvm.arm.mve.vst2q.p0f16.v8f16(half* [[ADDR:%.*]], <8 x half> [[VALUE_COERCE_FCA_0_0_EXTRACT]], <8 x half> [[VALUE_COERCE_FCA_0_1_EXTRACT]], i32 0)
 // CHECK-NEXT:    call void @llvm.arm.mve.vst2q.p0f16.v8f16(half* [[ADDR]], <8 x half> [[VALUE_COERCE_FCA_0_0_EXTRACT]], <8 x half> [[VALUE_COERCE_FCA_0_1_EXTRACT]], i32 1)
 // CHECK-NEXT:    ret void

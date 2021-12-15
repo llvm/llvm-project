@@ -5,6 +5,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 declare <4 x float> @llvm.x86.avx512.mask.add.ss.round(<4 x float>, <4 x float>, <4 x float>, i8, i32)
 
 define <4 x float> @test_add_ss(<4 x float> %a, <4 x float> %b) {
+;
 ; CHECK-LABEL: @test_add_ss(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
@@ -20,6 +21,7 @@ define <4 x float> @test_add_ss(<4 x float> %a, <4 x float> %b) {
 }
 
 define <4 x float> @test_add_ss_round(<4 x float> %a, <4 x float> %b) {
+;
 ; CHECK-LABEL: @test_add_ss_round(
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x float> @llvm.x86.avx512.mask.add.ss.round(<4 x float> [[A:%.*]], <4 x float> [[B:%.*]], <4 x float> undef, i8 -1, i32 8)
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
@@ -32,6 +34,7 @@ define <4 x float> @test_add_ss_round(<4 x float> %a, <4 x float> %b) {
 }
 
 define <4 x float> @test_add_ss_mask(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_add_ss_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
@@ -51,6 +54,7 @@ define <4 x float> @test_add_ss_mask(<4 x float> %a, <4 x float> %b, <4 x float>
 }
 
 define <4 x float> @test_add_ss_mask_round(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_add_ss_mask_round(
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x float> @llvm.x86.avx512.mask.add.ss.round(<4 x float> [[A:%.*]], <4 x float> [[B:%.*]], <4 x float> [[C:%.*]], i8 [[MASK:%.*]], i32 8)
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
@@ -63,6 +67,7 @@ define <4 x float> @test_add_ss_mask_round(<4 x float> %a, <4 x float> %b, <4 x 
 }
 
 define float @test_add_ss_1(float %a, float %b) {
+;
 ; CHECK-LABEL: @test_add_ss_1(
 ; CHECK-NEXT:    ret float 1.000000e+00
 ;
@@ -82,6 +87,7 @@ define float @test_add_ss_1(float %a, float %b) {
 declare <2 x double> @llvm.x86.avx512.mask.add.sd.round(<2 x double>, <2 x double>, <2 x double>, i8, i32)
 
 define <2 x double> @test_add_sd(<2 x double> %a, <2 x double> %b) {
+;
 ; CHECK-LABEL: @test_add_sd(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[B:%.*]], i64 0
@@ -95,6 +101,7 @@ define <2 x double> @test_add_sd(<2 x double> %a, <2 x double> %b) {
 }
 
 define <2 x double> @test_add_sd_round(<2 x double> %a, <2 x double> %b) {
+;
 ; CHECK-LABEL: @test_add_sd_round(
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x double> @llvm.x86.avx512.mask.add.sd.round(<2 x double> [[A:%.*]], <2 x double> [[B:%.*]], <2 x double> undef, i8 -1, i32 8)
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
@@ -105,6 +112,7 @@ define <2 x double> @test_add_sd_round(<2 x double> %a, <2 x double> %b) {
 }
 
 define <2 x double> @test_add_sd_mask(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_add_sd_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[B:%.*]], i64 0
@@ -122,6 +130,7 @@ define <2 x double> @test_add_sd_mask(<2 x double> %a, <2 x double> %b, <2 x dou
 }
 
 define <2 x double> @test_add_sd_mask_round(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_add_sd_mask_round(
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x double> @llvm.x86.avx512.mask.add.sd.round(<2 x double> [[A:%.*]], <2 x double> [[B:%.*]], <2 x double> [[C:%.*]], i8 [[MASK:%.*]], i32 8)
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
@@ -132,6 +141,7 @@ define <2 x double> @test_add_sd_mask_round(<2 x double> %a, <2 x double> %b, <2
 }
 
 define double @test_add_sd_1(double %a, double %b) {
+;
 ; CHECK-LABEL: @test_add_sd_1(
 ; CHECK-NEXT:    ret double 1.000000e+00
 ;
@@ -147,6 +157,7 @@ define double @test_add_sd_1(double %a, double %b) {
 declare <4 x float> @llvm.x86.avx512.mask.sub.ss.round(<4 x float>, <4 x float>, <4 x float>, i8, i32)
 
 define <4 x float> @test_sub_ss(<4 x float> %a, <4 x float> %b) {
+;
 ; CHECK-LABEL: @test_sub_ss(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
@@ -162,6 +173,7 @@ define <4 x float> @test_sub_ss(<4 x float> %a, <4 x float> %b) {
 }
 
 define <4 x float> @test_sub_ss_round(<4 x float> %a, <4 x float> %b) {
+;
 ; CHECK-LABEL: @test_sub_ss_round(
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x float> @llvm.x86.avx512.mask.sub.ss.round(<4 x float> [[A:%.*]], <4 x float> [[B:%.*]], <4 x float> undef, i8 -1, i32 8)
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
@@ -174,6 +186,7 @@ define <4 x float> @test_sub_ss_round(<4 x float> %a, <4 x float> %b) {
 }
 
 define <4 x float> @test_sub_ss_mask(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_sub_ss_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
@@ -193,6 +206,7 @@ define <4 x float> @test_sub_ss_mask(<4 x float> %a, <4 x float> %b, <4 x float>
 }
 
 define <4 x float> @test_sub_ss_mask_round(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_sub_ss_mask_round(
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x float> @llvm.x86.avx512.mask.sub.ss.round(<4 x float> [[A:%.*]], <4 x float> [[B:%.*]], <4 x float> [[C:%.*]], i8 [[MASK:%.*]], i32 8)
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
@@ -205,6 +219,7 @@ define <4 x float> @test_sub_ss_mask_round(<4 x float> %a, <4 x float> %b, <4 x 
 }
 
 define float @test_sub_ss_1(float %a, float %b) {
+;
 ; CHECK-LABEL: @test_sub_ss_1(
 ; CHECK-NEXT:    ret float 1.000000e+00
 ;
@@ -224,6 +239,7 @@ define float @test_sub_ss_1(float %a, float %b) {
 declare <2 x double> @llvm.x86.avx512.mask.sub.sd.round(<2 x double>, <2 x double>, <2 x double>, i8, i32)
 
 define <2 x double> @test_sub_sd(<2 x double> %a, <2 x double> %b) {
+;
 ; CHECK-LABEL: @test_sub_sd(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[B:%.*]], i64 0
@@ -237,6 +253,7 @@ define <2 x double> @test_sub_sd(<2 x double> %a, <2 x double> %b) {
 }
 
 define <2 x double> @test_sub_sd_round(<2 x double> %a, <2 x double> %b) {
+;
 ; CHECK-LABEL: @test_sub_sd_round(
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x double> @llvm.x86.avx512.mask.sub.sd.round(<2 x double> [[A:%.*]], <2 x double> [[B:%.*]], <2 x double> undef, i8 -1, i32 8)
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
@@ -247,6 +264,7 @@ define <2 x double> @test_sub_sd_round(<2 x double> %a, <2 x double> %b) {
 }
 
 define <2 x double> @test_sub_sd_mask(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_sub_sd_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[B:%.*]], i64 0
@@ -264,6 +282,7 @@ define <2 x double> @test_sub_sd_mask(<2 x double> %a, <2 x double> %b, <2 x dou
 }
 
 define <2 x double> @test_sub_sd_mask_round(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_sub_sd_mask_round(
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x double> @llvm.x86.avx512.mask.sub.sd.round(<2 x double> [[A:%.*]], <2 x double> [[B:%.*]], <2 x double> [[C:%.*]], i8 [[MASK:%.*]], i32 8)
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
@@ -274,6 +293,7 @@ define <2 x double> @test_sub_sd_mask_round(<2 x double> %a, <2 x double> %b, <2
 }
 
 define double @test_sub_sd_1(double %a, double %b) {
+;
 ; CHECK-LABEL: @test_sub_sd_1(
 ; CHECK-NEXT:    ret double 1.000000e+00
 ;
@@ -289,6 +309,7 @@ define double @test_sub_sd_1(double %a, double %b) {
 declare <4 x float> @llvm.x86.avx512.mask.mul.ss.round(<4 x float>, <4 x float>, <4 x float>, i8, i32)
 
 define <4 x float> @test_mul_ss(<4 x float> %a, <4 x float> %b) {
+;
 ; CHECK-LABEL: @test_mul_ss(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
@@ -304,6 +325,7 @@ define <4 x float> @test_mul_ss(<4 x float> %a, <4 x float> %b) {
 }
 
 define <4 x float> @test_mul_ss_round(<4 x float> %a, <4 x float> %b) {
+;
 ; CHECK-LABEL: @test_mul_ss_round(
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x float> @llvm.x86.avx512.mask.mul.ss.round(<4 x float> [[A:%.*]], <4 x float> [[B:%.*]], <4 x float> undef, i8 -1, i32 8)
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
@@ -316,6 +338,7 @@ define <4 x float> @test_mul_ss_round(<4 x float> %a, <4 x float> %b) {
 }
 
 define <4 x float> @test_mul_ss_mask(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_mul_ss_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
@@ -335,6 +358,7 @@ define <4 x float> @test_mul_ss_mask(<4 x float> %a, <4 x float> %b, <4 x float>
 }
 
 define <4 x float> @test_mul_ss_mask_round(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_mul_ss_mask_round(
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x float> @llvm.x86.avx512.mask.mul.ss.round(<4 x float> [[A:%.*]], <4 x float> [[B:%.*]], <4 x float> [[C:%.*]], i8 [[MASK:%.*]], i32 8)
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
@@ -347,6 +371,7 @@ define <4 x float> @test_mul_ss_mask_round(<4 x float> %a, <4 x float> %b, <4 x 
 }
 
 define float @test_mul_ss_1(float %a, float %b) {
+;
 ; CHECK-LABEL: @test_mul_ss_1(
 ; CHECK-NEXT:    ret float 1.000000e+00
 ;
@@ -366,6 +391,7 @@ define float @test_mul_ss_1(float %a, float %b) {
 declare <2 x double> @llvm.x86.avx512.mask.mul.sd.round(<2 x double>, <2 x double>, <2 x double>, i8, i32)
 
 define <2 x double> @test_mul_sd(<2 x double> %a, <2 x double> %b) {
+;
 ; CHECK-LABEL: @test_mul_sd(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[B:%.*]], i64 0
@@ -379,6 +405,7 @@ define <2 x double> @test_mul_sd(<2 x double> %a, <2 x double> %b) {
 }
 
 define <2 x double> @test_mul_sd_round(<2 x double> %a, <2 x double> %b) {
+;
 ; CHECK-LABEL: @test_mul_sd_round(
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x double> @llvm.x86.avx512.mask.mul.sd.round(<2 x double> [[A:%.*]], <2 x double> [[B:%.*]], <2 x double> undef, i8 -1, i32 8)
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
@@ -389,6 +416,7 @@ define <2 x double> @test_mul_sd_round(<2 x double> %a, <2 x double> %b) {
 }
 
 define <2 x double> @test_mul_sd_mask(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_mul_sd_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[B:%.*]], i64 0
@@ -406,6 +434,7 @@ define <2 x double> @test_mul_sd_mask(<2 x double> %a, <2 x double> %b, <2 x dou
 }
 
 define <2 x double> @test_mul_sd_mask_round(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_mul_sd_mask_round(
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x double> @llvm.x86.avx512.mask.mul.sd.round(<2 x double> [[A:%.*]], <2 x double> [[B:%.*]], <2 x double> [[C:%.*]], i8 [[MASK:%.*]], i32 8)
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
@@ -416,6 +445,7 @@ define <2 x double> @test_mul_sd_mask_round(<2 x double> %a, <2 x double> %b, <2
 }
 
 define double @test_mul_sd_1(double %a, double %b) {
+;
 ; CHECK-LABEL: @test_mul_sd_1(
 ; CHECK-NEXT:    ret double 1.000000e+00
 ;
@@ -431,6 +461,7 @@ define double @test_mul_sd_1(double %a, double %b) {
 declare <4 x float> @llvm.x86.avx512.mask.div.ss.round(<4 x float>, <4 x float>, <4 x float>, i8, i32)
 
 define <4 x float> @test_div_ss(<4 x float> %a, <4 x float> %b) {
+;
 ; CHECK-LABEL: @test_div_ss(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
@@ -446,6 +477,7 @@ define <4 x float> @test_div_ss(<4 x float> %a, <4 x float> %b) {
 }
 
 define <4 x float> @test_div_ss_round(<4 x float> %a, <4 x float> %b) {
+;
 ; CHECK-LABEL: @test_div_ss_round(
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x float> @llvm.x86.avx512.mask.div.ss.round(<4 x float> [[A:%.*]], <4 x float> [[B:%.*]], <4 x float> undef, i8 -1, i32 8)
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
@@ -458,6 +490,7 @@ define <4 x float> @test_div_ss_round(<4 x float> %a, <4 x float> %b) {
 }
 
 define <4 x float> @test_div_ss_mask(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_div_ss_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
@@ -477,6 +510,7 @@ define <4 x float> @test_div_ss_mask(<4 x float> %a, <4 x float> %b, <4 x float>
 }
 
 define <4 x float> @test_div_ss_mask_round(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_div_ss_mask_round(
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x float> @llvm.x86.avx512.mask.div.ss.round(<4 x float> [[A:%.*]], <4 x float> [[B:%.*]], <4 x float> [[C:%.*]], i8 [[MASK:%.*]], i32 8)
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
@@ -489,6 +523,7 @@ define <4 x float> @test_div_ss_mask_round(<4 x float> %a, <4 x float> %b, <4 x 
 }
 
 define float @test_div_ss_1(float %a, float %b) {
+;
 ; CHECK-LABEL: @test_div_ss_1(
 ; CHECK-NEXT:    ret float 1.000000e+00
 ;
@@ -508,6 +543,7 @@ define float @test_div_ss_1(float %a, float %b) {
 declare <2 x double> @llvm.x86.avx512.mask.div.sd.round(<2 x double>, <2 x double>, <2 x double>, i8, i32)
 
 define <2 x double> @test_div_sd(<2 x double> %a, <2 x double> %b) {
+;
 ; CHECK-LABEL: @test_div_sd(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[B:%.*]], i64 0
@@ -521,6 +557,7 @@ define <2 x double> @test_div_sd(<2 x double> %a, <2 x double> %b) {
 }
 
 define <2 x double> @test_div_sd_round(<2 x double> %a, <2 x double> %b) {
+;
 ; CHECK-LABEL: @test_div_sd_round(
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x double> @llvm.x86.avx512.mask.div.sd.round(<2 x double> [[A:%.*]], <2 x double> [[B:%.*]], <2 x double> undef, i8 -1, i32 8)
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
@@ -531,6 +568,7 @@ define <2 x double> @test_div_sd_round(<2 x double> %a, <2 x double> %b) {
 }
 
 define <2 x double> @test_div_sd_mask(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_div_sd_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[B:%.*]], i64 0
@@ -548,6 +586,7 @@ define <2 x double> @test_div_sd_mask(<2 x double> %a, <2 x double> %b, <2 x dou
 }
 
 define <2 x double> @test_div_sd_mask_round(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_div_sd_mask_round(
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x double> @llvm.x86.avx512.mask.div.sd.round(<2 x double> [[A:%.*]], <2 x double> [[B:%.*]], <2 x double> [[C:%.*]], i8 [[MASK:%.*]], i32 8)
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
@@ -558,6 +597,7 @@ define <2 x double> @test_div_sd_mask_round(<2 x double> %a, <2 x double> %b, <2
 }
 
 define double @test_div_sd_1(double %a, double %b) {
+;
 ; CHECK-LABEL: @test_div_sd_1(
 ; CHECK-NEXT:    ret double 1.000000e+00
 ;
@@ -573,6 +613,7 @@ define double @test_div_sd_1(double %a, double %b) {
 declare <4 x float> @llvm.x86.avx512.mask.max.ss.round(<4 x float>, <4 x float>, <4 x float>, i8, i32)
 
 define <4 x float> @test_max_ss(<4 x float> %a, <4 x float> %b) {
+;
 ; CHECK-LABEL: @test_max_ss(
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x float> @llvm.x86.avx512.mask.max.ss.round(<4 x float> [[A:%.*]], <4 x float> [[B:%.*]], <4 x float> undef, i8 -1, i32 4)
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
@@ -585,6 +626,7 @@ define <4 x float> @test_max_ss(<4 x float> %a, <4 x float> %b) {
 }
 
 define <4 x float> @test_max_ss_mask(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_max_ss_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x float> @llvm.x86.avx512.mask.max.ss.round(<4 x float> [[A:%.*]], <4 x float> [[B:%.*]], <4 x float> [[C:%.*]], i8 [[MASK:%.*]], i32 4)
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
@@ -597,6 +639,7 @@ define <4 x float> @test_max_ss_mask(<4 x float> %a, <4 x float> %b, <4 x float>
 }
 
 define float @test_max_ss_1(float %a, float %b) {
+;
 ; CHECK-LABEL: @test_max_ss_1(
 ; CHECK-NEXT:    ret float 1.000000e+00
 ;
@@ -616,6 +659,7 @@ define float @test_max_ss_1(float %a, float %b) {
 declare <2 x double> @llvm.x86.avx512.mask.max.sd.round(<2 x double>, <2 x double>, <2 x double>, i8, i32)
 
 define <2 x double> @test_max_sd(<2 x double> %a, <2 x double> %b) {
+;
 ; CHECK-LABEL: @test_max_sd(
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x double> @llvm.x86.avx512.mask.max.sd.round(<2 x double> [[A:%.*]], <2 x double> [[B:%.*]], <2 x double> undef, i8 -1, i32 4)
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
@@ -626,6 +670,7 @@ define <2 x double> @test_max_sd(<2 x double> %a, <2 x double> %b) {
 }
 
 define <2 x double> @test_max_sd_mask(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_max_sd_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x double> @llvm.x86.avx512.mask.max.sd.round(<2 x double> [[A:%.*]], <2 x double> [[B:%.*]], <2 x double> [[C:%.*]], i8 [[MASK:%.*]], i32 4)
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
@@ -636,6 +681,7 @@ define <2 x double> @test_max_sd_mask(<2 x double> %a, <2 x double> %b, <2 x dou
 }
 
 define double @test_max_sd_1(double %a, double %b) {
+;
 ; CHECK-LABEL: @test_max_sd_1(
 ; CHECK-NEXT:    ret double 1.000000e+00
 ;
@@ -651,6 +697,7 @@ define double @test_max_sd_1(double %a, double %b) {
 declare <4 x float> @llvm.x86.avx512.mask.min.ss.round(<4 x float>, <4 x float>, <4 x float>, i8, i32)
 
 define <4 x float> @test_min_ss(<4 x float> %a, <4 x float> %b) {
+;
 ; CHECK-LABEL: @test_min_ss(
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x float> @llvm.x86.avx512.mask.min.ss.round(<4 x float> [[A:%.*]], <4 x float> [[B:%.*]], <4 x float> undef, i8 -1, i32 4)
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
@@ -663,6 +710,7 @@ define <4 x float> @test_min_ss(<4 x float> %a, <4 x float> %b) {
 }
 
 define <4 x float> @test_min_ss_mask(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_min_ss_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x float> @llvm.x86.avx512.mask.min.ss.round(<4 x float> [[A:%.*]], <4 x float> [[B:%.*]], <4 x float> [[C:%.*]], i8 [[MASK:%.*]], i32 4)
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
@@ -675,6 +723,7 @@ define <4 x float> @test_min_ss_mask(<4 x float> %a, <4 x float> %b, <4 x float>
 }
 
 define float @test_min_ss_1(float %a, float %b) {
+;
 ; CHECK-LABEL: @test_min_ss_1(
 ; CHECK-NEXT:    ret float 1.000000e+00
 ;
@@ -694,6 +743,7 @@ define float @test_min_ss_1(float %a, float %b) {
 declare <2 x double> @llvm.x86.avx512.mask.min.sd.round(<2 x double>, <2 x double>, <2 x double>, i8, i32)
 
 define <2 x double> @test_min_sd(<2 x double> %a, <2 x double> %b) {
+;
 ; CHECK-LABEL: @test_min_sd(
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x double> @llvm.x86.avx512.mask.min.sd.round(<2 x double> [[A:%.*]], <2 x double> [[B:%.*]], <2 x double> undef, i8 -1, i32 4)
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
@@ -704,6 +754,7 @@ define <2 x double> @test_min_sd(<2 x double> %a, <2 x double> %b) {
 }
 
 define <2 x double> @test_min_sd_mask(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_min_sd_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x double> @llvm.x86.avx512.mask.min.sd.round(<2 x double> [[A:%.*]], <2 x double> [[B:%.*]], <2 x double> [[C:%.*]], i8 [[MASK:%.*]], i32 4)
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
@@ -714,6 +765,7 @@ define <2 x double> @test_min_sd_mask(<2 x double> %a, <2 x double> %b, <2 x dou
 }
 
 define double @test_min_sd_1(double %a, double %b) {
+;
 ; CHECK-LABEL: @test_min_sd_1(
 ; CHECK-NEXT:    ret double 1.000000e+00
 ;
@@ -729,6 +781,7 @@ define double @test_min_sd_1(double %a, double %b) {
 declare i8 @llvm.x86.avx512.mask.cmp.ss(<4 x float>, <4 x float>, i32, i8, i32)
 
 define i8 @test_cmp_ss(<4 x float> %a, <4 x float> %b, i8 %mask) {
+;
 ; CHECK-LABEL: @test_cmp_ss(
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call i8 @llvm.x86.avx512.mask.cmp.ss(<4 x float> [[A:%.*]], <4 x float> [[B:%.*]], i32 3, i8 [[MASK:%.*]], i32 4)
 ; CHECK-NEXT:    ret i8 [[TMP1]]
@@ -746,6 +799,7 @@ define i8 @test_cmp_ss(<4 x float> %a, <4 x float> %b, i8 %mask) {
 declare i8 @llvm.x86.avx512.mask.cmp.sd(<2 x double>, <2 x double>, i32, i8, i32)
 
 define i8 @test_cmp_sd(<2 x double> %a, <2 x double> %b, i8 %mask) {
+;
 ; CHECK-LABEL: @test_cmp_sd(
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call i8 @llvm.x86.avx512.mask.cmp.sd(<2 x double> [[A:%.*]], <2 x double> [[B:%.*]], i32 3, i8 [[MASK:%.*]], i32 4)
 ; CHECK-NEXT:    ret i8 [[TMP1]]
@@ -757,22 +811,23 @@ define i8 @test_cmp_sd(<2 x double> %a, <2 x double> %b, i8 %mask) {
 }
 
 define i64 @test(float %f, double %d) {
+;
 ; CHECK-LABEL: @test(
-; CHECK-NEXT:    [[V03:%.*]] = insertelement <4 x float> poison, float [[F:%.*]], i32 0
+; CHECK-NEXT:    [[V03:%.*]] = insertelement <4 x float> poison, float [[F:%.*]], i64 0
 ; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.x86.avx512.vcvtss2si32(<4 x float> [[V03]], i32 4)
-; CHECK-NEXT:    [[V13:%.*]] = insertelement <4 x float> poison, float [[F]], i32 0
+; CHECK-NEXT:    [[V13:%.*]] = insertelement <4 x float> poison, float [[F]], i64 0
 ; CHECK-NEXT:    [[T1:%.*]] = tail call i64 @llvm.x86.avx512.vcvtss2si64(<4 x float> [[V13]], i32 4)
-; CHECK-NEXT:    [[V23:%.*]] = insertelement <4 x float> poison, float [[F]], i32 0
+; CHECK-NEXT:    [[V23:%.*]] = insertelement <4 x float> poison, float [[F]], i64 0
 ; CHECK-NEXT:    [[T2:%.*]] = tail call i32 @llvm.x86.avx512.cvttss2si(<4 x float> [[V23]], i32 4)
-; CHECK-NEXT:    [[V33:%.*]] = insertelement <4 x float> poison, float [[F]], i32 0
+; CHECK-NEXT:    [[V33:%.*]] = insertelement <4 x float> poison, float [[F]], i64 0
 ; CHECK-NEXT:    [[T3:%.*]] = tail call i64 @llvm.x86.avx512.cvttss2si64(<4 x float> [[V33]], i32 4)
-; CHECK-NEXT:    [[V41:%.*]] = insertelement <2 x double> poison, double [[D:%.*]], i32 0
+; CHECK-NEXT:    [[V41:%.*]] = insertelement <2 x double> poison, double [[D:%.*]], i64 0
 ; CHECK-NEXT:    [[T4:%.*]] = tail call i32 @llvm.x86.avx512.vcvtsd2si32(<2 x double> [[V41]], i32 4)
-; CHECK-NEXT:    [[V51:%.*]] = insertelement <2 x double> poison, double [[D]], i32 0
+; CHECK-NEXT:    [[V51:%.*]] = insertelement <2 x double> poison, double [[D]], i64 0
 ; CHECK-NEXT:    [[T5:%.*]] = tail call i64 @llvm.x86.avx512.vcvtsd2si64(<2 x double> [[V51]], i32 4)
-; CHECK-NEXT:    [[V61:%.*]] = insertelement <2 x double> poison, double [[D]], i32 0
+; CHECK-NEXT:    [[V61:%.*]] = insertelement <2 x double> poison, double [[D]], i64 0
 ; CHECK-NEXT:    [[T6:%.*]] = tail call i32 @llvm.x86.avx512.cvttsd2si(<2 x double> [[V61]], i32 4)
-; CHECK-NEXT:    [[V71:%.*]] = insertelement <2 x double> poison, double [[D]], i32 0
+; CHECK-NEXT:    [[V71:%.*]] = insertelement <2 x double> poison, double [[D]], i64 0
 ; CHECK-NEXT:    [[T7:%.*]] = tail call i64 @llvm.x86.avx512.cvttsd2si64(<2 x double> [[V71]], i32 4)
 ; CHECK-NEXT:    [[T8:%.*]] = add i32 [[T0]], [[T2]]
 ; CHECK-NEXT:    [[T9:%.*]] = add i32 [[T4]], [[T6]]
@@ -837,22 +892,23 @@ declare i32 @llvm.x86.avx512.cvttsd2si(<2 x double>, i32)
 declare i64 @llvm.x86.avx512.cvttsd2si64(<2 x double>, i32)
 
 define i64 @test2(float %f, double %d) {
+;
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[V03:%.*]] = insertelement <4 x float> poison, float [[F:%.*]], i32 0
+; CHECK-NEXT:    [[V03:%.*]] = insertelement <4 x float> poison, float [[F:%.*]], i64 0
 ; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.x86.avx512.vcvtss2usi32(<4 x float> [[V03]], i32 4)
-; CHECK-NEXT:    [[V13:%.*]] = insertelement <4 x float> poison, float [[F]], i32 0
+; CHECK-NEXT:    [[V13:%.*]] = insertelement <4 x float> poison, float [[F]], i64 0
 ; CHECK-NEXT:    [[T1:%.*]] = tail call i64 @llvm.x86.avx512.vcvtss2usi64(<4 x float> [[V13]], i32 4)
-; CHECK-NEXT:    [[V23:%.*]] = insertelement <4 x float> poison, float [[F]], i32 0
+; CHECK-NEXT:    [[V23:%.*]] = insertelement <4 x float> poison, float [[F]], i64 0
 ; CHECK-NEXT:    [[T2:%.*]] = tail call i32 @llvm.x86.avx512.cvttss2usi(<4 x float> [[V23]], i32 4)
-; CHECK-NEXT:    [[V33:%.*]] = insertelement <4 x float> poison, float [[F]], i32 0
+; CHECK-NEXT:    [[V33:%.*]] = insertelement <4 x float> poison, float [[F]], i64 0
 ; CHECK-NEXT:    [[T3:%.*]] = tail call i64 @llvm.x86.avx512.cvttss2usi64(<4 x float> [[V33]], i32 4)
-; CHECK-NEXT:    [[V41:%.*]] = insertelement <2 x double> poison, double [[D:%.*]], i32 0
+; CHECK-NEXT:    [[V41:%.*]] = insertelement <2 x double> poison, double [[D:%.*]], i64 0
 ; CHECK-NEXT:    [[T4:%.*]] = tail call i32 @llvm.x86.avx512.vcvtsd2usi32(<2 x double> [[V41]], i32 4)
-; CHECK-NEXT:    [[V51:%.*]] = insertelement <2 x double> poison, double [[D]], i32 0
+; CHECK-NEXT:    [[V51:%.*]] = insertelement <2 x double> poison, double [[D]], i64 0
 ; CHECK-NEXT:    [[T5:%.*]] = tail call i64 @llvm.x86.avx512.vcvtsd2usi64(<2 x double> [[V51]], i32 4)
-; CHECK-NEXT:    [[V61:%.*]] = insertelement <2 x double> poison, double [[D]], i32 0
+; CHECK-NEXT:    [[V61:%.*]] = insertelement <2 x double> poison, double [[D]], i64 0
 ; CHECK-NEXT:    [[T6:%.*]] = tail call i32 @llvm.x86.avx512.cvttsd2usi(<2 x double> [[V61]], i32 4)
-; CHECK-NEXT:    [[V71:%.*]] = insertelement <2 x double> poison, double [[D]], i32 0
+; CHECK-NEXT:    [[V71:%.*]] = insertelement <2 x double> poison, double [[D]], i64 0
 ; CHECK-NEXT:    [[T7:%.*]] = tail call i64 @llvm.x86.avx512.cvttsd2usi64(<2 x double> [[V71]], i32 4)
 ; CHECK-NEXT:    [[T8:%.*]] = add i32 [[T0]], [[T2]]
 ; CHECK-NEXT:    [[T9:%.*]] = add i32 [[T4]], [[T6]]
@@ -919,6 +975,7 @@ declare i64 @llvm.x86.avx512.cvttsd2usi64(<2 x double>, i32)
 declare float @llvm.fma.f32(float, float, float) #1
 
 define <4 x float> @test_mask_vfmadd_ss(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_mask_vfmadd_ss(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
@@ -948,8 +1005,9 @@ define <4 x float> @test_mask_vfmadd_ss(<4 x float> %a, <4 x float> %b, <4 x flo
 }
 
 define float @test_mask_vfmadd_ss_0(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_mask_vfmadd_ss_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[C:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = call float @llvm.fma.f32(float [[TMP1]], float [[TMP2]], float [[TMP3]])
@@ -974,6 +1032,7 @@ define float @test_mask_vfmadd_ss_0(<4 x float> %a, <4 x float> %b, <4 x float> 
 }
 
 define float @test_mask_vfmadd_ss_1(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_mask_vfmadd_ss_1(
 ; CHECK-NEXT:    ret float 1.000000e+00
 ;
@@ -995,6 +1054,7 @@ define float @test_mask_vfmadd_ss_1(<4 x float> %a, <4 x float> %b, <4 x float> 
 declare double @llvm.fma.f64(double, double, double) #1
 
 define <2 x double> @test_mask_vfmadd_sd(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_mask_vfmadd_sd(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[B:%.*]], i64 0
@@ -1020,6 +1080,7 @@ define <2 x double> @test_mask_vfmadd_sd(<2 x double> %a, <2 x double> %b, <2 x 
 }
 
 define double @test_mask_vfmadd_sd_0(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_mask_vfmadd_sd_0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[B:%.*]], i64 0
@@ -1044,6 +1105,7 @@ define double @test_mask_vfmadd_sd_0(<2 x double> %a, <2 x double> %b, <2 x doub
 }
 
 define double @test_mask_vfmadd_sd_1(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_mask_vfmadd_sd_1(
 ; CHECK-NEXT:    ret double 1.000000e+00
 ;
@@ -1061,6 +1123,7 @@ define double @test_mask_vfmadd_sd_1(<2 x double> %a, <2 x double> %b, <2 x doub
 }
 
 define <4 x float> @test_maskz_vfmadd_ss(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_maskz_vfmadd_ss(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
@@ -1090,8 +1153,9 @@ define <4 x float> @test_maskz_vfmadd_ss(<4 x float> %a, <4 x float> %b, <4 x fl
 }
 
 define float @test_maskz_vfmadd_ss_0(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_maskz_vfmadd_ss_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[C:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = call float @llvm.fma.f32(float [[TMP1]], float [[TMP2]], float [[TMP3]])
@@ -1116,6 +1180,7 @@ define float @test_maskz_vfmadd_ss_0(<4 x float> %a, <4 x float> %b, <4 x float>
 }
 
 define float @test_maskz_vfmadd_ss_1(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_maskz_vfmadd_ss_1(
 ; CHECK-NEXT:    ret float 1.000000e+00
 ;
@@ -1135,6 +1200,7 @@ define float @test_maskz_vfmadd_ss_1(<4 x float> %a, <4 x float> %b, <4 x float>
 }
 
 define <2 x double> @test_maskz_vfmadd_sd(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_maskz_vfmadd_sd(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[B:%.*]], i64 0
@@ -1160,6 +1226,7 @@ define <2 x double> @test_maskz_vfmadd_sd(<2 x double> %a, <2 x double> %b, <2 x
 }
 
 define double @test_maskz_vfmadd_sd_0(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_maskz_vfmadd_sd_0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[B:%.*]], i64 0
@@ -1184,6 +1251,7 @@ define double @test_maskz_vfmadd_sd_0(<2 x double> %a, <2 x double> %b, <2 x dou
 }
 
 define double @test_maskz_vfmadd_sd_1(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_maskz_vfmadd_sd_1(
 ; CHECK-NEXT:    ret double 1.000000e+00
 ;
@@ -1201,6 +1269,7 @@ define double @test_maskz_vfmadd_sd_1(<2 x double> %a, <2 x double> %b, <2 x dou
 }
 
 define <4 x float> @test_mask3_vfmadd_ss(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_mask3_vfmadd_ss(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
@@ -1230,10 +1299,11 @@ define <4 x float> @test_mask3_vfmadd_ss(<4 x float> %a, <4 x float> %b, <4 x fl
 }
 
 define float @test_mask3_vfmadd_ss_0(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_mask3_vfmadd_ss_0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[C:%.*]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[C:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = call float @llvm.fma.f32(float [[TMP1]], float [[TMP2]], float [[TMP3]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = and i8 [[MASK:%.*]], 1
 ; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i8 [[TMP5]], 0
@@ -1256,6 +1326,7 @@ define float @test_mask3_vfmadd_ss_0(<4 x float> %a, <4 x float> %b, <4 x float>
 }
 
 define float @test_mask3_vfmadd_ss_1(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_mask3_vfmadd_ss_1(
 ; CHECK-NEXT:    ret float 1.000000e+00
 ;
@@ -1275,6 +1346,7 @@ define float @test_mask3_vfmadd_ss_1(<4 x float> %a, <4 x float> %b, <4 x float>
 }
 
 define <2 x double> @test_mask3_vfmadd_sd(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_mask3_vfmadd_sd(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[B:%.*]], i64 0
@@ -1300,6 +1372,7 @@ define <2 x double> @test_mask3_vfmadd_sd(<2 x double> %a, <2 x double> %b, <2 x
 }
 
 define double @test_mask3_vfmadd_sd_0(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_mask3_vfmadd_sd_0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[B:%.*]], i64 0
@@ -1324,6 +1397,7 @@ define double @test_mask3_vfmadd_sd_0(<2 x double> %a, <2 x double> %b, <2 x dou
 }
 
 define double @test_mask3_vfmadd_sd_1(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_mask3_vfmadd_sd_1(
 ; CHECK-NEXT:    ret double 1.000000e+00
 ;
@@ -1341,6 +1415,7 @@ define double @test_mask3_vfmadd_sd_1(<2 x double> %a, <2 x double> %b, <2 x dou
 }
 
 define <4 x float> @test_mask3_vfmsub_ss(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_mask3_vfmsub_ss(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
@@ -1374,13 +1449,14 @@ define <4 x float> @test_mask3_vfmsub_ss(<4 x float> %a, <4 x float> %b, <4 x fl
 }
 
 define float @test_mask3_vfmsub_ss_0(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_mask3_vfmsub_ss_0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[C:%.*]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[C:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = fneg float [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call float @llvm.fma.f32(float [[TMP1]], float [[TMP2]], float [[TMP4]])
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[C]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[C]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = and i8 [[MASK:%.*]], 1
 ; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i8 [[TMP7]], 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = select i1 [[DOTNOT]], float [[TMP6]], float [[TMP5]]
@@ -1404,6 +1480,7 @@ define float @test_mask3_vfmsub_ss_0(<4 x float> %a, <4 x float> %b, <4 x float>
 }
 
 define float @test_mask3_vfmsub_ss_1(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_mask3_vfmsub_ss_1(
 ; CHECK-NEXT:    ret float 1.000000e+00
 ;
@@ -1425,6 +1502,7 @@ define float @test_mask3_vfmsub_ss_1(<4 x float> %a, <4 x float> %b, <4 x float>
 }
 
 define float @test_mask3_vfmsub_ss_1_unary_fneg(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_mask3_vfmsub_ss_1_unary_fneg(
 ; CHECK-NEXT:    ret float 1.000000e+00
 ;
@@ -1446,6 +1524,7 @@ define float @test_mask3_vfmsub_ss_1_unary_fneg(<4 x float> %a, <4 x float> %b, 
 }
 
 define <2 x double> @test_mask3_vfmsub_sd(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_mask3_vfmsub_sd(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[B:%.*]], i64 0
@@ -1475,6 +1554,7 @@ define <2 x double> @test_mask3_vfmsub_sd(<2 x double> %a, <2 x double> %b, <2 x
 }
 
 define double @test_mask3_vfmsub_sd_0(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_mask3_vfmsub_sd_0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[B:%.*]], i64 0
@@ -1503,6 +1583,7 @@ define double @test_mask3_vfmsub_sd_0(<2 x double> %a, <2 x double> %b, <2 x dou
 }
 
 define double @test_mask3_vfmsub_sd_1(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_mask3_vfmsub_sd_1(
 ; CHECK-NEXT:    ret double 1.000000e+00
 ;
@@ -1522,6 +1603,7 @@ define double @test_mask3_vfmsub_sd_1(<2 x double> %a, <2 x double> %b, <2 x dou
 }
 
 define double @test_mask3_vfmsub_sd_1_unary_fneg(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_mask3_vfmsub_sd_1_unary_fneg(
 ; CHECK-NEXT:    ret double 1.000000e+00
 ;
@@ -1541,6 +1623,7 @@ define double @test_mask3_vfmsub_sd_1_unary_fneg(<2 x double> %a, <2 x double> %
 }
 
 define <4 x float> @test_mask3_vfnmsub_ss(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_mask3_vfnmsub_ss(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = fneg float [[TMP1]]
@@ -1576,14 +1659,15 @@ define <4 x float> @test_mask3_vfnmsub_ss(<4 x float> %a, <4 x float> %b, <4 x f
 }
 
 define float @test_mask3_vfnmsub_ss_0(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_mask3_vfnmsub_ss_0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = fneg float [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[C:%.*]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[C:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = fneg float [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call float @llvm.fma.f32(float [[TMP2]], float [[TMP3]], float [[TMP5]])
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[C]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[C]], i64 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = and i8 [[MASK:%.*]], 1
 ; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i8 [[TMP8]], 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[DOTNOT]], float [[TMP7]], float [[TMP6]]
@@ -1608,6 +1692,7 @@ define float @test_mask3_vfnmsub_ss_0(<4 x float> %a, <4 x float> %b, <4 x float
 }
 
 define float @test_mask3_vfnmsub_ss_1(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_mask3_vfnmsub_ss_1(
 ; CHECK-NEXT:    ret float 1.000000e+00
 ;
@@ -1630,6 +1715,7 @@ define float @test_mask3_vfnmsub_ss_1(<4 x float> %a, <4 x float> %b, <4 x float
 }
 
 define float @test_mask3_vfnmsub_ss_1_unary_fneg(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_mask3_vfnmsub_ss_1_unary_fneg(
 ; CHECK-NEXT:    ret float 1.000000e+00
 ;
@@ -1652,6 +1738,7 @@ define float @test_mask3_vfnmsub_ss_1_unary_fneg(<4 x float> %a, <4 x float> %b,
 }
 
 define <2 x double> @test_mask3_vfnmsub_sd(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_mask3_vfnmsub_sd(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = fneg double [[TMP1]]
@@ -1683,6 +1770,7 @@ define <2 x double> @test_mask3_vfnmsub_sd(<2 x double> %a, <2 x double> %b, <2 
 }
 
 define double @test_mask3_vfnmsub_sd_0(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_mask3_vfnmsub_sd_0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = fneg double [[TMP1]]
@@ -1713,6 +1801,7 @@ define double @test_mask3_vfnmsub_sd_0(<2 x double> %a, <2 x double> %b, <2 x do
 }
 
 define double @test_mask3_vfnmsub_sd_1(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_mask3_vfnmsub_sd_1(
 ; CHECK-NEXT:    ret double 1.000000e+00
 ;
@@ -1733,6 +1822,7 @@ define double @test_mask3_vfnmsub_sd_1(<2 x double> %a, <2 x double> %b, <2 x do
 }
 
 define double @test_mask3_vfnmsub_sd_1_unary_fneg(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_mask3_vfnmsub_sd_1_unary_fneg(
 ; CHECK-NEXT:    ret double 1.000000e+00
 ;
@@ -1755,6 +1845,7 @@ define double @test_mask3_vfnmsub_sd_1_unary_fneg(<2 x double> %a, <2 x double> 
 declare <8 x i32> @llvm.x86.avx2.permd(<8 x i32>, <8 x i32>)
 
 define <8 x i32> @identity_test_permvar_si_256(<8 x i32> %a0) {
+;
 ; CHECK-LABEL: @identity_test_permvar_si_256(
 ; CHECK-NEXT:    ret <8 x i32> [[A0:%.*]]
 ;
@@ -1763,6 +1854,7 @@ define <8 x i32> @identity_test_permvar_si_256(<8 x i32> %a0) {
 }
 
 define <8 x i32> @identity_test_permvar_si_256_mask(<8 x i32> %a0, <8 x i32> %passthru, i8 %mask) {
+;
 ; CHECK-LABEL: @identity_test_permvar_si_256_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = select <8 x i1> [[TMP1]], <8 x i32> [[A0:%.*]], <8 x i32> [[PASSTHRU:%.*]]
@@ -1775,6 +1867,7 @@ define <8 x i32> @identity_test_permvar_si_256_mask(<8 x i32> %a0, <8 x i32> %pa
 }
 
 define <8 x i32> @zero_test_permvar_si_256(<8 x i32> %a0) {
+;
 ; CHECK-LABEL: @zero_test_permvar_si_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[A0:%.*]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <8 x i32> [[TMP1]]
@@ -1784,6 +1877,7 @@ define <8 x i32> @zero_test_permvar_si_256(<8 x i32> %a0) {
 }
 
 define <8 x i32> @zero_test_permvar_si_256_mask(<8 x i32> %a0, <8 x i32> %passthru, i8 %mask) {
+;
 ; CHECK-LABEL: @zero_test_permvar_si_256_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[A0:%.*]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
@@ -1797,6 +1891,7 @@ define <8 x i32> @zero_test_permvar_si_256_mask(<8 x i32> %a0, <8 x i32> %passth
 }
 
 define <8 x i32> @shuffle_test_permvar_si_256(<8 x i32> %a0) {
+;
 ; CHECK-LABEL: @shuffle_test_permvar_si_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[A0:%.*]], <8 x i32> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <8 x i32> [[TMP1]]
@@ -1806,6 +1901,7 @@ define <8 x i32> @shuffle_test_permvar_si_256(<8 x i32> %a0) {
 }
 
 define <8 x i32> @shuffle_test_permvar_si_256_mask(<8 x i32> %a0, <8 x i32> %passthru, i8 %mask) {
+;
 ; CHECK-LABEL: @shuffle_test_permvar_si_256_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[A0:%.*]], <8 x i32> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
@@ -1819,6 +1915,7 @@ define <8 x i32> @shuffle_test_permvar_si_256_mask(<8 x i32> %a0, <8 x i32> %pas
 }
 
 define <8 x i32> @undef_test_permvar_si_256(<8 x i32> %a0) {
+;
 ; CHECK-LABEL: @undef_test_permvar_si_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[A0:%.*]], <8 x i32> poison, <8 x i32> <i32 undef, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <8 x i32> [[TMP1]]
@@ -1828,6 +1925,7 @@ define <8 x i32> @undef_test_permvar_si_256(<8 x i32> %a0) {
 }
 
 define <8 x i32> @undef_test_permvar_si_256_mask(<8 x i32> %a0, <8 x i32> %passthru, i8 %mask) {
+;
 ; CHECK-LABEL: @undef_test_permvar_si_256_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[A0:%.*]], <8 x i32> poison, <8 x i32> <i32 undef, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
@@ -1843,6 +1941,7 @@ define <8 x i32> @undef_test_permvar_si_256_mask(<8 x i32> %a0, <8 x i32> %passt
 declare <8 x float> @llvm.x86.avx2.permps(<8 x float>, <8 x i32>)
 
 define <8 x float> @identity_test_permvar_sf_256(<8 x float> %a0) {
+;
 ; CHECK-LABEL: @identity_test_permvar_sf_256(
 ; CHECK-NEXT:    ret <8 x float> [[A0:%.*]]
 ;
@@ -1851,6 +1950,7 @@ define <8 x float> @identity_test_permvar_sf_256(<8 x float> %a0) {
 }
 
 define <8 x float> @identity_test_permvar_sf_256_mask(<8 x float> %a0, <8 x float> %passthru, i8 %mask) {
+;
 ; CHECK-LABEL: @identity_test_permvar_sf_256_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = select <8 x i1> [[TMP1]], <8 x float> [[A0:%.*]], <8 x float> [[PASSTHRU:%.*]]
@@ -1863,6 +1963,7 @@ define <8 x float> @identity_test_permvar_sf_256_mask(<8 x float> %a0, <8 x floa
 }
 
 define <8 x float> @zero_test_permvar_sf_256(<8 x float> %a0) {
+;
 ; CHECK-LABEL: @zero_test_permvar_sf_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[A0:%.*]], <8 x float> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <8 x float> [[TMP1]]
@@ -1872,6 +1973,7 @@ define <8 x float> @zero_test_permvar_sf_256(<8 x float> %a0) {
 }
 
 define <8 x float> @zero_test_permvar_sf_256_mask(<8 x float> %a0, <8 x float> %passthru, i8 %mask) {
+;
 ; CHECK-LABEL: @zero_test_permvar_sf_256_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[A0:%.*]], <8 x float> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
@@ -1885,6 +1987,7 @@ define <8 x float> @zero_test_permvar_sf_256_mask(<8 x float> %a0, <8 x float> %
 }
 
 define <8 x float> @shuffle_test_permvar_sf_256(<8 x float> %a0) {
+;
 ; CHECK-LABEL: @shuffle_test_permvar_sf_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[A0:%.*]], <8 x float> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <8 x float> [[TMP1]]
@@ -1894,6 +1997,7 @@ define <8 x float> @shuffle_test_permvar_sf_256(<8 x float> %a0) {
 }
 
 define <8 x float> @shuffle_test_permvar_sf_256_mask(<8 x float> %a0, <8 x float> %passthru, i8 %mask) {
+;
 ; CHECK-LABEL: @shuffle_test_permvar_sf_256_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[A0:%.*]], <8 x float> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
@@ -1907,6 +2011,7 @@ define <8 x float> @shuffle_test_permvar_sf_256_mask(<8 x float> %a0, <8 x float
 }
 
 define <8 x float> @undef_test_permvar_sf_256(<8 x float> %a0) {
+;
 ; CHECK-LABEL: @undef_test_permvar_sf_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[A0:%.*]], <8 x float> poison, <8 x i32> <i32 undef, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <8 x float> [[TMP1]]
@@ -1916,6 +2021,7 @@ define <8 x float> @undef_test_permvar_sf_256(<8 x float> %a0) {
 }
 
 define <8 x float> @undef_test_permvar_sf_256_mask(<8 x float> %a0, <8 x float> %passthru, i8 %mask) {
+;
 ; CHECK-LABEL: @undef_test_permvar_sf_256_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[A0:%.*]], <8 x float> poison, <8 x i32> <i32 undef, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
@@ -1931,6 +2037,7 @@ define <8 x float> @undef_test_permvar_sf_256_mask(<8 x float> %a0, <8 x float> 
 declare <4 x i64> @llvm.x86.avx512.permvar.di.256(<4 x i64>, <4 x i64>)
 
 define <4 x i64> @identity_test_permvar_di_256(<4 x i64> %a0) {
+;
 ; CHECK-LABEL: @identity_test_permvar_di_256(
 ; CHECK-NEXT:    ret <4 x i64> [[A0:%.*]]
 ;
@@ -1939,6 +2046,7 @@ define <4 x i64> @identity_test_permvar_di_256(<4 x i64> %a0) {
 }
 
 define <4 x i64> @identity_test_permvar_di_256_mask(<4 x i64> %a0, <4 x i64> %passthru, i8 %mask) {
+;
 ; CHECK-LABEL: @identity_test_permvar_di_256_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
 ; CHECK-NEXT:    [[EXTRACT:%.*]] = shufflevector <8 x i1> [[TMP1]], <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -1953,6 +2061,7 @@ define <4 x i64> @identity_test_permvar_di_256_mask(<4 x i64> %a0, <4 x i64> %pa
 }
 
 define <4 x i64> @zero_test_permvar_di_256(<4 x i64> %a0) {
+;
 ; CHECK-LABEL: @zero_test_permvar_di_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i64> [[A0:%.*]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <4 x i64> [[TMP1]]
@@ -1962,6 +2071,7 @@ define <4 x i64> @zero_test_permvar_di_256(<4 x i64> %a0) {
 }
 
 define <4 x i64> @zero_test_permvar_di_256_mask(<4 x i64> %a0, <4 x i64> %passthru, i8 %mask) {
+;
 ; CHECK-LABEL: @zero_test_permvar_di_256_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i64> [[A0:%.*]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
@@ -1977,6 +2087,7 @@ define <4 x i64> @zero_test_permvar_di_256_mask(<4 x i64> %a0, <4 x i64> %passth
 }
 
 define <4 x i64> @shuffle_test_permvar_di_256(<4 x i64> %a0) {
+;
 ; CHECK-LABEL: @shuffle_test_permvar_di_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i64> [[A0:%.*]], <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <4 x i64> [[TMP1]]
@@ -1986,6 +2097,7 @@ define <4 x i64> @shuffle_test_permvar_di_256(<4 x i64> %a0) {
 }
 
 define <4 x i64> @shuffle_test_permvar_di_256_mask(<4 x i64> %a0, <4 x i64> %passthru, i8 %mask) {
+;
 ; CHECK-LABEL: @shuffle_test_permvar_di_256_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i64> [[A0:%.*]], <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
@@ -2001,6 +2113,7 @@ define <4 x i64> @shuffle_test_permvar_di_256_mask(<4 x i64> %a0, <4 x i64> %pas
 }
 
 define <4 x i64> @undef_test_permvar_di_256(<4 x i64> %a0) {
+;
 ; CHECK-LABEL: @undef_test_permvar_di_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i64> [[A0:%.*]], <4 x i64> poison, <4 x i32> <i32 undef, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <4 x i64> [[TMP1]]
@@ -2010,6 +2123,7 @@ define <4 x i64> @undef_test_permvar_di_256(<4 x i64> %a0) {
 }
 
 define <4 x i64> @undef_test_permvar_di_256_mask(<4 x i64> %a0, <4 x i64> %passthru, i8 %mask) {
+;
 ; CHECK-LABEL: @undef_test_permvar_di_256_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i64> [[A0:%.*]], <4 x i64> poison, <4 x i32> <i32 undef, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
@@ -2027,6 +2141,7 @@ define <4 x i64> @undef_test_permvar_di_256_mask(<4 x i64> %a0, <4 x i64> %passt
 declare <4 x double> @llvm.x86.avx512.permvar.df.256(<4 x double>, <4 x i64>)
 
 define <4 x double> @identity_test_permvar_df_256(<4 x double> %a0) {
+;
 ; CHECK-LABEL: @identity_test_permvar_df_256(
 ; CHECK-NEXT:    ret <4 x double> [[A0:%.*]]
 ;
@@ -2035,6 +2150,7 @@ define <4 x double> @identity_test_permvar_df_256(<4 x double> %a0) {
 }
 
 define <4 x double> @identity_test_permvar_df_256_mask(<4 x double> %a0, <4 x double> %passthru, i8 %mask) {
+;
 ; CHECK-LABEL: @identity_test_permvar_df_256_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
 ; CHECK-NEXT:    [[EXTRACT:%.*]] = shufflevector <8 x i1> [[TMP1]], <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -2049,6 +2165,7 @@ define <4 x double> @identity_test_permvar_df_256_mask(<4 x double> %a0, <4 x do
 }
 
 define <4 x double> @zero_test_permvar_df_256(<4 x double> %a0) {
+;
 ; CHECK-LABEL: @zero_test_permvar_df_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[A0:%.*]], <4 x double> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <4 x double> [[TMP1]]
@@ -2058,6 +2175,7 @@ define <4 x double> @zero_test_permvar_df_256(<4 x double> %a0) {
 }
 
 define <4 x double> @zero_test_permvar_df_256_mask(<4 x double> %a0, <4 x double> %passthru, i8 %mask) {
+;
 ; CHECK-LABEL: @zero_test_permvar_df_256_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[A0:%.*]], <4 x double> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
@@ -2073,6 +2191,7 @@ define <4 x double> @zero_test_permvar_df_256_mask(<4 x double> %a0, <4 x double
 }
 
 define <4 x double> @shuffle_test_permvar_df_256(<4 x double> %a0) {
+;
 ; CHECK-LABEL: @shuffle_test_permvar_df_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[A0:%.*]], <4 x double> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <4 x double> [[TMP1]]
@@ -2082,6 +2201,7 @@ define <4 x double> @shuffle_test_permvar_df_256(<4 x double> %a0) {
 }
 
 define <4 x double> @shuffle_test_permvar_df_256_mask(<4 x double> %a0, <4 x double> %passthru, i8 %mask) {
+;
 ; CHECK-LABEL: @shuffle_test_permvar_df_256_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[A0:%.*]], <4 x double> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
@@ -2097,6 +2217,7 @@ define <4 x double> @shuffle_test_permvar_df_256_mask(<4 x double> %a0, <4 x dou
 }
 
 define <4 x double> @undef_test_permvar_df_256(<4 x double> %a0) {
+;
 ; CHECK-LABEL: @undef_test_permvar_df_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[A0:%.*]], <4 x double> poison, <4 x i32> <i32 undef, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <4 x double> [[TMP1]]
@@ -2106,6 +2227,7 @@ define <4 x double> @undef_test_permvar_df_256(<4 x double> %a0) {
 }
 
 define <4 x double> @undef_test_permvar_df_256_mask(<4 x double> %a0, <4 x double> %passthru, i8 %mask) {
+;
 ; CHECK-LABEL: @undef_test_permvar_df_256_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[A0:%.*]], <4 x double> poison, <4 x i32> <i32 undef, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
@@ -2123,6 +2245,7 @@ define <4 x double> @undef_test_permvar_df_256_mask(<4 x double> %a0, <4 x doubl
 declare <16 x i32> @llvm.x86.avx512.permvar.si.512(<16 x i32>, <16 x i32>)
 
 define <16 x i32> @identity_test_permvar_si_512(<16 x i32> %a0) {
+;
 ; CHECK-LABEL: @identity_test_permvar_si_512(
 ; CHECK-NEXT:    ret <16 x i32> [[A0:%.*]]
 ;
@@ -2131,6 +2254,7 @@ define <16 x i32> @identity_test_permvar_si_512(<16 x i32> %a0) {
 }
 
 define <16 x i32> @identity_test_permvar_si_512_mask(<16 x i32> %a0, <16 x i32> %passthru, i16 %mask) {
+;
 ; CHECK-LABEL: @identity_test_permvar_si_512_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16 [[MASK:%.*]] to <16 x i1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = select <16 x i1> [[TMP1]], <16 x i32> [[A0:%.*]], <16 x i32> [[PASSTHRU:%.*]]
@@ -2143,6 +2267,7 @@ define <16 x i32> @identity_test_permvar_si_512_mask(<16 x i32> %a0, <16 x i32> 
 }
 
 define <16 x i32> @zero_test_permvar_si_512(<16 x i32> %a0) {
+;
 ; CHECK-LABEL: @zero_test_permvar_si_512(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[A0:%.*]], <16 x i32> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <16 x i32> [[TMP1]]
@@ -2152,6 +2277,7 @@ define <16 x i32> @zero_test_permvar_si_512(<16 x i32> %a0) {
 }
 
 define <16 x i32> @zero_test_permvar_si_512_mask(<16 x i32> %a0, <16 x i32> %passthru, i16 %mask) {
+;
 ; CHECK-LABEL: @zero_test_permvar_si_512_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[A0:%.*]], <16 x i32> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[MASK:%.*]] to <16 x i1>
@@ -2165,6 +2291,7 @@ define <16 x i32> @zero_test_permvar_si_512_mask(<16 x i32> %a0, <16 x i32> %pas
 }
 
 define <16 x i32> @shuffle_test_permvar_si_512(<16 x i32> %a0) {
+;
 ; CHECK-LABEL: @shuffle_test_permvar_si_512(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[A0:%.*]], <16 x i32> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <16 x i32> [[TMP1]]
@@ -2174,6 +2301,7 @@ define <16 x i32> @shuffle_test_permvar_si_512(<16 x i32> %a0) {
 }
 
 define <16 x i32> @shuffle_test_permvar_si_512_mask(<16 x i32> %a0, <16 x i32> %passthru, i16 %mask) {
+;
 ; CHECK-LABEL: @shuffle_test_permvar_si_512_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[A0:%.*]], <16 x i32> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[MASK:%.*]] to <16 x i1>
@@ -2187,6 +2315,7 @@ define <16 x i32> @shuffle_test_permvar_si_512_mask(<16 x i32> %a0, <16 x i32> %
 }
 
 define <16 x i32> @undef_test_permvar_si_512(<16 x i32> %a0) {
+;
 ; CHECK-LABEL: @undef_test_permvar_si_512(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[A0:%.*]], <16 x i32> poison, <16 x i32> <i32 undef, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <16 x i32> [[TMP1]]
@@ -2196,6 +2325,7 @@ define <16 x i32> @undef_test_permvar_si_512(<16 x i32> %a0) {
 }
 
 define <16 x i32> @undef_test_permvar_si_512_mask(<16 x i32> %a0, <16 x i32> %passthru, i16 %mask) {
+;
 ; CHECK-LABEL: @undef_test_permvar_si_512_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[A0:%.*]], <16 x i32> poison, <16 x i32> <i32 undef, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[MASK:%.*]] to <16 x i1>
@@ -2211,6 +2341,7 @@ define <16 x i32> @undef_test_permvar_si_512_mask(<16 x i32> %a0, <16 x i32> %pa
 declare <16 x float> @llvm.x86.avx512.permvar.sf.512(<16 x float>, <16 x i32>)
 
 define <16 x float> @identity_test_permvar_sf_512(<16 x float> %a0) {
+;
 ; CHECK-LABEL: @identity_test_permvar_sf_512(
 ; CHECK-NEXT:    ret <16 x float> [[A0:%.*]]
 ;
@@ -2219,6 +2350,7 @@ define <16 x float> @identity_test_permvar_sf_512(<16 x float> %a0) {
 }
 
 define <16 x float> @identity_test_permvar_sf_512_mask(<16 x float> %a0, <16 x float> %passthru, i16 %mask) {
+;
 ; CHECK-LABEL: @identity_test_permvar_sf_512_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16 [[MASK:%.*]] to <16 x i1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = select <16 x i1> [[TMP1]], <16 x float> [[A0:%.*]], <16 x float> [[PASSTHRU:%.*]]
@@ -2231,6 +2363,7 @@ define <16 x float> @identity_test_permvar_sf_512_mask(<16 x float> %a0, <16 x f
 }
 
 define <16 x float> @zero_test_permvar_sf_512(<16 x float> %a0) {
+;
 ; CHECK-LABEL: @zero_test_permvar_sf_512(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x float> [[A0:%.*]], <16 x float> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <16 x float> [[TMP1]]
@@ -2240,6 +2373,7 @@ define <16 x float> @zero_test_permvar_sf_512(<16 x float> %a0) {
 }
 
 define <16 x float> @zero_test_permvar_sf_512_mask(<16 x float> %a0, <16 x float> %passthru, i16 %mask) {
+;
 ; CHECK-LABEL: @zero_test_permvar_sf_512_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x float> [[A0:%.*]], <16 x float> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[MASK:%.*]] to <16 x i1>
@@ -2253,6 +2387,7 @@ define <16 x float> @zero_test_permvar_sf_512_mask(<16 x float> %a0, <16 x float
 }
 
 define <16 x float> @shuffle_test_permvar_sf_512(<16 x float> %a0) {
+;
 ; CHECK-LABEL: @shuffle_test_permvar_sf_512(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x float> [[A0:%.*]], <16 x float> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <16 x float> [[TMP1]]
@@ -2262,6 +2397,7 @@ define <16 x float> @shuffle_test_permvar_sf_512(<16 x float> %a0) {
 }
 
 define <16 x float> @shuffle_test_permvar_sf_512_mask(<16 x float> %a0, <16 x float> %passthru, i16 %mask) {
+;
 ; CHECK-LABEL: @shuffle_test_permvar_sf_512_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x float> [[A0:%.*]], <16 x float> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[MASK:%.*]] to <16 x i1>
@@ -2275,6 +2411,7 @@ define <16 x float> @shuffle_test_permvar_sf_512_mask(<16 x float> %a0, <16 x fl
 }
 
 define <16 x float> @undef_test_permvar_sf_512(<16 x float> %a0) {
+;
 ; CHECK-LABEL: @undef_test_permvar_sf_512(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x float> [[A0:%.*]], <16 x float> poison, <16 x i32> <i32 undef, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <16 x float> [[TMP1]]
@@ -2284,6 +2421,7 @@ define <16 x float> @undef_test_permvar_sf_512(<16 x float> %a0) {
 }
 
 define <16 x float> @undef_test_permvar_sf_512_mask(<16 x float> %a0, <16 x float> %passthru, i16 %mask) {
+;
 ; CHECK-LABEL: @undef_test_permvar_sf_512_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x float> [[A0:%.*]], <16 x float> poison, <16 x i32> <i32 undef, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[MASK:%.*]] to <16 x i1>
@@ -2299,6 +2437,7 @@ define <16 x float> @undef_test_permvar_sf_512_mask(<16 x float> %a0, <16 x floa
 declare <8 x i64> @llvm.x86.avx512.permvar.di.512(<8 x i64>, <8 x i64>)
 
 define <8 x i64> @identity_test_permvar_di_512(<8 x i64> %a0) {
+;
 ; CHECK-LABEL: @identity_test_permvar_di_512(
 ; CHECK-NEXT:    ret <8 x i64> [[A0:%.*]]
 ;
@@ -2307,6 +2446,7 @@ define <8 x i64> @identity_test_permvar_di_512(<8 x i64> %a0) {
 }
 
 define <8 x i64> @identity_test_permvar_di_512_mask(<8 x i64> %a0, <8 x i64> %passthru, i8 %mask) {
+;
 ; CHECK-LABEL: @identity_test_permvar_di_512_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = select <8 x i1> [[TMP1]], <8 x i64> [[A0:%.*]], <8 x i64> [[PASSTHRU:%.*]]
@@ -2319,6 +2459,7 @@ define <8 x i64> @identity_test_permvar_di_512_mask(<8 x i64> %a0, <8 x i64> %pa
 }
 
 define <8 x i64> @zero_test_permvar_di_512(<8 x i64> %a0) {
+;
 ; CHECK-LABEL: @zero_test_permvar_di_512(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i64> [[A0:%.*]], <8 x i64> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <8 x i64> [[TMP1]]
@@ -2328,6 +2469,7 @@ define <8 x i64> @zero_test_permvar_di_512(<8 x i64> %a0) {
 }
 
 define <8 x i64> @zero_test_permvar_di_512_mask(<8 x i64> %a0, <8 x i64> %passthru, i8 %mask) {
+;
 ; CHECK-LABEL: @zero_test_permvar_di_512_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i64> [[A0:%.*]], <8 x i64> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
@@ -2341,6 +2483,7 @@ define <8 x i64> @zero_test_permvar_di_512_mask(<8 x i64> %a0, <8 x i64> %passth
 }
 
 define <8 x i64> @shuffle_test_permvar_di_512(<8 x i64> %a0) {
+;
 ; CHECK-LABEL: @shuffle_test_permvar_di_512(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i64> [[A0:%.*]], <8 x i64> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <8 x i64> [[TMP1]]
@@ -2350,6 +2493,7 @@ define <8 x i64> @shuffle_test_permvar_di_512(<8 x i64> %a0) {
 }
 
 define <8 x i64> @shuffle_test_permvar_di_512_mask(<8 x i64> %a0, <8 x i64> %passthru, i8 %mask) {
+;
 ; CHECK-LABEL: @shuffle_test_permvar_di_512_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i64> [[A0:%.*]], <8 x i64> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
@@ -2363,6 +2507,7 @@ define <8 x i64> @shuffle_test_permvar_di_512_mask(<8 x i64> %a0, <8 x i64> %pas
 }
 
 define <8 x i64> @undef_test_permvar_di_512(<8 x i64> %a0) {
+;
 ; CHECK-LABEL: @undef_test_permvar_di_512(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i64> [[A0:%.*]], <8 x i64> poison, <8 x i32> <i32 undef, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <8 x i64> [[TMP1]]
@@ -2372,6 +2517,7 @@ define <8 x i64> @undef_test_permvar_di_512(<8 x i64> %a0) {
 }
 
 define <8 x i64> @undef_test_permvar_di_512_mask(<8 x i64> %a0, <8 x i64> %passthru, i8 %mask) {
+;
 ; CHECK-LABEL: @undef_test_permvar_di_512_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i64> [[A0:%.*]], <8 x i64> poison, <8 x i32> <i32 undef, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
@@ -2387,6 +2533,7 @@ define <8 x i64> @undef_test_permvar_di_512_mask(<8 x i64> %a0, <8 x i64> %passt
 declare <8 x double> @llvm.x86.avx512.permvar.df.512(<8 x double>, <8 x i64>)
 
 define <8 x double> @identity_test_permvar_df_512(<8 x double> %a0) {
+;
 ; CHECK-LABEL: @identity_test_permvar_df_512(
 ; CHECK-NEXT:    ret <8 x double> [[A0:%.*]]
 ;
@@ -2395,6 +2542,7 @@ define <8 x double> @identity_test_permvar_df_512(<8 x double> %a0) {
 }
 
 define <8 x double> @identity_test_permvar_df_512_mask(<8 x double> %a0, <8 x double> %passthru, i8 %mask) {
+;
 ; CHECK-LABEL: @identity_test_permvar_df_512_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = select <8 x i1> [[TMP1]], <8 x double> [[A0:%.*]], <8 x double> [[PASSTHRU:%.*]]
@@ -2407,6 +2555,7 @@ define <8 x double> @identity_test_permvar_df_512_mask(<8 x double> %a0, <8 x do
 }
 
 define <8 x double> @zero_test_permvar_df_512(<8 x double> %a0) {
+;
 ; CHECK-LABEL: @zero_test_permvar_df_512(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x double> [[A0:%.*]], <8 x double> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <8 x double> [[TMP1]]
@@ -2416,6 +2565,7 @@ define <8 x double> @zero_test_permvar_df_512(<8 x double> %a0) {
 }
 
 define <8 x double> @zero_test_permvar_df_512_mask(<8 x double> %a0, <8 x double> %passthru, i8 %mask) {
+;
 ; CHECK-LABEL: @zero_test_permvar_df_512_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x double> [[A0:%.*]], <8 x double> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
@@ -2429,6 +2579,7 @@ define <8 x double> @zero_test_permvar_df_512_mask(<8 x double> %a0, <8 x double
 }
 
 define <8 x double> @shuffle_test_permvar_df_512(<8 x double> %a0) {
+;
 ; CHECK-LABEL: @shuffle_test_permvar_df_512(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x double> [[A0:%.*]], <8 x double> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <8 x double> [[TMP1]]
@@ -2438,6 +2589,7 @@ define <8 x double> @shuffle_test_permvar_df_512(<8 x double> %a0) {
 }
 
 define <8 x double> @shuffle_test_permvar_df_512_mask(<8 x double> %a0, <8 x double> %passthru, i8 %mask) {
+;
 ; CHECK-LABEL: @shuffle_test_permvar_df_512_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x double> [[A0:%.*]], <8 x double> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
@@ -2451,6 +2603,7 @@ define <8 x double> @shuffle_test_permvar_df_512_mask(<8 x double> %a0, <8 x dou
 }
 
 define <8 x double> @undef_test_permvar_df_512(<8 x double> %a0) {
+;
 ; CHECK-LABEL: @undef_test_permvar_df_512(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x double> [[A0:%.*]], <8 x double> poison, <8 x i32> <i32 undef, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <8 x double> [[TMP1]]
@@ -2460,6 +2613,7 @@ define <8 x double> @undef_test_permvar_df_512(<8 x double> %a0) {
 }
 
 define <8 x double> @undef_test_permvar_df_512_mask(<8 x double> %a0, <8 x double> %passthru, i8 %mask) {
+;
 ; CHECK-LABEL: @undef_test_permvar_df_512_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x double> [[A0:%.*]], <8 x double> poison, <8 x i32> <i32 undef, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
@@ -2475,6 +2629,7 @@ define <8 x double> @undef_test_permvar_df_512_mask(<8 x double> %a0, <8 x doubl
 declare <8 x i16> @llvm.x86.avx512.permvar.hi.128(<8 x i16>, <8 x i16>)
 
 define <8 x i16> @identity_test_permvar_hi_128(<8 x i16> %a0) {
+;
 ; CHECK-LABEL: @identity_test_permvar_hi_128(
 ; CHECK-NEXT:    ret <8 x i16> [[A0:%.*]]
 ;
@@ -2483,6 +2638,7 @@ define <8 x i16> @identity_test_permvar_hi_128(<8 x i16> %a0) {
 }
 
 define <8 x i16> @identity_test_permvar_hi_128_mask(<8 x i16> %a0, <8 x i16> %passthru, i8 %mask) {
+;
 ; CHECK-LABEL: @identity_test_permvar_hi_128_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = select <8 x i1> [[TMP1]], <8 x i16> [[A0:%.*]], <8 x i16> [[PASSTHRU:%.*]]
@@ -2495,6 +2651,7 @@ define <8 x i16> @identity_test_permvar_hi_128_mask(<8 x i16> %a0, <8 x i16> %pa
 }
 
 define <8 x i16> @zero_test_permvar_hi_128(<8 x i16> %a0) {
+;
 ; CHECK-LABEL: @zero_test_permvar_hi_128(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i16> [[A0:%.*]], <8 x i16> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <8 x i16> [[TMP1]]
@@ -2504,6 +2661,7 @@ define <8 x i16> @zero_test_permvar_hi_128(<8 x i16> %a0) {
 }
 
 define <8 x i16> @zero_test_permvar_hi_128_mask(<8 x i16> %a0, <8 x i16> %passthru, i8 %mask) {
+;
 ; CHECK-LABEL: @zero_test_permvar_hi_128_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i16> [[A0:%.*]], <8 x i16> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
@@ -2517,6 +2675,7 @@ define <8 x i16> @zero_test_permvar_hi_128_mask(<8 x i16> %a0, <8 x i16> %passth
 }
 
 define <8 x i16> @shuffle_test_permvar_hi_128(<8 x i16> %a0) {
+;
 ; CHECK-LABEL: @shuffle_test_permvar_hi_128(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i16> [[A0:%.*]], <8 x i16> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <8 x i16> [[TMP1]]
@@ -2526,6 +2685,7 @@ define <8 x i16> @shuffle_test_permvar_hi_128(<8 x i16> %a0) {
 }
 
 define <8 x i16> @shuffle_test_permvar_hi_128_mask(<8 x i16> %a0, <8 x i16> %passthru, i8 %mask) {
+;
 ; CHECK-LABEL: @shuffle_test_permvar_hi_128_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i16> [[A0:%.*]], <8 x i16> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
@@ -2539,6 +2699,7 @@ define <8 x i16> @shuffle_test_permvar_hi_128_mask(<8 x i16> %a0, <8 x i16> %pas
 }
 
 define <8 x i16> @undef_test_permvar_hi_128(<8 x i16> %a0) {
+;
 ; CHECK-LABEL: @undef_test_permvar_hi_128(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i16> [[A0:%.*]], <8 x i16> poison, <8 x i32> <i32 undef, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <8 x i16> [[TMP1]]
@@ -2548,6 +2709,7 @@ define <8 x i16> @undef_test_permvar_hi_128(<8 x i16> %a0) {
 }
 
 define <8 x i16> @undef_test_permvar_hi_128_mask(<8 x i16> %a0, <8 x i16> %passthru, i8 %mask) {
+;
 ; CHECK-LABEL: @undef_test_permvar_hi_128_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i16> [[A0:%.*]], <8 x i16> poison, <8 x i32> <i32 undef, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
@@ -2563,6 +2725,7 @@ define <8 x i16> @undef_test_permvar_hi_128_mask(<8 x i16> %a0, <8 x i16> %passt
 declare <16 x i16> @llvm.x86.avx512.permvar.hi.256(<16 x i16>, <16 x i16>)
 
 define <16 x i16> @identity_test_permvar_hi_256(<16 x i16> %a0) {
+;
 ; CHECK-LABEL: @identity_test_permvar_hi_256(
 ; CHECK-NEXT:    ret <16 x i16> [[A0:%.*]]
 ;
@@ -2571,6 +2734,7 @@ define <16 x i16> @identity_test_permvar_hi_256(<16 x i16> %a0) {
 }
 
 define <16 x i16> @identity_test_permvar_hi_256_mask(<16 x i16> %a0, <16 x i16> %passthru, i16 %mask) {
+;
 ; CHECK-LABEL: @identity_test_permvar_hi_256_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16 [[MASK:%.*]] to <16 x i1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = select <16 x i1> [[TMP1]], <16 x i16> [[A0:%.*]], <16 x i16> [[PASSTHRU:%.*]]
@@ -2583,6 +2747,7 @@ define <16 x i16> @identity_test_permvar_hi_256_mask(<16 x i16> %a0, <16 x i16> 
 }
 
 define <16 x i16> @zero_test_permvar_hi_256(<16 x i16> %a0) {
+;
 ; CHECK-LABEL: @zero_test_permvar_hi_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i16> [[A0:%.*]], <16 x i16> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <16 x i16> [[TMP1]]
@@ -2592,6 +2757,7 @@ define <16 x i16> @zero_test_permvar_hi_256(<16 x i16> %a0) {
 }
 
 define <16 x i16> @zero_test_permvar_hi_256_mask(<16 x i16> %a0, <16 x i16> %passthru, i16 %mask) {
+;
 ; CHECK-LABEL: @zero_test_permvar_hi_256_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i16> [[A0:%.*]], <16 x i16> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[MASK:%.*]] to <16 x i1>
@@ -2605,6 +2771,7 @@ define <16 x i16> @zero_test_permvar_hi_256_mask(<16 x i16> %a0, <16 x i16> %pas
 }
 
 define <16 x i16> @shuffle_test_permvar_hi_256(<16 x i16> %a0) {
+;
 ; CHECK-LABEL: @shuffle_test_permvar_hi_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i16> [[A0:%.*]], <16 x i16> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <16 x i16> [[TMP1]]
@@ -2614,6 +2781,7 @@ define <16 x i16> @shuffle_test_permvar_hi_256(<16 x i16> %a0) {
 }
 
 define <16 x i16> @shuffle_test_permvar_hi_256_mask(<16 x i16> %a0, <16 x i16> %passthru, i16 %mask) {
+;
 ; CHECK-LABEL: @shuffle_test_permvar_hi_256_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i16> [[A0:%.*]], <16 x i16> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[MASK:%.*]] to <16 x i1>
@@ -2627,6 +2795,7 @@ define <16 x i16> @shuffle_test_permvar_hi_256_mask(<16 x i16> %a0, <16 x i16> %
 }
 
 define <16 x i16> @undef_test_permvar_hi_256(<16 x i16> %a0) {
+;
 ; CHECK-LABEL: @undef_test_permvar_hi_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i16> [[A0:%.*]], <16 x i16> poison, <16 x i32> <i32 undef, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <16 x i16> [[TMP1]]
@@ -2636,6 +2805,7 @@ define <16 x i16> @undef_test_permvar_hi_256(<16 x i16> %a0) {
 }
 
 define <16 x i16> @undef_test_permvar_hi_256_mask(<16 x i16> %a0, <16 x i16> %passthru, i16 %mask) {
+;
 ; CHECK-LABEL: @undef_test_permvar_hi_256_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i16> [[A0:%.*]], <16 x i16> poison, <16 x i32> <i32 undef, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[MASK:%.*]] to <16 x i1>
@@ -2651,6 +2821,7 @@ define <16 x i16> @undef_test_permvar_hi_256_mask(<16 x i16> %a0, <16 x i16> %pa
 declare <32 x i16> @llvm.x86.avx512.permvar.hi.512(<32 x i16>, <32 x i16>)
 
 define <32 x i16> @identity_test_permvar_hi_512(<32 x i16> %a0) {
+;
 ; CHECK-LABEL: @identity_test_permvar_hi_512(
 ; CHECK-NEXT:    ret <32 x i16> [[A0:%.*]]
 ;
@@ -2659,6 +2830,7 @@ define <32 x i16> @identity_test_permvar_hi_512(<32 x i16> %a0) {
 }
 
 define <32 x i16> @identity_test_permvar_hi_512_mask(<32 x i16> %a0, <32 x i16> %passthru, i32 %mask) {
+;
 ; CHECK-LABEL: @identity_test_permvar_hi_512_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[MASK:%.*]] to <32 x i1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = select <32 x i1> [[TMP1]], <32 x i16> [[A0:%.*]], <32 x i16> [[PASSTHRU:%.*]]
@@ -2671,6 +2843,7 @@ define <32 x i16> @identity_test_permvar_hi_512_mask(<32 x i16> %a0, <32 x i16> 
 }
 
 define <32 x i16> @zero_test_permvar_hi_512(<32 x i16> %a0) {
+;
 ; CHECK-LABEL: @zero_test_permvar_hi_512(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <32 x i16> [[A0:%.*]], <32 x i16> poison, <32 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <32 x i16> [[TMP1]]
@@ -2680,6 +2853,7 @@ define <32 x i16> @zero_test_permvar_hi_512(<32 x i16> %a0) {
 }
 
 define <32 x i16> @zero_test_permvar_hi_512_mask(<32 x i16> %a0, <32 x i16> %passthru, i32 %mask) {
+;
 ; CHECK-LABEL: @zero_test_permvar_hi_512_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <32 x i16> [[A0:%.*]], <32 x i16> poison, <32 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32 [[MASK:%.*]] to <32 x i1>
@@ -2693,6 +2867,7 @@ define <32 x i16> @zero_test_permvar_hi_512_mask(<32 x i16> %a0, <32 x i16> %pas
 }
 
 define <32 x i16> @shuffle_test_permvar_hi_512(<32 x i16> %a0) {
+;
 ; CHECK-LABEL: @shuffle_test_permvar_hi_512(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <32 x i16> [[A0:%.*]], <32 x i16> poison, <32 x i32> <i32 31, i32 30, i32 29, i32 28, i32 27, i32 26, i32 25, i32 24, i32 23, i32 22, i32 21, i32 20, i32 19, i32 18, i32 17, i32 16, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <32 x i16> [[TMP1]]
@@ -2702,6 +2877,7 @@ define <32 x i16> @shuffle_test_permvar_hi_512(<32 x i16> %a0) {
 }
 
 define <32 x i16> @shuffle_test_permvar_hi_512_mask(<32 x i16> %a0, <32 x i16> %passthru, i32 %mask) {
+;
 ; CHECK-LABEL: @shuffle_test_permvar_hi_512_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <32 x i16> [[A0:%.*]], <32 x i16> poison, <32 x i32> <i32 31, i32 30, i32 29, i32 28, i32 27, i32 26, i32 25, i32 24, i32 23, i32 22, i32 21, i32 20, i32 19, i32 18, i32 17, i32 16, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32 [[MASK:%.*]] to <32 x i1>
@@ -2715,6 +2891,7 @@ define <32 x i16> @shuffle_test_permvar_hi_512_mask(<32 x i16> %a0, <32 x i16> %
 }
 
 define <32 x i16> @undef_test_permvar_hi_512(<32 x i16> %a0) {
+;
 ; CHECK-LABEL: @undef_test_permvar_hi_512(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <32 x i16> [[A0:%.*]], <32 x i16> poison, <32 x i32> <i32 undef, i32 30, i32 29, i32 28, i32 27, i32 26, i32 25, i32 24, i32 23, i32 22, i32 21, i32 20, i32 19, i32 18, i32 17, i32 16, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <32 x i16> [[TMP1]]
@@ -2724,6 +2901,7 @@ define <32 x i16> @undef_test_permvar_hi_512(<32 x i16> %a0) {
 }
 
 define <32 x i16> @undef_test_permvar_hi_512_mask(<32 x i16> %a0, <32 x i16> %passthru, i32 %mask) {
+;
 ; CHECK-LABEL: @undef_test_permvar_hi_512_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <32 x i16> [[A0:%.*]], <32 x i16> poison, <32 x i32> <i32 undef, i32 30, i32 29, i32 28, i32 27, i32 26, i32 25, i32 24, i32 23, i32 22, i32 21, i32 20, i32 19, i32 18, i32 17, i32 16, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32 [[MASK:%.*]] to <32 x i1>
@@ -2739,6 +2917,7 @@ define <32 x i16> @undef_test_permvar_hi_512_mask(<32 x i16> %a0, <32 x i16> %pa
 declare <16 x i8> @llvm.x86.avx512.permvar.qi.128(<16 x i8>, <16 x i8>)
 
 define <16 x i8> @identity_test_permvar_qi_128(<16 x i8> %a0) {
+;
 ; CHECK-LABEL: @identity_test_permvar_qi_128(
 ; CHECK-NEXT:    ret <16 x i8> [[A0:%.*]]
 ;
@@ -2747,6 +2926,7 @@ define <16 x i8> @identity_test_permvar_qi_128(<16 x i8> %a0) {
 }
 
 define <16 x i8> @identity_test_permvar_qi_128_mask(<16 x i8> %a0, <16 x i8> %passthru, i16 %mask) {
+;
 ; CHECK-LABEL: @identity_test_permvar_qi_128_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16 [[MASK:%.*]] to <16 x i1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = select <16 x i1> [[TMP1]], <16 x i8> [[A0:%.*]], <16 x i8> [[PASSTHRU:%.*]]
@@ -2759,6 +2939,7 @@ define <16 x i8> @identity_test_permvar_qi_128_mask(<16 x i8> %a0, <16 x i8> %pa
 }
 
 define <16 x i8> @zero_test_permvar_qi_128(<16 x i8> %a0) {
+;
 ; CHECK-LABEL: @zero_test_permvar_qi_128(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[A0:%.*]], <16 x i8> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <16 x i8> [[TMP1]]
@@ -2768,6 +2949,7 @@ define <16 x i8> @zero_test_permvar_qi_128(<16 x i8> %a0) {
 }
 
 define <16 x i8> @zero_test_permvar_qi_128_mask(<16 x i8> %a0, <16 x i8> %passthru, i16 %mask) {
+;
 ; CHECK-LABEL: @zero_test_permvar_qi_128_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[A0:%.*]], <16 x i8> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[MASK:%.*]] to <16 x i1>
@@ -2781,6 +2963,7 @@ define <16 x i8> @zero_test_permvar_qi_128_mask(<16 x i8> %a0, <16 x i8> %passth
 }
 
 define <16 x i8> @shuffle_test_permvar_qi_128(<16 x i8> %a0) {
+;
 ; CHECK-LABEL: @shuffle_test_permvar_qi_128(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[A0:%.*]], <16 x i8> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <16 x i8> [[TMP1]]
@@ -2790,6 +2973,7 @@ define <16 x i8> @shuffle_test_permvar_qi_128(<16 x i8> %a0) {
 }
 
 define <16 x i8> @shuffle_test_permvar_qi_128_mask(<16 x i8> %a0, <16 x i8> %passthru, i16 %mask) {
+;
 ; CHECK-LABEL: @shuffle_test_permvar_qi_128_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[A0:%.*]], <16 x i8> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[MASK:%.*]] to <16 x i1>
@@ -2803,6 +2987,7 @@ define <16 x i8> @shuffle_test_permvar_qi_128_mask(<16 x i8> %a0, <16 x i8> %pas
 }
 
 define <16 x i8> @undef_test_permvar_qi_128(<16 x i8> %a0) {
+;
 ; CHECK-LABEL: @undef_test_permvar_qi_128(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[A0:%.*]], <16 x i8> poison, <16 x i32> <i32 undef, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <16 x i8> [[TMP1]]
@@ -2812,6 +2997,7 @@ define <16 x i8> @undef_test_permvar_qi_128(<16 x i8> %a0) {
 }
 
 define <16 x i8> @undef_test_permvar_qi_128_mask(<16 x i8> %a0, <16 x i8> %passthru, i16 %mask) {
+;
 ; CHECK-LABEL: @undef_test_permvar_qi_128_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[A0:%.*]], <16 x i8> poison, <16 x i32> <i32 undef, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[MASK:%.*]] to <16 x i1>
@@ -2827,6 +3013,7 @@ define <16 x i8> @undef_test_permvar_qi_128_mask(<16 x i8> %a0, <16 x i8> %passt
 declare <32 x i8> @llvm.x86.avx512.permvar.qi.256(<32 x i8>, <32 x i8>)
 
 define <32 x i8> @identity_test_permvar_qi_256(<32 x i8> %a0) {
+;
 ; CHECK-LABEL: @identity_test_permvar_qi_256(
 ; CHECK-NEXT:    ret <32 x i8> [[A0:%.*]]
 ;
@@ -2835,6 +3022,7 @@ define <32 x i8> @identity_test_permvar_qi_256(<32 x i8> %a0) {
 }
 
 define <32 x i8> @identity_test_permvar_qi_256_mask(<32 x i8> %a0, <32 x i8> %passthru, i32 %mask) {
+;
 ; CHECK-LABEL: @identity_test_permvar_qi_256_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[MASK:%.*]] to <32 x i1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = select <32 x i1> [[TMP1]], <32 x i8> [[A0:%.*]], <32 x i8> [[PASSTHRU:%.*]]
@@ -2847,6 +3035,7 @@ define <32 x i8> @identity_test_permvar_qi_256_mask(<32 x i8> %a0, <32 x i8> %pa
 }
 
 define <32 x i8> @zero_test_permvar_qi_256(<32 x i8> %a0) {
+;
 ; CHECK-LABEL: @zero_test_permvar_qi_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <32 x i8> [[A0:%.*]], <32 x i8> poison, <32 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <32 x i8> [[TMP1]]
@@ -2856,6 +3045,7 @@ define <32 x i8> @zero_test_permvar_qi_256(<32 x i8> %a0) {
 }
 
 define <32 x i8> @zero_test_permvar_qi_256_mask(<32 x i8> %a0, <32 x i8> %passthru, i32 %mask) {
+;
 ; CHECK-LABEL: @zero_test_permvar_qi_256_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <32 x i8> [[A0:%.*]], <32 x i8> poison, <32 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32 [[MASK:%.*]] to <32 x i1>
@@ -2869,6 +3059,7 @@ define <32 x i8> @zero_test_permvar_qi_256_mask(<32 x i8> %a0, <32 x i8> %passth
 }
 
 define <32 x i8> @shuffle_test_permvar_qi_256(<32 x i8> %a0) {
+;
 ; CHECK-LABEL: @shuffle_test_permvar_qi_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <32 x i8> [[A0:%.*]], <32 x i8> poison, <32 x i32> <i32 31, i32 30, i32 29, i32 28, i32 27, i32 26, i32 25, i32 24, i32 23, i32 22, i32 21, i32 20, i32 19, i32 18, i32 17, i32 16, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <32 x i8> [[TMP1]]
@@ -2878,6 +3069,7 @@ define <32 x i8> @shuffle_test_permvar_qi_256(<32 x i8> %a0) {
 }
 
 define <32 x i8> @shuffle_test_permvar_qi_256_mask(<32 x i8> %a0, <32 x i8> %passthru, i32 %mask) {
+;
 ; CHECK-LABEL: @shuffle_test_permvar_qi_256_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <32 x i8> [[A0:%.*]], <32 x i8> poison, <32 x i32> <i32 31, i32 30, i32 29, i32 28, i32 27, i32 26, i32 25, i32 24, i32 23, i32 22, i32 21, i32 20, i32 19, i32 18, i32 17, i32 16, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32 [[MASK:%.*]] to <32 x i1>
@@ -2891,6 +3083,7 @@ define <32 x i8> @shuffle_test_permvar_qi_256_mask(<32 x i8> %a0, <32 x i8> %pas
 }
 
 define <32 x i8> @undef_test_permvar_qi_256(<32 x i8> %a0) {
+;
 ; CHECK-LABEL: @undef_test_permvar_qi_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <32 x i8> [[A0:%.*]], <32 x i8> poison, <32 x i32> <i32 undef, i32 30, i32 29, i32 28, i32 27, i32 26, i32 25, i32 24, i32 23, i32 22, i32 21, i32 20, i32 19, i32 18, i32 17, i32 16, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <32 x i8> [[TMP1]]
@@ -2900,6 +3093,7 @@ define <32 x i8> @undef_test_permvar_qi_256(<32 x i8> %a0) {
 }
 
 define <32 x i8> @undef_test_permvar_qi_256_mask(<32 x i8> %a0, <32 x i8> %passthru, i32 %mask) {
+;
 ; CHECK-LABEL: @undef_test_permvar_qi_256_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <32 x i8> [[A0:%.*]], <32 x i8> poison, <32 x i32> <i32 undef, i32 30, i32 29, i32 28, i32 27, i32 26, i32 25, i32 24, i32 23, i32 22, i32 21, i32 20, i32 19, i32 18, i32 17, i32 16, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32 [[MASK:%.*]] to <32 x i1>
@@ -2915,6 +3109,7 @@ define <32 x i8> @undef_test_permvar_qi_256_mask(<32 x i8> %a0, <32 x i8> %passt
 declare <64 x i8> @llvm.x86.avx512.permvar.qi.512(<64 x i8>, <64 x i8>)
 
 define <64 x i8> @identity_test_permvar_qi_512(<64 x i8> %a0) {
+;
 ; CHECK-LABEL: @identity_test_permvar_qi_512(
 ; CHECK-NEXT:    ret <64 x i8> [[A0:%.*]]
 ;
@@ -2923,6 +3118,7 @@ define <64 x i8> @identity_test_permvar_qi_512(<64 x i8> %a0) {
 }
 
 define <64 x i8> @identity_test_permvar_qi_512_mask(<64 x i8> %a0, <64 x i8> %passthru, i64 %mask) {
+;
 ; CHECK-LABEL: @identity_test_permvar_qi_512_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[MASK:%.*]] to <64 x i1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = select <64 x i1> [[TMP1]], <64 x i8> [[A0:%.*]], <64 x i8> [[PASSTHRU:%.*]]
@@ -2935,6 +3131,7 @@ define <64 x i8> @identity_test_permvar_qi_512_mask(<64 x i8> %a0, <64 x i8> %pa
 }
 
 define <64 x i8> @zero_test_permvar_qi_512(<64 x i8> %a0) {
+;
 ; CHECK-LABEL: @zero_test_permvar_qi_512(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <64 x i8> [[A0:%.*]], <64 x i8> poison, <64 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <64 x i8> [[TMP1]]
@@ -2944,6 +3141,7 @@ define <64 x i8> @zero_test_permvar_qi_512(<64 x i8> %a0) {
 }
 
 define <64 x i8> @zero_test_permvar_qi_512_mask(<64 x i8> %a0, <64 x i8> %passthru, i64 %mask) {
+;
 ; CHECK-LABEL: @zero_test_permvar_qi_512_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <64 x i8> [[A0:%.*]], <64 x i8> poison, <64 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i64 [[MASK:%.*]] to <64 x i1>
@@ -2957,6 +3155,7 @@ define <64 x i8> @zero_test_permvar_qi_512_mask(<64 x i8> %a0, <64 x i8> %passth
 }
 
 define <64 x i8> @shuffle_test_permvar_qi_512(<64 x i8> %a0) {
+;
 ; CHECK-LABEL: @shuffle_test_permvar_qi_512(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <64 x i8> [[A0:%.*]], <64 x i8> poison, <64 x i32> <i32 63, i32 62, i32 61, i32 60, i32 59, i32 58, i32 57, i32 56, i32 55, i32 54, i32 53, i32 52, i32 51, i32 50, i32 49, i32 48, i32 47, i32 46, i32 45, i32 44, i32 43, i32 42, i32 41, i32 40, i32 39, i32 38, i32 37, i32 36, i32 35, i32 34, i32 33, i32 32, i32 31, i32 30, i32 29, i32 28, i32 27, i32 26, i32 25, i32 24, i32 23, i32 22, i32 21, i32 20, i32 19, i32 18, i32 17, i32 16, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <64 x i8> [[TMP1]]
@@ -2966,6 +3165,7 @@ define <64 x i8> @shuffle_test_permvar_qi_512(<64 x i8> %a0) {
 }
 
 define <64 x i8> @shuffle_test_permvar_qi_512_mask(<64 x i8> %a0, <64 x i8> %passthru, i64 %mask) {
+;
 ; CHECK-LABEL: @shuffle_test_permvar_qi_512_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <64 x i8> [[A0:%.*]], <64 x i8> poison, <64 x i32> <i32 63, i32 62, i32 61, i32 60, i32 59, i32 58, i32 57, i32 56, i32 55, i32 54, i32 53, i32 52, i32 51, i32 50, i32 49, i32 48, i32 47, i32 46, i32 45, i32 44, i32 43, i32 42, i32 41, i32 40, i32 39, i32 38, i32 37, i32 36, i32 35, i32 34, i32 33, i32 32, i32 31, i32 30, i32 29, i32 28, i32 27, i32 26, i32 25, i32 24, i32 23, i32 22, i32 21, i32 20, i32 19, i32 18, i32 17, i32 16, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i64 [[MASK:%.*]] to <64 x i1>
@@ -2979,6 +3179,7 @@ define <64 x i8> @shuffle_test_permvar_qi_512_mask(<64 x i8> %a0, <64 x i8> %pas
 }
 
 define <64 x i8> @undef_test_permvar_qi_512(<64 x i8> %a0) {
+;
 ; CHECK-LABEL: @undef_test_permvar_qi_512(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <64 x i8> [[A0:%.*]], <64 x i8> poison, <64 x i32> <i32 undef, i32 62, i32 61, i32 60, i32 59, i32 58, i32 57, i32 56, i32 55, i32 54, i32 53, i32 52, i32 51, i32 50, i32 49, i32 48, i32 47, i32 46, i32 45, i32 44, i32 43, i32 42, i32 41, i32 40, i32 39, i32 38, i32 37, i32 36, i32 35, i32 34, i32 33, i32 32, i32 31, i32 30, i32 29, i32 28, i32 27, i32 26, i32 25, i32 24, i32 23, i32 22, i32 21, i32 20, i32 19, i32 18, i32 17, i32 16, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <64 x i8> [[TMP1]]
@@ -2988,6 +3189,7 @@ define <64 x i8> @undef_test_permvar_qi_512(<64 x i8> %a0) {
 }
 
 define <64 x i8> @undef_test_permvar_qi_512_mask(<64 x i8> %a0, <64 x i8> %passthru, i64 %mask) {
+;
 ; CHECK-LABEL: @undef_test_permvar_qi_512_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <64 x i8> [[A0:%.*]], <64 x i8> poison, <64 x i32> <i32 undef, i32 62, i32 61, i32 60, i32 59, i32 58, i32 57, i32 56, i32 55, i32 54, i32 53, i32 52, i32 51, i32 50, i32 49, i32 48, i32 47, i32 46, i32 45, i32 44, i32 43, i32 42, i32 41, i32 40, i32 39, i32 38, i32 37, i32 36, i32 35, i32 34, i32 33, i32 32, i32 31, i32 30, i32 29, i32 28, i32 27, i32 26, i32 25, i32 24, i32 23, i32 22, i32 21, i32 20, i32 19, i32 18, i32 17, i32 16, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i64 [[MASK:%.*]] to <64 x i1>
@@ -3003,6 +3205,7 @@ define <64 x i8> @undef_test_permvar_qi_512_mask(<64 x i8> %a0, <64 x i8> %passt
 declare <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float>, <16 x float>, i32)
 
 define <16 x float> @test_add_ps(<16 x float> %a, <16 x float> %b) {
+;
 ; CHECK-LABEL: @test_add_ps(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd <16 x float> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret <16 x float> [[TMP1]]
@@ -3012,6 +3215,7 @@ define <16 x float> @test_add_ps(<16 x float> %a, <16 x float> %b) {
 }
 
 define <16 x float> @test_add_ps_round(<16 x float> %a, <16 x float> %b) {
+;
 ; CHECK-LABEL: @test_add_ps_round(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> [[A:%.*]], <16 x float> [[B:%.*]], i32 8)
 ; CHECK-NEXT:    ret <16 x float> [[TMP1]]
@@ -3021,6 +3225,7 @@ define <16 x float> @test_add_ps_round(<16 x float> %a, <16 x float> %b) {
 }
 
 define <16 x float> @test_add_ps_mask(<16 x float> %a, <16 x float> %b, <16 x float> %c, i16 %mask) {
+;
 ; CHECK-LABEL: @test_add_ps_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd <16 x float> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[MASK:%.*]] to <16 x i1>
@@ -3034,6 +3239,7 @@ define <16 x float> @test_add_ps_mask(<16 x float> %a, <16 x float> %b, <16 x fl
 }
 
 define <16 x float> @test_add_ps_mask_round(<16 x float> %a, <16 x float> %b, <16 x float> %c, i16 %mask) {
+;
 ; CHECK-LABEL: @test_add_ps_mask_round(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> [[A:%.*]], <16 x float> [[B:%.*]], i32 8)
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[MASK:%.*]] to <16 x i1>
@@ -3049,6 +3255,7 @@ define <16 x float> @test_add_ps_mask_round(<16 x float> %a, <16 x float> %b, <1
 declare <8 x double> @llvm.x86.avx512.add.pd.512(<8 x double>, <8 x double>, i32)
 
 define <8 x double> @test_add_pd(<8 x double> %a, <8 x double> %b) {
+;
 ; CHECK-LABEL: @test_add_pd(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd <8 x double> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret <8 x double> [[TMP1]]
@@ -3058,6 +3265,7 @@ define <8 x double> @test_add_pd(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @test_add_pd_round(<8 x double> %a, <8 x double> %b) {
+;
 ; CHECK-LABEL: @test_add_pd_round(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x double> @llvm.x86.avx512.add.pd.512(<8 x double> [[A:%.*]], <8 x double> [[B:%.*]], i32 8)
 ; CHECK-NEXT:    ret <8 x double> [[TMP1]]
@@ -3067,6 +3275,7 @@ define <8 x double> @test_add_pd_round(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @test_add_pd_mask(<8 x double> %a, <8 x double> %b, <8 x double> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_add_pd_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd <8 x double> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
@@ -3080,6 +3289,7 @@ define <8 x double> @test_add_pd_mask(<8 x double> %a, <8 x double> %b, <8 x dou
 }
 
 define <8 x double> @test_add_pd_mask_round(<8 x double> %a, <8 x double> %b, <8 x double> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_add_pd_mask_round(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x double> @llvm.x86.avx512.add.pd.512(<8 x double> [[A:%.*]], <8 x double> [[B:%.*]], i32 8)
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
@@ -3095,6 +3305,7 @@ define <8 x double> @test_add_pd_mask_round(<8 x double> %a, <8 x double> %b, <8
 declare <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float>, <16 x float>, i32)
 
 define <16 x float> @test_sub_ps(<16 x float> %a, <16 x float> %b) {
+;
 ; CHECK-LABEL: @test_sub_ps(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fsub <16 x float> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret <16 x float> [[TMP1]]
@@ -3104,6 +3315,7 @@ define <16 x float> @test_sub_ps(<16 x float> %a, <16 x float> %b) {
 }
 
 define <16 x float> @test_sub_ps_round(<16 x float> %a, <16 x float> %b) {
+;
 ; CHECK-LABEL: @test_sub_ps_round(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float> [[A:%.*]], <16 x float> [[B:%.*]], i32 8)
 ; CHECK-NEXT:    ret <16 x float> [[TMP1]]
@@ -3113,6 +3325,7 @@ define <16 x float> @test_sub_ps_round(<16 x float> %a, <16 x float> %b) {
 }
 
 define <16 x float> @test_sub_ps_mask(<16 x float> %a, <16 x float> %b, <16 x float> %c, i16 %mask) {
+;
 ; CHECK-LABEL: @test_sub_ps_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fsub <16 x float> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[MASK:%.*]] to <16 x i1>
@@ -3126,6 +3339,7 @@ define <16 x float> @test_sub_ps_mask(<16 x float> %a, <16 x float> %b, <16 x fl
 }
 
 define <16 x float> @test_sub_ps_mask_round(<16 x float> %a, <16 x float> %b, <16 x float> %c, i16 %mask) {
+;
 ; CHECK-LABEL: @test_sub_ps_mask_round(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float> [[A:%.*]], <16 x float> [[B:%.*]], i32 8)
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[MASK:%.*]] to <16 x i1>
@@ -3141,6 +3355,7 @@ define <16 x float> @test_sub_ps_mask_round(<16 x float> %a, <16 x float> %b, <1
 declare <8 x double> @llvm.x86.avx512.sub.pd.512(<8 x double>, <8 x double>, i32)
 
 define <8 x double> @test_sub_pd(<8 x double> %a, <8 x double> %b) {
+;
 ; CHECK-LABEL: @test_sub_pd(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fsub <8 x double> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret <8 x double> [[TMP1]]
@@ -3150,6 +3365,7 @@ define <8 x double> @test_sub_pd(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @test_sub_pd_round(<8 x double> %a, <8 x double> %b) {
+;
 ; CHECK-LABEL: @test_sub_pd_round(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x double> @llvm.x86.avx512.sub.pd.512(<8 x double> [[A:%.*]], <8 x double> [[B:%.*]], i32 8)
 ; CHECK-NEXT:    ret <8 x double> [[TMP1]]
@@ -3159,6 +3375,7 @@ define <8 x double> @test_sub_pd_round(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @test_sub_pd_mask(<8 x double> %a, <8 x double> %b, <8 x double> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_sub_pd_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fsub <8 x double> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
@@ -3172,6 +3389,7 @@ define <8 x double> @test_sub_pd_mask(<8 x double> %a, <8 x double> %b, <8 x dou
 }
 
 define <8 x double> @test_sub_pd_mask_round(<8 x double> %a, <8 x double> %b, <8 x double> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_sub_pd_mask_round(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x double> @llvm.x86.avx512.sub.pd.512(<8 x double> [[A:%.*]], <8 x double> [[B:%.*]], i32 8)
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
@@ -3187,6 +3405,7 @@ define <8 x double> @test_sub_pd_mask_round(<8 x double> %a, <8 x double> %b, <8
 declare <16 x float> @llvm.x86.avx512.mul.ps.512(<16 x float>, <16 x float>, i32)
 
 define <16 x float> @test_mul_ps(<16 x float> %a, <16 x float> %b) {
+;
 ; CHECK-LABEL: @test_mul_ps(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul <16 x float> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret <16 x float> [[TMP1]]
@@ -3196,6 +3415,7 @@ define <16 x float> @test_mul_ps(<16 x float> %a, <16 x float> %b) {
 }
 
 define <16 x float> @test_mul_ps_round(<16 x float> %a, <16 x float> %b) {
+;
 ; CHECK-LABEL: @test_mul_ps_round(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x float> @llvm.x86.avx512.mul.ps.512(<16 x float> [[A:%.*]], <16 x float> [[B:%.*]], i32 8)
 ; CHECK-NEXT:    ret <16 x float> [[TMP1]]
@@ -3205,6 +3425,7 @@ define <16 x float> @test_mul_ps_round(<16 x float> %a, <16 x float> %b) {
 }
 
 define <16 x float> @test_mul_ps_mask(<16 x float> %a, <16 x float> %b, <16 x float> %c, i16 %mask) {
+;
 ; CHECK-LABEL: @test_mul_ps_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul <16 x float> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[MASK:%.*]] to <16 x i1>
@@ -3218,6 +3439,7 @@ define <16 x float> @test_mul_ps_mask(<16 x float> %a, <16 x float> %b, <16 x fl
 }
 
 define <16 x float> @test_mul_ps_mask_round(<16 x float> %a, <16 x float> %b, <16 x float> %c, i16 %mask) {
+;
 ; CHECK-LABEL: @test_mul_ps_mask_round(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x float> @llvm.x86.avx512.mul.ps.512(<16 x float> [[A:%.*]], <16 x float> [[B:%.*]], i32 8)
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[MASK:%.*]] to <16 x i1>
@@ -3233,6 +3455,7 @@ define <16 x float> @test_mul_ps_mask_round(<16 x float> %a, <16 x float> %b, <1
 declare <8 x double> @llvm.x86.avx512.mul.pd.512(<8 x double>, <8 x double>, i32)
 
 define <8 x double> @test_mul_pd(<8 x double> %a, <8 x double> %b) {
+;
 ; CHECK-LABEL: @test_mul_pd(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul <8 x double> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret <8 x double> [[TMP1]]
@@ -3242,6 +3465,7 @@ define <8 x double> @test_mul_pd(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @test_mul_pd_round(<8 x double> %a, <8 x double> %b) {
+;
 ; CHECK-LABEL: @test_mul_pd_round(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x double> @llvm.x86.avx512.mul.pd.512(<8 x double> [[A:%.*]], <8 x double> [[B:%.*]], i32 8)
 ; CHECK-NEXT:    ret <8 x double> [[TMP1]]
@@ -3251,6 +3475,7 @@ define <8 x double> @test_mul_pd_round(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @test_mul_pd_mask(<8 x double> %a, <8 x double> %b, <8 x double> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_mul_pd_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul <8 x double> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
@@ -3264,6 +3489,7 @@ define <8 x double> @test_mul_pd_mask(<8 x double> %a, <8 x double> %b, <8 x dou
 }
 
 define <8 x double> @test_mul_pd_mask_round(<8 x double> %a, <8 x double> %b, <8 x double> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_mul_pd_mask_round(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x double> @llvm.x86.avx512.mul.pd.512(<8 x double> [[A:%.*]], <8 x double> [[B:%.*]], i32 8)
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
@@ -3279,6 +3505,7 @@ define <8 x double> @test_mul_pd_mask_round(<8 x double> %a, <8 x double> %b, <8
 declare <16 x float> @llvm.x86.avx512.div.ps.512(<16 x float>, <16 x float>, i32)
 
 define <16 x float> @test_div_ps(<16 x float> %a, <16 x float> %b) {
+;
 ; CHECK-LABEL: @test_div_ps(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fdiv <16 x float> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret <16 x float> [[TMP1]]
@@ -3288,6 +3515,7 @@ define <16 x float> @test_div_ps(<16 x float> %a, <16 x float> %b) {
 }
 
 define <16 x float> @test_div_ps_round(<16 x float> %a, <16 x float> %b) {
+;
 ; CHECK-LABEL: @test_div_ps_round(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x float> @llvm.x86.avx512.div.ps.512(<16 x float> [[A:%.*]], <16 x float> [[B:%.*]], i32 8)
 ; CHECK-NEXT:    ret <16 x float> [[TMP1]]
@@ -3297,6 +3525,7 @@ define <16 x float> @test_div_ps_round(<16 x float> %a, <16 x float> %b) {
 }
 
 define <16 x float> @test_div_ps_mask(<16 x float> %a, <16 x float> %b, <16 x float> %c, i16 %mask) {
+;
 ; CHECK-LABEL: @test_div_ps_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fdiv <16 x float> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[MASK:%.*]] to <16 x i1>
@@ -3310,6 +3539,7 @@ define <16 x float> @test_div_ps_mask(<16 x float> %a, <16 x float> %b, <16 x fl
 }
 
 define <16 x float> @test_div_ps_mask_round(<16 x float> %a, <16 x float> %b, <16 x float> %c, i16 %mask) {
+;
 ; CHECK-LABEL: @test_div_ps_mask_round(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x float> @llvm.x86.avx512.div.ps.512(<16 x float> [[A:%.*]], <16 x float> [[B:%.*]], i32 8)
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[MASK:%.*]] to <16 x i1>
@@ -3325,6 +3555,7 @@ define <16 x float> @test_div_ps_mask_round(<16 x float> %a, <16 x float> %b, <1
 declare <8 x double> @llvm.x86.avx512.div.pd.512(<8 x double>, <8 x double>, i32)
 
 define <8 x double> @test_div_pd(<8 x double> %a, <8 x double> %b) {
+;
 ; CHECK-LABEL: @test_div_pd(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fdiv <8 x double> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret <8 x double> [[TMP1]]
@@ -3334,6 +3565,7 @@ define <8 x double> @test_div_pd(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @test_div_pd_round(<8 x double> %a, <8 x double> %b) {
+;
 ; CHECK-LABEL: @test_div_pd_round(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x double> @llvm.x86.avx512.div.pd.512(<8 x double> [[A:%.*]], <8 x double> [[B:%.*]], i32 8)
 ; CHECK-NEXT:    ret <8 x double> [[TMP1]]
@@ -3343,6 +3575,7 @@ define <8 x double> @test_div_pd_round(<8 x double> %a, <8 x double> %b) {
 }
 
 define <8 x double> @test_div_pd_mask(<8 x double> %a, <8 x double> %b, <8 x double> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_div_pd_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fdiv <8 x double> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
@@ -3356,6 +3589,7 @@ define <8 x double> @test_div_pd_mask(<8 x double> %a, <8 x double> %b, <8 x dou
 }
 
 define <8 x double> @test_div_pd_mask_round(<8 x double> %a, <8 x double> %b, <8 x double> %c, i8 %mask) {
+;
 ; CHECK-LABEL: @test_div_pd_mask_round(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x double> @llvm.x86.avx512.div.pd.512(<8 x double> [[A:%.*]], <8 x double> [[B:%.*]], i32 8)
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[MASK:%.*]] to <8 x i1>
@@ -3371,9 +3605,10 @@ define <8 x double> @test_div_pd_mask_round(<8 x double> %a, <8 x double> %b, <8
 declare i32 @llvm.x86.avx512.vcomi.ss(<4 x float>, <4 x float>, i32, i32)
 
 define i32 @test_comi_ss_0(float %a, float %b) {
+;
 ; CHECK-LABEL: @test_comi_ss_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[A:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[B:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @llvm.x86.avx512.vcomi.ss(<4 x float> [[TMP1]], <4 x float> [[TMP2]], i32 0, i32 4)
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
@@ -3392,9 +3627,10 @@ define i32 @test_comi_ss_0(float %a, float %b) {
 declare i32 @llvm.x86.avx512.vcomi.sd(<2 x double>, <2 x double>, i32, i32)
 
 define i32 @test_comi_sd_0(double %a, double %b) {
+;
 ; CHECK-LABEL: @test_comi_sd_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[A:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[B:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @llvm.x86.avx512.vcomi.sd(<2 x double> [[TMP1]], <2 x double> [[TMP2]], i32 0, i32 4)
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;

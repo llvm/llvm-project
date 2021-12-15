@@ -216,3 +216,24 @@ sw.epilog:                                        ; preds = %entry, %sw.bb
   ret i32 %sum.0
 }
 
+declare void @checkd(double)
+declare double @log(double) willreturn nounwind readnone
+define void @test7(i1 %cond, double %d) {
+; CHECK-LABEL: @test7(
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[A:%.*]] = call double @log(double [[D:%.*]])
+; CHECK-NEXT:    call void @checkd(double [[A]])
+; CHECK-NEXT:    ret void
+; CHECK:       else:
+; CHECK-NEXT:    ret void
+;
+  %A = call double @log(double %d)
+  br i1 %cond, label %if, label %else
+
+if:
+  call void @checkd(double %A)
+  ret void
+else:
+  ret void
+}

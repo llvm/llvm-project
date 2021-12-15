@@ -53,6 +53,11 @@ Improvements to Clang's diagnostics
 
 - -Wbitwise-instead-of-logical (part of -Wbool-operation) warns about use of bitwise operators with boolean operands which have side effects.
 
+- Added diagnostic groups to control diagnostics for attribute extensions by
+  adding groups ``-Wc++N-attribute-extensions`` (where ``N`` is the standard
+  release being diagnosed against). These new groups are automatically implied
+  when passing ``-Wc++N-extensions``. Resolves PR33518.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
@@ -62,7 +67,8 @@ Non-comprehensive list of changes in this release
 New Compiler Flags
 ------------------
 
-- ...
+- Clang plugin arguments can now be passed through the compiler driver via
+  ``-fplugin-arg-pluginname-arg``, similar to GCC's ``-fplugin-arg``.
 
 Deprecated Compiler Flags
 -------------------------
@@ -140,6 +146,16 @@ C Language Changes in Clang
   ``__attribute__((warning("")))`` function attributes have been added.
 - The maximum allowed alignment has been increased from 2^29 to 2^32.
 
+- Clang now supports the ``_BitInt(N)`` family of bit-precise integer types
+  from C23. This type was previously exposed as ``_ExtInt(N)``, which is now a
+  deprecated alias for ``_BitInt(N)`` (so diagnostics will mention ``_BitInt``
+  even if source uses ``_ExtInt``). ``_BitInt(N)`` and ``_ExtInt(N)`` are the
+  same types in all respects beyond spelling and the deprecation warning.
+  ``_BitInt(N)`` is supported as an extension in older C modes and in all C++
+  modes. Note: the ABI for ``_BitInt(N)`` is still in the process of being
+  stabilized, so this type should not yet be used in interfaces that require
+  ABI stability.
+
 C++ Language Changes in Clang
 -----------------------------
 
@@ -172,6 +188,13 @@ OpenCL C Language Changes in Clang
 ABI Changes in Clang
 --------------------
 
+- The ``_ExtInt(N)`` extension has been standardized in C23 as ``_BitInt(N)``.
+  The mangling of this type in C++ has accordingly changed: under the Microsoft
+  ABI it is now mangled using the ``_BitInt`` spelling, and under the Itanium ABI
+  it is now mangled using a dedicated production. Note: the ABI for ``_BitInt(N)``
+  is still in the process of being stabilized, so this type should not yet be
+  used in interfaces that require ABI stability.
+
 OpenMP Support in Clang
 -----------------------
 
@@ -187,7 +210,6 @@ X86 Support in Clang
 --------------------
 
 - Support for ``AVX512-FP16`` instructions has been added.
-- Support for ``_Float16`` type has been added.
 
 Arm and AArch64 Support in Clang
 --------------------------------
@@ -215,7 +237,7 @@ Floating Point Support in Clang
   rather than -ffp-contract=fast, and the documentation of these features has
   been clarified. Previously, the documentation claimed that -ffp-model=precise
   was the default, but this was incorrect because the precise model implied
-  -ffp-contract=fast, wheras the (now corrected) default behavior is
+  -ffp-contract=fast, whereas the (now corrected) default behavior is
   -ffp-contract=on.
   -ffp-model=precise is now exactly the default mode of the compiler.
 
@@ -227,7 +249,10 @@ Internal API Changes
 Build System Changes
 --------------------
 
-- ...
+- Linux distros can specify ``-DCLANG_DEFAULT_PIE_ON_LINUX=On`` to use ``-fPIE`` and
+  ``-pie`` by default. This matches GCC installations on many Linux distros
+  (configured with ``--enable-default-pie``).
+  (`D113372 <https://reviews.llvm.org/D113372>`_)
 
 AST Matchers
 ------------
@@ -251,7 +276,7 @@ clang-format
 - Option ``AllowShortEnumsOnASingleLine: false`` has been improved, it now
   correctly places the opening brace according to ``BraceWrapping.AfterEnum``.
 
-- Option ``QualifierAligment`` has been added in order to auto-arrange the
+- Option ``QualifierAlignment`` has been added in order to auto-arrange the
   positioning of specifiers/qualifiers
   `const` `volatile` `static` `inline` `constexpr` `restrict`
   in variable and parameter declarations to be either ``Right`` aligned
@@ -264,6 +289,8 @@ clang-format
 - Add a ``Custom`` style to ``SpaceBeforeParens``, to better configure the
   space before parentheses. The custom options can be set using
   ``SpaceBeforeParensOptions``.
+
+- Improved C++20 Modules and Coroutines support.
 
 libclang
 --------

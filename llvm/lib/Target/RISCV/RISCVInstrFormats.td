@@ -107,31 +107,44 @@ def Vcompress    : RISCVVConstraint<!or(VS2Constraint.Value,
 
 // The following opcode names match those given in Table 19.1 in the
 // RISC-V User-level ISA specification ("RISC-V base opcode map").
-class RISCVOpcode<bits<7> val> {
+class RISCVOpcode<string name, bits<7> val> {
+  string Name = name;
   bits<7> Value = val;
 }
-def OPC_LOAD      : RISCVOpcode<0b0000011>;
-def OPC_LOAD_FP   : RISCVOpcode<0b0000111>;
-def OPC_MISC_MEM  : RISCVOpcode<0b0001111>;
-def OPC_OP_IMM    : RISCVOpcode<0b0010011>;
-def OPC_AUIPC     : RISCVOpcode<0b0010111>;
-def OPC_OP_IMM_32 : RISCVOpcode<0b0011011>;
-def OPC_STORE     : RISCVOpcode<0b0100011>;
-def OPC_STORE_FP  : RISCVOpcode<0b0100111>;
-def OPC_AMO       : RISCVOpcode<0b0101111>;
-def OPC_OP        : RISCVOpcode<0b0110011>;
-def OPC_LUI       : RISCVOpcode<0b0110111>;
-def OPC_OP_32     : RISCVOpcode<0b0111011>;
-def OPC_MADD      : RISCVOpcode<0b1000011>;
-def OPC_MSUB      : RISCVOpcode<0b1000111>;
-def OPC_NMSUB     : RISCVOpcode<0b1001011>;
-def OPC_NMADD     : RISCVOpcode<0b1001111>;
-def OPC_OP_FP     : RISCVOpcode<0b1010011>;
-def OPC_OP_V      : RISCVOpcode<0b1010111>;
-def OPC_BRANCH    : RISCVOpcode<0b1100011>;
-def OPC_JALR      : RISCVOpcode<0b1100111>;
-def OPC_JAL       : RISCVOpcode<0b1101111>;
-def OPC_SYSTEM    : RISCVOpcode<0b1110011>;
+def RISCVOpcodesList : GenericTable {
+  let FilterClass = "RISCVOpcode";
+  let Fields = [
+    "Name", "Value"
+  ];
+  let PrimaryKey = [ "Value" ];
+  let PrimaryKeyName = "lookupRISCVOpcodeByValue";
+}
+def lookupRISCVOpcodeByName : SearchIndex {
+  let Table = RISCVOpcodesList;
+  let Key = [ "Name" ];
+}
+def OPC_LOAD      : RISCVOpcode<"LOAD",      0b0000011>;
+def OPC_LOAD_FP   : RISCVOpcode<"LOAD_FP",   0b0000111>;
+def OPC_MISC_MEM  : RISCVOpcode<"MISC_MEM",  0b0001111>;
+def OPC_OP_IMM    : RISCVOpcode<"OP_IMM",    0b0010011>;
+def OPC_AUIPC     : RISCVOpcode<"AUIPC",     0b0010111>;
+def OPC_OP_IMM_32 : RISCVOpcode<"OP_IMM_32", 0b0011011>;
+def OPC_STORE     : RISCVOpcode<"STORE",     0b0100011>;
+def OPC_STORE_FP  : RISCVOpcode<"STORE_FP",  0b0100111>;
+def OPC_AMO       : RISCVOpcode<"AMO",       0b0101111>;
+def OPC_OP        : RISCVOpcode<"OP",        0b0110011>;
+def OPC_LUI       : RISCVOpcode<"LUI",       0b0110111>;
+def OPC_OP_32     : RISCVOpcode<"OP_32",     0b0111011>;
+def OPC_MADD      : RISCVOpcode<"MADD",      0b1000011>;
+def OPC_MSUB      : RISCVOpcode<"MSUB",      0b1000111>;
+def OPC_NMSUB     : RISCVOpcode<"NMSUB",     0b1001011>;
+def OPC_NMADD     : RISCVOpcode<"NMADD",     0b1001111>;
+def OPC_OP_FP     : RISCVOpcode<"OP_FP",     0b1010011>;
+def OPC_OP_V      : RISCVOpcode<"OP_V",      0b1010111>;
+def OPC_BRANCH    : RISCVOpcode<"BRANCH",    0b1100011>;
+def OPC_JALR      : RISCVOpcode<"JALR",      0b1100111>;
+def OPC_JAL       : RISCVOpcode<"JAL",       0b1101111>;
+def OPC_SYSTEM    : RISCVOpcode<"SYSTEM",    0b1110011>;
 
 class RVInst<dag outs, dag ins, string opcodestr, string argstr,
              list<dag> pattern, InstFormat format>
@@ -188,8 +201,7 @@ class RVInst<dag outs, dag ins, string opcodestr, string argstr,
 
 // Pseudo instructions
 class Pseudo<dag outs, dag ins, list<dag> pattern, string opcodestr = "", string argstr = "">
-    : RVInst<outs, ins, opcodestr, argstr, pattern, InstFormatPseudo>,
-      Sched<[]> {
+    : RVInst<outs, ins, opcodestr, argstr, pattern, InstFormatPseudo> {
   let isPseudo = 1;
   let isCodeGenOnly = 1;
 }
@@ -265,14 +277,14 @@ class RVInstR4Frm<bits<2> funct2, RISCVOpcode opcode, dag outs, dag ins,
   bits<5> rs3;
   bits<5> rs2;
   bits<5> rs1;
-  bits<3> funct3;
+  bits<3> frm;
   bits<5> rd;
 
   let Inst{31-27} = rs3;
   let Inst{26-25} = funct2;
   let Inst{24-20} = rs2;
   let Inst{19-15} = rs1;
-  let Inst{14-12} = funct3;
+  let Inst{14-12} = frm;
   let Inst{11-7} = rd;
   let Opcode = opcode.Value;
 }
@@ -300,13 +312,13 @@ class RVInstRFrm<bits<7> funct7, RISCVOpcode opcode, dag outs, dag ins,
     : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR> {
   bits<5> rs2;
   bits<5> rs1;
-  bits<3> funct3;
+  bits<3> frm;
   bits<5> rd;
 
   let Inst{31-25} = funct7;
   let Inst{24-20} = rs2;
   let Inst{19-15} = rs1;
-  let Inst{14-12} = funct3;
+  let Inst{14-12} = frm;
   let Inst{11-7} = rd;
   let Opcode = opcode.Value;
 }

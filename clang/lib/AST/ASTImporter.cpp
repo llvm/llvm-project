@@ -6066,20 +6066,24 @@ ASTNodeImporter::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
   if (Error Err = importInto(TemplatedFD, D->getTemplatedDecl()))
     return std::move(Err);
 
-  // Template parameters of the ClassTemplateDecl and FunctionTemplateDecl are
-  // shared, if the FunctionTemplateDecl is a deduction guide for the class.
-  // At import the ClassTemplateDecl object is always created first (FIXME: is
-  // this really true?) because the dependency, then the FunctionTemplateDecl.
-  // The DeclContext of the template parameters is changed when the
-  // FunctionTemplateDecl is created, but was set already when the class
-  // template was created. So here it is not the TU (default value) any more.
-  // FIXME: The DeclContext of the parameters is now set finally to the
-  // CXXDeductionGuideDecl object that was imported later. This may not be the
-  // same that is in the original AST, specially if there are multiple deduction
-  // guides.
-  DeclContext *OldParamDC = nullptr;
-  if (Params->size() > 0)
-    OldParamDC = Params->getParam(0)->getDeclContext();
+  // At creation of the template the template parameters are "adopted"
+  // (DeclContext is changed). After this possible change the lookup table
+  // must be updated.
+  // At deduction guides the DeclContext of the template parameters may be
+  // different from what we would expect, it may be the class template, or a
+  // probably different CXXDeductionGuideDecl. This may come from the fact that
+  // the template parameter objects may be shared between deduction guides or
+  // the class template, and at creation of multiple FunctionTemplateDecl
+  // objects (for deduction guides) the same parameters are re-used. The
+  // "adoption" happens multiple times with different parent, even recursively
+  // for TemplateTemplateParmDecl. The same happens at import when the
+  // FunctionTemplateDecl objects are created, but in different order.
+  // In this way the DeclContext of these template parameters is not necessarily
+  // the same as in the "from" context.
+  SmallVector<DeclContext *, 2> OldParamDC;
+  OldParamDC.reserve(Params->size());
+  llvm::transform(*Params, std::back_inserter(OldParamDC),
+                  [](NamedDecl *ND) { return ND->getDeclContext(); });
 
   FunctionTemplateDecl *ToFunc;
   if (GetImportedOrCreateDecl(ToFunc, D, Importer.getToContext(), DC, Loc, Name,
@@ -6091,7 +6095,12 @@ ASTNodeImporter::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
   ToFunc->setAccess(D->getAccess());
   ToFunc->setLexicalDeclContext(LexicalDC);
   LexicalDC->addDeclInternal(ToFunc);
-  updateLookupTableForTemplateParameters(*Params, OldParamDC);
+
+  ASTImporterLookupTable *LT = Importer.SharedState->getLookupTable();
+  if (LT && !OldParamDC.empty()) {
+    for (unsigned int I = 0; I < OldParamDC.size(); ++I)
+      LT->updateForced(Params->getParam(I), OldParamDC[I]);
+  }
 
   if (FoundByLookup) {
     auto *Recent =

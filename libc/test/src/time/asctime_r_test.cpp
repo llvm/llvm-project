@@ -30,7 +30,7 @@ TEST(LlvmLibcAsctimeR, Nullptr) {
   ASSERT_EQ(EINVAL, llvmlibc_errno);
   ASSERT_STREQ(nullptr, result);
 
-  char buffer[TimeConstants::AsctimeBufferSize];
+  char buffer[TimeConstants::ASCTIME_BUFFER_SIZE];
   result = __llvm_libc::asctime_r(nullptr, buffer);
   ASSERT_EQ(EINVAL, llvmlibc_errno);
   ASSERT_STREQ(nullptr, result);
@@ -42,7 +42,7 @@ TEST(LlvmLibcAsctimeR, Nullptr) {
 }
 
 TEST(LlvmLibcAsctimeR, ValidDate) {
-  char buffer[TimeConstants::AsctimeBufferSize];
+  char buffer[TimeConstants::ASCTIME_BUFFER_SIZE];
   struct tm tm_data;
   char *result;
   // 1970-01-01 00:00:00. Test with a valid buffer size.

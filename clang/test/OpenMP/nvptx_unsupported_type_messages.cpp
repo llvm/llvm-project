@@ -265,6 +265,6 @@ struct B {
   typedef typename A_type<value>::type type;
 };
 
-void bar(_ExtInt(66) a) {
+void bar(_BitInt(66) a) {
   auto b = a;
 }

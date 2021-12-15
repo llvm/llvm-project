@@ -373,19 +373,25 @@ static bool isTwoAddrUse(MachineInstr &MI, Register Reg, Register &DstReg) {
   return false;
 }
 
-/// Given a register, if has a single in-basic block use, return the use
-/// instruction if it's a copy or a two-address use.
+/// Given a register, if all its uses are in the same basic block, return the
+/// last use instruction if it's a copy or a two-address use.
 static MachineInstr *
 findOnlyInterestingUse(Register Reg, MachineBasicBlock *MBB,
                        MachineRegisterInfo *MRI, const TargetInstrInfo *TII,
-                       bool &IsCopy, Register &DstReg, bool &IsDstPhys) {
-  if (!MRI->hasOneNonDBGUse(Reg))
-    // None or more than one use.
+                       bool &IsCopy, Register &DstReg, bool &IsDstPhys,
+                       LiveIntervals *LIS) {
+  MachineOperand *UseOp = nullptr;
+  for (MachineOperand &MO : MRI->use_nodbg_operands(Reg)) {
+    MachineInstr *MI = MO.getParent();
+    if (MI->getParent() != MBB)
+      return nullptr;
+    if (isPlainlyKilled(MI, Reg, LIS))
+      UseOp = &MO;
+  }
+  if (!UseOp)
     return nullptr;
-  MachineOperand &UseOp = *MRI->use_nodbg_begin(Reg);
-  MachineInstr &UseMI = *UseOp.getParent();
-  if (UseMI.getParent() != MBB)
-    return nullptr;
+  MachineInstr &UseMI = *UseOp->getParent();
+
   Register SrcReg;
   bool IsSrcPhys;
   if (isCopyToReg(UseMI, TII, SrcReg, DstReg, IsSrcPhys, IsDstPhys)) {
@@ -399,7 +405,7 @@ findOnlyInterestingUse(Register Reg, MachineBasicBlock *MBB,
   }
   if (UseMI.isCommutable()) {
     unsigned Src1 = TargetInstrInfo::CommuteAnyOperandIndex;
-    unsigned Src2 = UseMI.getOperandNo(&UseOp);
+    unsigned Src2 = UseMI.getOperandNo(UseOp);
     if (TII->findCommutedOpIndices(UseMI, Src1, Src2)) {
       MachineOperand &MO = UseMI.getOperand(Src1);
       if (MO.isReg() && MO.isUse() &&
@@ -492,8 +498,7 @@ void TwoAddressInstructionPass::removeClobberedSrcRegMap(MachineInstr *MI) {
       return;
   }
 
-  for (unsigned i = 0, NumOps = MI->getNumOperands(); i != NumOps; ++i) {
-    const MachineOperand &MO = MI->getOperand(i);
+  for (const MachineOperand &MO : MI->operands()) {
     if (MO.isRegMask()) {
       removeMapRegEntry(MO, SrcRegMap, TRI);
       continue;
@@ -685,7 +690,6 @@ bool TwoAddressInstructionPass::convertInstTo3Addr(
 
   // If the old instruction is debug value tracked, an update is required.
   if (auto OldInstrNum = mi->peekDebugInstrNum()) {
-    // Sanity check.
     assert(mi->getNumExplicitDefs() == 1);
     assert(NewMI->getNumExplicitDefs() == 1);
 
@@ -724,7 +728,7 @@ void TwoAddressInstructionPass::scanUses(Register DstReg) {
   Register NewReg;
   Register Reg = DstReg;
   while (MachineInstr *UseMI = findOnlyInterestingUse(Reg, MBB, MRI, TII,IsCopy,
-                                                      NewReg, IsDstPhys)) {
+                                                      NewReg, IsDstPhys, LIS)) {
     if (IsCopy && !Processed.insert(UseMI).second)
       break;
 
@@ -1336,8 +1340,7 @@ tryInstructionTransform(MachineBasicBlock::iterator &mi,
           // Success, or at least we made an improvement. Keep the unfolded
           // instructions and discard the original.
           if (LV) {
-            for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-              MachineOperand &MO = MI.getOperand(i);
+            for (const MachineOperand &MO : MI.operands()) {
               if (MO.isReg() && MO.getReg().isVirtual()) {
                 if (MO.isUse()) {
                   if (MO.isKill()) {

@@ -356,7 +356,7 @@ struct WmmaElementwiseOpToNVVMLowering
   }
 };
 
-} // anonymous namespace
+} // namespace
 
 namespace mlir {
 

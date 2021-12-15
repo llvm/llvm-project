@@ -13,7 +13,7 @@
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(int, fegetenv, (fenv_t * envp)) {
-  return fputil::getEnv(envp);
+  return fputil::get_env(envp);
 }
 
 } // namespace __llvm_libc

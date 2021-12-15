@@ -403,7 +403,7 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
       NonNegatedOps.emplace_back(Op); // Just record which operand that was.
     }
     assert((NegatedOps.size() + NonNegatedOps.size()) == 2 &&
-           "Internal consistency sanity check.");
+           "Internal consistency check failed.");
     // Did we manage to sink negation into both of the operands?
     if (NegatedOps.size() == 2) // Then we get to keep the `add`!
       return Builder.CreateAdd(NegatedOps[0], NegatedOps[1],

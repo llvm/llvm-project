@@ -338,9 +338,10 @@ bool IRTranslator::translateCompare(const User &U,
     MIRBuilder.buildCopy(
         Res, getOrCreateVReg(*Constant::getAllOnesValue(U.getType())));
   else {
-    assert(CI && "Instruction should be CmpInst");
-    MIRBuilder.buildFCmp(Pred, Res, Op0, Op1,
-                         MachineInstr::copyFlagsFromInstruction(*CI));
+    uint16_t Flags = 0;
+    if (CI)
+      Flags = MachineInstr::copyFlagsFromInstruction(*CI);
+    MIRBuilder.buildFCmp(Pred, Res, Op0, Op1, Flags);
   }
 
   return true;
@@ -3502,7 +3503,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   // Get rid of the now empty basic block.
   EntryBB->removeSuccessor(&NewEntryBB);
   MF->remove(EntryBB);
-  MF->DeleteMachineBasicBlock(EntryBB);
+  MF->deleteMachineBasicBlock(EntryBB);
 
   assert(&MF->front() == &NewEntryBB &&
          "New entry wasn't next in the list of basic block!");

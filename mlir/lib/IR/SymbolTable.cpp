@@ -619,7 +619,7 @@ struct SymbolScope {
   /// The IR unit representing this scope.
   llvm::PointerUnion<Operation *, Region *> limit;
 };
-} // end anonymous namespace
+} // namespace
 
 /// Collect all of the symbol scopes from 'symbol' to (inclusive) 'limit'.
 static SmallVector<SymbolScope, 2> collectSymbolScopes(Operation *symbol,

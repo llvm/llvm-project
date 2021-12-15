@@ -3,7 +3,7 @@
 
 target triple = "x86_64-unknown-linux-gnu"
 
-; CHECK: module asm ".set a,a.[[HASH:[0-9a-f]+]]"
+; CHECK: module asm ".lto_set_conditional a,a.[[HASH:[0-9a-f]+]]"
 
 define void @b() {
   %f = alloca void ()*, align 8

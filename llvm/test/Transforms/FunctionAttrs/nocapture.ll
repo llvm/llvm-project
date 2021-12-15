@@ -259,7 +259,7 @@ define void @captureLaunder(i8* %p) {
   ret void
 }
 
-; FNATTR: @nocaptureStrip(i8* nocapture %p)
+; FNATTR: @nocaptureStrip(i8* nocapture writeonly %p)
 define void @nocaptureStrip(i8* %p) {
 entry:
   %b = call i8* @llvm.strip.invariant.group.p0i8(i8* %p)

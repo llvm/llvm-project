@@ -631,6 +631,12 @@ func @test_cmpi_vector(%arg0 : vector<8xi64>, %arg1 : vector<8xi64>) -> vector<8
   return %0 : vector<8xi1>
 }
 
+// CHECK-LABEL: test_cmpi_vector_0d
+func @test_cmpi_vector_0d(%arg0 : vector<i64>, %arg1 : vector<i64>) -> vector<i1> {
+  %0 = arith.cmpi ult, %arg0, %arg1 : vector<i64>
+  return %0 : vector<i1>
+}
+
 // CHECK-LABEL: test_cmpf
 func @test_cmpf(%arg0 : f64, %arg1 : f64) -> i1 {
   %0 = arith.cmpf oeq, %arg0, %arg1 : f64

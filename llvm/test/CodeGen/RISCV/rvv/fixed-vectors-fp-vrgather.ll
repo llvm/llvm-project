@@ -55,7 +55,7 @@ define void @gather_const_v64f16(<64 x half>* %x) {
 ; LMULMAX8-LABEL: gather_const_v64f16:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    addi a1, a0, 94
-; LMULMAX8-NEXT:    addi a2, zero, 64
+; LMULMAX8-NEXT:    li a2, 64
 ; LMULMAX8-NEXT:    vsetvli zero, a2, e16, m8, ta, mu
 ; LMULMAX8-NEXT:    vlse16.v v8, (a1), zero
 ; LMULMAX8-NEXT:    vse16.v v8, (a0)
@@ -94,7 +94,7 @@ define void @gather_const_v32f32(<32 x float>* %x) {
 ; LMULMAX8-LABEL: gather_const_v32f32:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    addi a1, a0, 68
-; LMULMAX8-NEXT:    addi a2, zero, 32
+; LMULMAX8-NEXT:    li a2, 32
 ; LMULMAX8-NEXT:    vsetvli zero, a2, e32, m8, ta, mu
 ; LMULMAX8-NEXT:    vlse32.v v8, (a1), zero
 ; LMULMAX8-NEXT:    vse32.v v8, (a0)

@@ -35,7 +35,7 @@ def TypeParamB : TypeParameter<"TestParamD", "a type param D"> {
 /// Check simple attribute parser and printer are generated correctly.
 
 // ATTR: ::mlir::Attribute TestAAttr::parse(::mlir::AsmParser &parser,
-// ATTR:                                    ::mlir::Type attrType) {
+// ATTR:                                    ::mlir::Type type) {
 // ATTR:   FailureOr<IntegerAttr> _result_value;
 // ATTR:   FailureOr<TestParamA> _result_complex;
 // ATTR:   if (parser.parseKeyword("hello"))
@@ -47,7 +47,7 @@ def TypeParamB : TypeParameter<"TestParamD", "a type param D"> {
 // ATTR:     return {};
 // ATTR:   if (parser.parseComma())
 // ATTR:     return {};
-// ATTR:   _result_complex = ::parseAttrParamA(parser, attrType);
+// ATTR:   _result_complex = ::parseAttrParamA(parser, type);
 // ATTR:   if (failed(_result_complex))
 // ATTR:     return {};
 // ATTR:   if (parser.parseRParen())
@@ -61,7 +61,7 @@ def TypeParamB : TypeParameter<"TestParamD", "a type param D"> {
 // ATTR:   printer << ' ' << "hello";
 // ATTR:   printer << ' ' << "=";
 // ATTR:   printer << ' ';
-// ATTR:   printer << getValue();
+// ATTR:   printer.printStrippedAttrOrType(getValue());
 // ATTR:   printer << ",";
 // ATTR:   printer << ' ';
 // ATTR:   ::printAttrParamA(printer, getComplex());
@@ -81,7 +81,7 @@ def AttrA : TestAttr<"TestA"> {
 /// Test simple struct parser and printer are generated correctly.
 
 // ATTR: ::mlir::Attribute TestBAttr::parse(::mlir::AsmParser &parser,
-// ATTR:                                    ::mlir::Type attrType) {
+// ATTR:                                    ::mlir::Type type) {
 // ATTR:   bool _seen_v0 = false;
 // ATTR:   bool _seen_v1 = false;
 // ATTR:   for (unsigned _index = 0; _index < 2; ++_index) {
@@ -92,12 +92,12 @@ def AttrA : TestAttr<"TestA"> {
 // ATTR:       return {};
 // ATTR:     if (!_seen_v0 && _paramKey == "v0") {
 // ATTR:       _seen_v0 = true;
-// ATTR:       _result_v0 = ::parseAttrParamA(parser, attrType);
+// ATTR:       _result_v0 = ::parseAttrParamA(parser, type);
 // ATTR:       if (failed(_result_v0))
 // ATTR:         return {};
 // ATTR:     } else if (!_seen_v1 && _paramKey == "v1") {
 // ATTR:       _seen_v1 = true;
-// ATTR:       _result_v1 = attrType ? ::parseAttrWithType(parser, attrType) : ::parseAttrWithout(parser);
+// ATTR:       _result_v1 = type ? ::parseAttrWithType(parser, type) : ::parseAttrWithout(parser);
 // ATTR:       if (failed(_result_v1))
 // ATTR:         return {};
 // ATTR:     } else {
@@ -136,7 +136,7 @@ def AttrB : TestAttr<"TestB"> {
 /// Test attribute with capture-all params has correct parser and printer.
 
 // ATTR: ::mlir::Attribute TestFAttr::parse(::mlir::AsmParser &parser,
-// ATTR:                                    ::mlir::Type attrType) {
+// ATTR:                                    ::mlir::Type type) {
 // ATTR:   ::mlir::FailureOr<int> _result_v0;
 // ATTR:   ::mlir::FailureOr<int> _result_v1;
 // ATTR:   _result_v0 = ::mlir::FieldParser<int>::parse(parser);
@@ -154,10 +154,10 @@ def AttrB : TestAttr<"TestB"> {
 
 // ATTR: void TestFAttr::print(::mlir::AsmPrinter &printer) const {
 // ATTR:   printer << ' ';
-// ATTR:   printer << getV0();
+// ATTR:   printer.printStrippedAttrOrType(getV0());
 // ATTR:   printer << ",";
 // ATTR:   printer << ' ';
-// ATTR:   printer << getV1();
+// ATTR:   printer.printStrippedAttrOrType(getV1());
 // ATTR: }
 
 def AttrC : TestAttr<"TestF"> {
@@ -213,7 +213,7 @@ def AttrC : TestAttr<"TestF"> {
 // TYPE:   printer << ' ' << "bob";
 // TYPE:   printer << ' ' << "bar";
 // TYPE:   printer << ' ';
-// TYPE:   printer << getValue();
+// TYPE:   printer.printStrippedAttrOrType(getValue());
 // TYPE:   printer << ' ' << "complex";
 // TYPE:   printer << ' ' << "=";
 // TYPE:   printer << ' ';
@@ -361,21 +361,21 @@ def TypeB : TestType<"TestD"> {
 // TYPE:   printer << "v0";
 // TYPE:   printer << ' ' << "=";
 // TYPE:   printer << ' ';
-// TYPE:   printer << getV0();
+// TYPE:   printer.printStrippedAttrOrType(getV0());
 // TYPE:   printer << ",";
 // TYPE:   printer << ' ' << "v2";
 // TYPE:   printer << ' ' << "=";
 // TYPE:   printer << ' ';
-// TYPE:   printer << getV2();
+// TYPE:   printer.printStrippedAttrOrType(getV2());
 // TYPE:   printer << "v1";
 // TYPE:   printer << ' ' << "=";
 // TYPE:   printer << ' ';
-// TYPE:   printer << getV1();
+// TYPE:   printer.printStrippedAttrOrType(getV1());
 // TYPE:   printer << ",";
 // TYPE:   printer << ' ' << "v3";
 // TYPE:   printer << ' ' << "=";
 // TYPE:   printer << ' ';
-// TYPE:   printer << getV3();
+// TYPE:   printer.printStrippedAttrOrType(getV3());
 // TYPE: }
 
 def TypeC : TestType<"TestE"> {

@@ -1461,50 +1461,92 @@ define i8 @lshr_bitwidth_mask(i8 %x, i8 %y) {
   ret i8 %r
 }
 
-define i32 @sext_to_sel(i32 %x, i1 %y) {
-; CHECK-LABEL: @sext_to_sel(
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[Y:%.*]], i32 [[X:%.*]], i32 0
-; CHECK-NEXT:    ret i32 [[R]]
+define i8 @not_ashr_bitwidth_mask(i8 %x, i8 %y) {
+; CHECK-LABEL: @not_ashr_bitwidth_mask(
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[POS_OR_ZERO:%.*]] = select i1 [[ISNEG]], i8 0, i8 [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[POS_OR_ZERO]]
 ;
-  %sext = sext i1 %y to i32
-  %r = and i32 %sext, %x
-  ret i32 %r
+  %sign = ashr i8 %x, 7
+  %not = xor i8 %sign, -1
+  %pos_or_zero = and i8 %not, %y
+  ret i8 %pos_or_zero
 }
 
-define <2 x i32> @sext_to_sel_swap(<2 x i32> %px, <2 x i1> %y) {
-; CHECK-LABEL: @sext_to_sel_swap(
-; CHECK-NEXT:    [[X:%.*]] = mul <2 x i32> [[PX:%.*]], [[PX]]
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[Y:%.*]], <2 x i32> [[X]], <2 x i32> zeroinitializer
-; CHECK-NEXT:    ret <2 x i32> [[R]]
+define <2 x i8> @not_ashr_bitwidth_mask_vec_commute(<2 x i8> %x, <2 x i8> %py) {
+; CHECK-LABEL: @not_ashr_bitwidth_mask_vec_commute(
+; CHECK-NEXT:    [[Y:%.*]] = mul <2 x i8> [[PY:%.*]], <i8 42, i8 2>
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt <2 x i8> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[POS_OR_ZERO:%.*]] = select <2 x i1> [[ISNEG]], <2 x i8> zeroinitializer, <2 x i8> [[Y]]
+; CHECK-NEXT:    ret <2 x i8> [[POS_OR_ZERO]]
 ;
-  %x = mul <2 x i32> %px, %px ; thwart complexity-based canonicalization
-  %sext = sext <2 x i1> %y to <2 x i32>
-  %r = and <2 x i32> %x, %sext
-  ret <2 x i32> %r
+  %y = mul <2 x i8> %py, <i8 42, i8 2>      ; thwart complexity-based ordering
+  %sign = ashr <2 x i8> %x, <i8 7, i8 7>
+  %not = xor <2 x i8> %sign, <i8 -1, i8 -1>
+  %pos_or_zero = and <2 x i8> %y, %not
+  ret <2 x i8> %pos_or_zero
 }
 
-define i32 @sext_to_sel_multi_use(i32 %x, i1 %y) {
-; CHECK-LABEL: @sext_to_sel_multi_use(
-; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[Y:%.*]] to i32
-; CHECK-NEXT:    call void @use32(i32 [[SEXT]])
-; CHECK-NEXT:    [[R:%.*]] = and i32 [[SEXT]], [[X:%.*]]
-; CHECK-NEXT:    ret i32 [[R]]
+; extra use of shift is ok
+
+define i8 @not_ashr_bitwidth_mask_use1(i8 %x, i8 %y) {
+; CHECK-LABEL: @not_ashr_bitwidth_mask_use1(
+; CHECK-NEXT:    [[SIGN:%.*]] = ashr i8 [[X:%.*]], 7
+; CHECK-NEXT:    call void @use8(i8 [[SIGN]])
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i8 [[X]], 0
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[ISNEG]], i8 0, i8 [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
 ;
-  %sext = sext i1 %y to i32
-  call void @use32(i32 %sext)
-  %r = and i32 %sext, %x
-  ret i32 %r
+  %sign = ashr i8 %x, 7
+  call void @use8(i8 %sign)
+  %not = xor i8 %sign, -1
+  %r = and i8 %not, %y
+  ret i8 %r
 }
 
-define i32 @sext_to_sel_multi_use_constant_mask(i1 %y) {
-; CHECK-LABEL: @sext_to_sel_multi_use_constant_mask(
-; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[Y:%.*]] to i32
-; CHECK-NEXT:    call void @use32(i32 [[SEXT]])
-; CHECK-NEXT:    [[R:%.*]] = and i32 [[SEXT]], 42
-; CHECK-NEXT:    ret i32 [[R]]
+; negative test - extra use
+
+define i8 @not_ashr_bitwidth_mask_use2(i8 %x, i8 %y) {
+; CHECK-LABEL: @not_ashr_bitwidth_mask_use2(
+; CHECK-NEXT:    [[SIGN:%.*]] = ashr i8 [[X:%.*]], 7
+; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[SIGN]], -1
+; CHECK-NEXT:    call void @use8(i8 [[NOT]])
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[NOT]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
 ;
-  %sext = sext i1 %y to i32
-  call void @use32(i32 %sext)
-  %r = and i32 %sext, 42
-  ret i32 %r
+  %sign = ashr i8 %x, 7
+  %not = xor i8 %sign, -1
+  call void @use8(i8 %not)
+  %r = and i8 %not, %y
+  ret i8 %r
+}
+
+; negative test - wrong shift amount
+
+define i8 @not_ashr_not_bitwidth_mask(i8 %x, i8 %y) {
+; CHECK-LABEL: @not_ashr_not_bitwidth_mask(
+; CHECK-NEXT:    [[SIGN:%.*]] = ashr i8 [[X:%.*]], 6
+; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[SIGN]], -1
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[NOT]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %sign = ashr i8 %x, 6
+  %not = xor i8 %sign, -1
+  %r = and i8 %not, %y
+  ret i8 %r
+}
+
+; negative test - wrong shift opcode
+
+define i8 @not_lshr_bitwidth_mask(i8 %x, i8 %y) {
+; CHECK-LABEL: @not_lshr_bitwidth_mask(
+; CHECK-NEXT:    [[SIGN:%.*]] = lshr i8 [[X:%.*]], 7
+; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[SIGN]], -1
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[NOT]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %sign = lshr i8 %x, 7
+  %not = xor i8 %sign, -1
+  %r = and i8 %not, %y
+  ret i8 %r
 }

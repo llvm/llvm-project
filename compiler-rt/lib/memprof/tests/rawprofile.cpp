@@ -1,14 +1,16 @@
 #include "memprof/memprof_rawprofile.h"
 
+#include <cstdint>
+#include <memory>
+
 #include "memprof/memprof_meminfoblock.h"
+#include "profile/MemProfData.inc"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_procmaps.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-
-#include <memory>
 
 namespace {
 
@@ -47,6 +49,8 @@ u64 PopulateFakeMap(const MemInfoBlock &FakeMIB, uptr StackPCBegin,
 
 template <class T = u64> T Read(char *&Buffer) {
   static_assert(std::is_pod<T>::value, "Must be a POD type.");
+  assert(reinterpret_cast<size_t>(Buffer) % sizeof(T) == 0 &&
+         "Unaligned read!");
   T t = *reinterpret_cast<T *>(Buffer);
   Buffer += sizeof(T);
   return t;
@@ -101,8 +105,9 @@ TEST(MemProf, Basic) {
   const u64 MIBOffset = Read(Ptr);
   const u64 StackOffset = Read(Ptr);
 
-  // ============= Check sizes.
+  // ============= Check sizes and padding.
   EXPECT_EQ(TotalSize, NumBytes);
+  EXPECT_EQ(TotalSize % 8, 0ULL);
 
   // Should be equal to the size of the raw profile header.
   EXPECT_EQ(SegmentOffset, 48ULL);
@@ -118,8 +123,10 @@ TEST(MemProf, Basic) {
 
   EXPECT_EQ(StackOffset, 336ULL);
   // We expect 2 stack entries, with 5 frames - 8b for total count,
-  // 2 * (8b for id, 8b for frame count and 5*8b for fake frames)
-  EXPECT_EQ(TotalSize - StackOffset, 8ULL + 2 * (8 + 8 + 5 * 8));
+  // 2 * (8b for id, 8b for frame count and 5*8b for fake frames).
+  // Since this is the last section, there may be additional padding at the end
+  // to make the total profile size 8b aligned.
+  EXPECT_GE(TotalSize - StackOffset, 8ULL + 2 * (8 + 8 + 5 * 8));
 
   // ============= Check contents.
   unsigned char ExpectedSegmentBytes[64] = {

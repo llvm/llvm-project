@@ -289,6 +289,44 @@ static void applyMutateAnyExtToZExt(MachineInstr &MI, MachineRegisterInfo &MRI,
   Observer.changedInstr(MI);
 }
 
+/// Match a 128b store of zero and split it into two 64 bit stores, for
+/// size/performance reasons.
+static bool matchSplitStoreZero128(MachineInstr &MI, MachineRegisterInfo &MRI) {
+  GStore &Store = cast<GStore>(MI);
+  if (!Store.isSimple())
+    return false;
+  LLT ValTy = MRI.getType(Store.getValueReg());
+  if (!ValTy.isVector() || ValTy.getSizeInBits() != 128)
+    return false;
+  if (ValTy.getSizeInBits() != Store.getMemSizeInBits())
+    return false; // Don't split truncating stores.
+  if (!MRI.hasOneNonDBGUse(Store.getValueReg()))
+    return false;
+  auto MaybeCst = isConstantOrConstantSplatVector(
+      *MRI.getVRegDef(Store.getValueReg()), MRI);
+  return MaybeCst && MaybeCst->isZero();
+}
+
+static void applySplitStoreZero128(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                   MachineIRBuilder &B,
+                                   GISelChangeObserver &Observer) {
+  B.setInstrAndDebugLoc(MI);
+  GStore &Store = cast<GStore>(MI);
+  assert(MRI.getType(Store.getValueReg()).isVector() &&
+         "Expected a vector store value");
+  LLT NewTy = LLT::scalar(64);
+  Register PtrReg = Store.getPointerReg();
+  auto Zero = B.buildConstant(NewTy, 0);
+  auto HighPtr = B.buildPtrAdd(MRI.getType(PtrReg), PtrReg,
+                               B.buildConstant(LLT::scalar(64), 8));
+  auto &MF = *MI.getMF();
+  auto *LowMMO = MF.getMachineMemOperand(&Store.getMMO(), 0, NewTy);
+  auto *HighMMO = MF.getMachineMemOperand(&Store.getMMO(), 8, NewTy);
+  B.buildStore(Zero, PtrReg, *LowMMO);
+  B.buildStore(Zero, HighPtr, *HighMMO);
+  Store.eraseFromParent();
+}
+
 #define AARCH64POSTLEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_DEPS
 #include "AArch64GenPostLegalizeGICombiner.inc"
 #undef AARCH64POSTLEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_DEPS

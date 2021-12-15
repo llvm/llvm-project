@@ -3,6 +3,7 @@ add_mlir_unittest(MLIRIRTests
   DialectTest.cpp
   InterfaceAttachmentTest.cpp
   OperationSupportTest.cpp
+  PatternMatchTest.cpp
   ShapedTypeTest.cpp
   SubElementInterfaceTest.cpp
 
