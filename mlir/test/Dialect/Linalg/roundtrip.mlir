@@ -86,20 +86,10 @@ func @pad_to_static_size(%arg0: tensor<?x?xf32>, %ub0: index, %ub1: index,
 
 // -----
 
-func @range(%arg0: index, %arg1: index, %arg2: index) {
-  %0 = linalg.range %arg0:%arg1:%arg2 : !linalg.range
-  return
-}
-// CHECK-LABEL: func @range(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index) {
-//  CHECK-NEXT:  linalg.range %{{.*}} : %{{.*}} : %{{.*}} : !linalg.range
-
-// -----
-
-func @views(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4: index) {
+func @views(%arg0: index) {
   %c0 = arith.constant 0 : index
   %0 = arith.muli %arg0, %arg0 : index
   %1 = memref.alloc (%0) : memref<?xi8>
-  %2 = linalg.range %arg0:%arg1:%arg2 : !linalg.range
   %3 = memref.view %1[%c0][%arg0, %arg0] : memref<?xi8> to memref<?x?xf32>
   %4 = memref.view %1[%c0][%arg0, %arg0] : memref<?xi8> to memref<?x?xvector<4x4xf32>>
   memref.dealloc %1 : memref<?xi8>
@@ -108,7 +98,6 @@ func @views(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4: index
 // CHECK-LABEL: func @views
 //  CHECK:  arith.muli %{{.*}}, %{{.*}} : index
 //  CHECK-NEXT:  memref.alloc(%{{.*}}) : memref<?xi8>
-//  CHECK-NEXT:  range
 //  CHECK-NEXT:  memref.view %{{.*}}[%{{.*}}][%{{.*}}] :
 //  CHECK-SAME:     memref<?xi8> to memref<?x?xf32>
 //  CHECK-NEXT:  memref.view %{{.*}}[%{{.*}}][%{{.*}}] :

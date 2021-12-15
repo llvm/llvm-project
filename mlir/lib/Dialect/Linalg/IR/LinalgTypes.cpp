@@ -106,7 +106,6 @@ void addNamedOpBuilders(
 }
 
 void mlir::linalg::LinalgDialect::initialize() {
-  addTypes<RangeType>();
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/Linalg/IR/LinalgOps.cpp.inc"
@@ -123,29 +122,6 @@ void mlir::linalg::LinalgDialect::initialize() {
       >(namedStructuredOpRegionBuilders);
 
   addInterfaces<LinalgInlinerInterface>();
-}
-
-Type mlir::linalg::LinalgDialect::parseType(DialectAsmParser &parser) const {
-  // Parse the main keyword for the type.
-  StringRef keyword;
-  if (parser.parseKeyword(&keyword))
-    return Type();
-  MLIRContext *context = getContext();
-
-  // Handle 'range' types.
-  if (keyword == "range")
-    return RangeType::get(context);
-
-  parser.emitError(parser.getNameLoc(), "unknown Linalg type: " + keyword);
-  return Type();
-}
-
-/// RangeType prints as just "range".
-static void print(RangeType rt, DialectAsmPrinter &os) { os << "range"; }
-
-void mlir::linalg::LinalgDialect::printType(Type type,
-                                            DialectAsmPrinter &os) const {
-  print(type.cast<RangeType>(), os);
 }
 
 LogicalResult LinalgDialect::verifyOperationAttribute(Operation *op,
