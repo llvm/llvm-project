@@ -558,8 +558,10 @@ Optional<Fraction> Simplex::computeOptimum(Direction direction, Unknown &u) {
   unsigned row = u.pos;
   Optional<Fraction> optimum = computeRowOptimum(direction, row);
   if (u.restricted && direction == Direction::Down &&
-      (!optimum || *optimum < Fraction(0, 1)))
-    (void)restoreRow(u);
+      (!optimum || *optimum < Fraction(0, 1))) {
+    if (failed(restoreRow(u)))
+      llvm_unreachable("Could not restore row!");
+  }
   return optimum;
 }
 
@@ -623,7 +625,8 @@ void Simplex::detectRedundant() {
     if (!minimum || *minimum < Fraction(0, 1)) {
       // Constraint is unbounded below or can attain negative sample values and
       // hence is not redundant.
-      (void)restoreRow(u);
+      if (failed(restoreRow(u)))
+        llvm_unreachable("Could not restore non-redundant row!");
       continue;
     }
 
