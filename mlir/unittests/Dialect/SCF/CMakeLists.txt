@@ -1,0 +1,10 @@
+add_mlir_unittest(MLIRSCFTests
+  SCFOps.cpp
+  )
+target_link_libraries(MLIRSCFTests
+  PRIVATE
+  MLIRIR
+  MLIRParser
+  MLIRSCF
+  MLIRStandard
+  )
