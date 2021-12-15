@@ -417,6 +417,37 @@ Value mlir::linalg::comprehensive_bufferize::BufferizationState::
   return operandBuffer;
 }
 
+void mlir::linalg::comprehensive_bufferize::BufferizationState::replaceOp(
+    Operation *op, ValueRange values) {
+  OpBuilder &b = getBuilder();
+  OpBuilder::InsertionGuard g(b);
+
+  // Replace all OpResults with the given values.
+  for (OpResult opResult : op->getOpResults()) {
+    // Skip OpResult if it has no uses.
+    if (opResult.getUses().empty())
+      continue;
+
+    Value replacement = values[opResult.getResultNumber()];
+    if (opResult.getType().isa<TensorType>()) {
+      // The OpResult is a tensor. Such values are replaced with memrefs during
+      // bufferization.
+      assert((replacement.getType().isa<MemRefType>() ||
+              replacement.getType().isa<UnrankedMemRefType>()) &&
+             "tensor op result should be replaced with a memref value");
+      // The existing uses of the OpResult still expect a tensor. Insert a
+      // ToTensorOp. Throughout bufferization, this ToTensorOp will gradually
+      // loose all of its users and eventually DCE away.
+      setInsertionPointAfter(b, replacement);
+      replacement = b.create<bufferization::ToTensorOp>(replacement.getLoc(),
+                                                        replacement);
+    }
+    opResult.replaceAllUsesWith(replacement);
+  }
+
+  op->erase();
+}
+
 LogicalResult
 mlir::linalg::comprehensive_bufferize::bufferize(Region *region,
                                                  BufferizationState &state) {
@@ -429,8 +460,14 @@ mlir::linalg::comprehensive_bufferize::bufferize(Region *region,
 LogicalResult
 mlir::linalg::comprehensive_bufferize::bufferize(Block *block,
                                                  BufferizationState &state) {
+  // Ops may get deleted during the traversal, so do not iterate over `block`
+  // directly.
+  SmallVector<Operation *> ops;
+  ops.reserve(block->getOperations().size());
   for (Operation &op : *block)
-    if (failed(bufferize(&op, state)))
+    ops.push_back(&op);
+  for (Operation *op : ops)
+    if (failed(bufferize(op, state)))
       return failure();
   return success();
 }
@@ -651,10 +688,13 @@ void mlir::linalg::comprehensive_bufferize::BufferizationState::mapBuffer(
 /// Wrapper for better debugging.
 Value mlir::linalg::comprehensive_bufferize::BufferizationState::lookupBuffer(
     Value tensor) {
-  // TODO: if key comes from bbArg, forward.
   assert(tensor.getType().isa<TensorType>() && "unexpected non-tensor type");
-  Value buffer = mapping.lookupOrNull(tensor);
 
+  // Replace "%t = to_tensor %m" with %m.
+  if (auto toTensorOp = tensor.getDefiningOp<bufferization::ToTensorOp>())
+    return toTensorOp.memref();
+
+  Value buffer = mapping.lookupOrNull(tensor);
   if (!buffer) {
     if (options.allowUnknownOps) {
       // `tensor` was not bufferized yet. This should never happen with

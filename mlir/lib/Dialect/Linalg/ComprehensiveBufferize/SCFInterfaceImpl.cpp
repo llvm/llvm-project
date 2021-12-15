@@ -7,10 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/SCFInterfaceImpl.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/PatternMatch.h"
 
 namespace mlir {
 namespace linalg {
@@ -214,51 +216,79 @@ struct ForOpInterface
     return true;
   }
 
-  LogicalResult bufferize(Operation *op, OpBuilder &b,
+  LogicalResult bufferize(Operation *op, OpBuilder & /*b*/,
                           BufferizationState &state) const {
     auto forOp = cast<scf::ForOp>(op);
+    Block *oldLoopBody = &forOp.getLoopBody().front();
 
-    // Take a guard before anything else.
-    OpBuilder::InsertionGuard g(b);
+    // Use IRRewriter instead of OpBuilder because it has additional helper
+    // functions.
+    IRRewriter rewriter(op->getContext());
+    rewriter.setInsertionPoint(forOp);
 
-    for (OpResult opResult : forOp->getResults()) {
-      if (!opResult.getType().isa<TensorType>())
-        continue;
-      // TODO: Atm we bail on unranked TensorType because we don't know how to
-      // alloc an UnrankedMemRefType + its underlying ranked MemRefType.
-      assert(opResult.getType().isa<RankedTensorType>() &&
-             "unsupported unranked tensor");
+    // Indices of all iter_args that have tensor type. These are the ones that
+    // are bufferized.
+    DenseSet<int64_t> indices;
+    for (const auto &it : llvm::enumerate(forOp.initArgs()))
+      if (it.value().getType().isa<TensorType>())
+        indices.insert(it.index());
 
-      // TODO: More general: Matching bbArg does not bufferize to a read.
-      Value resultBuffer = state.getResultBuffer(opResult);
-      if (!resultBuffer)
-        return failure();
+    // Given a range of values, apply `func` to those marked in `indices`.
+    // Otherwise, store the unmodified value in the result vector.
+    auto convert = [&](ValueRange values,
+                       std::function<Value(Value, int64_t)> func) {
+      SmallVector<Value> result;
+      for (const auto &it : llvm::enumerate(values)) {
+        size_t idx = it.index();
+        Value val = it.value();
+        result.push_back(indices.contains(idx) ? func(val, idx) : val);
+      }
+      return result;
+    };
 
-      OpOperand &opOperand = forOp.getOpOperandForResult(opResult);
-      BlockArgument bbArg = forOp.getRegionIterArgForOpOperand(opOperand);
-      state.mapBuffer(bbArg, resultBuffer);
-      state.mapBuffer(opResult, resultBuffer);
-    }
+    // Construct a new scf.for op with memref instead of tensor values.
+    SmallVector<Value> initArgs =
+        convert(forOp.initArgs(), [&](Value val, int64_t index) {
+          return state.getResultBuffer(forOp->getOpResult(index));
+        });
+    auto newForOp =
+        rewriter.create<scf::ForOp>(forOp.getLoc(), forOp.lowerBound(),
+                                    forOp.upperBound(), forOp.step(), initArgs);
+    Block *loopBody = &newForOp.getLoopBody().front();
+
+    // Set up new iter_args. The loop body uses tensors, so wrap the (memref)
+    // iter_args of the new loop in ToTensorOps.
+    rewriter.setInsertionPointToStart(loopBody);
+    SmallVector<Value> iterArgs =
+        convert(newForOp.getRegionIterArgs(), [&](Value val, int64_t index) {
+          return rewriter.create<bufferization::ToTensorOp>(val.getLoc(), val);
+        });
+    iterArgs.insert(iterArgs.begin(), newForOp.getInductionVar());
+
+    // Erase terminator if present.
+    if (iterArgs.size() == 1)
+      rewriter.eraseOp(loopBody->getTerminator());
+
+    // Move loop body to new loop.
+    rewriter.mergeBlocks(oldLoopBody, loopBody, iterArgs);
+
+    // Update scf.yield of new loop.
+    auto yieldOp = cast<scf::YieldOp>(loopBody->getTerminator());
+    rewriter.setInsertionPoint(yieldOp);
+    SmallVector<Value> yieldValues =
+        convert(yieldOp.results(), [&](Value val, int64_t index) {
+          return rewriter.create<bufferization::ToMemrefOp>(
+              val.getLoc(), initArgs[index].getType(), val);
+        });
+    yieldOp.resultsMutable().assign(yieldValues);
+
+    // Replace loop results.
+    state.replaceOp(op, newForOp->getResults());
 
     // Bufferize loop body.
-    if (failed(comprehensive_bufferize::bufferize(&forOp.region(), state)))
+    if (failed(comprehensive_bufferize::bufferize(loopBody, state)))
       return failure();
 
-    // Finish bufferizing scf::ForOp.
-    auto yieldOp = cast<scf::YieldOp>(&forOp.region().front().back());
-    for (OpOperand &operand : yieldOp->getOpOperands()) {
-      auto tensorType = operand.get().getType().dyn_cast<TensorType>();
-      if (!tensorType)
-        continue;
-
-      OpOperand &forOperand = forOp.getOpOperandForResult(
-          forOp->getResult(operand.getOperandNumber()));
-      auto bbArg = forOp.getRegionIterArgForOpOperand(forOperand);
-
-      // Buffers are equivalent so the work is already done and we just yield
-      // the bbArg so that it later canonicalizes away.
-      operand.set(bbArg);
-    }
     return success();
   }
 };

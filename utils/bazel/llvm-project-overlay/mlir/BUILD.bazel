@@ -6413,6 +6413,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":BufferizableOpInterface",
+        ":BufferizationDialect",
         ":IR",
         ":SCFDialect",
         ":Support",
