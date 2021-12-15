@@ -291,6 +291,7 @@ func @scf_for_yield_only(%A : tensor<?xf32>,
   -> (tensor<?xf32>, tensor<?xf32>)
 {
   //     CHECK:   %[[ALLOC_FOR_A:.*]] = memref.alloc
+  //     CHECK:   %[[CASTED:.*]] = memref.cast %[[ALLOC_FOR_A]]
   //     CHECK:   linalg.copy(%[[A]], %[[ALLOC_FOR_A]])
 
   // The first scf.for remains but just turns into dead code.
@@ -304,7 +305,7 @@ func @scf_for_yield_only(%A : tensor<?xf32>,
   }
 
   //     CHECK:   memref.dealloc %[[ALLOC_FOR_A]] : memref<?xf32>
-  //     CHECK:   return %[[ALLOC_FOR_A]] : memref<?xf32>
+  //     CHECK:   return %[[CASTED]] : memref<?xf32, #[[$map_1d_dyn]]>
   return %r0, %r1: tensor<?xf32>, tensor<?xf32>
 }
 
@@ -346,6 +347,7 @@ func @scf_for_with_tensor.insert_slice(
   -> (tensor<?xf32>, tensor<?xf32>)
 {
   //     CHECK:   %[[ALLOC_FOR_A:.*]] = memref.alloc
+  //     CHECK:   %[[CASTED:.*]] = memref.cast %[[ALLOC_FOR_A]]
   //     CHECK:   linalg.copy(%[[A]], %[[ALLOC_FOR_A]])
 
   //     CHECK: %[[svA:.*]] = memref.subview %[[ALLOC_FOR_A]][0] [4] [1]
@@ -369,7 +371,7 @@ func @scf_for_with_tensor.insert_slice(
   }
 
   //     CHECK:  memref.dealloc %[[ALLOC_FOR_A]] : memref<?xf32>
-  //     CHECK:  return %[[ALLOC_FOR_A]] : memref<?xf32>
+  //     CHECK:  return %[[CASTED]] : memref<?xf32, #[[$map_1d_dyn]]>
   return %r0#0, %r0#1: tensor<?xf32>, tensor<?xf32>
 }
 
