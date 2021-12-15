@@ -267,6 +267,12 @@ public:
     return result;
   }
 
+  MPFRNumber log2() const {
+    MPFRNumber result(*this);
+    mpfr_log2(result.value, value, mpfr_rounding);
+    return result;
+  }
+
   MPFRNumber remquo(const MPFRNumber &divisor, int &quotient) {
     MPFRNumber remainder(*this);
     long q;
@@ -494,6 +500,8 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.floor();
   case Operation::Log:
     return mpfrInput.log();
+  case Operation::Log2:
+    return mpfrInput.log2();
   case Operation::Mod2PI:
     return mpfrInput.mod_2pi();
   case Operation::ModPIOver2:
