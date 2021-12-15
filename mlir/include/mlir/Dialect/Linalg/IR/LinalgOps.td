@@ -330,34 +330,6 @@ def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
   let hasFolder = 1;
 }
 
-def Linalg_RangeOp :
-    Linalg_Op<"range", [NoSideEffect]>,
-    Arguments<(ins Index:$min, Index:$max, Index:$step)>,
-    Results<(outs Range)> {
-  let summary = "Create a `range` type value, used to create `view`s";
-  let description = [{
-    The `linalg.range` op creates a `!linalg.range` from 3 values of type
-    `index` that represent the min, max and step values of the `range`. This
-    type does not pass function boundaries at the moment.
-
-    Example:
-
-    ```mlir
-    %3 = linalg.range %0:%1:%2 : !linalg.range
-    ````
-  }];
-  let builders = [
-    OpBuilder<(ins "Value":$min, "Value":$max, "Value":$step),
-    [{
-      auto rangeType = RangeType::get($_builder.getContext());
-      build($_builder, $_state, rangeType, min, max, step);
-    }]>];
-
-  // Fully specified by traits.
-  let verifier = ?;
-  let assemblyFormat = "$min `:` $max `:` $step attr-dict `:` type(results)";
-}
-
 def Linalg_YieldOp : Linalg_Op<"yield", [NoSideEffect, ReturnLike, Terminator]>,
     Arguments<(ins Variadic<AnyType>:$values)> {
   let summary = "Linalg yield operation";

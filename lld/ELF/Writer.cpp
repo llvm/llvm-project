@@ -622,7 +622,7 @@ template <class ELFT> static void markUsedLocalSymbols() {
     return;
   // Without --gc-sections, the field is initialized with "true".
   // Drop the flag first and then rise for symbols referenced in relocations.
-  for (InputFile *file : objectFiles) {
+  for (ELFFileBase *file : objectFiles) {
     ObjFile<ELFT> *f = cast<ObjFile<ELFT>>(file);
     for (Symbol *b : f->getLocalSymbols())
       b->used = false;
@@ -704,9 +704,8 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
   llvm::TimeTraceScope timeScope("Add local symbols");
   if (config->copyRelocs && config->discard != DiscardPolicy::None)
     markUsedLocalSymbols<ELFT>();
-  for (InputFile *file : objectFiles) {
-    ObjFile<ELFT> *f = cast<ObjFile<ELFT>>(file);
-    for (Symbol *b : f->getLocalSymbols()) {
+  for (ELFFileBase *file : objectFiles) {
+    for (Symbol *b : file->getLocalSymbols()) {
       assert(b->isLocal() && "should have been caught in initializeSymbols()");
       auto *dr = dyn_cast<Defined>(b);
 
@@ -1322,7 +1321,7 @@ static DenseMap<const InputSectionBase *, int> buildSectionOrder() {
     if (!sym->isLazy())
       addSym(*sym);
 
-  for (InputFile *file : objectFiles)
+  for (ELFFileBase *file : objectFiles)
     for (Symbol *sym : file->getSymbols()) {
       if (!sym->isLocal())
         break;

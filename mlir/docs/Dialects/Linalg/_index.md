@@ -520,7 +520,6 @@ generally alias the operand `view`. At the moment the existing ops are:
 * `memref.view`,
 * `memref.subview`,
 * `memref.transpose`.
-* `linalg.range`,
 * `linalg.slice`,
 * `linalg.reshape`,
 ```

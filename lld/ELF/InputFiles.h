@@ -417,7 +417,7 @@ extern std::vector<ArchiveFile *> archiveFiles;
 extern std::vector<BinaryFile *> binaryFiles;
 extern std::vector<BitcodeFile *> bitcodeFiles;
 extern std::vector<LazyObjFile *> lazyObjFiles;
-extern std::vector<InputFile *> objectFiles;
+extern std::vector<ELFFileBase *> objectFiles;
 extern std::vector<SharedFile *> sharedFiles;
 
 } // namespace elf
