@@ -1318,26 +1318,21 @@ unsigned SharedFile::vernauxNum;
 // vector whose nth element contains a pointer to the Elf_Verdef for version
 // identifier n. Version identifiers that are not definitions map to nullptr.
 template <typename ELFT>
-static std::vector<const void *> parseVerdefs(const uint8_t *base,
-                                              const typename ELFT::Shdr *sec) {
+static SmallVector<const void *, 0>
+parseVerdefs(const uint8_t *base, const typename ELFT::Shdr *sec) {
   if (!sec)
     return {};
 
-  // We cannot determine the largest verdef identifier without inspecting
-  // every Elf_Verdef, but both bfd and gold assign verdef identifiers
-  // sequentially starting from 1, so we predict that the largest identifier
-  // will be verdefCount.
-  unsigned verdefCount = sec->sh_info;
-  std::vector<const void *> verdefs(verdefCount + 1);
-
   // Build the Verdefs array by following the chain of Elf_Verdef objects
   // from the start of the .gnu.version_d section.
+  SmallVector<const void *, 0> verdefs;
   const uint8_t *verdef = base + sec->sh_offset;
-  for (unsigned i = 0; i != verdefCount; ++i) {
+  for (unsigned i = 0, e = sec->sh_info; i != e; ++i) {
     auto *curVerdef = reinterpret_cast<const typename ELFT::Verdef *>(verdef);
     verdef += curVerdef->vd_next;
     unsigned verdefIndex = curVerdef->vd_ndx;
-    verdefs.resize(verdefIndex + 1);
+    if (verdefIndex >= verdefs.size())
+      verdefs.resize(verdefIndex + 1);
     verdefs[verdefIndex] = curVerdef;
   }
   return verdefs;
