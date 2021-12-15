@@ -40,6 +40,12 @@ TEST(DebuginfodClient, CacheHit) {
 // Check that the Debuginfod client returns an Error when it fails to find an
 // artifact.
 TEST(DebuginfodClient, CacheMiss) {
+  // Set the cache path to a temp directory to avoid permissions issues if $HOME
+  // is not writable.
+  SmallString<32> TempDir;
+  sys::path::system_temp_directory(true, TempDir);
+  setenv("DEBUGINFOD_CACHE_PATH", TempDir.c_str(),
+         /*replace=*/1);
   // Ensure there are no urls to guarantee a cache miss.
   setenv("DEBUGINFOD_URLS", "", /*replace=*/1);
   HTTPClient::initialize();
