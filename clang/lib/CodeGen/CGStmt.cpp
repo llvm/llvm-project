@@ -2454,7 +2454,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
     const ABIArgInfo &RetAI = CurFnInfo->getReturnInfo();
     if (RetAI.isDirect() || RetAI.isExtend()) {
       // Make a fake lvalue for the return value slot.
-      LValue ReturnSlot = MakeAddrLValue(ReturnValue, FnRetTy);
+      LValue ReturnSlot = MakeAddrLValueWithoutTBAA(ReturnValue, FnRetTy);
       CGM.getTargetCodeGenInfo().addReturnRegisterOutputs(
           *this, ReturnSlot, Constraints, ResultRegTypes, ResultTruncRegTypes,
           ResultRegDests, AsmString, S.getNumOutputs());
