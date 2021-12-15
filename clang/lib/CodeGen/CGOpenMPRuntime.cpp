@@ -6124,7 +6124,7 @@ llvm::Value *CGOpenMPRuntime::emitTaskReductionInit(
     llvm::Value *Idxs[] = {llvm::ConstantInt::get(CGM.SizeTy, /*V=*/0),
                            llvm::ConstantInt::get(CGM.SizeTy, Cnt)};
     llvm::Value *GEP = CGF.EmitCheckedInBoundsGEP(
-        TaskRedInput.getPointer(), Idxs,
+        TaskRedInput.getElementType(), TaskRedInput.getPointer(), Idxs,
         /*SignedIndices=*/false, /*IsSubtraction=*/false, Loc,
         ".rd_input.gep.");
     LValue ElemLVal = CGF.MakeNaturalAlignAddrLValue(GEP, RDType);
