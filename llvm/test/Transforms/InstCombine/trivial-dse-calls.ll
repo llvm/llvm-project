@@ -50,6 +50,18 @@ define void @test_lifetime2() {
   ret void
 }
 
+; As long as the result is unused, we can even remove reads of the alloca
+; itself since the write will be dropped.
+define void @test_dead_readwrite() {
+; CHECK-LABEL: @test_dead_readwrite(
+; CHECK-NEXT:    ret void
+;
+  %a = alloca i32, align 4
+  %bitcast = bitcast i32* %a to i8*
+  call void @f(i8* nocapture %bitcast) argmemonly nounwind willreturn
+  ret void
+}
+
 define i32 @test_neg_read_after() {
 ; CHECK-LABEL: @test_neg_read_after(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
@@ -195,6 +207,18 @@ define void @test_neg_unreleated_capture() {
   %bitcast = bitcast i32* %a to i8*
   %bitcast2 = bitcast i32* %a2 to i8*
   call void @f2(i8* nocapture writeonly %bitcast, i8* readonly %bitcast2) argmemonly nounwind willreturn
+  ret void
+}
+
+; As long as the result is unused, we can even remove reads of the alloca
+; itself since the write will be dropped.
+define void @test_self_read() {
+; CHECK-LABEL: @test_self_read(
+; CHECK-NEXT:    ret void
+;
+  %a = alloca i32, align 4
+  %bitcast = bitcast i32* %a to i8*
+  call void @f2(i8* nocapture writeonly %bitcast, i8* nocapture readonly %bitcast) argmemonly nounwind willreturn
   ret void
 }
 
