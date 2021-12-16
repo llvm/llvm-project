@@ -40,7 +40,7 @@ static cl::opt<bool>
                                    " callsites processed by inliner but decided"
                                    " to be not inlined"));
 
-static cl::opt<bool> EnableInlineDeferral("inline-deferral", cl::init(true),
+static cl::opt<bool> EnableInlineDeferral("inline-deferral", cl::init(false),
                                           cl::Hidden,
                                           cl::desc("Enable deferred inlining"));
 
