@@ -64,6 +64,8 @@ public:
          uint64_t Size, llvm::sys::fs::file_type Type,
          llvm::sys::fs::perms Perms);
 
+  /// Get a copy of a Status with a different size.
+  static Status copyWithNewSize(const Status &In, uint64_t NewSize);
   /// Get a copy of a Status with a different name.
   static Status copyWithNewName(const Status &In, const Twine &NewName);
   static Status copyWithNewName(const llvm::sys::fs::file_status &In,
