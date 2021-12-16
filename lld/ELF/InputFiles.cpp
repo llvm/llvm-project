@@ -1164,10 +1164,10 @@ template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
   // being resolved to different files.
   for (unsigned i : undefineds) {
     const Elf_Sym &eSym = eSyms[i];
-    StringRefZ name = this->stringTable.data() + eSym.st_name;
-    this->symbols[i]->resolve(Undefined{this, name, eSym.getBinding(),
-                                        eSym.st_other, eSym.getType()});
-    this->symbols[i]->referenced = true;
+    Symbol *sym = this->symbols[i];
+    sym->resolve(Undefined{this, sym->getName(), eSym.getBinding(),
+                           eSym.st_other, eSym.getType()});
+    sym->referenced = true;
   }
 }
 
