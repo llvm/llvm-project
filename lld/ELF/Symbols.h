@@ -86,7 +86,7 @@ public:
   uint32_t globalDynIndex = -1;
 
   // This field is a index to the symbol's version definition.
-  uint32_t verdefIndex = -1;
+  uint16_t verdefIndex = -1;
 
   // Version definition index.
   uint16_t versionId;
@@ -365,7 +365,7 @@ public:
 
   SharedSymbol(InputFile &file, StringRef name, uint8_t binding,
                uint8_t stOther, uint8_t type, uint64_t value, uint64_t size,
-               uint32_t alignment, uint32_t verdefIndex)
+               uint32_t alignment, uint16_t verdefIndex)
       : Symbol(SharedKind, &file, name, binding, stOther, type), value(value),
         size(size), alignment(alignment) {
     this->verdefIndex = verdefIndex;
@@ -487,9 +487,9 @@ union SymbolUnion {
 };
 
 // It is important to keep the size of SymbolUnion small for performance and
-// memory usage reasons. 80 bytes is a soft limit based on the size of Defined
+// memory usage reasons. 72 bytes is a soft limit based on the size of Defined
 // on a 64-bit system.
-static_assert(sizeof(SymbolUnion) <= 80, "SymbolUnion too large");
+static_assert(sizeof(SymbolUnion) <= 72, "SymbolUnion too large");
 
 template <typename T> struct AssertSymbol {
   static_assert(std::is_trivially_destructible<T>(),
