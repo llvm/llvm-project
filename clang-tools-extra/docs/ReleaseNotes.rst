@@ -153,6 +153,12 @@ Changes in existing checks
   <clang-tidy/checks/bugprone-throw-keyword-missing>` when creating an exception object
   using placement new
 
+- :doc:`cppcoreguidelines-narrowing-conversions <clang-tidy/checks/cppcoreguidelines-narrowing-conversions>`
+  check now supports a `WarnOnIntegerToFloatingPointNarrowingConversion`
+  option to control whether to warn on narrowing integer to floating-point
+  conversions.
+
+
 Removed checks
 ^^^^^^^^^^^^^^
 
