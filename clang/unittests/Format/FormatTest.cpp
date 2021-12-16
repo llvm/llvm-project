@@ -13452,6 +13452,25 @@ TEST_F(FormatTest, ConfigurableUseOfTab) {
                    "}",
                    Tab));
 
+  verifyFormat("void f() {\n"
+               "\treturn true ? aaaaaaaaaaaaaaaaaa\n"
+               "\t            : bbbbbbbbbbbbbbbbbb\n"
+               "}",
+               Tab);
+  FormatStyle TabNoBreak = Tab;
+  TabNoBreak.BreakBeforeTernaryOperators = false;
+  verifyFormat("void f() {\n"
+               "\treturn true ? aaaaaaaaaaaaaaaaaa :\n"
+               "\t              bbbbbbbbbbbbbbbbbb\n"
+               "}",
+               TabNoBreak);
+  verifyFormat("void f() {\n"
+               "\treturn true ?\n"
+               "\t           aaaaaaaaaaaaaaaaaaaa :\n"
+               "\t           bbbbbbbbbbbbbbbbbbbb\n"
+               "}",
+               TabNoBreak);
+
   Tab.UseTab = FormatStyle::UT_Never;
   EXPECT_EQ("/*\n"
             "              a\t\tcomment\n"

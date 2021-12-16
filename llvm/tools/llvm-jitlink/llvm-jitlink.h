@@ -32,11 +32,11 @@ namespace llvm {
 struct Session;
 
 struct Session {
+
   orc::ExecutionSession ES;
   orc::JITDylib *MainJD = nullptr;
   orc::ObjectLinkingLayer ObjLayer;
   orc::JITDylibSearchOrder JDSearchOrder;
-  std::vector<std::string> LibrarySearchPaths;
 
   ~Session();
 

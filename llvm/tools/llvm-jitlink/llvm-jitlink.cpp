@@ -82,6 +82,10 @@ static cl::list<std::string>
               cl::desc("Link against library X in the library search paths"),
               cl::Prefix, cl::cat(JITLinkCategory));
 
+static cl::list<std::string> LibrariesHidden(
+    "hidden-l", cl::desc("Link against library X in the library search paths"),
+    cl::Prefix, cl::cat(JITLinkCategory));
+
 static cl::opt<bool> NoExec("noexec", cl::desc("Do not execute loaded code"),
                             cl::init(false), cl::cat(JITLinkCategory));
 
@@ -270,7 +274,7 @@ static Error applyHarnessPromotions(Session &S, LinkGraph &G) {
   if (S.HarnessFiles.empty() || S.HarnessFiles.count(G.getName()))
     return Error::success();
 
-  LLVM_DEBUG(dbgs() << "Appling promotions to graph " << G.getName() << "\n");
+  LLVM_DEBUG(dbgs() << "Applying promotions to graph " << G.getName() << "\n");
 
   // If this graph is part of the test then promote any symbols referenced by
   // the harness to default scope, remove all symbols that clash with harness
@@ -1413,9 +1417,20 @@ static Error addObjects(Session &S,
   return Error::success();
 }
 
+static Expected<MaterializationUnit::Interface>
+getObjectFileInterfaceHidden(ExecutionSession &ES, MemoryBufferRef ObjBuffer) {
+  auto I = getObjectFileInterface(ES, ObjBuffer);
+  if (I) {
+    for (auto &KV : I->SymbolFlags)
+      KV.second &= ~JITSymbolFlags::Exported;
+  }
+  return I;
+}
+
 static Error addLibraries(Session &S,
                           const std::map<unsigned, JITDylib *> &IdxToJD) {
 
+  // 1. Collect search paths for each JITDylib.
   DenseMap<const JITDylib *, SmallVector<StringRef, 2>> JDSearchPaths;
 
   for (auto LSPItr = LibrarySearchPaths.begin(),
@@ -1447,16 +1462,58 @@ static Error addLibraries(Session &S,
     }
   });
 
+  // 2. Collect library loads from -lx, -hidden-lx.
+  struct LibraryLoad {
+    StringRef LibName;
+    unsigned Position;
+    StringRef *CandidateExtensions;
+    enum { Standard, Hidden } Modifier;
+  };
+  std::vector<LibraryLoad> LibraryLoads;
+  StringRef StandardExtensions[] = {".so", ".dylib", ".a"};
+  StringRef ArchiveExtensionsOnly[] = {".a"};
+
+  // Add -lx arguments to LibraryLoads.
   for (auto LibItr = Libraries.begin(), LibEnd = Libraries.end();
        LibItr != LibEnd; ++LibItr) {
+    LibraryLoad LL;
+    LL.LibName = *LibItr;
+    LL.Position = Libraries.getPosition(LibItr - Libraries.begin());
+    LL.CandidateExtensions = StandardExtensions;
+    LL.Modifier = LibraryLoad::Standard;
+    LibraryLoads.push_back(std::move(LL));
+  }
 
+  // Add -hidden-lx arguments to LibraryLoads.
+  for (auto LibHiddenItr = LibrariesHidden.begin(),
+            LibHiddenEnd = LibrariesHidden.end();
+       LibHiddenItr != LibHiddenEnd; ++LibHiddenItr) {
+    LibraryLoad LL;
+    LL.LibName = *LibHiddenItr;
+    LL.Position =
+        LibrariesHidden.getPosition(LibHiddenItr - LibrariesHidden.begin());
+    LL.CandidateExtensions = ArchiveExtensionsOnly;
+    LL.Modifier = LibraryLoad::Hidden;
+    LibraryLoads.push_back(std::move(LL));
+  }
+
+  // If there are any load-<modified> options then turn on flag overrides
+  // to avoid flag mismatch errors.
+  if (!LibrariesHidden.empty())
+    S.ObjLayer.setOverrideObjectFlagsWithResponsibilityFlags(true);
+
+  // Sort library loads by position in the argument list.
+  llvm::sort(LibraryLoads, [](const LibraryLoad &LHS, const LibraryLoad &RHS) {
+    return LHS.Position < RHS.Position;
+  });
+
+  // 3. Process library loads.
+  for (auto &LL : LibraryLoads) {
     bool LibFound = false;
-    StringRef LibName(*LibItr);
-    unsigned LibIdx = Libraries.getPosition(LibItr - Libraries.begin());
-    auto &JD = *std::prev(IdxToJD.lower_bound(LibIdx))->second;
+    auto &JD = *std::prev(IdxToJD.lower_bound(LL.Position))->second;
 
     // If this is the name of a JITDylib then link against that.
-    if (auto *LJD = S.ES.getJITDylibByName(LibName)) {
+    if (auto *LJD = S.ES.getJITDylibByName(LL.LibName)) {
       JD.addToLinkOrder(*LJD);
       continue;
     }
@@ -1467,10 +1524,11 @@ static Error addLibraries(Session &S,
       for (StringRef SearchPath : JDSearchPathsItr->second) {
         for (const char *LibExt : {".dylib", ".so", ".a"}) {
           SmallVector<char, 256> LibPath;
-          LibPath.reserve(SearchPath.size() + strlen("lib") + LibName.size() +
-                          strlen(LibExt) + 2); // +2 for pathsep, null term.
+          LibPath.reserve(SearchPath.size() + strlen("lib") +
+                          LL.LibName.size() + strlen(LibExt) +
+                          2); // +2 for pathsep, null term.
           llvm::copy(SearchPath, std::back_inserter(LibPath));
-          sys::path::append(LibPath, "lib" + LibName + LibExt);
+          sys::path::append(LibPath, "lib" + LL.LibName + LibExt);
           LibPath.push_back('\0');
 
           // Skip missing or non-regular paths.
@@ -1513,9 +1571,21 @@ static Error addLibraries(Session &S,
           }
           case file_magic::archive:
           case file_magic::macho_universal_binary: {
+            unique_function<Expected<MaterializationUnit::Interface>(
+                ExecutionSession & ES, MemoryBufferRef ObjBuffer)>
+                GetObjFileInterface;
+            switch (LL.Modifier) {
+            case LibraryLoad::Standard:
+              GetObjFileInterface = getObjectFileInterface;
+              break;
+            case LibraryLoad::Hidden:
+              GetObjFileInterface = getObjectFileInterfaceHidden;
+              break;
+            }
             auto G = StaticLibraryDefinitionGenerator::Load(
                 S.ObjLayer, LibPath.data(),
-                S.ES.getExecutorProcessControl().getTargetTriple());
+                S.ES.getExecutorProcessControl().getTargetTriple(),
+                std::move(GetObjFileInterface));
             if (!G)
               return G.takeError();
             JD.addGenerator(std::move(*G));
@@ -1545,7 +1615,7 @@ static Error addLibraries(Session &S,
     if (!LibFound)
       return make_error<StringError>("While linking " + JD.getName() +
                                          ", could not find library for -l" +
-                                         LibName,
+                                         LL.LibName,
                                      inconvertibleErrorCode());
   }
 
