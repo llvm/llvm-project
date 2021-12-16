@@ -3130,15 +3130,18 @@ public:
 
   class ParamValue {
     llvm::Value *Value;
+    llvm::Type *ElementType;
     unsigned Alignment;
-    ParamValue(llvm::Value *V, unsigned A) : Value(V), Alignment(A) {}
+    ParamValue(llvm::Value *V, llvm::Type *T, unsigned A)
+        : Value(V), ElementType(T), Alignment(A) {}
   public:
     static ParamValue forDirect(llvm::Value *value) {
-      return ParamValue(value, 0);
+      return ParamValue(value, nullptr, 0);
     }
     static ParamValue forIndirect(Address addr) {
       assert(!addr.getAlignment().isZero());
-      return ParamValue(addr.getPointer(), addr.getAlignment().getQuantity());
+      return ParamValue(addr.getPointer(), addr.getElementType(),
+                        addr.getAlignment().getQuantity());
     }
 
     bool isIndirect() const { return Alignment != 0; }
@@ -3151,7 +3154,7 @@ public:
 
     Address getIndirectAddress() const {
       assert(isIndirect());
-      return Address(Value, CharUnits::fromQuantity(Alignment));
+      return Address(Value, ElementType, CharUnits::fromQuantity(Alignment));
     }
   };
 
