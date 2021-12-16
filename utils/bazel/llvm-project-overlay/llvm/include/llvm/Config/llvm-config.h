@@ -111,4 +111,10 @@
 /* Define if the xar_open() function is supported this platform. */
 /* #undef HAVE_LIBXAR */
 
+/* Define if building libLLVM shared library */
+/* #undef LLVM_BUILD_LLVM_DYLIB */
+
+/* Define if building LLVM with BUILD_SHARED_LIBS */
+/* #undef LLVM_BUILD_SHARED_LIBS */
+
 #endif

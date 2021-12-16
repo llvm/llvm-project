@@ -103,4 +103,10 @@
 /* Define if the xar_open() function is supported on this platform. */
 #cmakedefine LLVM_HAVE_LIBXAR ${LLVM_HAVE_LIBXAR}
 
+/* Define if building libLLVM shared library */
+#cmakedefine LLVM_BUILD_LLVM_DYLIB
+
+/* Define if building LLVM with BUILD_SHARED_LIBS */
+#cmakedefine LLVM_BUILD_SHARED_LIBS
+
 #endif
