@@ -37,6 +37,8 @@ NarrowingConversionsCheck::NarrowingConversionsCheck(StringRef Name,
     : ClangTidyCheck(Name, Context),
       WarnOnIntegerNarrowingConversion(
           Options.get("WarnOnIntegerNarrowingConversion", true)),
+      WarnOnIntegerToFloatingPointNarrowingConversion(
+          Options.get("WarnOnIntegerToFloatingPointNarrowingConversion", true)),
       WarnOnFloatingPointNarrowingConversion(
           Options.get("WarnOnFloatingPointNarrowingConversion", true)),
       WarnWithinTemplateInstantiation(
@@ -49,6 +51,8 @@ void NarrowingConversionsCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "WarnOnIntegerNarrowingConversion",
                 WarnOnIntegerNarrowingConversion);
+  Options.store(Opts, "WarnOnIntegerToFloatingPointNarrowingConversion",
+                WarnOnIntegerToFloatingPointNarrowingConversion);
   Options.store(Opts, "WarnOnFloatingPointNarrowingConversion",
                 WarnOnFloatingPointNarrowingConversion);
   Options.store(Opts, "WarnWithinTemplateInstantiation",
@@ -425,19 +429,21 @@ void NarrowingConversionsCheck::handleIntegralToBoolean(
 void NarrowingConversionsCheck::handleIntegralToFloating(
     const ASTContext &Context, SourceLocation SourceLoc, const Expr &Lhs,
     const Expr &Rhs) {
-  const BuiltinType *ToType = getBuiltinType(Lhs);
-  llvm::APSInt IntegerConstant;
-  if (getIntegerConstantExprValue(Context, Rhs, IntegerConstant)) {
-    if (!isWideEnoughToHold(Context, IntegerConstant, *ToType))
-      diagNarrowIntegerConstant(SourceLoc, Lhs, Rhs, IntegerConstant);
-    return;
-  }
+  if (WarnOnIntegerToFloatingPointNarrowingConversion) {
+    const BuiltinType *ToType = getBuiltinType(Lhs);
+    llvm::APSInt IntegerConstant;
+    if (getIntegerConstantExprValue(Context, Rhs, IntegerConstant)) {
+      if (!isWideEnoughToHold(Context, IntegerConstant, *ToType))
+        diagNarrowIntegerConstant(SourceLoc, Lhs, Rhs, IntegerConstant);
+      return;
+    }
 
-  const BuiltinType *FromType = getBuiltinType(Rhs);
-  if (isWarningInhibitedByEquivalentSize(Context, *FromType, *ToType))
-    return;
-  if (!isWideEnoughToHold(Context, *FromType, *ToType))
-    diagNarrowType(SourceLoc, Lhs, Rhs);
+    const BuiltinType *FromType = getBuiltinType(Rhs);
+    if (isWarningInhibitedByEquivalentSize(Context, *FromType, *ToType))
+      return;
+    if (!isWideEnoughToHold(Context, *FromType, *ToType))
+      diagNarrowType(SourceLoc, Lhs, Rhs);
+  }
 }
 
 void NarrowingConversionsCheck::handleFloatingToIntegral(
