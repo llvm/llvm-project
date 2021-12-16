@@ -181,8 +181,7 @@ INTERFACE_WEAK_FUNCTION(__asan_default_options)
 INTERFACE_WEAK_FUNCTION(__asan_default_suppressions)
 INTERFACE_WEAK_FUNCTION(__asan_on_error)
 
-#if defined(__x86_64__) && \
-    !(defined(SANITIZER_MAC) || defined(SANITIZER_WINDOWS))
+#if defined(__x86_64__) && !defined(__APPLE__) && !defined(SANITIZER_WINDOWS)
 
 #  define ASAN_MEMORY_ACCESS_CALLBACK_ADD(s, reg, op) \
     INTERFACE_FUNCTION(__asan_check_##op##_add_##s##_##reg)

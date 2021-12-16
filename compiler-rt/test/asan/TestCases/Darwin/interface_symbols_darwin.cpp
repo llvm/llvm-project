@@ -2,6 +2,10 @@
 // If you're changing this file, please also change
 // ../Linux/interface_symbols.c
 
+// This is needed to run the preprocessor to exclude symbols guarded by platform
+// RUN: %clangxx -x c++-header -o - -E %p/../../../../lib/asan/asan_interface.inc  \
+// RUN:  | sed "s/INTERFACE_FUNCTION/\nINTERFACE_FUNCTION/g" >  %t.asan_interface.inc
+
 // RUN: %clangxx_asan -dead_strip -O2 %s -o %t.exe
 //
 // note: we can not use -D on Darwin.
@@ -16,7 +20,7 @@
 // RUN:  > %t.exports
 //
 // RUN: grep -e "INTERFACE_\(WEAK_\)\?FUNCTION"                                \
-// RUN:  %p/../../../../lib/asan/asan_interface.inc                            \
+// RUN:  %t.asan_interface.inc                                                 \
 // RUN:  %p/../../../../lib/ubsan/ubsan_interface.inc                          \
 // RUN:  %p/../../../../lib/sanitizer_common/sanitizer_common_interface.inc    \
 // RUN:  %p/../../../../lib/sanitizer_common/sanitizer_common_interface_posix.inc \
