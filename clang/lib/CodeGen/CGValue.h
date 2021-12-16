@@ -175,6 +175,7 @@ class LValue {
   } LVType;
 
   llvm::Value *V;
+  llvm::Type *ElementType;
 
   union {
     // Index into a vector subscript: V[i]
@@ -230,6 +231,13 @@ private:
                   LValueBaseInfo BaseInfo, TBAAAccessInfo TBAAInfo) {
     assert((!Alignment.isZero() || Type->isIncompleteType()) &&
            "initializing l-value with zero alignment!");
+    if (isGlobalReg())
+      assert(ElementType == nullptr && "Global reg does not store elem type");
+    else
+      assert(llvm::cast<llvm::PointerType>(V->getType())
+                 ->isOpaqueOrPointeeTypeMatches(ElementType) &&
+             "Pointer element type mismatch");
+
     this->Type = Type;
     this->Quals = Quals;
     const unsigned MaxAlign = 1U << 31;
@@ -327,17 +335,18 @@ public:
     return V;
   }
   Address getAddress(CodeGenFunction &CGF) const {
-    return Address(getPointer(CGF), getAlignment());
+    return Address(getPointer(CGF), ElementType, getAlignment());
   }
   void setAddress(Address address) {
     assert(isSimple());
     V = address.getPointer();
+    ElementType = address.getElementType();
     Alignment = address.getAlignment().getQuantity();
   }
 
   // vector elt lvalue
   Address getVectorAddress() const {
-    return Address(getVectorPointer(), getAlignment());
+    return Address(getVectorPointer(), ElementType, getAlignment());
   }
   llvm::Value *getVectorPointer() const {
     assert(isVectorElt());
@@ -349,7 +358,7 @@ public:
   }
 
   Address getMatrixAddress() const {
-    return Address(getMatrixPointer(), getAlignment());
+    return Address(getMatrixPointer(), ElementType, getAlignment());
   }
   llvm::Value *getMatrixPointer() const {
     assert(isMatrixElt());
@@ -362,7 +371,7 @@ public:
 
   // extended vector elements.
   Address getExtVectorAddress() const {
-    return Address(getExtVectorPointer(), getAlignment());
+    return Address(getExtVectorPointer(), ElementType, getAlignment());
   }
   llvm::Value *getExtVectorPointer() const {
     assert(isExtVectorElt());
@@ -375,7 +384,7 @@ public:
 
   // bitfield lvalue
   Address getBitFieldAddress() const {
-    return Address(getBitFieldPointer(), getAlignment());
+    return Address(getBitFieldPointer(), ElementType, getAlignment());
   }
   llvm::Value *getBitFieldPointer() const { assert(isBitField()); return V; }
   const CGBitFieldInfo &getBitFieldInfo() const {
@@ -395,6 +404,7 @@ public:
     R.LVType = Simple;
     assert(address.getPointer()->getType()->isPointerTy());
     R.V = address.getPointer();
+    R.ElementType = address.getElementType();
     R.Initialize(type, qs, address.getAlignment(), BaseInfo, TBAAInfo);
     return R;
   }
@@ -405,6 +415,7 @@ public:
     LValue R;
     R.LVType = VectorElt;
     R.V = vecAddress.getPointer();
+    R.ElementType = vecAddress.getElementType();
     R.VectorIdx = Idx;
     R.Initialize(type, type.getQualifiers(), vecAddress.getAlignment(),
                  BaseInfo, TBAAInfo);
@@ -417,6 +428,7 @@ public:
     LValue R;
     R.LVType = ExtVectorElt;
     R.V = vecAddress.getPointer();
+    R.ElementType = vecAddress.getElementType();
     R.VectorElts = Elts;
     R.Initialize(type, type.getQualifiers(), vecAddress.getAlignment(),
                  BaseInfo, TBAAInfo);
@@ -435,6 +447,7 @@ public:
     LValue R;
     R.LVType = BitField;
     R.V = Addr.getPointer();
+    R.ElementType = Addr.getElementType();
     R.BitFieldInfo = &Info;
     R.Initialize(type, type.getQualifiers(), Addr.getAlignment(), BaseInfo,
                  TBAAInfo);
@@ -446,6 +459,7 @@ public:
     LValue R;
     R.LVType = GlobalReg;
     R.V = V;
+    R.ElementType = nullptr;
     R.Initialize(type, type.getQualifiers(), alignment,
                  LValueBaseInfo(AlignmentSource::Decl), TBAAAccessInfo());
     return R;
@@ -457,6 +471,7 @@ public:
     LValue R;
     R.LVType = MatrixElt;
     R.V = matAddress.getPointer();
+    R.ElementType = matAddress.getElementType();
     R.VectorIdx = Idx;
     R.Initialize(type, type.getQualifiers(), matAddress.getAlignment(),
                  BaseInfo, TBAAInfo);
