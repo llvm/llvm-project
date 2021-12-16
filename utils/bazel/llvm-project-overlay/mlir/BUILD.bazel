@@ -2999,6 +2999,7 @@ cc_library(
     deps = [
         ":ArithmeticDialect",
         ":Async",
+        ":DLTIDialect",
         ":GPUDialect",
         ":GPUPassIncGen",
         ":MemRefDialect",
