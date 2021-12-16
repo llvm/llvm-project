@@ -76,6 +76,7 @@ private:
   void printImpl(const EraseStmt *stmt);
   void printImpl(const LetStmt *stmt);
   void printImpl(const ReplaceStmt *stmt);
+  void printImpl(const RewriteStmt *stmt);
 
   void printImpl(const AttributeExpr *expr);
   void printImpl(const DeclRefExpr *expr);
@@ -159,6 +160,7 @@ void NodePrinter::print(const Node *node) {
       .Case<
           // Statements.
           const CompoundStmt, const EraseStmt, const LetStmt, const ReplaceStmt,
+          const RewriteStmt,
 
           // Expressions.
           const AttributeExpr, const DeclRefExpr, const MemberAccessExpr,
@@ -195,6 +197,11 @@ void NodePrinter::printImpl(const ReplaceStmt *stmt) {
   os << "ReplaceStmt " << stmt << "\n";
   printChildren(stmt->getRootOpExpr());
   printChildren("ReplValues", stmt->getReplExprs());
+}
+
+void NodePrinter::printImpl(const RewriteStmt *stmt) {
+  os << "RewriteStmt " << stmt << "\n";
+  printChildren(stmt->getRootOpExpr(), stmt->getRewriteBody());
 }
 
 void NodePrinter::printImpl(const AttributeExpr *expr) {

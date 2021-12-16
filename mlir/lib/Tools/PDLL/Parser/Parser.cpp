@@ -164,6 +164,7 @@ private:
   FailureOr<ast::EraseStmt *> parseEraseStmt();
   FailureOr<ast::LetStmt *> parseLetStmt();
   FailureOr<ast::ReplaceStmt *> parseReplaceStmt();
+  FailureOr<ast::RewriteStmt *> parseRewriteStmt();
 
   //===--------------------------------------------------------------------===//
   // Creation+Analysis
@@ -246,6 +247,9 @@ private:
   FailureOr<ast::ReplaceStmt *>
   createReplaceStmt(llvm::SMRange loc, ast::Expr *rootOp,
                     MutableArrayRef<ast::Expr *> replValues);
+  FailureOr<ast::RewriteStmt *>
+  createRewriteStmt(llvm::SMRange loc, ast::Expr *rootOp,
+                    ast::CompoundStmt *rewriteBody);
 
   //===--------------------------------------------------------------------===//
   // Lexer Utilities
@@ -1156,6 +1160,9 @@ FailureOr<ast::Stmt *> Parser::parseStmt(bool expectTerminalSemicolon) {
   case Token::kw_replace:
     stmt = parseReplaceStmt();
     break;
+  case Token::kw_rewrite:
+    stmt = parseRewriteStmt();
+    break;
   default:
     stmt = parseExpr();
     break;
@@ -1305,6 +1312,32 @@ FailureOr<ast::ReplaceStmt *> Parser::parseReplaceStmt() {
   }
 
   return createReplaceStmt(loc, *rootOp, replValues);
+}
+
+FailureOr<ast::RewriteStmt *> Parser::parseRewriteStmt() {
+  llvm::SMRange loc = curToken.getLoc();
+  consumeToken(Token::kw_rewrite);
+
+  // Parse the root operation.
+  FailureOr<ast::Expr *> rootOp = parseExpr();
+  if (failed(rootOp))
+    return failure();
+
+  if (failed(parseToken(Token::kw_with, "expected `with` before rewrite body")))
+    return failure();
+
+  if (curToken.isNot(Token::l_brace))
+    return emitError("expected `{` to start rewrite body");
+
+  // The rewrite body of this statement is within a rewrite context.
+  llvm::SaveAndRestore<ParserContext> saveCtx(parserContext,
+                                              ParserContext::Rewrite);
+
+  FailureOr<ast::CompoundStmt *> rewriteBody = parseCompoundStmt();
+  if (failed(rewriteBody))
+    return failure();
+
+  return createRewriteStmt(loc, *rootOp, *rewriteBody);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1645,6 +1678,20 @@ Parser::createReplaceStmt(llvm::SMRange loc, ast::Expr *rootOp,
   }
 
   return ast::ReplaceStmt::create(ctx, loc, rootOp, replValues);
+}
+
+FailureOr<ast::RewriteStmt *>
+Parser::createRewriteStmt(llvm::SMRange loc, ast::Expr *rootOp,
+                          ast::CompoundStmt *rewriteBody) {
+  // Check that root is an Operation.
+  ast::Type rootType = rootOp->getType();
+  if (!rootType.isa<ast::OperationType>()) {
+    return emitError(
+        rootOp->getLoc(),
+        llvm::formatv("expected `Op` expression, but got `{0}`", rootType));
+  }
+
+  return ast::RewriteStmt::create(ctx, loc, rootOp, rewriteBody);
 }
 
 //===----------------------------------------------------------------------===//

@@ -100,6 +100,15 @@ ReplaceStmt *ReplaceStmt::create(Context &ctx, llvm::SMRange loc, Expr *rootOp,
 }
 
 //===----------------------------------------------------------------------===//
+// RewriteStmt
+
+RewriteStmt *RewriteStmt::create(Context &ctx, llvm::SMRange loc, Expr *rootOp,
+                                 CompoundStmt *rewriteBody) {
+  return new (ctx.getAllocator().Allocate<RewriteStmt>())
+      RewriteStmt(loc, rootOp, rewriteBody);
+}
+
+//===----------------------------------------------------------------------===//
 // AttributeExpr
 //===----------------------------------------------------------------------===//
 
