@@ -375,11 +375,11 @@ define i64 @v_test_urem_i64(i64 %x, i64 %y) {
 ; GCN-IR-NEXT:  ; %bb.2: ; %udiv-preheader
 ; GCN-IR-NEXT:    v_add_i32_e32 v14, vcc, -1, v2
 ; GCN-IR-NEXT:    v_addc_u32_e32 v15, vcc, -1, v3, vcc
-; GCN-IR-NEXT:    v_not_b32_e32 v6, v8
-; GCN-IR-NEXT:    v_not_b32_e32 v7, v9
-; GCN-IR-NEXT:    v_add_i32_e32 v8, vcc, v6, v10
+; GCN-IR-NEXT:    v_not_b32_e32 v7, v8
+; GCN-IR-NEXT:    v_not_b32_e32 v6, v9
+; GCN-IR-NEXT:    v_add_i32_e32 v8, vcc, v7, v10
 ; GCN-IR-NEXT:    v_lshr_b64 v[12:13], v[0:1], v12
-; GCN-IR-NEXT:    v_addc_u32_e32 v9, vcc, v7, v11, vcc
+; GCN-IR-NEXT:    v_addc_u32_e32 v9, vcc, v6, v11, vcc
 ; GCN-IR-NEXT:    v_mov_b32_e32 v10, 0
 ; GCN-IR-NEXT:    v_mov_b32_e32 v11, 0
 ; GCN-IR-NEXT:    v_mov_b32_e32 v7, 0
