@@ -1,0 +1,26 @@
+// RUN: not mlir-pdll %s -split-input-file 2>&1  | FileCheck %s
+
+// CHECK: expected `{` to start pattern body
+Pattern }
+
+// -----
+
+// CHECK: :6:9: error: `Foo` has already been defined
+// CHECK: :5:9: note: see previous definition here
+Pattern Foo { erase root: Op; }
+Pattern Foo { erase root: Op; }
+
+// -----
+
+// CHECK: expected Pattern body to terminate with an operation rewrite statement
+Pattern {
+  let value: Value;
+}
+
+// -----
+
+// CHECK: Pattern body was terminated by an operation rewrite statement, but found trailing statements
+Pattern {
+  erase root: Op;
+  let value: Value;
+}
