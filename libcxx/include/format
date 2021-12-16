@@ -369,6 +369,8 @@ __handle_replacement_field(const _CharT* __begin, const _CharT* __end,
       [&](auto __arg) {
         if constexpr (same_as<decltype(__arg), monostate>)
           __throw_format_error("Argument index out of bounds");
+        else if constexpr (same_as<decltype(__arg), typename basic_format_arg<_Ctx>::handle>)
+          __arg.format(__parse_ctx, __ctx);
         else {
           formatter<decltype(__arg), _CharT> __formatter;
           __parse_ctx.advance_to(__formatter.parse(__parse_ctx));
