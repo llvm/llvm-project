@@ -2498,12 +2498,6 @@ public:
                             LValueBaseInfo(Source), CGM.getTBAAAccessInfo(T));
   }
 
-  LValue MakeAddrLValue(llvm::Value *V, QualType T, CharUnits Alignment,
-                        LValueBaseInfo BaseInfo, TBAAAccessInfo TBAAInfo) {
-    return LValue::MakeAddr(Address(V, Alignment), T, getContext(),
-                            BaseInfo, TBAAInfo);
-  }
-
   LValue
   MakeAddrLValueWithoutTBAA(Address Addr, QualType T,
                             AlignmentSource Source = AlignmentSource::Type) {
