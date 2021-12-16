@@ -402,6 +402,10 @@ struct ExtractElementFromTensorFromElements
       return failure();
     auto tensorType = tensorFromElements.getType().cast<RankedTensorType>();
     auto rank = tensorType.getRank();
+    if (rank == 0) {
+      rewriter.replaceOp(extract, tensorFromElements.getOperand(0));
+      return success();
+    }
     SmallVector<APInt, 3> indices(rank);
     int64_t flatIndex = 0;
     int64_t stride = 1;

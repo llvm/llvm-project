@@ -135,6 +135,18 @@ func @extract_from_tensor.from_elements(%element : index) -> index {
 
 // -----
 
+// CHECK-LABEL: func @extract_from_tensor.from_elements_0d
+func @extract_from_tensor.from_elements_0d(%element : index) -> index {
+  // CHECK-SAME: ([[ARG:%.*]]: index)
+  %c0 = arith.constant 0 : index
+  %tensor = tensor.from_elements %element : tensor<index>
+  %extracted_element = tensor.extract %tensor[] : tensor<index>
+  // CHECK: [[ARG]] : index
+  return %extracted_element : index
+}
+
+// -----
+
 // CHECK-LABEL: func @extract_from_tensor.from_elements_3d
 func @extract_from_tensor.from_elements_3d()
     -> (f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32) {
