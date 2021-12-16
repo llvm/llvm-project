@@ -409,9 +409,9 @@ MLIRContext::getOrLoadDialect(StringRef dialectNamespace, TypeID dialectID,
                               function_ref<std::unique_ptr<Dialect>()> ctor) {
   auto &impl = getImpl();
   // Get the correct insertion position sorted by namespace.
-  std::unique_ptr<Dialect> &dialect = impl.loadedDialects[dialectNamespace];
+  auto dialectIt = impl.loadedDialects.find(dialectNamespace);
 
-  if (!dialect) {
+  if (dialectIt == impl.loadedDialects.end()) {
     LLVM_DEBUG(llvm::dbgs()
                << "Load new dialect in Context " << dialectNamespace << "\n");
 #ifndef NDEBUG
@@ -422,7 +422,8 @@ MLIRContext::getOrLoadDialect(StringRef dialectNamespace, TypeID dialectID,
           "the PassManager): this can indicate a "
           "missing `dependentDialects` in a pass for example.");
 #endif
-    dialect = ctor();
+    std::unique_ptr<Dialect> &dialect =
+        impl.loadedDialects.insert({dialectNamespace, ctor()}).first->second;
     assert(dialect && "dialect ctor failed");
 
     // Refresh all the identifiers dialect field, this catches cases where a
@@ -441,6 +442,7 @@ MLIRContext::getOrLoadDialect(StringRef dialectNamespace, TypeID dialectID,
   }
 
   // Abort if dialect with namespace has already been registered.
+  std::unique_ptr<Dialect> &dialect = dialectIt->second;
   if (dialect->getTypeID() != dialectID)
     llvm::report_fatal_error("a dialect with namespace '" + dialectNamespace +
                              "' has already been registered");
