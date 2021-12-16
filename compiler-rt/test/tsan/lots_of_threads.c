@@ -18,8 +18,13 @@ int main() {
   pthread_attr_setstacksize(&attr, 16 << 20);
   for (int iter = 0; iter < kIters; iter++) {
     pthread_t threads[kThreads];
-    for (int t = 0; t < kThreads; t++)
-      pthread_create(&threads[t], &attr, thr, 0);
+    for (int t = 0; t < kThreads; t++) {
+      int err = pthread_create(&threads[t], &attr, thr, 0);
+      if (err) {
+        fprintf(stderr, "Failed to create thread #%d\n", t);
+        return 1;
+      }
+    }
     barrier_wait(&barrier);
     for (int t = 0; t < kThreads; t++)
       pthread_join(threads[t], 0);
