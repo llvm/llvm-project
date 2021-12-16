@@ -22,13 +22,13 @@ class raw_ostream;
 namespace sys {
 
 /// A time point on the system clock. This is provided for two reasons:
-/// - to insulate us agains subtle differences in behavoir to differences in
-///   system clock precision (which is implementation-defined and differs between
-///   platforms).
+/// - to insulate us against subtle differences in behavior to differences in
+///   system clock precision (which is implementation-defined and differs
+///   between platforms).
 /// - to shorten the type name
-/// The default precision is nanoseconds. If need a specific precision specify
-/// it explicitly. If unsure, use the default. If you need a time point on a
-/// clock other than the system_clock, use std::chrono directly.
+/// The default precision is nanoseconds. If you need a specific precision
+/// specify it explicitly. If unsure, use the default. If you need a time point
+/// on a clock other than the system_clock, use std::chrono directly.
 template <typename D = std::chrono::nanoseconds>
 using TimePoint = std::chrono::time_point<std::chrono::system_clock, D>;
 

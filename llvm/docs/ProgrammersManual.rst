@@ -214,7 +214,7 @@ character array and a length) and supports the common operations available on
 
 It can be implicitly constructed using a C style null-terminated string, an
 ``std::string``, or explicitly with a character pointer and length.  For
-example, the ``StringRef`` find function is declared as:
+example, the ``StringMap`` find function is declared as:
 
 .. code-block:: c++
 
