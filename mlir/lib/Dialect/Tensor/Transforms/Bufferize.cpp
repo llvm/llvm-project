@@ -19,6 +19,7 @@
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/Transforms/Passes.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
@@ -65,18 +66,64 @@ public:
   LogicalResult
   matchAndRewrite(tensor::FromElementsOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    int numberOfElements = op.elements().size();
-    auto resultType = MemRefType::get(
-        {numberOfElements}, op.getType().cast<TensorType>().getElementType());
-    Value result = rewriter.create<memref::AllocOp>(op.getLoc(), resultType);
-    for (auto element : llvm::enumerate(op.elements())) {
-      Value index =
-          rewriter.create<arith::ConstantIndexOp>(op.getLoc(), element.index());
-      rewriter.create<memref::StoreOp>(op.getLoc(), element.value(), result,
-                                       index);
+    Location loc = op.getLoc();
+    auto tensorType = op.getType().cast<RankedTensorType>();
+    auto shape = tensorType.getShape();
+
+    // Allocate a buffer for the result.
+    auto resultType =
+        MemRefType::get(tensorType.getShape(), tensorType.getElementType());
+    Value buffer = rewriter.create<memref::AllocOp>(loc, resultType);
+
+    // Case: tensor<0xelem_type>.
+    if (op.elements().empty()) {
+      rewriter.replaceOp(op, {buffer});
+      return success();
     }
-    rewriter.replaceOp(op, {result});
+
+    // Case: tensor<elem_type>.
+    if (shape.empty()) {
+      rewriter.create<memref::StoreOp>(loc, op.elements().front(), buffer);
+      rewriter.replaceOp(op, {buffer});
+      return success();
+    }
+
+    // Create constants for the range of possible indices [0, max{shape_i}).
+    auto maxDim = *std::max_element(shape.begin(), shape.end());
+    SmallVector<Value, 2> constants;
+    constants.reserve(maxDim);
+    for (int i = 0; i < maxDim; ++i)
+      constants.push_back(rewriter.create<arith::ConstantIndexOp>(loc, i));
+
+    // Traverse all `elements` and create `memref.store` ops.
+    ImplicitLocOpBuilder b(loc, rewriter);
+    auto element_it = adaptor.elements().begin();
+    SmallVector<Value, 2> indices(tensorType.getRank(), constants[0]);
+    CreateStores(/*dim=*/0, buffer, shape, constants, element_it, indices, b);
+
+    rewriter.replaceOp(op, {buffer});
     return success();
+  }
+
+private:
+  // Implements backtracking to traverse indices of the output buffer while
+  // iterating over op.elements().
+  void CreateStores(int dim, Value buffer, ArrayRef<int64_t> shape,
+                    ArrayRef<Value> constants, ValueRange::iterator &element_it,
+                    SmallVectorImpl<Value> &indices,
+                    ImplicitLocOpBuilder b) const {
+    if (dim == shape.size() - 1) {
+      for (int i = 0; i < shape.back(); ++i) {
+        indices.back() = constants[i];
+        b.create<memref::StoreOp>(*element_it, buffer, indices);
+        ++element_it;
+      }
+      return;
+    }
+    for (int i = 0; i < shape[dim]; ++i) {
+      indices[dim] = constants[i];
+      CreateStores(dim + 1, buffer, shape, constants, element_it, indices, b);
+    }
   }
 };
 
