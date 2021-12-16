@@ -13,14 +13,13 @@
 #include "sanitizer_common/sanitizer_platform.h"
 #if SANITIZER_LINUX && defined(__x86_64__)
 
-#include "sanitizer_common/sanitizer_stoptheworld.h"
-#include "gtest/gtest.h"
+#  include <pthread.h>
+#  include <sched.h>
 
-#include "sanitizer_common/sanitizer_libc.h"
-#include "sanitizer_common/sanitizer_common.h"
-
-#include <pthread.h>
-#include <sched.h>
+#  include "gtest/gtest.h"
+#  include "sanitizer_common/sanitizer_common.h"
+#  include "sanitizer_common/sanitizer_libc.h"
+#  include "sanitizer_common/sanitizer_stoptheworld.h"
 
 namespace __sanitizer {
 
@@ -31,9 +30,7 @@ struct CallbackArgument {
   volatile bool threads_stopped;
   volatile bool callback_executed;
   CallbackArgument()
-    : counter(0),
-      threads_stopped(false),
-      callback_executed(false) {}
+      : counter(0), threads_stopped(false), callback_executed(false) {}
 };
 
 void *IncrementerThread(void *argument) {
@@ -59,7 +56,7 @@ void Callback(const SuspendedThreadsList &suspended_threads_list,
   for (uptr i = 0; i < 1000; i++) {
     sched_yield();
     if (__sync_fetch_and_add(&callback_argument->counter, 0) !=
-          counter_at_init) {
+        counter_at_init) {
       callback_argument->threads_stopped = false;
       return;
     }
@@ -73,8 +70,8 @@ TEST(StopTheWorld, SuspendThreadsSimple) {
   pthread_t thread_id;
   int pthread_create_result;
   pthread_mutex_lock(&incrementer_thread_exit_mutex);
-  pthread_create_result = pthread_create(&thread_id, NULL, IncrementerThread,
-                                         &argument);
+  pthread_create_result =
+      pthread_create(&thread_id, NULL, IncrementerThread, &argument);
   ASSERT_EQ(0, pthread_create_result);
   StopTheWorld(&Callback, &argument);
   pthread_mutex_unlock(&incrementer_thread_exit_mutex);
@@ -89,7 +86,7 @@ TEST(StopTheWorld, SuspendThreadsSimple) {
 // A more comprehensive test where we spawn a bunch of threads while executing
 // StopTheWorld in parallel.
 static const uptr kThreadCount = 50;
-static const uptr kStopWorldAfter = 10; // let this many threads spawn first
+static const uptr kStopWorldAfter = 10;  // let this many threads spawn first
 
 static pthread_mutex_t advanced_incrementer_thread_exit_mutex;
 
@@ -101,17 +98,17 @@ struct AdvancedCallbackArgument {
   volatile bool callback_executed;
   volatile bool fatal_error;
   AdvancedCallbackArgument()
-    : thread_index(0),
-      threads_stopped(false),
-      callback_executed(false),
-      fatal_error(false) {}
+      : thread_index(0),
+        threads_stopped(false),
+        callback_executed(false),
+        fatal_error(false) {}
 };
 
 void *AdvancedIncrementerThread(void *argument) {
   AdvancedCallbackArgument *callback_argument =
       (AdvancedCallbackArgument *)argument;
-  uptr this_thread_index = __sync_fetch_and_add(
-      &callback_argument->thread_index, 1);
+  uptr this_thread_index =
+      __sync_fetch_and_add(&callback_argument->thread_index, 1);
   // Spawn the next thread.
   int pthread_create_result;
   if (this_thread_index + 1 < kThreadCount) {
@@ -139,20 +136,20 @@ void *AdvancedIncrementerThread(void *argument) {
 }
 
 void AdvancedCallback(const SuspendedThreadsList &suspended_threads_list,
-                             void *argument) {
+                      void *argument) {
   AdvancedCallbackArgument *callback_argument =
       (AdvancedCallbackArgument *)argument;
   callback_argument->callback_executed = true;
 
   int counters_at_init[kThreadCount];
   for (uptr j = 0; j < kThreadCount; j++)
-    counters_at_init[j] = __sync_fetch_and_add(&callback_argument->counters[j],
-                                               0);
+    counters_at_init[j] =
+        __sync_fetch_and_add(&callback_argument->counters[j], 0);
   for (uptr i = 0; i < 10; i++) {
     sched_yield();
     for (uptr j = 0; j < kThreadCount; j++)
       if (__sync_fetch_and_add(&callback_argument->counters[j], 0) !=
-            counters_at_init[j]) {
+          counters_at_init[j]) {
         callback_argument->threads_stopped = false;
         return;
       }
@@ -167,8 +164,7 @@ TEST(StopTheWorld, SuspendThreadsAdvanced) {
   pthread_mutex_lock(&advanced_incrementer_thread_exit_mutex);
   int pthread_create_result;
   pthread_create_result = pthread_create(&argument.thread_ids[0], NULL,
-                                         AdvancedIncrementerThread,
-                                         &argument);
+                                         AdvancedIncrementerThread, &argument);
   ASSERT_EQ(0, pthread_create_result);
   // Wait for several threads to spawn before proceeding.
   while (__sync_fetch_and_add(&argument.thread_index, 0) < kStopWorldAfter)
@@ -180,7 +176,7 @@ TEST(StopTheWorld, SuspendThreadsAdvanced) {
   // Wait for all threads to spawn before we start terminating them.
   while (__sync_fetch_and_add(&argument.thread_index, 0) < kThreadCount)
     sched_yield();
-  ASSERT_FALSE(argument.fatal_error); // a pthread_create has failed
+  ASSERT_FALSE(argument.fatal_error);  // a pthread_create has failed
   // Signal the threads to terminate.
   pthread_mutex_unlock(&advanced_incrementer_thread_exit_mutex);
   for (uptr i = 0; i < kThreadCount; i++)
@@ -190,7 +186,7 @@ TEST(StopTheWorld, SuspendThreadsAdvanced) {
 
 static void SegvCallback(const SuspendedThreadsList &suspended_threads_list,
                          void *argument) {
-  *(volatile int*)0x1234 = 0;
+  *(volatile int *)0x1234 = 0;
 }
 
 TEST(StopTheWorld, SegvInCallback) {
