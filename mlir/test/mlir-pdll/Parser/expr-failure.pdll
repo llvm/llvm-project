@@ -82,6 +82,83 @@ Pattern {
 // -----
 
 //===----------------------------------------------------------------------===//
+// `op` Expr
+//===----------------------------------------------------------------------===//
+
+Pattern {
+  // CHECK: expected `)` after operation operand list
+  let value: Value;
+  let foo = op<builtin.func>(value<;
+}
+
+// -----
+
+Pattern {
+  // CHECK: unable to convert expression of type `Attr` to the expected type of `ValueRange`
+  let attr: Attr;
+  let foo = op<builtin.func>(attr);
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected `Value` or `ValueRange` convertible expression, but got `Type`
+  let foo = op<>(_: Type, _: TypeRange);
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected identifier or string attribute name
+  let foo = op<> { 10;
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected `Attr` expression, but got `Value`
+  let foo = op<> { foo = _: Value };
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected `}` after operation attribute list
+  let foo = op<> { "foo" {;
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected `(` before operation result type list
+  let foo = op<> -> );
+}
+
+// -----
+
+Pattern {
+  // CHECK: unable to convert expression of type `ValueRange` to the expected type of `TypeRange`
+  let foo = op<> -> (_: ValueRange);
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected `Type` or `TypeRange` convertible expression, but got `Value`
+  let foo = op<> -> (_: Value, _: ValueRange);
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected `)` after operation result type list
+  let value: TypeRange;
+  let foo = op<> -> (value<;
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // `type` Expr
 //===----------------------------------------------------------------------===//
 

@@ -117,6 +117,37 @@ MemberAccessExpr *MemberAccessExpr::create(Context &ctx, llvm::SMRange loc,
 }
 
 //===----------------------------------------------------------------------===//
+// OperationExpr
+//===----------------------------------------------------------------------===//
+
+OperationExpr *OperationExpr::create(
+    Context &ctx, llvm::SMRange loc, const OpNameDecl *name,
+    ArrayRef<Expr *> operands, ArrayRef<Expr *> resultTypes,
+    ArrayRef<NamedAttributeDecl *> attributes) {
+  unsigned allocSize =
+      OperationExpr::totalSizeToAlloc<Expr *, NamedAttributeDecl *>(
+          operands.size() + resultTypes.size(), attributes.size());
+  void *rawData =
+      ctx.getAllocator().Allocate(allocSize, alignof(OperationExpr));
+
+  Type resultType = OperationType::get(ctx, name->getName());
+  OperationExpr *opExpr = new (rawData)
+      OperationExpr(loc, resultType, name, operands.size(), resultTypes.size(),
+                    attributes.size(), name->getLoc());
+  std::uninitialized_copy(operands.begin(), operands.end(),
+                          opExpr->getOperands().begin());
+  std::uninitialized_copy(resultTypes.begin(), resultTypes.end(),
+                          opExpr->getResultTypes().begin());
+  std::uninitialized_copy(attributes.begin(), attributes.end(),
+                          opExpr->getAttributes().begin());
+  return opExpr;
+}
+
+Optional<StringRef> OperationExpr::getName() const {
+  return getNameDecl()->getName();
+}
+
+//===----------------------------------------------------------------------===//
 // TypeExpr
 //===----------------------------------------------------------------------===//
 
@@ -191,6 +222,16 @@ ValueRangeConstraintDecl *ValueRangeConstraintDecl::create(Context &ctx,
                                                            Expr *typeExpr) {
   return new (ctx.getAllocator().Allocate<ValueRangeConstraintDecl>())
       ValueRangeConstraintDecl(loc, typeExpr);
+}
+
+//===----------------------------------------------------------------------===//
+// NamedAttributeDecl
+//===----------------------------------------------------------------------===//
+
+NamedAttributeDecl *NamedAttributeDecl::create(Context &ctx, const Name &name,
+                                               Expr *value) {
+  return new (ctx.getAllocator().Allocate<NamedAttributeDecl>())
+      NamedAttributeDecl(name, value);
 }
 
 //===----------------------------------------------------------------------===//

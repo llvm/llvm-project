@@ -23,6 +23,7 @@ namespace ast {
 class Context;
 class Decl;
 class Expr;
+class NamedAttributeDecl;
 class OpNameDecl;
 class VariableDecl;
 
@@ -343,6 +344,105 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
+// AllResultsMemberAccessExpr
+
+/// This class represents an instance of MemberAccessExpr that references all
+/// results of an operation.
+class AllResultsMemberAccessExpr : public MemberAccessExpr {
+public:
+  /// Return the member name used for the "all-results" access.
+  static StringRef getMemberName() { return "$results"; }
+
+  static AllResultsMemberAccessExpr *create(Context &ctx, llvm::SMRange loc,
+                                            const Expr *parentExpr, Type type) {
+    return cast<AllResultsMemberAccessExpr>(
+        MemberAccessExpr::create(ctx, loc, parentExpr, getMemberName(), type));
+  }
+
+  /// Provide type casting support.
+  static bool classof(const Node *node) {
+    const MemberAccessExpr *memAccess = dyn_cast<MemberAccessExpr>(node);
+    return memAccess && memAccess->getMemberName() == getMemberName();
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// OperationExpr
+//===----------------------------------------------------------------------===//
+
+/// This expression represents the structural form of an MLIR Operation. It
+/// represents either an input operation to match, or an operation to create
+/// within a rewrite.
+class OperationExpr final
+    : public Node::NodeBase<OperationExpr, Expr>,
+      private llvm::TrailingObjects<OperationExpr, Expr *,
+                                    NamedAttributeDecl *> {
+public:
+  static OperationExpr *create(Context &ctx, llvm::SMRange loc,
+                               const OpNameDecl *nameDecl,
+                               ArrayRef<Expr *> operands,
+                               ArrayRef<Expr *> resultTypes,
+                               ArrayRef<NamedAttributeDecl *> attributes);
+
+  /// Return the name of the operation, or None if there isn't one.
+  Optional<StringRef> getName() const;
+
+  /// Return the declaration of the operation name.
+  const OpNameDecl *getNameDecl() const { return nameDecl; }
+
+  /// Return the location of the name of the operation expression, or an invalid
+  /// location if there isn't a name.
+  llvm::SMRange getNameLoc() const { return nameLoc; }
+
+  /// Return the operands of this operation.
+  MutableArrayRef<Expr *> getOperands() {
+    return {getTrailingObjects<Expr *>(), numOperands};
+  }
+  ArrayRef<Expr *> getOperands() const {
+    return const_cast<OperationExpr *>(this)->getOperands();
+  }
+
+  /// Return the result types of this operation.
+  MutableArrayRef<Expr *> getResultTypes() {
+    return {getTrailingObjects<Expr *>() + numOperands, numResultTypes};
+  }
+  MutableArrayRef<Expr *> getResultTypes() const {
+    return const_cast<OperationExpr *>(this)->getResultTypes();
+  }
+
+  /// Return the attributes of this operation.
+  MutableArrayRef<NamedAttributeDecl *> getAttributes() {
+    return {getTrailingObjects<NamedAttributeDecl *>(), numAttributes};
+  }
+  MutableArrayRef<NamedAttributeDecl *> getAttributes() const {
+    return const_cast<OperationExpr *>(this)->getAttributes();
+  }
+
+private:
+  OperationExpr(llvm::SMRange loc, Type type, const OpNameDecl *nameDecl,
+                unsigned numOperands, unsigned numResultTypes,
+                unsigned numAttributes, llvm::SMRange nameLoc)
+      : Base(loc, type), nameDecl(nameDecl), numOperands(numOperands),
+        numResultTypes(numResultTypes), numAttributes(numAttributes),
+        nameLoc(nameLoc) {}
+
+  /// The name decl of this expression.
+  const OpNameDecl *nameDecl;
+
+  /// The number of operands, result types, and attributes of the operation.
+  unsigned numOperands, numResultTypes, numAttributes;
+
+  /// The location of the operation name in the expression if it has a name.
+  llvm::SMRange nameLoc;
+
+  /// TrailingObject utilities.
+  friend llvm::TrailingObjects<OperationExpr, Expr *, NamedAttributeDecl *>;
+  size_t numTrailingObjects(OverloadToken<Expr *>) const {
+    return numOperands + numResultTypes;
+  }
+};
+
+//===----------------------------------------------------------------------===//
 // TypeExpr
 //===----------------------------------------------------------------------===//
 
@@ -556,6 +656,31 @@ protected:
 };
 
 //===----------------------------------------------------------------------===//
+// NamedAttributeDecl
+//===----------------------------------------------------------------------===//
+
+/// This Decl represents a NamedAttribute, and contains a string name and
+/// attribute value.
+class NamedAttributeDecl : public Node::NodeBase<NamedAttributeDecl, Decl> {
+public:
+  static NamedAttributeDecl *create(Context &ctx, const Name &name,
+                                    Expr *value);
+
+  /// Return the name of the attribute.
+  const Name &getName() const { return *Decl::getName(); }
+
+  /// Return value of the attribute.
+  Expr *getValue() const { return value; }
+
+private:
+  NamedAttributeDecl(const Name &name, Expr *value)
+      : Base(name.getLoc(), &name), value(value) {}
+
+  /// The value of the attribute.
+  Expr *value;
+};
+
+//===----------------------------------------------------------------------===//
 // OpNameDecl
 //===----------------------------------------------------------------------===//
 
@@ -703,7 +828,8 @@ private:
 //===----------------------------------------------------------------------===//
 
 inline bool Decl::classof(const Node *node) {
-  return isa<ConstraintDecl, OpNameDecl, PatternDecl, VariableDecl>(node);
+  return isa<ConstraintDecl, NamedAttributeDecl, OpNameDecl, PatternDecl,
+             VariableDecl>(node);
 }
 
 inline bool ConstraintDecl::classof(const Node *node) {
@@ -717,7 +843,8 @@ inline bool CoreConstraintDecl::classof(const Node *node) {
 }
 
 inline bool Expr::classof(const Node *node) {
-  return isa<AttributeExpr, DeclRefExpr, MemberAccessExpr, TypeExpr>(node);
+  return isa<AttributeExpr, DeclRefExpr, MemberAccessExpr, OperationExpr,
+             TypeExpr>(node);
 }
 
 inline bool OpRewriteStmt::classof(const Node *node) {
