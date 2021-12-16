@@ -513,7 +513,8 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
       Emitter.finalize(GV);
       CharUnits Align = CGM.getContext().getTypeAlignInChars(ArrayQTy);
       GV->setAlignment(Align.getAsAlign());
-      EmitFinalDestCopy(ArrayQTy, CGF.MakeAddrLValue(GV, ArrayQTy, Align));
+      Address GVAddr(GV, GV->getValueType(), Align);
+      EmitFinalDestCopy(ArrayQTy, CGF.MakeAddrLValue(GVAddr, ArrayQTy));
       return;
     }
   }

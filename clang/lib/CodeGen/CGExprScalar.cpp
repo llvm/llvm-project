@@ -3531,7 +3531,7 @@ static Value *emitPointerArithmetic(CodeGenFunction &CGF,
     return CGF.Builder.CreateBitCast(result, pointer->getType());
   }
 
-  llvm::Type *elemTy = pointer->getType()->getPointerElementType();
+  llvm::Type *elemTy = CGF.ConvertTypeForMem(elementType);
   if (CGF.getLangOpts().isSignedOverflowDefined())
     return CGF.Builder.CreateGEP(elemTy, pointer, index, "add.ptr");
 
