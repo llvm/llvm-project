@@ -708,6 +708,20 @@ ifneq "$(DYLIB_HIDE_SWIFTMODULE)" ""
             -emit-library $(DYLIB_SWIFT_FLAGS) -o $@ \
             $(patsubst %.swiftmodule.o,,$(DYLIB_OBJECTS))
 else
+ifneq "$(FRAMEWORK)" ""
+	mkdir -p $(FRAMEWORK).framework/Versions/A/Headers
+	mkdir -p $(FRAMEWORK).framework/Versions/A/Modules
+	mkdir -p $(FRAMEWORK).framework/Versions/A/Resources
+ifneq "$(MODULENAME)" ""
+	mkdir -p $(FRAMEWORK).framework/Versions/A/Modules/$(MODULENAME).swiftmodule
+	cp -r $(MODULENAME).swiftmodule $(FRAMEWORK).framework/Versions/A/Modules/$(MODULENAME).swiftmodule/$(ARCH).swiftmodule
+endif
+	(cd $(FRAMEWORK).framework/Versions; ln -sf A Current)
+	(cd $(FRAMEWORK).framework/; ln -sf Versions/A/Headers Headers)
+	(cd $(FRAMEWORK).framework/; ln -sf Versions/A/Modules Modules)
+	(cd $(FRAMEWORK).framework/; ln -sf Versions/A/Resources Resources)
+	(cd $(FRAMEWORK).framework/; ln -sf Versions/A/$(FRAMEWORK) $(FRAMEWORK))
+endif
 	$(SWIFTC) $(patsubst -g,,$(SWIFTFLAGS)) \
             -emit-library $(DYLIB_SWIFT_FLAGS) -o $@ $(DYLIB_OBJECTS)
 endif

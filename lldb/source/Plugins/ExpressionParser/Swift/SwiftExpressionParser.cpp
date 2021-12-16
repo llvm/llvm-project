@@ -1221,10 +1221,18 @@ struct SwiftASTContextError : public llvm::ErrorInfo<SwiftASTContextError> {
 /// This indicates an error in the SwiftASTContext.
 struct ModuleImportError : public llvm::ErrorInfo<ModuleImportError> {
   static char ID;
-  std::string Message;
+  std::string msg;
+  bool is_explicit;
 
-  ModuleImportError(llvm::Twine Message) : Message(Message.str()) {}
-  void log(llvm::raw_ostream &OS) const override { OS << "ModuleImport"; }
+  ModuleImportError(llvm::Twine message, bool is_explicit = false)
+      : msg(message.str()), is_explicit(is_explicit) {}
+  void log(llvm::raw_ostream &OS) const override {
+    if (is_explicit)
+      OS << "error while processing import statement:";
+    else
+      OS << "error while importing implicit dependency:";
+    OS << msg;
+  }
   std::error_code convertToErrorCode() const override {
     return inconvertibleErrorCode();
   }
@@ -1321,8 +1329,7 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
     const char *msg = implicit_import_error.AsCString();
     if (!msg)
       msg = "error status positive, but import still failed";
-    return make_error<ModuleImportError>(llvm::Twine("in implicit-import:\n") +
-                                         msg);
+    return make_error<ModuleImportError>(msg);
   }
 
   swift::ImplicitImportInfo importInfo;
@@ -1471,8 +1478,7 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
           const char *msg = auto_import_error.AsCString();
           if (!msg)
             msg = "error status positive, but import still failed";
-          return make_error<ModuleImportError>(
-              llvm::Twine("in user-import:\n") + msg);
+          return make_error<ModuleImportError>(msg, /*explicit=*/true);
     }
   }
 
@@ -1524,13 +1530,19 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
                      m_sc, *m_exe_scope, m_options, repl, playground);
 
   if (!parsed_expr) {
+    bool user_import = false;
     bool retry = false;
     handleAllErrors(parsed_expr.takeError(),
                     [&](const ModuleImportError &MIE) {
+                      if (MIE.is_explicit) {
+                        // A new dylib may have poisoned the context.
+                        retry = true;
+                        user_import = true;
+                      }
                       if (swift_ast_ctx->GetClangImporter())
                         // Already on backup power.
                         diagnostic_manager.PutString(eDiagnosticSeverityError,
-                                                     MIE.Message);
+                                                     MIE.message());
                       else
                         // Discard the shared scratch context and retry.
                         retry = true;
@@ -1552,7 +1564,8 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
     // fresh SwiftASTContext initialized with the flags from the
     // current lldb::Module / Swift dylib to avoid header search
     // mismatches.
-    m_sc.target_sp->SetUseScratchTypesystemPerModule(true);
+    if (!user_import)
+      m_sc.target_sp->SetUseScratchTypesystemPerModule(true);
     return 2;
   }
 

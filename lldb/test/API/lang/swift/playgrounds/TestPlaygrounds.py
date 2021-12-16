@@ -113,6 +113,8 @@ class TestSwiftPlaygrounds(TestBase):
             process, breakpoint)
 
         self.assertEqual(len(threads), 1)
+        self.expect('settings set target.swift-framework-search-paths "%s"' %
+                    self.getBuildDir())
 
         contents = ""
 
@@ -147,4 +149,24 @@ class TestSwiftPlaygrounds(TestBase):
         ret = self.frame().EvaluateExpression("get_output()")
         playground_output = ret.GetSummary()
         self.assertTrue(playground_output is not None)
-        self.assertTrue("=\\'23\\'" in playground_output)
+        self.assertIn("=\\'23\\'", playground_output)
+
+        # Test importing a library that adds new Clang options.
+        log = self.getBuildArtifact('types.log')
+        self.expect('log enable lldb types -f ' + log)
+        contents = "import Dylib\nf()\n"
+        res = self.frame().EvaluateExpression(contents, options)
+        ret = self.frame().EvaluateExpression("get_output()")
+        playground_output = ret.GetSummary()
+        self.assertTrue(playground_output is not None)
+        self.assertIn("Hello from the Dylib", playground_output)
+
+        # Scan through the types log to make sure the SwiftASTContext was poisoned.
+        logfile = open(log, "r")
+        found = 0
+        for line in logfile:
+            if 'New Swift image added' in line \
+               and 'Versions/A/Dylib' in line \
+               and 'ClangImporter needs to be reinitialized' in line:
+                    found += 1
+        self.assertEqual(found, 1)
