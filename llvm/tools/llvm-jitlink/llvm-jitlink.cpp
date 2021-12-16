@@ -270,7 +270,7 @@ static Error applyHarnessPromotions(Session &S, LinkGraph &G) {
   if (S.HarnessFiles.empty() || S.HarnessFiles.count(G.getName()))
     return Error::success();
 
-  LLVM_DEBUG(dbgs() << "Appling promotions to graph " << G.getName() << "\n");
+  LLVM_DEBUG(dbgs() << "Applying promotions to graph " << G.getName() << "\n");
 
   // If this graph is part of the test then promote any symbols referenced by
   // the harness to default scope, remove all symbols that clash with harness
