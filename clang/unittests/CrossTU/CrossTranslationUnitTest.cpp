@@ -61,7 +61,7 @@ public:
     ASSERT_FALSE(llvm::sys::fs::createTemporaryFile("index", "txt", IndexFD,
                                                     IndexFileName));
     llvm::ToolOutputFile IndexFile(IndexFileName, IndexFD);
-    IndexFile.os() << "c:@F@f#I# " << ASTFileName << "\n";
+    IndexFile.os() << "9:c:@F@f#I# " << ASTFileName << "\n";
     IndexFile.os().flush();
     EXPECT_TRUE(llvm::sys::fs::exists(IndexFileName));
 

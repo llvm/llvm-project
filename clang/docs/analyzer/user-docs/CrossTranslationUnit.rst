@@ -81,12 +81,12 @@ of `foo.cpp`:
   $
 
 The next step is to create a CTU index file which holds the `USR` name and location of external definitions in the
-source files:
+source files in format `<USR-Length>:<USR> <File-Path>`:
 
 .. code-block:: bash
 
   $ clang-extdef-mapping -p . foo.cpp
-  c:@F@foo# /path/to/your/project/foo.cpp
+  9:c:@F@foo# /path/to/your/project/foo.cpp
   $ clang-extdef-mapping -p . foo.cpp > externalDefMap.txt
 
 We have to modify `externalDefMap.txt` to contain the name of the `.ast` files instead of the source files:
@@ -278,12 +278,12 @@ The `invocation list`:
 
 We'd like to analyze `main.cpp` and discover the division by zero bug.
 As we are using On-demand mode, we only need to create a CTU index file which holds the `USR` name and location of
-external definitions in the source files:
+external definitions in the source files in format `<USR-Length>:<USR> <File-Path>`:
 
 .. code-block:: bash
 
   $ clang-extdef-mapping -p . foo.cpp
-  c:@F@foo# /path/to/your/project/foo.cpp
+  9:c:@F@foo# /path/to/your/project/foo.cpp
   $ clang-extdef-mapping -p . foo.cpp > externalDefMap.txt
 
 Now everything is available for the CTU analysis.
