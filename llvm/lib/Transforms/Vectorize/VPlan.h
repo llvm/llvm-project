@@ -501,6 +501,8 @@ public:
   const VPBlocksTy &getSuccessors() const { return Successors; }
   VPBlocksTy &getSuccessors() { return Successors; }
 
+  iterator_range<VPBlockBase **> successors() { return Successors; }
+
   const VPBlocksTy &getPredecessors() const { return Predecessors; }
   VPBlocksTy &getPredecessors() { return Predecessors; }
 

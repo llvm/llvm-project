@@ -165,7 +165,7 @@ public:
     // Any assignment involving the expression itself resets the variable to
     // "unknown". A more advanced analysis could try to evaluate the compound
     // assignment. For example, `x += 0` need not invalidate `x`.
-    if (const auto *E = Nodes.getNodeAs<clang::Expr>(kAssignment))
+    if (Nodes.getNodeAs<clang::Expr>(kAssignment))
       return ConstantPropagationLattice::top();
 
     llvm_unreachable("expected at least one bound identifier");

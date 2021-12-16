@@ -945,14 +945,14 @@ LogicalResult OpWithResultShapeInterfaceOp::reifyReturnTypeShapes(
   Location loc = getLoc();
   shapes.reserve(operands.size());
   for (Value operand : llvm::reverse(operands)) {
-    auto currShape = llvm::to_vector<4>(llvm::map_range(
-        llvm::seq<int64_t>(
-            0, operand.getType().cast<RankedTensorType>().getRank()),
-        [&](int64_t dim) -> Value {
+    auto rank = operand.getType().cast<RankedTensorType>().getRank();
+    auto currShape = llvm::to_vector<4>(
+        llvm::map_range(llvm::seq<int64_t>(0, rank), [&](int64_t dim) -> Value {
           return builder.createOrFold<tensor::DimOp>(loc, operand, dim);
         }));
     shapes.push_back(builder.create<tensor::FromElementsOp>(
-        getLoc(), builder.getIndexType(), currShape));
+        getLoc(), RankedTensorType::get({rank}, builder.getIndexType()),
+        currShape));
   }
   return success();
 }

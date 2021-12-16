@@ -6,15 +6,27 @@
 
 ; Small stack frame.
 ; CHECK-LABEL: func0
-; CHECK64: stmg  6, 7
+; CHECK64: stmg  6, 7, 1872(4)
+; stmg instruction's displacement field must be 2064-dsa_size
+; as per ABI
+; CHECK64: aghi  4, -192
+
+; CHECK64: lg  7, 2072(4)
+; CHECK64: aghi  4, 192
+; CHECK64: b 2(7)
 define void @func0() {
-  call i64 (i64) @fun(i64 10)
+  call i64 (i64) @fun(i64 10) 
   ret void
 }
 
 ; Spill all GPR CSRs
 ; CHECK-LABEL: func1
-; CHECK64: stmg 6, 15
+; CHECK64: stmg 6, 15, 1904(4)
+; CHECK64: aghi  4, -160
+
+; CHECK64: lmg 7, 15, 2072(4)
+; CHECK64: aghi  4, 160
+; CHECK64: b 2(7)
 define void @func1(i64 *%ptr) {
   %l01 = load volatile i64, i64 *%ptr
   %l02 = load volatile i64, i64 *%ptr
@@ -67,6 +79,8 @@ define void @func1(i64 *%ptr) {
 
 ; Spill all FPRs and VRs
 ; CHECK-LABEL: func2
+; CHECK64: stmg	6, 7, 1744(4)
+; CHECK64: aghi  4, -320 
 ; CHECK64: std	15, {{[0-9]+}}(4)                      * 8-byte Folded Spill
 ; CHECK64: std	14, {{[0-9]+}}(4)                      * 8-byte Folded Spill
 ; CHECK64: std	13, {{[0-9]+}}(4)                      * 8-byte Folded Spill
@@ -83,6 +97,27 @@ define void @func1(i64 *%ptr) {
 ; CHECK64: vst	18, {{[0-9]+}}(4), 4                   * 16-byte Folded Spill
 ; CHECK64: vst	17, {{[0-9]+}}(4), 4                   * 16-byte Folded Spill
 ; CHECK64: vst	16, {{[0-9]+}}(4), 4                   * 16-byte Folded Spill
+
+; CHECK64: ld	15, {{[0-9]+}}(4)                      * 8-byte Folded Reload
+; CHECK64: ld	14, {{[0-9]+}}(4)                      * 8-byte Folded Reload
+; CHECK64: ld	13, {{[0-9]+}}(4)                      * 8-byte Folded Reload
+; CHECK64: ld	12, {{[0-9]+}}(4)                      * 8-byte Folded Reload
+; CHECK64: ld	11, {{[0-9]+}}(4)                      * 8-byte Folded Reload
+; CHECK64: ld	10, {{[0-9]+}}(4)                      * 8-byte Folded Reload
+; CHECK64: ld	9, {{[0-9]+}}(4)                       * 8-byte Folded Reload
+; CHECK64: ld	8, {{[0-9]+}}(4)                       * 8-byte Folded Reload
+; CHECK64: vl	23, {{[0-9]+}}(4), 4                   * 16-byte Folded Reload
+; CHECK64: vl	22, {{[0-9]+}}(4), 4                   * 16-byte Folded Reload
+; CHECK64: vl	21, {{[0-9]+}}(4), 4                   * 16-byte Folded Reload
+; CHECK64: vl	20, {{[0-9]+}}(4), 4                   * 16-byte Folded Reload
+; CHECK64: vl	19, {{[0-9]+}}(4), 4                   * 16-byte Folded Reload
+; CHECK64: vl	18, {{[0-9]+}}(4), 4                   * 16-byte Folded Reload
+; CHECK64: vl	17, {{[0-9]+}}(4), 4                   * 16-byte Folded Reload
+; CHECK64: vl	16, {{[0-9]+}}(4), 4                   * 16-byte Folded Reload
+; CHECK64: lg  7, 2072(4)
+; CHECK64: aghi  4, 320
+; CHECK64: b 2(7)
+
 define void @func2(double *%ptr, <2 x i64> *%vec_ptr) {
   %l00 = load volatile double, double *%ptr
   %l01 = load volatile double, double *%ptr
@@ -232,5 +267,43 @@ define void @func2(double *%ptr, <2 x i64> *%vec_ptr) {
   ret void
 }
 
-declare i64 @fun(i64 %arg0)
+; Big stack frame, force the use of agfi before stmg
+; despite not requiring stack extension routine.
+; CHECK64: agfi  4, -1040768
+; CHECK64: stmg  6, 7, 2064(4)
+; CHECK64: agfi  4, 1040768
+define void @func3() {
+  %arr = alloca [130070 x i64], align 8
+  %ptr = bitcast [130070 x i64]* %arr to i8*
+  call i64 (i8*) @fun1(i8* %ptr)
+  ret void
+}
 
+; Requires the saving of r4 due to variable sized
+; object in stack frame. (Eg: VLA)
+; CHECK64: stmg  4, 8, 1856(4)
+; CHECK64: aghi  4, -192
+; CHECK64: lmg	4, 8, 2048(4)
+define i64 @func4(i64 %n) {
+  %vla = alloca i64, i64 %n, align 8
+  %call = call i64 @fun2(i64 %n, i64* nonnull %vla, i64* nonnull %vla)
+  ret i64 %call
+}
+
+; Require saving of r4 and in addition, a displacement large enough
+; to force use of agfi before stmg.
+; CHECK64: lgr	0, 4
+; CHECK64: agfi	4, -1040192
+; CHECK64: stmg  4, 8, 2048(4)
+; CHECK64: lmg 4, 8, 2048(4)
+define i64 @func5(i64 %n) {
+  %vla = alloca i64, i64 %n, align 8
+  %arr = alloca [130000 x i64], align 8
+  %ptr = bitcast [130000 x i64]* %arr to i64*
+  %call = call i64 @fun2(i64 %n, i64* nonnull %vla, i64* %ptr)
+  ret i64 %call
+}
+
+declare i64 @fun(i64 %arg0)
+declare i64 @fun1(i8* %ptr)
+declare i64 @fun2(i64 %n, i64* %arr0, i64* %arr1)
