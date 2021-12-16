@@ -363,6 +363,7 @@ define float @fold_fadd_qnan_qnan_ebmaytrap() #0 {
 
 define float @fold_fadd_qnan_qnan_ebstrict() #0 {
 ; CHECK-LABEL: @fold_fadd_qnan_qnan_ebstrict(
+; CHECK-NEXT:    [[ADD:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float 0x7FF8000000000000, float 0x7FF8000000000000, metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
 ; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %add = call float @llvm.experimental.constrained.fadd.f32(float 0x7ff8000000000000, float 0x7ff8000000000000, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
