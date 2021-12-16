@@ -179,8 +179,7 @@ enum class BufferRelation {
 /// equivalence classes to support bufferization.
 class BufferizationAliasInfo {
 public:
-  explicit BufferizationAliasInfo(Operation *rootOp,
-                                  const BufferizationOptions &options);
+  explicit BufferizationAliasInfo(Operation *rootOp);
 
   // BufferizationAliasInfo should be passed as a reference.
   BufferizationAliasInfo(const BufferizationAliasInfo &) = delete;
@@ -271,68 +270,6 @@ private:
 /// Return `true` if the given value is a BlockArgument of a FuncOp.
 bool isFunctionArgument(Value value);
 
-/// Determine which OpOperand* will alias with `result` if the op is bufferized
-/// in place. Return an empty vector if the op is not bufferizable.
-SmallVector<OpOperand *> getAliasingOpOperand(OpResult result);
-
-/// Determine which OpResult will alias with `opOperand` if the op is bufferized
-/// in place. Return an empty OpResult if the op is not bufferizable.
-OpResult getAliasingOpResult(OpOperand &opOperand);
-
-/// Return true if `opOperand` bufferizes to a memory read. Return `true` if the
-/// op is not bufferizable.
-bool bufferizesToMemoryRead(OpOperand &opOperand);
-
-/// Return true if `opOperand` bufferizes to a memory write. Return
-/// `true` if the op is not bufferizable.
-bool bufferizesToMemoryWrite(OpOperand &opOperand);
-
-/// Return true if `opOperand` does neither read nor write but bufferizes to an
-/// alias. Return false if the op is not bufferizable.
-bool bufferizesToAliasOnly(OpOperand &opOperand);
-
-/// Return true if the given value is read by an op that bufferizes to a memory
-/// read. Also takes into account ops that create an alias but do not read by
-/// themselves (e.g., ExtractSliceOp).
-bool isValueRead(Value value);
-
-/// Starting from `value`, follow the use-def chain in reverse, always selecting
-/// the aliasing OpOperands. Find and return Values for which `condition`
-/// evaluates to true. OpOperands of such matching Values are not traversed any
-/// further.
-///
-/// When reaching the end of a chain (BlockArgument or Value without aliasing
-/// OpOperands), also return the last Value of that chain.
-///
-/// Example:
-///
-///                               8
-///                               |
-///   6*         7*         +-----+----+
-///   |          |          |          |
-///   2*         3          4*         5
-///   |          |          |          |
-///   +----------+----------+----------+
-///              |
-///              1
-///
-/// In the above example, Values with a star satisfy the condition. When
-/// starting the traversal from Value 1, the resulting SetVector is:
-/// { 2, 7, 8, 5 }
-llvm::SetVector<Value>
-findValueInReverseUseDefChain(Value value, const BufferizationOptions &options,
-                              std::function<bool(Value)> condition);
-
-/// Find the Value of the last preceding write of a given Value.
-///
-/// Note: Unknown ops are handled conservatively and assumed to be writes.
-/// Furthermore, BlockArguments are also assumed to be writes. There is no
-/// analysis across block boundaries.
-///
-/// Note: When reaching an end of the reverse SSA use-def chain, that value
-/// is returned regardless of whether it is a memory write or not.
-Value findLastPrecedingWrite(Value value, const BufferizationOptions &options);
-
 /// Dialect-specific bufferization state. Analysis/bufferization information
 /// that is specific to ops from a certain dialect can be stored in derived
 /// variants of this struct.
@@ -359,11 +296,73 @@ struct DialectBufferizationState {
 /// * `replaceOp` replaces an op with new values.
 class BufferizationState {
 public:
-  BufferizationState(Operation *op, const BufferizationOptions &options)
-      : aliasInfo(op, options), options(options), builder(op->getContext()) {}
+  BufferizationState(Operation *op, const BufferizationOptions &options);
 
   // BufferizationState should be passed as a reference.
   BufferizationState(const BufferizationState &) = delete;
+
+  /// Determine which OpOperand* will alias with `result` if the op is
+  /// bufferized in place. Return an empty vector if the op is not bufferizable.
+  SmallVector<OpOperand *> getAliasingOpOperand(OpResult result);
+
+  /// Determine which OpResult will alias with `opOperand` if the op is
+  /// bufferized in place. Return an empty OpResult if the op is not
+  /// bufferizable.
+  OpResult getAliasingOpResult(OpOperand &opOperand);
+
+  /// Return true if `opOperand` bufferizes to a memory read. Return `true` if
+  /// the op is not bufferizable.
+  bool bufferizesToMemoryRead(OpOperand &opOperand);
+
+  /// Return true if `opOperand` bufferizes to a memory write. Return true` if
+  /// the op is not bufferizable.
+  bool bufferizesToMemoryWrite(OpOperand &opOperand);
+
+  /// Return true if `opOperand` does neither read nor write but bufferizes to
+  /// an alias. Return false if the op is not bufferizable.
+  bool bufferizesToAliasOnly(OpOperand &opOperand);
+
+  /// Return true if the given value is read by an op that bufferizes to a
+  /// memory read. Also takes into account ops that create an alias but do not
+  /// read by themselves (e.g., ExtractSliceOp).
+  bool isValueRead(Value value);
+
+  /// Starting from `value`, follow the use-def chain in reverse, always
+  /// selecting the aliasing OpOperands. Find and return Values for which
+  /// `condition` evaluates to true. OpOperands of such matching Values are not
+  /// traversed any further.
+  ///
+  /// When reaching the end of a chain (BlockArgument or Value without aliasing
+  /// OpOperands), also return the last Value of that chain.
+  ///
+  /// Example:
+  ///
+  ///                               8
+  ///                               |
+  ///   6*         7*         +-----+----+
+  ///   |          |          |          |
+  ///   2*         3          4*         5
+  ///   |          |          |          |
+  ///   +----------+----------+----------+
+  ///              |
+  ///              1
+  ///
+  /// In the above example, Values with a star satisfy the condition. When
+  /// starting the traversal from Value 1, the resulting SetVector is:
+  /// { 2, 7, 8, 5 }
+  llvm::SetVector<Value>
+  findValueInReverseUseDefChain(Value value,
+                                std::function<bool(Value)> condition);
+
+  /// Find the Value of the last preceding write of a given Value.
+  ///
+  /// Note: Unknown ops are handled conservatively and assumed to be writes.
+  /// Furthermore, BlockArguments are also assumed to be writes. There is no
+  /// analysis across block boundaries.
+  ///
+  /// Note: When reaching an end of the reverse SSA use-def chain, that value
+  /// is returned regardless of whether it is a memory write or not.
+  Value findLastPrecedingWrite(Value value);
 
   /// Creates a memref allocation.
   Optional<Value> createAlloc(OpBuilder &b, Location loc, MemRefType type,
@@ -494,25 +493,30 @@ template <typename OpTy>
 struct AllocationHoistingBarrierOnly
     : public BufferizableOpInterface::ExternalModel<
           AllocationHoistingBarrierOnly<OpTy>, OpTy> {
-  bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand) const {
+  bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
+                              BufferizationState &state) const {
     return true;
   }
 
-  bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand) const {
+  bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
+                               BufferizationState &state) const {
     return false;
   }
 
-  SmallVector<OpOperand *> getAliasingOpOperand(Operation *op,
-                                                OpResult opResult) const {
+  SmallVector<OpOperand *>
+  getAliasingOpOperand(Operation *op, OpResult opResult,
+                       BufferizationState &state) const {
     return {};
   }
 
-  OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand) const {
+  OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand,
+                               BufferizationState &state) const {
     return OpResult();
   }
 
   BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const BufferizationAliasInfo &aliasInfo) const {
+                                const BufferizationAliasInfo &aliasInfo,
+                                BufferizationState &state) const {
     return BufferRelation::None;
   }
 
