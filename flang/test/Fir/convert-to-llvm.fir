@@ -202,6 +202,43 @@ func @test_alloc_and_freemem_several() {
 // CHECK:              llvm.call @free([[B2]])
 // CHECK:              llvm.return
 
+
+func @test_with_shape(%ncols: index, %nrows: index) {
+  %1 = fir.allocmem !fir.array<?x?xf32>, %ncols, %nrows
+  fir.freemem %1 : !fir.heap<!fir.array<?x?xf32>>
+  return
+}
+
+// CHECK-LABEL: llvm.func @test_with_shape
+// CHECK-SAME: %[[NCOLS:.*]]: i64, %[[NROWS:.*]]: i64
+// CHECK:   %[[FOUR:.*]] = llvm.mlir.constant(4 : i64) : i64
+// CHECK:   %[[DIM1_SIZE:.*]] = llvm.mul %[[FOUR]], %[[NCOLS]]  : i64
+// CHECK:   %[[TOTAL_SIZE:.*]] = llvm.mul %[[DIM1_SIZE]], %[[NROWS]]  : i64
+// CHECK:   %[[MEM:.*]] = llvm.call @malloc(%[[TOTAL_SIZE]])
+// CHECK:   %[[B1:.*]] = llvm.bitcast %[[MEM]] : !llvm.ptr<i8> to !llvm.ptr<f32>
+// CHECK:   %[[B2:.*]] = llvm.bitcast %[[B1]] : !llvm.ptr<f32> to !llvm.ptr<i8>
+// CHECK:   llvm.call @free(%[[B2]]) : (!llvm.ptr<i8>) -> ()
+// CHECK:   llvm.return
+// CHECK: }
+
+func @test_string_with_shape(%len: index, %nelems: index) {
+  %1 = fir.allocmem !fir.array<?x!fir.char<1,?>>(%len : index), %nelems
+  fir.freemem %1 : !fir.heap<!fir.array<?x!fir.char<1,?>>>
+  return
+}
+
+// CHECK-LABEL: llvm.func @test_string_with_shape
+// CHECK-SAME: %[[LEN:.*]]: i64, %[[NELEMS:.*]]: i64)
+// CHECK:   %[[ONE:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:   %[[LEN_SIZE:.*]] = llvm.mul %[[ONE]], %[[LEN]]  : i64
+// CHECK:   %[[TOTAL_SIZE:.*]] = llvm.mul %[[LEN_SIZE]], %[[NELEMS]]  : i64
+// CHECK:   %[[MEM:.*]] = llvm.call @malloc(%[[TOTAL_SIZE]])
+// CHECK:   %[[B1:.*]] = llvm.bitcast %[[MEM]] : !llvm.ptr<i8> to !llvm.ptr<i8>
+// CHECK:   %[[B2:.*]] = llvm.bitcast %[[B1]] : !llvm.ptr<i8> to !llvm.ptr<i8>
+// CHECK:   llvm.call @free(%[[B2]]) : (!llvm.ptr<i8>) -> ()
+// CHECK:   llvm.return
+// CHECK: }
+
 // -----
 
 // Verify that fir.unreachable is transformed to llvm.unreachable
