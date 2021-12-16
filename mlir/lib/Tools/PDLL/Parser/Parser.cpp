@@ -1248,7 +1248,7 @@ FailureOr<ast::LetStmt *> Parser::parseLetStmt() {
               .Case<ast::AttrConstraintDecl, ast::ValueConstraintDecl,
                     ast::ValueRangeConstraintDecl>([&](const auto *cst) {
                 if (auto *typeConstraintExpr = cst->getTypeExpr()) {
-                  return emitError(
+                  return this->emitError(
                       constraint.referenceLoc,
                       "type constraints are not permitted on variables with "
                       "initializers");
