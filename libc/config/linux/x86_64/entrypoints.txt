@@ -185,21 +185,22 @@ set(TARGET_LIBM_ENTRYPOINTS
 if(LLVM_LIBC_FULL_BUILD)
   list(APPEND TARGET_LIBC_ENTRYPOINTS
     # assert.h entrypoints
-    libc.src.assert.__assert_fail
+    # libc.src.assert.__assert_fail
 
     # stdlib.h entrypoints
     libc.src.stdlib._Exit
-    libc.src.stdlib.abort
+    # libc.src.stdlib.abort
 
     # signal.h entrypoints
-    libc.src.signal.raise
-    libc.src.signal.sigaction
-    libc.src.signal.sigdelset
-    libc.src.signal.sigaddset
-    libc.src.signal.sigemptyset
-    libc.src.signal.sigprocmask
-    libc.src.signal.sigfillset
-    libc.src.signal.signal
+    # TODO: Enable signal.h entrypoints after fixing signal.h
+    # libc.src.signal.raise
+    # libc.src.signal.sigaction
+    # libc.src.signal.sigdelset
+    # libc.src.signal.sigaddset
+    # libc.src.signal.sigemptyset
+    # libc.src.signal.sigprocmask
+    # libc.src.signal.sigfillset
+    # libc.src.signal.signal
 
     # sys/mman.h entrypoints
     libc.src.sys.mman.mmap

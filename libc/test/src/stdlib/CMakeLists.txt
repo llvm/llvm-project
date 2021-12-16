@@ -125,19 +125,19 @@ add_libc_unittest(
     libc.src.stdlib._Exit
 )
 
-add_libc_unittest(
-  abort_test
-  SUITE
-    libc_stdlib_unittests
-  SRCS
-    abort_test.cpp
-  DEPENDS
-    libc.include.stdlib
-    libc.include.signal
-    libc.src.stdlib.abort
-    libc.src.stdlib._Exit
-    libc.src.signal.raise
-)
+# add_libc_unittest(
+#   abort_test
+#   SUITE
+#     libc_stdlib_unittests
+#   SRCS
+#     abort_test.cpp
+#   DEPENDS
+#     libc.include.stdlib
+#     libc.include.signal
+#     libc.src.stdlib.abort
+#     libc.src.stdlib._Exit
+#     libc.src.signal.raise
+# )
 
 add_libc_unittest(
   abs_test

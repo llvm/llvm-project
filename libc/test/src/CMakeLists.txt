@@ -38,8 +38,10 @@ if(NOT LLVM_LIBC_FULL_BUILD)
   return()
 endif()
 
-add_subdirectory(assert)
-add_subdirectory(signal)
+# The signal API is currently disabled as signal.h is incorrect.
+# since assert uses the signal API, we disable assert also.
+# add_subdirectory(assert)
+# add_subdirectory(signal)
 add_subdirectory(stdio)
 add_subdirectory(sys)
 add_subdirectory(threads)
