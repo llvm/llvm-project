@@ -249,7 +249,8 @@ public:
 
     {
 
-      // Check that InternedResult matches up with MR->getSymbols().
+      // Check that InternedResult matches up with MR->getSymbols(), overriding
+      // flags if requested.
       // This guards against faulty transformations / compilers / object caches.
 
       // First check that there aren't any missing symbols.
@@ -258,16 +259,20 @@ public:
       SymbolNameVector MissingSymbols;
       for (auto &KV : MR->getSymbols()) {
 
+        auto I = InternedResult.find(KV.first);
+
         // If this is a materialization-side-effects only symbol then bump
         // the counter and make sure it's *not* defined, otherwise make
         // sure that it is defined.
         if (KV.second.hasMaterializationSideEffectsOnly()) {
           ++NumMaterializationSideEffectsOnlySymbols;
-          if (InternedResult.count(KV.first))
+          if (I != InternedResult.end())
             ExtraSymbols.push_back(KV.first);
           continue;
-        } else if (!InternedResult.count(KV.first))
+        } else if (I == InternedResult.end())
           MissingSymbols.push_back(KV.first);
+        else if (Layer.OverrideObjectFlags)
+          I->second.setFlags(KV.second);
       }
 
       // If there were missing symbols then report the error.
