@@ -60,3 +60,39 @@ Pattern {
   let root: Op;
   erase root.unknown_result;
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// `attr` Expr
+//===----------------------------------------------------------------------===//
+
+Pattern {
+  // CHECK: expected string literal containing MLIR attribute
+  let foo = attr<foo>;
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected `>` after attribute literal
+  let foo = attr<""<>;
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// `type` Expr
+//===----------------------------------------------------------------------===//
+
+Pattern {
+  // CHECK: expected string literal containing MLIR type
+  let foo = type<foo;
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected `>` after type literal
+  let foo = type<"";
+}
