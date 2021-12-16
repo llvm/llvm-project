@@ -4,7 +4,6 @@ static_library("MC") {
     "//llvm/include/llvm/Config:config",
     "//llvm/lib/BinaryFormat",
     "//llvm/lib/DebugInfo/CodeView",
-    "//llvm/lib/ProfileData",
     "//llvm/lib/Support",
   ]
   public_deps = [
