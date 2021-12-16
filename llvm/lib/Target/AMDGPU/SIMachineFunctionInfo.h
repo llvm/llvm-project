@@ -501,7 +501,6 @@ public: // FIXME
   Register SGPRForBPSaveRestoreCopy;
   Optional<int> BasePointerSaveIndex;
 
-  Optional<int> ReturnAddressSaveIndex;
   Optional<int> EXECSaveIndex;
 
   Register VGPRReservedForSGPRSpill;

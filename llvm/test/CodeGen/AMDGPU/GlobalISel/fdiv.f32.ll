@@ -667,8 +667,8 @@ define <2 x float> @v_fdiv_v2f32(<2 x float> %a, <2 x float> %b) {
 ; GFX89-IEEE-NEXT:    v_fma_f32 v10, v12, v8, v10
 ; GFX89-IEEE-NEXT:    v_fma_f32 v11, v13, v9, v11
 ; GFX89-IEEE-NEXT:    v_fma_f32 v4, -v4, v10, v6
-; GFX89-IEEE-NEXT:    v_div_fmas_f32 v4, v4, v8, v10
 ; GFX89-IEEE-NEXT:    v_fma_f32 v5, -v5, v11, v7
+; GFX89-IEEE-NEXT:    v_div_fmas_f32 v4, v4, v8, v10
 ; GFX89-IEEE-NEXT:    s_mov_b64 vcc, s[4:5]
 ; GFX89-IEEE-NEXT:    v_div_fmas_f32 v5, v5, v9, v11
 ; GFX89-IEEE-NEXT:    v_div_fixup_f32 v0, v4, v2, v0
@@ -860,8 +860,8 @@ define <2 x float> @v_fdiv_v2f32_ulp25(<2 x float> %a, <2 x float> %b) {
 ; GFX89-IEEE-NEXT:    v_fma_f32 v10, v12, v8, v10
 ; GFX89-IEEE-NEXT:    v_fma_f32 v11, v13, v9, v11
 ; GFX89-IEEE-NEXT:    v_fma_f32 v4, -v4, v10, v6
-; GFX89-IEEE-NEXT:    v_div_fmas_f32 v4, v4, v8, v10
 ; GFX89-IEEE-NEXT:    v_fma_f32 v5, -v5, v11, v7
+; GFX89-IEEE-NEXT:    v_div_fmas_f32 v4, v4, v8, v10
 ; GFX89-IEEE-NEXT:    s_mov_b64 vcc, s[4:5]
 ; GFX89-IEEE-NEXT:    v_div_fmas_f32 v5, v5, v9, v11
 ; GFX89-IEEE-NEXT:    v_div_fixup_f32 v0, v4, v2, v0
@@ -1451,8 +1451,8 @@ define <2 x float> @v_fdiv_v2f32_arcp_ulp25(<2 x float> %a, <2 x float> %b) {
 ; GFX89-IEEE-NEXT:    v_fma_f32 v10, v12, v8, v10
 ; GFX89-IEEE-NEXT:    v_fma_f32 v11, v13, v9, v11
 ; GFX89-IEEE-NEXT:    v_fma_f32 v4, -v4, v10, v6
-; GFX89-IEEE-NEXT:    v_div_fmas_f32 v4, v4, v8, v10
 ; GFX89-IEEE-NEXT:    v_fma_f32 v5, -v5, v11, v7
+; GFX89-IEEE-NEXT:    v_div_fmas_f32 v4, v4, v8, v10
 ; GFX89-IEEE-NEXT:    s_mov_b64 vcc, s[4:5]
 ; GFX89-IEEE-NEXT:    v_div_fmas_f32 v5, v5, v9, v11
 ; GFX89-IEEE-NEXT:    v_div_fixup_f32 v0, v4, v2, v0
