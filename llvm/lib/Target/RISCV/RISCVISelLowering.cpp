@@ -1254,7 +1254,8 @@ bool RISCVTargetLowering::shouldSinkOperands(
 
 bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
                                        bool ForCodeSize) const {
-  if (VT == MVT::f16 && !Subtarget.hasStdExtZfhmin())
+  // FIXME: Change to Zfhmin once f16 becomes a legal type with Zfhmin.
+  if (VT == MVT::f16 && !Subtarget.hasStdExtZfh())
     return false;
   if (VT == MVT::f32 && !Subtarget.hasStdExtF())
     return false;
@@ -1274,9 +1275,10 @@ bool RISCVTargetLowering::hasBitPreservingFPLogic(EVT VT) const {
 MVT RISCVTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
                                                       CallingConv::ID CC,
                                                       EVT VT) const {
-  // Use f32 to pass f16 if it is legal and Zfhmin/Zfh is not enabled.
+  // Use f32 to pass f16 if it is legal and Zfh is not enabled.
   // We might still end up using a GPR but that will be decided based on ABI.
-  if (VT == MVT::f16 && Subtarget.hasStdExtF() && !Subtarget.hasStdExtZfhmin())
+  // FIXME: Change to Zfhmin once f16 becomes a legal type with Zfhmin.
+  if (VT == MVT::f16 && Subtarget.hasStdExtF() && !Subtarget.hasStdExtZfh())
     return MVT::f32;
 
   return TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT);
@@ -1285,9 +1287,10 @@ MVT RISCVTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
 unsigned RISCVTargetLowering::getNumRegistersForCallingConv(LLVMContext &Context,
                                                            CallingConv::ID CC,
                                                            EVT VT) const {
-  // Use f32 to pass f16 if it is legal and Zfhmin/Zfh is not enabled.
+  // Use f32 to pass f16 if it is legal and Zfh is not enabled.
   // We might still end up using a GPR but that will be decided based on ABI.
-  if (VT == MVT::f16 && Subtarget.hasStdExtF() && !Subtarget.hasStdExtZfhmin())
+  // FIXME: Change to Zfhmin once f16 becomes a legal type with Zfhmin.
+  if (VT == MVT::f16 && Subtarget.hasStdExtF() && !Subtarget.hasStdExtZfh())
     return 1;
 
   return TargetLowering::getNumRegistersForCallingConv(Context, CC, VT);
