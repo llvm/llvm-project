@@ -89,8 +89,15 @@ private:
   //===--------------------------------------------------------------------===//
   // Decls
 
+  /// This structure contains the set of pattern metadata that may be parsed.
+  struct ParsedPatternMetadata {
+    Optional<uint16_t> benefit;
+    bool hasBoundedRecursion = false;
+  };
+
   FailureOr<ast::Decl *> parseTopLevelDecl();
   FailureOr<ast::Decl *> parsePatternDecl();
+  LogicalResult parsePatternDeclMetadata(ParsedPatternMetadata &metadata);
 
   /// Check to see if a decl has already been defined with the given name, if
   /// one has emit and error and return failure. Returns success otherwise.
@@ -152,11 +159,10 @@ private:
 
   /// Try to create a pattern decl with the given components, returning the
   /// Pattern on success.
-  FailureOr<ast::PatternDecl *> createPatternDecl(llvm::SMRange loc,
-                                                  const ast::Name *name,
-                                                  Optional<uint16_t> benefit,
-                                                  bool hasBoundedRecursion,
-                                                  ast::CompoundStmt *body);
+  FailureOr<ast::PatternDecl *>
+  createPatternDecl(llvm::SMRange loc, const ast::Name *name,
+                    const ParsedPatternMetadata &metadata,
+                    ast::CompoundStmt *body);
 
   /// Try to create a variable decl with the given components, returning the
   /// Variable on success.
@@ -446,9 +452,10 @@ FailureOr<ast::Decl *> Parser::parsePatternDecl() {
     consumeToken(Token::identifier);
   }
 
-  // TODO: Parse any pattern metadata.
-  Optional<uint16_t> benefit;
-  bool hasBoundedRecursion = false;
+  // Parse any pattern metadata.
+  ParsedPatternMetadata metadata;
+  if (consumeIf(Token::kw_with) && failed(parsePatternDeclMetadata(metadata)))
+    return failure();
 
   // Parse the pattern body.
   ast::CompoundStmt *body;
@@ -478,7 +485,66 @@ FailureOr<ast::Decl *> Parser::parsePatternDecl() {
                      "rewrite statement, but found trailing statements");
   }
 
-  return createPatternDecl(loc, name, benefit, hasBoundedRecursion, body);
+  return createPatternDecl(loc, name, metadata, body);
+}
+
+LogicalResult
+Parser::parsePatternDeclMetadata(ParsedPatternMetadata &metadata) {
+  Optional<llvm::SMRange> benefitLoc;
+  Optional<llvm::SMRange> hasBoundedRecursionLoc;
+
+  do {
+    if (curToken.isNot(Token::identifier))
+      return emitError("expected pattern metadata identifier");
+    StringRef metadataStr = curToken.getSpelling();
+    llvm::SMRange metadataLoc = curToken.getLoc();
+    consumeToken(Token::identifier);
+
+    // Parse the benefit metadata: benefit(<integer-value>)
+    if (metadataStr == "benefit") {
+      if (benefitLoc) {
+        return emitErrorAndNote(metadataLoc,
+                                "pattern benefit has already been specified",
+                                *benefitLoc, "see previous definition here");
+      }
+      if (failed(parseToken(Token::l_paren,
+                            "expected `(` before pattern benefit")))
+        return failure();
+
+      uint16_t benefitValue = 0;
+      if (curToken.isNot(Token::integer))
+        return emitError("expected integral pattern benefit");
+      if (curToken.getSpelling().getAsInteger(/*Radix=*/10, benefitValue))
+        return emitError(
+            "expected pattern benefit to fit within a 16-bit integer");
+      consumeToken(Token::integer);
+
+      metadata.benefit = benefitValue;
+      benefitLoc = metadataLoc;
+
+      if (failed(
+              parseToken(Token::r_paren, "expected `)` after pattern benefit")))
+        return failure();
+      continue;
+    }
+
+    // Parse the bounded recursion metadata: recursion
+    if (metadataStr == "recursion") {
+      if (hasBoundedRecursionLoc) {
+        return emitErrorAndNote(
+            metadataLoc,
+            "pattern recursion metadata has already been specified",
+            *hasBoundedRecursionLoc, "see previous definition here");
+      }
+      metadata.hasBoundedRecursion = true;
+      hasBoundedRecursionLoc = metadataLoc;
+      continue;
+    }
+
+    return emitError(metadataLoc, "unknown pattern metadata");
+  } while (consumeIf(Token::comma));
+
+  return success();
 }
 
 FailureOr<ast::Expr *> Parser::parseTypeConstraintExpr() {
@@ -912,10 +978,10 @@ FailureOr<ast::LetStmt *> Parser::parseLetStmt() {
 
 FailureOr<ast::PatternDecl *>
 Parser::createPatternDecl(llvm::SMRange loc, const ast::Name *name,
-                          Optional<uint16_t> benefit, bool hasBoundedRecursion,
+                          const ParsedPatternMetadata &metadata,
                           ast::CompoundStmt *body) {
-  return ast::PatternDecl::create(ctx, loc, name, benefit, hasBoundedRecursion,
-                                  body);
+  return ast::PatternDecl::create(ctx, loc, name, metadata.benefit,
+                                  metadata.hasBoundedRecursion, body);
 }
 
 FailureOr<ast::VariableDecl *>
