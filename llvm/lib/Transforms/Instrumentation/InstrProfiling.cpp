@@ -42,6 +42,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/ProfileData/InstrProf.h"
+#include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
@@ -941,15 +942,15 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
     if (auto *SP = Fn->getSubprogram()) {
       DIBuilder DB(*M, true, SP->getUnit());
       Metadata *FunctionNameAnnotation[] = {
-          MDString::get(Ctx, "Function Name"),
+          MDString::get(Ctx, InstrProfCorrelator::FunctionNameAttributeName),
           MDString::get(Ctx, getPGOFuncNameVarInitializer(NamePtr)),
       };
       Metadata *CFGHashAnnotation[] = {
-          MDString::get(Ctx, "CFG Hash"),
+          MDString::get(Ctx, InstrProfCorrelator::CFGHashAttributeName),
           ConstantAsMetadata::get(Inc->getHash()),
       };
       Metadata *NumCountersAnnotation[] = {
-          MDString::get(Ctx, "Num Counters"),
+          MDString::get(Ctx, InstrProfCorrelator::NumCountersAttributeName),
           ConstantAsMetadata::get(Inc->getNumCounters()),
       };
       auto Annotations = DB.getOrCreateArray({
