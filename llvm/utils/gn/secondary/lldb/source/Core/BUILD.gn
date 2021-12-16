@@ -47,6 +47,7 @@ static_library("Core") {
     "AddressResolver.cpp",
     "AddressResolverFileLine.cpp",
     "Communication.cpp",
+    "DataFileCache.cpp",
     "Debugger.cpp",
     "Declaration.cpp",
     "Disassembler.cpp",
