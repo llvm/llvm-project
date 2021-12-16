@@ -1,0 +1,25 @@
+// RUN: mlir-pdll %s -I %S -split-input-file | FileCheck %s
+
+// CHECK: Module
+// CHECK: `-PatternDecl
+// CHECK:   `-CompoundStmt
+// CHECK:     `-EraseStmt
+Pattern {
+  erase _: Op;
+}
+
+// -----
+
+// CHECK: Module
+// CHECK: `-PatternDecl {{.*}} Name<NamedPattern>
+Pattern NamedPattern {
+  erase _: Op;
+}
+
+// -----
+
+// CHECK: Module
+// CHECK: `-PatternDecl {{.*}} Name<NamedPattern> Benefit<10> Recursion
+Pattern NamedPattern with benefit(10), recursion {
+  erase _: Op;
+}
