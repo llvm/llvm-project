@@ -112,9 +112,18 @@ bool WebAssemblyAsmTypeCheck::getLocal(SMLoc ErrorLoc, const MCInst &Inst,
   return false;
 }
 
-bool WebAssemblyAsmTypeCheck::checkEnd(SMLoc ErrorLoc) {
+bool WebAssemblyAsmTypeCheck::checkEnd(SMLoc ErrorLoc, bool PopVals) {
   if (LastSig.Returns.size() > Stack.size())
     return typeError(ErrorLoc, "end: insufficient values on the type stack");
+  
+  if (PopVals) {
+    for (auto VT : llvm::reverse(LastSig.Returns)) {
+      if (popType(ErrorLoc, VT)) 
+        return true;
+    }
+    return false;
+  }
+  
   for (size_t i = 0; i < LastSig.Returns.size(); i++) {
     auto EVT = LastSig.Returns[i];
     auto PVT = Stack[Stack.size() - LastSig.Returns.size() + i];
@@ -221,7 +230,7 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst) {
       return true;
   } else if (Name == "end_block" || Name == "end_loop" || Name == "end_if" ||
              Name == "else" || Name == "end_try") {
-    if (checkEnd(ErrorLoc))
+    if (checkEnd(ErrorLoc, Name == "else"))
       return true;
     if (Name == "end_block")
       Unreachable = false;
