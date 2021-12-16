@@ -905,8 +905,8 @@ void PerfScriptReader::computeCounterFromLBR(const PerfSample *Sample,
            "Branch' source should not be an external address, it should be "
            "converted to aritificial branch.");
     uint64_t SourceOffset = Binary->virtualAddrToOffset(LBR.Source);
-    uint64_t TargetOffset = LBR.Target == ExternalAddr
-                                ? ExternalAddr
+    uint64_t TargetOffset = LBR.Target == static_cast<uint64_t>(ExternalAddr)
+                                ? static_cast<uint64_t>(ExternalAddr)
                                 : Binary->virtualAddrToOffset(LBR.Target);
 
     if (!LBR.IsArtificial && TargetOffset != ExternalAddr) {
