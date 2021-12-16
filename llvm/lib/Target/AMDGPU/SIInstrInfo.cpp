@@ -899,8 +899,12 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   unsigned EltSize = 4;
   unsigned Opcode = AMDGPU::V_MOV_B32_e32;
   if (RI.isAGPRClass(RC)) {
-    Opcode = (RI.hasVGPRs(SrcRC)) ?
-      AMDGPU::V_ACCVGPR_WRITE_B32_e64 : AMDGPU::INSTRUCTION_LIST_END;
+    if (ST.hasGFX90AInsts() && RI.isAGPRClass(SrcRC))
+      Opcode = AMDGPU::V_ACCVGPR_MOV_B32;
+    else if (RI.hasVGPRs(SrcRC))
+      Opcode = AMDGPU::V_ACCVGPR_WRITE_B32_e64;
+    else
+      Opcode = AMDGPU::INSTRUCTION_LIST_END;
   } else if (RI.hasVGPRs(RC) && RI.isAGPRClass(SrcRC)) {
     Opcode = AMDGPU::V_ACCVGPR_READ_B32_e64;
   } else if ((Size % 64 == 0) && RI.hasVGPRs(RC) &&
