@@ -46,12 +46,19 @@ typedef __UINTPTR_TYPE__ uintptr_t;
 typedef char char2 __attribute__((ext_vector_type(2)));
 typedef char char4 __attribute__((ext_vector_type(4)));
 typedef uchar uchar4 __attribute__((ext_vector_type(4)));
+typedef uchar uchar16 __attribute__((ext_vector_type(16)));
 typedef float float4 __attribute__((ext_vector_type(4)));
+typedef float float16 __attribute__((ext_vector_type(16)));
 typedef half half4 __attribute__((ext_vector_type(4)));
 typedef int int2 __attribute__((ext_vector_type(2)));
 typedef int int4 __attribute__((ext_vector_type(4)));
+typedef uint uint2 __attribute__((ext_vector_type(2)));
 typedef uint uint4 __attribute__((ext_vector_type(4)));
 typedef long long2 __attribute__((ext_vector_type(2)));
+typedef long long8 __attribute__((ext_vector_type(8)));
+typedef ulong ulong4 __attribute__((ext_vector_type(4)));
+typedef short short16 __attribute__((ext_vector_type(16)));
+typedef ushort ushort3 __attribute__((ext_vector_type(3)));
 
 typedef int clk_profiling_info;
 #define CLK_PROFILING_COMMAND_EXEC_TIME 0x1
@@ -284,18 +291,27 @@ kernel void basic_vector_data() {
   global void *global_p;
   private void *private_p;
   size_t s;
+  ulong4 ul4;
+  short16 s16;
+#if __OPENCL_C_VERSION__ >= CL_VERSION_2_0
+  ushort3 us3;
+  uchar16 uc16;
+#endif
+  long8 l8;
+  uint2 ui2;
+  float16 f16;
 
-  vload4(s, (const __constant ulong *) constant_p);
-  vload16(s, (const __constant short *) constant_p);
+  ul4 = vload4(s, (const __constant ulong *) constant_p);
+  s16 = vload16(s, (const __constant short *) constant_p);
 
 #if __OPENCL_C_VERSION__ >= CL_VERSION_2_0
-  vload3(s, (const __generic ushort *) generic_p);
-  vload16(s, (const __generic uchar *) generic_p);
+  us3 = vload3(s, (const __generic ushort *) generic_p);
+  uc16 = vload16(s, (const __generic uchar *) generic_p);
 #endif
 
-  vload8(s, (const __global long *) global_p);
-  vload2(s, (const __local uint *) local_p);
-  vload16(s, (const __private float *) private_p);
+  l8 = vload8(s, (const __global long *) global_p);
+  ui2 = vload2(s, (const __local uint *) local_p);
+  f16 = vload16(s, (const __private float *) private_p);
 }
 
 kernel void basic_work_item() {
