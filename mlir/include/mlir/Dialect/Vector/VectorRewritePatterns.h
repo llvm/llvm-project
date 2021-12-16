@@ -157,9 +157,7 @@ void populateVectorTransposeLoweringPatterns(
 /// the other patterns can kick in, thus fully exiting out of the
 /// vector.multi_reduction abstraction.
 void populateVectorMultiReductionLoweringPatterns(
-    RewritePatternSet &patterns,
-    VectorMultiReductionLowering options =
-        VectorMultiReductionLowering::InnerParallel);
+    RewritePatternSet &patterns, VectorMultiReductionLowering options);
 
 /// Collects patterns to progressively lower vector contraction ops on high-D
 /// into low-D reduction and product ops.
