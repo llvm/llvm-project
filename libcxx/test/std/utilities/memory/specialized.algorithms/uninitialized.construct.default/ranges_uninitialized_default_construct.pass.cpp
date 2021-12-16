@@ -109,8 +109,6 @@ int main(int, char**) {
     assert(Counted::total_objects == N);
 
     std::destroy(buf.begin(), buf.end());
-    assert(Counted::current_objects == 0);
-    assert(Counted::total_objects == N);
     Counted::reset();
   }
 
@@ -125,8 +123,6 @@ int main(int, char**) {
     assert(Counted::total_objects == N);
 
     std::destroy(buf.begin(), buf.end());
-    assert(Counted::current_objects == 0);
-    assert(Counted::total_objects == N);
     Counted::reset();
   }
 
