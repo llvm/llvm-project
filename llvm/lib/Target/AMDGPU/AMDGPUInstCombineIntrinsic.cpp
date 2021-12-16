@@ -901,6 +901,22 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return IC.replaceInstUsesWith(II, ConstantInt::getFalse(II.getType()));
     break;
   }
+  case Intrinsic::amdgcn_waterfall_begin: {
+    Value *Index = II.getArgOperand(1);
+    // If there is a previous waterfall begin with the same index, we can remove
+    // this one.
+    IntrinsicInst *PrevII;
+    for (Value *Token = II.getArgOperand(0);
+         (PrevII = dyn_cast<IntrinsicInst>(Token)) &&
+         PrevII->getIntrinsicID() == Intrinsic::amdgcn_waterfall_begin;
+         Token = PrevII->getArgOperand(0)) {
+      if (Index == PrevII->getArgOperand(1)) {
+        IC.replaceInstUsesWith(II, II.getArgOperand(0));
+        return IC.eraseInstFromFunction(II);
+      }
+    }
+    break;
+  }
   default: {
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(II.getIntrinsicID())) {
