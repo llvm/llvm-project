@@ -1416,13 +1416,20 @@ defm VCOMPRESS_V : VCPR_MV_Mask<"vcompress", 0b010111>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0,
     RVVConstraint = NoConstraint in {
-foreach n = [1, 2, 4, 8] in {
-  def VMV#n#R_V  : RVInstV<0b100111, !add(n, -1), OPIVI, (outs VR:$vd),
-                           (ins VR:$vs2), "vmv" # n # "r.v", "$vd, $vs2">,
-                   VMVRSched<n> {
+def VMV1R_V  : RVInstV<0b100111, 0, OPIVI, (outs VR:$vd), (ins VR:$vs2),
+                       "vmv1r.v", "$vd, $vs2">, VMVRSched<1> {
   let Uses = [];
   let vm = 1;
 }
+// A future extension may relax the vector register alignment restrictions.
+foreach n = [2, 4, 8] in {
+  defvar vrc = !cast<VReg>("VRM"#n);
+  def VMV#n#R_V  : RVInstV<0b100111, !add(n, -1), OPIVI, (outs vrc:$vd),
+                           (ins vrc:$vs2), "vmv" # n # "r.v", "$vd, $vs2">,
+                   VMVRSched<n> {
+    let Uses = [];
+    let vm = 1;
+  }
 }
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 } // Predicates = [HasStdExtV]
