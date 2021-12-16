@@ -82,6 +82,68 @@ if config.llvm_use_sanitizer:
     llvm_config.with_system_environment(
         ['ASAN_SYMBOLIZER_PATH', 'MSAN_SYMBOLIZER_PATH'])
 
+# Check which debuggers are available:
+lldb_path = llvm_config.use_llvm_tool('lldb', search_env='LLDB')
+
+if lldb_path is not None:
+    config.available_features.add('lldb')
+
+def configure_dexter_substitutions():
+  """Configure substitutions for host platform and return list of dependencies
+  """
+  # Produce dexter path, lldb path, and combine into the %dexter substitution
+  # for running a test.
+  dexter_path = os.path.join(config.cross_project_tests_src_root,
+                             'debuginfo-tests', 'dexter', 'dexter.py')
+  dexter_test_cmd = '"{}" "{}" test'.format(sys.executable, dexter_path)
+  if lldb_path is not None:
+    dexter_test_cmd += ' --lldb-executable "{}"'.format(lldb_path)
+  tools.append(ToolSubst('%dexter', dexter_test_cmd))
+
+  # For testing other bits of dexter that aren't under the "test" subcommand,
+  # have a %dexter_base substitution.
+  dexter_base_cmd = '"{}" "{}"'.format(sys.executable, dexter_path)
+  tools.append(ToolSubst('%dexter_base', dexter_base_cmd))
+
+  # Set up commands for DexTer regression tests.
+  # Builder, debugger, optimisation level and several other flags differ
+  # depending on whether we're running a unix like or windows os.
+  if platform.system() == 'Windows':
+    # The Windows builder script uses lld.
+    dependencies = ['clang', 'lld-link']
+    dexter_regression_test_builder = '--builder clang-cl_vs2015'
+    dexter_regression_test_debugger = '--debugger dbgeng'
+    dexter_regression_test_cflags = '--cflags "/Zi /Od"'
+    dexter_regression_test_ldflags = '--ldflags "/Zi"'
+  else:
+    # Use lldb as the debugger on non-Windows platforms.
+    dependencies = ['clang', 'lldb']
+    dexter_regression_test_builder = '--builder clang'
+    dexter_regression_test_debugger = "--debugger lldb"
+    dexter_regression_test_cflags = '--cflags "-O0 -glldb"'
+    dexter_regression_test_ldflags = ''
+
+  # Typical command would take the form:
+  # ./path_to_py/python.exe ./path_to_dex/dexter.py test --fail-lt 1.0 -w --builder clang --debugger lldb --cflags '-O0 -g'
+  # Exclude build flags for %dexter_regression_base.
+  dexter_regression_test_base = ' '.join(
+    # "python", "dexter.py", test, fail_mode, builder, debugger, cflags, ldflags
+    ['"{}"'.format(sys.executable),
+    '"{}"'.format(dexter_path),
+    'test',
+    '--fail-lt 1.0 -w',
+    dexter_regression_test_debugger])
+  tools.append(ToolSubst('%dexter_regression_base', dexter_regression_test_base))
+
+  # Include build flags for %dexter_regression_test.
+  dexter_regression_test_build = ' '.join([
+    dexter_regression_test_base,
+    dexter_regression_test_builder,
+    dexter_regression_test_cflags,
+    dexter_regression_test_ldflags])
+  tools.append(ToolSubst('%dexter_regression_test', dexter_regression_test_build))
+  return dependencies
+
 def add_host_triple(clang):
   return '{} --target={}'.format(clang, config.host_triple)
 
@@ -104,72 +166,20 @@ def can_target_host():
 # 'dexter' as an available feature and force the dexter tests to use the host
 # triple.
 if can_target_host():
-  config.available_features.add('dexter')
   if config.host_triple != config.target_triple:
     print('Forcing dexter tests to use host triple {}.'.format(config.host_triple))
-  llvm_config.with_environment('PATHTOCLANG',
-                               add_host_triple(llvm_config.config.clang))
-  llvm_config.with_environment('PATHTOCLANGPP',
-                               add_host_triple(llvm_config.use_llvm_tool('clang++')))
-  llvm_config.with_environment('PATHTOCLANGCL',
-                               add_host_triple(llvm_config.use_llvm_tool('clang-cl')))
+  dependencies = configure_dexter_substitutions()
+  if all(d in config.available_features for d in dependencies):
+    config.available_features.add('dexter')
+    llvm_config.with_environment('PATHTOCLANG',
+                                 add_host_triple(llvm_config.config.clang))
+    llvm_config.with_environment('PATHTOCLANGPP',
+                                 add_host_triple(llvm_config.use_llvm_tool('clang++')))
+    llvm_config.with_environment('PATHTOCLANGCL',
+                                 add_host_triple(llvm_config.use_llvm_tool('clang-cl')))
 else:
   print('Host triple {} not supported. Skipping dexter tests in the '
         'debuginfo-tests project.'.format(config.host_triple))
-
-# Check which debuggers are available:
-lldb_path = llvm_config.use_llvm_tool('lldb', search_env='LLDB')
-
-if lldb_path is not None:
-    config.available_features.add('lldb')
-
-# Produce dexter path, lldb path, and combine into the %dexter substitution
-# for running a test.
-dexter_path = os.path.join(config.cross_project_tests_src_root,
-                           'debuginfo-tests', 'dexter', 'dexter.py')
-dexter_test_cmd = '"{}" "{}" test'.format(sys.executable, dexter_path)
-if lldb_path is not None:
-  dexter_test_cmd += ' --lldb-executable "{}"'.format(lldb_path)
-tools.append(ToolSubst('%dexter', dexter_test_cmd))
-
-# For testing other bits of dexter that aren't under the "test" subcommand,
-# have a %dexter_base substitution.
-dexter_base_cmd = '"{}" "{}"'.format(sys.executable, dexter_path)
-tools.append(ToolSubst('%dexter_base', dexter_base_cmd))
-
-# Set up commands for DexTer regression tests.
-# Builder, debugger, optimisation level and several other flags differ
-# depending on whether we're running a unix like or windows os.
-if platform.system() == 'Windows': 
-  dexter_regression_test_builder = '--builder clang-cl_vs2015'
-  dexter_regression_test_debugger = '--debugger dbgeng'
-  dexter_regression_test_cflags = '--cflags "/Zi /Od"'
-  dexter_regression_test_ldflags = '--ldflags "/Zi"'
-else:
-  dexter_regression_test_builder = '--builder clang'
-  dexter_regression_test_debugger = "--debugger lldb"
-  dexter_regression_test_cflags = '--cflags "-O0 -glldb"'
-  dexter_regression_test_ldflags = ''
-
-# Typical command would take the form:
-# ./path_to_py/python.exe ./path_to_dex/dexter.py test --fail-lt 1.0 -w --builder clang --debugger lldb --cflags '-O0 -g'
-# Exclude build flags for %dexter_regression_base.
-dexter_regression_test_base = ' '.join(
-  # "python", "dexter.py", test, fail_mode, builder, debugger, cflags, ldflags
-  ['"{}"'.format(sys.executable),
-  '"{}"'.format(dexter_path),
-  'test',
-  '--fail-lt 1.0 -w',
-  dexter_regression_test_debugger])
-tools.append(ToolSubst('%dexter_regression_base', dexter_regression_test_base))
-
-# Include build flags for %dexter_regression_test.
-dexter_regression_test_build = ' '.join([
-  dexter_regression_test_base,
-  dexter_regression_test_builder,
-  dexter_regression_test_cflags,
-  dexter_regression_test_ldflags])
-tools.append(ToolSubst('%dexter_regression_test', dexter_regression_test_build))
 
 tool_dirs = [config.llvm_tools_dir]
 
