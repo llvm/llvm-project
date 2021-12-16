@@ -3005,6 +3005,7 @@ cc_library(
         ":MemRefDialect",
         ":IR",
         ":ParallelLoopMapperAttrGen",
+        ":Parser",
         ":Pass",
         ":ROCDLToLLVMIRTranslation",
         ":SCFDialect",
