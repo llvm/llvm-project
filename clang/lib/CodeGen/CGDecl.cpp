@@ -405,7 +405,8 @@ void CodeGenFunction::EmitStaticVarDecl(const VarDecl &D,
 
   // Store into LocalDeclMap before generating initializer to handle
   // circular references.
-  setAddrOfLocalVar(&D, Address(addr, alignment));
+  setAddrOfLocalVar(
+      &D, Address(addr, ConvertTypeForMem(D.getType()), alignment));
 
   // We can't have a VLA here, but we can have a pointer to a VLA,
   // even though that doesn't really make any sense.

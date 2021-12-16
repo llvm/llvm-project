@@ -2719,7 +2719,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
     // For everything else, we can just do a simple increment.
     } else {
       llvm::Value *amt = Builder.getInt32(amount);
-      llvm::Type *elemTy = value->getType()->getPointerElementType();
+      llvm::Type *elemTy = CGF.ConvertTypeForMem(type);
       if (CGF.getLangOpts().isSignedOverflowDefined())
         value = Builder.CreateGEP(elemTy, value, amt, "incdec.ptr");
       else
