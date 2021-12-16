@@ -248,6 +248,37 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
+// ReplaceStmt
+
+/// This statement represents the `replace` statement in PDLL. This statement
+/// replace the given root operation with a set of values, corresponding roughly
+/// to the PatternRewriter::replaceOp API.
+class ReplaceStmt final : public Node::NodeBase<ReplaceStmt, OpRewriteStmt>,
+                          private llvm::TrailingObjects<ReplaceStmt, Expr *> {
+public:
+  static ReplaceStmt *create(Context &ctx, llvm::SMRange loc, Expr *rootOp,
+                             ArrayRef<Expr *> replExprs);
+
+  /// Return the replacement values of this statement.
+  MutableArrayRef<Expr *> getReplExprs() {
+    return {getTrailingObjects<Expr *>(), numReplExprs};
+  }
+  ArrayRef<Expr *> getReplExprs() const {
+    return const_cast<ReplaceStmt *>(this)->getReplExprs();
+  }
+
+private:
+  ReplaceStmt(llvm::SMRange loc, Expr *rootOp, unsigned numReplExprs)
+      : Base(loc, rootOp), numReplExprs(numReplExprs) {}
+
+  /// The number of replacement values within this statement.
+  unsigned numReplExprs;
+
+  /// TrailingObject utilities.
+  friend class llvm::TrailingObjects<ReplaceStmt, Expr *>;
+};
+
+//===----------------------------------------------------------------------===//
 // Expr
 //===----------------------------------------------------------------------===//
 
@@ -878,7 +909,7 @@ inline bool Expr::classof(const Node *node) {
 }
 
 inline bool OpRewriteStmt::classof(const Node *node) {
-  return isa<EraseStmt>(node);
+  return isa<EraseStmt, ReplaceStmt>(node);
 }
 
 inline bool Stmt::classof(const Node *node) {

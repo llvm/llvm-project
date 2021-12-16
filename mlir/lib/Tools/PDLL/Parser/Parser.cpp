@@ -54,6 +54,9 @@ private:
     /// is allows a terminal operation rewrite statement but no other rewrite
     /// transformations.
     PatternMatch,
+    /// The parser is currently within a Rewrite, which disallows calls to
+    /// constraints, requires operation expressions to have names, etc.
+    Rewrite,
   };
 
   //===--------------------------------------------------------------------===//
@@ -146,8 +149,8 @@ private:
   FailureOr<ast::Expr *> parseDeclRefExpr(StringRef name, llvm::SMRange loc);
   FailureOr<ast::Expr *> parseIdentifierExpr();
   FailureOr<ast::Expr *> parseMemberAccessExpr(ast::Expr *parentExpr);
-  FailureOr<ast::OpNameDecl *> parseOperationName();
-  FailureOr<ast::OpNameDecl *> parseWrappedOperationName();
+  FailureOr<ast::OpNameDecl *> parseOperationName(bool allowEmptyName = false);
+  FailureOr<ast::OpNameDecl *> parseWrappedOperationName(bool allowEmptyName);
   FailureOr<ast::Expr *> parseOperationExpr();
   FailureOr<ast::Expr *> parseTupleExpr();
   FailureOr<ast::Expr *> parseTypeExpr();
@@ -160,6 +163,7 @@ private:
   FailureOr<ast::CompoundStmt *> parseCompoundStmt();
   FailureOr<ast::EraseStmt *> parseEraseStmt();
   FailureOr<ast::LetStmt *> parseLetStmt();
+  FailureOr<ast::ReplaceStmt *> parseReplaceStmt();
 
   //===--------------------------------------------------------------------===//
   // Creation+Analysis
@@ -239,6 +243,9 @@ private:
 
   FailureOr<ast::EraseStmt *> createEraseStmt(llvm::SMRange loc,
                                               ast::Expr *rootOp);
+  FailureOr<ast::ReplaceStmt *>
+  createReplaceStmt(llvm::SMRange loc, ast::Expr *rootOp,
+                    MutableArrayRef<ast::Expr *> replValues);
 
   //===--------------------------------------------------------------------===//
   // Lexer Utilities
@@ -750,8 +757,10 @@ Parser::parseConstraint(Optional<llvm::SMRange> &typeConstraint,
   case Token::kw_Op: {
     consumeToken(Token::kw_Op);
 
-    // Parse an optional operation name.
-    FailureOr<ast::OpNameDecl *> opName = parseWrappedOperationName();
+    // Parse an optional operation name. If the name isn't provided, this refers
+    // to "any" operation.
+    FailureOr<ast::OpNameDecl *> opName =
+        parseWrappedOperationName(/*allowEmptyName=*/true);
     if (failed(opName))
       return failure();
 
@@ -923,13 +932,15 @@ FailureOr<ast::Expr *> Parser::parseMemberAccessExpr(ast::Expr *parentExpr) {
   return createMemberAccessExpr(parentExpr, memberName, loc);
 }
 
-FailureOr<ast::OpNameDecl *> Parser::parseOperationName() {
+FailureOr<ast::OpNameDecl *> Parser::parseOperationName(bool allowEmptyName) {
   llvm::SMRange loc = curToken.getLoc();
 
   // Handle the case of an no operation name.
-  if (curToken.isNot(Token::identifier) && !curToken.isKeyword())
-    return ast::OpNameDecl::create(ctx, llvm::SMRange());
-
+  if (curToken.isNot(Token::identifier) && !curToken.isKeyword()) {
+    if (allowEmptyName)
+      return ast::OpNameDecl::create(ctx, llvm::SMRange());
+    return emitError("expected dialect namespace");
+  }
   StringRef name = curToken.getSpelling();
   consumeToken();
 
@@ -950,11 +961,12 @@ FailureOr<ast::OpNameDecl *> Parser::parseOperationName() {
   return ast::OpNameDecl::create(ctx, ast::Name::create(ctx, name, loc));
 }
 
-FailureOr<ast::OpNameDecl *> Parser::parseWrappedOperationName() {
+FailureOr<ast::OpNameDecl *>
+Parser::parseWrappedOperationName(bool allowEmptyName) {
   if (!consumeIf(Token::less))
     return ast::OpNameDecl::create(ctx, llvm::SMRange());
 
-  FailureOr<ast::OpNameDecl *> opNameDecl = parseOperationName();
+  FailureOr<ast::OpNameDecl *> opNameDecl = parseOperationName(allowEmptyName);
   if (failed(opNameDecl))
     return failure();
 
@@ -976,8 +988,10 @@ FailureOr<ast::Expr *> Parser::parseOperationExpr() {
 
   // Parse the operation name. The name may be elided, in which case the
   // operation refers to "any" operation(i.e. a difference between `MyOp` and
-  // `Operation*`).
-  FailureOr<ast::OpNameDecl *> opNameDecl = parseWrappedOperationName();
+  // `Operation*`). Operation names within a rewrite context must be named.
+  bool allowEmptyName = parserContext != ParserContext::Rewrite;
+  FailureOr<ast::OpNameDecl *> opNameDecl =
+      parseWrappedOperationName(allowEmptyName);
   if (failed(opNameDecl))
     return failure();
 
@@ -1139,6 +1153,9 @@ FailureOr<ast::Stmt *> Parser::parseStmt(bool expectTerminalSemicolon) {
   case Token::kw_let:
     stmt = parseLetStmt();
     break;
+  case Token::kw_replace:
+    stmt = parseReplaceStmt();
+    break;
   default:
     stmt = parseExpr();
     break;
@@ -1242,6 +1259,52 @@ FailureOr<ast::LetStmt *> Parser::parseLetStmt() {
   if (failed(varDecl))
     return failure();
   return ast::LetStmt::create(ctx, loc, *varDecl);
+}
+
+FailureOr<ast::ReplaceStmt *> Parser::parseReplaceStmt() {
+  llvm::SMRange loc = curToken.getLoc();
+  consumeToken(Token::kw_replace);
+
+  // Parse the root operation expression.
+  FailureOr<ast::Expr *> rootOp = parseExpr();
+  if (failed(rootOp))
+    return failure();
+
+  if (failed(
+          parseToken(Token::kw_with, "expected `with` after root operation")))
+    return failure();
+
+  // The replacement portion of this statement is within a rewrite context.
+  llvm::SaveAndRestore<ParserContext> saveCtx(parserContext,
+                                              ParserContext::Rewrite);
+
+  // Parse the replacement values.
+  SmallVector<ast::Expr *> replValues;
+  if (consumeIf(Token::l_paren)) {
+    if (consumeIf(Token::r_paren)) {
+      return emitError(
+          loc, "expected at least one replacement value, consider using "
+               "`erase` if no replacement values are desired");
+    }
+
+    do {
+      FailureOr<ast::Expr *> replExpr = parseExpr();
+      if (failed(replExpr))
+        return failure();
+      replValues.emplace_back(*replExpr);
+    } while (consumeIf(Token::comma));
+
+    if (failed(parseToken(Token::r_paren,
+                          "expected `)` after replacement values")))
+      return failure();
+  } else {
+    FailureOr<ast::Expr *> replExpr = parseExpr();
+    if (failed(replExpr))
+      return failure();
+    replValues.emplace_back(*replExpr);
+  }
+
+  return createReplaceStmt(loc, *rootOp, replValues);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1547,6 +1610,41 @@ FailureOr<ast::EraseStmt *> Parser::createEraseStmt(llvm::SMRange loc,
     return emitError(rootOp->getLoc(), "expected `Op` expression");
 
   return ast::EraseStmt::create(ctx, loc, rootOp);
+}
+
+FailureOr<ast::ReplaceStmt *>
+Parser::createReplaceStmt(llvm::SMRange loc, ast::Expr *rootOp,
+                          MutableArrayRef<ast::Expr *> replValues) {
+  // Check that root is an Operation.
+  ast::Type rootType = rootOp->getType();
+  if (!rootType.isa<ast::OperationType>()) {
+    return emitError(
+        rootOp->getLoc(),
+        llvm::formatv("expected `Op` expression, but got `{0}`", rootType));
+  }
+
+  // If there are multiple replacement values, we implicitly convert any Op
+  // expressions to the value form.
+  bool shouldConvertOpToValues = replValues.size() > 1;
+  for (ast::Expr *&replExpr : replValues) {
+    ast::Type replType = replExpr->getType();
+
+    // Check that replExpr is an Operation, Value, or ValueRange.
+    if (replType.isa<ast::OperationType>()) {
+      if (shouldConvertOpToValues)
+        replExpr = convertOpToValue(replExpr);
+      continue;
+    }
+
+    if (replType != valueTy && replType != valueRangeTy) {
+      return emitError(replExpr->getLoc(),
+                       llvm::formatv("expected `Op`, `Value` or `ValueRange` "
+                                     "expression, but got `{0}`",
+                                     replType));
+    }
+  }
+
+  return ast::ReplaceStmt::create(ctx, loc, rootOp, replValues);
 }
 
 //===----------------------------------------------------------------------===//
