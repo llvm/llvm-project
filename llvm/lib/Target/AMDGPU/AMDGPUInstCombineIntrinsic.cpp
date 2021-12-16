@@ -1070,6 +1070,11 @@ Optional<Value *> GCNTTIImpl::simplifyDemandedVectorEltsIntrinsic(
   case Intrinsic::amdgcn_struct_tbuffer_load:
   case Intrinsic::amdgcn_tbuffer_load:
     return simplifyAMDGCNMemoryIntrinsicDemanded(IC, II, DemandedElts);
+  case Intrinsic::amdgcn_waterfall_end:
+    // Propagate demanded elements through to the value being returned by the
+    // waterfall loop.
+    SimplifyAndSetOp(&II, 1, DemandedElts, UndefElts);
+    break;
   default: {
     if (getAMDGPUImageDMaskIntrinsic(II.getIntrinsicID())) {
       return simplifyAMDGCNMemoryIntrinsicDemanded(IC, II, DemandedElts, 0);

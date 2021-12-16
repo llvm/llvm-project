@@ -4227,8 +4227,9 @@ define amdgpu_ps <2 x float> @test_waterfall_non_uniform_img_simplify_demanded(<
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[S_IDX]] to i64
 ; CHECK-NEXT:    [[PTR:%.*]] = getelementptr <8 x i32>, <8 x i32> addrspace(4)* [[IN:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[RSRC:%.*]] = load <8 x i32>, <8 x i32> addrspace(4)* [[PTR]], align 32
-; CHECK-NEXT:    [[R:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float [[S:%.*]], <8 x i32> [[RSRC]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    [[R1:%.*]] = call <4 x float> @llvm.amdgcn.waterfall.end.v4f32(i32 [[WF_TOKEN]], <4 x float> [[R]])
+; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.amdgcn.image.sample.1d.v2f32.f32(i32 3, float [[S:%.*]], <8 x i32> [[RSRC]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[R]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[R1:%.*]] = call <4 x float> @llvm.amdgcn.waterfall.end.v4f32(i32 [[WF_TOKEN]], <4 x float> [[TMP2]])
 ; CHECK-NEXT:    [[R2:%.*]] = shufflevector <4 x float> [[R1]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    ret <2 x float> [[R2]]
 ;
