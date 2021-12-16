@@ -79,9 +79,6 @@ defm split_stack_adjust_size
          "non-split-stack function">,
       MetaVarName<"<value>">;
 
-defm library_path:
-  Eq<"library-path", "Add a directory to the library search path">, MetaVarName<"<dir>">;
-
 def O: JoinedOrSeparate<["-"], "O">, HelpText<"Optimize output file size">;
 
 defm Tbss: Eq<"Tbss", "Same as --section-start with .bss as the sectionname">;
@@ -266,8 +263,10 @@ defm just_symbols: Eq<"just-symbols", "Just link symbols">;
 
 defm keep_unique: Eq<"keep-unique", "Do not fold this symbol during ICF">;
 
-defm library: Eq<"library", "Root name of library to use">,
-  MetaVarName<"<libName>">;
+def library: JoinedOrSeparate<["-"], "l">, MetaVarName<"<libname>">,
+  HelpText<"Search for library <libname>">;
+def library_path: JoinedOrSeparate<["-"], "L">, MetaVarName<"<dir>">,
+  HelpText<"Add <dir> to the library search path">;
 
 def m: JoinedOrSeparate<["-"], "m">, HelpText<"Set target emulation">;
 
@@ -524,8 +523,10 @@ def: JoinedOrSeparate<["-"], "e">, Alias<entry>, HelpText<"Alias for --entry">;
 def: Flag<["-"], "E">, Alias<export_dynamic>, HelpText<"Alias for --export-dynamic">;
 def: Separate<["-"], "F">, Alias<filter>, HelpText<"Alias for --filter">;
 def: Separate<["-"], "b">, Alias<format>, HelpText<"Alias for --format">;
-def: JoinedOrSeparate<["-"], "l">, Alias<library>, HelpText<"Alias for --library">;
-def: JoinedOrSeparate<["-"], "L">, Alias<library_path>, HelpText<"Alias for --library-path">;
+def: Separate<["--", "-"], "library">, Alias<library>;
+def: Joined<["--", "-"], "library=">, Alias<library>;
+def: Separate<["--", "-"], "library-path">, Alias<library_path>;
+def: Joined<["--", "-"], "library-path=">, Alias<library_path>;
 def: Flag<["-"], "n">, Alias<nmagic>, HelpText<"Alias for --nmagic">;
 def: Flag<["-"], "N">, Alias<omagic>, HelpText<"Alias for --omagic">;
 def: Joined<["--"], "output=">, Alias<o>, HelpText<"Alias for -o">;
