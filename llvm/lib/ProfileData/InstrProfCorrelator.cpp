@@ -41,7 +41,7 @@ InstrProfCorrelator::Context::get(std::unique_ptr<MemoryBuffer> Buffer,
   C->CountersSectionStart = CountersSection->getAddress();
   C->CountersSectionEnd = C->CountersSectionStart + CountersSection->getSize();
   C->ShouldSwapBytes = Obj.isLittleEndian() != sys::IsLittleEndianHost;
-  return C;
+  return Expected<std::unique_ptr<Context>>(std::move(C));
 }
 
 llvm::Expected<std::unique_ptr<InstrProfCorrelator>>
