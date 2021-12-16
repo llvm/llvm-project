@@ -75,12 +75,6 @@ public:
   /// loop may alias (i.e. one of the memchecks failed).
   Loop *getNonVersionedLoop() { return NonVersionedLoop; }
 
-  /// Returns the basic block that contains the runtime check BranchInst
-  BasicBlock *getRuntimeCheckBB() { return RuntimeCheckBB; }
-
-  /// Returns the runtime check BranchInst
-  BranchInst *getRuntimeCheckBI() { return RuntimeCheckBI; }
-
   /// Annotate memory instructions in the versioned loop with no-alias
   /// metadata based on the memchecks issued.
   ///
@@ -120,12 +114,6 @@ private:
   /// The fall-back loop.  I.e. control flows here if pointers in the
   /// loop may alias (memchecks failed).
   Loop *NonVersionedLoop;
-
-  /// The basic Block that stores the BranchInst to Versioned / NonVersioned
-  BasicBlock *RuntimeCheckBB;
-
-  /// The branch instruction to Versioned / NonVersioned
-  BranchInst *RuntimeCheckBI;
 
   /// This maps the instructions from VersionedLoop to their counterpart
   /// in NonVersionedLoop.
