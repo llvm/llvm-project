@@ -374,8 +374,7 @@ VPBasicBlock *VPBasicBlock::splitAt(iterator SplitAt) {
   assert((SplitAt == end() || SplitAt->getParent() == this) &&
          "can only split at a position in the same block");
 
-  SmallVector<VPBlockBase *, 2> Succs(getSuccessors().begin(),
-                                      getSuccessors().end());
+  SmallVector<VPBlockBase *, 2> Succs(successors());
   // First, disconnect the current block from its successors.
   for (VPBlockBase *Succ : Succs)
     VPBlockUtils::disconnectBlocks(this, Succ);
