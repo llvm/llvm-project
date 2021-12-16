@@ -689,22 +689,27 @@ void DWARFRewriter::updateDWARFObjectAddressRanges(
     }
   }
 
+  Optional<AttrInfo> LowPCAttrInfo =
+      findAttributeInfo(DIE, dwarf::DW_AT_low_pc);
   if (AbbreviationDecl->findAttributeIndex(dwarf::DW_AT_ranges)) {
     // Case 1: The object was already non-contiguous and had DW_AT_ranges.
     // In this case we simply need to update the value of DW_AT_ranges
     // and introduce DW_AT_GNU_ranges_base if required.
     Optional<AttrInfo> AttrVal = findAttributeInfo(DIE, dwarf::DW_AT_ranges);
-
     std::lock_guard<std::mutex> Lock(DebugInfoPatcherMutex);
     DebugInfoPatcher.addLE32Patch(
         AttrVal->Offset, DebugRangesOffset - DebugInfoPatcher.getRangeBase(),
         AttrVal->Size);
-    if (!RangesBase)
+
+    if (!RangesBase) {
+      if (LowPCAttrInfo &&
+          LowPCAttrInfo->V.getForm() != dwarf::DW_FORM_GNU_addr_index &&
+          LowPCAttrInfo->V.getForm() != dwarf::DW_FORM_addrx)
+        DebugInfoPatcher.addLE64Patch(LowPCAttrInfo->Offset, 0);
       return;
+    }
 
     // Convert DW_AT_low_pc into DW_AT_GNU_ranges_base.
-    Optional<AttrInfo> LowPCAttrInfo =
-        findAttributeInfo(DIE, dwarf::DW_AT_low_pc);
     if (!LowPCAttrInfo) {
       errs() << "BOLT-ERROR: skeleton CU at 0x"
              << Twine::utohexstr(DIE.getOffset())
@@ -725,8 +730,9 @@ void DWARFRewriter::updateDWARFObjectAddressRanges(
 
   // Case 2: The object has both DW_AT_low_pc and DW_AT_high_pc emitted back
   // to back. Replace with new attributes and patch the DIE.
-  if (AbbreviationDecl->findAttributeIndex(dwarf::DW_AT_low_pc) &&
-      AbbreviationDecl->findAttributeIndex(dwarf::DW_AT_high_pc)) {
+  Optional<AttrInfo> HighPCAttrInfo =
+      findAttributeInfo(DIE, dwarf::DW_AT_high_pc);
+  if (LowPCAttrInfo && HighPCAttrInfo) {
     convertToRangesPatchAbbrev(*DIE.getDwarfUnit(), AbbreviationDecl,
                                AbbrevWriter, RangesBase);
     convertToRangesPatchDebugInfo(DIE, DebugRangesOffset, DebugInfoPatcher,
