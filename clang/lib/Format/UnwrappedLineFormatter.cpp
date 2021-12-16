@@ -584,6 +584,9 @@ private:
                             Keywords.kw___except)) {
       if (Style.AllowShortBlocksOnASingleLine == FormatStyle::SBS_Never)
         return 0;
+      if (Style.AllowShortBlocksOnASingleLine == FormatStyle::SBS_Empty &&
+          !I[1]->First->is(tok::r_brace))
+        return 0;
       // Don't merge when we can't except the case when
       // the control statement block is empty
       if (!Style.AllowShortIfStatementsOnASingleLine &&

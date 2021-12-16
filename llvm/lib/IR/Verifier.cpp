@@ -735,8 +735,9 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
           Value *V = Op->stripPointerCasts();
           Assert(isa<GlobalVariable>(V) || isa<Function>(V) ||
                      isa<GlobalAlias>(V),
-                 "invalid llvm.used member", V);
-          Assert(V->hasName(), "members of llvm.used must be named", V);
+                 Twine("invalid ") + GV.getName() + " member", V);
+          Assert(V->hasName(),
+                 Twine("members of ") + GV.getName() + " must be named", V);
         }
       }
     }

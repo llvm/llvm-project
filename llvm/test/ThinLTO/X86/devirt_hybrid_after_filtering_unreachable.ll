@@ -102,12 +102,9 @@ declare dso_local nonnull i8* @_Znwm(i64)
 
 define linkonce_odr hidden void @_ZN7DerivedC2Ev(%class.Derived* nonnull align 8 dereferenceable(8) %this) unnamed_addr comdat align 2 {
 entry:
-  %this.addr = alloca %class.Derived*, align 8
-  store %class.Derived* %this, %class.Derived** %this.addr, align 8
-  %this1 = load %class.Derived*, %class.Derived** %this.addr, align 8
-  %0 = bitcast %class.Derived* %this1 to %class.Base*
+  %0 = bitcast %class.Derived* %this to %class.Base*
   call void @_ZN4BaseC2Ev(%class.Base* nonnull align 8 dereferenceable(8) %0)
-  %1 = bitcast %class.Derived* %this1 to i32 (...)***
+  %1 = bitcast %class.Derived* %this to i32 (...)***
   store i32 (...)** bitcast (i8** getelementptr inbounds ({ [5 x i8*] }, { [5 x i8*] }* @_ZTV7Derived, i32 0, inrange i32 0, i32 2) to i32 (...)**), i32 (...)*** %1, align 8
   ret void
 }
@@ -116,20 +113,14 @@ declare dso_local void @_Z3fooP4Base(%class.Base*)
 
 define linkonce_odr hidden void @_ZN4BaseC2Ev(%class.Base* nonnull align 8 dereferenceable(8) %this) unnamed_addr comdat align 2 {
 entry:
-  %this.addr = alloca %class.Base*, align 8
-  store %class.Base* %this, %class.Base** %this.addr, align 8
-  %this1 = load %class.Base*, %class.Base** %this.addr, align 8
-  %0 = bitcast %class.Base* %this1 to i32 (...)***
+  %0 = bitcast %class.Base* %this to i32 (...)***
   store i32 (...)** bitcast (i8** getelementptr inbounds ({ [5 x i8*] }, { [5 x i8*] }* @_ZTV4Base, i32 0, inrange i32 0, i32 2) to i32 (...)**), i32 (...)*** %0, align 8
   ret void
 }
 
 define linkonce_odr hidden void @_ZN4BaseD2Ev(%class.Base* nonnull align 8 dereferenceable(8) %this) unnamed_addr comdat align 2 {
 entry:
-  %this.addr = alloca %class.Base*, align 8
-  store %class.Base* %this, %class.Base** %this.addr, align 8
-  %this1 = load %class.Base*, %class.Base** %this.addr, align 8
-  %0 = bitcast %class.Base* %this1 to i32 (...)***
+  %0 = bitcast %class.Base* %this to i32 (...)***
   store i32 (...)** bitcast (i8** getelementptr inbounds ({ [5 x i8*] }, { [5 x i8*] }* @_ZTV4Base, i32 0, inrange i32 0, i32 2) to i32 (...)**), i32 (...)*** %0, align 8
   %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([18 x i8], [18 x i8]* @.str, i64 0, i64 0))
   ret void
@@ -137,9 +128,6 @@ entry:
 
 define linkonce_odr hidden void @_ZN4BaseD0Ev(%class.Base* nonnull align 8 dereferenceable(8) %this) unnamed_addr comdat align 2 {
 entry:
-  %this.addr = alloca %class.Base*, align 8
-  store %class.Base* %this, %class.Base** %this.addr, align 8
-  %this1 = load %class.Base*, %class.Base** %this.addr, align 8
   call void @llvm.trap()
   unreachable
 }
@@ -150,12 +138,9 @@ declare dso_local i32 @printf(i8*, ...)
 
 declare void @llvm.trap()
 
-!llvm.module.flags = !{!3, !4, !5, !6}
+!llvm.module.flags = !{!3}
 
 !0 = !{i64 16, !"_ZTS4Base"}
 !1 = !{i64 32, !"_ZTSM4BaseFvvE.virtual"}
 !2 = !{i64 1}
-!3 = !{i32 1, !"wchar_size", i32 4}
-!4 = !{i32 1, !"Virtual Function Elim", i32 0}
-!5 = !{i32 7, !"uwtable", i32 1}
-!6 = !{i32 7, !"frame-pointer", i32 2}
+!3 = !{i32 1, !"Virtual Function Elim", i32 0}

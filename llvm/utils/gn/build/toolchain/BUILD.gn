@@ -3,15 +3,11 @@ import("//llvm/utils/gn/build/toolchain/compiler.gni")
 declare_args() {
   # If is_goma is true, the location of the goma client install.
   # Set this to the output of `goma_ctl goma_dir`.
-  if (host_os == "win") {
-    goma_dir = "C:/src/goma/goma-win64"
-  } else {
-    goma_dir = getenv("HOME") + "/goma"
-  }
+  goma_dir = ""
 }
 
 assert(!use_goma || goma_dir != "",
-       "set goma_dir to the output of `goma_ctl goma_dir` in your args.gn")
+       "set `goma_dir` to the output of `goma_ctl goma_dir` in your args.gn")
 
 template("unix_toolchain") {
   toolchain(target_name) {

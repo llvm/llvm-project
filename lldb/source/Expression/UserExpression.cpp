@@ -263,8 +263,7 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
     user_expression_sp.reset();
 
     execution_results = lldb::eExpressionParseError;
-    if (fixed_expression && !fixed_expression->empty() &&
-        options.GetAutoApplyFixIts()) {
+    if (!fixed_expression->empty() && options.GetAutoApplyFixIts()) {
       const uint64_t max_fix_retries = options.GetRetriesWithFixIts();
       for (uint64_t i = 0; i < max_fix_retries; ++i) {
         // Try parsing the fixed expression.
