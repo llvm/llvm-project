@@ -70,7 +70,7 @@ bool lldb_private::formatters::swift::SwiftSharedString_SummaryProvider(
 }
 
 static bool readStringFromAddress(
-    uint64_t startAddress, uint64_t length, ProcessSP process, Stream &stream,
+    uint64_t startAddress, uint64_t length, ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &summary_options,
     StringPrinter::ReadStringAndDumpToStreamOptions read_options) {
   if (length == 0) {
@@ -79,7 +79,7 @@ static bool readStringFromAddress(
   }
 
   read_options.SetLocation(startAddress);
-  read_options.SetProcessSP(process);
+  read_options.SetTargetSP(valobj.GetTargetSP());
   read_options.SetStream(&stream);
   read_options.SetSourceSize(length);
   read_options.SetHasSourceSize(true);
@@ -299,7 +299,7 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
     uint64_t bias = (ptrSize == 8 ? 32 : 20);
     auto address = objectAddress + bias;
     return readStringFromAddress(
-      address, count, process, stream, summary_options, read_options);
+      address, count, valobj, stream, summary_options, read_options);
   }
 
   if ((discriminator & 0xF0) == 0x00) { // Shared string
@@ -314,7 +314,7 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
       return false;
 
     return readStringFromAddress(
-      start, count, process, stream, summary_options, read_options);
+      start, count, valobj, stream, summary_options, read_options);
   }
 
   // Native/shared strings should already have been handled.
@@ -417,7 +417,7 @@ bool lldb_private::formatters::swift::StaticString_SummaryProvider(
     return true;
   }
 
-  read_options.SetProcessSP(process_sp);
+  read_options.SetTargetSP(valobj.GetTargetSP());
   read_options.SetLocation(start_ptr);
   read_options.SetSourceSize(size);
   read_options.SetHasSourceSize(true);
@@ -459,7 +459,7 @@ bool lldb_private::formatters::swift::SwiftSharedString_SummaryProvider_2(
 
   uint64_t count = raw0 & 0x0000FFFFFFFFFFFF;
 
-  return readStringFromAddress(start, count, process, stream, summary_options,
+  return readStringFromAddress(start, count, valobj, stream, summary_options,
                                read_options);
 }
 
@@ -481,7 +481,7 @@ bool lldb_private::formatters::swift::SwiftStringStorage_SummaryProvider(
     return false;
   uint64_t count = raw0 & 0x0000FFFFFFFFFFFF;
   return readStringFromAddress(
-      address, count, process, stream, options,
+      address, count, valobj, stream, options,
       StringPrinter::ReadStringAndDumpToStreamOptions());
 }
 
@@ -500,7 +500,7 @@ bool lldb_private::formatters::swift::Bool_SummaryProvider(
   uint64_t value = value_child->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
   const uint64_t mask = 1 << 0;
   value &= mask;
-  
+
   switch (value) {
   case 0:
     stream.Printf("false");
@@ -686,7 +686,7 @@ bool lldb_private::formatters::swift::ObjC_Selector_SummaryProvider(
 
   StringPrinter::ReadStringAndDumpToStreamOptions read_options;
   read_options.SetLocation(ptr_value);
-  read_options.SetProcessSP(valobj.GetProcessSP());
+  read_options.SetTargetSP(valobj.GetTargetSP());
   read_options.SetStream(&stream);
   read_options.SetQuote('"');
   read_options.SetNeedsZeroTermination(true);
