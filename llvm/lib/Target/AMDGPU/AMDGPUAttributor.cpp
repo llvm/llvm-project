@@ -307,7 +307,7 @@ struct AAUniformWorkGroupSizeFunction : public AAUniformWorkGroupSize {
 
     bool AllCallSitesKnown = true;
     if (!A.checkForAllCallSites(CheckCallSite, *this, true, AllCallSitesKnown))
-      indicatePessimisticFixpoint();
+      return indicatePessimisticFixpoint();
 
     return Change;
   }
