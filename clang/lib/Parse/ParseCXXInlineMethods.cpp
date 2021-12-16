@@ -452,13 +452,14 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
     CXXMethodDecl *Method;
     if (FunctionTemplateDecl *FunTmpl
           = dyn_cast<FunctionTemplateDecl>(LM.Method))
-      Method = cast<CXXMethodDecl>(FunTmpl->getTemplatedDecl());
+      Method = dyn_cast<CXXMethodDecl>(FunTmpl->getTemplatedDecl());
     else
-      Method = cast<CXXMethodDecl>(LM.Method);
+      Method = dyn_cast<CXXMethodDecl>(LM.Method);
 
-    Sema::CXXThisScopeRAII ThisScope(Actions, Method->getParent(),
-                                     Method->getMethodQualifiers(),
-                                     getLangOpts().CPlusPlus11);
+    Sema::CXXThisScopeRAII ThisScope(
+        Actions, Method ? Method->getParent() : nullptr,
+        Method ? Method->getMethodQualifiers() : Qualifiers{},
+        Method && getLangOpts().CPlusPlus11);
 
     // Parse the exception-specification.
     SourceRange SpecificationRange;
