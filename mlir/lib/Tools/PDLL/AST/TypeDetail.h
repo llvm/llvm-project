@@ -33,6 +33,8 @@ template <typename ConcreteT, typename KeyT = void>
 struct TypeStorageBase : public Type::Storage {
   using KeyTy = KeyT;
   using Base = TypeStorageBase<ConcreteT, KeyT>;
+  TypeStorageBase(KeyTy key)
+      : Type::Storage(TypeID::get<ConcreteT>()), key(key) {}
 
   /// Construct an instance with the given storage allocator.
   static ConcreteT *construct(StorageUniquer::StorageAllocator &alloc,
@@ -47,17 +49,12 @@ struct TypeStorageBase : public Type::Storage {
   const KeyTy &getValue() const { return key; }
 
 protected:
-  TypeStorageBase(KeyTy key)
-      : Type::Storage(TypeID::get<ConcreteT>()), key(key) {}
-
   KeyTy key;
 };
 /// A specialization of the storage base for singleton types.
 template <typename ConcreteT>
 struct TypeStorageBase<ConcreteT, void> : public Type::Storage {
   using Base = TypeStorageBase<ConcreteT, void>;
-
-protected:
   TypeStorageBase() : Type::Storage(TypeID::get<ConcreteT>()) {}
 };
 
