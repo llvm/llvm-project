@@ -189,6 +189,11 @@ public:
                                DWOUnits.begin() + DWOUnits.getNumInfoUnits());
   }
 
+  const DWARFUnitVector &getDWOUnitsVector() {
+    parseDWOUnits();
+    return DWOUnits;
+  }
+
   /// Get units from .debug_types.dwo in the DWO context.
   unit_iterator_range dwo_types_section_units() {
     parseDWOUnits();

@@ -390,6 +390,9 @@ bool DWARFVerifier::handleDebugInfo() {
 
   OS << "Verifying non-dwo Units...\n";
   NumErrors += verifyUnits(DCtx.getNormalUnitsVector());
+
+  OS << "Verifying dwo Units...\n";
+  NumErrors += verifyUnits(DCtx.getDWOUnitsVector());
   return NumErrors == 0;
 }
 

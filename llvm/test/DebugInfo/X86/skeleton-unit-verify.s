@@ -8,6 +8,7 @@
 # CHECK-NEXT: warning: DW_TAG_skeleton_unit has DW_CHILDREN_yes but DIE has no children
 # CHECK-NEXT: DW_TAG_skeleton_unit
 # CHECK-NEXT: error: Skeleton compilation unit has children.
+# CHECK-NEXT: Verifying dwo Units...
 # CHECK-NEXT: Errors detected.
 
         .section .debug_abbrev,"",@progbits
