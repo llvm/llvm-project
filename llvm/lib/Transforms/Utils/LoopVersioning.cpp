@@ -30,6 +30,9 @@
 
 using namespace llvm;
 
+#define LVER_OPTION "loop-versioning"
+#define DEBUG_TYPE LVER_OPTION
+
 static cl::opt<bool>
     AnnotateNoAlias("loop-version-annotate-no-alias", cl::init(true),
                     cl::Hidden,
@@ -84,8 +87,11 @@ void LoopVersioning::versionLoop(
   } else
     RuntimeCheck = MemRuntimeCheck ? MemRuntimeCheck : SCEVRuntimeCheck;
 
-  assert(RuntimeCheck && "called even though we don't need "
-                         "any runtime checks");
+  if (!RuntimeCheck) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE " No MemRuntimeCheck or SCEVRuntimeCheck found"
+                      << ", set RuntimeCheck to False\n");
+    RuntimeCheck = ConstantInt::getFalse(RuntimeCheckBB->getContext());
+  }
 
   // Rename the block to make the IR more readable.
   RuntimeCheckBB->setName(VersionedLoop->getHeader()->getName() +
@@ -109,8 +115,8 @@ void LoopVersioning::versionLoop(
 
   // Insert the conditional branch based on the result of the memchecks.
   Instruction *OrigTerm = RuntimeCheckBB->getTerminator();
-  BranchInst::Create(NonVersionedLoop->getLoopPreheader(),
-                     VersionedLoop->getLoopPreheader(), RuntimeCheck, OrigTerm);
+  RuntimeCheckBI = BranchInst::Create(NonVersionedLoop->getLoopPreheader(),
+                           VersionedLoop->getLoopPreheader(), RuntimeCheck, OrigTerm);
   OrigTerm->eraseFromParent();
 
   // The loops merge in the original exit block.  This is now dominated by the
@@ -125,6 +131,9 @@ void LoopVersioning::versionLoop(
   assert(NonVersionedLoop->isLoopSimplifyForm() &&
          VersionedLoop->isLoopSimplifyForm() &&
          "The versioned loops should be in simplify form.");
+
+  // RuntimeCheckBB and RuntimeCheckBI is recorded
+  assert(RuntimeCheckBB && RuntimeCheckBI);
 }
 
 void LoopVersioning::addPHINodes(
@@ -323,9 +332,6 @@ public:
   static char ID;
 };
 }
-
-#define LVER_OPTION "loop-versioning"
-#define DEBUG_TYPE LVER_OPTION
 
 char LoopVersioningLegacyPass::ID;
 static const char LVer_name[] = "Loop Versioning";
