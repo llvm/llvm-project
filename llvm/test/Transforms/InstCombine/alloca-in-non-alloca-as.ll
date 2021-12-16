@@ -11,11 +11,9 @@ declare void @use(i8*, i32**)
 define weak amdgpu_kernel void @__omp_offloading_802_ea0109_main_l8(i32* %a) {
 ; CHECK-LABEL: @__omp_offloading_802_ea0109_main_l8(
 ; CHECK-NEXT:  .master:
-; CHECK-NEXT:    [[TMP0:%.*]] = alloca i32*, align 1, addrspace(5)
-; CHECK-NEXT:    [[DOTSUB:%.*]] = bitcast i32* addrspace(5)* [[TMP0]] to i8 addrspace(5)*
-; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast i8 addrspace(5)* [[DOTSUB]] to i8*
-; CHECK-NEXT:    [[A_ON_STACK:%.*]] = addrspacecast i32* addrspace(5)* [[TMP0]] to i32**
-; CHECK-NEXT:    call void @use(i8* [[TMP1]], i32** [[A_ON_STACK]])
+; CHECK-NEXT:    [[TMP0:%.*]] = alloca i32*, align 1
+; CHECK-NEXT:    [[DOTSUB:%.*]] = bitcast i32** [[TMP0]] to i8*
+; CHECK-NEXT:    call void @use(i8* [[DOTSUB]], i32** [[TMP0]])
 ; CHECK-NEXT:    ret void
 ;
 .master:
@@ -25,3 +23,22 @@ define weak amdgpu_kernel void @__omp_offloading_802_ea0109_main_l8(i32* %a) {
   call void @use(i8* %0, i32** %a_on_stack)
   ret void
 }
+
+%struct.widget = type { [8 x i8] }
+
+define void @spam(i64* %arg1) {
+; CHECK-LABEL: @spam(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[ALLOCA1:%.*]] = alloca [0 x [30 x %struct.widget]], align 16
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [0 x [30 x %struct.widget]], [0 x [30 x %struct.widget]]* [[ALLOCA1]], i64 0, i64 0, i64 0
+; CHECK-NEXT:    call void @zot(%struct.widget* [[GEP]])
+; CHECK-NEXT:    ret void
+;
+bb:
+  %alloca = alloca [30 x %struct.widget], i32 0, align 16
+  %gep = getelementptr inbounds [30 x %struct.widget], [30 x %struct.widget]* %alloca, i64 0, i64 0
+  call void @zot(%struct.widget* %gep)
+  ret void
+}
+
+declare hidden void @zot(%struct.widget*)
