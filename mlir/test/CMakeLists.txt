@@ -78,6 +78,7 @@ set(MLIR_TEST_DEPENDS
   mlir-linalg-ods-yaml-gen
   mlir-lsp-server
   mlir-opt
+  mlir-pdll
   mlir-reduce
   mlir-tblgen
   mlir-translate
