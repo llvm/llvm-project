@@ -600,9 +600,9 @@ using __is_primary_template = _IsValidExpansion<
     __test_for_primary_template, _Tp
   >;
 
-struct __two {char __lx[2];};
+// helper class
 
-// helper class:
+struct __two {char __lx[2];};
 
 // is_const
 
