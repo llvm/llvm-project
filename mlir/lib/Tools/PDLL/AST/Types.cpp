@@ -108,6 +108,29 @@ ValueRangeType ValueRangeType::get(Context &context) {
 }
 
 //===----------------------------------------------------------------------===//
+// TupleType
+//===----------------------------------------------------------------------===//
+
+TupleType TupleType::get(Context &context, ArrayRef<Type> elementTypes,
+                         ArrayRef<StringRef> elementNames) {
+  assert(elementTypes.size() == elementNames.size());
+  return context.getTypeUniquer().get<ImplTy>(
+      /*initFn=*/function_ref<void(ImplTy *)>(), elementTypes, elementNames);
+}
+TupleType TupleType::get(Context &context, ArrayRef<Type> elementTypes) {
+  SmallVector<StringRef> elementNames(elementTypes.size());
+  return get(context, elementTypes, elementNames);
+}
+
+ArrayRef<Type> TupleType::getElementTypes() const {
+  return getImplAs<ImplTy>()->getValue().first;
+}
+
+ArrayRef<StringRef> TupleType::getElementNames() const {
+  return getImplAs<ImplTy>()->getValue().second;
+}
+
+//===----------------------------------------------------------------------===//
 // TypeType
 //===----------------------------------------------------------------------===//
 

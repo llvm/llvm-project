@@ -20,4 +20,5 @@ Context::Context() {
 
   typeUniquer.registerParametricStorageType<detail::OperationTypeStorage>();
   typeUniquer.registerParametricStorageType<detail::RangeTypeStorage>();
+  typeUniquer.registerParametricStorageType<detail::TupleTypeStorage>();
 }

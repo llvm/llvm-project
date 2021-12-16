@@ -13,9 +13,11 @@
 #include "mlir/Tools/PDLL/AST/Diagnostic.h"
 #include "mlir/Tools/PDLL/AST/Nodes.h"
 #include "mlir/Tools/PDLL/AST/Types.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/SaveAndRestore.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include <string>
 
 using namespace mlir;
@@ -147,6 +149,7 @@ private:
   FailureOr<ast::OpNameDecl *> parseOperationName();
   FailureOr<ast::OpNameDecl *> parseWrappedOperationName();
   FailureOr<ast::Expr *> parseOperationExpr();
+  FailureOr<ast::Expr *> parseTupleExpr();
   FailureOr<ast::Expr *> parseTypeExpr();
   FailureOr<ast::Expr *> parseUnderscoreExpr();
 
@@ -227,6 +230,9 @@ private:
                                      Optional<StringRef> name,
                                      MutableArrayRef<ast::Expr *> values,
                                      ast::Type singleTy, ast::Type rangeTy);
+  FailureOr<ast::TupleExpr *> createTupleExpr(llvm::SMRange loc,
+                                              ArrayRef<ast::Expr *> elements,
+                                              ArrayRef<StringRef> elementNames);
 
   //===--------------------------------------------------------------------===//
   // Stmts
@@ -402,6 +408,35 @@ LogicalResult Parser::convertExpressionTo(
   if ((exprType == typeTy || exprType == typeRangeTy) &&
       (type == typeTy || type == typeRangeTy))
     return success();
+
+  // Handle tuple types.
+  if (auto exprTupleType = exprType.dyn_cast<ast::TupleType>()) {
+    auto tupleType = type.dyn_cast<ast::TupleType>();
+    if (!tupleType || tupleType.size() != exprTupleType.size())
+      return emitConvertError();
+
+    // Build a new tuple expression using each of the elements of the current
+    // tuple.
+    SmallVector<ast::Expr *> newExprs;
+    for (unsigned i = 0, e = exprTupleType.size(); i < e; ++i) {
+      newExprs.push_back(ast::MemberAccessExpr::create(
+          ctx, expr->getLoc(), expr, llvm::to_string(i),
+          exprTupleType.getElementTypes()[i]));
+
+      auto diagFn = [&](ast::Diagnostic &diag) {
+        diag.attachNote(llvm::formatv("when converting element #{0} of `{1}`",
+                                      i, exprTupleType));
+        if (noteAttachFn)
+          noteAttachFn(diag);
+      };
+      if (failed(convertExpressionTo(newExprs.back(),
+                                     tupleType.getElementTypes()[i], diagFn)))
+        return failure();
+    }
+    expr = ast::TupleExpr::create(ctx, expr->getLoc(), newExprs,
+                                  tupleType.getElementNames());
+    return success();
+  }
 
   return emitConvertError();
 }
@@ -799,6 +834,9 @@ FailureOr<ast::Expr *> Parser::parseExpr() {
   case Token::kw_type:
     lhsExpr = parseTypeExpr();
     break;
+  case Token::l_paren:
+    lhsExpr = parseTupleExpr();
+    break;
   default:
     return emitError("expected expression");
   }
@@ -994,6 +1032,58 @@ FailureOr<ast::Expr *> Parser::parseOperationExpr() {
 
   return createOperationExpr(loc, *opNameDecl, operands, attributes,
                              resultTypes);
+}
+
+FailureOr<ast::Expr *> Parser::parseTupleExpr() {
+  llvm::SMRange loc = curToken.getLoc();
+  consumeToken(Token::l_paren);
+
+  DenseMap<StringRef, llvm::SMRange> usedNames;
+  SmallVector<StringRef> elementNames;
+  SmallVector<ast::Expr *> elements;
+  if (curToken.isNot(Token::r_paren)) {
+    do {
+      // Check for the optional element name assignment before the value.
+      StringRef elementName;
+      if (curToken.is(Token::identifier) || curToken.isDependentKeyword()) {
+        Token elementNameTok = curToken;
+        consumeToken();
+
+        // The element name is only present if followed by an `=`.
+        if (consumeIf(Token::equal)) {
+          elementName = elementNameTok.getSpelling();
+
+          // Check to see if this name is already used.
+          auto elementNameIt =
+              usedNames.try_emplace(elementName, elementNameTok.getLoc());
+          if (!elementNameIt.second) {
+            return emitErrorAndNote(
+                elementNameTok.getLoc(),
+                llvm::formatv("duplicate tuple element label `{0}`",
+                              elementName),
+                elementNameIt.first->getSecond(),
+                "see previous label use here");
+          }
+        } else {
+          // Otherwise, we treat this as part of an expression so reset the
+          // lexer.
+          resetToken(elementNameTok.getLoc());
+        }
+      }
+      elementNames.push_back(elementName);
+
+      // Parse the tuple element value.
+      FailureOr<ast::Expr *> element = parseExpr();
+      if (failed(element))
+        return failure();
+      elements.push_back(*element);
+    } while (consumeIf(Token::comma));
+  }
+  loc.End = curToken.getEndLoc();
+  if (failed(
+          parseToken(Token::r_paren, "expected `)` after tuple element list")))
+    return failure();
+  return createTupleExpr(loc, elements, elementNames);
 }
 
 FailureOr<ast::Expr *> Parser::parseTypeExpr() {
@@ -1329,6 +1419,19 @@ FailureOr<ast::Type> Parser::validateMemberAccess(ast::Expr *parentExpr,
   if (parentType.isa<ast::OperationType>()) {
     if (name == ast::AllResultsMemberAccessExpr::getMemberName())
       return valueRangeTy;
+  } else if (auto tupleType = parentType.dyn_cast<ast::TupleType>()) {
+    // Handle indexed results.
+    unsigned index = 0;
+    if (llvm::isDigit(name[0]) && !name.getAsInteger(/*Radix=*/10, index) &&
+        index < tupleType.size()) {
+      return tupleType.getElementTypes()[index];
+    }
+
+    // Handle named results.
+    auto elementNames = tupleType.getElementNames();
+    auto it = llvm::find(elementNames, name);
+    if (it != elementNames.end())
+      return tupleType.getElementTypes()[it - elementNames.begin()];
   }
   return emitError(
       loc,
@@ -1417,6 +1520,20 @@ LogicalResult Parser::validateOperationOperandsOrResults(
             singleTy, rangeTy, valueExprType));
   }
   return success();
+}
+
+FailureOr<ast::TupleExpr *>
+Parser::createTupleExpr(llvm::SMRange loc, ArrayRef<ast::Expr *> elements,
+                        ArrayRef<StringRef> elementNames) {
+  for (const ast::Expr *element : elements) {
+    ast::Type eleTy = element->getType();
+    if (eleTy.isa<ast::ConstraintType, ast::TupleType>()) {
+      return emitError(
+          element->getLoc(),
+          llvm::formatv("unable to build a tuple with `{0}` element", eleTy));
+    }
+  }
+  return ast::TupleExpr::create(ctx, loc, elements, elementNames);
 }
 
 //===----------------------------------------------------------------------===//

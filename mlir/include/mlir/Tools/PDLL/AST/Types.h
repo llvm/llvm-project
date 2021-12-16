@@ -22,6 +22,7 @@ struct AttributeTypeStorage;
 struct ConstraintTypeStorage;
 struct OperationTypeStorage;
 struct RangeTypeStorage;
+struct TupleTypeStorage;
 struct TypeTypeStorage;
 struct ValueTypeStorage;
 } // namespace detail
@@ -201,6 +202,35 @@ public:
 
   /// Return an instance of the ValueRange type.
   static ValueRangeType get(Context &context);
+};
+
+//===----------------------------------------------------------------------===//
+// TupleType
+//===----------------------------------------------------------------------===//
+
+/// This class represents a PDLL tuple type, i.e. an ordered set of element
+/// types with optional names.
+class TupleType : public Type::TypeBase<detail::TupleTypeStorage> {
+public:
+  using Base::Base;
+
+  /// Return an instance of the Tuple type.
+  static TupleType get(Context &context, ArrayRef<Type> elementTypes,
+                       ArrayRef<StringRef> elementNames);
+  static TupleType get(Context &context,
+                       ArrayRef<Type> elementTypes = llvm::None);
+
+  /// Return the element types of this tuple.
+  ArrayRef<Type> getElementTypes() const;
+
+  /// Return the element names of this tuple.
+  ArrayRef<StringRef> getElementNames() const;
+
+  /// Return the number of elements within this tuple.
+  size_t size() const { return getElementTypes().size(); }
+
+  /// Return if the tuple has no elements.
+  bool empty() const { return size() == 0; }
 };
 
 //===----------------------------------------------------------------------===//

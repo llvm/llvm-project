@@ -443,6 +443,36 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
+// TupleExpr
+//===----------------------------------------------------------------------===//
+
+/// This expression builds a tuple from a set of element values.
+class TupleExpr final : public Node::NodeBase<TupleExpr, Expr>,
+                        private llvm::TrailingObjects<TupleExpr, Expr *> {
+public:
+  static TupleExpr *create(Context &ctx, llvm::SMRange loc,
+                           ArrayRef<Expr *> elements,
+                           ArrayRef<StringRef> elementNames);
+
+  /// Return the element expressions of this tuple.
+  MutableArrayRef<Expr *> getElements() {
+    return {getTrailingObjects<Expr *>(), getType().size()};
+  }
+  ArrayRef<Expr *> getElements() const {
+    return const_cast<TupleExpr *>(this)->getElements();
+  }
+
+  /// Return the tuple result type of this expression.
+  TupleType getType() const { return Base::getType().cast<TupleType>(); }
+
+private:
+  TupleExpr(llvm::SMRange loc, TupleType type) : Base(loc, type) {}
+
+  /// TrailingObject utilities.
+  friend class llvm::TrailingObjects<TupleExpr, Expr *>;
+};
+
+//===----------------------------------------------------------------------===//
 // TypeExpr
 //===----------------------------------------------------------------------===//
 
@@ -844,7 +874,7 @@ inline bool CoreConstraintDecl::classof(const Node *node) {
 
 inline bool Expr::classof(const Node *node) {
   return isa<AttributeExpr, DeclRefExpr, MemberAccessExpr, OperationExpr,
-             TypeExpr>(node);
+             TupleExpr, TypeExpr>(node);
 }
 
 inline bool OpRewriteStmt::classof(const Node *node) {

@@ -63,6 +63,65 @@ Pattern {
 
 // -----
 
+Pattern {
+  let tuple = (result1 = value: Value, result2 = value);
+
+  // CHECK: invalid member access `unknown_result` on expression of type `Tuple<result1: Value, result2: Value>`
+  let tuple2 = (tuple.result1, tuple.unknown_result);
+
+  erase op<>;
+}
+
+// -----
+
+Pattern {
+  let tuple = (result1 = value: Value, result2 = value);
+
+  // CHECK: invalid member access `2` on expression of type `Tuple<result1: Value, result2: Value>`
+  let tuple2 = (tuple.0, tuple.2);
+
+  erase op<>;
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// Tuple Expr
+//===----------------------------------------------------------------------===//
+
+Pattern {
+  // CHECK: expected `)` after tuple element list
+  let tuple = (value: Value, value;
+}
+
+// -----
+
+Pattern {
+  // CHECK: unable to build a tuple with `Tuple<Value, Value>` element
+  let tuple = (_: Value, _: Value);
+  let var = (tuple);
+  erase op<>;
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected expression
+  let tuple = (10 = _: Value);
+  erase op<>;
+}
+
+// -----
+
+Pattern {
+  // CHECK: duplicate tuple element label `field`
+  // CHECK: see previous label use here
+  let tuple = (field = _: Value, field = _: Value);
+  erase op<>;
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // `attr` Expr
 //===----------------------------------------------------------------------===//
