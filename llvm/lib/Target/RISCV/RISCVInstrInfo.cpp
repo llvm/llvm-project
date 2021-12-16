@@ -201,8 +201,9 @@ static bool isConvertibleToVMV_V_V(const RISCVSubtarget &STI,
       if (MBBI->modifiesRegister(RISCV::VL))
         return false;
 
-      // Go through all defined operands, including implicit defines.
-      for (const MachineOperand &MO : MBBI->operands()) {
+      // Only converting whole register copies to vmv.v.v when the defining
+      // value appears in the explicit operands.
+      for (const MachineOperand &MO : MBBI->explicit_operands()) {
         if (!MO.isReg() || !MO.isDef())
           continue;
         if (!FoundDef && TRI->isSubRegisterEq(MO.getReg(), SrcReg)) {
