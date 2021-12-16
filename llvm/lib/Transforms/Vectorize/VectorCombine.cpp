@@ -989,9 +989,9 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
   if (!FixedVT)
     return false;
 
-  InstructionCost OriginalCost = TTI.getMemoryOpCost(
-      Instruction::Load, LI->getType(), Align(LI->getAlignment()),
-      LI->getPointerAddressSpace());
+  InstructionCost OriginalCost =
+      TTI.getMemoryOpCost(Instruction::Load, LI->getType(), LI->getAlign(),
+                          LI->getPointerAddressSpace());
   InstructionCost ScalarizedCost = 0;
 
   Instruction *LastCheckedInst = LI;
