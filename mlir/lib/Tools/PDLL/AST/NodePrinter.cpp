@@ -80,6 +80,7 @@ private:
   void printImpl(const DeclRefExpr *expr);
   void printImpl(const MemberAccessExpr *expr);
   void printImpl(const OperationExpr *expr);
+  void printImpl(const TupleExpr *expr);
   void printImpl(const TypeExpr *expr);
 
   void printImpl(const AttrConstraintDecl *decl);
@@ -132,6 +133,17 @@ void NodePrinter::print(Type type) {
         print(type.getElementType());
         os << "Range";
       })
+      .Case([&](TupleType type) {
+        os << "Tuple<";
+        llvm::interleaveComma(
+            llvm::zip(type.getElementNames(), type.getElementTypes()), os,
+            [&](auto it) {
+              if (!std::get<0>(it).empty())
+                os << std::get<0>(it) << ": ";
+              this->print(std::get<1>(it));
+            });
+        os << ">";
+      })
       .Case([&](TypeType) { os << "Type"; })
       .Case([&](ValueType) { os << "Value"; })
       .Default([](Type) { llvm_unreachable("unknown AST type"); });
@@ -149,7 +161,7 @@ void NodePrinter::print(const Node *node) {
 
           // Expressions.
           const AttributeExpr, const DeclRefExpr, const MemberAccessExpr,
-          const OperationExpr, const TypeExpr,
+          const OperationExpr, const TupleExpr, const TypeExpr,
 
           // Decls.
           const AttrConstraintDecl, const OpConstraintDecl,
@@ -206,6 +218,14 @@ void NodePrinter::printImpl(const OperationExpr *expr) {
   printChildren("Operands", expr->getOperands());
   printChildren("Result Types", expr->getResultTypes());
   printChildren("Attributes", expr->getAttributes());
+}
+
+void NodePrinter::printImpl(const TupleExpr *expr) {
+  os << "TupleExpr " << expr << " Type<";
+  print(expr->getType());
+  os << ">\n";
+
+  printChildren(expr->getElements());
 }
 
 void NodePrinter::printImpl(const TypeExpr *expr) {

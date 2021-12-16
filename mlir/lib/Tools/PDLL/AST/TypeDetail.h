@@ -97,6 +97,26 @@ struct RangeTypeStorage : public TypeStorageBase<RangeTypeStorage, Type> {
 };
 
 //===----------------------------------------------------------------------===//
+// TupleType
+//===----------------------------------------------------------------------===//
+
+struct TupleTypeStorage
+    : public TypeStorageBase<TupleTypeStorage,
+                             std::pair<ArrayRef<Type>, ArrayRef<StringRef>>> {
+  using Base::Base;
+
+  static TupleTypeStorage *
+  construct(StorageUniquer::StorageAllocator &alloc,
+            std::pair<ArrayRef<Type>, ArrayRef<StringRef>> key) {
+    SmallVector<StringRef> names = llvm::to_vector(llvm::map_range(
+        key.second, [&](StringRef name) { return alloc.copyInto(name); }));
+    return new (alloc.allocate<TupleTypeStorage>()) TupleTypeStorage(
+        std::make_pair(alloc.copyInto(key.first),
+                       alloc.copyInto(llvm::makeArrayRef(names))));
+  }
+};
+
+//===----------------------------------------------------------------------===//
 // TypeType
 //===----------------------------------------------------------------------===//
 

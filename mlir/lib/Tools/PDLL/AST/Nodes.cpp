@@ -148,6 +148,26 @@ Optional<StringRef> OperationExpr::getName() const {
 }
 
 //===----------------------------------------------------------------------===//
+// TupleExpr
+//===----------------------------------------------------------------------===//
+
+TupleExpr *TupleExpr::create(Context &ctx, llvm::SMRange loc,
+                             ArrayRef<Expr *> elements,
+                             ArrayRef<StringRef> names) {
+  unsigned allocSize = TupleExpr::totalSizeToAlloc<Expr *>(elements.size());
+  void *rawData = ctx.getAllocator().Allocate(allocSize, alignof(TupleExpr));
+
+  auto elementTypes = llvm::map_range(
+      elements, [](const Expr *expr) { return expr->getType(); });
+  TupleType type = TupleType::get(ctx, llvm::to_vector(elementTypes), names);
+
+  TupleExpr *expr = new (rawData) TupleExpr(loc, type);
+  std::uninitialized_copy(elements.begin(), elements.end(),
+                          expr->getElements().begin());
+  return expr;
+}
+
+//===----------------------------------------------------------------------===//
 // TypeExpr
 //===----------------------------------------------------------------------===//
 
