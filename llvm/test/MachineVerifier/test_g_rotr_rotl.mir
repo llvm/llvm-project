@@ -7,7 +7,7 @@ body: |
     %src:_(<2 x s64>) = G_IMPLICIT_DEF
     %amt:_(s64) = G_IMPLICIT_DEF
 
-    ; CHECK: Rotate requires operands to be either all scalars or all vectors
+    ; CHECK: Shifts and rotates require operands to be either all scalars or all vectors
     %rotr:_(<2 x s64>) = G_ROTR %src, %amt
 
 ...

@@ -1608,12 +1608,16 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     }
     break;
   }
+  case TargetOpcode::G_SHL:
+  case TargetOpcode::G_LSHR:
+  case TargetOpcode::G_ASHR:
   case TargetOpcode::G_ROTR:
   case TargetOpcode::G_ROTL: {
     LLT Src1Ty = MRI->getType(MI->getOperand(1).getReg());
     LLT Src2Ty = MRI->getType(MI->getOperand(2).getReg());
     if (Src1Ty.isVector() != Src2Ty.isVector()) {
-      report("Rotate requires operands to be either all scalars or all vectors",
+      report("Shifts and rotates require operands to be either all scalars or "
+             "all vectors",
              MI);
       break;
     }
