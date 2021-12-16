@@ -2163,6 +2163,9 @@ void UnwrappedLineParser::parseIfThenElse() {
     nextToken();
   if (FormatTok->Tok.is(tok::l_paren))
     parseParens();
+  // handle  AttributeMacro  if (x) UNLIKELY
+  if (FormatTok->is(TT_AttributeMacro))
+    nextToken();
   // handle [[likely]] / [[unlikely]]
   if (FormatTok->is(tok::l_square) && tryToParseSimpleAttribute())
     parseSquare();
@@ -2182,6 +2185,9 @@ void UnwrappedLineParser::parseIfThenElse() {
   }
   if (FormatTok->Tok.is(tok::kw_else)) {
     nextToken();
+    // handle  AttributeMacro  else UNLIKELY
+    if (FormatTok->is(TT_AttributeMacro))
+      nextToken();
     // handle [[likely]] / [[unlikely]]
     if (FormatTok->Tok.is(tok::l_square) && tryToParseSimpleAttribute())
       parseSquare();
