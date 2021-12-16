@@ -4351,6 +4351,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   bool IsHIP = JA.isOffloading(Action::OFK_HIP);
   bool IsHIPDevice = JA.isDeviceOffloading(Action::OFK_HIP);
   bool IsOpenMPDevice = JA.isDeviceOffloading(Action::OFK_OpenMP);
+  bool IsOpenMPHost = JA.isHostOffloading(Action::OFK_OpenMP);
   bool IsHeaderModulePrecompile = isa<HeaderModulePrecompileJobAction>(JA);
   bool IsDeviceOffloadAction = !(JA.isDeviceOffloading(Action::OFK_None) ||
                                  JA.isDeviceOffloading(Action::OFK_Host));
@@ -4371,6 +4372,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   InputInfoList ModuleHeaderInputs;
   const InputInfo *CudaDeviceInput = nullptr;
   const InputInfo *OpenMPDeviceInput = nullptr;
+  const InputInfo *OpenMPHostInput = nullptr;
   for (const InputInfo &I : Inputs) {
     if (&I == &Input) {
       // This is the primary input.
@@ -4387,6 +4389,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CudaDeviceInput = &I;
     } else if (IsOpenMPDevice && !OpenMPDeviceInput) {
       OpenMPDeviceInput = &I;
+    } else if (IsOpenMPHost && !OpenMPHostInput) {
+      OpenMPHostInput = &I;
     } else {
       llvm_unreachable("unexpectedly given multiple inputs");
     }
