@@ -79,6 +79,7 @@ private:
   void printImpl(const AttributeExpr *expr);
   void printImpl(const DeclRefExpr *expr);
   void printImpl(const MemberAccessExpr *expr);
+  void printImpl(const OperationExpr *expr);
   void printImpl(const TypeExpr *expr);
 
   void printImpl(const AttrConstraintDecl *decl);
@@ -87,6 +88,7 @@ private:
   void printImpl(const TypeRangeConstraintDecl *decl);
   void printImpl(const ValueConstraintDecl *decl);
   void printImpl(const ValueRangeConstraintDecl *decl);
+  void printImpl(const NamedAttributeDecl *decl);
   void printImpl(const OpNameDecl *decl);
   void printImpl(const PatternDecl *decl);
   void printImpl(const VariableDecl *decl);
@@ -147,13 +149,14 @@ void NodePrinter::print(const Node *node) {
 
           // Expressions.
           const AttributeExpr, const DeclRefExpr, const MemberAccessExpr,
-          const TypeExpr,
+          const OperationExpr, const TypeExpr,
 
           // Decls.
           const AttrConstraintDecl, const OpConstraintDecl,
           const TypeConstraintDecl, const TypeRangeConstraintDecl,
           const ValueConstraintDecl, const ValueRangeConstraintDecl,
-          const OpNameDecl, const PatternDecl, const VariableDecl,
+          const NamedAttributeDecl, const OpNameDecl, const PatternDecl,
+          const VariableDecl,
 
           const Module>([&](auto derivedNode) { this->printImpl(derivedNode); })
       .Default([](const Node *) { llvm_unreachable("unknown AST node"); });
@@ -194,6 +197,17 @@ void NodePrinter::printImpl(const MemberAccessExpr *expr) {
   printChildren(expr->getParentExpr());
 }
 
+void NodePrinter::printImpl(const OperationExpr *expr) {
+  os << "OperationExpr " << expr << " Type<";
+  print(expr->getType());
+  os << ">\n";
+
+  printChildren(expr->getNameDecl());
+  printChildren("Operands", expr->getOperands());
+  printChildren("Result Types", expr->getResultTypes());
+  printChildren("Attributes", expr->getAttributes());
+}
+
 void NodePrinter::printImpl(const TypeExpr *expr) {
   os << "TypeExpr " << expr << " Value<\"" << expr->getValue() << "\">\n";
 }
@@ -227,6 +241,12 @@ void NodePrinter::printImpl(const ValueRangeConstraintDecl *decl) {
   os << "ValueRangeConstraintDecl " << decl << "\n";
   if (const auto *typeExpr = decl->getTypeExpr())
     printChildren(typeExpr);
+}
+
+void NodePrinter::printImpl(const NamedAttributeDecl *decl) {
+  os << "NamedAttributeDecl " << decl << " Name<" << decl->getName().getName()
+     << ">\n";
+  printChildren(decl->getValue());
 }
 
 void NodePrinter::printImpl(const OpNameDecl *decl) {

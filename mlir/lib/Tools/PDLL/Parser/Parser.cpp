@@ -80,6 +80,10 @@ private:
       ast::Expr *&expr, ast::Type type,
       function_ref<void(ast::Diagnostic &diag)> noteAttachFn = {});
 
+  /// Given an operation expression, convert it to a Value or ValueRange
+  /// typed expression.
+  ast::Expr *convertOpToValue(const ast::Expr *opExpr);
+
   //===--------------------------------------------------------------------===//
   // Directives
 
@@ -96,6 +100,7 @@ private:
   };
 
   FailureOr<ast::Decl *> parseTopLevelDecl();
+  FailureOr<ast::NamedAttributeDecl *> parseNamedAttributeDecl();
   FailureOr<ast::Decl *> parsePatternDecl();
   LogicalResult parsePatternDeclMetadata(ParsedPatternMetadata &metadata);
 
@@ -141,6 +146,7 @@ private:
   FailureOr<ast::Expr *> parseMemberAccessExpr(ast::Expr *parentExpr);
   FailureOr<ast::OpNameDecl *> parseOperationName();
   FailureOr<ast::OpNameDecl *> parseWrappedOperationName();
+  FailureOr<ast::Expr *> parseOperationExpr();
   FailureOr<ast::Expr *> parseTypeExpr();
   FailureOr<ast::Expr *> parseUnderscoreExpr();
 
@@ -205,6 +211,22 @@ private:
   /// success, this also returns the type of the member accessed.
   FailureOr<ast::Type> validateMemberAccess(ast::Expr *parentExpr,
                                             StringRef name, llvm::SMRange loc);
+  FailureOr<ast::OperationExpr *>
+  createOperationExpr(llvm::SMRange loc, const ast::OpNameDecl *name,
+                      MutableArrayRef<ast::Expr *> operands,
+                      MutableArrayRef<ast::NamedAttributeDecl *> attributes,
+                      MutableArrayRef<ast::Expr *> results);
+  LogicalResult
+  validateOperationOperands(llvm::SMRange loc, Optional<StringRef> name,
+                            MutableArrayRef<ast::Expr *> operands);
+  LogicalResult validateOperationResults(llvm::SMRange loc,
+                                         Optional<StringRef> name,
+                                         MutableArrayRef<ast::Expr *> results);
+  LogicalResult
+  validateOperationOperandsOrResults(llvm::SMRange loc,
+                                     Optional<StringRef> name,
+                                     MutableArrayRef<ast::Expr *> values,
+                                     ast::Type singleTy, ast::Type rangeTy);
 
   //===--------------------------------------------------------------------===//
   // Stmts
@@ -322,6 +344,11 @@ LogicalResult Parser::parseModuleBody(SmallVector<ast::Decl *> &decls) {
   return success();
 }
 
+ast::Expr *Parser::convertOpToValue(const ast::Expr *opExpr) {
+  return ast::AllResultsMemberAccessExpr::create(ctx, opExpr->getLoc(), opExpr,
+                                                 valueRangeTy);
+}
+
 LogicalResult Parser::convertExpressionTo(
     ast::Expr *&expr, ast::Type type,
     function_ref<void(ast::Diagnostic &diag)> noteAttachFn) {
@@ -351,15 +378,15 @@ LogicalResult Parser::convertExpressionTo(
 
     // An operation can always convert to a ValueRange.
     if (type == valueRangeTy) {
-      expr = ast::MemberAccessExpr::create(ctx, expr->getLoc(), expr,
-                                           "$results", valueRangeTy);
+      expr = ast::AllResultsMemberAccessExpr::create(ctx, expr->getLoc(), expr,
+                                                     valueRangeTy);
       return success();
     }
 
     // Allow conversion to a single value by constraining the result range.
     if (type == valueTy) {
-      expr = ast::MemberAccessExpr::create(ctx, expr->getLoc(), expr,
-                                           "$results", valueTy);
+      expr = ast::AllResultsMemberAccessExpr::create(ctx, expr->getLoc(), expr,
+                                                     valueTy);
       return success();
     }
     return emitConvertError();
@@ -445,6 +472,33 @@ FailureOr<ast::Decl *> Parser::parseTopLevelDecl() {
     curDeclScope->add(*decl);
   }
   return decl;
+}
+
+FailureOr<ast::NamedAttributeDecl *> Parser::parseNamedAttributeDecl() {
+  std::string attrNameStr;
+  if (curToken.isString())
+    attrNameStr = curToken.getStringValue();
+  else if (curToken.is(Token::identifier) || curToken.isKeyword())
+    attrNameStr = curToken.getSpelling().str();
+  else
+    return emitError("expected identifier or string attribute name");
+  const auto &name = ast::Name::create(ctx, attrNameStr, curToken.getLoc());
+  consumeToken();
+
+  // Check for a value of the attribute.
+  ast::Expr *attrValue = nullptr;
+  if (consumeIf(Token::equal)) {
+    FailureOr<ast::Expr *> attrExpr = parseExpr();
+    if (failed(attrExpr))
+      return failure();
+    attrValue = *attrExpr;
+  } else {
+    // If there isn't a concrete value, create an expression representing a
+    // UnitAttr.
+    attrValue = ast::AttributeExpr::create(ctx, name.getLoc(), "unit");
+  }
+
+  return ast::NamedAttributeDecl::create(ctx, name, attrValue);
 }
 
 FailureOr<ast::Decl *> Parser::parsePatternDecl() {
@@ -739,6 +793,9 @@ FailureOr<ast::Expr *> Parser::parseExpr() {
   case Token::identifier:
     lhsExpr = parseIdentifierExpr();
     break;
+  case Token::kw_op:
+    lhsExpr = parseOperationExpr();
+    break;
   case Token::kw_type:
     lhsExpr = parseTypeExpr();
     break;
@@ -866,6 +923,77 @@ FailureOr<ast::OpNameDecl *> Parser::parseWrappedOperationName() {
   if (failed(parseToken(Token::greater, "expected `>` after operation name")))
     return failure();
   return opNameDecl;
+}
+
+FailureOr<ast::Expr *> Parser::parseOperationExpr() {
+  llvm::SMRange loc = curToken.getLoc();
+  consumeToken(Token::kw_op);
+
+  // If it isn't followed by a `<`, the `op` keyword is treated as a normal
+  // identifier.
+  if (curToken.isNot(Token::less)) {
+    resetToken(loc);
+    return parseIdentifierExpr();
+  }
+
+  // Parse the operation name. The name may be elided, in which case the
+  // operation refers to "any" operation(i.e. a difference between `MyOp` and
+  // `Operation*`).
+  FailureOr<ast::OpNameDecl *> opNameDecl = parseWrappedOperationName();
+  if (failed(opNameDecl))
+    return failure();
+
+  // Check for the optional list of operands.
+  SmallVector<ast::Expr *> operands;
+  if (consumeIf(Token::l_paren)) {
+    do {
+      FailureOr<ast::Expr *> operand = parseExpr();
+      if (failed(operand))
+        return failure();
+      operands.push_back(*operand);
+    } while (consumeIf(Token::comma));
+
+    if (failed(parseToken(Token::r_paren,
+                          "expected `)` after operation operand list")))
+      return failure();
+  }
+
+  // Check for the optional list of attributes.
+  SmallVector<ast::NamedAttributeDecl *> attributes;
+  if (consumeIf(Token::l_brace)) {
+    do {
+      FailureOr<ast::NamedAttributeDecl *> decl = parseNamedAttributeDecl();
+      if (failed(decl))
+        return failure();
+      attributes.emplace_back(*decl);
+    } while (consumeIf(Token::comma));
+
+    if (failed(parseToken(Token::r_brace,
+                          "expected `}` after operation attribute list")))
+      return failure();
+  }
+
+  // Check for the optional list of result types.
+  SmallVector<ast::Expr *> resultTypes;
+  if (consumeIf(Token::arrow)) {
+    if (failed(parseToken(Token::l_paren,
+                          "expected `(` before operation result type list")))
+      return failure();
+
+    do {
+      FailureOr<ast::Expr *> resultTypeExpr = parseExpr();
+      if (failed(resultTypeExpr))
+        return failure();
+      resultTypes.push_back(*resultTypeExpr);
+    } while (consumeIf(Token::comma));
+
+    if (failed(parseToken(Token::r_paren,
+                          "expected `)` after operation result type list")))
+      return failure();
+  }
+
+  return createOperationExpr(loc, *opNameDecl, operands, attributes,
+                             resultTypes);
 }
 
 FailureOr<ast::Expr *> Parser::parseTypeExpr() {
@@ -1198,17 +1326,97 @@ FailureOr<ast::Type> Parser::validateMemberAccess(ast::Expr *parentExpr,
                                                   StringRef name,
                                                   llvm::SMRange loc) {
   ast::Type parentType = parentExpr->getType();
-  if (ast::OperationType opType = parentType.dyn_cast<ast::OperationType>()) {
-    // $results is a special member access representing all of the results.
-    // TODO: Should we have special AST expressions for these? How does the
-    // user reference these in the language itself?
-    if (name == "$results")
+  if (parentType.isa<ast::OperationType>()) {
+    if (name == ast::AllResultsMemberAccessExpr::getMemberName())
       return valueRangeTy;
   }
   return emitError(
       loc,
       llvm::formatv("invalid member access `{0}` on expression of type `{1}`",
                     name, parentType));
+}
+
+FailureOr<ast::OperationExpr *> Parser::createOperationExpr(
+    llvm::SMRange loc, const ast::OpNameDecl *name,
+    MutableArrayRef<ast::Expr *> operands,
+    MutableArrayRef<ast::NamedAttributeDecl *> attributes,
+    MutableArrayRef<ast::Expr *> results) {
+  Optional<StringRef> opNameRef = name->getName();
+
+  // Verify the inputs operands.
+  if (failed(validateOperationOperands(loc, opNameRef, operands)))
+    return failure();
+
+  // Verify the attribute list.
+  for (ast::NamedAttributeDecl *attr : attributes) {
+    // Check for an attribute type, or a type awaiting resolution.
+    ast::Type attrType = attr->getValue()->getType();
+    if (!attrType.isa<ast::AttributeType>()) {
+      return emitError(
+          attr->getValue()->getLoc(),
+          llvm::formatv("expected `Attr` expression, but got `{0}`", attrType));
+    }
+  }
+
+  // Verify the result types.
+  if (failed(validateOperationResults(loc, opNameRef, results)))
+    return failure();
+
+  return ast::OperationExpr::create(ctx, loc, name, operands, results,
+                                    attributes);
+}
+
+LogicalResult
+Parser::validateOperationOperands(llvm::SMRange loc, Optional<StringRef> name,
+                                  MutableArrayRef<ast::Expr *> operands) {
+  return validateOperationOperandsOrResults(loc, name, operands, valueTy,
+                                            valueRangeTy);
+}
+
+LogicalResult
+Parser::validateOperationResults(llvm::SMRange loc, Optional<StringRef> name,
+                                 MutableArrayRef<ast::Expr *> results) {
+  return validateOperationOperandsOrResults(loc, name, results, typeTy,
+                                            typeRangeTy);
+}
+
+LogicalResult Parser::validateOperationOperandsOrResults(
+    llvm::SMRange loc, Optional<StringRef> name,
+    MutableArrayRef<ast::Expr *> values, ast::Type singleTy,
+    ast::Type rangeTy) {
+  // All operation types accept a single range parameter.
+  if (values.size() == 1) {
+    if (failed(convertExpressionTo(values[0], rangeTy)))
+      return failure();
+    return success();
+  }
+
+  // Otherwise, accept the value groups as they have been defined and just
+  // ensure they are one of the expected types.
+  for (ast::Expr *&valueExpr : values) {
+    ast::Type valueExprType = valueExpr->getType();
+
+    // Check if this is one of the expected types.
+    if (valueExprType == rangeTy || valueExprType == singleTy)
+      continue;
+
+    // If the operand is an Operation, allow converting to a Value or
+    // ValueRange. This situations arises quite often with nested operation
+    // expressions: `op<my_dialect.foo>(op<my_dialect.bar>)`
+    if (singleTy == valueTy) {
+      if (valueExprType.isa<ast::OperationType>()) {
+        valueExpr = convertOpToValue(valueExpr);
+        continue;
+      }
+    }
+
+    return emitError(
+        valueExpr->getLoc(),
+        llvm::formatv(
+            "expected `{0}` or `{1}` convertible expression, but got `{2}`",
+            singleTy, rangeTy, valueExprType));
+  }
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

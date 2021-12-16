@@ -15,6 +15,82 @@ Pattern {
 // -----
 
 //===----------------------------------------------------------------------===//
+// OperationExpr
+//===----------------------------------------------------------------------===//
+
+// CHECK: Module
+// CHECK: `-OperationExpr {{.*}} Type<Op>
+// CHECK:   `-OpNameDecl
+Pattern {
+  erase op<>;
+}
+
+// -----
+
+// CHECK: Module
+// CHECK: `-OperationExpr {{.*}} Type<Op<my_dialect.foo>>
+// CHECK:   `-OpNameDecl {{.*}} Name<my_dialect.foo>
+Pattern {
+  erase op<my_dialect.foo>;
+}
+
+// -----
+
+// CHECK: Module
+// CHECK: `-OperationExpr {{.*}} Type<Op>
+// CHECK:   `-OpNameDecl
+// CHECK:   `Operands`
+// CHECK:     |-DeclRefExpr {{.*}} Type<Value>
+// CHECK:     |-DeclRefExpr {{.*}} Type<ValueRange>
+// CHECK:     `-DeclRefExpr {{.*}} Type<Value>
+Pattern {
+  erase op<>(_: Value, _: ValueRange, _: Value);
+}
+
+// -----
+
+// CHECK: Module
+// CHECK: `-OperationExpr {{.*}} Type<Op>
+// CHECK:   `-OpNameDecl
+// CHECK:   `Operands`
+// CHECK:     `-MemberAccessExpr {{.*}} Member<$results> Type<ValueRange>
+// CHECK:       `-OperationExpr {{.*}} Type<Op<my_dialect.bar>>
+// CHECK:         `-OpNameDecl {{.*}} Name<my_dialect.bar>
+Pattern {
+  erase op<>(op<my_dialect.bar>);
+}
+
+// -----
+
+// CHECK: Module
+// CHECK: `-OperationExpr {{.*}} Type<Op>
+// CHECK:   `-OpNameDecl
+// CHECK:   `Attributes`
+// CHECK:     |-NamedAttributeDecl {{.*}} Name<unitAttr>
+// CHECK:       `-AttributeExpr {{.*}} Value<"unit">
+// CHECK:     `-NamedAttributeDecl {{.*}} Name<normal$Attr>
+// CHECK:       `-DeclRefExpr {{.*}} Type<Attr>
+
+Pattern {
+  erase op<> {unitAttr, "normal$Attr" = _: Attr};
+}
+
+// -----
+
+// CHECK: Module
+// CHECK: `-OperationExpr {{.*}} Type<Op>
+// CHECK:   `-OpNameDecl
+// CHECK:   `Result Types`
+// CHECK:     |-DeclRefExpr {{.*}} Type<Type>
+// CHECK:     |-DeclRefExpr {{.*}} Type<TypeRange>
+// CHECK:     `-DeclRefExpr {{.*}} Type<Type>
+Pattern {
+  erase op<> -> (_: Type, _: TypeRange, _: Type);
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // TypeExpr
 //===----------------------------------------------------------------------===//
 
