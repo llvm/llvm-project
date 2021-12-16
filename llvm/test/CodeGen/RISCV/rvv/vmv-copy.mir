@@ -299,3 +299,31 @@ body:             |
     $v28 = PseudoVLE32_V_MF2 killed $x16, $noreg, 5, implicit $vl, implicit $vtype
     $v12 = COPY $v28
 ...
+---
+name: copy_implicit_def
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x12, $x14, $x16
+    ; 80 = e32,m1
+    ; CHECK-LABEL: name: copy_implicit_def
+    ; CHECK: liveins: $x12, $x14, $x16
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $x0 = PseudoVSETVLI $x14, 80, implicit-def $vl, implicit-def $vtype
+    ; CHECK-NEXT: $v8_v9_v10_v11_v12_v13_v14_v15 = PseudoVLSEG8E32_V_M1 killed $x12, $noreg, 5, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: $x0 = PseudoVSETIVLI 10, 80, implicit-def $vl, implicit-def $vtype
+    ; CHECK-NEXT: $v15 = PseudoVLE32_V_M1 killed $x16, $noreg, 5, implicit $vl, implicit $vtype, implicit killed $v8_v9_v10_v11_v12_v13_v14_v15, implicit-def $v8_v9_v10_v11_v12_v13_v14_v15
+    ; CHECK-NEXT: $v24 = PseudoVMV_V_V_M1 killed $v8, $noreg, 5, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: $v25 = PseudoVMV_V_V_M1 killed $v9, $noreg, 5, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: $v26 = PseudoVMV_V_V_M1 killed $v10, $noreg, 5, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: $v27 = PseudoVMV_V_V_M1 killed $v11, $noreg, 5, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: $v28 = PseudoVMV_V_V_M1 killed $v12, $noreg, 5, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: $v29 = PseudoVMV_V_V_M1 killed $v13, $noreg, 5, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: $v30 = PseudoVMV_V_V_M1 killed $v14, $noreg, 5, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: $v31 = PseudoVMV_V_V_M1 killed $v15, $noreg, 5, implicit $vl, implicit $vtype
+    $x0 = PseudoVSETVLI $x14, 80, implicit-def $vl, implicit-def $vtype
+    $v8_v9_v10_v11_v12_v13_v14_v15 = PseudoVLSEG8E32_V_M1 killed $x12, $noreg, 5, implicit $vl, implicit $vtype
+    $x0 = PseudoVSETIVLI 10, 80, implicit-def $vl, implicit-def $vtype
+    $v15 = PseudoVLE32_V_M1 killed $x16, $noreg, 5, implicit $vl, implicit $vtype, implicit killed $v8_v9_v10_v11_v12_v13_v14_v15, implicit-def $v8_v9_v10_v11_v12_v13_v14_v15
+    $v24_v25_v26_v27_v28_v29_v30_v31 = COPY killed $v8_v9_v10_v11_v12_v13_v14_v15
+...
