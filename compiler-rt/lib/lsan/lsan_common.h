@@ -33,21 +33,21 @@
 // Exclude leak-detection on arm32 for Android because `__aeabi_read_tp`
 // is missing. This caused a link error.
 #if SANITIZER_ANDROID && (__ANDROID_API__ < 28 || defined(__arm__))
-#define CAN_SANITIZE_LEAKS 0
+#  define CAN_SANITIZE_LEAKS 0
 #elif (SANITIZER_LINUX || SANITIZER_MAC) && (SANITIZER_WORDSIZE == 64) && \
     (defined(__x86_64__) || defined(__mips64) || defined(__aarch64__) ||  \
      defined(__powerpc64__) || defined(__s390x__))
-#define CAN_SANITIZE_LEAKS 1
+#  define CAN_SANITIZE_LEAKS 1
 #elif defined(__i386__) && (SANITIZER_LINUX || SANITIZER_MAC)
-#define CAN_SANITIZE_LEAKS 1
+#  define CAN_SANITIZE_LEAKS 1
 #elif defined(__arm__) && SANITIZER_LINUX
-#define CAN_SANITIZE_LEAKS 1
+#  define CAN_SANITIZE_LEAKS 1
 #elif SANITIZER_RISCV64 && SANITIZER_LINUX
-#define CAN_SANITIZE_LEAKS 1
+#  define CAN_SANITIZE_LEAKS 1
 #elif SANITIZER_NETBSD || SANITIZER_FUCHSIA
-#define CAN_SANITIZE_LEAKS 1
+#  define CAN_SANITIZE_LEAKS 1
 #else
-#define CAN_SANITIZE_LEAKS 0
+#  define CAN_SANITIZE_LEAKS 0
 #endif
 
 namespace __sanitizer {
