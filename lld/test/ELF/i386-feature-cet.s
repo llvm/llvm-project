@@ -23,6 +23,23 @@
 # RUN:   | FileCheck --check-prefix=WARN %s
 # WARN: {{.*}}.o: -z force-ibt: file does not have GNU_PROPERTY_X86_FEATURE_1_IBT property
 
+# RUN: not ld.lld -e func1 %t.o %t3.o -o /dev/null -z cet-report=something 2>&1 \
+# RUN:   | FileCheck --check-prefix=REPORT_INVALID %s
+# REPORT_INVALID: error: -z cet-report= parameter something is not recognized
+# REPORT_INVALID-EMPTY:
+
+# RUN: ld.lld -e func1 %t.o %t3.o -o /dev/null -z cet-report=warning 2>&1 \
+# RUN:   | FileCheck --check-prefix=CET_REPORT_WARN %s
+# CET_REPORT_WARN: {{.*}}.o: -z cet-report: file does not have GNU_PROPERTY_X86_FEATURE_1_IBT property
+# CET_REPORT_WARN: {{.*}}.o: -z cet-report: file does not have GNU_PROPERTY_X86_FEATURE_1_SHSTK property
+# CET_REPORT_WARN-EMPTY:
+
+# RUN: not ld.lld -e func1 %t.o %t3.o -o /dev/null -z cet-report=error 2>&1 \
+# RUN:   | FileCheck --check-prefix=CET_REPORT_ERROR %s
+# CET_REPORT_ERROR: {{.*}}.o: -z cet-report: file does not have GNU_PROPERTY_X86_FEATURE_1_IBT property
+# CET_REPORT_ERROR: {{.*}}.o: -z cet-report: file does not have GNU_PROPERTY_X86_FEATURE_1_SHSTK property
+# CET_REPORT_ERROR-EMPTY:
+
 # RUN: ld.lld -e func1 %t.o %t4.o -o %t
 # RUN: llvm-readelf -n %t | FileCheck --check-prefix=NOSHSTK %s
 

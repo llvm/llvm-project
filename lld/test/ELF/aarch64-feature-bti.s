@@ -187,9 +187,11 @@
 ## from the file without the .note.gnu.property.
 
 # RUN: ld.lld %t.o %t2.o -z force-bti %t.so -o %tforcebti.exe 2>&1 | FileCheck --check-prefix=FORCE-WARN %s
+# RUN: not ld.lld %t.o %t2.o -z force-bti -z bti-report=error %t.so -o %tfailifnotbti.exe 2>&1 | FileCheck --check-prefix=BTI_REPORT-ERROR %s
 
 # FORCE-WARN: aarch64-feature-bti.s.tmp2.o: -z force-bti: file does not have GNU_PROPERTY_AARCH64_FEATURE_1_BTI property
-
+# BTI_REPORT-ERROR: aarch64-feature-bti.s.tmp2.o: -z bti-report: file does not have GNU_PROPERTY_AARCH64_FEATURE_1_BTI property
+# BTI_REPORT-ERROR-EMPTY:
 
 # RUN: llvm-readelf -n %tforcebti.exe | FileCheck --check-prefix=BTIPROP %s
 # RUN: llvm-readelf --dynamic-table %tforcebti.exe | FileCheck --check-prefix BTIDYN %s
