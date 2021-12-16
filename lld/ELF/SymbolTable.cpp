@@ -64,16 +64,21 @@ Symbol *SymbolTable::insert(StringRef name) {
   // Since this is a hot path, the following string search code is
   // optimized for speed. StringRef::find(char) is much faster than
   // StringRef::find(StringRef).
+  StringRef stem = name;
   size_t pos = name.find('@');
   if (pos != StringRef::npos && pos + 1 < name.size() && name[pos + 1] == '@')
-    name = name.take_front(pos);
+    stem = name.take_front(pos);
 
-  auto p = symMap.insert({CachedHashStringRef(name), (int)symVector.size()});
+  auto p = symMap.insert({CachedHashStringRef(stem), (int)symVector.size()});
   int &symIndex = p.first->second;
   bool isNew = p.second;
 
-  if (!isNew)
-    return symVector[symIndex];
+  if (!isNew) {
+    Symbol *sym = symVector[symIndex];
+    if (stem.size() != name.size())
+      sym->setName(name);
+    return sym;
+  }
 
   Symbol *sym = reinterpret_cast<Symbol *>(make<SymbolUnion>());
   symVector.push_back(sym);

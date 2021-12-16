@@ -561,22 +561,6 @@ void Symbol::resolveUndefined(const Undefined &other) {
   }
 }
 
-// Using .symver foo,foo@@VER unfortunately creates two symbols: foo and
-// foo@@VER. We want to effectively ignore foo, so give precedence to
-// foo@@VER.
-// FIXME: If users can transition to using
-// .symver foo,foo@@@VER
-// we can delete this hack.
-static int compareVersion(StringRef a, StringRef b) {
-  bool x = a.contains("@@");
-  bool y = b.contains("@@");
-  if (!x && y)
-    return 1;
-  if (x && !y)
-    return -1;
-  return 0;
-}
-
 // Compare two symbols. Return 1 if the new symbol should win, -1 if
 // the new symbol should lose, or 0 if there is a conflict.
 int Symbol::compare(const Symbol *other) const {
@@ -585,8 +569,16 @@ int Symbol::compare(const Symbol *other) const {
   if (!isDefined() && !isCommon())
     return 1;
 
-  if (int cmp = compareVersion(getName(), other->getName()))
-    return cmp;
+  // .symver foo,foo@@VER unfortunately creates two defined symbols: foo and
+  // foo@@VER. In GNU ld, if foo and foo@@VER are in the same file, foo is
+  // ignored. In our implementation, when this is foo, this->getName() may still
+  // contain @@, return 1 in this case as well.
+  if (file == other->file) {
+    if (other->getName().contains("@@"))
+      return 1;
+    if (getName().contains("@@"))
+      return -1;
+  }
 
   if (other->isWeak())
     return -1;
