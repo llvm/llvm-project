@@ -279,6 +279,28 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
+// RewriteStmt
+
+/// This statement represents an operation rewrite that contains a block of
+/// nested rewrite commands. This allows for building more complex operation
+/// rewrites that span across multiple statements, which may be unconnected.
+class RewriteStmt final : public Node::NodeBase<RewriteStmt, OpRewriteStmt> {
+public:
+  static RewriteStmt *create(Context &ctx, llvm::SMRange loc, Expr *rootOp,
+                             CompoundStmt *rewriteBody);
+
+  /// Return the compound rewrite body.
+  CompoundStmt *getRewriteBody() const { return rewriteBody; }
+
+private:
+  RewriteStmt(llvm::SMRange loc, Expr *rootOp, CompoundStmt *rewriteBody)
+      : Base(loc, rootOp), rewriteBody(rewriteBody) {}
+
+  /// The body of nested rewriters within this statement.
+  CompoundStmt *rewriteBody;
+};
+
+//===----------------------------------------------------------------------===//
 // Expr
 //===----------------------------------------------------------------------===//
 
@@ -909,7 +931,7 @@ inline bool Expr::classof(const Node *node) {
 }
 
 inline bool OpRewriteStmt::classof(const Node *node) {
-  return isa<EraseStmt, ReplaceStmt>(node);
+  return isa<EraseStmt, ReplaceStmt, RewriteStmt>(node);
 }
 
 inline bool Stmt::classof(const Node *node) {

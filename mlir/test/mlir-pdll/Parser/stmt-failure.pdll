@@ -273,3 +273,37 @@ Pattern {
   // CHECK: expected dialect namespace
   replace op<>(input: Value) with op<>;
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// `rewrite`
+//===----------------------------------------------------------------------===//
+
+Pattern {
+  // CHECK: expected `Op` expression
+  rewrite attr<""> with { op<toy.reshape>; };
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected `with` before rewrite body
+  rewrite op<>;
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected `{` to start rewrite body
+  rewrite op<> with;
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected dialect namespace
+  rewrite root: Op with {
+      op<>;
+  };
+}

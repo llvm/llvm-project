@@ -182,3 +182,25 @@ Pattern {
 Pattern {
   replace _: Op with (_: Value, _: ValueRange, op<my_dialect.foo>);
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// RewriteStmt
+//===----------------------------------------------------------------------===//
+
+// CHECK: Module
+// CHECK: `-RewriteStmt
+// CHECK:   |-DeclRefExpr {{.*}} Type<Op>
+// CHECK:   `-CompoundStmt
+// CHECK:     |-OperationExpr {{.*}} Type<Op<my_dialect.some_op>>
+// CHECK:     `-ReplaceStmt {{.*}}
+// CHECK:       `-DeclRefExpr {{.*}} Type<Op>
+// CHECK:       `ReplValues`
+// CHECK:          `-OperationExpr {{.*}} Type<Op<my_dialect.foo>>
+Pattern {
+  rewrite root: Op with {
+    op<my_dialect.some_op>;
+    replace root with op<my_dialect.foo>;
+  };
+}
