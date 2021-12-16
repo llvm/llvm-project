@@ -142,6 +142,14 @@ public:
   void Resolve(FileSpec &file_spec);
   /// \}
 
+  /// Remove a single file.
+  ///
+  /// The path must specify a file and not a directory.
+  /// \{
+  Status RemoveFile(const FileSpec &file_spec);
+  Status RemoveFile(const llvm::Twine &path);
+  /// \}
+
   //// Create memory buffer from path.
   /// \{
   std::shared_ptr<DataBufferLLVM> CreateDataBuffer(const llvm::Twine &path,

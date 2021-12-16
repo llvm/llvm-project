@@ -158,6 +158,14 @@ public:
   ///     A string reference that contains bytes to append.
   void AppendData(llvm::StringRef data);
 
+  /// Append a bytes to the end of the owned data.
+  ///
+  /// Append the bytes contained in the array reference.
+  ///
+  /// \param data
+  ///     A array reference that contains bytes to append.
+  void AppendData(llvm::ArrayRef<uint8_t> data);
+
   /// Append a C string to the end of the owned data.
   ///
   /// Append the bytes contained in the string reference along with an extra
@@ -243,6 +251,17 @@ public:
   ///     A array reference to the data that this object references.
   llvm::ArrayRef<uint8_t> GetData() const;
 
+  /// Get the number of bytes contained in this object.
+  ///
+  /// \return
+  ///     The total number of bytes of data this object refers to.
+  size_t GetByteSize() const;
+
+  lldb::ByteOrder GetByteOrder() const { return m_byte_order; }
+
+  /// The address size to use when encoding pointers or addresses.
+  uint8_t GetAddressByteSize() const { return m_addr_size; }
+
 private:
   uint32_t BytesLeft(uint32_t offset) const {
     const uint32_t size = GetByteSize();
@@ -267,20 +286,14 @@ private:
   ///     object, \b false otherwise.
   bool ValidOffset(uint32_t offset) const { return offset < GetByteSize(); }
 
-  /// Get the number of bytes contained in this object.
-  ///
-  /// \return
-  ///     The total number of bytes of data this object refers to.
-  size_t GetByteSize() const;
-
   /// The shared pointer to data that can grow as data is added
   std::shared_ptr<lldb_private::DataBufferHeap> m_data_sp;
 
   /// The byte order of the data we are encoding to.
-  lldb::ByteOrder m_byte_order;
+  const lldb::ByteOrder m_byte_order;
 
   /// The address size to use when encoding pointers or addresses.
-  uint8_t m_addr_size;
+  const uint8_t m_addr_size;
 
   DataEncoder(const DataEncoder &) = delete;
   const DataEncoder &operator=(const DataEncoder &) = delete;

@@ -945,6 +945,43 @@ public:
     bool m_match_name_after_lookup = false;
   };
 
+  /// Get a unique hash for this module.
+  ///
+  /// The hash should be enough to identify the file on disk and the
+  /// architecture of the file. If the module represents an object inside of a
+  /// file, then the hash should include the object name and object offset to
+  /// ensure a unique hash. Some examples:
+  /// - just a regular object file (mach-o, elf, coff, etc) should create a hash
+  /// - a universal mach-o file that contains to multiple architectures,
+  ///   each architecture slice should have a unique hash even though they come
+  ///   from the same file
+  /// - a .o file inside of a BSD archive. Each .o file will have an object name
+  ///   and object offset that should produce a unique hash. The object offset
+  ///   is needed as BSD archive files can contain multiple .o files that have
+  ///   the same name.
+  uint32_t Hash();
+
+  /// Get a unique cache key for the current module.
+  ///
+  /// The cache key must be unique for a file on disk and not change if the file
+  /// is updated. This allows cache data to use this key as a prefix and as
+  /// files are modified in disk, we will overwrite the cache files. If one file
+  /// can contain multiple files, like a universal mach-o file or like a BSD
+  /// archive, the cache key must contain enough information to differentiate
+  /// these different files.
+  std::string GetCacheKey();
+
+  /// Get the global index file cache.
+  ///
+  /// LLDB can cache data for a module between runs. This cache directory can be
+  /// used to stored data that previously was manually created each time you debug.
+  /// Examples include debug information indexes, symbol tables, symbol table
+  /// indexes, and more.
+  ///
+  /// \returns
+  ///   If caching is enabled in the lldb settings, return a pointer to the data
+  ///   file cache. If caching is not enabled, return NULL.
+  static DataFileCache *GetIndexCache();
 protected:
   // Member Variables
   mutable std::recursive_mutex m_mutex; ///< A mutex to keep this object happy

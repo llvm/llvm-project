@@ -513,3 +513,11 @@ void FileSystem::Collect(const llvm::Twine &file) {
 void FileSystem::SetHomeDirectory(std::string home_directory) {
   m_home_directory = std::move(home_directory);
 }
+
+Status FileSystem::RemoveFile(const FileSpec &file_spec) {
+  return RemoveFile(file_spec.GetPath());
+}
+
+Status FileSystem::RemoveFile(const llvm::Twine &path) {
+  return Status(llvm::sys::fs::remove(path));
+}

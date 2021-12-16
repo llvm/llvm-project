@@ -13,6 +13,26 @@ let Definition = "modulelist" in {
     Global,
     DefaultStringValue<"">,
     Desc<"Debug info path which should be resolved while parsing, relative to the host filesystem.">;
+  def EnableLLDBIndexCache: Property<"enable-lldb-index-cache", "Boolean">,
+    Global,
+    DefaultFalse,
+    Desc<"Enable caching for debug sessions in LLDB. LLDB can cache data for each module for improved performance in subsequent debug sessions.">;
+  def LLDBIndexCachePath: Property<"lldb-index-cache-path", "FileSpec">,
+    Global,
+    DefaultStringValue<"">,
+    Desc<"The path to the LLDB index cache directory.">;
+  def LLDBIndexCacheMaxByteSize: Property<"lldb-index-cache-max-byte-size", "UInt64">,
+    Global,
+    DefaultUnsignedValue<0>,
+    Desc<"The maximum size for the LLDB index cache directory in bytes. A value over the amount of available space on the disk will be reduced to the amount of available space. A value of 0 disables the absolute size-based pruning.">;
+  def LLDBIndexCacheMaxPercent: Property<"lldb-index-cache-max-percent", "UInt64">,
+    Global,
+    DefaultUnsignedValue<0>,
+    Desc<"The maximum size for the cache directory in terms of percentage of the available space on the disk. Set to 100 to indicate no limit, 50 to indicate that the cache size will not be left over half the available disk space. A value over 100 will be reduced to 100. A value of 0 disables the percentage size-based pruning.">;
+  def LLDBIndexCacheExpirationDays: Property<"lldb-index-cache-expiration-days", "UInt64">,
+    Global,
+    DefaultUnsignedValue<7>,
+    Desc<"The expiration time in days for a file. When a file hasn't been accessed for the specified amount of days, it is removed from the cache. A value of 0 disables the expiration-based pruning.">;
 }
 
 let Definition = "debugger" in {
