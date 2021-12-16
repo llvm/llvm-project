@@ -1240,7 +1240,18 @@ Value *ScalarExprEmitter::EmitScalarCast(Value *Src, QualType SrcType,
 
   if (isa<llvm::IntegerType>(DstElementTy)) {
     assert(SrcElementTy->isFloatingPointTy() && "Unknown real conversion");
-    if (DstElementType->isSignedIntegerOrEnumerationType())
+    bool IsSigned = DstElementType->isSignedIntegerOrEnumerationType();
+
+    // If we can't recognize overflow as undefined behavior, assume that
+    // overflow saturates. This protects against normal optimizations if we are
+    // compiling with non-standard FP semantics.
+    if (!CGF.CGM.getCodeGenOpts().StrictFloatCastOverflow) {
+      llvm::Intrinsic::ID IID =
+          IsSigned ? llvm::Intrinsic::fptosi_sat : llvm::Intrinsic::fptoui_sat;
+      return Builder.CreateCall(CGF.CGM.getIntrinsic(IID, {DstTy, SrcTy}), Src);
+    }
+
+    if (IsSigned)
       return Builder.CreateFPToSI(Src, DstTy, "conv");
     return Builder.CreateFPToUI(Src, DstTy, "conv");
   }
