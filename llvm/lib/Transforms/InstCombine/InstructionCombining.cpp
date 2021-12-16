@@ -2561,7 +2561,7 @@ static bool isNeverEqualToUnescapedAlloc(Value *V, const TargetLibraryInfo &TLI,
 }
 
 /// Given a call CB which uses an address UsedV, return true if we can prove the
-/// calls only effect is storing to V.
+/// call's only possible effect is storing to V.
 static bool isRemovableWrite(CallBase &CB, Value *UsedV) {
   if (!CB.use_empty())
     // TODO: add recursion if returned attribute is present
@@ -2580,18 +2580,15 @@ static bool isRemovableWrite(CallBase &CB, Value *UsedV) {
     if (!CB.doesNotCapture(i))
       // capture would allow the address to be read back in an untracked manner
       return false;
-    if (UsedV != CB.getArgOperand(i)) {
-      if (!CB.onlyReadsMemory(i))
-        // A write to another memory location keeps the call live, and thus we
-        // must keep the alloca so that the call has somewhere to write to.
-        // TODO: This results in an inprecision when two values derived from the
-        // same alloca are passed as arguments to the same function.
-        return false;
-      continue;
-    }
-    if (!CB.paramHasAttr(i, Attribute::WriteOnly))
-      // a read would hold the address live
+    if (UsedV != CB.getArgOperand(i) && !CB.onlyReadsMemory(i))
+      // A write to another memory location keeps the call live, and thus we
+      // must keep the alloca so that the call has somewhere to write to.
+      // TODO: This results in an inprecision when two values derived from the
+      // same alloca are passed as arguments to the same function.
       return false;
+    // Note: Both reads from and writes to the alloca are fine.  Since the
+    // result is unused nothing can observe the values read from the alloca
+    // without writing it to some other observable location (checked above).
   }
   return true;
 }
