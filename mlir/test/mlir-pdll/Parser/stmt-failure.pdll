@@ -220,3 +220,56 @@ Pattern {
   let foo: Attr;
   let foo: Attr;
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// `replace`
+//===----------------------------------------------------------------------===//
+
+Pattern {
+  // CHECK: expected `Op` expression
+  replace attr<""> with attr<"">;
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected `with` after root operation
+  replace op<>;
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected `Op`, `Value` or `ValueRange` expression
+  replace op<> with attr<"">;
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected `Op`, `Value` or `ValueRange` expression
+  replace op<> with (attr<"">);
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected `)` after replacement values
+  replace op<>(input: Value) with (input;
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected at least one replacement value, consider using `erase` if no replacement values are desired
+  replace op<>(input: Value) with ();
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected dialect namespace
+  replace op<>(input: Value) with op<>;
+}

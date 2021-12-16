@@ -153,3 +153,32 @@ Pattern {
   let var: ValueRange<_: TypeRange>;
   erase _: Op;
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// ReplaceStmt
+//===----------------------------------------------------------------------===//
+
+// CHECK: Module
+// CHECK: `-ReplaceStmt
+// CHECK:   `-DeclRefExpr {{.*}} Type<Op>
+// CHECK:   ReplValues
+// CHECK:     `-OperationExpr {{.*}} Type<Op<my_dialect.foo>>
+Pattern {
+  replace _: Op with op<my_dialect.foo>;
+}
+
+// -----
+
+// CHECK: Module
+// CHECK: `-ReplaceStmt
+// CHECK:   `-DeclRefExpr {{.*}} Type<Op>
+// CHECK:   ReplValues
+// CHECK:     |-DeclRefExpr {{.*}} Type<Value>
+// CHECK:     |-DeclRefExpr {{.*}} Type<ValueRange>
+// CHECK:     `-MemberAccessExpr {{.*}} Member<$results> Type<ValueRange>
+// CHECK:       `-OperationExpr {{.*}} Type<Op<my_dialect.foo>>
+Pattern {
+  replace _: Op with (_: Value, _: ValueRange, op<my_dialect.foo>);
+}

@@ -86,6 +86,20 @@ EraseStmt *EraseStmt::create(Context &ctx, llvm::SMRange loc, Expr *rootOp) {
 }
 
 //===----------------------------------------------------------------------===//
+// ReplaceStmt
+
+ReplaceStmt *ReplaceStmt::create(Context &ctx, llvm::SMRange loc, Expr *rootOp,
+                                 ArrayRef<Expr *> replExprs) {
+  unsigned allocSize = ReplaceStmt::totalSizeToAlloc<Expr *>(replExprs.size());
+  void *rawData = ctx.getAllocator().Allocate(allocSize, alignof(ReplaceStmt));
+
+  ReplaceStmt *stmt = new (rawData) ReplaceStmt(loc, rootOp, replExprs.size());
+  std::uninitialized_copy(replExprs.begin(), replExprs.end(),
+                          stmt->getReplExprs().begin());
+  return stmt;
+}
+
+//===----------------------------------------------------------------------===//
 // AttributeExpr
 //===----------------------------------------------------------------------===//
 
