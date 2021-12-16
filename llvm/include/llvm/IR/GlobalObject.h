@@ -48,6 +48,7 @@ protected:
         ObjComdat(nullptr) {
     setGlobalValueSubClassData(0);
   }
+  ~GlobalObject();
 
   Comdat *ObjComdat;
   enum {
@@ -122,7 +123,7 @@ public:
   bool hasComdat() const { return getComdat() != nullptr; }
   const Comdat *getComdat() const { return ObjComdat; }
   Comdat *getComdat() { return ObjComdat; }
-  void setComdat(Comdat *C) { ObjComdat = C; }
+  void setComdat(Comdat *C);
 
   using Value::addMetadata;
   using Value::clearMetadata;

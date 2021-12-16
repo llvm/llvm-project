@@ -25,6 +25,10 @@ Comdat::Comdat() = default;
 
 StringRef Comdat::getName() const { return Name->first(); }
 
+void Comdat::addUser(GlobalObject *GO) { Users.insert(GO); }
+
+void Comdat::removeUser(GlobalObject *GO) { Users.erase(GO); }
+
 LLVMComdatRef LLVMGetOrInsertComdat(LLVMModuleRef M, const char *Name) {
   return wrap(unwrap(M)->getOrInsertComdat(Name));
 }
