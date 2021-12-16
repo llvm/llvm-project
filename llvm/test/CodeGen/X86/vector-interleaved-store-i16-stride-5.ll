@@ -919,7 +919,7 @@ define void @vf16(<16 x i16>* %in.vecptr0, <16 x i16>* %in.vecptr1, <16 x i16>* 
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm5 = xmm5[2,1,3,3]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm3, %ymm3
 ; AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm5 = xmm11[4],xmm10[4],xmm11[5],xmm10[5],xmm11[6],xmm10[6],xmm11[7],xmm10[7]
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm6 = xmm5[0,1,6,7,4,5,6,7,8,9,4,5,10,11,6,7]
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm6 = xmm5[0,1,6,7,u,u,u,u,8,9,4,5,10,11,u,u]
 ; AVX1-NEXT:    vpshufhw {{.*#+}} xmm5 = xmm5[0,1,2,3,4,7,6,6]
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm5 = xmm5[0,2,2,3]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm6, %ymm5

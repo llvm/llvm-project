@@ -2940,7 +2940,7 @@ define <4 x i32> @trunc_and_const_v4i64_v4i32(<4 x i64> %a0) nounwind {
 ;
 ; AVX2-FAST-ALL-LABEL: trunc_and_const_v4i64_v4i32:
 ; AVX2-FAST-ALL:       # %bb.0:
-; AVX2-FAST-ALL-NEXT:    vmovaps {{.*#+}} ymm1 = <0,2,4,6,u,u,u,u>
+; AVX2-FAST-ALL-NEXT:    vmovaps {{.*#+}} ymm1 = <u,2,4,6,u,u,u,u>
 ; AVX2-FAST-ALL-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; AVX2-FAST-ALL-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX2-FAST-ALL-NEXT:    vzeroupper
