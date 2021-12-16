@@ -8,9 +8,11 @@
 
 #include "lldb/Core/Mangled.h"
 
+#include "lldb/Core/DataFileCache.h"
 #include "lldb/Core/RichManglingContext.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/DataEncoder.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Logging.h"
 #include "lldb/Utility/RegularExpression.h"
@@ -410,4 +412,112 @@ Stream &operator<<(Stream &s, const Mangled &obj) {
   else
     s << ", demangled = <error>";
   return s;
+}
+
+// When encoding Mangled objects we can get away with encoding as little
+// information as is required. The enumeration below helps us to efficiently
+// encode Mangled objects.
+enum MangledEncoding {
+  /// If the Mangled object has neither a mangled name or demangled name we can
+  /// encode the object with one zero byte using the Empty enumeration.
+  Empty = 0u,
+  /// If the Mangled object has only a demangled name and no mangled named, we
+  /// can encode only the demangled name.
+  DemangledOnly = 1u,
+  /// If the mangle name can calculate the demangled name (it is the
+  /// mangled/demangled counterpart), then we only need to encode the mangled
+  /// name as the demangled name can be recomputed.
+  MangledOnly = 2u,
+  /// If we have a Mangled object with two different names that are not related
+  /// then we need to save both strings. This can happen if we have a name that
+  /// isn't a true mangled name, but we want to be able to lookup a symbol by
+  /// name and type in the symbol table. We do this for Objective C symbols like
+  /// "OBJC_CLASS_$_NSValue" where the mangled named will be set to
+  /// "OBJC_CLASS_$_NSValue" and the demangled name will be manually set to
+  /// "NSValue". If we tried to demangled the name "OBJC_CLASS_$_NSValue" it
+  /// would fail, but in these cases we want these unrelated names to be
+  /// preserved.
+  MangledAndDemangled = 3u
+};
+
+bool Mangled::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
+                     const StringTableReader &strtab) {
+  m_mangled.Clear();
+  m_demangled.Clear();
+  MangledEncoding encoding = (MangledEncoding)data.GetU8(offset_ptr);
+  switch (encoding) {
+    case Empty:
+      return true;
+
+    case DemangledOnly:
+      m_demangled.SetString(strtab.Get(data.GetU32(offset_ptr)));
+      return true;
+
+    case MangledOnly:
+      m_mangled.SetString(strtab.Get(data.GetU32(offset_ptr)));
+      return true;
+
+    case MangledAndDemangled:
+      m_mangled.SetString(strtab.Get(data.GetU32(offset_ptr)));
+      m_demangled.SetString(strtab.Get(data.GetU32(offset_ptr)));
+      return true;
+  }
+  return false;
+}
+/// The encoding format for the Mangled object is as follows:
+///
+/// uint8_t encoding;
+/// char str1[]; (only if DemangledOnly, MangledOnly)
+/// char str2[]; (only if MangledAndDemangled)
+///
+/// The strings are stored as NULL terminated UTF8 strings and str1 and str2
+/// are only saved if we need them based on the encoding.
+///
+/// Some mangled names have a mangled name that can be demangled by the built
+/// in demanglers. These kinds of mangled objects know when the mangled and
+/// demangled names are the counterparts for each other. This is done because
+/// demangling is very expensive and avoiding demangling the same name twice
+/// saves us a lot of compute time. For these kinds of names we only need to
+/// save the mangled name and have the encoding set to "MangledOnly".
+///
+/// If a mangled obejct has only a demangled name, then we save only that string
+/// and have the encoding set to "DemangledOnly".
+///
+/// Some mangled objects have both mangled and demangled names, but the
+/// demangled name can not be computed from the mangled name. This is often used
+/// for runtime named, like Objective C runtime V2 and V3 names. Both these
+/// names must be saved and the encoding is set to "MangledAndDemangled".
+///
+/// For a Mangled object with no names, we only need to set the encoding to
+/// "Empty" and not store any string values.
+void Mangled::Encode(DataEncoder &file, ConstStringTable &strtab) const {
+  MangledEncoding encoding = Empty;
+  if (m_mangled) {
+    encoding = MangledOnly;
+    if (m_demangled) {
+      // We have both mangled and demangled names. If the demangled name is the
+      // counterpart of the mangled name, then we only need to save the mangled
+      // named. If they are different, we need to save both.
+      ConstString s;
+      if (!(m_mangled.GetMangledCounterpart(s) && s == m_demangled))
+        encoding = MangledAndDemangled;
+    }
+  } else if (m_demangled) {
+    encoding = DemangledOnly;
+  }
+  file.AppendU8(encoding);
+  switch (encoding) {
+    case Empty:
+      break;
+    case DemangledOnly:
+      file.AppendU32(strtab.Add(m_demangled));
+      break;
+    case MangledOnly:
+      file.AppendU32(strtab.Add(m_mangled));
+      break;
+    case MangledAndDemangled:
+      file.AppendU32(strtab.Add(m_mangled));
+      file.AppendU32(strtab.Add(m_demangled));
+      break;
+  }
 }

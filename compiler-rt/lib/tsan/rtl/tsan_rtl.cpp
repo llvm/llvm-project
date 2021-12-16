@@ -698,6 +698,18 @@ void Initialize(ThreadState *thr) {
   OnInitialize();
 }
 
+#if !SANITIZER_GO
+#  pragma clang diagnostic push
+// We intentionally use a global constructor to delay the pthread call.
+#  pragma clang diagnostic ignored "-Wglobal-constructors"
+static bool UNUSED __local_tsan_dyninit = [] {
+  if (flags()->force_background_thread)
+    MaybeSpawnBackgroundThread();
+  return false;
+}();
+#  pragma clang diagnostic pop
+#endif
+
 void MaybeSpawnBackgroundThread() {
   // On MIPS, TSan initialization is run before
   // __pthread_initialize_minimal_internal() is finished, so we can not spawn

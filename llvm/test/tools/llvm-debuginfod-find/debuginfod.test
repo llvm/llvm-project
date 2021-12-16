@@ -52,7 +52,7 @@ def test_tool(server_path, tool_args):
     try:
         thread.start()
         env = os.environ
-        env['DEBUGINFOD_URLS'] = f'http://localhost:%s' % port
+        env['DEBUGINFOD_URLS'] = 'http://localhost:%s' % port
         process = subprocess.Popen(
             tool_args, env=env)
         code = process.wait()

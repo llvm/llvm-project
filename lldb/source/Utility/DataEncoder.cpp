@@ -172,6 +172,13 @@ void DataEncoder::AppendData(llvm::StringRef data) {
     m_data_sp->AppendData(bytes, length);
 }
 
+void DataEncoder::AppendData(llvm::ArrayRef<uint8_t> data) {
+  const uint8_t *bytes = data.data();
+  const size_t length = data.size();
+  if (bytes && length > 0)
+    m_data_sp->AppendData(bytes, length);
+}
+
 void DataEncoder::AppendCString(llvm::StringRef data) {
   const char *bytes = data.data();
   const size_t length = data.size();
