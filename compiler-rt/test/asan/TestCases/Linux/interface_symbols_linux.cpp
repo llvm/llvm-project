@@ -1,4 +1,6 @@
 // Check the presence of interface symbols in compiled file.
+// If you're changing this file, please also change
+// ../Darwin/interface_symbols_darwin.cpp
 
 // RUN: %clangxx -x c++-header -o - -E %p/../../../../lib/asan/asan_interface.inc  \
 // RUN:  | sed "s/INTERFACE_FUNCTION/\nINTERFACE_FUNCTION/g" >  %t.asan_interface.inc
