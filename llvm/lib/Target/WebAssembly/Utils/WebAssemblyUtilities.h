@@ -16,6 +16,7 @@
 #define LLVM_LIB_TARGET_WEBASSEMBLY_UTILS_WEBASSEMBLYUTILITIES_H
 
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/Support/CommandLine.h"
 
 namespace llvm {
 
@@ -69,6 +70,12 @@ inline bool isRefType(const Type *Ty) {
 
 bool isChild(const MachineInstr &MI, const WebAssemblyFunctionInfo &MFI);
 bool mayThrow(const MachineInstr &MI);
+
+// Exception handling / setjmp-longjmp handling command-line options
+extern cl::opt<bool> WasmEnableEmEH;   // asm.js-style EH
+extern cl::opt<bool> WasmEnableEmSjLj; // asm.js-style SjLJ
+extern cl::opt<bool> WasmEnableEH;     // EH using Wasm EH instructions
+extern cl::opt<bool> WasmEnableSjLj;   // SjLj using Wasm EH instructions
 
 // Exception-related function names
 extern const char *const ClangCallTerminateFn;

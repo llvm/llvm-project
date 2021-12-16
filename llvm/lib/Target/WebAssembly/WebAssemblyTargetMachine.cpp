@@ -14,6 +14,7 @@
 #include "WebAssemblyTargetMachine.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "TargetInfo/WebAssemblyTargetInfo.h"
+#include "Utils/WebAssemblyUtilities.h"
 #include "WebAssembly.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblyTargetObjectFile.h"
@@ -24,6 +25,7 @@
 #include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Function.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Scalar.h"
@@ -32,28 +34,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "wasm"
-
-// Emscripten's asm.js-style exception handling
-cl::opt<bool>
-    WasmEnableEmEH("enable-emscripten-cxx-exceptions",
-                   cl::desc("WebAssembly Emscripten-style exception handling"),
-                   cl::init(false));
-
-// Emscripten's asm.js-style setjmp/longjmp handling
-cl::opt<bool> WasmEnableEmSjLj(
-    "enable-emscripten-sjlj",
-    cl::desc("WebAssembly Emscripten-style setjmp/longjmp handling"),
-    cl::init(false));
-
-// Exception handling using wasm EH instructions
-cl::opt<bool> WasmEnableEH("wasm-enable-eh",
-                           cl::desc("WebAssembly exception handling"),
-                           cl::init(false));
-
-// setjmp/longjmp handling using wasm EH instrutions
-cl::opt<bool> WasmEnableSjLj("wasm-enable-sjlj",
-                             cl::desc("WebAssembly setjmp/longjmp handling"),
-                             cl::init(false));
 
 // A command-line option to keep implicit locals
 // for the purpose of testing with lit/llc ONLY.
@@ -368,7 +348,23 @@ FunctionPass *WebAssemblyPassConfig::createTargetRegisterAllocator(bool) {
   return nullptr; // No reg alloc
 }
 
-static void basicCheckForEHAndSjLj(const TargetMachine *TM) {
+using WebAssembly::WasmEnableEH;
+using WebAssembly::WasmEnableEmEH;
+using WebAssembly::WasmEnableEmSjLj;
+using WebAssembly::WasmEnableSjLj;
+
+static void basicCheckForEHAndSjLj(TargetMachine *TM) {
+  // Before checking, we make sure TargetOptions.ExceptionModel is the same as
+  // MCAsmInfo.ExceptionsType. Normally these have to be the same, because clang
+  // stores the exception model info in LangOptions, which is later transferred
+  // to TargetOptions and MCAsmInfo. But when clang compiles bitcode directly,
+  // clang's LangOptions is not used and thus the exception model info is not
+  // correctly transferred to TargetOptions and MCAsmInfo, so we make sure we
+  // have the correct exception model in in WebAssemblyMCAsmInfo constructor.
+  // But in this case TargetOptions is still not updated, so we make sure they
+  // are the same.
+  TM->Options.ExceptionModel = TM->getMCAsmInfo()->getExceptionHandlingType();
+
   // Basic Correctness checking related to -exception-model
   if (TM->Options.ExceptionModel != ExceptionHandling::None &&
       TM->Options.ExceptionModel != ExceptionHandling::Wasm)
