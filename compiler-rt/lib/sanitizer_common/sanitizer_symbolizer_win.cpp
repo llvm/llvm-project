@@ -318,7 +318,7 @@ Symbolizer *Symbolizer::PlatformInit() {
 }
 
 void Symbolizer::LateInitialize() {
-  Symbolizer::GetOrInit()->LateInitializeTools();
+  Symbolizer::GetOrInit();
 }
 
 }  // namespace __sanitizer
