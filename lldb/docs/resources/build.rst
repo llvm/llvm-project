@@ -304,8 +304,8 @@ ninja tree.
 macOS
 ^^^^^
 
-On macOS the LLDB test suite requires libc++. Either add ``libcxx`` to
-``LLVM_ENABLE_PROJECTS`` or disable the test suite with
+On macOS the LLDB test suite requires libc++. Either add
+``LLVM_ENABLE_RUNTIMES="libcxx;libcxxabi"`` or disable the test suite with
 ``LLDB_INCLUDE_TESTS=OFF``. Further useful options:
 
 * ``LLDB_BUILD_FRAMEWORK:BOOL``: Builds the LLDB.framework.
@@ -343,7 +343,8 @@ LLVM <https://llvm.org/docs/BuildingADistribution.html>`_):
 
   $ cmake -B /path/to/lldb-build -G Ninja \
           -C /path/to/llvm-project/lldb/cmake/caches/Apple-lldb-macOS.cmake \
-          -DLLVM_ENABLE_PROJECTS="clang;libcxx;lldb" \
+          -DLLVM_ENABLE_PROJECTS="clang;lldb" \
+          -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" \
           llvm-project/llvm
 
   $ DESTDIR=/path/to/lldb-install ninja -C /path/to/lldb-build check-lldb install-distribution
@@ -358,7 +359,8 @@ Build LLDB standalone for development with Xcode:
 
   $ cmake -B /path/to/llvm-build -G Ninja \
           -C /path/to/llvm-project/lldb/cmake/caches/Apple-lldb-base.cmake \
-          -DLLVM_ENABLE_PROJECTS="clang;libcxx" \
+          -DLLVM_ENABLE_PROJECTS="clang" \
+          -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" \
           llvm-project/llvm
   $ ninja -C /path/to/llvm-build
 
