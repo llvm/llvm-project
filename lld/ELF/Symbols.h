@@ -566,11 +566,6 @@ void Symbol::replace(const Symbol &newSym) {
   scriptDefined = old.scriptDefined;
   partition = old.partition;
 
-  // Symbol length is computed lazily. If we already know a symbol length,
-  // propagate it.
-  if (nameData == old.nameData && nameSize == 0 && old.nameSize != 0)
-    nameSize = old.nameSize;
-
   // Print out a log message if --trace-symbol was specified.
   // This is for debugging.
   if (traced)
