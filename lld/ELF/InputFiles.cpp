@@ -1049,7 +1049,9 @@ template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
   ArrayRef<Elf_Sym> eSyms = this->getELFSyms<ELFT>();
   this->symbols.resize(eSyms.size());
   SymbolUnion *locals =
-      getSpecificAllocSingleton<SymbolUnion>().Allocate(firstGlobal);
+      firstGlobal == 0
+          ? nullptr
+          : getSpecificAllocSingleton<SymbolUnion>().Allocate(firstGlobal);
 
   for (size_t i = 0; i != firstGlobal; ++i) {
     const Elf_Sym &eSym = eSyms[i];
