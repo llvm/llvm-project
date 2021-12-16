@@ -269,6 +269,29 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
+// AttributeExpr
+//===----------------------------------------------------------------------===//
+
+/// This expression represents a literal MLIR Attribute, and contains the
+/// textual assembly format of that attribute.
+class AttributeExpr : public Node::NodeBase<AttributeExpr, Expr> {
+public:
+  static AttributeExpr *create(Context &ctx, llvm::SMRange loc,
+                               StringRef value);
+
+  /// Get the raw value of this expression. This is the textual assembly format
+  /// of the MLIR Attribute.
+  StringRef getValue() const { return value; }
+
+private:
+  AttributeExpr(Context &ctx, llvm::SMRange loc, StringRef value)
+      : Base(loc, AttributeType::get(ctx)), value(value) {}
+
+  /// The value referenced by this expression.
+  StringRef value;
+};
+
+//===----------------------------------------------------------------------===//
 // DeclRefExpr
 //===----------------------------------------------------------------------===//
 
@@ -317,6 +340,28 @@ private:
 
   /// The name of the member being accessed from the parent.
   StringRef memberName;
+};
+
+//===----------------------------------------------------------------------===//
+// TypeExpr
+//===----------------------------------------------------------------------===//
+
+/// This expression represents a literal MLIR Type, and contains the textual
+/// assembly format of that type.
+class TypeExpr : public Node::NodeBase<TypeExpr, Expr> {
+public:
+  static TypeExpr *create(Context &ctx, llvm::SMRange loc, StringRef value);
+
+  /// Get the raw value of this expression. This is the textual assembly format
+  /// of the MLIR Type.
+  StringRef getValue() const { return value; }
+
+private:
+  TypeExpr(Context &ctx, llvm::SMRange loc, StringRef value)
+      : Base(loc, TypeType::get(ctx)), value(value) {}
+
+  /// The value referenced by this expression.
+  StringRef value;
 };
 
 //===----------------------------------------------------------------------===//
@@ -672,7 +717,7 @@ inline bool CoreConstraintDecl::classof(const Node *node) {
 }
 
 inline bool Expr::classof(const Node *node) {
-  return isa<DeclRefExpr, MemberAccessExpr>(node);
+  return isa<AttributeExpr, DeclRefExpr, MemberAccessExpr, TypeExpr>(node);
 }
 
 inline bool OpRewriteStmt::classof(const Node *node) {

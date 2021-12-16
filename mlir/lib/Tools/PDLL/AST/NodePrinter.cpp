@@ -76,8 +76,10 @@ private:
   void printImpl(const EraseStmt *stmt);
   void printImpl(const LetStmt *stmt);
 
+  void printImpl(const AttributeExpr *expr);
   void printImpl(const DeclRefExpr *expr);
   void printImpl(const MemberAccessExpr *expr);
+  void printImpl(const TypeExpr *expr);
 
   void printImpl(const AttrConstraintDecl *decl);
   void printImpl(const OpConstraintDecl *decl);
@@ -144,7 +146,8 @@ void NodePrinter::print(const Node *node) {
           const CompoundStmt, const EraseStmt, const LetStmt,
 
           // Expressions.
-          const DeclRefExpr, const MemberAccessExpr,
+          const AttributeExpr, const DeclRefExpr, const MemberAccessExpr,
+          const TypeExpr,
 
           // Decls.
           const AttrConstraintDecl, const OpConstraintDecl,
@@ -172,6 +175,10 @@ void NodePrinter::printImpl(const LetStmt *stmt) {
   printChildren(stmt->getVarDecl());
 }
 
+void NodePrinter::printImpl(const AttributeExpr *expr) {
+  os << "AttributeExpr " << expr << " Value<\"" << expr->getValue() << "\">\n";
+}
+
 void NodePrinter::printImpl(const DeclRefExpr *expr) {
   os << "DeclRefExpr " << expr << " Type<";
   print(expr->getType());
@@ -185,6 +192,10 @@ void NodePrinter::printImpl(const MemberAccessExpr *expr) {
   print(expr->getType());
   os << ">\n";
   printChildren(expr->getParentExpr());
+}
+
+void NodePrinter::printImpl(const TypeExpr *expr) {
+  os << "TypeExpr " << expr << " Value<\"" << expr->getValue() << "\">\n";
 }
 
 void NodePrinter::printImpl(const AttrConstraintDecl *decl) {

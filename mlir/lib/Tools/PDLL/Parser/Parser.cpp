@@ -135,11 +135,13 @@ private:
   FailureOr<ast::Expr *> parseExpr();
 
   /// Identifier expressions.
+  FailureOr<ast::Expr *> parseAttributeExpr();
   FailureOr<ast::Expr *> parseDeclRefExpr(StringRef name, llvm::SMRange loc);
   FailureOr<ast::Expr *> parseIdentifierExpr();
   FailureOr<ast::Expr *> parseMemberAccessExpr(ast::Expr *parentExpr);
   FailureOr<ast::OpNameDecl *> parseOperationName();
   FailureOr<ast::OpNameDecl *> parseWrappedOperationName();
+  FailureOr<ast::Expr *> parseTypeExpr();
   FailureOr<ast::Expr *> parseUnderscoreExpr();
 
   //===--------------------------------------------------------------------===//
@@ -236,6 +238,12 @@ private:
   void consumeToken(Token::Kind kind) {
     assert(curToken.is(kind) && "consumed an unexpected token");
     consumeToken();
+  }
+
+  /// Reset the lexer to the location at the given position.
+  void resetToken(llvm::SMRange tokLoc) {
+    lexer.resetPointer(tokLoc.Start.getPointer());
+    curToken = lexer.lexToken();
   }
 
   /// Consume the specified token if present and return success. On failure,
@@ -725,8 +733,14 @@ FailureOr<ast::Expr *> Parser::parseExpr() {
   // Parse the LHS expression.
   FailureOr<ast::Expr *> lhsExpr;
   switch (curToken.getKind()) {
+  case Token::kw_attr:
+    lhsExpr = parseAttributeExpr();
+    break;
   case Token::identifier:
     lhsExpr = parseIdentifierExpr();
+    break;
+  case Token::kw_type:
+    lhsExpr = parseTypeExpr();
     break;
   default:
     return emitError("expected expression");
@@ -746,6 +760,28 @@ FailureOr<ast::Expr *> Parser::parseExpr() {
     if (failed(lhsExpr))
       return failure();
   }
+}
+
+FailureOr<ast::Expr *> Parser::parseAttributeExpr() {
+  llvm::SMRange loc = curToken.getLoc();
+  consumeToken(Token::kw_attr);
+
+  // If we aren't followed by a `<`, the `attr` keyword is treated as a normal
+  // identifier.
+  if (!consumeIf(Token::less)) {
+    resetToken(loc);
+    return parseIdentifierExpr();
+  }
+
+  if (!curToken.isString())
+    return emitError("expected string literal containing MLIR attribute");
+  std::string attrExpr = curToken.getStringValue();
+  consumeToken();
+
+  if (failed(
+          parseToken(Token::greater, "expected `>` after attribute literal")))
+    return failure();
+  return ast::AttributeExpr::create(ctx, loc, attrExpr);
 }
 
 FailureOr<ast::Expr *> Parser::parseDeclRefExpr(StringRef name,
@@ -830,6 +866,27 @@ FailureOr<ast::OpNameDecl *> Parser::parseWrappedOperationName() {
   if (failed(parseToken(Token::greater, "expected `>` after operation name")))
     return failure();
   return opNameDecl;
+}
+
+FailureOr<ast::Expr *> Parser::parseTypeExpr() {
+  llvm::SMRange loc = curToken.getLoc();
+  consumeToken(Token::kw_type);
+
+  // If we aren't followed by a `<`, the `type` keyword is treated as a normal
+  // identifier.
+  if (!consumeIf(Token::less)) {
+    resetToken(loc);
+    return parseIdentifierExpr();
+  }
+
+  if (!curToken.isString())
+    return emitError("expected string literal containing MLIR type");
+  std::string attrExpr = curToken.getStringValue();
+  consumeToken();
+
+  if (failed(parseToken(Token::greater, "expected `>` after type literal")))
+    return failure();
+  return ast::TypeExpr::create(ctx, loc, attrExpr);
 }
 
 FailureOr<ast::Expr *> Parser::parseUnderscoreExpr() {

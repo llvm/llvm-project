@@ -86,6 +86,16 @@ EraseStmt *EraseStmt::create(Context &ctx, llvm::SMRange loc, Expr *rootOp) {
 }
 
 //===----------------------------------------------------------------------===//
+// AttributeExpr
+//===----------------------------------------------------------------------===//
+
+AttributeExpr *AttributeExpr::create(Context &ctx, llvm::SMRange loc,
+                                     StringRef value) {
+  return new (ctx.getAllocator().Allocate<AttributeExpr>())
+      AttributeExpr(ctx, loc, copyStringWithNull(ctx, value));
+}
+
+//===----------------------------------------------------------------------===//
 // DeclRefExpr
 //===----------------------------------------------------------------------===//
 
@@ -104,6 +114,15 @@ MemberAccessExpr *MemberAccessExpr::create(Context &ctx, llvm::SMRange loc,
                                            StringRef memberName, Type type) {
   return new (ctx.getAllocator().Allocate<MemberAccessExpr>()) MemberAccessExpr(
       loc, parentExpr, memberName.copy(ctx.getAllocator()), type);
+}
+
+//===----------------------------------------------------------------------===//
+// TypeExpr
+//===----------------------------------------------------------------------===//
+
+TypeExpr *TypeExpr::create(Context &ctx, llvm::SMRange loc, StringRef value) {
+  return new (ctx.getAllocator().Allocate<TypeExpr>())
+      TypeExpr(ctx, loc, copyStringWithNull(ctx, value));
 }
 
 //===----------------------------------------------------------------------===//
