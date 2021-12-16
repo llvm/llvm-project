@@ -1,4 +1,4 @@
-//===-- Optimizer/Transforms/Factory.h --------------------------*- C++ -*-===//
+//===-- Optimizer/Builder/Factory.h -----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_OPTIMIZER_TRANSFORMS_FACTORY_H
-#define FORTRAN_OPTIMIZER_TRANSFORMS_FACTORY_H
+#ifndef FORTRAN_OPTIMIZER_BUILDER_FACTORY_H
+#define FORTRAN_OPTIMIZER_BUILDER_FACTORY_H
 
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -93,4 +93,4 @@ originateIndices(mlir::Location loc, B &builder, mlir::Type memTy,
 
 } // namespace fir::factory
 
-#endif // FORTRAN_OPTIMIZER_TRANSFORMS_FACTORY_H
+#endif // FORTRAN_OPTIMIZER_BUILDER_FACTORY_H
