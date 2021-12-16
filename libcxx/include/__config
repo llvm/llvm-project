@@ -146,6 +146,8 @@
 // The incorrect implementation of CityHash has the problem that it drops some
 // bits on the floor.
 #    define _LIBCPP_ABI_FIX_CITYHASH_IMPLEMENTATION
+// Enable breaking changes to stage 2 of string to float conversion in locale
+#    define _LIBCPP_ABI_LOCAL_NUM_GET_NEW_STAGE2_FLOAT_LOOP
 // Remove the base 10 implementation of std::to_chars from the dylib.
 // The implementation moved to the header, but we still export the symbols from
 // the dylib for backwards compatibility.

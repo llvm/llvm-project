@@ -21,6 +21,7 @@
 #include "test_macros.h"
 #include "test_iterators.h"
 #include "hexfloat.h"
+#include "get_float_common.h"
 
 typedef std::num_get<char, cpp17_input_iterator<const char*> > F;
 
@@ -49,6 +50,41 @@ int main(int, char**)
     const my_facet f(1);
     std::ios ios(0);
     double v = -1;
+
+#ifdef _LIBCPP_ABI_LOCAL_NUM_GET_NEW_STAGE2_FLOAT_LOOP
+    // Valid floating point formats where whole string is consumed
+    TEST("0x123.4f", 8, (double)hexfloat<double>(0x123, 0x4f, 0), ios.eofbit);
+    TEST("inf", 3, INFINITY, ios.goodbit | ios.eofbit);
+    TEST("Inf", 3, INFINITY, ios.goodbit | ios.eofbit);
+    TEST("+iNf", 4, INFINITY, ios.goodbit | ios.eofbit);
+    TEST("-inF", 4, -INFINITY, ios.goodbit | ios.eofbit);
+    TEST("INFxyz", 3, INFINITY, ios.goodbit);
+
+    // Valid floating point formats with unparsed trailing characters
+    TEST("123.4f", 5, 123.4, ios.goodbit);
+    TEST("123xyz", 3, 123.0, ios.goodbit);
+    TEST("0x123.4+", 7, (double)hexfloat<double>(0x123, 0x4, 0), ios.goodbit);
+
+    // Shouldn't recognise e, p or x more than once
+    TEST("123.4e-5e-4", 8, 123.4e-5, ios.goodbit);
+    TEST("0x123.4p-5p-4", 10, (double)hexfloat<double>(0x123, 0x4, -5), ios.goodbit);
+    TEST("0x123x5", 5, (double)hexfloat<double>(0x123, 0x0, 0), ios.goodbit);
+
+    // Invalid (non-float) inputs
+    TEST("a", 0, 0.0, ios.failbit);
+    TEST("e", 0, 0.0, ios.failbit);
+    TEST("f", 0, 0.0, ios.failbit);
+    TEST("p", 0, 0.0, ios.failbit);
+    TEST("M", 0, 0.0, ios.failbit);
+    TEST("{}", 0, 0.0, ios.failbit);
+    TEST("x123", 0, 0.0, ios.failbit);
+
+    // Incomplete inputs, i.e. eof before finished parsing
+    TEST("-", 1, 0.0, ios.eofbit | ios.failbit);
+    TEST("+", 1, 0.0, ios.eofbit | ios.failbit);
+    TEST("0x123.4p", 8, 0.0, ios.eofbit | ios.failbit);
+#endif
+
     {
         const char str[] = "123";
         assert((ios.flags() & ios.basefield) == ios.dec);

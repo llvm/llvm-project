@@ -396,11 +396,21 @@ struct __num_get
     static string __stage2_float_prep(ios_base& __iob, _CharT* __atoms, _CharT& __decimal_point,
                                       _CharT& __thousands_sep);
 
+#ifndef _LIBCPP_ABI_LOCAL_NUM_GET_NEW_STAGE2_FLOAT_LOOP
     static int __stage2_float_loop(_CharT __ct, bool& __in_units, char& __exp,
                                    char* __a, char*& __a_end,
                                    _CharT __decimal_point, _CharT __thousands_sep,
                                    const string& __grouping, unsigned* __g,
                                    unsigned*& __g_end, unsigned& __dc, _CharT* __atoms);
+#else // _LIBCPP_ABI_LOCAL_NUM_GET_NEW_STAGE2_FLOAT_LOOP
+    static int __stage2_float_loop(_CharT __ct, bool& __in_units, char& __exp,
+                                   char* __a, char*& __a_end,
+                                   _CharT __decimal_point, _CharT __thousands_sep,
+                                   const string& __grouping, unsigned* __g,
+                                   unsigned*& __g_end, unsigned& __dc, _CharT* __atoms,
+                                   bool& __hex);
+#endif // _LIBCPP_ABI_LOCAL_NUM_GET_NEW_STAGE2_FLOAT_LOOP
+
 #ifndef _LIBCPP_ABI_OPTIMIZED_LOCALE_NUM_GET
     static string __stage2_int_prep(ios_base& __iob, _CharT* __atoms, _CharT& __thousands_sep);
     static int __stage2_int_loop(_CharT __ct, int __base, char* __a, char*& __a_end,
@@ -523,6 +533,7 @@ __num_get<_CharT>::__stage2_int_loop(_CharT __ct, int __base, char* __a, char*& 
     return 0;
 }
 
+#ifndef _LIBCPP_ABI_LOCAL_NUM_GET_NEW_STAGE2_FLOAT_LOOP
 template <class _CharT>
 int
 __num_get<_CharT>::__stage2_float_loop(_CharT __ct, bool& __in_units, char& __exp, char* __a, char*& __a_end,
@@ -579,8 +590,141 @@ __num_get<_CharT>::__stage2_float_loop(_CharT __ct, bool& __in_units, char& __ex
     if (__f >= 22)
         return 0;
     ++__dc;
+
     return 0;
 }
+#else // _LIBCPP_ABI_LOCAL_NUM_GET_NEW_STAGE2_FLOAT_LOOP
+template <class _CharT>
+_LIBCPP_HIDDEN
+int
+__num_get<_CharT>::__stage2_float_loop(_CharT __ct, bool& __in_units, char& __exp, char* __a, char*& __a_end,
+                    _CharT __decimal_point, _CharT __thousands_sep, const string& __grouping,
+                    unsigned* __g, unsigned*& __g_end, unsigned& __dc, _CharT* __atoms, bool& __hex)
+{
+#define __UPPERCASE(__x) ((__x)&0x5F)
+
+    if (__ct == __decimal_point)
+    {
+        if (!__in_units)
+            return -1;
+        __in_units = false;
+        *__a_end++ = '.';
+        if (__grouping.size() != 0 && __g_end-__g < __num_get_buf_sz)
+            *__g_end++ = __dc;
+        return 0;
+    }
+    if (__ct == __thousands_sep && __grouping.size() != 0)
+    {
+        if (!__in_units)
+            return -1;
+        if (__g_end-__g < __num_get_buf_sz)
+        {
+            *__g_end++ = __dc;
+            __dc = 0;
+        }
+        return 0;
+    }
+    ptrdiff_t __f = find(__atoms, __atoms + 32, __ct) - __atoms;
+    const bool __is_digit = __hex ? __f < 22 : __f < 10;
+    const bool __first = __a_end == __a;
+    if (__f >= 32)
+        return -1;
+    char __x = __src[__f];
+    char __X = __UPPERCASE(__x);
+
+    // Return early -1 for any character that is not valid at this point
+    if (__x == '-' || __x == '+')
+    {
+        // Previous character must be __exp, which was marked as seen setting bit 0x80
+        if (!__first && __UPPERCASE(__a_end[-1]) != (__exp & 0x7F))
+            return -1;
+    }
+    else if (__x == 'x' || __x == 'X')
+    {
+        // Can't have 'x' or 'X' as the first character
+        if (__first)
+            return -1;
+        // Must be preceeded by a '0'
+        if (__a_end[-1] != __atoms[0])
+            return -1;
+        // Can't have multiple occurrences of 'x'
+        if (__hex)
+            return -1;
+        __hex = true;
+        __exp = 'P';
+    }
+    else if (__X == __exp)
+    {
+        // Can't have e/E/p/P as first character
+        if (__first)
+            return -1;
+        // Mark exponent as seen
+        __exp |= (char) 0x80;
+        if (__in_units)
+        {
+            __in_units = false;
+            if (__grouping.size() != 0 && __g_end-__g < __num_get_buf_sz)
+                *__g_end++ = __dc;
+        }
+    }
+    else if (!__is_digit)
+    {
+        // Not '.' or __thousands_sep or '+' or '-' or 'x' or __exp or digit.
+        // Special handling for the characters in INF/NAN.
+        // These must appear at the start of the sequence, possibly preceeded by + or -.
+        // Look back one character to check that these are part of a valid sequence.
+
+        if (__first)
+        {
+            // + and - as first character are handled in a separate branch.
+            if (__X != 'I' && __X != 'N')
+                return -1;
+        }
+        else
+        {
+            char __prev =
+                __src[find(__atoms, __atoms + 32, __a_end[-1]) - __atoms];
+            char __PREV = __UPPERCASE(__prev);
+
+            // Rule out special characters out of sequence INF or NAN.
+            if (__X == 'I')
+            {
+                if (__prev != '+' && __prev != '-' && __PREV != 'N')
+                    return -1;
+            }
+            else if (__X == 'N')
+            {
+                if (__prev != '+' && __prev != '-' && __PREV != 'I' &&
+                    __PREV != 'A')
+                    return -1;
+            }
+            else if (__X == 'F')
+            {
+                if (__PREV != 'N')
+                    return -1;
+            }
+            else if (__X == 'A')
+            {
+                if (__PREV != 'N')
+                    return -1;
+            }
+            else if (!__is_digit)
+            {
+                return -1;
+            }
+        }
+    }
+
+    // "...c is allowed as the next character of an input field of the conversion specifier returned by Stage 1."
+    *__a_end++ = __x;
+
+    if (__is_digit)
+        ++__dc;
+
+    return 0;
+#undef __UPPERCASE
+}
+#endif // _LIBCPP_ABI_LOCAL_NUM_GET_NEW_STAGE2_FLOAT_LOOP
 
 extern template struct _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __num_get<char>;
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
@@ -1046,6 +1190,10 @@ num_get<_CharT, _InputIterator>::__do_get_floating_point(iter_type __b, iter_typ
     unsigned __dc = 0;
     bool __in_units = true;
     char __exp = 'E';
+#ifdef _LIBCPP_ABI_LOCAL_NUM_GET_NEW_STAGE2_FLOAT_LOOP
+    bool __hex = false; //< set to true when we see 0x
+#endif
+
     for (; __b != __e; ++__b)
     {
         if (__a_end == __a + __buf.size())
@@ -1056,10 +1204,17 @@ num_get<_CharT, _InputIterator>::__do_get_floating_point(iter_type __b, iter_typ
             __a = &__buf[0];
             __a_end = __a + __tmp;
         }
+#ifndef _LIBCPP_ABI_LOCAL_NUM_GET_NEW_STAGE2_FLOAT_LOOP
         if (this->__stage2_float_loop(*__b, __in_units, __exp, __a, __a_end,
                                       __decimal_point, __thousands_sep,
                                       __grouping, __g, __g_end,
                                       __dc, __atoms))
+#else // _LIBCPP_ABI_LOCAL_NUM_GET_NEW_STAGE2_FLOAT_LOOP
+        if (this->__stage2_float_loop(*__b, __in_units, __exp, __a, __a_end,
+                                      __decimal_point, __thousands_sep,
+                                      __grouping, __g, __g_end,
+                                      __dc, __atoms, __hex))
+#endif // _LIBCPP_ABI_LOCAL_NUM_GET_NEW_STAGE2_FLOAT_LOOP
             break;
     }
     if (__grouping.size() != 0 && __in_units && __g_end-__g < __num_get_base::__num_get_buf_sz)
