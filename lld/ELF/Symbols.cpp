@@ -214,7 +214,7 @@ void Symbol::parseSymbolVersion() {
     return;
   StringRef s = getName();
   size_t pos = s.find('@');
-  if (pos == 0 || pos == StringRef::npos)
+  if (pos == StringRef::npos)
     return;
   StringRef verstr = s.substr(pos + 1);
   if (verstr.empty())
