@@ -421,9 +421,6 @@ StringRef ObjFile<ELFT>::getShtGroupSignature(ArrayRef<Elf_Shdr> sections,
 
 template <class ELFT>
 bool ObjFile<ELFT>::shouldMerge(const Elf_Shdr &sec, StringRef name) {
-  if (!(sec.sh_flags & SHF_MERGE))
-    return false;
-
   // On a regular link we don't merge sections if -O0 (default is -O1). This
   // sometimes makes the linker significantly faster, although the output will
   // be bigger.
@@ -965,54 +962,65 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
   }
   }
 
-  // The GNU linker uses .note.GNU-stack section as a marker indicating
-  // that the code in the object file does not expect that the stack is
-  // executable (in terms of NX bit). If all input files have the marker,
-  // the GNU linker adds a PT_GNU_STACK segment to tells the loader to
-  // make the stack non-executable. Most object files have this section as
-  // of 2017.
-  //
-  // But making the stack non-executable is a norm today for security
-  // reasons. Failure to do so may result in a serious security issue.
-  // Therefore, we make LLD always add PT_GNU_STACK unless it is
-  // explicitly told to do otherwise (by -z execstack). Because the stack
-  // executable-ness is controlled solely by command line options,
-  // .note.GNU-stack sections are simply ignored.
-  if (name == ".note.GNU-stack")
-    return &InputSection::discarded;
+  if (name.startswith(".n")) {
+    // The GNU linker uses .note.GNU-stack section as a marker indicating
+    // that the code in the object file does not expect that the stack is
+    // executable (in terms of NX bit). If all input files have the marker,
+    // the GNU linker adds a PT_GNU_STACK segment to tells the loader to
+    // make the stack non-executable. Most object files have this section as
+    // of 2017.
+    //
+    // But making the stack non-executable is a norm today for security
+    // reasons. Failure to do so may result in a serious security issue.
+    // Therefore, we make LLD always add PT_GNU_STACK unless it is
+    // explicitly told to do otherwise (by -z execstack). Because the stack
+    // executable-ness is controlled solely by command line options,
+    // .note.GNU-stack sections are simply ignored.
+    if (name == ".note.GNU-stack")
+      return &InputSection::discarded;
 
-  // Object files that use processor features such as Intel Control-Flow
-  // Enforcement (CET) or AArch64 Branch Target Identification BTI, use a
-  // .note.gnu.property section containing a bitfield of feature bits like the
-  // GNU_PROPERTY_X86_FEATURE_1_IBT flag. Read a bitmap containing the flag.
-  //
-  // Since we merge bitmaps from multiple object files to create a new
-  // .note.gnu.property containing a single AND'ed bitmap, we discard an input
-  // file's .note.gnu.property section.
-  if (name == ".note.gnu.property") {
-    this->andFeatures = readAndFeatures<ELFT>(InputSection(*this, sec, name));
-    return &InputSection::discarded;
-  }
-
-  // Split stacks is a feature to support a discontiguous stack,
-  // commonly used in the programming language Go. For the details,
-  // see https://gcc.gnu.org/wiki/SplitStacks. An object file compiled
-  // for split stack will include a .note.GNU-split-stack section.
-  if (name == ".note.GNU-split-stack") {
-    if (config->relocatable) {
-      error("cannot mix split-stack and non-split-stack in a relocatable link");
+    // Object files that use processor features such as Intel Control-Flow
+    // Enforcement (CET) or AArch64 Branch Target Identification BTI, use a
+    // .note.gnu.property section containing a bitfield of feature bits like the
+    // GNU_PROPERTY_X86_FEATURE_1_IBT flag. Read a bitmap containing the flag.
+    //
+    // Since we merge bitmaps from multiple object files to create a new
+    // .note.gnu.property containing a single AND'ed bitmap, we discard an input
+    // file's .note.gnu.property section.
+    if (name == ".note.gnu.property") {
+      this->andFeatures = readAndFeatures<ELFT>(InputSection(*this, sec, name));
       return &InputSection::discarded;
     }
-    this->splitStack = true;
-    return &InputSection::discarded;
-  }
 
-  // An object file cmpiled for split stack, but where some of the
-  // functions were compiled with the no_split_stack_attribute will
-  // include a .note.GNU-no-split-stack section.
-  if (name == ".note.GNU-no-split-stack") {
-    this->someNoSplitStack = true;
-    return &InputSection::discarded;
+    // Split stacks is a feature to support a discontiguous stack,
+    // commonly used in the programming language Go. For the details,
+    // see https://gcc.gnu.org/wiki/SplitStacks. An object file compiled
+    // for split stack will include a .note.GNU-split-stack section.
+    if (name == ".note.GNU-split-stack") {
+      if (config->relocatable) {
+        error(
+            "cannot mix split-stack and non-split-stack in a relocatable link");
+        return &InputSection::discarded;
+      }
+      this->splitStack = true;
+      return &InputSection::discarded;
+    }
+
+    // An object file cmpiled for split stack, but where some of the
+    // functions were compiled with the no_split_stack_attribute will
+    // include a .note.GNU-no-split-stack section.
+    if (name == ".note.GNU-no-split-stack") {
+      this->someNoSplitStack = true;
+      return &InputSection::discarded;
+    }
+
+    // Strip existing .note.gnu.build-id sections so that the output won't have
+    // more than one build-id. This is not usually a problem because input
+    // object files normally don't have .build-id sections, but you can create
+    // such files by "ld.{bfd,gold,lld} -r --build-id", and we want to guard
+    // against it.
+    if (name == ".note.gnu.build-id")
+      return &InputSection::discarded;
   }
 
   // The linkonce feature is a sort of proto-comdat. Some glibc i386 object
@@ -1024,20 +1032,13 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
       name == ".gnu.linkonce.t.__i686.get_pc_thunk.bx")
     return &InputSection::discarded;
 
-  // Strip existing .note.gnu.build-id sections so that the output won't have
-  // more than one build-id. This is not usually a problem because input object
-  // files normally don't have .build-id sections, but you can create such files
-  // by "ld.{bfd,gold,lld} -r --build-id", and we want to guard against it.
-  if (name == ".note.gnu.build-id")
-    return &InputSection::discarded;
-
   // The linker merges EH (exception handling) frames and creates a
   // .eh_frame_hdr section for runtime. So we handle them with a special
   // class. For relocatable outputs, they are just passed through.
   if (name == ".eh_frame" && !config->relocatable)
     return make<EhInputSection>(*this, sec, name);
 
-  if (shouldMerge(sec, name))
+  if ((sec.sh_flags & SHF_MERGE) && shouldMerge(sec, name))
     return make<MergeInputSection>(*this, sec, name);
   return make<InputSection>(*this, sec, name);
 }
