@@ -4396,6 +4396,13 @@ TEST_F(FormatTest, MacroDefinitionInsideStatement) {
 
 TEST_F(FormatTest, HashInMacroDefinition) {
   EXPECT_EQ("#define A(c) L#c", format("#define A(c) L#c", getLLVMStyle()));
+  EXPECT_EQ("#define A(c) u#c", format("#define A(c) u#c", getLLVMStyle()));
+  EXPECT_EQ("#define A(c) U#c", format("#define A(c) U#c", getLLVMStyle()));
+  EXPECT_EQ("#define A(c) u8#c", format("#define A(c) u8#c", getLLVMStyle()));
+  EXPECT_EQ("#define A(c) LR#c", format("#define A(c) LR#c", getLLVMStyle()));
+  EXPECT_EQ("#define A(c) uR#c", format("#define A(c) uR#c", getLLVMStyle()));
+  EXPECT_EQ("#define A(c) UR#c", format("#define A(c) UR#c", getLLVMStyle()));
+  EXPECT_EQ("#define A(c) u8R#c", format("#define A(c) u8R#c", getLLVMStyle()));
   verifyFormat("#define A \\\n  b #c;", getLLVMStyleWithColumns(11));
   verifyFormat("#define A  \\\n"
                "  {        \\\n"
