@@ -111,6 +111,9 @@ struct ArgInfo {
 };
 } // Anonymous namespace
 
+using FuncList = SmallVectorImpl<Function *>;
+using ConstList = SmallVectorImpl<Constant *>;
+
 // Helper to check if \p LV is either a constant or a constant
 // range with a single element. This should cover exactly the same cases as the
 // old ValueLatticeElement::isConstant() and is intended to be used in the
@@ -188,7 +191,7 @@ static Constant *getConstantStackValue(CallInst *Call, Value *Val,
 //       ret void
 //     }
 //
-static void constantArgPropagation(SmallVectorImpl<Function *> &WorkList,
+static void constantArgPropagation(FuncList &WorkList,
                                    Module &M, SCCPSolver &Solver) {
   // Iterate over the argument tracked functions see if there
   // are any new constant values for the call instruction via
@@ -273,8 +276,8 @@ public:
   ///
   /// \returns true if at least one function is specialized.
   bool
-  specializeFunctions(SmallVectorImpl<Function *> &FuncDecls,
-                      SmallVectorImpl<Function *> &CurrentSpecializations) {
+  specializeFunctions(FuncList &FuncDecls,
+                      FuncList &CurrentSpecializations) {
     bool Changed = false;
     for (auto *F : FuncDecls) {
       if (!isCandidateFunction(F, CurrentSpecializations))
@@ -299,25 +302,7 @@ public:
       }
     }
 
-    for (auto *SpecializedFunc : CurrentSpecializations) {
-      SpecializedFuncs.insert(SpecializedFunc);
-
-      // Initialize the state of the newly created functions, marking them
-      // argument-tracked and executable.
-      if (SpecializedFunc->hasExactDefinition() &&
-          !SpecializedFunc->hasFnAttribute(Attribute::Naked))
-        Solver.addTrackedFunction(SpecializedFunc);
-      Solver.addArgumentTrackedFunction(SpecializedFunc);
-      FuncDecls.push_back(SpecializedFunc);
-      Solver.markBlockExecutable(&SpecializedFunc->front());
-
-      // Replace the function arguments for the specialized functions.
-      for (Argument &Arg : SpecializedFunc->args())
-        if (!Arg.use_empty() && tryToReplaceWithConstant(&Arg))
-          LLVM_DEBUG(dbgs() << "FnSpecialization: Replaced constant argument: "
-                            << Arg.getName() << "\n");
-    }
-
+    updateSpecializedFuncs(FuncDecls, CurrentSpecializations);
     NumFuncSpecialized += NbFunctionsSpecialized;
     return Changed;
   }
@@ -439,8 +424,7 @@ private:
     return Worklist;
   }
 
-  bool isCandidateFunction(Function *F,
-                           SmallVectorImpl<Function *> &Specializations) {
+  bool isCandidateFunction(Function *F, FuncList &Specializations) {
     // Do not specialize the cloned function again.
     if (SpecializedFuncs.contains(F))
       return false;
@@ -464,8 +448,7 @@ private:
     return true;
   }
 
-  void specializeFunction(ArgInfo &AI,
-                          SmallVectorImpl<Function *> &Specializations) {
+  void specializeFunction(ArgInfo &AI, FuncList &Specializations) {
     Function *Clone = cloneCandidateFunction(AI.Fn);
     Argument *ClonedArg = Clone->getArg(AI.Arg->getArgNo());
 
@@ -626,8 +609,7 @@ private:
   ///
   /// \returns true if the function should be specialized on the given
   /// argument.
-  bool isArgumentInteresting(Argument *A,
-                             SmallVectorImpl<Constant *> &Constants,
+  bool isArgumentInteresting(Argument *A, ConstList &Constants,
                              bool &IsPartial) {
     // For now, don't attempt to specialize functions based on the values of
     // composite types.
@@ -666,8 +648,7 @@ private:
   /// \returns true if all of the values the argument can take on are constant
   /// (e.g., the argument's parent function cannot be called with an
   /// overdefined value).
-  bool getPossibleConstants(Argument *A,
-                            SmallVectorImpl<Constant *> &Constants) {
+  bool getPossibleConstants(Argument *A, ConstList &Constants) {
     Function *F = A->getParent();
     bool AllConstant = true;
 
@@ -748,6 +729,29 @@ private:
         CS->setCalledFunction(Clone);
         Solver.markOverdefined(CS);
       }
+    }
+  }
+
+  void updateSpecializedFuncs(FuncList &FuncDecls,
+                              FuncList &CurrentSpecializations) {
+    for (auto *SpecializedFunc : CurrentSpecializations) {
+      SpecializedFuncs.insert(SpecializedFunc);
+
+      // Initialize the state of the newly created functions, marking them
+      // argument-tracked and executable.
+      if (SpecializedFunc->hasExactDefinition() &&
+          !SpecializedFunc->hasFnAttribute(Attribute::Naked))
+        Solver.addTrackedFunction(SpecializedFunc);
+
+      Solver.addArgumentTrackedFunction(SpecializedFunc);
+      FuncDecls.push_back(SpecializedFunc);
+      Solver.markBlockExecutable(&SpecializedFunc->front());
+
+      // Replace the function arguments for the specialized functions.
+      for (Argument &Arg : SpecializedFunc->args())
+        if (!Arg.use_empty() && tryToReplaceWithConstant(&Arg))
+          LLVM_DEBUG(dbgs() << "FnSpecialization: Replaced constant argument: "
+                            << Arg.getName() << "\n");
     }
   }
 };
