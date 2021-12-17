@@ -39,8 +39,7 @@ public:
   // lldb_private::PluginInterface functions
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
-  bool GetSupportedArchitectureAtIndex(uint32_t idx,
-                                       lldb_private::ArchSpec &arch) override;
+  std::vector<lldb_private::ArchSpec> GetSupportedArchitectures() override;
 
 protected:
   llvm::StringRef GetDeviceSupportDirectoryName() override;

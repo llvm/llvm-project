@@ -90,9 +90,9 @@ Status PlatformRemoteDarwinDevice::ResolveExecutable(
     // so ask the platform for the architectures that we should be using (in
     // the correct order) and see if we can find a match that way
     StreamString arch_names;
-    for (uint32_t idx = 0; GetSupportedArchitectureAtIndex(
-             idx, resolved_module_spec.GetArchitecture());
-         ++idx) {
+    llvm::ListSeparator LS;
+    for (const ArchSpec &arch : GetSupportedArchitectures()) {
+      resolved_module_spec.GetArchitecture() = arch;
       error = ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
                                           nullptr, nullptr, nullptr);
       // Did we find an executable using one of the
@@ -103,10 +103,7 @@ Status PlatformRemoteDarwinDevice::ResolveExecutable(
           error.SetErrorToGenericError();
       }
 
-      if (idx > 0)
-        arch_names.PutCString(", ");
-      arch_names.PutCString(
-          resolved_module_spec.GetArchitecture().GetArchitectureName());
+      arch_names << LS << arch.GetArchitectureName();
     }
 
     if (error.Fail() || !exe_module_sp) {
