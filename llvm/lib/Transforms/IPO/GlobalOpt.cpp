@@ -305,8 +305,9 @@ static bool CleanupConstantGlobalUsers(GlobalVariable *GV,
     else if (auto *LI = dyn_cast<LoadInst>(U)) {
       // A load from zeroinitializer is always zeroinitializer, regardless of
       // any applied offset.
-      if (Init->isNullValue()) {
-        LI->replaceAllUsesWith(Constant::getNullValue(LI->getType()));
+      if (Constant *Res =
+              ConstantFoldLoadFromUniformValue(Init, LI->getType())) {
+        LI->replaceAllUsesWith(Res);
         EraseFromParent(LI);
         continue;
       }
@@ -368,8 +369,7 @@ static bool isSafeSROAGEP(User *U) {
       return false;
   }
 
-  return llvm::all_of(U->users(),
-                      [](User *UU) { return isSafeSROAElementUse(UU); });
+  return llvm::all_of(U->users(), isSafeSROAElementUse);
 }
 
 /// Return true if the specified instruction is a safe user of a derived

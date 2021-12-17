@@ -3504,7 +3504,7 @@ LLVMTypeRef LLVMGetAllocatedType(LLVMValueRef Alloca);
  */
 
 /**
- * Check whether the given GEP instruction is inbounds.
+ * Check whether the given GEP operator is inbounds.
  */
 LLVMBool LLVMIsInBounds(LLVMValueRef GEP);
 
@@ -3514,7 +3514,7 @@ LLVMBool LLVMIsInBounds(LLVMValueRef GEP);
 void LLVMSetIsInBounds(LLVMValueRef GEP, LLVMBool InBounds);
 
 /**
- * Get the source element type of the given GEP instruction.
+ * Get the source element type of the given GEP operator.
  */
 LLVMTypeRef LLVMGetGEPSourceElementType(LLVMValueRef GEP);
 
@@ -3568,7 +3568,7 @@ LLVMBasicBlockRef LLVMGetIncomingBlock(LLVMValueRef PhiNode, unsigned Index);
 
 /**
  * Obtain the number of indices.
- * NB: This also works on GEP.
+ * NB: This also works on GEP operators.
  */
 unsigned LLVMGetNumIndices(LLVMValueRef Inst);
 

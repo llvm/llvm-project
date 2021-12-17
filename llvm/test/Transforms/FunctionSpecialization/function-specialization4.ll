@@ -38,7 +38,7 @@ entry:
   ret i32 %add1
 }
 
-; CONST1-NOT: define internal i32 @foo.1(i32 %x, i32* %b, i32* %c)
+; CONST1:     define internal i32 @foo.1(i32 %x, i32* %b, i32* %c)
 ; CONST1-NOT: define internal i32 @foo.2(i32 %x, i32* %b, i32* %c)
 
 ; CHECK:        define internal i32 @foo.1(i32 %x, i32* %b, i32* %c) {

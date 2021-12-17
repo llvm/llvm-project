@@ -2931,6 +2931,11 @@ handleCompareOpForVectorHelper(const APTy &LHSValue, BinaryOperatorKind Opcode,
     break;
   }
 
+  // The boolean operations on these vector types use an instruction that
+  // results in a mask of '-1' for the 'truth' value.  Ensure that we negate 1
+  // to -1 to make sure that we produce the correct value.
+  Result.negate();
+
   return true;
 }
 
@@ -10179,7 +10184,8 @@ namespace {
     bool VisitInitListExpr(const InitListExpr *E);
     bool VisitUnaryImag(const UnaryOperator *E);
     bool VisitBinaryOperator(const BinaryOperator *E);
-    // FIXME: Missing: unary -, unary ~, conditional operator (for GNU
+    bool VisitUnaryOperator(const UnaryOperator *E);
+    // FIXME: Missing: conditional operator (for GNU
     //                 conditional select), shufflevector, ExtVectorElementExpr
   };
 } // end anonymous namespace
@@ -10362,6 +10368,83 @@ bool VectorExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
     return false;
 
   return Success(LHSValue, E);
+}
+
+static llvm::Optional<APValue> handleVectorUnaryOperator(ASTContext &Ctx,
+                                                         QualType ResultTy,
+                                                         UnaryOperatorKind Op,
+                                                         APValue Elt) {
+  switch (Op) {
+  case UO_Plus:
+    // Nothing to do here.
+    return Elt;
+  case UO_Minus:
+    if (Elt.getKind() == APValue::Int) {
+      Elt.getInt().negate();
+    } else {
+      assert(Elt.getKind() == APValue::Float &&
+             "Vector can only be int or float type");
+      Elt.getFloat().changeSign();
+    }
+    return Elt;
+  case UO_Not:
+    // This is only valid for integral types anyway, so we don't have to handle
+    // float here.
+    assert(Elt.getKind() == APValue::Int &&
+           "Vector operator ~ can only be int");
+    Elt.getInt().flipAllBits();
+    return Elt;
+  case UO_LNot: {
+    if (Elt.getKind() == APValue::Int) {
+      Elt.getInt() = !Elt.getInt();
+      // operator ! on vectors returns -1 for 'truth', so negate it.
+      Elt.getInt().negate();
+      return Elt;
+    }
+    assert(Elt.getKind() == APValue::Float &&
+           "Vector can only be int or float type");
+    // Float types result in an int of the same size, but -1 for true, or 0 for
+    // false.
+    APSInt EltResult{Ctx.getIntWidth(ResultTy),
+                     ResultTy->isUnsignedIntegerType()};
+    if (Elt.getFloat().isZero())
+      EltResult.setAllBits();
+    else
+      EltResult.clearAllBits();
+
+    return APValue{EltResult};
+  }
+  default:
+    // FIXME: Implement the rest of the unary operators.
+    return llvm::None;
+  }
+}
+
+bool VectorExprEvaluator::VisitUnaryOperator(const UnaryOperator *E) {
+  Expr *SubExpr = E->getSubExpr();
+  const auto *VD = SubExpr->getType()->castAs<VectorType>();
+  // This result element type differs in the case of negating a floating point
+  // vector, since the result type is the a vector of the equivilant sized
+  // integer.
+  const QualType ResultEltTy = VD->getElementType();
+  UnaryOperatorKind Op = E->getOpcode();
+
+  APValue SubExprValue;
+  if (!Evaluate(SubExprValue, Info, SubExpr))
+    return false;
+
+  assert(SubExprValue.getVectorLength() == VD->getNumElements() &&
+         "Vector length doesn't match type?");
+
+  SmallVector<APValue, 4> ResultElements;
+  for (unsigned EltNum = 0; EltNum < VD->getNumElements(); ++EltNum) {
+    llvm::Optional<APValue> Elt = handleVectorUnaryOperator(
+        Info.Ctx, ResultEltTy, Op, SubExprValue.getVectorElt(EltNum));
+    if (!Elt)
+      return false;
+    ResultElements.push_back(*Elt);
+  }
+  return Success(APValue(ResultElements.data(), ResultElements.size()), E);
 }
 
 //===----------------------------------------------------------------------===//

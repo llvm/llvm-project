@@ -495,11 +495,10 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
   // instruction as needing e.g. WQM before visiting it and realizing it needs
   // WQM disabled.
   ReversePostOrderTraversal<MachineFunction *> RPOT(&MF);
-  for (auto BI = RPOT.begin(), BE = RPOT.end(); BI != BE; ++BI) {
-    MachineBasicBlock &MBB = **BI;
-    BlockInfo &BBI = Blocks[&MBB];
+  for (MachineBasicBlock *MBB : RPOT) {
+    BlockInfo &BBI = Blocks[MBB];
 
-    for (MachineInstr &MI : MBB) {
+    for (MachineInstr &MI : *MBB) {
       InstrInfo &III = Instructions[&MI];
       unsigned Opcode = MI.getOpcode();
       char Flags = 0;
@@ -561,7 +560,7 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
         BBI.Needs |= StateExact;
         if (!(BBI.InNeeds & StateExact)) {
           BBI.InNeeds |= StateExact;
-          Worklist.push_back(&MBB);
+          Worklist.push_back(MBB);
         }
         GlobalFlags |= StateExact;
         III.Disabled = StateWQM | StateStrict;

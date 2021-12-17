@@ -155,6 +155,15 @@ void OutputSection::commitSection(InputSection *isec) {
     entsize = 0;
 }
 
+static MergeSyntheticSection *createMergeSynthetic(StringRef name,
+                                                   uint32_t type,
+                                                   uint64_t flags,
+                                                   uint32_t alignment) {
+  if ((flags & SHF_STRINGS) && config->optimize >= 2)
+    return make<MergeTailSection>(name, type, flags, alignment);
+  return make<MergeNoTailSection>(name, type, flags, alignment);
+}
+
 // This function scans over the InputSectionBase list sectionBases to create
 // InputSectionDescription::sections.
 //

@@ -112,12 +112,6 @@ static cl::opt<bool> ExhaustiveSearch(
              "and interference cutoffs of last chance recoloring"),
     cl::Hidden);
 
-static cl::opt<bool> EnableLocalReassignment(
-    "enable-local-reassign", cl::Hidden,
-    cl::desc("Local reassignment can yield better allocation decisions, but "
-             "may be compile time intensive"),
-    cl::init(false));
-
 static cl::opt<bool> EnableDeferredSpilling(
     "enable-deferred-spilling", cl::Hidden,
     cl::desc("Instead of spilling a variable right away, defer the actual "
@@ -174,6 +168,7 @@ class RAGreedy : public MachineFunctionPass,
   PQueue Queue;
   std::unique_ptr<VirtRegAuxInfo> VRAI;
   Optional<ExtraRegInfo> ExtraInfo;
+  std::unique_ptr<RegAllocEvictionAdvisor> EvictAdvisor;
 
   // Enum CutOffStage to keep a track whether the register allocation failed
   // because of the cutoffs encountered in last chance recoloring.
@@ -305,10 +300,6 @@ class RAGreedy : public MachineFunctionPass,
   /// Callee-save register cost, calculated once per machine function.
   BlockFrequency CSRCost;
 
-  /// Run or not the local reassignment heuristic. This information is
-  /// obtained from the TargetSubtargetInfo.
-  bool EnableLocalReassign;
-
   /// Enable or not the consideration of the cost of local intervals created
   /// by a split candidate when choosing the best split candidate.
   bool EnableAdvancedRASplitCost;
@@ -377,13 +368,6 @@ private:
   bool calcCompactRegion(GlobalSplitCandidate&);
   void splitAroundRegion(LiveRangeEdit&, ArrayRef<unsigned>);
   void calcGapWeights(MCRegister, SmallVectorImpl<float> &);
-  Register canReassign(LiveInterval &VirtReg, Register PrevReg) const;
-  bool shouldEvict(LiveInterval &A, bool, LiveInterval &B, bool) const;
-  bool canEvictInterferenceBasedOnCost(LiveInterval &, MCRegister, bool,
-                                       EvictionCost &,
-                                       const SmallVirtRegSet &) const;
-  bool canEvictHintInterference(LiveInterval &, MCRegister,
-                                const SmallVirtRegSet &) const;
   bool canEvictInterferenceInRange(const LiveInterval &VirtReg,
                                    MCRegister PhysReg, SlotIndex Start,
                                    SlotIndex End, EvictionCost &MaxCost) const;
@@ -459,8 +443,6 @@ private:
   BlockFrequency getBrokenHintFreq(const HintsInfo &, MCRegister);
   void collectHintInfo(Register, HintsInfo &);
 
-  bool isUnusedCalleeSavedReg(MCRegister PhysReg) const;
-
   /// Greedy RA statistic to remark.
   struct RAGreedyStats {
     unsigned Reloads = 0;
@@ -527,6 +509,7 @@ INITIALIZE_PASS_DEPENDENCY(LiveRegMatrix)
 INITIALIZE_PASS_DEPENDENCY(EdgeBundles)
 INITIALIZE_PASS_DEPENDENCY(SpillPlacement)
 INITIALIZE_PASS_DEPENDENCY(MachineOptimizationRemarkEmitterPass)
+INITIALIZE_PASS_DEPENDENCY(RegAllocEvictionAdvisorAnalysis)
 INITIALIZE_PASS_END(RAGreedy, "greedy",
                 "Greedy Register Allocator", false, false)
 
@@ -593,6 +576,7 @@ void RAGreedy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<EdgeBundles>();
   AU.addRequired<SpillPlacement>();
   AU.addRequired<MachineOptimizationRemarkEmitterPass>();
+  AU.addRequired<RegAllocEvictionAdvisorAnalysis>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -757,7 +741,8 @@ MCRegister RAGreedy::tryAssign(LiveInterval &VirtReg,
       MCRegister PhysHint = Hint.asMCReg();
       LLVM_DEBUG(dbgs() << "missed hint " << printReg(PhysHint, TRI) << '\n');
 
-      if (canEvictHintInterference(VirtReg, PhysHint, FixedRegisters)) {
+      if (EvictAdvisor->canEvictHintInterference(VirtReg, PhysHint,
+                                                 FixedRegisters)) {
         evictInterference(VirtReg, PhysHint, NewVRegs);
         return PhysHint;
       }
@@ -783,7 +768,8 @@ MCRegister RAGreedy::tryAssign(LiveInterval &VirtReg,
 //                         Interference eviction
 //===----------------------------------------------------------------------===//
 
-Register RAGreedy::canReassign(LiveInterval &VirtReg, Register PrevReg) const {
+Register RegAllocEvictionAdvisor::canReassign(LiveInterval &VirtReg,
+                                              Register PrevReg) const {
   auto Order =
       AllocationOrder::create(VirtReg.reg(), *VRM, RegClassInfo, Matrix);
   MCRegister PhysReg;
@@ -822,8 +808,9 @@ Register RAGreedy::canReassign(LiveInterval &VirtReg, Register PrevReg) const {
 ///                   register.
 /// @param B          The live range to be evicted.
 /// @param BreaksHint True when B is already assigned to its preferred register.
-bool RAGreedy::shouldEvict(LiveInterval &A, bool IsHint,
-                           LiveInterval &B, bool BreaksHint) const {
+bool DefaultEvictionAdvisor::shouldEvict(LiveInterval &A, bool IsHint,
+                                         LiveInterval &B,
+                                         bool BreaksHint) const {
   bool CanSplit = ExtraInfo->getStage(B) < RS_Spill;
 
   // Be fairly aggressive about following hints as long as the evictee can be
@@ -840,7 +827,7 @@ bool RAGreedy::shouldEvict(LiveInterval &A, bool IsHint,
 
 /// canEvictHintInterference - return true if the interference for VirtReg
 /// on the PhysReg, which is VirtReg's hint, can be evicted in favor of VirtReg.
-bool RAGreedy::canEvictHintInterference(
+bool DefaultEvictionAdvisor::canEvictHintInterference(
     LiveInterval &VirtReg, MCRegister PhysReg,
     const SmallVirtRegSet &FixedRegisters) const {
   EvictionCost MaxCost;
@@ -858,7 +845,7 @@ bool RAGreedy::canEvictHintInterference(
 /// @param MaxCost Only look for cheaper candidates and update with new cost
 ///                when returning true.
 /// @returns True when interference can be evicted cheaper than MaxCost.
-bool RAGreedy::canEvictInterferenceBasedOnCost(
+bool DefaultEvictionAdvisor::canEvictInterferenceBasedOnCost(
     LiveInterval &VirtReg, MCRegister PhysReg, bool IsHint,
     EvictionCost &MaxCost, const SmallVirtRegSet &FixedRegisters) const {
   // It is only possible to evict virtual register interference.
@@ -1074,7 +1061,7 @@ void RAGreedy::evictInterference(LiveInterval &VirtReg, MCRegister PhysReg,
 
 /// Returns true if the given \p PhysReg is a callee saved register and has not
 /// been used for allocation yet.
-bool RAGreedy::isUnusedCalleeSavedReg(MCRegister PhysReg) const {
+bool RegAllocEvictionAdvisor::isUnusedCalleeSavedReg(MCRegister PhysReg) const {
   MCRegister CSR = RegClassInfo.getLastCalleeSavedAlias(PhysReg);
   if (!CSR)
     return false;
@@ -1082,7 +1069,7 @@ bool RAGreedy::isUnusedCalleeSavedReg(MCRegister PhysReg) const {
   return !Matrix->isPhysRegUsed(PhysReg);
 }
 
-MCRegister RAGreedy::tryFindEvictionCandidate(
+MCRegister DefaultEvictionAdvisor::tryFindEvictionCandidate(
     LiveInterval &VirtReg, const AllocationOrder &Order,
     uint8_t CostPerUseLimit, const SmallVirtRegSet &FixedRegisters) const {
   // Keep track of the cheapest interference seen so far.
@@ -1156,8 +1143,8 @@ MCRegister RAGreedy::tryEvict(LiveInterval &VirtReg, AllocationOrder &Order,
   NamedRegionTimer T("evict", "Evict", TimerGroupName, TimerGroupDescription,
                      TimePassesIsEnabled);
 
-  MCRegister BestPhys =
-      tryFindEvictionCandidate(VirtReg, Order, CostPerUseLimit, FixedRegisters);
+  MCRegister BestPhys = EvictAdvisor->tryFindEvictionCandidate(
+      VirtReg, Order, CostPerUseLimit, FixedRegisters);
   if (BestPhys.isValid())
     evictInterference(VirtReg, BestPhys, NewVRegs);
   return BestPhys;
@@ -1830,7 +1817,7 @@ unsigned RAGreedy::calculateRegionSplitCost(LiveInterval &VirtReg,
   unsigned BestCand = NoCand;
   for (MCPhysReg PhysReg : Order) {
     assert(PhysReg);
-    if (IgnoreCSR && isUnusedCalleeSavedReg(PhysReg))
+    if (IgnoreCSR && EvictAdvisor->isUnusedCalleeSavedReg(PhysReg))
       continue;
 
     // Discard bad candidates before we run out of interference cache cursors.
@@ -2982,8 +2969,8 @@ MCRegister RAGreedy::selectOrSplitImpl(LiveInterval &VirtReg,
     // When NewVRegs is not empty, we may have made decisions such as evicting
     // a virtual register, go with the earlier decisions and use the physical
     // register.
-    if (CSRCost.getFrequency() && isUnusedCalleeSavedReg(PhysReg) &&
-        NewVRegs.empty()) {
+    if (CSRCost.getFrequency() &&
+        EvictAdvisor->isUnusedCalleeSavedReg(PhysReg) && NewVRegs.empty()) {
       MCRegister CSRReg = tryAssignCSRFirstTime(VirtReg, Order, PhysReg,
                                                 CostPerUseLimit, NewVRegs);
       if (CSRReg || !NewVRegs.empty())
@@ -3247,10 +3234,6 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   TII = MF->getSubtarget().getInstrInfo();
   RCI.runOnMachineFunction(mf);
 
-  EnableLocalReassign = EnableLocalReassignment ||
-                        MF->getSubtarget().enableRALocalReassignment(
-                            MF->getTarget().getOptLevel());
-
   EnableAdvancedRASplitCost =
       ConsiderLocalIntervalCost.getNumOccurrences()
           ? ConsiderLocalIntervalCost
@@ -3286,6 +3269,8 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   SA.reset(new SplitAnalysis(*VRM, *LIS, *Loops));
   SE.reset(new SplitEditor(*SA, *AA, *LIS, *VRM, *DomTree, *MBFI, *VRAI));
   ExtraInfo.emplace();
+  EvictAdvisor = getAnalysis<RegAllocEvictionAdvisorAnalysis>().getAdvisor(
+      *MF, Matrix, LIS, VRM, RegClassInfo, &*ExtraInfo);
   IntfCache.init(MF, Matrix->getLiveUnions(), Indexes, LIS, TRI);
   GlobalCand.resize(32);  // This will grow as needed.
   SetOfBrokenHints.clear();
