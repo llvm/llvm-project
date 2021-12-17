@@ -242,7 +242,7 @@ private:
   DependencyScanningFilesystemSharedCache &SharedCache;
   /// The local cache is used by the worker thread to cache file system queries
   /// locally instead of querying the global cache every time.
-  DependencyScanningFilesystemLocalCache Cache;
+  DependencyScanningFilesystemLocalCache LocalCache;
   /// The optional mapping structure which records information about the
   /// excluded conditional directive skip mappings that are used by the
   /// currently active preprocessor.

@@ -161,7 +161,7 @@ DependencyScanningWorkerFilesystem::getOrCreateFileSystemEntry(
     StringRef Filename) {
   bool ShouldBeMinimized = shouldMinimize(Filename);
 
-  const auto *Entry = Cache.getCachedEntry(Filename);
+  const auto *Entry = LocalCache.getCachedEntry(Filename);
   if (Entry && !Entry->needsUpdate(ShouldBeMinimized))
     return EntryRef(ShouldBeMinimized, Entry);
 
