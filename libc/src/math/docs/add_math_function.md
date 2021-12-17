@@ -90,7 +90,7 @@ testing macros specifically used for floating point values, such as
 
 - Add unit test to:
 ```
-  libc/test/src/math/func_test.cpp
+  libc/test/src/math/<func>_test.cpp
 ```
 - Add the corresponding entry point to:
 ```
@@ -105,7 +105,7 @@ order to find exceptional cases for your function's implementation.
 
 - Add an exhaustive test to:
 ```
-  libc/test/src/math/exhaustive/func_test.cpp
+  libc/test/src/math/exhaustive/<func>_test.cpp
 ```
 - Add the corresponding entry point to:
 ```
@@ -157,7 +157,7 @@ implementation (which is very often glibc).
 
 - Build and Run a specific unit test:
 ```
-  $ ninja libc.test.src.math.func_test
+  $ ninja libc.test.src.math.<func>_test
   $ projects/libc/test/src/math/libc.test.src.math.<func>_test
 ```
 
