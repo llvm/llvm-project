@@ -34,7 +34,7 @@ define void @h2s_value_simplify_interaction(i1 %c, i8* %A) {
 ; IS________OPM-LABEL: define {{[^@]+}}@h2s_value_simplify_interaction
 ; IS________OPM-SAME: (i1 [[C:%.*]], i8* nocapture nofree readnone [[A:%.*]]) {
 ; IS________OPM-NEXT:  entry:
-; IS________OPM-NEXT:    [[M:%.*]] = tail call noalias i8* @malloc(i64 noundef 4)
+; IS________OPM-NEXT:    [[M:%.*]] = tail call noalias align 16 i8* @malloc(i64 noundef 4)
 ; IS________OPM-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; IS________OPM:       t:
 ; IS________OPM-NEXT:    br i1 false, label [[DEAD:%.*]], label [[F2:%.*]]
@@ -43,41 +43,41 @@ define void @h2s_value_simplify_interaction(i1 %c, i8* %A) {
 ; IS________OPM:       f2:
 ; IS________OPM-NEXT:    [[C1:%.*]] = bitcast i8* [[M]] to i32*
 ; IS________OPM-NEXT:    [[C2:%.*]] = bitcast i32* [[C1]] to i8*
-; IS________OPM-NEXT:    [[L:%.*]] = load i8, i8* [[C2]], align 1
+; IS________OPM-NEXT:    [[L:%.*]] = load i8, i8* [[C2]], align 16
 ; IS________OPM-NEXT:    call void @usei8(i8 [[L]])
-; IS________OPM-NEXT:    call void @no_sync_func(i8* nocapture nofree noundef [[C2]]) #[[ATTR5:[0-9]+]]
+; IS________OPM-NEXT:    call void @no_sync_func(i8* nocapture nofree noundef align 16 [[C2]]) #[[ATTR5:[0-9]+]]
 ; IS________OPM-NEXT:    br label [[J]]
 ; IS________OPM:       dead:
 ; IS________OPM-NEXT:    unreachable
 ; IS________OPM:       j:
 ; IS________OPM-NEXT:    [[PHI:%.*]] = phi i8* [ [[M]], [[F]] ], [ null, [[F2]] ]
-; IS________OPM-NEXT:    tail call void @no_sync_func(i8* nocapture nofree noundef [[PHI]]) #[[ATTR5]]
+; IS________OPM-NEXT:    tail call void @no_sync_func(i8* nocapture nofree noundef align 16 [[PHI]]) #[[ATTR5]]
 ; IS________OPM-NEXT:    ret void
 ;
 ; IS________NPM-LABEL: define {{[^@]+}}@h2s_value_simplify_interaction
 ; IS________NPM-SAME: (i1 [[C:%.*]], i8* nocapture nofree readnone [[A:%.*]]) {
 ; IS________NPM-NEXT:  entry:
-; IS________NPM-NEXT:    [[TMP0:%.*]] = alloca i8, i64 4, align 1
+; IS________NPM-NEXT:    [[TMP0:%.*]] = alloca i8, i64 4, align 16
 ; IS________NPM-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; IS________NPM:       t:
 ; IS________NPM-NEXT:    br i1 false, label [[DEAD:%.*]], label [[F2:%.*]]
 ; IS________NPM:       f:
 ; IS________NPM-NEXT:    br label [[J:%.*]]
 ; IS________NPM:       f2:
-; IS________NPM-NEXT:    [[L:%.*]] = load i8, i8* [[TMP0]], align 1
+; IS________NPM-NEXT:    [[L:%.*]] = load i8, i8* [[TMP0]], align 16
 ; IS________NPM-NEXT:    call void @usei8(i8 [[L]])
-; IS________NPM-NEXT:    call void @no_sync_func(i8* nocapture nofree noundef [[TMP0]]) #[[ATTR6:[0-9]+]]
+; IS________NPM-NEXT:    call void @no_sync_func(i8* nocapture nofree noundef align 16 [[TMP0]]) #[[ATTR6:[0-9]+]]
 ; IS________NPM-NEXT:    br label [[J]]
 ; IS________NPM:       dead:
 ; IS________NPM-NEXT:    unreachable
 ; IS________NPM:       j:
 ; IS________NPM-NEXT:    [[PHI:%.*]] = phi i8* [ [[TMP0]], [[F]] ], [ null, [[F2]] ]
-; IS________NPM-NEXT:    tail call void @no_sync_func(i8* nocapture nofree noundef [[PHI]]) #[[ATTR6]]
+; IS________NPM-NEXT:    tail call void @no_sync_func(i8* nocapture nofree noundef align 16 [[PHI]]) #[[ATTR6]]
 ; IS________NPM-NEXT:    ret void
 ;
 entry:
   %add = add i64 2, 2
-  %m = tail call noalias i8* @malloc(i64 %add)
+  %m = tail call align 16 noalias i8* @malloc(i64 %add)
   br i1 %c, label %t, label %f
 t:
   br i1 false, label %dead, label %f2

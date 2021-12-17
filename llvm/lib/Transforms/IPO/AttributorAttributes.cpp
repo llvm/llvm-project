@@ -5929,6 +5929,8 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
       }
 
       Align Alignment(1);
+      if (MaybeAlign RetAlign = AI.CB->getRetAlign())
+        Alignment = max(Alignment, RetAlign);
       if (AI.Kind == AllocationInfo::AllocationKind::ALIGNED_ALLOC) {
         Optional<APInt> AlignmentAPI =
             getAPInt(A, *this, *AI.CB->getArgOperand(0));
