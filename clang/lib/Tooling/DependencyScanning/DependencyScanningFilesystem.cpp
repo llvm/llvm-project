@@ -163,7 +163,7 @@ DependencyScanningWorkerFilesystem::getOrCreateFileSystemEntry(
 
   const auto *Entry = LocalCache.getCachedEntry(Filename);
   if (Entry && !Entry->needsUpdate(ShouldBeMinimized))
-    return EntryRef(ShouldBeMinimized, Entry);
+    return EntryRef(ShouldBeMinimized, *Entry);
 
   // FIXME: Handle PCM/PCH files.
   // FIXME: Handle module map files.
@@ -193,7 +193,7 @@ DependencyScanningWorkerFilesystem::getOrCreateFileSystemEntry(
 
   // Store the result in the local cache.
   Entry = &SharedCacheEntry.Value;
-  return EntryRef(ShouldBeMinimized, Entry);
+  return EntryRef(ShouldBeMinimized, *Entry);
 }
 
 llvm::ErrorOr<llvm::vfs::Status>
