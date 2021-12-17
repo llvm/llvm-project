@@ -60,15 +60,15 @@ CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *recordDecl) {
     return entry;
 
   // TODO: Implement checking for whether or not this type is safe to convert.
-  // Clang CodeGen has issues with infinitely looping on recursive types that
-  // has to be worked around
 
-  assert(!dyn_cast_or_null<clang::CXXRecordDecl>(recordDecl) &&
-         "CXXRecordDecl not yet finished");
+  // TODO: handle whether or not layout was skipped and recursive record layout
+
+  if (const auto *cxxRecordDecl = dyn_cast<CXXRecordDecl>(recordDecl)) {
+    assert(cxxRecordDecl->bases().begin() == cxxRecordDecl->bases().end() &&
+           "Base clases NYI");
+  }
 
   entry = computeRecordLayout(recordDecl);
-
-  // TODO: handle whether or not layout was skipped
 
   return entry;
 }
