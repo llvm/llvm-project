@@ -621,4 +621,9 @@ def err_cc1_unbounded_vscale_min : Error<
 
 def err_drv_ssp_missing_offset_argument : Error<
   "'%0' is used without '-mstack-protector-guard-offset', and there is no default">;
+
+def err_drv_only_one_offload_target_supported_in : Error<
+  "Only one offload target is supported in %0.">;
+def err_drv_invalid_or_unsupported_offload_target : Error<
+  "Invalid or unsupported offload target: '%0'.">;
 }
