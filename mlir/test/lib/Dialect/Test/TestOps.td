@@ -11,6 +11,7 @@
 
 include "TestDialect.td"
 include "mlir/Dialect/DLTI/DLTIBase.td"
+include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/RegionKindInterface.td"
@@ -286,6 +287,38 @@ def StringElementsAttrOp : TEST_Op<"string_elements_attr"> {
       StringElementsAttr:$scalar_string_attr
   );
 }
+
+//===----------------------------------------------------------------------===//
+// Test Enum Attributes
+//===----------------------------------------------------------------------===//
+
+// Define the C++ enum.
+def TestEnum
+    : I32EnumAttr<"TestEnum", "a test enum", [
+        I32EnumAttrCase<"First", 0, "first">,
+        I32EnumAttrCase<"Second", 1, "second">,
+        I32EnumAttrCase<"Third", 2, "third">,
+      ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "test";
+}
+
+// Define the enum attribute.
+def TestEnumAttr : EnumAttr<Test_Dialect, TestEnum, "enum">;
+
+// Define an op that contains the enum attribute.
+def OpWithEnum : TEST_Op<"op_with_enum"> {
+  let arguments = (ins TestEnumAttr:$value, OptionalAttr<AnyAttr>:$tag);
+  let assemblyFormat = "$value (`tag` $tag^)? attr-dict";
+}
+
+// Define a pattern that matches and creates an enum attribute.
+def : Pat<(OpWithEnum ConstantAttr<TestEnumAttr,
+                                   "::test::TestEnum::First">:$value,
+                      ConstantAttr<I32Attr, "0">:$tag),
+          (OpWithEnum ConstantAttr<TestEnumAttr,
+                                   "::test::TestEnum::Second">,
+                      ConstantAttr<I32Attr, "1">)>;
 
 //===----------------------------------------------------------------------===//
 // Test Attribute Constraints
