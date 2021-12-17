@@ -557,12 +557,12 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
         if (Error || !Expression.verify(U))
           ReportError("DIE contains invalid DWARF expression:");
       }
-    } else if (Error E = handleErrors(
+    } else if (Error Err = handleErrors(
                    Loc.takeError(), [&](std::unique_ptr<ResolverError> E) {
                      return U->isDWOUnit() ? Error::success()
                                            : Error(std::move(E));
                    }))
-      ReportError(toString(std::move(E)));
+      ReportError(toString(std::move(Err)));
     break;
   }
   case DW_AT_specification:
