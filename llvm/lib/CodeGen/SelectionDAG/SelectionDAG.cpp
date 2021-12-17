@@ -5480,8 +5480,8 @@ SDValue SelectionDAG::foldConstantFPMath(unsigned Opcode, const SDLoc &DL,
   //       should. That will require dealing with a potentially non-default
   //       rounding mode, checking the "opStatus" return value from the APFloat
   //       math calculations, and possibly other variations.
-  ConstantFPSDNode *N1CFP = isConstOrConstSplatFP(N1, /*AllowUndefs*/ true);
-  ConstantFPSDNode *N2CFP = isConstOrConstSplatFP(N2, /*AllowUndefs*/ true);
+  auto *N1CFP = dyn_cast<ConstantFPSDNode>(N1.getNode());
+  auto *N2CFP = dyn_cast<ConstantFPSDNode>(N2.getNode());
   if (N1CFP && N2CFP) {
     APFloat C1 = N1CFP->getValueAPF(); // make copy
     const APFloat &C2 = N2CFP->getValueAPF();
