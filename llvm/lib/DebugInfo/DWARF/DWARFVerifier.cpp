@@ -403,10 +403,13 @@ unsigned DWARFVerifier::verifyDieRanges(const DWARFDie &Die,
   if (!Die.isValid())
     return NumErrors;
 
+  DWARFUnit *Unit = Die.getDwarfUnit();
+
   auto RangesOrError = Die.getAddressRanges();
   if (!RangesOrError) {
     // FIXME: Report the error.
-    ++NumErrors;
+    if (!Unit->isDWOUnit())
+      ++NumErrors;
     llvm::consumeError(RangesOrError.takeError());
     return NumErrors;
   }
@@ -505,10 +508,12 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
   case DW_AT_ranges:
     // Make sure the offset in the DW_AT_ranges attribute is valid.
     if (auto SectionOffset = AttrValue.Value.getAsSectionOffset()) {
-      unsigned DwarfVersion = Die.getDwarfUnit()->getVersion();
+      unsigned DwarfVersion = U->getVersion();
       const DWARFSection &RangeSection = DwarfVersion < 5
                                              ? DObj.getRangesSection()
                                              : DObj.getRnglistsSection();
+      if (U->isDWOUnit() && RangeSection.Data.empty())
+        break;
       if (*SectionOffset >= RangeSection.Data.size())
         ReportError(
             "DW_AT_ranges offset is beyond " +
@@ -531,7 +536,6 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
   case DW_AT_location: {
     if (Expected<std::vector<DWARFLocationExpression>> Loc =
             Die.getLocations(DW_AT_location)) {
-      DWARFUnit *U = Die.getDwarfUnit();
       for (const auto &Entry : *Loc) {
         DataExtractor Data(toStringRef(Entry.Expr), DCtx.isLittleEndian(), 0);
         DWARFExpression Expression(Data, U->getAddressByteSize(),
