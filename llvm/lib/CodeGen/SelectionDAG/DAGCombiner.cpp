@@ -10044,6 +10044,8 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
   MaskedStoreSDNode *MST = cast<MaskedStoreSDNode>(N);
   SDValue Mask = MST->getMask();
   SDValue Chain = MST->getChain();
+  SDValue Value = MST->getValue();
+  SDValue Ptr = MST->getBasePtr();
   SDLoc DL(N);
 
   // Zap masked stores with a zero mask.
@@ -10062,6 +10064,42 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
   // Try transforming N to an indexed store.
   if (CombineToPreIndexedLoadStore(N) || CombineToPostIndexedLoadStore(N))
     return SDValue(N, 0);
+
+  if (MST->isTruncatingStore() && MST->isUnindexed() &&
+      Value.getValueType().isInteger() &&
+      (!isa<ConstantSDNode>(Value) ||
+       !cast<ConstantSDNode>(Value)->isOpaque())) {
+    APInt TruncDemandedBits =
+        APInt::getLowBitsSet(Value.getScalarValueSizeInBits(),
+                             MST->getMemoryVT().getScalarSizeInBits());
+
+    // See if we can simplify the operation with
+    // SimplifyDemandedBits, which only works if the value has a single use.
+    if (SimplifyDemandedBits(Value, TruncDemandedBits)) {
+      // Re-visit the store if anything changed and the store hasn't been merged
+      // with another node (N is deleted) SimplifyDemandedBits will add Value's
+      // node back to the worklist if necessary, but we also need to re-visit
+      // the Store node itself.
+      if (N->getOpcode() != ISD::DELETED_NODE)
+        AddToWorklist(N);
+      return SDValue(N, 0);
+    }
+  }
+
+  // If this is a TRUNC followed by a masked store, fold this into a masked
+  // truncating store.  We can do this even if this is already a masked
+  // truncstore.
+  if ((Value.getOpcode() == ISD::TRUNCATE) && Value.getNode()->hasOneUse() &&
+      MST->isUnindexed() &&
+      TLI.canCombineTruncStore(Value.getOperand(0).getValueType(),
+                               MST->getMemoryVT(), LegalOperations)) {
+    auto Mask = TLI.promoteTargetBoolean(DAG, MST->getMask(),
+                                         Value.getOperand(0).getValueType());
+    return DAG.getMaskedStore(Chain, SDLoc(N), Value.getOperand(0), Ptr,
+                              MST->getOffset(), Mask, MST->getMemoryVT(),
+                              MST->getMemOperand(), MST->getAddressingMode(),
+                              /*IsTruncating=*/true);
+  }
 
   return SDValue();
 }
