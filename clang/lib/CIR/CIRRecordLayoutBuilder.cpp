@@ -107,12 +107,20 @@ CIRRecordLowering::CIRRecordLowering(CIRGenTypes &cirGenTypes,
       isPacked{isPacked} {}
 
 void CIRRecordLowering::lower(bool nonVirtualBaseType) {
-  assert(!cxxRecordDecl && "CXXRecordDecl NYI");
-  assert(!recordDecl->isUnion() && "unions NYI");
+  assert(!recordDecl->isUnion() && "NYI");
 
   accumulateFields();
-  llvm::stable_sort(members);
 
+  if (cxxRecordDecl) {
+    assert(!astRecordLayout.hasOwnVFPtr() && "accumulateVPtrs() NYI");
+    assert(cxxRecordDecl->bases().begin() == cxxRecordDecl->bases().end() &&
+           "Inheritance NYI");
+
+    assert(!members.empty() && "Empty CXXRecordDecls NYI");
+    assert(!nonVirtualBaseType && "non-irtual base type handling NYI");
+  }
+
+  llvm::stable_sort(members);
   // TODO: implement clipTailPadding once bitfields are implemented
   // TODO: implemented packed structs
   // TODO: implement padding
@@ -152,13 +160,14 @@ CIRGenTypes::computeRecordLayout(const clang::RecordDecl *recordDecl) {
   CIRRecordLowering builder(*this, recordDecl, /*packed=*/false);
   builder.lower(/*nonVirtualBaseType=*/false);
 
-  assert(!llvm::isa<clang::CXXRecordDecl>(recordDecl) && "NYI");
+  if (llvm::isa<clang::CXXRecordDecl>(recordDecl)) {
+    assert(builder.astRecordLayout.getNonVirtualSize() ==
+               builder.astRecordLayout.getSize() &&
+           "Virtual base objects NYI");
+  }
+
   assert(!builder.isPacked && "Packed structs NYI");
-  // TODO: figure out the corresponding `opaque`ness mapping from llvm ->
-  // mlir::cir for this comment. Comment lifted from CodeGen
-  // Fill in the struct *after* computing the base type.  Filling in the body
-  // signifies that the type is no longer opaque and record layout is complete,
-  // but we may need to recursively layout D while laying D out as a base type.
+
   auto name = getRecordTypeName(recordDecl, "");
   auto identifier = mlir::StringAttr::get(&getMLIRContext(), name);
   auto structType = mlir::cir::StructType::get(&getMLIRContext(),
@@ -167,7 +176,7 @@ CIRGenTypes::computeRecordLayout(const clang::RecordDecl *recordDecl) {
   assert(!getContext().getLangOpts().DumpRecordLayouts &&
          "RecordLayouts dumping NYI");
 
-  // TODO: implement verification phase
+  // TODO: implement verification
 
   return structType;
 }

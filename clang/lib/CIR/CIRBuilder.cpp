@@ -2093,6 +2093,14 @@ public:
     case Decl::Function:
       buildFunction(cast<FunctionDecl>(decl));
       break;
+    case Decl::CXXRecord: {
+      CXXRecordDecl *crd = cast<CXXRecordDecl>(decl);
+      // TODO: Handle debug info as CodeGenModule.cpp does
+      for (auto *childDecl : crd->decls())
+        if (isa<VarDecl>(childDecl) || isa<CXXRecordDecl>(childDecl))
+          buildTopLevelDecl(childDecl);
+      break;
+    }
     case Decl::Record:
       // There's nothing to do here, we emit everything pertaining to `Record`s
       // lazily.
