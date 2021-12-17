@@ -2119,7 +2119,7 @@ private:
       if (ReuseShuffleIndices.empty())
         dbgs() << "Empty";
       else
-        for (unsigned ReuseIdx : ReuseShuffleIndices)
+        for (int ReuseIdx : ReuseShuffleIndices)
           dbgs() << ReuseIdx << ", ";
       dbgs() << "\n";
       dbgs() << "ReorderIndices: ";
