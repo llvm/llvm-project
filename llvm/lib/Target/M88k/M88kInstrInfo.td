@@ -200,11 +200,15 @@ def LO16 : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(Value, SDLoc(N), MVT::i32);
 }]>;
 
+def gi_LO16 : GICustomOperandRenderer<"renderLO16">, GISDNodeXFormEquiv<LO16>;
+
 // Bits 16-31 (counting from the lsb).
 def HI16 : SDNodeXForm<imm, [{
   uint64_t Value = (N->getZExtValue() & 0x00000000FFFF0000ULL) >> 16;
   return CurDAG->getTargetConstant(Value, SDLoc(N), MVT::i32);
 }]>;
+
+def gi_HI16 : GICustomOperandRenderer<"renderHI16">, GISDNodeXFormEquiv<HI16>;
 
 
 // Immediates for the lower and upper 16 bits of an i32, with the other

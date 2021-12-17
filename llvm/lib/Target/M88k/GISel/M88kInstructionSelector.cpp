@@ -39,6 +39,11 @@ public:
 private:
   bool selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const;
 
+  void renderLO16(MachineInstrBuilder &MIB, const MachineInstr &I,
+                  int OpIdx = -1) const;
+  void renderHI16(MachineInstrBuilder &MIB, const MachineInstr &I,
+                  int OpIdx = -1) const;
+
   const M88kTargetMachine &TM;
   const M88kInstrInfo &TII;
   const M88kRegisterInfo &TRI;
@@ -112,6 +117,26 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
     return false;
   }
   return true;
+}
+
+void M88kInstructionSelector::renderLO16(MachineInstrBuilder &MIB,
+                                         const MachineInstr &I,
+                                         int OpIdx) const {
+  assert(I.getOpcode() == TargetOpcode::G_CONSTANT && OpIdx == -1 &&
+         "Expected G_CONSTANT");
+  uint64_t Val = I.getOperand(1).getCImm()->getZExtValue();
+  Val &= 0x000000000000FFFFULL;
+  MIB.addImm(Val);
+}
+
+void M88kInstructionSelector::renderHI16(MachineInstrBuilder &MIB,
+                                         const MachineInstr &I,
+                                         int OpIdx) const {
+  assert(I.getOpcode() == TargetOpcode::G_CONSTANT && OpIdx == -1 &&
+         "Expected G_CONSTANT");
+  uint64_t Val = I.getOperand(1).getCImm()->getZExtValue();
+  Val = (Val & 0x00000000FFFF0000ULL) >> 16;
+  MIB.addImm(Val);
 }
 
 bool M88kInstructionSelector::select(MachineInstr &I) {
