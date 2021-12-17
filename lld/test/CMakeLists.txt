@@ -30,10 +30,35 @@ configure_lit_site_cfg(
 set(LLD_TEST_DEPS lld)
 if (NOT LLD_BUILT_STANDALONE)
   list(APPEND LLD_TEST_DEPS
-    FileCheck count dsymutil llc llvm-ar llvm-as llvm-bcanalyzer llvm-config
-    llvm-cvtres llvm-dis llvm-dwarfdump llvm-lib llvm-lipo llvm-mc llvm-nm
-    llvm-objcopy llvm-objdump llvm-otool llvm-pdbutil llvm-profdata llvm-readelf
-    llvm-readobj llvm-strip llvm-symbolizer not obj2yaml opt split-file yaml2obj
+    FileCheck
+    count
+    dsymutil
+    llc
+    llvm-ar
+    llvm-as
+    llvm-bcanalyzer
+    llvm-config
+    llvm-cvtres
+    llvm-dis
+    llvm-dwarfdump
+    llvm-lib
+    llvm-lipo
+    llvm-mc
+    llvm-nm
+    llvm-objcopy
+    llvm-objdump
+    llvm-otool
+    llvm-pdbutil
+    llvm-profdata
+    llvm-readelf
+    llvm-readobj
+    llvm-strip
+    llvm-symbolizer
+    not
+    obj2yaml
+    opt
+    split-file
+    yaml2obj
     )
 endif()
 
