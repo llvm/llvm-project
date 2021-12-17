@@ -5,6 +5,7 @@
 # CHECK: Verifying dwo Units...
 # CHECK: error: Compilation unit root DIE is not a unit DIE: DW_TAG_null.
 # CHECK: error: Compilation unit type (DW_UT_split_compile) and root DIE (DW_TAG_null) do not match.
+# CHECK: error: Unsupported DW_AT_location encoding: DW_FORM_data1
 # FIXME: This should read "type unit" or just "unit" to be correct for this case/in general
 # CHECK: error: DIE has DW_AT_decl_file that references a file with index 1 and the compile unit has no line table
 # CHECK: Errors detected
@@ -27,6 +28,7 @@
 	.quad	2                               # DWO ID
 	.byte	1                               # Abbrev [1] DW_TAG_compile_unit
 	.byte	0                               # DW_AT_decl_file
+	.byte	0				# DW_AT_location
 .Ldebug_info_dwo_end2:
 .Ldebug_info_dwo_prestart3:
 	.long	.Ldebug_info_dwo_end3-.Ldebug_info_dwo_start3 # Length of Unit
@@ -60,6 +62,8 @@
 	.byte	17                              # DW_TAG_compile_unit
 	.byte	0                               # DW_CHILDREN_no
 	.byte	58                              # DW_AT_decl_file
+	.byte	11                              # DW_FORM_data1
+	.byte	2                               # DW_AT_location
 	.byte	11                              # DW_FORM_data1
 	.byte	0                               # EOM(1)
 	.byte	0                               # EOM(2)
