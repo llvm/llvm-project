@@ -317,5 +317,28 @@ define i1 @captureDereferenceableOrNullICmp(i32* dereferenceable_or_null(4) %x) 
   ret i1 %2
 }
 
+declare void @capture(i8*)
+
+; FNATTR: define void @nocapture_fptr(i8* (i8*)* nocapture %f, i8* %p)
+define void @nocapture_fptr(i8* (i8*)* %f, i8* %p) {
+  %res = call i8* %f(i8* %p)
+  call void @capture(i8* %res)
+  ret void
+}
+
+; FNATTR: define void @recurse_fptr(i8* (i8*)* nocapture %f, i8* %p)
+define void @recurse_fptr(i8* (i8*)* %f, i8* %p) {
+  %res = call i8* %f(i8* %p)
+  store i8 0, i8* %res
+  ret void
+}
+
+; FNATTR: define void @readnone_indirec(void (i8*)* nocapture readnone %f, i8* readnone %p)
+define void @readnone_indirec(void (i8*)* %f, i8* %p) {
+  call void %f(i8* %p) readnone
+  ret void
+}
+
+
 declare i8* @llvm.launder.invariant.group.p0i8(i8*)
 declare i8* @llvm.strip.invariant.group.p0i8(i8*)
