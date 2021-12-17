@@ -3313,15 +3313,6 @@ void MergeNoTailSection::finalizeContents() {
   });
 }
 
-MergeSyntheticSection *elf::createMergeSynthetic(StringRef name, uint32_t type,
-                                                 uint64_t flags,
-                                                 uint32_t alignment) {
-  bool shouldTailMerge = (flags & SHF_STRINGS) && config->optimize >= 2;
-  if (shouldTailMerge)
-    return make<MergeTailSection>(name, type, flags, alignment);
-  return make<MergeNoTailSection>(name, type, flags, alignment);
-}
-
 template <class ELFT> void elf::splitSections() {
   llvm::TimeTraceScope timeScope("Split sections");
   // splitIntoPieces needs to be called on each MergeInputSection
