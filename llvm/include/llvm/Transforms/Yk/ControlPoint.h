@@ -9,7 +9,7 @@
 #define YK_DUMMY_CONTROL_POINT "yk_control_point"
 
 // The name of the new control point replacing the user's dummy control point.
-#define YK_NEW_CONTROL_POINT "yk_new_control_point"
+#define YK_NEW_CONTROL_POINT "__ykrt_control_point"
 
 namespace llvm {
 ModulePass *createYkControlPointPass();

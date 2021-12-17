@@ -27,12 +27,13 @@
 //     size_t pc;
 // }
 //
+// struct YkCtrlPointStruct cp_vars;
 // pc = 0;
 // while (...) {
-//     struct YkCtrlPointStruct cp_in = { pc };
 //     // Now we call the patched control point.
-//     YkCtrlPointStruct cp_out = yk_new_control_point(cp_in);
-//     pc = cp_out.pc;
+//     cp_vars.pc = pc;
+//     yk_new_control_point(&cp_vars);
+//     pc = cp_vars.pc;
 //     bc = program[pc];
 //     switch (bc) {
 //         // bytecode handlers here.
@@ -40,39 +41,8 @@
 // }
 // ```
 //
-// The call to the dummy control point must be the first thing that appears in
-// an interpreter dispatch loop.
-//
-// YKFIXME: The control point cannot yet be used in an interpreter using
-// threaded dispatch.
-//
-// YKFIXME: The tracing logic is currently over-simplified. The following items
-// need to be fixed:
-//
-//  - The address of `YkLocation` instances are used for identity, but they are
-//    intended to be freely moved by the user.
-//
-//  - Tracing starts when we encounter a location for which we have no machine
-//    code. A hot counter should be used instead.
-//
-//  - There can be only one compiled trace for now. There should be a code
-//    cache mapping from JIT locations to their machine code.
-//
-//  - The interpreter is assumed to be single threaded. We should implement a
-//    synchronisation function in Rust code that synchronises many threads which
-//    are calling the control point concurrently. This function should return a
-//    value that indicates if we should start/stop tracing, or jump to machine
-//    code etc.
-//
-//  - Guards are currently assumed to abort the program.
-//    https://github.com/ykjit/yk/issues/443
-//
-//  - The block that performs the call to JITted code branches back to itself
-//    to achieve rudimentary trace stitching. The looping should really be
-//    implemented in the JITted code itself so that it isn't necessary to
-//    repeatedly enter and exit the JITted code.
-//    https://github.com/ykjit/yk/issues/442
-//===----------------------------------------------------------------------===//
+// Note that this transformation occurs at the LLVM IR level. The above example
+// is shown as C code for easy comprehension.
 
 #include "llvm/Transforms/Yk/ControlPoint.h"
 #include "llvm/IR/BasicBlock.h"
@@ -87,11 +57,6 @@
 
 #define DEBUG_TYPE "yk-control-point"
 #define JIT_STATE_PREFIX "jit-state: "
-
-// These constants mirror `ykrt::mt::JITACTION_*`.
-const uintptr_t JITActionNop = 1;
-const uintptr_t JITActionStartTracing = 2;
-const uintptr_t JITActionStopTracing = 3;
 
 using namespace llvm;
 
@@ -111,124 +76,6 @@ CallInst *findControlPointCall(Module &M) {
     return nullptr;
 
   return cast<CallInst>(*U);
-}
-
-/// Creates a call for printing debug information inside the control point.
-void createJITStatePrint(IRBuilder<> &Builder, Module *Mod, std::string Str) {
-  if (std::getenv("YKD_PRINT_JITSTATE") == nullptr)
-    return;
-  LLVMContext &Context = Mod->getContext();
-  FunctionCallee Puts = Mod->getOrInsertFunction(
-      "__yk_debug_print",
-      FunctionType::get(Type::getVoidTy(Context),
-                        PointerType::get(Type::getInt8Ty(Context), 0), true));
-  Value *PutsString =
-      Builder.CreateGlobalStringPtr(StringRef(JIT_STATE_PREFIX + Str));
-  Builder.CreateCall(Puts, PutsString);
-}
-
-/// Generates the new control point, which includes all logic to start/stop
-/// tracing and to compile/execute traces.
-void createControlPoint(Module &Mod, Function *F, std::vector<Value *> LiveVars,
-                        StructType *YkCtrlPointStruct, Type *YkLocTy) {
-  auto &Context = Mod.getContext();
-
-  // Create control point blocks and setup the IRBuilder.
-  BasicBlock *CtrlPointEntry = BasicBlock::Create(Context, "cpentry", F);
-  BasicBlock *BBExecuteTrace = BasicBlock::Create(Context, "bbhexectrace", F);
-  BasicBlock *BBStartTracing = BasicBlock::Create(Context, "bbstarttracing", F);
-  BasicBlock *BBReturn = BasicBlock::Create(Context, "bbreturn", F);
-  BasicBlock *BBStopTracing = BasicBlock::Create(Context, "bbstoptracing", F);
-
-  // Get the type for a pointer-sized integer.
-  DataLayout DL(&Mod);
-  unsigned PtrBitSize = DL.getPointerSize() * 8;
-  IntegerType *PtrSizedInteger = IntegerType::getIntNTy(Context, PtrBitSize);
-
-  // Some frequently used constants.
-  ConstantInt *JActNop = ConstantInt::get(PtrSizedInteger, JITActionNop);
-  ConstantInt *JActStartTracing =
-      ConstantInt::get(PtrSizedInteger, JITActionStartTracing);
-  ConstantInt *JActStopTracing =
-      ConstantInt::get(PtrSizedInteger, JITActionStopTracing);
-
-  // Add definitions for __yk functions.
-  Function *FuncTransLoc = llvm::Function::Create(
-      FunctionType::get(PtrSizedInteger, {Type::getInt8PtrTy(Context)}, false),
-      GlobalValue::ExternalLinkage, "__ykrt_transition_location", Mod);
-
-  Function *FuncSetCodePtr = llvm::Function::Create(
-      FunctionType::get(
-          Type::getVoidTy(Context),
-          {Type::getInt8PtrTy(Context), Type::getInt8PtrTy(Context)}, false),
-      GlobalValue::ExternalLinkage, "__ykrt_set_loc_code_ptr", Mod);
-
-  Function *FuncStartTracing = llvm::Function::Create(
-      FunctionType::get(Type::getVoidTy(Context), {Type::getInt64Ty(Context)},
-                        false),
-      GlobalValue::ExternalLinkage, "__yktrace_start_tracing", Mod);
-
-  Function *FuncStopTracing = llvm::Function::Create(
-      FunctionType::get(Type::getInt8PtrTy(Context), {}, false),
-      GlobalValue::ExternalLinkage, "__yktrace_stop_tracing", Mod);
-
-  Function *FuncCompileTrace = llvm::Function::Create(
-      FunctionType::get(Type::getInt8PtrTy(Context),
-                        {Type::getInt8PtrTy(Context)}, false),
-      GlobalValue::ExternalLinkage, "__yktrace_irtrace_compile", Mod);
-
-  // Populate the entry block. This calls `__ykrt_transition_location()` to
-  // decide what to do next.
-  IRBuilder<> Builder(CtrlPointEntry);
-  Value *CastLoc =
-      Builder.CreateBitCast(F->getArg(0), Type::getInt8PtrTy(Context));
-  Value *JITAction = Builder.CreateCall(FuncTransLoc->getFunctionType(),
-                                        FuncTransLoc, {CastLoc});
-  SwitchInst *ActionSw = Builder.CreateSwitch(JITAction, BBExecuteTrace, 3);
-  ActionSw->addCase(JActNop, BBReturn);
-  ActionSw->addCase(JActStartTracing, BBStartTracing);
-  ActionSw->addCase(JActStopTracing, BBStopTracing);
-
-  // Populate the block that starts tracing.
-  Builder.SetInsertPoint(BBStartTracing);
-  createJITStatePrint(Builder, &Mod, "start-tracing");
-  Builder.CreateCall(FuncStartTracing->getFunctionType(), FuncStartTracing,
-                     {ConstantInt::get(Context, APInt(64, 1))});
-  Builder.CreateBr(BBReturn);
-
-  // Populate the block that calls a compiled trace. If execution gets into
-  // this block then `JITAction` is a pointer to a compiled trace.
-  Builder.SetInsertPoint(BBExecuteTrace);
-  std::vector<Type *> TypeParams;
-  for (Value *LV : LiveVars) {
-    TypeParams.push_back(LV->getType());
-  }
-  FunctionType *FType = FunctionType::get(
-      Type::getVoidTy(Context), {YkCtrlPointStruct->getPointerTo()}, false);
-  Value *JITActionPtr =
-      Builder.CreateIntToPtr(JITAction, Type::getInt8PtrTy(Context));
-  Value *CastTrace = Builder.CreateBitCast(JITActionPtr, FType->getPointerTo());
-  createJITStatePrint(Builder, &Mod, "enter-jit-code");
-  CallInst *CTResult = Builder.CreateCall(FType, CastTrace, F->getArg(1));
-  createJITStatePrint(Builder, &Mod, "exit-jit-code");
-  CTResult->setTailCall(true);
-  Builder.CreateBr(BBExecuteTrace);
-
-  // Create block that stops tracing, compiles a trace, and stores it in a
-  // global variable.
-  Builder.SetInsertPoint(BBStopTracing);
-  Value *TR =
-      Builder.CreateCall(FuncStopTracing->getFunctionType(), FuncStopTracing);
-  Value *CT = Builder.CreateCall(FuncCompileTrace->getFunctionType(),
-                                 FuncCompileTrace, {TR});
-  Builder.CreateCall(FuncSetCodePtr->getFunctionType(), FuncSetCodePtr,
-                     {CastLoc, CT});
-  createJITStatePrint(Builder, &Mod, "stop-tracing");
-  Builder.CreateBr(BBReturn);
-
-  // Populate the return block.
-  Builder.SetInsertPoint(BBReturn);
-  Builder.CreateRetVoid();
 }
 
 /// Extract all live variables that need to be passed into the control point.
@@ -347,7 +194,6 @@ public:
     OldCtrlPointCall->eraseFromParent();
 
     // Generate new control point logic.
-    createControlPoint(M, NF, LiveVals, CtrlPointVarsTy, YkLocTy);
     return true;
   }
 };
