@@ -186,7 +186,8 @@ public:
     if (auto Err = setUpInProcessLCTMReentryViaEPCIU(**EPCIU))
       return std::move(Err);
 
-    JITTargetMachineBuilder JTMB((*EPC)->getTargetTriple());
+    JITTargetMachineBuilder JTMB(
+        ES->getExecutorProcessControl().getTargetTriple());
 
     auto DL = JTMB.getDefaultDataLayoutForTarget();
     if (!DL)

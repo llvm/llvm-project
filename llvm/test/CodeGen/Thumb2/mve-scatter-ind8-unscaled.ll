@@ -420,65 +420,62 @@ entry:
 define arm_aapcs_vfpcc void @unscaled_v16i8_i8_2gep(i8* %base, <16 x i8>* %offptr, <16 x i8> %input) {
 ; CHECK-LABEL: unscaled_v16i8_i8_2gep:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, lr}
-; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, lr}
-; CHECK-NEXT:    .vsave {d8, d9}
-; CHECK-NEXT:    vpush {d8, d9}
-; CHECK-NEXT:    vldrb.s32 q2, [r1]
-; CHECK-NEXT:    vmov.i32 q1, #0x5
-; CHECK-NEXT:    vldrb.s32 q4, [r1, #8]
+; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, lr}
+; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, lr}
+; CHECK-NEXT:    vldrb.s32 q1, [r1]
+; CHECK-NEXT:    movs r2, #5
+; CHECK-NEXT:    vldrb.s32 q3, [r1, #8]
 ; CHECK-NEXT:    vmov.u8 r6, q0[0]
-; CHECK-NEXT:    vadd.i32 q2, q2, r0
-; CHECK-NEXT:    vmov.u8 r5, q0[4]
-; CHECK-NEXT:    vadd.i32 q2, q2, q1
-; CHECK-NEXT:    vadd.i32 q4, q4, r0
-; CHECK-NEXT:    vmov r2, r3, d4
-; CHECK-NEXT:    vmov.u8 r7, q0[6]
-; CHECK-NEXT:    vmov r12, lr, d5
-; CHECK-NEXT:    vldrb.s32 q2, [r1, #4]
-; CHECK-NEXT:    vadd.i32 q2, q2, r0
-; CHECK-NEXT:    vadd.i32 q3, q2, q1
-; CHECK-NEXT:    vldrb.s32 q2, [r1, #12]
-; CHECK-NEXT:    vmov r4, r8, d6
-; CHECK-NEXT:    vadd.i32 q2, q2, r0
-; CHECK-NEXT:    vmov r0, r9, d7
-; CHECK-NEXT:    vadd.i32 q3, q4, q1
-; CHECK-NEXT:    vadd.i32 q1, q2, q1
-; CHECK-NEXT:    strb r6, [r2]
-; CHECK-NEXT:    vmov.u8 r2, q0[1]
-; CHECK-NEXT:    strb r2, [r3]
-; CHECK-NEXT:    vmov.u8 r6, q0[2]
-; CHECK-NEXT:    vmov r2, r10, d6
-; CHECK-NEXT:    strb.w r6, [r12]
-; CHECK-NEXT:    vmov.u8 r6, q0[3]
-; CHECK-NEXT:    vmov.u8 r3, q0[8]
-; CHECK-NEXT:    strb.w r6, [lr]
-; CHECK-NEXT:    vmov r6, r1, d7
-; CHECK-NEXT:    strb r5, [r4]
-; CHECK-NEXT:    vmov.u8 r5, q0[5]
-; CHECK-NEXT:    strb.w r5, [r8]
-; CHECK-NEXT:    vmov r5, r4, d2
-; CHECK-NEXT:    strb r7, [r0]
-; CHECK-NEXT:    vmov.u8 r0, q0[7]
-; CHECK-NEXT:    strb.w r0, [r9]
-; CHECK-NEXT:    vmov r0, r7, d3
-; CHECK-NEXT:    strb r3, [r2]
-; CHECK-NEXT:    vmov.u8 r2, q0[9]
-; CHECK-NEXT:    strb.w r2, [r10]
-; CHECK-NEXT:    vmov.u8 r2, q0[10]
-; CHECK-NEXT:    strb r2, [r6]
-; CHECK-NEXT:    vmov.u8 r2, q0[11]
+; CHECK-NEXT:    vadd.i32 q1, q1, r0
+; CHECK-NEXT:    vmov.u8 r4, q0[2]
+; CHECK-NEXT:    vadd.i32 q1, q1, r2
+; CHECK-NEXT:    vadd.i32 q3, q3, r0
+; CHECK-NEXT:    vmov r3, r12, d2
+; CHECK-NEXT:    vadd.i32 q3, q3, r2
+; CHECK-NEXT:    vmov lr, r7, d3
+; CHECK-NEXT:    vldrb.s32 q1, [r1, #4]
+; CHECK-NEXT:    vadd.i32 q1, q1, r0
+; CHECK-NEXT:    vadd.i32 q2, q1, r2
+; CHECK-NEXT:    vldrb.s32 q1, [r1, #12]
+; CHECK-NEXT:    vmov r1, r5, d4
+; CHECK-NEXT:    vadd.i32 q1, q1, r0
+; CHECK-NEXT:    vmov r0, r8, d5
+; CHECK-NEXT:    vadd.i32 q1, q1, r2
+; CHECK-NEXT:    vmov.u8 r2, q0[4]
+; CHECK-NEXT:    strb r6, [r3]
+; CHECK-NEXT:    vmov.u8 r3, q0[1]
+; CHECK-NEXT:    strb.w r3, [r12]
+; CHECK-NEXT:    vmov r3, r12, d6
+; CHECK-NEXT:    strb.w r4, [lr]
+; CHECK-NEXT:    vmov.u8 r4, q0[3]
+; CHECK-NEXT:    strb r4, [r7]
+; CHECK-NEXT:    vmov r7, r4, d7
+; CHECK-NEXT:    vmov.u8 r6, q0[8]
 ; CHECK-NEXT:    strb r2, [r1]
-; CHECK-NEXT:    vmov.u8 r1, q0[12]
+; CHECK-NEXT:    vmov.u8 r1, q0[5]
 ; CHECK-NEXT:    strb r1, [r5]
+; CHECK-NEXT:    vmov.u8 r5, q0[6]
+; CHECK-NEXT:    vmov r1, r2, d2
+; CHECK-NEXT:    strb r5, [r0]
+; CHECK-NEXT:    vmov.u8 r0, q0[7]
+; CHECK-NEXT:    strb.w r0, [r8]
+; CHECK-NEXT:    vmov r0, r5, d3
+; CHECK-NEXT:    strb r6, [r3]
+; CHECK-NEXT:    vmov.u8 r3, q0[9]
+; CHECK-NEXT:    strb.w r3, [r12]
+; CHECK-NEXT:    vmov.u8 r3, q0[10]
+; CHECK-NEXT:    strb r3, [r7]
+; CHECK-NEXT:    vmov.u8 r3, q0[11]
+; CHECK-NEXT:    strb r3, [r4]
+; CHECK-NEXT:    vmov.u8 r3, q0[12]
+; CHECK-NEXT:    strb r3, [r1]
 ; CHECK-NEXT:    vmov.u8 r1, q0[13]
-; CHECK-NEXT:    strb r1, [r4]
+; CHECK-NEXT:    strb r1, [r2]
 ; CHECK-NEXT:    vmov.u8 r1, q0[14]
 ; CHECK-NEXT:    strb r1, [r0]
 ; CHECK-NEXT:    vmov.u8 r0, q0[15]
-; CHECK-NEXT:    strb r0, [r7]
-; CHECK-NEXT:    vpop {d8, d9}
-; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, pc}
+; CHECK-NEXT:    strb r0, [r5]
+; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, pc}
 entry:
   %offs = load <16 x i8>, <16 x i8>* %offptr, align 1
   %ptrs = getelementptr inbounds i8, i8* %base, <16 x i8> %offs

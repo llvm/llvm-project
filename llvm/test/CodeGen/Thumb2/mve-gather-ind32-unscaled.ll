@@ -460,8 +460,8 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @qi4(<4 x i32*> %p) {
 ; CHECK-LABEL: qi4:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.i32 q1, #0x10
-; CHECK-NEXT:    vadd.i32 q1, q0, q1
+; CHECK-NEXT:    movs r0, #16
+; CHECK-NEXT:    vadd.i32 q1, q0, r0
 ; CHECK-NEXT:    vldrw.u32 q0, [q1]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -473,8 +473,8 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @qi4_unaligned(<4 x i32*> %p) {
 ; CHECK-LABEL: qi4_unaligned:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.i32 q1, #0x10
-; CHECK-NEXT:    vadd.i32 q0, q0, q1
+; CHECK-NEXT:    movs r0, #16
+; CHECK-NEXT:    vadd.i32 q0, q0, r0
 ; CHECK-NEXT:    vmov r0, r1, d1
 ; CHECK-NEXT:    vmov r2, r3, d0
 ; CHECK-NEXT:    ldr r0, [r0]
