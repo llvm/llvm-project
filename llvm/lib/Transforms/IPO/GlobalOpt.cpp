@@ -369,8 +369,7 @@ static bool isSafeSROAGEP(User *U) {
       return false;
   }
 
-  return llvm::all_of(U->users(),
-                      [](User *UU) { return isSafeSROAElementUse(UU); });
+  return llvm::all_of(U->users(), isSafeSROAElementUse);
 }
 
 /// Return true if the specified instruction is a safe user of a derived

@@ -101,8 +101,7 @@ static bool tryToReplaceWithConstant(SCCPSolver &Solver, Value *V) {
   Constant *Const = nullptr;
   if (V->getType()->isStructTy()) {
     std::vector<ValueLatticeElement> IVs = Solver.getStructLatticeValueFor(V);
-    if (any_of(IVs,
-               [](const ValueLatticeElement &LV) { return isOverdefined(LV); }))
+    if (llvm::any_of(IVs, isOverdefined))
       return false;
     std::vector<Constant *> ConstVals;
     auto *ST = cast<StructType>(V->getType());

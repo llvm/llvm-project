@@ -104,9 +104,7 @@ bool llvm::canPeel(Loop *L) {
   // note that LoopPeeling currently can only update the branch weights of latch
   // blocks and branch weights to blocks with deopt or unreachable do not need
   // updating.
-  return all_of(Exits, [](const BasicBlock *BB) {
-    return IsBlockFollowedByDeoptOrUnreachable(BB);
-  });
+  return llvm::all_of(Exits, IsBlockFollowedByDeoptOrUnreachable);
 }
 
 // This function calculates the number of iterations after which the given Phi

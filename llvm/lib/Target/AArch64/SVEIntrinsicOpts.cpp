@@ -152,7 +152,7 @@ bool SVEIntrinsicOpts::coalescePTrueIntrinsicCalls(
   // Remove the most encompassing ptrue, as well as any promoted ptrues, leaving
   // behind only the ptrues to be coalesced.
   PTrues.remove(MostEncompassingPTrue);
-  PTrues.remove_if([](auto *PTrue) { return isPTruePromoted(PTrue); });
+  PTrues.remove_if(isPTruePromoted);
 
   // Hoist MostEncompassingPTrue to the start of the basic block. It is always
   // safe to do this, since ptrue intrinsic calls are guaranteed to have no

@@ -5920,8 +5920,7 @@ static bool isSequentialOrUndefOrZeroInRange(ArrayRef<int> Mask, unsigned Pos,
 /// from position Pos and ending in Pos+Size is undef or is zero.
 static bool isUndefOrZeroInRange(ArrayRef<int> Mask, unsigned Pos,
                                  unsigned Size) {
-  return llvm::all_of(Mask.slice(Pos, Size),
-                      [](int M) { return isUndefOrZero(M); });
+  return llvm::all_of(Mask.slice(Pos, Size), isUndefOrZero);
 }
 
 /// Helper function to test whether a shuffle mask could be
