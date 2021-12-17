@@ -726,22 +726,20 @@ determinePointerAccessAttrs(Argument *A,
 
       Captures &= !CB.doesNotCapture(UseIndex);
 
-      // Since the optimizer (by design) cannot see the data flow corresponding
-      // to a operand bundle use, these cannot participate in the optimistic SCC
-      // analysis.  Instead, we model the operand bundle uses as arguments in
-      // call to a function external to the SCC.
-      if (IsOperandBundleUse ||
-          !SCCNodes.count(&*std::next(F->arg_begin(), UseIndex))) {
-
-        // The accessors used on call site here do the right thing for calls and
-        // invokes with operand bundles.
-
-        if (!CB.onlyReadsMemory() && !CB.onlyReadsMemory(UseIndex))
-          return Attribute::None;
-        if (!CB.doesNotAccessMemory(UseIndex))
-          IsRead = true;
+      if (CB.isArgOperand(U) && SCCNodes.count(F->getArg(UseIndex))) {
+        // This is an argument which is part of the speculative SCC.  Note that
+        // only operands corresponding to formal arguments of the callee can
+        // participate in the speculation.
+        AddUsersToWorklistIfCapturing();
+        break;
       }
 
+      // The accessors used on call site here do the right thing for calls and
+      // invokes with operand bundles.
+      if (!CB.onlyReadsMemory() && !CB.onlyReadsMemory(UseIndex))
+        return Attribute::None;
+      if (!CB.doesNotAccessMemory(UseIndex))
+        IsRead = true;
       AddUsersToWorklistIfCapturing();
       break;
     }
