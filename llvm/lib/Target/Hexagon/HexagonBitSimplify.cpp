@@ -3182,8 +3182,7 @@ bool HexagonLoopRescheduling::processLoop(LoopCand &C) {
           if (UseI->getOperand(Idx+1).getMBB() != C.LB)
             BadUse = true;
         } else {
-          auto F = find(ShufIns, UseI);
-          if (F == ShufIns.end())
+          if (!llvm::is_contained(ShufIns, UseI))
             BadUse = true;
         }
       } else {
