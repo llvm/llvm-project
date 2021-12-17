@@ -581,16 +581,8 @@ struct ArgumentUsesTracker : public CaptureTracker {
       return true;
     }
 
-    // Note: the callee and the two successor blocks *follow* the argument
-    // operands.  This means there is no need to adjust UseIndex to account for
-    // these.
-
-    unsigned UseIndex =
-        std::distance(const_cast<const Use *>(CB->arg_begin()), U);
-
-    assert(UseIndex < CB->data_operands_size() &&
-           "Indirect function calls should have been filtered above!");
-
+    assert(!CB->isCallee(U) && "callee operand reported captured?");
+    const unsigned UseIndex = CB->getDataOperandNo(U);
     if (UseIndex >= CB->arg_size()) {
       // Data operand, but not a argument operand -- must be a bundle operand
       assert(CB->hasOperandBundles() && "Must be!");
@@ -722,20 +714,10 @@ determinePointerAccessAttrs(Argument *A,
         return Attribute::None;
       }
 
-      // Note: the callee and the two successor blocks *follow* the argument
-      // operands.  This means there is no need to adjust UseIndex to account
-      // for these.
-
-      unsigned UseIndex = std::distance(CB.arg_begin(), U);
-
-      // U cannot be the callee operand use: since we're exploring the
-      // transitive uses of an Argument, having such a use be a callee would
-      // imply the call site is an indirect call or invoke; and we'd take the
-      // early exit above.
-      assert(UseIndex < CB.data_operands_size() &&
-             "Data operand use expected!");
-
-      bool IsOperandBundleUse = UseIndex >= CB.arg_size();
+      // Given we've explictily handled the callee operand above, what's left
+      // must be a data operand (e.g. argument or operand bundle)
+      const unsigned UseIndex = CB.getDataOperandNo(U);
+      const bool IsOperandBundleUse = UseIndex >= CB.arg_size();
 
       if (UseIndex >= F->arg_size() && !IsOperandBundleUse) {
         assert(F->isVarArg() && "More params than args in non-varargs call");
