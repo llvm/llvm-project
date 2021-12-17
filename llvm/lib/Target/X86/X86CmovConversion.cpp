@@ -186,7 +186,7 @@ bool X86CmovConverterPass::runOnMachineFunction(MachineFunction &MF) {
     if (collectCmovCandidates(Blocks, AllCmovGroups, /*IncludeLoads*/ true)) {
       for (auto &Group : AllCmovGroups) {
         // Skip any group that doesn't do at least one memory operand cmov.
-        if (!llvm::any_of(Group, [&](MachineInstr *I) { return I->mayLoad(); }))
+        if (llvm::none_of(Group, [&](MachineInstr *I) { return I->mayLoad(); }))
           continue;
 
         // For CMOV groups which we can rewrite and which contain a memory load,
