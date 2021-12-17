@@ -1388,8 +1388,9 @@ void MergeInputSection::splitNonStrings(ArrayRef<uint8_t> data,
   assert((size % entSize) == 0);
   const bool live = !(flags & SHF_ALLOC) || !config->gcSections;
 
-  for (size_t i = 0; i != size; i += entSize)
-    pieces.emplace_back(i, xxHash64(data.slice(i, entSize)), live);
+  pieces.assign(size / entSize, SectionPiece(0, 0, false));
+  for (size_t i = 0, j = 0; i != size; i += entSize, j++)
+    pieces[j] = {i, (uint32_t)xxHash64(data.slice(i, entSize)), live};
 }
 
 template <class ELFT>
