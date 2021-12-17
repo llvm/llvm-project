@@ -84,6 +84,7 @@ else()
 endif()
 
 include_directories(include)
+pythonize_bool(LIBOMPTARGET_OMPT_SUPPORT)
 
 set(LIBOMPTARGET_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
