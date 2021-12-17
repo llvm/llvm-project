@@ -44,10 +44,6 @@ llvm::Error Reproducer::Initialize(ReproducerMode mode,
     }
     return Instance().SetCapture(root);
   } break;
-  case ReproducerMode::Replay:
-    return Instance().SetReplay(root, /*passive*/ false);
-  case ReproducerMode::PassiveReplay:
-    return Instance().SetReplay(root, /*passive*/ true);
   case ReproducerMode::Off:
     break;
   };
@@ -113,26 +109,6 @@ llvm::Error Reproducer::SetCapture(llvm::Optional<FileSpec> root) {
   }
 
   m_generator.emplace(*root);
-  return Error::success();
-}
-
-llvm::Error Reproducer::SetReplay(llvm::Optional<FileSpec> root, bool passive) {
-  std::lock_guard<std::mutex> guard(m_mutex);
-
-  if (root && m_generator)
-    return make_error<StringError>(
-        "cannot replay a reproducer when generating one",
-        inconvertibleErrorCode());
-
-  if (!root) {
-    m_loader.reset();
-    return Error::success();
-  }
-
-  m_loader.emplace(*root, passive);
-  if (auto e = m_loader->LoadIndex())
-    return e;
-
   return Error::success();
 }
 
@@ -222,8 +198,7 @@ void Generator::AddProvidersToIndex() {
 }
 
 Loader::Loader(FileSpec root, bool passive)
-    : m_root(MakeAbsolute(std::move(root))), m_loaded(false),
-      m_passive_replay(passive) {}
+    : m_root(MakeAbsolute(std::move(root))), m_loaded(false) {}
 
 llvm::Error Loader::LoadIndex() {
   if (m_loaded)

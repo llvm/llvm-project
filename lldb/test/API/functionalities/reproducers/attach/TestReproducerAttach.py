@@ -57,16 +57,6 @@ class ReproducerAttachTestCase(TestBase):
         self.assertIn('Process {} stopped'.format(pid), outs)
         self.assertIn('Reproducer written', outs)
 
-        # Check that replay works.
-        replay = subprocess.Popen(
-            [lldbtest_config.lldbExec, '-replay', reproducer],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE)
-        outs, _ = replay.communicate()
-        outs = outs.decode('utf-8')
-        self.assertIn('Process {} stopped'.format(pid), outs)
-
         # We can dump the reproducer in the current context.
         self.expect('reproducer dump -f {} -p process'.format(reproducer),
                     substrs=['pid = {}'.format(pid), 'name = {}'.format(exe)])

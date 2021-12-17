@@ -57,7 +57,6 @@ public:
   DummyReproducer() : Reproducer(){};
 
   using Reproducer::SetCapture;
-  using Reproducer::SetReplay;
 };
 
 struct YamlData {
@@ -98,42 +97,12 @@ TEST(ReproducerTest, SetCapture) {
             reproducer.GetReproducerPath());
 
   // Ensure that we cannot enable replay.
-  EXPECT_THAT_ERROR(
-      reproducer.SetReplay(FileSpec("//bogus/path", FileSpec::Style::posix)),
-      Failed());
   EXPECT_EQ(nullptr, reproducer.GetLoader());
 
   // Ensure we can disable the generator again.
   EXPECT_THAT_ERROR(reproducer.SetCapture(llvm::None), Succeeded());
   EXPECT_EQ(nullptr, reproducer.GetGenerator());
   EXPECT_EQ(nullptr, reproducer.GetLoader());
-}
-
-TEST(ReproducerTest, SetReplay) {
-  DummyReproducer reproducer;
-
-  // Initially both generator and loader are unset.
-  EXPECT_EQ(nullptr, reproducer.GetGenerator());
-  EXPECT_EQ(nullptr, reproducer.GetLoader());
-
-  // Expected to fail because we can't load the index.
-  EXPECT_THAT_ERROR(
-      reproducer.SetReplay(FileSpec("//bogus/path", FileSpec::Style::posix)),
-      Failed());
-  // However the loader should still be set, which we check here.
-  EXPECT_NE(nullptr, reproducer.GetLoader());
-
-  // Make sure the bogus path is correctly set.
-  EXPECT_EQ(FileSpec("//bogus/path", FileSpec::Style::posix),
-            reproducer.GetLoader()->GetRoot());
-  EXPECT_EQ(FileSpec("//bogus/path", FileSpec::Style::posix),
-            reproducer.GetReproducerPath());
-
-  // Ensure that we cannot enable replay.
-  EXPECT_THAT_ERROR(
-      reproducer.SetCapture(FileSpec("//bogus/path", FileSpec::Style::posix)),
-      Failed());
-  EXPECT_EQ(nullptr, reproducer.GetGenerator());
 }
 
 TEST(GeneratorTest, Create) {
@@ -213,50 +182,5 @@ TEST(GeneratorTest, YamlMultiProvider) {
     recorder->Record(data3);
 
     generator.Keep();
-  }
-
-  {
-    DummyReproducer reproducer;
-    EXPECT_THAT_ERROR(reproducer.SetReplay(FileSpec(root.str())), Succeeded());
-
-    auto &loader = *reproducer.GetLoader();
-    std::unique_ptr<repro::MultiLoader<YamlMultiProvider>> multi_loader =
-        repro::MultiLoader<YamlMultiProvider>::Create(&loader);
-
-    // Read the first file.
-    {
-      llvm::Optional<std::string> file = multi_loader->GetNextFile();
-      EXPECT_TRUE(static_cast<bool>(file));
-
-      auto buffer = llvm::MemoryBuffer::getFile(*file);
-      EXPECT_TRUE(static_cast<bool>(buffer));
-
-      yaml::Input yin((*buffer)->getBuffer());
-      std::vector<YamlData> data;
-      yin >> data;
-
-      ASSERT_EQ(data.size(), 2U);
-      EXPECT_THAT(data, testing::ElementsAre(data0, data1));
-    }
-
-    // Read the second file.
-    {
-      llvm::Optional<std::string> file = multi_loader->GetNextFile();
-      EXPECT_TRUE(static_cast<bool>(file));
-
-      auto buffer = llvm::MemoryBuffer::getFile(*file);
-      EXPECT_TRUE(static_cast<bool>(buffer));
-
-      yaml::Input yin((*buffer)->getBuffer());
-      std::vector<YamlData> data;
-      yin >> data;
-
-      ASSERT_EQ(data.size(), 2U);
-      EXPECT_THAT(data, testing::ElementsAre(data2, data3));
-    }
-
-    // There is no third file.
-    llvm::Optional<std::string> file = multi_loader->GetNextFile();
-    EXPECT_FALSE(static_cast<bool>(file));
   }
 }
