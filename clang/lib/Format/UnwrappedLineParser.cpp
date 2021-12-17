@@ -1941,6 +1941,22 @@ bool UnwrappedLineParser::tryToParseBracedList() {
   return true;
 }
 
+bool UnwrappedLineParser::tryToParseCSharpLambda() {
+  // Fat arrows (=>) have tok::TokenKind tok::equal but TokenType
+  // TT_FatArrow. They always start an expression or a child block if
+  // followed by a curly brace.
+  nextToken();
+  if (FormatTok->isNot(tok::l_brace))
+    return false;
+  // C# may break after => if the next character is a newline.
+  if (Style.BraceWrapping.AfterFunction) {
+    // calling `addUnwrappedLine()` here causes odd parsing errors.
+    FormatTok->MustBreakBefore = true;
+  }
+  parseChildBlock();
+  return true;
+}
+
 bool UnwrappedLineParser::parseBracedList(bool ContinueOnSemicolons,
                                           bool IsEnum,
                                           tok::TokenKind ClosingBraceKind) {
@@ -1949,23 +1965,9 @@ bool UnwrappedLineParser::parseBracedList(bool ContinueOnSemicolons,
   // FIXME: Once we have an expression parser in the UnwrappedLineParser,
   // replace this by using parseAssignmentExpression() inside.
   do {
-    if (Style.isCSharp()) {
-      // Fat arrows (=>) have tok::TokenKind tok::equal but TokenType
-      // TT_FatArrow. They always start an expression or a child block if
-      // followed by a curly brace.
-      if (FormatTok->is(TT_FatArrow)) {
-        nextToken();
-        if (FormatTok->is(tok::l_brace)) {
-          // C# may break after => if the next character is a newline.
-          if (Style.isCSharp() && Style.BraceWrapping.AfterFunction == true) {
-            // calling `addUnwrappedLine()` here causes odd parsing errors.
-            FormatTok->MustBreakBefore = true;
-          }
-          parseChildBlock();
-          continue;
-        }
-      }
-    }
+    if (Style.isCSharp() && FormatTok->is(TT_FatArrow))
+      if (tryToParseCSharpLambda())
+        continue;
     if (Style.Language == FormatStyle::LK_JavaScript) {
       if (FormatTok->is(Keywords.kw_function) ||
           FormatTok->startsSequence(Keywords.kw_async, Keywords.kw_function)) {
@@ -2092,7 +2094,7 @@ void UnwrappedLineParser::parseParens() {
       break;
     case tok::equal:
       if (Style.isCSharp() && FormatTok->is(TT_FatArrow))
-        parseStructuralElement();
+        tryToParseCSharpLambda();
       else
         nextToken();
       break;
