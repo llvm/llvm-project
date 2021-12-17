@@ -18,7 +18,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/ProfileData/InstrProf.h"
-#include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/LineIterator.h"
@@ -97,9 +96,6 @@ public:
 
   virtual bool instrEntryBBEnabled() const = 0;
 
-  /// Return true if we must provide debug info to create PGO profiles.
-  virtual bool useDebugInfoCorrelate() const { return false; }
-
   /// Return the PGO symtab. There are three different readers:
   /// Raw, Text, and Indexed profile readers. The first two types
   /// of readers are used only by llvm-profdata tool, while the indexed
@@ -154,12 +150,10 @@ public:
 
   /// Factory method to create an appropriately typed reader for the given
   /// instrprof file.
-  static Expected<std::unique_ptr<InstrProfReader>>
-  create(const Twine &Path, const InstrProfCorrelator *Correlator = nullptr);
+  static Expected<std::unique_ptr<InstrProfReader>> create(const Twine &Path);
 
   static Expected<std::unique_ptr<InstrProfReader>>
-  create(std::unique_ptr<MemoryBuffer> Buffer,
-         const InstrProfCorrelator *Correlator = nullptr);
+  create(std::unique_ptr<MemoryBuffer> Buffer);
 };
 
 /// Reader for the simple text based instrprof format.
@@ -221,9 +215,6 @@ class RawInstrProfReader : public InstrProfReader {
 private:
   /// The profile data file contents.
   std::unique_ptr<MemoryBuffer> DataBuffer;
-  /// If available, this hold the ProfileData array used to correlate raw
-  /// instrumentation data to their functions.
-  const InstrProfCorrelatorImpl<IntPtrT> *Correlator;
   bool ShouldSwapBytes;
   // The value of the version field of the raw profile data header. The lower 56
   // bits specifies the format version and the most significant 8 bits specify
@@ -235,7 +226,7 @@ private:
   const RawInstrProf::ProfileData<IntPtrT> *DataEnd;
   const uint64_t *CountersStart;
   const char *NamesStart;
-  const char *NamesEnd;
+  uint64_t NamesSize;
   // After value profile is all read, this pointer points to
   // the header of next profile data (if exists)
   const uint8_t *ValueDataStart;
@@ -246,11 +237,8 @@ private:
   const uint8_t *BinaryIdsStart;
 
 public:
-  RawInstrProfReader(std::unique_ptr<MemoryBuffer> DataBuffer,
-                     const InstrProfCorrelator *Correlator)
-      : DataBuffer(std::move(DataBuffer)),
-        Correlator(dyn_cast_or_null<const InstrProfCorrelatorImpl<IntPtrT>>(
-            Correlator)) {}
+  RawInstrProfReader(std::unique_ptr<MemoryBuffer> DataBuffer)
+      : DataBuffer(std::move(DataBuffer)) {}
   RawInstrProfReader(const RawInstrProfReader &) = delete;
   RawInstrProfReader &operator=(const RawInstrProfReader &) = delete;
 
@@ -269,10 +257,6 @@ public:
 
   bool instrEntryBBEnabled() const override {
     return (Version & VARIANT_MASK_INSTR_ENTRY) != 0;
-  }
-
-  bool useDebugInfoCorrelate() const override {
-    return (Version & VARIANT_MASK_DBG_CORRELATE) != 0;
   }
 
   InstrProfSymtab &getSymtab() override {
