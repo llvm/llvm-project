@@ -17220,10 +17220,11 @@ For example:
 Arguments:
 """"""""""
 
-The first two operands are vectors with the same type. The third argument
-``imm`` is the start index, modulo VL, where VL is the runtime vector length of
-the source/result vector. The ``imm`` is a signed integer constant in the range
-``-VL <= imm < VL``. For values outside of this range the result is poison.
+The first two operands are vectors with the same type. The start index is imm
+modulo the runtime number of elements in the source vector. For a fixed-width
+vector <N x eltty>, imm is a signed integer constant in the range
+-N <= imm < N. For a scalable vector <vscale x N x eltty>, imm is a signed
+integer constant in the range -X <= imm < X where X=vscale_range_min * N.
 
 '``llvm.experimental.stepvector``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
