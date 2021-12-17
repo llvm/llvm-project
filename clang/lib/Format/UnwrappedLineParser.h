@@ -138,6 +138,7 @@ private:
   // https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/where-generic-type-constraint
   void parseCSharpGenericTypeConstraint();
   bool tryToParseLambda();
+  bool tryToParseCSharpLambda();
   bool tryToParseLambdaIntroducer();
   bool tryToParsePropertyAccessor();
   void tryToParseJSFunction();
