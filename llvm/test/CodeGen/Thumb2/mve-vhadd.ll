@@ -9,10 +9,10 @@ define arm_aapcs_vfpcc <16 x i8> @vrhadd_s8(<16 x i8> %src1, <16 x i8> %src2) {
 ; CHECK-NEXT:    vmovlb.s8 q1, q1
 ; CHECK-NEXT:    vmovlb.s8 q0, q0
 ; CHECK-NEXT:    vadd.i16 q2, q3, q2
-; CHECK-NEXT:    vmov.i16 q3, #0x1
+; CHECK-NEXT:    movs r0, #1
 ; CHECK-NEXT:    vadd.i16 q0, q0, q1
-; CHECK-NEXT:    vadd.i16 q2, q2, q3
-; CHECK-NEXT:    vadd.i16 q0, q0, q3
+; CHECK-NEXT:    vadd.i16 q2, q2, r0
+; CHECK-NEXT:    vadd.i16 q0, q0, r0
 ; CHECK-NEXT:    vshr.u16 q2, q2, #1
 ; CHECK-NEXT:    vshr.u16 q0, q0, #1
 ; CHECK-NEXT:    vmovnt.i16 q0, q2
@@ -34,10 +34,10 @@ define arm_aapcs_vfpcc <8 x i16> @vrhadd_s16(<8 x i16> %src1, <8 x i16> %src2) {
 ; CHECK-NEXT:    vmovlb.s16 q1, q1
 ; CHECK-NEXT:    vmovlb.s16 q0, q0
 ; CHECK-NEXT:    vadd.i32 q2, q3, q2
-; CHECK-NEXT:    vmov.i32 q3, #0x1
+; CHECK-NEXT:    movs r0, #1
 ; CHECK-NEXT:    vadd.i32 q0, q0, q1
-; CHECK-NEXT:    vadd.i32 q2, q2, q3
-; CHECK-NEXT:    vadd.i32 q0, q0, q3
+; CHECK-NEXT:    vadd.i32 q2, q2, r0
+; CHECK-NEXT:    vadd.i32 q0, q0, r0
 ; CHECK-NEXT:    vshr.u32 q2, q2, #1
 ; CHECK-NEXT:    vshr.u32 q0, q0, #1
 ; CHECK-NEXT:    vmovnt.i32 q0, q2
@@ -204,10 +204,10 @@ define arm_aapcs_vfpcc <16 x i8> @vrhadd_u8(<16 x i8> %src1, <16 x i8> %src2) {
 ; CHECK-NEXT:    vmovlb.u8 q1, q1
 ; CHECK-NEXT:    vmovlb.u8 q0, q0
 ; CHECK-NEXT:    vadd.i16 q2, q3, q2
-; CHECK-NEXT:    vmov.i16 q3, #0x1
+; CHECK-NEXT:    movs r0, #1
 ; CHECK-NEXT:    vadd.i16 q0, q0, q1
-; CHECK-NEXT:    vadd.i16 q2, q2, q3
-; CHECK-NEXT:    vadd.i16 q0, q0, q3
+; CHECK-NEXT:    vadd.i16 q2, q2, r0
+; CHECK-NEXT:    vadd.i16 q0, q0, r0
 ; CHECK-NEXT:    vshr.u16 q2, q2, #1
 ; CHECK-NEXT:    vshr.u16 q0, q0, #1
 ; CHECK-NEXT:    vmovnt.i16 q0, q2
@@ -229,10 +229,10 @@ define arm_aapcs_vfpcc <8 x i16> @vrhadd_u16(<8 x i16> %src1, <8 x i16> %src2) {
 ; CHECK-NEXT:    vmovlb.u16 q1, q1
 ; CHECK-NEXT:    vmovlb.u16 q0, q0
 ; CHECK-NEXT:    vadd.i32 q2, q3, q2
-; CHECK-NEXT:    vmov.i32 q3, #0x1
+; CHECK-NEXT:    movs r0, #1
 ; CHECK-NEXT:    vadd.i32 q0, q0, q1
-; CHECK-NEXT:    vadd.i32 q2, q2, q3
-; CHECK-NEXT:    vadd.i32 q0, q0, q3
+; CHECK-NEXT:    vadd.i32 q2, q2, r0
+; CHECK-NEXT:    vadd.i32 q0, q0, r0
 ; CHECK-NEXT:    vshr.u32 q2, q2, #1
 ; CHECK-NEXT:    vshr.u32 q0, q0, #1
 ; CHECK-NEXT:    vmovnt.i32 q0, q2
@@ -745,21 +745,21 @@ define void @vrhadd_loop_s8(i8* nocapture readonly %x, i8* nocapture readonly %y
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    mov.w lr, #64
-; CHECK-NEXT:    vmov.i16 q0, #0x1
+; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:  .LBB18_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrb.u16 q1, [r1, #8]
-; CHECK-NEXT:    vldrb.u16 q2, [r0, #8]
-; CHECK-NEXT:    vadd.i16 q1, q2, q1
-; CHECK-NEXT:    vldrb.u16 q2, [r0], #16
-; CHECK-NEXT:    vadd.i16 q1, q1, q0
-; CHECK-NEXT:    vshr.u16 q1, q1, #1
-; CHECK-NEXT:    vstrb.16 q1, [r2, #8]
-; CHECK-NEXT:    vldrb.u16 q1, [r1], #16
-; CHECK-NEXT:    vadd.i16 q1, q2, q1
-; CHECK-NEXT:    vadd.i16 q1, q1, q0
-; CHECK-NEXT:    vshr.u16 q1, q1, #1
-; CHECK-NEXT:    vstrb.16 q1, [r2], #16
+; CHECK-NEXT:    vldrb.u16 q0, [r1, #8]
+; CHECK-NEXT:    vldrb.u16 q1, [r0, #8]
+; CHECK-NEXT:    vadd.i16 q0, q1, q0
+; CHECK-NEXT:    vldrb.u16 q1, [r0], #16
+; CHECK-NEXT:    vadd.i16 q0, q0, r3
+; CHECK-NEXT:    vshr.u16 q0, q0, #1
+; CHECK-NEXT:    vstrb.16 q0, [r2, #8]
+; CHECK-NEXT:    vldrb.u16 q0, [r1], #16
+; CHECK-NEXT:    vadd.i16 q0, q1, q0
+; CHECK-NEXT:    vadd.i16 q0, q0, r3
+; CHECK-NEXT:    vshr.u16 q0, q0, #1
+; CHECK-NEXT:    vstrb.16 q0, [r2], #16
 ; CHECK-NEXT:    le lr, .LBB18_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
@@ -797,21 +797,21 @@ define void @vrhadd_loop_s16(i16* nocapture readonly %x, i16* nocapture readonly
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    mov.w lr, #128
-; CHECK-NEXT:    vmov.i32 q0, #0x1
+; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:  .LBB19_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrh.u32 q1, [r1, #8]
-; CHECK-NEXT:    vldrh.u32 q2, [r0, #8]
-; CHECK-NEXT:    vadd.i32 q1, q2, q1
-; CHECK-NEXT:    vldrh.u32 q2, [r0], #16
-; CHECK-NEXT:    vadd.i32 q1, q1, q0
-; CHECK-NEXT:    vshr.u32 q1, q1, #1
-; CHECK-NEXT:    vstrh.32 q1, [r2, #8]
-; CHECK-NEXT:    vldrh.u32 q1, [r1], #16
-; CHECK-NEXT:    vadd.i32 q1, q2, q1
-; CHECK-NEXT:    vadd.i32 q1, q1, q0
-; CHECK-NEXT:    vshr.u32 q1, q1, #1
-; CHECK-NEXT:    vstrh.32 q1, [r2], #16
+; CHECK-NEXT:    vldrh.u32 q0, [r1, #8]
+; CHECK-NEXT:    vldrh.u32 q1, [r0, #8]
+; CHECK-NEXT:    vadd.i32 q0, q1, q0
+; CHECK-NEXT:    vldrh.u32 q1, [r0], #16
+; CHECK-NEXT:    vadd.i32 q0, q0, r3
+; CHECK-NEXT:    vshr.u32 q0, q0, #1
+; CHECK-NEXT:    vstrh.32 q0, [r2, #8]
+; CHECK-NEXT:    vldrh.u32 q0, [r1], #16
+; CHECK-NEXT:    vadd.i32 q0, q1, q0
+; CHECK-NEXT:    vadd.i32 q0, q0, r3
+; CHECK-NEXT:    vshr.u32 q0, q0, #1
+; CHECK-NEXT:    vstrh.32 q0, [r2], #16
 ; CHECK-NEXT:    le lr, .LBB19_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
@@ -935,21 +935,21 @@ define void @vrhadd_loop_u8(i8* nocapture readonly %x, i8* nocapture readonly %y
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    mov.w lr, #64
-; CHECK-NEXT:    vmov.i16 q0, #0x1
+; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:  .LBB21_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrb.u16 q1, [r1, #8]
-; CHECK-NEXT:    vldrb.u16 q2, [r0, #8]
-; CHECK-NEXT:    vadd.i16 q1, q2, q1
-; CHECK-NEXT:    vldrb.u16 q2, [r0], #16
-; CHECK-NEXT:    vadd.i16 q1, q1, q0
-; CHECK-NEXT:    vshr.u16 q1, q1, #1
-; CHECK-NEXT:    vstrb.16 q1, [r2, #8]
-; CHECK-NEXT:    vldrb.u16 q1, [r1], #16
-; CHECK-NEXT:    vadd.i16 q1, q2, q1
-; CHECK-NEXT:    vadd.i16 q1, q1, q0
-; CHECK-NEXT:    vshr.u16 q1, q1, #1
-; CHECK-NEXT:    vstrb.16 q1, [r2], #16
+; CHECK-NEXT:    vldrb.u16 q0, [r1, #8]
+; CHECK-NEXT:    vldrb.u16 q1, [r0, #8]
+; CHECK-NEXT:    vadd.i16 q0, q1, q0
+; CHECK-NEXT:    vldrb.u16 q1, [r0], #16
+; CHECK-NEXT:    vadd.i16 q0, q0, r3
+; CHECK-NEXT:    vshr.u16 q0, q0, #1
+; CHECK-NEXT:    vstrb.16 q0, [r2, #8]
+; CHECK-NEXT:    vldrb.u16 q0, [r1], #16
+; CHECK-NEXT:    vadd.i16 q0, q1, q0
+; CHECK-NEXT:    vadd.i16 q0, q0, r3
+; CHECK-NEXT:    vshr.u16 q0, q0, #1
+; CHECK-NEXT:    vstrb.16 q0, [r2], #16
 ; CHECK-NEXT:    le lr, .LBB21_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
@@ -987,21 +987,21 @@ define void @vrhadd_loop_u16(i16* nocapture readonly %x, i16* nocapture readonly
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    mov.w lr, #128
-; CHECK-NEXT:    vmov.i32 q0, #0x1
+; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:  .LBB22_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrh.u32 q1, [r1, #8]
-; CHECK-NEXT:    vldrh.u32 q2, [r0, #8]
-; CHECK-NEXT:    vadd.i32 q1, q2, q1
-; CHECK-NEXT:    vldrh.u32 q2, [r0], #16
-; CHECK-NEXT:    vadd.i32 q1, q1, q0
-; CHECK-NEXT:    vshr.u32 q1, q1, #1
-; CHECK-NEXT:    vstrh.32 q1, [r2, #8]
-; CHECK-NEXT:    vldrh.u32 q1, [r1], #16
-; CHECK-NEXT:    vadd.i32 q1, q2, q1
-; CHECK-NEXT:    vadd.i32 q1, q1, q0
-; CHECK-NEXT:    vshr.u32 q1, q1, #1
-; CHECK-NEXT:    vstrh.32 q1, [r2], #16
+; CHECK-NEXT:    vldrh.u32 q0, [r1, #8]
+; CHECK-NEXT:    vldrh.u32 q1, [r0, #8]
+; CHECK-NEXT:    vadd.i32 q0, q1, q0
+; CHECK-NEXT:    vldrh.u32 q1, [r0], #16
+; CHECK-NEXT:    vadd.i32 q0, q0, r3
+; CHECK-NEXT:    vshr.u32 q0, q0, #1
+; CHECK-NEXT:    vstrh.32 q0, [r2, #8]
+; CHECK-NEXT:    vldrh.u32 q0, [r1], #16
+; CHECK-NEXT:    vadd.i32 q0, q1, q0
+; CHECK-NEXT:    vadd.i32 q0, q0, r3
+; CHECK-NEXT:    vshr.u32 q0, q0, #1
+; CHECK-NEXT:    vstrh.32 q0, [r2], #16
 ; CHECK-NEXT:    le lr, .LBB22_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}

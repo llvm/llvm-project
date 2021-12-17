@@ -176,27 +176,27 @@ define arm_aapcs_vfpcc void @scaled_v8i16_i16_2gep(i16* %base, <8 x i16>* %offpt
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, lr}
 ; CHECK-NEXT:    push {r4, r5, r6, lr}
-; CHECK-NEXT:    vldrh.s32 q2, [r1]
-; CHECK-NEXT:    vmov.i32 q1, #0x28
+; CHECK-NEXT:    vldrh.s32 q1, [r1]
+; CHECK-NEXT:    mov.w r12, #40
 ; CHECK-NEXT:    vmov.u16 r6, q0[0]
-; CHECK-NEXT:    vshl.i32 q2, q2, #1
-; CHECK-NEXT:    vadd.i32 q2, q2, r0
-; CHECK-NEXT:    vadd.i32 q2, q2, q1
-; CHECK-NEXT:    vmov r2, r3, d4
-; CHECK-NEXT:    vmov r12, lr, d5
-; CHECK-NEXT:    vldrh.s32 q2, [r1, #8]
-; CHECK-NEXT:    vshl.i32 q2, q2, #1
-; CHECK-NEXT:    vadd.i32 q2, q2, r0
-; CHECK-NEXT:    vadd.i32 q1, q2, q1
+; CHECK-NEXT:    vshl.i32 q1, q1, #1
+; CHECK-NEXT:    vadd.i32 q1, q1, r0
+; CHECK-NEXT:    vadd.i32 q1, q1, r12
+; CHECK-NEXT:    vmov r3, r2, d2
+; CHECK-NEXT:    vmov lr, r5, d3
+; CHECK-NEXT:    vldrh.s32 q1, [r1, #8]
+; CHECK-NEXT:    vshl.i32 q1, q1, #1
+; CHECK-NEXT:    vadd.i32 q1, q1, r0
+; CHECK-NEXT:    vadd.i32 q1, q1, r12
 ; CHECK-NEXT:    vmov r0, r1, d2
-; CHECK-NEXT:    vmov r4, r5, d3
-; CHECK-NEXT:    strh r6, [r2]
-; CHECK-NEXT:    vmov.u16 r2, q0[1]
-; CHECK-NEXT:    strh r2, [r3]
+; CHECK-NEXT:    vmov r4, r12, d3
+; CHECK-NEXT:    strh r6, [r3]
+; CHECK-NEXT:    vmov.u16 r3, q0[1]
+; CHECK-NEXT:    strh r3, [r2]
 ; CHECK-NEXT:    vmov.u16 r2, q0[2]
-; CHECK-NEXT:    strh.w r2, [r12]
-; CHECK-NEXT:    vmov.u16 r2, q0[3]
 ; CHECK-NEXT:    strh.w r2, [lr]
+; CHECK-NEXT:    vmov.u16 r2, q0[3]
+; CHECK-NEXT:    strh r2, [r5]
 ; CHECK-NEXT:    vmov.u16 r2, q0[4]
 ; CHECK-NEXT:    strh r2, [r0]
 ; CHECK-NEXT:    vmov.u16 r0, q0[5]
@@ -204,7 +204,7 @@ define arm_aapcs_vfpcc void @scaled_v8i16_i16_2gep(i16* %base, <8 x i16>* %offpt
 ; CHECK-NEXT:    vmov.u16 r0, q0[6]
 ; CHECK-NEXT:    strh r0, [r4]
 ; CHECK-NEXT:    vmov.u16 r0, q0[7]
-; CHECK-NEXT:    strh r0, [r5]
+; CHECK-NEXT:    strh.w r0, [r12]
 ; CHECK-NEXT:    pop {r4, r5, r6, pc}
 entry:
   %offs = load <8 x i16>, <8 x i16>* %offptr, align 2

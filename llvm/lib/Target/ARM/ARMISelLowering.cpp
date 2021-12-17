@@ -7732,6 +7732,46 @@ static SDValue LowerBUILD_VECTORToVIDUP(SDValue Op, SelectionDAG &DAG,
                      DAG.getConstant(N, DL, MVT::i32));
 }
 
+// Returns true if the operation N can be treated as qr instruction variant at
+// operand Op.
+static bool IsQRMVEInstruction(const SDNode *N, const SDNode *Op) {
+  switch (N->getOpcode()) {
+  case ISD::ADD:
+  case ISD::MUL:
+  case ISD::SADDSAT:
+  case ISD::UADDSAT:
+    return true;
+  case ISD::SUB:
+  case ISD::SSUBSAT:
+  case ISD::USUBSAT:
+    return N->getOperand(1).getNode() == Op;
+  case ISD::INTRINSIC_WO_CHAIN:
+    switch (N->getConstantOperandVal(0)) {
+    case Intrinsic::arm_mve_add_predicated:
+    case Intrinsic::arm_mve_mul_predicated:
+    case Intrinsic::arm_mve_qadd_predicated:
+    case Intrinsic::arm_mve_vhadd:
+    case Intrinsic::arm_mve_hadd_predicated:
+    case Intrinsic::arm_mve_vqdmulh:
+    case Intrinsic::arm_mve_qdmulh_predicated:
+    case Intrinsic::arm_mve_vqrdmulh:
+    case Intrinsic::arm_mve_qrdmulh_predicated:
+    case Intrinsic::arm_mve_vqdmull:
+    case Intrinsic::arm_mve_vqdmull_predicated:
+      return true;
+    case Intrinsic::arm_mve_sub_predicated:
+    case Intrinsic::arm_mve_qsub_predicated:
+    case Intrinsic::arm_mve_vhsub:
+    case Intrinsic::arm_mve_hsub_predicated:
+      return N->getOperand(2).getNode() == Op;
+    default:
+      return false;
+    }
+  default:
+    return false;
+  }
+}
+
 // If this is a case we can't handle, return null and let the default
 // expansion code take care of it.
 SDValue ARMTargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
@@ -7752,6 +7792,20 @@ SDValue ARMTargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   if (BVN->isConstantSplat(SplatBits, SplatUndef, SplatBitSize, HasAnyUndefs)) {
     if (SplatUndef.isAllOnes())
       return DAG.getUNDEF(VT);
+
+    // If all the users of this constant splat are qr instruction variants,
+    // generate a vdup of the constant.
+    if (ST->hasMVEIntegerOps() && VT.getScalarSizeInBits() == SplatBitSize &&
+        (SplatBitSize == 8 || SplatBitSize == 16 || SplatBitSize == 32) &&
+        all_of(BVN->uses(),
+               [BVN](const SDNode *U) { return IsQRMVEInstruction(U, BVN); })) {
+      EVT DupVT = SplatBitSize == 32   ? MVT::v4i32
+                  : SplatBitSize == 16 ? MVT::v8i16
+                                       : MVT::v16i8;
+      SDValue Const = DAG.getConstant(SplatBits.getZExtValue(), dl, MVT::i32);
+      SDValue VDup = DAG.getNode(ARMISD::VDUP, dl, DupVT, Const);
+      return DAG.getNode(ARMISD::VECTOR_REG_CAST, dl, VT, VDup);
+    }
 
     if ((ST->hasNEON() && SplatBitSize <= 64) ||
         (ST->hasMVEIntegerOps() && SplatBitSize <= 64)) {

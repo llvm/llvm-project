@@ -251,34 +251,34 @@ define arm_aapcs_vfpcc <8 x i16> @scaled_v8i16_i16_2gep(i16* %base, <8 x i16>* %
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r7, lr}
 ; CHECK-NEXT:    push {r4, r5, r7, lr}
-; CHECK-NEXT:    vldrh.s32 q1, [r1, #8]
-; CHECK-NEXT:    vmov.i32 q0, #0x28
-; CHECK-NEXT:    vshl.i32 q1, q1, #1
-; CHECK-NEXT:    vadd.i32 q1, q1, r0
-; CHECK-NEXT:    vadd.i32 q1, q1, q0
-; CHECK-NEXT:    vmov r2, r12, d2
-; CHECK-NEXT:    vmov r3, lr, d3
-; CHECK-NEXT:    vldrh.s32 q1, [r1]
-; CHECK-NEXT:    vshl.i32 q1, q1, #1
-; CHECK-NEXT:    vadd.i32 q1, q1, r0
-; CHECK-NEXT:    vadd.i32 q0, q1, q0
-; CHECK-NEXT:    vmov r4, r5, d0
+; CHECK-NEXT:    vldrh.s32 q0, [r1, #8]
+; CHECK-NEXT:    mov.w r12, #40
+; CHECK-NEXT:    vshl.i32 q0, q0, #1
+; CHECK-NEXT:    vadd.i32 q0, q0, r0
+; CHECK-NEXT:    vadd.i32 q0, q0, r12
+; CHECK-NEXT:    vmov r3, lr, d0
+; CHECK-NEXT:    vmov r2, r4, d1
+; CHECK-NEXT:    vldrh.s32 q0, [r1]
+; CHECK-NEXT:    vshl.i32 q0, q0, #1
+; CHECK-NEXT:    vadd.i32 q0, q0, r0
+; CHECK-NEXT:    vadd.i32 q0, q0, r12
 ; CHECK-NEXT:    vmov r0, r1, d1
-; CHECK-NEXT:    ldrh r2, [r2]
-; CHECK-NEXT:    ldrh.w r12, [r12]
+; CHECK-NEXT:    ldrh.w r12, [lr]
+; CHECK-NEXT:    ldrh.w lr, [r4]
+; CHECK-NEXT:    vmov r4, r5, d0
 ; CHECK-NEXT:    ldrh r3, [r3]
-; CHECK-NEXT:    ldrh.w lr, [lr]
+; CHECK-NEXT:    ldrh r2, [r2]
+; CHECK-NEXT:    ldrh r0, [r0]
+; CHECK-NEXT:    ldrh r1, [r1]
 ; CHECK-NEXT:    ldrh r4, [r4]
 ; CHECK-NEXT:    ldrh r5, [r5]
 ; CHECK-NEXT:    vmov.16 q0[0], r4
-; CHECK-NEXT:    ldrh r0, [r0]
 ; CHECK-NEXT:    vmov.16 q0[1], r5
-; CHECK-NEXT:    ldrh r1, [r1]
 ; CHECK-NEXT:    vmov.16 q0[2], r0
 ; CHECK-NEXT:    vmov.16 q0[3], r1
-; CHECK-NEXT:    vmov.16 q0[4], r2
+; CHECK-NEXT:    vmov.16 q0[4], r3
 ; CHECK-NEXT:    vmov.16 q0[5], r12
-; CHECK-NEXT:    vmov.16 q0[6], r3
+; CHECK-NEXT:    vmov.16 q0[6], r2
 ; CHECK-NEXT:    vmov.16 q0[7], lr
 ; CHECK-NEXT:    pop {r4, r5, r7, pc}
 entry:
@@ -469,29 +469,29 @@ define arm_aapcs_vfpcc <8 x i16> @scaled_v8i16_i16_biggep5(<8 x i16*> %base) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, lr}
 ; CHECK-NEXT:    push {r4, r5, r6, lr}
-; CHECK-NEXT:    vmov.i32 q2, #0x20000
-; CHECK-NEXT:    vadd.i32 q0, q0, q2
-; CHECK-NEXT:    vadd.i32 q1, q1, q2
+; CHECK-NEXT:    mov.w r12, #131072
+; CHECK-NEXT:    vadd.i32 q0, q0, r12
+; CHECK-NEXT:    vadd.i32 q1, q1, r12
 ; CHECK-NEXT:    vmov r4, r5, d0
-; CHECK-NEXT:    vmov r1, lr, d1
-; CHECK-NEXT:    vmov r2, r3, d3
-; CHECK-NEXT:    vmov r0, r12, d2
+; CHECK-NEXT:    vmov r0, r12, d1
+; CHECK-NEXT:    vmov r3, lr, d3
+; CHECK-NEXT:    vmov r1, r2, d2
 ; CHECK-NEXT:    ldrh r4, [r4]
 ; CHECK-NEXT:    ldrh r5, [r5]
 ; CHECK-NEXT:    vmov.16 q0[0], r4
-; CHECK-NEXT:    ldrh r1, [r1]
+; CHECK-NEXT:    ldrh r0, [r0]
 ; CHECK-NEXT:    vmov.16 q0[1], r5
 ; CHECK-NEXT:    ldrh r6, [r3]
-; CHECK-NEXT:    ldrh.w r3, [lr]
-; CHECK-NEXT:    vmov.16 q0[2], r1
-; CHECK-NEXT:    ldrh r0, [r0]
+; CHECK-NEXT:    ldrh.w r3, [r12]
+; CHECK-NEXT:    vmov.16 q0[2], r0
+; CHECK-NEXT:    ldrh r1, [r1]
 ; CHECK-NEXT:    vmov.16 q0[3], r3
-; CHECK-NEXT:    ldrh.w r12, [r12]
-; CHECK-NEXT:    vmov.16 q0[4], r0
 ; CHECK-NEXT:    ldrh r2, [r2]
-; CHECK-NEXT:    vmov.16 q0[5], r12
-; CHECK-NEXT:    vmov.16 q0[6], r2
-; CHECK-NEXT:    vmov.16 q0[7], r6
+; CHECK-NEXT:    vmov.16 q0[4], r1
+; CHECK-NEXT:    ldrh.w lr, [lr]
+; CHECK-NEXT:    vmov.16 q0[5], r2
+; CHECK-NEXT:    vmov.16 q0[6], r6
+; CHECK-NEXT:    vmov.16 q0[7], lr
 ; CHECK-NEXT:    pop {r4, r5, r6, pc}
 entry:
   %ptrs2 = getelementptr inbounds i16,<8 x i16*> %base, i32 65536

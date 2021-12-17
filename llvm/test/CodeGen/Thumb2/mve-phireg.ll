@@ -63,24 +63,24 @@ define arm_aapcs_vfpcc void @k() {
 ; CHECK-NEXT:  .LBB0_5: @ %vector.body105.preheader
 ; CHECK-NEXT:    vldrw.u32 q0, [r8]
 ; CHECK-NEXT:    vldrw.u32 q1, [r9]
-; CHECK-NEXT:    vmov.i32 q2, #0x8
+; CHECK-NEXT:    movs r0, #8
 ; CHECK-NEXT:  .LBB0_6: @ %vector.body105
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vadd.i32 q1, q1, q2
-; CHECK-NEXT:    vadd.i32 q0, q0, q2
+; CHECK-NEXT:    vadd.i32 q1, q1, r0
+; CHECK-NEXT:    vadd.i32 q0, q0, r0
 ; CHECK-NEXT:    cbz r6, .LBB0_7
 ; CHECK-NEXT:    le .LBB0_6
 ; CHECK-NEXT:  .LBB0_7: @ %vector.body115.ph
 ; CHECK-NEXT:    vldrw.u32 q0, [r9]
+; CHECK-NEXT:    movs r0, #4
 ; CHECK-NEXT:    vstrw.32 q0, [sp] @ 16-byte Spill
 ; CHECK-NEXT:    @APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    @NO_APP
-; CHECK-NEXT:    vldrw.u32 q1, [sp] @ 16-byte Reload
-; CHECK-NEXT:    vmov.i32 q0, #0x4
+; CHECK-NEXT:    vldrw.u32 q0, [sp] @ 16-byte Reload
 ; CHECK-NEXT:  .LBB0_8: @ %vector.body115
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vadd.i32 q1, q1, q0
+; CHECK-NEXT:    vadd.i32 q0, q0, r0
 ; CHECK-NEXT:    b .LBB0_8
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.9:

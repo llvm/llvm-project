@@ -776,8 +776,8 @@ for.end:                                          ; preds = %vector.body, %entry
 define arm_aapcs_vfpcc <4 x i32> @qi4(<4 x i32*> %p) {
 ; CHECK-LABEL: qi4:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.i32 q1, #0x10
-; CHECK-NEXT:    vadd.i32 q1, q0, q1
+; CHECK-NEXT:    movs r0, #16
+; CHECK-NEXT:    vadd.i32 q1, q0, r0
 ; CHECK-NEXT:    vldrw.u32 q0, [q1]
 ; CHECK-NEXT:    bx lr
 entry:

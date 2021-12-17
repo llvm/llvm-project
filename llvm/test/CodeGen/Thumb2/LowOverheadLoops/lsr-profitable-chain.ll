@@ -10,17 +10,17 @@ target triple = "thumbv8.1m-arm-none-eabi"
 define arm_aapcs_vfpcc float @vctpi32(float* %0, i32 %1) {
 ; CHECK-LABEL: vctpi32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    vmvn.i32 q1, #0x1f
-; CHECK-NEXT:    vmov.32 q3[0], r0
-; CHECK-NEXT:    movs r2, #0
-; CHECK-NEXT:    subs r3, r1, #1
-; CHECK-NEXT:    vadd.i32 q1, q3, q1
-; CHECK-NEXT:    vidup.u32 q2, r2, #8
-; CHECK-NEXT:    vmov r0, s4
-; CHECK-NEXT:    vadd.i32 q1, q2, r0
+; CHECK-NEXT:    push {r4, lr}
+; CHECK-NEXT:    mvn r3, #31
+; CHECK-NEXT:    vmov.32 q2[0], r0
+; CHECK-NEXT:    movs r4, #0
+; CHECK-NEXT:    subs r2, r1, #1
+; CHECK-NEXT:    vadd.i32 q2, q2, r3
+; CHECK-NEXT:    vidup.u32 q1, r4, #8
+; CHECK-NEXT:    vmov r0, s8
+; CHECK-NEXT:    vadd.i32 q1, q1, r0
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
-; CHECK-NEXT:    dlstp.32 lr, r3
+; CHECK-NEXT:    dlstp.32 lr, r2
 ; CHECK-NEXT:  .LBB0_1: @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q2, [q1, #32]!
 ; CHECK-NEXT:    vadd.f32 q0, q0, q2
@@ -30,7 +30,7 @@ define arm_aapcs_vfpcc float @vctpi32(float* %0, i32 %1) {
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvt.f32.s32 s0, s0
 ; CHECK-NEXT:    vabs.f32 s0, s0
-; CHECK-NEXT:    pop {r7, pc}
+; CHECK-NEXT:    pop {r4, pc}
   %3 = tail call { <4 x i32>, i32 } @llvm.arm.mve.vidup.v4i32(i32 0, i32 8)
   %4 = extractvalue { <4 x i32>, i32 } %3, 0
   %5 = add nsw i32 %1, -1
