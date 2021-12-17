@@ -2524,7 +2524,8 @@ FileCheck output:
             self.fail(self._formatMessage(msg,
                 "'{}' is not success".format(error)))
 
-    def createTestTarget(self, file_path=None, msg=None):
+    def createTestTarget(self, file_path=None, msg=None,
+                         load_dependent_modules=True):
         """
         Creates a target from the file found at the given file path.
         Asserts that the resulting target is valid.
@@ -2538,7 +2539,6 @@ FileCheck output:
         error = lldb.SBError()
         triple = ""
         platform = ""
-        load_dependent_modules = True
         target = self.dbg.CreateTarget(file_path, triple, platform,
                                        load_dependent_modules, error)
         if error.Fail():

@@ -13,7 +13,10 @@ endif()
 
 add_lldb_unittest(SymbolTests
   LocateSymbolFileTest.cpp
+  MangledTest.cpp
   PostfixExpressionTest.cpp
+  SymbolTest.cpp
+  SymtabTest.cpp
   TestTypeSystem.cpp
   TestTypeSystemClang.cpp
   TestClangASTImporter.cpp
@@ -24,6 +27,7 @@ add_lldb_unittest(SymbolTests
   ${SWIFT_SOURCES}
 
   LINK_LIBS
+    lldbCore
     lldbHost
     lldbSymbol
     lldbUtilityHelpers
