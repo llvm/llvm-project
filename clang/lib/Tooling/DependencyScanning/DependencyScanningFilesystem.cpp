@@ -19,21 +19,22 @@ using namespace dependencies;
 llvm::ErrorOr<llvm::vfs::Status>
 CachedFileSystemEntry::initFile(StringRef Filename, llvm::vfs::FileSystem &FS) {
   // Load the file and its content from the file system.
-  llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>> MaybeFile =
-      FS.openFileForRead(Filename);
+  auto MaybeFile = FS.openFileForRead(Filename);
   if (!MaybeFile)
     return MaybeFile.getError();
+  auto File = std::move(*MaybeFile);
 
-  llvm::ErrorOr<llvm::vfs::Status> Stat = (*MaybeFile)->status();
-  if (!Stat)
-    return Stat.getError();
+  auto MaybeStat = File->status();
+  if (!MaybeStat)
+    return MaybeStat.getError();
+  auto Stat = std::move(*MaybeStat);
 
-  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> MaybeBuffer =
-      (*MaybeFile)->getBuffer(Stat->getName());
+  auto MaybeBuffer = File->getBuffer(Stat.getName());
   if (!MaybeBuffer)
     return MaybeBuffer.getError();
+  auto Buffer = std::move(*MaybeBuffer);
 
-  OriginalContents = std::move(*MaybeBuffer);
+  OriginalContents = std::move(Buffer);
   return Stat;
 }
 
