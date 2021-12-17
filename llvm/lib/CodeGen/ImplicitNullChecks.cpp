@@ -242,7 +242,7 @@ bool ImplicitNullChecks::canHandle(const MachineInstr *MI) {
   auto IsRegMask = [](const MachineOperand &MO) { return MO.isRegMask(); };
   (void)IsRegMask;
 
-  assert(!llvm::any_of(MI->operands(), IsRegMask) &&
+  assert(llvm::none_of(MI->operands(), IsRegMask) &&
          "Calls were filtered out above!");
 
   auto IsUnordered = [](MachineMemOperand *MMO) { return MMO->isUnordered(); };

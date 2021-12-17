@@ -3629,7 +3629,7 @@ static bool tryWidenCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
     return false; // TODO
   // Use lambda to lazily compute expensive condition after cheap ones.
   auto NoSideEffects = [](BasicBlock &BB) {
-    return !llvm::any_of(BB, [](const Instruction &I) {
+    return llvm::none_of(BB, [](const Instruction &I) {
         return I.mayWriteToMemory() || I.mayHaveSideEffects();
       });
   };

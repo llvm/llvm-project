@@ -1187,7 +1187,7 @@ TargetLoweringBase::emitPatchPoint(MachineInstr &InitialMI,
   // all stack slots), but we need to handle the different type of stackmap
   // operands and memory effects here.
 
-  if (!llvm::any_of(MI->operands(),
+  if (llvm::none_of(MI->operands(),
                     [](MachineOperand &Operand) { return Operand.isFI(); }))
     return MBB;
 

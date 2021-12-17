@@ -1693,7 +1693,7 @@ void ARMLowOverheadLoops::ConvertVPTBlocks(LowOverheadLoop &LoLoop) {
         // If any of the instructions between the VCMP and VPST are predicated
         // then a different code path is expected to have merged the VCMP and
         // VPST already.
-        if (!std::any_of(++MachineBasicBlock::iterator(VCMP),
+        if (std::none_of(++MachineBasicBlock::iterator(VCMP),
                          MachineBasicBlock::iterator(VPST), hasVPRUse) &&
             RDA->hasSameReachingDef(VCMP, VPST, VCMP->getOperand(1).getReg()) &&
             RDA->hasSameReachingDef(VCMP, VPST, VCMP->getOperand(2).getReg())) {
