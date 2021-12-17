@@ -1438,9 +1438,8 @@ static macho::Symbol *createBitcodeSymbol(const lto::InputFile::Symbol &objSym,
                                           BitcodeFile &file) {
   StringRef name = saver.save(objSym.getName());
 
-  // TODO: support weak references
   if (objSym.isUndefined())
-    return symtab->addUndefined(name, &file, /*isWeakRef=*/false);
+    return symtab->addUndefined(name, &file, /*isWeakRef=*/objSym.isWeak());
 
   // TODO: Write a test demonstrating why computing isPrivateExtern before
   // LTO compilation is important.

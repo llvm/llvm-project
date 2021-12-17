@@ -13,11 +13,6 @@
 # RUN: %lldb -x -b -s %S/Inputs/GDBRemoteCapture.in --capture --capture-path %t.repro %t.out | FileCheck %s --check-prefix CHECK --check-prefix CAPTURE
 # RUN: env FOO=BAR %lldb --replay %t.repro | FileCheck %s --check-prefix CHECK --check-prefix REPLAY
 
-# Test crash reproducer.
-# RUN: rm -rf %t.repro
-# RUN: %lldb -x -b -s %S/Inputs/GDBRemoteCrashCapture.in --capture --capture-path %t.repro %t.out | FileCheck %s --check-prefix CHECK --check-prefix CAPTURE
-# RUN: %lldb --replay %t.repro | FileCheck %s --check-prefix CHECK --check-prefix REPLAY
-
 # CHECK: Breakpoint 1
 # CHECK: Process {{.*}} stopped
 # CHECK: Process {{.*}} launched
