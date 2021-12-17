@@ -19,21 +19,22 @@ using namespace dependencies;
 llvm::ErrorOr<llvm::vfs::Status>
 CachedFileSystemEntry::initFile(StringRef Filename, llvm::vfs::FileSystem &FS) {
   // Load the file and its content from the file system.
-  llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>> MaybeFile =
-      FS.openFileForRead(Filename);
+  auto MaybeFile = FS.openFileForRead(Filename);
   if (!MaybeFile)
     return MaybeFile.getError();
+  auto File = std::move(*MaybeFile);
 
-  llvm::ErrorOr<llvm::vfs::Status> Stat = (*MaybeFile)->status();
-  if (!Stat)
-    return Stat.getError();
+  auto MaybeStat = File->status();
+  if (!MaybeStat)
+    return MaybeStat.getError();
+  auto Stat = std::move(*MaybeStat);
 
-  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> MaybeBuffer =
-      (*MaybeFile)->getBuffer(Stat->getName());
+  auto MaybeBuffer = File->getBuffer(Stat.getName());
   if (!MaybeBuffer)
     return MaybeBuffer.getError();
+  auto Buffer = std::move(*MaybeBuffer);
 
-  OriginalContents = std::move(*MaybeBuffer);
+  OriginalContents = std::move(Buffer);
   return Stat;
 }
 
@@ -115,14 +116,13 @@ static bool shouldMinimizeBasedOnExtension(StringRef Filename) {
   if (Ext.empty())
     return true; // C++ standard library
   return llvm::StringSwitch<bool>(Ext)
-    .CasesLower(".c", ".cc", ".cpp", ".c++", ".cxx", true)
-    .CasesLower(".h", ".hh", ".hpp", ".h++", ".hxx", true)
-    .CasesLower(".m", ".mm", true)
-    .CasesLower(".i", ".ii", ".mi", ".mmi", true)
-    .CasesLower(".def", ".inc", true)
-    .Default(false);
+      .CasesLower(".c", ".cc", ".cpp", ".c++", ".cxx", true)
+      .CasesLower(".h", ".hh", ".hpp", ".h++", ".hxx", true)
+      .CasesLower(".m", ".mm", true)
+      .CasesLower(".i", ".ii", ".mi", ".mmi", true)
+      .CasesLower(".def", ".inc", true)
+      .Default(false);
 }
-
 
 static bool shouldCacheStatFailures(StringRef Filename) {
   StringRef Ext = llvm::sys::path::extension(Filename);
@@ -162,9 +162,9 @@ DependencyScanningWorkerFilesystem::getOrCreateFileSystemEntry(
     StringRef Filename) {
   bool ShouldBeMinimized = shouldMinimize(Filename);
 
-  const auto *Entry = Cache.getCachedEntry(Filename);
+  const auto *Entry = LocalCache.getCachedEntry(Filename);
   if (Entry && !Entry->needsUpdate(ShouldBeMinimized))
-    return EntryRef(ShouldBeMinimized, Entry);
+    return EntryRef(ShouldBeMinimized, *Entry);
 
   // FIXME: Handle PCM/PCH files.
   // FIXME: Handle module map files.
@@ -194,7 +194,7 @@ DependencyScanningWorkerFilesystem::getOrCreateFileSystemEntry(
 
   // Store the result in the local cache.
   Entry = &SharedCacheEntry.Value;
-  return EntryRef(ShouldBeMinimized, Entry);
+  return EntryRef(ShouldBeMinimized, *Entry);
 }
 
 llvm::ErrorOr<llvm::vfs::Status>
@@ -242,8 +242,8 @@ private:
 llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>> MinimizedVFSFile::create(
     EntryRef Entry, ExcludedPreprocessorDirectiveSkipMapping *PPSkipMappings) {
   if (Entry.isDirectory())
-    return llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>(
-        std::make_error_code(std::errc::is_a_directory));
+    return std::make_error_code(std::errc::is_a_directory);
+
   llvm::ErrorOr<StringRef> Contents = Entry.getContents();
   if (!Contents)
     return Contents.getError();
