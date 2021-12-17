@@ -1225,27 +1225,26 @@ void InputSectionBase::adjustSplitStackFunctionPrologues(uint8_t *buf,
 }
 
 template <class ELFT> void InputSection::writeTo(uint8_t *buf) {
-  if (type == SHT_NOBITS)
-    return;
-
   if (auto *s = dyn_cast<SyntheticSection>(this)) {
     s->writeTo(buf + outSecOff);
     return;
   }
 
+  if (LLVM_UNLIKELY(type == SHT_NOBITS))
+    return;
   // If -r or --emit-relocs is given, then an InputSection
   // may be a relocation section.
-  if (type == SHT_RELA) {
+  if (LLVM_UNLIKELY(type == SHT_RELA)) {
     copyRelocations<ELFT>(buf + outSecOff, getDataAs<typename ELFT::Rela>());
     return;
   }
-  if (type == SHT_REL) {
+  if (LLVM_UNLIKELY(type == SHT_REL)) {
     copyRelocations<ELFT>(buf + outSecOff, getDataAs<typename ELFT::Rel>());
     return;
   }
 
   // If -r is given, we may have a SHT_GROUP section.
-  if (type == SHT_GROUP) {
+  if (LLVM_UNLIKELY(type == SHT_GROUP)) {
     copyShtGroup<ELFT>(buf + outSecOff);
     return;
   }
