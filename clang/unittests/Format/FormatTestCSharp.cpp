@@ -759,6 +759,128 @@ class MyClass
                GoogleStyle);
 }
 
+TEST_F(FormatTestCSharp, CSharpLambdasDontBreakFollowingCodeAlignment) {
+  FormatStyle GoogleStyle = getGoogleStyle(FormatStyle::LK_CSharp);
+  FormatStyle MicrosoftStyle = getMicrosoftStyle(FormatStyle::LK_CSharp);
+
+  verifyFormat(R"(//
+public class Sample
+{
+    public void Test()
+    {
+        while (true)
+        {
+            preBindEnumerators.RemoveAll(enumerator => !enumerator.MoveNext());
+            CodeThatFollowsLambda();
+            IsWellAligned();
+        }
+    }
+})",
+               MicrosoftStyle);
+
+  verifyFormat(R"(//
+public class Sample {
+  public void Test() {
+    while (true) {
+      preBindEnumerators.RemoveAll(enumerator => !enumerator.MoveNext());
+      CodeThatFollowsLambda();
+      IsWellAligned();
+    }
+  }
+})",
+               GoogleStyle);
+}
+
+TEST_F(FormatTestCSharp, CSharpLambdasComplexLambdasDontBreakAlignment) {
+  FormatStyle GoogleStyle = getGoogleStyle(FormatStyle::LK_CSharp);
+  FormatStyle MicrosoftStyle = getMicrosoftStyle(FormatStyle::LK_CSharp);
+
+  verifyFormat(R"(//
+public class Test
+{
+    private static void ComplexLambda(BuildReport protoReport)
+    {
+        allSelectedScenes =
+            veryVeryLongCollectionNameThatPutsTheLineLenghtAboveTheThresholds.Where(scene => scene.enabled)
+                .Select(scene => scene.path)
+                .ToArray();
+        if (allSelectedScenes.Count == 0)
+        {
+            return;
+        }
+        Functions();
+        AreWell();
+        Aligned();
+        AfterLambdaBlock();
+    }
+})",
+               MicrosoftStyle);
+
+  verifyFormat(R"(//
+public class Test {
+  private static void ComplexLambda(BuildReport protoReport) {
+    allSelectedScenes = veryVeryLongCollectionNameThatPutsTheLineLenghtAboveTheThresholds
+                            .Where(scene => scene.enabled)
+                            .Select(scene => scene.path)
+                            .ToArray();
+    if (allSelectedScenes.Count == 0) {
+      return;
+    }
+    Functions();
+    AreWell();
+    Aligned();
+    AfterLambdaBlock();
+  }
+})",
+               GoogleStyle);
+}
+
+TEST_F(FormatTestCSharp, CSharpLambdasMulipleLambdasDontBreakAlignment) {
+  FormatStyle GoogleStyle = getGoogleStyle(FormatStyle::LK_CSharp);
+  FormatStyle MicrosoftStyle = getMicrosoftStyle(FormatStyle::LK_CSharp);
+
+  verifyFormat(R"(//
+public class Test
+{
+    private static void MultipleLambdas(BuildReport protoReport)
+    {
+        allSelectedScenes =
+            veryVeryLongCollectionNameThatPutsTheLineLenghtAboveTheThresholds.Where(scene => scene.enabled)
+                .Select(scene => scene.path)
+                .ToArray();
+        preBindEnumerators.RemoveAll(enumerator => !enumerator.MoveNext());
+        if (allSelectedScenes.Count == 0)
+        {
+            return;
+        }
+        Functions();
+        AreWell();
+        Aligned();
+        AfterLambdaBlock();
+    }
+})",
+               MicrosoftStyle);
+
+  verifyFormat(R"(//
+public class Test {
+  private static void MultipleLambdas(BuildReport protoReport) {
+    allSelectedScenes = veryVeryLongCollectionNameThatPutsTheLineLenghtAboveTheThresholds
+                            .Where(scene => scene.enabled)
+                            .Select(scene => scene.path)
+                            .ToArray();
+    preBindEnumerators.RemoveAll(enumerator => !enumerator.MoveNext());
+    if (allSelectedScenes.Count == 0) {
+      return;
+    }
+    Functions();
+    AreWell();
+    Aligned();
+    AfterLambdaBlock();
+  }
+})",
+               GoogleStyle);
+}
+
 TEST_F(FormatTestCSharp, CSharpObjectInitializers) {
   FormatStyle Style = getGoogleStyle(FormatStyle::LK_CSharp);
 

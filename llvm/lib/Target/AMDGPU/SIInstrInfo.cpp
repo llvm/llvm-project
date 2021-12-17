@@ -5051,8 +5051,7 @@ void SIInstrInfo::legalizeOperandsVOP3(MachineRegisterInfo &MRI,
     --ConstantBusLimit;
   }
 
-  for (unsigned i = 0; i < 3; ++i) {
-    int Idx = VOP3Idx[i];
+  for (int Idx : VOP3Idx) {
     if (Idx == -1)
       break;
     MachineOperand &MO = MI.getOperand(Idx);

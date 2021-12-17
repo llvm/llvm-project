@@ -106,11 +106,8 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
          "Invalid constantexpr bitcast!");
 
   // Catch the obvious splat cases.
-  if (C->isNullValue() && !DestTy->isX86_MMXTy() && !DestTy->isX86_AMXTy())
-    return Constant::getNullValue(DestTy);
-  if (C->isAllOnesValue() && !DestTy->isX86_MMXTy() && !DestTy->isX86_AMXTy() &&
-      !DestTy->isPtrOrPtrVectorTy()) // Don't get ones for ptr types!
-    return Constant::getAllOnesValue(DestTy);
+  if (Constant *Res = ConstantFoldLoadFromUniformValue(C, DestTy))
+    return Res;
 
   if (auto *VTy = dyn_cast<VectorType>(C->getType())) {
     // Handle a vector->scalar integer/fp cast.
@@ -362,16 +359,8 @@ Constant *llvm::ConstantFoldLoadThroughBitcast(Constant *C, Type *DestTy,
 
     // Catch the obvious splat cases (since all-zeros can coerce non-integral
     // pointers legally).
-    if (C->isNullValue() && !DestTy->isX86_MMXTy() && !DestTy->isX86_AMXTy())
-      return Constant::getNullValue(DestTy);
-    if (C->isAllOnesValue() &&
-        (DestTy->isIntegerTy() || DestTy->isFloatingPointTy() ||
-         DestTy->isVectorTy()) &&
-        !DestTy->isX86_AMXTy() && !DestTy->isX86_MMXTy() &&
-        !DestTy->isPtrOrPtrVectorTy())
-      // Get ones when the input is trivial, but
-      // only for supported types inside getAllOnesValue.
-      return Constant::getAllOnesValue(DestTy);
+    if (Constant *Res = ConstantFoldLoadFromUniformValue(C, DestTy))
+      return Res;
 
     // If the type sizes are the same and a cast is legal, just directly
     // cast the constant.
@@ -704,16 +693,13 @@ Constant *llvm::ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,
                                                        Offset, DL))
         return Result;
 
-  // If this load comes from anywhere in a constant global, and if the global
-  // is all undef or zero, we know what it loads.
-  if (auto *GV = dyn_cast<GlobalVariable>(getUnderlyingObject(C))) {
-    if (GV->isConstant() && GV->hasDefinitiveInitializer()) {
-      if (GV->getInitializer()->isNullValue())
-        return Constant::getNullValue(Ty);
-      if (isa<UndefValue>(GV->getInitializer()))
-        return UndefValue::get(Ty);
-    }
-  }
+  // If this load comes from anywhere in a uniform constant global, the value
+  // is always the same, regardless of the loaded offset.
+  if (auto *GV = dyn_cast<GlobalVariable>(getUnderlyingObject(C)))
+    if (GV->isConstant() && GV->hasDefinitiveInitializer())
+      if (Constant *Res =
+              ConstantFoldLoadFromUniformValue(GV->getInitializer(), Ty))
+        return Res;
 
   return nullptr;
 }
@@ -722,6 +708,19 @@ Constant *llvm::ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,
                                              const DataLayout &DL) {
   APInt Offset(DL.getIndexTypeSizeInBits(C->getType()), 0);
   return ConstantFoldLoadFromConstPtr(C, Ty, Offset, DL);
+}
+
+Constant *llvm::ConstantFoldLoadFromUniformValue(Constant *C, Type *Ty) {
+  if (isa<PoisonValue>(C))
+    return PoisonValue::get(Ty);
+  if (isa<UndefValue>(C))
+    return UndefValue::get(Ty);
+  if (C->isNullValue() && !Ty->isX86_MMXTy() && !Ty->isX86_AMXTy())
+    return Constant::getNullValue(Ty);
+  if (C->isAllOnesValue() &&
+      (Ty->isIntOrIntVectorTy() || Ty->isFPOrFPVectorTy()))
+    return Constant::getAllOnesValue(Ty);
+  return nullptr;
 }
 
 namespace {
