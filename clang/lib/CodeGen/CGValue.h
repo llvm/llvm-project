@@ -47,6 +47,8 @@ class RValue {
   llvm::PointerIntPair<llvm::Value *, 2, Flavor> V1;
   // Stores second value and volatility.
   llvm::PointerIntPair<llvm::Value *, 1, bool> V2;
+  // Stores element type for aggregate values.
+  llvm::Type *ElementType;
 
 public:
   bool isScalar() const { return V1.getInt() == Scalar; }
@@ -71,7 +73,8 @@ public:
   Address getAggregateAddress() const {
     assert(isAggregate() && "Not an aggregate!");
     auto align = reinterpret_cast<uintptr_t>(V2.getPointer()) >> AggAlignShift;
-    return Address(V1.getPointer(), CharUnits::fromQuantity(align));
+    return Address(
+        V1.getPointer(), ElementType, CharUnits::fromQuantity(align));
   }
   llvm::Value *getAggregatePointer() const {
     assert(isAggregate() && "Not an aggregate!");
@@ -108,6 +111,7 @@ public:
     RValue ER;
     ER.V1.setPointer(addr.getPointer());
     ER.V1.setInt(Aggregate);
+    ER.ElementType = addr.getElementType();
 
     auto align = static_cast<uintptr_t>(addr.getAlignment().getQuantity());
     ER.V2.setPointer(reinterpret_cast<llvm::Value*>(align << AggAlignShift));
