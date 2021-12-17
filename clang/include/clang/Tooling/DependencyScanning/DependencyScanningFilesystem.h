@@ -177,31 +177,31 @@ class EntryRef {
   bool Minimized;
 
   /// The underlying cached entry.
-  const CachedFileSystemEntry *Entry;
+  const CachedFileSystemEntry &Entry;
 
 public:
-  EntryRef(bool Minimized, const CachedFileSystemEntry *Entry)
+  EntryRef(bool Minimized, const CachedFileSystemEntry &Entry)
       : Minimized(Minimized), Entry(Entry) {}
 
   llvm::ErrorOr<llvm::vfs::Status> getStatus() const {
-    auto MaybeStat = Entry->getStatus();
+    auto MaybeStat = Entry.getStatus();
     if (!MaybeStat || MaybeStat->isDirectory())
       return MaybeStat;
     return llvm::vfs::Status::copyWithNewSize(*MaybeStat,
                                               getContents()->size());
   }
 
-  bool isDirectory() const { return Entry->isDirectory(); }
+  bool isDirectory() const { return Entry.isDirectory(); }
 
-  StringRef getName() const { return Entry->getName(); }
+  StringRef getName() const { return Entry.getName(); }
 
   llvm::ErrorOr<StringRef> getContents() const {
-    return Minimized ? Entry->getMinimizedContents()
-                     : Entry->getOriginalContents();
+    return Minimized ? Entry.getMinimizedContents()
+                     : Entry.getOriginalContents();
   }
 
   const PreprocessorSkippedRangeMapping *getPPSkippedRangeMapping() const {
-    return Minimized ? &Entry->getPPSkippedRangeMapping() : nullptr;
+    return Minimized ? &Entry.getPPSkippedRangeMapping() : nullptr;
   }
 };
 
