@@ -206,9 +206,9 @@ static bool isRemovable(Instruction *I) {
     }
   }
 
-  // note: only get here for calls with analyzable writes - i.e. libcalls
+  // note: only get here for calls with analyzable writes.
   if (auto *CB = dyn_cast<CallBase>(I))
-    return CB->use_empty();
+    return CB->use_empty() && CB->willReturn() && CB->doesNotThrow();
 
   return false;
 }
