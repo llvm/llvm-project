@@ -14871,14 +14871,6 @@ SDValue DAGCombiner::visitFPOW(SDNode *N) {
 
 static SDValue foldFPToIntToFP(SDNode *N, SelectionDAG &DAG,
                                const TargetLowering &TLI) {
-  // This optimization is guarded by a function attribute because it may produce
-  // unexpected results. Ie, programs may be relying on the platform-specific
-  // undefined behavior when the float-to-int conversion overflows.
-  const Function &F = DAG.getMachineFunction().getFunction();
-  Attribute StrictOverflow = F.getFnAttribute("strict-float-cast-overflow");
-  if (StrictOverflow.getValueAsString().equals("false"))
-    return SDValue();
-
   // We only do this if the target has legal ftrunc. Otherwise, we'd likely be
   // replacing casts with a libcall. We also must be allowed to ignore -0.0
   // because FTRUNC will return -0.0 for (-1.0, -0.0), but using integer
