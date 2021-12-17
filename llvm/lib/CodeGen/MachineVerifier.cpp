@@ -2229,8 +2229,8 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
   if (LiveInts && Reg.isVirtual()) {
     if (LiveInts->hasInterval(Reg)) {
       LI = &LiveInts->getInterval(Reg);
-      if (SubRegIdx != 0 && !LI->empty() && !LI->hasSubRanges() &&
-          MRI->shouldTrackSubRegLiveness(Reg))
+      if (SubRegIdx != 0 && (MO->isDef() || !MO->isUndef()) && !LI->empty() &&
+          !LI->hasSubRanges() && MRI->shouldTrackSubRegLiveness(Reg))
         report("Live interval for subreg operand has no subranges", MO, MONum);
     } else {
       report("Virtual register has no live interval", MO, MONum);

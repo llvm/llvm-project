@@ -1,0 +1,234 @@
+// RUN: not mlir-pdll %s -split-input-file 2>&1 | FileCheck %s
+
+//===----------------------------------------------------------------------===//
+// Reference Expr
+//===----------------------------------------------------------------------===//
+
+Pattern {
+  // CHECK: expected identifier constraint
+  let foo = Foo: ;
+}
+
+// -----
+
+Pattern {
+  // CHECK: undefined reference to `bar`
+  let foo = bar;
+}
+
+// -----
+
+Pattern FooPattern {
+  erase _: Op;
+}
+
+Pattern {
+  // CHECK: invalid reference to `FooPattern`
+  let foo = FooPattern;
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected `:` after `_` variable
+  let foo = _;
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected identifier constraint
+  let foo = _: ;
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// Member Access Expr
+//===----------------------------------------------------------------------===//
+
+Pattern {
+  // CHECK: expected identifier or numeric member name
+  let root: Op;
+  erase root.<>;
+}
+
+// -----
+
+Pattern {
+  // CHECK: invalid member access `unknown_result` on expression of type `Op`
+  let root: Op;
+  erase root.unknown_result;
+}
+
+// -----
+
+Pattern {
+  let tuple = (result1 = value: Value, result2 = value);
+
+  // CHECK: invalid member access `unknown_result` on expression of type `Tuple<result1: Value, result2: Value>`
+  let tuple2 = (tuple.result1, tuple.unknown_result);
+
+  erase op<>;
+}
+
+// -----
+
+Pattern {
+  let tuple = (result1 = value: Value, result2 = value);
+
+  // CHECK: invalid member access `2` on expression of type `Tuple<result1: Value, result2: Value>`
+  let tuple2 = (tuple.0, tuple.2);
+
+  erase op<>;
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// Tuple Expr
+//===----------------------------------------------------------------------===//
+
+Pattern {
+  // CHECK: expected `)` after tuple element list
+  let tuple = (value: Value, value;
+}
+
+// -----
+
+Pattern {
+  // CHECK: unable to build a tuple with `Tuple<Value, Value>` element
+  let tuple = (_: Value, _: Value);
+  let var = (tuple);
+  erase op<>;
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected expression
+  let tuple = (10 = _: Value);
+  erase op<>;
+}
+
+// -----
+
+Pattern {
+  // CHECK: duplicate tuple element label `field`
+  // CHECK: see previous label use here
+  let tuple = (field = _: Value, field = _: Value);
+  erase op<>;
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// `attr` Expr
+//===----------------------------------------------------------------------===//
+
+Pattern {
+  // CHECK: expected string literal containing MLIR attribute
+  let foo = attr<foo>;
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected `>` after attribute literal
+  let foo = attr<""<>;
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// `op` Expr
+//===----------------------------------------------------------------------===//
+
+Pattern {
+  // CHECK: expected `)` after operation operand list
+  let value: Value;
+  let foo = op<builtin.func>(value<;
+}
+
+// -----
+
+Pattern {
+  // CHECK: unable to convert expression of type `Attr` to the expected type of `ValueRange`
+  let attr: Attr;
+  let foo = op<builtin.func>(attr);
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected `Value` or `ValueRange` convertible expression, but got `Type`
+  let foo = op<>(_: Type, _: TypeRange);
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected identifier or string attribute name
+  let foo = op<> { 10;
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected `Attr` expression, but got `Value`
+  let foo = op<> { foo = _: Value };
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected `}` after operation attribute list
+  let foo = op<> { "foo" {;
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected `(` before operation result type list
+  let foo = op<> -> );
+}
+
+// -----
+
+Pattern {
+  // CHECK: unable to convert expression of type `ValueRange` to the expected type of `TypeRange`
+  let foo = op<> -> (_: ValueRange);
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected `Type` or `TypeRange` convertible expression, but got `Value`
+  let foo = op<> -> (_: Value, _: ValueRange);
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected `)` after operation result type list
+  let value: TypeRange;
+  let foo = op<> -> (value<;
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// `type` Expr
+//===----------------------------------------------------------------------===//
+
+Pattern {
+  // CHECK: expected string literal containing MLIR type
+  let foo = type<foo;
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected `>` after type literal
+  let foo = type<"";
+}

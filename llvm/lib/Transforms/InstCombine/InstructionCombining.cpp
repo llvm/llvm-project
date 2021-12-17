@@ -2546,7 +2546,7 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   return nullptr;
 }
 
-static bool isNeverEqualToUnescapedAlloc(Value *V, const TargetLibraryInfo *TLI,
+static bool isNeverEqualToUnescapedAlloc(Value *V, const TargetLibraryInfo &TLI,
                                          Instruction *AI) {
   if (isa<ConstantPointerNull>(V))
     return true;
@@ -2557,12 +2557,45 @@ static bool isNeverEqualToUnescapedAlloc(Value *V, const TargetLibraryInfo *TLI,
   // through bitcasts of V can cause
   // the result statement below to be true, even when AI and V (ex:
   // i8* ->i32* ->i8* of AI) are the same allocations.
-  return isAllocLikeFn(V, TLI) && V != AI;
+  return isAllocLikeFn(V, &TLI) && V != AI;
+}
+
+/// Given a call CB which uses an address UsedV, return true if we can prove the
+/// call's only possible effect is storing to V.
+static bool isRemovableWrite(CallBase &CB, Value *UsedV) {
+  if (!CB.use_empty())
+    // TODO: add recursion if returned attribute is present
+    return false;
+
+  if (!CB.willReturn() || !CB.doesNotThrow() || !CB.onlyAccessesArgMemory() ||
+      CB.isTerminator())
+    return false;
+
+  if (CB.hasOperandBundles())
+    return false;
+
+  for (unsigned i = 0; i < CB.arg_size(); i++) {
+    if (!CB.getArgOperand(i)->getType()->isPointerTy())
+      continue;
+    if (!CB.doesNotCapture(i))
+      // capture would allow the address to be read back in an untracked manner
+      return false;
+    if (UsedV != CB.getArgOperand(i) && !CB.onlyReadsMemory(i))
+      // A write to another memory location keeps the call live, and thus we
+      // must keep the alloca so that the call has somewhere to write to.
+      // TODO: This results in an inprecision when two values derived from the
+      // same alloca are passed as arguments to the same function.
+      return false;
+    // Note: Both reads from and writes to the alloca are fine.  Since the
+    // result is unused nothing can observe the values read from the alloca
+    // without writing it to some other observable location (checked above).
+  }
+  return true;
 }
 
 static bool isAllocSiteRemovable(Instruction *AI,
                                  SmallVectorImpl<WeakTrackingVH> &Users,
-                                 const TargetLibraryInfo *TLI) {
+                                 const TargetLibraryInfo &TLI) {
   SmallVector<Instruction*, 4> Worklist;
   Worklist.push_back(AI);
 
@@ -2627,12 +2660,17 @@ static bool isAllocSiteRemovable(Instruction *AI,
           }
         }
 
-        if (isFreeCall(I, TLI)) {
+        if (isRemovableWrite(*cast<CallBase>(I), PI)) {
           Users.emplace_back(I);
           continue;
         }
 
-        if (isReallocLikeFn(I, TLI, true)) {
+        if (isFreeCall(I, &TLI)) {
+          Users.emplace_back(I);
+          continue;
+        }
+
+        if (isReallocLikeFn(I, &TLI, true)) {
           Users.emplace_back(I);
           Worklist.push_back(I);
           continue;
@@ -2676,7 +2714,7 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
     DIB.reset(new DIBuilder(*MI.getModule(), /*AllowUnresolved=*/false));
   }
 
-  if (isAllocSiteRemovable(&MI, Users, &TLI)) {
+  if (isAllocSiteRemovable(&MI, Users, TLI)) {
     for (unsigned i = 0, e = Users.size(); i != e; ++i) {
       // Lowering all @llvm.objectsize calls first because they may
       // use a bitcast/GEP of the alloca we are removing.

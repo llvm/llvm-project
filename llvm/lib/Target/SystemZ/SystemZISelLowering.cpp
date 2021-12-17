@@ -1500,8 +1500,16 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
       assert(VA.isMemLoc() && "Argument not register or memory");
 
       // Create the frame index object for this incoming parameter.
-      int FI = MFI.CreateFixedObject(LocVT.getSizeInBits() / 8,
-                                     VA.getLocMemOffset(), true);
+      // FIXME: Pre-include call frame size in the offset, should not
+      // need to manually add it here.
+      int64_t ArgSPOffset = VA.getLocMemOffset();
+      if (Subtarget.isTargetXPLINK64()) {
+        auto &XPRegs =
+            Subtarget.getSpecialRegisters<SystemZXPLINK64Registers>();
+        ArgSPOffset += XPRegs.getCallFrameSize();
+      }
+      int FI =
+          MFI.CreateFixedObject(LocVT.getSizeInBits() / 8, ArgSPOffset, true);
 
       // Create the SelectionDAG nodes corresponding to a load
       // from this parameter.  Unpromoted ints and floats are

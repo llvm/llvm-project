@@ -1099,7 +1099,7 @@ Address CodeGenFunction::EmitPointerWithAlignment(const Expr *E,
           if (InnerBaseInfo.getAlignmentSource() != AlignmentSource::Decl) {
             if (BaseInfo)
               BaseInfo->mergeForCast(TargetTypeBaseInfo);
-            Addr = Address(Addr.getPointer(), Align);
+            Addr = Address(Addr.getPointer(), Addr.getElementType(), Align);
           }
         }
 
@@ -1111,10 +1111,12 @@ Address CodeGenFunction::EmitPointerWithAlignment(const Expr *E,
                                       CodeGenFunction::CFITCK_UnrelatedCast,
                                       CE->getBeginLoc());
         }
-        return CE->getCastKind() != CK_AddressSpaceConversion
-                   ? Builder.CreateBitCast(Addr, ConvertType(E->getType()))
-                   : Builder.CreateAddrSpaceCast(Addr,
-                                                 ConvertType(E->getType()));
+
+        if (CE->getCastKind() == CK_AddressSpaceConversion)
+         return Builder.CreateAddrSpaceCast(Addr, ConvertType(E->getType()));
+
+        llvm::Type *ElemTy = ConvertTypeForMem(E->getType()->getPointeeType());
+        return Builder.CreateElementBitCast(Addr, ElemTy);
       }
       break;
 
@@ -2527,7 +2529,7 @@ static LValue EmitGlobalVarDeclLValue(CodeGenFunction &CGF,
   llvm::Type *RealVarTy = CGF.getTypes().ConvertTypeForMem(VD->getType());
   V = EmitBitCastOfLValueToProperType(CGF, V, RealVarTy);
   CharUnits Alignment = CGF.getContext().getDeclAlign(VD);
-  Address Addr(V, Alignment);
+  Address Addr(V, RealVarTy, Alignment);
   // Emit reference to the private copy of the variable if it is an OpenMP
   // threadprivate variable.
   if (CGF.getLangOpts().OpenMP && !CGF.getLangOpts().OpenMPSimd &&
@@ -2705,7 +2707,7 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
                                         /* BaseInfo= */ nullptr,
                                         /* TBAAInfo= */ nullptr,
                                         /* forPointeeType= */ true);
-        Addr = Address(Val, Alignment);
+        Addr = Address(Val, ConvertTypeForMem(E->getType()), Alignment);
       }
       return MakeAddrLValue(Addr, T, AlignmentSource::Decl);
     }
@@ -2782,9 +2784,10 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
     // Otherwise, it might be static local we haven't emitted yet for
     // some reason; most likely, because it's in an outer function.
     } else if (VD->isStaticLocal()) {
-      addr = Address(CGM.getOrCreateStaticVarDecl(
-          *VD, CGM.getLLVMLinkageVarDefinition(VD, /*IsConstant=*/false)),
-                     getContext().getDeclAlign(VD));
+      llvm::Constant *var = CGM.getOrCreateStaticVarDecl(
+          *VD, CGM.getLLVMLinkageVarDefinition(VD, /*IsConstant=*/false));
+      addr = Address(
+          var, ConvertTypeForMem(VD->getType()), getContext().getDeclAlign(VD));
 
     // No other cases for now.
     } else {

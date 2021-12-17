@@ -153,6 +153,7 @@ strtold_l U
 strtoll_l U
 strtoull_l U
 syscall U
+sysconf U
 tcgetattr U
 uname U
 ungetc U

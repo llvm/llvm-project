@@ -104,6 +104,7 @@
     __cpp_lib_math_constants                       201907L [C++20]
     __cpp_lib_math_special_functions               201603L [C++17]
     __cpp_lib_memory_resource                      201603L [C++17]
+    __cpp_lib_monadic_optional                     202110L [C++2b]
     __cpp_lib_node_extract                         201606L [C++17]
     __cpp_lib_nonmember_container_access           201411L [C++17]
     __cpp_lib_not_fn                               201603L [C++17]
@@ -502,6 +503,10 @@
 
 # ifdef __cpp_lib_memory_resource
 #   error "__cpp_lib_memory_resource should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_monadic_optional
+#   error "__cpp_lib_monadic_optional should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_node_extract
@@ -1066,6 +1071,10 @@
 
 # ifdef __cpp_lib_memory_resource
 #   error "__cpp_lib_memory_resource should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_monadic_optional
+#   error "__cpp_lib_monadic_optional should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_node_extract
@@ -1792,6 +1801,10 @@
 #   ifdef __cpp_lib_memory_resource
 #     error "__cpp_lib_memory_resource should not be defined because it is unimplemented in libc++!"
 #   endif
+# endif
+
+# ifdef __cpp_lib_monadic_optional
+#   error "__cpp_lib_monadic_optional should not be defined before c++2b"
 # endif
 
 # ifndef __cpp_lib_node_extract
@@ -2830,6 +2843,10 @@
 #   ifdef __cpp_lib_memory_resource
 #     error "__cpp_lib_memory_resource should not be defined because it is unimplemented in libc++!"
 #   endif
+# endif
+
+# ifdef __cpp_lib_monadic_optional
+#   error "__cpp_lib_monadic_optional should not be defined before c++2b"
 # endif
 
 # ifndef __cpp_lib_node_extract
@@ -3961,6 +3978,13 @@
 #   ifdef __cpp_lib_memory_resource
 #     error "__cpp_lib_memory_resource should not be defined because it is unimplemented in libc++!"
 #   endif
+# endif
+
+# ifndef __cpp_lib_monadic_optional
+#   error "__cpp_lib_monadic_optional should be defined in c++2b"
+# endif
+# if __cpp_lib_monadic_optional != 202110L
+#   error "__cpp_lib_monadic_optional should have the value 202110L in c++2b"
 # endif
 
 # ifndef __cpp_lib_node_extract

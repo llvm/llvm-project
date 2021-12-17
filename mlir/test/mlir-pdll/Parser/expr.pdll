@@ -1,0 +1,146 @@
+// RUN: mlir-pdll %s -I %S -split-input-file | FileCheck %s
+
+//===----------------------------------------------------------------------===//
+// AttrExpr
+//===----------------------------------------------------------------------===//
+
+// CHECK: Module
+// CHECK: `-AttributeExpr {{.*}} Value<"10: i32">
+Pattern {
+  let attr = attr<"10: i32">;
+
+  erase _: Op;
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// MemberAccessExpr
+//===----------------------------------------------------------------------===//
+
+// CHECK: Module
+// CHECK: `-VariableDecl {{.*}} Name<firstEltIndex> Type<Op>
+// CHECK:   `-MemberAccessExpr {{.*}} Member<0> Type<Op>
+// CHECK:     `-DeclRefExpr {{.*}} Type<Tuple<firstElt: Op>>
+// CHECK: `-VariableDecl {{.*}} Name<firstEltName> Type<Op>
+// CHECK:   `-MemberAccessExpr {{.*}} Member<firstElt> Type<Op>
+// CHECK:     `-DeclRefExpr {{.*}} Type<Tuple<firstElt: Op>>
+Pattern {
+  let tuple = (firstElt = _: Op);
+  let firstEltIndex = tuple.0;
+  let firstEltName = tuple.firstElt;
+
+  erase _: Op;
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// OperationExpr
+//===----------------------------------------------------------------------===//
+
+// CHECK: Module
+// CHECK: `-OperationExpr {{.*}} Type<Op>
+// CHECK:   `-OpNameDecl
+Pattern {
+  erase op<>;
+}
+
+// -----
+
+// CHECK: Module
+// CHECK: `-OperationExpr {{.*}} Type<Op<my_dialect.foo>>
+// CHECK:   `-OpNameDecl {{.*}} Name<my_dialect.foo>
+Pattern {
+  erase op<my_dialect.foo>;
+}
+
+// -----
+
+// CHECK: Module
+// CHECK: `-OperationExpr {{.*}} Type<Op>
+// CHECK:   `-OpNameDecl
+// CHECK:   `Operands`
+// CHECK:     |-DeclRefExpr {{.*}} Type<Value>
+// CHECK:     |-DeclRefExpr {{.*}} Type<ValueRange>
+// CHECK:     `-DeclRefExpr {{.*}} Type<Value>
+Pattern {
+  erase op<>(_: Value, _: ValueRange, _: Value);
+}
+
+// -----
+
+// CHECK: Module
+// CHECK: `-OperationExpr {{.*}} Type<Op>
+// CHECK:   `-OpNameDecl
+// CHECK:   `Operands`
+// CHECK:     `-MemberAccessExpr {{.*}} Member<$results> Type<ValueRange>
+// CHECK:       `-OperationExpr {{.*}} Type<Op<my_dialect.bar>>
+// CHECK:         `-OpNameDecl {{.*}} Name<my_dialect.bar>
+Pattern {
+  erase op<>(op<my_dialect.bar>);
+}
+
+// -----
+
+// CHECK: Module
+// CHECK: `-OperationExpr {{.*}} Type<Op>
+// CHECK:   `-OpNameDecl
+// CHECK:   `Attributes`
+// CHECK:     |-NamedAttributeDecl {{.*}} Name<unitAttr>
+// CHECK:       `-AttributeExpr {{.*}} Value<"unit">
+// CHECK:     `-NamedAttributeDecl {{.*}} Name<normal$Attr>
+// CHECK:       `-DeclRefExpr {{.*}} Type<Attr>
+
+Pattern {
+  erase op<> {unitAttr, "normal$Attr" = _: Attr};
+}
+
+// -----
+
+// CHECK: Module
+// CHECK: `-OperationExpr {{.*}} Type<Op>
+// CHECK:   `-OpNameDecl
+// CHECK:   `Result Types`
+// CHECK:     |-DeclRefExpr {{.*}} Type<Type>
+// CHECK:     |-DeclRefExpr {{.*}} Type<TypeRange>
+// CHECK:     `-DeclRefExpr {{.*}} Type<Type>
+Pattern {
+  erase op<> -> (_: Type, _: TypeRange, _: Type);
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// TupleExpr
+//===----------------------------------------------------------------------===//
+
+// CHECK: Module
+// CHECK: `-VariableDecl {{.*}} Name<emptyTuple>
+// CHECK:   `-TupleExpr {{.*}} Type<Tuple<>>
+// CHECK: `-VariableDecl {{.*}} Name<mixedTuple>
+// CHECK:   `-TupleExpr {{.*}} Type<Tuple<arg1: Attr, Value>>
+// CHECK:     |-DeclRefExpr {{.*}} Type<Attr>
+// CHECK:     `-DeclRefExpr {{.*}} Type<Value>
+Pattern {
+  let value: Value;
+
+  let emptyTuple = ();
+  let mixedTuple = (arg1 = _: Attr, value);
+
+  erase _: Op;
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// TypeExpr
+//===----------------------------------------------------------------------===//
+
+// CHECK: Module
+// CHECK: `-TypeExpr {{.*}} Value<"i64">
+Pattern {
+  let type = type<"i64">;
+
+  erase _: Op;
+}

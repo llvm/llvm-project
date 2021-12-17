@@ -17,15 +17,15 @@
 ;
 ; ASM: [[TOP_LOW_PC:[.0-9a-zA-Z]+]]:{{[[:space:]].*}}DEBUG_LABEL: foo:top
 ; ASM: [[DONE_LOW_PC:[.0-9a-zA-Z]+]]:{{[[:space:]].*}}DEBUG_LABEL: foo:done
-; ASM-LABEL: debug_info
+; ASM-LABEL: {{debug_info|dwinfo}}
 ; ASM: DW_TAG_label
 ; ASM-NEXT: DW_AT_name
-; ASM-NEXT: 1 {{.*}} DW_AT_decl_file
+; ASM: 1 {{.*}} DW_AT_decl_file
 ; ASM-NEXT: 4 {{.*}} DW_AT_decl_line
 ; ASM-NEXT: [[TOP_LOW_PC]]{{.*}} DW_AT_low_pc
 ; ASM: DW_TAG_label
 ; ASM-NEXT: DW_AT_name
-; ASM-NEXT: 1 {{.*}} DW_AT_decl_file
+; ASM: 1 {{.*}} DW_AT_decl_file
 ; ASM-NEXT: 7 {{.*}} DW_AT_decl_line
 ; ASM-NEXT: [[DONE_LOW_PC]]{{.*}} DW_AT_low_pc
 

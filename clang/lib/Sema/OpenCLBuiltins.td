@@ -806,17 +806,17 @@ multiclass VloadVstore<list<AddressSpace> addrspaces, bit defStores> {
   foreach AS = addrspaces in {
     foreach VSize = [2, 3, 4, 8, 16] in {
       foreach name = ["vload" # VSize] in {
-        def : Builtin<name, [VectorType<Char, VSize>, Size, PointerType<ConstType<Char>, AS>]>;
-        def : Builtin<name, [VectorType<UChar, VSize>, Size, PointerType<ConstType<UChar>, AS>]>;
-        def : Builtin<name, [VectorType<Short, VSize>, Size, PointerType<ConstType<Short>, AS>]>;
-        def : Builtin<name, [VectorType<UShort, VSize>, Size, PointerType<ConstType<UShort>, AS>]>;
-        def : Builtin<name, [VectorType<Int, VSize>, Size, PointerType<ConstType<Int>, AS>]>;
-        def : Builtin<name, [VectorType<UInt, VSize>, Size, PointerType<ConstType<UInt>, AS>]>;
-        def : Builtin<name, [VectorType<Long, VSize>, Size, PointerType<ConstType<Long>, AS>]>;
-        def : Builtin<name, [VectorType<ULong, VSize>, Size, PointerType<ConstType<ULong>, AS>]>;
-        def : Builtin<name, [VectorType<Float, VSize>, Size, PointerType<ConstType<Float>, AS>]>;
-        def : Builtin<name, [VectorType<Double, VSize>, Size, PointerType<ConstType<Double>, AS>]>;
-        def : Builtin<name, [VectorType<Half, VSize>, Size, PointerType<ConstType<Half>, AS>]>;
+        def : Builtin<name, [VectorType<Char, VSize>, Size, PointerType<ConstType<Char>, AS>], Attr.Pure>;
+        def : Builtin<name, [VectorType<UChar, VSize>, Size, PointerType<ConstType<UChar>, AS>], Attr.Pure>;
+        def : Builtin<name, [VectorType<Short, VSize>, Size, PointerType<ConstType<Short>, AS>], Attr.Pure>;
+        def : Builtin<name, [VectorType<UShort, VSize>, Size, PointerType<ConstType<UShort>, AS>], Attr.Pure>;
+        def : Builtin<name, [VectorType<Int, VSize>, Size, PointerType<ConstType<Int>, AS>], Attr.Pure>;
+        def : Builtin<name, [VectorType<UInt, VSize>, Size, PointerType<ConstType<UInt>, AS>], Attr.Pure>;
+        def : Builtin<name, [VectorType<Long, VSize>, Size, PointerType<ConstType<Long>, AS>], Attr.Pure>;
+        def : Builtin<name, [VectorType<ULong, VSize>, Size, PointerType<ConstType<ULong>, AS>], Attr.Pure>;
+        def : Builtin<name, [VectorType<Float, VSize>, Size, PointerType<ConstType<Float>, AS>], Attr.Pure>;
+        def : Builtin<name, [VectorType<Double, VSize>, Size, PointerType<ConstType<Double>, AS>], Attr.Pure>;
+        def : Builtin<name, [VectorType<Half, VSize>, Size, PointerType<ConstType<Half>, AS>], Attr.Pure>;
       }
       if defStores then {
         foreach name = ["vstore" # VSize] in {
@@ -848,11 +848,11 @@ defm : VloadVstore<[ConstantAS], 0>;
 
 multiclass VloadVstoreHalf<list<AddressSpace> addrspaces, bit defStores> {
   foreach AS = addrspaces in {
-    def : Builtin<"vload_half", [Float, Size, PointerType<ConstType<Half>, AS>]>;
-    def : Builtin<"vloada_half", [Float, Size, PointerType<ConstType<Half>, AS>]>;
+    def : Builtin<"vload_half", [Float, Size, PointerType<ConstType<Half>, AS>], Attr.Pure>;
+    def : Builtin<"vloada_half", [Float, Size, PointerType<ConstType<Half>, AS>], Attr.Pure>;
     foreach VSize = [2, 3, 4, 8, 16] in {
       foreach name = ["vload_half" # VSize, "vloada_half" # VSize] in {
-        def : Builtin<name, [VectorType<Float, VSize>, Size, PointerType<ConstType<Half>, AS>]>;
+        def : Builtin<name, [VectorType<Float, VSize>, Size, PointerType<ConstType<Half>, AS>], Attr.Pure>;
       }
     }
     if defStores then {
@@ -878,7 +878,7 @@ let MaxVersion = CL20 in {
 let MinVersion = CL20 in {
   defm : VloadVstoreHalf<[GenericAS], 1>;
 }
-// vload with constant address space is available regardless of version.
+// vload_half and vloada_half with constant address space are available regardless of version.
 defm : VloadVstoreHalf<[ConstantAS], 0>;
 
 // OpenCL v3.0 s6.15.8 - Synchronization Functions.

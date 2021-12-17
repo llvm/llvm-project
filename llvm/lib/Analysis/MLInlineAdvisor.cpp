@@ -35,6 +35,21 @@
 
 using namespace llvm;
 
+#ifdef LLVM_HAVE_TF_AOT
+#include "llvm/Analysis/ReleaseModeModelRunner.h"
+// codegen-ed file
+#include "InlinerSizeModel.h" // NOLINT
+#include "llvm/Analysis/InlineModelFeatureMaps.h"
+
+std::unique_ptr<InlineAdvisor>
+llvm::getReleaseModeAdvisor(Module &M, ModuleAnalysisManager &MAM) {
+  auto AOTRunner =
+      std::make_unique<ReleaseModeModelRunner<llvm::InlinerSizeModel>>(
+          M.getContext(), FeatureNameMap, DecisionName);
+  return std::make_unique<MLInlineAdvisor>(M, MAM, std::move(AOTRunner));
+}
+#endif
+
 #define DEBUG_TYPE "inline-ml"
 
 static cl::opt<float> SizeIncreaseThreshold(

@@ -19,6 +19,14 @@ using namespace Fortran::parser::literals;
 
 namespace Fortran::evaluate {
 
+// Can x*(a,b) be represented as (x*a,x*b)?  This code duplication
+// of the subexpression "x" cannot (yet?) be reliably undone by
+// common subexpression elimination in lowering, so it's disabled
+// here for now to avoid the risk of potential duplication of
+// expensive subexpressions (e.g., large array expressions, references
+// to expensive functions) in generate code.
+static constexpr bool allowOperandDuplication{false};
+
 std::optional<Expr<SomeType>> AsGenericExpr(DataRef &&ref) {
   const Symbol &symbol{ref.GetLastSymbol()};
   if (auto dyType{DynamicType::From(symbol)}) {
@@ -250,7 +258,7 @@ Expr<SomeComplex> PromoteRealToComplex(Expr<SomeReal> &&someX) {
 template <template <typename> class OPR, TypeCategory RCAT>
 std::optional<Expr<SomeType>> MixedComplexLeft(
     parser::ContextualMessages &messages, Expr<SomeComplex> &&zx,
-    Expr<SomeKind<RCAT>> &&iry, int defaultRealKind) {
+    Expr<SomeKind<RCAT>> &&iry, [[maybe_unused]] int defaultRealKind) {
   Expr<SomeReal> zr{GetComplexPart(zx, false)};
   Expr<SomeReal> zi{GetComplexPart(zx, true)};
   if constexpr (std::is_same_v<OPR<LargestReal>, Add<LargestReal>> ||
@@ -263,9 +271,9 @@ std::optional<Expr<SomeType>> MixedComplexLeft(
       return Package(ConstructComplex(messages, std::move(*rr),
           AsGenericExpr(std::move(zi)), defaultRealKind));
     }
-  } else if constexpr (std::is_same_v<OPR<LargestReal>,
-                           Multiply<LargestReal>> ||
-      std::is_same_v<OPR<LargestReal>, Divide<LargestReal>>) {
+  } else if constexpr (allowOperandDuplication &&
+      (std::is_same_v<OPR<LargestReal>, Multiply<LargestReal>> ||
+          std::is_same_v<OPR<LargestReal>, Divide<LargestReal>>)) {
     // (a,b) * x -> (a*x, b*x)
     // (a,b) / x -> (a/x, b/x)
     auto copy{iry};
@@ -288,7 +296,7 @@ std::optional<Expr<SomeType>> MixedComplexLeft(
               AsExpr(RealToIntPower<Ty>{std::move(zxk), std::move(iry)}));
         },
         std::move(zx.u)));
-  } else if (defaultRealKind != 666) { // dodge unused parameter warning
+  } else {
     // (a,b) ** x -> (a,b) ** (x,0)
     if constexpr (RCAT == TypeCategory::Integer) {
       Expr<SomeComplex> zy{ConvertTo(zx, std::move(iry))};
@@ -309,10 +317,13 @@ std::optional<Expr<SomeType>> MixedComplexLeft(
 template <template <typename> class OPR, TypeCategory LCAT>
 std::optional<Expr<SomeType>> MixedComplexRight(
     parser::ContextualMessages &messages, Expr<SomeKind<LCAT>> &&irx,
-    Expr<SomeComplex> &&zy, int defaultRealKind) {
-  if constexpr (std::is_same_v<OPR<LargestReal>, Add<LargestReal>> ||
-      std::is_same_v<OPR<LargestReal>, Multiply<LargestReal>>) {
+    Expr<SomeComplex> &&zy, [[maybe_unused]] int defaultRealKind) {
+  if constexpr (std::is_same_v<OPR<LargestReal>, Add<LargestReal>>) {
     // x + (a,b) -> (a,b) + x -> (a+x, b)
+    return MixedComplexLeft<OPR, LCAT>(
+        messages, std::move(zy), std::move(irx), defaultRealKind);
+  } else if constexpr (allowOperandDuplication &&
+      std::is_same_v<OPR<LargestReal>, Multiply<LargestReal>>) {
     // x * (a,b) -> (a,b) * x -> (a*x, b*x)
     return MixedComplexLeft<OPR, LCAT>(
         messages, std::move(zy), std::move(irx), defaultRealKind);
@@ -327,7 +338,7 @@ std::optional<Expr<SomeType>> MixedComplexRight(
       return Package(ConstructComplex(messages, std::move(*rr),
           AsGenericExpr(-std::move(zi)), defaultRealKind));
     }
-  } else if (defaultRealKind != 666) { // dodge unused parameter warning
+  } else {
     // x / (a,b) -> (x,0) / (a,b)
     if constexpr (LCAT == TypeCategory::Integer) {
       Expr<SomeComplex> zx{ConvertTo(zy, std::move(irx))};

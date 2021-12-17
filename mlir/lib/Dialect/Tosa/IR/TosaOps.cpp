@@ -423,8 +423,7 @@ void PadOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
   results.insert<MaterializePadValue>(context);
 }
 
-struct Conv2DFullyConnectedOptimization
-    : public OpRewritePattern<tosa::Conv2DOp> {
+struct Conv2DIsFullyConnected : public OpRewritePattern<tosa::Conv2DOp> {
   using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(tosa::Conv2DOp op,
@@ -437,6 +436,12 @@ struct Conv2DFullyConnectedOptimization
 
     if (!inputType.hasStaticShape() || !weightType.hasRank()) {
       return failure();
+    }
+
+    for (Attribute pad : op.pad().getValue()) {
+      if (!pad.cast<IntegerAttr>().getValue().isZero()) {
+        return failure();
+      }
     }
 
     // Stride must be 1 for this optimization.
@@ -456,9 +461,8 @@ struct Conv2DFullyConnectedOptimization
     ArrayRef<int64_t> inputShape = inputType.getShape();
     llvm::SmallVector<int64_t, 2> revisedInputShape{
         inputShape[0] * inputShape[1] * inputShape[2], inputShape[3]};
-    auto revisedInputShapeType = RankedTensorType::get(
-        revisedInputShape,
-        input.getType().dyn_cast<RankedTensorType>().getElementType());
+    auto revisedInputShapeType =
+        RankedTensorType::get(revisedInputShape, inputType.getElementType());
     auto reshapedInput = rewriter
                              .create<tosa::ReshapeOp>(
                                  op.getLoc(), revisedInputShapeType, input,
@@ -468,9 +472,8 @@ struct Conv2DFullyConnectedOptimization
     // Reshape kernel to [OC,KH,KW,IC] -> [OC, IC].
     llvm::SmallVector<int64_t, 2> revisedWeightShape{weightShape[0],
                                                      weightShape[3]};
-    auto revisedWeightShapeType = RankedTensorType::get(
-        revisedWeightShape,
-        weight.getType().dyn_cast<RankedTensorType>().getElementType());
+    auto revisedWeightShapeType =
+        RankedTensorType::get(revisedWeightShape, weightType.getElementType());
     auto reshapedWeight = rewriter
                               .create<tosa::ReshapeOp>(
                                   op.getLoc(), revisedWeightShapeType, weight,
@@ -480,9 +483,8 @@ struct Conv2DFullyConnectedOptimization
     // Perform a fully connected network over the reshaped input and weight.
     llvm::SmallVector<int64_t, 2> fullyConnectedShape{
         inputShape[0] * inputShape[1] * inputShape[2], weightShape[0]};
-    auto fullyConnectedShapeType = RankedTensorType::get(
-        fullyConnectedShape,
-        resultType.dyn_cast<ShapedType>().getElementType());
+    auto fullyConnectedShapeType =
+        RankedTensorType::get(fullyConnectedShape, resultType.getElementType());
 
     Value fullyConnectedValue;
     if (op.quantization_info()) {
@@ -512,7 +514,7 @@ struct Conv2DFullyConnectedOptimization
 
 void Conv2DOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
                                            MLIRContext *context) {
-  results.insert<Conv2DFullyConnectedOptimization>(context);
+  results.insert<Conv2DIsFullyConnected>(context);
 }
 
 struct DepthwiseConv2DMulOptimization
@@ -610,6 +612,41 @@ struct DepthwiseConv2DMulOptimization
 void DepthwiseConv2DOp::getCanonicalizationPatterns(
     OwningRewritePatternList &results, MLIRContext *context) {
   results.insert<DepthwiseConv2DMulOptimization>(context);
+}
+
+struct MaxPool2dIsNoOp : public OpRewritePattern<tosa::MaxPool2dOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::MaxPool2dOp op,
+                                PatternRewriter &rewriter) const override {
+    Value input = op.input();
+    Value output = op.output();
+    ShapedType inputType = input.getType().cast<ShapedType>();
+    ShapedType outputType = output.getType().cast<ShapedType>();
+
+    if (!inputType.hasStaticShape() || !outputType.hasStaticShape()) {
+      return failure();
+    }
+
+    // If the output and input shapes are 1x1, then this is a no op.
+    ArrayRef<int64_t> outputShape = outputType.getShape();
+    if (outputShape[1] != 1 || outputShape[2] != 1) {
+      return failure();
+    }
+
+    ArrayRef<int64_t> inputShape = inputType.getShape();
+    if (inputShape[1] != 1 || inputShape[2] != 1) {
+      return failure();
+    }
+
+    rewriter.replaceOp(op, input);
+    return success();
+  }
+};
+
+void MaxPool2dOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+                                              MLIRContext *context) {
+  results.insert<MaxPool2dIsNoOp>(context);
 }
 
 //===----------------------------------------------------------------------===//

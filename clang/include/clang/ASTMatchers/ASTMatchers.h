@@ -4872,7 +4872,7 @@ AST_POLYMORPHIC_MATCHER_P2(forEachArgumentWithParamType,
     }
   }
 
-  int ParamIndex = 0;
+  unsigned ParamIndex = 0;
   bool Matched = false;
   unsigned NumArgs = Node.getNumArgs();
   if (FProto && FProto->isVariadic())
@@ -4886,7 +4886,7 @@ AST_POLYMORPHIC_MATCHER_P2(forEachArgumentWithParamType,
 
       // This test is cheaper compared to the big matcher in the next if.
       // Therefore, please keep this order.
-      if (FProto) {
+      if (FProto && FProto->getNumParams() > ParamIndex) {
         QualType ParamType = FProto->getParamType(ParamIndex);
         if (ParamMatcher.matches(ParamType, Finder, &ParamMatches)) {
           Result.addMatch(ParamMatches);

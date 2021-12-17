@@ -1099,6 +1099,9 @@ bool DevirtIndex::tryFindVirtualCallTargets(
       if (VTP.VTableOffset != P.AddressPointOffset + ByteOffset)
         continue;
 
+      if (mustBeUnreachableFunction(VTP.FuncVI))
+        continue;
+
       TargetsForSlot.push_back(VTP.FuncVI);
     }
   }
