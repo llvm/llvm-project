@@ -46,7 +46,7 @@ jobs:
             
               const data = {
                 from: "LLVM Bugs <llvm-bugs@email.llvm.org>",
-                to: "anton.korobeynikov@llvm.org",
+                to: "llvm-bugs@lists.llvm.org",
                 subject: `[Bug ${issue.data.number}] ${issue.data.title}`,
                 template: "new-github-issue",
                 'h:X-Mailgun-Variables': JSON.stringify(payload)
