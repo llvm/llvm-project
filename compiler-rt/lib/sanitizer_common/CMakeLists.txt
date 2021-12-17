@@ -34,7 +34,6 @@ set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_solaris.cpp
   sanitizer_stoptheworld_fuchsia.cpp
   sanitizer_stoptheworld_mac.cpp
-  sanitizer_stoptheworld_win.cpp
   sanitizer_suppressions.cpp
   sanitizer_tls_get_addr.cpp
   sanitizer_thread_registry.cpp

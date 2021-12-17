@@ -13,7 +13,7 @@
 #include "sanitizer_common/sanitizer_stoptheworld.h"
 
 #include "sanitizer_common/sanitizer_platform.h"
-#if (SANITIZER_LINUX || SANITIZER_WINDOWS) && defined(__x86_64__)
+#if SANITIZER_LINUX && defined(__x86_64__)
 
 #  include <atomic>
 #  include <mutex>
@@ -155,13 +155,7 @@ static void SegvCallback(const SuspendedThreadsList &suspended_threads_list,
   *(volatile int *)0x1234 = 0;
 }
 
-#  if SANITIZER_WINDOWS
-#    define MAYBE_SegvInCallback DISABLED_SegvInCallback
-#  else
-#    define MAYBE_SegvInCallback SegvInCallback
-#  endif
-
-TEST(StopTheWorld, MAYBE_SegvInCallback) {
+TEST(StopTheWorld, SegvInCallback) {
   // Test that tracer thread catches SIGSEGV.
   StopTheWorld(&SegvCallback, NULL);
 }
