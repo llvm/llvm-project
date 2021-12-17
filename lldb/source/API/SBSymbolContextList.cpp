@@ -56,9 +56,8 @@ SBSymbolContext SBSymbolContextList::GetContextAtIndex(uint32_t idx) {
   SBSymbolContext sb_sc;
   if (m_opaque_up) {
     SymbolContext sc;
-    if (m_opaque_up->GetContextAtIndex(idx, sc)) {
-      sb_sc.SetSymbolContext(&sc);
-    }
+    if (m_opaque_up->GetContextAtIndex(idx, sc))
+      sb_sc = sc;
   }
   return LLDB_RECORD_RESULT(sb_sc);
 }
