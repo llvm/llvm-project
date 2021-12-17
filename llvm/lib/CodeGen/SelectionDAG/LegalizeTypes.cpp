@@ -1007,11 +1007,7 @@ SDValue DAGTypeLegalizer::JoinIntegers(SDValue Lo, SDValue Hi) {
 ///
 /// ValVT is the type of values that produced the boolean.
 SDValue DAGTypeLegalizer::PromoteTargetBoolean(SDValue Bool, EVT ValVT) {
-  SDLoc dl(Bool);
-  EVT BoolVT = getSetCCResultType(ValVT);
-  ISD::NodeType ExtendCode =
-      TargetLowering::getExtendForContent(TLI.getBooleanContents(ValVT));
-  return DAG.getNode(ExtendCode, dl, BoolVT, Bool);
+  return TLI.promoteTargetBoolean(DAG, Bool, ValVT);
 }
 
 /// Return the lower LoVT bits of Op in Lo and the upper HiVT bits in Hi.
