@@ -702,6 +702,11 @@ determinePointerAccessAttrs(Argument *A,
       };
 
       CallBase &CB = cast<CallBase>(*I);
+      if (CB.isCallee(U)) {
+        IsRead = true;
+        Captures = false; // See comment in CaptureTracking for context
+        continue;
+      }
       if (CB.doesNotAccessMemory()) {
         AddUsersToWorklistIfCapturing();
         continue;

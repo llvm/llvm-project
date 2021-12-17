@@ -92,19 +92,19 @@ define void @direct3(i8* %p) {
   ret void
 }
 
-; CHECK: define void @fptr_test1(i8* %p, void (i8*)* nocapture %f)
+; CHECK: define void @fptr_test1(i8* %p, void (i8*)* nocapture readonly %f)
 define void @fptr_test1(i8* %p, void (i8*)* %f) {
   call void %f(i8* %p)
   ret void
 }
 
-; CHECK: define void @fptr_test2(i8* %p, void (i8*)* nocapture %f)
+; CHECK: define void @fptr_test2(i8* %p, void (i8*)* nocapture readonly %f)
 define void @fptr_test2(i8* %p, void (i8*)* %f) {
   call void %f(i8* writeonly %p)
   ret void
 }
 
-; CHECK: define void @fptr_test3(i8* %p, void (i8*)* nocapture %f)
+; CHECK: define void @fptr_test3(i8* %p, void (i8*)* nocapture readonly %f)
 define void @fptr_test3(i8* %p, void (i8*)* %f) {
   call void %f(i8* %p) writeonly
   ret void
