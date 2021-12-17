@@ -278,7 +278,7 @@ public:
 
   // Splittable sections are handled as a sequence of data
   // rather than a single large blob of data.
-  std::vector<SectionPiece> pieces;
+  SmallVector<SectionPiece, 0> pieces;
 
   // Returns I'th piece's data. This function is very hot when
   // string merging is enabled, so we want to inline.
