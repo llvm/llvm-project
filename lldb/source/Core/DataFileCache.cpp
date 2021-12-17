@@ -274,9 +274,8 @@ bool ConstStringTable::Encode(DataEncoder &encoder) {
   encoder.AppendU8(0); // Start the string table with with an empty string.
   for (auto s: m_strings) {
     // Make sure all of the offsets match up with what we handed out!
-    const size_t stroff = encoder.GetByteSize() - strtab_offset;
-    auto pos = m_string_to_offset.find(s);
-    assert(pos->second == stroff);
+    assert(m_string_to_offset.find(s)->second ==
+           encoder.GetByteSize() - strtab_offset);
     // Append the C string into the encoder
     encoder.AppendCString(s.GetStringRef());
   }
