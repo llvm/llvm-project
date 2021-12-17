@@ -55,6 +55,13 @@ public:
     return result;
   }
 
+  Environment GetEmulatorEnvVars() {
+    Args args;
+    m_collection_sp->GetPropertyAtIndexAsArgs(nullptr, ePropertyEmulatorEnvVars,
+                                              args);
+    return Environment(args);
+  }
+
   Environment GetTargetEnvVars() {
     Args args;
     m_collection_sp->GetPropertyAtIndexAsArgs(nullptr, ePropertyTargetEnvVars,
@@ -175,8 +182,13 @@ lldb::ProcessSP PlatformQemuUser::DebugProcess(ProcessLaunchInfo &launch_info,
            get_arg_range(args));
 
   launch_info.SetArguments(args, true);
+
+  Environment emulator_env = Host::GetEnvironment();
+  for (const auto &KV : GetGlobalProperties().GetEmulatorEnvVars())
+    emulator_env[KV.first()] = KV.second;
   launch_info.GetEnvironment() = ComputeLaunchEnvironment(
-      std::move(launch_info.GetEnvironment()), Host::GetEnvironment());
+      std::move(launch_info.GetEnvironment()), std::move(emulator_env));
+
   launch_info.SetLaunchInSeparateProcessGroup(true);
   launch_info.GetFlags().Clear(eLaunchFlagDebug);
   launch_info.SetMonitorProcessCallback(ProcessLaunchInfo::NoOpMonitorCallback,

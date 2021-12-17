@@ -171,7 +171,7 @@ class TestQemuLaunch(TestBase):
 
         self.assertEqual(state["fake-arg"], "fake-value")
 
-    def test_target_env_vars(self):
+    def test_env_vars(self):
         # First clear any global environment to have a clean slate for this test
         self.runCmd("settings clear target.env-vars")
         self.runCmd("settings clear target.unset-env-vars")
@@ -187,6 +187,10 @@ class TestQemuLaunch(TestBase):
                 del os.environ[var(i)]
         self.addTearDownHook(cleanup)
 
+        # Set some emulator-only variables.
+        self.set_emulator_setting("emulator-env-vars",
+                "%s='emulator only'"%var(4))
+
         # And through the platform setting.
         self.set_emulator_setting("target-env-vars",
                 "%s='from platform' %s='from platform'" % (var(1), var(2)))
@@ -195,11 +199,13 @@ class TestQemuLaunch(TestBase):
         info = target.GetLaunchInfo()
         env = info.GetEnvironment()
 
-        # Platform settings should trump host values.
+        # Platform settings should trump host values. Emulator-only variables
+        # should not be visible.
         self.assertEqual(env.Get(var(0)), "from host")
         self.assertEqual(env.Get(var(1)), "from platform")
         self.assertEqual(env.Get(var(2)), "from platform")
         self.assertEqual(env.Get(var(3)), "from host")
+        self.assertIsNone(env.Get(var(4)))
 
         # Finally, make some launch_info specific changes.
         env.Set(var(2), "from target", True)
@@ -212,7 +218,8 @@ class TestQemuLaunch(TestBase):
         state = self._run_and_get_state(target, info)
         for i in range(4):
             self.assertEqual(state["environ"][var(i)], "from host")
+        self.assertEqual(state["environ"][var(4)], "emulator only")
         self.assertEqual(state["environ"]["QEMU_SET_ENV"],
                 "%s=from platform,%s=from target" % (var(1), var(2)))
         self.assertEqual(state["environ"]["QEMU_UNSET_ENV"],
-                "%s,QEMU_SET_ENV,QEMU_UNSET_ENV" % var(3))
+                "%s,%s,QEMU_SET_ENV,QEMU_UNSET_ENV" % (var(3), var(4)))
