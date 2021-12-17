@@ -1,4 +1,5 @@
 // Test that malloc_zone_from_ptr returns a valid zone for a 0-sized allocation.
+// Test that malloc_size does not crash for an invalid pointer.
 
 // RUN: %clang_tsan %s -o %t -framework Foundation
 // RUN: %run %t 2>&1 | FileCheck %s
@@ -54,4 +55,13 @@ int main() {
   // CHECK: size = 0x0
   describe_zone(p);
   // CHECK: zone = no zone
+
+  p = (void *)0x42;  // invalid pointer
+  s = malloc_size(p);
+  fprintf(stderr, "size = 0x%zx\n", s);
+  // CHECK: size = 0x0
+  describe_zone(p);
+  // CHECK: zone = no zone
+
+  return 0;
 }
