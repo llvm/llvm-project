@@ -346,13 +346,16 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
           if (Tracker->captured(U))
             return;
 
-      // Not captured if only passed via 'nocapture' arguments.  Note that
-      // calling a function pointer does not in itself cause the pointer to
+      // Calling a function pointer does not in itself cause the pointer to
       // be captured.  This is a subtle point considering that (for example)
       // the callee might return its own address.  It is analogous to saying
       // that loading a value from a pointer does not cause the pointer to be
       // captured, even though the loaded value might be the pointer itself
       // (think of self-referential objects).
+      if (Call->isCallee(U))
+        break;
+
+      // Not captured if only passed via 'nocapture' arguments.
       if (Call->isDataOperand(U) &&
           !Call->doesNotCapture(Call->getDataOperandNo(U))) {
         // The parameter is not marked 'nocapture' - captured.
