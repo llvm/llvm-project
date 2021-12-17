@@ -2289,7 +2289,10 @@ int32_t __tgt_rtl_run_target_region(int32_t device_id, void *tgt_entry_ptr,
 int32_t __tgt_rtl_run_target_team_region_async(
     int32_t device_id, void *tgt_entry_ptr, void **tgt_args,
     ptrdiff_t *tgt_offsets, int32_t arg_num, int32_t num_teams,
-    int32_t thread_limit, uint64_t loop_tripcount) {
+    int32_t thread_limit, uint64_t loop_tripcount,
+    __tgt_async_info *AsyncInfo) {
+  assert(AsyncInfo && "AsyncInfo is nullptr");
+  initAsyncInfo(AsyncInfo);
 
   DeviceInfo.load_run_lock.lock_shared();
   int32_t res =
@@ -2305,16 +2308,13 @@ int32_t __tgt_rtl_run_target_region_async(int32_t device_id,
                                           ptrdiff_t *tgt_offsets,
                                           int32_t arg_num,
                                           __tgt_async_info *AsyncInfo) {
-  assert(AsyncInfo && "AsyncInfo is nullptr");
-  initAsyncInfo(AsyncInfo);
-
   // use one team and one thread
   // fix thread num
   int32_t team_num = 1;
   int32_t thread_limit = 0; // use default
-  return __tgt_rtl_run_target_team_region_async(device_id, tgt_entry_ptr,
-                                                tgt_args, tgt_offsets, arg_num,
-                                                team_num, thread_limit, 0);
+  return __tgt_rtl_run_target_team_region_async(
+      device_id, tgt_entry_ptr, tgt_args, tgt_offsets, arg_num, team_num,
+      thread_limit, 0, AsyncInfo);
 }
 
 int32_t __tgt_rtl_synchronize(int32_t device_id, __tgt_async_info *AsyncInfo) {
