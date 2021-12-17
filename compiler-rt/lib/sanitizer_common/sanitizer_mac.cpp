@@ -888,7 +888,7 @@ bool SignalContext::IsTrueFaultingAddress() const {
     (uptr)ptrauth_strip(     \
         (void *)arm_thread_state64_get_##r(ucontext->uc_mcontext->__ss), 0)
 #else
-  #define AARCH64_GET_REG(r) ucontext->uc_mcontext->__ss.__##r
+  #define AARCH64_GET_REG(r) (uptr)ucontext->uc_mcontext->__ss.__##r
 #endif
 
 static void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
@@ -1326,7 +1326,7 @@ void SignalContext::DumpAllRegisters(void *context) {
 # define DUMPREG64(r) \
     Printf("%s = 0x%016llx  ", #r, ucontext->uc_mcontext->__ss.__ ## r);
 # define DUMPREGA64(r) \
-    Printf("   %s = 0x%016llx  ", #r, AARCH64_GET_REG(r));
+    Printf("   %s = 0x%016lx  ", #r, AARCH64_GET_REG(r));
 # define DUMPREG32(r) \
     Printf("%s = 0x%08x  ", #r, ucontext->uc_mcontext->__ss.__ ## r);
 # define DUMPREG_(r)   Printf(" "); DUMPREG(r);
