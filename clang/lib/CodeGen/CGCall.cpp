@@ -1261,8 +1261,7 @@ static llvm::Value *CreateCoercedLoad(Address Src, llvm::Type *Ty,
     //
     // FIXME: Assert that we aren't truncating non-padding bits when have access
     // to that information.
-    Src = CGF.Builder.CreateBitCast(Src,
-                                    Ty->getPointerTo(Src.getAddressSpace()));
+    Src = CGF.Builder.CreateElementBitCast(Src, Ty);
     return CGF.Builder.CreateLoad(Src);
   }
 
