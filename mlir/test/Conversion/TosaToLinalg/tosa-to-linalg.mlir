@@ -931,11 +931,11 @@ func @rescale_ui8(%arg0 : tensor<2xui8>) -> () {
 // CHECK: #[[$MAP0:.*]] = affine_map<(d0) -> (d0)>
 
 // CHECK-LABEL: @rescale_per_channel
-func @rescale_per_channel(%arg0 : tensor<2xi8>) -> (tensor<2xi8>) {
-  // CHECK: [[MULTIPLIERS:%.+]] = arith.constant dense<[42, 43]>
-  // CHECK: [[SHIFTS:%.+]] = arith.constant dense<[14, 15]>
-  // CHECK: [[INIT:%.+]] = linalg.init_tensor [2]
-  // CHECK: [[GENERIC:%.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP0]], #[[$MAP0]], #[[$MAP0]]], iterator_types = ["parallel"]} ins(%arg0, [[MULTIPLIERS]], [[SHIFTS]] : tensor<2xi8>, tensor<2xi32>, tensor<2xi8>) outs([[INIT]] : tensor<2xi8>)
+func @rescale_per_channel(%arg0 : tensor<3xi8>) -> (tensor<3xi8>) {
+  // CHECK: [[MULTIPLIERS:%.+]] = arith.constant dense<[42, 43, 0]>
+  // CHECK: [[SHIFTS:%.+]] = arith.constant dense<[14, 15, 0]>
+  // CHECK: [[INIT:%.+]] = linalg.init_tensor [3]
+  // CHECK: [[GENERIC:%.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP0]], #[[$MAP0]], #[[$MAP0]]], iterator_types = ["parallel"]} ins(%arg0, [[MULTIPLIERS]], [[SHIFTS]] : tensor<3xi8>, tensor<3xi32>, tensor<3xi8>) outs([[INIT]] : tensor<3xi8>)
   // CHECK: ^bb0([[IN:%.+]]: i8, [[MULTIPLIER:%.+]]: i32, [[SHIFT:%.+]]: i8, [[UNUSED:%.+]]: i8):
   // CHECK: [[C243:%.+]] = arith.constant 243
   // CHECK: [[C252:%.+]] = arith.constant 252
@@ -952,10 +952,10 @@ func @rescale_per_channel(%arg0 : tensor<2xi8>) -> (tensor<2xi8>) {
   // CHECK-DAG: [[BOUNDED:%.+]] = select [[MAXLT]], [[CMAX]], [[LOWER]]
   // CHECK-DAG: [[TRUNC:%.+]] = arith.trunci [[BOUNDED]]
   // CHECK-DAG: linalg.yield [[TRUNC]]
-  %0 = "tosa.rescale"(%arg0) {input_zp = 243 : i32, output_zp = 252 : i32, multiplier = [42 : i32, 43 : i32], shift = [14 : i32, 15 : i32], scale32 = false, double_round = false, per_channel = false} : (tensor<2xi8>)  -> (tensor<2xi8>)
+  %0 = "tosa.rescale"(%arg0) {input_zp = 243 : i32, output_zp = 252 : i32, multiplier = [42 : i32, 43 : i32, 44 : i32], shift = [14 : i32, 15 : i32, 64 : i32], scale32 = false, double_round = false, per_channel = false} : (tensor<3xi8>)  -> (tensor<3xi8>)
 
   // CHECK: return [[GENERIC]]
-  return %0 : tensor<2xi8>
+  return %0 : tensor<3xi8>
 }
 
 // -----
