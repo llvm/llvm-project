@@ -15,7 +15,7 @@
 	.byte	5                               # DWARF Unit Type
 	.byte	8                               # Address Size (in bytes)
 	.long	0                               # Offset Into Abbrev. Section
-	.quad	1
+	.quad	1                               # DWO ID
 	.quad   0
 .Ldebug_info_dwo_end1:
 	.long	.Ldebug_info_dwo_end2-.Ldebug_info_dwo_start2 # Length of Unit
@@ -24,8 +24,8 @@
 	.byte	5                               # DWARF Unit Type
 	.byte	8                               # Address Size (in bytes)
 	.long	0                               # Offset Into Abbrev. Section
-	.quad	2
-	.byte	1                               # Abbrev [1] 0xb:0x1b DW_TAG_compile_unit
+	.quad	2                               # DWO ID
+	.byte	1                               # Abbrev [1] DW_TAG_compile_unit
 	.byte	0                               # DW_AT_decl_file
 .Ldebug_info_dwo_end2:
 .Ldebug_info_dwo_prestart3:
@@ -38,7 +38,7 @@
 	.quad	3                               # Type Signature
 	.long	.Ldebug_info_dwo_die3-.Ldebug_info_dwo_prestart3 # Type DIE Offset
 .Ldebug_info_dwo_die3:
-	.byte	3                               # Abbrev [1] 0x18:0xe DW_TAG_type_unit
+	.byte	2                               # Abbrev [2] DW_TAG_type_unit
 	.byte	1                               # DW_AT_decl_file
 .Ldebug_info_dwo_end3:
 .Ldebug_info_dwo_prestart4:
@@ -51,7 +51,7 @@
 	.quad	4                               # Type Signature
 	.long	.Ldebug_info_dwo_die4-.Ldebug_info_dwo_prestart4 # Type DIE Offset
 .Ldebug_info_dwo_die4:
-	.byte	4                               # Abbrev [1] 0x18:0xe DW_TAG_type_unit
+	.byte	3                               # Abbrev [3] DW_TAG_type_unit
 	.long	0                               # DW_AT_stmt_list
 	.byte	0                               # DW_AT_decl_file
 .Ldebug_info_dwo_end4:
@@ -64,20 +64,13 @@
 	.byte	0                               # EOM(1)
 	.byte	0                               # EOM(2)
 	.byte	2                               # Abbreviation Code
-	.byte	17                              # DW_TAG_compile_unit
-	.byte	0                               # DW_CHILDREN_no
-	.byte	58                              # DW_AT_decl_file
-	.byte	11                              # DW_FORM_data1
-	.byte	0                               # EOM(1)
-	.byte	0                               # EOM(2)
-	.byte	3                               # Abbreviation Code
 	.byte	65                              # DW_TAG_type_unit
 	.byte	0                               # DW_CHILDREN_no
 	.byte	58                              # DW_AT_decl_file
 	.byte	11                              # DW_FORM_data1
 	.byte	0                               # EOM(1)
 	.byte	0                               # EOM(2)
-	.byte	4                               # Abbreviation Code
+	.byte	3                               # Abbreviation Code
 	.byte	65                              # DW_TAG_type_unit
 	.byte	0                               # DW_CHILDREN_no
 	.byte	16                              # DW_AT_stmt_list
