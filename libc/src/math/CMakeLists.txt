@@ -116,6 +116,8 @@ add_math_entrypoint_object(ldexp)
 add_math_entrypoint_object(ldexpf)
 add_math_entrypoint_object(ldexpl)
 
+add_math_entrypoint_object(logf)
+
 add_math_entrypoint_object(logb)
 add_math_entrypoint_object(logbf)
 add_math_entrypoint_object(logbl)
