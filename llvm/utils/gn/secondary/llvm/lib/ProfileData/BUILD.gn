@@ -9,6 +9,7 @@ static_library("ProfileData") {
   sources = [
     "GCOV.cpp",
     "InstrProf.cpp",
+    "InstrProfCorrelator.cpp",
     "InstrProfReader.cpp",
     "InstrProfWriter.cpp",
     "ProfileSummaryBuilder.cpp",
