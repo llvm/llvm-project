@@ -32,7 +32,7 @@ struct std::experimental::coroutine_traits<void, T...> { using promise_type = pr
 
 #ifndef DISABLE_WARNING
 void test0() { // expected-warning {{'promise_void' is required to declare the member 'unhandled_exception()' when exceptions are enabled}}
-  co_return;   // expected-warning {{Please move from std::experimental::coroutine_traits to std::coroutine_traits}}
+  co_return;   // expected-warning {{support for std::experimental::coroutine_traits will be removed}}
 }
 #else
 void test0() { // expected-no-diagnostics

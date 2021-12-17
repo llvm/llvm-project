@@ -1687,6 +1687,8 @@ ClassTemplateDecl *Sema::lookupCoroutineTraits(SourceLocation KwLoc,
       if (ExpNamespace && LookupQualifiedName(ExpResult, ExpNamespace)) {
         Diag(KwLoc,
              diag::err_mixed_use_std_and_experimental_namespace_for_coroutine);
+        Diag(KwLoc, diag::warn_deprecated_coroutine_namespace)
+            << "coroutine_traits";
         return nullptr;
       }
     }
