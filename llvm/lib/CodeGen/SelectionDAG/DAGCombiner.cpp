@@ -22614,7 +22614,6 @@ SDValue DAGCombiner::SimplifyVBinOp(SDNode *N, const SDLoc &DL) {
 
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
-  SDValue Ops[] = {LHS, RHS};
   unsigned Opcode = N->getOpcode();
   SDNodeFlags Flags = N->getFlags();
 
