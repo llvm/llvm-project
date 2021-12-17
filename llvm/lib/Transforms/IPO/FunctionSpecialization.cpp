@@ -409,11 +409,15 @@ private:
         return L.Gain > R.Gain;
       });
 
-      // TODO: truncate the worklist to 'MaxConstantsThreshold' candidates if
+      // Truncate the worklist to 'MaxConstantsThreshold' candidates if
       // necessary.
       if (Worklist.size() > MaxConstantsThreshold) {
-        Worklist.clear();
-        continue;
+        LLVM_DEBUG(dbgs() << "FnSpecialization: number of constants exceed "
+                    << "the maximum number of constants threshold.\n"
+                    << "Truncating worklist to " << MaxConstantsThreshold
+                    << " candidates.\n");
+        Worklist.erase(Worklist.begin() + MaxConstantsThreshold,
+                       Worklist.end());
       }
 
       if (IsPartial || Worklist.size() < ActualConstArg.size())
