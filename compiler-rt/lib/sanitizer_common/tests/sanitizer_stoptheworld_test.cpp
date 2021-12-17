@@ -104,7 +104,6 @@ void AdvancedIncrementerThread(AdvancedCallbackArgument &callback_argument) {
   uptr this_thread_index =
       __sync_fetch_and_add(&callback_argument.thread_index, 1);
   // Spawn the next thread.
-  int pthread_create_result;
   if (this_thread_index + 1 < kThreadCount) {
     try {
       callback_argument.threads[this_thread_index + 1] =
