@@ -2546,7 +2546,7 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   return nullptr;
 }
 
-static bool isNeverEqualToUnescapedAlloc(Value *V, const TargetLibraryInfo *TLI,
+static bool isNeverEqualToUnescapedAlloc(Value *V, const TargetLibraryInfo &TLI,
                                          Instruction *AI) {
   if (isa<ConstantPointerNull>(V))
     return true;
@@ -2557,7 +2557,7 @@ static bool isNeverEqualToUnescapedAlloc(Value *V, const TargetLibraryInfo *TLI,
   // through bitcasts of V can cause
   // the result statement below to be true, even when AI and V (ex:
   // i8* ->i32* ->i8* of AI) are the same allocations.
-  return isAllocLikeFn(V, TLI) && V != AI;
+  return isAllocLikeFn(V, &TLI) && V != AI;
 }
 
 /// Given a call CB which uses an address UsedV, return true if we can prove the
@@ -2598,7 +2598,7 @@ static bool isRemovableWrite(CallBase &CB, Value *UsedV) {
 
 static bool isAllocSiteRemovable(Instruction *AI,
                                  SmallVectorImpl<WeakTrackingVH> &Users,
-                                 const TargetLibraryInfo *TLI) {
+                                 const TargetLibraryInfo &TLI) {
   SmallVector<Instruction*, 4> Worklist;
   Worklist.push_back(AI);
 
@@ -2668,12 +2668,12 @@ static bool isAllocSiteRemovable(Instruction *AI,
           continue;
         }
 
-        if (isFreeCall(I, TLI)) {
+        if (isFreeCall(I, &TLI)) {
           Users.emplace_back(I);
           continue;
         }
 
-        if (isReallocLikeFn(I, TLI, true)) {
+        if (isReallocLikeFn(I, &TLI, true)) {
           Users.emplace_back(I);
           Worklist.push_back(I);
           continue;
@@ -2717,7 +2717,7 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
     DIB.reset(new DIBuilder(*MI.getModule(), /*AllowUnresolved=*/false));
   }
 
-  if (isAllocSiteRemovable(&MI, Users, &TLI)) {
+  if (isAllocSiteRemovable(&MI, Users, TLI)) {
     for (unsigned i = 0, e = Users.size(); i != e; ++i) {
       // Lowering all @llvm.objectsize calls first because they may
       // use a bitcast/GEP of the alloca we are removing.
