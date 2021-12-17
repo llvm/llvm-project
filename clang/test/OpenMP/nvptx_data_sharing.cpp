@@ -397,9 +397,9 @@ void test_ds(){
 // CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK:       user_code.entry:
-// CHECK-NEXT:    [[A:%.*]] = call i8* @__kmpc_alloc_shared(i64 4)
+// CHECK-NEXT:    [[A:%.*]] = call align 8 i8* @__kmpc_alloc_shared(i64 4)
 // CHECK-NEXT:    [[A_ON_STACK:%.*]] = bitcast i8* [[A]] to i32*
-// CHECK-NEXT:    [[B:%.*]] = call i8* @__kmpc_alloc_shared(i64 4)
+// CHECK-NEXT:    [[B:%.*]] = call align 8 i8* @__kmpc_alloc_shared(i64 4)
 // CHECK-NEXT:    [[B_ON_STACK:%.*]] = bitcast i8* [[B]] to i32*
 // CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    store i32 10, i32* [[A_ON_STACK]], align 4

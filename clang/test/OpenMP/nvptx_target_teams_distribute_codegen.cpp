@@ -607,7 +607,7 @@ int bar(int n){
 // CHECK1-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [1 x i8*], align 8
 // CHECK1-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
-// CHECK1-NEXT:    [[I:%.*]] = call i8* @__kmpc_alloc_shared(i64 4)
+// CHECK1-NEXT:    [[I:%.*]] = call align 8 i8* @__kmpc_alloc_shared(i64 4)
 // CHECK1-NEXT:    [[I_ON_STACK:%.*]] = bitcast i8* [[I]] to i32*
 // CHECK1-NEXT:    store i32 0, i32* [[DOTOMP_LB]], align 4
 // CHECK1-NEXT:    store i32 9, i32* [[DOTOMP_UB]], align 4
@@ -729,7 +729,7 @@ int bar(int n){
 // CHECK2-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [1 x i8*], align 4
 // CHECK2-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK2-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 4
-// CHECK2-NEXT:    [[I:%.*]] = call i8* @__kmpc_alloc_shared(i32 4)
+// CHECK2-NEXT:    [[I:%.*]] = call align 8 i8* @__kmpc_alloc_shared(i32 4)
 // CHECK2-NEXT:    [[I_ON_STACK:%.*]] = bitcast i8* [[I]] to i32*
 // CHECK2-NEXT:    store i32 0, i32* [[DOTOMP_LB]], align 4
 // CHECK2-NEXT:    store i32 9, i32* [[DOTOMP_UB]], align 4
@@ -851,7 +851,7 @@ int bar(int n){
 // CHECK3-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [1 x i8*], align 4
 // CHECK3-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK3-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 4
-// CHECK3-NEXT:    [[I:%.*]] = call i8* @__kmpc_alloc_shared(i32 4)
+// CHECK3-NEXT:    [[I:%.*]] = call align 8 i8* @__kmpc_alloc_shared(i32 4)
 // CHECK3-NEXT:    [[I_ON_STACK:%.*]] = bitcast i8* [[I]] to i32*
 // CHECK3-NEXT:    store i32 0, i32* [[DOTOMP_LB]], align 4
 // CHECK3-NEXT:    store i32 9, i32* [[DOTOMP_UB]], align 4
