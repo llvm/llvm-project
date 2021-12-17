@@ -534,6 +534,16 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
     ReportError("DIE has invalid DW_AT_stmt_list encoding:");
     break;
   case DW_AT_location: {
+    // FIXME: It might be nice if there's a way to walk location expressions
+    // without trying to resolve the address ranges - it'd be a more efficient
+    // API (since the API is currently unnecessarily resolving addresses for
+    // this use case which only wants to validate the expressions themselves) &
+    // then the expressions could be validated even if the addresses can't be
+    // resolved.
+    // That sort of API would probably look like a callback "for each
+    // expression" with some way to lazily resolve the address ranges when
+    // needed (& then the existing API used here could be built on top of that -
+    // using the callback API to build the data structure and return it).
     if (Expected<std::vector<DWARFLocationExpression>> Loc =
             Die.getLocations(DW_AT_location)) {
       for (const auto &Entry : *Loc) {
@@ -547,8 +557,12 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
         if (Error || !Expression.verify(U))
           ReportError("DIE contains invalid DWARF expression:");
       }
-    } else
-      ReportError(toString(Loc.takeError()));
+    } else if (Error E = handleErrors(
+                   Loc.takeError(), [&](std::unique_ptr<ResolverError> E) {
+                     return U->isDWOUnit() ? Error::success()
+                                           : Error(std::move(E));
+                   }))
+      ReportError(toString(std::move(E)));
     break;
   }
   case DW_AT_specification:
