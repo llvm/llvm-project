@@ -1626,7 +1626,7 @@ int32_t __tgt_rtl_init_device(int device_id) {
   if (DeviceInfo.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) {
     // TODO: add framework for multiple systems supporting unified_shared_memory
     coarse_grain_mem_tab = new AMDGPUMemTypeBitFieldTable(
-        AMDGPU_X86_64_SystemConfiguration::max_addressable_byte,
+        AMDGPU_X86_64_SystemConfiguration::max_addressable_byte+1, // memory size
         AMDGPU_X86_64_SystemConfiguration::page_size);
   }
 
@@ -2322,20 +2322,18 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
 }
 
 void *__tgt_rtl_data_alloc(int device_id, int64_t size, void *, int32_t kind) {
-  void *ptr = NULL;
+  void *ptr = nullptr;
   assert(device_id < DeviceInfo.NumberOfDevices && "Device ID too large");
 
-  if (kind != TARGET_ALLOC_DEFAULT) {
-    REPORT("Invalid target data allocation kind or requested allocator not "
-           "implemented yet\n");
-    return NULL;
+  ptr = DeviceInfo.DeviceAllocators[device_id].allocate(size, nullptr,
+                                                        (TargetAllocTy)kind);
+  if (kind == TARGET_ALLOC_SHARED) {
+    __tgt_rtl_set_coarse_grain_mem_region(ptr, size);
   }
 
-  hsa_amd_memory_pool_t MemoryPool = DeviceInfo.getDeviceMemoryPool(device_id);
-  hsa_status_t err = hsa_amd_memory_pool_allocate(MemoryPool, size, 0, &ptr);
   DP("Tgt alloc data %ld bytes, (tgt:%016llx).\n", size,
      (long long unsigned)(Elf64_Addr)ptr);
-  ptr = (err == HSA_STATUS_SUCCESS) ? ptr : NULL;
+
   return ptr;
 }
 
@@ -2383,14 +2381,7 @@ int32_t __tgt_rtl_data_retrieve_async(int device_id, void *hst_ptr,
 
 int32_t __tgt_rtl_data_delete(int device_id, void *tgt_ptr) {
   assert(device_id < DeviceInfo.NumberOfDevices && "Device ID too large");
-  hsa_status_t err;
-  DP("Tgt free data (tgt:%016llx).\n", (long long unsigned)(Elf64_Addr)tgt_ptr);
-  err = core::Runtime::Memfree(tgt_ptr);
-  if (err != HSA_STATUS_SUCCESS) {
-    DP("Error when freeing CUDA memory\n");
-    return OFFLOAD_FAIL;
-  }
-  return OFFLOAD_SUCCESS;
+  return DeviceInfo.DeviceAllocators[device_id].dev_free(tgt_ptr);
 }
 
 int32_t __tgt_rtl_run_target_team_region(int32_t device_id, void *tgt_entry_ptr,
