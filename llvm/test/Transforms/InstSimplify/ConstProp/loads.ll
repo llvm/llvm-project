@@ -280,3 +280,16 @@ define { i64, i64 } @test_load_struct() {
   %v = load { i64, i64 }, { i64, i64 }* @g3
   ret { i64, i64 } %v
 }
+
+@m64 = internal constant [2 x i64] zeroinitializer
+@idx = external global i32
+
+; This should not try to create an x86_mmx null value.
+define x86_mmx @load_mmx() {
+; CHECK-LABEL: @load_mmx(
+; CHECK-NEXT:    [[TEMP:%.*]] = load x86_mmx, x86_mmx* bitcast (i64* getelementptr ([2 x i64], [2 x i64]* @m64, i64 0, i64 ptrtoint (i32* @idx to i64)) to x86_mmx*), align 8
+; CHECK-NEXT:    ret x86_mmx [[TEMP]]
+;
+  %temp = load x86_mmx, x86_mmx* bitcast (i64* getelementptr ([2 x i64], [2 x i64]* @m64, i64 0, i64 ptrtoint (i32* @idx to i64)) to x86_mmx*)
+  ret x86_mmx %temp
+}
