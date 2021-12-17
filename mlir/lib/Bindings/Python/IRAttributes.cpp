@@ -513,11 +513,13 @@ public:
     if (mlirTypeIsAF64(elementType)) {
       // f64
       return bufferInfo<double>(shapedType);
-    } else if (mlirTypeIsAF16(elementType)) {
+    }
+    if (mlirTypeIsAF16(elementType)) {
       // f16
       return bufferInfo<uint16_t>(shapedType, "e");
-    } else if (mlirTypeIsAInteger(elementType) &&
-               mlirIntegerTypeGetWidth(elementType) == 32) {
+    }
+    if (mlirTypeIsAInteger(elementType) &&
+        mlirIntegerTypeGetWidth(elementType) == 32) {
       if (mlirIntegerTypeIsSignless(elementType) ||
           mlirIntegerTypeIsSigned(elementType)) {
         // i32

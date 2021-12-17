@@ -113,7 +113,8 @@ Type QuantizedType::castFromStorageType(Type candidateType) {
   if (candidateType.isa<UnrankedTensorType>()) {
     // i.e. tensor<i8> -> tensor<!quant<"uniform[i8:f32]{1.0}">>
     return UnrankedTensorType::get(getStorageType());
-  } else if (candidateType.isa<VectorType>()) {
+  }
+  if (candidateType.isa<VectorType>()) {
     // i.e. tensor<4xi8> -> tensor<4x!quant<"uniform[i8:f32]{1.0}">>
     return VectorType::get(candidateType.cast<VectorType>().getShape(),
                            getStorageType());
@@ -140,7 +141,8 @@ Type QuantizedType::castToStorageType(Type quantizedType) {
     }
     if (quantizedType.isa<UnrankedTensorType>()) {
       return UnrankedTensorType::get(storageType);
-    } else if (quantizedType.isa<VectorType>()) {
+    }
+    if (quantizedType.isa<VectorType>()) {
       return VectorType::get(sType.getShape(), storageType);
     }
   }
@@ -166,7 +168,8 @@ Type QuantizedType::castFromExpressedType(Type candidateType) {
     if (candidateType.isa<UnrankedTensorType>()) {
       // i.e. tensor<xf32> -> tensor<x!quant<"uniform[i8:f32]{1.0}">>
       return UnrankedTensorType::get(*this);
-    } else if (candidateType.isa<VectorType>()) {
+    }
+    if (candidateType.isa<VectorType>()) {
       // i.e. tensor<4xf32> -> tensor<4x!quant<"uniform[i8:f32]{1.0}">>
       return VectorType::get(candidateShapedType.getShape(), *this);
     }
@@ -193,7 +196,8 @@ Type QuantizedType::castToExpressedType(Type quantizedType) {
     }
     if (quantizedType.isa<UnrankedTensorType>()) {
       return UnrankedTensorType::get(expressedType);
-    } else if (quantizedType.isa<VectorType>()) {
+    }
+    if (quantizedType.isa<VectorType>()) {
       return VectorType::get(sType.getShape(), expressedType);
     }
   }
