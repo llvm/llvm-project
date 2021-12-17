@@ -536,7 +536,7 @@ auto AlignVectors::createAddressGroups() -> bool {
   erase_if(AddrGroups, [](auto &G) { return G.second.size() == 1; });
   // Remove groups that don't use HVX types.
   erase_if(AddrGroups, [&](auto &G) {
-    return !llvm::any_of(
+    return llvm::none_of(
         G.second, [&](auto &I) { return HVC.HST.isTypeForHVX(I.ValTy); });
   });
 

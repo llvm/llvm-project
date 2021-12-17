@@ -1,3 +1,5 @@
+// REQUIRES: zlib
+
 // Value profiling is currently not supported in lightweight mode.
 // RUN: %clang_pgogen -o %t.normal -mllvm --disable-vp=true %s
 // RUN: env LLVM_PROFILE_FILE=%t.profraw %run %t.normal

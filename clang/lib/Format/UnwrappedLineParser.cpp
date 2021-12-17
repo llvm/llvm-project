@@ -2159,18 +2159,22 @@ void UnwrappedLineParser::parseSquare(bool LambdaIntroducer) {
 }
 
 void UnwrappedLineParser::parseIfThenElse() {
+  auto HandleAttributes = [this]() {
+    // Handle AttributeMacro, e.g. `if (x) UNLIKELY`.
+    if (FormatTok->is(TT_AttributeMacro))
+      nextToken();
+    // Handle [[likely]] / [[unlikely]] attributes.
+    if (FormatTok->is(tok::l_square) && tryToParseSimpleAttribute())
+      parseSquare();
+  };
+
   assert(FormatTok->Tok.is(tok::kw_if) && "'if' expected");
   nextToken();
   if (FormatTok->Tok.isOneOf(tok::kw_constexpr, tok::identifier))
     nextToken();
   if (FormatTok->Tok.is(tok::l_paren))
     parseParens();
-  // handle  AttributeMacro  if (x) UNLIKELY
-  if (FormatTok->is(TT_AttributeMacro))
-    nextToken();
-  // handle [[likely]] / [[unlikely]]
-  if (FormatTok->is(tok::l_square) && tryToParseSimpleAttribute())
-    parseSquare();
+  HandleAttributes();
   bool NeedsUnwrappedLine = false;
   if (FormatTok->Tok.is(tok::l_brace)) {
     CompoundStatementIndenter Indenter(this, Style, Line->Level);
@@ -2187,12 +2191,7 @@ void UnwrappedLineParser::parseIfThenElse() {
   }
   if (FormatTok->Tok.is(tok::kw_else)) {
     nextToken();
-    // handle  AttributeMacro  else UNLIKELY
-    if (FormatTok->is(TT_AttributeMacro))
-      nextToken();
-    // handle [[likely]] / [[unlikely]]
-    if (FormatTok->Tok.is(tok::l_square) && tryToParseSimpleAttribute())
-      parseSquare();
+    HandleAttributes();
     if (FormatTok->Tok.is(tok::l_brace)) {
       CompoundStatementIndenter Indenter(this, Style, Line->Level);
       parseBlock();

@@ -71,14 +71,18 @@
 // DLWRAP_INTERNAL is similar, except the function it expands to is:
 // static int dlwrap_foo(char x0, double x1) { ... }
 // so that the function pointer call can be wrapped in library-specific code
+//
+// DLWRAP_INITIALIZE() declares static functions:
+#define DLWRAP_INITIALIZE()                                                    \
+  namespace dlwrap {                                                           \
+  static size_t size();                                                        \
+  static const char *symbol(size_t); /* get symbol name in [0, size()) */      \
+  static void **                                                               \
+      pointer(size_t); /* get pointer to function pointer in [0, size()) */    \
+  }
 
-// DLWRAP_FINALIZE() expands to definitions of:
+// DLWRAP_FINALIZE() implements the functions from DLWRAP_INITIALIZE
 #define DLWRAP_FINALIZE() DLWRAP_FINALIZE_IMPL()
-namespace dlwrap {
-static size_t size();
-static const char *symbol(size_t); // get symbol name in [0, size())
-static void **pointer(size_t); // get pointer to function pointer in [0, size())
-} // namespace dlwrap
 
 // Implementation details follow.
 

@@ -4,6 +4,9 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx     | FileCheck %s --check-prefixes=X64_AVX1
 ; RUN: llc < %s -mtriple=i686--   -mattr=+avx     | FileCheck %s --check-prefixes=X32_AVX1
 
+declare i32 @llvm.fptoui.sat.i32.f32(float)
+declare i64 @llvm.fptosi.sat.i64.f64(double)
+
 define float @trunc_unsigned_f32(float %x) #0 {
 ; SSE2-LABEL: trunc_unsigned_f32:
 ; SSE2:       # %bb.0:
@@ -689,37 +692,61 @@ define <4 x double> @trunc_signed_v4f64_nsz(<4 x double> %x) #0 {
   ret <4 x double> %r
 }
 
-; The fold may be guarded to allow existing code to continue
-; working based on its assumptions of float->int overflow.
+; The FTRUNC ("round**" x86 asm) fold relies on UB in the case of overflow.
+; This used to be guarded with an attribute check. That allowed existing
+; code to continue working based on its assumptions that float->int
+; overflow had saturating behavior.
+;
+; Now, we expect a front-end to use IR intrinsics if it wants to avoid this
+; transform.
 
-define float @trunc_unsigned_f32_disable_via_attr(float %x) #1 {
-; SSE-LABEL: trunc_unsigned_f32_disable_via_attr:
+define float @trunc_unsigned_f32_disable_via_intrinsic(float %x) #0 {
+; SSE-LABEL: trunc_unsigned_f32_disable_via_intrinsic:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvttss2si %xmm0, %rax
-; SSE-NEXT:    movl %eax, %eax
+; SSE-NEXT:    xorl %ecx, %ecx
+; SSE-NEXT:    xorps %xmm1, %xmm1
+; SSE-NEXT:    ucomiss %xmm1, %xmm0
+; SSE-NEXT:    cmovael %eax, %ecx
+; SSE-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    movl $-1, %eax
+; SSE-NEXT:    cmovbel %ecx, %eax
 ; SSE-NEXT:    xorps %xmm0, %xmm0
 ; SSE-NEXT:    cvtsi2ss %rax, %xmm0
 ; SSE-NEXT:    retq
 ;
-; X64_AVX1-LABEL: trunc_unsigned_f32_disable_via_attr:
+; X64_AVX1-LABEL: trunc_unsigned_f32_disable_via_intrinsic:
 ; X64_AVX1:       # %bb.0:
 ; X64_AVX1-NEXT:    vcvttss2si %xmm0, %rax
-; X64_AVX1-NEXT:    movl %eax, %eax
-; X64_AVX1-NEXT:    vcvtsi2ss %rax, %xmm1, %xmm0
+; X64_AVX1-NEXT:    xorl %ecx, %ecx
+; X64_AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; X64_AVX1-NEXT:    vucomiss %xmm1, %xmm0
+; X64_AVX1-NEXT:    cmovael %eax, %ecx
+; X64_AVX1-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64_AVX1-NEXT:    movl $-1, %eax
+; X64_AVX1-NEXT:    cmovbel %ecx, %eax
+; X64_AVX1-NEXT:    vcvtsi2ss %rax, %xmm2, %xmm0
 ; X64_AVX1-NEXT:    retq
 ;
-; X32_AVX1-LABEL: trunc_unsigned_f32_disable_via_attr:
+; X32_AVX1-LABEL: trunc_unsigned_f32_disable_via_intrinsic:
 ; X32_AVX1:       # %bb.0:
 ; X32_AVX1-NEXT:    pushl %eax
 ; X32_AVX1-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X32_AVX1-NEXT:    vcvttss2si %xmm0, %eax
 ; X32_AVX1-NEXT:    movl %eax, %ecx
 ; X32_AVX1-NEXT:    sarl $31, %ecx
-; X32_AVX1-NEXT:    vsubss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
-; X32_AVX1-NEXT:    vcvttss2si %xmm0, %edx
+; X32_AVX1-NEXT:    vsubss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm1
+; X32_AVX1-NEXT:    vcvttss2si %xmm1, %edx
 ; X32_AVX1-NEXT:    andl %ecx, %edx
 ; X32_AVX1-NEXT:    orl %eax, %edx
-; X32_AVX1-NEXT:    vmovd %edx, %xmm0
+; X32_AVX1-NEXT:    xorl %eax, %eax
+; X32_AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; X32_AVX1-NEXT:    vucomiss %xmm1, %xmm0
+; X32_AVX1-NEXT:    cmovael %edx, %eax
+; X32_AVX1-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X32_AVX1-NEXT:    movl $-1, %ecx
+; X32_AVX1-NEXT:    cmovbel %eax, %ecx
+; X32_AVX1-NEXT:    vmovd %ecx, %xmm0
 ; X32_AVX1-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X32_AVX1-NEXT:    vsubsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X32_AVX1-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0
@@ -727,47 +754,78 @@ define float @trunc_unsigned_f32_disable_via_attr(float %x) #1 {
 ; X32_AVX1-NEXT:    flds (%esp)
 ; X32_AVX1-NEXT:    popl %eax
 ; X32_AVX1-NEXT:    retl
-  %i = fptoui float %x to i32
+  %i = call i32 @llvm.fptoui.sat.i32.f32(float %x)
   %r = uitofp i32 %i to float
   ret float %r
 }
 
-define double @trunc_signed_f64_disable_via_attr(double %x) #1 {
-; SSE-LABEL: trunc_signed_f64_disable_via_attr:
+define double @trunc_signed_f64_disable_via_intrinsic(double %x) #0 {
+; SSE-LABEL: trunc_signed_f64_disable_via_intrinsic:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvttsd2si %xmm0, %rax
+; SSE-NEXT:    ucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
+; SSE-NEXT:    cmovbeq %rax, %rcx
+; SSE-NEXT:    xorl %eax, %eax
+; SSE-NEXT:    ucomisd %xmm0, %xmm0
+; SSE-NEXT:    cmovnpq %rcx, %rax
 ; SSE-NEXT:    xorps %xmm0, %xmm0
 ; SSE-NEXT:    cvtsi2sd %rax, %xmm0
 ; SSE-NEXT:    retq
 ;
-; X64_AVX1-LABEL: trunc_signed_f64_disable_via_attr:
+; X64_AVX1-LABEL: trunc_signed_f64_disable_via_intrinsic:
 ; X64_AVX1:       # %bb.0:
 ; X64_AVX1-NEXT:    vcvttsd2si %xmm0, %rax
+; X64_AVX1-NEXT:    vucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64_AVX1-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
+; X64_AVX1-NEXT:    cmovbeq %rax, %rcx
+; X64_AVX1-NEXT:    xorl %eax, %eax
+; X64_AVX1-NEXT:    vucomisd %xmm0, %xmm0
+; X64_AVX1-NEXT:    cmovnpq %rcx, %rax
 ; X64_AVX1-NEXT:    vcvtsi2sd %rax, %xmm1, %xmm0
 ; X64_AVX1-NEXT:    retq
 ;
-; X32_AVX1-LABEL: trunc_signed_f64_disable_via_attr:
+; X32_AVX1-LABEL: trunc_signed_f64_disable_via_intrinsic:
 ; X32_AVX1:       # %bb.0:
 ; X32_AVX1-NEXT:    pushl %ebp
 ; X32_AVX1-NEXT:    movl %esp, %ebp
+; X32_AVX1-NEXT:    pushl %esi
 ; X32_AVX1-NEXT:    andl $-8, %esp
-; X32_AVX1-NEXT:    subl $24, %esp
+; X32_AVX1-NEXT:    subl $32, %esp
 ; X32_AVX1-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X32_AVX1-NEXT:    vmovsd %xmm0, (%esp)
 ; X32_AVX1-NEXT:    fldl (%esp)
 ; X32_AVX1-NEXT:    fisttpll (%esp)
-; X32_AVX1-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X32_AVX1-NEXT:    vmovlps %xmm0, {{[0-9]+}}(%esp)
+; X32_AVX1-NEXT:    xorl %eax, %eax
+; X32_AVX1-NEXT:    vucomisd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X32_AVX1-NEXT:    movl $-2147483648, %ecx # imm = 0x80000000
+; X32_AVX1-NEXT:    movl $0, %edx
+; X32_AVX1-NEXT:    jb .LBB19_2
+; X32_AVX1-NEXT:  # %bb.1:
+; X32_AVX1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32_AVX1-NEXT:    movl (%esp), %edx
+; X32_AVX1-NEXT:  .LBB19_2:
+; X32_AVX1-NEXT:    vucomisd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X32_AVX1-NEXT:    movl $-1, %esi
+; X32_AVX1-NEXT:    cmovbel %edx, %esi
+; X32_AVX1-NEXT:    movl $2147483647, %edx # imm = 0x7FFFFFFF
+; X32_AVX1-NEXT:    cmovbel %ecx, %edx
+; X32_AVX1-NEXT:    vucomisd %xmm0, %xmm0
+; X32_AVX1-NEXT:    cmovpl %eax, %edx
+; X32_AVX1-NEXT:    cmovpl %eax, %esi
+; X32_AVX1-NEXT:    vmovd %esi, %xmm0
+; X32_AVX1-NEXT:    vpinsrd $1, %edx, %xmm0, %xmm0
+; X32_AVX1-NEXT:    vmovq %xmm0, {{[0-9]+}}(%esp)
 ; X32_AVX1-NEXT:    fildll {{[0-9]+}}(%esp)
 ; X32_AVX1-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; X32_AVX1-NEXT:    fldl {{[0-9]+}}(%esp)
-; X32_AVX1-NEXT:    movl %ebp, %esp
+; X32_AVX1-NEXT:    leal -4(%ebp), %esp
+; X32_AVX1-NEXT:    popl %esi
 ; X32_AVX1-NEXT:    popl %ebp
 ; X32_AVX1-NEXT:    retl
-  %i = fptosi double %x to i64
+  %i = call i64 @llvm.fptosi.sat.i64.f64(double %x)
   %r = sitofp i64 %i to double
   ret double %r
 }
 
 attributes #0 = { nounwind "no-signed-zeros-fp-math"="true" }
-attributes #1 = { nounwind "no-signed-zeros-fp-math"="true" "strict-float-cast-overflow"="false" }
