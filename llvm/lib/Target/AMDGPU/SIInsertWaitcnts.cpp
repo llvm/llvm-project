@@ -30,6 +30,7 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/DebugCounter.h"
@@ -51,26 +52,6 @@ static cl::opt<bool> ForceEmitZeroFlag(
   cl::init(false), cl::Hidden);
 
 namespace {
-
-template <typename EnumT>
-class enum_iterator
-    : public iterator_facade_base<enum_iterator<EnumT>,
-                                  std::forward_iterator_tag, const EnumT> {
-  EnumT Value;
-public:
-  enum_iterator() = default;
-  enum_iterator(EnumT Value) : Value(Value) {}
-
-  enum_iterator &operator++() {
-    Value = static_cast<EnumT>(Value + 1);
-    return *this;
-  }
-
-  bool operator==(const enum_iterator &RHS) const { return Value == RHS.Value; }
-
-  EnumT operator*() const { return Value; }
-};
-
 // Class of object that encapsulates latest instruction counter score
 // associated with the operand.  Used for determining whether
 // s_waitcnt instruction needs to be emitted.
@@ -78,11 +59,16 @@ public:
 #define CNT_MASK(t) (1u << (t))
 
 enum InstCounterType { VM_CNT = 0, LGKM_CNT, EXP_CNT, VS_CNT, NUM_INST_CNTS };
+} // namespace
 
-iterator_range<enum_iterator<InstCounterType>> inst_counter_types() {
-  return make_range(enum_iterator<InstCounterType>(VM_CNT),
-                    enum_iterator<InstCounterType>(NUM_INST_CNTS));
-}
+namespace llvm {
+template <> struct enum_iteration_traits<InstCounterType> {
+  static constexpr bool is_iterable = true;
+};
+} // namespace llvm
+
+namespace {
+auto inst_counter_types() { return enum_seq(VM_CNT, NUM_INST_CNTS); }
 
 using RegInterval = std::pair<int, int>;
 
