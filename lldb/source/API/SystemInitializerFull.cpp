@@ -50,15 +50,8 @@ SystemInitializerFull::~SystemInitializerFull() = default;
 
 llvm::Error SystemInitializerFull::Initialize() {
   llvm::Error error = SystemInitializerCommon::Initialize();
-  if (error) {
-    // During active replay, the ::Initialize call is replayed like any other
-    // SB API call and the return value is ignored. Since we can't intercept
-    // this, we terminate here before the uninitialized debugger inevitably
-    // crashes.
-    if (repro::Reproducer::Instance().IsReplaying())
-      llvm::report_fatal_error(std::move(error));
+  if (error)
     return error;
-  }
 
   // Initialize LLVM and Clang
   llvm::InitializeAllTargets();
