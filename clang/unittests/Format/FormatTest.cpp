@@ -6780,6 +6780,9 @@ TEST_F(FormatTest, TrailingReturnType) {
 
   // Not trailing return types.
   verifyFormat("void f() { auto a = b->c(); }");
+  verifyFormat("auto a = p->foo();");
+  verifyFormat("int a = p->foo();");
+  verifyFormat("auto lmbd = [] NOEXCEPT -> int { return 0; };");
 }
 
 TEST_F(FormatTest, DeductionGuides) {
