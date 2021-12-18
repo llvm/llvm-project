@@ -242,7 +242,6 @@ function(runtime_default_target)
                                       ${COMMON_CMAKE_ARGS}
                                       ${RUNTIMES_CMAKE_ARGS}
                            PASSTHROUGH_PREFIXES LLVM_ENABLE_RUNTIMES
-                                                LLVM_ENABLE_LLD
                                                 LLVM_USE_LINKER
                                                 ${ARG_PREFIXES}
                            EXTRA_TARGETS ${extra_targets}
@@ -347,8 +346,7 @@ function(runtime_register_target name target)
                                       -DLLVM_RUNTIMES_TARGET=${name}
                                       ${COMMON_CMAKE_ARGS}
                                       ${${name}_extra_args}
-                           PASSTHROUGH_PREFIXES LLVM_ENABLE_LLD
-                                                LLVM_USE_LINKER
+                           PASSTHROUGH_PREFIXES LLVM_USE_LINKER
                            EXTRA_TARGETS ${${name}_extra_targets}
                                          ${${name}_test_targets}
                            USE_TOOLCHAIN

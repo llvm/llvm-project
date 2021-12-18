@@ -110,7 +110,7 @@ void CheckAndProtect() {
     Die();
   }
 
-#    if defined(__aarch64__) && defined(__APPLE__) && SANITIZER_IOS
+#    if SANITIZER_IOS && !SANITIZER_IOSSIM
   ProtectRange(HeapMemEnd(), ShadowBeg());
   ProtectRange(ShadowEnd(), MetaShadowBeg());
   ProtectRange(MetaShadowEnd(), HiAppMemBeg());
