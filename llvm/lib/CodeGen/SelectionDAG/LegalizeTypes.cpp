@@ -83,7 +83,7 @@ void DAGTypeLegalizer::PerformExpensiveChecks() {
       SDValue Res(&Node, i);
       bool Failed = false;
       // Don't create a value in map.
-      auto ResId = (ValueToIdMap.count(Res)) ? ValueToIdMap[Res] : 0;
+      auto ResId = ValueToIdMap.lookup(Res);
 
       unsigned Mapped = 0;
       if (ResId && (ReplacedValues.find(ResId) != ReplacedValues.end())) {
