@@ -736,18 +736,6 @@ EXAMPLES:
 
 static llvm::Optional<int> InitializeReproducer(llvm::StringRef argv0,
                                                 opt::InputArgList &input_args) {
-  if (auto *replay_path = input_args.getLastArg(OPT_replay)) {
-    SBReplayOptions replay_options;
-    replay_options.SetCheckVersion(!input_args.hasArg(OPT_no_version_check));
-    replay_options.SetVerify(!input_args.hasArg(OPT_no_verification));
-    if (const char *error =
-            SBReproducer::Replay(replay_path->getValue(), replay_options)) {
-      WithColor::error() << "reproducer replay failed: " << error << '\n';
-      return 1;
-    }
-    return 0;
-  }
-
   bool capture = input_args.hasArg(OPT_capture);
   bool generate_on_exit = input_args.hasArg(OPT_generate_on_exit);
   auto *capture_path = input_args.getLastArg(OPT_capture_path);

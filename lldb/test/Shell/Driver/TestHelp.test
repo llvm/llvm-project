@@ -48,7 +48,6 @@ CHECK: -f
 CHECK: --help
 CHECK: -h
 CHECK: --no-use-colors
-CHECK: --replay
 CHECK: --version
 CHECK: -v
 CHECK: -X

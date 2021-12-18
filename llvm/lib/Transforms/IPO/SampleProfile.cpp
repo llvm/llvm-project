@@ -1159,11 +1159,9 @@ bool SampleProfileLoader::inlineHotFunctions(
     }
     for (CallBase *I : CIS) {
       Function *CalledFunction = I->getCalledFunction();
-      InlineCandidate Candidate = {
-          I,
-          LocalNotInlinedCallSites.count(I) ? LocalNotInlinedCallSites[I]
-                                            : nullptr,
-          0 /* dummy count */, 1.0 /* dummy distribution factor */};
+      InlineCandidate Candidate = {I, LocalNotInlinedCallSites.lookup(I),
+                                   0 /* dummy count */,
+                                   1.0 /* dummy distribution factor */};
       // Do not inline recursive calls.
       if (CalledFunction == &F)
         continue;
