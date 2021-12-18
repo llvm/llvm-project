@@ -42,9 +42,20 @@ M88kLegalizerInfo::M88kLegalizerInfo(const M88kSubtarget &ST) {
   getActionDefinitionsBuilder(G_SUB).legalFor({S32});
   getActionDefinitionsBuilder(G_MUL).legalFor({S32});
   getActionDefinitionsBuilder(G_UDIV).legalFor({S32});
-  getActionDefinitionsBuilder({G_AND, G_OR, G_XOR, G_SBFX, G_UBFX})
+  getActionDefinitionsBuilder({G_AND, G_OR, G_XOR})
       .legalFor({S32})
       .clampScalar(0, S32, S32);
+  getActionDefinitionsBuilder({G_SBFX, G_UBFX})
+      .legalFor({{S32, S32}})
+      .clampScalar(2, S32, S32)
+      .clampScalar(1, S32, S32)
+      .clampScalar(0, S32, S32);
+    getActionDefinitionsBuilder(
+        {G_SHL, G_LSHR, G_ASHR})
+      .legalFor({{S32, S32}})
+      .clampScalar(0, S32, S32)
+      .clampScalar(1, S32, S32);
+
   getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FNEG})
       .legalFor({S32, S64, S80});
   getLegacyLegalizerInfo().computeTables();
