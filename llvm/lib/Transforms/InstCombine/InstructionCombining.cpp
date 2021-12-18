@@ -2562,24 +2562,35 @@ static bool isNeverEqualToUnescapedAlloc(Value *V, const TargetLibraryInfo &TLI,
 
 /// Given a call CB which uses an address UsedV, return true if we can prove the
 /// call's only possible effect is storing to V.
-static bool isRemovableWrite(CallBase &CB, Value *UsedV,
-                             const TargetLibraryInfo &TLI) {
+static bool isRemovableWrite(CallBase &CB, Value *UsedV) {
   if (!CB.use_empty())
     // TODO: add recursion if returned attribute is present
     return false;
 
-  if (CB.isTerminator())
-    // TODO: remove implementation restriction
+  if (!CB.willReturn() || !CB.doesNotThrow() || !CB.onlyAccessesArgMemory() ||
+      CB.isTerminator())
     return false;
 
-  if (!CB.willReturn() || !CB.doesNotThrow())
+  if (CB.hasOperandBundles())
     return false;
 
-  // If the only possible side effect of the call is writing to the alloca,
-  // and the result isn't used, we can safely remove any reads implied by the
-  // call including those which might read the alloca itself.
-  Optional<MemoryLocation> Dest = MemoryLocation::getForDest(&CB, TLI);
-  return Dest && Dest->Ptr == UsedV;
+  for (unsigned i = 0; i < CB.arg_size(); i++) {
+    if (!CB.getArgOperand(i)->getType()->isPointerTy())
+      continue;
+    if (!CB.doesNotCapture(i))
+      // capture would allow the address to be read back in an untracked manner
+      return false;
+    if (UsedV != CB.getArgOperand(i) && !CB.onlyReadsMemory(i))
+      // A write to another memory location keeps the call live, and thus we
+      // must keep the alloca so that the call has somewhere to write to.
+      // TODO: This results in an inprecision when two values derived from the
+      // same alloca are passed as arguments to the same function.
+      return false;
+    // Note: Both reads from and writes to the alloca are fine.  Since the
+    // result is unused nothing can observe the values read from the alloca
+    // without writing it to some other observable location (checked above).
+  }
+  return true;
 }
 
 static bool isAllocSiteRemovable(Instruction *AI,
@@ -2649,7 +2660,7 @@ static bool isAllocSiteRemovable(Instruction *AI,
           }
         }
 
-        if (isRemovableWrite(*cast<CallBase>(I), PI, TLI)) {
+        if (isRemovableWrite(*cast<CallBase>(I), PI)) {
           Users.emplace_back(I);
           continue;
         }
