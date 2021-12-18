@@ -8,8 +8,6 @@
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I %s
 
-; For RV64F, fcvt.l.s is semantically equivalent to fcvt.w.s in this case
-; because fptosi will produce poison if the result doesn't fit into an i32.
 define i32 @fcvt_w_s(float %a) nounwind {
 ; RV32IF-LABEL: fcvt_w_s:
 ; RV32IF:       # %bb.0:

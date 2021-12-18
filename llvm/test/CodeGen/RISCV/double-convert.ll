@@ -88,8 +88,6 @@ define double @fcvt_d_s(float %a) nounwind {
   ret double %1
 }
 
-; For RV64D, fcvt.l.d is semantically equivalent to fcvt.w.d in this case
-; because fptosi will produce poison if the result doesn't fit into an i32.
 define i32 @fcvt_w_d(double %a) nounwind {
 ; RV32IFD-LABEL: fcvt_w_d:
 ; RV32IFD:       # %bb.0:
