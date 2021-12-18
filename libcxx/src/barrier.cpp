@@ -22,7 +22,7 @@ public:
     struct alignas(64) /* naturally-align the heap state */ __state_t
     {
         struct {
-            __atomic_base<__barrier_phase_t> __phase = ATOMIC_VAR_INIT(0);
+          __atomic_base<__barrier_phase_t> __phase{0};
         } __tickets[64];
     };
 

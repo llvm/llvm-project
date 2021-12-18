@@ -30,7 +30,7 @@
 typedef std::chrono::high_resolution_clock Clock;
 typedef std::chrono::milliseconds ms;
 
-std::atomic_bool invoked = ATOMIC_VAR_INIT(false);
+std::atomic_bool invoked{false};
 
 int f0()
 {

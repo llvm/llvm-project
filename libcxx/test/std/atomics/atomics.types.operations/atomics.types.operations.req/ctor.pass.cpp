@@ -41,10 +41,6 @@ struct TestFunc {
       constexpr Atomic a{t};
       assert(a == t);
     }
-    {
-      constexpr Atomic a = ATOMIC_VAR_INIT(t);
-      assert(a == t);
-    }
   }
 };
 
