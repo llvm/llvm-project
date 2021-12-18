@@ -22,14 +22,14 @@ body: |
 
     ; GFX8-LABEL: name: test_sextload_global_i32_i1
     ; GFX8: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX8: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s8), addrspace 1)
-    ; GFX8: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LOAD]], 1
-    ; GFX8: $vgpr0 = COPY [[SEXT_INREG]](s32)
+    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s8), addrspace 1)
+    ; GFX8-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LOAD]], 1
+    ; GFX8-NEXT: $vgpr0 = COPY [[SEXT_INREG]](s32)
     ; GFX6-LABEL: name: test_sextload_global_i32_i1
     ; GFX6: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX6: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s8), addrspace 1)
-    ; GFX6: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LOAD]], 1
-    ; GFX6: $vgpr0 = COPY [[SEXT_INREG]](s32)
+    ; GFX6-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s8), addrspace 1)
+    ; GFX6-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LOAD]], 1
+    ; GFX6-NEXT: $vgpr0 = COPY [[SEXT_INREG]](s32)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_SEXTLOAD %0 :: (load (s1), addrspace 1)
     $vgpr0 = COPY %1
@@ -43,14 +43,14 @@ body: |
 
     ; GFX8-LABEL: name: test_sextload_global_i32_i7
     ; GFX8: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX8: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s8), addrspace 1)
-    ; GFX8: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LOAD]], 7
-    ; GFX8: $vgpr0 = COPY [[SEXT_INREG]](s32)
+    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s8), addrspace 1)
+    ; GFX8-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LOAD]], 7
+    ; GFX8-NEXT: $vgpr0 = COPY [[SEXT_INREG]](s32)
     ; GFX6-LABEL: name: test_sextload_global_i32_i7
     ; GFX6: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX6: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s8), addrspace 1)
-    ; GFX6: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LOAD]], 7
-    ; GFX6: $vgpr0 = COPY [[SEXT_INREG]](s32)
+    ; GFX6-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s8), addrspace 1)
+    ; GFX6-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LOAD]], 7
+    ; GFX6-NEXT: $vgpr0 = COPY [[SEXT_INREG]](s32)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_SEXTLOAD %0 :: (load (s7), addrspace 1)
     $vgpr0 = COPY %1
@@ -63,24 +63,24 @@ body: |
 
     ; GFX8-LABEL: name: test_sextload_global_i32_i24
     ; GFX8: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX8: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p1) :: (load (s16), align 4, addrspace 1)
-    ; GFX8: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
-    ; GFX8: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; GFX8: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[PTR_ADD]](p1) :: (load (s8) from unknown-address + 2, align 2, addrspace 1)
-    ; GFX8: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; GFX8: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[SEXTLOAD]], [[C1]](s32)
-    ; GFX8: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL]], [[ZEXTLOAD]]
-    ; GFX8: $vgpr0 = COPY [[OR]](s32)
+    ; GFX8-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p1) :: (load (s16), align 4, addrspace 1)
+    ; GFX8-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; GFX8-NEXT: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C]](s64)
+    ; GFX8-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[PTR_ADD]](p1) :: (load (s8) from unknown-address + 2, align 2, addrspace 1)
+    ; GFX8-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; GFX8-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[SEXTLOAD]], [[C1]](s32)
+    ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL]], [[ZEXTLOAD]]
+    ; GFX8-NEXT: $vgpr0 = COPY [[OR]](s32)
     ; GFX6-LABEL: name: test_sextload_global_i32_i24
     ; GFX6: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX6: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p1) :: (load (s16), align 4, addrspace 1)
-    ; GFX6: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
-    ; GFX6: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; GFX6: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[PTR_ADD]](p1) :: (load (s8) from unknown-address + 2, align 2, addrspace 1)
-    ; GFX6: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; GFX6: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[SEXTLOAD]], [[C1]](s32)
-    ; GFX6: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL]], [[ZEXTLOAD]]
-    ; GFX6: $vgpr0 = COPY [[OR]](s32)
+    ; GFX6-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p1) :: (load (s16), align 4, addrspace 1)
+    ; GFX6-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; GFX6-NEXT: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C]](s64)
+    ; GFX6-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[PTR_ADD]](p1) :: (load (s8) from unknown-address + 2, align 2, addrspace 1)
+    ; GFX6-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[SEXTLOAD]], [[C1]](s32)
+    ; GFX6-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL]], [[ZEXTLOAD]]
+    ; GFX6-NEXT: $vgpr0 = COPY [[OR]](s32)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_SEXTLOAD %0 :: (load (s24), addrspace 1)
     $vgpr0 = COPY %1
@@ -94,14 +94,14 @@ body: |
 
     ; GFX8-LABEL: name: test_sextload_global_i32_i30
     ; GFX8: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX8: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), addrspace 1)
-    ; GFX8: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LOAD]], 30
-    ; GFX8: $vgpr0 = COPY [[SEXT_INREG]](s32)
+    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), addrspace 1)
+    ; GFX8-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LOAD]], 30
+    ; GFX8-NEXT: $vgpr0 = COPY [[SEXT_INREG]](s32)
     ; GFX6-LABEL: name: test_sextload_global_i32_i30
     ; GFX6: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX6: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), addrspace 1)
-    ; GFX6: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LOAD]], 30
-    ; GFX6: $vgpr0 = COPY [[SEXT_INREG]](s32)
+    ; GFX6-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), addrspace 1)
+    ; GFX6-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LOAD]], 30
+    ; GFX6-NEXT: $vgpr0 = COPY [[SEXT_INREG]](s32)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_SEXTLOAD %0 :: (load (s30), addrspace 1)
     $vgpr0 = COPY %1
@@ -115,14 +115,14 @@ body: |
 
     ; GFX8-LABEL: name: test_sextload_global_i32_i31
     ; GFX8: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX8: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), addrspace 1)
-    ; GFX8: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LOAD]], 31
-    ; GFX8: $vgpr0 = COPY [[SEXT_INREG]](s32)
+    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), addrspace 1)
+    ; GFX8-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LOAD]], 31
+    ; GFX8-NEXT: $vgpr0 = COPY [[SEXT_INREG]](s32)
     ; GFX6-LABEL: name: test_sextload_global_i32_i31
     ; GFX6: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX6: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), addrspace 1)
-    ; GFX6: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LOAD]], 31
-    ; GFX6: $vgpr0 = COPY [[SEXT_INREG]](s32)
+    ; GFX6-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), addrspace 1)
+    ; GFX6-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LOAD]], 31
+    ; GFX6-NEXT: $vgpr0 = COPY [[SEXT_INREG]](s32)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_SEXTLOAD %0 :: (load (s31), addrspace 1)
     $vgpr0 = COPY %1
@@ -136,12 +136,12 @@ body: |
 
     ; GFX8-LABEL: name: test_sextload_global_i32_i8
     ; GFX8: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX8: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s8), addrspace 1)
-    ; GFX8: $vgpr0 = COPY [[SEXTLOAD]](s32)
+    ; GFX8-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s8), addrspace 1)
+    ; GFX8-NEXT: $vgpr0 = COPY [[SEXTLOAD]](s32)
     ; GFX6-LABEL: name: test_sextload_global_i32_i8
     ; GFX6: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX6: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s8), addrspace 1)
-    ; GFX6: $vgpr0 = COPY [[SEXTLOAD]](s32)
+    ; GFX6-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s8), addrspace 1)
+    ; GFX6-NEXT: $vgpr0 = COPY [[SEXTLOAD]](s32)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_SEXTLOAD %0 :: (load (s8), addrspace 1)
     $vgpr0 = COPY %1
@@ -155,12 +155,12 @@ body: |
 
     ; GFX8-LABEL: name: test_sextload_global_i32_i16
     ; GFX8: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX8: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s16), addrspace 1)
-    ; GFX8: $vgpr0 = COPY [[SEXTLOAD]](s32)
+    ; GFX8-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s16), addrspace 1)
+    ; GFX8-NEXT: $vgpr0 = COPY [[SEXTLOAD]](s32)
     ; GFX6-LABEL: name: test_sextload_global_i32_i16
     ; GFX6: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX6: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s16), addrspace 1)
-    ; GFX6: $vgpr0 = COPY [[SEXTLOAD]](s32)
+    ; GFX6-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s16), addrspace 1)
+    ; GFX6-NEXT: $vgpr0 = COPY [[SEXTLOAD]](s32)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_SEXTLOAD %0 :: (load (s16), addrspace 1)
     $vgpr0 = COPY %1
@@ -173,12 +173,12 @@ body: |
 
     ; GFX8-LABEL: name: test_sextload_global_i31_i8
     ; GFX8: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX8: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s8), addrspace 1)
-    ; GFX8: $vgpr0 = COPY [[SEXTLOAD]](s32)
+    ; GFX8-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s8), addrspace 1)
+    ; GFX8-NEXT: $vgpr0 = COPY [[SEXTLOAD]](s32)
     ; GFX6-LABEL: name: test_sextload_global_i31_i8
     ; GFX6: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX6: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s8), addrspace 1)
-    ; GFX6: $vgpr0 = COPY [[SEXTLOAD]](s32)
+    ; GFX6-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s8), addrspace 1)
+    ; GFX6-NEXT: $vgpr0 = COPY [[SEXTLOAD]](s32)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s31) = G_SEXTLOAD %0 :: (load (s8), addrspace 1)
     %2:_(s32) = G_ANYEXT %1
@@ -192,14 +192,14 @@ body: |
 
     ; GFX8-LABEL: name: test_sextload_global_i64_i8
     ; GFX8: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX8: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s8), addrspace 1)
-    ; GFX8: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[SEXTLOAD]](s32)
-    ; GFX8: $vgpr0_vgpr1 = COPY [[SEXT]](s64)
+    ; GFX8-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s8), addrspace 1)
+    ; GFX8-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[SEXTLOAD]](s32)
+    ; GFX8-NEXT: $vgpr0_vgpr1 = COPY [[SEXT]](s64)
     ; GFX6-LABEL: name: test_sextload_global_i64_i8
     ; GFX6: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX6: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s8), addrspace 1)
-    ; GFX6: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[SEXTLOAD]](s32)
-    ; GFX6: $vgpr0_vgpr1 = COPY [[SEXT]](s64)
+    ; GFX6-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s8), addrspace 1)
+    ; GFX6-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[SEXTLOAD]](s32)
+    ; GFX6-NEXT: $vgpr0_vgpr1 = COPY [[SEXT]](s64)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s64) = G_SEXTLOAD %0 :: (load (s8), addrspace 1)
     $vgpr0_vgpr1 = COPY %1
@@ -212,14 +212,14 @@ body: |
 
     ; GFX8-LABEL: name: test_sextload_global_i64_i16
     ; GFX8: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX8: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s16), addrspace 1)
-    ; GFX8: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[SEXTLOAD]](s32)
-    ; GFX8: $vgpr0_vgpr1 = COPY [[SEXT]](s64)
+    ; GFX8-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s16), addrspace 1)
+    ; GFX8-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[SEXTLOAD]](s32)
+    ; GFX8-NEXT: $vgpr0_vgpr1 = COPY [[SEXT]](s64)
     ; GFX6-LABEL: name: test_sextload_global_i64_i16
     ; GFX6: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX6: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s16), addrspace 1)
-    ; GFX6: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[SEXTLOAD]](s32)
-    ; GFX6: $vgpr0_vgpr1 = COPY [[SEXT]](s64)
+    ; GFX6-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s16), addrspace 1)
+    ; GFX6-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[SEXTLOAD]](s32)
+    ; GFX6-NEXT: $vgpr0_vgpr1 = COPY [[SEXT]](s64)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s64) = G_SEXTLOAD %0 :: (load (s16), addrspace 1)
     $vgpr0_vgpr1 = COPY %1
@@ -232,14 +232,14 @@ body: |
 
     ; GFX8-LABEL: name: test_sextload_global_i64_i32
     ; GFX8: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX8: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), addrspace 1)
-    ; GFX8: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[LOAD]](s32)
-    ; GFX8: $vgpr0_vgpr1 = COPY [[SEXT]](s64)
+    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), addrspace 1)
+    ; GFX8-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[LOAD]](s32)
+    ; GFX8-NEXT: $vgpr0_vgpr1 = COPY [[SEXT]](s64)
     ; GFX6-LABEL: name: test_sextload_global_i64_i32
     ; GFX6: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX6: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), addrspace 1)
-    ; GFX6: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[LOAD]](s32)
-    ; GFX6: $vgpr0_vgpr1 = COPY [[SEXT]](s64)
+    ; GFX6-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), addrspace 1)
+    ; GFX6-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[LOAD]](s32)
+    ; GFX6-NEXT: $vgpr0_vgpr1 = COPY [[SEXT]](s64)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s64) = G_SEXTLOAD %0 :: (load (s32), addrspace 1)
     $vgpr0_vgpr1 = COPY %1
@@ -253,18 +253,18 @@ body: |
 
     ; GFX8-LABEL: name: test_sextload_global_s32_from_2_align1
     ; GFX8: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX8: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s16), align 1, addrspace 1)
-    ; GFX8: $vgpr0 = COPY [[SEXTLOAD]](s32)
+    ; GFX8-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s16), align 1, addrspace 1)
+    ; GFX8-NEXT: $vgpr0 = COPY [[SEXTLOAD]](s32)
     ; GFX6-LABEL: name: test_sextload_global_s32_from_2_align1
     ; GFX6: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX6: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p1) :: (load (s8), addrspace 1)
-    ; GFX6: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; GFX6: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; GFX6: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[PTR_ADD]](p1) :: (load (s8) from unknown-address + 1, addrspace 1)
-    ; GFX6: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; GFX6: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[SEXTLOAD]], [[C1]](s32)
-    ; GFX6: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL]], [[ZEXTLOAD]]
-    ; GFX6: $vgpr0 = COPY [[OR]](s32)
+    ; GFX6-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p1) :: (load (s8), addrspace 1)
+    ; GFX6-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; GFX6-NEXT: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C]](s64)
+    ; GFX6-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[PTR_ADD]](p1) :: (load (s8) from unknown-address + 1, addrspace 1)
+    ; GFX6-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+    ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[SEXTLOAD]], [[C1]](s32)
+    ; GFX6-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL]], [[ZEXTLOAD]]
+    ; GFX6-NEXT: $vgpr0 = COPY [[OR]](s32)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_SEXTLOAD %0 :: (load (s16), align 1, addrspace 1)
     $vgpr0 = COPY %1
@@ -278,20 +278,20 @@ body: |
 
     ; GFX8-LABEL: name: test_sextload_global_s64_from_2_align1
     ; GFX8: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX8: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s16), align 1, addrspace 1)
-    ; GFX8: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[SEXTLOAD]](s32)
-    ; GFX8: $vgpr0_vgpr1 = COPY [[SEXT]](s64)
+    ; GFX8-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s16), align 1, addrspace 1)
+    ; GFX8-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[SEXTLOAD]](s32)
+    ; GFX8-NEXT: $vgpr0_vgpr1 = COPY [[SEXT]](s64)
     ; GFX6-LABEL: name: test_sextload_global_s64_from_2_align1
     ; GFX6: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX6: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p1) :: (load (s8), addrspace 1)
-    ; GFX6: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; GFX6: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; GFX6: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[PTR_ADD]](p1) :: (load (s8) from unknown-address + 1, addrspace 1)
-    ; GFX6: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; GFX6: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[SEXTLOAD]], [[C1]](s32)
-    ; GFX6: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL]], [[ZEXTLOAD]]
-    ; GFX6: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[OR]](s32)
-    ; GFX6: $vgpr0_vgpr1 = COPY [[SEXT]](s64)
+    ; GFX6-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p1) :: (load (s8), addrspace 1)
+    ; GFX6-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; GFX6-NEXT: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C]](s64)
+    ; GFX6-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[PTR_ADD]](p1) :: (load (s8) from unknown-address + 1, addrspace 1)
+    ; GFX6-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+    ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[SEXTLOAD]], [[C1]](s32)
+    ; GFX6-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL]], [[ZEXTLOAD]]
+    ; GFX6-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[OR]](s32)
+    ; GFX6-NEXT: $vgpr0_vgpr1 = COPY [[SEXT]](s64)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s64) = G_SEXTLOAD %0 :: (load (s16), align 1, addrspace 1)
     $vgpr0_vgpr1 = COPY %1
@@ -305,12 +305,12 @@ body: |
 
     ; GFX8-LABEL: name: test_sextload_global_v2i16_from_v2s8
     ; GFX8: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX8: [[SEXTLOAD:%[0-9]+]]:_(<2 x s16>) = G_SEXTLOAD [[COPY]](p1) :: (load (<2 x s8>), addrspace 1)
-    ; GFX8: $vgpr0 = COPY [[SEXTLOAD]](<2 x s16>)
+    ; GFX8-NEXT: [[SEXTLOAD:%[0-9]+]]:_(<2 x s16>) = G_SEXTLOAD [[COPY]](p1) :: (load (<2 x s8>), addrspace 1)
+    ; GFX8-NEXT: $vgpr0 = COPY [[SEXTLOAD]](<2 x s16>)
     ; GFX6-LABEL: name: test_sextload_global_v2i16_from_v2s8
     ; GFX6: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX6: [[SEXTLOAD:%[0-9]+]]:_(<2 x s16>) = G_SEXTLOAD [[COPY]](p1) :: (load (<2 x s8>), addrspace 1)
-    ; GFX6: $vgpr0 = COPY [[SEXTLOAD]](<2 x s16>)
+    ; GFX6-NEXT: [[SEXTLOAD:%[0-9]+]]:_(<2 x s16>) = G_SEXTLOAD [[COPY]](p1) :: (load (<2 x s8>), addrspace 1)
+    ; GFX6-NEXT: $vgpr0 = COPY [[SEXTLOAD]](<2 x s16>)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(<2 x s16>) = G_SEXTLOAD %0 :: (load (<2 x s8>), addrspace 1)
     $vgpr0 = COPY %1
@@ -324,12 +324,12 @@ body: |
 
     ; GFX8-LABEL: name: test_sextload_global_v2i32_from_v2s8
     ; GFX8: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX8: [[SEXTLOAD:%[0-9]+]]:_(<2 x s32>) = G_SEXTLOAD [[COPY]](p1) :: (load (<2 x s8>), addrspace 1)
-    ; GFX8: $vgpr0_vgpr1 = COPY [[SEXTLOAD]](<2 x s32>)
+    ; GFX8-NEXT: [[SEXTLOAD:%[0-9]+]]:_(<2 x s32>) = G_SEXTLOAD [[COPY]](p1) :: (load (<2 x s8>), addrspace 1)
+    ; GFX8-NEXT: $vgpr0_vgpr1 = COPY [[SEXTLOAD]](<2 x s32>)
     ; GFX6-LABEL: name: test_sextload_global_v2i32_from_v2s8
     ; GFX6: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX6: [[SEXTLOAD:%[0-9]+]]:_(<2 x s32>) = G_SEXTLOAD [[COPY]](p1) :: (load (<2 x s8>), addrspace 1)
-    ; GFX6: $vgpr0_vgpr1 = COPY [[SEXTLOAD]](<2 x s32>)
+    ; GFX6-NEXT: [[SEXTLOAD:%[0-9]+]]:_(<2 x s32>) = G_SEXTLOAD [[COPY]](p1) :: (load (<2 x s8>), addrspace 1)
+    ; GFX6-NEXT: $vgpr0_vgpr1 = COPY [[SEXTLOAD]](<2 x s32>)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(<2 x s32>) = G_SEXTLOAD %0 :: (load (<2 x s8>), addrspace 1)
     $vgpr0_vgpr1 = COPY %1
@@ -343,12 +343,12 @@ body: |
 
     ; GFX8-LABEL: name: test_sextload_global_v2i32_from_v2s16
     ; GFX8: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX8: [[SEXTLOAD:%[0-9]+]]:_(<2 x s32>) = G_SEXTLOAD [[COPY]](p1) :: (load (<2 x s16>), addrspace 1)
-    ; GFX8: $vgpr0_vgpr1 = COPY [[SEXTLOAD]](<2 x s32>)
+    ; GFX8-NEXT: [[SEXTLOAD:%[0-9]+]]:_(<2 x s32>) = G_SEXTLOAD [[COPY]](p1) :: (load (<2 x s16>), addrspace 1)
+    ; GFX8-NEXT: $vgpr0_vgpr1 = COPY [[SEXTLOAD]](<2 x s32>)
     ; GFX6-LABEL: name: test_sextload_global_v2i32_from_v2s16
     ; GFX6: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX6: [[SEXTLOAD:%[0-9]+]]:_(<2 x s32>) = G_SEXTLOAD [[COPY]](p1) :: (load (<2 x s16>), addrspace 1)
-    ; GFX6: $vgpr0_vgpr1 = COPY [[SEXTLOAD]](<2 x s32>)
+    ; GFX6-NEXT: [[SEXTLOAD:%[0-9]+]]:_(<2 x s32>) = G_SEXTLOAD [[COPY]](p1) :: (load (<2 x s16>), addrspace 1)
+    ; GFX6-NEXT: $vgpr0_vgpr1 = COPY [[SEXTLOAD]](<2 x s32>)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(<2 x s32>) = G_SEXTLOAD %0 :: (load (<2 x s16>), addrspace 1)
     $vgpr0_vgpr1 = COPY %1
@@ -362,12 +362,12 @@ body: |
 
     ; GFX8-LABEL: name: test_sextload_global_v2i64_from_v2s16
     ; GFX8: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX8: [[SEXTLOAD:%[0-9]+]]:_(<2 x s64>) = G_SEXTLOAD [[COPY]](p1) :: (load (<2 x s16>), addrspace 1)
-    ; GFX8: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[SEXTLOAD]](<2 x s64>)
+    ; GFX8-NEXT: [[SEXTLOAD:%[0-9]+]]:_(<2 x s64>) = G_SEXTLOAD [[COPY]](p1) :: (load (<2 x s16>), addrspace 1)
+    ; GFX8-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[SEXTLOAD]](<2 x s64>)
     ; GFX6-LABEL: name: test_sextload_global_v2i64_from_v2s16
     ; GFX6: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX6: [[SEXTLOAD:%[0-9]+]]:_(<2 x s64>) = G_SEXTLOAD [[COPY]](p1) :: (load (<2 x s16>), addrspace 1)
-    ; GFX6: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[SEXTLOAD]](<2 x s64>)
+    ; GFX6-NEXT: [[SEXTLOAD:%[0-9]+]]:_(<2 x s64>) = G_SEXTLOAD [[COPY]](p1) :: (load (<2 x s16>), addrspace 1)
+    ; GFX6-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[SEXTLOAD]](<2 x s64>)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(<2 x s64>) = G_SEXTLOAD %0 :: (load (<2 x s16>), addrspace 1)
     $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %1
@@ -381,12 +381,12 @@ body: |
 
     ; GFX8-LABEL: name: test_sextload_global_v2i64_from_v2s32
     ; GFX8: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX8: [[SEXTLOAD:%[0-9]+]]:_(<2 x s64>) = G_SEXTLOAD [[COPY]](p1) :: (load (<2 x s32>), addrspace 1)
-    ; GFX8: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[SEXTLOAD]](<2 x s64>)
+    ; GFX8-NEXT: [[SEXTLOAD:%[0-9]+]]:_(<2 x s64>) = G_SEXTLOAD [[COPY]](p1) :: (load (<2 x s32>), addrspace 1)
+    ; GFX8-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[SEXTLOAD]](<2 x s64>)
     ; GFX6-LABEL: name: test_sextload_global_v2i64_from_v2s32
     ; GFX6: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX6: [[SEXTLOAD:%[0-9]+]]:_(<2 x s64>) = G_SEXTLOAD [[COPY]](p1) :: (load (<2 x s32>), addrspace 1)
-    ; GFX6: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[SEXTLOAD]](<2 x s64>)
+    ; GFX6-NEXT: [[SEXTLOAD:%[0-9]+]]:_(<2 x s64>) = G_SEXTLOAD [[COPY]](p1) :: (load (<2 x s32>), addrspace 1)
+    ; GFX6-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[SEXTLOAD]](<2 x s64>)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(<2 x s64>) = G_SEXTLOAD %0 :: (load (<2 x s32>), addrspace 1)
     $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %1
@@ -400,12 +400,12 @@ body: |
 
     ; GFX8-LABEL: name: test_sextload_global_s128_8
     ; GFX8: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX8: [[SEXTLOAD:%[0-9]+]]:_(s128) = G_SEXTLOAD [[COPY]](p1) :: (load (s64), addrspace 1)
-    ; GFX8: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[SEXTLOAD]](s128)
+    ; GFX8-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s128) = G_SEXTLOAD [[COPY]](p1) :: (load (s64), addrspace 1)
+    ; GFX8-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[SEXTLOAD]](s128)
     ; GFX6-LABEL: name: test_sextload_global_s128_8
     ; GFX6: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX6: [[SEXTLOAD:%[0-9]+]]:_(s128) = G_SEXTLOAD [[COPY]](p1) :: (load (s64), addrspace 1)
-    ; GFX6: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[SEXTLOAD]](s128)
+    ; GFX6-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s128) = G_SEXTLOAD [[COPY]](p1) :: (load (s64), addrspace 1)
+    ; GFX6-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[SEXTLOAD]](s128)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s128) = G_SEXTLOAD %0 :: (load (s64), addrspace 1)
     $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %1

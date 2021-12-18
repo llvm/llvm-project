@@ -9,14 +9,14 @@ body:             |
 
     ; CHECK-LABEL: name: memcpy_test
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; CHECK: [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
-    ; CHECK: [[MV1:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
-    ; CHECK: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[MV1]](p0) :: (load (s8))
-    ; CHECK: G_STORE [[LOAD]](s32), [[MV]](p0) :: (store (s8))
-    ; CHECK: S_ENDPGM 0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
+    ; CHECK-NEXT: [[MV1:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[MV1]](p0) :: (load (s8))
+    ; CHECK-NEXT: G_STORE [[LOAD]](s32), [[MV]](p0) :: (store (s8))
+    ; CHECK-NEXT: S_ENDPGM 0
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(p0) = G_MERGE_VALUES %0:_(s32), %1:_(s32)

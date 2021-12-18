@@ -11,10 +11,11 @@ body: |
     liveins: $vgpr0_vgpr1
     ; CHECK-LABEL: name: sextload_from_inreg
     ; CHECK: liveins: $vgpr0_vgpr1
-    ; CHECK: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; CHECK: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[COPY]](p1) :: (load (s64), addrspace 1)
-    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[LOAD]], 8
-    ; CHECK: $vgpr0_vgpr1 = COPY [[SEXT_INREG]](s64)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[COPY]](p1) :: (load (s64), addrspace 1)
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[LOAD]], 8
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[SEXT_INREG]](s64)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s64) = G_LOAD %0 :: (load (s64), align 8, addrspace 1)
     %2:_(s64) = G_SEXT_INREG %1, 8

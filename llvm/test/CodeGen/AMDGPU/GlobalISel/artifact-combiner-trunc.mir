@@ -10,7 +10,7 @@ body: |
     ; of the merge source
     ; CHECK-LABEL: name: trunc_s16_merge_s64_s32
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK: $vgpr0 = COPY [[C]](s32)
+    ; CHECK-NEXT: $vgpr0 = COPY [[C]](s32)
     %0:_(s32) = G_CONSTANT i32 0
     %1:_(s32) = G_CONSTANT i32 1
     %2:_(s64) = G_MERGE_VALUES %0, %1
@@ -27,7 +27,7 @@ body: |
     ; Test that trunc(merge) with trunc-size == merge-source-size is eliminated
     ; CHECK-LABEL: name: trunc_s32_merge_s64_s32
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK: $vgpr0 = COPY [[C]](s32)
+    ; CHECK-NEXT: $vgpr0 = COPY [[C]](s32)
     %0:_(s32) = G_CONSTANT i32 0
     %1:_(s32) = G_CONSTANT i32 1
     %2:_(s64) = G_MERGE_VALUES %0, %1
@@ -44,9 +44,9 @@ body: |
     ; smaller merge
     ; CHECK-LABEL: name: trunc_s64_merge_s128_s32
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[C]](s32), [[C1]](s32)
-    ; CHECK: $vgpr0_vgpr1 = COPY [[MV]](s64)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[C]](s32), [[C1]](s32)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[MV]](s64)
     %0:_(s32) = G_CONSTANT i32 0
     %1:_(s32) = G_CONSTANT i32 1
     %2:_(s128) = G_MERGE_VALUES %0, %1, %0, %1
@@ -62,10 +62,10 @@ body: |
     ; Test that trunc(merge) with a non-scalar merge source is not combined
     ; CHECK-LABEL: name: trunc_s32_merge_s128_p0
     ; CHECK: [[C:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
-    ; CHECK: [[C1:%[0-9]+]]:_(p0) = G_CONSTANT i64 1
-    ; CHECK: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[C]](p0), [[C1]](p0)
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[MV]](s128)
-    ; CHECK: $vgpr0 = COPY [[TRUNC]](s32)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(p0) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[C]](p0), [[C1]](p0)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[MV]](s128)
+    ; CHECK-NEXT: $vgpr0 = COPY [[TRUNC]](s32)
     %0:_(p0) = G_CONSTANT i64 0
     %1:_(p0) = G_CONSTANT i64 1
     %2:_(s128) = G_MERGE_VALUES %0, %1
@@ -81,10 +81,10 @@ body: |
     ; Test that trunc(merge) with a non-scalar merge source is not combined
     ; CHECK-LABEL: name: trunc_s64_merge_s128_p0
     ; CHECK: [[C:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
-    ; CHECK: [[C1:%[0-9]+]]:_(p0) = G_CONSTANT i64 1
-    ; CHECK: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[C]](p0), [[C1]](p0)
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s64) = G_TRUNC [[MV]](s128)
-    ; CHECK: $vgpr0_vgpr1 = COPY [[TRUNC]](s64)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(p0) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[C]](p0), [[C1]](p0)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s64) = G_TRUNC [[MV]](s128)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[TRUNC]](s64)
     %0:_(p0) = G_CONSTANT i64 0
     %1:_(p0) = G_CONSTANT i64 1
     %2:_(s128) = G_MERGE_VALUES %0, %1
@@ -100,10 +100,10 @@ body: |
     ; Test that trunc(merge) with a non-scalar merge source is not combined
     ; CHECK-LABEL: name: trunc_s128_merge_s192_p0
     ; CHECK: [[C:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
-    ; CHECK: [[C1:%[0-9]+]]:_(p0) = G_CONSTANT i64 1
-    ; CHECK: [[MV:%[0-9]+]]:_(s192) = G_MERGE_VALUES [[C]](p0), [[C1]](p0), [[C]](p0)
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s128) = G_TRUNC [[MV]](s192)
-    ; CHECK: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[TRUNC]](s128)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(p0) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s192) = G_MERGE_VALUES [[C]](p0), [[C1]](p0), [[C]](p0)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s128) = G_TRUNC [[MV]](s192)
+    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[TRUNC]](s128)
     %0:_(p0) = G_CONSTANT i64 0
     %1:_(p0) = G_CONSTANT i64 1
     %2:_(s192) = G_MERGE_VALUES %0, %1, %0
@@ -121,7 +121,7 @@ body: |
     ; have been combined.
     ; CHECK-LABEL: name: trunc_s68_merge_s128_s32
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK: $vgpr0 = COPY [[C]](s32)
+    ; CHECK-NEXT: $vgpr0 = COPY [[C]](s32)
     %0:_(s32) = G_CONSTANT i32 0
     %1:_(s32) = G_CONSTANT i32 1
     %2:_(s128) = G_MERGE_VALUES %0, %1, %0, %1
@@ -138,8 +138,8 @@ body: |
     ; Test that trunc(trunc) is combined to a single trunc
     ; CHECK-LABEL: name: trunc_trunc
     ; CHECK: [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[DEF]](s64)
-    ; CHECK: $vgpr0 = COPY [[TRUNC]](s32)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[DEF]](s64)
+    ; CHECK-NEXT: $vgpr0 = COPY [[TRUNC]](s32)
     %0:_(s64) = G_IMPLICIT_DEF
     %1:_(s48) = G_TRUNC %0
     %2:_(s32) = G_TRUNC %1
