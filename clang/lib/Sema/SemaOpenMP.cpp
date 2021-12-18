@@ -2306,9 +2306,7 @@ void Sema::startOpenMPCXXRangeFor() {
 OpenMPClauseKind Sema::isOpenMPPrivateDecl(ValueDecl *D, unsigned Level,
                                            unsigned CapLevel) const {
   assert(LangOpts.OpenMP && "OpenMP is not allowed");
-  if (DSAStack->hasExplicitDirective(
-          [](OpenMPDirectiveKind K) { return isOpenMPTaskingDirective(K); },
-          Level)) {
+  if (DSAStack->hasExplicitDirective(isOpenMPTaskingDirective, Level)) {
     bool IsTriviallyCopyable =
         D->getType().getNonReferenceType().isTriviallyCopyableType(Context) &&
         !D->getType()
