@@ -61,7 +61,7 @@ public:
 
 struct CieRecord {
   EhSectionPiece *cie = nullptr;
-  std::vector<EhSectionPiece *> fdes;
+  SmallVector<EhSectionPiece *, 0> fdes;
 };
 
 // Section for .eh_frame.
@@ -79,7 +79,7 @@ public:
 
   void addSection(EhInputSection *sec);
 
-  std::vector<EhInputSection *> sections;
+  SmallVector<EhInputSection *, 0> sections;
   size_t numFdes = 0;
 
   struct FdeData {
@@ -115,7 +115,7 @@ private:
 
   uint64_t getFdePc(uint8_t *buf, size_t off, uint8_t enc) const;
 
-  std::vector<CieRecord *> cieRecords;
+  SmallVector<CieRecord *, 0> cieRecords;
 
   // CIE records are uniquified by their contents and personality functions.
   llvm::DenseMap<std::pair<ArrayRef<uint8_t>, Symbol *>, CieRecord *> cieMap;
@@ -387,7 +387,7 @@ public:
   bool hasGotPltOffRel = false;
 
 private:
-  std::vector<const Symbol *> entries;
+  SmallVector<const Symbol *, 0> entries;
 };
 
 // The IgotPltSection is a Got associated with the PltSection for GNU Ifunc
@@ -403,7 +403,7 @@ public:
   bool isNeeded() const override { return !entries.empty(); }
 
 private:
-  std::vector<const Symbol *> entries;
+  SmallVector<const Symbol *, 0> entries;
 };
 
 class StringTableSection final : public SyntheticSection {
@@ -420,7 +420,7 @@ private:
   uint64_t size = 0;
 
   llvm::DenseMap<StringRef, unsigned> stringMap;
-  std::vector<StringRef> strings;
+  SmallVector<StringRef, 0> strings;
 };
 
 class DynamicReloc {
@@ -540,7 +540,7 @@ public:
             d->type == llvm::ELF::SHT_RELR);
   }
   int32_t dynamicTag, sizeDynamicTag;
-  std::vector<DynamicReloc> relocs;
+  SmallVector<DynamicReloc, 0> relocs;
 
 protected:
   size_t numRelativeRelocs = 0;
@@ -588,7 +588,7 @@ class RelrBaseSection : public SyntheticSection {
 public:
   RelrBaseSection();
   bool isNeeded() const override { return !relocs.empty(); }
-  std::vector<RelativeReloc> relocs;
+  SmallVector<RelativeReloc, 0> relocs;
 };
 
 // RelrSection is used to encode offsets for relative relocations.
@@ -608,7 +608,7 @@ public:
   }
 
 private:
-  std::vector<Elf_Relr> relrRelocs;
+  SmallVector<Elf_Relr, 0> relrRelocs;
 };
 
 struct SymbolTableEntry {
@@ -630,7 +630,7 @@ protected:
   void sortSymTabSymbols();
 
   // A vector of symbols and their string table offsets.
-  std::vector<SymbolTableEntry> symbols;
+  SmallVector<SymbolTableEntry, 0> symbols;
 
   StringTableSection &strTabSec;
 
@@ -669,7 +669,7 @@ public:
 
   // Adds symbols to the hash table.
   // Sorts the input to satisfy GNU hash section requirements.
-  void addSymbols(std::vector<SymbolTableEntry> &symbols);
+  void addSymbols(llvm::SmallVectorImpl<SymbolTableEntry> &symbols);
 
 private:
   // See the comment in writeBloomFilter.
@@ -682,7 +682,7 @@ private:
     uint32_t bucketIdx;
   };
 
-  std::vector<Entry> symbols;
+  SmallVector<Entry, 0> symbols;
   size_t maskWords;
   size_t nBuckets = 0;
   size_t size = 0;
@@ -722,7 +722,7 @@ public:
 
   size_t headerSize;
 
-  std::vector<const Symbol *> entries;
+  SmallVector<const Symbol *, 0> entries;
 };
 
 // Used for non-preemptible ifuncs. It does not have a header. Each entry is
@@ -730,7 +730,7 @@ public:
 // runtime. PltSection can only contain entries associated with JUMP_SLOT
 // relocations, so IPLT entries are in a separate section.
 class IpltSection final : public SyntheticSection {
-  std::vector<const Symbol *> entries;
+  SmallVector<const Symbol *, 0> entries;
 
 public:
   IpltSection();
@@ -747,7 +747,7 @@ public:
   void writeTo(uint8_t *buf) override;
   size_t getSize() const override;
 
-  std::vector<const Symbol *> canonical_plts;
+  SmallVector<const Symbol *, 0> canonical_plts;
   static constexpr size_t footerSize = 64;
 };
 
@@ -780,13 +780,13 @@ public:
 
   struct GdbChunk {
     InputSection *sec;
-    std::vector<AddressEntry> addressAreas;
-    std::vector<CuEntry> compilationUnits;
+    SmallVector<AddressEntry, 0> addressAreas;
+    SmallVector<CuEntry, 0> compilationUnits;
   };
 
   struct GdbSymbol {
     llvm::CachedHashStringRef name;
-    std::vector<uint32_t> cuVector;
+    SmallVector<uint32_t, 0> cuVector;
     uint32_t nameOff;
     uint32_t cuVectorOff;
   };
@@ -859,7 +859,7 @@ private:
   StringRef getFileDefName();
 
   unsigned fileDefNameOff;
-  std::vector<unsigned> verDefNameOffs;
+  SmallVector<unsigned, 0> verDefNameOffs;
 };
 
 // The .gnu.version section specifies the required version of each symbol in the
@@ -898,7 +898,7 @@ class VersionNeedSection final : public SyntheticSection {
     std::vector<Vernaux> vernauxs;
   };
 
-  std::vector<Verneed> verneeds;
+  SmallVector<Verneed, 0> verneeds;
 
 public:
   VersionNeedSection();
@@ -915,7 +915,7 @@ public:
 class MergeSyntheticSection : public SyntheticSection {
 public:
   void addSection(MergeInputSection *ms);
-  std::vector<MergeInputSection *> sections;
+  SmallVector<MergeInputSection *, 0> sections;
 
 protected:
   MergeSyntheticSection(StringRef name, uint32_t type, uint64_t flags,
@@ -962,7 +962,7 @@ private:
 
   // String table contents
   constexpr static size_t numShards = 32;
-  std::vector<llvm::StringTableBuilder> shards;
+  SmallVector<llvm::StringTableBuilder, 0> shards;
   size_t shardOffsets[numShards];
 };
 
@@ -1120,7 +1120,7 @@ public:
   bool roundUpSizeForErrata = false;
 
 private:
-  std::vector<Thunk *> thunks;
+  SmallVector<Thunk *, 0> thunks;
   size_t size = 0;
 };
 
@@ -1151,7 +1151,7 @@ public:
   void finalizeContents() override { finalized = true; }
 
 private:
-  std::vector<std::pair<const Symbol *, int64_t>> entries;
+  SmallVector<std::pair<const Symbol *, int64_t>, 0> entries;
   llvm::DenseMap<std::pair<const Symbol *, int64_t>, uint32_t> entry_index;
   bool finalized = false;
 };
