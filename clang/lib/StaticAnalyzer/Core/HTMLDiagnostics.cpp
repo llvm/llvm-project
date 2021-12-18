@@ -410,7 +410,7 @@ std::string HTMLDiagnostics::GenerateHTML(const PathDiagnostic& D, Rewriter &R,
     }
 
     // Append files to the main report file in the order they appear in the path
-    for (auto I : llvm::make_range(FileIDs.begin() + 1, FileIDs.end())) {
+    for (auto I : llvm::drop_begin(FileIDs)) {
       std::string s;
       llvm::raw_string_ostream os(s);
 

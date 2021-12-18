@@ -18285,7 +18285,7 @@ static void CheckForDuplicateEnumValues(Sema &S, ArrayRef<Decl *> Elements,
 
     // Emit one note for each of the remaining enum constants with
     // the same value.
-    for (auto *ECD : llvm::make_range(Vec->begin() + 1, Vec->end()))
+    for (auto *ECD : llvm::drop_begin(*Vec))
       S.Diag(ECD->getLocation(), diag::note_duplicate_element)
         << ECD << toString(ECD->getInitVal(), 10)
         << ECD->getSourceRange();
