@@ -141,6 +141,22 @@ set(files
   __coroutine/trivial_awaitables.h
   __debug
   __errc
+  __filesystem/copy_options.h
+  __filesystem/directory_entry.h
+  __filesystem/directory_iterator.h
+  __filesystem/directory_options.h
+  __filesystem/file_status.h
+  __filesystem/file_time_type.h
+  __filesystem/file_type.h
+  __filesystem/filesystem_error.h
+  __filesystem/operations.h
+  __filesystem/path_iterator.h
+  __filesystem/path.h
+  __filesystem/perm_options.h
+  __filesystem/perms.h
+  __filesystem/recursive_directory_iterator.h
+  __filesystem/space_info.h
+  __filesystem/u8path.h
   __format/format_arg.h
   __format/format_args.h
   __format/format_context.h
