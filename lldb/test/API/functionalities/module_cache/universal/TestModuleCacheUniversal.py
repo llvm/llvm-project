@@ -22,8 +22,6 @@ class ModuleCacheTestcaseUniversal(TestBase):
         # artifacts directory so no other tests are interfered with.
         self.runCmd('settings set symbols.lldb-index-cache-path "%s"' % (self.cache_dir))
         self.runCmd('settings set symbols.enable-lldb-index-cache true')
-        self.build()
-
 
     def get_module_cache_files(self, basename):
         module_file_glob = os.path.join(self.cache_dir, "llvmcache-*%s*" % (basename))
@@ -43,8 +41,12 @@ class ModuleCacheTestcaseUniversal(TestBase):
             they will each have a unique directory.
         """
         exe_basename = "testit"
+        src_dir = self.getSourceDir()
+        yaml_path = os.path.join(src_dir, "universal.yaml")
+        yaml_base, ext = os.path.splitext(yaml_path)
         exe = self.getBuildArtifact(exe_basename)
-
+        self.yaml2obj(yaml_path, exe)
+        self.assertTrue(os.path.exists(exe))
         # Create a module with no depedencies.
         self.runCmd('target create -d --arch x86_64 %s' % (exe))
         self.runCmd('image dump symtab %s' % (exe_basename))
