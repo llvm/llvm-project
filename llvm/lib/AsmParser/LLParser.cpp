@@ -152,28 +152,28 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
         FnAttrs.removeAttribute(Attribute::Alignment);
       }
 
-      AS = AS.addFnAttributes(Context, AttributeSet::get(Context, FnAttrs));
+      AS = AS.addFnAttributes(Context, FnAttrs);
       Fn->setAttributes(AS);
     } else if (CallInst *CI = dyn_cast<CallInst>(V)) {
       AttributeList AS = CI->getAttributes();
       AttrBuilder FnAttrs(AS.getFnAttrs());
       AS = AS.removeFnAttributes(Context);
       FnAttrs.merge(B);
-      AS = AS.addFnAttributes(Context, AttributeSet::get(Context, FnAttrs));
+      AS = AS.addFnAttributes(Context, FnAttrs);
       CI->setAttributes(AS);
     } else if (InvokeInst *II = dyn_cast<InvokeInst>(V)) {
       AttributeList AS = II->getAttributes();
       AttrBuilder FnAttrs(AS.getFnAttrs());
       AS = AS.removeFnAttributes(Context);
       FnAttrs.merge(B);
-      AS = AS.addFnAttributes(Context, AttributeSet::get(Context, FnAttrs));
+      AS = AS.addFnAttributes(Context, FnAttrs);
       II->setAttributes(AS);
     } else if (CallBrInst *CBI = dyn_cast<CallBrInst>(V)) {
       AttributeList AS = CBI->getAttributes();
       AttrBuilder FnAttrs(AS.getFnAttrs());
       AS = AS.removeFnAttributes(Context);
       FnAttrs.merge(B);
-      AS = AS.addFnAttributes(Context, AttributeSet::get(Context, FnAttrs));
+      AS = AS.addFnAttributes(Context, FnAttrs);
       CBI->setAttributes(AS);
     } else if (auto *GV = dyn_cast<GlobalVariable>(V)) {
       AttrBuilder Attrs(GV->getAttributes());
