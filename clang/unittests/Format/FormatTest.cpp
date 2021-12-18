@@ -3835,34 +3835,64 @@ TEST_F(FormatTest, IndentExternBlockStyle) {
   Style.IndentWidth = 2;
 
   Style.IndentExternBlock = FormatStyle::IEBS_Indent;
-  verifyFormat("extern \"C\" { /*9*/\n}", Style);
+  verifyFormat("extern \"C\" { /*9*/\n"
+               "}",
+               Style);
   verifyFormat("extern \"C\" {\n"
                "  int foo10();\n"
                "}",
                Style);
 
   Style.IndentExternBlock = FormatStyle::IEBS_NoIndent;
-  verifyFormat("extern \"C\" { /*11*/\n}", Style);
+  verifyFormat("extern \"C\" { /*11*/\n"
+               "}",
+               Style);
   verifyFormat("extern \"C\" {\n"
                "int foo12();\n"
                "}",
                Style);
 
-  Style.IndentExternBlock = FormatStyle::IEBS_AfterExternBlock;
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
   Style.BraceWrapping.AfterExternBlock = true;
-  verifyFormat("extern \"C\"\n{ /*13*/\n}", Style);
+  Style.IndentExternBlock = FormatStyle::IEBS_Indent;
+  verifyFormat("extern \"C\"\n"
+               "{ /*13*/\n"
+               "}",
+               Style);
   verifyFormat("extern \"C\"\n{\n"
                "  int foo14();\n"
                "}",
                Style);
 
-  Style.IndentExternBlock = FormatStyle::IEBS_AfterExternBlock;
-  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
   Style.BraceWrapping.AfterExternBlock = false;
-  verifyFormat("extern \"C\" { /*15*/\n}", Style);
+  Style.IndentExternBlock = FormatStyle::IEBS_NoIndent;
+  verifyFormat("extern \"C\" { /*15*/\n"
+               "}",
+               Style);
   verifyFormat("extern \"C\" {\n"
                "int foo16();\n"
+               "}",
+               Style);
+
+  Style.BraceWrapping.AfterExternBlock = true;
+  verifyFormat("extern \"C\"\n"
+               "{ /*13*/\n"
+               "}",
+               Style);
+  verifyFormat("extern \"C\"\n"
+               "{\n"
+               "int foo14();\n"
+               "}",
+               Style);
+
+  Style.IndentExternBlock = FormatStyle::IEBS_Indent;
+  verifyFormat("extern \"C\"\n"
+               "{ /*13*/\n"
+               "}",
+               Style);
+  verifyFormat("extern \"C\"\n"
+               "{\n"
+               "  int foo14();\n"
                "}",
                Style);
 }
