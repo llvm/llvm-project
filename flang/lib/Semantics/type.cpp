@@ -697,7 +697,14 @@ std::string DeclTypeSpec::AsFortran() const {
   case Character:
     return characterTypeSpec().AsFortran();
   case TypeDerived:
-    return "TYPE(" + derivedTypeSpec().AsFortran() + ')';
+    if (derivedTypeSpec()
+            .typeSymbol()
+            .get<DerivedTypeDetails>()
+            .isDECStructure()) {
+      return "RECORD" + derivedTypeSpec().typeSymbol().name().ToString();
+    } else {
+      return "TYPE(" + derivedTypeSpec().AsFortran() + ')';
+    }
   case ClassDerived:
     return "CLASS(" + derivedTypeSpec().AsFortran() + ')';
   case TypeStar:

@@ -63,6 +63,11 @@ std::optional<Success> LeaveDoConstruct::Parse(ParseState &state) {
   return {Success{}};
 }
 
+// These special parsers for bits of DEC STRUCTURE capture the names of
+// their components and nested structures in the user state so that
+// references to these fields with periods can be recognized as special
+// cases.
+
 std::optional<Name> OldStructureComponentName::Parse(ParseState &state) {
   if (std::optional<Name> n{name.Parse(state)}) {
     if (const auto *ustate{state.userState()}) {
@@ -80,11 +85,25 @@ std::optional<DataComponentDefStmt> StructureComponents::Parse(
   std::optional<DataComponentDefStmt> defs{stmt.Parse(state)};
   if (defs) {
     if (auto *ustate{state.userState()}) {
-      for (const auto &decl : std::get<std::list<ComponentDecl>>(defs->t)) {
-        ustate->NoteOldStructureComponent(std::get<Name>(decl.t).source);
+      for (const auto &item : std::get<std::list<ComponentOrFill>>(defs->t)) {
+        if (const auto *decl{std::get_if<ComponentDecl>(&item.u)}) {
+          ustate->NoteOldStructureComponent(std::get<Name>(decl->t).source);
+        }
       }
     }
   }
   return defs;
+}
+
+std::optional<StructureStmt> NestedStructureStmt::Parse(ParseState &state) {
+  std::optional<StructureStmt> stmt{Parser<StructureStmt>{}.Parse(state)};
+  if (stmt) {
+    if (auto *ustate{state.userState()}) {
+      for (const auto &entity : std::get<std::list<EntityDecl>>(stmt->t)) {
+        ustate->NoteOldStructureComponent(std::get<Name>(entity.t).source);
+      }
+    }
+  }
+  return stmt;
 }
 } // namespace Fortran::parser

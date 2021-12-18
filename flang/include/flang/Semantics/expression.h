@@ -247,6 +247,9 @@ public:
   const Assignment *Analyze(const parser::AssignmentStmt &);
   const Assignment *Analyze(const parser::PointerAssignmentStmt &);
 
+  // Builds a typed Designator from an untyped DataRef
+  MaybeExpr Designate(DataRef &&);
+
 protected:
   int IntegerTypeSpecKind(const parser::IntegerTypeSpec &);
 
@@ -319,7 +322,6 @@ private:
       const std::list<parser::SectionSubscript> &);
   std::optional<Component> CreateComponent(
       DataRef &&, const Symbol &, const semantics::Scope &);
-  MaybeExpr Designate(DataRef &&);
   MaybeExpr CompleteSubscripts(ArrayRef &&);
   MaybeExpr ApplySubscripts(DataRef &&, std::vector<Subscript> &&);
   MaybeExpr TopLevelChecks(DataRef &&);

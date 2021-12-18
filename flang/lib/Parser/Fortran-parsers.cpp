@@ -179,8 +179,11 @@ TYPE_CONTEXT_PARSER("declaration type spec"_en_US,
                            construct<DeclarationTypeSpec::ClassStar>())) ||
         extension<LanguageFeature::DECStructures>(
             construct<DeclarationTypeSpec>(
+                // As is also done for the STRUCTURE statement, the name of
+                // the structure includes the surrounding slashes to avoid
+                // name clashes.
                 construct<DeclarationTypeSpec::Record>(
-                    "RECORD /" >> name / "/"))))
+                    "RECORD" >> sourced("/" >> name / "/")))))
 
 // R704 intrinsic-type-spec ->
 //        integer-type-spec | REAL [kind-selector] | DOUBLE PRECISION |
@@ -401,8 +404,8 @@ TYPE_PARSER(recovery(
 // N.B. The standard requires double colons if there's an initializer.
 TYPE_PARSER(construct<DataComponentDefStmt>(declarationTypeSpec,
     optionalListBeforeColons(Parser<ComponentAttrSpec>{}),
-    nonemptyList(
-        "expected component declarations"_err_en_US, Parser<ComponentDecl>{})))
+    nonemptyList("expected component declarations"_err_en_US,
+        Parser<ComponentOrFill>{})))
 
 // R738 component-attr-spec ->
 //        access-spec | ALLOCATABLE |
@@ -426,6 +429,13 @@ TYPE_PARSER(construct<ComponentAttrSpec>(accessSpec) ||
 TYPE_CONTEXT_PARSER("component declaration"_en_US,
     construct<ComponentDecl>(name, maybe(Parser<ComponentArraySpec>{}),
         maybe(coarraySpec), maybe("*" >> charLength), maybe(initialization)))
+// The source field of the Name will be replaced with a distinct generated name.
+TYPE_CONTEXT_PARSER("%FILL item"_en_US,
+    extension<LanguageFeature::DECStructures>(
+        construct<FillDecl>(space >> sourced("%FILL" >> construct<Name>()),
+            maybe(Parser<ComponentArraySpec>{}), maybe("*" >> charLength))))
+TYPE_PARSER(construct<ComponentOrFill>(Parser<ComponentDecl>{}) ||
+    construct<ComponentOrFill>(Parser<FillDecl>{}))
 
 // R740 component-array-spec ->
 //        explicit-shape-spec-list | deferred-shape-spec-list
@@ -1180,14 +1190,21 @@ TYPE_PARSER(extension<LanguageFeature::CrayPointer>(construct<BasedPointerStmt>(
                      construct<BasedPointer>("(" >> objectName / ",",
                          objectName, maybe(Parser<ArraySpec>{}) / ")")))))
 
-TYPE_PARSER(construct<StructureStmt>("STRUCTURE /" >> name / "/", pure(true),
-                optionalList(entityDecl)) ||
-    construct<StructureStmt>(
-        "STRUCTURE" >> name, pure(false), pure<std::list<EntityDecl>>()))
+// Subtle: the name includes the surrounding slashes, which avoids
+// clashes with other uses of the name in the same scope.
+TYPE_PARSER(construct<StructureStmt>(
+    "STRUCTURE" >> maybe(sourced("/" >> name / "/")), optionalList(entityDecl)))
+
+constexpr auto nestedStructureDef{
+    CONTEXT_PARSER("nested STRUCTURE definition"_en_US,
+        construct<StructureDef>(statement(NestedStructureStmt{}),
+            many(Parser<StructureField>{}),
+            statement(construct<StructureDef::EndStructureStmt>(
+                "END STRUCTURE"_tok))))};
 
 TYPE_PARSER(construct<StructureField>(statement(StructureComponents{})) ||
     construct<StructureField>(indirect(Parser<Union>{})) ||
-    construct<StructureField>(indirect(Parser<StructureDef>{})))
+    construct<StructureField>(indirect(nestedStructureDef)))
 
 TYPE_CONTEXT_PARSER("STRUCTURE definition"_en_US,
     extension<LanguageFeature::DECStructures>(construct<StructureDef>(
