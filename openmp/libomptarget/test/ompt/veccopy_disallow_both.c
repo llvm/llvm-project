@@ -2,6 +2,7 @@
 // REQUIRES: ompt
 // UNSUPPORTED: nvptx64-nvidia-cuda
 // UNSUPPORTED: nvptx64-nvidia-cuda-newRTL
+// UNSUPPORTED: x86_64-pc-linux-gnu
 
 #include <stdio.h>
 #include <omp.h>
