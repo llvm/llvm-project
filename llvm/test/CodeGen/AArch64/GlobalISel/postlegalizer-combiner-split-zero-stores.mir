@@ -166,12 +166,12 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: %zero:_(s64) = G_CONSTANT i64 0
     ; CHECK-NEXT: %zerovec:_(<2 x s64>) = G_BUILD_VECTOR %zero(s64), %zero(s64)
-    ; CHECK-NEXT: G_STORE %zerovec(<2 x s64>), [[COPY]](p0) :: (volatile store (<4 x s32>))
+    ; CHECK-NEXT: G_STORE %zerovec(<2 x s64>), [[COPY]](p0) :: (volatile store (<2 x s64>))
     ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %zero:_(s64) = G_CONSTANT i64 0
     %zerovec:_(<2 x s64>) = G_BUILD_VECTOR %zero, %zero
-    G_STORE %zerovec(<2 x s64>), %0(p0) :: (volatile store (<4 x s32>))
+    G_STORE %zerovec(<2 x s64>), %0(p0) :: (volatile store (<2 x s64>))
     RET_ReallyLR
 
 ...
