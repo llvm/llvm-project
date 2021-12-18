@@ -214,6 +214,14 @@ if(NOT EXISTS "${MSVC_BASE}" OR
           "system headers and libraries")
 endif()
 
+# Try lowercase `include`/`lib` used by xwin/msvc-wine
+if(NOT EXISTS "${WINSDK_INCLUDE}")
+  set(WINSDK_INCLUDE "${WINSDK_BASE}/include/${WINSDK_VER}")
+endif()
+if(NOT EXISTS "${WINSDK_LIB}")
+  set(WINSDK_LIB "${WINSDK_BASE}/lib/${WINSDK_VER}")
+endif()
+
 if(NOT EXISTS "${WINSDK_BASE}" OR
    NOT EXISTS "${WINSDK_INCLUDE}" OR
    NOT EXISTS "${WINSDK_LIB}")
@@ -261,7 +269,7 @@ if(case_sensitive_filesystem)
   init_user_prop(winsdk_vfs_overlay_path)
   if(NOT winsdk_vfs_overlay_path)
     set(winsdk_vfs_overlay_path "${CMAKE_BINARY_DIR}/winsdk_vfs_overlay.yaml")
-    generate_winsdk_vfs_overlay("${WINSDK_BASE}/Include/${WINSDK_VER}" "${winsdk_vfs_overlay_path}")
+    generate_winsdk_vfs_overlay("${WINSDK_INCLUDE}" "${winsdk_vfs_overlay_path}")
     init_user_prop(winsdk_vfs_overlay_path)
   endif()
   list(APPEND COMPILE_FLAGS
@@ -296,7 +304,7 @@ if(case_sensitive_filesystem)
   init_user_prop(winsdk_lib_symlinks_dir)
   if(NOT winsdk_lib_symlinks_dir)
     set(winsdk_lib_symlinks_dir "${CMAKE_BINARY_DIR}/winsdk_lib_symlinks")
-    generate_winsdk_lib_symlinks("${WINSDK_BASE}/Lib/${WINSDK_VER}/um/${WINSDK_ARCH}" "${winsdk_lib_symlinks_dir}")
+    generate_winsdk_lib_symlinks("${WINSDK_LIB}/um/${WINSDK_ARCH}" "${winsdk_lib_symlinks_dir}")
     init_user_prop(winsdk_lib_symlinks_dir)
   endif()
   list(APPEND LINK_FLAGS
