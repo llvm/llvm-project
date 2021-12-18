@@ -102,9 +102,8 @@ define void @test5() nounwind {
 ; CHECK-LABEL: test5:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    lea (dst6,%pc), %a0
-; CHECK-NEXT:    lea (ptr6,%pc), %a1
-; CHECK-NEXT:    move.l %a0, (%a1)
-; CHECK-NEXT:    move.l (src6,%pc), (%a0)
+; CHECK-NEXT:    move.l %a0, (ptr6,%pc)
+; CHECK-NEXT:    move.l (src6,%pc), (dst6,%pc)
 ; CHECK-NEXT:    rts
 entry:
     store i32* @dst6, i32** @ptr6
