@@ -38,10 +38,13 @@ What's New in Libc++ 14.0.0?
 New Features
 ------------
 
-- There's initial support for the C++20 header ``<format>``. The implementation
-  is incomplete. Some functions are known to be inefficient; both in memory
-  usage and performance. The implementation is considered experimental and isn't
-  considered ABI stable.
+- There's support for the C++20 header ``<format>``. Some parts are still
+  missing, most notably the compile-time format string validation. Some
+  functions are known to be inefficient, both in memory usage and performance.
+  The implementation isn't API- or ABI-stable and therefore considered
+  experimental. (Some not-yet-implemented papers require an API-break.)
+  Vendors can still disable this header by turning the CMake option
+  `LIBCXX_ENABLE_INCOMPLETE_FEATURES` off.
 
 - There's a new CMake option ``LIBCXX_ENABLE_UNICODE`` to disable Unicode
   support in the ``<format>`` header. This only affects the estimation of the
