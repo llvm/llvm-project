@@ -8,9 +8,9 @@ body: |
     liveins: $vgpr0, $vgpr1
     ; CHECK-LABEL: name: legal_v2s32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32)
-    ; CHECK: S_NOP 0, implicit [[BUILD_VECTOR]](<2 x s32>)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32)
+    ; CHECK-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<2 x s32>)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(<2 x s32>) = G_BUILD_VECTOR %0, %1
@@ -23,10 +23,10 @@ body: |
     liveins: $vgpr0, $vgpr1, $vgpr2
     ; CHECK-LABEL: name: legal_v3s32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32)
-    ; CHECK: S_NOP 0, implicit [[BUILD_VECTOR]](<3 x s32>)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32)
+    ; CHECK-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<3 x s32>)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s32) = COPY $vgpr2
@@ -40,11 +40,11 @@ body: |
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; CHECK-LABEL: name: legal_v4s32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
-    ; CHECK: S_NOP 0, implicit [[BUILD_VECTOR]](<4 x s32>)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
+    ; CHECK-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<4 x s32>)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s32) = COPY $vgpr2
@@ -59,12 +59,12 @@ body: |
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
     ; CHECK-LABEL: name: legal_v5s32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
-    ; CHECK: [[COPY4:%[0-9]+]]:_(s32) = COPY $vgpr4
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<5 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32)
-    ; CHECK: S_NOP 0, implicit [[BUILD_VECTOR]](<5 x s32>)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(s32) = COPY $vgpr4
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<5 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32)
+    ; CHECK-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<5 x s32>)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s32) = COPY $vgpr2
@@ -80,13 +80,13 @@ body: |
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
     ; CHECK-LABEL: name: legal_v6s32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
-    ; CHECK: [[COPY4:%[0-9]+]]:_(s32) = COPY $vgpr4
-    ; CHECK: [[COPY5:%[0-9]+]]:_(s32) = COPY $vgpr5
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<6 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32)
-    ; CHECK: S_NOP 0, implicit [[BUILD_VECTOR]](<6 x s32>)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(s32) = COPY $vgpr4
+    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:_(s32) = COPY $vgpr5
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<6 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32)
+    ; CHECK-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<6 x s32>)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s32) = COPY $vgpr2
@@ -103,14 +103,14 @@ body: |
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6
     ; CHECK-LABEL: name: legal_v7s32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
-    ; CHECK: [[COPY4:%[0-9]+]]:_(s32) = COPY $vgpr4
-    ; CHECK: [[COPY5:%[0-9]+]]:_(s32) = COPY $vgpr5
-    ; CHECK: [[COPY6:%[0-9]+]]:_(s32) = COPY $vgpr6
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<7 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32)
-    ; CHECK: S_NOP 0, implicit [[BUILD_VECTOR]](<7 x s32>)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(s32) = COPY $vgpr4
+    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:_(s32) = COPY $vgpr5
+    ; CHECK-NEXT: [[COPY6:%[0-9]+]]:_(s32) = COPY $vgpr6
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<7 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32)
+    ; CHECK-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<7 x s32>)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s32) = COPY $vgpr2
@@ -128,15 +128,15 @@ body: |
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7
     ; CHECK-LABEL: name: legal_v8s32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
-    ; CHECK: [[COPY4:%[0-9]+]]:_(s32) = COPY $vgpr4
-    ; CHECK: [[COPY5:%[0-9]+]]:_(s32) = COPY $vgpr5
-    ; CHECK: [[COPY6:%[0-9]+]]:_(s32) = COPY $vgpr6
-    ; CHECK: [[COPY7:%[0-9]+]]:_(s32) = COPY $vgpr7
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-    ; CHECK: S_NOP 0, implicit [[BUILD_VECTOR]](<8 x s32>)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(s32) = COPY $vgpr4
+    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:_(s32) = COPY $vgpr5
+    ; CHECK-NEXT: [[COPY6:%[0-9]+]]:_(s32) = COPY $vgpr6
+    ; CHECK-NEXT: [[COPY7:%[0-9]+]]:_(s32) = COPY $vgpr7
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+    ; CHECK-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<8 x s32>)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s32) = COPY $vgpr2
@@ -155,16 +155,16 @@ body: |
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
     ; CHECK-LABEL: name: legal_v9s32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
-    ; CHECK: [[COPY4:%[0-9]+]]:_(s32) = COPY $vgpr4
-    ; CHECK: [[COPY5:%[0-9]+]]:_(s32) = COPY $vgpr5
-    ; CHECK: [[COPY6:%[0-9]+]]:_(s32) = COPY $vgpr6
-    ; CHECK: [[COPY7:%[0-9]+]]:_(s32) = COPY $vgpr7
-    ; CHECK: [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr8
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<9 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32)
-    ; CHECK: S_NOP 0, implicit [[BUILD_VECTOR]](<9 x s32>)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(s32) = COPY $vgpr4
+    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:_(s32) = COPY $vgpr5
+    ; CHECK-NEXT: [[COPY6:%[0-9]+]]:_(s32) = COPY $vgpr6
+    ; CHECK-NEXT: [[COPY7:%[0-9]+]]:_(s32) = COPY $vgpr7
+    ; CHECK-NEXT: [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr8
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<9 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32)
+    ; CHECK-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<9 x s32>)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s32) = COPY $vgpr2
@@ -184,17 +184,17 @@ body: |
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9
     ; CHECK-LABEL: name: legal_v10s32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
-    ; CHECK: [[COPY4:%[0-9]+]]:_(s32) = COPY $vgpr4
-    ; CHECK: [[COPY5:%[0-9]+]]:_(s32) = COPY $vgpr5
-    ; CHECK: [[COPY6:%[0-9]+]]:_(s32) = COPY $vgpr6
-    ; CHECK: [[COPY7:%[0-9]+]]:_(s32) = COPY $vgpr7
-    ; CHECK: [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr8
-    ; CHECK: [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr9
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<10 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32)
-    ; CHECK: S_NOP 0, implicit [[BUILD_VECTOR]](<10 x s32>)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(s32) = COPY $vgpr4
+    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:_(s32) = COPY $vgpr5
+    ; CHECK-NEXT: [[COPY6:%[0-9]+]]:_(s32) = COPY $vgpr6
+    ; CHECK-NEXT: [[COPY7:%[0-9]+]]:_(s32) = COPY $vgpr7
+    ; CHECK-NEXT: [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr8
+    ; CHECK-NEXT: [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr9
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<10 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32)
+    ; CHECK-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<10 x s32>)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s32) = COPY $vgpr2
@@ -215,18 +215,18 @@ body: |
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10
     ; CHECK-LABEL: name: legal_v11s32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
-    ; CHECK: [[COPY4:%[0-9]+]]:_(s32) = COPY $vgpr4
-    ; CHECK: [[COPY5:%[0-9]+]]:_(s32) = COPY $vgpr5
-    ; CHECK: [[COPY6:%[0-9]+]]:_(s32) = COPY $vgpr6
-    ; CHECK: [[COPY7:%[0-9]+]]:_(s32) = COPY $vgpr7
-    ; CHECK: [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr8
-    ; CHECK: [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr9
-    ; CHECK: [[COPY10:%[0-9]+]]:_(s32) = COPY $vgpr10
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<11 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32)
-    ; CHECK: S_NOP 0, implicit [[BUILD_VECTOR]](<11 x s32>)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(s32) = COPY $vgpr4
+    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:_(s32) = COPY $vgpr5
+    ; CHECK-NEXT: [[COPY6:%[0-9]+]]:_(s32) = COPY $vgpr6
+    ; CHECK-NEXT: [[COPY7:%[0-9]+]]:_(s32) = COPY $vgpr7
+    ; CHECK-NEXT: [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr8
+    ; CHECK-NEXT: [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr9
+    ; CHECK-NEXT: [[COPY10:%[0-9]+]]:_(s32) = COPY $vgpr10
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<11 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32)
+    ; CHECK-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<11 x s32>)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s32) = COPY $vgpr2
@@ -248,19 +248,19 @@ body: |
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11
     ; CHECK-LABEL: name: legal_v12s32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
-    ; CHECK: [[COPY4:%[0-9]+]]:_(s32) = COPY $vgpr4
-    ; CHECK: [[COPY5:%[0-9]+]]:_(s32) = COPY $vgpr5
-    ; CHECK: [[COPY6:%[0-9]+]]:_(s32) = COPY $vgpr6
-    ; CHECK: [[COPY7:%[0-9]+]]:_(s32) = COPY $vgpr7
-    ; CHECK: [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr8
-    ; CHECK: [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr9
-    ; CHECK: [[COPY10:%[0-9]+]]:_(s32) = COPY $vgpr10
-    ; CHECK: [[COPY11:%[0-9]+]]:_(s32) = COPY $vgpr11
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<12 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-    ; CHECK: S_NOP 0, implicit [[BUILD_VECTOR]](<12 x s32>)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(s32) = COPY $vgpr4
+    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:_(s32) = COPY $vgpr5
+    ; CHECK-NEXT: [[COPY6:%[0-9]+]]:_(s32) = COPY $vgpr6
+    ; CHECK-NEXT: [[COPY7:%[0-9]+]]:_(s32) = COPY $vgpr7
+    ; CHECK-NEXT: [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr8
+    ; CHECK-NEXT: [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr9
+    ; CHECK-NEXT: [[COPY10:%[0-9]+]]:_(s32) = COPY $vgpr10
+    ; CHECK-NEXT: [[COPY11:%[0-9]+]]:_(s32) = COPY $vgpr11
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<12 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+    ; CHECK-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<12 x s32>)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s32) = COPY $vgpr2
@@ -283,20 +283,20 @@ body: |
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12
     ; CHECK-LABEL: name: legal_v13s32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
-    ; CHECK: [[COPY4:%[0-9]+]]:_(s32) = COPY $vgpr4
-    ; CHECK: [[COPY5:%[0-9]+]]:_(s32) = COPY $vgpr5
-    ; CHECK: [[COPY6:%[0-9]+]]:_(s32) = COPY $vgpr6
-    ; CHECK: [[COPY7:%[0-9]+]]:_(s32) = COPY $vgpr7
-    ; CHECK: [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr8
-    ; CHECK: [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr9
-    ; CHECK: [[COPY10:%[0-9]+]]:_(s32) = COPY $vgpr10
-    ; CHECK: [[COPY11:%[0-9]+]]:_(s32) = COPY $vgpr11
-    ; CHECK: [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr12
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<13 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32)
-    ; CHECK: S_NOP 0, implicit [[BUILD_VECTOR]](<13 x s32>)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(s32) = COPY $vgpr4
+    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:_(s32) = COPY $vgpr5
+    ; CHECK-NEXT: [[COPY6:%[0-9]+]]:_(s32) = COPY $vgpr6
+    ; CHECK-NEXT: [[COPY7:%[0-9]+]]:_(s32) = COPY $vgpr7
+    ; CHECK-NEXT: [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr8
+    ; CHECK-NEXT: [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr9
+    ; CHECK-NEXT: [[COPY10:%[0-9]+]]:_(s32) = COPY $vgpr10
+    ; CHECK-NEXT: [[COPY11:%[0-9]+]]:_(s32) = COPY $vgpr11
+    ; CHECK-NEXT: [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr12
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<13 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32)
+    ; CHECK-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<13 x s32>)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s32) = COPY $vgpr2
@@ -320,21 +320,21 @@ body: |
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13
     ; CHECK-LABEL: name: legal_v14s32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
-    ; CHECK: [[COPY4:%[0-9]+]]:_(s32) = COPY $vgpr4
-    ; CHECK: [[COPY5:%[0-9]+]]:_(s32) = COPY $vgpr5
-    ; CHECK: [[COPY6:%[0-9]+]]:_(s32) = COPY $vgpr6
-    ; CHECK: [[COPY7:%[0-9]+]]:_(s32) = COPY $vgpr7
-    ; CHECK: [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr8
-    ; CHECK: [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr9
-    ; CHECK: [[COPY10:%[0-9]+]]:_(s32) = COPY $vgpr10
-    ; CHECK: [[COPY11:%[0-9]+]]:_(s32) = COPY $vgpr11
-    ; CHECK: [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr12
-    ; CHECK: [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr13
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<14 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32)
-    ; CHECK: S_NOP 0, implicit [[BUILD_VECTOR]](<14 x s32>)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(s32) = COPY $vgpr4
+    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:_(s32) = COPY $vgpr5
+    ; CHECK-NEXT: [[COPY6:%[0-9]+]]:_(s32) = COPY $vgpr6
+    ; CHECK-NEXT: [[COPY7:%[0-9]+]]:_(s32) = COPY $vgpr7
+    ; CHECK-NEXT: [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr8
+    ; CHECK-NEXT: [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr9
+    ; CHECK-NEXT: [[COPY10:%[0-9]+]]:_(s32) = COPY $vgpr10
+    ; CHECK-NEXT: [[COPY11:%[0-9]+]]:_(s32) = COPY $vgpr11
+    ; CHECK-NEXT: [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr12
+    ; CHECK-NEXT: [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr13
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<14 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32)
+    ; CHECK-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<14 x s32>)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s32) = COPY $vgpr2
@@ -359,22 +359,22 @@ body: |
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14
     ; CHECK-LABEL: name: legal_v15s32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
-    ; CHECK: [[COPY4:%[0-9]+]]:_(s32) = COPY $vgpr4
-    ; CHECK: [[COPY5:%[0-9]+]]:_(s32) = COPY $vgpr5
-    ; CHECK: [[COPY6:%[0-9]+]]:_(s32) = COPY $vgpr6
-    ; CHECK: [[COPY7:%[0-9]+]]:_(s32) = COPY $vgpr7
-    ; CHECK: [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr8
-    ; CHECK: [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr9
-    ; CHECK: [[COPY10:%[0-9]+]]:_(s32) = COPY $vgpr10
-    ; CHECK: [[COPY11:%[0-9]+]]:_(s32) = COPY $vgpr11
-    ; CHECK: [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr12
-    ; CHECK: [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr13
-    ; CHECK: [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr14
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<15 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32)
-    ; CHECK: S_NOP 0, implicit [[BUILD_VECTOR]](<15 x s32>)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(s32) = COPY $vgpr4
+    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:_(s32) = COPY $vgpr5
+    ; CHECK-NEXT: [[COPY6:%[0-9]+]]:_(s32) = COPY $vgpr6
+    ; CHECK-NEXT: [[COPY7:%[0-9]+]]:_(s32) = COPY $vgpr7
+    ; CHECK-NEXT: [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr8
+    ; CHECK-NEXT: [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr9
+    ; CHECK-NEXT: [[COPY10:%[0-9]+]]:_(s32) = COPY $vgpr10
+    ; CHECK-NEXT: [[COPY11:%[0-9]+]]:_(s32) = COPY $vgpr11
+    ; CHECK-NEXT: [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr12
+    ; CHECK-NEXT: [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr13
+    ; CHECK-NEXT: [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr14
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<15 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32)
+    ; CHECK-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<15 x s32>)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s32) = COPY $vgpr2
@@ -400,23 +400,23 @@ body: |
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15
     ; CHECK-LABEL: name: legal_v16s32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
-    ; CHECK: [[COPY4:%[0-9]+]]:_(s32) = COPY $vgpr4
-    ; CHECK: [[COPY5:%[0-9]+]]:_(s32) = COPY $vgpr5
-    ; CHECK: [[COPY6:%[0-9]+]]:_(s32) = COPY $vgpr6
-    ; CHECK: [[COPY7:%[0-9]+]]:_(s32) = COPY $vgpr7
-    ; CHECK: [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr8
-    ; CHECK: [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr9
-    ; CHECK: [[COPY10:%[0-9]+]]:_(s32) = COPY $vgpr10
-    ; CHECK: [[COPY11:%[0-9]+]]:_(s32) = COPY $vgpr11
-    ; CHECK: [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr12
-    ; CHECK: [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr13
-    ; CHECK: [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr14
-    ; CHECK: [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr15
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32)
-    ; CHECK: S_NOP 0, implicit [[BUILD_VECTOR]](<16 x s32>)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(s32) = COPY $vgpr4
+    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:_(s32) = COPY $vgpr5
+    ; CHECK-NEXT: [[COPY6:%[0-9]+]]:_(s32) = COPY $vgpr6
+    ; CHECK-NEXT: [[COPY7:%[0-9]+]]:_(s32) = COPY $vgpr7
+    ; CHECK-NEXT: [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr8
+    ; CHECK-NEXT: [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr9
+    ; CHECK-NEXT: [[COPY10:%[0-9]+]]:_(s32) = COPY $vgpr10
+    ; CHECK-NEXT: [[COPY11:%[0-9]+]]:_(s32) = COPY $vgpr11
+    ; CHECK-NEXT: [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr12
+    ; CHECK-NEXT: [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr13
+    ; CHECK-NEXT: [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr14
+    ; CHECK-NEXT: [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr15
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32)
+    ; CHECK-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<16 x s32>)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s32) = COPY $vgpr2
@@ -443,39 +443,39 @@ body: |
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31
     ; CHECK-LABEL: name: legal_v32s32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
-    ; CHECK: [[COPY4:%[0-9]+]]:_(s32) = COPY $vgpr4
-    ; CHECK: [[COPY5:%[0-9]+]]:_(s32) = COPY $vgpr5
-    ; CHECK: [[COPY6:%[0-9]+]]:_(s32) = COPY $vgpr6
-    ; CHECK: [[COPY7:%[0-9]+]]:_(s32) = COPY $vgpr7
-    ; CHECK: [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr8
-    ; CHECK: [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr9
-    ; CHECK: [[COPY10:%[0-9]+]]:_(s32) = COPY $vgpr10
-    ; CHECK: [[COPY11:%[0-9]+]]:_(s32) = COPY $vgpr11
-    ; CHECK: [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr12
-    ; CHECK: [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr13
-    ; CHECK: [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr14
-    ; CHECK: [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr15
-    ; CHECK: [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr16
-    ; CHECK: [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr17
-    ; CHECK: [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr18
-    ; CHECK: [[COPY19:%[0-9]+]]:_(s32) = COPY $vgpr19
-    ; CHECK: [[COPY20:%[0-9]+]]:_(s32) = COPY $vgpr20
-    ; CHECK: [[COPY21:%[0-9]+]]:_(s32) = COPY $vgpr21
-    ; CHECK: [[COPY22:%[0-9]+]]:_(s32) = COPY $vgpr22
-    ; CHECK: [[COPY23:%[0-9]+]]:_(s32) = COPY $vgpr23
-    ; CHECK: [[COPY24:%[0-9]+]]:_(s32) = COPY $vgpr24
-    ; CHECK: [[COPY25:%[0-9]+]]:_(s32) = COPY $vgpr25
-    ; CHECK: [[COPY26:%[0-9]+]]:_(s32) = COPY $vgpr26
-    ; CHECK: [[COPY27:%[0-9]+]]:_(s32) = COPY $vgpr27
-    ; CHECK: [[COPY28:%[0-9]+]]:_(s32) = COPY $vgpr28
-    ; CHECK: [[COPY29:%[0-9]+]]:_(s32) = COPY $vgpr29
-    ; CHECK: [[COPY30:%[0-9]+]]:_(s32) = COPY $vgpr30
-    ; CHECK: [[COPY31:%[0-9]+]]:_(s32) = COPY $vgpr31
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32), [[COPY16]](s32), [[COPY17]](s32), [[COPY18]](s32), [[COPY19]](s32), [[COPY20]](s32), [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32), [[COPY26]](s32), [[COPY27]](s32), [[COPY28]](s32), [[COPY29]](s32), [[COPY30]](s32), [[COPY31]](s32)
-    ; CHECK: S_NOP 0, implicit [[BUILD_VECTOR]](<32 x s32>)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(s32) = COPY $vgpr4
+    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:_(s32) = COPY $vgpr5
+    ; CHECK-NEXT: [[COPY6:%[0-9]+]]:_(s32) = COPY $vgpr6
+    ; CHECK-NEXT: [[COPY7:%[0-9]+]]:_(s32) = COPY $vgpr7
+    ; CHECK-NEXT: [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr8
+    ; CHECK-NEXT: [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr9
+    ; CHECK-NEXT: [[COPY10:%[0-9]+]]:_(s32) = COPY $vgpr10
+    ; CHECK-NEXT: [[COPY11:%[0-9]+]]:_(s32) = COPY $vgpr11
+    ; CHECK-NEXT: [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr12
+    ; CHECK-NEXT: [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr13
+    ; CHECK-NEXT: [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr14
+    ; CHECK-NEXT: [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr15
+    ; CHECK-NEXT: [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr16
+    ; CHECK-NEXT: [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr17
+    ; CHECK-NEXT: [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr18
+    ; CHECK-NEXT: [[COPY19:%[0-9]+]]:_(s32) = COPY $vgpr19
+    ; CHECK-NEXT: [[COPY20:%[0-9]+]]:_(s32) = COPY $vgpr20
+    ; CHECK-NEXT: [[COPY21:%[0-9]+]]:_(s32) = COPY $vgpr21
+    ; CHECK-NEXT: [[COPY22:%[0-9]+]]:_(s32) = COPY $vgpr22
+    ; CHECK-NEXT: [[COPY23:%[0-9]+]]:_(s32) = COPY $vgpr23
+    ; CHECK-NEXT: [[COPY24:%[0-9]+]]:_(s32) = COPY $vgpr24
+    ; CHECK-NEXT: [[COPY25:%[0-9]+]]:_(s32) = COPY $vgpr25
+    ; CHECK-NEXT: [[COPY26:%[0-9]+]]:_(s32) = COPY $vgpr26
+    ; CHECK-NEXT: [[COPY27:%[0-9]+]]:_(s32) = COPY $vgpr27
+    ; CHECK-NEXT: [[COPY28:%[0-9]+]]:_(s32) = COPY $vgpr28
+    ; CHECK-NEXT: [[COPY29:%[0-9]+]]:_(s32) = COPY $vgpr29
+    ; CHECK-NEXT: [[COPY30:%[0-9]+]]:_(s32) = COPY $vgpr30
+    ; CHECK-NEXT: [[COPY31:%[0-9]+]]:_(s32) = COPY $vgpr31
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32), [[COPY16]](s32), [[COPY17]](s32), [[COPY18]](s32), [[COPY19]](s32), [[COPY20]](s32), [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32), [[COPY26]](s32), [[COPY27]](s32), [[COPY28]](s32), [[COPY29]](s32), [[COPY30]](s32), [[COPY31]](s32)
+    ; CHECK-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<32 x s32>)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s32) = COPY $vgpr2
@@ -518,9 +518,9 @@ body: |
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; CHECK-LABEL: name: legal_v2s64
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[COPY]](s64), [[COPY1]](s64)
-    ; CHECK: S_NOP 0, implicit [[BUILD_VECTOR]](<2 x s64>)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[COPY]](s64), [[COPY1]](s64)
+    ; CHECK-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<2 x s64>)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s64) = COPY $vgpr2_vgpr3
     %2:_(<2 x s64>) = G_BUILD_VECTOR %0, %1
@@ -533,10 +533,10 @@ body: |
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
     ; CHECK-LABEL: name: legal_v3s64
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $vgpr4_vgpr5
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s64>) = G_BUILD_VECTOR [[COPY]](s64), [[COPY1]](s64), [[COPY2]](s64)
-    ; CHECK: S_NOP 0, implicit [[BUILD_VECTOR]](<3 x s64>)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $vgpr4_vgpr5
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s64>) = G_BUILD_VECTOR [[COPY]](s64), [[COPY1]](s64), [[COPY2]](s64)
+    ; CHECK-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<3 x s64>)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s64) = COPY $vgpr2_vgpr3
     %2:_(s64) = COPY $vgpr4_vgpr5
@@ -550,11 +550,11 @@ body: |
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7
     ; CHECK-LABEL: name: legal_v4s64
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $vgpr4_vgpr5
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s64) = COPY $vgpr6_vgpr7
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s64>) = G_BUILD_VECTOR [[COPY]](s64), [[COPY1]](s64), [[COPY2]](s64), [[COPY3]](s64)
-    ; CHECK: S_NOP 0, implicit [[BUILD_VECTOR]](<4 x s64>)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $vgpr4_vgpr5
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s64) = COPY $vgpr6_vgpr7
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s64>) = G_BUILD_VECTOR [[COPY]](s64), [[COPY1]](s64), [[COPY2]](s64), [[COPY3]](s64)
+    ; CHECK-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<4 x s64>)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s64) = COPY $vgpr2_vgpr3
     %2:_(s64) = COPY $vgpr4_vgpr5
@@ -569,12 +569,12 @@ body: |
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr8_vgpr9
     ; CHECK-LABEL: name: legal_v5s64
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $vgpr4_vgpr5
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s64) = COPY $vgpr6_vgpr7
-    ; CHECK: [[COPY4:%[0-9]+]]:_(s64) = COPY $vgpr8_vgpr9
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<5 x s64>) = G_BUILD_VECTOR [[COPY]](s64), [[COPY1]](s64), [[COPY2]](s64), [[COPY3]](s64), [[COPY4]](s64)
-    ; CHECK: S_NOP 0, implicit [[BUILD_VECTOR]](<5 x s64>)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $vgpr4_vgpr5
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s64) = COPY $vgpr6_vgpr7
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(s64) = COPY $vgpr8_vgpr9
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<5 x s64>) = G_BUILD_VECTOR [[COPY]](s64), [[COPY1]](s64), [[COPY2]](s64), [[COPY3]](s64), [[COPY4]](s64)
+    ; CHECK-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<5 x s64>)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s64) = COPY $vgpr2_vgpr3
     %2:_(s64) = COPY $vgpr4_vgpr5
@@ -590,13 +590,13 @@ body: |
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr8_vgpr9, $vgpr10_vgpr11
     ; CHECK-LABEL: name: legal_v6s64
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $vgpr4_vgpr5
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s64) = COPY $vgpr6_vgpr7
-    ; CHECK: [[COPY4:%[0-9]+]]:_(s64) = COPY $vgpr8_vgpr9
-    ; CHECK: [[COPY5:%[0-9]+]]:_(s64) = COPY $vgpr10_vgpr11
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<6 x s64>) = G_BUILD_VECTOR [[COPY]](s64), [[COPY1]](s64), [[COPY2]](s64), [[COPY3]](s64), [[COPY4]](s64), [[COPY5]](s64)
-    ; CHECK: S_NOP 0, implicit [[BUILD_VECTOR]](<6 x s64>)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $vgpr4_vgpr5
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s64) = COPY $vgpr6_vgpr7
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(s64) = COPY $vgpr8_vgpr9
+    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:_(s64) = COPY $vgpr10_vgpr11
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<6 x s64>) = G_BUILD_VECTOR [[COPY]](s64), [[COPY1]](s64), [[COPY2]](s64), [[COPY3]](s64), [[COPY4]](s64), [[COPY5]](s64)
+    ; CHECK-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<6 x s64>)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s64) = COPY $vgpr2_vgpr3
     %2:_(s64) = COPY $vgpr4_vgpr5
@@ -613,14 +613,14 @@ body: |
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr8_vgpr9, $vgpr10_vgpr11, $vgpr12_vgpr13
     ; CHECK-LABEL: name: legal_v7s64
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $vgpr4_vgpr5
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s64) = COPY $vgpr6_vgpr7
-    ; CHECK: [[COPY4:%[0-9]+]]:_(s64) = COPY $vgpr8_vgpr9
-    ; CHECK: [[COPY5:%[0-9]+]]:_(s64) = COPY $vgpr10_vgpr11
-    ; CHECK: [[COPY6:%[0-9]+]]:_(s64) = COPY $vgpr12_vgpr13
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<7 x s64>) = G_BUILD_VECTOR [[COPY]](s64), [[COPY1]](s64), [[COPY2]](s64), [[COPY3]](s64), [[COPY4]](s64), [[COPY5]](s64), [[COPY6]](s64)
-    ; CHECK: S_NOP 0, implicit [[BUILD_VECTOR]](<7 x s64>)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $vgpr4_vgpr5
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s64) = COPY $vgpr6_vgpr7
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(s64) = COPY $vgpr8_vgpr9
+    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:_(s64) = COPY $vgpr10_vgpr11
+    ; CHECK-NEXT: [[COPY6:%[0-9]+]]:_(s64) = COPY $vgpr12_vgpr13
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<7 x s64>) = G_BUILD_VECTOR [[COPY]](s64), [[COPY1]](s64), [[COPY2]](s64), [[COPY3]](s64), [[COPY4]](s64), [[COPY5]](s64), [[COPY6]](s64)
+    ; CHECK-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<7 x s64>)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s64) = COPY $vgpr2_vgpr3
     %2:_(s64) = COPY $vgpr4_vgpr5
@@ -638,15 +638,15 @@ body: |
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr8_vgpr9, $vgpr10_vgpr11, $vgpr12_vgpr13, $vgpr14_vgpr15
     ; CHECK-LABEL: name: legal_v8s64
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $vgpr4_vgpr5
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s64) = COPY $vgpr6_vgpr7
-    ; CHECK: [[COPY4:%[0-9]+]]:_(s64) = COPY $vgpr8_vgpr9
-    ; CHECK: [[COPY5:%[0-9]+]]:_(s64) = COPY $vgpr10_vgpr11
-    ; CHECK: [[COPY6:%[0-9]+]]:_(s64) = COPY $vgpr12_vgpr13
-    ; CHECK: [[COPY7:%[0-9]+]]:_(s64) = COPY $vgpr14_vgpr15
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s64>) = G_BUILD_VECTOR [[COPY]](s64), [[COPY1]](s64), [[COPY2]](s64), [[COPY3]](s64), [[COPY4]](s64), [[COPY5]](s64), [[COPY6]](s64), [[COPY7]](s64)
-    ; CHECK: S_NOP 0, implicit [[BUILD_VECTOR]](<8 x s64>)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $vgpr4_vgpr5
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s64) = COPY $vgpr6_vgpr7
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(s64) = COPY $vgpr8_vgpr9
+    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:_(s64) = COPY $vgpr10_vgpr11
+    ; CHECK-NEXT: [[COPY6:%[0-9]+]]:_(s64) = COPY $vgpr12_vgpr13
+    ; CHECK-NEXT: [[COPY7:%[0-9]+]]:_(s64) = COPY $vgpr14_vgpr15
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s64>) = G_BUILD_VECTOR [[COPY]](s64), [[COPY1]](s64), [[COPY2]](s64), [[COPY3]](s64), [[COPY4]](s64), [[COPY5]](s64), [[COPY6]](s64), [[COPY7]](s64)
+    ; CHECK-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<8 x s64>)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s64) = COPY $vgpr2_vgpr3
     %2:_(s64) = COPY $vgpr4_vgpr5
@@ -666,23 +666,23 @@ body: |
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr8_vgpr9, $vgpr10_vgpr11, $vgpr12_vgpr13, $vgpr14_vgpr15, $vgpr16_vgpr17, $vgpr18_vgpr19, $vgpr20_vgpr21, $vgpr22_vgpr23, $vgpr24_vgpr25, $vgpr26_vgpr27, $vgpr28_vgpr29, $vgpr30_vgpr31
     ; CHECK-LABEL: name: legal_v16s64
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $vgpr4_vgpr5
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s64) = COPY $vgpr6_vgpr7
-    ; CHECK: [[COPY4:%[0-9]+]]:_(s64) = COPY $vgpr8_vgpr9
-    ; CHECK: [[COPY5:%[0-9]+]]:_(s64) = COPY $vgpr10_vgpr11
-    ; CHECK: [[COPY6:%[0-9]+]]:_(s64) = COPY $vgpr12_vgpr13
-    ; CHECK: [[COPY7:%[0-9]+]]:_(s64) = COPY $vgpr14_vgpr15
-    ; CHECK: [[COPY8:%[0-9]+]]:_(s64) = COPY $vgpr16_vgpr17
-    ; CHECK: [[COPY9:%[0-9]+]]:_(s64) = COPY $vgpr18_vgpr19
-    ; CHECK: [[COPY10:%[0-9]+]]:_(s64) = COPY $vgpr20_vgpr21
-    ; CHECK: [[COPY11:%[0-9]+]]:_(s64) = COPY $vgpr22_vgpr23
-    ; CHECK: [[COPY12:%[0-9]+]]:_(s64) = COPY $vgpr24_vgpr25
-    ; CHECK: [[COPY13:%[0-9]+]]:_(s64) = COPY $vgpr26_vgpr27
-    ; CHECK: [[COPY14:%[0-9]+]]:_(s64) = COPY $vgpr28_vgpr29
-    ; CHECK: [[COPY15:%[0-9]+]]:_(s64) = COPY $vgpr30_vgpr31
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s64>) = G_BUILD_VECTOR [[COPY]](s64), [[COPY1]](s64), [[COPY2]](s64), [[COPY3]](s64), [[COPY4]](s64), [[COPY5]](s64), [[COPY6]](s64), [[COPY7]](s64), [[COPY8]](s64), [[COPY9]](s64), [[COPY10]](s64), [[COPY11]](s64), [[COPY12]](s64), [[COPY13]](s64), [[COPY14]](s64), [[COPY15]](s64)
-    ; CHECK: S_NOP 0, implicit [[BUILD_VECTOR]](<16 x s64>)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $vgpr4_vgpr5
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s64) = COPY $vgpr6_vgpr7
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(s64) = COPY $vgpr8_vgpr9
+    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:_(s64) = COPY $vgpr10_vgpr11
+    ; CHECK-NEXT: [[COPY6:%[0-9]+]]:_(s64) = COPY $vgpr12_vgpr13
+    ; CHECK-NEXT: [[COPY7:%[0-9]+]]:_(s64) = COPY $vgpr14_vgpr15
+    ; CHECK-NEXT: [[COPY8:%[0-9]+]]:_(s64) = COPY $vgpr16_vgpr17
+    ; CHECK-NEXT: [[COPY9:%[0-9]+]]:_(s64) = COPY $vgpr18_vgpr19
+    ; CHECK-NEXT: [[COPY10:%[0-9]+]]:_(s64) = COPY $vgpr20_vgpr21
+    ; CHECK-NEXT: [[COPY11:%[0-9]+]]:_(s64) = COPY $vgpr22_vgpr23
+    ; CHECK-NEXT: [[COPY12:%[0-9]+]]:_(s64) = COPY $vgpr24_vgpr25
+    ; CHECK-NEXT: [[COPY13:%[0-9]+]]:_(s64) = COPY $vgpr26_vgpr27
+    ; CHECK-NEXT: [[COPY14:%[0-9]+]]:_(s64) = COPY $vgpr28_vgpr29
+    ; CHECK-NEXT: [[COPY15:%[0-9]+]]:_(s64) = COPY $vgpr30_vgpr31
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s64>) = G_BUILD_VECTOR [[COPY]](s64), [[COPY1]](s64), [[COPY2]](s64), [[COPY3]](s64), [[COPY4]](s64), [[COPY5]](s64), [[COPY6]](s64), [[COPY7]](s64), [[COPY8]](s64), [[COPY9]](s64), [[COPY10]](s64), [[COPY11]](s64), [[COPY12]](s64), [[COPY13]](s64), [[COPY14]](s64), [[COPY15]](s64)
+    ; CHECK-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<16 x s64>)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s64) = COPY $vgpr2_vgpr3
     %2:_(s64) = COPY $vgpr4_vgpr5
@@ -711,9 +711,9 @@ body: |
 
     ; CHECK-LABEL: name: legal_v2s128
     ; CHECK: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s128) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s128>) = G_BUILD_VECTOR [[COPY]](s128), [[COPY1]](s128)
-    ; CHECK: S_NOP 0, implicit [[BUILD_VECTOR]](<2 x s128>)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s128) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s128>) = G_BUILD_VECTOR [[COPY]](s128), [[COPY1]](s128)
+    ; CHECK-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<2 x s128>)
     %0:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %1:_(s128) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
     %2:_(<2 x s128>) = G_BUILD_VECTOR %0, %1
@@ -727,9 +727,9 @@ body: |
     liveins: $vgpr0, $vgpr1
     ; CHECK-LABEL: name: legal_v2p3
     ; CHECK: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(p3) = COPY $vgpr1
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p3>) = G_BUILD_VECTOR [[COPY]](p3), [[COPY1]](p3)
-    ; CHECK: S_NOP 0, implicit [[BUILD_VECTOR]](<2 x p3>)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p3) = COPY $vgpr1
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p3>) = G_BUILD_VECTOR [[COPY]](p3), [[COPY1]](p3)
+    ; CHECK-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<2 x p3>)
     %0:_(p3) = COPY $vgpr0
     %1:_(p3) = COPY $vgpr1
     %2:_(<2 x p3>) = G_BUILD_VECTOR %0, %1
@@ -742,10 +742,10 @@ body: |
     liveins: $vgpr0, $vgpr1, $vgpr2
     ; CHECK-LABEL: name: legal_v3p3
     ; CHECK: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(p3) = COPY $vgpr1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(p3) = COPY $vgpr2
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x p3>) = G_BUILD_VECTOR [[COPY]](p3), [[COPY1]](p3), [[COPY2]](p3)
-    ; CHECK: S_NOP 0, implicit [[BUILD_VECTOR]](<3 x p3>)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p3) = COPY $vgpr1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(p3) = COPY $vgpr2
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x p3>) = G_BUILD_VECTOR [[COPY]](p3), [[COPY1]](p3), [[COPY2]](p3)
+    ; CHECK-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<3 x p3>)
     %0:_(p3) = COPY $vgpr0
     %1:_(p3) = COPY $vgpr1
     %2:_(p3) = COPY $vgpr2
@@ -760,9 +760,9 @@ body: |
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; CHECK-LABEL: name: legal_v2p0
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
-    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $vgpr2_vgpr3
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p0>) = G_BUILD_VECTOR [[COPY]](p0), [[COPY1]](p0)
-    ; CHECK: S_NOP 0, implicit [[BUILD_VECTOR]](<2 x p0>)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p0>) = G_BUILD_VECTOR [[COPY]](p0), [[COPY1]](p0)
+    ; CHECK-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<2 x p0>)
     %0:_(p0) = COPY $vgpr0_vgpr1
     %1:_(p0) = COPY $vgpr2_vgpr3
     %2:_(<2 x p0>) = G_BUILD_VECTOR %0, %1
@@ -776,9 +776,9 @@ body: |
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; CHECK-LABEL: name: legal_v2p999
     ; CHECK: [[COPY:%[0-9]+]]:_(p999) = COPY $vgpr0_vgpr1
-    ; CHECK: [[COPY1:%[0-9]+]]:_(p999) = COPY $vgpr2_vgpr3
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p999>) = G_BUILD_VECTOR [[COPY]](p999), [[COPY1]](p999)
-    ; CHECK: S_NOP 0, implicit [[BUILD_VECTOR]](<2 x p999>)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p999) = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p999>) = G_BUILD_VECTOR [[COPY]](p999), [[COPY1]](p999)
+    ; CHECK-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<2 x p999>)
     %0:_(p999) = COPY $vgpr0_vgpr1
     %1:_(p999) = COPY $vgpr2_vgpr3
     %2:_(<2 x p999>) = G_BUILD_VECTOR %0, %1
@@ -793,9 +793,9 @@ body: |
 
     ; CHECK-LABEL: name: legal_v2s256
     ; CHECK: [[COPY:%[0-9]+]]:_(s256) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s256) = COPY $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s256>) = G_BUILD_VECTOR [[COPY]](s256), [[COPY1]](s256)
-    ; CHECK: S_NOP 0, implicit [[BUILD_VECTOR]](<2 x s256>)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s256) = COPY $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s256>) = G_BUILD_VECTOR [[COPY]](s256), [[COPY1]](s256)
+    ; CHECK-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<2 x s256>)
     %0:_(s256) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
     %1:_(s256) = COPY $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     %2:_(<2 x s256>) = G_BUILD_VECTOR %0, %1
@@ -810,11 +810,11 @@ body: |
 
     ; CHECK-LABEL: name: legal_v4s128
     ; CHECK: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s128) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s128) = COPY $vgpr8_vgpr9_vgpr10_vgpr11
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s128) = COPY $vgpr12_vgpr13_vgpr14_vgpr15
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s128>) = G_BUILD_VECTOR [[COPY]](s128), [[COPY1]](s128), [[COPY2]](s128), [[COPY3]](s128)
-    ; CHECK: S_NOP 0, implicit [[BUILD_VECTOR]](<4 x s128>)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s128) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s128) = COPY $vgpr8_vgpr9_vgpr10_vgpr11
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s128) = COPY $vgpr12_vgpr13_vgpr14_vgpr15
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s128>) = G_BUILD_VECTOR [[COPY]](s128), [[COPY1]](s128), [[COPY2]](s128), [[COPY3]](s128)
+    ; CHECK-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<4 x s128>)
     %0:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %1:_(s128) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
     %2:_(s128) = COPY $vgpr8_vgpr9_vgpr10_vgpr11

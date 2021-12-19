@@ -169,6 +169,11 @@ class LitConfig(object):
         line = inspect.getlineno(f)
         sys.stderr.write('%s: %s:%d: %s: %s\n' % (self.progname, file, line,
                                                   kind, message))
+        if self.isWindows:
+            # In a git bash terminal, the writes to sys.stderr aren't visible
+            # on screen immediately. Flush them here to avoid broken/misoredered
+            # output.
+            sys.stderr.flush()
 
     def note(self, message):
         if not self.quiet:

@@ -162,3 +162,94 @@ InstructionCost RISCVTTIImpl::getGatherScatterOpCost(
       getMemoryOpCost(Opcode, VTy->getElementType(), Alignment, 0, CostKind, I);
   return NumLoads * MemOpCost;
 }
+
+void RISCVTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
+                                           TTI::UnrollingPreferences &UP,
+                                           OptimizationRemarkEmitter *ORE) {
+  // TODO: More tuning on benchmarks and metrics with changes as needed
+  //       would apply to all settings below to enable performance.
+
+  // Support explicit targets enabled for SiFive with the unrolling preferences
+  // below
+  bool UseDefaultPreferences = true;
+  if (ST->getTuneCPU().contains("sifive-e76") ||
+      ST->getTuneCPU().contains("sifive-s76") ||
+      ST->getTuneCPU().contains("sifive-u74") ||
+      ST->getTuneCPU().contains("sifive-7"))
+    UseDefaultPreferences = false;
+
+  if (UseDefaultPreferences)
+    return BasicTTIImplBase::getUnrollingPreferences(L, SE, UP, ORE);
+
+  // Enable Upper bound unrolling universally, not dependant upon the conditions
+  // below.
+  UP.UpperBound = true;
+
+  // Disable loop unrolling for Oz and Os.
+  UP.OptSizeThreshold = 0;
+  UP.PartialOptSizeThreshold = 0;
+  if (L->getHeader()->getParent()->hasOptSize())
+    return;
+
+  SmallVector<BasicBlock *, 4> ExitingBlocks;
+  L->getExitingBlocks(ExitingBlocks);
+  LLVM_DEBUG(dbgs() << "Loop has:\n"
+                    << "Blocks: " << L->getNumBlocks() << "\n"
+                    << "Exit blocks: " << ExitingBlocks.size() << "\n");
+
+  // Only allow another exit other than the latch. This acts as an early exit
+  // as it mirrors the profitability calculation of the runtime unroller.
+  if (ExitingBlocks.size() > 2)
+    return;
+
+  // Limit the CFG of the loop body for targets with a branch predictor.
+  // Allowing 4 blocks permits if-then-else diamonds in the body.
+  if (L->getNumBlocks() > 4)
+    return;
+
+  // Don't unroll vectorized loops, including the remainder loop
+  if (getBooleanLoopAttribute(L, "llvm.loop.isvectorized"))
+    return;
+
+  // Scan the loop: don't unroll loops with calls as this could prevent
+  // inlining.
+  InstructionCost Cost = 0;
+  for (auto *BB : L->getBlocks()) {
+    for (auto &I : *BB) {
+      // Initial setting - Don't unroll loops containing vectorized
+      // instructions.
+      if (I.getType()->isVectorTy())
+        return;
+
+      if (isa<CallInst>(I) || isa<InvokeInst>(I)) {
+        if (const Function *F = cast<CallBase>(I).getCalledFunction()) {
+          if (!isLoweredToCall(F))
+            continue;
+        }
+        return;
+      }
+
+      SmallVector<const Value *> Operands(I.operand_values());
+      Cost +=
+          getUserCost(&I, Operands, TargetTransformInfo::TCK_SizeAndLatency);
+    }
+  }
+
+  LLVM_DEBUG(dbgs() << "Cost of loop: " << Cost << "\n");
+
+  UP.Partial = true;
+  UP.Runtime = true;
+  UP.UnrollRemainder = true;
+  UP.UnrollAndJam = true;
+  UP.UnrollAndJamInnerLoopThreshold = 60;
+
+  // Force unrolling small loops can be very useful because of the branch
+  // taken cost of the backedge.
+  if (Cost < 12)
+    UP.Force = true;
+}
+
+void RISCVTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
+                                         TTI::PeelingPreferences &PP) {
+  BaseT::getPeelingPreferences(L, SE, PP);
+}
