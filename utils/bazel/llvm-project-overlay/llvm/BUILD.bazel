@@ -426,7 +426,6 @@ cc_library(
     deps = [
         ":BinaryFormat",
         ":DebugInfoCodeView",
-        ":ProfileData",
         ":Support",
         ":config",
         ":ir_headers",
@@ -840,6 +839,7 @@ cc_library(
     copts = llvm_copts,
     deps = [
         ":Core",
+        ":DebugInfoDWARF",
         ":Support",
         ":config",
     ],
