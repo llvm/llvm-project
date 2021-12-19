@@ -11515,6 +11515,17 @@ TEST_F(FormatTest, LayoutCxx11BraceInitializers) {
                "  };\n"
                "};");
   verifyFormat("#define A {a, a},");
+  // Don't confuse braced list initializers with compound statements.
+  verifyFormat(
+      "class A {\n"
+      "  A() : a{} {}\n"
+      "  A(int b) : b(b) {}\n"
+      "  A(int a, int b) : a(a), bs{{bs...}} { f(); }\n"
+      "  int a, b;\n"
+      "  explicit Expr(const Scalar<Result> &x) : u{Constant<Result>{x}} {}\n"
+      "  explicit Expr(Scalar<Result> &&x) : u{Constant<Result>{std::move(x)}} "
+      "{}\n"
+      "};");
 
   // Avoid breaking between equal sign and opening brace
   FormatStyle AvoidBreakingFirstArgument = getLLVMStyle();
