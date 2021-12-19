@@ -455,7 +455,7 @@ std::string toString(InvalidName::Kind K) {
 }
 
 llvm::Error makeError(InvalidName Reason) {
-  auto Message = [](InvalidName Reason) {
+  auto Message = [](const InvalidName &Reason) {
     switch (Reason.K) {
     case InvalidName::Keywords:
       return llvm::formatv("the chosen name \"{0}\" is a keyword",
@@ -733,7 +733,7 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
     return makeError(ReasonToReject::SameName);
   auto Invalid = checkName(RenameDecl, RInputs.NewName);
   if (Invalid)
-    return makeError(*Invalid);
+    return makeError(std::move(*Invalid));
 
   auto Reject = renameable(RenameDecl, RInputs.MainFilePath, RInputs.Index);
   if (Reject)

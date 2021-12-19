@@ -1060,6 +1060,11 @@ TEST(RenameTest, Renameable) {
       )cpp",
        "conflict", !HeaderFile, "Conflict"},
 
+      {R"cpp(
+        int V^ar;
+      )cpp",
+       "\"const\" is a keyword", !HeaderFile, "const"},
+
       {R"cpp(// Trying to rename into the same name, SameName == SameName.
         void func() {
           int S^ameName;
