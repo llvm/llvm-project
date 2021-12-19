@@ -1,11 +1,12 @@
 // RUN: %clang_cc1 -S -fno-strict-float-cast-overflow %s -emit-llvm -o - | FileCheck %s --check-prefix=NOSTRICT
 
 // When compiling with non-standard semantics, use intrinsics to inhibit the optimizer.
+// This used to require a function attribute, so we check that it is NOT here anymore.
 
 // NOSTRICT-LABEL: main
 // NOSTRICT: call i32 @llvm.fptosi.sat.i32.f64
 // NOSTRICT: call i32 @llvm.fptoui.sat.i32.f64
-// NOSTRICT: attributes #0 = {{.*}}"strict-float-cast-overflow"="false"{{.*}}
+// NOSTRICT-NOT: strict-float-cast-overflow
 
 // The workaround attribute is not applied by default.
 
