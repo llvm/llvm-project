@@ -71,6 +71,7 @@ class MxMoveEncAddrMode_r<string reg_opnd> : MxEncMemOp {
                     (operand "$"#reg_opnd, 3));
 }
 
+// TODO: Generalize and adopt this utility in other .td files as well.
 multiclass MxMoveOperandEncodings<string opnd_name> {
   // Dn
   def MxMove#NAME#OpEnc_d : MxEncAddrMode_d<opnd_name>;
@@ -107,6 +108,7 @@ class MxMove<string size, dag outs, dag ins, list<dag> pattern, MxMoveEncoding e
   let Inst = enc.Value;
 }
 
+// R <- R
 class MxMove_RR<MxType TYPE, string DST_REG, string SRC_REG,
                 MxMoveEncoding ENC,
                 MxOpBundle DST = !cast<MxOpBundle>("MxOp"#TYPE.Size#"AddrMode_"#DST_REG),
@@ -115,6 +117,22 @@ class MxMove_RR<MxType TYPE, string DST_REG, string SRC_REG,
              (outs DST.Op:$dst), (ins SRC.Op:$src),
              [(null_frag)], ENC>;
 
+foreach DST_REG = ["r", "a"] in {
+  foreach SRC_REG = ["r", "a"] in
+  foreach TYPE = [MxType16, MxType32] in
+  def MOV # TYPE.Size # DST_REG # SRC_REG # TYPE.Postfix
+      : MxMove_RR<TYPE, DST_REG, SRC_REG,
+                  MxMoveEncoding<!cast<MxMoveSize>("MxMoveSize"#TYPE.Size),
+                                 !cast<MxEncMemOp>("MxMoveDstOpEnc_"#DST_REG),
+                                 !cast<MxEncMemOp>("MxMoveSrcOpEnc_"#SRC_REG)>>;
+} // foreach DST_REG
+foreach TYPE = [MxType8, MxType16, MxType32] in
+def MOV # TYPE.Size # dd # TYPE.Postfix
+    : MxMove_RR<TYPE, "d", "d",
+                MxMoveEncoding<!cast<MxMoveSize>("MxMoveSize"#TYPE.Size),
+                               MxMoveDstOpEnc_d, MxMoveSrcOpEnc_d>>;
+
+// M <- R
 let mayStore = 1 in {
 class MxMove_MR<MxType TYPE, MxOpBundle DST, string SRC_REG, MxMoveEncoding ENC,
                 MxOpBundle SRC = !cast<MxOpBundle>("MxOp"#TYPE.Size#"AddrMode_"#SRC_REG)>
@@ -127,13 +145,42 @@ class MxMove_MI<MxType TYPE, MxOpBundle DST, MxMoveEncoding ENC,
              [(store SRC.ImmPat:$src, DST.Pat:$dst)], ENC>;
 } // let mayStore = 1
 
+foreach REG = ["r", "a", "d"] in
+foreach AM = MxMoveSupportedAMs in {
+  foreach TYPE = !if(!eq(REG, "d"), [MxType8, MxType16, MxType32], [MxType16, MxType32]) in
+  def MOV # TYPE.Size # AM # REG # TYPE.Postfix
+      : MxMove_MR<TYPE, !cast<MxOpBundle>("MxOp"#TYPE.Size#"AddrMode_"#AM), REG,
+                  MxMoveEncoding<!cast<MxMoveSize>("MxMoveSize"#TYPE.Size),
+                                 !cast<MxEncMemOp>("MxMoveDstOpEnc_"#AM),
+                                 !cast<MxEncMemOp>("MxMoveSrcOpEnc_"#REG)>>;
+} // foreach AM
+
+foreach AM = MxMoveSupportedAMs in {
+  foreach TYPE = [MxType8, MxType16, MxType32] in
+  def MOV # TYPE.Size # AM # i # TYPE.Postfix
+      : MxMove_MI<TYPE, !cast<MxOpBundle>("MxOp"#TYPE.Size#"AddrMode_"#AM),
+                  MxMoveEncoding<!cast<MxMoveSize>("MxMoveSize"#TYPE.Size),
+                                 !cast<MxEncMemOp>("MxMoveDstOpEnc_"#AM),
+                                 MxEncAddrMode_i<"src", TYPE.Size>>>;
+} // foreach AM
+
+// R <- I
 class MxMove_RI<MxType TYPE, string DST_REG, MxMoveEncoding ENC,
                 MxImmOpBundle SRC = !cast<MxImmOpBundle>("MxOp"#TYPE.Size#"AddrMode_i"),
                 MxOpBundle DST = !cast<MxOpBundle>("MxOp"#TYPE.Size#"AddrMode_"#DST_REG)>
     : MxMove<TYPE.Prefix, (outs DST.Op:$dst), (ins SRC.Op:$src),
               [(set TYPE.VT:$dst, SRC.ImmPat:$src)], ENC>;
 
+foreach REG = ["r", "a", "d"] in {
+  foreach TYPE = !if(!eq(REG, "d"), [MxType8, MxType16, MxType32], [MxType16, MxType32]) in
+  def MOV # TYPE.Size # REG # i # TYPE.Postfix
+      : MxMove_RI<TYPE, REG,
+                  MxMoveEncoding<!cast<MxMoveSize>("MxMoveSize"#TYPE.Size),
+                                 !cast<MxEncMemOp>("MxMoveDstOpEnc_"#REG),
+                                 MxEncAddrMode_i<"src", TYPE.Size>>>;
+} // foreach REG
 
+// R <- M
 let mayLoad = 1 in
 class MxMove_RM<MxType TYPE, string DST_REG, MxOpBundle SRC, MxEncMemOp SRC_ENC,
                 MxMoveSize SIZE_ENC = !cast<MxMoveSize>("MxMoveSize"#TYPE.Size),
@@ -150,6 +197,17 @@ foreach AM = MxMoveSupportedAMs in {
       : MxMove_RM<TYPE, REG, !cast<MxOpBundle>("MxOp"#TYPE.Size#"AddrMode_"#AM),
                   !cast<MxEncMemOp>("MxMoveSrcOpEnc_"#AM)>;
 } // foreach AM
+
+// Tail call version
+let Pattern = [(null_frag)] in {
+  foreach REG = ["r", "a"] in
+  foreach AM = MxMoveSupportedAMs in {
+    foreach TYPE = [MxType16, MxType32] in
+    def MOV # TYPE.Size # REG # AM # _TC
+        : MxMove_RM<TYPE, REG, !cast<MxOpBundle>("MxOp"#TYPE.Size#"AddrMode_"#AM),
+                    !cast<MxEncMemOp>("MxMoveSrcOpEnc_"#AM)>;
+  } // foreach AM
+} // let Pattern
 
 let mayLoad = 1, mayStore = 1 in
 class MxMove_MM<MxType TYPE, MxOpBundle DST, MxOpBundle SRC,
@@ -169,50 +227,6 @@ foreach SRC_AM = MxMoveSupportedAMs in {
                   !cast<MxEncMemOp>("MxMoveSrcOpEnc_"#SRC_AM)>;
 } // foreach SRC_AM
 
-foreach DST_REG = ["r", "a"] in {
-  foreach SRC_REG = ["r", "a"] in
-  foreach TYPE = [MxType16, MxType32] in
-  def MOV # TYPE.Size # DST_REG # SRC_REG # TYPE.Postfix
-      : MxMove_RR<TYPE, DST_REG, SRC_REG,
-                  MxMoveEncoding<!cast<MxMoveSize>("MxMoveSize"#TYPE.Size),
-                                 !cast<MxEncMemOp>("MxMoveDstOpEnc_"#DST_REG),
-                                 !cast<MxEncMemOp>("MxMoveSrcOpEnc_"#SRC_REG)>>;
-} // foreach DST_REG
-foreach TYPE = [MxType8, MxType16, MxType32] in
-def MOV # TYPE.Size # dd # TYPE.Postfix
-    : MxMove_RR<TYPE, "d", "d",
-                MxMoveEncoding<!cast<MxMoveSize>("MxMoveSize"#TYPE.Size),
-                               MxMoveDstOpEnc_d, MxMoveSrcOpEnc_d>>;
-
-
-foreach REG = ["r", "a", "d"] in
-foreach AM = MxMoveSupportedAMs in {
-  foreach TYPE = !if(!eq(REG, "d"), [MxType8, MxType16, MxType32], [MxType16, MxType32]) in
-  def MOV # TYPE.Size # AM # REG # TYPE.Postfix
-      : MxMove_MR<TYPE, !cast<MxOpBundle>("MxOp"#TYPE.Size#"AddrMode_"#AM), REG,
-                  MxMoveEncoding<!cast<MxMoveSize>("MxMoveSize"#TYPE.Size),
-                                 !cast<MxEncMemOp>("MxMoveDstOpEnc_"#AM),
-                                 !cast<MxEncMemOp>("MxMoveSrcOpEnc_"#REG)>>;
-} // foreach AM
-
-foreach REG = ["r", "a", "d"] in {
-  foreach TYPE = !if(!eq(REG, "d"), [MxType8, MxType16, MxType32], [MxType16, MxType32]) in
-  def MOV # TYPE.Size # REG # i # TYPE.Postfix
-      : MxMove_RI<TYPE, REG,
-                  MxMoveEncoding<!cast<MxMoveSize>("MxMoveSize"#TYPE.Size),
-                                 !cast<MxEncMemOp>("MxMoveDstOpEnc_"#REG),
-                                 MxEncAddrMode_i<"src", TYPE.Size>>>;
-} // foreach REG
-
-foreach AM = MxMoveSupportedAMs in {
-  foreach TYPE = [MxType8, MxType16, MxType32] in
-  def MOV # TYPE.Size # AM # i # TYPE.Postfix
-      : MxMove_MI<TYPE, !cast<MxOpBundle>("MxOp"#TYPE.Size#"AddrMode_"#AM),
-                  MxMoveEncoding<!cast<MxMoveSize>("MxMoveSize"#TYPE.Size),
-                                 !cast<MxEncMemOp>("MxMoveDstOpEnc_"#AM),
-                                 MxEncAddrMode_i<"src", TYPE.Size>>>;
-} // foreach AM
-
 // Store ABS(basically pointer) as Immdiate to Mem
 def : Pat<(store   MxType32.BPat :$src, MxType32.PPat :$dst),
           (MOV32pi MxType32.POp  :$dst, MxType32.IOp  :$src)>;
@@ -226,16 +240,6 @@ def : Pat<(store   MxType32.BPat :$src, MxType32.BPat :$dst),
 def : Pat<(store   MxType32.BPat :$src, MxType32.JPat :$dst),
           (MOV32ji MxType32.JOp  :$dst, MxType32.IOp  :$src)>;
 
-let Pattern = [(null_frag)] in {
-  foreach REG = ["r", "a"] in
-  foreach AM = MxMoveSupportedAMs in {
-    foreach TYPE = [MxType16, MxType32] in
-    def MOV # TYPE.Size # REG # AM # _TC
-        : MxMove_RM<TYPE, REG, !cast<MxOpBundle>("MxOp"#TYPE.Size#"AddrMode_"#AM),
-                    !cast<MxEncMemOp>("MxMoveSrcOpEnc_"#AM)>;
-  } // foreach AM
-} // let Pattern
-
 //===----------------------------------------------------------------------===//
 // MOVEM
 //
@@ -243,12 +247,12 @@ let Pattern = [(null_frag)] in {
 //===----------------------------------------------------------------------===//
 
 // Direction
-def MxMOVEM_MR : MxBead1Bit<0>;
-def MxMOVEM_RM : MxBead1Bit<1>;
+defvar MxMOVEM_MR = false;
+defvar MxMOVEM_RM = true;
 
 // Size
-def MxMOVEM_W  : MxBead1Bit<0>;
-def MxMOVEM_L  : MxBead1Bit<1>;
+defvar MxMOVEM_W = false;
+defvar MxMOVEM_L = true;
 
 /// ---------------+-------------+-------------+---------
 ///  F  E  D  C  B | A | 9  8  7 | 6 | 5  4  3 | 2  1  0
@@ -259,31 +263,47 @@ def MxMOVEM_L  : MxBead1Bit<1>;
 /// -----------------------------------------------------
 /// D - direction(RM,MR)
 /// S - size(W,L)
-class MxMOVEMEncoding<MxEncEA EA, MxEncExt EXT, MxBead1Bit SIZE, MxBead1Bit DIR,
-                      MxBead16Imm IMM>
-    : MxEncoding<EA.Reg, EA.DA, EA.Mode, SIZE, MxBead3Bits<0b001>, DIR,
-                 MxBead1Bit<1>, MxBead4Bits<0b0100>, IMM,
-                 EXT.Imm, EXT.B8, EXT.Scale, EXT.WL, EXT.DAReg>;
+class MxMOVEMEncoding<MxEncMemOp opnd_enc, bit size, bit direction,
+                      string mask_op_name> {
+  dag Value = (ascend
+    (descend 0b01001, direction, 0b001, size, opnd_enc.EA),
+    // Mask
+    (operand "$"#mask_op_name, 16),
+    opnd_enc.Supplement
+  );
+}
 
 let mayStore = 1 in
-class MxMOVEM_MR<MxType TYPE, MxBead1Bit SIZE,
-                 MxOperand MEMOp, MxEncEA EA, MxEncExt EXT>
+class MxMOVEM_MR<MxType TYPE, bit SIZE_ENC,
+                 MxOperand MEMOp, MxEncMemOp MEM_ENC>
     : MxInst<(outs), (ins MEMOp:$dst, MxMoveMask:$mask),
-             "movem."#TYPE.Prefix#"\t$mask, $dst", [],
-             MxMOVEMEncoding<EA, EXT, SIZE, MxMOVEM_MR, MxBead16Imm<1>>>;
+             "movem."#TYPE.Prefix#"\t$mask, $dst", []> {
+  let Inst = MxMOVEMEncoding<MEM_ENC, SIZE_ENC, MxMOVEM_MR, "mask">.Value;
+}
+
+foreach AM = MxMoveSupportedAMs in {
+  foreach TYPE = [MxType16, MxType32] in
+  def MOVM # TYPE.Size # AM # m # TYPE.Postfix
+      : MxMOVEM_MR<TYPE, !if(!eq(TYPE, MxType16), MxMOVEM_W, MxMOVEM_L),
+                   !cast<MxOpBundle>("MxOp"#TYPE.Size#"AddrMode_"#AM).Op,
+                   !cast<MxEncMemOp>("MxMoveDstOpEnc_"#AM)>;
+} // foreach AM
 
 let mayLoad = 1 in
-class MxMOVEM_RM<MxType TYPE, MxBead1Bit SIZE,
-                 MxOperand MEMOp, MxEncEA EA, MxEncExt EXT>
+class MxMOVEM_RM<MxType TYPE, bit SIZE_ENC,
+                 MxOperand MEMOp, MxEncMemOp MEM_ENC>
     : MxInst<(outs), (ins MxMoveMask:$mask, MEMOp:$src),
-             "movem."#TYPE.Prefix#"\t$src, $mask", [],
-             MxMOVEMEncoding<EA, EXT, SIZE, MxMOVEM_RM, MxBead16Imm<0>>>;
+             "movem."#TYPE.Prefix#"\t$src, $mask", []> {
+  let Inst = MxMOVEMEncoding<MEM_ENC, SIZE_ENC, MxMOVEM_RM, "mask">.Value;
+}
 
-def MOVM32jm : MxMOVEM_MR<MxType32, MxMOVEM_L, MxType32.JOp, MxEncEAj_0, MxExtEmpty>;
-def MOVM32pm : MxMOVEM_MR<MxType32, MxMOVEM_L, MxType32.POp, MxEncEAp_0, MxExtI16_0>;
-
-def MOVM32mj : MxMOVEM_RM<MxType32, MxMOVEM_L, MxType32.JOp, MxEncEAj_1, MxExtEmpty>;
-def MOVM32mp : MxMOVEM_RM<MxType32, MxMOVEM_L, MxType32.POp, MxEncEAp_1, MxExtI16_1>;
+foreach AM = MxMoveSupportedAMs in {
+  foreach TYPE = [MxType16, MxType32] in
+  def MOVM # TYPE.Size # m # AM # TYPE.Postfix
+      : MxMOVEM_RM<TYPE, !if(!eq(TYPE, MxType16), MxMOVEM_W, MxMOVEM_L),
+                   !cast<MxOpBundle>("MxOp"#TYPE.Size#"AddrMode_"#AM).Op,
+                   !cast<MxEncMemOp>("MxMoveSrcOpEnc_"#AM)>;
+} // foreach AM
 
 // Pseudo versions. These a required by virtual register spill/restore since
 // the mask requires real register to encode. These instruction will be expanded
@@ -331,21 +351,27 @@ def MOVM32mp_P : MxMOVEM_RM_Pseudo<MxType32r, MxType32.POp>;
 ///  0  1  0  0  0  1  0  0  1  1 |   MODE  |   REG
 /// --------------------------------------------------
 let Defs = [CCR] in
-class MxMoveToCCR<dag INS, MxEncEA EA, MxEncExt EXT>
-    : MxInst<(outs CCRC:$dst), INS, "move.w\t$src, $dst", [],
-             MxEncoding<EA.Reg, EA.DA, EA.Mode,
-                        MxBead4Bits<0b0011>, MxBead4Bits<0b0001>, MxBead2Bits<0b01>,
-                        EXT.Imm, EXT.B8, EXT.Scale, EXT.WL, EXT.DAReg>>;
+class MxMoveToCCR<MxOperand MEMOp, MxEncMemOp SRC_ENC>
+    : MxInst<(outs CCRC:$dst), (ins MEMOp:$src), "move.w\t$src, $dst", []> {
+  let Inst = (ascend
+    (descend 0b0100010011, SRC_ENC.EA),
+    SRC_ENC.Supplement
+  );
+}
 
-class MxMoveToCCRPseudo<dag INS> : MxPseudo<(outs CCRC:$dst), INS>;
+class MxMoveToCCRPseudo<MxOperand MEMOp>
+    : MxPseudo<(outs CCRC:$dst), (ins MEMOp:$src)>;
 
-let mayLoad = 1 in {
-def MOV16cp : MxMoveToCCR<(ins MxType16d.POp:$src), MxEncEAp_1, MxExtI16_1>;
-def  MOV8cp : MxMoveToCCRPseudo<(ins MxType8d.POp:$src)>;
-} // let mayLoad = 1
+let mayLoad = 1 in
+foreach AM = MxMoveSupportedAMs in {
+  def MOV16c # AM : MxMoveToCCR<!cast<MxOpBundle>("MxOp16AddrMode_"#AM).Op,
+                                !cast<MxEncMemOp>("MxMoveSrcOpEnc_"#AM)>;
+  def MOV8c # AM  : MxMoveToCCRPseudo<!cast<MxOpBundle>("MxOp8AddrMode_"#AM).Op>;
+} // foreach AM
 
-def MOV16cd : MxMoveToCCR<(ins MxType16d.ROp:$src), MxEncEAd_1, MxExtEmpty>;
-def  MOV8cd : MxMoveToCCRPseudo<(ins MxType8d.ROp:$src)>;
+// Only data register is allowed.
+def MOV16cd : MxMoveToCCR<MxOp16AddrMode_d.Op, MxMoveSrcOpEnc_d>;
+def MOV8cd  : MxMoveToCCRPseudo<MxOp8AddrMode_d.Op>;
 
 /// Move from CCR
 /// --------------------------------------------------
@@ -354,27 +380,38 @@ def  MOV8cd : MxMoveToCCRPseudo<(ins MxType8d.ROp:$src)>;
 ///                               | EFFECTIVE ADDRESS
 ///  0  1  0  0  0  0  1  0  1  1 |   MODE  |   REG
 /// --------------------------------------------------
-let Uses = [CCR] in
-class MxMoveFromCCR<dag OUTS, dag INS, MxEncEA EA, MxEncExt EXT>
-    : MxInst<OUTS, INS, "move.w\t$src, $dst", [],
-             MxEncoding<EA.Reg, EA.DA, EA.Mode,
-                        MxBead4Bits<0b1011>, MxBead4Bits<0b0000>, MxBead2Bits<0b01>,
-                        EXT.Imm, EXT.B8, EXT.Scale, EXT.WL, EXT.DAReg>>,
-      Requires<[ IsM68010 ]>;
+let Uses = [CCR] in {
+class MxMoveFromCCR_R
+    : MxInst<(outs MxDRD16:$dst), (ins CCRC:$src), "move.w\t$src, $dst", []>,
+      Requires<[ IsM68010 ]> {
+  let Inst = (descend 0b0100001011, MxEncAddrMode_d<"dst">.EA);
+}
 
-class MxMoveFromCCRPseudo<dag INS> : MxPseudo<(outs), INS>;
+class MxMoveFromCCR_M<MxOperand MEMOp, MxEncMemOp DST_ENC>
+    : MxInst<(outs), (ins MEMOp:$dst, CCRC:$src), "move.w\t$src, $dst", []>,
+      Requires<[ IsM68010 ]> {
+  let Inst = (ascend
+    (descend 0b0100001011, DST_ENC.EA),
+    DST_ENC.Supplement
+  );
+}
 
-let mayStore = 1 in {
-def MOV16pc
-  : MxMoveFromCCR<(outs), (ins MxType16d.POp:$dst, CCRC:$src), MxEncEAp_0, MxExtI16_0>;
-def MOV8pc : MxMoveFromCCRPseudo<(ins MxType8d.POp:$dst, CCRC:$src)>;
-} // let mayStore = 1
+class MxMoveFromCCRPseudo<MxOperand MEMOp>
+    : MxPseudo<(outs), (ins MEMOp:$dst, CCRC:$src)>;
+} // let Uses = [CCR]
 
-def MOV16dc
-  : MxMoveFromCCR<(outs MxType16d.ROp:$dst), (ins CCRC:$src), MxEncEAd_0, MxExtEmpty>;
+let mayStore = 1 in
+foreach AM = MxMoveSupportedAMs in {
+  def MOV16 # AM # c
+    : MxMoveFromCCR_M<!cast<MxOpBundle>("MxOp16AddrMode_"#AM).Op,
+                      !cast<MxEncMemOp>("MxMoveDstOpEnc_"#AM)>;
+  def MOV8 # AM # c
+    : MxMoveFromCCRPseudo<!cast<MxOpBundle>("MxOp8AddrMode_"#AM).Op>;
+} // foreach AM
 
-def MOV8dc : MxMoveFromCCRPseudo<(ins MxType8d.ROp:$dst, CCRC:$src)>;
-
+// Only data register is allowed.
+def MOV16dc : MxMoveFromCCR_R;
+def MOV8dc  : MxMoveFromCCRPseudo<MxOp8AddrMode_d.Op>;
 
 //===----------------------------------------------------------------------===//
 // LEA
@@ -385,18 +422,18 @@ def MOV8dc : MxMoveFromCCRPseudo<(ins MxType8d.ROp:$dst, CCRC:$src)>;
 /// ----------------------------------------------------
 ///  0  1  0  0 | DST REG | 1  1  1 |   MODE  |   REG
 /// ----------------------------------------------------
-class MxLEA<MxOperand SRCOpd, ComplexPattern SRCPat, MxEncEA EA, MxEncExt EXT>
-    : MxInst<(outs MxARD32:$dst), (ins SRCOpd:$src),
-             "lea\t$src, $dst", [(set i32:$dst, SRCPat:$src)],
-             MxEncoding<EA.Reg, EA.DA, EA.Mode,
-                        MxBead3Bits<0b111>, MxBeadReg<0>, MxBead4Bits<0x4>,
-                        EXT.Imm, EXT.B8, EXT.Scale, EXT.WL, EXT.DAReg>>;
+class MxLEA<MxOpBundle SRC, MxEncMemOp SRC_ENC>
+    : MxInst<(outs MxARD32:$dst), (ins SRC.Op:$src),
+             "lea\t$src, $dst", [(set i32:$dst, SRC.Pat:$src)]> {
+  let Inst = (ascend
+    (descend 0b0100, (operand "$dst", 3), 0b111, SRC_ENC.EA),
+    SRC_ENC.Supplement
+  );
+}
 
-def LEA32p : MxLEA<MxARID32, MxCP_ARID, MxEncEAp_1, MxExtI16_1>;
-def LEA32f : MxLEA<MxARII32, MxCP_ARII, MxEncEAf_1, MxExtBrief_1>;
-def LEA32q : MxLEA<MxPCD32,  MxCP_PCD,  MxEncEAq,   MxExtI16_1>;
-def LEA32b : MxLEA<MxAL32,   MxCP_AL,   MxEncEAb,   MxExtI32_1>;
-
+foreach AM = ["p", "f", "b", "q", "k"] in
+def LEA32 # AM : MxLEA<!cast<MxOpBundle>("MxOp32AddrMode_"#AM),
+                       !cast<MxEncMemOp>("MxMoveSrcOpEnc_"#AM)>;
 
 //===----------------------------------------------------------------------===//
 // Pseudos
