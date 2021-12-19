@@ -47,12 +47,10 @@ define arm_aapcs_vfpcc <2 x i64> @sadd_int64_t(<2 x i64> %src1, <2 x i64> %src2)
 ; CHECK-NEXT:    cmp r1, #0
 ; CHECK-NEXT:    cset r1, ne
 ; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    cset r2, mi
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    eorne r1, r1, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
+; CHECK-NEXT:    it mi
+; CHECK-NEXT:    eormi r1, r1, #1
 ; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    rsbs r1, r1, #0
 ; CHECK-NEXT:    bfi r2, r1, #0, #8
 ; CHECK-NEXT:    vmov r1, r3, d3
 ; CHECK-NEXT:    adds r1, r1, r0
@@ -66,10 +64,8 @@ define arm_aapcs_vfpcc <2 x i64> @sadd_int64_t(<2 x i64> %src1, <2 x i64> %src2)
 ; CHECK-NEXT:    vmov q0[3], q0[1], lr, r5
 ; CHECK-NEXT:    cset r0, ne
 ; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    cset r3, mi
-; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    eorne r0, r0, #1
+; CHECK-NEXT:    it mi
+; CHECK-NEXT:    eormi r0, r0, #1
 ; CHECK-NEXT:    rsbs r0, r0, #0
 ; CHECK-NEXT:    bfi r2, r0, #8, #8
 ; CHECK-NEXT:    asrs r0, r5, #31
