@@ -10528,21 +10528,22 @@ defm VSCATTERPF1DPD: avx512_gather_scatter_prefetch<0xC6, MRM6m, "vscatterpf1dpd
 defm VSCATTERPF1QPD: avx512_gather_scatter_prefetch<0xC7, MRM6m, "vscatterpf1qpd",
                      VK8WM, vz512mem>, EVEX_V512, VEX_W, EVEX_CD8<64, CD8VT1>;
 
-multiclass cvt_by_vec_width<bits<8> opc, X86VectorVTInfo Vec, string OpcodeStr > {
+multiclass cvt_by_vec_width<bits<8> opc, X86VectorVTInfo Vec, string OpcodeStr, SchedWrite Sched> {
 def rr : AVX512XS8I<opc, MRMSrcReg, (outs Vec.RC:$dst), (ins Vec.KRC:$src),
                   !strconcat(OpcodeStr#Vec.Suffix, "\t{$src, $dst|$dst, $src}"),
                   [(set Vec.RC:$dst, (Vec.VT (sext Vec.KRC:$src)))]>,
-                  EVEX, Sched<[WriteMove]>; // TODO - WriteVecTrunc?
+                  EVEX, Sched<[Sched]>;
 }
 
 multiclass cvt_mask_by_elt_width<bits<8> opc, AVX512VLVectorVTInfo VTInfo,
                                  string OpcodeStr, Predicate prd> {
+// TODO - Replace WriteMove with WriteVecTrunc?
 let Predicates = [prd] in
-  defm Z : cvt_by_vec_width<opc, VTInfo.info512, OpcodeStr>, EVEX_V512;
+  defm Z : cvt_by_vec_width<opc, VTInfo.info512, OpcodeStr, WriteMove>, EVEX_V512;
 
   let Predicates = [prd, HasVLX] in {
-    defm Z256 : cvt_by_vec_width<opc, VTInfo.info256, OpcodeStr>, EVEX_V256;
-    defm Z128 : cvt_by_vec_width<opc, VTInfo.info128, OpcodeStr>, EVEX_V128;
+    defm Z256 : cvt_by_vec_width<opc, VTInfo.info256, OpcodeStr, WriteMove>, EVEX_V256;
+    defm Z128 : cvt_by_vec_width<opc, VTInfo.info128, OpcodeStr, WriteMove>, EVEX_V128;
   }
 }
 
