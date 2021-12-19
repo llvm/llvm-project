@@ -2499,7 +2499,7 @@ bool SelectionDAG::MaskedValueIsAllOnes(SDValue V, const APInt &Mask,
 /// sense to specify which elements are demanded or undefined, therefore
 /// they are simply ignored.
 bool SelectionDAG::isSplatValue(SDValue V, const APInt &DemandedElts,
-                                APInt &UndefElts, unsigned Depth) {
+                                APInt &UndefElts, unsigned Depth) const {
   EVT VT = V.getValueType();
   assert(VT.isVector() && "Vector type expected");
 
@@ -2623,7 +2623,7 @@ bool SelectionDAG::isSplatValue(SDValue V, const APInt &DemandedElts,
 }
 
 /// Helper wrapper to main isSplatValue function.
-bool SelectionDAG::isSplatValue(SDValue V, bool AllowUndefs) {
+bool SelectionDAG::isSplatValue(SDValue V, bool AllowUndefs) const {
   EVT VT = V.getValueType();
   assert(VT.isVector() && "Vector type expected");
 
