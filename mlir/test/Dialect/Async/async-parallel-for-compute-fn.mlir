@@ -100,6 +100,24 @@ func @sink_constant_step(%arg0: memref<?x10xf32>, %lb: index, %ub: index) {
 // CHECK-SAME:   %[[STEP1:arg[0-9]+]]: index,
 // CHECK-SAME:   %[[MEMREF:arg[0-9]+]]: memref<?x10xf32>
 // CHECK-SAME: ) {
+// CHECK:        scf.for %[[I:arg[0-9]+]]
+// CHECK:          select
+// CHECK:          scf.for %[[J:arg[0-9]+]]
+// CHECK:          memref.store
+
+// CHECK-LABEL: func private @parallel_compute_fn_with_aligned_loops(
+// CHECK-SAME:   %[[BLOCK_INDEX:arg[0-9]+]]: index,
+// CHECK-SAME:   %[[BLOCK_SIZE:arg[0-9]+]]: index,
+// CHECK-SAME:   %[[TRIP_COUNT0:arg[0-9]+]]: index,
+// CHECK-SAME:   %[[TRIP_COUNT1:arg[0-9]+]]: index,
+// CHECK-SAME:   %[[LB0:arg[0-9]+]]: index,
+// CHECK-SAME:   %[[LB1:arg[0-9]+]]: index,
+// CHECK-SAME:   %[[UB0:arg[0-9]+]]: index,
+// CHECK-SAME:   %[[UB1:arg[0-9]+]]: index,
+// CHECK-SAME:   %[[STEP0:arg[0-9]+]]: index,
+// CHECK-SAME:   %[[STEP1:arg[0-9]+]]: index,
+// CHECK-SAME:   %[[MEMREF:arg[0-9]+]]: memref<?x10xf32>
+// CHECK-SAME: ) {
 // CHECK:        %[[C0:.*]] = arith.constant 0 : index
 // CHECK:        %[[C1:.*]] = arith.constant 1 : index
 // CHECK:        %[[C10:.*]] = arith.constant 10 : index
