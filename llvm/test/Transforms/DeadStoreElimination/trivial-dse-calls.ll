@@ -11,6 +11,9 @@ declare void @f2(i8*, i8*)
 ; Basic case for DSEing a trivially dead writing call
 define void @test_dead() {
 ; CHECK-LABEL: @test_dead(
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast i32* [[A]] to i8*
+; CHECK-NEXT:    call void @f(i8* nocapture writeonly [[BITCAST]]) #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca i32, align 4
@@ -25,6 +28,7 @@ define void @test_lifetime() {
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast i32* [[A]] to i8*
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[BITCAST]])
+; CHECK-NEXT:    call void @f(i8* nocapture writeonly [[BITCAST]]) #[[ATTR1]]
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[BITCAST]])
 ; CHECK-NEXT:    ret void
 ;
@@ -44,6 +48,7 @@ define void @test_lifetime2() {
 ; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast i32* [[A]] to i8*
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[BITCAST]])
 ; CHECK-NEXT:    call void @unknown()
+; CHECK-NEXT:    call void @f(i8* nocapture writeonly [[BITCAST]]) #[[ATTR1]]
 ; CHECK-NEXT:    call void @unknown()
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[BITCAST]])
 ; CHECK-NEXT:    ret void
@@ -62,6 +67,9 @@ define void @test_lifetime2() {
 ; itself since the write will be dropped.
 define void @test_dead_readwrite() {
 ; CHECK-LABEL: @test_dead_readwrite(
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast i32* [[A]] to i8*
+; CHECK-NEXT:    call void @f(i8* nocapture [[BITCAST]]) #[[ATTR1]]
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca i32, align 4
@@ -74,7 +82,7 @@ define i32 @test_neg_read_after() {
 ; CHECK-LABEL: @test_neg_read_after(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast i32* [[A]] to i8*
-; CHECK-NEXT:    call void @f(i8* nocapture writeonly [[BITCAST]]) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    call void @f(i8* nocapture writeonly [[BITCAST]]) #[[ATTR1]]
 ; CHECK-NEXT:    [[RES:%.*]] = load i32, i32* [[A]], align 4
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -195,6 +203,11 @@ define i32 @test_neg_captured_before() {
 ; Show that reading from unrelated memory is okay
 define void @test_unreleated_read() {
 ; CHECK-LABEL: @test_unreleated_read(
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[A2:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast i32* [[A]] to i8*
+; CHECK-NEXT:    [[BITCAST2:%.*]] = bitcast i32* [[A2]] to i8*
+; CHECK-NEXT:    call void @f2(i8* nocapture writeonly [[BITCAST]], i8* nocapture readonly [[BITCAST2]]) #[[ATTR1]]
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca i32, align 4
@@ -227,6 +240,9 @@ define void @test_neg_unreleated_capture() {
 ; itself since the write will be dropped.
 define void @test_self_read() {
 ; CHECK-LABEL: @test_self_read(
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast i32* [[A]] to i8*
+; CHECK-NEXT:    call void @f2(i8* nocapture writeonly [[BITCAST]], i8* nocapture readonly [[BITCAST]]) #[[ATTR1]]
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca i32, align 4

@@ -1279,17 +1279,18 @@ void UnwrappedLineParser::parseStructuralElement(bool IsTopLevel) {
     if (FormatTok->Tok.is(tok::string_literal)) {
       nextToken();
       if (FormatTok->Tok.is(tok::l_brace)) {
-        if (!Style.IndentExternBlock) {
-          if (Style.BraceWrapping.AfterExternBlock) {
-            addUnwrappedLine();
-          }
-          unsigned AddLevels = Style.BraceWrapping.AfterExternBlock ? 1u : 0u;
-          parseBlock(/*MustBeDeclaration=*/true, AddLevels);
-        } else {
-          unsigned AddLevels =
-              Style.IndentExternBlock == FormatStyle::IEBS_Indent ? 1u : 0u;
-          parseBlock(/*MustBeDeclaration=*/true, AddLevels);
-        }
+        if (Style.BraceWrapping.AfterExternBlock)
+          addUnwrappedLine();
+        // Either we indent or for backwards compatibility we follow the
+        // AfterExternBlock style.
+        unsigned AddLevels =
+            (Style.IndentExternBlock == FormatStyle::IEBS_Indent) ||
+                    (Style.BraceWrapping.AfterExternBlock &&
+                     Style.IndentExternBlock ==
+                         FormatStyle::IEBS_AfterExternBlock)
+                ? 1u
+                : 0u;
+        parseBlock(/*MustBeDeclaration=*/true, AddLevels);
         addUnwrappedLine();
         return;
       }
