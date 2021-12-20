@@ -9,7 +9,7 @@ __rvv_int16m2_t f1(__rvv_int16m2_t arg_0, __rvv_int16m2_t arg_1, int64_t arg_2) 
 }
 
 // !DISubrange(lowerBound: 0, upperBound: !DIExpression(DW_OP_bregx, 7202, 0, DW_OP_con
-// DEBUGINFO: stu, 2, DW_OP_div, DW_OP_constu, 2, DW_OP_mul))
+// DEBUGINFO: stu, 2, DW_OP_div, DW_OP_constu, 2, DW_OP_mul, DW_OP_constu, 1, DW_OP_minus))
 
 __rvv_int16mf2_t f2(__rvv_int16mf2_t arg_0, __rvv_int16mf2_t arg_1, int64_t arg_2) {
   __rvv_int16mf2_t ret;
@@ -17,7 +17,7 @@ __rvv_int16mf2_t f2(__rvv_int16mf2_t arg_0, __rvv_int16mf2_t arg_1, int64_t arg_
 }
 
 // !DISubrange(lowerBound: 0, upperBound: !DIExpression(DW_OP_bregx, 7202, 0, DW_OP_con
-// DEBUGINFO: stu, 2, DW_OP_div, DW_OP_constu, 2, DW_OP_div))
+// DEBUGINFO: stu, 2, DW_OP_div, DW_OP_constu, 2, DW_OP_div, DW_OP_constu, 1, DW_OP_minus))
 
 __rvv_int32mf2_t f3(__rvv_int32mf2_t arg_0, __rvv_int32mf2_t arg_1, int64_t arg_2) {
   __rvv_int32mf2_t ret;
@@ -25,4 +25,4 @@ __rvv_int32mf2_t f3(__rvv_int32mf2_t arg_0, __rvv_int32mf2_t arg_1, int64_t arg_
 }
 
 // !DISubrange(lowerBound: 0, upperBound: !DIExpression(DW_OP_bregx, 7202, 0, DW_OP_con
-// DEBUGINFO: stu, 4, DW_OP_div, DW_OP_constu, 2, DW_OP_div))
+// DEBUGINFO: stu, 4, DW_OP_div, DW_OP_constu, 2, DW_OP_div, DW_OP_constu, 1, DW_OP_minus))
