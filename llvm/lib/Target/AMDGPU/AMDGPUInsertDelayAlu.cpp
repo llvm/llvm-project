@@ -1,4 +1,4 @@
-//===- SIInsertDelayAlu.cpp - Insert s_delay_alu instructions -------------===//
+//===- AMDGPUInsertDelayAlu.cpp - Insert s_delay_alu instructions ---------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -23,7 +23,7 @@ using namespace llvm;
 
 namespace {
 
-class SIInsertDelayAlu : public MachineFunctionPass {
+class AMDGPUInsertDelayAlu : public MachineFunctionPass {
 public:
   static char ID;
 
@@ -32,7 +32,7 @@ public:
 
   TargetSchedModel SchedModel;
 
-  SIInsertDelayAlu() : MachineFunctionPass(ID) {}
+  AMDGPUInsertDelayAlu() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
@@ -391,7 +391,7 @@ public:
     if (skipFunction(MF.getFunction()))
       return false;
 
-    LLVM_DEBUG(dbgs() << "SIInsertDelayAlu running on " << MF.getName()
+    LLVM_DEBUG(dbgs() << "AMDGPUInsertDelayAlu running on " << MF.getName()
                       << "\n");
 
     const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
@@ -428,9 +428,9 @@ public:
 
 } // namespace
 
-char SIInsertDelayAlu::ID = 0;
+char AMDGPUInsertDelayAlu::ID = 0;
 
-char &llvm::SIInsertDelayAluID = SIInsertDelayAlu::ID;
+char &llvm::AMDGPUInsertDelayAluID = AMDGPUInsertDelayAlu::ID;
 
-INITIALIZE_PASS(SIInsertDelayAlu, DEBUG_TYPE, "SI Insert Delay ALU", false,
+INITIALIZE_PASS(AMDGPUInsertDelayAlu, DEBUG_TYPE, "SI Insert Delay ALU", false,
                 false)

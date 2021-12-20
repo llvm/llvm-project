@@ -58,6 +58,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUFrameLowering.cpp
   AMDGPUGlobalISelUtils.cpp
   AMDGPUHSAMetadataStreamer.cpp
+  AMDGPUInsertDelayAlu.cpp
   AMDGPUInstCombineIntrinsic.cpp
   AMDGPUInstrInfo.cpp
   AMDGPUInstructionSelector.cpp
@@ -134,7 +135,6 @@ add_llvm_target(AMDGPUCodeGen
   SIFoldOperands.cpp
   SIFormMemoryClauses.cpp
   SIFrameLowering.cpp
-  SIInsertDelayAlu.cpp
   SIInsertHardClauses.cpp
   SIInsertWaitcnts.cpp
   SIInstrInfo.cpp
