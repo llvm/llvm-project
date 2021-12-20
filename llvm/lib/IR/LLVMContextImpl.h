@@ -1429,6 +1429,8 @@ public:
 
   DenseMap<const GlobalValue *, DSOLocalEquivalent *> DSOLocalEquivalents;
 
+  DenseMap<const GlobalValue *, NoCFIValue *> NoCFIValues;
+
   ConstantUniqueMap<ConstantExpr> ExprConstants;
 
   ConstantUniqueMap<InlineAsm> InlineAsms;

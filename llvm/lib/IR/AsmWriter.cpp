@@ -1448,6 +1448,12 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
     return;
   }
 
+  if (const auto *NC = dyn_cast<NoCFIValue>(CV)) {
+    Out << "no_cfi ";
+    WriteAsOperandInternal(Out, NC->getGlobalValue(), WriterCtx);
+    return;
+  }
+
   if (const ConstantArray *CA = dyn_cast<ConstantArray>(CV)) {
     Type *ETy = CA->getType()->getElementType();
     Out << '[';
