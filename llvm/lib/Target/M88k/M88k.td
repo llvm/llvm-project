@@ -29,6 +29,7 @@ include "M88kCallingConv.td"
 include "M88kSchedule.td"
 include "M88kInstrFormats.td"
 include "M88kInstrInfo.td"
+include "M88kCombine.td"
 
 //===----------------------------------------------------------------------===//
 // M88k processors supported.

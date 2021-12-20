@@ -134,6 +134,7 @@ public:
   // GlobalISEL
   bool addIRTranslator() override;
   bool addLegalizeMachineIR() override;
+  void addPreRegBankSelect() override;
   bool addRegBankSelect() override;
   bool addGlobalInstructionSelect() override;
 };
@@ -161,6 +162,10 @@ bool M88kPassConfig::addIRTranslator() {
 bool M88kPassConfig::addLegalizeMachineIR() {
   addPass(new Legalizer());
   return false;
+}
+
+void M88kPassConfig::addPreRegBankSelect() {
+  addPass(createM88kPostLegalizerLowering());
 }
 
 bool M88kPassConfig::addRegBankSelect() {
