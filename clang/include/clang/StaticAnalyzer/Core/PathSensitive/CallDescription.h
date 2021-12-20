@@ -134,12 +134,18 @@ public:
       std::initializer_list<std::pair<CallDescription, T>> &&List)
       : LinearMap(List) {}
 
+  template <typename InputIt>
+  CallDescriptionMap(InputIt First, InputIt Last) : LinearMap(First, Last) {}
+
   ~CallDescriptionMap() = default;
 
   // These maps are usually stored once per checker, so let's make sure
   // we don't do redundant copies.
   CallDescriptionMap(const CallDescriptionMap &) = delete;
   CallDescriptionMap &operator=(const CallDescription &) = delete;
+
+  CallDescriptionMap(CallDescriptionMap &&) = default;
+  CallDescriptionMap &operator=(CallDescriptionMap &&) = default;
 
   LLVM_NODISCARD const T *lookup(const CallEvent &Call) const {
     // Slow path: linear lookup.
