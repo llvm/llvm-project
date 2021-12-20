@@ -18027,6 +18027,23 @@ ARMTargetLowering::PerformCMOVCombine(SDNode *N, SelectionDAG &DAG) const {
   if (!VT.isInteger())
       return SDValue();
 
+  // Fold away an unneccessary CMPZ/CMOV
+  // CMOV A, B, C1, $cpsr, (CMPZ (CMOV 1, 0, C2, D), 0) ->
+  // if C1==EQ -> CMOV A, B, C2, $cpsr, D
+  // if C1==NE -> CMOV A, B, NOT(C2), $cpsr, D
+  if (N->getConstantOperandVal(2) == ARMCC::EQ ||
+      N->getConstantOperandVal(2) == ARMCC::NE) {
+    ARMCC::CondCodes Cond;
+    if (SDValue C = IsCMPZCSINC(N->getOperand(4).getNode(), Cond)) {
+      if (N->getConstantOperandVal(2) == ARMCC::NE)
+        Cond = ARMCC::getOppositeCondition(Cond);
+      return DAG.getNode(N->getOpcode(), SDLoc(N), MVT::i32, N->getOperand(0),
+                         N->getOperand(1),
+                         DAG.getTargetConstant(Cond, SDLoc(N), MVT::i32),
+                         N->getOperand(3), C);
+    }
+  }
+
   // Materialize a boolean comparison for integers so we can avoid branching.
   if (isNullConstant(FalseVal)) {
     if (CC == ARMCC::EQ && isOneConstant(TrueVal)) {
