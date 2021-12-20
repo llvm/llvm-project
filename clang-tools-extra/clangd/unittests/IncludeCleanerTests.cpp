@@ -85,6 +85,10 @@ TEST(IncludeCleaner, ReferencedLocations) {
           "struct Foo; struct ^Foo{}; typedef Foo ^Bar;",
           "Bar b;",
       },
+      {
+          "namespace ns { class X; }; using ns::^X;",
+          "X *y;",
+      },
       // MemberExpr
       {
           "struct ^X{int ^a;}; X ^foo();",
@@ -198,14 +202,6 @@ TEST(IncludeCleaner, ReferencedLocations) {
       {
           "enum class ^Color : char {};",
           "Color *c;",
-      },
-      {
-          // When a type is resolved via a using declaration, the
-          // UsingShadowDecl is not referenced in the AST.
-          // Compare to TypedefType, or DeclRefExpr::getFoundDecl().
-          //                                 ^
-          "namespace ns { class ^X; }; using ns::X;",
-          "X *y;",
       }};
   for (const TestCase &T : Cases) {
     TestTU TU;

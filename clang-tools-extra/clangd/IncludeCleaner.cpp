@@ -74,6 +74,11 @@ public:
     return true;
   }
 
+  bool VisitUsingType(UsingType *UT) {
+    add(UT->getFoundDecl());
+    return true;
+  }
+
   bool VisitTypedefType(TypedefType *TT) {
     add(TT->getDecl());
     return true;

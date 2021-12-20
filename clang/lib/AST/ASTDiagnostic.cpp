@@ -38,6 +38,11 @@ QualType clang::desugarForDiagnostic(ASTContext &Context, QualType QT,
       QT = ET->desugar();
       continue;
     }
+    // ... or a using type ...
+    if (const UsingType *UT = dyn_cast<UsingType>(Ty)) {
+      QT = UT->desugar();
+      continue;
+    }
     // ... or a paren type ...
     if (const ParenType *PT = dyn_cast<ParenType>(Ty)) {
       QT = PT->desugar();
