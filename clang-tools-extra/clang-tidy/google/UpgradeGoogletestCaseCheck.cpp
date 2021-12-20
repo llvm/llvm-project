@@ -196,6 +196,12 @@ void UpgradeGoogletestCaseCheck::registerMatchers(MatchFinder *Finder) {
       usingDecl(hasAnyUsingShadowDecl(hasTargetDecl(TestCaseTypeAlias)))
           .bind("using"),
       this);
+  Finder->addMatcher(
+      typeLoc(loc(usingType(hasUnderlyingType(
+                  typedefType(hasDeclaration(TestCaseTypeAlias))))),
+              unless(hasAncestor(decl(isImplicit()))), LocationFilter)
+          .bind("typeloc"),
+      this);
 }
 
 static llvm::StringRef getNewMethodName(llvm::StringRef CurrentName) {
