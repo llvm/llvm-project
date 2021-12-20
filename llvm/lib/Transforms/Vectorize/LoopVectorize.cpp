@@ -8415,7 +8415,7 @@ VPValue *VPRecipeBuilder::createEdgeMask(BasicBlock *Src, BasicBlock *Dst,
   assert(EdgeMask && "No Edge Mask found for condition");
 
   if (BI->getSuccessor(0) != Dst)
-    EdgeMask = Builder.createNot(EdgeMask);
+    EdgeMask = Builder.createNot(EdgeMask, BI->getDebugLoc());
 
   if (SrcMask) { // Otherwise block in-mask is all-one, no need to AND.
     // The condition is 'SrcMask && EdgeMask', which is equivalent to
@@ -8424,7 +8424,8 @@ VPValue *VPRecipeBuilder::createEdgeMask(BasicBlock *Src, BasicBlock *Dst,
     // EdgeMask is poison. Using 'and' here introduces undefined behavior.
     VPValue *False = Plan->getOrAddVPValue(
         ConstantInt::getFalse(BI->getCondition()->getType()));
-    EdgeMask = Builder.createSelect(SrcMask, EdgeMask, False);
+    EdgeMask =
+        Builder.createSelect(SrcMask, EdgeMask, False, BI->getDebugLoc());
   }
 
   return EdgeMaskCache[Edge] = EdgeMask;
@@ -8488,7 +8489,7 @@ VPValue *VPRecipeBuilder::createBlockInMask(BasicBlock *BB, VPlanPtr &Plan) {
       continue;
     }
 
-    BlockMask = Builder.createOr(BlockMask, EdgeMask);
+    BlockMask = Builder.createOr(BlockMask, EdgeMask, {});
   }
 
   return BlockMaskCache[BB] = BlockMask;
