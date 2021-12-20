@@ -4780,6 +4780,7 @@ class PPCAsmPseudo<string asm, dag iops>
 def : InstAlias<"sc", (SC 0)>;
 
 def : InstAlias<"sync", (SYNC 0)>, Requires<[HasSYNC]>;
+def : InstAlias<"hwsync", (SYNC 0), 0>, Requires<[HasSYNC]>;
 def : InstAlias<"msync", (SYNC 0), 0>, Requires<[HasSYNC]>;
 def : InstAlias<"lwsync", (SYNC 1)>, Requires<[HasSYNC]>;
 def : InstAlias<"ptesync", (SYNC 2)>, Requires<[HasSYNC]>;
