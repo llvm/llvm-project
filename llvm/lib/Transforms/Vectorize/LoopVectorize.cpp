@@ -3562,7 +3562,7 @@ BasicBlock *InnerLoopVectorizer::completeLoopSkeleton(Loop *L,
   if (MDNode *LID = OrigLoop->getLoopID())
     L->setLoopID(LID);
 
-  LoopVectorizeHints Hints(L, true, *ORE);
+  LoopVectorizeHints Hints(L, true, *ORE, TTI);
   Hints.setAlreadyVectorized();
 
 #ifdef EXPENSIVE_CHECKS
@@ -5699,12 +5699,11 @@ bool LoopVectorizationCostModel::isMoreProfitable(
       EstimatedWidthB *= VScale.getValue();
   }
 
-  // When set to preferred, for now assume vscale may be larger than 1 (or the
-  // one being tuned for), so that scalable vectorization is slightly favorable
-  // over fixed-width vectorization.
-  if (Hints->isScalableVectorizationPreferred())
-    if (A.Width.isScalable() && !B.Width.isScalable())
-      return (CostA * B.Width.getFixedValue()) <= (CostB * EstimatedWidthA);
+  // Assume vscale may be larger than 1 (or the value being tuned for),
+  // so that scalable vectorization is slightly favorable over fixed-width
+  // vectorization.
+  if (A.Width.isScalable() && !B.Width.isScalable())
+    return (CostA * B.Width.getFixedValue()) <= (CostB * EstimatedWidthA);
 
   // To avoid the need for FP division:
   //      (CostA / A.Width) < (CostB / B.Width)
@@ -10250,7 +10249,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                     << L->getHeader()->getParent()->getName() << "\" from "
                     << DebugLocStr << "\n");
 
-  LoopVectorizeHints Hints(L, InterleaveOnlyWhenForced, *ORE);
+  LoopVectorizeHints Hints(L, InterleaveOnlyWhenForced, *ORE, TTI);
 
   LLVM_DEBUG(
       dbgs() << "LV: Loop hints:"

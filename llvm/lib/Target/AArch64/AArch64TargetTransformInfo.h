@@ -309,6 +309,8 @@ public:
 
   bool supportsScalableVectors() const { return ST->hasSVE(); }
 
+  bool enableScalableVectorization() const { return ST->hasSVE(); }
+
   bool isLegalToVectorizeReduction(const RecurrenceDescriptor &RdxDesc,
                                    ElementCount VF) const;
 
