@@ -365,7 +365,7 @@ static Value genIndexAndValueForDense(ConversionPatternRewriter &rewriter,
   Value val = rewriter.create<tensor::ExtractOp>(loc, tensor, ivs);
   Value cond = genIsNonzero(rewriter, loc, val);
   scf::IfOp ifOp = rewriter.create<scf::IfOp>(loc, cond, /*else*/ false);
-  rewriter.setInsertionPointToStart(&ifOp.thenRegion().front());
+  rewriter.setInsertionPointToStart(&ifOp.getThenRegion().front());
   unsigned i = 0;
   for (auto iv : ivs) {
     Value idx = constantIndex(rewriter, loc, i++);
@@ -670,11 +670,11 @@ class SparseTensorConvertConverter : public OpConversionPattern<ConvertOp> {
       SmallVector<Value> noArgs;
       SmallVector<Type> noTypes;
       auto whileOp = rewriter.create<scf::WhileOp>(loc, noTypes, noArgs);
-      Block *before = rewriter.createBlock(&whileOp.before(), {}, noTypes);
+      Block *before = rewriter.createBlock(&whileOp.getBefore(), {}, noTypes);
       rewriter.setInsertionPointToEnd(before);
       Value cond = genGetNextCall(rewriter, op, iter, ind, elemPtr);
       rewriter.create<scf::ConditionOp>(loc, cond, before->getArguments());
-      Block *after = rewriter.createBlock(&whileOp.after(), {}, noTypes);
+      Block *after = rewriter.createBlock(&whileOp.getAfter(), {}, noTypes);
       rewriter.setInsertionPointToStart(after);
       insertScalarIntoDenseTensor(rewriter, loc, elemPtr, dst, rank, ind);
       rewriter.create<scf::YieldOp>(loc);

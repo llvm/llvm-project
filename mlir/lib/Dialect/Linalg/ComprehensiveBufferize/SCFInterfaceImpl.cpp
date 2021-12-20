@@ -32,10 +32,10 @@ struct ExecuteRegionOpInterface
     auto executeRegionOp = cast<scf::ExecuteRegionOp>(op);
     size_t resultNum = std::distance(op->getOpResults().begin(),
                                      llvm::find(op->getOpResults(), opResult));
-    assert(executeRegionOp.region().getBlocks().size() == 1 &&
+    assert(executeRegionOp.getRegion().getBlocks().size() == 1 &&
            "expected exactly 1 block");
     auto yieldOp = dyn_cast<scf::YieldOp>(
-        executeRegionOp.region().front().getTerminator());
+        executeRegionOp.getRegion().front().getTerminator());
     assert(yieldOp && "expected scf.yield terminator in scf.execute_region");
     return {&yieldOp->getOpOperand(resultNum)};
   }
@@ -70,7 +70,8 @@ struct ExecuteRegionOpInterface
     if (hasTensorReturnType)
       return op->emitError(
           "scf.execute_region with tensor result not supported");
-    return comprehensive_bufferize::bufferize(&executeRegionOp.region(), state);
+    return comprehensive_bufferize::bufferize(&executeRegionOp.getRegion(),
+                                              state);
   }
 
   BufferRelation bufferRelation(Operation *op, OpResult opResult,
@@ -158,7 +159,7 @@ struct IfOpInterface
 
     // Create new op.
     auto newIfOp =
-        rewriter.create<scf::IfOp>(ifOp.getLoc(), newTypes, ifOp.condition(),
+        rewriter.create<scf::IfOp>(ifOp.getLoc(), newTypes, ifOp.getCondition(),
                                    /*withElseRegion=*/true);
 
     // Remove terminators.
@@ -288,7 +289,7 @@ struct ForOpInterface
     // Indices of all iter_args that have tensor type. These are the ones that
     // are bufferized.
     DenseSet<int64_t> indices;
-    for (const auto &it : llvm::enumerate(forOp.initArgs()))
+    for (const auto &it : llvm::enumerate(forOp.getInitArgs()))
       if (it.value().getType().isa<TensorType>())
         indices.insert(it.index());
 
@@ -307,12 +308,12 @@ struct ForOpInterface
 
     // Construct a new scf.for op with memref instead of tensor values.
     SmallVector<Value> initArgs =
-        convert(forOp.initArgs(), [&](Value val, int64_t index) {
+        convert(forOp.getInitArgs(), [&](Value val, int64_t index) {
           return state.getResultBuffer(forOp->getOpResult(index));
         });
-    auto newForOp =
-        rewriter.create<scf::ForOp>(forOp.getLoc(), forOp.lowerBound(),
-                                    forOp.upperBound(), forOp.step(), initArgs);
+    auto newForOp = rewriter.create<scf::ForOp>(
+        forOp.getLoc(), forOp.getLowerBound(), forOp.getUpperBound(),
+        forOp.getStep(), initArgs);
     Block *loopBody = &newForOp.getLoopBody().front();
 
     // Set up new iter_args. The loop body uses tensors, so wrap the (memref)
@@ -335,11 +336,11 @@ struct ForOpInterface
     auto yieldOp = cast<scf::YieldOp>(loopBody->getTerminator());
     rewriter.setInsertionPoint(yieldOp);
     SmallVector<Value> yieldValues =
-        convert(yieldOp.results(), [&](Value val, int64_t index) {
+        convert(yieldOp.getResults(), [&](Value val, int64_t index) {
           return rewriter.create<bufferization::ToMemrefOp>(
               val.getLoc(), initArgs[index].getType(), val);
         });
-    yieldOp.resultsMutable().assign(yieldValues);
+    yieldOp.getResultsMutable().assign(yieldValues);
 
     // Replace loop results.
     state.replaceOp(op, newForOp->getResults());
