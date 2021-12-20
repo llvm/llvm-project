@@ -2117,6 +2117,19 @@ def : GCNPat <
 } // end isWave32
 
 def : GCNPat <
+  (i32 (DivergentBinFrag<xor> i32:$src0, (i32 -1))),
+  (V_NOT_B32_e32 $src0)
+>;
+
+def : GCNPat <
+  (i64 (DivergentBinFrag<xor> i64:$src0, (i64 -1))),
+    (REG_SEQUENCE VReg_64,
+      (V_NOT_B32_e32 (i32 (EXTRACT_SUBREG i64:$src0, sub0))), sub0,
+      (V_NOT_B32_e32 (i32 (EXTRACT_SUBREG i64:$src0, sub1))), sub1
+    )
+>;
+
+def : GCNPat <
   (f16 (sint_to_fp i1:$src)),
   (V_CVT_F16_F32_e32 (
       V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
