@@ -916,6 +916,7 @@ module std [system] {
       module rel_ops             { private header "__utility/rel_ops.h" }
       module swap                { private header "__utility/swap.h" }
       module to_underlying       { private header "__utility/to_underlying.h" }
+      module transaction         { private header "__utility/transaction.h" }
     }
   }
   module valarray {
