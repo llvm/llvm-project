@@ -920,7 +920,7 @@ PyObject *lldb_private::LLDBSwigPython_GetRecognizedArguments(
 
   PythonString str(callee_name);
   PyObject *result =
-      PyObject_CallMethodObjArgs(implementor, str.get(), arg, NULL);
+      PyObject_CallMethodObjArgs(implementor, str.get(), arg.get(), NULL);
   return result;
 }
 
