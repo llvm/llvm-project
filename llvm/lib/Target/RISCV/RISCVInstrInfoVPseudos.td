@@ -1124,68 +1124,6 @@ class VPseudoTernaryNoMaskWithPolicy<VReg RetClass,
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
-class VPseudoAMOWDNoMask<VReg RetClass,
-                         VReg Op1Class> :
-        Pseudo<(outs GetVRegNoV0<RetClass>.R:$vd_wd),
-               (ins GPR:$rs1,
-                    Op1Class:$vs2,
-                    GetVRegNoV0<RetClass>.R:$vd,
-                    AVL:$vl, ixlenimm:$sew), []>,
-        RISCVVPseudo {
-  let mayLoad = 1;
-  let mayStore = 1;
-  let hasSideEffects = 1;
-  let Constraints = "$vd_wd = $vd";
-  let HasVLOp = 1;
-  let HasSEWOp = 1;
-  let HasDummyMask = 1;
-  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
-}
-
-class VPseudoAMOWDMask<VReg RetClass,
-                       VReg Op1Class> :
-        Pseudo<(outs GetVRegNoV0<RetClass>.R:$vd_wd),
-               (ins GPR:$rs1,
-                    Op1Class:$vs2,
-                    GetVRegNoV0<RetClass>.R:$vd,
-                    VMaskOp:$vm, AVL:$vl, ixlenimm:$sew), []>,
-        RISCVVPseudo {
-  let mayLoad = 1;
-  let mayStore = 1;
-  let hasSideEffects = 1;
-  let Constraints = "$vd_wd = $vd";
-  let HasVLOp = 1;
-  let HasSEWOp = 1;
-  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
-}
-
-multiclass VPseudoAMOEI<int eew> {
-  // Standard scalar AMO supports 32, 64, and 128 Mem data bits,
-  // and in the base vector "V" extension, only SEW up to ELEN = max(XLEN, FLEN)
-  // are required to be supported.
-  // therefore only [32, 64] is allowed here.
-  foreach sew = [32, 64] in {
-    foreach lmul = MxSet<sew>.m in {
-      defvar octuple_lmul = lmul.octuple;
-      // Calculate emul = eew * lmul / sew
-      defvar octuple_emul = !srl(!mul(eew, octuple_lmul), log2<sew>.val);
-      if !and(!ge(octuple_emul, 1), !le(octuple_emul, 64)) then {
-        defvar emulMX = octuple_to_str<octuple_emul>.ret;
-        defvar emul= !cast<LMULInfo>("V_" # emulMX);
-        let VLMul = lmul.value in {
-          def "_WD_" # lmul.MX # "_" # emulMX : VPseudoAMOWDNoMask<lmul.vrclass, emul.vrclass>;
-          def "_WD_" # lmul.MX # "_" # emulMX # "_MASK" : VPseudoAMOWDMask<lmul.vrclass, emul.vrclass>;
-        }
-      }
-    }
-  }
-}
-
-multiclass VPseudoAMO {
-  foreach eew = EEWList in
-  defm "EI" # eew : VPseudoAMOEI<eew>;
-}
-
 class VPseudoUSSegLoadNoMask<VReg RetClass, int EEW, bits<4> NF, bit isFF>:
       Pseudo<(outs RetClass:$rd),
              (ins GPR:$rs1, AVL:$vl, ixlenimm:$sew),[]>,
@@ -2927,42 +2865,6 @@ class VPatTernaryMask<string intrinsic,
                     (mask_type V0),
                     GPR:$vl, sew)>;
 
-class VPatAMOWDNoMask<string intrinsic_name,
-                    string inst,
-                    ValueType result_type,
-                    ValueType op1_type,
-                    int sew,
-                    LMULInfo vlmul,
-                    LMULInfo emul,
-                    VReg op1_reg_class> :
-  Pat<(result_type (!cast<Intrinsic>(intrinsic_name)
-                    GPR:$rs1,
-                    (op1_type op1_reg_class:$vs2),
-                    (result_type vlmul.vrclass:$vd),
-                    VLOpFrag)),
-                   (!cast<Instruction>(inst # "_WD_" # vlmul.MX # "_" # emul.MX)
-                    $rs1, $vs2, $vd,
-                    GPR:$vl, sew)>;
-
-class VPatAMOWDMask<string intrinsic_name,
-                    string inst,
-                    ValueType result_type,
-                    ValueType op1_type,
-                    ValueType mask_type,
-                    int sew,
-                    LMULInfo vlmul,
-                    LMULInfo emul,
-                    VReg op1_reg_class> :
-  Pat<(result_type (!cast<Intrinsic>(intrinsic_name # "_mask")
-                    GPR:$rs1,
-                    (op1_type op1_reg_class:$vs2),
-                    (result_type vlmul.vrclass:$vd),
-                    (mask_type V0),
-                    VLOpFrag)),
-                   (!cast<Instruction>(inst # "_WD_" # vlmul.MX # "_" # emul.MX # "_MASK")
-                    $rs1, $vs2, $vd,
-                    (mask_type V0), GPR:$vl, sew)>;
-
 multiclass VPatUnaryS_M<string intrinsic_name,
                              string inst>
 {
@@ -3800,44 +3702,6 @@ multiclass VPatConversionVF_WF <string intrinsic, string instruction> {
   }
 }
 
-multiclass VPatAMOWD<string intrinsic,
-                     string inst,
-                     ValueType result_type,
-                     ValueType offset_type,
-                     ValueType mask_type,
-                     int sew,
-                     LMULInfo vlmul,
-                     LMULInfo emul,
-                     VReg op1_reg_class>
-{
-  def : VPatAMOWDNoMask<intrinsic, inst, result_type, offset_type,
-                        sew, vlmul, emul, op1_reg_class>;
-  def : VPatAMOWDMask<intrinsic, inst, result_type, offset_type,
-                      mask_type, sew, vlmul, emul, op1_reg_class>;
-}
-
-multiclass VPatAMOV_WD<string intrinsic,
-                       string inst,
-                       list<VTypeInfo> vtilist> {
-  foreach eew = EEWList in {
-    foreach vti = vtilist in {
-      if !or(!eq(vti.SEW, 32), !eq(vti.SEW, 64)) then {
-        defvar octuple_lmul = vti.LMul.octuple;
-        // Calculate emul = eew * lmul / sew
-        defvar octuple_emul = !srl(!mul(eew, octuple_lmul), vti.Log2SEW);
-        if !and(!ge(octuple_emul, 1), !le(octuple_emul, 64)) then {
-          defvar emulMX = octuple_to_str<octuple_emul>.ret;
-          defvar offsetVti = !cast<VTypeInfo>("VI" # eew # emulMX);
-          defvar inst_ei = inst # "EI" # eew;
-          defm : VPatAMOWD<intrinsic, inst_ei,
-                           vti.Vector, offsetVti.Vector,
-                           vti.Mask, vti.Log2SEW, vti.LMul, offsetVti.LMul, offsetVti.RegClass>;
-        }
-      }
-    }
-  }
-}
-
 //===----------------------------------------------------------------------===//
 // Pseudo instructions
 //===----------------------------------------------------------------------===//
@@ -3964,19 +3828,6 @@ defm PseudoVSUXSEG : VPseudoISegStore</*Ordered=*/false>;
 // vlseg<nf>e<eew>ff.v may update VL register
 let hasSideEffects = 1, Defs = [VL] in
 defm PseudoVLSEG : VPseudoUSSegLoad</*isFF=*/true>;
-
-//===----------------------------------------------------------------------===//
-// 8. Vector AMO Operations
-//===----------------------------------------------------------------------===//
-defm PseudoVAMOSWAP : VPseudoAMO;
-defm PseudoVAMOADD : VPseudoAMO;
-defm PseudoVAMOXOR : VPseudoAMO;
-defm PseudoVAMOAND : VPseudoAMO;
-defm PseudoVAMOOR : VPseudoAMO;
-defm PseudoVAMOMIN : VPseudoAMO;
-defm PseudoVAMOMAX : VPseudoAMO;
-defm PseudoVAMOMINU : VPseudoAMO;
-defm PseudoVAMOMAXU : VPseudoAMO;
 
 //===----------------------------------------------------------------------===//
 // 12. Vector Integer Arithmetic Instructions
@@ -4532,25 +4383,6 @@ defm PseudoVCOMPRESS : VPseudoVCPR_V;
 //===----------------------------------------------------------------------===//
 // Patterns.
 //===----------------------------------------------------------------------===//
-
-//===----------------------------------------------------------------------===//
-// 8. Vector AMO Operations
-//===----------------------------------------------------------------------===//
-let Predicates = [HasStdExtZvamo] in {
-  defm : VPatAMOV_WD<"int_riscv_vamoswap", "PseudoVAMOSWAP", AllIntegerVectors>;
-  defm : VPatAMOV_WD<"int_riscv_vamoadd", "PseudoVAMOADD", AllIntegerVectors>;
-  defm : VPatAMOV_WD<"int_riscv_vamoxor", "PseudoVAMOXOR", AllIntegerVectors>;
-  defm : VPatAMOV_WD<"int_riscv_vamoand", "PseudoVAMOAND", AllIntegerVectors>;
-  defm : VPatAMOV_WD<"int_riscv_vamoor", "PseudoVAMOOR", AllIntegerVectors>;
-  defm : VPatAMOV_WD<"int_riscv_vamomin", "PseudoVAMOMIN", AllIntegerVectors>;
-  defm : VPatAMOV_WD<"int_riscv_vamomax", "PseudoVAMOMAX", AllIntegerVectors>;
-  defm : VPatAMOV_WD<"int_riscv_vamominu", "PseudoVAMOMINU", AllIntegerVectors>;
-  defm : VPatAMOV_WD<"int_riscv_vamomaxu", "PseudoVAMOMAXU", AllIntegerVectors>;
-} // Predicates = [HasStdExtZvamo]
-
-let Predicates = [HasStdExtZvamo, HasVInstructionsAnyF] in {
-  defm : VPatAMOV_WD<"int_riscv_vamoswap", "PseudoVAMOSWAP", AllFloatVectors>;
-} // Predicates = [HasStdExtZvamo, HasVInstructionsAnyF]
 
 //===----------------------------------------------------------------------===//
 // 12. Vector Integer Arithmetic Instructions
