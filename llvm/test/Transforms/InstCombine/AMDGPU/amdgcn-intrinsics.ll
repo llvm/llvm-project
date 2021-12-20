@@ -66,7 +66,7 @@ define double @test_constant_fold_rcp_f64_43() nounwind {
 
 define float @test_constant_fold_rcp_f32_43_strictfp() nounwind strictfp {
 ; CHECK-LABEL: @test_constant_fold_rcp_f32_43_strictfp(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.rcp.f32(float 4.300000e+01) [[ATTR11:#.*]]
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.rcp.f32(float 4.300000e+01) #[[ATTR12:[0-9]+]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.amdgcn.rcp.f32(float 4.300000e+01) strictfp nounwind readnone
@@ -1662,7 +1662,7 @@ define i64 @icmp_constant_inputs_false() {
 
 define i64 @icmp_constant_inputs_true() {
 ; CHECK-LABEL: @icmp_constant_inputs_true(
-; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.read_register.i64(metadata !0) [[ATTR12:#.*]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.read_register.i64(metadata [[META0:![0-9]+]]) #[[ATTR13:[0-9]+]]
 ; CHECK-NEXT:    ret i64 [[RESULT]]
 ;
   %result = call i64 @llvm.amdgcn.icmp.i64.i32(i32 9, i32 8, i32 34)
@@ -2369,7 +2369,7 @@ define i64 @fcmp_constant_inputs_false() {
 
 define i64 @fcmp_constant_inputs_true() {
 ; CHECK-LABEL: @fcmp_constant_inputs_true(
-; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.read_register.i64(metadata !0) [[ATTR12]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.read_register.i64(metadata [[META0]]) #[[ATTR13]]
 ; CHECK-NEXT:    ret i64 [[RESULT]]
 ;
   %result = call i64 @llvm.amdgcn.fcmp.i64.f32(float 2.0, float 4.0, i32 4)
@@ -2411,7 +2411,7 @@ define i64 @ballot_zero_64() {
 
 define i64 @ballot_one_64() {
 ; CHECK-LABEL: @ballot_one_64(
-; CHECK-NEXT:    [[B:%.*]] = call i64 @llvm.read_register.i64(metadata !0) [[ATTR12]]
+; CHECK-NEXT:    [[B:%.*]] = call i64 @llvm.read_register.i64(metadata [[META0]]) #[[ATTR13]]
 ; CHECK-NEXT:    ret i64 [[B]]
 ;
   %b = call i64 @llvm.amdgcn.ballot.i64(i1 1)
@@ -2437,7 +2437,7 @@ define i32 @ballot_zero_32() {
 
 define i32 @ballot_one_32() {
 ; CHECK-LABEL: @ballot_one_32(
-; CHECK-NEXT:    [[B:%.*]] = call i32 @llvm.read_register.i32(metadata !1) [[ATTR12]]
+; CHECK-NEXT:    [[B:%.*]] = call i32 @llvm.read_register.i32(metadata [[META1:![0-9]+]]) #[[ATTR13]]
 ; CHECK-NEXT:    ret i32 [[B]]
 ;
   %b = call i32 @llvm.amdgcn.ballot.i32(i1 1)
@@ -2861,8 +2861,8 @@ declare <2 x float> @llvm.amdgcn.image.sample.c.d.o.2darray.v2f32.f32.f32(i32, i
 
 define amdgpu_kernel void @image_sample_a16_1d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %s) {
 ; CHECK-LABEL: @image_sample_a16_1d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f16(i32 15, half [[S:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f16(i32 15, half [[S:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
@@ -2873,8 +2873,8 @@ define amdgpu_kernel void @image_sample_a16_1d(<4 x float> addrspace(1)* %out, <
 
 define amdgpu_kernel void @image_sample_a16_2d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %s, half %t) {
 ; CHECK-LABEL: @image_sample_a16_2d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f16(i32 15, half [[S:%.*]], half [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f16(i32 15, half [[S:%.*]], half [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
@@ -2886,8 +2886,8 @@ define amdgpu_kernel void @image_sample_a16_2d(<4 x float> addrspace(1)* %out, <
 
 define amdgpu_kernel void @image_sample_a16_3d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %s, half %t, half %r) {
 ; CHECK-LABEL: @image_sample_a16_3d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.3d.v4f32.f16(i32 15, half [[S:%.*]], half [[T:%.*]], half [[R:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.3d.v4f32.f16(i32 15, half [[S:%.*]], half [[T:%.*]], half [[R:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
@@ -2901,8 +2901,8 @@ define amdgpu_kernel void @image_sample_a16_3d(<4 x float> addrspace(1)* %out, <
 define amdgpu_kernel void @image_sample_a16_cube(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %s, half %t, half %face) {
 ;
 ; CHECK-LABEL: @image_sample_a16_cube(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.cube.v4f32.f16(i32 15, half [[S:%.*]], half [[T:%.*]], half [[FACE:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.cube.v4f32.f16(i32 15, half [[S:%.*]], half [[T:%.*]], half [[FACE:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
@@ -2915,8 +2915,8 @@ define amdgpu_kernel void @image_sample_a16_cube(<4 x float> addrspace(1)* %out,
 
 define amdgpu_kernel void @image_sample_a16_1darray(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %s, half %slice) {
 ; CHECK-LABEL: @image_sample_a16_1darray(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.1darray.v4f32.f16(i32 15, half [[S:%.*]], half [[SLICE:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.1darray.v4f32.f16(i32 15, half [[S:%.*]], half [[SLICE:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
@@ -2928,8 +2928,8 @@ define amdgpu_kernel void @image_sample_a16_1darray(<4 x float> addrspace(1)* %o
 
 define amdgpu_kernel void @image_sample_a16_2darray(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %s, half %t, half %slice) {
 ; CHECK-LABEL: @image_sample_a16_2darray(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.2darray.v4f32.f16(i32 15, half [[S:%.*]], half [[T:%.*]], half [[SLICE:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.2darray.v4f32.f16(i32 15, half [[S:%.*]], half [[T:%.*]], half [[SLICE:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
@@ -2942,8 +2942,8 @@ define amdgpu_kernel void @image_sample_a16_2darray(<4 x float> addrspace(1)* %o
 
 define amdgpu_kernel void @image_sample_a16_c_1d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %s) {
 ; CHECK-LABEL: @image_sample_a16_c_1d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.1d.v4f32.f16(i32 15, float [[ZCOMPARE:%.*]], half [[S:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.1d.v4f32.f16(i32 15, float [[ZCOMPARE:%.*]], half [[S:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
@@ -2954,8 +2954,8 @@ define amdgpu_kernel void @image_sample_a16_c_1d(<4 x float> addrspace(1)* %out,
 
 define amdgpu_kernel void @image_sample_a16_c_2d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %s, half %t) {
 ; CHECK-LABEL: @image_sample_a16_c_2d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.2d.v4f32.f16(i32 15, float [[ZCOMPARE:%.*]], half [[S:%.*]], half [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.2d.v4f32.f16(i32 15, float [[ZCOMPARE:%.*]], half [[S:%.*]], half [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
@@ -2967,8 +2967,8 @@ define amdgpu_kernel void @image_sample_a16_c_2d(<4 x float> addrspace(1)* %out,
 
 define amdgpu_kernel void @image_sample_a16_cl_1d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %s, half %clamp) {
 ; CHECK-LABEL: @image_sample_a16_cl_1d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.cl.1d.v4f32.f16(i32 15, half [[S:%.*]], half [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.cl.1d.v4f32.f16(i32 15, half [[S:%.*]], half [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
@@ -2980,8 +2980,8 @@ define amdgpu_kernel void @image_sample_a16_cl_1d(<4 x float> addrspace(1)* %out
 
 define amdgpu_kernel void @image_sample_a16_cl_2d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %s, half %t, half %clamp) {
 ; CHECK-LABEL: @image_sample_a16_cl_2d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.cl.2d.v4f32.f16(i32 15, half [[S:%.*]], half [[T:%.*]], half [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.cl.2d.v4f32.f16(i32 15, half [[S:%.*]], half [[T:%.*]], half [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
@@ -2994,8 +2994,8 @@ define amdgpu_kernel void @image_sample_a16_cl_2d(<4 x float> addrspace(1)* %out
 
 define amdgpu_kernel void @image_sample_a16_c_cl_1d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %s, half %clamp) {
 ; CHECK-LABEL: @image_sample_a16_c_cl_1d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.cl.1d.v4f32.f16(i32 15, float [[ZCOMPARE:%.*]], half [[S:%.*]], half [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.cl.1d.v4f32.f16(i32 15, float [[ZCOMPARE:%.*]], half [[S:%.*]], half [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
@@ -3007,8 +3007,8 @@ define amdgpu_kernel void @image_sample_a16_c_cl_1d(<4 x float> addrspace(1)* %o
 
 define amdgpu_kernel void @image_sample_a16_c_cl_2d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %s, half %t, half %clamp) {
 ; CHECK-LABEL: @image_sample_a16_c_cl_2d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.cl.2d.v4f32.f16(i32 15, float [[ZCOMPARE:%.*]], half [[S:%.*]], half [[T:%.*]], half [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.cl.2d.v4f32.f16(i32 15, float [[ZCOMPARE:%.*]], half [[S:%.*]], half [[T:%.*]], half [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
@@ -3021,8 +3021,8 @@ define amdgpu_kernel void @image_sample_a16_c_cl_2d(<4 x float> addrspace(1)* %o
 
 define amdgpu_kernel void @image_sample_a16_b_1d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %bias, half %s) {
 ; CHECK-LABEL: @image_sample_a16_b_1d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.b.1d.v4f32.f32.f16(i32 15, float [[BIAS:%.*]], half [[S:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.b.1d.v4f32.f32.f16(i32 15, float [[BIAS:%.*]], half [[S:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
@@ -3033,8 +3033,8 @@ define amdgpu_kernel void @image_sample_a16_b_1d(<4 x float> addrspace(1)* %out,
 
 define amdgpu_kernel void @image_sample_a16_b_2d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %bias, half %s, half %t) {
 ; CHECK-LABEL: @image_sample_a16_b_2d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.b.2d.v4f32.f32.f16(i32 15, float [[BIAS:%.*]], half [[S:%.*]], half [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.b.2d.v4f32.f32.f16(i32 15, float [[BIAS:%.*]], half [[S:%.*]], half [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
@@ -3046,8 +3046,8 @@ define amdgpu_kernel void @image_sample_a16_b_2d(<4 x float> addrspace(1)* %out,
 
 define amdgpu_kernel void @image_sample_a16_c_b_1d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %bias, float %zcompare, half %s) {
 ; CHECK-LABEL: @image_sample_a16_c_b_1d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.b.1d.v4f32.f32.f16(i32 15, float [[BIAS:%.*]], float [[ZCOMPARE:%.*]], half [[S:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.b.1d.v4f32.f32.f16(i32 15, float [[BIAS:%.*]], float [[ZCOMPARE:%.*]], half [[S:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
@@ -3058,8 +3058,8 @@ define amdgpu_kernel void @image_sample_a16_c_b_1d(<4 x float> addrspace(1)* %ou
 
 define amdgpu_kernel void @image_sample_a16_c_b_2d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %bias, float %zcompare, half %s, half %t) {
 ; CHECK-LABEL: @image_sample_a16_c_b_2d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.b.2d.v4f32.f32.f16(i32 15, float [[BIAS:%.*]], float [[ZCOMPARE:%.*]], half [[S:%.*]], half [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.b.2d.v4f32.f32.f16(i32 15, float [[BIAS:%.*]], float [[ZCOMPARE:%.*]], half [[S:%.*]], half [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
@@ -3071,8 +3071,8 @@ define amdgpu_kernel void @image_sample_a16_c_b_2d(<4 x float> addrspace(1)* %ou
 
 define amdgpu_kernel void @image_sample_a16_b_cl_1d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %bias, half %s, half %clamp) {
 ; CHECK-LABEL: @image_sample_a16_b_cl_1d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.b.cl.1d.v4f32.f32.f16(i32 15, float [[BIAS:%.*]], half [[S:%.*]], half [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.b.cl.1d.v4f32.f32.f16(i32 15, float [[BIAS:%.*]], half [[S:%.*]], half [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
@@ -3084,8 +3084,8 @@ define amdgpu_kernel void @image_sample_a16_b_cl_1d(<4 x float> addrspace(1)* %o
 
 define amdgpu_kernel void @image_sample_a16_b_cl_2d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %bias, half %s, half %t, half %clamp) {
 ; CHECK-LABEL: @image_sample_a16_b_cl_2d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.b.cl.2d.v4f32.f32.f16(i32 15, float [[BIAS:%.*]], half [[S:%.*]], half [[T:%.*]], half [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.b.cl.2d.v4f32.f32.f16(i32 15, float [[BIAS:%.*]], half [[S:%.*]], half [[T:%.*]], half [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
@@ -3098,8 +3098,8 @@ define amdgpu_kernel void @image_sample_a16_b_cl_2d(<4 x float> addrspace(1)* %o
 
 define amdgpu_kernel void @image_sample_a16_c_b_cl_1d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %bias, float %zcompare, half %s, half %clamp) {
 ; CHECK-LABEL: @image_sample_a16_c_b_cl_1d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.b.cl.1d.v4f32.f32.f16(i32 15, float [[BIAS:%.*]], float [[ZCOMPARE:%.*]], half [[S:%.*]], half [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.b.cl.1d.v4f32.f32.f16(i32 15, float [[BIAS:%.*]], float [[ZCOMPARE:%.*]], half [[S:%.*]], half [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
@@ -3111,8 +3111,8 @@ define amdgpu_kernel void @image_sample_a16_c_b_cl_1d(<4 x float> addrspace(1)* 
 
 define amdgpu_kernel void @image_sample_a16_c_b_cl_2d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %bias, float %zcompare, half %s, half %t, half %clamp) {
 ; CHECK-LABEL: @image_sample_a16_c_b_cl_2d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.b.cl.2d.v4f32.f32.f16(i32 15, float [[BIAS:%.*]], float [[ZCOMPARE:%.*]], half [[S:%.*]], half [[T:%.*]], half [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.b.cl.2d.v4f32.f32.f16(i32 15, float [[BIAS:%.*]], float [[ZCOMPARE:%.*]], half [[S:%.*]], half [[T:%.*]], half [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
@@ -3125,8 +3125,8 @@ define amdgpu_kernel void @image_sample_a16_c_b_cl_2d(<4 x float> addrspace(1)* 
 
 define amdgpu_kernel void @image_sample_a16_d_1d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %dsdh, half %dsdv, half %s) {
 ; CHECK-LABEL: @image_sample_a16_d_1d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.d.1d.v4f32.f16.f16(i32 15, half [[DSDH:%.*]], half [[DSDV:%.*]], half [[S:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.d.1d.v4f32.f16.f16(i32 15, half [[DSDH:%.*]], half [[DSDV:%.*]], half [[S:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %dsdh32 = fpext half %dsdh to float
@@ -3139,8 +3139,8 @@ define amdgpu_kernel void @image_sample_a16_d_1d(<4 x float> addrspace(1)* %out,
 
 define amdgpu_kernel void @image_sample_a16_d_2d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %t) {
 ; CHECK-LABEL: @image_sample_a16_d_2d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.d.2d.v4f32.f16.f16(i32 15, half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], half [[S:%.*]], half [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.d.2d.v4f32.f16.f16(i32 15, half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], half [[S:%.*]], half [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %dsdh32 = fpext half %dsdh to float
@@ -3156,8 +3156,8 @@ define amdgpu_kernel void @image_sample_a16_d_2d(<4 x float> addrspace(1)* %out,
 
 define amdgpu_kernel void @image_sample_a16_d_3d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %dsdh, half %dtdh, half %drdh, half %dsdv, half %dtdv, half %drdv, half %s, half %t, half %r) {
 ; CHECK-LABEL: @image_sample_a16_d_3d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.d.3d.v4f32.f16.f16(i32 15, half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DRDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], half [[DRDV:%.*]], half [[S:%.*]], half [[T:%.*]], half [[R:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.d.3d.v4f32.f16.f16(i32 15, half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DRDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], half [[DRDV:%.*]], half [[S:%.*]], half [[T:%.*]], half [[R:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %dsdh32 = fpext half %dsdh to float
@@ -3176,8 +3176,8 @@ define amdgpu_kernel void @image_sample_a16_d_3d(<4 x float> addrspace(1)* %out,
 
 define amdgpu_kernel void @image_sample_a16_c_d_1d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %dsdh, half %dsdv, half %s) {
 ; CHECK-LABEL: @image_sample_a16_c_d_1d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.d.1d.v4f32.f16.f16(i32 15, float [[ZCOMPARE:%.*]], half [[DSDH:%.*]], half [[DSDV:%.*]], half [[S:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.d.1d.v4f32.f16.f16(i32 15, float [[ZCOMPARE:%.*]], half [[DSDH:%.*]], half [[DSDV:%.*]], half [[S:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %dsdh32 = fpext half %dsdh to float
@@ -3190,8 +3190,8 @@ define amdgpu_kernel void @image_sample_a16_c_d_1d(<4 x float> addrspace(1)* %ou
 
 define amdgpu_kernel void @image_sample_a16_c_d_2d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %t) {
 ; CHECK-LABEL: @image_sample_a16_c_d_2d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.d.2d.v4f32.f16.f16(i32 15, float [[ZCOMPARE:%.*]], half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], half [[S:%.*]], half [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.d.2d.v4f32.f16.f16(i32 15, float [[ZCOMPARE:%.*]], half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], half [[S:%.*]], half [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %dsdh32 = fpext half %dsdh to float
@@ -3207,8 +3207,8 @@ define amdgpu_kernel void @image_sample_a16_c_d_2d(<4 x float> addrspace(1)* %ou
 
 define amdgpu_kernel void @image_sample_a16_d_cl_1d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %dsdh, half %dsdv, half %s, half %clamp) {
 ; CHECK-LABEL: @image_sample_a16_d_cl_1d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.d.cl.1d.v4f32.f16.f16(i32 15, half [[DSDH:%.*]], half [[DSDV:%.*]], half [[S:%.*]], half [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.d.cl.1d.v4f32.f16.f16(i32 15, half [[DSDH:%.*]], half [[DSDV:%.*]], half [[S:%.*]], half [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %dsdh32 = fpext half %dsdh to float
@@ -3222,8 +3222,8 @@ define amdgpu_kernel void @image_sample_a16_d_cl_1d(<4 x float> addrspace(1)* %o
 
 define amdgpu_kernel void @image_sample_a16_d_cl_2d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %t, half %clamp) {
 ; CHECK-LABEL: @image_sample_a16_d_cl_2d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.d.cl.2d.v4f32.f16.f16(i32 15, half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], half [[S:%.*]], half [[T:%.*]], half [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.d.cl.2d.v4f32.f16.f16(i32 15, half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], half [[S:%.*]], half [[T:%.*]], half [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %dsdh32 = fpext half %dsdh to float
@@ -3240,8 +3240,8 @@ define amdgpu_kernel void @image_sample_a16_d_cl_2d(<4 x float> addrspace(1)* %o
 
 define amdgpu_kernel void @image_sample_a16_c_d_cl_1d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %dsdh, half %dsdv, half %s, half %clamp) {
 ; CHECK-LABEL: @image_sample_a16_c_d_cl_1d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.d.cl.1d.v4f32.f16.f16(i32 15, float [[ZCOMPARE:%.*]], half [[DSDH:%.*]], half [[DSDV:%.*]], half [[S:%.*]], half [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.d.cl.1d.v4f32.f16.f16(i32 15, float [[ZCOMPARE:%.*]], half [[DSDH:%.*]], half [[DSDV:%.*]], half [[S:%.*]], half [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %dsdh32 = fpext half %dsdh to float
@@ -3255,8 +3255,8 @@ define amdgpu_kernel void @image_sample_a16_c_d_cl_1d(<4 x float> addrspace(1)* 
 
 define amdgpu_kernel void @image_sample_a16_c_d_cl_2d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %t, half %clamp) {
 ; CHECK-LABEL: @image_sample_a16_c_d_cl_2d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.d.cl.2d.v4f32.f16.f16(i32 15, float [[ZCOMPARE:%.*]], half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], half [[S:%.*]], half [[T:%.*]], half [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.d.cl.2d.v4f32.f16.f16(i32 15, float [[ZCOMPARE:%.*]], half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], half [[S:%.*]], half [[T:%.*]], half [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %dsdh32 = fpext half %dsdh to float
@@ -3273,8 +3273,8 @@ define amdgpu_kernel void @image_sample_a16_c_d_cl_2d(<4 x float> addrspace(1)* 
 
 define amdgpu_kernel void @image_sample_a16_cd_1d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %dsdh, half %dsdv, half %s) {
 ; CHECK-LABEL: @image_sample_a16_cd_1d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.cd.1d.v4f32.f16.f16(i32 15, half [[DSDH:%.*]], half [[DSDV:%.*]], half [[S:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.cd.1d.v4f32.f16.f16(i32 15, half [[DSDH:%.*]], half [[DSDV:%.*]], half [[S:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %dsdh32 = fpext half %dsdh to float
@@ -3287,8 +3287,8 @@ define amdgpu_kernel void @image_sample_a16_cd_1d(<4 x float> addrspace(1)* %out
 
 define amdgpu_kernel void @image_sample_a16_cd_2d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %t) {
 ; CHECK-LABEL: @image_sample_a16_cd_2d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.cd.2d.v4f32.f16.f16(i32 15, half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], half [[S:%.*]], half [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.cd.2d.v4f32.f16.f16(i32 15, half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], half [[S:%.*]], half [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %dsdh32 = fpext half %dsdh to float
@@ -3304,8 +3304,8 @@ define amdgpu_kernel void @image_sample_a16_cd_2d(<4 x float> addrspace(1)* %out
 
 define amdgpu_kernel void @image_sample_a16_c_cd_1d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %dsdh, half %dsdv, half %s) {
 ; CHECK-LABEL: @image_sample_a16_c_cd_1d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.cd.1d.v4f32.f16.f16(i32 15, float [[ZCOMPARE:%.*]], half [[DSDH:%.*]], half [[DSDV:%.*]], half [[S:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.cd.1d.v4f32.f16.f16(i32 15, float [[ZCOMPARE:%.*]], half [[DSDH:%.*]], half [[DSDV:%.*]], half [[S:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %dsdh32 = fpext half %dsdh to float
@@ -3318,8 +3318,8 @@ define amdgpu_kernel void @image_sample_a16_c_cd_1d(<4 x float> addrspace(1)* %o
 
 define amdgpu_kernel void @image_sample_a16_c_cd_2d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %t) {
 ; CHECK-LABEL: @image_sample_a16_c_cd_2d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.cd.2d.v4f32.f16.f16(i32 15, float [[ZCOMPARE:%.*]], half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], half [[S:%.*]], half [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.cd.2d.v4f32.f16.f16(i32 15, float [[ZCOMPARE:%.*]], half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], half [[S:%.*]], half [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %dsdh32 = fpext half %dsdh to float
@@ -3335,8 +3335,8 @@ define amdgpu_kernel void @image_sample_a16_c_cd_2d(<4 x float> addrspace(1)* %o
 
 define amdgpu_kernel void @image_sample_a16_cd_cl_1d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %dsdh, half %dsdv, half %s, half %clamp) {
 ; CHECK-LABEL: @image_sample_a16_cd_cl_1d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.cd.cl.1d.v4f32.f16.f16(i32 15, half [[DSDH:%.*]], half [[DSDV:%.*]], half [[S:%.*]], half [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.cd.cl.1d.v4f32.f16.f16(i32 15, half [[DSDH:%.*]], half [[DSDV:%.*]], half [[S:%.*]], half [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %dsdh32 = fpext half %dsdh to float
@@ -3350,8 +3350,8 @@ define amdgpu_kernel void @image_sample_a16_cd_cl_1d(<4 x float> addrspace(1)* %
 
 define amdgpu_kernel void @image_sample_a16_cd_cl_2d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %t, half %clamp) {
 ; CHECK-LABEL: @image_sample_a16_cd_cl_2d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.cd.cl.2d.v4f32.f16.f16(i32 15, half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], half [[S:%.*]], half [[T:%.*]], half [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.cd.cl.2d.v4f32.f16.f16(i32 15, half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], half [[S:%.*]], half [[T:%.*]], half [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %dsdh32 = fpext half %dsdh to float
@@ -3368,8 +3368,8 @@ define amdgpu_kernel void @image_sample_a16_cd_cl_2d(<4 x float> addrspace(1)* %
 
 define amdgpu_kernel void @image_sample_a16_c_cd_cl_1d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %dsdh, half %dsdv, half %s, half %clamp) {
 ; CHECK-LABEL: @image_sample_a16_c_cd_cl_1d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.1d.v4f32.f16.f16(i32 15, float [[ZCOMPARE:%.*]], half [[DSDH:%.*]], half [[DSDV:%.*]], half [[S:%.*]], half [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.1d.v4f32.f16.f16(i32 15, float [[ZCOMPARE:%.*]], half [[DSDH:%.*]], half [[DSDV:%.*]], half [[S:%.*]], half [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %dsdh32 = fpext half %dsdh to float
@@ -3383,8 +3383,8 @@ define amdgpu_kernel void @image_sample_a16_c_cd_cl_1d(<4 x float> addrspace(1)*
 
 define amdgpu_kernel void @image_sample_a16_c_cd_cl_2d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %t, half %clamp) {
 ; CHECK-LABEL: @image_sample_a16_c_cd_cl_2d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.2d.v4f32.f16.f16(i32 15, float [[ZCOMPARE:%.*]], half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], half [[S:%.*]], half [[T:%.*]], half [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.2d.v4f32.f16.f16(i32 15, float [[ZCOMPARE:%.*]], half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], half [[S:%.*]], half [[T:%.*]], half [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %dsdh32 = fpext half %dsdh to float
@@ -3401,8 +3401,8 @@ define amdgpu_kernel void @image_sample_a16_c_cd_cl_2d(<4 x float> addrspace(1)*
 
 define amdgpu_kernel void @image_sample_a16_l_1d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %s, half %lod) {
 ; CHECK-LABEL: @image_sample_a16_l_1d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.l.1d.v4f32.f16(i32 15, half [[S:%.*]], half [[LOD:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.l.1d.v4f32.f16(i32 15, half [[S:%.*]], half [[LOD:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
@@ -3414,8 +3414,8 @@ define amdgpu_kernel void @image_sample_a16_l_1d(<4 x float> addrspace(1)* %out,
 
 define amdgpu_kernel void @image_sample_a16_l_2d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %s, half %t, half %lod) {
 ; CHECK-LABEL: @image_sample_a16_l_2d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.l.2d.v4f32.f16(i32 15, half [[S:%.*]], half [[T:%.*]], half [[LOD:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.l.2d.v4f32.f16(i32 15, half [[S:%.*]], half [[T:%.*]], half [[LOD:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
@@ -3428,8 +3428,8 @@ define amdgpu_kernel void @image_sample_a16_l_2d(<4 x float> addrspace(1)* %out,
 
 define amdgpu_kernel void @image_sample_a16_c_l_1d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %s, half %lod) {
 ; CHECK-LABEL: @image_sample_a16_c_l_1d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.l.1d.v4f32.f16(i32 15, float [[ZCOMPARE:%.*]], half [[S:%.*]], half [[LOD:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.l.1d.v4f32.f16(i32 15, float [[ZCOMPARE:%.*]], half [[S:%.*]], half [[LOD:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
@@ -3441,8 +3441,8 @@ define amdgpu_kernel void @image_sample_a16_c_l_1d(<4 x float> addrspace(1)* %ou
 
 define amdgpu_kernel void @image_sample_a16_c_l_2d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %s, half %t, half %lod) {
 ; CHECK-LABEL: @image_sample_a16_c_l_2d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.l.2d.v4f32.f16(i32 15, float [[ZCOMPARE:%.*]], half [[S:%.*]], half [[T:%.*]], half [[LOD:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.l.2d.v4f32.f16(i32 15, float [[ZCOMPARE:%.*]], half [[S:%.*]], half [[T:%.*]], half [[LOD:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
@@ -3455,8 +3455,8 @@ define amdgpu_kernel void @image_sample_a16_c_l_2d(<4 x float> addrspace(1)* %ou
 
 define amdgpu_kernel void @image_sample_a16_lz_1d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %s) {
 ; CHECK-LABEL: @image_sample_a16_lz_1d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.lz.1d.v4f32.f16(i32 15, half [[S:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.lz.1d.v4f32.f16(i32 15, half [[S:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
@@ -3467,8 +3467,8 @@ define amdgpu_kernel void @image_sample_a16_lz_1d(<4 x float> addrspace(1)* %out
 
 define amdgpu_kernel void @image_sample_a16_lz_2d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %s, half %t) {
 ; CHECK-LABEL: @image_sample_a16_lz_2d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.lz.2d.v4f32.f16(i32 15, half [[S:%.*]], half [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.lz.2d.v4f32.f16(i32 15, half [[S:%.*]], half [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
@@ -3480,8 +3480,8 @@ define amdgpu_kernel void @image_sample_a16_lz_2d(<4 x float> addrspace(1)* %out
 
 define amdgpu_kernel void @image_sample_a16_c_lz_1d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %s) {
 ; CHECK-LABEL: @image_sample_a16_c_lz_1d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.lz.1d.v4f32.f16(i32 15, float [[ZCOMPARE:%.*]], half [[S:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.lz.1d.v4f32.f16(i32 15, float [[ZCOMPARE:%.*]], half [[S:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
@@ -3492,8 +3492,8 @@ define amdgpu_kernel void @image_sample_a16_c_lz_1d(<4 x float> addrspace(1)* %o
 
 define amdgpu_kernel void @image_sample_a16_c_lz_2d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %s, half %t) {
 ; CHECK-LABEL: @image_sample_a16_c_lz_2d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.lz.2d.v4f32.f16(i32 15, float [[ZCOMPARE:%.*]], half [[S:%.*]], half [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.lz.2d.v4f32.f16(i32 15, float [[ZCOMPARE:%.*]], half [[S:%.*]], half [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
@@ -3505,8 +3505,8 @@ define amdgpu_kernel void @image_sample_a16_c_lz_2d(<4 x float> addrspace(1)* %o
 
 define amdgpu_kernel void @image_sample_a16_c_d_o_2darray_V1(float addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 %offset, float %zcompare, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %t, half %slice) {
 ; CHECK-LABEL: @image_sample_a16_c_d_o_2darray_V1(
-; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.amdgcn.image.sample.c.d.o.2darray.f32.f16.f16(i32 4, i32 [[OFFSET:%.*]], float [[ZCOMPARE:%.*]], half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], half [[S:%.*]], half [[T:%.*]], half [[SLICE:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store float [[TMP1]], float addrspace(1)* [[OUT:%.*]], align 4
+; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.amdgcn.image.sample.c.d.o.2darray.f32.f16.f16(i32 4, i32 [[OFFSET:%.*]], float [[ZCOMPARE:%.*]], half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], half [[S:%.*]], half [[T:%.*]], half [[SLICE:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store float [[RES]], float addrspace(1)* [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %dsdh32 = fpext half %dsdh to float
@@ -3523,8 +3523,8 @@ define amdgpu_kernel void @image_sample_a16_c_d_o_2darray_V1(float addrspace(1)*
 
 define amdgpu_kernel void @image_sample_a16_c_d_o_2darray_V2(<2 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 %offset, float %zcompare, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %t, half %slice) {
 ; CHECK-LABEL: @image_sample_a16_c_d_o_2darray_V2(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x float> @llvm.amdgcn.image.sample.c.d.o.2darray.v2f32.f16.f16(i32 6, i32 [[OFFSET:%.*]], float [[ZCOMPARE:%.*]], half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], half [[S:%.*]], half [[T:%.*]], half [[SLICE:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <2 x float> [[TMP1]], <2 x float> addrspace(1)* [[OUT:%.*]], align 8
+; CHECK-NEXT:    [[RES:%.*]] = call <2 x float> @llvm.amdgcn.image.sample.c.d.o.2darray.v2f32.f16.f16(i32 6, i32 [[OFFSET:%.*]], float [[ZCOMPARE:%.*]], half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], half [[S:%.*]], half [[T:%.*]], half [[SLICE:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <2 x float> [[RES]], <2 x float> addrspace(1)* [[OUT:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %dsdh32 = fpext half %dsdh to float
@@ -3545,8 +3545,8 @@ define amdgpu_kernel void @image_sample_a16_c_d_o_2darray_V2(<2 x float> addrspa
 
 define amdgpu_kernel void @image_sample_g16_d_1d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %dsdh, half %dsdv, float %s) {
 ; CHECK-LABEL: @image_sample_g16_d_1d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.d.1d.v4f32.f16.f32(i32 15, half [[DSDH:%.*]], half [[DSDV:%.*]], float [[S:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.d.1d.v4f32.f16.f32(i32 15, half [[DSDH:%.*]], half [[DSDV:%.*]], float [[S:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %dsdh32 = fpext half %dsdh to float
@@ -3558,8 +3558,8 @@ define amdgpu_kernel void @image_sample_g16_d_1d(<4 x float> addrspace(1)* %out,
 
 define amdgpu_kernel void @image_sample_g16_d_2d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %dsdh, half %dtdh, half %dsdv, half %dtdv, float %s, float %t) {
 ; CHECK-LABEL: @image_sample_g16_d_2d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.d.2d.v4f32.f16.f32(i32 15, half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], float [[S:%.*]], float [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.d.2d.v4f32.f16.f32(i32 15, half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], float [[S:%.*]], float [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %dsdh32 = fpext half %dsdh to float
@@ -3573,8 +3573,8 @@ define amdgpu_kernel void @image_sample_g16_d_2d(<4 x float> addrspace(1)* %out,
 
 define amdgpu_kernel void @image_sample_g16_d_3d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %dsdh, half %dtdh, half %drdh, half %dsdv, half %dtdv, half %drdv, float %s, float %t, float %r) {
 ; CHECK-LABEL: @image_sample_g16_d_3d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.d.3d.v4f32.f16.f32(i32 15, half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DRDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], half [[DRDV:%.*]], float [[S:%.*]], float [[T:%.*]], float [[R:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.d.3d.v4f32.f16.f32(i32 15, half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DRDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], half [[DRDV:%.*]], float [[S:%.*]], float [[T:%.*]], float [[R:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %dsdh32 = fpext half %dsdh to float
@@ -3590,8 +3590,8 @@ define amdgpu_kernel void @image_sample_g16_d_3d(<4 x float> addrspace(1)* %out,
 
 define amdgpu_kernel void @image_sample_g16_c_d_1d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %dsdh, half %dsdv, float %s) {
 ; CHECK-LABEL: @image_sample_g16_c_d_1d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.d.1d.v4f32.f16.f32(i32 15, float [[ZCOMPARE:%.*]], half [[DSDH:%.*]], half [[DSDV:%.*]], float [[S:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.d.1d.v4f32.f16.f32(i32 15, float [[ZCOMPARE:%.*]], half [[DSDH:%.*]], half [[DSDV:%.*]], float [[S:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %dsdh32 = fpext half %dsdh to float
@@ -3603,8 +3603,8 @@ define amdgpu_kernel void @image_sample_g16_c_d_1d(<4 x float> addrspace(1)* %ou
 
 define amdgpu_kernel void @image_sample_g16_c_d_2d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %dsdh, half %dtdh, half %dsdv, half %dtdv, float %s, float %t) {
 ; CHECK-LABEL: @image_sample_g16_c_d_2d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.d.2d.v4f32.f16.f32(i32 15, float [[ZCOMPARE:%.*]], half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], float [[S:%.*]], float [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.d.2d.v4f32.f16.f32(i32 15, float [[ZCOMPARE:%.*]], half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], float [[S:%.*]], float [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %dsdh32 = fpext half %dsdh to float
@@ -3618,8 +3618,8 @@ define amdgpu_kernel void @image_sample_g16_c_d_2d(<4 x float> addrspace(1)* %ou
 
 define amdgpu_kernel void @image_sample_g16_d_cl_1d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %dsdh, half %dsdv, float %s, float %clamp) {
 ; CHECK-LABEL: @image_sample_g16_d_cl_1d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.d.cl.1d.v4f32.f16.f32(i32 15, half [[DSDH:%.*]], half [[DSDV:%.*]], float [[S:%.*]], float [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.d.cl.1d.v4f32.f16.f32(i32 15, half [[DSDH:%.*]], half [[DSDV:%.*]], float [[S:%.*]], float [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %dsdh32 = fpext half %dsdh to float
@@ -3631,8 +3631,8 @@ define amdgpu_kernel void @image_sample_g16_d_cl_1d(<4 x float> addrspace(1)* %o
 
 define amdgpu_kernel void @image_sample_g16_d_cl_2d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %dsdh, half %dtdh, half %dsdv, half %dtdv, float %s, float %t, float %clamp) {
 ; CHECK-LABEL: @image_sample_g16_d_cl_2d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.d.cl.2d.v4f32.f16.f32(i32 15, half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], float [[S:%.*]], float [[T:%.*]], float [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.d.cl.2d.v4f32.f16.f32(i32 15, half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], float [[S:%.*]], float [[T:%.*]], float [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %dsdh32 = fpext half %dsdh to float
@@ -3646,8 +3646,8 @@ define amdgpu_kernel void @image_sample_g16_d_cl_2d(<4 x float> addrspace(1)* %o
 
 define amdgpu_kernel void @image_sample_g16_c_d_cl_1d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %dsdh, half %dsdv, float %s, float %clamp) {
 ; CHECK-LABEL: @image_sample_g16_c_d_cl_1d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.d.cl.1d.v4f32.f16.f32(i32 15, float [[ZCOMPARE:%.*]], half [[DSDH:%.*]], half [[DSDV:%.*]], float [[S:%.*]], float [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.d.cl.1d.v4f32.f16.f32(i32 15, float [[ZCOMPARE:%.*]], half [[DSDH:%.*]], half [[DSDV:%.*]], float [[S:%.*]], float [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %dsdh32 = fpext half %dsdh to float
@@ -3659,8 +3659,8 @@ define amdgpu_kernel void @image_sample_g16_c_d_cl_1d(<4 x float> addrspace(1)* 
 
 define amdgpu_kernel void @image_sample_g16_c_d_cl_2d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %dsdh, half %dtdh, half %dsdv, half %dtdv, float %s, float %t, float %clamp) {
 ; CHECK-LABEL: @image_sample_g16_c_d_cl_2d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.d.cl.2d.v4f32.f16.f32(i32 15, float [[ZCOMPARE:%.*]], half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], float [[S:%.*]], float [[T:%.*]], float [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.d.cl.2d.v4f32.f16.f32(i32 15, float [[ZCOMPARE:%.*]], half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], float [[S:%.*]], float [[T:%.*]], float [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %dsdh32 = fpext half %dsdh to float
@@ -3674,8 +3674,8 @@ define amdgpu_kernel void @image_sample_g16_c_d_cl_2d(<4 x float> addrspace(1)* 
 
 define amdgpu_kernel void @image_sample_g16_cd_1d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %dsdh, half %dsdv, float %s) {
 ; CHECK-LABEL: @image_sample_g16_cd_1d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.cd.1d.v4f32.f16.f32(i32 15, half [[DSDH:%.*]], half [[DSDV:%.*]], float [[S:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.cd.1d.v4f32.f16.f32(i32 15, half [[DSDH:%.*]], half [[DSDV:%.*]], float [[S:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %dsdh32 = fpext half %dsdh to float
@@ -3687,8 +3687,8 @@ define amdgpu_kernel void @image_sample_g16_cd_1d(<4 x float> addrspace(1)* %out
 
 define amdgpu_kernel void @image_sample_g16_cd_2d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %dsdh, half %dtdh, half %dsdv, half %dtdv, float %s, float %t) {
 ; CHECK-LABEL: @image_sample_g16_cd_2d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.cd.2d.v4f32.f16.f32(i32 15, half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], float [[S:%.*]], float [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.cd.2d.v4f32.f16.f32(i32 15, half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], float [[S:%.*]], float [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %dsdh32 = fpext half %dsdh to float
@@ -3702,8 +3702,8 @@ define amdgpu_kernel void @image_sample_g16_cd_2d(<4 x float> addrspace(1)* %out
 
 define amdgpu_kernel void @image_sample_g16_c_cd_1d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %dsdh, half %dsdv, float %s) {
 ; CHECK-LABEL: @image_sample_g16_c_cd_1d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.cd.1d.v4f32.f16.f32(i32 15, float [[ZCOMPARE:%.*]], half [[DSDH:%.*]], half [[DSDV:%.*]], float [[S:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.cd.1d.v4f32.f16.f32(i32 15, float [[ZCOMPARE:%.*]], half [[DSDH:%.*]], half [[DSDV:%.*]], float [[S:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %dsdh32 = fpext half %dsdh to float
@@ -3715,8 +3715,8 @@ define amdgpu_kernel void @image_sample_g16_c_cd_1d(<4 x float> addrspace(1)* %o
 
 define amdgpu_kernel void @image_sample_g16_c_cd_2d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %dsdh, half %dtdh, half %dsdv, half %dtdv, float %s, float %t) {
 ; CHECK-LABEL: @image_sample_g16_c_cd_2d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.cd.2d.v4f32.f16.f32(i32 15, float [[ZCOMPARE:%.*]], half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], float [[S:%.*]], float [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.cd.2d.v4f32.f16.f32(i32 15, float [[ZCOMPARE:%.*]], half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], float [[S:%.*]], float [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %dsdh32 = fpext half %dsdh to float
@@ -3730,8 +3730,8 @@ define amdgpu_kernel void @image_sample_g16_c_cd_2d(<4 x float> addrspace(1)* %o
 
 define amdgpu_kernel void @image_sample_g16_cd_cl_1d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %dsdh, half %dsdv, float %s, float %clamp) {
 ; CHECK-LABEL: @image_sample_g16_cd_cl_1d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.cd.cl.1d.v4f32.f16.f32(i32 15, half [[DSDH:%.*]], half [[DSDV:%.*]], float [[S:%.*]], float [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.cd.cl.1d.v4f32.f16.f32(i32 15, half [[DSDH:%.*]], half [[DSDV:%.*]], float [[S:%.*]], float [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %dsdh32 = fpext half %dsdh to float
@@ -3743,8 +3743,8 @@ define amdgpu_kernel void @image_sample_g16_cd_cl_1d(<4 x float> addrspace(1)* %
 
 define amdgpu_kernel void @image_sample_g16_cd_cl_2d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %dsdh, half %dtdh, half %dsdv, half %dtdv, float %s, float %t, float %clamp) {
 ; CHECK-LABEL: @image_sample_g16_cd_cl_2d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.cd.cl.2d.v4f32.f16.f32(i32 15, half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], float [[S:%.*]], float [[T:%.*]], float [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.cd.cl.2d.v4f32.f16.f32(i32 15, half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], float [[S:%.*]], float [[T:%.*]], float [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %dsdh32 = fpext half %dsdh to float
@@ -3758,8 +3758,8 @@ define amdgpu_kernel void @image_sample_g16_cd_cl_2d(<4 x float> addrspace(1)* %
 
 define amdgpu_kernel void @image_sample_g16_c_cd_cl_1d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %dsdh, half %dsdv, float %s, float %clamp) {
 ; CHECK-LABEL: @image_sample_g16_c_cd_cl_1d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.1d.v4f32.f16.f32(i32 15, float [[ZCOMPARE:%.*]], half [[DSDH:%.*]], half [[DSDV:%.*]], float [[S:%.*]], float [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.1d.v4f32.f16.f32(i32 15, float [[ZCOMPARE:%.*]], half [[DSDH:%.*]], half [[DSDV:%.*]], float [[S:%.*]], float [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %dsdh32 = fpext half %dsdh to float
@@ -3771,8 +3771,8 @@ define amdgpu_kernel void @image_sample_g16_c_cd_cl_1d(<4 x float> addrspace(1)*
 
 define amdgpu_kernel void @image_sample_g16_c_cd_cl_2d(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %dsdh, half %dtdh, half %dsdv, half %dtdv, float %s, float %t, float %clamp) {
 ; CHECK-LABEL: @image_sample_g16_c_cd_cl_2d(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.2d.v4f32.f16.f32(i32 15, float [[ZCOMPARE:%.*]], half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], float [[S:%.*]], float [[T:%.*]], float [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.2d.v4f32.f16.f32(i32 15, float [[ZCOMPARE:%.*]], half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], float [[S:%.*]], float [[T:%.*]], float [[CLAMP:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %dsdh32 = fpext half %dsdh to float
@@ -3786,8 +3786,8 @@ define amdgpu_kernel void @image_sample_g16_c_cd_cl_2d(<4 x float> addrspace(1)*
 
 define amdgpu_kernel void @image_sample_g16_c_d_o_2darray_V1(float addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 %offset, float %zcompare, half %dsdh, half %dtdh, half %dsdv, half %dtdv, float %s, float %t, float %slice) {
 ; CHECK-LABEL: @image_sample_g16_c_d_o_2darray_V1(
-; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.amdgcn.image.sample.c.d.o.2darray.f32.f16.f32(i32 4, i32 [[OFFSET:%.*]], float [[ZCOMPARE:%.*]], half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], float [[S:%.*]], float [[T:%.*]], float [[SLICE:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store float [[TMP1]], float addrspace(1)* [[OUT:%.*]], align 4
+; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.amdgcn.image.sample.c.d.o.2darray.f32.f16.f32(i32 4, i32 [[OFFSET:%.*]], float [[ZCOMPARE:%.*]], half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], float [[S:%.*]], float [[T:%.*]], float [[SLICE:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store float [[RES]], float addrspace(1)* [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %dsdh32 = fpext half %dsdh to float
@@ -3801,8 +3801,8 @@ define amdgpu_kernel void @image_sample_g16_c_d_o_2darray_V1(float addrspace(1)*
 
 define amdgpu_kernel void @image_sample_g16_c_d_o_2darray_V2(<2 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 %offset, float %zcompare, half %dsdh, half %dtdh, half %dsdv, half %dtdv, float %s, float %t, float %slice) {
 ; CHECK-LABEL: @image_sample_g16_c_d_o_2darray_V2(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x float> @llvm.amdgcn.image.sample.c.d.o.2darray.v2f32.f16.f32(i32 6, i32 [[OFFSET:%.*]], float [[ZCOMPARE:%.*]], half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], float [[S:%.*]], float [[T:%.*]], float [[SLICE:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <2 x float> [[TMP1]], <2 x float> addrspace(1)* [[OUT:%.*]], align 8
+; CHECK-NEXT:    [[RES:%.*]] = call <2 x float> @llvm.amdgcn.image.sample.c.d.o.2darray.v2f32.f16.f32(i32 6, i32 [[OFFSET:%.*]], float [[ZCOMPARE:%.*]], half [[DSDH:%.*]], half [[DTDH:%.*]], half [[DSDV:%.*]], half [[DTDV:%.*]], float [[S:%.*]], float [[T:%.*]], float [[SLICE:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <2 x float> [[RES]], <2 x float> addrspace(1)* [[OUT:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %dsdh32 = fpext half %dsdh to float
@@ -3820,8 +3820,8 @@ define amdgpu_kernel void @image_sample_g16_c_d_o_2darray_V2(<2 x float> addrspa
 
 define amdgpu_kernel void @image_sample_a16_1d_nnan(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %s) {
 ; CHECK-LABEL: @image_sample_a16_1d_nnan(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f16(i32 15, half [[S:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call nnan <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f16(i32 15, half [[S:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
@@ -3832,8 +3832,8 @@ define amdgpu_kernel void @image_sample_a16_1d_nnan(<4 x float> addrspace(1)* %o
 
 define amdgpu_kernel void @image_sample_a16_1d_nnan_ninf_nsz(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %s) {
 ; CHECK-LABEL: @image_sample_a16_1d_nnan_ninf_nsz(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan ninf nsz <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f16(i32 15, half [[S:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call nnan ninf nsz <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f16(i32 15, half [[S:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
@@ -3844,8 +3844,8 @@ define amdgpu_kernel void @image_sample_a16_1d_nnan_ninf_nsz(<4 x float> addrspa
 
 define amdgpu_kernel void @image_sample_a16_1d_fast(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %s) {
 ; CHECK-LABEL: @image_sample_a16_1d_fast(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f16(i32 15, half [[S:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call fast <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f16(i32 15, half [[S:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
@@ -3856,8 +3856,8 @@ define amdgpu_kernel void @image_sample_a16_1d_fast(<4 x float> addrspace(1)* %o
 
 define amdgpu_kernel void @image_sample_a16_2d_nnan(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %s, half %t) {
 ; CHECK-LABEL: @image_sample_a16_2d_nnan(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f16(i32 15, half [[S:%.*]], half [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call nnan <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f16(i32 15, half [[S:%.*]], half [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
@@ -3869,8 +3869,8 @@ define amdgpu_kernel void @image_sample_a16_2d_nnan(<4 x float> addrspace(1)* %o
 
 define amdgpu_kernel void @image_sample_a16_3d_nnan(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %s, half %t, half %r) {
 ; CHECK-LABEL: @image_sample_a16_3d_nnan(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan <4 x float> @llvm.amdgcn.image.sample.3d.v4f32.f16(i32 15, half [[S:%.*]], half [[T:%.*]], half [[R:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call nnan <4 x float> @llvm.amdgcn.image.sample.3d.v4f32.f16(i32 15, half [[S:%.*]], half [[T:%.*]], half [[R:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
@@ -3884,8 +3884,8 @@ define amdgpu_kernel void @image_sample_a16_3d_nnan(<4 x float> addrspace(1)* %o
 define amdgpu_kernel void @image_sample_a16_cube_nnan(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %s, half %t, half %face) {
 ;
 ; CHECK-LABEL: @image_sample_a16_cube_nnan(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan <4 x float> @llvm.amdgcn.image.sample.cube.v4f32.f16(i32 15, half [[S:%.*]], half [[T:%.*]], half [[FACE:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call nnan <4 x float> @llvm.amdgcn.image.sample.cube.v4f32.f16(i32 15, half [[S:%.*]], half [[T:%.*]], half [[FACE:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
@@ -3898,8 +3898,8 @@ define amdgpu_kernel void @image_sample_a16_cube_nnan(<4 x float> addrspace(1)* 
 
 define amdgpu_kernel void @image_sample_a16_1darray_nnan(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %s, half %slice) {
 ; CHECK-LABEL: @image_sample_a16_1darray_nnan(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan <4 x float> @llvm.amdgcn.image.sample.1darray.v4f32.f16(i32 15, half [[S:%.*]], half [[SLICE:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call nnan <4 x float> @llvm.amdgcn.image.sample.1darray.v4f32.f16(i32 15, half [[S:%.*]], half [[SLICE:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
@@ -3911,8 +3911,8 @@ define amdgpu_kernel void @image_sample_a16_1darray_nnan(<4 x float> addrspace(1
 
 define amdgpu_kernel void @image_sample_a16_2darray_nnan(<4 x float> addrspace(1)* %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %s, half %t, half %slice) {
 ; CHECK-LABEL: @image_sample_a16_2darray_nnan(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan <4 x float> @llvm.amdgcn.image.sample.2darray.v4f32.f16(i32 15, half [[S:%.*]], half [[T:%.*]], half [[SLICE:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call nnan <4 x float> @llvm.amdgcn.image.sample.2darray.v4f32.f16(i32 15, half [[S:%.*]], half [[T:%.*]], half [[SLICE:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], <4 x float> addrspace(1)* [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
