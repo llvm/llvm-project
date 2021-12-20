@@ -1070,6 +1070,9 @@ class ImageDimIntrinsicInfo<AMDGPUImageDimIntrinsic I> {
   AMDGPUDimProps Dim = I.P.Dim;
   AMDGPUImageDimIntrinsicEval DimEval = AMDGPUImageDimIntrinsicEval<I.P>;
 
+  bits<8> NumOffsetArgs = DimEval.NumOffsetArgs;
+  bits<8> NumBiasArgs = DimEval.NumBiasArgs;
+  bits<8> NumZCompareArgs = DimEval.NumZCompareArgs;
   bits<8> NumGradients = DimEval.NumGradientArgs;
   bits<8> NumDmask = DimEval.NumDmaskArgs;
   bits<8> NumData = DimEval.NumDataArgs;
@@ -1078,6 +1081,9 @@ class ImageDimIntrinsicInfo<AMDGPUImageDimIntrinsic I> {
 
   bits<8> DMaskIndex = DimEval.DmaskArgIndex;
   bits<8> VAddrStart = DimEval.VAddrArgIndex;
+  bits<8> OffsetIndex = DimEval.OffsetArgIndex;
+  bits<8> BiasIndex = DimEval.BiasArgIndex;
+  bits<8> ZCompareIndex = DimEval.ZCompareArgIndex;
   bits<8> GradientStart = DimEval.GradientArgIndex;
   bits<8> CoordStart = DimEval.CoordArgIndex;
   bits<8> LodIndex = DimEval.LodArgIndex;
@@ -1089,6 +1095,8 @@ class ImageDimIntrinsicInfo<AMDGPUImageDimIntrinsic I> {
   bits<8> TexFailCtrlIndex = DimEval.TexFailCtrlArgIndex;
   bits<8> CachePolicyIndex = DimEval.CachePolicyArgIndex;
 
+  bits<8> BiasTyArg = !add(I.P.NumRetAndDataAnyTypes,
+    !if(!eq(NumOffsetArgs, 0), 0, I.P.ExtraAddrArgs[0].Type.isAny));
   bits<8> GradientTyArg = !add(I.P.NumRetAndDataAnyTypes,
     !foldl(0, I.P.ExtraAddrArgs, cnt, arg, !add(cnt, arg.Type.isAny)));
   bits<8> CoordTyArg = !add(GradientTyArg, !if(I.P.Gradients, 1, 0));
@@ -1096,10 +1104,10 @@ class ImageDimIntrinsicInfo<AMDGPUImageDimIntrinsic I> {
 
 def ImageDimIntrinsicTable : GenericTable {
   let FilterClass = "ImageDimIntrinsicInfo";
-  let Fields = ["Intr", "BaseOpcode", "Dim", "NumGradients", "NumDmask", "NumData", "NumVAddrs", "NumArgs",
-    "DMaskIndex", "VAddrStart", "GradientStart", "CoordStart", "LodIndex", "MipIndex", "VAddrEnd",
+  let Fields = ["Intr", "BaseOpcode", "Dim", "NumOffsetArgs", "NumBiasArgs", "NumZCompareArgs", "NumGradients", "NumDmask", "NumData", "NumVAddrs", "NumArgs",
+    "DMaskIndex", "VAddrStart", "OffsetIndex", "BiasIndex", "ZCompareIndex", "GradientStart", "CoordStart", "LodIndex", "MipIndex", "VAddrEnd",
     "RsrcIndex", "SampIndex", "UnormIndex", "TexFailCtrlIndex", "CachePolicyIndex",
-    "GradientTyArg", "CoordTyArg"];
+    "BiasTyArg", "GradientTyArg", "CoordTyArg"];
   string TypeOf_BaseOpcode = "MIMGBaseOpcode";
   string TypeOf_Dim = "MIMGDim";
 

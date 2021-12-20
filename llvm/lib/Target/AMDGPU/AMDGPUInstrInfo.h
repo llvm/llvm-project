@@ -49,6 +49,9 @@ struct ImageDimIntrinsicInfo {
   unsigned BaseOpcode;
   MIMGDim Dim;
 
+  uint8_t NumOffsetArgs;
+  uint8_t NumBiasArgs;
+  uint8_t NumZCompareArgs;
   uint8_t NumGradients;
   uint8_t NumDmask;
   uint8_t NumData;
@@ -57,6 +60,9 @@ struct ImageDimIntrinsicInfo {
 
   uint8_t DMaskIndex;
   uint8_t VAddrStart;
+  uint8_t OffsetIndex;
+  uint8_t BiasIndex;
+  uint8_t ZCompareIndex;
   uint8_t GradientStart;
   uint8_t CoordStart;
   uint8_t LodIndex;
@@ -68,6 +74,7 @@ struct ImageDimIntrinsicInfo {
   uint8_t TexFailCtrlIndex;
   uint8_t CachePolicyIndex;
 
+  uint8_t BiasTyArg;
   uint8_t GradientTyArg;
   uint8_t CoordTyArg;
 };
