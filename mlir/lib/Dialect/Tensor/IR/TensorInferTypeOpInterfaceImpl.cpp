@@ -152,11 +152,11 @@ struct ReifyExpandOrCollapseShapeOp
   reifyResultShapes(Operation *op, OpBuilder &b,
                     ReifiedRankedShapedTypeDims &reifiedReturnShapes) const {
     auto loc = op->getLoc();
-    auto reshape_op = cast<OpTy>(op);
-    auto result_shape = getReshapeOutputShapeFromInputShape(
-        b, loc, reshape_op.src(), reshape_op.getResultType().getShape(),
-        reshape_op.getReassociationMaps());
-    reifiedReturnShapes.push_back(getAsValues(b, loc, result_shape));
+    auto reshapeOp = cast<OpTy>(op);
+    auto resultShape = getReshapeOutputShapeFromInputShape(
+        b, loc, reshapeOp.src(), reshapeOp.getResultType().getShape(),
+        reshapeOp.getReassociationMaps());
+    reifiedReturnShapes.push_back(getAsValues(b, loc, resultShape));
     return success();
   }
 };

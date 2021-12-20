@@ -28,9 +28,9 @@ namespace {
 struct GpuAllReduceRewriter {
   using AccumulatorFactory = std::function<Value(Value, Value)>;
 
-  GpuAllReduceRewriter(gpu::GPUFuncOp funcOp_, gpu::AllReduceOp reduceOp_,
-                       PatternRewriter &rewriter_)
-      : funcOp(funcOp_), reduceOp(reduceOp_), rewriter(rewriter_),
+  GpuAllReduceRewriter(gpu::GPUFuncOp funcOp, gpu::AllReduceOp reduceOp,
+                       PatternRewriter &rewriter)
+      : funcOp(funcOp), reduceOp(reduceOp), rewriter(rewriter),
         loc(reduceOp.getLoc()), valueType(reduceOp.value().getType()),
         indexType(IndexType::get(reduceOp.getContext())),
         int32Type(IntegerType::get(reduceOp.getContext(), /*width=*/32)) {}

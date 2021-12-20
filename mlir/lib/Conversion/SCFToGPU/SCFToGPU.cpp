@@ -259,8 +259,8 @@ void AffineLoopToGpuConverter::createLaunch(AffineForOp rootForOp,
   // from 0 to N with step 1.  Therefore, loop induction variables are replaced
   // with (gpu-thread/block-id * S) + LB.
   builder.setInsertionPointToStart(&launchOp.body().front());
-  auto lbArgumentIt = lbs.begin();
-  auto stepArgumentIt = steps.begin();
+  auto *lbArgumentIt = lbs.begin();
+  auto *stepArgumentIt = steps.begin();
   for (auto en : llvm::enumerate(ivs)) {
     Value id =
         en.index() < numBlockDims
@@ -640,7 +640,7 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
     } else if (op == launchOp.getOperation()) {
       // Found our sentinel value. We have finished the operations from one
       // nesting level, pop one level back up.
-      auto parent = rewriter.getInsertionPoint()->getParentOp();
+      auto *parent = rewriter.getInsertionPoint()->getParentOp();
       rewriter.setInsertionPointAfter(parent);
       leftNestingScope = true;
       seenSideeffects = false;

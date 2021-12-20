@@ -223,7 +223,7 @@ void propagateShapesInRegion(Region &region) {
           // Check whether this use case is replaceable. We define an op as
           // being replaceable if it is used by a ReturnOp or a TosaOp.
           bool replaceable = true;
-          for (auto user : result.getUsers()) {
+          for (auto *user : result.getUsers()) {
             if (isa<ReturnOp>(user))
               continue;
             if (user->getDialect()->getNamespace() ==

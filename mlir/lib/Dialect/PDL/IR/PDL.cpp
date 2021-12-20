@@ -271,8 +271,8 @@ bool OperationOp::hasTypeInference() {
 static LogicalResult verify(PatternOp pattern) {
   Region &body = pattern.body();
   Operation *term = body.front().getTerminator();
-  auto rewrite_op = dyn_cast<RewriteOp>(term);
-  if (!rewrite_op) {
+  auto rewriteOp = dyn_cast<RewriteOp>(term);
+  if (!rewriteOp) {
     return pattern.emitOpError("expected body to terminate with `pdl.rewrite`")
         .attachNote(term->getLoc())
         .append("see terminator defined here");

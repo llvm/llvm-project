@@ -1426,9 +1426,9 @@ namespace {
 ///   Layout: {{n, strideW * w + dilationW * kw, c}, {kw, c}, {n, w, c}}
 /// ```
 /// kw is unrolled, w is unrolled iff dilationW > 1.
-struct Conv1D_NWC_Generator : public StructuredGenerator<LinalgOp> {
-  Conv1D_NWC_Generator(OpBuilder &builder, LinalgOp linalgOp, int strideW,
-                       int dilationW)
+struct Conv1DNwcGenerator : public StructuredGenerator<LinalgOp> {
+  Conv1DNwcGenerator(OpBuilder &builder, LinalgOp linalgOp, int strideW,
+                     int dilationW)
       : StructuredGenerator<LinalgOp>(builder, linalgOp), valid(false),
         strideW(strideW), dilationW(dilationW) {
     // Determine whether `linalgOp` can be generated with this generator
@@ -1594,7 +1594,7 @@ struct Conv1D_NWC_Generator : public StructuredGenerator<LinalgOp> {
   /// ```
   /// kw is always unrolled.
   /// TODO: w (resp. kw) is unrolled when the strideW ( resp. dilationW) is > 1.
-  FailureOr<Operation *> dilated_conv() {
+  FailureOr<Operation *> dilatedConv() {
     if (!valid)
       return failure();
 
@@ -1730,7 +1730,7 @@ struct Conv1D_NWC_Generator : public StructuredGenerator<LinalgOp> {
     if (layout({/*lhsIndex*/ {n, strideW * w + dilationW * kw, c},
                 /*rhsIndex*/ {kw, c},
                 /*resIndex*/ {n, w, c}}))
-      return dilated_conv();
+      return dilatedConv();
     return failure();
   }
 
@@ -1752,7 +1752,7 @@ vectorizeConvolution(OpBuilder &b, ConvolutionOpInterface convOp) {
   auto stride = strides ? *strides.getValues<uint64_t>().begin() : 1;
   auto dilation = dilations ? *dilations.getValues<uint64_t>().begin() : 1;
   LinalgOp linalgOp = cast<LinalgOp>(convOp.getOperation());
-  Conv1D_NWC_Generator e(b, linalgOp, stride, dilation);
+  Conv1DNwcGenerator e(b, linalgOp, stride, dilation);
   auto res = e.generateConv();
   if (succeeded(res))
     return res;

@@ -861,11 +861,11 @@ convertOmpWsLoop(Operation &opInst, llvm::IRBuilderBase &builder,
 }
 
 // Convert an Atomic Ordering attribute to llvm::AtomicOrdering.
-llvm::AtomicOrdering convertAtomicOrdering(Optional<StringRef> AOAttr) {
-  if (!AOAttr.hasValue())
+llvm::AtomicOrdering convertAtomicOrdering(Optional<StringRef> aoAttr) {
+  if (!aoAttr.hasValue())
     return llvm::AtomicOrdering::Monotonic; // Default Memory Ordering
 
-  return StringSwitch<llvm::AtomicOrdering>(AOAttr.getValue())
+  return StringSwitch<llvm::AtomicOrdering>(aoAttr.getValue())
       .Case("seq_cst", llvm::AtomicOrdering::SequentiallyConsistent)
       .Case("acq_rel", llvm::AtomicOrdering::AcquireRelease)
       .Case("acquire", llvm::AtomicOrdering::Acquire)
@@ -889,7 +889,7 @@ convertOmpAtomicRead(Operation &opInst, llvm::IRBuilderBase &builder,
       moduleTranslation.translateLoc(opInst.getLoc(), subprogram);
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder.saveIP(),
                                                     llvm::DebugLoc(diLoc));
-  llvm::AtomicOrdering AO = convertAtomicOrdering(readOp.memory_order());
+  llvm::AtomicOrdering ao = convertAtomicOrdering(readOp.memory_order());
   llvm::Value *address = moduleTranslation.lookupValue(readOp.address());
   llvm::OpenMPIRBuilder::InsertPointTy currentIP = builder.saveIP();
 
@@ -903,9 +903,9 @@ convertOmpAtomicRead(Operation &opInst, llvm::IRBuilderBase &builder,
 
   // Restore the IP and insert Atomic Read.
   builder.restoreIP(currentIP);
-  llvm::OpenMPIRBuilder::AtomicOpValue V = {v, false, false};
-  llvm::OpenMPIRBuilder::AtomicOpValue X = {address, false, false};
-  builder.restoreIP(ompBuilder->createAtomicRead(ompLoc, X, V, AO));
+  llvm::OpenMPIRBuilder::AtomicOpValue atomicV = {v, false, false};
+  llvm::OpenMPIRBuilder::AtomicOpValue x = {address, false, false};
+  builder.restoreIP(ompBuilder->createAtomicRead(ompLoc, x, atomicV, ao));
   return success();
 }
 

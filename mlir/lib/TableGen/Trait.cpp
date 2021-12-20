@@ -26,7 +26,7 @@ using namespace mlir::tblgen;
 //===----------------------------------------------------------------------===//
 
 Trait Trait::create(const llvm::Init *init) {
-  auto def = cast<llvm::DefInit>(init)->getDef();
+  auto *def = cast<llvm::DefInit>(init)->getDef();
   if (def->isSubClassOf("PredTrait"))
     return Trait(Kind::Pred, def);
   if (def->isSubClassOf("GenInternalTrait"))
