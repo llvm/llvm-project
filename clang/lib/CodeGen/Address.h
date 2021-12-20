@@ -79,6 +79,18 @@ public:
     assert(isValid());
     return Alignment;
   }
+
+  /// Return address with different pointer, but same element type and
+  /// alignment.
+  Address withPointer(llvm::Value *NewPointer) const {
+    return Address(NewPointer, ElementType, Alignment);
+  }
+
+  /// Return address with different alignment, but same pointer and element
+  /// type.
+  Address withAlignment(CharUnits NewAlignment) const {
+    return Address(Pointer, ElementType, NewAlignment);
+  }
 };
 
 /// A specialization of Address that requires the address to be an
