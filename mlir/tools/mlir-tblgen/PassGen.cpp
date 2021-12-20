@@ -145,12 +145,10 @@ static void emitPassDecls(ArrayRef<Pass> passes, raw_ostream &os) {
 // GEN: Pass registration generation
 //===----------------------------------------------------------------------===//
 
-/// The code snippet used to generate the start of a pass base class.
+/// The code snippet used to generate a pass registration.
 ///
 /// {0}: The def name of the pass record.
-/// {1}: The argument of the pass.
-/// {2): The summary of the pass.
-/// {3}: The code for constructing the pass.
+/// {1}: The pass constructor call.
 const char *const passRegistrationCode = R"(
 //===----------------------------------------------------------------------===//
 // {0} Registration
@@ -163,6 +161,9 @@ inline void register{0}Pass() {{
 }
 )";
 
+/// The code snippet used to generate a function to register all passes in a
+/// group.
+///
 /// {0}: The name of the pass group.
 const char *const passGroupRegistrationCode = R"(
 //===----------------------------------------------------------------------===//
@@ -204,7 +205,7 @@ static void emitDecls(const llvm::RecordKeeper &recordKeeper, raw_ostream &os) {
 }
 
 static mlir::GenRegistration
-    genRegister("gen-pass-decls", "Generate operation documentation",
+    genRegister("gen-pass-decls", "Generate pass declarations",
                 [](const llvm::RecordKeeper &records, raw_ostream &os) {
                   emitDecls(records, os);
                   return false;
