@@ -141,6 +141,9 @@ public:
   CallDescriptionMap(const CallDescriptionMap &) = delete;
   CallDescriptionMap &operator=(const CallDescription &) = delete;
 
+  CallDescriptionMap(CallDescriptionMap &&) = default;
+  CallDescriptionMap &operator=(CallDescriptionMap &&) = default;
+
   LLVM_NODISCARD const T *lookup(const CallEvent &Call) const {
     // Slow path: linear lookup.
     // TODO: Implement some sort of fast path.
