@@ -165,9 +165,6 @@
 /* Define to 1 if you have the `malloc_zone_statistics' function. */
 /* HAVE_MALLOC_ZONE_STATISTICS defined in Bazel */
 
-/* Define to 1 if you have the `posix_fallocate' function. */
-/* HAVE_POSIX_FALLOCATE defined in Bazel */
-
 /* Define to 1 if you have the `posix_spawn' function. */
 #define HAVE_POSIX_SPAWN 1
 

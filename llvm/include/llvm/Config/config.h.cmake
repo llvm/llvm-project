@@ -152,9 +152,6 @@
 /* Define to 1 if you have the `malloc_zone_statistics' function. */
 #cmakedefine HAVE_MALLOC_ZONE_STATISTICS ${HAVE_MALLOC_ZONE_STATISTICS}
 
-/* Define to 1 if you have the `posix_fallocate' function. */
-#cmakedefine HAVE_POSIX_FALLOCATE ${HAVE_POSIX_FALLOCATE}
-
 /* Define to 1 if you have the `posix_spawn' function. */
 #cmakedefine HAVE_POSIX_SPAWN ${HAVE_POSIX_SPAWN}
 
