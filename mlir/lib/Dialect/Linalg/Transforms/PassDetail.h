@@ -38,6 +38,10 @@ namespace memref {
 class MemRefDialect;
 } // namespace memref
 
+namespace tensor {
+class TensorDialect;
+} // namespace tensor
+
 namespace vector {
 class VectorDialect;
 } // namespace vector

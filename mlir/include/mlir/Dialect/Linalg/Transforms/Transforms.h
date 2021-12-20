@@ -86,6 +86,10 @@ void populateFoldReshapeOpsByLinearizationPatterns(RewritePatternSet &patterns);
 void populateFoldUnitDimsReshapeOpsByLinearizationPatterns(
     RewritePatternSet &patterns);
 
+/// Patterns to convert from one named op to another. These can be seen as
+/// canonicalizations of named ops into another named op.
+void populateLinalgNamedOpConversionPatterns(RewritePatternSet &patterns);
+
 /// Populates the given list with patterns to bufferize linalg ops.
 void populateLinalgBufferizePatterns(
     bufferization::BufferizeTypeConverter &converter,
