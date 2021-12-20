@@ -964,8 +964,18 @@ void TraceSwitchPartImpl(ThreadState* thr) {
   }
   {
     Lock lock(&ctx->slot_mtx);
-    ctx->slot_queue.Remove(thr->slot);
-    ctx->slot_queue.PushBack(thr->slot);
+    // There is a small chance that the slot may be not queued at this point.
+    // This can happen if the slot has kEpochLast epoch and another thread
+    // in FindSlotAndLock discovered that it's exhausted and removed it from
+    // the slot queue. kEpochLast can happen in 2 cases: (1) if TraceSwitchPart
+    // was called with the slot locked and epoch already at kEpochLast,
+    // or (2) if we've acquired a new slot in SlotLock in the beginning
+    // of the function and the slot was at kEpochLast - 1, so after increment
+    // in SlotAttachAndLock it become kEpochLast.
+    if (ctx->slot_queue.Queued(thr->slot)) {
+      ctx->slot_queue.Remove(thr->slot);
+      ctx->slot_queue.PushBack(thr->slot);
+    }
     if (recycle)
       ctx->trace_part_recycle.PushBack(recycle);
   }
