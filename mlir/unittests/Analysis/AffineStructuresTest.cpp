@@ -119,47 +119,50 @@ TEST(FlatAffineConstraintsTest, FindSampleTest) {
   checkSample(true, parseFAC("(x) : (7 * x >= 0, -7 * x + 5 >= 0)", &context));
 
   // 1 <= 5x and 5x <= 4 (no solution).
-  checkSample(false, makeFACFromConstraints(1, {{5, -1}, {-5, 4}}, {}));
+  checkSample(false,
+              parseFAC("(x) : (5 * x - 1 >= 0, -5 * x + 4 >= 0)", &context));
 
   // 1 <= 5x and 5x <= 9 (solution: x = 1).
-  checkSample(true, makeFACFromConstraints(1, {{5, -1}, {-5, 9}}, {}));
+  checkSample(true,
+              parseFAC("(x) : (5 * x - 1 >= 0, -5 * x + 9 >= 0)", &context));
 
   // Bounded sets with equalities.
   // x >= 8 and 40 >= y and x = y.
-  checkSample(
-      true, makeFACFromConstraints(2, {{1, 0, -8}, {0, -1, 40}}, {{1, -1, 0}}));
+  checkSample(true, parseFAC("(x,y) : (x - 8 >= 0, -y + 40 >= 0, x - y == 0)",
+                             &context));
 
   // x <= 10 and y <= 10 and 10 <= z and x + 2y = 3z.
   // solution: x = y = z = 10.
-  checkSample(true, makeFACFromConstraints(
-                        3, {{-1, 0, 0, 10}, {0, -1, 0, 10}, {0, 0, 1, -10}},
-                        {{1, 2, -3, 0}}));
+  checkSample(true, parseFAC("(x,y,z) : (-x + 10 >= 0, -y + 10 >= 0, "
+                             "z - 10 >= 0, x + 2 * y - 3 * z == 0)",
+                             &context));
 
   // x <= 10 and y <= 10 and 11 <= z and x + 2y = 3z.
   // This implies x + 2y >= 33 and x + 2y <= 30, which has no solution.
-  checkSample(false, makeFACFromConstraints(
-                         3, {{-1, 0, 0, 10}, {0, -1, 0, 10}, {0, 0, 1, -11}},
-                         {{1, 2, -3, 0}}));
+  checkSample(false, parseFAC("(x,y,z) : (-x + 10 >= 0, -y + 10 >= 0, "
+                              "z - 11 >= 0, x + 2 * y - 3 * z == 0)",
+                              &context));
 
   // 0 <= r and r <= 3 and 4q + r = 7.
   // Solution: q = 1, r = 3.
-  checkSample(true,
-              makeFACFromConstraints(2, {{0, 1, 0}, {0, -1, 3}}, {{4, 1, -7}}));
+  checkSample(
+      true,
+      parseFAC("(q,r) : (r >= 0, -r + 3 >= 0, 4 * q + r - 7 == 0)", &context));
 
   // 4q + r = 7 and r = 0.
   // Solution: q = 1, r = 3.
-  checkSample(false, makeFACFromConstraints(2, {}, {{4, 1, -7}, {0, 1, 0}}));
+  checkSample(false,
+              parseFAC("(q,r) : (4 * q + r - 7 == 0, r == 0)", &context));
 
   // The next two sets are large sets that should take a long time to sample
   // with a naive branch and bound algorithm but can be sampled efficiently with
   // the GBR algorithm.
   //
   // This is a triangle with vertices at (1/3, 0), (2/3, 0) and (10000, 10000).
-  checkSample(
-      true,
-      makeFACFromConstraints(
-          2, {{0, 1, 0}, {300000, -299999, -100000}, {-300000, 299998, 200000}},
-          {}));
+  checkSample(true, parseFAC("(x,y) : (y >= 0, "
+                             "300000 * x - 299999 * y - 100000 >= 0, "
+                             "-300000 * x + 299998 * y + 200000 >= 0)",
+                             &context));
 
   // This is a tetrahedron with vertices at
   // (1/3, 0, 0), (2/3, 0, 0), (2/3, 0, 10000), and (10000, 10000, 10000).
@@ -177,17 +180,13 @@ TEST(FlatAffineConstraintsTest, FindSampleTest) {
       {});
 
   // Same thing with some spurious extra dimensions equated to constants.
-  checkSample(true,
-              makeFACFromConstraints(
-                  5,
-                  {
-                      {0, 1, 0, 1, -1, 0},
-                      {0, -1, 1, -1, 1, 0},
-                      {300000, -299998, -1, -9, 21, -112000},
-                      {-150000, 149999, 0, -15, 47, 68000},
-                  },
-                  {{0, 0, 0, 1, -1, 0},       // p = q.
-                   {0, 0, 0, 1, 1, -2000}})); // p + q = 20000 => p = q = 10000.
+  checkSample(
+      true,
+      parseFAC("(a,b,c,d,e) : (b + d - e >= 0, -b + c - d + e >= 0, "
+               "300000 * a - 299998 * b - c - 9 * d + 21 * e - 112000 >= 0, "
+               "-150000 * a + 149999 * b - 15 * d + 47 * e + 68000 >= 0, "
+               "d - e == 0, d + e - 2000 == 0)",
+               &context));
 
   // This is a tetrahedron with vertices at
   // (1/3, 0, 0), (2/3, 0, 0), (2/3, 0, 100), (100, 100 - 1/3, 100).
@@ -204,40 +203,25 @@ TEST(FlatAffineConstraintsTest, FindSampleTest) {
   // empty.
 
   // This is a line segment from (0, 1/3) to (100, 100 + 1/3).
-  checkSample(false, makeFACFromConstraints(
-                         2,
-                         {
-                             {1, 0, 0},   // x >= 0.
-                             {-1, 0, 100} // -x + 100 >= 0, i.e., x <= 100.
-                         },
-                         {
-                             {3, -3, 1} // 3x - 3y + 1 = 0, i.e., y = x + 1/3.
-                         }));
+  checkSample(
+      false, parseFAC("(x,y) : (x >= 0, -x + 100 >= 0, 3 * x - 3 * y + 1 == 0)",
+                      &context));
 
   // A thin parallelogram. 0 <= x <= 100 and x + 1/3 <= y <= x + 2/3.
-  checkSample(false, makeFACFromConstraints(2,
-                                            {
-                                                {1, 0, 0},    // x >= 0.
-                                                {-1, 0, 100}, // x <= 100.
-                                                {3, -3, 2},   // 3x - 3y >= -2.
-                                                {-3, 3, -1},  // 3x - 3y <= -1.
-                                            },
-                                            {}));
+  checkSample(false,
+              parseFAC("(x,y) : (x >= 0, -x + 100 >= 0, "
+                       "3 * x - 3 * y + 2 >= 0, -3 * x + 3 * y - 1 >= 0)",
+                       &context));
 
-  checkSample(true, makeFACFromConstraints(2,
-                                           {
-                                               {2, 0, 0},   // 2x >= 1.
-                                               {-2, 0, 99}, // 2x <= 99.
-                                               {0, 2, 0},   // 2y >= 0.
-                                               {0, -2, 99}, // 2y <= 99.
-                                           },
-                                           {}));
+  checkSample(true, parseFAC("(x,y) : (2 * x >= 0, -2 * x + 99 >= 0, "
+                             "2 * y >= 0, -2 * y + 99 >= 0)",
+                             &context));
+
   // 2D cone with apex at (10000, 10000) and
   // edges passing through (1/3, 0) and (2/3, 0).
-  checkSample(
-      true,
-      makeFACFromConstraints(
-          2, {{300000, -299999, -100000}, {-300000, 299998, 200000}}, {}));
+  checkSample(true, parseFAC("(x,y) : (300000 * x - 299999 * y - 100000 >= 0, "
+                             "-300000 * x + 299998 * y + 200000 >= 0)",
+                             &context));
 
   // Cartesian product of a tetrahedron and a 2D cone.
   // The tetrahedron has vertices at
@@ -350,14 +334,9 @@ TEST(FlatAffineConstraintsTest, FindSampleTest) {
                           },
                           {});
 
-  checkSample(true, makeFACFromConstraints(3,
-                                           {
-                                               {2, 0, 0, -1}, // 2x >= 1
-                                           },
-                                           {{
-                                               {1, -1, 0, -1}, // y = x - 1
-                                               {0, 1, -1, 0},  // z = y
-                                           }}));
+  checkSample(true, parseFAC("(x, y, z) : (2 * x - 1 >= 0, x - y - 1 == 0, "
+                             "y - z == 0)",
+                             &context));
 
   // Regression tests for the computation of dual coefficients.
   checkSample(false, parseFAC("(x, y, z) : ("
@@ -377,67 +356,49 @@ TEST(FlatAffineConstraintsTest, FindSampleTest) {
 }
 
 TEST(FlatAffineConstraintsTest, IsIntegerEmptyTest) {
+
+  MLIRContext context;
+
   // 1 <= 5x and 5x <= 4 (no solution).
-  EXPECT_TRUE(
-      makeFACFromConstraints(1, {{5, -1}, {-5, 4}}, {}).isIntegerEmpty());
+  EXPECT_TRUE(parseFAC("(x) : (5 * x - 1 >= 0, -5 * x + 4 >= 0)", &context)
+                  .isIntegerEmpty());
   // 1 <= 5x and 5x <= 9 (solution: x = 1).
-  EXPECT_FALSE(
-      makeFACFromConstraints(1, {{5, -1}, {-5, 9}}, {}).isIntegerEmpty());
+  EXPECT_FALSE(parseFAC("(x) : (5 * x - 1 >= 0, -5 * x + 9 >= 0)", &context)
+                   .isIntegerEmpty());
 
   // Unbounded sets.
-  EXPECT_TRUE(makeFACFromConstraints(3,
-                                     {
-                                         {0, 2, 0, -1}, // 2y >= 1
-                                         {0, -2, 0, 1}, // 2y <= 1
-                                         {0, 0, 2, -1}, // 2z >= 1
-                                     },
-                                     {{2, 0, 0, -1}} // 2x = 1
-                                     )
+  EXPECT_TRUE(parseFAC("(x,y,z) : (2 * y - 1 >= 0, -2 * y + 1 >= 0, "
+                       "2 * z - 1 >= 0, 2 * x - 1 == 0)",
+                       &context)
                   .isIntegerEmpty());
 
-  EXPECT_FALSE(makeFACFromConstraints(3,
-                                      {
-                                          {2, 0, 0, -1},  // 2x >= 1
-                                          {-3, 0, 0, 3},  // 3x <= 3
-                                          {0, 0, 5, -6},  // 5z >= 6
-                                          {0, 0, -7, 17}, // 7z <= 17
-                                          {0, 3, 0, -2},  // 3y >= 2
-                                      },
-                                      {})
+  EXPECT_FALSE(parseFAC("(x,y,z) : (2 * x - 1 >= 0, -3 * x + 3 >= 0, "
+                        "5 * z - 6 >= 0, -7 * z + 17 >= 0, 3 * y - 2 >= 0)",
+                        &context)
                    .isIntegerEmpty());
 
-  EXPECT_FALSE(makeFACFromConstraints(3,
-                                      {
-                                          {2, 0, 0, -1}, // 2x >= 1
-                                      },
-                                      {{
-                                          {1, -1, 0, -1}, // y = x - 1
-                                          {0, 1, -1, 0},  // z = y
-                                      }})
-                   .isIntegerEmpty());
+  EXPECT_FALSE(
+      parseFAC("(x,y,z) : (2 * x - 1 >= 0, x - y - 1 == 0, y - z == 0)",
+               &context)
+          .isIntegerEmpty());
 
   // FlatAffineConstraints::isEmpty() does not detect the following sets to be
   // empty.
 
   // 3x + 7y = 1 and 0 <= x, y <= 10.
   // Since x and y are non-negative, 3x + 7y can never be 1.
-  EXPECT_TRUE(
-      makeFACFromConstraints(
-          2, {{1, 0, 0}, {-1, 0, 10}, {0, 1, 0}, {0, -1, 10}}, {{3, 7, -1}})
-          .isIntegerEmpty());
+  EXPECT_TRUE(parseFAC("(x,y) : (x >= 0, -x + 10 >= 0, y >= 0, -y + 10 >= 0, "
+                       "3 * x + 7 * y - 1 == 0)",
+                       &context)
+                  .isIntegerEmpty());
 
   // 2x = 3y and y = x - 1 and x + y = 6z + 2 and 0 <= x, y <= 100.
   // Substituting y = x - 1 in 3y = 2x, we obtain x = 3 and hence y = 2.
   // Since x + y = 5 cannot be equal to 6z + 2 for any z, the set is empty.
   EXPECT_TRUE(
-      makeFACFromConstraints(3,
-                             {
-                                 {1, 0, 0, 0},
-                                 {-1, 0, 0, 100},
-                                 {0, 1, 0, 0},
-                                 {0, -1, 0, 100},
-                             },
-                             {{2, -3, 0, 0}, {1, -1, 0, -1}, {1, 1, -6, -2}})
+      parseFAC("(x,y,z) : (x >= 0, -x + 100 >= 0, y >= 0, -y + 100 >= 0, "
+               "2 * x - 3 * y == 0, x - y - 1 == 0, x + y - 6 * z - 2 == 0)",
+               &context)
           .isIntegerEmpty());
 
   // 2x = 3y and y = x - 1 + 6z and x + y = 6q + 2 and 0 <= x, y <= 100.
@@ -445,36 +406,23 @@ TEST(FlatAffineConstraintsTest, IsIntegerEmptyTest) {
   // Now y = x - 1 + 6z implies y = 2 mod 3. In fact, since y is even, we have
   // y = 2 mod 6. Then since x = y + 1 + 6z, we have x = 3 mod 6, implying
   // x + y = 5 mod 6, which contradicts x + y = 6q + 2, so the set is empty.
-  EXPECT_TRUE(makeFACFromConstraints(
-                  4,
-                  {
-                      {1, 0, 0, 0, 0},
-                      {-1, 0, 0, 0, 100},
-                      {0, 1, 0, 0, 0},
-                      {0, -1, 0, 0, 100},
-                  },
-                  {{2, -3, 0, 0, 0}, {1, -1, 6, 0, -1}, {1, 1, 0, -6, -2}})
-                  .isIntegerEmpty());
+  EXPECT_TRUE(
+      parseFAC(
+          "(x,y,z,q) : (x >= 0, -x + 100 >= 0, y >= 0, -y + 100 >= 0, "
+          "2 * x - 3 * y == 0, x - y + 6 * z - 1 == 0, x + y - 6 * q - 2 == 0)",
+          &context)
+          .isIntegerEmpty());
 
   // Set with symbols.
-  FlatAffineConstraints fac6 = makeFACFromConstraints(2,
-                                                      {
-                                                          {1, 1, 0},
-                                                      },
-                                                      {
-                                                          {1, -1, 0},
-                                                      },
-                                                      1);
-  EXPECT_FALSE(fac6.isIntegerEmpty());
+  EXPECT_FALSE(
+      parseFAC("(x)[s] : (x + s >= 0, x - s == 0)", &context).isIntegerEmpty());
 }
 
 TEST(FlatAffineConstraintsTest, removeRedundantConstraintsTest) {
-  FlatAffineConstraints fac = makeFACFromConstraints(1,
-                                                     {
-                                                         {1, -2}, // x >= 2.
-                                                         {-1, 2}  // x <= 2.
-                                                     },
-                                                     {{1, -2}}); // x == 2.
+  MLIRContext context;
+
+  FlatAffineConstraints fac =
+      parseFAC("(x) : (x - 2 >= 0, -x + 2 >= 0, x - 2 == 0)", &context);
   fac.removeRedundantConstraints();
 
   // Both inequalities are redundant given the equality. Both have been removed.
@@ -482,12 +430,7 @@ TEST(FlatAffineConstraintsTest, removeRedundantConstraintsTest) {
   EXPECT_EQ(fac.getNumEqualities(), 1u);
 
   FlatAffineConstraints fac2 =
-      makeFACFromConstraints(2,
-                             {
-                                 {1, 0, -3}, // x >= 3.
-                                 {0, 1, -2}  // y >= 2 (redundant).
-                             },
-                             {{1, -1, 0}}); // x == y.
+      parseFAC("(x,y) : (x - 3 >= 0, y - 2 >= 0, x - y == 0)", &context);
   fac2.removeRedundantConstraints();
 
   // The second inequality is redundant and should have been removed. The
@@ -497,55 +440,53 @@ TEST(FlatAffineConstraintsTest, removeRedundantConstraintsTest) {
   EXPECT_EQ(fac2.getNumEqualities(), 1u);
 
   FlatAffineConstraints fac3 =
-      makeFACFromConstraints(3, {},
-                             {{1, -1, 0, 0},   // x == y.
-                              {1, 0, -1, 0},   // x == z.
-                              {0, 1, -1, 0}}); // y == z.
+      parseFAC("(x,y,z) : (x - y == 0, x - z == 0, y - z == 0)", &context);
   fac3.removeRedundantConstraints();
 
   // One of the three equalities can be removed.
   EXPECT_EQ(fac3.getNumInequalities(), 0u);
   EXPECT_EQ(fac3.getNumEqualities(), 2u);
 
-  FlatAffineConstraints fac4 = makeFACFromConstraints(
-      17,
-      {{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1},
-       {0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 500},
-       {0, 0, 0, -16, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-       {0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1},
-       {0, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 998},
-       {0, 0, 0, 16, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 15},
-       {0, 0, 0, 0, -16, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-       {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1},
-       {0, 0, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 998},
-       {0, 0, 0, 0, 16, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 15},
-       {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-       {0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-       {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, -1},
-       {0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 500},
-       {0, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 16, 0, 0, 0, 0, 0, 15},
-       {0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, -16, 0, 0, 0, 0, 0, 0},
-       {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -16, 0, 1, 0, 0, 0},
-       {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, -1},
-       {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 998},
-       {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16, 0, -1, 0, 0, 15},
-       {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0},
-       {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 1},
-       {0, 0, 0, 0, 0, 0, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 8, 8},
-       {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, -1, 8, 8},
-       {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, -8, -1},
-       {0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, -8, -1},
-       {0, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0},
-       {0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 0, 0},
-       {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, -10},
-       {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 10},
-       {0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, -13},
-       {0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 13},
-       {0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -10},
-       {0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10},
-       {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -13},
-       {-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13}},
-      {});
+  FlatAffineConstraints fac4 =
+      parseFAC("(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q) : ("
+               "b - 1 >= 0,"
+               "-b + 500 >= 0,"
+               "-16 * d + f >= 0,"
+               "f - 1 >= 0,"
+               "-f + 998 >= 0,"
+               "16 * d - f + 15 >= 0,"
+               "-16 * e + g >= 0,"
+               "g - 1 >= 0,"
+               "-g + 998 >= 0,"
+               "16 * e - g + 15 >= 0,"
+               "h >= 0,"
+               "-h + 1 >= 0,"
+               "j - 1 >= 0,"
+               "-j + 500 >= 0,"
+               "-f + 16 * l + 15 >= 0,"
+               "f - 16 * l >= 0,"
+               "-16 * m + o >= 0,"
+               "o - 1 >= 0,"
+               "-o + 998 >= 0,"
+               "16 * m - o + 15 >= 0,"
+               "p >= 0,"
+               "-p + 1 >= 0,"
+               "-g - h + 8 * q + 8 >= 0,"
+               "-o - p + 8 * q + 8 >= 0,"
+               "o + p - 8 * q - 1 >= 0,"
+               "g + h - 8 * q - 1 >= 0,"
+               "-f + n >= 0,"
+               "f - n >= 0,"
+               "k - 10 >= 0,"
+               "-k + 10 >= 0,"
+               "i - 13 >= 0,"
+               "-i + 13 >= 0,"
+               "c - 10 >= 0,"
+               "-c + 10 >= 0,"
+               "a - 13 >= 0,"
+               "-a + 13 >= 0"
+               ")",
+               &context);
 
   // The above is a large set of constraints without any redundant constraints,
   // as verified by the Fourier-Motzkin based removeRedundantInequalities.
@@ -560,18 +501,13 @@ TEST(FlatAffineConstraintsTest, removeRedundantConstraintsTest) {
   EXPECT_EQ(fac4.getNumInequalities(), nIneq);
   EXPECT_EQ(fac4.getNumEqualities(), nEq);
 
-  FlatAffineConstraints fac5 =
-      makeFACFromConstraints(2,
-                             {
-                                 {128, 0, 127}, // [0]: 128x >= -127.
-                                 {-1, 0, 7},    // [1]: x <= 7.
-                                 {-128, 1, 0},  // [2]: y >= 128x.
-                                 {0, 1, 0}      // [3]: y >= 0.
-                             },
-                             {});
-  // [0] implies that 128x >= 0, since x has to be an integer. (This should be
-  // caught by GCDTightenInqualities().)
-  // So [2] and [0] imply [3] since we have y >= 128x >= 0.
+  FlatAffineConstraints fac5 = parseFAC(
+      "(x,y) : (128 * x + 127 >= 0, -x + 7 >= 0, -128 * x + y >= 0, y >= 0)",
+      &context);
+  // 128x + 127 >= 0  implies that 128x >= 0, since x has to be an integer.
+  // (This should be caught by GCDTightenInqualities().)
+  // So -128x + y >= 0 and 128x + 127 >= 0 imply y >= 0 since we have
+  // y >= 128x >= 0.
   fac5.removeRedundantConstraints();
   EXPECT_EQ(fac5.getNumInequalities(), 3u);
   SmallVector<int64_t, 8> redundantConstraint = {0, 1, 0};
@@ -582,7 +518,7 @@ TEST(FlatAffineConstraintsTest, removeRedundantConstraintsTest) {
 }
 
 TEST(FlatAffineConstraintsTest, addConstantUpperBound) {
-  FlatAffineConstraints fac = makeFACFromConstraints(2, {}, {});
+  FlatAffineConstraints fac(2);
   fac.addBound(FlatAffineConstraints::UB, 0, 1);
   EXPECT_EQ(fac.atIneq(0, 0), -1);
   EXPECT_EQ(fac.atIneq(0, 1), 0);
@@ -595,7 +531,7 @@ TEST(FlatAffineConstraintsTest, addConstantUpperBound) {
 }
 
 TEST(FlatAffineConstraintsTest, addConstantLowerBound) {
-  FlatAffineConstraints fac = makeFACFromConstraints(2, {}, {});
+  FlatAffineConstraints fac(2);
   fac.addBound(FlatAffineConstraints::LB, 0, 1);
   EXPECT_EQ(fac.atIneq(0, 0), 1);
   EXPECT_EQ(fac.atIneq(0, 1), 0);
@@ -635,7 +571,7 @@ static void checkDivisionRepresentation(
 }
 
 TEST(FlatAffineConstraintsTest, computeLocalReprSimple) {
-  FlatAffineConstraints fac = makeFACFromConstraints(1, {}, {});
+  FlatAffineConstraints fac(1);
 
   fac.addLocalFloorDiv({1, 4}, 10);
   fac.addLocalFloorDiv({1, 0, 100}, 10);
@@ -650,7 +586,7 @@ TEST(FlatAffineConstraintsTest, computeLocalReprSimple) {
 }
 
 TEST(FlatAffineConstraintsTest, computeLocalReprConstantFloorDiv) {
-  FlatAffineConstraints fac = makeFACFromConstraints(4, {}, {});
+  FlatAffineConstraints fac(4);
 
   fac.addInequality({1, 0, 3, 1, 2});
   fac.addInequality({1, 2, -8, 1, 10});
@@ -668,7 +604,7 @@ TEST(FlatAffineConstraintsTest, computeLocalReprConstantFloorDiv) {
 }
 
 TEST(FlatAffineConstraintsTest, computeLocalReprRecursive) {
-  FlatAffineConstraints fac = makeFACFromConstraints(4, {}, {});
+  FlatAffineConstraints fac(4);
   fac.addInequality({1, 0, 3, 1, 2});
   fac.addInequality({1, 2, -8, 1, 10});
   fac.addEquality({1, 2, -4, 1, 10});
