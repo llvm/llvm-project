@@ -21,6 +21,7 @@
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
 #include <__ranges/dangling.h>
+#include <__utility/move.h>
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -45,7 +46,8 @@ struct __fn final : private __function_like {
     requires default_initializable<iter_value_t<_ForwardIterator>>
   _ForwardIterator operator()(_ForwardIterator __first, _Sentinel __last) const {
     using _ValueType = remove_reference_t<iter_reference_t<_ForwardIterator>>;
-    return _VSTD::__uninitialized_default_construct<_ValueType>(__first, __last);
+    return _VSTD::__uninitialized_default_construct<_ValueType>(
+        _VSTD::move(__first), _VSTD::move(__last));
   }
 
   template <__nothrow_forward_range _ForwardRange>
@@ -56,7 +58,7 @@ struct __fn final : private __function_like {
 
 };
 
-} // namespace __uninitialized_default_construct_ns
+} // namespace __uninitialized_default_construct
 
 inline namespace __cpo {
 inline constexpr auto uninitialized_default_construct =
@@ -77,16 +79,129 @@ struct __fn final : private __function_like {
   _ForwardIterator operator()(_ForwardIterator __first,
                               iter_difference_t<_ForwardIterator> __n) const {
     using _ValueType = remove_reference_t<iter_reference_t<_ForwardIterator>>;
-    return _VSTD::__uninitialized_default_construct_n<_ValueType>(__first, __n);
+    return _VSTD::__uninitialized_default_construct_n<_ValueType>(_VSTD::move(__first), __n);
   }
 
 };
 
-} // namespace __uninitialized_default_construct_n_ns
+} // namespace __uninitialized_default_construct_n
 
 inline namespace __cpo {
 inline constexpr auto uninitialized_default_construct_n =
     __uninitialized_default_construct_n::__fn(__function_like::__tag());
+} // namespace __cpo
+
+// uninitialized_value_construct
+
+namespace __uninitialized_value_construct {
+
+struct __fn final : private __function_like {
+
+  constexpr explicit __fn(__tag __x) noexcept : __function_like(__x) {}
+
+  template <__nothrow_forward_iterator _ForwardIterator,
+            __nothrow_sentinel_for<_ForwardIterator> _Sentinel>
+    requires default_initializable<iter_value_t<_ForwardIterator>>
+  _ForwardIterator operator()(_ForwardIterator __first, _Sentinel __last) const {
+    using _ValueType = remove_reference_t<iter_reference_t<_ForwardIterator>>;
+    return _VSTD::__uninitialized_value_construct<_ValueType>(
+        _VSTD::move(__first), _VSTD::move(__last));
+  }
+
+  template <__nothrow_forward_range _ForwardRange>
+    requires default_initializable<range_value_t<_ForwardRange>>
+  borrowed_iterator_t<_ForwardRange> operator()(_ForwardRange&& __range) const {
+    return (*this)(ranges::begin(__range), ranges::end(__range));
+  }
+
+};
+
+} // namespace __uninitialized_value_construct
+
+inline namespace __cpo {
+inline constexpr auto uninitialized_value_construct =
+    __uninitialized_value_construct::__fn(__function_like::__tag());
+} // namespace __cpo
+
+// uninitialized_value_construct_n
+
+namespace __uninitialized_value_construct_n {
+
+struct __fn final : private __function_like {
+
+  constexpr explicit __fn(__tag __x) noexcept : __function_like(__x) {}
+
+  template <__nothrow_forward_iterator _ForwardIterator>
+    requires default_initializable<iter_value_t<_ForwardIterator>>
+  _ForwardIterator operator()(_ForwardIterator __first,
+                              iter_difference_t<_ForwardIterator> __n) const {
+    using _ValueType = remove_reference_t<iter_reference_t<_ForwardIterator>>;
+    return _VSTD::__uninitialized_value_construct_n<_ValueType>(_VSTD::move(__first), __n);
+  }
+
+};
+
+} // namespace __uninitialized_value_construct_n
+
+inline namespace __cpo {
+inline constexpr auto uninitialized_value_construct_n =
+    __uninitialized_value_construct_n::__fn(__function_like::__tag());
+} // namespace __cpo
+
+// uninitialized_fill
+
+namespace __uninitialized_fill {
+
+struct __fn final : private __function_like {
+
+  constexpr explicit __fn(__tag __x) noexcept : __function_like(__x) {}
+
+  template <__nothrow_forward_iterator _ForwardIterator,
+            __nothrow_sentinel_for<_ForwardIterator> _Sentinel,
+            class _Tp>
+    requires constructible_from<iter_value_t<_ForwardIterator>, const _Tp&>
+  _ForwardIterator operator()(_ForwardIterator __first, _Sentinel __last, const _Tp& __x) const {
+    using _ValueType = remove_reference_t<iter_reference_t<_ForwardIterator>>;
+    return _VSTD::__uninitialized_fill<_ValueType>(_VSTD::move(__first), _VSTD::move(__last), __x);
+  }
+
+  template <__nothrow_forward_range _ForwardRange, class _Tp>
+    requires constructible_from<range_value_t<_ForwardRange>, const _Tp&>
+  borrowed_iterator_t<_ForwardRange> operator()(_ForwardRange&& __range, const _Tp& __x) const {
+    return (*this)(ranges::begin(__range), ranges::end(__range), __x);
+  }
+
+};
+
+} // namespace __uninitialized_fil
+
+inline namespace __cpo {
+inline constexpr auto uninitialized_fill = __uninitialized_fill::__fn(__function_like::__tag());
+} // namespace __cpo
+
+// uninitialized_fill_n
+
+namespace __uninitialized_fill_n {
+
+struct __fn final : private __function_like {
+
+  constexpr explicit __fn(__tag __x) noexcept : __function_like(__x) {}
+
+  template <__nothrow_forward_iterator _ForwardIterator, class _Tp>
+    requires constructible_from<iter_value_t<_ForwardIterator>, const _Tp&>
+  _ForwardIterator operator()(_ForwardIterator __first,
+                              iter_difference_t<_ForwardIterator> __n,
+                              const _Tp& __x) const {
+    using _ValueType = remove_reference_t<iter_reference_t<_ForwardIterator>>;
+    return _VSTD::__uninitialized_fill_n<_ValueType>(_VSTD::move(__first), __n, __x);
+  }
+
+};
+
+} // namespace __uninitialized_fill_n
+
+inline namespace __cpo {
+inline constexpr auto uninitialized_fill_n = __uninitialized_fill_n::__fn(__function_like::__tag());
 } // namespace __cpo
 
 } // namespace ranges

@@ -84,17 +84,17 @@ Permutation,pop_heap,Not assigned,n/a,Not started
 Permutation,sort_heap,Not assigned,n/a,Not started
 Permutation,prev_permutation,Not assigned,n/a,Not started
 Permutation,next_permutation,Not assigned,n/a,Not started
-Uninitialised memory,uninitialized_copy,var-const,n/a,Not started
-Uninitialised memory,uninitialized_copy_n,var-const,n/a,Not started
-Uninitialised memory,uninitialized_fill,var-const,n/a,Not started
-Uninitialised memory,uninitialized_fill_n,var-const,n/a,Not started
-Uninitialised memory,uninitialized_move,var-const,n/a,Not started
-Uninitialised memory,uninitialized_move_n,var-const,n/a,Not started
-Uninitialised memory,uninitialized_default_construct,var-const,n/a,Not started
-Uninitialised memory,uninitialized_default_construct_n,var-const,n/a,Not started
-Uninitialised memory,uninitialized_value_construct,var-const,n/a,Not started
-Uninitialised memory,uninitialized_value_construct_n,var-const,n/a,Not started
-Uninitialised memory,destroy,var-const,n/a,Not started
-Uninitialised memory,destroy_n,var-const,n/a,Not started
-Uninitialised memory,destroy_at,var-const,n/a,Not started
-Uninitialised memory,construct_at,var-const,n/a,Not started
+Uninitialised memory,uninitialized_copy,Konstantin Varlamov,n/a,Not started
+Uninitialised memory,uninitialized_copy_n,Konstantin Varlamov,n/a,Not started
+Uninitialised memory,uninitialized_fill,Konstantin Varlamov,`D115626 <https://llvm.org/D115626>`_,✅
+Uninitialised memory,uninitialized_fill_n,Konstantin Varlamov,`D115626 <https://llvm.org/D115626>`_,✅
+Uninitialised memory,uninitialized_move,Konstantin Varlamov,n/a,Not started
+Uninitialised memory,uninitialized_move_n,Konstantin Varlamov,n/a,Not started
+Uninitialised memory,uninitialized_default_construct,Konstantin Varlamov,`D115315 <https://llvm.org/D115315>`_,✅
+Uninitialised memory,uninitialized_default_construct_n,Konstantin Varlamov,`D115315 <https://llvm.org/D115315>`_,✅
+Uninitialised memory,uninitialized_value_construct,Konstantin Varlamov,`D115626 <https://llvm.org/D115626>`_,✅
+Uninitialised memory,uninitialized_value_construct_n,Konstantin Varlamov,`D115626 <https://llvm.org/D115626>`_,✅
+Uninitialised memory,destroy,Konstantin Varlamov,n/a,Not started
+Uninitialised memory,destroy_n,Konstantin Varlamov,n/a,Not started
+Uninitialised memory,destroy_at,Konstantin Varlamov,n/a,Not started
+Uninitialised memory,construct_at,Konstantin Varlamov,n/a,Not started

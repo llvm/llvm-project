@@ -188,9 +188,21 @@ uninitialized_copy_n(InputIterator first, Size n, ForwardIterator result);
 template <class ForwardIterator, class T>
 void uninitialized_fill(ForwardIterator first, ForwardIterator last, const T& x);
 
+template <nothrow-forward-iterator ForwardIterator, nothrow-sentinel-for<ForwardIterator> Sentinel, class T>
+  requires constructible_from<iter_value_t<ForwardIterator>, const T&>
+ForwardIterator ranges::uninitialized_fill(ForwardIterator first, Sentinel last, const T& x); // since C++20
+
+template <nothrow-forward-range ForwardRange, class T>
+  requires constructible_from<range_value_t<ForwardRange>, const T&>
+borrowed_iterator_t<ForwardRange> ranges::uninitialized_fill(ForwardRange&& range, const T& x); // since C++20
+
 template <class ForwardIterator, class Size, class T>
 ForwardIterator
 uninitialized_fill_n(ForwardIterator first, Size n, const T& x);
+
+template <nothrow-forward-iterator ForwardIterator, class T>
+  requires constructible_from<iter_value_t<ForwardIterator>, const T&>
+ForwardIterator ranges::uninitialized_fill_n(ForwardIterator first, iter_difference_t<ForwardIterator> n); // since C++20
 
 template <class T, class ...Args>
 constexpr T* construct_at(T* location, Args&& ...args); // since C++20
@@ -213,8 +225,20 @@ template <class InputIterator, class Size, class ForwardIterator>
 template <class ForwardIterator>
  void uninitialized_value_construct(ForwardIterator first, ForwardIterator last);
 
+template <nothrow-forward-iterator ForwardIterator, nothrow-sentinel-for<ForwardIterator> Sentinel>
+  requires default_initializable<iter_value_t<ForwardIterator>>
+ ForwardIterator ranges::uninitialized_value_construct(ForwardIterator first, Sentinel last); // since C++20
+
+template <nothrow-forward-range ForwardRange>
+  requires default_initializable<range_value_t<ForwardRange>>
+ borrowed_iterator_t<ForwardRange> ranges::uninitialized_value_construct(ForwardRange&& r); // since C++20
+
 template <class ForwardIterator, class Size>
  ForwardIterator uninitialized_value_construct_n(ForwardIterator first, Size n);
+
+template <nothrow-forward-iterator ForwardIterator>
+  requires default_initializable<iter_value_t<ForwardIterator>>
+ ForwardIterator ranges::uninitialized_value_construct_n(ForwardIterator first, iter_difference_t<ForwardIterator> n); // since C++20
 
 template <class ForwardIterator>
  void uninitialized_default_construct(ForwardIterator first, ForwardIterator last);

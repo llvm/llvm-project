@@ -18,16 +18,16 @@ Section,Description,Dependencies,Assignee,Complete
 | *nothrow-forward-iterator*
 | *nothrow-forward-range*","| [iterator.concepts]
 | [range.refinements]",Konstantin Varlamov,✅
-`[specialized.algorithms] <http://wg21.link/specialized.algorithms>`_,"| `ranges::uninitialized_default_construct <https://llvm.org/D115315>`
-| `ranges::uninitialized_default_construct_n <https://llvm.org/D115315>`
-| ranges::uninitialized_value_construct
-| ranges::uninitialized_value_construct_n
+`[specialized.algorithms] <http://wg21.link/specialized.algorithms>`_,"| `ranges::uninitialized_default_construct <https://llvm.org/D115315>`_
+| `ranges::uninitialized_default_construct_n <https://llvm.org/D115315>`_
+| `ranges::uninitialized_value_construct <https://llvm.org/D115626>`_
+| `ranges::uninitialized_value_construct_n <https://llvm.org/D115626>`_
 | ranges::uninitialized_copy
 | ranges::uninitialized_copy_n
 | ranges::uninitialized_move
 | ranges::uninitialized_move_n
-| ranges::uninitialized_fill
-| ranges::uninitialized_fill_n
+| `ranges::uninitialized_fill <https://llvm.org/D115626>`_
+| `ranges::uninitialized_fill_n <https://llvm.org/D115626>`_
 | ranges::construct_at
 | ranges::destroy
 | ranges::destroy_at
