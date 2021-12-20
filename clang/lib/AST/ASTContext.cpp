@@ -4604,7 +4604,7 @@ QualType ASTContext::getUsingType(const UsingShadowDecl *Found,
   if (T)
     return QualType(T, 0);
 
-  assert(!Underlying.hasQualifiers());
+  assert(!Underlying.hasLocalQualifiers());
   assert(Underlying == getTypeDeclType(cast<TypeDecl>(Found->getTargetDecl())));
   QualType Canon = Underlying.getCanonicalType();
 

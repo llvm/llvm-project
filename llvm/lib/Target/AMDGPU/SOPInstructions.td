@@ -257,22 +257,22 @@ let isReMaterializable = 1 in {
 def S_FF0_I32_B32 : SOP1_32 <"s_ff0_i32_b32">;
 def S_FF0_I32_B64 : SOP1_32_64 <"s_ff0_i32_b64">;
 def S_FF1_I32_B64 : SOP1_32_64 <"s_ff1_i32_b64",
-  [(set i32:$sdst, (AMDGPUffbl_b32 i64:$src0))]
+  [(set i32:$sdst, (UniformUnaryFrag<AMDGPUffbl_b32> i64:$src0))]
 >;
 
 def S_FF1_I32_B32 : SOP1_32 <"s_ff1_i32_b32",
-  [(set i32:$sdst, (AMDGPUffbl_b32 i32:$src0))]
+  [(set i32:$sdst, (UniformUnaryFrag<AMDGPUffbl_b32> i32:$src0))]
 >;
 
 def S_FLBIT_I32_B32 : SOP1_32 <"s_flbit_i32_b32",
-  [(set i32:$sdst, (AMDGPUffbh_u32 i32:$src0))]
+  [(set i32:$sdst, (UniformUnaryFrag<AMDGPUffbh_u32> i32:$src0))]
 >;
 
 def S_FLBIT_I32_B64 : SOP1_32_64 <"s_flbit_i32_b64",
-  [(set i32:$sdst, (AMDGPUffbh_u32 i64:$src0))]
+  [(set i32:$sdst, (UniformUnaryFrag<AMDGPUffbh_u32> i64:$src0))]
 >;
 def S_FLBIT_I32 : SOP1_32 <"s_flbit_i32",
-  [(set i32:$sdst, (AMDGPUffbh_i32 i32:$src0))]
+  [(set i32:$sdst, (UniformUnaryFrag<AMDGPUffbh_i32> i32:$src0))]
 >;
 def S_FLBIT_I32_I64 : SOP1_32_64 <"s_flbit_i32_i64">;
 def S_SEXT_I32_I8 : SOP1_32 <"s_sext_i32_i8",

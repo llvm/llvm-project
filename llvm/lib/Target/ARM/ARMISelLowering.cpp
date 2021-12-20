@@ -8400,8 +8400,9 @@ static SDValue LowerVECTOR_SHUFFLEv8i8(SDValue Op,
   SDLoc DL(Op);
 
   SmallVector<SDValue, 8> VTBLMask;
-  for (int I : ShuffleMask)
-    VTBLMask.push_back(DAG.getConstant(I, DL, MVT::i32));
+  for (ArrayRef<int>::iterator
+         I = ShuffleMask.begin(), E = ShuffleMask.end(); I != E; ++I)
+    VTBLMask.push_back(DAG.getConstant(*I, DL, MVT::i32));
 
   if (V2.getNode()->isUndef())
     return DAG.getNode(ARMISD::VTBL1, DL, MVT::v8i8, V1,
@@ -10681,23 +10682,25 @@ void ARMTargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
   // associated with.
   DenseMap<unsigned, SmallVector<MachineBasicBlock*, 2>> CallSiteNumToLPad;
   unsigned MaxCSNum = 0;
-  for (MachineBasicBlock &BB : *MF) {
-    if (!BB.isEHPad())
-      continue;
+  for (MachineFunction::iterator BB = MF->begin(), E = MF->end(); BB != E;
+       ++BB) {
+    if (!BB->isEHPad()) continue;
 
     // FIXME: We should assert that the EH_LABEL is the first MI in the landing
     // pad.
-    for (MachineInstr &II : BB) {
-      if (!II.isEHLabel())
-        continue;
+    for (MachineBasicBlock::iterator
+           II = BB->begin(), IE = BB->end(); II != IE; ++II) {
+      if (!II->isEHLabel()) continue;
 
-      MCSymbol *Sym = II.getOperand(0).getMCSymbol();
+      MCSymbol *Sym = II->getOperand(0).getMCSymbol();
       if (!MF->hasCallSiteLandingPad(Sym)) continue;
 
       SmallVectorImpl<unsigned> &CallSiteIdxs = MF->getCallSiteLandingPad(Sym);
-      for (unsigned Idx : CallSiteIdxs) {
-        CallSiteNumToLPad[Idx].push_back(&BB);
-        MaxCSNum = std::max(MaxCSNum, Idx);
+      for (SmallVectorImpl<unsigned>::iterator
+             CSI = CallSiteIdxs.begin(), CSE = CallSiteIdxs.end();
+           CSI != CSE; ++CSI) {
+        CallSiteNumToLPad[*CSI].push_back(&*BB);
+        MaxCSNum = std::max(MaxCSNum, *CSI);
       }
       break;
     }

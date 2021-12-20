@@ -310,7 +310,8 @@ void ARMConstantIslands::verify() {
            BBInfo[RHS.getNumber()].postOffset();
   }));
   LLVM_DEBUG(dbgs() << "Verifying " << CPUsers.size() << " CP users.\n");
-  for (CPUser &U : CPUsers) {
+  for (unsigned i = 0, e = CPUsers.size(); i != e; ++i) {
+    CPUser &U = CPUsers[i];
     unsigned UserOffset = getUserOffset(U);
     // Verify offset using the real max displacement without the safety
     // adjustment.
@@ -480,8 +481,8 @@ bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
 
     LLVM_DEBUG(dbgs() << "Beginning BR iteration #" << NoBRIters << '\n');
     bool BRChange = false;
-    for (auto &IB : ImmBranches)
-      BRChange |= fixupImmediateBr(IB);
+    for (unsigned i = 0, e = ImmBranches.size(); i != e; ++i)
+      BRChange |= fixupImmediateBr(ImmBranches[i]);
     if (BRChange && ++NoBRIters > 30)
       report_fatal_error("Branch Fix Up pass failed to converge!");
     LLVM_DEBUG(dumpBBs());
@@ -696,9 +697,10 @@ ARMConstantIslands::findConstPoolEntry(unsigned CPI,
   std::vector<CPEntry> &CPEs = CPEntries[CPI];
   // Number of entries per constpool index should be small, just do a
   // linear search.
-  for (CPEntry &CPE : CPEs)
-    if (CPE.CPEMI == CPEMI)
-      return &CPE;
+  for (unsigned i = 0, e = CPEs.size(); i != e; ++i) {
+    if (CPEs[i].CPEMI == CPEMI)
+      return &CPEs[i];
+  }
   return nullptr;
 }
 
@@ -1232,27 +1234,27 @@ int ARMConstantIslands::findInRangeCPEntry(CPUser& U, unsigned UserOffset) {
   // No.  Look for previously created clones of the CPE that are in range.
   unsigned CPI = getCombinedIndex(CPEMI);
   std::vector<CPEntry> &CPEs = CPEntries[CPI];
-  for (CPEntry &CPE : CPEs) {
+  for (unsigned i = 0, e = CPEs.size(); i != e; ++i) {
     // We already tried this one
-    if (CPE.CPEMI == CPEMI)
+    if (CPEs[i].CPEMI == CPEMI)
       continue;
     // Removing CPEs can leave empty entries, skip
-    if (CPE.CPEMI == nullptr)
+    if (CPEs[i].CPEMI == nullptr)
       continue;
-    if (isCPEntryInRange(UserMI, UserOffset, CPE.CPEMI, U.getMaxDisp(),
-                         U.NegOk)) {
-      LLVM_DEBUG(dbgs() << "Replacing CPE#" << CPI << " with CPE#" << CPE.CPI
-                        << "\n");
+    if (isCPEntryInRange(UserMI, UserOffset, CPEs[i].CPEMI, U.getMaxDisp(),
+                     U.NegOk)) {
+      LLVM_DEBUG(dbgs() << "Replacing CPE#" << CPI << " with CPE#"
+                        << CPEs[i].CPI << "\n");
       // Point the CPUser node to the replacement
-      U.CPEMI = CPE.CPEMI;
+      U.CPEMI = CPEs[i].CPEMI;
       // Change the CPI in the instruction operand to refer to the clone.
       for (MachineOperand &MO : UserMI->operands())
         if (MO.isCPI()) {
-          MO.setIndex(CPE.CPI);
+          MO.setIndex(CPEs[i].CPI);
           break;
         }
       // Adjust the refcount of the clone...
-      CPE.RefCount++;
+      CPEs[i].RefCount++;
       // ...and the original.  If we didn't remove the old entry, none of the
       // addresses changed, so we don't need another pass.
       return decrementCPEReferenceCount(CPI, CPEMI) ? 2 : 1;
@@ -1673,14 +1675,15 @@ void ARMConstantIslands::removeDeadCPEMI(MachineInstr *CPEMI) {
 /// are zero.
 bool ARMConstantIslands::removeUnusedCPEntries() {
   unsigned MadeChange = false;
-  for (std::vector<CPEntry> &CPEs : CPEntries) {
-    for (CPEntry &CPE : CPEs) {
-      if (CPE.RefCount == 0 && CPE.CPEMI) {
-        removeDeadCPEMI(CPE.CPEMI);
-        CPE.CPEMI = nullptr;
-        MadeChange = true;
+  for (unsigned i = 0, e = CPEntries.size(); i != e; ++i) {
+      std::vector<CPEntry> &CPEs = CPEntries[i];
+      for (unsigned j = 0, ee = CPEs.size(); j != ee; ++j) {
+        if (CPEs[j].RefCount == 0 && CPEs[j].CPEMI) {
+          removeDeadCPEMI(CPEs[j].CPEMI);
+          CPEs[j].CPEMI = nullptr;
+          MadeChange = true;
+        }
       }
-    }
   }
   return MadeChange;
 }
@@ -1826,7 +1829,8 @@ bool ARMConstantIslands::optimizeThumb2Instructions() {
   bool MadeChange = false;
 
   // Shrink ADR and LDR from constantpool.
-  for (CPUser &U : CPUsers) {
+  for (unsigned i = 0, e = CPUsers.size(); i != e; ++i) {
+    CPUser &U = CPUsers[i];
     unsigned Opcode = U.MI->getOpcode();
     unsigned NewOpc = 0;
     unsigned Scale = 1;
