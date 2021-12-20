@@ -144,26 +144,3 @@ test::buildStatementToAnnotationMapping(const FunctionDecl *Func,
 
   return Result;
 }
-
-std::pair<const FunctionDecl *, std::unique_ptr<CFG>>
-test::buildCFG(ASTContext &Context,
-               ast_matchers::internal::Matcher<FunctionDecl> FuncMatcher) {
-  CFG::BuildOptions Options;
-  Options.PruneTriviallyFalseEdges = false;
-  Options.AddInitializers = true;
-  Options.AddImplicitDtors = true;
-  Options.AddTemporaryDtors = true;
-  Options.setAllAlwaysAdd();
-
-  const FunctionDecl *F = ast_matchers::selectFirst<FunctionDecl>(
-      "target",
-      ast_matchers::match(
-          ast_matchers::functionDecl(ast_matchers::isDefinition(), FuncMatcher)
-              .bind("target"),
-          Context));
-  if (F == nullptr)
-    return std::make_pair(nullptr, nullptr);
-
-  return std::make_pair(
-      F, clang::CFG::buildCFG(F, F->getBody(), &Context, Options));
-}

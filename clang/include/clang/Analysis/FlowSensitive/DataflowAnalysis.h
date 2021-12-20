@@ -21,6 +21,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Stmt.h"
 #include "clang/Analysis/CFG.h"
+#include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/TypeErasedDataflowAnalysis.h"
 #include "llvm/ADT/Any.h"
@@ -101,17 +102,12 @@ template <typename LatticeT> struct DataflowAnalysisState {
 /// Performs dataflow analysis and returns a mapping from basic block IDs to
 /// dataflow analysis states that model the respective basic blocks. Indices
 /// of the returned vector correspond to basic block IDs.
-///
-/// Requirements:
-///
-///  `Cfg` must have been built with `CFG::BuildOptions::setAllAlwaysAdd()` to
-///  ensure that all sub-expressions in a basic block are evaluated.
 template <typename AnalysisT>
 std::vector<llvm::Optional<DataflowAnalysisState<typename AnalysisT::Lattice>>>
-runDataflowAnalysis(const CFG &Cfg, AnalysisT &Analysis,
+runDataflowAnalysis(const ControlFlowContext &CFCtx, AnalysisT &Analysis,
                     const Environment &InitEnv) {
   auto TypeErasedBlockStates =
-      runTypeErasedDataflowAnalysis(Cfg, Analysis, InitEnv);
+      runTypeErasedDataflowAnalysis(CFCtx, Analysis, InitEnv);
   std::vector<
       llvm::Optional<DataflowAnalysisState<typename AnalysisT::Lattice>>>
       BlockStates;
