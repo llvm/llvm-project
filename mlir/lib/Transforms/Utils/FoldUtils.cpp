@@ -168,7 +168,7 @@ LogicalResult OperationFolder::tryToFold(
   if (op->getNumOperands() >= 2 && op->hasTrait<OpTrait::IsCommutative>()) {
     std::stable_partition(
         op->getOpOperands().begin(), op->getOpOperands().end(),
-        [&](OpOperand &O) { return !matchPattern(O.get(), m_Constant()); });
+        [&](OpOperand &o) { return !matchPattern(o.get(), m_Constant()); });
   }
 
   // Check to see if any operands to the operation is constant and whether

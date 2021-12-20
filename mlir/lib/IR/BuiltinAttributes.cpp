@@ -121,10 +121,10 @@ findDuplicateElement(ArrayRef<NamedAttribute> value) {
   if (value.size() == 2)
     return value[0].getName() == value[1].getName() ? value[0] : none;
 
-  auto it = std::adjacent_find(value.begin(), value.end(),
-                               [](NamedAttribute l, NamedAttribute r) {
-                                 return l.getName() == r.getName();
-                               });
+  const auto *it = std::adjacent_find(value.begin(), value.end(),
+                                      [](NamedAttribute l, NamedAttribute r) {
+                                        return l.getName() == r.getName();
+                                      });
   return it != value.end() ? *it : none;
 }
 

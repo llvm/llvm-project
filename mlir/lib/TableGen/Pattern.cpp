@@ -649,7 +649,7 @@ std::vector<AppliedConstraint> Pattern::getConstraints() const {
   std::vector<AppliedConstraint> ret;
   ret.reserve(listInit->size());
 
-  for (auto it : *listInit) {
+  for (auto *it : *listInit) {
     auto *dagInit = dyn_cast<llvm::DagInit>(it);
     if (!dagInit)
       PrintFatalError(&def, "all elements in Pattern multi-entity "

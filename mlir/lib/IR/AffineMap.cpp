@@ -209,7 +209,7 @@ AffineMap AffineMap::getPermutationMap(ArrayRef<unsigned> permutation,
   SmallVector<AffineExpr, 4> affExprs;
   for (auto index : permutation)
     affExprs.push_back(getAffineDimExpr(index, context));
-  auto m = std::max_element(permutation.begin(), permutation.end());
+  const auto *m = std::max_element(permutation.begin(), permutation.end());
   auto permutationMap = AffineMap::get(*m + 1, 0, affExprs, context);
   assert(permutationMap.isPermutation() && "Invalid permutation vector");
   return permutationMap;

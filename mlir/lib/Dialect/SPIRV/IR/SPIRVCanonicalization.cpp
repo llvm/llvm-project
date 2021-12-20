@@ -74,7 +74,7 @@ static Attribute extractCompositeElement(Attribute composite,
 
 namespace {
 #include "SPIRVCanonicalization.inc"
-}
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // spv.AccessChainOp

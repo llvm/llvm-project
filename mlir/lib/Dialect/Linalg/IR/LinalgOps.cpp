@@ -228,6 +228,7 @@ public:
     return operand;
   }
 
+  // NOLINTNEXTLINE(*-identifier-naming): externally called.
   Value applyfn__add(Value lhs, Value rhs) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
@@ -237,6 +238,7 @@ public:
     llvm_unreachable("unsupported non numeric type");
   }
 
+  // NOLINTNEXTLINE(*-identifier-naming): externally called.
   Value applyfn__exp(Value x) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(x))
@@ -244,6 +246,7 @@ public:
     llvm_unreachable("unsupported non numeric type");
   }
 
+  // NOLINTNEXTLINE(*-identifier-naming): externally called.
   Value applyfn__log(Value x) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(x))
@@ -251,6 +254,7 @@ public:
     llvm_unreachable("unsupported non numeric type");
   }
 
+  // NOLINTNEXTLINE(*-identifier-naming): externally called.
   Value applyfn__sub(Value lhs, Value rhs) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
@@ -260,6 +264,7 @@ public:
     llvm_unreachable("unsupported non numeric type");
   }
 
+  // NOLINTNEXTLINE(*-identifier-naming): externally called.
   Value applyfn__mul(Value lhs, Value rhs) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
@@ -269,6 +274,7 @@ public:
     llvm_unreachable("unsupported non numeric type");
   }
 
+  // NOLINTNEXTLINE(*-identifier-naming): externally called.
   Value applyfn__max(Value lhs, Value rhs) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
@@ -278,6 +284,7 @@ public:
     llvm_unreachable("unsupported non numeric type");
   }
 
+  // NOLINTNEXTLINE(*-identifier-naming): externally called.
   Value applyfn__max_unsigned(Value lhs, Value rhs) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
@@ -287,6 +294,7 @@ public:
     llvm_unreachable("unsupported non numeric type");
   }
 
+  // NOLINTNEXTLINE(*-identifier-naming): externally called.
   Value applyfn__min(Value lhs, Value rhs) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
@@ -296,6 +304,7 @@ public:
     llvm_unreachable("unsupported non numeric type");
   }
 
+  // NOLINTNEXTLINE(*-identifier-naming): externally called.
   Value applyfn__min_unsigned(Value lhs, Value rhs) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
@@ -1829,12 +1838,12 @@ static ParseResult parseTiledLoopOp(OpAsmParser &parser,
     return failure();
 
   // Parse input tensors.
-  SmallVector<OpAsmParser::OperandType, 4> inputs, input_region_args;
+  SmallVector<OpAsmParser::OperandType, 4> inputs, inputRegionArgs;
   SmallVector<Type, 4> inputTypes;
   if (succeeded(parser.parseOptionalKeyword("ins"))) {
     llvm::SMLoc inputsOperandsLoc = parser.getCurrentLocation();
 
-    if (parser.parseAssignmentListWithTypes(input_region_args, inputs,
+    if (parser.parseAssignmentListWithTypes(inputRegionArgs, inputs,
                                             inputTypes))
       return failure();
 
@@ -1844,12 +1853,12 @@ static ParseResult parseTiledLoopOp(OpAsmParser &parser,
   }
 
   // Parse output tensors.
-  SmallVector<OpAsmParser::OperandType, 4> outputs, output_region_args;
+  SmallVector<OpAsmParser::OperandType, 4> outputs, outputRegionArgs;
   SmallVector<Type, 4> outputTypes;
   if (succeeded(parser.parseOptionalKeyword("outs"))) {
     llvm::SMLoc outputsOperandsLoc = parser.getCurrentLocation();
 
-    if (parser.parseAssignmentListWithTypes(output_region_args, outputs,
+    if (parser.parseAssignmentListWithTypes(outputRegionArgs, outputs,
                                             outputTypes))
       return failure();
 
@@ -1905,15 +1914,15 @@ static ParseResult parseTiledLoopOp(OpAsmParser &parser,
   // Parse the body.
   Region *body = result.addRegion();
 
-  SmallVector<Type, 4> region_types(ivs.size(), builder.getIndexType());
-  region_types.append(inputTypes);
-  region_types.append(outputTypes);
+  SmallVector<Type, 4> regionTypes(ivs.size(), builder.getIndexType());
+  regionTypes.append(inputTypes);
+  regionTypes.append(outputTypes);
 
-  SmallVector<OpAsmParser::OperandType, 4> region_args(ivs);
-  region_args.append(input_region_args);
-  region_args.append(output_region_args);
+  SmallVector<OpAsmParser::OperandType, 4> regionArgs(ivs);
+  regionArgs.append(inputRegionArgs);
+  regionArgs.append(outputRegionArgs);
 
-  if (parser.parseRegion(*body, region_args, region_types))
+  if (parser.parseRegion(*body, regionArgs, regionTypes))
     return failure();
 
   // Parse optional attributes.

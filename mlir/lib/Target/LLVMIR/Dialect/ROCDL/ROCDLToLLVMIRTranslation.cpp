@@ -29,17 +29,17 @@ using mlir::LLVM::detail::createIntrinsicCall;
 // take a single int32 argument. It is likely that the interface of this
 // function will change to make it more generic.
 static llvm::Value *createDeviceFunctionCall(llvm::IRBuilderBase &builder,
-                                             StringRef fn_name, int parameter) {
+                                             StringRef fnName, int parameter) {
   llvm::Module *module = builder.GetInsertBlock()->getModule();
-  llvm::FunctionType *function_type = llvm::FunctionType::get(
+  llvm::FunctionType *functionType = llvm::FunctionType::get(
       llvm::Type::getInt64Ty(module->getContext()), // return type.
       llvm::Type::getInt32Ty(module->getContext()), // parameter type.
       false);                                       // no variadic arguments.
   llvm::Function *fn = dyn_cast<llvm::Function>(
-      module->getOrInsertFunction(fn_name, function_type).getCallee());
-  llvm::Value *fn_op0 = llvm::ConstantInt::get(
+      module->getOrInsertFunction(fnName, functionType).getCallee());
+  llvm::Value *fnOp0 = llvm::ConstantInt::get(
       llvm::Type::getInt32Ty(module->getContext()), parameter);
-  return builder.CreateCall(fn, ArrayRef<llvm::Value *>(fn_op0));
+  return builder.CreateCall(fn, ArrayRef<llvm::Value *>(fnOp0));
 }
 
 namespace {

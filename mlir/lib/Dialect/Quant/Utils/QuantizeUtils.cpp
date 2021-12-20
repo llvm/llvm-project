@@ -106,17 +106,17 @@ Attribute mlir::quant::quantizeAttrUniform(
         realValue.cast<DenseFPElementsAttr>(), quantizedElementType, converter);
     outConvertedType = converted.getType();
     return converted;
-  } else if (realValue.isa<SparseElementsAttr>()) {
+  }
+  if (realValue.isa<SparseElementsAttr>()) {
     // Sparse tensor or vector constant.
     auto converted = convertSparseElementsAttr(
         realValue.cast<SparseElementsAttr>(), quantizedElementType, converter);
     outConvertedType = converted.getType();
     return converted;
-  } else {
-    // Nothing else matched: try to convert a primitive.
-    return convertPrimitiveValueAttr(realValue, quantizedElementType, converter,
-                                     outConvertedType);
   }
+  // Nothing else matched: try to convert a primitive.
+  return convertPrimitiveValueAttr(realValue, quantizedElementType, converter,
+                                   outConvertedType);
 }
 
 /// Convert an attribute from a type based on
@@ -132,9 +132,9 @@ Attribute mlir::quant::quantizeAttr(Attribute realValue,
     UniformQuantizedValueConverter converter(uniformQuantized);
     return quantizeAttrUniform(realValue, uniformQuantized, converter,
                                outConvertedType);
-
-  } else if (auto uniformQuantizedPerAxis =
-                 quantizedElementType.dyn_cast<UniformQuantizedPerAxisType>()) {
+  }
+  if (auto uniformQuantizedPerAxis =
+          quantizedElementType.dyn_cast<UniformQuantizedPerAxisType>()) {
     UniformQuantizedPerAxisValueConverter converter(uniformQuantizedPerAxis);
     auto converted = converter.convert(realValue);
     // TODO: why we need this outConvertedType? remove it?
@@ -142,7 +142,6 @@ Attribute mlir::quant::quantizeAttr(Attribute realValue,
       outConvertedType = converted.getType();
     }
     return converted;
-  } else {
-    return nullptr;
   }
+  return nullptr;
 }

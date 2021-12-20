@@ -38,7 +38,7 @@ std::string Dialect::getCppClassName() const {
 
 static StringRef getAsStringOrEmpty(const llvm::Record &record,
                                     StringRef fieldName) {
-  if (auto valueInit = record.getValueInit(fieldName)) {
+  if (auto *valueInit = record.getValueInit(fieldName)) {
     if (llvm::isa<llvm::StringInit>(valueInit))
       return record.getValueAsString(fieldName);
   }

@@ -34,8 +34,8 @@ NamedAttrList::NamedAttrList(DictionaryAttr attributes)
   dictionarySorted.setPointerAndInt(attributes, true);
 }
 
-NamedAttrList::NamedAttrList(const_iterator in_start, const_iterator in_end) {
-  assign(in_start, in_end);
+NamedAttrList::NamedAttrList(const_iterator inStart, const_iterator inEnd) {
+  assign(inStart, inEnd);
 }
 
 ArrayRef<NamedAttribute> NamedAttrList::getAttrs() const { return attrs; }
@@ -66,8 +66,8 @@ void NamedAttrList::append(StringRef name, Attribute attr) {
 }
 
 /// Replaces the attributes with new list of attributes.
-void NamedAttrList::assign(const_iterator in_start, const_iterator in_end) {
-  DictionaryAttr::sort(ArrayRef<NamedAttribute>{in_start, in_end}, attrs);
+void NamedAttrList::assign(const_iterator inStart, const_iterator inEnd) {
+  DictionaryAttr::sort(ArrayRef<NamedAttribute>{inStart, inEnd}, attrs);
   dictionarySorted.setPointerAndInt(nullptr, true);
 }
 

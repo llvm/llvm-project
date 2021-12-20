@@ -133,7 +133,7 @@ static bool isDefOrUse(const AsmParserState::SMDefinition &def, llvm::SMLoc loc,
   }
 
   // Check the uses.
-  auto useIt = llvm::find_if(def.uses, [&](const llvm::SMRange &range) {
+  const auto *useIt = llvm::find_if(def.uses, [&](const llvm::SMRange &range) {
     return contains(range, loc);
   });
   if (useIt != def.uses.end()) {

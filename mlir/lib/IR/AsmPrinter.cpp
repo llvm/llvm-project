@@ -1105,7 +1105,7 @@ void SSANameState::getResultIDAndNumber(OpResult result, Value &lookupValue,
 
   // Find the correct index using a binary search, as the groups are ordered.
   ArrayRef<int> resultGroups = resultGroupIt->second;
-  auto it = llvm::upper_bound(resultGroups, resultNo);
+  const auto *it = llvm::upper_bound(resultGroups, resultNo);
   int groupResultNo = 0, groupSize = 0;
 
   // If there are no smaller elements, the last result group is the lookup.
@@ -1240,8 +1240,8 @@ public:
   raw_ostream &getStream() { return os; }
 
   template <typename Container, typename UnaryFunctor>
-  inline void interleaveComma(const Container &c, UnaryFunctor each_fn) const {
-    llvm::interleaveComma(c, os, each_fn);
+  inline void interleaveComma(const Container &c, UnaryFunctor eachFn) const {
+    llvm::interleaveComma(c, os, eachFn);
   }
 
   /// This enum describes the different kinds of elision for the type of an

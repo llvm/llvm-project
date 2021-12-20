@@ -375,13 +375,13 @@ parseReductionVarList(OpAsmParser &parser,
 /// Print Reduction clause
 static void printReductionVarList(OpAsmPrinter &p,
                                   Optional<ArrayAttr> reductions,
-                                  OperandRange reduction_vars) {
+                                  OperandRange reductionVars) {
   p << "reduction(";
   for (unsigned i = 0, e = reductions->size(); i < e; ++i) {
     if (i != 0)
       p << ", ";
-    p << (*reductions)[i] << " -> " << reduction_vars[i] << " : "
-      << reduction_vars[i].getType();
+    p << (*reductions)[i] << " -> " << reductionVars[i] << " : "
+      << reductionVars[i].getType();
   }
   p << ") ";
 }
@@ -389,9 +389,9 @@ static void printReductionVarList(OpAsmPrinter &p,
 /// Verifies Reduction Clause
 static LogicalResult verifyReductionVarList(Operation *op,
                                             Optional<ArrayAttr> reductions,
-                                            OperandRange reduction_vars) {
-  if (reduction_vars.size() != 0) {
-    if (!reductions || reductions->size() != reduction_vars.size())
+                                            OperandRange reductionVars) {
+  if (reductionVars.size() != 0) {
+    if (!reductions || reductions->size() != reductionVars.size())
       return op->emitOpError()
              << "expected as many reduction symbol references "
                 "as reduction variables";
@@ -402,7 +402,7 @@ static LogicalResult verifyReductionVarList(Operation *op,
   }
 
   DenseSet<Value> accumulators;
-  for (auto args : llvm::zip(reduction_vars, *reductions)) {
+  for (auto args : llvm::zip(reductionVars, *reductions)) {
     Value accum = std::get<0>(args);
 
     if (!accumulators.insert(accum).second)

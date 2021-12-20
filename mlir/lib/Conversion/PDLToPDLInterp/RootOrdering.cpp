@@ -90,8 +90,8 @@ static void contract(RootOrderingGraph &graph, ArrayRef<Value> cycle,
       DenseMap<Value, RootOrderingCost> &costs = outer->second;
       Value bestSource;
       std::pair<unsigned, unsigned> bestCost;
-      auto inner = costs.begin(), inner_e = costs.end();
-      while (inner != inner_e) {
+      auto inner = costs.begin(), innerE = costs.end();
+      while (inner != innerE) {
         Value source = inner->first;
         if (cycleSet.contains(source)) {
           // Going-away edge => get its cost and erase it.

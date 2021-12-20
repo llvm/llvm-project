@@ -44,7 +44,6 @@ using namespace mlir;
 using namespace mlir::detail;
 
 using llvm::hash_combine;
-using llvm::hash_combine_range;
 
 //===----------------------------------------------------------------------===//
 // MLIRContext CommandLine Options

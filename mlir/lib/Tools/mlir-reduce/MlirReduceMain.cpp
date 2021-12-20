@@ -42,20 +42,20 @@ LogicalResult mlir::mlirReduceMain(int argc, char **argv,
                                    MLIRContext &context) {
   // Override the default '-h' and use the default PrintHelpMessage() which
   // won't print options in categories.
-  static llvm::cl::opt<bool> Help("h", llvm::cl::desc("Alias for -help"),
+  static llvm::cl::opt<bool> help("h", llvm::cl::desc("Alias for -help"),
                                   llvm::cl::Hidden);
 
-  static llvm::cl::OptionCategory MLIRReduceCategory("mlir-reduce options");
+  static llvm::cl::OptionCategory mlirReduceCategory("mlir-reduce options");
 
   static llvm::cl::opt<std::string> inputFilename(
       llvm::cl::Positional, llvm::cl::desc("<input file>"),
-      llvm::cl::cat(MLIRReduceCategory));
+      llvm::cl::cat(mlirReduceCategory));
 
   static llvm::cl::opt<std::string> outputFilename(
       "o", llvm::cl::desc("Output filename for the reduced test case"),
-      llvm::cl::init("-"), llvm::cl::cat(MLIRReduceCategory));
+      llvm::cl::init("-"), llvm::cl::cat(mlirReduceCategory));
 
-  llvm::cl::HideUnrelatedOptions(MLIRReduceCategory);
+  llvm::cl::HideUnrelatedOptions(mlirReduceCategory);
 
   llvm::InitLLVM y(argc, argv);
 
@@ -65,7 +65,7 @@ LogicalResult mlir::mlirReduceMain(int argc, char **argv,
   llvm::cl::ParseCommandLineOptions(argc, argv,
                                     "MLIR test case reduction tool.\n");
 
-  if (Help) {
+  if (help) {
     llvm::cl::PrintHelpMessage();
     return success();
   }

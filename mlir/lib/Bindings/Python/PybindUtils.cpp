@@ -8,8 +8,6 @@
 
 #include "PybindUtils.h"
 
-namespace py = pybind11;
-
 pybind11::error_already_set
 mlir::python::SetPyError(PyObject *excClass, const llvm::Twine &message) {
   auto messageStr = message.str();

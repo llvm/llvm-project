@@ -12,6 +12,8 @@
 
 #include "mlir/ExecutionEngine/RunnerUtils.h"
 
+// NOLINTBEGIN(*-identifier-naming)
+
 extern "C" void
 _mlir_ciface_fillI32Buffer(StridedMemRefType<int32_t, 1> *mem_ref,
                            int32_t value) {
@@ -36,3 +38,5 @@ _mlir_ciface_fillF32Buffer3D(StridedMemRefType<float, 3> *mem_ref,
   std::fill_n(mem_ref->basePtr,
               mem_ref->sizes[0] * mem_ref->sizes[1] * mem_ref->sizes[2], value);
 }
+
+// NOLINTEND(*-identifier-naming)

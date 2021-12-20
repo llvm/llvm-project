@@ -51,9 +51,8 @@ void PyGlobals::loadDialectModule(llvm::StringRef dialectNamespace) {
     } catch (py::error_already_set &e) {
       if (e.matches(PyExc_ModuleNotFoundError)) {
         continue;
-      } else {
-        throw;
       }
+      throw;
     }
     break;
   }
@@ -136,11 +135,10 @@ PyGlobals::lookupRawOpViewClass(llvm::StringRef operationName) {
       // Positive cache.
       rawOpViewClassMapCache[operationName] = foundIt->second;
       return foundIt->second;
-    } else {
-      // Negative cache.
-      rawOpViewClassMap[operationName] = py::none();
-      return llvm::None;
     }
+    // Negative cache.
+    rawOpViewClassMap[operationName] = py::none();
+    return llvm::None;
   }
 }
 

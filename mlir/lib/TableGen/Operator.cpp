@@ -346,10 +346,9 @@ void Operator::populateTypeInferenceInfo(
       if (getArg(*mi).is<NamedAttribute *>()) {
         // TODO: Handle attributes.
         continue;
-      } else {
-        resultTypeMapping[i].emplace_back(*mi);
-        found = true;
       }
+      resultTypeMapping[i].emplace_back(*mi);
+      found = true;
     }
     return found;
   };

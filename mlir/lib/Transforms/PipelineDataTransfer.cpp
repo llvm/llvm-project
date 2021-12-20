@@ -191,7 +191,7 @@ static void findMatchingStartFinishInsts(
     // Check for dependence with outgoing DMAs. Doing this conservatively.
     // TODO: use the dependence analysis to check for
     // dependences between an incoming and outgoing DMA in the same iteration.
-    auto it = outgoingDmaOps.begin();
+    auto *it = outgoingDmaOps.begin();
     for (; it != outgoingDmaOps.end(); ++it) {
       if (it->getDstMemRef() == dmaStartOp.getSrcMemRef())
         break;

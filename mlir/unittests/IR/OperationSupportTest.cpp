@@ -236,7 +236,7 @@ TEST(NamedAttrListTest, TestAppendAssign) {
   attrs.append("baz", b.getStringAttr("boo"));
 
   {
-    auto it = attrs.begin();
+    auto *it = attrs.begin();
     EXPECT_EQ(it->getName(), b.getStringAttr("foo"));
     EXPECT_EQ(it->getValue(), b.getStringAttr("bar"));
     ++it;
@@ -260,7 +260,7 @@ TEST(NamedAttrListTest, TestAppendAssign) {
   ASSERT_FALSE(dup.hasValue());
 
   {
-    auto it = attrs.begin();
+    auto *it = attrs.begin();
     EXPECT_EQ(it->getName(), b.getStringAttr("foo"));
     EXPECT_EQ(it->getValue(), b.getStringAttr("f"));
     ++it;

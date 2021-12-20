@@ -517,6 +517,6 @@ Operation *NormalizeMemRefs::createOpResultsNormalized(FuncOp funcOp,
       newRegion->takeBody(oldRegion);
     }
     return bb.createOperation(result);
-  } else
-    return oldOp;
+  }
+  return oldOp;
 }

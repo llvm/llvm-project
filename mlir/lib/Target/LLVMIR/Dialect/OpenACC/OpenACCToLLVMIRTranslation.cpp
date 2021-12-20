@@ -55,12 +55,11 @@ static llvm::Constant *createSourceLocStrFromLocation(Location loc,
     unsigned lineNo = fileLoc.getLine();
     unsigned colNo = fileLoc.getColumn();
     return builder.getOrCreateSrcLocStr(name, fileName, lineNo, colNo);
-  } else {
-    std::string locStr;
-    llvm::raw_string_ostream locOS(locStr);
-    locOS << loc;
-    return builder.getOrCreateSrcLocStr(locOS.str());
   }
+  std::string locStr;
+  llvm::raw_string_ostream locOS(locStr);
+  locOS << loc;
+  return builder.getOrCreateSrcLocStr(locOS.str());
 }
 
 /// Create the location struct from the operation location information.
@@ -81,9 +80,8 @@ static llvm::Constant *createMappingInformation(Location loc,
   if (auto nameLoc = loc.dyn_cast<NameLoc>()) {
     StringRef name = nameLoc.getName();
     return createSourceLocStrFromLocation(nameLoc.getChildLoc(), builder, name);
-  } else {
-    return createSourceLocStrFromLocation(loc, builder, "unknown");
   }
+  return createSourceLocStrFromLocation(loc, builder, "unknown");
 }
 
 /// Return the runtime function used to lower the given operation.

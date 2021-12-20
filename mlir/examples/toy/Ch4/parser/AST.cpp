@@ -118,7 +118,7 @@ void ASTDumper::dump(NumberExprAST *num) {
 ///    <2,2>[<2>[ 1, 2 ], <2>[ 3, 4 ] ]
 void printLitHelper(ExprAST *litOrNum) {
   // Inside a literal expression we can have either a number or another literal
-  if (auto num = llvm::dyn_cast<NumberExprAST>(litOrNum)) {
+  if (auto *num = llvm::dyn_cast<NumberExprAST>(litOrNum)) {
     llvm::errs() << num->getValue();
     return;
   }
