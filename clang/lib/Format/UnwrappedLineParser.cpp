@@ -1438,7 +1438,7 @@ void UnwrappedLineParser::parseStructuralElement(bool IsTopLevel) {
       break;
     case tok::kw_concept:
       parseConcept();
-      break;
+      return;
     case tok::kw_requires:
       parseRequires();
       break;
