@@ -420,18 +420,19 @@ KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,
   assert((!SelfMultiply || (LHS.One == RHS.One && LHS.Zero == RHS.Zero)) &&
          "Self multiplication knownbits mismatch");
 
-  // Compute a conservative estimate for high known-0 bits.
+  // Compute the high known-0 bits by multiplying the unsigned max of each side.
+  // Conservatively, M active bits * N active bits results in M + N bits in the
+  // result. But if we know a value is a power-of-2 for example, then this
+  // computes one more leading zero.
   // TODO: This could be generalized to number of sign bits (negative numbers).
-  unsigned LHSLeadZ = LHS.countMinLeadingZeros();
-  unsigned RHSLeadZ = RHS.countMinLeadingZeros();
+  APInt UMaxLHS = LHS.getMaxValue();
+  APInt UMaxRHS = RHS.getMaxValue();
 
-  // If either operand is a power-of-2, the multiply is only shifting bits in
-  // the other operand (there can't be a carry into the M+N bit of the result).
-  // Note: if we know that a value is entirely 0, that should simplify below.
-  bool BonusLZ = LHS.countMaxPopulation() == 1 || RHS.countMaxPopulation() == 1;
-
-  unsigned LeadZ = std::max(LHSLeadZ + RHSLeadZ + BonusLZ, BitWidth) - BitWidth;
-  assert(LeadZ <= BitWidth && "More zeros than bits?");
+  // For leading zeros in the result to be valid, the unsigned max product must
+  // fit in the bitwidth (it must not overflow).
+  bool HasOverflow;
+  APInt UMaxResult = UMaxLHS.umul_ov(UMaxRHS, HasOverflow);
+  unsigned LeadZ = HasOverflow ? 0 : UMaxResult.countLeadingZeros();
 
   // The result of the bottom bits of an integer multiply can be
   // inferred by looking at the bottom bits of both operands and

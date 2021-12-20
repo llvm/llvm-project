@@ -99,14 +99,14 @@ return:
 ; Make sure to avoid assertion crashes and use the type before
 ; truncation to generate the sub constant expressions that leads
 ; to the recomputed condition.
-; We allow to truncate from i64 to i59 if in 32-bit mode,
+; We allow truncate from i64 to i58 if in 32-bit mode,
 ; because both are illegal.
 
-define void @trunc64to59(i64 %a) {
-; ALL-LABEL: @trunc64to59(
-; CHECK32:         switch i59
-; CHECK32-NEXT:    i59 0, label %sw.bb1
-; CHECK32-NEXT:    i59 18717182647723699, label %sw.bb2
+define void @trunc64to58(i64 %a) {
+; ALL-LABEL: @trunc64to58(
+; CHECK32:         switch i58
+; CHECK32-NEXT:    i58 0, label %sw.bb1
+; CHECK32-NEXT:    i58 18717182647723699, label %sw.bb2
 ; CHECK32-NEXT:    ]
 ; CHECK64:         switch i64
 ; CHECK64-NEXT:    i64 0, label %sw.bb1
