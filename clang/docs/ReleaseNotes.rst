@@ -244,7 +244,9 @@ Floating Point Support in Clang
 Internal API Changes
 --------------------
 
-- ...
+- A new sugar ``Type`` AST node represents types accessed via a C++ using
+  declaration. Given code ``using std::error_code; error_code x;``, ``x`` has
+  a ``UsingType`` which desugars to the previous ``RecordType``.
 
 Build System Changes
 --------------------
@@ -269,6 +271,12 @@ AST Matchers
 - The ``hasAnyCapture`` matcher now only accepts an inner matcher of type
   ``Matcher<LambdaCapture>``. The matcher originally accepted an inner matcher
   of type ``Matcher<CXXThisExpr>`` or ``Matcher<VarDecl>``.
+- The ``usingType`` matcher is now available and needed to refer to types that
+  are referred to via using C++ using declarations.
+  The associated ``UsingShadowDecl`` can be matched using ``throughUsingDecl``
+  and the underlying ``Type`` with ``hasUnderlyingType``.
+  ``hasDeclaration`` continues to see through the alias and apply to the
+  underlying type.
 
 clang-format
 ------------
