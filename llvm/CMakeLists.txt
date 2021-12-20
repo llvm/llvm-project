@@ -334,6 +334,7 @@ set(LLVM_ALL_TARGETS
   WebAssembly
   X86
   XCore
+  Sim
   )
 
 # List of targets with JIT support:
