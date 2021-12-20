@@ -37,7 +37,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # CI builders to rebuild their copy of the Docker image. This is not a great
 # solution, however without that, the CI builders will keep the same cached
 # Docker image forever.
-RUN echo 5
+RUN echo 6
 
 RUN apt-get update && apt-get install -y bash curl
 
