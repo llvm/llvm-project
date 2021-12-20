@@ -2517,6 +2517,9 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV) {
   if (const auto *Equiv = dyn_cast<DSOLocalEquivalent>(CV))
     return getObjFileLowering().lowerDSOLocalEquivalent(Equiv, TM);
 
+  if (const NoCFIValue *NC = dyn_cast<NoCFIValue>(CV))
+    return MCSymbolRefExpr::create(getSymbol(NC->getGlobalValue()), Ctx);
+
   const ConstantExpr *CE = dyn_cast<ConstantExpr>(CV);
   if (!CE) {
     llvm_unreachable("Unknown constant value to lower!");

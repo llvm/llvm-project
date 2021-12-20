@@ -838,6 +838,9 @@ def warn_fortify_scanf_overflow : Warning<
   "%2, but the corresponding specifier may require size %3">,
   InGroup<FortifySource>;
 
+def err_function_start_invalid_type: Error<
+  "argument must be a function">;
+
 /// main()
 // static main() is not an error in C, just in C++.
 def warn_static_main : Warning<"'main' should not be declared static">,
