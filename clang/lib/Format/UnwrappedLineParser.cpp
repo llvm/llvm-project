@@ -578,14 +578,17 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
           // BlockKind later if we parse a braced list (where all blocks
           // inside are by default braced lists), or when we explicitly detect
           // blocks (for example while parsing lambdas).
+          // FIXME: Some of these do not apply to JS, e.g. "} {" can never be a
+          // braced list in JS.
           ProbablyBracedList =
               (Style.Language == FormatStyle::LK_JavaScript &&
                NextTok->isOneOf(Keywords.kw_of, Keywords.kw_in,
                                 Keywords.kw_as)) ||
               (Style.isCpp() && NextTok->is(tok::l_paren)) ||
               NextTok->isOneOf(tok::comma, tok::period, tok::colon,
-                               tok::r_paren, tok::r_square, tok::ellipsis) ||
-              (NextTok->isOneOf(tok::l_brace, tok::identifier) &&
+                               tok::r_paren, tok::r_square, tok::l_brace,
+                               tok::ellipsis) ||
+              (NextTok->is(tok::identifier) &&
                !PrevTok->isOneOf(tok::semi, tok::r_brace, tok::l_brace)) ||
               (NextTok->is(tok::semi) &&
                (!ExpectClassBody || LBraceStack.size() != 1)) ||
@@ -1279,17 +1282,18 @@ void UnwrappedLineParser::parseStructuralElement(bool IsTopLevel) {
     if (FormatTok->Tok.is(tok::string_literal)) {
       nextToken();
       if (FormatTok->Tok.is(tok::l_brace)) {
-        if (!Style.IndentExternBlock) {
-          if (Style.BraceWrapping.AfterExternBlock) {
-            addUnwrappedLine();
-          }
-          unsigned AddLevels = Style.BraceWrapping.AfterExternBlock ? 1u : 0u;
-          parseBlock(/*MustBeDeclaration=*/true, AddLevels);
-        } else {
-          unsigned AddLevels =
-              Style.IndentExternBlock == FormatStyle::IEBS_Indent ? 1u : 0u;
-          parseBlock(/*MustBeDeclaration=*/true, AddLevels);
-        }
+        if (Style.BraceWrapping.AfterExternBlock)
+          addUnwrappedLine();
+        // Either we indent or for backwards compatibility we follow the
+        // AfterExternBlock style.
+        unsigned AddLevels =
+            (Style.IndentExternBlock == FormatStyle::IEBS_Indent) ||
+                    (Style.BraceWrapping.AfterExternBlock &&
+                     Style.IndentExternBlock ==
+                         FormatStyle::IEBS_AfterExternBlock)
+                ? 1u
+                : 0u;
+        parseBlock(/*MustBeDeclaration=*/true, AddLevels);
         addUnwrappedLine();
         return;
       }
@@ -1434,7 +1438,7 @@ void UnwrappedLineParser::parseStructuralElement(bool IsTopLevel) {
       break;
     case tok::kw_concept:
       parseConcept();
-      break;
+      return;
     case tok::kw_requires:
       parseRequires();
       break;
@@ -2860,7 +2864,7 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
       //     class Foo implements {bar: number} { }
       nextToken();
       if (FormatTok->is(tok::l_brace)) {
-        parseBracedList();
+        tryToParseBracedList();
         continue;
       }
     }

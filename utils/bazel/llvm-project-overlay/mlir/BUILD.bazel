@@ -2018,7 +2018,10 @@ cc_library(
         "lib/Dialect/Async/Transforms/*.cpp",
         "lib/Dialect/Async/Transforms/*.h",
     ]),
-    hdrs = ["include/mlir/Dialect/Async/Passes.h"],
+    hdrs = [
+        "include/mlir/Dialect/Async/Passes.h",
+        "include/mlir/Dialect/Async/Transforms.h",
+    ],
     includes = ["include"],
     deps = [
         ":Analysis",

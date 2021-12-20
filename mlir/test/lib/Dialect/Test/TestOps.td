@@ -1667,13 +1667,16 @@ def PrettyPrintedRegionOp : TEST_Op<"pretty_printed_region",
   let printer = [{ return ::print(p, *this); }];
 }
 
-def PolyForOp : TEST_Op<"polyfor">
+def PolyForOp : TEST_Op<"polyfor", [OpAsmOpInterface]>
 {
   let summary =  "polyfor operation";
   let description = [{
     Test op with multiple region arguments, each argument of index type.
   }];
-
+  let extraClassDeclaration = [{
+    void getAsmBlockArgumentNames(mlir::Region &region,
+                                  mlir::OpAsmSetValueNameFn setNameFn);
+  }];
   let regions = (region SizedRegion<1>:$region);
   let parser = [{ return ::parse$cppClass(parser, result); }];
 }

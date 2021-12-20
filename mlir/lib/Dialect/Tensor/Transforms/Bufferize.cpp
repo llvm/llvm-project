@@ -112,7 +112,7 @@ private:
                     ArrayRef<Value> constants, ValueRange::iterator &element_it,
                     SmallVectorImpl<Value> &indices,
                     ImplicitLocOpBuilder b) const {
-    if (dim == shape.size() - 1) {
+    if (dim == static_cast<int>(shape.size()) - 1) {
       for (int i = 0; i < shape.back(); ++i) {
         indices.back() = constants[i];
         b.create<memref::StoreOp>(*element_it, buffer, indices);

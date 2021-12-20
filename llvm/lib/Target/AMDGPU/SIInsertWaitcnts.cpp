@@ -30,6 +30,7 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/DebugCounter.h"
@@ -51,26 +52,6 @@ static cl::opt<bool> ForceEmitZeroFlag(
   cl::init(false), cl::Hidden);
 
 namespace {
-
-template <typename EnumT>
-class enum_iterator
-    : public iterator_facade_base<enum_iterator<EnumT>,
-                                  std::forward_iterator_tag, const EnumT> {
-  EnumT Value;
-public:
-  enum_iterator() = default;
-  enum_iterator(EnumT Value) : Value(Value) {}
-
-  enum_iterator &operator++() {
-    Value = static_cast<EnumT>(Value + 1);
-    return *this;
-  }
-
-  bool operator==(const enum_iterator &RHS) const { return Value == RHS.Value; }
-
-  EnumT operator*() const { return Value; }
-};
-
 // Class of object that encapsulates latest instruction counter score
 // associated with the operand.  Used for determining whether
 // s_waitcnt instruction needs to be emitted.
@@ -78,27 +59,32 @@ public:
 #define CNT_MASK(t) (1u << (t))
 
 enum InstCounterType { VM_CNT = 0, LGKM_CNT, EXP_CNT, VS_CNT, NUM_INST_CNTS };
+} // namespace
 
-iterator_range<enum_iterator<InstCounterType>> inst_counter_types() {
-  return make_range(enum_iterator<InstCounterType>(VM_CNT),
-                    enum_iterator<InstCounterType>(NUM_INST_CNTS));
-}
+namespace llvm {
+template <> struct enum_iteration_traits<InstCounterType> {
+  static constexpr bool is_iterable = true;
+};
+} // namespace llvm
+
+namespace {
+auto inst_counter_types() { return enum_seq(VM_CNT, NUM_INST_CNTS); }
 
 using RegInterval = std::pair<int, int>;
 
-struct {
+struct HardwareLimits {
   unsigned VmcntMax;
   unsigned ExpcntMax;
   unsigned LgkmcntMax;
   unsigned VscntMax;
-} HardwareLimits;
+};
 
-struct {
+struct RegisterEncoding {
   unsigned VGPR0;
   unsigned VGPRL;
   unsigned SGPR0;
   unsigned SGPRL;
-} RegisterEncoding;
+};
 
 enum WaitEventType {
   VMEM_ACCESS,      // vector-memory read & write
@@ -194,18 +180,20 @@ void addWait(AMDGPU::Waitcnt &Wait, InstCounterType T, unsigned Count) {
 // "s_waitcnt 0" before use.
 class WaitcntBrackets {
 public:
-  WaitcntBrackets(const GCNSubtarget *SubTarget) : ST(SubTarget) {}
+  WaitcntBrackets(const GCNSubtarget *SubTarget, HardwareLimits Limits,
+                  RegisterEncoding Encoding)
+      : ST(SubTarget), Limits(Limits), Encoding(Encoding) {}
 
-  static unsigned getWaitCountMax(InstCounterType T) {
+  unsigned getWaitCountMax(InstCounterType T) const {
     switch (T) {
     case VM_CNT:
-      return HardwareLimits.VmcntMax;
+      return Limits.VmcntMax;
     case LGKM_CNT:
-      return HardwareLimits.LgkmcntMax;
+      return Limits.LgkmcntMax;
     case EXP_CNT:
-      return HardwareLimits.ExpcntMax;
+      return Limits.ExpcntMax;
     case VS_CNT:
-      return HardwareLimits.VscntMax;
+      return Limits.VscntMax;
     default:
       break;
     }
@@ -338,6 +326,8 @@ private:
                    unsigned OpNo, unsigned Val);
 
   const GCNSubtarget *ST = nullptr;
+  HardwareLimits Limits = {};
+  RegisterEncoding Encoding = {};
   unsigned ScoreLBs[NUM_INST_CNTS] = {0};
   unsigned ScoreUBs[NUM_INST_CNTS] = {0};
   unsigned PendingEvents = 0;
@@ -471,14 +461,14 @@ RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
   unsigned Reg = TRI->getEncodingValue(AMDGPU::getMCReg(Op.getReg(), *ST));
 
   if (TRI->isVectorRegister(*MRI, Op.getReg())) {
-    assert(Reg >= RegisterEncoding.VGPR0 && Reg <= RegisterEncoding.VGPRL);
-    Result.first = Reg - RegisterEncoding.VGPR0;
+    assert(Reg >= Encoding.VGPR0 && Reg <= Encoding.VGPRL);
+    Result.first = Reg - Encoding.VGPR0;
     if (TRI->isAGPR(*MRI, Op.getReg()))
       Result.first += AGPR_OFFSET;
     assert(Result.first >= 0 && Result.first < SQ_MAX_PGM_VGPRS);
   } else if (TRI->isSGPRReg(*MRI, Op.getReg())) {
-    assert(Reg >= RegisterEncoding.SGPR0 && Reg < SQ_MAX_PGM_SGPRS);
-    Result.first = Reg - RegisterEncoding.SGPR0 + NUM_ALL_VGPRS;
+    assert(Reg >= Encoding.SGPR0 && Reg < SQ_MAX_PGM_SGPRS);
+    Result.first = Reg - Encoding.SGPR0 + NUM_ALL_VGPRS;
     assert(Result.first >= NUM_ALL_VGPRS &&
            Result.first < SQ_MAX_PGM_SGPRS + NUM_ALL_VGPRS);
   }
@@ -1589,20 +1579,22 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   for (auto T : inst_counter_types())
     ForceEmitWaitcnt[T] = false;
 
-  HardwareLimits.VmcntMax = AMDGPU::getVmcntBitMask(IV);
-  HardwareLimits.ExpcntMax = AMDGPU::getExpcntBitMask(IV);
-  HardwareLimits.LgkmcntMax = AMDGPU::getLgkmcntBitMask(IV);
-  HardwareLimits.VscntMax = ST->hasVscnt() ? 63 : 0;
+  HardwareLimits Limits = {};
+  Limits.VmcntMax = AMDGPU::getVmcntBitMask(IV);
+  Limits.ExpcntMax = AMDGPU::getExpcntBitMask(IV);
+  Limits.LgkmcntMax = AMDGPU::getLgkmcntBitMask(IV);
+  Limits.VscntMax = ST->hasVscnt() ? 63 : 0;
 
   unsigned NumVGPRsMax = ST->getAddressableNumVGPRs();
   unsigned NumSGPRsMax = ST->getAddressableNumSGPRs();
   assert(NumVGPRsMax <= SQ_MAX_PGM_VGPRS);
   assert(NumSGPRsMax <= SQ_MAX_PGM_SGPRS);
 
-  RegisterEncoding.VGPR0 = TRI->getEncodingValue(AMDGPU::VGPR0);
-  RegisterEncoding.VGPRL = RegisterEncoding.VGPR0 + NumVGPRsMax - 1;
-  RegisterEncoding.SGPR0 = TRI->getEncodingValue(AMDGPU::SGPR0);
-  RegisterEncoding.SGPRL = RegisterEncoding.SGPR0 + NumSGPRsMax - 1;
+  RegisterEncoding Encoding = {};
+  Encoding.VGPR0 = TRI->getEncodingValue(AMDGPU::VGPR0);
+  Encoding.VGPRL = Encoding.VGPR0 + NumVGPRsMax - 1;
+  Encoding.SGPR0 = TRI->getEncodingValue(AMDGPU::SGPR0);
+  Encoding.SGPRL = Encoding.SGPR0 + NumSGPRsMax - 1;
 
   TrackedWaitcntSet.clear();
   BlockInfos.clear();
@@ -1652,9 +1644,9 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
           *Brackets = *BI.Incoming;
       } else {
         if (!Brackets)
-          Brackets = std::make_unique<WaitcntBrackets>(ST);
+          Brackets = std::make_unique<WaitcntBrackets>(ST, Limits, Encoding);
         else
-          *Brackets = WaitcntBrackets(ST);
+          *Brackets = WaitcntBrackets(ST, Limits, Encoding);
       }
 
       Modified |= insertWaitcntInBlock(MF, *BI.MBB, *Brackets);
