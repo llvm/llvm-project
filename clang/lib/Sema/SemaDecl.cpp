@@ -372,7 +372,6 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
   }
 
   NamedDecl *IIDecl = nullptr;
-  UsingShadowDecl *FoundUsingShadow = nullptr;
   switch (Result.getResultKind()) {
   case LookupResult::NotFound:
   case LookupResult::NotFoundInCurrentInstantiation:
@@ -442,10 +441,8 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
           (AllowDeducedTemplate && getAsTypeTemplateDecl(RealRes))) {
         if (!IIDecl ||
             // Make the selection of the recovery decl deterministic.
-            RealRes->getLocation() < IIDecl->getLocation()) {
+            RealRes->getLocation() < IIDecl->getLocation())
           IIDecl = RealRes;
-          FoundUsingShadow = dyn_cast<UsingShadowDecl>(*Res);
-        }
       }
     }
 
@@ -468,7 +465,6 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
 
   case LookupResult::Found:
     IIDecl = Result.getFoundDecl();
-    FoundUsingShadow = dyn_cast<UsingShadowDecl>(*Result.begin());
     break;
   }
 
@@ -495,20 +491,14 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
     (void)DiagnoseUseOfDecl(IDecl, NameLoc);
     if (!HasTrailingDot)
       T = Context.getObjCInterfaceType(IDecl);
-    FoundUsingShadow = nullptr; // FIXME: Target must be a TypeDecl.
   } else if (auto *UD = dyn_cast<UnresolvedUsingIfExistsDecl>(IIDecl)) {
     (void)DiagnoseUseOfDecl(UD, NameLoc);
     // Recover with 'int'
     T = Context.IntTy;
-    FoundUsingShadow = nullptr;
   } else if (AllowDeducedTemplate) {
-    if (auto *TD = getAsTypeTemplateDecl(IIDecl)) {
-      // FIXME: TemplateName should include FoundUsingShadow sugar.
+    if (auto *TD = getAsTypeTemplateDecl(IIDecl))
       T = Context.getDeducedTemplateSpecializationType(TemplateName(TD),
                                                        QualType(), false);
-      // Don't wrap in a further UsingType.
-      FoundUsingShadow = nullptr;
-    }
   }
 
   if (T.isNull()) {
@@ -516,9 +506,6 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
     Result.suppressDiagnostics();
     return nullptr;
   }
-
-  if (FoundUsingShadow)
-    T = Context.getUsingType(FoundUsingShadow, T);
 
   // NOTE: avoid constructing an ElaboratedType(Loc) if this is a
   // constructor or destructor name (in such a case, the scope specifier
@@ -856,6 +843,21 @@ static bool isTagTypeWithMissingTag(Sema &SemaRef, LookupResult &Result,
   return false;
 }
 
+/// Build a ParsedType for a simple-type-specifier with a nested-name-specifier.
+static ParsedType buildNestedType(Sema &S, CXXScopeSpec &SS,
+                                  QualType T, SourceLocation NameLoc) {
+  ASTContext &Context = S.Context;
+
+  TypeLocBuilder Builder;
+  Builder.pushTypeSpec(T).setNameLoc(NameLoc);
+
+  T = S.getElaboratedType(ETK_None, SS, T);
+  ElaboratedTypeLoc ElabTL = Builder.push<ElaboratedTypeLoc>(T);
+  ElabTL.setElaboratedKeywordLoc(SourceLocation());
+  ElabTL.setQualifierLoc(SS.getWithLocInContext(Context));
+  return S.CreateParsedType(T, Builder.getTypeSourceInfo(Context, T));
+}
+
 Sema::NameClassification Sema::ClassifyName(Scope *S, CXXScopeSpec &SS,
                                             IdentifierInfo *&Name,
                                             SourceLocation NameLoc,
@@ -1132,28 +1134,14 @@ Corrected:
                          : NameClassification::TypeTemplate(Template);
   }
 
-  auto BuildTypeFor = [&](TypeDecl *Type, NamedDecl *Found) {
-    QualType T = Context.getTypeDeclType(Type);
-    if (const auto *USD = dyn_cast<UsingShadowDecl>(Found))
-      T = Context.getUsingType(USD, T);
-
-    if (SS.isEmpty()) // No elaborated type, trivial location info
-      return ParsedType::make(T);
-
-    TypeLocBuilder Builder;
-    Builder.pushTypeSpec(T).setNameLoc(NameLoc);
-    T = getElaboratedType(ETK_None, SS, T);
-    ElaboratedTypeLoc ElabTL = Builder.push<ElaboratedTypeLoc>(T);
-    ElabTL.setElaboratedKeywordLoc(SourceLocation());
-    ElabTL.setQualifierLoc(SS.getWithLocInContext(Context));
-    return CreateParsedType(T, Builder.getTypeSourceInfo(Context, T));
-  };
-
   NamedDecl *FirstDecl = (*Result.begin())->getUnderlyingDecl();
   if (TypeDecl *Type = dyn_cast<TypeDecl>(FirstDecl)) {
     DiagnoseUseOfDecl(Type, NameLoc);
     MarkAnyDeclReferenced(Type->getLocation(), Type, /*OdrUse=*/false);
-    return BuildTypeFor(Type, *Result.begin());
+    QualType T = Context.getTypeDeclType(Type);
+    if (SS.isNotEmpty())
+      return buildNestedType(*this, SS, T, NameLoc);
+    return ParsedType::make(T);
   }
 
   ObjCInterfaceDecl *Class = dyn_cast<ObjCInterfaceDecl>(FirstDecl);
@@ -1202,7 +1190,10 @@ Corrected:
       isTagTypeWithMissingTag(*this, Result, S, SS, Name, NameLoc)) {
     TypeDecl *Type = Result.getAsSingle<TypeDecl>();
     DiagnoseUseOfDecl(Type, NameLoc);
-    return BuildTypeFor(Type, *Result.begin());
+    QualType T = Context.getTypeDeclType(Type);
+    if (SS.isNotEmpty())
+      return buildNestedType(*this, SS, T, NameLoc);
+    return ParsedType::make(T);
   }
 
   // If we already know which single declaration is referenced, just annotate

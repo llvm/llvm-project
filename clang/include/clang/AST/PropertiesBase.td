@@ -107,8 +107,6 @@ def DeclRef : RefPropertyType<"Decl"> { let ConstWhenWriting = 1; }
     SubclassPropertyType<"TemplateTypeParmDecl", DeclRef>;
   def TemplateTemplateParmDeclRef :
     SubclassPropertyType<"TemplateTemplateParmDecl", DeclRef>;
-  def UsingShadowDeclRef :
-    SubclassPropertyType<"UsingShadowDecl", DeclRef>;
   def ValueDeclRef :
     SubclassPropertyType<"ValueDecl", DeclRef>;
 def ElaboratedTypeKeyword : EnumPropertyType;
