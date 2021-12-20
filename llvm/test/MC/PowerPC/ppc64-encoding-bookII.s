@@ -207,6 +207,9 @@
 # CHECK-BE: lwsync                          # encoding: [0x7c,0x20,0x04,0xac]
 # CHECK-LE: lwsync                          # encoding: [0xac,0x04,0x20,0x7c]
             lwsync
+# CHECK-BE: sync                            # encoding: [0x7c,0x00,0x04,0xac]
+# CHECK-LE: sync                            # encoding: [0xac,0x04,0x00,0x7c]
+            hwsync
 # CHECK-BE: ptesync                         # encoding: [0x7c,0x40,0x04,0xac]
 # CHECK-LE: ptesync                         # encoding: [0xac,0x04,0x40,0x7c]
             ptesync
