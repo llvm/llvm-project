@@ -331,7 +331,7 @@ HoistingAnalysis::getPackedTensorSizes(ImplicitLocOpBuilder &b) {
     // Compute an upper bound `ubVal` for the upper bound of `forOp`.
     AffineMap boundMap;
     SmallVector<Value> boundOperands;
-    getUpperBoundForIndex(forOp.upperBound(), boundMap, boundOperands);
+    getUpperBoundForIndex(forOp.getUpperBound(), boundMap, boundOperands);
     Value ubVal = b.createOrFold<AffineMinOp>(boundMap, boundOperands);
     // Compute the maximal packing loop length as (ub - lb).ceilDiv(step) and
     // store the result to `dynamicTensorSizes`.
@@ -341,8 +341,8 @@ HoistingAnalysis::getPackedTensorSizes(ImplicitLocOpBuilder &b) {
     bindDims(b.getContext(), lb, ub);
     bindSymbols(b.getContext(), step);
     Value res = b.createOrFold<AffineApplyOp>(
-        (ub - lb).ceilDiv(step),
-        ValueRange{forOp.lowerBound(), ubVal, cast<scf::ForOp>(forOp).step()});
+        (ub - lb).ceilDiv(step), ValueRange{forOp.getLowerBound(), ubVal,
+                                            cast<scf::ForOp>(forOp).getStep()});
     dynamicTensorSizes.push_back(res);
   }
 
@@ -363,11 +363,11 @@ static Value buildLoopIterationCount(OpBuilder &b, scf::ForOp outer,
   AffineExpr iv, lb, step;
   bindDims(ctx, iv, lb);
   bindSymbols(ctx, step);
-  if (!isDefinedOutsideOrConstant(outer, forOp.lowerBound()) ||
-      !isDefinedOutsideOrConstant(outer, forOp.step()))
+  if (!isDefinedOutsideOrConstant(outer, forOp.getLowerBound()) ||
+      !isDefinedOutsideOrConstant(outer, forOp.getStep()))
     return Value();
-  Value ivVal = forOp.getInductionVar(), lbVal = forOp.lowerBound(),
-        stepVal = forOp.step();
+  Value ivVal = forOp.getInductionVar(), lbVal = forOp.getLowerBound(),
+        stepVal = forOp.getStep();
   auto loc = forOp->getLoc();
   return b.createOrFold<AffineApplyOp>(loc, (iv - lb).ceilDiv(step),
                                        ValueRange{ivVal, lbVal, stepVal});
@@ -434,10 +434,10 @@ FailureOr<Value> mlir::linalg::hoistPaddingOnTensors(PadTensorOp opToHoist,
       continue;
     }
     // Create a packing loop that takes `packedTensor` as iteration argument.
-    auto clonedForOp =
-        b.create<scf::ForOp>(loc, bvm.lookupOrDefault(forOp.lowerBound()),
-                             bvm.lookupOrDefault(forOp.upperBound()),
-                             bvm.lookupOrDefault(forOp.step()), packedTensor);
+    auto clonedForOp = b.create<scf::ForOp>(
+        loc, bvm.lookupOrDefault(forOp.getLowerBound()),
+        bvm.lookupOrDefault(forOp.getUpperBound()),
+        bvm.lookupOrDefault(forOp.getStep()), packedTensor);
     // Map the induction var, region args and results to the `clonedForOp`.
     bvm.map(forOp.getInductionVar(), clonedForOp.getInductionVar());
     bvm.map(forOp.getRegionIterArgs(), clonedForOp.getRegionIterArgs());

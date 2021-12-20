@@ -54,11 +54,11 @@ void ForLoopRangeFolding::runOnOperation() {
 
       OpBuilder b(op);
       BlockAndValueMapping lbMap;
-      lbMap.map(indVar, op.lowerBound());
+      lbMap.map(indVar, op.getLowerBound());
       BlockAndValueMapping ubMap;
-      ubMap.map(indVar, op.upperBound());
+      ubMap.map(indVar, op.getUpperBound());
       BlockAndValueMapping stepMap;
-      stepMap.map(indVar, op.step());
+      stepMap.map(indVar, op.getStep());
 
       if (isa<arith::AddIOp>(user)) {
         Operation *lbFold = b.clone(*user, lbMap);

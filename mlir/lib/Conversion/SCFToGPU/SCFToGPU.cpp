@@ -425,9 +425,9 @@ static LogicalResult processParallelLoop(
     return {};
   };
 
-  for (auto config : llvm::zip(mapping, parallelOp.getInductionVars(),
-                               parallelOp.lowerBound(), parallelOp.upperBound(),
-                               parallelOp.step())) {
+  for (auto config : llvm::zip(
+           mapping, parallelOp.getInductionVars(), parallelOp.getLowerBound(),
+           parallelOp.getUpperBound(), parallelOp.getStep())) {
     Attribute mappingAttribute;
     Value iv, lowerBound, upperBound, step;
     std::tie(mappingAttribute, iv, lowerBound, upperBound, step) = config;
@@ -518,7 +518,7 @@ static LogicalResult processParallelLoop(
               loc, arith::CmpIPredicate::slt, newIndex,
               cloningMap.lookupOrDefault(originalBound));
           scf::IfOp ifOp = rewriter.create<scf::IfOp>(loc, pred, false);
-          rewriter.setInsertionPointToStart(&ifOp.thenRegion().front());
+          rewriter.setInsertionPointToStart(&ifOp.getThenRegion().front());
           // Put a sentinel into the worklist so we know when to pop out of the
           // if body again. We use the launchOp here, as that cannot be part of
           // the bodies instruction.

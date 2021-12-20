@@ -35,8 +35,8 @@ scf::ForOp mlir::cloneWithNewYields(OpBuilder &b, scf::ForOp loop,
   auto operands = llvm::to_vector<4>(loop.getIterOperands());
   operands.append(newIterOperands.begin(), newIterOperands.end());
   scf::ForOp newLoop =
-      b.create<scf::ForOp>(loop.getLoc(), loop.lowerBound(), loop.upperBound(),
-                           loop.step(), operands);
+      b.create<scf::ForOp>(loop.getLoc(), loop.getLowerBound(),
+                           loop.getUpperBound(), loop.getStep(), operands);
 
   auto &loopBody = *loop.getBody();
   auto &newLoopBody = *newLoop.getBody();
@@ -118,10 +118,10 @@ void mlir::outlineIfOp(OpBuilder &b, scf::IfOp ifOp, FuncOp *thenFn,
     return outlinedFunc;
   };
 
-  if (thenFn && !ifOp.thenRegion().empty())
-    *thenFn = outline(ifOp.thenRegion(), thenFnName);
-  if (elseFn && !ifOp.elseRegion().empty())
-    *elseFn = outline(ifOp.elseRegion(), elseFnName);
+  if (thenFn && !ifOp.getThenRegion().empty())
+    *thenFn = outline(ifOp.getThenRegion(), thenFnName);
+  if (elseFn && !ifOp.getElseRegion().empty())
+    *elseFn = outline(ifOp.getElseRegion(), elseFnName);
 }
 
 bool mlir::getInnermostParallelLoops(Operation *rootOp,

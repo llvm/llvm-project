@@ -318,7 +318,7 @@ LogicalResult IsBroadcastableOpConverter::matchAndRewrite(
         b.create<scf::YieldOp>(loc, broadcastable);
       });
 
-  rewriter.replaceOp(op, reduceResult.results().front());
+  rewriter.replaceOp(op, reduceResult.getResults().front());
   return success();
 }
 

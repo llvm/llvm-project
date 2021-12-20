@@ -761,7 +761,7 @@ static void genInsertionStore(CodeGen &codegen, PatternRewriter &rewriter,
   scf::IfOp ifOp = rewriter.create<scf::IfOp>(loc, rewriter.getIndexType(),
                                               cond, /*else=*/true);
   // True branch.
-  rewriter.setInsertionPointToStart(&ifOp.thenRegion().front());
+  rewriter.setInsertionPointToStart(&ifOp.getThenRegion().front());
   rewriter.create<memref::StoreOp>(loc, tval, codegen.expFilled, index);
   rewriter.create<memref::StoreOp>(loc, index, codegen.expAdded,
                                    codegen.expCount);
@@ -769,7 +769,7 @@ static void genInsertionStore(CodeGen &codegen, PatternRewriter &rewriter,
   Value add = rewriter.create<arith::AddIOp>(loc, codegen.expCount, one);
   rewriter.create<scf::YieldOp>(loc, add);
   // False branch.
-  rewriter.setInsertionPointToStart(&ifOp.elseRegion().front());
+  rewriter.setInsertionPointToStart(&ifOp.getElseRegion().front());
   rewriter.create<scf::YieldOp>(loc, codegen.expCount);
   rewriter.setInsertionPointAfter(ifOp);
   // Value assignment.
@@ -1226,12 +1226,12 @@ static Operation *genWhile(Merger &merger, CodeGen &codegen,
   assert(types.size() == operands.size());
   Location loc = op.getLoc();
   scf::WhileOp whileOp = rewriter.create<scf::WhileOp>(loc, types, operands);
-  Block *before = rewriter.createBlock(&whileOp.before(), {}, types);
-  Block *after = rewriter.createBlock(&whileOp.after(), {}, types);
+  Block *before = rewriter.createBlock(&whileOp.getBefore(), {}, types);
+  Block *after = rewriter.createBlock(&whileOp.getAfter(), {}, types);
 
   // Build the "before" region, which effectively consists
   // of a conjunction of "i < upper" tests on all induction.
-  rewriter.setInsertionPointToStart(&whileOp.before().front());
+  rewriter.setInsertionPointToStart(&whileOp.getBefore().front());
   Value cond;
   unsigned o = 0;
   for (unsigned b = 0, be = indices.size(); b < be; b++) {
@@ -1254,7 +1254,7 @@ static Operation *genWhile(Merger &merger, CodeGen &codegen,
     codegen.loops[idx] = after->getArgument(o++);
   assert(o == operands.size());
   rewriter.create<scf::ConditionOp>(loc, cond, before->getArguments());
-  rewriter.setInsertionPointToStart(&whileOp.after().front());
+  rewriter.setInsertionPointToStart(&whileOp.getAfter().front());
   return whileOp;
 }
 
@@ -1365,7 +1365,7 @@ static void genWhileInduction(Merger &merger, CodeGen &codegen,
       rewriter.setInsertionPointAfter(ifOp);
     }
   }
-  rewriter.setInsertionPointToEnd(&whileOp.after().front());
+  rewriter.setInsertionPointToEnd(&whileOp.getAfter().front());
   // Finalize the induction. Note that the induction could be performed
   // in the individual if-branches to avoid re-evaluating the conditions.
   // However, that would result in a rather elaborate forest of yield
@@ -1455,7 +1455,7 @@ static scf::IfOp genIf(Merger &merger, CodeGen &codegen,
   if (codegen.expValues)
     types.push_back(rewriter.getIndexType());
   scf::IfOp ifOp = rewriter.create<scf::IfOp>(loc, types, cond, /*else=*/true);
-  rewriter.setInsertionPointToStart(&ifOp.thenRegion().front());
+  rewriter.setInsertionPointToStart(&ifOp.getThenRegion().front());
   return ifOp;
 }
 
@@ -1474,7 +1474,7 @@ static void endIf(Merger &merger, CodeGen &codegen, PatternRewriter &rewriter,
   }
   if (!operands.empty())
     rewriter.create<scf::YieldOp>(op.getLoc(), operands);
-  rewriter.setInsertionPointToStart(&ifOp.elseRegion().front());
+  rewriter.setInsertionPointToStart(&ifOp.getElseRegion().front());
 }
 
 //===----------------------------------------------------------------------===//
