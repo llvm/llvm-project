@@ -1328,8 +1328,8 @@ bool ARMLowOverheadLoops::ProcessLoop(MachineLoop *ML) {
   bool Changed = false;
 
   // Process inner loops first.
-  for (auto I = ML->begin(), E = ML->end(); I != E; ++I)
-    Changed |= ProcessLoop(*I);
+  for (MachineLoop *L : *ML)
+    Changed |= ProcessLoop(L);
 
   LLVM_DEBUG({
     dbgs() << "ARM Loops: Processing loop containing:\n";
