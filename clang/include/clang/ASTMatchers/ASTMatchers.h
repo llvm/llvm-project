@@ -4128,34 +4128,25 @@ AST_MATCHER_P(DeclRefExpr, to, internal::Matcher<Decl>,
           InnerMatcher.matches(*DeclNode, Finder, Builder));
 }
 
-/// Matches if a node refers to a declaration through a specific
-/// using shadow declaration.
+/// Matches a \c DeclRefExpr that refers to a declaration through a
+/// specific using shadow declaration.
 ///
-/// Examples:
+/// Given
 /// \code
-///   namespace a { int f(); }
+///   namespace a { void f() {} }
 ///   using a::f;
-///   int x = f();
+///   void g() {
+///     f();     // Matches this ..
+///     a::f();  // .. but not this.
+///   }
 /// \endcode
 /// declRefExpr(throughUsingDecl(anything()))
-///   matches \c f
-///
-/// \code
-///   namespace a { class X{}; }
-///   using a::X;
-///   X x;
-/// \code
-/// typeLoc(loc(usingType(throughUsingDecl(anything()))))
-///   matches \c X
-///
-/// Usable as: Matcher<DeclRefExpr>, Matcher<UsingType>
-AST_POLYMORPHIC_MATCHER_P(throughUsingDecl,
-                          AST_POLYMORPHIC_SUPPORTED_TYPES(DeclRefExpr,
-                                                          UsingType),
-                          internal::Matcher<UsingShadowDecl>, Inner) {
+///   matches \c f()
+AST_MATCHER_P(DeclRefExpr, throughUsingDecl,
+              internal::Matcher<UsingShadowDecl>, InnerMatcher) {
   const NamedDecl *FoundDecl = Node.getFoundDecl();
   if (const UsingShadowDecl *UsingDecl = dyn_cast<UsingShadowDecl>(FoundDecl))
-    return Inner.matches(*UsingDecl, Finder, Builder);
+    return InnerMatcher.matches(*UsingDecl, Finder, Builder);
   return false;
 }
 
@@ -6852,7 +6843,7 @@ extern const AstTypeMatcher<DecltypeType> decltypeType;
 AST_TYPE_TRAVERSE_MATCHER(hasDeducedType, getDeducedType,
                           AST_POLYMORPHIC_SUPPORTED_TYPES(AutoType));
 
-/// Matches \c DecltypeType or \c UsingType nodes to find the underlying type.
+/// Matches \c DecltypeType nodes to find out the underlying type.
 ///
 /// Given
 /// \code
@@ -6862,10 +6853,9 @@ AST_TYPE_TRAVERSE_MATCHER(hasDeducedType, getDeducedType,
 /// decltypeType(hasUnderlyingType(isInteger()))
 ///   matches the type of "a"
 ///
-/// Usable as: Matcher<DecltypeType>, Matcher<UsingType>
+/// Usable as: Matcher<DecltypeType>
 AST_TYPE_TRAVERSE_MATCHER(hasUnderlyingType, getUnderlyingType,
-                          AST_POLYMORPHIC_SUPPORTED_TYPES(DecltypeType,
-                                                          UsingType));
+                          AST_POLYMORPHIC_SUPPORTED_TYPES(DecltypeType));
 
 /// Matches \c FunctionType nodes.
 ///
@@ -7192,18 +7182,6 @@ AST_MATCHER_P(ElaboratedType, namesType, internal::Matcher<QualType>,
               InnerMatcher) {
   return InnerMatcher.matches(Node.getNamedType(), Finder, Builder);
 }
-
-/// Matches types specified through a using declaration.
-///
-/// Given
-/// \code
-///   namespace a { struct S {}; }
-///   using a::S;
-///   S s;
-/// \endcode
-///
-/// \c usingType() matches the type of the variable declaration of \c s.
-extern const AstTypeMatcher<UsingType> usingType;
 
 /// Matches types that represent the result of substituting a type for a
 /// template type parameter.

@@ -2380,9 +2380,6 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
     break;
   }
 
-  case Type::Using:
-    return mangleUnresolvedTypeOrSimpleId(cast<UsingType>(Ty)->desugar(),
-                                          Prefix);
   case Type::Elaborated:
     return mangleUnresolvedTypeOrSimpleId(
         cast<ElaboratedType>(Ty)->getNamedType(), Prefix);

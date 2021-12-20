@@ -364,10 +364,6 @@ public:
         Outer.add(ET->desugar(), Flags);
       }
 
-      void VisitUsingType(const UsingType *ET) {
-        Outer.add(ET->getFoundDecl(), Flags);
-      }
-
       void VisitInjectedClassNameType(const InjectedClassNameType *ICNT) {
         Outer.add(ICNT->getDecl(), Flags);
       }
@@ -857,13 +853,6 @@ refInTypeLoc(TypeLoc L, const HeuristicResolver *Resolver) {
         assert(!Ref->Qualifier.hasQualifier() && "qualifier already set");
         Ref->Qualifier = L.getQualifierLoc();
       }
-    }
-
-    void VisitUsingTypeLoc(UsingTypeLoc L) {
-      Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
-                                  L.getLocalSourceRange().getBegin(),
-                                  /*IsDecl=*/false,
-                                  {L.getFoundDecl()}});
     }
 
     void VisitTagTypeLoc(TagTypeLoc L) {
