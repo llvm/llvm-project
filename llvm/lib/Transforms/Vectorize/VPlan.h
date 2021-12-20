@@ -39,6 +39,7 @@
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Support/InstructionCost.h"
 #include <algorithm>
@@ -798,6 +799,7 @@ private:
   typedef unsigned char OpcodeTy;
   OpcodeTy Opcode;
   FastMathFlags FMF;
+  DebugLoc DL;
 
   /// Utility method serving execute(): generates a single instance of the
   /// modeled instruction.
@@ -807,12 +809,14 @@ protected:
   void setUnderlyingInstr(Instruction *I) { setUnderlyingValue(I); }
 
 public:
-  VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands)
+  VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands, DebugLoc DL)
       : VPRecipeBase(VPRecipeBase::VPInstructionSC, Operands),
-        VPValue(VPValue::VPVInstructionSC, nullptr, this), Opcode(Opcode) {}
+        VPValue(VPValue::VPVInstructionSC, nullptr, this), Opcode(Opcode),
+        DL(DL) {}
 
-  VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands)
-      : VPInstruction(Opcode, ArrayRef<VPValue *>(Operands)) {}
+  VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands,
+                DebugLoc DL = {})
+      : VPInstruction(Opcode, ArrayRef<VPValue *>(Operands), DL) {}
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
   static inline bool classof(const VPValue *V) {
@@ -821,7 +825,7 @@ public:
 
   VPInstruction *clone() const {
     SmallVector<VPValue *, 2> Operands(operands());
-    return new VPInstruction(Opcode, Operands);
+    return new VPInstruction(Opcode, Operands, DL);
   }
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.

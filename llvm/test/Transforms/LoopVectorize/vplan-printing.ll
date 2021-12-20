@@ -294,10 +294,8 @@ define void @debug_loc_vpinstruction(i32* nocapture %asd, i32* nocapture %bsd) !
 ; CHECK-NEXT:  Successor(s): if.then
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  if.then:
-; CHECK-NEXT:    EMIT vp<[[NOT1:%.+]]> = not ir<%cmp1>
-; CHECK-NOT:     !dbg
-; CHECK-NEXT:    EMIT vp<[[SEL1:%.+]]> = select vp<[[NOT1]]> ir<%cmp2> ir<false>
-; CHECK-NOT:     !dbg
+; CHECK-NEXT:    EMIT vp<[[NOT1:%.+]]> = not ir<%cmp1>, !dbg /tmp/s.c:5:3
+; CHECK-NEXT:    EMIT vp<[[SEL1:%.+]]> = select vp<[[NOT1]]> ir<%cmp2> ir<false>, !dbg /tmp/s.c:5:21
 ; CHECK-NEXT:    EMIT vp<[[OR1:%.+]]> = or vp<[[SEL1]]> ir<%cmp1>
 ; CHECK-NEXT:  Successor(s): pred.sdiv
 ; CHECK-EMPTY:

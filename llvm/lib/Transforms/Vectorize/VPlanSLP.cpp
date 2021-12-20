@@ -467,8 +467,9 @@ VPInstruction *VPlanSlp::buildGraph(ArrayRef<VPValue *> Values) {
     return markFailed();
 
   assert(CombinedOperands.size() > 0 && "Need more some operands");
-  auto *VPI = new VPInstruction(Opcode, CombinedOperands);
-  VPI->setUnderlyingInstr(cast<VPInstruction>(Values[0])->getUnderlyingInstr());
+  auto *Inst = cast<VPInstruction>(Values[0])->getUnderlyingInstr();
+  auto *VPI = new VPInstruction(Opcode, CombinedOperands, Inst->getDebugLoc());
+  VPI->setUnderlyingInstr(Inst);
 
   LLVM_DEBUG(dbgs() << "Create VPInstruction " << *VPI << " "
                     << *cast<VPInstruction>(Values[0]) << "\n");

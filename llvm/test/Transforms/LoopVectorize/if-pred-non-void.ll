@@ -155,11 +155,9 @@ for.cond.cleanup:                                 ; preds = %if.end
 ; CHECK: vector.body:
 ; CHECK: %[[CMP1:.+]] = icmp slt <2 x i32> %[[VAL:.+]], <i32 100, i32 100>
 ; CHECK: %[[CMP2:.+]] = icmp sge <2 x i32> %[[VAL]], <i32 200, i32 200>
-; CHECK: %[[NOT:.+]] = xor <2 x i1> %[[CMP1]], <i1 true, i1 true>
-; CHECK: %[[AND:.+]] = select <2 x i1> %[[NOT]], <2 x i1> %[[CMP2]], <2 x i1> zeroinitializer
-; CHECK-NOT: !dbg
+; CHECK: %[[NOT:.+]] = xor <2 x i1> %[[CMP1]], <i1 true, i1 true>, !dbg [[DBG1:![0-9]+]]
+; CHECK: %[[AND:.+]] = select <2 x i1> %[[NOT]], <2 x i1> %[[CMP2]], <2 x i1> zeroinitializer, !dbg [[DBG2:![0-9]+]]
 ; CHECK: %[[OR:.+]] = or <2 x i1> %[[AND]], %[[CMP1]]
-; CHECK-NOT: !dbg
 ; CHECK: %[[EXTRACT:.+]] = extractelement <2 x i1> %[[OR]], i32 0
 ; CHECK: br i1 %[[EXTRACT]], label %[[THEN:[a-zA-Z0-9.]+]], label %[[FI:[a-zA-Z0-9.]+]]
 ; CHECK: [[THEN]]:
@@ -284,3 +282,7 @@ for.end:
 !6 = !DISubroutineType(types: !2)
 !7 = !DILocation(line: 5, column: 21, scope: !5)
 !8 = !DILocation(line: 5, column: 3, scope: !5)
+
+
+; CHECK:      [[DBG1]] = !DILocation(line: 5, column: 21, scope: !26)
+; CHECK-NEXT: [[DBG2]] = !DILocation(line: 5, column: 3, scope: !26)
