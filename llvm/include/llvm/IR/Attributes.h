@@ -944,6 +944,8 @@ class AttrBuilder {
 
 public:
   AttrBuilder() = default;
+  AttrBuilder(const AttrBuilder &) = delete;
+  AttrBuilder(AttrBuilder &&) = default;
 
   AttrBuilder(const Attribute &A) {
     addAttribute(A);
