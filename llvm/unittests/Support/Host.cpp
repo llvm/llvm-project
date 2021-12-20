@@ -403,7 +403,7 @@ static bool runAndGetCommandOutput(
 TEST_F(HostTest, DummyRunAndGetCommandOutputUse) {
   // Suppress defined-but-not-used warnings when the tests using the helper are
   // disabled.
-  (void) runAndGetCommandOutput;
+  (void)&runAndGetCommandOutput;
 }
 
 TEST_F(HostTest, getMacOSHostVersion) {
