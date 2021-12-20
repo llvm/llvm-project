@@ -1009,9 +1009,8 @@ static LogicalResult generateOp(LinalgOpConfig &opConfig,
     return success(
         succeeded(generateNamedGenericOpOds(opConfig, genContext)) &&
         succeeded(generateNamedGenericOpDefns(opConfig, genContext)));
-  } else {
-    return emitError(genContext.getLoc()) << "unsupported operation type";
   }
+  return emitError(genContext.getLoc()) << "unsupported operation type";
 }
 
 //===----------------------------------------------------------------------===//

@@ -891,7 +891,7 @@ static void emitOperandDeserialization(const Operator &op, ArrayRef<SMLoc> loc,
   unsigned operandNum = 0;
   for (unsigned i = 0, e = op.getNumArgs(); i < e; ++i) {
     auto argument = op.getArg(i);
-    if (auto valueArg = argument.dyn_cast<NamedTypeConstraint *>()) {
+    if (auto *valueArg = argument.dyn_cast<NamedTypeConstraint *>()) {
       if (valueArg->isVariableLength()) {
         if (i != e - 1) {
           PrintFatalError(loc, "SPIR-V ops can have Variadic<..> or "
@@ -921,7 +921,7 @@ static void emitOperandDeserialization(const Operator &op, ArrayRef<SMLoc> loc,
       os << tabs << "}\n";
     } else {
       os << tabs << formatv("if ({0} < {1}.size()) {{\n", wordIndex, words);
-      auto attr = argument.get<NamedAttribute *>();
+      auto *attr = argument.get<NamedAttribute *>();
       auto newtabs = tabs.str() + "  ";
       emitAttributeDeserialization(
           (attr->attr.isOptional() ? attr->attr.getBaseAttr() : attr->attr),

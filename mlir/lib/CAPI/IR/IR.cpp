@@ -818,7 +818,7 @@ void mlirSymbolTableErase(MlirSymbolTable symbolTable,
 MlirLogicalResult mlirSymbolTableReplaceAllSymbolUses(MlirStringRef oldSymbol,
                                                       MlirStringRef newSymbol,
                                                       MlirOperation from) {
-  auto cppFrom = unwrap(from);
+  auto *cppFrom = unwrap(from);
   auto *context = cppFrom->getContext();
   auto oldSymbolAttr = StringAttr::get(unwrap(oldSymbol), context);
   auto newSymbolAttr = StringAttr::get(unwrap(newSymbol), context);

@@ -97,9 +97,9 @@ public:
 
     // Traverse all `elements` and create `memref.store` ops.
     ImplicitLocOpBuilder b(loc, rewriter);
-    auto element_it = adaptor.elements().begin();
+    auto elementIt = adaptor.elements().begin();
     SmallVector<Value, 2> indices(tensorType.getRank(), constants[0]);
-    CreateStores(/*dim=*/0, buffer, shape, constants, element_it, indices, b);
+    createStores(/*dim=*/0, buffer, shape, constants, elementIt, indices, b);
 
     rewriter.replaceOp(op, {buffer});
     return success();
@@ -108,21 +108,21 @@ public:
 private:
   // Implements backtracking to traverse indices of the output buffer while
   // iterating over op.elements().
-  void CreateStores(int dim, Value buffer, ArrayRef<int64_t> shape,
-                    ArrayRef<Value> constants, ValueRange::iterator &element_it,
+  void createStores(int dim, Value buffer, ArrayRef<int64_t> shape,
+                    ArrayRef<Value> constants, ValueRange::iterator &elementIt,
                     SmallVectorImpl<Value> &indices,
                     ImplicitLocOpBuilder b) const {
     if (dim == static_cast<int>(shape.size()) - 1) {
       for (int i = 0; i < shape.back(); ++i) {
         indices.back() = constants[i];
-        b.create<memref::StoreOp>(*element_it, buffer, indices);
-        ++element_it;
+        b.create<memref::StoreOp>(*elementIt, buffer, indices);
+        ++elementIt;
       }
       return;
     }
     for (int i = 0; i < shape[dim]; ++i) {
       indices[dim] = constants[i];
-      CreateStores(dim + 1, buffer, shape, constants, element_it, indices, b);
+      createStores(dim + 1, buffer, shape, constants, elementIt, indices, b);
     }
   }
 };

@@ -313,7 +313,7 @@ private:
     // a SymbolTable by the caller. SymbolTable needs to be refactored to
     // prevent manual building of Ops with symbols in code using SymbolTables
     // and then this needs to use the OpBuilder.
-    auto context = getOperation().getContext();
+    auto *context = getOperation().getContext();
     OpBuilder builder(context);
     auto kernelModule = builder.create<gpu::GPUModuleOp>(kernelFunc.getLoc(),
                                                          kernelFunc.getName());

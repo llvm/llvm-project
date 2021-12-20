@@ -771,8 +771,8 @@ static void buildExplicitValuePadOpWithQuantInfo(OpBuilder &builder,
                                                  OperationState &result,
                                                  Type outputType, Value input,
                                                  Value paddings,
-                                                 Value pad_const) {
-  result.addOperands({input, paddings, pad_const});
+                                                 Value padConst) {
+  result.addOperands({input, paddings, padConst});
   auto quantAttr = buildPadOpQuantizationAttr(builder, input);
   if (quantAttr)
     result.addAttribute("quantization_info", quantAttr);

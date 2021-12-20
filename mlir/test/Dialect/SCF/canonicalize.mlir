@@ -429,6 +429,24 @@ func @replace_false_if_with_values() {
 
 // -----
 
+// CHECK-LABEL: @merge_nested_if
+// CHECK-SAME: (%[[ARG0:.*]]: i1, %[[ARG1:.*]]: i1)
+func @merge_nested_if(%arg0: i1, %arg1: i1) {
+// CHECK: %[[COND:.*]] = arith.andi %[[ARG0]], %[[ARG1]]
+// CHECK: scf.if %[[COND]] {
+// CHECK-NEXT: "test.op"()
+  scf.if %arg0 {
+    scf.if %arg1 {
+      "test.op"() : () -> ()
+      scf.yield
+    }
+    scf.yield
+  }
+  return
+}
+
+// -----
+
 // CHECK-LABEL: @remove_zero_iteration_loop
 func @remove_zero_iteration_loop() {
   %c42 = arith.constant 42 : index

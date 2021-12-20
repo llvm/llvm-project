@@ -358,8 +358,8 @@ LogicalResult OpToOpPassAdaptor::run(Pass *pass, Operation *op,
   PassInstrumentor *pi = am.getPassInstrumentor();
   PassInstrumentation::PipelineParentInfo parentInfo = {llvm::get_threadid(),
                                                         pass};
-  auto dynamic_pipeline_callback = [&](OpPassManager &pipeline,
-                                       Operation *root) -> LogicalResult {
+  auto dynamicPipelineCallback = [&](OpPassManager &pipeline,
+                                     Operation *root) -> LogicalResult {
     if (!op->isAncestor(root))
       return root->emitOpError()
              << "Trying to schedule a dynamic pipeline on an "
@@ -379,7 +379,7 @@ LogicalResult OpToOpPassAdaptor::run(Pass *pass, Operation *op,
                                           verifyPasses, parentInitGeneration,
                                           pi, &parentInfo);
   };
-  pass->passState.emplace(op, am, dynamic_pipeline_callback);
+  pass->passState.emplace(op, am, dynamicPipelineCallback);
 
   // Instrument before the pass has run.
   if (pi)
@@ -437,7 +437,7 @@ LogicalResult OpToOpPassAdaptor::runPipeline(
     const PassInstrumentation::PipelineParentInfo *parentInfo) {
   assert((!instrumentor || parentInfo) &&
          "expected parent info if instrumentor is provided");
-  auto scope_exit = llvm::make_scope_exit([&] {
+  auto scopeExit = llvm::make_scope_exit([&] {
     // Clear out any computed operation analyses. These analyses won't be used
     // any more in this pipeline, and this helps reduce the current working set
     // of memory. If preserving these analyses becomes important in the future
@@ -460,7 +460,7 @@ LogicalResult OpToOpPassAdaptor::runPipeline(
 /// type, or nullptr if one does not exist.
 static OpPassManager *findPassManagerFor(MutableArrayRef<OpPassManager> mgrs,
                                          StringRef name) {
-  auto it = llvm::find_if(
+  auto *it = llvm::find_if(
       mgrs, [&](OpPassManager &mgr) { return mgr.getOpName() == name; });
   return it == mgrs.end() ? nullptr : &*it;
 }
@@ -470,7 +470,7 @@ static OpPassManager *findPassManagerFor(MutableArrayRef<OpPassManager> mgrs,
 static OpPassManager *findPassManagerFor(MutableArrayRef<OpPassManager> mgrs,
                                          StringAttr name,
                                          MLIRContext &context) {
-  auto it = llvm::find_if(
+  auto *it = llvm::find_if(
       mgrs, [&](OpPassManager &mgr) { return mgr.getOpName(context) == name; });
   return it == mgrs.end() ? nullptr : &*it;
 }

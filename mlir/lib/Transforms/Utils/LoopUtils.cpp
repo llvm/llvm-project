@@ -3034,7 +3034,7 @@ uint64_t mlir::affineDataCopyGenerate(Block::iterator begin,
     auto updateRegion =
         [&](const SmallMapVector<Value, std::unique_ptr<MemRefRegion>, 4>
                 &targetRegions) {
-          const auto it = targetRegions.find(region->memref);
+          const auto *const it = targetRegions.find(region->memref);
           if (it == targetRegions.end())
             return false;
 

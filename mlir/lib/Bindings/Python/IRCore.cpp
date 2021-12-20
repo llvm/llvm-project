@@ -1267,7 +1267,7 @@ PyOpView::buildGeneric(py::object cls, py::list resultTypeList,
       if (segmentSpec == 1 || segmentSpec == 0) {
         // Unpack unary element.
         try {
-          auto operandValue = py::cast<PyValue *>(std::get<0>(it.value()));
+          auto *operandValue = py::cast<PyValue *>(std::get<0>(it.value()));
           if (operandValue) {
             operands.push_back(operandValue);
             operandSegmentLengths.push_back(1);
@@ -2286,10 +2286,10 @@ void mlir::python::populateIRCore(py::module &m) {
       .def_property_readonly(
           "body",
           [](PyModule &self) {
-            PyOperationRef module_op = PyOperation::forOperation(
+            PyOperationRef moduleOp = PyOperation::forOperation(
                 self.getContext(), mlirModuleGetOperation(self.get()),
                 self.getRef().releaseObject());
-            PyBlock returnBlock(module_op, mlirModuleGetBody(self.get()));
+            PyBlock returnBlock(moduleOp, mlirModuleGetBody(self.get()));
             return returnBlock;
           },
           "Return the block for this module")

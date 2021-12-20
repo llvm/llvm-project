@@ -1525,7 +1525,7 @@ FailureOr<ast::Type> Parser::validateMemberAccess(ast::Expr *parentExpr,
 
     // Handle named results.
     auto elementNames = tupleType.getElementNames();
-    auto it = llvm::find(elementNames, name);
+    const auto *it = llvm::find(elementNames, name);
     if (it != elementNames.end())
       return tupleType.getElementTypes()[it - elementNames.begin()];
   }

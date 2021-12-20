@@ -316,7 +316,7 @@ Block *Block::getUniquePredecessor() {
 Block *Block::splitBlock(iterator splitBefore) {
   // Start by creating a new basic block, and insert it immediate after this
   // one in the containing region.
-  auto newBB = new Block();
+  auto *newBB = new Block();
   getParent()->getBlocks().insert(std::next(Region::iterator(this)), newBB);
 
   // Move all of the operations from the split point to the end of the region

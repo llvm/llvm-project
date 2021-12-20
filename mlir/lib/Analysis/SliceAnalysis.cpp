@@ -168,7 +168,7 @@ struct DFSState {
 };
 } // namespace
 
-static void DFSPostorder(Operation *root, DFSState *state) {
+static void dfsPostorder(Operation *root, DFSState *state) {
   SmallVector<Operation *> queue(1, root);
   std::vector<Operation *> ops;
   while (!queue.empty()) {
@@ -200,7 +200,7 @@ mlir::topologicalSort(const SetVector<Operation *> &toSort) {
   DFSState state(toSort);
   for (auto *s : toSort) {
     assert(toSort.count(s) == 1 && "NYI: multi-sets not supported");
-    DFSPostorder(s, &state);
+    dfsPostorder(s, &state);
   }
 
   // Reorder and return.

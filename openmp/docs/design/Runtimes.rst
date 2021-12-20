@@ -468,7 +468,7 @@ An extended syntax is available when ``KMP_TOPOLOGY_METHOD=hwloc``. Depending on
 resources are detected, you may be able to specify additional resources, such as
 NUMA domains and groups of hardware resources that share certain cache levels.
 
-**Basic syntax:** ``num_unitsID[@offset][:attribute] [,num_unitsID[@offset][:attribute]...]``
+**Basic syntax:** ``[num_units|*]ID[@offset][:attribute] [,[num_units|*]ID[@offset][:attribute]...]``
 
 Supported unit IDs are not case-insensitive.
 
@@ -483,6 +483,11 @@ Supported unit IDs are not case-insensitive.
 
 | ``T`` - thread
 | ``num_units`` specifies the requested number of HW threads per core.
+
+.. note::
+    ``num_units`` can be left out or explicitly specified as ``*`` instead of a positive integer
+    meaning use all specified resources at that level.
+    e.g., ``1s,*c`` means use 1 socket and all the cores on that socket
 
 ``offset`` - (Optional) The number of units to skip.
 
@@ -554,6 +559,8 @@ available hardware resources.
   architecture, depending on ``KMP_TOPOLOGY_METHOD`` specified, as hwloc can
   often detect more topology layers than the default method used by the OpenMP
   run-time library.
+* ``*c:eff1@3``: Use all available sockets, skip the first three cores of
+  efficiency 1, and then use the rest of the available cores of efficiency 1.
 
 To see the result of the setting, you can specify ``verbose`` modifier in
 ``KMP_AFFINITY`` environment variable. The OpenMP run-time library will output

@@ -127,7 +127,7 @@ class ConvertElementwiseToLinalgPass
     : public ConvertElementwiseToLinalgBase<ConvertElementwiseToLinalgPass> {
 
   void runOnOperation() final {
-    auto func = getOperation();
+    auto *func = getOperation();
     auto *context = &getContext();
     ConversionTarget target(*context);
     RewritePatternSet patterns(context);
