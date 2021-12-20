@@ -93,8 +93,13 @@ static bool BPFPreserveDITypeImpl(Function &F) {
         Ty = DTy->getBaseType();
       }
 
-      if (Ty->getName().empty())
-        report_fatal_error("Empty type name for BTF_TYPE_ID_REMOTE reloc");
+      if (Ty->getName().empty()) {
+        if (isa<DISubroutineType>(Ty))
+          report_fatal_error(
+              "SubroutineType not supported for BTF_TYPE_ID_REMOTE reloc");
+        else
+          report_fatal_error("Empty type name for BTF_TYPE_ID_REMOTE reloc");
+      }
       MD = Ty;
     }
 
