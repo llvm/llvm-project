@@ -2893,6 +2893,8 @@ template <class ELFT> void Writer<ELFT>::writeTrapInstr() {
 
 // Write section contents to a mmap'ed file.
 template <class ELFT> void Writer<ELFT>::writeSections() {
+  llvm::TimeTraceScope timeScope("Write sections");
+
   // In -r or --emit-relocs mode, write the relocation sections first as in
   // ELf_Rel targets we might find out that we need to modify the relocated
   // section while doing it.
