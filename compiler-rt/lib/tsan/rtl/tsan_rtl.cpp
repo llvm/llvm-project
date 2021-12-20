@@ -418,11 +418,11 @@ void MemoryProfiler(u64 uptime) {
   WriteToFile(ctx->memprof_fd, buf.data(), internal_strlen(buf.data()));
 }
 
-void InitializeMemoryProfiler() {
+static bool InitializeMemoryProfiler() {
   ctx->memprof_fd = kInvalidFd;
   const char *fname = flags()->profile_memory;
   if (!fname || !fname[0])
-    return;
+    return false;
   if (internal_strcmp(fname, "stdout") == 0) {
     ctx->memprof_fd = 1;
   } else if (internal_strcmp(fname, "stderr") == 0) {
@@ -434,11 +434,11 @@ void InitializeMemoryProfiler() {
     if (ctx->memprof_fd == kInvalidFd) {
       Printf("ThreadSanitizer: failed to open memory profile file '%s'\n",
              filename.data());
-      return;
+      return false;
     }
   }
   MemoryProfiler(0);
-  MaybeSpawnBackgroundThread();
+  return true;
 }
 
 static void *BackgroundThread(void *arg) {
@@ -689,7 +689,8 @@ void Initialize(ThreadState *thr) {
 
 #if !SANITIZER_GO
   Symbolizer::LateInitialize();
-  InitializeMemoryProfiler();
+  if (InitializeMemoryProfiler() || flags()->force_background_thread)
+    MaybeSpawnBackgroundThread();
 #endif
   ctx->initialized = true;
 
@@ -702,18 +703,6 @@ void Initialize(ThreadState *thr) {
 
   OnInitialize();
 }
-
-#if !SANITIZER_GO
-#  pragma clang diagnostic push
-// We intentionally use a global constructor to delay the pthread call.
-#  pragma clang diagnostic ignored "-Wglobal-constructors"
-static bool UNUSED __local_tsan_dyninit = [] {
-  if (flags()->force_background_thread)
-    MaybeSpawnBackgroundThread();
-  return false;
-}();
-#  pragma clang diagnostic pop
-#endif
 
 void MaybeSpawnBackgroundThread() {
   // On MIPS, TSan initialization is run before
