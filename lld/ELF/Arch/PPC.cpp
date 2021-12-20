@@ -20,6 +20,9 @@ using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf;
 
+// Undefine the macro predefined by GCC powerpc32.
+#undef PPC
+
 namespace {
 class PPC final : public TargetInfo {
 public:
