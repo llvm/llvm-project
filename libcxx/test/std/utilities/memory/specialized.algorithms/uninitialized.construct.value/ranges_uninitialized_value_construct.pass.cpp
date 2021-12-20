@@ -13,11 +13,11 @@
 
 // template <nothrow-forward-iterator ForwardIterator, nothrow-sentinel-for<ForwardIterator> Sentinel>
 //   requires default_initializable<iter_value_t<ForwardIterator>>
-// ForwardIterator ranges::uninitialized_default_construct(ForwardIterator first, Sentinel last);
+// ForwardIterator ranges::uninitialized_value_construct(ForwardIterator first, Sentinel last);
 //
 // template <nothrow-forward-range ForwardRange>
 //   requires default_initializable<range_value_t<ForwardRange>>
-// borrowed_iterator_t<ForwardRange> ranges::uninitialized_default_construct(ForwardRange&& range);
+// borrowed_iterator_t<ForwardRange> ranges::uninitialized_value_construct(ForwardRange&& range);
 
 #include <cassert>
 #include <iterator>
@@ -33,32 +33,34 @@
 // Because this is a variable and not a function, it's guaranteed that ADL won't be used. However,
 // implementations are allowed to use a different mechanism to achieve this effect, so this check is
 // libc++-specific.
-LIBCPP_STATIC_ASSERT(std::is_class_v<decltype(std::ranges::uninitialized_default_construct)>);
+LIBCPP_STATIC_ASSERT(std::is_class_v<decltype(std::ranges::uninitialized_value_construct)>);
 
-struct NotDefaultCtrable { NotDefaultCtrable() = delete; };
-static_assert(!std::is_invocable_v<decltype(std::ranges::uninitialized_default_construct),
-    NotDefaultCtrable*, NotDefaultCtrable*>);
+struct NotDefaultCtrable {
+  NotDefaultCtrable() = delete;
+};
+static_assert(
+    !std::is_invocable_v<decltype(std::ranges::uninitialized_value_construct), NotDefaultCtrable*, NotDefaultCtrable*>);
 
 int main(int, char**) {
   // An empty range -- no default constructors should be invoked.
   {
     Buffer<Counted, 1> buf;
 
-    std::ranges::uninitialized_default_construct(buf.begin(), buf.begin());
+    std::ranges::uninitialized_value_construct(buf.begin(), buf.begin());
     assert(Counted::current_objects == 0);
     assert(Counted::total_objects == 0);
 
-    std::ranges::uninitialized_default_construct(std::ranges::empty_view<Counted>());
+    std::ranges::uninitialized_value_construct(std::ranges::empty_view<Counted>());
     assert(Counted::current_objects == 0);
     assert(Counted::total_objects == 0);
 
     forward_iterator<Counted*> it(buf.begin());
     auto range = std::ranges::subrange(it, sentinel_wrapper<forward_iterator<Counted*>>(it));
-    std::ranges::uninitialized_default_construct(range.begin(), range.end());
+    std::ranges::uninitialized_value_construct(range.begin(), range.end());
     assert(Counted::current_objects == 0);
     assert(Counted::total_objects == 0);
 
-    std::ranges::uninitialized_default_construct(range);
+    std::ranges::uninitialized_value_construct(range);
     assert(Counted::current_objects == 0);
     assert(Counted::total_objects == 0);
   }
@@ -66,9 +68,9 @@ int main(int, char**) {
   // A range containing several objects, (iter, sentinel) overload.
   {
     constexpr int N = 5;
-    Buffer<Counted, 5> buf;
+    Buffer<Counted, N> buf;
 
-    std::ranges::uninitialized_default_construct(buf.begin(), buf.end());
+    std::ranges::uninitialized_value_construct(buf.begin(), buf.end());
     assert(Counted::current_objects == N);
     assert(Counted::total_objects == N);
 
@@ -82,7 +84,7 @@ int main(int, char**) {
     Buffer<Counted, N> buf;
 
     auto range = std::ranges::subrange(buf.begin(), buf.end());
-    std::ranges::uninitialized_default_construct(range);
+    std::ranges::uninitialized_value_construct(range);
     assert(Counted::current_objects == N);
     assert(Counted::total_objects == N);
 
@@ -95,8 +97,7 @@ int main(int, char**) {
     constexpr int N = 3;
     Buffer<Counted, 5> buf;
 
-    std::ranges::uninitialized_default_construct(
-        std::counted_iterator(buf.begin(), N), std::default_sentinel);
+    std::ranges::uninitialized_value_construct(std::counted_iterator(buf.begin(), N), std::default_sentinel);
     assert(Counted::current_objects == N);
     assert(Counted::total_objects == N);
 
@@ -109,7 +110,7 @@ int main(int, char**) {
     constexpr int N = 3;
     Buffer<Counted, 5> buf;
 
-    std::ranges::uninitialized_default_construct(std::views::counted(buf.begin(), N));
+    std::ranges::uninitialized_value_construct(std::views::counted(buf.begin(), N));
     assert(Counted::current_objects == N);
     assert(Counted::total_objects == N);
 
@@ -123,12 +124,29 @@ int main(int, char**) {
     Buffer<Counted, 5> buf;
 
     auto range = std::ranges::subrange(buf.begin(), buf.begin() + N);
-    std::ranges::uninitialized_default_construct(std::ranges::reverse_view(range));
+    std::ranges::uninitialized_value_construct(std::ranges::reverse_view(range));
     assert(Counted::current_objects == N);
     assert(Counted::total_objects == N);
 
     std::destroy(buf.begin(), buf.begin() + N);
     Counted::reset();
+  }
+
+  // Any existing values should be overwritten by value constructors.
+  {
+    constexpr int N = 5;
+    int buffer[N] = {42, 42, 42, 42, 42};
+
+    std::ranges::uninitialized_value_construct(buffer, buffer + 1);
+    assert(buffer[0] == 0);
+    assert(buffer[1] == 42);
+
+    std::ranges::uninitialized_value_construct(buffer, buffer + N);
+    assert(buffer[0] == 0);
+    assert(buffer[1] == 0);
+    assert(buffer[2] == 0);
+    assert(buffer[3] == 0);
+    assert(buffer[4] == 0);
   }
 
   // An exception is thrown while objects are being created -- the existing objects should stay
@@ -139,8 +157,9 @@ int main(int, char**) {
 
     Counted::throw_on = 3; // When constructing the fourth object (counting from one).
     try {
-      std::ranges::uninitialized_default_construct(buf.begin(), buf.end());
-    } catch(...) {}
+      std::ranges::uninitialized_value_construct(buf.begin(), buf.end());
+    } catch (...) {
+    }
     assert(Counted::current_objects == 0);
     assert(Counted::total_objects == 3);
     std::destroy(buf.begin(), buf.begin() + Counted::total_objects);
@@ -155,21 +174,22 @@ int main(int, char**) {
     Counted::throw_on = 3; // When constructing the fourth object.
     try {
       auto range = std::ranges::subrange(buf.begin(), buf.end());
-      std::ranges::uninitialized_default_construct(range);
-    } catch(...) {}
+      std::ranges::uninitialized_value_construct(range);
+    } catch (...) {
+    }
     assert(Counted::current_objects == 0);
     assert(Counted::total_objects == 3);
     std::destroy(buf.begin(), buf.begin() + Counted::total_objects);
     Counted::reset();
   }
-#endif  // TEST_HAS_NO_EXCEPTIONS
+#endif // TEST_HAS_NO_EXCEPTIONS
 
   // Works with const iterators, (iter, sentinel) overload.
   {
     constexpr int N = 5;
     Buffer<Counted, N> buf;
 
-    std::ranges::uninitialized_default_construct(buf.cbegin(), buf.cend());
+    std::ranges::uninitialized_value_construct(buf.cbegin(), buf.cend());
     assert(Counted::current_objects == N);
     assert(Counted::total_objects == N);
     std::destroy(buf.begin(), buf.end());
@@ -180,9 +200,9 @@ int main(int, char**) {
   {
     constexpr int N = 5;
     Buffer<Counted, N> buf;
-    auto range = std::ranges::subrange(buf.cbegin(), buf.cend());
 
-    std::ranges::uninitialized_default_construct(range);
+    auto range = std::ranges::subrange(buf.cbegin(), buf.cend());
+    std::ranges::uninitialized_value_construct(range);
     assert(Counted::current_objects == N);
     assert(Counted::total_objects == N);
     std::destroy(buf.begin(), buf.end());
