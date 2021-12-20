@@ -329,12 +329,12 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
     SmallVector<Type> types = {elementTy, elementTy, elementTy};
 
     auto whileOp = rewriter.create<scf::WhileOp>(loc, types, operands);
-    Block *before = rewriter.createBlock(&whileOp.before(), {}, types);
-    Block *after = rewriter.createBlock(&whileOp.after(), {}, types);
+    Block *before = rewriter.createBlock(&whileOp.getBefore(), {}, types);
+    Block *after = rewriter.createBlock(&whileOp.getAfter(), {}, types);
 
     // The conditional block of the while loop.
     {
-      rewriter.setInsertionPointToStart(&whileOp.before().front());
+      rewriter.setInsertionPointToStart(&whileOp.getBefore().front());
       Value input = before->getArgument(0);
       Value zero = before->getArgument(2);
 
@@ -346,7 +346,7 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
 
     // The body of the while loop: shift right until reaching a value of 0.
     {
-      rewriter.setInsertionPointToStart(&whileOp.after().front());
+      rewriter.setInsertionPointToStart(&whileOp.getAfter().front());
       Value input = after->getArgument(0);
       Value leadingZeros = after->getArgument(1);
 

@@ -37,8 +37,8 @@ using scf::ParallelOp;
 /// that version can be fully unrolled and vectorized.
 static void specializeParallelLoopForUnrolling(ParallelOp op) {
   SmallVector<int64_t, 2> constantIndices;
-  constantIndices.reserve(op.upperBound().size());
-  for (auto bound : op.upperBound()) {
+  constantIndices.reserve(op.getUpperBound().size());
+  for (auto bound : op.getUpperBound()) {
     auto minOp = bound.getDefiningOp<AffineMinOp>();
     if (!minOp)
       return;
@@ -55,7 +55,7 @@ static void specializeParallelLoopForUnrolling(ParallelOp op) {
   OpBuilder b(op);
   BlockAndValueMapping map;
   Value cond;
-  for (auto bound : llvm::zip(op.upperBound(), constantIndices)) {
+  for (auto bound : llvm::zip(op.getUpperBound(), constantIndices)) {
     Value constant =
         b.create<arith::ConstantIndexOp>(op.getLoc(), std::get<1>(bound));
     Value cmp = b.create<arith::CmpIOp>(op.getLoc(), arith::CmpIPredicate::eq,
@@ -74,7 +74,7 @@ static void specializeParallelLoopForUnrolling(ParallelOp op) {
 /// beneficial if the loop will almost always have the constant bound and that
 /// version can be fully unrolled and vectorized.
 static void specializeForLoopForUnrolling(ForOp op) {
-  auto bound = op.upperBound();
+  auto bound = op.getUpperBound();
   auto minOp = bound.getDefiningOp<AffineMinOp>();
   if (!minOp)
     return;
@@ -112,9 +112,9 @@ static void specializeForLoopForUnrolling(ForOp op) {
 static LogicalResult peelForLoop(RewriterBase &b, ForOp forOp,
                                  ForOp &partialIteration, Value &splitBound) {
   RewriterBase::InsertionGuard guard(b);
-  auto lbInt = getConstantIntValue(forOp.lowerBound());
-  auto ubInt = getConstantIntValue(forOp.upperBound());
-  auto stepInt = getConstantIntValue(forOp.step());
+  auto lbInt = getConstantIntValue(forOp.getLowerBound());
+  auto ubInt = getConstantIntValue(forOp.getUpperBound());
+  auto stepInt = getConstantIntValue(forOp.getStep());
 
   // No specialization necessary if step already divides upper bound evenly.
   if (lbInt && ubInt && stepInt && (*ubInt - *lbInt) % *stepInt == 0)
@@ -129,20 +129,21 @@ static LogicalResult peelForLoop(RewriterBase &b, ForOp forOp,
   // New upper bound: %ub - (%ub - %lb) mod %step
   auto modMap = AffineMap::get(0, 3, {sym1 - ((sym1 - sym0) % sym2)});
   b.setInsertionPoint(forOp);
-  splitBound = b.createOrFold<AffineApplyOp>(
-      loc, modMap,
-      ValueRange{forOp.lowerBound(), forOp.upperBound(), forOp.step()});
+  splitBound = b.createOrFold<AffineApplyOp>(loc, modMap,
+                                             ValueRange{forOp.getLowerBound(),
+                                                        forOp.getUpperBound(),
+                                                        forOp.getStep()});
 
   // Create ForOp for partial iteration.
   b.setInsertionPointAfter(forOp);
   partialIteration = cast<ForOp>(b.clone(*forOp.getOperation()));
-  partialIteration.lowerBoundMutable().assign(splitBound);
+  partialIteration.getLowerBoundMutable().assign(splitBound);
   forOp.replaceAllUsesWith(partialIteration->getResults());
-  partialIteration.initArgsMutable().assign(forOp->getResults());
+  partialIteration.getInitArgsMutable().assign(forOp->getResults());
 
   // Set new upper loop bound.
-  b.updateRootInPlace(forOp,
-                      [&]() { forOp.upperBoundMutable().assign(splitBound); });
+  b.updateRootInPlace(
+      forOp, [&]() { forOp.getUpperBoundMutable().assign(splitBound); });
 
   return success();
 }
@@ -153,9 +154,9 @@ static void rewriteAffineOpAfterPeeling(RewriterBase &rewriter, ForOp forOp,
                                         Value previousUb) {
   Value mainIv = forOp.getInductionVar();
   Value partialIv = partialIteration.getInductionVar();
-  assert(forOp.step() == partialIteration.step() &&
+  assert(forOp.getStep() == partialIteration.getStep() &&
          "expected same step in main and partial loop");
-  Value step = forOp.step();
+  Value step = forOp.getStep();
 
   forOp.walk([&](OpTy affineOp) {
     AffineMap map = affineOp.getAffineMap();
@@ -175,7 +176,7 @@ static void rewriteAffineOpAfterPeeling(RewriterBase &rewriter, ForOp forOp,
 LogicalResult mlir::scf::peelAndCanonicalizeForLoop(RewriterBase &rewriter,
                                                     ForOp forOp,
                                                     ForOp &partialIteration) {
-  Value previousUb = forOp.upperBound();
+  Value previousUb = forOp.getUpperBound();
   Value splitBound;
   if (failed(peelForLoop(rewriter, forOp, partialIteration, splitBound)))
     return failure();
