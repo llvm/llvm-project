@@ -243,7 +243,6 @@ enum {
   MutexTypeTrace,
   MutexTypeSlot,
   MutexTypeSlots,
-  MutexTypeMultiSlot,
 };
 
 }  // namespace __tsan

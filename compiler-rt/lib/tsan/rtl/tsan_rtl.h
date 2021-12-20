@@ -333,8 +333,6 @@ struct Context {
 
   // Protects global_epoch, slot_queue, trace_part_recycle.
   Mutex slot_mtx;
-  // Prevents lock order inversions when we lock more than 1 slot.
-  Mutex multi_slot_mtx;
   uptr global_epoch;  // guarded by slot_mtx and by all slot mutexes
   bool resetting;     // global reset is in progress
   IList<TidSlot, &TidSlot::node> slot_queue GUARDED_BY(slot_mtx);
@@ -607,16 +605,6 @@ void FiberSwitch(ThreadState *thr, uptr pc, ThreadState *fiber, unsigned flags);
 // tsan_interface.h. See documentation there as well.
 enum FiberSwitchFlags {
   FiberSwitchFlagNoSync = 1 << 0, // __tsan_switch_to_fiber_no_sync
-};
-
-class SlotPairLocker {
- public:
-  SlotPairLocker(ThreadState *thr, Sid sid);
-  ~SlotPairLocker();
-
- private:
-  ThreadState *thr_;
-  TidSlot *slot_;
 };
 
 class SlotLocker {
