@@ -3,11 +3,9 @@
 
 @x = global i32 0
 
-declare void @test1_1(i8* %x1_1, i8* readonly %y1_1, ...)
+declare void @test1_1(i8* %x1_1, i8* nocapture readonly %y1_1, ...)
 
-; NOTE: readonly for %y1_2 would be OK here but not for the similar situation in test13.
-;
-; CHECK: define void @test1_2(i8* %x1_2, i8* readonly %y1_2, i8* %z1_2)
+; CHECK: define void @test1_2(i8* %x1_2, i8* nocapture readonly %y1_2, i8* %z1_2)
 define void @test1_2(i8* %x1_2, i8* %y1_2, i8* %z1_2) {
   call void (i8*, i8*, ...) @test1_1(i8* %x1_2, i8* %y1_2, i8* %z1_2)
   store i32 0, i32* @x
@@ -130,10 +128,8 @@ declare void @escape_readonly_ptr(i8** %addr, i8* readonly %ptr)
 ; is marked as readnone/only. However, the functions can write the pointer into
 ; %addr, causing the store to write to %escaped_then_written.
 ;
-; FIXME: This test currently exposes a bug in function-attrs!
-;
-; CHECK: define void @unsound_readnone(i8* nocapture readnone %ignored, i8* readnone %escaped_then_written)
-; CHECK: define void @unsound_readonly(i8* nocapture readnone %ignored, i8* readonly %escaped_then_written)
+; CHECK: define void @unsound_readnone(i8* nocapture readnone %ignored, i8* %escaped_then_written)
+; CHECK: define void @unsound_readonly(i8* nocapture readnone %ignored, i8* %escaped_then_written)
 ;
 define void @unsound_readnone(i8* %ignored, i8* %escaped_then_written) {
   %addr = alloca i8*
