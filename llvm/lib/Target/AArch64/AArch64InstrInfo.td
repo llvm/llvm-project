@@ -5316,6 +5316,19 @@ def : Pat<(v4i32 (concat_vectors (v2i32 (trunc (v2i64 V128:$Vn))),
                                  (v2i32 (trunc (v2i64 V128:$Vm))))),
           (UZP1v4i32 V128:$Vn, V128:$Vm)>;
 
+def : Pat<(v16i8 (concat_vectors
+                 (v8i8 (trunc (AArch64vlshr (v8i16 V128:$Vn), (i32 8)))),
+                 (v8i8 (trunc (AArch64vlshr (v8i16 V128:$Vm), (i32 8)))))),
+          (UZP2v16i8 V128:$Vn, V128:$Vm)>;
+def : Pat<(v8i16 (concat_vectors
+                 (v4i16 (trunc (AArch64vlshr (v4i32 V128:$Vn), (i32 16)))),
+                 (v4i16 (trunc (AArch64vlshr (v4i32 V128:$Vm), (i32 16)))))),
+          (UZP2v8i16 V128:$Vn, V128:$Vm)>;
+def : Pat<(v4i32 (concat_vectors
+                 (v2i32 (trunc (AArch64vlshr (v2i64 V128:$Vn), (i32 32)))),
+                 (v2i32 (trunc (AArch64vlshr (v2i64 V128:$Vm), (i32 32)))))),
+          (UZP2v4i32 V128:$Vn, V128:$Vm)>;
+
 //----------------------------------------------------------------------------
 // AdvSIMD TBL/TBX instructions
 //----------------------------------------------------------------------------
