@@ -1,4 +1,6 @@
-; RUN: llc -mtriple i686-pc-windows-msvc < %s | FileCheck %s
+; RUN: llc -mtriple i686-pc-windows-msvc < %s | FileCheck %s --check-prefixes=CHECK,STDOUT
+; RUN: llc -mtriple i686-pc-windows-msvc < %s -o %t
+; RUN: FileCheck %s --input-file=%t --check-prefixes=CHECK,FILE
 ; ModuleID = 'D:\src\scopes\foo.cpp'
 source_filename = "D:\5Csrc\5Cscopes\5Cfoo.cpp"
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
@@ -20,19 +22,23 @@ attributes #0 = { nounwind sspstrong "correctly-rounded-divide-sqrt-fp-math"="fa
 ; One .debug$S section should contain an S_COMPILE3 record that identifies the
 ; source language and the version of the compiler based on the DICompileUnit.
 ; CHECK: 	.section	.debug$S,"dr"
+; CHECK:        .short  4353                    # Record kind: S_OBJNAME
+; CHECK-NEXT:   .long   0                       # Signature
+; STDOUT-NEXT:  .byte   0                       # Object name
+; FILE-NEXT:    .asciz	"{{.*}}{{\\\\|/}}cv-compiler-info.ll.tmp" # Object name
 ; CHECK: 		.short	4412                  # Record kind: S_COMPILE3
-; CHECK: 		.long	1                       # Flags and language
-; CHECK: 		.short	7                     # CPUType
-; CHECK: 		.short	4                     # Frontend version
-; CHECK: 		.short	0
-; CHECK: 		.short	0
-; CHECK: 		.short	0
-; CHECK: 		.short	[[BACKEND_VERSION:[0-9]+]]  # Backend version
-; CHECK: 		.short	0
-; CHECK: 		.short	0
-; CHECK: 		.short	0
-; CHECK: 		.asciz	"clang version 4.0.0 "  # Null-terminated compiler version string
-; CHECK-NOT: .short	4412                  # Record kind: S_COMPILE3
+; CHECK-NEXT:   .long	1                       # Flags and language
+; CHECK-NEXT: 	.short	7                     # CPUType
+; CHECK-NEXT: 	.short	4                     # Frontend version
+; CHECK-NEXT: 	.short	0
+; CHECK-NEXT: 	.short	0
+; CHECK-NEXT: 	.short	0
+; CHECK-NEXT: 	.short	[[BACKEND_VERSION:[0-9]+]]  # Backend version
+; CHECK-NEXT: 	.short	0
+; CHECK-NEXT: 	.short	0
+; CHECK-NEXT: 	.short	0
+; CHECK-NEXT: 	.asciz	"clang version 4.0.0 "  # Null-terminated compiler version string
+; CHECK-NOT:    .short	4412                  # Record kind: S_COMPILE3
 !1 = !DIFile(filename: "D:\5Csrc\5Cscopes\5Cfoo.cpp", directory: "D:\5Csrc\5Cscopes\5Cclang")
 !2 = !{}
 !7 = !{i32 2, !"CodeView", i32 1}

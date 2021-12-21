@@ -290,31 +290,34 @@ char_traits<_CharT>::assign(char_type* __s, size_t __n, char_type __a)
 
 template <class _CharT>
 static inline _LIBCPP_CONSTEXPR_AFTER_CXX17
-_CharT* __move_constexpr(_CharT* __s1, const _CharT* __s2, size_t __n) _NOEXCEPT
+_CharT* __copy_constexpr(_CharT* __dest, const _CharT* __source, size_t __n) _NOEXCEPT
 {
-    if (__n == 0) return __s1;
-    if (__s1 < __s2) {
-      _VSTD::copy(__s2, __s2 + __n, __s1);
-    } else if (__s2 < __s1) {
-      _VSTD::copy_backward(__s2, __s2 + __n, __s1 + __n);
-    }
-    return __s1;
+  _LIBCPP_ASSERT(__libcpp_is_constant_evaluated(), "__copy_constexpr() should always be constant evaluated");
+  _VSTD::copy_n(__source, __n, __dest);
+  return __dest;
 }
 
 template <class _CharT>
 static inline _LIBCPP_CONSTEXPR_AFTER_CXX17
-_CharT* __copy_constexpr(_CharT* __s1, const _CharT* __s2, size_t __n) _NOEXCEPT
+_CharT* __move_constexpr(_CharT* __dest, const _CharT* __source, size_t __n) _NOEXCEPT
 {
-    _VSTD::copy_n(__s2, __n, __s1);
-    return __s1;
+  _LIBCPP_ASSERT(__libcpp_is_constant_evaluated(), "__move_constexpr() should always be constant evaluated");
+  if (__n == 0)
+    return __dest;
+  _CharT* __allocation = new _CharT[__n];
+  _VSTD::__copy_constexpr(__allocation, __source, __n);
+  _VSTD::__copy_constexpr(__dest, static_cast<const _CharT*>(__allocation), __n);
+  delete[] __allocation;
+  return __dest;
 }
 
 template <class _CharT>
 static inline _LIBCPP_CONSTEXPR_AFTER_CXX17
 _CharT* __assign_constexpr(_CharT* __s, size_t __n, _CharT __a) _NOEXCEPT
 {
-     _VSTD::fill_n(__s, __n, __a);
-     return __s;
+  _LIBCPP_ASSERT(__libcpp_is_constant_evaluated(), "__assign_constexpr() should always be constant evaluated");
+  _VSTD::fill_n(__s, __n, __a);
+  return __s;
 }
 
 // char_traits<char>
