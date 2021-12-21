@@ -1661,45 +1661,53 @@ ClassTemplateDecl *Sema::lookupCoroutineTraits(SourceLocation KwLoc,
                                                SourceLocation FuncLoc,
                                                NamespaceDecl *&Namespace) {
   if (!StdCoroutineTraitsCache) {
-    NamespaceDecl *CoroNamespace = getStdNamespace();
-    LookupResult Result(*this, &PP.getIdentifierTable().get("coroutine_traits"),
-                        FuncLoc, LookupOrdinaryName);
+    // Because coroutines moved from std::experimental in the TS to std in
+    // C++20, we look in both places to give users time to transition their
+    // TS-specific code to C++20.  Diagnostics are given when the TS usage is
+    // discovered.
+    // TODO: Become stricter when <experimental/coroutine> is removed.
 
-    if (!CoroNamespace || !LookupQualifiedName(Result, CoroNamespace)) {
-      /// Look up in namespace std::experimental, for compatibility.
-      /// TODO: Remove this extra lookup when <experimental/coroutine> is
-      /// removed.
-      CoroNamespace = lookupStdExperimentalNamespace();
-      if (!CoroNamespace || !LookupQualifiedName(Result, CoroNamespace)) {
-        Diag(KwLoc, diag::err_implied_coroutine_type_not_found)
-            << "std::coroutine_traits";
-        return nullptr;
-      }
-      Diag(KwLoc, diag::warn_deprecated_coroutine_namespace)
-          << "coroutine_traits";
-    } else {
-      /// When we found coroutine_traits in std namespace. Make sure there is no
-      /// misleading definition in std::experimental namespace.
-      NamespaceDecl *ExpNamespace = lookupStdExperimentalNamespace();
-      LookupResult ExpResult(*this,
-                             &PP.getIdentifierTable().get("coroutine_traits"),
-                             FuncLoc, LookupOrdinaryName);
-      if (ExpNamespace && LookupQualifiedName(ExpResult, ExpNamespace)) {
-        Diag(KwLoc,
-             diag::err_mixed_use_std_and_experimental_namespace_for_coroutine);
-        Diag(KwLoc, diag::warn_deprecated_coroutine_namespace)
-            << "coroutine_traits";
-        return nullptr;
-      }
+    auto const &TraitIdent = PP.getIdentifierTable().get("coroutine_traits");
+
+    NamespaceDecl *StdSpace = getStdNamespace();
+    LookupResult ResStd(*this, &TraitIdent, FuncLoc, LookupOrdinaryName);
+    bool InStd = StdSpace && LookupQualifiedName(ResStd, StdSpace);
+
+    NamespaceDecl *ExpSpace = lookupStdExperimentalNamespace();
+    LookupResult ResExp(*this, &TraitIdent, FuncLoc, LookupOrdinaryName);
+    bool InExp = ExpSpace && LookupQualifiedName(ResExp, ExpSpace);
+
+    if (!InStd && !InExp) {
+      // The goggles, they found nothing!
+      Diag(KwLoc, diag::err_implied_coroutine_type_not_found)
+          << "std::coroutine_traits";
+      return nullptr;
     }
 
+    if (!InStd) {
+      // Found only in std::experimental.
+      Diag(KwLoc, diag::warn_deprecated_coroutine_namespace)
+          << "coroutine_traits";
+    } else if (InExp) {
+      // Found in std and std::experimental.
+      Diag(KwLoc,
+           diag::err_mixed_use_std_and_experimental_namespace_for_coroutine);
+      Diag(KwLoc, diag::warn_deprecated_coroutine_namespace)
+          << "coroutine_traits";
+      return nullptr;
+    }
+
+    // Prefer ::std to std::experimental.
+    auto &Result = InStd ? ResStd : ResExp;
+    CoroTraitsNamespaceCache = InStd ? StdSpace : ExpSpace;
+
+    // coroutine_traits is required to be a class template.
     if (!(StdCoroutineTraitsCache = Result.getAsSingle<ClassTemplateDecl>())) {
       Result.suppressDiagnostics();
       NamedDecl *Found = *Result.begin();
       Diag(Found->getLocation(), diag::err_malformed_std_coroutine_traits);
       return nullptr;
     }
-    CoroTraitsNamespaceCache = CoroNamespace;
   }
   Namespace = CoroTraitsNamespaceCache;
   return StdCoroutineTraitsCache;
