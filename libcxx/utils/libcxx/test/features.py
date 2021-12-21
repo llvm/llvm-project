@@ -75,8 +75,14 @@ DEFAULT_FEATURES = [
 
   # Whether Bash can run on the executor.
   # This is not always the case, for example when running on embedded systems.
+  #
+  # For the corner case of bash existing, but it being missing in the path
+  # set in %{exec} as "--env PATH=one-single-dir", the executor does find
+  # and executes bash, but bash then can't find any other common shell
+  # utilities. Test executing "bash -c 'bash --version'" to see if bash
+  # manages to find binaries to execute.
   Feature(name='executor-has-no-bash',
-          when=lambda cfg: runScriptExitCode(cfg, ['%{exec} bash --version']) != 0),
+          when=lambda cfg: runScriptExitCode(cfg, ['%{exec} bash -c \'bash --version\'']) != 0),
 
   Feature(name='apple-clang',                                                                                                      when=_isAppleClang),
   Feature(name=lambda cfg: 'apple-clang-{__clang_major__}'.format(**compilerMacros(cfg)),                                          when=_isAppleClang),
