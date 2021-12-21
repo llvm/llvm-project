@@ -328,10 +328,6 @@ static bool isMMAType(Type *Ty) {
 InstructionCost PPCTTIImpl::getUserCost(const User *U,
                                         ArrayRef<const Value *> Operands,
                                         TTI::TargetCostKind CostKind) {
-  // Set the max cost if an MMA type is present (v256i1, v512i1).
-  if (isMMAType(U->getType()))
-    return InstructionCost::getMax();
-
   // We already implement getCastInstrCost and getMemoryOpCost where we perform
   // the vector adjustment there.
   if (isa<CastInst>(U) || isa<LoadInst>(U) || isa<StoreInst>(U))
