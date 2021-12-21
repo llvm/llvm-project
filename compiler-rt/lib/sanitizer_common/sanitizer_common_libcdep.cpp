@@ -22,7 +22,6 @@ namespace __sanitizer {
 #if (SANITIZER_LINUX || SANITIZER_NETBSD) && !SANITIZER_GO
 // Weak default implementation for when sanitizer_stackdepot is not linked in.
 SANITIZER_WEAK_ATTRIBUTE StackDepotStats StackDepotGetStats() { return {}; }
-SANITIZER_WEAK_ATTRIBUTE void StackDepotStopBackgroundThread() {}
 
 void *BackgroundThread(void *arg) {
   VPrintf(1, "%s: Started BackgroundThread\n", SanitizerToolName);
@@ -200,13 +199,22 @@ void ProtectGap(uptr addr, uptr size, uptr zero_base_shadow_start,
 
 #endif  // !SANITIZER_FUCHSIA
 
+#if !SANITIZER_WINDOWS && !SANITIZER_GO
+// Weak default implementation for when sanitizer_stackdepot is not linked in.
+SANITIZER_WEAK_ATTRIBUTE void StackDepotStopBackgroundThread() {}
+static void StopStackDepotBackgroundThread() {
+  StackDepotStopBackgroundThread();
+}
+#else
+// SANITIZER_WEAK_ATTRIBUTE is unsupported.
+static void StopStackDepotBackgroundThread() {}
+#endif
+
 }  // namespace __sanitizer
 
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_sandbox_on_notify,
                              __sanitizer_sandbox_arguments *args) {
-#if (SANITIZER_LINUX || SANITIZER_NETBSD) && !SANITIZER_GO
-  __sanitizer::StackDepotStopBackgroundThread();
-#endif
+  __sanitizer::StopStackDepotBackgroundThread();
   __sanitizer::PlatformPrepareForSandboxing(args);
   if (__sanitizer::sandboxing_callback)
     __sanitizer::sandboxing_callback();
