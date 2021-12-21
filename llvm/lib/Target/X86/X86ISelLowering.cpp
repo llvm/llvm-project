@@ -25625,17 +25625,13 @@ static SDValue getTargetVShiftByConstNode(unsigned Opc, const SDLoc &dl, MVT VT,
 
 /// Handle vector element shifts where the shift amount may or may not be a
 /// constant. Takes immediate version of shift as input.
+/// TODO: Replace with vector + (splat) idx to avoid extract_element nodes.
 static SDValue getTargetVShiftNode(unsigned Opc, const SDLoc &dl, MVT VT,
                                    SDValue SrcOp, SDValue ShAmt,
                                    const X86Subtarget &Subtarget,
                                    SelectionDAG &DAG) {
   MVT SVT = ShAmt.getSimpleValueType();
   assert((SVT == MVT::i32 || SVT == MVT::i64) && "Unexpected value type!");
-
-  // Catch shift-by-constant.
-  if (ConstantSDNode *CShAmt = dyn_cast<ConstantSDNode>(ShAmt))
-    return getTargetVShiftByConstNode(Opc, dl, VT, SrcOp,
-                                      CShAmt->getZExtValue(), DAG);
 
   // Change opcode to non-immediate version.
   Opc = getTargetVShiftUniformOpcode(Opc, true);
@@ -26368,10 +26364,19 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       return DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i32,
                          DAG.getBitcast(MVT::i16, Ins));
     }
-    case VSHIFT:
+    case VSHIFT: {
+      SDValue SrcOp = Op.getOperand(1);
+      SDValue ShAmt = Op.getOperand(2);
+
+      // Catch shift-by-constant.
+      if (auto *CShAmt = dyn_cast<ConstantSDNode>(ShAmt))
+        return getTargetVShiftByConstNode(IntrData->Opc0, dl,
+                                          Op.getSimpleValueType(), SrcOp,
+                                          CShAmt->getZExtValue(), DAG);
+
       return getTargetVShiftNode(IntrData->Opc0, dl, Op.getSimpleValueType(),
-                                 Op.getOperand(1), Op.getOperand(2), Subtarget,
-                                 DAG);
+                                 SrcOp, ShAmt, Subtarget, DAG);
+    }
     case COMPRESS_EXPAND_IN_REG: {
       SDValue Mask = Op.getOperand(3);
       SDValue DataToCompress = Op.getOperand(1);
