@@ -197,11 +197,6 @@ static cl::opt<bool>
                    cl::desc("Write merged LTO module to file before CodeGen"),
                    cl::cat(LTOCategory));
 
-static cl::opt<bool>
-    DumpLinkedModule("dump-linked-module", cl::init(false),
-                     cl::desc("Dump linked LTO module before optimize"),
-                     cl::cat(LTOCategory));
-
 static cl::list<std::string> InputFilenames(cl::Positional, cl::OneOrMore,
                                             cl::desc("<input bitcode files>"),
                                             cl::cat(LTOCategory));
@@ -321,11 +316,11 @@ namespace {
       if (!CurrentActivity.empty())
         OS << ' ' << CurrentActivity;
       OS << ": ";
-
+  
       DiagnosticPrinterRawOStream DP(OS);
       DI.print(DP);
       OS << '\n';
-
+  
       if (DI.getSeverity() == DS_Error)
         exit(1);
       return true;
@@ -1120,14 +1115,6 @@ int main(int argc, char **argv) {
       error("error compiling the code");
 
   } else {
-    if (DumpLinkedModule) {
-      if (SaveLinkedModuleFile)
-        error(": -dump-linked-module must be used without -dump-linked-module");
-
-      Module &M = CodeGen.getMergedModule();
-      M.dump();
-    }
-
     if (Parallelism != 1)
       error("-j must be specified together with -o");
 
