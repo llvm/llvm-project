@@ -99,6 +99,7 @@ class VOP3_Pseudo <string opName, VOPProfile P, list<dag> pattern = [],
   let VOP3_OPSEL = isVop3OpSel;
   let IsPacked = P.IsPacked;
   let IsMAI = P.IsMAI;
+  let IsWMMA = P.IsWMMA;
 
   let AsmOperands = !if(isVop3OpSel,
                         P.AsmVOP3OpSel,

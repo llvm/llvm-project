@@ -117,6 +117,24 @@ void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
   unsigned Opcode = MI->getOpcode();
   const auto *TII = static_cast<const SIInstrInfo*>(ST.getInstrInfo());
 
+  if (TII->isWMMA(Opcode) && MI->getNumExplicitDefs() == 2) {
+
+    int MCOpcode =
+        TII->pseudoToMCOpcode(AMDGPU::mapWMMA3AddrTo2AddrOpcode(Opcode));
+    OutMI.setOpcode(MCOpcode);
+
+    for (const MachineOperand &MO : MI->explicit_operands()) {
+      // Skip extra destination added by TwoAddressInstructionPass.
+      if (MI->getOperandNo(&MO) == 1)
+        continue;
+
+      MCOperand MCOp;
+      lowerOperand(MO, MCOp);
+      OutMI.addOperand(MCOp);
+    }
+    return;
+  }
+
   // FIXME: Should be able to handle this with emitPseudoExpansionLowering. We
   // need to select it to the subtarget specific version, and there's no way to
   // do that with a single pseudo source operation.
@@ -138,34 +156,6 @@ void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
     lowerOperand(MI->getOperand(1), Src);
     OutMI.addOperand(Dest);
     OutMI.addOperand(Src);
-    return;
-  }
-  case AMDGPU::V_WMMA_BF16_16X16X16_BF16_threeaddr_w32:
-  case AMDGPU::V_WMMA_BF16_16X16X16_BF16_threeaddr_w64:
-  case AMDGPU::V_WMMA_F16_16X16X16_F16_threeaddr_w32:
-  case AMDGPU::V_WMMA_F16_16X16X16_F16_threeaddr_w64:
-  case AMDGPU::V_WMMA_F32_16X16X16_BF16_threeaddr_w32:
-  case AMDGPU::V_WMMA_F32_16X16X16_BF16_threeaddr_w64:
-  case AMDGPU::V_WMMA_F32_16X16X16_F16_threeaddr_w32:
-  case AMDGPU::V_WMMA_F32_16X16X16_F16_threeaddr_w64:
-  case AMDGPU::V_WMMA_I32_16X16X16_IU4_threeaddr_w32:
-  case AMDGPU::V_WMMA_I32_16X16X16_IU4_threeaddr_w64:
-  case AMDGPU::V_WMMA_I32_16X16X16_IU8_threeaddr_w32:
-  case AMDGPU::V_WMMA_I32_16X16X16_IU8_threeaddr_w64: {
-    int MCOpcode =
-        TII->pseudoToMCOpcode(AMDGPU::mapWMMA3AddrTo2AddrOpcode(Opcode));
-    OutMI.setOpcode(MCOpcode);
-
-    for (const MachineOperand &MO : MI->explicit_operands()) {
-      // Skip extra destination added by TwoAddressInstructionPass.
-      if (MI->getOperandNo(&MO) == 1)
-        continue;
-
-      MCOperand MCOp;
-      lowerOperand(MO, MCOp);
-      OutMI.addOperand(MCOp);
-    }
-
     return;
   }
   default:

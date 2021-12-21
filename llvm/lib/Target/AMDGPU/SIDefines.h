@@ -126,7 +126,10 @@ enum : uint64_t {
   IsAtomicNoRet = UINT64_C(1) << 57,
 
   // Atomic with return.
-  IsAtomicRet = UINT64_C(1) << 58
+  IsAtomicRet = UINT64_C(1) << 58,
+
+  // Is a WMMA instruction.
+  IsWMMA = UINT64_C(1) << 59,
 };
 
 // v_cmp_class_* etc. use a 10-bit mask for what operation is checked.
