@@ -371,7 +371,6 @@ Context::Context()
       racy_stacks(),
       racy_addresses(),
       fired_suppressions_mtx(MutexTypeFired),
-      clock_alloc(LINKER_INITIALIZED, "clock allocator"),
       slot_mtx(MutexTypeSlots),
       resetting() {
   fired_suppressions.reserve(8);
@@ -973,12 +972,6 @@ void TraceSwitchPartImpl(ThreadState* thr) {
           trace->parts.Front(), trace->parts.Back(),
           atomic_load_relaxed(&thr->trace_pos));
 }
-
-#if !SANITIZER_GO
-extern "C" void __tsan_trace_switch() {}
-
-extern "C" void __tsan_report_race() {}
-#endif
 
 void ThreadIgnoreBegin(ThreadState* thr, uptr pc) {
   DPrintf("#%d: ThreadIgnoreBegin\n", thr->tid);
