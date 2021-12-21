@@ -27,7 +27,7 @@ class _LIBCPP_TYPE_VIS random_device
 {
 #ifdef _LIBCPP_USING_DEV_RANDOM
     int __f_;
-#endif // defined(_LIBCPP_USING_DEV_RANDOM)
+#endif
 public:
     // types
     typedef unsigned result_type;
