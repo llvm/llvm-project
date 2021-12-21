@@ -1,9 +1,7 @@
 ; RUN: llc < %s | FileCheck %s --check-prefix=ASM
 ; RUN: llc < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s --check-prefix=OBJ
 ; RUN: llc < %s | llvm-mc -filetype=obj --triple=x86_64-windows | llvm-readobj - --codeview | FileCheck %s --check-prefix=OBJ
-; RUN: llc < %s -filetype=obj | obj2yaml | FileCheck %s --check-prefixes=YAML,YAML-STDOUT
-; RUN: llc < %s -filetype=obj -o %t
-; RUN: obj2yaml < %t | FileCheck %s --check-prefixes=YAML,YAML-FILE
+; RUN: llc < %s -filetype=obj | obj2yaml | FileCheck %s --check-prefix=YAML
 
 ; C++ source to regenerate:
 ; $ cat a.cpp
@@ -248,11 +246,6 @@
 ; YAML:    Subsections:
 ; YAML:      - !Symbols
 ; YAML:        Records:
-; YAML:          - Kind:            S_OBJNAME
-; YAML:            ObjNameSym:
-; YAML:               Signature:       0
-; YAML-STDOUT:        ObjectName:      ''
-; YAML-FILE:          ObjectName:      '{{.*}}'
 ; YAML:          - Kind:            S_COMPILE3
 ; YAML:            Compile3Sym:
 

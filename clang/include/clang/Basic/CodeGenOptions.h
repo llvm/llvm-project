@@ -227,9 +227,6 @@ public:
   /// Output filename for the split debug info, not used in the skeleton CU.
   std::string SplitDwarfOutput;
 
-  /// Output filename used in the COFF debug information.
-  std::string ObjectFilenameForDebug;
-
   /// The name of the relocation model to use.
   llvm::Reloc::Model RelocationModel;
 

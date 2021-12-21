@@ -302,8 +302,6 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
 
   void emitTypeGlobalHashes();
 
-  void emitObjName();
-
   void emitCompilerInformation();
 
   void emitBuildInfo();

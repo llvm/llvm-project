@@ -625,9 +625,8 @@ getFramePointerKind(const ArgList &Args, const llvm::Triple &Triple) {
 }
 
 /// Add a CC1 option to specify the debug compilation directory.
-static const char *addDebugCompDirArg(const ArgList &Args,
-                                      ArgStringList &CmdArgs,
-                                      const llvm::vfs::FileSystem &VFS) {
+static void addDebugCompDirArg(const ArgList &Args, ArgStringList &CmdArgs,
+                               const llvm::vfs::FileSystem &VFS) {
   if (Arg *A = Args.getLastArg(options::OPT_ffile_compilation_dir_EQ,
                                options::OPT_fdebug_compilation_dir_EQ)) {
     if (A->getOption().matches(options::OPT_ffile_compilation_dir_EQ))
@@ -639,31 +638,6 @@ static const char *addDebugCompDirArg(const ArgList &Args,
                  VFS.getCurrentWorkingDirectory()) {
     CmdArgs.push_back(Args.MakeArgString("-fdebug-compilation-dir=" + *CWD));
   }
-  StringRef Path(CmdArgs.back());
-  return Path.substr(Path.find('=') + 1).data();
-}
-
-static void addDebugObjectName(const ArgList &Args, ArgStringList &CmdArgs,
-                               const char *DebugCompilationDir,
-                               const char *OutputFileName) {
-  // No need to generate a value for -object-file-name if it was provided.
-  for (auto *Arg : Args.filtered(options::OPT_Xclang))
-    if (StringRef(Arg->getValue()).startswith("-object-file-name"))
-      return;
-
-  if (Args.hasArg(options::OPT_object_file_name_EQ))
-    return;
-
-  SmallString<128> ObjFileNameForDebug(OutputFileName);
-  if (ObjFileNameForDebug != "-" &&
-      !llvm::sys::path::is_absolute(ObjFileNameForDebug) &&
-      (!DebugCompilationDir ||
-       llvm::sys::path::is_absolute(DebugCompilationDir))) {
-    // Make the path absolute in the debug infos like MSVC does.
-    llvm::sys::fs::make_absolute(ObjFileNameForDebug);
-  }
-  CmdArgs.push_back(
-      Args.MakeArgString(Twine("-object-file-name=") + ObjFileNameForDebug));
 }
 
 /// Add a CC1 and CC1AS option to specify the debug file path prefix map.
@@ -5675,8 +5649,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fno-autolink");
 
   // Add in -fdebug-compilation-dir if necessary.
-  const char *DebugCompilationDir =
-      addDebugCompDirArg(Args, CmdArgs, D.getVFS());
+  addDebugCompDirArg(Args, CmdArgs, D.getVFS());
 
   addDebugPrefixMapArg(D, Args, CmdArgs);
 
@@ -7048,11 +7021,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(Str));
   }
 
-  // Add the output path to the object file for CodeView debug infos.
-  if (EmitCodeView && Output.isFilename())
-    addDebugObjectName(Args, CmdArgs, DebugCompilationDir,
-                       Output.getFilename());
-
   // Add the "-o out -x type src.c" flags last. This is done primarily to make
   // the -cc1 command easier to edit when reproducing compiler crashes.
   if (Output.getType() == types::TY_Dependencies) {
@@ -7670,14 +7638,11 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddAllArgs(CmdArgs, options::OPT_I_Group);
 
   // Determine the original source input.
-  auto FindSource = [](const Action *S) -> const Action * {
-    while (S->getKind() != Action::InputClass) {
-      assert(!S->getInputs().empty() && "unexpected root action!");
-      S = S->getInputs()[0];
-    }
-    return S;
-  };
-  const Action *SourceAction = FindSource(&JA);
+  const Action *SourceAction = &JA;
+  while (SourceAction->getKind() != Action::InputClass) {
+    assert(!SourceAction->getInputs().empty() && "unexpected root action!");
+    SourceAction = SourceAction->getInputs()[0];
+  }
 
   // Forward -g and handle debug info related flags, assuming we are dealing
   // with an actual assembly file.
@@ -7696,10 +7661,6 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
 
   codegenoptions::DebugInfoKind DebugInfoKind = codegenoptions::NoDebugInfo;
 
-  // Add the -fdebug-compilation-dir flag if needed.
-  const char *DebugCompilationDir =
-      addDebugCompDirArg(Args, CmdArgs, C.getDriver().getVFS());
-
   if (SourceAction->getType() == types::TY_Asm ||
       SourceAction->getType() == types::TY_PP_Asm) {
     // You might think that it would be ok to set DebugInfoKind outside of
@@ -7708,6 +7669,8 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
     // and it's not clear whether that test is just overly restrictive.
     DebugInfoKind = (WantDebug ? codegenoptions::DebugInfoConstructor
                                : codegenoptions::NoDebugInfo);
+    // Add the -fdebug-compilation-dir flag if needed.
+    addDebugCompDirArg(Args, CmdArgs, C.getDriver().getVFS());
 
     addDebugPrefixMapArg(getToolChain().getDriver(), Args, CmdArgs);
 
@@ -7817,29 +7780,6 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
                                     getToolChain().getDriver());
 
   Args.AddAllArgs(CmdArgs, options::OPT_mllvm);
-
-  if (DebugInfoKind > codegenoptions::NoDebugInfo && Output.isFilename())
-    addDebugObjectName(Args, CmdArgs, DebugCompilationDir,
-                       Output.getFilename());
-
-  // Fixup any previous commands that use -object-file-name because when we
-  // generated them, the final .obj name wasn't yet known.
-  for (Command &J : C.getJobs()) {
-    if (SourceAction != FindSource(&J.getSource()))
-      continue;
-    auto &JArgs = J.getArguments();
-    for (unsigned I = 0; I < JArgs.size(); ++I) {
-      if (StringRef(JArgs[I]).startswith("-object-file-name=") &&
-          Output.isFilename()) {
-        ArgStringList NewArgs(JArgs.begin(), JArgs.begin() + I);
-        addDebugObjectName(Args, NewArgs, DebugCompilationDir,
-                           Output.getFilename());
-        NewArgs.append(JArgs.begin() + I + 1, JArgs.end());
-        J.replaceArguments(NewArgs);
-        break;
-      }
-    }
-  }
 
   assert(Output.isFilename() && "Unexpected lipo output.");
   CmdArgs.push_back("-o");
