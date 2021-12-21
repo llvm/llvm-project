@@ -714,28 +714,20 @@ bool RegAllocEvictionAdvisor::isUnusedCalleeSavedReg(MCRegister PhysReg) const {
   return !Matrix->isPhysRegUsed(PhysReg);
 }
 
-MCRegister DefaultEvictionAdvisor::tryFindEvictionCandidate(
-    LiveInterval &VirtReg, const AllocationOrder &Order,
-    uint8_t CostPerUseLimit, const SmallVirtRegSet &FixedRegisters) const {
-  // Keep track of the cheapest interference seen so far.
-  EvictionCost BestCost;
-  BestCost.setMax();
-  MCRegister BestPhys;
+Optional<unsigned>
+RegAllocEvictionAdvisor::getOrderLimit(const LiveInterval &VirtReg,
+                                       const AllocationOrder &Order,
+                                       unsigned CostPerUseLimit) const {
   unsigned OrderLimit = Order.getOrder().size();
 
-  // When we are just looking for a reduced cost per use, don't break any
-  // hints, and only evict smaller spill weights.
   if (CostPerUseLimit < uint8_t(~0u)) {
-    BestCost.BrokenHints = 0;
-    BestCost.MaxWeight = VirtReg.weight();
-
     // Check of any registers in RC are below CostPerUseLimit.
     const TargetRegisterClass *RC = MRI->getRegClass(VirtReg.reg());
     uint8_t MinCost = RegClassInfo.getMinCost(RC);
     if (MinCost >= CostPerUseLimit) {
       LLVM_DEBUG(dbgs() << TRI->getRegClassName(RC) << " minimum cost = "
                         << MinCost << ", no cheaper registers to be found.\n");
-      return 0;
+      return None;
     }
 
     // It is normal for register classes to have a long tail of registers with
@@ -746,24 +738,50 @@ MCRegister DefaultEvictionAdvisor::tryFindEvictionCandidate(
                         << " regs.\n");
     }
   }
+  return OrderLimit;
+}
+
+bool RegAllocEvictionAdvisor::canAllocatePhysReg(unsigned CostPerUseLimit,
+                                                 MCRegister PhysReg) const {
+  if (RegCosts[PhysReg] >= CostPerUseLimit)
+    return false;
+  // The first use of a callee-saved register in a function has cost 1.
+  // Don't start using a CSR when the CostPerUseLimit is low.
+  if (CostPerUseLimit == 1 && isUnusedCalleeSavedReg(PhysReg)) {
+    LLVM_DEBUG(
+        dbgs() << printReg(PhysReg, TRI) << " would clobber CSR "
+               << printReg(RegClassInfo.getLastCalleeSavedAlias(PhysReg), TRI)
+               << '\n');
+    return false;
+  }
+  return true;
+}
+
+MCRegister DefaultEvictionAdvisor::tryFindEvictionCandidate(
+    LiveInterval &VirtReg, const AllocationOrder &Order,
+    uint8_t CostPerUseLimit, const SmallVirtRegSet &FixedRegisters) const {
+  // Keep track of the cheapest interference seen so far.
+  EvictionCost BestCost;
+  BestCost.setMax();
+  MCRegister BestPhys;
+  auto MaybeOrderLimit = getOrderLimit(VirtReg, Order, CostPerUseLimit);
+  if (!MaybeOrderLimit)
+    return MCRegister::NoRegister;
+  unsigned OrderLimit = *MaybeOrderLimit;
+
+  // When we are just looking for a reduced cost per use, don't break any
+  // hints, and only evict smaller spill weights.
+  if (CostPerUseLimit < uint8_t(~0u)) {
+    BestCost.BrokenHints = 0;
+    BestCost.MaxWeight = VirtReg.weight();
+  }
 
   for (auto I = Order.begin(), E = Order.getOrderLimitEnd(OrderLimit); I != E;
        ++I) {
     MCRegister PhysReg = *I;
     assert(PhysReg);
-    if (RegCosts[PhysReg] >= CostPerUseLimit)
-      continue;
-    // The first use of a callee-saved register in a function has cost 1.
-    // Don't start using a CSR when the CostPerUseLimit is low.
-    if (CostPerUseLimit == 1 && isUnusedCalleeSavedReg(PhysReg)) {
-      LLVM_DEBUG(
-          dbgs() << printReg(PhysReg, TRI) << " would clobber CSR "
-                 << printReg(RegClassInfo.getLastCalleeSavedAlias(PhysReg), TRI)
-                 << '\n');
-      continue;
-    }
-
-    if (!canEvictInterferenceBasedOnCost(VirtReg, PhysReg, false, BestCost,
+    if (!canAllocatePhysReg(CostPerUseLimit, PhysReg) ||
+        !canEvictInterferenceBasedOnCost(VirtReg, PhysReg, false, BestCost,
                                          FixedRegisters))
       continue;
 
