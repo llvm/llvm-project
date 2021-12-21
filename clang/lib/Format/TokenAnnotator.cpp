@@ -1826,14 +1826,16 @@ private:
     if (Tok.Previous->isOneOf(TT_LeadingJavaAnnotation, Keywords.kw_instanceof,
                               Keywords.kw_as))
       return false;
-    if (Style.Language == FormatStyle::LK_JavaScript &&
-        Tok.Previous->is(Keywords.kw_in))
+    if (Style.isJavaScript() && Tok.Previous->is(Keywords.kw_in))
       return false;
 
     // Skip "const" as it does not have an influence on whether this is a name.
     FormatToken *PreviousNotConst = Tok.getPreviousNonComment();
-    while (PreviousNotConst && PreviousNotConst->is(tok::kw_const))
-      PreviousNotConst = PreviousNotConst->getPreviousNonComment();
+
+    // For javascript const can be like "let" or "var"
+    if (!Style.isJavaScript())
+      while (PreviousNotConst && PreviousNotConst->is(tok::kw_const))
+        PreviousNotConst = PreviousNotConst->getPreviousNonComment();
 
     if (!PreviousNotConst)
       return false;
@@ -1852,10 +1854,24 @@ private:
         PreviousNotConst->is(TT_TypeDeclarationParen))
       return true;
 
-    return (!IsPPKeyword &&
-            PreviousNotConst->isOneOf(tok::identifier, tok::kw_auto)) ||
-           PreviousNotConst->is(TT_PointerOrReference) ||
-           PreviousNotConst->isSimpleTypeSpecifier();
+    // If is a preprocess keyword like #define.
+    if (IsPPKeyword)
+      return false;
+
+    // int a or auto a.
+    if (PreviousNotConst->isOneOf(tok::identifier, tok::kw_auto))
+      return true;
+
+    // *a or &a or &&a.
+    if (PreviousNotConst->is(TT_PointerOrReference))
+      return true;
+
+    // MyClass a;
+    if (PreviousNotConst->isSimpleTypeSpecifier())
+      return true;
+
+    // const a = in JavaScript.
+    return (Style.isJavaScript() && PreviousNotConst->is(tok::kw_const));
   }
 
   /// Determine whether ')' is ending a cast.
