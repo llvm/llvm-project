@@ -262,8 +262,8 @@ TEST_F(FormatTest, RemovesEmptyLines) {
                    "}",
                    getGoogleStyle()));
 
-  auto CustomStyle = clang::format::getLLVMStyle();
-  CustomStyle.BreakBeforeBraces = clang::format::FormatStyle::BS_Custom;
+  auto CustomStyle = getLLVMStyle();
+  CustomStyle.BreakBeforeBraces = FormatStyle::BS_Custom;
   CustomStyle.BraceWrapping.AfterNamespace = true;
   CustomStyle.KeepEmptyLinesAtTheStartOfBlocks = false;
   EXPECT_EQ("namespace N\n"
