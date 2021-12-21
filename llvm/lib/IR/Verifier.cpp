@@ -926,8 +926,8 @@ void Verifier::visitNamedMDNode(const NamedMDNode &NMD) {
           continue; // Allow null, skip.
         auto *C =
             mdconst::dyn_extract<Constant>(Dependency)->stripPointerCasts();
-        if (dyn_cast<UndefValue>(C))
-          continue; // Allow undef, skip.
+        if (dyn_cast<UndefValue>(C) || dyn_cast<ConstantPointerNull>(C))
+          continue; // Allow undef and null, skip.
         Assert(isa<GlobalValue>(C), "invalid llvm.used.conditional member");
       }
     }
