@@ -3500,15 +3500,16 @@ SDValue PPCTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
     if (LHS.getValueType() == MVT::v2i64) {
       // Equality can be handled by casting to the legal type for Altivec
       // comparisons, everything else needs to be expanded.
-      if (CC == ISD::SETEQ || CC == ISD::SETNE) {
-        return DAG.getNode(
-            ISD::BITCAST, dl, MVT::v2i64,
-            DAG.getSetCC(dl, MVT::v4i32,
-                         DAG.getNode(ISD::BITCAST, dl, MVT::v4i32, LHS),
-                         DAG.getNode(ISD::BITCAST, dl, MVT::v4i32, RHS), CC));
-      }
-
-      return SDValue();
+      if (CC != ISD::SETEQ && CC != ISD::SETNE)
+        return SDValue();
+      SDValue SetCC32 = DAG.getSetCC(
+          dl, MVT::v4i32, DAG.getNode(ISD::BITCAST, dl, MVT::v4i32, LHS),
+          DAG.getNode(ISD::BITCAST, dl, MVT::v4i32, RHS), CC);
+      int ShuffV[] = {1, 0, 3, 2};
+      SDValue Shuff =
+          DAG.getVectorShuffle(MVT::v4i32, dl, SetCC32, SetCC32, ShuffV);
+      return DAG.getBitcast(
+          MVT::v2i64, DAG.getNode(ISD::AND, dl, MVT::v4i32, Shuff, SetCC32));
     }
 
     // We handle most of these in the usual way.
