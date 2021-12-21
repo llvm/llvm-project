@@ -132,6 +132,7 @@ bool isHsaAbiVersion3Or4(const MCSubtargetInfo *STI) {
 #define GET_MIMGInfoTable_IMPL
 #define GET_MIMGLZMappingTable_IMPL
 #define GET_MIMGMIPMappingTable_IMPL
+#define GET_MIMGBiasMappingTable_IMPL
 #define GET_MIMGG16MappingTable_IMPL
 #include "AMDGPUGenSearchableTables.inc"
 
