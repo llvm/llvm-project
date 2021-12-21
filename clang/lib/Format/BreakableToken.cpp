@@ -91,7 +91,7 @@ getCommentSplit(StringRef Text, unsigned ContentStartColumn,
   // In JavaScript, some @tags can be followed by {, and machinery that parses
   // these comments will fail to understand the comment if followed by a line
   // break. So avoid ever breaking before a {.
-  if (Style.Language == FormatStyle::LK_JavaScript) {
+  if (Style.isJavaScript()) {
     StringRef::size_type SpaceOffset =
         Text.find_first_of(Blanks, MaxSplitBytes);
     if (SpaceOffset != StringRef::npos && SpaceOffset + 1 < Text.size() &&
@@ -127,8 +127,7 @@ getCommentSplit(StringRef Text, unsigned ContentStartColumn,
     }
 
     // Avoid ever breaking before a @tag or a { in JavaScript.
-    if (Style.Language == FormatStyle::LK_JavaScript &&
-        SpaceOffset + 1 < Text.size() &&
+    if (Style.isJavaScript() && SpaceOffset + 1 < Text.size() &&
         (Text[SpaceOffset + 1] == '{' || Text[SpaceOffset + 1] == '@')) {
       SpaceOffset = Text.find_last_of(Blanks, SpaceOffset);
       continue;
@@ -460,8 +459,7 @@ BreakableBlockComment::BreakableBlockComment(
   IndentAtLineBreak = std::max<unsigned>(IndentAtLineBreak, Decoration.size());
 
   // Detect a multiline jsdoc comment and set DelimitersOnNewline in that case.
-  if (Style.Language == FormatStyle::LK_JavaScript ||
-      Style.Language == FormatStyle::LK_Java) {
+  if (Style.isJavaScript() || Style.Language == FormatStyle::LK_Java) {
     if ((Lines[0] == "*" || Lines[0].startswith("* ")) && Lines.size() > 1) {
       // This is a multiline jsdoc comment.
       DelimitersOnNewline = true;
@@ -580,8 +578,7 @@ const llvm::StringSet<>
 };
 
 unsigned BreakableBlockComment::getContentIndent(unsigned LineIndex) const {
-  if (Style.Language != FormatStyle::LK_Java &&
-      Style.Language != FormatStyle::LK_JavaScript)
+  if (Style.Language != FormatStyle::LK_Java && !Style.isJavaScript())
     return 0;
   // The content at LineIndex 0 of a comment like:
   // /** line 0 */
