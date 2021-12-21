@@ -305,8 +305,9 @@ static bool CleanupConstantGlobalUsers(GlobalVariable *GV,
     else if (auto *LI = dyn_cast<LoadInst>(U)) {
       // A load from zeroinitializer is always zeroinitializer, regardless of
       // any applied offset.
-      if (Init->isNullValue()) {
-        LI->replaceAllUsesWith(Constant::getNullValue(LI->getType()));
+      Type *Ty = LI->getType();
+      if (Init->isNullValue() && !Ty->isX86_MMXTy() && !Ty->isX86_AMXTy()) {
+        LI->replaceAllUsesWith(Constant::getNullValue(Ty));
         EraseFromParent(LI);
         continue;
       }
@@ -316,8 +317,7 @@ static bool CleanupConstantGlobalUsers(GlobalVariable *GV,
       PtrOp = PtrOp->stripAndAccumulateConstantOffsets(
           DL, Offset, /* AllowNonInbounds */ true);
       if (PtrOp == GV) {
-        if (auto *Value = ConstantFoldLoadFromConst(Init, LI->getType(),
-                                                    Offset, DL)) {
+        if (auto *Value = ConstantFoldLoadFromConst(Init, Ty, Offset, DL)) {
           LI->replaceAllUsesWith(Value);
           EraseFromParent(LI);
         }

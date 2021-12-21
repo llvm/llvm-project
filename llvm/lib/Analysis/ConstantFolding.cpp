@@ -708,7 +708,8 @@ Constant *llvm::ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,
   // is all undef or zero, we know what it loads.
   if (auto *GV = dyn_cast<GlobalVariable>(getUnderlyingObject(C))) {
     if (GV->isConstant() && GV->hasDefinitiveInitializer()) {
-      if (GV->getInitializer()->isNullValue())
+      if (GV->getInitializer()->isNullValue() && !Ty->isX86_MMXTy() &&
+          !Ty->isX86_AMXTy())
         return Constant::getNullValue(Ty);
       if (isa<UndefValue>(GV->getInitializer()))
         return UndefValue::get(Ty);
