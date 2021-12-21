@@ -388,6 +388,8 @@ int CC1Command::Execute(ArrayRef<llvm::Optional<StringRef>> Redirects,
   Argv.push_back(getExecutable());
   Argv.append(getArguments().begin(), getArguments().end());
   Argv.push_back(nullptr);
+  Argv.pop_back(); // The terminating null element shall not be part of the
+                   // slice (main() behavior).
 
   // This flag simply indicates that the program couldn't start, which isn't
   // applicable here.
