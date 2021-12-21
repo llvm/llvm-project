@@ -893,6 +893,9 @@ def err_ptrauth_qualifier_address_discrimination_invalid : Error<
 def err_ptrauth_qualifier_extra_discriminator_invalid : Error<
   "extra discriminator for __ptrauth must be between 0 and %1; value is %0">;
 
+def err_function_start_invalid_type: Error<
+  "argument must be a function">;
+
 /// main()
 // static main() is not an error in C, just in C++.
 def warn_static_main : Warning<"'main' should not be declared static">,

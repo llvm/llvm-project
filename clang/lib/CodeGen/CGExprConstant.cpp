@@ -2058,6 +2058,9 @@ ConstantLValueEmitter::VisitCallExpr(const CallExpr *E) {
   if (builtin == Builtin::BI__builtin_ptrauth_sign_constant)
     return emitPointerAuthSignConstant(E);
 
+  if (builtin == Builtin::BI__builtin_function_start)
+    return CGM.GetFunctionStart(
+        E->getArg(0)->getAsBuiltinConstantDeclRef(CGM.getContext()));
   if (builtin != Builtin::BI__builtin___CFStringMakeConstantString &&
       builtin != Builtin::BI__builtin___NSStringMakeConstantString)
     return nullptr;
