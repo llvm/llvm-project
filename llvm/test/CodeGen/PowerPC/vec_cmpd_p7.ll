@@ -10,11 +10,21 @@ define <2 x i64> @v2si64_cmp(<2 x i64> %x, <2 x i64> %y) nounwind readnone {
 ; CHECK-LABEL: v2si64_cmp:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcmpequw 2, 2, 3
+; CHECK-NEXT:    addis 3, 2, .LCPI0_0@toc@ha
+; CHECK-NEXT:    addi 3, 3, .LCPI0_0@toc@l
+; CHECK-NEXT:    lvx 3, 0, 3
+; CHECK-NEXT:    vperm 3, 2, 2, 3
+; CHECK-NEXT:    xxland 34, 35, 34
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: v2si64_cmp:
 ; CHECK-BE:       # %bb.0:
 ; CHECK-BE-NEXT:    vcmpequw 2, 2, 3
+; CHECK-BE-NEXT:    addis 3, 2, .LCPI0_0@toc@ha
+; CHECK-BE-NEXT:    addi 3, 3, .LCPI0_0@toc@l
+; CHECK-BE-NEXT:    lxvw4x 35, 0, 3
+; CHECK-BE-NEXT:    vperm 3, 2, 2, 3
+; CHECK-BE-NEXT:    xxland 34, 35, 34
 ; CHECK-BE-NEXT:    blr
   %cmp = icmp eq <2 x i64> %x, %y
   %result = sext <2 x i1> %cmp to <2 x i64>
