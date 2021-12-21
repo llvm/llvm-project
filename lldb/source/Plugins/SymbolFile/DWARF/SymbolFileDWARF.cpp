@@ -1772,6 +1772,10 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
     return nullptr;
   }
 
+  if (dwo_file.GetFileNameExtension() == ".pcm" ||
+      dwo_file.GetFileNameExtension() == ".pch")
+    return nullptr;
+
   const lldb::offset_t file_offset = 0;
   DataBufferSP dwo_file_data_sp;
   lldb::offset_t dwo_file_data_offset = 0;
