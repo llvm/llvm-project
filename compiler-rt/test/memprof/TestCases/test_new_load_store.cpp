@@ -35,7 +35,7 @@ int main() {
   for (int i = 0; i < 10; i++)
     j += p[i];
 #ifdef FREE
-  delete p;
+  delete[] p;
 #endif
 
   return 0;
