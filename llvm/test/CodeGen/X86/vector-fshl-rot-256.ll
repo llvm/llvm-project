@@ -662,32 +662,31 @@ define <4 x i64> @splatvar_funnnel_v4i64(<4 x i64> %x, <4 x i64> %amt) nounwind 
 define <8 x i32> @splatvar_funnnel_v8i32(<8 x i32> %x, <8 x i32> %amt) nounwind {
 ; AVX1-LABEL: splatvar_funnnel_v8i32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm3 = xmm1[0],zero,xmm1[1],zero
-; AVX1-NEXT:    vpslld %xmm3, %xmm2, %xmm4
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm5 = [32,32,32,32]
-; AVX1-NEXT:    vpsubd %xmm1, %xmm5, %xmm1
-; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
-; AVX1-NEXT:    vpsrld %xmm1, %xmm2, %xmm2
-; AVX1-NEXT:    vpor %xmm2, %xmm4, %xmm2
-; AVX1-NEXT:    vpslld %xmm3, %xmm0, %xmm3
-; AVX1-NEXT:    vpsrld %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpor %xmm0, %xmm3, %xmm0
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm2[2,2,3,3]
+; AVX1-NEXT:    vpsllq %xmm1, %xmm3, %xmm3
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm4 = xmm0[2,2,3,3]
+; AVX1-NEXT:    vpsllq %xmm1, %xmm4, %xmm4
+; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm4, %ymm3
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[0,0,1,1]
+; AVX1-NEXT:    vpsllq %xmm1, %xmm2, %xmm2
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
+; AVX1-NEXT:    vpsllq %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[1,3],ymm3[1,3],ymm0[5,7],ymm3[5,7]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: splatvar_funnnel_v8i32:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [31,31,31,31]
 ; AVX2-NEXT:    vpand %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vpmovzxdq {{.*#+}} xmm2 = xmm1[0],zero,xmm1[1],zero
-; AVX2-NEXT:    vpslld %xmm2, %ymm0, %ymm2
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [32,32,32,32]
-; AVX2-NEXT:    vpsubd %xmm1, %xmm3, %xmm1
 ; AVX2-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
-; AVX2-NEXT:    vpsrld %xmm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpor %ymm0, %ymm2, %ymm0
+; AVX2-NEXT:    vpshufd {{.*#+}} ymm2 = ymm0[2,2,3,3,6,6,7,7]
+; AVX2-NEXT:    vpsllq %xmm1, %ymm2, %ymm2
+; AVX2-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,0,1,1,4,4,5,5]
+; AVX2-NEXT:    vpsllq %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[1,3],ymm2[1,3],ymm0[5,7],ymm2[5,7]
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: splatvar_funnnel_v8i32:
