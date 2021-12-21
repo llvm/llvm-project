@@ -64,8 +64,8 @@ static cl::opt<unsigned> FuncSpecializationMaxIters(
     cl::desc("The maximum number of iterations function specialization is run"),
     cl::init(1));
 
-static cl::opt<unsigned> MaxConstantsThreshold(
-    "func-specialization-max-constants", cl::Hidden,
+static cl::opt<unsigned> MaxClonesThreshold(
+    "func-specialization-max-clones", cl::Hidden,
     cl::desc("The maximum number of clones allowed for a single function "
              "specialization"),
     cl::init(3));
@@ -394,14 +394,14 @@ private:
         return L.Gain > R.Gain;
       });
 
-      // Truncate the worklist to 'MaxConstantsThreshold' candidates if
+      // Truncate the worklist to 'MaxClonesThreshold' candidates if
       // necessary.
-      if (Worklist.size() > MaxConstantsThreshold) {
-        LLVM_DEBUG(dbgs() << "FnSpecialization: number of constants exceed "
-                    << "the maximum number of constants threshold.\n"
-                    << "Truncating worklist to " << MaxConstantsThreshold
+      if (Worklist.size() > MaxClonesThreshold) {
+        LLVM_DEBUG(dbgs() << "FnSpecialization: number of candidates exceed "
+                    << "the maximum number of clones threshold.\n"
+                    << "Truncating worklist to " << MaxClonesThreshold
                     << " candidates.\n");
-        Worklist.erase(Worklist.begin() + MaxConstantsThreshold,
+        Worklist.erase(Worklist.begin() + MaxClonesThreshold,
                        Worklist.end());
       }
 
