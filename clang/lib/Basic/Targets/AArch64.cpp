@@ -45,6 +45,7 @@ static StringRef getArchVersionString(llvm::AArch64::ArchKind Kind) {
   case llvm::AArch64::ArchKind::ARMV9A:
   case llvm::AArch64::ArchKind::ARMV9_1A:
   case llvm::AArch64::ArchKind::ARMV9_2A:
+  case llvm::AArch64::ArchKind::ARMV9_3A:
     return "9";
   default:
     return "8";
@@ -245,6 +246,12 @@ void AArch64TargetInfo::getTargetDefinesARMV92A(const LangOptions &Opts,
                                                 MacroBuilder &Builder) const {
   // Armv9.2-A maps to Armv8.7-A
   getTargetDefinesARMV87A(Opts, Builder);
+}
+
+void AArch64TargetInfo::getTargetDefinesARMV93A(const LangOptions &Opts,
+                                                MacroBuilder &Builder) const {
+  // Armv9.3-A maps to Armv8.8-A
+  getTargetDefinesARMV88A(Opts, Builder);
 }
 
 void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
@@ -464,6 +471,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   case llvm::AArch64::ArchKind::ARMV9_2A:
     getTargetDefinesARMV92A(Opts, Builder);
     break;
+  case llvm::AArch64::ArchKind::ARMV9_3A:
+    getTargetDefinesARMV93A(Opts, Builder);
+    break;
   }
 
   // All of the __sync_(bool|val)_compare_and_swap_(1|2|4|8) builtins work.
@@ -620,6 +630,8 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       ArchKind = llvm::AArch64::ArchKind::ARMV9_1A;
     if (Feature == "+v9.2a")
       ArchKind = llvm::AArch64::ArchKind::ARMV9_2A;
+    if (Feature == "+v9.3a")
+      ArchKind = llvm::AArch64::ArchKind::ARMV9_3A;
     if (Feature == "+v8r")
       ArchKind = llvm::AArch64::ArchKind::ARMV8R;
     if (Feature == "+fullfp16")
