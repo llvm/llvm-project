@@ -27,7 +27,26 @@ class _LIBCPP_TYPE_VIS random_device
 {
 #ifdef _LIBCPP_USING_DEV_RANDOM
     int __f_;
+#elif !defined(_LIBCPP_ABI_NO_RANDOM_DEVICE_COMPATIBILITY_LAYOUT)
+#   if defined(__clang__)
+#       pragma clang diagnostic push
+#       pragma clang diagnostic ignored "-Wunused-private-field"
+#   endif
+
+    // Apple platforms used to use the `_LIBCPP_USING_DEV_RANDOM` code path, and now
+    // use `arc4random()` as of this comment. In order to avoid breaking the ABI, we
+    // retain the same layout as before.
+#   if defined(__APPLE__)
+    int __padding_; // padding to fake the `__f_` field above
+#   endif
+
+    // ... vendors can add workarounds here if they switch to a different representation ...
+
+#   if defined(__clang__)
+#       pragma clang diagnostic pop
+#   endif
 #endif
+
 public:
     // types
     typedef unsigned result_type;
