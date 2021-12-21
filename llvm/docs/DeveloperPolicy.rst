@@ -920,6 +920,13 @@ namely the Apache-2.0 with LLVM-exception license, which includes a copyright
 and `patent license`_.  When you contribute code to the LLVM project, you
 license it under these terms.
 
+In certain circumstances, code licensed under other licenses can be added
+to the codebase.  However, this may only be done with approval of the LLVM
+Foundation Board of Directors, and contributors should plan for the approval
+process to take at least 4-6 weeks.  If you would like to contribute code
+under a different license, please create a Phabricator review with the code
+you want to contribute and email board@llvm.org requesting a review.
+
 If you have questions or comments about these topics, please contact the
 `LLVM Developer's Mailing List <mailto:llvm-dev@lists.llvm.org>`_.  However,
 please realize that most compiler developers are not lawyers, and therefore you
