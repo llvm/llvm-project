@@ -461,7 +461,7 @@ static void *BackgroundThread(void *arg) {
     // Flush memory if requested.
     if (flags()->flush_memory_ms > 0) {
       if (last_flush + flags()->flush_memory_ms * kMs2Ns < now) {
-        VPrintf(1, "ThreadSanitizer: periodic memory flush\n");
+        VReport(1, "ThreadSanitizer: periodic memory flush\n");
         FlushShadowMemory();
         now = last_flush = NanoTime();
       }
@@ -469,15 +469,17 @@ static void *BackgroundThread(void *arg) {
     if (flags()->memory_limit_mb > 0) {
       uptr rss = GetRSS();
       uptr limit = uptr(flags()->memory_limit_mb) << 20;
-      VPrintf(1, "ThreadSanitizer: memory flush check"
-                 " RSS=%llu LAST=%llu LIMIT=%llu\n",
+      VReport(1,
+              "ThreadSanitizer: memory flush check"
+              " RSS=%llu LAST=%llu LIMIT=%llu\n",
               (u64)rss >> 20, (u64)last_rss >> 20, (u64)limit >> 20);
       if (2 * rss > limit + last_rss) {
-        VPrintf(1, "ThreadSanitizer: flushing memory due to RSS\n");
+        VReport(1, "ThreadSanitizer: flushing memory due to RSS\n");
         FlushShadowMemory();
         rss = GetRSS();
         now = NanoTime();
-        VPrintf(1, "ThreadSanitizer: memory flushed RSS=%llu\n", (u64)rss>>20);
+        VReport(1, "ThreadSanitizer: memory flushed RSS=%llu\n",
+                (u64)rss >> 20);
       }
       last_rss = rss;
     }
