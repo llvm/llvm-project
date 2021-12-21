@@ -11,8 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "tsan_fd.h"
-#include "tsan_rtl.h"
+
 #include <sanitizer_common/sanitizer_atomic.h>
+
+#include "tsan_interceptors.h"
+#include "tsan_rtl.h"
 
 namespace __tsan {
 
@@ -192,19 +195,21 @@ void FdClose(ThreadState *thr, uptr pc, int fd, bool write) {
   if (bogusfd(fd))
     return;
   FdDesc *d = fddesc(thr, pc, fd);
-  if (write) {
-    // To catch races between fd usage and close.
-    MemoryAccess(thr, pc, (uptr)d, 8, kAccessWrite);
-  } else {
-    // This path is used only by dup2/dup3 calls.
-    // We do read instead of write because there is a number of legitimate
-    // cases where write would lead to false positives:
-    // 1. Some software dups a closed pipe in place of a socket before closing
-    //    the socket (to prevent races actually).
-    // 2. Some daemons dup /dev/null in place of stdin/stdout.
-    // On the other hand we have not seen cases when write here catches real
-    // bugs.
-    MemoryAccess(thr, pc, (uptr)d, 8, kAccessRead);
+  if (!MustIgnoreInterceptor(thr)) {
+    if (write) {
+      // To catch races between fd usage and close.
+      MemoryAccess(thr, pc, (uptr)d, 8, kAccessWrite);
+    } else {
+      // This path is used only by dup2/dup3 calls.
+      // We do read instead of write because there is a number of legitimate
+      // cases where write would lead to false positives:
+      // 1. Some software dups a closed pipe in place of a socket before closing
+      //    the socket (to prevent races actually).
+      // 2. Some daemons dup /dev/null in place of stdin/stdout.
+      // On the other hand we have not seen cases when write here catches real
+      // bugs.
+      MemoryAccess(thr, pc, (uptr)d, 8, kAccessRead);
+    }
   }
   // We need to clear it, because if we do not intercept any call out there
   // that creates fd, we will hit false postives.

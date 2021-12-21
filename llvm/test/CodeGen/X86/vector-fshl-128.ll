@@ -1714,19 +1714,17 @@ define void @sink_splatvar(i32* %p, i32 %shift_amt) {
 ; SSE2-NEXT:    movq $-1024, %rax # imm = 0xFC00
 ; SSE2-NEXT:    movd %xmm0, %ecx
 ; SSE2-NEXT:    andl $31, %ecx
-; SSE2-NEXT:    movl $32, %edx
-; SSE2-NEXT:    subl %ecx, %edx
-; SSE2-NEXT:    movd %edx, %xmm0
-; SSE2-NEXT:    movd %ecx, %xmm1
+; SSE2-NEXT:    movd %ecx, %xmm0
 ; SSE2-NEXT:    .p2align 4, 0x90
 ; SSE2-NEXT:  .LBB8_1: # %loop
 ; SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
-; SSE2-NEXT:    movdqu 1024(%rdi,%rax), %xmm2
-; SSE2-NEXT:    movdqa %xmm2, %xmm3
-; SSE2-NEXT:    psrld %xmm0, %xmm3
-; SSE2-NEXT:    pslld %xmm1, %xmm2
-; SSE2-NEXT:    por %xmm3, %xmm2
-; SSE2-NEXT:    movdqu %xmm2, 1024(%rdi,%rax)
+; SSE2-NEXT:    movdqu 1024(%rdi,%rax), %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,2,3,3]
+; SSE2-NEXT:    psllq %xmm0, %xmm2
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,1,1]
+; SSE2-NEXT:    psllq %xmm0, %xmm1
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,3],xmm2[1,3]
+; SSE2-NEXT:    movups %xmm1, 1024(%rdi,%rax)
 ; SSE2-NEXT:    addq $16, %rax
 ; SSE2-NEXT:    jne .LBB8_1
 ; SSE2-NEXT:  # %bb.2: # %end
@@ -1734,22 +1732,19 @@ define void @sink_splatvar(i32* %p, i32 %shift_amt) {
 ;
 ; SSE41-LABEL: sink_splatvar:
 ; SSE41:       # %bb.0: # %entry
-; SSE41-NEXT:    movd %esi, %xmm1
+; SSE41-NEXT:    movd %esi, %xmm0
 ; SSE41-NEXT:    movq $-1024, %rax # imm = 0xFC00
-; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [32,32,32,32]
-; SSE41-NEXT:    psubd %xmm1, %xmm0
-; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
-; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
+; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE41-NEXT:    .p2align 4, 0x90
 ; SSE41-NEXT:  .LBB8_1: # %loop
 ; SSE41-NEXT:    # =>This Inner Loop Header: Depth=1
-; SSE41-NEXT:    movdqu 1024(%rdi,%rax), %xmm2
-; SSE41-NEXT:    movdqa %xmm2, %xmm3
-; SSE41-NEXT:    psrld %xmm0, %xmm3
-; SSE41-NEXT:    pslld %xmm1, %xmm2
-; SSE41-NEXT:    por %xmm3, %xmm2
-; SSE41-NEXT:    movdqu %xmm2, 1024(%rdi,%rax)
+; SSE41-NEXT:    movdqu 1024(%rdi,%rax), %xmm1
+; SSE41-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,2,3,3]
+; SSE41-NEXT:    psllq %xmm0, %xmm2
+; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,1,1]
+; SSE41-NEXT:    psllq %xmm0, %xmm1
+; SSE41-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,3],xmm2[1,3]
+; SSE41-NEXT:    movups %xmm1, 1024(%rdi,%rax)
 ; SSE41-NEXT:    addq $16, %rax
 ; SSE41-NEXT:    jne .LBB8_1
 ; SSE41-NEXT:  # %bb.2: # %end
@@ -1759,19 +1754,17 @@ define void @sink_splatvar(i32* %p, i32 %shift_amt) {
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vmovd %esi, %xmm0
 ; AVX1-NEXT:    movq $-1024, %rax # imm = 0xFC00
-; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm0 = [32,32,32,32]
-; AVX1-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
-; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
+; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    .p2align 4, 0x90
 ; AVX1-NEXT:  .LBB8_1: # %loop
 ; AVX1-NEXT:    # =>This Inner Loop Header: Depth=1
-; AVX1-NEXT:    vmovdqu 1024(%rdi,%rax), %xmm2
-; AVX1-NEXT:    vpsrld %xmm0, %xmm2, %xmm3
-; AVX1-NEXT:    vpslld %xmm1, %xmm2, %xmm2
-; AVX1-NEXT:    vpor %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vmovdqu %xmm2, 1024(%rdi,%rax)
+; AVX1-NEXT:    vmovdqu 1024(%rdi,%rax), %xmm1
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[2,2,3,3]
+; AVX1-NEXT:    vpsllq %xmm0, %xmm2, %xmm2
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,0,1,1]
+; AVX1-NEXT:    vpsllq %xmm0, %xmm1, %xmm1
+; AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[1,3],xmm2[1,3]
+; AVX1-NEXT:    vmovups %xmm1, 1024(%rdi,%rax)
 ; AVX1-NEXT:    addq $16, %rax
 ; AVX1-NEXT:    jne .LBB8_1
 ; AVX1-NEXT:  # %bb.2: # %end
@@ -1935,20 +1928,18 @@ define void @sink_splatvar(i32* %p, i32 %shift_amt) {
 ; X86-SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE2-NEXT:    movd %xmm0, %edx
 ; X86-SSE2-NEXT:    andl $31, %edx
-; X86-SSE2-NEXT:    movl $32, %esi
-; X86-SSE2-NEXT:    subl %edx, %esi
-; X86-SSE2-NEXT:    movd %esi, %xmm0
-; X86-SSE2-NEXT:    movd %edx, %xmm1
+; X86-SSE2-NEXT:    movd %edx, %xmm0
 ; X86-SSE2-NEXT:    xorl %edx, %edx
 ; X86-SSE2-NEXT:    .p2align 4, 0x90
 ; X86-SSE2-NEXT:  .LBB8_1: # %loop
 ; X86-SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-SSE2-NEXT:    movdqu (%eax,%ecx,4), %xmm2
-; X86-SSE2-NEXT:    movdqa %xmm2, %xmm3
-; X86-SSE2-NEXT:    psrld %xmm0, %xmm3
-; X86-SSE2-NEXT:    pslld %xmm1, %xmm2
-; X86-SSE2-NEXT:    por %xmm3, %xmm2
-; X86-SSE2-NEXT:    movdqu %xmm2, (%eax,%ecx,4)
+; X86-SSE2-NEXT:    movdqu (%eax,%ecx,4), %xmm1
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,2,3,3]
+; X86-SSE2-NEXT:    psllq %xmm0, %xmm2
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,1,1]
+; X86-SSE2-NEXT:    psllq %xmm0, %xmm1
+; X86-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,3],xmm2[1,3]
+; X86-SSE2-NEXT:    movups %xmm1, (%eax,%ecx,4)
 ; X86-SSE2-NEXT:    addl $4, %ecx
 ; X86-SSE2-NEXT:    adcl $0, %edx
 ; X86-SSE2-NEXT:    movl %ecx, %esi

@@ -6820,7 +6820,6 @@ static SDValue getUnpackh(SelectionDAG &DAG, const SDLoc &dl, EVT VT,
 
 /// Returns a node that packs the LHS + RHS nodes together at half width.
 /// May return X86ISD::PACKSS/PACKUS, packing the top/bottom half.
-/// TODO: Add vXi64 -> vXi32 pack support with vector_shuffle node.
 /// TODO: Add subvector splitting if/when we have a need for it.
 static SDValue getPack(SelectionDAG &DAG, const X86Subtarget &Subtarget,
                        const SDLoc &dl, MVT VT, SDValue LHS, SDValue RHS,
@@ -6832,8 +6831,23 @@ static SDValue getPack(SelectionDAG &DAG, const X86Subtarget &Subtarget,
          VT.getSizeInBits() == OpVT.getSizeInBits() &&
          (EltSizeInBits * 2) == OpVT.getScalarSizeInBits() &&
          "Unexpected PACK operand types");
-  assert((EltSizeInBits == 8 || EltSizeInBits == 16) &&
+  assert((EltSizeInBits == 8 || EltSizeInBits == 16 || EltSizeInBits == 32) &&
          "Unexpected PACK result type");
+
+  // Rely on vector shuffles for vXi64 -> vXi32 packing.
+  if (EltSizeInBits == 32) {
+    SmallVector<int> PackMask;
+    int Offset = PackHiHalf ? 1 : 0;
+    int NumElts = VT.getVectorNumElements();
+    for (int I = 0; I != NumElts; I += 4) {
+      PackMask.push_back(I + Offset);
+      PackMask.push_back(I + Offset + 2);
+      PackMask.push_back(I + Offset + NumElts);
+      PackMask.push_back(I + Offset + NumElts + 2);
+    }
+    return DAG.getVectorShuffle(VT, dl, DAG.getBitcast(VT, LHS),
+                                DAG.getBitcast(VT, RHS), PackMask);
+  }
 
   // See if we already have sufficient leading bits for PACKSS/PACKUS.
   if (!PackHiHalf) {
@@ -29866,44 +29880,53 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
           (VT == MVT::v64i8 && Subtarget.useBWIRegs())) &&
          "Only vXi32/vXi16/vXi8 vector rotates supported");
 
-  bool IsSplatAmt = DAG.isSplatValue(Amt);
+  // Check for a hidden ISD::ROTR, splat + vXi8 lowering can handle both, but we
+  // currently hit infinite loops in legalization if we allow ISD::ROTR.
+  // FIXME: Infinite ROTL<->ROTR legalization in TargetLowering::expandROT.
+  SDValue HiddenROTRAmt;
+  if (Amt.getOpcode() == ISD::SUB &&
+      ISD::isBuildVectorAllZeros(Amt.getOperand(0).getNode()))
+    HiddenROTRAmt = Amt.getOperand(1);
+
+  MVT ExtSVT = MVT::getIntegerVT(2 * EltSizeInBits);
+  MVT ExtVT = MVT::getVectorVT(ExtSVT, NumElts / 2);
+
   SDValue AmtMask = DAG.getConstant(EltSizeInBits - 1, DL, VT);
+  SDValue AmtMod = DAG.getNode(ISD::AND, DL, VT,
+                               HiddenROTRAmt ? HiddenROTRAmt : Amt, AmtMask);
+
+  // Attempt to fold as unpack(x,x) << zext(splat(y)):
+  // rotl(x,y) -> (unpack(x,x) << (y & (bw-1))) >> bw.
+  // rotr(x,y) -> (unpack(x,x) >> (y & (bw-1))).
+  // TODO: Handle vXi16 cases.
+  if (EltSizeInBits == 8 || EltSizeInBits == 32) {
+    if (SDValue BaseRotAmt = DAG.getSplatValue(AmtMod)) {
+      unsigned ShiftX86Opc = HiddenROTRAmt ? X86ISD::VSRLI : X86ISD::VSHLI;
+      SDValue Lo = DAG.getBitcast(ExtVT, getUnpackl(DAG, DL, VT, R, R));
+      SDValue Hi = DAG.getBitcast(ExtVT, getUnpackh(DAG, DL, VT, R, R));
+      BaseRotAmt = DAG.getZExtOrTrunc(BaseRotAmt, DL, MVT::i32);
+      Lo = getTargetVShiftNode(ShiftX86Opc, DL, ExtVT, Lo, BaseRotAmt,
+                               Subtarget, DAG);
+      Hi = getTargetVShiftNode(ShiftX86Opc, DL, ExtVT, Hi, BaseRotAmt,
+                               Subtarget, DAG);
+      return getPack(DAG, Subtarget, DL, VT, Lo, Hi, !HiddenROTRAmt);
+    }
+  }
 
   // v16i8/v32i8/v64i8: Split rotation into rot4/rot2/rot1 stages and select by
   // the amount bit.
   // TODO: We're doing nothing here that we couldn't do for funnel shifts.
   if (EltSizeInBits == 8) {
     bool IsConstAmt = ISD::isBuildVectorOfConstantSDNodes(Amt.getNode());
-    // Check for a hidden ISD::ROTR, vXi8 lowering can handle both, but we
-    // currently hit infinite loops in legalization if we allow ISD::ROTR.
-    // FIXME: Infinite ROTL<->ROTR legalization in TargetLowering::expandROT.
-    SDValue HiddenROTRAmt;
-    if (Amt.getOpcode() == ISD::SUB &&
-        ISD::isBuildVectorAllZeros(Amt.getOperand(0).getNode()))
-      HiddenROTRAmt = Amt.getOperand(1);
-
-    MVT ExtVT = MVT::getVectorVT(MVT::i16, NumElts / 2);
     MVT WideVT =
         MVT::getVectorVT(Subtarget.hasBWI() ? MVT::i16 : MVT::i32, NumElts);
     unsigned ShiftOpc = HiddenROTRAmt ? ISD::SRL : ISD::SHL;
-    unsigned ShiftX86Opc = HiddenROTRAmt ? X86ISD::VSRLI : X86ISD::VSHLI;
-    SDValue AmtMod = DAG.getNode(ISD::AND, DL, VT,
-                                 HiddenROTRAmt ? HiddenROTRAmt : Amt, AmtMask);
 
-    // Attempt to fold as unpack(x,x) << zext(y):
+    // Attempt to fold as:
     // rotl(x,y) -> (((aext(x) << bw) | zext(x)) << (y & (bw-1))) >> bw.
     // rotr(x,y) -> (((aext(x) << bw) | zext(x)) >> (y & (bw-1))).
-    if (SDValue BaseRotAmt = DAG.getSplatValue(AmtMod)) {
-      BaseRotAmt = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i32, BaseRotAmt);
-      SDValue Lo = DAG.getBitcast(ExtVT, getUnpackl(DAG, DL, VT, R, R));
-      SDValue Hi = DAG.getBitcast(ExtVT, getUnpackh(DAG, DL, VT, R, R));
-      Lo = getTargetVShiftNode(ShiftX86Opc, DL, ExtVT, Lo, BaseRotAmt,
-                               Subtarget, DAG);
-      Hi = getTargetVShiftNode(ShiftX86Opc, DL, ExtVT, Hi, BaseRotAmt,
-                               Subtarget, DAG);
-      return getPack(DAG, Subtarget, DL, VT, Lo, Hi, !HiddenROTRAmt);
-    } else if (supportedVectorVarShift(WideVT, Subtarget, ShiftOpc) &&
-               supportedVectorShiftWithImm(WideVT, Subtarget, ShiftOpc)) {
+    if (supportedVectorVarShift(WideVT, Subtarget, ShiftOpc) &&
+        supportedVectorShiftWithImm(WideVT, Subtarget, ShiftOpc)) {
       // If we're rotating by constant, just use default promotion.
       if (IsConstAmt)
         return SDValue();
@@ -29917,8 +29940,12 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
       if (!HiddenROTRAmt)
         R = getTargetVShiftByConstNode(X86ISD::VSRLI, DL, WideVT, R, 8, DAG);
       return DAG.getNode(ISD::TRUNCATE, DL, VT, R);
-    } else if (IsConstAmt ||
-               supportedVectorVarShift(ExtVT, Subtarget, ShiftOpc)) {
+    }
+
+    // Attempt to fold as unpack(x,x) << zext(y):
+    // rotl(x,y) -> (unpack(x,x) << (y & (bw-1))) >> bw.
+    // rotr(x,y) -> (unpack(x,x) >> (y & (bw-1))).
+    if (IsConstAmt || supportedVectorVarShift(ExtVT, Subtarget, ShiftOpc)) {
       // See if we can perform this by unpacking to lo/hi vXi16.
       SDValue Z = DAG.getConstant(0, DL, VT);
       SDValue RLo = DAG.getBitcast(ExtVT, getUnpackl(DAG, DL, VT, R, R));
@@ -29996,17 +30023,9 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
   }
 
   // ISD::ROT* uses modulo rotate amounts.
-  if (SDValue BaseRotAmt = DAG.getSplatValue(Amt)) {
-    // If the amount is a splat, perform the modulo BEFORE the splat,
-    // this helps LowerShiftByScalarVariable to remove the splat later.
-    Amt = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VT, BaseRotAmt);
-    Amt = DAG.getNode(ISD::AND, DL, VT, Amt, AmtMask);
-    Amt = DAG.getVectorShuffle(VT, DL, Amt, DAG.getUNDEF(VT),
-                               SmallVector<int>(NumElts, 0));
-  } else {
-    Amt = DAG.getNode(ISD::AND, DL, VT, Amt, AmtMask);
-  }
+  Amt = DAG.getNode(ISD::AND, DL, VT, Amt, AmtMask);
 
+  bool IsSplatAmt = DAG.isSplatValue(Amt);
   bool ConstantAmt = ISD::isBuildVectorOfConstantSDNodes(Amt.getNode());
   bool LegalVarShifts = supportedVectorVarShift(VT, Subtarget, ISD::SHL) &&
                         supportedVectorVarShift(VT, Subtarget, ISD::SRL);
