@@ -178,3 +178,16 @@ defm : Binary_vr_vv_ShortLong<vvp_sra,
 defm : Binary_vr_vv_ShortLong<vvp_srl,
                               i64, v256i64, "VSRL",
                               i32, v256i32, "PVSRLLO">;
+
+defm : Binary_rv_vv_ShortLong<c_vvp_fadd,
+                              f64, v256f64, "VFADDD",
+                              f32, v256f32, "PVFADDUP">;
+defm : Binary_rv_vv_ShortLong<c_vvp_fmul,
+                              f64, v256f64, "VFMULD",
+                              f32, v256f32, "PVFMULUP">;
+defm : Binary_rv_vv_ShortLong<vvp_fsub,
+                              f64, v256f64, "VFSUBD",
+                              f32, v256f32, "PVFSUBUP">;
+defm : Binary_rv_vr_vv_ShortLong<vvp_fdiv,
+                              f64, v256f64, "VFDIVD",
+                              f32, v256f32, "VFDIVS">;
