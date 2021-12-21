@@ -1681,11 +1681,10 @@ TSAN_INTERCEPTOR(int, eventfd, unsigned initval, int flags) {
 
 #if SANITIZER_LINUX
 TSAN_INTERCEPTOR(int, signalfd, int fd, void *mask, int flags) {
-  SCOPED_TSAN_INTERCEPTOR(signalfd, fd, mask, flags);
-  if (fd >= 0)
-    FdClose(thr, pc, fd);
+  SCOPED_INTERCEPTOR_RAW(signalfd, fd, mask, flags);
+  FdClose(thr, pc, fd);
   fd = REAL(signalfd)(fd, mask, flags);
-  if (fd >= 0)
+  if (!MustIgnoreInterceptor(thr))
     FdSignalCreate(thr, pc, fd);
   return fd;
 }
@@ -1762,17 +1761,15 @@ TSAN_INTERCEPTOR(int, listen, int fd, int backlog) {
 }
 
 TSAN_INTERCEPTOR(int, close, int fd) {
-  SCOPED_TSAN_INTERCEPTOR(close, fd);
-  if (fd >= 0)
-    FdClose(thr, pc, fd);
+  SCOPED_INTERCEPTOR_RAW(close, fd);
+  FdClose(thr, pc, fd);
   return REAL(close)(fd);
 }
 
 #if SANITIZER_LINUX
 TSAN_INTERCEPTOR(int, __close, int fd) {
-  SCOPED_TSAN_INTERCEPTOR(__close, fd);
-  if (fd >= 0)
-    FdClose(thr, pc, fd);
+  SCOPED_INTERCEPTOR_RAW(__close, fd);
+  FdClose(thr, pc, fd);
   return REAL(__close)(fd);
 }
 #define TSAN_MAYBE_INTERCEPT___CLOSE TSAN_INTERCEPT(__close)
@@ -1783,13 +1780,10 @@ TSAN_INTERCEPTOR(int, __close, int fd) {
 // glibc guts
 #if SANITIZER_LINUX && !SANITIZER_ANDROID
 TSAN_INTERCEPTOR(void, __res_iclose, void *state, bool free_addr) {
-  SCOPED_TSAN_INTERCEPTOR(__res_iclose, state, free_addr);
+  SCOPED_INTERCEPTOR_RAW(__res_iclose, state, free_addr);
   int fds[64];
   int cnt = ExtractResolvFDs(state, fds, ARRAY_SIZE(fds));
-  for (int i = 0; i < cnt; i++) {
-    if (fds[i] > 0)
-      FdClose(thr, pc, fds[i]);
-  }
+  for (int i = 0; i < cnt; i++) FdClose(thr, pc, fds[i]);
   REAL(__res_iclose)(state, free_addr);
 }
 #define TSAN_MAYBE_INTERCEPT___RES_ICLOSE TSAN_INTERCEPT(__res_iclose)
@@ -1870,7 +1864,7 @@ TSAN_INTERCEPTOR(int, rmdir, char *path) {
 }
 
 TSAN_INTERCEPTOR(int, closedir, void *dirp) {
-  SCOPED_TSAN_INTERCEPTOR(closedir, dirp);
+  SCOPED_INTERCEPTOR_RAW(closedir, dirp);
   if (dirp) {
     int fd = dirfd(dirp);
     FdClose(thr, pc, fd);
@@ -2375,7 +2369,7 @@ static void HandleRecvmsg(ThreadState *thr, uptr pc,
 #define COMMON_INTERCEPTOR_FILE_CLOSE(ctx, file) \
   if (file) {                                    \
     int fd = fileno_unlocked(file);              \
-    if (fd >= 0) FdClose(thr, pc, fd);           \
+    FdClose(thr, pc, fd);                        \
   }
 
 #define COMMON_INTERCEPTOR_DLOPEN(filename, flag) \
@@ -2582,7 +2576,7 @@ static USED void syscall_release(uptr pc, uptr addr) {
 }
 
 static void syscall_fd_close(uptr pc, int fd) {
-  TSAN_SYSCALL();
+  auto *thr = cur_thread();
   FdClose(thr, pc, fd);
 }
 
