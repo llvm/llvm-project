@@ -973,6 +973,34 @@ Address WebAssemblyABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
 }
 
 //===----------------------------------------------------------------------===//
+// M88k ABI Implementation
+//
+// This is a very simple ABI that relies a lot on DefaultABIInfo.
+//===----------------------------------------------------------------------===//
+
+class M88kABIInfo final : public ABIInfo {
+  DefaultABIInfo defaultInfo;
+
+public:
+  explicit M88kABIInfo(CodeGen::CodeGenTypes &CGT)
+      : ABIInfo(CGT), defaultInfo(CGT) {}
+
+  void computeInfo(CodeGen::CGFunctionInfo &FI) const override {}
+
+  CodeGen::Address EmitVAArg(CodeGen::CodeGenFunction &CGF,
+                             CodeGen::Address VAListAddr,
+                             QualType Ty) const override {
+    return VAListAddr;
+  }
+};
+
+class M88kTargetCodeGenInfo final : public TargetCodeGenInfo {
+public:
+  explicit M88kTargetCodeGenInfo(CodeGen::CodeGenTypes &CGT)
+      : TargetCodeGenInfo(std::make_unique<M88kABIInfo>(CGT)) {}
+};
+
+//===----------------------------------------------------------------------===//
 // le32/PNaCl bitcode ABI Implementation
 //
 // This is a simplified version of the x86_32 ABI.  Arguments and return values
@@ -12297,6 +12325,9 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
     return SetCGInfo(new LoongArchTargetCodeGenInfo(
         Types, getTarget().getPointerWidth(0), ABIFRLen));
   }
+// Crashes without serious implementation.
+//  case llvm::Triple::m88k:
+//    return SetCGInfo(new M88kTargetCodeGenInfo(Types));
   }
 }
 

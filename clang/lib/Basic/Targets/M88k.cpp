@@ -143,10 +143,5 @@ const char *M88kTargetInfo::getClobbers() const {
   return "";
 }
 
-M88kTargetInfo::BuiltinVaListKind M88kTargetInfo::getBuiltinVaListKind() const {
-  // TODO Check.
-  return TargetInfo::VoidPtrBuiltinVaList;
-}
-
 } // namespace targets
 } // namespace clang

@@ -39,7 +39,11 @@ public:
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &info) const override;
   const char *getClobbers() const override;
-  BuiltinVaListKind getBuiltinVaListKind() const override;
+
+  BuiltinVaListKind getBuiltinVaListKind() const override {
+    return TargetInfo::M88kBuiltinVaList;
+  }
+
   bool setCPU(const std::string &Name) override;
 };
 
