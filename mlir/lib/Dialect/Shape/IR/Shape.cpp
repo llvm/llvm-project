@@ -54,13 +54,13 @@ LogicalResult shape::getShapeVec(Value input,
   if (auto inputOp = input.getDefiningOp<ConstShapeOp>()) {
     shapeValues = llvm::to_vector<6>(inputOp.getShape().getValues<int64_t>());
     return success();
-  } else if (auto inputOp = input.getDefiningOp<arith::ConstantOp>()) {
+  }
+  if (auto inputOp = input.getDefiningOp<arith::ConstantOp>()) {
     shapeValues = llvm::to_vector<6>(
         inputOp.getValue().cast<DenseIntElementsAttr>().getValues<int64_t>());
     return success();
-  } else {
-    return failure();
   }
+  return failure();
 }
 
 static bool isErrorPropagationPossible(TypeRange operandTypes) {
