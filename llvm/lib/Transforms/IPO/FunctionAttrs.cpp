@@ -719,16 +719,8 @@ determinePointerAccessAttrs(Argument *A,
         return Attribute::None;
       }
 
-      // Given we've explictily handled the callee operand above, what's left
-      // must be a data operand (e.g. argument or operand bundle)
-      const bool IsOperandBundleUse = UseIndex >= CB.arg_size();
-      if (UseIndex >= F->arg_size() && !IsOperandBundleUse) {
-        assert(F->isVarArg() && "More params than args in non-varargs call");
-        return Attribute::None;
-      }
-
-
-      if (CB.isArgOperand(U) && SCCNodes.count(F->getArg(UseIndex))) {
+      if (CB.isArgOperand(U) && UseIndex < F->arg_size() &&
+          SCCNodes.count(F->getArg(UseIndex))) {
         // This is an argument which is part of the speculative SCC.  Note that
         // only operands corresponding to formal arguments of the callee can
         // participate in the speculation.
