@@ -20,33 +20,33 @@
 namespace __llvm_libc {
 namespace testutils {
 
-bool ProcessStatus::exitedNormally() const {
-  return WIFEXITED(PlatformDefined);
+bool ProcessStatus::exited_normally() const {
+  return WIFEXITED(platform_defined);
 }
 
-int ProcessStatus::getExitCode() const {
-  assert(exitedNormally() && "Abnormal termination, no exit code");
-  return WEXITSTATUS(PlatformDefined);
+int ProcessStatus::get_exit_code() const {
+  assert(exited_normally() && "Abnormal termination, no exit code");
+  return WEXITSTATUS(platform_defined);
 }
 
-int ProcessStatus::getFatalSignal() const {
-  if (exitedNormally())
+int ProcessStatus::get_fatal_signal() const {
+  if (exited_normally())
     return 0;
-  return WTERMSIG(PlatformDefined);
+  return WTERMSIG(platform_defined);
 }
 
-ProcessStatus invokeInSubprocess(FunctionCaller *Func, unsigned timeoutMS) {
+ProcessStatus invoke_in_subprocess(FunctionCaller *Func, unsigned timeoutMS) {
   std::unique_ptr<FunctionCaller> X(Func);
   int pipeFDs[2];
   if (::pipe(pipeFDs) == -1)
-    return ProcessStatus::Error("pipe(2) failed");
+    return ProcessStatus::error("pipe(2) failed");
 
   // Don't copy the buffers into the child process and print twice.
   std::cout.flush();
   std::cerr.flush();
   pid_t Pid = ::fork();
   if (Pid == -1)
-    return ProcessStatus::Error("fork(2) failed");
+    return ProcessStatus::error("fork(2) failed");
 
   if (!Pid) {
     (*Func)();
@@ -60,11 +60,11 @@ ProcessStatus invokeInSubprocess(FunctionCaller *Func, unsigned timeoutMS) {
   // No events requested so this call will only return after the timeout or if
   // the pipes peer was closed, signaling the process exited.
   if (::poll(&pollFD, 1, timeoutMS) == -1)
-    return ProcessStatus::Error("poll(2) failed");
+    return ProcessStatus::error("poll(2) failed");
   // If the pipe wasn't closed by the child yet then timeout has expired.
   if (!(pollFD.revents & POLLHUP)) {
     ::kill(Pid, SIGKILL);
-    return ProcessStatus::TimedOut();
+    return ProcessStatus::timed_out_ps();
   }
 
   int WStatus = 0;
@@ -72,13 +72,13 @@ ProcessStatus invokeInSubprocess(FunctionCaller *Func, unsigned timeoutMS) {
   // and doesn't turn into a zombie.
   pid_t status = ::waitpid(Pid, &WStatus, 0);
   if (status == -1)
-    return ProcessStatus::Error("waitpid(2) failed");
+    return ProcessStatus::error("waitpid(2) failed");
   assert(status == Pid);
   (void)status;
   return {WStatus};
 }
 
-const char *signalAsString(int Signum) { return ::strsignal(Signum); }
+const char *signal_as_string(int Signum) { return ::strsignal(Signum); }
 
 } // namespace testutils
 } // namespace __llvm_libc

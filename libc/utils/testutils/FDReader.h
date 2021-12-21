@@ -19,8 +19,8 @@ public:
   FDReader();
   ~FDReader();
 
-  int getWriteFD() { return pipefd[1]; }
-  bool matchWritten(const char *);
+  int get_write_fd() { return pipefd[1]; }
+  bool match_written(const char *);
 };
 
 } // namespace testutils

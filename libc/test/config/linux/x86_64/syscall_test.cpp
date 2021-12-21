@@ -39,6 +39,6 @@ TEST(LlvmLibcX86_64_SyscallTest, APITest) {
         return __llvm_libc::syscall(n, a1, a2, a3, a4, a5, a6);
       });
 
-  Function<long(long, void *)> notLongType(
+  Function<long(long, void *)> not_long_type(
       [](long n, void *a1) { return __llvm_libc::syscall(n, a1); });
 }

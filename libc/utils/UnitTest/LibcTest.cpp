@@ -291,22 +291,22 @@ bool Test::testMatch(bool MatchResult, MatcherBase &Matcher, const char *LHSStr,
 bool Test::testProcessKilled(testutils::FunctionCaller *Func, int Signal,
                              const char *LHSStr, const char *RHSStr,
                              const char *File, unsigned long Line) {
-  testutils::ProcessStatus Result = testutils::invokeInSubprocess(Func, 500);
+  testutils::ProcessStatus Result = testutils::invoke_in_subprocess(Func, 500);
 
-  if (const char *error = Result.getError()) {
+  if (const char *error = Result.get_error()) {
     Ctx->markFail();
     std::cout << File << ":" << Line << ": FAILURE\n" << error << '\n';
     return false;
   }
 
-  if (Result.timedOut()) {
+  if (Result.timed_out()) {
     Ctx->markFail();
     std::cout << File << ":" << Line << ": FAILURE\n"
               << "Process timed out after " << 500 << " milliseconds.\n";
     return false;
   }
 
-  if (Result.exitedNormally()) {
+  if (Result.exited_normally()) {
     Ctx->markFail();
     std::cout << File << ":" << Line << ": FAILURE\n"
               << "Expected " << LHSStr
@@ -314,41 +314,41 @@ bool Test::testProcessKilled(testutils::FunctionCaller *Func, int Signal,
     return false;
   }
 
-  int KilledBy = Result.getFatalSignal();
+  int KilledBy = Result.get_fatal_signal();
   assert(KilledBy != 0 && "Not killed by any signal");
   if (Signal == -1 || KilledBy == Signal)
     return true;
 
-  using testutils::signalAsString;
+  using testutils::signal_as_string;
   Ctx->markFail();
   std::cout << File << ":" << Line << ": FAILURE\n"
             << "              Expected: " << LHSStr << '\n'
             << "To be killed by signal: " << Signal << '\n'
-            << "              Which is: " << signalAsString(Signal) << '\n'
+            << "              Which is: " << signal_as_string(Signal) << '\n'
             << "  But it was killed by: " << KilledBy << '\n'
-            << "              Which is: " << signalAsString(KilledBy) << '\n';
+            << "              Which is: " << signal_as_string(KilledBy) << '\n';
   return false;
 }
 
 bool Test::testProcessExits(testutils::FunctionCaller *Func, int ExitCode,
                             const char *LHSStr, const char *RHSStr,
                             const char *File, unsigned long Line) {
-  testutils::ProcessStatus Result = testutils::invokeInSubprocess(Func, 500);
+  testutils::ProcessStatus Result = testutils::invoke_in_subprocess(Func, 500);
 
-  if (const char *error = Result.getError()) {
+  if (const char *error = Result.get_error()) {
     Ctx->markFail();
     std::cout << File << ":" << Line << ": FAILURE\n" << error << '\n';
     return false;
   }
 
-  if (Result.timedOut()) {
+  if (Result.timed_out()) {
     Ctx->markFail();
     std::cout << File << ":" << Line << ": FAILURE\n"
               << "Process timed out after " << 500 << " milliseconds.\n";
     return false;
   }
 
-  if (!Result.exitedNormally()) {
+  if (!Result.exited_normally()) {
     Ctx->markFail();
     std::cout << File << ":" << Line << ": FAILURE\n"
               << "Expected " << LHSStr << '\n'
@@ -357,7 +357,7 @@ bool Test::testProcessExits(testutils::FunctionCaller *Func, int ExitCode,
     return false;
   }
 
-  int ActualExit = Result.getExitCode();
+  int ActualExit = Result.get_exit_code();
   if (ActualExit == ExitCode)
     return true;
 

@@ -22,7 +22,7 @@ class NextAfterTestTemplate : public __llvm_libc::testing::Test {
   using MantissaWidth = __llvm_libc::fputil::MantissaWidth<T>;
   using UIntType = typename FPBits::UIntType;
 
-  static constexpr int bitWidthOfType =
+  static constexpr int BIT_WIDTH_OF_TYPE =
       __llvm_libc::fputil::FloatProperties<T>::BIT_WIDTH;
 
   const T zero = T(FPBits::zero());
@@ -30,10 +30,10 @@ class NextAfterTestTemplate : public __llvm_libc::testing::Test {
   const T inf = T(FPBits::inf());
   const T neg_inf = T(FPBits::neg_inf());
   const T nan = T(FPBits::build_nan(1));
-  const UIntType MIN_SUBNORMAL = FPBits::MIN_SUBNORMAL;
-  const UIntType MAX_SUBNORMAL = FPBits::MAX_SUBNORMAL;
-  const UIntType MIN_NORMAL = FPBits::MIN_NORMAL;
-  const UIntType MAX_NORMAL = FPBits::MAX_NORMAL;
+  const UIntType min_subnormal = FPBits::MIN_SUBNORMAL;
+  const UIntType max_subnormal = FPBits::MAX_SUBNORMAL;
+  const UIntType min_normal = FPBits::MIN_NORMAL;
+  const UIntType max_normal = FPBits::MAX_NORMAL;
 
 public:
   typedef T (*NextAfterFunc)(T, T);
@@ -50,89 +50,91 @@ public:
     // 'from' is zero|neg_zero.
     T x = zero;
     T result = func(x, T(1));
-    UIntType expectedBits = 1;
-    T expected = *reinterpret_cast<T *>(&expectedBits);
+    UIntType expected_bits = 1;
+    T expected = *reinterpret_cast<T *>(&expected_bits);
     ASSERT_FP_EQ(result, expected);
 
     result = func(x, T(-1));
-    expectedBits = (UIntType(1) << (bitWidthOfType - 1)) + 1;
-    expected = *reinterpret_cast<T *>(&expectedBits);
+    expected_bits = (UIntType(1) << (BIT_WIDTH_OF_TYPE - 1)) + 1;
+    expected = *reinterpret_cast<T *>(&expected_bits);
     ASSERT_FP_EQ(result, expected);
 
     x = neg_zero;
     result = func(x, 1);
-    expectedBits = 1;
-    expected = *reinterpret_cast<T *>(&expectedBits);
+    expected_bits = 1;
+    expected = *reinterpret_cast<T *>(&expected_bits);
     ASSERT_FP_EQ(result, expected);
 
     result = func(x, -1);
-    expectedBits = (UIntType(1) << (bitWidthOfType - 1)) + 1;
-    expected = *reinterpret_cast<T *>(&expectedBits);
+    expected_bits = (UIntType(1) << (BIT_WIDTH_OF_TYPE - 1)) + 1;
+    expected = *reinterpret_cast<T *>(&expected_bits);
     ASSERT_FP_EQ(result, expected);
 
     // 'from' is max subnormal value.
-    x = *reinterpret_cast<const T *>(&MAX_SUBNORMAL);
+    x = *reinterpret_cast<const T *>(&max_subnormal);
     result = func(x, 1);
-    expected = *reinterpret_cast<const T *>(&MIN_NORMAL);
+    expected = *reinterpret_cast<const T *>(&min_normal);
     ASSERT_FP_EQ(result, expected);
 
     result = func(x, 0);
-    expectedBits = MAX_SUBNORMAL - 1;
-    expected = *reinterpret_cast<T *>(&expectedBits);
+    expected_bits = max_subnormal - 1;
+    expected = *reinterpret_cast<T *>(&expected_bits);
     ASSERT_FP_EQ(result, expected);
 
     x = -x;
 
     result = func(x, -1);
-    expectedBits = (UIntType(1) << (bitWidthOfType - 1)) + MIN_NORMAL;
-    expected = *reinterpret_cast<T *>(&expectedBits);
+    expected_bits = (UIntType(1) << (BIT_WIDTH_OF_TYPE - 1)) + min_normal;
+    expected = *reinterpret_cast<T *>(&expected_bits);
     ASSERT_FP_EQ(result, expected);
 
     result = func(x, 0);
-    expectedBits = (UIntType(1) << (bitWidthOfType - 1)) + MAX_SUBNORMAL - 1;
-    expected = *reinterpret_cast<T *>(&expectedBits);
+    expected_bits =
+        (UIntType(1) << (BIT_WIDTH_OF_TYPE - 1)) + max_subnormal - 1;
+    expected = *reinterpret_cast<T *>(&expected_bits);
     ASSERT_FP_EQ(result, expected);
 
     // 'from' is min subnormal value.
-    x = *reinterpret_cast<const T *>(&MIN_SUBNORMAL);
+    x = *reinterpret_cast<const T *>(&min_subnormal);
     result = func(x, 1);
-    expectedBits = MIN_SUBNORMAL + 1;
-    expected = *reinterpret_cast<T *>(&expectedBits);
+    expected_bits = min_subnormal + 1;
+    expected = *reinterpret_cast<T *>(&expected_bits);
     ASSERT_FP_EQ(result, expected);
     ASSERT_FP_EQ(func(x, 0), 0);
 
     x = -x;
     result = func(x, -1);
-    expectedBits = (UIntType(1) << (bitWidthOfType - 1)) + MIN_SUBNORMAL + 1;
-    expected = *reinterpret_cast<T *>(&expectedBits);
+    expected_bits =
+        (UIntType(1) << (BIT_WIDTH_OF_TYPE - 1)) + min_subnormal + 1;
+    expected = *reinterpret_cast<T *>(&expected_bits);
     ASSERT_FP_EQ(result, expected);
     ASSERT_FP_EQ(func(x, 0), T(-0.0));
 
     // 'from' is min normal.
-    x = *reinterpret_cast<const T *>(&MIN_NORMAL);
+    x = *reinterpret_cast<const T *>(&min_normal);
     result = func(x, 0);
-    expectedBits = MAX_SUBNORMAL;
-    expected = *reinterpret_cast<T *>(&expectedBits);
+    expected_bits = max_subnormal;
+    expected = *reinterpret_cast<T *>(&expected_bits);
     ASSERT_FP_EQ(result, expected);
 
     result = func(x, inf);
-    expectedBits = MIN_NORMAL + 1;
-    expected = *reinterpret_cast<T *>(&expectedBits);
+    expected_bits = min_normal + 1;
+    expected = *reinterpret_cast<T *>(&expected_bits);
     ASSERT_FP_EQ(result, expected);
 
     x = -x;
     result = func(x, 0);
-    expectedBits = (UIntType(1) << (bitWidthOfType - 1)) + MAX_SUBNORMAL;
-    expected = *reinterpret_cast<T *>(&expectedBits);
+    expected_bits = (UIntType(1) << (BIT_WIDTH_OF_TYPE - 1)) + max_subnormal;
+    expected = *reinterpret_cast<T *>(&expected_bits);
     ASSERT_FP_EQ(result, expected);
 
     result = func(x, -inf);
-    expectedBits = (UIntType(1) << (bitWidthOfType - 1)) + MIN_NORMAL + 1;
-    expected = *reinterpret_cast<T *>(&expectedBits);
+    expected_bits = (UIntType(1) << (BIT_WIDTH_OF_TYPE - 1)) + min_normal + 1;
+    expected = *reinterpret_cast<T *>(&expected_bits);
     ASSERT_FP_EQ(result, expected);
 
     // 'from' is max normal and 'to' is infinity.
-    x = *reinterpret_cast<const T *>(&MAX_NORMAL);
+    x = *reinterpret_cast<const T *>(&max_normal);
     result = func(x, inf);
     ASSERT_FP_EQ(result, inf);
 
@@ -142,48 +144,48 @@ public:
     // 'from' is infinity.
     x = inf;
     result = func(x, 0);
-    expectedBits = MAX_NORMAL;
-    expected = *reinterpret_cast<T *>(&expectedBits);
+    expected_bits = max_normal;
+    expected = *reinterpret_cast<T *>(&expected_bits);
     ASSERT_FP_EQ(result, expected);
     ASSERT_FP_EQ(func(x, inf), inf);
 
     x = neg_inf;
     result = func(x, 0);
-    expectedBits = (UIntType(1) << (bitWidthOfType - 1)) + MAX_NORMAL;
-    expected = *reinterpret_cast<T *>(&expectedBits);
+    expected_bits = (UIntType(1) << (BIT_WIDTH_OF_TYPE - 1)) + max_normal;
+    expected = *reinterpret_cast<T *>(&expected_bits);
     ASSERT_FP_EQ(result, expected);
     ASSERT_FP_EQ(func(x, neg_inf), neg_inf);
 
     // 'from' is a power of 2.
     x = T(32.0);
     result = func(x, 0);
-    FPBits xBits = FPBits(x);
-    FPBits resultBits = FPBits(result);
-    ASSERT_EQ(resultBits.get_unbiased_exponent(),
-              uint16_t(xBits.get_unbiased_exponent() - 1));
-    ASSERT_EQ(resultBits.get_mantissa(),
+    FPBits x_bits = FPBits(x);
+    FPBits result_bits = FPBits(result);
+    ASSERT_EQ(result_bits.get_unbiased_exponent(),
+              uint16_t(x_bits.get_unbiased_exponent() - 1));
+    ASSERT_EQ(result_bits.get_mantissa(),
               (UIntType(1) << MantissaWidth::VALUE) - 1);
 
     result = func(x, T(33.0));
-    resultBits = FPBits(result);
-    ASSERT_EQ(resultBits.get_unbiased_exponent(),
-              xBits.get_unbiased_exponent());
-    ASSERT_EQ(resultBits.get_mantissa(), xBits.get_mantissa() + UIntType(1));
+    result_bits = FPBits(result);
+    ASSERT_EQ(result_bits.get_unbiased_exponent(),
+              x_bits.get_unbiased_exponent());
+    ASSERT_EQ(result_bits.get_mantissa(), x_bits.get_mantissa() + UIntType(1));
 
     x = -x;
 
     result = func(x, 0);
-    resultBits = FPBits(result);
-    ASSERT_EQ(resultBits.get_unbiased_exponent(),
-              uint16_t(xBits.get_unbiased_exponent() - 1));
-    ASSERT_EQ(resultBits.get_mantissa(),
+    result_bits = FPBits(result);
+    ASSERT_EQ(result_bits.get_unbiased_exponent(),
+              uint16_t(x_bits.get_unbiased_exponent() - 1));
+    ASSERT_EQ(result_bits.get_mantissa(),
               (UIntType(1) << MantissaWidth::VALUE) - 1);
 
     result = func(x, T(-33.0));
-    resultBits = FPBits(result);
-    ASSERT_EQ(resultBits.get_unbiased_exponent(),
-              xBits.get_unbiased_exponent());
-    ASSERT_EQ(resultBits.get_mantissa(), xBits.get_mantissa() + UIntType(1));
+    result_bits = FPBits(result);
+    ASSERT_EQ(result_bits.get_unbiased_exponent(),
+              x_bits.get_unbiased_exponent());
+    ASSERT_EQ(result_bits.get_mantissa(), x_bits.get_mantissa() + UIntType(1));
   }
 };
 

@@ -95,12 +95,12 @@ public:
   }
 
   void testSubnormalRange(RemQuoFunc func) {
-    constexpr UIntType count = 1000001;
-    constexpr UIntType step =
-        (FPBits::MAX_SUBNORMAL - FPBits::MIN_SUBNORMAL) / count;
+    constexpr UIntType COUNT = 1000001;
+    constexpr UIntType STEP =
+        (FPBits::MAX_SUBNORMAL - FPBits::MIN_SUBNORMAL) / COUNT;
     for (UIntType v = FPBits::MIN_SUBNORMAL, w = FPBits::MAX_SUBNORMAL;
          v <= FPBits::MAX_SUBNORMAL && w >= FPBits::MIN_SUBNORMAL;
-         v += step, w -= step) {
+         v += STEP, w -= STEP) {
       T x = T(FPBits(v)), y = T(FPBits(w));
       mpfr::BinaryOutput<T> result;
       mpfr::BinaryInput<T> input{x, y};
@@ -110,11 +110,11 @@ public:
   }
 
   void testNormalRange(RemQuoFunc func) {
-    constexpr UIntType count = 1000001;
-    constexpr UIntType step = (FPBits::MAX_NORMAL - FPBits::MIN_NORMAL) / count;
+    constexpr UIntType COUNT = 1000001;
+    constexpr UIntType STEP = (FPBits::MAX_NORMAL - FPBits::MIN_NORMAL) / COUNT;
     for (UIntType v = FPBits::MIN_NORMAL, w = FPBits::MAX_NORMAL;
          v <= FPBits::MAX_NORMAL && w >= FPBits::MIN_NORMAL;
-         v += step, w -= step) {
+         v += STEP, w -= STEP) {
       T x = T(FPBits(v)), y = T(FPBits(w));
       mpfr::BinaryOutput<T> result;
       mpfr::BinaryInput<T> input{x, y};

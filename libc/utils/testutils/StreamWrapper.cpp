@@ -19,8 +19,8 @@ namespace testutils {
 StreamWrapper outs() { return {std::addressof(std::cout)}; }
 
 template <typename T> StreamWrapper &StreamWrapper::operator<<(T t) {
-  assert(OS);
-  std::ostream &Stream = *reinterpret_cast<std::ostream *>(OS);
+  assert(os);
+  std::ostream &Stream = *reinterpret_cast<std::ostream *>(os);
   Stream << t;
   Stream.flush();
   return *this;
@@ -52,7 +52,7 @@ OutputFileStream::OutputFileStream(const char *FN)
     : StreamWrapper(new std::ofstream(FN)) {}
 
 OutputFileStream::~OutputFileStream() {
-  delete reinterpret_cast<std::ofstream *>(OS);
+  delete reinterpret_cast<std::ofstream *>(os);
 }
 
 } // namespace testutils

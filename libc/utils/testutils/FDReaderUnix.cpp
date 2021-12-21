@@ -27,7 +27,7 @@ FDReader::~FDReader() {
   ::close(pipefd[1]);
 }
 
-bool FDReader::matchWritten(const char *str) {
+bool FDReader::match_written(const char *str) {
 
   ::close(pipefd[1]);
 

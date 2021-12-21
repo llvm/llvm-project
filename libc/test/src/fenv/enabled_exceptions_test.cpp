@@ -46,7 +46,7 @@ TEST(LlvmLibcExceptionStatusTest, RaiseAndCrash) {
   // We '|' the individual exception flags instead of using FE_ALL_EXCEPT
   // as it can include non-standard extensions. Note that we should be able
   // to compile this file with headers from other libcs as well.
-  constexpr int allExcepts =
+  constexpr int ALL_EXCEPTS =
       FE_DIVBYZERO | FE_INVALID | FE_INEXACT | FE_OVERFLOW | FE_UNDERFLOW;
 
   for (int e : excepts) {
@@ -59,7 +59,7 @@ TEST(LlvmLibcExceptionStatusTest, RaiseAndCrash) {
     // can raise FE_INEXACT as well, we don't verify the other
     // exception flags when FE_INEXACT is enabled.
     if (e != FE_INEXACT) {
-      int others = allExcepts & ~e;
+      int others = ALL_EXCEPTS & ~e;
       ASSERT_EQ(__llvm_libc::feraiseexcept(others), 0);
       ASSERT_EQ(__llvm_libc::fetestexcept(others), others);
     }

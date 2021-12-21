@@ -19,9 +19,9 @@ DECLARE_SPECIAL_CONSTANTS(double)
 
 TEST(LlvmLibctanTest, Range) {
   static constexpr double _2pi = 6.283185307179586;
-  constexpr UIntType count = 10000000;
-  constexpr UIntType step = UIntType(-1) / count;
-  for (UIntType i = 0, v = 0; i <= count; ++i, v += step) {
+  constexpr UIntType COUNT = 10000000;
+  constexpr UIntType STEP = UIntType(-1) / COUNT;
+  for (UIntType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
     double x = double(FPBits(v));
     // TODO: Expand the range of testing after range reduction is implemented.
     if (isnan(x) || isinf(x) || x > _2pi || x < -_2pi)

@@ -16,21 +16,21 @@
 #include <math.h>
 
 TEST_F(LlvmLibcILogbTest, SpecialNumbers_ilogb) {
-  testSpecialNumbers<double>(&__llvm_libc::ilogb);
+  test_special_numbers<double>(&__llvm_libc::ilogb);
 }
 
 TEST_F(LlvmLibcILogbTest, PowersOfTwo_ilogb) {
-  testPowersOfTwo<double>(&__llvm_libc::ilogb);
+  test_powers_of_two<double>(&__llvm_libc::ilogb);
 }
 
 TEST_F(LlvmLibcILogbTest, SomeIntegers_ilogb) {
-  testSomeIntegers<double>(&__llvm_libc::ilogb);
+  test_some_integers<double>(&__llvm_libc::ilogb);
 }
 
 TEST_F(LlvmLibcILogbTest, SubnormalRange_ilogb) {
-  testSubnormalRange<double>(&__llvm_libc::ilogb);
+  test_subnormal_range<double>(&__llvm_libc::ilogb);
 }
 
 TEST_F(LlvmLibcILogbTest, NormalRange_ilogb) {
-  testNormalRange<double>(&__llvm_libc::ilogb);
+  test_normal_range<double>(&__llvm_libc::ilogb);
 }

@@ -21,9 +21,9 @@ class LlvmLibcSignalTest : public __llvm_libc::testing::Test {
   sigset_t oldSet;
 
 public:
-  void SetUp() override { __llvm_libc::sigprocmask(0, nullptr, &oldSet); }
+  void set_up() override { __llvm_libc::sigprocmask(0, nullptr, &oldSet); }
 
-  void TearDown() override {
+  void tear_down() override {
     __llvm_libc::sigprocmask(SIG_SETMASK, &oldSet, nullptr);
   }
 };
