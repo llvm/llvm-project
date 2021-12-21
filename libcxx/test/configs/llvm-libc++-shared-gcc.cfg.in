@@ -2,8 +2,6 @@
 # using a shared library, with GCC. This is done differently from Clang because
 # GCC does not support the -nostdlib++ command-line flag.
 
-import sys
-
 lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
 
 config.substitutions.append(('%{flags}', ''))
@@ -14,7 +12,7 @@ config.substitutions.append(('%{link_flags}',
     '-L %{lib} -Wl,-rpath,%{lib} -nodefaultlibs -lc++ -lm -lgcc_s -lgcc -lpthread -lc -lgcc_s -lgcc -latomic'
 ))
 config.substitutions.append(('%{exec}',
-    '{} %{{libcxx}}/utils/run.py --execdir %T -- '.format(sys.executable)
+    '%{executor} --execdir %T -- '
 ))
 
 import os, site

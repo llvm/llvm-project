@@ -29,3 +29,4 @@ config.host_triple = '@LLVM_HOST_TRIPLE@'
 config.substitutions.append(('%{cxx}', '@CMAKE_CXX_COMPILER@'))
 config.substitutions.append(('%{libcxx}', '@LIBCXXABI_LIBCXX_PATH@'))
 config.substitutions.append(('%{install}', '@CMAKE_BINARY_DIR@'))
+config.substitutions.append(('%{executor}', '@LIBCXXABI_EXECUTOR@'))
