@@ -1,4 +1,4 @@
-; RUN: opt -loop-vectorize -scalable-vectorization=on -S < %s | FileCheck %s
+; RUN: opt -loop-vectorize -S < %s | FileCheck %s
 
 target triple = "aarch64-unknown-linux-gnu"
 

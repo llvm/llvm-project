@@ -220,7 +220,7 @@ TEST(FlatAffineConstraintsTest, FindSampleTest) {
   // 2D cone with apex at (10000, 10000) and
   // edges passing through (1/3, 0) and (2/3, 0).
   checkSample(true, parseFAC("(x,y) : (300000 * x - 299999 * y - 100000 >= 0, "
-                             "-300000 * x + 2999998 * y + 200000 >= 0)",
+                             "-300000 * x + 299998 * y + 200000 >= 0)",
                              &context));
 
   // Cartesian product of a tetrahedron and a 2D cone.

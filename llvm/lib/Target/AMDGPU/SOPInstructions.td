@@ -157,6 +157,42 @@ class SOP1_1 <string opName, RegisterClass rc = SReg_64, list<dag> pattern=[]> :
   let has_sdst = 0;
 }
 
+class UniformUnaryFrag<SDPatternOperator Op> : PatFrag <
+  (ops node:$src0),
+  (Op $src0),
+  [{ return !N->isDivergent(); }]> {
+  // This check is unnecessary as it's captured by the result register
+  // bank constraint.
+  //
+  // FIXME: Should add a way for the emitter to recognize this is a
+  // trivially true predicate to eliminate the check.
+  let GISelPredicateCode = [{return true;}];
+}
+
+class UniformBinFrag<SDPatternOperator Op> : PatFrag <
+  (ops node:$src0, node:$src1),
+  (Op $src0, $src1),
+  [{ return !N->isDivergent(); }]> {
+  // This check is unnecessary as it's captured by the result register
+  // bank constraint.
+  //
+  // FIXME: Should add a way for the emitter to recognize this is a
+  // trivially true predicate to eliminate the check.
+  let GISelPredicateCode = [{return true;}];
+}
+
+class DivergentBinFrag<SDPatternOperator Op> : PatFrag <
+  (ops node:$src0, node:$src1),
+  (Op $src0, $src1),
+  [{ return N->isDivergent(); }]> {
+  // This check is unnecessary as it's captured by the result register
+  // bank constraint.
+  //
+  // FIXME: Should add a way for the emitter to recognize this is a
+  // trivially true predicate to eliminate the check.
+  let GISelPredicateCode = [{return true;}];
+}
+
 
 let isMoveImm = 1 in {
   let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
@@ -172,11 +208,11 @@ let isMoveImm = 1 in {
 
 let Defs = [SCC] in {
   def S_NOT_B32 : SOP1_32 <"s_not_b32",
-    [(set i32:$sdst, (not i32:$src0))]
+    [(set i32:$sdst, (UniformUnaryFrag<not> i32:$src0))]
   >;
 
   def S_NOT_B64 : SOP1_64 <"s_not_b64",
-    [(set i64:$sdst, (not i64:$src0))]
+    [(set i64:$sdst, (UniformUnaryFrag<not> i64:$src0))]
   >;
   def S_WQM_B32 : SOP1_32 <"s_wqm_b32">;
   def S_WQM_B64 : SOP1_64 <"s_wqm_b64">;
@@ -221,22 +257,22 @@ let isReMaterializable = 1 in {
 def S_FF0_I32_B32 : SOP1_32 <"s_ff0_i32_b32">;
 def S_FF0_I32_B64 : SOP1_32_64 <"s_ff0_i32_b64">;
 def S_FF1_I32_B64 : SOP1_32_64 <"s_ff1_i32_b64",
-  [(set i32:$sdst, (AMDGPUffbl_b32 i64:$src0))]
+  [(set i32:$sdst, (UniformUnaryFrag<AMDGPUffbl_b32> i64:$src0))]
 >;
 
 def S_FF1_I32_B32 : SOP1_32 <"s_ff1_i32_b32",
-  [(set i32:$sdst, (AMDGPUffbl_b32 i32:$src0))]
+  [(set i32:$sdst, (UniformUnaryFrag<AMDGPUffbl_b32> i32:$src0))]
 >;
 
 def S_FLBIT_I32_B32 : SOP1_32 <"s_flbit_i32_b32",
-  [(set i32:$sdst, (AMDGPUffbh_u32 i32:$src0))]
+  [(set i32:$sdst, (UniformUnaryFrag<AMDGPUffbh_u32> i32:$src0))]
 >;
 
 def S_FLBIT_I32_B64 : SOP1_32_64 <"s_flbit_i32_b64",
-  [(set i32:$sdst, (AMDGPUffbh_u32 i64:$src0))]
+  [(set i32:$sdst, (UniformUnaryFrag<AMDGPUffbh_u32> i64:$src0))]
 >;
 def S_FLBIT_I32 : SOP1_32 <"s_flbit_i32",
-  [(set i32:$sdst, (AMDGPUffbh_i32 i32:$src0))]
+  [(set i32:$sdst, (UniformUnaryFrag<AMDGPUffbh_i32> i32:$src0))]
 >;
 def S_FLBIT_I32_I64 : SOP1_32_64 <"s_flbit_i32_i64">;
 def S_SEXT_I32_I8 : SOP1_32 <"s_sext_i32_i8",
@@ -426,41 +462,6 @@ class SOP2_64_32_32 <string opName, list<dag> pattern=[]> : SOP2_Pseudo <
   "$sdst, $src0, $src1", pattern
 >;
 
-class UniformUnaryFrag<SDPatternOperator Op> : PatFrag <
-  (ops node:$src0),
-  (Op $src0),
-  [{ return !N->isDivergent(); }]> {
-  // This check is unnecessary as it's captured by the result register
-  // bank constraint.
-  //
-  // FIXME: Should add a way for the emitter to recognize this is a
-  // trivially true predicate to eliminate the check.
-  let GISelPredicateCode = [{return true;}];
-}
-
-class UniformBinFrag<SDPatternOperator Op> : PatFrag <
-  (ops node:$src0, node:$src1),
-  (Op $src0, $src1),
-  [{ return !N->isDivergent(); }]> {
-  // This check is unnecessary as it's captured by the result register
-  // bank constraint.
-  //
-  // FIXME: Should add a way for the emitter to recognize this is a
-  // trivially true predicate to eliminate the check.
-  let GISelPredicateCode = [{return true;}];
-}
-
-class DivergentBinFrag<SDPatternOperator Op> : PatFrag <
-  (ops node:$src0, node:$src1),
-  (Op $src0, $src1),
-  [{ return N->isDivergent(); }]> {
-  // This check is unnecessary as it's captured by the result register
-  // bank constraint.
-  //
-  // FIXME: Should add a way for the emitter to recognize this is a
-  // trivially true predicate to eliminate the check.
-  let GISelPredicateCode = [{return true;}];
-}
 
 let Defs = [SCC] in { // Carry out goes to SCC
 let isCommutable = 1 in {
@@ -485,19 +486,18 @@ def S_SUBB_U32 : SOP2_32 <"s_subb_u32",
   [(set i32:$sdst, (UniformBinFrag<sube> (i32 SSrc_b32:$src0), (i32 SSrc_b32:$src1)))]>;
 } // End Uses = [SCC]
 
-
 let isCommutable = 1 in {
 def S_MIN_I32 : SOP2_32 <"s_min_i32",
-  [(set i32:$sdst, (smin i32:$src0, i32:$src1))]
+  [(set i32:$sdst, (UniformBinFrag<smin> i32:$src0, i32:$src1))]
 >;
 def S_MIN_U32 : SOP2_32 <"s_min_u32",
-  [(set i32:$sdst, (umin i32:$src0, i32:$src1))]
+  [(set i32:$sdst, (UniformBinFrag<umin> i32:$src0, i32:$src1))]
 >;
 def S_MAX_I32 : SOP2_32 <"s_max_i32",
-  [(set i32:$sdst, (smax i32:$src0, i32:$src1))]
+  [(set i32:$sdst, (UniformBinFrag<smax> i32:$src0, i32:$src1))]
 >;
 def S_MAX_U32 : SOP2_32 <"s_max_u32",
-  [(set i32:$sdst, (umax i32:$src0, i32:$src1))]
+  [(set i32:$sdst, (UniformBinFrag<umax> i32:$src0, i32:$src1))]
 >;
 } // End isCommutable = 1
 } // End Defs = [SCC]

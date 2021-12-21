@@ -858,12 +858,11 @@ define i1 @mul_of_pow2_no_lz_other_op(i32 %x, i8 %y) {
   ret i1 %r
 }
 
+; The top 32-bits must be zero.
+
 define i1 @splat_mul_known_lz(i32 %x) {
 ; CHECK-LABEL: @splat_mul_known_lz(
-; CHECK-NEXT:    [[Z:%.*]] = zext i32 [[X:%.*]] to i128
-; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i128 [[Z]], 18446744078004518913
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i128 [[M]], 79228162514264337593543950336
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %z = zext i32 %x to i128
   %m = mul i128 %z, 18446744078004518913 ; 0x00000000_00000001_00000001_00000001
@@ -871,6 +870,8 @@ define i1 @splat_mul_known_lz(i32 %x) {
   %r = icmp eq i128 %s, 0
   ret i1 %r
 }
+
+; Negative test - the 33rd bit could be set.
 
 define i1 @splat_mul_unknown_lz(i32 %x) {
 ; CHECK-LABEL: @splat_mul_unknown_lz(

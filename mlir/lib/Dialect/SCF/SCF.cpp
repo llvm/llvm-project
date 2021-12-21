@@ -118,7 +118,7 @@ static ParseResult parseExecuteRegionOp(OpAsmParser &parser,
 static void print(OpAsmPrinter &p, ExecuteRegionOp op) {
   p.printOptionalArrowTypeList(op.getResultTypes());
 
-  p.printRegion(op.region(),
+  p.printRegion(op.getRegion(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/true);
 
@@ -126,9 +126,9 @@ static void print(OpAsmPrinter &p, ExecuteRegionOp op) {
 }
 
 static LogicalResult verify(ExecuteRegionOp op) {
-  if (op.region().empty())
+  if (op.getRegion().empty())
     return op.emitOpError("region needs to have at least one block");
-  if (op.region().front().getNumArguments() > 0)
+  if (op.getRegion().front().getNumArguments() > 0)
     return op.emitOpError("region cannot have any arguments");
   return success();
 }
@@ -152,9 +152,9 @@ struct SingleBlockExecuteInliner : public OpRewritePattern<ExecuteRegionOp> {
 
   LogicalResult matchAndRewrite(ExecuteRegionOp op,
                                 PatternRewriter &rewriter) const override {
-    if (!llvm::hasSingleElement(op.region()))
+    if (!llvm::hasSingleElement(op.getRegion()))
       return failure();
-    replaceOpWithRegion(rewriter, op, op.region());
+    replaceOpWithRegion(rewriter, op, op.getRegion());
     return success();
   }
 };
@@ -208,18 +208,18 @@ struct MultiBlockExecuteInliner : public OpRewritePattern<ExecuteRegionOp> {
     Block *postBlock = rewriter.splitBlock(prevBlock, op->getIterator());
     rewriter.setInsertionPointToEnd(prevBlock);
 
-    rewriter.create<BranchOp>(op.getLoc(), &op.region().front());
+    rewriter.create<BranchOp>(op.getLoc(), &op.getRegion().front());
 
-    for (Block &blk : op.region()) {
+    for (Block &blk : op.getRegion()) {
       if (YieldOp yieldOp = dyn_cast<YieldOp>(blk.getTerminator())) {
         rewriter.setInsertionPoint(yieldOp);
         rewriter.create<BranchOp>(yieldOp.getLoc(), postBlock,
-                                  yieldOp.results());
+                                  yieldOp.getResults());
         rewriter.eraseOp(yieldOp);
       }
     }
 
-    rewriter.inlineRegionBefore(op.region(), postBlock);
+    rewriter.inlineRegionBefore(op.getRegion(), postBlock);
     SmallVector<Value> blockArgs;
 
     for (auto res : op.getResults())
@@ -242,7 +242,7 @@ void ExecuteRegionOp::getCanonicalizationPatterns(RewritePatternSet &results,
 MutableOperandRange
 ConditionOp::getMutableSuccessorOperands(Optional<unsigned> index) {
   // Pass all operands except the condition to the successor region.
-  return argsMutable();
+  return getArgsMutable();
 }
 
 //===----------------------------------------------------------------------===//
@@ -277,7 +277,7 @@ void ForOp::build(OpBuilder &builder, OperationState &result, Value lb,
 }
 
 static LogicalResult verify(ForOp op) {
-  if (auto cst = op.step().getDefiningOp<arith::ConstantIndexOp>())
+  if (auto cst = op.getStep().getDefiningOp<arith::ConstantIndexOp>())
     if (cst.value() <= 0)
       return op.emitOpError("constant step operand must be positive");
 
@@ -340,14 +340,14 @@ static void printInitializationList(OpAsmPrinter &p,
 }
 
 static void print(OpAsmPrinter &p, ForOp op) {
-  p << " " << op.getInductionVar() << " = " << op.lowerBound() << " to "
-    << op.upperBound() << " step " << op.step();
+  p << " " << op.getInductionVar() << " = " << op.getLowerBound() << " to "
+    << op.getUpperBound() << " step " << op.getStep();
 
   printInitializationList(p, op.getRegionIterArgs(), op.getIterOperands(),
                           " iter_args");
   if (!op.getIterOperands().empty())
     p << " -> (" << op.getIterOperands().getTypes() << ')';
-  p.printRegion(op.region(),
+  p.printRegion(op.getRegion(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/op.hasIterOperands());
   p.printOptionalAttrDict(op->getAttrs());
@@ -409,10 +409,10 @@ static ParseResult parseForOp(OpAsmParser &parser, OperationState &result) {
   return success();
 }
 
-Region &ForOp::getLoopBody() { return region(); }
+Region &ForOp::getLoopBody() { return getRegion(); }
 
 bool ForOp::isDefinedOutsideOfLoop(Value value) {
-  return !region().isAncestor(value.getParentRegion());
+  return !getRegion().isAncestor(value.getParentRegion());
 }
 
 LogicalResult ForOp::moveOutOfLoop(ArrayRef<Operation *> ops) {
@@ -439,7 +439,7 @@ OperandRange ForOp::getSuccessorEntryOperands(unsigned index) {
 
   // The initial operands map to the loop arguments after the induction
   // variable.
-  return initArgs();
+  return getInitArgs();
 }
 
 /// Given the region at `index`, or the parent operation if `index` is None,
@@ -591,7 +591,7 @@ struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
   LogicalResult matchAndRewrite(scf::ForOp forOp,
                                 PatternRewriter &rewriter) const final {
     bool canonicalize = false;
-    Block &block = forOp.region().front();
+    Block &block = forOp.getRegion().front();
     auto yieldOp = cast<scf::YieldOp>(block.getTerminator());
 
     // An internal flat vector of block transfer
@@ -640,9 +640,9 @@ struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
       return failure();
 
     scf::ForOp newForOp = rewriter.create<scf::ForOp>(
-        forOp.getLoc(), forOp.lowerBound(), forOp.upperBound(), forOp.step(),
-        newIterArgs);
-    Block &newBlock = newForOp.region().front();
+        forOp.getLoc(), forOp.getLowerBound(), forOp.getUpperBound(),
+        forOp.getStep(), newIterArgs);
+    Block &newBlock = newForOp.getRegion().front();
 
     // Replace the null placeholders with newly constructed values.
     newBlockTransferArgs[0] = newBlock.getArgument(0); // iv
@@ -658,7 +658,7 @@ struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
       }
     }
 
-    Block &oldBlock = forOp.region().front();
+    Block &oldBlock = forOp.getRegion().front();
     assert(oldBlock.getNumArguments() == newBlockTransferArgs.size() &&
            "unexpected argument size mismatch");
 
@@ -704,13 +704,13 @@ struct SimplifyTrivialLoops : public OpRewritePattern<ForOp> {
                                 PatternRewriter &rewriter) const override {
     // If the upper bound is the same as the lower bound, the loop does not
     // iterate, just remove it.
-    if (op.lowerBound() == op.upperBound()) {
+    if (op.getLowerBound() == op.getUpperBound()) {
       rewriter.replaceOp(op, op.getIterOperands());
       return success();
     }
 
-    auto lb = op.lowerBound().getDefiningOp<arith::ConstantOp>();
-    auto ub = op.upperBound().getDefiningOp<arith::ConstantOp>();
+    auto lb = op.getLowerBound().getDefiningOp<arith::ConstantOp>();
+    auto ub = op.getUpperBound().getDefiningOp<arith::ConstantOp>();
     if (!lb || !ub)
       return failure();
 
@@ -722,7 +722,7 @@ struct SimplifyTrivialLoops : public OpRewritePattern<ForOp> {
       return success();
     }
 
-    auto step = op.step().getDefiningOp<arith::ConstantOp>();
+    auto step = op.getStep().getDefiningOp<arith::ConstantOp>();
     if (!step)
       return failure();
 
@@ -732,7 +732,7 @@ struct SimplifyTrivialLoops : public OpRewritePattern<ForOp> {
     if ((lbValue + stepValue).sge(ubValue)) {
       SmallVector<Value, 4> blockArgs;
       blockArgs.reserve(op.getNumIterOperands() + 1);
-      blockArgs.push_back(op.lowerBound());
+      blockArgs.push_back(op.getLowerBound());
       llvm::append_range(blockArgs, op.getIterOperands());
       replaceOpWithRegion(rewriter, op, op.getLoopBody(), blockArgs);
       return success();
@@ -769,9 +769,9 @@ static ForOp replaceTensorCastForOpIterArg(PatternRewriter &rewriter,
 
   // 2. Create the new forOp shell.
   scf::ForOp newForOp = rewriter.create<scf::ForOp>(
-      forOp.getLoc(), forOp.lowerBound(), forOp.upperBound(), forOp.step(),
-      newIterOperands);
-  Block &newBlock = newForOp.region().front();
+      forOp.getLoc(), forOp.getLowerBound(), forOp.getUpperBound(),
+      forOp.getStep(), newIterOperands);
+  Block &newBlock = newForOp.getRegion().front();
   SmallVector<Value, 4> newBlockTransferArgs(newBlock.getArguments().begin(),
                                              newBlock.getArguments().end());
 
@@ -786,7 +786,7 @@ static ForOp replaceTensorCastForOpIterArg(PatternRewriter &rewriter,
   newBlockTransferArgs[newRegionIterArg.getArgNumber()] = castIn;
 
   // 4. Steal the old block ops, mapping to the newBlockTransferArgs.
-  Block &oldBlock = forOp.region().front();
+  Block &oldBlock = forOp.getRegion().front();
   rewriter.mergeBlocks(&oldBlock, &newBlock, newBlockTransferArgs);
 
   // 5. Inject an outgoing cast op at the end of the block and yield it instead.
@@ -931,14 +931,15 @@ struct LastTensorLoadCanonicalization : public OpRewritePattern<ForOp> {
 
   LogicalResult matchAndRewrite(ForOp forOp,
                                 PatternRewriter &rewriter) const override {
-    assert(std::next(forOp.region().begin()) == forOp.region().end() &&
+    assert(std::next(forOp.getRegion().begin()) == forOp.getRegion().end() &&
            "unexpected multiple blocks");
 
     Location loc = forOp.getLoc();
     DenseMap<Value, Value> replacements;
     for (BlockArgument bbArg : forOp.getRegionIterArgs()) {
       unsigned idx = bbArg.getArgNumber() - /*numIv=*/1;
-      auto yieldOp = cast<scf::YieldOp>(forOp.region().front().getTerminator());
+      auto yieldOp =
+          cast<scf::YieldOp>(forOp.getRegion().front().getTerminator());
       Value yieldVal = yieldOp->getOperand(idx);
       auto tensorLoadOp = yieldVal.getDefiningOp<bufferization::ToTensorOp>();
       bool isTensor = bbArg.getType().isa<TensorType>();
@@ -1081,7 +1082,7 @@ void IfOp::build(OpBuilder &builder, OperationState &result, Value cond,
 }
 
 static LogicalResult verify(IfOp op) {
-  if (op.getNumResults() != 0 && op.elseRegion().empty())
+  if (op.getNumResults() != 0 && op.getElseRegion().empty())
     return op.emitOpError("must have an else block if defining values");
 
   return RegionBranchOpInterface::verifyTypes(op);
@@ -1123,18 +1124,18 @@ static ParseResult parseIfOp(OpAsmParser &parser, OperationState &result) {
 static void print(OpAsmPrinter &p, IfOp op) {
   bool printBlockTerminators = false;
 
-  p << " " << op.condition();
-  if (!op.results().empty()) {
+  p << " " << op.getCondition();
+  if (!op.getResults().empty()) {
     p << " -> (" << op.getResultTypes() << ")";
     // Print yield explicitly if the op defines values.
     printBlockTerminators = true;
   }
-  p.printRegion(op.thenRegion(),
+  p.printRegion(op.getThenRegion(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/printBlockTerminators);
 
   // Print the 'else' regions if it exists and has a block.
-  auto &elseRegion = op.elseRegion();
+  auto &elseRegion = op.getElseRegion();
   if (!elseRegion.empty()) {
     p << " else";
     p.printRegion(elseRegion,
@@ -1160,7 +1161,7 @@ void IfOp::getSuccessorRegions(Optional<unsigned> index,
   }
 
   // Don't consider the else region if it is empty.
-  Region *elseRegion = &this->elseRegion();
+  Region *elseRegion = &this->getElseRegion();
   if (elseRegion->empty())
     elseRegion = nullptr;
 
@@ -1170,7 +1171,7 @@ void IfOp::getSuccessorRegions(Optional<unsigned> index,
     condition = condAttr.getValue().isOneValue();
   } else {
     // If the condition isn't constant, both regions may be executed.
-    regions.push_back(RegionSuccessor(&thenRegion()));
+    regions.push_back(RegionSuccessor(&getThenRegion()));
     // If the else region does not exist, it is not a viable successor.
     if (elseRegion)
       regions.push_back(RegionSuccessor(elseRegion));
@@ -1178,7 +1179,7 @@ void IfOp::getSuccessorRegions(Optional<unsigned> index,
   }
 
   // Add the successor regions using the condition.
-  regions.push_back(RegionSuccessor(condition ? &thenRegion() : elseRegion));
+  regions.push_back(RegionSuccessor(condition ? &getThenRegion() : elseRegion));
 }
 
 /// If the condition is a constant, returns 1 for the executed block and 0 for
@@ -1236,7 +1237,7 @@ struct RemoveUnusedResults : public OpRewritePattern<IfOp> {
 
     // Create a replacement operation with empty then and else regions.
     auto emptyBuilder = [](OpBuilder &, Location) {};
-    auto newOp = rewriter.create<IfOp>(op.getLoc(), newTypes, op.condition(),
+    auto newOp = rewriter.create<IfOp>(op.getLoc(), newTypes, op.getCondition(),
                                        emptyBuilder, emptyBuilder);
 
     // Move the bodies and replace the terminators (note there is a then and
@@ -1258,14 +1259,14 @@ struct RemoveStaticCondition : public OpRewritePattern<IfOp> {
 
   LogicalResult matchAndRewrite(IfOp op,
                                 PatternRewriter &rewriter) const override {
-    auto constant = op.condition().getDefiningOp<arith::ConstantOp>();
+    auto constant = op.getCondition().getDefiningOp<arith::ConstantOp>();
     if (!constant)
       return failure();
 
     if (constant.getValue().cast<BoolAttr>().getValue())
-      replaceOpWithRegion(rewriter, op, op.thenRegion());
-    else if (!op.elseRegion().empty())
-      replaceOpWithRegion(rewriter, op, op.elseRegion());
+      replaceOpWithRegion(rewriter, op, op.getThenRegion());
+    else if (!op.getElseRegion().empty())
+      replaceOpWithRegion(rewriter, op, op.getElseRegion());
     else
       rewriter.eraseOp(op);
 
@@ -1281,16 +1282,16 @@ struct ConvertTrivialIfToSelect : public OpRewritePattern<IfOp> {
     if (op->getNumResults() == 0)
       return failure();
 
-    if (!llvm::hasSingleElement(op.thenRegion().front()) ||
-        !llvm::hasSingleElement(op.elseRegion().front()))
+    if (!llvm::hasSingleElement(op.getThenRegion().front()) ||
+        !llvm::hasSingleElement(op.getElseRegion().front()))
       return failure();
 
-    auto cond = op.condition();
+    auto cond = op.getCondition();
     auto thenYieldArgs =
-        cast<scf::YieldOp>(op.thenRegion().front().getTerminator())
+        cast<scf::YieldOp>(op.getThenRegion().front().getTerminator())
             .getOperands();
     auto elseYieldArgs =
-        cast<scf::YieldOp>(op.elseRegion().front().getTerminator())
+        cast<scf::YieldOp>(op.getElseRegion().front().getTerminator())
             .getOperands();
     SmallVector<Value> results(op->getNumResults());
     assert(thenYieldArgs.size() == results.size());
@@ -1330,7 +1331,7 @@ struct ConditionPropagation : public OpRewritePattern<IfOp> {
                                 PatternRewriter &rewriter) const override {
     // Early exit if the condition is constant since replacing a constant
     // in the body with another constant isn't a simplification.
-    if (op.condition().getDefiningOp<arith::ConstantOp>())
+    if (op.getCondition().getDefiningOp<arith::ConstantOp>())
       return failure();
 
     bool changed = false;
@@ -1342,8 +1343,8 @@ struct ConditionPropagation : public OpRewritePattern<IfOp> {
     Value constantFalse = nullptr;
 
     for (OpOperand &use :
-         llvm::make_early_inc_range(op.condition().getUses())) {
-      if (op.thenRegion().isAncestor(use.getOwner()->getParentRegion())) {
+         llvm::make_early_inc_range(op.getCondition().getUses())) {
+      if (op.getThenRegion().isAncestor(use.getOwner()->getParentRegion())) {
         changed = true;
 
         if (!constantTrue)
@@ -1352,7 +1353,7 @@ struct ConditionPropagation : public OpRewritePattern<IfOp> {
 
         rewriter.updateRootInPlace(use.getOwner(),
                                    [&]() { use.set(constantTrue); });
-      } else if (op.elseRegion().isAncestor(
+      } else if (op.getElseRegion().isAncestor(
                      use.getOwner()->getParentRegion())) {
         changed = true;
 
@@ -1414,16 +1415,17 @@ struct ReplaceIfYieldWithConditionOrValue : public OpRewritePattern<IfOp> {
     if (op.getNumResults() == 0)
       return failure();
 
-    auto trueYield = cast<scf::YieldOp>(op.thenRegion().back().getTerminator());
+    auto trueYield =
+        cast<scf::YieldOp>(op.getThenRegion().back().getTerminator());
     auto falseYield =
-        cast<scf::YieldOp>(op.elseRegion().back().getTerminator());
+        cast<scf::YieldOp>(op.getElseRegion().back().getTerminator());
 
     rewriter.setInsertionPoint(op->getBlock(),
                                op.getOperation()->getIterator());
     bool changed = false;
     Type i1Ty = rewriter.getI1Type();
-    for (auto tup :
-         llvm::zip(trueYield.results(), falseYield.results(), op.results())) {
+    for (auto tup : llvm::zip(trueYield.getResults(), falseYield.getResults(),
+                              op.getResults())) {
       Value trueResult, falseResult, opResult;
       std::tie(trueResult, falseResult, opResult) = tup;
 
@@ -1451,7 +1453,7 @@ struct ReplaceIfYieldWithConditionOrValue : public OpRewritePattern<IfOp> {
       if (!trueVal && falseVal) {
         if (!opResult.use_empty()) {
           Value notCond = rewriter.create<arith::XOrIOp>(
-              op.getLoc(), op.condition(),
+              op.getLoc(), op.getCondition(),
               rewriter.create<arith::ConstantOp>(
                   op.getLoc(), i1Ty, rewriter.getIntegerAttr(i1Ty, 1)));
           opResult.replaceAllUsesWith(notCond);
@@ -1460,7 +1462,7 @@ struct ReplaceIfYieldWithConditionOrValue : public OpRewritePattern<IfOp> {
       }
       if (trueVal && !falseVal) {
         if (!opResult.use_empty()) {
-          opResult.replaceAllUsesWith(op.condition());
+          opResult.replaceAllUsesWith(op.getCondition());
           changed = true;
         }
       }
@@ -1503,7 +1505,7 @@ struct CombineIfs : public OpRewritePattern<IfOp> {
     if (!prevIf)
       return failure();
 
-    if (nextIf.condition() != prevIf.condition())
+    if (nextIf.getCondition() != prevIf.getCondition())
       return failure();
 
     // Don't permit merging if a result of the first if is used
@@ -1516,15 +1518,15 @@ struct CombineIfs : public OpRewritePattern<IfOp> {
     llvm::append_range(mergedTypes, nextIf.getResultTypes());
 
     IfOp combinedIf = rewriter.create<IfOp>(
-        nextIf.getLoc(), mergedTypes, nextIf.condition(), /*hasElse=*/false);
-    rewriter.eraseBlock(&combinedIf.thenRegion().back());
+        nextIf.getLoc(), mergedTypes, nextIf.getCondition(), /*hasElse=*/false);
+    rewriter.eraseBlock(&combinedIf.getThenRegion().back());
 
     YieldOp thenYield = prevIf.thenYield();
     YieldOp thenYield2 = nextIf.thenYield();
 
-    combinedIf.thenRegion().getBlocks().splice(
-        combinedIf.thenRegion().getBlocks().begin(),
-        prevIf.thenRegion().getBlocks());
+    combinedIf.getThenRegion().getBlocks().splice(
+        combinedIf.getThenRegion().getBlocks().begin(),
+        prevIf.getThenRegion().getBlocks());
 
     rewriter.mergeBlocks(nextIf.thenBlock(), combinedIf.thenBlock());
     rewriter.setInsertionPointToEnd(combinedIf.thenBlock());
@@ -1535,15 +1537,15 @@ struct CombineIfs : public OpRewritePattern<IfOp> {
     rewriter.eraseOp(thenYield);
     rewriter.eraseOp(thenYield2);
 
-    combinedIf.elseRegion().getBlocks().splice(
-        combinedIf.elseRegion().getBlocks().begin(),
-        prevIf.elseRegion().getBlocks());
+    combinedIf.getElseRegion().getBlocks().splice(
+        combinedIf.getElseRegion().getBlocks().begin(),
+        prevIf.getElseRegion().getBlocks());
 
-    if (!nextIf.elseRegion().empty()) {
-      if (combinedIf.elseRegion().empty()) {
-        combinedIf.elseRegion().getBlocks().splice(
-            combinedIf.elseRegion().getBlocks().begin(),
-            nextIf.elseRegion().getBlocks());
+    if (!nextIf.getElseRegion().empty()) {
+      if (combinedIf.getElseRegion().empty()) {
+        combinedIf.getElseRegion().getBlocks().splice(
+            combinedIf.getElseRegion().getBlocks().begin(),
+            nextIf.getElseRegion().getBlocks());
       } else {
         YieldOp elseYield = combinedIf.elseYield();
         YieldOp elseYield2 = nextIf.elseYield();
@@ -1587,9 +1589,55 @@ struct RemoveEmptyElseBranch : public OpRewritePattern<IfOp> {
     if (!elseBlock || !llvm::hasSingleElement(*elseBlock))
       return failure();
     auto newIfOp = rewriter.cloneWithoutRegions(ifOp);
-    rewriter.inlineRegionBefore(ifOp.thenRegion(), newIfOp.thenRegion(),
-                                newIfOp.thenRegion().begin());
+    rewriter.inlineRegionBefore(ifOp.getThenRegion(), newIfOp.getThenRegion(),
+                                newIfOp.getThenRegion().begin());
     rewriter.eraseOp(ifOp);
+    return success();
+  }
+};
+
+/// Convert nested `if`s into `arith.andi` + single `if`.
+///
+///    scf.if %arg0 {
+///      scf.if %arg1 {
+///        ...
+///        scf.yield
+///      }
+///      scf.yield
+///    }
+///  becomes
+///
+///    %0 = arith.andi %arg0, %arg1
+///    scf.if %0 {
+///      ...
+///      scf.yield
+///    }
+struct CombineNestedIfs : public OpRewritePattern<IfOp> {
+  using OpRewritePattern<IfOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(IfOp op,
+                                PatternRewriter &rewriter) const override {
+    // Both `if` ops must not yield results and have only `then` block.
+    if (op->getNumResults() != 0 || op.elseBlock())
+      return failure();
+
+    auto nestedOps = op.thenBlock()->without_terminator();
+    // Nested `if` must be the only op in block.
+    if (!llvm::hasSingleElement(nestedOps))
+      return failure();
+
+    auto nestedIf = dyn_cast<IfOp>(*nestedOps.begin());
+    if (!nestedIf || nestedIf->getNumResults() != 0 || nestedIf.elseBlock())
+      return failure();
+
+    Location loc = op.getLoc();
+    Value newCondition = rewriter.create<arith::AndIOp>(loc, op.condition(),
+                                                        nestedIf.condition());
+    auto newIf = rewriter.create<IfOp>(loc, newCondition);
+    Block *newIfBlock = newIf.thenBlock();
+    rewriter.eraseOp(newIfBlock->getTerminator());
+    rewriter.mergeBlocks(nestedIf.thenBlock(), newIfBlock);
+    rewriter.eraseOp(op);
     return success();
   }
 };
@@ -1598,16 +1646,16 @@ struct RemoveEmptyElseBranch : public OpRewritePattern<IfOp> {
 
 void IfOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                        MLIRContext *context) {
-  results
-      .add<RemoveUnusedResults, RemoveStaticCondition, ConvertTrivialIfToSelect,
-           ConditionPropagation, ReplaceIfYieldWithConditionOrValue, CombineIfs,
-           RemoveEmptyElseBranch>(context);
+  results.add<CombineIfs, CombineNestedIfs, ConditionPropagation,
+              ConvertTrivialIfToSelect, RemoveEmptyElseBranch,
+              RemoveStaticCondition, RemoveUnusedResults,
+              ReplaceIfYieldWithConditionOrValue>(context);
 }
 
-Block *IfOp::thenBlock() { return &thenRegion().back(); }
+Block *IfOp::thenBlock() { return &getThenRegion().back(); }
 YieldOp IfOp::thenYield() { return cast<YieldOp>(&thenBlock()->back()); }
 Block *IfOp::elseBlock() {
-  Region &r = elseRegion();
+  Region &r = getElseRegion();
   if (r.empty())
     return nullptr;
   return &r.back();
@@ -1674,7 +1722,7 @@ static LogicalResult verify(ParallelOp op) {
   // Check that there is at least one value in lowerBound, upperBound and step.
   // It is sufficient to test only step, because it is ensured already that the
   // number of elements in lowerBound, upperBound and step are the same.
-  Operation::operand_range stepValues = op.step();
+  Operation::operand_range stepValues = op.getStep();
   if (stepValues.empty())
     return op.emitOpError(
         "needs at least one tuple element for lowerBound, upperBound and step");
@@ -1706,9 +1754,9 @@ static LogicalResult verify(ParallelOp op) {
 
   // Check that the number of results is the same as the number of ReduceOps.
   SmallVector<ReduceOp, 4> reductions(body->getOps<ReduceOp>());
-  auto resultsSize = op.results().size();
+  auto resultsSize = op.getResults().size();
   auto reductionsSize = reductions.size();
-  auto initValsSize = op.initVals().size();
+  auto initValsSize = op.getInitVals().size();
   if (resultsSize != reductionsSize)
     return op.emitOpError()
            << "expects number of results: " << resultsSize
@@ -1719,10 +1767,10 @@ static LogicalResult verify(ParallelOp op) {
            << " to be the same as number of initial values: " << initValsSize;
 
   // Check that the types of the results and reductions are the same.
-  for (auto resultAndReduce : llvm::zip(op.results(), reductions)) {
+  for (auto resultAndReduce : llvm::zip(op.getResults(), reductions)) {
     auto resultType = std::get<0>(resultAndReduce).getType();
     auto reduceOp = std::get<1>(resultAndReduce);
-    auto reduceType = reduceOp.operand().getType();
+    auto reduceType = reduceOp.getOperand().getType();
     if (resultType != reduceType)
       return reduceOp.emitOpError()
              << "expects type of reduce: " << reduceType
@@ -1803,20 +1851,20 @@ static ParseResult parseParallelOp(OpAsmParser &parser,
 }
 
 static void print(OpAsmPrinter &p, ParallelOp op) {
-  p << " (" << op.getBody()->getArguments() << ") = (" << op.lowerBound()
-    << ") to (" << op.upperBound() << ") step (" << op.step() << ")";
-  if (!op.initVals().empty())
-    p << " init (" << op.initVals() << ")";
+  p << " (" << op.getBody()->getArguments() << ") = (" << op.getLowerBound()
+    << ") to (" << op.getUpperBound() << ") step (" << op.getStep() << ")";
+  if (!op.getInitVals().empty())
+    p << " init (" << op.getInitVals() << ")";
   p.printOptionalArrowTypeList(op.getResultTypes());
-  p.printRegion(op.region(), /*printEntryBlockArgs=*/false);
+  p.printRegion(op.getRegion(), /*printEntryBlockArgs=*/false);
   p.printOptionalAttrDict(
       op->getAttrs(), /*elidedAttrs=*/ParallelOp::getOperandSegmentSizeAttr());
 }
 
-Region &ParallelOp::getLoopBody() { return region(); }
+Region &ParallelOp::getLoopBody() { return getRegion(); }
 
 bool ParallelOp::isDefinedOutsideOfLoop(Value value) {
-  return !region().isAncestor(value.getParentRegion());
+  return !getRegion().isAncestor(value.getParentRegion());
 }
 
 LogicalResult ParallelOp::moveOutOfLoop(ArrayRef<Operation *> ops) {
@@ -1846,11 +1894,11 @@ struct CollapseSingleIterationLoops : public OpRewritePattern<ParallelOp> {
     SmallVector<Value, 2> newLowerBounds;
     SmallVector<Value, 2> newUpperBounds;
     SmallVector<Value, 2> newSteps;
-    newLowerBounds.reserve(op.lowerBound().size());
-    newUpperBounds.reserve(op.upperBound().size());
-    newSteps.reserve(op.step().size());
-    for (auto dim : llvm::zip(op.lowerBound(), op.upperBound(), op.step(),
-                              op.getInductionVars())) {
+    newLowerBounds.reserve(op.getLowerBound().size());
+    newUpperBounds.reserve(op.getUpperBound().size());
+    newSteps.reserve(op.getStep().size());
+    for (auto dim : llvm::zip(op.getLowerBound(), op.getUpperBound(),
+                              op.getStep(), op.getInductionVars())) {
       Value lowerBound, upperBound, step, iv;
       std::tie(lowerBound, upperBound, step, iv) = dim;
       // Collect the statically known loop bounds.
@@ -1874,30 +1922,30 @@ struct CollapseSingleIterationLoops : public OpRewritePattern<ParallelOp> {
       }
     }
     // Exit if none of the loop dimensions perform a single iteration.
-    if (newLowerBounds.size() == op.lowerBound().size())
+    if (newLowerBounds.size() == op.getLowerBound().size())
       return failure();
 
     if (newLowerBounds.empty()) {
       // All of the loop dimensions perform a single iteration. Inline
       // loop body and nested ReduceOp's
       SmallVector<Value> results;
-      results.reserve(op.initVals().size());
+      results.reserve(op.getInitVals().size());
       for (auto &bodyOp : op.getLoopBody().front().without_terminator()) {
         auto reduce = dyn_cast<ReduceOp>(bodyOp);
         if (!reduce) {
           rewriter.clone(bodyOp, mapping);
           continue;
         }
-        Block &reduceBlock = reduce.reductionOperator().front();
+        Block &reduceBlock = reduce.getReductionOperator().front();
         auto initValIndex = results.size();
-        mapping.map(reduceBlock.getArgument(0), op.initVals()[initValIndex]);
+        mapping.map(reduceBlock.getArgument(0), op.getInitVals()[initValIndex]);
         mapping.map(reduceBlock.getArgument(1),
-                    mapping.lookupOrDefault(reduce.operand()));
+                    mapping.lookupOrDefault(reduce.getOperand()));
         for (auto &reduceBodyOp : reduceBlock.without_terminator())
           rewriter.clone(reduceBodyOp, mapping);
 
         auto result = mapping.lookupOrDefault(
-            cast<ReduceReturnOp>(reduceBlock.getTerminator()).result());
+            cast<ReduceReturnOp>(reduceBlock.getTerminator()).getResult());
         results.push_back(result);
       }
       rewriter.replaceOp(op, results);
@@ -1906,11 +1954,11 @@ struct CollapseSingleIterationLoops : public OpRewritePattern<ParallelOp> {
     // Replace the parallel loop by lower-dimensional parallel loop.
     auto newOp =
         rewriter.create<ParallelOp>(op.getLoc(), newLowerBounds, newUpperBounds,
-                                    newSteps, op.initVals(), nullptr);
+                                    newSteps, op.getInitVals(), nullptr);
     // Clone the loop body and remap the block arguments of the collapsed loops
     // (inlining does not support a cancellable block argument mapping).
-    rewriter.cloneRegionBefore(op.region(), newOp.region(),
-                               newOp.region().begin(), mapping);
+    rewriter.cloneRegionBefore(op.getRegion(), newOp.getRegion(),
+                               newOp.getRegion().begin(), mapping);
     rewriter.replaceOp(op, newOp.getResults());
     return success();
   }
@@ -1923,9 +1971,9 @@ struct RemoveEmptyParallelLoops : public OpRewritePattern<ParallelOp> {
 
   LogicalResult matchAndRewrite(ParallelOp op,
                                 PatternRewriter &rewriter) const override {
-    for (auto dim : llvm::zip(op.lowerBound(), op.upperBound())) {
+    for (auto dim : llvm::zip(op.getLowerBound(), op.getUpperBound())) {
       if (std::get<0>(dim) == std::get<1>(dim)) {
-        rewriter.replaceOp(op, op.initVals());
+        rewriter.replaceOp(op, op.getInitVals());
         return success();
       }
     }
@@ -1951,12 +1999,13 @@ struct MergeNestedParallelLoops : public OpRewritePattern<ParallelOp> {
     };
 
     for (auto val : outerBody.getArguments())
-      if (hasVal(innerOp.lowerBound(), val) ||
-          hasVal(innerOp.upperBound(), val) || hasVal(innerOp.step(), val))
+      if (hasVal(innerOp.getLowerBound(), val) ||
+          hasVal(innerOp.getUpperBound(), val) ||
+          hasVal(innerOp.getStep(), val))
         return failure();
 
     // Reductions are not supported yet.
-    if (!op.initVals().empty() || !innerOp.initVals().empty())
+    if (!op.getInitVals().empty() || !innerOp.getInitVals().empty())
       return failure();
 
     auto bodyBuilder = [&](OpBuilder &builder, Location /*loc*/,
@@ -1981,9 +2030,11 @@ struct MergeNestedParallelLoops : public OpRewritePattern<ParallelOp> {
       return ret;
     };
 
-    auto newLowerBounds = concatValues(op.lowerBound(), innerOp.lowerBound());
-    auto newUpperBounds = concatValues(op.upperBound(), innerOp.upperBound());
-    auto newSteps = concatValues(op.step(), innerOp.step());
+    auto newLowerBounds =
+        concatValues(op.getLowerBound(), innerOp.getLowerBound());
+    auto newUpperBounds =
+        concatValues(op.getUpperBound(), innerOp.getUpperBound());
+    auto newSteps = concatValues(op.getStep(), innerOp.getStep());
 
     rewriter.replaceOpWithNewOp<ParallelOp>(op, newLowerBounds, newUpperBounds,
                                             newSteps, llvm::None, bodyBuilder);
@@ -2019,8 +2070,8 @@ void ReduceOp::build(
 
 static LogicalResult verify(ReduceOp op) {
   // The region of a ReduceOp has two arguments of the same type as its operand.
-  auto type = op.operand().getType();
-  Block &block = op.reductionOperator().front();
+  auto type = op.getOperand().getType();
+  Block &block = op.getReductionOperator().front();
   if (block.empty())
     return op.emitOpError("the block inside reduce should not be empty");
   if (block.getNumArguments() != 2 ||
@@ -2060,9 +2111,9 @@ static ParseResult parseReduceOp(OpAsmParser &parser, OperationState &result) {
 }
 
 static void print(OpAsmPrinter &p, ReduceOp op) {
-  p << "(" << op.operand() << ") ";
-  p << " : " << op.operand().getType();
-  p.printRegion(op.reductionOperator());
+  p << "(" << op.getOperand() << ") ";
+  p << " : " << op.getOperand().getType();
+  p.printRegion(op.getReductionOperator());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2073,8 +2124,8 @@ static LogicalResult verify(ReduceReturnOp op) {
   // The type of the return value should be the same type as the type of the
   // operand of the enclosing ReduceOp.
   auto reduceOp = cast<ReduceOp>(op->getParentOp());
-  Type reduceType = reduceOp.operand().getType();
-  if (reduceType != op.result().getType())
+  Type reduceType = reduceOp.getOperand().getType();
+  if (reduceType != op.getResult().getType())
     return op.emitOpError() << "needs to have type " << reduceType
                             << " (the type of the enclosing ReduceOp)";
   return success();
@@ -2088,15 +2139,15 @@ OperandRange WhileOp::getSuccessorEntryOperands(unsigned index) {
   assert(index == 0 &&
          "WhileOp is expected to branch only to the first region");
 
-  return inits();
+  return getInits();
 }
 
 ConditionOp WhileOp::getConditionOp() {
-  return cast<ConditionOp>(before().front().getTerminator());
+  return cast<ConditionOp>(getBefore().front().getTerminator());
 }
 
 Block::BlockArgListType WhileOp::getAfterArguments() {
-  return after().front().getArguments();
+  return getAfter().front().getArguments();
 }
 
 void WhileOp::getSuccessorRegions(Optional<unsigned> index,
@@ -2105,18 +2156,18 @@ void WhileOp::getSuccessorRegions(Optional<unsigned> index,
   (void)operands;
 
   if (!index.hasValue()) {
-    regions.emplace_back(&before(), before().getArguments());
+    regions.emplace_back(&getBefore(), getBefore().getArguments());
     return;
   }
 
   assert(*index < 2 && "there are only two regions in a WhileOp");
   if (*index == 0) {
-    regions.emplace_back(&after(), after().getArguments());
+    regions.emplace_back(&getAfter(), getAfter().getArguments());
     regions.emplace_back(getResults());
     return;
   }
 
-  regions.emplace_back(&before(), before().getArguments());
+  regions.emplace_back(&getBefore(), getBefore().getArguments());
 }
 
 /// Parses a `while` op.
@@ -2164,13 +2215,13 @@ static ParseResult parseWhileOp(OpAsmParser &parser, OperationState &result) {
 
 /// Prints a `while` op.
 static void print(OpAsmPrinter &p, scf::WhileOp op) {
-  printInitializationList(p, op.before().front().getArguments(), op.inits(),
-                          " ");
+  printInitializationList(p, op.getBefore().front().getArguments(),
+                          op.getInits(), " ");
   p << " : ";
-  p.printFunctionalType(op.inits().getTypes(), op.results().getTypes());
-  p.printRegion(op.before(), /*printEntryBlockArgs=*/false);
+  p.printFunctionalType(op.getInits().getTypes(), op.getResults().getTypes());
+  p.printRegion(op.getBefore(), /*printEntryBlockArgs=*/false);
   p << " do";
-  p.printRegion(op.after());
+  p.printRegion(op.getAfter());
   p.printOptionalAttrDictWithKeyword(op->getAttrs());
 }
 
@@ -2216,13 +2267,13 @@ static LogicalResult verify(scf::WhileOp op) {
     return failure();
 
   auto beforeTerminator = verifyAndGetTerminator<scf::ConditionOp>(
-      op, op.before(),
+      op, op.getBefore(),
       "expects the 'before' region to terminate with 'scf.condition'");
   if (!beforeTerminator)
     return failure();
 
   auto afterTerminator = verifyAndGetTerminator<scf::YieldOp>(
-      op, op.after(),
+      op, op.getAfter(),
       "expects the 'after' region to terminate with 'scf.yield'");
   return success(afterTerminator != nullptr);
 }
@@ -2260,12 +2311,12 @@ struct WhileConditionTruth : public OpRewritePattern<WhileOp> {
 
     bool replaced = false;
     for (auto yieldedAndBlockArgs :
-         llvm::zip(term.args(), op.getAfterArguments())) {
-      if (std::get<0>(yieldedAndBlockArgs) == term.condition()) {
+         llvm::zip(term.getArgs(), op.getAfterArguments())) {
+      if (std::get<0>(yieldedAndBlockArgs) == term.getCondition()) {
         if (!std::get<1>(yieldedAndBlockArgs).use_empty()) {
           if (!constantTrue)
             constantTrue = rewriter.create<arith::ConstantOp>(
-                op.getLoc(), term.condition().getType(),
+                op.getLoc(), term.getCondition().getType(),
                 rewriter.getBoolAttr(true));
 
           std::get<1>(yieldedAndBlockArgs).replaceAllUsesWith(constantTrue);
@@ -2310,7 +2361,7 @@ struct WhileUnusedResult : public OpRewritePattern<WhileOp> {
                                 PatternRewriter &rewriter) const override {
     auto term = op.getConditionOp();
     auto afterArgs = op.getAfterArguments();
-    auto termArgs = term.args();
+    auto termArgs = term.getArgs();
 
     // Collect results mapping, new terminator args and new result types.
     SmallVector<unsigned> newResultsIndices;
@@ -2338,15 +2389,15 @@ struct WhileUnusedResult : public OpRewritePattern<WhileOp> {
     {
       OpBuilder::InsertionGuard g(rewriter);
       rewriter.setInsertionPoint(term);
-      rewriter.replaceOpWithNewOp<ConditionOp>(term, term.condition(),
+      rewriter.replaceOpWithNewOp<ConditionOp>(term, term.getCondition(),
                                                newTermArgs);
     }
 
     auto newWhile =
-        rewriter.create<WhileOp>(op.getLoc(), newResultTypes, op.inits());
+        rewriter.create<WhileOp>(op.getLoc(), newResultTypes, op.getInits());
 
     Block &newAfterBlock = *rewriter.createBlock(
-        &newWhile.after(), /*insertPt*/ {}, newResultTypes);
+        &newWhile.getAfter(), /*insertPt*/ {}, newResultTypes);
 
     // Build new results list and new after block args (unused entries will be
     // null).
@@ -2357,10 +2408,10 @@ struct WhileUnusedResult : public OpRewritePattern<WhileOp> {
       newAfterBlockArgs[it.value()] = newAfterBlock.getArgument(it.index());
     }
 
-    rewriter.inlineRegionBefore(op.before(), newWhile.before(),
-                                newWhile.before().begin());
+    rewriter.inlineRegionBefore(op.getBefore(), newWhile.getBefore(),
+                                newWhile.getBefore().begin());
 
-    Block &afterBlock = op.after().front();
+    Block &afterBlock = op.getAfter().front();
     rewriter.mergeBlocks(&afterBlock, &newAfterBlock, newAfterBlockArgs);
 
     rewriter.replaceOp(op, newResults);

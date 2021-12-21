@@ -829,6 +829,9 @@ def warn_fortify_scanf_overflow : Warning<
   "%2, but the corresponding specifier may require size %3">,
   InGroup<FortifySource>;
 
+def err_function_start_invalid_type: Error<
+  "argument must be a function">;
+
 /// main()
 // static main() is not an error in C, just in C++.
 def warn_static_main : Warning<"'main' should not be declared static">,
@@ -11031,14 +11034,12 @@ def err_implied_coroutine_type_not_found : Error<
   "a coroutine; include <experimental/coroutine> if your version "
   "of libcxx is less than 14.0">;
 def warn_deprecated_coroutine_namespace : Warning<
-  "Please move from std::experimental::%0 to std::%0. "
-  "Support for std::experimental::%0 will be removed in LLVM 15.">,
+  "support for std::experimental::%0 will be removed in LLVM 15; "
+  "use std::%0 instead">,
   InGroup<DeprecatedExperimentalCoroutine>;
-def err_mixed_use_std_and_experimental_namespace_for_coroutine : Error <
-  "Found mixed use of std namespace and std::experimental namespace for "
-  "coroutine, which is disallowed. The coroutine components in "
-  "std::experimental namespace is deprecated. Please use coroutine components "
-  "under std namespace.">;
+def err_mixed_use_std_and_experimental_namespace_for_coroutine : Error<
+  "mixed use of std and std::experimental namespaces for "
+  "coroutine components">;
 def err_implicit_coroutine_std_nothrow_type_not_found : Error<
   "std::nothrow was not found; include <new> before defining a coroutine which "
   "uses get_return_object_on_allocation_failure()">;

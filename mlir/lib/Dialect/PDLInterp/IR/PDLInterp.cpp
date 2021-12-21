@@ -74,9 +74,9 @@ void ForEachOp::build(::mlir::OpBuilder &builder, ::mlir::OperationState &state,
   build(builder, state, range, successor);
   if (initLoop) {
     // Create the block and the loop variable.
-    auto range_type = range.getType().cast<pdl::RangeType>();
+    auto rangeType = range.getType().cast<pdl::RangeType>();
     state.regions.front()->emplaceBlock();
-    state.regions.front()->addArgument(range_type.getElementType());
+    state.regions.front()->addArgument(rangeType.getElementType());
   }
 }
 

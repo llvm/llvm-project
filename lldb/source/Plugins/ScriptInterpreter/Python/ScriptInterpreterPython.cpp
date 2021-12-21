@@ -2521,7 +2521,6 @@ bool ScriptInterpreterPythonImpl::RunScriptFormatKeyword(
 bool ScriptInterpreterPythonImpl::RunScriptFormatKeyword(
     const char *impl_function, Thread *thread, std::string &output,
     Status &error) {
-  bool ret_val;
   if (!thread) {
     error.SetErrorString("no thread");
     return false;
@@ -2531,16 +2530,16 @@ bool ScriptInterpreterPythonImpl::RunScriptFormatKeyword(
     return false;
   }
 
-  {
-    ThreadSP thread_sp(thread->shared_from_this());
-    Locker py_lock(this,
-                   Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
-    ret_val = LLDBSWIGPythonRunScriptKeywordThread(
-        impl_function, m_dictionary_name.c_str(), thread_sp, output);
-    if (!ret_val)
-      error.SetErrorString("python script evaluation failed");
+  Locker py_lock(this,
+                 Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
+  if (llvm::Optional<std::string> result = LLDBSWIGPythonRunScriptKeywordThread(
+          impl_function, m_dictionary_name.c_str(),
+          thread->shared_from_this())) {
+    output = std::move(*result);
+    return true;
   }
-  return ret_val;
+  error.SetErrorString("python script evaluation failed");
+  return false;
 }
 
 bool ScriptInterpreterPythonImpl::RunScriptFormatKeyword(
@@ -2571,7 +2570,6 @@ bool ScriptInterpreterPythonImpl::RunScriptFormatKeyword(
 bool ScriptInterpreterPythonImpl::RunScriptFormatKeyword(
     const char *impl_function, StackFrame *frame, std::string &output,
     Status &error) {
-  bool ret_val;
   if (!frame) {
     error.SetErrorString("no frame");
     return false;
@@ -2581,16 +2579,16 @@ bool ScriptInterpreterPythonImpl::RunScriptFormatKeyword(
     return false;
   }
 
-  {
-    StackFrameSP frame_sp(frame->shared_from_this());
-    Locker py_lock(this,
-                   Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
-    ret_val = LLDBSWIGPythonRunScriptKeywordFrame(
-        impl_function, m_dictionary_name.c_str(), frame_sp, output);
-    if (!ret_val)
-      error.SetErrorString("python script evaluation failed");
+  Locker py_lock(this,
+                 Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
+  if (llvm::Optional<std::string> result = LLDBSWIGPythonRunScriptKeywordFrame(
+          impl_function, m_dictionary_name.c_str(),
+          frame->shared_from_this())) {
+    output = std::move(*result);
+    return true;
   }
-  return ret_val;
+  error.SetErrorString("python script evaluation failed");
+  return false;
 }
 
 bool ScriptInterpreterPythonImpl::RunScriptFormatKeyword(
@@ -2655,7 +2653,6 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
   }
 
   ScriptInterpreterIORedirect &io_redirect = **io_redirect_or_error;
-  lldb::DebuggerSP debugger_sp = m_debugger.shared_from_this();
 
   // Before executing Python code, lock the GIL.
   Locker py_lock(this,
@@ -2792,7 +2789,8 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
   // if we are here, everything worked
   // call __lldb_init_module(debugger,dict)
   if (!LLDBSwigPythonCallModuleInit(module_name.c_str(),
-                                    m_dictionary_name.c_str(), debugger_sp)) {
+                                    m_dictionary_name.c_str(),
+                                    m_debugger.shared_from_this())) {
     error.SetErrorString("calling __lldb_init_module failed");
     return false;
   }

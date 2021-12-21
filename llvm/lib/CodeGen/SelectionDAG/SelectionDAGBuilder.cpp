@@ -1625,6 +1625,9 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
     if (const auto *Equiv = dyn_cast<DSOLocalEquivalent>(C))
       return getValue(Equiv->getGlobalValue());
 
+    if (const auto *NC = dyn_cast<NoCFIValue>(C))
+      return getValue(NC->getGlobalValue());
+
     VectorType *VecTy = cast<VectorType>(V->getType());
 
     // Now that we know the number and type of the elements, get that number of

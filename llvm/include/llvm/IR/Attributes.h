@@ -456,6 +456,8 @@ public:
   static AttributeList get(LLVMContext &C, unsigned Index,
                            ArrayRef<StringRef> Kind);
   static AttributeList get(LLVMContext &C, unsigned Index,
+                           AttributeSet Attrs);
+  static AttributeList get(LLVMContext &C, unsigned Index,
                            const AttrBuilder &B);
 
   // TODO: remove non-AtIndex versions of these methods.
@@ -942,6 +944,8 @@ class AttrBuilder {
 
 public:
   AttrBuilder() = default;
+  AttrBuilder(const AttrBuilder &) = delete;
+  AttrBuilder(AttrBuilder &&) = default;
 
   AttrBuilder(const Attribute &A) {
     addAttribute(A);

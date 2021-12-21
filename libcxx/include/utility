@@ -231,6 +231,7 @@ template <class T>
 #include <__utility/rel_ops.h>
 #include <__utility/swap.h>
 #include <__utility/to_underlying.h>
+#include <__utility/transaction.h>
 #include <compare>
 #include <initializer_list>
 #include <version>

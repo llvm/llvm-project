@@ -3548,6 +3548,14 @@ TEST_F(FormatTest, FormatsNamespaces) {
                    "} // namespace in\n"
                    "} // namespace out",
                    Style));
+
+  Style.NamespaceIndentation = FormatStyle::NI_None;
+  verifyFormat("template <class T>\n"
+               "concept a_concept = X<>;\n"
+               "namespace B {\n"
+               "struct b_struct {};\n"
+               "} // namespace B\n",
+               Style);
 }
 
 TEST_F(FormatTest, NamespaceMacros) {

@@ -707,9 +707,6 @@ bool AMDGPURegisterBankInfo::executeInWaterfallLoop(
   iterator_range<MachineBasicBlock::iterator> Range,
   SmallSet<Register, 4> &SGPROperandRegs,
   MachineRegisterInfo &MRI) const {
-  SmallVector<Register, 4> ResultRegs;
-  SmallVector<Register, 4> InitResultRegs;
-  SmallVector<Register, 4> PhiRegs;
 
   // Track use registers which have already been expanded with a readfirstlane
   // sequence. This may have multiple uses if moving a sequence.
@@ -773,15 +770,6 @@ bool AMDGPURegisterBankInfo::executeInWaterfallLoop(
     .addMBB(&MBB)
     .addReg(NewExec)
     .addMBB(LoopBB);
-
-  for (auto Result : zip(InitResultRegs, ResultRegs, PhiRegs)) {
-    B.buildInstr(TargetOpcode::G_PHI)
-      .addDef(std::get<2>(Result))
-      .addReg(std::get<0>(Result)) // Initial value / implicit_def
-      .addMBB(&MBB)
-      .addReg(std::get<1>(Result)) // Mid-loop value.
-      .addMBB(LoopBB);
-  }
 
   const DebugLoc &DL = B.getDL();
 

@@ -431,8 +431,8 @@ static scf::ForOp replaceForOpWithNewSignature(OpBuilder &b, scf::ForOp loop,
   auto operands = llvm::to_vector<4>(loop.getIterOperands());
   operands.append(newIterOperands.begin(), newIterOperands.end());
   scf::ForOp newLoop =
-      b.create<scf::ForOp>(loop.getLoc(), loop.lowerBound(), loop.upperBound(),
-                           loop.step(), operands);
+      b.create<scf::ForOp>(loop.getLoc(), loop.getLowerBound(),
+                           loop.getUpperBound(), loop.getStep(), operands);
   newLoop.getBody()->erase();
   newLoop.getLoopBody().getBlocks().splice(
       newLoop.getLoopBody().getBlocks().begin(),

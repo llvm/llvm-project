@@ -641,6 +641,7 @@ void VPRecipeBase::moveBefore(VPBasicBlock &BB,
 void VPInstruction::generateInstruction(VPTransformState &State,
                                         unsigned Part) {
   IRBuilder<> &Builder = State.Builder;
+  Builder.SetCurrentDebugLocation(DL);
 
   if (Instruction::isBinaryOp(getOpcode())) {
     Value *A = State.get(getOperand(0), Part);
@@ -766,6 +767,11 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
   for (const VPValue *Operand : operands()) {
     O << " ";
     Operand->printAsOperand(O, SlotTracker);
+  }
+
+  if (DL) {
+    O << ", !dbg ";
+    DL.print(O);
   }
 }
 #endif

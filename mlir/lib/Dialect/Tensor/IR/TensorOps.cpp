@@ -634,7 +634,7 @@ OpFoldResult RankOp::fold(ArrayRef<Attribute> operands) {
 // ReshapeOp
 //===----------------------------------------------------------------------===//
 
-static int64_t GetNumElements(ShapedType type) {
+static int64_t getNumElements(ShapedType type) {
   int64_t numElements = 1;
   for (auto dim : type.getShape())
     numElements *= dim;
@@ -657,7 +657,7 @@ static LogicalResult verify(ReshapeOp op) {
   if (resultRankedType) {
     if (operandRankedType && resultRankedType.hasStaticShape() &&
         operandRankedType.hasStaticShape()) {
-      if (GetNumElements(operandRankedType) != GetNumElements(resultRankedType))
+      if (getNumElements(operandRankedType) != getNumElements(resultRankedType))
         return op.emitOpError("source and destination tensor should have the "
                               "same number of elements");
     }

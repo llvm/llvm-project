@@ -4222,6 +4222,20 @@ may not be ``dso_local``.
 
 This is currently only supported for ELF binary formats.
 
+.. _no_cfi:
+
+No CFI
+------
+
+``no_cfi @func``
+
+With `Control-Flow Integrity (CFI)
+<https://clang.llvm.org/docs/ControlFlowIntegrity.html>`_, a '``no_cfi``'
+constant represents a function reference that does not get replaced with a
+reference to the CFI jump table in the ``LowerTypeTests`` pass. These constants
+may be useful in low-level programs, such as operating system kernels, which
+need to refer to the actual function body.
+
 .. _constantexprs:
 
 Constant Expressions

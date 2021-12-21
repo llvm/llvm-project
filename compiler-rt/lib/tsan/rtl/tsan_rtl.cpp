@@ -210,7 +210,6 @@ static void DoResetImpl(uptr epoch) {
 // error: expecting mutex 'slot.mtx' to be held at start of each loop
 void DoReset(ThreadState* thr, uptr epoch) NO_THREAD_SAFETY_ANALYSIS {
   {
-    Lock l(&ctx->multi_slot_mtx);
     for (auto& slot : ctx->slots) {
       slot.mtx.Lock();
       if (UNLIKELY(epoch == 0))
@@ -337,6 +336,13 @@ void SlotDetach(ThreadState* thr) {
 
 void SlotLock(ThreadState* thr) NO_THREAD_SAFETY_ANALYSIS {
   DCHECK(!thr->slot_locked);
+#if SANITIZER_DEBUG
+  // Check these mutexes are not locked.
+  // We can call DoReset from SlotAttachAndLock, which will lock
+  // these mutexes, but it happens only every once in a while.
+  { ThreadRegistryLock lock(&ctx->thread_registry); }
+  { Lock lock(&ctx->slot_mtx); }
+#endif
   TidSlot* slot = thr->slot;
   slot->mtx.Lock();
   thr->slot_locked = true;
@@ -367,7 +373,6 @@ Context::Context()
       fired_suppressions_mtx(MutexTypeFired),
       clock_alloc(LINKER_INITIALIZED, "clock allocator"),
       slot_mtx(MutexTypeSlots),
-      multi_slot_mtx(MutexTypeMultiSlot),
       resetting() {
   fired_suppressions.reserve(8);
   for (uptr i = 0; i < ARRAY_SIZE(slots); i++) {
@@ -767,7 +772,6 @@ void ForkBefore(ThreadState *thr, uptr pc) NO_THREAD_SAFETY_ANALYSIS {
   // Detaching from the slot makes OnUserFree skip writing to the shadow.
   // The slot will be locked so any attempts to use it will deadlock anyway.
   SlotDetach(thr);
-  ctx->multi_slot_mtx.Lock();
   for (auto& slot : ctx->slots) slot.mtx.Lock();
   ctx->thread_registry.Lock();
   ctx->slot_mtx.Lock();
@@ -799,7 +803,6 @@ static void ForkAfter(ThreadState* thr) NO_THREAD_SAFETY_ANALYSIS {
   ctx->slot_mtx.Unlock();
   ctx->thread_registry.Unlock();
   for (auto& slot : ctx->slots) slot.mtx.Unlock();
-  ctx->multi_slot_mtx.Unlock();
   SlotAttachAndLock(thr);
   SlotUnlock(thr);
   GlobalProcessorUnlock();
@@ -961,8 +964,18 @@ void TraceSwitchPartImpl(ThreadState* thr) {
   }
   {
     Lock lock(&ctx->slot_mtx);
-    ctx->slot_queue.Remove(thr->slot);
-    ctx->slot_queue.PushBack(thr->slot);
+    // There is a small chance that the slot may be not queued at this point.
+    // This can happen if the slot has kEpochLast epoch and another thread
+    // in FindSlotAndLock discovered that it's exhausted and removed it from
+    // the slot queue. kEpochLast can happen in 2 cases: (1) if TraceSwitchPart
+    // was called with the slot locked and epoch already at kEpochLast,
+    // or (2) if we've acquired a new slot in SlotLock in the beginning
+    // of the function and the slot was at kEpochLast - 1, so after increment
+    // in SlotAttachAndLock it become kEpochLast.
+    if (ctx->slot_queue.Queued(thr->slot)) {
+      ctx->slot_queue.Remove(thr->slot);
+      ctx->slot_queue.PushBack(thr->slot);
+    }
     if (recycle)
       ctx->trace_part_recycle.PushBack(recycle);
   }
@@ -1053,9 +1066,7 @@ MutexMeta mutex_meta[] = {
     {MutexTypeAtExit, "AtExit", {}},
     {MutexTypeFired, "Fired", {MutexLeaf}},
     {MutexTypeRacy, "Racy", {MutexLeaf}},
-    {MutexTypeGlobalProc,
-     "GlobalProc",
-     {MutexTypeSlot, MutexTypeSlots, MutexTypeMultiSlot}},
+    {MutexTypeGlobalProc, "GlobalProc", {MutexTypeSlot, MutexTypeSlots}},
     {MutexTypeInternalAlloc, "InternalAlloc", {MutexLeaf}},
     {MutexTypeTrace, "Trace", {}},
     {MutexTypeSlot,
@@ -1063,7 +1074,6 @@ MutexMeta mutex_meta[] = {
      {MutexMulti, MutexTypeTrace, MutexTypeSyncVar, MutexThreadRegistry,
       MutexTypeSlots}},
     {MutexTypeSlots, "Slots", {MutexTypeTrace, MutexTypeReport}},
-    {MutexTypeMultiSlot, "MultiSlot", {MutexTypeSlot, MutexTypeSlots}},
     {},
 };
 

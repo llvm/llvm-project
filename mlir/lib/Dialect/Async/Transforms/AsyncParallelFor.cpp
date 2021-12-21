@@ -209,7 +209,7 @@ static ParallelComputeFunctionType
 getParallelComputeFunctionType(scf::ParallelOp op, PatternRewriter &rewriter) {
   // Values implicitly captured by the parallel operation.
   llvm::SetVector<Value> captures;
-  getUsedValuesDefinedAbove(op.region(), op.region(), captures);
+  getUsedValuesDefinedAbove(op.getRegion(), op.getRegion(), captures);
 
   SmallVector<Type> inputs;
   inputs.reserve(2 + 4 * op.getNumLoops() + captures.size());
@@ -500,8 +500,8 @@ static FuncOp createAsyncDispatchFunction(ParallelComputeFunction &computeFunc,
 
   // Create a recursive dispatch loop.
   scf::WhileOp whileOp = b.create<scf::WhileOp>(types, operands);
-  Block *before = b.createBlock(&whileOp.before(), {}, types);
-  Block *after = b.createBlock(&whileOp.after(), {}, types);
+  Block *before = b.createBlock(&whileOp.getBefore(), {}, types);
+  Block *after = b.createBlock(&whileOp.getAfter(), {}, types);
 
   // Setup dispatch loop condition block: decide if we need to go into the
   // `after` block and launch one more async dispatch.
@@ -582,9 +582,9 @@ static void doAsyncDispatch(ImplicitLocOpBuilder &b, PatternRewriter &rewriter,
   // the given operands vector.
   auto appendBlockComputeOperands = [&](SmallVector<Value> &operands) {
     operands.append(tripCounts);
-    operands.append(op.lowerBound().begin(), op.lowerBound().end());
-    operands.append(op.upperBound().begin(), op.upperBound().end());
-    operands.append(op.step().begin(), op.step().end());
+    operands.append(op.getLowerBound().begin(), op.getLowerBound().end());
+    operands.append(op.getUpperBound().begin(), op.getUpperBound().end());
+    operands.append(op.getStep().begin(), op.getStep().end());
     operands.append(parallelComputeFunction.captures);
   };
 
@@ -661,9 +661,11 @@ doSequentialDispatch(ImplicitLocOpBuilder &b, PatternRewriter &rewriter,
   auto computeFuncOperands = [&](Value blockIndex) -> SmallVector<Value> {
     SmallVector<Value> computeFuncOperands = {blockIndex, blockSize};
     computeFuncOperands.append(tripCounts);
-    computeFuncOperands.append(op.lowerBound().begin(), op.lowerBound().end());
-    computeFuncOperands.append(op.upperBound().begin(), op.upperBound().end());
-    computeFuncOperands.append(op.step().begin(), op.step().end());
+    computeFuncOperands.append(op.getLowerBound().begin(),
+                               op.getLowerBound().end());
+    computeFuncOperands.append(op.getUpperBound().begin(),
+                               op.getUpperBound().end());
+    computeFuncOperands.append(op.getStep().begin(), op.getStep().end());
     computeFuncOperands.append(parallelComputeFunction.captures);
     return computeFuncOperands;
   };
@@ -722,9 +724,9 @@ AsyncParallelForRewrite::matchAndRewrite(scf::ParallelOp op,
   //   tripCount = ceil_div(upperBound - lowerBound, step);
   SmallVector<Value> tripCounts(op.getNumLoops());
   for (size_t i = 0; i < op.getNumLoops(); ++i) {
-    auto lb = op.lowerBound()[i];
-    auto ub = op.upperBound()[i];
-    auto step = op.step()[i];
+    auto lb = op.getLowerBound()[i];
+    auto ub = op.getUpperBound()[i];
+    auto step = op.getStep()[i];
     auto range = b.createOrFold<arith::SubIOp>(ub, lb);
     tripCounts[i] = b.createOrFold<arith::CeilDivSIOp>(range, step);
   }
@@ -758,9 +760,9 @@ AsyncParallelForRewrite::matchAndRewrite(scf::ParallelOp op,
     // folding, loop unrolling and vectorization.
     ParallelComputeFunctionBounds staticBounds = {
         integerConstants(tripCounts),
-        integerConstants(op.lowerBound()),
-        integerConstants(op.upperBound()),
-        integerConstants(op.step()),
+        integerConstants(op.getLowerBound()),
+        integerConstants(op.getUpperBound()),
+        integerConstants(op.getStep()),
     };
 
     // Find how many inner iteration dimensions are statically known, and their

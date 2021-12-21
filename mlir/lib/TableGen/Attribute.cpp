@@ -253,7 +253,7 @@ StringRef StructFieldAttr::getName() const {
 }
 
 Attribute StructFieldAttr::getType() const {
-  auto init = def->getValueInit("type");
+  auto *init = def->getValueInit("type");
   return Attribute(cast<llvm::DefInit>(init));
 }
 

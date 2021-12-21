@@ -195,7 +195,7 @@ static Value clamp(ImplicitLocOpBuilder &builder, Value value, Value lowerBound,
 // Decomposes given floating point value `arg` into a normalized fraction and
 // an integral power of two (see std::frexp). Returned values have float type.
 static std::pair<Value, Value> frexp(ImplicitLocOpBuilder &builder, Value arg,
-                                     bool is_positive = false) {
+                                     bool isPositive = false) {
   assert(getElementTypeOrSelf(arg).isF32() && "arg must be f32 type");
   ArrayRef<int64_t> shape = vectorShape(arg);
 
@@ -222,7 +222,7 @@ static std::pair<Value, Value> frexp(ImplicitLocOpBuilder &builder, Value arg,
   Value normalizedFraction = builder.create<arith::BitcastOp>(f32Vec, tmp1);
 
   // Compute exponent.
-  Value arg0 = is_positive ? arg : builder.create<math::AbsOp>(arg);
+  Value arg0 = isPositive ? arg : builder.create<math::AbsOp>(arg);
   Value biasedExponentBits = builder.create<arith::ShRUIOp>(
       builder.create<arith::BitcastOp>(i32Vec, arg0),
       bcast(i32Cst(builder, 23)));

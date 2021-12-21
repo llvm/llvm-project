@@ -68,9 +68,10 @@ findSelectedDialect(ArrayRef<const llvm::Record *> dialectDefs) {
     return llvm::None;
   }
 
-  auto dialectIt = llvm::find_if(dialectDefs, [](const llvm::Record *def) {
-    return Dialect(def).getName() == selectedDialect;
-  });
+  const auto *dialectIt =
+      llvm::find_if(dialectDefs, [](const llvm::Record *def) {
+        return Dialect(def).getName() == selectedDialect;
+      });
   if (dialectIt == dialectDefs.end()) {
     llvm::errs() << "selected dialect with '-dialect' does not exist\n";
     return llvm::None;

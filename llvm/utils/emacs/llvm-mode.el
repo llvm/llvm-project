@@ -67,7 +67,7 @@
          ;; Runtime preemption specifiers
          "dso_preemptable" "dso_local" "dso_local_equivalent"
 
-         "gc" "atomic" "volatile" "personality" "prologue" "section") 'symbols) . font-lock-keyword-face)
+         "gc" "atomic" "no_cfi" "volatile" "personality" "prologue" "section") 'symbols) . font-lock-keyword-face)
    ;; Arithmetic and Logical Operators
    `(,(regexp-opt '("add" "sub" "mul" "sdiv" "udiv" "urem" "srem" "and" "or" "xor"
                     "setne" "seteq" "setlt" "setgt" "setle" "setge") 'symbols) . font-lock-keyword-face)

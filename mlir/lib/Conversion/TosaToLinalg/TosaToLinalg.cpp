@@ -329,12 +329,12 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
     SmallVector<Type> types = {elementTy, elementTy, elementTy};
 
     auto whileOp = rewriter.create<scf::WhileOp>(loc, types, operands);
-    Block *before = rewriter.createBlock(&whileOp.before(), {}, types);
-    Block *after = rewriter.createBlock(&whileOp.after(), {}, types);
+    Block *before = rewriter.createBlock(&whileOp.getBefore(), {}, types);
+    Block *after = rewriter.createBlock(&whileOp.getAfter(), {}, types);
 
     // The conditional block of the while loop.
     {
-      rewriter.setInsertionPointToStart(&whileOp.before().front());
+      rewriter.setInsertionPointToStart(&whileOp.getBefore().front());
       Value input = before->getArgument(0);
       Value zero = before->getArgument(2);
 
@@ -346,7 +346,7 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
 
     // The body of the while loop: shift right until reaching a value of 0.
     {
-      rewriter.setInsertionPointToStart(&whileOp.after().front());
+      rewriter.setInsertionPointToStart(&whileOp.getAfter().front());
       Value input = after->getArgument(0);
       Value leadingZeros = after->getArgument(1);
 
@@ -2173,16 +2173,16 @@ public:
 
           rewriter.create<linalg::YieldOp>(loc, result);
           return success();
-        } else {
-          y0x0 = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, y0x0);
-          y0x1 = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, y0x1);
-          y1x0 = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, y1x0);
-          y1x1 = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, y1x1);
+        }
+        y0x0 = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, y0x0);
+        y0x1 = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, y0x1);
+        y1x0 = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, y1x0);
+        y1x1 = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, y1x1);
 
-          if (resultElementTy.getIntOrFloatBitWidth() > 32) {
-            dx = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, dx);
-            dy = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, dy);
-          }
+        if (resultElementTy.getIntOrFloatBitWidth() > 32) {
+          dx = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, dx);
+          dy = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, dy);
+        }
 
           auto unitVal = rewriter.create<arith::ConstantOp>(
               loc, rewriter.getIntegerAttr(resultElementTy, 1 << shift));
@@ -2206,7 +2206,6 @@ public:
 
           rewriter.create<linalg::YieldOp>(loc, result);
           return success();
-        }
       }
 
       return failure();

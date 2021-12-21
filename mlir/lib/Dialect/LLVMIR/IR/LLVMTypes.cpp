@@ -266,13 +266,14 @@ bool LLVMPointerType::areCompatible(DataLayoutEntryListRef oldLayout,
     unsigned size = kDefaultPointerSizeBits;
     unsigned abi = kDefaultPointerAlignment;
     auto newType = newEntry.getKey().get<Type>().cast<LLVMPointerType>();
-    auto it = llvm::find_if(oldLayout, [&](DataLayoutEntryInterface entry) {
-      if (auto type = entry.getKey().dyn_cast<Type>()) {
-        return type.cast<LLVMPointerType>().getAddressSpace() ==
-               newType.getAddressSpace();
-      }
-      return false;
-    });
+    const auto *it =
+        llvm::find_if(oldLayout, [&](DataLayoutEntryInterface entry) {
+          if (auto type = entry.getKey().dyn_cast<Type>()) {
+            return type.cast<LLVMPointerType>().getAddressSpace() ==
+                   newType.getAddressSpace();
+          }
+          return false;
+        });
     if (it == oldLayout.end()) {
       llvm::find_if(oldLayout, [&](DataLayoutEntryInterface entry) {
         if (auto type = entry.getKey().dyn_cast<Type>()) {
@@ -440,14 +441,15 @@ LLVMStructType::getTypeSizeInBits(const DataLayout &dataLayout,
 
 namespace {
 enum class StructDLEntryPos { Abi = 0, Preferred = 1 };
-}
+} // namespace
 
 static Optional<unsigned>
 getStructDataLayoutEntry(DataLayoutEntryListRef params, LLVMStructType type,
                          StructDLEntryPos pos) {
-  auto currentEntry = llvm::find_if(params, [](DataLayoutEntryInterface entry) {
-    return entry.isTypeEntry();
-  });
+  const auto *currentEntry =
+      llvm::find_if(params, [](DataLayoutEntryInterface entry) {
+        return entry.isTypeEntry();
+      });
   if (currentEntry == params.end())
     return llvm::None;
 
@@ -509,7 +511,7 @@ bool LLVMStructType::areCompatible(DataLayoutEntryListRef oldLayout,
     if (!newEntry.isTypeEntry())
       continue;
 
-    auto previousEntry =
+    const auto *previousEntry =
         llvm::find_if(oldLayout, [](DataLayoutEntryInterface entry) {
           return entry.isTypeEntry();
         });
