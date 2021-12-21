@@ -12,21 +12,6 @@ import os
 import pipes
 import re
 import shutil
-import subprocess
-
-def _supportsVerify(config):
-    """
-    Determine whether clang-verify is supported by the given configuration.
-
-    This is done by checking whether the %{cxx} substitution in that
-    configuration supports certain compiler flags.
-    """
-    command = "%{{cxx}} -xc++ {} -Werror -fsyntax-only -Xclang -verify-ignore-unexpected".format(os.devnull)
-    command = lit.TestRunner.applySubstitutions([command], config.substitutions,
-                                                recursion_limit=config.recursiveExpansionLimit)[0]
-    devNull = open(os.devnull, 'w')
-    result = subprocess.call(command, shell=True, stdout=devNull, stderr=devNull)
-    return result == 0
 
 def _getTempPaths(test):
     """
@@ -216,7 +201,7 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
 
     def execute(self, test, litConfig):
         VERIFY_FLAGS = '-Xclang -verify -Xclang -verify-ignore-unexpected=note -ferror-limit=0'
-        supportsVerify = _supportsVerify(test.config)
+        supportsVerify = 'verify-support' in test.config.available_features
         filename = test.path_in_suite[-1]
 
         # TODO(ldionne): We currently disable tests that re-define _LIBCPP_ASSERT

@@ -678,6 +678,17 @@ struct DevirtModule {
   static ValueInfo lookUpFunctionValueInfo(Function *TheFn,
                                            ModuleSummaryIndex *ExportSummary);
 
+  // Returns true if the function definition must be unreachable.
+  //
+  // Note if this helper function returns true, `F` is guaranteed
+  // to be unreachable; if it returns false, `F` might still
+  // be unreachable but not covered by this helper function.
+  //
+  // Implementation-wise, if function definition is present, IR is analyzed; if
+  // not, look up function flags from ExportSummary as a fallback.
+  static bool mustBeUnreachableFunction(Function *const F,
+                                        ModuleSummaryIndex *ExportSummary);
+
   // Lower the module using the action and summary passed as command line
   // arguments. For testing purposes only.
   static bool
@@ -1038,10 +1049,8 @@ bool DevirtModule::tryFindVirtualCallTargets(
 
     // We can disregard unreachable functions as possible call targets, as
     // unreachable functions shouldn't be called.
-    if (ExportSummary && (mustBeUnreachableFunction(
-                             lookUpFunctionValueInfo(Fn, ExportSummary)))) {
+    if (mustBeUnreachableFunction(Fn, ExportSummary))
       continue;
-    }
 
     TargetsForSlot.push_back({Fn, &TM});
   }
@@ -2085,6 +2094,20 @@ DevirtModule::lookUpFunctionValueInfo(Function *TheFn,
     TheFnVI = ExportSummary->getValueInfo(TheFnGUIDWithExportedName);
   }
   return TheFnVI;
+}
+
+bool DevirtModule::mustBeUnreachableFunction(
+    Function *const F, ModuleSummaryIndex *ExportSummary) {
+  // First, learn unreachability by analyzing function IR.
+  if (!F->isDeclaration()) {
+    // A function must be unreachable if its entry block ends with an
+    // 'unreachable'.
+    return isa<UnreachableInst>(F->getEntryBlock().getTerminator());
+  }
+  // Learn unreachability from ExportSummary if ExportSummary is present.
+  return ExportSummary &&
+         ::mustBeUnreachableFunction(
+             DevirtModule::lookUpFunctionValueInfo(F, ExportSummary));
 }
 
 bool DevirtModule::run() {
