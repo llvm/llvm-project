@@ -290,11 +290,11 @@ char_traits<_CharT>::assign(char_type* __s, size_t __n, char_type __a)
 
 template <class _CharT>
 static inline _LIBCPP_CONSTEXPR_AFTER_CXX17
-_CharT* __copy_constexpr(_CharT* __s1, const _CharT* __s2, size_t __n) _NOEXCEPT
+_CharT* __copy_constexpr(_CharT* __dest, const _CharT* __source, size_t __n) _NOEXCEPT
 {
   _LIBCPP_ASSERT(__libcpp_is_constant_evaluated(), "__copy_constexpr() should always be constant evaluated");
-  _VSTD::copy_n(__s2, __n, __s1);
-  return __s1;
+  _VSTD::copy_n(__source, __n, __dest);
+  return __dest;
 }
 
 template <class _CharT>
