@@ -1208,13 +1208,6 @@ void ClangdLSPServer::onCallHierarchyIncomingCalls(
   Server->incomingCalls(Params.item, std::move(Reply));
 }
 
-void ClangdLSPServer::onCallHierarchyOutgoingCalls(
-    const CallHierarchyOutgoingCallsParams &Params,
-    Callback<std::vector<CallHierarchyOutgoingCall>> Reply) {
-  // FIXME: To be implemented.
-  Reply(std::vector<CallHierarchyOutgoingCall>{});
-}
-
 void ClangdLSPServer::onInlayHints(const InlayHintsParams &Params,
                                    Callback<std::vector<InlayHint>> Reply) {
   Server->inlayHints(Params.textDocument.uri.file(), std::move(Reply));
@@ -1478,7 +1471,6 @@ void ClangdLSPServer::bindMethods(LSPBinder &Bind,
   Bind.method("typeHierarchy/resolve", this, &ClangdLSPServer::onResolveTypeHierarchy);
   Bind.method("textDocument/prepareCallHierarchy", this, &ClangdLSPServer::onPrepareCallHierarchy);
   Bind.method("callHierarchy/incomingCalls", this, &ClangdLSPServer::onCallHierarchyIncomingCalls);
-  Bind.method("callHierarchy/outgoingCalls", this, &ClangdLSPServer::onCallHierarchyOutgoingCalls);
   Bind.method("textDocument/selectionRange", this, &ClangdLSPServer::onSelectionRange);
   Bind.method("textDocument/documentLink", this, &ClangdLSPServer::onDocumentLink);
   Bind.method("textDocument/semanticTokens/full", this, &ClangdLSPServer::onSemanticTokens);
