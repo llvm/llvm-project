@@ -1,3 +1,5 @@
+// REQUIRES: system-windows
+
 // RUN: cp %s %T/debug-info-objname.cpp
 // RUN: cd %T
 
