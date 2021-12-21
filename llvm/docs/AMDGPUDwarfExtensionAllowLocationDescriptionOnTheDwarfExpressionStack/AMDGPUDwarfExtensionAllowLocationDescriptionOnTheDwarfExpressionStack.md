@@ -3,7 +3,7 @@
 - [Extension](#extension)
 - [Heterogeneous Computing Devices](#heterogeneous-computing-devices)
 - [DWARF 5](#dwarf-5)
-  - [What is DWARF?](#what-is-dwarf)
+  - [How DWARF Maps Source Language To Hardware](#how-dwarf-maps-source-language-to-hardware)
   - [Examples](#examples)
     - [Dynamic Array Size](#dynamic-array-size)
     - [Variable Location in Register](#variable-location-in-register)
@@ -29,15 +29,22 @@
 
 # Extension
 
-This extension is to generalize the DWARF expression evaluation model to allow
-location descriptions to be manipulated on the stack. It is done in a manner
-that is backwards compatible with DWARF 5. This permits operations to act on
-location descriptions in an incremental, consistent, and composable manner.
+In DWARF 5, expressions are evaluated using a typed value stack, a separate
+location area, and an independent loclist mechanism. This extension unifies all
+three mechanisms into a single generalized DWARF expression evaluation model
+that allows both typed values and location descriptions to be manipulated on the
+evaluation stack. Both single and multiple location descriptions are supported
+on the stack. In addition, the call frame information (CFI) is extended to
+support the full generality of location descriptions. This is done in a manner
+that is backwards compatible with DWARF 5. The extension involves changes to the
+DWARF 5 sections 2.5 (pp 26-38), 2.6 (pp 38-45), and 6.4 (pp 171-182).
 
-It allows a small number of operations to be defined to address the requirements
-of heterogeneous devices as well as providing benefits to non-heterogeneous
-devices. It also acts as a foundation to provide support for other issues that
-have been raised that would benefit all devices.
+The extension permits operations to act on location descriptions in an
+incremental, consistent, and composable manner. It allows a small number of
+operations to be defined to address the requirements of heterogeneous devices as
+well as providing benefits to non-heterogeneous devices. It acts as a foundation
+to provide support for other issues that have been raised that would benefit all
+devices.
 
 Other approaches were explored that involved adding specialized operations and
 rules. However, these resulted in the need for more operations that did not
@@ -100,7 +107,7 @@ Before presenting the proposed solution to supporting heterogeneous devices, a
 brief overview of the DWARF 5 expression evaluation model will be given to
 highlight the aspects being addressed by the extension.
 
-## What is DWARF?
+## How DWARF Maps Source Language To Hardware
 
 DWARF is a standardized way to specify debug information. It describes source
 language entities such as compilation units, functions, types, variables, etc.
