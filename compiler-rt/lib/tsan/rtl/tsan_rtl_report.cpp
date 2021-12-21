@@ -193,7 +193,7 @@ void ScopedReportBase::AddMemoryAccess(uptr addr, uptr external_tag, Shadow s,
     mop->stack->suppressable = true;
   for (uptr i = 0; i < mset->Size(); i++) {
     MutexSet::Desc d = mset->Get(i);
-    u64 id = this->AddMutex(d.addr, d.stack_id);
+    int id = this->AddMutex(d.addr, d.stack_id);
     ReportMopMutex mtx = {id, d.write};
     mop->mset.PushBack(mtx);
   }
