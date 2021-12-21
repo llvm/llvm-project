@@ -712,8 +712,8 @@ bool llvm::returnTypeIsEligibleForTailCall(const Function *F,
     // The manipulations performed when we're looking through an insertvalue or
     // an extractvalue would happen at the front of the RetPath list, so since
     // we have to copy it anyway it's more efficient to create a reversed copy.
-    SmallVector<unsigned, 4> TmpRetPath(RetPath.rbegin(), RetPath.rend());
-    SmallVector<unsigned, 4> TmpCallPath(CallPath.rbegin(), CallPath.rend());
+    SmallVector<unsigned, 4> TmpRetPath(llvm::reverse(RetPath));
+    SmallVector<unsigned, 4> TmpCallPath(llvm::reverse(CallPath));
 
     // Finally, we can check whether the value produced by the tail call at this
     // index is compatible with the value we return.

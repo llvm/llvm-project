@@ -884,7 +884,7 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
     InnermostGEP = GEP;
     InBounds &= GEP->isInBounds();
 
-    SmallVector<Value *, 4> NestedOps(GEP->op_begin() + 1, GEP->op_end());
+    SmallVector<Value *, 4> NestedOps(llvm::drop_begin(GEP->operands()));
 
     // Do not try the incorporate the sub-GEP if some index is not a number.
     bool AllConstantInt = true;
