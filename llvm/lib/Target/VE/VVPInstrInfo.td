@@ -45,6 +45,9 @@ def vvp_sub    : SDNode<"VEISD::VVP_SUB",  SDTIntBinOpVVP>;
 def vvp_mul    : SDNode<"VEISD::VVP_MUL",  SDTIntBinOpVVP>;
 def c_vvp_mul  : vvp_commutative<vvp_mul>;
 
+def vvp_sdiv   : SDNode<"VEISD::VVP_SDIV", SDTIntBinOpVVP>;
+def vvp_udiv   : SDNode<"VEISD::VVP_UDIV", SDTIntBinOpVVP>;
+
 def vvp_and    : SDNode<"VEISD::VVP_AND",  SDTIntBinOpVVP>;
 def c_vvp_and  : vvp_commutative<vvp_and>;
 
