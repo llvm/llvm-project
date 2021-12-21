@@ -664,10 +664,7 @@ Instruction *InstCombinerImpl::foldPHIArgLoadIntoPHI(PHINode &PN) {
     return nullptr;
 
   // When processing loads, we need to propagate two bits of information to the
-  // sunk load: whether it is volatile, and what its alignment is.  We currently
-  // don't sink loads when some have their alignment specified and some don't.
-  // visitLoadInst will propagate an alignment onto the load when TD is around,
-  // and if TD isn't around, we can't handle the mixed case.
+  // sunk load: whether it is volatile, and what its alignment is.
   bool isVolatile = FirstLI->isVolatile();
   Align LoadAlignment = FirstLI->getAlign();
   unsigned LoadAddrSpace = FirstLI->getPointerAddressSpace();
@@ -699,7 +696,7 @@ Instruction *InstCombinerImpl::foldPHIArgLoadIntoPHI(PHINode &PN) {
         !isSafeAndProfitableToSinkLoad(LI))
       return nullptr;
 
-    LoadAlignment = std::min(LoadAlignment, Align(LI->getAlign()));
+    LoadAlignment = std::min(LoadAlignment, LI->getAlign());
 
     // If the PHI is of volatile loads and the load block has multiple
     // successors, sinking it would remove a load of the volatile value from
