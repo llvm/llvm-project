@@ -204,6 +204,10 @@ public:
   ///         from the parent process will be used.
   virtual void setEnvironment(llvm::ArrayRef<const char *> NewEnvironment);
 
+  void replaceArguments(llvm::opt::ArgStringList List) {
+    Arguments = std::move(List);
+  }
+
   const char *getExecutable() const { return Executable; }
 
   const llvm::opt::ArgStringList &getArguments() const { return Arguments; }

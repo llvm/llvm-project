@@ -646,6 +646,7 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
   Options.MCOptions.Argv0 = CodeGenOpts.Argv0;
   Options.MCOptions.CommandLineArgs = CodeGenOpts.CommandLineArgs;
   Options.DebugStrictDwarf = CodeGenOpts.DebugStrictDwarf;
+  Options.ObjectFilenameForDebug = CodeGenOpts.ObjectFilenameForDebug;
 
   return true;
 }
@@ -1583,7 +1584,8 @@ static void runThinLTOBackend(
     return;
 
   auto AddStream = [&](size_t Task) {
-    return std::make_unique<CachedFileStream>(std::move(OS));
+    return std::make_unique<CachedFileStream>(std::move(OS),
+                                              CGOpts.ObjectFilenameForDebug);
   };
   lto::Config Conf;
   if (CGOpts.SaveTempsFilePrefix != "") {

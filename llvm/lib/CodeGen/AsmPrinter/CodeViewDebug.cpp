@@ -649,6 +649,7 @@ void CodeViewDebug::endModule() {
   switchToDebugSectionForSymbol(nullptr);
 
   MCSymbol *CompilerInfo = beginCVSubsection(DebugSubsectionKind::Symbols);
+  emitObjName();
   emitCompilerInformation();
   endCVSubsection(CompilerInfo);
 
@@ -782,6 +783,29 @@ void CodeViewDebug::emitTypeGlobalHashes() {
                 GHR.Hash.size());
     OS.emitBinaryData(S);
   }
+}
+
+void CodeViewDebug::emitObjName() {
+  MCSymbol *CompilerEnd = beginSymbolRecord(SymbolKind::S_OBJNAME);
+
+  StringRef PathRef(Asm->TM.Options.ObjectFilenameForDebug);
+  llvm::SmallString<256> PathStore(PathRef);
+
+  if (PathRef.empty() || PathRef == "-") {
+    // Don't emit the filename if we're writing to stdout or to /dev/null.
+    PathRef = {};
+  } else {
+    llvm::sys::path::remove_dots(PathStore, /*remove_dot_dot=*/true);
+    PathRef = PathStore;
+  }
+
+  OS.AddComment("Signature");
+  OS.emitIntValue(0, 4);
+
+  OS.AddComment("Object name");
+  emitNullTerminatedSymbolName(OS, PathRef);
+
+  endSymbolRecord(CompilerEnd);
 }
 
 namespace {
