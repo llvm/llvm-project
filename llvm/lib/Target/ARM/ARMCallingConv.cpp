@@ -230,10 +230,9 @@ static bool CC_ARM_AAPCS_Custom_Aggregate(unsigned ValNo, MVT ValVT,
 
   unsigned RegResult = State.AllocateRegBlock(RegList, PendingMembers.size());
   if (RegResult) {
-    for (SmallVectorImpl<CCValAssign>::iterator It = PendingMembers.begin();
-         It != PendingMembers.end(); ++It) {
-      It->convertToReg(RegResult);
-      State.addLoc(*It);
+    for (CCValAssign &PendingMember : PendingMembers) {
+      PendingMember.convertToReg(RegResult);
+      State.addLoc(PendingMember);
       ++RegResult;
     }
     PendingMembers.clear();
