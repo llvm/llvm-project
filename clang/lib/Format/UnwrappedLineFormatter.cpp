@@ -97,8 +97,8 @@ private:
   /// For example, 'public:' labels in classes are offset by 1 or 2
   /// characters to the left from their level.
   int getIndentOffset(const FormatToken &RootToken) {
-    if (Style.Language == FormatStyle::LK_Java ||
-        Style.Language == FormatStyle::LK_JavaScript || Style.isCSharp())
+    if (Style.Language == FormatStyle::LK_Java || Style.isJavaScript() ||
+        Style.isCSharp())
       return 0;
     if (RootToken.isAccessSpecifier(false) ||
         RootToken.isObjCAccessSpecifier() ||
@@ -1187,8 +1187,7 @@ unsigned UnwrappedLineFormatter::format(
       bool FitsIntoOneLine =
           TheLine.Last->TotalLength + Indent <= ColumnLimit ||
           (TheLine.Type == LT_ImportStatement &&
-           (Style.Language != FormatStyle::LK_JavaScript ||
-            !Style.JavaScriptWrapImports)) ||
+           (!Style.isJavaScript() || !Style.JavaScriptWrapImports)) ||
           (Style.isCSharp() &&
            TheLine.InPPDirective); // don't split #regions in C#
       if (Style.ColumnLimit == 0)
