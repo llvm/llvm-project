@@ -6188,10 +6188,6 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode =
       AMDGPU::getMIMGBaseOpcodeInfo(Intr->BaseOpcode);
   const AMDGPU::MIMGDimInfo *DimInfo = AMDGPU::getMIMGDimInfo(Intr->Dim);
-  const AMDGPU::MIMGLZMappingInfo *LZMappingInfo =
-      AMDGPU::getMIMGLZMappingInfo(Intr->BaseOpcode);
-  const AMDGPU::MIMGMIPMappingInfo *MIPMappingInfo =
-      AMDGPU::getMIMGMIPMappingInfo(Intr->BaseOpcode);
   unsigned IntrOpcode = Intr->BaseOpcode;
   bool IsGFX10Plus = AMDGPU::isGFX10Plus(*Subtarget);
 
@@ -6278,28 +6274,6 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
 
   unsigned VAddrEnd = ArgOffset + Intr->VAddrEnd;
   SmallVector<SDValue, 4> VAddrs;
-
-  // Optimize _L to _LZ when _L is zero
-  if (LZMappingInfo) {
-    if (auto *ConstantLod = dyn_cast<ConstantFPSDNode>(
-            Op.getOperand(ArgOffset + Intr->LodIndex))) {
-      if (ConstantLod->isZero() || ConstantLod->isNegative()) {
-        IntrOpcode = LZMappingInfo->LZ;  // set new opcode to _lz variant of _l
-        VAddrEnd--;                      // remove 'lod'
-      }
-    }
-  }
-
-  // Optimize _mip away, when 'lod' is zero
-  if (MIPMappingInfo) {
-    if (auto *ConstantLod = dyn_cast<ConstantSDNode>(
-            Op.getOperand(ArgOffset + Intr->MipIndex))) {
-      if (ConstantLod->isZero()) {
-        IntrOpcode = MIPMappingInfo->NONMIP;  // set new opcode to variant without _mip
-        VAddrEnd--;                           // remove 'mip'
-      }
-    }
-  }
 
   // Check for 16 bit addresses or derivatives and pack if true.
   MVT VAddrVT =

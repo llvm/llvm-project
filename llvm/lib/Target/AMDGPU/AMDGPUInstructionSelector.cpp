@@ -1510,10 +1510,6 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
     AMDGPU::getMIMGBaseOpcodeInfo(Intr->BaseOpcode);
 
   const AMDGPU::MIMGDimInfo *DimInfo = AMDGPU::getMIMGDimInfo(Intr->Dim);
-  const AMDGPU::MIMGLZMappingInfo *LZMappingInfo =
-      AMDGPU::getMIMGLZMappingInfo(Intr->BaseOpcode);
-  const AMDGPU::MIMGMIPMappingInfo *MIPMappingInfo =
-      AMDGPU::getMIMGMIPMappingInfo(Intr->BaseOpcode);
   unsigned IntrOpcode = Intr->BaseOpcode;
   const bool IsGFX10Plus = AMDGPU::isGFX10Plus(STI);
 
@@ -1583,26 +1579,6 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
 
       if (IsD16 && !STI.hasUnpackedD16VMem())
         NumVDataDwords = (DMaskLanes + 1) / 2;
-    }
-  }
-
-  // Optimize _L to _LZ when _L is zero
-  if (LZMappingInfo) {
-    // The legalizer replaced the register with an immediate 0 if we need to
-    // change the opcode.
-    const MachineOperand &Lod = MI.getOperand(ArgOffset + Intr->LodIndex);
-    if (Lod.isImm()) {
-      assert(Lod.getImm() == 0);
-      IntrOpcode = LZMappingInfo->LZ;  // set new opcode to _lz variant of _l
-    }
-  }
-
-  // Optimize _mip away, when 'lod' is zero
-  if (MIPMappingInfo) {
-    const MachineOperand &Lod = MI.getOperand(ArgOffset + Intr->MipIndex);
-    if (Lod.isImm()) {
-      assert(Lod.getImm() == 0);
-      IntrOpcode = MIPMappingInfo->NONMIP;  // set new opcode to variant without _mip
     }
   }
 

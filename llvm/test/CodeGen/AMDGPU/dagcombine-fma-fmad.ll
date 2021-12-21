@@ -5,6 +5,7 @@ define amdgpu_ps float @_amdgpu_ps_main() #0 {
 ; GCN-LABEL: _amdgpu_ps_main:
 ; GCN:       ; %bb.0: ; %.entry
 ; GCN-NEXT:    s_mov_b32 s0, 0
+; GCN-NEXT:    v_mov_b32_e32 v4, 0
 ; GCN-NEXT:    s_mov_b32 s1, s0
 ; GCN-NEXT:    s_mov_b32 s2, s0
 ; GCN-NEXT:    s_mov_b32 s3, s0
@@ -14,10 +15,11 @@ define amdgpu_ps float @_amdgpu_ps_main() #0 {
 ; GCN-NEXT:    s_mov_b32 s7, s0
 ; GCN-NEXT:    image_sample v[0:1], v[0:1], s[0:7], s[0:3] dmask:0x3 dim:SQ_RSRC_IMG_2D
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    s_clause 0x2
+; GCN-NEXT:    s_clause 0x1
 ; GCN-NEXT:    image_sample v2, v[0:1], s[0:7], s[0:3] dmask:0x4 dim:SQ_RSRC_IMG_2D
 ; GCN-NEXT:    image_sample v3, v[0:1], s[0:7], s[0:3] dmask:0x1 dim:SQ_RSRC_IMG_2D
-; GCN-NEXT:    image_load v4, v[0:1], s[0:7] dmask:0x4 dim:SQ_RSRC_IMG_2D unorm
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    image_load_mip v4, v[2:4], s[0:7] dmask:0x4 dim:SQ_RSRC_IMG_2D unorm
 ; GCN-NEXT:    s_clause 0x3
 ; GCN-NEXT:    s_buffer_load_dword s24, s[0:3], 0x5c
 ; GCN-NEXT:    s_buffer_load_dword s28, s[0:3], 0x7c
@@ -44,33 +46,31 @@ define amdgpu_ps float @_amdgpu_ps_main() #0 {
 ; GCN-NEXT:    v_sub_f32_e32 v8, s0, v1
 ; GCN-NEXT:    v_fma_f32 v7, -s2, v6, s6
 ; GCN-NEXT:    v_fma_f32 v5, v6, v5, 1.0
+; GCN-NEXT:    v_mad_f32 v10, s2, v6, v2
 ; GCN-NEXT:    s_mov_b32 s0, 0x3c23d70a
 ; GCN-NEXT:    v_fmac_f32_e32 v1, v6, v8
+; GCN-NEXT:    v_mac_f32_e32 v10, v7, v6
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mul_f32_e32 v9, s10, v0
 ; GCN-NEXT:    v_fma_f32 v0, -v0, s10, s14
+; GCN-NEXT:    v_mul_f32_e32 v8, s18, v2
+; GCN-NEXT:    v_mul_f32_e32 v3, s22, v3
 ; GCN-NEXT:    v_fmac_f32_e32 v9, v0, v6
 ; GCN-NEXT:    v_sub_f32_e32 v0, v1, v5
-; GCN-NEXT:    v_fmac_f32_e32 v5, v0, v6
-; GCN-NEXT:    s_waitcnt vmcnt(2)
-; GCN-NEXT:    v_mad_f32 v10, s2, v6, v2
-; GCN-NEXT:    v_mul_f32_e32 v8, s18, v2
-; GCN-NEXT:    s_waitcnt vmcnt(1)
-; GCN-NEXT:    v_mul_f32_e32 v3, s22, v3
-; GCN-NEXT:    v_mac_f32_e32 v10, v7, v6
 ; GCN-NEXT:    v_mul_f32_e32 v1, v8, v6
 ; GCN-NEXT:    v_mul_f32_e32 v7, v6, v3
 ; GCN-NEXT:    v_fma_f32 v3, -v6, v3, v9
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_add_f32_e32 v4, v4, v10
+; GCN-NEXT:    v_fmac_f32_e32 v5, v0, v6
 ; GCN-NEXT:    v_fma_f32 v0, v2, s26, -v1
 ; GCN-NEXT:    v_fmac_f32_e32 v7, v3, v6
-; GCN-NEXT:    v_mul_f32_e32 v3, v4, v6
-; GCN-NEXT:    v_fma_f32 v4, v5, s0, 0x3ca3d70a
 ; GCN-NEXT:    v_fmac_f32_e32 v1, v0, v6
 ; GCN-NEXT:    v_mul_f32_e32 v0, v2, v6
-; GCN-NEXT:    v_mul_f32_e32 v2, v7, v4
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    v_add_f32_e32 v4, v4, v10
+; GCN-NEXT:    v_mul_f32_e32 v3, v4, v6
+; GCN-NEXT:    v_fma_f32 v4, v5, s0, 0x3ca3d70a
 ; GCN-NEXT:    v_mul_f32_e32 v1, v3, v1
+; GCN-NEXT:    v_mul_f32_e32 v2, v7, v4
 ; GCN-NEXT:    v_fmac_f32_e32 v1, v2, v0
 ; GCN-NEXT:    v_max_f32_e32 v0, 0, v1
 ; GCN-NEXT:    ; return to shader part epilog
