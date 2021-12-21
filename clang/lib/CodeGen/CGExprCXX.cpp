@@ -1725,8 +1725,7 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
   // of optimization level.
   if (CGM.getCodeGenOpts().StrictVTablePointers &&
       allocator->isReservedGlobalPlacementOperator())
-    result = result.withPointer(
-        Builder.CreateLaunderInvariantGroup(result.getPointer()));
+    result = Builder.CreateLaunderInvariantGroup(result);
 
   // Emit sanitizer checks for pointer value now, so that in the case of an
   // array it was checked only once and not at each constructor call. We may

@@ -4384,8 +4384,7 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
         hasAnyVptr(FieldType, getContext()))
       // Because unions can easily skip invariant.barriers, we need to add
       // a barrier every time CXXRecord field with vptr is referenced.
-      addr = Address(Builder.CreateLaunderInvariantGroup(addr.getPointer()),
-                     addr.getAlignment());
+      addr = Builder.CreateLaunderInvariantGroup(addr);
 
     if (IsInPreservedAIRegion ||
         (getDebugInfo() && rec->hasAttr<BPFPreserveAccessIndexAttr>())) {
