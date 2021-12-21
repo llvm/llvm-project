@@ -452,9 +452,7 @@ static void *BackgroundThread(void *arg) {
 
   u64 last_flush = start;
   uptr last_rss = 0;
-  for (int i = 0;
-      atomic_load(&ctx->stop_background_thread, memory_order_relaxed) == 0;
-      i++) {
+  while (!atomic_load_relaxed(&ctx->stop_background_thread)) {
     SleepForMillis(100);
     u64 now = NanoTime();
 
