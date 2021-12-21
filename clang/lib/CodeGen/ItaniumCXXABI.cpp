@@ -1469,7 +1469,8 @@ void ItaniumCXXABI::emitThrow(CodeGenFunction &CGF, const CXXThrowExpr *E) {
       AllocExceptionFn, llvm::ConstantInt::get(SizeTy, TypeSize), "exception");
 
   CharUnits ExnAlign = CGF.getContext().getExnObjectAlignment();
-  CGF.EmitAnyExprToExn(E->getSubExpr(), Address(ExceptionPtr, ExnAlign));
+  CGF.EmitAnyExprToExn(
+      E->getSubExpr(), Address(ExceptionPtr, CGM.Int8Ty, ExnAlign));
 
   // Now throw the exception.
   llvm::Constant *TypeInfo = CGM.GetAddrOfRTTIDescriptor(ThrowType,
@@ -2619,7 +2620,7 @@ void ItaniumCXXABI::EmitGuardedInit(CodeGenFunction &CGF,
     CGM.setStaticLocalDeclGuardAddress(&D, guard);
   }
 
-  Address guardAddr = Address(guard, guardAlignment);
+  Address guardAddr = Address(guard, guard->getValueType(), guardAlignment);
 
   // Test whether the variable has completed initialization.
   //

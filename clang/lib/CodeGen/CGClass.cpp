@@ -326,9 +326,9 @@ Address CodeGenFunction::GetAddressOfBaseClass(
   }
 
   // Get the base pointer type.
+  llvm::Type *BaseValueTy = ConvertType((PathEnd[-1])->getType());
   llvm::Type *BasePtrTy =
-      ConvertType((PathEnd[-1])->getType())
-          ->getPointerTo(Value.getType()->getPointerAddressSpace());
+      BaseValueTy->getPointerTo(Value.getType()->getPointerAddressSpace());
 
   QualType DerivedTy = getContext().getRecordType(Derived);
   CharUnits DerivedAlign = CGM.getClassPointerAlignment(Derived);
@@ -342,7 +342,7 @@ Address CodeGenFunction::GetAddressOfBaseClass(
       EmitTypeCheck(TCK_Upcast, Loc, Value.getPointer(),
                     DerivedTy, DerivedAlign, SkippedChecks);
     }
-    return Builder.CreateBitCast(Value, BasePtrTy);
+    return Builder.CreateElementBitCast(Value, BaseValueTy);
   }
 
   llvm::BasicBlock *origBB = nullptr;
@@ -379,7 +379,7 @@ Address CodeGenFunction::GetAddressOfBaseClass(
                                           VirtualOffset, Derived, VBase);
 
   // Cast to the destination type.
-  Value = Builder.CreateBitCast(Value, BasePtrTy);
+  Value = Builder.CreateElementBitCast(Value, BaseValueTy);
 
   // Build a phi if we needed a null check.
   if (NullCheckValue) {
@@ -406,16 +406,16 @@ CodeGenFunction::GetAddressOfDerivedClass(Address BaseAddr,
 
   QualType DerivedTy =
     getContext().getCanonicalType(getContext().getTagDeclType(Derived));
-  unsigned AddrSpace =
-    BaseAddr.getPointer()->getType()->getPointerAddressSpace();
-  llvm::Type *DerivedPtrTy = ConvertType(DerivedTy)->getPointerTo(AddrSpace);
+  unsigned AddrSpace = BaseAddr.getAddressSpace();
+  llvm::Type *DerivedValueTy = ConvertType(DerivedTy);
+  llvm::Type *DerivedPtrTy = DerivedValueTy->getPointerTo(AddrSpace);
 
   llvm::Value *NonVirtualOffset =
     CGM.GetNonVirtualBaseClassOffset(Derived, PathBegin, PathEnd);
 
   if (!NonVirtualOffset) {
     // No offset, we can just cast back.
-    return Builder.CreateBitCast(BaseAddr, DerivedPtrTy);
+    return Builder.CreateElementBitCast(BaseAddr, DerivedValueTy);
   }
 
   llvm::BasicBlock *CastNull = nullptr;
@@ -453,7 +453,7 @@ CodeGenFunction::GetAddressOfDerivedClass(Address BaseAddr,
     Value = PHI;
   }
 
-  return Address(Value, CGM.getClassPointerAlignment(Derived));
+  return Address(Value, DerivedValueTy, CGM.getClassPointerAlignment(Derived));
 }
 
 llvm::Value *CodeGenFunction::GetVTTParameter(GlobalDecl GD,
