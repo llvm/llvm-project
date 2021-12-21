@@ -24,7 +24,8 @@ inline int64_t ceilDiv(int64_t lhs, int64_t rhs) {
   assert(rhs != 0);
   // C/C++'s integer division rounds towards 0.
   int64_t x = (rhs > 0) ? -1 : 1;
-  return (lhs * rhs > 0) ? ((lhs + x) / rhs) + 1 : -(-lhs / rhs);
+  return ((lhs != 0) && (lhs > 0) == (rhs > 0)) ? ((lhs + x) / rhs) + 1
+                                                : -(-lhs / rhs);
 }
 
 /// Returns the result of MLIR's floordiv operation on constants. The RHS is
@@ -33,7 +34,8 @@ inline int64_t floorDiv(int64_t lhs, int64_t rhs) {
   assert(rhs != 0);
   // C/C++'s integer division rounds towards 0.
   int64_t x = (rhs < 0) ? 1 : -1;
-  return (lhs * rhs < 0) ? -((-lhs + x) / rhs) - 1 : lhs / rhs;
+  return ((lhs != 0) && ((lhs < 0) != (rhs < 0))) ? -((-lhs + x) / rhs) - 1
+                                                  : lhs / rhs;
 }
 
 /// Returns MLIR's mod operation on constants. MLIR's mod operation yields the
