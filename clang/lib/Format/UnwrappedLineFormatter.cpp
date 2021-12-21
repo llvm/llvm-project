@@ -393,11 +393,17 @@ private:
 
     // Try to merge a block with left brace wrapped that wasn't yet covered
     if (TheLine->Last->is(tok::l_brace)) {
-      return !Style.BraceWrapping.AfterFunction ||
-                     (I[1]->First->is(tok::r_brace) &&
-                      !Style.BraceWrapping.SplitEmptyRecord)
-                 ? tryMergeSimpleBlock(I, E, Limit)
-                 : 0;
+      bool ShouldMerge = false;
+      if (TheLine->First->isOneOf(tok::kw_class, tok::kw_struct)) {
+        ShouldMerge = !Style.BraceWrapping.AfterClass ||
+                      (I[1]->First->is(tok::r_brace) &&
+                       !Style.BraceWrapping.SplitEmptyRecord);
+      } else {
+        ShouldMerge = !Style.BraceWrapping.AfterFunction ||
+                      (I[1]->First->is(tok::r_brace) &&
+                       !Style.BraceWrapping.SplitEmptyFunction);
+      }
+      return ShouldMerge ? tryMergeSimpleBlock(I, E, Limit) : 0;
     }
     // Try to merge a function block with left brace wrapped
     if (I[1]->First->is(TT_FunctionLBrace) &&
