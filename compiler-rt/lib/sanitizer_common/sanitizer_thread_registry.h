@@ -133,6 +133,11 @@ class MUTEX ThreadRegistry {
   u32 ConsumeThreadUserId(uptr user_id);
   void SetThreadUserId(u32 tid, uptr user_id);
 
+  // OnFork must be called in the child process after fork to purge old
+  // threads that don't exist anymore (except for the current thread tid).
+  // Returns number of alive threads before fork.
+  u32 OnFork(u32 tid);
+
  private:
   const ThreadContextFactory context_factory_;
   const u32 max_threads_;

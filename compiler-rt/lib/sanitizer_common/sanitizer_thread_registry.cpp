@@ -110,7 +110,7 @@ ThreadRegistry::ThreadRegistry(ThreadContextFactory factory, u32 max_threads,
       max_threads_(max_threads),
       thread_quarantine_size_(thread_quarantine_size),
       max_reuse_(max_reuse),
-      mtx_(),
+      mtx_(MutexThreadRegistry),
       total_threads_(0),
       alive_threads_(0),
       max_alive_threads_(0),
@@ -363,6 +363,22 @@ void ThreadRegistry::SetThreadUserId(u32 tid, uptr user_id) {
   CHECK_EQ(tctx->user_id, 0);
   tctx->user_id = user_id;
   CHECK(live_.try_emplace(user_id, tctx->tid).second);
+}
+
+u32 ThreadRegistry::OnFork(u32 tid) {
+  ThreadRegistryLock l(this);
+  // We only purge user_id (pthread_t) of live threads because
+  // they cause CHECK failures if new threads with matching pthread_t
+  // created after fork.
+  // Potentially we could purge more info (ThreadContextBase themselves),
+  // but it's hard to test and easy to introduce new issues by doing this.
+  for (auto *tctx : threads_) {
+    if (tctx->tid == tid || !tctx->user_id)
+      continue;
+    CHECK(live_.erase(tctx->user_id));
+    tctx->user_id = 0;
+  }
+  return alive_threads_;
 }
 
 }  // namespace __sanitizer
