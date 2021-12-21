@@ -369,14 +369,19 @@ struct AllocaOpConversion : public FIROpConversion<fir::AllocaOp> {
     if (alloc.hasShapeOperands()) {
       mlir::Type allocEleTy = fir::unwrapRefType(alloc.getType());
       // Scale the size by constant factors encoded in the array type.
+      // We only do this for arrays that don't have a constant interior, since
+      // those are the only ones that get decayed to a pointer to the element
+      // type.
       if (auto seqTy = allocEleTy.dyn_cast<fir::SequenceType>()) {
-        fir::SequenceType::Extent constSize = 1;
-        for (auto extent : seqTy.getShape())
-          if (extent != fir::SequenceType::getUnknownExtent())
-            constSize *= extent;
-        mlir::Value constVal{
-            genConstantIndex(loc, ity, rewriter, constSize).getResult()};
-        size = rewriter.create<mlir::LLVM::MulOp>(loc, ity, size, constVal);
+        if (!seqTy.hasConstantInterior()) {
+          fir::SequenceType::Extent constSize = 1;
+          for (auto extent : seqTy.getShape())
+            if (extent != fir::SequenceType::getUnknownExtent())
+              constSize *= extent;
+          mlir::Value constVal{
+              genConstantIndex(loc, ity, rewriter, constSize).getResult()};
+          size = rewriter.create<mlir::LLVM::MulOp>(loc, ity, size, constVal);
+        }
       }
       unsigned end = operands.size();
       for (; i < end; ++i)
