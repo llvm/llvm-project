@@ -262,8 +262,8 @@ TEST_F(FormatTest, RemovesEmptyLines) {
                    "}",
                    getGoogleStyle()));
 
-  auto CustomStyle = clang::format::getLLVMStyle();
-  CustomStyle.BreakBeforeBraces = clang::format::FormatStyle::BS_Custom;
+  auto CustomStyle = getLLVMStyle();
+  CustomStyle.BreakBeforeBraces = FormatStyle::BS_Custom;
   CustomStyle.BraceWrapping.AfterNamespace = true;
   CustomStyle.KeepEmptyLinesAtTheStartOfBlocks = false;
   EXPECT_EQ("namespace N\n"
@@ -12200,6 +12200,38 @@ TEST_F(FormatTest, SplitEmptyFunction) {
                "}",
                Style);
 }
+
+TEST_F(FormatTest, SplitEmptyFunctionButNotRecord) {
+  FormatStyle Style = getLLVMStyle();
+  Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_None;
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterFunction = true;
+  Style.BraceWrapping.SplitEmptyFunction = true;
+  Style.BraceWrapping.SplitEmptyRecord = false;
+  Style.ColumnLimit = 40;
+
+  verifyFormat("class C {};", Style);
+  verifyFormat("struct C {};", Style);
+  verifyFormat("void f(int aaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+               "       int bbbbbbbbbbbbbbbbbbbbbbbb)\n"
+               "{\n"
+               "}",
+               Style);
+  verifyFormat("class C {\n"
+               "  C()\n"
+               "      : aaaaaaaaaaaaaaaaaaaaaaaaaaaa(),\n"
+               "        bbbbbbbbbbbbbbbbbbb()\n"
+               "  {\n"
+               "  }\n"
+               "  void\n"
+               "  m(int aaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+               "    int bbbbbbbbbbbbbbbbbbbbbbbb)\n"
+               "  {\n"
+               "  }\n"
+               "};",
+               Style);
+}
+
 TEST_F(FormatTest, KeepShortFunctionAfterPPElse) {
   FormatStyle Style = getLLVMStyle();
   Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_All;

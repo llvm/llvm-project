@@ -801,7 +801,7 @@ void ForkParentAfter(ThreadState* thr, uptr pc) { ForkAfter(thr); }
 
 void ForkChildAfter(ThreadState* thr, uptr pc, bool start_thread) {
   ForkAfter(thr);
-  u32 nthread = ThreadCount(thr);
+  u32 nthread = ctx->thread_registry.OnFork(thr->tid);
   VPrintf(1,
           "ThreadSanitizer: forked new process with pid %d,"
           " parent had %d threads\n",

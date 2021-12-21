@@ -596,7 +596,7 @@ bool llvm::checkDebugInfoMetadata(Module &M,
   auto DILocsBefore = DIPreservationMap[NameOfWrappedPass].DILocations;
   auto DILocsAfter = DIPreservationAfter[NameOfWrappedPass].DILocations;
 
-  auto InstToDelete = DIPreservationAfter[NameOfWrappedPass].InstToDelete;
+  auto InstToDelete = DIPreservationMap[NameOfWrappedPass].InstToDelete;
 
   auto DIVarsBefore = DIPreservationMap[NameOfWrappedPass].DIVariables;
   auto DIVarsAfter = DIPreservationAfter[NameOfWrappedPass].DIVariables;
