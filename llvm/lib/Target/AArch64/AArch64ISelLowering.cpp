@@ -19618,12 +19618,72 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
     }
   }
 
+  unsigned WhichResult;
+  if (isZIPMask(ShuffleMask, VT, WhichResult) && WhichResult == 0)
+    return convertFromScalableVector(
+        DAG, VT, DAG.getNode(AArch64ISD::ZIP1, DL, ContainerVT, Op1, Op2));
+
+  if (isTRNMask(ShuffleMask, VT, WhichResult)) {
+    unsigned Opc = (WhichResult == 0) ? AArch64ISD::TRN1 : AArch64ISD::TRN2;
+    return convertFromScalableVector(
+        DAG, VT, DAG.getNode(Opc, DL, ContainerVT, Op1, Op2));
+  }
+
+  if (isZIP_v_undef_Mask(ShuffleMask, VT, WhichResult) && WhichResult == 0)
+    return convertFromScalableVector(
+        DAG, VT, DAG.getNode(AArch64ISD::ZIP1, DL, ContainerVT, Op1, Op1));
+
+  if (isTRN_v_undef_Mask(ShuffleMask, VT, WhichResult)) {
+    unsigned Opc = (WhichResult == 0) ? AArch64ISD::TRN1 : AArch64ISD::TRN2;
+    return convertFromScalableVector(
+        DAG, VT, DAG.getNode(Opc, DL, ContainerVT, Op1, Op1));
+  }
+
+  // Functions like isZIPMask return true when a ISD::VECTOR_SHUFFLE's mask
+  // represents the same logical operation as performed by a ZIP instruction. In
+  // isolation these functions do not mean the ISD::VECTOR_SHUFFLE is exactly
+  // equivalent to an AArch64 instruction. There's the extra component of
+  // ISD::VECTOR_SHUFFLE's value type to consider. Prior to SVE these functions
+  // only operated on 64/128bit vector types that have a direct mapping to a
+  // target register and so an exact mapping is implied.
+  // However, when using SVE for fixed length vectors, most legal vector types
+  // are actually sub-vectors of a larger SVE register. When mapping
+  // ISD::VECTOR_SHUFFLE to an SVE instruction care must be taken to consider
+  // how the mask's indices translate. Specifically, when the mapping requires
+  // an exact meaning for a specific vector index (e.g. Index X is the last
+  // vector element in the register) then such mappings are often only safe when
+  // the exact SVE register size is know. The main exception to this is when
+  // indices are logically relative to the first element of either
+  // ISD::VECTOR_SHUFFLE operand because these relative indices don't change
+  // when converting from fixed-length to scalable vector types (i.e. the start
+  // of a fixed length vector is always the start of a scalable vector).
   unsigned MinSVESize = Subtarget->getMinSVEVectorSizeInBits();
   unsigned MaxSVESize = Subtarget->getMaxSVEVectorSizeInBits();
-  if (MinSVESize == MaxSVESize && MaxSVESize == VT.getSizeInBits() &&
-      ShuffleVectorInst::isReverseMask(ShuffleMask) && Op2.isUndef()) {
-    Op = DAG.getNode(ISD::VECTOR_REVERSE, DL, ContainerVT, Op1);
-    return convertFromScalableVector(DAG, VT, Op);
+  if (MinSVESize == MaxSVESize && MaxSVESize == VT.getSizeInBits()) {
+    if (ShuffleVectorInst::isReverseMask(ShuffleMask) && Op2.isUndef()) {
+      Op = DAG.getNode(ISD::VECTOR_REVERSE, DL, ContainerVT, Op1);
+      return convertFromScalableVector(DAG, VT, Op);
+    }
+
+    if (isZIPMask(ShuffleMask, VT, WhichResult) && WhichResult != 0)
+      return convertFromScalableVector(
+          DAG, VT, DAG.getNode(AArch64ISD::ZIP2, DL, ContainerVT, Op1, Op2));
+
+    if (isUZPMask(ShuffleMask, VT, WhichResult)) {
+      unsigned Opc = (WhichResult == 0) ? AArch64ISD::UZP1 : AArch64ISD::UZP2;
+      return convertFromScalableVector(
+          DAG, VT, DAG.getNode(Opc, DL, ContainerVT, Op1, Op2));
+    }
+
+    if (isZIP_v_undef_Mask(ShuffleMask, VT, WhichResult) && WhichResult != 0)
+      return convertFromScalableVector(
+          DAG, VT, DAG.getNode(AArch64ISD::ZIP2, DL, ContainerVT, Op1, Op1));
+
+    if (isUZP_v_undef_Mask(ShuffleMask, VT, WhichResult)) {
+      unsigned Opc = (WhichResult == 0) ? AArch64ISD::UZP1 : AArch64ISD::UZP2;
+      return convertFromScalableVector(
+          DAG, VT, DAG.getNode(Opc, DL, ContainerVT, Op1, Op1));
+    }
   }
 
   return SDValue();
