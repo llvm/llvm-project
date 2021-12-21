@@ -1,3 +1,4 @@
+// REQUIRES: x86-registered-target
 // RUN: cp %s %T/debug-info-objname.cpp
 // RUN: cd %T
 
