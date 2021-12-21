@@ -157,8 +157,7 @@ bool VPlanTransforms::sinkScalarOperands(VPlan &Plan) {
       // TODO: add ".cloned" suffix to name of Clone's VPValue.
 
       Clone->insertBefore(SinkCandidate);
-      SmallVector<VPUser *, 4> Users(SinkCandidate->user_begin(),
-                                     SinkCandidate->user_end());
+      SmallVector<VPUser *, 4> Users(SinkCandidate->users());
       for (auto *U : Users) {
         auto *UI = cast<VPRecipeBase>(U);
         if (UI->getParent() == SinkTo)
@@ -265,8 +264,7 @@ bool VPlanTransforms::mergeReplicateRegions(VPlan &Plan) {
       VPValue *PredInst1 =
           cast<VPPredInstPHIRecipe>(&Phi1ToMove)->getOperand(0);
       VPValue *Phi1ToMoveV = Phi1ToMove.getVPSingleValue();
-      SmallVector<VPUser *> Users(Phi1ToMoveV->user_begin(),
-                                  Phi1ToMoveV->user_end());
+      SmallVector<VPUser *> Users(Phi1ToMoveV->users());
       for (VPUser *U : Users) {
         auto *UI = dyn_cast<VPRecipeBase>(U);
         if (!UI || UI->getParent() != Then2)
