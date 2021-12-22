@@ -133,4 +133,4 @@ FrozenRewritePatternSet::FrozenRewritePatternSet(
       pdlPatterns.takeRewriteFunctions());
 }
 
-FrozenRewritePatternSet::~FrozenRewritePatternSet() {}
+FrozenRewritePatternSet::~FrozenRewritePatternSet() = default;

@@ -54,9 +54,9 @@ void OperationName::dump() const { print(llvm::errs()); }
 // AsmParser
 //===--------------------------------------------------------------------===//
 
-AsmParser::~AsmParser() {}
-DialectAsmParser::~DialectAsmParser() {}
-OpAsmParser::~OpAsmParser() {}
+AsmParser::~AsmParser() = default;
+DialectAsmParser::~DialectAsmParser() = default;
+OpAsmParser::~OpAsmParser() = default;
 
 MLIRContext *AsmParser::getContext() const { return getBuilder().getContext(); }
 
@@ -64,13 +64,13 @@ MLIRContext *AsmParser::getContext() const { return getBuilder().getContext(); }
 // DialectAsmPrinter
 //===----------------------------------------------------------------------===//
 
-DialectAsmPrinter::~DialectAsmPrinter() {}
+DialectAsmPrinter::~DialectAsmPrinter() = default;
 
 //===----------------------------------------------------------------------===//
 // OpAsmPrinter
 //===----------------------------------------------------------------------===//
 
-OpAsmPrinter::~OpAsmPrinter() {}
+OpAsmPrinter::~OpAsmPrinter() = default;
 
 void OpAsmPrinter::printFunctionalType(Operation *op) {
   auto &os = getStream();
@@ -1221,7 +1221,7 @@ private:
 AsmState::AsmState(Operation *op, const OpPrintingFlags &printerFlags,
                    LocationMap *locationMap)
     : impl(std::make_unique<AsmStateImpl>(op, printerFlags, locationMap)) {}
-AsmState::~AsmState() {}
+AsmState::~AsmState() = default;
 
 //===----------------------------------------------------------------------===//
 // AsmPrinter::Impl
@@ -2116,7 +2116,7 @@ void AsmPrinter::Impl::printDialectType(Type type) {
 // AsmPrinter
 //===--------------------------------------------------------------------===//
 
-AsmPrinter::~AsmPrinter() {}
+AsmPrinter::~AsmPrinter() = default;
 
 raw_ostream &AsmPrinter::getStream() const {
   assert(impl && "expected AsmPrinter::getStream to be overriden");

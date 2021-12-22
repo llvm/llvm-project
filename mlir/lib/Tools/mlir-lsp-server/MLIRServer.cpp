@@ -878,7 +878,7 @@ struct lsp::MLIRServer::Impl {
 
 lsp::MLIRServer::MLIRServer(DialectRegistry &registry)
     : impl(std::make_unique<Impl>(registry)) {}
-lsp::MLIRServer::~MLIRServer() {}
+lsp::MLIRServer::~MLIRServer() = default;
 
 void lsp::MLIRServer::addOrUpdateDocument(
     const URIForFile &uri, StringRef contents, int64_t version,

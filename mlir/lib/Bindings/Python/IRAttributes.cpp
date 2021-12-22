@@ -524,7 +524,8 @@ public:
           mlirIntegerTypeIsSigned(elementType)) {
         // i32
         return bufferInfo<int32_t>(shapedType);
-      } else if (mlirIntegerTypeIsUnsigned(elementType)) {
+      }
+      if (mlirIntegerTypeIsUnsigned(elementType)) {
         // unsigned i32
         return bufferInfo<uint32_t>(shapedType);
       }
@@ -534,7 +535,8 @@ public:
           mlirIntegerTypeIsSigned(elementType)) {
         // i64
         return bufferInfo<int64_t>(shapedType);
-      } else if (mlirIntegerTypeIsUnsigned(elementType)) {
+      }
+      if (mlirIntegerTypeIsUnsigned(elementType)) {
         // unsigned i64
         return bufferInfo<uint64_t>(shapedType);
       }
@@ -544,7 +546,8 @@ public:
           mlirIntegerTypeIsSigned(elementType)) {
         // i8
         return bufferInfo<int8_t>(shapedType);
-      } else if (mlirIntegerTypeIsUnsigned(elementType)) {
+      }
+      if (mlirIntegerTypeIsUnsigned(elementType)) {
         // unsigned i8
         return bufferInfo<uint8_t>(shapedType);
       }
@@ -554,7 +557,8 @@ public:
           mlirIntegerTypeIsSigned(elementType)) {
         // i16
         return bufferInfo<int16_t>(shapedType);
-      } else if (mlirIntegerTypeIsUnsigned(elementType)) {
+      }
+      if (mlirIntegerTypeIsUnsigned(elementType)) {
         // unsigned i16
         return bufferInfo<uint16_t>(shapedType);
       }

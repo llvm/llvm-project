@@ -342,7 +342,7 @@ AffineMap Builder::getShiftedAffineMap(AffineMap map, int64_t shift) {
 // OpBuilder
 //===----------------------------------------------------------------------===//
 
-OpBuilder::Listener::~Listener() {}
+OpBuilder::Listener::~Listener() = default;
 
 /// Insert the given operation at the current insertion point and return it.
 Operation *OpBuilder::insert(Operation *op) {

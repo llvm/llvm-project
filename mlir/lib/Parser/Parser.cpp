@@ -1233,8 +1233,7 @@ public:
   std::pair<StringRef, unsigned>
   getResultName(unsigned resultNo) const override {
     // Scan for the resultID that contains this result number.
-    for (unsigned nameID = 0, e = resultIDs.size(); nameID != e; ++nameID) {
-      const auto &entry = resultIDs[nameID];
+    for (const auto &entry : resultIDs) {
       if (resultNo < std::get<1>(entry)) {
         // Don't pass on the leading %.
         StringRef name = std::get<0>(entry).drop_front();

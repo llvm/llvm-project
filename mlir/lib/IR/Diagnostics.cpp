@@ -257,7 +257,7 @@ void DiagnosticEngineImpl::emit(Diagnostic diag) {
 //===----------------------------------------------------------------------===//
 
 DiagnosticEngine::DiagnosticEngine() : impl(new DiagnosticEngineImpl()) {}
-DiagnosticEngine::~DiagnosticEngine() {}
+DiagnosticEngine::~DiagnosticEngine() = default;
 
 /// Register a new handler for diagnostics to the engine. This function returns
 /// a unique identifier for the registered handler, which can be used to
@@ -434,7 +434,7 @@ SourceMgrDiagnosticHandler::SourceMgrDiagnosticHandler(
     : SourceMgrDiagnosticHandler(mgr, ctx, llvm::errs(),
                                  std::move(shouldShowLocFn)) {}
 
-SourceMgrDiagnosticHandler::~SourceMgrDiagnosticHandler() {}
+SourceMgrDiagnosticHandler::~SourceMgrDiagnosticHandler() = default;
 
 void SourceMgrDiagnosticHandler::emitDiagnostic(Location loc, Twine message,
                                                 DiagnosticSeverity kind,
@@ -952,7 +952,7 @@ struct ParallelDiagnosticHandlerImpl : public llvm::PrettyStackTraceEntry {
 
 ParallelDiagnosticHandler::ParallelDiagnosticHandler(MLIRContext *ctx)
     : impl(new ParallelDiagnosticHandlerImpl(ctx)) {}
-ParallelDiagnosticHandler::~ParallelDiagnosticHandler() {}
+ParallelDiagnosticHandler::~ParallelDiagnosticHandler() = default;
 
 /// Set the order id for the current thread.
 void ParallelDiagnosticHandler::setOrderIDForThread(size_t orderID) {

@@ -124,7 +124,7 @@ Dialect::Dialect(StringRef name, MLIRContext *context, TypeID id)
   assert(isValidNamespace(name) && "invalid dialect namespace");
 }
 
-Dialect::~Dialect() {}
+Dialect::~Dialect() = default;
 
 /// Verify an attribute from this dialect on the argument at 'argIndex' for
 /// the region at 'regionIndex' on the given operation. Returns failure if
@@ -196,7 +196,7 @@ void Dialect::addInterface(std::unique_ptr<DialectInterface> interface) {
 // Dialect Interface
 //===----------------------------------------------------------------------===//
 
-DialectInterface::~DialectInterface() {}
+DialectInterface::~DialectInterface() = default;
 
 DialectInterfaceCollectionBase::DialectInterfaceCollectionBase(
     MLIRContext *ctx, TypeID interfaceKind) {
@@ -208,7 +208,7 @@ DialectInterfaceCollectionBase::DialectInterfaceCollectionBase(
   }
 }
 
-DialectInterfaceCollectionBase::~DialectInterfaceCollectionBase() {}
+DialectInterfaceCollectionBase::~DialectInterfaceCollectionBase() = default;
 
 /// Get the interface for the dialect of given operation, or null if one
 /// is not registered.

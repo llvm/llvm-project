@@ -188,7 +188,7 @@ PassManager::IRPrinterConfig::IRPrinterConfig(bool printModuleScope,
       printAfterOnlyOnChange(printAfterOnlyOnChange),
       printAfterOnlyOnFailure(printAfterOnlyOnFailure),
       opPrintingFlags(opPrintingFlags) {}
-PassManager::IRPrinterConfig::~IRPrinterConfig() {}
+PassManager::IRPrinterConfig::~IRPrinterConfig() = default;
 
 /// A hook that may be overridden by a derived config that checks if the IR
 /// of 'operation' should be dumped *before* the pass 'pass' has been

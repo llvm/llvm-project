@@ -198,7 +198,7 @@ public:
   // The next unique identifier to use for newly created graph nodes.
   unsigned nextNodeId = 0;
 
-  MemRefDependenceGraph() {}
+  MemRefDependenceGraph() = default;
 
   // Initializes the dependence graph based on operations in 'f'.
   // Returns true on success, false otherwise.

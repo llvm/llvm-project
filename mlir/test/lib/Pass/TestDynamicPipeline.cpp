@@ -32,7 +32,7 @@ public:
     pm.getDependentDialects(registry);
   }
 
-  TestDynamicPipelinePass(){};
+  TestDynamicPipelinePass() = default;
   TestDynamicPipelinePass(const TestDynamicPipelinePass &) {}
 
   void runOnOperation() override {

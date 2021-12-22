@@ -56,7 +56,7 @@ void AffineParallelize::runOnFunction() {
   f.walk<WalkOrder::PreOrder>([&](AffineForOp loop) {
     SmallVector<LoopReduction> reductions;
     if (isLoopParallel(loop, parallelReductions ? &reductions : nullptr))
-      parallelizableLoops.push_back({loop, std::move(reductions)});
+      parallelizableLoops.emplace_back(loop, std::move(reductions));
   });
 
   for (const ParallelizationCandidate &candidate : parallelizableLoops) {

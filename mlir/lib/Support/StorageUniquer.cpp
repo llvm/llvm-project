@@ -332,7 +332,7 @@ struct StorageUniquerImpl {
 } // namespace mlir
 
 StorageUniquer::StorageUniquer() : impl(new StorageUniquerImpl()) {}
-StorageUniquer::~StorageUniquer() {}
+StorageUniquer::~StorageUniquer() = default;
 
 /// Set the flag specifying if multi-threading is disabled within the uniquer.
 void StorageUniquer::disableMultithreading(bool disable) {

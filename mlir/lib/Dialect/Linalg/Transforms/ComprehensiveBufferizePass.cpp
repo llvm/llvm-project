@@ -33,7 +33,7 @@ namespace {
 struct LinalgComprehensiveModuleBufferize
     : public LinalgComprehensiveModuleBufferizeBase<
           LinalgComprehensiveModuleBufferize> {
-  LinalgComprehensiveModuleBufferize() {}
+  LinalgComprehensiveModuleBufferize() = default;
 
   LinalgComprehensiveModuleBufferize(
       const LinalgComprehensiveModuleBufferize &p) {}

@@ -756,13 +756,13 @@ void ForwardDataFlowSolver::join(Operation *owner, AbstractLatticeElement &to,
 // AbstractLatticeElement
 //===----------------------------------------------------------------------===//
 
-AbstractLatticeElement::~AbstractLatticeElement() {}
+AbstractLatticeElement::~AbstractLatticeElement() = default;
 
 //===----------------------------------------------------------------------===//
 // ForwardDataFlowAnalysisBase
 //===----------------------------------------------------------------------===//
 
-ForwardDataFlowAnalysisBase::~ForwardDataFlowAnalysisBase() {}
+ForwardDataFlowAnalysisBase::~ForwardDataFlowAnalysisBase() = default;
 
 AbstractLatticeElement &
 ForwardDataFlowAnalysisBase::getLatticeElement(Value value) {

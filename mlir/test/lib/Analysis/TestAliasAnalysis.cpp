@@ -108,11 +108,11 @@ struct TestAliasAnalysisModRefPass
     });
 
     // Check for aliasing behavior between each of the values.
-    for (auto it = valsToCheck.begin(), e = valsToCheck.end(); it != e; ++it) {
+    for (auto &it : valsToCheck) {
       getOperation()->walk([&](Operation *op) {
         if (!op->getAttr("test.ptr"))
           return;
-        printModRefResult(aliasAnalysis.getModRef(op, *it), op, *it);
+        printModRefResult(aliasAnalysis.getModRef(op, it), op, it);
       });
     }
   }

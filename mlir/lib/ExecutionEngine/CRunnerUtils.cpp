@@ -109,7 +109,7 @@ extern "C" void print_flops(double flops) {
 extern "C" double rtclock() {
 #ifndef _WIN32
   struct timeval tp;
-  int stat = gettimeofday(&tp, NULL);
+  int stat = gettimeofday(&tp, nullptr);
   if (stat != 0)
     fprintf(stderr, "Error returning time from gettimeofday: %d\n", stat);
   return (tp.tv_sec + tp.tv_usec * 1.0e-6);

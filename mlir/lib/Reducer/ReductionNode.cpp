@@ -111,7 +111,7 @@ void ReductionNode::update(std::pair<Tester::Interestingness, size_t> result) {
   if (interesting == Tester::Interestingness::True) {
     // This module may has been updated. Reset the range.
     ranges.clear();
-    ranges.push_back({0, std::distance(region->op_begin(), region->op_end())});
+    ranges.emplace_back(0, std::distance(region->op_begin(), region->op_end()));
   } else {
     // Release the uninteresting module to save some memory.
     module.release()->erase();

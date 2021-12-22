@@ -157,7 +157,7 @@ private:
 LLVM::TypeFromLLVMIRTranslator::TypeFromLLVMIRTranslator(MLIRContext &context)
     : impl(new detail::TypeFromLLVMIRTranslatorImpl(context)) {}
 
-LLVM::TypeFromLLVMIRTranslator::~TypeFromLLVMIRTranslator() {}
+LLVM::TypeFromLLVMIRTranslator::~TypeFromLLVMIRTranslator() = default;
 
 Type LLVM::TypeFromLLVMIRTranslator::translateType(llvm::Type *type) {
   return impl->translateType(type);

@@ -91,7 +91,7 @@ void AsmParserState::Impl::resolveSymbolUses() {
 //===----------------------------------------------------------------------===//
 
 AsmParserState::AsmParserState() : impl(std::make_unique<Impl>()) {}
-AsmParserState::~AsmParserState() {}
+AsmParserState::~AsmParserState() = default;
 AsmParserState &AsmParserState::operator=(AsmParserState &&other) {
   impl = std::move(other.impl);
   return *this;

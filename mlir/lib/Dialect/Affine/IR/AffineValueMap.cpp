@@ -99,4 +99,4 @@ ArrayRef<Value> AffineValueMap::getOperands() const {
 
 AffineMap AffineValueMap::getAffineMap() const { return map.getAffineMap(); }
 
-AffineValueMap::~AffineValueMap() {}
+AffineValueMap::~AffineValueMap() = default;

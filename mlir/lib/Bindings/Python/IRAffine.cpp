@@ -676,7 +676,7 @@ void mlir::python::populateIRAffine(py::module &m) {
                     std::vector<PyAffineMap> res;
                     res.reserve(compressed.size());
                     for (auto m : compressed)
-                      res.push_back(PyAffineMap(context->getRef(), m));
+                      res.emplace_back(context->getRef(), m);
                     return res;
                   })
       .def_property_readonly(
