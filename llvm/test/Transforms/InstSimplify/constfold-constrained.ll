@@ -282,6 +282,7 @@ entry:
 define double @fadd_05() #0 {
 ; CHECK-LABEL: @fadd_05(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double 1.000000e+00, double 2.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
 ; CHECK-NEXT:    ret double 3.000000e+00
 ;
 entry:
@@ -293,6 +294,7 @@ entry:
 define double @fadd_06() #0 {
 ; CHECK-LABEL: @fadd_06(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double 1.000000e+00, double 2.000000e+00, metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR0]]
 ; CHECK-NEXT:    ret double 3.000000e+00
 ;
 entry:

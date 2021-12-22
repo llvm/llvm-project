@@ -428,7 +428,7 @@ class CollectReachableCallees {
     //
     // FIXME: Need to handle bit-casted function pointers.
     //
-    SmallVector<CallGraphNode *, 8> CGNStack(df_begin(KCGN), df_end(KCGN));
+    SmallVector<CallGraphNode *, 8> CGNStack(depth_first(KCGN));
     SmallPtrSet<CallGraphNode *, 8> VisitedCGNodes;
     while (!CGNStack.empty()) {
       auto *CGN = CGNStack.pop_back_val();
