@@ -2,7 +2,7 @@
 ; REQUIRES: have_tf_api
 ; Generate mock model
 ; RUN: rm -rf %t
-; RUN: %python %S/../../../../lib/Analysis/models/generate_mock_model.py %S/../../../../lib/Analysis/models/inlining/config.py %t
+; RUN: %python %S/../../../../lib/Analysis/models/gen-inline-oz-test-model.py %t
 ;
 ; RUN: opt -enable-ml-inliner=development -passes=scc-oz-module-inliner -training-log=- -tfutils-text-log -ml-inliner-model-under-training=%t -ml-inliner-ir2native-model=%S/../../../../unittests/Analysis/Inputs/ir2native_x86_64_model -S < %s | FileCheck %s 
 ; RUN: opt -enable-ml-inliner=development -passes=scc-oz-module-inliner -training-log=- -tfutils-text-log -ml-inliner-model-under-training=%t -ml-inliner-ir2native-model=%S/../../../../unittests/Analysis/Inputs/ir2native_x86_64_model -ml-inliner-output-spec-override=%S/Inputs/test_output_spec.json -S < %s | FileCheck %s --check-prefixes=EXTRA-OUTPUTS,CHECK

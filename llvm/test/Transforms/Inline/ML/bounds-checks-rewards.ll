@@ -8,7 +8,7 @@
 ;
 ; Generate mock model
 ; RUN: rm -rf %t
-; RUN: %python %S/../../../../lib/Analysis/models/generate_mock_model.py %S/../../../../lib/Analysis/models/inlining/config.py %t
+; RUN: %python %S/../../../../lib/Analysis/models/gen-inline-oz-test-model.py %t
 ;
 ; When the bounds are very wide ("no bounds"), all inlinings happen.
 ; RUN: opt -passes=scc-oz-module-inliner -ml-inliner-ir2native-model=%S/../../../../unittests/Analysis/Inputs/ir2native_x86_64_model -ml-inliner-model-under-training=%t -training-log=- -tfutils-text-log -enable-ml-inliner=development -ml-advisor-size-increase-threshold=10.0 -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=NOBOUNDS
