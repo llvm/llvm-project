@@ -25,7 +25,7 @@ TEST(DWARFDie, manualExtractDump) {
   uint16_t Version = 4;
   Triple Triple = getDefaultTargetTripleForAddrSize(sizeof(AddrType));
   if (!isConfigurationSupported(Triple))
-    return;
+    GTEST_SKIP();
 
   auto ExpectedDG = dwarfgen::Generator::create(Triple, Version);
   ASSERT_THAT_EXPECTED(ExpectedDG, Succeeded());

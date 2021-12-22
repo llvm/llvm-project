@@ -51,7 +51,7 @@ void DWARFExpressionCompactPrinterTest::TestExprPrinter(
     ArrayRef<uint8_t> ExprData, StringRef Expected) {
   // If we didn't build ARM, do not run the test.
   if (!MRI)
-    return;
+    GTEST_SKIP();
 
   // Print the expression, passing in the subprogram DIE, and check that the
   // result is as expected.
