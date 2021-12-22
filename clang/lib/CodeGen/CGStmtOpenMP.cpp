@@ -24,10 +24,13 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/PrettyStackTrace.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/Support/AtomicOrdering.h"
 using namespace clang;
 using namespace CodeGen;
@@ -4431,6 +4434,53 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
         UntiedLocalVars;
     // Set proper addresses for generated private copies.
     OMPPrivateScope Scope(CGF);
+    // Generate debug info for variables present in shared clause.
+    if (auto *DI = CGF.getDebugInfo()) {
+      llvm::SmallDenseMap<const VarDecl *, FieldDecl *> CaptureFields =
+          CGF.CapturedStmtInfo->getCaptureFields();
+      llvm::Value *ContextValue = CGF.CapturedStmtInfo->getContextValue();
+      if (CaptureFields.size() && ContextValue) {
+        unsigned CharWidth = CGF.getContext().getCharWidth();
+        // The shared variables are packed together as members of structure.
+        // So the address of each shared variable can be computed by adding
+        // offset of it (within record) to the base address of record. For each
+        // shared variable, debug intrinsic llvm.dbg.declare is generated with
+        // appropriate expressions (DIExpression).
+        // Ex:
+        //  %12 = load %struct.anon*, %struct.anon** %__context.addr.i
+        //  call void @llvm.dbg.declare(metadata %struct.anon* %12,
+        //            metadata !svar1,
+        //            metadata !DIExpression(DW_OP_deref))
+        //  call void @llvm.dbg.declare(metadata %struct.anon* %12,
+        //            metadata !svar2,
+        //            metadata !DIExpression(DW_OP_plus_uconst, 8, DW_OP_deref))
+        for (auto It = CaptureFields.begin(); It != CaptureFields.end(); ++It) {
+          const VarDecl *SharedVar = It->first;
+          RecordDecl *CaptureRecord = It->second->getParent();
+          const ASTRecordLayout &Layout =
+              CGF.getContext().getASTRecordLayout(CaptureRecord);
+          unsigned Offset =
+              Layout.getFieldOffset(It->second->getFieldIndex()) / CharWidth;
+          (void)DI->EmitDeclareOfAutoVariable(SharedVar, ContextValue,
+                                              CGF.Builder, false);
+          llvm::Instruction &Last = CGF.Builder.GetInsertBlock()->back();
+          // Get the call dbg.declare instruction we just created and update
+          // its DIExpression to add offset to base address.
+          if (auto DDI = dyn_cast<llvm::DbgVariableIntrinsic>(&Last)) {
+            SmallVector<uint64_t, 8> Ops;
+            // Add offset to the base address if non zero.
+            if (Offset) {
+              Ops.push_back(llvm::dwarf::DW_OP_plus_uconst);
+              Ops.push_back(Offset);
+            }
+            Ops.push_back(llvm::dwarf::DW_OP_deref);
+            auto &Ctx = DDI->getContext();
+            llvm::DIExpression *DIExpr = llvm::DIExpression::get(Ctx, Ops);
+            Last.setOperand(2, llvm::MetadataAsValue::get(Ctx, DIExpr));
+          }
+        }
+      }
+    }
     llvm::SmallVector<std::pair<const VarDecl *, Address>, 16> FirstprivatePtrs;
     if (!Data.PrivateVars.empty() || !Data.FirstprivateVars.empty() ||
         !Data.LastprivateVars.empty() || !Data.PrivateLocals.empty()) {
