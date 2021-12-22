@@ -5370,4 +5370,3 @@ int main() {
 // CHECK8-NEXT:    call void @__tgt_register_requires(i64 1)
 // CHECK8-NEXT:    ret void
 //
-//
