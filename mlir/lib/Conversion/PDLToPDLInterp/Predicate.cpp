@@ -15,7 +15,7 @@ using namespace mlir::pdl_to_pdl_interp;
 // Positions
 //===----------------------------------------------------------------------===//
 
-Position::~Position() {}
+Position::~Position() = default;
 
 /// Returns the depth of the first ancestor operation position.
 unsigned Position::getOperationDepth() const {

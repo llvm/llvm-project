@@ -41,8 +41,8 @@ struct LoopUnroll : public AffineLoopUnrollBase<LoopUnroll> {
 
   LoopUnroll() : getUnrollFactor(nullptr) {}
   LoopUnroll(const LoopUnroll &other)
-      : AffineLoopUnrollBase<LoopUnroll>(other),
-        getUnrollFactor(other.getUnrollFactor) {}
+
+      = default;
   explicit LoopUnroll(
       Optional<unsigned> unrollFactor = None, bool unrollUpToFactor = false,
       bool unrollFull = false,

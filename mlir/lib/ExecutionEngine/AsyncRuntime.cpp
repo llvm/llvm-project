@@ -289,7 +289,7 @@ extern "C" int64_t mlirAsyncRuntimeAddTokenToGroup(AsyncToken *token,
     // then, and re-ackquire the lock.
     group->addRef();
 
-    token->awaiters.push_back([group, onTokenReady]() {
+    token->awaiters.emplace_back([group, onTokenReady]() {
       // Make sure that `dropRef` does not destroy the mutex owned by the lock.
       {
         std::unique_lock<std::mutex> lockGroup(group->mu);
@@ -408,7 +408,7 @@ extern "C" void mlirAsyncRuntimeAwaitTokenAndExecute(AsyncToken *token,
     lock.unlock();
     execute();
   } else {
-    token->awaiters.push_back([execute]() { execute(); });
+    token->awaiters.emplace_back([execute]() { execute(); });
   }
 }
 
@@ -421,7 +421,7 @@ extern "C" void mlirAsyncRuntimeAwaitValueAndExecute(AsyncValue *value,
     lock.unlock();
     execute();
   } else {
-    value->awaiters.push_back([execute]() { execute(); });
+    value->awaiters.emplace_back([execute]() { execute(); });
   }
 }
 
@@ -434,7 +434,7 @@ extern "C" void mlirAsyncRuntimeAwaitAllInGroupAndExecute(AsyncGroup *group,
     lock.unlock();
     execute();
   } else {
-    group->awaiters.push_back([execute]() { execute(); });
+    group->awaiters.emplace_back([execute]() { execute(); });
   }
 }
 

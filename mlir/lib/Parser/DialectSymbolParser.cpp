@@ -32,7 +32,7 @@ public:
   CustomDialectAsmParser(StringRef fullSpec, Parser &parser)
       : AsmParserImpl<DialectAsmParser>(parser.getToken().getLoc(), parser),
         fullSpec(fullSpec) {}
-  ~CustomDialectAsmParser() override {}
+  ~CustomDialectAsmParser() override = default;
 
   /// Returns the full specification of the symbol being parsed. This allows
   /// for using a separate parser if necessary.

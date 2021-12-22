@@ -180,7 +180,7 @@ private:
 LLVM::TypeToLLVMIRTranslator::TypeToLLVMIRTranslator(llvm::LLVMContext &context)
     : impl(new detail::TypeToLLVMIRTranslatorImpl(context)) {}
 
-LLVM::TypeToLLVMIRTranslator::~TypeToLLVMIRTranslator() {}
+LLVM::TypeToLLVMIRTranslator::~TypeToLLVMIRTranslator() = default;
 
 llvm::Type *LLVM::TypeToLLVMIRTranslator::translateType(Type type) {
   return impl->translateType(type);

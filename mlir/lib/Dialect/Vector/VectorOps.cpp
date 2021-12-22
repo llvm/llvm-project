@@ -702,7 +702,7 @@ getDimMap(ArrayRef<AffineMap> indexingMaps, ArrayAttr iteratorTypes,
     int64_t lhsDim = getResultIndex(indexingMaps[0], targetExpr);
     int64_t rhsDim = getResultIndex(indexingMaps[1], targetExpr);
     if (lhsDim >= 0 && rhsDim >= 0)
-      dimMap.push_back({lhsDim, rhsDim});
+      dimMap.emplace_back(lhsDim, rhsDim);
   }
   return dimMap;
 }
