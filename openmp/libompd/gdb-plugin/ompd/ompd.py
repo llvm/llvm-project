@@ -194,7 +194,12 @@ class ompd_icvs(gdb.Command):
                                 else:
                                         icv_value = ompdModule.call_ompd_get_icv_from_scope(handle, \
                                                     scope, addr_space.icv_map[icv_name][0])
-                                        print('%-31s %-26s %d' % (icv_name, ompd_scope_map[scope], icv_value))
+                                        if icv_value is None:
+                                                icv_string = ompdModule.call_ompd_get_icv_string_from_scope( \
+                                                             handle, scope, addr_space.icv_map[icv_name][0])
+                                                print('%-31s %-26s %s' % (icv_name, ompd_scope_map[scope], icv_string))
+                                        else:
+                                            print('%-31s %-26s %d' % (icv_name, ompd_scope_map[scope], icv_value))
                 except:
                        traceback.print_exc()
 

@@ -682,9 +682,13 @@ static PyObject* call_ompd_initialize(PyObject* self, PyObject* noargs)
                 };
 
         ompd_rc_t (*my_ompd_init)(ompd_word_t version, ompd_callbacks_t*) = dlsym(ompd_library, "ompd_initialize");
-        ompd_rc_t returnInit = my_ompd_init(42, &table);
+        if (!my_ompd_init) {
+            _printf("ompd_initialize symbol missing");
+	    return NULL;
+        }
+        ompd_rc_t returnInit = my_ompd_init(201811, &table);
         if(returnInit != ompd_rc_ok) {
-                _printf("An error occurred when calling ompd_initialize! Error code: %d", returnInit);
+            _printf("An error occurred when calling ompd_initialize! Error code: %d", returnInit);
         }
         ompd_address_space_handle_t* addr_space = NULL;
         ompd_rc_t (*my_proc_init)(ompd_address_space_context_t*, ompd_address_space_handle_t**)  = dlsym(ompd_library, "ompd_process_initialize");

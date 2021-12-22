@@ -11,12 +11,20 @@
  * This implements an OMPD DLL for the LLVM OpenMP runtime library.
  */
 
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #define NDEBUG 1
 
 #include "omp-debug.h"
+#include "TargetValue.h"
 #include "omp.h"
 #include "ompd-private.h"
-#include "TargetValue.h"
 #include <assert.h>
 #include <cstdio>
 #include <inttypes.h>
@@ -25,13 +33,24 @@
 
 ompd_device_type_sizes_t type_sizes;
 uint64_t ompd_state;
+ompd_rc_t ompd_get_num_threads(
+    ompd_parallel_handle_t *parallel_handle, /* IN: OpenMP parallel handle */
+    ompd_word_t *val /* OUT: number of threads */);
 
 /* --- OMPD functions ------------------------------------------------------- */
 
-/* --- 1 Initialization ----------------------------------------------------- */
+/* --- Initialization ------------------------------------------------------- */
 
 ompd_rc_t ompd_initialize(ompd_word_t version, const ompd_callbacks_t *table) {
-  ompd_rc_t ret = table ? ompd_rc_ok : ompd_rc_bad_input;
+  ompd_rc_t ret = ompd_rc_ok;
+  ompd_word_t ompd_version;
+
+  if (!table)
+    return ompd_rc_bad_input;
+
+  ompd_get_api_version(&ompd_version);
+  if (version != ompd_version)
+    return ompd_rc_unsupported;
   callbacks = table;
   TValue::callbacks = table;
   __ompd_init_icvs(table);
@@ -42,18 +61,16 @@ ompd_rc_t ompd_initialize(ompd_word_t version, const ompd_callbacks_t *table) {
 
 ompd_rc_t ompd_finalize(void) { return ompd_rc_ok; }
 
-ompd_rc_t
-ompd_process_initialize(ompd_address_space_context_t
-                            *context, /* IN: debugger handle for the target */
-                        ompd_address_space_handle_t *
-                            *handle /* OUT: ompd handle for the target */
-                        ) {
+ompd_rc_t ompd_process_initialize(
+    ompd_address_space_context_t
+        *context, /* IN: debugger handle for the target */
+    ompd_address_space_handle_t **handle /* OUT: ompd handle for the target */
+) {
   if (!context)
     return ompd_rc_bad_input;
   if (!handle)
     return ompd_rc_bad_input;
 
-  int rtl_version;
   ompd_rc_t ret = initTypeSizes(context);
   if (ret != ompd_rc_ok)
     return ret;
@@ -64,11 +81,12 @@ ompd_process_initialize(ompd_address_space_context_t
   if (ret != ompd_rc_ok)
     return ret;
   ret = callbacks->alloc_memory(sizeof(ompd_address_space_handle_t),
-                                 (void **)(handle));
+                                (void **)(handle));
   if (ret != ompd_rc_ok)
     return ret;
-  if (!handle)
+  if (!*handle)
     return ompd_rc_error;
+
   (*handle)->context = context;
   (*handle)->kind = OMPD_DEVICE_KIND_HOST;
 
@@ -77,17 +95,22 @@ ompd_process_initialize(ompd_address_space_context_t
 
 ompd_rc_t
 ompd_get_omp_version(ompd_address_space_handle_t
-                            *address_space, /* IN: handle for the address space */
+                         *address_space, /* IN: handle for the address space */
                      ompd_word_t *version) {
   if (!address_space)
     return ompd_rc_stale_handle;
+  if (!version)
+    return ompd_rc_bad_input;
+
   ompd_address_space_context_t *context = address_space->context;
   ompd_rc_t ret;
 
   if (!context)
     return ompd_rc_stale_handle;
 
-  assert(callbacks && "Callback table not initialized!");
+  if (!callbacks) {
+    return ompd_rc_callback_error;
+  }
 
   ret = TValue(context, "__kmp_openmp_version")
             .castBase(ompd_type_int)
@@ -100,85 +123,62 @@ ompd_rc_t ompd_get_omp_version_string(
         *address_space, /* IN: handle for the address space */
     const char **string) {
   if (!address_space)
+    return ompd_rc_stale_handle;
+  if (!string)
     return ompd_rc_bad_input;
-  static const char *omp_version = "";
+  ompd_address_space_context_t *context = address_space->context;
+  ompd_word_t ver;
+  ompd_rc_t ret;
+  char *omp_version;
+  ret = callbacks->alloc_memory(10, /* max digit can be store on int*/
+                                (void **)&omp_version);
+
+  if (ret != ompd_rc_ok)
+    return ret;
+
+  ret = TValue(context, "__kmp_openmp_version")
+            .castBase(ompd_type_int)
+            .getValue(ver);
+  if (ret != ompd_rc_ok)
+    return ret;
+
+  sprintf(omp_version, "%ld", ver);
   *string = omp_version;
-  return ompd_rc_ok;
+  return ret;
 }
 
 ompd_rc_t ompd_rel_address_space_handle(
     ompd_address_space_handle_t
         *addr_handle /* IN: handle for the address space */
-    ) {
+) {
   if (!addr_handle)
-    return ompd_rc_bad_input;
+    return ompd_rc_stale_handle;
 
   ompd_rc_t ret = callbacks->free_memory((void *)(addr_handle));
-//  delete addr_handle;
+  //  delete addr_handle;
   return ret;
 }
 
-ompd_rc_t ompd_device_initialize(
-    ompd_address_space_handle_t *process_handle,
-    ompd_address_space_context_t *device_context,
-    ompd_device_t kind,
-    ompd_size_t sizeof_id,
-    void *id,
-    ompd_address_space_handle_t **device_handle
-    )
-{
+ompd_rc_t ompd_device_initialize(ompd_address_space_handle_t *process_handle,
+                                 ompd_address_space_context_t *device_context,
+                                 ompd_device_t kind, ompd_size_t sizeof_id,
+                                 void *id,
+                                 ompd_address_space_handle_t **device_handle) {
   if (!device_context)
     return ompd_rc_bad_input;
-
-  ompd_rc_t ret;
-  uint64_t ompd_num_cuda_devices;
-
-  ret = TValue(process_handle->context, "ompd_num_cuda_devices").
-        castBase(ompd_type_long_long).
-        getValue(ompd_num_cuda_devices);
-  if (ret != ompd_rc_ok)
-    return ret;
-
-
-  for (uint64_t i = 0; i < ompd_num_cuda_devices; i++) {
-    uint64_t cuda_ctx;
-
-    ret = TValue(process_handle->context, "ompd_CudaDeviceDataArray").
-          cast("DeviceDataTy",1).
-          getArrayElement(i).
-          access("Context").
-          castBase(ompd_type_long_long).
-          getValue(cuda_ctx);
-
-    if ( ret != ompd_rc_ok )
-      continue;
-
-    if (cuda_ctx == *((uint64_t *)id)) {
-      ret = callbacks->alloc_memory(sizeof(ompd_address_space_handle_t),
-                                     (void **)(device_handle));
-      if (ret != ompd_rc_ok)
-        return ret;
-      if (!device_handle)
-        return ompd_rc_error;
-      (*device_handle)->context = device_context;
-      (*device_handle)->kind = OMPD_DEVICE_KIND_CUDA;
-      (*device_handle)->id = (uint64_t)id;
-      return ompd_rc_ok;
-    }
-  }
 
   return ompd_rc_unavailable;
 }
 
-/* --- 4.5 Thread Handles --------------------------------------------------- */
+/* --- Thread Handles ------------------------------------------------------- */
 
 /* thread_handle is of type (kmp_base_info_t) */
 
 ompd_rc_t ompd_get_thread_in_parallel(
     ompd_parallel_handle_t *parallel_handle, /* IN: OpenMP parallel handle */
-    int thread_num, /* OUT: number of handles in the array */
+    int thread_num, /* IN: Thread num, handle of which is to be returned */
     ompd_thread_handle_t **thread_handle /* OUT: handle */
-    ) {
+) {
   if (!parallel_handle)
     return ompd_rc_stale_handle;
   if (!parallel_handle->ah)
@@ -189,77 +189,44 @@ ompd_rc_t ompd_get_thread_in_parallel(
   if (!context)
     return ompd_rc_stale_handle;
 
-  assert(callbacks && "Callback table not initialized!");
-
-  ompd_address_t taddr={OMPD_SEGMENT_UNSPECIFIED,0};
-
-  if (parallel_handle->ah->kind == OMPD_DEVICE_KIND_CUDA) {
-    uint16_t thread_idx;
-    // We cannot use the task descriptor associated with the parallel info as
-    // their task might not be currently active
-    // So to get the current thread, we access the tasks thread info and get
-    // get its threadIdx.x
-    auto TaskDescr  = TValue(context, parallel_handle->th)
-                        .cast("ompd_nvptx_parallel_info_t", 0,
-                              OMPD_SEGMENT_CUDA_PTX_GLOBAL)
-                        .access("parallel_tasks")
-                        .cast("omptarget_nvptx_TaskDescr", 1,
-                              OMPD_SEGMENT_CUDA_PTX_GLOBAL)
-                        .getArrayElement(thread_num);
-
-    ret = TaskDescr.access("ompd_thread_info")
-                   .cast("ompd_nvptx_thread_info_t", 0,
-                         OMPD_SEGMENT_CUDA_PTX_GLOBAL)
-                   .access("threadIdx_x")
-                  .castBase(ompd_type_short)
-                  .getValue(thread_idx);
-
-    if (ret != ompd_rc_ok) {
-      return ret;
-    }
-
-    ret = TValue(context, NULL,
-                 "omptarget_nvptx_threadPrivateContext",
-                 OMPD_SEGMENT_CUDA_PTX_SHARED)
-            .cast("omptarget_nvptx_ThreadPrivateContext", 1,
-                  OMPD_SEGMENT_CUDA_PTX_SHARED)
-            .access("topTaskDescr")
-            .cast("omptarget_nvptx_TaskDescr", 2,
-                  OMPD_SEGMENT_CUDA_PTX_GLOBAL)
-            .getPtrArrayElement(thread_idx)
-            .dereference()
-            .getAddress(&taddr);
-
-    if (taddr.address == 0 && thread_idx % 32 == 0) {
-      ret = TaskDescr.getAddress(&taddr);
-    }
-  } else {
-    ret = TValue(context, parallel_handle->th) /* t */
-              .cast("kmp_base_team_t", 0)
-              .access("t_threads") /*t.t_threads*/
-              .cast("kmp_info_t", 2)
-              .getArrayElement(thread_num) /*t.t_threads[nth_handle]*/
-              .access("th")                /*t.t_threads[i]->th*/
-              .getAddress(&taddr);
+  if (!callbacks) {
+    return ompd_rc_callback_error;
   }
+
+  ompd_word_t team_size_var;
+  ret = ompd_get_num_threads(parallel_handle, &team_size_var);
+  if (ret != ompd_rc_ok)
+    return ret;
+  if (thread_num < 0 || thread_num >= team_size_var)
+    return ompd_rc_bad_input;
+
+  ompd_address_t taddr = {OMPD_SEGMENT_UNSPECIFIED, 0};
+
+  ret = TValue(context, parallel_handle->th) /* t */
+            .cast("kmp_base_team_t", 0)
+            .access("t_threads") /*t.t_threads*/
+            .cast("kmp_info_t", 2)
+            .getArrayElement(thread_num) /*t.t_threads[nth_handle]*/
+            .access("th")                /*t.t_threads[i]->th*/
+            .getAddress(&taddr);
 
   if (ret != ompd_rc_ok)
     return ret;
 
   ret = callbacks->alloc_memory(sizeof(ompd_thread_handle_t),
-                                 (void **)(thread_handle));
+                                (void **)(thread_handle));
   if (ret != ompd_rc_ok)
     return ret;
 
   (*thread_handle)->th = taddr;
   (*thread_handle)->ah = parallel_handle->ah;
-  (*thread_handle)->cuda_kernel_info = parallel_handle->cuda_kernel_info;
   return ret;
 }
 
 ompd_rc_t ompd_rel_thread_handle(
-    ompd_thread_handle_t *thread_handle /* IN: OpenMP parallel handle */
-    ) {
+    ompd_thread_handle_t
+        *thread_handle /* IN: OpenMP thread handle to be released */
+) {
   if (!thread_handle)
     return ompd_rc_stale_handle;
   ompd_rc_t ret = callbacks->free_memory((void *)(thread_handle));
@@ -275,37 +242,23 @@ ompd_rc_t ompd_thread_handle_compare(ompd_thread_handle_t *thread_handle_1,
     return ompd_rc_stale_handle;
   if (!thread_handle_2)
     return ompd_rc_stale_handle;
+  if (!cmp_value)
+    return ompd_rc_bad_input;
   if (thread_handle_1->ah->kind != thread_handle_2->ah->kind)
     return ompd_rc_bad_input;
   *cmp_value = thread_handle_1->th.address - thread_handle_2->th.address;
-  if (*cmp_value == 0 && thread_handle_1->ah->kind == OMPD_DEVICE_KIND_CUDA) {
-    *cmp_value = thread_handle_1->cuda_kernel_info->cudaDevId -
-        thread_handle_2->cuda_kernel_info->cudaDevId;
-    if (*cmp_value == 0) {
-      *cmp_value = thread_handle_1->cuda_kernel_info->cudaContext -
-          thread_handle_2->cuda_kernel_info->cudaContext;
-    }
-    if (*cmp_value == 0) {
-      *cmp_value = thread_handle_1->cuda_kernel_info->warpSize -
-          thread_handle_2->cuda_kernel_info->warpSize;
-    }
-    if (*cmp_value == 0) {
-      *cmp_value = thread_handle_1->cuda_kernel_info->gridId -
-          thread_handle_2->cuda_kernel_info->gridId;
-    }
-  }
 
   return ompd_rc_ok;
 }
 
-/* --- 4.6 Parallel Region Handles------------------------------------------- */
+/* --- Parallel Region Handles----------------------------------------------- */
 
 /* parallel_handle is of type (kmp_base_team_t)*/
 
 ompd_rc_t ompd_get_curr_parallel_handle(
     ompd_thread_handle_t *thread_handle,     /* IN: OpenMP thread handle*/
     ompd_parallel_handle_t **parallel_handle /* OUT: OpenMP parallel handle */
-    ) {
+) {
   if (!thread_handle)
     return ompd_rc_stale_handle;
   if (!thread_handle->ah)
@@ -315,74 +268,84 @@ ompd_rc_t ompd_get_curr_parallel_handle(
   if (!context || !thread_context)
     return ompd_rc_stale_handle;
 
-  assert(callbacks && "Callback table not initialized!");
+  if (!callbacks) {
+    return ompd_rc_callback_error;
+  }
 
   ompd_rc_t ret;
 
-  if (thread_handle->ah->kind == OMPD_DEVICE_KIND_CUDA) {
-    ompd_address_t taddr;
-    TValue ph;
-    // The ompd_parallel_info_t we need is only present in the previous task
-    // of an implicit task.
-    uint16_t task_is_implicit = 0;
-    ret = ompd_rc_ok;
-    auto possibleTaskDescr = TValue(context, thread_handle->th)
-                              .cast("omptarget_nvptx_TaskDescr", 0,
-                                     OMPD_SEGMENT_CUDA_PTX_GLOBAL);
+  ompd_address_t taddr = {OMPD_SEGMENT_UNSPECIFIED, 0},
+                 lwt = {OMPD_SEGMENT_UNSPECIFIED, 0};
 
-    while (!task_is_implicit && ret == ompd_rc_ok) {
-      ret = possibleTaskDescr.access("ompd_thread_info")
-                             .cast("ompd_nvptx_thread_info_t", 0,
-                                   OMPD_SEGMENT_CUDA_PTX_GLOBAL)
-                             .access("task_implicit")
-                             .castBase()
-                             .getValue(task_is_implicit);
-      possibleTaskDescr = possibleTaskDescr.access("prev")
-                                           .cast("omptarget_nvptx_TaskDescr",
-                                                 1, OMPD_SEGMENT_CUDA_PTX_GLOBAL);
-      ret = possibleTaskDescr.dereference().getAddress(&taddr);
-    }
+  TValue teamdata = TValue(context, thread_handle->th) /*__kmp_threads[t]->th*/
+                        .cast("kmp_base_info_t")
+                        .access("th_team") /*__kmp_threads[t]->th.th_team*/
+                        .cast("kmp_team_p", 1)
+                        .access("t"); /*__kmp_threads[t]->th.th_team->t*/
 
-    if (ret != ompd_rc_ok) {
-      if (taddr.address == 0) {
-        ph = TValue(context, NULL, "omptarget_nvptx_threadPrivateContext")
-                 .cast("omptarget_nvptx_ThreadPrivateContext", 1,
-                       OMPD_SEGMENT_CUDA_PTX_SHARED)
-                  .access("ompd_levelZeroParallelInfo")
-                  .cast("ompd_nvptx_parallel_info_t", 0,
-                        OMPD_SEGMENT_CUDA_PTX_GLOBAL);
-      } else {
-        return ret;
-      }
-    } else {
-      ph = possibleTaskDescr.access("ompd_thread_info")
-               .cast("ompd_nvptx_thread_info_t", 0,
-                      OMPD_SEGMENT_CUDA_PTX_GLOBAL)
-               .access("enclosed_parallel")
-               .cast("ompd_nvptx_parallel_info_t", 0,
-                     OMPD_SEGMENT_CUDA_PTX_GLOBAL);
-    }
+  ret = teamdata.getAddress(&taddr);
+  if (ret != ompd_rc_ok)
+    return ret;
 
-    ret = ph.getAddress(&taddr);
-    if (ret != ompd_rc_ok)
-      return ret;
+  lwt.segment = OMPD_SEGMENT_UNSPECIFIED;
+  ret = teamdata.cast("kmp_base_team_t", 0)
+            .access("ompt_serialized_team_info")
+            .castBase()
+            .getValue(lwt.address);
+  if (ret != ompd_rc_ok)
+    return ret;
 
-    ret = callbacks->alloc_memory(sizeof(ompd_parallel_handle_t),
-                                 (void **)(parallel_handle));
-    if (ret != ompd_rc_ok)
-      return ret;
+  ret = callbacks->alloc_memory(sizeof(ompd_parallel_handle_t),
+                                (void **)(parallel_handle));
+  if (ret != ompd_rc_ok)
+    return ret;
 
-    (*parallel_handle)->ah = thread_handle->ah;
-    (*parallel_handle)->th = taddr;
-    (*parallel_handle)->cuda_kernel_info = thread_handle->cuda_kernel_info;
-  } else {
-    ompd_address_t taddr={OMPD_SEGMENT_UNSPECIFIED,0}, lwt={OMPD_SEGMENT_UNSPECIFIED,0};
+  (*parallel_handle)->ah = thread_handle->ah;
+  (*parallel_handle)->th = taddr;
+  (*parallel_handle)->lwt = lwt;
+  return ompd_rc_ok;
+}
 
-    TValue teamdata = TValue(context, thread_handle->th) /*__kmp_threads[t]->th*/
-                          .cast("kmp_base_info_t")
-                          .access("th_team") /*__kmp_threads[t]->th.th_team*/
-                          .cast("kmp_team_p", 1)
-                          .access("t"); /*__kmp_threads[t]->th.th_team->t*/
+ompd_rc_t ompd_get_enclosing_parallel_handle(
+    ompd_parallel_handle_t *parallel_handle, /* IN: OpenMP parallel handle */
+    ompd_parallel_handle_t *
+        *enclosing_parallel_handle /* OUT: OpenMP parallel handle */
+) {
+  if (!parallel_handle)
+    return ompd_rc_stale_handle;
+  if (!parallel_handle->ah)
+    return ompd_rc_stale_handle;
+  ompd_address_space_context_t *context = parallel_handle->ah->context;
+
+  if (!context)
+    return ompd_rc_stale_handle;
+
+  if (!callbacks) {
+    return ompd_rc_callback_error;
+  }
+
+  ompd_address_t taddr = parallel_handle->th,
+                 lwt = {OMPD_SEGMENT_UNSPECIFIED, 0};
+  ompd_rc_t ret;
+
+  ret = ompd_rc_stale_handle;
+  TValue lwtValue = TValue(context, parallel_handle->lwt);
+  if (lwtValue.getError() == ompd_rc_ok) // lwt == 0x0
+  {                                      // if we are in lwt, get parent
+    ret = lwtValue.cast("ompt_lw_taskteam_t", 0)
+              .access("parent")
+              .cast("ompt_lw_taskteam_t", 1)
+              .dereference()
+              .getAddress(&lwt);
+  }
+  if (ret != ompd_rc_ok) { // no lwt or parent==0x0
+
+    TValue teamdata =
+        TValue(context, parallel_handle->th) /*__kmp_threads[t]->th*/
+            .cast("kmp_base_team_t", 0)      /*t*/
+            .access("t_parent")              /*t.t_parent*/
+            .cast("kmp_team_p", 1)
+            .access("t"); /*t.t_parent->t*/
 
     ret = teamdata.getAddress(&taddr);
     if (ret != ompd_rc_ok)
@@ -395,152 +358,15 @@ ompd_rc_t ompd_get_curr_parallel_handle(
               .getValue(lwt.address);
     if (ret != ompd_rc_ok)
       return ret;
-
-    ret = callbacks->alloc_memory(sizeof(ompd_parallel_handle_t),
-                                   (void **)(parallel_handle));
-    if (ret != ompd_rc_ok)
-      return ret;
-
-    (*parallel_handle)->ah = thread_handle->ah;
-    (*parallel_handle)->th = taddr;
-    (*parallel_handle)->lwt = lwt;
-  }
-  return ompd_rc_ok;
-}
-
-ompd_rc_t ompd_get_enclosing_parallel_handle(
-    ompd_parallel_handle_t *parallel_handle, /* IN: OpenMP parallel handle */
-    ompd_parallel_handle_t *
-        *enclosing_parallel_handle /* OUT: OpenMP parallel handle */
-    ) {
-  if (!parallel_handle)
-    return ompd_rc_stale_handle;
-  if (!parallel_handle->ah)
-    return ompd_rc_stale_handle;
-  ompd_address_space_context_t *context = parallel_handle->ah->context;
-
-  if (!context)
-    return ompd_rc_stale_handle;
-
-  assert(callbacks && "Callback table not initialized!");
-
-  ompd_address_t taddr = parallel_handle->th, lwt={OMPD_SEGMENT_UNSPECIFIED,0};
-  ompd_rc_t ret;
-
-  if (parallel_handle->ah->kind == OMPD_DEVICE_KIND_CUDA) {
-    uint16_t level;
-    TValue curParallelInfo = TValue(context, taddr)
-                             .cast("ompd_nvptx_parallel_info_t", 0,
-                                   OMPD_SEGMENT_CUDA_PTX_SHARED);
-
-    ret = curParallelInfo
-            .cast("ompd_nvptx_parallel_info_t", 0,
-                  OMPD_SEGMENT_CUDA_PTX_GLOBAL)
-            .access("level")
-            .castBase(ompd_type_short)
-            .getValue(level);
-
-    if (ret != ompd_rc_ok)
-      return ret;
-
-    TValue prevTaskDescr = curParallelInfo.cast("ompd_nvptx_parallel_info_t", 0,
-                                                OMPD_SEGMENT_CUDA_PTX_SHARED)
-                                          .access("parallel_tasks")
-                                          .cast("omptarget_nvptx_TaskDescr", 1,
-                                                OMPD_SEGMENT_CUDA_PTX_GLOBAL)
-                                          .access("prev")
-                                          .cast("omptarget_nvptx_TaskDescr", 1,
-                                                OMPD_SEGMENT_CUDA_PTX_GLOBAL)
-                                          .dereference();
-
-    ret = prevTaskDescr.getAddress(&taddr);
-
-    // If the previous task of the tasks of the current parallel region is
-    // NULL, then we got the parallel handle for the (implicit?) top level
-    // task which has no enclosing task.
-    if (ret != ompd_rc_ok) {
-      return ret;
-    }
-
-    // The instance of TaskDescr for the previous task contains the parallel
-    // info for the current parallel region. So we have to go back to the
-    // previous task of the previous task
-    prevTaskDescr = prevTaskDescr.access("prev")
-                                 .cast("omptarget_nvptx_TaskDescr", 1,
-                                       OMPD_SEGMENT_CUDA_PTX_GLOBAL)
-                                 .dereference();
-
-    ret = prevTaskDescr.getAddress(&taddr);
-
-      if (ret != ompd_rc_ok) {
-      if (taddr.address == 0 && level == 1) {
-        // If we are in generic mode, there is an implicit parallel region
-        // around the master thread
-        prevTaskDescr = TValue(context, NULL, "omptarget_nvptx_threadPrivateContext",
-                               OMPD_SEGMENT_CUDA_PTX_SHARED)
-                            .cast("omptarget_nvptx_ThreadPrivateContext", 1,
-                                  OMPD_SEGMENT_CUDA_PTX_SHARED)
-                            .access("ompd_levelZeroParallelInfo");
-      } else {
-        return ret;
-      }
-    } else {
-      prevTaskDescr = prevTaskDescr.access("ompd_thread_info")
-                                   .cast("ompd_nvptx_thread_info_t", 0,
-                                         OMPD_SEGMENT_CUDA_PTX_GLOBAL)
-                                   .access("enclosed_parallel");
-    }
-
-    ret = prevTaskDescr.cast("ompd_nvptx_parallel_info_t", 0,
-                             OMPD_SEGMENT_CUDA_PTX_GLOBAL)
-                       .getAddress(&taddr);
-
-    if (ret != ompd_rc_ok) {
-      return ret;
-    }
-  } else {
-    ret = ompd_rc_stale_handle;
-    TValue lwtValue = TValue(context, parallel_handle->lwt);
-    if (lwtValue.getError() == ompd_rc_ok) // lwt == 0x0
-    {                                      // if we are in lwt, get parent
-      ret = lwtValue.cast("ompt_lw_taskteam_t", 0)
-                .access("parent")
-                .cast("ompt_lw_taskteam_t", 1)
-                .dereference()
-                .getAddress(&lwt);
-    }
-    if (ret != ompd_rc_ok) { // no lwt or parent==0x0
-
-      TValue teamdata =
-          TValue(context, parallel_handle->th) /*__kmp_threads[t]->th*/
-              .cast("kmp_base_team_t", 0)      /*t*/
-              .access("t_parent")              /*t.t_parent*/
-              .cast("kmp_team_p", 1)
-              .access("t"); /*t.t_parent->t*/
-
-      ret = teamdata.getAddress(&taddr);
-      if (ret != ompd_rc_ok)
-        return ret;
-
-      lwt.segment = OMPD_SEGMENT_UNSPECIFIED;
-      ret = teamdata.cast("kmp_base_team_t", 0)
-                .access("ompt_serialized_team_info")
-                .castBase()
-                .getValue(lwt.address);
-      if (ret != ompd_rc_ok)
-        return ret;
-    }
   }
 
   ret = callbacks->alloc_memory(sizeof(ompd_parallel_handle_t),
-                                 (void **)(enclosing_parallel_handle));
+                                (void **)(enclosing_parallel_handle));
   if (ret != ompd_rc_ok)
     return ret;
   (*enclosing_parallel_handle)->th = taddr;
   (*enclosing_parallel_handle)->lwt = lwt;
   (*enclosing_parallel_handle)->ah = parallel_handle->ah;
-  (*enclosing_parallel_handle)->cuda_kernel_info =
-      parallel_handle->cuda_kernel_info;
   return ompd_rc_ok;
 }
 
@@ -548,7 +374,7 @@ ompd_rc_t ompd_get_task_parallel_handle(
     ompd_task_handle_t *task_handle, /* IN: OpenMP task handle */
     ompd_parallel_handle_t *
         *task_parallel_handle /* OUT: OpenMP parallel handle */
-    ) {
+) {
   if (!task_handle)
     return ompd_rc_stale_handle;
   if (!task_handle->ah)
@@ -558,81 +384,38 @@ ompd_rc_t ompd_get_task_parallel_handle(
   if (!context)
     return ompd_rc_stale_handle;
 
-  assert(callbacks && "Callback table not initialized!");
-  ompd_address_t taddr={OMPD_SEGMENT_UNSPECIFIED,0};
+  if (!callbacks) {
+    return ompd_rc_callback_error;
+  }
+
+  ompd_address_t taddr = {OMPD_SEGMENT_UNSPECIFIED, 0};
 
   ompd_rc_t ret;
 
-  if (task_handle->ah->kind == OMPD_DEVICE_KIND_CUDA) {
-    TValue parallelHandle;
-    // The ompd_parallel_info_t we need is only present in the previous task
-    // of an implicit task.
-    uint16_t task_is_implicit = 0;
-    ret = ompd_rc_ok;
-    auto possibleTaskDescr = TValue(context, task_handle->th)
-                              .cast("omptarget_nvptx_TaskDescr", 0,
-                                     OMPD_SEGMENT_CUDA_PTX_GLOBAL);
+  ret = TValue(context, task_handle->th)
+            .cast("kmp_taskdata_t") /*td*/
+            .access("td_team")      /*td.td_team*/
+            .cast("kmp_team_p", 1)
+            .access("t") /*td.td_team->t*/
+            .getAddress(&taddr);
 
-    while (!task_is_implicit && ret == ompd_rc_ok) {
-      ret = possibleTaskDescr.access("ompd_thread_info")
-                             .cast("ompd_nvptx_thread_info_t", 0,
-                                   OMPD_SEGMENT_CUDA_PTX_GLOBAL)
-                             .access("task_implicit")
-                             .castBase()
-                             .getValue(task_is_implicit);
-      possibleTaskDescr = possibleTaskDescr.access("prev")
-                                           .cast("omptarget_nvptx_TaskDescr",
-                                                 1, OMPD_SEGMENT_CUDA_PTX_GLOBAL);
-      ret = possibleTaskDescr.dereference().getAddress(&taddr);
-    }
-
-    if (ret != ompd_rc_ok) {
-      if (taddr.address == 0) {
-        parallelHandle = TValue(context, NULL,
-                                "omptarget_nvptx_threadPrivateContext")
-                            .cast("omptarget_nvptx_ThreadPrivateContext", 1,
-                                  OMPD_SEGMENT_CUDA_PTX_SHARED)
-                            .access("ompd_levelZeroParallelInfo")
-                            .cast("ompd_nvptx_parallel_info_t", 0,
-                                  OMPD_SEGMENT_CUDA_PTX_GLOBAL);
-      } else {
-        return ret;
-      }
-    } else {
-      parallelHandle = possibleTaskDescr.access("ompd_thread_info")
-                                        .cast("ompd_nvptx_thread_info_t", 0,
-                                              OMPD_SEGMENT_CUDA_PTX_GLOBAL)
-                                        .access("enclosed_parallel")
-                                        .cast("ompd_nvptx_parallel_info_t", 0,
-                                              OMPD_SEGMENT_CUDA_PTX_GLOBAL);
-    }
-    ret = parallelHandle.getAddress(&taddr);
-  } else {
-    ret = TValue(context, task_handle->th)
-              .cast("kmp_taskdata_t") /*td*/
-              .access("td_team")      /*td.td_team*/
-              .cast("kmp_team_p", 1)
-              .access("t") /*td.td_team->t*/
-              .getAddress(&taddr);
-  }
   if (ret != ompd_rc_ok)
     return ret;
 
   ret = callbacks->alloc_memory(sizeof(ompd_parallel_handle_t),
-                                 (void **)(task_parallel_handle));
+                                (void **)(task_parallel_handle));
   if (ret != ompd_rc_ok)
     return ret;
 
   (*task_parallel_handle)->ah = task_handle->ah;
   (*task_parallel_handle)->lwt = task_handle->lwt;
   (*task_parallel_handle)->th = taddr;
-  (*task_parallel_handle)->cuda_kernel_info = task_handle->cuda_kernel_info;
   return ompd_rc_ok;
 }
 
 ompd_rc_t ompd_rel_parallel_handle(
     ompd_parallel_handle_t *parallel_handle /* IN: OpenMP parallel handle */
-    ) {
+) {
   if (!parallel_handle)
     return ompd_rc_stale_handle;
   ompd_rc_t ret = callbacks->free_memory((void *)(parallel_handle));
@@ -649,11 +432,14 @@ ompd_parallel_handle_compare(ompd_parallel_handle_t *parallel_handle_1,
     return ompd_rc_stale_handle;
   if (!parallel_handle_2)
     return ompd_rc_stale_handle;
+  if (!cmp_value)
+    return ompd_rc_bad_input;
   if (parallel_handle_1->ah->kind != parallel_handle_2->ah->kind)
     return ompd_rc_bad_input;
   if (parallel_handle_1->ah->kind == OMPD_DEVICE_KIND_HOST) {
     if (parallel_handle_1->th.address - parallel_handle_2->th.address)
-      *cmp_value = parallel_handle_1->th.address - parallel_handle_2->th.address;
+      *cmp_value =
+          parallel_handle_1->th.address - parallel_handle_2->th.address;
     else
       *cmp_value =
           parallel_handle_1->lwt.address - parallel_handle_2->lwt.address;
@@ -663,14 +449,14 @@ ompd_parallel_handle_compare(ompd_parallel_handle_t *parallel_handle_1,
   return ompd_rc_ok;
 }
 
-/* --- 4.7 Task Handles ----------------------------------------------------- */
+/* ------- Task Handles ----------------------------------------------------- */
 
 /* task_handle is of type (kmp_taskdata_t) */
 
 ompd_rc_t ompd_get_curr_task_handle(
     ompd_thread_handle_t *thread_handle, /* IN: OpenMP thread handle*/
     ompd_task_handle_t **task_handle     /* OUT: OpenMP task handle */
-    ) {
+) {
   if (!thread_handle)
     return ompd_rc_stale_handle;
   if (!thread_handle->ah)
@@ -679,69 +465,66 @@ ompd_rc_t ompd_get_curr_task_handle(
   if (!context)
     return ompd_rc_stale_handle;
 
-  assert(callbacks && "Callback table not initialized!");
-  ompd_address_t taddr={OMPD_SEGMENT_UNSPECIFIED,0}, lwt={OMPD_SEGMENT_UNSPECIFIED,0};
+  if (!callbacks) {
+    return ompd_rc_callback_error;
+  }
+
+  ompd_address_t taddr = {OMPD_SEGMENT_UNSPECIFIED, 0},
+                 lwt = {OMPD_SEGMENT_UNSPECIFIED, 0};
   ompd_rc_t ret = ompd_rc_ok;
 
   lwt.segment = OMPD_SEGMENT_UNSPECIFIED;
 
-  if (thread_handle->ah->kind == OMPD_DEVICE_KIND_CUDA) {
-    lwt.address = 0;
-    taddr = thread_handle->th;
-  } else {
-    TValue taskdata =
-        TValue(context, thread_handle->th) /*__kmp_threads[t]->th*/
-            .cast("kmp_base_info_t")
-            .access("th_current_task") /*__kmp_threads[t]->th.th_current_task*/
-            .cast("kmp_taskdata_t", 1);
+  TValue taskdata =
+      TValue(context, thread_handle->th) /*__kmp_threads[t]->th*/
+          .cast("kmp_base_info_t")
+          .access("th_current_task") /*__kmp_threads[t]->th.th_current_task*/
+          .cast("kmp_taskdata_t", 1);
 
-    ret = taskdata.dereference().getAddress(&taddr);
-    if (ret != ompd_rc_ok)
-      return ret;
+  ret = taskdata.dereference().getAddress(&taddr);
+  if (ret != ompd_rc_ok)
+    return ret;
 
-    ret = taskdata
-              .access("td_team") /*td.td_team*/
-              .cast("kmp_team_p", 1)
-              .access("t") /*td.td_team->t*/
-              .cast("kmp_base_team_t", 0)
-              .access("ompt_serialized_team_info")
-              .castBase()
-              .getValue(lwt.address);
-  }
+  ret = taskdata
+            .access("td_team") /*td.td_team*/
+            .cast("kmp_team_p", 1)
+            .access("t") /*td.td_team->t*/
+            .cast("kmp_base_team_t", 0)
+            .access("ompt_serialized_team_info")
+            .castBase()
+            .getValue(lwt.address);
+
   if (ret != ompd_rc_ok)
     return ret;
 
   ret = callbacks->alloc_memory(sizeof(ompd_task_handle_t),
-                                 (void **)(task_handle));
+                                (void **)(task_handle));
   if (ret != ompd_rc_ok)
     return ret;
 
   (*task_handle)->th = taddr;
   (*task_handle)->lwt = lwt;
   (*task_handle)->ah = thread_handle->ah;
-  (*task_handle)->cuda_kernel_info = thread_handle->cuda_kernel_info;
   return ompd_rc_ok;
 }
 
 ompd_rc_t ompd_get_generating_task_handle(
     ompd_task_handle_t *task_handle,        /* IN: OpenMP task handle */
     ompd_task_handle_t **parent_task_handle /* OUT: OpenMP task handle */
-    ) {
-  // Generating and Scheduling task are the same on cuda?
-  if (task_handle->ah->kind == OMPD_DEVICE_KIND_CUDA) {
-    return ompd_get_scheduling_task_handle(task_handle, parent_task_handle);
-  }
-
+) {
   if (!task_handle)
     return ompd_rc_stale_handle;
   if (!task_handle->ah)
     return ompd_rc_stale_handle;
+
   ompd_address_space_context_t *context = task_handle->ah->context;
   if (!context)
     return ompd_rc_stale_handle;
+  if (!callbacks) {
+    return ompd_rc_callback_error;
+  }
 
-  assert(callbacks && "Callback table not initialized!");
-  ompd_address_t taddr = task_handle->th, lwt={OMPD_SEGMENT_UNSPECIFIED,0};
+  ompd_address_t taddr = task_handle->th, lwt = {OMPD_SEGMENT_UNSPECIFIED, 0};
 
   ompd_rc_t ret = ompd_rc_stale_handle;
   TValue lwtValue = TValue(context, task_handle->lwt);
@@ -778,7 +561,7 @@ ompd_rc_t ompd_get_generating_task_handle(
   }
 
   ret = callbacks->alloc_memory(sizeof(ompd_task_handle_t),
-                                 (void **)(parent_task_handle));
+                                (void **)(parent_task_handle));
   if (ret != ompd_rc_ok)
     return ret;
 
@@ -791,7 +574,7 @@ ompd_rc_t ompd_get_generating_task_handle(
 ompd_rc_t ompd_get_scheduling_task_handle(
     ompd_task_handle_t *task_handle,        /* IN: OpenMP task handle */
     ompd_task_handle_t **parent_task_handle /* OUT: OpenMP task handle */
-    ) {
+) {
   if (!task_handle)
     return ompd_rc_stale_handle;
   if (!task_handle->ah)
@@ -800,25 +583,14 @@ ompd_rc_t ompd_get_scheduling_task_handle(
   if (!context)
     return ompd_rc_stale_handle;
 
-  assert(callbacks && "Callback table not initialized!");
-  ompd_address_t taddr={OMPD_SEGMENT_UNSPECIFIED,0};
+  if (!callbacks) {
+    return ompd_rc_callback_error;
+  }
+
+  ompd_address_t taddr = {OMPD_SEGMENT_UNSPECIFIED, 0};
   ompd_rc_t ret;
 
-  if (task_handle->ah->kind == OMPD_DEVICE_KIND_CUDA) {
-    ret = TValue(context, task_handle->th)
-            .cast("omptarget_nvptx_TaskDescr", 0,
-                  OMPD_SEGMENT_CUDA_PTX_GLOBAL)
-            .access("prev")
-            .cast("omptarget_nvptx_TaskDescr", 1,
-                  OMPD_SEGMENT_CUDA_PTX_GLOBAL)
-            .dereference()
-            .getAddress(&taddr);
-    if (taddr.address == 0) {
-      return ompd_rc_unavailable;
-    }
-  } else {
-    ret =
-        TValue(context, task_handle->th)
+  ret = TValue(context, task_handle->th)
             .cast("kmp_taskdata_t")   /*td*/
             .access("ompt_task_info") // td->ompt_task_info
             .cast("ompt_task_info_t")
@@ -826,31 +598,28 @@ ompd_rc_t ompd_get_scheduling_task_handle(
             .cast("kmp_taskdata_t", 1)
             .castBase()
             .getValue(taddr.address);
-    if (taddr.address == 0) {
-      return ompd_rc_unavailable;
-    }
+  if (taddr.address == 0) {
+    return ompd_rc_unavailable;
   }
 
   if (ret != ompd_rc_ok)
     return ret;
   ret = callbacks->alloc_memory(sizeof(ompd_task_handle_t),
-                                 (void **)(parent_task_handle));
+                                (void **)(parent_task_handle));
   if (ret != ompd_rc_ok)
     return ret;
 
   (*parent_task_handle)->th = taddr;
-  (*parent_task_handle)->lwt = {OMPD_SEGMENT_UNSPECIFIED,0};
+  (*parent_task_handle)->lwt = {OMPD_SEGMENT_UNSPECIFIED, 0};
   (*parent_task_handle)->ah = task_handle->ah;
-  (*parent_task_handle)->cuda_kernel_info = task_handle->cuda_kernel_info;
   return ret;
 }
 
 ompd_rc_t ompd_get_task_in_parallel(
     ompd_parallel_handle_t *parallel_handle, /* IN: OpenMP parallel handle */
-    int thread_num,                  /* OUT: number of the task handle */
+    int thread_num, /* IN: thread num of implicit task of team */
     ompd_task_handle_t **task_handle /* OUT: OpenMP task handle */
-    ) {
-  int i;
+) {
   if (!parallel_handle)
     return ompd_rc_stale_handle;
   if (!parallel_handle->ah)
@@ -859,47 +628,44 @@ ompd_rc_t ompd_get_task_in_parallel(
   if (!context)
     return ompd_rc_stale_handle;
 
-  assert(callbacks && "Callback table not initialized!");
+  if (!callbacks) {
+    return ompd_rc_callback_error;
+  }
 
   ompd_rc_t ret;
-  ompd_address_t taddr={OMPD_SEGMENT_UNSPECIFIED,0};
+  ompd_word_t team_size_var;
+  ret = ompd_get_num_threads(parallel_handle, &team_size_var);
+  if (ret != ompd_rc_ok)
+    return ret;
+  if (thread_num < 0 || thread_num >= team_size_var)
+    return ompd_rc_bad_input;
 
-  if (parallel_handle->ah->kind == OMPD_DEVICE_KIND_CUDA) {
-    ret = TValue(context, parallel_handle->th)
-              .cast("ompd_nvptx_parallel_info_t", 0,
-                    OMPD_SEGMENT_CUDA_PTX_GLOBAL)
-              .access("parallel_tasks")
-              .cast("omptarget_nvptx_TaskDescr", 1,
-                    OMPD_SEGMENT_CUDA_PTX_GLOBAL)
-              .getArrayElement(thread_num)
-              .getAddress(&taddr);
-  } else {
-    ret = TValue(context, parallel_handle->th) /* t */
-              .cast("kmp_base_team_t", 0)
-              .access("t_implicit_task_taskdata") /*t.t_implicit_task_taskdata*/
-              .cast("kmp_taskdata_t", 1)
-              .getArrayElement(
-                  thread_num) /*t.t_implicit_task_taskdata[nth_handle]*/
-              .getAddress(&taddr);
-  }
+  ompd_address_t taddr = {OMPD_SEGMENT_UNSPECIFIED, 0};
+
+  ret = TValue(context, parallel_handle->th) /* t */
+            .cast("kmp_base_team_t", 0)
+            .access("t_implicit_task_taskdata") /*t.t_implicit_task_taskdata*/
+            .cast("kmp_taskdata_t", 1)
+            .getArrayElement(
+                thread_num) /*t.t_implicit_task_taskdata[nth_handle]*/
+            .getAddress(&taddr);
 
   if (ret != ompd_rc_ok)
     return ret;
   ret = callbacks->alloc_memory(sizeof(ompd_task_handle_t),
-                                 (void **)(task_handle));
+                                (void **)(task_handle));
   if (ret != ompd_rc_ok)
     return ret;
 
   (*task_handle)->th = taddr;
   (*task_handle)->ah = parallel_handle->ah;
-  (*task_handle)->lwt = {OMPD_SEGMENT_UNSPECIFIED,0};
-  (*task_handle)->cuda_kernel_info = parallel_handle->cuda_kernel_info;
+  (*task_handle)->lwt = {OMPD_SEGMENT_UNSPECIFIED, 0};
   return ret;
 }
 
 ompd_rc_t ompd_rel_task_handle(
     ompd_task_handle_t *task_handle /* IN: OpenMP task handle */
-    ) {
+) {
   if (!task_handle)
     return ompd_rc_stale_handle;
   ompd_rc_t ret = callbacks->free_memory((void *)(task_handle));
@@ -915,26 +681,21 @@ ompd_rc_t ompd_task_handle_compare(ompd_task_handle_t *task_handle_1,
     return ompd_rc_stale_handle;
   if (!task_handle_2)
     return ompd_rc_stale_handle;
+  if (!cmp_value)
+    return ompd_rc_bad_input;
   if (task_handle_1->ah->kind != task_handle_2->ah->kind)
     return ompd_rc_bad_input;
-  if (task_handle_1->th.address - task_handle_2->th.address ||
-        task_handle_1->ah->kind == OMPD_DEVICE_KIND_CUDA)
+  if (task_handle_1->th.address - task_handle_2->th.address)
     *cmp_value = task_handle_1->th.address - task_handle_2->th.address;
   else
     *cmp_value = task_handle_1->lwt.address - task_handle_2->lwt.address;
   return ompd_rc_ok;
 }
 
-/* --- 7 Thread Inquiry ----------------------------------------------------- */
-
-/* --- 7.1 Operating System Thread Inquiry ---------------------------------- */
-
-ompd_rc_t
-ompd_get_thread_handle(ompd_address_space_handle_t
-                           *handle, /* IN: handle for the address space */
-                       ompd_thread_id_t kind,
-                       ompd_size_t sizeof_thread_id, const void *thread_id,
-                       ompd_thread_handle_t **thread_handle) {
+ompd_rc_t ompd_get_thread_handle(
+    ompd_address_space_handle_t *handle, /* IN: handle for the address space */
+    ompd_thread_id_t kind, ompd_size_t sizeof_thread_id, const void *thread_id,
+    ompd_thread_handle_t **thread_handle) {
   if (!handle)
     return ompd_rc_stale_handle;
   ompd_address_space_context_t *context = handle->context;
@@ -943,7 +704,9 @@ ompd_get_thread_handle(ompd_address_space_handle_t
   if (!context)
     return ompd_rc_stale_handle;
 
-  assert(callbacks && "Callback table not initialized!");
+  if (!callbacks) {
+    return ompd_rc_callback_error;
+  }
   ompd_thread_context_t *tcontext;
   ret = callbacks->get_thread_context_for_thread_id(
       context, kind, sizeof_thread_id, thread_id, &tcontext);
@@ -952,129 +715,50 @@ ompd_get_thread_handle(ompd_address_space_handle_t
 
   int tId;
 
-  if (kind == OMPD_THREAD_ID_CUDALOGICAL) {
-    ompd_cudathread_coord_t *p = (ompd_cudathread_coord_t *)thread_id;
-
-    // omptarget_nvptx_threadPrivateContext->topTaskDescr[p->threadIdx.x]
-    TValue th = TValue(context, tcontext,
-                       "omptarget_nvptx_threadPrivateContext",
-                       OMPD_SEGMENT_CUDA_PTX_SHARED)
-                .cast("omptarget_nvptx_ThreadPrivateContext", 1,
-                      OMPD_SEGMENT_CUDA_PTX_SHARED)
-                .access("topTaskDescr")
-                .cast("omptarget_nvptx_TaskDescr", 1,
-                      OMPD_SEGMENT_CUDA_PTX_GLOBAL)
-                .getPtrArrayElement(p->threadIdx.x)
-                .dereference();
-
-    ompd_address_t taddr={OMPD_SEGMENT_UNSPECIFIED,0};
-    ret = th.getAddress(&taddr);
-
-    if (ret != ompd_rc_ok) {
-      if (taddr.address == 0 && p->threadIdx.x % 32 == 0) {
-        // check for the master task/thread instead
-        // The master thread should never have the threadIdx.x of zero, so
-        // checking it this way should be safe
-
-        th = TValue(context, tcontext,
-                    "omptarget_nvptx_threadPrivateContext",
-                    OMPD_SEGMENT_CUDA_PTX_SHARED)
-            .cast("omptarget_nvptx_ThreadPrivateContext", 1,
-                   OMPD_SEGMENT_CUDA_PTX_SHARED)
-            .access("teamContext")
-            .cast("omptarget_nvptx_TeamDescr", 0,
-                  OMPD_SEGMENT_CUDA_PTX_SHARED)
-            .access("levelZeroTaskDescr");
-
-        ret = th.getAddress(&taddr);
-
-        if (ret != ompd_rc_ok)
-          return ret;
-      } else {
-        return ret;
-      }
-    }
-
-    // omptarget_nvptx_threadPrivateContext->topTaskDescr[p->threadIdx.x]
-    //                                     ->ompd_thread_info.threadIdx_x
-    ret = th.cast("omptarget_nvptx_TaskDescr", 0, OMPD_SEGMENT_CUDA_PTX_SHARED)
-            .access("ompd_thread_info")
-            .cast("ompd_nvptx_thread_info_t", 0, OMPD_SEGMENT_CUDA_PTX_GLOBAL)
-            .access("threadIdx_x")
-            .castBase(ompd_type_short)
+  ret = TValue(context, tcontext, "__kmp_gtid")
+            .castBase("__kmp_gtid")
             .getValue(tId);
+  if (ret != ompd_rc_ok)
+    return ret;
 
-    if (ret != ompd_rc_ok)
-      return ret;
+  if (tId < 0) // thread is no omp worker
+    return ompd_rc_unavailable;
 
-    if (tId != p->threadIdx.x) {
-        return ompd_rc_stale_handle;
-    }
+  TValue th = TValue(context, "__kmp_threads") // __kmp_threads
+                  .cast("kmp_info_t", 2)
+                  .getArrayElement(tId) /*__kmp_threads[t]*/
+                  .access("th");        /*__kmp_threads[t]->th*/
 
-    // allocate both the thread handle and the cuda kernel info in one go
-    ret = callbacks->alloc_memory(sizeof(ompd_thread_handle_t) +
-                                  sizeof(ompd_cuda_thread_kernel_info_t),
-                                  (void **)(thread_handle));
-    if (ret != ompd_rc_ok)
-      return ret;
-
-    (*thread_handle)->ah = handle;
-    (*thread_handle)->th = taddr;
-    (*thread_handle)->cuda_kernel_info =
-        (ompd_cuda_thread_kernel_info_t*)((*thread_handle) + 1);
-
-    (*thread_handle)->cuda_kernel_info->cudaDevId = p->cudaDevId;
-    (*thread_handle)->cuda_kernel_info->cudaContext = p->cudaContext;
-    (*thread_handle)->cuda_kernel_info->warpSize = p->warpSize;
-    (*thread_handle)->cuda_kernel_info->gridId = p->gridId;
-    (*thread_handle)->cuda_kernel_info->gridDim = p->gridDim;
-    (*thread_handle)->cuda_kernel_info->blockDim = p->blockDim;
-  } else {
-    ret = TValue(context, tcontext, "__kmp_gtid")
-              .castBase("__kmp_gtid")
-              .getValue(tId);
-    if (ret != ompd_rc_ok)
-      return ret;
-
-    if (tId < 0) // thread is no omp worker
-      return ompd_rc_unavailable;
-
-    TValue th = TValue(context, "__kmp_threads") // __kmp_threads
-                    .cast("kmp_info_t", 2)
-                    .getArrayElement(tId) /*__kmp_threads[t]*/
-                    .access("th");        /*__kmp_threads[t]->th*/
-
-    ompd_address_t taddr={OMPD_SEGMENT_UNSPECIFIED,0};
-    ret = th.getAddress(&taddr);
-    if (ret != ompd_rc_ok)
-      return ret;
-    ret = callbacks->alloc_memory(sizeof(ompd_thread_handle_t),
-                                   (void **)(thread_handle));
-    if (ret != ompd_rc_ok)
-      return ret;
-    (*thread_handle)->ah = handle;
-    (*thread_handle)->th = taddr;
-    (*thread_handle)->cuda_kernel_info = NULL;
+  ompd_address_t taddr = {OMPD_SEGMENT_UNSPECIFIED, 0};
+  ret = th.getAddress(&taddr);
+  if (ret != ompd_rc_ok)
+    return ret;
+  ret = callbacks->alloc_memory(sizeof(ompd_thread_handle_t),
+                                (void **)(thread_handle));
+  if (ret != ompd_rc_ok)
+    return ret;
+  (*thread_handle)->ah = handle;
+  (*thread_handle)->th = taddr;
 
 #ifndef NDEBUG
-    if (ret != ompd_rc_ok)
-      return ret;
+  if (ret != ompd_rc_ok)
+    return ret;
 
-    pthread_t oshandle;
-    TBaseValue ds_handle =
-        th.cast("kmp_base_info_t")
-            .access("th_info") /*__kmp_threads[t]->th.th_info*/
-            .cast("kmp_desc_t")
-            .access("ds") /*__kmp_threads[t]->th.th_info.ds*/
-            .cast("kmp_desc_base_t")
-            .access("ds_thread") /*__kmp_threads[t]->th.th_info.ds.ds_thread*/
-            .castBase();
+  pthread_t oshandle;
+  TBaseValue ds_handle =
+      th.cast("kmp_base_info_t")
+          .access("th_info") /*__kmp_threads[t]->th.th_info*/
+          .cast("kmp_desc_t")
+          .access("ds") /*__kmp_threads[t]->th.th_info.ds*/
+          .cast("kmp_desc_base_t")
+          .access("ds_thread") /*__kmp_threads[t]->th.th_info.ds.ds_thread*/
+          .castBase();
 
-    assert(ompd_rc_ok == ds_handle.getValue(oshandle) &&
-           oshandle == *(pthread_t *)(thread_id) &&
-           "Callback table not initialized!");
+  assert(ompd_rc_ok == ds_handle.getValue(oshandle) &&
+         oshandle == *(pthread_t *)(thread_id) &&
+         "Callback table not initialized!");
 #endif
-  }
+
   (*thread_handle)->thread_context = tcontext;
   return ret;
 }
@@ -1082,7 +766,9 @@ ompd_get_thread_handle(ompd_address_space_handle_t
 ompd_rc_t ompd_get_thread_id(
     ompd_thread_handle_t *thread_handle, /* IN: OpenMP thread handle*/
     ompd_thread_id_t kind, ompd_size_t sizeof_thread_id, void *thread_id) {
-  if (kind != OMPD_THREAD_ID_PTHREAD && kind != OMPD_THREAD_ID_CUDALOGICAL)
+  if (kind != OMPD_THREAD_ID_PTHREAD)
+    return ompd_rc_unsupported;
+  if (!thread_id)
     return ompd_rc_bad_input;
   if (!thread_handle)
     return ompd_rc_stale_handle;
@@ -1093,272 +779,224 @@ ompd_rc_t ompd_get_thread_id(
     return ompd_rc_stale_handle;
   ompd_rc_t ret;
 
-  if (kind == OMPD_THREAD_ID_CUDALOGICAL) {
-    if (sizeof_thread_id != sizeof(ompd_cudathread_coord_t)) {
-      return ompd_rc_bad_input;
-    }
-    ompd_cudathread_coord_t *cuda_thread_id =
-        (ompd_cudathread_coord_t*)thread_id;
-    cuda_thread_id->cudaDevId = thread_handle->cuda_kernel_info->cudaDevId;
-    cuda_thread_id->cudaContext = thread_handle->cuda_kernel_info->cudaContext;
-    cuda_thread_id->warpSize = thread_handle->cuda_kernel_info->warpSize;
-    cuda_thread_id->gridId = thread_handle->cuda_kernel_info->gridId;
+  ompd_size_t size;
+  ret = tf.getType(context, "kmp_thread_t").getSize(&size);
+  if (ret != ompd_rc_ok)
+    return ret;
+  if (sizeof_thread_id != size)
+    return ompd_rc_bad_input;
 
-    auto threadInfo = TValue(context, thread_handle->th)
-                        .cast("omptarget_nvptx_TaskDescr", 0,
-                              OMPD_SEGMENT_CUDA_PTX_GLOBAL)
-                        .access("ompd_thread_info")
-                        .cast("ompd_nvptx_thread_info_t", 0,
-                              OMPD_SEGMENT_CUDA_PTX_GLOBAL);
-
-    ret = threadInfo.access("threadIdx_x")
-                    .castBase()
-                    .getValue(cuda_thread_id->threadIdx.x);
-
-    if (ret != ompd_rc_ok)
-      return ret;
-
-    cuda_thread_id->threadIdx.y = cuda_thread_id->threadIdx.z = 0;
-
-    ret = threadInfo.access("blockIdx_x")
-                    .castBase()
-                    .getValue(cuda_thread_id->blockIdx.x);
-
-    if (ret != ompd_rc_ok)
-      return ret;
-
-    cuda_thread_id->blockIdx.y = cuda_thread_id->blockIdx.z = 0;
-
-    cuda_thread_id->gridDim = thread_handle->cuda_kernel_info->gridDim;
-    cuda_thread_id->blockDim = thread_handle->cuda_kernel_info->blockDim;
-
-    return ompd_rc_ok;
-  } else {
-    ompd_size_t size;
-    ret = tf.getType(context, "kmp_thread_t").getSize(&size);
-    if (ret != ompd_rc_ok)
-      return ret;
-    if (sizeof_thread_id != size)
-      return ompd_rc_bad_input;
-
-    assert(callbacks && "Callback table not initialized!");
-
-    ret = TValue(context, thread_handle->th) /*__kmp_threads[t]->th*/
-              .cast("kmp_base_info_t")
-              .access("th_info") /*__kmp_threads[t]->th.th_info*/
-              .cast("kmp_desc_t")
-              .access("ds") /*__kmp_threads[t]->th.th_info.ds*/
-              .cast("kmp_desc_base_t")
-              .access("ds_thread") /*__kmp_threads[t]->th.th_info.ds.ds_thread*/
-              .cast("kmp_thread_t")
-              .getRawValue(thread_id, 1);
+  if (!callbacks) {
+    return ompd_rc_callback_error;
   }
+
+  ret = TValue(context, thread_handle->th) /*__kmp_threads[t]->th*/
+            .cast("kmp_base_info_t")
+            .access("th_info") /*__kmp_threads[t]->th.th_info*/
+            .cast("kmp_desc_t")
+            .access("ds") /*__kmp_threads[t]->th.th_info.ds*/
+            .cast("kmp_desc_base_t")
+            .access("ds_thread") /*__kmp_threads[t]->th.th_info.ds.ds_thread*/
+            .cast("kmp_thread_t")
+            .getRawValue(thread_id, 1);
+
   return ret;
 }
 
-/* --- 7.2 OMPT Thread State Inquiry Analogue ------------------------------- */
+/* --- OMPT Thread State Inquiry Analogue ----------------------------------- */
 
 ompd_rc_t ompd_get_state(
     ompd_thread_handle_t *thread_handle, /* IN: OpenMP thread handle*/
     ompd_word_t *state,                  /* OUT: State of this thread */
     ompd_wait_id_t *wait_id              /* OUT: Wait ID */
-    ) {
+) {
   if (!thread_handle)
     return ompd_rc_stale_handle;
   if (!thread_handle->ah)
     return ompd_rc_stale_handle;
+  if (!state)
+    return ompd_rc_bad_input;
   ompd_address_space_context_t *context = thread_handle->ah->context;
   if (!context)
     return ompd_rc_stale_handle;
   if (!ompd_state)
     return ompd_rc_needs_state_tracking;
 
+  if (!callbacks) {
+    return ompd_rc_callback_error;
+  }
   ompd_rc_t ret;
-  assert(callbacks && "Callback table not initialized!");
 
-  if (thread_handle->ah->kind == OMPD_DEVICE_KIND_CUDA) {
-    if (wait_id)
-      *wait_id = 0;
-    ret  = TValue(context, thread_handle->th)
-            .cast("omptarget_nvptx_TaskDescr", 0, OMPD_SEGMENT_CUDA_PTX_SHARED)
-            .access("ompd_thread_info")
-            .cast("ompd_nvptx_thread_info_t", 0, OMPD_SEGMENT_CUDA_PTX_GLOBAL)
-            .access("state")
-            .castBase(ompd_type_long_long)
-            .getValue(*state);
-  } else {
-    TValue ompt_thread_info =
-        TValue(context, thread_handle->th) /*__kmp_threads[t]->th*/
-            .cast("kmp_base_info_t")
-            .access("ompt_thread_info") /*__kmp_threads[t]->th.ompt_thread_info*/
-            .cast("ompt_thread_info_t");
-    if (ompt_thread_info.gotError())
-      return ompt_thread_info.getError();
-    ret = ompt_thread_info
+  TValue ompt_thread_info =
+      TValue(context, thread_handle->th) /*__kmp_threads[t]->th*/
+          .cast("kmp_base_info_t")
+          .access("ompt_thread_info") /*__kmp_threads[t]->th.ompt_thread_info*/
+          .cast("ompt_thread_info_t");
+  if (ompt_thread_info.gotError())
+    return ompt_thread_info.getError();
+  ret = ompt_thread_info
             .access("state") /*__kmp_threads[t]->th.ompt_thread_info.state*/
             .castBase()
             .getValue(*state);
-    if (ret != ompd_rc_ok)
-      return ret;
+  if (ret != ompd_rc_ok)
+    return ret;
+  if (wait_id)
     ret = ompt_thread_info
               .access("wait_id") /*__kmp_threads[t]->th.ompt_thread_info.state*/
               .castBase()
               .getValue(*wait_id);
-  }
+
   return ret;
 }
 
-/* --- 8 Task Inquiry ------------------------------------------------------- */
+/* ---  Task Inquiry -------------------------------------------------------- */
 
-/* --- 8.1 Task Settings ---------------------------------------------------- */
+/* ---  Task Settings ------------------------------------------------------- */
 
-/* --- 8.2 OMPT Task Inquiry Analogues -------------------------------------- */
+/* ---  OMPT Task Inquiry Analogues ----------------------------------------- */
 
-ompd_rc_t ompd_get_task_frame(
-    ompd_task_handle_t *task_handle, /* IN: OpenMP task handle*/
-    ompd_frame_info_t *exit_frame,
-    ompd_frame_info_t *enter_frame
-    ) {
+ompd_rc_t
+ompd_get_task_frame(ompd_task_handle_t *task_handle, /* IN: OpenMP task handle*/
+                    ompd_frame_info_t *exit_frame,
+                    ompd_frame_info_t *enter_frame) {
   if (!task_handle)
     return ompd_rc_stale_handle;
   if (!task_handle->ah)
     return ompd_rc_stale_handle;
+  if (!exit_frame || !enter_frame)
+    return ompd_rc_bad_input;
   ompd_address_space_context_t *context = task_handle->ah->context;
   if (!context)
     return ompd_rc_stale_handle;
   if (!ompd_state)
     return ompd_rc_needs_state_tracking;
 
-  assert(callbacks && "Callback table not initialized!");
+  if (!callbacks) {
+    return ompd_rc_callback_error;
+  }
 
   ompd_rc_t ret;
 
-  if (task_handle->ah->kind == OMPD_DEVICE_KIND_CUDA) {
-    return ompd_rc_unsupported;
-  } else {
-    TValue taskInfo;
-    if (task_handle->lwt.address != 0)
-      taskInfo =
-          TValue(context, task_handle->lwt).cast("ompt_lw_taskteam_t", 0); /*lwt*/
-    else
-      taskInfo = TValue(context, task_handle->th).cast("kmp_taskdata_t", 0); /*t*/
-    TValue frame = taskInfo
-                       .access("ompt_task_info") // td->ompt_task_info
-                       .cast("ompt_task_info_t")
-                       .access("frame") // td->ompd_task_info.frame
-                       .cast("ompt_frame_t", 0);
-    enter_frame->frame_address.segment = OMPD_SEGMENT_UNSPECIFIED;
-    ret = frame
+  TValue taskInfo;
+  if (task_handle->lwt.address != 0)
+    taskInfo =
+        TValue(context, task_handle->lwt).cast("ompt_lw_taskteam_t", 0); /*lwt*/
+  else
+    taskInfo = TValue(context, task_handle->th).cast("kmp_taskdata_t", 0); /*t*/
+  TValue frame = taskInfo
+                     .access("ompt_task_info") // td->ompt_task_info
+                     .cast("ompt_task_info_t")
+                     .access("frame") // td->ompd_task_info.frame
+                     .cast("ompt_frame_t", 0);
+  enter_frame->frame_address.segment = OMPD_SEGMENT_UNSPECIFIED;
+  ret = frame
             .access("enter_frame") // td->ompt_task_info.frame.enter_frame
             .castBase()
             .getValue(enter_frame->frame_address.address);
 
-    if (ret != ompd_rc_ok)
-      return ret;
+  if (ret != ompd_rc_ok)
+    return ret;
 
-    exit_frame->frame_address.segment = OMPD_SEGMENT_UNSPECIFIED;
-    ret = frame
-              .access("exit_frame") // td->ompt_task_info.frame.exit_frame
-              .castBase()
-              .getValue(exit_frame->frame_address.address);
-  }
+  exit_frame->frame_address.segment = OMPD_SEGMENT_UNSPECIFIED;
+  ret = frame
+            .access("exit_frame") // td->ompt_task_info.frame.exit_frame
+            .castBase()
+            .getValue(exit_frame->frame_address.address);
+
   return ret;
 }
 
 ompd_rc_t ompd_get_task_function(
     ompd_task_handle_t *task_handle, /* IN: OpenMP task handle */
     ompd_address_t *task_addr /* OUT: first instruction in the task region */
-    )
-{
+) {
   if (!task_handle)
     return ompd_rc_stale_handle;
   if (!task_handle->ah)
     return ompd_rc_stale_handle;
+  if (!task_addr)
+    return ompd_rc_bad_input;
   ompd_address_space_context_t *context = task_handle->ah->context;
   if (!context)
     return ompd_rc_stale_handle;
   if (!ompd_state)
     return ompd_rc_needs_state_tracking;
+  if (!callbacks) {
+    return ompd_rc_callback_error;
+  }
 
-  assert(callbacks && "Callback table not initialized!");
   ompd_rc_t ret;
 
-  if (task_handle->ah->kind == OMPD_DEVICE_KIND_CUDA) {
-    task_addr->segment = OMPD_SEGMENT_UNSPECIFIED;
+  task_addr->segment = OMPD_SEGMENT_UNSPECIFIED;
+  TValue taskInfo;
+  if (task_handle->lwt.address != 0)
+    return ompd_rc_bad_input; // We need to decide what we do here.
+  else {
+    ompd_word_t val;
     ret = TValue(context, task_handle->th)
-            .cast("omptarget_nvptx_TaskDescr", 0,
-                  OMPD_SEGMENT_CUDA_PTX_GLOBAL)
-            .access("ompd_thread_info")
-            .cast("ompd_nvptx_thread_info_t", 0,
-                  OMPD_SEGMENT_CUDA_PTX_GLOBAL)
-            .access("task_function")
-            .castBase()
-            .getValue(task_addr->address);
+              .cast("kmp_taskdata_t") // td
+              .access("td_flags")     // td->td_flags
+              .cast("kmp_tasking_flags_t")
+              .check("tasktype", &val); // td->td_flags.tasktype
 
-  } else {
-    task_addr->segment = OMPD_SEGMENT_UNSPECIFIED;
-    TValue taskInfo;
-    if(task_handle->lwt.address!=0)
-      return ompd_rc_bad_input; // We need to decide what we do here.
-    else
-    {
-      ompd_word_t val;
+    if (ret != ompd_rc_ok)
+      return ret;
+
+    if (val == 1) { // tasktype: explicit = 1, implicit = 0
+
       ret = TValue(context, task_handle->th)
-                      .cast("kmp_taskdata_t") // td
-                      .access("td_flags")     // td->td_flags
-                      .cast("kmp_tasking_flags_t")
-                      .check("tasktype", &val); // td->td_flags.tasktype
+                .cast("kmp_taskdata_t", 0) /*t*/
+                .getArrayElement(
+                    1) /* see kmp.h: #define KMP_TASKDATA_TO_TASK(taskdata)
+                          (kmp_task_t *)(taskdata + 1) */
+                .cast("kmp_task_t", 0) /* (kmp_task_t *) */
+                .access("routine")     /*td->ompt_task_info*/
+                .castBase()
+                .getValue(task_addr->address);
 
-      if (ret != ompd_rc_ok)
-        return ret;
+    } else {
 
-      if (val==1) { // tasktype: explicit = 1, implicit = 0
-
-        ret = TValue(context, task_handle->th)
-              .cast("kmp_taskdata_t",0)		/*t*/
-              .getArrayElement(1)                   /* see kmp.h: #define KMP_TASKDATA_TO_TASK(taskdata) (kmp_task_t *)(taskdata + 1) */
-              .cast("kmp_task_t",0)                 /* (kmp_task_t *) */
-              .access("routine")             /*td->ompt_task_info*/
-              .castBase()
-              .getValue(task_addr->address);
-
-      } else {
-
-        ret = TValue(context, task_handle->th)
-              .cast("kmp_taskdata_t") /*td*/
-              .access("td_team")      /*td.td_team*/
-              .cast("kmp_team_p", 1)
-              .access("t")            /*td.td_team->t*/
-              .cast("kmp_base_team_t", 0)
-              .access("t_pkfn")       /*td.td_team->t.t_pkfn*/
-              .castBase()
-              .getValue(task_addr->address);
-
-      }
+      ret = TValue(context, task_handle->th)
+                .cast("kmp_taskdata_t") /*td*/
+                .access("td_team")      /*td.td_team*/
+                .cast("kmp_team_p", 1)
+                .access("t") /*td.td_team->t*/
+                .cast("kmp_base_team_t", 0)
+                .access("t_pkfn") /*td.td_team->t.t_pkfn*/
+                .castBase()
+                .getValue(task_addr->address);
     }
   }
+
   return ret;
 }
 
-/* --- --- OMPD Version and Compatibility Information ----------------------- */
+/* ------- OMPD Version and Compatibility Information ----------------------- */
 
 ompd_rc_t ompd_get_api_version(ompd_word_t *version) {
+  if (!version)
+    return ompd_rc_bad_input;
+
   *version = OMPD_VERSION;
   return ompd_rc_ok;
 }
 
 ompd_rc_t
 ompd_get_version_string(const char **string /* OUT: OMPD version string */
-                            ) {
+) {
+  if (!string)
+    return ompd_rc_bad_input;
+
   static const char version_string[] =
       "LLVM OpenMP " STR(OMPD_IMPLEMENTS_OPENMP) "." STR(
           OMPD_IMPLEMENTS_OPENMP_SUBVERSION) " Debugging Library implmenting "
-                                             "TR " STR(OMPD_TR_VERSION) "" STR(OMPD_TR_SUBVERSION);
+                                             "TR " STR(OMPD_TR_VERSION) "" STR(
+                                                 OMPD_TR_SUBVERSION);
   *string = version_string;
   return ompd_rc_ok;
 }
 
-/* --- 4.8 Display Control Variables ---------------------------------------- */
+/* ------ Display Control Variables ----------------------------------------- */
 
 ompd_rc_t ompd_get_display_control_vars(ompd_address_space_handle_t *handle,
                                         const char *const **control_vars) {

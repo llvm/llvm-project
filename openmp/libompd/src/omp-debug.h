@@ -62,17 +62,6 @@ static const ompd_callbacks_t *callbacks = nullptr;
     OMPD_CALLBACK(read_memory, context, th_context, &_addr, size, buf);        \
   } while (0)
 
-// Information shared by all threads in a kernel
-// Used to map thread handles to native cuda thread ids
-typedef struct _ompd_cuda_thread_kernel_info_s {
-  ompd_addr_t cudaDevId;
-  ompd_addr_t cudaContext;
-  ompd_addr_t warpSize;
-  ompd_addr_t gridId;
-  ompd_dim3_t gridDim;
-  ompd_dim3_t blockDim;
-} ompd_cuda_thread_kernel_info_t;
-
 typedef struct _ompd_aspace_cont ompd_address_space_context_t;
 
 typedef struct _ompd_aspace_handle {
@@ -85,34 +74,24 @@ typedef struct _ompd_thread_handle {
   ompd_address_space_handle_t *ah;
   ompd_thread_context_t *thread_context;
   ompd_address_t th; /* target handle */
-  ompd_cuda_thread_kernel_info_t *cuda_kernel_info; /* only valid for cuda */
 } ompd_thread_handle_t;
 
 typedef struct _ompd_parallel_handle {
   ompd_address_space_handle_t *ah;
   ompd_address_t th;  /* target handle */
   ompd_address_t lwt; /* lwt handle */
-  ompd_cuda_thread_kernel_info_t *cuda_kernel_info; /* copied from the thread
-                                                       used to retrieve this
-                                                       parallel region handle
-                                                     */
 } ompd_parallel_handle_t;
 
 typedef struct _ompd_task_handle {
   ompd_address_space_handle_t *ah;
   ompd_address_t th;  /* target handle */
   ompd_address_t lwt; /* lwt handle */
-  ompd_cuda_thread_kernel_info_t *cuda_kernel_info; /* copied from the thread
-                                                       used to retrieve this
-                                                       parallel region handle
-                                                     */
   _ompd_task_handle(){
     ah=NULL;
     th.segment=OMPD_SEGMENT_UNSPECIFIED;
     lwt.segment=OMPD_SEGMENT_UNSPECIFIED;
     th.address=0;
     lwt.address=0;
-    cuda_kernel_info=NULL;
   }
 } ompd_task_handle_t;
 
