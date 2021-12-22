@@ -283,34 +283,34 @@ constexpr bool testEndFunction() {
 ASSERT_NOEXCEPT(std::ranges::end(std::declval<int (&)[10]>()));
 ASSERT_NOEXCEPT(std::ranges::cend(std::declval<int (&)[10]>()));
 
-template<class T>
 struct NoThrowMemberEnd {
-  T begin() const;
-  T end() const noexcept;
-};
-ASSERT_NOEXCEPT(std::ranges::end(std::declval<NoThrowMemberEnd<int*>&>()));
-ASSERT_NOEXCEPT(std::ranges::cend(std::declval<NoThrowMemberEnd<int*>&>()));
-ASSERT_NOT_NOEXCEPT(std::ranges::end(std::declval<NoThrowMemberEnd<ThrowingIterator<int>>&>()));
-ASSERT_NOT_NOEXCEPT(std::ranges::cend(std::declval<NoThrowMemberEnd<ThrowingIterator<int>>&>()));
+  ThrowingIterator<int> begin() const;
+  ThrowingIterator<int> end() const noexcept; // auto(t.end()) doesn't throw
+} ntme;
+static_assert(noexcept(std::ranges::end(ntme)));
+static_assert(noexcept(std::ranges::cend(ntme)));
 
-template<class T>
 struct NoThrowADLEnd {
-  T begin() const;
-  friend T end(NoThrowADLEnd&) noexcept { return T{}; }
-  friend T end(NoThrowADLEnd const&) noexcept { return T{}; }
-};
-ASSERT_NOEXCEPT(std::ranges::end(std::declval<NoThrowADLEnd<int*>&>()));
-ASSERT_NOEXCEPT(std::ranges::cend(std::declval<NoThrowADLEnd<int*>&>()));
-ASSERT_NOT_NOEXCEPT(std::ranges::end(std::declval<NoThrowADLEnd<ThrowingIterator<int>>&>()));
-ASSERT_NOT_NOEXCEPT(std::ranges::cend(std::declval<NoThrowADLEnd<ThrowingIterator<int>>&>()));
+  ThrowingIterator<int> begin() const;
+  friend ThrowingIterator<int> end(NoThrowADLEnd&) noexcept;  // auto(end(t)) doesn't throw
+  friend ThrowingIterator<int> end(const NoThrowADLEnd&) noexcept;
+} ntae;
+static_assert(noexcept(std::ranges::end(ntae)));
+static_assert(noexcept(std::ranges::cend(ntae)));
 
-struct BeginReturnsArrayRef {
+struct NoThrowMemberEndReturnsRef {
+  ThrowingIterator<int> begin() const;
+  ThrowingIterator<int>& end() const noexcept; // auto(t.end()) may throw
+} ntmerr;
+static_assert(!noexcept(std::ranges::end(ntmerr)));
+static_assert(!noexcept(std::ranges::cend(ntmerr)));
+
+struct EndReturnsArrayRef {
     auto begin() const noexcept -> int(&)[10];
     auto end() const noexcept -> int(&)[10];
-} brar;
-static_assert(noexcept(std::ranges::end(brar)));
-static_assert(noexcept(std::ranges::cend(brar)));
-
+} erar;
+static_assert(noexcept(std::ranges::end(erar)));
+static_assert(noexcept(std::ranges::cend(erar)));
 
 int main(int, char**) {
   testArray();
