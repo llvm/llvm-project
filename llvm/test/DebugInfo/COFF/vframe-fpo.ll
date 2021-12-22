@@ -65,9 +65,7 @@
 ; CODEVIEW-NEXT:   Subsection [
 ; CODEVIEW-NEXT:     SubSectionType: Symbols (0xF1)
 ; CODEVIEW-NEXT:     SubSectionSize:
-; CODEVIEW-NEXT:     ObjNameSym {
-; CODEVIEW-NEXT:       Kind: S_OBJNAME (0x1101)
-; CODEVIEW:          Compile3Sym {
+; CODEVIEW-NEXT:     Compile3Sym {
 ; CODEVIEW-NEXT:       Kind: S_COMPILE3 (0x113C)
 ; CODEVIEW:          }
 ; CODEVIEW:        ]

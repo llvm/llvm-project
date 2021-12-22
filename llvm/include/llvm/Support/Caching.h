@@ -27,11 +27,8 @@ class MemoryBuffer;
 /// that can be done by deriving from this class and overriding the destructor.
 class CachedFileStream {
 public:
-  CachedFileStream(std::unique_ptr<raw_pwrite_stream> OS,
-                   std::string OSPath = "")
-      : OS(std::move(OS)), ObjectPathName(OSPath) {}
+  CachedFileStream(std::unique_ptr<raw_pwrite_stream> OS) : OS(std::move(OS)) {}
   std::unique_ptr<raw_pwrite_stream> OS;
-  std::string ObjectPathName;
   virtual ~CachedFileStream() = default;
 };
 

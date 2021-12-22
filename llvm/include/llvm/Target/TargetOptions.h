@@ -418,11 +418,6 @@ namespace llvm {
 
     /// Machine level options.
     MCTargetOptions MCOptions;
-
-    /// Stores the filename/path of the final .o/.obj file, to be written in the
-    /// debug information. This is used for emitting the CodeView S_OBJNAME
-    /// record.
-    std::string ObjectFilenameForDebug;
   };
 
 } // End llvm namespace
