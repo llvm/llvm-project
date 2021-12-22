@@ -514,45 +514,19 @@ bool PlatformDarwin::ModuleIsExcludedForUnconstrainedSearches(
   return obj_type == ObjectFile::eTypeDynamicLinker;
 }
 
-bool PlatformDarwin::x86GetSupportedArchitectureAtIndex(uint32_t idx,
-                                                        ArchSpec &arch) {
+void PlatformDarwin::x86GetSupportedArchitectures(
+    std::vector<ArchSpec> &archs) {
   ArchSpec host_arch = HostInfo::GetArchitecture(HostInfo::eArchKindDefault);
+  archs.push_back(host_arch);
+
   if (host_arch.GetCore() == ArchSpec::eCore_x86_64_x86_64h) {
-    switch (idx) {
-    case 0:
-      arch = host_arch;
-      return true;
-
-    case 1:
-      arch.SetTriple("x86_64-apple-macosx");
-      return true;
-
-    case 2:
-      arch = HostInfo::GetArchitecture(HostInfo::eArchKind32);
-      return true;
-
-    default:
-      return false;
-    }
+    archs.push_back(ArchSpec("x86_64-apple-macosx"));
+    archs.push_back(HostInfo::GetArchitecture(HostInfo::eArchKind32));
   } else {
-    if (idx == 0) {
-      arch = HostInfo::GetArchitecture(HostInfo::eArchKindDefault);
-      return arch.IsValid();
-    } else if (idx == 1) {
-      ArchSpec platform_arch(
-          HostInfo::GetArchitecture(HostInfo::eArchKindDefault));
-      ArchSpec platform_arch64(
-          HostInfo::GetArchitecture(HostInfo::eArchKind64));
-      if (platform_arch.IsExactMatch(platform_arch64)) {
-        // This macosx platform supports both 32 and 64 bit. Since we already
-        // returned the 64 bit arch for idx == 0, return the 32 bit arch for
-        // idx == 1
-        arch = HostInfo::GetArchitecture(HostInfo::eArchKind32);
-        return arch.IsValid();
-      }
-    }
+    ArchSpec host_arch64 = HostInfo::GetArchitecture(HostInfo::eArchKind64);
+    if (host_arch.IsExactMatch(host_arch64))
+      archs.push_back(HostInfo::GetArchitecture(HostInfo::eArchKind32));
   }
-  return false;
 }
 
 static llvm::ArrayRef<const char *> GetCompatibleArchs(ArchSpec::Core core) {
@@ -669,21 +643,19 @@ const char *PlatformDarwin::GetCompatibleArch(ArchSpec::Core core, size_t idx) {
 /// The architecture selection rules for arm processors These cpu subtypes have
 /// distinct names (e.g. armv7f) but armv7 binaries run fine on an armv7f
 /// processor.
-bool PlatformDarwin::ARMGetSupportedArchitectureAtIndex(uint32_t idx,
-                                                        ArchSpec &arch) {
+void PlatformDarwin::ARMGetSupportedArchitectures(
+    std::vector<ArchSpec> &archs) {
   const ArchSpec system_arch = GetSystemArchitecture();
   const ArchSpec::Core system_core = system_arch.GetCore();
 
-  if (const char *compatible_arch = GetCompatibleArch(system_core, idx)) {
+  const char *compatible_arch;
+  for (unsigned idx = 0;
+       (compatible_arch = GetCompatibleArch(system_core, idx)); ++idx) {
     llvm::Triple triple;
     triple.setArchName(compatible_arch);
     triple.setVendor(llvm::Triple::VendorType::Apple);
-    arch.SetTriple(triple);
-    return true;
+    archs.push_back(ArchSpec(triple));
   }
-
-  arch.Clear();
-  return false;
 }
 
 static FileSpec GetXcodeSelectPath() {
@@ -1366,12 +1338,4 @@ FileSpec PlatformDarwin::GetCurrentCommandLineToolsDirectory() {
   if (FileSpec fspec = HostInfo::GetShlibDir())
     return FileSpec(FindComponentInPath(fspec.GetPath(), "CommandLineTools"));
   return {};
-}
-
-std::vector<ArchSpec> PlatformDarwin::GetSupportedArchitectures() {
-  std::vector<ArchSpec> result;
-  ArchSpec arch;
-  for (uint32_t idx = 0; GetSupportedArchitectureAtIndex(idx, arch); ++idx)
-    result.push_back(arch);
-  return result;
 }

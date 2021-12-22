@@ -47,8 +47,7 @@ public:
     return PlatformDarwin::GetFile(source, destination);
   }
 
-  bool GetSupportedArchitectureAtIndex(uint32_t idx,
-                                       lldb_private::ArchSpec &arch) override;
+  std::vector<lldb_private::ArchSpec> GetSupportedArchitectures() override;
 
   lldb_private::ConstString
   GetSDKDirectory(lldb_private::Target &target) override;
@@ -59,11 +58,6 @@ public:
     return PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
         target, options, lldb_private::XcodeSDK::Type::MacOSX);
   }
-
-private:
-#if defined(__arm__) || defined(__arm64__) || defined(__aarch64__)
-  uint32_t m_num_arm_arches = 0;
-#endif
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMMACOSX_H

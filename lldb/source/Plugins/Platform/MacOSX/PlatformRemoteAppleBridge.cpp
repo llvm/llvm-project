@@ -137,34 +137,8 @@ llvm::StringRef PlatformRemoteAppleBridge::GetDescriptionStatic() {
   return "Remote BridgeOS platform plug-in.";
 }
 
-bool PlatformRemoteAppleBridge::GetSupportedArchitectureAtIndex(uint32_t idx,
-                                                            ArchSpec &arch) {
-  ArchSpec system_arch(GetSystemArchitecture());
-
-  const ArchSpec::Core system_core = system_arch.GetCore();
-  switch (system_core) {
-  default:
-    switch (idx) {
-    case 0:
-      arch.SetTriple("arm64-apple-bridgeos");
-      return true;
-    default:
-      break;
-    }
-    break;
-
-  case ArchSpec::eCore_arm_arm64:
-    switch (idx) {
-    case 0:
-      arch.SetTriple("arm64-apple-bridgeos");
-      return true;
-    default:
-      break;
-    }
-    break;
-  }
-  arch.Clear();
-  return false;
+std::vector<ArchSpec> PlatformRemoteAppleBridge::GetSupportedArchitectures() {
+  return {ArchSpec("arm64-apple-bridgeos")};
 }
 
 llvm::StringRef PlatformRemoteAppleBridge::GetDeviceSupportDirectoryName() {
