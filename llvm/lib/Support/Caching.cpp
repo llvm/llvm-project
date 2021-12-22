@@ -79,14 +79,13 @@ Expected<FileCache> llvm::localCache(Twine CacheNameRef,
     struct CacheStream : CachedFileStream {
       AddBufferFn AddBuffer;
       sys::fs::TempFile TempFile;
-      std::string EntryPath;
       unsigned Task;
 
       CacheStream(std::unique_ptr<raw_pwrite_stream> OS, AddBufferFn AddBuffer,
                   sys::fs::TempFile TempFile, std::string EntryPath,
                   unsigned Task)
-          : CachedFileStream(std::move(OS)), AddBuffer(std::move(AddBuffer)),
-            TempFile(std::move(TempFile)), EntryPath(std::move(EntryPath)),
+          : CachedFileStream(std::move(OS), std::move(EntryPath)),
+            AddBuffer(std::move(AddBuffer)), TempFile(std::move(TempFile)),
             Task(Task) {}
 
       ~CacheStream() {
@@ -99,7 +98,7 @@ Expected<FileCache> llvm::localCache(Twine CacheNameRef,
         // Open the file first to avoid racing with a cache pruner.
         ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
             MemoryBuffer::getOpenFile(
-                sys::fs::convertFDToNativeFile(TempFile.FD), EntryPath,
+                sys::fs::convertFDToNativeFile(TempFile.FD), ObjectPathName,
                 /*FileSize=*/-1, /*RequiresNullTerminator=*/false);
         if (!MBOrErr)
           report_fatal_error(Twine("Failed to open new cache file ") +
@@ -115,14 +114,14 @@ Expected<FileCache> llvm::localCache(Twine CacheNameRef,
         // AddBuffer a copy of the bytes we wrote in that case. We do this
         // instead of just using the existing file, because the pruner might
         // delete the file before we get a chance to use it.
-        Error E = TempFile.keep(EntryPath);
+        Error E = TempFile.keep(ObjectPathName);
         E = handleErrors(std::move(E), [&](const ECError &E) -> Error {
           std::error_code EC = E.convertToErrorCode();
           if (EC != errc::permission_denied)
             return errorCodeToError(EC);
 
           auto MBCopy = MemoryBuffer::getMemBufferCopy((*MBOrErr)->getBuffer(),
-                                                       EntryPath);
+                                                       ObjectPathName);
           MBOrErr = std::move(MBCopy);
 
           // FIXME: should we consume the discard error?
@@ -133,7 +132,7 @@ Expected<FileCache> llvm::localCache(Twine CacheNameRef,
 
         if (E)
           report_fatal_error(Twine("Failed to rename temporary file ") +
-                             TempFile.TmpName + " to " + EntryPath + ": " +
+                             TempFile.TmpName + " to " + ObjectPathName + ": " +
                              toString(std::move(E)) + "\n");
 
         AddBuffer(Task, std::move(*MBOrErr));

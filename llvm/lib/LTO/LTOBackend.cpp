@@ -412,6 +412,8 @@ static void codegen(const Config &Conf, TargetMachine *TM,
   if (Error Err = StreamOrErr.takeError())
     report_fatal_error(std::move(Err));
   std::unique_ptr<CachedFileStream> &Stream = *StreamOrErr;
+  TM->Options.ObjectFilenameForDebug = Stream->ObjectPathName;
+
   legacy::PassManager CodeGenPasses;
   CodeGenPasses.add(
       createImmutableModuleSummaryIndexWrapperPass(&CombinedIndex));
