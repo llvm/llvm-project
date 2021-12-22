@@ -296,7 +296,6 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
 // CHECK-NEXT:    "name": "Obj",
-// CHECK-NEXT:    "mangledName": "Obj",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "I *"
 // CHECK-NEXT:    }
@@ -673,7 +672,6 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "name": "s",
-// CHECK-NEXT:        "mangledName": "s",
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "desugaredQualType": "SEL *",
 // CHECK-NEXT:         "qualType": "SEL",
@@ -765,7 +763,6 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
 // CHECK-NEXT:    "name": "Obj",
-// CHECK-NEXT:    "mangledName": "Obj",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "desugaredQualType": "id",
 // CHECK-NEXT:     "qualType": "id",
@@ -953,7 +950,6 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
 // CHECK-NEXT:    "name": "Obj",
-// CHECK-NEXT:    "mangledName": "Obj",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "J *"
 // CHECK-NEXT:    }
@@ -1593,7 +1589,6 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "name": "i",
-// CHECK-NEXT:        "mangledName": "i",
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "qualType": "int"
 // CHECK-NEXT:        },
@@ -1977,7 +1972,6 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
 // CHECK-NEXT:    "name": "Array",
-// CHECK-NEXT:    "mangledName": "Array",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "NSMutableArray *"
 // CHECK-NEXT:    }
@@ -2004,7 +1998,6 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
 // CHECK-NEXT:    "name": "Dict",
-// CHECK-NEXT:    "mangledName": "Dict",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "NSMutableDictionary *"
 // CHECK-NEXT:    }
@@ -2870,7 +2863,6 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "isUsed": true,
 // CHECK-NEXT:        "name": "i",
-// CHECK-NEXT:        "mangledName": "i",
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "desugaredQualType": "id",
 // CHECK-NEXT:         "qualType": "id",
@@ -4826,7 +4818,6 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
 // CHECK-NEXT:    "name": "Ptr",
-// CHECK-NEXT:    "mangledName": "Ptr",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "I *"
 // CHECK-NEXT:    }

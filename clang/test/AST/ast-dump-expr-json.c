@@ -322,7 +322,6 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
 // CHECK-NEXT:    "name": "a",
-// CHECK-NEXT:    "mangledName": "a",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
 // CHECK-NEXT:    }
@@ -582,7 +581,6 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
 // CHECK-NEXT:    "name": "a",
-// CHECK-NEXT:    "mangledName": "a",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
 // CHECK-NEXT:    }
@@ -1017,7 +1015,6 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
 // CHECK-NEXT:    "name": "a",
-// CHECK-NEXT:    "mangledName": "a",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
 // CHECK-NEXT:    }
@@ -1044,7 +1041,6 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
 // CHECK-NEXT:    "name": "b",
-// CHECK-NEXT:    "mangledName": "b",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
 // CHECK-NEXT:    }
@@ -3391,7 +3387,6 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
 // CHECK-NEXT:    "name": "a",
-// CHECK-NEXT:    "mangledName": "a",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
 // CHECK-NEXT:    }
@@ -3418,7 +3413,6 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
 // CHECK-NEXT:    "name": "b",
-// CHECK-NEXT:    "mangledName": "b",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int *"
 // CHECK-NEXT:    }
@@ -4059,7 +4053,6 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
 // CHECK-NEXT:    "name": "a",
-// CHECK-NEXT:    "mangledName": "a",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int *"
 // CHECK-NEXT:    }
@@ -4086,7 +4079,6 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
 // CHECK-NEXT:    "name": "b",
-// CHECK-NEXT:    "mangledName": "b",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "desugaredQualType": "struct S",
 // CHECK-NEXT:     "qualType": "struct S"
@@ -4114,7 +4106,6 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
 // CHECK-NEXT:    "name": "c",
-// CHECK-NEXT:    "mangledName": "c",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "struct S *"
 // CHECK-NEXT:    }
@@ -4957,7 +4948,6 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
 // CHECK-NEXT:    "name": "a",
-// CHECK-NEXT:    "mangledName": "a",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
 // CHECK-NEXT:    }

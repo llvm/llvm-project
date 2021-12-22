@@ -1178,7 +1178,6 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
 // CHECK-NEXT:    "name": "x",
-// CHECK-NEXT:    "mangledName": "x",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
 // CHECK-NEXT:    }
@@ -1204,7 +1203,6 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "y",
-// CHECK-NEXT:    "mangledName": "y",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "desugaredQualType": "enum (unnamed at {{.*}}:69:29)",
 // CHECK-NEXT:     "qualType": "enum (unnamed enum at {{.*}}:69:29)"
@@ -1352,7 +1350,6 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
 // CHECK-NEXT:    "name": "x",
-// CHECK-NEXT:    "mangledName": "x",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "desugaredQualType": "enum Enum",
 // CHECK-NEXT:     "qualType": "enum Enum"
@@ -1523,7 +1520,6 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "x",
-// CHECK-NEXT:    "mangledName": "x",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
 // CHECK-NEXT:    }
@@ -1888,7 +1884,6 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestParmVarDecl",
-// CHECK-NEXT:  "mangledName": "TestParmVarDecl",
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "int"
 // CHECK-NEXT:  }

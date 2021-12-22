@@ -744,11 +744,18 @@ void JSONNodeDumper::VisitNamedDecl(const NamedDecl *ND) {
     JOS.attribute("name", ND->getNameAsString());
     // FIXME: There are likely other contexts in which it makes no sense to ask
     // for a mangled name.
-    if (!isa<RequiresExprBodyDecl>(ND->getDeclContext())) {
-      std::string MangledName = ASTNameGen.getName(ND);
-      if (!MangledName.empty())
-        JOS.attribute("mangledName", MangledName);
-    }
+    if (isa<RequiresExprBodyDecl>(ND->getDeclContext()))
+      return;
+
+    // Mangled names are not meaningful for locals, and may not be well-defined
+    // in the case of VLAs.
+    auto *VD = dyn_cast<VarDecl>(ND);
+    if (VD && VD->hasLocalStorage())
+      return;
+
+    std::string MangledName = ASTNameGen.getName(ND);
+    if (!MangledName.empty())
+      JOS.attribute("mangledName", MangledName);
   }
 }
 

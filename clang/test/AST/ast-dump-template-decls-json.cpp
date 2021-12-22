@@ -1040,7 +1040,6 @@ void i();
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "name": "i",
-// CHECK-NEXT:        "mangledName": "_ZZ1fiE1i",
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "qualType": "int"
 // CHECK-NEXT:        },

@@ -628,7 +628,6 @@ int main() {
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "a",
-// CHECK-NEXT:    "mangledName": "_ZZ5Test3iiE1a",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
 // CHECK-NEXT:    }
@@ -654,7 +653,6 @@ int main() {
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "b",
-// CHECK-NEXT:    "mangledName": "_ZZ5Test3iiE1b",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
 // CHECK-NEXT:    }
@@ -711,7 +709,6 @@ int main() {
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "a",
-// CHECK-NEXT:    "mangledName": "_ZZ5Test4iiE1a",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
 // CHECK-NEXT:    }
@@ -737,7 +734,6 @@ int main() {
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "b",
-// CHECK-NEXT:    "mangledName": "_ZZ5Test4iiE1b",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
 // CHECK-NEXT:    },
