@@ -20,7 +20,7 @@ HEXAGON_Vect1024 test1(void *in, void *out) {
   v2 = *p++;
   q1 = *p++;
 
-  return __builtin_HEXAGON_V6_vaddcarrysat_128B(v1, v2, q1);
+  return __builtin_HEXAGON_V6_vaddcarrysat_128B(v1, v2, __builtin_HEXAGON_V6_vandvrt_128B(q1, -1));
 }
 
 // CHECK-LABEL: @test26

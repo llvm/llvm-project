@@ -44,7 +44,7 @@ HEXAGON_Vect512 test5(void *in, void *out) {
   v2 = *p++;
   q1 = *p++;
 
-  return __builtin_HEXAGON_V6_vaddcarrysat(v1, v2, q1);
+  return __builtin_HEXAGON_V6_vaddcarrysat(v1, v2, __builtin_HEXAGON_V6_vandvrt(q1, -1));
 }
 
 // CHECK-LABEL: @test6
