@@ -3556,6 +3556,11 @@ TEST_F(FormatTest, FormatsNamespaces) {
                "struct b_struct {};\n"
                "} // namespace B\n",
                Style);
+  verifyFormat("template <int I> constexpr void foo requires(I == 42) {}\n"
+               "namespace ns {\n"
+               "void foo() {}\n"
+               "} // namespace ns\n",
+               Style);
 }
 
 TEST_F(FormatTest, NamespaceMacros) {
