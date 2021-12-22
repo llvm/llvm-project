@@ -7,7 +7,6 @@ target datalayout = "E-m:e-p:32:32-i64:32-f64:32:64-a:0:32-n32-S32"
 
 ; There is no dead store in this test. Make sure no store is deleted by DSE.
 ; Test case related to bug report PR52774.
-; NOTE: Showing actual (broken) DSE behavior.
 
 define %struct.ilist* @test() {
 ; CHECK-LABEL: @test(
@@ -19,6 +18,8 @@ define %struct.ilist* @test() {
 ; CHECK-NEXT:    [[LIST_NEW_ILIST_PTR]] = bitcast i8* [[LIST_NEW_I8_PTR]] to %struct.ilist*
 ; CHECK-NEXT:    [[GEP_NEW_VALUE:%.*]] = getelementptr inbounds [[STRUCT_ILIST:%.*]], %struct.ilist* [[LIST_NEW_ILIST_PTR]], i32 0, i32 0
 ; CHECK-NEXT:    store i32 42, i32* [[GEP_NEW_VALUE]], align 8
+; CHECK-NEXT:    [[GEP_NEW_NEXT:%.*]] = getelementptr inbounds [[STRUCT_ILIST]], %struct.ilist* [[LIST_NEW_ILIST_PTR]], i32 0, i32 1
+; CHECK-NEXT:    store %struct.ilist* [[LIST_NEXT]], %struct.ilist** [[GEP_NEW_NEXT]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[IV_NEXT]], 10
 ; CHECK-NEXT:    br i1 [[COND]], label [[EXIT:%.*]], label [[LOOP]]

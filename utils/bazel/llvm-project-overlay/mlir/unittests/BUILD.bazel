@@ -266,7 +266,11 @@ cc_test(
     ]),
     deps = [
         "//llvm:gtest_main",
+        "//mlir:IR",
+        "//mlir:Parser",
+        "//mlir:Pass",
         "//mlir:TransformUtils",
+        "//mlir:Transforms",
     ],
 )
 

@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/threads/thrd_join.h"
-#include "config/linux/syscall.h" // For syscall function.
-#include "include/sys/syscall.h"  // For syscall numbers.
-#include "include/threads.h"      // For thrd_* type definitions.
+#include "include/sys/syscall.h"          // For syscall numbers.
+#include "include/threads.h"              // For thrd_* type definitions.
+#include "src/__support/OSUtil/syscall.h" // For syscall function.
 #include "src/__support/common.h"
 #include "src/sys/mman/munmap.h"
 #include "src/threads/linux/Futex.h"

@@ -1,4 +1,4 @@
-//===------------ inline implementation of x86_64 syscalls ----------------===//
+//===---------- inline implementation of x86_64 syscalls ----------* C++ *-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-%%begin()
+#ifndef LLVM_LIBC_SRC_SUPPORT_OSUTIL_LINUX_X86_64_SYSCALL_H
+#define LLVM_LIBC_SRC_SUPPORT_OSUTIL_LINUX_X86_64_SYSCALL_H
 
 #include "src/__support/common.h"
 
@@ -100,7 +101,8 @@ __attribute__((always_inline)) inline long syscall(long __number, Ts... ts) {
   return syscall(__number, (long)ts...);
 }
 
-
 #undef SYSCALL_CLOBBER_LIST
 
 } // namespace __llvm_libc
+
+#endif // LLVM_LIBC_SRC_SUPPORT_OSUTIL_LINUX_X86_64_SYSCALL_H

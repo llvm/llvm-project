@@ -28,7 +28,7 @@ PatternApplicator::PatternApplicator(
     bytecode->initializeMutableState(*mutableByteCodeState);
   }
 }
-PatternApplicator::~PatternApplicator() {}
+PatternApplicator::~PatternApplicator() = default;
 
 #ifndef NDEBUG
 /// Log a message for a pattern that is impossible to match.

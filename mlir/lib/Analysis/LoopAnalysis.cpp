@@ -182,8 +182,7 @@ static bool isAccessIndexInvariant(Value iv, Value index) {
 
 DenseSet<Value> mlir::getInvariantAccesses(Value iv, ArrayRef<Value> indices) {
   DenseSet<Value> res;
-  for (unsigned idx = 0, n = indices.size(); idx < n; ++idx) {
-    auto val = indices[idx];
+  for (auto val : indices) {
     if (isAccessIndexInvariant(iv, val)) {
       res.insert(val);
     }

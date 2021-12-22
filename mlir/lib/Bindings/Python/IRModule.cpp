@@ -29,7 +29,7 @@ PyGlobals::PyGlobals() {
   instance = this;
   // The default search path include {mlir.}dialects, where {mlir.} is the
   // package prefix configured at compile time.
-  dialectSearchPrefixes.push_back(MAKE_MLIR_PYTHON_QUALNAME("dialects"));
+  dialectSearchPrefixes.emplace_back(MAKE_MLIR_PYTHON_QUALNAME("dialects"));
 }
 
 PyGlobals::~PyGlobals() { instance = nullptr; }
