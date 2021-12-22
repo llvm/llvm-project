@@ -378,8 +378,7 @@ static Address castValueFromUintptr(CodeGenFunction &CGF, SourceLocation Loc,
       AddrLV.getAddress(CGF).getPointer(), Ctx.getUIntPtrType(),
       Ctx.getPointerType(DstType), Loc);
   Address TmpAddr =
-      CGF.MakeNaturalAlignAddrLValue(CastedPtr, Ctx.getPointerType(DstType))
-          .getAddress(CGF);
+      CGF.MakeNaturalAlignAddrLValue(CastedPtr, DstType).getAddress(CGF);
   return TmpAddr;
 }
 

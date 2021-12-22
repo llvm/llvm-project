@@ -7797,7 +7797,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK13-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK13-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
-// CHECK13-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK13-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK13-NEXT:    [[CONV1:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK13-NEXT:    store i32 [[TMP2]], i32* [[CONV1]], align 4
 // CHECK13-NEXT:    [[TMP3:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -7832,7 +7832,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK13-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK13-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
-// CHECK13-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK13-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK13-NEXT:    store i32 [[TMP2]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK13-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK13-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP3]], 0
@@ -7878,7 +7878,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP15]] to i64
 // CHECK13-NEXT:    [[TMP17:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK13-NEXT:    [[TMP18:%.*]] = zext i32 [[TMP17]] to i64
-// CHECK13-NEXT:    [[TMP19:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK13-NEXT:    [[TMP19:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK13-NEXT:    [[CONV6:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK13-NEXT:    store i32 [[TMP19]], i32* [[CONV6]], align 4
 // CHECK13-NEXT:    [[TMP20:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -7931,7 +7931,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK13-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK13-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
-// CHECK13-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK13-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK13-NEXT:    store i32 [[TMP2]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK13-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK13-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP3]], 0
@@ -8019,7 +8019,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK13-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK13-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
-// CHECK13-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK13-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK13-NEXT:    [[CONV1:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK13-NEXT:    store i32 [[TMP2]], i32* [[CONV1]], align 4
 // CHECK13-NEXT:    [[TMP3:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -8054,7 +8054,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK13-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK13-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
-// CHECK13-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK13-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK13-NEXT:    store i32 [[TMP2]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK13-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK13-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP3]], 0
@@ -8100,7 +8100,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP15]] to i64
 // CHECK13-NEXT:    [[TMP17:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK13-NEXT:    [[TMP18:%.*]] = zext i32 [[TMP17]] to i64
-// CHECK13-NEXT:    [[TMP19:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK13-NEXT:    [[TMP19:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK13-NEXT:    [[CONV6:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK13-NEXT:    store i32 [[TMP19]], i32* [[CONV6]], align 4
 // CHECK13-NEXT:    [[TMP20:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -8153,7 +8153,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK13-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK13-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
-// CHECK13-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK13-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK13-NEXT:    store i32 [[TMP2]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK13-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK13-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP3]], 0
@@ -8245,11 +8245,11 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK13-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
 // CHECK13-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK13-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK13-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK13-NEXT:    [[CONV2:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK13-NEXT:    store i32 [[TMP2]], i32* [[CONV2]], align 4
 // CHECK13-NEXT:    [[TMP3:%.*]] = load i64, i64* [[N_CASTED]], align 8
-// CHECK13-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK13-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK13-NEXT:    [[CONV3:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED]] to i32*
 // CHECK13-NEXT:    store i32 [[TMP4]], i32* [[CONV3]], align 4
 // CHECK13-NEXT:    [[TMP5:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED]], align 8
@@ -8288,7 +8288,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK13-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
 // CHECK13-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK13-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK13-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK13-NEXT:    store i32 [[TMP2]], i32* [[DOTCAPTURE_EXPR_2]], align 4
 // CHECK13-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_2]], align 4
 // CHECK13-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP3]], 0
@@ -8305,7 +8305,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    store i32 [[TMP5]], i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK13-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK13-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK13-NEXT:    [[TMP6:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK13-NEXT:    [[TMP6:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK13-NEXT:    [[TMP7:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK13-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP7]], align 4
 // CHECK13-NEXT:    call void @__kmpc_for_static_init_4(%struct.ident_t* @[[GLOB1]], i32 [[TMP8]], i32 91, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_COMB_LB]], i32* [[DOTOMP_COMB_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 [[TMP6]])
@@ -8336,11 +8336,11 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[TMP17:%.*]] = zext i32 [[TMP16]] to i64
 // CHECK13-NEXT:    [[TMP18:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK13-NEXT:    [[TMP19:%.*]] = zext i32 [[TMP18]] to i64
-// CHECK13-NEXT:    [[TMP20:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK13-NEXT:    [[TMP20:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK13-NEXT:    [[CONV8:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK13-NEXT:    store i32 [[TMP20]], i32* [[CONV8]], align 4
 // CHECK13-NEXT:    [[TMP21:%.*]] = load i64, i64* [[N_CASTED]], align 8
-// CHECK13-NEXT:    [[TMP22:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK13-NEXT:    [[TMP22:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK13-NEXT:    [[CONV9:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED]] to i32*
 // CHECK13-NEXT:    store i32 [[TMP22]], i32* [[CONV9]], align 4
 // CHECK13-NEXT:    [[TMP23:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED]], align 8
@@ -8419,7 +8419,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK13-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
 // CHECK13-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK13-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK13-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK13-NEXT:    store i32 [[TMP2]], i32* [[DOTCAPTURE_EXPR_2]], align 4
 // CHECK13-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_2]], align 4
 // CHECK13-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP3]], 0
@@ -8507,7 +8507,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK13-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK13-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
-// CHECK13-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK13-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK13-NEXT:    [[CONV1:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK13-NEXT:    store i32 [[TMP2]], i32* [[CONV1]], align 4
 // CHECK13-NEXT:    [[TMP3:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -8542,7 +8542,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK13-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK13-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
-// CHECK13-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK13-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK13-NEXT:    store i32 [[TMP2]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK13-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK13-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP3]], 0
@@ -8588,7 +8588,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP15]] to i64
 // CHECK13-NEXT:    [[TMP17:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK13-NEXT:    [[TMP18:%.*]] = zext i32 [[TMP17]] to i64
-// CHECK13-NEXT:    [[TMP19:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK13-NEXT:    [[TMP19:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK13-NEXT:    [[CONV6:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK13-NEXT:    store i32 [[TMP19]], i32* [[CONV6]], align 4
 // CHECK13-NEXT:    [[TMP20:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -8641,7 +8641,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK13-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK13-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
-// CHECK13-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK13-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK13-NEXT:    store i32 [[TMP2]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK13-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK13-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP3]], 0
@@ -8729,11 +8729,11 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK13-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
 // CHECK13-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK13-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK13-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK13-NEXT:    [[CONV2:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK13-NEXT:    store i32 [[TMP2]], i32* [[CONV2]], align 4
 // CHECK13-NEXT:    [[TMP3:%.*]] = load i64, i64* [[N_CASTED]], align 8
-// CHECK13-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK13-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK13-NEXT:    [[CONV3:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED]] to i32*
 // CHECK13-NEXT:    store i32 [[TMP4]], i32* [[CONV3]], align 4
 // CHECK13-NEXT:    [[TMP5:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED]], align 8
@@ -8772,7 +8772,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK13-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
 // CHECK13-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK13-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK13-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK13-NEXT:    store i32 [[TMP2]], i32* [[DOTCAPTURE_EXPR_2]], align 4
 // CHECK13-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_2]], align 4
 // CHECK13-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP3]], 0
@@ -8818,11 +8818,11 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP15]] to i64
 // CHECK13-NEXT:    [[TMP17:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK13-NEXT:    [[TMP18:%.*]] = zext i32 [[TMP17]] to i64
-// CHECK13-NEXT:    [[TMP19:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK13-NEXT:    [[TMP19:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK13-NEXT:    [[CONV8:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK13-NEXT:    store i32 [[TMP19]], i32* [[CONV8]], align 4
 // CHECK13-NEXT:    [[TMP20:%.*]] = load i64, i64* [[N_CASTED]], align 8
-// CHECK13-NEXT:    [[TMP21:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK13-NEXT:    [[TMP21:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK13-NEXT:    [[CONV9:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED]] to i32*
 // CHECK13-NEXT:    store i32 [[TMP21]], i32* [[CONV9]], align 4
 // CHECK13-NEXT:    [[TMP22:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED]], align 8
@@ -8878,7 +8878,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK13-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
 // CHECK13-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK13-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK13-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK13-NEXT:    store i32 [[TMP2]], i32* [[DOTCAPTURE_EXPR_2]], align 4
 // CHECK13-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_2]], align 4
 // CHECK13-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP3]], 0
@@ -8901,7 +8901,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    store i32 [[CONV6]], i32* [[DOTOMP_UB]], align 4
 // CHECK13-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK13-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK13-NEXT:    [[TMP8:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK13-NEXT:    [[TMP8:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK13-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
 // CHECK13-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
 // CHECK13-NEXT:    [[TMP11:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
@@ -9413,7 +9413,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    store i64 [[DOTCAPTURE_EXPR_]], i64* [[DOTCAPTURE_EXPR__ADDR]], align 8
 // CHECK13-NEXT:    [[TMP0:%.*]] = load [10 x i32]*, [10 x i32]** [[A_ADDR]], align 8
 // CHECK13-NEXT:    [[CONV:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK13-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK13-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK13-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED]] to i32*
 // CHECK13-NEXT:    store i32 [[TMP1]], i32* [[CONV1]], align 4
 // CHECK13-NEXT:    [[TMP2:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED]], align 8
@@ -9473,7 +9473,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP8]] to i64
 // CHECK13-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK13-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP10]] to i64
-// CHECK13-NEXT:    [[TMP12:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK13-NEXT:    [[TMP12:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK13-NEXT:    [[CONV2:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED]] to i32*
 // CHECK13-NEXT:    store i32 [[TMP12]], i32* [[CONV2]], align 4
 // CHECK13-NEXT:    [[TMP13:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED]], align 8
@@ -9526,7 +9526,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    store i32 [[CONV2]], i32* [[DOTOMP_UB]], align 4
 // CHECK13-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK13-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK13-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK13-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK13-NEXT:    [[TMP4:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK13-NEXT:    [[TMP5:%.*]] = load i32, i32* [[TMP4]], align 4
 // CHECK13-NEXT:    call void @__kmpc_for_static_init_4(%struct.ident_t* @[[GLOB2]], i32 [[TMP5]], i32 33, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 [[TMP3]])
@@ -9752,7 +9752,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    store i64 [[DOTCAPTURE_EXPR_]], i64* [[DOTCAPTURE_EXPR__ADDR]], align 8
 // CHECK13-NEXT:    [[TMP0:%.*]] = load [10 x i32]*, [10 x i32]** [[A_ADDR]], align 8
 // CHECK13-NEXT:    [[CONV:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK13-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK13-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK13-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED]] to i32*
 // CHECK13-NEXT:    store i32 [[TMP1]], i32* [[CONV1]], align 4
 // CHECK13-NEXT:    [[TMP2:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED]], align 8
@@ -9812,7 +9812,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP8]] to i64
 // CHECK13-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK13-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP10]] to i64
-// CHECK13-NEXT:    [[TMP12:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK13-NEXT:    [[TMP12:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK13-NEXT:    [[CONV2:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED]] to i32*
 // CHECK13-NEXT:    store i32 [[TMP12]], i32* [[CONV2]], align 4
 // CHECK13-NEXT:    [[TMP13:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED]], align 8
@@ -9865,7 +9865,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    store i32 [[CONV2]], i32* [[DOTOMP_UB]], align 4
 // CHECK13-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK13-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK13-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK13-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK13-NEXT:    [[TMP4:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
 // CHECK13-NEXT:    [[TMP5:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
 // CHECK13-NEXT:    [[TMP6:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
@@ -10316,7 +10316,7 @@ int main (int argc, char **argv) {
 // CHECK14-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK14-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK14-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
-// CHECK14-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK14-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK14-NEXT:    [[CONV1:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK14-NEXT:    store i32 [[TMP2]], i32* [[CONV1]], align 4
 // CHECK14-NEXT:    [[TMP3:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -10351,7 +10351,7 @@ int main (int argc, char **argv) {
 // CHECK14-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK14-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK14-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
-// CHECK14-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK14-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK14-NEXT:    store i32 [[TMP2]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK14-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK14-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP3]], 0
@@ -10397,7 +10397,7 @@ int main (int argc, char **argv) {
 // CHECK14-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP15]] to i64
 // CHECK14-NEXT:    [[TMP17:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK14-NEXT:    [[TMP18:%.*]] = zext i32 [[TMP17]] to i64
-// CHECK14-NEXT:    [[TMP19:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK14-NEXT:    [[TMP19:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK14-NEXT:    [[CONV6:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK14-NEXT:    store i32 [[TMP19]], i32* [[CONV6]], align 4
 // CHECK14-NEXT:    [[TMP20:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -10450,7 +10450,7 @@ int main (int argc, char **argv) {
 // CHECK14-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK14-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK14-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
-// CHECK14-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK14-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK14-NEXT:    store i32 [[TMP2]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK14-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK14-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP3]], 0
@@ -10538,7 +10538,7 @@ int main (int argc, char **argv) {
 // CHECK14-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK14-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK14-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
-// CHECK14-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK14-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK14-NEXT:    [[CONV1:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK14-NEXT:    store i32 [[TMP2]], i32* [[CONV1]], align 4
 // CHECK14-NEXT:    [[TMP3:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -10573,7 +10573,7 @@ int main (int argc, char **argv) {
 // CHECK14-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK14-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK14-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
-// CHECK14-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK14-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK14-NEXT:    store i32 [[TMP2]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK14-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK14-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP3]], 0
@@ -10619,7 +10619,7 @@ int main (int argc, char **argv) {
 // CHECK14-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP15]] to i64
 // CHECK14-NEXT:    [[TMP17:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK14-NEXT:    [[TMP18:%.*]] = zext i32 [[TMP17]] to i64
-// CHECK14-NEXT:    [[TMP19:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK14-NEXT:    [[TMP19:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK14-NEXT:    [[CONV6:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK14-NEXT:    store i32 [[TMP19]], i32* [[CONV6]], align 4
 // CHECK14-NEXT:    [[TMP20:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -10672,7 +10672,7 @@ int main (int argc, char **argv) {
 // CHECK14-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK14-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK14-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
-// CHECK14-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK14-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK14-NEXT:    store i32 [[TMP2]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK14-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK14-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP3]], 0
@@ -10764,11 +10764,11 @@ int main (int argc, char **argv) {
 // CHECK14-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK14-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
 // CHECK14-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK14-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK14-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK14-NEXT:    [[CONV2:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK14-NEXT:    store i32 [[TMP2]], i32* [[CONV2]], align 4
 // CHECK14-NEXT:    [[TMP3:%.*]] = load i64, i64* [[N_CASTED]], align 8
-// CHECK14-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK14-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK14-NEXT:    [[CONV3:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED]] to i32*
 // CHECK14-NEXT:    store i32 [[TMP4]], i32* [[CONV3]], align 4
 // CHECK14-NEXT:    [[TMP5:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED]], align 8
@@ -10807,7 +10807,7 @@ int main (int argc, char **argv) {
 // CHECK14-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK14-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
 // CHECK14-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK14-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK14-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK14-NEXT:    store i32 [[TMP2]], i32* [[DOTCAPTURE_EXPR_2]], align 4
 // CHECK14-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_2]], align 4
 // CHECK14-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP3]], 0
@@ -10824,7 +10824,7 @@ int main (int argc, char **argv) {
 // CHECK14-NEXT:    store i32 [[TMP5]], i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK14-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK14-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK14-NEXT:    [[TMP6:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK14-NEXT:    [[TMP6:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK14-NEXT:    [[TMP7:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK14-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP7]], align 4
 // CHECK14-NEXT:    call void @__kmpc_for_static_init_4(%struct.ident_t* @[[GLOB1]], i32 [[TMP8]], i32 91, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_COMB_LB]], i32* [[DOTOMP_COMB_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 [[TMP6]])
@@ -10855,11 +10855,11 @@ int main (int argc, char **argv) {
 // CHECK14-NEXT:    [[TMP17:%.*]] = zext i32 [[TMP16]] to i64
 // CHECK14-NEXT:    [[TMP18:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK14-NEXT:    [[TMP19:%.*]] = zext i32 [[TMP18]] to i64
-// CHECK14-NEXT:    [[TMP20:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK14-NEXT:    [[TMP20:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK14-NEXT:    [[CONV8:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK14-NEXT:    store i32 [[TMP20]], i32* [[CONV8]], align 4
 // CHECK14-NEXT:    [[TMP21:%.*]] = load i64, i64* [[N_CASTED]], align 8
-// CHECK14-NEXT:    [[TMP22:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK14-NEXT:    [[TMP22:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK14-NEXT:    [[CONV9:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED]] to i32*
 // CHECK14-NEXT:    store i32 [[TMP22]], i32* [[CONV9]], align 4
 // CHECK14-NEXT:    [[TMP23:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED]], align 8
@@ -10938,7 +10938,7 @@ int main (int argc, char **argv) {
 // CHECK14-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK14-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
 // CHECK14-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK14-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK14-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK14-NEXT:    store i32 [[TMP2]], i32* [[DOTCAPTURE_EXPR_2]], align 4
 // CHECK14-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_2]], align 4
 // CHECK14-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP3]], 0
@@ -11026,7 +11026,7 @@ int main (int argc, char **argv) {
 // CHECK14-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK14-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK14-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
-// CHECK14-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK14-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK14-NEXT:    [[CONV1:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK14-NEXT:    store i32 [[TMP2]], i32* [[CONV1]], align 4
 // CHECK14-NEXT:    [[TMP3:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -11061,7 +11061,7 @@ int main (int argc, char **argv) {
 // CHECK14-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK14-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK14-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
-// CHECK14-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK14-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK14-NEXT:    store i32 [[TMP2]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK14-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK14-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP3]], 0
@@ -11107,7 +11107,7 @@ int main (int argc, char **argv) {
 // CHECK14-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP15]] to i64
 // CHECK14-NEXT:    [[TMP17:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK14-NEXT:    [[TMP18:%.*]] = zext i32 [[TMP17]] to i64
-// CHECK14-NEXT:    [[TMP19:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK14-NEXT:    [[TMP19:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK14-NEXT:    [[CONV6:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK14-NEXT:    store i32 [[TMP19]], i32* [[CONV6]], align 4
 // CHECK14-NEXT:    [[TMP20:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -11160,7 +11160,7 @@ int main (int argc, char **argv) {
 // CHECK14-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK14-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK14-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
-// CHECK14-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK14-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK14-NEXT:    store i32 [[TMP2]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK14-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK14-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP3]], 0
@@ -11248,11 +11248,11 @@ int main (int argc, char **argv) {
 // CHECK14-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK14-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
 // CHECK14-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK14-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK14-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK14-NEXT:    [[CONV2:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK14-NEXT:    store i32 [[TMP2]], i32* [[CONV2]], align 4
 // CHECK14-NEXT:    [[TMP3:%.*]] = load i64, i64* [[N_CASTED]], align 8
-// CHECK14-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK14-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK14-NEXT:    [[CONV3:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED]] to i32*
 // CHECK14-NEXT:    store i32 [[TMP4]], i32* [[CONV3]], align 4
 // CHECK14-NEXT:    [[TMP5:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED]], align 8
@@ -11291,7 +11291,7 @@ int main (int argc, char **argv) {
 // CHECK14-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK14-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
 // CHECK14-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK14-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK14-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK14-NEXT:    store i32 [[TMP2]], i32* [[DOTCAPTURE_EXPR_2]], align 4
 // CHECK14-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_2]], align 4
 // CHECK14-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP3]], 0
@@ -11337,11 +11337,11 @@ int main (int argc, char **argv) {
 // CHECK14-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP15]] to i64
 // CHECK14-NEXT:    [[TMP17:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK14-NEXT:    [[TMP18:%.*]] = zext i32 [[TMP17]] to i64
-// CHECK14-NEXT:    [[TMP19:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK14-NEXT:    [[TMP19:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK14-NEXT:    [[CONV8:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK14-NEXT:    store i32 [[TMP19]], i32* [[CONV8]], align 4
 // CHECK14-NEXT:    [[TMP20:%.*]] = load i64, i64* [[N_CASTED]], align 8
-// CHECK14-NEXT:    [[TMP21:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK14-NEXT:    [[TMP21:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK14-NEXT:    [[CONV9:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED]] to i32*
 // CHECK14-NEXT:    store i32 [[TMP21]], i32* [[CONV9]], align 4
 // CHECK14-NEXT:    [[TMP22:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED]], align 8
@@ -11397,7 +11397,7 @@ int main (int argc, char **argv) {
 // CHECK14-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK14-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
 // CHECK14-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK14-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK14-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK14-NEXT:    store i32 [[TMP2]], i32* [[DOTCAPTURE_EXPR_2]], align 4
 // CHECK14-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_2]], align 4
 // CHECK14-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP3]], 0
@@ -11420,7 +11420,7 @@ int main (int argc, char **argv) {
 // CHECK14-NEXT:    store i32 [[CONV6]], i32* [[DOTOMP_UB]], align 4
 // CHECK14-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK14-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK14-NEXT:    [[TMP8:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK14-NEXT:    [[TMP8:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK14-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
 // CHECK14-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
 // CHECK14-NEXT:    [[TMP11:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
@@ -11932,7 +11932,7 @@ int main (int argc, char **argv) {
 // CHECK14-NEXT:    store i64 [[DOTCAPTURE_EXPR_]], i64* [[DOTCAPTURE_EXPR__ADDR]], align 8
 // CHECK14-NEXT:    [[TMP0:%.*]] = load [10 x i32]*, [10 x i32]** [[A_ADDR]], align 8
 // CHECK14-NEXT:    [[CONV:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK14-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK14-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK14-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED]] to i32*
 // CHECK14-NEXT:    store i32 [[TMP1]], i32* [[CONV1]], align 4
 // CHECK14-NEXT:    [[TMP2:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED]], align 8
@@ -11992,7 +11992,7 @@ int main (int argc, char **argv) {
 // CHECK14-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP8]] to i64
 // CHECK14-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK14-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP10]] to i64
-// CHECK14-NEXT:    [[TMP12:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK14-NEXT:    [[TMP12:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK14-NEXT:    [[CONV2:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED]] to i32*
 // CHECK14-NEXT:    store i32 [[TMP12]], i32* [[CONV2]], align 4
 // CHECK14-NEXT:    [[TMP13:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED]], align 8
@@ -12045,7 +12045,7 @@ int main (int argc, char **argv) {
 // CHECK14-NEXT:    store i32 [[CONV2]], i32* [[DOTOMP_UB]], align 4
 // CHECK14-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK14-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK14-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK14-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK14-NEXT:    [[TMP4:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK14-NEXT:    [[TMP5:%.*]] = load i32, i32* [[TMP4]], align 4
 // CHECK14-NEXT:    call void @__kmpc_for_static_init_4(%struct.ident_t* @[[GLOB2]], i32 [[TMP5]], i32 33, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 [[TMP3]])
@@ -12271,7 +12271,7 @@ int main (int argc, char **argv) {
 // CHECK14-NEXT:    store i64 [[DOTCAPTURE_EXPR_]], i64* [[DOTCAPTURE_EXPR__ADDR]], align 8
 // CHECK14-NEXT:    [[TMP0:%.*]] = load [10 x i32]*, [10 x i32]** [[A_ADDR]], align 8
 // CHECK14-NEXT:    [[CONV:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK14-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK14-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK14-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED]] to i32*
 // CHECK14-NEXT:    store i32 [[TMP1]], i32* [[CONV1]], align 4
 // CHECK14-NEXT:    [[TMP2:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED]], align 8
@@ -12331,7 +12331,7 @@ int main (int argc, char **argv) {
 // CHECK14-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP8]] to i64
 // CHECK14-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK14-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP10]] to i64
-// CHECK14-NEXT:    [[TMP12:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK14-NEXT:    [[TMP12:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK14-NEXT:    [[CONV2:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED]] to i32*
 // CHECK14-NEXT:    store i32 [[TMP12]], i32* [[CONV2]], align 4
 // CHECK14-NEXT:    [[TMP13:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED]], align 8
@@ -12384,7 +12384,7 @@ int main (int argc, char **argv) {
 // CHECK14-NEXT:    store i32 [[CONV2]], i32* [[DOTOMP_UB]], align 4
 // CHECK14-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK14-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK14-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK14-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK14-NEXT:    [[TMP4:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
 // CHECK14-NEXT:    [[TMP5:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
 // CHECK14-NEXT:    [[TMP6:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
@@ -17669,7 +17669,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK17-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK17-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
-// CHECK17-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK17-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK17-NEXT:    [[CONV1:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK17-NEXT:    store i32 [[TMP2]], i32* [[CONV1]], align 4
 // CHECK17-NEXT:    [[TMP3:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -17704,7 +17704,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK17-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK17-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
-// CHECK17-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK17-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK17-NEXT:    store i32 [[TMP2]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK17-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK17-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP3]], 0
@@ -17750,7 +17750,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP15]] to i64
 // CHECK17-NEXT:    [[TMP17:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK17-NEXT:    [[TMP18:%.*]] = zext i32 [[TMP17]] to i64
-// CHECK17-NEXT:    [[TMP19:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK17-NEXT:    [[TMP19:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK17-NEXT:    [[CONV6:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK17-NEXT:    store i32 [[TMP19]], i32* [[CONV6]], align 4
 // CHECK17-NEXT:    [[TMP20:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -17803,7 +17803,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK17-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK17-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
-// CHECK17-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK17-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK17-NEXT:    store i32 [[TMP2]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK17-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK17-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP3]], 0
@@ -17891,7 +17891,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK17-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK17-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
-// CHECK17-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK17-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK17-NEXT:    [[CONV1:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK17-NEXT:    store i32 [[TMP2]], i32* [[CONV1]], align 4
 // CHECK17-NEXT:    [[TMP3:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -17926,7 +17926,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK17-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK17-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
-// CHECK17-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK17-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK17-NEXT:    store i32 [[TMP2]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK17-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK17-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP3]], 0
@@ -17972,7 +17972,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP15]] to i64
 // CHECK17-NEXT:    [[TMP17:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK17-NEXT:    [[TMP18:%.*]] = zext i32 [[TMP17]] to i64
-// CHECK17-NEXT:    [[TMP19:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK17-NEXT:    [[TMP19:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK17-NEXT:    [[CONV6:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK17-NEXT:    store i32 [[TMP19]], i32* [[CONV6]], align 4
 // CHECK17-NEXT:    [[TMP20:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -18025,7 +18025,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK17-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK17-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
-// CHECK17-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK17-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK17-NEXT:    store i32 [[TMP2]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK17-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK17-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP3]], 0
@@ -18117,11 +18117,11 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK17-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
 // CHECK17-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK17-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK17-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK17-NEXT:    [[CONV2:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK17-NEXT:    store i32 [[TMP2]], i32* [[CONV2]], align 4
 // CHECK17-NEXT:    [[TMP3:%.*]] = load i64, i64* [[N_CASTED]], align 8
-// CHECK17-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK17-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK17-NEXT:    [[CONV3:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED]] to i32*
 // CHECK17-NEXT:    store i32 [[TMP4]], i32* [[CONV3]], align 4
 // CHECK17-NEXT:    [[TMP5:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED]], align 8
@@ -18160,7 +18160,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK17-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
 // CHECK17-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK17-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK17-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK17-NEXT:    store i32 [[TMP2]], i32* [[DOTCAPTURE_EXPR_2]], align 4
 // CHECK17-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_2]], align 4
 // CHECK17-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP3]], 0
@@ -18177,7 +18177,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    store i32 [[TMP5]], i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK17-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK17-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK17-NEXT:    [[TMP6:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK17-NEXT:    [[TMP6:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK17-NEXT:    [[TMP7:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK17-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP7]], align 4
 // CHECK17-NEXT:    call void @__kmpc_for_static_init_4(%struct.ident_t* @[[GLOB1]], i32 [[TMP8]], i32 91, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_COMB_LB]], i32* [[DOTOMP_COMB_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 [[TMP6]])
@@ -18208,11 +18208,11 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[TMP17:%.*]] = zext i32 [[TMP16]] to i64
 // CHECK17-NEXT:    [[TMP18:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK17-NEXT:    [[TMP19:%.*]] = zext i32 [[TMP18]] to i64
-// CHECK17-NEXT:    [[TMP20:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK17-NEXT:    [[TMP20:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK17-NEXT:    [[CONV8:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK17-NEXT:    store i32 [[TMP20]], i32* [[CONV8]], align 4
 // CHECK17-NEXT:    [[TMP21:%.*]] = load i64, i64* [[N_CASTED]], align 8
-// CHECK17-NEXT:    [[TMP22:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK17-NEXT:    [[TMP22:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK17-NEXT:    [[CONV9:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED]] to i32*
 // CHECK17-NEXT:    store i32 [[TMP22]], i32* [[CONV9]], align 4
 // CHECK17-NEXT:    [[TMP23:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED]], align 8
@@ -18291,7 +18291,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK17-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
 // CHECK17-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK17-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK17-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK17-NEXT:    store i32 [[TMP2]], i32* [[DOTCAPTURE_EXPR_2]], align 4
 // CHECK17-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_2]], align 4
 // CHECK17-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP3]], 0
@@ -18379,7 +18379,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK17-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK17-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
-// CHECK17-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK17-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK17-NEXT:    [[CONV1:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK17-NEXT:    store i32 [[TMP2]], i32* [[CONV1]], align 4
 // CHECK17-NEXT:    [[TMP3:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -18414,7 +18414,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK17-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK17-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
-// CHECK17-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK17-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK17-NEXT:    store i32 [[TMP2]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK17-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK17-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP3]], 0
@@ -18460,7 +18460,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP15]] to i64
 // CHECK17-NEXT:    [[TMP17:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK17-NEXT:    [[TMP18:%.*]] = zext i32 [[TMP17]] to i64
-// CHECK17-NEXT:    [[TMP19:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK17-NEXT:    [[TMP19:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK17-NEXT:    [[CONV6:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK17-NEXT:    store i32 [[TMP19]], i32* [[CONV6]], align 4
 // CHECK17-NEXT:    [[TMP20:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -18513,7 +18513,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK17-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK17-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
-// CHECK17-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK17-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK17-NEXT:    store i32 [[TMP2]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK17-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK17-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP3]], 0
@@ -18601,11 +18601,11 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK17-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
 // CHECK17-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK17-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK17-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK17-NEXT:    [[CONV2:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK17-NEXT:    store i32 [[TMP2]], i32* [[CONV2]], align 4
 // CHECK17-NEXT:    [[TMP3:%.*]] = load i64, i64* [[N_CASTED]], align 8
-// CHECK17-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK17-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK17-NEXT:    [[CONV3:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED]] to i32*
 // CHECK17-NEXT:    store i32 [[TMP4]], i32* [[CONV3]], align 4
 // CHECK17-NEXT:    [[TMP5:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED]], align 8
@@ -18644,7 +18644,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK17-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
 // CHECK17-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK17-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK17-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK17-NEXT:    store i32 [[TMP2]], i32* [[DOTCAPTURE_EXPR_2]], align 4
 // CHECK17-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_2]], align 4
 // CHECK17-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP3]], 0
@@ -18690,11 +18690,11 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP15]] to i64
 // CHECK17-NEXT:    [[TMP17:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK17-NEXT:    [[TMP18:%.*]] = zext i32 [[TMP17]] to i64
-// CHECK17-NEXT:    [[TMP19:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK17-NEXT:    [[TMP19:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK17-NEXT:    [[CONV8:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK17-NEXT:    store i32 [[TMP19]], i32* [[CONV8]], align 4
 // CHECK17-NEXT:    [[TMP20:%.*]] = load i64, i64* [[N_CASTED]], align 8
-// CHECK17-NEXT:    [[TMP21:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK17-NEXT:    [[TMP21:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK17-NEXT:    [[CONV9:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED]] to i32*
 // CHECK17-NEXT:    store i32 [[TMP21]], i32* [[CONV9]], align 4
 // CHECK17-NEXT:    [[TMP22:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED]], align 8
@@ -18750,7 +18750,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK17-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
 // CHECK17-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK17-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK17-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK17-NEXT:    store i32 [[TMP2]], i32* [[DOTCAPTURE_EXPR_2]], align 4
 // CHECK17-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_2]], align 4
 // CHECK17-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP3]], 0
@@ -18773,7 +18773,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    store i32 [[CONV6]], i32* [[DOTOMP_UB]], align 4
 // CHECK17-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK17-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK17-NEXT:    [[TMP8:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK17-NEXT:    [[TMP8:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK17-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
 // CHECK17-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
 // CHECK17-NEXT:    [[TMP11:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
@@ -19285,7 +19285,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    store i64 [[DOTCAPTURE_EXPR_]], i64* [[DOTCAPTURE_EXPR__ADDR]], align 8
 // CHECK17-NEXT:    [[TMP0:%.*]] = load [10 x i32]*, [10 x i32]** [[A_ADDR]], align 8
 // CHECK17-NEXT:    [[CONV:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK17-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK17-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK17-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED]] to i32*
 // CHECK17-NEXT:    store i32 [[TMP1]], i32* [[CONV1]], align 4
 // CHECK17-NEXT:    [[TMP2:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED]], align 8
@@ -19345,7 +19345,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP8]] to i64
 // CHECK17-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK17-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP10]] to i64
-// CHECK17-NEXT:    [[TMP12:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK17-NEXT:    [[TMP12:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK17-NEXT:    [[CONV2:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED]] to i32*
 // CHECK17-NEXT:    store i32 [[TMP12]], i32* [[CONV2]], align 4
 // CHECK17-NEXT:    [[TMP13:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED]], align 8
@@ -19398,7 +19398,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    store i32 [[CONV2]], i32* [[DOTOMP_UB]], align 4
 // CHECK17-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK17-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK17-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK17-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK17-NEXT:    [[TMP4:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK17-NEXT:    [[TMP5:%.*]] = load i32, i32* [[TMP4]], align 4
 // CHECK17-NEXT:    call void @__kmpc_for_static_init_4(%struct.ident_t* @[[GLOB2]], i32 [[TMP5]], i32 33, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 [[TMP3]])
@@ -19624,7 +19624,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    store i64 [[DOTCAPTURE_EXPR_]], i64* [[DOTCAPTURE_EXPR__ADDR]], align 8
 // CHECK17-NEXT:    [[TMP0:%.*]] = load [10 x i32]*, [10 x i32]** [[A_ADDR]], align 8
 // CHECK17-NEXT:    [[CONV:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK17-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK17-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK17-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED]] to i32*
 // CHECK17-NEXT:    store i32 [[TMP1]], i32* [[CONV1]], align 4
 // CHECK17-NEXT:    [[TMP2:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED]], align 8
@@ -19684,7 +19684,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP8]] to i64
 // CHECK17-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK17-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP10]] to i64
-// CHECK17-NEXT:    [[TMP12:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK17-NEXT:    [[TMP12:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK17-NEXT:    [[CONV2:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED]] to i32*
 // CHECK17-NEXT:    store i32 [[TMP12]], i32* [[CONV2]], align 4
 // CHECK17-NEXT:    [[TMP13:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED]], align 8
@@ -19737,7 +19737,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    store i32 [[CONV2]], i32* [[DOTOMP_UB]], align 4
 // CHECK17-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK17-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK17-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK17-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK17-NEXT:    [[TMP4:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
 // CHECK17-NEXT:    [[TMP5:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
 // CHECK17-NEXT:    [[TMP6:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
@@ -20188,7 +20188,7 @@ int main (int argc, char **argv) {
 // CHECK18-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK18-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK18-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
-// CHECK18-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK18-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK18-NEXT:    [[CONV1:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK18-NEXT:    store i32 [[TMP2]], i32* [[CONV1]], align 4
 // CHECK18-NEXT:    [[TMP3:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -20223,7 +20223,7 @@ int main (int argc, char **argv) {
 // CHECK18-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK18-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK18-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
-// CHECK18-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK18-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK18-NEXT:    store i32 [[TMP2]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK18-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK18-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP3]], 0
@@ -20269,7 +20269,7 @@ int main (int argc, char **argv) {
 // CHECK18-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP15]] to i64
 // CHECK18-NEXT:    [[TMP17:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK18-NEXT:    [[TMP18:%.*]] = zext i32 [[TMP17]] to i64
-// CHECK18-NEXT:    [[TMP19:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK18-NEXT:    [[TMP19:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK18-NEXT:    [[CONV6:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK18-NEXT:    store i32 [[TMP19]], i32* [[CONV6]], align 4
 // CHECK18-NEXT:    [[TMP20:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -20322,7 +20322,7 @@ int main (int argc, char **argv) {
 // CHECK18-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK18-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK18-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
-// CHECK18-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK18-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK18-NEXT:    store i32 [[TMP2]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK18-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK18-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP3]], 0
@@ -20410,7 +20410,7 @@ int main (int argc, char **argv) {
 // CHECK18-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK18-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK18-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
-// CHECK18-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK18-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK18-NEXT:    [[CONV1:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK18-NEXT:    store i32 [[TMP2]], i32* [[CONV1]], align 4
 // CHECK18-NEXT:    [[TMP3:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -20445,7 +20445,7 @@ int main (int argc, char **argv) {
 // CHECK18-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK18-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK18-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
-// CHECK18-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK18-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK18-NEXT:    store i32 [[TMP2]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK18-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK18-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP3]], 0
@@ -20491,7 +20491,7 @@ int main (int argc, char **argv) {
 // CHECK18-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP15]] to i64
 // CHECK18-NEXT:    [[TMP17:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK18-NEXT:    [[TMP18:%.*]] = zext i32 [[TMP17]] to i64
-// CHECK18-NEXT:    [[TMP19:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK18-NEXT:    [[TMP19:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK18-NEXT:    [[CONV6:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK18-NEXT:    store i32 [[TMP19]], i32* [[CONV6]], align 4
 // CHECK18-NEXT:    [[TMP20:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -20544,7 +20544,7 @@ int main (int argc, char **argv) {
 // CHECK18-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK18-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK18-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
-// CHECK18-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK18-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK18-NEXT:    store i32 [[TMP2]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK18-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK18-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP3]], 0
@@ -20636,11 +20636,11 @@ int main (int argc, char **argv) {
 // CHECK18-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK18-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
 // CHECK18-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK18-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK18-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK18-NEXT:    [[CONV2:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK18-NEXT:    store i32 [[TMP2]], i32* [[CONV2]], align 4
 // CHECK18-NEXT:    [[TMP3:%.*]] = load i64, i64* [[N_CASTED]], align 8
-// CHECK18-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK18-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK18-NEXT:    [[CONV3:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED]] to i32*
 // CHECK18-NEXT:    store i32 [[TMP4]], i32* [[CONV3]], align 4
 // CHECK18-NEXT:    [[TMP5:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED]], align 8
@@ -20679,7 +20679,7 @@ int main (int argc, char **argv) {
 // CHECK18-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK18-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
 // CHECK18-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK18-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK18-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK18-NEXT:    store i32 [[TMP2]], i32* [[DOTCAPTURE_EXPR_2]], align 4
 // CHECK18-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_2]], align 4
 // CHECK18-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP3]], 0
@@ -20696,7 +20696,7 @@ int main (int argc, char **argv) {
 // CHECK18-NEXT:    store i32 [[TMP5]], i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK18-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK18-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK18-NEXT:    [[TMP6:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK18-NEXT:    [[TMP6:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK18-NEXT:    [[TMP7:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK18-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP7]], align 4
 // CHECK18-NEXT:    call void @__kmpc_for_static_init_4(%struct.ident_t* @[[GLOB1]], i32 [[TMP8]], i32 91, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_COMB_LB]], i32* [[DOTOMP_COMB_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 [[TMP6]])
@@ -20727,11 +20727,11 @@ int main (int argc, char **argv) {
 // CHECK18-NEXT:    [[TMP17:%.*]] = zext i32 [[TMP16]] to i64
 // CHECK18-NEXT:    [[TMP18:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK18-NEXT:    [[TMP19:%.*]] = zext i32 [[TMP18]] to i64
-// CHECK18-NEXT:    [[TMP20:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK18-NEXT:    [[TMP20:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK18-NEXT:    [[CONV8:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK18-NEXT:    store i32 [[TMP20]], i32* [[CONV8]], align 4
 // CHECK18-NEXT:    [[TMP21:%.*]] = load i64, i64* [[N_CASTED]], align 8
-// CHECK18-NEXT:    [[TMP22:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK18-NEXT:    [[TMP22:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK18-NEXT:    [[CONV9:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED]] to i32*
 // CHECK18-NEXT:    store i32 [[TMP22]], i32* [[CONV9]], align 4
 // CHECK18-NEXT:    [[TMP23:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED]], align 8
@@ -20810,7 +20810,7 @@ int main (int argc, char **argv) {
 // CHECK18-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK18-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
 // CHECK18-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK18-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK18-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK18-NEXT:    store i32 [[TMP2]], i32* [[DOTCAPTURE_EXPR_2]], align 4
 // CHECK18-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_2]], align 4
 // CHECK18-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP3]], 0
@@ -20898,7 +20898,7 @@ int main (int argc, char **argv) {
 // CHECK18-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK18-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK18-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
-// CHECK18-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK18-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK18-NEXT:    [[CONV1:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK18-NEXT:    store i32 [[TMP2]], i32* [[CONV1]], align 4
 // CHECK18-NEXT:    [[TMP3:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -20933,7 +20933,7 @@ int main (int argc, char **argv) {
 // CHECK18-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK18-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK18-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
-// CHECK18-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK18-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK18-NEXT:    store i32 [[TMP2]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK18-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK18-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP3]], 0
@@ -20979,7 +20979,7 @@ int main (int argc, char **argv) {
 // CHECK18-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP15]] to i64
 // CHECK18-NEXT:    [[TMP17:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK18-NEXT:    [[TMP18:%.*]] = zext i32 [[TMP17]] to i64
-// CHECK18-NEXT:    [[TMP19:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK18-NEXT:    [[TMP19:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK18-NEXT:    [[CONV6:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK18-NEXT:    store i32 [[TMP19]], i32* [[CONV6]], align 4
 // CHECK18-NEXT:    [[TMP20:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -21032,7 +21032,7 @@ int main (int argc, char **argv) {
 // CHECK18-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK18-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK18-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
-// CHECK18-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK18-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK18-NEXT:    store i32 [[TMP2]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK18-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK18-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP3]], 0
@@ -21120,11 +21120,11 @@ int main (int argc, char **argv) {
 // CHECK18-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK18-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
 // CHECK18-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK18-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK18-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK18-NEXT:    [[CONV2:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK18-NEXT:    store i32 [[TMP2]], i32* [[CONV2]], align 4
 // CHECK18-NEXT:    [[TMP3:%.*]] = load i64, i64* [[N_CASTED]], align 8
-// CHECK18-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK18-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK18-NEXT:    [[CONV3:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED]] to i32*
 // CHECK18-NEXT:    store i32 [[TMP4]], i32* [[CONV3]], align 4
 // CHECK18-NEXT:    [[TMP5:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED]], align 8
@@ -21163,7 +21163,7 @@ int main (int argc, char **argv) {
 // CHECK18-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK18-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
 // CHECK18-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK18-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK18-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK18-NEXT:    store i32 [[TMP2]], i32* [[DOTCAPTURE_EXPR_2]], align 4
 // CHECK18-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_2]], align 4
 // CHECK18-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP3]], 0
@@ -21209,11 +21209,11 @@ int main (int argc, char **argv) {
 // CHECK18-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP15]] to i64
 // CHECK18-NEXT:    [[TMP17:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK18-NEXT:    [[TMP18:%.*]] = zext i32 [[TMP17]] to i64
-// CHECK18-NEXT:    [[TMP19:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK18-NEXT:    [[TMP19:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK18-NEXT:    [[CONV8:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK18-NEXT:    store i32 [[TMP19]], i32* [[CONV8]], align 4
 // CHECK18-NEXT:    [[TMP20:%.*]] = load i64, i64* [[N_CASTED]], align 8
-// CHECK18-NEXT:    [[TMP21:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK18-NEXT:    [[TMP21:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK18-NEXT:    [[CONV9:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED]] to i32*
 // CHECK18-NEXT:    store i32 [[TMP21]], i32* [[CONV9]], align 4
 // CHECK18-NEXT:    [[TMP22:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED]], align 8
@@ -21269,7 +21269,7 @@ int main (int argc, char **argv) {
 // CHECK18-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK18-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
 // CHECK18-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK18-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK18-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK18-NEXT:    store i32 [[TMP2]], i32* [[DOTCAPTURE_EXPR_2]], align 4
 // CHECK18-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_2]], align 4
 // CHECK18-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP3]], 0
@@ -21292,7 +21292,7 @@ int main (int argc, char **argv) {
 // CHECK18-NEXT:    store i32 [[CONV6]], i32* [[DOTOMP_UB]], align 4
 // CHECK18-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK18-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK18-NEXT:    [[TMP8:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK18-NEXT:    [[TMP8:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK18-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
 // CHECK18-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
 // CHECK18-NEXT:    [[TMP11:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
@@ -21804,7 +21804,7 @@ int main (int argc, char **argv) {
 // CHECK18-NEXT:    store i64 [[DOTCAPTURE_EXPR_]], i64* [[DOTCAPTURE_EXPR__ADDR]], align 8
 // CHECK18-NEXT:    [[TMP0:%.*]] = load [10 x i32]*, [10 x i32]** [[A_ADDR]], align 8
 // CHECK18-NEXT:    [[CONV:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK18-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK18-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK18-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED]] to i32*
 // CHECK18-NEXT:    store i32 [[TMP1]], i32* [[CONV1]], align 4
 // CHECK18-NEXT:    [[TMP2:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED]], align 8
@@ -21864,7 +21864,7 @@ int main (int argc, char **argv) {
 // CHECK18-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP8]] to i64
 // CHECK18-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK18-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP10]] to i64
-// CHECK18-NEXT:    [[TMP12:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK18-NEXT:    [[TMP12:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK18-NEXT:    [[CONV2:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED]] to i32*
 // CHECK18-NEXT:    store i32 [[TMP12]], i32* [[CONV2]], align 4
 // CHECK18-NEXT:    [[TMP13:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED]], align 8
@@ -21917,7 +21917,7 @@ int main (int argc, char **argv) {
 // CHECK18-NEXT:    store i32 [[CONV2]], i32* [[DOTOMP_UB]], align 4
 // CHECK18-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK18-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK18-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK18-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK18-NEXT:    [[TMP4:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK18-NEXT:    [[TMP5:%.*]] = load i32, i32* [[TMP4]], align 4
 // CHECK18-NEXT:    call void @__kmpc_for_static_init_4(%struct.ident_t* @[[GLOB2]], i32 [[TMP5]], i32 33, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 [[TMP3]])
@@ -22143,7 +22143,7 @@ int main (int argc, char **argv) {
 // CHECK18-NEXT:    store i64 [[DOTCAPTURE_EXPR_]], i64* [[DOTCAPTURE_EXPR__ADDR]], align 8
 // CHECK18-NEXT:    [[TMP0:%.*]] = load [10 x i32]*, [10 x i32]** [[A_ADDR]], align 8
 // CHECK18-NEXT:    [[CONV:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK18-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK18-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK18-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED]] to i32*
 // CHECK18-NEXT:    store i32 [[TMP1]], i32* [[CONV1]], align 4
 // CHECK18-NEXT:    [[TMP2:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED]], align 8
@@ -22203,7 +22203,7 @@ int main (int argc, char **argv) {
 // CHECK18-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP8]] to i64
 // CHECK18-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK18-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP10]] to i64
-// CHECK18-NEXT:    [[TMP12:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK18-NEXT:    [[TMP12:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK18-NEXT:    [[CONV2:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED]] to i32*
 // CHECK18-NEXT:    store i32 [[TMP12]], i32* [[CONV2]], align 4
 // CHECK18-NEXT:    [[TMP13:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED]], align 8
@@ -22256,7 +22256,7 @@ int main (int argc, char **argv) {
 // CHECK18-NEXT:    store i32 [[CONV2]], i32* [[DOTOMP_UB]], align 4
 // CHECK18-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK18-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK18-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK18-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK18-NEXT:    [[TMP4:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
 // CHECK18-NEXT:    [[TMP5:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
 // CHECK18-NEXT:    [[TMP6:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8

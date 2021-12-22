@@ -902,7 +902,7 @@ int main (int argc, char **argv) {
 // CHECK1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK1-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK1:       user_code.entry:
-// CHECK1-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK1-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK1-NEXT:    [[ARGC1:%.*]] = call i8* @__kmpc_alloc_shared(i64 4)
 // CHECK1-NEXT:    [[ARGC_ON_STACK:%.*]] = bitcast i8* [[ARGC1]] to i32*
 // CHECK1-NEXT:    store i32 [[TMP1]], i32* [[ARGC_ON_STACK]], align 4
@@ -1069,7 +1069,7 @@ int main (int argc, char **argv) {
 // CHECK3-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK3-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK3:       user_code.entry:
-// CHECK3-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV2]], align 8
+// CHECK3-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV2]], align 4
 // CHECK3-NEXT:    [[ARGC3:%.*]] = call i8* @__kmpc_alloc_shared(i64 4)
 // CHECK3-NEXT:    [[ARGC_ON_STACK:%.*]] = bitcast i8* [[ARGC3]] to i32*
 // CHECK3-NEXT:    store i32 [[TMP1]], i32* [[ARGC_ON_STACK]], align 4

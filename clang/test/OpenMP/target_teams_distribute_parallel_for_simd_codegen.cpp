@@ -261,14 +261,14 @@ int target_teams_fun(int *g){
 // CHECK1-NEXT:    [[TMP1:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
 // CHECK1-NEXT:    [[CONV4:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
 // CHECK1-NEXT:    [[CONV5:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR2]] to i32*
-// CHECK1-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV4]], align 8
-// CHECK1-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV5]], align 8
+// CHECK1-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV4]], align 4
+// CHECK1-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV5]], align 4
 // CHECK1-NEXT:    call void @__kmpc_push_num_teams(%struct.ident_t* @[[GLOB4]], i32 [[TMP0]], i32 [[TMP2]], i32 [[TMP3]])
-// CHECK1-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK1-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK1-NEXT:    [[CONV6:%.*]] = bitcast i64* [[I_CASTED]] to i32*
 // CHECK1-NEXT:    store i32 [[TMP4]], i32* [[CONV6]], align 4
 // CHECK1-NEXT:    [[TMP5:%.*]] = load i64, i64* [[I_CASTED]], align 8
-// CHECK1-NEXT:    [[TMP6:%.*]] = load i32, i32* [[CONV3]], align 8
+// CHECK1-NEXT:    [[TMP6:%.*]] = load i32, i32* [[CONV3]], align 4
 // CHECK1-NEXT:    [[CONV7:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK1-NEXT:    store i32 [[TMP6]], i32* [[CONV7]], align 4
 // CHECK1-NEXT:    [[TMP7:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -304,7 +304,7 @@ int target_teams_fun(int *g){
 // CHECK1-NEXT:    [[CONV:%.*]] = bitcast i64* [[I_ADDR]] to i32*
 // CHECK1-NEXT:    [[CONV1:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK1-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK1-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK1-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK1-NEXT:    store i32 [[TMP1]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK1-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK1-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP2]], 0
@@ -356,7 +356,7 @@ int target_teams_fun(int *g){
 // CHECK1-NEXT:    [[CONV8:%.*]] = bitcast i64* [[I_CASTED]] to i32*
 // CHECK1-NEXT:    store i32 [[TMP18]], i32* [[CONV8]], align 4
 // CHECK1-NEXT:    [[TMP19:%.*]] = load i64, i64* [[I_CASTED]], align 8
-// CHECK1-NEXT:    [[TMP20:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK1-NEXT:    [[TMP20:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK1-NEXT:    [[CONV9:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK1-NEXT:    store i32 [[TMP20]], i32* [[CONV9]], align 4
 // CHECK1-NEXT:    [[TMP21:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -383,7 +383,7 @@ int target_teams_fun(int *g){
 // CHECK1-NEXT:    [[DIV11:%.*]] = sdiv i32 [[SUB10]], 1
 // CHECK1-NEXT:    [[MUL:%.*]] = mul nsw i32 [[DIV11]], 1
 // CHECK1-NEXT:    [[ADD12:%.*]] = add nsw i32 0, [[MUL]]
-// CHECK1-NEXT:    store i32 [[ADD12]], i32* [[CONV]], align 8
+// CHECK1-NEXT:    store i32 [[ADD12]], i32* [[CONV]], align 4
 // CHECK1-NEXT:    br label [[DOTOMP_FINAL_DONE]]
 // CHECK1:       .omp.final.done:
 // CHECK1-NEXT:    br label [[OMP_PRECOND_END]]
@@ -424,7 +424,7 @@ int target_teams_fun(int *g){
 // CHECK1-NEXT:    [[CONV:%.*]] = bitcast i64* [[I_ADDR]] to i32*
 // CHECK1-NEXT:    [[CONV1:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK1-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK1-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK1-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK1-NEXT:    store i32 [[TMP1]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK1-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK1-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP2]], 0
@@ -438,9 +438,9 @@ int target_teams_fun(int *g){
 // CHECK1:       omp.precond.then:
 // CHECK1-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [1000 x i32], [1000 x i32]* [[TMP0]], i64 0, i64 0
 // CHECK1-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[ARRAYDECAY]], i64 8) ]
-// CHECK1-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK1-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK1-NEXT:    store i32 [[TMP4]], i32* [[DOTLINEAR_START]], align 4
-// CHECK1-NEXT:    [[TMP5:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK1-NEXT:    [[TMP5:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK1-NEXT:    store i32 [[TMP5]], i32* [[DOTLINEAR_STEP]], align 4
 // CHECK1-NEXT:    store i32 0, i32* [[DOTOMP_LB]], align 4
 // CHECK1-NEXT:    [[TMP6:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_2]], align 4
@@ -512,7 +512,7 @@ int target_teams_fun(int *g){
 // CHECK1-NEXT:    [[DIV13:%.*]] = sdiv i32 [[SUB12]], 1
 // CHECK1-NEXT:    [[MUL14:%.*]] = mul nsw i32 [[DIV13]], 1
 // CHECK1-NEXT:    [[ADD15:%.*]] = add nsw i32 0, [[MUL14]]
-// CHECK1-NEXT:    store i32 [[ADD15]], i32* [[CONV]], align 8
+// CHECK1-NEXT:    store i32 [[ADD15]], i32* [[CONV]], align 4
 // CHECK1-NEXT:    br label [[DOTOMP_FINAL_DONE]]
 // CHECK1:       .omp.final.done:
 // CHECK1-NEXT:    [[TMP28:%.*]] = load i32, i32* [[DOTOMP_IS_LAST]], align 4
@@ -538,7 +538,7 @@ int target_teams_fun(int *g){
 // CHECK1-NEXT:    store i32* [[G]], i32** [[G_ADDR]], align 8
 // CHECK1-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK1-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK1-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK1-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK1-NEXT:    [[CONV1:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK1-NEXT:    store i32 [[TMP1]], i32* [[CONV1]], align 4
 // CHECK1-NEXT:    [[TMP2:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -573,7 +573,7 @@ int target_teams_fun(int *g){
 // CHECK1-NEXT:    store i32* [[G]], i32** [[G_ADDR]], align 8
 // CHECK1-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK1-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK1-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK1-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK1-NEXT:    store i32 [[TMP1]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK1-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK1-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP2]], 0
@@ -619,7 +619,7 @@ int target_teams_fun(int *g){
 // CHECK1-NEXT:    [[TMP15:%.*]] = zext i32 [[TMP14]] to i64
 // CHECK1-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4, !llvm.access.group !11
 // CHECK1-NEXT:    [[TMP17:%.*]] = zext i32 [[TMP16]] to i64
-// CHECK1-NEXT:    [[TMP18:%.*]] = load i32, i32* [[CONV]], align 8, !llvm.access.group !11
+// CHECK1-NEXT:    [[TMP18:%.*]] = load i32, i32* [[CONV]], align 4, !llvm.access.group !11
 // CHECK1-NEXT:    [[CONV6:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK1-NEXT:    store i32 [[TMP18]], i32* [[CONV6]], align 4, !llvm.access.group !11
 // CHECK1-NEXT:    [[TMP19:%.*]] = load i64, i64* [[N_CASTED]], align 8, !llvm.access.group !11
@@ -684,7 +684,7 @@ int target_teams_fun(int *g){
 // CHECK1-NEXT:    store i32* [[G]], i32** [[G_ADDR]], align 8
 // CHECK1-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK1-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK1-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK1-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK1-NEXT:    store i32 [[TMP1]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK1-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK1-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP2]], 0
@@ -972,14 +972,14 @@ int target_teams_fun(int *g){
 // CHECK2-NEXT:    [[TMP1:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
 // CHECK2-NEXT:    [[CONV4:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
 // CHECK2-NEXT:    [[CONV5:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR2]] to i32*
-// CHECK2-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV4]], align 8
-// CHECK2-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV5]], align 8
+// CHECK2-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV4]], align 4
+// CHECK2-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV5]], align 4
 // CHECK2-NEXT:    call void @__kmpc_push_num_teams(%struct.ident_t* @[[GLOB4]], i32 [[TMP0]], i32 [[TMP2]], i32 [[TMP3]])
-// CHECK2-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK2-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK2-NEXT:    [[CONV6:%.*]] = bitcast i64* [[I_CASTED]] to i32*
 // CHECK2-NEXT:    store i32 [[TMP4]], i32* [[CONV6]], align 4
 // CHECK2-NEXT:    [[TMP5:%.*]] = load i64, i64* [[I_CASTED]], align 8
-// CHECK2-NEXT:    [[TMP6:%.*]] = load i32, i32* [[CONV3]], align 8
+// CHECK2-NEXT:    [[TMP6:%.*]] = load i32, i32* [[CONV3]], align 4
 // CHECK2-NEXT:    [[CONV7:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK2-NEXT:    store i32 [[TMP6]], i32* [[CONV7]], align 4
 // CHECK2-NEXT:    [[TMP7:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -1015,7 +1015,7 @@ int target_teams_fun(int *g){
 // CHECK2-NEXT:    [[CONV:%.*]] = bitcast i64* [[I_ADDR]] to i32*
 // CHECK2-NEXT:    [[CONV1:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK2-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK2-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK2-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK2-NEXT:    store i32 [[TMP1]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK2-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK2-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP2]], 0
@@ -1067,7 +1067,7 @@ int target_teams_fun(int *g){
 // CHECK2-NEXT:    [[CONV8:%.*]] = bitcast i64* [[I_CASTED]] to i32*
 // CHECK2-NEXT:    store i32 [[TMP18]], i32* [[CONV8]], align 4
 // CHECK2-NEXT:    [[TMP19:%.*]] = load i64, i64* [[I_CASTED]], align 8
-// CHECK2-NEXT:    [[TMP20:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK2-NEXT:    [[TMP20:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK2-NEXT:    [[CONV9:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK2-NEXT:    store i32 [[TMP20]], i32* [[CONV9]], align 4
 // CHECK2-NEXT:    [[TMP21:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -1094,7 +1094,7 @@ int target_teams_fun(int *g){
 // CHECK2-NEXT:    [[DIV11:%.*]] = sdiv i32 [[SUB10]], 1
 // CHECK2-NEXT:    [[MUL:%.*]] = mul nsw i32 [[DIV11]], 1
 // CHECK2-NEXT:    [[ADD12:%.*]] = add nsw i32 0, [[MUL]]
-// CHECK2-NEXT:    store i32 [[ADD12]], i32* [[CONV]], align 8
+// CHECK2-NEXT:    store i32 [[ADD12]], i32* [[CONV]], align 4
 // CHECK2-NEXT:    br label [[DOTOMP_FINAL_DONE]]
 // CHECK2:       .omp.final.done:
 // CHECK2-NEXT:    br label [[OMP_PRECOND_END]]
@@ -1135,7 +1135,7 @@ int target_teams_fun(int *g){
 // CHECK2-NEXT:    [[CONV:%.*]] = bitcast i64* [[I_ADDR]] to i32*
 // CHECK2-NEXT:    [[CONV1:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK2-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK2-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK2-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK2-NEXT:    store i32 [[TMP1]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK2-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK2-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP2]], 0
@@ -1149,9 +1149,9 @@ int target_teams_fun(int *g){
 // CHECK2:       omp.precond.then:
 // CHECK2-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [1000 x i32], [1000 x i32]* [[TMP0]], i64 0, i64 0
 // CHECK2-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[ARRAYDECAY]], i64 8) ]
-// CHECK2-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK2-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK2-NEXT:    store i32 [[TMP4]], i32* [[DOTLINEAR_START]], align 4
-// CHECK2-NEXT:    [[TMP5:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK2-NEXT:    [[TMP5:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK2-NEXT:    store i32 [[TMP5]], i32* [[DOTLINEAR_STEP]], align 4
 // CHECK2-NEXT:    store i32 0, i32* [[DOTOMP_LB]], align 4
 // CHECK2-NEXT:    [[TMP6:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_2]], align 4
@@ -1223,7 +1223,7 @@ int target_teams_fun(int *g){
 // CHECK2-NEXT:    [[DIV13:%.*]] = sdiv i32 [[SUB12]], 1
 // CHECK2-NEXT:    [[MUL14:%.*]] = mul nsw i32 [[DIV13]], 1
 // CHECK2-NEXT:    [[ADD15:%.*]] = add nsw i32 0, [[MUL14]]
-// CHECK2-NEXT:    store i32 [[ADD15]], i32* [[CONV]], align 8
+// CHECK2-NEXT:    store i32 [[ADD15]], i32* [[CONV]], align 4
 // CHECK2-NEXT:    br label [[DOTOMP_FINAL_DONE]]
 // CHECK2:       .omp.final.done:
 // CHECK2-NEXT:    [[TMP28:%.*]] = load i32, i32* [[DOTOMP_IS_LAST]], align 4
@@ -1249,7 +1249,7 @@ int target_teams_fun(int *g){
 // CHECK2-NEXT:    store i32* [[G]], i32** [[G_ADDR]], align 8
 // CHECK2-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK2-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK2-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK2-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK2-NEXT:    [[CONV1:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK2-NEXT:    store i32 [[TMP1]], i32* [[CONV1]], align 4
 // CHECK2-NEXT:    [[TMP2:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -1284,7 +1284,7 @@ int target_teams_fun(int *g){
 // CHECK2-NEXT:    store i32* [[G]], i32** [[G_ADDR]], align 8
 // CHECK2-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK2-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK2-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK2-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK2-NEXT:    store i32 [[TMP1]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK2-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK2-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP2]], 0
@@ -1330,7 +1330,7 @@ int target_teams_fun(int *g){
 // CHECK2-NEXT:    [[TMP15:%.*]] = zext i32 [[TMP14]] to i64
 // CHECK2-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4, !llvm.access.group !11
 // CHECK2-NEXT:    [[TMP17:%.*]] = zext i32 [[TMP16]] to i64
-// CHECK2-NEXT:    [[TMP18:%.*]] = load i32, i32* [[CONV]], align 8, !llvm.access.group !11
+// CHECK2-NEXT:    [[TMP18:%.*]] = load i32, i32* [[CONV]], align 4, !llvm.access.group !11
 // CHECK2-NEXT:    [[CONV6:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK2-NEXT:    store i32 [[TMP18]], i32* [[CONV6]], align 4, !llvm.access.group !11
 // CHECK2-NEXT:    [[TMP19:%.*]] = load i64, i64* [[N_CASTED]], align 8, !llvm.access.group !11
@@ -1395,7 +1395,7 @@ int target_teams_fun(int *g){
 // CHECK2-NEXT:    store i32* [[G]], i32** [[G_ADDR]], align 8
 // CHECK2-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK2-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK2-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK2-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK2-NEXT:    store i32 [[TMP1]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK2-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK2-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP2]], 0
@@ -3475,14 +3475,14 @@ int target_teams_fun(int *g){
 // CHECK9-NEXT:    [[TMP1:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
 // CHECK9-NEXT:    [[CONV4:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
 // CHECK9-NEXT:    [[CONV5:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR2]] to i32*
-// CHECK9-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV4]], align 8
-// CHECK9-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV5]], align 8
+// CHECK9-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV4]], align 4
+// CHECK9-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV5]], align 4
 // CHECK9-NEXT:    call void @__kmpc_push_num_teams(%struct.ident_t* @[[GLOB4]], i32 [[TMP0]], i32 [[TMP2]], i32 [[TMP3]])
-// CHECK9-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK9-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK9-NEXT:    [[CONV6:%.*]] = bitcast i64* [[I_CASTED]] to i32*
 // CHECK9-NEXT:    store i32 [[TMP4]], i32* [[CONV6]], align 4
 // CHECK9-NEXT:    [[TMP5:%.*]] = load i64, i64* [[I_CASTED]], align 8
-// CHECK9-NEXT:    [[TMP6:%.*]] = load i32, i32* [[CONV3]], align 8
+// CHECK9-NEXT:    [[TMP6:%.*]] = load i32, i32* [[CONV3]], align 4
 // CHECK9-NEXT:    [[CONV7:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK9-NEXT:    store i32 [[TMP6]], i32* [[CONV7]], align 4
 // CHECK9-NEXT:    [[TMP7:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -3518,7 +3518,7 @@ int target_teams_fun(int *g){
 // CHECK9-NEXT:    [[CONV:%.*]] = bitcast i64* [[I_ADDR]] to i32*
 // CHECK9-NEXT:    [[CONV1:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK9-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK9-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK9-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK9-NEXT:    store i32 [[TMP1]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK9-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK9-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP2]], 0
@@ -3570,7 +3570,7 @@ int target_teams_fun(int *g){
 // CHECK9-NEXT:    [[CONV8:%.*]] = bitcast i64* [[I_CASTED]] to i32*
 // CHECK9-NEXT:    store i32 [[TMP18]], i32* [[CONV8]], align 4
 // CHECK9-NEXT:    [[TMP19:%.*]] = load i64, i64* [[I_CASTED]], align 8
-// CHECK9-NEXT:    [[TMP20:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK9-NEXT:    [[TMP20:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK9-NEXT:    [[CONV9:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK9-NEXT:    store i32 [[TMP20]], i32* [[CONV9]], align 4
 // CHECK9-NEXT:    [[TMP21:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -3597,7 +3597,7 @@ int target_teams_fun(int *g){
 // CHECK9-NEXT:    [[DIV11:%.*]] = sdiv i32 [[SUB10]], 1
 // CHECK9-NEXT:    [[MUL:%.*]] = mul nsw i32 [[DIV11]], 1
 // CHECK9-NEXT:    [[ADD12:%.*]] = add nsw i32 0, [[MUL]]
-// CHECK9-NEXT:    store i32 [[ADD12]], i32* [[CONV]], align 8
+// CHECK9-NEXT:    store i32 [[ADD12]], i32* [[CONV]], align 4
 // CHECK9-NEXT:    br label [[DOTOMP_FINAL_DONE]]
 // CHECK9:       .omp.final.done:
 // CHECK9-NEXT:    br label [[OMP_PRECOND_END]]
@@ -3638,7 +3638,7 @@ int target_teams_fun(int *g){
 // CHECK9-NEXT:    [[CONV:%.*]] = bitcast i64* [[I_ADDR]] to i32*
 // CHECK9-NEXT:    [[CONV1:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK9-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK9-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK9-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK9-NEXT:    store i32 [[TMP1]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK9-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK9-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP2]], 0
@@ -3652,9 +3652,9 @@ int target_teams_fun(int *g){
 // CHECK9:       omp.precond.then:
 // CHECK9-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [1000 x i32], [1000 x i32]* [[TMP0]], i64 0, i64 0
 // CHECK9-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[ARRAYDECAY]], i64 8) ]
-// CHECK9-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK9-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK9-NEXT:    store i32 [[TMP4]], i32* [[DOTLINEAR_START]], align 4
-// CHECK9-NEXT:    [[TMP5:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK9-NEXT:    [[TMP5:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK9-NEXT:    store i32 [[TMP5]], i32* [[DOTLINEAR_STEP]], align 4
 // CHECK9-NEXT:    store i32 0, i32* [[DOTOMP_LB]], align 4
 // CHECK9-NEXT:    [[TMP6:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_2]], align 4
@@ -3726,7 +3726,7 @@ int target_teams_fun(int *g){
 // CHECK9-NEXT:    [[DIV13:%.*]] = sdiv i32 [[SUB12]], 1
 // CHECK9-NEXT:    [[MUL14:%.*]] = mul nsw i32 [[DIV13]], 1
 // CHECK9-NEXT:    [[ADD15:%.*]] = add nsw i32 0, [[MUL14]]
-// CHECK9-NEXT:    store i32 [[ADD15]], i32* [[CONV]], align 8
+// CHECK9-NEXT:    store i32 [[ADD15]], i32* [[CONV]], align 4
 // CHECK9-NEXT:    br label [[DOTOMP_FINAL_DONE]]
 // CHECK9:       .omp.final.done:
 // CHECK9-NEXT:    [[TMP28:%.*]] = load i32, i32* [[DOTOMP_IS_LAST]], align 4
@@ -3752,7 +3752,7 @@ int target_teams_fun(int *g){
 // CHECK9-NEXT:    store i32* [[G]], i32** [[G_ADDR]], align 8
 // CHECK9-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK9-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK9-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK9-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK9-NEXT:    [[CONV1:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK9-NEXT:    store i32 [[TMP1]], i32* [[CONV1]], align 4
 // CHECK9-NEXT:    [[TMP2:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -3787,7 +3787,7 @@ int target_teams_fun(int *g){
 // CHECK9-NEXT:    store i32* [[G]], i32** [[G_ADDR]], align 8
 // CHECK9-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK9-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK9-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK9-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK9-NEXT:    store i32 [[TMP1]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK9-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK9-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP2]], 0
@@ -3833,7 +3833,7 @@ int target_teams_fun(int *g){
 // CHECK9-NEXT:    [[TMP15:%.*]] = zext i32 [[TMP14]] to i64
 // CHECK9-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4, !llvm.access.group !12
 // CHECK9-NEXT:    [[TMP17:%.*]] = zext i32 [[TMP16]] to i64
-// CHECK9-NEXT:    [[TMP18:%.*]] = load i32, i32* [[CONV]], align 8, !llvm.access.group !12
+// CHECK9-NEXT:    [[TMP18:%.*]] = load i32, i32* [[CONV]], align 4, !llvm.access.group !12
 // CHECK9-NEXT:    [[CONV6:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK9-NEXT:    store i32 [[TMP18]], i32* [[CONV6]], align 4, !llvm.access.group !12
 // CHECK9-NEXT:    [[TMP19:%.*]] = load i64, i64* [[N_CASTED]], align 8, !llvm.access.group !12
@@ -3898,7 +3898,7 @@ int target_teams_fun(int *g){
 // CHECK9-NEXT:    store i32* [[G]], i32** [[G_ADDR]], align 8
 // CHECK9-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK9-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK9-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK9-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK9-NEXT:    store i32 [[TMP1]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK9-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK9-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP2]], 0
@@ -4009,14 +4009,14 @@ int target_teams_fun(int *g){
 // CHECK10-NEXT:    [[TMP1:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
 // CHECK10-NEXT:    [[CONV4:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
 // CHECK10-NEXT:    [[CONV5:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR2]] to i32*
-// CHECK10-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV4]], align 8
-// CHECK10-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV5]], align 8
+// CHECK10-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV4]], align 4
+// CHECK10-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV5]], align 4
 // CHECK10-NEXT:    call void @__kmpc_push_num_teams(%struct.ident_t* @[[GLOB4]], i32 [[TMP0]], i32 [[TMP2]], i32 [[TMP3]])
-// CHECK10-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK10-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK10-NEXT:    [[CONV6:%.*]] = bitcast i64* [[I_CASTED]] to i32*
 // CHECK10-NEXT:    store i32 [[TMP4]], i32* [[CONV6]], align 4
 // CHECK10-NEXT:    [[TMP5:%.*]] = load i64, i64* [[I_CASTED]], align 8
-// CHECK10-NEXT:    [[TMP6:%.*]] = load i32, i32* [[CONV3]], align 8
+// CHECK10-NEXT:    [[TMP6:%.*]] = load i32, i32* [[CONV3]], align 4
 // CHECK10-NEXT:    [[CONV7:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK10-NEXT:    store i32 [[TMP6]], i32* [[CONV7]], align 4
 // CHECK10-NEXT:    [[TMP7:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -4052,7 +4052,7 @@ int target_teams_fun(int *g){
 // CHECK10-NEXT:    [[CONV:%.*]] = bitcast i64* [[I_ADDR]] to i32*
 // CHECK10-NEXT:    [[CONV1:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK10-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK10-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK10-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK10-NEXT:    store i32 [[TMP1]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK10-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK10-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP2]], 0
@@ -4104,7 +4104,7 @@ int target_teams_fun(int *g){
 // CHECK10-NEXT:    [[CONV8:%.*]] = bitcast i64* [[I_CASTED]] to i32*
 // CHECK10-NEXT:    store i32 [[TMP18]], i32* [[CONV8]], align 4
 // CHECK10-NEXT:    [[TMP19:%.*]] = load i64, i64* [[I_CASTED]], align 8
-// CHECK10-NEXT:    [[TMP20:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK10-NEXT:    [[TMP20:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK10-NEXT:    [[CONV9:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK10-NEXT:    store i32 [[TMP20]], i32* [[CONV9]], align 4
 // CHECK10-NEXT:    [[TMP21:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -4131,7 +4131,7 @@ int target_teams_fun(int *g){
 // CHECK10-NEXT:    [[DIV11:%.*]] = sdiv i32 [[SUB10]], 1
 // CHECK10-NEXT:    [[MUL:%.*]] = mul nsw i32 [[DIV11]], 1
 // CHECK10-NEXT:    [[ADD12:%.*]] = add nsw i32 0, [[MUL]]
-// CHECK10-NEXT:    store i32 [[ADD12]], i32* [[CONV]], align 8
+// CHECK10-NEXT:    store i32 [[ADD12]], i32* [[CONV]], align 4
 // CHECK10-NEXT:    br label [[DOTOMP_FINAL_DONE]]
 // CHECK10:       .omp.final.done:
 // CHECK10-NEXT:    br label [[OMP_PRECOND_END]]
@@ -4172,7 +4172,7 @@ int target_teams_fun(int *g){
 // CHECK10-NEXT:    [[CONV:%.*]] = bitcast i64* [[I_ADDR]] to i32*
 // CHECK10-NEXT:    [[CONV1:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK10-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK10-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK10-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK10-NEXT:    store i32 [[TMP1]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK10-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK10-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP2]], 0
@@ -4186,9 +4186,9 @@ int target_teams_fun(int *g){
 // CHECK10:       omp.precond.then:
 // CHECK10-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [1000 x i32], [1000 x i32]* [[TMP0]], i64 0, i64 0
 // CHECK10-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[ARRAYDECAY]], i64 8) ]
-// CHECK10-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK10-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK10-NEXT:    store i32 [[TMP4]], i32* [[DOTLINEAR_START]], align 4
-// CHECK10-NEXT:    [[TMP5:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK10-NEXT:    [[TMP5:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK10-NEXT:    store i32 [[TMP5]], i32* [[DOTLINEAR_STEP]], align 4
 // CHECK10-NEXT:    store i32 0, i32* [[DOTOMP_LB]], align 4
 // CHECK10-NEXT:    [[TMP6:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_2]], align 4
@@ -4260,7 +4260,7 @@ int target_teams_fun(int *g){
 // CHECK10-NEXT:    [[DIV13:%.*]] = sdiv i32 [[SUB12]], 1
 // CHECK10-NEXT:    [[MUL14:%.*]] = mul nsw i32 [[DIV13]], 1
 // CHECK10-NEXT:    [[ADD15:%.*]] = add nsw i32 0, [[MUL14]]
-// CHECK10-NEXT:    store i32 [[ADD15]], i32* [[CONV]], align 8
+// CHECK10-NEXT:    store i32 [[ADD15]], i32* [[CONV]], align 4
 // CHECK10-NEXT:    br label [[DOTOMP_FINAL_DONE]]
 // CHECK10:       .omp.final.done:
 // CHECK10-NEXT:    [[TMP28:%.*]] = load i32, i32* [[DOTOMP_IS_LAST]], align 4
@@ -4286,7 +4286,7 @@ int target_teams_fun(int *g){
 // CHECK10-NEXT:    store i32* [[G]], i32** [[G_ADDR]], align 8
 // CHECK10-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK10-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK10-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK10-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK10-NEXT:    [[CONV1:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK10-NEXT:    store i32 [[TMP1]], i32* [[CONV1]], align 4
 // CHECK10-NEXT:    [[TMP2:%.*]] = load i64, i64* [[N_CASTED]], align 8
@@ -4321,7 +4321,7 @@ int target_teams_fun(int *g){
 // CHECK10-NEXT:    store i32* [[G]], i32** [[G_ADDR]], align 8
 // CHECK10-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK10-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK10-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK10-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK10-NEXT:    store i32 [[TMP1]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK10-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK10-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP2]], 0
@@ -4367,7 +4367,7 @@ int target_teams_fun(int *g){
 // CHECK10-NEXT:    [[TMP15:%.*]] = zext i32 [[TMP14]] to i64
 // CHECK10-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4, !llvm.access.group !12
 // CHECK10-NEXT:    [[TMP17:%.*]] = zext i32 [[TMP16]] to i64
-// CHECK10-NEXT:    [[TMP18:%.*]] = load i32, i32* [[CONV]], align 8, !llvm.access.group !12
+// CHECK10-NEXT:    [[TMP18:%.*]] = load i32, i32* [[CONV]], align 4, !llvm.access.group !12
 // CHECK10-NEXT:    [[CONV6:%.*]] = bitcast i64* [[N_CASTED]] to i32*
 // CHECK10-NEXT:    store i32 [[TMP18]], i32* [[CONV6]], align 4, !llvm.access.group !12
 // CHECK10-NEXT:    [[TMP19:%.*]] = load i64, i64* [[N_CASTED]], align 8, !llvm.access.group !12
@@ -4432,7 +4432,7 @@ int target_teams_fun(int *g){
 // CHECK10-NEXT:    store i32* [[G]], i32** [[G_ADDR]], align 8
 // CHECK10-NEXT:    [[CONV:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK10-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[A_ADDR]], align 8
-// CHECK10-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK10-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK10-NEXT:    store i32 [[TMP1]], i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK10-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
 // CHECK10-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP2]], 0

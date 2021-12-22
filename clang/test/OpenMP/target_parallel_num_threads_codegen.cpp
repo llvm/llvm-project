@@ -465,9 +465,9 @@ int bar(int n){
 // CHECK1-NEXT:    [[TMP1:%.*]] = load %struct.S1*, %struct.S1** [[THIS_ADDR]], align 8
 // CHECK1-NEXT:    [[CONV:%.*]] = bitcast i64* [[B_ADDR]] to i32*
 // CHECK1-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK1-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK1-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK1-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 [[TMP2]])
-// CHECK1-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK1-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK1-NEXT:    [[CONV2:%.*]] = bitcast i64* [[B_CASTED]] to i32*
 // CHECK1-NEXT:    store i32 [[TMP3]], i32* [[CONV2]], align 4
 // CHECK1-NEXT:    [[TMP4:%.*]] = load i64, i64* [[B_CASTED]], align 8
@@ -488,7 +488,7 @@ int bar(int n){
 // CHECK1-NEXT:    store i64 [[B]], i64* [[B_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = load %struct.S1*, %struct.S1** [[THIS_ADDR]], align 8
 // CHECK1-NEXT:    [[CONV:%.*]] = bitcast i64* [[B_ADDR]] to i32*
-// CHECK1-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK1-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK1-NEXT:    [[CONV1:%.*]] = sitofp i32 [[TMP1]] to double
 // CHECK1-NEXT:    [[ADD:%.*]] = fadd double [[CONV1]], 1.500000e+00
 // CHECK1-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_S1:%.*]], %struct.S1* [[TMP0]], i32 0, i32 0
@@ -530,7 +530,7 @@ int bar(int n){
 // CHECK1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK1-NEXT:    store i64 [[DOTCAPTURE_EXPR_]], i64* [[DOTCAPTURE_EXPR__ADDR]], align 8
 // CHECK1-NEXT:    [[CONV:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK1-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK1-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK1-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 [[TMP1]])
 // CHECK1-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined..4 to void (i32*, i32*, ...)*))
 // CHECK1-NEXT:    ret void
@@ -553,7 +553,7 @@ int bar(int n){
 // CHECK1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK1-NEXT:    store i64 [[DOTCAPTURE_EXPR_]], i64* [[DOTCAPTURE_EXPR__ADDR]], align 8
 // CHECK1-NEXT:    [[CONV:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK1-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK1-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK1-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 [[TMP1]])
 // CHECK1-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined..7 to void (i32*, i32*, ...)*))
 // CHECK1-NEXT:    ret void
@@ -603,14 +603,14 @@ int bar(int n){
 // CHECK1-NEXT:    [[CONV:%.*]] = bitcast i64* [[A_ADDR]] to i32*
 // CHECK1-NEXT:    [[CONV1:%.*]] = bitcast i64* [[B_ADDR]] to i16*
 // CHECK1-NEXT:    [[CONV2:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i16*
-// CHECK1-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV2]], align 8
+// CHECK1-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV2]], align 2
 // CHECK1-NEXT:    [[TMP2:%.*]] = sext i16 [[TMP1]] to i32
 // CHECK1-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 [[TMP2]])
-// CHECK1-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK1-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK1-NEXT:    [[CONV3:%.*]] = bitcast i64* [[A_CASTED]] to i32*
 // CHECK1-NEXT:    store i32 [[TMP3]], i32* [[CONV3]], align 4
 // CHECK1-NEXT:    [[TMP4:%.*]] = load i64, i64* [[A_CASTED]], align 8
-// CHECK1-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV1]], align 8
+// CHECK1-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV1]], align 2
 // CHECK1-NEXT:    [[CONV4:%.*]] = bitcast i64* [[B_CASTED]] to i16*
 // CHECK1-NEXT:    store i16 [[TMP5]], i16* [[CONV4]], align 2
 // CHECK1-NEXT:    [[TMP6:%.*]] = load i64, i64* [[B_CASTED]], align 8
@@ -631,11 +631,11 @@ int bar(int n){
 // CHECK1-NEXT:    store i64 [[B]], i64* [[B_ADDR]], align 8
 // CHECK1-NEXT:    [[CONV:%.*]] = bitcast i64* [[A_ADDR]] to i32*
 // CHECK1-NEXT:    [[CONV1:%.*]] = bitcast i64* [[B_ADDR]] to i16*
-// CHECK1-NEXT:    [[TMP0:%.*]] = load i16, i16* [[CONV1]], align 8
+// CHECK1-NEXT:    [[TMP0:%.*]] = load i16, i16* [[CONV1]], align 2
 // CHECK1-NEXT:    [[CONV2:%.*]] = sext i16 [[TMP0]] to i32
-// CHECK1-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK1-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[CONV2]]
-// CHECK1-NEXT:    store i32 [[ADD]], i32* [[CONV]], align 8
+// CHECK1-NEXT:    store i32 [[ADD]], i32* [[CONV]], align 4
 // CHECK1-NEXT:    ret void
 //
 //
@@ -922,9 +922,9 @@ int bar(int n){
 // CHECK2-NEXT:    [[TMP1:%.*]] = load %struct.S1*, %struct.S1** [[THIS_ADDR]], align 8
 // CHECK2-NEXT:    [[CONV:%.*]] = bitcast i64* [[B_ADDR]] to i32*
 // CHECK2-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK2-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK2-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK2-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 [[TMP2]])
-// CHECK2-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK2-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK2-NEXT:    [[CONV2:%.*]] = bitcast i64* [[B_CASTED]] to i32*
 // CHECK2-NEXT:    store i32 [[TMP3]], i32* [[CONV2]], align 4
 // CHECK2-NEXT:    [[TMP4:%.*]] = load i64, i64* [[B_CASTED]], align 8
@@ -945,7 +945,7 @@ int bar(int n){
 // CHECK2-NEXT:    store i64 [[B]], i64* [[B_ADDR]], align 8
 // CHECK2-NEXT:    [[TMP0:%.*]] = load %struct.S1*, %struct.S1** [[THIS_ADDR]], align 8
 // CHECK2-NEXT:    [[CONV:%.*]] = bitcast i64* [[B_ADDR]] to i32*
-// CHECK2-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK2-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK2-NEXT:    [[CONV1:%.*]] = sitofp i32 [[TMP1]] to double
 // CHECK2-NEXT:    [[ADD:%.*]] = fadd double [[CONV1]], 1.500000e+00
 // CHECK2-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_S1:%.*]], %struct.S1* [[TMP0]], i32 0, i32 0
@@ -987,7 +987,7 @@ int bar(int n){
 // CHECK2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK2-NEXT:    store i64 [[DOTCAPTURE_EXPR_]], i64* [[DOTCAPTURE_EXPR__ADDR]], align 8
 // CHECK2-NEXT:    [[CONV:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK2-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK2-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK2-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 [[TMP1]])
 // CHECK2-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined..4 to void (i32*, i32*, ...)*))
 // CHECK2-NEXT:    ret void
@@ -1010,7 +1010,7 @@ int bar(int n){
 // CHECK2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK2-NEXT:    store i64 [[DOTCAPTURE_EXPR_]], i64* [[DOTCAPTURE_EXPR__ADDR]], align 8
 // CHECK2-NEXT:    [[CONV:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK2-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK2-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK2-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 [[TMP1]])
 // CHECK2-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined..7 to void (i32*, i32*, ...)*))
 // CHECK2-NEXT:    ret void
@@ -1060,14 +1060,14 @@ int bar(int n){
 // CHECK2-NEXT:    [[CONV:%.*]] = bitcast i64* [[A_ADDR]] to i32*
 // CHECK2-NEXT:    [[CONV1:%.*]] = bitcast i64* [[B_ADDR]] to i16*
 // CHECK2-NEXT:    [[CONV2:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i16*
-// CHECK2-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV2]], align 8
+// CHECK2-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV2]], align 2
 // CHECK2-NEXT:    [[TMP2:%.*]] = sext i16 [[TMP1]] to i32
 // CHECK2-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 [[TMP2]])
-// CHECK2-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK2-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK2-NEXT:    [[CONV3:%.*]] = bitcast i64* [[A_CASTED]] to i32*
 // CHECK2-NEXT:    store i32 [[TMP3]], i32* [[CONV3]], align 4
 // CHECK2-NEXT:    [[TMP4:%.*]] = load i64, i64* [[A_CASTED]], align 8
-// CHECK2-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV1]], align 8
+// CHECK2-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV1]], align 2
 // CHECK2-NEXT:    [[CONV4:%.*]] = bitcast i64* [[B_CASTED]] to i16*
 // CHECK2-NEXT:    store i16 [[TMP5]], i16* [[CONV4]], align 2
 // CHECK2-NEXT:    [[TMP6:%.*]] = load i64, i64* [[B_CASTED]], align 8
@@ -1088,11 +1088,11 @@ int bar(int n){
 // CHECK2-NEXT:    store i64 [[B]], i64* [[B_ADDR]], align 8
 // CHECK2-NEXT:    [[CONV:%.*]] = bitcast i64* [[A_ADDR]] to i32*
 // CHECK2-NEXT:    [[CONV1:%.*]] = bitcast i64* [[B_ADDR]] to i16*
-// CHECK2-NEXT:    [[TMP0:%.*]] = load i16, i16* [[CONV1]], align 8
+// CHECK2-NEXT:    [[TMP0:%.*]] = load i16, i16* [[CONV1]], align 2
 // CHECK2-NEXT:    [[CONV2:%.*]] = sext i16 [[TMP0]] to i32
-// CHECK2-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK2-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK2-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[CONV2]]
-// CHECK2-NEXT:    store i32 [[ADD]], i32* [[CONV]], align 8
+// CHECK2-NEXT:    store i32 [[ADD]], i32* [[CONV]], align 4
 // CHECK2-NEXT:    ret void
 //
 //
@@ -1505,13 +1505,13 @@ int bar(int n){
 // CHECK3-NEXT:    store i32 [[DOTCAPTURE_EXPR_]], i32* [[DOTCAPTURE_EXPR__ADDR]], align 4
 // CHECK3-NEXT:    [[CONV:%.*]] = bitcast i32* [[B_ADDR]] to i16*
 // CHECK3-NEXT:    [[CONV1:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR__ADDR]] to i16*
-// CHECK3-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV1]], align 4
+// CHECK3-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV1]], align 2
 // CHECK3-NEXT:    [[TMP2:%.*]] = sext i16 [[TMP1]] to i32
 // CHECK3-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 [[TMP2]])
 // CHECK3-NEXT:    [[TMP3:%.*]] = load i32, i32* [[A_ADDR]], align 4
 // CHECK3-NEXT:    store i32 [[TMP3]], i32* [[A_CASTED]], align 4
 // CHECK3-NEXT:    [[TMP4:%.*]] = load i32, i32* [[A_CASTED]], align 4
-// CHECK3-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV]], align 4
+// CHECK3-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV]], align 2
 // CHECK3-NEXT:    [[CONV2:%.*]] = bitcast i32* [[B_CASTED]] to i16*
 // CHECK3-NEXT:    store i16 [[TMP5]], i16* [[CONV2]], align 2
 // CHECK3-NEXT:    [[TMP6:%.*]] = load i32, i32* [[B_CASTED]], align 4
@@ -1531,7 +1531,7 @@ int bar(int n){
 // CHECK3-NEXT:    store i32 [[A]], i32* [[A_ADDR]], align 4
 // CHECK3-NEXT:    store i32 [[B]], i32* [[B_ADDR]], align 4
 // CHECK3-NEXT:    [[CONV:%.*]] = bitcast i32* [[B_ADDR]] to i16*
-// CHECK3-NEXT:    [[TMP0:%.*]] = load i16, i16* [[CONV]], align 4
+// CHECK3-NEXT:    [[TMP0:%.*]] = load i16, i16* [[CONV]], align 2
 // CHECK3-NEXT:    [[CONV1:%.*]] = sext i16 [[TMP0]] to i32
 // CHECK3-NEXT:    [[TMP1:%.*]] = load i32, i32* [[A_ADDR]], align 4
 // CHECK3-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[CONV1]]
@@ -1948,13 +1948,13 @@ int bar(int n){
 // CHECK4-NEXT:    store i32 [[DOTCAPTURE_EXPR_]], i32* [[DOTCAPTURE_EXPR__ADDR]], align 4
 // CHECK4-NEXT:    [[CONV:%.*]] = bitcast i32* [[B_ADDR]] to i16*
 // CHECK4-NEXT:    [[CONV1:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR__ADDR]] to i16*
-// CHECK4-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV1]], align 4
+// CHECK4-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV1]], align 2
 // CHECK4-NEXT:    [[TMP2:%.*]] = sext i16 [[TMP1]] to i32
 // CHECK4-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 [[TMP2]])
 // CHECK4-NEXT:    [[TMP3:%.*]] = load i32, i32* [[A_ADDR]], align 4
 // CHECK4-NEXT:    store i32 [[TMP3]], i32* [[A_CASTED]], align 4
 // CHECK4-NEXT:    [[TMP4:%.*]] = load i32, i32* [[A_CASTED]], align 4
-// CHECK4-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV]], align 4
+// CHECK4-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV]], align 2
 // CHECK4-NEXT:    [[CONV2:%.*]] = bitcast i32* [[B_CASTED]] to i16*
 // CHECK4-NEXT:    store i16 [[TMP5]], i16* [[CONV2]], align 2
 // CHECK4-NEXT:    [[TMP6:%.*]] = load i32, i32* [[B_CASTED]], align 4
@@ -1974,7 +1974,7 @@ int bar(int n){
 // CHECK4-NEXT:    store i32 [[A]], i32* [[A_ADDR]], align 4
 // CHECK4-NEXT:    store i32 [[B]], i32* [[B_ADDR]], align 4
 // CHECK4-NEXT:    [[CONV:%.*]] = bitcast i32* [[B_ADDR]] to i16*
-// CHECK4-NEXT:    [[TMP0:%.*]] = load i16, i16* [[CONV]], align 4
+// CHECK4-NEXT:    [[TMP0:%.*]] = load i16, i16* [[CONV]], align 2
 // CHECK4-NEXT:    [[CONV1:%.*]] = sext i16 [[TMP0]] to i32
 // CHECK4-NEXT:    [[TMP1:%.*]] = load i32, i32* [[A_ADDR]], align 4
 // CHECK4-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[CONV1]]
@@ -1996,7 +1996,7 @@ int bar(int n){
 // CHECK9-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1:[0-9]+]])
 // CHECK9-NEXT:    store i64 [[DOTCAPTURE_EXPR_]], i64* [[DOTCAPTURE_EXPR__ADDR]], align 8
 // CHECK9-NEXT:    [[CONV:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK9-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK9-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK9-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 [[TMP1]])
 // CHECK9-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined. to void (i32*, i32*, ...)*))
 // CHECK9-NEXT:    ret void
@@ -2019,7 +2019,7 @@ int bar(int n){
 // CHECK9-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK9-NEXT:    store i64 [[DOTCAPTURE_EXPR_]], i64* [[DOTCAPTURE_EXPR__ADDR]], align 8
 // CHECK9-NEXT:    [[CONV:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK9-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK9-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK9-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 [[TMP1]])
 // CHECK9-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined..1 to void (i32*, i32*, ...)*))
 // CHECK9-NEXT:    ret void
@@ -2049,9 +2049,9 @@ int bar(int n){
 // CHECK9-NEXT:    [[TMP1:%.*]] = load %struct.S1*, %struct.S1** [[THIS_ADDR]], align 8
 // CHECK9-NEXT:    [[CONV:%.*]] = bitcast i64* [[B_ADDR]] to i32*
 // CHECK9-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK9-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK9-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK9-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 [[TMP2]])
-// CHECK9-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK9-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK9-NEXT:    [[CONV2:%.*]] = bitcast i64* [[B_CASTED]] to i32*
 // CHECK9-NEXT:    store i32 [[TMP3]], i32* [[CONV2]], align 4
 // CHECK9-NEXT:    [[TMP4:%.*]] = load i64, i64* [[B_CASTED]], align 8
@@ -2072,7 +2072,7 @@ int bar(int n){
 // CHECK9-NEXT:    store i64 [[B]], i64* [[B_ADDR]], align 8
 // CHECK9-NEXT:    [[TMP0:%.*]] = load %struct.S1*, %struct.S1** [[THIS_ADDR]], align 8
 // CHECK9-NEXT:    [[CONV:%.*]] = bitcast i64* [[B_ADDR]] to i32*
-// CHECK9-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK9-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK9-NEXT:    [[CONV1:%.*]] = sitofp i32 [[TMP1]] to double
 // CHECK9-NEXT:    [[ADD:%.*]] = fadd double [[CONV1]], 1.500000e+00
 // CHECK9-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_S1:%.*]], %struct.S1* [[TMP0]], i32 0, i32 0
@@ -2141,14 +2141,14 @@ int bar(int n){
 // CHECK9-NEXT:    [[CONV:%.*]] = bitcast i64* [[A_ADDR]] to i32*
 // CHECK9-NEXT:    [[CONV1:%.*]] = bitcast i64* [[B_ADDR]] to i16*
 // CHECK9-NEXT:    [[CONV2:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i16*
-// CHECK9-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV2]], align 8
+// CHECK9-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV2]], align 2
 // CHECK9-NEXT:    [[TMP2:%.*]] = sext i16 [[TMP1]] to i32
 // CHECK9-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 [[TMP2]])
-// CHECK9-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK9-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK9-NEXT:    [[CONV3:%.*]] = bitcast i64* [[A_CASTED]] to i32*
 // CHECK9-NEXT:    store i32 [[TMP3]], i32* [[CONV3]], align 4
 // CHECK9-NEXT:    [[TMP4:%.*]] = load i64, i64* [[A_CASTED]], align 8
-// CHECK9-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV1]], align 8
+// CHECK9-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV1]], align 2
 // CHECK9-NEXT:    [[CONV4:%.*]] = bitcast i64* [[B_CASTED]] to i16*
 // CHECK9-NEXT:    store i16 [[TMP5]], i16* [[CONV4]], align 2
 // CHECK9-NEXT:    [[TMP6:%.*]] = load i64, i64* [[B_CASTED]], align 8
@@ -2169,11 +2169,11 @@ int bar(int n){
 // CHECK9-NEXT:    store i64 [[B]], i64* [[B_ADDR]], align 8
 // CHECK9-NEXT:    [[CONV:%.*]] = bitcast i64* [[A_ADDR]] to i32*
 // CHECK9-NEXT:    [[CONV1:%.*]] = bitcast i64* [[B_ADDR]] to i16*
-// CHECK9-NEXT:    [[TMP0:%.*]] = load i16, i16* [[CONV1]], align 8
+// CHECK9-NEXT:    [[TMP0:%.*]] = load i16, i16* [[CONV1]], align 2
 // CHECK9-NEXT:    [[CONV2:%.*]] = sext i16 [[TMP0]] to i32
-// CHECK9-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK9-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK9-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[CONV2]]
-// CHECK9-NEXT:    store i32 [[ADD]], i32* [[CONV]], align 8
+// CHECK9-NEXT:    store i32 [[ADD]], i32* [[CONV]], align 4
 // CHECK9-NEXT:    ret void
 //
 //
@@ -2184,7 +2184,7 @@ int bar(int n){
 // CHECK10-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1:[0-9]+]])
 // CHECK10-NEXT:    store i64 [[DOTCAPTURE_EXPR_]], i64* [[DOTCAPTURE_EXPR__ADDR]], align 8
 // CHECK10-NEXT:    [[CONV:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK10-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK10-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK10-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 [[TMP1]])
 // CHECK10-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined. to void (i32*, i32*, ...)*))
 // CHECK10-NEXT:    ret void
@@ -2207,7 +2207,7 @@ int bar(int n){
 // CHECK10-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK10-NEXT:    store i64 [[DOTCAPTURE_EXPR_]], i64* [[DOTCAPTURE_EXPR__ADDR]], align 8
 // CHECK10-NEXT:    [[CONV:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK10-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK10-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK10-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 [[TMP1]])
 // CHECK10-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined..1 to void (i32*, i32*, ...)*))
 // CHECK10-NEXT:    ret void
@@ -2237,9 +2237,9 @@ int bar(int n){
 // CHECK10-NEXT:    [[TMP1:%.*]] = load %struct.S1*, %struct.S1** [[THIS_ADDR]], align 8
 // CHECK10-NEXT:    [[CONV:%.*]] = bitcast i64* [[B_ADDR]] to i32*
 // CHECK10-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK10-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK10-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK10-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 [[TMP2]])
-// CHECK10-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK10-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK10-NEXT:    [[CONV2:%.*]] = bitcast i64* [[B_CASTED]] to i32*
 // CHECK10-NEXT:    store i32 [[TMP3]], i32* [[CONV2]], align 4
 // CHECK10-NEXT:    [[TMP4:%.*]] = load i64, i64* [[B_CASTED]], align 8
@@ -2260,7 +2260,7 @@ int bar(int n){
 // CHECK10-NEXT:    store i64 [[B]], i64* [[B_ADDR]], align 8
 // CHECK10-NEXT:    [[TMP0:%.*]] = load %struct.S1*, %struct.S1** [[THIS_ADDR]], align 8
 // CHECK10-NEXT:    [[CONV:%.*]] = bitcast i64* [[B_ADDR]] to i32*
-// CHECK10-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK10-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK10-NEXT:    [[CONV1:%.*]] = sitofp i32 [[TMP1]] to double
 // CHECK10-NEXT:    [[ADD:%.*]] = fadd double [[CONV1]], 1.500000e+00
 // CHECK10-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_S1:%.*]], %struct.S1* [[TMP0]], i32 0, i32 0
@@ -2329,14 +2329,14 @@ int bar(int n){
 // CHECK10-NEXT:    [[CONV:%.*]] = bitcast i64* [[A_ADDR]] to i32*
 // CHECK10-NEXT:    [[CONV1:%.*]] = bitcast i64* [[B_ADDR]] to i16*
 // CHECK10-NEXT:    [[CONV2:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i16*
-// CHECK10-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV2]], align 8
+// CHECK10-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV2]], align 2
 // CHECK10-NEXT:    [[TMP2:%.*]] = sext i16 [[TMP1]] to i32
 // CHECK10-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 [[TMP2]])
-// CHECK10-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK10-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK10-NEXT:    [[CONV3:%.*]] = bitcast i64* [[A_CASTED]] to i32*
 // CHECK10-NEXT:    store i32 [[TMP3]], i32* [[CONV3]], align 4
 // CHECK10-NEXT:    [[TMP4:%.*]] = load i64, i64* [[A_CASTED]], align 8
-// CHECK10-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV1]], align 8
+// CHECK10-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV1]], align 2
 // CHECK10-NEXT:    [[CONV4:%.*]] = bitcast i64* [[B_CASTED]] to i16*
 // CHECK10-NEXT:    store i16 [[TMP5]], i16* [[CONV4]], align 2
 // CHECK10-NEXT:    [[TMP6:%.*]] = load i64, i64* [[B_CASTED]], align 8
@@ -2357,11 +2357,11 @@ int bar(int n){
 // CHECK10-NEXT:    store i64 [[B]], i64* [[B_ADDR]], align 8
 // CHECK10-NEXT:    [[CONV:%.*]] = bitcast i64* [[A_ADDR]] to i32*
 // CHECK10-NEXT:    [[CONV1:%.*]] = bitcast i64* [[B_ADDR]] to i16*
-// CHECK10-NEXT:    [[TMP0:%.*]] = load i16, i16* [[CONV1]], align 8
+// CHECK10-NEXT:    [[TMP0:%.*]] = load i16, i16* [[CONV1]], align 2
 // CHECK10-NEXT:    [[CONV2:%.*]] = sext i16 [[TMP0]] to i32
-// CHECK10-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK10-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK10-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[CONV2]]
-// CHECK10-NEXT:    store i32 [[ADD]], i32* [[CONV]], align 8
+// CHECK10-NEXT:    store i32 [[ADD]], i32* [[CONV]], align 4
 // CHECK10-NEXT:    ret void
 //
 //
@@ -2510,13 +2510,13 @@ int bar(int n){
 // CHECK11-NEXT:    store i32 [[DOTCAPTURE_EXPR_]], i32* [[DOTCAPTURE_EXPR__ADDR]], align 4
 // CHECK11-NEXT:    [[CONV:%.*]] = bitcast i32* [[B_ADDR]] to i16*
 // CHECK11-NEXT:    [[CONV1:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR__ADDR]] to i16*
-// CHECK11-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV1]], align 4
+// CHECK11-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV1]], align 2
 // CHECK11-NEXT:    [[TMP2:%.*]] = sext i16 [[TMP1]] to i32
 // CHECK11-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 [[TMP2]])
 // CHECK11-NEXT:    [[TMP3:%.*]] = load i32, i32* [[A_ADDR]], align 4
 // CHECK11-NEXT:    store i32 [[TMP3]], i32* [[A_CASTED]], align 4
 // CHECK11-NEXT:    [[TMP4:%.*]] = load i32, i32* [[A_CASTED]], align 4
-// CHECK11-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV]], align 4
+// CHECK11-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV]], align 2
 // CHECK11-NEXT:    [[CONV2:%.*]] = bitcast i32* [[B_CASTED]] to i16*
 // CHECK11-NEXT:    store i16 [[TMP5]], i16* [[CONV2]], align 2
 // CHECK11-NEXT:    [[TMP6:%.*]] = load i32, i32* [[B_CASTED]], align 4
@@ -2536,7 +2536,7 @@ int bar(int n){
 // CHECK11-NEXT:    store i32 [[A]], i32* [[A_ADDR]], align 4
 // CHECK11-NEXT:    store i32 [[B]], i32* [[B_ADDR]], align 4
 // CHECK11-NEXT:    [[CONV:%.*]] = bitcast i32* [[B_ADDR]] to i16*
-// CHECK11-NEXT:    [[TMP0:%.*]] = load i16, i16* [[CONV]], align 4
+// CHECK11-NEXT:    [[TMP0:%.*]] = load i16, i16* [[CONV]], align 2
 // CHECK11-NEXT:    [[CONV1:%.*]] = sext i16 [[TMP0]] to i32
 // CHECK11-NEXT:    [[TMP1:%.*]] = load i32, i32* [[A_ADDR]], align 4
 // CHECK11-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[CONV1]]
@@ -2689,13 +2689,13 @@ int bar(int n){
 // CHECK12-NEXT:    store i32 [[DOTCAPTURE_EXPR_]], i32* [[DOTCAPTURE_EXPR__ADDR]], align 4
 // CHECK12-NEXT:    [[CONV:%.*]] = bitcast i32* [[B_ADDR]] to i16*
 // CHECK12-NEXT:    [[CONV1:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR__ADDR]] to i16*
-// CHECK12-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV1]], align 4
+// CHECK12-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV1]], align 2
 // CHECK12-NEXT:    [[TMP2:%.*]] = sext i16 [[TMP1]] to i32
 // CHECK12-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 [[TMP2]])
 // CHECK12-NEXT:    [[TMP3:%.*]] = load i32, i32* [[A_ADDR]], align 4
 // CHECK12-NEXT:    store i32 [[TMP3]], i32* [[A_CASTED]], align 4
 // CHECK12-NEXT:    [[TMP4:%.*]] = load i32, i32* [[A_CASTED]], align 4
-// CHECK12-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV]], align 4
+// CHECK12-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV]], align 2
 // CHECK12-NEXT:    [[CONV2:%.*]] = bitcast i32* [[B_CASTED]] to i16*
 // CHECK12-NEXT:    store i16 [[TMP5]], i16* [[CONV2]], align 2
 // CHECK12-NEXT:    [[TMP6:%.*]] = load i32, i32* [[B_CASTED]], align 4
@@ -2715,7 +2715,7 @@ int bar(int n){
 // CHECK12-NEXT:    store i32 [[A]], i32* [[A_ADDR]], align 4
 // CHECK12-NEXT:    store i32 [[B]], i32* [[B_ADDR]], align 4
 // CHECK12-NEXT:    [[CONV:%.*]] = bitcast i32* [[B_ADDR]] to i16*
-// CHECK12-NEXT:    [[TMP0:%.*]] = load i16, i16* [[CONV]], align 4
+// CHECK12-NEXT:    [[TMP0:%.*]] = load i16, i16* [[CONV]], align 2
 // CHECK12-NEXT:    [[CONV1:%.*]] = sext i16 [[TMP0]] to i32
 // CHECK12-NEXT:    [[TMP1:%.*]] = load i32, i32* [[A_ADDR]], align 4
 // CHECK12-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[CONV1]]
@@ -2999,9 +2999,9 @@ int bar(int n){
 // CHECK17-NEXT:    [[TMP1:%.*]] = load %struct.S1*, %struct.S1** [[THIS_ADDR]], align 8
 // CHECK17-NEXT:    [[CONV:%.*]] = bitcast i64* [[B_ADDR]] to i32*
 // CHECK17-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK17-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK17-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK17-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 [[TMP2]])
-// CHECK17-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK17-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK17-NEXT:    [[CONV2:%.*]] = bitcast i64* [[B_CASTED]] to i32*
 // CHECK17-NEXT:    store i32 [[TMP3]], i32* [[CONV2]], align 4
 // CHECK17-NEXT:    [[TMP4:%.*]] = load i64, i64* [[B_CASTED]], align 8
@@ -3022,7 +3022,7 @@ int bar(int n){
 // CHECK17-NEXT:    store i64 [[B]], i64* [[B_ADDR]], align 8
 // CHECK17-NEXT:    [[TMP0:%.*]] = load %struct.S1*, %struct.S1** [[THIS_ADDR]], align 8
 // CHECK17-NEXT:    [[CONV:%.*]] = bitcast i64* [[B_ADDR]] to i32*
-// CHECK17-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK17-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK17-NEXT:    [[CONV1:%.*]] = sitofp i32 [[TMP1]] to double
 // CHECK17-NEXT:    [[ADD:%.*]] = fadd double [[CONV1]], 1.500000e+00
 // CHECK17-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_S1:%.*]], %struct.S1* [[TMP0]], i32 0, i32 0
@@ -3064,7 +3064,7 @@ int bar(int n){
 // CHECK17-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK17-NEXT:    store i64 [[DOTCAPTURE_EXPR_]], i64* [[DOTCAPTURE_EXPR__ADDR]], align 8
 // CHECK17-NEXT:    [[CONV:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK17-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK17-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK17-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 [[TMP1]])
 // CHECK17-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined..4 to void (i32*, i32*, ...)*))
 // CHECK17-NEXT:    ret void
@@ -3087,7 +3087,7 @@ int bar(int n){
 // CHECK17-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK17-NEXT:    store i64 [[DOTCAPTURE_EXPR_]], i64* [[DOTCAPTURE_EXPR__ADDR]], align 8
 // CHECK17-NEXT:    [[CONV:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK17-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK17-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK17-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 [[TMP1]])
 // CHECK17-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined..7 to void (i32*, i32*, ...)*))
 // CHECK17-NEXT:    ret void
@@ -3137,14 +3137,14 @@ int bar(int n){
 // CHECK17-NEXT:    [[CONV:%.*]] = bitcast i64* [[A_ADDR]] to i32*
 // CHECK17-NEXT:    [[CONV1:%.*]] = bitcast i64* [[B_ADDR]] to i16*
 // CHECK17-NEXT:    [[CONV2:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i16*
-// CHECK17-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV2]], align 8
+// CHECK17-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV2]], align 2
 // CHECK17-NEXT:    [[TMP2:%.*]] = sext i16 [[TMP1]] to i32
 // CHECK17-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 [[TMP2]])
-// CHECK17-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK17-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK17-NEXT:    [[CONV3:%.*]] = bitcast i64* [[A_CASTED]] to i32*
 // CHECK17-NEXT:    store i32 [[TMP3]], i32* [[CONV3]], align 4
 // CHECK17-NEXT:    [[TMP4:%.*]] = load i64, i64* [[A_CASTED]], align 8
-// CHECK17-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV1]], align 8
+// CHECK17-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV1]], align 2
 // CHECK17-NEXT:    [[CONV4:%.*]] = bitcast i64* [[B_CASTED]] to i16*
 // CHECK17-NEXT:    store i16 [[TMP5]], i16* [[CONV4]], align 2
 // CHECK17-NEXT:    [[TMP6:%.*]] = load i64, i64* [[B_CASTED]], align 8
@@ -3165,11 +3165,11 @@ int bar(int n){
 // CHECK17-NEXT:    store i64 [[B]], i64* [[B_ADDR]], align 8
 // CHECK17-NEXT:    [[CONV:%.*]] = bitcast i64* [[A_ADDR]] to i32*
 // CHECK17-NEXT:    [[CONV1:%.*]] = bitcast i64* [[B_ADDR]] to i16*
-// CHECK17-NEXT:    [[TMP0:%.*]] = load i16, i16* [[CONV1]], align 8
+// CHECK17-NEXT:    [[TMP0:%.*]] = load i16, i16* [[CONV1]], align 2
 // CHECK17-NEXT:    [[CONV2:%.*]] = sext i16 [[TMP0]] to i32
-// CHECK17-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK17-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK17-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[CONV2]]
-// CHECK17-NEXT:    store i32 [[ADD]], i32* [[CONV]], align 8
+// CHECK17-NEXT:    store i32 [[ADD]], i32* [[CONV]], align 4
 // CHECK17-NEXT:    ret void
 //
 //
@@ -3456,9 +3456,9 @@ int bar(int n){
 // CHECK18-NEXT:    [[TMP1:%.*]] = load %struct.S1*, %struct.S1** [[THIS_ADDR]], align 8
 // CHECK18-NEXT:    [[CONV:%.*]] = bitcast i64* [[B_ADDR]] to i32*
 // CHECK18-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK18-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK18-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK18-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 [[TMP2]])
-// CHECK18-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK18-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK18-NEXT:    [[CONV2:%.*]] = bitcast i64* [[B_CASTED]] to i32*
 // CHECK18-NEXT:    store i32 [[TMP3]], i32* [[CONV2]], align 4
 // CHECK18-NEXT:    [[TMP4:%.*]] = load i64, i64* [[B_CASTED]], align 8
@@ -3479,7 +3479,7 @@ int bar(int n){
 // CHECK18-NEXT:    store i64 [[B]], i64* [[B_ADDR]], align 8
 // CHECK18-NEXT:    [[TMP0:%.*]] = load %struct.S1*, %struct.S1** [[THIS_ADDR]], align 8
 // CHECK18-NEXT:    [[CONV:%.*]] = bitcast i64* [[B_ADDR]] to i32*
-// CHECK18-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK18-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK18-NEXT:    [[CONV1:%.*]] = sitofp i32 [[TMP1]] to double
 // CHECK18-NEXT:    [[ADD:%.*]] = fadd double [[CONV1]], 1.500000e+00
 // CHECK18-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_S1:%.*]], %struct.S1* [[TMP0]], i32 0, i32 0
@@ -3521,7 +3521,7 @@ int bar(int n){
 // CHECK18-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK18-NEXT:    store i64 [[DOTCAPTURE_EXPR_]], i64* [[DOTCAPTURE_EXPR__ADDR]], align 8
 // CHECK18-NEXT:    [[CONV:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK18-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK18-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK18-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 [[TMP1]])
 // CHECK18-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined..4 to void (i32*, i32*, ...)*))
 // CHECK18-NEXT:    ret void
@@ -3544,7 +3544,7 @@ int bar(int n){
 // CHECK18-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK18-NEXT:    store i64 [[DOTCAPTURE_EXPR_]], i64* [[DOTCAPTURE_EXPR__ADDR]], align 8
 // CHECK18-NEXT:    [[CONV:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK18-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK18-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK18-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 [[TMP1]])
 // CHECK18-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined..7 to void (i32*, i32*, ...)*))
 // CHECK18-NEXT:    ret void
@@ -3594,14 +3594,14 @@ int bar(int n){
 // CHECK18-NEXT:    [[CONV:%.*]] = bitcast i64* [[A_ADDR]] to i32*
 // CHECK18-NEXT:    [[CONV1:%.*]] = bitcast i64* [[B_ADDR]] to i16*
 // CHECK18-NEXT:    [[CONV2:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i16*
-// CHECK18-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV2]], align 8
+// CHECK18-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV2]], align 2
 // CHECK18-NEXT:    [[TMP2:%.*]] = sext i16 [[TMP1]] to i32
 // CHECK18-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 [[TMP2]])
-// CHECK18-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK18-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK18-NEXT:    [[CONV3:%.*]] = bitcast i64* [[A_CASTED]] to i32*
 // CHECK18-NEXT:    store i32 [[TMP3]], i32* [[CONV3]], align 4
 // CHECK18-NEXT:    [[TMP4:%.*]] = load i64, i64* [[A_CASTED]], align 8
-// CHECK18-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV1]], align 8
+// CHECK18-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV1]], align 2
 // CHECK18-NEXT:    [[CONV4:%.*]] = bitcast i64* [[B_CASTED]] to i16*
 // CHECK18-NEXT:    store i16 [[TMP5]], i16* [[CONV4]], align 2
 // CHECK18-NEXT:    [[TMP6:%.*]] = load i64, i64* [[B_CASTED]], align 8
@@ -3622,11 +3622,11 @@ int bar(int n){
 // CHECK18-NEXT:    store i64 [[B]], i64* [[B_ADDR]], align 8
 // CHECK18-NEXT:    [[CONV:%.*]] = bitcast i64* [[A_ADDR]] to i32*
 // CHECK18-NEXT:    [[CONV1:%.*]] = bitcast i64* [[B_ADDR]] to i16*
-// CHECK18-NEXT:    [[TMP0:%.*]] = load i16, i16* [[CONV1]], align 8
+// CHECK18-NEXT:    [[TMP0:%.*]] = load i16, i16* [[CONV1]], align 2
 // CHECK18-NEXT:    [[CONV2:%.*]] = sext i16 [[TMP0]] to i32
-// CHECK18-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK18-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK18-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[CONV2]]
-// CHECK18-NEXT:    store i32 [[ADD]], i32* [[CONV]], align 8
+// CHECK18-NEXT:    store i32 [[ADD]], i32* [[CONV]], align 4
 // CHECK18-NEXT:    ret void
 //
 //
@@ -4039,13 +4039,13 @@ int bar(int n){
 // CHECK19-NEXT:    store i32 [[DOTCAPTURE_EXPR_]], i32* [[DOTCAPTURE_EXPR__ADDR]], align 4
 // CHECK19-NEXT:    [[CONV:%.*]] = bitcast i32* [[B_ADDR]] to i16*
 // CHECK19-NEXT:    [[CONV1:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR__ADDR]] to i16*
-// CHECK19-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV1]], align 4
+// CHECK19-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV1]], align 2
 // CHECK19-NEXT:    [[TMP2:%.*]] = sext i16 [[TMP1]] to i32
 // CHECK19-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 [[TMP2]])
 // CHECK19-NEXT:    [[TMP3:%.*]] = load i32, i32* [[A_ADDR]], align 4
 // CHECK19-NEXT:    store i32 [[TMP3]], i32* [[A_CASTED]], align 4
 // CHECK19-NEXT:    [[TMP4:%.*]] = load i32, i32* [[A_CASTED]], align 4
-// CHECK19-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV]], align 4
+// CHECK19-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV]], align 2
 // CHECK19-NEXT:    [[CONV2:%.*]] = bitcast i32* [[B_CASTED]] to i16*
 // CHECK19-NEXT:    store i16 [[TMP5]], i16* [[CONV2]], align 2
 // CHECK19-NEXT:    [[TMP6:%.*]] = load i32, i32* [[B_CASTED]], align 4
@@ -4065,7 +4065,7 @@ int bar(int n){
 // CHECK19-NEXT:    store i32 [[A]], i32* [[A_ADDR]], align 4
 // CHECK19-NEXT:    store i32 [[B]], i32* [[B_ADDR]], align 4
 // CHECK19-NEXT:    [[CONV:%.*]] = bitcast i32* [[B_ADDR]] to i16*
-// CHECK19-NEXT:    [[TMP0:%.*]] = load i16, i16* [[CONV]], align 4
+// CHECK19-NEXT:    [[TMP0:%.*]] = load i16, i16* [[CONV]], align 2
 // CHECK19-NEXT:    [[CONV1:%.*]] = sext i16 [[TMP0]] to i32
 // CHECK19-NEXT:    [[TMP1:%.*]] = load i32, i32* [[A_ADDR]], align 4
 // CHECK19-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[CONV1]]
@@ -4482,13 +4482,13 @@ int bar(int n){
 // CHECK20-NEXT:    store i32 [[DOTCAPTURE_EXPR_]], i32* [[DOTCAPTURE_EXPR__ADDR]], align 4
 // CHECK20-NEXT:    [[CONV:%.*]] = bitcast i32* [[B_ADDR]] to i16*
 // CHECK20-NEXT:    [[CONV1:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR__ADDR]] to i16*
-// CHECK20-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV1]], align 4
+// CHECK20-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV1]], align 2
 // CHECK20-NEXT:    [[TMP2:%.*]] = sext i16 [[TMP1]] to i32
 // CHECK20-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 [[TMP2]])
 // CHECK20-NEXT:    [[TMP3:%.*]] = load i32, i32* [[A_ADDR]], align 4
 // CHECK20-NEXT:    store i32 [[TMP3]], i32* [[A_CASTED]], align 4
 // CHECK20-NEXT:    [[TMP4:%.*]] = load i32, i32* [[A_CASTED]], align 4
-// CHECK20-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV]], align 4
+// CHECK20-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV]], align 2
 // CHECK20-NEXT:    [[CONV2:%.*]] = bitcast i32* [[B_CASTED]] to i16*
 // CHECK20-NEXT:    store i16 [[TMP5]], i16* [[CONV2]], align 2
 // CHECK20-NEXT:    [[TMP6:%.*]] = load i32, i32* [[B_CASTED]], align 4
@@ -4508,7 +4508,7 @@ int bar(int n){
 // CHECK20-NEXT:    store i32 [[A]], i32* [[A_ADDR]], align 4
 // CHECK20-NEXT:    store i32 [[B]], i32* [[B_ADDR]], align 4
 // CHECK20-NEXT:    [[CONV:%.*]] = bitcast i32* [[B_ADDR]] to i16*
-// CHECK20-NEXT:    [[TMP0:%.*]] = load i16, i16* [[CONV]], align 4
+// CHECK20-NEXT:    [[TMP0:%.*]] = load i16, i16* [[CONV]], align 2
 // CHECK20-NEXT:    [[CONV1:%.*]] = sext i16 [[TMP0]] to i32
 // CHECK20-NEXT:    [[TMP1:%.*]] = load i32, i32* [[A_ADDR]], align 4
 // CHECK20-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[CONV1]]
@@ -4530,7 +4530,7 @@ int bar(int n){
 // CHECK25-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1:[0-9]+]])
 // CHECK25-NEXT:    store i64 [[DOTCAPTURE_EXPR_]], i64* [[DOTCAPTURE_EXPR__ADDR]], align 8
 // CHECK25-NEXT:    [[CONV:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK25-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK25-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK25-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 [[TMP1]])
 // CHECK25-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined. to void (i32*, i32*, ...)*))
 // CHECK25-NEXT:    ret void
@@ -4553,7 +4553,7 @@ int bar(int n){
 // CHECK25-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK25-NEXT:    store i64 [[DOTCAPTURE_EXPR_]], i64* [[DOTCAPTURE_EXPR__ADDR]], align 8
 // CHECK25-NEXT:    [[CONV:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK25-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK25-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK25-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 [[TMP1]])
 // CHECK25-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined..1 to void (i32*, i32*, ...)*))
 // CHECK25-NEXT:    ret void
@@ -4583,9 +4583,9 @@ int bar(int n){
 // CHECK25-NEXT:    [[TMP1:%.*]] = load %struct.S1*, %struct.S1** [[THIS_ADDR]], align 8
 // CHECK25-NEXT:    [[CONV:%.*]] = bitcast i64* [[B_ADDR]] to i32*
 // CHECK25-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK25-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK25-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK25-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 [[TMP2]])
-// CHECK25-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK25-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK25-NEXT:    [[CONV2:%.*]] = bitcast i64* [[B_CASTED]] to i32*
 // CHECK25-NEXT:    store i32 [[TMP3]], i32* [[CONV2]], align 4
 // CHECK25-NEXT:    [[TMP4:%.*]] = load i64, i64* [[B_CASTED]], align 8
@@ -4606,7 +4606,7 @@ int bar(int n){
 // CHECK25-NEXT:    store i64 [[B]], i64* [[B_ADDR]], align 8
 // CHECK25-NEXT:    [[TMP0:%.*]] = load %struct.S1*, %struct.S1** [[THIS_ADDR]], align 8
 // CHECK25-NEXT:    [[CONV:%.*]] = bitcast i64* [[B_ADDR]] to i32*
-// CHECK25-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK25-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK25-NEXT:    [[CONV1:%.*]] = sitofp i32 [[TMP1]] to double
 // CHECK25-NEXT:    [[ADD:%.*]] = fadd double [[CONV1]], 1.500000e+00
 // CHECK25-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_S1:%.*]], %struct.S1* [[TMP0]], i32 0, i32 0
@@ -4675,14 +4675,14 @@ int bar(int n){
 // CHECK25-NEXT:    [[CONV:%.*]] = bitcast i64* [[A_ADDR]] to i32*
 // CHECK25-NEXT:    [[CONV1:%.*]] = bitcast i64* [[B_ADDR]] to i16*
 // CHECK25-NEXT:    [[CONV2:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i16*
-// CHECK25-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV2]], align 8
+// CHECK25-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV2]], align 2
 // CHECK25-NEXT:    [[TMP2:%.*]] = sext i16 [[TMP1]] to i32
 // CHECK25-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 [[TMP2]])
-// CHECK25-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK25-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK25-NEXT:    [[CONV3:%.*]] = bitcast i64* [[A_CASTED]] to i32*
 // CHECK25-NEXT:    store i32 [[TMP3]], i32* [[CONV3]], align 4
 // CHECK25-NEXT:    [[TMP4:%.*]] = load i64, i64* [[A_CASTED]], align 8
-// CHECK25-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV1]], align 8
+// CHECK25-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV1]], align 2
 // CHECK25-NEXT:    [[CONV4:%.*]] = bitcast i64* [[B_CASTED]] to i16*
 // CHECK25-NEXT:    store i16 [[TMP5]], i16* [[CONV4]], align 2
 // CHECK25-NEXT:    [[TMP6:%.*]] = load i64, i64* [[B_CASTED]], align 8
@@ -4703,11 +4703,11 @@ int bar(int n){
 // CHECK25-NEXT:    store i64 [[B]], i64* [[B_ADDR]], align 8
 // CHECK25-NEXT:    [[CONV:%.*]] = bitcast i64* [[A_ADDR]] to i32*
 // CHECK25-NEXT:    [[CONV1:%.*]] = bitcast i64* [[B_ADDR]] to i16*
-// CHECK25-NEXT:    [[TMP0:%.*]] = load i16, i16* [[CONV1]], align 8
+// CHECK25-NEXT:    [[TMP0:%.*]] = load i16, i16* [[CONV1]], align 2
 // CHECK25-NEXT:    [[CONV2:%.*]] = sext i16 [[TMP0]] to i32
-// CHECK25-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK25-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK25-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[CONV2]]
-// CHECK25-NEXT:    store i32 [[ADD]], i32* [[CONV]], align 8
+// CHECK25-NEXT:    store i32 [[ADD]], i32* [[CONV]], align 4
 // CHECK25-NEXT:    ret void
 //
 //
@@ -4718,7 +4718,7 @@ int bar(int n){
 // CHECK26-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1:[0-9]+]])
 // CHECK26-NEXT:    store i64 [[DOTCAPTURE_EXPR_]], i64* [[DOTCAPTURE_EXPR__ADDR]], align 8
 // CHECK26-NEXT:    [[CONV:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK26-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK26-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK26-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 [[TMP1]])
 // CHECK26-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined. to void (i32*, i32*, ...)*))
 // CHECK26-NEXT:    ret void
@@ -4741,7 +4741,7 @@ int bar(int n){
 // CHECK26-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK26-NEXT:    store i64 [[DOTCAPTURE_EXPR_]], i64* [[DOTCAPTURE_EXPR__ADDR]], align 8
 // CHECK26-NEXT:    [[CONV:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK26-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK26-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK26-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 [[TMP1]])
 // CHECK26-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined..1 to void (i32*, i32*, ...)*))
 // CHECK26-NEXT:    ret void
@@ -4771,9 +4771,9 @@ int bar(int n){
 // CHECK26-NEXT:    [[TMP1:%.*]] = load %struct.S1*, %struct.S1** [[THIS_ADDR]], align 8
 // CHECK26-NEXT:    [[CONV:%.*]] = bitcast i64* [[B_ADDR]] to i32*
 // CHECK26-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i32*
-// CHECK26-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK26-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK26-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 [[TMP2]])
-// CHECK26-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK26-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK26-NEXT:    [[CONV2:%.*]] = bitcast i64* [[B_CASTED]] to i32*
 // CHECK26-NEXT:    store i32 [[TMP3]], i32* [[CONV2]], align 4
 // CHECK26-NEXT:    [[TMP4:%.*]] = load i64, i64* [[B_CASTED]], align 8
@@ -4794,7 +4794,7 @@ int bar(int n){
 // CHECK26-NEXT:    store i64 [[B]], i64* [[B_ADDR]], align 8
 // CHECK26-NEXT:    [[TMP0:%.*]] = load %struct.S1*, %struct.S1** [[THIS_ADDR]], align 8
 // CHECK26-NEXT:    [[CONV:%.*]] = bitcast i64* [[B_ADDR]] to i32*
-// CHECK26-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK26-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK26-NEXT:    [[CONV1:%.*]] = sitofp i32 [[TMP1]] to double
 // CHECK26-NEXT:    [[ADD:%.*]] = fadd double [[CONV1]], 1.500000e+00
 // CHECK26-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_S1:%.*]], %struct.S1* [[TMP0]], i32 0, i32 0
@@ -4863,14 +4863,14 @@ int bar(int n){
 // CHECK26-NEXT:    [[CONV:%.*]] = bitcast i64* [[A_ADDR]] to i32*
 // CHECK26-NEXT:    [[CONV1:%.*]] = bitcast i64* [[B_ADDR]] to i16*
 // CHECK26-NEXT:    [[CONV2:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__ADDR]] to i16*
-// CHECK26-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV2]], align 8
+// CHECK26-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV2]], align 2
 // CHECK26-NEXT:    [[TMP2:%.*]] = sext i16 [[TMP1]] to i32
 // CHECK26-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 [[TMP2]])
-// CHECK26-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK26-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK26-NEXT:    [[CONV3:%.*]] = bitcast i64* [[A_CASTED]] to i32*
 // CHECK26-NEXT:    store i32 [[TMP3]], i32* [[CONV3]], align 4
 // CHECK26-NEXT:    [[TMP4:%.*]] = load i64, i64* [[A_CASTED]], align 8
-// CHECK26-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV1]], align 8
+// CHECK26-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV1]], align 2
 // CHECK26-NEXT:    [[CONV4:%.*]] = bitcast i64* [[B_CASTED]] to i16*
 // CHECK26-NEXT:    store i16 [[TMP5]], i16* [[CONV4]], align 2
 // CHECK26-NEXT:    [[TMP6:%.*]] = load i64, i64* [[B_CASTED]], align 8
@@ -4891,11 +4891,11 @@ int bar(int n){
 // CHECK26-NEXT:    store i64 [[B]], i64* [[B_ADDR]], align 8
 // CHECK26-NEXT:    [[CONV:%.*]] = bitcast i64* [[A_ADDR]] to i32*
 // CHECK26-NEXT:    [[CONV1:%.*]] = bitcast i64* [[B_ADDR]] to i16*
-// CHECK26-NEXT:    [[TMP0:%.*]] = load i16, i16* [[CONV1]], align 8
+// CHECK26-NEXT:    [[TMP0:%.*]] = load i16, i16* [[CONV1]], align 2
 // CHECK26-NEXT:    [[CONV2:%.*]] = sext i16 [[TMP0]] to i32
-// CHECK26-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK26-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK26-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[CONV2]]
-// CHECK26-NEXT:    store i32 [[ADD]], i32* [[CONV]], align 8
+// CHECK26-NEXT:    store i32 [[ADD]], i32* [[CONV]], align 4
 // CHECK26-NEXT:    ret void
 //
 //
@@ -5044,13 +5044,13 @@ int bar(int n){
 // CHECK27-NEXT:    store i32 [[DOTCAPTURE_EXPR_]], i32* [[DOTCAPTURE_EXPR__ADDR]], align 4
 // CHECK27-NEXT:    [[CONV:%.*]] = bitcast i32* [[B_ADDR]] to i16*
 // CHECK27-NEXT:    [[CONV1:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR__ADDR]] to i16*
-// CHECK27-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV1]], align 4
+// CHECK27-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV1]], align 2
 // CHECK27-NEXT:    [[TMP2:%.*]] = sext i16 [[TMP1]] to i32
 // CHECK27-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 [[TMP2]])
 // CHECK27-NEXT:    [[TMP3:%.*]] = load i32, i32* [[A_ADDR]], align 4
 // CHECK27-NEXT:    store i32 [[TMP3]], i32* [[A_CASTED]], align 4
 // CHECK27-NEXT:    [[TMP4:%.*]] = load i32, i32* [[A_CASTED]], align 4
-// CHECK27-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV]], align 4
+// CHECK27-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV]], align 2
 // CHECK27-NEXT:    [[CONV2:%.*]] = bitcast i32* [[B_CASTED]] to i16*
 // CHECK27-NEXT:    store i16 [[TMP5]], i16* [[CONV2]], align 2
 // CHECK27-NEXT:    [[TMP6:%.*]] = load i32, i32* [[B_CASTED]], align 4
@@ -5070,7 +5070,7 @@ int bar(int n){
 // CHECK27-NEXT:    store i32 [[A]], i32* [[A_ADDR]], align 4
 // CHECK27-NEXT:    store i32 [[B]], i32* [[B_ADDR]], align 4
 // CHECK27-NEXT:    [[CONV:%.*]] = bitcast i32* [[B_ADDR]] to i16*
-// CHECK27-NEXT:    [[TMP0:%.*]] = load i16, i16* [[CONV]], align 4
+// CHECK27-NEXT:    [[TMP0:%.*]] = load i16, i16* [[CONV]], align 2
 // CHECK27-NEXT:    [[CONV1:%.*]] = sext i16 [[TMP0]] to i32
 // CHECK27-NEXT:    [[TMP1:%.*]] = load i32, i32* [[A_ADDR]], align 4
 // CHECK27-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[CONV1]]
@@ -5223,13 +5223,13 @@ int bar(int n){
 // CHECK28-NEXT:    store i32 [[DOTCAPTURE_EXPR_]], i32* [[DOTCAPTURE_EXPR__ADDR]], align 4
 // CHECK28-NEXT:    [[CONV:%.*]] = bitcast i32* [[B_ADDR]] to i16*
 // CHECK28-NEXT:    [[CONV1:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR__ADDR]] to i16*
-// CHECK28-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV1]], align 4
+// CHECK28-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV1]], align 2
 // CHECK28-NEXT:    [[TMP2:%.*]] = sext i16 [[TMP1]] to i32
 // CHECK28-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 [[TMP2]])
 // CHECK28-NEXT:    [[TMP3:%.*]] = load i32, i32* [[A_ADDR]], align 4
 // CHECK28-NEXT:    store i32 [[TMP3]], i32* [[A_CASTED]], align 4
 // CHECK28-NEXT:    [[TMP4:%.*]] = load i32, i32* [[A_CASTED]], align 4
-// CHECK28-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV]], align 4
+// CHECK28-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV]], align 2
 // CHECK28-NEXT:    [[CONV2:%.*]] = bitcast i32* [[B_CASTED]] to i16*
 // CHECK28-NEXT:    store i16 [[TMP5]], i16* [[CONV2]], align 2
 // CHECK28-NEXT:    [[TMP6:%.*]] = load i32, i32* [[B_CASTED]], align 4
@@ -5249,7 +5249,7 @@ int bar(int n){
 // CHECK28-NEXT:    store i32 [[A]], i32* [[A_ADDR]], align 4
 // CHECK28-NEXT:    store i32 [[B]], i32* [[B_ADDR]], align 4
 // CHECK28-NEXT:    [[CONV:%.*]] = bitcast i32* [[B_ADDR]] to i16*
-// CHECK28-NEXT:    [[TMP0:%.*]] = load i16, i16* [[CONV]], align 4
+// CHECK28-NEXT:    [[TMP0:%.*]] = load i16, i16* [[CONV]], align 2
 // CHECK28-NEXT:    [[CONV1:%.*]] = sext i16 [[TMP0]] to i32
 // CHECK28-NEXT:    [[TMP1:%.*]] = load i32, i32* [[A_ADDR]], align 4
 // CHECK28-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[CONV1]]

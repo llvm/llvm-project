@@ -822,7 +822,7 @@ int main() {
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR__CASTED:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    store i64 [[ARG]], i64* [[ARG_ADDR]], align 8
 // CHECK1-NEXT:    [[CONV:%.*]] = bitcast i64* [[ARG_ADDR]] to i32*
-// CHECK1-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK1-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK1-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP0]], 0
 // CHECK1-NEXT:    [[FROMBOOL:%.*]] = zext i1 [[TOBOOL]] to i8
 // CHECK1-NEXT:    store i8 [[FROMBOOL]], i8* [[DOTCAPTURE_EXPR_]], align 1
@@ -885,7 +885,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP7]] to i64
 // CHECK1-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4, !llvm.access.group !38
 // CHECK1-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP9]] to i64
-// CHECK1-NEXT:    [[TMP11:%.*]] = load i8, i8* [[CONV]], align 8, !llvm.access.group !38
+// CHECK1-NEXT:    [[TMP11:%.*]] = load i8, i8* [[CONV]], align 1, !llvm.access.group !38
 // CHECK1-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP11]] to i1
 // CHECK1-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK1:       omp_if.then:
@@ -1376,7 +1376,7 @@ int main() {
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR__CASTED:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    store i64 [[ARG]], i64* [[ARG_ADDR]], align 8
 // CHECK1-NEXT:    [[CONV:%.*]] = bitcast i64* [[ARG_ADDR]] to i32*
-// CHECK1-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK1-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK1-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP0]], 0
 // CHECK1-NEXT:    [[FROMBOOL:%.*]] = zext i1 [[TOBOOL]] to i8
 // CHECK1-NEXT:    store i8 [[FROMBOOL]], i8* [[DOTCAPTURE_EXPR_]], align 1
@@ -1439,7 +1439,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP7]] to i64
 // CHECK1-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4, !llvm.access.group !56
 // CHECK1-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP9]] to i64
-// CHECK1-NEXT:    [[TMP11:%.*]] = load i8, i8* [[CONV]], align 8, !llvm.access.group !56
+// CHECK1-NEXT:    [[TMP11:%.*]] = load i8, i8* [[CONV]], align 1, !llvm.access.group !56
 // CHECK1-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP11]] to i1
 // CHECK1-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK1:       omp_if.then:
@@ -2271,7 +2271,7 @@ int main() {
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR__CASTED:%.*]] = alloca i64, align 8
 // CHECK2-NEXT:    store i64 [[ARG]], i64* [[ARG_ADDR]], align 8
 // CHECK2-NEXT:    [[CONV:%.*]] = bitcast i64* [[ARG_ADDR]] to i32*
-// CHECK2-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK2-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK2-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP0]], 0
 // CHECK2-NEXT:    [[FROMBOOL:%.*]] = zext i1 [[TOBOOL]] to i8
 // CHECK2-NEXT:    store i8 [[FROMBOOL]], i8* [[DOTCAPTURE_EXPR_]], align 1
@@ -2334,7 +2334,7 @@ int main() {
 // CHECK2-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP7]] to i64
 // CHECK2-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4, !llvm.access.group !38
 // CHECK2-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP9]] to i64
-// CHECK2-NEXT:    [[TMP11:%.*]] = load i8, i8* [[CONV]], align 8, !llvm.access.group !38
+// CHECK2-NEXT:    [[TMP11:%.*]] = load i8, i8* [[CONV]], align 1, !llvm.access.group !38
 // CHECK2-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP11]] to i1
 // CHECK2-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK2:       omp_if.then:
@@ -2825,7 +2825,7 @@ int main() {
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR__CASTED:%.*]] = alloca i64, align 8
 // CHECK2-NEXT:    store i64 [[ARG]], i64* [[ARG_ADDR]], align 8
 // CHECK2-NEXT:    [[CONV:%.*]] = bitcast i64* [[ARG_ADDR]] to i32*
-// CHECK2-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK2-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK2-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP0]], 0
 // CHECK2-NEXT:    [[FROMBOOL:%.*]] = zext i1 [[TOBOOL]] to i8
 // CHECK2-NEXT:    store i8 [[FROMBOOL]], i8* [[DOTCAPTURE_EXPR_]], align 1
@@ -2888,7 +2888,7 @@ int main() {
 // CHECK2-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP7]] to i64
 // CHECK2-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4, !llvm.access.group !56
 // CHECK2-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP9]] to i64
-// CHECK2-NEXT:    [[TMP11:%.*]] = load i8, i8* [[CONV]], align 8, !llvm.access.group !56
+// CHECK2-NEXT:    [[TMP11:%.*]] = load i8, i8* [[CONV]], align 1, !llvm.access.group !56
 // CHECK2-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP11]] to i1
 // CHECK2-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK2:       omp_if.then:
@@ -3720,7 +3720,7 @@ int main() {
 // CHECK3-NEXT:    [[DOTCAPTURE_EXPR__CASTED:%.*]] = alloca i64, align 8
 // CHECK3-NEXT:    store i64 [[ARG]], i64* [[ARG_ADDR]], align 8
 // CHECK3-NEXT:    [[CONV:%.*]] = bitcast i64* [[ARG_ADDR]] to i32*
-// CHECK3-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK3-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK3-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP0]], 0
 // CHECK3-NEXT:    [[FROMBOOL:%.*]] = zext i1 [[TOBOOL]] to i8
 // CHECK3-NEXT:    store i8 [[FROMBOOL]], i8* [[DOTCAPTURE_EXPR_]], align 1
@@ -3775,7 +3775,7 @@ int main() {
 // CHECK3-NEXT:    store i32 [[COND]], i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK3-NEXT:    [[TMP4:%.*]] = load i32, i32* [[DOTOMP_COMB_LB]], align 4
 // CHECK3-NEXT:    store i32 [[TMP4]], i32* [[DOTOMP_IV]], align 4
-// CHECK3-NEXT:    [[TMP5:%.*]] = load i8, i8* [[CONV]], align 8
+// CHECK3-NEXT:    [[TMP5:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK3-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP5]] to i1
 // CHECK3-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE6:%.*]]
 // CHECK3:       omp_if.then:
@@ -3790,13 +3790,13 @@ int main() {
 // CHECK3-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP8]] to i64
 // CHECK3-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4, !llvm.access.group !35
 // CHECK3-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP10]] to i64
-// CHECK3-NEXT:    [[TMP12:%.*]] = load i8, i8* [[CONV]], align 8, !llvm.access.group !35
+// CHECK3-NEXT:    [[TMP12:%.*]] = load i8, i8* [[CONV]], align 1, !llvm.access.group !35
 // CHECK3-NEXT:    [[TOBOOL2:%.*]] = trunc i8 [[TMP12]] to i1
 // CHECK3-NEXT:    [[CONV3:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED]] to i8*
 // CHECK3-NEXT:    [[FROMBOOL:%.*]] = zext i1 [[TOBOOL2]] to i8
 // CHECK3-NEXT:    store i8 [[FROMBOOL]], i8* [[CONV3]], align 1, !llvm.access.group !35
 // CHECK3-NEXT:    [[TMP13:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED]], align 8, !llvm.access.group !35
-// CHECK3-NEXT:    [[TMP14:%.*]] = load i8, i8* [[CONV]], align 8, !llvm.access.group !35
+// CHECK3-NEXT:    [[TMP14:%.*]] = load i8, i8* [[CONV]], align 1, !llvm.access.group !35
 // CHECK3-NEXT:    [[TOBOOL4:%.*]] = trunc i8 [[TMP14]] to i1
 // CHECK3-NEXT:    br i1 [[TOBOOL4]], label [[OMP_IF_THEN5:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK3:       omp_if.then5:
@@ -3831,13 +3831,13 @@ int main() {
 // CHECK3-NEXT:    [[TMP21:%.*]] = zext i32 [[TMP20]] to i64
 // CHECK3-NEXT:    [[TMP22:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK3-NEXT:    [[TMP23:%.*]] = zext i32 [[TMP22]] to i64
-// CHECK3-NEXT:    [[TMP24:%.*]] = load i8, i8* [[CONV]], align 8
+// CHECK3-NEXT:    [[TMP24:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK3-NEXT:    [[TOBOOL10:%.*]] = trunc i8 [[TMP24]] to i1
 // CHECK3-NEXT:    [[CONV12:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED11]] to i8*
 // CHECK3-NEXT:    [[FROMBOOL13:%.*]] = zext i1 [[TOBOOL10]] to i8
 // CHECK3-NEXT:    store i8 [[FROMBOOL13]], i8* [[CONV12]], align 1
 // CHECK3-NEXT:    [[TMP25:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED11]], align 8
-// CHECK3-NEXT:    [[TMP26:%.*]] = load i8, i8* [[CONV]], align 8
+// CHECK3-NEXT:    [[TMP26:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK3-NEXT:    [[TOBOOL14:%.*]] = trunc i8 [[TMP26]] to i1
 // CHECK3-NEXT:    br i1 [[TOBOOL14]], label [[OMP_IF_THEN15:%.*]], label [[OMP_IF_ELSE16:%.*]]
 // CHECK3:       omp_if.then15:
@@ -3905,7 +3905,7 @@ int main() {
 // CHECK3-NEXT:    store i32 [[CONV2]], i32* [[DOTOMP_UB]], align 4
 // CHECK3-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK3-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK3-NEXT:    [[TMP2:%.*]] = load i8, i8* [[CONV]], align 8
+// CHECK3-NEXT:    [[TMP2:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK3-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP2]] to i1
 // CHECK3-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK3:       omp_if.then:
@@ -4033,7 +4033,7 @@ int main() {
 // CHECK3-NEXT:    store i32 [[CONV2]], i32* [[DOTOMP_UB]], align 4
 // CHECK3-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK3-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK3-NEXT:    [[TMP2:%.*]] = load i8, i8* [[CONV]], align 8
+// CHECK3-NEXT:    [[TMP2:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK3-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP2]] to i1
 // CHECK3-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK3:       omp_if.then:
@@ -4508,7 +4508,7 @@ int main() {
 // CHECK3-NEXT:    [[DOTCAPTURE_EXPR__CASTED:%.*]] = alloca i64, align 8
 // CHECK3-NEXT:    store i64 [[ARG]], i64* [[ARG_ADDR]], align 8
 // CHECK3-NEXT:    [[CONV:%.*]] = bitcast i64* [[ARG_ADDR]] to i32*
-// CHECK3-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK3-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK3-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP0]], 0
 // CHECK3-NEXT:    [[FROMBOOL:%.*]] = zext i1 [[TOBOOL]] to i8
 // CHECK3-NEXT:    store i8 [[FROMBOOL]], i8* [[DOTCAPTURE_EXPR_]], align 1
@@ -4571,7 +4571,7 @@ int main() {
 // CHECK3-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP7]] to i64
 // CHECK3-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4, !llvm.access.group !55
 // CHECK3-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP9]] to i64
-// CHECK3-NEXT:    [[TMP11:%.*]] = load i8, i8* [[CONV]], align 8, !llvm.access.group !55
+// CHECK3-NEXT:    [[TMP11:%.*]] = load i8, i8* [[CONV]], align 1, !llvm.access.group !55
 // CHECK3-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP11]] to i1
 // CHECK3-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK3:       omp_if.then:
@@ -5403,7 +5403,7 @@ int main() {
 // CHECK4-NEXT:    [[DOTCAPTURE_EXPR__CASTED:%.*]] = alloca i64, align 8
 // CHECK4-NEXT:    store i64 [[ARG]], i64* [[ARG_ADDR]], align 8
 // CHECK4-NEXT:    [[CONV:%.*]] = bitcast i64* [[ARG_ADDR]] to i32*
-// CHECK4-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK4-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK4-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP0]], 0
 // CHECK4-NEXT:    [[FROMBOOL:%.*]] = zext i1 [[TOBOOL]] to i8
 // CHECK4-NEXT:    store i8 [[FROMBOOL]], i8* [[DOTCAPTURE_EXPR_]], align 1
@@ -5458,7 +5458,7 @@ int main() {
 // CHECK4-NEXT:    store i32 [[COND]], i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK4-NEXT:    [[TMP4:%.*]] = load i32, i32* [[DOTOMP_COMB_LB]], align 4
 // CHECK4-NEXT:    store i32 [[TMP4]], i32* [[DOTOMP_IV]], align 4
-// CHECK4-NEXT:    [[TMP5:%.*]] = load i8, i8* [[CONV]], align 8
+// CHECK4-NEXT:    [[TMP5:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK4-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP5]] to i1
 // CHECK4-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE6:%.*]]
 // CHECK4:       omp_if.then:
@@ -5473,13 +5473,13 @@ int main() {
 // CHECK4-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP8]] to i64
 // CHECK4-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4, !llvm.access.group !35
 // CHECK4-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP10]] to i64
-// CHECK4-NEXT:    [[TMP12:%.*]] = load i8, i8* [[CONV]], align 8, !llvm.access.group !35
+// CHECK4-NEXT:    [[TMP12:%.*]] = load i8, i8* [[CONV]], align 1, !llvm.access.group !35
 // CHECK4-NEXT:    [[TOBOOL2:%.*]] = trunc i8 [[TMP12]] to i1
 // CHECK4-NEXT:    [[CONV3:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED]] to i8*
 // CHECK4-NEXT:    [[FROMBOOL:%.*]] = zext i1 [[TOBOOL2]] to i8
 // CHECK4-NEXT:    store i8 [[FROMBOOL]], i8* [[CONV3]], align 1, !llvm.access.group !35
 // CHECK4-NEXT:    [[TMP13:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED]], align 8, !llvm.access.group !35
-// CHECK4-NEXT:    [[TMP14:%.*]] = load i8, i8* [[CONV]], align 8, !llvm.access.group !35
+// CHECK4-NEXT:    [[TMP14:%.*]] = load i8, i8* [[CONV]], align 1, !llvm.access.group !35
 // CHECK4-NEXT:    [[TOBOOL4:%.*]] = trunc i8 [[TMP14]] to i1
 // CHECK4-NEXT:    br i1 [[TOBOOL4]], label [[OMP_IF_THEN5:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK4:       omp_if.then5:
@@ -5514,13 +5514,13 @@ int main() {
 // CHECK4-NEXT:    [[TMP21:%.*]] = zext i32 [[TMP20]] to i64
 // CHECK4-NEXT:    [[TMP22:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK4-NEXT:    [[TMP23:%.*]] = zext i32 [[TMP22]] to i64
-// CHECK4-NEXT:    [[TMP24:%.*]] = load i8, i8* [[CONV]], align 8
+// CHECK4-NEXT:    [[TMP24:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK4-NEXT:    [[TOBOOL10:%.*]] = trunc i8 [[TMP24]] to i1
 // CHECK4-NEXT:    [[CONV12:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED11]] to i8*
 // CHECK4-NEXT:    [[FROMBOOL13:%.*]] = zext i1 [[TOBOOL10]] to i8
 // CHECK4-NEXT:    store i8 [[FROMBOOL13]], i8* [[CONV12]], align 1
 // CHECK4-NEXT:    [[TMP25:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED11]], align 8
-// CHECK4-NEXT:    [[TMP26:%.*]] = load i8, i8* [[CONV]], align 8
+// CHECK4-NEXT:    [[TMP26:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK4-NEXT:    [[TOBOOL14:%.*]] = trunc i8 [[TMP26]] to i1
 // CHECK4-NEXT:    br i1 [[TOBOOL14]], label [[OMP_IF_THEN15:%.*]], label [[OMP_IF_ELSE16:%.*]]
 // CHECK4:       omp_if.then15:
@@ -5588,7 +5588,7 @@ int main() {
 // CHECK4-NEXT:    store i32 [[CONV2]], i32* [[DOTOMP_UB]], align 4
 // CHECK4-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK4-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK4-NEXT:    [[TMP2:%.*]] = load i8, i8* [[CONV]], align 8
+// CHECK4-NEXT:    [[TMP2:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK4-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP2]] to i1
 // CHECK4-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK4:       omp_if.then:
@@ -5716,7 +5716,7 @@ int main() {
 // CHECK4-NEXT:    store i32 [[CONV2]], i32* [[DOTOMP_UB]], align 4
 // CHECK4-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK4-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK4-NEXT:    [[TMP2:%.*]] = load i8, i8* [[CONV]], align 8
+// CHECK4-NEXT:    [[TMP2:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK4-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP2]] to i1
 // CHECK4-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK4:       omp_if.then:
@@ -6191,7 +6191,7 @@ int main() {
 // CHECK4-NEXT:    [[DOTCAPTURE_EXPR__CASTED:%.*]] = alloca i64, align 8
 // CHECK4-NEXT:    store i64 [[ARG]], i64* [[ARG_ADDR]], align 8
 // CHECK4-NEXT:    [[CONV:%.*]] = bitcast i64* [[ARG_ADDR]] to i32*
-// CHECK4-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK4-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK4-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP0]], 0
 // CHECK4-NEXT:    [[FROMBOOL:%.*]] = zext i1 [[TOBOOL]] to i8
 // CHECK4-NEXT:    store i8 [[FROMBOOL]], i8* [[DOTCAPTURE_EXPR_]], align 1
@@ -6254,7 +6254,7 @@ int main() {
 // CHECK4-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP7]] to i64
 // CHECK4-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4, !llvm.access.group !55
 // CHECK4-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP9]] to i64
-// CHECK4-NEXT:    [[TMP11:%.*]] = load i8, i8* [[CONV]], align 8, !llvm.access.group !55
+// CHECK4-NEXT:    [[TMP11:%.*]] = load i8, i8* [[CONV]], align 1, !llvm.access.group !55
 // CHECK4-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP11]] to i1
 // CHECK4-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK4:       omp_if.then:
@@ -8268,7 +8268,7 @@ int main() {
 // CHECK9-NEXT:    [[DOTCAPTURE_EXPR__CASTED:%.*]] = alloca i64, align 8
 // CHECK9-NEXT:    store i64 [[ARG]], i64* [[ARG_ADDR]], align 8
 // CHECK9-NEXT:    [[CONV:%.*]] = bitcast i64* [[ARG_ADDR]] to i32*
-// CHECK9-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK9-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK9-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP0]], 0
 // CHECK9-NEXT:    [[FROMBOOL:%.*]] = zext i1 [[TOBOOL]] to i8
 // CHECK9-NEXT:    store i8 [[FROMBOOL]], i8* [[DOTCAPTURE_EXPR_]], align 1
@@ -8331,7 +8331,7 @@ int main() {
 // CHECK9-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP7]] to i64
 // CHECK9-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4, !llvm.access.group !42
 // CHECK9-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP9]] to i64
-// CHECK9-NEXT:    [[TMP11:%.*]] = load i8, i8* [[CONV]], align 8, !llvm.access.group !42
+// CHECK9-NEXT:    [[TMP11:%.*]] = load i8, i8* [[CONV]], align 1, !llvm.access.group !42
 // CHECK9-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP11]] to i1
 // CHECK9-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK9:       omp_if.then:
@@ -8822,7 +8822,7 @@ int main() {
 // CHECK9-NEXT:    [[DOTCAPTURE_EXPR__CASTED:%.*]] = alloca i64, align 8
 // CHECK9-NEXT:    store i64 [[ARG]], i64* [[ARG_ADDR]], align 8
 // CHECK9-NEXT:    [[CONV:%.*]] = bitcast i64* [[ARG_ADDR]] to i32*
-// CHECK9-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK9-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK9-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP0]], 0
 // CHECK9-NEXT:    [[FROMBOOL:%.*]] = zext i1 [[TOBOOL]] to i8
 // CHECK9-NEXT:    store i8 [[FROMBOOL]], i8* [[DOTCAPTURE_EXPR_]], align 1
@@ -8885,7 +8885,7 @@ int main() {
 // CHECK9-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP7]] to i64
 // CHECK9-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4, !llvm.access.group !60
 // CHECK9-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP9]] to i64
-// CHECK9-NEXT:    [[TMP11:%.*]] = load i8, i8* [[CONV]], align 8, !llvm.access.group !60
+// CHECK9-NEXT:    [[TMP11:%.*]] = load i8, i8* [[CONV]], align 1, !llvm.access.group !60
 // CHECK9-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP11]] to i1
 // CHECK9-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK9:       omp_if.then:
@@ -9717,7 +9717,7 @@ int main() {
 // CHECK10-NEXT:    [[DOTCAPTURE_EXPR__CASTED:%.*]] = alloca i64, align 8
 // CHECK10-NEXT:    store i64 [[ARG]], i64* [[ARG_ADDR]], align 8
 // CHECK10-NEXT:    [[CONV:%.*]] = bitcast i64* [[ARG_ADDR]] to i32*
-// CHECK10-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK10-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK10-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP0]], 0
 // CHECK10-NEXT:    [[FROMBOOL:%.*]] = zext i1 [[TOBOOL]] to i8
 // CHECK10-NEXT:    store i8 [[FROMBOOL]], i8* [[DOTCAPTURE_EXPR_]], align 1
@@ -9780,7 +9780,7 @@ int main() {
 // CHECK10-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP7]] to i64
 // CHECK10-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4, !llvm.access.group !42
 // CHECK10-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP9]] to i64
-// CHECK10-NEXT:    [[TMP11:%.*]] = load i8, i8* [[CONV]], align 8, !llvm.access.group !42
+// CHECK10-NEXT:    [[TMP11:%.*]] = load i8, i8* [[CONV]], align 1, !llvm.access.group !42
 // CHECK10-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP11]] to i1
 // CHECK10-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK10:       omp_if.then:
@@ -10271,7 +10271,7 @@ int main() {
 // CHECK10-NEXT:    [[DOTCAPTURE_EXPR__CASTED:%.*]] = alloca i64, align 8
 // CHECK10-NEXT:    store i64 [[ARG]], i64* [[ARG_ADDR]], align 8
 // CHECK10-NEXT:    [[CONV:%.*]] = bitcast i64* [[ARG_ADDR]] to i32*
-// CHECK10-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK10-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK10-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP0]], 0
 // CHECK10-NEXT:    [[FROMBOOL:%.*]] = zext i1 [[TOBOOL]] to i8
 // CHECK10-NEXT:    store i8 [[FROMBOOL]], i8* [[DOTCAPTURE_EXPR_]], align 1
@@ -10334,7 +10334,7 @@ int main() {
 // CHECK10-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP7]] to i64
 // CHECK10-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4, !llvm.access.group !60
 // CHECK10-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP9]] to i64
-// CHECK10-NEXT:    [[TMP11:%.*]] = load i8, i8* [[CONV]], align 8, !llvm.access.group !60
+// CHECK10-NEXT:    [[TMP11:%.*]] = load i8, i8* [[CONV]], align 1, !llvm.access.group !60
 // CHECK10-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP11]] to i1
 // CHECK10-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK10:       omp_if.then:
@@ -11166,7 +11166,7 @@ int main() {
 // CHECK11-NEXT:    [[DOTCAPTURE_EXPR__CASTED:%.*]] = alloca i64, align 8
 // CHECK11-NEXT:    store i64 [[ARG]], i64* [[ARG_ADDR]], align 8
 // CHECK11-NEXT:    [[CONV:%.*]] = bitcast i64* [[ARG_ADDR]] to i32*
-// CHECK11-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK11-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK11-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP0]], 0
 // CHECK11-NEXT:    [[FROMBOOL:%.*]] = zext i1 [[TOBOOL]] to i8
 // CHECK11-NEXT:    store i8 [[FROMBOOL]], i8* [[DOTCAPTURE_EXPR_]], align 1
@@ -11221,7 +11221,7 @@ int main() {
 // CHECK11-NEXT:    store i32 [[COND]], i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK11-NEXT:    [[TMP4:%.*]] = load i32, i32* [[DOTOMP_COMB_LB]], align 4
 // CHECK11-NEXT:    store i32 [[TMP4]], i32* [[DOTOMP_IV]], align 4
-// CHECK11-NEXT:    [[TMP5:%.*]] = load i8, i8* [[CONV]], align 8
+// CHECK11-NEXT:    [[TMP5:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK11-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP5]] to i1
 // CHECK11-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE6:%.*]]
 // CHECK11:       omp_if.then:
@@ -11236,13 +11236,13 @@ int main() {
 // CHECK11-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP8]] to i64
 // CHECK11-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4, !llvm.access.group !39
 // CHECK11-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP10]] to i64
-// CHECK11-NEXT:    [[TMP12:%.*]] = load i8, i8* [[CONV]], align 8, !llvm.access.group !39
+// CHECK11-NEXT:    [[TMP12:%.*]] = load i8, i8* [[CONV]], align 1, !llvm.access.group !39
 // CHECK11-NEXT:    [[TOBOOL2:%.*]] = trunc i8 [[TMP12]] to i1
 // CHECK11-NEXT:    [[CONV3:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED]] to i8*
 // CHECK11-NEXT:    [[FROMBOOL:%.*]] = zext i1 [[TOBOOL2]] to i8
 // CHECK11-NEXT:    store i8 [[FROMBOOL]], i8* [[CONV3]], align 1, !llvm.access.group !39
 // CHECK11-NEXT:    [[TMP13:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED]], align 8, !llvm.access.group !39
-// CHECK11-NEXT:    [[TMP14:%.*]] = load i8, i8* [[CONV]], align 8, !llvm.access.group !39
+// CHECK11-NEXT:    [[TMP14:%.*]] = load i8, i8* [[CONV]], align 1, !llvm.access.group !39
 // CHECK11-NEXT:    [[TOBOOL4:%.*]] = trunc i8 [[TMP14]] to i1
 // CHECK11-NEXT:    br i1 [[TOBOOL4]], label [[OMP_IF_THEN5:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK11:       omp_if.then5:
@@ -11277,13 +11277,13 @@ int main() {
 // CHECK11-NEXT:    [[TMP21:%.*]] = zext i32 [[TMP20]] to i64
 // CHECK11-NEXT:    [[TMP22:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK11-NEXT:    [[TMP23:%.*]] = zext i32 [[TMP22]] to i64
-// CHECK11-NEXT:    [[TMP24:%.*]] = load i8, i8* [[CONV]], align 8
+// CHECK11-NEXT:    [[TMP24:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK11-NEXT:    [[TOBOOL10:%.*]] = trunc i8 [[TMP24]] to i1
 // CHECK11-NEXT:    [[CONV12:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED11]] to i8*
 // CHECK11-NEXT:    [[FROMBOOL13:%.*]] = zext i1 [[TOBOOL10]] to i8
 // CHECK11-NEXT:    store i8 [[FROMBOOL13]], i8* [[CONV12]], align 1
 // CHECK11-NEXT:    [[TMP25:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED11]], align 8
-// CHECK11-NEXT:    [[TMP26:%.*]] = load i8, i8* [[CONV]], align 8
+// CHECK11-NEXT:    [[TMP26:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK11-NEXT:    [[TOBOOL14:%.*]] = trunc i8 [[TMP26]] to i1
 // CHECK11-NEXT:    br i1 [[TOBOOL14]], label [[OMP_IF_THEN15:%.*]], label [[OMP_IF_ELSE16:%.*]]
 // CHECK11:       omp_if.then15:
@@ -11351,7 +11351,7 @@ int main() {
 // CHECK11-NEXT:    store i32 [[CONV2]], i32* [[DOTOMP_UB]], align 4
 // CHECK11-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK11-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK11-NEXT:    [[TMP2:%.*]] = load i8, i8* [[CONV]], align 8
+// CHECK11-NEXT:    [[TMP2:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK11-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP2]] to i1
 // CHECK11-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK11:       omp_if.then:
@@ -11479,7 +11479,7 @@ int main() {
 // CHECK11-NEXT:    store i32 [[CONV2]], i32* [[DOTOMP_UB]], align 4
 // CHECK11-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK11-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK11-NEXT:    [[TMP2:%.*]] = load i8, i8* [[CONV]], align 8
+// CHECK11-NEXT:    [[TMP2:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK11-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP2]] to i1
 // CHECK11-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK11:       omp_if.then:
@@ -11954,7 +11954,7 @@ int main() {
 // CHECK11-NEXT:    [[DOTCAPTURE_EXPR__CASTED:%.*]] = alloca i64, align 8
 // CHECK11-NEXT:    store i64 [[ARG]], i64* [[ARG_ADDR]], align 8
 // CHECK11-NEXT:    [[CONV:%.*]] = bitcast i64* [[ARG_ADDR]] to i32*
-// CHECK11-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK11-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK11-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP0]], 0
 // CHECK11-NEXT:    [[FROMBOOL:%.*]] = zext i1 [[TOBOOL]] to i8
 // CHECK11-NEXT:    store i8 [[FROMBOOL]], i8* [[DOTCAPTURE_EXPR_]], align 1
@@ -12017,7 +12017,7 @@ int main() {
 // CHECK11-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP7]] to i64
 // CHECK11-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4, !llvm.access.group !59
 // CHECK11-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP9]] to i64
-// CHECK11-NEXT:    [[TMP11:%.*]] = load i8, i8* [[CONV]], align 8, !llvm.access.group !59
+// CHECK11-NEXT:    [[TMP11:%.*]] = load i8, i8* [[CONV]], align 1, !llvm.access.group !59
 // CHECK11-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP11]] to i1
 // CHECK11-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK11:       omp_if.then:
@@ -12849,7 +12849,7 @@ int main() {
 // CHECK12-NEXT:    [[DOTCAPTURE_EXPR__CASTED:%.*]] = alloca i64, align 8
 // CHECK12-NEXT:    store i64 [[ARG]], i64* [[ARG_ADDR]], align 8
 // CHECK12-NEXT:    [[CONV:%.*]] = bitcast i64* [[ARG_ADDR]] to i32*
-// CHECK12-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK12-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK12-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP0]], 0
 // CHECK12-NEXT:    [[FROMBOOL:%.*]] = zext i1 [[TOBOOL]] to i8
 // CHECK12-NEXT:    store i8 [[FROMBOOL]], i8* [[DOTCAPTURE_EXPR_]], align 1
@@ -12904,7 +12904,7 @@ int main() {
 // CHECK12-NEXT:    store i32 [[COND]], i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK12-NEXT:    [[TMP4:%.*]] = load i32, i32* [[DOTOMP_COMB_LB]], align 4
 // CHECK12-NEXT:    store i32 [[TMP4]], i32* [[DOTOMP_IV]], align 4
-// CHECK12-NEXT:    [[TMP5:%.*]] = load i8, i8* [[CONV]], align 8
+// CHECK12-NEXT:    [[TMP5:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK12-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP5]] to i1
 // CHECK12-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE6:%.*]]
 // CHECK12:       omp_if.then:
@@ -12919,13 +12919,13 @@ int main() {
 // CHECK12-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP8]] to i64
 // CHECK12-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4, !llvm.access.group !39
 // CHECK12-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP10]] to i64
-// CHECK12-NEXT:    [[TMP12:%.*]] = load i8, i8* [[CONV]], align 8, !llvm.access.group !39
+// CHECK12-NEXT:    [[TMP12:%.*]] = load i8, i8* [[CONV]], align 1, !llvm.access.group !39
 // CHECK12-NEXT:    [[TOBOOL2:%.*]] = trunc i8 [[TMP12]] to i1
 // CHECK12-NEXT:    [[CONV3:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED]] to i8*
 // CHECK12-NEXT:    [[FROMBOOL:%.*]] = zext i1 [[TOBOOL2]] to i8
 // CHECK12-NEXT:    store i8 [[FROMBOOL]], i8* [[CONV3]], align 1, !llvm.access.group !39
 // CHECK12-NEXT:    [[TMP13:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED]], align 8, !llvm.access.group !39
-// CHECK12-NEXT:    [[TMP14:%.*]] = load i8, i8* [[CONV]], align 8, !llvm.access.group !39
+// CHECK12-NEXT:    [[TMP14:%.*]] = load i8, i8* [[CONV]], align 1, !llvm.access.group !39
 // CHECK12-NEXT:    [[TOBOOL4:%.*]] = trunc i8 [[TMP14]] to i1
 // CHECK12-NEXT:    br i1 [[TOBOOL4]], label [[OMP_IF_THEN5:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK12:       omp_if.then5:
@@ -12960,13 +12960,13 @@ int main() {
 // CHECK12-NEXT:    [[TMP21:%.*]] = zext i32 [[TMP20]] to i64
 // CHECK12-NEXT:    [[TMP22:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK12-NEXT:    [[TMP23:%.*]] = zext i32 [[TMP22]] to i64
-// CHECK12-NEXT:    [[TMP24:%.*]] = load i8, i8* [[CONV]], align 8
+// CHECK12-NEXT:    [[TMP24:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK12-NEXT:    [[TOBOOL10:%.*]] = trunc i8 [[TMP24]] to i1
 // CHECK12-NEXT:    [[CONV12:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED11]] to i8*
 // CHECK12-NEXT:    [[FROMBOOL13:%.*]] = zext i1 [[TOBOOL10]] to i8
 // CHECK12-NEXT:    store i8 [[FROMBOOL13]], i8* [[CONV12]], align 1
 // CHECK12-NEXT:    [[TMP25:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED11]], align 8
-// CHECK12-NEXT:    [[TMP26:%.*]] = load i8, i8* [[CONV]], align 8
+// CHECK12-NEXT:    [[TMP26:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK12-NEXT:    [[TOBOOL14:%.*]] = trunc i8 [[TMP26]] to i1
 // CHECK12-NEXT:    br i1 [[TOBOOL14]], label [[OMP_IF_THEN15:%.*]], label [[OMP_IF_ELSE16:%.*]]
 // CHECK12:       omp_if.then15:
@@ -13034,7 +13034,7 @@ int main() {
 // CHECK12-NEXT:    store i32 [[CONV2]], i32* [[DOTOMP_UB]], align 4
 // CHECK12-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK12-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK12-NEXT:    [[TMP2:%.*]] = load i8, i8* [[CONV]], align 8
+// CHECK12-NEXT:    [[TMP2:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK12-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP2]] to i1
 // CHECK12-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK12:       omp_if.then:
@@ -13162,7 +13162,7 @@ int main() {
 // CHECK12-NEXT:    store i32 [[CONV2]], i32* [[DOTOMP_UB]], align 4
 // CHECK12-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK12-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK12-NEXT:    [[TMP2:%.*]] = load i8, i8* [[CONV]], align 8
+// CHECK12-NEXT:    [[TMP2:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK12-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP2]] to i1
 // CHECK12-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK12:       omp_if.then:
@@ -13637,7 +13637,7 @@ int main() {
 // CHECK12-NEXT:    [[DOTCAPTURE_EXPR__CASTED:%.*]] = alloca i64, align 8
 // CHECK12-NEXT:    store i64 [[ARG]], i64* [[ARG_ADDR]], align 8
 // CHECK12-NEXT:    [[CONV:%.*]] = bitcast i64* [[ARG_ADDR]] to i32*
-// CHECK12-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK12-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK12-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP0]], 0
 // CHECK12-NEXT:    [[FROMBOOL:%.*]] = zext i1 [[TOBOOL]] to i8
 // CHECK12-NEXT:    store i8 [[FROMBOOL]], i8* [[DOTCAPTURE_EXPR_]], align 1
@@ -13700,7 +13700,7 @@ int main() {
 // CHECK12-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP7]] to i64
 // CHECK12-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4, !llvm.access.group !59
 // CHECK12-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP9]] to i64
-// CHECK12-NEXT:    [[TMP11:%.*]] = load i8, i8* [[CONV]], align 8, !llvm.access.group !59
+// CHECK12-NEXT:    [[TMP11:%.*]] = load i8, i8* [[CONV]], align 1, !llvm.access.group !59
 // CHECK12-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP11]] to i1
 // CHECK12-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK12:       omp_if.then:
