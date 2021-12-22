@@ -284,10 +284,9 @@ public:
                     swift::Demangle::NodePointer node);
 
   /// Return the canonicalized Demangle tree for a Swift mangled type name.
-  static swift::Demangle::NodePointer GetCanonicalDemangleTree(
-      TypeSystemSwiftTypeRef *module_holder, SwiftASTContext *target_holder,
-      swift::Demangle::Demangler &dem, llvm::StringRef mangled_name);
-
+  swift::Demangle::NodePointer
+  GetCanonicalDemangleTree(swift::Demangle::Demangler &dem,
+                           llvm::StringRef mangled_name);
   /// Return the base name of the topmost nominal type.
   static llvm::StringRef GetBaseName(swift::Demangle::NodePointer node);
 
@@ -344,6 +343,30 @@ private:
   clang::api_notes::APINotesManager *
   GetAPINotesManager(ClangExternalASTSourceCallbacks *source, unsigned id);
 
+  lldb::TypeSP LookupClangType(llvm::StringRef name);
+
+  CompilerType LookupClangForwardType(llvm::StringRef name);
+
+  std::pair<swift::Demangle::NodePointer, CompilerType>
+  ResolveTypeAlias(swift::Demangle::Demangler &dem,
+                   swift::Demangle::NodePointer node,
+                   bool prefer_clang_types = false);
+
+  swift::Demangle::NodePointer
+  GetCanonicalNode(swift::Demangle::Demangler &dem,
+                   swift::Demangle::NodePointer node);
+
+  uint32_t CollectTypeInfo(swift::Demangle::Demangler &dem,
+                           swift::Demangle::NodePointer node,
+                           bool &unresolved_typealias,
+                           bool generic_walk = false);
+
+  swift::Demangle::NodePointer
+  GetClangTypeNode(CompilerType clang_type, swift::Demangle::Demangler &dem);
+
+  swift::Demangle::NodePointer
+  GetClangTypeTypeNode(swift::Demangle::Demangler &dem,
+                       CompilerType clang_type);
 #ifndef NDEBUG
   /// Check whether the type being dealt with is tricky to validate due to
   /// discrepancies between TypeSystemSwiftTypeRef and SwiftASTContext.
