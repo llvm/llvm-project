@@ -2618,6 +2618,24 @@ SITargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   SmallVector<SDValue, 48> RetOps;
   RetOps.push_back(Chain); // Operand #0 = Chain (updated below)
 
+  // Add return address for callable functions.
+  if (!Info->isEntryFunction()) {
+    const SIRegisterInfo *TRI = getSubtarget()->getRegisterInfo();
+    SDValue ReturnAddrReg = CreateLiveInRegister(
+      DAG, &AMDGPU::SReg_64RegClass, TRI->getReturnAddressReg(MF), MVT::i64);
+
+    SDValue ReturnAddrVirtualReg =
+        DAG.getRegister(MF.getRegInfo().createVirtualRegister(
+                            CallConv != CallingConv::AMDGPU_Gfx
+                                ? &AMDGPU::CCR_SGPR_64RegClass
+                                : &AMDGPU::Gfx_CCR_SGPR_64RegClass),
+                        MVT::i64);
+    Chain =
+        DAG.getCopyToReg(Chain, DL, ReturnAddrVirtualReg, ReturnAddrReg, Flag);
+    Flag = Chain.getValue(1);
+    RetOps.push_back(ReturnAddrVirtualReg);
+  }
+
   // Copy the result values into the output registers.
   for (unsigned I = 0, RealRVLocIdx = 0, E = RVLocs.size(); I != E;
        ++I, ++RealRVLocIdx) {
@@ -2674,8 +2692,15 @@ SITargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     RetOps.push_back(Flag);
 
   unsigned Opc = AMDGPUISD::ENDPGM;
-  if (!IsWaveEnd)
-    Opc = IsShader ? AMDGPUISD::RETURN_TO_EPILOG : AMDGPUISD::RET_FLAG;
+  if (!IsWaveEnd) {
+    if (IsShader)
+      Opc = AMDGPUISD::RETURN_TO_EPILOG;
+    else if (CallConv == CallingConv::AMDGPU_Gfx)
+      Opc = AMDGPUISD::RET_GFX_FLAG;
+    else
+      Opc = AMDGPUISD::RET_FLAG;
+  }
+
   return DAG.getNode(Opc, DL, MVT::Other, RetOps);
 }
 
@@ -3243,6 +3268,21 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
 
+  SDValue PhysReturnAddrReg;
+  if (IsTailCall) {
+    // Since the return is being combined with the call, we need to pass on the
+    // return address.
+
+    const SIRegisterInfo *TRI = getSubtarget()->getRegisterInfo();
+    SDValue ReturnAddrReg = CreateLiveInRegister(
+      DAG, &AMDGPU::SReg_64RegClass, TRI->getReturnAddressReg(MF), MVT::i64);
+
+    PhysReturnAddrReg = DAG.getRegister(TRI->getReturnAddressReg(MF),
+                                        MVT::i64);
+    Chain = DAG.getCopyToReg(Chain, DL, PhysReturnAddrReg, ReturnAddrReg, InFlag);
+    InFlag = Chain.getValue(1);
+  }
+
   // We don't usually want to end the call-sequence here because we would tidy
   // the frame up *after* the call, however in the ABI-changing tail-call case
   // we've carefully laid out the parameters so that when sp is reset they'll be
@@ -3272,6 +3312,8 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     // this information must travel along with the operation for eventual
     // consumption by emitEpilogue.
     Ops.push_back(DAG.getTargetConstant(FPDiff, DL, MVT::i32));
+
+    Ops.push_back(PhysReturnAddrReg);
   }
 
   // Add argument registers to the end of the list so that they are known live

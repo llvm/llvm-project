@@ -152,10 +152,6 @@ def CSR_AMDGPU_AGPRs_32_255 : CalleeSavedRegs<
   (sequence "AGPR%u", 32, 255)
 >;
 
-def CSR_AMDGPU_SGPRs_30_31 : CalleeSavedRegs<
-  (sequence "SGPR%u", 30, 31)
->;
-
 def CSR_AMDGPU_SGPRs_32_105 : CalleeSavedRegs<
   (sequence "SGPR%u", 32, 105)
 >;
@@ -186,7 +182,7 @@ def CSR_AMDGPU_AllAllocatableSRegs : CalleeSavedRegs<
 >;
 
 def CSR_AMDGPU_HighRegs : CalleeSavedRegs<
-  (add CSR_AMDGPU_VGPRs, CSR_AMDGPU_SGPRs_30_31, CSR_AMDGPU_SGPRs_32_105)
+  (add CSR_AMDGPU_VGPRs, CSR_AMDGPU_SGPRs_32_105)
 >;
 
 def CSR_AMDGPU_HighRegs_With_AGPRs : CalleeSavedRegs<
@@ -194,7 +190,7 @@ def CSR_AMDGPU_HighRegs_With_AGPRs : CalleeSavedRegs<
 >;
 
 def CSR_AMDGPU_SI_Gfx : CalleeSavedRegs<
-  (add CSR_AMDGPU_VGPRs, CSR_AMDGPU_SI_Gfx_SGPRs_4_29, CSR_AMDGPU_SGPRs_30_31, CSR_AMDGPU_SI_Gfx_SGPRs_64_105)
+  (add CSR_AMDGPU_VGPRs, CSR_AMDGPU_SI_Gfx_SGPRs_4_29, CSR_AMDGPU_SI_Gfx_SGPRs_64_105)
 >;
 
 def CSR_AMDGPU_SI_Gfx_With_AGPRs : CalleeSavedRegs<
