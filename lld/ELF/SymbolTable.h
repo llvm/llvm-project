@@ -91,7 +91,7 @@ private:
   llvm::Optional<llvm::StringMap<std::vector<Symbol *>>> demangledSyms;
 };
 
-extern SymbolTable *symtab;
+extern std::unique_ptr<SymbolTable> symtab;
 
 } // namespace elf
 } // namespace lld
