@@ -680,6 +680,9 @@ AMDGPUCompiler::executeInProcessDriver(ArrayRef<const char *> Args) {
       }
       std::unique_ptr<CompilerInstance> Clang(new CompilerInstance());
       Clang->setVerboseOutputStream(LogS);
+      if (!Argv.back()) {
+        Argv.pop_back();
+      }
       if (!CompilerInvocation::CreateFromArgs(Clang->getInvocation(), Argv,
                                               Diags)) {
         return AMD_COMGR_STATUS_ERROR;
@@ -699,6 +702,9 @@ AMDGPUCompiler::executeInProcessDriver(ArrayRef<const char *> Args) {
         logArgv(LogS, "clang", Argv);
       }
       Argv.erase(Argv.begin() + 1);
+      if (!Argv.back()) {
+        Argv.pop_back();
+      }
       AssemblerInvocation Asm;
       if (!AssemblerInvocation::createFromArgs(Asm, Argv, Diags)) {
         return AMD_COMGR_STATUS_ERROR;
