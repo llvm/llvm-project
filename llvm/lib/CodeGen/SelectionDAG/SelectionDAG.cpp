@@ -2500,6 +2500,7 @@ bool SelectionDAG::MaskedValueIsAllOnes(SDValue V, const APInt &Mask,
 /// they are simply ignored.
 bool SelectionDAG::isSplatValue(SDValue V, const APInt &DemandedElts,
                                 APInt &UndefElts, unsigned Depth) const {
+  unsigned Opcode = V.getOpcode();
   EVT VT = V.getValueType();
   assert(VT.isVector() && "Vector type expected");
 
@@ -2511,7 +2512,7 @@ bool SelectionDAG::isSplatValue(SDValue V, const APInt &DemandedElts,
 
   // Deal with some common cases here that work for both fixed and scalable
   // vector types.
-  switch (V.getOpcode()) {
+  switch (Opcode) {
   case ISD::SPLAT_VECTOR:
     UndefElts = V.getOperand(0).isUndef()
                     ? APInt::getAllOnes(DemandedElts.getBitWidth())
@@ -2537,7 +2538,12 @@ bool SelectionDAG::isSplatValue(SDValue V, const APInt &DemandedElts,
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND:
     return isSplatValue(V.getOperand(0), DemandedElts, UndefElts, Depth + 1);
-  }
+  default:
+    if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::INTRINSIC_WO_CHAIN ||
+        Opcode == ISD::INTRINSIC_W_CHAIN || Opcode == ISD::INTRINSIC_VOID)
+      return TLI->isSplatValueForTargetNode(V, DemandedElts, UndefElts, Depth);
+    break;
+}
 
   // We don't support other cases than those above for scalable vectors at
   // the moment.
@@ -2548,7 +2554,7 @@ bool SelectionDAG::isSplatValue(SDValue V, const APInt &DemandedElts,
   assert(NumElts == DemandedElts.getBitWidth() && "Vector size mismatch");
   UndefElts = APInt::getZero(NumElts);
 
-  switch (V.getOpcode()) {
+  switch (Opcode) {
   case ISD::BUILD_VECTOR: {
     SDValue Scl;
     for (unsigned i = 0; i != NumElts; ++i) {

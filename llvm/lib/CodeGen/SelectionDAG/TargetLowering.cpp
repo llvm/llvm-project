@@ -3136,6 +3136,19 @@ bool TargetLowering::isKnownNeverNaNForTargetNode(SDValue Op,
   return false;
 }
 
+bool TargetLowering::isSplatValueForTargetNode(SDValue Op,
+                                               const APInt &DemandedElts,
+                                               APInt &UndefElts,
+                                               unsigned Depth) const {
+  assert((Op.getOpcode() >= ISD::BUILTIN_OP_END ||
+          Op.getOpcode() == ISD::INTRINSIC_WO_CHAIN ||
+          Op.getOpcode() == ISD::INTRINSIC_W_CHAIN ||
+          Op.getOpcode() == ISD::INTRINSIC_VOID) &&
+         "Should use isSplatValue if you don't know whether Op"
+         " is a target node!");
+  return false;
+}
+
 // FIXME: Ideally, this would use ISD::isConstantSplatVector(), but that must
 // work with truncating build vectors and vectors with elements of less than
 // 8 bits.
