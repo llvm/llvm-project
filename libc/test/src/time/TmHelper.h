@@ -20,9 +20,9 @@ namespace tmhelper {
 namespace testing {
 
 // A helper function to initialize tm data structure.
-static inline void InitializeTmData(struct tm *tm_data, int year, int month,
-                                    int mday, int hour, int min, int sec,
-                                    int wday, int yday) {
+static inline void initialize_tm_data(struct tm *tm_data, int year, int month,
+                                      int mday, int hour, int min, int sec,
+                                      int wday, int yday) {
   struct tm temp = {.tm_sec = sec,
                     .tm_min = min,
                     .tm_hour = hour,

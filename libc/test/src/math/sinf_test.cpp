@@ -18,7 +18,7 @@
 #include <errno.h>
 #include <stdint.h>
 
-using __llvm_libc::testing::sdcomp26094Values;
+using __llvm_libc::testing::SDCOMP26094_VALUES;
 using FPBits = __llvm_libc::fputil::FPBits<float>;
 
 namespace mpfr = __llvm_libc::testing::mpfr;
@@ -47,9 +47,9 @@ TEST(LlvmLibcSinfTest, SpecialNumbers) {
 }
 
 TEST(LlvmLibcSinfTest, InFloatRange) {
-  constexpr uint32_t count = 1000000;
-  constexpr uint32_t step = UINT32_MAX / count;
-  for (uint32_t i = 0, v = 0; i <= count; ++i, v += step) {
+  constexpr uint32_t COUNT = 1000000;
+  constexpr uint32_t STEP = UINT32_MAX / COUNT;
+  for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
     float x = float(FPBits(v));
     if (isnan(x) || isinf(x))
       continue;
@@ -78,7 +78,7 @@ TEST(LlvmLibcSinfTest, SmallValues) {
 // SDCOMP-26094: check sinf in the cases for which the range reducer
 // returns values furthest beyond its nominal upper bound of pi/4.
 TEST(LlvmLibcSinfTest, SDCOMP_26094) {
-  for (uint32_t v : sdcomp26094Values) {
+  for (uint32_t v : SDCOMP26094_VALUES) {
     float x = float(FPBits((v)));
     EXPECT_MPFR_MATCH(mpfr::Operation::Sin, x, __llvm_libc::sinf(x), 1.0);
   }
