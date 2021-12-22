@@ -551,18 +551,8 @@ void DwarfCompileUnit::constructScopeDIE(LexicalScope *Scope,
   // Emit lexical blocks.
   DIE *ScopeDIE = constructLexicalScopeDIE(Scope);
   assert(ScopeDIE && "Scope DIE should not be null.");
+
   ParentScopeDIE.addChild(ScopeDIE);
-
-  // Track abstract and concrete lexical block scopes.
-  if (Scope->isAbstractScope()) {
-    assert(!getAbstractScopeDIEs().count(DS) &&
-           "Abstract DIE for this scope exists!");
-    getAbstractScopeDIEs()[DS] = ScopeDIE;
-  } else if (!Scope->getInlinedAt()) {
-    assert(!LocalScopeDIEs.count(DS) && "Concrete DIE for this scope exists!");
-    LocalScopeDIEs[DS] = ScopeDIE;
-  }
-
   createAndAddScopeChildren(Scope, *ScopeDIE);
 }
 
@@ -656,7 +646,7 @@ DIE *DwarfCompileUnit::constructInlinedScopeDIE(LexicalScope *Scope) {
   auto *InlinedSP = getDISubprogram(DS);
   // Find the subprogram's DwarfCompileUnit in the SPMap in case the subprogram
   // was inlined from another compile unit.
-  DIE *OriginDIE = getAbstractScopeDIEs()[InlinedSP];
+  DIE *OriginDIE = getAbstractSPDies()[InlinedSP];
   assert(OriginDIE && "Unable to find original DIE for an inlined subprogram.");
 
   auto ScopeDIE = DIE::get(DIEValueAllocator, dwarf::DW_TAG_inlined_subroutine);
@@ -1020,12 +1010,6 @@ DIE &DwarfCompileUnit::constructSubprogramScopeDIE(const DISubprogram *Sub,
   if (Scope) {
     assert(!Scope->getInlinedAt());
     assert(!Scope->isAbstractScope());
-
-    // Remember the subrogram before creating child entities.
-    assert(!LocalScopeDIEs.count(Sub) &&
-           "Concrete DIE for the subprogram exists!");
-    LocalScopeDIEs[Sub] = &ScopeDIE;
-
     // Collect lexical scope children first.
     // ObjectPointer might be a local (non-argument) local variable if it's a
     // block's synthetic this pointer.
@@ -1061,18 +1045,27 @@ DIE *DwarfCompileUnit::createAndAddScopeChildren(LexicalScope *Scope,
   for (DbgVariable *DV : Locals)
     ScopeDIE.addChild(constructVariableDIE(*DV, *Scope, ObjectPointer));
 
+  // Emit imported entities (skipped in gmlt-like data).
+  if (!includeMinimalInlineScopes()) {
+    for (const auto *IE : ImportedEntities[Scope->getScopeNode()])
+      ScopeDIE.addChild(constructImportedEntityDIE(cast<DIImportedEntity>(IE)));
+  }
+
   // Emit labels.
   for (DbgLabel *DL : DU->getScopeLabels().lookup(Scope))
     ScopeDIE.addChild(constructLabelDIE(*DL, *Scope));
 
   // Emit inner lexical scopes.
-  auto needToEmitLexicalScope = [this](LexicalScope *LS) -> bool {
+  auto needToEmitLexicalScope = [this](LexicalScope *LS) {
     if (isa<DISubprogram>(LS->getScopeNode()))
       return true;
     auto Vars = DU->getScopeVariables().lookup(LS);
     if (!Vars.Args.empty() || !Vars.Locals.empty())
       return true;
-    return LocalScopesWithLocalDecls.count(LS->getScopeNode());
+    if (!includeMinimalInlineScopes() &&
+        !ImportedEntities[LS->getScopeNode()].empty())
+      return true;
+    return false;
   };
   for (LexicalScope *LS : Scope->getChildren()) {
     // If the lexical block doesn't have non-scope children, skip
@@ -1088,10 +1081,11 @@ DIE *DwarfCompileUnit::createAndAddScopeChildren(LexicalScope *Scope,
 
 void DwarfCompileUnit::constructAbstractSubprogramScopeDIE(
     LexicalScope *Scope) {
+  DIE *&AbsDef = getAbstractSPDies()[Scope->getScopeNode()];
+  if (AbsDef)
+    return;
 
   auto *SP = cast<DISubprogram>(Scope->getScopeNode());
-  if (getAbstractScopeDIEs().count(SP))
-    return;
 
   DIE *ContextDIE;
   DwarfCompileUnit *ContextCU = this;
@@ -1115,19 +1109,14 @@ void DwarfCompileUnit::constructAbstractSubprogramScopeDIE(
 
   // Passing null as the associated node because the abstract definition
   // shouldn't be found by lookup.
-  DIE &AbsDef = ContextCU->createAndAddDIE(dwarf::DW_TAG_subprogram,
-                                           *ContextDIE, nullptr);
-
-  // Store the DIE before creating children.
-  getAbstractScopeDIEs()[SP] = &AbsDef;
-
-  ContextCU->applySubprogramAttributesToDefinition(SP, AbsDef);
-  ContextCU->addSInt(AbsDef, dwarf::DW_AT_inline,
+  AbsDef = &ContextCU->createAndAddDIE(dwarf::DW_TAG_subprogram, *ContextDIE, nullptr);
+  ContextCU->applySubprogramAttributesToDefinition(SP, *AbsDef);
+  ContextCU->addSInt(*AbsDef, dwarf::DW_AT_inline,
                      DD->getDwarfVersion() <= 4 ? Optional<dwarf::Form>()
                                                 : dwarf::DW_FORM_implicit_const,
                      dwarf::DW_INL_inlined);
-  if (DIE *ObjectPointer = ContextCU->createAndAddScopeChildren(Scope, AbsDef))
-    ContextCU->addDIEEntry(AbsDef, dwarf::DW_AT_object_pointer, *ObjectPointer);
+  if (DIE *ObjectPointer = ContextCU->createAndAddScopeChildren(Scope, *AbsDef))
+    ContextCU->addDIEEntry(*AbsDef, dwarf::DW_AT_object_pointer, *ObjectPointer);
 }
 
 bool DwarfCompileUnit::useGNUAnalogForDwarf5Feature() const {
@@ -1261,61 +1250,47 @@ void DwarfCompileUnit::constructCallSiteParmEntryDIEs(
   }
 }
 
-DIE *DwarfCompileUnit::createImportedEntityDIE(const DIImportedEntity *IE) {
-  DIE *IMDie = DIE::get(DIEValueAllocator, (dwarf::Tag)IE->getTag());
-  insertDIE(IE, IMDie);
-
+DIE *DwarfCompileUnit::constructImportedEntityDIE(
+    const DIImportedEntity *Module) {
+  DIE *IMDie = DIE::get(DIEValueAllocator, (dwarf::Tag)Module->getTag());
+  insertDIE(Module, IMDie);
   DIE *EntityDie;
-  auto *Entity = IE->getEntity();
+  auto *Entity = Module->getEntity();
   if (auto *NS = dyn_cast<DINamespace>(Entity))
     EntityDie = getOrCreateNameSpace(NS);
   else if (auto *M = dyn_cast<DIModule>(Entity))
     EntityDie = getOrCreateModule(M);
-  else if (auto *SP = dyn_cast<DISubprogram>(Entity)) {
-    // If we have abstract subprogram created, refer it.
-    if (auto *AbsSPDie = getAbstractScopeDIEs().lookup(SP))
-      EntityDie = AbsSPDie;
-    else
-      EntityDie = getOrCreateSubprogramDIE(SP);
-  } else if (auto *T = dyn_cast<DIType>(Entity))
+  else if (auto *SP = dyn_cast<DISubprogram>(Entity))
+    EntityDie = getOrCreateSubprogramDIE(SP);
+  else if (auto *T = dyn_cast<DIType>(Entity))
     EntityDie = getOrCreateTypeDIE(T);
   else if (auto *GV = dyn_cast<DIGlobalVariable>(Entity))
     EntityDie = getOrCreateGlobalVariableDIE(GV, {});
   else
     EntityDie = getDIE(Entity);
   assert(EntityDie);
-
-  addSourceLine(*IMDie, IE->getLine(), IE->getFile());
+  addSourceLine(*IMDie, Module->getLine(), Module->getFile());
   addDIEEntry(*IMDie, dwarf::DW_AT_import, *EntityDie);
-  StringRef Name = IE->getName();
+  StringRef Name = Module->getName();
   if (!Name.empty())
     addString(*IMDie, dwarf::DW_AT_name, Name);
 
   // This is for imported module with renamed entities (such as variables and
   // subprograms).
-  DINodeArray Elements = IE->getElements();
+  DINodeArray Elements = Module->getElements();
   for (const auto *Element : Elements) {
     if (!Element)
       continue;
-    IMDie->addChild(createImportedEntityDIE(cast<DIImportedEntity>(Element)));
+    IMDie->addChild(
+        constructImportedEntityDIE(cast<DIImportedEntity>(Element)));
   }
+
   return IMDie;
-}
-
-void DwarfCompileUnit::createAndAddImportedEntityDIE(
-    const DIImportedEntity *IE) {
-  DIE *ContextDIE = getOrCreateContextDIE(IE->getScope());
-  assert(ContextDIE &&
-         "Could not get or create scope for the imported entity!");
-  if (!ContextDIE)
-    return;
-
-  ContextDIE->addChild(createImportedEntityDIE(IE));
 }
 
 void DwarfCompileUnit::finishSubprogramDefinition(const DISubprogram *SP) {
   DIE *D = getDIE(SP);
-  if (DIE *AbsSPDIE = getAbstractScopeDIEs().lookup(SP)) {
+  if (DIE *AbsSPDIE = getAbstractSPDies().lookup(SP)) {
     if (D)
       // If this subprogram has an abstract definition, reference that
       addDIEEntry(*D, dwarf::DW_AT_abstract_origin, *AbsSPDIE);
@@ -1604,39 +1579,4 @@ void DwarfCompileUnit::createBaseTypeDIEs() {
 
     Btr.Die = &Die;
   }
-}
-
-static DIE *
-findLocalScopeDIE(const DILocalScope *LS,
-                  DenseMap<const DILocalScope *, DIE *> &ScopeDIEs) {
-  DIE *ScopeDIE = ScopeDIEs.lookup(LS);
-  if (isa<DISubprogram>(LS) && !ScopeDIE)
-    return nullptr;
-  if (!ScopeDIE)
-    return findLocalScopeDIE(cast<DILocalScope>(LS->getScope()), ScopeDIEs);
-  return ScopeDIE;
-}
-
-DIE *DwarfCompileUnit::findLocalScopeDIE(const DIScope *S) {
-  auto *LScope = dyn_cast_or_null<DILocalScope>(S);
-  if (!LScope)
-    return nullptr;
-
-  // Check if we have an abstract tree.
-  if (getAbstractScopeDIEs().count(LScope->getSubprogram()))
-    return ::findLocalScopeDIE(LScope, getAbstractScopeDIEs());
-
-  return ::findLocalScopeDIE(LScope, LocalScopeDIEs);
-}
-
-DIE *DwarfCompileUnit::getOrCreateContextDIE(const DIScope *Context) {
-  if (auto *LScope = dyn_cast_or_null<DILocalScope>(Context)) {
-    if (DIE *ScopeDIE = findLocalScopeDIE(LScope))
-      return ScopeDIE;
-
-    // If nothing was found, fall back to DISubprogram and let
-    // DwarfUnit::getOrCreateContextDIE() create a new DIE for it.
-    Context = LScope->getSubprogram();
-  }
-  return DwarfUnit::getOrCreateContextDIE(Context);
 }
