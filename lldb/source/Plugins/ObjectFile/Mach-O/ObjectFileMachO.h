@@ -120,7 +120,7 @@ public:
 
   lldb::addr_t GetAddressMask() override;
 
-  bool GetCorefileMainBinaryInfo(lldb::addr_t &address,
+  bool GetCorefileMainBinaryInfo(lldb::addr_t &value, bool &value_is_offset,
                                  lldb_private::UUID &uuid,
                                  ObjectFile::BinaryType &type) override;
 
