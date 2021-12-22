@@ -4346,4 +4346,3 @@ int main (int argc, char **argv) {
 // CHECK28-NEXT:    call void @__tgt_register_requires(i64 1)
 // CHECK28-NEXT:    ret void
 //
-//

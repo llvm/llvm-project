@@ -8212,4 +8212,3 @@ int main() {
 // CHECK17-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP3]])
 // CHECK17-NEXT:    ret void
 //
-//

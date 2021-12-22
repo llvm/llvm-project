@@ -1005,4 +1005,3 @@ void parallel_master_allocate() {
 // CHECK29-SAME: () #[[ATTR4:[0-9]+]] comdat {
 // CHECK29-NEXT:    ret i32* @a
 //
-//

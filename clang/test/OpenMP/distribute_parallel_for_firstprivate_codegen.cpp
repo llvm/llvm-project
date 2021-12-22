@@ -5006,4 +5006,3 @@ int main() {
 // CHECK11-NEXT:    call void @__tgt_register_requires(i64 1)
 // CHECK11-NEXT:    ret void
 //
-//
