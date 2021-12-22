@@ -1056,13 +1056,21 @@ static bool applyCmpPredicateToEqualOperands(arith::CmpIPredicate predicate) {
   llvm_unreachable("unknown cmpi predicate kind");
 }
 
+static Attribute getBoolAttribute(Type type, MLIRContext *ctx, bool value) {
+  auto boolAttr = BoolAttr::get(ctx, value);
+  ShapedType shapedType = type.dyn_cast_or_null<ShapedType>();
+  if (!shapedType)
+    return boolAttr;
+  return DenseElementsAttr::get(shapedType, boolAttr);
+}
+
 OpFoldResult arith::CmpIOp::fold(ArrayRef<Attribute> operands) {
   assert(operands.size() == 2 && "cmpi takes two operands");
 
   // cmpi(pred, x, x)
   if (getLhs() == getRhs()) {
     auto val = applyCmpPredicateToEqualOperands(getPredicate());
-    return BoolAttr::get(getContext(), val);
+    return getBoolAttribute(getType(), getContext(), val);
   }
 
   auto lhs = operands.front().dyn_cast_or_null<IntegerAttr>();
