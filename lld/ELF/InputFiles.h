@@ -111,7 +111,7 @@ public:
   SmallVector<Symbol *, 0> symbols;
 
   // Index of MIPS GOT built for this file.
-  llvm::Optional<uint32_t> mipsGotIndex;
+  uint32_t mipsGotIndex = -1;
 
   // outSecOff of .got2 in the current file. This is used by PPC32 -fPIC/-fPIE
   // to compute offsets in PLT call stubs.
