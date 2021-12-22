@@ -10,6 +10,8 @@
 
 long g = 0;
 long h = 0;
+
+__attribute__((disable_sanitizer_instrumentation))
 void f() {
   static dispatch_once_t onceToken;
   dispatch_once(&onceToken, ^{
@@ -18,6 +20,7 @@ void f() {
   h++;
 }
 
+__attribute__((disable_sanitizer_instrumentation))
 void __tsan_on_report() {
   fprintf(stderr, "Report.\n");
   f();
