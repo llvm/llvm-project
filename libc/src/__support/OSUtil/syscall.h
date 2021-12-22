@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_CONFIG_LINUX_SYSCALL_H
-#define LLVM_LIBC_CONFIG_LINUX_SYSCALL_H
+#ifndef LLVM_LIBC_SRC_SUPPORT_OSUTIL_SYSCALL_H
+#define LLVM_LIBC_SRC_SUPPORT_OSUTIL_SYSCALL_H
 
-%%include_file(${inline_syscalls})
+#ifdef __unix__
+#include "linux/syscall.h"
+#endif
 
-#endif // LLVM_LIBC_CONFIG_LINUX_SYSCALL_H
+#endif // LLVM_LIBC_SRC_SUPPORT_OSUTIL_SYSCALL_H

@@ -7,9 +7,9 @@ add_entrypoint_object(
     signal.h
     ../raise.h
   DEPENDS
-    libc.config.linux.linux_syscall_h
     libc.include.signal
     libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
 )
 
 add_object_library(
@@ -25,8 +25,8 @@ add_object_library(
     # asan creates asan.module_ctor which uses stack space, causing warnings.
     -fno-sanitize=address
   DEPENDS
-    libc.config.linux.linux_syscall_h
     libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
 )
 
 add_entrypoint_object(
@@ -38,9 +38,9 @@ add_entrypoint_object(
     ../sigaction.h
   DEPENDS
     .__restore
-    libc.config.linux.linux_syscall_h
     libc.include.signal
     libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
     libc.src.errno.__errno_location
 )
 
@@ -52,9 +52,9 @@ add_entrypoint_object(
     signal.h
     ../sigprocmask.h
   DEPENDS
-    libc.config.linux.linux_syscall_h
     libc.include.signal
     libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
     libc.src.errno.__errno_location
 )
 

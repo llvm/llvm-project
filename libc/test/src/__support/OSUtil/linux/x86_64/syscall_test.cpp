@@ -6,10 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "config/linux/syscall.h"
-#include "utils/UnitTest/Test.h"
-
 #include "src/__support/CPP/Functional.h"
+#include "src/__support/OSUtil/syscall.h"
+#include "utils/UnitTest/Test.h"
 
 TEST(LlvmLibcX86_64_SyscallTest, APITest) {
   // We only do a signature test here. Actual functionality tests are
