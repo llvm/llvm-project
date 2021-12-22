@@ -5620,10 +5620,15 @@ addr_t ObjectFileMachO::GetAddressMask() {
   return mask;
 }
 
-bool ObjectFileMachO::GetCorefileMainBinaryInfo(addr_t &address, UUID &uuid,
+bool ObjectFileMachO::GetCorefileMainBinaryInfo(addr_t &value,
+                                                bool &value_is_offset,
+                                                UUID &uuid,
                                                 ObjectFile::BinaryType &type) {
-  address = LLDB_INVALID_ADDRESS;
+  value = LLDB_INVALID_ADDRESS;
+  value_is_offset = false;
   uuid.Clear();
+  uint32_t log2_pagesize = 0; // not currently passed up to caller
+  uint32_t platform = 0;      // not currently passed up to caller
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
@@ -5641,6 +5646,26 @@ bool ObjectFileMachO::GetCorefileMainBinaryInfo(addr_t &address, UUID &uuid,
         uint64_t fileoff = m_data.GetU64_unchecked(&offset);
         uint64_t size = m_data.GetU64_unchecked(&offset);
 
+        // struct main_bin_spec
+        // {
+        //     uint32_t version;       // currently 2
+        //     uint32_t type;          // 0 == unspecified, 1 == kernel,
+        //                             // 2 == user process,
+        //                             // 3 == standalone binary
+        //     uint64_t address;       // UINT64_MAX if address not specified
+        //     uint64_t slide;         // slide, UINT64_MAX if unspecified
+        //                             // 0 if no slide needs to be applied to
+        //                             // file address
+        //     uuid_t   uuid;          // all zero's if uuid not specified
+        //     uint32_t log2_pagesize; // process page size in log base 2,
+        //                             // e.g. 4k pages are 12.
+        //                             // 0 for unspecified
+        //     uint32_t platform;      // The Mach-O platform for this corefile.
+        //                             // 0 for unspecified.
+        //                             // The values are defined in
+        //                             // <mach-o/loader.h>, PLATFORM_*.
+        // } __attribute((packed));
+
         // "main bin spec" (main binary specification) data payload is
         // formatted:
         //    uint32_t version       [currently 1]
@@ -5656,14 +5681,25 @@ bool ObjectFileMachO::GetCorefileMainBinaryInfo(addr_t &address, UUID &uuid,
         if (strcmp("main bin spec", data_owner) == 0 && size >= 32) {
           offset = fileoff;
           uint32_t version;
-          if (m_data.GetU32(&offset, &version, 1) != nullptr && version == 1) {
+          if (m_data.GetU32(&offset, &version, 1) != nullptr && version <= 2) {
             uint32_t binspec_type = 0;
             uuid_t raw_uuid;
             memset(raw_uuid, 0, sizeof(uuid_t));
 
-            if (m_data.GetU32(&offset, &binspec_type, 1) &&
-                m_data.GetU64(&offset, &address, 1) &&
-                m_data.CopyData(offset, sizeof(uuid_t), raw_uuid) != 0) {
+            if (!m_data.GetU32(&offset, &binspec_type, 1))
+              return false;
+            if (!m_data.GetU64(&offset, &value, 1))
+              return false;
+            uint64_t slide = LLDB_INVALID_ADDRESS;
+            if (version > 1 && !m_data.GetU64(&offset, &slide, 1))
+              return false;
+            if (value == LLDB_INVALID_ADDRESS &&
+                slide != LLDB_INVALID_ADDRESS) {
+              value = slide;
+              value_is_offset = true;
+            }
+
+            if (m_data.CopyData(offset, sizeof(uuid_t), raw_uuid) != 0) {
               uuid = UUID::fromOptionalData(raw_uuid, sizeof(uuid_t));
               // convert the "main bin spec" type into our
               // ObjectFile::BinaryType enum
@@ -5681,6 +5717,10 @@ bool ObjectFileMachO::GetCorefileMainBinaryInfo(addr_t &address, UUID &uuid,
                 type = eBinaryTypeStandalone;
                 break;
               }
+              if (!m_data.GetU32(&offset, &log2_pagesize, 1))
+                return false;
+              if (version > 1 && !m_data.GetU32(&offset, &platform, 1))
+                return false;
               return true;
             }
           }
@@ -7006,7 +7046,17 @@ bool ObjectFileMachO::LoadCoreFileImages(lldb_private::Process &process) {
   for (const MachOCorefileImageEntry &image : image_infos.all_image_infos) {
     ModuleSpec module_spec;
     module_spec.GetUUID() = image.uuid;
-    module_spec.GetFileSpec() = FileSpec(image.filename.c_str());
+    if (image.filename.empty()) {
+      char namebuf[80];
+      if (image.load_address != LLDB_INVALID_ADDRESS)
+        snprintf(namebuf, sizeof(namebuf), "mem-image-0x%" PRIx64,
+                 image.load_address);
+      else
+        snprintf(namebuf, sizeof(namebuf), "mem-image+0x%" PRIx64, image.slide);
+      module_spec.GetFileSpec() = FileSpec(namebuf);
+    } else {
+      module_spec.GetFileSpec() = FileSpec(image.filename.c_str());
+    }
     if (image.currently_executing) {
       Symbols::DownloadObjectAndSymbolFile(module_spec, true);
       if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {

@@ -20,9 +20,10 @@ struct main_bin_spec_payload {
   uint32_t version;
   uint32_t type;
   uint64_t address;
+  uint64_t slide;
   uuid_t uuid;
   uint32_t log2_pagesize;
-  uint32_t unused;
+  uint32_t platform;
 };
 
 union uint32_buf {
@@ -49,33 +50,36 @@ void add_uint32(std::vector<uint8_t> &buf, uint32_t val) {
     buf.push_back(conv.bytebuf[i]);
 }
 
-std::vector<uint8_t> x86_lc_thread_load_command() {
+std::vector<uint8_t> lc_thread_load_command(cpu_type_t cputype) {
   std::vector<uint8_t> data;
-  add_uint32(data, LC_THREAD);                // thread_command.cmd
-  add_uint32(data, 184);                      // thread_command.cmdsize
-  add_uint32(data, x86_THREAD_STATE64);       // thread_command.flavor
-  add_uint32(data, x86_THREAD_STATE64_COUNT); // thread_command.count
-  add_uint64(data, 0x0000000000000000);       // rax
-  add_uint64(data, 0x0000000000000400);       // rbx
-  add_uint64(data, 0x0000000000000000);       // rcx
-  add_uint64(data, 0x0000000000000000);       // rdx
-  add_uint64(data, 0x0000000000000000);       // rdi
-  add_uint64(data, 0x0000000000000000);       // rsi
-  add_uint64(data, 0xffffff9246e2ba20);       // rbp
-  add_uint64(data, 0xffffff9246e2ba10);       // rsp
-  add_uint64(data, 0x0000000000000000);       // r8
-  add_uint64(data, 0x0000000000000000);       // r9
-  add_uint64(data, 0x0000000000000000);       // r10
-  add_uint64(data, 0x0000000000000000);       // r11
-  add_uint64(data, 0xffffff7f96ce5fe1);       // r12
-  add_uint64(data, 0x0000000000000000);       // r13
-  add_uint64(data, 0x0000000000000000);       // r14
-  add_uint64(data, 0xffffff9246e2bac0);       // r15
-  add_uint64(data, 0xffffff8015a8f6d0);       // rip
-  add_uint64(data, 0x0000000000011111);       // rflags
-  add_uint64(data, 0x0000000000022222);       // cs
-  add_uint64(data, 0x0000000000033333);       // fs
-  add_uint64(data, 0x0000000000044444);       // gs
+  // Emit an LC_THREAD register context appropriate for the cputype
+  // of the binary we're embedded.  The tests in this case do not
+  // use the register values, so 0's are fine, lldb needs to see at
+  // least one LC_THREAD in the corefile.
+#if defined(__x86_64__)
+  if (cputype == CPU_TYPE_X86_64) {
+    add_uint32(data, LC_THREAD); // thread_command.cmd
+    add_uint32(data,
+               16 + (x86_THREAD_STATE64_COUNT * 4)); // thread_command.cmdsize
+    add_uint32(data, x86_THREAD_STATE64);            // thread_command.flavor
+    add_uint32(data, x86_THREAD_STATE64_COUNT);      // thread_command.count
+    for (int i = 0; i < x86_THREAD_STATE64_COUNT; i++) {
+      add_uint32(data, 0); // whatever, just some empty register values
+    }
+  }
+#endif
+#if defined(__arm64__) || defined(__aarch64__)
+  if (cputype == CPU_TYPE_ARM64) {
+    add_uint32(data, LC_THREAD); // thread_command.cmd
+    add_uint32(data,
+               16 + (ARM_THREAD_STATE64_COUNT * 4)); // thread_command.cmdsize
+    add_uint32(data, ARM_THREAD_STATE64);            // thread_command.flavor
+    add_uint32(data, ARM_THREAD_STATE64_COUNT);      // thread_command.count
+    for (int i = 0; i < ARM_THREAD_STATE64_COUNT; i++) {
+      add_uint32(data, 0); // whatever, just some empty register values
+    }
+  }
+#endif
   return data;
 }
 
@@ -121,7 +125,8 @@ void add_lc_note_kern_ver_str_load_command(
 
 void add_lc_note_main_bin_spec_load_command(
     std::vector<std::vector<uint8_t>> &loadcmds, std::vector<uint8_t> &payload,
-    int payload_file_offset, std::string uuidstr, uint64_t address) {
+    int payload_file_offset, std::string uuidstr, uint64_t address,
+    uint64_t slide) {
   std::vector<uint8_t> loadcmd_data;
 
   add_uint32(loadcmd_data, LC_NOTE); // note_command.cmd
@@ -145,15 +150,16 @@ void add_lc_note_main_bin_spec_load_command(
   loadcmds.push_back(loadcmd_data);
 
   // Now write the "main bin spec" payload.
-  add_uint32(payload, 1);          // version
+  add_uint32(payload, 2);          // version
   add_uint32(payload, 3);          // type == 3 [ firmware, standalone, etc ]
   add_uint64(payload, address);    // load address
+  add_uint64(payload, slide);      // slide
   uuid_t uuid;
   uuid_parse(uuidstr.c_str(), uuid);
   for (int i = 0; i < sizeof(uuid_t); i++)
     payload.push_back(uuid[i]);
   add_uint32(payload, 0); // log2_pagesize unspecified
-  add_uint32(payload, 0); // unused
+  add_uint32(payload, 0); // platform unspecified
 }
 
 void add_lc_segment(std::vector<std::vector<uint8_t>> &loadcmds,
@@ -179,7 +185,8 @@ void add_lc_segment(std::vector<std::vector<uint8_t>> &loadcmds,
   loadcmds.push_back(loadcmd_data);
 }
 
-std::string get_uuid_from_binary(const char *fn) {
+std::string get_uuid_from_binary(const char *fn, cpu_type_t &cputype,
+                                 cpu_subtype_t &cpusubtype) {
   FILE *f = fopen(fn, "r");
   if (f == nullptr) {
     fprintf(stderr, "Unable to open binary '%s' to get uuid\n", fn);
@@ -213,9 +220,9 @@ std::string get_uuid_from_binary(const char *fn) {
       fprintf(stderr, "error reading mach header from input file\n");
       exit(1);
     }
-    if (mh.cputype != CPU_TYPE_X86_64) {
+    if (mh.cputype != CPU_TYPE_X86_64 && mh.cputype != CPU_TYPE_ARM64) {
       fprintf(stderr,
-              "This tool creates an x86_64 corefile but "
+              "This tool creates an x86_64/arm64 corefile but "
               "the supplied binary '%s' is cputype 0x%x\n",
               fn, (uint32_t)mh.cputype);
       exit(1);
@@ -223,15 +230,17 @@ std::string get_uuid_from_binary(const char *fn) {
     num_of_load_cmds = mh.ncmds;
     size_of_load_cmds = mh.sizeofcmds;
     file_offset += sizeof(struct mach_header);
+    cputype = mh.cputype;
+    cpusubtype = mh.cpusubtype;
   } else {
     struct mach_header_64 mh;
     if (::fread(&mh, 1, sizeof(mh), f) != sizeof(mh)) {
       fprintf(stderr, "error reading mach header from input file\n");
       exit(1);
     }
-    if (mh.cputype != CPU_TYPE_X86_64) {
+    if (mh.cputype != CPU_TYPE_X86_64 && mh.cputype != CPU_TYPE_ARM64) {
       fprintf(stderr,
-              "This tool creates an x86_64 corefile but "
+              "This tool creates an x86_64/arm64 corefile but "
               "the supplied binary '%s' is cputype 0x%x\n",
               fn, (uint32_t)mh.cputype);
       exit(1);
@@ -239,6 +248,8 @@ std::string get_uuid_from_binary(const char *fn) {
     num_of_load_cmds = mh.ncmds;
     size_of_load_cmds = mh.sizeofcmds;
     file_offset += sizeof(struct mach_header_64);
+    cputype = mh.cputype;
+    cpusubtype = mh.cpusubtype;
   }
 
   off_t load_cmds_offset = file_offset;
@@ -269,12 +280,15 @@ std::string get_uuid_from_binary(const char *fn) {
 }
 
 int main(int argc, char **argv) {
-  if (argc != 5) {
-    fprintf(stderr,
-            "usage: create-empty-corefile version-string|main-bin-spec "
-            "<output-core-name> <binary-to-copy-uuid-from> <address>\n");
+  if (argc != 6) {
+    fprintf(
+        stderr,
+        "usage: create-empty-corefile version-string|main-bin-spec "
+        "<output-core-name> <binary-to-copy-uuid-from> <address> <slide>\n");
     fprintf(stderr,
             "     <address> is base 16, 0xffffffffffffffff means unknown\n");
+    fprintf(stderr,
+            "     <slide> is base 16, 0xffffffffffffffff means unknown\n");
     fprintf(
         stderr,
         "Create a Mach-O corefile with an either LC_NOTE 'kern ver str' or \n");
@@ -289,7 +303,9 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
-  std::string uuid = get_uuid_from_binary(argv[3]);
+  cpu_type_t cputype;
+  cpu_subtype_t cpusubtype;
+  std::string uuid = get_uuid_from_binary(argv[3], cputype, cpusubtype);
 
   // An array of load commands (in the form of byte arrays)
   std::vector<std::vector<uint8_t>> load_commands;
@@ -304,15 +320,22 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
+  errno = 0;
+  uint64_t slide = strtoull(argv[5], NULL, 16);
+  if (errno != 0) {
+    fprintf(stderr, "Unable to parse slide %s as base 16", argv[4]);
+    exit(1);
+  }
+
   // First add all the load commands / payload so we can figure out how large
   // the load commands will actually be.
-  load_commands.push_back(x86_lc_thread_load_command());
+  load_commands.push_back(lc_thread_load_command(cputype));
   if (strcmp(argv[1], "version-string") == 0)
     add_lc_note_kern_ver_str_load_command(load_commands, payload, 0, uuid,
                                           address);
   else
     add_lc_note_main_bin_spec_load_command(load_commands, payload, 0, uuid,
-                                           address);
+                                           address, slide);
   add_lc_segment(load_commands, payload, 0);
 
   int size_of_load_commands = 0;
@@ -327,22 +350,22 @@ int main(int argc, char **argv) {
   load_commands.clear();
   payload.clear();
 
-  load_commands.push_back(x86_lc_thread_load_command());
+  load_commands.push_back(lc_thread_load_command(cputype));
 
   if (strcmp(argv[1], "version-string") == 0)
     add_lc_note_kern_ver_str_load_command(
         load_commands, payload, header_and_load_cmd_room, uuid, address);
   else
     add_lc_note_main_bin_spec_load_command(
-        load_commands, payload, header_and_load_cmd_room, uuid, address);
+        load_commands, payload, header_and_load_cmd_room, uuid, address, slide);
 
   add_lc_segment(load_commands, payload, header_and_load_cmd_room);
 
   struct mach_header_64 mh;
   mh.magic = MH_MAGIC_64;
-  mh.cputype = CPU_TYPE_X86_64;
+  mh.cputype = cputype;
 
-  mh.cpusubtype = CPU_SUBTYPE_X86_64_ALL;
+  mh.cpusubtype = cpusubtype;
   mh.filetype = MH_CORE;
   mh.ncmds = load_commands.size();
   mh.sizeofcmds = size_of_load_commands;
