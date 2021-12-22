@@ -29,7 +29,7 @@ private:
   const T zero = T(__llvm_libc::fputil::FPBits<T>::zero());
   const T neg_zero = T(__llvm_libc::fputil::FPBits<T>::neg_zero());
 
-  UIntType getRandomBitPattern() {
+  UIntType get_random_bit_pattern() {
     UIntType bits{0};
     for (UIntType i = 0; i < sizeof(UIntType) / 2; ++i) {
       bits =
@@ -39,7 +39,7 @@ private:
   }
 
 public:
-  void testSpecialNumbers(Func func) {
+  void test_special_numbers(Func func) {
     EXPECT_FP_EQ(func(zero, zero, zero), zero);
     EXPECT_FP_EQ(func(zero, neg_zero, neg_zero), neg_zero);
     EXPECT_FP_EQ(func(inf, inf, zero), inf);
@@ -63,14 +63,14 @@ public:
     EXPECT_FP_EQ(func(T(1.75), z, -z), T(0.75) * z);
   }
 
-  void testSubnormalRange(Func func) {
-    constexpr UIntType count = 1000001;
-    constexpr UIntType step =
-        (FPBits::MAX_SUBNORMAL - FPBits::MIN_SUBNORMAL) / count;
+  void test_subnormal_range(Func func) {
+    constexpr UIntType COUNT = 1000001;
+    constexpr UIntType STEP =
+        (FPBits::MAX_SUBNORMAL - FPBits::MIN_SUBNORMAL) / COUNT;
     for (UIntType v = FPBits::MIN_SUBNORMAL, w = FPBits::MAX_SUBNORMAL;
          v <= FPBits::MAX_SUBNORMAL && w >= FPBits::MIN_SUBNORMAL;
-         v += step, w -= step) {
-      T x = T(FPBits(getRandomBitPattern())), y = T(FPBits(v)),
+         v += STEP, w -= STEP) {
+      T x = T(FPBits(get_random_bit_pattern())), y = T(FPBits(v)),
         z = T(FPBits(w));
       T result = func(x, y, z);
       mpfr::TernaryInput<T> input{x, y, z};
@@ -78,14 +78,14 @@ public:
     }
   }
 
-  void testNormalRange(Func func) {
-    constexpr UIntType count = 1000001;
-    constexpr UIntType step = (FPBits::MAX_NORMAL - FPBits::MIN_NORMAL) / count;
+  void test_normal_range(Func func) {
+    constexpr UIntType COUNT = 1000001;
+    constexpr UIntType STEP = (FPBits::MAX_NORMAL - FPBits::MIN_NORMAL) / COUNT;
     for (UIntType v = FPBits::MIN_NORMAL, w = FPBits::MAX_NORMAL;
          v <= FPBits::MAX_NORMAL && w >= FPBits::MIN_NORMAL;
-         v += step, w -= step) {
+         v += STEP, w -= STEP) {
       T x = T(FPBits(v)), y = T(FPBits(w)),
-        z = T(FPBits(getRandomBitPattern()));
+        z = T(FPBits(get_random_bit_pattern()));
       T result = func(x, y, z);
       mpfr::TernaryInput<T> input{x, y, z};
       ASSERT_MPFR_MATCH(mpfr::Operation::Fma, input, result, 0.5);

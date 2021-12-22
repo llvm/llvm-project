@@ -101,9 +101,9 @@ TEST(LlvmLibcExpfTest, Underflow) {
 }
 
 TEST(LlvmLibcexp2fTest, InFloatRange) {
-  constexpr uint32_t count = 1000000;
-  constexpr uint32_t step = UINT32_MAX / count;
-  for (uint32_t i = 0, v = 0; i <= count; ++i, v += step) {
+  constexpr uint32_t COUNT = 1000000;
+  constexpr uint32_t STEP = UINT32_MAX / COUNT;
+  for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
     float x = float(FPBits(v));
     if (isnan(x) || isinf(x))
       continue;

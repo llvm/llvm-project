@@ -55,10 +55,10 @@ public:
   }
 
   void testRange(FMinFunc func) {
-    constexpr UIntType count = 10000001;
-    constexpr UIntType step = UIntType(-1) / count;
-    for (UIntType i = 0, v = 0, w = UIntType(-1); i <= count;
-         ++i, v += step, w -= step) {
+    constexpr UIntType COUNT = 10000001;
+    constexpr UIntType STEP = UIntType(-1) / COUNT;
+    for (UIntType i = 0, v = 0, w = UIntType(-1); i <= COUNT;
+         ++i, v += STEP, w -= STEP) {
       T x = T(FPBits(v)), y = T(FPBits(w));
       if (isnan(x) || isinf(x))
         continue;

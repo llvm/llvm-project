@@ -50,9 +50,9 @@ public:
   }
 
 protected:
-  void SetUp() override { Options.Log = BenchmarkLog::Full; }
+  void set_up() override { Options.Log = BenchmarkLog::Full; }
 
-  void TearDown() override {
+  void tear_down() override {
     // We make sure all the expected measurements were performed.
     if (MaybeTimepoints)
       EXPECT_THAT(*MaybeTimepoints, IsEmpty());

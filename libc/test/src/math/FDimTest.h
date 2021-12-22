@@ -19,7 +19,7 @@ public:
   using FPBits = __llvm_libc::fputil::FPBits<T>;
   using UIntType = typename FPBits::UIntType;
 
-  void testNaNArg(FuncPtr func) {
+  void test_na_n_arg(FuncPtr func) {
     EXPECT_FP_EQ(nan, func(nan, inf));
     EXPECT_FP_EQ(nan, func(neg_inf, nan));
     EXPECT_FP_EQ(nan, func(nan, zero));
@@ -29,7 +29,7 @@ public:
     EXPECT_FP_EQ(func(nan, nan), nan);
   }
 
-  void testInfArg(FuncPtr func) {
+  void test_inf_arg(FuncPtr func) {
     EXPECT_FP_EQ(zero, func(neg_inf, inf));
     EXPECT_FP_EQ(inf, func(inf, zero));
     EXPECT_FP_EQ(zero, func(neg_zero, inf));
@@ -37,7 +37,7 @@ public:
     EXPECT_FP_EQ(zero, func(T(-1.2345), inf));
   }
 
-  void testNegInfArg(FuncPtr func) {
+  void test_neg_inf_arg(FuncPtr func) {
     EXPECT_FP_EQ(inf, func(inf, neg_inf));
     EXPECT_FP_EQ(zero, func(neg_inf, zero));
     EXPECT_FP_EQ(inf, func(neg_zero, neg_inf));
@@ -45,18 +45,18 @@ public:
     EXPECT_FP_EQ(inf, func(T(1.2345), neg_inf));
   }
 
-  void testBothZero(FuncPtr func) {
+  void test_both_zero(FuncPtr func) {
     EXPECT_FP_EQ(zero, func(zero, zero));
     EXPECT_FP_EQ(zero, func(zero, neg_zero));
     EXPECT_FP_EQ(zero, func(neg_zero, zero));
     EXPECT_FP_EQ(zero, func(neg_zero, neg_zero));
   }
 
-  void testInRange(FuncPtr func) {
-    constexpr UIntType count = 10000001;
-    constexpr UIntType step = UIntType(-1) / count;
-    for (UIntType i = 0, v = 0, w = UIntType(-1); i <= count;
-         ++i, v += step, w -= step) {
+  void test_in_range(FuncPtr func) {
+    constexpr UIntType COUNT = 10000001;
+    constexpr UIntType STEP = UIntType(-1) / COUNT;
+    for (UIntType i = 0, v = 0, w = UIntType(-1); i <= COUNT;
+         ++i, v += STEP, w -= STEP) {
       T x = T(FPBits(v)), y = T(FPBits(w));
       if (isnan(x) || isinf(x))
         continue;

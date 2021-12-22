@@ -24,14 +24,14 @@ using __llvm_libc::time_utils::TimeConstants;
 static inline time_t call_mktime(struct tm *tm_data, int year, int month,
                                  int mday, int hour, int min, int sec, int wday,
                                  int yday) {
-  __llvm_libc::tmhelper::testing::InitializeTmData(tm_data, year, month, mday,
-                                                   hour, min, sec, wday, yday);
+  __llvm_libc::tmhelper::testing::initialize_tm_data(
+      tm_data, year, month, mday, hour, min, sec, wday, yday);
   return __llvm_libc::mktime(tm_data);
 }
 
 TEST(LlvmLibcMkTime, FailureSetsErrno) {
   struct tm tm_data;
-  __llvm_libc::tmhelper::testing::InitializeTmData(
+  __llvm_libc::tmhelper::testing::initialize_tm_data(
       &tm_data, INT_MAX, INT_MAX, INT_MAX, INT_MAX, INT_MAX, -1, 0, 0);
   EXPECT_THAT(__llvm_libc::mktime(&tm_data), Fails(EOVERFLOW));
 }
