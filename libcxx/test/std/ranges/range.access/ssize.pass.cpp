@@ -25,8 +25,6 @@ static_assert( std::is_invocable_v<RangeSSizeT, int[1]>);
 static_assert( std::is_invocable_v<RangeSSizeT, int (&&)[1]>);
 static_assert( std::is_invocable_v<RangeSSizeT, int (&)[1]>);
 
-static_assert(std::semiregular<std::remove_cv_t<RangeSSizeT>>);
-
 struct SizeMember {
   constexpr size_t size() { return 42; }
 };
