@@ -25,26 +25,26 @@ define amdgpu_kernel void @test_kernel_call_external_void_func_void_clobber_s30_
 ; MUBUF:   buffer_store_dword
 ; FLATSCR: scratch_store_dword
 ; GCN: v_writelane_b32 v40, s33, 4
-; GCN: v_writelane_b32 v40, s34, 0
-; GCN: v_writelane_b32 v40, s35, 1
-; GCN: v_writelane_b32 v40, s30, 2
-; GCN: v_writelane_b32 v40, s31, 3
+; GCN: v_writelane_b32 v40, s30, 0
+; GCN: v_writelane_b32 v40, s31, 1
+; GCN: v_writelane_b32 v40, s34, 2
+; GCN: v_writelane_b32 v40, s35, 3
 
 ; GCN: s_swappc_b64
 ; GCN-NEXT: ;;#ASMSTART
 ; GCN-NEXT: ;;#ASMEND
 ; GCN-NEXT: s_swappc_b64
-; MUBUF-DAG:   v_readlane_b32 s4, v40, 2
-; MUBUF-DAG:   v_readlane_b32 s5, v40, 3
-; FLATSCR-DAG: v_readlane_b32 s0, v40, 2
-; FLATSCR-DAG: v_readlane_b32 s1, v40, 3
-; GCN: v_readlane_b32 s35, v40, 1
-; GCN: v_readlane_b32 s34, v40, 0
+; GCN: v_readlane_b32 s35, v40, 3
+; GCN: v_readlane_b32 s34, v40, 2
+; MUBUF-DAG:   v_readlane_b32 s31, v40, 1
+; MUBUF-DAG:   v_readlane_b32 s30, v40, 0
+; FLATSCR-DAG: v_readlane_b32 s31, v40, 1
+; FLATSCR-DAG: v_readlane_b32 s30, v40, 0
 
 ; GCN: v_readlane_b32 s33, v40, 4
 ; MUBUF:   buffer_load_dword
 ; FLATSCR: scratch_load_dword
-; GCN: s_setpc_b64
+; GCN: s_setpc_b64 s[30:31]
 define void @test_func_call_external_void_func_void_clobber_s30_s31_call_external_void_func_void() #0 {
   call void @external_void_func_void()
   call void asm sideeffect "", ""() #0
@@ -74,11 +74,14 @@ define void @test_func_call_external_void_funcx2() #0 {
 
 ; GCN-LABEL: {{^}}void_func_void_clobber_s30_s31:
 ; GCN: s_waitcnt
-; GCN-NEXT: s_mov_b64 [[SAVEPC:s\[[0-9]+:[0-9]+\]]], s[30:31]
+; GCN: v_writelane_b32 v0, s30, 0
+; GCN: v_writelane_b32 v0, s31, 1
 ; GCN-NEXT: #ASMSTART
 ; GCN: ; clobber
 ; GCN-NEXT: #ASMEND
-; GCN-NEXT: s_setpc_b64 [[SAVEPC]]
+; GCN: v_readlane_b32 s31, v0, 1
+; GCN: v_readlane_b32 s30, v0, 0
+; GCN: s_setpc_b64 s[30:31]
 define void @void_func_void_clobber_s30_s31() #2 {
   call void asm sideeffect "; clobber", "~{s[30:31]}"() #0
   ret void

@@ -40,20 +40,16 @@ define amdgpu_kernel void @kernel_call() #0 {
 }
 
 ; GCN-LABEL: {{^}}func_regular_call:
-; GCN-NOT: buffer_store
 ; GCN-NOT: buffer_load
 ; GCN-NOT: readlane
-; GCN-NOT: writelane
-; GCN: flat_load_dword v8
+; GCN: flat_load_dword v9
 ; GCN: s_swappc_b64
-; GCN-NOT: buffer_store
 ; GCN-NOT: buffer_load
 ; GCN-NOT: readlane
-; GCN-NOT: writelane
-; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, v8
+; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, v9
 
-; GCN: ; NumSgprs: 32
-; GCN: ; NumVgprs: 9
+; GCN: ; NumSgprs: 34
+; GCN: ; NumVgprs: 10
 define void @func_regular_call() #1 {
   %vgpr = load volatile i32, i32 addrspace(1)* undef
   tail call void @func()
@@ -76,13 +72,13 @@ define void @func_tail_call() #1 {
 }
 
 ; GCN-LABEL: {{^}}func_call_tail_call:
-; GCN: flat_load_dword v8
+; GCN: flat_load_dword v9
 ; GCN: s_swappc_b64
-; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, v8
+; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, v9
 ; GCN: s_setpc_b64
 
-; GCN: ; NumSgprs: 32
-; GCN: ; NumVgprs: 9
+; GCN: ; NumSgprs: 34
+; GCN: ; NumVgprs: 10
 define void @func_call_tail_call() #1 {
   %vgpr = load volatile i32, i32 addrspace(1)* undef
   tail call void @func()
@@ -97,8 +93,11 @@ define void @void_func_void() noinline {
 
 ; Make sure we don't get save/restore of FP between calls.
 ; GCN-LABEL: {{^}}test_funcx2:
-; GCN-NOT: s5
+; GCN: s_getpc_b64
 ; GCN-NOT: s32
+; GCN: s_swappc_b64
+; GCN-NOT: s32
+; GCN: s_swappc_b64
 define void @test_funcx2() #0 {
   call void @void_func_void()
   call void @void_func_void()

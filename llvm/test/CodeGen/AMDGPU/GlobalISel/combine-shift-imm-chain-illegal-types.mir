@@ -283,10 +283,9 @@ body:             |
     liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31
 
     ; CHECK-LABEL: name: ushlsat_i44
-    ; CHECK: liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31
+    ; CHECK: liveins: $vgpr0, $vgpr1
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; CHECK: [[COPY2:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
     ; CHECK: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
     ; CHECK: [[TRUNC:%[0-9]+]]:_(s44) = G_TRUNC [[MV]](s64)
     ; CHECK: [[C:%[0-9]+]]:_(s44) = G_CONSTANT i44 22
@@ -296,11 +295,9 @@ body:             |
     ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[ANYEXT]](s64)
     ; CHECK: $vgpr0 = COPY [[UV]](s32)
     ; CHECK: $vgpr1 = COPY [[UV1]](s32)
-    ; CHECK: [[COPY3:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY2]]
-    ; CHECK: S_SETPC_B64_return [[COPY3]], implicit $vgpr0, implicit $vgpr1
+    ; CHECK: S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
     %2:_(s32) = COPY $vgpr0
     %3:_(s32) = COPY $vgpr1
-    %1:sgpr_64 = COPY $sgpr30_sgpr31
     %4:_(s64) = G_MERGE_VALUES %2(s32), %3(s32)
     %0:_(s44) = G_TRUNC %4(s64)
     %5:_(s44) = G_CONSTANT i44 22
@@ -310,8 +307,7 @@ body:             |
     %10:_(s32), %11:_(s32) = G_UNMERGE_VALUES %9(s64)
     $vgpr0 = COPY %10(s32)
     $vgpr1 = COPY %11(s32)
-    %8:ccr_sgpr_64 = COPY %1
-    S_SETPC_B64_return %8, implicit $vgpr0, implicit $vgpr1
+    S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
 
 ...
 ---
@@ -319,13 +315,12 @@ name:            ushlsat_i55
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31
+    liveins: $vgpr0, $vgpr1
 
     ; CHECK-LABEL: name: ushlsat_i55
-    ; CHECK: liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31
+    ; CHECK: liveins: $vgpr0, $vgpr1
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; CHECK: [[COPY2:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
     ; CHECK: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
     ; CHECK: [[TRUNC:%[0-9]+]]:_(s55) = G_TRUNC [[MV]](s64)
     ; CHECK: [[C:%[0-9]+]]:_(s55) = G_CONSTANT i55 53
@@ -334,11 +329,9 @@ body:             |
     ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[ANYEXT]](s64)
     ; CHECK: $vgpr0 = COPY [[UV]](s32)
     ; CHECK: $vgpr1 = COPY [[UV1]](s32)
-    ; CHECK: [[COPY3:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY2]]
-    ; CHECK: S_SETPC_B64_return [[COPY3]], implicit $vgpr0, implicit $vgpr1
+    ; CHECK: S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
     %2:_(s32) = COPY $vgpr0
     %3:_(s32) = COPY $vgpr1
-    %1:sgpr_64 = COPY $sgpr30_sgpr31
     %4:_(s64) = G_MERGE_VALUES %2(s32), %3(s32)
     %0:_(s55) = G_TRUNC %4(s64)
     %5:_(s55) = G_CONSTANT i55 50
@@ -349,7 +342,6 @@ body:             |
     %11:_(s32), %12:_(s32) = G_UNMERGE_VALUES %10(s64)
     $vgpr0 = COPY %11(s32)
     $vgpr1 = COPY %12(s32)
-    %9:ccr_sgpr_64 = COPY %1
-    S_SETPC_B64_return %9, implicit $vgpr0, implicit $vgpr1
+    S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
 
 ...
