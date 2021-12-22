@@ -413,9 +413,9 @@ bool PPCLoopInstrFormPrep::runOnFunction(Function &F) {
 
   bool MadeChange = false;
 
-  for (auto I = LI->begin(), IE = LI->end(); I != IE; ++I)
-    for (auto L = df_begin(*I), LE = df_end(*I); L != LE; ++L)
-      MadeChange |= runOnLoop(*L);
+  for (Loop *I : *LI)
+    for (Loop *L : depth_first(I))
+      MadeChange |= runOnLoop(L);
 
   return MadeChange;
 }

@@ -224,8 +224,8 @@ bool LoopDataPrefetch::run() {
   bool MadeChange = false;
 
   for (Loop *I : *LI)
-    for (auto L = df_begin(I), LE = df_end(I); L != LE; ++L)
-      MadeChange |= runOnLoop(*L);
+    for (Loop *L : depth_first(I))
+      MadeChange |= runOnLoop(L);
 
   return MadeChange;
 }
