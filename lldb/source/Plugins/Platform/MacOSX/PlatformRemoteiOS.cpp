@@ -133,9 +133,10 @@ llvm::StringRef PlatformRemoteiOS::GetDescriptionStatic() {
 PlatformRemoteiOS::PlatformRemoteiOS()
     : PlatformRemoteDarwinDevice() {}
 
-bool PlatformRemoteiOS::GetSupportedArchitectureAtIndex(uint32_t idx,
-                                                        ArchSpec &arch) {
-  return ARMGetSupportedArchitectureAtIndex(idx, arch);
+std::vector<ArchSpec> PlatformRemoteiOS::GetSupportedArchitectures() {
+  std::vector<ArchSpec> result;
+  ARMGetSupportedArchitectures(result);
+  return result;
 }
 
 llvm::StringRef PlatformRemoteiOS::GetDeviceSupportDirectoryName() {
