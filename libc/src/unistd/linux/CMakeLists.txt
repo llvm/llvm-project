@@ -6,7 +6,7 @@ add_entrypoint_object(
     ../write.h
   DEPENDS
     libc.include.unistd
-    libc.config.linux.linux_syscall_h
     libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
     libc.src.errno.__errno_location
 )

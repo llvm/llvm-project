@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_SRC_SIGNAL_LINUX_SIGNAL_H
 #define LLVM_LIBC_SRC_SIGNAL_LINUX_SIGNAL_H
 
-#include "config/linux/syscall.h" // For internal syscall function.
-#include "include/sys/syscall.h"  // For syscall numbers.
+#include "include/sys/syscall.h"          // For syscall numbers.
+#include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 
 #include "include/signal.h"
 

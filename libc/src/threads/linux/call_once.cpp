@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/threads/call_once.h"
-#include "config/linux/syscall.h" // For syscall functions.
-#include "include/sys/syscall.h"  // For syscall numbers.
-#include "include/threads.h"      // For call_once related type definition.
+#include "include/sys/syscall.h" // For syscall numbers.
+#include "include/threads.h"     // For call_once related type definition.
+#include "src/__support/OSUtil/syscall.h" // For syscall functions.
 #include "src/__support/common.h"
 #include "src/threads/linux/Futex.h"
 

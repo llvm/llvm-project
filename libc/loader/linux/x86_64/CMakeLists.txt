@@ -3,9 +3,9 @@ add_loader_object(
   SRC
     start.cpp
   DEPENDS
-    libc.config.linux.linux_syscall_h
     libc.config.linux.app_h
     libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
     libc.src.string.memcpy
     libc.src.sys.mman.mmap
   COMPILE_OPTIONS
