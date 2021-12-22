@@ -21,6 +21,7 @@
 #include "flang/ISO_Fortran_binding.h"
 #include "flang/Runtime/memory.h"
 #include "flang/Runtime/type-code.h"
+#include <algorithm>
 #include <cassert>
 #include <cinttypes>
 #include <cstddef>
