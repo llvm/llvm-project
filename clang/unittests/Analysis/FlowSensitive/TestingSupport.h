@@ -1,4 +1,4 @@
-//===--- DataflowValues.h - Data structure for dataflow values --*- C++ -*-===//
+//===--- TestingSupport.h - Testing utils for dataflow analyses -*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,9 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines a skeleton data structure for encapsulating the dataflow
-// values for a CFG.  Typically this is subclassed to provide methods for
-// computing these values from a CFG.
+// This file defines utilities to simplify testing of dataflow analyses.
 //
 //===----------------------------------------------------------------------===//
 
@@ -81,8 +79,7 @@ void checkDataflow(
   using StateT = DataflowAnalysisState<typename AnalysisT::Lattice>;
 
   llvm::Annotations AnnotatedCode(Code);
-  auto Unit = tooling::buildASTFromCodeWithArgs(
-      AnnotatedCode.code(), {"-fsyntax-only", "-std=c++17"});
+  auto Unit = tooling::buildASTFromCodeWithArgs(AnnotatedCode.code(), Args);
   auto &Context = Unit->getASTContext();
 
   if (Context.getDiagnostics().getClient()->getNumErrors() != 0) {
@@ -134,8 +131,7 @@ void checkDataflow(
             return;
           if (auto *Lattice = llvm::any_cast<typename AnalysisT::Lattice>(
                   &State.Lattice.Value)) {
-            Results.emplace_back(
-                It->second, StateT{std::move(*Lattice), std::move(State.Env)});
+            Results.emplace_back(It->second, StateT{*Lattice, State.Env});
           } else {
             FAIL() << "Could not cast lattice element to expected type.";
           }

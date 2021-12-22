@@ -107,6 +107,16 @@ static bool ParseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
   // By default the frontend driver creates a ParseSyntaxOnly action.
   opts.programAction = ParseSyntaxOnly;
 
+  // Treat multiple action options as an invocation error. Note that `clang
+  // -cc1` does accept multiple action options, but will only consider the
+  // rightmost one.
+  if (args.hasMultipleArgs(clang::driver::options::OPT_Action_Group)) {
+    const unsigned diagID = diags.getCustomDiagID(
+        clang::DiagnosticsEngine::Error, "Only one action option is allowed");
+    diags.Report(diagID);
+    return false;
+  }
+
   // Identify the action (i.e. opts.ProgramAction)
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::driver::options::OPT_Action_Group)) {

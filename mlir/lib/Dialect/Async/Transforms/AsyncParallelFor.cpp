@@ -14,6 +14,7 @@
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Async/IR/Async.h"
 #include "mlir/Dialect/Async/Passes.h"
+#include "mlir/Dialect/Async/Transforms.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BlockAndValueMapping.h"
@@ -105,10 +106,12 @@ struct AsyncParallelForPass
 
 struct AsyncParallelForRewrite : public OpRewritePattern<scf::ParallelOp> {
 public:
-  AsyncParallelForRewrite(MLIRContext *ctx, bool asyncDispatch,
-                          int32_t numWorkerThreads, int32_t minTaskSize)
+  AsyncParallelForRewrite(
+      MLIRContext *ctx, bool asyncDispatch, int32_t numWorkerThreads,
+      AsyncMinTaskSizeComputationFunction computeMinTaskSize)
       : OpRewritePattern(ctx), asyncDispatch(asyncDispatch),
-        numWorkerThreads(numWorkerThreads), minTaskSize(minTaskSize) {}
+        numWorkerThreads(numWorkerThreads),
+        computeMinTaskSize(computeMinTaskSize) {}
 
   LogicalResult matchAndRewrite(scf::ParallelOp op,
                                 PatternRewriter &rewriter) const override;
@@ -116,7 +119,7 @@ public:
 private:
   bool asyncDispatch;
   int32_t numWorkerThreads;
-  int32_t minTaskSize;
+  AsyncMinTaskSizeComputationFunction computeMinTaskSize;
 };
 
 struct ParallelComputeFunctionType {
@@ -206,7 +209,7 @@ static ParallelComputeFunctionType
 getParallelComputeFunctionType(scf::ParallelOp op, PatternRewriter &rewriter) {
   // Values implicitly captured by the parallel operation.
   llvm::SetVector<Value> captures;
-  getUsedValuesDefinedAbove(op.region(), op.region(), captures);
+  getUsedValuesDefinedAbove(op.getRegion(), op.getRegion(), captures);
 
   SmallVector<Type> inputs;
   inputs.reserve(2 + 4 * op.getNumLoops() + captures.size());
@@ -252,7 +255,11 @@ static ParallelComputeFunction createParallelComputeFunction(
       getParallelComputeFunctionType(op, rewriter);
 
   FunctionType type = computeFuncType.type;
-  FuncOp func = FuncOp::create(op.getLoc(), "parallel_compute_fn", type);
+  FuncOp func = FuncOp::create(op.getLoc(),
+                               numBlockAlignedInnerLoops > 0
+                                   ? "parallel_compute_fn_with_aligned_loops"
+                                   : "parallel_compute_fn",
+                               type);
   func.setPrivate();
 
   // Insert function into the module symbol table and assign it unique name.
@@ -493,8 +500,8 @@ static FuncOp createAsyncDispatchFunction(ParallelComputeFunction &computeFunc,
 
   // Create a recursive dispatch loop.
   scf::WhileOp whileOp = b.create<scf::WhileOp>(types, operands);
-  Block *before = b.createBlock(&whileOp.before(), {}, types);
-  Block *after = b.createBlock(&whileOp.after(), {}, types);
+  Block *before = b.createBlock(&whileOp.getBefore(), {}, types);
+  Block *after = b.createBlock(&whileOp.getAfter(), {}, types);
 
   // Setup dispatch loop condition block: decide if we need to go into the
   // `after` block and launch one more async dispatch.
@@ -575,9 +582,9 @@ static void doAsyncDispatch(ImplicitLocOpBuilder &b, PatternRewriter &rewriter,
   // the given operands vector.
   auto appendBlockComputeOperands = [&](SmallVector<Value> &operands) {
     operands.append(tripCounts);
-    operands.append(op.lowerBound().begin(), op.lowerBound().end());
-    operands.append(op.upperBound().begin(), op.upperBound().end());
-    operands.append(op.step().begin(), op.step().end());
+    operands.append(op.getLowerBound().begin(), op.getLowerBound().end());
+    operands.append(op.getUpperBound().begin(), op.getUpperBound().end());
+    operands.append(op.getStep().begin(), op.getStep().end());
     operands.append(parallelComputeFunction.captures);
   };
 
@@ -654,9 +661,11 @@ doSequentialDispatch(ImplicitLocOpBuilder &b, PatternRewriter &rewriter,
   auto computeFuncOperands = [&](Value blockIndex) -> SmallVector<Value> {
     SmallVector<Value> computeFuncOperands = {blockIndex, blockSize};
     computeFuncOperands.append(tripCounts);
-    computeFuncOperands.append(op.lowerBound().begin(), op.lowerBound().end());
-    computeFuncOperands.append(op.upperBound().begin(), op.upperBound().end());
-    computeFuncOperands.append(op.step().begin(), op.step().end());
+    computeFuncOperands.append(op.getLowerBound().begin(),
+                               op.getLowerBound().end());
+    computeFuncOperands.append(op.getUpperBound().begin(),
+                               op.getUpperBound().end());
+    computeFuncOperands.append(op.getStep().begin(), op.getStep().end());
     computeFuncOperands.append(parallelComputeFunction.captures);
     return computeFuncOperands;
   };
@@ -702,6 +711,11 @@ AsyncParallelForRewrite::matchAndRewrite(scf::ParallelOp op,
 
   ImplicitLocOpBuilder b(op.getLoc(), rewriter);
 
+  // Computing minTaskSize emits IR and can be implemented as executing a cost
+  // model on the body of the scf.parallel. Thus it needs to be computed before
+  // the body of the scf.parallel has been manipulated.
+  Value minTaskSize = computeMinTaskSize(b, op);
+
   // Make sure that all constants will be inside the parallel operation body to
   // reduce the number of parallel compute function arguments.
   cloneConstantsIntoTheRegion(op.getLoopBody(), rewriter);
@@ -710,9 +724,9 @@ AsyncParallelForRewrite::matchAndRewrite(scf::ParallelOp op,
   //   tripCount = ceil_div(upperBound - lowerBound, step);
   SmallVector<Value> tripCounts(op.getNumLoops());
   for (size_t i = 0; i < op.getNumLoops(); ++i) {
-    auto lb = op.lowerBound()[i];
-    auto ub = op.upperBound()[i];
-    auto step = op.step()[i];
+    auto lb = op.getLowerBound()[i];
+    auto ub = op.getUpperBound()[i];
+    auto step = op.getStep()[i];
     auto range = b.createOrFold<arith::SubIOp>(ub, lb);
     tripCounts[i] = b.createOrFold<arith::CeilDivSIOp>(range, step);
   }
@@ -746,13 +760,13 @@ AsyncParallelForRewrite::matchAndRewrite(scf::ParallelOp op,
     // folding, loop unrolling and vectorization.
     ParallelComputeFunctionBounds staticBounds = {
         integerConstants(tripCounts),
-        integerConstants(op.lowerBound()),
-        integerConstants(op.upperBound()),
-        integerConstants(op.step()),
+        integerConstants(op.getLowerBound()),
+        integerConstants(op.getUpperBound()),
+        integerConstants(op.getStep()),
     };
 
     // Find how many inner iteration dimensions are statically known, and their
-    // product is smaller than the `512`. We aling the parallel compute block
+    // product is smaller than the `512`. We align the parallel compute block
     // size by the product of statically known dimensions, so that we can
     // guarantee that the inner loops executes from 0 to the loop trip counts
     // and we can elide dynamic loop boundaries, and give LLVM an opportunity to
@@ -793,50 +807,64 @@ AsyncParallelForRewrite::matchAndRewrite(scf::ParallelOp op,
     Value maxComputeBlocks = b.create<arith::ConstantIndexOp>(
         std::max(1, static_cast<int>(numWorkerThreads * overshardingFactor)));
 
-    // Target block size from the pass parameters.
-    Value minTaskSizeCst = b.create<arith::ConstantIndexOp>(minTaskSize);
-
     // Compute parallel block size from the parallel problem size:
     //   blockSize = min(tripCount,
     //                   max(ceil_div(tripCount, maxComputeBlocks),
-    //                       ceil_div(minTaskSize, bodySize)))
+    //                       minTaskSize))
     Value bs0 = b.create<arith::CeilDivSIOp>(tripCount, maxComputeBlocks);
-    Value bs1 = b.create<arith::MaxSIOp>(bs0, minTaskSizeCst);
+    Value bs1 = b.create<arith::MaxSIOp>(bs0, minTaskSize);
     Value blockSize = b.create<arith::MinSIOp>(tripCount, bs1);
 
-    // Align the block size to be a multiple of the statically known number
-    // of iterations in the inner loops.
-    if (numUnrollableLoops > 0 && minTaskSize >= maxIterations) {
-      Value numIters = b.create<arith::ConstantIndexOp>(
-          numIterations[op.getNumLoops() - numUnrollableLoops]);
-      Value bs2 = b.create<arith::MulIOp>(
-          b.create<arith::CeilDivSIOp>(blockSize, numIters), numIters);
-      blockSize = b.create<arith::MinSIOp>(tripCount, bs2);
-    } else {
-      // Reset the number of unrollable loops if we didn't align the block size.
-      numUnrollableLoops = 0;
-    }
+    ParallelComputeFunction notUnrollableParallelComputeFunction =
+        createParallelComputeFunction(op, staticBounds, 0, rewriter);
+
+    // Dispatch parallel compute function using async recursive work splitting,
+    // or by submitting compute task sequentially from a caller thread.
+    auto doDispatch = asyncDispatch ? doAsyncDispatch : doSequentialDispatch;
+
+    // Create a parallel compute function that takes a block id and computes
+    // the parallel operation body for a subset of iteration space.
 
     // Compute the number of parallel compute blocks.
     Value blockCount = b.create<arith::CeilDivSIOp>(tripCount, blockSize);
 
-    // Create a parallel compute function that takes a block id and computes
-    // the parallel operation body for a subset of iteration space.
-    ParallelComputeFunction parallelComputeFunction =
-        createParallelComputeFunction(op, staticBounds, numUnrollableLoops,
-                                      rewriter);
+    // Unroll when numUnrollableLoops > 0 && blockSize >= maxIterations.
+    bool staticShouldUnroll = numUnrollableLoops > 0;
+    auto dispatchNotUnrollable = [&](OpBuilder &nestedBuilder, Location loc) {
+      ImplicitLocOpBuilder nb(loc, nestedBuilder);
+      doDispatch(b, rewriter, notUnrollableParallelComputeFunction, op,
+                 blockSize, blockCount, tripCounts);
+      nb.create<scf::YieldOp>();
+    };
 
-    // Dispatch parallel compute function using async recursive work splitting,
-    // or by submitting compute task sequentially from a caller thread.
-    if (asyncDispatch) {
-      doAsyncDispatch(b, rewriter, parallelComputeFunction, op, blockSize,
-                      blockCount, tripCounts);
+    if (staticShouldUnroll) {
+      Value dynamicShouldUnroll = b.create<arith::CmpIOp>(
+          arith::CmpIPredicate::sge, blockSize,
+          b.create<arith::ConstantIndexOp>(maxIterations));
+
+      ParallelComputeFunction unrollableParallelComputeFunction =
+          createParallelComputeFunction(op, staticBounds, numUnrollableLoops,
+                                        rewriter);
+
+      auto dispatchUnrollable = [&](OpBuilder &nestedBuilder, Location loc) {
+        ImplicitLocOpBuilder nb(loc, nestedBuilder);
+        // Align the block size to be a multiple of the statically known
+        // number of iterations in the inner loops.
+        Value numIters = nb.create<arith::ConstantIndexOp>(
+            numIterations[op.getNumLoops() - numUnrollableLoops]);
+        Value alignedBlockSize = nb.create<arith::MulIOp>(
+            nb.create<arith::CeilDivSIOp>(blockSize, numIters), numIters);
+        doDispatch(b, rewriter, unrollableParallelComputeFunction, op,
+                   alignedBlockSize, blockCount, tripCounts);
+        nb.create<scf::YieldOp>();
+      };
+
+      b.create<scf::IfOp>(TypeRange(), dynamicShouldUnroll, dispatchUnrollable,
+                          dispatchNotUnrollable);
+      nb.create<scf::YieldOp>();
     } else {
-      doSequentialDispatch(b, rewriter, parallelComputeFunction, op, blockSize,
-                           blockCount, tripCounts);
+      dispatchNotUnrollable(nb, loc);
     }
-
-    nb.create<scf::YieldOp>();
   };
 
   // Replace the `scf.parallel` operation with the parallel compute function.
@@ -852,9 +880,11 @@ void AsyncParallelForPass::runOnOperation() {
   MLIRContext *ctx = &getContext();
 
   RewritePatternSet patterns(ctx);
-  patterns.add<AsyncParallelForRewrite>(ctx, asyncDispatch, numWorkerThreads,
-                                        minTaskSize);
-
+  populateAsyncParallelForPatterns(
+      patterns, asyncDispatch, numWorkerThreads,
+      [&](ImplicitLocOpBuilder builder, scf::ParallelOp op) {
+        return builder.create<arith::ConstantIndexOp>(minTaskSize);
+      });
   if (failed(applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
     signalPassFailure();
 }
@@ -868,4 +898,12 @@ std::unique_ptr<Pass> mlir::createAsyncParallelForPass(bool asyncDispatch,
                                                        int32_t minTaskSize) {
   return std::make_unique<AsyncParallelForPass>(asyncDispatch, numWorkerThreads,
                                                 minTaskSize);
+}
+
+void mlir::async::populateAsyncParallelForPatterns(
+    RewritePatternSet &patterns, bool asyncDispatch, int32_t numWorkerThreads,
+    AsyncMinTaskSizeComputationFunction computeMinTaskSize) {
+  MLIRContext *ctx = patterns.getContext();
+  patterns.add<AsyncParallelForRewrite>(ctx, asyncDispatch, numWorkerThreads,
+                                        computeMinTaskSize);
 }

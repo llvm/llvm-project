@@ -1,0 +1,309 @@
+// RUN: not mlir-pdll %s -split-input-file 2>&1 | FileCheck %s
+
+// CHECK: expected top-level declaration, such as a `Pattern`
+10
+
+// -----
+
+Pattern {
+  // CHECK: expected `;` after statement
+  erase _: Op
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// `erase`
+//===----------------------------------------------------------------------===//
+
+Pattern {
+  // CHECK: expected expression
+  erase;
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected `Op` expression
+  erase _: Attr;
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// `let`
+//===----------------------------------------------------------------------===//
+
+Pattern {
+  // CHECK: expected identifier after `let` to name a new variable
+  let 5;
+}
+
+// -----
+
+Pattern {
+  // CHECK: `_` may only be used to define "inline" variables
+  let _;
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected expression
+  let foo: Attr<>;
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected expression of `Type` in type constraint
+  let foo: Attr<_: Attr>;
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected `>` after variable type constraint
+  let foo: Attr<_: Type{};
+}
+
+// -----
+
+Pattern {
+  // CHECK: the type of this variable has already been constrained
+  let foo: [Attr<_: Type>, Attr<_: Type];
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected `.` after dialect namespace
+  let foo: Op<builtin>;
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected operation name after dialect namespace
+  let foo: Op<builtin.>;
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected `>` after operation name
+  let foo: Op<builtin.func<;
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected expression
+  let foo: Value<>;
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected expression of `Type` in type constraint
+  let foo: Value<_: Attr>;
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected `>` after variable type constraint
+  let foo: Value<_: Type{};
+}
+
+// -----
+
+Pattern {
+  // CHECK: the type of this variable has already been constrained
+  let foo: [Value<_: Type>, Value<_: Type];
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected expression
+  let foo: ValueRange<10>;
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected expression of `TypeRange` in type constraint
+  let foo: ValueRange<_: Type>;
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected `>` after variable type constraint
+  let foo: ValueRange<_: Type{};
+}
+
+// -----
+
+Pattern {
+  // CHECK: the type of this variable has already been constrained
+  let foo: [ValueRange<_: Type>, ValueRange<_: Type];
+}
+
+// -----
+
+Pattern {
+  // CHECK: unknown reference to constraint `UnknownConstraint`
+  let foo: UnknownConstraint;
+}
+
+// -----
+
+Pattern Foo {
+  erase root: Op;
+}
+
+Pattern {
+  // CHECK: invalid reference to non-constraint
+  let foo: Foo;
+}
+
+// -----
+
+Pattern {
+  // CHECK: constraint type `Attr` is incompatible with the previously inferred type `Value`
+  let foo: [Value, Attr];
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected `]` after constraint list
+  let foo: [Attr[];
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected expression
+  let foo: Attr = ;
+}
+
+// -----
+
+Pattern {
+  // CHECK: type constraints are not permitted on variables with initializers
+  let foo: ValueRange<_: Type> = _: Op;
+}
+
+// -----
+
+Pattern {
+  // CHECK: unable to infer type for variable `foo`
+  // CHECK: note: the type of a variable must be inferable from the constraint list or the initializer
+  let foo;
+}
+
+// -----
+
+Pattern {
+  // CHECK: unable to convert expression of type `Attr` to the expected type of `Value`
+  let foo: Value = _: Attr;
+}
+
+// -----
+
+Pattern {
+  // CHECK: :7:7: error: `foo` has already been defined
+  // CHECK: :6:7: note: see previous definition here
+  let foo: Attr;
+  let foo: Attr;
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// `replace`
+//===----------------------------------------------------------------------===//
+
+Pattern {
+  // CHECK: expected `Op` expression
+  replace attr<""> with attr<"">;
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected `with` after root operation
+  replace op<>;
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected `Op`, `Value` or `ValueRange` expression
+  replace op<> with attr<"">;
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected `Op`, `Value` or `ValueRange` expression
+  replace op<> with (attr<"">);
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected `)` after replacement values
+  replace op<>(input: Value) with (input;
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected at least one replacement value, consider using `erase` if no replacement values are desired
+  replace op<>(input: Value) with ();
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected dialect namespace
+  replace op<>(input: Value) with op<>;
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// `rewrite`
+//===----------------------------------------------------------------------===//
+
+Pattern {
+  // CHECK: expected `Op` expression
+  rewrite attr<""> with { op<toy.reshape>; };
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected `with` before rewrite body
+  rewrite op<>;
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected `{` to start rewrite body
+  rewrite op<> with;
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected dialect namespace
+  rewrite root: Op with {
+      op<>;
+  };
+}

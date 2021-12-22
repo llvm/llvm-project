@@ -390,6 +390,9 @@ bool DWARFVerifier::handleDebugInfo() {
 
   OS << "Verifying non-dwo Units...\n";
   NumErrors += verifyUnits(DCtx.getNormalUnitsVector());
+
+  OS << "Verifying dwo Units...\n";
+  NumErrors += verifyUnits(DCtx.getDWOUnitsVector());
   return NumErrors == 0;
 }
 
@@ -400,10 +403,13 @@ unsigned DWARFVerifier::verifyDieRanges(const DWARFDie &Die,
   if (!Die.isValid())
     return NumErrors;
 
+  DWARFUnit *Unit = Die.getDwarfUnit();
+
   auto RangesOrError = Die.getAddressRanges();
   if (!RangesOrError) {
     // FIXME: Report the error.
-    ++NumErrors;
+    if (!Unit->isDWOUnit())
+      ++NumErrors;
     llvm::consumeError(RangesOrError.takeError());
     return NumErrors;
   }
@@ -496,15 +502,18 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
   };
 
   const DWARFObject &DObj = DCtx.getDWARFObj();
+  DWARFUnit *U = Die.getDwarfUnit();
   const auto Attr = AttrValue.Attr;
   switch (Attr) {
   case DW_AT_ranges:
     // Make sure the offset in the DW_AT_ranges attribute is valid.
     if (auto SectionOffset = AttrValue.Value.getAsSectionOffset()) {
-      unsigned DwarfVersion = Die.getDwarfUnit()->getVersion();
+      unsigned DwarfVersion = U->getVersion();
       const DWARFSection &RangeSection = DwarfVersion < 5
                                              ? DObj.getRangesSection()
                                              : DObj.getRnglistsSection();
+      if (U->isDWOUnit() && RangeSection.Data.empty())
+        break;
       if (*SectionOffset >= RangeSection.Data.size())
         ReportError(
             "DW_AT_ranges offset is beyond " +
@@ -517,7 +526,7 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
   case DW_AT_stmt_list:
     // Make sure the offset in the DW_AT_stmt_list attribute is valid.
     if (auto SectionOffset = AttrValue.Value.getAsSectionOffset()) {
-      if (*SectionOffset >= DObj.getLineSection().Data.size())
+      if (*SectionOffset >= U->getLineSection().Data.size())
         ReportError("DW_AT_stmt_list offset is beyond .debug_line bounds: " +
                     llvm::formatv("{0:x8}", *SectionOffset));
       break;
@@ -525,9 +534,18 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
     ReportError("DIE has invalid DW_AT_stmt_list encoding:");
     break;
   case DW_AT_location: {
+    // FIXME: It might be nice if there's a way to walk location expressions
+    // without trying to resolve the address ranges - it'd be a more efficient
+    // API (since the API is currently unnecessarily resolving addresses for
+    // this use case which only wants to validate the expressions themselves) &
+    // then the expressions could be validated even if the addresses can't be
+    // resolved.
+    // That sort of API would probably look like a callback "for each
+    // expression" with some way to lazily resolve the address ranges when
+    // needed (& then the existing API used here could be built on top of that -
+    // using the callback API to build the data structure and return it).
     if (Expected<std::vector<DWARFLocationExpression>> Loc =
             Die.getLocations(DW_AT_location)) {
-      DWARFUnit *U = Die.getDwarfUnit();
       for (const auto &Entry : *Loc) {
         DataExtractor Data(toStringRef(Entry.Expr), DCtx.isLittleEndian(), 0);
         DWARFExpression Expression(Data, U->getAddressByteSize(),
@@ -539,8 +557,12 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
         if (Error || !Expression.verify(U))
           ReportError("DIE contains invalid DWARF expression:");
       }
-    } else
-      ReportError(toString(Loc.takeError()));
+    } else if (Error Err = handleErrors(
+                   Loc.takeError(), [&](std::unique_ptr<ResolverError> E) {
+                     return U->isDWOUnit() ? Error::success()
+                                           : Error(std::move(E));
+                   }))
+      ReportError(toString(std::move(Err)));
     break;
   }
   case DW_AT_specification:
@@ -576,7 +598,8 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
   case DW_AT_call_file:
   case DW_AT_decl_file: {
     if (auto FileIdx = AttrValue.Value.getAsUnsignedConstant()) {
-      DWARFUnit *U = Die.getDwarfUnit();
+      if (U->isDWOUnit() && !U->isTypeUnit())
+        break;
       const auto *LT = U->getContext().getLineTableForUnit(U);
       if (LT) {
         if (!LT->hasFileAtIndex(*FileIdx)) {

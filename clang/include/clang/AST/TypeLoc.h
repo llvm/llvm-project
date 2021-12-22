@@ -665,6 +665,16 @@ public:
   }
 };
 
+/// Wrapper for source info for types used via transparent aliases.
+class UsingTypeLoc : public InheritingConcreteTypeLoc<TypeSpecTypeLoc,
+                                                      UsingTypeLoc, UsingType> {
+public:
+  QualType getUnderlyingType() const {
+    return getTypePtr()->getUnderlyingType();
+  }
+  UsingShadowDecl *getFoundDecl() const { return getTypePtr()->getFoundDecl(); }
+};
+
 /// Wrapper for source info for typedefs.
 class TypedefTypeLoc : public InheritingConcreteTypeLoc<TypeSpecTypeLoc,
                                                         TypedefTypeLoc,

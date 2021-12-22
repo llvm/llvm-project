@@ -405,7 +405,8 @@ void CodeGenFunction::EmitStaticVarDecl(const VarDecl &D,
 
   // Store into LocalDeclMap before generating initializer to handle
   // circular references.
-  setAddrOfLocalVar(&D, Address(addr, alignment));
+  llvm::Type *elemTy = ConvertTypeForMem(D.getType());
+  setAddrOfLocalVar(&D, Address(addr, elemTy, alignment));
 
   // We can't have a VLA here, but we can have a pointer to a VLA,
   // even though that doesn't really make any sense.
@@ -458,8 +459,7 @@ void CodeGenFunction::EmitStaticVarDecl(const VarDecl &D,
   // RAUW's the GV uses of this constant will be invalid.
   llvm::Constant *castedAddr =
     llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(var, expectedType);
-  if (var != castedAddr)
-    LocalDeclMap.find(&D)->second = Address(castedAddr, alignment);
+  LocalDeclMap.find(&D)->second = Address(castedAddr, elemTy, alignment);
   CGM.setStaticLocalDeclAddress(&D, castedAddr);
 
   CGM.getSanitizerMetadata()->reportGlobalToASan(var, D);
@@ -1146,7 +1146,7 @@ Address CodeGenModule::createUnnamedGlobalFrom(const VarDecl &D,
     CacheEntry->setAlignment(Align.getAsAlign());
   }
 
-  return Address(CacheEntry, Align);
+  return Address(CacheEntry, CacheEntry->getValueType(), Align);
 }
 
 static Address createUnnamedGlobalForMemcpyFrom(CodeGenModule &CGM,
@@ -1193,7 +1193,7 @@ static void emitStoresForConstant(CodeGenModule &CGM, const VarDecl &D,
     bool valueAlreadyCorrect =
         constant->isNullValue() || isa<llvm::UndefValue>(constant);
     if (!valueAlreadyCorrect) {
-      Loc = Builder.CreateBitCast(Loc, Ty->getPointerTo(Loc.getAddressSpace()));
+      Loc = Builder.CreateElementBitCast(Loc, Ty);
       emitStoresForInitAfterBZero(CGM, constant, Loc, isVolatile, Builder,
                                   IsAutoInit);
     }

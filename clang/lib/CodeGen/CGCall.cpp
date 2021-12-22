@@ -1261,8 +1261,7 @@ static llvm::Value *CreateCoercedLoad(Address Src, llvm::Type *Ty,
     //
     // FIXME: Assert that we aren't truncating non-padding bits when have access
     // to that information.
-    Src = CGF.Builder.CreateBitCast(Src,
-                                    Ty->getPointerTo(Src.getAddressSpace()));
+    Src = CGF.Builder.CreateElementBitCast(Src, Ty);
     return CGF.Builder.CreateLoad(Src);
   }
 
@@ -1831,11 +1830,6 @@ void CodeGenModule::getDefaultFunctionAttributes(StringRef Name,
 
     if (LangOpts.getFPExceptionMode() == LangOptions::FPE_Ignore)
       FuncAttrs.addAttribute("no-trapping-math", "true");
-
-    // Strict (compliant) code is the default, so only add this attribute to
-    // indicate that we are trying to workaround a problem case.
-    if (!CodeGenOpts.StrictFloatCastOverflow)
-      FuncAttrs.addAttribute("strict-float-cast-overflow", "false");
 
     // TODO: Are these all needed?
     // unsafe/inf/nan/nsz are handled by instruction-level FastMathFlags.
@@ -2686,8 +2680,8 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
     case ABIArgInfo::Indirect:
     case ABIArgInfo::IndirectAliased: {
       assert(NumIRArgs == 1);
-      Address ParamAddr =
-          Address(Fn->getArg(FirstIRArg), ArgI.getIndirectAlign());
+      Address ParamAddr = Address(Fn->getArg(FirstIRArg), ConvertTypeForMem(Ty),
+                                  ArgI.getIndirectAlign());
 
       if (!hasScalarEvaluationKind(Ty)) {
         // Aggregates and complex variables are accessed by reference. All we
@@ -4134,8 +4128,7 @@ void CodeGenFunction::EmitCallArgs(
   }
 
   // If we still have any arguments, emit them using the type of the argument.
-  for (auto *A : llvm::make_range(std::next(ArgRange.begin(), ArgTypes.size()),
-                                  ArgRange.end()))
+  for (auto *A : llvm::drop_begin(ArgRange, ArgTypes.size()))
     ArgTypes.push_back(IsVariadic ? getVarArgType(A) : A->getType());
   assert((int)ArgTypes.size() == (ArgRange.end() - ArgRange.begin()));
 
@@ -4648,13 +4641,13 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     //
     // In other cases, we assert that the types match up (until pointers stop
     // having pointee types).
-    llvm::Type *TypeFromVal;
     if (Callee.isVirtual())
-      TypeFromVal = Callee.getVirtualFunctionType();
-    else
-      TypeFromVal =
-          Callee.getFunctionPointer()->getType()->getPointerElementType();
-    assert(IRFuncTy == TypeFromVal);
+      assert(IRFuncTy == Callee.getVirtualFunctionType());
+    else {
+      llvm::PointerType *PtrTy =
+          llvm::cast<llvm::PointerType>(Callee.getFunctionPointer()->getType());
+      assert(PtrTy->isOpaqueOrPointeeTypeMatches(IRFuncTy));
+    }
   }
 #endif
 
@@ -4869,7 +4862,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
           I->copyInto(*this, AI);
         } else {
           // Skip the extra memcpy call.
-          auto *T = V->getType()->getPointerElementType()->getPointerTo(
+          auto *T = llvm::PointerType::getWithSamePointeeType(
+              cast<llvm::PointerType>(V->getType()),
               CGM.getDataLayout().getAllocaAddrSpace());
           IRCallArgs[FirstIRArg] = getTargetHooks().performAddrSpaceCast(
               *this, V, LangAS::Default, CGM.getASTAllocaAddressSpace(), T,
@@ -4964,8 +4958,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
           Builder.CreateMemCpy(TempAlloca, Src, SrcSize);
           Src = TempAlloca;
         } else {
-          Src = Builder.CreateBitCast(Src,
-                                      STy->getPointerTo(Src.getAddressSpace()));
+          Src = Builder.CreateElementBitCast(Src, STy);
         }
 
         assert(NumIRArgs == STy->getNumElements());

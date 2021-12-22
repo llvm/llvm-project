@@ -190,7 +190,10 @@ private:
   bool handleLDSymbol(StringRef originalName);
   void handleLDPreviousSymbol(StringRef name, StringRef originalName);
   void handleLDInstallNameSymbol(StringRef name, StringRef originalName);
+  void handleLDHideSymbol(StringRef name, StringRef originalName);
   void checkAppExtensionSafety(bool dylibIsAppExtensionSafe) const;
+
+  llvm::DenseSet<llvm::CachedHashStringRef> hiddenSymbols;
 };
 
 // .a file

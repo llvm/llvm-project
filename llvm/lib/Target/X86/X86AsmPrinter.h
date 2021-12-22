@@ -31,6 +31,7 @@ class LLVM_LIBRARY_VISIBILITY X86AsmPrinter : public AsmPrinter {
   FaultMaps FM;
   std::unique_ptr<MCCodeEmitter> CodeEmitter;
   bool EmitFPOData = false;
+  bool ShouldEmitWeakSwiftAsyncExtendedFramePointerFlags = false;
 
   // This utility class tracks the length of a stackmap instruction's 'shadow'.
   // It is used by the X86AsmPrinter to ensure that the stackmap shadow
@@ -151,6 +152,10 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
   void emitFunctionBodyStart() override;
   void emitFunctionBodyEnd() override;
+
+  bool shouldEmitWeakSwiftAsyncExtendedFramePointerFlags() const override {
+    return ShouldEmitWeakSwiftAsyncExtendedFramePointerFlags;
+  }
 };
 
 } // end namespace llvm

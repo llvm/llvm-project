@@ -559,6 +559,7 @@ class VOPProfileWMMA<VOPProfile P, string Suffix, RegisterOperand _Src01RC64, bi
   let HasClamp = _HasClamp;
   let HasOpSel = _HasOpSel;
   let Outs64 = !if(!eq(TwoDest, 1),(outs DstRC:$vdst, DstRC:$vdst2), (outs DstRC:$vdst));
+  let IsWMMA = 1;
 }
 
 def VOP_V8F32_V8F32_V8F32_V8F32 : VOPProfile <[v8f32, v8f32, v8f32, v8f32]>;

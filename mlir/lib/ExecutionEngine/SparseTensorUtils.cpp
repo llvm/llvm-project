@@ -550,7 +550,7 @@ static char *toLower(char *token) {
 
 /// Read the MME header of a general sparse matrix of type real.
 static void readMMEHeader(FILE *file, char *filename, char *line,
-                          uint64_t *idata, bool *is_symmetric) {
+                          uint64_t *idata, bool *isSymmetric) {
   char header[64];
   char object[64];
   char format[64];
@@ -562,12 +562,12 @@ static void readMMEHeader(FILE *file, char *filename, char *line,
     fprintf(stderr, "Corrupt header in %s\n", filename);
     exit(1);
   }
-  *is_symmetric = (strcmp(toLower(symmetry), "symmetric") == 0);
+  *isSymmetric = (strcmp(toLower(symmetry), "symmetric") == 0);
   // Make sure this is a general sparse matrix.
   if (strcmp(toLower(header), "%%matrixmarket") ||
       strcmp(toLower(object), "matrix") ||
       strcmp(toLower(format), "coordinate") || strcmp(toLower(field), "real") ||
-      (strcmp(toLower(symmetry), "general") && !(*is_symmetric))) {
+      (strcmp(toLower(symmetry), "general") && !(*isSymmetric))) {
     fprintf(stderr,
             "Cannot find a general sparse matrix with type real in %s\n",
             filename);
@@ -636,9 +636,9 @@ static SparseTensorCOO<V> *openSparseTensorCOO(char *filename, uint64_t rank,
   // Perform some file format dependent set up.
   char line[kColWidth];
   uint64_t idata[512];
-  bool is_symmetric = false;
+  bool isSymmetric = false;
   if (strstr(filename, ".mtx")) {
-    readMMEHeader(file, filename, line, idata, &is_symmetric);
+    readMMEHeader(file, filename, line, idata, &isSymmetric);
   } else if (strstr(filename, ".tns")) {
     readExtFROSTTHeader(file, filename, line, idata);
   } else {
@@ -674,7 +674,7 @@ static SparseTensorCOO<V> *openSparseTensorCOO(char *filename, uint64_t rank,
     // We currently chose to deal with symmetric matrices by fully constructing
     // them. In the future, we may want to make symmetry implicit for storage
     // reasons.
-    if (is_symmetric && indices[0] != indices[1])
+    if (isSymmetric && indices[0] != indices[1])
       tensor->add({indices[1], indices[0]}, value);
   }
   // Close the file and return tensor.
@@ -718,17 +718,16 @@ typedef uint64_t index_t;
       }                                                                        \
       return SparseTensorStorage<P, I, V>::newSparseTensor(rank, sizes, perm,  \
                                                            sparsity, tensor);  \
-    } else if (action == Action::kEmptyCOO) {                                  \
-      return SparseTensorCOO<V>::newSparseTensorCOO(rank, sizes, perm);        \
-    } else {                                                                   \
-      tensor = static_cast<SparseTensorStorage<P, I, V> *>(ptr)->toCOO(perm);  \
-      if (action == Action::kToIterator) {                                     \
-        tensor->startIterator();                                               \
-      } else {                                                                 \
-        assert(action == Action::kToCOO);                                      \
-      }                                                                        \
-      return tensor;                                                           \
     }                                                                          \
+    if (action == Action::kEmptyCOO)                                           \
+      return SparseTensorCOO<V>::newSparseTensorCOO(rank, sizes, perm);        \
+    tensor = static_cast<SparseTensorStorage<P, I, V> *>(ptr)->toCOO(perm);    \
+    if (action == Action::kToIterator) {                                       \
+      tensor->startIterator();                                                 \
+    } else {                                                                   \
+      assert(action == Action::kToCOO);                                        \
+    }                                                                          \
+    return tensor;                                                             \
   }
 
 #define CASE_SECSAME(p, v, P, V) CASE(p, p, v, P, P, V)
@@ -1092,15 +1091,15 @@ void *convertToMLIRSparseTensor(uint64_t rank, uint64_t nse, uint64_t *shape,
 //
 //  TODO: for now f64 tensors only, no dim ordering, all dimensions compressed
 //
-void convertFromMLIRSparseTensor(void *tensor, uint64_t *p_rank,
-                                 uint64_t *p_nse, uint64_t **p_shape,
-                                 double **p_values, uint64_t **p_indices) {
-  SparseTensorStorage<uint64_t, uint64_t, double> *sparse_tensor =
+void convertFromMLIRSparseTensor(void *tensor, uint64_t *pRank, uint64_t *pNse,
+                                 uint64_t **pShape, double **pValues,
+                                 uint64_t **pIndices) {
+  SparseTensorStorage<uint64_t, uint64_t, double> *sparseTensor =
       static_cast<SparseTensorStorage<uint64_t, uint64_t, double> *>(tensor);
-  uint64_t rank = sparse_tensor->getRank();
+  uint64_t rank = sparseTensor->getRank();
   std::vector<uint64_t> perm(rank);
   std::iota(perm.begin(), perm.end(), 0);
-  SparseTensorCOO<double> *coo = sparse_tensor->toCOO(perm.data());
+  SparseTensorCOO<double> *coo = sparseTensor->toCOO(perm.data());
 
   const std::vector<Element<double>> &elements = coo->getElements();
   uint64_t nse = elements.size();
@@ -1120,11 +1119,11 @@ void convertFromMLIRSparseTensor(void *tensor, uint64_t *p_rank,
   }
 
   delete coo;
-  *p_rank = rank;
-  *p_nse = nse;
-  *p_shape = shape;
-  *p_values = values;
-  *p_indices = indices;
+  *pRank = rank;
+  *pNse = nse;
+  *pShape = shape;
+  *pValues = values;
+  *pIndices = indices;
 }
 } // extern "C"
 

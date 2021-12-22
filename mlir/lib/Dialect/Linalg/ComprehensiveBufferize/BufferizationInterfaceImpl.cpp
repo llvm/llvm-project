@@ -39,12 +39,14 @@ namespace bufferization_ext {
 struct ToMemrefOpInterface
     : public BufferizableOpInterface::ExternalModel<ToMemrefOpInterface,
                                                     bufferization::ToMemrefOp> {
-  bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand) const {
+  bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
+                              BufferizationState &state) const {
     // It is unknown whether the resulting MemRef will be read or not.
     return true;
   }
 
-  OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand) const {
+  OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand,
+                               BufferizationState &state) const {
     return OpResult();
   }
 
@@ -63,21 +65,9 @@ struct ToMemrefOpInterface
     // If a ToMemrefOp's tensor operand has not been bufferized yet, the op
     // remains unchanged. All IR up to this ToMemrefOp has already been
     // bufferized, unless there were unknown ops that could be bufferized.
-    if (!state.isMapped(toMemrefOp.tensor())) {
-      assert(state.getOptions().allowUnknownOps &&
-             "expected that tensor is mapped");
-      return success();
-    }
-
-    // If a ToMemrefOp's tensor operand has been bufferized, the op can be
-    // removed.
-    Value memref = state.lookupBuffer(toMemrefOp.tensor());
-    // Do not replace a ToMemrefOp with itself. E.g., when bufferizing a
-    // function body, ToMemrefOps were inserted before starting bufferization of
-    // the function body. Such ToMemrefOps are replaced in a separate step after
-    // the function body has been bufferized.
-    if (toMemrefOp.getResult() != memref)
-      toMemrefOp.replaceAllUsesWith(memref);
+    assert((isFunctionArgument(toMemrefOp.tensor()) ||
+            state.getOptions().allowUnknownOps) &&
+           "expected that tensor is mapped");
 
     return success();
   }
@@ -98,8 +88,6 @@ struct ToTensorOpInterface
                                                     bufferization::ToTensorOp> {
   LogicalResult bufferize(Operation *op, OpBuilder &b,
                           BufferizationState &state) const {
-    auto tensorLoadOp = cast<bufferization::ToTensorOp>(op);
-    state.mapBuffer(tensorLoadOp.result(), tensorLoadOp.memref());
     return success();
   }
 

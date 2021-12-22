@@ -1372,7 +1372,7 @@ TEST(LocateSymbol, Alias) {
 
       R"cpp(
       namespace ns { class [[Foo]] {}; }
-      using ns::Foo;
+      using ns::[[Foo]];
       F^oo f;
     )cpp",
 

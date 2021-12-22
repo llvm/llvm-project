@@ -248,6 +248,7 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::ContextualFoldingSet<TemplateSpecializationType, ASTContext&>
     TemplateSpecializationTypes;
   mutable llvm::FoldingSet<ParenType> ParenTypes;
+  mutable llvm::FoldingSet<UsingType> UsingTypes;
   mutable llvm::FoldingSet<ElaboratedType> ElaboratedTypes;
   mutable llvm::FoldingSet<DependentNameType> DependentNameTypes;
   mutable llvm::ContextualFoldingSet<DependentTemplateSpecializationType,
@@ -1555,6 +1556,9 @@ public:
     return getTypeDeclTypeSlow(Decl);
   }
 
+  QualType getUsingType(const UsingShadowDecl *Found,
+                        QualType Underlying) const;
+
   /// Return the unique reference to the type for the specified
   /// typedef-name decl.
   QualType getTypedefType(const TypedefNameDecl *Decl,
@@ -1563,6 +1567,9 @@ public:
   QualType getRecordType(const RecordDecl *Decl) const;
 
   QualType getEnumType(const EnumDecl *Decl) const;
+
+  QualType
+  getUnresolvedUsingType(const UnresolvedUsingTypenameDecl *Decl) const;
 
   QualType getInjectedClassNameType(CXXRecordDecl *Decl, QualType TST) const;
 

@@ -87,7 +87,7 @@ TEST(DWARFDie, getLocations) {
       Die.getLocations(DW_AT_vtable_elem_location),
       Failed<ErrorInfoBase>(testing::Property(
           &ErrorInfoBase::message,
-          "Unable to resolve indirect address 1 for: DW_LLE_startx_length")));
+          "unable to resolve indirect address 1 for: DW_LLE_startx_length")));
 
   EXPECT_THAT_EXPECTED(
       Die.getLocations(DW_AT_call_data_location),

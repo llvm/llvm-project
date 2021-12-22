@@ -86,7 +86,7 @@ entry:
 }
 
 ; CHECK-LABEL: pass_integrals0:
-; CHECK: ag  2, -{{[0-9]+}}(4)
+; CHECK: ag  2, 2328(4)
 ; CHECK-NEXT: lgr 3, 2
 define signext i64 @pass_integrals0(i64 signext %arg0, i32 signext %arg1, i16 signext %arg2, i64 signext %arg3) {
 entry:

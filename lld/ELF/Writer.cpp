@@ -752,10 +752,9 @@ template <class ELFT> void Writer<ELFT>::addSectionSymbols() {
     // Set the symbol to be relative to the output section so that its st_value
     // equals the output section address. Note, there may be a gap between the
     // start of the output section and isec.
-    auto *sym =
-        make<Defined>(isec->file, "", STB_LOCAL, /*stOther=*/0, STT_SECTION,
-                      /*value=*/0, /*size=*/0, isec->getOutputSection());
-    in.symTab->addSymbol(sym);
+    in.symTab->addSymbol(
+        makeDefined(isec->file, "", STB_LOCAL, /*stOther=*/0, STT_SECTION,
+                    /*value=*/0, /*size=*/0, isec->getOutputSection()));
   }
 }
 
@@ -2894,6 +2893,8 @@ template <class ELFT> void Writer<ELFT>::writeTrapInstr() {
 
 // Write section contents to a mmap'ed file.
 template <class ELFT> void Writer<ELFT>::writeSections() {
+  llvm::TimeTraceScope timeScope("Write sections");
+
   // In -r or --emit-relocs mode, write the relocation sections first as in
   // ELf_Rel targets we might find out that we need to modify the relocated
   // section while doing it.

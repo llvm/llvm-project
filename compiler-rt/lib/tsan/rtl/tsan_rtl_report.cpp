@@ -193,7 +193,7 @@ void ScopedReportBase::AddMemoryAccess(uptr addr, uptr external_tag, Shadow s,
     mop->stack->suppressable = true;
   for (uptr i = 0; i < mset->Size(); i++) {
     MutexSet::Desc d = mset->Get(i);
-    u64 id = this->AddMutex(d.addr, d.stack_id);
+    int id = this->AddMutex(d.addr, d.stack_id);
     ReportMopMutex mtx = {id, d.write};
     mop->mset.PushBack(mtx);
   }
@@ -270,7 +270,6 @@ int ScopedReportBase::AddMutex(uptr addr, StackID creation_stack_id) {
   rep_->mutexes.PushBack(rm);
   rm->id = rep_->mutexes.Size() - 1;
   rm->addr = addr;
-  rm->destroyed = false;
   rm->stack = SymbolizeStackId(creation_stack_id);
   return rm->id;
 }
@@ -729,27 +728,6 @@ static bool IsFiredSuppression(Context *ctx, ReportType type, uptr addr) {
   return false;
 }
 
-// We need to lock the target slot during RestoreStack because it protects
-// the slot journal. However, the target slot can be the slot of the current
-// thread or a different slot.
-SlotPairLocker::SlotPairLocker(ThreadState *thr,
-                               Sid sid) NO_THREAD_SAFETY_ANALYSIS : thr_(thr),
-                                                                    slot_() {
-  CHECK_NE(sid, kFreeSid);
-  Lock l(&ctx->multi_slot_mtx);
-  SlotLock(thr);
-  if (sid == thr->slot->sid)
-    return;
-  slot_ = &ctx->slots[static_cast<uptr>(sid)];
-  slot_->mtx.Lock();
-}
-
-SlotPairLocker::~SlotPairLocker() NO_THREAD_SAFETY_ANALYSIS {
-  SlotUnlock(thr_);
-  if (slot_)
-    slot_->mtx.Unlock();
-}
-
 void ReportRace(ThreadState *thr, RawShadow *shadow_mem, Shadow cur, Shadow old,
                 AccessType typ0) {
   CheckedMutex::CheckNoLocks();
@@ -806,7 +784,9 @@ void ReportRace(ThreadState *thr, RawShadow *shadow_mem, Shadow cur, Shadow old,
   DynamicMutexSet mset1;
   MutexSet *mset[kMop] = {&thr->mset, mset1};
 
-  SlotPairLocker locker(thr, s[1].sid());
+  // We need to lock the slot during RestoreStack because it protects
+  // the slot journal.
+  Lock slot_lock(&ctx->slots[static_cast<uptr>(s[1].sid())].mtx);
   ThreadRegistryLock l0(&ctx->thread_registry);
   Lock slots_lock(&ctx->slot_mtx);
   if (!RestoreStack(EventType::kAccessExt, s[1].sid(), s[1].epoch(), addr1,

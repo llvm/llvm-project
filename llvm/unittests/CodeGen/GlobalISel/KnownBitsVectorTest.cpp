@@ -201,10 +201,11 @@ TEST_F(AArch64GISelMITest, TestKnownBitsVectorDecreasingCstPHIWithLoop) {
    %10:_(s8) = G_CONSTANT i8 5
    %11:_(<2 x s8>) = G_BUILD_VECTOR %10:_(s8), %10:_(s8)
    %12:_(s8) = G_CONSTANT i8 1
+   %16:_(<2 x s8>) = G_BUILD_VECTOR %12:_(s8), %12:_(s8)
 
    bb.12:
    %13:_(<2 x s8>) = PHI %11(<2 x s8>), %bb.10, %14(<2 x s8>), %bb.12
-   %14:_(<2 x s8>) = G_LSHR %13, %12
+   %14:_(<2 x s8>) = G_LSHR %13, %16
    %15:_(<2 x s8>) = COPY %14
    G_BR %bb.12
 )";

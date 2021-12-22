@@ -51,7 +51,7 @@ int main(int, char**) {
   {
     int buf[8] = {1, 2, 3, 4, 5, 6, 7, 8};
 
-    using CommonForwardIter = std::common_iterator<ForwardIter, sentinel_wrapper<ForwardIter>>;
+    using CommonForwardIter = std::common_iterator<ForwardIter, sized_sentinel<ForwardIter>>;
     using CommonIntIter = std::common_iterator<int*, sentinel_wrapper<int*>>;
 
     {

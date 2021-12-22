@@ -94,10 +94,16 @@ using namespace llvm;
   llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
 #include "llvm/Support/Extension.def"
 
+namespace llvm {
+extern cl::opt<bool> DebugInfoCorrelate;
+}
+
 namespace {
 
 // Default filename used for profile generation.
-static constexpr StringLiteral DefaultProfileGenName = "default_%m.profraw";
+std::string getDefaultProfileGenName() {
+  return DebugInfoCorrelate ? "default_%p.proflite" : "default_%m.profraw";
+}
 
 class EmitAssemblyHelper {
   DiagnosticsEngine &Diags;
@@ -640,6 +646,7 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
   Options.MCOptions.Argv0 = CodeGenOpts.Argv0;
   Options.MCOptions.CommandLineArgs = CodeGenOpts.CommandLineArgs;
   Options.DebugStrictDwarf = CodeGenOpts.DebugStrictDwarf;
+  Options.ObjectFilenameForDebug = CodeGenOpts.ObjectFilenameForDebug;
 
   return true;
 }
@@ -886,7 +893,7 @@ void EmitAssemblyHelper::CreatePasses(legacy::PassManager &MPM,
     if (!CodeGenOpts.InstrProfileOutput.empty())
       PMBuilder.PGOInstrGen = CodeGenOpts.InstrProfileOutput;
     else
-      PMBuilder.PGOInstrGen = std::string(DefaultProfileGenName);
+      PMBuilder.PGOInstrGen = getDefaultProfileGenName();
   }
   if (CodeGenOpts.hasProfileIRUse()) {
     PMBuilder.PGOInstrUse = CodeGenOpts.ProfileInstrumentUsePath;
@@ -1231,7 +1238,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
   if (CodeGenOpts.hasProfileIRInstr())
     // -fprofile-generate.
     PGOOpt = PGOOptions(CodeGenOpts.InstrProfileOutput.empty()
-                            ? std::string(DefaultProfileGenName)
+                            ? getDefaultProfileGenName()
                             : CodeGenOpts.InstrProfileOutput,
                         "", "", PGOOptions::IRInstr, PGOOptions::NoCSAction,
                         CodeGenOpts.DebugInfoForProfiling);
@@ -1269,13 +1276,13 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
              "Cannot run CSProfileGen pass with ProfileGen or SampleUse "
              " pass");
       PGOOpt->CSProfileGenFile = CodeGenOpts.InstrProfileOutput.empty()
-                                     ? std::string(DefaultProfileGenName)
+                                     ? getDefaultProfileGenName()
                                      : CodeGenOpts.InstrProfileOutput;
       PGOOpt->CSAction = PGOOptions::CSIRInstr;
     } else
       PGOOpt = PGOOptions("",
                           CodeGenOpts.InstrProfileOutput.empty()
-                              ? std::string(DefaultProfileGenName)
+                              ? getDefaultProfileGenName()
                               : CodeGenOpts.InstrProfileOutput,
                           "", PGOOptions::NoAction, PGOOptions::CSIRInstr,
                           CodeGenOpts.DebugInfoForProfiling);
@@ -1577,7 +1584,8 @@ static void runThinLTOBackend(
     return;
 
   auto AddStream = [&](size_t Task) {
-    return std::make_unique<CachedFileStream>(std::move(OS));
+    return std::make_unique<CachedFileStream>(std::move(OS),
+                                              CGOpts.ObjectFilenameForDebug);
   };
   lto::Config Conf;
   if (CGOpts.SaveTempsFilePrefix != "") {

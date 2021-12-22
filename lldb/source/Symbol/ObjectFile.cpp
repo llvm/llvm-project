@@ -23,6 +23,8 @@
 #include "lldb/Utility/Timer.h"
 #include "lldb/lldb-private.h"
 
+#include "llvm/Support/DJB.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -737,13 +739,24 @@ Symtab *ObjectFile::GetSymtab() {
     // not be able to access the symbol table contents since all APIs in Symtab
     // are protected by a mutex in the Symtab object itself.
     llvm::call_once(*m_symtab_once_up, [&]() {
-       ElapsedTime elapsed(module_sp->GetSymtabParseTime());
-       Symtab *symtab = new Symtab(this);
-       std::lock_guard<std::recursive_mutex> symtab_guard(symtab->GetMutex());
-       m_symtab_up.reset(symtab);
-       ParseSymtab(*m_symtab_up);
-       m_symtab_up->Finalize();
+      Symtab *symtab = new Symtab(this);
+      std::lock_guard<std::recursive_mutex> symtab_guard(symtab->GetMutex());
+      m_symtab_up.reset(symtab);
+      if (!m_symtab_up->LoadFromCache()) {
+        ElapsedTime elapsed(module_sp->GetSymtabParseTime());
+        ParseSymtab(*m_symtab_up);
+        m_symtab_up->Finalize();
+      }
     });
   }
   return m_symtab_up.get();
+}
+
+uint32_t ObjectFile::GetCacheHash() {
+  if (m_cache_hash)
+    return *m_cache_hash;
+  StreamString strm;
+  strm.Format("{0}-{1}-{2}", m_file, GetType(), GetStrata());
+  m_cache_hash = llvm::djbHash(strm.GetString());
+  return *m_cache_hash;
 }

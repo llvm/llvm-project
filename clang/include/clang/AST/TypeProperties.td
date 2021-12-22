@@ -358,7 +358,20 @@ let Class = UnresolvedUsingType in {
   }
 
   def : Creator<[{
-    return ctx.getTypeDeclType(cast<UnresolvedUsingTypenameDecl>(declaration));
+    return ctx.getUnresolvedUsingType(cast<UnresolvedUsingTypenameDecl>(declaration));
+  }]>;
+}
+
+let Class = UsingType in {
+  def : Property<"foundDeclaration", UsingShadowDeclRef> {
+    let Read = [{ node->getFoundDecl() }];
+  }
+  def : Property<"underlyingType", QualType> {
+    let Read = [{ node->getUnderlyingType() }];
+  }
+
+  def : Creator<[{
+    return ctx.getUsingType(foundDeclaration, underlyingType);
   }]>;
 }
 

@@ -945,6 +945,12 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       return false;
     break;
 
+  case Type::Using:
+    if (!IsStructurallyEquivalent(Context, cast<UsingType>(T1)->getFoundDecl(),
+                                  cast<UsingType>(T2)->getFoundDecl()))
+      return false;
+    break;
+
   case Type::Typedef:
     if (!IsStructurallyEquivalent(Context, cast<TypedefType>(T1)->getDecl(),
                                   cast<TypedefType>(T2)->getDecl()))

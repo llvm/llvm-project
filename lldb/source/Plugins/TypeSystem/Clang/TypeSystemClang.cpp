@@ -2581,6 +2581,7 @@ RemoveWrappingTypes(QualType type, ArrayRef<clang::Type::TypeClass> mask = {}) {
     case clang::Type::Typedef:
     case clang::Type::TypeOf:
     case clang::Type::TypeOfExpr:
+    case clang::Type::Using:
       type = type->getLocallyUnqualifiedSingleStepDesugaredType();
       break;
     default:
@@ -4063,6 +4064,7 @@ TypeSystemClang::GetTypeClass(lldb::opaque_compiler_type_t type) {
   case clang::Type::Paren:
   case clang::Type::TypeOf:
   case clang::Type::TypeOfExpr:
+  case clang::Type::Using:
     llvm_unreachable("Handled in RemoveWrappingTypes!");
   case clang::Type::UnaryTransform:
     break;
@@ -4722,6 +4724,7 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
   case clang::Type::Typedef:
   case clang::Type::TypeOf:
   case clang::Type::TypeOfExpr:
+  case clang::Type::Using:
     llvm_unreachable("Handled in RemoveWrappingTypes!");
 
   case clang::Type::UnaryTransform:
@@ -5104,6 +5107,7 @@ lldb::Format TypeSystemClang::GetFormat(lldb::opaque_compiler_type_t type) {
   case clang::Type::Typedef:
   case clang::Type::TypeOf:
   case clang::Type::TypeOfExpr:
+  case clang::Type::Using:
     llvm_unreachable("Handled in RemoveWrappingTypes!");
   case clang::Type::UnaryTransform:
     break;

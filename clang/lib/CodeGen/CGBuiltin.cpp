@@ -4505,6 +4505,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   }
   case Builtin::BI__builtin_addressof:
     return RValue::get(EmitLValue(E->getArg(0)).getPointer(*this));
+  case Builtin::BI__builtin_function_start:
+    return RValue::get(CGM.GetFunctionStart(
+        E->getArg(0)->getAsBuiltinConstantDeclRef(CGM.getContext())));
   case Builtin::BI__builtin_operator_new:
     return EmitBuiltinNewDeleteCall(
         E->getCallee()->getType()->castAs<FunctionProtoType>(), E, false);
@@ -18023,7 +18026,7 @@ RValue CodeGenFunction::EmitBuiltinAlignTo(const CallExpr *E, bool AlignUp) {
     if (getLangOpts().isSignedOverflowDefined())
       Result = Builder.CreateGEP(Int8Ty, Base, Difference, "aligned_result");
     else
-      Result = EmitCheckedInBoundsGEP(Base, Difference,
+      Result = EmitCheckedInBoundsGEP(Int8Ty, Base, Difference,
                                       /*SignedIndices=*/true,
                                       /*isSubtraction=*/!AlignUp,
                                       E->getExprLoc(), "aligned_result");

@@ -152,4 +152,22 @@ def MemRefDataFlowOpt : FunctionPass<"fir-memref-dataflow-opt"> {
   ];
 }
 
+def MemoryAllocationOpt : Pass<"memory-allocation-opt", "mlir::FuncOp"> {
+  let summary = "Convert stack to heap allocations and vice versa.";
+  let description = [{
+    Convert stack allocations to heap allocations and vice versa based on
+    estimated size, lifetime, usage patterns, the call tree, etc.
+  }];
+  let dependentDialects = [ "fir::FIROpsDialect" ];
+  let options = [
+    Option<"dynamicArrayOnHeap", "dynamic-array-on-heap",
+           "bool", /*default=*/"false",
+           "Allocate all arrays with runtime determined size on heap.">,
+    Option<"maxStackArraySize", "maximum-array-alloc-size",
+           "std::size_t", /*default=*/"~static_cast<std::size_t>(0)",
+           "Set maximum number of elements of an array allocated on the stack.">
+  ];
+  let constructor = "::fir::createMemoryAllocationPass()";
+}
+
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES

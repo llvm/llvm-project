@@ -62,6 +62,7 @@ public:
   std::string ABIName;
   std::string AssemblyLanguage;
   std::string SplitDwarfFile;
+  std::string COFFOutputFilename;
 
   const char *Argv0 = nullptr;
   ArrayRef<const char *> CommandLineArgs;

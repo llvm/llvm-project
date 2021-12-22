@@ -29,6 +29,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 
@@ -104,14 +105,12 @@ public:
     /// Vectorize loops using scalable vectors or fixed-width vectors, but favor
     /// scalable vectors when the cost-model is inconclusive. This is the
     /// default when the scalable.enable hint is enabled through a pragma.
-    SK_PreferScalable = 1,
-    /// Vectorize loops using scalable vectors or fixed-width  vectors, but
-    /// favor fixed-width vectors when the cost is inconclusive.
-    SK_PreferFixedWidth = 2,
+    SK_PreferScalable = 1
   };
 
   LoopVectorizeHints(const Loop *L, bool InterleaveOnlyWhenForced,
-                     OptimizationRemarkEmitter &ORE);
+                     OptimizationRemarkEmitter &ORE,
+                     const TargetTransformInfo *TTI = nullptr);
 
   /// Mark the loop L as already vectorized by setting the width to 1.
   void setAlreadyVectorized();
@@ -123,9 +122,10 @@ public:
   void emitRemarkWithHints() const;
 
   ElementCount getWidth() const {
-    return ElementCount::get(Width.Value,
-                             isScalableVectorizationExplicitlyEnabled());
+    return ElementCount::get(Width.Value, (ScalableForceKind)Scalable.Value ==
+                                              SK_PreferScalable);
   }
+
   unsigned getInterleave() const {
     if (Interleave.Value)
       return Interleave.Value;
@@ -144,22 +144,9 @@ public:
     return (ForceKind)Force.Value;
   }
 
-  /// \return true if the cost-model for scalable vectorization should
-  /// favor vectorization with scalable vectors over fixed-width vectors when
-  /// the cost-model is inconclusive.
-  bool isScalableVectorizationPreferred() const {
-    return Scalable.Value == SK_PreferScalable;
-  }
-
-  /// \return true if scalable vectorization has been explicitly enabled.
-  bool isScalableVectorizationExplicitlyEnabled() const {
-    return Scalable.Value == SK_PreferFixedWidth ||
-           Scalable.Value == SK_PreferScalable;
-  }
-
   /// \return true if scalable vectorization has been explicitly disabled.
   bool isScalableVectorizationDisabled() const {
-    return Scalable.Value == SK_FixedWidthOnly;
+    return (ScalableForceKind)Scalable.Value == SK_FixedWidthOnly;
   }
 
   /// If hints are provided that force vectorization, use the AlwaysPrint

@@ -338,29 +338,6 @@ class VALUVs2<bits<6> funct6, bits<5> vs1, RISCVVFormat opv, string opcodestr>
                opcodestr, "$vd, $vs2$vm">;
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
-let hasSideEffects = 0, mayLoad = 1, mayStore = 1 in {
-// vamo vd, (rs1), vs2, vd, vm
-class VAMOWd<RISCVAMOOP amoop, RISCVWidth width, string opcodestr>
-    : RVInstVAMO<amoop, width.Value{2-0}, (outs VR:$vd_wd),
-            (ins GPR:$rs1, VR:$vs2, VR:$vd, VMaskOp:$vm),
-            opcodestr, "$vd_wd, (${rs1}), $vs2, $vd$vm"> {
-    let Constraints = "$vd_wd = $vd";
-    let wd = 1;
-    bits<5> vd;
-    let Inst{11-7} = vd;
-}
-
-// vamo x0, (rs1), vs2, vs3, vm
-class VAMONoWd<RISCVAMOOP amoop, RISCVWidth width, string opcodestr>
-    : RVInstVAMO<amoop, width.Value{2-0}, (outs),
-            (ins GPR:$rs1, VR:$vs2, VR:$vs3, VMaskOp:$vm),
-            opcodestr, "x0, (${rs1}), $vs2, $vs3$vm"> {
-    bits<5> vs3;
-    let Inst{11-7} = vs3;
-}
-
-} // hasSideEffects = 0, mayLoad = 1, mayStore = 1
-
 //===----------------------------------------------------------------------===//
 // Combination of instruction classes.
 // Use these multiclasses to define instructions more easily.
@@ -779,11 +756,6 @@ multiclass VCPR_MV_Mask<string opcodestr, bits<6> funct6, string vm = "v"> {
            Sched<[WriteVCompressV, ReadVCompressV, ReadVCompressV]>;
 }
 
-multiclass VAMO<RISCVAMOOP amoop, RISCVWidth width, string opcodestr> {
-  def _WD : VAMOWd<amoop, width, opcodestr>;
-  def _UNWD : VAMONoWd<amoop, width, opcodestr>;
-}
-
 multiclass VWholeLoadN<bits<3> nf, string opcodestr, RegisterClass VRC> {
   foreach l = [8, 16, 32, 64] in {
     defvar w = !cast<RISCVWidth>("LSWidth" # l);
@@ -822,7 +794,7 @@ foreach eew = [8, 16, 32, 64] in {
   // Vector Strided Instructions
   def VLSE#eew#_V  : VStridedLoad<w,  "vlse"#eew#".v">, VLSSched<eew>;
   def VSSE#eew#_V  : VStridedStore<w,  "vsse"#eew#".v">, VSSSched<eew>;
-  
+
   // Vector Indexed Instructions
   def VLUXEI#eew#_V :
     VIndexedLoad<MOPLDIndexedUnord, w, "vluxei"#eew#".v">, VLXSched<eew, "U">;
@@ -1416,13 +1388,20 @@ defm VCOMPRESS_V : VCPR_MV_Mask<"vcompress", 0b010111>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0,
     RVVConstraint = NoConstraint in {
-foreach n = [1, 2, 4, 8] in {
-  def VMV#n#R_V  : RVInstV<0b100111, !add(n, -1), OPIVI, (outs VR:$vd),
-                           (ins VR:$vs2), "vmv" # n # "r.v", "$vd, $vs2">,
-                   VMVRSched<n> {
+def VMV1R_V  : RVInstV<0b100111, 0, OPIVI, (outs VR:$vd), (ins VR:$vs2),
+                       "vmv1r.v", "$vd, $vs2">, VMVRSched<1> {
   let Uses = [];
   let vm = 1;
 }
+// A future extension may relax the vector register alignment restrictions.
+foreach n = [2, 4, 8] in {
+  defvar vrc = !cast<VReg>("VRM"#n);
+  def VMV#n#R_V  : RVInstV<0b100111, !add(n, -1), OPIVI, (outs vrc:$vd),
+                           (ins vrc:$vs2), "vmv" # n # "r.v", "$vd, $vs2">,
+                   VMVRSched<n> {
+    let Uses = [];
+    let vm = 1;
+  }
 }
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 } // Predicates = [HasStdExtV]
@@ -1461,32 +1440,5 @@ let Predicates = [HasStdExtZvlsseg] in {
     }
   }
 } // Predicates = [HasStdExtZvlsseg]
-
-let Predicates = [HasStdExtZvamo, HasStdExtA] in {
-  foreach eew = [8, 16, 32] in {
-    defvar w = !cast<RISCVWidth>("LSWidth"#eew);
-    defm VAMOSWAPEI#eew : VAMO<AMOOPVamoSwap, w, "vamoswapei"#eew#".v">;
-    defm VAMOADDEI#eew : VAMO<AMOOPVamoAdd, w, "vamoaddei"#eew#".v">;
-    defm VAMOXOREI#eew : VAMO<AMOOPVamoXor, w, "vamoxorei"#eew#".v">;
-    defm VAMOANDEI#eew : VAMO<AMOOPVamoAnd, w, "vamoandei"#eew#".v">;
-    defm VAMOOREI#eew : VAMO<AMOOPVamoOr, w, "vamoorei"#eew#".v">;
-    defm VAMOMINEI#eew : VAMO<AMOOPVamoMin, w, "vamominei"#eew#".v">;
-    defm VAMOMAXEI#eew : VAMO<AMOOPVamoMax, w, "vamomaxei"#eew#".v">;
-    defm VAMOMINUEI#eew : VAMO<AMOOPVamoMinu, w, "vamominuei"#eew#".v">;
-    defm VAMOMAXUEI#eew : VAMO<AMOOPVamoMaxu, w, "vamomaxuei"#eew#".v">;
-  }
-} // Predicates = [HasStdExtZvamo, HasStdExtA]
-
-let Predicates = [HasStdExtZvamo, HasStdExtA, IsRV64] in {
-  defm VAMOSWAPEI64 : VAMO<AMOOPVamoSwap, LSWidth64, "vamoswapei64.v">;
-  defm VAMOADDEI64 : VAMO<AMOOPVamoAdd, LSWidth64, "vamoaddei64.v">;
-  defm VAMOXOREI64 : VAMO<AMOOPVamoXor, LSWidth64, "vamoxorei64.v">;
-  defm VAMOANDEI64 : VAMO<AMOOPVamoAnd, LSWidth64, "vamoandei64.v">;
-  defm VAMOOREI64 : VAMO<AMOOPVamoOr, LSWidth64, "vamoorei64.v">;
-  defm VAMOMINEI64 : VAMO<AMOOPVamoMin, LSWidth64, "vamominei64.v">;
-  defm VAMOMAXEI64 : VAMO<AMOOPVamoMax, LSWidth64, "vamomaxei64.v">;
-  defm VAMOMINUEI64 : VAMO<AMOOPVamoMinu, LSWidth64, "vamominuei64.v">;
-  defm VAMOMAXUEI64 : VAMO<AMOOPVamoMaxu, LSWidth64, "vamomaxuei64.v">;
-} // Predicates = [HasStdExtZvamo, HasStdExtA, IsRV64]
 
 include "RISCVInstrInfoVPseudos.td"

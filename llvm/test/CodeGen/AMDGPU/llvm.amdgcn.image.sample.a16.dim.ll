@@ -461,7 +461,7 @@ main_body:
   ret <4 x float> %v
 }
 
-define amdgpu_ps <4 x float> @sample_b_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %bias, half %s) {
+define amdgpu_ps <4 x float> @sample_b_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %bias, half %s) {
 ; GFX9-LABEL: sample_b_1d:
 ; GFX9:       ; %bb.0: ; %main_body
 ; GFX9-NEXT:    s_mov_b64 s[12:13], exec
@@ -490,11 +490,11 @@ define amdgpu_ps <4 x float> @sample_b_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.b.1d.v4f32.f32.f16(i32 15, float %bias, half %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.b.1d.v4f32.f16.f16(i32 15, half %bias, half %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
 }
 
-define amdgpu_ps <4 x float> @sample_b_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %bias, half %s, half %t) {
+define amdgpu_ps <4 x float> @sample_b_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %bias, half %s, half %t) {
 ; GFX9-LABEL: sample_b_2d:
 ; GFX9:       ; %bb.0: ; %main_body
 ; GFX9-NEXT:    s_mov_b64 s[12:13], exec
@@ -529,11 +529,11 @@ define amdgpu_ps <4 x float> @sample_b_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.b.2d.v4f32.f32.f16(i32 15, float %bias, half %s, half %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.b.2d.v4f32.f16.f16(i32 15, half %bias, half %s, half %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
 }
 
-define amdgpu_ps <4 x float> @sample_c_b_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %bias, float %zcompare, half %s) {
+define amdgpu_ps <4 x float> @sample_c_b_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %bias, float %zcompare, half %s) {
 ; GFX9-LABEL: sample_c_b_1d:
 ; GFX9:       ; %bb.0: ; %main_body
 ; GFX9-NEXT:    s_mov_b64 s[12:13], exec
@@ -562,11 +562,11 @@ define amdgpu_ps <4 x float> @sample_c_b_1d(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.c.b.1d.v4f32.f32.f16(i32 15, float %bias, float %zcompare, half %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.c.b.1d.v4f32.f16.f16(i32 15, half %bias, float %zcompare, half %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
 }
 
-define amdgpu_ps <4 x float> @sample_c_b_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %bias, float %zcompare, half %s, half %t) {
+define amdgpu_ps <4 x float> @sample_c_b_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %bias, float %zcompare, half %s, half %t) {
 ; GFX9-LABEL: sample_c_b_2d:
 ; GFX9:       ; %bb.0: ; %main_body
 ; GFX9-NEXT:    s_mov_b64 s[12:13], exec
@@ -601,11 +601,11 @@ define amdgpu_ps <4 x float> @sample_c_b_2d(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.c.b.2d.v4f32.f32.f16(i32 15, float %bias, float %zcompare, half %s, half %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.c.b.2d.v4f32.f16.f16(i32 15, half %bias, float %zcompare, half %s, half %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
 }
 
-define amdgpu_ps <4 x float> @sample_b_cl_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %bias, half %s, half %clamp) {
+define amdgpu_ps <4 x float> @sample_b_cl_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %bias, half %s, half %clamp) {
 ; GFX9-LABEL: sample_b_cl_1d:
 ; GFX9:       ; %bb.0: ; %main_body
 ; GFX9-NEXT:    s_mov_b64 s[12:13], exec
@@ -640,11 +640,11 @@ define amdgpu_ps <4 x float> @sample_b_cl_1d(<8 x i32> inreg %rsrc, <4 x i32> in
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.b.cl.1d.v4f32.f32.f16(i32 15, float %bias, half %s, half %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.b.cl.1d.v4f32.f16.f16(i32 15, half %bias, half %s, half %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
 }
 
-define amdgpu_ps <4 x float> @sample_b_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %bias, half %s, half %t, half %clamp) {
+define amdgpu_ps <4 x float> @sample_b_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %bias, half %s, half %t, half %clamp) {
 ; GFX9-LABEL: sample_b_cl_2d:
 ; GFX9:       ; %bb.0: ; %main_body
 ; GFX9-NEXT:    s_mov_b64 s[12:13], exec
@@ -681,11 +681,11 @@ define amdgpu_ps <4 x float> @sample_b_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> in
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.b.cl.2d.v4f32.f32.f16(i32 15, float %bias, half %s, half %t, half %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.b.cl.2d.v4f32.f16.f16(i32 15, half %bias, half %s, half %t, half %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
 }
 
-define amdgpu_ps <4 x float> @sample_c_b_cl_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %bias, float %zcompare, half %s, half %clamp) {
+define amdgpu_ps <4 x float> @sample_c_b_cl_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %bias, float %zcompare, half %s, half %clamp) {
 ; GFX9-LABEL: sample_c_b_cl_1d:
 ; GFX9:       ; %bb.0: ; %main_body
 ; GFX9-NEXT:    s_mov_b64 s[12:13], exec
@@ -720,11 +720,11 @@ define amdgpu_ps <4 x float> @sample_c_b_cl_1d(<8 x i32> inreg %rsrc, <4 x i32> 
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.c.b.cl.1d.v4f32.f32.f16(i32 15, float %bias, float %zcompare, half %s, half %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.c.b.cl.1d.v4f32.f16.f16(i32 15, half %bias, float %zcompare, half %s, half %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
 }
 
-define amdgpu_ps <4 x float> @sample_c_b_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %bias, float %zcompare, half %s, half %t, half %clamp) {
+define amdgpu_ps <4 x float> @sample_c_b_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %bias, float %zcompare, half %s, half %t, half %clamp) {
 ; GFX9-LABEL: sample_c_b_cl_2d:
 ; GFX9:       ; %bb.0: ; %main_body
 ; GFX9-NEXT:    s_mov_b64 s[12:13], exec
@@ -762,7 +762,7 @@ define amdgpu_ps <4 x float> @sample_c_b_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> 
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.c.b.cl.2d.v4f32.f32.f16(i32 15, float %bias, float %zcompare, half %s, half %t, half %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.c.b.cl.2d.v4f32.f16.f16(i32 15, half %bias, float %zcompare, half %s, half %t, half %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
 }
 
@@ -1441,14 +1441,14 @@ declare <4 x float> @llvm.amdgcn.image.sample.cl.2d.v4f32.f16(i32, half, half, h
 declare <4 x float> @llvm.amdgcn.image.sample.c.cl.1d.v4f32.f16(i32, float, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 declare <4 x float> @llvm.amdgcn.image.sample.c.cl.2d.v4f32.f16(i32, float, half, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
-declare <4 x float> @llvm.amdgcn.image.sample.b.1d.v4f32.f32.f16(i32, float, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.b.2d.v4f32.f32.f16(i32, float, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.b.1d.v4f32.f32.f16(i32, float, float, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.b.2d.v4f32.f32.f16(i32, float, float, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.b.cl.1d.v4f32.f32.f16(i32, float, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.b.cl.2d.v4f32.f32.f16(i32, float, half, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.b.cl.1d.v4f32.f32.f16(i32, float, float, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.b.cl.2d.v4f32.f32.f16(i32, float, float, half, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.b.1d.v4f32.f16.f16(i32, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.b.2d.v4f32.f16.f16(i32, half, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.b.1d.v4f32.f16.f16(i32, half, float, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.b.2d.v4f32.f16.f16(i32, half, float, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.b.cl.1d.v4f32.f16.f16(i32, half, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.b.cl.2d.v4f32.f16.f16(i32, half, half, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.b.cl.1d.v4f32.f16.f16(i32, half, float, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.b.cl.2d.v4f32.f16.f16(i32, half, float, half, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 declare <4 x float> @llvm.amdgcn.image.sample.d.1d.v4f32.f16.f16(i32, half, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 declare <4 x float> @llvm.amdgcn.image.sample.d.2d.v4f32.f16.f16(i32, half, half, half, half, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1

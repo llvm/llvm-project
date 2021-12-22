@@ -1,118 +1,128 @@
 {
-	"name": "vscode-mlir",
-	"displayName": "MLIR",
-	"description": "MLIR Language Extension",
-	"version": "0.0.2",
-	"publisher": "llvm-vs-code-extensions",
-	"homepage": "https://mlir.llvm.org/",
-	"icon": "icon.png",
-	"engines": {
-		"vscode": "^1.52.0"
-	},
-	"categories": [
-		"Programming Languages"
-	],
-	"keywords": [
-		"LLVM",
-		"MLIR"
-	],
-	"activationEvents": [
-		"onLanguage:mlir"
-	],
-	"main": "./out/extension",
-	"scripts": {
-		"vscode:prepublish": "tsc -p ./",
-		"compile": "tsc -watch -p ./",
-		"format": "clang-format -i --glob=\"{src,test}/*.ts\"",
-		"package": "vsce package",
-		"publish": "vsce publish",
-		"git-clang-format": "git-clang-format"
-	},
-	"dependencies": {
-		"chokidar": "3.5.2",
-		"vscode-languageclient": "^5.2.1",
-		"vscode-languageserver-types": "3.16.0"
-	},
-	"devDependencies": {
-		"@types/mocha": "^5.2.0",
-		"@types/node": "^8.0.0",
-		"@types/vscode": "1.52.*",
-		"clang-format": "1.4.0",
-		"tslint": "^5.16.0",
-		"typescript": "^3.5.1",
-		"vsce": "^1.75.0",
-		"vscode-test": "^1.3.0"
-	},
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/llvm/vscode-mlir.git"
-	},
-	"contributes": {
-		"languages": [
-			{
-				"id": "mlir",
-				"aliases": [
-					"MLIR",
-					"mlir"
-				],
-				"extensions": [
-					".mlir"
-				],
-				"configuration": "./language-configuration.json"
-			},
-			{
-				"id": "mlir-injection"
-			}
-		],
-		"grammars": [
-			{
-				"language": "mlir",
-				"scopeName": "source.mlir",
-				"path": "./grammar.json"
-			},
-			{
-				"language": "mlir-injection",
-				"scopeName": "markdown.mlir.codeblock",
-				"path": "markdown-grammar.json",
-				"injectTo": [
-					"text.html.markdown"
-				],
-				"embeddedLanguages": {
-					"meta.embedded.block.mlir": "mlir"
-				}
-			}
-		],
-		"configuration": {
-			"type": "object",
-			"title": "MLIR",
-			"properties": {
-				"mlir.server_path": {
-					"scope": "resource",
-					"type": "string",
-					"description": "The file path of the mlir-lsp-server executable."
-				},
-				"mlir.onSettingsChanged": {
-					"type": "string",
-					"default": "prompt",
-					"description": "Action taken when a setting change requires a server restart to take effect.",
-					"enum": [
-						"prompt",
-						"restart",
-						"ignore"
-					],
-					"enumDescriptions": [
-						"Prompt the user for restarting the server",
-						"Automatically restart the server",
-						"Do nothing"
-					]
-				}
-			}
-		},
-		"commands": [
-			{
-				"command": "mlir.restart",
-				"title": "mlir: Restart language server"
-			}
-		]
-	}
+  "name": "vscode-mlir",
+  "displayName": "MLIR",
+  "description": "MLIR Language Extension",
+  "version": "0.0.3",
+  "publisher": "llvm-vs-code-extensions",
+  "homepage": "https://mlir.llvm.org/",
+  "icon": "icon.png",
+  "engines": {
+    "vscode": "^1.52.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "keywords": [
+    "LLVM",
+    "MLIR"
+  ],
+  "activationEvents": [
+    "onLanguage:mlir"
+  ],
+  "main": "./out/extension",
+  "scripts": {
+    "vscode:prepublish": "tsc -p ./",
+    "compile": "tsc -watch -p ./",
+    "format": "clang-format -i --glob=\"{src,test}/*.ts\"",
+    "package": "vsce package",
+    "publish": "vsce publish",
+    "git-clang-format": "git-clang-format"
+  },
+  "dependencies": {
+    "chokidar": "3.5.2",
+    "vscode-languageclient": "^5.2.1",
+    "vscode-languageserver-types": "3.16.0"
+  },
+  "devDependencies": {
+    "@types/mocha": "^5.2.0",
+    "@types/node": "^8.0.0",
+    "@types/vscode": "1.52.*",
+    "clang-format": "1.4.0",
+    "tslint": "^5.16.0",
+    "typescript": "^3.5.1",
+    "vsce": "^1.75.0",
+    "vscode-test": "^1.3.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/llvm/vscode-mlir.git"
+  },
+  "contributes": {
+    "languages": [
+      {
+        "id": "mlir",
+        "aliases": [
+          "MLIR",
+          "mlir"
+        ],
+        "extensions": [
+          ".mlir"
+        ],
+        "configuration": "./language-configuration.json"
+      },
+      {
+        "id": "mlir-injection"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "mlir",
+        "scopeName": "source.mlir",
+        "path": "./grammar.json"
+      },
+      {
+        "language": "mlir-injection",
+        "scopeName": "markdown.mlir.codeblock",
+        "path": "markdown-grammar.json",
+        "injectTo": [
+          "text.html.markdown"
+        ],
+        "embeddedLanguages": {
+          "meta.embedded.block.mlir": "mlir"
+        }
+      },
+      {
+        "scopeName": "source.cpp.mlir",
+        "path": "./cpp-grammar.json",
+        "injectTo": [
+          "source.cpp"
+        ],
+        "embeddedLanguages": {
+          "source.mlir": "mlir"
+        }
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "MLIR",
+      "properties": {
+        "mlir.server_path": {
+          "scope": "resource",
+          "type": "string",
+          "description": "The file path of the mlir-lsp-server executable."
+        },
+        "mlir.onSettingsChanged": {
+          "type": "string",
+          "default": "prompt",
+          "description": "Action taken when a setting change requires a server restart to take effect.",
+          "enum": [
+            "prompt",
+            "restart",
+            "ignore"
+          ],
+          "enumDescriptions": [
+            "Prompt the user for restarting the server",
+            "Automatically restart the server",
+            "Do nothing"
+          ]
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "mlir.restart",
+        "title": "mlir: Restart language server"
+      }
+    ]
+  }
 }

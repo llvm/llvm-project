@@ -16,6 +16,7 @@
 #include "InputFiles.h"
 #include "InputSection.h"
 #include "lld/Common/LLVM.h"
+#include "lld/Common/Memory.h"
 #include "lld/Common/Strings.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Object/Archive.h"
@@ -85,7 +86,7 @@ public:
   uint32_t globalDynIndex = -1;
 
   // This field is a index to the symbol's version definition.
-  uint32_t verdefIndex = -1;
+  uint16_t verdefIndex = -1;
 
   // Version definition index.
   uint16_t versionId;
@@ -364,7 +365,7 @@ public:
 
   SharedSymbol(InputFile &file, StringRef name, uint8_t binding,
                uint8_t stOther, uint8_t type, uint64_t value, uint64_t size,
-               uint32_t alignment, uint32_t verdefIndex)
+               uint32_t alignment, uint16_t verdefIndex)
       : Symbol(SharedKind, &file, name, binding, stOther, type), value(value),
         size(size), alignment(alignment) {
     this->verdefIndex = verdefIndex;
@@ -486,9 +487,9 @@ union SymbolUnion {
 };
 
 // It is important to keep the size of SymbolUnion small for performance and
-// memory usage reasons. 80 bytes is a soft limit based on the size of Defined
+// memory usage reasons. 72 bytes is a soft limit based on the size of Defined
 // on a 64-bit system.
-static_assert(sizeof(SymbolUnion) <= 80, "SymbolUnion too large");
+static_assert(sizeof(SymbolUnion) <= 72, "SymbolUnion too large");
 
 template <typename T> struct AssertSymbol {
   static_assert(std::is_trivially_destructible<T>(),
@@ -565,15 +566,16 @@ void Symbol::replace(const Symbol &newSym) {
   scriptDefined = old.scriptDefined;
   partition = old.partition;
 
-  // Symbol length is computed lazily. If we already know a symbol length,
-  // propagate it.
-  if (nameData == old.nameData && nameSize == 0 && old.nameSize != 0)
-    nameSize = old.nameSize;
-
   // Print out a log message if --trace-symbol was specified.
   // This is for debugging.
   if (traced)
     printTraceSymbol(this);
+}
+
+template <typename... T> Defined *makeDefined(T &&...args) {
+  return new (reinterpret_cast<Defined *>(
+      getSpecificAllocSingleton<SymbolUnion>().Allocate()))
+      Defined(std::forward<T>(args)...);
 }
 
 void maybeWarnUnorderableSymbol(const Symbol *sym);

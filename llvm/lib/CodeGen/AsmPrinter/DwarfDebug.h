@@ -665,6 +665,12 @@ public:
   void addDwarfTypeUnitType(DwarfCompileUnit &CU, StringRef Identifier,
                             DIE &Die, const DICompositeType *CTy);
 
+  /// Return the type unit signature of \p CTy after finding or creating its
+  /// type unit. Return None if a type unit cannot be created for \p CTy.
+  Optional<uint64_t> getOrCreateDwarfTypeUnit(DwarfCompileUnit &CU,
+                                              StringRef Identifier,
+                                              const DICompositeType *CTy);
+
   class NonTypeUnitContext {
     DwarfDebug *DD;
     decltype(DwarfDebug::TypeUnitsUnderConstruction) TypeUnitsUnderConstruction;

@@ -5,6 +5,8 @@
 # GCN-label: name: vop3
 # GCN: %6:vgpr_32, %7:sreg_32_xm0_xexec = V_SUBBREV_U32_e64_dpp %3, %0, %1, %5, 1, 1, 15, 15, 1, implicit $exec
 # GCN: %8:vgpr_32 = V_CVT_PK_U8_F32_e64_dpp %3, 4, %0, 2, %2, 2, %1, 1, 1, 15, 15, 1, implicit $mode, implicit $exec
+# GCN: %10:vgpr_32 = V_MED3_F32_e64 0, %9, 0, %0, 0, 12345678, 0, 0, implicit $mode, implicit $exec
+# GCN: %12:vgpr_32 = V_MED3_F32_e64 0, %11, 0, 2, 0, %7, 0, 0, implicit $mode, implicit $exec
 name: vop3
 tracksRegLiveness: true
 body:             |
@@ -21,6 +23,14 @@ body:             |
     %6:vgpr_32, %7:sreg_32_xm0_xexec = V_SUBBREV_U32_e64 %4, %1, %5, 1, implicit $exec
 
     %8:vgpr_32 = V_CVT_PK_U8_F32_e64 4, %4, 2, %2, 2, %1, 1, implicit $mode, implicit $exec
+
+    ; should not be combined because src2 literal is illegal
+    %9:vgpr_32 = V_MOV_B32_dpp %3, %1, 1, 15, 15, 1, implicit $exec
+    %10:vgpr_32 = V_MED3_F32_e64 0, %9, 0, %0, 0, 12345678, 0, 0, implicit $mode, implicit $exec
+
+    ; should not be combined because src1 imm is illegal
+    %11:vgpr_32 = V_MOV_B32_dpp %3, %1, 1, 15, 15, 1, implicit $exec
+    %12:vgpr_32 = V_MED3_F32_e64 0, %11, 0, 2, 0, %7, 0, 0, implicit $mode, implicit $exec
 ...
 
 name: vop3p

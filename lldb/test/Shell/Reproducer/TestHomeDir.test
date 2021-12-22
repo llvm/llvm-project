@@ -9,6 +9,4 @@
 
 # RUN: cat %t.repro/home.txt | FileCheck %t.check
 # RUN: %lldb -b -o 'reproducer dump -p home -f %t.repro' | FileCheck %t.check
-
-# RUN: %lldb --replay %t.repro | FileCheck %s
 # CHECK: 95126

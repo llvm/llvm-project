@@ -724,15 +724,14 @@ void FormatManager::LoadSystemFormatters() {
   lldb::TypeSummaryImplSP string_array_format(
       new StringSummaryFormat(string_array_flags, "${var%char[]}"));
 
-  RegularExpression any_size_char_arr(llvm::StringRef("char ?\\[[0-9]+\\]"));
+  RegularExpression any_size_char_arr(R"(^((un)?signed )?char ?\[[0-9]+\]$)");
 
   TypeCategoryImpl::SharedPointer sys_category_sp =
       GetCategory(m_system_category_name);
 
-  sys_category_sp->GetTypeSummariesContainer()->Add(ConstString("char *"),
-                                                    string_format);
-  sys_category_sp->GetTypeSummariesContainer()->Add(
-      ConstString("unsigned char *"), string_format);
+  sys_category_sp->GetRegexTypeSummariesContainer()->Add(
+      RegularExpression(R"(^((un)?signed )?char ?(\*|\[\])$)"), string_format);
+
   sys_category_sp->GetRegexTypeSummariesContainer()->Add(
       std::move(any_size_char_arr), string_array_format);
 

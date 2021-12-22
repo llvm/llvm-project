@@ -652,6 +652,13 @@ public:
     return std::string(std::string(Version.str()));
   }
 
+  /// If the input path is a .dSYM bundle (as created by the dsymutil tool),
+  /// return the paths to the object files found in the bundle, otherwise return
+  /// an empty vector. If the path appears to be a .dSYM bundle but no objects
+  /// were found or there was a filesystem error, then return an error.
+  static Expected<std::vector<std::string>>
+  findDsymObjectMembers(StringRef Path);
+
 private:
   MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian, bool Is64Bits,
                   Error &Err, uint32_t UniversalCputype = 0,

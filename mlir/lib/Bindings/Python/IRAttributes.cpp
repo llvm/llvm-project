@@ -17,7 +17,6 @@ namespace py = pybind11;
 using namespace mlir;
 using namespace mlir::python;
 
-using llvm::None;
 using llvm::Optional;
 using llvm::SmallVector;
 using llvm::Twine;
@@ -510,14 +509,17 @@ public:
     if (mlirTypeIsAF32(elementType)) {
       // f32
       return bufferInfo<float>(shapedType);
-    } else if (mlirTypeIsAF64(elementType)) {
+    }
+    if (mlirTypeIsAF64(elementType)) {
       // f64
       return bufferInfo<double>(shapedType);
-    } else if (mlirTypeIsAF16(elementType)) {
+    }
+    if (mlirTypeIsAF16(elementType)) {
       // f16
       return bufferInfo<uint16_t>(shapedType, "e");
-    } else if (mlirTypeIsAInteger(elementType) &&
-               mlirIntegerTypeGetWidth(elementType) == 32) {
+    }
+    if (mlirTypeIsAInteger(elementType) &&
+        mlirIntegerTypeGetWidth(elementType) == 32) {
       if (mlirIntegerTypeIsSignless(elementType) ||
           mlirIntegerTypeIsSigned(elementType)) {
         // i32
@@ -712,12 +714,12 @@ public:
           SmallVector<MlirNamedAttribute> mlirNamedAttributes;
           mlirNamedAttributes.reserve(attributes.size());
           for (auto &it : attributes) {
-            auto &mlir_attr = it.second.cast<PyAttribute &>();
+            auto &mlirAttr = it.second.cast<PyAttribute &>();
             auto name = it.first.cast<std::string>();
             mlirNamedAttributes.push_back(mlirNamedAttributeGet(
-                mlirIdentifierGet(mlirAttributeGetContext(mlir_attr),
+                mlirIdentifierGet(mlirAttributeGetContext(mlirAttr),
                                   toMlirStringRef(name)),
-                mlir_attr));
+                mlirAttr));
           }
           MlirAttribute attr =
               mlirDictionaryAttrGet(context->get(), mlirNamedAttributes.size(),

@@ -788,6 +788,9 @@ foreach(t ${LLVM_TARGETS_TO_BUILD})
   endif()
 endforeach(t)
 
+# Provide an LLVM_ namespaced alias for use in #cmakedefine.
+set(LLVM_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
+
 # Produce the target definition files, which provide a way for clients to easily
 # include various classes of targets.
 configure_file(

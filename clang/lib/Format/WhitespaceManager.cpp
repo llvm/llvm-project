@@ -1282,9 +1282,12 @@ void WhitespaceManager::generateChanges() {
                                  C.EscapedNewlineColumn);
       else
         appendNewlineText(ReplacementText, C.NewlinesBefore);
+      // FIXME: This assert should hold if we computed the column correctly.
+      // assert((int)C.StartOfTokenColumn >= C.Spaces);
       appendIndentText(
           ReplacementText, C.Tok->IndentLevel, std::max(0, C.Spaces),
-          C.StartOfTokenColumn - std::max(0, C.Spaces), C.IsAligned);
+          std::max((int)C.StartOfTokenColumn, C.Spaces) - std::max(0, C.Spaces),
+          C.IsAligned);
       ReplacementText.append(C.CurrentLinePrefix);
       storeReplacement(C.OriginalWhitespaceRange, ReplacementText);
     }

@@ -375,7 +375,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPURewriteOutArgumentsPass(*PR);
   initializeAMDGPUUnifyMetadataPass(*PR);
   initializeSIAnnotateControlFlowPass(*PR);
-  initializeSIInsertDelayAluPass(*PR);
+  initializeAMDGPUInsertDelayAluPass(*PR);
   initializeSIInsertHardClausesPass(*PR);
   initializeSIInsertWaitcntsPass(*PR);
   initializeSIModeRegisterPass(*PR);
@@ -1427,7 +1427,7 @@ void GCNPassConfig::addPreEmitPass() {
   addPass(&PostRAHazardRecognizerID);
 
   if (EnableInsertDelayAlu && getOptLevel() > CodeGenOpt::None)
-    addPass(&SIInsertDelayAluID);
+    addPass(&AMDGPUInsertDelayAluID);
 
   addPass(&BranchRelaxationPassID);
 }

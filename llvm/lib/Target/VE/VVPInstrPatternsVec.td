@@ -100,6 +100,14 @@ multiclass Binary_vr_vv<
   defm : Binary_vv<OpNode, DataVT, MaskVT, OpBaseName>;
 }
 
+multiclass Binary_rv_vr_vv<
+    SDPatternOperator OpNode,
+    ValueType ScalarVT, ValueType DataVT, ValueType MaskVT,
+    string OpBaseName> {
+  defm : Binary_rv<OpNode, ScalarVT, DataVT, MaskVT, OpBaseName>;
+  defm : Binary_vr_vv<OpNode, ScalarVT, DataVT, MaskVT, OpBaseName>;
+}
+
 // Expand both 64bit and 32 bit variant (256 elements)
 multiclass Binary_rv_vv_ShortLong<
     SDPatternOperator OpNode,
@@ -125,6 +133,18 @@ multiclass Binary_vr_vv_ShortLong<
                       ShortOpBaseName>;
 }
 
+multiclass Binary_rv_vr_vv_ShortLong<
+    SDPatternOperator OpNode,
+    ValueType LongScalarVT, ValueType LongDataVT, string LongOpBaseName,
+    ValueType ShortScalarVT, ValueType ShortDataVT, string ShortOpBaseName> {
+  defm : Binary_rv_vr_vv<OpNode,
+                      LongScalarVT, LongDataVT, v256i1,
+                      LongOpBaseName>;
+  defm : Binary_rv_vr_vv<OpNode,
+                      ShortScalarVT, ShortDataVT, v256i1,
+                      ShortOpBaseName>;
+}
+
 defm : Binary_rv_vv_ShortLong<c_vvp_add,
                               i64, v256i64, "VADDSL",
                               i32, v256i32, "VADDSWSX">;
@@ -134,6 +154,12 @@ defm : Binary_rv_vv_ShortLong<vvp_sub,
 defm : Binary_rv_vv_ShortLong<c_vvp_mul,
                               i64, v256i64, "VMULSL",
                               i32, v256i32, "VMULSWSX">;
+defm : Binary_rv_vr_vv_ShortLong<vvp_sdiv,
+                              i64, v256i64, "VDIVSL",
+                              i32, v256i32, "VDIVSWSX">;
+defm : Binary_rv_vr_vv_ShortLong<vvp_udiv,
+                              i64, v256i64, "VDIVUL",
+                              i32, v256i32, "VDIVUW">;
 defm : Binary_rv_vv_ShortLong<c_vvp_and,
                               i64, v256i64, "VAND",
                               i32, v256i32, "PVANDLO">;
@@ -152,3 +178,16 @@ defm : Binary_vr_vv_ShortLong<vvp_sra,
 defm : Binary_vr_vv_ShortLong<vvp_srl,
                               i64, v256i64, "VSRL",
                               i32, v256i32, "PVSRLLO">;
+
+defm : Binary_rv_vv_ShortLong<c_vvp_fadd,
+                              f64, v256f64, "VFADDD",
+                              f32, v256f32, "PVFADDUP">;
+defm : Binary_rv_vv_ShortLong<c_vvp_fmul,
+                              f64, v256f64, "VFMULD",
+                              f32, v256f32, "PVFMULUP">;
+defm : Binary_rv_vv_ShortLong<vvp_fsub,
+                              f64, v256f64, "VFSUBD",
+                              f32, v256f32, "PVFSUBUP">;
+defm : Binary_rv_vr_vv_ShortLong<vvp_fdiv,
+                              f64, v256f64, "VFDIVD",
+                              f32, v256f32, "VFDIVS">;

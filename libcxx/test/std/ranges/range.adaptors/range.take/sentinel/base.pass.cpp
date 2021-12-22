@@ -28,13 +28,13 @@ constexpr bool test() {
 
   {
     const std::ranges::take_view<MoveOnlyView> tv(MoveOnlyView{buffer}, 4);
-    assert(tv.end().base().base() == sw.base());
+    assert(base(tv.end().base()) == base(sw));
     ASSERT_SAME_TYPE(decltype(tv.end().base()), sentinel_wrapper<int *>);
   }
 
   {
     std::ranges::take_view<MoveOnlyView> tv(MoveOnlyView{buffer}, 4);
-    assert(tv.end().base().base() == sw.base());
+    assert(base(tv.end().base()) == base(sw));
     ASSERT_SAME_TYPE(decltype(tv.end().base()), sentinel_wrapper<int *>);
   }
 

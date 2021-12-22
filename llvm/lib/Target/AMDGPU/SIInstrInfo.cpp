@@ -900,8 +900,12 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   unsigned EltSize = 4;
   unsigned Opcode = AMDGPU::V_MOV_B32_e32;
   if (RI.isAGPRClass(RC)) {
-    Opcode = (RI.hasVGPRs(SrcRC)) ?
-      AMDGPU::V_ACCVGPR_WRITE_B32_e64 : AMDGPU::INSTRUCTION_LIST_END;
+    if (ST.hasGFX90AInsts() && RI.isAGPRClass(SrcRC))
+      Opcode = AMDGPU::V_ACCVGPR_MOV_B32;
+    else if (RI.hasVGPRs(SrcRC))
+      Opcode = AMDGPU::V_ACCVGPR_WRITE_B32_e64;
+    else
+      Opcode = AMDGPU::INSTRUCTION_LIST_END;
   } else if (RI.hasVGPRs(RC) && RI.isAGPRClass(SrcRC)) {
     Opcode = AMDGPU::V_ACCVGPR_READ_B32_e64;
   } else if ((Size % 64 == 0) && RI.hasVGPRs(RC) &&
@@ -3184,10 +3188,10 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
                Opc == AMDGPU::V_FMAC_F64_e32 || Opc == AMDGPU::V_FMAC_F64_e64;
   bool IsF64 = Opc == AMDGPU::V_FMAC_F64_e32 || Opc == AMDGPU::V_FMAC_F64_e64;
 
-  bool IsWMMA = false;
-
   switch (Opc) {
   default:
+    if (SIInstrInfo::isWMMA(MI))
+      break;
     return nullptr;
   case AMDGPU::V_MAC_F16_e64:
   case AMDGPU::V_FMAC_F16_e64:
@@ -3213,21 +3217,6 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
     if (Src0->isImm() && !isInlineConstant(MI, Src0Idx, *Src0))
       return nullptr;
 
-    break;
-  }
-  case AMDGPU::V_WMMA_BF16_16X16X16_BF16_twoaddr_w32:
-  case AMDGPU::V_WMMA_BF16_16X16X16_BF16_twoaddr_w64:
-  case AMDGPU::V_WMMA_F16_16X16X16_F16_twoaddr_w32:
-  case AMDGPU::V_WMMA_F16_16X16X16_F16_twoaddr_w64:
-  case AMDGPU::V_WMMA_F32_16X16X16_BF16_twoaddr_w32:
-  case AMDGPU::V_WMMA_F32_16X16X16_BF16_twoaddr_w64:
-  case AMDGPU::V_WMMA_F32_16X16X16_F16_twoaddr_w32:
-  case AMDGPU::V_WMMA_F32_16X16X16_F16_twoaddr_w64:
-  case AMDGPU::V_WMMA_I32_16X16X16_IU4_twoaddr_w32:
-  case AMDGPU::V_WMMA_I32_16X16X16_IU4_twoaddr_w64:
-  case AMDGPU::V_WMMA_I32_16X16X16_IU8_twoaddr_w32:
-  case AMDGPU::V_WMMA_I32_16X16X16_IU8_twoaddr_w64: {
-    IsWMMA = true;
     break;
   }
   }
@@ -3315,7 +3304,7 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
     }
   }
 
-  if (IsWMMA) {
+  if (SIInstrInfo::isWMMA(MI)) {
     unsigned NewOpc = AMDGPU::mapWMMA2AddrTo3AddrOpcode(MI.getOpcode());
     auto NewDest = MachineOperand::CreateReg(Src2->getReg(), true);
     auto NewMI = BuildMI(MBB, MI, MI.getDebugLoc(), get(NewOpc))
@@ -3331,7 +3320,7 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
     return NewMI;
   }
 
-  unsigned NewOpc = IsFMA ? (IsF16 ? AMDGPU::V_FMA_F16_e64
+  unsigned NewOpc = IsFMA ? (IsF16 ? AMDGPU::V_FMA_F16_gfx9_e64
                                    : IsF64 ? AMDGPU::V_FMA_F64_e64
                                            : AMDGPU::V_FMA_F32_e64)
                           : (IsF16 ? AMDGPU::V_MAD_F16_e64 : AMDGPU::V_MAD_F32_e64);
@@ -5087,8 +5076,7 @@ void SIInstrInfo::legalizeOperandsVOP3(MachineRegisterInfo &MRI,
     --ConstantBusLimit;
   }
 
-  for (unsigned i = 0; i < 3; ++i) {
-    int Idx = VOP3Idx[i];
+  for (int Idx : VOP3Idx) {
     if (Idx == -1)
       break;
     MachineOperand &MO = MI.getOperand(Idx);

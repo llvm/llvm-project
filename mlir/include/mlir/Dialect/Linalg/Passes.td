@@ -100,6 +100,12 @@ def LinalgFoldReshapeOpsByLinearization :
   let dependentDialects = ["AffineDialect", "memref::MemRefDialect"];
 }
 
+def LinalgNamedOpConversion: Pass<"linalg-named-op-conversion"> {
+  let summary = "Convert from one named linalg op to another.";
+  let constructor = "mlir::createLinalgNamedOpConversionPass()";
+  let dependentDialects = ["linalg::LinalgDialect", "tensor::TensorDialect"];
+}
+
 def LinalgLowerTiledLoopsToSCF
     : FunctionPass<"convert-linalg-tiled-loops-to-scf"> {
   let summary = "Lower linalg tiled loops to SCF loops and parallel loops";

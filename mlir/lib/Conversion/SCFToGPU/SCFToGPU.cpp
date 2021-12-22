@@ -259,8 +259,8 @@ void AffineLoopToGpuConverter::createLaunch(AffineForOp rootForOp,
   // from 0 to N with step 1.  Therefore, loop induction variables are replaced
   // with (gpu-thread/block-id * S) + LB.
   builder.setInsertionPointToStart(&launchOp.body().front());
-  auto lbArgumentIt = lbs.begin();
-  auto stepArgumentIt = steps.begin();
+  auto *lbArgumentIt = lbs.begin();
+  auto *stepArgumentIt = steps.begin();
   for (auto en : llvm::enumerate(ivs)) {
     Value id =
         en.index() < numBlockDims
@@ -425,9 +425,9 @@ static LogicalResult processParallelLoop(
     return {};
   };
 
-  for (auto config : llvm::zip(mapping, parallelOp.getInductionVars(),
-                               parallelOp.lowerBound(), parallelOp.upperBound(),
-                               parallelOp.step())) {
+  for (auto config : llvm::zip(
+           mapping, parallelOp.getInductionVars(), parallelOp.getLowerBound(),
+           parallelOp.getUpperBound(), parallelOp.getStep())) {
     Attribute mappingAttribute;
     Value iv, lowerBound, upperBound, step;
     std::tie(mappingAttribute, iv, lowerBound, upperBound, step) = config;
@@ -518,7 +518,7 @@ static LogicalResult processParallelLoop(
               loc, arith::CmpIPredicate::slt, newIndex,
               cloningMap.lookupOrDefault(originalBound));
           scf::IfOp ifOp = rewriter.create<scf::IfOp>(loc, pred, false);
-          rewriter.setInsertionPointToStart(&ifOp.thenRegion().front());
+          rewriter.setInsertionPointToStart(&ifOp.getThenRegion().front());
           // Put a sentinel into the worklist so we know when to pop out of the
           // if body again. We use the launchOp here, as that cannot be part of
           // the bodies instruction.
@@ -640,7 +640,7 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
     } else if (op == launchOp.getOperation()) {
       // Found our sentinel value. We have finished the operations from one
       // nesting level, pop one level back up.
-      auto parent = rewriter.getInsertionPoint()->getParentOp();
+      auto *parent = rewriter.getInsertionPoint()->getParentOp();
       rewriter.setInsertionPointAfter(parent);
       leftNestingScope = true;
       seenSideeffects = false;

@@ -234,24 +234,16 @@ static bool isNonVolatileStore(const Instruction *I) {
   return false;
 }
 
-// Returns true if `F` must be an unreachable function.
+// Returns true if the function definition must be unreachable.
 //
 // Note if this helper function returns true, `F` is guaranteed
 // to be unreachable; if it returns false, `F` might still
 // be unreachable but not covered by this helper function.
 static bool mustBeUnreachableFunction(const Function &F) {
-  if (!F.empty()) {
-    const BasicBlock &entryBlock = F.getEntryBlock();
-    // A function must be unreachable if its entry block
-    // ends with an 'unreachable'.
-    if (!entryBlock.empty()) {
-      const Instruction *inst = &(*entryBlock.rbegin());
-      if (inst->getOpcode() == Instruction::Unreachable) {
-        return true;
-      }
-    }
-  }
-  return false;
+  // A function must be unreachable if its entry block ends with an
+  // 'unreachable'.
+  assert(!F.isDeclaration());
+  return isa<UnreachableInst>(F.getEntryBlock().getTerminator());
 }
 
 static void computeFunctionSummary(

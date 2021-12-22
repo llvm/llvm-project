@@ -888,7 +888,7 @@ bool SignalContext::IsTrueFaultingAddress() const {
     (uptr)ptrauth_strip(     \
         (void *)arm_thread_state64_get_##r(ucontext->uc_mcontext->__ss), 0)
 #else
-  #define AARCH64_GET_REG(r) ucontext->uc_mcontext->__ss.__##r
+  #define AARCH64_GET_REG(r) (uptr)ucontext->uc_mcontext->__ss.__##r
 #endif
 
 static void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
@@ -1223,7 +1223,7 @@ uptr MapDynamicShadow(uptr shadow_size_bytes, uptr shadow_scale,
 
   uptr largest_gap_found = 0;
   uptr max_occupied_addr = 0;
-  VReport(2, "FindDynamicShadowStart, space_size = %p\n", space_size);
+  VReport(2, "FindDynamicShadowStart, space_size = %p\n", (void *)space_size);
   uptr shadow_start =
       FindAvailableMemoryRange(space_size, alignment, granularity,
                                &largest_gap_found, &max_occupied_addr);
@@ -1232,20 +1232,21 @@ uptr MapDynamicShadow(uptr shadow_size_bytes, uptr shadow_scale,
     VReport(
         2,
         "Shadow doesn't fit, largest_gap_found = %p, max_occupied_addr = %p\n",
-        largest_gap_found, max_occupied_addr);
+        (void *)largest_gap_found, (void *)max_occupied_addr);
     uptr new_max_vm = RoundDownTo(largest_gap_found << shadow_scale, alignment);
     if (new_max_vm < max_occupied_addr) {
       Report("Unable to find a memory range for dynamic shadow.\n");
       Report(
           "space_size = %p, largest_gap_found = %p, max_occupied_addr = %p, "
           "new_max_vm = %p\n",
-          space_size, largest_gap_found, max_occupied_addr, new_max_vm);
+          (void *)space_size, (void *)largest_gap_found,
+          (void *)max_occupied_addr, (void *)new_max_vm);
       CHECK(0 && "cannot place shadow");
     }
     RestrictMemoryToMaxAddress(new_max_vm);
     high_mem_end = new_max_vm - 1;
     space_size = (high_mem_end >> shadow_scale) + left_padding;
-    VReport(2, "FindDynamicShadowStart, space_size = %p\n", space_size);
+    VReport(2, "FindDynamicShadowStart, space_size = %p\n", (void *)space_size);
     shadow_start = FindAvailableMemoryRange(space_size, alignment, granularity,
                                             nullptr, nullptr);
     if (shadow_start == 0) {
@@ -1325,7 +1326,7 @@ void SignalContext::DumpAllRegisters(void *context) {
 # define DUMPREG64(r) \
     Printf("%s = 0x%016llx  ", #r, ucontext->uc_mcontext->__ss.__ ## r);
 # define DUMPREGA64(r) \
-    Printf("   %s = 0x%016llx  ", #r, AARCH64_GET_REG(r));
+    Printf("   %s = 0x%016lx  ", #r, AARCH64_GET_REG(r));
 # define DUMPREG32(r) \
     Printf("%s = 0x%08x  ", #r, ucontext->uc_mcontext->__ss.__ ## r);
 # define DUMPREG_(r)   Printf(" "); DUMPREG(r);

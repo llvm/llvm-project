@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-vectorize -scalable-vectorization=preferred -prefer-predicate-over-epilogue=predicate-dont-vectorize < %s | FileCheck %s
+; RUN: opt -S -loop-vectorize -prefer-predicate-over-epilogue=predicate-dont-vectorize < %s | FileCheck %s
 
 ; CHECK-NOT: vector.body:
 

@@ -1225,27 +1225,26 @@ void InputSectionBase::adjustSplitStackFunctionPrologues(uint8_t *buf,
 }
 
 template <class ELFT> void InputSection::writeTo(uint8_t *buf) {
-  if (type == SHT_NOBITS)
-    return;
-
   if (auto *s = dyn_cast<SyntheticSection>(this)) {
     s->writeTo(buf + outSecOff);
     return;
   }
 
+  if (LLVM_UNLIKELY(type == SHT_NOBITS))
+    return;
   // If -r or --emit-relocs is given, then an InputSection
   // may be a relocation section.
-  if (type == SHT_RELA) {
+  if (LLVM_UNLIKELY(type == SHT_RELA)) {
     copyRelocations<ELFT>(buf + outSecOff, getDataAs<typename ELFT::Rela>());
     return;
   }
-  if (type == SHT_REL) {
+  if (LLVM_UNLIKELY(type == SHT_REL)) {
     copyRelocations<ELFT>(buf + outSecOff, getDataAs<typename ELFT::Rel>());
     return;
   }
 
   // If -r is given, we may have a SHT_GROUP section.
-  if (type == SHT_GROUP) {
+  if (LLVM_UNLIKELY(type == SHT_GROUP)) {
     copyShtGroup<ELFT>(buf + outSecOff);
     return;
   }
@@ -1365,7 +1364,7 @@ SyntheticSection *MergeInputSection::getParent() const {
 // null-terminated strings.
 void MergeInputSection::splitStrings(ArrayRef<uint8_t> data, size_t entSize) {
   size_t off = 0;
-  bool isAlloc = flags & SHF_ALLOC;
+  const bool live = !(flags & SHF_ALLOC) || !config->gcSections;
   StringRef s = toStringRef(data);
 
   while (!s.empty()) {
@@ -1374,7 +1373,7 @@ void MergeInputSection::splitStrings(ArrayRef<uint8_t> data, size_t entSize) {
       fatal(toString(this) + ": string is not null terminated");
     size_t size = end + entSize;
 
-    pieces.emplace_back(off, xxHash64(s.substr(0, size)), !isAlloc);
+    pieces.emplace_back(off, xxHash64(s.substr(0, size)), live);
     s = s.substr(size);
     off += size;
   }
@@ -1386,10 +1385,11 @@ void MergeInputSection::splitNonStrings(ArrayRef<uint8_t> data,
                                         size_t entSize) {
   size_t size = data.size();
   assert((size % entSize) == 0);
-  bool isAlloc = flags & SHF_ALLOC;
+  const bool live = !(flags & SHF_ALLOC) || !config->gcSections;
 
-  for (size_t i = 0; i != size; i += entSize)
-    pieces.emplace_back(i, xxHash64(data.slice(i, entSize)), !isAlloc);
+  pieces.assign(size / entSize, SectionPiece(0, 0, false));
+  for (size_t i = 0, j = 0; i != size; i += entSize, j++)
+    pieces[j] = {i, (uint32_t)xxHash64(data.slice(i, entSize)), live};
 }
 
 template <class ELFT>

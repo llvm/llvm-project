@@ -552,7 +552,9 @@ void ReportDeadlock(ThreadState *thr, uptr pc, DDReport *r) {
 
 void ReportDestroyLocked(ThreadState *thr, uptr pc, uptr addr,
                          FastState last_lock, StackID creation_stack_id) {
-  SlotPairLocker locker(thr, last_lock.sid());
+  // We need to lock the slot during RestoreStack because it protects
+  // the slot journal.
+  Lock slot_lock(&ctx->slots[static_cast<uptr>(last_lock.sid())].mtx);
   ThreadRegistryLock l0(&ctx->thread_registry);
   Lock slots_lock(&ctx->slot_mtx);
   ScopedReport rep(ReportTypeMutexDestroyLocked);

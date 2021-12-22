@@ -179,8 +179,7 @@ enum class BufferRelation {
 /// equivalence classes to support bufferization.
 class BufferizationAliasInfo {
 public:
-  explicit BufferizationAliasInfo(Operation *rootOp,
-                                  const BufferizationOptions &options);
+  explicit BufferizationAliasInfo(Operation *rootOp);
 
   // BufferizationAliasInfo should be passed as a reference.
   BufferizationAliasInfo(const BufferizationAliasInfo &) = delete;
@@ -268,67 +267,8 @@ private:
   llvm::EquivalenceClasses<Value, ValueComparator> equivalentInfo;
 };
 
-/// Determine which OpOperand* will alias with `result` if the op is bufferized
-/// in place. Return an empty vector if the op is not bufferizable.
-SmallVector<OpOperand *> getAliasingOpOperand(OpResult result);
-
-/// Determine which OpResult will alias with `opOperand` if the op is bufferized
-/// in place. Return an empty OpResult if the op is not bufferizable.
-OpResult getAliasingOpResult(OpOperand &opOperand);
-
-/// Return true if `opOperand` bufferizes to a memory read. Return `true` if the
-/// op is not bufferizable.
-bool bufferizesToMemoryRead(OpOperand &opOperand);
-
-/// Return true if `opOperand` bufferizes to a memory write. Return
-/// `true` if the op is not bufferizable.
-bool bufferizesToMemoryWrite(OpOperand &opOperand);
-
-/// Return true if `opOperand` does neither read nor write but bufferizes to an
-/// alias. Return false if the op is not bufferizable.
-bool bufferizesToAliasOnly(OpOperand &opOperand);
-
-/// Return true if the given value is read by an op that bufferizes to a memory
-/// read. Also takes into account ops that create an alias but do not read by
-/// themselves (e.g., ExtractSliceOp).
-bool isValueRead(Value value);
-
-/// Starting from `value`, follow the use-def chain in reverse, always selecting
-/// the aliasing OpOperands. Find and return Values for which `condition`
-/// evaluates to true. OpOperands of such matching Values are not traversed any
-/// further.
-///
-/// When reaching the end of a chain (BlockArgument or Value without aliasing
-/// OpOperands), also return the last Value of that chain.
-///
-/// Example:
-///
-///                               8
-///                               |
-///   6*         7*         +-----+----+
-///   |          |          |          |
-///   2*         3          4*         5
-///   |          |          |          |
-///   +----------+----------+----------+
-///              |
-///              1
-///
-/// In the above example, Values with a star satisfy the condition. When
-/// starting the traversal from Value 1, the resulting SetVector is:
-/// { 2, 7, 8, 5 }
-llvm::SetVector<Value>
-findValueInReverseUseDefChain(Value value, const BufferizationOptions &options,
-                              std::function<bool(Value)> condition);
-
-/// Find the Value of the last preceding write of a given Value.
-///
-/// Note: Unknown ops are handled conservatively and assumed to be writes.
-/// Furthermore, BlockArguments are also assumed to be writes. There is no
-/// analysis across block boundaries.
-///
-/// Note: When reaching an end of the reverse SSA use-def chain, that value
-/// is returned regardless of whether it is a memory write or not.
-Value findLastPrecedingWrite(Value value, const BufferizationOptions &options);
+/// Return `true` if the given value is a BlockArgument of a FuncOp.
+bool isFunctionArgument(Value value);
 
 /// Dialect-specific bufferization state. Analysis/bufferization information
 /// that is specific to ops from a certain dialect can be stored in derived
@@ -342,25 +282,87 @@ struct DialectBufferizationState {
   DialectBufferizationState(const DialectBufferizationState &) = delete;
 };
 
-/// BufferizationState keeps track of memory buffers and provides a variety of
-/// helper functions for dealing with them. In particular,
+/// BufferizationState provides a variety of helper functions for dealing with
+/// tensor values and memref buffers. In particular,
 /// `BufferizableOpInterface::bufferize` implementation should utilize the
 /// following helper functions.
 ///
 /// * `createAlloc` / `createDealloc` / `createAllocDeallocPair` creates ops
 ///   that allocate and/or deallocate memref buffers.
-/// * `mapBuffer` maps a tensor value to a memref buffer during bufferization.
-/// * `lookupBuffer` returns the mapped memref buffer of a given tensor value.
+/// * `lookupBuffer` returns the memref buffer of a given tensor value.
 /// * `getResultBuffer` returns the memref buffer for a given tensor OpResult.
 ///   Based on inplace bufferization decisions of the analysis, it may either
 ///   directly return a mapped buffer or allocate a new brand new buffer.
+/// * `replaceOp` replaces an op with new values.
 class BufferizationState {
 public:
-  BufferizationState(Operation *op, const BufferizationOptions &options)
-      : aliasInfo(op, options), options(options), builder(op->getContext()) {}
+  BufferizationState(Operation *op, const BufferizationOptions &options);
 
   // BufferizationState should be passed as a reference.
   BufferizationState(const BufferizationState &) = delete;
+
+  /// Determine which OpOperand* will alias with `result` if the op is
+  /// bufferized in place. Return an empty vector if the op is not bufferizable.
+  SmallVector<OpOperand *> getAliasingOpOperand(OpResult result);
+
+  /// Determine which OpResult will alias with `opOperand` if the op is
+  /// bufferized in place. Return an empty OpResult if the op is not
+  /// bufferizable.
+  OpResult getAliasingOpResult(OpOperand &opOperand);
+
+  /// Return true if `opOperand` bufferizes to a memory read. Return `true` if
+  /// the op is not bufferizable.
+  bool bufferizesToMemoryRead(OpOperand &opOperand);
+
+  /// Return true if `opOperand` bufferizes to a memory write. Return true` if
+  /// the op is not bufferizable.
+  bool bufferizesToMemoryWrite(OpOperand &opOperand);
+
+  /// Return true if `opOperand` does neither read nor write but bufferizes to
+  /// an alias. Return false if the op is not bufferizable.
+  bool bufferizesToAliasOnly(OpOperand &opOperand);
+
+  /// Return true if the given value is read by an op that bufferizes to a
+  /// memory read. Also takes into account ops that create an alias but do not
+  /// read by themselves (e.g., ExtractSliceOp).
+  bool isValueRead(Value value);
+
+  /// Starting from `value`, follow the use-def chain in reverse, always
+  /// selecting the aliasing OpOperands. Find and return Values for which
+  /// `condition` evaluates to true. OpOperands of such matching Values are not
+  /// traversed any further.
+  ///
+  /// When reaching the end of a chain (BlockArgument or Value without aliasing
+  /// OpOperands), also return the last Value of that chain.
+  ///
+  /// Example:
+  ///
+  ///                               8
+  ///                               |
+  ///   6*         7*         +-----+----+
+  ///   |          |          |          |
+  ///   2*         3          4*         5
+  ///   |          |          |          |
+  ///   +----------+----------+----------+
+  ///              |
+  ///              1
+  ///
+  /// In the above example, Values with a star satisfy the condition. When
+  /// starting the traversal from Value 1, the resulting SetVector is:
+  /// { 2, 7, 8, 5 }
+  llvm::SetVector<Value>
+  findValueInReverseUseDefChain(Value value,
+                                std::function<bool(Value)> condition);
+
+  /// Find the Value of the last preceding write of a given Value.
+  ///
+  /// Note: Unknown ops are handled conservatively and assumed to be writes.
+  /// Furthermore, BlockArguments are also assumed to be writes. There is no
+  /// analysis across block boundaries.
+  ///
+  /// Note: When reaching an end of the reverse SSA use-def chain, that value
+  /// is returned regardless of whether it is a memory write or not.
+  Value findLastPrecedingWrite(Value value);
 
   /// Creates a memref allocation.
   Optional<Value> createAlloc(OpBuilder &b, Location loc, MemRefType type,
@@ -378,16 +380,19 @@ public:
   /// Creates a memcpy between two given buffers.
   void createMemCpy(OpBuilder &b, Location loc, Value from, Value to);
 
-  /// Replace an op with replacement values. The op is deleted.
+  /// Replace an op with replacement values. The op is deleted. Tensor OpResults
+  /// must be replaced with memref values.
   void replaceOp(Operation *op, ValueRange values);
 
-  /// Map tensor values to memref buffers.
-  // TODO: Deprecated. Remove all uses of this op. Use `replaceOp` instead.
-  void mapBuffer(ValueRange tensors, ValueRange buffers);
-
-  /// Map a tensor value to a memref buffer.
-  // TODO: Deprecated. Remove all uses of this op. Use `replaceOp` instead.
-  void mapBuffer(Value tensor, Value buffer);
+  /// Replace an op with a new op. Tensor OpResults must be replaced with memref
+  /// values.
+  template <typename OpTy, typename... Args>
+  OpTy replaceOpWithNewOp(OpBuilder &b, Operation *op, Args &&...args) {
+    Operation *newOp =
+        b.create<OpTy>(op->getLoc(), std::forward<Args>(args)...);
+    replaceOp(op, newOp->getResults());
+    return cast<OpTy>(newOp);
+  }
 
   /// Lookup the memref buffer that is associated to the given tensor value.
   /// Asserts if no buffer is associated.
@@ -396,22 +401,10 @@ public:
   /// Return `true` if the given OpResult has been decided to bufferize inplace.
   bool isInPlace(OpResult opResult) const;
 
-  /// Return `true` if the given value is mapped.
-  // TODO: Deprecated. Remove all uses of this op.
-  bool isMapped(Value value) const;
-
   /// Return the result buffer (memref) for a given OpResult (tensor). Allocate
   /// a new buffer and copy over data from the existing buffer if out-of-place
   /// bufferization is necessary.
   Value getResultBuffer(OpResult result);
-
-  /// Mark `op` as obsolete, so that it is deleted after bufferization.
-  // TODO: Deprecated. Remove all uses of this op.
-  void markOpObsolete(Operation *op);
-
-  /// Erase all ops that were marked obsolete.
-  // TODO: Deprecated. Remove all uses of this op.
-  void eraseObsoleteOps();
 
   /// Return dialect-specific bufferization state.
   template <typename StateT> StateT &getDialectState(StringRef name) {
@@ -440,12 +433,6 @@ private:
   /// `aliasInfo` keeps track of aliasing and equivalent values. Only internal
   /// functions and `runComprehensiveBufferize` may access this object.
   BufferizationAliasInfo aliasInfo;
-
-  /// The mapping of tensors to buffers.
-  BlockAndValueMapping mapping;
-
-  /// Obsolete ops that should be deleted after bufferization.
-  SmallVector<Operation *> obsoleteOps;
 
   /// Dialect-specific bufferization state.
   DenseMap<StringRef, std::unique_ptr<DialectBufferizationState>> dialectState;
@@ -506,25 +493,30 @@ template <typename OpTy>
 struct AllocationHoistingBarrierOnly
     : public BufferizableOpInterface::ExternalModel<
           AllocationHoistingBarrierOnly<OpTy>, OpTy> {
-  bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand) const {
+  bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
+                              BufferizationState &state) const {
     return true;
   }
 
-  bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand) const {
+  bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
+                               BufferizationState &state) const {
     return false;
   }
 
-  SmallVector<OpOperand *> getAliasingOpOperand(Operation *op,
-                                                OpResult opResult) const {
+  SmallVector<OpOperand *>
+  getAliasingOpOperand(Operation *op, OpResult opResult,
+                       BufferizationState &state) const {
     return {};
   }
 
-  OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand) const {
+  OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand,
+                               BufferizationState &state) const {
     return OpResult();
   }
 
   BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const BufferizationAliasInfo &aliasInfo) const {
+                                const BufferizationAliasInfo &aliasInfo,
+                                BufferizationState &state) const {
     return BufferRelation::None;
   }
 
