@@ -21,6 +21,7 @@ def SCF_Dialect : Dialect {
   let name = "scf";
   let cppNamespace = "::mlir::scf";
   let dependentDialects = ["arith::ArithmeticDialect"];
+  let emitAccessorPrefix = kEmitAccessorPrefix_Both;
 }
 
 // Base class for SCF dialect ops.
@@ -403,6 +404,12 @@ def IfOp : SCF_Op<"if",
     YieldOp thenYield();
     Block* elseBlock();
     YieldOp elseYield();
+
+    /// If the condition is a constant, returns 1 for the executed block and 0
+    /// for the other. Otherwise, returns `kUnknownNumRegionInvocations` for
+    /// both successors.
+    void getNumRegionInvocations(ArrayRef<Attribute> operands,
+                                 SmallVectorImpl<int64_t> &countPerRegion);
   }];
 
   let hasCanonicalizer = 1;

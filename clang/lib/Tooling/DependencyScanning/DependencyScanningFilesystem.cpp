@@ -16,20 +16,21 @@ using namespace clang;
 using namespace tooling;
 using namespace dependencies;
 
-CachedFileSystemEntry CachedFileSystemEntry::createFileEntry(
-    StringRef Filename, llvm::vfs::FileSystem &FS, bool Minimize) {
+llvm::ErrorOr<llvm::vfs::Status>
+CachedFileSystemEntry::initFile(StringRef Filename, llvm::vfs::FileSystem &FS,
+                                bool Minimize) {
   // Load the file and its content from the file system.
   llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>> MaybeFile =
       FS.openFileForRead(Filename);
   if (!MaybeFile)
     return MaybeFile.getError();
+
   llvm::ErrorOr<llvm::vfs::Status> Stat = (*MaybeFile)->status();
   if (!Stat)
     return Stat.getError();
 
-  llvm::vfs::File &F = **MaybeFile;
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> MaybeBuffer =
-      F.getBuffer(Stat->getName());
+      (*MaybeFile)->getBuffer(Stat->getName());
   if (!MaybeBuffer)
     return MaybeBuffer.getError();
 
@@ -42,22 +43,18 @@ CachedFileSystemEntry CachedFileSystemEntry::createFileEntry(
     // Use the original file unless requested otherwise, or
     // if the minimization failed.
     // FIXME: Propage the diagnostic if desired by the client.
-    CachedFileSystemEntry Result;
-    Result.MaybeStat = std::move(*Stat);
-    Result.Contents = std::move(*MaybeBuffer);
-    return Result;
+    Contents = std::move(*MaybeBuffer);
+    return Stat;
   }
 
-  CachedFileSystemEntry Result;
-  size_t Size = MinimizedFileContents.size();
-  Result.MaybeStat = llvm::vfs::Status(Stat->getName(), Stat->getUniqueID(),
-                                       Stat->getLastModificationTime(),
-                                       Stat->getUser(), Stat->getGroup(), Size,
-                                       Stat->getType(), Stat->getPermissions());
+  Stat = llvm::vfs::Status(Stat->getName(), Stat->getUniqueID(),
+                           Stat->getLastModificationTime(), Stat->getUser(),
+                           Stat->getGroup(), MinimizedFileContents.size(),
+                           Stat->getType(), Stat->getPermissions());
   // The contents produced by the minimizer must be null terminated.
   assert(MinimizedFileContents.data()[MinimizedFileContents.size()] == '\0' &&
          "not null terminated contents");
-  Result.Contents = std::make_unique<llvm::SmallVectorMemoryBuffer>(
+  Contents = std::make_unique<llvm::SmallVectorMemoryBuffer>(
       std::move(MinimizedFileContents));
 
   // Compute the skipped PP ranges that speedup skipping over inactive
@@ -76,17 +73,8 @@ CachedFileSystemEntry CachedFileSystemEntry::createFileEntry(
     }
     Mapping[Range.Offset] = Range.Length;
   }
-  Result.PPSkippedRangeMapping = std::move(Mapping);
-
-  return Result;
-}
-
-CachedFileSystemEntry
-CachedFileSystemEntry::createDirectoryEntry(llvm::vfs::Status &&Stat) {
-  assert(Stat.isDirectory() && "not a directory!");
-  auto Result = CachedFileSystemEntry();
-  Result.MaybeStat = std::move(Stat);
-  return Result;
+  PPSkippedRangeMapping = std::move(Mapping);
+  return Stat;
 }
 
 DependencyScanningFilesystemSharedCache::SingleCache::SingleCache() {
@@ -157,17 +145,13 @@ bool DependencyScanningWorkerFilesystem::shouldMinimize(StringRef RawFilename) {
   return !NotToBeMinimized.contains(Filename);
 }
 
-CachedFileSystemEntry DependencyScanningWorkerFilesystem::createFileSystemEntry(
-    llvm::ErrorOr<llvm::vfs::Status> &&MaybeStatus, StringRef Filename,
-    bool ShouldMinimize) {
-  if (!MaybeStatus)
-    return CachedFileSystemEntry(MaybeStatus.getError());
-
-  if (MaybeStatus->isDirectory())
-    return CachedFileSystemEntry::createDirectoryEntry(std::move(*MaybeStatus));
-
-  return CachedFileSystemEntry::createFileEntry(Filename, getUnderlyingFS(),
-                                                ShouldMinimize);
+void CachedFileSystemEntry::init(llvm::ErrorOr<llvm::vfs::Status> &&MaybeStatus,
+                                 StringRef Filename, llvm::vfs::FileSystem &FS,
+                                 bool ShouldMinimize) {
+  if (!MaybeStatus || MaybeStatus->isDirectory())
+    MaybeStat = std::move(MaybeStatus);
+  else
+    MaybeStat = initFile(Filename, FS, ShouldMinimize);
 }
 
 llvm::ErrorOr<const CachedFileSystemEntry *>
@@ -188,7 +172,7 @@ DependencyScanningWorkerFilesystem::getOrCreateFileSystemEntry(
     std::lock_guard<std::mutex> LockGuard(SharedCacheEntry.ValueLock);
     CachedFileSystemEntry &CacheEntry = SharedCacheEntry.Value;
 
-    if (!CacheEntry.isValid()) {
+    if (!CacheEntry.isInitialized()) {
       auto MaybeStatus = getUnderlyingFS().status(Filename);
       if (!MaybeStatus && !shouldCacheStatFailures(Filename))
         // HACK: We need to always restat non source files if the stat fails.
@@ -196,8 +180,8 @@ DependencyScanningWorkerFilesystem::getOrCreateFileSystemEntry(
         //   files before building them, and then looks for them again. If we
         //   cache the stat failure, it won't see them the second time.
         return MaybeStatus.getError();
-      CacheEntry = createFileSystemEntry(std::move(MaybeStatus), Filename,
-                                         ShouldMinimize);
+      CacheEntry.init(std::move(MaybeStatus), Filename, getUnderlyingFS(),
+                      ShouldMinimize);
     }
 
     Result = &CacheEntry;
