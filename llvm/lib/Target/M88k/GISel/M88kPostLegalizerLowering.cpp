@@ -21,8 +21,6 @@
 
 #include "GISel/M88kLegalizerInfo.h"
 #include "M88kTargetMachine.h"
-#include "MCTargetDesc/M88kMCTargetDesc.h"
-#include "TargetInfo/M88kTargetInfo.h"
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
@@ -63,10 +61,14 @@ static void replaceMI(unsigned Opc, MachineInstr &MI, MachineRegisterInfo &MRI,
   Register SrcReg;
   std::tie(SrcReg, Width, Offset) = MatchInfo;
   MachineIRBuilder MIB(MI);
-  MIB.buildInstr(Opc, {MI.getOperand(0).getReg()}, {SrcReg})
-      .addImm((Width << 5) | Offset);
-  MRI.setRegClass(MI.getOperand(0).getReg(), &M88k::GPRRCRegClass);
-  MRI.setRegClass(SrcReg, &M88k::GPRRCRegClass);
+  MachineFunction &MF = MIB.getMF();
+  const M88kSubtarget &Subtarget = MF.getSubtarget<M88kSubtarget>();
+  const auto *TRI = Subtarget.getRegisterInfo();
+  const auto *TII = Subtarget.getInstrInfo();
+  const auto *RBI = Subtarget.getRegBankInfo();
+  auto Inst = MIB.buildInstr(Opc, {MI.getOperand(0).getReg()}, {SrcReg})
+                  .addImm((Width << 5) | Offset);
+  constrainSelectedInstRegOperands(*Inst, *TII, *TRI, *RBI);
   MI.eraseFromParent();
 }
 
