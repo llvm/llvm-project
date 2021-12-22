@@ -213,6 +213,7 @@ template <class T, class Container, class Compare>
 #include <deque>
 #include <functional>
 #include <vector>
+#include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header

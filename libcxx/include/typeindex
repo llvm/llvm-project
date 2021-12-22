@@ -49,6 +49,7 @@ struct hash<type_index>
 #include <__functional_base>
 #include <compare>
 #include <typeinfo>
+#include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
