@@ -241,14 +241,12 @@ getFixIt(const tooling::Diagnostic &Diagnostic, bool AnyFix);
 
 /// A diagnostic consumer that turns each \c Diagnostic into a
 /// \c SourceManager-independent \c ClangTidyError.
-///
-/// \param EnableNolintBlocks Enables diagnostic-disabling inside blocks of
-/// code, delimited by NOLINTBEGIN and NOLINTEND.
-//
 // FIXME: If we move away from unit-tests, this can be moved to a private
 // implementation file.
 class ClangTidyDiagnosticConsumer : public DiagnosticConsumer {
 public:
+  /// \param EnableNolintBlocks Enables diagnostic-disabling inside blocks of
+  /// code, delimited by NOLINTBEGIN and NOLINTEND.
   ClangTidyDiagnosticConsumer(ClangTidyContext &Ctx,
                               DiagnosticsEngine *ExternalDiagEngine = nullptr,
                               bool RemoveIncompatibleErrors = true,
