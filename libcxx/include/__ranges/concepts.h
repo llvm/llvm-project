@@ -29,8 +29,6 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-// clang-format off
-
 #if !defined(_LIBCPP_HAS_NO_RANGES)
 
 namespace ranges {
@@ -125,8 +123,6 @@ namespace ranges {
 } // namespace ranges
 
 #endif // !defined(_LIBCPP_HAS_NO_RANGES)
-
-// clang-format on
 
 _LIBCPP_END_NAMESPACE_STD
 

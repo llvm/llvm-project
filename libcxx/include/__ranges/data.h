@@ -26,7 +26,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if !defined(_LIBCPP_HAS_NO_RANGES)
 
-// clang-format off
 namespace ranges {
 // [range.prim.data]
 namespace __data {
@@ -71,8 +70,6 @@ inline namespace __cpo {
   inline constexpr auto data = __data::__fn{};
 } // namespace __cpo
 } // namespace ranges
-
-// clang-format off
 
 #endif // !defined(_LIBCPP_HAS_NO_RANGES)
 
