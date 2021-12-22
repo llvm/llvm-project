@@ -3,14 +3,15 @@
 abseil-string-find-startswith
 =============================
 
-Checks whether a ``std::string::find()`` result is compared with 0, and
-suggests replacing with ``absl::StartsWith()``. This is both a readability and
-performance issue.
+Checks whether a ``std::string::find()`` or ``std::string::rfind()`` result is
+compared with 0, and suggests replacing with ``absl::StartsWith()``. This is
+both a readability and performance issue.
 
 .. code-block:: c++
 
   string s = "...";
   if (s.find("Hello World") == 0) { /* do something */ }
+  if (s.rfind("Hello World", 0) == 0) { /* do something */ }
 
 becomes
 
@@ -18,6 +19,7 @@ becomes
 .. code-block:: c++
 
   string s = "...";
+  if (absl::StartsWith(s, "Hello World")) { /* do something */ }
   if (absl::StartsWith(s, "Hello World")) { /* do something */ }
 
 
