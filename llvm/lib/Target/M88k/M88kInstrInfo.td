@@ -802,6 +802,12 @@ let isCall = 1, isTerminator = 1, isBarrier = 1 in {
   def JSR : F_JMP<0b11001, (outs), (ins GPR:$rs2), "jsr">;
   let hasDelaySlot = 1 in
     def JSRn : F_JMP<0b11001, (outs), (ins GPR:$rs2), "jsr.n">;
+  def BSR : F_BRANCH<0b11001, (outs), (ins brtarget26:$d26), "bsr",
+                     [(br bb:$d26)]>;
+
+  let hasDelaySlot = 1 in
+    def BSRn : F_BRANCH<0b11001, (outs), (ins brtarget26:$d26), "bsr.n",
+                        [(br bb:$d26)]>;
 }
 
 let isReturn = 1, isTerminator = 1, isBarrier = 1, Uses = [R1] in {

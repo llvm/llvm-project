@@ -110,20 +110,20 @@ isns:
   bcnd.n     3, %r1, -10
 
 # uncoditional branch
-  br       0
-  br       -10
-  br       10
-  br.n     0
-  br.n     -10
-  br.n     10
+  br           0
+  br           -10
+  br           10
+  br.n         0
+  br.n         -10
+  br.n         10
 
 # branch to subroutine
-#  bsr       0
-#  bsr       -10
-#  bsr       10
-#  bsr.n     0
-#  bsr.n     -10
-#  bsr.n     10
+  bsr          0
+  bsr          -10
+  bsr          10
+  bsr.n        0
+  bsr.n        -10
+  bsr.n        10
 
 # clear bit field
   clr      %r1, %r2, 5<15>
