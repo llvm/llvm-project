@@ -1121,7 +1121,7 @@ DataFlowSanitizer::buildWrapperFunction(Function *F, StringRef NewFName,
 
   BasicBlock *BB = BasicBlock::Create(*Ctx, "entry", NewF);
   if (F->isVarArg()) {
-    NewF->removeFnAttrs(AttrBuilder().addAttribute("split-stack"));
+    NewF->removeFnAttr("split-stack");
     CallInst::Create(DFSanVarargWrapperFn,
                      IRBuilder<>(BB).CreateGlobalStringPtr(F->getName()), "",
                      BB);
