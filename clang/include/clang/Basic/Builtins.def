@@ -649,6 +649,7 @@ BUILTIN(__builtin_elementwise_min, "v.", "nct")
 BUILTIN(__builtin_elementwise_ceil, "v.", "nct")
 BUILTIN(__builtin_reduce_max, "v.", "nct")
 BUILTIN(__builtin_reduce_min, "v.", "nct")
+BUILTIN(__builtin_reduce_xor, "v.", "nct")
 
 BUILTIN(__builtin_matrix_transpose, "v.", "nFt")
 BUILTIN(__builtin_matrix_column_major_load, "v.", "nFt")

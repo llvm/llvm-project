@@ -35,3 +35,20 @@ void test_builtin_reduce_min(int i, float4 v, int3 iv) {
   i = __builtin_reduce_min(i);
   // expected-error@-1 {{1st argument must be a vector type (was 'int')}}
 }
+
+void test_builtin_reduce_xor(int i, float4 v, int3 iv) {
+  struct Foo s = __builtin_reduce_xor(iv);
+  // expected-error@-1 {{initializing 'struct Foo' with an expression of incompatible type 'int'}}
+
+  i = __builtin_reduce_xor();
+  // expected-error@-1 {{too few arguments to function call, expected 1, have 0}}
+
+  i = __builtin_reduce_xor(iv, iv);
+  // expected-error@-1 {{too many arguments to function call, expected 1, have 2}}
+
+  i = __builtin_reduce_xor(i);
+  // expected-error@-1 {{1st argument must be a vector of integers (was 'int')}}
+
+  i = __builtin_reduce_xor(v);
+  // expected-error@-1 {{1st argument must be a vector of integers (was 'float4' (vector of 4 'float' values))}}
+}
