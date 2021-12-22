@@ -572,3 +572,14 @@ defm PS_storerd : NewCircularStore<DoubleRegs, WordAccess>;
 // __builtin_trap.
 let hasSideEffects = 1, isPseudo = 1, isCodeGenOnly = 1, isSolo = 1 in
 def PS_crash: InstHexagon<(outs), (ins), "", [], "", PSEUDO, TypePSEUDO>;
+
+// This is actual trap1 instruction from before v65. It's here since it is
+// no longer included in DepInstrInfo.td.
+def PS_trap1 : HInst<(outs), (ins u8_0Imm:$Ii), "trap1(#$Ii)", tc_53c851ab,
+                     TypeJ>, Enc_a51a9a, Requires<[HasPreV65]> {
+  let Inst{1-0} = 0b00;
+  let Inst{7-5} = 0b000;
+  let Inst{13-13} = 0b0;
+  let Inst{31-16} = 0b0101010010000000;
+}
+

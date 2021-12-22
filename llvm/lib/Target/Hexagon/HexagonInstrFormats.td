@@ -146,9 +146,6 @@ class InstHexagon<dag outs, dag ins, string asmstr, list<dag> pattern,
   bits<1> isFP = 0;
   let TSFlags {50} = isFP; // Floating-point.
 
-  bits<1> isSomeOK = 0;
-  let TSFlags {51} = isSomeOK; // Relax some grouping constraints.
-
   bits<1> hasNewValue2 = 0;
   let TSFlags{52} = hasNewValue2; // Second New-value producer insn.
   bits<3> opNewValue2 = 0;
@@ -160,8 +157,8 @@ class InstHexagon<dag outs, dag ins, string asmstr, list<dag> pattern,
   bits<1> prefersSlot3 = 0;
   let TSFlags{57} = prefersSlot3; // Complex XU
 
-  bits<1> hasTmpDst = 0;
-  let TSFlags{60} = hasTmpDst;  // v65 : 'fake" register VTMP is set
+  bits<1> hasHvxTmp = 0;
+  let TSFlags{60} = hasHvxTmp;  // vector register vX.tmp false-write
 
   bit CVINew = 0;
   let TSFlags{62} = CVINew;

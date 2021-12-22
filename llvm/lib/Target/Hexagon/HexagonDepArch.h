@@ -21,31 +21,32 @@
 
 namespace llvm {
 namespace Hexagon {
-enum class ArchEnum { NoArch, Generic, V5, V55, V60, V62, V65, V66, V67, V68 };
+enum class ArchEnum { NoArch, Generic, V5, V55, V60, V62, V65, V66, V67, V68, V69 };
 
-static constexpr unsigned ArchValsNumArray[] = {5, 55, 60, 62, 65, 66, 67, 68};
+static constexpr unsigned ArchValsNumArray[] = {5, 55, 60, 62, 65, 66, 67, 68, 69};
 static constexpr ArrayRef<unsigned> ArchValsNum(ArchValsNumArray);
 
-static constexpr StringLiteral ArchValsTextArray[] = { "v5", "v55", "v60", "v62", "v65", "v66", "v67", "v68" };
+static constexpr StringLiteral ArchValsTextArray[] = { "v5", "v55", "v60", "v62", "v65", "v66", "v67", "v68", "v69" };
 static constexpr ArrayRef<StringLiteral> ArchValsText(ArchValsTextArray);
 
-static constexpr StringLiteral CpuValsTextArray[] = { "hexagonv5", "hexagonv55", "hexagonv60", "hexagonv62", "hexagonv65", "hexagonv66", "hexagonv67", "hexagonv67t", "hexagonv68" };
+static constexpr StringLiteral CpuValsTextArray[] = { "hexagonv5", "hexagonv55", "hexagonv60", "hexagonv62", "hexagonv65", "hexagonv66", "hexagonv67", "hexagonv67t", "hexagonv68", "hexagonv69" };
 static constexpr ArrayRef<StringLiteral> CpuValsText(CpuValsTextArray);
 
-static constexpr StringLiteral CpuNickTextArray[] = { "v5", "v55", "v60", "v62", "v65", "v66", "v67", "v67t", "v68" };
+static constexpr StringLiteral CpuNickTextArray[] = { "v5", "v55", "v60", "v62", "v65", "v66", "v67", "v67t", "v68", "v69" };
 static constexpr ArrayRef<StringLiteral> CpuNickText(CpuNickTextArray);
 
 static const std::map<std::string, ArchEnum> CpuTable{
-  {"generic", Hexagon::ArchEnum::V5},
-  {"hexagonv5", Hexagon::ArchEnum::V5},
-  {"hexagonv55", Hexagon::ArchEnum::V55},
-  {"hexagonv60", Hexagon::ArchEnum::V60},
-  {"hexagonv62", Hexagon::ArchEnum::V62},
-  {"hexagonv65", Hexagon::ArchEnum::V65},
-  {"hexagonv66", Hexagon::ArchEnum::V66},
-  {"hexagonv67", Hexagon::ArchEnum::V67},
-  {"hexagonv67t", Hexagon::ArchEnum::V67},
-  {"hexagonv68", Hexagon::ArchEnum::V68},
+    {"generic", Hexagon::ArchEnum::V5},
+    {"hexagonv5", Hexagon::ArchEnum::V5},
+    {"hexagonv55", Hexagon::ArchEnum::V55},
+    {"hexagonv60", Hexagon::ArchEnum::V60},
+    {"hexagonv62", Hexagon::ArchEnum::V62},
+    {"hexagonv65", Hexagon::ArchEnum::V65},
+    {"hexagonv66", Hexagon::ArchEnum::V66},
+    {"hexagonv67", Hexagon::ArchEnum::V67},
+    {"hexagonv67t", Hexagon::ArchEnum::V67},
+    {"hexagonv68", Hexagon::ArchEnum::V68},
+    {"hexagonv69", Hexagon::ArchEnum::V69},
 };
 
 static const std::map<std::string, unsigned> ElfFlagsByCpuStr = {
@@ -59,6 +60,7 @@ static const std::map<std::string, unsigned> ElfFlagsByCpuStr = {
   {"hexagonv67", llvm::ELF::EF_HEXAGON_MACH_V67},
   {"hexagonv67t", llvm::ELF::EF_HEXAGON_MACH_V67T},
   {"hexagonv68", llvm::ELF::EF_HEXAGON_MACH_V68},
+  {"hexagonv69", llvm::ELF::EF_HEXAGON_MACH_V69},
 };
 static const std::map<unsigned, std::string> ElfArchByMachFlags = {
   {llvm::ELF::EF_HEXAGON_MACH_V5, "V5"},
@@ -70,6 +72,7 @@ static const std::map<unsigned, std::string> ElfArchByMachFlags = {
   {llvm::ELF::EF_HEXAGON_MACH_V67, "V67"},
   {llvm::ELF::EF_HEXAGON_MACH_V67T, "V67T"},
   {llvm::ELF::EF_HEXAGON_MACH_V68, "V68"},
+  {llvm::ELF::EF_HEXAGON_MACH_V69, "V69"},
 };
 static const std::map<unsigned, std::string> ElfCpuByMachFlags = {
   {llvm::ELF::EF_HEXAGON_MACH_V5, "hexagonv5"},
@@ -81,6 +84,7 @@ static const std::map<unsigned, std::string> ElfCpuByMachFlags = {
   {llvm::ELF::EF_HEXAGON_MACH_V67, "hexagonv67"},
   {llvm::ELF::EF_HEXAGON_MACH_V67T, "hexagonv67t"},
   {llvm::ELF::EF_HEXAGON_MACH_V68, "hexagonv68"},
+  {llvm::ELF::EF_HEXAGON_MACH_V69, "hexagonv69"},
 };
 
 } // namespace Hexagon

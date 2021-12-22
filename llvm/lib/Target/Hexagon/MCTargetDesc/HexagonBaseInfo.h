@@ -154,9 +154,8 @@ namespace HexagonII {
     PrefersSlot3Pos = 57,
     PrefersSlot3Mask = 0x1,
 
-    // v65
-    HasTmpDstPos = 60,
-    HasTmpDstMask = 0x1,
+    HasHvxTmpPos = 60,
+    HasHvxTmpMask = 0x1,
 
     CVINewPos = 62,
     CVINewMask = 0x1,
