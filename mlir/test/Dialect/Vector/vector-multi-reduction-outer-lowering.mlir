@@ -163,3 +163,10 @@ func @vector_reduction_1D(%arg0 : vector<2xf32>) -> f32 {
 }
 // CHECK-LABEL: func @vector_reduction_1D
 //       CHECK:   return %{{.+}}
+
+func @vector_multi_reduction_to_scalar(%arg0: vector<2x3xf32>) -> f32 {
+  %0 = vector.multi_reduction <add>, %arg0 [0, 1] : vector<2x3xf32> to f32
+  return %0 : f32
+}
+// CHECK-LABEL: func @vector_multi_reduction_to_scalar
+//       CHECK:   return %{{.+}}

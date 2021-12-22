@@ -581,16 +581,8 @@ struct ArgumentUsesTracker : public CaptureTracker {
       return true;
     }
 
-    // Note: the callee and the two successor blocks *follow* the argument
-    // operands.  This means there is no need to adjust UseIndex to account for
-    // these.
-
-    unsigned UseIndex =
-        std::distance(const_cast<const Use *>(CB->arg_begin()), U);
-
-    assert(UseIndex < CB->data_operands_size() &&
-           "Indirect function calls should have been filtered above!");
-
+    assert(!CB->isCallee(U) && "callee operand reported captured?");
+    const unsigned UseIndex = CB->getDataOperandNo(U);
     if (UseIndex >= CB->arg_size()) {
       // Data operand, but not a argument operand -- must be a bundle operand
       assert(CB->hasOperandBundles() && "Must be!");
@@ -702,6 +694,11 @@ determinePointerAccessAttrs(Argument *A,
       };
 
       CallBase &CB = cast<CallBase>(*I);
+      if (CB.isCallee(U)) {
+        IsRead = true;
+        Captures = false; // See comment in CaptureTracking for context
+        continue;
+      }
       if (CB.doesNotAccessMemory()) {
         AddUsersToWorklistIfCapturing();
         continue;
@@ -717,20 +714,10 @@ determinePointerAccessAttrs(Argument *A,
         return Attribute::None;
       }
 
-      // Note: the callee and the two successor blocks *follow* the argument
-      // operands.  This means there is no need to adjust UseIndex to account
-      // for these.
-
-      unsigned UseIndex = std::distance(CB.arg_begin(), U);
-
-      // U cannot be the callee operand use: since we're exploring the
-      // transitive uses of an Argument, having such a use be a callee would
-      // imply the call site is an indirect call or invoke; and we'd take the
-      // early exit above.
-      assert(UseIndex < CB.data_operands_size() &&
-             "Data operand use expected!");
-
-      bool IsOperandBundleUse = UseIndex >= CB.arg_size();
+      // Given we've explictily handled the callee operand above, what's left
+      // must be a data operand (e.g. argument or operand bundle)
+      const unsigned UseIndex = CB.getDataOperandNo(U);
+      const bool IsOperandBundleUse = UseIndex >= CB.arg_size();
 
       if (UseIndex >= F->arg_size() && !IsOperandBundleUse) {
         assert(F->isVarArg() && "More params than args in non-varargs call");
@@ -739,22 +726,20 @@ determinePointerAccessAttrs(Argument *A,
 
       Captures &= !CB.doesNotCapture(UseIndex);
 
-      // Since the optimizer (by design) cannot see the data flow corresponding
-      // to a operand bundle use, these cannot participate in the optimistic SCC
-      // analysis.  Instead, we model the operand bundle uses as arguments in
-      // call to a function external to the SCC.
-      if (IsOperandBundleUse ||
-          !SCCNodes.count(&*std::next(F->arg_begin(), UseIndex))) {
-
-        // The accessors used on call site here do the right thing for calls and
-        // invokes with operand bundles.
-
-        if (!CB.onlyReadsMemory() && !CB.onlyReadsMemory(UseIndex))
-          return Attribute::None;
-        if (!CB.doesNotAccessMemory(UseIndex))
-          IsRead = true;
+      if (CB.isArgOperand(U) && SCCNodes.count(F->getArg(UseIndex))) {
+        // This is an argument which is part of the speculative SCC.  Note that
+        // only operands corresponding to formal arguments of the callee can
+        // participate in the speculation.
+        AddUsersToWorklistIfCapturing();
+        break;
       }
 
+      // The accessors used on call site here do the right thing for calls and
+      // invokes with operand bundles.
+      if (!CB.onlyReadsMemory() && !CB.onlyReadsMemory(UseIndex))
+        return Attribute::None;
+      if (!CB.doesNotAccessMemory(UseIndex))
+        IsRead = true;
       AddUsersToWorklistIfCapturing();
       break;
     }

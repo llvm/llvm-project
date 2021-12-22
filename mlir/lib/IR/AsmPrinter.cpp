@@ -1006,6 +1006,20 @@ void SSANameState::shadowRegionArgs(Region &region, ValueRange namesToUse) {
 }
 
 void SSANameState::numberValuesInRegion(Region &region) {
+  auto setBlockArgNameFn = [&](Value arg, StringRef name) {
+    assert(!valueIDs.count(arg) && "arg numbered multiple times");
+    assert(arg.cast<BlockArgument>().getOwner()->getParent() == &region &&
+           "arg not defined in current region");
+    setValueName(arg, name);
+  };
+
+  if (!printerFlags.shouldPrintGenericOpForm()) {
+    if (Operation *op = region.getParentOp()) {
+      if (auto asmInterface = dyn_cast<OpAsmOpInterface>(op))
+        asmInterface.getAsmBlockArgumentNames(region, setBlockArgNameFn);
+    }
+  }
+
   // Number the values within this region in a breadth-first order.
   unsigned nextBlockID = 0;
   for (auto &block : region) {
@@ -1017,23 +1031,9 @@ void SSANameState::numberValuesInRegion(Region &region) {
 }
 
 void SSANameState::numberValuesInBlock(Block &block) {
-  auto setArgNameFn = [&](Value arg, StringRef name) {
-    assert(!valueIDs.count(arg) && "arg numbered multiple times");
-    assert(arg.cast<BlockArgument>().getOwner() == &block &&
-           "arg not defined in 'block'");
-    setValueName(arg, name);
-  };
-
-  bool isEntryBlock = block.isEntryBlock();
-  if (isEntryBlock && !printerFlags.shouldPrintGenericOpForm()) {
-    if (auto *op = block.getParentOp()) {
-      if (auto asmInterface = interfaces.getInterfaceFor(op->getDialect()))
-        asmInterface->getAsmBlockArgumentNames(&block, setArgNameFn);
-    }
-  }
-
   // Number the block arguments. We give entry block arguments a special name
   // 'arg'.
+  bool isEntryBlock = block.isEntryBlock();
   SmallString<32> specialNameBuffer(isEntryBlock ? "arg" : "");
   llvm::raw_svector_ostream specialName(specialNameBuffer);
   for (auto arg : block.getArguments()) {
@@ -1105,7 +1105,7 @@ void SSANameState::getResultIDAndNumber(OpResult result, Value &lookupValue,
 
   // Find the correct index using a binary search, as the groups are ordered.
   ArrayRef<int> resultGroups = resultGroupIt->second;
-  auto it = llvm::upper_bound(resultGroups, resultNo);
+  const auto *it = llvm::upper_bound(resultGroups, resultNo);
   int groupResultNo = 0, groupSize = 0;
 
   // If there are no smaller elements, the last result group is the lookup.
@@ -1240,8 +1240,8 @@ public:
   raw_ostream &getStream() { return os; }
 
   template <typename Container, typename UnaryFunctor>
-  inline void interleaveComma(const Container &c, UnaryFunctor each_fn) const {
-    llvm::interleaveComma(c, os, each_fn);
+  inline void interleaveComma(const Container &c, UnaryFunctor eachFn) const {
+    llvm::interleaveComma(c, os, eachFn);
   }
 
   /// This enum describes the different kinds of elision for the type of an

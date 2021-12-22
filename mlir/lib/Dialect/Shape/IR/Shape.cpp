@@ -31,7 +31,7 @@ using namespace mlir::shape;
 
 namespace {
 #include "ShapeCanonicalization.inc"
-}
+} // namespace
 
 RankedTensorType shape::getExtentTensorType(MLIRContext *ctx, int64_t rank) {
   return RankedTensorType::get({rank}, IndexType::get(ctx));
@@ -50,16 +50,17 @@ LogicalResult shape::getShapeVec(Value input,
       return failure();
     shapeValues = llvm::to_vector<6>(type.getShape());
     return success();
-  } else if (auto inputOp = input.getDefiningOp<ConstShapeOp>()) {
+  }
+  if (auto inputOp = input.getDefiningOp<ConstShapeOp>()) {
     shapeValues = llvm::to_vector<6>(inputOp.getShape().getValues<int64_t>());
     return success();
-  } else if (auto inputOp = input.getDefiningOp<arith::ConstantOp>()) {
+  }
+  if (auto inputOp = input.getDefiningOp<arith::ConstantOp>()) {
     shapeValues = llvm::to_vector<6>(
         inputOp.getValue().cast<DenseIntElementsAttr>().getValues<int64_t>());
     return success();
-  } else {
-    return failure();
   }
+  return failure();
 }
 
 static bool isErrorPropagationPossible(TypeRange operandTypes) {

@@ -543,7 +543,7 @@ private:
 
   void verifySwiftErrorCall(CallBase &Call, const Value *SwiftErrorVal);
   void verifySwiftErrorValue(const Value *SwiftErrorVal);
-  void verifyTailCCMustTailAttrs(AttrBuilder Attrs, StringRef Context);
+  void verifyTailCCMustTailAttrs(const AttrBuilder &Attrs, StringRef Context);
   void verifyMustTailCall(CallInst &CI);
   bool verifyAttributeCount(AttributeList Attrs, unsigned Params);
   void verifyAttributeTypes(AttributeSet Attrs, const Value *V);
@@ -735,8 +735,9 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
           Value *V = Op->stripPointerCasts();
           Assert(isa<GlobalVariable>(V) || isa<Function>(V) ||
                      isa<GlobalAlias>(V),
-                 "invalid llvm.used member", V);
-          Assert(V->hasName(), "members of llvm.used must be named", V);
+                 Twine("invalid ") + GV.getName() + " member", V);
+          Assert(V->hasName(),
+                 Twine("members of ") + GV.getName() + " must be named", V);
         }
       }
     }
@@ -3313,7 +3314,7 @@ void Verifier::visitCallBase(CallBase &Call) {
   visitInstruction(Call);
 }
 
-void Verifier::verifyTailCCMustTailAttrs(AttrBuilder Attrs,
+void Verifier::verifyTailCCMustTailAttrs(const AttrBuilder &Attrs,
                                          StringRef Context) {
   Assert(!Attrs.contains(Attribute::InAlloca),
          Twine("inalloca attribute not allowed in ") + Context);

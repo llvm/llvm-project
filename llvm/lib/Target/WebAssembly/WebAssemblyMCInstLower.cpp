@@ -40,9 +40,6 @@ cl::opt<bool>
                                " instruction output for test purposes only."),
                       cl::init(false));
 
-extern cl::opt<bool> WasmEnableEmEH;
-extern cl::opt<bool> WasmEnableEmSjLj;
-
 static void removeRegisterOperands(const MachineInstr *MI, MCInst &OutMI);
 
 MCSymbol *
@@ -112,7 +109,8 @@ WebAssemblyMCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
 
   bool InvokeDetected = false;
   auto *WasmSym = Printer.getMCSymbolForFunction(
-      F, WasmEnableEmEH || WasmEnableEmSjLj, Signature.get(), InvokeDetected);
+      F, WebAssembly::WasmEnableEmEH || WebAssembly::WasmEnableEmSjLj,
+      Signature.get(), InvokeDetected);
   WasmSym->setSignature(Signature.get());
   Printer.addSignature(std::move(Signature));
   WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);

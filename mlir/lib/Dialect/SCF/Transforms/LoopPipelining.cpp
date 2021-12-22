@@ -82,10 +82,10 @@ bool LoopPipelinerInternal::initializeLoopInfo(
     ForOp op, const PipeliningOption &options) {
   forOp = op;
   auto upperBoundCst =
-      forOp.upperBound().getDefiningOp<arith::ConstantIndexOp>();
+      forOp.getUpperBound().getDefiningOp<arith::ConstantIndexOp>();
   auto lowerBoundCst =
-      forOp.lowerBound().getDefiningOp<arith::ConstantIndexOp>();
-  auto stepCst = forOp.step().getDefiningOp<arith::ConstantIndexOp>();
+      forOp.getLowerBound().getDefiningOp<arith::ConstantIndexOp>();
+  auto stepCst = forOp.getStep().getDefiningOp<arith::ConstantIndexOp>();
   if (!upperBoundCst || !lowerBoundCst || !stepCst)
     return false;
   ub = upperBoundCst.value();
@@ -226,8 +226,9 @@ scf::ForOp LoopPipelinerInternal::createKernelLoop(
   // iteration we change the upper bound to remove those iterations.
   Value newUb = rewriter.create<arith::ConstantIndexOp>(forOp.getLoc(),
                                                         ub - maxStage * step);
-  auto newForOp = rewriter.create<scf::ForOp>(
-      forOp.getLoc(), forOp.lowerBound(), newUb, forOp.step(), newLoopArg);
+  auto newForOp =
+      rewriter.create<scf::ForOp>(forOp.getLoc(), forOp.getLowerBound(), newUb,
+                                  forOp.getStep(), newLoopArg);
   return newForOp;
 }
 

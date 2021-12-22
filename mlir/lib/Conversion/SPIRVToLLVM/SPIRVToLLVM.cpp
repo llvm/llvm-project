@@ -1390,7 +1390,7 @@ public:
     auto dstType = typeConverter.convertType(op.getType());
     auto scalarType = dstType.cast<VectorType>().getElementType();
     auto componentsArray = components.getValue();
-    auto context = rewriter.getContext();
+    auto *context = rewriter.getContext();
     auto llvmI32Type = IntegerType::get(context, 32);
     Value targetOp = rewriter.create<LLVM::UndefOp>(loc, dstType);
     for (unsigned i = 0; i < componentsArray.size(); i++) {

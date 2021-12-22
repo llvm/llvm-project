@@ -28,8 +28,8 @@ static Value sourceMaterializationCallback(OpBuilder &builder, Type type,
 
   // A detensored value is converted back by creating a new tensor from its
   // element(s).
-  auto createNewTensorOp = builder.create<tensor::FromElementsOp>(
-      loc, inputs[0].getType(), inputs[0]);
+  auto createNewTensorOp =
+      builder.create<tensor::FromElementsOp>(loc, inputs[0]);
 
   // FromElementsOp results in a tensor<1xdtype>, we need to reshape that to
   // a tensor<dtype> instead.

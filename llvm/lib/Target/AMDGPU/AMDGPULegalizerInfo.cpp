@@ -1052,10 +1052,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
     // Split vector extloads.
     unsigned MemSize = Query.MMODescrs[0].MemoryTy.getSizeInBits();
-    unsigned AlignBits = Query.MMODescrs[0].AlignInBits;
-
-    if (MemSize < DstTy.getSizeInBits())
-      MemSize = std::max(MemSize, AlignBits);
 
     if (DstTy.isVector() && DstTy.getSizeInBits() > MemSize)
       return true;
@@ -1075,12 +1071,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       // If the alignment allows, these should have been widened.
       if (!isPowerOf2_32(NumRegs))
         return true;
-    }
-
-    if (AlignBits < MemSize) {
-      const SITargetLowering *TLI = ST.getTargetLowering();
-      return !TLI->allowsMisalignedMemoryAccessesImpl(MemSize, AS,
-                                                      Align(AlignBits / 8));
     }
 
     return false;
@@ -1176,20 +1166,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
               if (DstSize > MemSize)
                 return std::make_pair(0, LLT::scalar(MemSize));
 
-              if (!isPowerOf2_32(DstSize)) {
-                // We're probably decomposing an odd sized store. Try to split
-                // to the widest type. TODO: Account for alignment. As-is it
-                // should be OK, since the new parts will be further legalized.
-                unsigned FloorSize = PowerOf2Floor(DstSize);
-                return std::make_pair(0, LLT::scalar(FloorSize));
-              }
-
-              if (DstSize > 32 && (DstSize % 32 != 0)) {
-                // FIXME: Need a way to specify non-extload of larger size if
-                // suitably aligned.
-                return std::make_pair(0, LLT::scalar(32 * (DstSize / 32)));
-              }
-
               unsigned MaxSize = maxSizeForAddrSpace(ST,
                                                      PtrTy.getAddressSpace(),
                                                      Op == G_LOAD);
@@ -1255,14 +1231,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                 return std::make_pair(
                     0, LLT::scalarOrVector(
                            ElementCount::getFixed(FloorSize / EltSize), EltTy));
-              }
-
-              // Need to split because of alignment.
-              unsigned Align = Query.MMODescrs[0].AlignInBits;
-              if (EltSize > Align &&
-                  (EltSize / Align < DstTy.getNumElements())) {
-                return std::make_pair(
-                    0, LLT::fixed_vector(EltSize / Align, EltTy));
               }
 
               // May need relegalization for the scalars.
@@ -4237,8 +4205,17 @@ static void packImage16bitOpsToDwords(MachineIRBuilder &B, MachineInstr &MI,
         (I >= Intr->GradientStart && I < Intr->CoordStart && !IsG16) ||
         (I >= Intr->CoordStart && !IsA16)) {
       // Handle any gradient or coordinate operands that should not be packed
-      AddrReg = B.buildBitcast(V2S16, AddrReg).getReg(0);
-      PackedAddrs.push_back(AddrReg);
+      if ((I < Intr->GradientStart) && IsA16 &&
+          (B.getMRI()->getType(AddrReg) == S16)) {
+        // Special handling of bias when A16 is on. Bias is of type half but
+        // occupies full 32-bit.
+        PackedAddrs.push_back(
+            B.buildBuildVector(V2S16, {AddrReg, B.buildUndef(S16).getReg(0)})
+                .getReg(0));
+      } else {
+        AddrReg = B.buildBitcast(V2S16, AddrReg).getReg(0);
+        PackedAddrs.push_back(AddrReg);
+      }
     } else {
       // Dz/dh, dz/dv and the last odd coord are packed with undef. Also, in 1D,
       // derivatives dx/dh and dx/dv are packed with undef.

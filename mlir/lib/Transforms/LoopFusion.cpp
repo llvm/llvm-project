@@ -301,14 +301,15 @@ public:
       memrefEdgeCount[value]--;
     }
     // Remove 'srcId' from 'inEdges[dstId]'.
-    for (auto it = inEdges[dstId].begin(); it != inEdges[dstId].end(); ++it) {
+    for (auto *it = inEdges[dstId].begin(); it != inEdges[dstId].end(); ++it) {
       if ((*it).id == srcId && (*it).value == value) {
         inEdges[dstId].erase(it);
         break;
       }
     }
     // Remove 'dstId' from 'outEdges[srcId]'.
-    for (auto it = outEdges[srcId].begin(); it != outEdges[srcId].end(); ++it) {
+    for (auto *it = outEdges[srcId].begin(); it != outEdges[srcId].end();
+         ++it) {
       if ((*it).id == dstId && (*it).value == value) {
         outEdges[srcId].erase(it);
         break;

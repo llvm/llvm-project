@@ -228,6 +228,7 @@ public:
     return operand;
   }
 
+  // NOLINTNEXTLINE(*-identifier-naming): externally called.
   Value applyfn__add(Value lhs, Value rhs) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
@@ -237,6 +238,7 @@ public:
     llvm_unreachable("unsupported non numeric type");
   }
 
+  // NOLINTNEXTLINE(*-identifier-naming): externally called.
   Value applyfn__exp(Value x) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(x))
@@ -244,6 +246,7 @@ public:
     llvm_unreachable("unsupported non numeric type");
   }
 
+  // NOLINTNEXTLINE(*-identifier-naming): externally called.
   Value applyfn__log(Value x) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(x))
@@ -251,6 +254,7 @@ public:
     llvm_unreachable("unsupported non numeric type");
   }
 
+  // NOLINTNEXTLINE(*-identifier-naming): externally called.
   Value applyfn__sub(Value lhs, Value rhs) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
@@ -260,6 +264,7 @@ public:
     llvm_unreachable("unsupported non numeric type");
   }
 
+  // NOLINTNEXTLINE(*-identifier-naming): externally called.
   Value applyfn__mul(Value lhs, Value rhs) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
@@ -269,6 +274,7 @@ public:
     llvm_unreachable("unsupported non numeric type");
   }
 
+  // NOLINTNEXTLINE(*-identifier-naming): externally called.
   Value applyfn__max(Value lhs, Value rhs) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
@@ -278,6 +284,7 @@ public:
     llvm_unreachable("unsupported non numeric type");
   }
 
+  // NOLINTNEXTLINE(*-identifier-naming): externally called.
   Value applyfn__max_unsigned(Value lhs, Value rhs) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
@@ -287,6 +294,7 @@ public:
     llvm_unreachable("unsupported non numeric type");
   }
 
+  // NOLINTNEXTLINE(*-identifier-naming): externally called.
   Value applyfn__min(Value lhs, Value rhs) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
@@ -296,6 +304,7 @@ public:
     llvm_unreachable("unsupported non numeric type");
   }
 
+  // NOLINTNEXTLINE(*-identifier-naming): externally called.
   Value applyfn__min_unsigned(Value lhs, Value rhs) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
@@ -1829,12 +1838,12 @@ static ParseResult parseTiledLoopOp(OpAsmParser &parser,
     return failure();
 
   // Parse input tensors.
-  SmallVector<OpAsmParser::OperandType, 4> inputs, input_region_args;
+  SmallVector<OpAsmParser::OperandType, 4> inputs, inputRegionArgs;
   SmallVector<Type, 4> inputTypes;
   if (succeeded(parser.parseOptionalKeyword("ins"))) {
     llvm::SMLoc inputsOperandsLoc = parser.getCurrentLocation();
 
-    if (parser.parseAssignmentListWithTypes(input_region_args, inputs,
+    if (parser.parseAssignmentListWithTypes(inputRegionArgs, inputs,
                                             inputTypes))
       return failure();
 
@@ -1844,12 +1853,12 @@ static ParseResult parseTiledLoopOp(OpAsmParser &parser,
   }
 
   // Parse output tensors.
-  SmallVector<OpAsmParser::OperandType, 4> outputs, output_region_args;
+  SmallVector<OpAsmParser::OperandType, 4> outputs, outputRegionArgs;
   SmallVector<Type, 4> outputTypes;
   if (succeeded(parser.parseOptionalKeyword("outs"))) {
     llvm::SMLoc outputsOperandsLoc = parser.getCurrentLocation();
 
-    if (parser.parseAssignmentListWithTypes(output_region_args, outputs,
+    if (parser.parseAssignmentListWithTypes(outputRegionArgs, outputs,
                                             outputTypes))
       return failure();
 
@@ -1905,15 +1914,15 @@ static ParseResult parseTiledLoopOp(OpAsmParser &parser,
   // Parse the body.
   Region *body = result.addRegion();
 
-  SmallVector<Type, 4> region_types(ivs.size(), builder.getIndexType());
-  region_types.append(inputTypes);
-  region_types.append(outputTypes);
+  SmallVector<Type, 4> regionTypes(ivs.size(), builder.getIndexType());
+  regionTypes.append(inputTypes);
+  regionTypes.append(outputTypes);
 
-  SmallVector<OpAsmParser::OperandType, 4> region_args(ivs);
-  region_args.append(input_region_args);
-  region_args.append(output_region_args);
+  SmallVector<OpAsmParser::OperandType, 4> regionArgs(ivs);
+  regionArgs.append(inputRegionArgs);
+  regionArgs.append(outputRegionArgs);
 
-  if (parser.parseRegion(*body, region_args, region_types))
+  if (parser.parseRegion(*body, regionArgs, regionTypes))
     return failure();
 
   // Parse optional attributes.
@@ -2665,118 +2674,6 @@ struct FoldTensorCastOp : public OpInterfaceRewritePattern<LinalgOp> {
   }
 };
 
-static llvm::SmallVector<int64_t> getIndicesVector(int start, int end) {
-  return llvm::to_vector<2>(llvm::seq<int64_t>(start, end));
-}
-
-LogicalResult matchAndReplaceDepthwiseConv(Operation *operation, Value input,
-                                           Value kernel, Value iZp, Value kZp,
-                                           Value init, Attribute stride,
-                                           Attribute dilation,
-                                           PatternRewriter &rewriter) {
-  Location loc = operation->getLoc();
-  auto linalgOp = dyn_cast<LinalgOp>(operation);
-  // Exit out on the memref version of this operation.
-  if (!linalgOp || !linalgOp.hasTensorSemantics())
-    return failure();
-
-  auto result = operation->getResult(0);
-
-  auto kernelTy = kernel.getType().dyn_cast<RankedTensorType>();
-  auto initTy = init.getType().dyn_cast<RankedTensorType>();
-  auto resultTy = result.getType().template dyn_cast<RankedTensorType>();
-  if (!kernelTy || !initTy || !resultTy)
-    return failure();
-
-  if (kernelTy.getDimSize(3) != 1)
-    return failure();
-
-  // Collapse kernel dims.
-  SmallVector<ReassociationIndices, 4> collapsedKernelDims = {
-      getIndicesVector(0, 1), getIndicesVector(1, 2), getIndicesVector(2, 4)};
-  auto newKernelTy = RankedTensorType::get(
-      {kernelTy.getDimSize(0), kernelTy.getDimSize(1), kernelTy.getDimSize(2)},
-      kernelTy.getElementType());
-  auto collapsedKernel = rewriter.create<tensor::CollapseShapeOp>(
-      loc, newKernelTy, kernel, collapsedKernelDims);
-
-  // Collapse init dims.
-  SmallVector<ReassociationIndices, 4> collapsedInitDims = {
-      getIndicesVector(0, 1), getIndicesVector(1, 2), getIndicesVector(2, 3),
-      getIndicesVector(3, 5)};
-  auto newInitTy =
-      RankedTensorType::get({initTy.getDimSize(0), initTy.getDimSize(1),
-                             initTy.getDimSize(2), initTy.getDimSize(3)},
-                            initTy.getElementType());
-  auto collapsedInit = rewriter.create<tensor::CollapseShapeOp>(
-      loc, newInitTy, init, collapsedInitDims);
-
-  Value newConv;
-  if (isa<DepthwiseConv2DNhwcHwcmOp>(operation)) {
-    newConv = rewriter
-                  .create<DepthwiseConv2DNhwcHwcOp>(
-                      loc, newInitTy, ValueRange{input, collapsedKernel},
-                      ValueRange{collapsedInit}, stride, dilation)
-                  .getResult(0);
-  } else if (isa<DepthwiseConv2DNhwcHwcmQOp>(operation)) {
-    newConv =
-        rewriter
-            .create<DepthwiseConv2DNhwcHwcQOp>(
-                loc, newInitTy, ValueRange{input, collapsedKernel, iZp, kZp},
-                ValueRange{collapsedInit}, stride, dilation)
-            .getResult(0);
-  }
-
-  if (!newConv)
-    return failure();
-
-  // Expand dimensions back out to
-  rewriter.replaceOpWithNewOp<tensor::ExpandShapeOp>(
-      operation, resultTy, newConv, collapsedInitDims);
-  return success();
-}
-
-struct SimplifyDepthwiseConvOp
-    : public OpRewritePattern<DepthwiseConv2DNhwcHwcmOp> {
-  using OpRewritePattern<DepthwiseConv2DNhwcHwcmOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(DepthwiseConv2DNhwcHwcmOp op,
-                                PatternRewriter &rewriter) const override {
-    Operation *operation = op.getOperation();
-    Value input = op.getInputOperand(0)->get();
-    Value kernel = op.getInputOperand(1)->get();
-    Value init = op.getOutputOperand(0)->get();
-
-    auto stride = op.strides();
-    auto dilation = op.dilations();
-
-    return matchAndReplaceDepthwiseConv(operation, input, kernel, nullptr,
-                                        nullptr, init, stride, dilation,
-                                        rewriter);
-  }
-};
-
-struct SimplifyDepthwiseConvQOp
-    : public OpRewritePattern<DepthwiseConv2DNhwcHwcmQOp> {
-  using OpRewritePattern<DepthwiseConv2DNhwcHwcmQOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(DepthwiseConv2DNhwcHwcmQOp op,
-                                PatternRewriter &rewriter) const override {
-    Operation *operation = op.getOperation();
-    Value input = op.getInputOperand(0)->get();
-    Value kernel = op.getInputOperand(1)->get();
-    Value iZp = op.getInputOperand(2)->get();
-    Value kZp = op.getInputOperand(3)->get();
-    Value init = op.getOutputOperand(0)->get();
-
-    auto stride = op.strides();
-    auto dilation = op.dilations();
-
-    return matchAndReplaceDepthwiseConv(operation, input, kernel, iZp, kZp,
-                                        init, stride, dilation, rewriter);
-  }
-};
-
 } // namespace
 
 #define LINALGOP_FOLDERS(XXX)                                                  \
@@ -2798,8 +2695,7 @@ LINALGOP_FOLDERS(GenericOp)
 
 void LinalgDialect::getCanonicalizationPatterns(
     RewritePatternSet &results) const {
-  results.add<EraseDeadLinalgOp, FoldTensorCastOp, SimplifyDepthwiseConvOp,
-              SimplifyDepthwiseConvQOp>(getContext());
+  results.add<EraseDeadLinalgOp, FoldTensorCastOp>(getContext());
 }
 
 Operation *LinalgDialect::materializeConstant(OpBuilder &builder,

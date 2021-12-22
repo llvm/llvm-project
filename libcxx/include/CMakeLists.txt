@@ -238,6 +238,7 @@ set(files
   __memory/uninitialized_algorithms.h
   __memory/unique_ptr.h
   __memory/uses_allocator.h
+  __memory/voidify.h
   __mutex_base
   __numeric/accumulate.h
   __numeric/adjacent_difference.h
@@ -357,6 +358,7 @@ set(files
   __utility/rel_ops.h
   __utility/swap.h
   __utility/to_underlying.h
+  __utility/transaction.h
   __variant/monostate.h
   algorithm
   any

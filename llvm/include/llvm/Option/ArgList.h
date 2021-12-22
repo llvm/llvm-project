@@ -245,6 +245,12 @@ public:
     return getLastArg(Ids...) != nullptr;
   }
 
+  /// Return true if the arg list contains multiple arguments matching \p Id.
+  bool hasMultipleArgs(OptSpecifier Id) const {
+    auto Args = filtered(Id);
+    return (Args.begin() != Args.end()) && (++Args.begin()) != Args.end();
+  }
+
   /// Return the last argument matching \p Id, or null.
   template<typename ...OptSpecifiers>
   Arg *getLastArg(OptSpecifiers ...Ids) const {

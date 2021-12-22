@@ -488,6 +488,7 @@ class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
   BitcodeReaderValueList ValueList;
   Optional<MetadataLoader> MDLoader;
   std::vector<Comdat *> ComdatList;
+  DenseSet<GlobalObject *> ImplicitComdatObjects;
   SmallVector<Instruction *, 64> InstructionList;
 
   std::vector<std::pair<GlobalVariable *, unsigned>> GlobalInits;
@@ -2038,14 +2039,8 @@ Expected<Value *> BitcodeReader::recordValue(SmallVectorImpl<uint64_t> &Record,
     return error("Invalid value name");
   V->setName(NameStr);
   auto *GO = dyn_cast<GlobalObject>(V);
-  if (GO) {
-    if (GO->getComdat() == reinterpret_cast<Comdat *>(1)) {
-      if (TT.supportsCOMDAT())
-        GO->setComdat(TheModule->getOrInsertComdat(V->getName()));
-      else
-        GO->setComdat(nullptr);
-    }
-  }
+  if (GO && ImplicitComdatObjects.contains(GO) && TT.supportsCOMDAT())
+    GO->setComdat(TheModule->getOrInsertComdat(V->getName()));
   return V;
 }
 
@@ -2943,6 +2938,19 @@ Error BitcodeReader::parseConstants() {
       V = DSOLocalEquivalent::get(GV);
       break;
     }
+    case bitc::CST_CODE_NO_CFI_VALUE: {
+      if (Record.size() < 2)
+        return error("Invalid record");
+      Type *GVTy = getTypeByID(Record[0]);
+      if (!GVTy)
+        return error("Invalid record");
+      GlobalValue *GV = dyn_cast_or_null<GlobalValue>(
+          ValueList.getConstantFwdRef(Record[1], GVTy));
+      if (!GV)
+        return error("Invalid record");
+      V = NoCFIValue::get(GV);
+      break;
+    }
     }
 
     ValueList.assignValue(V, NextCstNo);
@@ -3293,7 +3301,7 @@ Error BitcodeReader::parseGlobalVarRecord(ArrayRef<uint64_t> Record) {
       NewGV->setComdat(ComdatList[ComdatID - 1]);
     }
   } else if (hasImplicitComdat(RawLinkage)) {
-    NewGV->setComdat(reinterpret_cast<Comdat *>(1));
+    ImplicitComdatObjects.insert(NewGV);
   }
 
   if (Record.size() > 12) {
@@ -3427,7 +3435,7 @@ Error BitcodeReader::parseFunctionRecord(ArrayRef<uint64_t> Record) {
       Func->setComdat(ComdatList[ComdatID - 1]);
     }
   } else if (hasImplicitComdat(RawLinkage)) {
-    Func->setComdat(reinterpret_cast<Comdat *>(1));
+    ImplicitComdatObjects.insert(Func);
   }
 
   if (Record.size() > 13)

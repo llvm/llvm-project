@@ -838,6 +838,9 @@ def warn_fortify_scanf_overflow : Warning<
   "%2, but the corresponding specifier may require size %3">,
   InGroup<FortifySource>;
 
+def err_function_start_invalid_type: Error<
+  "argument must be a function">;
+
 /// main()
 // static main() is not an error in C, just in C++.
 def warn_static_main : Warning<"'main' should not be declared static">,
@@ -9151,15 +9154,22 @@ def warn_cxx17_compat_defaulted_comparison : Warning<
   "before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
 def err_defaulted_comparison_template : Error<
   "comparison operator template cannot be defaulted">;
-def err_defaulted_comparison_out_of_class : Error<
-  "%sub{select_defaulted_comparison_kind}0 can only be defaulted in a class "
-  "definition">;
+def err_defaulted_comparison_num_args : Error<
+  "%select{non-member|member}0 %sub{select_defaulted_comparison_kind}1"
+  " comparison operator must have %select{2|1}0 parameters">;
 def err_defaulted_comparison_param : Error<
   "invalid parameter type for defaulted %sub{select_defaulted_comparison_kind}0"
   "; found %1, expected %2%select{| or %4}3">;
+def err_defaulted_comparison_param_unknown : Error<
+  "invalid parameter type for non-member defaulted"
+  " %sub{select_defaulted_comparison_kind}0"
+  "; found %1, expected class or reference to a constant class">;
 def err_defaulted_comparison_param_mismatch : Error<
   "parameters for defaulted %sub{select_defaulted_comparison_kind}0 "
   "must have the same type%diff{ (found $ vs $)|}1,2">;
+def err_defaulted_comparison_not_friend : Error<
+  "%sub{select_defaulted_comparison_kind}0 is not a friend of"
+  " %select{|incomplete class }1%2">;
 def err_defaulted_comparison_non_const : Error<
   "defaulted member %sub{select_defaulted_comparison_kind}0 must be "
   "const-qualified">;
@@ -11033,14 +11043,12 @@ def err_implied_coroutine_type_not_found : Error<
   "a coroutine; include <experimental/coroutine> if your version "
   "of libcxx is less than 14.0">;
 def warn_deprecated_coroutine_namespace : Warning<
-  "Please move from std::experimental::%0 to std::%0. "
-  "Support for std::experimental::%0 will be removed in LLVM 15.">,
+  "support for std::experimental::%0 will be removed in LLVM 15; "
+  "use std::%0 instead">,
   InGroup<DeprecatedExperimentalCoroutine>;
-def err_mixed_use_std_and_experimental_namespace_for_coroutine : Error <
-  "Found mixed use of std namespace and std::experimental namespace for "
-  "coroutine, which is disallowed. The coroutine components in "
-  "std::experimental namespace is deprecated. Please use coroutine components "
-  "under std namespace.">;
+def err_mixed_use_std_and_experimental_namespace_for_coroutine : Error<
+  "mixed use of std and std::experimental namespaces for "
+  "coroutine components">;
 def err_implicit_coroutine_std_nothrow_type_not_found : Error<
   "std::nothrow was not found; include <new> before defining a coroutine which "
   "uses get_return_object_on_allocation_failure()">;

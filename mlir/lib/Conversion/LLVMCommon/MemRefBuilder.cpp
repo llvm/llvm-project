@@ -468,10 +468,10 @@ Value UnrankedMemRefDescriptor::sizeBasePtr(
   Value structPtr =
       builder.create<LLVM::BitcastOp>(loc, structPtrTy, memRefDescPtr);
 
-  Type int32_type = typeConverter.convertType(builder.getI32Type());
+  Type int32Type = typeConverter.convertType(builder.getI32Type());
   Value zero =
       createIndexAttrConstant(builder, loc, typeConverter.getIndexType(), 0);
-  Value three = builder.create<LLVM::ConstantOp>(loc, int32_type,
+  Value three = builder.create<LLVM::ConstantOp>(loc, int32Type,
                                                  builder.getI32IntegerAttr(3));
   return builder.create<LLVM::GEPOp>(loc, LLVM::LLVMPointerType::get(indexTy),
                                      structPtr, ValueRange({zero, three}));

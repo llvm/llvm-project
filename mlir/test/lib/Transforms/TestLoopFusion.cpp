@@ -156,7 +156,7 @@ using LoopFunc = function_ref<bool(AffineForOp, AffineForOp, unsigned, unsigned,
 // If 'return_on_change' is true, returns on first invocation of 'fn' which
 // returns true.
 static bool iterateLoops(ArrayRef<SmallVector<AffineForOp, 2>> depthToLoops,
-                         LoopFunc fn, bool return_on_change = false) {
+                         LoopFunc fn, bool returnOnChange = false) {
   bool changed = false;
   for (unsigned loopDepth = 0, end = depthToLoops.size(); loopDepth < end;
        ++loopDepth) {
@@ -167,7 +167,7 @@ static bool iterateLoops(ArrayRef<SmallVector<AffineForOp, 2>> depthToLoops,
         if (j != k)
           changed |=
               fn(loops[j], loops[k], j, k, loopDepth, depthToLoops.size());
-        if (changed && return_on_change)
+        if (changed && returnOnChange)
           return true;
       }
     }

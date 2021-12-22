@@ -1988,6 +1988,9 @@ ConstantLValueEmitter::VisitAddrLabelExpr(const AddrLabelExpr *E) {
 ConstantLValue
 ConstantLValueEmitter::VisitCallExpr(const CallExpr *E) {
   unsigned builtin = E->getBuiltinCallee();
+  if (builtin == Builtin::BI__builtin_function_start)
+    return CGM.GetFunctionStart(
+        E->getArg(0)->getAsBuiltinConstantDeclRef(CGM.getContext()));
   if (builtin != Builtin::BI__builtin___CFStringMakeConstantString &&
       builtin != Builtin::BI__builtin___NSStringMakeConstantString)
     return nullptr;

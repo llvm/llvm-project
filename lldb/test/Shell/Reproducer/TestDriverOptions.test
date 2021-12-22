@@ -1,10 +1,8 @@
 # Check that errors are propagated to the driver.
 #
 # RUN: not %lldb --capture --capture-path %t/bogus/bogus 2>&1 | FileCheck %s --check-prefix INVALID-CAPTURE
-# RUN: not %lldb --replay %t/bogus/bogus  2>&1 | FileCheck %s --check-prefix INVALID-REPLAY
 #
 # INVALID-CAPTURE: unable to create reproducer directory
-# INVALID-REPLAY: unable to load reproducer index
 
 # Check that all option combination work as expected.
 #

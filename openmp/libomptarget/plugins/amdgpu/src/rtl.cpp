@@ -1323,8 +1323,318 @@ uint32_t elf_e_flags(__tgt_device_image *image) {
   DP("ELF Flags: 0x%x\n", Flags);
   return Flags;
 }
+
+template <typename T> bool enforce_upper_bound(T *value, T upper) {
+  bool changed = *value > upper;
+  if (changed) {
+    *value = upper;
+  }
+  return changed;
+}
+
+Elf64_Shdr *find_only_SHT_HASH(Elf *elf) {
+  size_t N;
+  int rc = elf_getshdrnum(elf, &N);
+  if (rc != 0) {
+    return nullptr;
+  }
+
+  Elf64_Shdr *result = nullptr;
+  for (size_t i = 0; i < N; i++) {
+    Elf_Scn *scn = elf_getscn(elf, i);
+    if (scn) {
+      Elf64_Shdr *shdr = elf64_getshdr(scn);
+      if (shdr) {
+        if (shdr->sh_type == SHT_HASH) {
+          if (result == nullptr) {
+            result = shdr;
+          } else {
+            // multiple SHT_HASH sections not handled
+            return nullptr;
+          }
+        }
+      }
+    }
+  }
+  return result;
+}
+
+const Elf64_Sym *elf_lookup(Elf *elf, char *base, Elf64_Shdr *section_hash,
+                            const char *symname) {
+
+  assert(section_hash);
+  size_t section_symtab_index = section_hash->sh_link;
+  Elf64_Shdr *section_symtab =
+      elf64_getshdr(elf_getscn(elf, section_symtab_index));
+  size_t section_strtab_index = section_symtab->sh_link;
+
+  const Elf64_Sym *symtab =
+      reinterpret_cast<const Elf64_Sym *>(base + section_symtab->sh_offset);
+
+  const uint32_t *hashtab =
+      reinterpret_cast<const uint32_t *>(base + section_hash->sh_offset);
+
+  // Layout:
+  // nbucket
+  // nchain
+  // bucket[nbucket]
+  // chain[nchain]
+  uint32_t nbucket = hashtab[0];
+  const uint32_t *bucket = &hashtab[2];
+  const uint32_t *chain = &hashtab[nbucket + 2];
+
+  const size_t max = strlen(symname) + 1;
+  const uint32_t hash = elf_hash(symname);
+  for (uint32_t i = bucket[hash % nbucket]; i != 0; i = chain[i]) {
+    char *n = elf_strptr(elf, section_strtab_index, symtab[i].st_name);
+    if (strncmp(symname, n, max) == 0) {
+      return &symtab[i];
+    }
+  }
+
+  return nullptr;
+}
+
+struct symbol_info {
+  void *addr = nullptr;
+  uint32_t size = UINT32_MAX;
+  uint32_t sh_type = SHT_NULL;
+};
+
+int get_symbol_info_without_loading(Elf *elf, char *base, const char *symname,
+                                    symbol_info *res) {
+  if (elf_kind(elf) != ELF_K_ELF) {
+    return 1;
+  }
+
+  Elf64_Shdr *section_hash = find_only_SHT_HASH(elf);
+  if (!section_hash) {
+    return 1;
+  }
+
+  const Elf64_Sym *sym = elf_lookup(elf, base, section_hash, symname);
+  if (!sym) {
+    return 1;
+  }
+
+  if (sym->st_size > UINT32_MAX) {
+    return 1;
+  }
+
+  if (sym->st_shndx == SHN_UNDEF) {
+    return 1;
+  }
+
+  Elf_Scn *section = elf_getscn(elf, sym->st_shndx);
+  if (!section) {
+    return 1;
+  }
+
+  Elf64_Shdr *header = elf64_getshdr(section);
+  if (!header) {
+    return 1;
+  }
+
+  res->addr = sym->st_value + base;
+  res->size = static_cast<uint32_t>(sym->st_size);
+  res->sh_type = header->sh_type;
+  return 0;
+}
+
+int get_symbol_info_without_loading(char *base, size_t img_size,
+                                    const char *symname, symbol_info *res) {
+  Elf *elf = elf_memory(base, img_size);
+  if (elf) {
+    int rc = get_symbol_info_without_loading(elf, base, symname, res);
+    elf_end(elf);
+    return rc;
+  }
+  return 1;
+}
+
+hsa_status_t interop_get_symbol_info(char *base, size_t img_size,
+                                     const char *symname, void **var_addr,
+                                     uint32_t *var_size) {
+  symbol_info si;
+  int rc = get_symbol_info_without_loading(base, img_size, symname, &si);
+  if (rc == 0) {
+    *var_addr = si.addr;
+    *var_size = si.size;
+    return HSA_STATUS_SUCCESS;
+  } else {
+    return HSA_STATUS_ERROR;
+  }
+}
+
+template <typename C>
+hsa_status_t module_register_from_memory_to_place(
+    std::map<std::string, atl_kernel_info_t> &KernelInfoTable,
+    std::map<std::string, atl_symbol_info_t> &SymbolInfoTable,
+    void *module_bytes, size_t module_size, int DeviceId, C cb,
+    std::vector<hsa_executable_t> &HSAExecutables) {
+  auto L = [](void *data, size_t size, void *cb_state) -> hsa_status_t {
+    C *unwrapped = static_cast<C *>(cb_state);
+    return (*unwrapped)(data, size);
+  };
+  return core::RegisterModuleFromMemory(
+      KernelInfoTable, SymbolInfoTable, module_bytes, module_size,
+      DeviceInfo.HSAAgents[DeviceId], L, static_cast<void *>(&cb),
+      HSAExecutables);
+}
+
+uint64_t get_device_State_bytes(char *ImageStart, size_t img_size) {
+  uint64_t device_State_bytes = 0;
+  {
+    // If this is the deviceRTL, get the state variable size
+    symbol_info size_si;
+    int rc = get_symbol_info_without_loading(
+        ImageStart, img_size, "omptarget_nvptx_device_State_size", &size_si);
+
+    if (rc == 0) {
+      if (size_si.size != sizeof(uint64_t)) {
+        DP("Found device_State_size variable with wrong size\n");
+        return 0;
+      }
+
+      // Read number of bytes directly from the elf
+      memcpy(&device_State_bytes, size_si.addr, sizeof(uint64_t));
+    }
+  }
+  return device_State_bytes;
+}
+
+struct device_environment {
+  // initialise an DeviceEnvironmentTy in the deviceRTL
+  // patches around differences in the deviceRTL between trunk, aomp,
+  // rocmcc. Over time these differences will tend to zero and this class
+  // simplified.
+  // Symbol may be in .data or .bss, and may be missing fields, todo:
+  // review aomp/trunk/rocm and simplify the following
+
+  // The symbol may also have been deadstripped because the device side
+  // accessors were unused.
+
+  // If the symbol is in .data (aomp, rocm) it can be written directly.
+  // If it is in .bss, we must wait for it to be allocated space on the
+  // gpu (trunk) and initialize after loading.
+  const char *sym() { return "omptarget_device_environment"; }
+
+  DeviceEnvironmentTy host_device_env;
+  symbol_info si;
+  bool valid = false;
+
+  __tgt_device_image *image;
+  const size_t img_size;
+
+  device_environment(int device_id, int number_devices,
+                     __tgt_device_image *image, const size_t img_size)
+      : image(image), img_size(img_size) {
+
+    host_device_env.NumDevices = number_devices;
+    host_device_env.DeviceNum = device_id;
+    host_device_env.DebugKind = 0;
+    host_device_env.DynamicMemSize = 0;
+    if (char *envStr = getenv("LIBOMPTARGET_DEVICE_RTL_DEBUG")) {
+      host_device_env.DebugKind = std::stoi(envStr);
+    }
+
+    int rc = get_symbol_info_without_loading((char *)image->ImageStart,
+                                             img_size, sym(), &si);
+    if (rc != 0) {
+      DP("Finding global device environment '%s' - symbol missing.\n", sym());
+      return;
+    }
+
+    if (si.size > sizeof(host_device_env)) {
+      DP("Symbol '%s' has size %u, expected at most %zu.\n", sym(), si.size,
+         sizeof(host_device_env));
+      return;
+    }
+
+    valid = true;
+  }
+
+  bool in_image() { return si.sh_type != SHT_NOBITS; }
+
+  hsa_status_t before_loading(void *data, size_t size) {
+    if (valid) {
+      if (in_image()) {
+        DP("Setting global device environment before load (%u bytes)\n",
+           si.size);
+        uint64_t offset = (char *)si.addr - (char *)image->ImageStart;
+        void *pos = (char *)data + offset;
+        memcpy(pos, &host_device_env, si.size);
+      }
+    }
+    return HSA_STATUS_SUCCESS;
+  }
+
+  hsa_status_t after_loading() {
+    if (valid) {
+      if (!in_image()) {
+        DP("Setting global device environment after load (%u bytes)\n",
+           si.size);
+        int device_id = host_device_env.DeviceNum;
+        auto &SymbolInfo = DeviceInfo.SymbolInfoTable[device_id];
+        void *state_ptr;
+        uint32_t state_ptr_size;
+        hsa_status_t err = interop_hsa_get_symbol_info(
+            SymbolInfo, device_id, sym(), &state_ptr, &state_ptr_size);
+        if (err != HSA_STATUS_SUCCESS) {
+          DP("failed to find %s in loaded image\n", sym());
+          return err;
+        }
+
+        if (state_ptr_size != si.size) {
+          DP("Symbol had size %u before loading, %u after\n", state_ptr_size,
+             si.size);
+          return HSA_STATUS_ERROR;
+        }
+
+        return DeviceInfo.freesignalpool_memcpy_h2d(state_ptr, &host_device_env,
+                                                    state_ptr_size, device_id);
+      }
+    }
+    return HSA_STATUS_SUCCESS;
+  }
+};
+
+hsa_status_t impl_calloc(void **ret_ptr, size_t size, int DeviceId) {
+  uint64_t rounded = 4 * ((size + 3) / 4);
+  void *ptr;
+  hsa_amd_memory_pool_t MemoryPool = DeviceInfo.getDeviceMemoryPool(DeviceId);
+  hsa_status_t err = hsa_amd_memory_pool_allocate(MemoryPool, rounded, 0, &ptr);
+  if (err != HSA_STATUS_SUCCESS) {
+    return err;
+  }
+
+  hsa_status_t rc = hsa_amd_memory_fill(ptr, 0, rounded / 4);
+  if (rc != HSA_STATUS_SUCCESS) {
+    DP("zero fill device_state failed with %u\n", rc);
+    core::Runtime::Memfree(ptr);
+    return HSA_STATUS_ERROR;
+  }
+
+  *ret_ptr = ptr;
+  return HSA_STATUS_SUCCESS;
+}
+
+bool image_contains_symbol(void *data, size_t size, const char *sym) {
+  symbol_info si;
+  int rc = get_symbol_info_without_loading((char *)data, size, sym, &si);
+  return (rc == 0) && (si.addr != nullptr);
+}
+
 } // namespace
 
+namespace core {
+hsa_status_t allow_access_to_all_gpu_agents(void *ptr) {
+  return hsa_amd_agents_allow_access(DeviceInfo.HSAAgents.size(),
+                                     &DeviceInfo.HSAAgents[0], NULL, ptr);
+}
+} // namespace core
+
+extern "C" {
 int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *image) {
   return elf_machine_id_is_amdgcn(image);
 }
@@ -1344,16 +1654,6 @@ int64_t __tgt_rtl_init_requires(int64_t RequiresFlags) {
   DeviceInfo.RequiresFlags = RequiresFlags;
   return RequiresFlags;
 }
-
-namespace {
-template <typename T> bool enforce_upper_bound(T *value, T upper) {
-  bool changed = *value > upper;
-  if (changed) {
-    *value = upper;
-  }
-  return changed;
-}
-} // namespace
 
 int32_t __tgt_rtl_init_device(int device_id) {
   hsa_status_t err;
@@ -1510,182 +1810,6 @@ int32_t __tgt_rtl_init_device(int device_id) {
   return OFFLOAD_SUCCESS;
 }
 
-namespace {
-Elf64_Shdr *find_only_SHT_HASH(Elf *elf) {
-  size_t N;
-  int rc = elf_getshdrnum(elf, &N);
-  if (rc != 0) {
-    return nullptr;
-  }
-
-  Elf64_Shdr *result = nullptr;
-  for (size_t i = 0; i < N; i++) {
-    Elf_Scn *scn = elf_getscn(elf, i);
-    if (scn) {
-      Elf64_Shdr *shdr = elf64_getshdr(scn);
-      if (shdr) {
-        if (shdr->sh_type == SHT_HASH) {
-          if (result == nullptr) {
-            result = shdr;
-          } else {
-            // multiple SHT_HASH sections not handled
-            return nullptr;
-          }
-        }
-      }
-    }
-  }
-  return result;
-}
-
-const Elf64_Sym *elf_lookup(Elf *elf, char *base, Elf64_Shdr *section_hash,
-                            const char *symname) {
-
-  assert(section_hash);
-  size_t section_symtab_index = section_hash->sh_link;
-  Elf64_Shdr *section_symtab =
-      elf64_getshdr(elf_getscn(elf, section_symtab_index));
-  size_t section_strtab_index = section_symtab->sh_link;
-
-  const Elf64_Sym *symtab =
-      reinterpret_cast<const Elf64_Sym *>(base + section_symtab->sh_offset);
-
-  const uint32_t *hashtab =
-      reinterpret_cast<const uint32_t *>(base + section_hash->sh_offset);
-
-  // Layout:
-  // nbucket
-  // nchain
-  // bucket[nbucket]
-  // chain[nchain]
-  uint32_t nbucket = hashtab[0];
-  const uint32_t *bucket = &hashtab[2];
-  const uint32_t *chain = &hashtab[nbucket + 2];
-
-  const size_t max = strlen(symname) + 1;
-  const uint32_t hash = elf_hash(symname);
-  for (uint32_t i = bucket[hash % nbucket]; i != 0; i = chain[i]) {
-    char *n = elf_strptr(elf, section_strtab_index, symtab[i].st_name);
-    if (strncmp(symname, n, max) == 0) {
-      return &symtab[i];
-    }
-  }
-
-  return nullptr;
-}
-
-struct symbol_info {
-  void *addr = nullptr;
-  uint32_t size = UINT32_MAX;
-  uint32_t sh_type = SHT_NULL;
-};
-
-int get_symbol_info_without_loading(Elf *elf, char *base, const char *symname,
-                                    symbol_info *res) {
-  if (elf_kind(elf) != ELF_K_ELF) {
-    return 1;
-  }
-
-  Elf64_Shdr *section_hash = find_only_SHT_HASH(elf);
-  if (!section_hash) {
-    return 1;
-  }
-
-  const Elf64_Sym *sym = elf_lookup(elf, base, section_hash, symname);
-  if (!sym) {
-    return 1;
-  }
-
-  if (sym->st_size > UINT32_MAX) {
-    return 1;
-  }
-
-  if (sym->st_shndx == SHN_UNDEF) {
-    return 1;
-  }
-
-  Elf_Scn *section = elf_getscn(elf, sym->st_shndx);
-  if (!section) {
-    return 1;
-  }
-
-  Elf64_Shdr *header = elf64_getshdr(section);
-  if (!header) {
-    return 1;
-  }
-
-  res->addr = sym->st_value + base;
-  res->size = static_cast<uint32_t>(sym->st_size);
-  res->sh_type = header->sh_type;
-  return 0;
-}
-
-int get_symbol_info_without_loading(char *base, size_t img_size,
-                                    const char *symname, symbol_info *res) {
-  Elf *elf = elf_memory(base, img_size);
-  if (elf) {
-    int rc = get_symbol_info_without_loading(elf, base, symname, res);
-    elf_end(elf);
-    return rc;
-  }
-  return 1;
-}
-
-hsa_status_t interop_get_symbol_info(char *base, size_t img_size,
-                                     const char *symname, void **var_addr,
-                                     uint32_t *var_size) {
-  symbol_info si;
-  int rc = get_symbol_info_without_loading(base, img_size, symname, &si);
-  if (rc == 0) {
-    *var_addr = si.addr;
-    *var_size = si.size;
-    return HSA_STATUS_SUCCESS;
-  } else {
-    return HSA_STATUS_ERROR;
-  }
-}
-
-template <typename C>
-hsa_status_t module_register_from_memory_to_place(
-    std::map<std::string, atl_kernel_info_t> &KernelInfoTable,
-    std::map<std::string, atl_symbol_info_t> &SymbolInfoTable,
-    void *module_bytes, size_t module_size, int DeviceId, C cb,
-    std::vector<hsa_executable_t> &HSAExecutables) {
-  auto L = [](void *data, size_t size, void *cb_state) -> hsa_status_t {
-    C *unwrapped = static_cast<C *>(cb_state);
-    return (*unwrapped)(data, size);
-  };
-  return core::RegisterModuleFromMemory(
-      KernelInfoTable, SymbolInfoTable, module_bytes, module_size,
-      DeviceInfo.HSAAgents[DeviceId], L, static_cast<void *>(&cb),
-      HSAExecutables);
-}
-} // namespace
-
-static uint64_t get_device_State_bytes(char *ImageStart, size_t img_size) {
-  uint64_t device_State_bytes = 0;
-  {
-    // If this is the deviceRTL, get the state variable size
-    symbol_info size_si;
-    int rc = get_symbol_info_without_loading(
-        ImageStart, img_size, "omptarget_nvptx_device_State_size", &size_si);
-
-    if (rc == 0) {
-      if (size_si.size != sizeof(uint64_t)) {
-        DP("Found device_State_size variable with wrong size\n");
-        return 0;
-      }
-
-      // Read number of bytes directly from the elf
-      memcpy(&device_State_bytes, size_si.addr, sizeof(uint64_t));
-    }
-  }
-  return device_State_bytes;
-}
-
-static __tgt_target_table *
-__tgt_rtl_load_binary_locked(int32_t device_id, __tgt_device_image *image);
-
 static __tgt_target_table *
 __tgt_rtl_load_binary_locked(int32_t device_id, __tgt_device_image *image);
 
@@ -1695,128 +1819,6 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
   __tgt_target_table *res = __tgt_rtl_load_binary_locked(device_id, image);
   DeviceInfo.load_run_lock.unlock();
   return res;
-}
-
-struct device_environment {
-  // initialise an DeviceEnvironmentTy in the deviceRTL
-  // patches around differences in the deviceRTL between trunk, aomp,
-  // rocmcc. Over time these differences will tend to zero and this class
-  // simplified.
-  // Symbol may be in .data or .bss, and may be missing fields, todo:
-  // review aomp/trunk/rocm and simplify the following
-
-  // The symbol may also have been deadstripped because the device side
-  // accessors were unused.
-
-  // If the symbol is in .data (aomp, rocm) it can be written directly.
-  // If it is in .bss, we must wait for it to be allocated space on the
-  // gpu (trunk) and initialize after loading.
-  const char *sym() { return "omptarget_device_environment"; }
-
-  DeviceEnvironmentTy host_device_env;
-  symbol_info si;
-  bool valid = false;
-
-  __tgt_device_image *image;
-  const size_t img_size;
-
-  device_environment(int device_id, int number_devices,
-                     __tgt_device_image *image, const size_t img_size)
-      : image(image), img_size(img_size) {
-
-    host_device_env.NumDevices = number_devices;
-    host_device_env.DeviceNum = device_id;
-    host_device_env.DebugKind = 0;
-    host_device_env.DynamicMemSize = 0;
-    if (char *envStr = getenv("LIBOMPTARGET_DEVICE_RTL_DEBUG")) {
-      host_device_env.DebugKind = std::stoi(envStr);
-    }
-
-    int rc = get_symbol_info_without_loading((char *)image->ImageStart,
-                                             img_size, sym(), &si);
-    if (rc != 0) {
-      DP("Finding global device environment '%s' - symbol missing.\n", sym());
-      return;
-    }
-
-    if (si.size > sizeof(host_device_env)) {
-      DP("Symbol '%s' has size %u, expected at most %zu.\n", sym(), si.size,
-         sizeof(host_device_env));
-      return;
-    }
-
-    valid = true;
-  }
-
-  bool in_image() { return si.sh_type != SHT_NOBITS; }
-
-  hsa_status_t before_loading(void *data, size_t size) {
-    if (valid) {
-      if (in_image()) {
-        DP("Setting global device environment before load (%u bytes)\n",
-           si.size);
-        uint64_t offset = (char *)si.addr - (char *)image->ImageStart;
-        void *pos = (char *)data + offset;
-        memcpy(pos, &host_device_env, si.size);
-      }
-    }
-    return HSA_STATUS_SUCCESS;
-  }
-
-  hsa_status_t after_loading() {
-    if (valid) {
-      if (!in_image()) {
-        DP("Setting global device environment after load (%u bytes)\n",
-           si.size);
-        int device_id = host_device_env.DeviceNum;
-        auto &SymbolInfo = DeviceInfo.SymbolInfoTable[device_id];
-        void *state_ptr;
-        uint32_t state_ptr_size;
-        hsa_status_t err = interop_hsa_get_symbol_info(
-            SymbolInfo, device_id, sym(), &state_ptr, &state_ptr_size);
-        if (err != HSA_STATUS_SUCCESS) {
-          DP("failed to find %s in loaded image\n", sym());
-          return err;
-        }
-
-        if (state_ptr_size != si.size) {
-          DP("Symbol had size %u before loading, %u after\n", state_ptr_size,
-             si.size);
-          return HSA_STATUS_ERROR;
-        }
-
-        return DeviceInfo.freesignalpool_memcpy_h2d(state_ptr, &host_device_env,
-                                                    state_ptr_size, device_id);
-      }
-    }
-    return HSA_STATUS_SUCCESS;
-  }
-};
-
-static hsa_status_t impl_calloc(void **ret_ptr, size_t size, int DeviceId) {
-  uint64_t rounded = 4 * ((size + 3) / 4);
-  void *ptr;
-  hsa_amd_memory_pool_t MemoryPool = DeviceInfo.getDeviceMemoryPool(DeviceId);
-  hsa_status_t err = hsa_amd_memory_pool_allocate(MemoryPool, rounded, 0, &ptr);
-  if (err != HSA_STATUS_SUCCESS) {
-    return err;
-  }
-
-  hsa_status_t rc = hsa_amd_memory_fill(ptr, 0, rounded / 4);
-  if (rc != HSA_STATUS_SUCCESS) {
-    DP("zero fill device_state failed with %u\n", rc);
-    core::Runtime::Memfree(ptr);
-    return HSA_STATUS_ERROR;
-  }
-
-  *ret_ptr = ptr;
-  return HSA_STATUS_SUCCESS;
-}
-
-static bool image_contains_symbol(void *data, size_t size, const char *sym) {
-  symbol_info si;
-  int rc = get_symbol_info_without_loading((char *)data, size, sym, &si);
-  return (rc == 0) && (si.addr != nullptr);
 }
 
 __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
@@ -2289,7 +2291,10 @@ int32_t __tgt_rtl_run_target_region(int32_t device_id, void *tgt_entry_ptr,
 int32_t __tgt_rtl_run_target_team_region_async(
     int32_t device_id, void *tgt_entry_ptr, void **tgt_args,
     ptrdiff_t *tgt_offsets, int32_t arg_num, int32_t num_teams,
-    int32_t thread_limit, uint64_t loop_tripcount) {
+    int32_t thread_limit, uint64_t loop_tripcount,
+    __tgt_async_info *AsyncInfo) {
+  assert(AsyncInfo && "AsyncInfo is nullptr");
+  initAsyncInfo(AsyncInfo);
 
   DeviceInfo.load_run_lock.lock_shared();
   int32_t res =
@@ -2305,16 +2310,13 @@ int32_t __tgt_rtl_run_target_region_async(int32_t device_id,
                                           ptrdiff_t *tgt_offsets,
                                           int32_t arg_num,
                                           __tgt_async_info *AsyncInfo) {
-  assert(AsyncInfo && "AsyncInfo is nullptr");
-  initAsyncInfo(AsyncInfo);
-
   // use one team and one thread
   // fix thread num
   int32_t team_num = 1;
   int32_t thread_limit = 0; // use default
-  return __tgt_rtl_run_target_team_region_async(device_id, tgt_entry_ptr,
-                                                tgt_args, tgt_offsets, arg_num,
-                                                team_num, thread_limit, 0);
+  return __tgt_rtl_run_target_team_region_async(
+      device_id, tgt_entry_ptr, tgt_args, tgt_offsets, arg_num, team_num,
+      thread_limit, 0, AsyncInfo);
 }
 
 int32_t __tgt_rtl_synchronize(int32_t device_id, __tgt_async_info *AsyncInfo) {
@@ -2328,11 +2330,4 @@ int32_t __tgt_rtl_synchronize(int32_t device_id, __tgt_async_info *AsyncInfo) {
   }
   return OFFLOAD_SUCCESS;
 }
-
-namespace core {
-hsa_status_t allow_access_to_all_gpu_agents(void *ptr) {
-  return hsa_amd_agents_allow_access(DeviceInfo.HSAAgents.size(),
-                                     &DeviceInfo.HSAAgents[0], NULL, ptr);
-}
-
-} // namespace core
+} // extern "C"

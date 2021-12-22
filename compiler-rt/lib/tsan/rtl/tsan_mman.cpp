@@ -364,7 +364,7 @@ void *user_pvalloc(ThreadState *thr, uptr pc, uptr sz) {
 }
 
 uptr user_alloc_usable_size(const void *p) {
-  if (p == 0)
+  if (p == 0 || !IsAppMem((uptr)p))
     return 0;
   MBlock *b = ctx->metamap.GetBlock((uptr)p);
   if (!b)

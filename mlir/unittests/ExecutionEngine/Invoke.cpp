@@ -103,10 +103,10 @@ TEST(MLIRExecutionEngine, SubtractFloat) {
 }
 
 TEST(NativeMemRefJit, ZeroRankMemref) {
-  OwningMemRef<float, 0> A({});
-  A[{}] = 42.;
-  ASSERT_EQ(*A->data, 42);
-  A[{}] = 0;
+  OwningMemRef<float, 0> a({});
+  a[{}] = 42.;
+  ASSERT_EQ(*a->data, 42);
+  a[{}] = 0;
   std::string moduleStr = R"mlir(
   func @zero_ranked(%arg0 : memref<f32>) attributes { llvm.emit_c_interface } {
     %cst42 = arith.constant 42.0 : f32
@@ -125,19 +125,19 @@ TEST(NativeMemRefJit, ZeroRankMemref) {
   ASSERT_TRUE(!!jitOrError);
   auto jit = std::move(jitOrError.get());
 
-  llvm::Error error = jit->invoke("zero_ranked", &*A);
+  llvm::Error error = jit->invoke("zero_ranked", &*a);
   ASSERT_TRUE(!error);
-  EXPECT_EQ((A[{}]), 42.);
-  for (float &elt : *A)
-    EXPECT_EQ(&elt, &(A[{}]));
+  EXPECT_EQ((a[{}]), 42.);
+  for (float &elt : *a)
+    EXPECT_EQ(&elt, &(a[{}]));
 }
 
 TEST(NativeMemRefJit, RankOneMemref) {
   int64_t shape[] = {9};
-  OwningMemRef<float, 1> A(shape);
+  OwningMemRef<float, 1> a(shape);
   int count = 1;
-  for (float &elt : *A) {
-    EXPECT_EQ(&elt, &(A[{count - 1}]));
+  for (float &elt : *a) {
+    EXPECT_EQ(&elt, &(a[{count - 1}]));
     elt = count++;
   }
 
@@ -160,10 +160,10 @@ TEST(NativeMemRefJit, RankOneMemref) {
   ASSERT_TRUE(!!jitOrError);
   auto jit = std::move(jitOrError.get());
 
-  llvm::Error error = jit->invoke("one_ranked", &*A);
+  llvm::Error error = jit->invoke("one_ranked", &*a);
   ASSERT_TRUE(!error);
   count = 1;
-  for (float &elt : *A) {
+  for (float &elt : *a) {
     if (count == 6)
       EXPECT_EQ(elt, 42.);
     else
@@ -173,24 +173,24 @@ TEST(NativeMemRefJit, RankOneMemref) {
 }
 
 TEST(NativeMemRefJit, BasicMemref) {
-  constexpr int K = 3;
-  constexpr int M = 7;
+  constexpr int k = 3;
+  constexpr int m = 7;
   // Prepare arguments beforehand.
   auto init = [=](float &elt, ArrayRef<int64_t> indices) {
     assert(indices.size() == 2);
-    elt = M * indices[0] + indices[1];
+    elt = m * indices[0] + indices[1];
   };
-  int64_t shape[] = {K, M};
-  int64_t shapeAlloc[] = {K + 1, M + 1};
-  OwningMemRef<float, 2> A(shape, shapeAlloc, init);
-  ASSERT_EQ(A->sizes[0], K);
-  ASSERT_EQ(A->sizes[1], M);
-  ASSERT_EQ(A->strides[0], M + 1);
-  ASSERT_EQ(A->strides[1], 1);
-  for (int i = 0; i < K; ++i) {
-    for (int j = 0; j < M; ++j) {
-      EXPECT_EQ((A[{i, j}]), i * M + j);
-      EXPECT_EQ(&(A[{i, j}]), &((*A)[i][j]));
+  int64_t shape[] = {k, m};
+  int64_t shapeAlloc[] = {k + 1, m + 1};
+  OwningMemRef<float, 2> a(shape, shapeAlloc, init);
+  ASSERT_EQ(a->sizes[0], k);
+  ASSERT_EQ(a->sizes[1], m);
+  ASSERT_EQ(a->strides[0], m + 1);
+  ASSERT_EQ(a->strides[1], 1);
+  for (int i = 0; i < k; ++i) {
+    for (int j = 0; j < m; ++j) {
+      EXPECT_EQ((a[{i, j}]), i * m + j);
+      EXPECT_EQ(&(a[{i, j}]), &((*a)[i][j]));
     }
   }
   std::string moduleStr = R"mlir(
@@ -214,27 +214,27 @@ TEST(NativeMemRefJit, BasicMemref) {
   ASSERT_TRUE(!!jitOrError);
   std::unique_ptr<ExecutionEngine> jit = std::move(jitOrError.get());
 
-  llvm::Error error = jit->invoke("rank2_memref", &*A, &*A);
+  llvm::Error error = jit->invoke("rank2_memref", &*a, &*a);
   ASSERT_TRUE(!error);
-  EXPECT_EQ(((*A)[1][2]), 42.);
-  EXPECT_EQ((A[{2, 1}]), 42.);
+  EXPECT_EQ(((*a)[1][2]), 42.);
+  EXPECT_EQ((a[{2, 1}]), 42.);
 }
 
 // A helper function that will be called from the JIT
-static void memref_multiply(::StridedMemRefType<float, 2> *memref,
-                            int32_t coefficient) {
+static void memrefMultiply(::StridedMemRefType<float, 2> *memref,
+                           int32_t coefficient) {
   for (float &elt : *memref)
     elt *= coefficient;
 }
 
 TEST(NativeMemRefJit, JITCallback) {
-  constexpr int K = 2;
-  constexpr int M = 2;
-  int64_t shape[] = {K, M};
-  int64_t shapeAlloc[] = {K + 1, M + 1};
-  OwningMemRef<float, 2> A(shape, shapeAlloc);
+  constexpr int k = 2;
+  constexpr int m = 2;
+  int64_t shape[] = {k, m};
+  int64_t shapeAlloc[] = {k + 1, m + 1};
+  OwningMemRef<float, 2> a(shape, shapeAlloc);
   int count = 1;
-  for (float &elt : *A)
+  for (float &elt : *a)
     elt = count++;
 
   std::string moduleStr = R"mlir(
@@ -259,15 +259,15 @@ TEST(NativeMemRefJit, JITCallback) {
   jit->registerSymbols([&](llvm::orc::MangleAndInterner interner) {
     llvm::orc::SymbolMap symbolMap;
     symbolMap[interner("_mlir_ciface_callback")] =
-        llvm::JITEvaluatedSymbol::fromPointer(memref_multiply);
+        llvm::JITEvaluatedSymbol::fromPointer(memrefMultiply);
     return symbolMap;
   });
 
   int32_t coefficient = 3.;
-  llvm::Error error = jit->invoke("caller_for_callback", &*A, coefficient);
+  llvm::Error error = jit->invoke("caller_for_callback", &*a, coefficient);
   ASSERT_TRUE(!error);
   count = 1;
-  for (float elt : *A)
+  for (float elt : *a)
     ASSERT_EQ(elt, coefficient * count++);
 }
 

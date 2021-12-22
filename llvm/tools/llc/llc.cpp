@@ -605,6 +605,9 @@ static int compileModule(char **argv, LLVMContext &Context) {
       GetOutputStream(TheTarget->getName(), TheTriple.getOS(), argv[0]);
   if (!Out) return 1;
 
+  // Ensure the filename is passed down to CodeViewDebug.
+  Target->Options.ObjectFilenameForDebug = Out->outputFilename();
+
   std::unique_ptr<ToolOutputFile> DwoOut;
   if (!SplitDwarfOutputFile.empty()) {
     std::error_code EC;

@@ -290,6 +290,10 @@ enum class instrprof_error {
   too_large,
   truncated,
   malformed,
+  missing_debug_info_for_correlation,
+  unexpected_debug_info_for_correlation,
+  unable_to_correlate_profile,
+  unsupported_debug_format,
   unknown_function,
   invalid_prof,
   hash_mismatch,
@@ -1149,7 +1153,8 @@ void getMemOPSizeRangeFromOption(StringRef Str, int64_t &RangeStart,
 // Create a COMDAT variable INSTR_PROF_RAW_VERSION_VAR to make the runtime
 // aware this is an ir_level profile so it can set the version flag.
 GlobalVariable *createIRLevelProfileFlagVar(Module &M, bool IsCS,
-                                            bool InstrEntryBBEnabled);
+                                            bool InstrEntryBBEnabled,
+                                            bool DebugInfoCorrelate);
 
 // Create the variable for the profile file name.
 void createProfileFileNameVar(Module &M, StringRef InstrProfileOutput);

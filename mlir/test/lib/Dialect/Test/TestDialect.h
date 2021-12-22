@@ -39,7 +39,6 @@ class DLTIDialect;
 class RewritePatternSet;
 } // namespace mlir
 
-#include "TestOpEnums.h.inc"
 #include "TestOpInterfaces.h.inc"
 #include "TestOpStructs.h.inc"
 #include "TestOpsDialect.h.inc"

@@ -23,6 +23,9 @@ module asm "classical GAS"
 @align = global i32 31, align 4
 @nullptr = global i32* null
 
+@const_gep = global i32* getelementptr (i32, i32* @var, i64 2)
+@const_inbounds_gep = global i32* getelementptr inbounds (i32, i32* @var, i64 1)
+
 @aliased1 = alias i32, i32* @var
 @aliased2 = internal alias i32, i32* @var
 @aliased3 = external alias i32, i32* @var

@@ -595,6 +595,21 @@ private:
 
   /// @}
 
+  /// Retrieves a ToolChain for a particular device \p Target triple
+  ///
+  /// \param[in] HostTC is the host ToolChain paired with the device
+  ///
+  /// \param[in] Action (e.g. OFK_Cuda/OFK_OpenMP/OFK_SYCL) is an Offloading
+  /// action that is optionally passed to a ToolChain (used by CUDA, to specify
+  /// if it's used in conjunction with OpenMP)
+  ///
+  /// Will cache ToolChains for the life of the driver object, and create them
+  /// on-demand.
+  const ToolChain &getOffloadingDeviceToolChain(
+      const llvm::opt::ArgList &Args, const llvm::Triple &Target,
+      const ToolChain &HostTC,
+      const Action::OffloadKind &TargetDeviceOffloadKind) const;
+
   /// Get bitmasks for which option flags to include and exclude based on
   /// the driver mode.
   std::pair<unsigned, unsigned> getIncludeExcludeOptionFlagMasks(bool IsClCompatMode) const;

@@ -759,6 +759,128 @@ class MyClass
                GoogleStyle);
 }
 
+TEST_F(FormatTestCSharp, CSharpLambdasDontBreakFollowingCodeAlignment) {
+  FormatStyle GoogleStyle = getGoogleStyle(FormatStyle::LK_CSharp);
+  FormatStyle MicrosoftStyle = getMicrosoftStyle(FormatStyle::LK_CSharp);
+
+  verifyFormat(R"(//
+public class Sample
+{
+    public void Test()
+    {
+        while (true)
+        {
+            preBindEnumerators.RemoveAll(enumerator => !enumerator.MoveNext());
+            CodeThatFollowsLambda();
+            IsWellAligned();
+        }
+    }
+})",
+               MicrosoftStyle);
+
+  verifyFormat(R"(//
+public class Sample {
+  public void Test() {
+    while (true) {
+      preBindEnumerators.RemoveAll(enumerator => !enumerator.MoveNext());
+      CodeThatFollowsLambda();
+      IsWellAligned();
+    }
+  }
+})",
+               GoogleStyle);
+}
+
+TEST_F(FormatTestCSharp, CSharpLambdasComplexLambdasDontBreakAlignment) {
+  FormatStyle GoogleStyle = getGoogleStyle(FormatStyle::LK_CSharp);
+  FormatStyle MicrosoftStyle = getMicrosoftStyle(FormatStyle::LK_CSharp);
+
+  verifyFormat(R"(//
+public class Test
+{
+    private static void ComplexLambda(BuildReport protoReport)
+    {
+        allSelectedScenes =
+            veryVeryLongCollectionNameThatPutsTheLineLenghtAboveTheThresholds.Where(scene => scene.enabled)
+                .Select(scene => scene.path)
+                .ToArray();
+        if (allSelectedScenes.Count == 0)
+        {
+            return;
+        }
+        Functions();
+        AreWell();
+        Aligned();
+        AfterLambdaBlock();
+    }
+})",
+               MicrosoftStyle);
+
+  verifyFormat(R"(//
+public class Test {
+  private static void ComplexLambda(BuildReport protoReport) {
+    allSelectedScenes = veryVeryLongCollectionNameThatPutsTheLineLenghtAboveTheThresholds
+                            .Where(scene => scene.enabled)
+                            .Select(scene => scene.path)
+                            .ToArray();
+    if (allSelectedScenes.Count == 0) {
+      return;
+    }
+    Functions();
+    AreWell();
+    Aligned();
+    AfterLambdaBlock();
+  }
+})",
+               GoogleStyle);
+}
+
+TEST_F(FormatTestCSharp, CSharpLambdasMulipleLambdasDontBreakAlignment) {
+  FormatStyle GoogleStyle = getGoogleStyle(FormatStyle::LK_CSharp);
+  FormatStyle MicrosoftStyle = getMicrosoftStyle(FormatStyle::LK_CSharp);
+
+  verifyFormat(R"(//
+public class Test
+{
+    private static void MultipleLambdas(BuildReport protoReport)
+    {
+        allSelectedScenes =
+            veryVeryLongCollectionNameThatPutsTheLineLenghtAboveTheThresholds.Where(scene => scene.enabled)
+                .Select(scene => scene.path)
+                .ToArray();
+        preBindEnumerators.RemoveAll(enumerator => !enumerator.MoveNext());
+        if (allSelectedScenes.Count == 0)
+        {
+            return;
+        }
+        Functions();
+        AreWell();
+        Aligned();
+        AfterLambdaBlock();
+    }
+})",
+               MicrosoftStyle);
+
+  verifyFormat(R"(//
+public class Test {
+  private static void MultipleLambdas(BuildReport protoReport) {
+    allSelectedScenes = veryVeryLongCollectionNameThatPutsTheLineLenghtAboveTheThresholds
+                            .Where(scene => scene.enabled)
+                            .Select(scene => scene.path)
+                            .ToArray();
+    preBindEnumerators.RemoveAll(enumerator => !enumerator.MoveNext());
+    if (allSelectedScenes.Count == 0) {
+      return;
+    }
+    Functions();
+    AreWell();
+    Aligned();
+    AfterLambdaBlock();
+  }
+})",
+               GoogleStyle);
+}
+
 TEST_F(FormatTestCSharp, CSharpObjectInitializers) {
   FormatStyle Style = getGoogleStyle(FormatStyle::LK_CSharp);
 
@@ -1366,6 +1488,33 @@ TEST_F(FormatTestCSharp, NamespaceIndentation) {
                "        }\n"
                "    }\n"
                "}\n",
+               Style);
+}
+
+TEST_F(FormatTestCSharp, SwitchExpression) {
+  FormatStyle Style = getMicrosoftStyle(FormatStyle::LK_CSharp);
+  verifyFormat("int x = a switch {\n"
+               "    1 => (0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0),\n"
+               "    2 => 1,\n"
+               "    _ => 2\n"
+               "};\n",
+               Style);
+}
+
+TEST_F(FormatTestCSharp, EmptyShortBlock) {
+  auto Style = getLLVMStyle();
+  Style.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Empty;
+
+  verifyFormat("try {\n"
+               "  doA();\n"
+               "} catch (Exception e) {\n"
+               "  e.printStackTrace();\n"
+               "}\n",
+               Style);
+
+  verifyFormat("try {\n"
+               "  doA();\n"
+               "} catch (Exception e) {}\n",
                Style);
 }
 

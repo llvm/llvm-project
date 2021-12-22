@@ -1774,8 +1774,9 @@ void LowerTypeTestsModule::replaceCfiUses(Function *Old, Value *New,
                                           bool IsJumpTableCanonical) {
   SmallSetVector<Constant *, 4> Constants;
   for (Use &U : llvm::make_early_inc_range(Old->uses())) {
-    // Skip block addresses
-    if (isa<BlockAddress>(U.getUser()))
+    // Skip block addresses and no_cfi values, which refer to the function
+    // body instead of the jump table.
+    if (isa<BlockAddress, NoCFIValue>(U.getUser()))
       continue;
 
     // Skip direct calls to externally defined or non-dso_local functions
@@ -1802,7 +1803,7 @@ void LowerTypeTestsModule::replaceCfiUses(Function *Old, Value *New,
 }
 
 void LowerTypeTestsModule::replaceDirectCalls(Value *Old, Value *New) {
-  Old->replaceUsesWithIf(New, [](Use &U) { return isDirectCall(U); });
+  Old->replaceUsesWithIf(New, isDirectCall);
 }
 
 bool LowerTypeTestsModule::lower() {

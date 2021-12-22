@@ -1,5 +1,5 @@
-; RUN: opt -loop-vectorize -scalable-vectorization=preferred -force-vector-interleave=1 -force-vector-width=4 -S < %s | FileCheck %s --check-prefix=CHECK-VF4IC1
-; RUN: opt -loop-vectorize -scalable-vectorization=preferred -force-vector-interleave=4 -force-vector-width=4 -S < %s | FileCheck %s --check-prefix=CHECK-VF4IC4
+; RUN: opt -loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -S < %s | FileCheck %s --check-prefix=CHECK-VF4IC1
+; RUN: opt -loop-vectorize -force-vector-interleave=4 -force-vector-width=4 -S < %s | FileCheck %s --check-prefix=CHECK-VF4IC4
 
 target triple = "aarch64-linux-gnu"
 

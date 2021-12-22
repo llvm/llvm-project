@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -loop-vectorize -scalable-vectorization=on -force-vector-interleave=1 -S -debug-only=loop-vectorize < %s 2>%t | FileCheck %s
+; RUN: opt -loop-vectorize -force-vector-interleave=1 -S -debug-only=loop-vectorize < %s 2>%t | FileCheck %s
 ; RUN: cat %t | FileCheck %s --check-prefix=CHECK-COST
 
 target triple = "aarch64-unknown-linux-gnu"

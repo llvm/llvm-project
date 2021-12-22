@@ -792,6 +792,34 @@ static BranchInst *getExpectedExitLoopLatchBranch(Loop *L) {
   return LatchBR;
 }
 
+/// Return the estimated trip count for any exiting branch which dominates
+/// the loop latch.
+static Optional<uint64_t>
+getEstimatedTripCount(BranchInst *ExitingBranch, Loop *L,
+                      uint64_t &OrigExitWeight) {
+  // To estimate the number of times the loop body was executed, we want to
+  // know the number of times the backedge was taken, vs. the number of times
+  // we exited the loop.
+  uint64_t LoopWeight, ExitWeight;
+  if (!ExitingBranch->extractProfMetadata(LoopWeight, ExitWeight))
+    return None;
+
+  if (L->contains(ExitingBranch->getSuccessor(1)))
+    std::swap(LoopWeight, ExitWeight);
+
+  if (!ExitWeight)
+    // Don't have a way to return predicated infinite
+    return None;
+
+  OrigExitWeight = ExitWeight;
+
+  // Estimated exit count is a ratio of the loop weight by the weight of the
+  // edge exiting the loop, rounded to nearest.
+  uint64_t ExitCount = llvm::divideNearest(LoopWeight, ExitWeight);
+  // Estimated trip count is one plus estimated exit count.
+  return ExitCount + 1;
+}
+
 Optional<unsigned>
 llvm::getLoopEstimatedTripCount(Loop *L,
                                 unsigned *EstimatedLoopInvocationWeight) {
@@ -799,32 +827,16 @@ llvm::getLoopEstimatedTripCount(Loop *L,
   // ignoring other exiting blocks.  This can overestimate the trip count
   // if we exit through another exit, but can never underestimate it.
   // TODO: incorporate information from other exits
-  BranchInst *LatchBranch = getExpectedExitLoopLatchBranch(L);
-  if (!LatchBranch)
-    return None;
-
-  // To estimate the number of times the loop body was executed, we want to
-  // know the number of times the backedge was taken, vs. the number of times
-  // we exited the loop.
-  uint64_t BackedgeTakenWeight, LatchExitWeight;
-  if (!LatchBranch->extractProfMetadata(BackedgeTakenWeight, LatchExitWeight))
-    return None;
-
-  if (LatchBranch->getSuccessor(0) != L->getHeader())
-    std::swap(BackedgeTakenWeight, LatchExitWeight);
-
-  if (!LatchExitWeight)
-    return None;
-
-  if (EstimatedLoopInvocationWeight)
-    *EstimatedLoopInvocationWeight = LatchExitWeight;
-
-  // Estimated backedge taken count is a ratio of the backedge taken weight by
-  // the weight of the edge exiting the loop, rounded to nearest.
-  uint64_t BackedgeTakenCount =
-      llvm::divideNearest(BackedgeTakenWeight, LatchExitWeight);
-  // Estimated trip count is one plus estimated backedge taken count.
-  return BackedgeTakenCount + 1;
+  if (BranchInst *LatchBranch = getExpectedExitLoopLatchBranch(L)) {
+    uint64_t ExitWeight;
+    if (Optional<uint64_t> EstTripCount =
+        getEstimatedTripCount(LatchBranch, L, ExitWeight)) {
+      if (EstimatedLoopInvocationWeight)
+        *EstimatedLoopInvocationWeight = ExitWeight;
+      return *EstTripCount;
+    }
+  }
+  return None;
 }
 
 bool llvm::setLoopEstimatedTripCount(Loop *L, unsigned EstimatedTripCount,

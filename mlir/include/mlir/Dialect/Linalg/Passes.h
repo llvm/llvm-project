@@ -26,6 +26,8 @@ std::unique_ptr<Pass> createLinalgFoldUnitExtentDimsPass();
 std::unique_ptr<Pass> createLinalgElementwiseOpFusionPass();
 std::unique_ptr<Pass> createFoldReshapeOpsByLinearizationPass();
 
+std::unique_ptr<Pass> createLinalgNamedOpConversionPass();
+
 std::unique_ptr<OperationPass<FuncOp>> createLinalgTilingPass(
     ArrayRef<int64_t> tileSizes = {},
     linalg::LinalgTilingLoopType loopType = linalg::LinalgTilingLoopType::Loops,

@@ -43,7 +43,8 @@ struct LoopCoalescingPass : public LoopCoalescingBase<LoopCoalescingPass> {
     for (unsigned i = 0, e = loops.size(); i < e; ++i) {
       operandsDefinedAbove[i] = i;
       for (unsigned j = 0; j < i; ++j) {
-        if (areValuesDefinedAbove(loops[i].getOperands(), loops[j].region())) {
+        if (areValuesDefinedAbove(loops[i].getOperands(),
+                                  loops[j].getRegion())) {
           operandsDefinedAbove[i] = j;
           break;
         }

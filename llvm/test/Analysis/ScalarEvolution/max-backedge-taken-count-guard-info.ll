@@ -1475,3 +1475,76 @@ loop:
 exit:
   ret void
 }
+
+define i32 @sle_sgt_ult_umax_to_smax(i32 %num) {
+; CHECK-LABEL: 'sle_sgt_ult_umax_to_smax'
+; CHECK-NEXT:  Classifying expressions for: @sle_sgt_ult_umax_to_smax
+; CHECK-NEXT:    %iv = phi i32 [ 0, %guard.3 ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {0,+,4}<nuw><%loop> U: [0,25) S: [0,25) Exits: (4 * ((-4 + %num) /u 4))<nuw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw i32 %iv, 4
+; CHECK-NEXT:    --> {4,+,4}<nuw><%loop> U: [4,29) S: [4,29) Exits: (4 + (4 * ((-4 + %num) /u 4))<nuw>) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @sle_sgt_ult_umax_to_smax
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-4 + %num) /u 4)
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 6
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-4 + %num) /u 4)
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 1
+;
+guard.1:
+  %cmp.1 = icmp sle i32 %num, 0
+  br i1 %cmp.1, label %exit, label %guard.2
+
+guard.2:
+  %cmp.2 = icmp sgt i32 %num, 28
+  br i1 %cmp.2, label %exit, label %guard.3
+
+guard.3:
+  %cmp.3 = icmp ult i32 %num, 4
+  br i1 %cmp.3, label %exit, label %loop
+
+loop:
+  %iv = phi i32 [ 0, %guard.3 ], [ %iv.next, %loop ]
+  %iv.next = add nuw i32 %iv, 4
+  %ec = icmp eq i32 %iv.next, %num
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret i32 0
+}
+
+; Similar to @sle_sgt_ult_umax_to_smax but with different predicate order.
+define i32 @ult_sle_sgt_umax_to_smax(i32 %num) {
+; CHECK-LABEL: 'ult_sle_sgt_umax_to_smax'
+; CHECK-NEXT:  Classifying expressions for: @ult_sle_sgt_umax_to_smax
+; CHECK-NEXT:    %iv = phi i32 [ 0, %guard.3 ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {0,+,4}<nuw><%loop> U: [0,-3) S: [-2147483648,2147483645) Exits: (4 * ((-4 + %num) /u 4))<nuw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw i32 %iv, 4
+; CHECK-NEXT:    --> {4,+,4}<nuw><%loop> U: [4,-3) S: [-2147483648,2147483645) Exits: (4 + (4 * ((-4 + %num) /u 4))<nuw>) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @ult_sle_sgt_umax_to_smax
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-4 + %num) /u 4)
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 1073741823
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-4 + %num) /u 4)
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 1
+;
+guard.1:
+  %cmp.1 = icmp ult i32 %num, 4
+  br i1 %cmp.1, label %exit, label %guard.2
+
+guard.2:
+  %cmp.2 = icmp sgt i32 %num, 28
+  br i1 %cmp.2, label %exit, label %guard.3
+
+guard.3:
+  %cmp.3 = icmp sle i32 %num, 0
+  br i1 %cmp.3, label %exit, label %loop
+
+loop:
+  %iv = phi i32 [ 0, %guard.3 ], [ %iv.next, %loop ]
+  %iv.next = add nuw i32 %iv, 4
+  %ec = icmp eq i32 %iv.next, %num
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret i32 0
+}

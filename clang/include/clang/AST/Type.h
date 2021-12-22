@@ -129,6 +129,7 @@ class TemplateArgumentLoc;
 class TemplateTypeParmDecl;
 class TypedefNameDecl;
 class UnresolvedUsingTypenameDecl;
+class UsingShadowDecl;
 
 using CanQualType = CanQual<Type>;
 
@@ -4366,6 +4367,27 @@ public:
                       UnresolvedUsingTypenameDecl *D) {
     ID.AddPointer(D);
   }
+};
+
+class UsingType : public Type, public llvm::FoldingSetNode {
+  UsingShadowDecl *Found;
+  friend class ASTContext; // ASTContext creates these.
+
+  UsingType(const UsingShadowDecl *Found, QualType Underlying, QualType Canon);
+
+public:
+  UsingShadowDecl *getFoundDecl() const { return Found; }
+  QualType getUnderlyingType() const;
+
+  bool isSugared() const { return true; }
+  QualType desugar() const { return getUnderlyingType(); }
+
+  void Profile(llvm::FoldingSetNodeID &ID) { Profile(ID, Found); }
+  static void Profile(llvm::FoldingSetNodeID &ID,
+                      const UsingShadowDecl *Found) {
+    ID.AddPointer(Found);
+  }
+  static bool classof(const Type *T) { return T->getTypeClass() == Using; }
 };
 
 class TypedefType : public Type {

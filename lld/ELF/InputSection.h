@@ -250,7 +250,7 @@ protected:
 // be found by looking at the next one).
 struct SectionPiece {
   SectionPiece(size_t off, uint32_t hash, bool live)
-      : inputOff(off), live(live || !config->gcSections), hash(hash >> 1) {}
+      : inputOff(off), live(live), hash(hash >> 1) {}
 
   uint32_t inputOff;
   uint32_t live : 1;
@@ -278,7 +278,7 @@ public:
 
   // Splittable sections are handled as a sequence of data
   // rather than a single large blob of data.
-  std::vector<SectionPiece> pieces;
+  SmallVector<SectionPiece, 0> pieces;
 
   // Returns I'th piece's data. This function is very hot when
   // string merging is enabled, so we want to inline.

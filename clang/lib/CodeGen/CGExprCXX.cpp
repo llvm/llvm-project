@@ -1594,7 +1594,7 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
     // In these cases, discard the computed alignment and use the
     // formal alignment of the allocated type.
     if (BaseInfo.getAlignmentSource() != AlignmentSource::Decl)
-      allocation = Address(allocation.getPointer(), allocAlign);
+      allocation = allocation.withAlignment(allocAlign);
 
     // Set up allocatorArgs for the call to operator delete if it's not
     // the reserved global operator.
@@ -1664,7 +1664,7 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
           allocationAlign, getContext().toCharUnitsFromBits(AllocatorAlign));
     }
 
-    allocation = Address(RV.getScalarVal(), allocationAlign);
+    allocation = Address(RV.getScalarVal(), Int8Ty, allocationAlign);
   }
 
   // Emit a null check on the allocation result if the allocation
@@ -1725,8 +1725,7 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
   // of optimization level.
   if (CGM.getCodeGenOpts().StrictVTablePointers &&
       allocator->isReservedGlobalPlacementOperator())
-    result = Address(Builder.CreateLaunderInvariantGroup(result.getPointer()),
-                     result.getAlignment());
+    result = Builder.CreateLaunderInvariantGroup(result);
 
   // Emit sanitizer checks for pointer value now, so that in the case of an
   // array it was checked only once and not at each constructor call. We may

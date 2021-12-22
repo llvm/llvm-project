@@ -708,7 +708,8 @@ Constant *llvm::ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,
   // is all undef or zero, we know what it loads.
   if (auto *GV = dyn_cast<GlobalVariable>(getUnderlyingObject(C))) {
     if (GV->isConstant() && GV->hasDefinitiveInitializer()) {
-      if (GV->getInitializer()->isNullValue())
+      if (GV->getInitializer()->isNullValue() && !Ty->isX86_MMXTy() &&
+          !Ty->isX86_AMXTy())
         return Constant::getNullValue(Ty);
       if (isa<UndefValue>(GV->getInitializer()))
         return UndefValue::get(Ty);
@@ -884,7 +885,7 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
     InnermostGEP = GEP;
     InBounds &= GEP->isInBounds();
 
-    SmallVector<Value *, 4> NestedOps(GEP->op_begin() + 1, GEP->op_end());
+    SmallVector<Value *, 4> NestedOps(llvm::drop_begin(GEP->operands()));
 
     // Do not try the incorporate the sub-GEP if some index is not a number.
     bool AllConstantInt = true;

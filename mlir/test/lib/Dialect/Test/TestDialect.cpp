@@ -105,20 +105,6 @@ struct TestOpAsmInterface : public OpAsmDialectInterface {
     if (auto asmOp = dyn_cast<AsmDialectInterfaceOp>(op))
       setNameFn(asmOp, "result");
   }
-
-  void getAsmBlockArgumentNames(Block *block,
-                                OpAsmSetValueNameFn setNameFn) const final {
-    auto op = block->getParentOp();
-    auto arrayAttr = op->getAttrOfType<ArrayAttr>("arg_names");
-    if (!arrayAttr)
-      return;
-    auto args = block->getArguments();
-    auto e = std::min(arrayAttr.size(), args.size());
-    for (unsigned i = 0; i < e; ++i) {
-      if (auto strAttr = arrayAttr[i].dyn_cast<StringAttr>())
-        setNameFn(args[i], strAttr.getValue());
-    }
-  }
 };
 
 struct TestDialectFoldInterface : public DialectFoldInterface {
@@ -703,24 +689,24 @@ static ParseResult parseWrappingRegionOp(OpAsmParser &parser,
   Region &body = *result.addRegion();
   body.push_back(new Block);
   Block &block = body.back();
-  Operation *wrapped_op = parser.parseGenericOperation(&block, block.begin());
-  if (!wrapped_op)
+  Operation *wrappedOp = parser.parseGenericOperation(&block, block.begin());
+  if (!wrappedOp)
     return failure();
 
   // Create a return terminator in the inner region, pass as operand to the
   // terminator the returned values from the wrapped operation.
-  SmallVector<Value, 8> return_operands(wrapped_op->getResults());
+  SmallVector<Value, 8> returnOperands(wrappedOp->getResults());
   OpBuilder builder(parser.getContext());
   builder.setInsertionPointToEnd(&block);
-  builder.create<TestReturnOp>(wrapped_op->getLoc(), return_operands);
+  builder.create<TestReturnOp>(wrappedOp->getLoc(), returnOperands);
 
   // Get the results type for the wrapping op from the terminator operands.
-  Operation &return_op = body.back().back();
-  result.types.append(return_op.operand_type_begin(),
-                      return_op.operand_type_end());
+  Operation &returnOp = body.back().back();
+  result.types.append(returnOp.operand_type_begin(),
+                      returnOp.operand_type_end());
 
   // Use the location of the wrapped op for the "test.wrapping_region" op.
-  result.location = wrapped_op->getLoc();
+  result.location = wrappedOp->getLoc();
 
   return success();
 }
@@ -848,6 +834,19 @@ static ParseResult parsePolyForOp(OpAsmParser &parser, OperationState &result) {
   return parser.parseRegion(*body, ivsInfo, argTypes);
 }
 
+void PolyForOp::getAsmBlockArgumentNames(Region &region,
+                                         OpAsmSetValueNameFn setNameFn) {
+  auto arrayAttr = getOperation()->getAttrOfType<ArrayAttr>("arg_names");
+  if (!arrayAttr)
+    return;
+  auto args = getRegion().front().getArguments();
+  auto e = std::min(arrayAttr.size(), args.size());
+  for (unsigned i = 0; i < e; ++i) {
+    if (auto strAttr = arrayAttr[i].dyn_cast<StringAttr>())
+      setNameFn(args[i], strAttr.getValue());
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Test removing op with inner ops.
 //===----------------------------------------------------------------------===//
@@ -945,14 +944,14 @@ LogicalResult OpWithResultShapeInterfaceOp::reifyReturnTypeShapes(
   Location loc = getLoc();
   shapes.reserve(operands.size());
   for (Value operand : llvm::reverse(operands)) {
-    auto currShape = llvm::to_vector<4>(llvm::map_range(
-        llvm::seq<int64_t>(
-            0, operand.getType().cast<RankedTensorType>().getRank()),
-        [&](int64_t dim) -> Value {
+    auto rank = operand.getType().cast<RankedTensorType>().getRank();
+    auto currShape = llvm::to_vector<4>(
+        llvm::map_range(llvm::seq<int64_t>(0, rank), [&](int64_t dim) -> Value {
           return builder.createOrFold<tensor::DimOp>(loc, operand, dim);
         }));
     shapes.push_back(builder.create<tensor::FromElementsOp>(
-        getLoc(), builder.getIndexType(), currShape));
+        getLoc(), RankedTensorType::get({rank}, builder.getIndexType()),
+        currShape));
   }
   return success();
 }

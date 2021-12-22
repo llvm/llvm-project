@@ -527,7 +527,7 @@ static void genAttributeVerifier(
                                emitHelper.isEmittingForOp());
 
     // Prefix with `tblgen_` to avoid hiding the attribute accessor.
-    Twine varName = tblgenNamePrefix + attrName;
+    std::string varName = (tblgenNamePrefix + attrName).str();
 
     // If the attribute is not required and we cannot emit the condition, then
     // there is nothing to be done.

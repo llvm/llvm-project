@@ -488,7 +488,7 @@ Instruction *AArch64StackTagging::insertBaseTaggedPointer(
 
 void AArch64StackTagging::alignAndPadAlloca(AllocaInfo &Info) {
   const Align NewAlignment =
-      max(MaybeAlign(Info.AI->getAlignment()), kTagGranuleSize);
+      max(MaybeAlign(Info.AI->getAlign()), kTagGranuleSize);
   Info.AI->setAlignment(NewAlignment);
 
   uint64_t Size = Info.AI->getAllocationSizeInBits(*DL).getValue() / 8;

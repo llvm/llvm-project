@@ -25,7 +25,8 @@ class Module;
 namespace mlir {
 /// Replaces `gpu.launch` with `gpu.launch_func` by moving the region into
 /// a separate kernel function.
-std::unique_ptr<OperationPass<ModuleOp>> createGpuKernelOutliningPass();
+std::unique_ptr<OperationPass<ModuleOp>>
+createGpuKernelOutliningPass(StringRef dataLayoutStr = StringRef());
 
 /// Rewrites a function region so that GPU ops execute asynchronously.
 std::unique_ptr<OperationPass<FuncOp>> createGpuAsyncRegionPass();

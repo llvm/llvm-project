@@ -1912,10 +1912,10 @@ public:
   ///
   /// NOTE: The function will return true for a demanded splat of UNDEF values.
   bool isSplatValue(SDValue V, const APInt &DemandedElts, APInt &UndefElts,
-                    unsigned Depth = 0);
+                    unsigned Depth = 0) const;
 
   /// Test whether \p V has a splatted value.
-  bool isSplatValue(SDValue V, bool AllowUndefs = false);
+  bool isSplatValue(SDValue V, bool AllowUndefs = false) const;
 
   /// If V is a splatted value, return the source vector and its splat index.
   SDValue getSplatSourceVector(SDValue V, int &SplatIndex);

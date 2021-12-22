@@ -1240,7 +1240,18 @@ Value *ScalarExprEmitter::EmitScalarCast(Value *Src, QualType SrcType,
 
   if (isa<llvm::IntegerType>(DstElementTy)) {
     assert(SrcElementTy->isFloatingPointTy() && "Unknown real conversion");
-    if (DstElementType->isSignedIntegerOrEnumerationType())
+    bool IsSigned = DstElementType->isSignedIntegerOrEnumerationType();
+
+    // If we can't recognize overflow as undefined behavior, assume that
+    // overflow saturates. This protects against normal optimizations if we are
+    // compiling with non-standard FP semantics.
+    if (!CGF.CGM.getCodeGenOpts().StrictFloatCastOverflow) {
+      llvm::Intrinsic::ID IID =
+          IsSigned ? llvm::Intrinsic::fptosi_sat : llvm::Intrinsic::fptoui_sat;
+      return Builder.CreateCall(CGF.CGM.getIntrinsic(IID, {DstTy, SrcTy}), Src);
+    }
+
+    if (IsSigned)
       return Builder.CreateFPToSI(Src, DstTy, "conv");
     return Builder.CreateFPToUI(Src, DstTy, "conv");
   }
@@ -2656,7 +2667,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
     // For everything else, we can just do a simple increment.
     } else {
       llvm::Value *amt = Builder.getInt32(amount);
-      llvm::Type *elemTy = value->getType()->getPointerElementType();
+      llvm::Type *elemTy = CGF.ConvertTypeForMem(type);
       if (CGF.getLangOpts().isSignedOverflowDefined())
         value = Builder.CreateGEP(elemTy, value, amt, "incdec.ptr");
       else
@@ -3531,7 +3542,7 @@ static Value *emitPointerArithmetic(CodeGenFunction &CGF,
     return CGF.Builder.CreateBitCast(result, pointer->getType());
   }
 
-  llvm::Type *elemTy = pointer->getType()->getPointerElementType();
+  llvm::Type *elemTy = CGF.ConvertTypeForMem(elementType);
   if (CGF.getLangOpts().isSignedOverflowDefined())
     return CGF.Builder.CreateGEP(elemTy, pointer, index, "add.ptr");
 

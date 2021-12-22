@@ -881,6 +881,9 @@ public:
                                     ForDefinition_t IsForDefinition
                                       = NotForDefinition);
 
+  // Return the function body address of the given function.
+  llvm::Constant *GetFunctionStart(const ValueDecl *Decl);
+
   /// Get the address of the RTTI descriptor for the given type.
   llvm::Constant *GetAddrOfRTTIDescriptor(QualType Ty, bool ForEH = false);
 

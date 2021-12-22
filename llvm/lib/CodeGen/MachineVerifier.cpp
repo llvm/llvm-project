@@ -1608,12 +1608,16 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     }
     break;
   }
+  case TargetOpcode::G_SHL:
+  case TargetOpcode::G_LSHR:
+  case TargetOpcode::G_ASHR:
   case TargetOpcode::G_ROTR:
   case TargetOpcode::G_ROTL: {
     LLT Src1Ty = MRI->getType(MI->getOperand(1).getReg());
     LLT Src2Ty = MRI->getType(MI->getOperand(2).getReg());
     if (Src1Ty.isVector() != Src2Ty.isVector()) {
-      report("Rotate requires operands to be either all scalars or all vectors",
+      report("Shifts and rotates require operands to be either all scalars or "
+             "all vectors",
              MI);
       break;
     }
@@ -2229,8 +2233,8 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
   if (LiveInts && Reg.isVirtual()) {
     if (LiveInts->hasInterval(Reg)) {
       LI = &LiveInts->getInterval(Reg);
-      if (SubRegIdx != 0 && !LI->empty() && !LI->hasSubRanges() &&
-          MRI->shouldTrackSubRegLiveness(Reg))
+      if (SubRegIdx != 0 && (MO->isDef() || !MO->isUndef()) && !LI->empty() &&
+          !LI->hasSubRanges() && MRI->shouldTrackSubRegLiveness(Reg))
         report("Live interval for subreg operand has no subranges", MO, MONum);
     } else {
       report("Virtual register has no live interval", MO, MONum);

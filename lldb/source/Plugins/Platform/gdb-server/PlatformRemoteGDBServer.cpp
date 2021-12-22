@@ -225,18 +225,12 @@ Status PlatformRemoteGDBServer::ConnectRemote(Args &args) {
   m_platform_hostname = parsed_url->hostname.str();
 
   m_gdb_client.SetConnection(std::make_unique<ConnectionFileDescriptor>());
-  if (repro::Reproducer::Instance().IsReplaying()) {
-    error = m_gdb_replay_server.Connect(m_gdb_client);
-    if (error.Success())
-      m_gdb_replay_server.StartAsyncThread();
-  } else {
-    if (repro::Generator *g = repro::Reproducer::Instance().GetGenerator()) {
-      repro::GDBRemoteProvider &provider =
-          g->GetOrCreate<repro::GDBRemoteProvider>();
-      m_gdb_client.SetPacketRecorder(provider.GetNewPacketRecorder());
-    }
-    m_gdb_client.Connect(url, &error);
+  if (repro::Generator *g = repro::Reproducer::Instance().GetGenerator()) {
+    repro::GDBRemoteProvider &provider =
+        g->GetOrCreate<repro::GDBRemoteProvider>();
+    m_gdb_client.SetPacketRecorder(provider.GetNewPacketRecorder());
   }
+  m_gdb_client.Connect(url, &error);
 
   if (error.Fail())
     return error;

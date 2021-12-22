@@ -6011,7 +6011,7 @@ struct SCEVDbgValueBuilder {
     // See setFinalExpression: prepend our opcodes on the start of any old
     // expression opcodes.
     assert(!DI.hasArgList());
-    llvm::SmallVector<uint64_t, 6> FinalExpr(Expr.begin() + 2, Expr.end());
+    llvm::SmallVector<uint64_t, 6> FinalExpr(llvm::drop_begin(Expr, 2));
     auto *NewExpr =
         DIExpression::prependOpcodes(OldExpr, FinalExpr, /*StackValue*/ true);
     DI.setExpression(NewExpr);

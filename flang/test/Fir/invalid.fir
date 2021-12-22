@@ -284,6 +284,15 @@ func @test_coordinate_of(%arr : !fir.ref<!fir.char<10>>) {
 
 // -----
 
+func @test_coordinate_of(%arr : !fir.ref<!fir.char<10, 1>>) {
+  %1 = arith.constant 10 : i32
+  // expected-error@+1 {{'fir.coordinate_of' op cannot apply coordinate_of to this type}}
+  %2 = fir.coordinate_of %arr, %1 : (!fir.ref<!fir.char<10, 1>>, i32) -> !fir.ref<f32>
+  return
+}
+
+// -----
+
 %0 = arith.constant 22 : i32
 // expected-error@+1 {{'fir.embox' op operand #0 must be any reference, but got 'i32'}}
 %1 = fir.embox %0 : (i32) -> !fir.box<i32>

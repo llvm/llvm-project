@@ -206,9 +206,9 @@ LogicalResult mlir::promoteIfSingleIteration(AffineForOp forOp) {
 /// Promotes the loop body of a forOp to its containing block if the forOp
 /// it can be determined that the loop has a single iteration.
 LogicalResult mlir::promoteIfSingleIteration(scf::ForOp forOp) {
-  auto lbCstOp = forOp.lowerBound().getDefiningOp<arith::ConstantIndexOp>();
-  auto ubCstOp = forOp.upperBound().getDefiningOp<arith::ConstantIndexOp>();
-  auto stepCstOp = forOp.step().getDefiningOp<arith::ConstantIndexOp>();
+  auto lbCstOp = forOp.getLowerBound().getDefiningOp<arith::ConstantIndexOp>();
+  auto ubCstOp = forOp.getUpperBound().getDefiningOp<arith::ConstantIndexOp>();
+  auto stepCstOp = forOp.getStep().getDefiningOp<arith::ConstantIndexOp>();
   if (!lbCstOp || !ubCstOp || !stepCstOp || lbCstOp.value() < 0 ||
       ubCstOp.value() < 0 || stepCstOp.value() < 0)
     return failure();
@@ -999,7 +999,7 @@ static void getPerfectlyNestedLoopsImpl(
     unsigned maxLoops = std::numeric_limits<unsigned>::max()) {
   for (unsigned i = 0; i < maxLoops; ++i) {
     forOps.push_back(rootForOp);
-    Block &body = rootForOp.region().front();
+    Block &body = rootForOp.getRegion().front();
     if (body.begin() != std::prev(body.end(), 2))
       return;
 
@@ -1226,14 +1226,14 @@ LogicalResult mlir::loopUnrollByFactor(
   // 'upperBoundUnrolled' and 'stepUnrolled' for static and dynamic cases.
   OpBuilder boundsBuilder(forOp);
   auto loc = forOp.getLoc();
-  auto step = forOp.step();
+  auto step = forOp.getStep();
   Value upperBoundUnrolled;
   Value stepUnrolled;
   bool generateEpilogueLoop = true;
 
-  auto lbCstOp = forOp.lowerBound().getDefiningOp<arith::ConstantIndexOp>();
-  auto ubCstOp = forOp.upperBound().getDefiningOp<arith::ConstantIndexOp>();
-  auto stepCstOp = forOp.step().getDefiningOp<arith::ConstantIndexOp>();
+  auto lbCstOp = forOp.getLowerBound().getDefiningOp<arith::ConstantIndexOp>();
+  auto ubCstOp = forOp.getUpperBound().getDefiningOp<arith::ConstantIndexOp>();
+  auto stepCstOp = forOp.getStep().getDefiningOp<arith::ConstantIndexOp>();
   if (lbCstOp && ubCstOp && stepCstOp) {
     // Constant loop bounds computation.
     int64_t lbCst = lbCstOp.value();
@@ -1264,8 +1264,8 @@ LogicalResult mlir::loopUnrollByFactor(
     // Dynamic loop bounds computation.
     // TODO: Add dynamic asserts for negative lb/ub/step, or
     // consider using ceilDiv from AffineApplyExpander.
-    auto lowerBound = forOp.lowerBound();
-    auto upperBound = forOp.upperBound();
+    auto lowerBound = forOp.getLowerBound();
+    auto upperBound = forOp.getUpperBound();
     Value diff =
         boundsBuilder.create<arith::SubIOp>(loc, upperBound, lowerBound);
     Value tripCount = ceilDivPositive(boundsBuilder, loc, diff, step);
@@ -1857,7 +1857,7 @@ stripmineSink(AffineForOp forOp, uint64_t factor,
 
 static Loops stripmineSink(scf::ForOp forOp, Value factor,
                            ArrayRef<scf::ForOp> targets) {
-  auto originalStep = forOp.step();
+  auto originalStep = forOp.getStep();
   auto iv = forOp.getInductionVar();
 
   OpBuilder b(forOp);
@@ -1871,11 +1871,11 @@ static Loops stripmineSink(scf::ForOp forOp, Value factor,
 
     // Insert newForOp before the terminator of `t`.
     auto b = OpBuilder::atBlockTerminator((t.getBody()));
-    Value stepped = b.create<arith::AddIOp>(t.getLoc(), iv, forOp.step());
+    Value stepped = b.create<arith::AddIOp>(t.getLoc(), iv, forOp.getStep());
     Value less = b.create<arith::CmpIOp>(t.getLoc(), arith::CmpIPredicate::slt,
-                                         forOp.upperBound(), stepped);
+                                         forOp.getUpperBound(), stepped);
     Value ub =
-        b.create<SelectOp>(t.getLoc(), less, forOp.upperBound(), stepped);
+        b.create<SelectOp>(t.getLoc(), less, forOp.getUpperBound(), stepped);
 
     // Splice [begin, begin + nOps - 1) into `newForOp` and replace uses.
     auto newForOp = b.create<scf::ForOp>(t.getLoc(), iv, ub, originalStep);
@@ -1883,7 +1883,7 @@ static Loops stripmineSink(scf::ForOp forOp, Value factor,
         newForOp.getBody()->getOperations().begin(),
         t.getBody()->getOperations(), begin, std::next(begin, nOps - 1));
     replaceAllUsesInRegionWith(iv, newForOp.getInductionVar(),
-                               newForOp.region());
+                               newForOp.getRegion());
 
     innerLoops.push_back(newForOp);
   }
@@ -2050,9 +2050,9 @@ TileLoops mlir::extractFixedOuterLoops(scf::ForOp rootForOp,
     auto forOp = forOps[i];
     OpBuilder builder(forOp);
     auto loc = forOp.getLoc();
-    Value diff = builder.create<arith::SubIOp>(loc, forOp.upperBound(),
-                                               forOp.lowerBound());
-    Value numIterations = ceilDivPositive(builder, loc, diff, forOp.step());
+    Value diff = builder.create<arith::SubIOp>(loc, forOp.getUpperBound(),
+                                               forOp.getLowerBound());
+    Value numIterations = ceilDivPositive(builder, loc, diff, forOp.getStep());
     Value iterationsPerBlock =
         ceilDivPositive(builder, loc, numIterations, sizes[i]);
     tileSizes.push_back(iterationsPerBlock);
@@ -2135,9 +2135,9 @@ static LoopParams normalizeLoop(OpBuilder &boundsBuilder,
 static void normalizeLoop(scf::ForOp loop, scf::ForOp outer, scf::ForOp inner) {
   OpBuilder builder(outer);
   OpBuilder innerBuilder = OpBuilder::atBlockBegin(inner.getBody());
-  auto loopPieces =
-      normalizeLoop(builder, innerBuilder, loop.getLoc(), loop.lowerBound(),
-                    loop.upperBound(), loop.step(), loop.getInductionVar());
+  auto loopPieces = normalizeLoop(builder, innerBuilder, loop.getLoc(),
+                                  loop.getLowerBound(), loop.getUpperBound(),
+                                  loop.getStep(), loop.getInductionVar());
 
   loop.setLowerBound(loopPieces.lowerBound);
   loop.setUpperBound(loopPieces.upperBound);
@@ -2160,10 +2160,10 @@ void mlir::coalesceLoops(MutableArrayRef<scf::ForOp> loops) {
   // of the number of iterations of all loops.
   OpBuilder builder(outermost);
   Location loc = outermost.getLoc();
-  Value upperBound = outermost.upperBound();
+  Value upperBound = outermost.getUpperBound();
   for (auto loop : loops.drop_front())
     upperBound =
-        builder.create<arith::MulIOp>(loc, upperBound, loop.upperBound());
+        builder.create<arith::MulIOp>(loc, upperBound, loop.getUpperBound());
   outermost.setUpperBound(upperBound);
 
   builder.setInsertionPointToStart(outermost.getBody());
@@ -2181,13 +2181,13 @@ void mlir::coalesceLoops(MutableArrayRef<scf::ForOp> loops) {
     unsigned idx = loops.size() - i - 1;
     if (i != 0)
       previous = builder.create<arith::DivSIOp>(loc, previous,
-                                                loops[idx + 1].upperBound());
+                                                loops[idx + 1].getUpperBound());
 
     Value iv = (i == e - 1) ? previous
                             : builder.create<arith::RemSIOp>(
-                                  loc, previous, loops[idx].upperBound());
+                                  loc, previous, loops[idx].getUpperBound());
     replaceAllUsesInRegionWith(loops[idx].getInductionVar(), iv,
-                               loops.back().region());
+                               loops.back().getRegion());
   }
 
   // 4. Move the operations from the innermost just above the second-outermost
@@ -2331,8 +2331,8 @@ void mlir::collapseParallelLoops(
     OpBuilder insideLoopBuilder = OpBuilder::atBlockBegin(loops.getBody());
     auto resultBounds =
         normalizeLoop(outsideBuilder, insideLoopBuilder, loc,
-                      loops.lowerBound()[i], loops.upperBound()[i],
-                      loops.step()[i], loops.getBody()->getArgument(i));
+                      loops.getLowerBound()[i], loops.getUpperBound()[i],
+                      loops.getStep()[i], loops.getBody()->getArgument(i));
 
     normalizedLowerBounds.push_back(resultBounds.lowerBound);
     normalizedUpperBounds.push_back(resultBounds.upperBound);
@@ -2374,7 +2374,7 @@ void mlir::collapseParallelLoops(
             Value iv = insideBuilder.create<arith::RemSIOp>(
                 loc, previous, normalizedUpperBounds[idx]);
             replaceAllUsesInRegionWith(loops.getBody()->getArgument(idx), iv,
-                                       loops.region());
+                                       loops.getRegion());
 
             // Remove the effect of the current induction value to prepare for
             // the next value.
@@ -2385,7 +2385,7 @@ void mlir::collapseParallelLoops(
           // The final induction value is just the remaining value.
           unsigned idx = combinedDimensions[i][0];
           replaceAllUsesInRegionWith(loops.getBody()->getArgument(idx),
-                                     previous, loops.region());
+                                     previous, loops.getRegion());
         }
       });
 
@@ -2419,12 +2419,12 @@ void mlir::mapLoopToProcessorIds(scf::ForOp forOp, ArrayRef<Value> processorId,
   }
 
   auto mulApplyOp = b.create<AffineApplyOp>(
-      loc, mulMap, ValueRange{linearIndex, forOp.step()});
+      loc, mulMap, ValueRange{linearIndex, forOp.getStep()});
   Value lb = b.create<AffineApplyOp>(
-      loc, addMap, ValueRange{mulApplyOp, forOp.lowerBound()});
+      loc, addMap, ValueRange{mulApplyOp, forOp.getLowerBound()});
   forOp.setLowerBound(lb);
 
-  Value step = forOp.step();
+  Value step = forOp.getStep();
   for (auto numProcs : numProcessors)
     step = b.create<AffineApplyOp>(loc, mulMap, ValueRange{numProcs, step});
   forOp.setStep(step);
@@ -3034,7 +3034,7 @@ uint64_t mlir::affineDataCopyGenerate(Block::iterator begin,
     auto updateRegion =
         [&](const SmallMapVector<Value, std::unique_ptr<MemRefRegion>, 4>
                 &targetRegions) {
-          const auto it = targetRegions.find(region->memref);
+          const auto *const it = targetRegions.find(region->memref);
           if (it == targetRegions.end())
             return false;
 

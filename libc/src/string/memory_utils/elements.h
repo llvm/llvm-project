@@ -511,8 +511,6 @@ template <size_t Size> struct Builtin {
     // __builtin_memcpy_inline guarantees to never call external functions.
     // Unfortunately it is not widely available.
     __builtin_memcpy_inline(dst, src, SIZE);
-#elif __has_builtin(__builtin_memcpy)
-    __builtin_memcpy(dst, src, SIZE);
 #else
     for_loop_copy(dst, src);
 #endif

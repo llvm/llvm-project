@@ -423,193 +423,39 @@ void PadOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
   results.insert<MaterializePadValue>(context);
 }
 
-struct Conv2DFullyConnectedOptimization
-    : public OpRewritePattern<tosa::Conv2DOp> {
+struct MaxPool2dIsNoOp : public OpRewritePattern<tosa::MaxPool2dOp> {
   using OpRewritePattern::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(tosa::Conv2DOp op,
+  LogicalResult matchAndRewrite(tosa::MaxPool2dOp op,
                                 PatternRewriter &rewriter) const override {
     Value input = op.input();
-    Value weight = op.weight();
+    Value output = op.output();
     ShapedType inputType = input.getType().cast<ShapedType>();
-    ShapedType weightType = weight.getType().cast<ShapedType>();
-    ShapedType resultType = op.getType().cast<ShapedType>();
+    ShapedType outputType = output.getType().cast<ShapedType>();
 
-    if (!inputType.hasStaticShape() || !weightType.hasRank()) {
+    if (!inputType.hasStaticShape() || !outputType.hasStaticShape()) {
       return failure();
     }
 
-    // Stride must be 1 for this optimization.
-    for (Attribute stride : op.stride().getValue()) {
-      if (!stride.cast<IntegerAttr>().getValue().isOne()) {
-        return failure();
-      }
-    }
-
-    // Only works for a 1x1 kernel.
-    ArrayRef<int64_t> weightShape = weightType.getShape();
-    if (weightShape[1] != 1 || weightShape[2] != 1) {
+    // If the output and input shapes are 1x1, then this is a no op.
+    ArrayRef<int64_t> outputShape = outputType.getShape();
+    if (outputShape[1] != 1 || outputShape[2] != 1) {
       return failure();
     }
 
-    // Reshape input to [N,IH,IW,IC] -> [N * IH * IW, IC].
     ArrayRef<int64_t> inputShape = inputType.getShape();
-    llvm::SmallVector<int64_t, 2> revisedInputShape{
-        inputShape[0] * inputShape[1] * inputShape[2], inputShape[3]};
-    auto revisedInputShapeType = RankedTensorType::get(
-        revisedInputShape,
-        input.getType().dyn_cast<RankedTensorType>().getElementType());
-    auto reshapedInput = rewriter
-                             .create<tosa::ReshapeOp>(
-                                 op.getLoc(), revisedInputShapeType, input,
-                                 rewriter.getI64ArrayAttr(revisedInputShape))
-                             .getResult();
-
-    // Reshape kernel to [OC,KH,KW,IC] -> [OC, IC].
-    llvm::SmallVector<int64_t, 2> revisedWeightShape{weightShape[0],
-                                                     weightShape[3]};
-    auto revisedWeightShapeType = RankedTensorType::get(
-        revisedWeightShape,
-        weight.getType().dyn_cast<RankedTensorType>().getElementType());
-    auto reshapedWeight = rewriter
-                              .create<tosa::ReshapeOp>(
-                                  op.getLoc(), revisedWeightShapeType, weight,
-                                  rewriter.getI64ArrayAttr(revisedWeightShape))
-                              .getResult();
-
-    // Perform a fully connected network over the reshaped input and weight.
-    llvm::SmallVector<int64_t, 2> fullyConnectedShape{
-        inputShape[0] * inputShape[1] * inputShape[2], weightShape[0]};
-    auto fullyConnectedShapeType = RankedTensorType::get(
-        fullyConnectedShape,
-        resultType.dyn_cast<ShapedType>().getElementType());
-
-    Value fullyConnectedValue;
-    if (op.quantization_info()) {
-      fullyConnectedValue =
-          rewriter
-              .create<tosa::FullyConnectedOp>(
-                  op.getLoc(), fullyConnectedShapeType, reshapedInput,
-                  reshapedWeight, op.bias(), op.quantization_info().getValue())
-              .getResult();
-    } else {
-      fullyConnectedValue = rewriter
-                                .create<tosa::FullyConnectedOp>(
-                                    op.getLoc(), fullyConnectedShapeType,
-                                    reshapedInput, reshapedWeight, op.bias())
-                                .getResult();
+    if (inputShape[1] != 1 || inputShape[2] != 1) {
+      return failure();
     }
 
-    // Reshape output to [N, IH, IW, OC].
-    llvm::SmallVector<int64_t, 4> outputShape{inputShape[0], inputShape[1],
-                                              inputShape[2], weightShape[0]};
-    rewriter.replaceOpWithNewOp<tosa::ReshapeOp>(
-        op, resultType, fullyConnectedValue,
-        rewriter.getI64ArrayAttr(outputShape));
+    rewriter.replaceOp(op, input);
     return success();
   }
 };
 
-void Conv2DOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
-                                           MLIRContext *context) {
-  results.insert<Conv2DFullyConnectedOptimization>(context);
-}
-
-struct DepthwiseConv2DMulOptimization
-    : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(tosa::DepthwiseConv2DOp op,
-                                PatternRewriter &rewriter) const override {
-    Value input = op.input();
-    Value weight = op.weight();
-    ShapedType inputType = input.getType().cast<ShapedType>();
-    ShapedType weightType = weight.getType().cast<ShapedType>();
-    ShapedType resultType = op.output().getType().cast<ShapedType>();
-    Type inputEType = inputType.getElementType();
-
-    if (!(inputType.hasStaticShape() && weightType.hasStaticShape() &&
-          resultType.hasStaticShape())) {
-      return failure();
-    }
-
-    // Quantization information needs to still be performed.
-    if (op.quantization_info() || !inputEType.isa<FloatType>()) {
-      return failure();
-    }
-
-    // Stride must be 1 for this optimization.
-    for (Attribute stride : op.stride().getValue()) {
-      if (!stride.cast<IntegerAttr>().getValue().isOne()) {
-        return failure();
-      }
-    }
-
-    // Only works for a 1x1 kernel.
-    ArrayRef<int64_t> weightShape = weightType.getShape();
-    if (weightShape[0] != 1 || weightShape[1] != 1) {
-      return failure();
-    }
-
-    // Reshape input to [N, H, W, C] -> [N, H, W, C, 1].
-    ArrayRef<int64_t> inputShape = inputType.getShape();
-    llvm::SmallVector<int64_t, 2> revisedInputShape{
-        inputShape[0], inputShape[1], inputShape[2], inputShape[3], 1};
-    auto revisedInputShapeType = RankedTensorType::get(
-        revisedInputShape,
-        input.getType().dyn_cast<RankedTensorType>().getElementType());
-    auto reshapedInput = rewriter
-                             .create<tosa::ReshapeOp>(
-                                 op.getLoc(), revisedInputShapeType, input,
-                                 rewriter.getI64ArrayAttr(revisedInputShape))
-                             .getResult();
-
-    // Reshape kernel to [KH, KW, C, M] -> [1, 1, 1, C, M].
-    llvm::SmallVector<int64_t, 2> revisedWeightShape{1, 1, 1, weightShape[2],
-                                                     weightShape[3]};
-    auto revisedWeightShapeType = RankedTensorType::get(
-        revisedWeightShape,
-        weight.getType().dyn_cast<RankedTensorType>().getElementType());
-    auto reshapedWeight = rewriter
-                              .create<tosa::ReshapeOp>(
-                                  op.getLoc(), revisedWeightShapeType, weight,
-                                  rewriter.getI64ArrayAttr(revisedWeightShape))
-                              .getResult();
-
-    // Perform an elementwise mul over the reshaped input and weight.
-    llvm::SmallVector<int64_t, 2> mulShape{inputShape[0], inputShape[1],
-                                           inputShape[2], inputShape[3],
-                                           weightShape[3]};
-    auto mulShapeType = RankedTensorType::get(
-        mulShape,
-        weight.getType().dyn_cast<RankedTensorType>().getElementType());
-    Value mulValue =
-        rewriter
-            .create<tosa::MulOp>(op.getLoc(), mulShapeType, reshapedInput,
-                                 reshapedWeight, /*shift=*/0)
-            .getResult();
-
-    // Reshape output to [N, H, W, C * M].
-    auto outputShape = op.output().getType().cast<ShapedType>().getShape();
-    auto outputShapeType = RankedTensorType::get(
-        outputShape,
-        input.getType().dyn_cast<RankedTensorType>().getElementType());
-    auto outputValue =
-        rewriter.create<tosa::ReshapeOp>(op.getLoc(), outputShapeType, mulValue,
-                                         rewriter.getI64ArrayAttr(outputShape));
-
-    // Add in the bias.
-    rewriter
-        .replaceOpWithNewOp<tosa::AddOp>(op, outputShapeType, outputValue,
-                                         op.bias())
-        .getResult();
-    return success();
-  }
-};
-
-void DepthwiseConv2DOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<DepthwiseConv2DMulOptimization>(context);
+void MaxPool2dOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+                                              MLIRContext *context) {
+  results.insert<MaxPool2dIsNoOp>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -710,7 +556,8 @@ OpFoldResult TransposeOp::fold(ArrayRef<Attribute> operands) {
 // TOSA Operator Verifiers.
 //===----------------------------------------------------------------------===//
 
-template <typename T> static LogicalResult verifyConvOp(T op) {
+template <typename T>
+static LogicalResult verifyConvOp(T op) {
   // All TOSA conv ops have an input() and weight().
   auto inputType = op.input().getType().template dyn_cast<RankedTensorType>();
   auto weightType = op.weight().getType().template dyn_cast<RankedTensorType>();
@@ -924,8 +771,8 @@ static void buildExplicitValuePadOpWithQuantInfo(OpBuilder &builder,
                                                  OperationState &result,
                                                  Type outputType, Value input,
                                                  Value paddings,
-                                                 Value pad_const) {
-  result.addOperands({input, paddings, pad_const});
+                                                 Value padConst) {
+  result.addOperands({input, paddings, padConst});
   auto quantAttr = buildPadOpQuantizationAttr(builder, input);
   if (quantAttr)
     result.addAttribute("quantization_info", quantAttr);

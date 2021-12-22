@@ -702,6 +702,16 @@ Stack permissions are recorded in the
 .Dv PT_GNU_STACK
 segment.
 .Pp
+.It Cm bti-report Ns = Ns Ar [none|warning|error]
+Specify how to report the missing GNU_PROPERTY_AARCH64_FEATURE_1_BTI property.
+.Cm none
+is the default, linker will not report the missing property otherwise will be reported as a warning or an error.
+.Pp
+.It Cm cet-report Ns = Ns Ar [none|warning|error]
+Specify how to report the missing GNU_PROPERTY_X86_FEATURE_1_IBT or GNU_PROPERTY_X86_FEATURE_1_SHSTK properties.
+.Cm none
+is the default, linker will not report the missing property otherwise will be reported as a warning or an error.
+.Pp
 .It Cm force-bti
 Force enable AArch64 BTI instruction in PLT, warn if Input ELF file does not have GNU_PROPERTY_AARCH64_FEATURE_1_BTI property.
 .Pp

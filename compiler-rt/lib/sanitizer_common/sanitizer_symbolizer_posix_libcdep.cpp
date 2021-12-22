@@ -492,7 +492,7 @@ Symbolizer *Symbolizer::PlatformInit() {
 }
 
 void Symbolizer::LateInitialize() {
-  Symbolizer::GetOrInit()->LateInitializeTools();
+  Symbolizer::GetOrInit();
   InitializeSwiftDemangler();
 }
 
