@@ -23,12 +23,16 @@ using RangeCBeginT = decltype(std::ranges::cbegin)&;
 
 static int globalBuff[8];
 
-struct Incomplete;
-
 static_assert(!std::is_invocable_v<RangeBeginT, int (&&)[10]>);
 static_assert( std::is_invocable_v<RangeBeginT, int (&)[10]>);
 static_assert(!std::is_invocable_v<RangeBeginT, int (&&)[]>);
 static_assert( std::is_invocable_v<RangeBeginT, int (&)[]>);
+
+struct Incomplete;
+static_assert(!std::is_invocable_v<RangeBeginT, Incomplete(&&)[]>);
+static_assert(!std::is_invocable_v<RangeBeginT, Incomplete(&&)[42]>);
+static_assert(!std::is_invocable_v<RangeCBeginT, Incomplete(&&)[]>);
+static_assert(!std::is_invocable_v<RangeCBeginT, Incomplete(&&)[42]>);
 
 struct BeginMember {
   int x;

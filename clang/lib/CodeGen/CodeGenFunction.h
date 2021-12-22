@@ -459,6 +459,11 @@ public:
     /// Get the name of the capture helper.
     virtual StringRef getHelperName() const { return "__captured_stmt"; }
 
+    /// Get the CaptureFields
+    llvm::SmallDenseMap<const VarDecl *, FieldDecl *> getCaptureFields() {
+      return CaptureFields;
+    }
+
   private:
     /// The kind of captured statement being generated.
     CapturedRegionKind Kind;

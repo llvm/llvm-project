@@ -13,10 +13,7 @@
 
 class ProcessFreeBSDKernel : public lldb_private::PostMortemProcess {
 public:
-  ProcessFreeBSDKernel(lldb::TargetSP target_sp, lldb::ListenerSP listener,
-                       const lldb_private::FileSpec &core_file, void *fvc);
-
-  ~ProcessFreeBSDKernel() override;
+  ProcessFreeBSDKernel(lldb::TargetSP target_sp, lldb::ListenerSP listener);
 
   static lldb::ProcessSP
   CreateInstance(lldb::TargetSP target_sp, lldb::ListenerSP listener,
@@ -44,17 +41,11 @@ public:
 
   lldb_private::Status DoLoadCore() override;
 
-  size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                      lldb_private::Status &error) override;
-
   lldb_private::DynamicLoader *GetDynamicLoader() override;
 
 protected:
   bool DoUpdateThreadList(lldb_private::ThreadList &old_thread_list,
                           lldb_private::ThreadList &new_thread_list) override;
-
-private:
-  void *m_fvc;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_PROCESSFREEBSDKERNEL_H

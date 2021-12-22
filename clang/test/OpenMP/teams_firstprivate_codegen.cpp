@@ -5258,4 +5258,3 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK20-NEXT:    call void @__tgt_register_requires(i64 1)
 // CHECK20-NEXT:    ret void
 //
-//

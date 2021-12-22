@@ -28,6 +28,12 @@ static_assert(!std::is_invocable_v<RangeEndT, int (&)[]>);
 static_assert(!std::is_invocable_v<RangeEndT, int (&&)[10]>);
 static_assert( std::is_invocable_v<RangeEndT, int (&)[10]>);
 
+struct Incomplete;
+static_assert(!std::is_invocable_v<RangeEndT, Incomplete(&&)[]>);
+static_assert(!std::is_invocable_v<RangeEndT, Incomplete(&&)[42]>);
+static_assert(!std::is_invocable_v<RangeCEndT, Incomplete(&&)[]>);
+static_assert(!std::is_invocable_v<RangeCEndT, Incomplete(&&)[42]>);
+
 struct EndMember {
   int x;
   constexpr const int *begin() const { return nullptr; }

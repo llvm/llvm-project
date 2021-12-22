@@ -27,15 +27,10 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if !defined(_LIBCPP_HAS_NO_RANGES)
 
-// clang-format off
-
 namespace ranges {
   template <class _Tp>
   concept __can_borrow =
       is_lvalue_reference_v<_Tp> || enable_borrowed_range<remove_cvref_t<_Tp> >;
-
-  template<class _Tp>
-  concept __is_complete = requires { sizeof(_Tp); };
 } // namespace ranges
 
 // [range.access.begin]
@@ -61,15 +56,10 @@ namespace ranges::__begin {
 
   struct __fn {
     template <class _Tp>
-    requires is_array_v<remove_cv_t<_Tp>>
-    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp& __t) const noexcept {
-      constexpr bool __complete = __is_complete<iter_value_t<_Tp> >;
-      if constexpr (__complete) { // used to disable cryptic diagnostic
-        return __t + 0;
-      }
-      else {
-        static_assert(__complete, "`std::ranges::begin` is SFINAE-unfriendly on arrays of an incomplete type.");
-      }
+      requires is_array_v<remove_cv_t<_Tp>>
+    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp& __t) const noexcept
+    {
+      return __t;
     }
 
     template <class _Tp>
@@ -127,14 +117,10 @@ namespace ranges::__end {
   class __fn {
   public:
     template <class _Tp, size_t _Np>
-    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp (&__t)[_Np]) const noexcept {
-      constexpr bool __complete = __is_complete<remove_cv_t<_Tp> >;
-      if constexpr (__complete) { // used to disable cryptic diagnostic
-        return __t + _Np;
-      }
-      else {
-        static_assert(__complete, "`std::ranges::end` is SFINAE-unfriendly on arrays of an incomplete type.");
-      }
+    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp (&__t)[_Np]) const noexcept
+      requires (sizeof(*__t) != 0)  // Disallow incomplete element types.
+    {
+      return __t + _Np;
     }
 
     template <class _Tp>
@@ -208,8 +194,6 @@ namespace ranges::__cend {
 namespace ranges::inline __cpo {
   inline constexpr auto cend = __cend::__fn{};
 } // namespace ranges::__cpo
-
-// clang-format off
 
 #endif // !defined(_LIBCPP_HAS_NO_RANGES)
 
