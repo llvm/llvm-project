@@ -105,6 +105,21 @@ cc_test(
 )
 
 cc_test(
+    name = "scf_tests",
+    size = "small",
+    srcs = glob([
+        "Dialect/SCF/*.cpp",
+        "Dialect/SCF/*.h",
+    ]),
+    deps = [
+        "//llvm:gtest_main",
+        "//mlir:Parser",
+        "//mlir:SCFDialect",
+        "//mlir:StandardOps",
+    ],
+)
+
+cc_test(
     name = "sparse_tensor_tests",
     size = "small",
     srcs = glob([
