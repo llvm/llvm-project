@@ -36,16 +36,21 @@ struct CommonFixture {
     EXPECT_FALSE(Unrecoverable);
   }
 
-  bool setupGenerator(uint16_t Version = 4, uint8_t AddrSize = 8) {
+  // Note: ASSERT_THAT_EXPECTED cannot be used in a non-void function, so
+  // setupGenerator() is split into two.
+  void setupGeneratorImpl(uint16_t Version, uint8_t AddrSize) {
     AddressSize = AddrSize;
-    Triple T =
-        getDefaultTargetTripleForAddrSize(AddressSize == 0 ? 8 : AddressSize);
+    Triple T = getDefaultTargetTripleForAddrSize(AddressSize ? AddressSize : 8);
     if (!isConfigurationSupported(T))
-      return false;
+      return;
     auto ExpectedGenerator = Generator::create(T, Version);
-    if (ExpectedGenerator)
-      Gen.reset(ExpectedGenerator->release());
-    return true;
+    ASSERT_THAT_EXPECTED(ExpectedGenerator, Succeeded());
+    Gen = std::move(*ExpectedGenerator);
+  }
+
+  bool setupGenerator(uint16_t Version = 4, uint8_t AddrSize = 8) {
+    setupGeneratorImpl(Version, AddrSize);
+    return Gen != nullptr;
   }
 
   void generate() {
@@ -60,8 +65,7 @@ struct CommonFixture {
   }
 
   std::unique_ptr<DWARFContext> createContext() {
-    if (!Gen)
-      return nullptr;
+    assert(Gen != nullptr && "Generator is not set up");
     StringRef FileBytes = Gen->generate();
     MemoryBufferRef FileBuffer(FileBytes, "dwarf");
     auto Obj = object::ObjectFile::createObjectFile(FileBuffer);
