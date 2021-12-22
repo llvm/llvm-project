@@ -319,8 +319,7 @@ class Addr2LinePool final : public SymbolizerTool {
 extern "C" {
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE bool
 __sanitizer_symbolize_code(const char *ModuleName, u64 ModuleOffset,
-                           char *Buffer, int MaxLength,
-                           bool SymbolizeInlineFrames);
+                           char *Buffer, int MaxLength);
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE bool
 __sanitizer_symbolize_data(const char *ModuleName, u64 ModuleOffset,
                            char *Buffer, int MaxLength);
@@ -328,11 +327,16 @@ SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void
 __sanitizer_symbolize_flush();
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE int
 __sanitizer_symbolize_demangle(const char *Name, char *Buffer, int MaxLength);
+SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE bool
+__sanitizer_symbolize_set_inline_frames(bool InlineFrames);
 }  // extern "C"
 
 class InternalSymbolizer final : public SymbolizerTool {
  public:
   static InternalSymbolizer *get(LowLevelAllocator *alloc) {
+    if (__sanitizer_symbolize_set_inline_frames)
+      CHECK(__sanitizer_symbolize_set_inline_frames(
+          common_flags()->symbolize_inline_frames));
     if (__sanitizer_symbolize_code && __sanitizer_symbolize_data)
       return new (*alloc) InternalSymbolizer();
     return 0;
@@ -340,8 +344,7 @@ class InternalSymbolizer final : public SymbolizerTool {
 
   bool SymbolizePC(uptr addr, SymbolizedStack *stack) override {
     bool result = __sanitizer_symbolize_code(
-        stack->info.module, stack->info.module_offset, buffer_, kBufferSize,
-        common_flags()->symbolize_inline_frames);
+        stack->info.module, stack->info.module_offset, buffer_, kBufferSize);
     if (result)
       ParseSymbolizePCOutput(buffer_, stack);
     return result;
