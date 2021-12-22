@@ -95,6 +95,10 @@ struct OutlinableRegion {
   /// required for the following basic blocks in this case.
   bool EndsInBranch = false;
 
+  /// The PHIBlocks with their corresponding return block based on the return
+  /// value as the key.
+  DenseMap<Value *, BasicBlock *> PHIBlocks;
+
   /// Mapping of the argument number in the deduplicated function
   /// to a given constant, which is used when creating the arguments to the call
   /// to the newly created deduplicated function.  This is handled separately
@@ -182,7 +186,14 @@ public:
   IROutliner(function_ref<TargetTransformInfo &(Function &)> GTTI,
              function_ref<IRSimilarityIdentifier &(Module &)> GIRSI,
              function_ref<OptimizationRemarkEmitter &(Function &)> GORE)
-      : getTTI(GTTI), getIRSI(GIRSI), getORE(GORE) {}
+      : getTTI(GTTI), getIRSI(GIRSI), getORE(GORE) {
+    
+    // Check that the DenseMap implementation has not changed.
+    assert(DenseMapInfo<unsigned>::getEmptyKey() == (unsigned)-1 &&
+           "DenseMapInfo<unsigned>'s empty key isn't -1!");
+    assert(DenseMapInfo<unsigned>::getTombstoneKey() == (unsigned)-2 &&
+           "DenseMapInfo<unsigned>'s tombstone key isn't -2!");
+  }
   bool run(Module &M);
 
 private:
