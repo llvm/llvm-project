@@ -185,7 +185,7 @@ void DWARFExpressionCopyBytesTest::readAndCheckObjFile(
 void DWARFExpressionCopyBytesTest::testExpr(ArrayRef<uint8_t> ExprData) {
   // If we didn't build x86, do not run the test.
   if (!MRI)
-    return;
+    GTEST_SKIP();
 
   DataExtractor DE(ExprData, true, 8);
   DWARFExpression Expr(DE, 8);
