@@ -23,6 +23,8 @@ def main():
 
     for l in sys.stdin:
         m = line_re.match(l)
+        if m is None:
+            continue
         offset, size = [int(x) for x in m.groups()]
 
         inf.seek(offset)

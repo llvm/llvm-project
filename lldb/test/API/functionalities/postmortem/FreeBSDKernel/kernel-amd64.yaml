@@ -14,6 +14,12 @@ Sections:
     AddressAlign:    0x80
     Offset:          0x17BA348
     Size:            0x445C80
+  - Name:            .rodata
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_MERGE, SHF_STRINGS ]
+    Address:         0xFFFFFFFF81152D30
+    AddressAlign:    0x10
+    Size:            0x800
 Symbols:
   - Name:            kernbase
     Index:           SHN_ABS
@@ -36,3 +42,87 @@ Symbols:
     Binding:         STB_GLOBAL
     Value:           0xFFFFFFFF81CD4C0C
     Size:            0x4
+  - Name:            proc_off_p_comm
+    Type:            STT_OBJECT
+    Section:         .rodata
+    Binding:         STB_GLOBAL
+    Value:           0xFFFFFFFF815CA624
+    Size:            0x4
+  - Name:            proc_off_p_hash
+    Type:            STT_OBJECT
+    Section:         .rodata
+    Binding:         STB_GLOBAL
+    Value:           0xFFFFFFFF815CA62C
+    Size:            0x4
+  - Name:            proc_off_p_list
+    Type:            STT_OBJECT
+    Section:         .rodata
+    Binding:         STB_GLOBAL
+    Value:           0xFFFFFFFF815CA628
+    Size:            0x4
+  - Name:            proc_off_p_pid
+    Type:            STT_OBJECT
+    Section:         .rodata
+    Binding:         STB_GLOBAL
+    Value:           0xFFFFFFFF815CA620
+    Size:            0x4
+  - Name:            proc_off_p_threads
+    Type:            STT_OBJECT
+    Section:         .rodata
+    Binding:         STB_GLOBAL
+    Value:           0xFFFFFFFF815CA630
+    Size:            0x4
+  - Name:            thread_off_td_name
+    Type:            STT_OBJECT
+    Section:         .rodata
+    Binding:         STB_GLOBAL
+    Value:           0xFFFFFFFF815CA638
+    Size:            0x4
+  - Name:            thread_off_td_oncpu
+    Type:            STT_OBJECT
+    Section:         .rodata
+    Binding:         STB_GLOBAL
+    Value:           0xFFFFFFFF815CA63C
+    Size:            0x4
+  - Name:            thread_off_td_pcb
+    Type:            STT_OBJECT
+    Section:         .rodata
+    Binding:         STB_GLOBAL
+    Value:           0xFFFFFFFF815CA640
+    Size:            0x4
+  - Name:            thread_off_td_plist
+    Type:            STT_OBJECT
+    Section:         .rodata
+    Binding:         STB_GLOBAL
+    Value:           0xFFFFFFFF815CA644
+    Size:            0x4
+  - Name:            thread_off_td_tid
+    Type:            STT_OBJECT
+    Section:         .rodata
+    Binding:         STB_GLOBAL
+    Value:           0xFFFFFFFF815CA634
+    Size:            0x4
+  - Name:            dumptid
+    Type:            STT_OBJECT
+    Section:         .bss
+    Binding:         STB_GLOBAL
+    Value:           0xFFFFFFFF81CA69A8
+    Size:            0x4
+  - Name:            pcb_size
+    Type:            STT_OBJECT
+    Section:         .rodata
+    Binding:         STB_GLOBAL
+    Value:           0xFFFFFFFF815CA590
+    Size:            0x4
+  - Name:            stoppcbs
+    Type:            STT_OBJECT
+    Section:         .bss
+    Binding:         STB_GLOBAL
+    Value:           0xFFFFFFFF81D23E20
+    Size:            0x14000
+  - Name:            allproc
+    Type:            STT_OBJECT
+    Section:         .bss
+    Binding:         STB_GLOBAL
+    Value:           0xFFFFFFFF81C9A2F0
+    Size:            0x8
