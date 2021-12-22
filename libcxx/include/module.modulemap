@@ -921,8 +921,8 @@ module std [system] {
 
     module __utility {
       module as_const            { private header "__utility/as_const.h" }
+      module auto_cast           { private header "__utility/auto_cast.h" }
       module cmp                 { private header "__utility/cmp.h" }
-      module decay_copy          { private header "__utility/decay_copy.h" }
       module declval             { private header "__utility/declval.h" }
       module exchange            { private header "__utility/exchange.h" }
       module forward             { private header "__utility/forward.h" }

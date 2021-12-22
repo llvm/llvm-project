@@ -14,8 +14,7 @@
 #include <__iterator/readable_traits.h>
 #include <__ranges/enable_borrowed_range.h>
 #include <__utility/as_const.h>
-#include <__utility/decay_copy.h>
-#include <__utility/forward.h>
+#include <__utility/auto_cast.h>
 #include <concepts>
 #include <type_traits>
 
@@ -39,7 +38,7 @@ namespace ranges::__begin {
   concept __member_begin =
     __can_borrow<_Tp> &&
     requires(_Tp&& __t) {
-      { _VSTD::__decay_copy(__t.begin()) } -> input_or_output_iterator;
+      { _LIBCPP_AUTO_CAST(__t.begin()) } -> input_or_output_iterator;
     };
 
   void begin(auto&) = delete;
@@ -51,7 +50,7 @@ namespace ranges::__begin {
     __can_borrow<_Tp> &&
     __class_or_enum<remove_cvref_t<_Tp> > &&
     requires(_Tp && __t) {
-      { _VSTD::__decay_copy(begin(__t)) } -> input_or_output_iterator;
+      { _LIBCPP_AUTO_CAST(begin(__t)) } -> input_or_output_iterator;
     };
 
   struct __fn {
@@ -65,17 +64,17 @@ namespace ranges::__begin {
     template <class _Tp>
     requires __member_begin<_Tp>
     [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
-    noexcept(noexcept(_VSTD::__decay_copy(__t.begin())))
+    noexcept(noexcept(_LIBCPP_AUTO_CAST(__t.begin())))
     {
-      return __t.begin();
+      return _LIBCPP_AUTO_CAST(__t.begin());
     }
 
     template <class _Tp>
     requires __unqualified_begin<_Tp>
     [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
-    noexcept(noexcept(_VSTD::__decay_copy(begin(__t))))
+    noexcept(noexcept(_LIBCPP_AUTO_CAST(begin(__t))))
     {
-      return begin(__t);
+      return _LIBCPP_AUTO_CAST(begin(__t));
     }
 
     void operator()(auto&&) const = delete;
@@ -98,7 +97,7 @@ namespace ranges::__end {
     __can_borrow<_Tp> &&
     requires(_Tp&& __t) {
       typename iterator_t<_Tp>;
-      { _VSTD::__decay_copy(_VSTD::forward<_Tp>(__t).end()) } -> sentinel_for<iterator_t<_Tp> >;
+      { _LIBCPP_AUTO_CAST(__t.end()) } -> sentinel_for<iterator_t<_Tp> >;
     };
 
   void end(auto&) = delete;
@@ -111,7 +110,7 @@ namespace ranges::__end {
     __class_or_enum<remove_cvref_t<_Tp> > &&
     requires(_Tp && __t) {
       typename iterator_t<_Tp>;
-      { _VSTD::__decay_copy(end(_VSTD::forward<_Tp>(__t))) } -> sentinel_for<iterator_t<_Tp> >;
+      { _LIBCPP_AUTO_CAST(end(__t)) } -> sentinel_for<iterator_t<_Tp> >;
     };
 
   class __fn {
@@ -126,17 +125,17 @@ namespace ranges::__end {
     template <class _Tp>
     requires __member_end<_Tp>
     [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
-    noexcept(noexcept(_VSTD::__decay_copy(__t.end())))
+    noexcept(noexcept(_LIBCPP_AUTO_CAST(__t.end())))
     {
-      return _VSTD::forward<_Tp>(__t).end();
+      return _LIBCPP_AUTO_CAST(__t.end());
     }
 
     template <class _Tp>
     requires __unqualified_end<_Tp>
     [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
-    noexcept(noexcept(_VSTD::__decay_copy(end(__t))))
+    noexcept(noexcept(_LIBCPP_AUTO_CAST(end(__t))))
     {
-      return end(__t);
+      return _LIBCPP_AUTO_CAST(end(__t));
     }
 
     void operator()(auto&&) const = delete;
