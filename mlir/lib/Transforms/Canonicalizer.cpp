@@ -21,7 +21,13 @@ using namespace mlir;
 namespace {
 /// Canonicalize operations in nested regions.
 struct Canonicalizer : public CanonicalizerBase<Canonicalizer> {
-  Canonicalizer(const GreedyRewriteConfig &config) : config(config) {}
+  Canonicalizer(const GreedyRewriteConfig &config,
+                ArrayRef<std::string> disabledPatterns,
+                ArrayRef<std::string> enabledPatterns)
+      : config(config) {
+    this->disabledPatterns = disabledPatterns;
+    this->enabledPatterns = enabledPatterns;
+  }
 
   Canonicalizer() {
     // Default constructed Canonicalizer takes its settings from command line
@@ -61,6 +67,9 @@ std::unique_ptr<Pass> mlir::createCanonicalizerPass() {
 
 /// Creates an instance of the Canonicalizer pass with the specified config.
 std::unique_ptr<Pass>
-mlir::createCanonicalizerPass(const GreedyRewriteConfig &config) {
-  return std::make_unique<Canonicalizer>(config);
+createCanonicalizerPass(const GreedyRewriteConfig &config,
+                        ArrayRef<std::string> disabledPatterns = llvm::None,
+                        ArrayRef<std::string> enabledPatterns = llvm::None) {
+  return std::make_unique<Canonicalizer>(config, disabledPatterns,
+                                         enabledPatterns);
 }
