@@ -4,7 +4,8 @@
 // Ensure that we place appropriate lifetime markers around indirectly returned
 // temporaries, and that the lifetime.ends appear in a timely manner.
 //
-// -O1 is used so lifetime markers actually get emitted.
+// -O1 is used so lifetime markers actually get emitted and optnone is added
+// to avoid elimination of lifetime markers by optimizations.
 
 struct S {
   int ns[40];
@@ -13,25 +14,39 @@ struct S {
 struct S foo(void);
 
 // CHECK-LABEL: define dso_local void @bar
+__attribute__((optnone))
 struct S bar() {
   // O0-NOT: @llvm.lifetime.start
   // O0-NOT: @llvm.lifetime.end
 
   struct S r;
-  // O1: call void @llvm.lifetime.start.p0i8({{[^,]*}}, i8* nonnull %[[TMP1:[^)]+]])
-  // O1: call void @foo
-  r = foo();
-  // O1: call void @llvm.lifetime.end.p0i8({{[^,]*}}, i8* nonnull %[[TMP1]])
+  // O1: %[[TMP1_ALLOCA:[^ ]+]] = alloca %struct.S
+  // O1: %[[TMP2_ALLOCA:[^ ]+]] = alloca %struct.S
+  // O1: %[[TMP3_ALLOCA:[^ ]+]] = alloca %struct.S
 
-  // O1: call void @llvm.lifetime.start.p0i8({{[^,]*}}, i8* nonnull %[[TMP2:[^)]+]])
+  // O1: %[[P:[^ ]+]] = bitcast %struct.S* %[[TMP1_ALLOCA]] to i8*
+  // O1: call void @llvm.lifetime.start.p0i8({{[^,]*}}, i8* %[[P]])
   // O1: call void @foo
   r = foo();
-  // O1: call void @llvm.lifetime.end.p0i8({{[^,]*}}, i8* nonnull %[[TMP2]])
+  // O1: memcpy
+  // O1: %[[P:[^ ]+]] = bitcast %struct.S* %[[TMP1_ALLOCA]] to i8*
+  // O1: call void @llvm.lifetime.end.p0i8({{[^,]*}}, i8* %[[P]])
 
-  // O1: call void @llvm.lifetime.start.p0i8({{[^,]*}}, i8* nonnull %[[TMP3:[^)]+]])
+  // O1: %[[P:[^ ]+]] = bitcast %struct.S* %[[TMP2_ALLOCA]] to i8*
+  // O1: call void @llvm.lifetime.start.p0i8({{[^,]*}}, i8* %[[P]])
   // O1: call void @foo
   r = foo();
-  // O1: call void @llvm.lifetime.end.p0i8({{[^,]*}}, i8* nonnull %[[TMP3]])
+  // O1: memcpy
+  // O1: %[[P:[^ ]+]] = bitcast %struct.S* %[[TMP2_ALLOCA]] to i8*
+  // O1: call void @llvm.lifetime.end.p0i8({{[^,]*}}, i8* %[[P]])
+
+  // O1: %[[P:[^ ]+]] = bitcast %struct.S* %[[TMP3_ALLOCA]] to i8*
+  // O1: call void @llvm.lifetime.start.p0i8({{[^,]*}}, i8* %[[P]])
+  // O1: call void @foo
+  r = foo();
+  // O1: memcpy
+  // O1: %[[P:[^ ]+]] = bitcast %struct.S* %[[TMP3_ALLOCA]] to i8*
+  // O1: call void @llvm.lifetime.end.p0i8({{[^,]*}}, i8* %[[P]])
 
   return r;
 }
@@ -39,8 +54,6 @@ struct S bar() {
 struct S foo_int(int);
 
 // Be sure that we're placing the lifetime.end so that all paths go through it.
-// Since this function turns out to be large-ish, optnone to hopefully keep it
-// stable.
 // CHECK-LABEL: define dso_local void @baz
 __attribute__((optnone))
 struct S baz(int i, volatile int *j) {

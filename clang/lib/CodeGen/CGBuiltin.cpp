@@ -3211,6 +3211,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(Result);
   }
 
+  case Builtin::BI__builtin_reduce_xor: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Result = Builder.CreateUnaryIntrinsic(
+        llvm::Intrinsic::vector_reduce_xor, Op0, nullptr, "rdx.xor");
+    return RValue::get(Result);
+  }
+
   case Builtin::BI__builtin_matrix_transpose: {
     const auto *MatrixTy = E->getArg(0)->getType()->getAs<ConstantMatrixType>();
     Value *MatValue = EmitScalarExpr(E->getArg(0));

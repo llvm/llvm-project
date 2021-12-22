@@ -3050,8 +3050,7 @@ reformat(const FormatStyle &Style, StringRef Code,
       });
   }
 
-  if (Style.Language == FormatStyle::LK_JavaScript &&
-      Style.JavaScriptQuotes != FormatStyle::JSQS_Leave)
+  if (Style.isJavaScript() && Style.JavaScriptQuotes != FormatStyle::JSQS_Leave)
     Passes.emplace_back([&](const Environment &Env) {
       return JavaScriptRequoter(Env, Expanded).process();
     });
@@ -3060,7 +3059,7 @@ reformat(const FormatStyle &Style, StringRef Code,
     return Formatter(Env, Expanded, Status).process();
   });
 
-  if (Style.Language == FormatStyle::LK_JavaScript &&
+  if (Style.isJavaScript() &&
       Style.InsertTrailingCommas == FormatStyle::TCS_Wrapped)
     Passes.emplace_back([&](const Environment &Env) {
       return TrailingCommaInserter(Env, Expanded).process();

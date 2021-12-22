@@ -132,6 +132,7 @@ source_set("sources") {
     "sanitizer_stoptheworld_linux_libcdep.cpp",
     "sanitizer_stoptheworld_mac.cpp",
     "sanitizer_stoptheworld_netbsd_libcdep.cpp",
+    "sanitizer_stoptheworld_win.cpp",
     "sanitizer_suppressions.cpp",
     "sanitizer_suppressions.h",
     "sanitizer_symbolizer.cpp",

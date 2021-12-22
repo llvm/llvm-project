@@ -333,18 +333,43 @@
 #  define _LIBCPP_SHORT_WCHAR   1
 #endif
 
+// Libc++ supports various implementations of std::random_device.
+//
+// _LIBCPP_USING_DEV_RANDOM
+//      Read entropy from the given file, by default `/dev/urandom`.
+//      If a token is provided, it is assumed to be the path to a file
+//      to read entropy from. This is the default behavior if nothing
+//      else is specified. This implementation requires storing state
+//      inside `std::random_device`.
+//
+// _LIBCPP_USING_ARC4_RANDOM
+//      Use arc4random(). This allows obtaining random data even when
+//      using sandboxing mechanisms. On some platforms like Apple, this
+//      is the recommended source of entropy for user-space programs.
+//      When this option is used, the token passed to `std::random_device`'s
+//      constructor *must* be "/dev/urandom" -- anything else is an error.
+//
+// _LIBCPP_USING_GETENTROPY
+//      Use getentropy().
+//      When this option is used, the token passed to `std::random_device`'s
+//      constructor *must* be "/dev/urandom" -- anything else is an error.
+//
+// _LIBCPP_USING_NACL_RANDOM
+//      NaCl's sandbox (which PNaCl also runs in) doesn't allow filesystem access,
+//      including accesses to the special files under `/dev`. This implementation
+//      uses the NaCL syscall `nacl_secure_random_init()` to get entropy.
+//      When this option is used, the token passed to `std::random_device`'s
+//      constructor *must* be "/dev/urandom" -- anything else is an error.
+//
+// _LIBCPP_USING_WIN32_RANDOM
+//      Use rand_s(), for use on Windows.
+//      When this option is used, the token passed to `std::random_device`'s
+//      constructor *must* be "/dev/urandom" -- anything else is an error.
 #if defined(__OpenBSD__)
-   // Certain architectures provide arc4random(). Prefer using
-   // arc4random() over /dev/{u,}random to make it possible to obtain
-   // random data even when using sandboxing mechanisms such as chroots,
-   // Capsicum, etc.
 #  define _LIBCPP_USING_ARC4_RANDOM
 #elif defined(__Fuchsia__) || defined(__wasi__)
 #  define _LIBCPP_USING_GETENTROPY
 #elif defined(__native_client__)
-   // NaCl's sandbox (which PNaCl also runs in) doesn't allow filesystem access,
-   // including accesses to the special files under /dev. C++11's
-   // std::random_device is instead exposed through a NaCl syscall.
 #  define _LIBCPP_USING_NACL_RANDOM
 #elif defined(_LIBCPP_WIN32API)
 #  define _LIBCPP_USING_WIN32_RANDOM

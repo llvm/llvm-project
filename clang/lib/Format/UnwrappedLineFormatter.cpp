@@ -97,8 +97,8 @@ private:
   /// For example, 'public:' labels in classes are offset by 1 or 2
   /// characters to the left from their level.
   int getIndentOffset(const FormatToken &RootToken) {
-    if (Style.Language == FormatStyle::LK_Java ||
-        Style.Language == FormatStyle::LK_JavaScript || Style.isCSharp())
+    if (Style.Language == FormatStyle::LK_Java || Style.isJavaScript() ||
+        Style.isCSharp())
       return 0;
     if (RootToken.isAccessSpecifier(false) ||
         RootToken.isObjCAccessSpecifier() ||
@@ -393,11 +393,17 @@ private:
 
     // Try to merge a block with left brace wrapped that wasn't yet covered
     if (TheLine->Last->is(tok::l_brace)) {
-      return !Style.BraceWrapping.AfterFunction ||
-                     (I[1]->First->is(tok::r_brace) &&
-                      !Style.BraceWrapping.SplitEmptyRecord)
-                 ? tryMergeSimpleBlock(I, E, Limit)
-                 : 0;
+      bool ShouldMerge = false;
+      if (TheLine->First->isOneOf(tok::kw_class, tok::kw_struct)) {
+        ShouldMerge = !Style.BraceWrapping.AfterClass ||
+                      (I[1]->First->is(tok::r_brace) &&
+                       !Style.BraceWrapping.SplitEmptyRecord);
+      } else {
+        ShouldMerge = !Style.BraceWrapping.AfterFunction ||
+                      (I[1]->First->is(tok::r_brace) &&
+                       !Style.BraceWrapping.SplitEmptyFunction);
+      }
+      return ShouldMerge ? tryMergeSimpleBlock(I, E, Limit) : 0;
     }
     // Try to merge a function block with left brace wrapped
     if (I[1]->First->is(TT_FunctionLBrace) &&
@@ -1187,8 +1193,7 @@ unsigned UnwrappedLineFormatter::format(
       bool FitsIntoOneLine =
           TheLine.Last->TotalLength + Indent <= ColumnLimit ||
           (TheLine.Type == LT_ImportStatement &&
-           (Style.Language != FormatStyle::LK_JavaScript ||
-            !Style.JavaScriptWrapImports)) ||
+           (!Style.isJavaScript() || !Style.JavaScriptWrapImports)) ||
           (Style.isCSharp() &&
            TheLine.InPPDirective); // don't split #regions in C#
       if (Style.ColumnLimit == 0)

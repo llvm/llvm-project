@@ -484,7 +484,7 @@ TEST(DiagnosticTest, ClangTidySuppressionComment) {
       // NOLINTEND
 
       // verify no crashes on unmatched nolints.
-      // NOLINTBEIGN
+      // NOLINTBEGIN
     }
   )cpp");
   TestTU TU = TestTU::withCode(Main.code());

@@ -2,8 +2,6 @@
 # AIX using a shared library.
 #
 
-import sys
-
 lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
 
 config.substitutions.append(('%{flags}', ''))
@@ -14,7 +12,7 @@ config.substitutions.append(('%{link_flags}',
     '-nostdlib++ -L %{install}/lib -lc++ -lc++abi -latomic -Wl,-bbigtoc'
 ))
 config.substitutions.append(('%{exec}',
-    '{} %{{libcxx}}/utils/run.py --execdir %T --env LIBPATH=%{{install}}/lib -- '.format(sys.executable)
+    '%{executor} --execdir %T --env LIBPATH=%{install}/lib -- '
 ))
 
 # LIBCXX-AIX-FIXME is the feature name used to XFAIL the

@@ -366,8 +366,7 @@ void UnwrappedLineParser::parse() {
 void UnwrappedLineParser::parseFile() {
   // The top-level context in a file always has declarations, except for pre-
   // processor directives and JavaScript files.
-  bool MustBeDeclaration =
-      !Line->InPPDirective && Style.Language != FormatStyle::LK_JavaScript;
+  bool MustBeDeclaration = !Line->InPPDirective && !Style.isJavaScript();
   ScopedDeclarationState DeclarationState(*Line, DeclarationScopeStack,
                                           MustBeDeclaration);
   if (Style.Language == FormatStyle::LK_TextProto)
@@ -478,8 +477,7 @@ void UnwrappedLineParser::parseLevel(bool HasOpeningBrace) {
       LLVM_FALLTHROUGH;
     }
     case tok::kw_case:
-      if (Style.Language == FormatStyle::LK_JavaScript &&
-          Line->MustBeDeclaration) {
+      if (Style.isJavaScript() && Line->MustBeDeclaration) {
         // A 'case: string' style field declaration.
         parseStructuralElement();
         break;
@@ -528,7 +526,7 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
 
     switch (Tok->Tok.getKind()) {
     case tok::l_brace:
-      if (Style.Language == FormatStyle::LK_JavaScript && PrevTok) {
+      if (Style.isJavaScript() && PrevTok) {
         if (PrevTok->isOneOf(tok::colon, tok::less))
           // A ':' indicates this code is in a type, or a braced list
           // following a label in an object literal ({a: {b: 1}}).
@@ -581,7 +579,7 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
           // FIXME: Some of these do not apply to JS, e.g. "} {" can never be a
           // braced list in JS.
           ProbablyBracedList =
-              (Style.Language == FormatStyle::LK_JavaScript &&
+              (Style.isJavaScript() &&
                NextTok->isOneOf(Keywords.kw_of, Keywords.kw_in,
                                 Keywords.kw_as)) ||
               (Style.isCpp() && NextTok->is(tok::l_paren)) ||
@@ -791,7 +789,7 @@ void UnwrappedLineParser::parseChildBlock() {
   FormatTok->setBlockKind(BK_Block);
   nextToken();
   {
-    bool SkipIndent = (Style.Language == FormatStyle::LK_JavaScript &&
+    bool SkipIndent = (Style.isJavaScript() &&
                        (isGoogScope(*Line) || isIIFE(*Line, Keywords)));
     ScopedLineState LineState(*this);
     ScopedDeclarationState DeclarationState(*Line, DeclarationScopeStack,
@@ -1222,39 +1220,39 @@ void UnwrappedLineParser::parseStructuralElement(bool IsTopLevel) {
   case tok::kw_public:
   case tok::kw_protected:
   case tok::kw_private:
-    if (Style.Language == FormatStyle::LK_Java ||
-        Style.Language == FormatStyle::LK_JavaScript || Style.isCSharp())
+    if (Style.Language == FormatStyle::LK_Java || Style.isJavaScript() ||
+        Style.isCSharp())
       nextToken();
     else
       parseAccessSpecifier();
     return;
   case tok::kw_if:
-    if (Style.Language == FormatStyle::LK_JavaScript && Line->MustBeDeclaration)
+    if (Style.isJavaScript() && Line->MustBeDeclaration)
       // field/method declaration.
       break;
     parseIfThenElse();
     return;
   case tok::kw_for:
   case tok::kw_while:
-    if (Style.Language == FormatStyle::LK_JavaScript && Line->MustBeDeclaration)
+    if (Style.isJavaScript() && Line->MustBeDeclaration)
       // field/method declaration.
       break;
     parseForOrWhileLoop();
     return;
   case tok::kw_do:
-    if (Style.Language == FormatStyle::LK_JavaScript && Line->MustBeDeclaration)
+    if (Style.isJavaScript() && Line->MustBeDeclaration)
       // field/method declaration.
       break;
     parseDoWhile();
     return;
   case tok::kw_switch:
-    if (Style.Language == FormatStyle::LK_JavaScript && Line->MustBeDeclaration)
+    if (Style.isJavaScript() && Line->MustBeDeclaration)
       // 'switch: string' field declaration.
       break;
     parseSwitch();
     return;
   case tok::kw_default:
-    if (Style.Language == FormatStyle::LK_JavaScript && Line->MustBeDeclaration)
+    if (Style.isJavaScript() && Line->MustBeDeclaration)
       // 'default: string' field declaration.
       break;
     nextToken();
@@ -1265,14 +1263,14 @@ void UnwrappedLineParser::parseStructuralElement(bool IsTopLevel) {
     // e.g. "default void f() {}" in a Java interface.
     break;
   case tok::kw_case:
-    if (Style.Language == FormatStyle::LK_JavaScript && Line->MustBeDeclaration)
+    if (Style.isJavaScript() && Line->MustBeDeclaration)
       // 'case: string' field declaration.
       break;
     parseCaseLabel();
     return;
   case tok::kw_try:
   case tok::kw___try:
-    if (Style.Language == FormatStyle::LK_JavaScript && Line->MustBeDeclaration)
+    if (Style.isJavaScript() && Line->MustBeDeclaration)
       // field/method declaration.
       break;
     parseTryCatch();
@@ -1300,7 +1298,7 @@ void UnwrappedLineParser::parseStructuralElement(bool IsTopLevel) {
     }
     break;
   case tok::kw_export:
-    if (Style.Language == FormatStyle::LK_JavaScript) {
+    if (Style.isJavaScript()) {
       parseJavaScriptEs6ImportExport();
       return;
     }
@@ -1326,7 +1324,7 @@ void UnwrappedLineParser::parseStructuralElement(bool IsTopLevel) {
       return;
     }
     if (FormatTok->is(Keywords.kw_import)) {
-      if (Style.Language == FormatStyle::LK_JavaScript) {
+      if (Style.isJavaScript()) {
         parseJavaScriptEs6ImportExport();
         return;
       }
@@ -1480,7 +1478,7 @@ void UnwrappedLineParser::parseStructuralElement(bool IsTopLevel) {
       if (Style.Language == FormatStyle::LK_Java && FormatTok &&
           FormatTok->is(tok::kw_class))
         nextToken();
-      if (Style.Language == FormatStyle::LK_JavaScript && FormatTok &&
+      if (Style.isJavaScript() && FormatTok &&
           FormatTok->Tok.getIdentifierInfo())
         // JavaScript only has pseudo keywords, all keywords are allowed to
         // appear in "IdentifierName" positions. See http://es5.github.io/#x7.6
@@ -1537,8 +1535,7 @@ void UnwrappedLineParser::parseStructuralElement(bool IsTopLevel) {
       // element continues.
       break;
     case tok::kw_try:
-      if (Style.Language == FormatStyle::LK_JavaScript &&
-          Line->MustBeDeclaration) {
+      if (Style.isJavaScript() && Line->MustBeDeclaration) {
         // field/method declaration.
         nextToken();
         break;
@@ -1565,17 +1562,15 @@ void UnwrappedLineParser::parseStructuralElement(bool IsTopLevel) {
       // expressions (functions that are not on their own line) must not create
       // a new unwrapped line, so they are special cased below.
       size_t TokenCount = Line->Tokens.size();
-      if (Style.Language == FormatStyle::LK_JavaScript &&
-          FormatTok->is(Keywords.kw_function) &&
+      if (Style.isJavaScript() && FormatTok->is(Keywords.kw_function) &&
           (TokenCount > 1 || (TokenCount == 1 && !Line->Tokens.front().Tok->is(
                                                      Keywords.kw_async)))) {
         tryToParseJSFunction();
         break;
       }
-      if ((Style.Language == FormatStyle::LK_JavaScript ||
-           Style.Language == FormatStyle::LK_Java) &&
+      if ((Style.isJavaScript() || Style.Language == FormatStyle::LK_Java) &&
           FormatTok->is(Keywords.kw_interface)) {
-        if (Style.Language == FormatStyle::LK_JavaScript) {
+        if (Style.isJavaScript()) {
           // In JavaScript/TypeScript, "interface" can be used as a standalone
           // identifier, e.g. in `var interface = 1;`. If "interface" is
           // followed by another identifier, it is very like to be an actual
@@ -1611,7 +1606,7 @@ void UnwrappedLineParser::parseStructuralElement(bool IsTopLevel) {
 
       // JS doesn't have macros, and within classes colons indicate fields, not
       // labels.
-      if (Style.Language == FormatStyle::LK_JavaScript)
+      if (Style.isJavaScript())
         break;
 
       TokenCount = Line->Tokens.size();
@@ -1642,19 +1637,9 @@ void UnwrappedLineParser::parseStructuralElement(bool IsTopLevel) {
       break;
     }
     case tok::equal:
-      // Fat arrows (=>) have tok::TokenKind tok::equal but TokenType
-      // TT_FatArrow. They always start an expression or a child block if
-      // followed by a curly brace.
-      if (FormatTok->is(TT_FatArrow)) {
-        nextToken();
-        if (FormatTok->is(tok::l_brace)) {
-          // C# may break after => if the next character is a newline.
-          if (Style.isCSharp() && Style.BraceWrapping.AfterFunction == true) {
-            // calling `addUnwrappedLine()` here causes odd parsing errors.
-            FormatTok->MustBreakBefore = true;
-          }
-          parseChildBlock();
-        }
+      if ((Style.isJavaScript() || Style.isCSharp()) &&
+          FormatTok->is(TT_FatArrow)) {
+        tryToParseChildBlock();
         break;
       }
 
@@ -1730,7 +1715,7 @@ bool UnwrappedLineParser::tryToParsePropertyAccessor() {
   // Try to parse the property accessor:
   // https://docs.microsoft.com/en-us/dotnet/csharp/programming-guide/classes-and-structs/properties
   Tokens->setPosition(StoredPosition);
-  if (!IsTrivialPropertyAccessor && Style.BraceWrapping.AfterFunction == true)
+  if (!IsTrivialPropertyAccessor && Style.BraceWrapping.AfterFunction)
     addUnwrappedLine();
   nextToken();
   do {
@@ -1945,18 +1930,15 @@ bool UnwrappedLineParser::tryToParseBracedList() {
   return true;
 }
 
-bool UnwrappedLineParser::tryToParseCSharpLambda() {
-  // Fat arrows (=>) have tok::TokenKind tok::equal but TokenType
-  // TT_FatArrow. They always start an expression or a child block if
-  // followed by a curly brace.
+bool UnwrappedLineParser::tryToParseChildBlock() {
+  assert(Style.isJavaScript() || Style.isCSharp());
+  assert(FormatTok->is(TT_FatArrow));
+  // Fat arrows (=>) have tok::TokenKind tok::equal but TokenType TT_FatArrow.
+  // They always start an expression or a child block if followed by a curly
+  // brace.
   nextToken();
   if (FormatTok->isNot(tok::l_brace))
     return false;
-  // C# may break after => if the next character is a newline.
-  if (Style.BraceWrapping.AfterFunction) {
-    // calling `addUnwrappedLine()` here causes odd parsing errors.
-    FormatTok->MustBreakBefore = true;
-  }
   parseChildBlock();
   return true;
 }
@@ -1969,23 +1951,14 @@ bool UnwrappedLineParser::parseBracedList(bool ContinueOnSemicolons,
   // FIXME: Once we have an expression parser in the UnwrappedLineParser,
   // replace this by using parseAssignmentExpression() inside.
   do {
-    if (Style.isCSharp() && FormatTok->is(TT_FatArrow))
-      if (tryToParseCSharpLambda())
-        continue;
-    if (Style.Language == FormatStyle::LK_JavaScript) {
+    if (Style.isCSharp() && FormatTok->is(TT_FatArrow) &&
+        tryToParseChildBlock())
+      continue;
+    if (Style.isJavaScript()) {
       if (FormatTok->is(Keywords.kw_function) ||
           FormatTok->startsSequence(Keywords.kw_async, Keywords.kw_function)) {
         tryToParseJSFunction();
         continue;
-      }
-      if (FormatTok->is(TT_FatArrow)) {
-        nextToken();
-        // Fat arrows can be followed by simple expressions or by child blocks
-        // in curly braces.
-        if (FormatTok->is(tok::l_brace)) {
-          parseChildBlock();
-          continue;
-        }
       }
       if (FormatTok->is(tok::l_brace)) {
         // Could be a method inside of a braced list `{a() { return 1; }}`.
@@ -2001,12 +1974,6 @@ bool UnwrappedLineParser::parseBracedList(bool ContinueOnSemicolons,
       return !HasError;
     }
     switch (FormatTok->Tok.getKind()) {
-    case tok::caret:
-      nextToken();
-      if (FormatTok->is(tok::l_brace)) {
-        parseChildBlock();
-      }
-      break;
     case tok::l_square:
       if (Style.isCSharp())
         parseSquare();
@@ -2017,7 +1984,7 @@ bool UnwrappedLineParser::parseBracedList(bool ContinueOnSemicolons,
       parseParens();
       // JavaScript can just have free standing methods and getters/setters in
       // object literals. Detect them by a "{" following ")".
-      if (Style.Language == FormatStyle::LK_JavaScript) {
+      if (Style.isJavaScript()) {
         if (FormatTok->is(tok::l_brace))
           parseChildBlock();
         break;
@@ -2044,7 +2011,7 @@ bool UnwrappedLineParser::parseBracedList(bool ContinueOnSemicolons,
       // lists (in so-called TypeMemberLists). Thus, the semicolon cannot be
       // used for error recovery if we have otherwise determined that this is
       // a braced list.
-      if (Style.Language == FormatStyle::LK_JavaScript) {
+      if (Style.isJavaScript()) {
         nextToken();
         break;
       }
@@ -2098,18 +2065,18 @@ void UnwrappedLineParser::parseParens() {
       break;
     case tok::equal:
       if (Style.isCSharp() && FormatTok->is(TT_FatArrow))
-        tryToParseCSharpLambda();
+        tryToParseChildBlock();
       else
         nextToken();
       break;
     case tok::kw_class:
-      if (Style.Language == FormatStyle::LK_JavaScript)
+      if (Style.isJavaScript())
         parseRecord(/*ParseAsExpr=*/true);
       else
         nextToken();
       break;
     case tok::identifier:
-      if (Style.Language == FormatStyle::LK_JavaScript &&
+      if (Style.isJavaScript() &&
           (FormatTok->is(Keywords.kw_function) ||
            FormatTok->startsSequence(Keywords.kw_async, Keywords.kw_function)))
         tryToParseJSFunction();
@@ -2280,8 +2247,7 @@ void UnwrappedLineParser::parseTryCatch() {
       nextToken();
     if (!(FormatTok->isOneOf(tok::kw_catch, Keywords.kw___except,
                              tok::kw___finally) ||
-          ((Style.Language == FormatStyle::LK_Java ||
-            Style.Language == FormatStyle::LK_JavaScript) &&
+          ((Style.Language == FormatStyle::LK_Java || Style.isJavaScript()) &&
            FormatTok->is(Keywords.kw_finally)) ||
           (FormatTok->Tok.isObjCAtKeyword(tok::objc_catch) ||
            FormatTok->Tok.isObjCAtKeyword(tok::objc_finally))))
@@ -2404,8 +2370,7 @@ void UnwrappedLineParser::parseForOrWhileLoop() {
          "'for', 'while' or foreach macro expected");
   nextToken();
   // JS' for await ( ...
-  if (Style.Language == FormatStyle::LK_JavaScript &&
-      FormatTok->is(Keywords.kw_await))
+  if (Style.isJavaScript() && FormatTok->is(Keywords.kw_await))
     nextToken();
   if (Style.isCpp() && FormatTok->is(tok::kw_co_await))
     nextToken();
@@ -2651,8 +2616,7 @@ bool UnwrappedLineParser::parseEnum() {
   // In TypeScript, "enum" can also be used as property name, e.g. in interface
   // declarations. An "enum" keyword followed by a colon would be a syntax
   // error and thus assume it is just an identifier.
-  if (Style.Language == FormatStyle::LK_JavaScript &&
-      FormatTok->isOneOf(tok::colon, tok::question))
+  if (Style.isJavaScript() && FormatTok->isOneOf(tok::colon, tok::question))
     return false;
 
   // In protobuf, "enum" can be used as a field name.
@@ -2724,8 +2688,8 @@ bool UnwrappedLineParser::parseStructLike() {
   // record declaration or definition can start a structural element.
   parseRecord();
   // This does not apply to Java, JavaScript and C#.
-  if (Style.Language == FormatStyle::LK_Java ||
-      Style.Language == FormatStyle::LK_JavaScript || Style.isCSharp()) {
+  if (Style.Language == FormatStyle::LK_Java || Style.isJavaScript() ||
+      Style.isCSharp()) {
     if (FormatTok->is(tok::semi))
       nextToken();
     addUnwrappedLine();
@@ -2854,10 +2818,9 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
   while (FormatTok->isOneOf(tok::identifier, tok::coloncolon, tok::hashhash,
                             tok::kw___attribute, tok::kw___declspec,
                             tok::kw_alignas, tok::l_square, tok::r_square) ||
-         ((Style.Language == FormatStyle::LK_Java ||
-           Style.Language == FormatStyle::LK_JavaScript) &&
+         ((Style.Language == FormatStyle::LK_Java || Style.isJavaScript()) &&
           FormatTok->isOneOf(tok::period, tok::comma))) {
-    if (Style.Language == FormatStyle::LK_JavaScript &&
+    if (Style.isJavaScript() &&
         FormatTok->isOneOf(Keywords.kw_extends, Keywords.kw_implements)) {
       // JavaScript/TypeScript supports inline object types in
       // extends/implements positions:
@@ -3331,7 +3294,7 @@ void UnwrappedLineParser::nextToken(int LevelDifference) {
   flushComments(isOnNewLine(*FormatTok));
   pushToken(FormatTok);
   FormatToken *Previous = FormatTok;
-  if (Style.Language != FormatStyle::LK_JavaScript)
+  if (!Style.isJavaScript())
     readToken(LevelDifference);
   else
     readTokenWithJavaScriptASI();

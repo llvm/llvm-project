@@ -2669,6 +2669,7 @@ struct FormatStyle {
   bool isCpp() const { return Language == LK_Cpp || Language == LK_ObjC; }
   bool isCSharp() const { return Language == LK_CSharp; }
   bool isJson() const { return Language == LK_Json; }
+  bool isJavaScript() const { return Language == LK_JavaScript; }
 
   /// Language, this format style is targeted at.
   /// \version 3.5

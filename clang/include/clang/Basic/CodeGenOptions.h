@@ -227,6 +227,9 @@ public:
   /// Output filename for the split debug info, not used in the skeleton CU.
   std::string SplitDwarfOutput;
 
+  /// Output filename used in the COFF debug information.
+  std::string ObjectFilenameForDebug;
+
   /// The name of the relocation model to use.
   llvm::Reloc::Model RelocationModel;
 
@@ -395,7 +398,7 @@ public:
   /// Executable and command-line used to create a given CompilerInvocation.
   /// Most of the time this will be the full -cc1 command.
   const char *Argv0 = nullptr;
-  ArrayRef<const char *> CommandLineArgs;
+  std::vector<std::string> CommandLineArgs;
 
   /// The minimum hotness value a diagnostic needs in order to be included in
   /// optimization diagnostics.

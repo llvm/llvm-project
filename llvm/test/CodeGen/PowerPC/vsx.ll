@@ -2032,16 +2032,31 @@ define <2 x i1> @test65(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: test65:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcmpequw v2, v2, v3
+; CHECK-NEXT:    addis r3, r2, .LCPI59_0@toc@ha
+; CHECK-NEXT:    addi r3, r3, .LCPI59_0@toc@l
+; CHECK-NEXT:    lxvw4x v3, 0, r3
+; CHECK-NEXT:    vperm v3, v2, v2, v3
+; CHECK-NEXT:    xxland v2, v3, v2
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-REG-LABEL: test65:
 ; CHECK-REG:       # %bb.0:
 ; CHECK-REG-NEXT:    vcmpequw v2, v2, v3
+; CHECK-REG-NEXT:    addis r3, r2, .LCPI59_0@toc@ha
+; CHECK-REG-NEXT:    addi r3, r3, .LCPI59_0@toc@l
+; CHECK-REG-NEXT:    lxvw4x v3, 0, r3
+; CHECK-REG-NEXT:    vperm v3, v2, v2, v3
+; CHECK-REG-NEXT:    xxland v2, v3, v2
 ; CHECK-REG-NEXT:    blr
 ;
 ; CHECK-FISL-LABEL: test65:
 ; CHECK-FISL:       # %bb.0:
-; CHECK-FISL-NEXT:    vcmpequw v2, v2, v3
+; CHECK-FISL-NEXT:    vcmpequw v3, v2, v3
+; CHECK-FISL-NEXT:    addis r3, r2, .LCPI59_0@toc@ha
+; CHECK-FISL-NEXT:    addi r3, r3, .LCPI59_0@toc@l
+; CHECK-FISL-NEXT:    lxvw4x v2, 0, r3
+; CHECK-FISL-NEXT:    vperm v2, v3, v3, v2
+; CHECK-FISL-NEXT:    xxland v2, v2, v3
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test65:
@@ -2059,19 +2074,34 @@ define <2 x i1> @test66(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: test66:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcmpequw v2, v2, v3
+; CHECK-NEXT:    addis r3, r2, .LCPI60_0@toc@ha
+; CHECK-NEXT:    addi r3, r3, .LCPI60_0@toc@l
+; CHECK-NEXT:    lxvw4x v3, 0, r3
 ; CHECK-NEXT:    xxlnor v2, v2, v2
+; CHECK-NEXT:    vperm v3, v2, v2, v3
+; CHECK-NEXT:    xxland v2, v3, v2
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-REG-LABEL: test66:
 ; CHECK-REG:       # %bb.0:
 ; CHECK-REG-NEXT:    vcmpequw v2, v2, v3
+; CHECK-REG-NEXT:    addis r3, r2, .LCPI60_0@toc@ha
+; CHECK-REG-NEXT:    addi r3, r3, .LCPI60_0@toc@l
+; CHECK-REG-NEXT:    lxvw4x v3, 0, r3
 ; CHECK-REG-NEXT:    xxlnor v2, v2, v2
+; CHECK-REG-NEXT:    vperm v3, v2, v2, v3
+; CHECK-REG-NEXT:    xxland v2, v3, v2
 ; CHECK-REG-NEXT:    blr
 ;
 ; CHECK-FISL-LABEL: test66:
 ; CHECK-FISL:       # %bb.0:
 ; CHECK-FISL-NEXT:    vcmpequw v2, v2, v3
-; CHECK-FISL-NEXT:    xxlnor v2, v2, v2
+; CHECK-FISL-NEXT:    xxlnor v3, v2, v2
+; CHECK-FISL-NEXT:    addis r3, r2, .LCPI60_0@toc@ha
+; CHECK-FISL-NEXT:    addi r3, r3, .LCPI60_0@toc@l
+; CHECK-FISL-NEXT:    lxvw4x v2, 0, r3
+; CHECK-FISL-NEXT:    vperm v2, v3, v3, v2
+; CHECK-FISL-NEXT:    xxland v2, v2, v3
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test66:

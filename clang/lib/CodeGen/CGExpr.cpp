@@ -1345,10 +1345,11 @@ LValue CodeGenFunction::EmitLValue(const Expr *E) {
     if (LV.isSimple()) {
       // Defend against branches out of gnu statement expressions surrounded by
       // cleanups.
-      llvm::Value *V = LV.getPointer(*this);
+      Address Addr = LV.getAddress(*this);
+      llvm::Value *V = Addr.getPointer();
       Scope.ForceCleanup({&V});
-      return LValue::MakeAddr(Address(V, LV.getAlignment()), LV.getType(),
-                              getContext(), LV.getBaseInfo(), LV.getTBAAInfo());
+      return LValue::MakeAddr(Addr.withPointer(V), LV.getType(), getContext(),
+                              LV.getBaseInfo(), LV.getTBAAInfo());
     }
     // FIXME: Is it possible to create an ExprWithCleanups that produces a
     // bitfield lvalue or some other non-simple lvalue?
@@ -2476,10 +2477,11 @@ CodeGenFunction::EmitLoadOfReference(LValue RefLVal,
       Builder.CreateLoad(RefLVal.getAddress(*this), RefLVal.isVolatile());
   CGM.DecorateInstructionWithTBAA(Load, RefLVal.getTBAAInfo());
 
+  QualType PointeeType = RefLVal.getType()->getPointeeType();
   CharUnits Align = CGM.getNaturalTypeAlignment(
-      RefLVal.getType()->getPointeeType(), PointeeBaseInfo, PointeeTBAAInfo,
+      PointeeType, PointeeBaseInfo, PointeeTBAAInfo,
       /* forPointeeType= */ true);
-  return Address(Load, Align);
+  return Address(Load, ConvertTypeForMem(PointeeType), Align);
 }
 
 LValue CodeGenFunction::EmitLoadOfReferenceLValue(LValue RefLVal) {
@@ -4382,8 +4384,7 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
         hasAnyVptr(FieldType, getContext()))
       // Because unions can easily skip invariant.barriers, we need to add
       // a barrier every time CXXRecord field with vptr is referenced.
-      addr = Address(Builder.CreateLaunderInvariantGroup(addr.getPointer()),
-                     addr.getAlignment());
+      addr = Builder.CreateLaunderInvariantGroup(addr);
 
     if (IsInPreservedAIRegion ||
         (getDebugInfo() && rec->hasAttr<BPFPreserveAccessIndexAttr>())) {
@@ -4541,10 +4542,10 @@ EmitConditionalOperatorLValue(const AbstractConditionalOperator *expr) {
       // because it can't be used.
       if (auto *ThrowExpr = dyn_cast<CXXThrowExpr>(live->IgnoreParens())) {
         EmitCXXThrowExpr(ThrowExpr);
-        llvm::Type *Ty =
-            llvm::PointerType::getUnqual(ConvertType(dead->getType()));
+        llvm::Type *ElemTy = ConvertType(dead->getType());
+        llvm::Type *Ty = llvm::PointerType::getUnqual(ElemTy);
         return MakeAddrLValue(
-            Address(llvm::UndefValue::get(Ty), CharUnits::One()),
+            Address(llvm::UndefValue::get(Ty), ElemTy, CharUnits::One()),
             dead->getType());
       }
       return EmitLValue(live);
@@ -4586,11 +4587,13 @@ EmitConditionalOperatorLValue(const AbstractConditionalOperator *expr) {
   EmitBlock(contBlock);
 
   if (lhs && rhs) {
-    llvm::PHINode *phi =
-        Builder.CreatePHI(lhs->getPointer(*this)->getType(), 2, "cond-lvalue");
-    phi->addIncoming(lhs->getPointer(*this), lhsBlock);
-    phi->addIncoming(rhs->getPointer(*this), rhsBlock);
-    Address result(phi, std::min(lhs->getAlignment(), rhs->getAlignment()));
+    Address lhsAddr = lhs->getAddress(*this);
+    Address rhsAddr = rhs->getAddress(*this);
+    llvm::PHINode *phi = Builder.CreatePHI(lhsAddr.getType(), 2, "cond-lvalue");
+    phi->addIncoming(lhsAddr.getPointer(), lhsBlock);
+    phi->addIncoming(rhsAddr.getPointer(), rhsBlock);
+    Address result(phi, lhsAddr.getElementType(),
+                   std::min(lhsAddr.getAlignment(), rhsAddr.getAlignment()));
     AlignmentSource alignSource =
       std::max(lhs->getBaseInfo().getAlignmentSource(),
                rhs->getBaseInfo().getAlignmentSource());

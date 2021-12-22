@@ -371,7 +371,6 @@ Context::Context()
       racy_stacks(),
       racy_addresses(),
       fired_suppressions_mtx(MutexTypeFired),
-      clock_alloc(LINKER_INITIALIZED, "clock allocator"),
       slot_mtx(MutexTypeSlots),
       resetting() {
   fired_suppressions.reserve(8);
@@ -450,33 +449,34 @@ static void *BackgroundThread(void *arg) {
   const u64 kMs2Ns = 1000 * 1000;
   const u64 start = NanoTime();
 
-  u64 last_flush = NanoTime();
+  u64 last_flush = start;
   uptr last_rss = 0;
-  for (int i = 0;
-      atomic_load(&ctx->stop_background_thread, memory_order_relaxed) == 0;
-      i++) {
+  while (!atomic_load_relaxed(&ctx->stop_background_thread)) {
     SleepForMillis(100);
     u64 now = NanoTime();
 
     // Flush memory if requested.
     if (flags()->flush_memory_ms > 0) {
       if (last_flush + flags()->flush_memory_ms * kMs2Ns < now) {
-        VPrintf(1, "ThreadSanitizer: periodic memory flush\n");
+        VReport(1, "ThreadSanitizer: periodic memory flush\n");
         FlushShadowMemory();
-        last_flush = NanoTime();
+        now = last_flush = NanoTime();
       }
     }
     if (flags()->memory_limit_mb > 0) {
       uptr rss = GetRSS();
       uptr limit = uptr(flags()->memory_limit_mb) << 20;
-      VPrintf(1, "ThreadSanitizer: memory flush check"
-                 " RSS=%llu LAST=%llu LIMIT=%llu\n",
+      VReport(1,
+              "ThreadSanitizer: memory flush check"
+              " RSS=%llu LAST=%llu LIMIT=%llu\n",
               (u64)rss >> 20, (u64)last_rss >> 20, (u64)limit >> 20);
       if (2 * rss > limit + last_rss) {
-        VPrintf(1, "ThreadSanitizer: flushing memory due to RSS\n");
+        VReport(1, "ThreadSanitizer: flushing memory due to RSS\n");
         FlushShadowMemory();
         rss = GetRSS();
-        VPrintf(1, "ThreadSanitizer: memory flushed RSS=%llu\n", (u64)rss>>20);
+        now = NanoTime();
+        VReport(1, "ThreadSanitizer: memory flushed RSS=%llu\n",
+                (u64)rss >> 20);
       }
       last_rss = rss;
     }
@@ -801,7 +801,7 @@ void ForkParentAfter(ThreadState* thr, uptr pc) { ForkAfter(thr); }
 
 void ForkChildAfter(ThreadState* thr, uptr pc, bool start_thread) {
   ForkAfter(thr);
-  u32 nthread = ThreadCount(thr);
+  u32 nthread = ctx->thread_registry.OnFork(thr->tid);
   VPrintf(1,
           "ThreadSanitizer: forked new process with pid %d,"
           " parent had %d threads\n",
@@ -972,12 +972,6 @@ void TraceSwitchPartImpl(ThreadState* thr) {
           trace->parts.Front(), trace->parts.Back(),
           atomic_load_relaxed(&thr->trace_pos));
 }
-
-#if !SANITIZER_GO
-extern "C" void __tsan_trace_switch() {}
-
-extern "C" void __tsan_report_race() {}
-#endif
 
 void ThreadIgnoreBegin(ThreadState* thr, uptr pc) {
   DPrintf("#%d: ThreadIgnoreBegin\n", thr->tid);
