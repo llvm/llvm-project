@@ -353,6 +353,30 @@ int32_t __tgt_rtl_run_target_team_region(int32_t device_id, void *tgt_entry_ptr,
 #define __tgt_rtl_run_target_team_region(...)                                  \
   __tgt_rtl_run_target_team_region_impl(__VA_ARGS__)
 
+static int32_t __tgt_rtl_run_target_team_region_async_impl(
+    int32_t device_id, void *tgt_entry_ptr, void **tgt_args,
+    ptrdiff_t *tgt_offsets, int32_t arg_num, int32_t num_teams,
+    int32_t thread_limit, uint64_t loop_tripcount,
+     __tgt_async_info *AsyncInfo);
+int32_t __tgt_rtl_run_target_team_region_async(int32_t device_id, void *tgt_entry_ptr,
+                                         void **tgt_args,
+                                         ptrdiff_t *tgt_offsets,
+                                         int32_t arg_num, int32_t num_teams,
+                                         int32_t thread_limit,
+                                         uint64_t loop_tripcount,
+					  __tgt_async_info *AsyncInfo) {
+  auto t = detail::log<int32_t>(__func__, device_id, tgt_entry_ptr, tgt_args,
+                                tgt_offsets, arg_num, num_teams, thread_limit,
+                                loop_tripcount, AsyncInfo);
+  int32_t r = __tgt_rtl_run_target_team_region_async_impl(
+      device_id, tgt_entry_ptr, tgt_args, tgt_offsets, arg_num, num_teams,
+      thread_limit, loop_tripcount, AsyncInfo);
+  t.res(r);
+  return r;
+}
+#define __tgt_rtl_run_target_team_region_async(...)                                  \
+  __tgt_rtl_run_target_team_region_async_impl(__VA_ARGS__)
+
 static int32_t __tgt_rtl_synchronize_impl(int32_t device_id,
                                           __tgt_async_info *async_info_ptr);
 int32_t __tgt_rtl_synchronize(int32_t device_id,
