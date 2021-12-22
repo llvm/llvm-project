@@ -123,6 +123,7 @@
 ; CHECK-NEXT:      Machine Optimization Remark Emitter
 ; CHECK-NEXT:      Greedy Register Allocator
 ; CHECK-NEXT:      Virtual Register Rewriter
+; CHECK-NEXT:      Register Allocation Pass Scoring
 ; CHECK-NEXT:      Stack Slot Coloring
 ; CHECK-NEXT:      Machine Copy Propagation Pass
 ; CHECK-NEXT:      Machine Loop Invariant Code Motion

@@ -156,6 +156,7 @@ public:
   VirtRegMap *getVirtRegMap() const { return VRM; }
   const RegisterClassInfo &getRegClassInfo() const { return RegClassInfo; }
   const ExtraRegInfo &getExtraInfo() const { return *ExtraInfo; }
+  size_t getQueueSize() const { return Queue.size(); }
   // end (interface to eviction advisers)
 
 private:
