@@ -479,14 +479,12 @@ static void createFPFnStub(Function *F, Module *M, FPParamVariant PV,
 
 // remove the use-soft-float attribute
 static void removeUseSoftFloat(Function &F) {
-  AttrBuilder B;
   LLVM_DEBUG(errs() << "removing -use-soft-float\n");
-  B.addAttribute("use-soft-float", "false");
-  F.removeFnAttrs(B);
+  F.removeFnAttr("use-soft-float");
   if (F.hasFnAttribute("use-soft-float")) {
     LLVM_DEBUG(errs() << "still has -use-soft-float\n");
   }
-  F.addFnAttrs(B);
+  F.addFnAttr("use-soft-float", "false");
 }
 
 // This pass only makes sense when the underlying chip has floating point but
