@@ -254,31 +254,8 @@ inline constexpr bool std::ranges::enable_view<std::filesystem::recursive_direct
 #include<__filesystem/recursive_directory_iterator.h>
 #include<__filesystem/space_info.h>
 #include<__filesystem/u8path.h>
-
-#include <__availability>
-#include <__config>
-#include <__debug>
-#include <__ranges/enable_borrowed_range.h>
-#include <__ranges/enable_view.h>
-#include <__utility/forward.h>
-#include <chrono>
 #include <compare>
-#include <cstddef>
-#include <cstdlib>
-#include <iosfwd>
-#include <iterator>
-#include <memory>
-#include <stack>
-#include <string>
-#include <string_view>
-#include <system_error>
-#include <utility>
 #include <version>
-
-#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
-# include <locale>
-# include <iomanip> // for quoted
-#endif
 
 #if defined(_LIBCPP_HAS_NO_FILESYSTEM_LIBRARY)
 # error "The Filesystem library is not supported since libc++ has been configured with LIBCXX_ENABLE_FILESYSTEM disabled"
