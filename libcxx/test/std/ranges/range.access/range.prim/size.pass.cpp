@@ -25,6 +25,17 @@ static_assert( std::is_invocable_v<RangeSizeT, int[1]>);
 static_assert( std::is_invocable_v<RangeSizeT, int (&&)[1]>);
 static_assert( std::is_invocable_v<RangeSizeT, int (&)[1]>);
 
+struct Incomplete;
+static_assert(!std::is_invocable_v<RangeSizeT, Incomplete[]>);
+static_assert(!std::is_invocable_v<RangeSizeT, Incomplete(&)[]>);
+static_assert(!std::is_invocable_v<RangeSizeT, Incomplete(&&)[]>);
+
+extern Incomplete array_of_incomplete[42];
+static_assert(std::ranges::size(array_of_incomplete) == 42);
+static_assert(std::ranges::size(std::move(array_of_incomplete)) == 42);
+static_assert(std::ranges::size(std::as_const(array_of_incomplete)) == 42);
+static_assert(std::ranges::size(static_cast<const Incomplete(&&)[42]>(array_of_incomplete)) == 42);
+
 static_assert(std::semiregular<std::remove_cv_t<RangeSizeT>>);
 
 struct SizeMember {
