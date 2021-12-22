@@ -67,9 +67,9 @@ std::unique_ptr<Pass> mlir::createCanonicalizerPass() {
 
 /// Creates an instance of the Canonicalizer pass with the specified config.
 std::unique_ptr<Pass>
-createCanonicalizerPass(const GreedyRewriteConfig &config,
-                        ArrayRef<std::string> disabledPatterns = llvm::None,
-                        ArrayRef<std::string> enabledPatterns = llvm::None) {
+mlir::createCanonicalizerPass(const GreedyRewriteConfig &config,
+                              ArrayRef<std::string> disabledPatterns,
+                              ArrayRef<std::string> enabledPatterns) {
   return std::make_unique<Canonicalizer>(config, disabledPatterns,
                                          enabledPatterns);
 }
