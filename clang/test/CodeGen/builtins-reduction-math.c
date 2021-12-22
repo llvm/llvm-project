@@ -57,3 +57,14 @@ void test_builtin_reduce_min(float4 vf1, si8 vi1, u4 vu1) {
   const si8 cvi1 = vi1;
   unsigned long long r5 = __builtin_reduce_min(cvi1);
 }
+
+void test_builtin_reduce_xor(si8 vi1, u4 vu1) {
+
+  // CHECK:      [[VI1:%.+]] = load <8 x i16>, <8 x i16>* %vi1.addr, align 16
+  // CHECK-NEXT: call i16 @llvm.vector.reduce.xor.v8i16(<8 x i16> [[VI1]])
+  short r2 = __builtin_reduce_xor(vi1);
+
+  // CHECK:      [[VU1:%.+]] = load <4 x i32>, <4 x i32>* %vu1.addr, align 16
+  // CHECK-NEXT: call i32 @llvm.vector.reduce.xor.v4i32(<4 x i32> [[VU1]])
+  unsigned r3 = __builtin_reduce_xor(vu1);
+}
