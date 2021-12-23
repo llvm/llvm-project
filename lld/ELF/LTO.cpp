@@ -204,6 +204,8 @@ BitcodeCompiler::BitcodeCompiler() {
                                        config->ltoPartitions);
 
   // Initialize usedStartStop.
+  if (bitcodeFiles.empty())
+    return;
   for (Symbol *sym : symtab->symbols()) {
     StringRef s = sym->getName();
     for (StringRef prefix : {"__start_", "__stop_"})

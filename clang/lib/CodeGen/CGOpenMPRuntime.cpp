@@ -5945,7 +5945,7 @@ static llvm::Value *emitReduceInitFunction(CodeGenModule &CGM,
   } else {
     OrigLVal = CGF.MakeNaturalAlignAddrLValue(
         llvm::ConstantPointerNull::get(CGM.VoidPtrTy),
-        CGM.getContext().VoidPtrTy);
+        CGM.getContext().VoidTy);
   }
   // Emit the initializer:
   // %0 = bitcast void* %arg to <type>*
