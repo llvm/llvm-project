@@ -3469,11 +3469,18 @@ void CodeGenFunction::EmitFunctionEpilog(const CGFunctionInfo &FI,
     case TEK_Aggregate:
       // Do nothing; aggregrates get evaluated directly into the destination.
       break;
-    case TEK_Scalar:
-      EmitStoreOfScalar(Builder.CreateLoad(ReturnValue),
-                        MakeNaturalAlignAddrLValue(&*AI, RetTy),
-                        /*isInit*/ true);
+    case TEK_Scalar: {
+      LValueBaseInfo BaseInfo;
+      TBAAAccessInfo TBAAInfo;
+      CharUnits Alignment =
+          CGM.getNaturalTypeAlignment(RetTy, &BaseInfo, &TBAAInfo);
+      Address ArgAddr(&*AI, ConvertType(RetTy), Alignment);
+      LValue ArgVal =
+          LValue::MakeAddr(ArgAddr, RetTy, getContext(), BaseInfo, TBAAInfo);
+      EmitStoreOfScalar(
+          Builder.CreateLoad(ReturnValue), ArgVal, /*isInit*/ true);
       break;
+    }
     }
     break;
   }

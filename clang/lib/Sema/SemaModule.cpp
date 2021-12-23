@@ -383,11 +383,18 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
   if (!ModuleScopes.empty())
     Context.addModuleInitializer(ModuleScopes.back().Module, Import);
 
-  // Re-export the module if needed.
   if (!ModuleScopes.empty() && ModuleScopes.back().ModuleInterface) {
+    // Re-export the module if the imported module is exported.
+    // Note that we don't need to add re-exported module to Imports field
+    // since `Exports` implies the module is imported already.
     if (ExportLoc.isValid() || getEnclosingExportDecl(Import))
       getCurrentModule()->Exports.emplace_back(Mod, false);
+    else
+      getCurrentModule()->Imports.insert(Mod);
   } else if (ExportLoc.isValid()) {
+    // [module.interface]p1:
+    // An export-declaration shall inhabit a namespace scope and appear in the
+    // purview of a module interface unit.
     Diag(ExportLoc, diag::err_export_not_in_module_interface);
   }
 
