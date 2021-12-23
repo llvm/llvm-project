@@ -688,8 +688,6 @@ static void EmitOMPAggregateInit(CodeGenFunction &CGF, Address DestAddr,
   // Drill down to the base element type on both arrays.
   const ArrayType *ArrayTy = Type->getAsArrayTypeUnsafe();
   llvm::Value *NumElements = CGF.emitArrayLength(ArrayTy, ElementTy, DestAddr);
-  DestAddr =
-      CGF.Builder.CreateElementBitCast(DestAddr, DestAddr.getElementType());
   if (DRD)
     SrcAddr =
         CGF.Builder.CreateElementBitCast(SrcAddr, DestAddr.getElementType());
