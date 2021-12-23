@@ -449,6 +449,11 @@ def warn_drv_vectorize_needs_hvx : Warning<
   "auto-vectorization requires HVX, use -mhvx to enable it">,
   InGroup<OptionIgnored>;
 
+def err_drv_invalid_hvx_qfloat : Error<
+  "-mhvx-qfloat is not supported without a -mhvx/-mhvx= flag.">;
+def err_drv_invalid_arch_hvx_qfloat : Error<
+  "-mhvx-qfloat is not supported on HVX %0.">;
+
 def err_drv_module_header_wrong_kind : Error<
   "header file '%0' input type '%1' does not match type of prior input "
   "in module compilation; use '-x %2' to override">;

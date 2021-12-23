@@ -88,6 +88,27 @@ static void handleHVXTargetFeatures(const Driver &D, const ArgList &Args,
         Args.MakeArgString(llvm::Twine("+hvx-length") + HVXLength.lower());
     Features.push_back(HVXFeature);
   }
+
+  // Handle -mhvx-qfloat.
+  // QFloat is valid only on HVX v68/v68+ as of now.
+  unsigned short CpuVer;
+  Cpu.drop_front(1).getAsInteger(10, CpuVer);
+  if (Arg *A = Args.getLastArg(options::OPT_mhexagon_hvx_qfloat,
+                               options::OPT_mno_hexagon_hvx_qfloat)) {
+    if (A->getOption().matches(options::OPT_mno_hexagon_hvx_qfloat)) {
+      StringRef OptName = A->getOption().getName().substr(4);
+      Features.push_back(Args.MakeArgString("-" + OptName));
+      return;
+    }
+    StringRef OptName = A->getOption().getName().substr(1);
+    if (HasHVX) {
+      if (CpuVer >= 68)
+        Features.push_back(Args.MakeArgString("+" + OptName));
+      else
+        D.Diag(diag::err_drv_invalid_arch_hvx_qfloat) << Cpu;
+    } else
+      D.Diag(diag::err_drv_invalid_hvx_qfloat);
+  }
 }
 
 // Hexagon target features.
@@ -154,6 +175,12 @@ void hexagon::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   } else {
     assert(Output.isNothing() && "Unexpected output");
     CmdArgs.push_back("-fsyntax-only");
+  }
+
+  if (Arg *A = Args.getLastArg(options::OPT_mhexagon_hvx_ieee_fp,
+                               options::OPT_mno_hexagon_hvx_ieee_fp)) {
+    if (A->getOption().matches(options::OPT_mhexagon_hvx_ieee_fp))
+      CmdArgs.push_back("-mhvx-ieee-fp");
   }
 
   if (auto G = toolchains::HexagonToolChain::getSmallDataThreshold(Args)) {
