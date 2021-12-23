@@ -443,16 +443,13 @@ def err_analyzer_checker_option_invalid_input : Error<
 def err_analyzer_checker_incompatible_analyzer_option : Error<
   "checker cannot be enabled with analyzer option '%0' == %1">;
 
-def err_drv_invalid_hvx_length : Error<
-  "-mhvx-length is not supported without a -mhvx/-mhvx= flag">;
-def warn_drv_vectorize_needs_hvx : Warning<
-  "auto-vectorization requires HVX, use -mhvx to enable it">,
+def warn_drv_needs_hvx : Warning<
+  "%0 requires HVX, use -mhvx/-mhvx= to enable it">,
   InGroup<OptionIgnored>;
-
-def err_drv_invalid_hvx_qfloat : Error<
-  "-mhvx-qfloat is not supported without a -mhvx/-mhvx= flag.">;
-def err_drv_invalid_arch_hvx_qfloat : Error<
-  "-mhvx-qfloat is not supported on HVX %0.">;
+def err_drv_needs_hvx : Error<
+  "%0 requires HVX, use -mhvx/-mhvx= to enable it">;
+def err_drv_needs_hvx_version : Error<
+  "%0 is not supported on HVX %1">;
 
 def err_drv_module_header_wrong_kind : Error<
   "header file '%0' input type '%1' does not match type of prior input "
