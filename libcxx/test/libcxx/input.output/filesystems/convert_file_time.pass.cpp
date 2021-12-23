@@ -14,12 +14,13 @@
 
 // ADDITIONAL_COMPILE_FLAGS: -I %S/../../../../src/filesystem
 
-#include <filesystem>
-#include <chrono>
-#include <type_traits>
-#include <limits>
-#include <cstddef>
 #include <cassert>
+#include <chrono>
+#include <cstddef>
+#include <filesystem>
+#include <limits>
+#include <string>
+#include <type_traits>
 
 #include "filesystem_common.h"
 

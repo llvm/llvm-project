@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "filesystem"
 #include "__config"
+#include "filesystem"
+#include "stack"
 #if defined(_LIBCPP_WIN32API)
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
