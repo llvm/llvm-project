@@ -916,7 +916,7 @@ static void emitRegionAttributes(const Operator &op, raw_ostream &os) {
 
 /// Emits named accessors to regions.
 static void emitRegionAccessors(const Operator &op, raw_ostream &os) {
-  for (auto en : llvm::enumerate(op.getRegions())) {
+  for (const auto &en : llvm::enumerate(op.getRegions())) {
     const NamedRegion &region = en.value();
     if (region.name.empty())
       continue;

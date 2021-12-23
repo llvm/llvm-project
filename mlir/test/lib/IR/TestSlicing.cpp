@@ -33,7 +33,7 @@ static LogicalResult createBackwardSliceFunction(Operation *op,
       builder.create<FuncOp>(loc, clonedFuncOpName, parentFuncOp.getType());
   BlockAndValueMapping mapper;
   builder.setInsertionPointToEnd(clonedFuncOp.addEntryBlock());
-  for (auto arg : enumerate(parentFuncOp.getArguments()))
+  for (const auto &arg : enumerate(parentFuncOp.getArguments()))
     mapper.map(arg.value(), clonedFuncOp.getArgument(arg.index()));
   SetVector<Operation *> slice;
   getBackwardSlice(op, &slice);

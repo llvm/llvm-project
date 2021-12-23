@@ -661,7 +661,7 @@ FailureOr<std::unique_ptr<Element>> FormatParser::parseParamsDirective() {
   /// Collect all of the attribute's or type's parameters.
   SmallVector<std::unique_ptr<Element>> vars;
   /// Ensure that none of the parameters have already been captured.
-  for (auto it : llvm::enumerate(def.getParameters())) {
+  for (const auto &it : llvm::enumerate(def.getParameters())) {
     if (seenParams.test(it.index())) {
       return emitError("`params` captures duplicate parameter: " +
                        it.value().getName());

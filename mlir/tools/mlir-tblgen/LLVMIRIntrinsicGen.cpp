@@ -65,7 +65,7 @@ static IndicesTy getOverloadableTypeIdxs(const llvm::Record &record,
                                          const char *listName) {
   auto results = record.getValueAsListOfDefs(listName);
   IndicesTy overloadedOps(results.size());
-  for (auto r : llvm::enumerate(results)) {
+  for (const auto &r : llvm::enumerate(results)) {
     llvm::MVT::SimpleValueType vt = getValueType(r.value());
     switch (vt) {
     case llvm::MVT::iAny:

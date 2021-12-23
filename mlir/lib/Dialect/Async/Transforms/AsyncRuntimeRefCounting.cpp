@@ -418,7 +418,7 @@ AsyncRuntimeRefCountingPass::addDropRefInDivergentLivenessSuccessor(
         continue;
 
       // Update terminator `successor` block to `refCountingBlock`.
-      for (auto pair : llvm::enumerate(terminator->getSuccessors()))
+      for (const auto &pair : llvm::enumerate(terminator->getSuccessors()))
         if (pair.value() == successor)
           terminator->setSuccessor(refCountingBlock, pair.index());
     }
