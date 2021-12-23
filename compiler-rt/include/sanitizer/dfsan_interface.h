@@ -27,6 +27,10 @@ typedef uint32_t dfsan_origin;
 /// Signature of the callback argument to dfsan_set_write_callback().
 typedef void (*dfsan_write_callback_t)(int fd, const void *buf, size_t count);
 
+/// Signature of the callback argument to dfsan_set_conditional_callback().
+typedef void (*dfsan_conditional_callback_t)(dfsan_label label,
+                                             dfsan_origin origin);
+
 /// Computes the union of \c l1 and \c l2, resulting in a union label.
 dfsan_label dfsan_union(dfsan_label l1, dfsan_label l2);
 
@@ -73,6 +77,19 @@ void dfsan_flush(void);
 /// before the write is done.  The write is not guaranteed to succeed when the
 /// callback executes.  Pass in NULL to remove any callback.
 void dfsan_set_write_callback(dfsan_write_callback_t labeled_write_callback);
+
+/// Sets a callback to be invoked on any conditional expressions which have a
+/// taint label set. This can be used to find where tainted data influences
+/// the behavior of the program.
+/// These callbacks will only be added when -dfsan-conditional-callbacks=true.
+void dfsan_set_conditional_callback(dfsan_conditional_callback_t callback);
+
+/// Conditional expressions occur during signal handlers.
+/// Making callbacks that handle signals well is tricky, so when
+/// -dfsan-conditional-callbacks=true, conditional expressions used in signal
+/// handlers will add the labels they see into a global (bitwise-or together).
+/// This function returns all label bits seen in signal handler conditions.
+dfsan_label dfsan_get_labels_in_signal_conditional();
 
 /// Interceptor hooks.
 /// Whenever a dfsan's custom function is called the corresponding
