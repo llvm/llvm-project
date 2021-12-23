@@ -2,10 +2,6 @@
 // Tests for the hvx features and warnings.
 // -----------------------------------------------------------------------------
 
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv66 -mhvx \
-// RUN:  2>&1 | FileCheck -check-prefix=CHECKHVX166 %s
-// CHECKHVX166: "-target-feature" "+hvxv66"
-
 // RUN: %clang -c %s -### -target hexagon-unknown-elf -mv65 -mhvx \
 // RUN:  2>&1 | FileCheck -check-prefix=CHECKHVX165 %s
 // CHECKHVX165: "-target-feature" "+hvxv65"
@@ -13,6 +9,10 @@
 // RUN: %clang -c %s -### -target hexagon-unknown-elf -mv62 -mhvx \
 // RUN:  2>&1 | FileCheck -check-prefix=CHECKHVX162 %s
 // CHECKHVX162: "-target-feature" "+hvxv62"
+
+// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv66 -mhvx \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECKHVX166 %s
+// CHECKHVX166: "-target-feature" "+hvxv66"
 
 // RUN: %clang -c %s -### -target hexagon-unknown-elf -mv65 -mhvx \
 // RUN:  -mhvx-length=128B 2>&1 | FileCheck -check-prefix=CHECKHVX2 %s
@@ -38,6 +38,17 @@
 // RUN: %clang -c %s -### -target hexagon-unknown-elf -mv62 -mhvx -mno-hvx \
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-NOHVX %s
 // CHECK-NOHVX-NOT: "-target-feature" "+hvx
+
+// No hvx-ieee-fp target feature must be added if -mno-hvx-ieee-fp occurs last
+// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv69 -mhvx-ieee-fp -mno-hvx \
+// RUN:  -mno-hvx-ieee-fp 2>&1 | FileCheck -check-prefix=CHECK-NOHVX-IEEE-FP %s
+// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv69 -mhvx-ieee-fp -mhvx \
+// RUN:  -mno-hvx-ieee-fp 2>&1 | FileCheck -check-prefix=CHECK-HVX-NOHVX-IEEE-FP %s
+//
+// CHECK-NOHVX-IEEE-FP-NOT: "-target-feature" "+hvx-ieee-fp"
+// CHECK-HVX-NOHVX-IEEE-FP-NOT: "-target-feature" "+hvx-ieee-fp"
+// CHECK-HVX-NOHVX-IEEE-FP: "-target-feature" "+hvx
+// CHECK-HVX-NOHVX-IEEE-FP-NOT: "-target-feature" "+hvx-ieee-fp"
 
 // Hvx target feature should be added if -mno-hvx doesn't occur last
 // RUN: %clang -c %s -### -target hexagon-unknown-elf -mv62 -mno-hvx -mhvx\
@@ -93,3 +104,15 @@
 // RUN: %clang -c %s -### -target hexagon-unknown-elf -mhvx -mhvx-length=128 \
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVXLENGTH-VALUE-ERROR %s
 // CHECK-HVXLENGTH-VALUE-ERROR: error: unsupported argument '{{.*}}' to option 'mhvx-length='
+
+// Test -mhvx-ieee-fp flag
+// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv69 -mhvx-ieee-fp \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVXIEEEFP-LONE %s
+// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv69 -mhvx -mhvx-ieee-fp \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVXIEEEFP %s
+// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv69 -mno-hvx -mhvx-ieee-fp \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVXIEEEFP %s
+// CHECK-HVXIEEEFP-LONE-NOT: "-target-feature" "+hvx"
+// CHECK-HVXIEEEFP-LONE: "-target-feature" "+hvx-ieee-fp"
+// CHECK-HVXIEEEFP: "-target-feature" "+hvx-ieee-fp"
+// CHECK-HVXIEEEFP-LONE-NOT: "-target-feature" "+hvx"
