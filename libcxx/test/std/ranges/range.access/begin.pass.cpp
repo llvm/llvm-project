@@ -11,6 +11,7 @@
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // std::ranges::begin
+// std::ranges::cbegin
 
 #include <ranges>
 
@@ -18,8 +19,8 @@
 #include "test_macros.h"
 #include "test_iterators.h"
 
-using RangeBeginT = decltype(std::ranges::begin)&;
-using RangeCBeginT = decltype(std::ranges::cbegin)&;
+using RangeBeginT = decltype(std::ranges::begin);
+using RangeCBeginT = decltype(std::ranges::cbegin);
 
 static int globalBuff[8];
 
@@ -48,6 +49,28 @@ static_assert( std::is_invocable_v<RangeCBeginT, BeginMember &>);
 static_assert(!std::is_invocable_v<RangeCBeginT, BeginMember &&>);
 static_assert( std::is_invocable_v<RangeCBeginT, BeginMember const&>);
 static_assert( std::is_invocable_v<RangeCBeginT, BeginMember const&&>);
+
+constexpr bool testReturnTypes() {
+  {
+    int *x[2];
+    ASSERT_SAME_TYPE(decltype(std::ranges::begin(x)), int**);
+    ASSERT_SAME_TYPE(decltype(std::ranges::cbegin(x)), int* const*);
+  }
+  {
+    int x[2][2];
+    ASSERT_SAME_TYPE(decltype(std::ranges::begin(x)), int(*)[2]);
+    ASSERT_SAME_TYPE(decltype(std::ranges::cbegin(x)), const int(*)[2]);
+  }
+  {
+    struct Different {
+      char*& begin();
+      short*& begin() const;
+    } x;
+    ASSERT_SAME_TYPE(decltype(std::ranges::begin(x)), char*);
+    ASSERT_SAME_TYPE(decltype(std::ranges::cbegin(x)), short*);
+  }
+  return true;
+}
 
 constexpr bool testArray() {
   int a[2];
@@ -118,12 +141,18 @@ constexpr bool testBeginMember() {
   BeginMember a;
   assert(std::ranges::begin(a) == &a.x);
   assert(std::ranges::cbegin(a) == &a.x);
+  static_assert(!std::is_invocable_v<RangeBeginT, BeginMember&&>);
+  static_assert(!std::is_invocable_v<RangeCBeginT, BeginMember&&>);
 
   NonConstBeginMember b;
   assert(std::ranges::begin(b) == &b.x);
+  static_assert(!std::is_invocable_v<RangeCBeginT, NonConstBeginMember&>);
 
   EnabledBorrowingBeginMember c;
+  assert(std::ranges::begin(c) == &globalBuff[0]);
+  assert(std::ranges::cbegin(c) == &globalBuff[0]);
   assert(std::ranges::begin(std::move(c)) == &globalBuff[0]);
+  assert(std::ranges::cbegin(std::move(c)) == &globalBuff[0]);
 
   BeginMemberFunction d;
   assert(std::ranges::begin(d) == &d.x);
@@ -202,44 +231,44 @@ static_assert(!std::is_invocable_v<RangeBeginT, BeginFunctionReturnsPtrConvertib
 constexpr bool testBeginFunction() {
   BeginFunction a{};
   const BeginFunction aa{};
-  static_assert(!std::invocable<decltype(std::ranges::begin), decltype((a))>);
-  assert(std::ranges::begin(aa) == &aa.x);
+  static_assert(!std::invocable<RangeBeginT, decltype((a))>);
   assert(std::ranges::cbegin(a) == &a.x);
+  assert(std::ranges::begin(aa) == &aa.x);
   assert(std::ranges::cbegin(aa) == &aa.x);
 
   BeginFunctionByValue b{};
   const BeginFunctionByValue bb{};
   assert(std::ranges::begin(b) == &globalBuff[1]);
-  assert(std::ranges::begin(bb) == &globalBuff[1]);
   assert(std::ranges::cbegin(b) == &globalBuff[1]);
+  assert(std::ranges::begin(bb) == &globalBuff[1]);
   assert(std::ranges::cbegin(bb) == &globalBuff[1]);
 
   BeginFunctionEnabledBorrowing c{};
   const BeginFunctionEnabledBorrowing cc{};
   assert(std::ranges::begin(std::move(c)) == &globalBuff[2]);
-  static_assert(!std::invocable<decltype(std::ranges::cbegin), decltype(std::move(c))>);
+  assert(std::ranges::cbegin(std::move(c)) == &globalBuff[2]);
   assert(std::ranges::begin(std::move(cc)) == &globalBuff[2]);
   assert(std::ranges::cbegin(std::move(cc)) == &globalBuff[2]);
 
   BeginFunctionReturnsEmptyPtr d{};
   const BeginFunctionReturnsEmptyPtr dd{};
-  static_assert(!std::invocable<decltype(std::ranges::begin), decltype((d))>);
-  assert(std::ranges::begin(dd) == &dd.x);
+  static_assert(!std::invocable<RangeBeginT, decltype((d))>);
   assert(std::ranges::cbegin(d) == &d.x);
+  assert(std::ranges::begin(dd) == &dd.x);
   assert(std::ranges::cbegin(dd) == &dd.x);
 
   BeginFunctionWithDataMember e{};
   const BeginFunctionWithDataMember ee{};
-  static_assert(!std::invocable<decltype(std::ranges::begin), decltype((e))>);
+  static_assert(!std::invocable<RangeBeginT, decltype((e))>);
   assert(std::ranges::begin(ee) == &ee.x);
   assert(std::ranges::cbegin(e) == &e.x);
   assert(std::ranges::cbegin(ee) == &ee.x);
 
   BeginFunctionWithPrivateBeginMember f{};
   const BeginFunctionWithPrivateBeginMember ff{};
-  static_assert(!std::invocable<decltype(std::ranges::begin), decltype((f))>);
-  assert(std::ranges::begin(ff) == &ff.y);
+  static_assert(!std::invocable<RangeBeginT, decltype((f))>);
   assert(std::ranges::cbegin(f) == &f.y);
+  assert(std::ranges::begin(ff) == &ff.y);
   assert(std::ranges::cbegin(ff) == &ff.y);
 
   return true;
@@ -274,8 +303,9 @@ struct BeginReturnsArrayRef {
 static_assert(noexcept(std::ranges::begin(brar)));
 static_assert(noexcept(std::ranges::cbegin(brar)));
 
-
 int main(int, char**) {
+  static_assert(testReturnTypes());
+
   testArray();
   static_assert(testArray());
 

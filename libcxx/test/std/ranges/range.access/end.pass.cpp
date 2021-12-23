@@ -11,6 +11,7 @@
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // std::ranges::end
+// std::ranges::cend
 
 #include <ranges>
 
@@ -18,8 +19,8 @@
 #include "test_macros.h"
 #include "test_iterators.h"
 
-using RangeEndT = decltype(std::ranges::end)&;
-using RangeCEndT = decltype(std::ranges::cend)&;
+using RangeEndT = decltype(std::ranges::end);
+using RangeCEndT = decltype(std::ranges::cend);
 
 static int globalBuff[8];
 
@@ -46,6 +47,30 @@ static_assert( std::is_invocable_v<RangeEndT,  EndMember const&>);
 static_assert(!std::is_invocable_v<RangeEndT,  EndMember &&>);
 static_assert( std::is_invocable_v<RangeCEndT, EndMember &>);
 static_assert( std::is_invocable_v<RangeCEndT, EndMember const&>);
+
+constexpr bool testReturnTypes() {
+  {
+    int *x[2];
+    ASSERT_SAME_TYPE(decltype(std::ranges::end(x)), int**);
+    ASSERT_SAME_TYPE(decltype(std::ranges::cend(x)), int* const*);
+  }
+  {
+    int x[2][2];
+    ASSERT_SAME_TYPE(decltype(std::ranges::end(x)), int(*)[2]);
+    ASSERT_SAME_TYPE(decltype(std::ranges::cend(x)), const int(*)[2]);
+  }
+  {
+    struct Different {
+      char *begin();
+      sentinel_wrapper<char*>& end();
+      short *begin() const;
+      sentinel_wrapper<short*>& end() const;
+    } x;
+    ASSERT_SAME_TYPE(decltype(std::ranges::end(x)), sentinel_wrapper<char*>);
+    ASSERT_SAME_TYPE(decltype(std::ranges::cend(x)), sentinel_wrapper<short*>);
+  }
+  return true;
+}
 
 constexpr bool testArray() {
   int a[2];
@@ -139,9 +164,11 @@ constexpr bool testEndMember() {
 
   NonConstEndMember b;
   assert(std::ranges::end(b) == &b.x);
+  static_assert(!std::is_invocable_v<RangeCEndT, decltype((b))>);
 
   EnabledBorrowingEndMember c;
   assert(std::ranges::end(std::move(c)) == &globalBuff[0]);
+  assert(std::ranges::cend(std::move(c)) == &globalBuff[0]);
 
   EndMemberFunction d;
   assert(std::ranges::end(d) == &d.x);
@@ -246,7 +273,9 @@ struct BeginMemberEndFunction {
 constexpr bool testEndFunction() {
   const EndFunction a{};
   assert(std::ranges::end(a) == &a.x);
+  assert(std::ranges::cend(a) == &a.x);
   EndFunction aa{};
+  static_assert(!std::is_invocable_v<RangeEndT, decltype((aa))>);
   assert(std::ranges::cend(aa) == &aa.x);
 
   EndFunctionByValue b;
@@ -255,25 +284,34 @@ constexpr bool testEndFunction() {
 
   EndFunctionEnabledBorrowing c;
   assert(std::ranges::end(std::move(c)) == &globalBuff[2]);
+  assert(std::ranges::cend(std::move(c)) == &globalBuff[2]);
 
   const EndFunctionReturnsEmptyPtr d{};
   assert(std::ranges::end(d) == &d.x);
+  assert(std::ranges::cend(d) == &d.x);
   EndFunctionReturnsEmptyPtr dd{};
+  static_assert(!std::is_invocable_v<RangeEndT, decltype((dd))>);
   assert(std::ranges::cend(dd) == &dd.x);
 
   const EndFunctionWithDataMember e{};
   assert(std::ranges::end(e) == &e.x);
+  assert(std::ranges::cend(e) == &e.x);
   EndFunctionWithDataMember ee{};
+  static_assert(!std::is_invocable_v<RangeEndT, decltype((ee))>);
   assert(std::ranges::cend(ee) == &ee.x);
 
   const EndFunctionWithPrivateEndMember f{};
   assert(std::ranges::end(f) == &f.y);
+  assert(std::ranges::cend(f) == &f.y);
   EndFunctionWithPrivateEndMember ff{};
+  static_assert(!std::is_invocable_v<RangeEndT, decltype((ff))>);
   assert(std::ranges::cend(ff) == &ff.y);
 
   const BeginMemberEndFunction g{};
   assert(std::ranges::end(g) == &g.x);
+  assert(std::ranges::cend(g) == &g.x);
   BeginMemberEndFunction gg{};
+  static_assert(!std::is_invocable_v<RangeEndT, decltype((gg))>);
   assert(std::ranges::cend(gg) == &gg.x);
 
   return true;
@@ -313,6 +351,8 @@ static_assert(noexcept(std::ranges::end(erar)));
 static_assert(noexcept(std::ranges::cend(erar)));
 
 int main(int, char**) {
+  static_assert(testReturnTypes());
+
   testArray();
   static_assert(testArray());
 
