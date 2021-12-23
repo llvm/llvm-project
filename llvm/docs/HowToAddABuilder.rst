@@ -80,7 +80,7 @@ Here are the steps you can follow to do so:
    to authenticate your buildbot-worker.
 
 #. Create a buildbot-worker in context of that buildbot-worker account. Point it
-   to the **lab.llvm.org** port **9990** (see `Buildbot documentation,
+   to the **lab.llvm.org** port **9994** (see `Buildbot documentation,
    Creating a worker
    <http://docs.buildbot.net/current/tutorial/firstrun.html#creating-a-worker>`_
    for more details) by running the following command:
@@ -88,12 +88,14 @@ Here are the steps you can follow to do so:
     .. code-block:: bash
 
        $ buildbot-worker create-worker <buildbot-worker-root-directory> \
-                    lab.llvm.org:9990 \
+                    lab.llvm.org:9994 \
                     <buildbot-worker-access-name> \
                     <buildbot-worker-access-password>
 
-   To point a worker to silent master please use lab.llvm.org:9994 instead
-   of lab.llvm.org:9990.
+   This will cause your new worker to connect to the staging buildmaster
+   which is silent by default.  Only once a new worker is stable, and
+   approval from Galina has been received (see last step) should it
+   be pointed at the main buildmaster.
 
 #. Fill the buildbot-worker description and admin name/e-mail.  Here is an
    example of the buildbot-worker description::
@@ -140,13 +142,25 @@ Here are the steps you can follow to do so:
    will let you know that your changes are applied and buildmaster is
    reconfigured.
 
-#. Check the status of your buildbot-worker on the `Waterfall Display
-   <http://lab.llvm.org/buildbot/#/waterfall>`_ to make sure it is connected,
-   and the `Workers Display <http://lab.llvm.org/buildbot/#/workers>`_ to see if
-   administrator contact and worker information are correct.
+#. Check the status of your buildbot-worker on the `Waterfall Display (Staging)
+   <http://lab.llvm.org/staging/#/waterfall>`_ to make sure it is
+   connected, and the `Workers Display (Staging)
+   <http://lab.llvm.org/staging/#/workers>`_ to see if administrator
+   contact and worker information are correct.
 
-#. Wait for the first build to succeed and enjoy.
+#. At this point, you have a working builder connected to the staging
+   buildmaster.  You can now make sure it is reliably green and keeps
+   up with the build queue.  No notifications will be sent, so you can
+   keep an unstable builder connected to staging indefinitely.
 
+#. (Optional) Once the builder is stable on the staging buildmaster with
+   several days of green history, you can chose to move it to the production
+   buildmaster to enable developer notifications.  Please email `Galina
+   Kistanova <mailto:gkistanova@gmail.com>`_ for review and approval.
+
+   To move a worker to production (once approved), stop your worker, edit the
+   buildbot.tac file to change the port number from 9994 to 9990 and start it
+   again.
 
 Best Practices for Configuring a Fast Builder
 =============================================
