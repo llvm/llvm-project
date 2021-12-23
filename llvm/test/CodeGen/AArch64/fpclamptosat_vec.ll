@@ -315,17 +315,12 @@ entry:
 define <8 x i16> @stest_f16i16(<8 x half> %x) {
 ; CHECK-CVT-LABEL: stest_f16i16:
 ; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    fcvtl2 v2.4s, v0.8h
-; CHECK-CVT-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-CVT-NEXT:    movi v1.4s, #127, msl #8
-; CHECK-CVT-NEXT:    mvni v3.4s, #127, msl #8
-; CHECK-CVT-NEXT:    fcvtzs v2.4s, v2.4s
-; CHECK-CVT-NEXT:    fcvtzs v0.4s, v0.4s
-; CHECK-CVT-NEXT:    smin v2.4s, v2.4s, v1.4s
-; CHECK-CVT-NEXT:    smin v0.4s, v0.4s, v1.4s
-; CHECK-CVT-NEXT:    smax v1.4s, v2.4s, v3.4s
-; CHECK-CVT-NEXT:    smax v0.4s, v0.4s, v3.4s
-; CHECK-CVT-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
+; CHECK-CVT-NEXT:    fcvtl v1.4s, v0.4h
+; CHECK-CVT-NEXT:    fcvtl2 v0.4s, v0.8h
+; CHECK-CVT-NEXT:    fcvtzs v1.4s, v1.4s
+; CHECK-CVT-NEXT:    fcvtzs v2.4s, v0.4s
+; CHECK-CVT-NEXT:    sqxtn v0.4h, v1.4s
+; CHECK-CVT-NEXT:    sqxtn2 v0.8h, v2.4s
 ; CHECK-CVT-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: stest_f16i16:
@@ -1028,17 +1023,12 @@ entry:
 define <8 x i16> @stest_f16i16_mm(<8 x half> %x) {
 ; CHECK-CVT-LABEL: stest_f16i16_mm:
 ; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    fcvtl2 v2.4s, v0.8h
-; CHECK-CVT-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-CVT-NEXT:    movi v1.4s, #127, msl #8
-; CHECK-CVT-NEXT:    mvni v3.4s, #127, msl #8
-; CHECK-CVT-NEXT:    fcvtzs v2.4s, v2.4s
-; CHECK-CVT-NEXT:    fcvtzs v0.4s, v0.4s
-; CHECK-CVT-NEXT:    smin v2.4s, v2.4s, v1.4s
-; CHECK-CVT-NEXT:    smin v0.4s, v0.4s, v1.4s
-; CHECK-CVT-NEXT:    smax v1.4s, v2.4s, v3.4s
-; CHECK-CVT-NEXT:    smax v0.4s, v0.4s, v3.4s
-; CHECK-CVT-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
+; CHECK-CVT-NEXT:    fcvtl v1.4s, v0.4h
+; CHECK-CVT-NEXT:    fcvtl2 v0.4s, v0.8h
+; CHECK-CVT-NEXT:    fcvtzs v1.4s, v1.4s
+; CHECK-CVT-NEXT:    fcvtzs v2.4s, v0.4s
+; CHECK-CVT-NEXT:    sqxtn v0.4h, v1.4s
+; CHECK-CVT-NEXT:    sqxtn2 v0.8h, v2.4s
 ; CHECK-CVT-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: stest_f16i16_mm:
