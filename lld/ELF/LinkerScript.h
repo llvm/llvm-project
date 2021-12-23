@@ -366,7 +366,7 @@ public:
   std::vector<const InputSectionBase *> orphanSections;
 };
 
-extern LinkerScript *script;
+extern std::unique_ptr<LinkerScript> script;
 
 } // end namespace elf
 } // end namespace lld
