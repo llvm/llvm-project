@@ -4538,9 +4538,12 @@ getRVVFPReductionOpAndOperands(SDValue Op, SelectionDAG &DAG, EVT EltVT) {
   switch (Opcode) {
   default:
     llvm_unreachable("Unhandled reduction");
-  case ISD::VECREDUCE_FADD:
-    return std::make_tuple(RISCVISD::VECREDUCE_FADD_VL, Op.getOperand(0),
-                           DAG.getNeutralElement(BaseOpcode, DL, EltVT, Flags));
+  case ISD::VECREDUCE_FADD: {
+    // Use positive zero if we can. It is cheaper to materialize.
+    SDValue Zero =
+        DAG.getConstantFP(Flags.hasNoSignedZeros() ? 0.0 : -0.0, DL, EltVT);
+    return std::make_tuple(RISCVISD::VECREDUCE_FADD_VL, Op.getOperand(0), Zero);
+  }
   case ISD::VECREDUCE_SEQ_FADD:
     return std::make_tuple(RISCVISD::VECREDUCE_SEQ_FADD_VL, Op.getOperand(1),
                            Op.getOperand(0));
