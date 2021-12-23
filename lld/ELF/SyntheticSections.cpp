@@ -1636,11 +1636,11 @@ void RelocationBaseSection::finalizeContents() {
   else
     getParent()->link = 0;
 
-  if (in.relaPlt == this && in.gotPlt->getParent()) {
+  if (in.relaPlt.get() == this && in.gotPlt->getParent()) {
     getParent()->flags |= ELF::SHF_INFO_LINK;
     getParent()->info = in.gotPlt->getParent()->sectionIndex;
   }
-  if (in.relaIplt == this && in.igotPlt->getParent()) {
+  if (in.relaIplt.get() == this && in.igotPlt->getParent()) {
     getParent()->flags |= ELF::SHF_INFO_LINK;
     getParent()->info = in.igotPlt->getParent()->sectionIndex;
   }
@@ -3801,8 +3801,9 @@ void PartitionIndexSection::writeTo(uint8_t *buf) {
     write32(buf, mainPart->dynStrTab->getVA() + partitions[i].nameStrTab - va);
     write32(buf + 4, partitions[i].elfHeader->getVA() - (va + 4));
 
-    SyntheticSection *next =
-        i == partitions.size() - 1 ? in.partEnd : partitions[i + 1].elfHeader;
+    SyntheticSection *next = i == partitions.size() - 1
+                                 ? in.partEnd.get()
+                                 : partitions[i + 1].elfHeader;
     write32(buf + 8, next->getVA() - partitions[i].elfHeader->getVA());
 
     va += 12;
