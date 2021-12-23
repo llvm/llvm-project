@@ -184,8 +184,8 @@ let Predicates = [HasStdExtD] in {
 /// Float conversion operations
 
 // f64 -> f32, f32 -> f64
-def : Pat<(fpround FPR64:$rs1), (FCVT_S_D FPR64:$rs1, 0b111)>;
-def : Pat<(fpextend FPR32:$rs1), (FCVT_D_S FPR32:$rs1)>;
+def : Pat<(any_fpround FPR64:$rs1), (FCVT_S_D FPR64:$rs1, 0b111)>;
+def : Pat<(any_fpextend FPR32:$rs1), (FCVT_D_S FPR32:$rs1)>;
 
 // [u]int<->double conversion patterns must be gated on IsRV32 or IsRV64, so
 // are defined later.
@@ -271,8 +271,8 @@ let Predicates = [HasStdExtD, IsRV32] in {
 def : Pat<(f64 (fpimm0)), (FCVT_D_W (i32 X0))>;
 
 // double->[u]int. Round-to-zero must be used.
-def : Pat<(i32 (fp_to_sint FPR64:$rs1)), (FCVT_W_D FPR64:$rs1, 0b001)>;
-def : Pat<(i32 (fp_to_uint FPR64:$rs1)), (FCVT_WU_D FPR64:$rs1, 0b001)>;
+def : Pat<(i32 (any_fp_to_sint FPR64:$rs1)), (FCVT_W_D FPR64:$rs1, 0b001)>;
+def : Pat<(i32 (any_fp_to_uint FPR64:$rs1)), (FCVT_WU_D FPR64:$rs1, 0b001)>;
 
 // Saturating double->[u]int32.
 def : Pat<(i32 (riscv_fcvt_x_rtz FPR64:$rs1)), (FCVT_W_D $rs1, 0b001)>;
@@ -285,8 +285,8 @@ def : Pat<(i32 (lrint FPR64:$rs1)), (FCVT_W_D $rs1, 0b111)>;
 def : Pat<(i32 (lround FPR64:$rs1)), (FCVT_W_D $rs1, 0b100)>;
 
 // [u]int->double.
-def : Pat<(sint_to_fp (i32 GPR:$rs1)), (FCVT_D_W GPR:$rs1)>;
-def : Pat<(uint_to_fp (i32 GPR:$rs1)), (FCVT_D_WU GPR:$rs1)>;
+def : Pat<(any_sint_to_fp (i32 GPR:$rs1)), (FCVT_D_W GPR:$rs1)>;
+def : Pat<(any_uint_to_fp (i32 GPR:$rs1)), (FCVT_D_WU GPR:$rs1)>;
 } // Predicates = [HasStdExtD, IsRV32]
 
 let Predicates = [HasStdExtD, IsRV64] in {
@@ -301,20 +301,20 @@ def : Pat<(i64 (bitconvert FPR64:$rs1)), (FMV_X_D FPR64:$rs1)>;
 // Use target specific isd nodes to help us remember the result is sign
 // extended. Matching sext_inreg+fptoui/fptosi may cause the conversion to be
 // duplicated if it has another user that didn't need the sign_extend.
-def : Pat<(riscv_fcvt_w_rtz_rv64 FPR64:$rs1),  (FCVT_W_D $rs1, 0b001)>;
-def : Pat<(riscv_fcvt_wu_rtz_rv64 FPR64:$rs1), (FCVT_WU_D $rs1, 0b001)>;
+def : Pat<(riscv_any_fcvt_w_rtz_rv64 FPR64:$rs1),  (FCVT_W_D $rs1, 0b001)>;
+def : Pat<(riscv_any_fcvt_wu_rtz_rv64 FPR64:$rs1), (FCVT_WU_D $rs1, 0b001)>;
 
 // [u]int32->fp
-def : Pat<(sint_to_fp (i64 (sexti32 (i64 GPR:$rs1)))), (FCVT_D_W $rs1)>;
-def : Pat<(uint_to_fp (i64 (zexti32 (i64 GPR:$rs1)))), (FCVT_D_WU $rs1)>;
+def : Pat<(any_sint_to_fp (i64 (sexti32 (i64 GPR:$rs1)))), (FCVT_D_W $rs1)>;
+def : Pat<(any_uint_to_fp (i64 (zexti32 (i64 GPR:$rs1)))), (FCVT_D_WU $rs1)>;
 
 // Saturating double->[u]int64.
 def : Pat<(i64 (riscv_fcvt_x_rtz FPR64:$rs1)), (FCVT_L_D $rs1, 0b001)>;
 def : Pat<(i64 (riscv_fcvt_xu_rtz FPR64:$rs1)), (FCVT_LU_D $rs1, 0b001)>;
 
 // double->[u]int64. Round-to-zero must be used.
-def : Pat<(i64 (fp_to_sint FPR64:$rs1)), (FCVT_L_D FPR64:$rs1, 0b001)>;
-def : Pat<(i64 (fp_to_uint FPR64:$rs1)), (FCVT_LU_D FPR64:$rs1, 0b001)>;
+def : Pat<(i64 (any_fp_to_sint FPR64:$rs1)), (FCVT_L_D FPR64:$rs1, 0b001)>;
+def : Pat<(i64 (any_fp_to_uint FPR64:$rs1)), (FCVT_LU_D FPR64:$rs1, 0b001)>;
 
 // double->int64 with current rounding mode.
 def : Pat<(i64 (lrint FPR64:$rs1)), (FCVT_L_D $rs1, 0b111)>;
@@ -325,6 +325,6 @@ def : Pat<(i64 (lround FPR64:$rs1)), (FCVT_L_D $rs1, 0b100)>;
 def : Pat<(i64 (llround FPR64:$rs1)), (FCVT_L_D $rs1, 0b100)>;
 
 // [u]int64->fp. Match GCC and default to using dynamic rounding mode.
-def : Pat<(sint_to_fp (i64 GPR:$rs1)), (FCVT_D_L GPR:$rs1, 0b111)>;
-def : Pat<(uint_to_fp (i64 GPR:$rs1)), (FCVT_D_LU GPR:$rs1, 0b111)>;
+def : Pat<(any_sint_to_fp (i64 GPR:$rs1)), (FCVT_D_L GPR:$rs1, 0b111)>;
+def : Pat<(any_uint_to_fp (i64 GPR:$rs1)), (FCVT_D_LU GPR:$rs1, 0b111)>;
 } // Predicates = [HasStdExtD, IsRV64]

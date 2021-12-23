@@ -16,7 +16,6 @@
 #include <__format/format_string.h>
 #include <__format/formatter.h>
 #include <__format/parser_std_format_spec.h>
-#include <algorithm>
 #include <string_view>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

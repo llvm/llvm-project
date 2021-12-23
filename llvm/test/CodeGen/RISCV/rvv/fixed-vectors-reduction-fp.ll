@@ -1408,3 +1408,20 @@ define double @vreduce_fmax_v32f64(<32 x double>* %x) {
   %red = call double @llvm.vector.reduce.fmax.v32f64(<32 x double> %v)
   ret double %red
 }
+
+define float @vreduce_nsz_fadd_v4f32(<4 x float>* %x, float %s) {
+; CHECK-LABEL: vreduce_nsz_fadd_v4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
+; CHECK-NEXT:    vmv.v.i v9, 0
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; CHECK-NEXT:    vfredusum.vs v8, v8, v9
+; CHECK-NEXT:    vfmv.f.s ft0, v8
+; CHECK-NEXT:    fadd.s fa0, fa0, ft0
+; CHECK-NEXT:    ret
+  %v = load <4 x float>, <4 x float>* %x
+  %red = call reassoc nsz float @llvm.vector.reduce.fadd.v4f32(float %s, <4 x float> %v)
+  ret float %red
+}

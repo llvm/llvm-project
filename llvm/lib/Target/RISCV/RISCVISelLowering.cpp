@@ -335,6 +335,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::STRICT_FSUB, MVT::f16, Legal);
     setOperationAction(ISD::STRICT_FMUL, MVT::f16, Legal);
     setOperationAction(ISD::STRICT_FDIV, MVT::f16, Legal);
+    setOperationAction(ISD::STRICT_FP_ROUND, MVT::f16, Legal);
+    setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f32, Legal);
     setOperationAction(ISD::STRICT_FSQRT, MVT::f16, Legal);
     for (auto CC : FPCCToExpand)
       setCondCodeAction(CC, MVT::f16, Expand);
@@ -405,6 +407,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::STRICT_FSUB, MVT::f64, Legal);
     setOperationAction(ISD::STRICT_FMUL, MVT::f64, Legal);
     setOperationAction(ISD::STRICT_FDIV, MVT::f64, Legal);
+    setOperationAction(ISD::STRICT_FP_ROUND, MVT::f32, Legal);
+    setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f64, Legal);
     setOperationAction(ISD::STRICT_FSQRT, MVT::f64, Legal);
     for (auto CC : FPCCToExpand)
       setCondCodeAction(CC, MVT::f64, Expand);
@@ -429,6 +433,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasStdExtF()) {
     setOperationAction(ISD::FP_TO_UINT_SAT, XLenVT, Custom);
     setOperationAction(ISD::FP_TO_SINT_SAT, XLenVT, Custom);
+
+    setOperationAction(ISD::STRICT_FP_TO_UINT, XLenVT, Legal);
+    setOperationAction(ISD::STRICT_FP_TO_SINT, XLenVT, Legal);
+    setOperationAction(ISD::STRICT_UINT_TO_FP, XLenVT, Legal);
+    setOperationAction(ISD::STRICT_SINT_TO_FP, XLenVT, Legal);
 
     setOperationAction(ISD::FLT_ROUNDS_, XLenVT, Custom);
     setOperationAction(ISD::SET_ROUNDING, MVT::Other, Custom);
@@ -4529,9 +4538,12 @@ getRVVFPReductionOpAndOperands(SDValue Op, SelectionDAG &DAG, EVT EltVT) {
   switch (Opcode) {
   default:
     llvm_unreachable("Unhandled reduction");
-  case ISD::VECREDUCE_FADD:
-    return std::make_tuple(RISCVISD::VECREDUCE_FADD_VL, Op.getOperand(0),
-                           DAG.getNeutralElement(BaseOpcode, DL, EltVT, Flags));
+  case ISD::VECREDUCE_FADD: {
+    // Use positive zero if we can. It is cheaper to materialize.
+    SDValue Zero =
+        DAG.getConstantFP(Flags.hasNoSignedZeros() ? 0.0 : -0.0, DL, EltVT);
+    return std::make_tuple(RISCVISD::VECREDUCE_FADD_VL, Op.getOperand(0), Zero);
+  }
   case ISD::VECREDUCE_SEQ_FADD:
     return std::make_tuple(RISCVISD::VECREDUCE_SEQ_FADD_VL, Op.getOperand(1),
                            Op.getOperand(0));
@@ -5727,11 +5739,17 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     SDValue Op0 = IsStrict ? N->getOperand(1) : N->getOperand(0);
     if (getTypeAction(*DAG.getContext(), Op0.getValueType()) !=
         TargetLowering::TypeSoftenFloat) {
-      // FIXME: Support strict FP.
-      if (IsStrict)
-        return;
       if (!isTypeLegal(Op0.getValueType()))
         return;
+      if (IsStrict) {
+        unsigned Opc = IsSigned ? RISCVISD::STRICT_FCVT_W_RTZ_RV64
+                                : RISCVISD::STRICT_FCVT_WU_RTZ_RV64;
+        SDVTList VTs = DAG.getVTList(MVT::i64, MVT::Other);
+        SDValue Res = DAG.getNode(Opc, DL, VTs, N->getOperand(0), Op0);
+        Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
+        Results.push_back(Res.getValue(1));
+        return;
+      }
       unsigned Opc =
           IsSigned ? RISCVISD::FCVT_W_RTZ_RV64 : RISCVISD::FCVT_WU_RTZ_RV64;
       SDValue Res = DAG.getNode(Opc, DL, MVT::i64, Op0);
@@ -7152,11 +7170,23 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     // Fold (zero_extend (fp_to_uint X)) to prevent forming fcvt+zexti32 during
     // type legalization. This is safe because fp_to_uint produces poison if
     // it overflows.
-    if (N->getValueType(0) == MVT::i64 && Subtarget.is64Bit() &&
-        N->getOperand(0).getOpcode() == ISD::FP_TO_UINT &&
-        isTypeLegal(N->getOperand(0).getOperand(0).getValueType()))
-      return DAG.getNode(ISD::FP_TO_UINT, SDLoc(N), MVT::i64,
-                         N->getOperand(0).getOperand(0));
+    if (N->getValueType(0) == MVT::i64 && Subtarget.is64Bit()) {
+      SDValue Src = N->getOperand(0);
+      if (Src.getOpcode() == ISD::FP_TO_UINT &&
+          isTypeLegal(Src.getOperand(0).getValueType()))
+        return DAG.getNode(ISD::FP_TO_UINT, SDLoc(N), MVT::i64,
+                           Src.getOperand(0));
+      if (Src.getOpcode() == ISD::STRICT_FP_TO_UINT && Src.hasOneUse() &&
+          isTypeLegal(Src.getOperand(1).getValueType())) {
+        SDVTList VTs = DAG.getVTList(MVT::i64, MVT::Other);
+        SDValue Res = DAG.getNode(ISD::STRICT_FP_TO_UINT, SDLoc(N), VTs,
+                                  Src.getOperand(0), Src.getOperand(1));
+        DCI.CombineTo(N, Res);
+        DAG.ReplaceAllUsesOfValueWith(Src.getValue(1), Res.getValue(1));
+        DCI.recursivelyDeleteUnusedNodes(Src.getNode());
+        return SDValue(N, 0); // Return N so it doesn't get rechecked.
+      }
+    }
     return SDValue();
   case RISCVISD::SELECT_CC: {
     // Transform
@@ -7717,6 +7747,8 @@ unsigned RISCVTargetLowering::ComputeNumSignBitsForTargetNode(
   case RISCVISD::BDECOMPRESSW:
   case RISCVISD::FCVT_W_RTZ_RV64:
   case RISCVISD::FCVT_WU_RTZ_RV64:
+  case RISCVISD::STRICT_FCVT_W_RTZ_RV64:
+  case RISCVISD::STRICT_FCVT_WU_RTZ_RV64:
     // TODO: As the result is sign-extended, this is conservatively correct. A
     // more precise answer could be calculated for SRAW depending on known
     // bits in the shift amount.
@@ -9448,6 +9480,8 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(FCVT_XU_RTZ)
   NODE_NAME_CASE(FCVT_W_RTZ_RV64)
   NODE_NAME_CASE(FCVT_WU_RTZ_RV64)
+  NODE_NAME_CASE(STRICT_FCVT_W_RTZ_RV64)
+  NODE_NAME_CASE(STRICT_FCVT_WU_RTZ_RV64)
   NODE_NAME_CASE(READ_CYCLE_WIDE)
   NODE_NAME_CASE(GREV)
   NODE_NAME_CASE(GREVW)
