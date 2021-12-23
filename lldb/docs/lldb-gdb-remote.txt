@@ -1003,6 +1003,9 @@ vendor: is a string that represents the vendor (apple)
 endian: is one of "little", "big", or "pdp"
 ptrsize: is a number that represents how big pointers are in bytes
 
+main-binary-uuid: is the UUID of a firmware type binary that the gdb stub knows about
+main-binary-address: is the load address of the firmware type binary
+main-binary-slide: is the slide of the firmware type binary, if address isn't known
 
 //----------------------------------------------------------------------
 // "qShlibInfoAddr"

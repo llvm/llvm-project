@@ -1006,6 +1006,23 @@ GDBRemoteCommunicationClient::GetProcessArchitecture() {
   return m_process_arch;
 }
 
+bool GDBRemoteCommunicationClient::GetProcessStandaloneBinary(
+    UUID &uuid, addr_t &value, bool &value_is_offset) {
+  if (m_qProcessInfo_is_valid == eLazyBoolCalculate)
+    GetCurrentProcessInfo();
+
+  // Return true if we have a UUID or an address/offset of the
+  // main standalone / firmware binary being used.
+  if (!m_process_standalone_uuid.IsValid() &&
+      m_process_standalone_value == LLDB_INVALID_ADDRESS)
+    return false;
+
+  uuid = m_process_standalone_uuid;
+  value = m_process_standalone_value;
+  value_is_offset = m_process_standalone_value_is_offset;
+  return true;
+}
+
 bool GDBRemoteCommunicationClient::GetGDBServerVersion() {
   if (m_qGDBServerVersion_is_valid == eLazyBoolCalculate) {
     m_gdb_server_name.clear();
@@ -2147,6 +2164,25 @@ bool GDBRemoteCommunicationClient::GetCurrentProcessInfo(bool allow_lazy) {
         } else if (name.equals("elf_abi")) {
           elf_abi = std::string(value);
           ++num_keys_decoded;
+        } else if (name.equals("main-binary-uuid")) {
+          m_process_standalone_uuid.SetFromStringRef(value);
+          ++num_keys_decoded;
+        } else if (name.equals("main-binary-slide")) {
+          StringExtractor extractor(value);
+          m_process_standalone_value =
+              extractor.GetU64(LLDB_INVALID_ADDRESS, 16);
+          if (m_process_standalone_value != LLDB_INVALID_ADDRESS) {
+            m_process_standalone_value_is_offset = true;
+            ++num_keys_decoded;
+          }
+        } else if (name.equals("main-binary-address")) {
+          StringExtractor extractor(value);
+          m_process_standalone_value =
+              extractor.GetU64(LLDB_INVALID_ADDRESS, 16);
+          if (m_process_standalone_value != LLDB_INVALID_ADDRESS) {
+            m_process_standalone_value_is_offset = false;
+            ++num_keys_decoded;
+          }
         }
       }
       if (num_keys_decoded > 0)
