@@ -146,3 +146,42 @@ define void @unsound_readonly(i8* %ignored, i8* %escaped_then_written) {
   store i8 0, i8* %addr.ld
   ret void
 }
+
+
+; CHECK: define void @fptr_test1a(i8* nocapture readnone %p, void (i8*)* nocapture readonly %f)
+define void @fptr_test1a(i8* %p, void (i8*)* %f) {
+  call void %f(i8* nocapture readnone %p)
+  ret void
+}
+
+; CHECK: define void @fptr_test1b(i8* %p, void (i8*)* nocapture readonly %f)
+define void @fptr_test1b(i8* %p, void (i8*)* %f) {
+  ; Can't infer readnone here because call might capture %p
+  call void %f(i8* readnone %p)
+  ret void
+}
+
+; CHECK: define void @fptr_test1c(i8* readnone %p, void (i8*)* nocapture readonly %f)
+define void @fptr_test1c(i8* %p, void (i8*)* %f) {
+  call void %f(i8* readnone %p) readonly
+  ret void
+}
+
+; CHECK: define void @fptr_test2a(i8* nocapture readonly %p, void (i8*)* nocapture readonly %f)
+define void @fptr_test2a(i8* %p, void (i8*)* %f) {
+  call void %f(i8* nocapture readonly %p)
+  ret void
+}
+
+; CHECK: define void @fptr_test2b(i8* %p, void (i8*)* nocapture readonly %f)
+define void @fptr_test2b(i8* %p, void (i8*)* %f) {
+  ; Can't infer readonly here because call might capture %p
+  call void %f(i8* readonly %p)
+  ret void
+}
+
+; CHECK: define void @fptr_test2c(i8* readonly %p, void (i8*)* nocapture readonly %f)
+define void @fptr_test2c(i8* %p, void (i8*)* %f) {
+  call void %f(i8* readonly %p) readonly
+  ret void
+}
