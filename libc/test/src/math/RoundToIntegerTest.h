@@ -141,7 +141,7 @@ public:
 
     F x = F(bits);
     long mpfr_result;
-    bool erangeflag = mpfr::RoundToLong(x, mpfr_result);
+    bool erangeflag = mpfr::round_to_long(x, mpfr_result);
     ASSERT_FALSE(erangeflag);
     test_one_input(func, x, mpfr_result, false);
   }
@@ -163,10 +163,10 @@ public:
       long mpfr_long_result;
       bool erangeflag;
       if (TestModes)
-        erangeflag =
-            mpfr::RoundToLong(x, to_mpfr_rounding_mode(mode), mpfr_long_result);
+        erangeflag = mpfr::round_to_long(x, to_mpfr_rounding_mode(mode),
+                                         mpfr_long_result);
       else
-        erangeflag = mpfr::RoundToLong(x, mpfr_long_result);
+        erangeflag = mpfr::round_to_long(x, mpfr_long_result);
       ASSERT_FALSE(erangeflag);
       I mpfr_result = mpfr_long_result;
       test_one_input(func, x, mpfr_result, false);
@@ -210,13 +210,13 @@ public:
         __llvm_libc::fputil::set_round(m);
         long mpfr_long_result;
         bool erangeflag =
-            mpfr::RoundToLong(x, to_mpfr_rounding_mode(m), mpfr_long_result);
+            mpfr::round_to_long(x, to_mpfr_rounding_mode(m), mpfr_long_result);
         ASSERT_TRUE(erangeflag);
         test_one_input(func, x, INTEGER_MIN, true);
       }
     } else {
       long mpfr_long_result;
-      bool erangeflag = mpfr::RoundToLong(x, mpfr_long_result);
+      bool erangeflag = mpfr::round_to_long(x, mpfr_long_result);
       ASSERT_TRUE(erangeflag);
       test_one_input(func, x, INTEGER_MIN, true);
     }
@@ -280,8 +280,8 @@ public:
       if (TestModes) {
         for (int m : ROUNDING_MODES) {
           long mpfr_long_result;
-          bool erangeflag =
-              mpfr::RoundToLong(x, to_mpfr_rounding_mode(m), mpfr_long_result);
+          bool erangeflag = mpfr::round_to_long(x, to_mpfr_rounding_mode(m),
+                                                mpfr_long_result);
           I mpfr_result = mpfr_long_result;
           __llvm_libc::fputil::set_round(m);
           if (erangeflag)
@@ -291,7 +291,7 @@ public:
         }
       } else {
         long mpfr_long_result;
-        bool erangeflag = mpfr::RoundToLong(x, mpfr_long_result);
+        bool erangeflag = mpfr::round_to_long(x, mpfr_long_result);
         I mpfr_result = mpfr_long_result;
         if (erangeflag)
           test_one_input(func, x, x > 0 ? INTEGER_MAX : INTEGER_MIN, true);
