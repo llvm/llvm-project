@@ -1052,13 +1052,8 @@ void CodeGenFunction::EmitNewArrayInitializer(
       InitListElements =
           cast<ConstantArrayType>(ILE->getType()->getAsArrayTypeUnsafe())
               ->getSize().getZExtValue();
-      CurPtr =
-          Address(Builder.CreateInBoundsGEP(CurPtr.getElementType(),
-                                            CurPtr.getPointer(),
-                                            Builder.getSize(InitListElements),
-                                            "string.init.end"),
-                  CurPtr.getAlignment().alignmentAtOffset(InitListElements *
-                                                          ElementSize));
+      CurPtr = Builder.CreateConstInBoundsGEP(
+          CurPtr, InitListElements, "string.init.end");
 
       // Zero out the rest, if any remain.
       llvm::ConstantInt *ConstNum = dyn_cast<llvm::ConstantInt>(NumElements);

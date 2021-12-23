@@ -1,7 +1,7 @@
 # RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass=instruction-select -global-isel-abort=2 -pass-remarks-missed='gisel*' -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck -check-prefix=ERR %s
 
-# ERR: remark: <unknown>:0:0: cannot select: %3:sgpr(<4 x s16>) = G_INSERT %0:sgpr, %2:sgpr(s16), 0 (in function: insert_sgpr_s16_to_v4s16_offset0)
-# ERR-NEXT: remark: <unknown>:0:0: cannot select: %2:sgpr(<16 x s32>) = G_INSERT %0:sgpr, %1:sgpr(<8 x s32>), 0 (in function: insert_sgpr_v8s32_to_v16s32_offset0)
+# ERR: remark: <unknown>:0:0: instruction is not legal: %3:sgpr(<4 x s16>) = G_INSERT %0:sgpr, %2:sgpr(s16), 0 (in function: insert_sgpr_s16_to_v4s16_offset0)
+# ERR-NEXT: <unknown>:0:0: instruction is not legal: %2:sgpr(<16 x s32>) = G_INSERT %0:sgpr, %1:sgpr(<8 x s32>), 0 (in function: insert_sgpr_v8s32_to_v16s32_offset0)
 # ERR-NOT: remark
 
 # FIXME: This 16-bit insert source should not be legal and this test

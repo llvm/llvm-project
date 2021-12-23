@@ -32994,11 +32994,6 @@ bool X86TargetLowering::isLegalAddressingMode(const DataLayout &DL,
 bool X86TargetLowering::isVectorShiftByScalarCheap(Type *Ty) const {
   unsigned Bits = Ty->getScalarSizeInBits();
 
-  // 8-bit shifts are always expensive, but versions with a scalar amount aren't
-  // particularly cheaper than those without.
-  if (Bits == 8)
-    return false;
-
   // XOP has v16i8/v8i16/v4i32/v2i64 variable vector shifts.
   // Splitting for v32i8/v16i16 on XOP+AVX2 targets is still preferred.
   if (Subtarget.hasXOP() &&

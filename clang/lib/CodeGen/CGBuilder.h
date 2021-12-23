@@ -258,6 +258,21 @@ public:
                    Addr.getAlignment().alignmentAtOffset(Index * EltSize));
   }
 
+  /// Create GEP with single dynamic index. The address alignment is reduced
+  /// according to the element size.
+  using CGBuilderBaseTy::CreateGEP;
+  Address CreateGEP(Address Addr, llvm::Value *Index,
+                    const llvm::Twine &Name = "") {
+    const llvm::DataLayout &DL = BB->getParent()->getParent()->getDataLayout();
+    CharUnits EltSize =
+        CharUnits::fromQuantity(DL.getTypeAllocSize(Addr.getElementType()));
+
+    return Address(CreateGEP(Addr.getElementType(), Addr.getPointer(), Index,
+                             Name),
+                   Addr.getElementType(),
+                   Addr.getAlignment().alignmentOfArrayElement(EltSize));
+  }
+
   /// Given a pointer to i8, adjust it by a given constant offset.
   Address CreateConstInBoundsByteGEP(Address Addr, CharUnits Offset,
                                      const llvm::Twine &Name = "") {

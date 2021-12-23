@@ -215,6 +215,48 @@ MachineInstrBuilder MachineIRBuilder::buildMaskLowPtrBits(const DstOp &Res,
   return buildPtrMask(Res, Op0, MaskReg);
 }
 
+MachineInstrBuilder
+MachineIRBuilder::buildPadVectorWithUndefElements(const DstOp &Res,
+                                                  const SrcOp &Op0) {
+  LLT ResTy = Res.getLLTTy(*getMRI());
+  LLT Op0Ty = Op0.getLLTTy(*getMRI());
+
+  assert((ResTy.isVector() && Op0Ty.isVector()) && "Non vector type");
+  assert((ResTy.getElementType() == Op0Ty.getElementType()) &&
+         "Different vector element types");
+  assert((ResTy.getNumElements() > Op0Ty.getNumElements()) &&
+         "Op0 has more elements");
+
+  auto Unmerge = buildUnmerge(Op0Ty.getElementType(), Op0);
+  SmallVector<Register, 8> Regs;
+  for (auto Op : Unmerge.getInstr()->defs())
+    Regs.push_back(Op.getReg());
+  Register Undef = buildUndef(Op0Ty.getElementType()).getReg(0);
+  unsigned NumberOfPadElts = ResTy.getNumElements() - Regs.size();
+  for (unsigned i = 0; i < NumberOfPadElts; ++i)
+    Regs.push_back(Undef);
+  return buildMerge(Res, Regs);
+}
+
+MachineInstrBuilder
+MachineIRBuilder::buildDeleteTrailingVectorElements(const DstOp &Res,
+                                                    const SrcOp &Op0) {
+  LLT ResTy = Res.getLLTTy(*getMRI());
+  LLT Op0Ty = Op0.getLLTTy(*getMRI());
+
+  assert((ResTy.isVector() && Op0Ty.isVector()) && "Non vector type");
+  assert((ResTy.getElementType() == Op0Ty.getElementType()) &&
+         "Different vector element types");
+  assert((ResTy.getNumElements() < Op0Ty.getNumElements()) &&
+         "Op0 has fewer elements");
+
+  SmallVector<Register, 8> Regs;
+  auto Unmerge = buildUnmerge(Op0Ty.getElementType(), Op0);
+  for (unsigned i = 0; i < ResTy.getNumElements(); ++i)
+    Regs.push_back(Unmerge.getReg(i));
+  return buildMerge(Res, Regs);
+}
+
 MachineInstrBuilder MachineIRBuilder::buildBr(MachineBasicBlock &Dest) {
   return buildInstr(TargetOpcode::G_BR).addMBB(&Dest);
 }
@@ -613,10 +655,8 @@ MachineInstrBuilder MachineIRBuilder::buildUnmerge(ArrayRef<LLT> Res,
 MachineInstrBuilder MachineIRBuilder::buildUnmerge(LLT Res,
                                                    const SrcOp &Op) {
   unsigned NumReg = Op.getLLTTy(*getMRI()).getSizeInBits() / Res.getSizeInBits();
-  SmallVector<Register, 8> TmpVec;
-  for (unsigned I = 0; I != NumReg; ++I)
-    TmpVec.push_back(getMRI()->createGenericVirtualRegister(Res));
-  return buildUnmerge(TmpVec, Op);
+  SmallVector<DstOp, 8> TmpVec(NumReg, Res);
+  return buildInstr(TargetOpcode::G_UNMERGE_VALUES, TmpVec, Op);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildUnmerge(ArrayRef<Register> Res,
