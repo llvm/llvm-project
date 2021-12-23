@@ -1246,7 +1246,7 @@ static void maybeShuffle(DenseMap<const InputSectionBase *, int> &order) {
   if (config->shuffleSections.empty())
     return;
 
-  std::vector<InputSectionBase *> matched, sections = inputSections;
+  SmallVector<InputSectionBase *, 0> matched, sections = inputSections;
   matched.reserve(sections.size());
   for (const auto &patAndSeed : config->shuffleSections) {
     matched.clear();
