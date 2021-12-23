@@ -295,12 +295,12 @@ static SmallSet<SharedSymbol *, 4> getSymbolsAt(SharedSymbol &ss) {
 // in .bss and in the case of a canonical plt entry it is in .plt. This function
 // replaces the existing symbol with a Defined pointing to the appropriate
 // location.
-static void replaceWithDefined(Symbol &sym, SectionBase *sec, uint64_t value,
+static void replaceWithDefined(Symbol &sym, SectionBase &sec, uint64_t value,
                                uint64_t size) {
   Symbol old = sym;
 
   sym.replace(Defined{sym.file, sym.getName(), sym.binding, sym.stOther,
-                      sym.type, value, size, sec});
+                      sym.type, value, size, &sec});
 
   sym.pltIndex = old.pltIndex;
   sym.gotIndex = old.gotIndex;
@@ -379,9 +379,9 @@ template <class ELFT> static void addCopyRelSymbolImpl(SharedSymbol &ss) {
   // dynamic symbol for each one. This causes the copy relocation to correctly
   // interpose any aliases.
   for (SharedSymbol *sym : getSymbolsAt<ELFT>(ss))
-    replaceWithDefined(*sym, sec, 0, sym->size);
+    replaceWithDefined(*sym, *sec, 0, sym->size);
 
-  mainPart->relaDyn->addSymbolReloc(target->copyRel, sec, 0, ss);
+  mainPart->relaDyn->addSymbolReloc(target->copyRel, *sec, 0, ss);
 }
 
 static void addCopyRelSymbol(SharedSymbol &ss) {
@@ -1024,7 +1024,7 @@ static void processRelocAux(InputSectionBase &sec, RelExpr expr, RelType type,
     } else if (rel != 0) {
       if (config->emachine == EM_MIPS && rel == target->symbolicRel)
         rel = target->relativeRel;
-      sec.getPartition().relaDyn->addSymbolReloc(rel, &sec, offset, sym, addend,
+      sec.getPartition().relaDyn->addSymbolReloc(rel, sec, offset, sym, addend,
                                                  type);
 
       // MIPS ABI turns using of GOT and dynamic relocations inside out.
@@ -1244,14 +1244,14 @@ handleTlsRelocation(RelType type, Symbol &sym, InputSectionBase &c,
           in.got->relocations.push_back(
               {R_ADDEND, target->symbolicRel, off, 1, &sym});
         else
-          mainPart->relaDyn->addSymbolReloc(target->tlsModuleIndexRel, in.got,
+          mainPart->relaDyn->addSymbolReloc(target->tlsModuleIndexRel, *in.got,
                                             off, sym);
 
         // If the symbol is preemptible we need the dynamic linker to write
         // the offset too.
         uint64_t offsetOff = off + config->wordsize;
         if (sym.isPreemptible)
-          mainPart->relaDyn->addSymbolReloc(target->tlsOffsetRel, in.got,
+          mainPart->relaDyn->addSymbolReloc(target->tlsOffsetRel, *in.got,
                                             offsetOff, sym);
         else
           in.got->relocations.push_back(
@@ -1269,7 +1269,7 @@ handleTlsRelocation(RelType type, Symbol &sym, InputSectionBase &c,
            addend, &sym});
       if (!sym.isInGot()) {
         in.got->addEntry(sym);
-        mainPart->relaDyn->addSymbolReloc(target->tlsGotRel, in.got,
+        mainPart->relaDyn->addSymbolReloc(target->tlsGotRel, *in.got,
                                           sym.getGotOffset(), sym);
       }
     } else {
@@ -1430,7 +1430,7 @@ static void scanReloc(InputSectionBase &sec, OffsetGetter &getOffset, RelTy *&i,
   // direct relocation on through.
   if (sym.isGnuIFunc() && config->zIfuncNoplt) {
     sym.exportDynamic = true;
-    mainPart->relaDyn->addSymbolReloc(type, &sec, offset, sym, addend, type);
+    mainPart->relaDyn->addSymbolReloc(type, sec, offset, sym, addend, type);
     return;
   }
 
@@ -1626,7 +1626,7 @@ void elf::postScanRelocations() {
         assert(sym.isFunc() && sym.needsPlt);
         if (!sym.isDefined()) {
           replaceWithDefined(
-              sym, in.plt,
+              sym, *in.plt,
               target->pltHeaderSize + target->pltEntrySize * sym.pltIndex, 0);
           sym.needsCopy = true;
           if (config->emachine == EM_PPC) {
