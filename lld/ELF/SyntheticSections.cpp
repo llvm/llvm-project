@@ -3620,14 +3620,12 @@ void PPC32Got2Section::finalizeContents() {
   // .got2 . This function computes outSecOff of each .got2 to be used in
   // PPC32PltCallStub::writeTo(). The purpose of this empty synthetic section is
   // to collect input sections named ".got2".
-  uint32_t offset = 0;
   for (SectionCommand *cmd : getParent()->commands)
     if (auto *isd = dyn_cast<InputSectionDescription>(cmd)) {
       for (InputSection *isec : isd->sections) {
-        if (isec == this)
-          continue;
-        isec->file->ppc32Got2OutSecOff = offset;
-        offset += (uint32_t)isec->getSize();
+        // isec->file may be nullptr for MergeSyntheticSection.
+        if (isec != this && isec->file)
+          isec->file->ppc32Got2 = isec;
       }
     }
 }
