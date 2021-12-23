@@ -281,6 +281,7 @@ class LLVMSymbolizerProcess final : public SymbolizerProcess {
     argv[i++] = inline_flag;
     argv[i++] = kSymbolizerArch;
     argv[i++] = nullptr;
+    CHECK_LE(i, kArgVMax);
   }
 };
 
