@@ -394,7 +394,7 @@ inline bool isDebugSection(const InputSectionBase &sec) {
 }
 
 // The list of all input sections.
-extern std::vector<InputSectionBase *> inputSections;
+extern SmallVector<InputSectionBase *, 0> inputSections;
 
 // The set of TOC entries (.toc + addend) for which we should not apply
 // toc-indirect to toc-relative relaxation. const Symbol * refers to the

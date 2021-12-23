@@ -40,7 +40,7 @@ using namespace llvm::sys;
 using namespace lld;
 using namespace lld::elf;
 
-std::vector<InputSectionBase *> elf::inputSections;
+SmallVector<InputSectionBase *, 0> elf::inputSections;
 DenseSet<std::pair<const Symbol *, uint64_t>> elf::ppc64noTocRelax;
 
 // Returns a string to construct an error message.
