@@ -328,14 +328,12 @@ define <4 x i32> @rotr_v4i32(<4 x i32> %x, <4 x i32> %z) nounwind {
 ;
 ; X64-AVX2-LABEL: rotr_v4i32:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; X64-AVX2-NEXT:    vpsubd %xmm1, %xmm2, %xmm1
 ; X64-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [31,31,31,31]
 ; X64-AVX2-NEXT:    vpand %xmm2, %xmm1, %xmm1
-; X64-AVX2-NEXT:    vpsllvd %xmm1, %xmm0, %xmm2
+; X64-AVX2-NEXT:    vpsrlvd %xmm1, %xmm0, %xmm2
 ; X64-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [32,32,32,32]
 ; X64-AVX2-NEXT:    vpsubd %xmm1, %xmm3, %xmm1
-; X64-AVX2-NEXT:    vpsrlvd %xmm1, %xmm0, %xmm0
+; X64-AVX2-NEXT:    vpsllvd %xmm1, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vpor %xmm0, %xmm2, %xmm0
 ; X64-AVX2-NEXT:    retq
   %f = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %x, <4 x i32> %x, <4 x i32> %z)
