@@ -118,35 +118,6 @@ static isl::schedule rebuildBand(isl::schedule_node_band OldBand,
   return NewBand.get_schedule();
 }
 
-/// Recursively visit all nodes of a schedule tree while allowing changes.
-///
-/// The visit methods return an isl::schedule_node that is used to continue
-/// visiting the tree. Structural changes such as returning a different node
-/// will confuse the visitor.
-template <typename Derived, typename... Args>
-struct ScheduleNodeRewriter
-    : public RecursiveScheduleTreeVisitor<Derived, isl::schedule_node,
-                                          Args...> {
-  Derived &getDerived() { return *static_cast<Derived *>(this); }
-  const Derived &getDerived() const {
-    return *static_cast<const Derived *>(this);
-  }
-
-  isl::schedule_node visitNode(const isl::schedule_node &Node, Args... args) {
-    if (!Node.has_children())
-      return Node;
-
-    isl::schedule_node It = Node.first_child();
-    while (true) {
-      It = getDerived().visit(It, std::forward<Args>(args)...);
-      if (!It.has_next_sibling())
-        break;
-      It = It.next_sibling();
-    }
-    return It.parent();
-  }
-};
-
 /// Rewrite a schedule tree by reconstructing it bottom-up.
 ///
 /// By default, the original schedule tree is reconstructed. To build a

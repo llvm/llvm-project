@@ -154,6 +154,39 @@ struct RecursiveScheduleTreeVisitor
   }
 };
 
+/// Recursively visit all nodes of a schedule tree while allowing changes.
+///
+/// The visit methods return an isl::schedule_node that is used to continue
+/// visiting the tree. Structural changes such as returning a different node
+/// will confuse the visitor.
+template <typename Derived, typename... Args>
+struct ScheduleNodeRewriter
+    : public RecursiveScheduleTreeVisitor<Derived, isl::schedule_node,
+                                          Args...> {
+  Derived &getDerived() { return *static_cast<Derived *>(this); }
+  const Derived &getDerived() const {
+    return *static_cast<const Derived *>(this);
+  }
+
+  isl::schedule_node visitNode(isl::schedule_node Node, Args... args) {
+    return getDerived().visitChildren(Node);
+  }
+
+  isl::schedule_node visitChildren(isl::schedule_node Node, Args... args) {
+    if (!Node.has_children())
+      return Node;
+
+    isl::schedule_node It = Node.first_child();
+    while (true) {
+      It = getDerived().visit(It, std::forward<Args>(args)...);
+      if (!It.has_next_sibling())
+        break;
+      It = It.next_sibling();
+    }
+    return It.parent();
+  }
+};
+
 /// Is this node the marker for its parent band?
 bool isBandMark(const isl::schedule_node &Node);
 

@@ -384,6 +384,19 @@ ScheduleTreeOptimizer::isolateFullPartialTiles(isl::schedule_node Node,
   return Result;
 }
 
+struct InsertSimdMarkers : public ScheduleNodeRewriter<InsertSimdMarkers> {
+  isl::schedule_node visitBand(isl::schedule_node_band Band) {
+    isl::schedule_node Node = visitChildren(Band);
+
+    // Only add SIMD markers to innermost bands.
+    if (!Node.first_child().isa<isl::schedule_node_leaf>())
+      return Node;
+
+    isl::id LoopMarker = isl::id::alloc(Band.ctx(), "SIMD", nullptr);
+    return Band.insert_mark(LoopMarker);
+  }
+};
+
 isl::schedule_node ScheduleTreeOptimizer::prevectSchedBand(
     isl::schedule_node Node, unsigned DimToVectorize, int VectorWidth) {
   assert(isl_schedule_node_get_type(Node.get()) == isl_schedule_node_band);
@@ -408,16 +421,19 @@ isl::schedule_node ScheduleTreeOptimizer::prevectSchedBand(
   Node = Node.child(0);
   // Make sure the "trivially vectorizable loop" is not unrolled. Otherwise,
   // we will have troubles to match it in the backend.
-  isl::schedule_node_band NodeBand =
-      Node.as<isl::schedule_node_band>().set_ast_build_options(
-          isl::union_set(Node.ctx(), "{ unroll[x]: 1 = 0 }"));
-  Node = isl::manage(isl_schedule_node_band_sink(NodeBand.release()));
-  Node = Node.child(0);
-  if (isl_schedule_node_get_type(Node.get()) == isl_schedule_node_leaf)
-    Node = Node.parent();
-  auto LoopMarker = isl::id::alloc(Node.ctx(), "SIMD", nullptr);
+  Node = Node.as<isl::schedule_node_band>().set_ast_build_options(
+      isl::union_set(Node.ctx(), "{ unroll[x]: 1 = 0 }"));
+
+  // Sink the inner loop into the smallest possible statements to make them
+  // represent a single vector instruction if possible.
+  Node = isl::manage(isl_schedule_node_band_sink(Node.release()));
+
+  // Add SIMD markers to those vector statements.
+  InsertSimdMarkers SimdMarkerInserter;
+  Node = SimdMarkerInserter.visit(Node);
+
   PrevectOpts++;
-  return Node.insert_mark(LoopMarker);
+  return Node.parent();
 }
 
 static bool isSimpleInnermostBand(const isl::schedule_node &Node) {
