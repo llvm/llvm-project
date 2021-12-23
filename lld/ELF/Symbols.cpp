@@ -256,10 +256,12 @@ void Symbol::parseSymbolVersion() {
 }
 
 void Symbol::extract() const {
-  if (auto *sym = dyn_cast<LazyArchive>(this))
+  if (auto *sym = dyn_cast<LazyArchive>(this)) {
     cast<ArchiveFile>(sym->file)->extract(sym->sym);
-  else
-    cast<LazyObjFile>(this->file)->extract();
+  } else if (file->lazy) {
+    file->lazy = false;
+    parseFile(file);
+  }
 }
 
 MemoryBufferRef LazyArchive::getMemberBuffer() {
@@ -711,8 +713,7 @@ template <class LazyT> void Symbol::resolveLazy(const LazyT &other) {
         return;
       }
     } else if (auto *loSym = dyn_cast<LazyObject>(&other)) {
-      LazyObjFile *obj = cast<LazyObjFile>(loSym->file);
-      if (obj->shouldExtractForCommon(loSym->getName())) {
+      if (loSym->file->shouldExtractForCommon(loSym->getName())) {
         replaceCommon(*this, other);
         return;
       }

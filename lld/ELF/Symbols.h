@@ -430,7 +430,9 @@ class LazyObject : public Symbol {
 public:
   LazyObject(InputFile &file, StringRef name)
       : Symbol(LazyObjectKind, &file, name, llvm::ELF::STB_GLOBAL,
-               llvm::ELF::STV_DEFAULT, llvm::ELF::STT_NOTYPE) {}
+               llvm::ELF::STV_DEFAULT, llvm::ELF::STT_NOTYPE) {
+    isUsedInRegularObj = false;
+  }
 
   static bool classof(const Symbol *s) { return s->kind() == LazyObjectKind; }
 };
