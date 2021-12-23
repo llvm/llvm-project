@@ -54,6 +54,10 @@ dfsan_origin dfsan_get_origin(long data);
 /// Retrieves the label associated with the data at the given address.
 dfsan_label dfsan_read_label(const void *addr, size_t size);
 
+/// Return the origin associated with the first taint byte in the size bytes
+/// from the address addr.
+dfsan_origin dfsan_read_origin_of_first_taint(const void *addr, size_t size);
+
 /// Returns whether the given label label contains the label elem.
 int dfsan_has_label(dfsan_label label, dfsan_label elem);
 
