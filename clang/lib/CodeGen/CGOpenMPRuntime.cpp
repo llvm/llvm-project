@@ -774,7 +774,7 @@ LValue ReductionCodeGen::emitSharedLValueUB(CodeGenFunction &CGF,
 }
 
 void ReductionCodeGen::emitAggregateInitialization(
-    CodeGenFunction &CGF, unsigned N, Address PrivateAddr, LValue SharedLVal,
+    CodeGenFunction &CGF, unsigned N, Address PrivateAddr, Address SharedAddr,
     const OMPDeclareReductionDecl *DRD) {
   // Emit VarDecl with copy init for arrays.
   // Get the address of the original variable captured in current
@@ -787,7 +787,7 @@ void ReductionCodeGen::emitAggregateInitialization(
                        EmitDeclareReductionInit,
                        EmitDeclareReductionInit ? ClausesData[N].ReductionOp
                                                 : PrivateVD->getInit(),
-                       DRD, SharedLVal.getAddress(CGF));
+                       DRD, SharedAddr);
 }
 
 ReductionCodeGen::ReductionCodeGen(ArrayRef<const Expr *> Shareds,
@@ -881,7 +881,7 @@ void ReductionCodeGen::emitAggregateType(CodeGenFunction &CGF, unsigned N,
 }
 
 void ReductionCodeGen::emitInitialization(
-    CodeGenFunction &CGF, unsigned N, Address PrivateAddr, LValue SharedLVal,
+    CodeGenFunction &CGF, unsigned N, Address PrivateAddr, Address SharedAddr,
     llvm::function_ref<bool(CodeGenFunction &)> DefaultInit) {
   assert(SharedAddresses.size() > N && "No variable was generated");
   const auto *PrivateVD =
@@ -891,21 +891,15 @@ void ReductionCodeGen::emitInitialization(
   QualType PrivateType = PrivateVD->getType();
   PrivateAddr = CGF.Builder.CreateElementBitCast(
       PrivateAddr, CGF.ConvertTypeForMem(PrivateType));
-  QualType SharedType = SharedAddresses[N].first.getType();
-  SharedLVal = CGF.MakeAddrLValue(
-      CGF.Builder.CreateElementBitCast(SharedLVal.getAddress(CGF),
-                                       CGF.ConvertTypeForMem(SharedType)),
-      SharedType, SharedAddresses[N].first.getBaseInfo(),
-      CGF.CGM.getTBAAInfoForSubobject(SharedAddresses[N].first, SharedType));
   if (CGF.getContext().getAsArrayType(PrivateVD->getType())) {
     if (DRD && DRD->getInitializer())
       (void)DefaultInit(CGF);
-    emitAggregateInitialization(CGF, N, PrivateAddr, SharedLVal, DRD);
+    emitAggregateInitialization(CGF, N, PrivateAddr, SharedAddr, DRD);
   } else if (DRD && (DRD->getInitializer() || !PrivateVD->hasInit())) {
     (void)DefaultInit(CGF);
+    QualType SharedType = SharedAddresses[N].first.getType();
     emitInitWithReductionInitializer(CGF, DRD, ClausesData[N].ReductionOp,
-                                     PrivateAddr, SharedLVal.getAddress(CGF),
-                                     SharedLVal.getType());
+                                     PrivateAddr, SharedAddr, SharedType);
   } else if (!DefaultInit(CGF) && PrivateVD->hasInit() &&
              !CGF.isTrivialInitializer(PrivateVD->getInit())) {
     CGF.EmitAnyExprToMem(PrivateVD->getInit(), PrivateAddr,
@@ -5915,25 +5909,20 @@ static llvm::Value *emitReduceInitFunction(CodeGenModule &CGM,
                                 CGM.getContext().getSizeType(), Loc);
   }
   RCG.emitAggregateType(CGF, N, Size);
-  LValue OrigLVal;
+  Address OrigAddr = Address::invalid();
   // If initializer uses initializer from declare reduction construct, emit a
   // pointer to the address of the original reduction item (reuired by reduction
   // initializer)
   if (RCG.usesReductionInitializer(N)) {
     Address SharedAddr = CGF.GetAddrOfLocalVar(&ParamOrig);
-    SharedAddr = CGF.EmitLoadOfPointer(
+    OrigAddr = CGF.EmitLoadOfPointer(
         SharedAddr,
         CGM.getContext().VoidPtrTy.castAs<PointerType>()->getTypePtr());
-    OrigLVal = CGF.MakeAddrLValue(SharedAddr, CGM.getContext().VoidPtrTy);
-  } else {
-    OrigLVal = CGF.MakeNaturalAlignAddrLValue(
-        llvm::ConstantPointerNull::get(CGM.VoidPtrTy),
-        CGM.getContext().VoidTy);
   }
   // Emit the initializer:
   // %0 = bitcast void* %arg to <type>*
   // store <type> <init>, <type>* %0
-  RCG.emitInitialization(CGF, N, PrivateAddr, OrigLVal,
+  RCG.emitInitialization(CGF, N, PrivateAddr, OrigAddr,
                          [](CodeGenFunction &) { return false; });
   CGF.FinishFunction();
   return Fn;
