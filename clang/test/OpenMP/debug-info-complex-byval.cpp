@@ -57,7 +57,7 @@ void a() {
 // CHECK1-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8, !dbg [[DBG38]]
 // CHECK1-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[DOTBOUND_TID__ADDR]], align 8, !dbg [[DBG38]]
 // CHECK1-NEXT:    [[TMP2:%.*]] = bitcast { float, float }* [[CONV]] to <2 x float>*, !dbg [[DBG38]]
-// CHECK1-NEXT:    [[TMP3:%.*]] = load <2 x float>, <2 x float>* [[TMP2]], align 8, !dbg [[DBG38]]
+// CHECK1-NEXT:    [[TMP3:%.*]] = load <2 x float>, <2 x float>* [[TMP2]], align 4, !dbg [[DBG38]]
 // CHECK1-NEXT:    call void @.omp_outlined._debug__(i32* [[TMP0]], i32* [[TMP1]], <2 x float> [[TMP3]]) #[[ATTR4:[0-9]+]], !dbg [[DBG38]]
 // CHECK1-NEXT:    ret void, !dbg [[DBG38]]
 //

@@ -710,22 +710,13 @@ determinePointerAccessAttrs(Argument *A,
       if (CB.doesNotAccessMemory())
         continue;
 
-      Function *F = CB.getCalledFunction();
-      if (!F) {
-        if (CB.onlyReadsMemory()) {
-          IsRead = true;
-          continue;
-        }
-        return Attribute::None;
-      }
-
-      if (CB.isArgOperand(U) && UseIndex < F->arg_size() &&
-          SCCNodes.count(F->getArg(UseIndex))) {
-        // This is an argument which is part of the speculative SCC.  Note that
-        // only operands corresponding to formal arguments of the callee can
-        // participate in the speculation.
-        break;
-      }
+      if (Function *F = CB.getCalledFunction())
+        if (CB.isArgOperand(U) && UseIndex < F->arg_size() &&
+            SCCNodes.count(F->getArg(UseIndex)))
+          // This is an argument which is part of the speculative SCC.  Note
+          // that only operands corresponding to formal arguments of the callee
+          // can participate in the speculation.
+          break;
 
       // The accessors used on call site here do the right thing for calls and
       // invokes with operand bundles.

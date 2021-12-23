@@ -90,7 +90,7 @@ bool elf::link(ArrayRef<const char *> args, bool canExitEarly,
     archiveFiles.clear();
     binaryFiles.clear();
     bitcodeFiles.clear();
-    lazyObjFiles.clear();
+    lazyBitcodeFiles.clear();
     objectFiles.clear();
     sharedFiles.clear();
     backwardReferences.clear();
@@ -248,7 +248,7 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
 
       for (const std::pair<MemoryBufferRef, uint64_t> &p :
            getArchiveMembers(mbref))
-        files.push_back(make<LazyObjFile>(p.first, path, p.second));
+        files.push_back(createLazyFile(p.first, path, p.second));
       return;
     }
 
@@ -273,7 +273,7 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
   case file_magic::bitcode:
   case file_magic::elf_relocatable:
     if (inLib)
-      files.push_back(make<LazyObjFile>(mbref, "", 0));
+      files.push_back(createLazyFile(mbref, "", 0));
     else
       files.push_back(createObjectFile(mbref));
     break;

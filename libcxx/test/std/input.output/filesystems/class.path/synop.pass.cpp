@@ -17,8 +17,9 @@
 // static constexpr value_type preferred_separator = ...;
 
 #include "filesystem_include.h"
-#include <type_traits>
 #include <cassert>
+#include <string>
+#include <type_traits>
 
 #include "test_macros.h"
 

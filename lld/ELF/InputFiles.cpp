@@ -43,12 +43,12 @@ using namespace lld::elf;
 bool InputFile::isInGroup;
 uint32_t InputFile::nextGroupId;
 
-std::vector<ArchiveFile *> elf::archiveFiles;
-std::vector<BinaryFile *> elf::binaryFiles;
-std::vector<BitcodeFile *> elf::bitcodeFiles;
-std::vector<LazyObjFile *> elf::lazyObjFiles;
-std::vector<ELFFileBase *> elf::objectFiles;
-std::vector<SharedFile *> elf::sharedFiles;
+SmallVector<ArchiveFile *, 0> elf::archiveFiles;
+SmallVector<BinaryFile *, 0> elf::binaryFiles;
+SmallVector<BitcodeFile *, 0> elf::bitcodeFiles;
+SmallVector<BitcodeFile *, 0> elf::lazyBitcodeFiles;
+SmallVector<ELFFileBase *, 0> elf::objectFiles;
+SmallVector<SharedFile *, 0> elf::sharedFiles;
 
 std::unique_ptr<TarWriter> elf::tar;
 
@@ -186,9 +186,13 @@ template <class ELFT> static void doParseFile(InputFile *file) {
   }
 
   // Lazy object file
-  if (auto *f = dyn_cast<LazyObjFile>(file)) {
-    lazyObjFiles.push_back(f);
-    f->parse<ELFT>();
+  if (file->lazy) {
+    if (auto *f = dyn_cast<BitcodeFile>(file)) {
+      lazyBitcodeFiles.push_back(f);
+      f->parseLazy();
+    } else {
+      cast<ObjFile<ELFT>>(file)->parseLazy();
+    }
     return;
   }
 
@@ -1130,15 +1134,14 @@ template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
     // defined symbol in a .eh_frame becomes dangling symbols.
     if (sec == &InputSection::discarded) {
       Undefined und{this, name, binding, stOther, type, secIdx};
-      // !ArchiveFile::parsed or LazyObjFile::extracted means that the file
+      // !ArchiveFile::parsed or !LazyObjFile::lazy means that the file
       // containing this object has not finished processing, i.e. this symbol is
       // a result of a lazy symbol extract. We should demote the lazy symbol to
       // an Undefined so that any relocations outside of the group to it will
       // trigger a discarded section error.
       if ((sym->symbolKind == Symbol::LazyArchiveKind &&
            !cast<ArchiveFile>(sym->file)->parsed) ||
-          (sym->symbolKind == Symbol::LazyObjectKind &&
-           cast<LazyObjFile>(sym->file)->extracted)) {
+          (sym->symbolKind == Symbol::LazyObjectKind && !sym->file->lazy)) {
         sym->replace(und);
         // Prevent LTO from internalizing the symbol in case there is a
         // reference to this symbol from this file.
@@ -1630,9 +1633,10 @@ static uint8_t getOsAbi(const Triple &t) {
 }
 
 BitcodeFile::BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
-                         uint64_t offsetInArchive)
+                         uint64_t offsetInArchive, bool lazy)
     : InputFile(BitcodeKind, mb) {
   this->archiveName = archiveName;
+  this->lazy = lazy;
 
   std::string path = mb.getBufferIdentifier().str();
   if (config->thinLTOIndexOnly)
@@ -1718,6 +1722,12 @@ template <class ELFT> void BitcodeFile::parse() {
     addDependentLibrary(l, this);
 }
 
+void BitcodeFile::parseLazy() {
+  for (const lto::InputFile::Symbol &sym : obj->symbols())
+    if (!sym.isUndefined())
+      symtab->addSymbol(LazyObject{*this, saver.save(sym.getName())});
+}
+
 void BinaryFile::parse() {
   ArrayRef<uint8_t> data = arrayRefFromStringRef(mb.getBuffer());
   auto *section = make<InputSection>(this, SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
@@ -1744,7 +1754,7 @@ void BinaryFile::parse() {
 InputFile *elf::createObjectFile(MemoryBufferRef mb, StringRef archiveName,
                                  uint64_t offsetInArchive) {
   if (isBitcode(mb))
-    return make<BitcodeFile>(mb, archiveName, offsetInArchive);
+    return make<BitcodeFile>(mb, archiveName, offsetInArchive, /*lazy=*/false);
 
   switch (getELFKind(mb, archiveName)) {
   case ELF32LEKind:
@@ -1760,40 +1770,19 @@ InputFile *elf::createObjectFile(MemoryBufferRef mb, StringRef archiveName,
   }
 }
 
-void LazyObjFile::extract() {
-  if (extracted)
-    return;
-  extracted = true;
+InputFile *elf::createLazyFile(MemoryBufferRef mb, StringRef archiveName,
+                               uint64_t offsetInArchive) {
+  if (isBitcode(mb))
+    return make<BitcodeFile>(mb, archiveName, offsetInArchive, /*lazy=*/true);
 
-  InputFile *file = createObjectFile(mb, archiveName, offsetInArchive);
-  file->groupId = groupId;
-
-  // Copy symbol vector so that the new InputFile doesn't have to
-  // insert the same defined symbols to the symbol table again.
-  file->symbols = std::move(symbols);
-
-  parseFile(file);
+  auto *file =
+      cast<ELFFileBase>(createObjectFile(mb, archiveName, offsetInArchive));
+  file->lazy = true;
+  return file;
 }
 
-template <class ELFT> void LazyObjFile::parse() {
+template <class ELFT> void ObjFile<ELFT>::parseLazy() {
   using Elf_Sym = typename ELFT::Sym;
-
-  // A lazy object file wraps either a bitcode file or an ELF file.
-  if (isBitcode(this->mb)) {
-    std::unique_ptr<lto::InputFile> obj =
-        CHECK(lto::InputFile::create(this->mb), this);
-    for (const lto::InputFile::Symbol &sym : obj->symbols()) {
-      if (sym.isUndefined())
-        continue;
-      symtab->addSymbol(LazyObject{*this, saver.save(sym.getName())});
-    }
-    return;
-  }
-
-  if (getELFKind(this->mb, archiveName) != config->ekind) {
-    error("incompatible file: " + this->mb.getBufferIdentifier());
-    return;
-  }
 
   // Find a symbol table.
   ELFFile<ELFT> obj = check(ELFFile<ELFT>::create(mb.getBuffer()));
@@ -1825,16 +1814,16 @@ template <class ELFT> void LazyObjFile::parse() {
         continue;
       sym->resolve(LazyObject{*this, sym->getName()});
 
-      // If extracted, stop iterating because this->symbols has been transferred
-      // to the instantiated ObjFile.
-      if (extracted)
+      // If extracted, stop iterating because the symbol resolution has been
+      // done by ObjFile::parse.
+      if (!lazy)
         return;
     }
     return;
   }
 }
 
-bool LazyObjFile::shouldExtractForCommon(const StringRef &name) {
+bool InputFile::shouldExtractForCommon(StringRef name) {
   if (isBitcode(mb))
     return isBitcodeNonCommonDef(mb, name, archiveName);
 
@@ -1854,11 +1843,6 @@ template void BitcodeFile::parse<ELF32LE>();
 template void BitcodeFile::parse<ELF32BE>();
 template void BitcodeFile::parse<ELF64LE>();
 template void BitcodeFile::parse<ELF64BE>();
-
-template void LazyObjFile::parse<ELF32LE>();
-template void LazyObjFile::parse<ELF32BE>();
-template void LazyObjFile::parse<ELF64LE>();
-template void LazyObjFile::parse<ELF64BE>();
 
 template class elf::ObjFile<ELF32LE>;
 template class elf::ObjFile<ELF32BE>;

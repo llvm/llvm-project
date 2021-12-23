@@ -380,8 +380,8 @@ int main (int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP1:%.*]] = load [100 x i32]*, [100 x i32]** [[A_ADDR]], align 8
 // CHECK1-NEXT:    [[CONV2:%.*]] = bitcast i64* [[I_ADDR]] to i32*
 // CHECK1-NEXT:    [[CONV3:%.*]] = bitcast i64* [[N_ADDR]] to i32*
-// CHECK1-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
-// CHECK1-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK1-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
+// CHECK1-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK1-NEXT:    call void @__kmpc_push_num_teams(%struct.ident_t* @[[GLOB2]], i32 [[TMP0]], i32 [[TMP2]], i32 [[TMP3]])
 // CHECK1-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_teams(%struct.ident_t* @[[GLOB2]], i32 3, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, i32*, [100 x i32]*)* @.omp_outlined. to void (i32*, i32*, ...)*), i32* [[CONV2]], i32* [[CONV3]], [100 x i32]* [[TMP1]])
 // CHECK1-NEXT:    ret void
@@ -789,8 +789,8 @@ int main (int argc, char **argv) {
 // CHECK2-NEXT:    [[TMP1:%.*]] = load [100 x i32]*, [100 x i32]** [[A_ADDR]], align 8
 // CHECK2-NEXT:    [[CONV2:%.*]] = bitcast i64* [[I_ADDR]] to i32*
 // CHECK2-NEXT:    [[CONV3:%.*]] = bitcast i64* [[N_ADDR]] to i32*
-// CHECK2-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
-// CHECK2-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK2-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
+// CHECK2-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK2-NEXT:    call void @__kmpc_push_num_teams(%struct.ident_t* @[[GLOB2]], i32 [[TMP0]], i32 [[TMP2]], i32 [[TMP3]])
 // CHECK2-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_teams(%struct.ident_t* @[[GLOB2]], i32 3, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, i32*, [100 x i32]*)* @.omp_outlined. to void (i32*, i32*, ...)*), i32* [[CONV2]], i32* [[CONV3]], [100 x i32]* [[TMP1]])
 // CHECK2-NEXT:    ret void
@@ -4329,7 +4329,7 @@ int main (int argc, char **argv) {
 // CHECK21-NEXT:    store i32 [[COND]], i32* [[DOTOMP_UB]], align 4
 // CHECK21-NEXT:    [[TMP5:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
 // CHECK21-NEXT:    store i32 [[TMP5]], i32* [[DOTOMP_IV]], align 4
-// CHECK21-NEXT:    [[TMP6:%.*]] = load i8, i8* [[CONV]], align 8
+// CHECK21-NEXT:    [[TMP6:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK21-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP6]] to i1
 // CHECK21-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK21:       omp_if.then:
@@ -4551,7 +4551,7 @@ int main (int argc, char **argv) {
 // CHECK22-NEXT:    store i32 [[COND]], i32* [[DOTOMP_UB]], align 4
 // CHECK22-NEXT:    [[TMP5:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
 // CHECK22-NEXT:    store i32 [[TMP5]], i32* [[DOTOMP_IV]], align 4
-// CHECK22-NEXT:    [[TMP6:%.*]] = load i8, i8* [[CONV]], align 8
+// CHECK22-NEXT:    [[TMP6:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK22-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP6]] to i1
 // CHECK22-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK22:       omp_if.then:
@@ -4773,7 +4773,7 @@ int main (int argc, char **argv) {
 // CHECK23-NEXT:    store i32 [[COND]], i32* [[DOTOMP_UB]], align 4
 // CHECK23-NEXT:    [[TMP5:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
 // CHECK23-NEXT:    store i32 [[TMP5]], i32* [[DOTOMP_IV]], align 4
-// CHECK23-NEXT:    [[TMP6:%.*]] = load i8, i8* [[CONV]], align 4
+// CHECK23-NEXT:    [[TMP6:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK23-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP6]] to i1
 // CHECK23-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK23:       omp_if.then:
@@ -4993,7 +4993,7 @@ int main (int argc, char **argv) {
 // CHECK24-NEXT:    store i32 [[COND]], i32* [[DOTOMP_UB]], align 4
 // CHECK24-NEXT:    [[TMP5:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
 // CHECK24-NEXT:    store i32 [[TMP5]], i32* [[DOTOMP_IV]], align 4
-// CHECK24-NEXT:    [[TMP6:%.*]] = load i8, i8* [[CONV]], align 4
+// CHECK24-NEXT:    [[TMP6:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK24-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP6]] to i1
 // CHECK24-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK24:       omp_if.then:
@@ -5991,8 +5991,8 @@ int main (int argc, char **argv) {
 // CHECK33-NEXT:    [[CONV:%.*]] = bitcast i64* [[TE_ADDR]] to i32*
 // CHECK33-NEXT:    [[CONV1:%.*]] = bitcast i64* [[TH_ADDR]] to i32*
 // CHECK33-NEXT:    [[TMP1:%.*]] = load [10 x i32]*, [10 x i32]** [[A_ADDR]], align 8
-// CHECK33-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
-// CHECK33-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK33-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
+// CHECK33-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK33-NEXT:    call void @__kmpc_push_num_teams(%struct.ident_t* @[[GLOB2]], i32 [[TMP0]], i32 [[TMP2]], i32 [[TMP3]])
 // CHECK33-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_teams(%struct.ident_t* @[[GLOB2]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, [10 x i32]*)* @.omp_outlined..1 to void (i32*, i32*, ...)*), [10 x i32]* [[TMP1]])
 // CHECK33-NEXT:    ret void
@@ -6369,8 +6369,8 @@ int main (int argc, char **argv) {
 // CHECK34-NEXT:    [[CONV:%.*]] = bitcast i64* [[TE_ADDR]] to i32*
 // CHECK34-NEXT:    [[CONV1:%.*]] = bitcast i64* [[TH_ADDR]] to i32*
 // CHECK34-NEXT:    [[TMP1:%.*]] = load [10 x i32]*, [10 x i32]** [[A_ADDR]], align 8
-// CHECK34-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
-// CHECK34-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK34-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
+// CHECK34-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK34-NEXT:    call void @__kmpc_push_num_teams(%struct.ident_t* @[[GLOB2]], i32 [[TMP0]], i32 [[TMP2]], i32 [[TMP3]])
 // CHECK34-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_teams(%struct.ident_t* @[[GLOB2]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, [10 x i32]*)* @.omp_outlined..1 to void (i32*, i32*, ...)*), [10 x i32]* [[TMP1]])
 // CHECK34-NEXT:    ret void
@@ -7321,7 +7321,7 @@ int main (int argc, char **argv) {
 // CHECK37-NEXT:    [[CONV1:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK37-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK37-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
-// CHECK37-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK37-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK37-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP2]], 0
 // CHECK37-NEXT:    [[FROMBOOL:%.*]] = zext i1 [[TOBOOL]] to i8
 // CHECK37-NEXT:    store i8 [[FROMBOOL]], i8* [[DOTCAPTURE_EXPR_]], align 1
@@ -7399,7 +7399,7 @@ int main (int argc, char **argv) {
 // CHECK37-NEXT:    store i32 [[COND]], i32* [[DOTOMP_UB]], align 4
 // CHECK37-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
 // CHECK37-NEXT:    store i32 [[TMP13]], i32* [[DOTOMP_IV]], align 4
-// CHECK37-NEXT:    [[TMP14:%.*]] = load i8, i8* [[CONV]], align 8
+// CHECK37-NEXT:    [[TMP14:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK37-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP14]] to i1
 // CHECK37-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK37:       omp_if.then:
@@ -7552,8 +7552,8 @@ int main (int argc, char **argv) {
 // CHECK37-NEXT:    [[CONV:%.*]] = bitcast i64* [[TE_ADDR]] to i32*
 // CHECK37-NEXT:    [[CONV1:%.*]] = bitcast i64* [[TH_ADDR]] to i32*
 // CHECK37-NEXT:    [[TMP1:%.*]] = load [10 x i32]*, [10 x i32]** [[A_ADDR]], align 8
-// CHECK37-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
-// CHECK37-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK37-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
+// CHECK37-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK37-NEXT:    call void @__kmpc_push_num_teams(%struct.ident_t* @[[GLOB2]], i32 [[TMP0]], i32 [[TMP2]], i32 [[TMP3]])
 // CHECK37-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_teams(%struct.ident_t* @[[GLOB2]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, [10 x i32]*)* @.omp_outlined..1 to void (i32*, i32*, ...)*), [10 x i32]* [[TMP1]])
 // CHECK37-NEXT:    ret void
@@ -7764,7 +7764,7 @@ int main (int argc, char **argv) {
 // CHECK38-NEXT:    [[CONV1:%.*]] = bitcast i64* [[N_ADDR]] to i32*
 // CHECK38-NEXT:    [[TMP0:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
 // CHECK38-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[A_ADDR]], align 8
-// CHECK38-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK38-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK38-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP2]], 0
 // CHECK38-NEXT:    [[FROMBOOL:%.*]] = zext i1 [[TOBOOL]] to i8
 // CHECK38-NEXT:    store i8 [[FROMBOOL]], i8* [[DOTCAPTURE_EXPR_]], align 1
@@ -7842,7 +7842,7 @@ int main (int argc, char **argv) {
 // CHECK38-NEXT:    store i32 [[COND]], i32* [[DOTOMP_UB]], align 4
 // CHECK38-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
 // CHECK38-NEXT:    store i32 [[TMP13]], i32* [[DOTOMP_IV]], align 4
-// CHECK38-NEXT:    [[TMP14:%.*]] = load i8, i8* [[CONV]], align 8
+// CHECK38-NEXT:    [[TMP14:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK38-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP14]] to i1
 // CHECK38-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK38:       omp_if.then:
@@ -7995,8 +7995,8 @@ int main (int argc, char **argv) {
 // CHECK38-NEXT:    [[CONV:%.*]] = bitcast i64* [[TE_ADDR]] to i32*
 // CHECK38-NEXT:    [[CONV1:%.*]] = bitcast i64* [[TH_ADDR]] to i32*
 // CHECK38-NEXT:    [[TMP1:%.*]] = load [10 x i32]*, [10 x i32]** [[A_ADDR]], align 8
-// CHECK38-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
-// CHECK38-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK38-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
+// CHECK38-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK38-NEXT:    call void @__kmpc_push_num_teams(%struct.ident_t* @[[GLOB2]], i32 [[TMP0]], i32 [[TMP2]], i32 [[TMP3]])
 // CHECK38-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_teams(%struct.ident_t* @[[GLOB2]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, [10 x i32]*)* @.omp_outlined..1 to void (i32*, i32*, ...)*), [10 x i32]* [[TMP1]])
 // CHECK38-NEXT:    ret void
@@ -8281,7 +8281,7 @@ int main (int argc, char **argv) {
 // CHECK39-NEXT:    store i32 [[COND]], i32* [[DOTOMP_UB]], align 4
 // CHECK39-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
 // CHECK39-NEXT:    store i32 [[TMP13]], i32* [[DOTOMP_IV]], align 4
-// CHECK39-NEXT:    [[TMP14:%.*]] = load i8, i8* [[CONV]], align 4
+// CHECK39-NEXT:    [[TMP14:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK39-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP14]] to i1
 // CHECK39-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK39:       omp_if.then:
@@ -8713,7 +8713,7 @@ int main (int argc, char **argv) {
 // CHECK40-NEXT:    store i32 [[COND]], i32* [[DOTOMP_UB]], align 4
 // CHECK40-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
 // CHECK40-NEXT:    store i32 [[TMP13]], i32* [[DOTOMP_IV]], align 4
-// CHECK40-NEXT:    [[TMP14:%.*]] = load i8, i8* [[CONV]], align 4
+// CHECK40-NEXT:    [[TMP14:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK40-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP14]] to i1
 // CHECK40-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK40:       omp_if.then:
