@@ -381,35 +381,6 @@ template <class ELFT> void elf::markLive() {
     return;
   }
 
-  // Otherwise, do mark-sweep GC.
-  //
-  // The --gc-sections option works only for SHF_ALLOC sections (sections that
-  // are memory-mapped at runtime). So we can unconditionally make non-SHF_ALLOC
-  // sections alive except SHF_LINK_ORDER, SHT_REL/SHT_RELA sections, and
-  // sections in a group.
-  //
-  // Usually, non-SHF_ALLOC sections are not removed even if they are
-  // unreachable through relocations because reachability is not a good signal
-  // whether they are garbage or not (e.g. there is usually no section referring
-  // to a .comment section, but we want to keep it.) When a non-SHF_ALLOC
-  // section is retained, we also retain sections dependent on it.
-  //
-  // Note on SHF_LINK_ORDER: Such sections contain metadata and they
-  // have a reverse dependency on the InputSection they are linked with.
-  // We are able to garbage collect them.
-  //
-  // Note on SHF_REL{,A}: Such sections reach here only when -r
-  // or --emit-reloc were given. And they are subject of garbage
-  // collection because, if we remove a text section, we also
-  // remove its relocation section.
-  //
-  // Note on nextInSectionGroup: The ELF spec says that group sections are
-  // included or omitted as a unit. We take the interpretation that:
-  //
-  // - Group members (nextInSectionGroup != nullptr) are subject to garbage
-  //   collection.
-  // - Groups members are retained or discarded as a unit.
-
   // Follow the graph to mark all live sections.
   for (unsigned curPart = 1; curPart <= partitions.size(); ++curPart)
     MarkLive<ELFT>(curPart).run();
