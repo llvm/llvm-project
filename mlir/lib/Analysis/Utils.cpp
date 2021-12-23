@@ -817,15 +817,15 @@ mlir::computeSliceUnion(ArrayRef<Operation *> opsA, ArrayRef<Operation *> opsB,
   FlatAffineValueConstraints sliceUnionCst;
   assert(sliceUnionCst.getNumDimAndSymbolIds() == 0);
   std::vector<std::pair<Operation *, Operation *>> dependentOpPairs;
-  for (unsigned i = 0, numOpsA = opsA.size(); i < numOpsA; ++i) {
-    MemRefAccess srcAccess(opsA[i]);
-    for (unsigned j = 0, numOpsB = opsB.size(); j < numOpsB; ++j) {
-      MemRefAccess dstAccess(opsB[j]);
+  for (auto i : opsA) {
+    MemRefAccess srcAccess(i);
+    for (auto j : opsB) {
+      MemRefAccess dstAccess(j);
       if (srcAccess.memref != dstAccess.memref)
         continue;
       // Check if 'loopDepth' exceeds nesting depth of src/dst ops.
-      if ((!isBackwardSlice && loopDepth > getNestingDepth(opsA[i])) ||
-          (isBackwardSlice && loopDepth > getNestingDepth(opsB[j]))) {
+      if ((!isBackwardSlice && loopDepth > getNestingDepth(i)) ||
+          (isBackwardSlice && loopDepth > getNestingDepth(j))) {
         LLVM_DEBUG(llvm::dbgs() << "Invalid loop depth\n");
         return SliceComputationResult::GenericFailure;
       }
@@ -844,13 +844,12 @@ mlir::computeSliceUnion(ArrayRef<Operation *> opsA, ArrayRef<Operation *> opsB,
       }
       if (result.value == DependenceResult::NoDependence)
         continue;
-      dependentOpPairs.push_back({opsA[i], opsB[j]});
+      dependentOpPairs.emplace_back(i, j);
 
       // Compute slice bounds for 'srcAccess' and 'dstAccess'.
       ComputationSliceState tmpSliceState;
-      mlir::getComputationSliceState(opsA[i], opsB[j], &dependenceConstraints,
-                                     loopDepth, isBackwardSlice,
-                                     &tmpSliceState);
+      mlir::getComputationSliceState(i, j, &dependenceConstraints, loopDepth,
+                                     isBackwardSlice, &tmpSliceState);
 
       if (sliceUnionCst.getNumDimAndSymbolIds() == 0) {
         // Initialize 'sliceUnionCst' with the bounds computed in previous step.

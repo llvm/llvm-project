@@ -14,8 +14,7 @@
 #include <__iterator/readable_traits.h>
 #include <__ranges/enable_borrowed_range.h>
 #include <__utility/as_const.h>
-#include <__utility/decay_copy.h>
-#include <__utility/forward.h>
+#include <__utility/auto_cast.h>
 #include <concepts>
 #include <type_traits>
 
@@ -27,15 +26,10 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if !defined(_LIBCPP_HAS_NO_RANGES)
 
-// clang-format off
-
 namespace ranges {
   template <class _Tp>
   concept __can_borrow =
       is_lvalue_reference_v<_Tp> || enable_borrowed_range<remove_cvref_t<_Tp> >;
-
-  template<class _Tp>
-  concept __is_complete = requires { sizeof(_Tp); };
 } // namespace ranges
 
 // [range.access.begin]
@@ -44,7 +38,7 @@ namespace ranges::__begin {
   concept __member_begin =
     __can_borrow<_Tp> &&
     requires(_Tp&& __t) {
-      { _VSTD::__decay_copy(__t.begin()) } -> input_or_output_iterator;
+      { _LIBCPP_AUTO_CAST(__t.begin()) } -> input_or_output_iterator;
     };
 
   void begin(auto&) = delete;
@@ -56,36 +50,31 @@ namespace ranges::__begin {
     __can_borrow<_Tp> &&
     __class_or_enum<remove_cvref_t<_Tp> > &&
     requires(_Tp && __t) {
-      { _VSTD::__decay_copy(begin(__t)) } -> input_or_output_iterator;
+      { _LIBCPP_AUTO_CAST(begin(__t)) } -> input_or_output_iterator;
     };
 
   struct __fn {
     template <class _Tp>
-    requires is_array_v<remove_cv_t<_Tp>>
-    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp& __t) const noexcept {
-      constexpr bool __complete = __is_complete<iter_value_t<_Tp> >;
-      if constexpr (__complete) { // used to disable cryptic diagnostic
-        return __t + 0;
-      }
-      else {
-        static_assert(__complete, "`std::ranges::begin` is SFINAE-unfriendly on arrays of an incomplete type.");
-      }
+      requires is_array_v<remove_cv_t<_Tp>>
+    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp& __t) const noexcept
+    {
+      return __t;
     }
 
     template <class _Tp>
     requires __member_begin<_Tp>
     [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
-    noexcept(noexcept(_VSTD::__decay_copy(__t.begin())))
+    noexcept(noexcept(_LIBCPP_AUTO_CAST(__t.begin())))
     {
-      return __t.begin();
+      return _LIBCPP_AUTO_CAST(__t.begin());
     }
 
     template <class _Tp>
     requires __unqualified_begin<_Tp>
     [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
-    noexcept(noexcept(_VSTD::__decay_copy(begin(__t))))
+    noexcept(noexcept(_LIBCPP_AUTO_CAST(begin(__t))))
     {
-      return begin(__t);
+      return _LIBCPP_AUTO_CAST(begin(__t));
     }
 
     void operator()(auto&&) const = delete;
@@ -108,7 +97,7 @@ namespace ranges::__end {
     __can_borrow<_Tp> &&
     requires(_Tp&& __t) {
       typename iterator_t<_Tp>;
-      { _VSTD::__decay_copy(_VSTD::forward<_Tp>(__t).end()) } -> sentinel_for<iterator_t<_Tp> >;
+      { _LIBCPP_AUTO_CAST(__t.end()) } -> sentinel_for<iterator_t<_Tp> >;
     };
 
   void end(auto&) = delete;
@@ -121,36 +110,32 @@ namespace ranges::__end {
     __class_or_enum<remove_cvref_t<_Tp> > &&
     requires(_Tp && __t) {
       typename iterator_t<_Tp>;
-      { _VSTD::__decay_copy(end(_VSTD::forward<_Tp>(__t))) } -> sentinel_for<iterator_t<_Tp> >;
+      { _LIBCPP_AUTO_CAST(end(__t)) } -> sentinel_for<iterator_t<_Tp> >;
     };
 
   class __fn {
   public:
     template <class _Tp, size_t _Np>
-    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp (&__t)[_Np]) const noexcept {
-      constexpr bool __complete = __is_complete<remove_cv_t<_Tp> >;
-      if constexpr (__complete) { // used to disable cryptic diagnostic
-        return __t + _Np;
-      }
-      else {
-        static_assert(__complete, "`std::ranges::end` is SFINAE-unfriendly on arrays of an incomplete type.");
-      }
+    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp (&__t)[_Np]) const noexcept
+      requires (sizeof(*__t) != 0)  // Disallow incomplete element types.
+    {
+      return __t + _Np;
     }
 
     template <class _Tp>
     requires __member_end<_Tp>
     [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
-    noexcept(noexcept(_VSTD::__decay_copy(__t.end())))
+    noexcept(noexcept(_LIBCPP_AUTO_CAST(__t.end())))
     {
-      return _VSTD::forward<_Tp>(__t).end();
+      return _LIBCPP_AUTO_CAST(__t.end());
     }
 
     template <class _Tp>
     requires __unqualified_end<_Tp>
     [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
-    noexcept(noexcept(_VSTD::__decay_copy(end(__t))))
+    noexcept(noexcept(_LIBCPP_AUTO_CAST(end(__t))))
     {
-      return end(__t);
+      return _LIBCPP_AUTO_CAST(end(__t));
     }
 
     void operator()(auto&&) const = delete;
@@ -208,8 +193,6 @@ namespace ranges::__cend {
 namespace ranges::inline __cpo {
   inline constexpr auto cend = __cend::__fn{};
 } // namespace ranges::__cpo
-
-// clang-format off
 
 #endif // !defined(_LIBCPP_HAS_NO_RANGES)
 

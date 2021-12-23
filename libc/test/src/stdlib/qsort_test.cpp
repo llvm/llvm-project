@@ -27,9 +27,9 @@ TEST(LlvmLibcQsortTest, SortedArray) {
   int array[25] = {10,   23,   33,   35,   55,   70,    71,   100,  110,
                    123,  133,  135,  155,  170,  171,   1100, 1110, 1123,
                    1133, 1135, 1155, 1170, 1171, 11100, 12310};
-  constexpr size_t array_size = sizeof(array) / sizeof(int);
+  constexpr size_t ARRAY_SIZE = sizeof(array) / sizeof(int);
 
-  __llvm_libc::qsort(array, array_size, sizeof(int), int_compare);
+  __llvm_libc::qsort(array, ARRAY_SIZE, sizeof(int), int_compare);
 
   ASSERT_LE(array[0], 10);
   ASSERT_LE(array[1], 23);
@@ -61,11 +61,11 @@ TEST(LlvmLibcQsortTest, SortedArray) {
 TEST(LlvmLibcQsortTest, ReverseSortedArray) {
   int array[25] = {25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13,
                    12, 11, 10, 9,  8,  7,  6,  5,  4,  3,  2,  1};
-  constexpr size_t array_size = sizeof(array) / sizeof(int);
+  constexpr size_t ARRAY_SIZE = sizeof(array) / sizeof(int);
 
-  __llvm_libc::qsort(array, array_size, sizeof(int), int_compare);
+  __llvm_libc::qsort(array, ARRAY_SIZE, sizeof(int), int_compare);
 
-  for (int i = 0; i < int(array_size - 1); ++i)
+  for (int i = 0; i < int(ARRAY_SIZE - 1); ++i)
     ASSERT_LE(array[i], i + 1);
 }
 
@@ -73,20 +73,20 @@ TEST(LlvmLibcQsortTest, AllEqualElements) {
   int array[25] = {100, 100, 100, 100, 100, 100, 100, 100, 100,
                    100, 100, 100, 100, 100, 100, 100, 100, 100,
                    100, 100, 100, 100, 100, 100, 100};
-  constexpr size_t array_size = sizeof(array) / sizeof(int);
+  constexpr size_t ARRAY_SIZE = sizeof(array) / sizeof(int);
 
-  __llvm_libc::qsort(array, array_size, sizeof(int), int_compare);
+  __llvm_libc::qsort(array, ARRAY_SIZE, sizeof(int), int_compare);
 
-  for (size_t i = 0; i < array_size - 1; ++i)
+  for (size_t i = 0; i < ARRAY_SIZE - 1; ++i)
     ASSERT_LE(array[i], 100);
 }
 
 TEST(LlvmLibcQsortTest, UnsortedArray1) {
   int array[25] = {10, 23,  8,  35, 55, 45, 40,  100,  110,  123,  90, 80,  70,
                    60, 171, 11, 1,  -1, -5, -10, 1155, 1170, 1171, 12, -100};
-  constexpr size_t array_size = sizeof(array) / sizeof(int);
+  constexpr size_t ARRAY_SIZE = sizeof(array) / sizeof(int);
 
-  __llvm_libc::qsort(array, array_size, sizeof(int), int_compare);
+  __llvm_libc::qsort(array, ARRAY_SIZE, sizeof(int), int_compare);
 
   ASSERT_LE(array[0], -100);
   ASSERT_LE(array[1], -10);
@@ -117,9 +117,9 @@ TEST(LlvmLibcQsortTest, UnsortedArray1) {
 
 TEST(LlvmLibcQsortTest, UnsortedArray2) {
   int array[7] = {10, 40, 45, 55, 35, 23, 60};
-  constexpr size_t array_size = sizeof(array) / sizeof(int);
+  constexpr size_t ARRAY_SIZE = sizeof(array) / sizeof(int);
 
-  __llvm_libc::qsort(array, array_size, sizeof(int), int_compare);
+  __llvm_libc::qsort(array, ARRAY_SIZE, sizeof(int), int_compare);
 
   ASSERT_LE(array[0], 10);
   ASSERT_LE(array[1], 23);
@@ -132,9 +132,9 @@ TEST(LlvmLibcQsortTest, UnsortedArray2) {
 
 TEST(LlvmLibcQsortTest, UnsortedArrayDuplicateElements1) {
   int array[6] = {10, 10, 20, 20, 5, 5};
-  constexpr size_t array_size = sizeof(array) / sizeof(int);
+  constexpr size_t ARRAY_SIZE = sizeof(array) / sizeof(int);
 
-  __llvm_libc::qsort(array, array_size, sizeof(int), int_compare);
+  __llvm_libc::qsort(array, ARRAY_SIZE, sizeof(int), int_compare);
 
   ASSERT_LE(array[0], 5);
   ASSERT_LE(array[1], 5);
@@ -146,9 +146,9 @@ TEST(LlvmLibcQsortTest, UnsortedArrayDuplicateElements1) {
 
 TEST(LlvmLibcQsortTest, UnsortedArrayDuplicateElements2) {
   int array[10] = {20, 10, 10, 10, 10, 20, 21, 21, 21, 21};
-  constexpr size_t array_size = sizeof(array) / sizeof(int);
+  constexpr size_t ARRAY_SIZE = sizeof(array) / sizeof(int);
 
-  __llvm_libc::qsort(array, array_size, sizeof(int), int_compare);
+  __llvm_libc::qsort(array, ARRAY_SIZE, sizeof(int), int_compare);
 
   ASSERT_LE(array[0], 10);
   ASSERT_LE(array[1], 10);
@@ -164,9 +164,9 @@ TEST(LlvmLibcQsortTest, UnsortedArrayDuplicateElements2) {
 
 TEST(LlvmLibcQsortTest, UnsortedArrayDuplicateElements3) {
   int array[10] = {20, 30, 30, 30, 30, 20, 21, 21, 21, 21};
-  constexpr size_t array_size = sizeof(array) / sizeof(int);
+  constexpr size_t ARRAY_SIZE = sizeof(array) / sizeof(int);
 
-  __llvm_libc::qsort(array, array_size, sizeof(int), int_compare);
+  __llvm_libc::qsort(array, ARRAY_SIZE, sizeof(int), int_compare);
 
   ASSERT_LE(array[0], 20);
   ASSERT_LE(array[1], 20);
@@ -182,9 +182,9 @@ TEST(LlvmLibcQsortTest, UnsortedArrayDuplicateElements3) {
 
 TEST(LlvmLibcQsortTest, UnsortedThreeElementArray1) {
   int array[3] = {14999024, 0, 3};
-  constexpr size_t array_size = sizeof(array) / sizeof(int);
+  constexpr size_t ARRAY_SIZE = sizeof(array) / sizeof(int);
 
-  __llvm_libc::qsort(array, array_size, sizeof(int), int_compare);
+  __llvm_libc::qsort(array, ARRAY_SIZE, sizeof(int), int_compare);
 
   ASSERT_LE(array[0], 0);
   ASSERT_LE(array[1], 3);
@@ -193,9 +193,9 @@ TEST(LlvmLibcQsortTest, UnsortedThreeElementArray1) {
 
 TEST(LlvmLibcQsortTest, UnsortedThreeElementArray2) {
   int array[3] = {3, 14999024, 0};
-  constexpr size_t array_size = sizeof(array) / sizeof(int);
+  constexpr size_t ARRAY_SIZE = sizeof(array) / sizeof(int);
 
-  __llvm_libc::qsort(array, array_size, sizeof(int), int_compare);
+  __llvm_libc::qsort(array, ARRAY_SIZE, sizeof(int), int_compare);
 
   ASSERT_LE(array[0], 0);
   ASSERT_LE(array[1], 3);
@@ -204,9 +204,9 @@ TEST(LlvmLibcQsortTest, UnsortedThreeElementArray2) {
 
 TEST(LlvmLibcQsortTest, UnsortedThreeElementArray3) {
   int array[3] = {3, 0, 14999024};
-  constexpr size_t array_size = sizeof(array) / sizeof(int);
+  constexpr size_t ARRAY_SIZE = sizeof(array) / sizeof(int);
 
-  __llvm_libc::qsort(array, array_size, sizeof(int), int_compare);
+  __llvm_libc::qsort(array, ARRAY_SIZE, sizeof(int), int_compare);
 
   ASSERT_LE(array[0], 0);
   ASSERT_LE(array[1], 3);
@@ -215,9 +215,9 @@ TEST(LlvmLibcQsortTest, UnsortedThreeElementArray3) {
 
 TEST(LlvmLibcQsortTest, SameElementThreeElementArray) {
   int array[3] = {12345, 12345, 12345};
-  constexpr size_t array_size = sizeof(array) / sizeof(int);
+  constexpr size_t ARRAY_SIZE = sizeof(array) / sizeof(int);
 
-  __llvm_libc::qsort(array, array_size, sizeof(int), int_compare);
+  __llvm_libc::qsort(array, ARRAY_SIZE, sizeof(int), int_compare);
 
   ASSERT_LE(array[0], 12345);
   ASSERT_LE(array[1], 12345);
@@ -226,9 +226,9 @@ TEST(LlvmLibcQsortTest, SameElementThreeElementArray) {
 
 TEST(LlvmLibcQsortTest, UnsortedTwoElementArray1) {
   int array[2] = {14999024, 0};
-  constexpr size_t array_size = sizeof(array) / sizeof(int);
+  constexpr size_t ARRAY_SIZE = sizeof(array) / sizeof(int);
 
-  __llvm_libc::qsort(array, array_size, sizeof(int), int_compare);
+  __llvm_libc::qsort(array, ARRAY_SIZE, sizeof(int), int_compare);
 
   ASSERT_LE(array[0], 0);
   ASSERT_LE(array[1], 14999024);
@@ -236,9 +236,9 @@ TEST(LlvmLibcQsortTest, UnsortedTwoElementArray1) {
 
 TEST(LlvmLibcQsortTest, UnsortedTwoElementArray2) {
   int array[2] = {0, 14999024};
-  constexpr size_t array_size = sizeof(array) / sizeof(int);
+  constexpr size_t ARRAY_SIZE = sizeof(array) / sizeof(int);
 
-  __llvm_libc::qsort(array, array_size, sizeof(int), int_compare);
+  __llvm_libc::qsort(array, ARRAY_SIZE, sizeof(int), int_compare);
 
   ASSERT_LE(array[0], 0);
   ASSERT_LE(array[1], 14999024);
@@ -246,20 +246,20 @@ TEST(LlvmLibcQsortTest, UnsortedTwoElementArray2) {
 
 TEST(LlvmLibcQsortTest, SameElementTwoElementArray) {
   int array[2] = {12345, 12345};
-  constexpr size_t array_size = sizeof(array) / sizeof(int);
+  constexpr size_t ARRAY_SIZE = sizeof(array) / sizeof(int);
 
-  __llvm_libc::qsort(array, array_size, sizeof(int), int_compare);
+  __llvm_libc::qsort(array, ARRAY_SIZE, sizeof(int), int_compare);
 
   ASSERT_LE(array[0], 12345);
   ASSERT_LE(array[1], 12345);
 }
 
 TEST(LlvmLibcQSortTest, SingleElementArray) {
-  constexpr int elem = 12345;
-  int array[1] = {elem};
-  constexpr size_t array_size = sizeof(array) / sizeof(int);
+  constexpr int ELEM = 12345;
+  int array[1] = {ELEM};
+  constexpr size_t ARRAY_SIZE = sizeof(array) / sizeof(int);
 
-  __llvm_libc::qsort(array, array_size, sizeof(int), int_compare);
+  __llvm_libc::qsort(array, ARRAY_SIZE, sizeof(int), int_compare);
 
-  ASSERT_LE(array[0], elem);
+  ASSERT_LE(array[0], ELEM);
 }

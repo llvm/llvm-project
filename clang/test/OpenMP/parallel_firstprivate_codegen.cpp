@@ -4322,4 +4322,3 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK17-NEXT:    call void @__kmpc_free(i32 [[TMP12]], i8* [[TMP22]], i8* inttoptr (i64 8 to i8*))
 // CHECK17-NEXT:    ret void
 //
-//

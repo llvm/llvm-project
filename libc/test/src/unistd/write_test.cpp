@@ -14,10 +14,10 @@
 
 TEST(LlvmLibcUniStd, WriteBasic) {
   using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
-  constexpr const char *hello = "hello";
+  constexpr const char *HELLO = "hello";
   __llvm_libc::testutils::FDReader reader;
-  EXPECT_THAT(__llvm_libc::write(reader.getWriteFD(), hello, 5), Succeeds(5));
-  EXPECT_TRUE(reader.matchWritten(hello));
+  EXPECT_THAT(__llvm_libc::write(reader.get_write_fd(), HELLO, 5), Succeeds(5));
+  EXPECT_TRUE(reader.match_written(HELLO));
 }
 
 TEST(LlvmLibcUniStd, WriteFails) {

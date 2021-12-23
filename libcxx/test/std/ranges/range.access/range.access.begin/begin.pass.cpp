@@ -23,12 +23,16 @@ using RangeCBeginT = decltype(std::ranges::cbegin)&;
 
 static int globalBuff[8];
 
-struct Incomplete;
-
 static_assert(!std::is_invocable_v<RangeBeginT, int (&&)[10]>);
 static_assert( std::is_invocable_v<RangeBeginT, int (&)[10]>);
 static_assert(!std::is_invocable_v<RangeBeginT, int (&&)[]>);
 static_assert( std::is_invocable_v<RangeBeginT, int (&)[]>);
+
+struct Incomplete;
+static_assert(!std::is_invocable_v<RangeBeginT, Incomplete(&&)[]>);
+static_assert(!std::is_invocable_v<RangeBeginT, Incomplete(&&)[42]>);
+static_assert(!std::is_invocable_v<RangeCBeginT, Incomplete(&&)[]>);
+static_assert(!std::is_invocable_v<RangeCBeginT, Incomplete(&&)[42]>);
 
 struct BeginMember {
   int x;
@@ -245,28 +249,27 @@ constexpr bool testBeginFunction() {
 ASSERT_NOEXCEPT(std::ranges::begin(std::declval<int (&)[10]>()));
 ASSERT_NOEXCEPT(std::ranges::cbegin(std::declval<int (&)[10]>()));
 
-template<class T>
 struct NoThrowMemberBegin {
-  T begin() const noexcept;
-};
-ASSERT_NOEXCEPT(std::ranges::begin(std::declval<NoThrowMemberBegin<int*>&>()));
-ASSERT_NOEXCEPT(std::ranges::cbegin(std::declval<NoThrowMemberBegin<int*>&>()));
-ASSERT_NOT_NOEXCEPT(std::ranges::begin(std::declval<NoThrowMemberBegin<ThrowingIterator<int>>&>()));
-ASSERT_NOT_NOEXCEPT(std::ranges::cbegin(std::declval<NoThrowMemberBegin<ThrowingIterator<int>>&>()));
+  ThrowingIterator<int> begin() const noexcept; // auto(t.begin()) doesn't throw
+} ntmb;
+static_assert(noexcept(std::ranges::begin(ntmb)));
+static_assert(noexcept(std::ranges::cbegin(ntmb)));
 
-template<class T>
 struct NoThrowADLBegin {
-  friend T begin(NoThrowADLBegin&) noexcept { return T{}; }
-  friend T begin(NoThrowADLBegin const&) noexcept { return T{}; }
-};
-ASSERT_NOEXCEPT(std::ranges::begin(std::declval<NoThrowADLBegin<int*>&>()));
-ASSERT_NOEXCEPT(std::ranges::cbegin(std::declval<NoThrowADLBegin<int*>&>()));
-ASSERT_NOT_NOEXCEPT(std::ranges::begin(std::declval<NoThrowADLBegin<ThrowingIterator<int>>&>()));
-ASSERT_NOT_NOEXCEPT(std::ranges::cbegin(std::declval<NoThrowADLBegin<ThrowingIterator<int>>&>()));
+  friend ThrowingIterator<int> begin(NoThrowADLBegin&) noexcept;  // auto(begin(t)) doesn't throw
+  friend ThrowingIterator<int> begin(const NoThrowADLBegin&) noexcept;
+} ntab;
+static_assert(noexcept(std::ranges::begin(ntab)));
+static_assert(noexcept(std::ranges::cbegin(ntab)));
+
+struct NoThrowMemberBeginReturnsRef {
+  ThrowingIterator<int>& begin() const noexcept; // auto(t.begin()) may throw
+} ntmbrr;
+static_assert(!noexcept(std::ranges::begin(ntmbrr)));
+static_assert(!noexcept(std::ranges::cbegin(ntmbrr)));
 
 struct BeginReturnsArrayRef {
     auto begin() const noexcept -> int(&)[10];
-    auto end() const noexcept -> int(&)[10];
 } brar;
 static_assert(noexcept(std::ranges::begin(brar)));
 static_assert(noexcept(std::ranges::cbegin(brar)));

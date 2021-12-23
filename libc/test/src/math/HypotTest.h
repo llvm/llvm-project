@@ -32,7 +32,7 @@ private:
   const T neg_zero = T(__llvm_libc::fputil::FPBits<T>::neg_zero());
 
 public:
-  void testSpecialNumbers(Func func) {
+  void test_special_numbers(Func func) {
     EXPECT_FP_EQ(func(inf, nan), inf);
     EXPECT_FP_EQ(func(nan, neg_inf), inf);
     EXPECT_FP_EQ(func(zero, inf), inf);
@@ -45,14 +45,14 @@ public:
     EXPECT_FP_EQ(func(neg_zero, zero), zero);
   }
 
-  void testSubnormalRange(Func func) {
-    constexpr UIntType count = 1000001;
+  void test_subnormal_range(Func func) {
+    constexpr UIntType COUNT = 1000001;
     for (unsigned scale = 0; scale < 4; ++scale) {
-      UIntType maxValue = FPBits::MAX_SUBNORMAL << scale;
-      UIntType step = (maxValue - FPBits::MIN_SUBNORMAL) / count;
+      UIntType max_value = FPBits::MAX_SUBNORMAL << scale;
+      UIntType step = (max_value - FPBits::MIN_SUBNORMAL) / COUNT;
       for (int signs = 0; signs < 4; ++signs) {
-        for (UIntType v = FPBits::MIN_SUBNORMAL, w = maxValue;
-             v <= maxValue && w >= FPBits::MIN_SUBNORMAL;
+        for (UIntType v = FPBits::MIN_SUBNORMAL, w = max_value;
+             v <= max_value && w >= FPBits::MIN_SUBNORMAL;
              v += step, w -= step) {
           T x = T(FPBits(v)), y = T(FPBits(w));
           if (signs % 2 == 1) {
@@ -70,13 +70,13 @@ public:
     }
   }
 
-  void testNormalRange(Func func) {
-    constexpr UIntType count = 1000001;
-    constexpr UIntType step = (FPBits::MAX_NORMAL - FPBits::MIN_NORMAL) / count;
+  void test_normal_range(Func func) {
+    constexpr UIntType COUNT = 1000001;
+    constexpr UIntType STEP = (FPBits::MAX_NORMAL - FPBits::MIN_NORMAL) / COUNT;
     for (int signs = 0; signs < 4; ++signs) {
       for (UIntType v = FPBits::MIN_NORMAL, w = FPBits::MAX_NORMAL;
            v <= FPBits::MAX_NORMAL && w >= FPBits::MIN_NORMAL;
-           v += step, w -= step) {
+           v += STEP, w -= STEP) {
         T x = T(FPBits(v)), y = T(FPBits(w));
         if (signs % 2 == 1) {
           x = -x;

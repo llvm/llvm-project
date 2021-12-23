@@ -4697,7 +4697,7 @@ void range_for_collapsed() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@_Z17with_var_schedulev
-// CHECK5-SAME: () #[[ATTR0:[0-9]+]] !dbg [[DBG7:![0-9]+]] {
+// CHECK5-SAME: () #[[ATTR0:[0-9]+]] !dbg [[DBG6:![0-9]+]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[A:%.*]] = alloca double, align 8
 // CHECK5-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i8, align 1

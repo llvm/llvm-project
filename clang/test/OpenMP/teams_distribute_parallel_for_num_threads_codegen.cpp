@@ -4680,4 +4680,3 @@ int main() {
 // CHECK6-NEXT:    call void @__tgt_register_requires(i64 1)
 // CHECK6-NEXT:    ret void
 //
-//

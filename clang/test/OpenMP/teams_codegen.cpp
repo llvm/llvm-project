@@ -4161,4 +4161,3 @@ void foo() {
 // CHECK44-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 4
 // CHECK44-NEXT:    ret void
 //
-//

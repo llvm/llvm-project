@@ -575,5 +575,107 @@ define amdgpu_kernel void @rcp_ftzdaz() #1 {
   ret void
 }
 
+define i32 @frem(i32 %arg) {
+; CIFASTF64-LABEL: 'frem'
+; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %F32 = frem float undef, undef
+; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V4F32 = frem <4 x float> undef, undef
+; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 112 for instruction: %V8F32 = frem <8 x float> undef, undef
+; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 672 for instruction: %V16F32 = frem <16 x float> undef, undef
+; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %F64 = frem double undef, undef
+; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V2F64 = frem <2 x double> undef, undef
+; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %V4F64 = frem <4 x double> undef, undef
+; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 576 for instruction: %V8F64 = frem <8 x double> undef, undef
+; CIFASTF64-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i32 undef
+;
+; CISLOWF64-LABEL: 'frem'
+; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %F32 = frem float undef, undef
+; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V4F32 = frem <4 x float> undef, undef
+; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 112 for instruction: %V8F32 = frem <8 x float> undef, undef
+; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 672 for instruction: %V16F32 = frem <16 x float> undef, undef
+; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 38 for instruction: %F64 = frem double undef, undef
+; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 76 for instruction: %V2F64 = frem <2 x double> undef, undef
+; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 152 for instruction: %V4F64 = frem <4 x double> undef, undef
+; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 912 for instruction: %V8F64 = frem <8 x double> undef, undef
+; CISLOWF64-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i32 undef
+;
+; SIFASTF64-LABEL: 'frem'
+; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %F32 = frem float undef, undef
+; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V4F32 = frem <4 x float> undef, undef
+; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 112 for instruction: %V8F32 = frem <8 x float> undef, undef
+; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 672 for instruction: %V16F32 = frem <16 x float> undef, undef
+; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: %F64 = frem double undef, undef
+; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 54 for instruction: %V2F64 = frem <2 x double> undef, undef
+; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 108 for instruction: %V4F64 = frem <4 x double> undef, undef
+; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 648 for instruction: %V8F64 = frem <8 x double> undef, undef
+; SIFASTF64-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i32 undef
+;
+; SISLOWF64-LABEL: 'frem'
+; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %F32 = frem float undef, undef
+; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V4F32 = frem <4 x float> undef, undef
+; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 112 for instruction: %V8F32 = frem <8 x float> undef, undef
+; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 672 for instruction: %V16F32 = frem <16 x float> undef, undef
+; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 41 for instruction: %F64 = frem double undef, undef
+; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 82 for instruction: %V2F64 = frem <2 x double> undef, undef
+; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 164 for instruction: %V4F64 = frem <4 x double> undef, undef
+; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 984 for instruction: %V8F64 = frem <8 x double> undef, undef
+; SISLOWF64-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i32 undef
+;
+; FP16-LABEL: 'frem'
+; FP16-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %F32 = frem float undef, undef
+; FP16-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V4F32 = frem <4 x float> undef, undef
+; FP16-NEXT:  Cost Model: Found an estimated cost of 112 for instruction: %V8F32 = frem <8 x float> undef, undef
+; FP16-NEXT:  Cost Model: Found an estimated cost of 672 for instruction: %V16F32 = frem <16 x float> undef, undef
+; FP16-NEXT:  Cost Model: Found an estimated cost of 38 for instruction: %F64 = frem double undef, undef
+; FP16-NEXT:  Cost Model: Found an estimated cost of 76 for instruction: %V2F64 = frem <2 x double> undef, undef
+; FP16-NEXT:  Cost Model: Found an estimated cost of 152 for instruction: %V4F64 = frem <4 x double> undef, undef
+; FP16-NEXT:  Cost Model: Found an estimated cost of 912 for instruction: %V8F64 = frem <8 x double> undef, undef
+; FP16-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i32 undef
+;
+; CI-SIZE-LABEL: 'frem'
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %F32 = frem float undef, undef
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V4F32 = frem <4 x float> undef, undef
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %V8F32 = frem <8 x float> undef, undef
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 576 for instruction: %V16F32 = frem <16 x float> undef, undef
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %F64 = frem double undef, undef
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 44 for instruction: %V2F64 = frem <2 x double> undef, undef
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 88 for instruction: %V4F64 = frem <4 x double> undef, undef
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 528 for instruction: %V8F64 = frem <8 x double> undef, undef
+; CI-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
+;
+; SI-SIZE-LABEL: 'frem'
+; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %F32 = frem float undef, undef
+; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V4F32 = frem <4 x float> undef, undef
+; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %V8F32 = frem <8 x float> undef, undef
+; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 576 for instruction: %V16F32 = frem <16 x float> undef, undef
+; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %F64 = frem double undef, undef
+; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %V2F64 = frem <2 x double> undef, undef
+; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 100 for instruction: %V4F64 = frem <4 x double> undef, undef
+; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 600 for instruction: %V8F64 = frem <8 x double> undef, undef
+; SI-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
+;
+; FP16-SIZE-LABEL: 'frem'
+; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %F32 = frem float undef, undef
+; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V4F32 = frem <4 x float> undef, undef
+; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %V8F32 = frem <8 x float> undef, undef
+; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 576 for instruction: %V16F32 = frem <16 x float> undef, undef
+; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %F64 = frem double undef, undef
+; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 44 for instruction: %V2F64 = frem <2 x double> undef, undef
+; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 88 for instruction: %V4F64 = frem <4 x double> undef, undef
+; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 528 for instruction: %V8F64 = frem <8 x double> undef, undef
+; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
+;
+  %F32 = frem float undef, undef
+  %V4F32 = frem <4 x float> undef, undef
+  %V8F32 = frem <8 x float> undef, undef
+  %V16F32 = frem <16 x float> undef, undef
+
+  %F64 = frem double undef, undef
+  %V2F64 = frem <2 x double> undef, undef
+  %V4F64 = frem <4 x double> undef, undef
+  %V8F64 = frem <8 x double> undef, undef
+
+  ret i32 undef
+}
+
 attributes #0 = { nounwind "denormal-fp-math-f32"="ieee,ieee" }
 attributes #1 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }

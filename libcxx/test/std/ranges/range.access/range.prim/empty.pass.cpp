@@ -30,6 +30,17 @@ static_assert( std::is_invocable_v<RangeEmptyT, int (&&)[1]>);
 static_assert( std::is_invocable_v<RangeEmptyT, int (&)[1]>);
 static_assert( std::is_invocable_v<RangeEmptyT, const int (&)[1]>);
 
+struct Incomplete;
+static_assert(!std::is_invocable_v<RangeEmptyT, Incomplete[]>);
+static_assert(!std::is_invocable_v<RangeEmptyT, Incomplete(&)[]>);
+static_assert(!std::is_invocable_v<RangeEmptyT, Incomplete(&&)[]>);
+
+extern Incomplete array_of_incomplete[42];
+static_assert(!std::ranges::empty(array_of_incomplete));
+static_assert(!std::ranges::empty(std::move(array_of_incomplete)));
+static_assert(!std::ranges::empty(std::as_const(array_of_incomplete)));
+static_assert(!std::ranges::empty(static_cast<const Incomplete(&&)[42]>(array_of_incomplete)));
+
 struct NonConstSizeAndEmpty {
   int size();
   bool empty();

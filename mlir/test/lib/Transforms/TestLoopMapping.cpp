@@ -32,7 +32,7 @@ public:
   StringRef getDescription() const final {
     return "test mapping a single loop on a virtual processor grid";
   }
-  explicit TestLoopMappingPass() {}
+  explicit TestLoopMappingPass() = default;
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<AffineDialect, scf::SCFDialect>();

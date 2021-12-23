@@ -7,6 +7,6 @@
 ;
 ; REQUIRES: have_tf_api
 ; RUN: rm -rf %t && mkdir %t
-; RUN: %python %S/../../../../lib/Analysis/models/generate_mock_model.py %S/../../../../lib/Analysis/models/inlining/config.py %t
+; RUN: %python %S/../../../../lib/Analysis/models/gen-inline-oz-test-model.py %t
 ; RUN: opt -passes=scc-oz-module-inliner -enable-ml-inliner=default -S < %S/Inputs/test-module.ll 2>&1 | FileCheck %S/Inputs/test-module.ll --check-prefix=DEFAULT
 ; RUN: opt -passes=scc-oz-module-inliner -enable-ml-inliner=development -ml-inliner-model-under-training=%t -S < %S/Inputs/test-module.ll 2>&1 | FileCheck %S/Inputs/test-module.ll --check-prefix=CHECK

@@ -5241,4 +5241,3 @@ int bar(int n){
 // CHECK28-NEXT:    store i32 [[ADD]], i32* [[A_ADDR]], align 4
 // CHECK28-NEXT:    ret void
 //
-//

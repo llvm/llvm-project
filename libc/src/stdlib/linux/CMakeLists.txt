@@ -6,6 +6,6 @@ add_entrypoint_object(
     ../_Exit.h
   DEPENDS
     libc.include.sys_syscall
-    libc.config.linux.linux_syscall_h
     libc.include.stdlib
+    libc.src.__support.OSUtil.osutil
 )

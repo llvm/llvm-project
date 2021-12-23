@@ -18,7 +18,7 @@ template <typename T> class SqrtTest : public __llvm_libc::testing::Test {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 
-  static constexpr UIntType HiddenBit =
+  static constexpr UIntType HIDDEN_BIT =
       UIntType(1) << __llvm_libc::fputil::MantissaWidth<T>::VALUE;
 
 public:
@@ -37,7 +37,7 @@ public:
   }
 
   void testDenormalValues(SqrtFunc func) {
-    for (UIntType mant = 1; mant < HiddenBit; mant <<= 1) {
+    for (UIntType mant = 1; mant < HIDDEN_BIT; mant <<= 1) {
       FPBits denormal(T(0.0));
       denormal.set_mantissa(mant);
 
@@ -45,18 +45,18 @@ public:
                         T(0.5));
     }
 
-    constexpr UIntType count = 1'000'001;
-    constexpr UIntType step = HiddenBit / count;
-    for (UIntType i = 0, v = 0; i <= count; ++i, v += step) {
+    constexpr UIntType COUNT = 1'000'001;
+    constexpr UIntType STEP = HIDDEN_BIT / COUNT;
+    for (UIntType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
       T x = *reinterpret_cast<T *>(&v);
       ASSERT_MPFR_MATCH(mpfr::Operation::Sqrt, x, func(x), 0.5);
     }
   }
 
   void testNormalRange(SqrtFunc func) {
-    constexpr UIntType count = 10'000'001;
-    constexpr UIntType step = UIntType(-1) / count;
-    for (UIntType i = 0, v = 0; i <= count; ++i, v += step) {
+    constexpr UIntType COUNT = 10'000'001;
+    constexpr UIntType STEP = UIntType(-1) / COUNT;
+    for (UIntType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
       T x = *reinterpret_cast<T *>(&v);
       if (isnan(x) || (x < 0)) {
         continue;
