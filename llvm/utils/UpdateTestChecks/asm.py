@@ -174,6 +174,12 @@ ASM_FUNCTION_WASM32_RE = re.compile(
     r'^\s*(\.Lfunc_end[0-9]+:\n|end_function)',
     flags=(re.M | re.S))
 
+ASM_FUNCTION_VE_RE = re.compile(
+    r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*@(?P=func)\n'
+    r'(?P<body>^##?[ \t]+[^:]+:.*?)\s*'
+    r'.Lfunc_end[0-9]+:\n',
+    flags=(re.M | re.S))
+
 SCRUB_X86_SHUFFLES_RE = (
     re.compile(
         r'^(\s*\w+) [^#\n]+#+ ((?:[xyz]mm\d+|mem)( \{%k\d+\}( \{z\})?)? = .*)$',
@@ -362,6 +368,16 @@ def scrub_asm_wasm32(asm, args):
   asm = common.SCRUB_TRAILING_WHITESPACE_RE.sub(r'', asm)
   return asm
 
+def scrub_asm_ve(asm, args):
+  # Scrub runs of whitespace out of the assembly, but leave the leading
+  # whitespace in place.
+  asm = common.SCRUB_WHITESPACE_RE.sub(r' ', asm)
+  # Expand the tabs used for indentation.
+  asm = string.expandtabs(asm, 2)
+  # Strip trailing whitespace.
+  asm = common.SCRUB_TRAILING_WHITESPACE_RE.sub(r'', asm)
+  return asm
+
 def get_triple_from_march(march):
   triples = {
       'amdgcn': 'amdgcn',
@@ -369,6 +385,7 @@ def get_triple_from_march(march):
       'mips': 'mips',
       'sparc': 'sparc',
       'hexagon': 'hexagon',
+      've': 've',
   }
   for prefix, triple in triples.items():
     if march.startswith(prefix):
@@ -414,6 +431,7 @@ def get_run_handler(triple):
       'sparc': (scrub_asm_sparc, ASM_FUNCTION_SPARC_RE),
       's390x': (scrub_asm_systemz, ASM_FUNCTION_SYSTEMZ_RE),
       'wasm32': (scrub_asm_wasm32, ASM_FUNCTION_WASM32_RE),
+      've': (scrub_asm_ve, ASM_FUNCTION_VE_RE),
   }
   handler = None
   best_prefix = ''
