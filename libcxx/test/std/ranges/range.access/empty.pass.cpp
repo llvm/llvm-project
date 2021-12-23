@@ -168,6 +168,11 @@ constexpr bool testBeginEqualsEnd() {
   return true;
 }
 
+// Test ADL-proofing.
+struct Incomplete;
+template<class T> struct Holder { T t; };
+static_assert(!std::is_invocable_v<RangeEmptyT, Holder<Incomplete>*>);
+
 int main(int, char**) {
   testEmptyMember();
   static_assert(testEmptyMember());

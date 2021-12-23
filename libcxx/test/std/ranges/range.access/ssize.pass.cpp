@@ -78,6 +78,11 @@ constexpr bool test() {
   return true;
 }
 
+// Test ADL-proofing.
+struct Incomplete;
+template<class T> struct Holder { T t; };
+static_assert(!std::is_invocable_v<RangeSSizeT, Holder<Incomplete>*>);
+
 int main(int, char**) {
   test();
   static_assert(test());
