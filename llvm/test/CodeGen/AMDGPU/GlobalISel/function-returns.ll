@@ -888,11 +888,12 @@ define <3 x i16> @v3i16_func_void() #0 {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<3 x s16>) = G_LOAD [[DEF]](p1) :: (load (<3 x s16>) from `<3 x i16> addrspace(1)* undef`, align 8, addrspace 1)
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(<3 x s16>) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[LOAD]](<3 x s16>), [[DEF1]](<3 x s16>)
-  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>), [[UV2:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<6 x s16>)
-  ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](<2 x s16>)
-  ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](<2 x s16>)
+  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[LOAD]](<3 x s16>)
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s16>) = G_BUILD_VECTOR [[UV]](s16), [[UV1]](s16), [[UV2]](s16), [[DEF1]](s16)
+  ; CHECK-NEXT:   [[UV3:%[0-9]+]]:_(<2 x s16>), [[UV4:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<4 x s16>)
+  ; CHECK-NEXT:   $vgpr0 = COPY [[UV3]](<2 x s16>)
+  ; CHECK-NEXT:   $vgpr1 = COPY [[UV4]](<2 x s16>)
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY]]
   ; CHECK-NEXT:   S_SETPC_B64_return [[COPY1]], implicit $vgpr0, implicit $vgpr1
   %val = load <3 x i16>, <3 x i16> addrspace(1)* undef
@@ -942,12 +943,13 @@ define <5 x i16> @v5i16_func_void() #0 {
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile load (p1) from `<5 x i16> addrspace(1)* addrspace(4)* undef`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<5 x s16>) = G_LOAD [[LOAD]](p1) :: (load (<5 x s16>) from %ir.ptr, align 16, addrspace 1)
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(<5 x s16>) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<10 x s16>) = G_CONCAT_VECTORS [[LOAD1]](<5 x s16>), [[DEF1]](<5 x s16>)
-  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>), [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>), [[UV4:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<10 x s16>)
-  ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](<2 x s16>)
-  ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](<2 x s16>)
-  ; CHECK-NEXT:   $vgpr2 = COPY [[UV2]](<2 x s16>)
+  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16), [[UV4:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[LOAD1]](<5 x s16>)
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<6 x s16>) = G_BUILD_VECTOR [[UV]](s16), [[UV1]](s16), [[UV2]](s16), [[UV3]](s16), [[UV4]](s16), [[DEF1]](s16)
+  ; CHECK-NEXT:   [[UV5:%[0-9]+]]:_(<2 x s16>), [[UV6:%[0-9]+]]:_(<2 x s16>), [[UV7:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<6 x s16>)
+  ; CHECK-NEXT:   $vgpr0 = COPY [[UV5]](<2 x s16>)
+  ; CHECK-NEXT:   $vgpr1 = COPY [[UV6]](<2 x s16>)
+  ; CHECK-NEXT:   $vgpr2 = COPY [[UV7]](<2 x s16>)
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY]]
   ; CHECK-NEXT:   S_SETPC_B64_return [[COPY1]], implicit $vgpr0, implicit $vgpr1, implicit $vgpr2
   %ptr = load volatile <5 x i16> addrspace(1)*, <5 x i16> addrspace(1)* addrspace(4)* undef
