@@ -26,8 +26,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if !defined(_LIBCPP_HAS_NO_RANGES)
 
-namespace ranges {
 // [range.prim.data]
+
+namespace ranges {
 namespace __data {
   template <class _Tp>
   concept __ptr_to_object = is_pointer_v<_Tp> && is_object_v<remove_pointer_t<_Tp>>;
@@ -64,7 +65,7 @@ namespace __data {
       return _VSTD::to_address(ranges::begin(_VSTD::forward<_Tp>(__t)));
     }
   };
-} // end namespace __data
+}
 
 inline namespace __cpo {
   inline constexpr auto data = __data::__fn{};

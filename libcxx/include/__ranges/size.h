@@ -26,10 +26,13 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if !defined(_LIBCPP_HAS_NO_RANGES)
 
 namespace ranges {
-template<class>
-inline constexpr bool disable_sized_range = false;
+  template<class>
+  inline constexpr bool disable_sized_range = false;
+}
 
 // [range.prim.size]
+
+namespace ranges {
 namespace __size {
   void size(auto&) = delete;
   void size(const auto&) = delete;
@@ -90,18 +93,23 @@ namespace __size {
       return _VSTD::__to_unsigned_like(ranges::end(__t) - ranges::begin(__t));
     }
   };
-} // end namespace __size
+}
 
 inline namespace __cpo {
   inline constexpr auto size = __size::__fn{};
 } // namespace __cpo
+} // namespace ranges
 
+// [range.prim.ssize]
+
+namespace ranges {
 namespace __ssize {
   struct __fn {
     template<class _Tp>
       requires requires (_Tp&& __t) { ranges::size(__t); }
     [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr integral auto operator()(_Tp&& __t) const
-        noexcept(noexcept(ranges::size(__t))) {
+      noexcept(noexcept(ranges::size(__t)))
+    {
       using _Signed = make_signed_t<decltype(ranges::size(__t))>;
       if constexpr (sizeof(ptrdiff_t) > sizeof(_Signed))
         return static_cast<ptrdiff_t>(ranges::size(__t));

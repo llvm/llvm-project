@@ -23,8 +23,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if !defined(_LIBCPP_HAS_NO_RANGES)
 
-namespace ranges {
 // [range.prim.empty]
+
+namespace ranges {
 namespace __empty {
   template <class _Tp>
   concept __member_empty = requires(_Tp&& __t) {
