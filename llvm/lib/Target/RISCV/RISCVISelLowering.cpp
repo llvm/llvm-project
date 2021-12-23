@@ -1166,7 +1166,7 @@ bool RISCVTargetLowering::isCheapToSpeculateCtlz() const {
   return Subtarget.hasStdExtZbb();
 }
 
-bool RISCVTargetLowering::hasAndNot(SDValue Y) const {
+bool RISCVTargetLowering::hasAndNotCompare(SDValue Y) const {
   EVT VT = Y.getValueType();
 
   // FIXME: Support vectors once we have tests.
