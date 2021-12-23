@@ -86,7 +86,7 @@ class SymbolizerProcess {
   ~SymbolizerProcess() {}
 
   /// The maximum number of arguments required to invoke a tool process.
-  static const unsigned kArgVMax = 6;
+  static const unsigned kArgVMax = 16;
 
   // Customizable by subclasses.
   virtual bool StartSymbolizerSubprocess();
