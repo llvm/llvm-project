@@ -143,16 +143,16 @@ void ProcessGlobalRegions(Frontier *frontier) {
 }
 
 void ProcessPlatformSpecificAllocations(Frontier *frontier) {
-  unsigned depth = 1;
-  vm_size_t size = 0;
   vm_address_t address = 0;
   kern_return_t err = KERN_SUCCESS;
-  mach_msg_type_number_t count = VM_REGION_SUBMAP_INFO_COUNT_64;
 
   InternalMmapVectorNoCtor<RootRegion> const *root_regions = GetRootRegions();
 
   while (err == KERN_SUCCESS) {
+    vm_size_t size = 0;
+    unsigned depth = 1;
     struct vm_region_submap_info_64 info;
+    mach_msg_type_number_t count = VM_REGION_SUBMAP_INFO_COUNT_64;
     err = vm_region_recurse_64(mach_task_self(), &address, &size, &depth,
                                (vm_region_info_t)&info, &count);
 
