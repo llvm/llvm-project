@@ -534,7 +534,7 @@ public:
                                           uint64_t offsetInSec, Symbol &sym,
                                           RelType addendRelType);
   void addReloc(DynamicReloc::Kind kind, RelType dynType,
-                InputSectionBase *inputSec, uint64_t offsetInSec, Symbol &sym,
+                InputSectionBase &inputSec, uint64_t offsetInSec, Symbol &sym,
                 int64_t addend, RelExpr expr, RelType addendRelType);
   bool isNeeded() const override { return !relocs.empty(); }
   size_t getSize() const override { return relocs.size() * this->entsize; }
