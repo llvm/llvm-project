@@ -18,12 +18,14 @@
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
 
 static llvm::symbolize::LLVMSymbolizer *Symbolizer = nullptr;
+static bool Demangle = true;
 static bool InlineFrames = true;
 
 static llvm::symbolize::LLVMSymbolizer *getDefaultSymbolizer() {
   if (Symbolizer)
     return Symbolizer;
   llvm::symbolize::LLVMSymbolizer::Options Opts;
+  Opts.Demangle = Demangle;
   Symbolizer = new llvm::symbolize::LLVMSymbolizer(Opts);
   return Symbolizer;
 }
@@ -110,6 +112,14 @@ int __sanitizer_symbolize_demangle(const char *Name, char *Buffer,
                                         Result.c_str()) < MaxLength
              ? static_cast<int>(Result.size() + 1)
              : 0;
+}
+
+bool __sanitizer_symbolize_set_demangle(bool Value) {
+  // Must be called before LLVMSymbolizer created.
+  if (Symbolizer)
+    return false;
+  Demangle = Value;
+  return true;
 }
 
 bool __sanitizer_symbolize_set_inline_frames(bool Value) {
