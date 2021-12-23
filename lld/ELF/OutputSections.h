@@ -138,7 +138,7 @@ struct Out {
 
 uint64_t getHeaderSize();
 
-extern std::vector<OutputSection *> outputSections;
+extern llvm::SmallVector<OutputSection *, 0> outputSections;
 } // namespace elf
 } // namespace lld
 

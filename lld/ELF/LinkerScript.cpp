@@ -561,15 +561,15 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
 }
 
 void LinkerScript::discard(InputSectionBase &s) {
-  if (&s == in.shStrTab || &s == mainPart->relrDyn)
+  if (&s == in.shStrTab.get() || &s == mainPart->relrDyn.get())
     error("discarding " + s.name + " section is not allowed");
 
   // You can discard .hash and .gnu.hash sections by linker scripts. Since
   // they are synthesized sections, we need to handle them differently than
   // other regular sections.
-  if (&s == mainPart->gnuHashTab)
+  if (&s == mainPart->gnuHashTab.get())
     mainPart->gnuHashTab = nullptr;
-  if (&s == mainPart->hashTab)
+  if (&s == mainPart->hashTab.get())
     mainPart->hashTab = nullptr;
 
   s.markDead();
