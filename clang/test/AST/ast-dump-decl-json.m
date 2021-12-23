@@ -344,7 +344,6 @@ void f() {
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "i",
-// CHECK-NEXT:    "mangledName": "_i",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
 // CHECK-NEXT:    }
@@ -393,7 +392,6 @@ void f() {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
 // CHECK-NEXT:    "name": "self",
-// CHECK-NEXT:    "mangledName": "_self",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "testObjCMethodDecl *"
 // CHECK-NEXT:    }
@@ -408,7 +406,6 @@ void f() {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
 // CHECK-NEXT:    "name": "_cmd",
-// CHECK-NEXT:    "mangledName": "__cmd",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "desugaredQualType": "SEL *",
 // CHECK-NEXT:     "qualType": "SEL",
@@ -437,7 +434,6 @@ void f() {
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "i",
-// CHECK-NEXT:    "mangledName": "_i",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
 // CHECK-NEXT:    }
@@ -735,7 +731,6 @@ void f() {
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "isImplicit": true,
 // CHECK-NEXT:      "name": "self",
-// CHECK-NEXT:      "mangledName": "_self",
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "TestObjCClass *"
 // CHECK-NEXT:      }
@@ -750,7 +745,6 @@ void f() {
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "isImplicit": true,
 // CHECK-NEXT:      "name": "_cmd",
-// CHECK-NEXT:      "mangledName": "__cmd",
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "desugaredQualType": "SEL *",
 // CHECK-NEXT:       "qualType": "SEL",
@@ -999,7 +993,6 @@ void f() {
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "isImplicit": true,
 // CHECK-NEXT:      "name": "self",
-// CHECK-NEXT:      "mangledName": "_self",
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "TestObjCClass *"
 // CHECK-NEXT:      }
@@ -1014,7 +1007,6 @@ void f() {
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "isImplicit": true,
 // CHECK-NEXT:      "name": "_cmd",
-// CHECK-NEXT:      "mangledName": "__cmd",
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "desugaredQualType": "SEL *",
 // CHECK-NEXT:       "qualType": "SEL",
@@ -1258,7 +1250,6 @@ void f() {
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "foo",
-// CHECK-NEXT:      "mangledName": "_foo",
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "int"
 // CHECK-NEXT:      }
@@ -1343,7 +1334,6 @@ void f() {
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "bar",
-// CHECK-NEXT:      "mangledName": "_bar",
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "int"
 // CHECK-NEXT:      }
@@ -1593,7 +1583,6 @@ void f() {
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "foo",
-// CHECK-NEXT:      "mangledName": "_foo",
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "int"
 // CHECK-NEXT:      }
@@ -1679,7 +1668,6 @@ void f() {
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "bar",
-// CHECK-NEXT:      "mangledName": "_bar",
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "int"
 // CHECK-NEXT:      }
@@ -1741,7 +1729,6 @@ void f() {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
 // CHECK-NEXT:    "name": "x",
-// CHECK-NEXT:    "mangledName": "_x",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
 // CHECK-NEXT:    }
@@ -1854,7 +1841,6 @@ void f() {
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "name": "y",
-// CHECK-NEXT:            "mangledName": "_y",
 // CHECK-NEXT:            "type": {
 // CHECK-NEXT:             "qualType": "int"
 // CHECK-NEXT:            }
@@ -1960,7 +1946,6 @@ void f() {
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "name": "y",
-// CHECK-NEXT:            "mangledName": "_y",
 // CHECK-NEXT:            "type": {
 // CHECK-NEXT:             "qualType": "int"
 // CHECK-NEXT:            }
@@ -1999,7 +1984,6 @@ void f() {
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "Test",
-// CHECK-NEXT:  "mangledName": "_Test",
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "desugaredQualType": "int",
 // CHECK-NEXT:   "qualType": "typeof (B.foo)"

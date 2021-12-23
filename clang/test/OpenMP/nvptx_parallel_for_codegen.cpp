@@ -472,7 +472,7 @@ int bar(int n){
 // CHECK-NEXT:    [[D:%.*]] = call i8* @__kmpc_alloc_shared(i64 4)
 // CHECK-NEXT:    [[D_ON_STACK:%.*]] = bitcast i8* [[D]] to i32*
 // CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
-// CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK-NEXT:    store i32 [[TMP3]], i32* [[D_ON_STACK]], align 4
 // CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[CAPTURED_VARS_ADDRS]], i64 0, i64 0
 // CHECK-NEXT:    [[TMP5:%.*]] = bitcast [10 x i32]* [[TMP0]] to i8*

@@ -1031,9 +1031,9 @@ void array_func(int n, int a[n], St s[2]) {
 // CHECK1-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP7]], align 4
 // CHECK1-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP8]], 1
 // CHECK1-NEXT:    store i32 [[INC]], i32* [[TMP7]], align 4
-// CHECK1-NEXT:    [[TMP9:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK1-NEXT:    [[TMP9:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK1-NEXT:    [[DEC:%.*]] = add nsw i32 [[TMP9]], -1
-// CHECK1-NEXT:    store i32 [[DEC]], i32* [[CONV1]], align 8
+// CHECK1-NEXT:    store i32 [[DEC]], i32* [[CONV1]], align 4
 // CHECK1-NEXT:    [[TMP10:%.*]] = load i32*, i32** [[_TMP5]], align 8
 // CHECK1-NEXT:    [[TMP11:%.*]] = load i32, i32* [[TMP10]], align 4
 // CHECK1-NEXT:    [[DIV:%.*]] = sdiv i32 [[TMP11]], 1
@@ -1867,9 +1867,9 @@ void array_func(int n, int a[n], St s[2]) {
 // CHECK2-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP7]], align 4
 // CHECK2-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP8]], 1
 // CHECK2-NEXT:    store i32 [[INC]], i32* [[TMP7]], align 4
-// CHECK2-NEXT:    [[TMP9:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK2-NEXT:    [[TMP9:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK2-NEXT:    [[DEC:%.*]] = add nsw i32 [[TMP9]], -1
-// CHECK2-NEXT:    store i32 [[DEC]], i32* [[CONV1]], align 8
+// CHECK2-NEXT:    store i32 [[DEC]], i32* [[CONV1]], align 4
 // CHECK2-NEXT:    [[TMP10:%.*]] = load i32*, i32** [[_TMP5]], align 8
 // CHECK2-NEXT:    [[TMP11:%.*]] = load i32, i32* [[TMP10]], align 4
 // CHECK2-NEXT:    [[DIV:%.*]] = sdiv i32 [[TMP11]], 1
@@ -3049,9 +3049,9 @@ void array_func(int n, int a[n], St s[2]) {
 // CHECK3-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP7]], align 4
 // CHECK3-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP8]], 1
 // CHECK3-NEXT:    store i32 [[INC]], i32* [[TMP7]], align 4
-// CHECK3-NEXT:    [[TMP9:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK3-NEXT:    [[TMP9:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK3-NEXT:    [[DEC:%.*]] = add nsw i32 [[TMP9]], -1
-// CHECK3-NEXT:    store i32 [[DEC]], i32* [[CONV1]], align 8
+// CHECK3-NEXT:    store i32 [[DEC]], i32* [[CONV1]], align 4
 // CHECK3-NEXT:    [[TMP10:%.*]] = load i32*, i32** [[_TMP5]], align 8
 // CHECK3-NEXT:    [[TMP11:%.*]] = load i32, i32* [[TMP10]], align 4
 // CHECK3-NEXT:    [[DIV:%.*]] = sdiv i32 [[TMP11]], 1
@@ -3873,9 +3873,9 @@ void array_func(int n, int a[n], St s[2]) {
 // CHECK4-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP7]], align 4
 // CHECK4-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP8]], 1
 // CHECK4-NEXT:    store i32 [[INC]], i32* [[TMP7]], align 4
-// CHECK4-NEXT:    [[TMP9:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK4-NEXT:    [[TMP9:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK4-NEXT:    [[DEC:%.*]] = add nsw i32 [[TMP9]], -1
-// CHECK4-NEXT:    store i32 [[DEC]], i32* [[CONV1]], align 8
+// CHECK4-NEXT:    store i32 [[DEC]], i32* [[CONV1]], align 4
 // CHECK4-NEXT:    [[TMP10:%.*]] = load i32*, i32** [[_TMP5]], align 8
 // CHECK4-NEXT:    [[TMP11:%.*]] = load i32, i32* [[TMP10]], align 4
 // CHECK4-NEXT:    [[DIV:%.*]] = sdiv i32 [[TMP11]], 1
@@ -5053,9 +5053,9 @@ void array_func(int n, int a[n], St s[2]) {
 // CHECK5-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP7]], align 4, !dbg [[DBG168:![0-9]+]]
 // CHECK5-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP8]], 1, !dbg [[DBG168]]
 // CHECK5-NEXT:    store i32 [[INC]], i32* [[TMP7]], align 4, !dbg [[DBG168]]
-// CHECK5-NEXT:    [[TMP9:%.*]] = load i32, i32* [[CONV1]], align 8, !dbg [[DBG169:![0-9]+]]
+// CHECK5-NEXT:    [[TMP9:%.*]] = load i32, i32* [[CONV1]], align 4, !dbg [[DBG169:![0-9]+]]
 // CHECK5-NEXT:    [[DEC:%.*]] = add nsw i32 [[TMP9]], -1, !dbg [[DBG169]]
-// CHECK5-NEXT:    store i32 [[DEC]], i32* [[CONV1]], align 8, !dbg [[DBG169]]
+// CHECK5-NEXT:    store i32 [[DEC]], i32* [[CONV1]], align 4, !dbg [[DBG169]]
 // CHECK5-NEXT:    [[TMP10:%.*]] = load i32*, i32** [[_TMP5]], align 8, !dbg [[DBG167]]
 // CHECK5-NEXT:    [[TMP11:%.*]] = load i32, i32* [[TMP10]], align 4, !dbg [[DBG170:![0-9]+]]
 // CHECK5-NEXT:    [[DIV:%.*]] = sdiv i32 [[TMP11]], 1, !dbg [[DBG170]]

@@ -630,22 +630,16 @@ void PrintInvalidOriginWarning(dfsan_label label, const void *address) {
       d.Warning(), label, address, d.Default());
 }
 
-bool PrintOriginTraceToStr(const void *addr, const char *description,
-                           InternalScopedString *out) {
-  CHECK(out);
-  CHECK(dfsan_get_track_origins());
+void PrintInvalidOriginIdWarning(dfsan_origin origin) {
   Decorator d;
+  Printf(
+      "  %sOrigin Id %d has invalid origin tracking. This can "
+      "be a DFSan bug.%s\n",
+      d.Warning(), origin, d.Default());
+}
 
-  const dfsan_label label = *__dfsan::shadow_for(addr);
-  CHECK(label);
-
-  const dfsan_origin origin = *__dfsan::origin_for(addr);
-
-  out->append("  %sTaint value 0x%x (at %p) origin tracking (%s)%s\n",
-              d.Origin(), label, addr, description ? description : "",
-              d.Default());
-
-  Origin o = Origin::FromRawId(origin);
+bool PrintOriginTraceFramesToStr(Origin o, InternalScopedString *out) {
+  Decorator d;
   bool found = false;
 
   while (o.isChainedOrigin()) {
@@ -666,6 +660,25 @@ bool PrintOriginTraceToStr(const void *addr, const char *description,
   }
 
   return found;
+}
+
+bool PrintOriginTraceToStr(const void *addr, const char *description,
+                           InternalScopedString *out) {
+  CHECK(out);
+  CHECK(dfsan_get_track_origins());
+  Decorator d;
+
+  const dfsan_label label = *__dfsan::shadow_for(addr);
+  CHECK(label);
+
+  const dfsan_origin origin = *__dfsan::origin_for(addr);
+
+  out->append("  %sTaint value 0x%x (at %p) origin tracking (%s)%s\n",
+              d.Origin(), label, addr, description ? description : "",
+              d.Default());
+
+  Origin o = Origin::FromRawId(origin);
+  return PrintOriginTraceFramesToStr(o, out);
 }
 
 }  // namespace
@@ -714,6 +727,50 @@ dfsan_sprint_origin_trace(const void *addr, const char *description,
 
   if (!success) {
     PrintInvalidOriginWarning(label, addr);
+    return 0;
+  }
+
+  if (out_buf_size) {
+    internal_strncpy(out_buf, trace.data(), out_buf_size - 1);
+    out_buf[out_buf_size - 1] = '\0';
+  }
+
+  return trace.length();
+}
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void dfsan_print_origin_id_trace(
+    dfsan_origin origin) {
+  if (!dfsan_get_track_origins()) {
+    PrintNoOriginTrackingWarning();
+    return;
+  }
+  Origin o = Origin::FromRawId(origin);
+
+  InternalScopedString trace;
+  bool success = PrintOriginTraceFramesToStr(o, &trace);
+
+  if (trace.length())
+    Printf("%s", trace.data());
+
+  if (!success)
+    PrintInvalidOriginIdWarning(origin);
+}
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE uptr dfsan_sprint_origin_id_trace(
+    dfsan_origin origin, char *out_buf, uptr out_buf_size) {
+  CHECK(out_buf);
+
+  if (!dfsan_get_track_origins()) {
+    PrintNoOriginTrackingWarning();
+    return 0;
+  }
+  Origin o = Origin::FromRawId(origin);
+
+  InternalScopedString trace;
+  bool success = PrintOriginTraceFramesToStr(o, &trace);
+
+  if (!success) {
+    PrintInvalidOriginIdWarning(origin);
     return 0;
   }
 

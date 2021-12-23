@@ -8,6 +8,7 @@ declare void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* nocapture, i8, i
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
 declare void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32) nounwind
 declare void @llvm.init.trampoline(i8*, i8*, i8*)
+declare void @llvm.matrix.column.major.store(<6 x float>, float*, i64, i1, i32, i32)
 
 define void @test1(i32* %Q, i32* %P) {
 ; CHECK-LABEL: @test1(
@@ -193,6 +194,20 @@ define void @test11() {
   ret void
 }
 
+; TODO: Specialized store intrinsics should be removed if dead.
+define void @test_matrix_store(i64 %stride) {
+; CHECK-LABEL: @test_matrix_store(
+; CHECK-NEXT:    [[A:%.*]] = alloca [6 x float], align 4
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast [6 x float]* [[A]] to float*
+; CHECK-NEXT:    call void @llvm.matrix.column.major.store.v6f32.i64(<6 x float> zeroinitializer, float* [[CAST]], i64 [[STRIDE:%.*]], i1 false, i32 3, i32 2)
+; CHECK-NEXT:    ret void
+;
+  %a = alloca [6 x float]
+  %cast = bitcast [6 x float]* %a to float*
+  call void @llvm.matrix.column.major.store(<6 x float> zeroinitializer, float* %cast, i64 %stride, i1 false, i32 3, i32 2)
+  ret void
+}
+
 ; %P doesn't escape, the DEAD instructions should be removed.
 declare void @test13f()
 define i32* @test13() {
@@ -312,7 +327,7 @@ define noalias i8* @test23() nounwind uwtable ssp {
 ; CHECK-NEXT:    store i8 97, i8* [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [2 x i8], [2 x i8]* [[X]], i64 0, i64 1
 ; CHECK-NEXT:    store i8 0, i8* [[ARRAYIDX1]], align 1
-; CHECK-NEXT:    [[CALL:%.*]] = call i8* @strdup(i8* [[ARRAYIDX]]) [[ATTR3:#.*]]
+; CHECK-NEXT:    [[CALL:%.*]] = call i8* @strdup(i8* [[ARRAYIDX]]) #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    ret i8* [[CALL]]
 ;
   %x = alloca [2 x i8], align 1
@@ -350,7 +365,7 @@ define i8* @test25(i8* %p) nounwind {
 ; CHECK-NEXT:    [[P_4:%.*]] = getelementptr i8, i8* [[P:%.*]], i64 4
 ; CHECK-NEXT:    [[TMP:%.*]] = load i8, i8* [[P_4]], align 1
 ; CHECK-NEXT:    store i8 0, i8* [[P_4]], align 1
-; CHECK-NEXT:    [[Q:%.*]] = call i8* @strdup(i8* [[P]]) [[ATTR6:#.*]]
+; CHECK-NEXT:    [[Q:%.*]] = call i8* @strdup(i8* [[P]]) #[[ATTR10:[0-9]+]]
 ; CHECK-NEXT:    store i8 [[TMP]], i8* [[P_4]], align 1
 ; CHECK-NEXT:    ret i8* [[Q]]
 ;
