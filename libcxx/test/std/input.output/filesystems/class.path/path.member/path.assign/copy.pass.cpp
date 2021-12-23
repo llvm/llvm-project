@@ -15,9 +15,8 @@
 // path& operator=(path const&);
 
 #include "filesystem_include.h"
-#include <cassert>
-#include <string>
 #include <type_traits>
+#include <cassert>
 
 #include "test_macros.h"
 
