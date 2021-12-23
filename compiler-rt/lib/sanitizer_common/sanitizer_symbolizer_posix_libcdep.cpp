@@ -218,6 +218,7 @@ class Addr2LineProcess final : public SymbolizerProcess {
     argv[i++] = "-Cfe";
     argv[i++] = module_name_;
     argv[i++] = nullptr;
+    CHECK_LE(i, kArgVMax);
   }
 
   bool ReachedEndOfOutput(const char *buffer, uptr length) const override;
