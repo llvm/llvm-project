@@ -215,16 +215,16 @@ void unreachable_call() {
 // CHECK1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK1-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK1:       user_code.entry:
-// CHECK1-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV]], align 8
+// CHECK1-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV]], align 2
 // CHECK1-NEXT:    [[CONV1:%.*]] = sext i16 [[TMP1]] to i32
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV1]], 1
 // CHECK1-NEXT:    [[CONV2:%.*]] = trunc i32 [[ADD]] to i16
-// CHECK1-NEXT:    store i16 [[CONV2]], i16* [[CONV]], align 8
-// CHECK1-NEXT:    [[TMP2:%.*]] = load i16, i16* [[CONV]], align 8
+// CHECK1-NEXT:    store i16 [[CONV2]], i16* [[CONV]], align 2
+// CHECK1-NEXT:    [[TMP2:%.*]] = load i16, i16* [[CONV]], align 2
 // CHECK1-NEXT:    [[CONV3:%.*]] = sext i16 [[TMP2]] to i32
 // CHECK1-NEXT:    [[ADD4:%.*]] = add nsw i32 [[CONV3]], 2
 // CHECK1-NEXT:    [[CONV5:%.*]] = trunc i32 [[ADD4]] to i16
-// CHECK1-NEXT:    store i16 [[CONV5]], i16* [[CONV]], align 8
+// CHECK1-NEXT:    store i16 [[CONV5]], i16* [[CONV]], align 2
 // CHECK1-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1, i1 true)
 // CHECK1-NEXT:    ret void
 // CHECK1:       worker.exit:
@@ -265,9 +265,9 @@ void unreachable_call() {
 // CHECK1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP8]], -1
 // CHECK1-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK1:       user_code.entry:
-// CHECK1-NEXT:    [[TMP9:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK1-NEXT:    [[TMP9:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP9]], 1
-// CHECK1-NEXT:    store i32 [[ADD]], i32* [[CONV]], align 8
+// CHECK1-NEXT:    store i32 [[ADD]], i32* [[CONV]], align 4
 // CHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x float], [10 x float]* [[TMP0]], i64 0, i64 2
 // CHECK1-NEXT:    [[TMP10:%.*]] = load float, float* [[ARRAYIDX]], align 4
 // CHECK1-NEXT:    [[CONV5:%.*]] = fpext float [[TMP10]] to double
@@ -342,19 +342,19 @@ void unreachable_call() {
 // CHECK1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK1-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK1:       user_code.entry:
-// CHECK1-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK1-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP2]], 1
-// CHECK1-NEXT:    store i32 [[ADD]], i32* [[CONV]], align 8
-// CHECK1-NEXT:    [[TMP3:%.*]] = load i16, i16* [[CONV1]], align 8
+// CHECK1-NEXT:    store i32 [[ADD]], i32* [[CONV]], align 4
+// CHECK1-NEXT:    [[TMP3:%.*]] = load i16, i16* [[CONV1]], align 2
 // CHECK1-NEXT:    [[CONV3:%.*]] = sext i16 [[TMP3]] to i32
 // CHECK1-NEXT:    [[ADD4:%.*]] = add nsw i32 [[CONV3]], 1
 // CHECK1-NEXT:    [[CONV5:%.*]] = trunc i32 [[ADD4]] to i16
-// CHECK1-NEXT:    store i16 [[CONV5]], i16* [[CONV1]], align 8
-// CHECK1-NEXT:    [[TMP4:%.*]] = load i8, i8* [[CONV2]], align 8
+// CHECK1-NEXT:    store i16 [[CONV5]], i16* [[CONV1]], align 2
+// CHECK1-NEXT:    [[TMP4:%.*]] = load i8, i8* [[CONV2]], align 1
 // CHECK1-NEXT:    [[CONV6:%.*]] = sext i8 [[TMP4]] to i32
 // CHECK1-NEXT:    [[ADD7:%.*]] = add nsw i32 [[CONV6]], 1
 // CHECK1-NEXT:    [[CONV8:%.*]] = trunc i32 [[ADD7]] to i8
-// CHECK1-NEXT:    store i8 [[CONV8]], i8* [[CONV2]], align 8
+// CHECK1-NEXT:    store i8 [[CONV8]], i8* [[CONV2]], align 1
 // CHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x i32], [10 x i32]* [[TMP0]], i64 0, i64 2
 // CHECK1-NEXT:    [[TMP5:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
 // CHECK1-NEXT:    [[ADD9:%.*]] = add nsw i32 [[TMP5]], 1
@@ -387,7 +387,7 @@ void unreachable_call() {
 // CHECK1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP4]], -1
 // CHECK1-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK1:       user_code.entry:
-// CHECK1-NEXT:    [[TMP5:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK1-NEXT:    [[TMP5:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK1-NEXT:    [[CONV3:%.*]] = sitofp i32 [[TMP5]] to double
 // CHECK1-NEXT:    [[ADD:%.*]] = fadd double [[CONV3]], 1.500000e+00
 // CHECK1-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_S1:%.*]], %struct.S1* [[TMP0]], i32 0, i32 0
@@ -468,14 +468,14 @@ void unreachable_call() {
 // CHECK1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK1-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK1:       user_code.entry:
-// CHECK1-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK1-NEXT:    [[TMP2:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP2]], 1
-// CHECK1-NEXT:    store i32 [[ADD]], i32* [[CONV]], align 8
-// CHECK1-NEXT:    [[TMP3:%.*]] = load i16, i16* [[CONV1]], align 8
+// CHECK1-NEXT:    store i32 [[ADD]], i32* [[CONV]], align 4
+// CHECK1-NEXT:    [[TMP3:%.*]] = load i16, i16* [[CONV1]], align 2
 // CHECK1-NEXT:    [[CONV2:%.*]] = sext i16 [[TMP3]] to i32
 // CHECK1-NEXT:    [[ADD3:%.*]] = add nsw i32 [[CONV2]], 1
 // CHECK1-NEXT:    [[CONV4:%.*]] = trunc i32 [[ADD3]] to i16
-// CHECK1-NEXT:    store i16 [[CONV4]], i16* [[CONV1]], align 8
+// CHECK1-NEXT:    store i16 [[CONV4]], i16* [[CONV1]], align 2
 // CHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x i32], [10 x i32]* [[TMP0]], i64 0, i64 2
 // CHECK1-NEXT:    [[TMP4:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
 // CHECK1-NEXT:    [[ADD5:%.*]] = add nsw i32 [[TMP4]], 1
@@ -602,16 +602,16 @@ void unreachable_call() {
 // CHECK2-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK2-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK2:       user_code.entry:
-// CHECK2-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV]], align 4
+// CHECK2-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV]], align 2
 // CHECK2-NEXT:    [[CONV1:%.*]] = sext i16 [[TMP1]] to i32
 // CHECK2-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV1]], 1
 // CHECK2-NEXT:    [[CONV2:%.*]] = trunc i32 [[ADD]] to i16
-// CHECK2-NEXT:    store i16 [[CONV2]], i16* [[CONV]], align 4
-// CHECK2-NEXT:    [[TMP2:%.*]] = load i16, i16* [[CONV]], align 4
+// CHECK2-NEXT:    store i16 [[CONV2]], i16* [[CONV]], align 2
+// CHECK2-NEXT:    [[TMP2:%.*]] = load i16, i16* [[CONV]], align 2
 // CHECK2-NEXT:    [[CONV3:%.*]] = sext i16 [[TMP2]] to i32
 // CHECK2-NEXT:    [[ADD4:%.*]] = add nsw i32 [[CONV3]], 2
 // CHECK2-NEXT:    [[CONV5:%.*]] = trunc i32 [[ADD4]] to i16
-// CHECK2-NEXT:    store i16 [[CONV5]], i16* [[CONV]], align 4
+// CHECK2-NEXT:    store i16 [[CONV5]], i16* [[CONV]], align 2
 // CHECK2-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1, i1 true)
 // CHECK2-NEXT:    ret void
 // CHECK2:       worker.exit:
@@ -730,16 +730,16 @@ void unreachable_call() {
 // CHECK2-NEXT:    [[TMP2:%.*]] = load i32, i32* [[A_ADDR]], align 4
 // CHECK2-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP2]], 1
 // CHECK2-NEXT:    store i32 [[ADD]], i32* [[A_ADDR]], align 4
-// CHECK2-NEXT:    [[TMP3:%.*]] = load i16, i16* [[CONV]], align 4
+// CHECK2-NEXT:    [[TMP3:%.*]] = load i16, i16* [[CONV]], align 2
 // CHECK2-NEXT:    [[CONV2:%.*]] = sext i16 [[TMP3]] to i32
 // CHECK2-NEXT:    [[ADD3:%.*]] = add nsw i32 [[CONV2]], 1
 // CHECK2-NEXT:    [[CONV4:%.*]] = trunc i32 [[ADD3]] to i16
-// CHECK2-NEXT:    store i16 [[CONV4]], i16* [[CONV]], align 4
-// CHECK2-NEXT:    [[TMP4:%.*]] = load i8, i8* [[CONV1]], align 4
+// CHECK2-NEXT:    store i16 [[CONV4]], i16* [[CONV]], align 2
+// CHECK2-NEXT:    [[TMP4:%.*]] = load i8, i8* [[CONV1]], align 1
 // CHECK2-NEXT:    [[CONV5:%.*]] = sext i8 [[TMP4]] to i32
 // CHECK2-NEXT:    [[ADD6:%.*]] = add nsw i32 [[CONV5]], 1
 // CHECK2-NEXT:    [[CONV7:%.*]] = trunc i32 [[ADD6]] to i8
-// CHECK2-NEXT:    store i8 [[CONV7]], i8* [[CONV1]], align 4
+// CHECK2-NEXT:    store i8 [[CONV7]], i8* [[CONV1]], align 1
 // CHECK2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x i32], [10 x i32]* [[TMP0]], i32 0, i32 2
 // CHECK2-NEXT:    [[TMP5:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
 // CHECK2-NEXT:    [[ADD8:%.*]] = add nsw i32 [[TMP5]], 1
@@ -854,11 +854,11 @@ void unreachable_call() {
 // CHECK2-NEXT:    [[TMP2:%.*]] = load i32, i32* [[A_ADDR]], align 4
 // CHECK2-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP2]], 1
 // CHECK2-NEXT:    store i32 [[ADD]], i32* [[A_ADDR]], align 4
-// CHECK2-NEXT:    [[TMP3:%.*]] = load i16, i16* [[CONV]], align 4
+// CHECK2-NEXT:    [[TMP3:%.*]] = load i16, i16* [[CONV]], align 2
 // CHECK2-NEXT:    [[CONV1:%.*]] = sext i16 [[TMP3]] to i32
 // CHECK2-NEXT:    [[ADD2:%.*]] = add nsw i32 [[CONV1]], 1
 // CHECK2-NEXT:    [[CONV3:%.*]] = trunc i32 [[ADD2]] to i16
-// CHECK2-NEXT:    store i16 [[CONV3]], i16* [[CONV]], align 4
+// CHECK2-NEXT:    store i16 [[CONV3]], i16* [[CONV]], align 2
 // CHECK2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x i32], [10 x i32]* [[TMP0]], i32 0, i32 2
 // CHECK2-NEXT:    [[TMP4:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
 // CHECK2-NEXT:    [[ADD4:%.*]] = add nsw i32 [[TMP4]], 1
@@ -985,16 +985,16 @@ void unreachable_call() {
 // CHECK3-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK3-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK3:       user_code.entry:
-// CHECK3-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV]], align 4
+// CHECK3-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV]], align 2
 // CHECK3-NEXT:    [[CONV1:%.*]] = sext i16 [[TMP1]] to i32
 // CHECK3-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV1]], 1
 // CHECK3-NEXT:    [[CONV2:%.*]] = trunc i32 [[ADD]] to i16
-// CHECK3-NEXT:    store i16 [[CONV2]], i16* [[CONV]], align 4
-// CHECK3-NEXT:    [[TMP2:%.*]] = load i16, i16* [[CONV]], align 4
+// CHECK3-NEXT:    store i16 [[CONV2]], i16* [[CONV]], align 2
+// CHECK3-NEXT:    [[TMP2:%.*]] = load i16, i16* [[CONV]], align 2
 // CHECK3-NEXT:    [[CONV3:%.*]] = sext i16 [[TMP2]] to i32
 // CHECK3-NEXT:    [[ADD4:%.*]] = add nsw i32 [[CONV3]], 2
 // CHECK3-NEXT:    [[CONV5:%.*]] = trunc i32 [[ADD4]] to i16
-// CHECK3-NEXT:    store i16 [[CONV5]], i16* [[CONV]], align 4
+// CHECK3-NEXT:    store i16 [[CONV5]], i16* [[CONV]], align 2
 // CHECK3-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1, i1 true)
 // CHECK3-NEXT:    ret void
 // CHECK3:       worker.exit:
@@ -1113,16 +1113,16 @@ void unreachable_call() {
 // CHECK3-NEXT:    [[TMP2:%.*]] = load i32, i32* [[A_ADDR]], align 4
 // CHECK3-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP2]], 1
 // CHECK3-NEXT:    store i32 [[ADD]], i32* [[A_ADDR]], align 4
-// CHECK3-NEXT:    [[TMP3:%.*]] = load i16, i16* [[CONV]], align 4
+// CHECK3-NEXT:    [[TMP3:%.*]] = load i16, i16* [[CONV]], align 2
 // CHECK3-NEXT:    [[CONV2:%.*]] = sext i16 [[TMP3]] to i32
 // CHECK3-NEXT:    [[ADD3:%.*]] = add nsw i32 [[CONV2]], 1
 // CHECK3-NEXT:    [[CONV4:%.*]] = trunc i32 [[ADD3]] to i16
-// CHECK3-NEXT:    store i16 [[CONV4]], i16* [[CONV]], align 4
-// CHECK3-NEXT:    [[TMP4:%.*]] = load i8, i8* [[CONV1]], align 4
+// CHECK3-NEXT:    store i16 [[CONV4]], i16* [[CONV]], align 2
+// CHECK3-NEXT:    [[TMP4:%.*]] = load i8, i8* [[CONV1]], align 1
 // CHECK3-NEXT:    [[CONV5:%.*]] = sext i8 [[TMP4]] to i32
 // CHECK3-NEXT:    [[ADD6:%.*]] = add nsw i32 [[CONV5]], 1
 // CHECK3-NEXT:    [[CONV7:%.*]] = trunc i32 [[ADD6]] to i8
-// CHECK3-NEXT:    store i8 [[CONV7]], i8* [[CONV1]], align 4
+// CHECK3-NEXT:    store i8 [[CONV7]], i8* [[CONV1]], align 1
 // CHECK3-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x i32], [10 x i32]* [[TMP0]], i32 0, i32 2
 // CHECK3-NEXT:    [[TMP5:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
 // CHECK3-NEXT:    [[ADD8:%.*]] = add nsw i32 [[TMP5]], 1
@@ -1237,11 +1237,11 @@ void unreachable_call() {
 // CHECK3-NEXT:    [[TMP2:%.*]] = load i32, i32* [[A_ADDR]], align 4
 // CHECK3-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP2]], 1
 // CHECK3-NEXT:    store i32 [[ADD]], i32* [[A_ADDR]], align 4
-// CHECK3-NEXT:    [[TMP3:%.*]] = load i16, i16* [[CONV]], align 4
+// CHECK3-NEXT:    [[TMP3:%.*]] = load i16, i16* [[CONV]], align 2
 // CHECK3-NEXT:    [[CONV1:%.*]] = sext i16 [[TMP3]] to i32
 // CHECK3-NEXT:    [[ADD2:%.*]] = add nsw i32 [[CONV1]], 1
 // CHECK3-NEXT:    [[CONV3:%.*]] = trunc i32 [[ADD2]] to i16
-// CHECK3-NEXT:    store i16 [[CONV3]], i16* [[CONV]], align 4
+// CHECK3-NEXT:    store i16 [[CONV3]], i16* [[CONV]], align 2
 // CHECK3-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x i32], [10 x i32]* [[TMP0]], i32 0, i32 2
 // CHECK3-NEXT:    [[TMP4:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
 // CHECK3-NEXT:    [[ADD4:%.*]] = add nsw i32 [[TMP4]], 1

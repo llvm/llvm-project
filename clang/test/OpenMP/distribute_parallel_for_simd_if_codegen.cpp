@@ -3817,7 +3817,7 @@ int main() {
 // CHECK3-NEXT:    store i32 [[CONV2]], i32* [[DOTOMP_UB]], align 4
 // CHECK3-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK3-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK3-NEXT:    [[TMP2:%.*]] = load i8, i8* [[CONV]], align 8
+// CHECK3-NEXT:    [[TMP2:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK3-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP2]] to i1
 // CHECK3-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK3:       omp_if.then:
@@ -3945,7 +3945,7 @@ int main() {
 // CHECK3-NEXT:    store i32 [[CONV2]], i32* [[DOTOMP_UB]], align 4
 // CHECK3-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK3-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK3-NEXT:    [[TMP2:%.*]] = load i8, i8* [[CONV]], align 8
+// CHECK3-NEXT:    [[TMP2:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK3-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP2]] to i1
 // CHECK3-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK3:       omp_if.then:
@@ -5465,7 +5465,7 @@ int main() {
 // CHECK4-NEXT:    store i32 [[CONV2]], i32* [[DOTOMP_UB]], align 4
 // CHECK4-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK4-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK4-NEXT:    [[TMP2:%.*]] = load i8, i8* [[CONV]], align 8
+// CHECK4-NEXT:    [[TMP2:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK4-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP2]] to i1
 // CHECK4-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK4:       omp_if.then:
@@ -5593,7 +5593,7 @@ int main() {
 // CHECK4-NEXT:    store i32 [[CONV2]], i32* [[DOTOMP_UB]], align 4
 // CHECK4-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK4-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK4-NEXT:    [[TMP2:%.*]] = load i8, i8* [[CONV]], align 8
+// CHECK4-NEXT:    [[TMP2:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK4-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP2]] to i1
 // CHECK4-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK4:       omp_if.then:
@@ -11083,7 +11083,7 @@ int main() {
 // CHECK11-NEXT:    store i32 [[CONV2]], i32* [[DOTOMP_UB]], align 4
 // CHECK11-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK11-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK11-NEXT:    [[TMP2:%.*]] = load i8, i8* [[CONV]], align 8
+// CHECK11-NEXT:    [[TMP2:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK11-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP2]] to i1
 // CHECK11-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK11:       omp_if.then:
@@ -11211,7 +11211,7 @@ int main() {
 // CHECK11-NEXT:    store i32 [[CONV2]], i32* [[DOTOMP_UB]], align 4
 // CHECK11-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK11-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK11-NEXT:    [[TMP2:%.*]] = load i8, i8* [[CONV]], align 8
+// CHECK11-NEXT:    [[TMP2:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK11-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP2]] to i1
 // CHECK11-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK11:       omp_if.then:
@@ -12731,7 +12731,7 @@ int main() {
 // CHECK12-NEXT:    store i32 [[CONV2]], i32* [[DOTOMP_UB]], align 4
 // CHECK12-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK12-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK12-NEXT:    [[TMP2:%.*]] = load i8, i8* [[CONV]], align 8
+// CHECK12-NEXT:    [[TMP2:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK12-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP2]] to i1
 // CHECK12-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK12:       omp_if.then:
@@ -12859,7 +12859,7 @@ int main() {
 // CHECK12-NEXT:    store i32 [[CONV2]], i32* [[DOTOMP_UB]], align 4
 // CHECK12-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // CHECK12-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK12-NEXT:    [[TMP2:%.*]] = load i8, i8* [[CONV]], align 8
+// CHECK12-NEXT:    [[TMP2:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK12-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP2]] to i1
 // CHECK12-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK12:       omp_if.then:
