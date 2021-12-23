@@ -19,10 +19,10 @@
 // bool operator> (directory_entry const&) const noexcept;
 // bool operator>=(directory_entry const&) const noexcept;
 
+
 #include "filesystem_include.h"
-#include <cassert>
 #include <type_traits>
-#include <utility>
+#include <cassert>
 
 #include "test_macros.h"
 

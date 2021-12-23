@@ -19,9 +19,8 @@
 // typedef ... iterator_category
 
 #include "filesystem_include.h"
-#include <cassert>
-#include <iterator>
 #include <type_traits>
+#include <cassert>
 
 #include "test_macros.h"
 
