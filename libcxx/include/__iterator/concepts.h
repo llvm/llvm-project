@@ -28,8 +28,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if !defined(_LIBCPP_HAS_NO_RANGES)
 
-// clang-format off
-
 // [iterator.concept.readable]
 template<class _In>
 concept __indirectly_readable_impl =
@@ -258,8 +256,6 @@ concept indirectly_movable_storable =
 
 // Note: indirectly_swappable is located in iter_swap.h to prevent a dependency cycle
 // (both iter_swap and indirectly_swappable require indirectly_readable).
-
-// clang-format on
 
 #endif // !defined(_LIBCPP_HAS_NO_RANGES)
 

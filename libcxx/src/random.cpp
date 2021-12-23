@@ -9,8 +9,8 @@
 #include <__config>
 
 #if defined(_LIBCPP_USING_WIN32_RANDOM)
-// Must be defined before including stdlib.h to enable rand_s().
-#define _CRT_RAND_S
+    // Must be defined before including stdlib.h to enable rand_s().
+#   define _CRT_RAND_S
 #endif // defined(_LIBCPP_USING_WIN32_RANDOM)
 
 #include "limits"
@@ -18,7 +18,7 @@
 #include "system_error"
 
 #if defined(__sun__)
-#define rename solaris_headers_are_broken
+#   define rename solaris_headers_are_broken
 #endif // defined(__sun__)
 
 #include <errno.h>
@@ -26,16 +26,16 @@
 #include <stdlib.h>
 
 #if defined(_LIBCPP_USING_GETENTROPY)
-#include <sys/random.h>
+#   include <sys/random.h>
 #elif defined(_LIBCPP_USING_DEV_RANDOM)
-#include <fcntl.h>
-#include <unistd.h>
-#if __has_include(<sys/ioctl.h>) && __has_include(<linux/random.h>)
-#include <sys/ioctl.h>
-#include <linux/random.h>
-#endif
+#   include <fcntl.h>
+#   include <unistd.h>
+#   if __has_include(<sys/ioctl.h>) && __has_include(<linux/random.h>)
+#       include <sys/ioctl.h>
+#       include <linux/random.h>
+#   endif
 #elif defined(_LIBCPP_USING_NACL_RANDOM)
-#include <nacl/nacl_random.h>
+#   include <nacl/nacl_random.h>
 #endif
 
 

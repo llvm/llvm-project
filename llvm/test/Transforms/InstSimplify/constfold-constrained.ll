@@ -282,6 +282,7 @@ entry:
 define double @fadd_05() #0 {
 ; CHECK-LABEL: @fadd_05(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double 1.000000e+00, double 2.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
 ; CHECK-NEXT:    ret double 3.000000e+00
 ;
 entry:
@@ -293,6 +294,7 @@ entry:
 define double @fadd_06() #0 {
 ; CHECK-LABEL: @fadd_06(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double 1.000000e+00, double 2.000000e+00, metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR0]]
 ; CHECK-NEXT:    ret double 3.000000e+00
 ;
 entry:
@@ -415,6 +417,120 @@ entry:
 }
 
 
+; When exceptions are ignored, comparison of constants can be folded, even for (signaling) NaNs.
+define i1 @cmp_eq_01() #0 {
+; CHECK-LABEL: @cmp_eq_01(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RESULT:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double 1.000000e+00, double 2.000000e+00, metadata !"oeq", metadata !"fpexcept.ignore") #[[ATTR0]]
+; CHECK-NEXT:    ret i1 [[RESULT]]
+;
+entry:
+  %result = call i1 @llvm.experimental.constrained.fcmp.f64(double 1.0, double 2.0, metadata !"oeq", metadata !"fpexcept.ignore") #0
+  ret i1 %result
+}
+
+define i1 @cmp_eq_02() #0 {
+; CHECK-LABEL: @cmp_eq_02(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RESULT:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double 2.000000e+00, double 2.000000e+00, metadata !"oeq", metadata !"fpexcept.ignore") #[[ATTR0]]
+; CHECK-NEXT:    ret i1 [[RESULT]]
+;
+entry:
+  %result = call i1 @llvm.experimental.constrained.fcmp.f64(double 2.0, double 2.0, metadata !"oeq", metadata !"fpexcept.ignore") #0
+  ret i1 %result
+}
+
+define i1 @cmp_eq_03() #0 {
+; CHECK-LABEL: @cmp_eq_03(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RESULT:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double 2.000000e+00, double 0x7FF8000000000000, metadata !"oeq", metadata !"fpexcept.ignore") #[[ATTR0]]
+; CHECK-NEXT:    ret i1 [[RESULT]]
+;
+entry:
+  %result = call i1 @llvm.experimental.constrained.fcmp.f64(double 2.0, double 0x7ff8000000000000, metadata !"oeq", metadata !"fpexcept.ignore") #0
+  ret i1 %result
+}
+
+define i1 @cmp_eq_04() #0 {
+; CHECK-LABEL: @cmp_eq_04(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RESULT:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double 2.000000e+00, double 0x7FF4000000000000, metadata !"oeq", metadata !"fpexcept.ignore") #[[ATTR0]]
+; CHECK-NEXT:    ret i1 [[RESULT]]
+;
+entry:
+  %result = call i1 @llvm.experimental.constrained.fcmp.f64(double 2.0, double 0x7ff4000000000000, metadata !"oeq", metadata !"fpexcept.ignore") #0
+  ret i1 %result
+}
+
+define i1 @cmp_eq_05() #0 {
+; CHECK-LABEL: @cmp_eq_05(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RESULT:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double 2.000000e+00, double 0x7FF8000000000000, metadata !"oeq", metadata !"fpexcept.ignore") #[[ATTR0]]
+; CHECK-NEXT:    ret i1 [[RESULT]]
+;
+entry:
+  %result = call i1 @llvm.experimental.constrained.fcmps.f64(double 2.0, double 0x7ff8000000000000, metadata !"oeq", metadata !"fpexcept.ignore") #0
+  ret i1 %result
+}
+
+define i1 @cmp_eq_06() #0 {
+; CHECK-LABEL: @cmp_eq_06(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RESULT:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double 2.000000e+00, double 0x7FF4000000000000, metadata !"oeq", metadata !"fpexcept.ignore") #[[ATTR0]]
+; CHECK-NEXT:    ret i1 [[RESULT]]
+;
+entry:
+  %result = call i1 @llvm.experimental.constrained.fcmps.f64(double 2.0, double 0x7ff4000000000000, metadata !"oeq", metadata !"fpexcept.ignore") #0
+  ret i1 %result
+}
+
+; Compare with SNAN is NOT folded if the exception behavior mode is not 'ignore'.
+define i1 @cmp_eq_nan_01() #0 {
+; CHECK-LABEL: @cmp_eq_nan_01(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RESULT:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double 0x7FF4000000000000, double 1.000000e+00, metadata !"oeq", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    ret i1 [[RESULT]]
+;
+entry:
+  %result = call i1 @llvm.experimental.constrained.fcmp.f64(double 0x7ff4000000000000, double 1.0, metadata !"oeq", metadata !"fpexcept.strict") #0
+  ret i1 %result
+}
+
+define i1 @cmp_eq_nan_02() #0 {
+; CHECK-LABEL: @cmp_eq_nan_02(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RESULT:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double 0x7FF4000000000000, double 1.000000e+00, metadata !"oeq", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    ret i1 [[RESULT]]
+;
+entry:
+  %result = call i1 @llvm.experimental.constrained.fcmps.f64(double 0x7ff4000000000000, double 1.0, metadata !"oeq", metadata !"fpexcept.strict") #0
+  ret i1 %result
+}
+
+; Compare with QNAN is folded for fcmp but is NOT folded for fcmps if the exception behavior mode is not 'ignore'.
+define i1 @cmp_eq_nan_03() #0 {
+; CHECK-LABEL: @cmp_eq_nan_03(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RESULT:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double 0x7FF8000000000000, double 1.000000e+00, metadata !"oeq", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    ret i1 [[RESULT]]
+;
+entry:
+  %result = call i1 @llvm.experimental.constrained.fcmp.f64(double 0x7ff8000000000000, double 1.0, metadata !"oeq", metadata !"fpexcept.strict") #0
+  ret i1 %result
+}
+
+define i1 @cmp_eq_nan_04() #0 {
+; CHECK-LABEL: @cmp_eq_nan_04(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RESULT:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double 0x7FF8000000000000, double 1.000000e+00, metadata !"oeq", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    ret i1 [[RESULT]]
+;
+entry:
+  %result = call i1 @llvm.experimental.constrained.fcmps.f64(double 0x7ff8000000000000, double 1.0, metadata !"oeq", metadata !"fpexcept.strict") #0
+  ret i1 %result
+}
+
+
 attributes #0 = { strictfp }
 
 declare double @llvm.experimental.constrained.nearbyint.f64(double, metadata, metadata)
@@ -433,4 +549,6 @@ declare double @llvm.experimental.constrained.fdiv.f64(double, double, metadata,
 declare double @llvm.experimental.constrained.frem.f64(double, double, metadata, metadata)
 declare double @llvm.experimental.constrained.fma.f64(double, double, double, metadata, metadata)
 declare double @llvm.experimental.constrained.fmuladd.f64(double, double, double, metadata, metadata)
+declare i1 @llvm.experimental.constrained.fcmp.f64(double, double, metadata, metadata)
+declare i1 @llvm.experimental.constrained.fcmps.f64(double, double, metadata, metadata)
 

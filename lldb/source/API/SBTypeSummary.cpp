@@ -100,20 +100,11 @@ const lldb_private::TypeSummaryOptions &SBTypeSummaryOptions::ref() const {
 }
 
 SBTypeSummaryOptions::SBTypeSummaryOptions(
-    const lldb_private::TypeSummaryOptions *lldb_object_ptr) {
+    const lldb_private::TypeSummaryOptions &lldb_object)
+    : m_opaque_up(std::make_unique<TypeSummaryOptions>(lldb_object)) {
   LLDB_RECORD_CONSTRUCTOR(SBTypeSummaryOptions,
-                          (const lldb_private::TypeSummaryOptions *),
-                          lldb_object_ptr);
-
-  SetOptions(lldb_object_ptr);
-}
-
-void SBTypeSummaryOptions::SetOptions(
-    const lldb_private::TypeSummaryOptions *lldb_object_ptr) {
-  if (lldb_object_ptr)
-    m_opaque_up = std::make_unique<TypeSummaryOptions>(*lldb_object_ptr);
-  else
-    m_opaque_up = std::make_unique<TypeSummaryOptions>();
+                          (const lldb_private::TypeSummaryOptions &),
+                          lldb_object);
 }
 
 SBTypeSummary::SBTypeSummary() : m_opaque_sp() {
@@ -175,7 +166,7 @@ SBTypeSummary SBTypeSummary::CreateWithCallback(FormatCallback cb,
              const TypeSummaryOptions &opt) -> bool {
           SBStream stream;
           SBValue sb_value(valobj.GetSP());
-          SBTypeSummaryOptions options(&opt);
+          SBTypeSummaryOptions options(opt);
           if (!cb(sb_value, options, stream))
             return false;
           stm.Write(stream.GetData(), stream.GetSize());
@@ -492,7 +483,7 @@ void RegisterMethods<SBTypeSummaryOptions>(Registry &R) {
   LLDB_REGISTER_METHOD(void, SBTypeSummaryOptions, SetCapping,
                        (lldb::TypeSummaryCapping));
   LLDB_REGISTER_CONSTRUCTOR(SBTypeSummaryOptions,
-                            (const lldb_private::TypeSummaryOptions *));
+                            (const lldb_private::TypeSummaryOptions &));
 }
 
 template <>

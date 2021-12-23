@@ -7,8 +7,6 @@
 # We also don't use a per-target include directory layout, so we have only one
 # include directory for the libc++ headers.
 
-import sys
-
 lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
 
 config.substitutions.append(('%{flags}',
@@ -21,7 +19,7 @@ config.substitutions.append(('%{link_flags}',
     '-nostdlib++ -L %{install}/lib -lc++'
 ))
 config.substitutions.append(('%{exec}',
-    '{} %{{libcxx}}/utils/run.py --execdir %T --env DYLD_LIBRARY_PATH=%{{install}}/lib -- '.format(sys.executable)
+    '%{executor} --execdir %T --env DYLD_LIBRARY_PATH=%{install}/lib -- '
 ))
 
 import os, site

@@ -702,7 +702,7 @@ getDimMap(ArrayRef<AffineMap> indexingMaps, ArrayAttr iteratorTypes,
     int64_t lhsDim = getResultIndex(indexingMaps[0], targetExpr);
     int64_t rhsDim = getResultIndex(indexingMaps[1], targetExpr);
     if (lhsDim >= 0 && rhsDim >= 0)
-      dimMap.push_back({lhsDim, rhsDim});
+      dimMap.emplace_back(lhsDim, rhsDim);
   }
   return dimMap;
 }
@@ -1125,11 +1125,11 @@ static Value foldExtractFromBroadcast(ExtractOp extractOp) {
   auto getRank = [](Type type) {
     return type.isa<VectorType>() ? type.cast<VectorType>().getRank() : 0;
   };
-  unsigned broadcasrSrcRank = getRank(source.getType());
+  unsigned broadcastSrcRank = getRank(source.getType());
   unsigned extractResultRank = getRank(extractOp.getType());
-  if (extractResultRank < broadcasrSrcRank) {
+  if (extractResultRank < broadcastSrcRank) {
     auto extractPos = extractVector<int64_t>(extractOp.position());
-    unsigned rankDiff = broadcasrSrcRank - extractResultRank;
+    unsigned rankDiff = broadcastSrcRank - extractResultRank;
     extractPos.erase(
         extractPos.begin(),
         std::next(extractPos.begin(), extractPos.size() - rankDiff));
@@ -1236,12 +1236,12 @@ public:
     auto getRank = [](Type type) {
       return type.isa<VectorType>() ? type.cast<VectorType>().getRank() : 0;
     };
-    unsigned broadcasrSrcRank = getRank(source.getType());
+    unsigned broadcastSrcRank = getRank(source.getType());
     unsigned extractResultRank = getRank(extractOp.getType());
     // We only consider the case where the rank of the source is smaller than
     // the rank of the extract dst. The other cases are handled in the folding
     // patterns.
-    if (extractResultRank <= broadcasrSrcRank)
+    if (extractResultRank <= broadcastSrcRank)
       return failure();
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
         extractOp, extractOp.getType(), source);

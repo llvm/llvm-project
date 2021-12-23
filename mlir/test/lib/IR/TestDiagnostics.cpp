@@ -23,7 +23,7 @@ struct TestDiagnosticFilterPass
   StringRef getDescription() const final {
     return "Test diagnostic filtering support.";
   }
-  TestDiagnosticFilterPass() {}
+  TestDiagnosticFilterPass() = default;
   TestDiagnosticFilterPass(const TestDiagnosticFilterPass &) {}
 
   void runOnOperation() override {

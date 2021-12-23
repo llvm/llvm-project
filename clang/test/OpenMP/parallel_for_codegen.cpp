@@ -298,7 +298,7 @@ void range_for_collapsed() {
 // CHECK1-NEXT:    store i64 [[TMP3]], i64* [[DOTOMP_UB]], align 8
 // CHECK1-NEXT:    store i64 1, i64* [[DOTOMP_STRIDE]], align 8
 // CHECK1-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK1-NEXT:    [[TMP4:%.*]] = load i8, i8* [[CONV]], align 8
+// CHECK1-NEXT:    [[TMP4:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK1-NEXT:    [[CONV6:%.*]] = sext i8 [[TMP4]] to i64
 // CHECK1-NEXT:    [[TMP5:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    [[TMP6:%.*]] = load i32, i32* [[TMP5]], align 4
@@ -1304,7 +1304,7 @@ void range_for_collapsed() {
 // CHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, float* [[VLA1]], i64 [[IDXPROM]]
 // CHECK1-NEXT:    [[TMP14:%.*]] = load float, float* [[ARRAYIDX]], align 4
 // CHECK1-NEXT:    [[ADD5:%.*]] = fadd float [[CONV4]], [[TMP14]]
-// CHECK1-NEXT:    [[TMP15:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK1-NEXT:    [[TMP15:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK1-NEXT:    [[CONV6:%.*]] = sitofp i32 [[TMP15]] to float
 // CHECK1-NEXT:    [[ADD7:%.*]] = fadd float [[ADD5]], [[CONV6]]
 // CHECK1-NEXT:    [[TMP16:%.*]] = load float*, float** [[TMP0]], align 8
@@ -1412,7 +1412,7 @@ void range_for_collapsed() {
 // CHECK2-NEXT:    store i64 [[TMP3]], i64* [[DOTOMP_UB]], align 8
 // CHECK2-NEXT:    store i64 1, i64* [[DOTOMP_STRIDE]], align 8
 // CHECK2-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK2-NEXT:    [[TMP4:%.*]] = load i8, i8* [[CONV]], align 8
+// CHECK2-NEXT:    [[TMP4:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK2-NEXT:    [[CONV6:%.*]] = sext i8 [[TMP4]] to i64
 // CHECK2-NEXT:    [[TMP5:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK2-NEXT:    [[TMP6:%.*]] = load i32, i32* [[TMP5]], align 4
@@ -2418,7 +2418,7 @@ void range_for_collapsed() {
 // CHECK2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, float* [[VLA1]], i64 [[IDXPROM]]
 // CHECK2-NEXT:    [[TMP14:%.*]] = load float, float* [[ARRAYIDX]], align 4
 // CHECK2-NEXT:    [[ADD5:%.*]] = fadd float [[CONV4]], [[TMP14]]
-// CHECK2-NEXT:    [[TMP15:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK2-NEXT:    [[TMP15:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK2-NEXT:    [[CONV6:%.*]] = sitofp i32 [[TMP15]] to float
 // CHECK2-NEXT:    [[ADD7:%.*]] = fadd float [[ADD5]], [[CONV6]]
 // CHECK2-NEXT:    [[TMP16:%.*]] = load float*, float** [[TMP0]], align 8
@@ -2526,7 +2526,7 @@ void range_for_collapsed() {
 // CHECK3-NEXT:    store i64 [[TMP3]], i64* [[DOTOMP_UB]], align 8
 // CHECK3-NEXT:    store i64 1, i64* [[DOTOMP_STRIDE]], align 8
 // CHECK3-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK3-NEXT:    [[TMP4:%.*]] = load i8, i8* [[CONV]], align 8
+// CHECK3-NEXT:    [[TMP4:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK3-NEXT:    [[CONV6:%.*]] = sext i8 [[TMP4]] to i64
 // CHECK3-NEXT:    [[TMP5:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK3-NEXT:    [[TMP6:%.*]] = load i32, i32* [[TMP5]], align 4
@@ -3532,7 +3532,7 @@ void range_for_collapsed() {
 // CHECK3-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, float* [[VLA1]], i64 [[IDXPROM]]
 // CHECK3-NEXT:    [[TMP14:%.*]] = load float, float* [[ARRAYIDX]], align 4
 // CHECK3-NEXT:    [[ADD5:%.*]] = fadd float [[CONV4]], [[TMP14]]
-// CHECK3-NEXT:    [[TMP15:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK3-NEXT:    [[TMP15:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK3-NEXT:    [[CONV6:%.*]] = sitofp i32 [[TMP15]] to float
 // CHECK3-NEXT:    [[ADD7:%.*]] = fadd float [[ADD5]], [[CONV6]]
 // CHECK3-NEXT:    [[TMP16:%.*]] = load float*, float** [[TMP0]], align 8
@@ -3640,7 +3640,7 @@ void range_for_collapsed() {
 // CHECK4-NEXT:    store i64 [[TMP3]], i64* [[DOTOMP_UB]], align 8
 // CHECK4-NEXT:    store i64 1, i64* [[DOTOMP_STRIDE]], align 8
 // CHECK4-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK4-NEXT:    [[TMP4:%.*]] = load i8, i8* [[CONV]], align 8
+// CHECK4-NEXT:    [[TMP4:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK4-NEXT:    [[CONV6:%.*]] = sext i8 [[TMP4]] to i64
 // CHECK4-NEXT:    [[TMP5:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK4-NEXT:    [[TMP6:%.*]] = load i32, i32* [[TMP5]], align 4
@@ -4646,7 +4646,7 @@ void range_for_collapsed() {
 // CHECK4-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, float* [[VLA1]], i64 [[IDXPROM]]
 // CHECK4-NEXT:    [[TMP14:%.*]] = load float, float* [[ARRAYIDX]], align 4
 // CHECK4-NEXT:    [[ADD5:%.*]] = fadd float [[CONV4]], [[TMP14]]
-// CHECK4-NEXT:    [[TMP15:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK4-NEXT:    [[TMP15:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK4-NEXT:    [[CONV6:%.*]] = sitofp i32 [[TMP15]] to float
 // CHECK4-NEXT:    [[ADD7:%.*]] = fadd float [[ADD5]], [[CONV6]]
 // CHECK4-NEXT:    [[TMP16:%.*]] = load float*, float** [[TMP0]], align 8
@@ -4697,7 +4697,7 @@ void range_for_collapsed() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@_Z17with_var_schedulev
-// CHECK5-SAME: () #[[ATTR0:[0-9]+]] !dbg [[DBG7:![0-9]+]] {
+// CHECK5-SAME: () #[[ATTR0:[0-9]+]] !dbg [[DBG6:![0-9]+]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[A:%.*]] = alloca double, align 8
 // CHECK5-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i8, align 1
@@ -4754,7 +4754,7 @@ void range_for_collapsed() {
 // CHECK5-NEXT:    store i64 [[TMP3]], i64* [[DOTOMP_UB]], align 8, !dbg [[DBG15]]
 // CHECK5-NEXT:    store i64 1, i64* [[DOTOMP_STRIDE]], align 8, !dbg [[DBG15]]
 // CHECK5-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4, !dbg [[DBG15]]
-// CHECK5-NEXT:    [[TMP4:%.*]] = load i8, i8* [[CONV]], align 8, !dbg [[DBG14]]
+// CHECK5-NEXT:    [[TMP4:%.*]] = load i8, i8* [[CONV]], align 1, !dbg [[DBG14]]
 // CHECK5-NEXT:    [[CONV6:%.*]] = sext i8 [[TMP4]] to i64, !dbg [[DBG14]]
 // CHECK5-NEXT:    [[TMP5:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8, !dbg [[DBG14]]
 // CHECK5-NEXT:    [[TMP6:%.*]] = load i32, i32* [[TMP5]], align 4, !dbg [[DBG14]]
@@ -5760,7 +5760,7 @@ void range_for_collapsed() {
 // CHECK5-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, float* [[VLA1]], i64 [[IDXPROM]], !dbg [[DBG111]]
 // CHECK5-NEXT:    [[TMP14:%.*]] = load float, float* [[ARRAYIDX]], align 4, !dbg [[DBG111]]
 // CHECK5-NEXT:    [[ADD5:%.*]] = fadd float [[CONV4]], [[TMP14]], !dbg [[DBG111]]
-// CHECK5-NEXT:    [[TMP15:%.*]] = load i32, i32* [[CONV]], align 8, !dbg [[DBG111]]
+// CHECK5-NEXT:    [[TMP15:%.*]] = load i32, i32* [[CONV]], align 4, !dbg [[DBG111]]
 // CHECK5-NEXT:    [[CONV6:%.*]] = sitofp i32 [[TMP15]] to float, !dbg [[DBG111]]
 // CHECK5-NEXT:    [[ADD7:%.*]] = fadd float [[ADD5]], [[CONV6]], !dbg [[DBG111]]
 // CHECK5-NEXT:    [[TMP16:%.*]] = load float*, float** [[TMP0]], align 8, !dbg [[DBG111]]
@@ -5868,7 +5868,7 @@ void range_for_collapsed() {
 // CHECK6-NEXT:    store i64 [[TMP3]], i64* [[DOTOMP_UB]], align 8
 // CHECK6-NEXT:    store i64 1, i64* [[DOTOMP_STRIDE]], align 8
 // CHECK6-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK6-NEXT:    [[TMP4:%.*]] = load i8, i8* [[CONV]], align 8
+// CHECK6-NEXT:    [[TMP4:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK6-NEXT:    [[CONV6:%.*]] = sext i8 [[TMP4]] to i64
 // CHECK6-NEXT:    [[TMP5:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK6-NEXT:    [[TMP6:%.*]] = load i32, i32* [[TMP5]], align 4
@@ -6872,7 +6872,7 @@ void range_for_collapsed() {
 // CHECK6-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, float* [[VLA1]], i64 [[IDXPROM]]
 // CHECK6-NEXT:    [[TMP14:%.*]] = load float, float* [[ARRAYIDX]], align 4
 // CHECK6-NEXT:    [[ADD5:%.*]] = fadd float [[CONV4]], [[TMP14]]
-// CHECK6-NEXT:    [[TMP15:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK6-NEXT:    [[TMP15:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK6-NEXT:    [[CONV6:%.*]] = sitofp i32 [[TMP15]] to float
 // CHECK6-NEXT:    [[ADD7:%.*]] = fadd float [[ADD5]], [[CONV6]]
 // CHECK6-NEXT:    [[TMP16:%.*]] = load float*, float** [[TMP0]], align 8

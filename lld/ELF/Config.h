@@ -22,6 +22,7 @@
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include <atomic>
+#include <memory>
 #include <vector>
 
 namespace lld {
@@ -343,7 +344,7 @@ struct Configuration {
 };
 
 // The only instance of Configuration struct.
-extern Configuration *config;
+extern std::unique_ptr<Configuration> config;
 
 // The first two elements of versionDefinitions represent VER_NDX_LOCAL and
 // VER_NDX_GLOBAL. This helper returns other elements.

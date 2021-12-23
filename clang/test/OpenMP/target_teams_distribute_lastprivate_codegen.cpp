@@ -182,11 +182,11 @@ int main() {
 // CHECK1-NEXT:    [[CONV5:%.*]] = bitcast i64* [[G1_CASTED]] to double*
 // CHECK1-NEXT:    store double [[TMP3]], double* [[CONV5]], align 8
 // CHECK1-NEXT:    [[TMP4:%.*]] = load i64, i64* [[G1_CASTED]], align 8
-// CHECK1-NEXT:    [[TMP5:%.*]] = load i32, i32* [[CONV2]], align 8
+// CHECK1-NEXT:    [[TMP5:%.*]] = load i32, i32* [[CONV2]], align 4
 // CHECK1-NEXT:    [[CONV6:%.*]] = bitcast i64* [[SVAR_CASTED]] to i32*
 // CHECK1-NEXT:    store i32 [[TMP5]], i32* [[CONV6]], align 4
 // CHECK1-NEXT:    [[TMP6:%.*]] = load i64, i64* [[SVAR_CASTED]], align 8
-// CHECK1-NEXT:    [[TMP7:%.*]] = load float, float* [[CONV3]], align 8
+// CHECK1-NEXT:    [[TMP7:%.*]] = load float, float* [[CONV3]], align 4
 // CHECK1-NEXT:    [[CONV7:%.*]] = bitcast i64* [[SFVAR_CASTED]] to float*
 // CHECK1-NEXT:    store float [[TMP7]], float* [[CONV7]], align 4
 // CHECK1-NEXT:    [[TMP8:%.*]] = load i64, i64* [[SFVAR_CASTED]], align 8
@@ -298,9 +298,9 @@ int main() {
 // CHECK1-NEXT:    [[TMP20:%.*]] = load double, double* [[TMP19]], align 8
 // CHECK1-NEXT:    store volatile double [[TMP20]], double* [[TMP0]], align 8
 // CHECK1-NEXT:    [[TMP21:%.*]] = load i32, i32* [[SVAR8]], align 4
-// CHECK1-NEXT:    store i32 [[TMP21]], i32* [[CONV2]], align 8
+// CHECK1-NEXT:    store i32 [[TMP21]], i32* [[CONV2]], align 4
 // CHECK1-NEXT:    [[TMP22:%.*]] = load float, float* [[SFVAR9]], align 4
-// CHECK1-NEXT:    store float [[TMP22]], float* [[CONV3]], align 8
+// CHECK1-NEXT:    store float [[TMP22]], float* [[CONV3]], align 4
 // CHECK1-NEXT:    br label [[DOTOMP_LASTPRIVATE_DONE]]
 // CHECK1:       .omp.lastprivate.done:
 // CHECK1-NEXT:    ret void
@@ -361,11 +361,11 @@ int main() {
 // CHECK2-NEXT:    [[CONV5:%.*]] = bitcast i64* [[G1_CASTED]] to double*
 // CHECK2-NEXT:    store double [[TMP3]], double* [[CONV5]], align 8
 // CHECK2-NEXT:    [[TMP4:%.*]] = load i64, i64* [[G1_CASTED]], align 8
-// CHECK2-NEXT:    [[TMP5:%.*]] = load i32, i32* [[CONV2]], align 8
+// CHECK2-NEXT:    [[TMP5:%.*]] = load i32, i32* [[CONV2]], align 4
 // CHECK2-NEXT:    [[CONV6:%.*]] = bitcast i64* [[SVAR_CASTED]] to i32*
 // CHECK2-NEXT:    store i32 [[TMP5]], i32* [[CONV6]], align 4
 // CHECK2-NEXT:    [[TMP6:%.*]] = load i64, i64* [[SVAR_CASTED]], align 8
-// CHECK2-NEXT:    [[TMP7:%.*]] = load float, float* [[CONV3]], align 8
+// CHECK2-NEXT:    [[TMP7:%.*]] = load float, float* [[CONV3]], align 4
 // CHECK2-NEXT:    [[CONV7:%.*]] = bitcast i64* [[SFVAR_CASTED]] to float*
 // CHECK2-NEXT:    store float [[TMP7]], float* [[CONV7]], align 4
 // CHECK2-NEXT:    [[TMP8:%.*]] = load i64, i64* [[SFVAR_CASTED]], align 8
@@ -477,9 +477,9 @@ int main() {
 // CHECK2-NEXT:    [[TMP20:%.*]] = load double, double* [[TMP19]], align 8
 // CHECK2-NEXT:    store volatile double [[TMP20]], double* [[TMP0]], align 8
 // CHECK2-NEXT:    [[TMP21:%.*]] = load i32, i32* [[SVAR8]], align 4
-// CHECK2-NEXT:    store i32 [[TMP21]], i32* [[CONV2]], align 8
+// CHECK2-NEXT:    store i32 [[TMP21]], i32* [[CONV2]], align 4
 // CHECK2-NEXT:    [[TMP22:%.*]] = load float, float* [[SFVAR9]], align 4
-// CHECK2-NEXT:    store float [[TMP22]], float* [[CONV3]], align 8
+// CHECK2-NEXT:    store float [[TMP22]], float* [[CONV3]], align 4
 // CHECK2-NEXT:    br label [[DOTOMP_LASTPRIVATE_DONE]]
 // CHECK2:       .omp.lastprivate.done:
 // CHECK2-NEXT:    ret void
@@ -977,12 +977,12 @@ int main() {
 // CHECK9-NEXT:    [[TMP2:%.*]] = load %struct.S*, %struct.S** [[VAR_ADDR]], align 8
 // CHECK9-NEXT:    [[CONV1:%.*]] = bitcast i64* [[SVAR_ADDR]] to i32*
 // CHECK9-NEXT:    store %struct.S* [[TMP2]], %struct.S** [[TMP]], align 8
-// CHECK9-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK9-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK9-NEXT:    [[CONV2:%.*]] = bitcast i64* [[T_VAR_CASTED]] to i32*
 // CHECK9-NEXT:    store i32 [[TMP3]], i32* [[CONV2]], align 4
 // CHECK9-NEXT:    [[TMP4:%.*]] = load i64, i64* [[T_VAR_CASTED]], align 8
 // CHECK9-NEXT:    [[TMP5:%.*]] = load %struct.S*, %struct.S** [[TMP]], align 8
-// CHECK9-NEXT:    [[TMP6:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK9-NEXT:    [[TMP6:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK9-NEXT:    [[CONV3:%.*]] = bitcast i64* [[SVAR_CASTED]] to i32*
 // CHECK9-NEXT:    store i32 [[TMP6]], i32* [[CONV3]], align 4
 // CHECK9-NEXT:    [[TMP7:%.*]] = load i64, i64* [[SVAR_CASTED]], align 8
@@ -1104,7 +1104,7 @@ int main() {
 // CHECK9-NEXT:    br i1 [[TMP22]], label [[DOTOMP_LASTPRIVATE_THEN:%.*]], label [[DOTOMP_LASTPRIVATE_DONE:%.*]]
 // CHECK9:       .omp.lastprivate.then:
 // CHECK9-NEXT:    [[TMP23:%.*]] = load i32, i32* [[T_VAR3]], align 4
-// CHECK9-NEXT:    store i32 [[TMP23]], i32* [[CONV]], align 8
+// CHECK9-NEXT:    store i32 [[TMP23]], i32* [[CONV]], align 4
 // CHECK9-NEXT:    [[TMP24:%.*]] = bitcast [2 x i32]* [[TMP0]] to i8*
 // CHECK9-NEXT:    [[TMP25:%.*]] = bitcast [2 x i32]* [[VEC4]] to i8*
 // CHECK9-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[TMP24]], i8* align 4 [[TMP25]], i64 8, i1 false)
@@ -1129,7 +1129,7 @@ int main() {
 // CHECK9-NEXT:    [[TMP32:%.*]] = bitcast %struct.S* [[TMP30]] to i8*
 // CHECK9-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[TMP31]], i8* align 4 [[TMP32]], i64 4, i1 false)
 // CHECK9-NEXT:    [[TMP33:%.*]] = load i32, i32* [[SVAR8]], align 4
-// CHECK9-NEXT:    store i32 [[TMP33]], i32* [[CONV1]], align 8
+// CHECK9-NEXT:    store i32 [[TMP33]], i32* [[CONV1]], align 4
 // CHECK9-NEXT:    br label [[DOTOMP_LASTPRIVATE_DONE]]
 // CHECK9:       .omp.lastprivate.done:
 // CHECK9-NEXT:    call void @_ZN1SIfED1Ev(%struct.S* nonnull align 4 dereferenceable(4) [[VAR6]]) #[[ATTR4]]
@@ -1320,7 +1320,7 @@ int main() {
 // CHECK9-NEXT:    [[TMP1:%.*]] = load [2 x %struct.S.0]*, [2 x %struct.S.0]** [[S_ARR_ADDR]], align 8
 // CHECK9-NEXT:    [[TMP2:%.*]] = load %struct.S.0*, %struct.S.0** [[VAR_ADDR]], align 8
 // CHECK9-NEXT:    store %struct.S.0* [[TMP2]], %struct.S.0** [[TMP]], align 8
-// CHECK9-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK9-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK9-NEXT:    [[CONV1:%.*]] = bitcast i64* [[T_VAR_CASTED]] to i32*
 // CHECK9-NEXT:    store i32 [[TMP3]], i32* [[CONV1]], align 4
 // CHECK9-NEXT:    [[TMP4:%.*]] = load i64, i64* [[T_VAR_CASTED]], align 8
@@ -1439,7 +1439,7 @@ int main() {
 // CHECK9-NEXT:    br i1 [[TMP22]], label [[DOTOMP_LASTPRIVATE_THEN:%.*]], label [[DOTOMP_LASTPRIVATE_DONE:%.*]]
 // CHECK9:       .omp.lastprivate.then:
 // CHECK9-NEXT:    [[TMP23:%.*]] = load i32, i32* [[T_VAR2]], align 4
-// CHECK9-NEXT:    store i32 [[TMP23]], i32* [[CONV]], align 8
+// CHECK9-NEXT:    store i32 [[TMP23]], i32* [[CONV]], align 4
 // CHECK9-NEXT:    [[TMP24:%.*]] = bitcast [2 x i32]* [[TMP0]] to i8*
 // CHECK9-NEXT:    [[TMP25:%.*]] = bitcast [2 x i32]* [[VEC3]] to i8*
 // CHECK9-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[TMP24]], i8* align 4 [[TMP25]], i64 8, i1 false)
@@ -1683,12 +1683,12 @@ int main() {
 // CHECK10-NEXT:    [[TMP2:%.*]] = load %struct.S*, %struct.S** [[VAR_ADDR]], align 8
 // CHECK10-NEXT:    [[CONV1:%.*]] = bitcast i64* [[SVAR_ADDR]] to i32*
 // CHECK10-NEXT:    store %struct.S* [[TMP2]], %struct.S** [[TMP]], align 8
-// CHECK10-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK10-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK10-NEXT:    [[CONV2:%.*]] = bitcast i64* [[T_VAR_CASTED]] to i32*
 // CHECK10-NEXT:    store i32 [[TMP3]], i32* [[CONV2]], align 4
 // CHECK10-NEXT:    [[TMP4:%.*]] = load i64, i64* [[T_VAR_CASTED]], align 8
 // CHECK10-NEXT:    [[TMP5:%.*]] = load %struct.S*, %struct.S** [[TMP]], align 8
-// CHECK10-NEXT:    [[TMP6:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK10-NEXT:    [[TMP6:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK10-NEXT:    [[CONV3:%.*]] = bitcast i64* [[SVAR_CASTED]] to i32*
 // CHECK10-NEXT:    store i32 [[TMP6]], i32* [[CONV3]], align 4
 // CHECK10-NEXT:    [[TMP7:%.*]] = load i64, i64* [[SVAR_CASTED]], align 8
@@ -1810,7 +1810,7 @@ int main() {
 // CHECK10-NEXT:    br i1 [[TMP22]], label [[DOTOMP_LASTPRIVATE_THEN:%.*]], label [[DOTOMP_LASTPRIVATE_DONE:%.*]]
 // CHECK10:       .omp.lastprivate.then:
 // CHECK10-NEXT:    [[TMP23:%.*]] = load i32, i32* [[T_VAR3]], align 4
-// CHECK10-NEXT:    store i32 [[TMP23]], i32* [[CONV]], align 8
+// CHECK10-NEXT:    store i32 [[TMP23]], i32* [[CONV]], align 4
 // CHECK10-NEXT:    [[TMP24:%.*]] = bitcast [2 x i32]* [[TMP0]] to i8*
 // CHECK10-NEXT:    [[TMP25:%.*]] = bitcast [2 x i32]* [[VEC4]] to i8*
 // CHECK10-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[TMP24]], i8* align 4 [[TMP25]], i64 8, i1 false)
@@ -1835,7 +1835,7 @@ int main() {
 // CHECK10-NEXT:    [[TMP32:%.*]] = bitcast %struct.S* [[TMP30]] to i8*
 // CHECK10-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[TMP31]], i8* align 4 [[TMP32]], i64 4, i1 false)
 // CHECK10-NEXT:    [[TMP33:%.*]] = load i32, i32* [[SVAR8]], align 4
-// CHECK10-NEXT:    store i32 [[TMP33]], i32* [[CONV1]], align 8
+// CHECK10-NEXT:    store i32 [[TMP33]], i32* [[CONV1]], align 4
 // CHECK10-NEXT:    br label [[DOTOMP_LASTPRIVATE_DONE]]
 // CHECK10:       .omp.lastprivate.done:
 // CHECK10-NEXT:    call void @_ZN1SIfED1Ev(%struct.S* nonnull align 4 dereferenceable(4) [[VAR6]]) #[[ATTR4]]
@@ -2026,7 +2026,7 @@ int main() {
 // CHECK10-NEXT:    [[TMP1:%.*]] = load [2 x %struct.S.0]*, [2 x %struct.S.0]** [[S_ARR_ADDR]], align 8
 // CHECK10-NEXT:    [[TMP2:%.*]] = load %struct.S.0*, %struct.S.0** [[VAR_ADDR]], align 8
 // CHECK10-NEXT:    store %struct.S.0* [[TMP2]], %struct.S.0** [[TMP]], align 8
-// CHECK10-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK10-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK10-NEXT:    [[CONV1:%.*]] = bitcast i64* [[T_VAR_CASTED]] to i32*
 // CHECK10-NEXT:    store i32 [[TMP3]], i32* [[CONV1]], align 4
 // CHECK10-NEXT:    [[TMP4:%.*]] = load i64, i64* [[T_VAR_CASTED]], align 8
@@ -2145,7 +2145,7 @@ int main() {
 // CHECK10-NEXT:    br i1 [[TMP22]], label [[DOTOMP_LASTPRIVATE_THEN:%.*]], label [[DOTOMP_LASTPRIVATE_DONE:%.*]]
 // CHECK10:       .omp.lastprivate.then:
 // CHECK10-NEXT:    [[TMP23:%.*]] = load i32, i32* [[T_VAR2]], align 4
-// CHECK10-NEXT:    store i32 [[TMP23]], i32* [[CONV]], align 8
+// CHECK10-NEXT:    store i32 [[TMP23]], i32* [[CONV]], align 4
 // CHECK10-NEXT:    [[TMP24:%.*]] = bitcast [2 x i32]* [[TMP0]] to i8*
 // CHECK10-NEXT:    [[TMP25:%.*]] = bitcast [2 x i32]* [[VEC3]] to i8*
 // CHECK10-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[TMP24]], i8* align 4 [[TMP25]], i64 8, i1 false)
@@ -3614,5 +3614,4 @@ int main() {
 // CHECK12-NEXT:  entry:
 // CHECK12-NEXT:    call void @__tgt_register_requires(i64 1)
 // CHECK12-NEXT:    ret void
-//
 //

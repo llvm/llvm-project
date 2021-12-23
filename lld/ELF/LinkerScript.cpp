@@ -47,7 +47,7 @@ using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::elf;
 
-LinkerScript *elf::script;
+std::unique_ptr<LinkerScript> elf::script;
 
 static bool isSectionPrefix(StringRef prefix, StringRef name) {
   return name.consume_front(prefix) && (name.empty() || name[0] == '.');
@@ -560,22 +560,22 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
   return ret;
 }
 
-void LinkerScript::discard(InputSectionBase *s) {
-  if (s == in.shStrTab || s == mainPart->relrDyn)
-    error("discarding " + s->name + " section is not allowed");
+void LinkerScript::discard(InputSectionBase &s) {
+  if (&s == in.shStrTab || &s == mainPart->relrDyn)
+    error("discarding " + s.name + " section is not allowed");
 
   // You can discard .hash and .gnu.hash sections by linker scripts. Since
   // they are synthesized sections, we need to handle them differently than
   // other regular sections.
-  if (s == mainPart->gnuHashTab)
+  if (&s == mainPart->gnuHashTab)
     mainPart->gnuHashTab = nullptr;
-  if (s == mainPart->hashTab)
+  if (&s == mainPart->hashTab)
     mainPart->hashTab = nullptr;
 
-  s->markDead();
-  s->parent = nullptr;
-  for (InputSection *ds : s->dependentSections)
-    discard(ds);
+  s.markDead();
+  s.parent = nullptr;
+  for (InputSection *sec : s.dependentSections)
+    discard(*sec);
 }
 
 void LinkerScript::discardSynthetic(OutputSection &outCmd) {
@@ -589,7 +589,7 @@ void LinkerScript::discardSynthetic(OutputSection &outCmd) {
         std::vector<InputSectionBase *> matches =
             computeInputSections(isd, secs);
         for (InputSectionBase *s : matches)
-          discard(s);
+          discard(*s);
       }
   }
 }
@@ -618,7 +618,7 @@ void LinkerScript::processSectionCommands() {
     // Any input section assigned to it is discarded.
     if (osec->name == "/DISCARD/") {
       for (InputSectionBase *s : v)
-        discard(s);
+        discard(*s);
       discardSynthetic(*osec);
       osec->commands.clear();
       return false;

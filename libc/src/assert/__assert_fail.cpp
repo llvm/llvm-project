@@ -10,8 +10,8 @@
 #include "src/stdlib/abort.h"
 
 // These includes are temporary.
-#include "config/linux/syscall.h" // For internal syscall function.
 #include "include/sys/syscall.h"  // For syscall numbers.
+#include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 
 namespace __llvm_libc {
 

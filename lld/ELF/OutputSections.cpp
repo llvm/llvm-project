@@ -40,7 +40,7 @@ OutputSection *Out::preinitArray;
 OutputSection *Out::initArray;
 OutputSection *Out::finiArray;
 
-std::vector<OutputSection *> elf::outputSections;
+SmallVector<OutputSection *, 0> elf::outputSections;
 
 uint32_t OutputSection::getPhdrFlags() const {
   uint32_t ret = 0;
@@ -560,7 +560,7 @@ void OutputSection::checkDynRelAddends(const uint8_t *bufStart) {
     if (!sec)
       return;
     for (const DynamicReloc &rel : sec->relocs) {
-      int64_t addend = rel.computeAddend();
+      int64_t addend = rel.addend;
       const OutputSection *relOsec = rel.inputSec->getOutputSection();
       assert(relOsec != nullptr && "missing output section for relocation");
       const uint8_t *relocTarget =

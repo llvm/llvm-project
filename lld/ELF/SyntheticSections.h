@@ -449,21 +449,21 @@ public:
   DynamicReloc(RelType type, const InputSectionBase *inputSec,
                uint64_t offsetInSec, Kind kind, Symbol &sym, int64_t addend,
                RelExpr expr)
-      : type(type), sym(&sym), inputSec(inputSec), offsetInSec(offsetInSec),
-        kind(kind), expr(expr), addend(addend) {}
+      : sym(&sym), inputSec(inputSec), offsetInSec(offsetInSec), type(type),
+        addend(addend), kind(kind), expr(expr) {}
   /// This constructor records a relative relocation with no symbol.
   DynamicReloc(RelType type, const InputSectionBase *inputSec,
                uint64_t offsetInSec, int64_t addend = 0)
-      : type(type), sym(nullptr), inputSec(inputSec), offsetInSec(offsetInSec),
-        kind(AddendOnly), expr(R_ADDEND), addend(addend) {}
+      : sym(nullptr), inputSec(inputSec), offsetInSec(offsetInSec), type(type),
+        addend(addend), kind(AddendOnly), expr(R_ADDEND) {}
   /// This constructor records dynamic relocation settings used by the MIPS
   /// multi-GOT implementation.
   DynamicReloc(RelType type, const InputSectionBase *inputSec,
                uint64_t offsetInSec, const OutputSection *outputSec,
                int64_t addend)
-      : type(type), sym(nullptr), inputSec(inputSec), offsetInSec(offsetInSec),
-        kind(MipsMultiGotPage), expr(R_ADDEND), addend(addend),
-        outputSec(outputSec) {}
+      : sym(nullptr), outputSec(outputSec), inputSec(inputSec),
+        offsetInSec(offsetInSec), type(type), addend(addend),
+        kind(MipsMultiGotPage), expr(R_ADDEND) {}
 
   uint64_t getOffset() const;
   uint32_t getSymIndex(SymbolTableBaseSection *symTab) const;
@@ -476,18 +476,24 @@ public:
   /// address/the address of the corresponding GOT entry/etc.
   int64_t computeAddend() const;
 
-  RelType type;
+  void computeRaw(SymbolTableBaseSection *symtab);
+
   Symbol *sym;
+  const OutputSection *outputSec = nullptr;
   const InputSectionBase *inputSec;
   uint64_t offsetInSec;
+  uint64_t r_offset;
+  RelType type;
+  uint32_t r_sym;
+  // Initially input addend, then the output addend after
+  // RelocationSection<ELFT>::writeTo.
+  int64_t addend;
 
 private:
   Kind kind;
   // The kind of expression used to calculate the added (required e.g. for
   // relative GOT relocations).
   RelExpr expr;
-  int64_t addend;
-  const OutputSection *outputSec = nullptr;
 };
 
 template <class ELFT> class DynamicSection final : public SyntheticSection {
@@ -513,22 +519,22 @@ public:
   /// using relocations on the input section (e.g. MipsGotSection::writeTo()).
   void addReloc(const DynamicReloc &reloc);
   /// Add a dynamic relocation against \p sym with an optional addend.
-  void addSymbolReloc(RelType dynType, InputSectionBase *isec,
+  void addSymbolReloc(RelType dynType, InputSectionBase &isec,
                       uint64_t offsetInSec, Symbol &sym, int64_t addend = 0,
                       llvm::Optional<RelType> addendRelType = llvm::None);
   /// Add a relative dynamic relocation that uses the target address of \p sym
   /// (i.e. InputSection::getRelocTargetVA()) + \p addend as the addend.
-  void addRelativeReloc(RelType dynType, InputSectionBase *isec,
+  void addRelativeReloc(RelType dynType, InputSectionBase &isec,
                         uint64_t offsetInSec, Symbol &sym, int64_t addend,
                         RelType addendRelType, RelExpr expr);
   /// Add a dynamic relocation using the target address of \p sym as the addend
   /// if \p sym is non-preemptible. Otherwise add a relocation against \p sym.
   void addAddendOnlyRelocIfNonPreemptible(RelType dynType,
-                                          InputSectionBase *isec,
+                                          InputSectionBase &isec,
                                           uint64_t offsetInSec, Symbol &sym,
                                           RelType addendRelType);
   void addReloc(DynamicReloc::Kind kind, RelType dynType,
-                InputSectionBase *inputSec, uint64_t offsetInSec, Symbol &sym,
+                InputSectionBase &inputSec, uint64_t offsetInSec, Symbol &sym,
                 int64_t addend, RelExpr expr, RelType addendRelType);
   bool isNeeded() const override { return !relocs.empty(); }
   size_t getSize() const override { return relocs.size() * this->entsize; }

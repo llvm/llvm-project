@@ -1,4 +1,12 @@
-if (NOT FBSDVMCore_FOUND)
+set(FBSDKERNEL_LIBS)
+if(FBSDVMCore_FOUND)
+  list(APPEND FBSDKERNEL_LIBS fbsdvmcore)
+endif()
+if(${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD")
+  list(APPEND FBSDKERNEL_LIBS kvm)
+endif()
+
+if (NOT FBSDKERNEL_LIBS)
   message(STATUS "Skipping FreeBSDKernel plugin due to missing libfbsdvmcore")
   return()
 endif()
@@ -13,7 +21,7 @@ add_lldb_library(lldbPluginProcessFreeBSDKernel PLUGIN
   LINK_LIBS
     lldbCore
     lldbTarget
-    fbsdvmcore
+    ${FBSDKERNEL_LIBS}
   LINK_COMPONENTS
     Support
   )

@@ -26,11 +26,11 @@ struct TestOpaqueLoc
   /// A simple structure which is used for testing as an underlying location in
   /// OpaqueLoc.
   struct MyLocation {
-    MyLocation() : id(42) {}
+    MyLocation() = default;
     MyLocation(int id) : id(id) {}
     int getId() { return id; }
 
-    int id;
+    int id{42};
   };
 
   void runOnOperation() override {

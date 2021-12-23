@@ -54,6 +54,10 @@ dfsan_origin dfsan_get_origin(long data);
 /// Retrieves the label associated with the data at the given address.
 dfsan_label dfsan_read_label(const void *addr, size_t size);
 
+/// Return the origin associated with the first taint byte in the size bytes
+/// from the address addr.
+dfsan_origin dfsan_read_origin_of_first_taint(const void *addr, size_t size);
+
 /// Returns whether the given label label contains the label elem.
 int dfsan_has_label(dfsan_label label, dfsan_label elem);
 
@@ -87,6 +91,9 @@ void dfsan_weak_hook_strncmp(void *caller_pc, const char *s1, const char *s2,
 /// prints description at the beginning of the trace. If origin tracking is not
 /// on, or the address is not labeled, it prints nothing.
 void dfsan_print_origin_trace(const void *addr, const char *description);
+/// As above, but use an origin id from dfsan_get_origin() instead of address.
+/// Does not include header line with taint label and address information.
+void dfsan_print_origin_id_trace(dfsan_origin origin);
 
 /// Prints the origin trace of the label at the address \p addr to a
 /// pre-allocated output buffer. If origin tracking is not on, or the address is
@@ -124,6 +131,10 @@ void dfsan_print_origin_trace(const void *addr, const char *description);
 /// return value is not less than \p out_buf_size.
 size_t dfsan_sprint_origin_trace(const void *addr, const char *description,
                                  char *out_buf, size_t out_buf_size);
+/// As above, but use an origin id from dfsan_get_origin() instead of address.
+/// Does not include header line with taint label and address information.
+size_t dfsan_sprint_origin_id_trace(dfsan_origin origin, char *out_buf,
+                                    size_t out_buf_size);
 
 /// Prints the stack trace leading to this call to a pre-allocated output
 /// buffer.

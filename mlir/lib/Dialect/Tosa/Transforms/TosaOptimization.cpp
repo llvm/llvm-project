@@ -215,7 +215,7 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
 
 class TosaOptimization : public PassWrapper<TosaOptimization, FunctionPass> {
 public:
-  explicit TosaOptimization() {}
+  explicit TosaOptimization() = default;
   void runOnFunction() override;
 
   StringRef getArgument() const final { return PASS_NAME; }
