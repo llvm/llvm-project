@@ -996,6 +996,7 @@ static void SignalAction(int signo, void *si, void *uc) {
   sigaction_cb cb =
       (sigaction_cb)atomic_load(&sigactions[signo], memory_order_relaxed);
   cb(signo, si, uc);
+  CHECK_UNPOISONED(uc, ucontext_t_sz(uc));
 }
 
 static void read_sigaction(const __sanitizer_sigaction *act) {
