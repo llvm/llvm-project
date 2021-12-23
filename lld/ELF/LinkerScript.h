@@ -312,7 +312,7 @@ public:
 
   bool hasPhdrsCommands() { return !phdrsCommands.empty(); }
   uint64_t getDot() { return dot; }
-  void discard(InputSectionBase *s);
+  void discard(InputSectionBase &s);
 
   ExprValue getSymbolValue(StringRef name, const Twine &loc);
 

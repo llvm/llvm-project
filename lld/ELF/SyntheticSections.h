@@ -524,13 +524,13 @@ public:
                       llvm::Optional<RelType> addendRelType = llvm::None);
   /// Add a relative dynamic relocation that uses the target address of \p sym
   /// (i.e. InputSection::getRelocTargetVA()) + \p addend as the addend.
-  void addRelativeReloc(RelType dynType, InputSectionBase *isec,
+  void addRelativeReloc(RelType dynType, InputSectionBase &isec,
                         uint64_t offsetInSec, Symbol &sym, int64_t addend,
                         RelType addendRelType, RelExpr expr);
   /// Add a dynamic relocation using the target address of \p sym as the addend
   /// if \p sym is non-preemptible. Otherwise add a relocation against \p sym.
   void addAddendOnlyRelocIfNonPreemptible(RelType dynType,
-                                          InputSectionBase *isec,
+                                          InputSectionBase &isec,
                                           uint64_t offsetInSec, Symbol &sym,
                                           RelType addendRelType);
   void addReloc(DynamicReloc::Kind kind, RelType dynType,
