@@ -1727,25 +1727,37 @@ static Instruction *foldComplexAndOrPatterns(BinaryOperator &I,
       (Opcode == Instruction::And) ? Instruction::Or : Instruction::And;
 
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-  Value *A, *B, *C, *X, *Y;
+  Value *A, *B, *C, *X, *Y, *Dummy;
+
+  // Match following expressions:
+  // (~(A | B) & C)
+  // (~(A & B) | C)
+  // Captures X = ~(A | B) or ~(A & B)
+  const auto matchNotOrAnd =
+      [Opcode, FlippedOpcode](Value *Op, auto m_A, auto m_B, auto m_C,
+                              Value *&X, bool CountUses = false) -> bool {
+    if (CountUses && !Op->hasOneUse())
+      return false;
+
+    if (match(Op, m_c_BinOp(FlippedOpcode,
+                            m_CombineAnd(m_Value(X),
+                                         m_Not(m_c_BinOp(Opcode, m_A, m_B))),
+                            m_C)))
+      return !CountUses || X->hasOneUse();
+
+    return false;
+  };
 
   // (~(A | B) & C) | ... --> ...
   // (~(A & B) | C) & ... --> ...
   // TODO: One use checks are conservative. We just need to check that a total
   //       number of multiple used values does not exceed reduction
   //       in operations.
-  if (match(Op0,
-            m_c_BinOp(FlippedOpcode,
-                      m_CombineAnd(m_Value(X), m_Not(m_BinOp(Opcode, m_Value(A),
-                                                             m_Value(B)))),
-                      m_Value(C)))) {
+  if (matchNotOrAnd(Op0, m_Value(A), m_Value(B), m_Value(C), X)) {
     // (~(A | B) & C) | (~(A | C) & B) --> (B ^ C) & ~A
     // (~(A & B) | C) & (~(A & C) | B) --> ~((B ^ C) & A)
-    if (match(Op1,
-              m_OneUse(m_c_BinOp(FlippedOpcode,
-                                 m_OneUse(m_Not(m_c_BinOp(Opcode, m_Specific(A),
-                                                          m_Specific(C)))),
-                                 m_Specific(B))))) {
+    if (matchNotOrAnd(Op1, m_Specific(A), m_Specific(C), m_Specific(B), Dummy,
+                      true)) {
       Value *Xor = Builder.CreateXor(B, C);
       return (Opcode == Instruction::Or)
                  ? BinaryOperator::CreateAnd(Xor, Builder.CreateNot(A))
@@ -1754,11 +1766,8 @@ static Instruction *foldComplexAndOrPatterns(BinaryOperator &I,
 
     // (~(A | B) & C) | (~(B | C) & A) --> (A ^ C) & ~B
     // (~(A & B) | C) & (~(B & C) | A) --> ~((A ^ C) & B)
-    if (match(Op1,
-              m_OneUse(m_c_BinOp(FlippedOpcode,
-                                 m_OneUse(m_Not(m_c_BinOp(Opcode, m_Specific(B),
-                                                          m_Specific(C)))),
-                                 m_Specific(A))))) {
+    if (matchNotOrAnd(Op1, m_Specific(B), m_Specific(C), m_Specific(A), Dummy,
+                      true)) {
       Value *Xor = Builder.CreateXor(A, C);
       return (Opcode == Instruction::Or)
                  ? BinaryOperator::CreateAnd(Xor, Builder.CreateNot(B))
