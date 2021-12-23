@@ -1,7 +1,7 @@
 // RUN: %clangxx -O3  %s -o %t
 // RUN: %env_tool_opts=strip_path_prefix=/TestCases/ %run %t 2>&1 | FileCheck %s
-// RUN: %env_tool_opts=strip_path_prefix=/TestCases/:symbolize_inline_frames=0 \
-// RUN:   %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK-NOINLINE
+// RUN: %env_tool_opts=strip_path_prefix=/TestCases/:symbolize_inline_frames=0 %run %t 2>&1 | FileCheck %s --check-prefixes=NOINLINE
+// RUN: %env_tool_opts=strip_path_prefix=/TestCases/:symbolize_inline_frames=1 %run %t 2>&1 | FileCheck %s
 
 // XFAIL: darwin
 
@@ -18,7 +18,7 @@ __attribute__((noinline)) static void Symbolize() {
     printf("%s\n", p);
 }
 
-// CHECK-NOINLINE: {{0x[0-9a-f]+}} in main symbolize_pc_inline.cpp:[[@LINE+2]]
+// NOINLINE: {{0x[0-9a-f]+}} in main symbolize_pc_inline.cpp:[[@LINE+2]]
 // CHECK: [[ADDR:0x[0-9a-f]+]] in C2 symbolize_pc_inline.cpp:[[@LINE+1]]
 static inline void C2() { Symbolize(); }
 
