@@ -794,6 +794,18 @@ class VOPPatGen<SDPatternOperator Op, VOPProfile P> {
   list<dag> ret =  [!con(Outs, (set Ins))];
 }
 
+class DivergentUnaryFrag<SDPatternOperator Op> : PatFrag <
+  (ops node:$src0),
+  (Op $src0),
+  [{ return N->isDivergent(); }]> {
+  // This check is unnecessary as it's captured by the result register
+  // bank constraint.
+  //
+  // FIXME: Should add a way for the emitter to recognize this is a
+  // trivially true predicate to eliminate the check.
+  let GISelPredicateCode = [{return true;}];
+}
+
 class VOPPatOrNull<SDPatternOperator Op, VOPProfile P> {
   list<dag> ret = !if(!ne(P.NeedPatGen,PatGenMode.NoPattern), VOPPatGen<Op, P>.ret, []);
 }
