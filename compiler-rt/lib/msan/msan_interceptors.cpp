@@ -990,7 +990,7 @@ static void SignalAction(int signo, void *si, void *uc) {
   ScopedThreadLocalStateBackup stlsb;
   UnpoisonParam(3);
   __msan_unpoison(si, sizeof(__sanitizer_sigaction));
-  __msan_unpoison(uc, __sanitizer::ucontext_t_sz);
+  __msan_unpoison(uc, ucontext_t_sz(uc));
 
   typedef void (*sigaction_cb)(int, void *, void *);
   sigaction_cb cb =

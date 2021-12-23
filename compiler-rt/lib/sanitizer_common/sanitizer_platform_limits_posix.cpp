@@ -173,6 +173,11 @@ typedef struct user_fpregs elf_fpregset_t;
 #include "sanitizer_internal_defs.h"
 #include "sanitizer_platform_limits_posix.h"
 
+// To prevent macro redefinition warning between our sanitizer_thread_safety.h
+// and system's scsi.h.
+#  undef RELEASE
+#  include "sanitizer_common.h"
+
 namespace __sanitizer {
   unsigned struct_utsname_sz = sizeof(struct utsname);
   unsigned struct_stat_sz = sizeof(struct stat);
@@ -214,10 +219,20 @@ namespace __sanitizer {
 #if !SANITIZER_ANDROID
   unsigned struct_statfs_sz = sizeof(struct statfs);
   unsigned struct_sockaddr_sz = sizeof(struct sockaddr);
-  unsigned ucontext_t_sz = sizeof(ucontext_t);
-#endif // !SANITIZER_ANDROID
 
-#if SANITIZER_LINUX
+  unsigned ucontext_t_sz(void *ctx) {
+#    if SANITIZER_LINUX && SANITIZER_X64
+    // See kernel arch/x86/kernel/fpu/signal.c for details.
+    const auto *fpregs = static_cast<ucontext_t *>(ctx)->uc_mcontext.fpregs;
+    if (fpregs->__glibc_reserved1[12] == FP_XSTATE_MAGIC1)
+      return reinterpret_cast<const char *>(fpregs) +
+             fpregs->__glibc_reserved1[13] - static_cast<const char *>(ctx);
+#    endif
+    return sizeof(ucontext_t);
+  }
+#  endif  // !SANITIZER_ANDROID
+
+#  if SANITIZER_LINUX
   unsigned struct_epoll_event_sz = sizeof(struct epoll_event);
   unsigned struct_sysinfo_sz = sizeof(struct sysinfo);
   unsigned __user_cap_header_struct_sz =
