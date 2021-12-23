@@ -581,6 +581,74 @@ define <vscale x 2 x double> @fabs_nxv2f64(<vscale x 2 x double> %a) {
   ret <vscale x 2 x double> %res
 }
 
+; FABD
+
+define <vscale x 8 x half> @fabd_nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x half> %b) {
+; CHECK-LABEL: fabd_nxv8f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    fabd z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    ret
+  %sub = fsub <vscale x 8 x half> %a, %b
+  %res = call <vscale x 8 x half> @llvm.fabs.nxv8f16(<vscale x 8 x half> %sub)
+  ret <vscale x 8 x half> %res
+}
+
+define <vscale x 4 x half> @fabd_nxv4f16(<vscale x 4 x half> %a, <vscale x 4 x half> %b) {
+; CHECK-LABEL: fabd_nxv4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fabd z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    ret
+  %sub = fsub <vscale x 4 x half> %a, %b
+  %res = call <vscale x 4 x half> @llvm.fabs.nxv4f16(<vscale x 4 x half> %sub)
+  ret <vscale x 4 x half> %res
+}
+
+define <vscale x 2 x half> @fabd_nxv2f16(<vscale x 2 x half> %a, <vscale x 2 x half> %b) {
+; CHECK-LABEL: fabd_nxv2f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fabd z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    ret
+  %sub = fsub <vscale x 2 x half> %a, %b
+  %res = call <vscale x 2 x half> @llvm.fabs.nxv2f16(<vscale x 2 x half> %sub)
+  ret <vscale x 2 x half> %res
+}
+
+define <vscale x 4 x float> @fabd_nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> %b) {
+; CHECK-LABEL: fabd_nxv4f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fabd z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %sub = fsub <vscale x 4 x float> %a, %b
+  %res = call <vscale x 4 x float> @llvm.fabs.nxv4f32(<vscale x 4 x float> %sub)
+  ret <vscale x 4 x float> %res
+}
+
+define <vscale x 2 x float> @fabd_nxv2f32(<vscale x 2 x float> %a, <vscale x 2 x float> %b) {
+; CHECK-LABEL: fabd_nxv2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fabd z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %sub = fsub <vscale x 2 x float> %a, %b
+  %res = call <vscale x 2 x float> @llvm.fabs.nxv2f32(<vscale x 2 x float> %sub)
+  ret <vscale x 2 x float> %res
+}
+
+define <vscale x 2 x double> @fabd_nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b) {
+; CHECK-LABEL: fabd_nxv2f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fabd z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %sub = fsub <vscale x 2 x double> %a, %b
+  %res = call <vscale x 2 x double> @llvm.fabs.nxv2f64(<vscale x 2 x double> %sub)
+  ret <vscale x 2 x double> %res
+}
+
 ; maxnum minnum
 
 define <vscale x 16 x half> @maxnum_nxv16f16(<vscale x 16 x half> %a, <vscale x 16 x half> %b) {
