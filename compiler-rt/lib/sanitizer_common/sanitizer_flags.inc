@@ -179,6 +179,7 @@ COMMON_FLAG(bool, use_madv_dontdump, true,
           "in core file.")
 COMMON_FLAG(bool, symbolize_inline_frames, true,
             "Print inlined frames in stacktraces. Defaults to true.")
+COMMON_FLAG(bool, demangle, true, "Print demangled symbols.")
 COMMON_FLAG(bool, symbolize_vs_style, false,
             "Print file locations in Visual Studio style (e.g: "
             " file(10,42): ...")
