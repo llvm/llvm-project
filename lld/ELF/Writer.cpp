@@ -1469,13 +1469,6 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
     if (!os)
       continue;
     os->sortRank = getSectionRank(os);
-
-    // We want to assign rude approximation values to outSecOff fields
-    // to know the relative order of the input sections. We use it for
-    // sorting SHF_LINK_ORDER sections. See resolveShfLinkOrder().
-    uint64_t i = 0;
-    for (InputSection *sec : getInputSections(os))
-      sec->outSecOff = i++;
   }
 
   if (!script->hasSectionsCommand) {
