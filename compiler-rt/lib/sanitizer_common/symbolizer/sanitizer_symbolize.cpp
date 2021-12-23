@@ -17,10 +17,15 @@
 #include "llvm/DebugInfo/Symbolize/DIPrinter.h"
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
 
+static llvm::symbolize::LLVMSymbolizer *Symbolizer = nullptr;
+static bool InlineFrames = true;
+
 static llvm::symbolize::LLVMSymbolizer *getDefaultSymbolizer() {
-  static llvm::symbolize::LLVMSymbolizer *DefaultSymbolizer =
-      new llvm::symbolize::LLVMSymbolizer();
-  return DefaultSymbolizer;
+  if (Symbolizer)
+    return Symbolizer;
+  llvm::symbolize::LLVMSymbolizer::Options Opts;
+  Symbolizer = new llvm::symbolize::LLVMSymbolizer(Opts);
+  return Symbolizer;
 }
 
 static llvm::symbolize::PrinterConfig getDefaultPrinterConfig() {
@@ -43,8 +48,7 @@ extern "C" {
 typedef uint64_t u64;
 
 bool __sanitizer_symbolize_code(const char *ModuleName, uint64_t ModuleOffset,
-                                char *Buffer, int MaxLength,
-                                bool SymbolizeInlineFrames) {
+                                char *Buffer, int MaxLength) {
   std::string Result;
   {
     llvm::raw_string_ostream OS(Result);
@@ -55,7 +59,7 @@ bool __sanitizer_symbolize_code(const char *ModuleName, uint64_t ModuleOffset,
 
     // TODO: it is neccessary to set proper SectionIndex here.
     // object::SectionedAddress::UndefSection works for only absolute addresses.
-    if (SymbolizeInlineFrames) {
+    if (InlineFrames) {
       auto ResOrErr = getDefaultSymbolizer()->symbolizeInlinedCode(
           ModuleName,
           {ModuleOffset, llvm::object::SectionedAddress::UndefSection});
@@ -93,7 +97,10 @@ bool __sanitizer_symbolize_data(const char *ModuleName, uint64_t ModuleOffset,
                                         Result.c_str()) < MaxLength;
 }
 
-void __sanitizer_symbolize_flush() { getDefaultSymbolizer()->flush(); }
+void __sanitizer_symbolize_flush() {
+  if (Symbolizer)
+    Symbolizer->flush();
+}
 
 int __sanitizer_symbolize_demangle(const char *Name, char *Buffer,
                                    int MaxLength) {
@@ -103,6 +110,11 @@ int __sanitizer_symbolize_demangle(const char *Name, char *Buffer,
                                         Result.c_str()) < MaxLength
              ? static_cast<int>(Result.size() + 1)
              : 0;
+}
+
+bool __sanitizer_symbolize_set_inline_frames(bool Value) {
+  InlineFrames = Value;
+  return true;
 }
 
 // Override __cxa_atexit and ignore callbacks.
