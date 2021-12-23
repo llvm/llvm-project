@@ -33,21 +33,6 @@
 ;     auto Lambda = [i](){};
 ; }
 
-; CHECK:   DW_TAG_subprogram
-; CHECK:     DW_TAG_variable
-; CHECK:     DW_TAG_variable
-; CHECK:     DW_TAG_variable
-; CHECK:     DW_TAG_variable
-; CHECK:       DW_AT_name{{.*}}"i"
-; CHECK:       DW_AT_alignment{{.*}}32
-; CHECK:     DW_TAG_variable
-; CHECK:     DW_TAG_class_type
-; CHECK:       DW_TAG_member
-; CHECK:         DW_AT_name{{.*}}"i"
-; CHECK:         DW_AT_alignment{{.*}}32
-; CHECK:       DW_TAG_subprogram
-; CHECK:         DW_TAG_formal_parameter
-
 ; CHECK:   DW_TAG_class_type
 ; CHECK:     DW_AT_name{{.*}}"C0"
 ; CHECK:     DW_AT_alignment{{.*}}64
@@ -67,6 +52,21 @@
 ; CHECK:       DW_TAG_enumerator
 ; CHECK:       DW_TAG_enumerator
 ; CHECK:       DW_TAG_enumerator
+
+; CHECK:   DW_TAG_subprogram
+; CHECK:     DW_TAG_variable
+; CHECK:     DW_TAG_variable
+; CHECK:     DW_TAG_variable
+; CHECK:     DW_TAG_variable
+; CHECK:       DW_AT_name{{.*}}"i"
+; CHECK:       DW_AT_alignment{{.*}}32
+; CHECK:     DW_TAG_variable
+; CHECK:     DW_TAG_class_type
+; CHECK:       DW_TAG_member
+; CHECK:         DW_AT_name{{.*}}"i"
+; CHECK:         DW_AT_alignment{{.*}}32
+; CHECK:       DW_TAG_subprogram
+; CHECK:         DW_TAG_formal_parameter
 
 ; CHECK:   DW_TAG_class_type
 ; CHECK:     DW_AT_name{{.*}}"C1"

@@ -52,8 +52,6 @@
 ;; The check-not directives check that Unused doesn't get a DIE in the CU.
 ; CHECK: DW_TAG_compile_unit
 ; CHECK-NOT: DW_AT_signature
-; CHECK: DW_AT_type ([[DIE_Enum:[0-9a-fx]+]] "Ex::Enum")
-; CHECK-NOT: DW_AT_signature
 ; CHECK: DW_AT_type ([[DIE_Outer:[0-9a-fx]+]] "Outer")
 ; CHECK-NOT: DW_AT_signature
 
@@ -62,10 +60,13 @@
 ; CHECK:      [[DIE_Outer]]:  DW_TAG_class_type
 ; CHECK-NEXT:    DW_AT_declaration (true)
 ; CHECK-NEXT:    DW_AT_signature   ([[SIG_Outer]])
-; CHECK-EMPTY:
+
+; CHECK-NOT: DW_AT_signature
+; CHECK: DW_AT_type ([[DIE_Enum:[0-9a-fx]+]] "Ex::Enum")
+; CHECK-NOT: DW_AT_signature
 
 ;; Ex is not referenced in the CU but its nested type, Enum, is.
-; CHECK-NEXT: DW_TAG_structure_type
+; CHECK:      DW_TAG_structure_type
 ; CHECK-NEXT:     DW_AT_declaration     (true)
 ; CHECK-NEXT:     DW_AT_signature       ([[SIG_Ex]])
 ; CHECK-EMPTY:

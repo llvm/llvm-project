@@ -14,7 +14,37 @@
 ; CHECK-NEXT:              DW_AT_low_pc [DW_FORM_addr]       (0x0000000000000002)
 ; CHECK-NEXT:              DW_AT_high_pc [DW_FORM_data4]     (0x00000002)
 
-; CHECK: 0x0000002a:   DW_TAG_subprogram
+; CHECK: 0x0000002a:   DW_TAG_variable
+; CHECK-NEXT:                DW_AT_name [DW_FORM_strp]       ("foo")
+; CHECK-NEXT:                DW_AT_type [DW_FORM_ref4]       (0x0000003f "int *")
+; CHECK-NEXT:                DW_AT_external [DW_FORM_flag_present]   (true)
+; CHECK-NEXT:                DW_AT_decl_file [DW_FORM_data1] ("/usr/local/google/home/sbc/dev/wasm/simple{{[/\\]}}test.c")
+; CHECK-NEXT:                DW_AT_decl_line [DW_FORM_data1] (4)
+; CHECK-NEXT:                DW_AT_location [DW_FORM_exprloc]        (DW_OP_addr 0x0)
+
+; CHECK: 0x0000003f:   DW_TAG_pointer_type
+; CHECK-NEXT:                DW_AT_type [DW_FORM_ref4]       (0x00000044 "int")
+
+; CHECK: 0x00000044:   DW_TAG_base_type
+; CHECK-NEXT:                DW_AT_name [DW_FORM_strp]       ("int")
+; CHECK-NEXT:                DW_AT_encoding [DW_FORM_data1]  (DW_ATE_signed)
+; CHECK-NEXT:                DW_AT_byte_size [DW_FORM_data1] (0x04)
+
+; CHECK: 0x0000004b:   DW_TAG_variable
+; CHECK-NEXT:                DW_AT_name [DW_FORM_strp]       ("ptr2")
+; CHECK-NEXT:                DW_AT_type [DW_FORM_ref4]       (0x00000060 "void (*)()")
+; CHECK-NEXT:                DW_AT_external [DW_FORM_flag_present]   (true)
+; CHECK-NEXT:                DW_AT_decl_file [DW_FORM_data1] ("/usr/local/google/home/sbc/dev/wasm/simple{{[/\\]}}test.c")
+; CHECK-NEXT:                DW_AT_decl_line [DW_FORM_data1] (5)
+; CHECK-NEXT:                DW_AT_location [DW_FORM_exprloc]        (DW_OP_addr 0x8)
+
+; CHECK: 0x00000060:   DW_TAG_pointer_type
+; CHECK-NEXT:                DW_AT_type [DW_FORM_ref4]       (0x00000065 "void ()")
+
+; CHECK: 0x00000065:   DW_TAG_subroutine_type
+; CHECK-NEXT:                DW_AT_prototyped [DW_FORM_flag_present] (true)
+
+; CHECK: 0x00000066:   DW_TAG_subprogram
 ; CHECK-NEXT:                DW_AT_low_pc [DW_FORM_addr]     (0x0000000000000002)
 ; CHECK-NEXT:                DW_AT_high_pc [DW_FORM_data4]   (0x00000002)
 ; CHECK-NEXT:                DW_AT_frame_base [DW_FORM_exprloc]      (DW_OP_WASM_location 0x3 0x0, DW_OP_stack_value)
@@ -23,36 +53,6 @@
 ; CHECK-NEXT:                DW_AT_decl_line [DW_FORM_data1] (2)
 ; CHECK-NEXT:                DW_AT_prototyped [DW_FORM_flag_present] (true)
 ; CHECK-NEXT:                DW_AT_external [DW_FORM_flag_present]   (true)
-
-; CHECK: 0x00000045:   DW_TAG_variable
-; CHECK-NEXT:                DW_AT_name [DW_FORM_strp]       ("foo")
-; CHECK-NEXT:                DW_AT_type [DW_FORM_ref4]       (0x0000005a "int *")
-; CHECK-NEXT:                DW_AT_external [DW_FORM_flag_present]   (true)
-; CHECK-NEXT:                DW_AT_decl_file [DW_FORM_data1] ("/usr/local/google/home/sbc/dev/wasm/simple{{[/\\]}}test.c")
-; CHECK-NEXT:                DW_AT_decl_line [DW_FORM_data1] (4)
-; CHECK-NEXT:                DW_AT_location [DW_FORM_exprloc]        (DW_OP_addr 0x0)
-
-; CHECK: 0x0000005a:   DW_TAG_pointer_type
-; CHECK-NEXT:                DW_AT_type [DW_FORM_ref4]       (0x0000005f "int")
-
-; CHECK: 0x0000005f:   DW_TAG_base_type
-; CHECK-NEXT:                DW_AT_name [DW_FORM_strp]       ("int")
-; CHECK-NEXT:                DW_AT_encoding [DW_FORM_data1]  (DW_ATE_signed)
-; CHECK-NEXT:                DW_AT_byte_size [DW_FORM_data1] (0x04)
-
-; CHECK: 0x00000066:   DW_TAG_variable
-; CHECK-NEXT:                DW_AT_name [DW_FORM_strp]       ("ptr2")
-; CHECK-NEXT:                DW_AT_type [DW_FORM_ref4]       (0x0000007b "void (*)()")
-; CHECK-NEXT:                DW_AT_external [DW_FORM_flag_present]   (true)
-; CHECK-NEXT:                DW_AT_decl_file [DW_FORM_data1] ("/usr/local/google/home/sbc/dev/wasm/simple{{[/\\]}}test.c")
-; CHECK-NEXT:                DW_AT_decl_line [DW_FORM_data1] (5)
-; CHECK-NEXT:                DW_AT_location [DW_FORM_exprloc]        (DW_OP_addr 0x8)
-
-; CHECK: 0x0000007b:   DW_TAG_pointer_type
-; CHECK-NEXT:                DW_AT_type [DW_FORM_ref4]       (0x00000080 "void ()")
-
-; CHECK: 0x00000080:   DW_TAG_subroutine_type
-; CHECK-NEXT:                DW_AT_prototyped [DW_FORM_flag_present] (true)
 
 ; CHECK: 0x00000081:   NULL
 

@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=x86_64-macosx %s -o %t -filetype=obj
 ; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck %s
 
-; CHECK: DW_TAG_subprogram [8] *
+; CHECK: DW_TAG_subprogram [9] *
 ; CHECK-NOT: DW_AT_{{(MIPS_)?}}linkage_name
 ; CHECK: DW_AT_specification
 
