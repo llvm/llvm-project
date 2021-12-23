@@ -98,6 +98,10 @@ void HexagonMCChecker::init(MCInst const &MCI) {
   for (unsigned i = 0; i < MCID.getNumImplicitUses(); ++i)
     initReg(MCI, MCID.getImplicitUses()[i], PredReg, isTrue);
 
+  const bool IgnoreTmpDst = (HexagonMCInstrInfo::hasTmpDst(MCII, MCI) ||
+                             HexagonMCInstrInfo::hasHvxTmp(MCII, MCI)) &&
+                            STI.getFeatureBits()[Hexagon::ArchV69];
+
   // Get implicit register definitions.
   if (const MCPhysReg *ImpDef = MCID.getImplicitDefs())
     for (; *ImpDef; ++ImpDef) {
@@ -123,7 +127,7 @@ void HexagonMCChecker::init(MCInst const &MCI) {
                HexagonMCInstrInfo::isPredicateLate(MCII, MCI))
         // Include implicit late predicates.
         LatePreds.insert(R);
-      else
+      else if (!IgnoreTmpDst)
         Defs[R].insert(PredSense(PredReg, isTrue));
     }
 
@@ -178,7 +182,7 @@ void HexagonMCChecker::init(MCInst const &MCI) {
         // vshuff(Vx, Vy, Rx) <- Vx(0) and Vy(1) are both source and
         // destination registers with this instruction. same for vdeal(Vx,Vy,Rx)
         Uses.insert(*SRI);
-      else
+      else if (!IgnoreTmpDst)
         Defs[*SRI].insert(PredSense(PredReg, isTrue));
     }
   }
@@ -227,9 +231,11 @@ bool HexagonMCChecker::check(bool FullCheck) {
   bool chkAXOK = checkAXOK();
   bool chkCofMax1 = checkCOFMax1();
   bool chkHWLoop = checkHWLoop();
+  bool chkValidTmpDst = FullCheck ? checkValidTmpDst() : true;
   bool chkLegalVecRegPair = checkLegalVecRegPair();
   bool chk = chkP && chkNV && chkR && chkRRO && chkS && chkSh && chkSl &&
-             chkAXOK && chkCofMax1 && chkHWLoop && chkLegalVecRegPair;
+             chkAXOK && chkCofMax1 && chkHWLoop && chkValidTmpDst &&
+             chkLegalVecRegPair;
 
   return chk;
 }
@@ -674,6 +680,32 @@ bool HexagonMCChecker::checkSolo() {
 bool HexagonMCChecker::checkShuffle() {
   HexagonMCShuffler MCSDX(Context, ReportErrors, MCII, STI, MCB);
   return MCSDX.check();
+}
+
+bool HexagonMCChecker::checkValidTmpDst() {
+  if (!STI.getFeatureBits()[Hexagon::ArchV69]) {
+    return true;
+  }
+  auto HasTmp = [&](MCInst const &I) {
+    return HexagonMCInstrInfo::hasTmpDst(MCII, I) ||
+           HexagonMCInstrInfo::hasHvxTmp(MCII, I);
+  };
+  unsigned HasTmpCount =
+      llvm::count_if(HexagonMCInstrInfo::bundleInstructions(MCII, MCB), HasTmp);
+
+  if (HasTmpCount > 1) {
+    reportError(
+        MCB.getLoc(),
+        "this packet has more than one HVX vtmp/.tmp destination instruction");
+
+    for (auto const &I : HexagonMCInstrInfo::bundleInstructions(MCII, MCB))
+      if (HasTmp(I))
+        reportNote(I.getLoc(),
+                   "this is an HVX vtmp/.tmp destination instruction");
+
+    return false;
+  }
+  return true;
 }
 
 void HexagonMCChecker::compoundRegisterMap(unsigned &Register) {

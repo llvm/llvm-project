@@ -939,10 +939,24 @@ bool HexagonMCInstrInfo::prefersSlot3(MCInstrInfo const &MCII,
   return (F >> HexagonII::PrefersSlot3Pos) & HexagonII::PrefersSlot3Mask;
 }
 
-/// return true if instruction has hasTmpDst attribute.
 bool HexagonMCInstrInfo::hasTmpDst(MCInstrInfo const &MCII, MCInst const &MCI) {
+  switch (MCI.getOpcode()) {
+  default:
+    return false;
+  case Hexagon::V6_vgathermh:
+  case Hexagon::V6_vgathermhq:
+  case Hexagon::V6_vgathermhw:
+  case Hexagon::V6_vgathermhwq:
+  case Hexagon::V6_vgathermw:
+  case Hexagon::V6_vgathermwq:
+    return true;
+  }
+  return false;
+}
+
+bool HexagonMCInstrInfo::hasHvxTmp(MCInstrInfo const &MCII, MCInst const &MCI) {
   const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
-  return (F >> HexagonII::HasTmpDstPos) & HexagonII::HasTmpDstMask;
+  return (F >> HexagonII::HasHvxTmpPos) & HexagonII::HasHvxTmpMask;
 }
 
 bool HexagonMCInstrInfo::requiresSlot(MCSubtargetInfo const &STI,
