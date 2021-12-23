@@ -1007,14 +1007,14 @@ void MipsGotSection::build() {
         // thread-locals that have been marked as local through a linker script)
         if (!s->isPreemptible && !config->shared)
           continue;
-        mainPart->relaDyn->addSymbolReloc(target->tlsModuleIndexRel, this,
+        mainPart->relaDyn->addSymbolReloc(target->tlsModuleIndexRel, *this,
                                           offset, *s);
         // However, we can skip writing the TLS offset reloc for non-preemptible
         // symbols since it is known even in shared libraries
         if (!s->isPreemptible)
           continue;
         offset += config->wordsize;
-        mainPart->relaDyn->addSymbolReloc(target->tlsOffsetRel, this, offset,
+        mainPart->relaDyn->addSymbolReloc(target->tlsOffsetRel, *this, offset,
                                           *s);
       }
     }
@@ -1027,7 +1027,7 @@ void MipsGotSection::build() {
     // Dynamic relocations for "global" entries.
     for (const std::pair<Symbol *, size_t> &p : got.global) {
       uint64_t offset = p.second * config->wordsize;
-      mainPart->relaDyn->addSymbolReloc(target->relativeRel, this, offset,
+      mainPart->relaDyn->addSymbolReloc(target->relativeRel, *this, offset,
                                         *p.first);
     }
     if (!config->isPic)
@@ -1573,12 +1573,12 @@ RelocationBaseSection::RelocationBaseSection(StringRef name, uint32_t type,
       dynamicTag(dynamicTag), sizeDynamicTag(sizeDynamicTag) {}
 
 void RelocationBaseSection::addSymbolReloc(RelType dynType,
-                                           InputSectionBase *isec,
+                                           InputSectionBase &isec,
                                            uint64_t offsetInSec, Symbol &sym,
                                            int64_t addend,
                                            Optional<RelType> addendRelType) {
-  addReloc(DynamicReloc::AgainstSymbol, dynType, isec, offsetInSec, sym, addend,
-           R_ADDEND, addendRelType ? *addendRelType : target->noneRel);
+  addReloc(DynamicReloc::AgainstSymbol, dynType, &isec, offsetInSec, sym,
+           addend, R_ADDEND, addendRelType ? *addendRelType : target->noneRel);
 }
 
 void RelocationBaseSection::addRelativeReloc(
