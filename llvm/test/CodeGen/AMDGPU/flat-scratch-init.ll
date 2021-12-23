@@ -5,6 +5,7 @@
 declare void @extern_func() #0
 
 define amdgpu_kernel void @stack_object_addrspacecast_in_kernel_no_calls() {
+<<<<<<< HEAD
 ; FLAT_SCR_OPT-LABEL: stack_object_addrspacecast_in_kernel_no_calls:
 ; FLAT_SCR_OPT:       ; %bb.0:
 ; FLAT_SCR_OPT-NEXT:    s_add_u32 s0, s0, s3
@@ -34,6 +35,24 @@ define amdgpu_kernel void @stack_object_addrspacecast_in_kernel_no_calls() {
 ; FLAT_SCR_ARCH-NEXT:    flat_store_dword v[0:1], v2
 ; FLAT_SCR_ARCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; FLAT_SCR_ARCH-NEXT:    s_endpgm
+=======
+; GCN-LABEL: stack_object_addrspacecast_in_kernel_no_calls:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_add_u32 s0, s0, s3
+; GCN-NEXT:    s_addc_u32 s1, s1, 0
+; GCN-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s0
+; GCN-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s1
+; GCN-NEXT:    v_mov_b32_e32 v0, 4
+; GCN-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_SH_MEM_BASES, 0, 16)
+; GCN-NEXT:    v_mov_b32_e32 v2, 0
+; GCN-NEXT:    s_lshl_b32 s0, s0, 16
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc_lo, -1, v0
+; GCN-NEXT:    v_cndmask_b32_e64 v1, 0, s0, vcc_lo
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc_lo
+; GCN-NEXT:    flat_store_dword v[0:1], v2
+; GCN-NEXT:    s_waitcnt_vscnt null, 0x0
+; GCN-NEXT:    s_endpgm
+>>>>>>> parent of 640beb38e771... [amdgpu] Enable selection of `s_cselect_b64`.
   %alloca = alloca i32, addrspace(5)
   %cast = addrspacecast i32 addrspace(5)* %alloca to i32*
   store volatile i32 0, i32* %cast
