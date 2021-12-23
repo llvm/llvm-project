@@ -1162,18 +1162,25 @@ bool AMDGPURegisterBankInfo::applyMappingLoad(MachineInstr &MI,
       // 96-bit loads are only available for vector loads. We need to split this
       // into a 64-bit part, and 32 (unless we can widen to a 128-bit load).
       if (MMO->getAlign() < Align(16)) {
+        MachineFunction *MF = MI.getParent()->getParent();
+        ApplyRegBankMapping ApplyBank(*this, MRI, DstBank);
+        MachineIRBuilder B(MI, ApplyBank);
+        LegalizerHelper Helper(*MF, ApplyBank, B);
         LLT Part64, Part32;
         std::tie(Part64, Part32) = splitUnequalType(LoadTy, 64);
-        auto Load0 = B.buildLoadFromOffset(Part64, PtrReg, *MMO, 0);
-        auto Load1 = B.buildLoadFromOffset(Part32, PtrReg, *MMO, 8);
-
-        auto Undef = B.buildUndef(LoadTy);
-        auto Ins0 = B.buildInsert(LoadTy, Undef, Load0, 0);
-        B.buildInsert(MI.getOperand(0), Ins0, Load1, 64);
+        if (Helper.reduceLoadStoreWidth(cast<GAnyLoad>(MI), 0, Part64) !=
+            LegalizerHelper::Legalized)
+          return false;
+        return true;
       } else {
         LLT WiderTy = widen96To128(LoadTy);
         auto WideLoad = B.buildLoadFromOffset(WiderTy, PtrReg, *MMO, 0);
-        B.buildExtract(MI.getOperand(0), WideLoad, 0);
+        if (WiderTy.isScalar())
+          B.buildTrunc(MI.getOperand(0), WideLoad);
+        else {
+          B.buildDeleteTrailingVectorElements(MI.getOperand(0).getReg(),
+                                              WideLoad);
+        }
       }
     }
 

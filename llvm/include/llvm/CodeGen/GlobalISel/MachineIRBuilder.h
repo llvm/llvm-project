@@ -497,6 +497,34 @@ public:
   MachineInstrBuilder buildMaskLowPtrBits(const DstOp &Res, const SrcOp &Op0,
                                           uint32_t NumBits);
 
+  /// Build and insert
+  /// a, b, ..., x = G_UNMERGE_VALUES \p Op0
+  /// \p Res = G_BUILD_VECTOR a, b, ..., x, undef, ..., undef
+  ///
+  /// Pad \p Op0 with undef elements to match number of elements in \p Res.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Res and \p Op0 must be generic virtual registers with vector type,
+  ///      same vector element type and Op0 must have fewer elements then Res.
+  ///
+  /// \return a MachineInstrBuilder for the newly created build vector instr.
+  MachineInstrBuilder buildPadVectorWithUndefElements(const DstOp &Res,
+                                                      const SrcOp &Op0);
+
+  /// Build and insert
+  /// a, b, ..., x, y, z = G_UNMERGE_VALUES \p Op0
+  /// \p Res = G_BUILD_VECTOR a, b, ..., x
+  ///
+  /// Delete trailing elements in \p Op0 to match number of elements in \p Res.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Res and \p Op0 must be generic virtual registers with vector type,
+  ///      same vector element type and Op0 must have more elements then Res.
+  ///
+  /// \return a MachineInstrBuilder for the newly created build vector instr.
+  MachineInstrBuilder buildDeleteTrailingVectorElements(const DstOp &Res,
+                                                        const SrcOp &Op0);
+
   /// Build and insert \p Res, \p CarryOut = G_UADDO \p Op0, \p Op1
   ///
   /// G_UADDO sets \p Res to \p Op0 + \p Op1 (truncated to the bit width) and

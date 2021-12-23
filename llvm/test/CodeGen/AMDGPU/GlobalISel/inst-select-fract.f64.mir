@@ -32,8 +32,7 @@ body: |
     %7:sgpr(s64) = G_CONSTANT i64 36
     %8:sgpr(p4) = G_PTR_ADD %2, %7(s64)
     %9:sgpr(<2 x s64>) = G_LOAD %8(p4) :: (dereferenceable invariant load (<2 x s64>), align 4, addrspace 4)
-    %10:sgpr(s64) = G_EXTRACT %9(<2 x s64>), 0
-    %13:sgpr(s64) = G_EXTRACT %9(<2 x s64>), 64
+    %10:sgpr(s64), %13:sgpr(s64) = G_UNMERGE_VALUES %9(<2 x s64>)
     %15:sgpr(p1) = G_INTTOPTR %13(s64)
     %18:sgpr(s64) = G_LOAD %15(p1) :: (load (s64), addrspace 1)
     %19:sgpr(s64) = G_FCONSTANT double -0.000000e+00
@@ -82,8 +81,7 @@ body: |
     %7:sgpr(s64) = G_CONSTANT i64 36
     %8:sgpr(p4) = G_PTR_ADD %2, %7(s64)
     %9:sgpr(<2 x s64>) = G_LOAD %8(p4) :: (dereferenceable invariant load (<2 x s64>), align 4, addrspace 4)
-    %10:sgpr(s64) = G_EXTRACT %9(<2 x s64>), 0
-    %13:sgpr(s64) = G_EXTRACT %9(<2 x s64>), 64
+    %10:sgpr(s64), %13:sgpr(s64) = G_UNMERGE_VALUES %9(<2 x s64>)
     %15:sgpr(p1) = G_INTTOPTR %13(s64)
     %18:sgpr(s64) = G_LOAD %15(p1) :: (load (s64), addrspace 1)
     %19:sgpr(s64) = G_FABS %18

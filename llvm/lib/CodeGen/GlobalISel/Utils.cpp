@@ -923,6 +923,21 @@ LLT llvm::getLCMType(LLT OrigTy, LLT TargetTy) {
   return LLT::scalar(LCMSize);
 }
 
+LLT llvm::getCoverTy(LLT OrigTy, LLT TargetTy) {
+  if (!OrigTy.isVector() || !TargetTy.isVector() || OrigTy == TargetTy ||
+      (OrigTy.getScalarSizeInBits() != TargetTy.getScalarSizeInBits()))
+    return getLCMType(OrigTy, TargetTy);
+
+  unsigned OrigTyNumElts = OrigTy.getNumElements();
+  unsigned TargetTyNumElts = TargetTy.getNumElements();
+  if (OrigTyNumElts % TargetTyNumElts == 0)
+    return OrigTy;
+
+  unsigned NumElts = alignTo(OrigTyNumElts, TargetTyNumElts);
+  return LLT::scalarOrVector(ElementCount::getFixed(NumElts),
+                             OrigTy.getElementType());
+}
+
 LLT llvm::getGCDType(LLT OrigTy, LLT TargetTy) {
   const unsigned OrigSize = OrigTy.getSizeInBits();
   const unsigned TargetSize = TargetTy.getSizeInBits();

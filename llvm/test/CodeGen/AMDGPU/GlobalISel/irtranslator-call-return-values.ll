@@ -2078,11 +2078,11 @@ define amdgpu_kernel void @test_call_external_v3i16_func_void() #0 {
   ; GCN-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_v3i16_func_void, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31, implicit-def $vgpr0, implicit-def $vgpr1
   ; GCN-NEXT:   [[COPY21:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY22:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
-  ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[COPY21]](<2 x s16>), [[COPY22]](<2 x s16>), [[DEF1]](<2 x s16>)
-  ; GCN-NEXT:   [[UV:%[0-9]+]]:_(<3 x s16>), [[UV1:%[0-9]+]]:_(<3 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<6 x s16>)
+  ; GCN-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[COPY21]](<2 x s16>), [[COPY22]](<2 x s16>)
+  ; GCN-NEXT:   [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<4 x s16>)
+  ; GCN-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s16>) = G_BUILD_VECTOR [[UV]](s16), [[UV1]](s16), [[UV2]](s16)
   ; GCN-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
-  ; GCN-NEXT:   G_STORE [[UV]](<3 x s16>), [[DEF]](p1) :: (volatile store (<3 x s16>) into `<3 x i16> addrspace(1)* undef`, align 8, addrspace 1)
+  ; GCN-NEXT:   G_STORE [[BUILD_VECTOR]](<3 x s16>), [[DEF]](p1) :: (volatile store (<3 x s16>) into `<3 x i16> addrspace(1)* undef`, align 8, addrspace 1)
   ; GCN-NEXT:   S_ENDPGM 0
   %val = call <3 x i16> @external_v3i16_func_void()
   store volatile <3 x i16> %val, <3 x i16> addrspace(1)* undef
@@ -2252,11 +2252,11 @@ define amdgpu_kernel void @test_call_external_v3f16_func_void() #0 {
   ; GCN-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_v3f16_func_void, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31, implicit-def $vgpr0, implicit-def $vgpr1
   ; GCN-NEXT:   [[COPY21:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY22:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
-  ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[COPY21]](<2 x s16>), [[COPY22]](<2 x s16>), [[DEF1]](<2 x s16>)
-  ; GCN-NEXT:   [[UV:%[0-9]+]]:_(<3 x s16>), [[UV1:%[0-9]+]]:_(<3 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<6 x s16>)
+  ; GCN-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[COPY21]](<2 x s16>), [[COPY22]](<2 x s16>)
+  ; GCN-NEXT:   [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<4 x s16>)
+  ; GCN-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s16>) = G_BUILD_VECTOR [[UV]](s16), [[UV1]](s16), [[UV2]](s16)
   ; GCN-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
-  ; GCN-NEXT:   G_STORE [[UV]](<3 x s16>), [[DEF]](p1) :: (volatile store (<3 x s16>) into `<3 x half> addrspace(1)* undef`, align 8, addrspace 1)
+  ; GCN-NEXT:   G_STORE [[BUILD_VECTOR]](<3 x s16>), [[DEF]](p1) :: (volatile store (<3 x s16>) into `<3 x half> addrspace(1)* undef`, align 8, addrspace 1)
   ; GCN-NEXT:   S_ENDPGM 0
   %val = call <3 x half> @external_v3f16_func_void()
   store volatile <3 x half> %val, <3 x half> addrspace(1)* undef

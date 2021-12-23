@@ -705,10 +705,10 @@ body: |
     ; GFX9-NEXT: [[BUILD_VECTOR_TRUNC3:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY2]](s32), [[COPY3]](s32)
     ; GFX9-NEXT: [[SHL1:%[0-9]+]]:_(<2 x s16>) = G_SHL [[BUILD_VECTOR_TRUNC1]], [[BUILD_VECTOR_TRUNC3]](<2 x s16>)
     ; GFX9-NEXT: [[ASHR1:%[0-9]+]]:_(<2 x s16>) = G_ASHR [[SHL1]], [[BUILD_VECTOR_TRUNC3]](<2 x s16>)
-    ; GFX9-NEXT: [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
     ; GFX9-NEXT: [[BITCAST2:%[0-9]+]]:_(s32) = G_BITCAST [[ASHR]](<2 x s16>)
     ; GFX9-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST2]], [[C]](s32)
     ; GFX9-NEXT: [[BITCAST3:%[0-9]+]]:_(s32) = G_BITCAST [[ASHR1]](<2 x s16>)
+    ; GFX9-NEXT: [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
     ; GFX9-NEXT: [[UV3:%[0-9]+]]:_(<2 x s16>), [[UV4:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<4 x s16>)
     ; GFX9-NEXT: [[BITCAST4:%[0-9]+]]:_(s32) = G_BITCAST [[UV3]](<2 x s16>)
     ; GFX9-NEXT: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST4]], [[C]](s32)
