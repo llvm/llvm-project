@@ -1019,7 +1019,10 @@ def int_codeview_annotation : DefaultAttrsIntrinsic<[], [llvm_metadata_ty],
 //
 def int_init_trampoline : Intrinsic<[],
                                     [llvm_ptr_ty, llvm_ptr_ty, llvm_ptr_ty],
-                                    [IntrArgMemOnly, NoCapture<ArgIndex<0>>]>,
+                                    [IntrArgMemOnly, NoCapture<ArgIndex<0>>,
+                                     WriteOnly<ArgIndex<0>>,
+                                     ReadNone<ArgIndex<1>>,
+                                     ReadNone<ArgIndex<2>>]>,
                                     GCCBuiltin<"__builtin_init_trampoline">;
 
 def int_adjust_trampoline : Intrinsic<[llvm_ptr_ty], [llvm_ptr_ty],
