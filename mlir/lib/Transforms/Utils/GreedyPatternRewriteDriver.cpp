@@ -255,11 +255,6 @@ bool GreedyPatternRewriteDriver::simplify(MutableArrayRef<Region> regions) {
 #else
       LogicalResult matchResult = matcher.matchAndRewrite(op, *this);
 #endif
-
-
-#ifndef NDEBUG
-#endif
-
       changed |= succeeded(matchResult);
     }
 
