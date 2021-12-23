@@ -1203,24 +1203,24 @@ struct Partition {
   StringRef name;
   uint64_t nameStrTab;
 
-  SyntheticSection *elfHeader;
-  SyntheticSection *programHeaders;
+  std::unique_ptr<SyntheticSection> elfHeader;
+  std::unique_ptr<SyntheticSection> programHeaders;
   std::vector<PhdrEntry *> phdrs;
 
-  ARMExidxSyntheticSection *armExidx;
-  BuildIdSection *buildId;
-  SyntheticSection *dynamic;
-  StringTableSection *dynStrTab;
-  SymbolTableBaseSection *dynSymTab;
-  EhFrameHeader *ehFrameHdr;
-  EhFrameSection *ehFrame;
-  GnuHashTableSection *gnuHashTab;
-  HashTableSection *hashTab;
-  RelocationBaseSection *relaDyn;
-  RelrBaseSection *relrDyn;
-  VersionDefinitionSection *verDef;
-  SyntheticSection *verNeed;
-  VersionTableSection *verSym;
+  std::unique_ptr<ARMExidxSyntheticSection> armExidx;
+  std::unique_ptr<BuildIdSection> buildId;
+  std::unique_ptr<SyntheticSection> dynamic;
+  std::unique_ptr<StringTableSection> dynStrTab;
+  std::unique_ptr<SymbolTableBaseSection> dynSymTab;
+  std::unique_ptr<EhFrameHeader> ehFrameHdr;
+  std::unique_ptr<EhFrameSection> ehFrame;
+  std::unique_ptr<GnuHashTableSection> gnuHashTab;
+  std::unique_ptr<HashTableSection> hashTab;
+  std::unique_ptr<RelocationBaseSection> relaDyn;
+  std::unique_ptr<RelrBaseSection> relrDyn;
+  std::unique_ptr<VersionDefinitionSection> verDef;
+  std::unique_ptr<SyntheticSection> verNeed;
+  std::unique_ptr<VersionTableSection> verSym;
 
   unsigned getNumber() const { return this - &partitions[0] + 1; }
 };

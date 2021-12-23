@@ -345,49 +345,52 @@ template <class ELFT> void elf::createSyntheticSections() {
     };
 
     if (!part.name.empty()) {
-      part.elfHeader = make<PartitionElfHeaderSection<ELFT>>();
+      part.elfHeader = std::make_unique<PartitionElfHeaderSection<ELFT>>();
       part.elfHeader->name = part.name;
       add(*part.elfHeader);
 
-      part.programHeaders = make<PartitionProgramHeadersSection<ELFT>>();
+      part.programHeaders =
+          std::make_unique<PartitionProgramHeadersSection<ELFT>>();
       add(*part.programHeaders);
     }
 
     if (config->buildId != BuildIdKind::None) {
-      part.buildId = make<BuildIdSection>();
+      part.buildId = std::make_unique<BuildIdSection>();
       add(*part.buildId);
     }
 
-    part.dynStrTab = make<StringTableSection>(".dynstr", true);
-    part.dynSymTab = make<SymbolTableSection<ELFT>>(*part.dynStrTab);
-    part.dynamic = make<DynamicSection<ELFT>>();
+    part.dynStrTab = std::make_unique<StringTableSection>(".dynstr", true);
+    part.dynSymTab =
+        std::make_unique<SymbolTableSection<ELFT>>(*part.dynStrTab);
+    part.dynamic = std::make_unique<DynamicSection<ELFT>>();
     if (config->androidPackDynRelocs)
-      part.relaDyn = make<AndroidPackedRelocationSection<ELFT>>(relaDynName);
-    else
       part.relaDyn =
-          make<RelocationSection<ELFT>>(relaDynName, config->zCombreloc);
+          std::make_unique<AndroidPackedRelocationSection<ELFT>>(relaDynName);
+    else
+      part.relaDyn = std::make_unique<RelocationSection<ELFT>>(
+          relaDynName, config->zCombreloc);
 
     if (config->hasDynSymTab) {
       add(*part.dynSymTab);
 
-      part.verSym = make<VersionTableSection>();
+      part.verSym = std::make_unique<VersionTableSection>();
       add(*part.verSym);
 
       if (!namedVersionDefs().empty()) {
-        part.verDef = make<VersionDefinitionSection>();
+        part.verDef = std::make_unique<VersionDefinitionSection>();
         add(*part.verDef);
       }
 
-      part.verNeed = make<VersionNeedSection<ELFT>>();
+      part.verNeed = std::make_unique<VersionNeedSection<ELFT>>();
       add(*part.verNeed);
 
       if (config->gnuHash) {
-        part.gnuHashTab = make<GnuHashTableSection>();
+        part.gnuHashTab = std::make_unique<GnuHashTableSection>();
         add(*part.gnuHashTab);
       }
 
       if (config->sysvHash) {
-        part.hashTab = make<HashTableSection>();
+        part.hashTab = std::make_unique<HashTableSection>();
         add(*part.hashTab);
       }
 
@@ -397,23 +400,23 @@ template <class ELFT> void elf::createSyntheticSections() {
     }
 
     if (config->relrPackDynRelocs) {
-      part.relrDyn = make<RelrSection<ELFT>>();
+      part.relrDyn = std::make_unique<RelrSection<ELFT>>();
       add(*part.relrDyn);
     }
 
     if (!config->relocatable) {
       if (config->ehFrameHdr) {
-        part.ehFrameHdr = make<EhFrameHeader>();
+        part.ehFrameHdr = std::make_unique<EhFrameHeader>();
         add(*part.ehFrameHdr);
       }
-      part.ehFrame = make<EhFrameSection>();
+      part.ehFrame = std::make_unique<EhFrameSection>();
       add(*part.ehFrame);
     }
 
     if (config->emachine == EM_ARM && !config->relocatable) {
       // The ARMExidxsyntheticsection replaces all the individual .ARM.exidx
       // InputSections.
-      part.armExidx = make<ARMExidxSyntheticSection>();
+      part.armExidx = std::make_unique<ARMExidxSyntheticSection>();
       add(*part.armExidx);
     }
   }
@@ -1886,9 +1889,9 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // Even the author of gold doesn't remember why gold behaves that way.
   // https://sourceware.org/ml/binutils/2002-03/msg00360.html
   if (mainPart->dynamic->parent)
-    symtab->addSymbol(Defined{/*file=*/nullptr, "_DYNAMIC", STB_WEAK,
-                              STV_HIDDEN, STT_NOTYPE,
-                              /*value=*/0, /*size=*/0, mainPart->dynamic});
+    symtab->addSymbol(
+        Defined{/*file=*/nullptr, "_DYNAMIC", STB_WEAK, STV_HIDDEN, STT_NOTYPE,
+                /*value=*/0, /*size=*/0, mainPart->dynamic.get()});
 
   // Define __rel[a]_iplt_{start,end} symbols if needed.
   addRelIpltSymbols();
