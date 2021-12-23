@@ -4378,6 +4378,32 @@ def : Pat<(v4i16 (trunc (smax (smin (v4i32 V128:$Vn), (v4i32 VImm7FFF)),
                               (v4i32 VImm8000)))),
           (SQXTNv4i16 V128:$Vn)>;
 
+// concat_vectors(Vd, trunc(smin(smax Vm, -128), 127) ~> SQXTN2(Vd, Vn)
+// with reversed min/max
+def : Pat<(v16i8 (concat_vectors
+                 (v8i8 V64:$Vd),
+                 (v8i8 (trunc (smin (smax (v8i16 V128:$Vn), (v8i16 VImm80)),
+                                          (v8i16 VImm7F)))))),
+          (SQXTNv16i8 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
+def : Pat<(v16i8 (concat_vectors
+                 (v8i8 V64:$Vd),
+                 (v8i8 (trunc (smax (smin (v8i16 V128:$Vn), (v8i16 VImm7F)),
+                                          (v8i16 VImm80)))))),
+          (SQXTNv16i8 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
+
+// concat_vectors(Vd, trunc(smin(smax Vm, -32768), 32767) ~> SQXTN2(Vd, Vn)
+// with reversed min/max
+def : Pat<(v8i16 (concat_vectors
+                 (v4i16 V64:$Vd),
+                 (v4i16 (trunc (smin (smax (v4i32 V128:$Vn), (v4i32 VImm8000)),
+                                           (v4i32 VImm7FFF)))))),
+          (SQXTNv8i16 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
+def : Pat<(v8i16 (concat_vectors
+                 (v4i16 V64:$Vd),
+                 (v4i16 (trunc (smax (smin (v4i32 V128:$Vn), (v4i32 VImm7FFF)),
+                                           (v4i32 VImm8000)))))),
+          (SQXTNv8i16 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
+
 //===----------------------------------------------------------------------===//
 // Advanced SIMD three vector instructions.
 //===----------------------------------------------------------------------===//
