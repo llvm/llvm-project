@@ -121,14 +121,15 @@ TEST_F(ConfigCompileTests, Condition) {
 }
 
 TEST_F(ConfigCompileTests, CompileCommands) {
+  Frag.CompileFlags.Compiler.emplace("tpc.exe");
   Frag.CompileFlags.Add.emplace_back("-foo");
   Frag.CompileFlags.Remove.emplace_back("--include-directory=");
   std::vector<std::string> Argv = {"clang", "-I", "bar/", "--", "a.cc"};
   EXPECT_TRUE(compileAndApply());
-  EXPECT_THAT(Conf.CompileFlags.Edits, SizeIs(2));
+  EXPECT_THAT(Conf.CompileFlags.Edits, SizeIs(3));
   for (auto &Edit : Conf.CompileFlags.Edits)
     Edit(Argv);
-  EXPECT_THAT(Argv, ElementsAre("clang", "-foo", "--", "a.cc"));
+  EXPECT_THAT(Argv, ElementsAre("tpc.exe", "-foo", "--", "a.cc"));
 }
 
 TEST_F(ConfigCompileTests, CompilationDatabase) {
