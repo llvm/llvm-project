@@ -80,10 +80,10 @@ static_assert(!std::is_invocable_v<RangeEmptyT, const InputIterators&>);
 
 constexpr bool testEmptyMember() {
   HasMemberAndFunction a;
-  assert(std::ranges::empty(a) == true);
+  assert(std::ranges::empty(a));
 
   BoolConvertibleReturnType b;
-  assert(std::ranges::empty(b) == true);
+  assert(std::ranges::empty(b));
 
   return true;
 }
@@ -107,17 +107,17 @@ static_assert(std::ranges::sized_range<BeginEndSizedSentinel>);
 
 constexpr bool testUsingRangesSize() {
   SizeMember a{1};
-  assert(std::ranges::empty(a) == false);
+  assert(!std::ranges::empty(a));
   SizeMember b{0};
-  assert(std::ranges::empty(b) == true);
+  assert(std::ranges::empty(b));
 
   SizeFunction c{1};
-  assert(std::ranges::empty(c) == false);
+  assert(!std::ranges::empty(c));
   SizeFunction d{0};
-  assert(std::ranges::empty(d) == true);
+  assert(std::ranges::empty(d));
 
   BeginEndSizedSentinel e;
-  assert(std::ranges::empty(e) == true);
+  assert(std::ranges::empty(e));
 
   return true;
 }
@@ -154,14 +154,14 @@ struct EvilBeginEnd {
 
 constexpr bool testBeginEqualsEnd() {
   BeginEndNotSizedSentinel a;
-  assert(std::ranges::empty(a) == true);
+  assert(std::ranges::empty(a));
 
   DisabledSizeRangeWithBeginEnd d;
-  assert(std::ranges::empty(d) == true);
+  assert(std::ranges::empty(d));
 
   BeginEndAndEmpty e;
-  assert(std::ranges::empty(e) == false); // e.empty()
-  assert(std::ranges::empty(std::as_const(e)) == true); // e.begin() == e.end()
+  assert(!std::ranges::empty(e)); // e.empty()
+  assert(std::ranges::empty(std::as_const(e))); // e.begin() == e.end()
 
   assert(std::ranges::empty(EvilBeginEnd()));
 
