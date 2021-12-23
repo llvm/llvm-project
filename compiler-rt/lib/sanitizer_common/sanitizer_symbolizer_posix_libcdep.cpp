@@ -213,7 +213,9 @@ class Addr2LineProcess final : public SymbolizerProcess {
                const char *(&argv)[kArgVMax]) const override {
     int i = 0;
     argv[i++] = path_to_binary;
-    argv[i++] = "-iCfe";
+    if (common_flags()->symbolize_inline_frames)
+      argv[i++] = "-i";
+    argv[i++] = "-Cfe";
     argv[i++] = module_name_;
     argv[i++] = nullptr;
   }
