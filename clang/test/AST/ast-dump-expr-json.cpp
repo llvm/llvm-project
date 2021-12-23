@@ -324,7 +324,6 @@ void TestNonADLCall3() {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
 // CHECK-NEXT:    "name": "obj1",
-// CHECK-NEXT:    "mangledName": "_ZZ19TestPointerToMember1SPS_MS_iMS_FviEE4obj1",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "S"
 // CHECK-NEXT:    }
@@ -351,7 +350,6 @@ void TestNonADLCall3() {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
 // CHECK-NEXT:    "name": "obj2",
-// CHECK-NEXT:    "mangledName": "_ZZ19TestPointerToMember1SPS_MS_iMS_FviEE4obj2",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "S *"
 // CHECK-NEXT:    }
@@ -378,7 +376,6 @@ void TestNonADLCall3() {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
 // CHECK-NEXT:    "name": "data",
-// CHECK-NEXT:    "mangledName": "_ZZ19TestPointerToMember1SPS_MS_iMS_FviEE4data",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int S::*"
 // CHECK-NEXT:    }
@@ -405,7 +402,6 @@ void TestNonADLCall3() {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
 // CHECK-NEXT:    "name": "call",
-// CHECK-NEXT:    "mangledName": "_ZZ19TestPointerToMember1SPS_MS_iMS_FviEE4call",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "void (S::*)(int)"
 // CHECK-NEXT:    }
@@ -1072,7 +1068,6 @@ void TestNonADLCall3() {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
 // CHECK-NEXT:    "name": "s",
-// CHECK-NEXT:    "mangledName": "_ZZ11TestCastingPK1SE1s",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "const S *"
 // CHECK-NEXT:    }
@@ -1512,7 +1507,6 @@ void TestNonADLCall3() {
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "isReferenced": true,
 // CHECK-NEXT:      "name": "p",
-// CHECK-NEXT:      "mangledName": "_ZZ20TestUnaryExpressionsPiE1p",
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "int *"
 // CHECK-NEXT:      }
@@ -2539,7 +2533,6 @@ void TestNonADLCall3() {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
 // CHECK-NEXT:    "name": "a",
-// CHECK-NEXT:    "mangledName": "_ZZ22TestPostfixExpressions1SPS_P1UIiEE1a",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "S"
 // CHECK-NEXT:    }
@@ -2566,7 +2559,6 @@ void TestNonADLCall3() {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
 // CHECK-NEXT:    "name": "p",
-// CHECK-NEXT:    "mangledName": "_ZZ22TestPostfixExpressions1SPS_P1UIiEE1p",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "S *"
 // CHECK-NEXT:    }
@@ -2593,7 +2585,6 @@ void TestNonADLCall3() {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
 // CHECK-NEXT:    "name": "r",
-// CHECK-NEXT:    "mangledName": "_ZZ22TestPostfixExpressions1SPS_P1UIiEE1r",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "U<int> *"
 // CHECK-NEXT:    }
@@ -3669,7 +3660,6 @@ void TestNonADLCall3() {
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "isReferenced": true,
 // CHECK-NEXT:      "name": "a",
-// CHECK-NEXT:      "mangledName": "_ZZ22TestPrimaryExpressionsDpT_E1a",
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "Ts..."
 // CHECK-NEXT:      },
@@ -4369,7 +4359,6 @@ void TestNonADLCall3() {
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "isReferenced": true,
 // CHECK-NEXT:          "name": "b",
-// CHECK-NEXT:          "mangledName": "_ZZ22TestPrimaryExpressionsDpT_E1b",
 // CHECK-NEXT:          "type": {
 // CHECK-NEXT:           "qualType": "int"
 // CHECK-NEXT:          }
@@ -4396,7 +4385,6 @@ void TestNonADLCall3() {
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "isReferenced": true,
 // CHECK-NEXT:          "name": "c",
-// CHECK-NEXT:          "mangledName": "_ZZ22TestPrimaryExpressionsDpT_E1c",
 // CHECK-NEXT:          "type": {
 // CHECK-NEXT:           "qualType": "int"
 // CHECK-NEXT:          }
@@ -4735,7 +4723,6 @@ void TestNonADLCall3() {
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "name": "a",
-// CHECK-NEXT:              "mangledName": "_ZZZ22TestPrimaryExpressionsDpT_ENKUlizE_clEizE1a",
 // CHECK-NEXT:              "type": {
 // CHECK-NEXT:               "qualType": "int"
 // CHECK-NEXT:              }
@@ -4836,7 +4823,6 @@ void TestNonADLCall3() {
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "name": "a",
-// CHECK-NEXT:              "mangledName": "_ZZZ22TestPrimaryExpressionsDpT_ENUlizE_8__invokeEizE1a",
 // CHECK-NEXT:              "type": {
 // CHECK-NEXT:               "qualType": "int"
 // CHECK-NEXT:              }
@@ -7851,7 +7837,6 @@ void TestNonADLCall3() {
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "isUsed": true,
 // CHECK-NEXT:        "name": "x",
-// CHECK-NEXT:        "mangledName": "_ZZ11TestADLCallvE1x",
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "desugaredQualType": "NS::X",
 // CHECK-NEXT:         "qualType": "NS::X"
@@ -8290,7 +8275,6 @@ void TestNonADLCall3() {
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "isUsed": true,
 // CHECK-NEXT:        "name": "x",
-// CHECK-NEXT:        "mangledName": "_ZZ14TestNonADLCallvE1x",
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "desugaredQualType": "NS::X",
 // CHECK-NEXT:         "qualType": "NS::X"
@@ -8572,7 +8556,6 @@ void TestNonADLCall3() {
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "isUsed": true,
 // CHECK-NEXT:        "name": "x",
-// CHECK-NEXT:        "mangledName": "_ZZ15TestNonADLCall2vE1x",
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "desugaredQualType": "NS::X",
 // CHECK-NEXT:         "qualType": "NS::X"
@@ -9056,7 +9039,6 @@ void TestNonADLCall3() {
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "isUsed": true,
 // CHECK-NEXT:        "name": "x",
-// CHECK-NEXT:        "mangledName": "_ZZN19test_adl_call_three15TestNonADLCall3EvE1x",
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "qualType": "NS::X"
 // CHECK-NEXT:        },

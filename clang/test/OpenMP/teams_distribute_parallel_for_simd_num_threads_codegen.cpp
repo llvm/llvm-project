@@ -362,7 +362,7 @@ int main() {
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR__CASTED:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    store i64 [[A]], i64* [[A_ADDR]], align 8
 // CHECK1-NEXT:    [[CONV:%.*]] = bitcast i64* [[A_ADDR]] to i8*
-// CHECK1-NEXT:    [[TMP0:%.*]] = load i8, i8* [[CONV]], align 8
+// CHECK1-NEXT:    [[TMP0:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK1-NEXT:    store i8 [[TMP0]], i8* [[DOTCAPTURE_EXPR_]], align 1
 // CHECK1-NEXT:    [[TMP1:%.*]] = load i8, i8* [[DOTCAPTURE_EXPR_]], align 1
 // CHECK1-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED]] to i8*
@@ -416,7 +416,7 @@ int main() {
 // CHECK1-NEXT:    [[CMP1:%.*]] = icmp sle i32 [[TMP5]], [[TMP6]]
 // CHECK1-NEXT:    br i1 [[CMP1]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
 // CHECK1:       omp.inner.for.body:
-// CHECK1-NEXT:    [[TMP7:%.*]] = load i8, i8* [[CONV]], align 8, !llvm.access.group !18
+// CHECK1-NEXT:    [[TMP7:%.*]] = load i8, i8* [[CONV]], align 1, !llvm.access.group !18
 // CHECK1-NEXT:    [[TMP8:%.*]] = sext i8 [[TMP7]] to i32
 // CHECK1-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB3]], i32 [[TMP1]], i32 [[TMP8]]), !llvm.access.group !18
 // CHECK1-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_COMB_LB]], align 4, !llvm.access.group !18
@@ -1189,7 +1189,7 @@ int main() {
 // CHECK1-NEXT:    [[CMP1:%.*]] = icmp sle i32 [[TMP5]], [[TMP6]]
 // CHECK1-NEXT:    br i1 [[CMP1]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
 // CHECK1:       omp.inner.for.body:
-// CHECK1-NEXT:    [[TMP7:%.*]] = load i8, i8* [[CONV]], align 8, !llvm.access.group !42
+// CHECK1-NEXT:    [[TMP7:%.*]] = load i8, i8* [[CONV]], align 1, !llvm.access.group !42
 // CHECK1-NEXT:    [[TMP8:%.*]] = sext i8 [[TMP7]] to i32
 // CHECK1-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB3]], i32 [[TMP1]], i32 [[TMP8]]), !llvm.access.group !42
 // CHECK1-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_COMB_LB]], align 4, !llvm.access.group !42
@@ -1598,7 +1598,7 @@ int main() {
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR__CASTED:%.*]] = alloca i64, align 8
 // CHECK2-NEXT:    store i64 [[A]], i64* [[A_ADDR]], align 8
 // CHECK2-NEXT:    [[CONV:%.*]] = bitcast i64* [[A_ADDR]] to i8*
-// CHECK2-NEXT:    [[TMP0:%.*]] = load i8, i8* [[CONV]], align 8
+// CHECK2-NEXT:    [[TMP0:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK2-NEXT:    store i8 [[TMP0]], i8* [[DOTCAPTURE_EXPR_]], align 1
 // CHECK2-NEXT:    [[TMP1:%.*]] = load i8, i8* [[DOTCAPTURE_EXPR_]], align 1
 // CHECK2-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED]] to i8*
@@ -1652,7 +1652,7 @@ int main() {
 // CHECK2-NEXT:    [[CMP1:%.*]] = icmp sle i32 [[TMP5]], [[TMP6]]
 // CHECK2-NEXT:    br i1 [[CMP1]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
 // CHECK2:       omp.inner.for.body:
-// CHECK2-NEXT:    [[TMP7:%.*]] = load i8, i8* [[CONV]], align 8, !llvm.access.group !18
+// CHECK2-NEXT:    [[TMP7:%.*]] = load i8, i8* [[CONV]], align 1, !llvm.access.group !18
 // CHECK2-NEXT:    [[TMP8:%.*]] = sext i8 [[TMP7]] to i32
 // CHECK2-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB3]], i32 [[TMP1]], i32 [[TMP8]]), !llvm.access.group !18
 // CHECK2-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_COMB_LB]], align 4, !llvm.access.group !18
@@ -2425,7 +2425,7 @@ int main() {
 // CHECK2-NEXT:    [[CMP1:%.*]] = icmp sle i32 [[TMP5]], [[TMP6]]
 // CHECK2-NEXT:    br i1 [[CMP1]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
 // CHECK2:       omp.inner.for.body:
-// CHECK2-NEXT:    [[TMP7:%.*]] = load i8, i8* [[CONV]], align 8, !llvm.access.group !42
+// CHECK2-NEXT:    [[TMP7:%.*]] = load i8, i8* [[CONV]], align 1, !llvm.access.group !42
 // CHECK2-NEXT:    [[TMP8:%.*]] = sext i8 [[TMP7]] to i32
 // CHECK2-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB3]], i32 [[TMP1]], i32 [[TMP8]]), !llvm.access.group !42
 // CHECK2-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_COMB_LB]], align 4, !llvm.access.group !42
@@ -3532,7 +3532,7 @@ int main() {
 // CHECK5-NEXT:    [[DOTCAPTURE_EXPR__CASTED:%.*]] = alloca i64, align 8
 // CHECK5-NEXT:    store i64 [[A]], i64* [[A_ADDR]], align 8
 // CHECK5-NEXT:    [[CONV:%.*]] = bitcast i64* [[A_ADDR]] to i8*
-// CHECK5-NEXT:    [[TMP0:%.*]] = load i8, i8* [[CONV]], align 8
+// CHECK5-NEXT:    [[TMP0:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK5-NEXT:    store i8 [[TMP0]], i8* [[DOTCAPTURE_EXPR_]], align 1
 // CHECK5-NEXT:    [[TMP1:%.*]] = load i8, i8* [[DOTCAPTURE_EXPR_]], align 1
 // CHECK5-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED]] to i8*
@@ -3586,7 +3586,7 @@ int main() {
 // CHECK5-NEXT:    [[CMP1:%.*]] = icmp sle i32 [[TMP5]], [[TMP6]]
 // CHECK5-NEXT:    br i1 [[CMP1]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
 // CHECK5:       omp.inner.for.body:
-// CHECK5-NEXT:    [[TMP7:%.*]] = load i8, i8* [[CONV]], align 8, !llvm.access.group !18
+// CHECK5-NEXT:    [[TMP7:%.*]] = load i8, i8* [[CONV]], align 1, !llvm.access.group !18
 // CHECK5-NEXT:    [[TMP8:%.*]] = sext i8 [[TMP7]] to i32
 // CHECK5-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB3]], i32 [[TMP1]], i32 [[TMP8]]), !llvm.access.group !18
 // CHECK5-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_COMB_LB]], align 4, !llvm.access.group !18
@@ -4350,7 +4350,7 @@ int main() {
 // CHECK5-NEXT:    [[CMP1:%.*]] = icmp sle i32 [[TMP5]], [[TMP6]]
 // CHECK5-NEXT:    br i1 [[CMP1]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
 // CHECK5:       omp.inner.for.body:
-// CHECK5-NEXT:    [[TMP7:%.*]] = load i8, i8* [[CONV]], align 8, !llvm.access.group !42
+// CHECK5-NEXT:    [[TMP7:%.*]] = load i8, i8* [[CONV]], align 1, !llvm.access.group !42
 // CHECK5-NEXT:    [[TMP8:%.*]] = sext i8 [[TMP7]] to i32
 // CHECK5-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB3]], i32 [[TMP1]], i32 [[TMP8]]), !llvm.access.group !42
 // CHECK5-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_COMB_LB]], align 4, !llvm.access.group !42
@@ -4768,7 +4768,7 @@ int main() {
 // CHECK6-NEXT:    [[DOTCAPTURE_EXPR__CASTED:%.*]] = alloca i64, align 8
 // CHECK6-NEXT:    store i64 [[A]], i64* [[A_ADDR]], align 8
 // CHECK6-NEXT:    [[CONV:%.*]] = bitcast i64* [[A_ADDR]] to i8*
-// CHECK6-NEXT:    [[TMP0:%.*]] = load i8, i8* [[CONV]], align 8
+// CHECK6-NEXT:    [[TMP0:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK6-NEXT:    store i8 [[TMP0]], i8* [[DOTCAPTURE_EXPR_]], align 1
 // CHECK6-NEXT:    [[TMP1:%.*]] = load i8, i8* [[DOTCAPTURE_EXPR_]], align 1
 // CHECK6-NEXT:    [[CONV1:%.*]] = bitcast i64* [[DOTCAPTURE_EXPR__CASTED]] to i8*
@@ -4822,7 +4822,7 @@ int main() {
 // CHECK6-NEXT:    [[CMP1:%.*]] = icmp sle i32 [[TMP5]], [[TMP6]]
 // CHECK6-NEXT:    br i1 [[CMP1]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
 // CHECK6:       omp.inner.for.body:
-// CHECK6-NEXT:    [[TMP7:%.*]] = load i8, i8* [[CONV]], align 8, !llvm.access.group !18
+// CHECK6-NEXT:    [[TMP7:%.*]] = load i8, i8* [[CONV]], align 1, !llvm.access.group !18
 // CHECK6-NEXT:    [[TMP8:%.*]] = sext i8 [[TMP7]] to i32
 // CHECK6-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB3]], i32 [[TMP1]], i32 [[TMP8]]), !llvm.access.group !18
 // CHECK6-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_COMB_LB]], align 4, !llvm.access.group !18
@@ -5586,7 +5586,7 @@ int main() {
 // CHECK6-NEXT:    [[CMP1:%.*]] = icmp sle i32 [[TMP5]], [[TMP6]]
 // CHECK6-NEXT:    br i1 [[CMP1]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
 // CHECK6:       omp.inner.for.body:
-// CHECK6-NEXT:    [[TMP7:%.*]] = load i8, i8* [[CONV]], align 8, !llvm.access.group !42
+// CHECK6-NEXT:    [[TMP7:%.*]] = load i8, i8* [[CONV]], align 1, !llvm.access.group !42
 // CHECK6-NEXT:    [[TMP8:%.*]] = sext i8 [[TMP7]] to i32
 // CHECK6-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB3]], i32 [[TMP1]], i32 [[TMP8]]), !llvm.access.group !42
 // CHECK6-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_COMB_LB]], align 4, !llvm.access.group !42

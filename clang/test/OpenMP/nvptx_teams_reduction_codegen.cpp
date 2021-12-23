@@ -4520,10 +4520,10 @@ int bar(int n){
 // CHECK1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK1-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK1:       user_code.entry:
-// CHECK1-NEXT:    [[TMP1:%.*]] = load i8, i8* [[CONV]], align 8
+// CHECK1-NEXT:    [[TMP1:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK1-NEXT:    [[C2:%.*]] = call i8* @__kmpc_alloc_shared(i64 1)
 // CHECK1-NEXT:    store i8 [[TMP1]], i8* [[C2]], align 1
-// CHECK1-NEXT:    [[TMP2:%.*]] = load float, float* [[CONV1]], align 8
+// CHECK1-NEXT:    [[TMP2:%.*]] = load float, float* [[CONV1]], align 4
 // CHECK1-NEXT:    [[D3:%.*]] = call i8* @__kmpc_alloc_shared(i64 4)
 // CHECK1-NEXT:    [[D_ON_STACK:%.*]] = bitcast i8* [[D3]] to float*
 // CHECK1-NEXT:    store float [[TMP2]], float* [[D_ON_STACK]], align 4
@@ -5839,7 +5839,7 @@ int bar(int n){
 // CHECK2-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK2-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK2:       user_code.entry:
-// CHECK2-NEXT:    [[TMP1:%.*]] = load i8, i8* [[CONV]], align 4
+// CHECK2-NEXT:    [[TMP1:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK2-NEXT:    [[C2:%.*]] = call i8* @__kmpc_alloc_shared(i32 1)
 // CHECK2-NEXT:    store i8 [[TMP1]], i8* [[C2]], align 1
 // CHECK2-NEXT:    [[TMP2:%.*]] = load float, float* [[CONV1]], align 4
@@ -7157,7 +7157,7 @@ int bar(int n){
 // CHECK3-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK3-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK3:       user_code.entry:
-// CHECK3-NEXT:    [[TMP1:%.*]] = load i8, i8* [[CONV]], align 4
+// CHECK3-NEXT:    [[TMP1:%.*]] = load i8, i8* [[CONV]], align 1
 // CHECK3-NEXT:    [[C2:%.*]] = call i8* @__kmpc_alloc_shared(i32 1)
 // CHECK3-NEXT:    store i8 [[TMP1]], i8* [[C2]], align 1
 // CHECK3-NEXT:    [[TMP2:%.*]] = load float, float* [[CONV1]], align 4
