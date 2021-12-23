@@ -167,20 +167,20 @@ LLVM_LIBC_FUNCTION(float, logf, (float x)) {
   m += xbits.get_exponent();
   // Set bits to 1.m
   xbits.set_unbiased_exponent(0x7F);
-  int fIndex = xbits.get_mantissa() >> 16;
+  int f_index = xbits.get_mantissa() >> 16;
 
   FPBits f(xbits.val);
   f.bits &= ~0x0000'FFFF;
 
   double d = static_cast<float>(xbits) - static_cast<float>(f);
-  d *= ONE_OVER_F[fIndex];
+  d *= ONE_OVER_F[f_index];
 
   double r = __llvm_libc::fputil::polyeval(
       d, 0x1.0000000008169p+0, -0x1.0000004f78405p-1, 0x1.555654d2bc769p-2,
       -0x1.00a570d090322p-2, 0x1.e158d823f89cap-3);
 
   double extra_factor =
-      __llvm_libc::fputil::fma(static_cast<double>(m), LOG_2, LOG_F[fIndex]);
+      __llvm_libc::fputil::fma(static_cast<double>(m), LOG_2, LOG_F[f_index]);
   switch (FPBits(x).uintval()) {
   case 0x3f80d19f:
     return 0x1.a1e82cp-8f;
