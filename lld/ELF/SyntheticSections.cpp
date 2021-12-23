@@ -1578,8 +1578,8 @@ void RelocationBaseSection::addSymbolReloc(RelType dynType,
                                            uint64_t offsetInSec, Symbol &sym,
                                            int64_t addend,
                                            Optional<RelType> addendRelType) {
-  addReloc(DynamicReloc::AgainstSymbol, dynType, &isec, offsetInSec, sym,
-           addend, R_ADDEND, addendRelType ? *addendRelType : target->noneRel);
+  addReloc(DynamicReloc::AgainstSymbol, dynType, isec, offsetInSec, sym, addend,
+           R_ADDEND, addendRelType ? *addendRelType : target->noneRel);
 }
 
 void RelocationBaseSection::addRelativeReloc(
@@ -1591,8 +1591,8 @@ void RelocationBaseSection::addRelativeReloc(
   assert((!sym.isPreemptible || expr == R_GOT) &&
          "cannot add relative relocation against preemptible symbol");
   assert(expr != R_ADDEND && "expected non-addend relocation expression");
-  addReloc(DynamicReloc::AddendOnlyWithTargetVA, dynType, &inputSec,
-           offsetInSec, sym, addend, expr, addendRelType);
+  addReloc(DynamicReloc::AddendOnlyWithTargetVA, dynType, inputSec, offsetInSec,
+           sym, addend, expr, addendRelType);
 }
 
 void RelocationBaseSection::addAddendOnlyRelocIfNonPreemptible(
@@ -1603,21 +1603,21 @@ void RelocationBaseSection::addAddendOnlyRelocIfNonPreemptible(
     addReloc({dynType, &isec, offsetInSec, DynamicReloc::AgainstSymbol, sym, 0,
               R_ABS});
   else
-    addReloc(DynamicReloc::AddendOnlyWithTargetVA, dynType, &isec, offsetInSec,
+    addReloc(DynamicReloc::AddendOnlyWithTargetVA, dynType, isec, offsetInSec,
              sym, 0, R_ABS, addendRelType);
 }
 
 void RelocationBaseSection::addReloc(DynamicReloc::Kind kind, RelType dynType,
-                                     InputSectionBase *inputSec,
+                                     InputSectionBase &inputSec,
                                      uint64_t offsetInSec, Symbol &sym,
                                      int64_t addend, RelExpr expr,
                                      RelType addendRelType) {
   // Write the addends to the relocated address if required. We skip
   // it if the written value would be zero.
   if (config->writeAddends && (expr != R_ADDEND || addend != 0))
-    inputSec->relocations.push_back(
+    inputSec.relocations.push_back(
         {expr, addendRelType, offsetInSec, addend, &sym});
-  addReloc({dynType, inputSec, offsetInSec, kind, sym, addend, expr});
+  addReloc({dynType, &inputSec, offsetInSec, kind, sym, addend, expr});
 }
 
 void RelocationBaseSection::addReloc(const DynamicReloc &reloc) {
