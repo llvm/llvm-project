@@ -797,7 +797,7 @@ struct DSEState {
 
         auto *MD = dyn_cast_or_null<MemoryDef>(MA);
         if (MD && MemDefs.size() < MemorySSADefsPerBlockLimit &&
-            (getLocForWriteEx(&I) || isMemTerminatorInst(&I)))
+            (getLocForWrite(&I) || isMemTerminatorInst(&I)))
           MemDefs.push_back(MD);
       }
     }
@@ -984,7 +984,7 @@ struct DSEState {
     return I.first->second;
   }
 
-  Optional<MemoryLocation> getLocForWriteEx(Instruction *I) const {
+  Optional<MemoryLocation> getLocForWrite(Instruction *I) const {
     if (!I->mayWriteToMemory())
       return None;
 
@@ -1003,7 +1003,7 @@ struct DSEState {
   /// Assuming this instruction has a dead analyzable write, can we delete
   /// this instruction?
   bool isRemovable(Instruction *I) {
-    assert(getLocForWriteEx(I) && "Must have analyzable write");
+    assert(getLocForWrite(I) && "Must have analyzable write");
 
     // Don't remove volatile/atomic stores.
     if (StoreInst *SI = dyn_cast<StoreInst>(I))
@@ -1040,7 +1040,7 @@ struct DSEState {
         return false;
 
     int64_t InstWriteOffset, DepWriteOffset;
-    if (auto CC = getLocForWriteEx(UseInst))
+    if (auto CC = getLocForWrite(UseInst))
       return isOverwrite(UseInst, DefInst, *CC, DefLoc, InstWriteOffset,
                          DepWriteOffset) == OW_Complete;
     return false;
@@ -1052,7 +1052,7 @@ struct DSEState {
                       << *Def->getMemoryInst()
                       << ") is at the end the function \n");
 
-    auto MaybeLoc = getLocForWriteEx(Def->getMemoryInst());
+    auto MaybeLoc = getLocForWrite(Def->getMemoryInst());
     if (!MaybeLoc) {
       LLVM_DEBUG(dbgs() << "  ... could not get location for write.\n");
       return false;
@@ -1315,7 +1315,7 @@ struct DSEState {
 
       // If Current does not have an analyzable write location or is not
       // removable, skip it.
-      CurrentLoc = getLocForWriteEx(CurrentI);
+      CurrentLoc = getLocForWrite(CurrentI);
       if (!CurrentLoc || !isRemovable(CurrentI)) {
         CanOptimize = false;
         continue;
@@ -1677,7 +1677,7 @@ struct DSEState {
         continue;
 
       Instruction *DefI = Def->getMemoryInst();
-      auto DefLoc = getLocForWriteEx(DefI);
+      auto DefLoc = getLocForWrite(DefI);
       if (!DefLoc || !isRemovable(DefI))
         continue;
 
@@ -1850,7 +1850,7 @@ struct DSEState {
     bool Changed = false;
     for (auto OI : IOL) {
       Instruction *DeadI = OI.first;
-      MemoryLocation Loc = *getLocForWriteEx(DeadI);
+      MemoryLocation Loc = *getLocForWrite(DeadI);
       assert(isRemovable(DeadI) && "Expect only removable instruction");
 
       const Value *Ptr = Loc.Ptr->stripPointerCasts();
@@ -1877,7 +1877,7 @@ struct DSEState {
         continue;
 
       Instruction *DefInst = Def->getMemoryInst();
-      auto MaybeDefLoc = getLocForWriteEx(DefInst);
+      auto MaybeDefLoc = getLocForWrite(DefInst);
       if (!MaybeDefLoc || !isRemovable(DefInst))
         return false;
 
@@ -1899,7 +1899,7 @@ struct DSEState {
         if (auto *MemSetI = dyn_cast<MemSetInst>(UpperInst)) {
           if (auto *SI = dyn_cast<StoreInst>(DefInst)) {
             // MemSetInst must have a write location.
-            MemoryLocation UpperLoc = *getLocForWriteEx(UpperInst);
+            MemoryLocation UpperLoc = *getLocForWrite(UpperInst);
             int64_t InstWriteOffset = 0;
             int64_t DepWriteOffset = 0;
             auto OR = isOverwrite(UpperInst, DefInst, UpperLoc, *MaybeDefLoc,
@@ -1943,7 +1943,7 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
       MaybeKillingLoc = State.getLocForTerminator(KillingI).map(
           [](const std::pair<MemoryLocation, bool> &P) { return P.first; });
     else
-      MaybeKillingLoc = State.getLocForWriteEx(KillingI);
+      MaybeKillingLoc = State.getLocForWrite(KillingI);
 
     if (!MaybeKillingLoc) {
       LLVM_DEBUG(dbgs() << "Failed to find analyzable write location for "
@@ -2007,7 +2007,7 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
       if (!DebugCounter::shouldExecute(MemorySSACounter))
         continue;
 
-      MemoryLocation DeadLoc = *State.getLocForWriteEx(DeadI);
+      MemoryLocation DeadLoc = *State.getLocForWrite(DeadI);
 
       if (IsMemTerm) {
         const Value *DeadUndObj = getUnderlyingObject(DeadLoc.Ptr);
