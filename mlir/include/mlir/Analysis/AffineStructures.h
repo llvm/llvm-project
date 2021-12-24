@@ -419,6 +419,16 @@ protected:
   /// Normalized each constraints by the GCD of its coefficients.
   void normalizeConstraintsByGCD();
 
+  /// Searches for a constraint with a non-zero coefficient at `colIdx` in
+  /// equality (isEq=true) or inequality (isEq=false) constraints.
+  /// Returns true and sets row found in search in `rowIdx`, false otherwise.
+  bool findConstraintWithNonZeroAt(unsigned colIdx, bool isEq,
+                                   unsigned *rowIdx) const;
+
+  /// Returns true if the pos^th column is all zero for both inequalities and
+  /// equalities.
+  bool isColZero(unsigned pos) const;
+
   /// A parameter that controls detection of an unrealistic number of
   /// constraints. If the number of constraints is this many times the number of
   /// variables, we consider such a system out of line with the intended use
