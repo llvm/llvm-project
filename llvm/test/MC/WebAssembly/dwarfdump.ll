@@ -15,7 +15,37 @@
 ; CHECK-NEXT:              DW_AT_low_pc		(0x00000002)
 ; CHECK-NEXT:              DW_AT_high_pc	(0x00000004)
 
-; CHECK: 0x00000026:   DW_TAG_subprogram
+; CHECK: 0x00000026:   DW_TAG_variable
+; CHECK-NEXT:                DW_AT_name	("foo")
+; CHECK-NEXT:                DW_AT_type	(0x00000037 "int *")
+; CHECK-NEXT:                DW_AT_external	(true)
+; CHECK-NEXT:                DW_AT_decl_file	("/usr/local/google/home/sbc/dev/wasm/simple{{[/\\]}}test.c")
+; CHECK-NEXT:                DW_AT_decl_line	(4)
+; CHECK-NEXT:                DW_AT_location	(DW_OP_addr 0x0)
+
+; CHECK: 0x00000037:   DW_TAG_pointer_type
+; CHECK-NEXT:                DW_AT_type	(0x0000003c "int")
+
+; CHECK: 0x0000003c:   DW_TAG_base_type
+; CHECK-NEXT:                DW_AT_name	("int")
+; CHECK-NEXT:                DW_AT_encoding	(DW_ATE_signed)
+; CHECK-NEXT:                DW_AT_byte_size	(0x04)
+
+; CHECK: 0x00000043:   DW_TAG_variable
+; CHECK-NEXT:                DW_AT_name	("ptr2")
+; CHECK-NEXT:                DW_AT_type	(0x00000054 "void (*)()")
+; CHECK-NEXT:                DW_AT_external	(true)
+; CHECK-NEXT:                DW_AT_decl_file	("/usr/local/google/home/sbc/dev/wasm/simple{{[/\\]}}test.c")
+; CHECK-NEXT:                DW_AT_decl_line	(5)
+; CHECK-NEXT:                DW_AT_location	(DW_OP_addr 0x4)
+
+; CHECK: 0x00000054:   DW_TAG_pointer_type
+; CHECK-NEXT:                DW_AT_type	(0x00000059 "void ()")
+
+; CHECK: 0x00000059:   DW_TAG_subroutine_type
+; CHECK-NEXT:                DW_AT_prototyped	(true)
+
+; CHECK: 0x0000005a:   DW_TAG_subprogram
 ; CHECK-NEXT:                DW_AT_low_pc	(0x00000002)
 ; CHECK-NEXT:                DW_AT_high_pc	(0x00000004)
 ; CHECK-NEXT:                DW_AT_frame_base	(DW_OP_WASM_location 0x3 0x0, DW_OP_stack_value)
@@ -24,36 +54,6 @@
 ; CHECK-NEXT:                DW_AT_decl_line	(2)
 ; CHECK-NEXT:                DW_AT_prototyped	(true)
 ; CHECK-NEXT:                DW_AT_external		(true)
-
-; CHECK: 0x0000003d:   DW_TAG_variable
-; CHECK-NEXT:                DW_AT_name	("foo")
-; CHECK-NEXT:                DW_AT_type	(0x0000004e "int *")
-; CHECK-NEXT:                DW_AT_external	(true)
-; CHECK-NEXT:                DW_AT_decl_file	("/usr/local/google/home/sbc/dev/wasm/simple{{[/\\]}}test.c")
-; CHECK-NEXT:                DW_AT_decl_line	(4)
-; CHECK-NEXT:                DW_AT_location	(DW_OP_addr 0x0)
-
-; CHECK: 0x0000004e:   DW_TAG_pointer_type
-; CHECK-NEXT:                DW_AT_type	(0x00000053 "int")
-
-; CHECK: 0x00000053:   DW_TAG_base_type
-; CHECK-NEXT:                DW_AT_name	("int")
-; CHECK-NEXT:                DW_AT_encoding	(DW_ATE_signed)
-; CHECK-NEXT:                DW_AT_byte_size	(0x04)
-
-; CHECK: 0x0000005a:   DW_TAG_variable
-; CHECK-NEXT:                DW_AT_name	("ptr2")
-; CHECK-NEXT:                DW_AT_type	(0x0000006b "void (*)()")
-; CHECK-NEXT:                DW_AT_external	(true)
-; CHECK-NEXT:                DW_AT_decl_file	("/usr/local/google/home/sbc/dev/wasm/simple{{[/\\]}}test.c")
-; CHECK-NEXT:                DW_AT_decl_line	(5)
-; CHECK-NEXT:                DW_AT_location	(DW_OP_addr 0x4)
-
-; CHECK: 0x0000006b:   DW_TAG_pointer_type
-; CHECK-NEXT:                DW_AT_type	(0x00000070 "void ()")
-
-; CHECK: 0x00000070:   DW_TAG_subroutine_type
-; CHECK-NEXT:                DW_AT_prototyped	(true)
 
 ; CHECK: 0x00000071:   NULL
 
@@ -66,10 +66,40 @@
 ; SPLIT-NEXT:               DW_AT_language    (DW_LANG_C99)
 ; SPLIT-NEXT:               DW_AT_name        ("test.c")
 ; SPLIT-NEXT:               DW_AT_GNU_dwo_name        ("{{.*}}dwarfdump.ll.tmp.dwo")
-; SPLIT-NEXT:               DW_AT_GNU_dwo_id  (0x0642bb5dada25ca6)
+; SPLIT-NEXT:               DW_AT_GNU_dwo_id  (0xad3151f12153fa17)
 
-; SPLIT:      0x00000019:   DW_TAG_subprogram
-; SPLIT-NEXT:                 DW_AT_low_pc    (indexed (00000000) address = <unresolved>)
+; SPLIT:      0x00000019:   DW_TAG_variable
+; SPLIT-NEXT:                 DW_AT_name      ("foo")
+; SPLIT-NEXT:                 DW_AT_type      (0x00000024 "int *")
+; SPLIT-NEXT:                 DW_AT_external  (true)
+; SPLIT-NEXT:                 DW_AT_decl_file (0x01)
+; SPLIT-NEXT:                 DW_AT_decl_line (4)
+; SPLIT-NEXT:                 DW_AT_location  (DW_OP_GNU_addr_index 0x0)
+
+; SPLIT:      0x00000024:   DW_TAG_pointer_type
+; SPLIT-NEXT:                 DW_AT_type      (0x00000029 "int")
+
+; SPLIT:      0x00000029:   DW_TAG_base_type
+; SPLIT-NEXT:                 DW_AT_name      ("int")
+; SPLIT-NEXT:                 DW_AT_encoding  (DW_ATE_signed)
+; SPLIT-NEXT:                 DW_AT_byte_size (0x04)
+
+; SPLIT:      0x0000002d:   DW_TAG_variable
+; SPLIT-NEXT:                 DW_AT_name      ("ptr2")
+; SPLIT-NEXT:                 DW_AT_type      (0x00000038 "void (*)()")
+; SPLIT-NEXT:                 DW_AT_external  (true)
+; SPLIT-NEXT:                 DW_AT_decl_file (0x01)
+; SPLIT-NEXT:                 DW_AT_decl_line (5)
+; SPLIT-NEXT:                 DW_AT_location  (DW_OP_GNU_addr_index 0x1)
+
+; SPLIT:      0x00000038:   DW_TAG_pointer_type
+; SPLIT-NEXT:                 DW_AT_type      (0x0000003d "void ()")
+
+; SPLIT:      0x0000003d:   DW_TAG_subroutine_type
+; SPLIT-NEXT:                 DW_AT_prototyped        (true)
+
+; SPLIT:      0x0000003e:   DW_TAG_subprogram
+; SPLIT-NEXT:                 DW_AT_low_pc    (indexed (00000002) address = <unresolved>)
 ; SPLIT-NEXT:                 DW_AT_high_pc   (0x00000002)
 ; SPLIT-NEXT:                 DW_AT_frame_base        (DW_OP_WASM_location 0x3 0x0, DW_OP_stack_value)
 ; SPLIT-NEXT:                 DW_AT_name      ("f2")
@@ -77,36 +107,6 @@
 ; SPLIT-NEXT:                 DW_AT_decl_line (2)
 ; SPLIT-NEXT:                 DW_AT_prototyped        (true)
 ; SPLIT-NEXT:                 DW_AT_external  (true)
-
-; SPLIT:      0x0000002a:   DW_TAG_variable
-; SPLIT-NEXT:                 DW_AT_name      ("foo")
-; SPLIT-NEXT:                 DW_AT_type      (0x00000035 "int *")
-; SPLIT-NEXT:                 DW_AT_external  (true)
-; SPLIT-NEXT:                 DW_AT_decl_file (0x01)
-; SPLIT-NEXT:                 DW_AT_decl_line (4)
-; SPLIT-NEXT:                 DW_AT_location  (DW_OP_GNU_addr_index 0x1)
-
-; SPLIT:      0x00000035:   DW_TAG_pointer_type
-; SPLIT-NEXT:                 DW_AT_type      (0x0000003a "int")
-
-; SPLIT:      0x0000003a:   DW_TAG_base_type
-; SPLIT-NEXT:                 DW_AT_name      ("int")
-; SPLIT-NEXT:                 DW_AT_encoding  (DW_ATE_signed)
-; SPLIT-NEXT:                 DW_AT_byte_size (0x04)
-
-; SPLIT:      0x0000003e:   DW_TAG_variable
-; SPLIT-NEXT:                 DW_AT_name      ("ptr2")
-; SPLIT-NEXT:                 DW_AT_type      (0x00000049 "void (*)()")
-; SPLIT-NEXT:                 DW_AT_external  (true)
-; SPLIT-NEXT:                 DW_AT_decl_file (0x01)
-; SPLIT-NEXT:                 DW_AT_decl_line (5)
-; SPLIT-NEXT:                 DW_AT_location  (DW_OP_GNU_addr_index 0x2)
-
-; SPLIT:      0x00000049:   DW_TAG_pointer_type
-; SPLIT-NEXT:                 DW_AT_type      (0x0000004e "void ()")
-
-; SPLIT:      0x0000004e:   DW_TAG_subroutine_type
-; SPLIT-NEXT:                 DW_AT_prototyped        (true)
 
 ; SPLIT:      0x0000004f:   NULL
 

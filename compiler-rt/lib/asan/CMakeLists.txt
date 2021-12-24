@@ -42,8 +42,12 @@ set(ASAN_CXX_SOURCES
   asan_new_delete.cpp
   )
 
+set(ASAN_STATIC_SOURCES
+  asan_rtl_static.cpp
+  )
+
 if (NOT WIN32 AND NOT APPLE)
-  set(ASAN_STATIC_SOURCES
+  list(APPEND ASAN_STATIC_SOURCES
     asan_rtl_x86_64.S
   )
 endif()

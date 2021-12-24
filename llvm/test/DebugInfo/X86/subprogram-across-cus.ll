@@ -35,12 +35,12 @@
 ; Check that there are no verifier failures, and that the SP for "main" appears
 ; in the correct CU.
 ; CHECK-LABEL:      DW_TAG_compile_unit
+; CHECK:              DW_AT_name ("1.cpp")
+; CHECK-NOT:          DW_AT_name ("main")
+; CHECK-LABEL:      DW_TAG_compile_unit
 ; CHECK:              DW_AT_name ("2.cpp")
 ; CHECK:            DW_TAG_subprogram
 ; CHECK:              DW_AT_name ("main")
-; CHECK-LABEL:      DW_TAG_compile_unit
-; CHECK:              DW_AT_name ("1.cpp")
-; CHECK-NOT:          DW_AT_name ("main")
 
 source_filename = "ld-temp.o"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

@@ -444,7 +444,7 @@ void SIMachineFunctionInfo::removeDeadFrameIndices(MachineFrameInfo &MFI) {
       MFI.setStackID(i, TargetStackID::Default);
 
   for (auto &R : VGPRToAGPRSpills) {
-    if (R.second.FullyAllocated)
+    if (R.second.IsDead)
       MFI.RemoveStackObject(R.first);
   }
 }
