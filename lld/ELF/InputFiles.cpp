@@ -1782,45 +1782,27 @@ InputFile *elf::createLazyFile(MemoryBufferRef mb, StringRef archiveName,
 }
 
 template <class ELFT> void ObjFile<ELFT>::parseLazy() {
-  using Elf_Sym = typename ELFT::Sym;
+  const ArrayRef<typename ELFT::Sym> eSyms = this->getELFSyms<ELFT>();
+  auto &symbols = this->symbols;
+  SymbolTable *const symtab = elf::symtab.get();
+  const StringRef strtab = this->stringTable;
 
-  // Find a symbol table.
-  ELFFile<ELFT> obj = check(ELFFile<ELFT>::create(mb.getBuffer()));
-  ArrayRef<typename ELFT::Shdr> sections = CHECK(obj.sections(), this);
+  symbols.resize(eSyms.size());
+  for (size_t i = firstGlobal, end = eSyms.size(); i != end; ++i)
+    if (eSyms[i].st_shndx != SHN_UNDEF)
+      symbols[i] = symtab->insert(CHECK(eSyms[i].getName(strtab), this));
 
-  for (const typename ELFT::Shdr &sec : sections) {
-    if (sec.sh_type != SHT_SYMTAB)
-      continue;
-
-    // A symbol table is found.
-    ArrayRef<Elf_Sym> eSyms = CHECK(obj.symbols(&sec), this);
-    uint32_t firstGlobal = sec.sh_info;
-    StringRef strtab = CHECK(obj.getStringTableForSymtab(sec, sections), this);
-    this->symbols.resize(eSyms.size());
-
-    // Get existing symbols or insert placeholder symbols.
-    for (size_t i = firstGlobal, end = eSyms.size(); i != end; ++i)
-      if (eSyms[i].st_shndx != SHN_UNDEF)
-        this->symbols[i] =
-            symtab->insert(CHECK(eSyms[i].getName(strtab), this));
-
-    // Replace existing symbols with LazyObject symbols.
-    //
-    // resolve() may trigger this->extract() if an existing symbol is an
-    // undefined symbol. If that happens, this LazyObjFile has served
-    // its purpose, and we can exit from the loop early.
-    for (Symbol *sym : this->symbols) {
-      if (!sym)
-        continue;
+  // Replace existing symbols with LazyObject symbols.
+  //
+  // resolve() may trigger this->extract() if an existing symbol is an undefined
+  // symbol. If that happens, this function has served its purpose, and we can
+  // exit from the loop early.
+  for (Symbol *sym : this->symbols)
+    if (sym) {
       sym->resolve(LazyObject{*this, sym->getName()});
-
-      // If extracted, stop iterating because the symbol resolution has been
-      // done by ObjFile::parse.
       if (!lazy)
         return;
     }
-    return;
-  }
 }
 
 bool InputFile::shouldExtractForCommon(StringRef name) {
