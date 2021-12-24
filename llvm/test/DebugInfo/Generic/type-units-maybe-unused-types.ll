@@ -1,4 +1,4 @@
-; RUN: llc %s -mtriple=x86_64-linux-gnu -generate-type-units -o - -filetype=obj \
+; RUN: %llc_dwarf %s -generate-type-units -o - -filetype=obj \
 ; RUN: | llvm-dwarfdump -o - - \
 ; RUN: | FileCheck %s
 
