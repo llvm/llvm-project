@@ -120,20 +120,6 @@ MemoryLocation MemoryLocation::getForDest(const AnyMemIntrinsic *MI) {
 
 Optional<MemoryLocation>
 MemoryLocation::getForDest(const CallBase *CB, const TargetLibraryInfo &TLI) {
-  if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(CB)) {
-    if (auto *MemInst = dyn_cast<AnyMemIntrinsic>(CB))
-      return getForDest(MemInst);
-
-    switch (II->getIntrinsicID()) {
-    default:
-      return None;
-    case Intrinsic::init_trampoline:
-      return MemoryLocation::getForArgument(CB, 0, TLI);
-    case Intrinsic::masked_store:
-      return MemoryLocation::getForArgument(CB, 1, TLI);
-    }
-  }
-
   if (!CB->onlyAccessesArgMemory())
     return None;
 

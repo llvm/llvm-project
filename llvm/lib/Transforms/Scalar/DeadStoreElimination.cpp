@@ -182,33 +182,19 @@ static bool isRemovable(Instruction *I) {
   if (StoreInst *SI = dyn_cast<StoreInst>(I))
     return SI->isUnordered();
 
-  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
-    switch (II->getIntrinsicID()) {
-    default: llvm_unreachable("Does not have LocForWrite");
-    case Intrinsic::lifetime_end:
-      // Never remove dead lifetime_end's, e.g. because it is followed by a
-      // free.
-      return false;
-    case Intrinsic::init_trampoline:
-      // Always safe to remove init_trampoline.
-      return true;
-    case Intrinsic::memset:
-    case Intrinsic::memmove:
-    case Intrinsic::memcpy:
-    case Intrinsic::memcpy_inline:
-      // Don't remove volatile memory intrinsics.
-      return !cast<MemIntrinsic>(II)->isVolatile();
-    case Intrinsic::memcpy_element_unordered_atomic:
-    case Intrinsic::memmove_element_unordered_atomic:
-    case Intrinsic::memset_element_unordered_atomic:
-    case Intrinsic::masked_store:
-      return true;
-    }
-  }
+  // Note: only get here for calls with analyzable writes.
+  if (auto *CB = dyn_cast<CallBase>(I)) {
+    // Don't remove volatile memory intrinsics.
+    if (auto *MI = dyn_cast<MemIntrinsic>(CB))
+      return !MI->isVolatile();
 
-  // note: only get here for calls with analyzable writes.
-  if (auto *CB = dyn_cast<CallBase>(I))
+    // Never remove dead lifetime intrinsics, e.g. because they are followed by
+    // a free.
+    if (CB->isLifetimeStartOrEnd())
+      return false;
+
     return CB->use_empty() && CB->willReturn() && CB->doesNotThrow();
+  }
 
   return false;
 }
