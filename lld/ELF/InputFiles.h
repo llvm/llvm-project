@@ -41,6 +41,7 @@ namespace elf {
 
 using llvm::object::Archive;
 
+class InputSection;
 class Symbol;
 
 // If --reproduce is specified, all input files are written to this tar archive.
@@ -114,12 +115,12 @@ public:
 
   SmallVector<Symbol *, 0> symbols;
 
+  // .got2 in the current file. This is used by PPC32 -fPIC/-fPIE to compute
+  // offsets in PLT call stubs.
+  InputSection *ppc32Got2 = nullptr;
+
   // Index of MIPS GOT built for this file.
   uint32_t mipsGotIndex = -1;
-
-  // outSecOff of .got2 in the current file. This is used by PPC32 -fPIC/-fPIE
-  // to compute offsets in PLT call stubs.
-  uint32_t ppc32Got2OutSecOff = 0;
 
   // groupId is used for --warn-backrefs which is an optional error
   // checking feature. All files within the same --{start,end}-group or

@@ -261,7 +261,7 @@ bool ToolChain::IsUnwindTablesDefault(const ArgList &Args) const {
 
 Tool *ToolChain::getClang() const {
   if (!Clang)
-    Clang.reset(new tools::Clang(*this));
+    Clang.reset(new tools::Clang(*this, useIntegratedBackend()));
   return Clang.get();
 }
 

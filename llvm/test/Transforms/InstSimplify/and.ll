@@ -132,15 +132,11 @@ define i8 @or_or_not_no_common_op(i8 %x, i8 %y, i8 %z) {
   ret i8 %and
 }
 
-; ((A | B) ^ A ) & ((A | B) ^ B)
+; ((X | Y) ^ X ) & ((X | Y) ^ Y) --> 0
 
 define i8 @or_xor(i8 %x, i8 %y) {
 ; CHECK-LABEL: @or_xor(
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[XOR1:%.*]] = xor i8 [[OR]], [[X]]
-; CHECK-NEXT:    [[XOR2:%.*]] = xor i8 [[OR]], [[Y]]
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[XOR1]], [[XOR2]]
-; CHECK-NEXT:    ret i8 [[AND]]
+; CHECK-NEXT:    ret i8 0
 ;
   %or = or i8 %x, %y
   %xor1 = xor i8 %or, %x
@@ -149,15 +145,11 @@ define i8 @or_xor(i8 %x, i8 %y) {
   ret i8 %and
 }
 
-; ((A | B) ^ B ) & ((A | B) ^ A)
+; ((X | Y) ^ Y ) & ((X | Y) ^ X) --> 0
 
 define i8 @or_xor_commute1(i8 %x, i8 %y) {
 ; CHECK-LABEL: @or_xor_commute1(
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[XOR1:%.*]] = xor i8 [[OR]], [[X]]
-; CHECK-NEXT:    [[XOR2:%.*]] = xor i8 [[OR]], [[Y]]
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[XOR2]], [[XOR1]]
-; CHECK-NEXT:    ret i8 [[AND]]
+; CHECK-NEXT:    ret i8 0
 ;
   %or = or i8 %x, %y
   %xor1 = xor i8 %or, %x
@@ -166,15 +158,11 @@ define i8 @or_xor_commute1(i8 %x, i8 %y) {
   ret i8 %and
 }
 
-; (A ^ (A | B) ) & (B ^ (A | B))
+; (X ^ (X | Y) ) & (Y ^ (X | Y)) --> 0
 
 define i71 @or_xor_commute2(i71 %x, i71 %y) {
 ; CHECK-LABEL: @or_xor_commute2(
-; CHECK-NEXT:    [[OR:%.*]] = or i71 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[XOR1:%.*]] = xor i71 [[X]], [[OR]]
-; CHECK-NEXT:    [[XOR2:%.*]] = xor i71 [[Y]], [[OR]]
-; CHECK-NEXT:    [[AND:%.*]] = and i71 [[XOR1]], [[XOR2]]
-; CHECK-NEXT:    ret i71 [[AND]]
+; CHECK-NEXT:    ret i71 0
 ;
   %or = or i71 %x, %y
   %xor1 = xor i71 %x, %or
@@ -183,19 +171,98 @@ define i71 @or_xor_commute2(i71 %x, i71 %y) {
   ret i71 %and
 }
 
-; (B ^ (A | B) ) & (A ^ (A | B))
+; (Y ^ (X | Y) ) & (X ^ (X | Y)) --> 0
 
 define <2 x i64> @or_xor_commute3(<2 x i64> %x, <2 x i64> %y) {
 ; CHECK-LABEL: @or_xor_commute3(
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i64> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[XOR1:%.*]] = xor <2 x i64> [[Y]], [[OR]]
-; CHECK-NEXT:    [[XOR2:%.*]] = xor <2 x i64> [[X]], [[OR]]
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i64> [[XOR1]], [[XOR2]]
-; CHECK-NEXT:    ret <2 x i64> [[AND]]
+; CHECK-NEXT:    ret <2 x i64> zeroinitializer
 ;
   %or = or <2 x i64> %x, %y
   %xor1 = xor <2 x i64> %y, %or
   %xor2 = xor <2 x i64> %x, %or
   %and = and <2 x i64> %xor1, %xor2
   ret <2 x i64> %and
+}
+
+; ((X | Y) ^ X ) & (Y ^ (X | Y)) --> 0
+
+define i32 @or_xor_commute4(i32 %x, i32 %y) {
+; CHECK-LABEL: @or_xor_commute4(
+; CHECK-NEXT:    ret i32 0
+;
+  %or = or i32 %x, %y
+  %xor1 = xor i32 %or, %x
+  %xor2 = xor i32 %y, %or
+  %and = and i32 %xor1, %xor2
+  ret i32 %and
+}
+
+; ((X | Y) ^ Y ) & (X ^ (X | Y)) --> 0
+
+define i32 @or_xor_commute5(i32 %x, i32 %y) {
+; CHECK-LABEL: @or_xor_commute5(
+; CHECK-NEXT:    ret i32 0
+;
+  %or = or i32 %x, %y
+  %xor1 = xor i32 %or, %y
+  %xor2 = xor i32 %x, %or
+  %and = and i32 %xor1, %xor2
+  ret i32 %and
+}
+
+; (X ^ (X | Y) ) & ((X | Y) ^ Y) --> 0
+
+define i32 @or_xor_commute6(i32 %x, i32 %y) {
+; CHECK-LABEL: @or_xor_commute6(
+; CHECK-NEXT:    ret i32 0
+;
+  %or = or i32 %x, %y
+  %xor1 = xor i32 %x, %or
+  %xor2 = xor i32 %or, %y
+  %and = and i32 %xor1, %xor2
+  ret i32 %and
+}
+
+; (Y ^ (X | Y) ) & ((X | Y) ^ X) --> 0
+
+define i32 @or_xor_commute7(i32 %x, i32 %y) {
+; CHECK-LABEL: @or_xor_commute7(
+; CHECK-NEXT:    ret i32 0
+;
+  %or = or i32 %x, %y
+  %xor1 = xor i32 %y, %or
+  %xor2 = xor i32 %or, %x
+  %and = and i32 %xor1, %xor2
+  ret i32 %and
+}
+
+; (Y ^ (X | Y) ) & ((X | Y) ^ X) --> 0
+
+define i32 @or_xor_complex_op(i32 %x, i32 %in) {
+; CHECK-LABEL: @or_xor_complex_op(
+; CHECK-NEXT:    ret i32 0
+;
+  %y = or i32 %in, 1
+  %or = or i32 %x, %y
+  %xor1 = xor i32 %y, %or
+  %xor2 = xor i32 %or, %x
+  %and = and i32 %xor1, %xor2
+  ret i32 %and
+}
+
+define i32 @or_xor_limitation(i32 %x, i32 %y) {
+; CHECK-LABEL: @or_xor_limitation(
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[Y]], [[OR1]]
+; CHECK-NEXT:    [[XOR2:%.*]] = xor i32 [[OR2]], [[X]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[XOR1]], [[XOR2]]
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %or1 = or i32 %y, %x
+  %or2 = or i32 %x, %y
+  %xor1 = xor i32 %y, %or1
+  %xor2 = xor i32 %or2, %x
+  %and = and i32 %xor1, %xor2
+  ret i32 %and
 }

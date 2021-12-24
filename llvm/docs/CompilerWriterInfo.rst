@@ -119,6 +119,12 @@ SystemZ
 
 * `z/Architecture Principles of Operation (registration required, free sign-up) <http://www-01.ibm.com/support/docview.wss?uid=isg2b9de5f05a9d57819852571c500428f9a>`_
 
+VE
+--
+
+* `NEC SX-Aurora TSUBASA ISA Guide <https://www.hpc.nec/documents/guide/pdfs/Aurora_ISA_guide.pdf>`_
+* `NEC SX-Aurora TSUBASA manuals and documentation <https://www.hpc.nec/documentation>`_
+
 X86
 ---
 

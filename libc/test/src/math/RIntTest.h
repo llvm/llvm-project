@@ -70,12 +70,12 @@ public:
     for (int mode : ROUNDING_MODES) {
       __llvm_libc::fputil::set_round(mode);
       mpfr::RoundingMode mpfr_mode = to_mpfr_rounding_mode(mode);
-      ASSERT_FP_EQ(func(T(1.0)), mpfr::Round(T(1.0), mpfr_mode));
-      ASSERT_FP_EQ(func(T(-1.0)), mpfr::Round(T(-1.0), mpfr_mode));
-      ASSERT_FP_EQ(func(T(10.0)), mpfr::Round(T(10.0), mpfr_mode));
-      ASSERT_FP_EQ(func(T(-10.0)), mpfr::Round(T(-10.0), mpfr_mode));
-      ASSERT_FP_EQ(func(T(1234.0)), mpfr::Round(T(1234.0), mpfr_mode));
-      ASSERT_FP_EQ(func(T(-1234.0)), mpfr::Round(T(-1234.0), mpfr_mode));
+      ASSERT_FP_EQ(func(T(1.0)), mpfr::round(T(1.0), mpfr_mode));
+      ASSERT_FP_EQ(func(T(-1.0)), mpfr::round(T(-1.0), mpfr_mode));
+      ASSERT_FP_EQ(func(T(10.0)), mpfr::round(T(10.0), mpfr_mode));
+      ASSERT_FP_EQ(func(T(-10.0)), mpfr::round(T(-10.0), mpfr_mode));
+      ASSERT_FP_EQ(func(T(1234.0)), mpfr::round(T(1234.0), mpfr_mode));
+      ASSERT_FP_EQ(func(T(-1234.0)), mpfr::round(T(-1234.0), mpfr_mode));
     }
   }
 
@@ -83,12 +83,12 @@ public:
     for (int mode : ROUNDING_MODES) {
       __llvm_libc::fputil::set_round(mode);
       mpfr::RoundingMode mpfr_mode = to_mpfr_rounding_mode(mode);
-      ASSERT_FP_EQ(func(T(0.5)), mpfr::Round(T(0.5), mpfr_mode));
-      ASSERT_FP_EQ(func(T(-0.5)), mpfr::Round(T(-0.5), mpfr_mode));
-      ASSERT_FP_EQ(func(T(0.115)), mpfr::Round(T(0.115), mpfr_mode));
-      ASSERT_FP_EQ(func(T(-0.115)), mpfr::Round(T(-0.115), mpfr_mode));
-      ASSERT_FP_EQ(func(T(0.715)), mpfr::Round(T(0.715), mpfr_mode));
-      ASSERT_FP_EQ(func(T(-0.715)), mpfr::Round(T(-0.715), mpfr_mode));
+      ASSERT_FP_EQ(func(T(0.5)), mpfr::round(T(0.5), mpfr_mode));
+      ASSERT_FP_EQ(func(T(-0.5)), mpfr::round(T(-0.5), mpfr_mode));
+      ASSERT_FP_EQ(func(T(0.115)), mpfr::round(T(0.115), mpfr_mode));
+      ASSERT_FP_EQ(func(T(-0.115)), mpfr::round(T(-0.115), mpfr_mode));
+      ASSERT_FP_EQ(func(T(0.715)), mpfr::round(T(0.715), mpfr_mode));
+      ASSERT_FP_EQ(func(T(-0.715)), mpfr::round(T(-0.715), mpfr_mode));
     }
   }
 
@@ -102,7 +102,7 @@ public:
       for (int mode : ROUNDING_MODES) {
         __llvm_libc::fputil::set_round(mode);
         mpfr::RoundingMode mpfr_mode = to_mpfr_rounding_mode(mode);
-        ASSERT_FP_EQ(func(x), mpfr::Round(x, mpfr_mode));
+        ASSERT_FP_EQ(func(x), mpfr::round(x, mpfr_mode));
       }
     }
   }
@@ -121,7 +121,7 @@ public:
       for (int mode : ROUNDING_MODES) {
         __llvm_libc::fputil::set_round(mode);
         mpfr::RoundingMode mpfr_mode = to_mpfr_rounding_mode(mode);
-        ASSERT_FP_EQ(func(x), mpfr::Round(x, mpfr_mode));
+        ASSERT_FP_EQ(func(x), mpfr::round(x, mpfr_mode));
       }
     }
   }

@@ -882,3 +882,17 @@ define double @vreduce_fmax_nxv16f64(<vscale x 16 x double> %v) {
   %red = call double @llvm.vector.reduce.fmax.nxv16f64(<vscale x 16 x double> %v)
   ret double %red
 }
+
+define float @vreduce_nsz_fadd_nxv1f32(<vscale x 1 x float> %v, float %s) {
+; CHECK-LABEL: vreduce_nsz_fadd_nxv1f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
+; CHECK-NEXT:    vmv.v.i v9, 0
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vfredusum.vs v8, v8, v9
+; CHECK-NEXT:    vfmv.f.s ft0, v8
+; CHECK-NEXT:    fadd.s fa0, fa0, ft0
+; CHECK-NEXT:    ret
+  %red = call reassoc nsz float @llvm.vector.reduce.fadd.nxv1f32(float %s, <vscale x 1 x float> %v)
+  ret float %red
+}

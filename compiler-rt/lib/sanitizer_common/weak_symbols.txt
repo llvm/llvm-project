@@ -6,3 +6,5 @@ ___sanitizer_symbolize_code
 ___sanitizer_symbolize_data
 ___sanitizer_symbolize_demangle
 ___sanitizer_symbolize_flush
+___sanitizer_symbolize_set_demangle
+___sanitizer_symbolize_set_inline_frames

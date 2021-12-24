@@ -708,8 +708,6 @@ static void EmitOMPAggregateInit(CodeGenFunction &CGF, Address DestAddr,
   // Drill down to the base element type on both arrays.
   const ArrayType *ArrayTy = Type->getAsArrayTypeUnsafe();
   llvm::Value *NumElements = CGF.emitArrayLength(ArrayTy, ElementTy, DestAddr);
-  DestAddr =
-      CGF.Builder.CreateElementBitCast(DestAddr, DestAddr.getElementType());
   if (DRD)
     SrcAddr =
         CGF.Builder.CreateElementBitCast(SrcAddr, DestAddr.getElementType());
@@ -4530,10 +4528,7 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
         std::tie(Addr, Size) = getPointerAndSize(CGF, E);
         llvm::Value *Idx = CGF.EmitLoadOfScalar(PosLVal, E->getExprLoc());
         LValue Base = CGF.MakeAddrLValue(
-            Address(CGF.Builder.CreateGEP(AffinitiesArray.getElementType(),
-                                          AffinitiesArray.getPointer(), Idx),
-                    AffinitiesArray.getAlignment()),
-            KmpTaskAffinityInfoTy);
+            CGF.Builder.CreateGEP(AffinitiesArray, Idx), KmpTaskAffinityInfoTy);
         // affs[i].base_addr = &<Affinities[i].second>;
         LValue BaseAddrLVal = CGF.EmitLValueForField(
             Base, *std::next(KmpAffinityInfoRD->field_begin(), BaseAddr));
@@ -4697,12 +4692,10 @@ CGOpenMPRuntime::getDepobjElements(CodeGenFunction &CGF, LValue DepobjLVal,
           Base.getAddress(CGF), CGF.ConvertTypeForMem(KmpDependInfoPtrTy));
   Base = CGF.MakeAddrLValue(Addr, KmpDependInfoTy, Base.getBaseInfo(),
                             Base.getTBAAInfo());
-  llvm::Value *DepObjAddr = CGF.Builder.CreateGEP(
-      Addr.getElementType(), Addr.getPointer(),
-      llvm::ConstantInt::get(CGF.IntPtrTy, -1, /*isSigned=*/true));
+  Address DepObjAddr = CGF.Builder.CreateGEP(
+      Addr, llvm::ConstantInt::get(CGF.IntPtrTy, -1, /*isSigned=*/true));
   LValue NumDepsBase = CGF.MakeAddrLValue(
-      Address(DepObjAddr, Addr.getAlignment()), KmpDependInfoTy,
-      Base.getBaseInfo(), Base.getTBAAInfo());
+      DepObjAddr, KmpDependInfoTy, Base.getBaseInfo(), Base.getTBAAInfo());
   // NumDeps = deps[i].base_addr;
   LValue BaseAddrLVal = CGF.EmitLValueForField(
       NumDepsBase, *std::next(KmpDependInfoRD->field_begin(), BaseAddr));
@@ -4738,10 +4731,7 @@ static void emitDependData(CodeGenFunction &CGF, QualType &KmpDependInfoTy,
       LValue &PosLVal = *Pos.get<LValue *>();
       llvm::Value *Idx = CGF.EmitLoadOfScalar(PosLVal, E->getExprLoc());
       Base = CGF.MakeAddrLValue(
-          Address(CGF.Builder.CreateGEP(DependenciesArray.getElementType(),
-                                        DependenciesArray.getPointer(), Idx),
-                  DependenciesArray.getAlignment()),
-          KmpDependInfoTy);
+          CGF.Builder.CreateGEP(DependenciesArray, Idx), KmpDependInfoTy);
     }
     // deps[i].base_addr = &<Dependencies[i].second>;
     LValue BaseAddrLVal = CGF.EmitLValueForField(
@@ -4798,12 +4788,10 @@ emitDepobjElementsSizes(CodeGenFunction &CGF, QualType &KmpDependInfoTy,
           Base.getAddress(CGF), KmpDependInfoPtrT);
       Base = CGF.MakeAddrLValue(Addr, KmpDependInfoTy, Base.getBaseInfo(),
                                 Base.getTBAAInfo());
-      llvm::Value *DepObjAddr = CGF.Builder.CreateGEP(
-          Addr.getElementType(), Addr.getPointer(),
-          llvm::ConstantInt::get(CGF.IntPtrTy, -1, /*isSigned=*/true));
+      Address DepObjAddr = CGF.Builder.CreateGEP(
+          Addr, llvm::ConstantInt::get(CGF.IntPtrTy, -1, /*isSigned=*/true));
       LValue NumDepsBase = CGF.MakeAddrLValue(
-          Address(DepObjAddr, Addr.getAlignment()), KmpDependInfoTy,
-          Base.getBaseInfo(), Base.getTBAAInfo());
+          DepObjAddr, KmpDependInfoTy, Base.getBaseInfo(), Base.getTBAAInfo());
       // NumDeps = deps[i].base_addr;
       LValue BaseAddrLVal = CGF.EmitLValueForField(
           NumDepsBase, *std::next(KmpDependInfoRD->field_begin(), BaseAddr));
@@ -4859,12 +4847,10 @@ static void emitDepobjElements(CodeGenFunction &CGF, QualType &KmpDependInfoTy,
                                 Base.getTBAAInfo());
 
       // Get number of elements in a single depobj.
-      llvm::Value *DepObjAddr = CGF.Builder.CreateGEP(
-          Addr.getElementType(), Addr.getPointer(),
-          llvm::ConstantInt::get(CGF.IntPtrTy, -1, /*isSigned=*/true));
+      Address DepObjAddr = CGF.Builder.CreateGEP(
+          Addr, llvm::ConstantInt::get(CGF.IntPtrTy, -1, /*isSigned=*/true));
       LValue NumDepsBase = CGF.MakeAddrLValue(
-          Address(DepObjAddr, Addr.getAlignment()), KmpDependInfoTy,
-          Base.getBaseInfo(), Base.getTBAAInfo());
+          DepObjAddr, KmpDependInfoTy, Base.getBaseInfo(), Base.getTBAAInfo());
       // NumDeps = deps[i].base_addr;
       LValue BaseAddrLVal = CGF.EmitLValueForField(
           NumDepsBase, *std::next(KmpDependInfoRD->field_begin(), BaseAddr));
@@ -4876,10 +4862,7 @@ static void emitDepobjElements(CodeGenFunction &CGF, QualType &KmpDependInfoTy,
           ElSize,
           CGF.Builder.CreateIntCast(NumDeps, CGF.SizeTy, /*isSigned=*/false));
       llvm::Value *Pos = CGF.EmitLoadOfScalar(PosLVal, E->getExprLoc());
-      Address DepAddr =
-          Address(CGF.Builder.CreateGEP(DependenciesArray.getElementType(),
-                                        DependenciesArray.getPointer(), Pos),
-                  DependenciesArray.getAlignment());
+      Address DepAddr = CGF.Builder.CreateGEP(DependenciesArray, Pos);
       CGF.Builder.CreateMemCpy(DepAddr, Base.getAddress(CGF), Size);
 
       // Increase pos.

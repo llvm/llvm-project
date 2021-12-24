@@ -159,6 +159,8 @@ SYMBOLIZER_API_LIST=__sanitizer_symbolize_code
 SYMBOLIZER_API_LIST+=,__sanitizer_symbolize_data
 SYMBOLIZER_API_LIST+=,__sanitizer_symbolize_flush
 SYMBOLIZER_API_LIST+=,__sanitizer_symbolize_demangle
+SYMBOLIZER_API_LIST+=,__sanitizer_symbolize_set_demangle
+SYMBOLIZER_API_LIST+=,__sanitizer_symbolize_set_inline_frames
 
 LIBCXX_ARCHIVE_DIR=$(dirname $(find $LIBCXX_BUILD -name libc++.a | head -n1))
 

@@ -99,6 +99,7 @@ class HexagonMCChecker {
   bool checkHWLoop();
   bool checkCOFMax1();
   bool checkLegalVecRegPair();
+  bool checkValidTmpDst();
 
   static void compoundRegisterMap(unsigned &);
 

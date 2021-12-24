@@ -806,8 +806,9 @@ void elf::writePPC32PltCallStub(uint8_t *buf, uint64_t gotPltVA,
     // The stub loads an address relative to r30 (.got2+Addend). Addend is
     // almost always 0x8000. The address of .got2 is different in another object
     // file, so a stub cannot be shared.
-    offset = gotPltVA - (in.ppc32Got2->getParent()->getVA() +
-                         file->ppc32Got2OutSecOff + addend);
+    offset = gotPltVA -
+             (in.ppc32Got2->getParent()->getVA() +
+              (file->ppc32Got2 ? file->ppc32Got2->outSecOff : 0) + addend);
   } else {
     // The stub loads an address relative to _GLOBAL_OFFSET_TABLE_ (which is
     // currently the address of .got).
