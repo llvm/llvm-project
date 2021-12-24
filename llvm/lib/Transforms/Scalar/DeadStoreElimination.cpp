@@ -1704,13 +1704,19 @@ struct DSEState {
   /// \returns true if \p Def is a no-op store, either because it
   /// directly stores back a loaded value or stores zero to a calloced object.
   bool storeIsNoop(MemoryDef *Def, const Value *DefUO) {
-    StoreInst *Store = dyn_cast<StoreInst>(Def->getMemoryInst());
-    MemSetInst *MemSet = dyn_cast<MemSetInst>(Def->getMemoryInst());
+    Instruction *DefI = Def->getMemoryInst();
+    StoreInst *Store = dyn_cast<StoreInst>(DefI);
+    MemSetInst *MemSet = dyn_cast<MemSetInst>(DefI);
     Constant *StoredConstant = nullptr;
     if (Store)
       StoredConstant = dyn_cast<Constant>(Store->getOperand(0));
-    if (MemSet)
+    else if (MemSet)
       StoredConstant = dyn_cast<Constant>(MemSet->getValue());
+    else
+      return false;
+
+    if (!isRemovable(DefI))
+      return false;
 
     if (StoredConstant && StoredConstant->isNullValue()) {
       auto *DefUOInst = dyn_cast<Instruction>(DefUO);
@@ -2065,8 +2071,7 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
     }
 
     // Check if the store is a no-op.
-    if (!Shortend && isRemovable(KillingI) &&
-        State.storeIsNoop(KillingDef, KillingUndObj)) {
+    if (!Shortend && State.storeIsNoop(KillingDef, KillingUndObj)) {
       LLVM_DEBUG(dbgs() << "DSE: Remove No-Op Store:\n  DEAD: " << *KillingI
                         << '\n');
       State.deleteDeadInstruction(KillingI);
