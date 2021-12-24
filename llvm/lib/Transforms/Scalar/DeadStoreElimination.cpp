@@ -1195,23 +1195,14 @@ struct DSEState {
   /// loop. In particular, this guarantees that it only references a single
   /// MemoryLocation during execution of the containing function.
   bool isGuaranteedLoopInvariant(const Value *Ptr) {
-    auto IsGuaranteedLoopInvariantBase = [](const Value *Ptr) {
-      Ptr = Ptr->stripPointerCasts();
-      if (auto *I = dyn_cast<Instruction>(Ptr))
-        return I->getParent()->isEntryBlock();
-      return true;
-    };
-
     Ptr = Ptr->stripPointerCasts();
-    if (auto *I = dyn_cast<Instruction>(Ptr)) {
-      if (I->getParent()->isEntryBlock())
-        return true;
-    }
-    if (auto *GEP = dyn_cast<GEPOperator>(Ptr)) {
-      return IsGuaranteedLoopInvariantBase(GEP->getPointerOperand()) &&
-             GEP->hasAllConstantIndices();
-    }
-    return IsGuaranteedLoopInvariantBase(Ptr);
+    if (auto *GEP = dyn_cast<GEPOperator>(Ptr))
+      if (GEP->hasAllConstantIndices())
+        Ptr = GEP->getPointerOperand()->stripPointerCasts();
+
+    if (auto *I = dyn_cast<Instruction>(Ptr))
+      return I->getParent()->isEntryBlock();
+    return true;
   }
 
   // Find a MemoryDef writing to \p KillingLoc and dominating \p StartAccess,
