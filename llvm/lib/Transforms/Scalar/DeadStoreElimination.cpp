@@ -988,14 +988,8 @@ struct DSEState {
     if (!I->mayWriteToMemory())
       return None;
 
-    if (auto *CB = dyn_cast<CallBase>(I)) {
-      // If the functions may write to memory we do not know about, bail out.
-      if (!CB->onlyAccessesArgMemory() &&
-          !CB->onlyAccessesInaccessibleMemOrArgMem())
-        return None;
-
+    if (auto *CB = dyn_cast<CallBase>(I))
       return MemoryLocation::getForDest(CB, TLI);
-    }
 
     return MemoryLocation::getOrNone(I);
   }
