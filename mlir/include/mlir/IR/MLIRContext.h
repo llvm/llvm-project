@@ -147,6 +147,13 @@ public:
   /// this call in this case.
   void setThreadPool(llvm::ThreadPool &pool);
 
+  /// Return the number of threads used by the thread pool in this context. The
+  /// number of computed hardware threads can change over the lifetime of a
+  /// process based on affinity changes, so users should use the number of
+  /// threads actually in the thread pool for dispatching work. Returns 1 if
+  /// multithreading is disabled.
+  unsigned getNumThreads();
+
   /// Return the thread pool used by this context. This method requires that
   /// multithreading be enabled within the context, and should generally not be
   /// used directly. Users should instead prefer the threading utilities within
