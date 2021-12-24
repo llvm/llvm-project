@@ -637,9 +637,9 @@ class divergent_i64_BinOp <SDPatternOperator Op, Instruction Inst> :
       )
   >;
 
-def :  divergent_i64_BinOp <and, V_AND_B32_e32>;
-def :  divergent_i64_BinOp <or,  V_OR_B32_e32>;
-def :  divergent_i64_BinOp <xor, V_XOR_B32_e32>;
+def :  divergent_i64_BinOp <and, V_AND_B32_e64>;
+def :  divergent_i64_BinOp <or,  V_OR_B32_e64>;
+def :  divergent_i64_BinOp <xor, V_XOR_B32_e64>;
 
 let SubtargetPredicate = Has16BitInsts in {
 
@@ -687,6 +687,36 @@ let SubtargetPredicate = HasDLInsts in {
 
 let isReMaterializable = 1 in
 defm V_XNOR_B32 : VOP2Inst <"v_xnor_b32", VOP_I32_I32_I32, xnor>;
+
+def : GCNPat<
+  (i32 (DivergentUnaryFrag<not> (xor_oneuse i32:$src0, i32:$src1))),
+  (i32 (V_XNOR_B32_e64 $src0, $src1))
+>;
+
+def : GCNPat<
+  (i32 (DivergentBinFrag<xor_oneuse> (not i32:$src0), i32:$src1)),
+  (i32 (V_XNOR_B32_e64 $src0, $src1))
+>;
+
+def : GCNPat<
+  (i64 (DivergentUnaryFrag<not> (xor_oneuse i64:$src0, i64:$src1))),
+  (REG_SEQUENCE VReg_64, (i32 (V_XNOR_B32_e64
+                            (i32 (EXTRACT_SUBREG $src0, sub0)),
+                            (i32 (EXTRACT_SUBREG $src1, sub0)))), sub0,
+                     (i32 (V_XNOR_B32_e64
+                            (i32 (EXTRACT_SUBREG $src0, sub1)),
+                            (i32 (EXTRACT_SUBREG $src1, sub1)))), sub1)
+>;
+
+def : GCNPat<
+  (i64 (DivergentBinFrag<xor_oneuse> (not i64:$src0), i64:$src1)),
+  (REG_SEQUENCE VReg_64, (i32 (V_XNOR_B32_e64
+                            (i32 (EXTRACT_SUBREG $src0, sub0)),
+                            (i32 (EXTRACT_SUBREG $src1, sub0)))), sub0,
+                     (i32 (V_XNOR_B32_e64
+                            (i32 (EXTRACT_SUBREG $src0, sub1)),
+                            (i32 (EXTRACT_SUBREG $src1, sub1)))), sub1)
+>;
 
 let Constraints = "$vdst = $src2",
     DisableEncoding = "$src2",

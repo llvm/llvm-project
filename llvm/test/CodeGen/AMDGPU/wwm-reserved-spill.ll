@@ -472,10 +472,10 @@ define amdgpu_gfx i64 @strict_wwm_called_i64(i64 %a) noinline {
 ; GFX9-O0-NEXT:    ; kill: def $vgpr6 killed $vgpr6 def $vgpr6_vgpr7 killed $exec
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v7, v0
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v0, v7
-; GFX9-O0-NEXT:    v_or_b32_e32 v0, v0, v3
+; GFX9-O0-NEXT:    v_or_b32_e64 v0, v0, v3
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v1, v6
-; GFX9-O0-NEXT:    v_or_b32_e32 v6, v1, v2
+; GFX9-O0-NEXT:    v_or_b32_e64 v6, v1, v2
 ; GFX9-O0-NEXT:    ; kill: def $vgpr6 killed $vgpr6 def $vgpr6_vgpr7 killed $exec
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v7, v0
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v1, v6

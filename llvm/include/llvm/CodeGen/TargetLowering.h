@@ -3292,6 +3292,17 @@ public:
     return false;
   }
 
+  // Lets target to control the following reassociation of operands: (op (op x,
+  // c1), y) -> (op (op x, y), c1) where N0 is (op x, c1) and N1 is y. By
+  // default consider profitable any case where N0 has single use.  This
+  // behavior reflects the condition replaced by this target hook call in the
+  // DAGCombiner.  Any particular target can implement its own heuristic to
+  // restrict common combiner.
+  virtual bool isReassocProfitable(SelectionDAG &DAG, SDValue N0,
+                                   SDValue N1) const {
+    return N0.hasOneUse();
+  }
+
   virtual bool isSDNodeAlwaysUniform(const SDNode * N) const {
     return false;
   }

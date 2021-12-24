@@ -106,8 +106,11 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}and_or_or_and:
-; GCN: v_mov_b32_e32 [[MASK:v[0-9]+]], 0xffff0500
-; GCN: v_perm_b32 v{{[0-9]+}}, {{[vs][0-9]+}}, {{[vs][0-9]+}}, [[MASK]]
+; GCN: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0xff00
+; GCN: s_or_b32 [[SREG:s[0-9]+]], s{{[0-9]+}}, 0xffff0000
+; GCN: v_and_b32_e32 [[VREG:v[0-9]+]], 0xff00ff, v{{[0-9]+}}
+; GCN: v_or_b32_e32 v{{[0-9]+}}, [[SREG]], [[VREG]]
+; FIXME here should have been "v_perm_b32" with 0xffff0500 mask.
 define amdgpu_kernel void @and_or_or_and(i32 addrspace(1)* nocapture %arg, i32 %arg1) {
 bb:
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -153,10 +156,14 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}known_ffff0500:
-; GCN-DAG: v_mov_b32_e32 [[MASK:v[0-9]+]], 0xffff0500
-; GCN-DAG: v_mov_b32_e32 [[RES:v[0-9]+]], 0xffff8004
-; GCN: v_perm_b32 v{{[0-9]+}}, {{[vs][0-9]+}}, {{[vs][0-9]+}}, [[MASK]]
+; GCN: v_mov_b32_e32 [[RES:v[0-9]+]], 0xffff8004
+; GCN: s_and_b32 [[SREG:s[0-9]+]], [[SREG]], 0xff00
+; GCN: s_or_b32 [[SREG]], [[SREG]], 0xffff0000
+; GCN: v_and_b32_e32 [[VREG:v[0-9]+]], 0xff00ff, [[VREG]]
+; GCN: v_or_b32_e32 [[VREG]], [[SREG]], [[VREG]]
+; GCN: store_dword v[{{[0-9:]+}}], [[VREG]]{{$}}
 ; GCN: store_dword v[{{[0-9:]+}}], [[RES]]{{$}}
+; FIXME here should have been "v_perm_b32" with 0xffff0500 mask.
 define amdgpu_kernel void @known_ffff0500(i32 addrspace(1)* nocapture %arg, i32 %arg1) {
 bb:
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
