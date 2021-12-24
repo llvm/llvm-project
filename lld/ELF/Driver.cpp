@@ -2120,11 +2120,10 @@ static void redirectSymbols(ArrayRef<WrappedSymbol> wrapped) {
     return;
 
   // Update pointers in input files.
-  parallelForEach(objectFiles, [&](InputFile *file) {
-    MutableArrayRef<Symbol *> syms = file->getMutableSymbols();
-    for (size_t i = 0, e = syms.size(); i != e; ++i)
-      if (Symbol *s = map.lookup(syms[i]))
-        syms[i] = s;
+  parallelForEach(objectFiles, [&](ELFFileBase *file) {
+    for (Symbol *&sym : file->getMutableGlobalSymbols())
+      if (Symbol *s = map.lookup(sym))
+        sym = s;
   });
 
   // Update pointers in the symbol table.
