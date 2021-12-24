@@ -1654,6 +1654,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::SRL,              VT, Custom);
       setOperationAction(ISD::SHL,              VT, Custom);
       setOperationAction(ISD::SRA,              VT, Custom);
+      setOperationAction(ISD::ROTL,             VT, Custom);
+      setOperationAction(ISD::ROTR,             VT, Custom);
       setOperationAction(ISD::SETCC,            VT, Custom);
 
       // The condition codes aren't legal in SSE/AVX and under AVX512 we use
@@ -1668,20 +1670,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::UMIN,             VT, Legal);
       setOperationAction(ISD::ABS,              VT, Legal);
       setOperationAction(ISD::CTPOP,            VT, Custom);
-      setOperationAction(ISD::ROTL,             VT, Custom);
-      setOperationAction(ISD::ROTR,             VT, Custom);
       setOperationAction(ISD::STRICT_FSETCC,    VT, Custom);
       setOperationAction(ISD::STRICT_FSETCCS,   VT, Custom);
     }
-
-    // With BWI, expanding (and promoting the shifts) is the better.
-    if (!Subtarget.useBWIRegs()) {
-      setOperationAction(ISD::ROTL, MVT::v32i16, Custom);
-      setOperationAction(ISD::ROTR, MVT::v32i16, Custom);
-    }
-
-    setOperationAction(ISD::ROTL,   MVT::v64i8,  Custom);
-    setOperationAction(ISD::ROTR,   MVT::v64i8,  Custom);
 
     for (auto VT : { MVT::v64i8, MVT::v32i16 }) {
       setOperationAction(ISD::ABS,     VT, HasBWI ? Legal : Custom);
@@ -29894,12 +29885,12 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
   if (VT.is512BitVector() && !Subtarget.useBWIRegs())
     return splitVectorIntBinary(Op, DAG);
 
-  assert((VT == MVT::v4i32 || VT == MVT::v8i16 || VT == MVT::v16i8 ||
-          ((VT == MVT::v8i32 || VT == MVT::v16i16 || VT == MVT::v32i8) &&
-           Subtarget.hasAVX2()) ||
-          (VT == MVT::v32i16 && !Subtarget.useBWIRegs()) ||
-          (VT == MVT::v64i8 && Subtarget.useBWIRegs())) &&
-         "Only vXi32/vXi16/vXi8 vector rotates supported");
+  assert(
+      (VT == MVT::v4i32 || VT == MVT::v8i16 || VT == MVT::v16i8 ||
+       ((VT == MVT::v8i32 || VT == MVT::v16i16 || VT == MVT::v32i8) &&
+        Subtarget.hasAVX2()) ||
+       ((VT == MVT::v32i16 || VT == MVT::v64i8) && Subtarget.useBWIRegs())) &&
+      "Only vXi32/vXi16/vXi8 vector rotates supported");
 
   MVT ExtSVT = MVT::getIntegerVT(2 * EltSizeInBits);
   MVT ExtVT = MVT::getVectorVT(ExtSVT, NumElts / 2);

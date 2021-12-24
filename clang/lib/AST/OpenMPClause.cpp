@@ -126,6 +126,7 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
   case OMPC_write:
   case OMPC_update:
   case OMPC_capture:
+  case OMPC_compare:
   case OMPC_seq_cst:
   case OMPC_acq_rel:
   case OMPC_acquire:
@@ -217,6 +218,7 @@ const OMPClauseWithPostUpdate *OMPClauseWithPostUpdate::get(const OMPClause *C) 
   case OMPC_write:
   case OMPC_update:
   case OMPC_capture:
+  case OMPC_compare:
   case OMPC_seq_cst:
   case OMPC_acq_rel:
   case OMPC_acquire:
@@ -1790,6 +1792,10 @@ void OMPClausePrinter::VisitOMPUpdateClause(OMPUpdateClause *Node) {
 
 void OMPClausePrinter::VisitOMPCaptureClause(OMPCaptureClause *) {
   OS << "capture";
+}
+
+void OMPClausePrinter::VisitOMPCompareClause(OMPCompareClause *) {
+  OS << "compare";
 }
 
 void OMPClausePrinter::VisitOMPSeqCstClause(OMPSeqCstClause *) {
