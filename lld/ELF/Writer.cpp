@@ -679,7 +679,6 @@ static bool includeInSymtab(const Symbol &b) {
     SectionBase *sec = d->section;
     if (!sec)
       return true;
-    sec = sec->repl;
 
     // Exclude symbols pointing to garbage-collected sections.
     if (isa<InputSectionBase>(sec) && !sec->isLive())
@@ -1302,7 +1301,7 @@ static DenseMap<const InputSectionBase *, int> buildSectionOrder() {
 
     if (auto *d = dyn_cast<Defined>(&sym)) {
       if (auto *sec = dyn_cast_or_null<InputSectionBase>(d->section)) {
-        int &priority = sectionOrder[cast<InputSectionBase>(sec->repl)];
+        int &priority = sectionOrder[cast<InputSectionBase>(sec)];
         priority = std::min(priority, ent.priority);
       }
     }
@@ -1725,7 +1724,7 @@ static void fixSymbolsAfterShrinking() {
       if (!sec)
         return;
 
-      const InputSectionBase *inputSec = dyn_cast<InputSectionBase>(sec->repl);
+      const InputSectionBase *inputSec = dyn_cast<InputSectionBase>(sec);
       if (!inputSec || !inputSec->bytesDropped)
         return;
 
