@@ -679,8 +679,7 @@ InlinerPass::optimizeSCCAsync(MutableArrayRef<CallGraphNode *> nodesToVisit,
   // Note: The number of pass managers here needs to remain constant
   // to prevent issues with pass instrumentations that rely on having the same
   // pass manager for the main thread.
-  llvm::ThreadPool &threadPool = ctx->getThreadPool();
-  size_t numThreads = threadPool.getThreadCount();
+  size_t numThreads = ctx->getNumThreads();
   if (opPipelines.size() < numThreads) {
     // Reserve before resizing so that we can use a reference to the first
     // element.

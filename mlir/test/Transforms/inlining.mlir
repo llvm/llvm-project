@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -inline='default-pipeline=''' | FileCheck %s
+// RUN: mlir-opt %s --mlir-disable-threading -inline='default-pipeline=''' | FileCheck %s
 // RUN: mlir-opt %s -inline='default-pipeline=''' -mlir-print-debuginfo -mlir-print-local-scope | FileCheck %s --check-prefix INLINE-LOC
 // RUN: mlir-opt %s -inline | FileCheck %s --check-prefix INLINE_SIMPLIFY
 
