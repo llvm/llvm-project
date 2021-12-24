@@ -52,13 +52,6 @@ public:
 
   StringRef name;
 
-  // This pointer points to the "real" instance of this instance.
-  // Usually Repl == this. However, if ICF merges two sections,
-  // Repl pointer of one section points to another section. So,
-  // if you need to get a pointer to this instance, do not use
-  // this but instead this->Repl.
-  SectionBase *repl;
-
   uint8_t sectionKind : 3;
 
   // The next two bit fields are only used by InputSectionBase, but we
@@ -102,9 +95,9 @@ protected:
   constexpr SectionBase(Kind sectionKind, StringRef name, uint64_t flags,
                         uint32_t entsize, uint32_t alignment, uint32_t type,
                         uint32_t info, uint32_t link)
-      : name(name), repl(this), sectionKind(sectionKind), bss(false),
-        keepUnique(false), partition(0), alignment(alignment), flags(flags),
-        entsize(entsize), type(type), link(link), info(info) {}
+      : name(name), sectionKind(sectionKind), bss(false), keepUnique(false),
+        partition(0), alignment(alignment), flags(flags), entsize(entsize),
+        type(type), link(link), info(info) {}
 };
 
 // This corresponds to a section of an input file.
@@ -366,6 +359,10 @@ public:
 
   template <class ELFT, class RelTy>
   void relocateNonAlloc(uint8_t *buf, llvm::ArrayRef<RelTy> rels);
+
+  // Points to the canonical section. If ICF folds two sections, repl pointer of
+  // one section points to the other.
+  InputSection *repl = this;
 
   // Used by ICF.
   uint32_t eqClass[2] = {0, 0};
