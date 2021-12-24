@@ -597,6 +597,10 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
       CGM.getIntrinsic(llvm::Intrinsic::coro_begin), {CoroId, Phi});
   CurCoro.Data->CoroBegin = CoroBegin;
 
+  // We need to emit `get_­return_­object` first. According to:
+  // [dcl.fct.def.coroutine]p7
+  // The call to get_­return_­object is sequenced before the call to
+  // initial_­suspend and is invoked at most once.
   GetReturnObjectManager GroManager(*this, S);
   GroManager.EmitGroAlloca();
 
