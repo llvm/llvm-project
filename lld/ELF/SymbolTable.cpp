@@ -70,11 +70,8 @@ Symbol *SymbolTable::insert(StringRef name) {
     stem = name.take_front(pos);
 
   auto p = symMap.insert({CachedHashStringRef(stem), (int)symVector.size()});
-  int &symIndex = p.first->second;
-  bool isNew = p.second;
-
-  if (!isNew) {
-    Symbol *sym = symVector[symIndex];
+  if (!p.second) {
+    Symbol *sym = symVector[p.first->second];
     if (stem.size() != name.size())
       sym->setName(name);
     return sym;
@@ -264,7 +261,6 @@ void SymbolTable::scanVersionScript() {
   SmallString<128> buf;
   // First, we assign versions to exact matching symbols,
   // i.e. version definitions not containing any glob meta-characters.
-  std::vector<Symbol *> syms;
   for (VersionDefinition &v : config->versionDefinitions) {
     auto assignExact = [&](SymbolVersion pat, uint16_t id, StringRef ver) {
       bool found =

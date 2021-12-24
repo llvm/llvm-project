@@ -9657,6 +9657,9 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   if (Constraint.size() == 1) {
     switch (Constraint[0]) {
     case 'r':
+      // TODO: Support fixed vectors up to XLen for P extension?
+      if (VT.isVector())
+        break;
       return std::make_pair(0U, &RISCV::GPRRegClass);
     case 'f':
       if (Subtarget.hasStdExtZfh() && VT == MVT::f16)
@@ -9669,17 +9672,15 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     default:
       break;
     }
-  } else {
-    if (Constraint == "vr") {
-      for (const auto *RC : {&RISCV::VRRegClass, &RISCV::VRM2RegClass,
-                             &RISCV::VRM4RegClass, &RISCV::VRM8RegClass}) {
-        if (TRI->isTypeLegalForClass(*RC, VT.SimpleTy))
-          return std::make_pair(0U, RC);
-      }
-    } else if (Constraint == "vm") {
-      if (TRI->isTypeLegalForClass(RISCV::VMV0RegClass, VT.SimpleTy))
-        return std::make_pair(0U, &RISCV::VMV0RegClass);
+  } else if (Constraint == "vr") {
+    for (const auto *RC : {&RISCV::VRRegClass, &RISCV::VRM2RegClass,
+                           &RISCV::VRM4RegClass, &RISCV::VRM8RegClass}) {
+      if (TRI->isTypeLegalForClass(*RC, VT.SimpleTy))
+        return std::make_pair(0U, RC);
     }
+  } else if (Constraint == "vm") {
+    if (TRI->isTypeLegalForClass(RISCV::VMV0RegClass, VT.SimpleTy))
+      return std::make_pair(0U, &RISCV::VMV0RegClass);
   }
 
   // Clang will correctly decode the usage of register name aliases into their
