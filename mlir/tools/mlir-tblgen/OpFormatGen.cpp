@@ -1291,7 +1291,7 @@ void OperationFormat::genElementParser(Element *element, MethodBody &body,
       llvm::raw_string_ostream os(attrTypeStr);
       os << tgfmt(*typeBuilder, &attrTypeCtx);
     } else {
-      attrTypeStr = "Type{}";
+      attrTypeStr = "::mlir::Type{}";
     }
     if (var->attr.isOptional()) {
       body << formatv(optionalAttrParserCode, var->name, attrTypeStr);
@@ -1375,7 +1375,7 @@ void OperationFormat::genElementParser(Element *element, MethodBody &body,
                             listName);
           })
           .Default([&](auto operand) {
-            body << formatv(typeParserCode, "Type", listName);
+            body << formatv(typeParserCode, "::mlir::Type", listName);
           });
     }
   } else if (auto *dir = dyn_cast<FunctionalTypeDirective>(element)) {
@@ -1517,7 +1517,7 @@ void OperationFormat::genParserOperandTypeResolution(
     // once. Use llvm::concat to perform the merge. llvm::concat does not allow
     // the case of a single range, so guard it here.
     if (op.getNumOperands() > 1) {
-      body << "::llvm::concat<const Type>(";
+      body << "::llvm::concat<const ::mlir::Type>(";
       llvm::interleaveComma(
           llvm::seq<int>(0, op.getNumOperands()), body, [&](int i) {
             body << "::llvm::ArrayRef<::mlir::Type>(";
