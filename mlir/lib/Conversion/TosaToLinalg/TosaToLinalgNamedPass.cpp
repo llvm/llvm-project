@@ -26,12 +26,11 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "mlir/Transforms/Passes.h"
 
 using namespace mlir;
 
 namespace {
-struct TosaToLinalg : public TosaToLinalgBase<TosaToLinalg> {
+struct TosaToLinalgNamed : public TosaToLinalgNamedBase<TosaToLinalgNamed> {
 public:
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<arith::ArithmeticDialect, linalg::LinalgDialect,
@@ -43,34 +42,27 @@ public:
     RewritePatternSet patterns(&getContext());
     ConversionTarget target(getContext());
     target.addLegalDialect<linalg::LinalgDialect, StandardOpsDialect,
-                           tensor::TensorDialect, scf::SCFDialect>();
-    target.addIllegalDialect<tosa::TosaDialect>();
+                           tosa::TosaDialect, tensor::TensorDialect,
+                           scf::SCFDialect>();
 
     // Not every TOSA op can be legalized to linalg.
-    target.addLegalOp<tosa::ApplyScaleOp>();
-    target.addLegalOp<tosa::IfOp>();
-    target.addLegalOp<tosa::ConstOp>();
-    target.addLegalOp<tosa::WhileOp>();
-    target.addLegalOp<tosa::SliceOp>();
+    target.addIllegalOp<tosa::Conv2DOp>();
+    target.addIllegalOp<tosa::DepthwiseConv2DOp>();
+    target.addIllegalOp<tosa::MaxPool2dOp>();
+    target.addIllegalOp<tosa::AvgPool2dOp>();
+    target.addIllegalOp<tosa::MatMulOp>();
+    target.addIllegalOp<tosa::FullyConnectedOp>();
 
     target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
 
     FuncOp func = getFunction();
-    mlir::tosa::populateTosaToLinalgConversionPatterns(&patterns);
+    mlir::tosa::populateTosaToLinalgNamedConversionPatterns(&patterns);
     if (failed(applyFullConversion(func, target, std::move(patterns))))
       signalPassFailure();
   }
 };
 } // namespace
 
-std::unique_ptr<Pass> mlir::tosa::createTosaToLinalg() {
-  return std::make_unique<TosaToLinalg>();
-}
-
-void mlir::tosa::addTosaToLinalgPasses(OpPassManager &pm) {
-  pm.addNestedPass<FuncOp>(createTosaMakeBroadcastablePass());
-  pm.addNestedPass<FuncOp>(createTosaToLinalgNamed());
-  pm.addNestedPass<FuncOp>(mlir::createCanonicalizerPass());
-  pm.addNestedPass<FuncOp>(createTosaMakeBroadcastablePass());
-  pm.addNestedPass<FuncOp>(createTosaToLinalg());
+std::unique_ptr<Pass> mlir::tosa::createTosaToLinalgNamed() {
+  return std::make_unique<TosaToLinalgNamed>();
 }
