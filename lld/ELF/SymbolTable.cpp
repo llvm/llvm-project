@@ -133,7 +133,7 @@ static bool canBeVersioned(const Symbol &sym) {
 // other than trying to match a pattern against all demangled symbols.
 // So, if "extern C++" feature is used, we need to demangle all known
 // symbols.
-StringMap<std::vector<Symbol *>> &SymbolTable::getDemangledSyms() {
+StringMap<SmallVector<Symbol *, 0>> &SymbolTable::getDemangledSyms() {
   if (!demangledSyms) {
     demangledSyms.emplace();
     std::string demangled;
@@ -154,7 +154,7 @@ StringMap<std::vector<Symbol *>> &SymbolTable::getDemangledSyms() {
   return *demangledSyms;
 }
 
-std::vector<Symbol *> SymbolTable::findByVersion(SymbolVersion ver) {
+SmallVector<Symbol *, 0> SymbolTable::findByVersion(SymbolVersion ver) {
   if (ver.isExternCpp)
     return getDemangledSyms().lookup(ver.name);
   if (Symbol *sym = find(ver.name))
@@ -163,9 +163,9 @@ std::vector<Symbol *> SymbolTable::findByVersion(SymbolVersion ver) {
   return {};
 }
 
-std::vector<Symbol *> SymbolTable::findAllByVersion(SymbolVersion ver,
-                                                    bool includeNonDefault) {
-  std::vector<Symbol *> res;
+SmallVector<Symbol *, 0> SymbolTable::findAllByVersion(SymbolVersion ver,
+                                                       bool includeNonDefault) {
+  SmallVector<Symbol *, 0> res;
   SingleStringMatcher m(ver.name);
   auto check = [&](StringRef name) {
     size_t pos = name.find('@');
@@ -191,8 +191,8 @@ std::vector<Symbol *> SymbolTable::findAllByVersion(SymbolVersion ver,
 }
 
 void SymbolTable::handleDynamicList() {
+  SmallVector<Symbol *, 0> syms;
   for (SymbolVersion &ver : config->dynamicList) {
-    std::vector<Symbol *> syms;
     if (ver.hasWildcard)
       syms = findAllByVersion(ver, /*includeNonDefault=*/true);
     else
@@ -209,7 +209,7 @@ bool SymbolTable::assignExactVersion(SymbolVersion ver, uint16_t versionId,
                                      StringRef versionName,
                                      bool includeNonDefault) {
   // Get a list of symbols which we need to assign the version to.
-  std::vector<Symbol *> syms = findByVersion(ver);
+  SmallVector<Symbol *, 0> syms = findByVersion(ver);
 
   auto getName = [](uint16_t ver) -> std::string {
     if (ver == VER_NDX_LOCAL)
