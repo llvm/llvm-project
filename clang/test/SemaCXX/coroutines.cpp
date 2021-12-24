@@ -970,17 +970,34 @@ extern "C" int f(mismatch_gro_type_tag4) {
   co_return; //expected-note {{function is a coroutine due to use of 'co_return' here}}
 }
 
-struct bad_promise_no_return_func { // expected-note {{'bad_promise_no_return_func' defined here}}
-  coro<bad_promise_no_return_func> get_return_object();
+struct promise_no_return_func {
+  coro<promise_no_return_func> get_return_object();
   suspend_always initial_suspend();
   suspend_always final_suspend() noexcept;
   void unhandled_exception();
 };
-// FIXME: The PDTS currently specifies this as UB, technically forbidding a
-// diagnostic.
-coro<bad_promise_no_return_func> no_return_value_or_return_void() {
-  // expected-error@-1 {{'bad_promise_no_return_func' must declare either 'return_value' or 'return_void'}}
+// [dcl.fct.def.coroutine]/p6
+// If searches for the names return_­void and return_­value in the scope of
+// the promise type each find any declarations, the program is ill-formed.
+// [Note 1: If return_­void is found, flowing off the end of a coroutine is
+// equivalent to a co_­return with no operand. Otherwise, flowing off the end
+// of a coroutine results in undefined behavior ([stmt.return.coroutine]). —
+// end note]
+//
+// So it isn't ill-formed if the promise doesn't define return_value and return_void.
+// It is just a potential UB.
+coro<promise_no_return_func> no_return_value_or_return_void() {
   co_await a;
+}
+
+// The following two tests that it would emit correct diagnostic message
+// if we co_return in `promise_no_return_func`.
+coro<promise_no_return_func> no_return_value_or_return_void_2() {
+  co_return; // expected-error {{no member named 'return_void'}}
+}
+
+coro<promise_no_return_func> no_return_value_or_return_void_3() {
+  co_return 43; // expected-error {{no member named 'return_value'}}
 }
 
 struct bad_await_suspend_return {

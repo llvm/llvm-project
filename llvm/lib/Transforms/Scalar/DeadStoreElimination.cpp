@@ -182,33 +182,19 @@ static bool isRemovable(Instruction *I) {
   if (StoreInst *SI = dyn_cast<StoreInst>(I))
     return SI->isUnordered();
 
-  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
-    switch (II->getIntrinsicID()) {
-    default: llvm_unreachable("Does not have LocForWrite");
-    case Intrinsic::lifetime_end:
-      // Never remove dead lifetime_end's, e.g. because it is followed by a
-      // free.
-      return false;
-    case Intrinsic::init_trampoline:
-      // Always safe to remove init_trampoline.
-      return true;
-    case Intrinsic::memset:
-    case Intrinsic::memmove:
-    case Intrinsic::memcpy:
-    case Intrinsic::memcpy_inline:
-      // Don't remove volatile memory intrinsics.
-      return !cast<MemIntrinsic>(II)->isVolatile();
-    case Intrinsic::memcpy_element_unordered_atomic:
-    case Intrinsic::memmove_element_unordered_atomic:
-    case Intrinsic::memset_element_unordered_atomic:
-    case Intrinsic::masked_store:
-      return true;
-    }
-  }
+  // Note: only get here for calls with analyzable writes.
+  if (auto *CB = dyn_cast<CallBase>(I)) {
+    // Don't remove volatile memory intrinsics.
+    if (auto *MI = dyn_cast<MemIntrinsic>(CB))
+      return !MI->isVolatile();
 
-  // note: only get here for calls with analyzable writes.
-  if (auto *CB = dyn_cast<CallBase>(I))
+    // Never remove dead lifetime intrinsics, e.g. because they are followed by
+    // a free.
+    if (CB->isLifetimeStartOrEnd())
+      return false;
+
     return CB->use_empty() && CB->willReturn() && CB->doesNotThrow();
+  }
 
   return false;
 }
@@ -1209,23 +1195,14 @@ struct DSEState {
   /// loop. In particular, this guarantees that it only references a single
   /// MemoryLocation during execution of the containing function.
   bool isGuaranteedLoopInvariant(const Value *Ptr) {
-    auto IsGuaranteedLoopInvariantBase = [](const Value *Ptr) {
-      Ptr = Ptr->stripPointerCasts();
-      if (auto *I = dyn_cast<Instruction>(Ptr))
-        return I->getParent()->isEntryBlock();
-      return true;
-    };
-
     Ptr = Ptr->stripPointerCasts();
-    if (auto *I = dyn_cast<Instruction>(Ptr)) {
-      if (I->getParent()->isEntryBlock())
-        return true;
-    }
-    if (auto *GEP = dyn_cast<GEPOperator>(Ptr)) {
-      return IsGuaranteedLoopInvariantBase(GEP->getPointerOperand()) &&
-             GEP->hasAllConstantIndices();
-    }
-    return IsGuaranteedLoopInvariantBase(Ptr);
+    if (auto *GEP = dyn_cast<GEPOperator>(Ptr))
+      if (GEP->hasAllConstantIndices())
+        Ptr = GEP->getPointerOperand()->stripPointerCasts();
+
+    if (auto *I = dyn_cast<Instruction>(Ptr))
+      return I->getParent()->isEntryBlock();
+    return true;
   }
 
   // Find a MemoryDef writing to \p KillingLoc and dominating \p StartAccess,
