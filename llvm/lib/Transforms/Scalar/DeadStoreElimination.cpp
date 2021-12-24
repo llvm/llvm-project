@@ -175,30 +175,6 @@ static cl::opt<bool>
 using OverlapIntervalsTy = std::map<int64_t, int64_t>;
 using InstOverlapIntervalsTy = DenseMap<Instruction *, OverlapIntervalsTy>;
 
-/// If the value of this instruction and the memory it writes to is unused, may
-/// we delete this instruction?
-static bool isRemovable(Instruction *I) {
-  // Don't remove volatile/atomic stores.
-  if (StoreInst *SI = dyn_cast<StoreInst>(I))
-    return SI->isUnordered();
-
-  // Note: only get here for calls with analyzable writes.
-  if (auto *CB = dyn_cast<CallBase>(I)) {
-    // Don't remove volatile memory intrinsics.
-    if (auto *MI = dyn_cast<MemIntrinsic>(CB))
-      return !MI->isVolatile();
-
-    // Never remove dead lifetime intrinsics, e.g. because they are followed by
-    // a free.
-    if (CB->isLifetimeStartOrEnd())
-      return false;
-
-    return CB->use_empty() && CB->willReturn() && CB->doesNotThrow();
-  }
-
-  return false;
-}
-
 /// Returns true if the end of this instruction can be safely shortened in
 /// length.
 static bool isShortenableAtTheEnd(Instruction *I) {
@@ -1022,6 +998,31 @@ struct DSEState {
     }
 
     return MemoryLocation::getOrNone(I);
+  }
+
+  /// Assuming this instruction has a dead analyzable write, can we delete
+  /// this instruction?
+  bool isRemovable(Instruction *I) {
+    assert(getLocForWriteEx(I) && "Must have analyzable write");
+
+    // Don't remove volatile/atomic stores.
+    if (StoreInst *SI = dyn_cast<StoreInst>(I))
+      return SI->isUnordered();
+
+    if (auto *CB = dyn_cast<CallBase>(I)) {
+      // Don't remove volatile memory intrinsics.
+      if (auto *MI = dyn_cast<MemIntrinsic>(CB))
+        return !MI->isVolatile();
+
+      // Never remove dead lifetime intrinsics, e.g. because they are followed
+      // by a free.
+      if (CB->isLifetimeStartOrEnd())
+        return false;
+
+      return CB->use_empty() && CB->willReturn() && CB->doesNotThrow();
+    }
+
+    return false;
   }
 
   /// Returns true if \p UseInst completely overwrites \p DefLoc
