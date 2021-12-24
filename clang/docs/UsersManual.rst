@@ -3537,7 +3537,7 @@ should be built or installed. Please refer to `the following instructions
 <https://github.com/KhronosGroup/SPIRV-LLVM-Translator#build-instructions>`_
 for more details. Clang will expects the ``llvm-spirv`` executable to
 be present in the ``PATH`` environment variable. Clang uses ``llvm-spirv``
-with `the conformant assembly syntax package
+with `the widely adopted assembly syntax package
 <https://github.com/KhronosGroup/SPIRV-LLVM-Translator/#build-with-spirv-tools>`_.
 
 `The versioning
