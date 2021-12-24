@@ -1432,9 +1432,13 @@ bool CoroutineStmtBuilder::makeOnFallthrough() {
   assert(!IsPromiseDependentType &&
          "cannot make statement while the promise type is dependent");
 
-  // [dcl.fct.def.coroutine]/4
-  // The unqualified-ids 'return_void' and 'return_value' are looked up in
-  // the scope of class P. If both are found, the program is ill-formed.
+  // [dcl.fct.def.coroutine]/p6
+  // If searches for the names return_­void and return_­value in the scope of
+  // the promise type each find any declarations, the program is ill-formed.
+  // [Note 1: If return_­void is found, flowing off the end of a coroutine is
+  // equivalent to a co_­return with no operand. Otherwise, flowing off the end
+  // of a coroutine results in undefined behavior ([stmt.return.coroutine]). —
+  // end note]
   bool HasRVoid, HasRValue;
   LookupResult LRVoid =
       lookupMember(S, "return_void", PromiseRecordDecl, Loc, HasRVoid);
@@ -1455,18 +1459,20 @@ bool CoroutineStmtBuilder::makeOnFallthrough() {
         << LRValue.getLookupName();
     return false;
   } else if (!HasRVoid && !HasRValue) {
-    // FIXME: The PDTS currently specifies this case as UB, not ill-formed.
-    // However we still diagnose this as an error since until the PDTS is fixed.
-    S.Diag(FD.getLocation(),
-           diag::err_coroutine_promise_requires_return_function)
-        << PromiseRecordDecl;
-    S.Diag(PromiseRecordDecl->getLocation(), diag::note_defined_here)
-        << PromiseRecordDecl;
-    return false;
+    // We need to set 'Fallthrough'. Otherwise the other analysis part might
+    // think the coroutine has defined a return_value method. So it might emit
+    // **false** positive warning. e.g.,
+    //
+    //    promise_without_return_func foo() {
+    //        co_await something();
+    //    }
+    //
+    // Then AnalysisBasedWarning would emit a warning about `foo()` lacking a
+    // co_return statements, which isn't correct.
+    Fallthrough = S.ActOnNullStmt(PromiseRecordDecl->getLocation());
+    if (Fallthrough.isInvalid())
+      return false;
   } else if (HasRVoid) {
-    // If the unqualified-id return_void is found, flowing off the end of a
-    // coroutine is equivalent to a co_return with no operand. Otherwise,
-    // flowing off the end of a coroutine results in undefined behavior.
     Fallthrough = S.BuildCoreturnStmt(FD.getLocation(), nullptr,
                                       /*IsImplicit*/false);
     Fallthrough = S.ActOnFinishFullStmt(Fallthrough.get());
