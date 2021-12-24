@@ -1800,7 +1800,7 @@ template <class ELFT> void ObjFile<ELFT>::parseLazy() {
   // resolve() may trigger this->extract() if an existing symbol is an undefined
   // symbol. If that happens, this function has served its purpose, and we can
   // exit from the loop early.
-  for (Symbol *sym : symbols)
+  for (Symbol *sym : makeArrayRef(symbols).slice(firstGlobal))
     if (sym) {
       sym->resolve(LazyObject{*this, sym->getName()});
       if (!lazy)
