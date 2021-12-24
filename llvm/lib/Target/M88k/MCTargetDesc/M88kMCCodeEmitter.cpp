@@ -121,14 +121,28 @@ M88kMCCodeEmitter::getMachineOpValue(const MCInst &MI, const MCOperand &MO,
 unsigned M88kMCCodeEmitter::getPC16Encoding(const MCInst &MI, unsigned OpNo,
                                             SmallVectorImpl<MCFixup> &Fixups,
                                             const MCSubtargetInfo &STI) const {
-  // TODO Implement.
+  const MCOperand &MO = MI.getOperand(OpNo);
+  assert(MO.isImm() || MO.isExpr() && "Expected imm or MCExpr");
+
+  const MCExpr *Expr =
+      MO.isImm() ? MCConstantExpr::create(MO.getImm(), Ctx) : MO.getExpr();
+
+  Fixups.push_back(MCFixup::create(
+      0, Expr, static_cast<MCFixupKind>(M88k::FK_88K_DISP16), MI.getLoc()));
   return 0;
 }
 
 unsigned M88kMCCodeEmitter::getPC26Encoding(const MCInst &MI, unsigned OpNo,
                                             SmallVectorImpl<MCFixup> &Fixups,
                                             const MCSubtargetInfo &STI) const {
-  // TODO Implement.
+  const MCOperand &MO = MI.getOperand(OpNo);
+  assert(MO.isImm() || MO.isExpr() && "Expected imm or MCExpr");
+
+  const MCExpr *Expr =
+      MO.isImm() ? MCConstantExpr::create(MO.getImm(), Ctx) : MO.getExpr();
+
+  Fixups.push_back(MCFixup::create(
+      0, Expr, static_cast<MCFixupKind>(M88k::FK_88K_DISP26), MI.getLoc()));
   return 0;
 }
 

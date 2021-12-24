@@ -597,20 +597,15 @@ OperandMatchResultTy M88kAsmParser::parsePCRel(OperandVector &Operands,
     return false;
   };
 
-  // For consistency with the GNU assembler, treat immediates as offsets
-  // from ".".
+  // For consistency with the GNU assembler, treat immediates as absolute
+  // values. In this case, check only the range.
   if (auto *CE = dyn_cast<MCConstantExpr>(Expr)) {
     if (isOutOfRangeConstant(CE)) {
       Error(StartLoc, "offset out of range");
       return MatchOperand_ParseFail;
     }
-    int64_t Value = CE->getValue();
-    MCSymbol *Sym = Ctx.createTempSymbol();
-    Out.emitLabel(Sym);
-    const MCExpr *Base =
-        MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, Ctx);
-    Expr = Value == 0 ? Base : MCBinaryExpr::createAdd(Base, Expr, Ctx);
   }
+
 
   // For consistency with the GNU assembler, conservatively assume that a
   // constant offset must by itself be within the given size range.

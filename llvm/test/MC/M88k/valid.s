@@ -45,69 +45,180 @@ isns:
 # CHECK: and.u    %r2, %r3, 0            | encoding: [0x44,0x43,0x00,0x00]
 # CHECK: and.u    %r2, %r3, 4096         | encoding: [0x44,0x43,0x10,0x00]
 
-  # branch on bit clear
-  bb0      0, %r1, 0
-  bb0      0, %r1, -10
-  bb0      0, %r1, 10
-  bb0      31, %r1, 0
-  bb0      31, %r1, -10
-  bb0      31, %r1, 10
-  bb0.n    0, %r1, 0
-# COM: CHECK: bb0      0, %r1, 0              | encoding: [0xd0,0x01,0x00,0x00]
+# branch on bit clear
+  bb0          0, %r1, 0
+  bb0          0, %r1, -10
+  bb0          0, %r1, 10
+  bb0          31, %r1, 0
+  bb0          31, %r1, -10
+  bb0          31, %r1, 10
+  bb0.n        0, %r1, 0
+# CHECK: bb0          0, %r1, 0         | encoding: [0xd0,0x01,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 0, kind: FK_88K_DISP16
+# CHECK: bb0          0, %r1, -10       | encoding: [0xd0,0x01,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: -10, kind: FK_88K_DISP16
+# CHECK: bb0          0, %r1, 10        | encoding: [0xd0,0x01,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 10, kind: FK_88K_DISP16
+# CHECK: bb0          31, %r1, 0        | encoding: [0xd3,0xe1,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 0, kind: FK_88K_DISP16
+# CHECK: bb0          31, %r1, -10      | encoding: [0xd3,0xe1,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: -10, kind: FK_88K_DISP16
+# CHECK: bb0          31, %r1, 10       | encoding: [0xd3,0xe1,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 10, kind: FK_88K_DISP16
+# CHECK: bb0.n        0, %r1, 0         | encoding: [0xd4,0x01,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 0, kind: FK_88K_DISP16
 
-  # branch on bit set
-  bb1       0, %r1, 0
-  bb1       0, %r1, -10
-  bb1       0, %r1, 10
-  bb1       31, %r1, 0
-  bb1       31, %r1, -10
-  bb1       31, %r1, 10
-  bb1.n     0, %r1, 0
+# branch on bit set
+  bb1          0, %r1, 0
+  bb1          0, %r1, -10
+  bb1          0, %r1, 10
+  bb1          31, %r1, 0
+  bb1          31, %r1, -10
+  bb1          31, %r1, 10
+  bb1.n        0, %r1, 0
+# CHECK: bb1          0, %r1, 0         | encoding: [0xd8,0x01,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 0, kind: FK_88K_DISP16
+# CHECK: bb1          0, %r1, -10       | encoding: [0xd8,0x01,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: -10, kind: FK_88K_DISP16
+# CHECK: bb1          0, %r1, 10        | encoding: [0xd8,0x01,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 10, kind: FK_88K_DISP16
+# CHECK: bb1          31, %r1, 0        | encoding: [0xdb,0xe1,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 0, kind: FK_88K_DISP16
+# CHECK: bb1          31, %r1, -10      | encoding: [0xdb,0xe1,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: -10, kind: FK_88K_DISP16
+# CHECK: bb1          31, %r1, 10       | encoding: [0xdb,0xe1,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 10, kind: FK_88K_DISP16
+# CHECK: bb1.n        0, %r1, 0         | encoding: [0xdc,0x01,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 0, kind: FK_88K_DISP16
 
-  # conditional branch
-  bcnd       eq0, %r1, 0
-  bcnd       eq0, %r1, 10
-  bcnd       eq0, %r1, -10
-  bcnd.n     eq0, %r1, 0
-  bcnd.n     eq0, %r1, 10
-  bcnd.n     eq0, %r1, -10
-  bcnd       ne0, %r1, 0
-  bcnd       ne0, %r1, 10
-  bcnd       ne0, %r1, -10
-  bcnd.n     ne0, %r1, 0
-  bcnd.n     ne0, %r1, 10
-  bcnd.n     ne0, %r1, -10
-  bcnd       gt0, %r1, 0
-  bcnd       gt0, %r1, 10
-  bcnd       gt0, %r1, -10
-  bcnd.n     gt0, %r1, 0
-  bcnd.n     gt0, %r1, 10
-  bcnd.n     gt0, %r1, -10
-  bcnd       lt0, %r1, 0
-  bcnd       lt0, %r1, 10
-  bcnd       lt0, %r1, -10
-  bcnd.n     lt0, %r1, 0
-  bcnd.n     lt0, %r1, 10
-  bcnd.n     lt0, %r1, -10
-  bcnd       ge0, %r1, 0
-  bcnd       ge0, %r1, 10
-  bcnd       ge0, %r1, -10
-  bcnd.n     ge0, %r1, 0
-  bcnd.n     ge0, %r1, 10
-  bcnd.n     ge0, %r1, -10
-  bcnd       le0, %r1, 0
-  bcnd       le0, %r1, 10
-  bcnd       le0, %r1, -10
-  bcnd.n     le0, %r1, 0
-  bcnd.n     le0, %r1, 10
-  bcnd.n     le0, %r1, -10
+# conditional branch
+  bcnd         eq0, %r1, 0
+  bcnd         eq0, %r1, 10
+  bcnd         eq0, %r1, -10
+  bcnd.n       eq0, %r1, 0
+  bcnd.n       eq0, %r1, 10
+  bcnd.n       eq0, %r1, -10
+  bcnd         ne0, %r1, 0
+  bcnd         ne0, %r1, 10
+  bcnd         ne0, %r1, -10
+  bcnd.n       ne0, %r1, 0
+  bcnd.n       ne0, %r1, 10
+  bcnd.n       ne0, %r1, -10
+  bcnd         gt0, %r1, 0
+  bcnd         gt0, %r1, 10
+  bcnd         gt0, %r1, -10
+  bcnd.n       gt0, %r1, 0
+  bcnd.n       gt0, %r1, 10
+  bcnd.n       gt0, %r1, -10
+  bcnd         lt0, %r1, 0
+  bcnd         lt0, %r1, 10
+  bcnd         lt0, %r1, -10
+  bcnd.n       lt0, %r1, 0
+  bcnd.n       lt0, %r1, 10
+  bcnd.n       lt0, %r1, -10
+  bcnd         ge0, %r1, 0
+  bcnd         ge0, %r1, 10
+  bcnd         ge0, %r1, -10
+  bcnd.n       ge0, %r1, 0
+  bcnd.n       ge0, %r1, 10
+  bcnd.n       ge0, %r1, -10
+  bcnd         le0, %r1, 0
+  bcnd         le0, %r1, 10
+  bcnd         le0, %r1, -10
+  bcnd.n       le0, %r1, 0
+  bcnd.n       le0, %r1, 10
+  bcnd.n       le0, %r1, -10
   # using m5 field
-  bcnd       3, %r1, 0
-  bcnd       3, %r1, 10
-  bcnd       3, %r1, -10
-  bcnd.n     3, %r1, 0
-  bcnd.n     3, %r1, 10
-  bcnd.n     3, %r1, -10
+  bcnd         3, %r1, 0
+  bcnd         3, %r1, 10
+  bcnd         3, %r1, -10
+  bcnd.n       3, %r1, 0
+  bcnd.n       3, %r1, 10
+  bcnd.n       3, %r1, -10
+# CHECK: bcnd         eq0, %r1, 0       | encoding: [0xe8,0x41,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 0, kind: FK_88K_DISP16
+# CHECK: bcnd         eq0, %r1, 10      | encoding: [0xe8,0x41,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 10, kind: FK_88K_DISP16
+# CHECK: bcnd         eq0, %r1, -10     | encoding: [0xe8,0x41,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: -10, kind: FK_88K_DISP16
+# CHECK: bcnd.n       eq0, %r1, 0       | encoding: [0xec,0x41,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 0, kind: FK_88K_DISP16
+# CHECK: bcnd.n       eq0, %r1, 10      | encoding: [0xec,0x41,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 10, kind: FK_88K_DISP16
+# CHECK: bcnd.n       eq0, %r1, -10     | encoding: [0xec,0x41,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: -10, kind: FK_88K_DISP16
+# CHECK: bcnd         ne0, %r1, 0       | encoding: [0xe9,0xa1,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 0, kind: FK_88K_DISP16
+# CHECK: bcnd         ne0, %r1, 10      | encoding: [0xe9,0xa1,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 10, kind: FK_88K_DISP16
+# CHECK: bcnd         ne0, %r1, -10     | encoding: [0xe9,0xa1,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: -10, kind: FK_88K_DISP16
+# CHECK: bcnd.n       ne0, %r1, 0       | encoding: [0xed,0xa1,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 0, kind: FK_88K_DISP16
+# CHECK: bcnd.n       ne0, %r1, 10      | encoding: [0xed,0xa1,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 10, kind: FK_88K_DISP16
+# CHECK: bcnd.n       ne0, %r1, -10     | encoding: [0xed,0xa1,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: -10, kind: FK_88K_DISP16
+# CHECK: bcnd         gt0, %r1, 0       | encoding: [0xe8,0x21,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 0, kind: FK_88K_DISP16
+# CHECK: bcnd         gt0, %r1, 10      | encoding: [0xe8,0x21,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 10, kind: FK_88K_DISP16
+# CHECK: bcnd         gt0, %r1, -10     | encoding: [0xe8,0x21,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: -10, kind: FK_88K_DISP16
+# CHECK: bcnd.n       gt0, %r1, 0       | encoding: [0xec,0x21,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 0, kind: FK_88K_DISP16
+# CHECK: bcnd.n       gt0, %r1, 10      | encoding: [0xec,0x21,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 10, kind: FK_88K_DISP16
+# CHECK: bcnd.n       gt0, %r1, -10     | encoding: [0xec,0x21,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: -10, kind: FK_88K_DISP16
+# CHECK: bcnd         lt0, %r1, 0       | encoding: [0xe9,0x81,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 0, kind: FK_88K_DISP16
+# CHECK: bcnd         lt0, %r1, 10      | encoding: [0xe9,0x81,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 10, kind: FK_88K_DISP16
+# CHECK: bcnd         lt0, %r1, -10     | encoding: [0xe9,0x81,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: -10, kind: FK_88K_DISP16
+# CHECK: bcnd.n       lt0, %r1, 0       | encoding: [0xed,0x81,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 0, kind: FK_88K_DISP16
+# CHECK: bcnd.n       lt0, %r1, 10      | encoding: [0xed,0x81,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 10, kind: FK_88K_DISP16
+# CHECK: bcnd.n       lt0, %r1, -10     | encoding: [0xed,0x81,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: -10, kind: FK_88K_DISP16
+# CHECK: bcnd         ge0, %r1, 0       | encoding: [0xe8,0x61,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 0, kind: FK_88K_DISP16
+# CHECK: bcnd         ge0, %r1, 10      | encoding: [0xe8,0x61,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 10, kind: FK_88K_DISP16
+# CHECK: bcnd         ge0, %r1, -10     | encoding: [0xe8,0x61,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: -10, kind: FK_88K_DISP16
+# CHECK: bcnd.n       ge0, %r1, 0       | encoding: [0xec,0x61,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 0, kind: FK_88K_DISP16
+# CHECK: bcnd.n       ge0, %r1, 10      | encoding: [0xec,0x61,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 10, kind: FK_88K_DISP16
+# CHECK: bcnd.n       ge0, %r1, -10     | encoding: [0xec,0x61,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: -10, kind: FK_88K_DISP16
+# CHECK: bcnd         le0, %r1, 0       | encoding: [0xe9,0xc1,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 0, kind: FK_88K_DISP16
+# CHECK: bcnd         le0, %r1, 10      | encoding: [0xe9,0xc1,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 10, kind: FK_88K_DISP16
+# CHECK: bcnd         le0, %r1, -10     | encoding: [0xe9,0xc1,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: -10, kind: FK_88K_DISP16
+# CHECK: bcnd.n       le0, %r1, 0       | encoding: [0xed,0xc1,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 0, kind: FK_88K_DISP16
+# CHECK: bcnd.n       le0, %r1, 10      | encoding: [0xed,0xc1,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 10, kind: FK_88K_DISP16
+# CHECK: bcnd.n       le0, %r1, -10     | encoding: [0xed,0xc1,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: -10, kind: FK_88K_DISP16
+# CHECK: bcnd         ge0, %r1, 0       | encoding: [0xe8,0x61,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 0, kind: FK_88K_DISP16
+# CHECK: bcnd         ge0, %r1, 10      | encoding: [0xe8,0x61,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 10, kind: FK_88K_DISP16
+# CHECK: bcnd         ge0, %r1, -10     | encoding: [0xe8,0x61,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: -10, kind: FK_88K_DISP16
+# CHECK: bcnd.n       ge0, %r1, 0       | encoding: [0xec,0x61,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 0, kind: FK_88K_DISP16
+# CHECK: bcnd.n       ge0, %r1, 10      | encoding: [0xec,0x61,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 10, kind: FK_88K_DISP16
+# CHECK: bcnd.n       ge0, %r1, -10     | encoding: [0xec,0x61,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: -10, kind: FK_88K_DISP16
 
 # uncoditional branch
   br           0
@@ -116,7 +227,18 @@ isns:
   br.n         0
   br.n         -10
   br.n         10
-
+# CHECK: br           0                 | encoding: [0b110000AA,A,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 0, kind: FK_88K_DISP26
+# CHECK: br           -10               | encoding: [0b110000AA,A,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: -10, kind: FK_88K_DISP26
+# CHECK: br           10                | encoding: [0b110000AA,A,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 10, kind: FK_88K_DISP26
+# CHECK: br.n         0                 | encoding: [0b110001AA,A,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 0, kind: FK_88K_DISP26
+# CHECK: br.n         -10               | encoding: [0b110001AA,A,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: -10, kind: FK_88K_DISP26
+# CHECK: br.n         10                | encoding: [0b110001AA,A,A,A]
+                                        |   fixup A - offset: 0, value: 10, kind: FK_88K_DISP26
 # branch to subroutine
   bsr          0
   bsr          -10
@@ -124,6 +246,18 @@ isns:
   bsr.n        0
   bsr.n        -10
   bsr.n        10
+# CHECK: bsr          0                 | encoding: [0b110010AA,A,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 0, kind: FK_88K_DISP26
+# CHECK: bsr          -10               | encoding: [0b110010AA,A,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: -10, kind: FK_88K_DISP26
+# CHECK: bsr          10                | encoding: [0b110010AA,A,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 10, kind: FK_88K_DISP26
+# CHECK: bsr.n        0                 | encoding: [0b110011AA,A,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 0, kind: FK_88K_DISP26
+# CHECK: bsr.n        -10               | encoding: [0b110011AA,A,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: -10, kind: FK_88K_DISP26
+# CHECK: bsr.n        10                | encoding: [0b110011AA,A,A,A]
+# CHECK:                                |   fixup A - offset: 0, value: 10, kind: FK_88K_DISP26
 
 # clear bit field
   clr      %r1, %r2, 5<15>

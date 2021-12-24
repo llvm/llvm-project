@@ -16,6 +16,8 @@ namespace M88k {
 enum FixupKind {
   // These correspond directly to R_88K_* relocations.
   FK_88K_NONE = FirstTargetFixupKind, // R_88K_NONE
+  FK_88K_DISP16, // R_88K_DISP16
+  FK_88K_DISP26, // R_88K_DISP26
   FK_88K_HI, // R_88K_16H = upper 16-bits of a symbolic relocation
   FK_88K_LO, // R_88K_16H = lower 16-bits of a symbolic relocation
 

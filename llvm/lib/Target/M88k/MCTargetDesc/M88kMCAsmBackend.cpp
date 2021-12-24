@@ -39,6 +39,8 @@ public:
   bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
                             const MCRelaxableFragment *Fragment,
                             const MCAsmLayout &Layout) const override;
+  bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
+                             const MCValue &Target) override;
 
 #if LLVM_VERSION_MAJOR > 13
   bool writeNopData(raw_ostream &OS, uint64_t Count,
@@ -63,7 +65,7 @@ Optional<MCFixupKind> M88kMCAsmBackend::getFixupKind(StringRef Name) const {
 #define ELF_RELOC(X, Y) .Case(#X, Y)
 #include "llvm/BinaryFormat/ELFRelocs/M88k.def"
 #undef ELF_RELOC
-			.Default(-1u);
+                      .Default(-1u);
   if (Type != -1u)
     return static_cast<MCFixupKind>(FirstLiteralRelocationKind + Type);
   return None;
@@ -76,6 +78,8 @@ M88kMCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       // M88kMCFixups.h.
       // name    offset bits flags
       {"FK_88K_NONE", 0, 32, 0},
+      {"FK_88K_DISP16", 16, 16, 0},
+      {"FK_88K_DISP26", 6, 26, 0},
       {"FK_88K_HI", 16, 16, 0},
       {"FK_88K_LO", 16, 16, 0}};
 
@@ -136,6 +140,13 @@ bool M88kMCAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
                                             const MCRelaxableFragment *Fragment,
                                             const MCAsmLayout &Layout) const {
   return false;
+}
+
+bool M88kMCAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
+                                             const MCFixup &Fixup,
+                                             const MCValue &Target) {
+  return Fixup.getKind() == M88k::FK_88K_DISP16 ||
+         Fixup.getKind() == M88k::FK_88K_DISP26;
 }
 
 #if LLVM_VERSION_MAJOR > 13
