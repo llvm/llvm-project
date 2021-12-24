@@ -2504,11 +2504,26 @@ TEST_F(FormatTest, ShortEnums) {
   FormatStyle Style = getLLVMStyle();
   Style.AllowShortEnumsOnASingleLine = true;
   verifyFormat("enum { A, B, C } ShortEnum1, ShortEnum2;", Style);
+  verifyFormat("typedef enum { A, B, C } ShortEnum1, ShortEnum2;", Style);
   Style.AllowShortEnumsOnASingleLine = false;
   verifyFormat("enum {\n"
                "  A,\n"
                "  B,\n"
                "  C\n"
+               "} ShortEnum1, ShortEnum2;",
+               Style);
+  verifyFormat("typedef enum {\n"
+               "  A,\n"
+               "  B,\n"
+               "  C\n"
+               "} ShortEnum1, ShortEnum2;",
+               Style);
+  verifyFormat("enum {\n"
+               "  A,\n"
+               "} ShortEnum1, ShortEnum2;",
+               Style);
+  verifyFormat("typedef enum {\n"
+               "  A,\n"
                "} ShortEnum1, ShortEnum2;",
                Style);
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;

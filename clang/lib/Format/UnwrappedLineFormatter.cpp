@@ -393,11 +393,18 @@ private:
 
     // Try to merge a block with left brace wrapped that wasn't yet covered
     if (TheLine->Last->is(tok::l_brace)) {
+      const FormatToken *Tok = TheLine->First;
       bool ShouldMerge = false;
-      if (TheLine->First->isOneOf(tok::kw_class, tok::kw_struct)) {
+      if (Tok->is(tok::kw_typedef)) {
+        Tok = Tok->getNextNonComment();
+        assert(Tok);
+      }
+      if (Tok->isOneOf(tok::kw_class, tok::kw_struct)) {
         ShouldMerge = !Style.BraceWrapping.AfterClass ||
                       (I[1]->First->is(tok::r_brace) &&
                        !Style.BraceWrapping.SplitEmptyRecord);
+      } else if (Tok->is(tok::kw_enum)) {
+        ShouldMerge = Style.AllowShortEnumsOnASingleLine;
       } else {
         ShouldMerge = !Style.BraceWrapping.AfterFunction ||
                       (I[1]->First->is(tok::r_brace) &&
