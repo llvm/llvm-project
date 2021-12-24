@@ -1672,12 +1672,12 @@ struct DSEState {
         dbgs()
         << "Trying to eliminate MemoryDefs at the end of the function\n");
     for (MemoryDef *Def : llvm::reverse(MemDefs)) {
-      if (SkipStores.contains(Def) || !isRemovable(Def->getMemoryInst()))
+      if (SkipStores.contains(Def))
         continue;
 
       Instruction *DefI = Def->getMemoryInst();
       auto DefLoc = getLocForWriteEx(DefI);
-      if (!DefLoc)
+      if (!DefLoc || !isRemovable(DefI))
         continue;
 
       // NOTE: Currently eliminating writes at the end of a function is limited
@@ -1866,9 +1866,14 @@ struct DSEState {
     LLVM_DEBUG(dbgs() << "Trying to eliminate MemoryDefs that write the "
                          "already existing value\n");
     for (auto *Def : MemDefs) {
-      if (SkipStores.contains(Def) || MSSA.isLiveOnEntryDef(Def) ||
-          !isRemovable(Def->getMemoryInst()))
+      if (SkipStores.contains(Def) || MSSA.isLiveOnEntryDef(Def))
         continue;
+
+      Instruction *DefInst = Def->getMemoryInst();
+      auto MaybeDefLoc = getLocForWriteEx(DefInst);
+      if (!MaybeDefLoc || !isRemovable(DefInst))
+        return false;
+
       MemoryDef *UpperDef;
       // To conserve compile-time, we avoid walking to the next clobbering def.
       // Instead, we just try to get the optimized access, if it exists. DSE
@@ -1880,17 +1885,14 @@ struct DSEState {
       if (!UpperDef || MSSA.isLiveOnEntryDef(UpperDef))
         continue;
 
-      Instruction *DefInst = Def->getMemoryInst();
       Instruction *UpperInst = UpperDef->getMemoryInst();
-      auto IsRedundantStore = [this, DefInst,
-                               UpperInst](MemoryLocation UpperLoc) {
+      auto IsRedundantStore = [&]() {
         if (DefInst->isIdenticalTo(UpperInst))
           return true;
         if (auto *MemSetI = dyn_cast<MemSetInst>(UpperInst)) {
           if (auto *SI = dyn_cast<StoreInst>(DefInst)) {
-            auto MaybeDefLoc = getLocForWriteEx(DefInst);
-            if (!MaybeDefLoc)
-              return false;
+            // MemSetInst must have a write location.
+            MemoryLocation UpperLoc = *getLocForWriteEx(UpperInst);
             int64_t InstWriteOffset = 0;
             int64_t DepWriteOffset = 0;
             auto OR = isOverwrite(UpperInst, DefInst, UpperLoc, *MaybeDefLoc,
@@ -1903,9 +1905,7 @@ struct DSEState {
         return false;
       };
 
-      auto MaybeUpperLoc = getLocForWriteEx(UpperInst);
-      if (!MaybeUpperLoc || !IsRedundantStore(*MaybeUpperLoc) ||
-          isReadClobber(*MaybeUpperLoc, DefInst))
+      if (!IsRedundantStore() || isReadClobber(*MaybeDefLoc, DefInst))
         continue;
       LLVM_DEBUG(dbgs() << "DSE: Remove No-Op Store:\n  DEAD: " << *DefInst
                         << '\n');
