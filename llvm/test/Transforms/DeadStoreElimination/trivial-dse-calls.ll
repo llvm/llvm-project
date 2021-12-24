@@ -252,14 +252,12 @@ define void @test_self_read() {
   ret void
 }
 
-; TODO: We should be able to remove the call because while we don't know
-; the size of the write done by the call, we do know the following store
-; writes to the entire contents of the alloca.
+; We can remove the call because while we don't know the size of the write done
+; by the call, we do know the following store writes to the entire contents of
+; the alloca.
 define i32 @test_dse_overwrite() {
 ; CHECK-LABEL: @test_dse_overwrite(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast i32* [[A]] to i8*
-; CHECK-NEXT:    call void @f(i8* nocapture writeonly [[BITCAST]]) #[[ATTR1]]
 ; CHECK-NEXT:    store i32 0, i32* [[A]], align 4
 ; CHECK-NEXT:    [[V:%.*]] = load i32, i32* [[A]], align 4
 ; CHECK-NEXT:    ret i32 [[V]]
