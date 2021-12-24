@@ -248,8 +248,9 @@ protected:
         exportDynamic(isExportDynamic(k, visibility)), inDynamicList(false),
         canInline(false), referenced(false), traced(false), isInIplt(false),
         gotInIgot(false), isPreemptible(false), used(!config->gcSections),
-        needsTocRestore(false), scriptDefined(false), needsCopy(false),
-        needsGot(false), needsPlt(false), hasDirectReloc(false) {}
+        folded(false), needsTocRestore(false), scriptDefined(false),
+        needsCopy(false), needsGot(false), needsPlt(false),
+        hasDirectReloc(false) {}
 
 public:
   // True if this symbol is in the Iplt sub-section of the Plt and the Igot
@@ -268,6 +269,9 @@ public:
   // NOTE: In Writer.cpp the field is used to mark local defined symbols
   // which are referenced by relocations when -r or --emit-relocs is given.
   uint8_t used : 1;
+
+  // True if defined relative to a section discarded by ICF.
+  uint8_t folded : 1;
 
   // True if a call to this symbol needs to be followed by a restore of the
   // PPC64 toc pointer.
