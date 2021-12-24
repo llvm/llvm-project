@@ -1555,14 +1555,8 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
 
       MachineInstr *CFI = nullptr;
       if (NeedsCFI) {
-        if (SB.SuperReg == SB.TRI.getReturnAddressReg(SB.MF)) {
-          if (i == e - 1)
-            CFI = TFL->buildCFIForSGPRToVGPRSpill(*SB.MBB, MI, DebugLoc(),
-                                                  AMDGPU::PC_REG, VGPRSpills);
-        } else {
-          CFI = TFL->buildCFIForSGPRToVGPRSpill(*SB.MBB, MI, DebugLoc(), SubReg,
-                                                Spill.VGPR, Spill.Lane);
-        }
+        CFI = TFL->buildCFIForSGPRToVGPRSpill(*SB.MBB, MI, DebugLoc(), SubReg,
+                                              Spill.VGPR, Spill.Lane);
       }
 
       if (LIS) {
@@ -1638,17 +1632,7 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
       // Write out VGPR
       SB.readWriteTmpVGPR(Offset, /*IsLoad*/ false);
 
-      // TODO: Implement CFI for SpillToVMEM for all scenarios.
-      MachineInstr *CFI = nullptr;
-      if (NeedsCFI && SB.SuperReg == SB.TRI.getReturnAddressReg(SB.MF)) {
-        int64_t CFIOffset = (Offset * SB.EltSize +
-                             SB.MF.getFrameInfo().getObjectOffset(Index)) *
-                            ST.getWavefrontSize();
-        CFI = TFL->buildCFIForSGPRToVMEMSpill(*SB.MBB, MI, DebugLoc(),
-                                              AMDGPU::PC_REG, CFIOffset);
-      }
-      if (LIS && CFI)
-        LIS->InsertMachineInstrInMaps(*CFI);
+      // TODO: Implement CFI for SpillToVMEM if/when it is fully supported.
     }
 
     SB.restore();

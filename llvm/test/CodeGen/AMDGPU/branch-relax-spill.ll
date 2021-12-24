@@ -974,9 +974,9 @@ define void @spill_func(i32 addrspace(1)* %arg) #0 {
 ; CHECK-NEXT:    v_writelane_b32 v1, s100, 3
 ; CHECK-NEXT:    v_writelane_b32 v1, s101, 4
 ; CHECK-NEXT:    v_writelane_b32 v1, s30, 5
+; CHECK-NEXT:    s_mov_b32 s29, s12
 ; CHECK-NEXT:    v_writelane_b32 v1, s31, 6
-; CHECK-NEXT:    s_mov_b32 s31, s12
-; CHECK-NEXT:    s_cmp_eq_u32 s31, 0
+; CHECK-NEXT:    s_cmp_eq_u32 s29, 0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    s_mov_b32 s0, 0
 ; CHECK-NEXT:    ;;#ASMEND
@@ -1336,6 +1336,7 @@ define void @spill_func(i32 addrspace(1)* %arg) #0 {
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; reg use s5
 ; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    v_readlane_b32 s4, v1, 5
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; reg use s6
 ; CHECK-NEXT:    ;;#ASMEND
@@ -1414,7 +1415,6 @@ define void @spill_func(i32 addrspace(1)* %arg) #0 {
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; reg use s31
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_readlane_b32 s30, v1, 5
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; reg use s32
 ; CHECK-NEXT:    ;;#ASMEND
@@ -1631,7 +1631,7 @@ define void @spill_func(i32 addrspace(1)* %arg) #0 {
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; reg use vcc_hi
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_readlane_b32 s31, v1, 6
+; CHECK-NEXT:    v_readlane_b32 s5, v1, 6
 ; CHECK-NEXT:    v_readlane_b32 s101, v1, 4
 ; CHECK-NEXT:    v_readlane_b32 s100, v1, 3
 ; CHECK-NEXT:    v_readlane_b32 s99, v1, 2
@@ -1701,12 +1701,12 @@ define void @spill_func(i32 addrspace(1)* %arg) #0 {
 ; CHECK-NEXT:    v_readlane_b32 s35, v0, 2
 ; CHECK-NEXT:    v_readlane_b32 s34, v0, 1
 ; CHECK-NEXT:    v_readlane_b32 s33, v0, 0
-; CHECK-NEXT:    s_or_saveexec_b64 s[4:5], -1
+; CHECK-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; CHECK-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; CHECK-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
-; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
+; CHECK-NEXT:    s_mov_b64 exec, s[6:7]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
+; CHECK-NEXT:    s_setpc_b64 s[4:5]
 entry:
   %cnd = tail call i32 @llvm.amdgcn.workgroup.id.x() #0
   %sgpr0 = tail call i32 asm sideeffect "s_mov_b32 s0, 0", "={s0}"() #0

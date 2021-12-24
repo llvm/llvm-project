@@ -112,22 +112,16 @@ public:
                                            const Register VGPR, const int Lane) const;
   /// Create a CFI index describing a spill of an SGPR to multiple lanes of
   /// VGPRs and build a MachineInstr around it.
-  MachineInstr *buildCFIForSGPRToVGPRSpill(
+  void buildCFIForSGPRToVGPRSpill(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
       const DebugLoc &DL, Register SGPR,
       ArrayRef<SIMachineFunctionInfo::SpilledReg> VGPRSpills) const;
-  /// Create a CFI index describing a spill of a SGPR to VMEM and
-  /// build a MachineInstr around it.
-  MachineInstr *buildCFIForSGPRToVMEMSpill(MachineBasicBlock &MBB,
-                                           MachineBasicBlock::iterator MBBI,
-                                           const DebugLoc &DL, unsigned SGPR,
-                                           int64_t Offset) const;
   /// Create a CFI index describing a spill of a VGPR to VMEM and
   /// build a MachineInstr around it.
-  MachineInstr *buildCFIForVGPRToVMEMSpill(MachineBasicBlock &MBB,
-                                           MachineBasicBlock::iterator MBBI,
-                                           const DebugLoc &DL, unsigned VGPR,
-                                           int64_t Offset) const;
+  void buildCFIForVGPRToVMEMSpill(MachineBasicBlock &MBB,
+                                  MachineBasicBlock::iterator MBBI,
+                                  const DebugLoc &DL, unsigned VGPR,
+                                  int64_t Offset) const;
 };
 
 } // end namespace llvm

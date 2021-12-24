@@ -537,6 +537,8 @@ declare hidden void @ex() #0
 ; CHECK-NEXT: .cfi_undefined 59
 ; CHECK-NEXT: .cfi_undefined 60
 ; CHECK-NEXT: .cfi_undefined 61
+; CHECK-NEXT: .cfi_undefined 62
+; CHECK-NEXT: .cfi_undefined 63
 
 ; CHECK-NOT: .cfi_{{.*}}
 

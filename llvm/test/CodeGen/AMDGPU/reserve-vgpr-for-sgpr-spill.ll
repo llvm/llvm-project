@@ -99,8 +99,8 @@ define void @reserve_lowest_available_vgpr() #0 {
 ; GCN-LABEL: {{^}}reserve_vgpr_with_sgpr_spills:
 ; GCN-NOT:  buffer_store_dword v255, off, s[0:3], s32
 ; GCN: ; def s4
-; GCN: v_writelane_b32 v254, s4, 0
-; GCN: v_readlane_b32 s4, v254, 0
+; GCN: v_writelane_b32 v254, s4, 2
+; GCN: v_readlane_b32 s4, v254, 2
 ; GCN: ; use s4
 
 define void @reserve_vgpr_with_sgpr_spills() #0 {

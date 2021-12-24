@@ -434,7 +434,8 @@ void SIMachineFunctionInfo::removeDeadFrameIndices(MachineFunction &MF) {
   // freed frame indices by later pass(es) like "stack slot coloring".
   for (auto &R : make_early_inc_range(SGPRToVGPRSpills)) {
     if (R.first != FramePointerSaveIndex && R.first != BasePointerSaveIndex &&
-        (!TRI->isCFISavedRegsSpillEnabled() || R.first != EXECSaveIndex)) {
+        (!TRI->isCFISavedRegsSpillEnabled() ||
+         (R.first != ReturnAddressSaveIndex && R.first != EXECSaveIndex))) {
       MFI.RemoveStackObject(R.first);
       SGPRToVGPRSpills.erase(R.first);
     }
@@ -445,7 +446,8 @@ void SIMachineFunctionInfo::removeDeadFrameIndices(MachineFunction &MF) {
   for (int i = MFI.getObjectIndexBegin(), e = MFI.getObjectIndexEnd(); i != e;
        ++i)
     if (i != FramePointerSaveIndex && i != BasePointerSaveIndex &&
-        (!TRI->isCFISavedRegsSpillEnabled() || i != EXECSaveIndex))
+        (!TRI->isCFISavedRegsSpillEnabled() ||
+         (i != ReturnAddressSaveIndex && i != EXECSaveIndex)))
       MFI.setStackID(i, TargetStackID::Default);
 
   for (auto &R : VGPRToAGPRSpills) {

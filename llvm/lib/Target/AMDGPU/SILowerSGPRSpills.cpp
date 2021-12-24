@@ -97,8 +97,7 @@ static void insertCSRRestores(MachineBasicBlock &RestoreBlock,
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  const SIRegisterInfo *RI = ST.getRegisterInfo();
+
   // Restore all registers immediately before the return and any
   // terminators that precede it.
   MachineBasicBlock::iterator I = RestoreBlock.getFirstTerminator();
@@ -107,8 +106,8 @@ static void insertCSRRestores(MachineBasicBlock &RestoreBlock,
   if (!TFI->restoreCalleeSavedRegisters(RestoreBlock, I, CSI, TRI)) {
     for (const CalleeSavedInfo &CI : reverse(CSI)) {
       unsigned Reg = CI.getReg();
-      const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(
-          Reg, Reg == RI->getReturnAddressReg(MF) ? MVT::i64 : MVT::i32);
+      const TargetRegisterClass *RC =
+          TRI->getMinimalPhysRegClass(Reg, MVT::i32);
 
       TII.loadRegFromStackSlot(RestoreBlock, I, Reg, CI.getFrameIdx(), RC, TRI);
       assert(I != RestoreBlock.begin() &&
@@ -187,19 +186,11 @@ bool SILowerSGPRSpills::spillCalleeSavedRegs(MachineFunction &MF) {
 
     std::vector<CalleeSavedInfo> CSI;
     const MCPhysReg *CSRegs = MRI.getCalleeSavedRegs();
-    Register RetAddrReg = TRI->getReturnAddressReg(MF);
-    bool SpillRetAddrReg = false;
 
     for (unsigned I = 0; CSRegs[I]; ++I) {
       MCRegister Reg = CSRegs[I];
 
       if (SavedRegs.test(Reg)) {
-        if (Reg == TRI->getSubReg(RetAddrReg, AMDGPU::sub0) ||
-            Reg == TRI->getSubReg(RetAddrReg, AMDGPU::sub1)) {
-          SpillRetAddrReg = true;
-          continue;
-        }
-
         const TargetRegisterClass *RC =
           TRI->getMinimalPhysRegClass(Reg, MVT::i32);
         int JunkFI = MFI.CreateStackObject(TRI->getSpillSize(*RC),
@@ -207,17 +198,6 @@ bool SILowerSGPRSpills::spillCalleeSavedRegs(MachineFunction &MF) {
 
         CSI.push_back(CalleeSavedInfo(Reg, JunkFI));
       }
-    }
-
-    // Return address uses a register pair. Add the super register to the
-    // CSI list so that it's easier to identify the entire spill and CFI
-    // can be emitted appropriately.
-    if (SpillRetAddrReg) {
-      const TargetRegisterClass *RC =
-          TRI->getMinimalPhysRegClass(RetAddrReg, MVT::i64);
-      int JunkFI = MFI.CreateStackObject(TRI->getSpillSize(*RC),
-                                         TRI->getSpillAlign(*RC), true);
-      CSI.push_back(CalleeSavedInfo(RetAddrReg, JunkFI));
     }
 
     if (!CSI.empty()) {

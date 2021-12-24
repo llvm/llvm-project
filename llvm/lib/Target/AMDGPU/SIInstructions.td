@@ -463,7 +463,7 @@ def SI_RETURN_TO_EPILOG : SPseudoInstSI <
 
 // Return for returning function calls.
 def SI_RETURN : SPseudoInstSI <
-  (outs), (ins), [(AMDGPUret_flag)],
+  (outs), (ins), [],
   "; return"> {
   let isTerminator = 1;
   let isBarrier = 1;
