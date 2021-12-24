@@ -70,11 +70,8 @@ Symbol *SymbolTable::insert(StringRef name) {
     stem = name.take_front(pos);
 
   auto p = symMap.insert({CachedHashStringRef(stem), (int)symVector.size()});
-  int &symIndex = p.first->second;
-  bool isNew = p.second;
-
-  if (!isNew) {
-    Symbol *sym = symVector[symIndex];
+  if (!p.second) {
+    Symbol *sym = symVector[p.first->second];
     if (stem.size() != name.size())
       sym->setName(name);
     return sym;
