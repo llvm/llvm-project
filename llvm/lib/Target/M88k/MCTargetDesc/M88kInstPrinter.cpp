@@ -157,12 +157,10 @@ void M88kInstPrinter::printCCodeOperand(const MCInst *MI, int OpNum,
 void M88kInstPrinter::printPCRelOperand(const MCInst *MI, uint64_t Address,
                                         int OpNum, const MCSubtargetInfo &STI,
                                         raw_ostream &O) {
-  // TODO
   const MCOperand &MO = MI->getOperand(OpNum);
-  if (MO.isImm()) {
-    O << "0x";
-    O.write_hex(MO.getImm());
-  } else
+  if (MO.isImm())
+    O << MO.getImm();
+  else
     MO.getExpr()->print(O, &MAI);
 }
 

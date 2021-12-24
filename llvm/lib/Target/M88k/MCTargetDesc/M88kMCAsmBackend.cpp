@@ -149,12 +149,8 @@ bool M88kMCAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
          Fixup.getKind() == M88k::FK_88K_DISP26;
 }
 
-#if LLVM_VERSION_MAJOR > 13
 bool M88kMCAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
                                     const MCSubtargetInfo *STI) const {
-#else
-bool M88kMCAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
-#endif
   if ((Count % 4) != 0)
     return false;
 

@@ -579,8 +579,6 @@ M88kAsmParser::parseConditionCode(OperandVector &Operands) {
 
 OperandMatchResultTy M88kAsmParser::parsePCRel(OperandVector &Operands,
                                                unsigned Bits) {
-  MCContext &Ctx = getContext();
-  MCStreamer &Out = getStreamer();
   const MCExpr *Expr;
   SMLoc StartLoc = Parser.getTok().getLoc();
   if (getParser().parseExpression(Expr))
