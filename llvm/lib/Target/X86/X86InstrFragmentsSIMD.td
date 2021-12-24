@@ -1058,6 +1058,12 @@ def INSERT_get_vinsert128_imm : SDNodeXForm<insert_subvector, [{
   return getInsertVINSERTImmediate(N, 128, SDLoc(N));
 }]>;
 
+// INSERT_get_vperm2x128_imm xform function: convert insert_subvector index to
+// commuted VPERM2F128/VPERM2I128 imm.
+def INSERT_get_vperm2x128_commutedimm : SDNodeXForm<insert_subvector, [{
+  return getPermuteVINSERTCommutedImmediate(N, 128, SDLoc(N));
+}]>;
+
 // EXTRACT_get_vextract256_imm xform function: convert extract_subvector index
 // to VEXTRACTF64x4 imm.
 def EXTRACT_get_vextract256_imm : SDNodeXForm<extract_subvector, [{

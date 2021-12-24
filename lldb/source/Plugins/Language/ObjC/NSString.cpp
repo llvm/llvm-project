@@ -166,7 +166,7 @@ bool lldb_private::formatters::NSStringSummaryProvider(
       return false;
     if (has_explicit_length && is_unicode) {
       options.SetLocation(location);
-      options.SetProcessSP(process_sp);
+      options.SetTargetSP(valobj.GetTargetSP());
       options.SetStream(&stream);
       options.SetQuote('"');
       options.SetSourceSize(explicit_length);
@@ -179,7 +179,7 @@ bool lldb_private::formatters::NSStringSummaryProvider(
           StringPrinter::StringElementType::UTF16>(options);
     } else {
       options.SetLocation(location + 1);
-      options.SetProcessSP(process_sp);
+      options.SetTargetSP(valobj.GetTargetSP());
       options.SetStream(&stream);
       options.SetSourceSize(explicit_length);
       options.SetHasSourceSize(has_explicit_length);
@@ -195,7 +195,7 @@ bool lldb_private::formatters::NSStringSummaryProvider(
     uint64_t location = 3 * ptr_size + valobj_addr;
 
     options.SetLocation(location);
-    options.SetProcessSP(process_sp);
+    options.SetTargetSP(valobj.GetTargetSP());
     options.SetStream(&stream);
     options.SetQuote('"');
     options.SetSourceSize(explicit_length);
@@ -217,7 +217,7 @@ bool lldb_private::formatters::NSStringSummaryProvider(
         return false;
     }
     options.SetLocation(location);
-    options.SetProcessSP(process_sp);
+    options.SetTargetSP(valobj.GetTargetSP());
     options.SetStream(&stream);
     options.SetQuote('"');
     options.SetSourceSize(explicit_length);
@@ -237,7 +237,7 @@ bool lldb_private::formatters::NSStringSummaryProvider(
     lldb::addr_t location = valobj.GetValueAsUnsigned(0) + ptr_size + 4;
 
     options.SetLocation(location);
-    options.SetProcessSP(process_sp);
+    options.SetTargetSP(valobj.GetTargetSP());
     options.SetStream(&stream);
     options.SetQuote('"');
     options.SetSourceSize(explicit_length);
@@ -260,7 +260,7 @@ bool lldb_private::formatters::NSStringSummaryProvider(
       location++;
     }
     options.SetLocation(location);
-    options.SetProcessSP(process_sp);
+    options.SetTargetSP(valobj.GetTargetSP());
     options.SetStream(&stream);
     options.SetSourceSize(explicit_length);
     options.SetHasSourceSize(has_explicit_length);
@@ -283,7 +283,7 @@ bool lldb_private::formatters::NSStringSummaryProvider(
       explicit_length++; // account for the fact that there is no NULL and we
                          // need to have one added
     options.SetLocation(location);
-    options.SetProcessSP(process_sp);
+    options.SetTargetSP(valobj.GetTargetSP());
     options.SetStream(&stream);
     options.SetSourceSize(explicit_length);
     options.SetHasSourceSize(has_explicit_length);

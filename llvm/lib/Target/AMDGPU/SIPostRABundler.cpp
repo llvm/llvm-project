@@ -8,7 +8,7 @@
 //
 /// \file
 /// This pass creates bundles of memory instructions to protect adjacent loads
-/// and stores from beeing rescheduled apart from each other post-RA.
+/// and stores from being rescheduled apart from each other post-RA.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -90,6 +90,9 @@ bool SIPostRABundler::isDependentLoad(const MachineInstr &MI) const {
 
 void SIPostRABundler::collectUsedRegUnits(const MachineInstr &MI,
                                           BitVector &UsedRegUnits) const {
+  if (MI.isDebugInstr())
+    return;
+
   for (const MachineOperand &Op : MI.operands()) {
     if (!Op.isReg() || !Op.readsReg())
       continue;

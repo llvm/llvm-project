@@ -174,8 +174,8 @@ void GPUDialect::printType(Type type, DialectAsmPrinter &os) const {
 
 LogicalResult GPUDialect::verifyOperationAttribute(Operation *op,
                                                    NamedAttribute attr) {
-  if (!attr.second.isa<UnitAttr>() ||
-      attr.first != getContainerModuleAttrName())
+  if (!attr.getValue().isa<UnitAttr>() ||
+      attr.getName() != getContainerModuleAttrName())
     return success();
 
   auto module = dyn_cast<ModuleOp>(op);
@@ -302,7 +302,7 @@ static LogicalResult verifyShuffleOp(gpu::ShuffleOp shuffleOp) {
 }
 
 static void printShuffleOp(OpAsmPrinter &p, ShuffleOp op) {
-  p << ' ' << op.getOperands() << ' ' << op.mode() << " : "
+  p << ' ' << op.getOperands() << ' ' << stringifyEnum(op.mode()) << " : "
     << op.value().getType();
 }
 
@@ -1177,7 +1177,7 @@ struct SimplifyDimOfAllocOp : public OpRewritePattern<memref::DimOp> {
   }
 };
 
-} // end anonymous namespace.
+} // namespace
 
 void AllocOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                           MLIRContext *context) {
@@ -1185,6 +1185,7 @@ void AllocOp::getCanonicalizationPatterns(RewritePatternSet &results,
 }
 
 #include "mlir/Dialect/GPU/GPUOpInterfaces.cpp.inc"
+#include "mlir/Dialect/GPU/GPUOpsEnums.cpp.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/GPU/GPUOps.cpp.inc"

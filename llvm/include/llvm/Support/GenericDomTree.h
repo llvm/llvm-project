@@ -528,9 +528,9 @@ protected:
   /// of CFG edges must not delete the CFG nodes before calling this function.
   ///
   /// The applyUpdates function can reorder the updates and remove redundant
-  /// ones internally. The batch updater is also able to detect sequences of
-  /// zero and exactly one update -- it's optimized to do less work in these
-  /// cases.
+  /// ones internally (as long as it is done in a deterministic fashion). The
+  /// batch updater is also able to detect sequences of zero and exactly one
+  /// update -- it's optimized to do less work in these cases.
   ///
   /// Note that for postdominators it automatically takes care of applying
   /// updates on reverse edges internally (so there's no need to swap the
@@ -538,8 +538,8 @@ protected:
   /// The type of updates is the same for DomTreeBase<T> and PostDomTreeBase<T>
   /// with the same template parameter T.
   ///
-  /// \param Updates An unordered sequence of updates to perform. The current
-  /// CFG and the reverse of these updates provides the pre-view of the CFG.
+  /// \param Updates An ordered sequence of updates to perform. The current CFG
+  /// and the reverse of these updates provides the pre-view of the CFG.
   ///
   void applyUpdates(ArrayRef<UpdateType> Updates) {
     GraphDiff<NodePtr, IsPostDominator> PreViewCFG(
@@ -547,9 +547,9 @@ protected:
     DomTreeBuilder::ApplyUpdates(*this, PreViewCFG, nullptr);
   }
 
-  /// \param Updates An unordered sequence of updates to perform. The current
-  /// CFG and the reverse of these updates provides the pre-view of the CFG.
-  /// \param PostViewUpdates An unordered sequence of update to perform in order
+  /// \param Updates An ordered sequence of updates to perform. The current CFG
+  /// and the reverse of these updates provides the pre-view of the CFG.
+  /// \param PostViewUpdates An ordered sequence of update to perform in order
   /// to obtain a post-view of the CFG. The DT will be updated assuming the
   /// obtained PostViewCFG is the desired end state.
   void applyUpdates(ArrayRef<UpdateType> Updates,

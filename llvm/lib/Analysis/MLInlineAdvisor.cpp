@@ -35,6 +35,21 @@
 
 using namespace llvm;
 
+#ifdef LLVM_HAVE_TF_AOT
+#include "llvm/Analysis/ReleaseModeModelRunner.h"
+// codegen-ed file
+#include "InlinerSizeModel.h" // NOLINT
+#include "llvm/Analysis/InlineModelFeatureMaps.h"
+
+std::unique_ptr<InlineAdvisor>
+llvm::getReleaseModeAdvisor(Module &M, ModuleAnalysisManager &MAM) {
+  auto AOTRunner =
+      std::make_unique<ReleaseModeModelRunner<llvm::InlinerSizeModel>>(
+          M.getContext(), FeatureNameMap, DecisionName);
+  return std::make_unique<MLInlineAdvisor>(M, MAM, std::move(AOTRunner));
+}
+#endif
+
 #define DEBUG_TYPE "inline-ml"
 
 static cl::opt<float> SizeIncreaseThreshold(
@@ -116,6 +131,8 @@ MLInlineAdvisor::MLInlineAdvisor(Module &M, ModuleAnalysisManager &MAM,
 void MLInlineAdvisor::onPassEntry() {
   // Function passes executed between InlinerPass runs may have changed the
   // module-wide features.
+  if (!Invalid)
+    return;
   NodeCount = 0;
   EdgeCount = 0;
   for (auto &F : M)
@@ -123,6 +140,7 @@ void MLInlineAdvisor::onPassEntry() {
       ++NodeCount;
       EdgeCount += getLocalCalls(F);
     }
+  Invalid = false;
 }
 
 int64_t MLInlineAdvisor::getLocalCalls(Function &F) {
@@ -242,29 +260,32 @@ std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdviceImpl(CallBase &CB) {
   auto &CallerBefore = FAM.getResult<FunctionPropertiesAnalysis>(Caller);
   auto &CalleeBefore = FAM.getResult<FunctionPropertiesAnalysis>(Callee);
 
-  ModelRunner->setFeature(FeatureIndex::CalleeBasicBlockCount,
-                          CalleeBefore.BasicBlockCount);
-  ModelRunner->setFeature(FeatureIndex::CallSiteHeight,
-                          FunctionLevels[&Caller]);
-  ModelRunner->setFeature(FeatureIndex::NodeCount, NodeCount);
-  ModelRunner->setFeature(FeatureIndex::NrCtantParams, NrCtantParams);
-  ModelRunner->setFeature(FeatureIndex::EdgeCount, EdgeCount);
-  ModelRunner->setFeature(FeatureIndex::CallerUsers, CallerBefore.Uses);
-  ModelRunner->setFeature(FeatureIndex::CallerConditionallyExecutedBlocks,
-                          CallerBefore.BlocksReachedFromConditionalInstruction);
-  ModelRunner->setFeature(FeatureIndex::CallerBasicBlockCount,
-                          CallerBefore.BasicBlockCount);
-  ModelRunner->setFeature(FeatureIndex::CalleeConditionallyExecutedBlocks,
-                          CalleeBefore.BlocksReachedFromConditionalInstruction);
-  ModelRunner->setFeature(FeatureIndex::CalleeUsers, CalleeBefore.Uses);
-  ModelRunner->setFeature(FeatureIndex::CostEstimate, CostEstimate);
+  *ModelRunner->getTensor<int64_t>(FeatureIndex::CalleeBasicBlockCount) =
+      CalleeBefore.BasicBlockCount;
+  *ModelRunner->getTensor<int64_t>(FeatureIndex::CallSiteHeight) =
+      FunctionLevels[&Caller];
+  *ModelRunner->getTensor<int64_t>(FeatureIndex::NodeCount) = NodeCount;
+  *ModelRunner->getTensor<int64_t>(FeatureIndex::NrCtantParams) = NrCtantParams;
+  *ModelRunner->getTensor<int64_t>(FeatureIndex::EdgeCount) = EdgeCount;
+  *ModelRunner->getTensor<int64_t>(FeatureIndex::CallerUsers) =
+      CallerBefore.Uses;
+  *ModelRunner->getTensor<int64_t>(
+      FeatureIndex::CallerConditionallyExecutedBlocks) =
+      CallerBefore.BlocksReachedFromConditionalInstruction;
+  *ModelRunner->getTensor<int64_t>(FeatureIndex::CallerBasicBlockCount) =
+      CallerBefore.BasicBlockCount;
+  *ModelRunner->getTensor<int64_t>(
+      FeatureIndex::CalleeConditionallyExecutedBlocks) =
+      CalleeBefore.BlocksReachedFromConditionalInstruction;
+  *ModelRunner->getTensor<int64_t>(FeatureIndex::CalleeUsers) =
+      CalleeBefore.Uses;
+  *ModelRunner->getTensor<int64_t>(FeatureIndex::CostEstimate) = CostEstimate;
 
   // Add the cost features
   for (size_t I = 0;
        I < static_cast<size_t>(InlineCostFeatureIndex::NumberOfFeatures); ++I) {
-    ModelRunner->setFeature(
-        inlineCostFeatureToMlFeature(static_cast<InlineCostFeatureIndex>(I)),
-        CostFeatures->at(I));
+    *ModelRunner->getTensor<int64_t>(inlineCostFeatureToMlFeature(
+        static_cast<InlineCostFeatureIndex>(I))) = CostFeatures->at(I);
   }
 
   return getAdviceFromModel(CB, ORE);
@@ -273,7 +294,8 @@ std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdviceImpl(CallBase &CB) {
 std::unique_ptr<MLInlineAdvice>
 MLInlineAdvisor::getAdviceFromModel(CallBase &CB,
                                     OptimizationRemarkEmitter &ORE) {
-  return std::make_unique<MLInlineAdvice>(this, CB, ORE, ModelRunner->run());
+  return std::make_unique<MLInlineAdvice>(
+      this, CB, ORE, static_cast<bool>(ModelRunner->evaluate<int64_t>()));
 }
 
 std::unique_ptr<InlineAdvice> MLInlineAdvisor::getMandatoryAdvice(CallBase &CB,
@@ -299,7 +321,8 @@ void MLInlineAdvice::reportContextForRemark(
   using namespace ore;
   OR << NV("Callee", Callee->getName());
   for (size_t I = 0; I < NumberOfFeatures; ++I)
-    OR << NV(FeatureNameMap[I], getAdvisor()->getModelRunner().getFeature(I));
+    OR << NV(FeatureNameMap[I],
+             *getAdvisor()->getModelRunner().getTensor<int64_t>(I));
   OR << NV("ShouldInline", isInliningRecommended());
 }
 

@@ -55,7 +55,7 @@ ScriptedThread::ScriptedThread(ScriptedProcess &process, Status &error)
   StructuredData::GenericSP object_sp =
       scripted_thread_interface->CreatePluginObject(
           class_name->c_str(), exe_ctx,
-          process.m_scripted_process_info.GetDictionarySP());
+          process.m_scripted_process_info.GetArgsSP());
   if (!object_sp || !object_sp->IsValid()) {
     error.SetErrorString("Failed to create valid script object");
     return;
@@ -64,32 +64,6 @@ ScriptedThread::ScriptedThread(ScriptedProcess &process, Status &error)
   m_script_object_sp = object_sp;
 
   SetID(scripted_thread_interface->GetThreadID());
-
-  llvm::Optional<std::string> reg_data =
-      scripted_thread_interface->GetRegisterContext();
-  if (!reg_data) {
-    error.SetErrorString("Failed to get scripted thread registers data.");
-    return;
-  }
-
-  DataBufferSP data_sp(
-      std::make_shared<DataBufferHeap>(reg_data->c_str(), reg_data->size()));
-
-  if (!data_sp->GetByteSize()) {
-    error.SetErrorString("Failed to copy raw registers data.");
-    return;
-  }
-
-  std::shared_ptr<RegisterContextMemory> reg_ctx_memory =
-      std::make_shared<RegisterContextMemory>(
-          *this, 0, *GetDynamicRegisterInfo(), LLDB_INVALID_ADDRESS);
-  if (!reg_ctx_memory) {
-    error.SetErrorString("Failed to create a register context.");
-    return;
-  }
-
-  reg_ctx_memory->SetAllRegisterData(data_sp);
-  m_reg_context_sp = reg_ctx_memory;
 }
 
 ScriptedThread::~ScriptedThread() { DestroyThread(); }
@@ -115,21 +89,48 @@ void ScriptedThread::WillResume(StateType resume_state) {}
 void ScriptedThread::ClearStackFrames() { Thread::ClearStackFrames(); }
 
 RegisterContextSP ScriptedThread::GetRegisterContext() {
-  if (!m_reg_context_sp) {
-    m_reg_context_sp = std::make_shared<RegisterContextThreadMemory>(
-        *this, LLDB_INVALID_ADDRESS);
-    GetInterface()->GetRegisterContext();
-  }
+  if (!m_reg_context_sp)
+    m_reg_context_sp = CreateRegisterContextForFrame(nullptr);
   return m_reg_context_sp;
 }
 
 RegisterContextSP
 ScriptedThread::CreateRegisterContextForFrame(StackFrame *frame) {
-  uint32_t concrete_frame_idx = frame ? frame->GetConcreteFrameIndex() : 0;
+  const uint32_t concrete_frame_idx =
+      frame ? frame->GetConcreteFrameIndex() : 0;
 
-  if (concrete_frame_idx == 0)
-    return GetRegisterContext();
-  return GetUnwinder().CreateRegisterContextForFrame(frame);
+  if (concrete_frame_idx)
+    return GetUnwinder().CreateRegisterContextForFrame(frame);
+
+  lldb::RegisterContextSP reg_ctx_sp;
+  Status error;
+
+  llvm::Optional<std::string> reg_data = GetInterface()->GetRegisterContext();
+  if (!reg_data)
+    return GetInterface()->ErrorWithMessage<lldb::RegisterContextSP>(
+        LLVM_PRETTY_FUNCTION, "Failed to get scripted thread registers data.",
+        error, LIBLLDB_LOG_THREAD);
+
+  DataBufferSP data_sp(
+      std::make_shared<DataBufferHeap>(reg_data->c_str(), reg_data->size()));
+
+  if (!data_sp->GetByteSize())
+    return GetInterface()->ErrorWithMessage<lldb::RegisterContextSP>(
+        LLVM_PRETTY_FUNCTION, "Failed to copy raw registers data.", error,
+        LIBLLDB_LOG_THREAD);
+
+  std::shared_ptr<RegisterContextMemory> reg_ctx_memory =
+      std::make_shared<RegisterContextMemory>(
+          *this, 0, *GetDynamicRegisterInfo(), LLDB_INVALID_ADDRESS);
+  if (!reg_ctx_memory)
+    return GetInterface()->ErrorWithMessage<lldb::RegisterContextSP>(
+        LLVM_PRETTY_FUNCTION, "Failed to create a register context.", error,
+        LIBLLDB_LOG_THREAD);
+
+  reg_ctx_memory->SetAllRegisterData(data_sp);
+  m_reg_context_sp = reg_ctx_memory;
+
+  return m_reg_context_sp;
 }
 
 bool ScriptedThread::CalculateStopInfo() {
@@ -142,13 +143,15 @@ bool ScriptedThread::CalculateStopInfo() {
   if (!dict_sp->GetValueForKeyAsInteger("type", stop_reason_type))
     return GetInterface()->ErrorWithMessage<bool>(
         LLVM_PRETTY_FUNCTION,
-        "Couldn't find value for key 'type' in stop reason dictionary.", error);
+        "Couldn't find value for key 'type' in stop reason dictionary.", error,
+        LIBLLDB_LOG_THREAD);
 
   StructuredData::Dictionary *data_dict;
   if (!dict_sp->GetValueForKeyAsDictionary("data", data_dict))
     return GetInterface()->ErrorWithMessage<bool>(
         LLVM_PRETTY_FUNCTION,
-        "Couldn't find value for key 'type' in stop reason dictionary.", error);
+        "Couldn't find value for key 'type' in stop reason dictionary.", error,
+        LIBLLDB_LOG_THREAD);
 
   switch (stop_reason_type) {
   case lldb::eStopReasonNone:
@@ -175,7 +178,7 @@ bool ScriptedThread::CalculateStopInfo() {
         llvm::Twine("Unsupported stop reason type (" +
                     llvm::Twine(stop_reason_type) + llvm::Twine(")."))
             .str(),
-        error);
+        error, LIBLLDB_LOG_THREAD);
   }
 
   SetStopInfo(stop_info_sp);
@@ -183,9 +186,7 @@ bool ScriptedThread::CalculateStopInfo() {
 }
 
 void ScriptedThread::RefreshStateAfterStop() {
-  // TODO: Implement
-  if (m_reg_context_sp)
-    m_reg_context_sp->InvalidateAllRegisters();
+  GetRegisterContext()->InvalidateIfNeeded(/*force=*/false);
 }
 
 lldb::ScriptedThreadInterfaceSP ScriptedThread::GetInterface() const {
@@ -197,13 +198,17 @@ std::shared_ptr<DynamicRegisterInfo> ScriptedThread::GetDynamicRegisterInfo() {
 
   if (!m_register_info_sp) {
     StructuredData::DictionarySP reg_info = GetInterface()->GetRegisterInfo();
+
+    Status error;
     if (!reg_info)
-      return nullptr;
+      return GetInterface()
+          ->ErrorWithMessage<std::shared_ptr<DynamicRegisterInfo>>(
+              LLVM_PRETTY_FUNCTION,
+              "Failed to get scripted thread registers info.", error,
+              LIBLLDB_LOG_THREAD);
 
     m_register_info_sp = std::make_shared<DynamicRegisterInfo>(
         *reg_info, m_scripted_process.GetTarget().GetArchitecture());
-    assert(m_register_info_sp->GetNumRegisters() > 0);
-    assert(m_register_info_sp->GetNumRegisterSets() > 0);
   }
 
   return m_register_info_sp;

@@ -122,9 +122,9 @@ enum class InitializerPlacement {
 // insert into the initializer list of a constructor. We use this to ensure
 // proper absolute ordering according to the class declaration relative to the
 // (perhaps improper) ordering in the existing initializer list, if any.
-struct IntializerInsertion {
-  IntializerInsertion(InitializerPlacement Placement,
-                      const CXXCtorInitializer *Where)
+struct InitializerInsertion {
+  InitializerInsertion(InitializerPlacement Placement,
+                       const CXXCtorInitializer *Where)
       : Placement(Placement), Where(Where) {}
 
   SourceLocation getLocation(const ASTContext &Context,
@@ -186,11 +186,11 @@ const RecordDecl *getCanonicalRecordDecl(const QualType &Type) {
 }
 
 template <typename R, typename T>
-SmallVector<IntializerInsertion, 16>
+SmallVector<InitializerInsertion, 16>
 computeInsertions(const CXXConstructorDecl::init_const_range &Inits,
                   const R &OrderedDecls,
                   const SmallPtrSetImpl<const T *> &DeclsToInit) {
-  SmallVector<IntializerInsertion, 16> Insertions;
+  SmallVector<InitializerInsertion, 16> Insertions;
   Insertions.emplace_back(InitializerPlacement::New, nullptr);
 
   typename R::const_iterator Decl = std::begin(OrderedDecls);
@@ -209,7 +209,7 @@ computeInsertions(const CXXConstructorDecl::init_const_range &Inits,
       // Add all fields between current field up until the next initializer.
       for (; Decl != std::end(OrderedDecls) && *Decl != InitDecl; ++Decl) {
         if (const auto *D = dyn_cast<T>(*Decl)) {
-          if (DeclsToInit.count(D) > 0)
+          if (DeclsToInit.contains(D))
             Insertions.back().Initializers.emplace_back(getName(D));
         }
       }
@@ -221,7 +221,7 @@ computeInsertions(const CXXConstructorDecl::init_const_range &Inits,
   // Add remaining decls that require initialization.
   for (; Decl != std::end(OrderedDecls); ++Decl) {
     if (const auto *D = dyn_cast<T>(*Decl)) {
-      if (DeclsToInit.count(D) > 0)
+      if (DeclsToInit.contains(D))
         Insertions.back().Initializers.emplace_back(getName(D));
     }
   }

@@ -75,9 +75,7 @@ bool X86LowerTileCopy::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
 
   for (MachineBasicBlock &MBB : MF) {
-    for (MachineBasicBlock::iterator MII = MBB.begin(), MIE = MBB.end();
-         MII != MIE;) {
-      MachineInstr &MI = *MII++;
+    for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
       if (!MI.isCopy())
         continue;
       MachineOperand &DstMO = MI.getOperand(0);

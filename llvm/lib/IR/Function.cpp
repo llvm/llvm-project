@@ -979,7 +979,11 @@ enum IIT_Info {
   IIT_BF16 = 48,
   IIT_STRUCT9 = 49,
   IIT_V256 = 50,
-  IIT_AMX  = 51
+  IIT_AMX  = 51,
+  IIT_PPCF128 = 52,
+  IIT_V3 = 53,
+  IIT_EXTERNREF = 54,
+  IIT_FUNCREF = 55
 };
 
 static void DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
@@ -1026,6 +1030,9 @@ static void DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
   case IIT_F128:
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::Quad, 0));
     return;
+  case IIT_PPCF128:
+    OutputTable.push_back(IITDescriptor::get(IITDescriptor::PPCQuad, 0));
+    return;
   case IIT_I1:
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::Integer, 1));
     return;
@@ -1050,6 +1057,10 @@ static void DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
     return;
   case IIT_V2:
     OutputTable.push_back(IITDescriptor::getVector(2, IsScalableVector));
+    DecodeIITType(NextElt, Infos, Info, OutputTable);
+    return;
+  case IIT_V3:
+    OutputTable.push_back(IITDescriptor::getVector(3, IsScalableVector));
     DecodeIITType(NextElt, Infos, Info, OutputTable);
     return;
   case IIT_V4:
@@ -1087,6 +1098,14 @@ static void DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
   case IIT_V1024:
     OutputTable.push_back(IITDescriptor::getVector(1024, IsScalableVector));
     DecodeIITType(NextElt, Infos, Info, OutputTable);
+    return;
+  case IIT_EXTERNREF:
+    OutputTable.push_back(IITDescriptor::get(IITDescriptor::Pointer, 10));
+    OutputTable.push_back(IITDescriptor::get(IITDescriptor::Struct, 0));
+    return;
+  case IIT_FUNCREF:
+    OutputTable.push_back(IITDescriptor::get(IITDescriptor::Pointer, 20));
+    OutputTable.push_back(IITDescriptor::get(IITDescriptor::Integer, 8));
     return;
   case IIT_PTR:
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::Pointer, 0));
@@ -1250,6 +1269,7 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
   case IITDescriptor::Float: return Type::getFloatTy(Context);
   case IITDescriptor::Double: return Type::getDoubleTy(Context);
   case IITDescriptor::Quad: return Type::getFP128Ty(Context);
+  case IITDescriptor::PPCQuad: return Type::getPPC_FP128Ty(Context);
 
   case IITDescriptor::Integer:
     return IntegerType::get(Context, D.Integer_Width);
@@ -1432,6 +1452,7 @@ static bool matchIntrinsicType(
     case IITDescriptor::Float: return !Ty->isFloatTy();
     case IITDescriptor::Double: return !Ty->isDoubleTy();
     case IITDescriptor::Quad: return !Ty->isFP128Ty();
+    case IITDescriptor::PPCQuad: return !Ty->isPPC_FP128Ty();
     case IITDescriptor::Integer: return !Ty->isIntegerTy(D.Integer_Width);
     case IITDescriptor::Vector: {
       VectorType *VT = dyn_cast<VectorType>(Ty);
@@ -1886,10 +1907,9 @@ void Function::setValueSubclassDataBit(unsigned Bit, bool On) {
 
 void Function::setEntryCount(ProfileCount Count,
                              const DenseSet<GlobalValue::GUID> *S) {
-  assert(Count.hasValue());
 #if !defined(NDEBUG)
   auto PrevCount = getEntryCount();
-  assert(!PrevCount.hasValue() || PrevCount.getType() == Count.getType());
+  assert(!PrevCount.hasValue() || PrevCount->getType() == Count.getType());
 #endif
 
   auto ImportGUIDs = getImportGUIDs();
@@ -1907,7 +1927,7 @@ void Function::setEntryCount(uint64_t Count, Function::ProfileCountType Type,
   setEntryCount(ProfileCount(Count, Type), Imports);
 }
 
-ProfileCount Function::getEntryCount(bool AllowSynthetic) const {
+Optional<ProfileCount> Function::getEntryCount(bool AllowSynthetic) const {
   MDNode *MD = getMetadata(LLVMContext::MD_prof);
   if (MD && MD->getOperand(0))
     if (MDString *MDS = dyn_cast<MDString>(MD->getOperand(0))) {
@@ -1917,7 +1937,7 @@ ProfileCount Function::getEntryCount(bool AllowSynthetic) const {
         // A value of -1 is used for SamplePGO when there were no samples.
         // Treat this the same as unknown.
         if (Count == (uint64_t)-1)
-          return ProfileCount::getInvalid();
+          return None;
         return ProfileCount(Count, PCT_Real);
       } else if (AllowSynthetic &&
                  MDS->getString().equals("synthetic_function_entry_count")) {
@@ -1926,7 +1946,7 @@ ProfileCount Function::getEntryCount(bool AllowSynthetic) const {
         return ProfileCount(Count, PCT_Synthetic);
       }
     }
-  return ProfileCount::getInvalid();
+  return None;
 }
 
 DenseSet<GlobalValue::GUID> Function::getImportGUIDs() const {

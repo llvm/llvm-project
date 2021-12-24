@@ -112,6 +112,18 @@ static bool isDSAddress(const Constant *C) {
   return AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::REGION_ADDRESS;
 }
 
+/// Returns true if the function requires the implicit argument be passed
+/// regardless of the function contents.
+static bool funcRequiresImplicitArgPtr(const Function &F) {
+  // Sanitizers require the hostcall buffer passed in the implicit arguments.
+  return F.hasFnAttribute(Attribute::SanitizeAddress) ||
+         F.hasFnAttribute(Attribute::SanitizeThread) ||
+         F.hasFnAttribute(Attribute::SanitizeMemory) ||
+         F.hasFnAttribute(Attribute::SanitizeHWAddress) ||
+         F.hasFnAttribute(Attribute::SanitizeMemTag);
+}
+
+namespace {
 class AMDGPUInformationCache : public InformationCache {
 public:
   AMDGPUInformationCache(const Module &M, AnalysisGetter &AG,
@@ -295,7 +307,7 @@ struct AAUniformWorkGroupSizeFunction : public AAUniformWorkGroupSize {
 
     bool AllCallSitesKnown = true;
     if (!A.checkForAllCallSites(CheckCallSite, *this, true, AllCallSitesKnown))
-      indicatePessimisticFixpoint();
+      return indicatePessimisticFixpoint();
 
     return Change;
   }
@@ -338,7 +350,17 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
 
   void initialize(Attributor &A) override {
     Function *F = getAssociatedFunction();
+
+    // If the function requires the implicit arg pointer due to sanitizers,
+    // assume it's needed even if explicitly marked as not requiring it.
+    const bool NeedsImplicit = funcRequiresImplicitArgPtr(*F);
+    if (NeedsImplicit)
+      removeAssumedBits(IMPLICIT_ARG_PTR);
+
     for (auto Attr : ImplicitAttrs) {
+      if (NeedsImplicit && Attr.first == IMPLICIT_ARG_PTR)
+        continue;
+
       if (F->hasFnAttribute(Attr.second))
         addKnownBits(Attr.first);
     }
@@ -499,6 +521,9 @@ struct AAAMDFlatWorkGroupSize
     std::tie(MinGroupSize, MaxGroupSize) = InfoCache.getFlatWorkGroupSizes(*F);
     intersectKnown(
         ConstantRange(APInt(32, MinGroupSize), APInt(32, MaxGroupSize + 1)));
+
+    if (AMDGPU::isEntryFunctionCC(F->getCallingConv()))
+      indicatePessimisticFixpoint();
   }
 
   ChangeStatus updateImpl(Attributor &A) override {
@@ -643,6 +668,7 @@ public:
   TargetMachine *TM;
   static char ID;
 };
+} // namespace
 
 char AMDGPUAttributor::ID = 0;
 

@@ -103,7 +103,7 @@ void ContinuationRecordBuilder::writeMemberType(RecordType &Record) {
   if (getCurrentSegmentLength() > MaxSegmentLength) {
     // We need to inject some bytes before the member we just wrote but after
     // the previous member.  Save off the length of the member we just wrote so
-    // that we can do some sanity checking on it.
+    // that we can do validate it.
     uint32_t MemberLength = SegmentWriter.getOffset() - OriginalOffset;
     (void) MemberLength;
     insertSegmentEnd(OriginalOffset);

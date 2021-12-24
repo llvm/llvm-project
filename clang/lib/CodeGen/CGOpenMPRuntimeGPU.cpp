@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "CGOpenMPRuntimeGPU.h"
-#include "CGOpenMPRuntimeNVPTX.h"
 #include "CodeGenFunction.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclOpenMP.h"
@@ -21,7 +20,6 @@
 #include "clang/Basic/Cuda.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
-#include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/Support/MathExtras.h"
 
 using namespace clang;
@@ -1197,7 +1195,7 @@ unsigned CGOpenMPRuntimeGPU::getDefaultLocationReserved2Flags() const {
 CGOpenMPRuntimeGPU::CGOpenMPRuntimeGPU(CodeGenModule &CGM)
     : CGOpenMPRuntime(CGM, "_", "$") {
   if (!CGM.getLangOpts().OpenMPIsDevice)
-    llvm_unreachable("OpenMP NVPTX can only handle device code.");
+    llvm_unreachable("OpenMP can only handle device code.");
 
   llvm::OpenMPIRBuilder &OMPBuilder = getOMPBuilder();
   if (CGM.getLangOpts().OpenMPTargetNewRuntime) {
@@ -1223,11 +1221,7 @@ void CGOpenMPRuntimeGPU::emitProcBindClause(CodeGenFunction &CGF,
 void CGOpenMPRuntimeGPU::emitNumThreadsClause(CodeGenFunction &CGF,
                                                 llvm::Value *NumThreads,
                                                 SourceLocation Loc) {
-  // Do nothing in case of SPMD mode and L0 parallel.
-  if (getExecutionMode() == CGOpenMPRuntimeGPU::EM_SPMD)
-    return;
-
-  CGOpenMPRuntime::emitNumThreadsClause(CGF, NumThreads, Loc);
+  // Nothing to do.
 }
 
 void CGOpenMPRuntimeGPU::emitNumTeamsClause(CodeGenFunction &CGF,
@@ -1512,13 +1506,16 @@ void CGOpenMPRuntimeGPU::emitParallelCall(CodeGenFunction &CGF,
                                           SourceLocation Loc,
                                           llvm::Function *OutlinedFn,
                                           ArrayRef<llvm::Value *> CapturedVars,
-                                          const Expr *IfCond) {
+                                          const Expr *IfCond,
+                                          llvm::Value *NumThreads) {
   if (!CGF.HaveInsertPoint())
     return;
 
-  auto &&ParallelGen = [this, Loc, OutlinedFn, CapturedVars,
-                        IfCond](CodeGenFunction &CGF, PrePostActionTy &Action) {
+  auto &&ParallelGen = [this, Loc, OutlinedFn, CapturedVars, IfCond,
+                        NumThreads](CodeGenFunction &CGF,
+                                    PrePostActionTy &Action) {
     CGBuilderTy &Bld = CGF.Builder;
+    llvm::Value *NumThreadsVal = NumThreads;
     llvm::Function *WFn = WrapperFunctionsMap[OutlinedFn];
     llvm::Value *ID = llvm::ConstantPointerNull::get(CGM.Int8PtrTy);
     if (WFn)
@@ -1558,13 +1555,18 @@ void CGOpenMPRuntimeGPU::emitParallelCall(CodeGenFunction &CGF,
     else
       IfCondVal = llvm::ConstantInt::get(CGF.Int32Ty, 1);
 
-    assert(IfCondVal && "Expected a value");
+    if (!NumThreadsVal)
+      NumThreadsVal = llvm::ConstantInt::get(CGF.Int32Ty, -1);
+    else
+      NumThreadsVal = Bld.CreateZExtOrTrunc(NumThreadsVal, CGF.Int32Ty),
+
+      assert(IfCondVal && "Expected a value");
     llvm::Value *RTLoc = emitUpdateLocation(CGF, Loc);
     llvm::Value *Args[] = {
         RTLoc,
         getThreadID(CGF, Loc),
         IfCondVal,
-        llvm::ConstantInt::get(CGF.Int32Ty, -1),
+        NumThreadsVal,
         llvm::ConstantInt::get(CGF.Int32Ty, -1),
         FnPtr,
         ID,
@@ -2188,11 +2190,8 @@ static llvm::Value *emitInterWarpCopyFunction(CodeGenModule &CGM,
       // elemptr = ((CopyType*)(elemptrptr)) + I
       Address ElemPtr = Address(ElemPtrPtr, Align);
       ElemPtr = Bld.CreateElementBitCast(ElemPtr, CopyType);
-      if (NumIters > 1) {
-        ElemPtr = Address(Bld.CreateGEP(ElemPtr.getElementType(),
-                                        ElemPtr.getPointer(), Cnt),
-                          ElemPtr.getAlignment());
-      }
+      if (NumIters > 1)
+        ElemPtr = Bld.CreateGEP(ElemPtr, Cnt);
 
       // Get pointer to location in transfer medium.
       // MediumPtr = &medium[warp_id]
@@ -2258,11 +2257,8 @@ static llvm::Value *emitInterWarpCopyFunction(CodeGenModule &CGM,
           TargetElemPtrPtr, /*Volatile=*/false, C.VoidPtrTy, Loc);
       Address TargetElemPtr = Address(TargetElemPtrVal, Align);
       TargetElemPtr = Bld.CreateElementBitCast(TargetElemPtr, CopyType);
-      if (NumIters > 1) {
-        TargetElemPtr = Address(Bld.CreateGEP(TargetElemPtr.getElementType(),
-                                              TargetElemPtr.getPointer(), Cnt),
-                                TargetElemPtr.getAlignment());
-      }
+      if (NumIters > 1)
+        TargetElemPtr = Bld.CreateGEP(TargetElemPtr, Cnt);
 
       // *TargetElemPtr = SrcMediumVal;
       llvm::Value *SrcMediumValue =
@@ -3901,6 +3897,7 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(
       case CudaArch::GFX1033:
       case CudaArch::GFX1034:
       case CudaArch::GFX1035:
+      case CudaArch::Generic:
       case CudaArch::UNUSED:
       case CudaArch::UNKNOWN:
         break;
@@ -3959,4 +3956,19 @@ llvm::Value *CGOpenMPRuntimeGPU::getGPUNumThreads(CodeGenFunction &CGF) {
         llvm::GlobalVariable::ExternalLinkage, LocSize, &CGF.CGM.getModule());
   }
   return Bld.CreateCall(F, llvm::None, "nvptx_num_threads");
+}
+
+llvm::Value *CGOpenMPRuntimeGPU::getGPUThreadID(CodeGenFunction &CGF) {
+  ArrayRef<llvm::Value *> Args{};
+  return CGF.EmitRuntimeCall(
+      OMPBuilder.getOrCreateRuntimeFunction(
+          CGM.getModule(), OMPRTL___kmpc_get_hardware_thread_id_in_block),
+      Args);
+}
+
+llvm::Value *CGOpenMPRuntimeGPU::getGPUWarpSize(CodeGenFunction &CGF) {
+  ArrayRef<llvm::Value *> Args{};
+  return CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
+                                 CGM.getModule(), OMPRTL___kmpc_get_warp_size),
+                             Args);
 }

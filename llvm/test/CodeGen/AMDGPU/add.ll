@@ -1,6 +1,7 @@
 ; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SIVI,FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SIVI,FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,FUNC %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10,FUNC %s
 
 ; FUNC-LABEL: {{^}}s_add_i32:
 ; GCN: s_add_i32 s[[REG:[0-9]+]], {{s[0-9]+, s[0-9]+}}
@@ -86,6 +87,7 @@ entry:
 ; GCN: {{buffer|flat|global}}_load_dword [[B:v[0-9]+]]
 ; SIVI: v_add_{{i|u}}32_e32 v{{[0-9]+}}, vcc, [[A]], [[B]]
 ; GFX9: v_add_u32_e32 v{{[0-9]+}}, [[A]], [[B]]
+; GFX10: v_add_nc_u32_e32 v{{[0-9]+}}, [[A]], [[B]]
 define amdgpu_kernel void @v_add_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds i32, i32 addrspace(1)* %in, i32 %tid
@@ -101,6 +103,7 @@ define amdgpu_kernel void @v_add_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %
 ; GCN: {{buffer|flat|global}}_load_dword [[A:v[0-9]+]]
 ; SIVI: v_add_{{i|u}}32_e32 v{{[0-9]+}}, vcc, 0x7b, [[A]]
 ; GFX9: v_add_u32_e32 v{{[0-9]+}}, 0x7b, [[A]]
+; GFX10: v_add_nc_u32_e32 v{{[0-9]+}}, 0x7b, [[A]]
 define amdgpu_kernel void @v_add_imm_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds i32, i32 addrspace(1)* %in, i32 %tid
@@ -166,6 +169,7 @@ endif:
 ; SI: v_add_i32_e64 v0, s[0:1], s0, v0
 ; VI: v_add_u32_e64 v0, s[0:1], s0, v0
 ; GFX9: v_add_u32_e32 v0, s0, v0
+; GFX10: v_add_nc_u32_e32 v0, s0, v0
 
 ; GCN: ; def vcc
 ; GCN: ds_write_b32

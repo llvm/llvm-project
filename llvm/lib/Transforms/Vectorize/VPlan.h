@@ -39,6 +39,7 @@
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Support/InstructionCost.h"
 #include <algorithm>
@@ -51,6 +52,7 @@ namespace llvm {
 
 class BasicBlock;
 class DominatorTree;
+class InductionDescriptor;
 class InnerLoopVectorizer;
 class LoopInfo;
 class raw_ostream;
@@ -59,6 +61,7 @@ class Value;
 class VPBasicBlock;
 class VPRegionBlock;
 class VPlan;
+class VPReplicateRecipe;
 class VPlanSlp;
 
 /// Returns a calculation for the total number of elements for a given \p VF.
@@ -346,6 +349,10 @@ struct VPTransformState {
 
   /// Pointer to the VPlan code is generated for.
   VPlan *Plan;
+
+  /// Holds recipes that may generate a poison value that is used after
+  /// vectorization, even when their operands are not poison.
+  SmallPtrSet<VPRecipeBase *, 16> MayGeneratePoisonRecipes;
 };
 
 /// VPUsers instance used by VPBlockBase to manage CondBit and the block
@@ -494,6 +501,8 @@ public:
 
   const VPBlocksTy &getSuccessors() const { return Successors; }
   VPBlocksTy &getSuccessors() { return Successors; }
+
+  iterator_range<VPBlockBase **> successors() { return Successors; }
 
   const VPBlocksTy &getPredecessors() const { return Predecessors; }
   VPBlocksTy &getPredecessors() { return Predecessors; }
@@ -789,6 +798,8 @@ public:
 private:
   typedef unsigned char OpcodeTy;
   OpcodeTy Opcode;
+  FastMathFlags FMF;
+  DebugLoc DL;
 
   /// Utility method serving execute(): generates a single instance of the
   /// modeled instruction.
@@ -798,19 +809,14 @@ protected:
   void setUnderlyingInstr(Instruction *I) { setUnderlyingValue(I); }
 
 public:
-  VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands)
+  VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands, DebugLoc DL)
       : VPRecipeBase(VPRecipeBase::VPInstructionSC, Operands),
-        VPValue(VPValue::VPVInstructionSC, nullptr, this), Opcode(Opcode) {}
+        VPValue(VPValue::VPVInstructionSC, nullptr, this), Opcode(Opcode),
+        DL(DL) {}
 
-  VPInstruction(unsigned Opcode, ArrayRef<VPInstruction *> Operands)
-      : VPRecipeBase(VPRecipeBase::VPInstructionSC, {}),
-        VPValue(VPValue::VPVInstructionSC, nullptr, this), Opcode(Opcode) {
-    for (auto *I : Operands)
-      addOperand(I->getVPSingleValue());
-  }
-
-  VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands)
-      : VPInstruction(Opcode, ArrayRef<VPValue *>(Operands)) {}
+  VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands,
+                DebugLoc DL = {})
+      : VPInstruction(Opcode, ArrayRef<VPValue *>(Operands), DL) {}
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
   static inline bool classof(const VPValue *V) {
@@ -819,7 +825,7 @@ public:
 
   VPInstruction *clone() const {
     SmallVector<VPValue *, 2> Operands(operands());
-    return new VPInstruction(Opcode, Operands);
+    return new VPInstruction(Opcode, Operands, DL);
   }
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
@@ -870,6 +876,9 @@ public:
       return true;
     }
   }
+
+  /// Set the fast-math flags.
+  void setFastMathFlags(FastMathFlags FMFNew);
 };
 
 /// VPWidenRecipe is a recipe for producing a copy of vector type its
@@ -1001,21 +1010,22 @@ public:
 
 /// A recipe for handling phi nodes of integer and floating-point inductions,
 /// producing their vector and scalar values.
-class VPWidenIntOrFpInductionRecipe : public VPRecipeBase {
+class VPWidenIntOrFpInductionRecipe : public VPRecipeBase, public VPValue {
   PHINode *IV;
+  const InductionDescriptor &IndDesc;
 
 public:
-  VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, Instruction *Cast,
-                                TruncInst *Trunc = nullptr)
-      : VPRecipeBase(VPWidenIntOrFpInductionSC, {Start}), IV(IV) {
-    if (Trunc)
-      new VPValue(Trunc, this);
-    else
-      new VPValue(IV, this);
+  VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start,
+                                const InductionDescriptor &IndDesc)
+      : VPRecipeBase(VPWidenIntOrFpInductionSC, {Start}), VPValue(IV, this),
+        IV(IV), IndDesc(IndDesc) {}
 
-    if (Cast)
-      new VPValue(Cast, this);
-  }
+  VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start,
+                                const InductionDescriptor &IndDesc,
+                                TruncInst *Trunc)
+      : VPRecipeBase(VPWidenIntOrFpInductionSC, {Start}), VPValue(Trunc, this),
+        IV(IV), IndDesc(IndDesc) {}
+
   ~VPWidenIntOrFpInductionRecipe() override = default;
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
@@ -1036,13 +1046,6 @@ public:
   /// Returns the start value of the induction.
   VPValue *getStartValue() { return getOperand(0); }
 
-  /// Returns the cast VPValue, if one is attached, or nullptr otherwise.
-  VPValue *getCastValue() {
-    if (getNumDefinedValues() != 2)
-      return nullptr;
-    return getVPValue(1);
-  }
-
   /// Returns the first defined value as TruncInst, if it is one or nullptr
   /// otherwise.
   TruncInst *getTruncInst() {
@@ -1051,6 +1054,9 @@ public:
   const TruncInst *getTruncInst() const {
     return dyn_cast_or_null<TruncInst>(getVPValue(0)->getUnderlyingValue());
   }
+
+  /// Returns the induction descriptor for the recipe.
+  const InductionDescriptor &getInductionDescriptor() const { return IndDesc; }
 };
 
 /// A recipe for handling first order recurrences and pointer inductions. For
@@ -1167,7 +1173,7 @@ struct VPFirstOrderRecurrencePHIRecipe : public VPWidenPHIRecipe {
 /// operand.
 class VPReductionPHIRecipe : public VPWidenPHIRecipe {
   /// Descriptor for the reduction.
-  RecurrenceDescriptor &RdxDesc;
+  const RecurrenceDescriptor &RdxDesc;
 
   /// The phi is part of an in-loop reduction.
   bool IsInLoop;
@@ -1178,7 +1184,7 @@ class VPReductionPHIRecipe : public VPWidenPHIRecipe {
 public:
   /// Create a new VPReductionPHIRecipe for the reduction \p Phi described by \p
   /// RdxDesc.
-  VPReductionPHIRecipe(PHINode *Phi, RecurrenceDescriptor &RdxDesc,
+  VPReductionPHIRecipe(PHINode *Phi, const RecurrenceDescriptor &RdxDesc,
                        VPValue &Start, bool IsInLoop = false,
                        bool IsOrdered = false)
       : VPWidenPHIRecipe(VPVReductionPHISC, VPReductionPHISC, Phi, &Start),
@@ -1208,7 +1214,9 @@ public:
              VPSlotTracker &SlotTracker) const override;
 #endif
 
-  RecurrenceDescriptor &getRecurrenceDescriptor() { return RdxDesc; }
+  const RecurrenceDescriptor &getRecurrenceDescriptor() const {
+    return RdxDesc;
+  }
 
   /// Returns true, if the phi is part of an ordered reduction.
   bool isOrdered() const { return IsOrdered; }
@@ -1338,13 +1346,13 @@ public:
 /// The Operands are {ChainOp, VecOp, [Condition]}.
 class VPReductionRecipe : public VPRecipeBase, public VPValue {
   /// The recurrence decriptor for the reduction in question.
-  RecurrenceDescriptor *RdxDesc;
+  const RecurrenceDescriptor *RdxDesc;
   /// Pointer to the TTI, needed to create the target reduction
   const TargetTransformInfo *TTI;
 
 public:
-  VPReductionRecipe(RecurrenceDescriptor *R, Instruction *I, VPValue *ChainOp,
-                    VPValue *VecOp, VPValue *CondOp,
+  VPReductionRecipe(const RecurrenceDescriptor *R, Instruction *I,
+                    VPValue *ChainOp, VPValue *VecOp, VPValue *CondOp,
                     const TargetTransformInfo *TTI)
       : VPRecipeBase(VPRecipeBase::VPReductionSC, {ChainOp, VecOp}),
         VPValue(VPValue::VPVReductionSC, I, this), RdxDesc(R), TTI(TTI) {
@@ -1511,7 +1519,7 @@ public:
 /// - For store: Address, stored value, optional mask
 /// TODO: We currently execute only per-part unless a specific instance is
 /// provided.
-class VPWidenMemoryInstructionRecipe : public VPRecipeBase {
+class VPWidenMemoryInstructionRecipe : public VPRecipeBase, public VPValue {
   Instruction &Ingredient;
 
   // Whether the loaded-from / stored-to addresses are consecutive.
@@ -1533,10 +1541,10 @@ class VPWidenMemoryInstructionRecipe : public VPRecipeBase {
 public:
   VPWidenMemoryInstructionRecipe(LoadInst &Load, VPValue *Addr, VPValue *Mask,
                                  bool Consecutive, bool Reverse)
-      : VPRecipeBase(VPWidenMemoryInstructionSC, {Addr}), Ingredient(Load),
+      : VPRecipeBase(VPWidenMemoryInstructionSC, {Addr}),
+        VPValue(VPValue::VPVMemoryInstructionSC, &Load, this), Ingredient(Load),
         Consecutive(Consecutive), Reverse(Reverse) {
     assert((Consecutive || !Reverse) && "Reverse implies consecutive");
-    new VPValue(VPValue::VPVMemoryInstructionSC, &Load, this);
     setMask(Mask);
   }
 
@@ -1544,6 +1552,7 @@ public:
                                  VPValue *StoredValue, VPValue *Mask,
                                  bool Consecutive, bool Reverse)
       : VPRecipeBase(VPWidenMemoryInstructionSC, {Addr, StoredValue}),
+        VPValue(VPValue::VPVMemoryInstructionSC, &Store, this),
         Ingredient(Store), Consecutive(Consecutive), Reverse(Reverse) {
     assert((Consecutive || !Reverse) && "Reverse implies consecutive");
     setMask(Mask);
@@ -1593,11 +1602,11 @@ public:
 };
 
 /// A Recipe for widening the canonical induction variable of the vector loop.
-class VPWidenCanonicalIVRecipe : public VPRecipeBase {
+class VPWidenCanonicalIVRecipe : public VPRecipeBase, public VPValue {
 public:
-  VPWidenCanonicalIVRecipe() : VPRecipeBase(VPWidenCanonicalIVSC, {}) {
-    new VPValue(nullptr, this);
-  }
+  VPWidenCanonicalIVRecipe()
+      : VPRecipeBase(VPWidenCanonicalIVSC, {}),
+        VPValue(VPValue::VPVWidenCanonicalIVSC, nullptr, this) {}
 
   ~VPWidenCanonicalIVRecipe() override = default;
 
@@ -2249,6 +2258,12 @@ public:
     return map_range(Operands, Fn);
   }
 
+  /// Returns true if \p VPV is uniform after vectorization.
+  bool isUniformAfterVectorization(VPValue *VPV) const {
+    auto RepR = dyn_cast_or_null<VPReplicateRecipe>(VPV->getDef());
+    return !VPV->getDef() || (RepR && RepR->isUniform());
+  }
+
 private:
   /// Add to the given dominator tree the header block and every new basic block
   /// that was created between it and the latch block, inclusive.
@@ -2337,18 +2352,23 @@ public:
 
   /// Insert disconnected VPBlockBase \p NewBlock after \p BlockPtr. Add \p
   /// NewBlock as successor of \p BlockPtr and \p BlockPtr as predecessor of \p
-  /// NewBlock, and propagate \p BlockPtr parent to \p NewBlock. If \p BlockPtr
-  /// has more than one successor, its conditional bit is propagated to \p
-  /// NewBlock. \p NewBlock must have neither successors nor predecessors.
+  /// NewBlock, and propagate \p BlockPtr parent to \p NewBlock. \p BlockPtr's
+  /// successors are moved from \p BlockPtr to \p NewBlock and \p BlockPtr's
+  /// conditional bit is propagated to \p NewBlock. \p NewBlock must have
+  /// neither successors nor predecessors.
   static void insertBlockAfter(VPBlockBase *NewBlock, VPBlockBase *BlockPtr) {
     assert(NewBlock->getSuccessors().empty() &&
-           "Can't insert new block with successors.");
-    // TODO: move successors from BlockPtr to NewBlock when this functionality
-    // is necessary. For now, setBlockSingleSuccessor will assert if BlockPtr
-    // already has successors.
-    BlockPtr->setOneSuccessor(NewBlock);
-    NewBlock->setPredecessors({BlockPtr});
+           NewBlock->getPredecessors().empty() &&
+           "Can't insert new block with predecessors or successors.");
     NewBlock->setParent(BlockPtr->getParent());
+    SmallVector<VPBlockBase *> Succs(BlockPtr->successors());
+    for (VPBlockBase *Succ : Succs) {
+      disconnectBlocks(BlockPtr, Succ);
+      connectBlocks(NewBlock, Succ);
+    }
+    NewBlock->setCondBit(BlockPtr->getCondBit());
+    BlockPtr->setCondBit(nullptr);
+    connectBlocks(BlockPtr, NewBlock);
   }
 
   /// Insert disconnected VPBlockBases \p IfTrue and \p IfFalse after \p
@@ -2389,6 +2409,31 @@ public:
     assert(To && "Successor to disconnect is null.");
     From->removeSuccessor(To);
     To->removePredecessor(From);
+  }
+
+  /// Try to merge \p Block into its single predecessor, if \p Block is a
+  /// VPBasicBlock and its predecessor has a single successor. Returns a pointer
+  /// to the predecessor \p Block was merged into or nullptr otherwise.
+  static VPBasicBlock *tryToMergeBlockIntoPredecessor(VPBlockBase *Block) {
+    auto *VPBB = dyn_cast<VPBasicBlock>(Block);
+    auto *PredVPBB =
+        dyn_cast_or_null<VPBasicBlock>(Block->getSinglePredecessor());
+    if (!VPBB || !PredVPBB || PredVPBB->getNumSuccessors() != 1)
+      return nullptr;
+
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB))
+      R.moveBefore(*PredVPBB, PredVPBB->end());
+    VPBlockUtils::disconnectBlocks(PredVPBB, VPBB);
+    auto *ParentRegion = cast<VPRegionBlock>(Block->getParent());
+    if (ParentRegion->getExit() == Block)
+      ParentRegion->setExit(PredVPBB);
+    SmallVector<VPBlockBase *> Successors(Block->successors());
+    for (auto *Succ : Successors) {
+      VPBlockUtils::disconnectBlocks(Block, Succ);
+      VPBlockUtils::connectBlocks(PredVPBB, Succ);
+    }
+    delete Block;
+    return PredVPBB;
   }
 
   /// Returns true if the edge \p FromBlock -> \p ToBlock is a back-edge.

@@ -62,15 +62,14 @@ protected:
         return Changed;
 
       SmallVector<MachineBasicBlock*, 8> PredToRemove;
-      for (MachineBasicBlock::pred_iterator PI = ReturnMBB.pred_begin(),
-           PIE = ReturnMBB.pred_end(); PI != PIE; ++PI) {
+      for (MachineBasicBlock *Pred : ReturnMBB.predecessors()) {
         bool OtherReference = false, BlockChanged = false;
 
-        if ((*PI)->empty())
+        if (Pred->empty())
           continue;
 
-        for (MachineBasicBlock::iterator J = (*PI)->getLastNonDebugInstr();;) {
-          if (J == (*PI)->end())
+        for (MachineBasicBlock::iterator J = Pred->getLastNonDebugInstr();;) {
+          if (J == Pred->end())
             break;
 
           if (J->getOpcode() == PPC::B) {
@@ -78,7 +77,7 @@ protected:
               // This is an unconditional branch to the return. Replace the
               // branch with a blr.
               MachineInstr *MI = ReturnMBB.getParent()->CloneMachineInstr(&*I);
-              (*PI)->insert(J, MI);
+              Pred->insert(J, MI);
 
               MachineBasicBlock::iterator K = J--;
               K->eraseFromParent();
@@ -95,7 +94,7 @@ protected:
               MachineInstrBuilder(*ReturnMBB.getParent(), MI)
                   .add(J->getOperand(0))
                   .add(J->getOperand(1));
-              (*PI)->insert(J, MI);
+              Pred->insert(J, MI);
 
               MachineBasicBlock::iterator K = J--;
               K->eraseFromParent();
@@ -112,7 +111,7 @@ protected:
                   TII->get(J->getOpcode() == PPC::BC ? PPC::BCLR : PPC::BCLRn));
               MachineInstrBuilder(*ReturnMBB.getParent(), MI)
                   .add(J->getOperand(0));
-              (*PI)->insert(J, MI);
+              Pred->insert(J, MI);
 
               MachineBasicBlock::iterator K = J--;
               K->eraseFromParent();
@@ -132,18 +131,18 @@ protected:
           } else if (!J->isTerminator() && !J->isDebugInstr())
             break;
 
-          if (J == (*PI)->begin())
+          if (J == Pred->begin())
             break;
 
           --J;
         }
 
-        if ((*PI)->canFallThrough() && (*PI)->isLayoutSuccessor(&ReturnMBB))
+        if (Pred->canFallThrough() && Pred->isLayoutSuccessor(&ReturnMBB))
           OtherReference = true;
 
         // Predecessors are stored in a vector and can't be removed here.
         if (!OtherReference && BlockChanged) {
-          PredToRemove.push_back(*PI);
+          PredToRemove.push_back(Pred);
         }
 
         if (BlockChanged)
@@ -185,12 +184,9 @@ public:
       // nothing to do.
       if (MF.size() < 2)
         return Changed;
-      
-      // We can't use a range-based for loop due to clobbering the iterator.
-      for (MachineFunction::iterator I = MF.begin(), E = MF.end(); I != E;) {
-        MachineBasicBlock &B = *I++;
+
+      for (MachineBasicBlock &B : llvm::make_early_inc_range(MF))
         Changed |= processBlock(B);
-      }
 
       return Changed;
     }

@@ -119,6 +119,6 @@ private:
   StringRef spelling;
 };
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_LIB_PARSER_TOKEN_H

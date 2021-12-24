@@ -158,27 +158,6 @@ def ElementsAttrInterface : AttrInterface<"ElementsAttr"> {
   ];
 
   string ElementsAttrInterfaceAccessors = [{
-    /// Return the attribute value at the given index. The index is expected to
-    /// refer to a valid element.
-    Attribute getValue(ArrayRef<uint64_t> index) const {
-      return getValue<Attribute>(index);
-    }
-
-    /// Return the value of type 'T' at the given index, where 'T' corresponds
-    /// to an Attribute type.
-    template <typename T>
-    std::enable_if_t<!std::is_same<T, ::mlir::Attribute>::value &&
-                     std::is_base_of<T, ::mlir::Attribute>::value>
-    getValue(ArrayRef<uint64_t> index) const {
-      return getValue(index).template dyn_cast_or_null<T>();
-    }
-
-    /// Return the value of type 'T' at the given index.
-    template <typename T>
-    T getValue(ArrayRef<uint64_t> index) const {
-      return getFlatValue<T>(getFlattenedIndex(index));
-    }
-
     /// Return the number of elements held by this attribute.
     int64_t size() const { return getNumElements(); }
 
@@ -281,6 +260,14 @@ def ElementsAttrInterface : AttrInterface<"ElementsAttr"> {
     // Value Iteration
     //===------------------------------------------------------------------===//
 
+    /// The iterator for the given element type T.
+    template <typename T, typename AttrT = ConcreteAttr>
+    using iterator = decltype(std::declval<AttrT>().template value_begin<T>());
+    /// The iterator range over the given element T.
+    template <typename T, typename AttrT = ConcreteAttr>
+    using iterator_range =
+        decltype(std::declval<AttrT>().template getValues<T>());
+
     /// Return an iterator to the first element of this attribute as a value of
     /// type `T`.
     template <typename T>
@@ -292,11 +279,8 @@ def ElementsAttrInterface : AttrInterface<"ElementsAttr"> {
     template <typename T>
     auto getValues() const {
       auto beginIt = $_attr.template value_begin<T>();
-      return llvm::make_range(beginIt, std::next(beginIt, size()));
-    }
-    /// Return the value at the given flattened index.
-    template <typename T> T getFlatValue(uint64_t index) const {
-      return *std::next($_attr.template value_begin<T>(), index);
+      return detail::ElementsAttrRange<decltype(beginIt)>(
+        Attribute($_attr).getType(), beginIt, std::next(beginIt, size()));
     }
   }] # ElementsAttrInterfaceAccessors;
 
@@ -304,7 +288,7 @@ def ElementsAttrInterface : AttrInterface<"ElementsAttr"> {
     template <typename T>
     using iterator = detail::ElementsAttrIterator<T>;
     template <typename T>
-    using iterator_range = llvm::iterator_range<iterator<T>>;
+    using iterator_range = detail::ElementsAttrRange<iterator<T>>;
 
     //===------------------------------------------------------------------===//
     // Accessors
@@ -329,8 +313,12 @@ def ElementsAttrInterface : AttrInterface<"ElementsAttr"> {
     uint64_t getFlattenedIndex(ArrayRef<uint64_t> index) const {
       return getFlattenedIndex(*this, index);
     }
-    static uint64_t getFlattenedIndex(Attribute elementsAttr,
+    static uint64_t getFlattenedIndex(Type type,
                                       ArrayRef<uint64_t> index);
+    static uint64_t getFlattenedIndex(Attribute elementsAttr,
+                                      ArrayRef<uint64_t> index) {
+      return getFlattenedIndex(elementsAttr.getType(), index);
+    }
 
     /// Returns the number of elements held by this attribute.
     int64_t getNumElements() const { return getNumElements(*this); }
@@ -350,13 +338,6 @@ def ElementsAttrInterface : AttrInterface<"ElementsAttr"> {
                                   !std::is_base_of<Attribute, T>::value,
                                   ResultT>;
 
-    /// Return the element of this attribute at the given index as a value of
-    /// type 'T'.
-    template <typename T>
-    T getFlatValue(uint64_t index) const {
-      return *std::next(value_begin<T>(), index);
-    }
-
     /// Return the splat value for this attribute. This asserts that the
     /// attribute corresponds to a splat.
     template <typename T>
@@ -368,7 +349,7 @@ def ElementsAttrInterface : AttrInterface<"ElementsAttr"> {
     /// Return the elements of this attribute as a value of type 'T'.
     template <typename T>
     DefaultValueCheckT<T, iterator_range<T>> getValues() const {
-      return iterator_range<T>(value_begin<T>(), value_end<T>());
+      return {Attribute::getType(), value_begin<T>(), value_end<T>()};
     }
     template <typename T>
     DefaultValueCheckT<T, iterator<T>> value_begin() const;
@@ -384,12 +365,12 @@ def ElementsAttrInterface : AttrInterface<"ElementsAttr"> {
       llvm::mapped_iterator<iterator<Attribute>, T (*)(Attribute)>;
     template <typename T>
     using DerivedAttrValueIteratorRange =
-      llvm::iterator_range<DerivedAttrValueIterator<T>>;
+      detail::ElementsAttrRange<DerivedAttrValueIterator<T>>;
     template <typename T, typename = DerivedAttrValueCheckT<T>>
     DerivedAttrValueIteratorRange<T> getValues() const {
       auto castFn = [](Attribute attr) { return attr.template cast<T>(); };
-      return llvm::map_range(getValues<Attribute>(),
-                             static_cast<T (*)(Attribute)>(castFn));
+      return {Attribute::getType(), llvm::map_range(getValues<Attribute>(),
+                             static_cast<T (*)(Attribute)>(castFn))};
     }
     template <typename T, typename = DerivedAttrValueCheckT<T>>
     DerivedAttrValueIterator<T> value_begin() const {
@@ -407,8 +388,10 @@ def ElementsAttrInterface : AttrInterface<"ElementsAttr"> {
     /// return the iterable range. Otherwise, return llvm::None.
     template <typename T>
     DefaultValueCheckT<T, Optional<iterator_range<T>>> tryGetValues() const {
-      if (Optional<iterator<T>> beginIt = try_value_begin<T>())
-        return iterator_range<T>(*beginIt, value_end<T>());
+      if (Optional<iterator<T>> beginIt = try_value_begin<T>()) {
+        return iterator_range<T>(Attribute::getType(), *beginIt,
+                                 value_end<T>());
+      }
       return llvm::None;
     }
     template <typename T>
@@ -418,10 +401,15 @@ def ElementsAttrInterface : AttrInterface<"ElementsAttr"> {
     /// return the iterable range. Otherwise, return llvm::None.
     template <typename T, typename = DerivedAttrValueCheckT<T>>
     Optional<DerivedAttrValueIteratorRange<T>> tryGetValues() const {
+      auto values = tryGetValues<Attribute>();
+      if (!values)
+        return llvm::None;
+
       auto castFn = [](Attribute attr) { return attr.template cast<T>(); };
-      if (auto values = tryGetValues<Attribute>())
-        return llvm::map_range(*values, static_cast<T (*)(Attribute)>(castFn));
-      return llvm::None;
+      return DerivedAttrValueIteratorRange<T>(
+        Attribute::getType(),
+        llvm::map_range(*values, static_cast<T (*)(Attribute)>(castFn))
+      );
     }
     template <typename T, typename = DerivedAttrValueCheckT<T>>
     Optional<DerivedAttrValueIterator<T>> try_value_begin() const {

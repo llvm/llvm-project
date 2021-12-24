@@ -56,7 +56,7 @@ struct Reloc {
   uint8_t length = 0;
   // The offset from the start of the subsection that this relocation belongs
   // to.
-  uint64_t offset = 0;
+  uint32_t offset = 0;
   // Adding this offset to the address of the referent symbol or subsection
   // gives the destination that this relocation refers to.
   int64_t addend = 0;

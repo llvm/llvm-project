@@ -32,7 +32,7 @@ struct LoopInvariantCodeMotion
     : public LoopInvariantCodeMotionBase<LoopInvariantCodeMotion> {
   void runOnOperation() override;
 };
-} // end anonymous namespace
+} // namespace
 
 // Checks whether the given op can be hoisted by checking that
 // - the op and any of its contained operations do not depend on SSA values
@@ -85,7 +85,7 @@ LogicalResult mlir::moveLoopInvariantCode(LoopLikeOpInterface looplike) {
 
   // Helper to check whether an operation is loop invariant wrt. SSA properties.
   auto isDefinedOutsideOfBody = [&](Value value) {
-    auto definingOp = value.getDefiningOp();
+    auto *definingOp = value.getDefiningOp();
     return (definingOp && !!willBeMovedSet.count(definingOp)) ||
            looplike.isDefinedOutsideOfLoop(value);
   };

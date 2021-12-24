@@ -5,7 +5,7 @@ endif()
 
 function(add_math_entrypoint_object name)
   # We prefer machine specific implementation if available. Hence we check
-  # that first and retrun early if we are able to add an alias target for the
+  # that first and return early if we are able to add an alias target for the
   # machine specific implementation.
   get_fq_target_name("${LIBC_TARGET_ARCHITECTURE}.${name}" fq_machine_specific_target_name)
   if(TARGET ${fq_machine_specific_target_name})
@@ -115,6 +115,8 @@ add_math_entrypoint_object(ilogbl)
 add_math_entrypoint_object(ldexp)
 add_math_entrypoint_object(ldexpf)
 add_math_entrypoint_object(ldexpl)
+
+add_math_entrypoint_object(logf)
 
 add_math_entrypoint_object(logb)
 add_math_entrypoint_object(logbf)

@@ -133,13 +133,6 @@ void PrintAddressSpaceLayout() {
   CHECK(SHADOW_SCALE >= 3 && SHADOW_SCALE <= 7);
 }
 
-static bool UNUSED __local_memprof_dyninit = [] {
-  MaybeStartBackgroudThread();
-  SetSoftRssLimitExceededCallback(MemprofSoftRssLimitExceededCallback);
-
-  return false;
-}();
-
 static void MemprofInitInternal() {
   if (LIKELY(memprof_inited))
     return;

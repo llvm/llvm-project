@@ -10,6 +10,7 @@
 #define MATH_OPS
 
 include "mlir/Dialect/Math/IR/MathBase.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/VectorInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
@@ -19,6 +20,17 @@ class Math_Op<string mnemonic, list<OpTrait> traits = []> :
     Op<Math_Dialect, mnemonic, traits # [NoSideEffect,
     DeclareOpInterfaceMethods<VectorUnrollOpInterface>] #
     ElementwiseMappable.traits>;
+
+// Base class for unary math operations on integer types. Require a operand and
+// result of the same type. This type can be an integer type, or vector or tensor
+// thereof.
+class Math_IntegerUnaryOp<string mnemonic, list<OpTrait> traits = []> :
+    Math_Op<mnemonic, traits # [SameOperandsAndResultType]> {
+  let arguments = (ins SignlessIntegerLike:$operand);
+  let results = (outs SignlessIntegerLike:$result);
+
+  let assemblyFormat = "$operand attr-dict `:` type($result)";
+}
 
 // Base class for unary math operations on floating point types. Require a
 // operand and result of the same type. This type can be a floating point type,
@@ -281,6 +293,111 @@ def Math_SinOp : Math_FloatUnaryOp<"sin"> {
 
     // Tensor element-wise sine value.
     %x = math.sin %y : tensor<4x?xf8>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// CountLeadingZerosOp
+//===----------------------------------------------------------------------===//
+
+def Math_CountLeadingZerosOp : Math_IntegerUnaryOp<"ctlz"> {
+  let summary = "counts the leading zeros an integer value";
+  let description = [{
+    The `ctlz` operation computes the number of leading zeros of an integer value.
+
+    Example:
+
+    ```mlir
+    // Scalar ctlz function value.
+    %a = math.ctlz %b : i32
+
+    // SIMD vector element-wise ctlz function value.
+    %f = math.ctlz %g : vector<4xi16>
+
+    // Tensor element-wise ctlz function value.
+    %x = math.ctlz %y : tensor<4x?xi8>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// CountTrailingZerosOp
+//===----------------------------------------------------------------------===//
+
+def Math_CountTrailingZerosOp : Math_IntegerUnaryOp<"cttz"> {
+  let summary = "counts the trailing zeros an integer value";
+  let description = [{
+    The `cttz` operation computes the number of trailing zeros of an integer value.
+
+    Example:
+
+    ```mlir
+    // Scalar cttz function value.
+    %a = math.cttz %b : i32
+
+    // SIMD vector element-wise cttz function value.
+    %f = math.cttz %g : vector<4xi16>
+
+    // Tensor element-wise cttz function value.
+    %x = math.cttz %y : tensor<4x?xi8>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// CtPopOp
+//===----------------------------------------------------------------------===//
+
+def Math_CtPopOp : Math_IntegerUnaryOp<"ctpop"> {
+  let summary = "counts the number of set bits of an integer value";
+  let description = [{
+    The `ctpop` operation computes the number of set bits of an integer value.
+
+    Example:
+
+    ```mlir
+    // Scalar ctpop function value.
+    %a = math.ctpop %b : i32
+
+    // SIMD vector element-wise ctpop function value.
+    %f = math.ctpop %g : vector<4xi16>
+
+    // Tensor element-wise ctpop function value.
+    %x = math.ctpop %y : tensor<4x?xi8>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// ErfOp
+//===----------------------------------------------------------------------===//
+
+def Math_ErfOp : Math_FloatUnaryOp<"erf"> {
+  let summary = "error function of the specified value";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `math.erf` ssa-use `:` type
+    ```
+
+    The `erf` operation computes the error function. It takes one operand
+    and returns one result of the same type. This type may be a float scalar
+    type, a vector whose element type is float, or a tensor of floats. It has
+    no standard attributes.
+
+    Example:
+
+    ```mlir
+    // Scalar error function value.
+    %a = math.erf %b : f64
+
+    // SIMD vector element-wise error function value.
+    %f = math.erf %g : vector<4xf32>
+
+    // Tensor element-wise error function value.
+    %x = math.erf %y : tensor<4x?xf8>
     ```
   }];
 }

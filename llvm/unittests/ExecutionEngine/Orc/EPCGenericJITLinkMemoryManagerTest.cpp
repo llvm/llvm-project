@@ -78,24 +78,24 @@ private:
   DenseMap<void *, sys::OwningMemoryBlock> Blocks;
 };
 
-llvm::orc::shared::detail::CWrapperFunctionResult
-testReserve(const char *ArgData, size_t ArgSize) {
+llvm::orc::shared::CWrapperFunctionResult testReserve(const char *ArgData,
+                                                      size_t ArgSize) {
   return WrapperFunction<rt::SPSSimpleExecutorMemoryManagerReserveSignature>::
       handle(ArgData, ArgSize,
              makeMethodWrapperHandler(&SimpleAllocator::reserve))
           .release();
 }
 
-llvm::orc::shared::detail::CWrapperFunctionResult
-testFinalize(const char *ArgData, size_t ArgSize) {
+llvm::orc::shared::CWrapperFunctionResult testFinalize(const char *ArgData,
+                                                       size_t ArgSize) {
   return WrapperFunction<rt::SPSSimpleExecutorMemoryManagerFinalizeSignature>::
       handle(ArgData, ArgSize,
              makeMethodWrapperHandler(&SimpleAllocator::finalize))
           .release();
 }
 
-llvm::orc::shared::detail::CWrapperFunctionResult
-testDeallocate(const char *ArgData, size_t ArgSize) {
+llvm::orc::shared::CWrapperFunctionResult testDeallocate(const char *ArgData,
+                                                         size_t ArgSize) {
   return WrapperFunction<
              rt::SPSSimpleExecutorMemoryManagerDeallocateSignature>::
       handle(ArgData, ArgSize,

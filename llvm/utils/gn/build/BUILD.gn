@@ -7,7 +7,8 @@ import("//llvm/utils/gn/build/toolchain/target_flags.gni")
 declare_args() {
   # Whether to build everything with coverage information.
   # After building with this, run tests and then run
-  #    llvm/utils/prepare-code-coverage-artifact.py  \
+  #    llvm/utils/prepare-code-coverage-artifact.py \
+  #        --compilation-dir=out/gn \
   #        .../llvm-profdata .../llvm-cov out/gn/profiles/ report/ \
   #        out/gn/bin/llvm-undname ...
   # to generate a HTML report for the binaries passed in the last line.
@@ -71,6 +72,32 @@ config("compiler_defaults") {
       if (host_os != "mac" && use_lld) {
         cflags += [ "-ggnu-pubnames" ]  # PR34820
         ldflags += [ "-Wl,--gdb-index" ]
+
+        # Use debug fission. In this mode, detailed debug information is
+        # written to a .dwo file next to each .o file instead of into the .o
+        # file directly. The linker then only links the .o files, which contain
+        # a pointer to each .dwo file. The debugger then reads debug info out
+        # of all the .dwo files instead of from the binary.
+        #
+        # (The dwp tool can link all the debug info together into a single
+        # "debug info binary", but that's not done as part of the build.)
+        #
+        # This requires `-Wl,--gdb-index` (above) to work well.
+        #
+        # With lld, this reduces link time:
+        # - in release + symbol_level=2 builds: From 2.3s to 1.3s
+        # - in debug builds: From 5.2s to 4.6s
+        #
+        # Time needed for gdb startup and setting a breakpoint is comparable,
+        # the time from from `r` to hititng a breakpoint on main goes from 4s
+        # to 2s.
+        #
+        # (macOS's linker always keeps debug info out of its output executables
+        # and debuggers there also know to load debug info from the .o files.
+        # macOS also has a debug info linker like dwp, it's called dsymutil.
+        # This happens by default, so there's no need to pass a flag there.)
+        cflags += [ "-gsplit-dwarf" ]
+        ldflags += [ "-gsplit-dwarf" ]  # Needed for ThinLTO builds.
       }
     } else if (symbol_level == 1) {
       cflags += [ "-g1" ]
@@ -79,6 +106,8 @@ config("compiler_defaults") {
       # On the other hand, gdb startup is well below 1s with and without the
       # index, and people using -g1 likely don't use a debugger. So don't use
       # the flag here.
+      # Linetables always go in the .o file, even with -gsplit-dwarf, so there's
+      # no point in passing -gsplit-dwarf here.
     }
     if (is_optimized) {
       cflags += [ "-O3" ]
@@ -226,6 +255,10 @@ config("compiler_defaults") {
     cflags += [
       "-fcoverage-mapping",
 
+      # For build determinism. Using this requires passing --compilation-dir to
+      # llvm/utils/prepare-code-coverage-artifact.py.
+      "-fcoverage-compilation-dir=.",
+
       # Using an absolute path here is lame, but it's used at test execution
       # time to generate the profiles, and lit doesn't specify a fixed folder
       # for test execution -- so this is the only way to get all profiles into
@@ -234,14 +267,6 @@ config("compiler_defaults") {
       "-fprofile-instr-generate=" +
           rebase_path("$root_build_dir/profiles/%4m.profraw"),
     ]
-    if (use_goma) {
-      # goma has a bug where it writes the server-side absolute path.
-      # Work around that.
-      # FIXME: Instead, set this to `.` for deterministic builds and pass
-      # the build dir to prepare-code-coverage-artifact.py instead.
-      cflags += [ "-fcoverage-compilation-dir=" + rebase_path(root_build_dir) ]
-    }
-
     if (host_os != "win") {
       ldflags += [ "-fprofile-instr-generate" ]
     }
@@ -265,17 +290,15 @@ config("compiler_defaults") {
       }
     }
     if (use_relative_paths_in_debug_info) {
-      cflags += [
-        "-fdebug-compilation-dir",
-        ".",
-      ]
+      cflags += [ "-fdebug-compilation-dir=." ]
     }
   }
   if (sysroot != "") {
     if (current_os == "win") {
       assert(is_clang, "sysroot only works with clang-cl as host compiler")
       cflags += [ "/winsysroot" + rebase_path(sysroot, root_build_dir) ]
-    } else if (current_os != "ios" && current_os != "mac") {
+    } else if (current_os != "ios" && current_os != "mac" &&
+               current_os != "android") {
       cflags += [ "--sysroot=" + rebase_path(sysroot, root_build_dir) ]
     }
   }
@@ -373,7 +396,8 @@ config("no_rtti") {
 config("zdefs") {
   # -Wl,-z,defs doesn't work with sanitizers.
   # https://clang.llvm.org/docs/AddressSanitizer.html
-  if (current_os != "ios" && current_os != "mac" && current_os != "win" && !(use_asan || use_tsan || use_ubsan)) {
+  if (current_os != "ios" && current_os != "mac" && current_os != "win" &&
+      !(use_asan || use_tsan || use_ubsan)) {
     ldflags = [ "-Wl,-z,defs" ]
   }
 }

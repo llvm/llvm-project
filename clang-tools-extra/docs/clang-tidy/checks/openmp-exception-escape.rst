@@ -8,9 +8,9 @@ out of the Structured Block it was thrown in.
 
 As per the OpenMP specification, a structured block is an executable statement,
 possibly compound, with a single entry at the top and a single exit at the
-bottom. Which means, ``throw`` may not be used to to 'exit' out of the
+bottom. Which means, ``throw`` may not be used to 'exit' out of the
 structured block. If an exception is not caught in the same structured block
-it was thrown in, the behaviour is undefined.
+it was thrown in, the behavior is undefined.
 
 FIXME: this check does not model SEH, ``setjmp``/``longjmp``.
 

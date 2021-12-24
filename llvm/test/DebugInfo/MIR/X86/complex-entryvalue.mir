@@ -48,6 +48,6 @@ body:             |
     frame-setup PUSH64r killed $rbp, implicit-def $rsp, implicit $rsp
     $rbp = frame-setup MOV64rr $rsp
     $rbp = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !16
-    RETQ debug-location !16
+    RET64 debug-location !16
 
 ...

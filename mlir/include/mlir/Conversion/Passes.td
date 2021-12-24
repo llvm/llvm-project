@@ -127,6 +127,41 @@ def ConvertAsyncToLLVM : Pass<"convert-async-to-llvm", "ModuleOp"> {
 }
 
 //===----------------------------------------------------------------------===//
+// BufferizationToMemRef
+//===----------------------------------------------------------------------===//
+
+def ConvertBufferizationToMemRef : Pass<"convert-bufferization-to-memref"> {
+  let summary = "Convert operations from the Bufferization dialect to the "
+                "MemRef dialect";
+  let description = [{
+
+    This pass converts bufferization operations into memref operations.
+
+    In the current state, this pass only transforms a `bufferization.clone`
+    operation into `memref.alloc` and `memref.copy` operations. This conversion
+    is needed, since some clone operations could remain after applying several
+    transformation processes. Currently, only `canonicalize` transforms clone
+    operations or even eliminates them. This can lead to errors if any clone op
+    survived after all conversion passes (starting from the bufferization
+    dialect) are performed.
+
+    See:
+    https://llvm.discourse.group/t/bufferization-error-related-to-memref-clone/4665
+
+    To avoid these errors, this pass can be performed as a last clean-up pass to
+    transform remaining operations and to proceed in other dialects (memref
+    e.g.).
+
+    Note that this pass only transforms the operation without any further
+    analyses. This pass does not consider any memory analysis or optimization
+    and hence does not resolve any memory leaks.
+
+  }];
+  let constructor = "mlir::createBufferizationToMemRefPass()";
+  let dependentDialects = ["arith::ArithmeticDialect", "memref::MemRefDialect"];
+}
+
+//===----------------------------------------------------------------------===//
 // ComplexToLLVM
 //===----------------------------------------------------------------------===//
 
@@ -192,7 +227,15 @@ def ConvertGpuOpsToROCDLOps : Pass<"convert-gpu-to-rocdl", "gpu::GPUModuleOp"> {
   let options = [
     Option<"indexBitwidth", "index-bitwidth", "unsigned",
            /*default=kDeriveIndexBitwidthFromDataLayout*/"0",
-           "Bitwidth of the index type, 0 to use size of machine word">
+           "Bitwidth of the index type, 0 to use size of machine word">,
+    Option<"runtime", "runtime", "::mlir::gpu::amd::Runtime",
+          "::mlir::gpu::amd::Runtime::Unknown",
+          "Runtime code will be run on (default is Unknown, can also use HIP or OpenCl)",
+          [{::llvm::cl::values(
+            clEnumValN(::mlir::gpu::amd::Runtime::Unknown, "unknown", "Unknown (default)"),
+            clEnumValN(::mlir::gpu::amd::Runtime::HIP, "HIP", "HIP"),
+            clEnumValN(::mlir::gpu::amd::Runtime::OpenCL, "OpenCL", "OpenCL")
+          )}]>
   ];
 }
 
@@ -700,23 +743,23 @@ def ConvertVectorToLLVM : Pass<"convert-vector-to-llvm", "ModuleOp"> {
     Option<"reassociateFPReductions", "reassociate-fp-reductions",
            "bool", /*default=*/"false",
            "Allows llvm to reassociate floating-point reductions for speed">,
-    Option<"enableIndexOptimizations", "enable-index-optimizations",
+    Option<"indexOptimizations", "enable-index-optimizations",
            "bool", /*default=*/"true",
            "Allows compiler to assume indices fit in 32-bit if that yields "
 	   "faster code">,
-    Option<"enableAMX", "enable-amx",
+    Option<"amx", "enable-amx",
            "bool", /*default=*/"false",
            "Enables the use of AMX dialect while lowering the vector "
 	   "dialect.">,
-    Option<"enableArmNeon", "enable-arm-neon",
+    Option<"armNeon", "enable-arm-neon",
            "bool", /*default=*/"false",
            "Enables the use of ArmNeon dialect while lowering the vector "
 	   "dialect.">,
-    Option<"enableArmSVE", "enable-arm-sve",
+    Option<"armSVE", "enable-arm-sve",
            "bool", /*default=*/"false",
            "Enables the use of ArmSVE dialect while lowering the vector "
        "dialect.">,
-    Option<"enableX86Vector", "enable-x86vector",
+    Option<"x86Vector", "enable-x86vector",
            "bool", /*default=*/"false",
            "Enables the use of X86Vector dialect while lowering the vector "
 	   "dialect.">

@@ -76,6 +76,7 @@ public:
 
 private:
   LoopInfo *LI = nullptr;
+  const DataLayout *DL;
 
   // Check this is a valid gather with correct alignment
   bool isLegalTypeAndAlignment(unsigned NumElements, unsigned ElemSize,
@@ -149,10 +150,10 @@ private:
   bool optimiseOffsets(Value *Offsets, BasicBlock *BB, LoopInfo *LI);
   // Pushes the given add out of the loop
   void pushOutAdd(PHINode *&Phi, Value *OffsSecondOperand, unsigned StartIndex);
-  // Pushes the given mul out of the loop
-  void pushOutMul(PHINode *&Phi, Value *IncrementPerRound,
-                  Value *OffsSecondOperand, unsigned LoopIncrement,
-                  IRBuilder<> &Builder);
+  // Pushes the given mul or shl out of the loop
+  void pushOutMulShl(unsigned Opc, PHINode *&Phi, Value *IncrementPerRound,
+                     Value *OffsSecondOperand, unsigned LoopIncrement,
+                     IRBuilder<> &Builder);
 };
 
 } // end anonymous namespace
@@ -335,14 +336,15 @@ int MVEGatherScatterLowering::computeScale(unsigned GEPElemSize,
 
 Optional<int64_t> MVEGatherScatterLowering::getIfConst(const Value *V) {
   const Constant *C = dyn_cast<Constant>(V);
-  if (C != nullptr)
+  if (C && C->getSplatValue())
     return Optional<int64_t>{C->getUniqueInteger().getSExtValue()};
   if (!isa<Instruction>(V))
     return Optional<int64_t>{};
 
   const Instruction *I = cast<Instruction>(V);
-  if (I->getOpcode() == Instruction::Add ||
-              I->getOpcode() == Instruction::Mul) {
+  if (I->getOpcode() == Instruction::Add || I->getOpcode() == Instruction::Or ||
+      I->getOpcode() == Instruction::Mul ||
+      I->getOpcode() == Instruction::Shl) {
     Optional<int64_t> Op0 = getIfConst(I->getOperand(0));
     Optional<int64_t> Op1 = getIfConst(I->getOperand(1));
     if (!Op0 || !Op1)
@@ -351,18 +353,30 @@ Optional<int64_t> MVEGatherScatterLowering::getIfConst(const Value *V) {
       return Optional<int64_t>{Op0.getValue() + Op1.getValue()};
     if (I->getOpcode() == Instruction::Mul)
       return Optional<int64_t>{Op0.getValue() * Op1.getValue()};
+    if (I->getOpcode() == Instruction::Shl)
+      return Optional<int64_t>{Op0.getValue() << Op1.getValue()};
+    if (I->getOpcode() == Instruction::Or)
+      return Optional<int64_t>{Op0.getValue() | Op1.getValue()};
   }
   return Optional<int64_t>{};
+}
+
+// Return true if I is an Or instruction that is equivalent to an add, due to
+// the operands having no common bits set.
+static bool isAddLikeOr(Instruction *I, const DataLayout &DL) {
+  return I->getOpcode() == Instruction::Or &&
+         haveNoCommonBitsSet(I->getOperand(0), I->getOperand(1), DL);
 }
 
 std::pair<Value *, int64_t>
 MVEGatherScatterLowering::getVarAndConst(Value *Inst, int TypeScale) {
   std::pair<Value *, int64_t> ReturnFalse =
       std::pair<Value *, int64_t>(nullptr, 0);
-  // At this point, the instruction we're looking at must be an add or we
-  // bail out
+  // At this point, the instruction we're looking at must be an add or an
+  // add-like-or.
   Instruction *Add = dyn_cast<Instruction>(Inst);
-  if (Add == nullptr || Add->getOpcode() != Instruction::Add)
+  if (Add == nullptr ||
+      (Add->getOpcode() != Instruction::Add && !isAddLikeOr(Add, *DL)))
     return ReturnFalse;
 
   Value *Summand;
@@ -737,10 +751,9 @@ Instruction *MVEGatherScatterLowering::tryCreateIncrementingGatScat(
 
   // The gep was in charge of making sure the offsets are scaled correctly
   // - calculate that factor so it can be applied by hand
-  DataLayout DT = I->getParent()->getParent()->getParent()->getDataLayout();
   int TypeScale =
-      computeScale(DT.getTypeSizeInBits(GEP->getOperand(0)->getType()),
-                   DT.getTypeSizeInBits(GEP->getType()) /
+      computeScale(DL->getTypeSizeInBits(GEP->getOperand(0)->getType()),
+                   DL->getTypeSizeInBits(GEP->getType()) /
                        cast<FixedVectorType>(GEP->getType())->getNumElements());
   if (TypeScale == -1)
     return nullptr;
@@ -888,11 +901,11 @@ void MVEGatherScatterLowering::pushOutAdd(PHINode *&Phi,
   Phi->removeIncomingValue(StartIndex);
 }
 
-void MVEGatherScatterLowering::pushOutMul(PHINode *&Phi,
-                                          Value *IncrementPerRound,
-                                          Value *OffsSecondOperand,
-                                          unsigned LoopIncrement,
-                                          IRBuilder<> &Builder) {
+void MVEGatherScatterLowering::pushOutMulShl(unsigned Opcode, PHINode *&Phi,
+                                             Value *IncrementPerRound,
+                                             Value *OffsSecondOperand,
+                                             unsigned LoopIncrement,
+                                             IRBuilder<> &Builder) {
   LLVM_DEBUG(dbgs() << "masked gathers/scatters: optimising mul instruction\n");
 
   // Create a new scalar add outside of the loop and transform it to a splat
@@ -901,12 +914,13 @@ void MVEGatherScatterLowering::pushOutMul(PHINode *&Phi,
         Phi->getIncomingBlock(LoopIncrement == 1 ? 0 : 1)->back());
 
   // Create a new index
-  Value *StartIndex = BinaryOperator::Create(
-      Instruction::Mul, Phi->getIncomingValue(LoopIncrement == 1 ? 0 : 1),
-      OffsSecondOperand, "PushedOutMul", InsertionPoint);
+  Value *StartIndex =
+      BinaryOperator::Create((Instruction::BinaryOps)Opcode,
+                             Phi->getIncomingValue(LoopIncrement == 1 ? 0 : 1),
+                             OffsSecondOperand, "PushedOutMul", InsertionPoint);
 
   Instruction *Product =
-      BinaryOperator::Create(Instruction::Mul, IncrementPerRound,
+      BinaryOperator::Create((Instruction::BinaryOps)Opcode, IncrementPerRound,
                              OffsSecondOperand, "Product", InsertionPoint);
   // Increment NewIndex by Product instead of the multiplication
   Instruction *NewIncrement = BinaryOperator::Create(
@@ -923,7 +937,7 @@ void MVEGatherScatterLowering::pushOutMul(PHINode *&Phi,
 
 // Check whether all usages of this instruction are as offsets of
 // gathers/scatters or simple arithmetics only used by gathers/scatters
-static bool hasAllGatScatUsers(Instruction *I) {
+static bool hasAllGatScatUsers(Instruction *I, const DataLayout &DL) {
   if (I->hasNUses(0)) {
     return false;
   }
@@ -936,8 +950,10 @@ static bool hasAllGatScatUsers(Instruction *I) {
       return Gatscat;
     } else {
       unsigned OpCode = cast<Instruction>(U)->getOpcode();
-      if ((OpCode == Instruction::Add || OpCode == Instruction::Mul) &&
-          hasAllGatScatUsers(cast<Instruction>(U))) {
+      if ((OpCode == Instruction::Add || OpCode == Instruction::Mul ||
+           OpCode == Instruction::Shl ||
+           isAddLikeOr(cast<Instruction>(U), DL)) &&
+          hasAllGatScatUsers(cast<Instruction>(U), DL)) {
         continue;
       }
       return false;
@@ -955,14 +971,15 @@ bool MVEGatherScatterLowering::optimiseOffsets(Value *Offsets, BasicBlock *BB,
   if (!isa<Instruction>(Offsets))
     return false;
   Instruction *Offs = cast<Instruction>(Offsets);
-  if (Offs->getOpcode() != Instruction::Add &&
-      Offs->getOpcode() != Instruction::Mul)
+  if (Offs->getOpcode() != Instruction::Add && !isAddLikeOr(Offs, *DL) &&
+      Offs->getOpcode() != Instruction::Mul &&
+      Offs->getOpcode() != Instruction::Shl)
     return false;
   Loop *L = LI->getLoopFor(BB);
   if (L == nullptr)
     return false;
   if (!Offs->hasOneUse()) {
-    if (!hasAllGatScatUsers(Offs))
+    if (!hasAllGatScatUsers(Offs, *DL))
       return false;
   }
 
@@ -1060,11 +1077,13 @@ bool MVEGatherScatterLowering::optimiseOffsets(Value *Offsets, BasicBlock *BB,
 
   switch (Offs->getOpcode()) {
   case Instruction::Add:
+  case Instruction::Or:
     pushOutAdd(NewPhi, OffsSecondOperand, IncrementingBlock == 1 ? 0 : 1);
     break;
   case Instruction::Mul:
-    pushOutMul(NewPhi, IncrementPerRound, OffsSecondOperand, IncrementingBlock,
-               Builder);
+  case Instruction::Shl:
+    pushOutMulShl(Offs->getOpcode(), NewPhi, IncrementPerRound,
+                  OffsSecondOperand, IncrementingBlock, Builder);
     break;
   default:
     return false;
@@ -1182,8 +1201,7 @@ bool MVEGatherScatterLowering::optimiseAddress(Value *Address, BasicBlock *BB,
   if (!GEP)
     return false;
   bool Changed = false;
-  if (GEP->hasOneUse() &&
-      dyn_cast<GetElementPtrInst>(GEP->getPointerOperand())) {
+  if (GEP->hasOneUse() && isa<GetElementPtrInst>(GEP->getPointerOperand())) {
     IRBuilder<> Builder(GEP->getContext());
     Builder.SetInsertPoint(GEP);
     Builder.SetCurrentDebugLocation(GEP->getDebugLoc());
@@ -1214,6 +1232,7 @@ bool MVEGatherScatterLowering::runOnFunction(Function &F) {
   if (!ST->hasMVEIntegerOps())
     return false;
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  DL = &F.getParent()->getDataLayout();
   SmallVector<IntrinsicInst *, 4> Gathers;
   SmallVector<IntrinsicInst *, 4> Scatters;
 

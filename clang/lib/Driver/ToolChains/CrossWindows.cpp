@@ -185,7 +185,7 @@ void tools::CrossWindows::Linker::ConstructJob(
     }
   }
 
-  if (TC.getSanitizerArgs().needsAsanRt()) {
+  if (TC.getSanitizerArgs(Args).needsAsanRt()) {
     // TODO handle /MT[d] /MD[d]
     if (Args.hasArg(options::OPT_shared)) {
       CmdArgs.push_back(TC.getCompilerRTArgString(Args, "asan_dll_thunk"));
@@ -223,7 +223,7 @@ bool CrossWindowsToolChain::isPICDefault() const {
   return getArch() == llvm::Triple::x86_64;
 }
 
-bool CrossWindowsToolChain::isPIEDefault() const {
+bool CrossWindowsToolChain::isPIEDefault(const llvm::opt::ArgList &Args) const {
   return getArch() == llvm::Triple::x86_64;
 }
 

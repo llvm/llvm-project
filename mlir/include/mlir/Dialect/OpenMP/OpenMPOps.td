@@ -139,13 +139,77 @@ def TerminatorOp : OpenMP_Op<"terminator", [Terminator]> {
 def OMP_SCHEDULE_MOD_None : StrEnumAttrCase<"none", 0>;
 def OMP_SCHEDULE_MOD_Monotonic : StrEnumAttrCase<"monotonic", 1>;
 def OMP_SCHEDULE_MOD_Nonmonotonic : StrEnumAttrCase<"nonmonotonic", 2>;
+def OMP_SCHEDULE_MOD_SIMD : StrEnumAttrCase<"simd", 3>;
 
 def ScheduleModifier : StrEnumAttr<"ScheduleModifier", "OpenMP Schedule Modifier",
                                          [OMP_SCHEDULE_MOD_None,
                                           OMP_SCHEDULE_MOD_Monotonic,
-                                          OMP_SCHEDULE_MOD_Nonmonotonic]>
+                                          OMP_SCHEDULE_MOD_Nonmonotonic,
+                                          OMP_SCHEDULE_MOD_SIMD]>
 {
     let cppNamespace = "::mlir::omp";
+}
+
+//===----------------------------------------------------------------------===//
+// 2.8.1 Sections Construct
+//===----------------------------------------------------------------------===//
+
+def SectionOp : OpenMP_Op<"section", [HasParent<"SectionsOp">]> {
+  let summary = "section directive";
+  let description = [{
+    A section operation encloses a region which represents one section in a
+    sections construct. A section op should always be surrounded by an
+    `omp.sections` operation.
+  }];
+  let regions = (region AnyRegion:$region);
+  let assemblyFormat = "$region attr-dict";
+}
+
+def SectionsOp : OpenMP_Op<"sections", [AttrSizedOperandSegments]> {
+  let summary = "sections construct";
+  let description = [{
+    The sections construct is a non-iterative worksharing construct that
+    contains `omp.section` operations. The `omp.section` operations are to be
+    distributed among and executed by the threads in a team. Each `omp.section`
+    is executed once by one of the threads in the team in the context of its
+    implicit task.
+
+    `private_vars`, `firstprivate_vars` and`lastprivate_vars` arguments are
+    variadic list of operands that specify the data sharing attributes of the
+    list of values. They are optional.
+
+    Reductions can be performed in a sections construct by specifying reduction
+    accumulator variables in `reduction_vars` and symbols referring to reduction
+    declarations in the `reductions` attribute. Each reduction is identified
+    by the accumulator it uses and accumulators must not be repeated in the same
+    reduction. The `omp.reduction` operation accepts the accumulator and a
+    partial value which is considered to be produced by the section for the
+    given reduction. If multiple values are produced for the same accumulator,
+    i.e. there are multiple `omp.reduction`s, the last value is taken. The
+    reduction declaration specifies how to combine the values from each section
+    into the final value, which is available in the accumulator after all the
+    sections complete.
+
+    The $allocators_vars and $allocate_vars parameters are a variadic list of values
+    that specify the memory allocator to be used to obtain storage for private values.
+
+    The `nowait` attribute, when present, signifies that there should be no
+    implicit barrier at the end of the construct.
+  }];
+  let arguments = (ins Variadic<AnyType>:$private_vars,
+                       Variadic<AnyType>:$firstprivate_vars,
+                       Variadic<AnyType>:$lastprivate_vars,
+                       Variadic<OpenMP_PointerLikeType>:$reduction_vars,
+                       OptionalAttr<SymbolRefArrayAttr>:$reductions,
+                       Variadic<AnyType>:$allocate_vars,
+                       Variadic<AnyType>:$allocators_vars,
+                       UnitAttr:$nowait);
+
+  let regions = (region SizedRegion<1>:$region);
+
+  let parser = [{ return parseSectionsOp(parser, result); }];
+  let printer = [{ return printSectionsOp(p, *this); }];
+  let verifier = [{ return verifySectionsOp(*this); }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -227,6 +291,7 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
              OptionalAttr<ScheduleKind>:$schedule_val,
              Optional<AnyType>:$schedule_chunk_var,
              OptionalAttr<ScheduleModifier>:$schedule_modifier,
+             UnitAttr:$simd_modifier,
              Confined<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$collapse_val,
              UnitAttr:$nowait,
              Confined<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$ordered_val,
@@ -497,6 +562,138 @@ def TaskwaitOp : OpenMP_Op<"taskwait"> {
   }];
 
   let assemblyFormat = "attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
+// 2.17.7 atomic construct
+//===----------------------------------------------------------------------===//
+
+// In the OpenMP Specification, atomic construct has an `atomic-clause` which
+// can take the values `read`, `write`, `update` and `capture`. These four
+// kinds of atomic constructs are fundamentally independent and are handled
+// separately while lowering. Having four separate operations (one for each
+// value of the clause) here decomposes handling of this construct into a
+// two-step process.
+
+def AtomicReadOp : OpenMP_Op<"atomic.read"> {
+
+  let summary = "performs an atomic read";
+
+  let description = [{
+    This operation performs an atomic read.
+
+    The operand `address` is the address from where the value is atomically
+    read.
+
+    `hint` is the value of hint (as specified in the hint clause). It is a
+    compile time constant. As the name suggests, this is just a hint for
+    optimization.
+
+    `memory_order` indicates the memory ordering behavior of the construct. It
+    can be one of `seq_cst`, `acq_rel`, `release`, `acquire` or `relaxed`.
+  }];
+
+  let arguments = (ins OpenMP_PointerLikeType:$address,
+                       DefaultValuedAttr<I64Attr, "0">:$hint,
+                       OptionalAttr<MemoryOrderKind>:$memory_order);
+  let results = (outs AnyType);
+  let parser = [{ return parseAtomicReadOp(parser, result); }];
+  let printer = [{ return printAtomicReadOp(p, *this); }];
+  let verifier = [{ return verifyAtomicReadOp(*this); }];
+}
+
+def AtomicWriteOp : OpenMP_Op<"atomic.write"> {
+
+  let summary = "performs an atomic write";
+
+  let description = [{
+    This operation performs an atomic write.
+
+    The operand `address` is the address to where the `value` is atomically
+    written w.r.t. multiple threads. The evaluation of `value` need not be
+    atomic w.r.t. the write to address. In general, the type(address) must
+    dereference to type(value).
+
+    `hint` is the value of hint (as specified in the hint clause). It is a
+    compile time constant. As the name suggests, this is just a hint for
+    optimization.
+
+    `memory_order` indicates the memory ordering behavior of the construct. It
+    can be one of `seq_cst`, `acq_rel`, `release`, `acquire` or `relaxed`.
+  }];
+
+  let arguments = (ins OpenMP_PointerLikeType:$address,
+                       AnyType:$value,
+                       DefaultValuedAttr<I64Attr, "0">:$hint,
+                       OptionalAttr<MemoryOrderKind>:$memory_order);
+  let parser = [{ return parseAtomicWriteOp(parser, result); }];
+  let printer = [{ return printAtomicWriteOp(p, *this); }];
+  let verifier = [{ return verifyAtomicWriteOp(*this); }];
+}
+
+// TODO: autogenerate from OMP.td in future if possible.
+def ATOMIC_BINOP_KIND_ADD : I64EnumAttrCase<"ADD", 0>;
+def ATOMIC_BINOP_KIND_MUL : I64EnumAttrCase<"MUL", 1>;
+def ATOMIC_BINOP_KIND_SUB : I64EnumAttrCase<"SUB", 2>;
+def ATOMIC_BINOP_KIND_DIV : I64EnumAttrCase<"DIV", 3>;
+def ATOMIC_BINOP_KIND_AND : I64EnumAttrCase<"AND", 4>;
+def ATOMIC_BINOP_KIND_OR : I64EnumAttrCase<"OR", 5>;
+def ATOMIC_BINOP_KIND_XOR : I64EnumAttrCase<"XOR", 6>;
+def ATOMIC_BINOP_KIND_SHIFT_RIGHT : I64EnumAttrCase<"SHIFTR", 7>;
+def ATOMIC_BINOP_KIND_SHIFT_LEFT : I64EnumAttrCase<"SHIFTL", 8>;
+def ATOMIC_BINOP_KIND_MAX : I64EnumAttrCase<"MAX", 9>;
+def ATOMIC_BINOP_KIND_MIN : I64EnumAttrCase<"MIN", 10>;
+def ATOMIC_BINOP_KIND_EQV : I64EnumAttrCase<"EQV", 11>;
+def ATOMIC_BINOP_KIND_NEQV : I64EnumAttrCase<"NEQV", 12>;
+
+def AtomicBinOpKindAttr : I64EnumAttr<
+    "AtomicBinOpKind", "BinOp for Atomic Updates",
+    [ATOMIC_BINOP_KIND_ADD, ATOMIC_BINOP_KIND_MUL, ATOMIC_BINOP_KIND_SUB,
+     ATOMIC_BINOP_KIND_DIV, ATOMIC_BINOP_KIND_AND, ATOMIC_BINOP_KIND_OR,
+     ATOMIC_BINOP_KIND_XOR, ATOMIC_BINOP_KIND_SHIFT_RIGHT,
+     ATOMIC_BINOP_KIND_SHIFT_LEFT, ATOMIC_BINOP_KIND_MAX,
+     ATOMIC_BINOP_KIND_MIN, ATOMIC_BINOP_KIND_EQV, ATOMIC_BINOP_KIND_NEQV]> {
+  let cppNamespace = "::mlir::omp";
+  let stringToSymbolFnName = "AtomicBinOpKindToEnum";
+  let symbolToStringFnName = "AtomicBinOpKindToString";
+}
+
+def AtomicUpdateOp : OpenMP_Op<"atomic.update"> {
+
+  let summary = "performs an atomic update";
+
+  let description = [{
+    This operation performs an atomic update.
+
+    The operands `x` and `expr` are exactly the same as the operands `x` and
+    `expr` in the OpenMP Standard. The operand `x` is the address of the
+    variable that is being updated. `x` is atomically read/written. The
+    evaluation of `expr` need not be atomic w.r.t the read or write of the
+    location designated by `x`. In general, type(x) must dereference to
+    type(expr).
+
+    The attribute `isXBinopExpr` is
+      - true when the expression is of the form `x binop expr` on RHS
+      - false when the expression is of the form `expr binop x` on RHS
+
+    The attribute `binop` is the binary operation being performed atomically.
+
+    `hint` is the value of hint (as used in the hint clause). It is a compile
+    time constant. As the name suggests, this is just a hint for optimization.
+
+    `memory_order` indicates the memory ordering behavior of the construct. It
+    can be one of `seq_cst`, `acq_rel`, `release`, `acquire` or `relaxed`.
+  }];
+
+  let arguments = (ins OpenMP_PointerLikeType:$x,
+                       AnyType:$expr,
+                       UnitAttr:$isXBinopExpr,
+                       AtomicBinOpKindAttr:$binop,
+                       DefaultValuedAttr<I64Attr, "0">:$hint,
+                       OptionalAttr<MemoryOrderKind>:$memory_order);
+  let parser = [{ return parseAtomicUpdateOp(parser, result); }];
+  let printer = [{ return printAtomicUpdateOp(p, *this); }];
+  let verifier = [{ return verifyAtomicUpdateOp(*this); }];
 }
 
 //===----------------------------------------------------------------------===//

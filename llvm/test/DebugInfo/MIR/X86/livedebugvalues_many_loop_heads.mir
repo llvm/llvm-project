@@ -191,6 +191,6 @@ body:  |
  
   bb.18:
   liveins: $rsi, $rdi, $eflags
-    RETQ
+    RET64
 
 ...

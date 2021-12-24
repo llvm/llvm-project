@@ -14,7 +14,7 @@
 
 #include "xray_interface_internal.h"
 
-#include <cstdint>
+#include <cinttypes>
 #include <cstdio>
 #include <errno.h>
 #include <limits>
@@ -52,6 +52,8 @@ static const int16_t cSledLength = 48;
 static const int16_t cSledLength = 64;
 #elif defined(__powerpc64__)
 static const int16_t cSledLength = 8;
+#elif defined(__hexagon__)
+static const int16_t cSledLength = 20;
 #else
 #error "Unsupported CPU Architecture"
 #endif /* CPU architecture */
@@ -169,7 +171,8 @@ bool patchSled(const XRaySledEntry &Sled, bool Enable,
     Success = patchTypedEvent(Enable, FuncId, Sled);
     break;
   default:
-    Report("Unsupported sled kind '%d' @%04x\n", Sled.Address, int(Sled.Kind));
+    Report("Unsupported sled kind '%" PRIu64 "' @%04x\n", Sled.Address,
+           int(Sled.Kind));
     return false;
   }
   return Success;
@@ -305,7 +308,7 @@ XRayPatchingStatus controlPatching(bool Enable) XRAY_NEVER_INSTRUMENT {
                               ? flags()->xray_page_size_override
                               : GetPageSizeCached();
   if ((PageSize == 0) || ((PageSize & (PageSize - 1)) != 0)) {
-    Report("System page size is not a power of two: %lld\n", PageSize);
+    Report("System page size is not a power of two: %zu\n", PageSize);
     return XRayPatchingStatus::FAILED;
   }
 
@@ -356,7 +359,7 @@ XRayPatchingStatus mprotectAndPatchFunction(int32_t FuncId,
                               ? flags()->xray_page_size_override
                               : GetPageSizeCached();
   if ((PageSize == 0) || ((PageSize & (PageSize - 1)) != 0)) {
-    Report("Provided page size is not a power of two: %lld\n", PageSize);
+    Report("Provided page size is not a power of two: %zu\n", PageSize);
     return XRayPatchingStatus::FAILED;
   }
 

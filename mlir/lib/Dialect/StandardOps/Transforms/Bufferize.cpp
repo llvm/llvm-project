@@ -10,8 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Transforms/Bufferize.h"
+#include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "PassDetail.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
@@ -29,18 +30,20 @@ public:
   LogicalResult
   matchAndRewrite(SelectOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (!op.condition().getType().isa<IntegerType>())
+    if (!op.getCondition().getType().isa<IntegerType>())
       return rewriter.notifyMatchFailure(op, "requires scalar condition");
 
-    rewriter.replaceOpWithNewOp<SelectOp>(
-        op, adaptor.condition(), adaptor.true_value(), adaptor.false_value());
+    rewriter.replaceOpWithNewOp<SelectOp>(op, adaptor.getCondition(),
+                                          adaptor.getTrueValue(),
+                                          adaptor.getFalseValue());
     return success();
   }
 };
 } // namespace
 
-void mlir::populateStdBufferizePatterns(BufferizeTypeConverter &typeConverter,
-                                        RewritePatternSet &patterns) {
+void mlir::populateStdBufferizePatterns(
+    bufferization::BufferizeTypeConverter &typeConverter,
+    RewritePatternSet &patterns) {
   patterns.add<BufferizeSelectOp>(typeConverter, patterns.getContext());
 }
 
@@ -48,7 +51,7 @@ namespace {
 struct StdBufferizePass : public StdBufferizeBase<StdBufferizePass> {
   void runOnFunction() override {
     auto *context = &getContext();
-    BufferizeTypeConverter typeConverter;
+    bufferization::BufferizeTypeConverter typeConverter;
     RewritePatternSet patterns(context);
     ConversionTarget target(*context);
 
@@ -61,7 +64,7 @@ struct StdBufferizePass : public StdBufferizeBase<StdBufferizePass> {
     // touch the data).
     target.addDynamicallyLegalOp<SelectOp>([&](SelectOp op) {
       return typeConverter.isLegal(op.getType()) ||
-             !op.condition().getType().isa<IntegerType>();
+             !op.getCondition().getType().isa<IntegerType>();
     });
     if (failed(
             applyPartialConversion(getFunction(), target, std::move(patterns))))

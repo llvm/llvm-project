@@ -58,12 +58,16 @@
 # RUN: not ld.lld %t -output=/no/such/file 2>&1 | FileCheck -check-prefix=ERR9 %s
 # ERR9: cannot open output file utput=/no/such/file
 
-# RUN: not ld.lld %t -z foo 2>&1 | FileCheck -check-prefix=ERR10 %s
-# RUN: not ld.lld %t -z foo --version 2>&1 | FileCheck -check-prefix=ERR10 %s
-# ERR10: unknown -z value: foo
+# RUN: ld.lld %t -z foo -o /dev/null 2>&1 | FileCheck -check-prefix=ERR10 %s
+# RUN: ld.lld %t -z foo -o /dev/null --version 2>&1 | FileCheck -check-prefix=ERR10 %s
+# ERR10: warning: unknown -z value: foo
 
 ## Check we report "unknown -z value" error even with -v.
-# RUN: not ld.lld %t -z foo -v 2>&1 | FileCheck -check-prefix=ERR10 %s
+# RUN: ld.lld %t -z foo -o /dev/null -v 2>&1 | FileCheck -check-prefix=ERR10 %s
+
+## Note: in GNU ld, --fatal-warning still leads to a warning.
+# RUN: not ld.lld %t -z foo --fatal-warnings 2>&1 | FileCheck --check-prefix=ERR10-FATAL %s
+# ERR10-FATAL: error: unknown -z value: foo
 
 # RUN: not ld.lld %t -z max-page-size 2>&1 | FileCheck -check-prefix=ERR11 %s
 # ERR11: unknown -z value: max-page-size

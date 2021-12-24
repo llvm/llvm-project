@@ -20,6 +20,7 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileOutputBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
 
 using namespace llvm;
@@ -388,6 +389,11 @@ Error objcopy::macho::executeObjcopyOnBinary(const CommonConfig &Config,
   if (!O)
     return createFileError(Config.InputFilename, O.takeError());
 
+  if (O->get()->Header.FileType == MachO::HeaderFileType::MH_PRELOAD)
+    return createStringError(std::errc::not_supported,
+                             "%s: MH_PRELOAD files are not supported",
+                             Config.InputFilename.str().c_str());
+
   if (Error E = handleArgs(Config, MachOConfig, **O))
     return createFileError(Config.InputFilename, std::move(E));
 
@@ -404,7 +410,8 @@ Error objcopy::macho::executeObjcopyOnBinary(const CommonConfig &Config,
     PageSize = 4096;
   }
 
-  MachOWriter Writer(**O, In.is64Bit(), In.isLittleEndian(), PageSize, Out);
+  MachOWriter Writer(**O, In.is64Bit(), In.isLittleEndian(),
+                     sys::path::filename(Config.OutputFilename), PageSize, Out);
   if (auto E = Writer.finalize())
     return E;
   return Writer.write();
@@ -469,9 +476,8 @@ Error objcopy::macho::executeObjcopyOnMachOUniversalBinary(
                                          **ObjOrErr, MemStream))
       return E;
 
-    std::unique_ptr<MemoryBuffer> MB =
-        std::make_unique<SmallVectorMemoryBuffer>(std::move(Buffer),
-                                                  ArchFlagName);
+    auto MB = std::make_unique<SmallVectorMemoryBuffer>(
+        std::move(Buffer), ArchFlagName, /*RequiresNullTerminator=*/false);
     Expected<std::unique_ptr<Binary>> BinaryOrErr = object::createBinary(*MB);
     if (!BinaryOrErr)
       return BinaryOrErr.takeError();

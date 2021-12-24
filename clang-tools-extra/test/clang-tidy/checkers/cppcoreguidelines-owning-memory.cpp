@@ -91,13 +91,9 @@ void test_assignment_and_initialization() {
   // FIXME:, flow analysis for the case of reassignment. Value must be released before
   owned_int6 = owned_int3; // BAD, because reassignment without resource release
 
-  auto owned_int7 = returns_owner1(); // Bad, since type deduction eliminates the owner wrapper
-  // CHECK-NOTES: [[@LINE-1]]:3: warning: initializing non-owner 'int *' with a newly created 'gsl::owner<>'
-  // CHECK-NOTES: [[@LINE-2]]:3: note: type deduction did not result in an owner
+  auto owned_int7 = returns_owner1(); // Ok, since type deduction does not eliminate the owner wrapper
 
-  const auto owned_int8 = returns_owner2(); // Bad, since type deduction eliminates the owner wrapper
-  // CHECK-NOTES: [[@LINE-1]]:3: warning: initializing non-owner 'int *const' with a newly created 'gsl::owner<>'
-  // CHECK-NOTES: [[@LINE-2]]:3: note: type deduction did not result in an owner
+  const auto owned_int8 = returns_owner2(); // Ok, since type deduction does not eliminate the owner wrapper
 
   gsl::owner<int *> owned_int9 = returns_owner1(); // Ok
   int *unowned_int3 = returns_owner1();            // Bad
@@ -285,15 +281,12 @@ void test_class_with_owner() {
   ClassWithOwner C2{A};                                                // Bad, since the owner would be initialized with an non-owner, but catched in the class
   ClassWithOwner C3{gsl::owner<ArbitraryClass *>(new ArbitraryClass)}; // Ok
 
-  const auto Owner1 = C3.buggy_but_returns_owner(); // BAD, deduces Owner1 to ArbitraryClass *const
-  // CHECK-NOTES: [[@LINE-1]]:3: warning: initializing non-owner 'ArbitraryClass *const' with a newly created 'gsl::owner<>'
-  // CHECK-NOTES: [[@LINE-2]]:3: note: type deduction did not result in an owner
+  const auto Owner1 = C3.buggy_but_returns_owner(); // Ok, deduces Owner1 to owner<ArbitraryClass *> const
 
-  auto Owner2 = C2.buggy_but_returns_owner(); // BAD, deduces Owner2 to ArbitraryClass *
-  // CHECK-NOTES: [[@LINE-1]]:3: warning: initializing non-owner 'ArbitraryClass *' with a newly created 'gsl::owner<>'
-  // CHECK-NOTES: [[@LINE-2]]:3: note: type deduction did not result in an owner
+  auto Owner2 = C2.buggy_but_returns_owner(); // Ok, deduces Owner2 to owner<ArbitraryClass *>
 
-  Owner2 = &A; // Ok, since type deduction did NOT result in owner<int*>
+  Owner2 = &A; // BAD, since type deduction resulted in owner<ArbitraryClass *>
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: expected assignment source to be of type 'gsl::owner<>'; got 'ArbitraryClass *'
 
   gsl::owner<ArbitraryClass *> Owner3 = C1.buggy_but_returns_owner(); // Ok, still an owner
   Owner3 = &A;                                                        // Bad, since assignment of non-owner to owner

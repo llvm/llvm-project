@@ -260,34 +260,12 @@ define <4 x i32> @cmp_sel_0_or_1_vec(<4 x i32> %x, <4 x i32> %y) {
 define <2 x i37> @ossfuzz21167(<2 x i37> %x, <2 x i37> %y) {
 ; SSE-LABEL: ossfuzz21167:
 ; SSE:       # %bb.0: # %BB
-; SSE-NEXT:    psllq $27, %xmm1
-; SSE-NEXT:    movdqa %xmm1, %xmm0
-; SSE-NEXT:    psrad $27, %xmm0
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,3,2,3]
-; SSE-NEXT:    psrlq $27, %xmm1
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; SSE-NEXT:    movdqa {{.*#+}} xmm0 = [2147483648,2147483648]
-; SSE-NEXT:    pxor %xmm0, %xmm1
-; SSE-NEXT:    movdqa %xmm1, %xmm2
-; SSE-NEXT:    pcmpgtd %xmm0, %xmm2
-; SSE-NEXT:    pcmpeqd %xmm0, %xmm1
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; SSE-NEXT:    pand %xmm2, %xmm1
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[1,1,3,3]
-; SSE-NEXT:    por %xmm1, %xmm0
-; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    xorps %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: ossfuzz21167:
 ; AVX:       # %bb.0: # %BB
-; AVX-NEXT:    vpsllq $27, %xmm1, %xmm0
-; AVX-NEXT:    vpsrad $27, %xmm0, %xmm1
-; AVX-NEXT:    vpsrlq $27, %xmm0, %xmm0
-; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3],xmm0[4,5],xmm1[6,7]
-; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpsrlq $63, %xmm0, %xmm0
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 BB:
   %c0 = icmp sgt <2 x i37> %y, zeroinitializer

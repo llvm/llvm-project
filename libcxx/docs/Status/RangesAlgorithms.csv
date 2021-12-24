@@ -1,0 +1,100 @@
+Category,Algorithm,Assignee,CL,Complete
+Search,any_of,Christopher Di Bella,`D105793 <https://llvm.org/D105793>`_
+Search,all_of,Christopher Di Bella,`D105793 <https://llvm.org/D105793>`_
+Search,none_of,Christopher Di Bella,`D105793 <https://llvm.org/D105793>`_
+Search,find,Christopher Di Bella,`D105456 <https://llvm.org/D105456>`_
+Search,find_if,Christopher Di Bella,`D105792 <https://llvm.org/D105792>`_
+Search,find_if_not,Christopher Di Bella,`D105792 <https://llvm.org/D105792>`_
+Search,find_first_of,Not assigned,n/a,Not started
+Search,adjacent_find,Not assigned,n/a,Not started
+Search,mismatch,Not assigned,n/a,Not started
+Search,equal,Not assigned,n/a,Not started
+Search,lexicographical_compare,Not assigned,n/a,Not started
+Search,partition_point,Christopher Di Bella,`D105794 <https://llvm.org/D105794>`_,Under review
+Search,lower_bound,Christopher Di Bella,`D105795 <https://llvm.org/D105795>`_,Under review
+Search,upper_bound,Christopher Di Bella,`D105795 <https://llvm.org/D105795>`_,Under review
+Search,equal_range,Christopher Di Bella,n/a,Not started
+Search,binary_search,Christopher Di Bella,n/a,Not started
+Search,min,Not assigned,n/a,Not started
+Search,max,Not assigned,n/a,Not started
+Search,minmax,Not assigned,n/a,Not started
+Search,min_element,Not assigned,n/a,Not started
+Search,max_element,Not assigned,n/a,Not started
+Search,minmax_element,Not assigned,n/a,Not started
+Search,count,Not assigned,n/a,Not started
+Search,count_if,Not assigned,n/a,Not started
+Search,search,Not assigned,n/a,Not started
+Search,search_n,Not assigned,n/a,Not started
+Search,find_end,Not assigned,n/a,Not started
+Read-only,is_partitioned,Christopher Di Bella,`D105794 <https://llvm.org/D105794>`_,Under review
+Read-only,is_sorted,Not assigned,n/a,Not started
+Read-only,is_sorted_unitl,Not assigned,n/a,Not started
+Read-only,includes,Not assigned,n/a,Not started
+Read-only,is_heap,Not assigned,n/a,Not started
+Read-only,is_heap_until,Not assigned,n/a,Not started
+Read-only,clamp,Not assigned,n/a,Not started
+Read-only,is_permutation,Not assigned,n/a,Not started
+Read-only,for_each,Not assigned,n/a,Not started
+Read-only,for_each_n,Not assigned,n/a,Not started
+Write,copy,Not assigned,n/a,Not started
+Write,copy_if,Not assigned,n/a,Not started
+Write,copy_n,Not assigned,n/a,Not started
+Write,copy_backward,Not assigned,n/a,Not started
+Write,move,Not assigned,n/a,Not started
+Write,move_backward,Not assigned,n/a,Not started
+Write,fill,Not assigned,n/a,Not started
+Write,fill_n,Not assigned,n/a,Not started
+Write,transform,Not assigned,n/a,Not started
+Write,generate,Not assigned,n/a,Not started
+Write,generate_nNot assigned,n/a,Not started
+Write,remove_copy,Not assigned,n/a,Not started
+Write,remove_copy_if,Not assigned,n/a,Not started
+Write,replace,Not assigned,n/a,Not started
+Write,replace_if,Not assigned,n/a,Not started
+Write,replace_copy,Not assigned,n/a,Not started
+Write,replace_copy_if,Not assigned,n/a,Not started
+Write,swap_ranges,Not assigned,n/a,Not started
+Write,reverse_copy,Not assigned,n/a,Not started
+Write,rotate_copy,Not assigned,n/a,Not started
+Write,sample,Not assigned,n/a,Not started
+Write,unique_copy,Not assigned,n/a,Not started
+Write,partition_copy,Not assigned,n/a,Not started
+Write,partial_sort_copy,Not assigned,n/a,Not started
+Merge,merge,Not assigned,n/a,Not started
+Merge,set_difference,Not assigned,n/a,Not started
+Merge,set_intersection,Not assigned,n/a,Not started
+Merge,set_symmetric_difference,Not assigned,n/a,Not started
+Merge,set_union,Not assigned,n/a,Not started
+Permutation,remove,Not assigned,n/a,Not started
+Permutation,remove_if,Not assigned,n/a,Not started
+Permutation,reverse,Not assigned,n/a,Not started
+Permutation,rotate,Not assigned,n/a,Not started
+Permutation,shuffle,Not assigned,n/a,Not started
+Permutation,unique,Not assigned,n/a,Not started
+Permutation,partition,Not assigned,n/a,Not started
+Permutation,stable_partition,Not assigned,n/a,Not started
+Permutation,sort,Not assigned,n/a,Not started
+Permutation,stable_sort,Not assigned,n/a,Not started
+Permutation,partial_sort,Not assigned,n/a,Not started
+Permutation,nth_element,Not assigned,n/a,Not started
+Permutation,inplace_merge,Not assigned,n/a,Not started
+Permutation,make_heap,Not assigned,n/a,Not started
+Permutation,push_heap,Not assigned,n/a,Not started
+Permutation,pop_heap,Not assigned,n/a,Not started
+Permutation,sort_heap,Not assigned,n/a,Not started
+Permutation,prev_permutation,Not assigned,n/a,Not started
+Permutation,next_permutation,Not assigned,n/a,Not started
+Uninitialised memory,uninitialized_copy,Konstantin Varlamov,n/a,Not started
+Uninitialised memory,uninitialized_copy_n,Konstantin Varlamov,n/a,Not started
+Uninitialised memory,uninitialized_fill,Konstantin Varlamov,`D115626 <https://llvm.org/D115626>`_,✅
+Uninitialised memory,uninitialized_fill_n,Konstantin Varlamov,`D115626 <https://llvm.org/D115626>`_,✅
+Uninitialised memory,uninitialized_move,Konstantin Varlamov,n/a,Not started
+Uninitialised memory,uninitialized_move_n,Konstantin Varlamov,n/a,Not started
+Uninitialised memory,uninitialized_default_construct,Konstantin Varlamov,`D115315 <https://llvm.org/D115315>`_,✅
+Uninitialised memory,uninitialized_default_construct_n,Konstantin Varlamov,`D115315 <https://llvm.org/D115315>`_,✅
+Uninitialised memory,uninitialized_value_construct,Konstantin Varlamov,`D115626 <https://llvm.org/D115626>`_,✅
+Uninitialised memory,uninitialized_value_construct_n,Konstantin Varlamov,`D115626 <https://llvm.org/D115626>`_,✅
+Uninitialised memory,destroy,Konstantin Varlamov,n/a,Not started
+Uninitialised memory,destroy_n,Konstantin Varlamov,n/a,Not started
+Uninitialised memory,destroy_at,Konstantin Varlamov,n/a,Not started
+Uninitialised memory,construct_at,Konstantin Varlamov,n/a,Not started

@@ -212,6 +212,14 @@ void ProcessLaunchInfo::SetDetachOnError(bool enable) {
 
 llvm::Error ProcessLaunchInfo::SetUpPtyRedirection() {
   Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS);
+
+  bool stdin_free = GetFileActionForFD(STDIN_FILENO) == nullptr;
+  bool stdout_free = GetFileActionForFD(STDOUT_FILENO) == nullptr;
+  bool stderr_free = GetFileActionForFD(STDERR_FILENO) == nullptr;
+  bool any_free = stdin_free || stdout_free || stderr_free;
+  if (!any_free)
+    return llvm::Error::success();
+
   LLDB_LOG(log, "Generating a pty to use for stdin/out/err");
 
   int open_flags = O_RDWR | O_NOCTTY;
@@ -226,19 +234,13 @@ llvm::Error ProcessLaunchInfo::SetUpPtyRedirection() {
 
   const FileSpec secondary_file_spec(m_pty->GetSecondaryName());
 
-  // Only use the secondary tty if we don't have anything specified for
-  // input and don't have an action for stdin
-  if (GetFileActionForFD(STDIN_FILENO) == nullptr)
+  if (stdin_free)
     AppendOpenFileAction(STDIN_FILENO, secondary_file_spec, true, false);
 
-  // Only use the secondary tty if we don't have anything specified for
-  // output and don't have an action for stdout
-  if (GetFileActionForFD(STDOUT_FILENO) == nullptr)
+  if (stdout_free)
     AppendOpenFileAction(STDOUT_FILENO, secondary_file_spec, false, true);
 
-  // Only use the secondary tty if we don't have anything specified for
-  // error and don't have an action for stderr
-  if (GetFileActionForFD(STDERR_FILENO) == nullptr)
+  if (stderr_free)
     AppendOpenFileAction(STDERR_FILENO, secondary_file_spec, false, true);
   return llvm::Error::success();
 }

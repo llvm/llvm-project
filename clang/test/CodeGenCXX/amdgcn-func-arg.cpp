@@ -33,8 +33,8 @@ void func_with_indirect_arg(A a) {
 // CHECK-LABEL: @_Z22test_indirect_arg_autov(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[A:%.*]] = alloca [[CLASS_A:%.*]], align 4, addrspace(5)
-// CHECK-NEXT:    [[A_ASCAST:%.*]] = addrspacecast [[CLASS_A]] addrspace(5)* [[A]] to %class.A*
 // CHECK-NEXT:    [[AGG_TMP:%.*]] = alloca [[CLASS_A]], align 4, addrspace(5)
+// CHECK-NEXT:    [[A_ASCAST:%.*]] = addrspacecast [[CLASS_A]] addrspace(5)* [[A]] to %class.A*
 // CHECK-NEXT:    [[AGG_TMP_ASCAST:%.*]] = addrspacecast [[CLASS_A]] addrspace(5)* [[AGG_TMP]] to %class.A*
 // CHECK-NEXT:    call void @_ZN1AC1Ev(%class.A* nonnull align 4 dereferenceable(4) [[A_ASCAST]])
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast %class.A* [[AGG_TMP_ASCAST]] to i8*
@@ -85,8 +85,8 @@ void func_with_byval_arg(B b) {
 // CHECK-LABEL: @_Z19test_byval_arg_autov(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[B:%.*]] = alloca [[CLASS_B:%.*]], align 4, addrspace(5)
-// CHECK-NEXT:    [[B_ASCAST:%.*]] = addrspacecast [[CLASS_B]] addrspace(5)* [[B]] to %class.B*
 // CHECK-NEXT:    [[AGG_TMP:%.*]] = alloca [[CLASS_B]], align 4, addrspace(5)
+// CHECK-NEXT:    [[B_ASCAST:%.*]] = addrspacecast [[CLASS_B]] addrspace(5)* [[B]] to %class.B*
 // CHECK-NEXT:    [[AGG_TMP_ASCAST:%.*]] = addrspacecast [[CLASS_B]] addrspace(5)* [[AGG_TMP]] to %class.B*
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast %class.B* [[AGG_TMP_ASCAST]] to i8*
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast %class.B* [[B_ASCAST]] to i8*

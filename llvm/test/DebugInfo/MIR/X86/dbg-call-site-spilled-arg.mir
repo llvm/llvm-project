@@ -3,7 +3,7 @@
 # RUN: llc -emit-call-site-info -debug-entry-values -start-after=machineverifier -filetype=obj %s -o - | llvm-dwarfdump - | FileCheck %s
 # 
 # Command:
-# $ ~/src/builds/llvm-project-master-RA/bin/clang -g -Xclang -femit-debug-entry-values -O2 -c -o spill.o spill.cc -mllvm -stop-before=machineverifier -o spill.mir
+# $ ~/src/builds/llvm-project-main-RA/bin/clang -g -Xclang -femit-debug-entry-values -O2 -c -o spill.o spill.cc -mllvm -stop-before=machineverifier -o spill.mir
 #
 # Source:
 ## extern void callee(int);
@@ -172,6 +172,6 @@ body:             |
     $r14 = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !20
     $r15 = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !20
     $rbp = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !20
-    RETQ debug-location !20
+    RET64 debug-location !20
 
 ...

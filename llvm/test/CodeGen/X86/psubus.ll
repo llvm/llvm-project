@@ -47,6 +47,22 @@ define <8 x i16> @ashr_xor_and(<8 x i16> %x) nounwind {
   ret <8 x i16> %res
 }
 
+define <8 x i16> @ashr_add_and(<8 x i16> %x) nounwind {
+; SSE-LABEL: ashr_add_and:
+; SSE:       # %bb.0:
+; SSE-NEXT:    psubusw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: ashr_add_and:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpsubusw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %signsplat = ashr <8 x i16> %x, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
+  %flipsign = add <8 x i16> %x, <i16 undef, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768>
+  %res = and <8 x i16> %signsplat, %flipsign
+  ret <8 x i16> %res
+}
+
 ; negative test - extra uses may lead to extra instructions when custom-lowered
 
 define <16 x i8> @ashr_xor_and_commute_uses(<16 x i8> %x, <16 x i8>* %p1, <16 x i8>* %p2) nounwind {
@@ -114,6 +130,47 @@ define <4 x i32> @ashr_xor_and_custom(<4 x i32> %x) nounwind {
 ; AVX512-NEXT:    retq
   %signsplat = ashr <4 x i32> %x, <i32 undef, i32 31, i32 31, i32 31>
   %flipsign = xor <4 x i32> %x, <i32 2147483648, i32 2147483648, i32 2147483648, i32 2147483648>
+  %res = and <4 x i32> %flipsign, %signsplat
+  ret <4 x i32> %res
+}
+
+define <4 x i32> @ashr_add_and_custom(<4 x i32> %x) nounwind {
+; SSE2OR3-LABEL: ashr_add_and_custom:
+; SSE2OR3:       # %bb.0:
+; SSE2OR3-NEXT:    movdqa %xmm0, %xmm1
+; SSE2OR3-NEXT:    psrad $31, %xmm1
+; SSE2OR3-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2OR3-NEXT:    pand %xmm1, %xmm0
+; SSE2OR3-NEXT:    retq
+;
+; SSE41-LABEL: ashr_add_and_custom:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [2147483648,2147483648,2147483648,2147483648]
+; SSE41-NEXT:    pmaxud %xmm1, %xmm0
+; SSE41-NEXT:    psubd %xmm1, %xmm0
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: ashr_add_and_custom:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [2147483648,2147483648,2147483648,2147483648]
+; AVX1-NEXT:    vpmaxud %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: ashr_add_and_custom:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [2147483648,2147483648,2147483648,2147483648]
+; AVX2-NEXT:    vpmaxud %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: ashr_add_and_custom:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsrad $31, %xmm0, %xmm1
+; AVX512-NEXT:    vpternlogd $72, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm0
+; AVX512-NEXT:    retq
+  %signsplat = ashr <4 x i32> %x, <i32 undef, i32 31, i32 31, i32 31>
+  %flipsign = add <4 x i32> %x, <i32 2147483648, i32 2147483648, i32 2147483648, i32 2147483648>
   %res = and <4 x i32> %flipsign, %signsplat
   ret <4 x i32> %res
 }
@@ -364,6 +421,38 @@ define <16 x i16> @ashr_xor_and_v16i16(<16 x i16> %x) nounwind {
 ; AVX512-NEXT:    retq
   %signsplat = ashr <16 x i16> %x, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
   %flipsign = xor <16 x i16> %x, <i16 undef, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768>
+  %res = and <16 x i16> %signsplat, %flipsign
+  ret <16 x i16> %res
+}
+
+define <16 x i16> @ashr_add_and_v16i16(<16 x i16> %x) nounwind {
+; SSE-LABEL: ashr_add_and_v16i16:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [32768,32768,32768,32768,32768,32768,32768,32768]
+; SSE-NEXT:    psubusw %xmm2, %xmm0
+; SSE-NEXT:    psubusw %xmm2, %xmm1
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: ashr_add_and_v16i16:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [32768,32768,32768,32768,32768,32768,32768,32768]
+; AVX1-NEXT:    vpsubusw %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpsubusw %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: ashr_add_and_v16i16:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpsubusw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: ashr_add_and_v16i16:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsubusw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX512-NEXT:    retq
+  %signsplat = ashr <16 x i16> %x, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
+  %flipsign = add <16 x i16> %x, <i16 undef, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768>
   %res = and <16 x i16> %signsplat, %flipsign
   ret <16 x i16> %res
 }

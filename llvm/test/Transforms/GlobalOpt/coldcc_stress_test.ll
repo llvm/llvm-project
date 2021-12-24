@@ -1,5 +1,5 @@
-; RUN: opt < %s -globalopt -S -enable-coldcc-stress-test -mtriple=powerpc64le-unknown-linux-gnu | FileCheck %s -check-prefix=COLDCC
-; RUN: opt < %s -globalopt -S | FileCheck %s -check-prefix=CHECK
+; RUN: opt < %s -passes=globalopt -S -enable-coldcc-stress-test -mtriple=powerpc64le-unknown-linux-gnu | FileCheck %s -check-prefix=COLDCC
+; RUN: opt < %s -passes=globalopt -S | FileCheck %s -check-prefix=CHECK
 
 define internal i32 @callee_default(i32* %m) {
 ; COLDCC-LABEL: define internal coldcc i32 @callee_default

@@ -518,7 +518,7 @@ static void PrintTagInfoAroundAddr(tag_t *tag_ptr, uptr num_rows,
   InternalScopedString s;
   for (tag_t *row = beg_row; row < end_row; row += row_len) {
     s.append("%s", row == center_row_beg ? "=>" : "  ");
-    s.append("%p:", row);
+    s.append("%p:", (void *)row);
     for (uptr i = 0; i < row_len; i++) {
       s.append("%s", row + i == tag_ptr ? "[" : " ");
       print_tag(s, &row[i]);
@@ -702,12 +702,33 @@ void ReportTagMismatch(StackTrace *stack, uptr tagged_addr, uptr access_size,
   tag_t mem_tag = *tag_ptr;
 
   Printf("%s", d.Access());
-  Printf("%s of size %zu at %p tags: %02x/%02x (ptr/mem) in thread T%zd\n",
-         is_store ? "WRITE" : "READ", access_size, untagged_addr, ptr_tag,
-         mem_tag, t->unique_id());
+  if (mem_tag && mem_tag < kShadowAlignment) {
+    tag_t *granule_ptr = reinterpret_cast<tag_t *>((untagged_addr + offset) &
+                                                   ~(kShadowAlignment - 1));
+    // If offset is 0, (untagged_addr + offset) is not aligned to granules.
+    // This is the offset of the leftmost accessed byte within the bad granule.
+    u8 in_granule_offset = (untagged_addr + offset) & (kShadowAlignment - 1);
+    tag_t short_tag = granule_ptr[kShadowAlignment - 1];
+    // The first mismatch was a short granule that matched the ptr_tag.
+    if (short_tag == ptr_tag) {
+      // If the access starts after the end of the short granule, then the first
+      // bad byte is the first byte of the access; otherwise it is the first
+      // byte past the end of the short granule
+      if (mem_tag > in_granule_offset) {
+        offset += mem_tag - in_granule_offset;
+      }
+    }
+    Printf(
+        "%s of size %zu at %p tags: %02x/%02x(%02x) (ptr/mem) in thread T%zd\n",
+        is_store ? "WRITE" : "READ", access_size, untagged_addr, ptr_tag,
+        mem_tag, short_tag, t->unique_id());
+  } else {
+    Printf("%s of size %zu at %p tags: %02x/%02x (ptr/mem) in thread T%zd\n",
+           is_store ? "WRITE" : "READ", access_size, untagged_addr, ptr_tag,
+           mem_tag, t->unique_id());
+  }
   if (offset != 0)
-    Printf("Invalid access starting at offset [%zu, %zu)\n", offset,
-           Min(access_size, static_cast<uptr>(offset) + (1 << kShadowScale)));
+    Printf("Invalid access starting at offset %zu\n", offset);
   Printf("%s", d.Default());
 
   stack->Print();

@@ -24,14 +24,14 @@ char t1 () {
   return '0';
 }
 
-// just a sanity test, the same behavior as t1()
+// just a basic correctness test, the same behavior as t1()
 char t2 () {
   *ptr() = 'c';
   return '0';
 }
 
 // Each of the tests below is repeated with pointers as well as references.
-// This is mostly a sanity check, but then again, both should work!
+// This is mostly a basic correctness check, but then again, both should work!
 char t3 () {
   char& r = ref();
   r = 'c'; // no-warning

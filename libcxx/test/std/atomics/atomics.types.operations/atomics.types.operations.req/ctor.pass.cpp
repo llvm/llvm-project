@@ -5,8 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// UNSUPPORTED: libcpp-has-no-threads
+
 // UNSUPPORTED: c++03
 
 // <atomic>
@@ -40,10 +39,6 @@ struct TestFunc {
     }
     {
       constexpr Atomic a{t};
-      assert(a == t);
-    }
-    {
-      constexpr Atomic a = ATOMIC_VAR_INIT(t);
       assert(a == t);
     }
   }

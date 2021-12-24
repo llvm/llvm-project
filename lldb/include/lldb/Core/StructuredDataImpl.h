@@ -29,6 +29,9 @@ public:
 
   StructuredDataImpl(const StructuredDataImpl &rhs) = default;
 
+  StructuredDataImpl(StructuredData::ObjectSP obj)
+      : m_data_sp(std::move(obj)) {}
+
   StructuredDataImpl(const lldb::EventSP &event_sp)
       : m_plugin_wp(
             EventDataStructuredData::GetPluginFromEvent(event_sp.get())),
@@ -151,6 +154,8 @@ public:
     }
     return (::snprintf(dst, dst_len, "%s", result.data()));
   }
+
+  StructuredData::ObjectSP GetObjectSP() const { return m_data_sp; }
 
 private:
   lldb::StructuredDataPluginWP m_plugin_wp;

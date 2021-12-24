@@ -1,4 +1,4 @@
-//===------------------ directory_iterator.cpp ----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "filesystem"
 #include "__config"
+#include "filesystem"
+#include "stack"
 #if defined(_LIBCPP_WIN32API)
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX

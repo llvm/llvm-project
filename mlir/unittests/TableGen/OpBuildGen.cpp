@@ -15,7 +15,6 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
-#include "mlir/IR/Identifier.h"
 #include "gmock/gmock.h"
 #include <vector>
 
@@ -63,7 +62,8 @@ protected:
 
     EXPECT_EQ(op->getAttrs().size(), attrs.size());
     for (unsigned idx : llvm::seq<unsigned>(0U, attrs.size()))
-      EXPECT_EQ(op->getAttr(attrs[idx].first.strref()), attrs[idx].second);
+      EXPECT_EQ(op->getAttr(attrs[idx].getName().strref()),
+                attrs[idx].getValue());
 
     concreteOp.erase();
   }
@@ -217,6 +217,13 @@ TEST_F(
     OpBuildGenTest,
     BuildMethodsSameOperandsAndResultTypeAndInferOpTypeInterfaceSuppression) {
   testSingleVariadicInputInferredType<test::TableGenBuildOp5>();
+}
+
+TEST_F(OpBuildGenTest, BuildMethodsRegionsAndInferredType) {
+  auto op = builder.create<test::TableGenBuildOp6>(
+      loc, ValueRange{*cstI32, *cstF32}, /*attributes=*/noAttrs);
+  ASSERT_EQ(op->getNumRegions(), 1u);
+  verifyOp(std::move(op), {i32Ty}, {*cstI32, *cstF32}, noAttrs);
 }
 
 } // namespace mlir

@@ -14,7 +14,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Globals:
 @global = global i32 0, align 4
 @dyn_init_global = global i32 0, align 4
-@blacklisted_global = global i32 0, align 4
+@blocked_global = global i32 0, align 4
 @_ZZ4funcvE10static_var = internal global i32 0, align 4
 @.str = private unnamed_addr constant [14 x i8] c"Hello, world!\00", align 1
 @llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__sub_I_asan_globals.cpp, i8* null }]
@@ -86,7 +86,7 @@ attributes #1 = { nounwind sanitize_address "less-precise-fpmad"="false" "frame-
 
 !0 = !{i32* @global, !6, !"global", i1 false, i1 false}
 !1 = !{i32* @dyn_init_global, !7, !"dyn_init_global", i1 true, i1 false}
-!2 = !{i32* @blacklisted_global, null, null, i1 false, i1 true}
+!2 = !{i32* @blocked_global, null, null, i1 false, i1 true}
 !3 = !{i32* @_ZZ4funcvE10static_var, !8, !"static_var", i1 false, i1 false}
 !4 = !{[14 x i8]* @.str, !9, !"<string literal>", i1 false, i1 false}
 

@@ -149,7 +149,8 @@ enum RISCVExtension : uint8_t {
 class RVVIntrinsic {
 
 private:
-  std::string Name; // Builtin name
+  std::string BuiltinName; // Builtin name
+  std::string Name;        // C intrinsic name.
   std::string MangledName;
   std::string IRName;
   bool IsMask;
@@ -176,6 +177,7 @@ public:
                StringRef RequiredExtension, unsigned NF);
   ~RVVIntrinsic() = default;
 
+  StringRef getBuiltinName() const { return BuiltinName; }
   StringRef getName() const { return Name; }
   StringRef getMangledName() const { return MangledName; }
   bool hasVL() const { return HasVL; }
@@ -188,6 +190,9 @@ public:
   StringRef getManualCodegen() const { return ManualCodegen; }
   uint8_t getRISCVExtensions() const { return RISCVExtensions; }
   unsigned getNF() const { return NF; }
+  const std::vector<int64_t> &getIntrinsicTypes() const {
+    return IntrinsicTypes;
+  }
 
   // Return the type string for a BUILTIN() macro in Builtins.def.
   std::string getBuiltinTypeStr() const;
@@ -764,8 +769,9 @@ RVVIntrinsic::RVVIntrinsic(StringRef NewName, StringRef Suffix,
       HasNoMaskedOverloaded(HasNoMaskedOverloaded), HasAutoDef(HasAutoDef),
       ManualCodegen(ManualCodegen.str()), NF(NF) {
 
-  // Init Name and MangledName
-  Name = NewName.str();
+  // Init BuiltinName, Name and MangledName
+  BuiltinName = NewName.str();
+  Name = BuiltinName;
   if (NewMangledName.empty())
     MangledName = NewName.split("_").first.str();
   else
@@ -775,8 +781,10 @@ RVVIntrinsic::RVVIntrinsic(StringRef NewName, StringRef Suffix,
   if (!MangledSuffix.empty())
     MangledName += "_" + MangledSuffix.str();
   if (IsMask) {
+    BuiltinName += "_m";
     Name += "_m";
   }
+
   // Init RISC-V extensions
   for (const auto &T : OutInTypes) {
     if (T->isFloatVector(16) || T->isFloat(16))
@@ -854,7 +862,7 @@ void RVVIntrinsic::emitCodeGenSwitchBody(raw_ostream &OS) const {
 
 void RVVIntrinsic::emitIntrinsicFuncDef(raw_ostream &OS) const {
   OS << "__attribute__((__clang_builtin_alias__(";
-  OS << "__builtin_rvv_" << getName() << ")))\n";
+  OS << "__builtin_rvv_" << getBuiltinName() << ")))\n";
   OS << OutputType->getTypeStr() << " " << getName() << "(";
   // Emit function arguments
   if (!InputTypes.empty()) {
@@ -867,7 +875,7 @@ void RVVIntrinsic::emitIntrinsicFuncDef(raw_ostream &OS) const {
 
 void RVVIntrinsic::emitMangledFuncDef(raw_ostream &OS) const {
   OS << "__attribute__((__clang_builtin_alias__(";
-  OS << "__builtin_rvv_" << getName() << ")))\n";
+  OS << "__builtin_rvv_" << getBuiltinName() << ")))\n";
   OS << OutputType->getTypeStr() << " " << getMangledName() << "(";
   // Emit function arguments
   if (!InputTypes.empty()) {
@@ -973,8 +981,7 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
     return A->getRISCVExtensions() < B->getRISCVExtensions();
   });
 
-  OS << "#define __rvv_ai static __inline__ "
-        "__attribute__((__always_inline__, __nodebug__))\n";
+  OS << "#define __rvv_ai static __inline__\n";
 
   // Print intrinsic functions with macro
   emitArchMacroAndBody(Defs, OS, [](raw_ostream &OS, const RVVIntrinsic &Inst) {
@@ -988,7 +995,7 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
 
   // Print Overloaded APIs
   OS << "#define __rvv_aio static __inline__ "
-        "__attribute__((__always_inline__, __nodebug__, __overloadable__))\n";
+        "__attribute__((__overloadable__))\n";
 
   emitArchMacroAndBody(Defs, OS, [](raw_ostream &OS, const RVVIntrinsic &Inst) {
     if (!Inst.isMask() && !Inst.hasNoMaskedOverloaded())
@@ -1009,13 +1016,31 @@ void RVVEmitter::createBuiltins(raw_ostream &OS) {
   std::vector<std::unique_ptr<RVVIntrinsic>> Defs;
   createRVVIntrinsics(Defs);
 
+  // Map to keep track of which builtin names have already been emitted.
+  StringMap<RVVIntrinsic *> BuiltinMap;
+
   OS << "#if defined(TARGET_BUILTIN) && !defined(RISCVV_BUILTIN)\n";
   OS << "#define RISCVV_BUILTIN(ID, TYPE, ATTRS) TARGET_BUILTIN(ID, TYPE, "
         "ATTRS, \"experimental-v\")\n";
   OS << "#endif\n";
   for (auto &Def : Defs) {
-    OS << "RISCVV_BUILTIN(__builtin_rvv_" << Def->getName() << ",\""
-       << Def->getBuiltinTypeStr() << "\", \"n\")\n";
+    auto P =
+        BuiltinMap.insert(std::make_pair(Def->getBuiltinName(), Def.get()));
+    if (!P.second) {
+      // Verify that this would have produced the same builtin definition.
+      if (P.first->second->hasAutoDef() != Def->hasAutoDef()) {
+        PrintFatalError("Builtin with same name has different hasAutoDef");
+      } else if (!Def->hasAutoDef() && P.first->second->getBuiltinTypeStr() !=
+                                           Def->getBuiltinTypeStr()) {
+        PrintFatalError("Builtin with same name has different type string");
+      }
+      continue;
+    }
+
+    OS << "RISCVV_BUILTIN(__builtin_rvv_" << Def->getBuiltinName() << ",\"";
+    if (!Def->hasAutoDef())
+      OS << Def->getBuiltinTypeStr();
+    OS << "\", \"n\")\n";
   }
   OS << "#undef RISCVV_BUILTIN\n";
 }
@@ -1028,6 +1053,10 @@ void RVVEmitter::createCodeGen(raw_ostream &OS) {
                              const std::unique_ptr<RVVIntrinsic> &B) {
     return A->getIRName() < B->getIRName();
   });
+
+  // Map to keep track of which builtin names have already been emitted.
+  StringMap<RVVIntrinsic *> BuiltinMap;
+
   // Print switch body when the ir name or ManualCodegen changes from previous
   // iteration.
   RVVIntrinsic *PrevDef = Defs.begin()->get();
@@ -1038,7 +1067,29 @@ void RVVEmitter::createCodeGen(raw_ostream &OS) {
       PrevDef->emitCodeGenSwitchBody(OS);
     }
     PrevDef = Def.get();
-    OS << "case RISCVVector::BI__builtin_rvv_" << Def->getName() << ":\n";
+
+    auto P =
+        BuiltinMap.insert(std::make_pair(Def->getBuiltinName(), Def.get()));
+    if (P.second) {
+      OS << "case RISCVVector::BI__builtin_rvv_" << Def->getBuiltinName()
+         << ":\n";
+      continue;
+    }
+
+    if (P.first->second->getIRName() != Def->getIRName())
+      PrintFatalError("Builtin with same name has different IRName");
+    else if (P.first->second->getManualCodegen() != Def->getManualCodegen())
+      PrintFatalError("Builtin with same name has different ManualCodegen");
+    else if (P.first->second->getNF() != Def->getNF())
+      PrintFatalError("Builtin with same name has different NF");
+    else if (P.first->second->isMask() != Def->isMask())
+      PrintFatalError("Builtin with same name has different isMask");
+    else if (P.first->second->hasVL() != Def->hasVL())
+      PrintFatalError("Builtin with same name has different HasPolicy");
+    else if (P.first->second->hasPolicy() != Def->hasPolicy())
+      PrintFatalError("Builtin with same name has different HasPolicy");
+    else if (P.first->second->getIntrinsicTypes() != Def->getIntrinsicTypes())
+      PrintFatalError("Builtin with same name has different IntrinsicTypes");
   }
   Defs.back()->emitCodeGenSwitchBody(OS);
   OS << "\n";

@@ -124,8 +124,8 @@ void LLParser::restoreParsingState(const SlotMapping *Slots) {
         std::make_pair(I.first, std::make_pair(I.second, LocTy())));
 }
 
-/// validateEndOfModule - Do final validity and sanity checks at the end of the
-/// module.
+/// validateEndOfModule - Do final validity and basic correctness checks at the
+/// end of the module.
 bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
   if (!M)
     return false;
@@ -152,28 +152,28 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
         FnAttrs.removeAttribute(Attribute::Alignment);
       }
 
-      AS = AS.addFnAttributes(Context, AttributeSet::get(Context, FnAttrs));
+      AS = AS.addFnAttributes(Context, FnAttrs);
       Fn->setAttributes(AS);
     } else if (CallInst *CI = dyn_cast<CallInst>(V)) {
       AttributeList AS = CI->getAttributes();
       AttrBuilder FnAttrs(AS.getFnAttrs());
       AS = AS.removeFnAttributes(Context);
       FnAttrs.merge(B);
-      AS = AS.addFnAttributes(Context, AttributeSet::get(Context, FnAttrs));
+      AS = AS.addFnAttributes(Context, FnAttrs);
       CI->setAttributes(AS);
     } else if (InvokeInst *II = dyn_cast<InvokeInst>(V)) {
       AttributeList AS = II->getAttributes();
       AttrBuilder FnAttrs(AS.getFnAttrs());
       AS = AS.removeFnAttributes(Context);
       FnAttrs.merge(B);
-      AS = AS.addFnAttributes(Context, AttributeSet::get(Context, FnAttrs));
+      AS = AS.addFnAttributes(Context, FnAttrs);
       II->setAttributes(AS);
     } else if (CallBrInst *CBI = dyn_cast<CallBrInst>(V)) {
       AttributeList AS = CBI->getAttributes();
       AttrBuilder FnAttrs(AS.getFnAttrs());
       AS = AS.removeFnAttributes(Context);
       FnAttrs.merge(B);
-      AS = AS.addFnAttributes(Context, AttributeSet::get(Context, FnAttrs));
+      AS = AS.addFnAttributes(Context, FnAttrs);
       CBI->setAttributes(AS);
     } else if (auto *GV = dyn_cast<GlobalVariable>(V)) {
       AttrBuilder Attrs(GV->getAttributes());
@@ -271,7 +271,7 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
   return false;
 }
 
-/// Do final validity and sanity checks at the end of the index.
+/// Do final validity and basic correctness checks at the end of the index.
 bool LLParser::validateEndOfIndex() {
   if (!Index)
     return false;
@@ -1306,7 +1306,8 @@ bool LLParser::parseEnumAttribute(Attribute::AttrKind Attr, AttrBuilder &B,
     unsigned MinValue, MaxValue;
     if (parseVScaleRangeArguments(MinValue, MaxValue))
       return true;
-    B.addVScaleRangeAttr(MinValue, MaxValue);
+    B.addVScaleRangeAttr(MinValue,
+                         MaxValue > 0 ? MaxValue : Optional<unsigned>());
     return false;
   }
   case Attribute::Dereferenceable: {
@@ -2989,9 +2990,10 @@ BasicBlock *LLParser::PerFunctionState::defineBB(const std::string &Name,
 /// parseValID - parse an abstract value that doesn't necessarily have a
 /// type implied.  For example, if we parse "4" we don't know what integer type
 /// it has.  The value will later be combined with its type and checked for
-/// sanity.  PFS is used to convert function-local operands of metadata (since
-/// metadata operands are not just parsed here but also converted to values).
-/// PFS can be null when we are not parsing metadata values inside a function.
+/// basic correctness.  PFS is used to convert function-local operands of
+/// metadata (since metadata operands are not just parsed here but also
+/// converted to values). PFS can be null when we are not parsing metadata
+/// values inside a function.
 bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
   ID.Loc = Lex.getLoc();
   switch (Lex.getKind()) {
@@ -3283,6 +3285,20 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
 
     ID.ConstantVal = DSOLocalEquivalent::get(GV);
     ID.Kind = ValID::t_Constant;
+    return false;
+  }
+
+  case lltok::kw_no_cfi: {
+    // ValID ::= 'no_cfi' @foo
+    Lex.Lex();
+
+    if (parseValID(ID, PFS))
+      return true;
+
+    if (ID.Kind != ValID::t_GlobalID && ID.Kind != ValID::t_GlobalName)
+      return error(ID.Loc, "expected global value name in no_cfi");
+
+    ID.NoCFI = true;
     return false;
   }
 
@@ -5266,9 +5282,13 @@ bool LLParser::convertValIDToValue(Type *Ty, ValID &ID, Value *&V,
   }
   case ValID::t_GlobalName:
     V = getGlobalVal(ID.StrVal, Ty, ID.Loc);
+    if (V && ID.NoCFI)
+      V = NoCFIValue::get(cast<GlobalValue>(V));
     return V == nullptr;
   case ValID::t_GlobalID:
     V = getGlobalVal(ID.UIntVal, Ty, ID.Loc);
+    if (V && ID.NoCFI)
+      V = NoCFIValue::get(cast<GlobalValue>(V));
     return V == nullptr;
   case ValID::t_APSInt:
     if (!Ty->isIntegerTy())
@@ -8532,6 +8552,7 @@ bool LLParser::parseFlag(unsigned &Val) {
 ///        [',' 'noUnwind' ':' Flag]? ')'
 ///        [',' 'mayThrow' ':' Flag]? ')'
 ///        [',' 'hasUnknownCall' ':' Flag]? ')'
+///        [',' 'mustBeUnreachable' ':' Flag]? ')'
 
 bool LLParser::parseOptionalFFlags(FunctionSummary::FFlags &FFlags) {
   assert(Lex.getKind() == lltok::kw_funcFlags);
@@ -8597,6 +8618,12 @@ bool LLParser::parseOptionalFFlags(FunctionSummary::FFlags &FFlags) {
       if (parseToken(lltok::colon, "expected ':'") || parseFlag(Val))
         return true;
       FFlags.HasUnknownCall = Val;
+      break;
+    case lltok::kw_mustBeUnreachable:
+      Lex.Lex();
+      if (parseToken(lltok::colon, "expected ':'") || parseFlag(Val))
+        return true;
+      FFlags.MustBeUnreachable = Val;
       break;
     default:
       return error(Lex.getLoc(), "expected function flag type");

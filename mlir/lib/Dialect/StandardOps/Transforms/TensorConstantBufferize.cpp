@@ -11,12 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/StandardOps/Transforms/Passes.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/Transforms/BufferUtils.h"
-#include "mlir/Transforms/Bufferize.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
@@ -24,11 +25,11 @@ using namespace mlir;
 memref::GlobalOp GlobalCreator::getGlobalFor(arith::ConstantOp constantOp) {
   auto type = constantOp.getType().cast<RankedTensorType>();
 
-  BufferizeTypeConverter typeConverter;
+  bufferization::BufferizeTypeConverter typeConverter;
 
   // If we already have a global for this constant value, no need to do
   // anything else.
-  auto it = globals.find(constantOp.value());
+  auto it = globals.find(constantOp.getValue());
   if (it != globals.end())
     return cast<memref::GlobalOp>(it->second);
 
@@ -52,14 +53,14 @@ memref::GlobalOp GlobalCreator::getGlobalFor(arith::ConstantOp constantOp) {
       constantOp.getLoc(), (Twine("__constant_") + os.str()).str(),
       /*sym_visibility=*/globalBuilder.getStringAttr("private"),
       /*type=*/typeConverter.convertType(type).cast<MemRefType>(),
-      /*initial_value=*/constantOp.value().cast<ElementsAttr>(),
+      /*initial_value=*/constantOp.getValue().cast<ElementsAttr>(),
       /*constant=*/true,
       /*alignment=*/memrefAlignment);
   symbolTable.insert(global);
   // The symbol table inserts at the end of the module, but globals are a bit
   // nicer if they are at the beginning.
   global->moveBefore(&moduleOp.front());
-  globals[constantOp.value()] = global;
+  globals[constantOp.getValue()] = global;
   return global;
 }
 
@@ -90,7 +91,8 @@ public:
 } // namespace
 
 void mlir::populateTensorConstantBufferizePatterns(
-    GlobalCreator &globalCreator, BufferizeTypeConverter &typeConverter,
+    GlobalCreator &globalCreator,
+    bufferization::BufferizeTypeConverter &typeConverter,
     RewritePatternSet &patterns) {
   patterns.add<BufferizeTensorConstantOp>(globalCreator, typeConverter,
                                           patterns.getContext());
@@ -110,7 +112,7 @@ public:
     GlobalCreator globals(module, alignment);
 
     auto *context = &getContext();
-    BufferizeTypeConverter typeConverter;
+    bufferization::BufferizeTypeConverter typeConverter;
     RewritePatternSet patterns(context);
     ConversionTarget target(*context);
 

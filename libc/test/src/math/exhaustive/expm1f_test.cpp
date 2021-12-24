@@ -20,7 +20,7 @@ TEST(LlvmLibcExpm1fExhaustiveTest, AllValues) {
   uint32_t bits = 0;
   do {
     FPBits x(bits);
-    if (!x.isInfOrNaN() && float(x) < 88.70f) {
+    if (!x.is_inf_or_nan() && float(x) < 88.70f) {
       ASSERT_MPFR_MATCH(mpfr::Operation::Expm1, float(x),
                         __llvm_libc::expm1f(float(x)), 1.5);
     }

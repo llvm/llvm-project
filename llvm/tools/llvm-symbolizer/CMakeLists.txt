@@ -10,6 +10,7 @@ add_public_tablegen_target(SymbolizerOptsTableGen)
 set(LLVM_LINK_COMPONENTS
   DebugInfoDWARF
   DebugInfoPDB
+  Debuginfod
   Demangle
   Object
   Option

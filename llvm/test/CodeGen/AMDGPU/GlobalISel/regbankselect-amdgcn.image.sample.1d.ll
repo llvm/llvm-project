@@ -128,14 +128,12 @@ define amdgpu_ps void @sample_1d_vgpr_vaddr__vgpr_rsrc__sgpr_samp(<8 x i32> %rsr
   ; FAST:   [[BUILD_VECTOR1:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
   ; FAST:   [[COPY12:%[0-9]+]]:vgpr(s32) = COPY $vgpr8
   ; FAST:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
-  ; FAST:   [[DEF1:%[0-9]+]]:vgpr(<4 x s32>) = G_IMPLICIT_DEF
-  ; FAST:   [[DEF2:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
+  ; FAST:   [[DEF1:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
   ; FAST:   [[UV:%[0-9]+]]:vreg_64(s64), [[UV1:%[0-9]+]]:vreg_64(s64), [[UV2:%[0-9]+]]:vreg_64(s64), [[UV3:%[0-9]+]]:vreg_64(s64) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<8 x s32>)
   ; FAST:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
   ; FAST: bb.2:
   ; FAST:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
-  ; FAST:   [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF2]], %bb.1, %24, %bb.2
-  ; FAST:   [[PHI1:%[0-9]+]]:vgpr(<4 x s32>) = G_PHI [[DEF1]](<4 x s32>), %bb.1, %17(<4 x s32>), %bb.2
+  ; FAST:   [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF1]], %bb.1, %22, %bb.2
   ; FAST:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV]].sub0(s64), implicit $exec
   ; FAST:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV]].sub1(s64), implicit $exec
   ; FAST:   [[MV:%[0-9]+]]:sreg_64_xexec(s64) = G_MERGE_VALUES [[V_READFIRSTLANE_B32_]](s32), [[V_READFIRSTLANE_B32_1]](s32)
@@ -156,10 +154,10 @@ define amdgpu_ps void @sample_1d_vgpr_vaddr__vgpr_rsrc__sgpr_samp(<8 x i32> %rsr
   ; FAST:   [[V_CMP_EQ_U64_e64_3:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[MV3]](s64), [[UV3]](s64), implicit $exec
   ; FAST:   [[S_AND_B64_2:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_3]], [[S_AND_B64_1]], implicit-def $scc
   ; FAST:   [[BUILD_VECTOR2:%[0-9]+]]:sgpr(<8 x s32>) = G_BUILD_VECTOR [[V_READFIRSTLANE_B32_]](s32), [[V_READFIRSTLANE_B32_1]](s32), [[V_READFIRSTLANE_B32_2]](s32), [[V_READFIRSTLANE_B32_3]](s32), [[V_READFIRSTLANE_B32_4]](s32), [[V_READFIRSTLANE_B32_5]](s32), [[V_READFIRSTLANE_B32_6]](s32), [[V_READFIRSTLANE_B32_7]](s32)
-  ; FAST:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.1d), 15, [[COPY12]](s32), [[BUILD_VECTOR2]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 0 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
   ; FAST:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_2]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; FAST:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.1d), 15, [[COPY12]](s32), [[BUILD_VECTOR2]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 0 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
   ; FAST:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
-  ; FAST:   S_CBRANCH_EXECNZ %bb.2, implicit $exec
+  ; FAST:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; FAST: bb.3:
   ; FAST:   successors: %bb.4(0x80000000)
   ; FAST:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
@@ -186,14 +184,12 @@ define amdgpu_ps void @sample_1d_vgpr_vaddr__vgpr_rsrc__sgpr_samp(<8 x i32> %rsr
   ; GREEDY:   [[BUILD_VECTOR1:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
   ; GREEDY:   [[COPY12:%[0-9]+]]:vgpr(s32) = COPY $vgpr8
   ; GREEDY:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
-  ; GREEDY:   [[DEF1:%[0-9]+]]:vgpr(<4 x s32>) = G_IMPLICIT_DEF
-  ; GREEDY:   [[DEF2:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
+  ; GREEDY:   [[DEF1:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
   ; GREEDY:   [[UV:%[0-9]+]]:vreg_64(s64), [[UV1:%[0-9]+]]:vreg_64(s64), [[UV2:%[0-9]+]]:vreg_64(s64), [[UV3:%[0-9]+]]:vreg_64(s64) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<8 x s32>)
   ; GREEDY:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
   ; GREEDY: bb.2:
   ; GREEDY:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
-  ; GREEDY:   [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF2]], %bb.1, %24, %bb.2
-  ; GREEDY:   [[PHI1:%[0-9]+]]:vgpr(<4 x s32>) = G_PHI [[DEF1]](<4 x s32>), %bb.1, %17(<4 x s32>), %bb.2
+  ; GREEDY:   [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF1]], %bb.1, %22, %bb.2
   ; GREEDY:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV]].sub0(s64), implicit $exec
   ; GREEDY:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV]].sub1(s64), implicit $exec
   ; GREEDY:   [[MV:%[0-9]+]]:sreg_64_xexec(s64) = G_MERGE_VALUES [[V_READFIRSTLANE_B32_]](s32), [[V_READFIRSTLANE_B32_1]](s32)
@@ -214,10 +210,10 @@ define amdgpu_ps void @sample_1d_vgpr_vaddr__vgpr_rsrc__sgpr_samp(<8 x i32> %rsr
   ; GREEDY:   [[V_CMP_EQ_U64_e64_3:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[MV3]](s64), [[UV3]](s64), implicit $exec
   ; GREEDY:   [[S_AND_B64_2:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_3]], [[S_AND_B64_1]], implicit-def $scc
   ; GREEDY:   [[BUILD_VECTOR2:%[0-9]+]]:sgpr(<8 x s32>) = G_BUILD_VECTOR [[V_READFIRSTLANE_B32_]](s32), [[V_READFIRSTLANE_B32_1]](s32), [[V_READFIRSTLANE_B32_2]](s32), [[V_READFIRSTLANE_B32_3]](s32), [[V_READFIRSTLANE_B32_4]](s32), [[V_READFIRSTLANE_B32_5]](s32), [[V_READFIRSTLANE_B32_6]](s32), [[V_READFIRSTLANE_B32_7]](s32)
-  ; GREEDY:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.1d), 15, [[COPY12]](s32), [[BUILD_VECTOR2]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 0 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
   ; GREEDY:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_2]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GREEDY:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.1d), 15, [[COPY12]](s32), [[BUILD_VECTOR2]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 0 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
   ; GREEDY:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
-  ; GREEDY:   S_CBRANCH_EXECNZ %bb.2, implicit $exec
+  ; GREEDY:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GREEDY: bb.3:
   ; GREEDY:   successors: %bb.4(0x80000000)
   ; GREEDY:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
@@ -251,14 +247,12 @@ define amdgpu_ps void @sample_1d_vgpr_vaddr__sgpr_rsrc__vgpr_samp(<8 x i32> inre
   ; FAST:   [[BUILD_VECTOR1:%[0-9]+]]:vgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
   ; FAST:   [[COPY12:%[0-9]+]]:vgpr(s32) = COPY $vgpr4
   ; FAST:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
-  ; FAST:   [[DEF1:%[0-9]+]]:vgpr(<4 x s32>) = G_IMPLICIT_DEF
-  ; FAST:   [[DEF2:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
+  ; FAST:   [[DEF1:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
   ; FAST:   [[UV:%[0-9]+]]:vreg_64(s64), [[UV1:%[0-9]+]]:vreg_64(s64) = G_UNMERGE_VALUES [[BUILD_VECTOR1]](<4 x s32>)
   ; FAST:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
   ; FAST: bb.2:
   ; FAST:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
-  ; FAST:   [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF2]], %bb.1, %24, %bb.2
-  ; FAST:   [[PHI1:%[0-9]+]]:vgpr(<4 x s32>) = G_PHI [[DEF1]](<4 x s32>), %bb.1, %17(<4 x s32>), %bb.2
+  ; FAST:   [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF1]], %bb.1, %22, %bb.2
   ; FAST:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV]].sub0(s64), implicit $exec
   ; FAST:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV]].sub1(s64), implicit $exec
   ; FAST:   [[MV:%[0-9]+]]:sreg_64_xexec(s64) = G_MERGE_VALUES [[V_READFIRSTLANE_B32_]](s32), [[V_READFIRSTLANE_B32_1]](s32)
@@ -269,10 +263,10 @@ define amdgpu_ps void @sample_1d_vgpr_vaddr__sgpr_rsrc__vgpr_samp(<8 x i32> inre
   ; FAST:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[MV1]](s64), [[UV1]](s64), implicit $exec
   ; FAST:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_1]], [[V_CMP_EQ_U64_e64_]], implicit-def $scc
   ; FAST:   [[BUILD_VECTOR2:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[V_READFIRSTLANE_B32_]](s32), [[V_READFIRSTLANE_B32_1]](s32), [[V_READFIRSTLANE_B32_2]](s32), [[V_READFIRSTLANE_B32_3]](s32)
-  ; FAST:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.1d), 15, [[COPY12]](s32), [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR2]](<4 x s32>), 0, 0, 0, 0 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
   ; FAST:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; FAST:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.1d), 15, [[COPY12]](s32), [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR2]](<4 x s32>), 0, 0, 0, 0 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
   ; FAST:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
-  ; FAST:   S_CBRANCH_EXECNZ %bb.2, implicit $exec
+  ; FAST:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; FAST: bb.3:
   ; FAST:   successors: %bb.4(0x80000000)
   ; FAST:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
@@ -299,14 +293,12 @@ define amdgpu_ps void @sample_1d_vgpr_vaddr__sgpr_rsrc__vgpr_samp(<8 x i32> inre
   ; GREEDY:   [[BUILD_VECTOR1:%[0-9]+]]:vgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
   ; GREEDY:   [[COPY12:%[0-9]+]]:vgpr(s32) = COPY $vgpr4
   ; GREEDY:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
-  ; GREEDY:   [[DEF1:%[0-9]+]]:vgpr(<4 x s32>) = G_IMPLICIT_DEF
-  ; GREEDY:   [[DEF2:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
+  ; GREEDY:   [[DEF1:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
   ; GREEDY:   [[UV:%[0-9]+]]:vreg_64(s64), [[UV1:%[0-9]+]]:vreg_64(s64) = G_UNMERGE_VALUES [[BUILD_VECTOR1]](<4 x s32>)
   ; GREEDY:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
   ; GREEDY: bb.2:
   ; GREEDY:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
-  ; GREEDY:   [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF2]], %bb.1, %24, %bb.2
-  ; GREEDY:   [[PHI1:%[0-9]+]]:vgpr(<4 x s32>) = G_PHI [[DEF1]](<4 x s32>), %bb.1, %17(<4 x s32>), %bb.2
+  ; GREEDY:   [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF1]], %bb.1, %22, %bb.2
   ; GREEDY:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV]].sub0(s64), implicit $exec
   ; GREEDY:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV]].sub1(s64), implicit $exec
   ; GREEDY:   [[MV:%[0-9]+]]:sreg_64_xexec(s64) = G_MERGE_VALUES [[V_READFIRSTLANE_B32_]](s32), [[V_READFIRSTLANE_B32_1]](s32)
@@ -317,10 +309,10 @@ define amdgpu_ps void @sample_1d_vgpr_vaddr__sgpr_rsrc__vgpr_samp(<8 x i32> inre
   ; GREEDY:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[MV1]](s64), [[UV1]](s64), implicit $exec
   ; GREEDY:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_1]], [[V_CMP_EQ_U64_e64_]], implicit-def $scc
   ; GREEDY:   [[BUILD_VECTOR2:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[V_READFIRSTLANE_B32_]](s32), [[V_READFIRSTLANE_B32_1]](s32), [[V_READFIRSTLANE_B32_2]](s32), [[V_READFIRSTLANE_B32_3]](s32)
-  ; GREEDY:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.1d), 15, [[COPY12]](s32), [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR2]](<4 x s32>), 0, 0, 0, 0 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
   ; GREEDY:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GREEDY:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.1d), 15, [[COPY12]](s32), [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR2]](<4 x s32>), 0, 0, 0, 0 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
   ; GREEDY:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
-  ; GREEDY:   S_CBRANCH_EXECNZ %bb.2, implicit $exec
+  ; GREEDY:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GREEDY: bb.3:
   ; GREEDY:   successors: %bb.4(0x80000000)
   ; GREEDY:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
@@ -354,15 +346,13 @@ define amdgpu_ps void @sample_1d_vgpr_vaddr__vgpr_rsrc__vgpr_samp(<8 x i32> %rsr
   ; FAST:   [[BUILD_VECTOR1:%[0-9]+]]:vgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
   ; FAST:   [[COPY12:%[0-9]+]]:vgpr(s32) = COPY $vgpr12
   ; FAST:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
-  ; FAST:   [[DEF1:%[0-9]+]]:vgpr(<4 x s32>) = G_IMPLICIT_DEF
-  ; FAST:   [[DEF2:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
+  ; FAST:   [[DEF1:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
   ; FAST:   [[UV:%[0-9]+]]:vreg_64(s64), [[UV1:%[0-9]+]]:vreg_64(s64), [[UV2:%[0-9]+]]:vreg_64(s64), [[UV3:%[0-9]+]]:vreg_64(s64) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<8 x s32>)
   ; FAST:   [[UV4:%[0-9]+]]:vreg_64(s64), [[UV5:%[0-9]+]]:vreg_64(s64) = G_UNMERGE_VALUES [[BUILD_VECTOR1]](<4 x s32>)
   ; FAST:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
   ; FAST: bb.2:
   ; FAST:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
-  ; FAST:   [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF2]], %bb.1, %24, %bb.2
-  ; FAST:   [[PHI1:%[0-9]+]]:vgpr(<4 x s32>) = G_PHI [[DEF1]](<4 x s32>), %bb.1, %17(<4 x s32>), %bb.2
+  ; FAST:   [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF1]], %bb.1, %22, %bb.2
   ; FAST:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV]].sub0(s64), implicit $exec
   ; FAST:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV]].sub1(s64), implicit $exec
   ; FAST:   [[MV:%[0-9]+]]:sreg_64_xexec(s64) = G_MERGE_VALUES [[V_READFIRSTLANE_B32_]](s32), [[V_READFIRSTLANE_B32_1]](s32)
@@ -394,10 +384,10 @@ define amdgpu_ps void @sample_1d_vgpr_vaddr__vgpr_rsrc__vgpr_samp(<8 x i32> %rsr
   ; FAST:   [[V_CMP_EQ_U64_e64_5:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[MV5]](s64), [[UV5]](s64), implicit $exec
   ; FAST:   [[S_AND_B64_4:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_5]], [[S_AND_B64_3]], implicit-def $scc
   ; FAST:   [[BUILD_VECTOR3:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[V_READFIRSTLANE_B32_8]](s32), [[V_READFIRSTLANE_B32_9]](s32), [[V_READFIRSTLANE_B32_10]](s32), [[V_READFIRSTLANE_B32_11]](s32)
-  ; FAST:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.1d), 15, [[COPY12]](s32), [[BUILD_VECTOR2]](<8 x s32>), [[BUILD_VECTOR3]](<4 x s32>), 0, 0, 0, 0 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
   ; FAST:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_4]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; FAST:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.1d), 15, [[COPY12]](s32), [[BUILD_VECTOR2]](<8 x s32>), [[BUILD_VECTOR3]](<4 x s32>), 0, 0, 0, 0 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
   ; FAST:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
-  ; FAST:   S_CBRANCH_EXECNZ %bb.2, implicit $exec
+  ; FAST:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; FAST: bb.3:
   ; FAST:   successors: %bb.4(0x80000000)
   ; FAST:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
@@ -424,15 +414,13 @@ define amdgpu_ps void @sample_1d_vgpr_vaddr__vgpr_rsrc__vgpr_samp(<8 x i32> %rsr
   ; GREEDY:   [[BUILD_VECTOR1:%[0-9]+]]:vgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
   ; GREEDY:   [[COPY12:%[0-9]+]]:vgpr(s32) = COPY $vgpr12
   ; GREEDY:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
-  ; GREEDY:   [[DEF1:%[0-9]+]]:vgpr(<4 x s32>) = G_IMPLICIT_DEF
-  ; GREEDY:   [[DEF2:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
+  ; GREEDY:   [[DEF1:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
   ; GREEDY:   [[UV:%[0-9]+]]:vreg_64(s64), [[UV1:%[0-9]+]]:vreg_64(s64), [[UV2:%[0-9]+]]:vreg_64(s64), [[UV3:%[0-9]+]]:vreg_64(s64) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<8 x s32>)
   ; GREEDY:   [[UV4:%[0-9]+]]:vreg_64(s64), [[UV5:%[0-9]+]]:vreg_64(s64) = G_UNMERGE_VALUES [[BUILD_VECTOR1]](<4 x s32>)
   ; GREEDY:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
   ; GREEDY: bb.2:
   ; GREEDY:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
-  ; GREEDY:   [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF2]], %bb.1, %24, %bb.2
-  ; GREEDY:   [[PHI1:%[0-9]+]]:vgpr(<4 x s32>) = G_PHI [[DEF1]](<4 x s32>), %bb.1, %17(<4 x s32>), %bb.2
+  ; GREEDY:   [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF1]], %bb.1, %22, %bb.2
   ; GREEDY:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV]].sub0(s64), implicit $exec
   ; GREEDY:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV]].sub1(s64), implicit $exec
   ; GREEDY:   [[MV:%[0-9]+]]:sreg_64_xexec(s64) = G_MERGE_VALUES [[V_READFIRSTLANE_B32_]](s32), [[V_READFIRSTLANE_B32_1]](s32)
@@ -464,10 +452,10 @@ define amdgpu_ps void @sample_1d_vgpr_vaddr__vgpr_rsrc__vgpr_samp(<8 x i32> %rsr
   ; GREEDY:   [[V_CMP_EQ_U64_e64_5:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[MV5]](s64), [[UV5]](s64), implicit $exec
   ; GREEDY:   [[S_AND_B64_4:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_5]], [[S_AND_B64_3]], implicit-def $scc
   ; GREEDY:   [[BUILD_VECTOR3:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[V_READFIRSTLANE_B32_8]](s32), [[V_READFIRSTLANE_B32_9]](s32), [[V_READFIRSTLANE_B32_10]](s32), [[V_READFIRSTLANE_B32_11]](s32)
-  ; GREEDY:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.1d), 15, [[COPY12]](s32), [[BUILD_VECTOR2]](<8 x s32>), [[BUILD_VECTOR3]](<4 x s32>), 0, 0, 0, 0 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
   ; GREEDY:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_4]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GREEDY:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.1d), 15, [[COPY12]](s32), [[BUILD_VECTOR2]](<8 x s32>), [[BUILD_VECTOR3]](<4 x s32>), 0, 0, 0, 0 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
   ; GREEDY:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
-  ; GREEDY:   S_CBRANCH_EXECNZ %bb.2, implicit $exec
+  ; GREEDY:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GREEDY: bb.3:
   ; GREEDY:   successors: %bb.4(0x80000000)
   ; GREEDY:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]

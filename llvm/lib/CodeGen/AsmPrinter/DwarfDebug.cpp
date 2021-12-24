@@ -480,7 +480,7 @@ static bool hasObjCCategory(StringRef Name) {
   if (!isObjCClass(Name))
     return false;
 
-  return Name.find(") ") != StringRef::npos;
+  return Name.contains(") ");
 }
 
 static void getObjCClassCategory(StringRef In, StringRef &Class,
@@ -1224,17 +1224,15 @@ void DwarfDebug::beginModule(Module *M) {
         CU.getOrCreateGlobalVariableDIE(GV, sortGlobalExprs(GVMap[GV]));
     }
 
-    for (auto *Ty : CUNode->getEnumTypes()) {
-      // The enum types array by design contains pointers to
-      // MDNodes rather than DIRefs. Unique them here.
+    for (auto *Ty : CUNode->getEnumTypes())
       CU.getOrCreateTypeDIE(cast<DIType>(Ty));
-    }
+
     for (auto *Ty : CUNode->getRetainedTypes()) {
       // The retained types array by design contains pointers to
       // MDNodes rather than DIRefs. Unique them here.
       if (DIType *RT = dyn_cast<DIType>(Ty))
-          // There is no point in force-emitting a forward declaration.
-          CU.getOrCreateTypeDIE(RT);
+        // There is no point in force-emitting a forward declaration.
+        CU.getOrCreateTypeDIE(RT);
     }
     // Emit imported_modules last so that the relevant context is already
     // available.
@@ -1407,6 +1405,10 @@ void DwarfDebug::finalizeModuleInfo() {
 
 // Emit all Dwarf sections that should come after the content.
 void DwarfDebug::endModule() {
+  // Terminate the pending line table.
+  if (PrevCU)
+    terminateLineTable(PrevCU);
+  PrevCU = nullptr;
   assert(CurFn == nullptr);
   assert(CurMI == nullptr);
 
@@ -2172,10 +2174,22 @@ DwarfDebug::getDwarfCompileUnitIDForLineTable(const DwarfCompileUnit &CU) {
     return CU.getUniqueID();
 }
 
+void DwarfDebug::terminateLineTable(const DwarfCompileUnit *CU) {
+  const auto &CURanges = CU->getRanges();
+  auto &LineTable = Asm->OutStreamer->getContext().getMCDwarfLineTable(
+      getDwarfCompileUnitIDForLineTable(*CU));
+  // Add the last range label for the given CU.
+  LineTable.getMCLineSections().addEndEntry(
+      const_cast<MCSymbol *>(CURanges.back().End));
+}
+
 void DwarfDebug::skippedNonDebugFunction() {
   // If we don't have a subprogram for this function then there will be a hole
   // in the range information. Keep note of this by setting the previously used
   // section to nullptr.
+  // Terminate the pending line table.
+  if (PrevCU)
+    terminateLineTable(PrevCU);
   PrevCU = nullptr;
   CurFn = nullptr;
 }

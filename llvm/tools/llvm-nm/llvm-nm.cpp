@@ -599,22 +599,16 @@ static void darwinPrintStab(MachOObjectFile *MachO, const NMSymbol &S) {
     outs() << format("   %02x", NType);
 }
 
-static Optional<std::string> demangle(StringRef Name, bool StripUnderscore) {
-  if (StripUnderscore && !Name.empty() && Name[0] == '_')
-    Name = Name.substr(1);
+static Optional<std::string> demangle(const std::string &Name,
+                                      bool StripUnderscore) {
+  const char *Mangled = Name.c_str();
+  if (StripUnderscore && Mangled[0] == '_')
+    Mangled = Mangled + 1;
 
-  if (!Name.startswith("_Z"))
-    return None;
-
-  int Status;
-  char *Undecorated =
-      itaniumDemangle(Name.str().c_str(), nullptr, nullptr, &Status);
-  if (Status != 0)
-    return None;
-
-  std::string S(Undecorated);
-  free(Undecorated);
-  return S;
+  std::string Demangled;
+  if (nonMicrosoftDemangle(Mangled, Demangled))
+    return Demangled;
+  return None;
 }
 
 static bool symbolIsDefined(const NMSymbol &Sym) {

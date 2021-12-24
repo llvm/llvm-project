@@ -17,7 +17,6 @@ namespace Fortran::runtime::io {
 template <Direction DIR>
 InternalDescriptorUnit<DIR>::InternalDescriptorUnit(
     Scalar scalar, std::size_t length) {
-  isFixedRecordLength = true;
   recordLength = length;
   endfileRecordNumber = 2;
   void *pointer{reinterpret_cast<void *>(const_cast<char *>(scalar))};
@@ -34,7 +33,6 @@ InternalDescriptorUnit<DIR>::InternalDescriptorUnit(
       terminator, that.SizeInBytes() <= d.SizeInBytes(maxRank, true, 0));
   new (&d) Descriptor{that};
   d.Check();
-  isFixedRecordLength = true;
   recordLength = d.ElementBytes();
   endfileRecordNumber = d.Elements() + 1;
 }
@@ -88,25 +86,39 @@ bool InternalDescriptorUnit<DIR>::Emit(
 }
 
 template <Direction DIR>
+std::size_t InternalDescriptorUnit<DIR>::GetNextInputBytes(
+    const char *&p, IoErrorHandler &handler) {
+  if constexpr (DIR == Direction::Output) {
+    handler.Crash("InternalDescriptorUnit<Direction::Output>::"
+                  "GetNextInputBytes() called");
+    return 0;
+  } else {
+    const char *record{CurrentRecord()};
+    if (!record) {
+      handler.SignalEnd();
+      return 0;
+    } else if (positionInRecord >= recordLength.value_or(positionInRecord)) {
+      return 0;
+    } else {
+      p = &record[positionInRecord];
+      return *recordLength - positionInRecord;
+    }
+  }
+}
+
+template <Direction DIR>
 std::optional<char32_t> InternalDescriptorUnit<DIR>::GetCurrentChar(
     IoErrorHandler &handler) {
-  if constexpr (DIR == Direction::Output) {
-    handler.Crash(
-        "InternalDescriptorUnit<Direction::Output>::GetCurrentChar() called");
+  const char *p{nullptr};
+  std::size_t bytes{GetNextInputBytes(p, handler)};
+  if (bytes == 0) {
     return std::nullopt;
+  } else {
+    if (isUTF8) {
+      // TODO: UTF-8 decoding
+    }
+    return *p;
   }
-  const char *record{CurrentRecord()};
-  if (!record) {
-    handler.SignalEnd();
-    return std::nullopt;
-  }
-  if (positionInRecord >= recordLength.value_or(positionInRecord)) {
-    return std::nullopt;
-  }
-  if (isUTF8) {
-    // TODO: UTF-8 decoding
-  }
-  return record[positionInRecord];
 }
 
 template <Direction DIR>

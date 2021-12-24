@@ -479,3 +479,71 @@ func @test_not_trivially_true_or_false_returning_three_results() -> (index, inde
   }
   return %res#0, %res#1, %res#2 : index, index, index
 }
+
+// -----
+
+// Test simplification of mod expressions.
+// CHECK-DAG:   #[[$MOD:.*]] = affine_map<()[s0, s1, s2, s3, s4] -> (s3 + s4 * s1 + (s0 - s1) mod s2)>
+// CHECK-DAG:   #[[$SIMPLIFIED_MOD_RHS:.*]] = affine_map<()[s0, s1, s2, s3] -> (s3 mod (s2 - s0 * s1))>
+// CHECK-DAG:   #[[$MODULO_AND_PRODUCT:.*]] = affine_map<()[s0, s1, s2, s3] -> (s0 * s1 + s3 - (-s0 + s3) mod s2)>
+// CHECK-LABEL: func @semiaffine_simplification_mod
+// CHECK-SAME:  (%[[ARG0:.*]]: index, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index, %[[ARG3:.*]]: index, %[[ARG4:.*]]: index, %[[ARG5:.*]]: index)
+func @semiaffine_simplification_mod(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4: index, %arg5: index) -> (index, index, index) {
+  %a = affine.apply affine_map<(d0, d1)[s0, s1, s2, s3] -> ((-(d1 * s0 - (s0 - s1) mod s2) + s3) + (d0 * s1 + d1 * s0))>(%arg0, %arg1)[%arg2, %arg3, %arg4, %arg5]
+  %b = affine.apply affine_map<(d0)[s0, s1, s2, s3] -> (d0 mod (s0 - s1 * s2 + s3 - s0))>(%arg0)[%arg0, %arg1, %arg2, %arg3]
+  %c = affine.apply affine_map<(d0)[s0, s1, s2] -> (d0 + (d0 + s0) mod s2 + s0 * s1 - (d0 + s0) mod s2 - (d0 - s0) mod s2)>(%arg0)[%arg1, %arg2, %arg3]
+  return %a, %b, %c : index, index, index
+}
+// CHECK-NEXT: %[[RESULT0:.*]] = affine.apply #[[$MOD]]()[%[[ARG2]], %[[ARG3]], %[[ARG4]], %[[ARG5]], %[[ARG0]]]
+// CHECK-NEXT: %[[RESULT1:.*]] = affine.apply #[[$SIMPLIFIED_MOD_RHS]]()[%[[ARG1]], %[[ARG2]], %[[ARG3]], %[[ARG0]]]
+// CHECK-NEXT: %[[RESULT2:.*]] = affine.apply #[[$MODULO_AND_PRODUCT]]()[%[[ARG1]], %[[ARG2]], %[[ARG3]], %[[ARG0]]]
+// CHECK-NEXT: return %[[RESULT0]], %[[RESULT1]], %[[RESULT2]]
+
+// -----
+
+// Test simplification of floordiv and ceildiv expressions.
+// CHECK-DAG:   #[[$SIMPLIFIED_FLOORDIV_RHS:.*]] = affine_map<()[s0, s1, s2, s3] -> (s3 floordiv (s2 - s0 * s1))>
+// CHECK-DAG:   #[[$FLOORDIV:.*]] = affine_map<()[s0, s1, s2, s3] -> (s0 + s3 + (s0 - s1) floordiv s2)>
+// CHECK-DAG:   #[[$SIMPLIFIED_CEILDIV_RHS:.*]] = affine_map<()[s0, s1, s2, s3] -> (s3 ceildiv (s2 - s0 * s1))>
+// CHECK-LABEL: func @semiaffine_simplification_floordiv_and_ceildiv
+// CHECK-SAME:  (%[[ARG0:.*]]: index, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index, %[[ARG3:.*]]: index, %[[ARG4:.*]]: index)
+func @semiaffine_simplification_floordiv_and_ceildiv(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4: index) -> (index, index, index) {
+  %a = affine.apply affine_map<(d0)[s0, s1, s2, s3] -> (d0 floordiv (s0 - s1 * s2 + s3 - s0))>(%arg0)[%arg0, %arg1, %arg2, %arg3]
+  %b = affine.apply affine_map<(d0)[s0, s1, s2, s3] -> ((-(d0 * s1 - (s0 - s1) floordiv s2) + s3) + (d0 * s1 + s0))>(%arg0)[%arg1, %arg2, %arg3, %arg4]
+  %c = affine.apply affine_map<(d0)[s0, s1, s2, s3] -> (d0 ceildiv (s0 - s1 * s2 + s3 - s0))>(%arg0)[%arg0, %arg1, %arg2, %arg3]
+  return %a, %b, %c : index, index, index
+}
+// CHECK-NEXT: %[[RESULT0:.*]] = affine.apply #[[$SIMPLIFIED_FLOORDIV_RHS]]()[%[[ARG1]], %[[ARG2]], %[[ARG3]], %[[ARG0]]]
+// CHECK-NEXT: %[[RESULT1:.*]] = affine.apply #[[$FLOORDIV]]()[%[[ARG1]], %[[ARG2]], %[[ARG3]], %[[ARG4]]]
+// CHECK-NEXT: %[[RESULT2:.*]] = affine.apply #[[$SIMPLIFIED_CEILDIV_RHS]]()[%[[ARG1]], %[[ARG2]], %[[ARG3]], %[[ARG0]]]
+// CHECK-NEXT: return %[[RESULT0]], %[[RESULT1]], %[[RESULT2]]
+
+// -----
+
+// Test simplification of product expressions.
+// CHECK-DAG:   #[[$PRODUCT:.*]] = affine_map<()[s0, s1, s2, s3, s4] -> (s3 + s4 + (s0 - s1) * s2)>
+// CHECK-DAG:   #[[$SUM_OF_PRODUCTS:.*]] = affine_map<()[s0, s1, s2, s3, s4] -> (s2 * s0 + s2 + s3 * s0 + s3 * s1 + s3 + s4 * s1 + s4)>
+// CHECK-LABEL: func @semiaffine_simplification_product
+// CHECK-SAME:  (%[[ARG0:.*]]: index, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index, %[[ARG3:.*]]: index, %[[ARG4:.*]]: index, %[[ARG5:.*]]: index)
+func @semiaffine_simplification_product(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4: index, %arg5: index) -> (index, index) {
+  %a = affine.apply affine_map<(d0)[s0, s1, s2, s3] -> ((-(s0 - (s0 - s1) * s2) + s3) + (d0 + s0))>(%arg0)[%arg1, %arg2, %arg3, %arg4]
+  %b = affine.apply affine_map<(d0, d1, d2)[s0, s1] -> (d0 + d1 * s1 + d1 + d0 * s0 + d1 * s0 + d2 * s1 + d2)>(%arg0, %arg1, %arg2)[%arg3, %arg4]
+  return %a, %b : index, index
+}
+// CHECK-NEXT: %[[RESULT0:.*]] = affine.apply #[[$PRODUCT]]()[%[[ARG1]], %[[ARG2]], %[[ARG3]], %[[ARG4]], %[[ARG0]]]
+// CHECK-NEXT: %[[RESULT1:.*]] = affine.apply #[[$SUM_OF_PRODUCTS]]()[%[[ARG3]], %[[ARG4]], %[[ARG0]], %[[ARG1]], %[[ARG2]]]
+// CHECK-NEXT: return %[[RESULT0]], %[[RESULT1]]
+
+// -----
+
+// CHECK-DAG: #[[$SIMPLIFIED_MAP:.*]] = affine_map<()[s0, s1, s2, s3] -> ((-s0 + s2 + s3) mod (s0 + s1))>
+// CHECK-LABEL: func @semi_affine_simplification_euclidean_lemma
+// CHECK-SAME: (%[[ARG0:.*]]: index, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index, %[[ARG3:.*]]: index, %[[ARG4:.*]]: index, %[[ARG5:.*]]: index)
+func @semi_affine_simplification_euclidean_lemma(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4: index, %arg5: index) -> (index, index) {
+  %a = affine.apply affine_map<(d0, d1)[s0, s1] -> ((d0 + d1) - ((d0 + d1) floordiv (s0 - s1)) * (s0 - s1) - (d0 + d1) mod (s0 - s1))>(%arg0, %arg1)[%arg2, %arg3]
+  %b = affine.apply affine_map<(d0, d1)[s0, s1] -> ((d0 + d1 - s0) - ((d0 + d1 - s0) floordiv (s0 + s1)) * (s0 + s1))>(%arg0, %arg1)[%arg2, %arg3]
+  return %a, %b : index, index
+}
+// CHECK-NEXT: %[[ZERO:.*]] = arith.constant 0 : index
+// CHECK-NEXT: %[[RESULT:.*]] = affine.apply #[[$SIMPLIFIED_MAP]]()[%[[ARG2]], %[[ARG3]], %[[ARG0]], %[[ARG1]]]
+// CHECK-NEXT: return %[[ZERO]], %[[RESULT]]

@@ -2,6 +2,8 @@
 // RUN:   -fallow-half-arguments-and-returns -target-feature -fp16 \
 // RUN:   -fsyntax-only -verify
 
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 #include <arm_neon.h>
 
 float16x4_t test_vcvt_f16_f32(float32x4_t a) {

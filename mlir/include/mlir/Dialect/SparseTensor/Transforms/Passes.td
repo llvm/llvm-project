@@ -55,6 +55,7 @@ def Sparsification : Pass<"sparsification", "ModuleOp"> {
   let dependentDialects = [
     "AffineDialect",
     "arith::ArithmeticDialect",
+    "bufferization::BufferizationDialect",
     "LLVM::LLVMDialect",
     "memref::MemRefDialect",
     "scf::SCFDialect",
@@ -105,7 +106,9 @@ def SparseTensorConversion : Pass<"sparse-tensor-conversion", "ModuleOp"> {
   let constructor = "mlir::createSparseTensorConversionPass()";
   let dependentDialects = [
     "arith::ArithmeticDialect",
+    "bufferization::BufferizationDialect",
     "LLVM::LLVMDialect",
+    "linalg::LinalgDialect",
     "memref::MemRefDialect",
     "scf::SCFDialect",
     "sparse_tensor::SparseTensorDialect",

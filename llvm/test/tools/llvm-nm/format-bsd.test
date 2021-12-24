@@ -11,7 +11,7 @@
 # RUN: cmp %t.formatbsd.txt %t.fbsd.txt
 # RUN: cmp %t.formatbsd.txt %t.b.txt
 
-## Sanity check that some output is actually printed.
+## Verify that some output is actually printed.
 # RUN: FileCheck %s --input-file=%t.default.txt
 
 # CHECK:      0000000000000000 T sym1

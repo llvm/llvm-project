@@ -1351,8 +1351,8 @@ bool PolynomialMultiplyRecognize::convertShiftsToLeft(BasicBlock *LoopB,
     // be unshifted.
     if (!commutesWithShift(R))
       return false;
-    for (auto I = R->user_begin(), E = R->user_end(); I != E; ++I) {
-      auto *T = cast<Instruction>(*I);
+    for (User *U : R->users()) {
+      auto *T = cast<Instruction>(U);
       // Skip users from outside of the loop. They will be handled later.
       // Also, skip the right-shifts and phi nodes, since they mix early
       // and late values.
@@ -1490,10 +1490,8 @@ void PolynomialMultiplyRecognize::cleanupLoopBody(BasicBlock *LoopB) {
     if (Value *SV = SimplifyInstruction(&I, {DL, &TLI, &DT}))
       I.replaceAllUsesWith(SV);
 
-  for (auto I = LoopB->begin(), N = I; I != LoopB->end(); I = N) {
-    N = std::next(I);
-    RecursivelyDeleteTriviallyDeadInstructions(&*I, &TLI);
-  }
+  for (Instruction &I : llvm::make_early_inc_range(*LoopB))
+    RecursivelyDeleteTriviallyDeadInstructions(&I, &TLI);
 }
 
 unsigned PolynomialMultiplyRecognize::getInverseMxN(unsigned QP) {
@@ -2247,8 +2245,7 @@ CleanupAndExit:
     DT->addNewBlock(MemmoveB, Preheader);
     // Find the new immediate dominator of the exit block.
     BasicBlock *ExitD = Preheader;
-    for (auto PI = pred_begin(ExitB), PE = pred_end(ExitB); PI != PE; ++PI) {
-      BasicBlock *PB = *PI;
+    for (BasicBlock *PB : predecessors(ExitB)) {
       ExitD = DT->findNearestCommonDominator(ExitD, PB);
       if (!ExitD)
         break;

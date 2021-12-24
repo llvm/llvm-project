@@ -625,6 +625,7 @@ AArch64StringToVectorLayout(StringRef LayoutStr) {
 namespace AArch64SysReg {
   struct SysReg {
     const char *Name;
+    const char *AltName;
     unsigned Encoding;
     bool Readable;
     bool Writeable;

@@ -300,7 +300,8 @@ void NORETURN CheckFailed(const char *file, int line, const char *cond,
     }                                          \
   } while (0)
 
-#define RAW_CHECK(expr, ...) RAW_CHECK_MSG(expr, #expr "\n", __VA_ARGS__)
+#define RAW_CHECK(expr) RAW_CHECK_MSG(expr, #expr "\n", )
+#define RAW_CHECK_VA(expr, ...) RAW_CHECK_MSG(expr, #expr "\n", __VA_ARGS__)
 
 #define CHECK_IMPL(c1, op, c2) \
   do { \

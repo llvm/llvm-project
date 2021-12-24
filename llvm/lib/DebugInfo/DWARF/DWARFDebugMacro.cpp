@@ -194,13 +194,11 @@ Error DWARFDebugMacro::parseImpl(
       if (MacroContributionOffset == MacroToUnits.end())
         return createStringError(errc::invalid_argument,
                                  "Macro contribution of the unit not found");
-      Optional<uint64_t> StrOffset =
+      Expected<uint64_t> StrOffset =
           MacroContributionOffset->second->getStringOffsetSectionItem(
               Data.getULEB128(&Offset));
       if (!StrOffset)
-        return createStringError(
-            errc::invalid_argument,
-            "String offsets contribution of the unit not found");
+        return StrOffset.takeError();
       E.MacroStr =
           MacroContributionOffset->second->getStringExtractor().getCStr(
               &*StrOffset);

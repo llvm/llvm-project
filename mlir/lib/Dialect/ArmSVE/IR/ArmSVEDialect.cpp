@@ -25,12 +25,6 @@ using namespace arm_sve;
 #include "mlir/Dialect/ArmSVE/ArmSVEDialect.cpp.inc"
 
 static Type getI1SameShape(Type type);
-static void buildScalableCmpIOp(OpBuilder &build, OperationState &result,
-                                arith::CmpIPredicate predicate, Value lhs,
-                                Value rhs);
-static void buildScalableCmpFOp(OpBuilder &build, OperationState &result,
-                                arith::CmpFPredicate predicate, Value lhs,
-                                Value rhs);
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/ArmSVE/ArmSVE.cpp.inc"
@@ -43,31 +37,6 @@ void ArmSVEDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/ArmSVE/ArmSVE.cpp.inc"
       >();
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "mlir/Dialect/ArmSVE/ArmSVETypes.cpp.inc"
-      >();
-}
-
-//===----------------------------------------------------------------------===//
-// ScalableVectorType
-//===----------------------------------------------------------------------===//
-
-Type ArmSVEDialect::parseType(DialectAsmParser &parser) const {
-  llvm::SMLoc typeLoc = parser.getCurrentLocation();
-  {
-    Type genType;
-    auto parseResult = generatedTypeParser(parser, "vector", genType);
-    if (parseResult.hasValue())
-      return genType;
-  }
-  parser.emitError(typeLoc, "unknown type in ArmSVE dialect");
-  return Type();
-}
-
-void ArmSVEDialect::printType(Type type, DialectAsmPrinter &os) const {
-  if (failed(generatedTypePrinter(type, os)))
-    llvm_unreachable("unexpected 'arm_sve' type kind");
 }
 
 //===----------------------------------------------------------------------===//
@@ -77,30 +46,8 @@ void ArmSVEDialect::printType(Type type, DialectAsmPrinter &os) const {
 // Return the scalable vector of the same shape and containing i1.
 static Type getI1SameShape(Type type) {
   auto i1Type = IntegerType::get(type.getContext(), 1);
-  if (auto sVectorType = type.dyn_cast<ScalableVectorType>())
-    return ScalableVectorType::get(type.getContext(), sVectorType.getShape(),
-                                   i1Type);
+  if (auto sVectorType = type.dyn_cast<VectorType>())
+    return VectorType::get(sVectorType.getShape(), i1Type,
+                           sVectorType.getNumScalableDims());
   return nullptr;
-}
-
-//===----------------------------------------------------------------------===//
-// CmpFOp
-//===----------------------------------------------------------------------===//
-
-static void buildScalableCmpFOp(OpBuilder &build, OperationState &result,
-                                arith::CmpFPredicate predicate, Value lhs,
-                                Value rhs) {
-  result.addOperands({lhs, rhs});
-  result.types.push_back(getI1SameShape(lhs.getType()));
-  result.addAttribute(ScalableCmpFOp::getPredicateAttrName(),
-                      build.getI64IntegerAttr(static_cast<int64_t>(predicate)));
-}
-
-static void buildScalableCmpIOp(OpBuilder &build, OperationState &result,
-                                arith::CmpIPredicate predicate, Value lhs,
-                                Value rhs) {
-  result.addOperands({lhs, rhs});
-  result.types.push_back(getI1SameShape(lhs.getType()));
-  result.addAttribute(ScalableCmpIOp::getPredicateAttrName(),
-                      build.getI64IntegerAttr(static_cast<int64_t>(predicate)));
 }

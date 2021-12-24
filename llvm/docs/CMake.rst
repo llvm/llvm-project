@@ -366,6 +366,12 @@ enabled sub-projects. Nearly all of these variable names begin with
   $CMAKE_INSTALL_PREFIX/Toolchains containing an xctoolchain directory which can
   be used to override the default system tools.
 
+**LLVM_DEFAULT_TARGET_TRIPLE**:STRING
+  LLVM target to use for code generation when no target is explicitly specified.
+  It defaults to "host", meaning that it shall pick the architecture
+  of the machine where LLVM is being built. If you are building a cross-compiler,
+  set it to the target triple of your desired architecture.
+
 **LLVM_DOXYGEN_QCH_FILENAME**:STRING
   The filename of the Qt Compressed Help file that will be generated when
   ``-DLLVM_ENABLE_DOXYGEN=ON`` and
@@ -485,19 +491,20 @@ enabled sub-projects. Nearly all of these variable names begin with
 
 **LLVM_ENABLE_PROJECTS**:STRING
   Semicolon-separated list of projects to build, or *all* for building all
-  (clang, libcxx, libcxxabi, lldb, compiler-rt, lld, polly, etc) projects.
-  This flag assumes that projects are checked out side-by-side and not nested,
-  i.e. clang needs to be in parallel of llvm instead of nested in `llvm/tools`.
+  (clang, lldb, compiler-rt, lld, polly, etc) projects. This flag assumes
+  that projects are checked out side-by-side and not nested, i.e. clang
+  needs to be in parallel of llvm instead of nested in `llvm/tools`.
   This feature allows to have one build for only LLVM and another for clang+llvm
   using the same source checkout.
   The full list is:
-  ``clang;clang-tools-extra;compiler-rt;cross-project-tests;libc;libclc;libcxx;libcxxabi;libunwind;lld;lldb;openmp;polly;pstl``
+  ``clang;clang-tools-extra;compiler-rt;cross-project-tests;libc;libclc;lld;lldb;openmp;polly;pstl``
 
 **LLVM_ENABLE_RUNTIMES**:STRING
   Build libc++, libc++abi or other projects using that a just-built compiler.
   This is the correct way to build libc++ when putting together a toolchain.
   It will build the builtins separately from the other runtimes to preserve
-  correct dependency ordering.
+  correct dependency ordering. If you want to build the runtimes using a system
+  compiler, see the `libc++ documentation <https://libcxx.llvm.org/BuildingLibcxx.html>`_.
   Note: the list should not have duplicates with `LLVM_ENABLE_PROJECTS`.
   The full list is:
   ``compiler-rt;libc;libcxx;libcxxabi;libunwind;openmp``
@@ -535,8 +542,8 @@ enabled sub-projects. Nearly all of these variable names begin with
   Defaults to ON.
 
 **LLVM_EXPERIMENTAL_TARGETS_TO_BUILD**:STRING
-  Semicolon-separated list of experimental targets to build and linked into 
-  llvm. This will build the experimental target without needing it to add to the 
+  Semicolon-separated list of experimental targets to build and linked into
+  llvm. This will build the experimental target without needing it to add to the
   list of all the targets available in the LLVM's main CMakeLists.txt.
 
 **LLVM_EXTERNAL_{CLANG,LLD,POLLY}_SOURCE_DIR**:PATH
@@ -614,7 +621,7 @@ enabled sub-projects. Nearly all of these variable names begin with
 
     $ D:\git> git clone https://github.com/mjansson/rpmalloc
     $ D:\llvm-project> cmake ... -DLLVM_INTEGRATED_CRT_ALLOC=D:\git\rpmalloc
-  
+
   This flag needs to be used along with the static CRT, ie. if building the
   Release target, add -DLLVM_USE_CRT_RELEASE=MT.
 
@@ -728,6 +735,12 @@ enabled sub-projects. Nearly all of these variable names begin with
   Define the sanitizer used to build LLVM binaries and tests. Possible values
   are ``Address``, ``Memory``, ``MemoryWithOrigins``, ``Undefined``, ``Thread``,
   ``DataFlow``, and ``Address;Undefined``. Defaults to empty string.
+
+**LLVM_USE_SPLIT_DWARF**:BOOL
+  If enabled CMake will pass ``-gsplit-dwarf`` to the compiler. This option
+  reduces link-time memory usage by reducing the amount of debug information that
+  the linker needs to resolve. It is recommended for platforms using the ELF object
+  format, like Linux systems when linker memory usage is too high.
 
 **SPHINX_EXECUTABLE**:STRING
   The path to the ``sphinx-build`` executable detected by CMake.

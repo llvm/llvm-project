@@ -25,6 +25,12 @@
 
 LLVM_C_EXTERN_C_BEGIN
 
+/**
+ * @addtogroup LLVMCTarget
+ *
+ * @{
+ */
+
 typedef struct LLVMOpaqueTargetMachine *LLVMTargetMachineRef;
 typedef struct LLVMTarget *LLVMTargetRef;
 
@@ -155,6 +161,10 @@ char* LLVMGetHostCPUFeatures(void);
 
 /** Adds the target-specific analysis passes to the pass manager. */
 void LLVMAddAnalysisPasses(LLVMTargetMachineRef T, LLVMPassManagerRef PM);
+
+/**
+ * @}
+ */
 
 LLVM_C_EXTERN_C_END
 

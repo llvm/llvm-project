@@ -1,4 +1,4 @@
-//===------ utils/obj2yaml.cpp - obj2yaml conversion tool -------*- C++ -*-===//
+//===------ utils/obj2yaml.cpp - obj2yaml conversion tool -----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,6 +17,14 @@
 
 using namespace llvm;
 using namespace llvm::object;
+
+static cl::opt<std::string>
+    InputFilename(cl::Positional, cl::desc("<input file>"), cl::init("-"));
+static cl::bits<RawSegments> RawSegment(
+    "raw-segment",
+    cl::desc("Mach-O: dump the raw contents of the listed segments instead of "
+             "parsing them:"),
+    cl::values(clEnumVal(data, "__DATA"), clEnumVal(linkedit, "__LINKEDIT")));
 
 static Error dumpObject(const ObjectFile &Obj) {
   if (Obj.isCOFF())
@@ -54,7 +62,7 @@ static Error dumpInput(StringRef File) {
   // Universal MachO is not a subclass of ObjectFile, so it needs to be handled
   // here with the other binary types.
   if (Binary.isMachO() || Binary.isMachOUniversalBinary())
-    return macho2yaml(outs(), Binary);
+    return macho2yaml(outs(), Binary, RawSegment.getBits());
   if (ObjectFile *Obj = dyn_cast<ObjectFile>(&Binary))
     return dumpObject(*Obj);
   if (MinidumpFile *Minidump = dyn_cast<MinidumpFile>(&Binary))
@@ -73,9 +81,6 @@ static void reportError(StringRef Input, Error Err) {
   errs() << "Error reading file: " << Input << ": " << ErrMsg;
   errs().flush();
 }
-
-cl::opt<std::string> InputFilename(cl::Positional, cl::desc("<input file>"),
-                                   cl::init("-"));
 
 int main(int argc, char *argv[]) {
   InitLLVM X(argc, argv);

@@ -35,7 +35,7 @@ struct SimplifyAffineStructures
   /// Utility to simplify an affine attribute and update its entry in the parent
   /// operation if necessary.
   template <typename AttributeT>
-  void simplifyAndUpdateAttribute(Operation *op, Identifier name,
+  void simplifyAndUpdateAttribute(Operation *op, StringAttr name,
                                   AttributeT attr) {
     auto &simplified = simplifiedAttributes[attr];
     if (simplified == attr)
@@ -69,7 +69,7 @@ struct SimplifyAffineStructures
   DenseMap<Attribute, Attribute> simplifiedAttributes;
 };
 
-} // end anonymous namespace
+} // namespace
 
 std::unique_ptr<OperationPass<FuncOp>>
 mlir::createSimplifyAffineStructuresPass() {
@@ -90,10 +90,10 @@ void SimplifyAffineStructures::runOnFunction() {
   SmallVector<Operation *> opsToSimplify;
   func.walk([&](Operation *op) {
     for (auto attr : op->getAttrs()) {
-      if (auto mapAttr = attr.second.dyn_cast<AffineMapAttr>())
-        simplifyAndUpdateAttribute(op, attr.first, mapAttr);
-      else if (auto setAttr = attr.second.dyn_cast<IntegerSetAttr>())
-        simplifyAndUpdateAttribute(op, attr.first, setAttr);
+      if (auto mapAttr = attr.getValue().dyn_cast<AffineMapAttr>())
+        simplifyAndUpdateAttribute(op, attr.getName(), mapAttr);
+      else if (auto setAttr = attr.getValue().dyn_cast<IntegerSetAttr>())
+        simplifyAndUpdateAttribute(op, attr.getName(), setAttr);
     }
 
     if (isa<AffineForOp, AffineIfOp, AffineApplyOp>(op))

@@ -50,6 +50,8 @@ enum Kind : unsigned {
   ResultPos,
   ResultGroupPos,
   TypePos,
+  AttributeLiteralPos,
+  TypeLiteralPos,
 
   // Questions, ordered by dependency and decreasing priority.
   IsNotNullQuestion,
@@ -65,12 +67,13 @@ enum Kind : unsigned {
 
   // Answers.
   AttributeAnswer,
-  TrueAnswer,
+  FalseAnswer,
   OperationNameAnswer,
+  TrueAnswer,
   TypeAnswer,
   UnsignedAnswer,
 };
-} // end namespace Predicates
+} // namespace Predicates
 
 /// Base class for all predicates, used to allow efficient pointer comparison.
 template <typename ConcreteT, typename BaseT, typename Key,
@@ -164,12 +167,22 @@ private:
 /// A position describing an attribute of an operation.
 struct AttributePosition
     : public PredicateBase<AttributePosition, Position,
-                           std::pair<OperationPosition *, Identifier>,
+                           std::pair<OperationPosition *, StringAttr>,
                            Predicates::AttributePos> {
   explicit AttributePosition(const KeyTy &key);
 
   /// Returns the attribute name of this position.
-  Identifier getName() const { return key.second; }
+  StringAttr getName() const { return key.second; }
+};
+
+//===----------------------------------------------------------------------===//
+// AttributeLiteralPosition
+
+/// A position describing a literal attribute.
+struct AttributeLiteralPosition
+    : public PredicateBase<AttributeLiteralPosition, Position, Attribute,
+                           Predicates::AttributeLiteralPos> {
+  using PredicateBase::PredicateBase;
 };
 
 //===----------------------------------------------------------------------===//
@@ -216,24 +229,45 @@ struct OperandGroupPosition
 
 /// An operation position describes an operation node in the IR. Other position
 /// kinds are formed with respect to an operation position.
-struct OperationPosition : public PredicateBase<OperationPosition, Position,
-                                                std::pair<Position *, unsigned>,
-                                                Predicates::OperationPos> {
+struct OperationPosition
+    : public PredicateBase<OperationPosition, Position,
+                           std::tuple<Position *, Optional<unsigned>, unsigned>,
+                           Predicates::OperationPos> {
+  static constexpr unsigned kDown = std::numeric_limits<unsigned>::max();
+
   explicit OperationPosition(const KeyTy &key) : Base(key) {
-    parent = key.first;
+    parent = std::get<0>(key);
+  }
+
+  /// Returns a hash suitable for the given keytype.
+  static llvm::hash_code hashKey(const KeyTy &key) {
+    return llvm::hash_value(key);
   }
 
   /// Gets the root position.
   static OperationPosition *getRoot(StorageUniquer &uniquer) {
-    return Base::get(uniquer, nullptr, 0);
-  }
-  /// Gets an operation position with the given parent.
-  static OperationPosition *get(StorageUniquer &uniquer, Position *parent) {
-    return Base::get(uniquer, parent, parent->getOperationDepth() + 1);
+    return Base::get(uniquer, nullptr, kDown, 0);
   }
 
+  /// Gets an downward operation position with the given parent.
+  static OperationPosition *get(StorageUniquer &uniquer, Position *parent) {
+    return Base::get(uniquer, parent, kDown, parent->getOperationDepth() + 1);
+  }
+
+  /// Gets an upward operation position with the given parent and operand.
+  static OperationPosition *get(StorageUniquer &uniquer, Position *parent,
+                                Optional<unsigned> operand) {
+    return Base::get(uniquer, parent, operand, parent->getOperationDepth() + 1);
+  }
+
+  /// Returns the operand index for an upward operation position.
+  Optional<unsigned> getIndex() const { return std::get<1>(key); }
+
+  /// Returns if this operation position is upward, accepting an input.
+  bool isUpward() const { return getIndex().getValueOr(0) != kDown; }
+
   /// Returns the depth of this position.
-  unsigned getDepth() const { return key.second; }
+  unsigned getDepth() const { return std::get<2>(key); }
 
   /// Returns if this operation position corresponds to the root.
   bool isRoot() const { return getDepth() == 0; }
@@ -296,6 +330,17 @@ struct TypePosition : public PredicateBase<TypePosition, Position, Position *,
 };
 
 //===----------------------------------------------------------------------===//
+// TypeLiteralPosition
+
+/// A position describing a literal type or type range. The value is stored as
+/// either a TypeAttr, or an ArrayAttr of TypeAttr.
+struct TypeLiteralPosition
+    : public PredicateBase<TypeLiteralPosition, Position, Attribute,
+                           Predicates::TypeLiteralPos> {
+  using PredicateBase::PredicateBase;
+};
+
+//===----------------------------------------------------------------------===//
 // Qualifiers
 //===----------------------------------------------------------------------===//
 
@@ -346,6 +391,12 @@ struct TrueAnswer
   using Base::Base;
 };
 
+/// An Answer representing a boolean 'false' value.
+struct FalseAnswer
+    : PredicateBase<FalseAnswer, Qualifier, void, Predicates::FalseAnswer> {
+  using Base::Base;
+};
+
 /// An Answer representing a `Type` value. The value is stored as either a
 /// TypeAttr, or an ArrayAttr of TypeAttr.
 struct TypeAnswer : public PredicateBase<TypeAnswer, Qualifier, Attribute,
@@ -375,6 +426,17 @@ struct ConstraintQuestion
           std::tuple<StringRef, ArrayRef<Position *>, Attribute>,
           Predicates::ConstraintQuestion> {
   using Base::Base;
+
+  /// Return the name of the constraint.
+  StringRef getName() const { return std::get<0>(key); }
+
+  /// Return the arguments of the constraint.
+  ArrayRef<Position *> getArgs() const { return std::get<1>(key); }
+
+  /// Return the constant parameters of the constraint.
+  ArrayAttr getParams() const {
+    return std::get<2>(key).dyn_cast_or_null<ArrayAttr>();
+  }
 
   /// Construct an instance with the given storage allocator.
   static ConstraintQuestion *construct(StorageUniquer::StorageAllocator &alloc,
@@ -433,18 +495,21 @@ public:
   PredicateUniquer() {
     // Register the types of Positions with the uniquer.
     registerParametricStorageType<AttributePosition>();
+    registerParametricStorageType<AttributeLiteralPosition>();
     registerParametricStorageType<OperandPosition>();
     registerParametricStorageType<OperandGroupPosition>();
     registerParametricStorageType<OperationPosition>();
     registerParametricStorageType<ResultPosition>();
     registerParametricStorageType<ResultGroupPosition>();
     registerParametricStorageType<TypePosition>();
+    registerParametricStorageType<TypeLiteralPosition>();
 
     // Register the types of Questions with the uniquer.
     registerParametricStorageType<AttributeAnswer>();
     registerParametricStorageType<OperationNameAnswer>();
     registerParametricStorageType<TypeAnswer>();
     registerParametricStorageType<UnsignedAnswer>();
+    registerSingletonStorageType<FalseAnswer>();
     registerSingletonStorageType<TrueAnswer>();
 
     // Register the types of Answers with the uniquer.
@@ -485,9 +550,22 @@ public:
     return OperationPosition::get(uniquer, p);
   }
 
+  /// Returns the position of operation using the value at the given index.
+  OperationPosition *getUsersOp(Position *p, Optional<unsigned> operand) {
+    assert((isa<OperandPosition, OperandGroupPosition, ResultPosition,
+                ResultGroupPosition>(p)) &&
+           "expected result position");
+    return OperationPosition::get(uniquer, p, operand);
+  }
+
   /// Returns an attribute position for an attribute of the given operation.
   Position *getAttribute(OperationPosition *p, StringRef name) {
-    return AttributePosition::get(uniquer, p, Identifier::get(name, ctx));
+    return AttributePosition::get(uniquer, p, StringAttr::get(ctx, name));
+  }
+
+  /// Returns an attribute position for the given attribute.
+  Position *getAttributeLiteral(Attribute attr) {
+    return AttributeLiteralPosition::get(uniquer, attr);
   }
 
   /// Returns an operand position for an operand of the given operation.
@@ -521,6 +599,12 @@ public:
   /// Returns a type position for the given entity.
   Position *getType(Position *p) { return TypePosition::get(uniquer, p); }
 
+  /// Returns a type position for the given type value. The value is stored
+  /// as either a TypeAttr, or an ArrayAttr of TypeAttr.
+  Position *getTypeLiteral(Attribute attr) {
+    return TypeLiteralPosition::get(uniquer, attr);
+  }
+
   //===--------------------------------------------------------------------===//
   // Qualifiers
   //===--------------------------------------------------------------------===//
@@ -536,9 +620,14 @@ public:
             AttributeAnswer::get(uniquer, attr)};
   }
 
-  /// Create a predicate comparing two values.
+  /// Create a predicate checking if two values are equal.
   Predicate getEqualTo(Position *pos) {
     return {EqualToQuestion::get(uniquer, pos), TrueAnswer::get(uniquer)};
+  }
+
+  /// Create a predicate checking if two values are not equal.
+  Predicate getNotEqualTo(Position *pos) {
+    return {EqualToQuestion::get(uniquer, pos), FalseAnswer::get(uniquer)};
   }
 
   /// Create a predicate that applies a generic constraint.
@@ -597,7 +686,7 @@ private:
   MLIRContext *ctx;
 };
 
-} // end namespace pdl_to_pdl_interp
-} // end namespace mlir
+} // namespace pdl_to_pdl_interp
+} // namespace mlir
 
 #endif // MLIR_CONVERSION_PDLTOPDLINTERP_PREDICATE_H_

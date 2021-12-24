@@ -38,12 +38,12 @@ using namespace llvm;
 // Explicit template instantiations and specialization definitions for core
 // template typedefs.
 namespace llvm {
-extern cl::opt<bool> EagerlyInvalidateAnalyses;
-
 static cl::opt<bool> AbortOnMaxDevirtIterationsReached(
     "abort-on-max-devirt-iterations-reached",
     cl::desc("Abort when the max iterations for devirtualization CGSCC repeat "
              "pass is reached"));
+
+AnalysisKey ShouldNotRunFunctionPassesAnalysis::Key;
 
 // Explicit instantiations for the core proxy templates.
 template class AllAnalysesOn<LazyCallGraph::SCC>;
@@ -542,6 +542,9 @@ PreservedAnalyses CGSCCToFunctionPassAdaptor::run(LazyCallGraph::SCC &C,
 
     Function &F = N->getFunction();
 
+    if (NoRerun && FAM.getCachedResult<ShouldNotRunFunctionPassesAnalysis>(F))
+      continue;
+
     PassInstrumentation PI = FAM.getResult<PassInstrumentationAnalysis>(F);
     if (!PI.runBeforePass<Function>(*Pass, F))
       continue;
@@ -557,8 +560,9 @@ PreservedAnalyses CGSCCToFunctionPassAdaptor::run(LazyCallGraph::SCC &C,
     // We know that the function pass couldn't have invalidated any other
     // function's analyses (that's the contract of a function pass), so
     // directly handle the function analysis manager's invalidation here.
-    FAM.invalidate(F, EagerlyInvalidateAnalyses ? PreservedAnalyses::none()
-                                                : PassPA);
+    FAM.invalidate(F, EagerlyInvalidate ? PreservedAnalyses::none() : PassPA);
+    if (NoRerun)
+      (void)FAM.getResult<ShouldNotRunFunctionPassesAnalysis>(F);
 
     // Then intersect the preserved set so that invalidation of module
     // analyses will eventually occur when the module pass completes.
@@ -859,7 +863,7 @@ incorporateNewSCCRange(const SCCRangeT &NewSCCRange, LazyCallGraph &G,
   // split-off SCCs.
   // We know however that this will preserve any FAM proxy so go ahead and mark
   // that.
-  PreservedAnalyses PA;
+  auto PA = PreservedAnalyses::allInSet<AllAnalysesOn<Function>>();
   PA.preserve<FunctionAnalysisManagerCGSCCProxy>();
   AM.invalidate(*OldC, PA);
 

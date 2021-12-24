@@ -715,6 +715,7 @@ PreservedAnalyses LintPass::run(Function &F, FunctionAnalysisManager &AM) {
   return PreservedAnalyses::all();
 }
 
+namespace {
 class LintLegacyPass : public FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
@@ -733,6 +734,7 @@ public:
   }
   void print(raw_ostream &O, const Module *M) const override {}
 };
+} // namespace
 
 char LintLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(LintLegacyPass, "lint", "Statically lint-checks LLVM IR",

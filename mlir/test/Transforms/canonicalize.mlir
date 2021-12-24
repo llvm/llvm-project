@@ -1028,6 +1028,26 @@ func @tensor_arith.ceildivsi_by_one(%arg0: tensor<4x5xi32>) -> tensor<4x5xi32> {
 
 // -----
 
+// CHECK-LABEL: func @arith.ceildivui_by_one
+// CHECK-SAME: %[[ARG:[a-zA-Z0-9]+]]
+func @arith.ceildivui_by_one(%arg0: i32) -> (i32) {
+  %c1 = arith.constant 1 : i32
+  %res = arith.ceildivui %arg0, %c1 : i32
+  // CHECK: return %[[ARG]]
+  return %res : i32
+}
+
+// CHECK-LABEL: func @tensor_arith.ceildivui_by_one
+// CHECK-SAME: %[[ARG:[a-zA-Z0-9]+]]
+func @tensor_arith.ceildivui_by_one(%arg0: tensor<4x5xi32>) -> tensor<4x5xi32> {
+  %c1 = arith.constant dense<1> : tensor<4x5xi32>
+  %res = arith.ceildivui %arg0, %c1 : tensor<4x5xi32>
+  // CHECK: return %[[ARG]]
+  return %res : tensor<4x5xi32>
+}
+
+// -----
+
 // CHECK-LABEL: func @memref_cast_folding_subview
 func @memref_cast_folding_subview(%arg0: memref<4x5xf32>, %i: index) -> (memref<?x?xf32, offset:? , strides: [?, ?]>) {
   %0 = memref.cast %arg0 : memref<4x5xf32> to memref<?x?xf32>
@@ -1148,12 +1168,12 @@ func @fold_trunci_sexti(%arg0: i1) -> i1 attributes {} {
 // CHECK-LABEL: func @simple_clone_elimination
 func @simple_clone_elimination() -> memref<5xf32> {
   %ret = memref.alloc() : memref<5xf32>
-  %temp = memref.clone %ret : memref<5xf32> to memref<5xf32>
+  %temp = bufferization.clone %ret : memref<5xf32> to memref<5xf32>
   memref.dealloc %temp : memref<5xf32>
   return %ret : memref<5xf32>
 }
 // CHECK-NEXT: %[[ret:.*]] = memref.alloc()
-// CHECK-NOT: %{{.*}} = memref.clone
+// CHECK-NOT: %{{.*}} = bufferization.clone
 // CHECK-NOT: memref.dealloc %{{.*}}
 // CHECK: return %[[ret]]
 
@@ -1163,14 +1183,14 @@ func @simple_clone_elimination() -> memref<5xf32> {
 func @clone_loop_alloc(%arg0: index, %arg1: index, %arg2: index, %arg3: memref<2xf32>, %arg4: memref<2xf32>) {
   %0 = memref.alloc() : memref<2xf32>
   memref.dealloc %0 : memref<2xf32>
-  %1 = memref.clone %arg3 : memref<2xf32> to memref<2xf32>
+  %1 = bufferization.clone %arg3 : memref<2xf32> to memref<2xf32>
   %2 = scf.for %arg5 = %arg0 to %arg1 step %arg2 iter_args(%arg6 = %1) -> (memref<2xf32>) {
     %3 = arith.cmpi eq, %arg5, %arg1 : index
     memref.dealloc %arg6 : memref<2xf32>
     %4 = memref.alloc() : memref<2xf32>
-    %5 = memref.clone %4 : memref<2xf32> to memref<2xf32>
+    %5 = bufferization.clone %4 : memref<2xf32> to memref<2xf32>
     memref.dealloc %4 : memref<2xf32>
-    %6 = memref.clone %5 : memref<2xf32> to memref<2xf32>
+    %6 = bufferization.clone %5 : memref<2xf32> to memref<2xf32>
     memref.dealloc %5 : memref<2xf32>
     scf.yield %6 : memref<2xf32>
   }
@@ -1179,7 +1199,7 @@ func @clone_loop_alloc(%arg0: index, %arg1: index, %arg2: index, %arg3: memref<2
   return
 }
 
-// CHECK-NEXT: %[[ALLOC0:.*]] = memref.clone
+// CHECK-NEXT: %[[ALLOC0:.*]] = bufferization.clone
 // CHECK-NEXT: %[[ALLOC1:.*]] = scf.for
 // CHECK-NEXT: memref.dealloc
 // CHECK-NEXT: %[[ALLOC2:.*]] = memref.alloc
@@ -1196,20 +1216,20 @@ func @clone_nested_region(%arg0: index, %arg1: index, %arg2: index) -> memref<?x
   %1 = memref.alloc(%arg0, %arg0) : memref<?x?xf32>
   %2 = scf.if %0 -> (memref<?x?xf32>) {
     %3 = scf.if %cmp -> (memref<?x?xf32>) {
-      %9 = memref.clone %1 : memref<?x?xf32> to memref<?x?xf32>
+      %9 = bufferization.clone %1 : memref<?x?xf32> to memref<?x?xf32>
       scf.yield %9 : memref<?x?xf32>
     } else {
       %7 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
-      %10 = memref.clone %7 : memref<?x?xf32> to memref<?x?xf32>
+      %10 = bufferization.clone %7 : memref<?x?xf32> to memref<?x?xf32>
       memref.dealloc %7 : memref<?x?xf32>
       scf.yield %10 : memref<?x?xf32>
     }
-    %6 = memref.clone %3 : memref<?x?xf32> to memref<?x?xf32>
+    %6 = bufferization.clone %3 : memref<?x?xf32> to memref<?x?xf32>
     memref.dealloc %3 : memref<?x?xf32>
     scf.yield %6 : memref<?x?xf32>
   } else {
     %3 = memref.alloc(%arg1, %arg1) : memref<?x?xf32>
-    %6 = memref.clone %3 : memref<?x?xf32> to memref<?x?xf32>
+    %6 = bufferization.clone %3 : memref<?x?xf32> to memref<?x?xf32>
     memref.dealloc %3 : memref<?x?xf32>
     scf.yield %6 : memref<?x?xf32>
   }
@@ -1220,7 +1240,7 @@ func @clone_nested_region(%arg0: index, %arg1: index, %arg2: index) -> memref<?x
 //      CHECK: %[[ALLOC1:.*]] = memref.alloc
 // CHECK-NEXT: %[[ALLOC2:.*]] = scf.if
 // CHECK-NEXT: %[[ALLOC3_1:.*]] = scf.if
-// CHECK-NEXT: %[[ALLOC4_1:.*]] = memref.clone %[[ALLOC1]]
+// CHECK-NEXT: %[[ALLOC4_1:.*]] = bufferization.clone %[[ALLOC1]]
 // CHECK-NEXT: scf.yield %[[ALLOC4_1]]
 //      CHECK: %[[ALLOC4_2:.*]] = memref.alloc
 // CHECK-NEXT: scf.yield %[[ALLOC4_2]]

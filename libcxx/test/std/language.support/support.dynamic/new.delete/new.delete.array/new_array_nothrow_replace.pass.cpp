@@ -10,6 +10,7 @@
 
 // UNSUPPORTED: sanitizer-new-delete
 // XFAIL: libcpp-no-vcruntime
+// XFAIL: LIBCXX-AIX-FIXME
 
 #include <new>
 #include <cstddef>

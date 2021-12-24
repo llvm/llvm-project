@@ -265,30 +265,32 @@ int internal_sysctlbyname(const char *sname, void *oldp, uptr *oldlenp,
 
 static fd_t internal_spawn_impl(const char *argv[], const char *envp[],
                                 pid_t *pid) {
-  fd_t master_fd = kInvalidFd;
-  fd_t slave_fd = kInvalidFd;
+  fd_t primary_fd = kInvalidFd;
+  fd_t secondary_fd = kInvalidFd;
 
   auto fd_closer = at_scope_exit([&] {
-    internal_close(master_fd);
-    internal_close(slave_fd);
+    internal_close(primary_fd);
+    internal_close(secondary_fd);
   });
 
   // We need a new pseudoterminal to avoid buffering problems. The 'atos' tool
   // in particular detects when it's talking to a pipe and forgets to flush the
   // output stream after sending a response.
-  master_fd = posix_openpt(O_RDWR);
-  if (master_fd == kInvalidFd) return kInvalidFd;
+  primary_fd = posix_openpt(O_RDWR);
+  if (primary_fd == kInvalidFd)
+    return kInvalidFd;
 
-  int res = grantpt(master_fd) || unlockpt(master_fd);
+  int res = grantpt(primary_fd) || unlockpt(primary_fd);
   if (res != 0) return kInvalidFd;
 
   // Use TIOCPTYGNAME instead of ptsname() to avoid threading problems.
-  char slave_pty_name[128];
-  res = ioctl(master_fd, TIOCPTYGNAME, slave_pty_name);
+  char secondary_pty_name[128];
+  res = ioctl(primary_fd, TIOCPTYGNAME, secondary_pty_name);
   if (res == -1) return kInvalidFd;
 
-  slave_fd = internal_open(slave_pty_name, O_RDWR);
-  if (slave_fd == kInvalidFd) return kInvalidFd;
+  secondary_fd = internal_open(secondary_pty_name, O_RDWR);
+  if (secondary_fd == kInvalidFd)
+    return kInvalidFd;
 
   // File descriptor actions
   posix_spawn_file_actions_t acts;
@@ -299,9 +301,9 @@ static fd_t internal_spawn_impl(const char *argv[], const char *envp[],
     posix_spawn_file_actions_destroy(&acts);
   });
 
-  res = posix_spawn_file_actions_adddup2(&acts, slave_fd, STDIN_FILENO) ||
-        posix_spawn_file_actions_adddup2(&acts, slave_fd, STDOUT_FILENO) ||
-        posix_spawn_file_actions_addclose(&acts, slave_fd);
+  res = posix_spawn_file_actions_adddup2(&acts, secondary_fd, STDIN_FILENO) ||
+        posix_spawn_file_actions_adddup2(&acts, secondary_fd, STDOUT_FILENO) ||
+        posix_spawn_file_actions_addclose(&acts, secondary_fd);
   if (res != 0) return kInvalidFd;
 
   // Spawn attributes
@@ -326,14 +328,14 @@ static fd_t internal_spawn_impl(const char *argv[], const char *envp[],
 
   // Disable echo in the new terminal, disable CR.
   struct termios termflags;
-  tcgetattr(master_fd, &termflags);
+  tcgetattr(primary_fd, &termflags);
   termflags.c_oflag &= ~ONLCR;
   termflags.c_lflag &= ~ECHO;
-  tcsetattr(master_fd, TCSANOW, &termflags);
+  tcsetattr(primary_fd, TCSANOW, &termflags);
 
-  // On success, do not close master_fd on scope exit.
-  fd_t fd = master_fd;
-  master_fd = kInvalidFd;
+  // On success, do not close primary_fd on scope exit.
+  fd_t fd = primary_fd;
+  primary_fd = kInvalidFd;
 
   return fd;
 }
@@ -543,6 +545,9 @@ uptr TlsBaseAddr() {
   asm("movq %%gs:0,%0" : "=r"(segbase));
 #elif defined(__i386__)
   asm("movl %%gs:0,%0" : "=r"(segbase));
+#elif defined(__aarch64__)
+  asm("mrs %x0, tpidrro_el0" : "=r"(segbase));
+  segbase &= 0x07ul;  // clearing lower bits, cpu id stored there
 #endif
   return segbase;
 }
@@ -883,7 +888,7 @@ bool SignalContext::IsTrueFaultingAddress() const {
     (uptr)ptrauth_strip(     \
         (void *)arm_thread_state64_get_##r(ucontext->uc_mcontext->__ss), 0)
 #else
-  #define AARCH64_GET_REG(r) ucontext->uc_mcontext->__ss.__##r
+  #define AARCH64_GET_REG(r) (uptr)ucontext->uc_mcontext->__ss.__##r
 #endif
 
 static void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
@@ -1218,7 +1223,7 @@ uptr MapDynamicShadow(uptr shadow_size_bytes, uptr shadow_scale,
 
   uptr largest_gap_found = 0;
   uptr max_occupied_addr = 0;
-  VReport(2, "FindDynamicShadowStart, space_size = %p\n", space_size);
+  VReport(2, "FindDynamicShadowStart, space_size = %p\n", (void *)space_size);
   uptr shadow_start =
       FindAvailableMemoryRange(space_size, alignment, granularity,
                                &largest_gap_found, &max_occupied_addr);
@@ -1227,20 +1232,21 @@ uptr MapDynamicShadow(uptr shadow_size_bytes, uptr shadow_scale,
     VReport(
         2,
         "Shadow doesn't fit, largest_gap_found = %p, max_occupied_addr = %p\n",
-        largest_gap_found, max_occupied_addr);
+        (void *)largest_gap_found, (void *)max_occupied_addr);
     uptr new_max_vm = RoundDownTo(largest_gap_found << shadow_scale, alignment);
     if (new_max_vm < max_occupied_addr) {
       Report("Unable to find a memory range for dynamic shadow.\n");
       Report(
           "space_size = %p, largest_gap_found = %p, max_occupied_addr = %p, "
           "new_max_vm = %p\n",
-          space_size, largest_gap_found, max_occupied_addr, new_max_vm);
+          (void *)space_size, (void *)largest_gap_found,
+          (void *)max_occupied_addr, (void *)new_max_vm);
       CHECK(0 && "cannot place shadow");
     }
     RestrictMemoryToMaxAddress(new_max_vm);
     high_mem_end = new_max_vm - 1;
     space_size = (high_mem_end >> shadow_scale) + left_padding;
-    VReport(2, "FindDynamicShadowStart, space_size = %p\n", space_size);
+    VReport(2, "FindDynamicShadowStart, space_size = %p\n", (void *)space_size);
     shadow_start = FindAvailableMemoryRange(space_size, alignment, granularity,
                                             nullptr, nullptr);
     if (shadow_start == 0) {
@@ -1311,7 +1317,7 @@ uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding,
 }
 
 // FIXME implement on this platform.
-void GetMemoryProfile(fill_profile_f cb, uptr *stats, uptr stats_size) { }
+void GetMemoryProfile(fill_profile_f cb, uptr *stats) {}
 
 void SignalContext::DumpAllRegisters(void *context) {
   Report("Register values:\n");
@@ -1320,7 +1326,7 @@ void SignalContext::DumpAllRegisters(void *context) {
 # define DUMPREG64(r) \
     Printf("%s = 0x%016llx  ", #r, ucontext->uc_mcontext->__ss.__ ## r);
 # define DUMPREGA64(r) \
-    Printf("   %s = 0x%016llx  ", #r, AARCH64_GET_REG(r));
+    Printf("   %s = 0x%016lx  ", #r, AARCH64_GET_REG(r));
 # define DUMPREG32(r) \
     Printf("%s = 0x%08x  ", #r, ucontext->uc_mcontext->__ss.__ ## r);
 # define DUMPREG_(r)   Printf(" "); DUMPREG(r);

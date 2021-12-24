@@ -61,10 +61,10 @@ QualifierAlignmentFixer::QualifierAlignmentFixer(
 std::pair<tooling::Replacements, unsigned> QualifierAlignmentFixer::analyze(
     TokenAnnotator &Annotator, SmallVectorImpl<AnnotatedLine *> &AnnotatedLines,
     FormatTokenLexer &Tokens) {
-
-  auto Env =
-      std::make_unique<Environment>(Code, FileName, Ranges, FirstStartColumn,
-                                    NextStartColumn, LastStartColumn);
+  auto Env = Environment::make(Code, FileName, Ranges, FirstStartColumn,
+                               NextStartColumn, LastStartColumn);
+  if (!Env)
+    return {};
   llvm::Optional<std::string> CurrentCode = None;
   tooling::Replacements Fixes;
   for (size_t I = 0, E = Passes.size(); I < E; ++I) {
@@ -75,10 +75,12 @@ std::pair<tooling::Replacements, unsigned> QualifierAlignmentFixer::analyze(
       Fixes = Fixes.merge(PassFixes.first);
       if (I + 1 < E) {
         CurrentCode = std::move(*NewCode);
-        Env = std::make_unique<Environment>(
+        Env = Environment::make(
             *CurrentCode, FileName,
             tooling::calculateRangesAfterReplacements(Fixes, Ranges),
             FirstStartColumn, NextStartColumn, LastStartColumn);
+        if (!Env)
+          return {};
       }
     }
   }

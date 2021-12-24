@@ -26,6 +26,7 @@ func @main() {
   call @print_memref_f32(%B_) : (memref<*xf32>) -> ()
   %C_ = memref.cast %C : memref<?xf32, offset: ?, strides: [?]> to memref<*xf32>
   call @print_memref_f32(%C_) : (memref<*xf32>) -> ()
+  memref.dealloc %A : memref<?x?xf32>
   return
 }
 

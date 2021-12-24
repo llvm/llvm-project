@@ -119,12 +119,7 @@ void SymbolFilePDB::Terminate() {
 
 void SymbolFilePDB::DebuggerInitialize(lldb_private::Debugger &debugger) {}
 
-lldb_private::ConstString SymbolFilePDB::GetPluginNameStatic() {
-  static ConstString g_name("pdb");
-  return g_name;
-}
-
-const char *SymbolFilePDB::GetPluginDescriptionStatic() {
+llvm::StringRef SymbolFilePDB::GetPluginDescriptionStatic() {
   return "Microsoft PDB debug symbol file reader.";
 }
 
@@ -1426,7 +1421,6 @@ void SymbolFilePDB::AddSymbols(lldb_private::Symtab &symtab) {
                ));
   }
 
-  symtab.CalculateSymbolSizes();
   symtab.Finalize();
 }
 

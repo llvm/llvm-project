@@ -188,14 +188,14 @@ public:
   /// Returns the AffineMapAttr associated with 'memref'.
   NamedAttribute getAffineMapAttrForMemRef(Value memref) {
     if (memref == getSrcMemRef())
-      return {Identifier::get(getSrcMapAttrName(), getContext()),
+      return {StringAttr::get(getContext(), getSrcMapAttrName()),
               getSrcMapAttr()};
     if (memref == getDstMemRef())
-      return {Identifier::get(getDstMapAttrName(), getContext()),
+      return {StringAttr::get(getContext(), getDstMapAttrName()),
               getDstMapAttr()};
     assert(memref == getTagMemRef() &&
            "DmaStartOp expected source, destination or tag memref");
-    return {Identifier::get(getTagMapAttrName(), getContext()),
+    return {StringAttr::get(getContext(), getTagMapAttrName()),
             getTagMapAttr()};
   }
 
@@ -303,7 +303,7 @@ public:
   /// associated with 'memref'.
   NamedAttribute getAffineMapAttrForMemRef(Value memref) {
     assert(memref == getTagMemRef());
-    return {Identifier::get(getTagMapAttrName(), getContext()),
+    return {StringAttr::get(getContext(), getTagMapAttrName()),
             getTagMapAttr()};
   }
 
@@ -362,6 +362,10 @@ AffineApplyOp makeComposedAffineApply(OpBuilder &b, Location loc, AffineMap map,
 /// Variant of `makeComposedAffineApply` which infers the AffineMap from `e`.
 AffineApplyOp makeComposedAffineApply(OpBuilder &b, Location loc, AffineExpr e,
                                       ValueRange values);
+
+/// Returns the values obtained by applying `map` to the list of values.
+SmallVector<Value, 4> applyMapToValues(OpBuilder &b, Location loc,
+                                       AffineMap map, ValueRange values);
 
 /// Given an affine map `map` and its input `operands`, this method composes
 /// into `map`, maps of AffineApplyOps whose results are the values in
@@ -455,6 +459,6 @@ private:
   friend class AffineForOp;
 };
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif

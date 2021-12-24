@@ -907,3 +907,41 @@ func @transpose_nofold_multi_ops_in_region(%init: tensor<3x2xf32>) -> tensor<3x2
   } -> tensor<3x2xf32>
   return %1 : tensor<3x2xf32>
 }
+
+// -----
+
+// Fusing the broadcast into a reduction would require to insert extra knowledge
+// about the size of the reduction dimension. As long, as this is not
+// implemented, we check that two linalg operations remain.
+// TODO: Support this case in element-wise fusion.
+
+#map0 = affine_map<(d0, d1) -> ()>
+#map1 = affine_map<(d0, d1) -> (d0, d1)>
+#map2 = affine_map<(d0, d1) -> (d1, d0)>
+#map3 = affine_map<(d0, d1) -> (d0)>
+
+// CHECK-LABEL: @no_fusion_missing_reduction_shape
+// CHECK: linalg.generic
+// CHECK: linalg.generic
+func @no_fusion_missing_reduction_shape(%arg0: tensor<f32>, %arg1: index) -> tensor<?xf32> {
+  %cst = arith.constant 0xFF800000 : f32
+  %4 = linalg.init_tensor [%arg1, %arg1] : tensor<?x?xf32>
+  %5 = linalg.generic {
+    indexing_maps = [#map0, #map1],
+    iterator_types = ["parallel", "parallel"]
+  } ins(%arg0 : tensor<f32>) outs(%4 : tensor<?x?xf32>) {
+  ^bb0(%arg2: f32, %arg3: f32):  // no predecessors
+    linalg.yield %arg2 : f32
+  } -> tensor<?x?xf32>
+  %6 = linalg.init_tensor [%arg1] : tensor<?xf32>
+  %7 = linalg.fill(%cst, %6) : f32, tensor<?xf32> -> tensor<?xf32>
+  %8 = linalg.generic {
+    indexing_maps = [#map2, #map3],
+    iterator_types = ["parallel", "reduction"]
+  } ins(%5 : tensor<?x?xf32>) outs(%7 : tensor<?xf32>) {
+  ^bb0(%arg2: f32, %arg3: f32):  // no predecessors
+    %9 = arith.maxf %arg2, %arg3 : f32
+    linalg.yield %9 : f32
+  } -> tensor<?xf32>
+  return %8 : tensor<?xf32>
+}

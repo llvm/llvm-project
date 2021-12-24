@@ -14,7 +14,7 @@ namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(div_t, div, (int x, int y)) {
   div_t res;
-  integerRemQuo(x, y, res.quot, res.rem);
+  integer_rem_quo(x, y, res.quot, res.rem);
   return res;
 }
 

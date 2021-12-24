@@ -147,6 +147,63 @@ test_pointer_sort()
     assert(*pv[array_size - 1] == v[array_size - 1]);
 }
 
+// test_adversarial_quicksort generates a vector with values arranged in such a
+// way that they would invoke O(N^2) behavior on any quick sort implementation
+// that satisifies certain conditions.  Details are available in the following
+// paper:
+// "A Killer Adversary for Quicksort", M. D. McIlroy, Software—Practice &
+// ExperienceVolume 29 Issue 4 April 10, 1999 pp 341–344.
+// https://dl.acm.org/doi/10.5555/311868.311871.
+struct AdversaryComparator {
+  AdversaryComparator(int N, std::vector<int>& input) : gas(N - 1), V(input) {
+    V.resize(N);
+    // Populate all positions in the generated input to gas to indicate that
+    // none of the values have been fixed yet.
+    for (int i = 0; i < N; ++i)
+      V[i] = gas;
+  }
+
+  bool operator()(int x, int y) {
+    if (V[x] == gas && V[y] == gas) {
+      // We are comparing two inputs whose value is still to be decided.
+      if (x == candidate) {
+        V[x] = nsolid++;
+      } else {
+        V[y] = nsolid++;
+      }
+    }
+    if (V[x] == gas) {
+      candidate = x;
+    } else if (V[y] == gas) {
+      candidate = y;
+    }
+    return V[x] < V[y];
+  }
+
+private:
+  // If an element is equal to gas, it indicates that the value of the element
+  // is still to be decided and may change over the course of time.
+  const int gas;
+  // This is a reference so that we can manipulate the input vector later.
+  std::vector<int>& V;
+  // Candidate for the pivot position.
+  int candidate = 0;
+  int nsolid = 0;
+};
+
+void test_adversarial_quicksort(int N) {
+  assert(N > 0);
+  std::vector<int> ascVals(N);
+  // Fill up with ascending values from 0 to N-1.  These will act as indices
+  // into V.
+  std::iota(ascVals.begin(), ascVals.end(), 0);
+  std::vector<int> V;
+  AdversaryComparator comp(N, V);
+  std::sort(ascVals.begin(), ascVals.end(), comp);
+  std::sort(V.begin(), V.end());
+  assert(std::is_sorted(V.begin(), V.end()));
+}
+
 int main(int, char**)
 {
     // test null range
@@ -171,6 +228,7 @@ int main(int, char**)
     test_larger_sorts(1009);
 
     test_pointer_sort();
+    test_adversarial_quicksort(1 << 20);
 
-  return 0;
+    return 0;
 }

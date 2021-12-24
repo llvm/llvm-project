@@ -1033,7 +1033,8 @@ on_ompt_callback_dependences(
 {
   char buffer[2048];
   char *progress = buffer;
-  for (int i = 0; i < ndeps && progress < buffer + 2000; i++) {
+  int i;
+  for (i = 0; i < ndeps && progress < buffer + 2000; i++) {
     if (deps[i].dependence_type == ompt_dependence_type_source ||
         deps[i].dependence_type == ompt_dependence_type_sink)
       progress +=

@@ -71,8 +71,8 @@ using namespace llvm::support;
 using namespace lld;
 using namespace lld::elf;
 
-Configuration *elf::config;
-LinkerDriver *elf::driver;
+std::unique_ptr<Configuration> elf::config;
+std::unique_ptr<LinkerDriver> elf::driver;
 
 static void setConfigs(opt::InputArgList &args);
 static void readConfigs(opt::InputArgList &args);
@@ -90,7 +90,7 @@ bool elf::link(ArrayRef<const char *> args, bool canExitEarly,
     archiveFiles.clear();
     binaryFiles.clear();
     bitcodeFiles.clear();
-    lazyObjFiles.clear();
+    lazyBitcodeFiles.clear();
     objectFiles.clear();
     sharedFiles.clear();
     backwardReferences.clear();
@@ -111,10 +111,10 @@ bool elf::link(ArrayRef<const char *> args, bool canExitEarly,
   errorHandler().exitEarly = canExitEarly;
   stderrOS.enable_colors(stderrOS.has_colors());
 
-  config = make<Configuration>();
-  driver = make<LinkerDriver>();
-  script = make<LinkerScript>();
-  symtab = make<SymbolTable>();
+  config = std::make_unique<Configuration>();
+  driver = std::make_unique<LinkerDriver>();
+  script = std::make_unique<LinkerScript>();
+  symtab = std::make_unique<SymbolTable>();
 
   partitions = {Partition()};
 
@@ -223,7 +223,6 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     readLinkerScript(mbref);
     return;
   case file_magic::archive: {
-    // Handle -whole-archive.
     if (inWholeArchive) {
       for (const auto &p : getArchiveMembers(mbref))
         files.push_back(createObjectFile(p.first, path, p.second));
@@ -249,7 +248,7 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
 
       for (const std::pair<MemoryBufferRef, uint64_t> &p :
            getArchiveMembers(mbref))
-        files.push_back(make<LazyObjFile>(p.first, path, p.second));
+        files.push_back(createLazyFile(p.first, path, p.second));
       return;
     }
 
@@ -263,23 +262,18 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
       return;
     }
 
-    // DSOs usually have DT_SONAME tags in their ELF headers, and the
-    // sonames are used to identify DSOs. But if they are missing,
-    // they are identified by filenames. We don't know whether the new
-    // file has a DT_SONAME or not because we haven't parsed it yet.
-    // Here, we set the default soname for the file because we might
-    // need it later.
-    //
-    // If a file was specified by -lfoo, the directory part is not
-    // significant, as a user did not specify it. This behavior is
-    // compatible with GNU.
+    // Shared objects are identified by soname. soname is (if specified)
+    // DT_SONAME and falls back to filename. If a file was specified by -lfoo,
+    // the directory part is ignored. Note that path may be a temporary and
+    // cannot be stored into SharedFile::soName.
+    path = mbref.getBufferIdentifier();
     files.push_back(
         make<SharedFile>(mbref, withLOption ? path::filename(path) : path));
     return;
   case file_magic::bitcode:
   case file_magic::elf_relocatable:
     if (inLib)
-      files.push_back(make<LazyObjFile>(mbref, "", 0));
+      files.push_back(createLazyFile(mbref, "", 0));
     else
       files.push_back(createObjectFile(mbref));
     break;
@@ -360,10 +354,10 @@ static void checkOptions() {
 
   if (config->executeOnly) {
     if (config->emachine != EM_AARCH64)
-      error("-execute-only is only supported on AArch64 targets");
+      error("--execute-only is only supported on AArch64 targets");
 
     if (config->singleRoRx && !script->hasSectionsCommand)
-      error("-execute-only and -no-rosegment cannot be used together");
+      error("--execute-only and --no-rosegment cannot be used together");
   }
 
   if (config->zRetpolineplt && config->zForceIbt)
@@ -374,7 +368,13 @@ static void checkOptions() {
       error("-z pac-plt only supported on AArch64");
     if (config->zForceBti)
       error("-z force-bti only supported on AArch64");
+    if (config->zBtiReport != "none")
+      error("-z bti-report only supported on AArch64");
   }
+
+  if (config->emachine != EM_386 && config->emachine != EM_X86_64 &&
+      config->zCetReport != "none")
+    error("-z cet-report only supported on X86 and X86_64");
 }
 
 static const char *getReproduceOption(opt::InputArgList &args) {
@@ -461,24 +461,27 @@ static bool isKnownZFlag(StringRef s) {
          s == "rela" || s == "relro" || s == "retpolineplt" ||
          s == "rodynamic" || s == "shstk" || s == "text" || s == "undefs" ||
          s == "wxneeded" || s.startswith("common-page-size=") ||
+         s.startswith("bti-report=") || s.startswith("cet-report=") ||
          s.startswith("dead-reloc-in-nonalloc=") ||
          s.startswith("max-page-size=") || s.startswith("stack-size=") ||
          s.startswith("start-stop-visibility=");
 }
 
-// Report an error for an unknown -z option.
+// Report a warning for an unknown -z option.
 static void checkZOptions(opt::InputArgList &args) {
   for (auto *arg : args.filtered(OPT_z))
     if (!isKnownZFlag(arg->getValue()))
-      error("unknown -z value: " + StringRef(arg->getValue()));
+      warn("unknown -z value: " + StringRef(arg->getValue()));
 }
 
 void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   ELFOptTable parser;
   opt::InputArgList args = parser.parse(argsArr.slice(1));
 
-  // Interpret this flag early because error() depends on them.
+  // Interpret the flags early because error()/warn() depend on them.
   errorHandler().errorLimit = args::getInteger(args, OPT_error_limit, 20);
+  errorHandler().fatalWarnings =
+      args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false);
   checkZOptions(args);
 
   // Handle -help
@@ -490,10 +493,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Handle -v or -version.
   //
   // A note about "compatible with GNU linkers" message: this is a hack for
-  // scripts generated by GNU Libtool 2.4.6 (released in February 2014 and
-  // still the newest version in March 2017) or earlier to recognize LLD as
-  // a GNU compatible linker. As long as an output for the -v option
-  // contains "GNU" or "with BFD", they recognize us as GNU-compatible.
+  // scripts generated by GNU Libtool up to 2021-10 to recognize LLD as
+  // a GNU compatible linker. See
+  // <https://lists.gnu.org/archive/html/libtool/2017-01/msg00007.html>.
   //
   // This is somewhat ugly hack, but in reality, we had no choice other
   // than doing this. Considering the very long release cycle of Libtool,
@@ -592,7 +594,7 @@ static void setUnresolvedSymbolPolicy(opt::InputArgList &args) {
                                               OPT_warn_unresolved_symbols, true)
                                      ? UnresolvedPolicy::ReportError
                                      : UnresolvedPolicy::Warn;
-  // -shared implies -unresolved-symbols=ignore-all because missing
+  // -shared implies --unresolved-symbols=ignore-all because missing
   // symbols are likely to be resolved at runtime.
   bool diagRegular = !config->shared, diagShlib = !config->shared;
 
@@ -757,23 +759,9 @@ static OrphanHandlingPolicy getOrphanHandling(opt::InputArgList &args) {
   return OrphanHandlingPolicy::Place;
 }
 
-// Parses --power10-stubs= flags, to disable or enable Power 10
-// instructions in stubs.
-static bool getP10StubOpt(opt::InputArgList &args) {
-
-  if (args.getLastArgValue(OPT_power10_stubs_eq)== "no")
-    return false;
-
-  if (!args.hasArg(OPT_power10_stubs_eq) &&
-      args.hasArg(OPT_no_power10_stubs))
-    return false;
-
-  return true;
-}
-
 // Parse --build-id or --build-id=<style>. We handle "tree" as a
 // synonym for "sha1" because all our hash functions including
-// -build-id=sha1 are actually tree hashes for performance reasons.
+// --build-id=sha1 are actually tree hashes for performance reasons.
 static std::pair<BuildIdKind, std::vector<uint8_t>>
 getBuildId(opt::InputArgList &args) {
   auto *arg = args.getLastArg(OPT_build_id, OPT_build_id_eq);
@@ -817,7 +805,7 @@ static std::pair<bool, bool> getPackDynRelocs(opt::InputArgList &args) {
 static void readCallGraph(MemoryBufferRef mb) {
   // Build a map from symbol name to section
   DenseMap<StringRef, Symbol *> map;
-  for (InputFile *file : objectFiles)
+  for (ELFFileBase *file : objectFiles)
     for (Symbol *sym : file->getSymbols())
       map[sym->getName()] = sym;
 
@@ -989,11 +977,14 @@ static void parseClangOption(StringRef opt, const Twine &msg) {
   error(msg + ": " + StringRef(err).trim());
 }
 
+// Checks the parameter of the bti-report and cet-report options.
+static bool isValidReportString(StringRef arg) {
+  return arg == "none" || arg == "warning" || arg == "error";
+}
+
 // Initializes Config members by the command line options.
 static void readConfigs(opt::InputArgList &args) {
   errorHandler().verbose = args.hasArg(OPT_verbose);
-  errorHandler().fatalWarnings =
-      args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false);
   errorHandler().vsDiagnostics =
       args.hasArg(OPT_visual_studio_diagnostics_format, false);
 
@@ -1122,6 +1113,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->printArchiveStats = args.getLastArgValue(OPT_print_archive_stats);
   config->printSymbolOrder =
       args.getLastArgValue(OPT_print_symbol_order);
+  config->relax = args.hasFlag(OPT_relax, OPT_no_relax, true);
   config->rpath = getRpath(args);
   config->relocatable = args.hasArg(OPT_relocatable);
   config->saveTemps = args.hasArg(OPT_save_temps);
@@ -1196,7 +1188,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->zText = getZFlag(args, "text", "notext", true);
   config->zWxneeded = hasZOption(args, "wxneeded");
   setUnresolvedSymbolPolicy(args);
-  config->Power10Stub = getP10StubOpt(args);
+  config->power10Stubs = args.getLastArgValue(OPT_power10_stubs_eq) != "no";
 
   if (opt::Arg *arg = args.getLastArg(OPT_eb, OPT_el)) {
     if (arg->getOption().matches(OPT_eb))
@@ -1221,6 +1213,23 @@ static void readConfigs(opt::InputArgList &args) {
       config->shuffleSections.emplace_back(std::move(*pat), uint32_t(v));
     else
       error(errPrefix + toString(pat.takeError()));
+  }
+
+  auto reports = {std::make_pair("bti-report", &config->zBtiReport),
+                  std::make_pair("cet-report", &config->zCetReport)};
+  for (opt::Arg *arg : args.filtered(OPT_z)) {
+    std::pair<StringRef, StringRef> option =
+        StringRef(arg->getValue()).split('=');
+    for (auto reportArg : reports) {
+      if (option.first != reportArg.first)
+        continue;
+      if (!isValidReportString(option.second)) {
+        error(Twine("-z ") + reportArg.first + "= parameter " + option.second +
+              " is not recognized");
+        continue;
+      }
+      *reportArg.second = option.second;
+    }
   }
 
   for (opt::Arg *arg : args.filtered(OPT_z)) {
@@ -1308,7 +1317,7 @@ static void readConfigs(opt::InputArgList &args) {
     config->emulation = s;
   }
 
-  // Parse -hash-style={sysv,gnu,both}.
+  // Parse --hash-style={sysv,gnu,both}.
   if (auto *arg = args.getLastArg(OPT_hash_style)) {
     StringRef s = arg->getValue();
     if (s == "sysv")
@@ -1318,7 +1327,7 @@ static void readConfigs(opt::InputArgList &args) {
     else if (s == "both")
       config->sysvHash = config->gnuHash = true;
     else
-      error("unknown -hash-style: " + s);
+      error("unknown --hash-style: " + s);
   }
 
   if (args.hasArg(OPT_print_map))
@@ -1461,13 +1470,12 @@ static void setConfigs(opt::InputArgList &args) {
       args.hasFlag(OPT_pcrel_optimize, OPT_no_pcrel_optimize, m == EM_PPC64);
 }
 
-// Returns a value of "-format" option.
 static bool isFormatBinary(StringRef s) {
   if (s == "binary")
     return true;
   if (s == "elf" || s == "default")
     return false;
-  error("unknown -format value: " + s +
+  error("unknown --format value: " + s +
         " (supported formats: elf, default, binary)");
   return false;
 }
@@ -1492,9 +1500,9 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
       StringRef to;
       std::tie(from, to) = StringRef(arg->getValue()).split('=');
       if (from.empty() || to.empty())
-        error("-defsym: syntax error: " + StringRef(arg->getValue()));
+        error("--defsym: syntax error: " + StringRef(arg->getValue()));
       else
-        readDefsym(from, MemoryBufferRef(to, "-defsym"));
+        readDefsym(from, MemoryBufferRef(to, "--defsym"));
       break;
     }
     case OPT_script:
@@ -1628,7 +1636,7 @@ static uint64_t getCommonPageSize(opt::InputArgList &args) {
   return val;
 }
 
-// Parses -image-base option.
+// Parses --image-base option.
 static Optional<uint64_t> getImageBase(opt::InputArgList &args) {
   // Because we are using "Config->maxPageSize" here, this function has to be
   // called after the variable is initialized.
@@ -1639,11 +1647,11 @@ static Optional<uint64_t> getImageBase(opt::InputArgList &args) {
   StringRef s = arg->getValue();
   uint64_t v;
   if (!to_integer(s, v)) {
-    error("-image-base: number expected, but got " + s);
+    error("--image-base: number expected, but got " + s);
     return 0;
   }
   if ((v % config->maxPageSize) != 0)
-    warn("-image-base: address isn't multiple of page size: " + s);
+    warn("--image-base: address isn't multiple of page size: " + s);
   return v;
 }
 
@@ -1665,8 +1673,8 @@ static DenseSet<StringRef> getExcludeLibs(opt::InputArgList &args) {
   return ret;
 }
 
-// Handles the -exclude-libs option. If a static library file is specified
-// by the -exclude-libs option, all public symbols from the archive become
+// Handles the --exclude-libs option. If a static library file is specified
+// by the --exclude-libs option, all public symbols from the archive become
 // private unless otherwise specified by version scripts or something.
 // A special library name "ALL" means all archive files.
 //
@@ -1683,7 +1691,7 @@ static void excludeLibs(opt::InputArgList &args) {
             sym->versionId = VER_NDX_LOCAL;
   };
 
-  for (InputFile *file : objectFiles)
+  for (ELFFileBase *file : objectFiles)
     visit(file);
 
   for (BitcodeFile *file : bitcodeFiles)
@@ -1698,7 +1706,7 @@ static void handleUndefined(Symbol *sym, const char *option) {
 
   if (!sym->isLazy())
     return;
-  sym->fetch();
+  sym->extract();
   if (!config->whyExtract.empty())
     whyExtract.emplace_back(option, sym->file, *sym);
 }
@@ -1713,14 +1721,12 @@ static void handleUndefinedGlob(StringRef arg) {
     return;
   }
 
+  // Calling sym->extract() in the loop is not safe because it may add new
+  // symbols to the symbol table, invalidating the current iterator.
   std::vector<Symbol *> syms;
-  for (Symbol *sym : symtab->symbols()) {
-    // Calling Sym->fetch() from here is not safe because it may
-    // add new symbols to the symbol table, invalidating the
-    // current iterator. So we just keep a note.
+  for (Symbol *sym : symtab->symbols())
     if (pat->match(sym->getName()))
       syms.push_back(sym);
-  }
 
   for (Symbol *sym : syms)
     handleUndefined(sym, "--undefined-glob");
@@ -1738,7 +1744,7 @@ static void handleLibcall(StringRef name) {
     mb = cast<LazyArchive>(sym)->getMemberBuffer();
 
   if (isBitcode(mb))
-    sym->fetch();
+    sym->extract();
 }
 
 // Handle --dependency-file=<path>. If that option is given, lld creates a
@@ -1921,10 +1927,11 @@ template <typename ELFT>
 static void readSymbolPartitionSection(InputSectionBase *s) {
   // Read the relocation that refers to the partition's entry point symbol.
   Symbol *sym;
-  if (s->areRelocsRela)
-    sym = &s->getFile<ELFT>()->getRelocTargetSym(s->template relas<ELFT>()[0]);
+  const RelsOrRelas<ELFT> rels = s->template relsOrRelas<ELFT>();
+  if (rels.areRelocsRel())
+    sym = &s->getFile<ELFT>()->getRelocTargetSym(rels.rels[0]);
   else
-    sym = &s->getFile<ELFT>()->getRelocTargetSym(s->template rels<ELFT>()[0]);
+    sym = &s->getFile<ELFT>()->getRelocTargetSym(rels.relas[0]);
   if (!isa<Defined>(sym) || !sym->includeInDynsym())
     return;
 
@@ -1997,25 +2004,25 @@ template <class ELFT> void LinkerDriver::compileBitcodeFiles() {
     if (!config->relocatable)
       for (Symbol *sym : obj->getGlobalSymbols())
         sym->parseSymbolVersion();
-    objectFiles.push_back(file);
+    objectFiles.push_back(obj);
   }
 }
 
 // The --wrap option is a feature to rename symbols so that you can write
-// wrappers for existing functions. If you pass `-wrap=foo`, all
+// wrappers for existing functions. If you pass `--wrap=foo`, all
 // occurrences of symbol `foo` are resolved to `__wrap_foo` (so, you are
 // expected to write `__wrap_foo` function as a wrapper). The original
 // symbol becomes accessible as `__real_foo`, so you can call that from your
 // wrapper.
 //
-// This data structure is instantiated for each -wrap option.
+// This data structure is instantiated for each --wrap option.
 struct WrappedSymbol {
   Symbol *sym;
   Symbol *real;
   Symbol *wrap;
 };
 
-// Handles -wrap option.
+// Handles --wrap option.
 //
 // This function instantiates wrapper symbols. At this point, they seem
 // like they are not being used at all, so we explicitly set some flags so
@@ -2057,7 +2064,7 @@ static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &args) {
   return v;
 }
 
-// Do renaming for -wrap and foo@v1 by updating pointers to symbols.
+// Do renaming for --wrap and foo@v1 by updating pointers to symbols.
 //
 // When this function is executed, only InputFiles and symbol table
 // contain pointers to symbol objects. We visit them to replace pointers,
@@ -2113,16 +2120,25 @@ static void redirectSymbols(ArrayRef<WrappedSymbol> wrapped) {
     return;
 
   // Update pointers in input files.
-  parallelForEach(objectFiles, [&](InputFile *file) {
-    MutableArrayRef<Symbol *> syms = file->getMutableSymbols();
-    for (size_t i = 0, e = syms.size(); i != e; ++i)
-      if (Symbol *s = map.lookup(syms[i]))
-        syms[i] = s;
+  parallelForEach(objectFiles, [&](ELFFileBase *file) {
+    for (Symbol *&sym : file->getMutableGlobalSymbols())
+      if (Symbol *s = map.lookup(sym))
+        sym = s;
   });
 
   // Update pointers in the symbol table.
   for (const WrappedSymbol &w : wrapped)
     symtab->wrap(w.sym, w.real, w.wrap);
+}
+
+static void checkAndReportMissingFeature(StringRef config, uint32_t features,
+                                         uint32_t mask, const Twine &report) {
+  if (!(features & mask)) {
+    if (config == "error")
+      error(report);
+    else if (config == "warning")
+      warn(report);
+  }
 }
 
 // To enable CET (x86's hardware-assited control flow enforcement), each
@@ -2141,14 +2157,32 @@ template <class ELFT> static uint32_t getAndFeatures() {
   uint32_t ret = -1;
   for (InputFile *f : objectFiles) {
     uint32_t features = cast<ObjFile<ELFT>>(f)->andFeatures;
+
+    checkAndReportMissingFeature(
+        config->zBtiReport, features, GNU_PROPERTY_AARCH64_FEATURE_1_BTI,
+        toString(f) + ": -z bti-report: file does not have "
+                      "GNU_PROPERTY_AARCH64_FEATURE_1_BTI property");
+
+    checkAndReportMissingFeature(
+        config->zCetReport, features, GNU_PROPERTY_X86_FEATURE_1_IBT,
+        toString(f) + ": -z cet-report: file does not have "
+                      "GNU_PROPERTY_X86_FEATURE_1_IBT property");
+
+    checkAndReportMissingFeature(
+        config->zCetReport, features, GNU_PROPERTY_X86_FEATURE_1_SHSTK,
+        toString(f) + ": -z cet-report: file does not have "
+                      "GNU_PROPERTY_X86_FEATURE_1_SHSTK property");
+
     if (config->zForceBti && !(features & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)) {
-      warn(toString(f) + ": -z force-bti: file does not have "
-                         "GNU_PROPERTY_AARCH64_FEATURE_1_BTI property");
       features |= GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
+      if (config->zBtiReport == "none")
+        warn(toString(f) + ": -z force-bti: file does not have "
+                           "GNU_PROPERTY_AARCH64_FEATURE_1_BTI property");
     } else if (config->zForceIbt &&
                !(features & GNU_PROPERTY_X86_FEATURE_1_IBT)) {
-      warn(toString(f) + ": -z force-ibt: file does not have "
-                         "GNU_PROPERTY_X86_FEATURE_1_IBT property");
+      if (config->zCetReport == "none")
+        warn(toString(f) + ": -z force-ibt: file does not have "
+                           "GNU_PROPERTY_X86_FEATURE_1_IBT property");
       features |= GNU_PROPERTY_X86_FEATURE_1_IBT;
     }
     if (config->zPacPlt && !(features & GNU_PROPERTY_AARCH64_FEATURE_1_PAC)) {
@@ -2170,7 +2204,7 @@ template <class ELFT> static uint32_t getAndFeatures() {
 // all linker scripts have already been parsed.
 template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   llvm::TimeTraceScope timeScope("Link", StringRef("LinkerDriver::Link"));
-  // If a -hash-style option was not given, set to a default value,
+  // If a --hash-style option was not given, set to a default value,
   // which varies depending on the target.
   if (!args.hasArg(OPT_hash_style)) {
     if (config->emachine == EM_MIPS)
@@ -2213,7 +2247,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     symtab->insert(arg->getValue())->traced = true;
 
   // Handle -u/--undefined before input files. If both a.a and b.so define foo,
-  // -u foo a.a b.so will fetch a.a.
+  // -u foo a.a b.so will extract a.a.
   for (StringRef name : config->undefined)
     addUnusedUndefined(name)->referenced = true;
 
@@ -2303,9 +2337,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // Create elfHeader early. We need a dummy section in
   // addReservedSymbols to mark the created symbols as not absolute.
   Out::elfHeader = make<OutputSection>("", 0, SHF_ALLOC);
-  Out::elfHeader->size = sizeof(typename ELFT::Ehdr);
 
-  // Create wrapped symbols for -wrap option.
   std::vector<WrappedSymbol> wrapped = addWrappedSymbols(args);
 
   // We need to create some reserved symbols such as _end. Create them.
@@ -2340,9 +2372,9 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   if (errorCount())
     return;
 
-  // If -thinlto-index-only is given, we should create only "index
+  // If --thinlto-index-only is given, we should create only "index
   // files" and not object files. Index file creation is already done
-  // in addCombinedLTOObject, so we are done if that's the case.
+  // in compileBitcodeFiles, so we are done if that's the case.
   // Likewise, --plugin-opt=emit-llvm and --plugin-opt=emit-asm are the
   // options to create output files in bitcode or assembly code
   // respectively. No object files are generated.
@@ -2352,7 +2384,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
       !config->thinLTOModulesToCompile.empty())
     return;
 
-  // Apply symbol renames for -wrap and combine foo@v1 and foo@@v1.
+  // Apply symbol renames for --wrap and combine foo@v1 and foo@@v1.
   redirectSymbols(wrapped);
 
   {
@@ -2378,7 +2410,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
       }
 
       // We do not want to emit debug sections if --strip-all
-      // or -strip-debug are given.
+      // or --strip-debug are given.
       if (config->strip == StripPolicy::None)
         return false;
 
@@ -2483,8 +2515,8 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     // merging MergeInputSections into a single MergeSyntheticSection. From this
     // point onwards InputSectionDescription::sections should be used instead of
     // sectionBases.
-    for (BaseCommand *base : script->sectionCommands)
-      if (auto *sec = dyn_cast<OutputSection>(base))
+    for (SectionCommand *cmd : script->sectionCommands)
+      if (auto *sec = dyn_cast<OutputSection>(cmd))
         sec->finalizeInputSections();
     llvm::erase_if(inputSections, [](InputSectionBase *s) {
       return isa<MergeInputSection>(s);

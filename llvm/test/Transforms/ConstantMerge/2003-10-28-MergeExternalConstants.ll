@@ -1,4 +1,4 @@
-; RUN: opt -S -constmerge < %s | FileCheck %s
+; RUN: opt -S -passes=constmerge < %s | FileCheck %s
 
 ; CHECK: @foo = constant i32 6
 ; CHECK: @bar = constant i32 6

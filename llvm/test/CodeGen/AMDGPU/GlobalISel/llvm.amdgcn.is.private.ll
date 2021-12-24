@@ -69,12 +69,12 @@ define amdgpu_kernel void @is_private_sgpr(i8* %ptr) {
 ; CI-NEXT:    s_load_dword s0, s[4:5], 0x11
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    s_cmp_lg_u32 s1, s0
-; CI-NEXT:    s_cbranch_scc1 BB1_2
+; CI-NEXT:    s_cbranch_scc1 .LBB1_2
 ; CI-NEXT:  ; %bb.1: ; %bb0
 ; CI-NEXT:    v_mov_b32_e32 v0, 0
 ; CI-NEXT:    flat_store_dword v[0:1], v0
 ; CI-NEXT:    s_waitcnt vmcnt(0)
-; CI-NEXT:  BB1_2: ; %bb1
+; CI-NEXT:  .LBB1_2: ; %bb1
 ; CI-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: is_private_sgpr:
@@ -84,12 +84,12 @@ define amdgpu_kernel void @is_private_sgpr(i8* %ptr) {
 ; GFX9-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_SH_MEM_BASES, 0, 16)
 ; GFX9-NEXT:    s_lshl_b32 s0, s0, 16
 ; GFX9-NEXT:    s_cmp_lg_u32 s1, s0
-; GFX9-NEXT:    s_cbranch_scc1 BB1_2
+; GFX9-NEXT:    s_cbranch_scc1 .LBB1_2
 ; GFX9-NEXT:  ; %bb.1: ; %bb0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    global_store_dword v[0:1], v0, off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:  BB1_2: ; %bb1
+; GFX9-NEXT:  .LBB1_2: ; %bb1
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: is_private_sgpr:
@@ -99,12 +99,12 @@ define amdgpu_kernel void @is_private_sgpr(i8* %ptr) {
 ; GFX10-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_SH_MEM_BASES, 0, 16)
 ; GFX10-NEXT:    s_lshl_b32 s0, s0, 16
 ; GFX10-NEXT:    s_cmp_lg_u32 s1, s0
-; GFX10-NEXT:    s_cbranch_scc1 BB1_2
+; GFX10-NEXT:    s_cbranch_scc1 .LBB1_2
 ; GFX10-NEXT:  ; %bb.1: ; %bb0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    global_store_dword v[0:1], v0, off
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:  BB1_2: ; %bb1
+; GFX10-NEXT:  .LBB1_2: ; %bb1
 ; GFX10-NEXT:    s_endpgm
   %val = call i1 @llvm.amdgcn.is.private(i8* %ptr)
   br i1 %val, label %bb0, label %bb1

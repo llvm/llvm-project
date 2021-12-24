@@ -14,6 +14,7 @@
 
 #include "lld/Common/LLVM.h"
 #include "lld/Common/Memory.h"
+#include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -40,6 +41,7 @@ namespace macho {
 struct PlatformInfo;
 class ConcatInputSection;
 class Symbol;
+class Defined;
 struct Reloc;
 enum class RefState : uint8_t;
 
@@ -50,11 +52,18 @@ extern std::unique_ptr<llvm::TarWriter> tar;
 // If .subsections_via_symbols is set, each InputSection will be split along
 // symbol boundaries. The field offset represents the offset of the subsection
 // from the start of the original pre-split InputSection.
-struct SubsectionEntry {
-  uint64_t offset;
-  InputSection *isec;
+struct Subsection {
+  uint64_t offset = 0;
+  InputSection *isec = nullptr;
 };
-using SubsectionMap = std::vector<SubsectionEntry>;
+
+using Subsections = std::vector<Subsection>;
+
+struct Section {
+  uint64_t address = 0;
+  Subsections subsections;
+  Section(uint64_t addr) : address(addr){};
+};
 
 class InputFile {
 public:
@@ -69,11 +78,12 @@ public:
   virtual ~InputFile() = default;
   Kind kind() const { return fileKind; }
   StringRef getName() const { return name; }
+  static void resetIdCount() { idCount = 0; }
 
   MemoryBufferRef mb;
 
   std::vector<Symbol *> symbols;
-  std::vector<SubsectionMap> subsections;
+  std::vector<Section> sections;
   // Provides an easy way to sort InputFiles deterministically.
   const int id;
 
@@ -98,27 +108,30 @@ private:
 class ObjFile final : public InputFile {
 public:
   ObjFile(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName);
+  ArrayRef<llvm::MachO::data_in_code_entry> getDataInCode() const;
+
   static bool classof(const InputFile *f) { return f->kind() == ObjKind; }
 
   llvm::DWARFUnit *compileUnit = nullptr;
   const uint32_t modTime;
   std::vector<ConcatInputSection *> debugSections;
-  ArrayRef<llvm::MachO::data_in_code_entry> dataInCodeEntries;
 
 private:
+  Section *compactUnwindSection = nullptr;
+
   template <class LP> void parse();
-  template <class Section> void parseSections(ArrayRef<Section>);
+  template <class SectionHeader> void parseSections(ArrayRef<SectionHeader>);
   template <class LP>
   void parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
                     ArrayRef<typename LP::nlist> nList, const char *strtab,
                     bool subsectionsViaSymbols);
   template <class NList>
   Symbol *parseNonSectionSymbol(const NList &sym, StringRef name);
-  template <class Section>
-  void parseRelocations(ArrayRef<Section> sectionHeaders, const Section &,
-                        SubsectionMap &);
+  template <class SectionHeader>
+  void parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
+                        const SectionHeader &, Subsections &);
   void parseDebugInfo();
-  void parseDataInCode();
+  void registerCompactUnwind();
 };
 
 // command-line -sectcreate file
@@ -177,7 +190,10 @@ private:
   bool handleLDSymbol(StringRef originalName);
   void handleLDPreviousSymbol(StringRef name, StringRef originalName);
   void handleLDInstallNameSymbol(StringRef name, StringRef originalName);
+  void handleLDHideSymbol(StringRef name, StringRef originalName);
   void checkAppExtensionSafety(bool dylibIsAppExtensionSafe) const;
+
+  llvm::DenseSet<llvm::CachedHashStringRef> hiddenSymbols;
 };
 
 // .a file
@@ -209,6 +225,7 @@ public:
 };
 
 extern llvm::SetVector<InputFile *> inputFiles;
+extern llvm::DenseMap<llvm::CachedHashStringRef, MemoryBufferRef> cachedReads;
 
 llvm::Optional<MemoryBufferRef> readFile(StringRef path);
 

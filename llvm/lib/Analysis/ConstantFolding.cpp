@@ -352,9 +352,12 @@ Constant *llvm::ConstantFoldLoadThroughBitcast(Constant *C, Type *DestTy,
                                          const DataLayout &DL) {
   do {
     Type *SrcTy = C->getType();
-    uint64_t DestSize = DL.getTypeSizeInBits(DestTy);
-    uint64_t SrcSize = DL.getTypeSizeInBits(SrcTy);
-    if (SrcSize < DestSize)
+    if (SrcTy == DestTy)
+      return C;
+
+    TypeSize DestSize = DL.getTypeSizeInBits(DestTy);
+    TypeSize SrcSize = DL.getTypeSizeInBits(SrcTy);
+    if (!TypeSize::isKnownGE(SrcSize, DestSize))
       return nullptr;
 
     // Catch the obvious splat cases (since all-zeros can coerce non-integral
@@ -690,8 +693,8 @@ Constant *llvm::ConstantFoldLoadFromConst(Constant *C, Type *Ty,
 }
 
 Constant *llvm::ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,
+                                             APInt Offset,
                                              const DataLayout &DL) {
-  APInt Offset(DL.getIndexTypeSizeInBits(C->getType()), 0);
   C = cast<Constant>(C->stripAndAccumulateConstantOffsets(
           DL, Offset, /* AllowNonInbounds */ true));
 
@@ -705,7 +708,8 @@ Constant *llvm::ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,
   // is all undef or zero, we know what it loads.
   if (auto *GV = dyn_cast<GlobalVariable>(getUnderlyingObject(C))) {
     if (GV->isConstant() && GV->hasDefinitiveInitializer()) {
-      if (GV->getInitializer()->isNullValue())
+      if (GV->getInitializer()->isNullValue() && !Ty->isX86_MMXTy() &&
+          !Ty->isX86_AMXTy())
         return Constant::getNullValue(Ty);
       if (isa<UndefValue>(GV->getInitializer()))
         return UndefValue::get(Ty);
@@ -713,6 +717,12 @@ Constant *llvm::ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,
   }
 
   return nullptr;
+}
+
+Constant *llvm::ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,
+                                             const DataLayout &DL) {
+  APInt Offset(DL.getIndexTypeSizeInBits(C->getType()), 0);
+  return ConstantFoldLoadFromConstPtr(C, Ty, Offset, DL);
 }
 
 namespace {
@@ -875,7 +885,7 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
     InnermostGEP = GEP;
     InBounds &= GEP->isInBounds();
 
-    SmallVector<Value *, 4> NestedOps(GEP->op_begin() + 1, GEP->op_end());
+    SmallVector<Value *, 4> NestedOps(llvm::drop_begin(GEP->operands()));
 
     // Do not try the incorporate the sub-GEP if some index is not a number.
     bool AllConstantInt = true;
@@ -1354,19 +1364,6 @@ Constant *llvm::ConstantFoldLoadThroughGEPConstantExpr(Constant *C,
   return ConstantFoldLoadThroughBitcast(C, Ty, DL);
 }
 
-Constant *
-llvm::ConstantFoldLoadThroughGEPIndices(Constant *C,
-                                        ArrayRef<Constant *> Indices) {
-  // Loop over all of the operands, tracking down which value we are
-  // addressing.
-  for (Constant *Index : Indices) {
-    C = C->getAggregateElement(Index);
-    if (!C)
-      return nullptr;
-  }
-  return C;
-}
-
 //===----------------------------------------------------------------------===//
 //  Constant Folding for Calls
 //
@@ -1781,15 +1778,8 @@ static bool mayFoldConstrained(ConstrainedFPIntrinsic *CI,
 
   // If the operation does not change exception status flags, it is safe
   // to fold.
-  if (St == APFloat::opStatus::opOK) {
-    // When FP exceptions are not ignored, intrinsic call will not be
-    // eliminated, because it is considered as having side effect. But we
-    // know that its evaluation does not raise exceptions, so side effect
-    // is absent. To allow removing the call, mark it as not accessing memory.
-    if (EB && *EB != fp::ExceptionBehavior::ebIgnore)
-      CI->addFnAttr(Attribute::ReadNone);
+  if (St == APFloat::opStatus::opOK)
     return true;
-  }
 
   // If evaluation raised FP exception, the result can depend on rounding
   // mode. If the latter is unknown, folding is not possible.
@@ -2967,10 +2957,6 @@ static Constant *ConstantFoldFixedVectorCall(
     if (auto *Op = dyn_cast<ConstantInt>(Operands[0])) {
       unsigned Lanes = FVTy->getNumElements();
       uint64_t Limit = Op->getZExtValue();
-      // vctp64 are currently modelled as returning a v4i1, not a v2i1. Make
-      // sure we get the limit right in that case and set all relevant lanes.
-      if (IntrinsicID == Intrinsic::arm_mve_vctp64)
-        Limit *= 2;
 
       SmallVector<Constant *, 16> NCs;
       for (unsigned i = 0; i < Lanes; i++) {

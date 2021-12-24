@@ -1,4 +1,4 @@
-//===------------------------- chrono.cpp ---------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -80,9 +80,9 @@ public:
   GetSystemTimeAsFileTimePtr fp;
 };
 
-# 83 "chrono.cpp" 1 3
-GetSystemTimeInit GetSystemTimeAsFileTimeFunc _LIBCPP_INIT_PRIORITY_MAX;
-# 85 "chrono.cpp" 2
+// Pretend we're inside a system header so the compiler doesn't flag the use of the init_priority
+// attribute with a value that's reserved for the implementation (we're the implementation).
+#include "chrono_system_time_init.h"
 } // namespace
 
 #endif

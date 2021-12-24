@@ -455,10 +455,18 @@ void GlobalSection::writeBody() {
   bool is64 = config->is64.getValueOr(false);
   uint8_t itype = is64 ? WASM_TYPE_I64 : WASM_TYPE_I32;
   for (const Symbol *sym : internalGotSymbols) {
-    // In the case of dynamic linking, internal GOT entries
-    // need to be mutable since they get updated to the correct
-    // runtime value during `__wasm_apply_global_relocs`.
-    bool mutable_ = config->isPic & !sym->isStub;
+    bool mutable_ = false;
+    if (!sym->isStub) {
+      // In the case of dynamic linking, these global must to be mutable since
+      // they get updated to the correct runtime value during
+      // `__wasm_apply_global_relocs`.
+      if (config->isPic && !sym->isTLS())
+        mutable_ = true;
+      // With multi-theadeding any TLS globals must be mutable since they get
+      // set during `__wasm_apply_global_tls_relocs`
+      if (config->sharedMemory && sym->isTLS())
+        mutable_ = true;
+    }
     WasmGlobalType type{itype, mutable_};
     WasmInitExpr initExpr;
     if (auto *d = dyn_cast<DefinedData>(sym))
@@ -558,9 +566,10 @@ void ElemSection::writeBody() {
 
 DataCountSection::DataCountSection(ArrayRef<OutputSegment *> segments)
     : SyntheticSection(llvm::wasm::WASM_SEC_DATACOUNT),
-      numSegments(std::count_if(
-          segments.begin(), segments.end(),
-          [](OutputSegment *const segment) { return !segment->isBss; })) {}
+      numSegments(std::count_if(segments.begin(), segments.end(),
+                                [](OutputSegment *const segment) {
+                                  return segment->requiredInBinary();
+                                })) {}
 
 void DataCountSection::writeBody() {
   writeUleb128(bodyOutputStream, numSegments, "data count");
@@ -716,7 +725,7 @@ unsigned NameSection::numNamedDataSegments() const {
   unsigned numNames = 0;
 
   for (const OutputSegment *s : segments)
-    if (!s->name.empty() && !s->isBss)
+    if (!s->name.empty() && s->requiredInBinary())
       ++numNames;
 
   return numNames;
@@ -789,7 +798,7 @@ void NameSection::writeBody() {
     writeUleb128(sub.os, count, "name count");
 
     for (OutputSegment *s : segments) {
-      if (!s->name.empty() && !s->isBss) {
+      if (!s->name.empty() && s->requiredInBinary()) {
         writeUleb128(sub.os, s->index, "global index");
         writeStr(sub.os, s->name, "segment name");
       }

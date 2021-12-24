@@ -16,7 +16,7 @@
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/Affine/Utils.h"
-#include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/SCF/Utils.h"
@@ -61,7 +61,7 @@ static bool isEqualOffsetSizeOrStride(OpFoldResult op1, OpFoldResult op2) {
     Attribute attr = ofr.dyn_cast<Attribute>();
     // Note: isa+cast-like pattern allows writing the condition below as 1 line.
     if (!attr && ofr.get<Value>().getDefiningOp<arith::ConstantOp>())
-      attr = ofr.get<Value>().getDefiningOp<arith::ConstantOp>().value();
+      attr = ofr.get<Value>().getDefiningOp<arith::ConstantOp>().getValue();
     if (auto intAttr = attr.dyn_cast_or_null<IntegerAttr>())
       return intAttr.getValue().getSExtValue();
     return llvm::None;
@@ -286,9 +286,11 @@ static void hoistReadWrite(HoistableRead read, HoistableWrite write,
 
   // Update the source tensor.
   if (read.extractSliceOp)
-    read.extractSliceOp.sourceMutable().assign(forOp.initArgs()[initArgNumber]);
+    read.extractSliceOp.sourceMutable().assign(
+        forOp.getInitArgs()[initArgNumber]);
   else
-    read.transferReadOp.sourceMutable().assign(forOp.initArgs()[initArgNumber]);
+    read.transferReadOp.sourceMutable().assign(
+        forOp.getInitArgs()[initArgNumber]);
 
   // Hoist write after.
   if (write.insertSliceOp)
@@ -296,7 +298,7 @@ static void hoistReadWrite(HoistableRead read, HoistableWrite write,
   write.transferWriteOp->moveAfter(forOp);
 
   // Update the yield.
-  auto yieldOp = cast<scf::YieldOp>(forOp.region().front().getTerminator());
+  auto yieldOp = cast<scf::YieldOp>(forOp.getRegion().front().getTerminator());
   if (write.insertSliceOp)
     yieldOp->setOperand(initArgNumber, write.insertSliceOp.dest());
   else

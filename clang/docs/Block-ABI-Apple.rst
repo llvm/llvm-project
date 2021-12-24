@@ -43,7 +43,7 @@ the following form:
     struct Block_literal_1 {
         void *isa; // initialized to &_NSConcreteStackBlock or &_NSConcreteGlobalBlock
         int flags;
-        int reserved; 
+        int reserved;
         R (*invoke)(struct Block_literal_1 *, P...);
         struct Block_descriptor_1 {
             unsigned long int reserved;     // NULL
@@ -74,7 +74,7 @@ The following flags bits are in use thusly for a possible ABI.2010.3.16:
         BLOCK_HAS_CTOR =          (1 << 26), // helpers have C++ code
         BLOCK_IS_GLOBAL =         (1 << 28),
         BLOCK_HAS_STRET =         (1 << 29), // IFF BLOCK_HAS_SIGNATURE
-        BLOCK_HAS_SIGNATURE =     (1 << 30), 
+        BLOCK_HAS_SIGNATURE =     (1 << 30),
     };
 
 In 10.6.ABI the (1<<29) was usually set and was always ignored by the runtime -
@@ -104,25 +104,25 @@ When a ``Block`` literal expression is evaluated the stack based structure is
 initialized as follows:
 
 1. A ``static`` descriptor structure is declared and initialized as follows:
-  
+
   a. The ``invoke`` function pointer is set to a function that takes the
   ``Block`` structure as its first argument and the rest of the arguments (if
   any) to the ``Block`` and executes the ``Block`` compound statement.
-  
+
   b. The ``size`` field is set to the size of the following ``Block`` literal
   structure.
-  
+
   c. The ``copy_helper`` and ``dispose_helper`` function pointers are set to
   respective helper functions if they are required by the ``Block`` literal.
 
 2. A stack (or global) ``Block`` literal data structure is created and
    initialized as follows:
-   
+
    a. The ``isa`` field is set to the address of the external
    ``_NSConcreteStackBlock``, which is a block of uninitialized memory supplied
    in ``libSystem``, or ``_NSConcreteGlobalBlock`` if this is a static or file
    level ``Block`` literal.
-   
+
    b. The ``flags`` field is set to zero unless there are variables imported
    into the ``Block`` that need helper functions for program level
    ``Block_copy()`` and ``Block_release()`` operations, in which case the
@@ -141,15 +141,15 @@ would cause the following to be created on a 32-bit system:
     struct __block_literal_1 {
         void *isa;
         int flags;
-        int reserved; 
+        int reserved;
         void (*invoke)(struct __block_literal_1 *);
         struct __block_descriptor_1 *descriptor;
     };
-    
+
     void __block_invoke_1(struct __block_literal_1 *_block) {
         printf("hello world\n");
     }
-    
+
     static struct __block_descriptor_1 {
         unsigned long int reserved;
         unsigned long int Block_size;
@@ -214,20 +214,20 @@ The simplest example is that of importing a variable of type ``int``:
 which would be compiled to:
 
 .. code-block:: c
-    
+
     struct __block_literal_2 {
         void *isa;
         int flags;
-        int reserved; 
+        int reserved;
         void (*invoke)(struct __block_literal_2 *);
         struct __block_descriptor_2 *descriptor;
         const int x;
     };
-    
+
     void __block_invoke_2(struct __block_literal_2 *_block) {
         printf("x is %d\n", _block->x);
     }
-    
+
     static struct __block_descriptor_2 {
         unsigned long int reserved;
         unsigned long int Block_size;
@@ -266,33 +266,33 @@ A quick example:
     void (^existingBlock)(void) = ...;
     void (^vv)(void) = ^{ existingBlock(); }
     vv();
-    
+
     struct __block_literal_3 {
        ...; // existing block
     };
-    
+
     struct __block_literal_4 {
         void *isa;
         int flags;
-        int reserved; 
+        int reserved;
         void (*invoke)(struct __block_literal_4 *);
         struct __block_literal_3 *const existingBlock;
     };
-    
+
     void __block_invoke_4(struct __block_literal_2 *_block) {
        __block->existingBlock->invoke(__block->existingBlock);
     }
-    
+
     void __block_copy_4(struct __block_literal_4 *dst, struct __block_literal_4 *src) {
          //_Block_copy_assign(&dst->existingBlock, src->existingBlock, 0);
          _Block_object_assign(&dst->existingBlock, src->existingBlock, BLOCK_FIELD_IS_BLOCK);
     }
-    
+
     void __block_dispose_4(struct __block_literal_4 *src) {
          // was _Block_destroy
          _Block_object_dispose(src->existingBlock, BLOCK_FIELD_IS_BLOCK);
     }
-    
+
     static struct __block_descriptor_4 {
         unsigned long int reserved;
         unsigned long int Block_size;
@@ -344,7 +344,7 @@ would have the following helper functions generated:
     void __block_copy_foo(struct __block_literal_5 *dst, struct __block_literal_5 *src) {
          _Block_object_assign(&dst->objectPointer, src-> objectPointer, BLOCK_FIELD_IS_OBJECT);
     }
-    
+
     void __block_dispose_foo(struct __block_literal_5 *src) {
          _Block_object_dispose(src->objectPointer, BLOCK_FIELD_IS_OBJECT);
     }
@@ -392,17 +392,17 @@ The structure is initialized such that:
 
     a. The ``forwarding`` pointer is set to the beginning of its enclosing
     structure.
-    
+
     b. The ``size`` field is initialized to the total size of the enclosing
-    structure.    
-    
+    structure.
+
     c. The ``flags`` field is set to either 0 if no helper functions are needed
-    or (1<<25) if they are.    
-    
-    d. The helper functions are initialized (if present).    
-    
-    e. The variable itself is set to its initial value.    
-    
+    or (1<<25) if they are.
+
+    d. The helper functions are initialized (if present).
+
+    e. The variable itself is set to its initial value.
+
     f. The ``isa`` field is set to ``NULL``.
 
 Access to ``__block`` variables from within its lexical scope
@@ -428,7 +428,7 @@ would be rewritten to be:
       int size;
       int captured_i;
     } i = { NULL, &i, 0, sizeof(struct _block_byref_i), 10 };
-    
+
     i.forwarding->captured_i = 11;
 
 In the case of a ``Block`` reference variable being marked ``__block`` the
@@ -454,12 +454,12 @@ would translate into:
         void (*byref_dispose)(struct _block_byref_voidBlock *);
         void (^captured_voidBlock)(void);
     };
-    
+
     void _block_byref_keep_helper(struct _block_byref_voidBlock *dst, struct _block_byref_voidBlock *src) {
         //_Block_copy_assign(&dst->captured_voidBlock, src->captured_voidBlock, 0);
         _Block_object_assign(&dst->captured_voidBlock, src->captured_voidBlock, BLOCK_FIELD_IS_BLOCK | BLOCK_BYREF_CALLER);
     }
-    
+
     void _block_byref_dispose_helper(struct _block_byref_voidBlock *param) {
         //_Block_destroy(param->captured_voidBlock, 0);
         _Block_object_dispose(param->captured_voidBlock, BLOCK_FIELD_IS_BLOCK | BLOCK_BYREF_CALLER)}
@@ -471,7 +471,7 @@ and:
     struct _block_byref_voidBlock voidBlock = {( .forwarding=&voidBlock, .flags=(1<<25), .size=sizeof(struct _block_byref_voidBlock *),
         .byref_keep=_block_byref_keep_helper, .byref_dispose=_block_byref_dispose_helper,
         .captured_voidBlock=blockA )};
-    
+
     voidBlock.forwarding->captured_voidBlock = blockB;
 
 Importing ``__block`` variables into ``Blocks``
@@ -503,31 +503,31 @@ would translate to:
         void (*byref_dispose)(struct _block_byref_i *);
         int captured_i;
     };
-    
-    
+
+
     struct __block_literal_5 {
         void *isa;
         int flags;
-        int reserved; 
+        int reserved;
         void (*invoke)(struct __block_literal_5 *);
         struct __block_descriptor_5 *descriptor;
         struct _block_byref_i *i_holder;
     };
-    
+
     void __block_invoke_5(struct __block_literal_5 *_block) {
        _block->forwarding->captured_i = 10;
     }
-    
+
     void __block_copy_5(struct __block_literal_5 *dst, struct __block_literal_5 *src) {
          //_Block_byref_assign_copy(&dst->captured_i, src->captured_i);
          _Block_object_assign(&dst->captured_i, src->captured_i, BLOCK_FIELD_IS_BYREF | BLOCK_BYREF_CALLER);
     }
-    
+
     void __block_dispose_5(struct __block_literal_5 *src) {
          //_Block_byref_release(src->captured_i);
          _Block_object_dispose(src->captured_i, BLOCK_FIELD_IS_BYREF | BLOCK_BYREF_CALLER);
     }
-    
+
     static struct __block_descriptor_5 {
         unsigned long int reserved;
         unsigned long int Block_size;
@@ -660,12 +660,12 @@ would translate to:
         void (*byref_dispose)(struct _block_byref_i *);
         id captured_obj;
     };
-    
+
     void _block_byref_obj_keep(struct _block_byref_voidBlock *dst, struct _block_byref_voidBlock *src) {
         //_Block_copy_assign(&dst->captured_obj, src->captured_obj, 0);
         _Block_object_assign(&dst->captured_obj, src->captured_obj, BLOCK_FIELD_IS_OBJECT | BLOCK_FIELD_IS_WEAK | BLOCK_BYREF_CALLER);
     }
-    
+
     void _block_byref_obj_dispose(struct _block_byref_voidBlock *param) {
         //_Block_destroy(param->captured_obj, 0);
         _Block_object_dispose(param->captured_obj, BLOCK_FIELD_IS_OBJECT | BLOCK_FIELD_IS_WEAK | BLOCK_BYREF_CALLER);
@@ -678,26 +678,26 @@ for the block ``byref`` part and:
     struct __block_literal_5 {
         void *isa;
         int flags;
-        int reserved; 
+        int reserved;
         void (*invoke)(struct __block_literal_5 *);
         struct __block_descriptor_5 *descriptor;
         struct _block_byref_obj *byref_obj;
     };
-    
+
     void __block_invoke_5(struct __block_literal_5 *_block) {
        [objc_read_weak(&_block->byref_obj->forwarding->captured_obj) somemessage];
     }
-    
+
     void __block_copy_5(struct __block_literal_5 *dst, struct __block_literal_5 *src) {
          //_Block_byref_assign_copy(&dst->byref_obj, src->byref_obj);
          _Block_object_assign(&dst->byref_obj, src->byref_obj, BLOCK_FIELD_IS_BYREF | BLOCK_FIELD_IS_WEAK);
     }
-    
+
     void __block_dispose_5(struct __block_literal_5 *src) {
          //_Block_byref_release(src->byref_obj);
          _Block_object_dispose(src->byref_obj, BLOCK_FIELD_IS_BYREF | BLOCK_FIELD_IS_WEAK);
     }
-    
+
     static struct __block_descriptor_5 {
         unsigned long int reserved;
         unsigned long int Block_size;
@@ -712,7 +712,7 @@ and within the compound statement:
     truct _block_byref_obj obj = {( .forwarding=&obj, .flags=(1<<25), .size=sizeof(struct _block_byref_obj),
                      .byref_keep=_block_byref_obj_keep, .byref_dispose=_block_byref_obj_dispose,
                      .captured_obj = <initialization expression> )};
-    
+
     truct __block_literal_5 _block_literal = {
          &_NSConcreteStackBlock,
          (1<<25)|(1<<29), <uninitialized>,
@@ -720,8 +720,8 @@ and within the compound statement:
          &__block_descriptor_5,
          &obj,        // a reference to the on-stack structure containing "captured_obj"
     };
-    
-    
+
+
     functioncall(_block_literal->invoke(&_block_literal));
 
 C++ Support
@@ -755,24 +755,24 @@ The compiler would synthesize:
     struct __block_literal_10 {
         void *isa;
         int flags;
-        int reserved; 
+        int reserved;
         void (*invoke)(struct __block_literal_10 *);
         struct __block_descriptor_10 *descriptor;
         const FOO foo;
     };
-    
+
     void __block_invoke_10(struct __block_literal_10 *_block) {
        printf("%d\n", _block->foo.value());
     }
-    
+
     void __block_copy_10(struct __block_literal_10 *dst, struct __block_literal_10 *src) {
          FOO_ctor(&dst->foo, &src->foo);
     }
-    
+
     void __block_dispose_10(struct __block_literal_10 *src) {
          FOO_dtor(&src->foo);
     }
-    
+
     static struct __block_descriptor_10 {
         unsigned long int reserved;
         unsigned long int Block_size;
@@ -837,7 +837,7 @@ copy/dispose helpers:
     void _block_byref_obj_keep(struct _block_byref_blockStorageFoo *dst, struct _block_byref_blockStorageFoo *src) {
          FOO_ctor(&dst->blockStorageFoo, &src->blockStorageFoo);
     }
-    
+
     void _block_byref_obj_dispose(struct _block_byref_blockStorageFoo *src) {
          FOO_dtor(&src->blockStorageFoo);
     }
@@ -881,9 +881,9 @@ in the dispose helper where ``<apropos>`` is:
         BLOCK_FIELD_IS_OBJECT   =  3,  // id, NSObject, __attribute__((NSObject)), block, ...
         BLOCK_FIELD_IS_BLOCK    =  7,  // a block variable
         BLOCK_FIELD_IS_BYREF    =  8,  // the on stack structure holding the __block variable
-    
+
         BLOCK_FIELD_IS_WEAK     = 16,  // declared __weak
-    
+
         BLOCK_BYREF_CALLER      = 128, // called from byref copy/dispose helpers
     };
 
@@ -903,7 +903,7 @@ this causes the addition of ``BLOCK_FIELD_IS_WEAK`` orred onto the
 The prototypes, and summary, of the helper functions are:
 
 .. code-block:: c
-    
+
     /* Certain field types require runtime assistance when being copied to the
        heap.  The following function is used to copy fields of types: blocks,
        pointers to byref structures, and objects (including
@@ -912,7 +912,7 @@ The prototypes, and summary, of the helper functions are:
        helper will one see BLOCK_FIELD_IS_BYREF.
     */
     void _Block_object_assign(void *destAddr, const void *object, const int flags);
-    
+
     /* Similarly a compiler generated dispose helper needs to call back for each
        field of the byref data structure.  (Currently the implementation only
        packs one field into the byref structure but in principle there could be

@@ -171,12 +171,12 @@ endif:
 ; GFX1064: s_or_b64 s[{{[0-9:]+}}], vcc, s[{{[0-9:]+}}]
 ; GFX1064: s_andn2_b64 exec, exec, s[{{[0-9:]+}}]
 ; GCN:     s_cbranch_execz
-; GCN:   BB{{.*}}:
+; GCN:   .LBB{{.*}}:
 ; GFX1032: s_and_saveexec_b32 s{{[0-9]+}}, vcc_lo
 ; GFX1064: s_and_saveexec_b64 s[{{[0-9:]+}}], vcc{{$}}
 ; GCN:     s_cbranch_execz
 ; GCN:   ; %bb.{{[0-9]+}}:
-; GCN:   BB{{.*}}:
+; GCN:   .LBB{{.*}}:
 ; GFX1032: s_xor_b32 s{{[0-9]+}}, exec_lo, s{{[0-9]+}}
 ; GFX1064: s_xor_b64 s[{{[0-9:]+}}], exec, s[{{[0-9:]+}}]
 ; GCN:   ; %bb.{{[0-9]+}}:
@@ -185,9 +185,9 @@ endif:
 ; GFX1032: s_and_saveexec_b32 s{{[0-9]+}}, s{{[0-9]+}}
 ; GFX1064: s_or_b64 exec, exec, s[{{[0-9:]+}}]
 ; GFX1064: s_and_saveexec_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}]{{$}}
-; GCN:     s_cbranch_execz BB
+; GCN:     s_cbranch_execz .LBB
 ; GCN:   ; %bb.{{[0-9]+}}:
-; GCN:   BB{{.*}}:
+; GCN:   .LBB{{.*}}:
 ; GCN:     s_endpgm
 define amdgpu_kernel void @test_loop_with_if(i32 addrspace(1)* %arg) #0 {
 bb:
@@ -229,7 +229,7 @@ bb13:
 ; GFX1064: s_and_saveexec_b64 s[{{[0-9:]+}}], vcc{{$}}
 ; GCN:     s_cbranch_execz
 ; GCN:   ; %bb.{{[0-9]+}}: ; %.preheader
-; GCN:   BB{{.*}}:
+; GCN:   .LBB{{.*}}:
 
 ; GCN:     global_store_dword
 ; GFX1032: s_or_b32 [[MASK0:s[0-9]+]], [[MASK0]], vcc_lo
@@ -240,7 +240,7 @@ bb13:
 ; GFX1064: s_and_b64 [[MASK0]], [[MASK0]], exec
 ; GFX1032: s_or_b32 [[MASK1]], [[MASK1]], [[MASK0]]
 ; GFX1064: s_or_b64 [[MASK1]], [[MASK1]], [[MASK0]]
-; GCN:   BB{{.*}}: ; %Flow
+; GCN:   .LBB{{.*}}: ; %Flow
 ; GFX1032: s_and_b32 [[TMP0:s[0-9]+]], exec_lo, [[MASK1]]
 ; GFX1064: s_and_b64 [[TMP0:s\[[0-9:]+\]]], exec, [[MASK1]]
 ; GFX1032: s_or_b32  [[ACC:s[0-9]+]], [[TMP0]], [[ACC]]
@@ -248,7 +248,7 @@ bb13:
 ; GFX1032: s_andn2_b32 exec_lo, exec_lo, [[ACC]]
 ; GFX1064: s_andn2_b64 exec, exec, [[ACC]]
 ; GCN:     s_cbranch_execz
-; GCN:   BB{{.*}}:
+; GCN:   .LBB{{.*}}:
 
 ; GFX1032-DAG: s_or_b32 [[MASK1]], [[MASK1]], exec_lo
 ; GFX1064-DAG: s_or_b64 [[MASK1]], [[MASK1]], exec
@@ -330,26 +330,24 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}test_udiv64:
-; GFX1032: v_add_co_u32 v{{[0-9]+}}, [[SDST:s[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}
-; GFX1032: v_add_co_ci_u32_e32 v{{[0-9]+}}, vcc_lo, 0, v{{[0-9]+}}, vcc_lo
-; GFX1032: v_add_co_ci_u32_e64 v{{[0-9]+}}, vcc_lo, v{{[0-9]+}}, v{{[0-9]+}}, [[SDST]]
-; GFX1032: v_add_co_u32 v{{[0-9]+}}, vcc_lo, v{{[0-9]+}}, v{{[0-9]+}}
-; GFX1032: v_add_co_u32 v{{[0-9]+}}, vcc_lo, v{{[0-9]+}}, v{{[0-9]+}}
 ; GFX1032: v_add_co_u32 v{{[0-9]+}}, vcc_lo, v{{[0-9]+}}, v{{[0-9]+}}
 ; GFX1032: v_add_co_ci_u32_e32 v{{[0-9]+}}, vcc_lo, 0, v{{[0-9]+}}, vcc_lo
-; GFX1032: v_sub_co_u32 v{{[0-9]+}}, vcc_lo, s{{[0-9]+}}, v{{[0-9]+}}
-; GFX1032: v_subrev_co_ci_u32_e64 v{{[0-9]+}}, s{{[0-9]+}}, {{[vs][0-9]+}}, v{{[0-9]+}}, vcc_lo
-; GFX1032: v_sub_co_ci_u32_e32 v{{[0-9]+}}, vcc_lo, {{[vs][0-9]+}}, v{{[0-9]+}}, vcc_lo
-; GFX1064: v_add_co_u32 v{{[0-9]+}}, [[SDST:s\[[0-9:]+\]]], v{{[0-9]+}}, v{{[0-9]+}}
+; GFX1032: v_add_co_u32 v{{[0-9]+}}, vcc_lo, v{{[0-9]+}}, v{{[0-9]+}}
+; GFX1032: v_add_co_ci_u32_e32 v{{[0-9]+}}, vcc_lo, v{{[0-9]+}}, v{{[0-9]+}}, vcc_lo
+; GFX1032: v_add_co_ci_u32_e32 v{{[0-9]+}}, vcc_lo, 0, v{{[0-9]+}}, vcc_lo
+; GFX1032: v_add_co_u32 v{{[0-9]+}}, vcc_lo, v{{[0-9]+}}, v{{[0-9]+}}
+; GFX1032: v_add_co_ci_u32_e32 v{{[0-9]+}}, vcc_lo, 0, v{{[0-9]+}}, vcc_lo
+; GFX1032: v_add_co_u32 v{{[0-9]+}}, vcc_lo, v{{[0-9]+}}, v{{[0-9]+}}
+; GFX1032: v_add_co_ci_u32_e32 v{{[0-9]+}}, vcc_lo, v{{[0-9]+}}, v{{[0-9]+}}, vcc_lo
+; GFX1064: v_add_co_u32 v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}}
 ; GFX1064: v_add_co_ci_u32_e32 v{{[0-9]+}}, vcc, 0, v{{[0-9]+}}, vcc{{$}}
-; GFX1064: v_add_co_ci_u32_e64 v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}}, [[SDST]]
 ; GFX1064: v_add_co_u32 v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}}
-; GFX1064: v_add_co_u32 v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}}
+; GFX1064: v_add_co_ci_u32_e32 v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}}, vcc{{$}}
+; GFX1064: v_add_co_ci_u32_e32 v{{[0-9]+}}, vcc, 0, v{{[0-9]+}}, vcc{{$}}
 ; GFX1064: v_add_co_u32 v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}}
 ; GFX1064: v_add_co_ci_u32_e32 v{{[0-9]+}}, vcc, 0, v{{[0-9]+}}, vcc{{$}}
-; GFX1064: v_sub_co_u32 v{{[0-9]+}}, vcc, s{{[0-9]+}}, v{{[0-9]+}}
-; GFX1064: v_subrev_co_ci_u32_e64 v{{[0-9]+}}, s[{{[0-9:]+}}], {{[vs][0-9]+}}, v{{[0-9]+}}, vcc
-; GFX1064: v_sub_co_ci_u32_e32 v{{[0-9]+}}, vcc, {{[vs][0-9]+}}, v{{[0-9]+}}, vcc
+; GFX1064: v_add_co_u32 v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}}
+; GFX1064: v_add_co_ci_u32_e32 v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}}, vcc{{$}}
 define amdgpu_kernel void @test_udiv64(i64 addrspace(1)* %arg) #0 {
 bb:
   %tmp = getelementptr inbounds i64, i64 addrspace(1)* %arg, i64 1
@@ -448,7 +446,7 @@ define amdgpu_kernel void @test_div_fmas_f64(double addrspace(1)* %out, double %
 ; GCN: load_dword [[LOAD:v[0-9]+]]
 ; GCN: v_cmp_ne_u32_e32 [[VCC]], 0, [[LOAD]]
 
-; GCN: BB{{[0-9_]+}}:
+; GCN: .LBB{{[0-9_]+}}:
 ; GFX1032: s_or_b32 exec_lo, exec_lo, [[SAVE]]
 ; GFX1064: s_or_b64 exec, exec, [[SAVE]]
 ; GCN: v_div_fmas_f32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}

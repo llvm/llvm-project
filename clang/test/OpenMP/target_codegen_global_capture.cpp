@@ -384,29 +384,29 @@ int tbar2(short a, short b, short c, short d){
 // CHECK1-NEXT:    [[CONV6:%.*]] = bitcast i64* [[D_ADDR]] to i16*
 // CHECK1-NEXT:    [[CONV7:%.*]] = bitcast i64* [[GD_ADDR]] to double*
 // CHECK1-NEXT:    [[CONV8:%.*]] = bitcast i64* [[SD_ADDR]] to float*
-// CHECK1-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV]], align 8
+// CHECK1-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV]], align 2
 // CHECK1-NEXT:    [[CONV9:%.*]] = sext i16 [[TMP1]] to i32
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV9]], 1
 // CHECK1-NEXT:    [[CONV10:%.*]] = trunc i32 [[ADD]] to i16
-// CHECK1-NEXT:    store i16 [[CONV10]], i16* [[CONV]], align 8
+// CHECK1-NEXT:    store i16 [[CONV10]], i16* [[CONV]], align 2
 // CHECK1-NEXT:    [[TMP2:%.*]] = load double, double* [[CONV1]], align 8
 // CHECK1-NEXT:    [[ADD11:%.*]] = fadd double [[TMP2]], 1.000000e+00
 // CHECK1-NEXT:    store double [[ADD11]], double* [[CONV1]], align 8
-// CHECK1-NEXT:    [[TMP3:%.*]] = load float, float* [[CONV2]], align 8
+// CHECK1-NEXT:    [[TMP3:%.*]] = load float, float* [[CONV2]], align 4
 // CHECK1-NEXT:    [[CONV12:%.*]] = fpext float [[TMP3]] to double
 // CHECK1-NEXT:    [[ADD13:%.*]] = fadd double [[CONV12]], 1.000000e+00
 // CHECK1-NEXT:    [[CONV14:%.*]] = fptrunc double [[ADD13]] to float
-// CHECK1-NEXT:    store float [[CONV14]], float* [[CONV2]], align 8
+// CHECK1-NEXT:    store float [[CONV14]], float* [[CONV2]], align 4
 // CHECK1-NEXT:    [[TMP4:%.*]] = load double, double* [[CONV3]], align 8
 // CHECK1-NEXT:    [[CMP:%.*]] = fcmp ogt double [[TMP4]], 0.000000e+00
 // CHECK1-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK1:       land.lhs.true:
-// CHECK1-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV4]], align 8
+// CHECK1-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV4]], align 2
 // CHECK1-NEXT:    [[CONV15:%.*]] = sext i16 [[TMP5]] to i32
 // CHECK1-NEXT:    [[CMP16:%.*]] = icmp sgt i32 [[CONV15]], 0
 // CHECK1-NEXT:    br i1 [[CMP16]], label [[LAND_LHS_TRUE17:%.*]], label [[OMP_IF_ELSE]]
 // CHECK1:       land.lhs.true17:
-// CHECK1-NEXT:    [[TMP6:%.*]] = load float, float* [[CONV5]], align 8
+// CHECK1-NEXT:    [[TMP6:%.*]] = load float, float* [[CONV5]], align 4
 // CHECK1-NEXT:    [[CONV18:%.*]] = fpext float [[TMP6]] to double
 // CHECK1-NEXT:    [[CMP19:%.*]] = fcmp ogt double [[CONV18]], 0.000000e+00
 // CHECK1-NEXT:    br i1 [[CMP19]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE]]
@@ -697,29 +697,29 @@ int tbar2(short a, short b, short c, short d){
 // CHECK1-NEXT:    [[CONV6:%.*]] = bitcast i64* [[D_ADDR]] to i16*
 // CHECK1-NEXT:    [[CONV7:%.*]] = bitcast i64* [[GD_ADDR]] to double*
 // CHECK1-NEXT:    [[CONV8:%.*]] = bitcast i64* [[SD_ADDR]] to float*
-// CHECK1-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV]], align 8
+// CHECK1-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV]], align 2
 // CHECK1-NEXT:    [[CONV9:%.*]] = sext i16 [[TMP1]] to i32
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV9]], 1
 // CHECK1-NEXT:    [[CONV10:%.*]] = trunc i32 [[ADD]] to i16
-// CHECK1-NEXT:    store i16 [[CONV10]], i16* [[CONV]], align 8
+// CHECK1-NEXT:    store i16 [[CONV10]], i16* [[CONV]], align 2
 // CHECK1-NEXT:    [[TMP2:%.*]] = load double, double* [[CONV1]], align 8
 // CHECK1-NEXT:    [[ADD11:%.*]] = fadd double [[TMP2]], 1.000000e+00
 // CHECK1-NEXT:    store double [[ADD11]], double* [[CONV1]], align 8
-// CHECK1-NEXT:    [[TMP3:%.*]] = load float, float* [[CONV2]], align 8
+// CHECK1-NEXT:    [[TMP3:%.*]] = load float, float* [[CONV2]], align 4
 // CHECK1-NEXT:    [[CONV12:%.*]] = fpext float [[TMP3]] to double
 // CHECK1-NEXT:    [[ADD13:%.*]] = fadd double [[CONV12]], 1.000000e+00
 // CHECK1-NEXT:    [[CONV14:%.*]] = fptrunc double [[ADD13]] to float
-// CHECK1-NEXT:    store float [[CONV14]], float* [[CONV2]], align 8
+// CHECK1-NEXT:    store float [[CONV14]], float* [[CONV2]], align 4
 // CHECK1-NEXT:    [[TMP4:%.*]] = load double, double* [[CONV3]], align 8
 // CHECK1-NEXT:    [[CMP:%.*]] = fcmp ogt double [[TMP4]], 0.000000e+00
 // CHECK1-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK1:       land.lhs.true:
-// CHECK1-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV4]], align 8
+// CHECK1-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV4]], align 2
 // CHECK1-NEXT:    [[CONV15:%.*]] = sext i16 [[TMP5]] to i32
 // CHECK1-NEXT:    [[CMP16:%.*]] = icmp sgt i32 [[CONV15]], 0
 // CHECK1-NEXT:    br i1 [[CMP16]], label [[LAND_LHS_TRUE17:%.*]], label [[OMP_IF_ELSE]]
 // CHECK1:       land.lhs.true17:
-// CHECK1-NEXT:    [[TMP6:%.*]] = load float, float* [[CONV5]], align 8
+// CHECK1-NEXT:    [[TMP6:%.*]] = load float, float* [[CONV5]], align 4
 // CHECK1-NEXT:    [[CONV18:%.*]] = fpext float [[TMP6]] to double
 // CHECK1-NEXT:    [[CMP19:%.*]] = fcmp ogt double [[CONV18]], 0.000000e+00
 // CHECK1-NEXT:    br i1 [[CMP19]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE]]
@@ -1029,29 +1029,29 @@ int tbar2(short a, short b, short c, short d){
 // CHECK1-NEXT:    [[CONV6:%.*]] = bitcast i64* [[D_ADDR]] to i16*
 // CHECK1-NEXT:    [[CONV7:%.*]] = bitcast i64* [[GD_ADDR]] to double*
 // CHECK1-NEXT:    [[CONV8:%.*]] = bitcast i64* [[SD_ADDR]] to float*
-// CHECK1-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV]], align 8
+// CHECK1-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV]], align 2
 // CHECK1-NEXT:    [[CONV9:%.*]] = sext i16 [[TMP1]] to i32
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV9]], 1
 // CHECK1-NEXT:    [[CONV10:%.*]] = trunc i32 [[ADD]] to i16
-// CHECK1-NEXT:    store i16 [[CONV10]], i16* [[CONV]], align 8
+// CHECK1-NEXT:    store i16 [[CONV10]], i16* [[CONV]], align 2
 // CHECK1-NEXT:    [[TMP2:%.*]] = load double, double* [[CONV1]], align 8
 // CHECK1-NEXT:    [[ADD11:%.*]] = fadd double [[TMP2]], 1.000000e+00
 // CHECK1-NEXT:    store double [[ADD11]], double* [[CONV1]], align 8
-// CHECK1-NEXT:    [[TMP3:%.*]] = load float, float* [[CONV2]], align 8
+// CHECK1-NEXT:    [[TMP3:%.*]] = load float, float* [[CONV2]], align 4
 // CHECK1-NEXT:    [[CONV12:%.*]] = fpext float [[TMP3]] to double
 // CHECK1-NEXT:    [[ADD13:%.*]] = fadd double [[CONV12]], 1.000000e+00
 // CHECK1-NEXT:    [[CONV14:%.*]] = fptrunc double [[ADD13]] to float
-// CHECK1-NEXT:    store float [[CONV14]], float* [[CONV2]], align 8
+// CHECK1-NEXT:    store float [[CONV14]], float* [[CONV2]], align 4
 // CHECK1-NEXT:    [[TMP4:%.*]] = load double, double* [[CONV3]], align 8
 // CHECK1-NEXT:    [[CMP:%.*]] = fcmp ogt double [[TMP4]], 0.000000e+00
 // CHECK1-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK1:       land.lhs.true:
-// CHECK1-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV4]], align 8
+// CHECK1-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV4]], align 2
 // CHECK1-NEXT:    [[CONV15:%.*]] = sext i16 [[TMP5]] to i32
 // CHECK1-NEXT:    [[CMP16:%.*]] = icmp sgt i32 [[CONV15]], 0
 // CHECK1-NEXT:    br i1 [[CMP16]], label [[LAND_LHS_TRUE17:%.*]], label [[OMP_IF_ELSE]]
 // CHECK1:       land.lhs.true17:
-// CHECK1-NEXT:    [[TMP6:%.*]] = load float, float* [[CONV5]], align 8
+// CHECK1-NEXT:    [[TMP6:%.*]] = load float, float* [[CONV5]], align 4
 // CHECK1-NEXT:    [[CONV18:%.*]] = fpext float [[TMP6]] to double
 // CHECK1-NEXT:    [[CMP19:%.*]] = fcmp ogt double [[CONV18]], 0.000000e+00
 // CHECK1-NEXT:    br i1 [[CMP19]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE]]
@@ -1326,29 +1326,29 @@ int tbar2(short a, short b, short c, short d){
 // CHECK2-NEXT:    [[CONV6:%.*]] = bitcast i64* [[D_ADDR]] to i16*
 // CHECK2-NEXT:    [[CONV7:%.*]] = bitcast i64* [[GD_ADDR]] to double*
 // CHECK2-NEXT:    [[CONV8:%.*]] = bitcast i64* [[SD_ADDR]] to float*
-// CHECK2-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV]], align 8
+// CHECK2-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV]], align 2
 // CHECK2-NEXT:    [[CONV9:%.*]] = sext i16 [[TMP1]] to i32
 // CHECK2-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV9]], 1
 // CHECK2-NEXT:    [[CONV10:%.*]] = trunc i32 [[ADD]] to i16
-// CHECK2-NEXT:    store i16 [[CONV10]], i16* [[CONV]], align 8
+// CHECK2-NEXT:    store i16 [[CONV10]], i16* [[CONV]], align 2
 // CHECK2-NEXT:    [[TMP2:%.*]] = load double, double* [[CONV1]], align 8
 // CHECK2-NEXT:    [[ADD11:%.*]] = fadd double [[TMP2]], 1.000000e+00
 // CHECK2-NEXT:    store double [[ADD11]], double* [[CONV1]], align 8
-// CHECK2-NEXT:    [[TMP3:%.*]] = load float, float* [[CONV2]], align 8
+// CHECK2-NEXT:    [[TMP3:%.*]] = load float, float* [[CONV2]], align 4
 // CHECK2-NEXT:    [[CONV12:%.*]] = fpext float [[TMP3]] to double
 // CHECK2-NEXT:    [[ADD13:%.*]] = fadd double [[CONV12]], 1.000000e+00
 // CHECK2-NEXT:    [[CONV14:%.*]] = fptrunc double [[ADD13]] to float
-// CHECK2-NEXT:    store float [[CONV14]], float* [[CONV2]], align 8
+// CHECK2-NEXT:    store float [[CONV14]], float* [[CONV2]], align 4
 // CHECK2-NEXT:    [[TMP4:%.*]] = load double, double* [[CONV3]], align 8
 // CHECK2-NEXT:    [[CMP:%.*]] = fcmp ogt double [[TMP4]], 0.000000e+00
 // CHECK2-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK2:       land.lhs.true:
-// CHECK2-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV4]], align 8
+// CHECK2-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV4]], align 2
 // CHECK2-NEXT:    [[CONV15:%.*]] = sext i16 [[TMP5]] to i32
 // CHECK2-NEXT:    [[CMP16:%.*]] = icmp sgt i32 [[CONV15]], 0
 // CHECK2-NEXT:    br i1 [[CMP16]], label [[LAND_LHS_TRUE17:%.*]], label [[OMP_IF_ELSE]]
 // CHECK2:       land.lhs.true17:
-// CHECK2-NEXT:    [[TMP6:%.*]] = load float, float* [[CONV5]], align 8
+// CHECK2-NEXT:    [[TMP6:%.*]] = load float, float* [[CONV5]], align 4
 // CHECK2-NEXT:    [[CONV18:%.*]] = fpext float [[TMP6]] to double
 // CHECK2-NEXT:    [[CMP19:%.*]] = fcmp ogt double [[CONV18]], 0.000000e+00
 // CHECK2-NEXT:    br i1 [[CMP19]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE]]
@@ -1639,29 +1639,29 @@ int tbar2(short a, short b, short c, short d){
 // CHECK2-NEXT:    [[CONV6:%.*]] = bitcast i64* [[D_ADDR]] to i16*
 // CHECK2-NEXT:    [[CONV7:%.*]] = bitcast i64* [[GD_ADDR]] to double*
 // CHECK2-NEXT:    [[CONV8:%.*]] = bitcast i64* [[SD_ADDR]] to float*
-// CHECK2-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV]], align 8
+// CHECK2-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV]], align 2
 // CHECK2-NEXT:    [[CONV9:%.*]] = sext i16 [[TMP1]] to i32
 // CHECK2-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV9]], 1
 // CHECK2-NEXT:    [[CONV10:%.*]] = trunc i32 [[ADD]] to i16
-// CHECK2-NEXT:    store i16 [[CONV10]], i16* [[CONV]], align 8
+// CHECK2-NEXT:    store i16 [[CONV10]], i16* [[CONV]], align 2
 // CHECK2-NEXT:    [[TMP2:%.*]] = load double, double* [[CONV1]], align 8
 // CHECK2-NEXT:    [[ADD11:%.*]] = fadd double [[TMP2]], 1.000000e+00
 // CHECK2-NEXT:    store double [[ADD11]], double* [[CONV1]], align 8
-// CHECK2-NEXT:    [[TMP3:%.*]] = load float, float* [[CONV2]], align 8
+// CHECK2-NEXT:    [[TMP3:%.*]] = load float, float* [[CONV2]], align 4
 // CHECK2-NEXT:    [[CONV12:%.*]] = fpext float [[TMP3]] to double
 // CHECK2-NEXT:    [[ADD13:%.*]] = fadd double [[CONV12]], 1.000000e+00
 // CHECK2-NEXT:    [[CONV14:%.*]] = fptrunc double [[ADD13]] to float
-// CHECK2-NEXT:    store float [[CONV14]], float* [[CONV2]], align 8
+// CHECK2-NEXT:    store float [[CONV14]], float* [[CONV2]], align 4
 // CHECK2-NEXT:    [[TMP4:%.*]] = load double, double* [[CONV3]], align 8
 // CHECK2-NEXT:    [[CMP:%.*]] = fcmp ogt double [[TMP4]], 0.000000e+00
 // CHECK2-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK2:       land.lhs.true:
-// CHECK2-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV4]], align 8
+// CHECK2-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV4]], align 2
 // CHECK2-NEXT:    [[CONV15:%.*]] = sext i16 [[TMP5]] to i32
 // CHECK2-NEXT:    [[CMP16:%.*]] = icmp sgt i32 [[CONV15]], 0
 // CHECK2-NEXT:    br i1 [[CMP16]], label [[LAND_LHS_TRUE17:%.*]], label [[OMP_IF_ELSE]]
 // CHECK2:       land.lhs.true17:
-// CHECK2-NEXT:    [[TMP6:%.*]] = load float, float* [[CONV5]], align 8
+// CHECK2-NEXT:    [[TMP6:%.*]] = load float, float* [[CONV5]], align 4
 // CHECK2-NEXT:    [[CONV18:%.*]] = fpext float [[TMP6]] to double
 // CHECK2-NEXT:    [[CMP19:%.*]] = fcmp ogt double [[CONV18]], 0.000000e+00
 // CHECK2-NEXT:    br i1 [[CMP19]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE]]
@@ -1971,29 +1971,29 @@ int tbar2(short a, short b, short c, short d){
 // CHECK2-NEXT:    [[CONV6:%.*]] = bitcast i64* [[D_ADDR]] to i16*
 // CHECK2-NEXT:    [[CONV7:%.*]] = bitcast i64* [[GD_ADDR]] to double*
 // CHECK2-NEXT:    [[CONV8:%.*]] = bitcast i64* [[SD_ADDR]] to float*
-// CHECK2-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV]], align 8
+// CHECK2-NEXT:    [[TMP1:%.*]] = load i16, i16* [[CONV]], align 2
 // CHECK2-NEXT:    [[CONV9:%.*]] = sext i16 [[TMP1]] to i32
 // CHECK2-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV9]], 1
 // CHECK2-NEXT:    [[CONV10:%.*]] = trunc i32 [[ADD]] to i16
-// CHECK2-NEXT:    store i16 [[CONV10]], i16* [[CONV]], align 8
+// CHECK2-NEXT:    store i16 [[CONV10]], i16* [[CONV]], align 2
 // CHECK2-NEXT:    [[TMP2:%.*]] = load double, double* [[CONV1]], align 8
 // CHECK2-NEXT:    [[ADD11:%.*]] = fadd double [[TMP2]], 1.000000e+00
 // CHECK2-NEXT:    store double [[ADD11]], double* [[CONV1]], align 8
-// CHECK2-NEXT:    [[TMP3:%.*]] = load float, float* [[CONV2]], align 8
+// CHECK2-NEXT:    [[TMP3:%.*]] = load float, float* [[CONV2]], align 4
 // CHECK2-NEXT:    [[CONV12:%.*]] = fpext float [[TMP3]] to double
 // CHECK2-NEXT:    [[ADD13:%.*]] = fadd double [[CONV12]], 1.000000e+00
 // CHECK2-NEXT:    [[CONV14:%.*]] = fptrunc double [[ADD13]] to float
-// CHECK2-NEXT:    store float [[CONV14]], float* [[CONV2]], align 8
+// CHECK2-NEXT:    store float [[CONV14]], float* [[CONV2]], align 4
 // CHECK2-NEXT:    [[TMP4:%.*]] = load double, double* [[CONV3]], align 8
 // CHECK2-NEXT:    [[CMP:%.*]] = fcmp ogt double [[TMP4]], 0.000000e+00
 // CHECK2-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK2:       land.lhs.true:
-// CHECK2-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV4]], align 8
+// CHECK2-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV4]], align 2
 // CHECK2-NEXT:    [[CONV15:%.*]] = sext i16 [[TMP5]] to i32
 // CHECK2-NEXT:    [[CMP16:%.*]] = icmp sgt i32 [[CONV15]], 0
 // CHECK2-NEXT:    br i1 [[CMP16]], label [[LAND_LHS_TRUE17:%.*]], label [[OMP_IF_ELSE]]
 // CHECK2:       land.lhs.true17:
-// CHECK2-NEXT:    [[TMP6:%.*]] = load float, float* [[CONV5]], align 8
+// CHECK2-NEXT:    [[TMP6:%.*]] = load float, float* [[CONV5]], align 4
 // CHECK2-NEXT:    [[CONV18:%.*]] = fpext float [[TMP6]] to double
 // CHECK2-NEXT:    [[CMP19:%.*]] = fcmp ogt double [[CONV18]], 0.000000e+00
 // CHECK2-NEXT:    br i1 [[CMP19]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE]]
@@ -2262,11 +2262,11 @@ int tbar2(short a, short b, short c, short d){
 // CHECK3-NEXT:    store double [[TMP5]], double* [[GC7]], align 8
 // CHECK3-NEXT:    [[TMP6:%.*]] = load double, double* [[TMP3]], align 8
 // CHECK3-NEXT:    store double [[TMP6]], double* [[GD8]], align 8
-// CHECK3-NEXT:    [[TMP7:%.*]] = load i16, i16* [[CONV]], align 4
+// CHECK3-NEXT:    [[TMP7:%.*]] = load i16, i16* [[CONV]], align 2
 // CHECK3-NEXT:    [[CONV9:%.*]] = sext i16 [[TMP7]] to i32
 // CHECK3-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV9]], 1
 // CHECK3-NEXT:    [[CONV10:%.*]] = trunc i32 [[ADD]] to i16
-// CHECK3-NEXT:    store i16 [[CONV10]], i16* [[CONV]], align 4
+// CHECK3-NEXT:    store i16 [[CONV10]], i16* [[CONV]], align 2
 // CHECK3-NEXT:    [[TMP8:%.*]] = load double, double* [[GB6]], align 8
 // CHECK3-NEXT:    [[ADD11:%.*]] = fadd double [[TMP8]], 1.000000e+00
 // CHECK3-NEXT:    store double [[ADD11]], double* [[GB6]], align 8
@@ -2279,7 +2279,7 @@ int tbar2(short a, short b, short c, short d){
 // CHECK3-NEXT:    [[CMP:%.*]] = fcmp ogt double [[TMP10]], 0.000000e+00
 // CHECK3-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK3:       land.lhs.true:
-// CHECK3-NEXT:    [[TMP11:%.*]] = load i16, i16* [[CONV2]], align 4
+// CHECK3-NEXT:    [[TMP11:%.*]] = load i16, i16* [[CONV2]], align 2
 // CHECK3-NEXT:    [[CONV15:%.*]] = sext i16 [[TMP11]] to i32
 // CHECK3-NEXT:    [[CMP16:%.*]] = icmp sgt i32 [[CONV15]], 0
 // CHECK3-NEXT:    br i1 [[CMP16]], label [[LAND_LHS_TRUE17:%.*]], label [[OMP_IF_ELSE]]
@@ -2569,11 +2569,11 @@ int tbar2(short a, short b, short c, short d){
 // CHECK3-NEXT:    store double [[TMP5]], double* [[GC7]], align 8
 // CHECK3-NEXT:    [[TMP6:%.*]] = load double, double* [[TMP3]], align 8
 // CHECK3-NEXT:    store double [[TMP6]], double* [[GD8]], align 8
-// CHECK3-NEXT:    [[TMP7:%.*]] = load i16, i16* [[CONV]], align 4
+// CHECK3-NEXT:    [[TMP7:%.*]] = load i16, i16* [[CONV]], align 2
 // CHECK3-NEXT:    [[CONV9:%.*]] = sext i16 [[TMP7]] to i32
 // CHECK3-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV9]], 1
 // CHECK3-NEXT:    [[CONV10:%.*]] = trunc i32 [[ADD]] to i16
-// CHECK3-NEXT:    store i16 [[CONV10]], i16* [[CONV]], align 4
+// CHECK3-NEXT:    store i16 [[CONV10]], i16* [[CONV]], align 2
 // CHECK3-NEXT:    [[TMP8:%.*]] = load double, double* [[GB6]], align 8
 // CHECK3-NEXT:    [[ADD11:%.*]] = fadd double [[TMP8]], 1.000000e+00
 // CHECK3-NEXT:    store double [[ADD11]], double* [[GB6]], align 8
@@ -2586,7 +2586,7 @@ int tbar2(short a, short b, short c, short d){
 // CHECK3-NEXT:    [[CMP:%.*]] = fcmp ogt double [[TMP10]], 0.000000e+00
 // CHECK3-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK3:       land.lhs.true:
-// CHECK3-NEXT:    [[TMP11:%.*]] = load i16, i16* [[CONV2]], align 4
+// CHECK3-NEXT:    [[TMP11:%.*]] = load i16, i16* [[CONV2]], align 2
 // CHECK3-NEXT:    [[CONV15:%.*]] = sext i16 [[TMP11]] to i32
 // CHECK3-NEXT:    [[CMP16:%.*]] = icmp sgt i32 [[CONV15]], 0
 // CHECK3-NEXT:    br i1 [[CMP16]], label [[LAND_LHS_TRUE17:%.*]], label [[OMP_IF_ELSE]]
@@ -2895,11 +2895,11 @@ int tbar2(short a, short b, short c, short d){
 // CHECK3-NEXT:    store double [[TMP5]], double* [[GC7]], align 8
 // CHECK3-NEXT:    [[TMP6:%.*]] = load double, double* [[TMP3]], align 8
 // CHECK3-NEXT:    store double [[TMP6]], double* [[GD8]], align 8
-// CHECK3-NEXT:    [[TMP7:%.*]] = load i16, i16* [[CONV]], align 4
+// CHECK3-NEXT:    [[TMP7:%.*]] = load i16, i16* [[CONV]], align 2
 // CHECK3-NEXT:    [[CONV9:%.*]] = sext i16 [[TMP7]] to i32
 // CHECK3-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV9]], 1
 // CHECK3-NEXT:    [[CONV10:%.*]] = trunc i32 [[ADD]] to i16
-// CHECK3-NEXT:    store i16 [[CONV10]], i16* [[CONV]], align 4
+// CHECK3-NEXT:    store i16 [[CONV10]], i16* [[CONV]], align 2
 // CHECK3-NEXT:    [[TMP8:%.*]] = load double, double* [[GB6]], align 8
 // CHECK3-NEXT:    [[ADD11:%.*]] = fadd double [[TMP8]], 1.000000e+00
 // CHECK3-NEXT:    store double [[ADD11]], double* [[GB6]], align 8
@@ -2912,7 +2912,7 @@ int tbar2(short a, short b, short c, short d){
 // CHECK3-NEXT:    [[CMP:%.*]] = fcmp ogt double [[TMP10]], 0.000000e+00
 // CHECK3-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK3:       land.lhs.true:
-// CHECK3-NEXT:    [[TMP11:%.*]] = load i16, i16* [[CONV2]], align 4
+// CHECK3-NEXT:    [[TMP11:%.*]] = load i16, i16* [[CONV2]], align 2
 // CHECK3-NEXT:    [[CONV15:%.*]] = sext i16 [[TMP11]] to i32
 // CHECK3-NEXT:    [[CMP16:%.*]] = icmp sgt i32 [[CONV15]], 0
 // CHECK3-NEXT:    br i1 [[CMP16]], label [[LAND_LHS_TRUE17:%.*]], label [[OMP_IF_ELSE]]
@@ -3186,11 +3186,11 @@ int tbar2(short a, short b, short c, short d){
 // CHECK4-NEXT:    store double [[TMP5]], double* [[GC7]], align 8
 // CHECK4-NEXT:    [[TMP6:%.*]] = load double, double* [[TMP3]], align 8
 // CHECK4-NEXT:    store double [[TMP6]], double* [[GD8]], align 8
-// CHECK4-NEXT:    [[TMP7:%.*]] = load i16, i16* [[CONV]], align 4
+// CHECK4-NEXT:    [[TMP7:%.*]] = load i16, i16* [[CONV]], align 2
 // CHECK4-NEXT:    [[CONV9:%.*]] = sext i16 [[TMP7]] to i32
 // CHECK4-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV9]], 1
 // CHECK4-NEXT:    [[CONV10:%.*]] = trunc i32 [[ADD]] to i16
-// CHECK4-NEXT:    store i16 [[CONV10]], i16* [[CONV]], align 4
+// CHECK4-NEXT:    store i16 [[CONV10]], i16* [[CONV]], align 2
 // CHECK4-NEXT:    [[TMP8:%.*]] = load double, double* [[GB6]], align 8
 // CHECK4-NEXT:    [[ADD11:%.*]] = fadd double [[TMP8]], 1.000000e+00
 // CHECK4-NEXT:    store double [[ADD11]], double* [[GB6]], align 8
@@ -3203,7 +3203,7 @@ int tbar2(short a, short b, short c, short d){
 // CHECK4-NEXT:    [[CMP:%.*]] = fcmp ogt double [[TMP10]], 0.000000e+00
 // CHECK4-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK4:       land.lhs.true:
-// CHECK4-NEXT:    [[TMP11:%.*]] = load i16, i16* [[CONV2]], align 4
+// CHECK4-NEXT:    [[TMP11:%.*]] = load i16, i16* [[CONV2]], align 2
 // CHECK4-NEXT:    [[CONV15:%.*]] = sext i16 [[TMP11]] to i32
 // CHECK4-NEXT:    [[CMP16:%.*]] = icmp sgt i32 [[CONV15]], 0
 // CHECK4-NEXT:    br i1 [[CMP16]], label [[LAND_LHS_TRUE17:%.*]], label [[OMP_IF_ELSE]]
@@ -3493,11 +3493,11 @@ int tbar2(short a, short b, short c, short d){
 // CHECK4-NEXT:    store double [[TMP5]], double* [[GC7]], align 8
 // CHECK4-NEXT:    [[TMP6:%.*]] = load double, double* [[TMP3]], align 8
 // CHECK4-NEXT:    store double [[TMP6]], double* [[GD8]], align 8
-// CHECK4-NEXT:    [[TMP7:%.*]] = load i16, i16* [[CONV]], align 4
+// CHECK4-NEXT:    [[TMP7:%.*]] = load i16, i16* [[CONV]], align 2
 // CHECK4-NEXT:    [[CONV9:%.*]] = sext i16 [[TMP7]] to i32
 // CHECK4-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV9]], 1
 // CHECK4-NEXT:    [[CONV10:%.*]] = trunc i32 [[ADD]] to i16
-// CHECK4-NEXT:    store i16 [[CONV10]], i16* [[CONV]], align 4
+// CHECK4-NEXT:    store i16 [[CONV10]], i16* [[CONV]], align 2
 // CHECK4-NEXT:    [[TMP8:%.*]] = load double, double* [[GB6]], align 8
 // CHECK4-NEXT:    [[ADD11:%.*]] = fadd double [[TMP8]], 1.000000e+00
 // CHECK4-NEXT:    store double [[ADD11]], double* [[GB6]], align 8
@@ -3510,7 +3510,7 @@ int tbar2(short a, short b, short c, short d){
 // CHECK4-NEXT:    [[CMP:%.*]] = fcmp ogt double [[TMP10]], 0.000000e+00
 // CHECK4-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK4:       land.lhs.true:
-// CHECK4-NEXT:    [[TMP11:%.*]] = load i16, i16* [[CONV2]], align 4
+// CHECK4-NEXT:    [[TMP11:%.*]] = load i16, i16* [[CONV2]], align 2
 // CHECK4-NEXT:    [[CONV15:%.*]] = sext i16 [[TMP11]] to i32
 // CHECK4-NEXT:    [[CMP16:%.*]] = icmp sgt i32 [[CONV15]], 0
 // CHECK4-NEXT:    br i1 [[CMP16]], label [[LAND_LHS_TRUE17:%.*]], label [[OMP_IF_ELSE]]
@@ -3819,11 +3819,11 @@ int tbar2(short a, short b, short c, short d){
 // CHECK4-NEXT:    store double [[TMP5]], double* [[GC7]], align 8
 // CHECK4-NEXT:    [[TMP6:%.*]] = load double, double* [[TMP3]], align 8
 // CHECK4-NEXT:    store double [[TMP6]], double* [[GD8]], align 8
-// CHECK4-NEXT:    [[TMP7:%.*]] = load i16, i16* [[CONV]], align 4
+// CHECK4-NEXT:    [[TMP7:%.*]] = load i16, i16* [[CONV]], align 2
 // CHECK4-NEXT:    [[CONV9:%.*]] = sext i16 [[TMP7]] to i32
 // CHECK4-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV9]], 1
 // CHECK4-NEXT:    [[CONV10:%.*]] = trunc i32 [[ADD]] to i16
-// CHECK4-NEXT:    store i16 [[CONV10]], i16* [[CONV]], align 4
+// CHECK4-NEXT:    store i16 [[CONV10]], i16* [[CONV]], align 2
 // CHECK4-NEXT:    [[TMP8:%.*]] = load double, double* [[GB6]], align 8
 // CHECK4-NEXT:    [[ADD11:%.*]] = fadd double [[TMP8]], 1.000000e+00
 // CHECK4-NEXT:    store double [[ADD11]], double* [[GB6]], align 8
@@ -3836,7 +3836,7 @@ int tbar2(short a, short b, short c, short d){
 // CHECK4-NEXT:    [[CMP:%.*]] = fcmp ogt double [[TMP10]], 0.000000e+00
 // CHECK4-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK4:       land.lhs.true:
-// CHECK4-NEXT:    [[TMP11:%.*]] = load i16, i16* [[CONV2]], align 4
+// CHECK4-NEXT:    [[TMP11:%.*]] = load i16, i16* [[CONV2]], align 2
 // CHECK4-NEXT:    [[CONV15:%.*]] = sext i16 [[TMP11]] to i32
 // CHECK4-NEXT:    [[CMP16:%.*]] = icmp sgt i32 [[CONV15]], 0
 // CHECK4-NEXT:    br i1 [[CMP16]], label [[LAND_LHS_TRUE17:%.*]], label [[OMP_IF_ELSE]]

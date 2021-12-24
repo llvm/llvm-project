@@ -1,5 +1,9 @@
-; RUN: llc -mtriple=x86_64-unknown-unknown -stop-before livedebugvalues %s -o - \
-; RUN:   | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-unknown -stop-before livedebugvalues %s -o -\
+; RUN:     -experimental-debug-variable-locations=false \
+; RUN:   | FileCheck %s --check-prefixes=CHECK,DBGVALUE
+; RUN: llc -mtriple=x86_64-unknown-unknown -stop-before livedebugvalues %s -o -\
+; RUN:     -experimental-debug-variable-locations=true \
+; RUN:   | FileCheck %s --check-prefixes=CHECK,INSTRREF
 ;
 ; Generated at -O1 from:
 ; typedef struct {
@@ -20,13 +24,22 @@
 ; }
 ;
 ; The debug info is attached to the ADD 4096 operation, which doesn't survive
-; instruction selection as it is folded into the load.
+; instruction selection as it is folded into the load. As a result, we should
+; refer to s4 and myVar with complex expressions.
 ;
-; CHECK:   ![[S4:.*]] = !DILocalVariable(name: "s4", 
-; CHECK:   ![[MYVAR:.*]] = !DILocalVariable(name: "myVar", 
-; CHECK:      DBG_VALUE $rax, $noreg, ![[MYVAR]],
-; CHECK-SAME:           !DIExpression(DW_OP_plus_uconst, 4096, DW_OP_stack_value)
-; CHECK-NEXT: DBG_VALUE $rax, $noreg, ![[S4]],
+; NB: instruction referencing and DBG_VALUE modes produce debug insts in a
+; different order.
+;
+; CHECK:         ![[S4:.*]] = !DILocalVariable(name: "s4", 
+; CHECK:         ![[MYVAR:.*]] = !DILocalVariable(name: "myVar", 
+; CHECK:         $rax = MOV64rm
+; INSTRREF-SAME: debug-instr-number 2,
+; INSTRREF-NEXT: DBG_INSTR_REF 2, 0, ![[S4]],
+; DBGVALUE-NEXT: DBG_VALUE $rax, $noreg, ![[MYVAR]],
+; CHECK-SAME:       !DIExpression(DW_OP_plus_uconst, 4096, DW_OP_stack_value)
+
+; INSTRREF:      DBG_INSTR_REF 2, 0, ![[MYVAR]],
+; DBGVALUE:      DBG_VALUE $rax, $noreg, ![[S4]],
 ; CHECK-SAME:           !DIExpression(DW_OP_plus_uconst, 4096, DW_OP_stack_value)
 ; CHECK-NEXT: $rdi = MOV64rm killed renamable $rax, 1, $noreg, 4096, $noreg,
 

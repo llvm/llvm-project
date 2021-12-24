@@ -189,7 +189,7 @@ class SizeClassAllocator32 {
     sci->free_list.push_front(b);
   }
 
-  bool PointerIsMine(const void *p) {
+  bool PointerIsMine(const void *p) const {
     uptr mem = reinterpret_cast<uptr>(p);
     if (SANITIZER_SIGN_EXTENDED_ADDRESSES)
       mem &= (kSpaceSize - 1);
@@ -293,9 +293,7 @@ class SizeClassAllocator32 {
     return res;
   }
 
-  uptr ComputeRegionBeg(uptr mem) {
-    return mem & ~(kRegionSize - 1);
-  }
+  uptr ComputeRegionBeg(uptr mem) const { return mem & ~(kRegionSize - 1); }
 
   uptr AllocateRegion(AllocatorStats *stat, uptr class_id) {
     DCHECK_LT(class_id, kNumClasses);

@@ -72,7 +72,7 @@ class SIScheduleBlock {
   // store the live virtual and real registers.
   // We do care only of SGPR32 and VGPR32 and do track only virtual registers.
   // Pressure of additional registers required inside the block.
-  std::vector<unsigned> InternalAdditionnalPressure;
+  std::vector<unsigned> InternalAdditionalPressure;
   // Pressure of input and output registers
   std::vector<unsigned> LiveInPressure;
   std::vector<unsigned> LiveOutPressure;
@@ -153,8 +153,8 @@ public:
 
   // Needs the block to be scheduled inside
   // TODO: find a way to compute it.
-  std::vector<unsigned> &getInternalAdditionnalRegUsage() {
-    return InternalAdditionnalPressure;
+  std::vector<unsigned> &getInternalAdditionalRegUsage() {
+    return InternalAdditionalPressure;
   }
 
   std::set<unsigned> &getInRegs() { return LiveInRegs; }

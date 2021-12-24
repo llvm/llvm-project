@@ -45,17 +45,17 @@ _start:
  bl .thumb_target
  bl thumb_func_with_notype
  bl thumb_func_with_explicit_notype
-// WARN: {{.*}}.s:[[# @LINE+1]]:(.arm_caller+0x30): branch and link relocation: R_ARM_CALL to STT_SECTION symbol .arm_target ; interworking not performed
+// WARN: {{.*}}.o:(.arm_caller+0x30): branch and link relocation: R_ARM_CALL to STT_SECTION symbol .arm_target ; interworking not performed; {{.*}}.s:[[#@LINE+1]]
  blx .arm_target
-// WARN: {{.*}}.s:[[# @LINE+1]]:(.arm_caller+0x34): branch and link relocation: R_ARM_CALL to non STT_FUNC symbol: arm_func_with_notype interworking not performed; consider using directive '.type arm_func_with_notype, %function' to give symbol type STT_FUNC if interworking between ARM and Thumb is required
+// WARN: {{.*}}.o:(.arm_caller+0x34): branch and link relocation: R_ARM_CALL to non STT_FUNC symbol: arm_func_with_notype interworking not performed; consider using directive '.type arm_func_with_notype, %function' to give symbol type STT_FUNC if interworking between ARM and Thumb is required; {{.*}}.s:[[#@LINE+1]]
  blx arm_func_with_notype
-// WARN: {{.*}}.s:[[# @LINE+1]]:(.arm_caller+0x38): branch and link relocation: R_ARM_CALL to non STT_FUNC symbol: arm_func_with_explicit_notype interworking not performed; consider using directive '.type arm_func_with_explicit_notype, %function' to give symbol type STT_FUNC if interworking between ARM and Thumb is required
+// WARN: {{.*}}.o:(.arm_caller+0x38): branch and link relocation: R_ARM_CALL to non STT_FUNC symbol: arm_func_with_explicit_notype interworking not performed; consider using directive '.type arm_func_with_explicit_notype, %function' to give symbol type STT_FUNC if interworking between ARM and Thumb is required; {{.*}}.s:[[#@LINE+1]]
  blx arm_func_with_explicit_notype
-// WARN: {{.*}}.s:[[# @LINE+1]]:(.arm_caller+0x3C): branch and link relocation: R_ARM_CALL to STT_SECTION symbol .thumb_target ; interworking not performed
+// WARN: {{.*}}.o:(.arm_caller+0x3c): branch and link relocation: R_ARM_CALL to STT_SECTION symbol .thumb_target ; interworking not performed; {{.*}}.s:[[#@LINE+1]]
  blx .thumb_target
-// WARN: {{.*}}.s:[[# @LINE+1]]:(.arm_caller+0x40): branch and link relocation: R_ARM_CALL to non STT_FUNC symbol: thumb_func_with_notype interworking not performed; consider using directive '.type thumb_func_with_notype, %function' to give symbol type STT_FUNC if interworking between ARM and Thumb is required
+// WARN: {{.*}}.o:(.arm_caller+0x40): branch and link relocation: R_ARM_CALL to non STT_FUNC symbol: thumb_func_with_notype interworking not performed; consider using directive '.type thumb_func_with_notype, %function' to give symbol type STT_FUNC if interworking between ARM and Thumb is required; {{.*}}.s:[[#@LINE+1]]
  blx thumb_func_with_notype
-// WARN: {{.*}}.s:[[# @LINE+1]]:(.arm_caller+0x44): branch and link relocation: R_ARM_CALL to non STT_FUNC symbol: thumb_func_with_explicit_notype interworking not performed; consider using directive '.type thumb_func_with_explicit_notype, %function' to give symbol type STT_FUNC if interworking between ARM and Thumb is required
+// WARN: {{.*}}.o:(.arm_caller+0x44): branch and link relocation: R_ARM_CALL to non STT_FUNC symbol: thumb_func_with_explicit_notype interworking not performed; consider using directive '.type thumb_func_with_explicit_notype, %function' to give symbol type STT_FUNC if interworking between ARM and Thumb is required; {{.*}}.s:[[#@LINE+1]]
  blx thumb_func_with_explicit_notype
 
  .section .thumb_caller, "ax", %progbits
@@ -75,17 +75,17 @@ thumb_caller:
  beq.w .thumb_target
  beq.w thumb_func_with_notype
  beq.w thumb_func_with_explicit_notype
-// WARN: {{.*}}.s:[[# @LINE+1]]:(.thumb_caller+0x30): branch and link relocation: R_ARM_THM_CALL to STT_SECTION symbol .arm_target ; interworking not performed
+// WARN: {{.*}}.o:(.thumb_caller+0x30): branch and link relocation: R_ARM_THM_CALL to STT_SECTION symbol .arm_target ; interworking not performed; {{.*}}.s:[[#@LINE+1]]
  bl .arm_target
-// WARN: {{.*}}.s:[[# @LINE+1]]:(.thumb_caller+0x34): branch and link relocation: R_ARM_THM_CALL to non STT_FUNC symbol: arm_func_with_notype interworking not performed; consider using directive '.type arm_func_with_notype, %function' to give symbol type STT_FUNC if interworking between ARM and Thumb is required
+// WARN: {{.*}}.o:(.thumb_caller+0x34): branch and link relocation: R_ARM_THM_CALL to non STT_FUNC symbol: arm_func_with_notype interworking not performed; consider using directive '.type arm_func_with_notype, %function' to give symbol type STT_FUNC if interworking between ARM and Thumb is required; {{.*}}.s:[[#@LINE+1]]
  bl arm_func_with_notype
- // WARN: {{.*}}.s:[[# @LINE+1]]:(.thumb_caller+0x38): branch and link relocation: R_ARM_THM_CALL to non STT_FUNC symbol: arm_func_with_explicit_notype interworking not performed; consider using directive '.type arm_func_with_explicit_notype, %function' to give symbol type STT_FUNC if interworking between ARM and Thumb is required
+ // WARN: {{.*}}.o:(.thumb_caller+0x38): branch and link relocation: R_ARM_THM_CALL to non STT_FUNC symbol: arm_func_with_explicit_notype interworking not performed; consider using directive '.type arm_func_with_explicit_notype, %function' to give symbol type STT_FUNC if interworking between ARM and Thumb is required; {{.*}}.s:[[#@LINE+1]]
  bl arm_func_with_explicit_notype
-// WARN: {{.*}}.s:[[# @LINE+1]]:(.thumb_caller+0x3C): branch and link relocation: R_ARM_THM_CALL to STT_SECTION symbol .thumb_target ; interworking not performed
+// WARN: {{.*}}.o:(.thumb_caller+0x3c): branch and link relocation: R_ARM_THM_CALL to STT_SECTION symbol .thumb_target ; interworking not performed; {{.*}}.s:[[#@LINE+1]]
  bl .thumb_target
-// WARN: {{.*}}.s:[[# @LINE+1]]:(.thumb_caller+0x40): branch and link relocation: R_ARM_THM_CALL to non STT_FUNC symbol: thumb_func_with_notype interworking not performed; consider using directive '.type thumb_func_with_notype, %function' to give symbol type STT_FUNC if interworking between ARM and Thumb is required
+// WARN: {{.*}}.o:(.thumb_caller+0x40): branch and link relocation: R_ARM_THM_CALL to non STT_FUNC symbol: thumb_func_with_notype interworking not performed; consider using directive '.type thumb_func_with_notype, %function' to give symbol type STT_FUNC if interworking between ARM and Thumb is required; {{.*}}.s:[[#@LINE+1]]
  bl thumb_func_with_notype
-// {{.*}}.s:[[# @LINE+1]]:(.thumb_caller+0x44): branch and link relocation: R_ARM_THM_CALL to non STT_FUNC symbol: thumb_func_with_explicit_notype interworking not performed; consider using directive '.type thumb_func_with_explicit_notype, %function' to give symbol type STT_FUNC if interworking between ARM and Thumb is required
+// {{.*}}.o:(.thumb_caller+0x44): branch and link relocation: R_ARM_THM_CALL to non STT_FUNC symbol: thumb_func_with_explicit_notype interworking not performed; consider using directive '.type thumb_func_with_explicit_notype, %function' to give symbol type STT_FUNC if interworking between ARM and Thumb is required; {{.*}}.s:[[#@LINE+1]]
  bl thumb_func_with_explicit_notype
  blx .arm_target
  blx arm_func_with_notype

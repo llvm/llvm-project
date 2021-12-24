@@ -13,6 +13,7 @@
 #ifndef MLIR_ANALYSIS_AFFINESTRUCTURES_H
 #define MLIR_ANALYSIS_AFFINESTRUCTURES_H
 
+#include "mlir/Analysis/Presburger/IntegerPolyhedron.h"
 #include "mlir/Analysis/Presburger/Matrix.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/OpDefinition.h"
@@ -56,13 +57,10 @@ struct MutableAffineMap;
 /// that some floordiv combinations are converted to mod's by AffineExpr
 /// construction.
 ///
-class FlatAffineConstraints {
+class FlatAffineConstraints : public IntegerPolyhedron {
 public:
   /// All derived classes of FlatAffineConstraints.
   enum class Kind { FlatAffineConstraints, FlatAffineValueConstraints };
-
-  /// Kind of identifier (column).
-  enum IdKind { Dimension, Symbol, Local };
 
   /// Constructs a constraint system reserving memory for the specified number
   /// of constraints and identifiers.
@@ -70,22 +68,18 @@ public:
                         unsigned numReservedEqualities,
                         unsigned numReservedCols, unsigned numDims,
                         unsigned numSymbols, unsigned numLocals)
-      : numIds(numDims + numSymbols + numLocals), numDims(numDims),
-        numSymbols(numSymbols),
-        equalities(0, numIds + 1, numReservedEqualities, numReservedCols),
-        inequalities(0, numIds + 1, numReservedInequalities, numReservedCols) {
-    assert(numReservedCols >= numIds + 1);
-  }
+      : IntegerPolyhedron(numReservedInequalities, numReservedEqualities,
+                          numReservedCols, numDims, numSymbols, numLocals) {}
 
   /// Constructs a constraint system with the specified number of
   /// dimensions and symbols.
   FlatAffineConstraints(unsigned numDims = 0, unsigned numSymbols = 0,
                         unsigned numLocals = 0)
-      : FlatAffineConstraints(/*numReservedInequalities=*/0,
-                              /*numReservedEqualities=*/0,
-                              /*numReservedCols=*/numDims + numSymbols +
-                                  numLocals + 1,
-                              numDims, numSymbols, numLocals) {}
+      : IntegerPolyhedron(/*numReservedInequalities=*/0,
+                          /*numReservedEqualities=*/0,
+                          /*numReservedCols=*/numDims + numSymbols + numLocals +
+                              1,
+                          numDims, numSymbols, numLocals) {}
 
   /// Return a system with no constraints, i.e., one which is satisfied by all
   /// points.
@@ -105,20 +99,6 @@ public:
   virtual Kind getKind() const { return Kind::FlatAffineConstraints; }
 
   static bool classof(const FlatAffineConstraints *cst) { return true; }
-
-  /// Clears any existing data and reserves memory for the specified
-  /// constraints.
-  virtual void reset(unsigned numReservedInequalities,
-                     unsigned numReservedEqualities, unsigned numReservedCols,
-                     unsigned numDims, unsigned numSymbols,
-                     unsigned numLocals = 0);
-
-  void reset(unsigned numDims = 0, unsigned numSymbols = 0,
-             unsigned numLocals = 0);
-
-  /// Appends constraints from `other` into `this`. This is equivalent to an
-  /// intersection with no simplification of any sort attempted.
-  void append(const FlatAffineConstraints &other);
 
   /// Checks for emptiness by performing variable elimination on all
   /// identifiers, running the GCD test on each equality constraint, and
@@ -157,49 +137,25 @@ public:
   bool containsPoint(ArrayRef<int64_t> point) const;
 
   /// Find pairs of inequalities identified by their position indices, using
-  /// which an explicit representation for each local variable can be computed
-  /// The pairs are stored as indices of upperbound, lowerbound
-  /// inequalities. If no such pair can be found, it is stored as llvm::None.
-  void getLocalReprLbUbPairs(
+  /// which an explicit representation for each local variable can be computed.
+  /// The pairs are stored as indices of upperbound, lowerbound inequalities. If
+  /// no such pair can be found, it is stored as llvm::None.
+  ///
+  /// The dividends of the explicit representations are stored in `dividends`
+  /// and the denominators in `denominators`. If no explicit representation
+  /// could be found for the `i^th` local identifier, `denominators[i]` is set
+  /// to 0.
+  void getLocalReprs(
+      std::vector<SmallVector<int64_t, 8>> &dividends,
+      SmallVector<unsigned, 4> &denominators,
       std::vector<llvm::Optional<std::pair<unsigned, unsigned>>> &repr) const;
+  void getLocalReprs(
+      std::vector<llvm::Optional<std::pair<unsigned, unsigned>>> &repr) const;
+  void getLocalReprs(std::vector<SmallVector<int64_t, 8>> &dividends,
+                     SmallVector<unsigned, 4> &denominators) const;
 
   // Clones this object.
   std::unique_ptr<FlatAffineConstraints> clone() const;
-
-  /// Returns the value at the specified equality row and column.
-  inline int64_t atEq(unsigned i, unsigned j) const { return equalities(i, j); }
-  inline int64_t &atEq(unsigned i, unsigned j) { return equalities(i, j); }
-
-  /// Returns the value at the specified inequality row and column.
-  inline int64_t atIneq(unsigned i, unsigned j) const {
-    return inequalities(i, j);
-  }
-  inline int64_t &atIneq(unsigned i, unsigned j) { return inequalities(i, j); }
-
-  /// Returns the number of columns in the constraint system.
-  inline unsigned getNumCols() const { return numIds + 1; }
-
-  inline unsigned getNumEqualities() const { return equalities.getNumRows(); }
-
-  inline unsigned getNumInequalities() const {
-    return inequalities.getNumRows();
-  }
-
-  inline unsigned getNumReservedEqualities() const {
-    return equalities.getNumReservedRows();
-  }
-
-  inline unsigned getNumReservedInequalities() const {
-    return inequalities.getNumReservedRows();
-  }
-
-  inline ArrayRef<int64_t> getEquality(unsigned idx) const {
-    return equalities.getRow(idx);
-  }
-
-  inline ArrayRef<int64_t> getInequality(unsigned idx) const {
-    return inequalities.getRow(idx);
-  }
 
   /// The type of bound: equal, lower bound or upper bound.
   enum BoundType { EQ, LB, UB };
@@ -235,38 +191,12 @@ public:
                       SmallVectorImpl<AffineMap> *lbMaps,
                       SmallVectorImpl<AffineMap> *ubMaps);
 
-  /// Adds an inequality (>= 0) from the coefficients specified in `inEq`.
-  void addInequality(ArrayRef<int64_t> inEq);
-  /// Adds an equality from the coefficients specified in `eq`.
-  void addEquality(ArrayRef<int64_t> eq);
-
   /// Adds a new local identifier as the floordiv of an affine function of other
   /// identifiers, the coefficients of which are provided in `dividend` and with
   /// respect to a positive constant `divisor`. Two constraints are added to the
   /// system to capture equivalence with the floordiv:
   /// q = dividend floordiv c    <=>   c*q <= dividend <= c*q + c - 1.
   void addLocalFloorDiv(ArrayRef<int64_t> dividend, int64_t divisor);
-
-  /// Swap the posA^th identifier with the posB^th identifier.
-  virtual void swapId(unsigned posA, unsigned posB);
-
-  /// Insert `num` identifiers of the specified kind at position `pos`.
-  /// Positions are relative to the kind of identifier. The coefficient columns
-  /// corresponding to the added identifiers are initialized to zero. Return the
-  /// absolute column position (i.e., not relative to the kind of identifier)
-  /// of the first added identifier.
-  unsigned insertDimId(unsigned pos, unsigned num = 1);
-  unsigned insertSymbolId(unsigned pos, unsigned num = 1);
-  unsigned insertLocalId(unsigned pos, unsigned num = 1);
-  virtual unsigned insertId(IdKind kind, unsigned pos, unsigned num = 1);
-
-  /// Append `num` identifiers of the specified kind after the last identifier.
-  /// of that kind. Return the position of the first appended column. The
-  /// coefficient columns corresponding to the added identifiers are initialized
-  /// to zero.
-  unsigned appendDimId(unsigned num = 1);
-  unsigned appendSymbolId(unsigned num = 1);
-  unsigned appendLocalId(unsigned num = 1);
 
   /// Composes an affine map whose dimensions and symbols match one to one with
   /// the dimensions and symbols of this FlatAffineConstraints. The results of
@@ -281,22 +211,6 @@ public:
   // mark exactness for example.
   void projectOut(unsigned pos, unsigned num);
   inline void projectOut(unsigned pos) { return projectOut(pos, 1); }
-
-  /// Removes identifiers of the specified kind with the specified pos (or
-  /// within the specified range) from the system. The specified location is
-  /// relative to the first identifier of the specified kind.
-  void removeId(IdKind kind, unsigned pos);
-  void removeIdRange(IdKind kind, unsigned idStart, unsigned idLimit);
-
-  /// Removes the specified identifier from the system.
-  void removeId(unsigned pos);
-
-  void removeEquality(unsigned pos);
-  void removeInequality(unsigned pos);
-
-  /// Remove the (in)equalities at positions [start, end).
-  void removeEqualityRange(unsigned start, unsigned end);
-  void removeInequalityRange(unsigned start, unsigned end);
 
   /// Sets the `values.size()` identifiers starting at `po`s to the specified
   /// values and removes them.
@@ -335,17 +249,6 @@ public:
   ///    other  = {2 <= d0 <= 6, 5 <= d1 <= 15},
   ///    output = {0 <= d0 <= 6, 1 <= d1 <= 15}
   LogicalResult unionBoundingBox(const FlatAffineConstraints &other);
-
-  unsigned getNumConstraints() const {
-    return getNumInequalities() + getNumEqualities();
-  }
-  inline unsigned getNumIds() const { return numIds; }
-  inline unsigned getNumDimIds() const { return numDims; }
-  inline unsigned getNumSymbolIds() const { return numSymbols; }
-  inline unsigned getNumDimAndSymbolIds() const { return numDims + numSymbols; }
-  inline unsigned getNumLocalIds() const {
-    return numIds - numDims - numSymbols;
-  }
 
   /// Replaces the contents of this FlatAffineConstraints with `other`.
   virtual void clearAndCopyFrom(const FlatAffineConstraints &other);
@@ -430,24 +333,22 @@ public:
   /// variables.
   void convertDimToLocal(unsigned dimStart, unsigned dimLimit);
 
-  /// Merge local ids of `this` and `other`. This is done by appending local ids
-  /// of `other` to `this` and inserting local ids of `this` to `other` at start
-  /// of its local ids.
+  /// Adds additional local ids to the sets such that they both have the union
+  /// of the local ids in each set, without changing the set of points that
+  /// lie in `this` and `other`. The ordering of the local ids in the
+  /// sets may also be changed. After merging, if the `i^th` local variable in
+  /// one set has a known division representation, then the `i^th` local
+  /// variable in the other set either has the same division representation or
+  /// no known division representation.
+  ///
+  /// The number of dimensions and symbol ids in `this` and `other` should
+  /// match.
   void mergeLocalIds(FlatAffineConstraints &other);
-
-  /// Removes all equalities and inequalities.
-  void clearConstraints();
 
   void print(raw_ostream &os) const;
   void dump() const;
 
 protected:
-  /// Return the index at which the specified kind of id starts.
-  unsigned getIdKindOffset(IdKind kind) const;
-
-  /// Assert that `value` is at most the number of ids of the specified kind.
-  void assertAtMostNumIdKind(unsigned value, IdKind kind) const;
-
   /// Returns false if the fields corresponding to various identifier counts, or
   /// equality/inequality buffer sizes aren't consistent; true otherwise. This
   /// is meant to be used within an assert internally.
@@ -517,27 +418,6 @@ protected:
 
   /// Normalized each constraints by the GCD of its coefficients.
   void normalizeConstraintsByGCD();
-
-  /// Removes identifiers in the column range [idStart, idLimit), and copies any
-  /// remaining valid data into place, updates member variables, and resizes
-  /// arrays as needed.
-  virtual void removeIdRange(unsigned idStart, unsigned idLimit);
-
-  /// Total number of identifiers.
-  unsigned numIds;
-
-  /// Number of identifiers corresponding to real dimensions.
-  unsigned numDims;
-
-  /// Number of identifiers corresponding to symbols (unknown but constant for
-  /// analysis).
-  unsigned numSymbols;
-
-  /// Coefficients of affine equalities (in == 0 form).
-  Matrix equalities;
-
-  /// Coefficients of affine inequalities (in >= 0 form).
-  Matrix inequalities;
 
   /// A parameter that controls detection of an unrealistic number of
   /// constraints. If the number of constraints is this many times the number of
@@ -807,8 +687,8 @@ public:
   /// constraint systems are updated so that they have the union of all
   /// identifiers, with `this`'s original identifiers appearing first followed
   /// by any of `other`'s identifiers that didn't appear in `this`. Local
-  /// identifiers of each system are by design separate/local and are placed
-  /// one after other (`this`'s followed by `other`'s).
+  /// identifiers in `other` that have the same division representation as local
+  /// identifiers in `this` are merged into one.
   //  E.g.: Input: `this`  has (%i, %j) [%M, %N]
   //               `other` has (%k, %j) [%P, %N, %M]
   //        Output: both `this`, `other` have (%i, %j, %k) [%M, %N, %P]
@@ -884,8 +764,9 @@ public:
   }
 
   /// Merge and align symbols of `this` and `other` such that both get union of
-  /// of symbols that are unique. Symbols with Value as `None` are considered
-  /// to be inequal to all other symbols.
+  /// of symbols that are unique. Symbols in `this` and `other` should be
+  /// unique. Symbols with Value as `None` are considered to be inequal to all
+  /// other symbols.
   void mergeSymbolIds(FlatAffineValueConstraints &other);
 
 protected:
@@ -1069,6 +950,6 @@ LogicalResult getRelationFromMap(AffineMap &map, FlatAffineRelation &rel);
 LogicalResult getRelationFromMap(const AffineValueMap &map,
                                  FlatAffineRelation &rel);
 
-} // end namespace mlir.
+} // namespace mlir.
 
 #endif // MLIR_ANALYSIS_AFFINESTRUCTURES_H

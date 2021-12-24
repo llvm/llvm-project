@@ -1,6 +1,9 @@
 static_library("Windows") {
   output_name = "lldbPluginPlatformWindows"
-  configs += [ "//llvm/utils/gn/build:lldb_code" ]
+  configs += [
+    "//llvm/utils/gn/build:clang_code",
+    "//llvm/utils/gn/build:lldb_code",
+  ]
   deps = [
     "//lldb/source/Breakpoint",
     "//lldb/source/Core",
@@ -9,6 +12,6 @@ static_library("Windows") {
   ]
 
   # Reaches into Plugins/TypeSystem/Clang.
-  #include_dirs = [ "//lldb/source" ]
+  include_dirs = [ "//lldb/source" ]
   sources = [ "PlatformWindows.cpp" ]
 }

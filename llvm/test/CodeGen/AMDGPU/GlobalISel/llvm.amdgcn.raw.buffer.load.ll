@@ -69,10 +69,10 @@ define amdgpu_ps float @raw_buffer_load_f32__vgpr_rsrc__vgpr_voffset__sgpr_soffs
   ; CHECK:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE2]], [[COPY7]], implicit $exec
   ; CHECK:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_1]], [[V_CMP_EQ_U64_e64_]], implicit-def $scc
   ; CHECK:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; CHECK:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY4]], [[REG_SEQUENCE3]], [[COPY5]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
   ; CHECK:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; CHECK:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY4]], [[REG_SEQUENCE3]], [[COPY5]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
   ; CHECK:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
-  ; CHECK:   S_CBRANCH_EXECNZ %bb.2, implicit $exec
+  ; CHECK:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; CHECK: bb.3:
   ; CHECK:   successors: %bb.4(0x80000000)
   ; CHECK:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
@@ -114,10 +114,10 @@ define amdgpu_ps float @raw_buffer_load_f32__vgpr_rsrc__vgpr_voffset__vgpr_soffs
   ; CHECK:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY5]], implicit $exec
   ; CHECK:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY5]], implicit $exec
   ; CHECK:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U32_e64_]], [[S_AND_B64_]], implicit-def $scc
-  ; CHECK:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY4]], [[REG_SEQUENCE3]], [[V_READFIRSTLANE_B32_4]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
   ; CHECK:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; CHECK:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY4]], [[REG_SEQUENCE3]], [[V_READFIRSTLANE_B32_4]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
   ; CHECK:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
-  ; CHECK:   S_CBRANCH_EXECNZ %bb.2, implicit $exec
+  ; CHECK:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; CHECK: bb.3:
   ; CHECK:   successors: %bb.4(0x80000000)
   ; CHECK:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
@@ -444,10 +444,10 @@ define amdgpu_ps half @raw_buffer_load_f16__vgpr_rsrc__vgpr_voffset__sgpr_soffse
   ; CHECK:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE2]], [[COPY7]], implicit $exec
   ; CHECK:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_1]], [[V_CMP_EQ_U64_e64_]], implicit-def $scc
   ; CHECK:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; CHECK:   [[BUFFER_LOAD_USHORT_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_USHORT_OFFEN [[COPY4]], [[REG_SEQUENCE3]], [[COPY5]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s16), align 1, addrspace 4)
   ; CHECK:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; CHECK:   [[BUFFER_LOAD_USHORT_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_USHORT_OFFEN [[COPY4]], [[REG_SEQUENCE3]], [[COPY5]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s16), align 1, addrspace 4)
   ; CHECK:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
-  ; CHECK:   S_CBRANCH_EXECNZ %bb.2, implicit $exec
+  ; CHECK:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; CHECK: bb.3:
   ; CHECK:   successors: %bb.4(0x80000000)
   ; CHECK:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
@@ -486,10 +486,10 @@ define amdgpu_ps float @raw_buffer_load_i8__vgpr_rsrc__vgpr_voffset__sgpr_soffse
   ; CHECK:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE2]], [[COPY7]], implicit $exec
   ; CHECK:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_1]], [[V_CMP_EQ_U64_e64_]], implicit-def $scc
   ; CHECK:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; CHECK:   [[BUFFER_LOAD_UBYTE_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_UBYTE_OFFEN [[COPY4]], [[REG_SEQUENCE3]], [[COPY5]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s8), addrspace 4)
   ; CHECK:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; CHECK:   [[BUFFER_LOAD_UBYTE_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_UBYTE_OFFEN [[COPY4]], [[REG_SEQUENCE3]], [[COPY5]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s8), addrspace 4)
   ; CHECK:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
-  ; CHECK:   S_CBRANCH_EXECNZ %bb.2, implicit $exec
+  ; CHECK:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; CHECK: bb.3:
   ; CHECK:   successors: %bb.4(0x80000000)
   ; CHECK:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
@@ -744,10 +744,10 @@ define amdgpu_ps float @raw_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffs
   ; CHECK:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE2]], [[COPY7]], implicit $exec
   ; CHECK:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_1]], [[V_CMP_EQ_U64_e64_]], implicit-def $scc
   ; CHECK:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; CHECK:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY4]], [[REG_SEQUENCE3]], [[S_ADD_I32_]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
   ; CHECK:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; CHECK:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY4]], [[REG_SEQUENCE3]], [[S_ADD_I32_]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
   ; CHECK:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
-  ; CHECK:   S_CBRANCH_EXECNZ %bb.2, implicit $exec
+  ; CHECK:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; CHECK: bb.3:
   ; CHECK:   successors: %bb.4(0x80000000)
   ; CHECK:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
@@ -774,7 +774,7 @@ define amdgpu_ps float @raw_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffs
   ; CHECK:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr2
   ; CHECK:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4096
   ; CHECK:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
-  ; CHECK:   %14:vgpr_32, dead %35:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY4]], [[COPY6]], 0, implicit $exec
+  ; CHECK:   %14:vgpr_32, dead %33:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY4]], [[COPY6]], 0, implicit $exec
   ; CHECK:   [[COPY7:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; CHECK:   [[COPY8:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
   ; CHECK:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
@@ -790,10 +790,10 @@ define amdgpu_ps float @raw_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffs
   ; CHECK:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE2]], [[COPY8]], implicit $exec
   ; CHECK:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_1]], [[V_CMP_EQ_U64_e64_]], implicit-def $scc
   ; CHECK:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; CHECK:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN %14, [[REG_SEQUENCE3]], [[COPY5]], 904, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
   ; CHECK:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; CHECK:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN %14, [[REG_SEQUENCE3]], [[COPY5]], 904, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
   ; CHECK:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
-  ; CHECK:   S_CBRANCH_EXECNZ %bb.2, implicit $exec
+  ; CHECK:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; CHECK: bb.3:
   ; CHECK:   successors: %bb.4(0x80000000)
   ; CHECK:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]

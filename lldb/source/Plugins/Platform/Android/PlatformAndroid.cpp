@@ -129,21 +129,10 @@ PlatformSP PlatformAndroid::CreateInstance(bool force, const ArchSpec *arch) {
 PlatformAndroid::PlatformAndroid(bool is_host)
     : PlatformLinux(is_host), m_sdk_version(0) {}
 
-ConstString PlatformAndroid::GetPluginNameStatic(bool is_host) {
-  if (is_host) {
-    static ConstString g_host_name(Platform::GetHostPlatformName());
-    return g_host_name;
-  } else {
-    static ConstString g_remote_name("remote-android");
-    return g_remote_name;
-  }
-}
-
-const char *PlatformAndroid::GetPluginDescriptionStatic(bool is_host) {
+llvm::StringRef PlatformAndroid::GetPluginDescriptionStatic(bool is_host) {
   if (is_host)
     return "Local Android user platform plug-in.";
-  else
-    return "Remote Android user platform plug-in.";
+  return "Remote Android user platform plug-in.";
 }
 
 Status PlatformAndroid::ConnectRemote(Args &args) {
@@ -155,15 +144,14 @@ Status PlatformAndroid::ConnectRemote(Args &args) {
   if (!m_remote_platform_sp)
     m_remote_platform_sp = PlatformSP(new PlatformAndroidRemoteGDBServer());
 
-  llvm::Optional<uint16_t> port;
-  llvm::StringRef scheme, host, path;
   const char *url = args.GetArgumentAtIndex(0);
   if (!url)
     return Status("URL is null.");
-  if (!UriParser::Parse(url, scheme, host, port, path))
+  llvm::Optional<URI> parsed_url = URI::Parse(url);
+  if (!parsed_url)
     return Status("Invalid URL: %s", url);
-  if (host != "localhost")
-    m_device_id = std::string(host);
+  if (parsed_url->hostname != "localhost")
+    m_device_id = parsed_url->hostname.str();
 
   auto error = PlatformLinux::ConnectRemote(args);
   if (error.Success()) {

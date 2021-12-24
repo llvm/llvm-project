@@ -2,7 +2,21 @@
 // RUN:   --sparsification --sparse-tensor-conversion \
 // RUN:   --convert-vector-to-scf --convert-scf-to-std \
 // RUN:   --func-bufferize --tensor-constant-bufferize --tensor-bufferize \
-// RUN:   --std-bufferize --finalizing-bufferize  \
+// RUN:   --std-bufferize --finalizing-bufferize --lower-affine \
+// RUN:   --convert-vector-to-llvm --convert-memref-to-llvm --convert-std-to-llvm --reconcile-unrealized-casts | \
+// RUN: TENSOR0="%mlir_integration_test_dir/data/mttkrp_b.tns" \
+// RUN: mlir-cpu-runner \
+// RUN:  -e entry -entry-point-result=void  \
+// RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
+// RUN: FileCheck %s
+//
+// Do the same run, but now with SIMDization as well. This should not change the outcome.
+//
+// RUN: mlir-opt %s \
+// RUN:   --sparsification="vectorization-strategy=2 vl=4" --sparse-tensor-conversion \
+// RUN:   --convert-vector-to-scf --convert-scf-to-std \
+// RUN:   --func-bufferize --tensor-constant-bufferize --tensor-bufferize \
+// RUN:   --std-bufferize --finalizing-bufferize --lower-affine \
 // RUN:   --convert-vector-to-llvm --convert-memref-to-llvm --convert-std-to-llvm --reconcile-unrealized-casts | \
 // RUN: TENSOR0="%mlir_integration_test_dir/data/mttkrp_b.tns" \
 // RUN: mlir-cpu-runner \
@@ -86,7 +100,7 @@ module {
         memref.store %k, %cdata[%i, %j] : memref<?x?xf64>
       }
     }
-    %c = memref.tensor_load %cdata : memref<?x?xf64>
+    %c = bufferization.to_tensor %cdata : memref<?x?xf64>
 
     %ddata = memref.alloc(%c4, %c5) : memref<?x?xf64>
     scf.for %i = %c0 to %c4 step %c1 {
@@ -98,7 +112,7 @@ module {
         memref.store %k, %ddata[%i, %j] : memref<?x?xf64>
       }
     }
-    %d = memref.tensor_load %ddata : memref<?x?xf64>
+    %d = bufferization.to_tensor %ddata : memref<?x?xf64>
 
     %adata = memref.alloc(%c2, %c5) : memref<?x?xf64>
     scf.for %i = %c0 to %c2 step %c1 {
@@ -106,7 +120,7 @@ module {
         memref.store %i0, %adata[%i, %j] : memref<?x?xf64>
       }
     }
-    %a = memref.tensor_load %adata : memref<?x?xf64>
+    %a = bufferization.to_tensor %adata : memref<?x?xf64>
 
     // Call kernel.
     %0 = call @kernel_mttkrp(%b, %c, %d, %a)
@@ -118,7 +132,7 @@ module {
     // CHECK: ( ( 16075, 21930, 28505, 35800, 43815 ),
     // CHECK:   ( 10000, 14225, 19180, 24865, 31280 ) )
     //
-    %m = memref.buffer_cast %0 : memref<?x?xf64>
+    %m = bufferization.to_memref %0 : memref<?x?xf64>
     %v = vector.transfer_read %m[%c0, %c0], %i0
           : memref<?x?xf64>, vector<2x5xf64>
     vector.print %v : vector<2x5xf64>

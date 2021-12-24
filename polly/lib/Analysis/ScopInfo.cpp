@@ -112,7 +112,7 @@ STATISTIC(NumSingletonWrites, "Number of singleton writes after ScopInfo");
 STATISTIC(NumSingletonWritesInLoops,
           "Number of singleton writes nested in affine loops after ScopInfo");
 
-int const polly::MaxDisjunctsInDomain = 20;
+unsigned const polly::MaxDisjunctsInDomain = 20;
 
 // The number of disjunct in the context after which we stop to add more
 // disjuncts. This parameter is there to avoid exponential growth in the
@@ -443,9 +443,10 @@ void MemoryAccess::updateDimensionality() {
   isl::space AccessSpace = AccessRelation.get_space().range();
   isl::ctx Ctx = ArraySpace.ctx();
 
-  auto DimsArray = ArraySpace.dim(isl::dim::set).release();
-  auto DimsAccess = AccessSpace.dim(isl::dim::set).release();
-  auto DimsMissing = DimsArray - DimsAccess;
+  unsigned DimsArray = unsignedFromIslSize(ArraySpace.dim(isl::dim::set));
+  unsigned DimsAccess = unsignedFromIslSize(AccessSpace.dim(isl::dim::set));
+  assert(DimsArray >= DimsAccess);
+  unsigned DimsMissing = DimsArray - DimsAccess;
 
   auto *BB = getStatement()->getEntryBlock();
   auto &DL = BB->getModule()->getDataLayout();
@@ -455,10 +456,10 @@ void MemoryAccess::updateDimensionality() {
   isl::map Map = isl::map::from_domain_and_range(
       isl::set::universe(AccessSpace), isl::set::universe(ArraySpace));
 
-  for (auto i : seq<isl_size>(0, DimsMissing))
+  for (auto i : seq<unsigned>(0, DimsMissing))
     Map = Map.fix_si(isl::dim::out, i, 0);
 
-  for (auto i : seq<isl_size>(DimsMissing, DimsArray))
+  for (auto i : seq<unsigned>(DimsMissing, DimsArray))
     Map = Map.equate(isl::dim::in, i - DimsMissing, isl::dim::out, i);
 
   AccessRelation = AccessRelation.apply_range(Map);
@@ -497,9 +498,10 @@ void MemoryAccess::updateDimensionality() {
   if (ElemBytes > ArrayElemSize) {
     assert(ElemBytes % ArrayElemSize == 0 &&
            "Loaded element size should be multiple of canonical element size");
+    assert(DimsArray >= 1);
     isl::map Map = isl::map::from_domain_and_range(
         isl::set::universe(ArraySpace), isl::set::universe(ArraySpace));
-    for (auto i : seq<isl_size>(0, DimsArray - 1))
+    for (auto i : seq<unsigned>(0, DimsArray - 1))
       Map = Map.equate(isl::dim::in, i, isl::dim::out, i);
 
     isl::constraint C;
@@ -1008,10 +1010,10 @@ bool MemoryAccess::isStrideX(isl::map Schedule, int StrideWidth) const {
 
   Stride = getStride(Schedule);
   StrideX = isl::set::universe(Stride.get_space());
-  for (auto i : seq<isl_size>(0, StrideX.tuple_dim().release() - 1))
+  int Size = unsignedFromIslSize(StrideX.tuple_dim());
+  for (auto i : seq<int>(0, Size - 1))
     StrideX = StrideX.fix_si(isl::dim::set, i, 0);
-  StrideX = StrideX.fix_si(isl::dim::set, StrideX.tuple_dim().release() - 1,
-                           StrideWidth);
+  StrideX = StrideX.fix_si(isl::dim::set, Size - 1, StrideWidth);
   IsStrideX = Stride.is_subset(StrideX);
 
   return IsStrideX;
@@ -1070,9 +1072,9 @@ void MemoryAccess::setNewAccessRelation(isl::map NewAccess) {
 
   // Check whether access dimensions correspond to number of dimensions of the
   // accesses array.
-  isl_size Dims = SAI->getNumberOfDimensions();
-  assert(NewAccessSpace.dim(isl::dim::set).release() == Dims &&
-         "Access dims must match array dims");
+  unsigned Dims = SAI->getNumberOfDimensions();
+  unsigned SpaceSize = unsignedFromIslSize(NewAccessSpace.dim(isl::dim::set));
+  assert(SpaceSize == Dims && "Access dims must match array dims");
 #endif
 
   NewAccess = NewAccess.gist_params(getStatement()->getParent()->getContext());

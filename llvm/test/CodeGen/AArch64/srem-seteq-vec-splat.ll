@@ -184,7 +184,7 @@ define <4 x i32> @test_srem_one_ne(<4 x i32> %X) nounwind {
 define <4 x i32> @test_srem_pow2(<4 x i32> %X) nounwind {
 ; CHECK-LABEL: test_srem_pow2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sshr v2.4s, v0.4s, #31
+; CHECK-NEXT:    cmlt v2.4s, v0.4s, #0
 ; CHECK-NEXT:    mov v3.16b, v0.16b
 ; CHECK-NEXT:    movi v1.4s, #1
 ; CHECK-NEXT:    usra v3.4s, v2.4s, #28
@@ -203,7 +203,7 @@ define <4 x i32> @test_srem_pow2(<4 x i32> %X) nounwind {
 define <4 x i32> @test_srem_int_min(<4 x i32> %X) nounwind {
 ; CHECK-LABEL: test_srem_int_min:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sshr v2.4s, v0.4s, #31
+; CHECK-NEXT:    cmlt v2.4s, v0.4s, #0
 ; CHECK-NEXT:    mov v3.16b, v0.16b
 ; CHECK-NEXT:    movi v1.4s, #128, lsl #24
 ; CHECK-NEXT:    usra v3.4s, v2.4s, #1

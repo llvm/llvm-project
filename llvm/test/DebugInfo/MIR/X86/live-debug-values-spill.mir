@@ -467,6 +467,6 @@ body:             |
     $r14 = POP64r implicit-def $rsp, implicit $rsp, debug-location !90
     $r15 = POP64r implicit-def $rsp, implicit $rsp, debug-location !90
     $rbp = POP64r implicit-def $rsp, implicit $rsp, debug-location !90
-    RETQ debug-location !90
+    RET64 debug-location !90
 
 ...

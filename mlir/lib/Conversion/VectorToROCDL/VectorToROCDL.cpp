@@ -64,6 +64,10 @@ public:
   LogicalResult
   matchAndRewrite(ConcreteOp xferOp, typename ConcreteOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    // TODO: support 0-d corner case.
+    if (xferOp.getTransferRank() == 0)
+      return failure();
+
     if (xferOp.getVectorType().getRank() > 1 ||
         llvm::size(xferOp.indices()) == 0)
       return failure();
@@ -141,7 +145,7 @@ public:
         vecTy, dwordConfig, int32Zero, int32Zero, int1False, int1False);
   }
 };
-} // end anonymous namespace
+} // namespace
 
 void mlir::populateVectorToROCDLConversionPatterns(
     LLVMTypeConverter &converter, RewritePatternSet &patterns) {

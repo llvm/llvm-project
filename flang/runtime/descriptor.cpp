@@ -163,19 +163,6 @@ int Descriptor::Destroy(bool finalize) {
 
 int Descriptor::Deallocate() { return ISO::CFI_deallocate(&raw_); }
 
-bool Descriptor::IncrementSubscripts(
-    SubscriptValue *subscript, const int *permutation) const {
-  for (int j{0}; j < raw_.rank; ++j) {
-    int k{permutation ? permutation[j] : j};
-    const Dimension &dim{GetDimension(k)};
-    if (subscript[k]++ < dim.UpperBound()) {
-      return true;
-    }
-    subscript[k] = dim.LowerBound();
-  }
-  return false;
-}
-
 bool Descriptor::DecrementSubscripts(
     SubscriptValue *subscript, const int *permutation) const {
   for (int j{raw_.rank - 1}; j >= 0; --j) {
@@ -202,29 +189,6 @@ std::size_t Descriptor::ZeroBasedElementNumber(
   return result;
 }
 
-bool Descriptor::SubscriptsForZeroBasedElementNumber(SubscriptValue *subscript,
-    std::size_t elementNumber, const int *permutation) const {
-  std::size_t coefficient{1};
-  std::size_t dimCoefficient[maxRank];
-  for (int j{0}; j < raw_.rank; ++j) {
-    int k{permutation ? permutation[j] : j};
-    const Dimension &dim{GetDimension(k)};
-    dimCoefficient[j] = coefficient;
-    coefficient *= dim.Extent();
-  }
-  if (elementNumber >= coefficient) {
-    return false; // out of range
-  }
-  for (int j{raw_.rank - 1}; j >= 0; --j) {
-    int k{permutation ? permutation[j] : j};
-    const Dimension &dim{GetDimension(k)};
-    std::size_t quotient{elementNumber / dimCoefficient[j]};
-    subscript[k] = quotient + dim.LowerBound();
-    elementNumber -= quotient * dimCoefficient[j];
-  }
-  return true;
-}
-
 bool Descriptor::EstablishPointerSection(const Descriptor &source,
     const SubscriptValue *lower, const SubscriptValue *upper,
     const SubscriptValue *stride) {
@@ -241,6 +205,13 @@ bool Descriptor::EstablishPointerSection(const Descriptor &source,
     }
   }
   raw_.rank = newRank;
+  if (const auto *sourceAddendum = source.Addendum()) {
+    if (auto *addendum{Addendum()}) {
+      *addendum = *sourceAddendum;
+    } else {
+      return false;
+    }
+  }
   return CFI_section(&raw_, &source.raw_, lower, upper, stride) == CFI_SUCCESS;
 }
 

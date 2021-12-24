@@ -1,8 +1,8 @@
 ; RUN: opt -function-specialization -force-function-specialization \
-; RUN:   -func-specialization-max-constants=2 -S < %s | FileCheck %s
+; RUN:   -func-specialization-max-clones=2 -S < %s | FileCheck %s
 
 ; RUN: opt -function-specialization -force-function-specialization \
-; RUN:   -func-specialization-max-constants=1 -S < %s | FileCheck %s --check-prefix=CONST1
+; RUN:   -func-specialization-max-clones=1 -S < %s | FileCheck %s --check-prefix=CONST1
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
@@ -38,7 +38,7 @@ entry:
   ret i32 %add1
 }
 
-; CONST1-NOT: define internal i32 @foo.1(i32 %x, i32* %b, i32* %c)
+; CONST1:     define internal i32 @foo.1(i32 %x, i32* %b, i32* %c)
 ; CONST1-NOT: define internal i32 @foo.2(i32 %x, i32* %b, i32* %c)
 
 ; CHECK:        define internal i32 @foo.1(i32 %x, i32* %b, i32* %c) {

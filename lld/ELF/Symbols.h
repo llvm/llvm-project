@@ -16,6 +16,7 @@
 #include "InputFiles.h"
 #include "InputSection.h"
 #include "lld/Common/LLVM.h"
+#include "lld/Common/Memory.h"
 #include "lld/Common/Strings.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Object/Archive.h"
@@ -85,7 +86,7 @@ public:
   uint32_t globalDynIndex = -1;
 
   // This field is a index to the symbol's version definition.
-  uint32_t verdefIndex = -1;
+  uint16_t verdefIndex = -1;
 
   // Version definition index.
   uint16_t versionId;
@@ -93,7 +94,7 @@ public:
   // Symbol binding. This is not overwritten by replace() to track
   // changes during resolution. In particular:
   //  - An undefined weak is still weak when it resolves to a shared library.
-  //  - An undefined weak will not fetch archive members, but we have to
+  //  - An undefined weak will not extract archive members, but we have to
   //    remember it is weak.
   uint8_t binding;
 
@@ -216,10 +217,10 @@ public:
   void mergeProperties(const Symbol &other);
   void resolve(const Symbol &other);
 
-  // If this is a lazy symbol, fetch an input file and add the symbol
+  // If this is a lazy symbol, extract an input file and add the symbol
   // in the file to the symbol table. Calling this function on
   // non-lazy object causes a runtime error.
-  void fetch() const;
+  void extract() const;
 
   static bool isExportDynamic(Kind k, uint8_t visibility) {
     if (k == SharedKind)
@@ -245,16 +246,13 @@ protected:
         type(type), stOther(stOther), symbolKind(k), visibility(stOther & 3),
         isUsedInRegularObj(!file || file->kind() == InputFile::ObjKind),
         exportDynamic(isExportDynamic(k, visibility)), inDynamicList(false),
-        canInline(false), referenced(false), traced(false), needsPltAddr(false),
-        isInIplt(false), gotInIgot(false), isPreemptible(false),
-        used(!config->gcSections), needsTocRestore(false),
-        scriptDefined(false) {}
+        canInline(false), referenced(false), traced(false), isInIplt(false),
+        gotInIgot(false), isPreemptible(false), used(!config->gcSections),
+        folded(false), needsTocRestore(false), scriptDefined(false),
+        needsCopy(false), needsGot(false), needsPlt(false),
+        hasDirectReloc(false) {}
 
 public:
-  // True the symbol should point to its PLT entry.
-  // For SharedSymbol only.
-  uint8_t needsPltAddr : 1;
-
   // True if this symbol is in the Iplt sub-section of the Plt and the Igot
   // sub-section of the .got.plt or .got.
   uint8_t isInIplt : 1;
@@ -272,12 +270,25 @@ public:
   // which are referenced by relocations when -r or --emit-relocs is given.
   uint8_t used : 1;
 
+  // True if defined relative to a section discarded by ICF.
+  uint8_t folded : 1;
+
   // True if a call to this symbol needs to be followed by a restore of the
   // PPC64 toc pointer.
   uint8_t needsTocRestore : 1;
 
   // True if this symbol is defined by a linker script.
   uint8_t scriptDefined : 1;
+
+  // True if this symbol needs a canonical PLT entry, or (during
+  // postScanRelocations) a copy relocation.
+  uint8_t needsCopy : 1;
+
+  // Temporary flags used to communicate which symbol entries need PLT and GOT
+  // entries during postScanRelocations();
+  uint8_t needsGot : 1;
+  uint8_t needsPlt : 1;
+  uint8_t hasDirectReloc : 1;
 
   // The partition whose dynamic symbol table contains this symbol's definition.
   uint8_t partition = 1;
@@ -358,7 +369,7 @@ public:
 
   SharedSymbol(InputFile &file, StringRef name, uint8_t binding,
                uint8_t stOther, uint8_t type, uint64_t value, uint64_t size,
-               uint32_t alignment, uint32_t verdefIndex)
+               uint32_t alignment, uint16_t verdefIndex)
       : Symbol(SharedKind, &file, name, binding, stOther, type), value(value),
         size(size), alignment(alignment) {
     this->verdefIndex = verdefIndex;
@@ -423,7 +434,9 @@ class LazyObject : public Symbol {
 public:
   LazyObject(InputFile &file, StringRef name)
       : Symbol(LazyObjectKind, &file, name, llvm::ELF::STB_GLOBAL,
-               llvm::ELF::STV_DEFAULT, llvm::ELF::STT_NOTYPE) {}
+               llvm::ELF::STV_DEFAULT, llvm::ELF::STT_NOTYPE) {
+    isUsedInRegularObj = false;
+  }
 
   static bool classof(const Symbol *s) { return s->kind() == LazyObjectKind; }
 };
@@ -480,9 +493,9 @@ union SymbolUnion {
 };
 
 // It is important to keep the size of SymbolUnion small for performance and
-// memory usage reasons. 80 bytes is a soft limit based on the size of Defined
+// memory usage reasons. 72 bytes is a soft limit based on the size of Defined
 // on a 64-bit system.
-static_assert(sizeof(SymbolUnion) <= 80, "SymbolUnion too large");
+static_assert(sizeof(SymbolUnion) <= 72, "SymbolUnion too large");
 
 template <typename T> struct AssertSymbol {
   static_assert(std::is_trivially_destructible<T>(),
@@ -559,15 +572,16 @@ void Symbol::replace(const Symbol &newSym) {
   scriptDefined = old.scriptDefined;
   partition = old.partition;
 
-  // Symbol length is computed lazily. If we already know a symbol length,
-  // propagate it.
-  if (nameData == old.nameData && nameSize == 0 && old.nameSize != 0)
-    nameSize = old.nameSize;
-
   // Print out a log message if --trace-symbol was specified.
   // This is for debugging.
   if (traced)
     printTraceSymbol(this);
+}
+
+template <typename... T> Defined *makeDefined(T &&...args) {
+  return new (reinterpret_cast<Defined *>(
+      getSpecificAllocSingleton<SymbolUnion>().Allocate()))
+      Defined(std::forward<T>(args)...);
 }
 
 void maybeWarnUnorderableSymbol(const Symbol *sym);

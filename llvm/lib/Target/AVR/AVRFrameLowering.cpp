@@ -247,8 +247,8 @@ bool AVRFrameLowering::spillCalleeSavedRegisters(
   const TargetInstrInfo &TII = *STI.getInstrInfo();
   AVRMachineFunctionInfo *AVRFI = MF.getInfo<AVRMachineFunctionInfo>();
 
-  for (unsigned i = CSI.size(); i != 0; --i) {
-    unsigned Reg = CSI[i - 1].getReg();
+  for (const CalleeSavedInfo &I : llvm::reverse(CSI)) {
+    unsigned Reg = I.getReg();
     bool IsNotLiveIn = !MBB.isLiveIn(Reg);
 
     assert(TRI->getRegSizeInBits(*TRI->getMinimalPhysRegClass(Reg)) == 8 &&
@@ -303,16 +303,16 @@ static void fixStackStores(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MI,
                            const TargetInstrInfo &TII, Register FP) {
   // Iterate through the BB until we hit a call instruction or we reach the end.
-  for (auto I = MI, E = MBB.end(); I != E && !I->isCall();) {
-    MachineBasicBlock::iterator NextMI = std::next(I);
-    MachineInstr &MI = *I;
-    unsigned Opcode = I->getOpcode();
+  for (MachineInstr &MI :
+       llvm::make_early_inc_range(llvm::make_range(MI, MBB.end()))) {
+    if (MI.isCall())
+      break;
+
+    unsigned Opcode = MI.getOpcode();
 
     // Only care of pseudo store instructions where SP is the base pointer.
-    if (Opcode != AVR::STDSPQRr && Opcode != AVR::STDWSPQRr) {
-      I = NextMI;
+    if (Opcode != AVR::STDSPQRr && Opcode != AVR::STDWSPQRr)
       continue;
-    }
 
     assert(MI.getOperand(0).getReg() == AVR::SP &&
            "Invalid register, should be SP!");
@@ -324,8 +324,6 @@ static void fixStackStores(MachineBasicBlock &MBB,
 
     MI.setDesc(TII.get(STOpc));
     MI.getOperand(0).setReg(FP);
-
-    I = NextMI;
   }
 }
 

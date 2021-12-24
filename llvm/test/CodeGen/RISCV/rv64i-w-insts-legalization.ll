@@ -20,7 +20,7 @@ define signext i32 @addw(i32 signext %s, i32 signext %n, i32 signext %k) nounwin
 ; CHECK-NEXT:    addw a0, a0, a1
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB0_2:
-; CHECK-NEXT:    mv a0, zero
+; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    ret
 entry:
   %cmp6 = icmp slt i32 %s, %n
@@ -65,7 +65,7 @@ define signext i32 @subw(i32 signext %s, i32 signext %n, i32 signext %k) nounwin
 ; CHECK-NEXT:    subw a0, a0, a1
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB1_2:
-; CHECK-NEXT:    mv a0, zero
+; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    ret
 entry:
   %cmp6 = icmp slt i32 %s, %n

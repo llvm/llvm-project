@@ -70,11 +70,6 @@ class SymbolizerTool {
     return nullptr;
   }
 
-  // Called during the LateInitialize phase of Sanitizer initialization.
-  // Usually this is a safe place to call code that might need to use user
-  // memory allocators.
-  virtual void LateInitialize() {}
-
  protected:
   ~SymbolizerTool() {}
 };
@@ -91,7 +86,7 @@ class SymbolizerProcess {
   ~SymbolizerProcess() {}
 
   /// The maximum number of arguments required to invoke a tool process.
-  static const unsigned kArgVMax = 6;
+  static const unsigned kArgVMax = 16;
 
   // Customizable by subclasses.
   virtual bool StartSymbolizerSubprocess();

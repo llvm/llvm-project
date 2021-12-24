@@ -5,13 +5,7 @@
 // CHECK-DAG: #[[$strided3D:.*]] = affine_map<(d0, d1, d2)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2 + d2)>
 // CHECK-DAG: #[[$strided2DOFF0:.*]] = affine_map<(d0, d1)[s0] -> (d0 * s0 + d1)>
 // CHECK-DAG: #[[$strided3DOFF0:.*]] = affine_map<(d0, d1, d2)[s0, s1] -> (d0 * s0 + d1 * s1 + d2)>
-
-// CHECK-LABEL: test_buffer_cast
-func @test_buffer_cast(%arg0: tensor<?xi64>, %arg1: tensor<*xi64>) -> (memref<?xi64, affine_map<(d0) -> (d0 + 7)>>, memref<*xi64, 1>) {
-  %0 = memref.buffer_cast %arg0 : memref<?xi64, affine_map<(d0) -> (d0 + 7)>>
-  %1 = memref.buffer_cast %arg1 : memref<*xi64, 1>
-  return %0, %1 : memref<?xi64, affine_map<(d0) -> (d0 + 7)>>, memref<*xi64, 1>
-}
+// CHECK-DAG: #[[$strided2D42:.*]] = affine_map<(d0, d1) -> (d0 * 42 + d1)>
 
 // CHECK-LABEL: func @memref_reinterpret_cast
 func @memref_reinterpret_cast(%in: memref<?xf32>)
@@ -20,6 +14,15 @@ func @memref_reinterpret_cast(%in: memref<?xf32>)
   %c10 = arith.constant 10 : index
   %out = memref.reinterpret_cast %in to
            offset: [%c0], sizes: [10, %c10], strides: [%c10, 1]
+           : memref<?xf32> to memref<10x?xf32, offset: ?, strides: [?, 1]>
+  return %out : memref<10x?xf32, offset: ?, strides: [?, 1]>
+}
+
+// CHECK-LABEL: func @memref_reinterpret_cast_static_to_dynamic_sizes
+func @memref_reinterpret_cast_static_to_dynamic_sizes(%in: memref<?xf32>)
+    -> memref<10x?xf32, offset: ?, strides: [?, 1]> {
+  %out = memref.reinterpret_cast %in to
+           offset: [1], sizes: [10, 10], strides: [1, 1]
            : memref<?xf32> to memref<10x?xf32, offset: ?, strides: [?, 1]>
   return %out : memref<10x?xf32, offset: ?, strides: [?, 1]>
 }
@@ -62,15 +65,6 @@ func @write_global_memref() {
 // CHECK-LABEL: func @read_global_memref
 func @read_global_memref() {
   %0 = memref.get_global @memref0 : memref<2xf32>
-  %1 = memref.tensor_load %0 : memref<2xf32>
-  return
-}
-
-// CHECK-LABEL: func @memref_clone
-func @memref_clone() {
-  %0 = memref.alloc() : memref<2xf32>
-  %1 = memref.cast %0 : memref<2xf32> to memref<*xf32>
-  %2 = memref.clone %1 : memref<*xf32> to memref<*xf32>
   return
 }
 
@@ -123,13 +117,13 @@ func @expand_collapse_shape_static(%arg0: memref<3x4x5xf32>,
   %r3 = memref.collapse_shape %3 [[0, 1], [2], [3, 4]] :
     memref<1x3x4x1x5xf32> into memref<3x4x5xf32>
   // Reshapes on tensors.
-  %t0 = linalg.tensor_expand_shape %arg1 [[0, 1], [2], [3, 4]] :
+  %t0 = tensor.expand_shape %arg1 [[0, 1], [2], [3, 4]] :
     tensor<3x4x5xf32> into tensor<1x3x4x1x5xf32>
-  %rt0 = linalg.tensor_collapse_shape %t0 [[0, 1], [2], [3, 4]] :
+  %rt0 = tensor.collapse_shape %t0 [[0, 1], [2], [3, 4]] :
     tensor<1x3x4x1x5xf32> into tensor<3x4x5xf32>
-  %t1 = linalg.tensor_expand_shape %arg2 [[0, 1], [2], [3, 4]] :
+  %t1 = tensor.expand_shape %arg2 [[0, 1], [2], [3, 4]] :
     tensor<3x?x5xf32> into tensor<1x3x?x1x5xf32>
-  %rt1 = linalg.tensor_collapse_shape %t1 [[0], [1, 2], [3, 4]] :
+  %rt1 = tensor.collapse_shape %t1 [[0], [1, 2], [3, 4]] :
     tensor<1x3x?x1x5xf32> into tensor<1x?x5xf32>
   return
 }
@@ -151,15 +145,16 @@ func @expand_collapse_shape_static(%arg0: memref<3x4x5xf32>,
 //       CHECK:   memref.collapse_shape {{.*}} {{\[}}[0, 1], [2], [3, 4]]
 //  CHECK-SAME:     memref<1x3x4x1x5xf32> into memref<3x4x5xf32>
 //
-//       CHECK:   linalg.tensor_expand_shape {{.*}}: tensor<3x4x5xf32> into tensor<1x3x4x1x5xf32>
-//       CHECK:   linalg.tensor_collapse_shape {{.*}}: tensor<1x3x4x1x5xf32> into tensor<3x4x5xf32>
-//       CHECK:   linalg.tensor_expand_shape {{.*}}: tensor<3x?x5xf32> into tensor<1x3x?x1x5xf32>
-//       CHECK:   linalg.tensor_collapse_shape {{.*}}: tensor<1x3x?x1x5xf32> into tensor<1x?x5xf32>
+//       CHECK:   tensor.expand_shape {{.*}}: tensor<3x4x5xf32> into tensor<1x3x4x1x5xf32>
+//       CHECK:   tensor.collapse_shape {{.*}}: tensor<1x3x4x1x5xf32> into tensor<3x4x5xf32>
+//       CHECK:   tensor.expand_shape {{.*}}: tensor<3x?x5xf32> into tensor<1x3x?x1x5xf32>
+//       CHECK:   tensor.collapse_shape {{.*}}: tensor<1x3x?x1x5xf32> into tensor<1x?x5xf32>
 
 
 func @expand_collapse_shape_dynamic(%arg0: memref<?x?x?xf32>,
          %arg1: memref<?x?x?xf32, offset : 0, strides : [?, ?, 1]>,
-         %arg2: memref<?x?x?xf32, offset : ?, strides : [?, ?, 1]>) {
+         %arg2: memref<?x?x?xf32, offset : ?, strides : [?, ?, 1]>,
+         %arg3: memref<?x42xf32, offset : 0, strides : [42, 1]>) {
   %0 = memref.collapse_shape %arg0 [[0, 1], [2]] :
     memref<?x?x?xf32> into memref<?x?xf32>
   %r0 = memref.expand_shape %0 [[0, 1], [2]] :
@@ -176,6 +171,12 @@ func @expand_collapse_shape_dynamic(%arg0: memref<?x?x?xf32>,
   %r2 = memref.expand_shape %2 [[0, 1], [2]] :
     memref<?x?xf32, offset : ?, strides : [?, 1]> into
     memref<?x4x?xf32, offset : ?, strides : [?, ?, 1]>
+  %3 = memref.collapse_shape %arg3 [[0, 1]] :
+    memref<?x42xf32, offset : 0, strides : [42, 1]> into
+    memref<?xf32, offset : 0, strides : [1]>
+  %r3 = memref.expand_shape %3 [[0, 1]] :
+    memref<?xf32, offset : 0, strides : [1]> into
+    memref<?x42xf32, offset : 0, strides : [42, 1]>
   return
 }
 // CHECK-LABEL: func @expand_collapse_shape_dynamic
@@ -191,6 +192,10 @@ func @expand_collapse_shape_dynamic(%arg0: memref<?x?x?xf32>,
 //  CHECK-SAME:     memref<?x?x?xf32, #[[$strided3D]]> into memref<?x?xf32, #[[$strided2D]]>
 //       CHECK:   memref.expand_shape {{.*}} {{\[}}[0, 1], [2]]
 //  CHECK-SAME:     memref<?x?xf32, #[[$strided2D]]> into memref<?x4x?xf32, #[[$strided3D]]>
+//       CHECK:   memref.collapse_shape {{.*}} {{\[}}[0, 1]]
+//  CHECK-SAME:     memref<?x42xf32, #[[$strided2D42]]> into memref<?xf32>
+//       CHECK:   memref.expand_shape {{.*}} {{\[}}[0, 1]]
+//  CHECK-SAME:     memref<?xf32> into memref<?x42xf32, #[[$strided2D42]]>
 
 func @expand_collapse_shape_zero_dim(%arg0 : memref<1x1xf32>, %arg1 : memref<f32>)
     -> (memref<f32>, memref<1x1xf32>) {
@@ -211,3 +216,14 @@ func @collapse_shape_to_dynamic
 //      CHECK: func @collapse_shape_to_dynamic
 //      CHECK:   memref.collapse_shape
 // CHECK-SAME:    [0], [1], [2, 3, 4]
+
+// -----
+
+func @rank(%t : memref<4x4x?xf32>) {
+  // CHECK: %{{.*}} = memref.rank %{{.*}} : memref<4x4x?xf32>
+  %0 = "memref.rank"(%t) : (memref<4x4x?xf32>) -> index
+
+  // CHECK: %{{.*}} = memref.rank %{{.*}} : memref<4x4x?xf32>
+  %1 = memref.rank %t : memref<4x4x?xf32>
+  return
+}

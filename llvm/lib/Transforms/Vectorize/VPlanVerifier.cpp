@@ -128,3 +128,59 @@ void VPlanVerifier::verifyHierarchicalCFG(
   assert(!TopRegion->getParent() && "VPlan Top Region should have no parent.");
   verifyRegionRec(TopRegion);
 }
+
+bool VPlanVerifier::verifyPlanIsValid(const VPlan &Plan) {
+  auto Iter = depth_first(
+      VPBlockRecursiveTraversalWrapper<const VPBlockBase *>(Plan.getEntry()));
+  for (const VPBasicBlock *VPBB :
+       VPBlockUtils::blocksOnly<const VPBasicBlock>(Iter)) {
+    // Verify that phi-like recipes are at the beginning of the block, with no
+    // other recipes in between.
+    auto RecipeI = VPBB->begin();
+    auto End = VPBB->end();
+    while (RecipeI != End && RecipeI->isPhi())
+      RecipeI++;
+
+    while (RecipeI != End) {
+      if (RecipeI->isPhi() && !isa<VPBlendRecipe>(&*RecipeI)) {
+        errs() << "Found phi-like recipe after non-phi recipe";
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+        errs() << ": ";
+        RecipeI->dump();
+        errs() << "after\n";
+        std::prev(RecipeI)->dump();
+#endif
+        return false;
+      }
+      RecipeI++;
+    }
+  }
+
+  const VPRegionBlock *TopRegion = cast<VPRegionBlock>(Plan.getEntry());
+  const VPBasicBlock *Entry = dyn_cast<VPBasicBlock>(TopRegion->getEntry());
+  if (!Entry) {
+    errs() << "VPlan entry block is not a VPBasicBlock\n";
+    return false;
+  }
+  const VPBasicBlock *Exit = dyn_cast<VPBasicBlock>(TopRegion->getExit());
+  if (!Exit) {
+    errs() << "VPlan exit block is not a VPBasicBlock\n";
+    return false;
+  }
+
+  for (const VPRegionBlock *Region :
+       VPBlockUtils::blocksOnly<const VPRegionBlock>(
+           depth_first(VPBlockRecursiveTraversalWrapper<const VPBlockBase *>(
+               Plan.getEntry())))) {
+    if (Region->getEntry()->getNumPredecessors() != 0) {
+      errs() << "region entry block has predecessors\n";
+      return false;
+    }
+    if (Region->getExit()->getNumSuccessors() != 0) {
+      errs() << "region exit block has successors\n";
+      return false;
+    }
+  }
+  return true;
+}

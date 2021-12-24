@@ -34,19 +34,27 @@ public:
   virtual ~ProfileGeneratorBase() = default;
   static std::unique_ptr<ProfileGeneratorBase>
   create(ProfiledBinary *Binary, const ContextSampleCounterMap &SampleCounters,
-         bool ProfileIsCS);
+         bool ProfileIsCSFlat);
   virtual void generateProfile() = 0;
   void write();
 
-  static uint32_t getDuplicationFactor(unsigned Discriminator) {
-    return llvm::DILocation::getDuplicationFactorFromDiscriminator(
-        Discriminator);
+  static uint32_t
+  getDuplicationFactor(unsigned Discriminator,
+                       bool UseFSD = ProfileGeneratorBase::UseFSDiscriminator) {
+    return UseFSD ? 1
+                  : llvm::DILocation::getDuplicationFactorFromDiscriminator(
+                        Discriminator);
   }
 
-  static uint32_t getBaseDiscriminator(unsigned Discriminator) {
-    return DILocation::getBaseDiscriminatorFromDiscriminator(
-        Discriminator, /* IsFSDiscriminator */ false);
+  static uint32_t
+  getBaseDiscriminator(unsigned Discriminator,
+                       bool UseFSD = ProfileGeneratorBase::UseFSDiscriminator) {
+    return UseFSD ? Discriminator
+                  : DILocation::getBaseDiscriminatorFromDiscriminator(
+                        Discriminator, /* IsFSDiscriminator */ false);
   }
+
+  static bool UseFSDiscriminator;
 
 protected:
   // Use SampleProfileWriter to serialize profile map
@@ -74,7 +82,24 @@ protected:
   void updateBodySamplesforFunctionProfile(FunctionSamples &FunctionProfile,
                                            const SampleContextFrame &LeafLoc,
                                            uint64_t Count);
+  void updateTotalSamples();
+
   StringRef getCalleeNameForOffset(uint64_t TargetOffset);
+
+  void computeSummaryAndThreshold();
+
+  void calculateAndShowDensity(const SampleProfileMap &Profiles);
+
+  double calculateDensity(const SampleProfileMap &Profiles,
+                          uint64_t HotCntThreshold);
+
+  void showDensitySuggestion(double Density);
+
+  // Thresholds from profile summary to answer isHotCount/isColdCount queries.
+  uint64_t HotCountThreshold;
+
+  uint64_t ColdCountThreshold;
+
   // Used by SampleProfileWriter
   SampleProfileMap ProfileMap;
 
@@ -104,6 +129,9 @@ private:
   void populateBodySamplesForAllFunctions(const RangeSample &RangeCounter);
   void
   populateBoundarySamplesForAllFunctions(const BranchSample &BranchCounters);
+  void postProcessProfiles();
+  void trimColdProfiles(const SampleProfileMap &Profiles,
+                        uint64_t ColdCntThreshold);
 };
 
 using ProbeCounterMap =
@@ -245,8 +273,6 @@ private:
   // and trimming cold profiles, running preinliner on profiles.
   void postProcessProfiles();
 
-  void computeSummaryAndThreshold();
-
   void populateBodySamplesForFunction(FunctionSamples &FunctionProfile,
                                       const RangeSample &RangeCounters);
   void populateBoundarySamplesForFunction(SampleContextFrames ContextId,
@@ -269,9 +295,6 @@ private:
   FunctionSamples &
   getFunctionProfileForLeafProbe(SampleContextFrames ContextStack,
                                  const MCDecodedPseudoProbe *LeafProbe);
-  // Thresholds from profile summary to answer isHotCount/isColdCount queries.
-  uint64_t HotCountThreshold;
-  uint64_t ColdCountThreshold;
 
   // Underlying context table serves for sample profile writer.
   std::unordered_set<SampleContextFrameVector, SampleContextFrameHash> Contexts;

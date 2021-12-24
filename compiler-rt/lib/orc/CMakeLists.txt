@@ -4,6 +4,7 @@
 set(ORC_SOURCES
   extensible_rtti.cpp
   log_error_to_stderr.cpp
+  macho_ehframe_registration.cpp
   macho_platform.cpp
   elfnix_platform.cpp
   run_program_wrapper.cpp
@@ -12,6 +13,7 @@ set(ORC_SOURCES
 # Implementation files for all ORC architectures.
 set(ALL_ORC_ASM_SOURCES
   macho_tlv.x86-64.S
+  macho_tlv.arm64.S
   elfnix_tls.x86-64.S
 )
 
@@ -60,7 +62,10 @@ if (TARGET cxx-headers OR HAVE_LIBCXX)
 endif()
 
 if (APPLE)
-  add_asm_sources(ORC_ASM_SOURCES macho_tlv.x86-64.S)
+  add_asm_sources(ORC_ASM_SOURCES
+    macho_tlv.x86-64.S
+    macho_tlv.arm64.S
+    )
 
   add_compiler_rt_object_libraries(RTOrc
     OS ${ORC_SUPPORTED_OS}

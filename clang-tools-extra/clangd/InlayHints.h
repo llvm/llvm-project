@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INLAY_HINTS_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INLAY_HINTS_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INLAYHINTS_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INLAYHINTS_H
 
 #include "Protocol.h"
 #include <vector>
@@ -28,4 +28,4 @@ std::vector<InlayHint> inlayHints(ParsedAST &AST);
 } // namespace clangd
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_INLAY_HINTS_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_INLAYHINTS_H

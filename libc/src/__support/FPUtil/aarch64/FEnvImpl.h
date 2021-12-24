@@ -9,6 +9,12 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_AARCH64_FENVIMPL_H
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_AARCH64_FENVIMPL_H
 
+#include "src/__support/architectures.h"
+
+#if !defined(LLVM_LIBC_ARCH_AARCH64)
+#error "Invalid include"
+#endif
+
 #include <arm_acle.h>
 #include <fenv.h>
 #include <stdint.h>
@@ -69,7 +75,7 @@ struct FEnv {
   static void writeStatusWord(uint32_t fpsr) { __arm_wsr("fpsr", fpsr); }
 };
 
-static inline int enableExcept(int excepts) {
+static inline int enable_except(int excepts) {
   uint32_t newExcepts = FEnv::getStatusValueForExcept(excepts);
   uint32_t controlWord = FEnv::getControlWord();
   int oldExcepts =
@@ -79,7 +85,7 @@ static inline int enableExcept(int excepts) {
   return FEnv::exceptionStatusToMacro(oldExcepts);
 }
 
-static inline int disableExcept(int excepts) {
+static inline int disable_except(int excepts) {
   uint32_t disabledExcepts = FEnv::getStatusValueForExcept(excepts);
   uint32_t controlWord = FEnv::getControlWord();
   int oldExcepts =
@@ -89,14 +95,14 @@ static inline int disableExcept(int excepts) {
   return FEnv::exceptionStatusToMacro(oldExcepts);
 }
 
-static inline int getExcept() {
+static inline int get_except() {
   uint32_t controlWord = FEnv::getControlWord();
   int enabledExcepts =
       (controlWord >> FEnv::ExceptionControlFlagsBitPosition) & 0x1F;
   return FEnv::exceptionStatusToMacro(enabledExcepts);
 }
 
-static inline int clearExcept(int excepts) {
+static inline int clear_except(int excepts) {
   uint32_t statusWord = FEnv::getStatusWord();
   uint32_t toClear = FEnv::getStatusValueForExcept(excepts);
   statusWord &= ~(toClear << FEnv::ExceptionStatusFlagsBitPosition);
@@ -104,14 +110,14 @@ static inline int clearExcept(int excepts) {
   return 0;
 }
 
-static inline int testExcept(int excepts) {
+static inline int test_except(int excepts) {
   uint32_t toTest = FEnv::getStatusValueForExcept(excepts);
   uint32_t statusWord = FEnv::getStatusWord();
   return FEnv::exceptionStatusToMacro(
       (statusWord >> FEnv::ExceptionStatusFlagsBitPosition) & toTest);
 }
 
-static inline int setExcept(int excepts) {
+static inline int set_except(int excepts) {
   uint32_t statusWord = FEnv::getControlWord();
   uint32_t statusValue = FEnv::getStatusValueForExcept(excepts);
   statusWord |= (statusValue << FEnv::ExceptionStatusFlagsBitPosition);
@@ -119,11 +125,11 @@ static inline int setExcept(int excepts) {
   return 0;
 }
 
-static inline int raiseExcept(int excepts) {
+static inline int raise_except(int excepts) {
   float zero = 0.0f;
   float one = 1.0f;
-  float largeValue = float(FPBits<float>(FPBits<float>::maxNormal));
-  float smallValue = float(FPBits<float>(FPBits<float>::minNormal));
+  float largeValue = float(FPBits<float>(FPBits<float>::MAX_NORMAL));
+  float smallValue = float(FPBits<float>(FPBits<float>::MIN_NORMAL));
   auto divfunc = [](float a, float b) {
     __asm__ __volatile__("ldr  s0, %0\n\t"
                          "ldr  s1, %1\n\t"
@@ -178,7 +184,7 @@ static inline int raiseExcept(int excepts) {
   return 0;
 }
 
-static inline int getRound() {
+static inline int get_round() {
   uint32_t roundingMode =
       (FEnv::getControlWord() >> FEnv::RoundingControlBitPosition) & 0x3;
   switch (roundingMode) {
@@ -195,7 +201,7 @@ static inline int getRound() {
   }
 }
 
-static inline int setRound(int mode) {
+static inline int set_round(int mode) {
   uint16_t bitValue;
   switch (mode) {
   case FE_TONEAREST:
@@ -222,14 +228,14 @@ static inline int setRound(int mode) {
   return 0;
 }
 
-static inline int getEnv(fenv_t *envp) {
+static inline int get_env(fenv_t *envp) {
   FEnv::FPState *state = reinterpret_cast<FEnv::FPState *>(envp);
   state->ControlWord = FEnv::getControlWord();
   state->StatusWord = FEnv::getStatusWord();
   return 0;
 }
 
-static inline int setEnv(const fenv_t *envp) {
+static inline int set_env(const fenv_t *envp) {
   if (envp == FE_DFL_ENV) {
     // Default status and control words bits are all zeros so we just
     // write zeros.

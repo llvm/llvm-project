@@ -114,6 +114,6 @@ body:             |
     MOV64mr killed renamable $rax, 1, $noreg, 0, $fs, killed renamable $rcx, debug-location !18 :: (store (s64) into @__safestack_unsafe_stack_ptr)
     $rsp = frame-destroy ADD64ri8 $rsp, 24, implicit-def dead $eflags, debug-location !18
     CFI_INSTRUCTION def_cfa_offset 8, debug-location !18
-    RETQ debug-location !18
+    RET64 debug-location !18
 
 ...

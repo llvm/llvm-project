@@ -9,6 +9,7 @@
 #ifndef _LIBCPP___RANGES_COUNTED_H
 #define _LIBCPP___RANGES_COUNTED_H
 
+#include <__concepts/convertible_to.h>
 #include <__config>
 #include <__iterator/concepts.h>
 #include <__iterator/counted_iterator.h>
@@ -16,10 +17,7 @@
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/iterator_traits.h>
 #include <__memory/pointer_traits.h>
-#include <__ranges/concepts.h>
 #include <__ranges/subrange.h>
-#include <__utility/decay_copy.h>
-#include <__utility/declval.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <span>
@@ -36,50 +34,39 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace ranges::views {
 
 namespace __counted {
-  template<class _From, class _To>
-  concept __explicitly_convertible = requires {
-    _To(_From{});
-  };
 
   struct __fn {
-    template<class _Iter, class _Diff>
-      requires contiguous_iterator<decay_t<_Iter>> &&
-               __explicitly_convertible<_Diff, iter_difference_t<_Iter>>
+    template<contiguous_iterator _It>
     _LIBCPP_HIDE_FROM_ABI
-    constexpr auto operator()(_Iter&& __it, _Diff __c) const
-      noexcept(noexcept(
-        span(_VSTD::to_address(__it), static_cast<iter_difference_t<_Iter>>(__c))
-      ))
-    {
-      return span(_VSTD::to_address(__it), static_cast<iter_difference_t<_Iter>>(__c));
-    }
+    static constexpr auto __go(_It __it, iter_difference_t<_It> __count)
+      noexcept(noexcept(span(_VSTD::to_address(__it), static_cast<size_t>(__count))))
+      // Deliberately omit return-type SFINAE, because to_address is not SFINAE-friendly
+      { return          span(_VSTD::to_address(__it), static_cast<size_t>(__count)); }
 
-    template<class _Iter, class _Diff>
-      requires random_access_iterator<decay_t<_Iter>> &&
-               __explicitly_convertible<_Diff, iter_difference_t<_Iter>>
+    template<random_access_iterator _It>
     _LIBCPP_HIDE_FROM_ABI
-    constexpr auto operator()(_Iter&& __it, _Diff __c) const
-      noexcept(
-        noexcept(__it + static_cast<iter_difference_t<_Iter>>(__c)) &&
-        noexcept(ranges::subrange(_VSTD::forward<_Iter>(__it), _VSTD::__decay_copy(__it)))
-      )
-    {
-      auto __last = __it + static_cast<iter_difference_t<_Iter>>(__c);
-      return ranges::subrange(_VSTD::forward<_Iter>(__it), _VSTD::move(__last));
-    }
+    static constexpr auto __go(_It __it, iter_difference_t<_It> __count)
+      noexcept(noexcept(subrange(__it, __it + __count)))
+      -> decltype(      subrange(__it, __it + __count))
+      { return          subrange(__it, __it + __count); }
 
-    template<class _Iter, class _Diff>
-      requires __explicitly_convertible<_Diff, iter_difference_t<_Iter>>
+    template<class _It>
     _LIBCPP_HIDE_FROM_ABI
-    constexpr auto operator()(_Iter&& __it, _Diff __c) const
-      noexcept(noexcept(
-        ranges::subrange(counted_iterator(_VSTD::forward<_Iter>(__it), __c), default_sentinel)
-      ))
-    {
-      return ranges::subrange(counted_iterator(_VSTD::forward<_Iter>(__it), __c), default_sentinel);
-    }
+    static constexpr auto __go(_It __it, iter_difference_t<_It> __count)
+      noexcept(noexcept(subrange(counted_iterator(_VSTD::move(__it), __count), default_sentinel)))
+      -> decltype(      subrange(counted_iterator(_VSTD::move(__it), __count), default_sentinel))
+      { return          subrange(counted_iterator(_VSTD::move(__it), __count), default_sentinel); }
+
+    template<class _It, convertible_to<iter_difference_t<_It>> _Diff>
+      requires input_or_output_iterator<decay_t<_It>>
+    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI
+    constexpr auto operator()(_It&& __it, _Diff&& __count) const
+      noexcept(noexcept(__go(_VSTD::forward<_It>(__it), _VSTD::forward<_Diff>(__count))))
+      -> decltype(      __go(_VSTD::forward<_It>(__it), _VSTD::forward<_Diff>(__count)))
+      { return          __go(_VSTD::forward<_It>(__it), _VSTD::forward<_Diff>(__count)); }
   };
-}
+
+} // namespace __counted
 
 inline namespace __cpo {
   inline constexpr auto counted = __counted::__fn{};

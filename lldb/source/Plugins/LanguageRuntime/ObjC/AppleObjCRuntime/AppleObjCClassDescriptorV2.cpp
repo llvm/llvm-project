@@ -9,6 +9,7 @@
 #include "AppleObjCClassDescriptorV2.h"
 
 #include "lldb/Expression/FunctionCaller.h"
+#include "lldb/Target/ABI.h"
 #include "lldb/Utility/Log.h"
 
 using namespace lldb;
@@ -73,6 +74,10 @@ bool ClassDescriptorV2::objc_class_t::Read(Process *process,
   m_flags = (uint8_t)(data_NEVER_USE & (lldb::addr_t)3);
   m_data_ptr = data_NEVER_USE & GetClassDataMask(process);
 
+  if (ABISP abi_sp = process->GetABI()) {
+    m_isa = abi_sp->FixCodeAddress(m_isa);
+    m_superclass = abi_sp->FixCodeAddress(m_superclass);
+  }
   return true;
 }
 
@@ -105,6 +110,8 @@ bool ClassDescriptorV2::class_rw_t::Read(Process *process, lldb::addr_t addr) {
   m_flags = extractor.GetU32_unchecked(&cursor);
   m_version = extractor.GetU32_unchecked(&cursor);
   m_ro_ptr = extractor.GetAddress_unchecked(&cursor);
+  if (ABISP abi_sp = process->GetABI())
+    m_ro_ptr = abi_sp->FixCodeAddress(m_ro_ptr);
   m_method_list_ptr = extractor.GetAddress_unchecked(&cursor);
   m_properties_ptr = extractor.GetAddress_unchecked(&cursor);
   m_firstSubclass = extractor.GetAddress_unchecked(&cursor);
@@ -120,6 +127,8 @@ bool ClassDescriptorV2::class_rw_t::Read(Process *process, lldb::addr_t addr) {
                             process->GetByteOrder(),
                             process->GetAddressByteSize());
     m_ro_ptr = extractor.GetAddress_unchecked(&cursor);
+    if (ABISP abi_sp = process->GetABI())
+      m_ro_ptr = abi_sp->FixCodeAddress(m_ro_ptr);
   }
 
   return true;
@@ -231,6 +240,8 @@ bool ClassDescriptorV2::method_list_t::Read(Process *process,
   DataBufferHeap buffer(size, '\0');
   Status error;
 
+  if (ABISP abi_sp = process->GetABI())
+    addr = abi_sp->FixCodeAddress(addr);
   process->ReadMemory(addr, buffer.GetBytes(), size, error);
   if (error.Fail()) {
     return false;

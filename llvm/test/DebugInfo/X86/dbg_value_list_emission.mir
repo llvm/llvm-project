@@ -97,5 +97,5 @@ body:             |
     ; CHECK-NEXT:   DW_AT_name ("localh")
     ; CHECK-NOT:   DW_AT_location
 
-    RETQ debug-location !15
+    RET64 debug-location !15
 ...

@@ -86,6 +86,6 @@ void populateDecomposeCallGraphTypesPatterns(MLIRContext *context,
                                              ValueDecomposer &decomposer,
                                              RewritePatternSet &patterns);
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_DIALECT_STANDARDOPS_TRANSFORMS_DECOMPOSECALLGRAPHTYPES_H

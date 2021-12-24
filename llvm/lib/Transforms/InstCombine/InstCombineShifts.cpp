@@ -346,9 +346,8 @@ static Instruction *foldShiftOfShiftedLogic(BinaryOperator &I,
   // TODO: Remove the one-use check if the other logic operand (Y) is constant.
   Value *X, *Y;
   auto matchFirstShift = [&](Value *V) {
-    BinaryOperator *BO;
     APInt Threshold(Ty->getScalarSizeInBits(), Ty->getScalarSizeInBits());
-    return match(V, m_BinOp(BO)) && BO->getOpcode() == ShiftOpcode &&
+    return match(V, m_BinOp(ShiftOpcode, m_Value(), m_Value())) &&
            match(V, m_OneUse(m_Shift(m_Value(X), m_Constant(C0)))) &&
            match(ConstantExpr::getAdd(C0, C1),
                  m_SpecificInt_ICMP(ICmpInst::ICMP_ULT, Threshold));

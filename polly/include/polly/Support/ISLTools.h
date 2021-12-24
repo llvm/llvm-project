@@ -14,8 +14,32 @@
 #ifndef POLLY_ISLTOOLS_H
 #define POLLY_ISLTOOLS_H
 
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/iterator.h"
 #include "isl/isl-noexceptions.h"
+#include <cassert>
+
+/// In debug builds assert that the @p Size is valid, in non-debug builds
+/// disable the mandatory state checking but do not enforce the error checking.
+inline void islAssert(const isl::size &Size) {
+#ifdef NDEBUG
+  // Calling is_error() marks that the error status has been checked which
+  // disables the error-status-not-checked errors that would otherwise occur
+  // when using the value.
+  (void)Size.is_error();
+#else
+  // Assert on error in debug builds.
+  assert(!Size.is_error());
+#endif
+}
+
+/// Check that @p Size is valid (only on debug builds) and cast it to unsigned.
+/// Cast the @p Size to unsigned. If the @p Size is not valid (Size.is_error()
+/// == true) then an assert and an abort are triggered.
+inline unsigned unsignedFromIslSize(const isl::size &Size) {
+  islAssert(Size);
+  return static_cast<unsigned>(Size);
+}
 
 namespace isl {
 inline namespace noexceptions {
@@ -160,7 +184,7 @@ isl::set singleton(isl::union_set USet, isl::space ExpectedSpace);
 /// The implementation currently returns the maximum number of dimensions it
 /// encounters, if different, and 0 if none is encountered. However, most other
 /// code will most likely fail if one of these happen.
-isl_size getNumScatterDims(const isl::union_map &Schedule);
+unsigned getNumScatterDims(const isl::union_map &Schedule);
 
 /// Return the scatter space of a @p Schedule.
 ///
@@ -497,6 +521,13 @@ isl::set subtractParams(isl::set Set, isl::set Params);
 /// can also be a piecewise constant and it would return the minimum/maximum
 /// value. Otherwise, return NaN.
 isl::val getConstant(isl::pw_aff PwAff, bool Max, bool Min);
+
+/// Check that @p End is valid and return an iterator from @p Begin to @p End
+///
+/// Use case example:
+///   for (unsigned i : rangeIslSize(0, Map.domain_tuple_dim()))
+///     // do stuff
+llvm::iota_range<unsigned> rangeIslSize(unsigned Begin, isl::size End);
 
 /// Dump a description of the argument to llvm::errs().
 ///

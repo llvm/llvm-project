@@ -648,14 +648,14 @@ define void @DCT_mve5(%struct.DCT_InstanceTypeDef* nocapture readonly %S, float*
 ; CHECK-NEXT:    add.w r9, r3, r5
 ; CHECK-NEXT:    vldrw.u32 q5, [r4], #16
 ; CHECK-NEXT:    vldrw.u32 q6, [r3], #16
-; CHECK-NEXT:    vfma.f32 q3, q6, q5
 ; CHECK-NEXT:    add.w r12, r9, r5
+; CHECK-NEXT:    vfma.f32 q3, q6, q5
 ; CHECK-NEXT:    vldrw.u32 q6, [r9]
-; CHECK-NEXT:    vfma.f32 q4, q6, q5
 ; CHECK-NEXT:    add.w r6, r12, r5
+; CHECK-NEXT:    vfma.f32 q4, q6, q5
 ; CHECK-NEXT:    vldrw.u32 q6, [r12]
-; CHECK-NEXT:    vfma.f32 q2, q6, q5
 ; CHECK-NEXT:    adds r7, r6, r5
+; CHECK-NEXT:    vfma.f32 q2, q6, q5
 ; CHECK-NEXT:    vldrw.u32 q6, [r6]
 ; CHECK-NEXT:    vfma.f32 q0, q6, q5
 ; CHECK-NEXT:    vldrw.u32 q6, [r7]
@@ -866,17 +866,17 @@ define void @DCT_mve6(%struct.DCT_InstanceTypeDef* nocapture readonly %S, float*
 ; CHECK-NEXT:    add.w r12, r3, r5
 ; CHECK-NEXT:    vldrw.u32 q6, [r1], #16
 ; CHECK-NEXT:    vldrw.u32 q7, [r3], #16
-; CHECK-NEXT:    vfma.f32 q4, q7, q6
 ; CHECK-NEXT:    add.w r10, r12, r5
+; CHECK-NEXT:    vfma.f32 q4, q7, q6
 ; CHECK-NEXT:    vldrw.u32 q7, [r12]
-; CHECK-NEXT:    vfma.f32 q5, q7, q6
 ; CHECK-NEXT:    add.w r6, r10, r5
+; CHECK-NEXT:    vfma.f32 q5, q7, q6
 ; CHECK-NEXT:    vldrw.u32 q7, [r10]
-; CHECK-NEXT:    vfma.f32 q2, q7, q6
 ; CHECK-NEXT:    adds r7, r6, r5
+; CHECK-NEXT:    vfma.f32 q2, q7, q6
 ; CHECK-NEXT:    vldrw.u32 q7, [r6]
-; CHECK-NEXT:    vfma.f32 q0, q7, q6
 ; CHECK-NEXT:    adds r6, r7, r5
+; CHECK-NEXT:    vfma.f32 q0, q7, q6
 ; CHECK-NEXT:    vldrw.u32 q7, [r7]
 ; CHECK-NEXT:    vfma.f32 q3, q7, q6
 ; CHECK-NEXT:    vldrw.u32 q7, [r6]
@@ -1107,47 +1107,49 @@ define void @DCT_mve7(%struct.DCT_InstanceTypeDef* nocapture readonly %S, float*
 ; CHECK-NEXT:  .LBB6_3: @ %vector.body
 ; CHECK-NEXT:    @ Parent Loop BB6_2 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    add.w r10, r3, r5
 ; CHECK-NEXT:    vctp.32 r12
-; CHECK-NEXT:    vpsttt
+; CHECK-NEXT:    add.w r10, r3, r5
+; CHECK-NEXT:    vpstt
 ; CHECK-NEXT:    vldrwt.u32 q7, [r1], #16
 ; CHECK-NEXT:    vldrwt.u32 q0, [r3], #16
-; CHECK-NEXT:    vfmat.f32 q5, q0, q7
 ; CHECK-NEXT:    add.w r11, r10, r5
+; CHECK-NEXT:    sub.w r12, r12, #4
 ; CHECK-NEXT:    vpstt
+; CHECK-NEXT:    vfmat.f32 q5, q0, q7
 ; CHECK-NEXT:    vldrwt.u32 q0, [r10]
-; CHECK-NEXT:    vfmat.f32 q6, q0, q7
-; CHECK-NEXT:    vstrw.32 q6, [sp, #40] @ 16-byte Spill
-; CHECK-NEXT:    vpstt
-; CHECK-NEXT:    vldrwt.u32 q0, [r11]
-; CHECK-NEXT:    vfmat.f32 q1, q0, q7
 ; CHECK-NEXT:    add.w r6, r11, r5
+; CHECK-NEXT:    vpstt
+; CHECK-NEXT:    vfmat.f32 q6, q0, q7
+; CHECK-NEXT:    vldrwt.u32 q0, [r11]
+; CHECK-NEXT:    vstrw.32 q6, [sp, #40] @ 16-byte Spill
 ; CHECK-NEXT:    vmov q6, q5
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vfmat.f32 q1, q0, q7
 ; CHECK-NEXT:    vmov q5, q4
 ; CHECK-NEXT:    vmov q4, q3
+; CHECK-NEXT:    vmov q3, q1
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vldrwt.u32 q0, [r6]
-; CHECK-NEXT:    vmov q3, q1
 ; CHECK-NEXT:    vldrw.u32 q1, [sp, #56] @ 16-byte Reload
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vfmat.f32 q1, q0, q7
 ; CHECK-NEXT:    adds r7, r6, r5
+; CHECK-NEXT:    vpstt
+; CHECK-NEXT:    vfmat.f32 q1, q0, q7
+; CHECK-NEXT:    vldrwt.u32 q0, [r7]
+; CHECK-NEXT:    adds r6, r7, r5
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #56] @ 16-byte Spill
 ; CHECK-NEXT:    vmov q1, q3
 ; CHECK-NEXT:    vmov q3, q4
-; CHECK-NEXT:    vmov q4, q5
-; CHECK-NEXT:    vmov q5, q6
-; CHECK-NEXT:    vldrw.u32 q6, [sp, #40] @ 16-byte Reload
-; CHECK-NEXT:    sub.w r12, r12, #4
-; CHECK-NEXT:    adds r6, r7, r5
 ; CHECK-NEXT:    vpstt
-; CHECK-NEXT:    vldrwt.u32 q0, [r7]
 ; CHECK-NEXT:    vfmat.f32 q3, q0, q7
-; CHECK-NEXT:    adds r7, r6, r5
-; CHECK-NEXT:    vpstttt
 ; CHECK-NEXT:    vldrwt.u32 q0, [r6]
+; CHECK-NEXT:    vmov q4, q5
+; CHECK-NEXT:    adds r7, r6, r5
+; CHECK-NEXT:    vpstt
 ; CHECK-NEXT:    vfmat.f32 q4, q0, q7
 ; CHECK-NEXT:    vldrwt.u32 q0, [r7]
+; CHECK-NEXT:    vmov q5, q6
+; CHECK-NEXT:    vldrw.u32 q6, [sp, #40] @ 16-byte Reload
+; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vfmat.f32 q2, q0, q7
 ; CHECK-NEXT:    le lr, .LBB6_3
 ; CHECK-NEXT:  @ %bb.4: @ %middle.block
@@ -1396,54 +1398,55 @@ define void @DCT_mve8(%struct.DCT_InstanceTypeDef* nocapture readonly %S, float*
 ; CHECK-NEXT:  .LBB7_3: @ %vector.body
 ; CHECK-NEXT:    @ Parent Loop BB7_2 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    add.w r11, r3, r5
 ; CHECK-NEXT:    vctp.32 r10
-; CHECK-NEXT:    vpsttt
+; CHECK-NEXT:    add.w r11, r3, r5
+; CHECK-NEXT:    vpstt
 ; CHECK-NEXT:    vldrwt.u32 q0, [r9], #16
 ; CHECK-NEXT:    vldrwt.u32 q1, [r3], #16
-; CHECK-NEXT:    vfmat.f32 q6, q1, q0
-; CHECK-NEXT:    vstrw.32 q6, [sp, #40] @ 16-byte Spill
-; CHECK-NEXT:    vpstt
-; CHECK-NEXT:    vldrwt.u32 q1, [r11]
-; CHECK-NEXT:    vfmat.f32 q7, q1, q0
 ; CHECK-NEXT:    add.w r6, r11, r5
+; CHECK-NEXT:    sub.w r10, r10, #4
+; CHECK-NEXT:    vpstt
+; CHECK-NEXT:    vfmat.f32 q6, q1, q0
+; CHECK-NEXT:    vldrwt.u32 q1, [r11]
+; CHECK-NEXT:    vstrw.32 q6, [sp, #40] @ 16-byte Spill
 ; CHECK-NEXT:    vmov q6, q5
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vfmat.f32 q7, q1, q0
 ; CHECK-NEXT:    vmov q5, q3
 ; CHECK-NEXT:    vmov q3, q4
+; CHECK-NEXT:    vmov q4, q2
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vldrwt.u32 q1, [r6]
-; CHECK-NEXT:    vmov q4, q2
 ; CHECK-NEXT:    vldrw.u32 q2, [sp, #56] @ 16-byte Reload
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vfmat.f32 q2, q1, q0
-; CHECK-NEXT:    vstrw.32 q2, [sp, #56] @ 16-byte Spill
 ; CHECK-NEXT:    adds r7, r6, r5
-; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vpstt
+; CHECK-NEXT:    vfmat.f32 q2, q1, q0
 ; CHECK-NEXT:    vldrwt.u32 q1, [r7]
+; CHECK-NEXT:    vstrw.32 q2, [sp, #56] @ 16-byte Spill
 ; CHECK-NEXT:    vldrw.u32 q2, [sp, #72] @ 16-byte Reload
 ; CHECK-NEXT:    adds r6, r7, r5
-; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vpstt
 ; CHECK-NEXT:    vfmat.f32 q2, q1, q0
+; CHECK-NEXT:    vldrwt.u32 q1, [r6]
+; CHECK-NEXT:    adds r7, r6, r5
 ; CHECK-NEXT:    vstrw.32 q2, [sp, #72] @ 16-byte Spill
 ; CHECK-NEXT:    vmov q2, q4
 ; CHECK-NEXT:    vmov q4, q3
-; CHECK-NEXT:    vmov q3, q5
-; CHECK-NEXT:    vmov q5, q6
-; CHECK-NEXT:    vldrw.u32 q6, [sp, #40] @ 16-byte Reload
-; CHECK-NEXT:    adds r7, r6, r5
 ; CHECK-NEXT:    vpstt
-; CHECK-NEXT:    vldrwt.u32 q1, [r6]
 ; CHECK-NEXT:    vfmat.f32 q2, q1, q0
-; CHECK-NEXT:    sub.w r10, r10, #4
-; CHECK-NEXT:    adds r6, r7, r5
-; CHECK-NEXT:    vpstttt
 ; CHECK-NEXT:    vldrwt.u32 q1, [r7]
+; CHECK-NEXT:    adds r6, r7, r5
+; CHECK-NEXT:    vmov q3, q5
+; CHECK-NEXT:    vpstt
 ; CHECK-NEXT:    vfmat.f32 q4, q1, q0
 ; CHECK-NEXT:    vldrwt.u32 q1, [r6]
-; CHECK-NEXT:    vfmat.f32 q5, q1, q0
+; CHECK-NEXT:    vmov q5, q6
 ; CHECK-NEXT:    add r6, r5
 ; CHECK-NEXT:    vpstt
+; CHECK-NEXT:    vfmat.f32 q5, q1, q0
 ; CHECK-NEXT:    vldrwt.u32 q1, [r6]
+; CHECK-NEXT:    vldrw.u32 q6, [sp, #40] @ 16-byte Reload
+; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vfmat.f32 q3, q1, q0
 ; CHECK-NEXT:    le lr, .LBB7_3
 ; CHECK-NEXT:  @ %bb.4: @ %middle.block

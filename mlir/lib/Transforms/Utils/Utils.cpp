@@ -90,7 +90,7 @@ LogicalResult mlir::replaceAllMemRefUsesWith(Value oldMemRef, Value newMemRef,
   // Perform index rewrites for the dereferencing op and then replace the op
   NamedAttribute oldMapAttrPair =
       affMapAccInterface.getAffineMapAttrForMemRef(oldMemRef);
-  AffineMap oldMap = oldMapAttrPair.second.cast<AffineMapAttr>().getValue();
+  AffineMap oldMap = oldMapAttrPair.getValue().cast<AffineMapAttr>().getValue();
   unsigned oldMapNumInputs = oldMap.getNumInputs();
   SmallVector<Value, 4> oldMapOperands(
       op->operand_begin() + memRefOperandPos + 1,
@@ -194,8 +194,8 @@ LogicalResult mlir::replaceAllMemRefUsesWith(Value oldMemRef, Value newMemRef,
   // Add attribute for 'newMap', other Attributes do not change.
   auto newMapAttr = AffineMapAttr::get(newMap);
   for (auto namedAttr : op->getAttrs()) {
-    if (namedAttr.first == oldMapAttrPair.first)
-      state.attributes.push_back({namedAttr.first, newMapAttr});
+    if (namedAttr.getName() == oldMapAttrPair.getName())
+      state.attributes.push_back({namedAttr.getName(), newMapAttr});
     else
       state.attributes.push_back(namedAttr);
   }

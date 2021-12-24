@@ -136,17 +136,17 @@ TEST(VerifierTest, CrossModuleRef) {
   raw_string_ostream ErrorOS(Error);
   EXPECT_TRUE(verifyModule(M2, &ErrorOS));
   EXPECT_TRUE(StringRef(ErrorOS.str())
-                  .equals("Global is used by function in a different module\n"
-                          "i32 ()* @foo2\n"
-                          "; ModuleID = 'M2'\n"
-                          "i32 ()* @foo3\n"
-                          "; ModuleID = 'M3'\n"
-                          "Global is referenced in a different module!\n"
+                  .equals("Global is referenced in a different module!\n"
                           "i32 ()* @foo2\n"
                           "; ModuleID = 'M2'\n"
                           "  %call = call i32 @foo2()\n"
                           "i32 ()* @foo1\n"
-                          "; ModuleID = 'M1'\n"));
+                          "; ModuleID = 'M1'\n"
+                          "Global is used by function in a different module\n"
+                          "i32 ()* @foo2\n"
+                          "; ModuleID = 'M2'\n"
+                          "i32 ()* @foo3\n"
+                          "; ModuleID = 'M3'\n"));
 
   Error.clear();
   EXPECT_TRUE(verifyModule(M1, &ErrorOS));

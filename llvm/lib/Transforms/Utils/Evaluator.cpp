@@ -128,11 +128,6 @@ isSimpleEnoughValueToCommit(Constant *C,
 /// globals and GEP's of globals.  This should be kept up to date with
 /// CommitValueTo.
 static bool isSimpleEnoughPointerToCommit(Constant *C, const DataLayout &DL) {
-  // Conservatively, avoid aggregate types. This is because we don't
-  // want to worry about them partially overlapping other stores.
-  if (!cast<PointerType>(C->getType())->getElementType()->isSingleValueType())
-    return false;
-
   if (GlobalVariable *GV = dyn_cast<GlobalVariable>(C))
     // Do not allow weak/*_odr/linkonce linkage or external globals.
     return GV->hasUniqueInitializer();
@@ -290,9 +285,8 @@ bool Evaluator::getFormalParams(CallBase &CB, Function *F,
   }
 
   auto ArgI = CB.arg_begin();
-  for (auto ParI = FTy->param_begin(), ParE = FTy->param_end(); ParI != ParE;
-       ++ParI) {
-    auto *ArgC = ConstantFoldLoadThroughBitcast(getVal(*ArgI), *ParI, DL);
+  for (Type *PTy : FTy->params()) {
+    auto *ArgC = ConstantFoldLoadThroughBitcast(getVal(*ArgI), PTy, DL);
     if (!ArgC) {
       LLVM_DEBUG(dbgs() << "Can not convert function argument.\n");
       return false;
@@ -343,7 +337,10 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
         Ptr = FoldedPtr;
         LLVM_DEBUG(dbgs() << "; To: " << *Ptr << "\n");
       }
-      if (!isSimpleEnoughPointerToCommit(Ptr, DL)) {
+      // Conservatively, avoid aggregate types. This is because we don't
+      // want to worry about them partially overlapping other stores.
+      if (!SI->getValueOperand()->getType()->isSingleValueType() ||
+          !isSimpleEnoughPointerToCommit(Ptr, DL)) {
         // If this is too complex for us to commit, reject it.
         LLVM_DEBUG(
             dbgs() << "Pointer is too complex for us to evaluate store.");

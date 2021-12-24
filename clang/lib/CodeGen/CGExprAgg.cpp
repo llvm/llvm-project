@@ -127,6 +127,8 @@ public:
   }
 
   void VisitConstantExpr(ConstantExpr *E) {
+    EnsureDest(E->getType());
+
     if (llvm::Value *Result = ConstantEmitter(CGF).tryEmitConstantExpr(E)) {
       CGF.EmitAggregateStore(Result, Dest.getAddress(),
                              E->getType().isVolatileQualified());
@@ -299,7 +301,7 @@ void AggExprEmitter::withReturnValueSlot(
   if (!UseTemp)
     return;
 
-  assert(Dest.getPointer() != Src.getAggregatePointer());
+  assert(Dest.isIgnored() || Dest.getPointer() != Src.getAggregatePointer());
   EmitFinalDestCopy(E->getType(), Src);
 
   if (!RequiresDestruction && LifetimeStartInst) {
@@ -491,7 +493,7 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
   CharUnits elementSize = CGF.getContext().getTypeSizeInChars(elementType);
   CharUnits elementAlign =
     DestPtr.getAlignment().alignmentOfArrayElement(elementSize);
-  llvm::Type *llvmElementType = begin->getType()->getPointerElementType();
+  llvm::Type *llvmElementType = CGF.ConvertTypeForMem(elementType);
 
   // Consider initializing the array by copying from a global. For this to be
   // more efficient than per-element initialization, the size of the elements
@@ -511,7 +513,8 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
       Emitter.finalize(GV);
       CharUnits Align = CGM.getContext().getTypeAlignInChars(ArrayQTy);
       GV->setAlignment(Align.getAsAlign());
-      EmitFinalDestCopy(ArrayQTy, CGF.MakeAddrLValue(GV, ArrayQTy, Align));
+      Address GVAddr(GV, GV->getValueType(), Align);
+      EmitFinalDestCopy(ArrayQTy, CGF.MakeAddrLValue(GVAddr, ArrayQTy));
       return;
     }
   }
@@ -563,8 +566,8 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
       if (endOfInit.isValid()) Builder.CreateStore(element, endOfInit);
     }
 
-    LValue elementLV =
-      CGF.MakeAddrLValue(Address(element, elementAlign), elementType);
+    LValue elementLV = CGF.MakeAddrLValue(
+        Address(element, llvmElementType, elementAlign), elementType);
     EmitInitializationToLValue(E->getInit(i), elementLV);
   }
 

@@ -54,10 +54,8 @@ namespace clangd {
 namespace {
 
 using ::testing::AllOf;
-using ::testing::Contains;
 using ::testing::ElementsAre;
 using ::testing::Field;
-using ::testing::Gt;
 using ::testing::IsEmpty;
 using ::testing::Pair;
 using ::testing::SizeIs;
@@ -635,7 +633,8 @@ TEST(ClangdServerTest, InvalidCompileCommand) {
   EXPECT_ERROR(runFindDocumentHighlights(Server, FooCpp, Position()));
   EXPECT_ERROR(runRename(Server, FooCpp, Position(), "new_name",
                          clangd::RenameOptions()));
-  EXPECT_ERROR(runSignatureHelp(Server, FooCpp, Position()));
+  EXPECT_ERROR(
+      runSignatureHelp(Server, FooCpp, Position(), MarkupKind::PlainText));
   // Identifier-based fallback completion.
   EXPECT_THAT(cantFail(runCodeComplete(Server, FooCpp, Position(),
                                        clangd::CodeCompleteOptions()))

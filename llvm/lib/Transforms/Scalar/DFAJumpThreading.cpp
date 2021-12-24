@@ -490,7 +490,7 @@ private:
   }
 
   bool isPredictableValue(Value *InpVal, SmallSet<Value *, 16> &SeenValues) {
-    if (SeenValues.find(InpVal) != SeenValues.end())
+    if (SeenValues.contains(InpVal))
       return true;
 
     if (isa<ConstantInt>(InpVal))
@@ -505,7 +505,7 @@ private:
 
   void addInstToQueue(Value *Val, std::deque<Instruction *> &Q,
                       SmallSet<Value *, 16> &SeenValues) {
-    if (SeenValues.find(Val) != SeenValues.end())
+    if (SeenValues.contains(Val))
       return;
     if (Instruction *I = dyn_cast<Instruction>(Val))
       Q.push_back(I);
@@ -588,7 +588,7 @@ struct AllSwitchPaths {
         PrevBB = BB;
       }
 
-      if (TPath.isExitValueSet())
+      if (TPath.isExitValueSet() && isSupported(TPath))
         TPaths.push_back(TPath);
     }
   }
@@ -668,7 +668,7 @@ private:
 
       for (Value *Incoming : CurPhi->incoming_values()) {
         if (Incoming == FirstDef || isa<ConstantInt>(Incoming) ||
-            SeenValues.find(Incoming) != SeenValues.end()) {
+            SeenValues.contains(Incoming)) {
           continue;
         }
 
@@ -681,6 +681,62 @@ private:
     }
 
     return Res;
+  }
+
+  /// The determinator BB should precede the switch-defining BB.
+  ///
+  /// Otherwise, it is possible that the state defined in the determinator block
+  /// defines the state for the next iteration of the loop, rather than for the
+  /// current one.
+  ///
+  /// Currently supported paths:
+  /// \code
+  /// < switch bb1 determ def > [ 42, determ ]
+  /// < switch_and_def bb1 determ > [ 42, determ ]
+  /// < switch_and_def_and_determ bb1 > [ 42, switch_and_def_and_determ ]
+  /// \endcode
+  ///
+  /// Unsupported paths:
+  /// \code
+  /// < switch bb1 def determ > [ 43, determ ]
+  /// < switch_and_determ bb1 def > [ 43, switch_and_determ ]
+  /// \endcode
+  bool isSupported(const ThreadingPath &TPath) {
+    Instruction *SwitchCondI = dyn_cast<Instruction>(Switch->getCondition());
+    assert(SwitchCondI);
+    if (!SwitchCondI)
+      return false;
+
+    const BasicBlock *SwitchCondDefBB = SwitchCondI->getParent();
+    const BasicBlock *SwitchCondUseBB = Switch->getParent();
+    const BasicBlock *DeterminatorBB = TPath.getDeterminatorBB();
+
+    assert(
+        SwitchCondUseBB == TPath.getPath().front() &&
+        "The first BB in a threading path should have the switch instruction");
+    if (SwitchCondUseBB != TPath.getPath().front())
+      return false;
+
+    // Make DeterminatorBB the first element in Path.
+    PathType Path = TPath.getPath();
+    auto ItDet = std::find(Path.begin(), Path.end(), DeterminatorBB);
+    std::rotate(Path.begin(), ItDet, Path.end());
+
+    bool IsDetBBSeen = false;
+    bool IsDefBBSeen = false;
+    bool IsUseBBSeen = false;
+    for (BasicBlock *BB : Path) {
+      if (BB == DeterminatorBB)
+        IsDetBBSeen = true;
+      if (BB == SwitchCondDefBB)
+        IsDefBBSeen = true;
+      if (BB == SwitchCondUseBB)
+        IsUseBBSeen = true;
+      if (IsDetBBSeen && IsUseBBSeen && !IsDefBBSeen)
+        return false;
+    }
+
+    return true;
   }
 
   SwitchInst *Switch;

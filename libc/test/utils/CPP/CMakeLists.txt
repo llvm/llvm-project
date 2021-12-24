@@ -7,7 +7,7 @@ add_libc_unittest(
   SRCS
     bitset_test.cpp
   DEPENDS
-    libc.utils.CPP.standalone_cpp
+    libc.src.__support.CPP.standalone_cpp
 )
 
 add_libc_unittest(
@@ -17,7 +17,7 @@ add_libc_unittest(
   SRCS
     stringview_test.cpp
   DEPENDS
-    libc.utils.CPP.standalone_cpp
+    libc.src.__support.CPP.standalone_cpp
 )
 
 add_libc_unittest(
@@ -27,7 +27,7 @@ add_libc_unittest(
   SRCS
     limits_test.cpp
   DEPENDS
-    libc.utils.CPP.standalone_cpp
+    libc.src.__support.CPP.standalone_cpp
 )
 
 add_libc_unittest(
@@ -37,5 +37,5 @@ add_libc_unittest(
   SRCS
     arrayref_test.cpp
   DEPENDS
-    libc.utils.CPP.standalone_cpp
+    libc.src.__support.CPP.standalone_cpp
 )

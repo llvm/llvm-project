@@ -190,13 +190,14 @@ MaybeExpr ExpressionAnalyzer::Designate(DataRef &&ref) {
         return Expr<SomeType>{ProcedureDesignator{symbol}};
       }
     } else if (auto interface{context_.intrinsics().IsSpecificIntrinsicFunction(
-                   symbol.name().ToString())}) {
+                   symbol.name().ToString())};
+               interface && !interface->isRestrictedSpecific) {
       SpecificIntrinsic intrinsic{
           symbol.name().ToString(), std::move(*interface)};
       intrinsic.isRestrictedSpecific = interface->isRestrictedSpecific;
       return Expr<SomeType>{ProcedureDesignator{std::move(intrinsic)}};
     } else {
-      Say("'%s' is not a specific intrinsic procedure"_err_en_US,
+      Say("'%s' is not an unrestricted specific intrinsic procedure"_err_en_US,
           symbol.name());
     }
     return std::nullopt;
@@ -936,7 +937,13 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::ArrayElement &ae) {
     } else if (baseExpr->Rank() == 0) {
       if (const Symbol * symbol{GetLastSymbol(*baseExpr)}) {
         if (!context_.HasError(symbol)) {
-          Say("'%s' is not an array"_err_en_US, symbol->name());
+          if (inDataStmtConstant_) {
+            // Better error for NULL(X) with a MOLD= argument
+            Say("'%s' must be an array or structure constructor if used with non-empty parentheses as a DATA statement constant"_err_en_US,
+                symbol->name());
+          } else {
+            Say("'%s' is not an array"_err_en_US, symbol->name());
+          }
           context_.SetError(*symbol);
         }
       }
@@ -1909,7 +1916,7 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
           "Base of procedure component reference is not a derived-type object"_err_en_US);
     }
   }
-  CHECK(!GetContextualMessages().empty());
+  CHECK(context_.AnyFatalError());
   return std::nullopt;
 }
 
@@ -2021,8 +2028,8 @@ std::pair<const Symbol *, bool> ExpressionAnalyzer::ResolveGeneric(
           continue;
         }
       }
-      if (semantics::CheckInterfaceForGeneric(
-              *procedure, localActuals, GetFoldingContext()) &&
+      if (semantics::CheckInterfaceForGeneric(*procedure, localActuals,
+              GetFoldingContext(), false /* no integer conversions */) &&
           CheckCompatibleArguments(*procedure, localActuals)) {
         if ((procedure->IsElemental() && elemental) ||
             (!procedure->IsElemental() && nonElemental)) {
@@ -2946,6 +2953,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Selector &selector) {
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::DataStmtConstant &x) {
+  auto restorer{common::ScopedSet(inDataStmtConstant_, true)};
   return ExprOrVariable(x, x.source);
 }
 

@@ -11,7 +11,7 @@ declare half @dummy(half)
 define void @br_fcmp_false(half %a, half %b) nounwind {
 ; RV32IZFH-LABEL: br_fcmp_false:
 ; RV32IZFH:       # %bb.0:
-; RV32IZFH-NEXT:    addi a0, zero, 1
+; RV32IZFH-NEXT:    li a0, 1
 ; RV32IZFH-NEXT:    bnez a0, .LBB0_2
 ; RV32IZFH-NEXT:  # %bb.1: # %if.then
 ; RV32IZFH-NEXT:    ret
@@ -22,7 +22,7 @@ define void @br_fcmp_false(half %a, half %b) nounwind {
 ;
 ; RV64IZFH-LABEL: br_fcmp_false:
 ; RV64IZFH:       # %bb.0:
-; RV64IZFH-NEXT:    addi a0, zero, 1
+; RV64IZFH-NEXT:    li a0, 1
 ; RV64IZFH-NEXT:    bnez a0, .LBB0_2
 ; RV64IZFH-NEXT:  # %bb.1: # %if.then
 ; RV64IZFH-NEXT:    ret
@@ -527,7 +527,7 @@ if.then:
 define void @br_fcmp_true(half %a, half %b) nounwind {
 ; RV32IZFH-LABEL: br_fcmp_true:
 ; RV32IZFH:       # %bb.0:
-; RV32IZFH-NEXT:    addi a0, zero, 1
+; RV32IZFH-NEXT:    li a0, 1
 ; RV32IZFH-NEXT:    bnez a0, .LBB16_2
 ; RV32IZFH-NEXT:  # %bb.1: # %if.else
 ; RV32IZFH-NEXT:    ret
@@ -538,7 +538,7 @@ define void @br_fcmp_true(half %a, half %b) nounwind {
 ;
 ; RV64IZFH-LABEL: br_fcmp_true:
 ; RV64IZFH:       # %bb.0:
-; RV64IZFH-NEXT:    addi a0, zero, 1
+; RV64IZFH-NEXT:    li a0, 1
 ; RV64IZFH-NEXT:    bnez a0, .LBB16_2
 ; RV64IZFH-NEXT:  # %bb.1: # %if.else
 ; RV64IZFH-NEXT:    ret

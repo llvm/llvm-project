@@ -1,12 +1,13 @@
 ! RUN: not %flang_fc1 -fdebug-unparse-with-symbols %s 2>&1 | FileCheck %s
 ! CHECK: Label '50' was not found
+! CHECK-NOT: error: Label '55' is in a construct that prevents its use as a branch target here
 ! CHECK: Label '55' is in a construct that prevents its use as a branch target here
 ! CHECK: Label '70' is not a branch target
 ! CHECK: Control flow use of '70'
-! CHECK: Label '80' is in a construct that prevents its use as a branch target here
-! CHECK: Label '90' is in a construct that prevents its use as a branch target here
-! CHECK: Label '91' is in a construct that prevents its use as a branch target here
-! CHECK: Label '92' is in a construct that prevents its use as a branch target here
+! CHECK: error: Label '80' is in a construct that prevents its use as a branch target here
+! CHECK: error: Label '90' is in a construct that prevents its use as a branch target here
+! CHECK: error: Label '91' is in a construct that prevents its use as a branch target here
+! CHECK: error: Label '92' is in a construct that prevents its use as a branch target here
 
 subroutine sub00(a,b,n,m)
   real a(n,m)

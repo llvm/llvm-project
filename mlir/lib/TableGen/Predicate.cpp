@@ -110,7 +110,7 @@ struct PredNode {
   std::string prefix;
   std::string suffix;
 };
-} // end anonymous namespace
+} // namespace
 
 // Get a predicate tree node kind based on the kind used in the predicate
 // TableGen record.
@@ -131,7 +131,7 @@ static PredCombinerKind getPredCombinerKind(const Pred &pred) {
 namespace {
 // Substitution<pattern, replacement>.
 using Subst = std::pair<StringRef, StringRef>;
-} // end anonymous namespace
+} // namespace
 
 /// Perform the given substitutions on 'str' in-place.
 static void performSubstitutions(std::string &str,
@@ -188,7 +188,7 @@ buildPredicateTree(const Pred &root,
   // Build child subtrees.
   auto combined = static_cast<const CombinedPred &>(root);
   for (const auto *record : combined.getChildren()) {
-    auto childTree =
+    auto *childTree =
         buildPredicateTree(Pred(record), allocator, allSubstitutions);
     rootNode->children.push_back(childTree);
   }
@@ -241,7 +241,7 @@ propagateGroundTruth(PredNode *node,
 
   for (auto &child : children) {
     // First, simplify the child.  This maintains the predicate as it was.
-    auto simplifiedChild =
+    auto *simplifiedChild =
         propagateGroundTruth(child, knownTruePreds, knownFalsePreds);
 
     // Just add the child if we don't know how to simplify the current node.
@@ -273,8 +273,9 @@ propagateGroundTruth(PredNode *node,
       node->kind = collapseKind;
       node->children.clear();
       return node;
-    } else if (simplifiedChild->kind == eraseKind ||
-               eraseList.count(simplifiedChild->predicate) != 0) {
+    }
+    if (simplifiedChild->kind == eraseKind ||
+        eraseList.count(simplifiedChild->predicate) != 0) {
       continue;
     }
     node->children.push_back(simplifiedChild);
@@ -350,7 +351,7 @@ static std::string getCombinedCondition(const PredNode &root) {
 
 std::string CombinedPred::getConditionImpl() const {
   llvm::SpecificBumpPtrAllocator<PredNode> allocator;
-  auto predicateTree = buildPredicateTree(*this, allocator, {});
+  auto *predicateTree = buildPredicateTree(*this, allocator, {});
   predicateTree =
       propagateGroundTruth(predicateTree,
                            /*knownTruePreds=*/llvm::SmallPtrSet<Pred *, 2>(),

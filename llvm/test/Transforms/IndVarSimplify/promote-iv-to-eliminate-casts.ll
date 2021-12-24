@@ -181,8 +181,8 @@ return:         ; preds = %bb
 define void @promote_latch_condition_decrementing_loop_01(i32* %p, i32* %a) {
 ; CHECK-LABEL: @promote_latch_condition_decrementing_loop_01(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[P:%.*]], align 4, [[RNG0:!range !.*]]
-; CHECK-NEXT:    [[LEN_MINUS_1:%.*]] = add nsw i32 [[LEN]], -1
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[P:%.*]], align 4, !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[LEN_MINUS_1:%.*]] = add i32 [[LEN]], -1
 ; CHECK-NEXT:    [[ZERO_CHECK:%.*]] = icmp eq i32 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[ZERO_CHECK]], label [[LOOPEXIT:%.*]], label [[PREHEADER:%.*]]
 ; CHECK:       preheader:
@@ -226,7 +226,7 @@ loop:
 define void @promote_latch_condition_decrementing_loop_02(i32* %p, i32* %a) {
 ; CHECK-LABEL: @promote_latch_condition_decrementing_loop_02(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[P:%.*]], align 4, [[RNG0]]
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[P:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    [[ZERO_CHECK:%.*]] = icmp eq i32 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[ZERO_CHECK]], label [[LOOPEXIT:%.*]], label [[PREHEADER:%.*]]
 ; CHECK:       preheader:
@@ -269,7 +269,7 @@ loop:
 define void @promote_latch_condition_decrementing_loop_03(i32* %p, i32* %a) {
 ; CHECK-LABEL: @promote_latch_condition_decrementing_loop_03(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[P:%.*]], align 4, [[RNG0]]
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[P:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    [[ZERO_CHECK:%.*]] = icmp eq i32 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[ZERO_CHECK]], label [[LOOPEXIT:%.*]], label [[PREHEADER:%.*]]
 ; CHECK:       preheader:
@@ -314,7 +314,7 @@ loop:
 define void @promote_latch_condition_decrementing_loop_04(i32* %p, i32* %a, i1 %cond) {
 ; CHECK-LABEL: @promote_latch_condition_decrementing_loop_04(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[P:%.*]], align 4, [[RNG0]]
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[P:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    [[LEN_MINUS_1:%.*]] = add nsw i32 [[LEN]], -1
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
@@ -376,7 +376,7 @@ loop:
 define void @promote_latch_condition_decrementing_loop_05(i32* %p, i32* %a, i1 %cond) {
 ; CHECK-LABEL: @promote_latch_condition_decrementing_loop_05(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[P:%.*]], align 4, [[RNG0]]
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[P:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
 ; CHECK-NEXT:    br label [[MERGE:%.*]]

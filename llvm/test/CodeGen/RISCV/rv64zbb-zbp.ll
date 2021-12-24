@@ -186,7 +186,7 @@ define void @rol_i32_nosext(i32 signext %a, i32 signext %b, i32* %x) nounwind {
 define signext i32 @rol_i32_neg_constant_rhs(i32 signext %a) nounwind {
 ; RV64I-LABEL: rol_i32_neg_constant_rhs:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi a1, zero, -2
+; RV64I-NEXT:    li a1, -2
 ; RV64I-NEXT:    sllw a2, a1, a0
 ; RV64I-NEXT:    negw a0, a0
 ; RV64I-NEXT:    srlw a0, a1, a0
@@ -195,13 +195,13 @@ define signext i32 @rol_i32_neg_constant_rhs(i32 signext %a) nounwind {
 ;
 ; RV64ZBB-LABEL: rol_i32_neg_constant_rhs:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    addi a1, zero, -2
+; RV64ZBB-NEXT:    li a1, -2
 ; RV64ZBB-NEXT:    rolw a0, a1, a0
 ; RV64ZBB-NEXT:    ret
 ;
 ; RV64ZBP-LABEL: rol_i32_neg_constant_rhs:
 ; RV64ZBP:       # %bb.0:
-; RV64ZBP-NEXT:    addi a1, zero, -2
+; RV64ZBP-NEXT:    li a1, -2
 ; RV64ZBP-NEXT:    rolw a0, a1, a0
 ; RV64ZBP-NEXT:    ret
   %1 = tail call i32 @llvm.fshl.i32(i32 -2, i32 -2, i32 %a)
@@ -286,7 +286,7 @@ define void @ror_i32_nosext(i32 signext %a, i32 signext %b, i32* %x) nounwind {
 define signext i32 @ror_i32_neg_constant_rhs(i32 signext %a) nounwind {
 ; RV64I-LABEL: ror_i32_neg_constant_rhs:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi a1, zero, -2
+; RV64I-NEXT:    li a1, -2
 ; RV64I-NEXT:    srlw a2, a1, a0
 ; RV64I-NEXT:    negw a0, a0
 ; RV64I-NEXT:    sllw a0, a1, a0
@@ -295,13 +295,13 @@ define signext i32 @ror_i32_neg_constant_rhs(i32 signext %a) nounwind {
 ;
 ; RV64ZBB-LABEL: ror_i32_neg_constant_rhs:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    addi a1, zero, -2
+; RV64ZBB-NEXT:    li a1, -2
 ; RV64ZBB-NEXT:    rorw a0, a1, a0
 ; RV64ZBB-NEXT:    ret
 ;
 ; RV64ZBP-LABEL: ror_i32_neg_constant_rhs:
 ; RV64ZBP:       # %bb.0:
-; RV64ZBP-NEXT:    addi a1, zero, -2
+; RV64ZBP-NEXT:    li a1, -2
 ; RV64ZBP-NEXT:    rorw a0, a1, a0
 ; RV64ZBP-NEXT:    ret
   %1 = tail call i32 @llvm.fshr.i32(i32 -2, i32 -2, i32 %a)
@@ -627,4 +627,104 @@ define i16 @srai_i16(i16 %a) nounwind {
 ; RV64ZBP-NEXT:    ret
   %1 = ashr i16 %a, 9
   ret i16 %1
+}
+
+define i1 @andn_seqz_i32(i32 signext %a, i32 signext %b) nounwind {
+; RV64I-LABEL: andn_seqz_i32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    xor a0, a0, a1
+; RV64I-NEXT:    seqz a0, a0
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-LABEL: andn_seqz_i32:
+; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    andn a0, a1, a0
+; RV64ZBB-NEXT:    seqz a0, a0
+; RV64ZBB-NEXT:    ret
+;
+; RV64ZBP-LABEL: andn_seqz_i32:
+; RV64ZBP:       # %bb.0:
+; RV64ZBP-NEXT:    and a0, a0, a1
+; RV64ZBP-NEXT:    xor a0, a0, a1
+; RV64ZBP-NEXT:    seqz a0, a0
+; RV64ZBP-NEXT:    ret
+  %and = and i32 %a, %b
+  %cmpeq = icmp eq i32 %and, %b
+  ret i1 %cmpeq
+}
+
+define i1 @andn_seqz_i64(i64 %a, i64 %b) nounwind {
+; RV64I-LABEL: andn_seqz_i64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    xor a0, a0, a1
+; RV64I-NEXT:    seqz a0, a0
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-LABEL: andn_seqz_i64:
+; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    andn a0, a1, a0
+; RV64ZBB-NEXT:    seqz a0, a0
+; RV64ZBB-NEXT:    ret
+;
+; RV64ZBP-LABEL: andn_seqz_i64:
+; RV64ZBP:       # %bb.0:
+; RV64ZBP-NEXT:    and a0, a0, a1
+; RV64ZBP-NEXT:    xor a0, a0, a1
+; RV64ZBP-NEXT:    seqz a0, a0
+; RV64ZBP-NEXT:    ret
+  %and = and i64 %a, %b
+  %cmpeq = icmp eq i64 %and, %b
+  ret i1 %cmpeq
+}
+
+define i1 @andn_snez_i32(i32 signext %a, i32 signext %b) nounwind {
+; RV64I-LABEL: andn_snez_i32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    xor a0, a0, a1
+; RV64I-NEXT:    snez a0, a0
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-LABEL: andn_snez_i32:
+; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    andn a0, a1, a0
+; RV64ZBB-NEXT:    snez a0, a0
+; RV64ZBB-NEXT:    ret
+;
+; RV64ZBP-LABEL: andn_snez_i32:
+; RV64ZBP:       # %bb.0:
+; RV64ZBP-NEXT:    and a0, a0, a1
+; RV64ZBP-NEXT:    xor a0, a0, a1
+; RV64ZBP-NEXT:    snez a0, a0
+; RV64ZBP-NEXT:    ret
+  %and = and i32 %a, %b
+  %cmpeq = icmp ne i32 %and, %b
+  ret i1 %cmpeq
+}
+
+define i1 @andn_snez_i64(i64 %a, i64 %b) nounwind {
+; RV64I-LABEL: andn_snez_i64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    xor a0, a0, a1
+; RV64I-NEXT:    snez a0, a0
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-LABEL: andn_snez_i64:
+; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    andn a0, a1, a0
+; RV64ZBB-NEXT:    snez a0, a0
+; RV64ZBB-NEXT:    ret
+;
+; RV64ZBP-LABEL: andn_snez_i64:
+; RV64ZBP:       # %bb.0:
+; RV64ZBP-NEXT:    and a0, a0, a1
+; RV64ZBP-NEXT:    xor a0, a0, a1
+; RV64ZBP-NEXT:    snez a0, a0
+; RV64ZBP-NEXT:    ret
+  %and = and i64 %a, %b
+  %cmpeq = icmp ne i64 %and, %b
+  ret i1 %cmpeq
 }

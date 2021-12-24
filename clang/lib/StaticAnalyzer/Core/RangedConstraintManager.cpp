@@ -41,7 +41,12 @@ ProgramStateRef RangedConstraintManager::assumeSym(ProgramStateRef State,
       return assumeSymRel(State, SIE->getLHS(), op, SIE->getRHS());
     }
 
-  } else if (const SymSymExpr *SSE = dyn_cast<SymSymExpr>(Sym)) {
+    // Handle adjustment with non-comparison ops.
+    const llvm::APSInt &Zero = getBasicVals().getValue(0, SIE->getType());
+    return assumeSymRel(State, SIE, (Assumption ? BO_NE : BO_EQ), Zero);
+  }
+
+  if (const auto *SSE = dyn_cast<SymSymExpr>(Sym)) {
     BinaryOperator::Opcode Op = SSE->getOpcode();
     assert(BinaryOperator::isComparisonOp(Op));
 

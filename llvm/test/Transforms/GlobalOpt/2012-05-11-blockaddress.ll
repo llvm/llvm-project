@@ -1,4 +1,4 @@
-; RUN: opt < %s -globalopt -S | FileCheck %s
+; RUN: opt < %s -passes=globalopt -S | FileCheck %s
 ; Check that the mere presence of a blockaddress doesn't prevent -globalopt
 ; from promoting @f to fastcc.
 

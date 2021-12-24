@@ -1831,7 +1831,7 @@ declare void @llvm.masked.scatter.v32i8.v32p0i8(<32 x i8>, <32 x i8*>, i32, <32 
 define void @mscatter_baseidx_v32i8(<32 x i8> %val, i8* %base, <32 x i8> %idxs, <32 x i1> %m) {
 ; RV32-LABEL: mscatter_baseidx_v32i8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi a1, zero, 32
+; RV32-NEXT:    li a1, 32
 ; RV32-NEXT:    vsetvli zero, a1, e32, m8, ta, mu
 ; RV32-NEXT:    vsext.vf4 v16, v10
 ; RV32-NEXT:    vsetvli zero, zero, e8, m2, ta, mu

@@ -369,8 +369,7 @@ multiclass Load<string OpcStr, bits<6> Op3Val, SDPatternOperator OpNode,
 
 // TODO: Instructions of the LoadASI class are currently asm only; hooking up
 // CodeGen's address spaces to use these is a future task.
-class LoadASI<string OpcStr, bits<6> Op3Val, SDPatternOperator OpNode,
-              RegisterClass RC, ValueType Ty, InstrItinClass itin = NoItinerary> :
+class LoadASI<string OpcStr, bits<6> Op3Val, RegisterClass RC> :
   F3_1_asi<3, Op3Val, (outs RC:$dst), (ins MEMrr:$addr, i8imm:$asi),
                 !strconcat(OpcStr, "a [$addr] $asi, $dst"),
                 []>;
@@ -380,7 +379,7 @@ multiclass LoadA<string OpcStr, bits<6> Op3Val, bits<6> LoadAOp3Val,
                  SDPatternOperator OpNode, RegisterClass RC, ValueType Ty,
                  InstrItinClass itin = NoItinerary> :
              Load<OpcStr, Op3Val, OpNode, RC, Ty, itin> {
-  def Arr  : LoadASI<OpcStr, LoadAOp3Val, OpNode, RC, Ty>;
+  def Arr  : LoadASI<OpcStr, LoadAOp3Val, RC>;
 }
 
 // The LDSTUB instruction is supported for asm only.
@@ -411,8 +410,7 @@ multiclass Store<string OpcStr, bits<6> Op3Val, SDPatternOperator OpNode,
 
 // TODO: Instructions of the StoreASI class are currently asm only; hooking up
 // CodeGen's address spaces to use these is a future task.
-class StoreASI<string OpcStr, bits<6> Op3Val,
-               SDPatternOperator OpNode, RegisterClass RC, ValueType Ty,
+class StoreASI<string OpcStr, bits<6> Op3Val, RegisterClass RC,
                InstrItinClass itin = IIC_st> :
   F3_1_asi<3, Op3Val, (outs), (ins MEMrr:$addr, RC:$rd, i8imm:$asi),
            !strconcat(OpcStr, "a $rd, [$addr] $asi"),
@@ -420,10 +418,9 @@ class StoreASI<string OpcStr, bits<6> Op3Val,
            itin>;
 
 multiclass StoreA<string OpcStr, bits<6> Op3Val, bits<6> StoreAOp3Val,
-                  SDPatternOperator OpNode, RegisterClass RC, ValueType Ty,
-                  InstrItinClass itin = IIC_st> :
+                  SDPatternOperator OpNode, RegisterClass RC, ValueType Ty> :
              Store<OpcStr, Op3Val, OpNode, RC, Ty> {
-  def Arr : StoreASI<OpcStr, StoreAOp3Val, OpNode, RC, Ty, itin>;
+  def Arr : StoreASI<OpcStr, StoreAOp3Val, RC>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -523,12 +520,12 @@ let DecoderMethod = "DecodeLoadIntPair" in
 // Section B.2 - Load Floating-point Instructions, p. 92
 let DecoderMethod = "DecodeLoadFP" in {
   defm LDF   : Load<"ld",  0b100000, load,    FPRegs,  f32, IIC_iu_or_fpu_instr>;
-  def LDFArr : LoadASI<"ld",  0b110000, load, FPRegs,  f32, IIC_iu_or_fpu_instr>,
+  def LDFArr : LoadASI<"ld",  0b110000, FPRegs>,
                 Requires<[HasV9]>;
 }
 let DecoderMethod = "DecodeLoadDFP" in {
   defm LDDF   : Load<"ldd", 0b100011, load,    DFPRegs, f64, IIC_ldd>;
-  def LDDFArr : LoadASI<"ldd", 0b110011, load, DFPRegs, f64>,
+  def LDDFArr : LoadASI<"ldd", 0b110011, DFPRegs>,
                  Requires<[HasV9]>;
 }
 let DecoderMethod = "DecodeLoadQFP" in
@@ -573,17 +570,17 @@ let DecoderMethod = "DecodeStoreInt" in {
 }
 
 let DecoderMethod = "DecodeStoreIntPair" in
-  defm STD   : StoreA<"std", 0b000111, 0b010111, store, IntPair, v2i32, IIC_std>;
+  defm STD   : StoreA<"std", 0b000111, 0b010111, store, IntPair, v2i32>;
 
 // Section B.5 - Store Floating-point Instructions, p. 97
 let DecoderMethod = "DecodeStoreFP" in {
   defm STF   : Store<"st",  0b100100, store,         FPRegs,  f32>;
-  def STFArr : StoreASI<"st",  0b110100, store,      FPRegs,  f32>,
+  def STFArr : StoreASI<"st",  0b110100, FPRegs>,
                Requires<[HasV9]>;
 }
 let DecoderMethod = "DecodeStoreDFP" in {
   defm STDF   : Store<"std", 0b100111, store,         DFPRegs, f64, IIC_std>;
-  def STDFArr : StoreASI<"std", 0b110111, store,      DFPRegs, f64>,
+  def STDFArr : StoreASI<"std", 0b110111, DFPRegs>,
                 Requires<[HasV9]>;
 }
 let DecoderMethod = "DecodeStoreQFP" in

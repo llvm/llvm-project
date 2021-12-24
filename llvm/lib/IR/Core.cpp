@@ -1696,6 +1696,14 @@ LLVMValueRef LLVMConstGEP(LLVMValueRef ConstantVal,
   return wrap(ConstantExpr::getGetElementPtr(Ty, Val, IdxList));
 }
 
+LLVMValueRef LLVMConstGEP2(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
+                           LLVMValueRef *ConstantIndices, unsigned NumIndices) {
+  ArrayRef<Constant *> IdxList(unwrap<Constant>(ConstantIndices, NumIndices),
+                               NumIndices);
+  Constant *Val = unwrap<Constant>(ConstantVal);
+  return wrap(ConstantExpr::getGetElementPtr(unwrap(Ty), Val, IdxList));
+}
+
 LLVMValueRef LLVMConstInBoundsGEP(LLVMValueRef ConstantVal,
                                   LLVMValueRef *ConstantIndices,
                                   unsigned NumIndices) {
@@ -1705,6 +1713,15 @@ LLVMValueRef LLVMConstInBoundsGEP(LLVMValueRef ConstantVal,
   Type *Ty =
       cast<PointerType>(Val->getType()->getScalarType())->getElementType();
   return wrap(ConstantExpr::getInBoundsGetElementPtr(Ty, Val, IdxList));
+}
+
+LLVMValueRef LLVMConstInBoundsGEP2(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
+                                   LLVMValueRef *ConstantIndices,
+                                   unsigned NumIndices) {
+  ArrayRef<Constant *> IdxList(unwrap<Constant>(ConstantIndices, NumIndices),
+                               NumIndices);
+  Constant *Val = unwrap<Constant>(ConstantVal);
+  return wrap(ConstantExpr::getInBoundsGetElementPtr(unwrap(Ty), Val, IdxList));
 }
 
 LLVMValueRef LLVMConstTrunc(LLVMValueRef ConstantVal, LLVMTypeRef ToType) {
@@ -2262,6 +2279,14 @@ LLVMValueRef LLVMAddAlias(LLVMModuleRef M, LLVMTypeRef Ty, LLVMValueRef Aliasee,
                           const char *Name) {
   auto *PTy = cast<PointerType>(unwrap(Ty));
   return wrap(GlobalAlias::create(PTy->getElementType(), PTy->getAddressSpace(),
+                                  GlobalValue::ExternalLinkage, Name,
+                                  unwrap<Constant>(Aliasee), unwrap(M)));
+}
+
+LLVMValueRef LLVMAddAlias2(LLVMModuleRef M, LLVMTypeRef ValueTy,
+                           unsigned AddrSpace, LLVMValueRef Aliasee,
+                           const char *Name) {
+  return wrap(GlobalAlias::create(unwrap(ValueTy), AddrSpace,
                                   GlobalValue::ExternalLinkage, Name,
                                   unwrap<Constant>(Aliasee), unwrap(M)));
 }
@@ -2999,11 +3024,15 @@ LLVMTypeRef LLVMGetAllocatedType(LLVMValueRef Alloca) {
 /*--.. Operations on gep instructions (only) ...............................--*/
 
 LLVMBool LLVMIsInBounds(LLVMValueRef GEP) {
-  return unwrap<GetElementPtrInst>(GEP)->isInBounds();
+  return unwrap<GEPOperator>(GEP)->isInBounds();
 }
 
 void LLVMSetIsInBounds(LLVMValueRef GEP, LLVMBool InBounds) {
   return unwrap<GetElementPtrInst>(GEP)->setIsInBounds(InBounds);
+}
+
+LLVMTypeRef LLVMGetGEPSourceElementType(LLVMValueRef GEP) {
+  return wrap(unwrap<GEPOperator>(GEP)->getSourceElementType());
 }
 
 /*--.. Operations on phi nodes .............................................--*/
@@ -3031,7 +3060,7 @@ LLVMBasicBlockRef LLVMGetIncomingBlock(LLVMValueRef PhiNode, unsigned Index) {
 
 unsigned LLVMGetNumIndices(LLVMValueRef Inst) {
   auto *I = unwrap(Inst);
-  if (auto *GEP = dyn_cast<GetElementPtrInst>(I))
+  if (auto *GEP = dyn_cast<GEPOperator>(I))
     return GEP->getNumIndices();
   if (auto *EV = dyn_cast<ExtractValueInst>(I))
     return EV->getNumIndices();

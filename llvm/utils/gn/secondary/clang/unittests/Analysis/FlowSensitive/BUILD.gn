@@ -1,0 +1,24 @@
+import("//llvm/utils/unittest/unittest.gni")
+
+unittest("ClangAnalysisFlowSensitiveTests") {
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang/lib/AST",
+    "//clang/lib/ASTMatchers",
+    "//clang/lib/Analysis",
+    "//clang/lib/Analysis/FlowSensitive",
+    "//clang/lib/Basic",
+    "//clang/lib/Frontend",
+    "//clang/lib/Lex",
+    "//clang/lib/Testing",
+    "//clang/lib/Tooling",
+    "//llvm/lib/Support",
+    "//llvm/lib/Testing/Support",
+  ]
+  sources = [
+    "SingleVarConstantPropagationTest.cpp",
+    "TestingSupport.cpp",
+    "TestingSupportTest.cpp",
+    "TypeErasedDataflowAnalysisTest.cpp",
+  ]
+}

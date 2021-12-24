@@ -442,4 +442,24 @@ private:
 
 #endif // TEST_STD_VER >= 11
 
+template <class T>
+class DefaultCtorDeleter
+{
+    int state_;
+
+public:
+    int state() const {return state_;}
+    void operator()(T* p) {delete p;}
+};
+
+template <class T>
+class DefaultCtorDeleter<T[]>
+{
+    int state_;
+
+public:
+    int state() const {return state_;}
+    void operator()(T* p) {delete [] p;}
+};
+
 #endif // SUPPORT_DELETER_TYPES_H

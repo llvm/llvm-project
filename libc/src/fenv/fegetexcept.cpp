@@ -12,6 +12,6 @@
 
 namespace __llvm_libc {
 
-LLVM_LIBC_FUNCTION(int, fegetexcept, ()) { return fputil::getExcept(); }
+LLVM_LIBC_FUNCTION(int, fegetexcept, ()) { return fputil::get_except(); }
 
 } // namespace __llvm_libc

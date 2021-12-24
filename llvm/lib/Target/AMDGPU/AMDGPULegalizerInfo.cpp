@@ -533,7 +533,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     getActionDefinitionsBuilder({G_ADD, G_SUB, G_MUL})
       .legalFor({S32, S16, V2S16})
       .minScalar(0, S16)
-      .clampMaxNumElements(0, S16, 2)
+      .clampMaxNumElementsStrict(0, S16, 2)
       .widenScalarToNextMultipleOf(0, 32)
       .maxScalar(0, S32)
       .scalarize(0);
@@ -541,7 +541,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     getActionDefinitionsBuilder({G_UADDSAT, G_USUBSAT, G_SADDSAT, G_SSUBSAT})
       .legalFor({S32, S16, V2S16}) // Clamp modifier
       .minScalarOrElt(0, S16)
-      .clampMaxNumElements(0, S16, 2)
+      .clampMaxNumElementsStrict(0, S16, 2)
       .scalarize(0)
       .widenScalarToNextPow2(0, 32)
       .lower();
@@ -712,7 +712,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   }
 
   if (ST.hasVOP3PInsts())
-    FPOpActions.clampMaxNumElements(0, S16, 2);
+    FPOpActions.clampMaxNumElementsStrict(0, S16, 2);
 
   FPOpActions
     .scalarize(0)
@@ -728,7 +728,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   getActionDefinitionsBuilder({G_FNEG, G_FABS})
     .legalFor(FPTypesPK16)
-    .clampMaxNumElements(0, S16, 2)
+    .clampMaxNumElementsStrict(0, S16, 2)
     .scalarize(0)
     .clampScalar(0, S16, S64);
 
@@ -965,7 +965,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   if (ST.has16BitInsts()) {
     getActionDefinitionsBuilder(G_BSWAP)
       .legalFor({S16, S32, V2S16})
-      .clampMaxNumElements(0, S16, 2)
+      .clampMaxNumElementsStrict(0, S16, 2)
       // FIXME: Fixing non-power-of-2 before clamp is workaround for
       // narrowScalar limitation.
       .widenScalarToNextPow2(0)
@@ -1052,10 +1052,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
     // Split vector extloads.
     unsigned MemSize = Query.MMODescrs[0].MemoryTy.getSizeInBits();
-    unsigned AlignBits = Query.MMODescrs[0].AlignInBits;
-
-    if (MemSize < DstTy.getSizeInBits())
-      MemSize = std::max(MemSize, AlignBits);
 
     if (DstTy.isVector() && DstTy.getSizeInBits() > MemSize)
       return true;
@@ -1075,12 +1071,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       // If the alignment allows, these should have been widened.
       if (!isPowerOf2_32(NumRegs))
         return true;
-    }
-
-    if (AlignBits < MemSize) {
-      const SITargetLowering *TLI = ST.getTargetLowering();
-      return !TLI->allowsMisalignedMemoryAccessesImpl(MemSize, AS,
-                                                      Align(AlignBits / 8));
     }
 
     return false;
@@ -1176,20 +1166,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
               if (DstSize > MemSize)
                 return std::make_pair(0, LLT::scalar(MemSize));
 
-              if (!isPowerOf2_32(DstSize)) {
-                // We're probably decomposing an odd sized store. Try to split
-                // to the widest type. TODO: Account for alignment. As-is it
-                // should be OK, since the new parts will be further legalized.
-                unsigned FloorSize = PowerOf2Floor(DstSize);
-                return std::make_pair(0, LLT::scalar(FloorSize));
-              }
-
-              if (DstSize > 32 && (DstSize % 32 != 0)) {
-                // FIXME: Need a way to specify non-extload of larger size if
-                // suitably aligned.
-                return std::make_pair(0, LLT::scalar(32 * (DstSize / 32)));
-              }
-
               unsigned MaxSize = maxSizeForAddrSpace(ST,
                                                      PtrTy.getAddressSpace(),
                                                      Op == G_LOAD);
@@ -1255,14 +1231,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                 return std::make_pair(
                     0, LLT::scalarOrVector(
                            ElementCount::getFixed(FloorSize / EltSize), EltTy));
-              }
-
-              // Need to split because of alignment.
-              unsigned Align = Query.MMODescrs[0].AlignInBits;
-              if (EltSize > Align &&
-                  (EltSize / Align < DstTy.getNumElements())) {
-                return std::make_pair(
-                    0, LLT::fixed_vector(EltSize / Align, EltTy));
               }
 
               // May need relegalization for the scalars.
@@ -1457,6 +1425,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     // FIXME: Doesn't handle extract of illegal sizes.
     getActionDefinitionsBuilder(Op)
       .lowerIf(all(typeIs(LitTyIdx, S16), sizeIs(BigTyIdx, 32)))
+      .lowerIf([=](const LegalityQuery &Query) {
+          // Sub-vector(or single element) insert and extract.
+          // TODO: verify immediate offset here since lower only works with
+          // whole elements.
+          const LLT BigTy = Query.Types[BigTyIdx];
+          return BigTy.isVector();
+        })
       // FIXME: Multiples of 16 should not be legal.
       .legalIf([=](const LegalityQuery &Query) {
           const LLT BigTy = Query.Types[BigTyIdx];
@@ -1615,7 +1590,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       // Prefer to reduce vector widths for 16-bit vectors before lowering, to
       // get more vector shift opportunities, since we'll get those when
       // expanded.
-      .fewerElementsIf(elementTypeIs(0, S16), changeTo(0, V2S16));
+      .clampMaxNumElementsStrict(0, S16, 2);
   } else if (ST.has16BitInsts()) {
     SextInReg.lowerFor({{S32}, {S64}, {S16}});
   } else {
@@ -1637,14 +1612,14 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   getActionDefinitionsBuilder(G_FSHR)
     .legalFor({{S32, S32}})
     .lowerFor({{V2S16, V2S16}})
-    .fewerElementsIf(elementTypeIs(0, S16), changeTo(0, V2S16))
+    .clampMaxNumElementsStrict(0, S16, 2)
     .scalarize(0)
     .lower();
 
   if (ST.hasVOP3PInsts()) {
     getActionDefinitionsBuilder(G_FSHL)
       .lowerFor({{V2S16, V2S16}})
-      .fewerElementsIf(elementTypeIs(0, S16), changeTo(0, V2S16))
+      .clampMaxNumElementsStrict(0, S16, 2)
       .scalarize(0)
       .lower();
   } else {
@@ -2567,10 +2542,8 @@ bool AMDGPULegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
       } else {
         // For cases where the widened type isn't a nice register value, unmerge
         // from a widened register (e.g. <3 x s16> -> <4 x s16>)
-        B.setInsertPt(B.getMBB(), ++B.getInsertPt());
-        WideLoad = Helper.widenWithUnmerge(WideTy, ValReg);
-        B.setInsertPt(B.getMBB(), MI.getIterator());
-        B.buildLoadFromOffset(WideLoad, PtrReg, *MMO, 0);
+        WideLoad = B.buildLoadFromOffset(WideTy, PtrReg, *MMO, 0).getReg(0);
+        B.buildDeleteTrailingVectorElements(ValReg, WideLoad);
       }
     }
 
@@ -3051,7 +3024,6 @@ void AMDGPULegalizerInfo::legalizeUnsignedDIV_REM64Impl(MachineIRBuilder &B,
 
   auto Add1_Lo = B.buildUAddo(S32, S1, RcpLo, MulHi1_Lo);
   auto Add1_Hi = B.buildUAdde(S32, S1, RcpHi, MulHi1_Hi, Add1_Lo.getReg(1));
-  auto Add1_HiNc = B.buildAdd(S32, RcpHi, MulHi1_Hi);
   auto Add1 = B.buildMerge(S64, {Add1_Lo, Add1_Hi});
 
   auto MulLo2 = B.buildMul(S64, NegDenom, Add1);
@@ -3062,9 +3034,7 @@ void AMDGPULegalizerInfo::legalizeUnsignedDIV_REM64Impl(MachineIRBuilder &B,
 
   auto Zero32 = B.buildConstant(S32, 0);
   auto Add2_Lo = B.buildUAddo(S32, S1, Add1_Lo, MulHi2_Lo);
-  auto Add2_HiC =
-      B.buildUAdde(S32, S1, Add1_HiNc, MulHi2_Hi, Add1_Lo.getReg(1));
-  auto Add2_Hi = B.buildUAdde(S32, S1, Add2_HiC, Zero32, Add2_Lo.getReg(1));
+  auto Add2_Hi = B.buildUAdde(S32, S1, Add1_Hi, MulHi2_Hi, Add2_Lo.getReg(1));
   auto Add2 = B.buildMerge(S64, {Add2_Lo, Add2_Hi});
 
   auto UnmergeNumer = B.buildUnmerge(S32, Numer);
@@ -3846,6 +3816,10 @@ Register AMDGPULegalizerInfo::handleD16VData(MachineIRBuilder &B,
     llvm_unreachable("invalid data type");
   }
 
+  if (StoreVT == LLT::fixed_vector(3, S16)) {
+    Reg = B.buildPadVectorWithUndefElements(LLT::fixed_vector(4, S16), Reg)
+              .getReg(0);
+  }
   return Reg;
 }
 
@@ -4240,8 +4214,17 @@ static void packImage16bitOpsToDwords(MachineIRBuilder &B, MachineInstr &MI,
         (I >= Intr->GradientStart && I < Intr->CoordStart && !IsG16) ||
         (I >= Intr->CoordStart && !IsA16)) {
       // Handle any gradient or coordinate operands that should not be packed
-      AddrReg = B.buildBitcast(V2S16, AddrReg).getReg(0);
-      PackedAddrs.push_back(AddrReg);
+      if ((I < Intr->GradientStart) && IsA16 &&
+          (B.getMRI()->getType(AddrReg) == S16)) {
+        // Special handling of bias when A16 is on. Bias is of type half but
+        // occupies full 32-bit.
+        PackedAddrs.push_back(
+            B.buildBuildVector(V2S16, {AddrReg, B.buildUndef(S16).getReg(0)})
+                .getReg(0));
+      } else {
+        AddrReg = B.buildBitcast(V2S16, AddrReg).getReg(0);
+        PackedAddrs.push_back(AddrReg);
+      }
     } else {
       // Dz/dh, dz/dv and the last odd coord are packed with undef. Also, in 1D,
       // derivatives dx/dh and dx/dv are packed with undef.
@@ -4408,8 +4391,8 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
       if (ConstantLod->isZero() || ConstantLod->isNegative()) {
         // Set new opcode to _lz variant of _l, and change the intrinsic ID.
         const AMDGPU::ImageDimIntrinsicInfo *NewImageDimIntr =
-            AMDGPU::getImageDimInstrinsicByBaseOpcode(LZMappingInfo->LZ,
-                                                      Intr->Dim);
+            AMDGPU::getImageDimIntrinsicByBaseOpcode(LZMappingInfo->LZ,
+                                                     Intr->Dim);
 
         // The starting indexes should remain in the same place.
         --CorrectedNumVAddrs;
@@ -4679,9 +4662,23 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   // Deal with the one annoying legal case.
   const LLT V3S16 = LLT::fixed_vector(3, 16);
   if (Ty == V3S16) {
-    padWithUndef(ResTy, RegsToCover - ResultRegs.size() + 1);
-    auto Concat = B.buildConcatVectors(LLT::fixed_vector(6, 16), ResultRegs);
-    B.buildUnmerge({DstReg, MRI->createGenericVirtualRegister(V3S16)}, Concat);
+    if (IsTFE) {
+      if (ResultRegs.size() == 1) {
+        NewResultReg = ResultRegs[0];
+      } else if (ResultRegs.size() == 2) {
+        LLT V4S16 = LLT::fixed_vector(4, 16);
+        NewResultReg = B.buildConcatVectors(V4S16, ResultRegs).getReg(0);
+      } else {
+        return false;
+      }
+    }
+
+    if (MRI->getType(DstReg).getNumElements() <
+        MRI->getType(NewResultReg).getNumElements()) {
+      B.buildDeleteTrailingVectorElements(DstReg, NewResultReg);
+    } else {
+      B.buildPadVectorWithUndefElements(DstReg, NewResultReg);
+    }
     return true;
   }
 
@@ -4872,8 +4869,8 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
   }
   Ops.push_back(RayExtent);
 
-  auto packLanes = [&Ops, &S32, &B] (Register Src) {
-    auto Unmerge = B.buildUnmerge({S32, S32, S32, S32}, Src);
+  auto packLanes = [&Ops, &S32, &B](Register Src) {
+    auto Unmerge = B.buildUnmerge({S32, S32, S32}, Src);
     Ops.push_back(Unmerge.getReg(0));
     Ops.push_back(Unmerge.getReg(1));
     Ops.push_back(Unmerge.getReg(2));
@@ -4881,8 +4878,8 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
 
   packLanes(RayOrigin);
   if (IsA16) {
-    auto UnmergeRayDir = B.buildUnmerge({S16, S16, S16, S16}, RayDir);
-    auto UnmergeRayInvDir = B.buildUnmerge({S16, S16, S16, S16}, RayInvDir);
+    auto UnmergeRayDir = B.buildUnmerge({S16, S16, S16}, RayDir);
+    auto UnmergeRayInvDir = B.buildUnmerge({S16, S16, S16}, RayInvDir);
     Register R1 = MRI.createGenericVirtualRegister(S32);
     Register R2 = MRI.createGenericVirtualRegister(S32);
     Register R3 = MRI.createGenericVirtualRegister(S32);

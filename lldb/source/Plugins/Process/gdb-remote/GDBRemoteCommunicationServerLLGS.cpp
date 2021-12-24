@@ -25,6 +25,7 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/PosixApi.h"
+#include "lldb/Host/Socket.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/Host/common/NativeRegisterContext.h"
 #include "lldb/Host/common/NativeThreadProtocol.h"
@@ -39,6 +40,7 @@
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/UnimplementedError.h"
+#include "lldb/Utility/UriParser.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -284,7 +286,7 @@ Status GDBRemoteCommunicationServerLLGS::LaunchProcess() {
   if (should_forward_stdio) {
     // nullptr means it's not redirected to file or pty (in case of LLGS local)
     // at least one of stdio will be transferred pty<->gdb-remote we need to
-    // give the pty master handle to this object to read and/or write
+    // give the pty primary handle to this object to read and/or write
     LLDB_LOG(log,
              "pid = {0}: setting up stdout/stderr redirection via $O "
              "gdb-remote commands",
@@ -1085,18 +1087,6 @@ void GDBRemoteCommunicationServerLLGS::NewSubprocess(
 
 void GDBRemoteCommunicationServerLLGS::DataAvailableCallback() {
   Log *log(GetLogIfAnyCategoriesSet(GDBR_LOG_COMM));
-
-  if (!m_handshake_completed) {
-    if (!HandshakeWithClient()) {
-      LLDB_LOGF(log,
-                "GDBRemoteCommunicationServerLLGS::%s handshake with "
-                "client failed, exiting",
-                __FUNCTION__);
-      m_mainloop.RequestTermination();
-      return;
-    }
-    m_handshake_completed = true;
-  }
 
   bool interrupt = false;
   bool done = false;
@@ -3887,4 +3877,39 @@ void GDBRemoteCommunicationServerLLGS::SetEnabledExtensions(
   NativeProcessProtocol::Extension flags = m_extensions_supported;
   assert(!bool(flags & ~m_process_factory.GetSupportedExtensions()));
   process.SetEnabledExtensions(flags);
+}
+
+std::string
+lldb_private::process_gdb_remote::LLGSArgToURL(llvm::StringRef url_arg,
+                                               bool reverse_connect) {
+  // Try parsing the argument as URL.
+  if (llvm::Optional<URI> url = URI::Parse(url_arg)) {
+    if (reverse_connect)
+      return url_arg.str();
+
+    // Translate the scheme from LLGS notation to ConnectionFileDescriptor.
+    // If the scheme doesn't match any, pass it through to support using CFD
+    // schemes directly.
+    std::string new_url = llvm::StringSwitch<std::string>(url->scheme)
+                              .Case("tcp", "listen")
+                              .Case("unix", "unix-accept")
+                              .Case("unix-abstract", "unix-abstract-accept")
+                              .Default(url->scheme.str());
+    llvm::append_range(new_url, url_arg.substr(url->scheme.size()));
+    return new_url;
+  }
+
+  std::string host_port = url_arg.str();
+  // If host_and_port starts with ':', default the host to be "localhost" and
+  // expect the remainder to be the port.
+  if (url_arg.startswith(":"))
+    host_port.insert(0, "localhost");
+
+  // Try parsing the (preprocessed) argument as host:port pair.
+  if (!llvm::errorToBool(Socket::DecodeHostAndPort(host_port).takeError()))
+    return (reverse_connect ? "connect://" : "listen://") + host_port;
+
+  // If none of the above applied, interpret the argument as UNIX socket path.
+  return (reverse_connect ? "unix-connect://" : "unix-accept://") +
+         url_arg.str();
 }

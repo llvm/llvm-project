@@ -72,17 +72,12 @@ PlatformSP PlatformRemoteGDBServer::CreateInstance(bool force,
   return PlatformSP();
 }
 
-ConstString PlatformRemoteGDBServer::GetPluginNameStatic() {
-  static ConstString g_name("remote-gdb-server");
-  return g_name;
-}
-
-const char *PlatformRemoteGDBServer::GetDescriptionStatic() {
+llvm::StringRef PlatformRemoteGDBServer::GetDescriptionStatic() {
   return "A platform that uses the GDB remote protocol as the communication "
          "transport.";
 }
 
-const char *PlatformRemoteGDBServer::GetDescription() {
+llvm::StringRef PlatformRemoteGDBServer::GetDescription() {
   if (m_platform_description.empty()) {
     if (IsConnected()) {
       // Send the get description packet
@@ -92,76 +87,6 @@ const char *PlatformRemoteGDBServer::GetDescription() {
   if (!m_platform_description.empty())
     return m_platform_description.c_str();
   return GetDescriptionStatic();
-}
-
-Status PlatformRemoteGDBServer::ResolveExecutable(
-    const ModuleSpec &module_spec, lldb::ModuleSP &exe_module_sp,
-    const FileSpecList *module_search_paths_ptr) {
-  // copied from PlatformRemoteiOS
-
-  Status error;
-  // Nothing special to do here, just use the actual file and architecture
-
-  ModuleSpec resolved_module_spec(module_spec);
-
-  // Resolve any executable within an apk on Android?
-  // Host::ResolveExecutableInBundle (resolved_module_spec.GetFileSpec());
-
-  if (FileSystem::Instance().Exists(resolved_module_spec.GetFileSpec()) ||
-      module_spec.GetUUID().IsValid()) {
-    if (resolved_module_spec.GetArchitecture().IsValid() ||
-        resolved_module_spec.GetUUID().IsValid()) {
-      error = ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
-                                          module_search_paths_ptr, nullptr,
-                                          nullptr);
-
-      if (exe_module_sp && exe_module_sp->GetObjectFile())
-        return error;
-      exe_module_sp.reset();
-    }
-    // No valid architecture was specified or the exact arch wasn't found so
-    // ask the platform for the architectures that we should be using (in the
-    // correct order) and see if we can find a match that way
-    StreamString arch_names;
-    for (uint32_t idx = 0; GetSupportedArchitectureAtIndex(
-             idx, resolved_module_spec.GetArchitecture());
-         ++idx) {
-      error = ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
-                                          module_search_paths_ptr, nullptr,
-                                          nullptr);
-      // Did we find an executable using one of the
-      if (error.Success()) {
-        if (exe_module_sp && exe_module_sp->GetObjectFile())
-          break;
-        else
-          error.SetErrorToGenericError();
-      }
-
-      if (idx > 0)
-        arch_names.PutCString(", ");
-      arch_names.PutCString(
-          resolved_module_spec.GetArchitecture().GetArchitectureName());
-    }
-
-    if (error.Fail() || !exe_module_sp) {
-      if (FileSystem::Instance().Readable(resolved_module_spec.GetFileSpec())) {
-        error.SetErrorStringWithFormatv(
-            "'{0}' doesn't contain any '{1}' platform architectures: {2}",
-            resolved_module_spec.GetFileSpec(), GetPluginName(),
-            arch_names.GetData());
-      } else {
-        error.SetErrorStringWithFormat(
-            "'%s' is not readable",
-            resolved_module_spec.GetFileSpec().GetPath().c_str());
-      }
-    }
-  } else {
-    error.SetErrorStringWithFormat(
-        "'%s' does not exist",
-        resolved_module_spec.GetFileSpec().GetPath().c_str());
-  }
-
-  return error;
 }
 
 bool PlatformRemoteGDBServer::GetModuleSpec(const FileSpec &module_file_spec,
@@ -214,21 +139,6 @@ PlatformRemoteGDBServer::PlatformRemoteGDBServer()
 /// inherited from by the plug-in instance.
 PlatformRemoteGDBServer::~PlatformRemoteGDBServer() = default;
 
-bool PlatformRemoteGDBServer::GetSupportedArchitectureAtIndex(uint32_t idx,
-                                                              ArchSpec &arch) {
-  ArchSpec remote_arch = m_gdb_client.GetSystemArchitecture();
-
-  if (idx == 0) {
-    arch = remote_arch;
-    return arch.IsValid();
-  } else if (idx == 1 && remote_arch.IsValid() &&
-             remote_arch.GetTriple().isArch64Bit()) {
-    arch.SetTriple(remote_arch.GetTriple().get32BitArchVariant());
-    return arch.IsValid();
-  }
-  return false;
-}
-
 size_t PlatformRemoteGDBServer::GetSoftwareBreakpointTrapOpcode(
     Target &target, BreakpointSite *bp_site) {
   // This isn't needed if the z/Z packets are supported in the GDB remote
@@ -241,12 +151,13 @@ bool PlatformRemoteGDBServer::GetRemoteOSVersion() {
   return !m_os_version.empty();
 }
 
-bool PlatformRemoteGDBServer::GetRemoteOSBuildString(std::string &s) {
-  return m_gdb_client.GetOSBuildString(s);
+llvm::Optional<std::string> PlatformRemoteGDBServer::GetRemoteOSBuildString() {
+  return m_gdb_client.GetOSBuildString();
 }
 
-bool PlatformRemoteGDBServer::GetRemoteOSKernelDescription(std::string &s) {
-  return m_gdb_client.GetOSKernelDescription(s);
+llvm::Optional<std::string>
+PlatformRemoteGDBServer::GetRemoteOSKernelDescription() {
+  return m_gdb_client.GetOSKernelDescription();
 }
 
 // Remote Platform subclasses need to override this function
@@ -305,28 +216,21 @@ Status PlatformRemoteGDBServer::ConnectRemote(Args &args) {
   if (!url)
     return Status("URL is null.");
 
-  llvm::Optional<uint16_t> port;
-  llvm::StringRef scheme, hostname, pathname;
-  if (!UriParser::Parse(url, scheme, hostname, port, pathname))
+  llvm::Optional<URI> parsed_url = URI::Parse(url);
+  if (!parsed_url)
     return Status("Invalid URL: %s", url);
 
   // We're going to reuse the hostname when we connect to the debugserver.
-  m_platform_scheme = std::string(scheme);
-  m_platform_hostname = std::string(hostname);
+  m_platform_scheme = parsed_url->scheme.str();
+  m_platform_hostname = parsed_url->hostname.str();
 
   m_gdb_client.SetConnection(std::make_unique<ConnectionFileDescriptor>());
-  if (repro::Reproducer::Instance().IsReplaying()) {
-    error = m_gdb_replay_server.Connect(m_gdb_client);
-    if (error.Success())
-      m_gdb_replay_server.StartAsyncThread();
-  } else {
-    if (repro::Generator *g = repro::Reproducer::Instance().GetGenerator()) {
-      repro::GDBRemoteProvider &provider =
-          g->GetOrCreate<repro::GDBRemoteProvider>();
-      m_gdb_client.SetPacketRecorder(provider.GetNewPacketRecorder());
-    }
-    m_gdb_client.Connect(url, &error);
+  if (repro::Generator *g = repro::Reproducer::Instance().GetGenerator()) {
+    repro::GDBRemoteProvider &provider =
+        g->GetOrCreate<repro::GDBRemoteProvider>();
+    m_gdb_client.SetPacketRecorder(provider.GetNewPacketRecorder());
   }
+  m_gdb_client.Connect(url, &error);
 
   if (error.Fail())
     return error;
@@ -337,6 +241,15 @@ Status PlatformRemoteGDBServer::ConnectRemote(Args &args) {
     // now.
     if (m_working_dir)
       m_gdb_client.SetWorkingDir(m_working_dir);
+
+    m_supported_architectures.clear();
+    ArchSpec remote_arch = m_gdb_client.GetSystemArchitecture();
+    if (remote_arch) {
+      m_supported_architectures.push_back(remote_arch);
+      if (remote_arch.GetTriple().isArch64Bit())
+        m_supported_architectures.push_back(
+            ArchSpec(remote_arch.GetTriple().get32BitArchVariant()));
+    }
   } else {
     m_gdb_client.Disconnect();
     if (error.Success())

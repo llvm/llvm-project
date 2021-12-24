@@ -36,11 +36,11 @@ target triple = "x86_64-unknown-linux-gnu"
 ; AVX1: LV: Found an estimated cost of 400 for VF 32 For instruction:   %valB = load i64, i64* %inB, align 8
 ;
 ; AVX2-SLOWGATHER: LV: Found an estimated cost of 1 for VF 1 For instruction:   %valB = load i64, i64* %inB, align 8
-; AVX2-SLOWGATHER: LV: Found an estimated cost of 24 for VF 2 For instruction:   %valB = load i64, i64* %inB, align 8
-; AVX2-SLOWGATHER: LV: Found an estimated cost of 50 for VF 4 For instruction:   %valB = load i64, i64* %inB, align 8
-; AVX2-SLOWGATHER: LV: Found an estimated cost of 100 for VF 8 For instruction:   %valB = load i64, i64* %inB, align 8
-; AVX2-SLOWGATHER: LV: Found an estimated cost of 200 for VF 16 For instruction:   %valB = load i64, i64* %inB, align 8
-; AVX2-SLOWGATHER: LV: Found an estimated cost of 400 for VF 32 For instruction:   %valB = load i64, i64* %inB, align 8
+; AVX2-SLOWGATHER: LV: Found an estimated cost of 4 for VF 2 For instruction:   %valB = load i64, i64* %inB, align 8
+; AVX2-SLOWGATHER: LV: Found an estimated cost of 10 for VF 4 For instruction:   %valB = load i64, i64* %inB, align 8
+; AVX2-SLOWGATHER: LV: Found an estimated cost of 20 for VF 8 For instruction:   %valB = load i64, i64* %inB, align 8
+; AVX2-SLOWGATHER: LV: Found an estimated cost of 40 for VF 16 For instruction:   %valB = load i64, i64* %inB, align 8
+; AVX2-SLOWGATHER: LV: Found an estimated cost of 80 for VF 32 For instruction:   %valB = load i64, i64* %inB, align 8
 ;
 ; AVX2-FASTGATHER: LV: Found an estimated cost of 1 for VF 1 For instruction:   %valB = load i64, i64* %inB, align 8
 ; AVX2-FASTGATHER: LV: Found an estimated cost of 4 for VF 2 For instruction:   %valB = load i64, i64* %inB, align 8
@@ -57,7 +57,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; AVX512: LV: Found an estimated cost of 40 for VF 32 For instruction:   %valB = load i64, i64* %inB, align 8
 ; AVX512: LV: Found an estimated cost of 80 for VF 64 For instruction:   %valB = load i64, i64* %inB, align 8
 ;
-; CHECK-NOT: LV: Found an estimated cost of {{[0-9]+}} for VF {{[0-9]+}} For instruction:   %v0 = load i8, i8* %in0, align 2
+; CHECK-NOT: LV: Found an estimated cost of {{[0-9]+}} for VF {{[0-9]+}} For instruction:   %valB = load i64, i64* %inB, align 8
 
 define void @test() {
 entry:

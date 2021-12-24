@@ -894,7 +894,7 @@ public:
                                                 ParsedAttr> {
     iterator() : iterator_adaptor_base(nullptr) {}
     iterator(VecTy::iterator I) : iterator_adaptor_base(I) {}
-    reference operator*() { return **I; }
+    reference operator*() const { return **I; }
     friend class ParsedAttributesView;
   };
   struct const_iterator
@@ -1097,6 +1097,7 @@ enum AttributeArgumentNType {
   AANT_ArgumentString,
   AANT_ArgumentIdentifier,
   AANT_ArgumentConstantExpr,
+  AANT_ArgumentBuiltinFunction,
 };
 
 /// These constants match the enumerated choices of

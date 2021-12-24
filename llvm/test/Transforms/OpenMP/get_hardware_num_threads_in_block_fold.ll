@@ -8,9 +8,9 @@ target triple = "nvptx64"
 
 @G = external global i32
 ;.
-; CHECK: @[[KERNEL0_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 1
+; CHECK: @[[KERNEL0_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 3
 ; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external global i32
-; CHECK: @[[KERNEL1_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 1
+; CHECK: @[[KERNEL1_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 3
 ; CHECK: @[[KERNEL2_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 3
 ; CHECK: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
 ; CHECK: @[[GLOB1:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* @[[GLOB0]], i32 0, i32 0) }, align 8
@@ -25,11 +25,11 @@ define weak void @kernel0() #0 {
 ; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* null, i8 2, i1 false)
 ; CHECK-NEXT:    ret void
 ;
-  %i = call i32 @__kmpc_target_init(%struct.ident_t* null, i8 2, i1 false, i1 false)
+  %i = call i32 @__kmpc_target_init(%struct.ident_t* null, i8 1, i1 false, i1 false)
   call void @helper0()
   call void @helper1()
   call void @helper2()
-  call void @__kmpc_target_deinit(%struct.ident_t* null, i8 2, i1 false)
+  call void @__kmpc_target_deinit(%struct.ident_t* null, i8 1, i1 false)
   ret void
 }
 
@@ -43,9 +43,9 @@ define weak void @kernel1() #0 {
 ; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* null, i8 2, i1 false)
 ; CHECK-NEXT:    ret void
 ;
-  %i = call i32 @__kmpc_target_init(%struct.ident_t* null, i8 2, i1 false, i1 false)
+  %i = call i32 @__kmpc_target_init(%struct.ident_t* null, i8 1, i1 false, i1 false)
   call void @helper1()
-  call void @__kmpc_target_deinit(%struct.ident_t* null, i8 2, i1 false)
+  call void @__kmpc_target_deinit(%struct.ident_t* null, i8 1, i1 false)
   ret void
 }
 

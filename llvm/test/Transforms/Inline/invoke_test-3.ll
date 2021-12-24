@@ -3,6 +3,7 @@
 
 ; RUN: opt < %s -inline -S | FileCheck %s
 ; RUN: opt < %s -passes='cgscc(inline)' -S | FileCheck %s
+; RUN: opt < %s -passes='module-inline' -S | FileCheck %s
 
 declare void @might_throw()
 

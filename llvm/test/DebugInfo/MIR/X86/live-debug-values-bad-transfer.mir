@@ -1,5 +1,5 @@
-# RUN: llc %s -mtriple=x86_64-unknown-unknown -o - -run-pass=livedebugvalues | FileCheck %s --implicit-check-not=DBG_VALUE
-# RUN: llc %s -mtriple=x86_64-unknown-unknown -o - -run-pass=livedebugvalues -experimental-debug-variable-locations | FileCheck %s -check-prefix=NEWLDV --implicit-check-not=DBG_VALUE
+# RUN: llc %s -mtriple=x86_64-unknown-unknown -o - -run-pass=livedebugvalues -experimental-debug-variable-locations=false | FileCheck %s --implicit-check-not=DBG_VALUE
+# RUN: llc %s -mtriple=x86_64-unknown-unknown -o - -run-pass=livedebugvalues -experimental-debug-variable-locations=true | FileCheck %s -check-prefix=NEWLDV --implicit-check-not=DBG_VALUE
 #
 # Test that the DBG_VALUE of ecx below does not get propagated. It is considered
 # live-in on LiveDebugValues' first pass through the loop, but on the second it
@@ -106,6 +106,6 @@ body:             |
     $eax = MOV32rr killed $ebx, debug-location !10
     $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp
     CFI_INSTRUCTION def_cfa_offset 8
-    RETQ $eax, debug-location !10
+    RET64 $eax, debug-location !10
 
 ...

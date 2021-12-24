@@ -199,7 +199,7 @@ private:
   FrozenRewritePatternSet reducerPatterns;
 };
 
-} // end anonymous namespace
+} // namespace
 
 LogicalResult ReductionTreePass::initialize(MLIRContext *context) {
   RewritePatternSet patterns(context);

@@ -22,3 +22,6 @@ MERGE2:  4: 26
 MERGE2:  5: 14 _Z3foov:10 _Z3barv:4
 MERGE2:  6: 12 _Z3barv:8 _Z3foov:4
 MERGE2:  !CFGChecksum: 563022570642068
+
+RUN: llvm-profdata show --sample -show-sec-info-only %t | FileCheck %s
+CHECK: FunctionMetadata {{.*}} Flags: {probe}

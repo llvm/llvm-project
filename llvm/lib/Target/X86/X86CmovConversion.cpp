@@ -186,7 +186,7 @@ bool X86CmovConverterPass::runOnMachineFunction(MachineFunction &MF) {
     if (collectCmovCandidates(Blocks, AllCmovGroups, /*IncludeLoads*/ true)) {
       for (auto &Group : AllCmovGroups) {
         // Skip any group that doesn't do at least one memory operand cmov.
-        if (!llvm::any_of(Group, [&](MachineInstr *I) { return I->mayLoad(); }))
+        if (llvm::none_of(Group, [&](MachineInstr *I) { return I->mayLoad(); }))
           continue;
 
         // For CMOV groups which we can rewrite and which contain a memory load,
@@ -582,10 +582,9 @@ static bool checkEFLAGSLive(MachineInstr *MI) {
   }
 
   // We hit the end of the block, check whether EFLAGS is live into a successor.
-  for (auto I = BB->succ_begin(), E = BB->succ_end(); I != E; ++I) {
-    if ((*I)->isLiveIn(X86::EFLAGS))
+  for (MachineBasicBlock *Succ : BB->successors())
+    if (Succ->isLiveIn(X86::EFLAGS))
       return true;
-  }
 
   return false;
 }
@@ -797,8 +796,7 @@ void X86CmovConverterPass::convertCmovInstsToBranches(
         MOp.setIsKill(false);
       }
     }
-    MBB->erase(MachineBasicBlock::iterator(MI),
-               std::next(MachineBasicBlock::iterator(MI)));
+    MBB->erase(&MI);
 
     // Add this PHI to the rewrite table.
     FalseBBRegRewriteTable[NewCMOV->getOperand(0).getReg()] = TmpReg;

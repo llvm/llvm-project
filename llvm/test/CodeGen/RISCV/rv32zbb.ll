@@ -48,7 +48,7 @@ define i32 @ctlz_i32(i32 %a) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ; RV32I-NEXT:  .LBB0_2:
-; RV32I-NEXT:    addi a0, zero, 32
+; RV32I-NEXT:    li a0, 32
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: ctlz_i32:
@@ -138,15 +138,15 @@ define i64 @ctlz_i64(i64 %a) nounwind {
 ; RV32I-NEXT:  .LBB1_2:
 ; RV32I-NEXT:    srli a0, s2, 24
 ; RV32I-NEXT:  .LBB1_3:
-; RV32I-NEXT:    mv a1, zero
-; RV32I-NEXT:    lw s6, 0(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s5, 4(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s5, 4(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s6, 0(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -156,11 +156,11 @@ define i64 @ctlz_i64(i64 %a) nounwind {
 ; RV32ZBB-NEXT:  # %bb.1:
 ; RV32ZBB-NEXT:    clz a0, a0
 ; RV32ZBB-NEXT:    addi a0, a0, 32
-; RV32ZBB-NEXT:    mv a1, zero
+; RV32ZBB-NEXT:    li a1, 0
 ; RV32ZBB-NEXT:    ret
 ; RV32ZBB-NEXT:  .LBB1_2:
 ; RV32ZBB-NEXT:    clz a0, a1
-; RV32ZBB-NEXT:    mv a1, zero
+; RV32ZBB-NEXT:    li a1, 0
 ; RV32ZBB-NEXT:    ret
   %1 = call i64 @llvm.ctlz.i64(i64 %a, i1 false)
   ret i64 %1
@@ -202,7 +202,7 @@ define i32 @cttz_i32(i32 %a) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ; RV32I-NEXT:  .LBB2_2:
-; RV32I-NEXT:    addi a0, zero, 32
+; RV32I-NEXT:    li a0, 32
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: cttz_i32:
@@ -276,15 +276,15 @@ define i64 @cttz_i64(i64 %a) nounwind {
 ; RV32I-NEXT:  .LBB3_2:
 ; RV32I-NEXT:    srli a0, s2, 24
 ; RV32I-NEXT:  .LBB3_3:
-; RV32I-NEXT:    mv a1, zero
-; RV32I-NEXT:    lw s6, 0(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s5, 4(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s5, 4(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s6, 0(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -294,11 +294,11 @@ define i64 @cttz_i64(i64 %a) nounwind {
 ; RV32ZBB-NEXT:  # %bb.1:
 ; RV32ZBB-NEXT:    ctz a0, a1
 ; RV32ZBB-NEXT:    addi a0, a0, 32
-; RV32ZBB-NEXT:    mv a1, zero
+; RV32ZBB-NEXT:    li a1, 0
 ; RV32ZBB-NEXT:    ret
 ; RV32ZBB-NEXT:  .LBB3_2:
 ; RV32ZBB-NEXT:    ctz a0, a0
-; RV32ZBB-NEXT:    mv a1, zero
+; RV32ZBB-NEXT:    li a1, 0
 ; RV32ZBB-NEXT:    ret
   %1 = call i64 @llvm.cttz.i64(i64 %a, i1 false)
   ret i64 %1
@@ -392,14 +392,14 @@ define i64 @ctpop_i64(i64 %a) nounwind {
 ; RV32I-NEXT:    call __mulsi3@plt
 ; RV32I-NEXT:    srli a0, a0, 24
 ; RV32I-NEXT:    add a0, a0, s5
-; RV32I-NEXT:    mv a1, zero
-; RV32I-NEXT:    lw s5, 4(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s5, 4(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -408,7 +408,7 @@ define i64 @ctpop_i64(i64 %a) nounwind {
 ; RV32ZBB-NEXT:    cpop a1, a1
 ; RV32ZBB-NEXT:    cpop a0, a0
 ; RV32ZBB-NEXT:    add a0, a0, a1
-; RV32ZBB-NEXT:    mv a1, zero
+; RV32ZBB-NEXT:    li a1, 0
 ; RV32ZBB-NEXT:    ret
   %1 = call i64 @llvm.ctpop.i64(i64 %a)
   ret i64 %1
@@ -795,13 +795,13 @@ define i64 @zexth_i64(i64 %a) nounwind {
 ; RV32I-NEXT:    lui a1, 16
 ; RV32I-NEXT:    addi a1, a1, -1
 ; RV32I-NEXT:    and a0, a0, a1
-; RV32I-NEXT:    mv a1, zero
+; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: zexth_i64:
 ; RV32ZBB:       # %bb.0:
 ; RV32ZBB-NEXT:    zext.h a0, a0
-; RV32ZBB-NEXT:    mv a1, zero
+; RV32ZBB-NEXT:    li a1, 0
 ; RV32ZBB-NEXT:    ret
   %and = and i64 %a, 65535
   ret i64 %and

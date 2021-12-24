@@ -34,7 +34,12 @@ typedef struct _NSZone NSZone;
     @try {}
     // the exception name is optional (weird)
     @catch (NSException *) {}
-}
+} // expected-warning {{non-void function does not return a value}}
+
+- (NSDictionary *)anotherFunction {
+    @try {}
+    @finally {}
+} // FIXME: This should warn about a missing return too.
 @end
 
 int foo() {

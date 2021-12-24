@@ -11,6 +11,8 @@
 //
 // clang-format off
 
+// UNSUPPORTED: libcpp-has-no-threads
+
 // <mutex>
 
 // Test the feature test macros defined by <mutex>

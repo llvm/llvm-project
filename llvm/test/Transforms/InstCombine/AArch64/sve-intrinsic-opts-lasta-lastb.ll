@@ -287,7 +287,7 @@ define i8 @lastb_binop_LHS_RHS_splat_sdiv(<vscale x 16 x i1> %pg, i8 %scalar1, i
 ; Check that we don't do anything as the binary op has multiple uses.
 define i8 @lastb_binop_nochange(<vscale x 16 x i1> %pg, i8 %scalar, <vscale x 16 x i8> %vector) #0 {
 ; OPT-LABEL: @lastb_binop_nochange(
-; OPT-NEXT:    [[SPLAT_INSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[SCALAR:%.*]], i32 0
+; OPT-NEXT:    [[SPLAT_INSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[SCALAR:%.*]], i64 0
 ; OPT-NEXT:    [[SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[SPLAT_INSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
 ; OPT-NEXT:    [[BINOP:%.*]] = sdiv <vscale x 16 x i8> [[VECTOR:%.*]], [[SPLAT]]
 ; OPT-NEXT:    [[LAST:%.*]] = tail call i8 @llvm.aarch64.sve.lastb.nxv16i8(<vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[BINOP]])

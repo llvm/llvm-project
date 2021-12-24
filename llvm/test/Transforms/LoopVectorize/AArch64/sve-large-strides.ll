@@ -1,4 +1,4 @@
-; RUN: opt -mtriple aarch64-linux-gnu -mattr=+sve -loop-vectorize -scalable-vectorization=on -dce -instcombine -S <%s | FileCheck %s
+; RUN: opt -mtriple aarch64-linux-gnu -mattr=+sve -loop-vectorize -dce -instcombine -S <%s | FileCheck %s
 
 define void @stride7_i32(i32* noalias nocapture %dst, i64 %n) #0 {
 ; CHECK-LABEL: @stride7_i32(
@@ -90,7 +90,7 @@ for.end:                                          ; preds = %for.end.loopexit, %
   ret void
 }
 
-attributes #0 = { vscale_range(0, 16) }
+attributes #0 = { vscale_range(1, 16) }
 !0 = distinct !{!0, !1, !2, !3, !4, !5}
 !1 = !{!"llvm.loop.mustprogress"}
 !2 = !{!"llvm.loop.vectorize.width", i32 4}

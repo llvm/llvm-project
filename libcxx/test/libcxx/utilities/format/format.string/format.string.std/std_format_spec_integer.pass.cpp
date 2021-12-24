@@ -8,11 +8,12 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-incomplete-format
+// XFAIL: LIBCXX-AIX-FIXME
 
 // <format>
 
 // Tests the parsing of the format string as specified in [format.string.std].
-// It validates whether the std-format-spec is valid for a string type.
+// It validates whether the std-format-spec is valid for an integer type.
 
 #include <format>
 #include <cassert>

@@ -64,9 +64,11 @@ public:
 class BTFTypeDerived : public BTFTypeBase {
   const DIDerivedType *DTy;
   bool NeedsFixup;
+  StringRef Name;
 
 public:
   BTFTypeDerived(const DIDerivedType *Ty, unsigned Tag, bool NeedsFixup);
+  BTFTypeDerived(unsigned NextTypeId, unsigned Tag, StringRef Name);
   void completeType(BTFDebug &BDebug) override;
   void emitType(MCStreamer &OS) override;
   void setPointeeType(uint32_t PointeeType);
@@ -214,6 +216,16 @@ public:
   uint32_t getSize() override { return BTFTypeBase::getSize() + 4; }
   void completeType(BTFDebug &BDebug) override;
   void emitType(MCStreamer &OS) override;
+};
+
+class BTFTypeTypeTag : public BTFTypeBase {
+  const DIDerivedType *DTy;
+  StringRef Tag;
+
+public:
+  BTFTypeTypeTag(uint32_t NextTypeId, StringRef Tag);
+  BTFTypeTypeTag(const DIDerivedType *DTy, StringRef Tag);
+  void completeType(BTFDebug &BDebug) override;
 };
 
 /// String table.

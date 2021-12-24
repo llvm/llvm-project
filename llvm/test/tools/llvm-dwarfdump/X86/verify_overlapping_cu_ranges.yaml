@@ -44,10 +44,10 @@
 # CHECK: error: DIE has overlapping ranges in DW_AT_ranges attribute: [0x0000000000000000, 0x0000000000000020) and [0x0000000000000000, 0x0000000000000030)
 
 # CHECK: 0x0000000b:   DW_TAG_compile_unit
-# CHECK-NEXT:                DW_AT_name      ("/tmp/main.c")
-# CHECK-NEXT:                DW_AT_language  (DW_LANG_C)
-# CHECK-NEXT:                DW_AT_low_pc    (0x0000000000000000)
-# CHECK-NEXT:                DW_AT_ranges    (0x00000000
+# CHECK-NEXT:                DW_AT_name      [DW_FORM_strp] ( .debug_str[0x00000001] = "/tmp/main.c")
+# CHECK-NEXT:                DW_AT_language  [DW_FORM_data2] (DW_LANG_C)
+# CHECK-NEXT:                DW_AT_low_pc    [DW_FORM_addr] (0x0000000000000000)
+# CHECK-NEXT:                DW_AT_ranges    [DW_FORM_sec_offset] (0x00000000
 # CHECK-NEXT:                   [0x0000000000002000, 0x0000000000003000)
 # CHECK-NEXT:                   [0x0000000000000000, 0x0000000000000020)
 # CHECK-NEXT:                   [0x0000000000000000, 0x0000000000000030)
@@ -55,16 +55,14 @@
 
 # CHECK: error: DIEs have overlapping address ranges:
 # CHECK: 0x0000002f: DW_TAG_subprogram
-# CHECK-NEXT:              DW_AT_name        ("stripped2")
-# CHECK-NEXT:              DW_AT_low_pc      (0x0000000000000000)
-# CHECK-NEXT:              DW_AT_high_pc     (0x0000000000000030)
+# CHECK-NEXT:              DW_AT_name        [DW_FORM_strp] ( .debug_str[0x00000017] = "stripped2")
+# CHECK-NEXT:              DW_AT_low_pc      [DW_FORM_addr] (0x0000000000000000)
+# CHECK-NEXT:              DW_AT_high_pc     [DW_FORM_addr] (0x0000000000000030)
 
 # CHECK: 0x0000001e: DW_TAG_subprogram
-# CHECK-NEXT:              DW_AT_name        ("stripped1")
-# CHECK-NEXT:              DW_AT_low_pc      (0x0000000000000000)
-# CHECK-NEXT:              DW_AT_high_pc     (0x0000000000000020)
-
-# CHECK: Verifying
+# CHECK-NEXT:              DW_AT_name        [DW_FORM_strp] ( .debug_str[0x0000000d] = "stripped1")
+# CHECK-NEXT:              DW_AT_low_pc      [DW_FORM_addr] (0x0000000000000000)
+# CHECK-NEXT:              DW_AT_high_pc     [DW_FORM_data4] (0x00000020)
 
 --- !mach-o
 FileHeader:

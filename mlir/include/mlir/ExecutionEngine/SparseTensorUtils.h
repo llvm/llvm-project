@@ -1,0 +1,55 @@
+//===- SparseTensorUtils.h - Enums shared with the runtime ------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This header file defines several enums shared between
+// Transforms/SparseTensorConversion.cpp and ExecutionEngine/SparseUtils.cpp
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef MLIR_EXECUTIONENGINE_SPARSETENSORUTILS_H_
+#define MLIR_EXECUTIONENGINE_SPARSETENSORUTILS_H_
+
+#include <cinttypes>
+
+extern "C" {
+
+/// Encoding of the elemental type, for "overloading" @newSparseTensor.
+enum class OverheadType : uint32_t { kU64 = 1, kU32 = 2, kU16 = 3, kU8 = 4 };
+
+/// Encoding of the elemental type, for "overloading" @newSparseTensor.
+enum class PrimaryType : uint32_t {
+  kF64 = 1,
+  kF32 = 2,
+  kI64 = 3,
+  kI32 = 4,
+  kI16 = 5,
+  kI8 = 6
+};
+
+/// The actions performed by @newSparseTensor.
+enum class Action : uint32_t {
+  kEmpty = 0,
+  kFromFile = 1,
+  kFromCOO = 2,
+  kEmptyCOO = 3,
+  kToCOO = 4,
+  kToIterator = 5
+};
+
+/// This enum mimics `SparseTensorEncodingAttr::DimLevelType` for
+/// breaking dependency cycles.  `SparseTensorEncodingAttr::DimLevelType`
+/// is the source of truth and this enum should be kept consistent with it.
+enum class DimLevelType : uint8_t {
+  kDense = 0,
+  kCompressed = 1,
+  kSingleton = 2
+};
+
+} // extern "C"
+
+#endif // MLIR_EXECUTIONENGINE_SPARSETENSORUTILS_H_

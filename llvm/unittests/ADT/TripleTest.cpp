@@ -117,6 +117,18 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::Linux, T.getOS());
   EXPECT_EQ(Triple::MuslX32, T.getEnvironment());
 
+  T = Triple("arm-unknown-linux-android16");
+  EXPECT_EQ(Triple::arm, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::Android, T.getEnvironment());
+
+  T = Triple("aarch64-unknown-linux-android21");
+  EXPECT_EQ(Triple::aarch64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::Android, T.getEnvironment());
+
   // PS4 has two spellings for the vendor.
   T = Triple("x86_64-scei-ps4");
   EXPECT_EQ(Triple::x86_64, T.getArch());
@@ -221,6 +233,16 @@ TEST(TripleTest, ParsedIDs) {
 
   T = Triple("spir64-unknown-unknown");
   EXPECT_EQ(Triple::spir64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::UnknownOS, T.getOS());
+
+  T = Triple("spirv32-unknown-unknown");
+  EXPECT_EQ(Triple::spirv32, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::UnknownOS, T.getOS());
+
+  T = Triple("spirv64-unknown-unknown");
+  EXPECT_EQ(Triple::spirv64, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::UnknownOS, T.getOS());
 
@@ -865,6 +887,16 @@ TEST(TripleTest, BitWidthPredicates) {
   EXPECT_FALSE(T.isArch32Bit());
   EXPECT_TRUE(T.isArch64Bit());
 
+  T.setArch(Triple::spirv32);
+  EXPECT_FALSE(T.isArch16Bit());
+  EXPECT_TRUE(T.isArch32Bit());
+  EXPECT_FALSE(T.isArch64Bit());
+
+  T.setArch(Triple::spirv64);
+  EXPECT_FALSE(T.isArch16Bit());
+  EXPECT_FALSE(T.isArch32Bit());
+  EXPECT_TRUE(T.isArch64Bit());
+
   T.setArch(Triple::sparc);
   EXPECT_FALSE(T.isArch16Bit());
   EXPECT_TRUE(T.isArch32Bit());
@@ -1031,6 +1063,14 @@ TEST(TripleTest, BitWidthArchVariants) {
   T.setArch(Triple::spir64);
   EXPECT_EQ(Triple::spir, T.get32BitArchVariant().getArch());
   EXPECT_EQ(Triple::spir64, T.get64BitArchVariant().getArch());
+
+  T.setArch(Triple::spirv32);
+  EXPECT_EQ(Triple::spirv32, T.get32BitArchVariant().getArch());
+  EXPECT_EQ(Triple::spirv64, T.get64BitArchVariant().getArch());
+
+  T.setArch(Triple::spirv64);
+  EXPECT_EQ(Triple::spirv32, T.get32BitArchVariant().getArch());
+  EXPECT_EQ(Triple::spirv64, T.get64BitArchVariant().getArch());
 
   T.setArch(Triple::wasm32);
   EXPECT_EQ(Triple::wasm32, T.get32BitArchVariant().getArch());
@@ -1233,7 +1273,7 @@ TEST(TripleTest, EndianArchVariants) {
 
 TEST(TripleTest, getOSVersion) {
   Triple T;
-  unsigned Major, Minor, Micro;
+  VersionTuple Version;
 
   T = Triple("i386-apple-darwin9");
   EXPECT_TRUE(T.isMacOSX());
@@ -1241,14 +1281,10 @@ TEST(TripleTest, getOSVersion) {
   EXPECT_FALSE(T.isArch16Bit());
   EXPECT_TRUE(T.isArch32Bit());
   EXPECT_FALSE(T.isArch64Bit());
-  T.getMacOSXVersion(Major, Minor, Micro);
-  EXPECT_EQ((unsigned)10, Major);
-  EXPECT_EQ((unsigned)5, Minor);
-  EXPECT_EQ((unsigned)0, Micro);
-  T.getiOSVersion(Major, Minor, Micro);
-  EXPECT_EQ((unsigned)5, Major);
-  EXPECT_EQ((unsigned)0, Minor);
-  EXPECT_EQ((unsigned)0, Micro);
+  T.getMacOSXVersion(Version);
+  EXPECT_EQ(VersionTuple(10, 5), Version);
+  Version = T.getiOSVersion();
+  EXPECT_EQ(VersionTuple(5), Version);
 
   T = Triple("x86_64-apple-darwin9");
   EXPECT_TRUE(T.isMacOSX());
@@ -1256,14 +1292,10 @@ TEST(TripleTest, getOSVersion) {
   EXPECT_FALSE(T.isArch16Bit());
   EXPECT_FALSE(T.isArch32Bit());
   EXPECT_TRUE(T.isArch64Bit());
-  T.getMacOSXVersion(Major, Minor, Micro);
-  EXPECT_EQ((unsigned)10, Major);
-  EXPECT_EQ((unsigned)5, Minor);
-  EXPECT_EQ((unsigned)0, Micro);
-  T.getiOSVersion(Major, Minor, Micro);
-  EXPECT_EQ((unsigned)5, Major);
-  EXPECT_EQ((unsigned)0, Minor);
-  EXPECT_EQ((unsigned)0, Micro);
+  T.getMacOSXVersion(Version);
+  EXPECT_EQ(VersionTuple(10, 5), Version);
+  Version = T.getiOSVersion();
+  EXPECT_EQ(VersionTuple(5), Version);
 
   T = Triple("x86_64-apple-macosx");
   EXPECT_TRUE(T.isMacOSX());
@@ -1271,14 +1303,10 @@ TEST(TripleTest, getOSVersion) {
   EXPECT_FALSE(T.isArch16Bit());
   EXPECT_FALSE(T.isArch32Bit());
   EXPECT_TRUE(T.isArch64Bit());
-  T.getMacOSXVersion(Major, Minor, Micro);
-  EXPECT_EQ((unsigned)10, Major);
-  EXPECT_EQ((unsigned)4, Minor);
-  EXPECT_EQ((unsigned)0, Micro);
-  T.getiOSVersion(Major, Minor, Micro);
-  EXPECT_EQ((unsigned)5, Major);
-  EXPECT_EQ((unsigned)0, Minor);
-  EXPECT_EQ((unsigned)0, Micro);
+  T.getMacOSXVersion(Version);
+  EXPECT_EQ(VersionTuple(10, 4), Version);
+  Version = T.getiOSVersion();
+  EXPECT_EQ(VersionTuple(5), Version);
 
   T = Triple("x86_64-apple-macosx10.7");
   EXPECT_TRUE(T.isMacOSX());
@@ -1286,14 +1314,10 @@ TEST(TripleTest, getOSVersion) {
   EXPECT_FALSE(T.isArch16Bit());
   EXPECT_FALSE(T.isArch32Bit());
   EXPECT_TRUE(T.isArch64Bit());
-  T.getMacOSXVersion(Major, Minor, Micro);
-  EXPECT_EQ((unsigned)10, Major);
-  EXPECT_EQ((unsigned)7, Minor);
-  EXPECT_EQ((unsigned)0, Micro);
-  T.getiOSVersion(Major, Minor, Micro);
-  EXPECT_EQ((unsigned)5, Major);
-  EXPECT_EQ((unsigned)0, Minor);
-  EXPECT_EQ((unsigned)0, Micro);
+  T.getMacOSXVersion(Version);
+  EXPECT_EQ(VersionTuple(10, 7), Version);
+  Version = T.getiOSVersion();
+  EXPECT_EQ(VersionTuple(5), Version);
 
   T = Triple("x86_64-apple-macos11.0");
   EXPECT_TRUE(T.isMacOSX());
@@ -1301,10 +1325,8 @@ TEST(TripleTest, getOSVersion) {
   EXPECT_FALSE(T.isArch16Bit());
   EXPECT_FALSE(T.isArch32Bit());
   EXPECT_TRUE(T.isArch64Bit());
-  T.getMacOSXVersion(Major, Minor, Micro);
-  EXPECT_EQ((unsigned)11, Major);
-  EXPECT_EQ((unsigned)0, Minor);
-  EXPECT_EQ((unsigned)0, Micro);
+  T.getMacOSXVersion(Version);
+  EXPECT_EQ(VersionTuple(11, 0), Version);
 
   T = Triple("arm64-apple-macosx11.5.8");
   EXPECT_TRUE(T.isMacOSX());
@@ -1312,34 +1334,26 @@ TEST(TripleTest, getOSVersion) {
   EXPECT_FALSE(T.isArch16Bit());
   EXPECT_FALSE(T.isArch32Bit());
   EXPECT_TRUE(T.isArch64Bit());
-  T.getMacOSXVersion(Major, Minor, Micro);
-  EXPECT_EQ((unsigned)11, Major);
-  EXPECT_EQ((unsigned)5, Minor);
-  EXPECT_EQ((unsigned)8, Micro);
+  T.getMacOSXVersion(Version);
+  EXPECT_EQ(VersionTuple(11, 5, 8), Version);
 
   // 10.16 forms a valid triple, even though it's not
   // a version of a macOS.
   T = Triple("x86_64-apple-macos10.16");
   EXPECT_TRUE(T.isMacOSX());
-  T.getMacOSXVersion(Major, Minor, Micro);
-  EXPECT_EQ((unsigned)10, Major);
-  EXPECT_EQ((unsigned)16, Minor);
-  EXPECT_EQ((unsigned)0, Micro);
+  T.getMacOSXVersion(Version);
+  EXPECT_EQ(VersionTuple(10, 16), Version);
 
   T = Triple("x86_64-apple-darwin20");
   EXPECT_TRUE(T.isMacOSX());
-  T.getMacOSXVersion(Major, Minor, Micro);
-  EXPECT_EQ((unsigned)11, Major);
-  EXPECT_EQ((unsigned)0, Minor);
-  EXPECT_EQ((unsigned)0, Micro);
+  T.getMacOSXVersion(Version);
+  EXPECT_EQ(VersionTuple(11), Version);
 
   // For darwin triples on macOS 11, only compare the major version.
   T = Triple("x86_64-apple-darwin20.2");
   EXPECT_TRUE(T.isMacOSX());
-  T.getMacOSXVersion(Major, Minor, Micro);
-  EXPECT_EQ((unsigned)11, Major);
-  EXPECT_EQ((unsigned)0, Minor);
-  EXPECT_EQ((unsigned)0, Micro);
+  T.getMacOSXVersion(Version);
+  EXPECT_EQ(VersionTuple(11), Version);
 
   T = Triple("armv7-apple-ios");
   EXPECT_FALSE(T.isMacOSX());
@@ -1347,14 +1361,10 @@ TEST(TripleTest, getOSVersion) {
   EXPECT_FALSE(T.isArch16Bit());
   EXPECT_TRUE(T.isArch32Bit());
   EXPECT_FALSE(T.isArch64Bit());
-  T.getMacOSXVersion(Major, Minor, Micro);
-  EXPECT_EQ((unsigned)10, Major);
-  EXPECT_EQ((unsigned)4, Minor);
-  EXPECT_EQ((unsigned)0, Micro);
-  T.getiOSVersion(Major, Minor, Micro);
-  EXPECT_EQ((unsigned)5, Major);
-  EXPECT_EQ((unsigned)0, Minor);
-  EXPECT_EQ((unsigned)0, Micro);
+  T.getMacOSXVersion(Version);
+  EXPECT_EQ(VersionTuple(10, 4), Version);
+  Version = T.getiOSVersion();
+  EXPECT_EQ(VersionTuple(5), Version);
 
   T = Triple("armv7-apple-ios7.0");
   EXPECT_FALSE(T.isMacOSX());
@@ -1362,34 +1372,43 @@ TEST(TripleTest, getOSVersion) {
   EXPECT_FALSE(T.isArch16Bit());
   EXPECT_TRUE(T.isArch32Bit());
   EXPECT_FALSE(T.isArch64Bit());
-  T.getMacOSXVersion(Major, Minor, Micro);
-  EXPECT_EQ((unsigned)10, Major);
-  EXPECT_EQ((unsigned)4, Minor);
-  EXPECT_EQ((unsigned)0, Micro);
-  T.getiOSVersion(Major, Minor, Micro);
-  EXPECT_EQ((unsigned)7, Major);
-  EXPECT_EQ((unsigned)0, Minor);
-  EXPECT_EQ((unsigned)0, Micro);
+  T.getMacOSXVersion(Version);
+  EXPECT_EQ(VersionTuple(10, 4), Version);
+  Version = T.getiOSVersion();
+  EXPECT_EQ(VersionTuple(7, 0), Version);
   EXPECT_FALSE(T.isSimulatorEnvironment());
 
   T = Triple("x86_64-apple-ios10.3-simulator");
   EXPECT_TRUE(T.isiOS());
-  T.getiOSVersion(Major, Minor, Micro);
-  EXPECT_EQ((unsigned)10, Major);
-  EXPECT_EQ((unsigned)3, Minor);
-  EXPECT_EQ((unsigned)0, Micro);
+  Version = T.getiOSVersion();
+  EXPECT_EQ(VersionTuple(10, 3), Version);
   EXPECT_TRUE(T.isSimulatorEnvironment());
   EXPECT_FALSE(T.isMacCatalystEnvironment());
 
   T = Triple("x86_64-apple-ios13.0-macabi");
   EXPECT_TRUE(T.isiOS());
-  T.getiOSVersion(Major, Minor, Micro);
-  EXPECT_EQ((unsigned)13, Major);
-  EXPECT_EQ((unsigned)0, Minor);
-  EXPECT_EQ((unsigned)0, Micro);
+  Version = T.getiOSVersion();
+  EXPECT_EQ(VersionTuple(13, 0), Version);
   EXPECT_TRUE(T.getEnvironment() == Triple::MacABI);
   EXPECT_TRUE(T.isMacCatalystEnvironment());
   EXPECT_FALSE(T.isSimulatorEnvironment());
+}
+
+TEST(TripleTest, getEnvironmentVersion) {
+  Triple T;
+  VersionTuple Version;
+
+  T = Triple("arm-unknown-linux-android16");
+  EXPECT_TRUE(T.isAndroid());
+  Version = T.getEnvironmentVersion();
+  EXPECT_EQ(VersionTuple(16), Version);
+  EXPECT_EQ(Triple::Android, T.getEnvironment());
+
+  T = Triple("aarch64-unknown-linux-android21");
+  EXPECT_TRUE(T.isAndroid());
+  Version = T.getEnvironmentVersion();
+  EXPECT_EQ(VersionTuple(21), Version);
+  EXPECT_EQ(Triple::Android, T.getEnvironment());
 }
 
 TEST(TripleTest, isMacOSVersionLT) {
@@ -1536,6 +1555,15 @@ TEST(TripleTest, NormalizeWindows) {
             Triple::normalize("i686-pc-windows-elf-elf"));
 
   EXPECT_TRUE(Triple("x86_64-pc-win32").isWindowsMSVCEnvironment());
+}
+
+TEST(TripleTest, NormalizeAndroid) {
+  EXPECT_EQ("arm-unknown-linux-android16",
+            Triple::normalize("arm-linux-androideabi16"));
+  EXPECT_EQ("armv7a-unknown-linux-android",
+            Triple::normalize("armv7a-linux-androideabi"));
+  EXPECT_EQ("aarch64-unknown-linux-android21",
+            Triple::normalize("aarch64-linux-android21"));
 }
 
 TEST(TripleTest, getARMCPUForArch) {

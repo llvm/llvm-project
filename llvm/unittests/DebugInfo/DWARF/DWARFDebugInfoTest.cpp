@@ -43,8 +43,8 @@ namespace {
 template <uint16_t Version, class AddrType, class RefAddrType>
 void TestAllForms() {
   Triple Triple = getDefaultTargetTripleForAddrSize(sizeof(AddrType));
-  if (!isObjectEmissionSupported(Triple))
-    return;
+  if (!isConfigurationSupported(Triple))
+    GTEST_SKIP();
 
   // Test that we can decode all DW_FORM values correctly.
   const AddrType AddrValue = (AddrType)0x0123456789abcdefULL;
@@ -477,8 +477,8 @@ TEST(DWARFDebugInfo, TestDWARF32Version5Addr8AllForms) {
 
 template <uint16_t Version, class AddrType> void TestChildren() {
   Triple Triple = getDefaultTargetTripleForAddrSize(sizeof(AddrType));
-  if (!isObjectEmissionSupported(Triple))
-    return;
+  if (!isConfigurationSupported(Triple))
+    GTEST_SKIP();
 
   // Test that we can decode DW_FORM_ref_addr values correctly in DWARF 2 with
   // 4 byte addresses. DW_FORM_ref_addr values should be 4 bytes when using
@@ -619,8 +619,8 @@ TEST(DWARFDebugInfo, TestDWARF32Version4Addr8Children) {
 
 template <uint16_t Version, class AddrType> void TestReferences() {
   Triple Triple = getDefaultTargetTripleForAddrSize(sizeof(AddrType));
-  if (!isObjectEmissionSupported(Triple))
-    return;
+  if (!isConfigurationSupported(Triple))
+    GTEST_SKIP();
 
   // Test that we can decode DW_FORM_refXXX values correctly in DWARF.
   auto ExpectedDG = dwarfgen::Generator::create(Triple, Version);
@@ -881,8 +881,8 @@ TEST(DWARFDebugInfo, TestDWARF32Version4Addr8References) {
 
 template <uint16_t Version, class AddrType> void TestAddresses() {
   Triple Triple = getDefaultTargetTripleForAddrSize(sizeof(AddrType));
-  if (!isObjectEmissionSupported(Triple))
-    return;
+  if (!isConfigurationSupported(Triple))
+    GTEST_SKIP();
 
   // Test the DWARF APIs related to accessing the DW_AT_low_pc and
   // DW_AT_high_pc.
@@ -1069,8 +1069,8 @@ TEST(DWARFDebugInfo, DISABLED_TestStringOffsets) {
 TEST(DWARFDebugInfo, TestStringOffsets) {
 #endif
   Triple Triple = getNormalizedDefaultTargetTriple();
-  if (!isObjectEmissionSupported(Triple))
-    return;
+  if (!isConfigurationSupported(Triple))
+    GTEST_SKIP();
 
   const char *String1 = "Hello";
   const char *String2 = "World";
@@ -1133,8 +1133,8 @@ TEST(DWARFDebugInfo, TestStringOffsets) {
 
 TEST(DWARFDebugInfo, TestEmptyStringOffsets) {
   Triple Triple = getNormalizedDefaultTargetTriple();
-  if (!isObjectEmissionSupported(Triple))
-    return;
+  if (!isConfigurationSupported(Triple))
+    GTEST_SKIP();
 
   const char *String1 = "Hello";
 
@@ -1162,8 +1162,8 @@ TEST(DWARFDebugInfo, TestEmptyStringOffsets) {
 
 TEST(DWARFDebugInfo, TestRelations) {
   Triple Triple = getNormalizedDefaultTargetTriple();
-  if (!isObjectEmissionSupported(Triple))
-    return;
+  if (!isConfigurationSupported(Triple))
+    GTEST_SKIP();
 
   // Test the DWARF APIs related to accessing the DW_AT_low_pc and
   // DW_AT_high_pc.
@@ -1349,8 +1349,8 @@ TEST(DWARFDebugInfo, TestDWARFDie) {
 
 TEST(DWARFDebugInfo, TestChildIterators) {
   Triple Triple = getNormalizedDefaultTargetTriple();
-  if (!isObjectEmissionSupported(Triple))
-    return;
+  if (!isConfigurationSupported(Triple))
+    GTEST_SKIP();
 
   // Test the DWARF APIs related to iterating across the children of a DIE using
   // the DWARFDie::iterator class.
@@ -1458,8 +1458,8 @@ TEST(DWARFDebugInfo, TestEmptyChildren) {
 
 TEST(DWARFDebugInfo, TestAttributeIterators) {
   Triple Triple = getNormalizedDefaultTargetTriple();
-  if (!isObjectEmissionSupported(Triple))
-    return;
+  if (!isConfigurationSupported(Triple))
+    GTEST_SKIP();
 
   // Test the DWARF APIs related to iterating across all attribute values in a
   // a DWARFDie.
@@ -1504,7 +1504,7 @@ TEST(DWARFDebugInfo, TestAttributeIterators) {
 
   ASSERT_NE(E, I);
   EXPECT_EQ(I->Attr, DW_AT_name);
-  auto ActualCUPath = I->Value.getAsCString();
+  auto ActualCUPath = toString(I->Value);
   EXPECT_EQ(CUPath, *ActualCUPath);
 
   ASSERT_NE(E, ++I);
@@ -1520,8 +1520,8 @@ TEST(DWARFDebugInfo, TestAttributeIterators) {
 
 TEST(DWARFDebugInfo, TestFindRecurse) {
   Triple Triple = getNormalizedDefaultTargetTriple();
-  if (!isObjectEmissionSupported(Triple))
-    return;
+  if (!isConfigurationSupported(Triple))
+    GTEST_SKIP();
 
   uint16_t Version = 4;
   auto ExpectedDG = dwarfgen::Generator::create(Triple, Version);
@@ -1734,8 +1734,8 @@ TEST(DWARFDebugInfo, TestDwarfToFunctions) {
 
 TEST(DWARFDebugInfo, TestFindAttrs) {
   Triple Triple = getNormalizedDefaultTargetTriple();
-  if (!isObjectEmissionSupported(Triple))
-    return;
+  if (!isConfigurationSupported(Triple))
+    GTEST_SKIP();
 
   // Test the DWARFDie::find() and DWARFDie::findRecursively() that take an
   // ArrayRef<dwarf::Attribute> value to make sure they work correctly.
@@ -1797,8 +1797,8 @@ TEST(DWARFDebugInfo, TestFindAttrs) {
 
 TEST(DWARFDebugInfo, TestImplicitConstAbbrevs) {
   Triple Triple = getNormalizedDefaultTargetTriple();
-  if (!isObjectEmissionSupported(Triple))
-    return;
+  if (!isConfigurationSupported(Triple))
+    GTEST_SKIP();
 
   uint16_t Version = 5;
   auto ExpectedDG = dwarfgen::Generator::create(Triple, Version);
@@ -1923,7 +1923,7 @@ TEST(DWARFDebugInfo, TestImplicitConstAbbrevs) {
 TEST(DWARFDebugInfo, TestErrorReporting) {
   Triple Triple("x86_64-pc-linux");
   if (!isConfigurationSupported(Triple))
-      return;
+    GTEST_SKIP();
 
   auto ExpectedDG = dwarfgen::Generator::create(Triple, 4 /*DwarfVersion*/);
   ASSERT_THAT_EXPECTED(ExpectedDG, Succeeded());

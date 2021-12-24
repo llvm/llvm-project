@@ -376,6 +376,8 @@ HANDLE_LIBCALL(UINTTOFP_I128_F64, "__floatuntidf")
 HANDLE_LIBCALL(UINTTOFP_I128_F80, "__floatuntixf")
 HANDLE_LIBCALL(UINTTOFP_I128_F128, "__floatuntitf")
 HANDLE_LIBCALL(UINTTOFP_I128_PPCF128, "__floatuntitf")
+HANDLE_LIBCALL(CONVERT_F128_PPCF128, "__extendkftf2")
+HANDLE_LIBCALL(CONVERT_PPCF128_F128, "__trunctfkf2")
 
 // Comparison
 HANDLE_LIBCALL(OEQ_F32, "__eqsf2")
@@ -432,6 +434,7 @@ HANDLE_LIBCALL(MEMSET_ELEMENT_UNORDERED_ATOMIC_16, "__llvm_memset_element_unorde
 
 // Exception handling
 HANDLE_LIBCALL(UNWIND_RESUME, "_Unwind_Resume")
+HANDLE_LIBCALL(CXA_END_CLEANUP, "__cxa_end_cleanup")
 
 // Note: there are two sets of atomics libcalls; see
 // <https://llvm.org/docs/Atomics.html> for more info on the

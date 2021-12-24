@@ -162,7 +162,7 @@ bool FlattenCFGOpt::FlattenParallelAndOr(BasicBlock *BB, IRBuilder<> &Builder) {
       // of \param BB (BB4) and should not have address-taken.
       // There should exist only one such unconditional
       // branch among the predecessors.
-      if (UnCondBlock || !PP || (Preds.count(PP) == 0) ||
+      if (UnCondBlock || !PP || !Preds.contains(PP) ||
           Pred->hasAddressTaken())
         return false;
 
@@ -215,7 +215,7 @@ bool FlattenCFGOpt::FlattenParallelAndOr(BasicBlock *BB, IRBuilder<> &Builder) {
 
     // PS is the successor which is not BB. Check successors to identify
     // the last conditional branch.
-    if (Preds.count(PS) == 0) {
+    if (!Preds.contains(PS)) {
       // Case 2.
       LastCondBlock = Pred;
     } else {

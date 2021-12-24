@@ -62,9 +62,10 @@ public:
   std::string ABIName;
   std::string AssemblyLanguage;
   std::string SplitDwarfFile;
+  std::string COFFOutputFilename;
 
   const char *Argv0 = nullptr;
-  ArrayRef<const char *> CommandLineArgs;
+  ArrayRef<std::string> CommandLineArgs;
 
   /// Additional paths to search for `.include` directives when using the
   /// integrated assembler.

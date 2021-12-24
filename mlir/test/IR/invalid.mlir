@@ -20,6 +20,11 @@ func @nestedtensor(tensor<tensor<i8>>) -> () // expected-error {{invalid tensor 
 
 // -----
 
+// expected-error@+1 {{invalid dimension}}
+#large_dim = tensor<9223372036854775808xf32>
+
+// -----
+
 func @illegalmemrefelementtype(memref<?xtensor<i8>>) -> () // expected-error {{invalid memref element type}}
 
 // -----
@@ -949,7 +954,7 @@ func @zero_in_vector_type() -> vector<1x0xi32>
 
 // -----
 
-// expected-error @+1 {{expected dimension size in vector type}}
+// expected-error @+1 {{expected non-function type}}
 func @negative_vector_size() -> vector<-1xi32>
 
 // -----

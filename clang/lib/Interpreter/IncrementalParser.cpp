@@ -291,4 +291,11 @@ IncrementalParser::Parse(llvm::StringRef input) {
 
   return PTU;
 }
+
+llvm::StringRef IncrementalParser::GetMangledName(GlobalDecl GD) const {
+  CodeGenerator *CG = getCodeGen(Act.get());
+  assert(CG);
+  return CG->GetMangledName(GD);
+}
+
 } // end namespace clang

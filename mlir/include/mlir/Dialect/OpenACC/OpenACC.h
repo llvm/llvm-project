@@ -36,7 +36,7 @@ namespace acc {
 /// combined and the final mapping value would be 5 (4 | 1).
 enum OpenACCExecMapping { NONE = 0, VECTOR = 1, WORKER = 2, GANG = 4 };
 
-} // end namespace acc
-} // end namespace mlir
+} // namespace acc
+} // namespace mlir
 
 #endif // MLIR_DIALECT_OPENACC_OPENACC_H_

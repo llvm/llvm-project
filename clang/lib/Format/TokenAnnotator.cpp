@@ -242,7 +242,7 @@ private:
       bool OperatorCalledAsMemberFunction =
           Prev->Previous && Prev->Previous->isOneOf(tok::period, tok::arrow);
       Contexts.back().IsExpression = OperatorCalledAsMemberFunction;
-    } else if (Style.Language == FormatStyle::LK_JavaScript &&
+    } else if (Style.isJavaScript() &&
                (Line.startsWith(Keywords.kw_type, tok::identifier) ||
                 Line.startsWith(tok::kw_export, Keywords.kw_type,
                                 tok::identifier))) {
@@ -256,13 +256,13 @@ private:
                 Left->Previous->is(TT_BinaryOperator))) {
       // static_assert, if and while usually contain expressions.
       Contexts.back().IsExpression = true;
-    } else if (Style.Language == FormatStyle::LK_JavaScript && Left->Previous &&
+    } else if (Style.isJavaScript() && Left->Previous &&
                (Left->Previous->is(Keywords.kw_function) ||
                 (Left->Previous->endsSequence(tok::identifier,
                                               Keywords.kw_function)))) {
       // function(...) or function f(...)
       Contexts.back().IsExpression = false;
-    } else if (Style.Language == FormatStyle::LK_JavaScript && Left->Previous &&
+    } else if (Style.isJavaScript() && Left->Previous &&
                Left->Previous->is(TT_JsTypeColon)) {
       // let x: (SomeType);
       Contexts.back().IsExpression = false;
@@ -314,10 +314,11 @@ private:
     //
     // void (*FunctionPointer)(void);
     // void (&FunctionReference)(void);
+    // void (&&FunctionReference)(void);
     // void (^ObjCBlock)(void);
     bool MightBeFunctionType = !Contexts[Contexts.size() - 2].IsExpression;
     bool ProbablyFunctionType =
-        CurrentToken->isOneOf(tok::star, tok::amp, tok::caret);
+        CurrentToken->isOneOf(tok::star, tok::amp, tok::ampamp, tok::caret);
     bool HasMultipleLines = false;
     bool HasMultipleParametersOnALine = false;
     bool MightBeObjCForRangeLoop =
@@ -581,7 +582,7 @@ private:
         Left->setType(TT_InlineASMSymbolicNameLSquare);
       } else if (IsCpp11AttributeSpecifier) {
         Left->setType(TT_AttributeSquare);
-      } else if (Style.Language == FormatStyle::LK_JavaScript && Parent &&
+      } else if (Style.isJavaScript() && Parent &&
                  Contexts.back().ContextKind == tok::l_brace &&
                  Parent->isOneOf(tok::l_brace, tok::comma)) {
         Left->setType(TT_JsComputedPropertyName);
@@ -645,8 +646,7 @@ private:
 
     ScopedContextCreator ContextCreator(*this, tok::l_square, BindingIncrease);
     Contexts.back().IsExpression = true;
-    if (Style.Language == FormatStyle::LK_JavaScript && Parent &&
-        Parent->is(TT_JsTypeColon))
+    if (Style.isJavaScript() && Parent && Parent->is(TT_JsTypeColon))
       Contexts.back().IsExpression = false;
 
     Contexts.back().ColonIsObjCMethodExpr = StartsObjCMethodExpr;
@@ -773,7 +773,7 @@ private:
       Contexts.back().ColonIsDictLiteral = true;
       if (Left->is(BK_BracedInit))
         Contexts.back().IsExpression = true;
-      if (Style.Language == FormatStyle::LK_JavaScript && Left->Previous &&
+      if (Style.isJavaScript() && Left->Previous &&
           Left->Previous->is(TT_JsTypeColon))
         Contexts.back().IsExpression = false;
 
@@ -807,12 +807,11 @@ private:
                 Previous->is(tok::string_literal))
               Previous->setType(TT_SelectorName);
           }
-          if (CurrentToken->is(tok::colon) ||
-              Style.Language == FormatStyle::LK_JavaScript)
+          if (CurrentToken->is(tok::colon) || Style.isJavaScript())
             Left->setType(TT_DictLiteral);
         }
         if (CurrentToken->is(tok::comma)) {
-          if (Style.Language == FormatStyle::LK_JavaScript)
+          if (Style.isJavaScript())
             Left->setType(TT_DictLiteral);
           ++CommaCount;
         }
@@ -878,7 +877,7 @@ private:
       if (!Tok->Previous)
         return false;
       // Colons from ?: are handled in parseConditional().
-      if (Style.Language == FormatStyle::LK_JavaScript) {
+      if (Style.isJavaScript()) {
         if (Contexts.back().ColonIsForRangeExpr || // colon in for loop
             (Contexts.size() == 1 &&               // switch/case labels
              !Line.First->isOneOf(tok::kw_enum, tok::kw_case)) ||
@@ -902,9 +901,13 @@ private:
           break;
         }
       }
-      if (Contexts.back().ColonIsDictLiteral ||
-          Style.Language == FormatStyle::LK_Proto ||
-          Style.Language == FormatStyle::LK_TextProto) {
+      if (Line.First->isOneOf(Keywords.kw_module, Keywords.kw_import) ||
+          Line.First->startsSequence(tok::kw_export, Keywords.kw_module) ||
+          Line.First->startsSequence(tok::kw_export, Keywords.kw_import)) {
+        Tok->setType(TT_ModulePartitionColon);
+      } else if (Contexts.back().ColonIsDictLiteral ||
+                 Style.Language == FormatStyle::LK_Proto ||
+                 Style.Language == FormatStyle::LK_TextProto) {
         Tok->setType(TT_DictLiteral);
         if (Style.Language == FormatStyle::LK_TextProto) {
           if (FormatToken *Previous = Tok->getPreviousNonComment())
@@ -946,11 +949,15 @@ private:
                  !Line.First->isOneOf(tok::kw_enum, tok::kw_case,
                                       tok::kw_default)) {
         FormatToken *Prev = Tok->getPreviousNonComment();
+        if (!Prev)
+          break;
         if (Prev->isOneOf(tok::r_paren, tok::kw_noexcept))
           Tok->setType(TT_CtorInitializerColon);
         else if (Prev->is(tok::kw_try)) {
           // Member initializer list within function try block.
           FormatToken *PrevPrev = Prev->getPreviousNonComment();
+          if (!PrevPrev)
+            break;
           if (PrevPrev && PrevPrev->isOneOf(tok::r_paren, tok::kw_noexcept))
             Tok->setType(TT_CtorInitializerColon);
         } else
@@ -970,8 +977,7 @@ private:
     case tok::amp:
       // | and & in declarations/type expressions represent union and
       // intersection types, respectively.
-      if (Style.Language == FormatStyle::LK_JavaScript &&
-          !Contexts.back().IsExpression)
+      if (Style.isJavaScript() && !Contexts.back().IsExpression)
         Tok->setType(TT_JsTypeOperator);
       break;
     case tok::kw_if:
@@ -986,7 +992,7 @@ private:
       }
       break;
     case tok::kw_for:
-      if (Style.Language == FormatStyle::LK_JavaScript) {
+      if (Style.isJavaScript()) {
         // x.for and {for: ...}
         if ((Tok->Previous && Tok->Previous->is(tok::period)) ||
             (Tok->Next && Tok->Next->is(tok::colon)))
@@ -995,6 +1001,8 @@ private:
         if (CurrentToken && CurrentToken->is(Keywords.kw_await))
           next();
       }
+      if (Style.isCpp() && CurrentToken && CurrentToken->is(tok::kw_co_await))
+        next();
       Contexts.back().ColonIsForRangeExpr = true;
       next();
       if (!parseParens())
@@ -1095,7 +1103,7 @@ private:
         CurrentToken->Previous->setType(TT_OverloadedOperator);
       break;
     case tok::question:
-      if (Style.Language == FormatStyle::LK_JavaScript && Tok->Next &&
+      if (Style.isJavaScript() && Tok->Next &&
           Tok->Next->isOneOf(tok::semi, tok::comma, tok::colon, tok::r_paren,
                              tok::r_brace)) {
         // Question marks before semicolons, colons, etc. indicate optional
@@ -1108,7 +1116,7 @@ private:
       // Declarations cannot be conditional expressions, this can only be part
       // of a type declaration.
       if (Line.MustBeDeclaration && !Contexts.back().IsExpression &&
-          Style.Language == FormatStyle::LK_JavaScript)
+          Style.isJavaScript())
         break;
       if (Style.isCSharp()) {
         // `Type?)`, `Type?>`, `Type? name;` and `Type? name =` can only be
@@ -1241,7 +1249,7 @@ private:
     if (!CurrentToken)
       return Type;
 
-    if (Style.Language == FormatStyle::LK_JavaScript && IsFirstToken) {
+    if (Style.isJavaScript() && IsFirstToken) {
       // JavaScript files can contain shebang lines of the form:
       // #!/usr/bin/env node
       // Treat these like C++ #include directives.
@@ -1343,14 +1351,13 @@ public:
     bool ImportStatement = false;
 
     // import {...} from '...';
-    if (Style.Language == FormatStyle::LK_JavaScript &&
-        CurrentToken->is(Keywords.kw_import))
+    if (Style.isJavaScript() && CurrentToken->is(Keywords.kw_import))
       ImportStatement = true;
 
     while (CurrentToken) {
       if (CurrentToken->is(tok::kw_virtual))
         KeywordVirtualFound = true;
-      if (Style.Language == FormatStyle::LK_JavaScript) {
+      if (Style.isJavaScript()) {
         // export {...} from '...';
         // An export followed by "from 'some string';" is a re-export from
         // another module identified by a URI and is treated as a
@@ -1493,7 +1500,7 @@ private:
         !Line.First->isOneOf(tok::kw_template, tok::kw_using, tok::kw_return) &&
         // Type aliases use `type X = ...;` in TypeScript and can be exported
         // using `export type ...`.
-        !(Style.Language == FormatStyle::LK_JavaScript &&
+        !(Style.isJavaScript() &&
           (Line.startsWith(Keywords.kw_type, tok::identifier) ||
            Line.startsWith(tok::kw_export, Keywords.kw_type,
                            tok::identifier))) &&
@@ -1578,6 +1585,8 @@ private:
         if (TemplateCloser->is(tok::l_paren)) {
           // No Matching Paren yet so skip to matching paren
           TemplateCloser = untilMatchingParen(TemplateCloser);
+          if (!TemplateCloser)
+            break;
         }
         if (TemplateCloser->is(tok::less))
           NestingLevel++;
@@ -1620,11 +1629,11 @@ private:
       // The token type is already known.
       return;
 
-    if ((Style.Language == FormatStyle::LK_JavaScript || Style.isCSharp()) &&
+    if ((Style.isJavaScript() || Style.isCSharp()) &&
         Current.is(tok::exclaim)) {
       if (Current.Previous) {
         bool IsIdentifier =
-            Style.Language == FormatStyle::LK_JavaScript
+            Style.isJavaScript()
                 ? Keywords.IsJavaScriptIdentifier(
                       *Current.Previous, /* AcceptIdentifierName= */ true)
                 : Current.Previous->is(tok::identifier);
@@ -1666,7 +1675,7 @@ private:
       Current.setType(TT_LambdaArrow);
     } else if (Current.is(tok::arrow) && AutoFound && Line.MustBeDeclaration &&
                Current.NestingLevel == 0 &&
-               !Current.Previous->is(tok::kw_operator)) {
+               !Current.Previous->isOneOf(tok::kw_operator, tok::identifier)) {
       // not auto operator->() -> xxx;
       Current.setType(TT_TrailingReturnArrow);
     } else if (Current.is(tok::arrow) && Current.Previous &&
@@ -1691,8 +1700,8 @@ private:
     } else if (Current.isOneOf(tok::exclaim, tok::tilde)) {
       Current.setType(TT_UnaryOperator);
     } else if (Current.is(tok::question)) {
-      if (Style.Language == FormatStyle::LK_JavaScript &&
-          Line.MustBeDeclaration && !Contexts.back().IsExpression) {
+      if (Style.isJavaScript() && Line.MustBeDeclaration &&
+          !Contexts.back().IsExpression) {
         // In JavaScript, `interface X { foo?(): bar; }` is an optional method
         // on the interface, not a ternary expression.
         Current.setType(TT_JsTypeOptionalQuestion);
@@ -1735,8 +1744,7 @@ private:
                 Current.setType(TT_FunctionAnnotationRParen);
           }
         }
-    } else if (Current.is(tok::at) && Current.Next &&
-               Style.Language != FormatStyle::LK_JavaScript &&
+    } else if (Current.is(tok::at) && Current.Next && !Style.isJavaScript() &&
                Style.Language != FormatStyle::LK_Java) {
       // In Java & JavaScript, "@..." is a decorator or annotation. In ObjC, it
       // marks declarations and properties that need special formatting.
@@ -1783,7 +1791,7 @@ private:
       // function declaration have been found.
       Current.setType(TT_TrailingAnnotation);
     } else if ((Style.Language == FormatStyle::LK_Java ||
-                Style.Language == FormatStyle::LK_JavaScript) &&
+                Style.isJavaScript()) &&
                Current.Previous) {
       if (Current.Previous->is(tok::at) &&
           Current.isNot(Keywords.kw_interface)) {
@@ -1813,14 +1821,16 @@ private:
     if (Tok.Previous->isOneOf(TT_LeadingJavaAnnotation, Keywords.kw_instanceof,
                               Keywords.kw_as))
       return false;
-    if (Style.Language == FormatStyle::LK_JavaScript &&
-        Tok.Previous->is(Keywords.kw_in))
+    if (Style.isJavaScript() && Tok.Previous->is(Keywords.kw_in))
       return false;
 
     // Skip "const" as it does not have an influence on whether this is a name.
     FormatToken *PreviousNotConst = Tok.getPreviousNonComment();
-    while (PreviousNotConst && PreviousNotConst->is(tok::kw_const))
-      PreviousNotConst = PreviousNotConst->getPreviousNonComment();
+
+    // For javascript const can be like "let" or "var"
+    if (!Style.isJavaScript())
+      while (PreviousNotConst && PreviousNotConst->is(tok::kw_const))
+        PreviousNotConst = PreviousNotConst->getPreviousNonComment();
 
     if (!PreviousNotConst)
       return false;
@@ -1839,10 +1849,24 @@ private:
         PreviousNotConst->is(TT_TypeDeclarationParen))
       return true;
 
-    return (!IsPPKeyword &&
-            PreviousNotConst->isOneOf(tok::identifier, tok::kw_auto)) ||
-           PreviousNotConst->is(TT_PointerOrReference) ||
-           PreviousNotConst->isSimpleTypeSpecifier();
+    // If is a preprocess keyword like #define.
+    if (IsPPKeyword)
+      return false;
+
+    // int a or auto a.
+    if (PreviousNotConst->isOneOf(tok::identifier, tok::kw_auto))
+      return true;
+
+    // *a or &a or &&a.
+    if (PreviousNotConst->is(TT_PointerOrReference))
+      return true;
+
+    // MyClass a;
+    if (PreviousNotConst->isSimpleTypeSpecifier())
+      return true;
+
+    // const a = in JavaScript.
+    return (Style.isJavaScript() && PreviousNotConst->is(tok::kw_const));
   }
 
   /// Determine whether ')' is ending a cast.
@@ -1993,7 +2017,7 @@ private:
   /// Return the type of the given token assuming it is * or &.
   TokenType determineStarAmpUsage(const FormatToken &Tok, bool IsExpression,
                                   bool InTemplateArgument) {
-    if (Style.Language == FormatStyle::LK_JavaScript)
+    if (Style.isJavaScript())
       return TT_BinaryOperator;
 
     // && in C# must be a binary operator.
@@ -2021,9 +2045,8 @@ private:
                            tok::comma, tok::semi, tok::kw_return, tok::colon,
                            tok::kw_co_return, tok::kw_co_await,
                            tok::kw_co_yield, tok::equal, tok::kw_delete,
-                           tok::kw_sizeof, tok::kw_throw) ||
-        PrevToken->isOneOf(TT_BinaryOperator, TT_ConditionalExpr,
-                           TT_UnaryOperator, TT_CastRParen))
+                           tok::kw_sizeof, tok::kw_throw, TT_BinaryOperator,
+                           TT_ConditionalExpr, TT_UnaryOperator, TT_CastRParen))
       return TT_UnaryOperator;
 
     if (NextToken->is(tok::l_square) && NextToken->isNot(TT_LambdaLSquare))
@@ -2161,8 +2184,8 @@ public:
 
       int CurrentPrecedence = getCurrentPrecedence();
 
-      if (Current && Current->is(TT_SelectorName) &&
-          Precedence == CurrentPrecedence) {
+      if (Precedence == CurrentPrecedence && Current &&
+          Current->is(TT_SelectorName)) {
         if (LatestOperator)
           addFakeParenthesis(Start, prec::Level(Precedence));
         Start = Current;
@@ -2238,19 +2261,17 @@ private:
         return 0;
       if (Current->is(TT_RangeBasedForLoopColon))
         return prec::Comma;
-      if ((Style.Language == FormatStyle::LK_Java ||
-           Style.Language == FormatStyle::LK_JavaScript) &&
+      if ((Style.Language == FormatStyle::LK_Java || Style.isJavaScript()) &&
           Current->is(Keywords.kw_instanceof))
         return prec::Relational;
-      if (Style.Language == FormatStyle::LK_JavaScript &&
+      if (Style.isJavaScript() &&
           Current->isOneOf(Keywords.kw_in, Keywords.kw_as))
         return prec::Relational;
       if (Current->is(TT_BinaryOperator) || Current->is(tok::comma))
         return Current->getPrecedence();
       if (Current->isOneOf(tok::period, tok::arrow))
         return PrecedenceArrowAndPeriod;
-      if ((Style.Language == FormatStyle::LK_Java ||
-           Style.Language == FormatStyle::LK_JavaScript) &&
+      if ((Style.Language == FormatStyle::LK_Java || Style.isJavaScript()) &&
           Current->isOneOf(Keywords.kw_extends, Keywords.kw_implements,
                            Keywords.kw_throws))
         return 0;
@@ -2322,11 +2343,9 @@ private:
 void TokenAnnotator::setCommentLineLevels(
     SmallVectorImpl<AnnotatedLine *> &Lines) {
   const AnnotatedLine *NextNonCommentLine = nullptr;
-  for (SmallVectorImpl<AnnotatedLine *>::reverse_iterator I = Lines.rbegin(),
-                                                          E = Lines.rend();
-       I != E; ++I) {
+  for (AnnotatedLine *AL : llvm::reverse(Lines)) {
     bool CommentLine = true;
-    for (const FormatToken *Tok = (*I)->First; Tok; Tok = Tok->Next) {
+    for (const FormatToken *Tok = AL->First; Tok; Tok = Tok->Next) {
       if (!Tok->is(tok::comment)) {
         CommentLine = false;
         break;
@@ -2338,21 +2357,20 @@ void TokenAnnotator::setCommentLineLevels(
     if (NextNonCommentLine && CommentLine &&
         NextNonCommentLine->First->NewlinesBefore <= 1 &&
         NextNonCommentLine->First->OriginalColumn ==
-            (*I)->First->OriginalColumn) {
+            AL->First->OriginalColumn) {
       // Align comments for preprocessor lines with the # in column 0 if
       // preprocessor lines are not indented. Otherwise, align with the next
       // line.
-      (*I)->Level =
-          (Style.IndentPPDirectives != FormatStyle::PPDIS_BeforeHash &&
-           (NextNonCommentLine->Type == LT_PreprocessorDirective ||
-            NextNonCommentLine->Type == LT_ImportStatement))
-              ? 0
-              : NextNonCommentLine->Level;
+      AL->Level = (Style.IndentPPDirectives != FormatStyle::PPDIS_BeforeHash &&
+                   (NextNonCommentLine->Type == LT_PreprocessorDirective ||
+                    NextNonCommentLine->Type == LT_ImportStatement))
+                      ? 0
+                      : NextNonCommentLine->Level;
     } else {
-      NextNonCommentLine = (*I)->First->isNot(tok::r_brace) ? (*I) : nullptr;
+      NextNonCommentLine = AL->First->isNot(tok::r_brace) ? AL : nullptr;
     }
 
-    setCommentLineLevels((*I)->Children);
+    setCommentLineLevels(AL->Children);
   }
 }
 
@@ -2364,11 +2382,9 @@ static unsigned maxNestingDepth(const AnnotatedLine &Line) {
 }
 
 void TokenAnnotator::annotate(AnnotatedLine &Line) {
-  for (SmallVectorImpl<AnnotatedLine *>::iterator I = Line.Children.begin(),
-                                                  E = Line.Children.end();
-       I != E; ++I) {
-    annotate(**I);
-  }
+  for (auto &Child : Line.Children)
+    annotate(*Child);
+
   AnnotatingParser Parser(Style, Line, Keywords);
   Line.Type = Parser.parseLine();
 
@@ -2641,8 +2657,8 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) {
     if (Current->Role)
       Current->Role->precomputeFormattingInfos(Current);
     if (Current->MatchingParen &&
-        Current->MatchingParen->opensBlockOrBlockTypeList(Style)) {
-      assert(IndentLevel > 0);
+        Current->MatchingParen->opensBlockOrBlockTypeList(Style) &&
+        IndentLevel > 0) {
       --IndentLevel;
     }
     Current->IndentLevel = IndentLevel;
@@ -2724,7 +2740,7 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
       return 2;
     if (Left.is(tok::comma) && Left.NestingLevel == 0)
       return 3;
-  } else if (Style.Language == FormatStyle::LK_JavaScript) {
+  } else if (Style.isJavaScript()) {
     if (Right.is(Keywords.kw_function) && Left.isNot(tok::comma))
       return 100;
     if (Left.is(TT_JsTypeColon))
@@ -2906,7 +2922,7 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
 
 bool TokenAnnotator::spaceRequiredBeforeParens(const FormatToken &Right) const {
   return Style.SpaceBeforeParens == FormatStyle::SBPO_Always ||
-         (Style.SpaceBeforeParens == FormatStyle::SBPO_NonEmptyParentheses &&
+         (Style.SpaceBeforeParensOptions.BeforeNonEmptyParentheses &&
           Right.ParameterCount > 0);
 }
 
@@ -2940,9 +2956,18 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
       return true;
   }
 
-  // requires ( or requires(
-  if (Right.is(tok::l_paren) && Left.is(tok::kw_requires))
-    return spaceRequiredBeforeParens(Right);
+  // auto{x} auto(x)
+  if (Left.is(tok::kw_auto) && Right.isOneOf(tok::l_paren, tok::l_brace))
+    return false;
+
+  // operator co_await(x)
+  if (Right.is(tok::l_paren) && Left.is(tok::kw_co_await) && Left.Previous &&
+      Left.Previous->is(tok::kw_operator))
+    return false;
+  // co_await (x), co_yield (x), co_return (x)
+  if (Left.isOneOf(tok::kw_co_await, tok::kw_co_yield, tok::kw_co_return) &&
+      Right.isNot(tok::semi))
+    return true;
   // requires clause Concept1<T> && Concept2<T>
   if (Left.is(TT_ConstraintJunctions) && Right.is(tok::identifier))
     return true;
@@ -3005,8 +3030,14 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
          Style.SpaceAroundPointerQualifiers == FormatStyle::SAPQ_Both) &&
         (Left.is(TT_AttributeParen) || Left.canBePointerOrReferenceQualifier()))
       return true;
+    if (Left.Tok.isLiteral())
+      return true;
+    // for (auto a = 0, b = 0; const auto & c : {1, 2, 3})
+    if (Left.isTypeOrIdentifier() && Right.Next && Right.Next->Next &&
+        Right.Next->Next->is(TT_RangeBasedForLoopColon))
+      return getTokenPointerOrReferenceAlignment(Right) !=
+             FormatStyle::PAS_Left;
     return (
-        Left.Tok.isLiteral() ||
         (!Left.isOneOf(TT_PointerOrReference, tok::l_paren) &&
          (getTokenPointerOrReferenceAlignment(Right) != FormatStyle::PAS_Left ||
           (Line.IsMultiVariableDeclStmt &&
@@ -3025,18 +3056,32 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
          Style.SpaceAroundPointerQualifiers == FormatStyle::SAPQ_Both) &&
         Right.canBePointerOrReferenceQualifier())
       return true;
-    return Right.Tok.isLiteral() || Right.is(TT_BlockComment) ||
-           (Right.isOneOf(Keywords.kw_override, Keywords.kw_final) &&
-            !Right.is(TT_StartOfName)) ||
-           (Right.is(tok::l_brace) && Right.is(BK_Block)) ||
-           (!Right.isOneOf(TT_PointerOrReference, TT_ArraySubscriptLSquare,
-                           tok::l_paren) &&
-            (getTokenPointerOrReferenceAlignment(Left) !=
-                 FormatStyle::PAS_Right &&
-             !Line.IsMultiVariableDeclStmt) &&
-            Left.Previous &&
-            !Left.Previous->isOneOf(tok::l_paren, tok::coloncolon,
-                                    tok::l_square));
+    // & 1
+    if (Right.Tok.isLiteral())
+      return true;
+    // & /* comment
+    if (Right.is(TT_BlockComment))
+      return true;
+    // foo() -> const Bar * override/final
+    if (Right.isOneOf(Keywords.kw_override, Keywords.kw_final) &&
+        !Right.is(TT_StartOfName))
+      return true;
+    // & {
+    if (Right.is(tok::l_brace) && Right.is(BK_Block))
+      return true;
+    // for (auto a = 0, b = 0; const auto& c : {1, 2, 3})
+    if (Left.Previous && Left.Previous->isTypeOrIdentifier() && Right.Next &&
+        Right.Next->is(TT_RangeBasedForLoopColon))
+      return getTokenPointerOrReferenceAlignment(Left) !=
+             FormatStyle::PAS_Right;
+    return !Right.isOneOf(TT_PointerOrReference, TT_ArraySubscriptLSquare,
+                          tok::l_paren) &&
+           (getTokenPointerOrReferenceAlignment(Left) !=
+                FormatStyle::PAS_Right &&
+            !Line.IsMultiVariableDeclStmt) &&
+           Left.Previous &&
+           !Left.Previous->isOneOf(tok::l_paren, tok::coloncolon,
+                                   tok::l_square);
   }
   // Ensure right pointer alignment with ellipsis e.g. int *...P
   if (Left.is(tok::ellipsis) && Left.Previous &&
@@ -3127,40 +3172,70 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     return Style.Cpp11BracedListStyle ? Style.SpacesInParentheses : true;
   if (Left.is(TT_BlockComment))
     // No whitespace in x(/*foo=*/1), except for JavaScript.
-    return Style.Language == FormatStyle::LK_JavaScript ||
-           !Left.TokenText.endswith("=*/");
+    return Style.isJavaScript() || !Left.TokenText.endswith("=*/");
 
   // Space between template and attribute.
   // e.g. template <typename T> [[nodiscard]] ...
   if (Left.is(TT_TemplateCloser) && Right.is(TT_AttributeSquare))
     return true;
+  // Space before parentheses common for all languages
   if (Right.is(tok::l_paren)) {
+    if (Left.is(TT_TemplateCloser) && Right.isNot(TT_FunctionTypeLParen))
+      return spaceRequiredBeforeParens(Right);
+    if (Left.is(tok::kw_requires))
+      return spaceRequiredBeforeParens(Right);
     if ((Left.is(tok::r_paren) && Left.is(TT_AttributeParen)) ||
         (Left.is(tok::r_square) && Left.is(TT_AttributeSquare)))
       return true;
-    if (Style.SpaceBeforeParens ==
-            FormatStyle::SBPO_ControlStatementsExceptControlMacros &&
-        Left.is(TT_ForEachMacro))
-      return false;
-    if (Style.SpaceBeforeParens ==
-            FormatStyle::SBPO_ControlStatementsExceptControlMacros &&
-        Left.is(TT_IfMacro))
-      return false;
-    return Line.Type == LT_ObjCDecl || Left.is(tok::semi) ||
-           (Style.SpaceBeforeParens != FormatStyle::SBPO_Never &&
-            (Left.isOneOf(tok::pp_elif, tok::kw_for, tok::kw_while,
-                          tok::kw_switch, tok::kw_case, TT_ForEachMacro,
-                          TT_ObjCForIn) ||
-             Left.isIf(Line.Type != LT_PreprocessorDirective) ||
-             (Left.isOneOf(tok::kw_try, Keywords.kw___except, tok::kw_catch,
-                           tok::kw_new, tok::kw_delete) &&
-              (!Left.Previous || Left.Previous->isNot(tok::period))))) ||
-           (spaceRequiredBeforeParens(Right) &&
-            (Left.is(tok::identifier) || Left.isFunctionLikeKeyword() ||
-             Left.is(tok::r_paren) || Left.isSimpleTypeSpecifier() ||
-             (Left.is(tok::r_square) && Left.MatchingParen &&
-              Left.MatchingParen->is(TT_LambdaLSquare))) &&
-            Line.Type != LT_PreprocessorDirective);
+    if (Left.is(TT_ForEachMacro))
+      return (Style.SpaceBeforeParensOptions.AfterForeachMacros ||
+              spaceRequiredBeforeParens(Right));
+    if (Left.is(TT_IfMacro))
+      return (Style.SpaceBeforeParensOptions.AfterIfMacros ||
+              spaceRequiredBeforeParens(Right));
+    if (Line.Type == LT_ObjCDecl)
+      return true;
+    if (Left.is(tok::semi))
+      return true;
+    if (Left.isOneOf(tok::pp_elif, tok::kw_for, tok::kw_while, tok::kw_switch,
+                     tok::kw_case, TT_ForEachMacro, TT_ObjCForIn))
+      return Style.SpaceBeforeParensOptions.AfterControlStatements ||
+             spaceRequiredBeforeParens(Right);
+    if (Left.isIf(Line.Type != LT_PreprocessorDirective))
+      return Style.SpaceBeforeParensOptions.AfterControlStatements ||
+             spaceRequiredBeforeParens(Right);
+
+    // TODO add Operator overloading specific Options to
+    // SpaceBeforeParensOptions
+    if (Right.is(TT_OverloadedOperatorLParen))
+      return spaceRequiredBeforeParens(Right);
+    // Function declaration or definition
+    if (Line.MightBeFunctionDecl && (Left.is(TT_FunctionDeclarationName))) {
+      if (Line.mightBeFunctionDefinition())
+        return Style.SpaceBeforeParensOptions.AfterFunctionDefinitionName ||
+               spaceRequiredBeforeParens(Right);
+      else
+        return Style.SpaceBeforeParensOptions.AfterFunctionDeclarationName ||
+               spaceRequiredBeforeParens(Right);
+    }
+    // Lambda
+    if (Line.Type != LT_PreprocessorDirective && Left.is(tok::r_square) &&
+        Left.MatchingParen && Left.MatchingParen->is(TT_LambdaLSquare))
+      return Style.SpaceBeforeParensOptions.AfterFunctionDefinitionName ||
+             spaceRequiredBeforeParens(Right);
+    if (!Left.Previous || Left.Previous->isNot(tok::period)) {
+      if (Left.isOneOf(tok::kw_try, Keywords.kw___except, tok::kw_catch))
+        return Style.SpaceBeforeParensOptions.AfterControlStatements ||
+               spaceRequiredBeforeParens(Right);
+      if (Left.isOneOf(tok::kw_new, tok::kw_delete))
+        return Style.SpaceBeforeParens != FormatStyle::SBPO_Never ||
+               spaceRequiredBeforeParens(Right);
+    }
+    if (Line.Type != LT_PreprocessorDirective &&
+        (Left.is(tok::identifier) || Left.isFunctionLikeKeyword() ||
+         Left.is(tok::r_paren) || Left.isSimpleTypeSpecifier()))
+      return spaceRequiredBeforeParens(Right);
+    return false;
   }
   if (Left.is(tok::at) && Right.Tok.getObjCKeywordID() != tok::objc_not_keyword)
     return false;
@@ -3175,7 +3250,13 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     return false;
   if (Left.is(tok::period) || Right.is(tok::period))
     return false;
-  if (Right.is(tok::hash) && Left.is(tok::identifier) && Left.TokenText == "L")
+  // u#str, U#str, L#str, u8#str
+  // uR#str, UR#str, LR#str, u8R#str
+  if (Right.is(tok::hash) && Left.is(tok::identifier) &&
+      (Left.TokenText == "L" || Left.TokenText == "u" ||
+       Left.TokenText == "U" || Left.TokenText == "u8" ||
+       Left.TokenText == "LR" || Left.TokenText == "uR" ||
+       Left.TokenText == "UR" || Left.TokenText == "u8R"))
     return false;
   if (Left.is(TT_TemplateCloser) && Left.MatchingParen &&
       Left.MatchingParen->Previous &&
@@ -3202,6 +3283,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     // qualifiers such as
     // void Fn() const &;
     return getTokenReferenceAlignment(Right) != FormatStyle::PAS_Left;
+
   return true;
 }
 
@@ -3211,9 +3293,35 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   auto HasExistingWhitespace = [&Right]() {
     return Right.WhitespaceRange.getBegin() != Right.WhitespaceRange.getEnd();
   };
+
   if (Right.Tok.getIdentifierInfo() && Left.Tok.getIdentifierInfo())
     return true; // Never ever merge two identifiers.
+
+  // Leave a space between * and /* to avoid C4138 `comment end` found outside
+  // of comment.
+  if (Left.is(tok::star) && Right.is(tok::comment))
+    return true;
+
   if (Style.isCpp()) {
+    // Space between import <iostream>.
+    // or import .....;
+    if (Left.is(Keywords.kw_import) && Right.isOneOf(tok::less, tok::ellipsis))
+      return true;
+    // No space between module :.
+    if (Left.isOneOf(Keywords.kw_module, Keywords.kw_import) &&
+        Right.is(TT_ModulePartitionColon))
+      return true;
+    // No space between import foo:bar but keep a space between import :bar;
+    if (Left.is(tok::identifier) && Right.is(TT_ModulePartitionColon))
+      return false;
+    // No space between :bar;
+    if (Left.is(TT_ModulePartitionColon) &&
+        Right.isOneOf(tok::identifier, tok::kw_private))
+      return false;
+    if (Left.is(tok::ellipsis) && Right.is(tok::identifier) &&
+        Line.First->is(Keywords.kw_import))
+      return false;
+
     if (Left.is(tok::kw_operator))
       return Right.is(tok::coloncolon);
     if (Right.is(tok::l_brace) && Right.is(BK_BracedInit) &&
@@ -3307,7 +3415,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     if (Right.is(tok::l_paren))
       if (Left.isOneOf(tok::kw_using, Keywords.kw_async, Keywords.kw_when,
                        Keywords.kw_lock))
-        return Style.SpaceBeforeParens == FormatStyle::SBPO_ControlStatements ||
+        return Style.SpaceBeforeParensOptions.AfterControlStatements ||
                spaceRequiredBeforeParens(Right);
 
     // space between method modifier and opening parenthesis of a tuple return
@@ -3319,7 +3427,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
                      Keywords.kw_async, Keywords.kw_unsafe) &&
         Right.is(tok::l_paren))
       return true;
-  } else if (Style.Language == FormatStyle::LK_JavaScript) {
+  } else if (Style.isJavaScript()) {
     if (Left.is(TT_FatArrow))
       return true;
     // for await ( ...
@@ -3414,7 +3522,8 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     if (Left.is(tok::r_square) && Right.is(tok::l_brace))
       return true;
     if (Left.is(Keywords.kw_synchronized) && Right.is(tok::l_paren))
-      return Style.SpaceBeforeParens != FormatStyle::SBPO_Never;
+      return Style.SpaceBeforeParensOptions.AfterControlStatements ||
+             spaceRequiredBeforeParens(Right);
     if ((Left.isOneOf(tok::kw_static, tok::kw_public, tok::kw_private,
                       tok::kw_protected) ||
          Left.isOneOf(Keywords.kw_final, Keywords.kw_abstract,
@@ -3440,9 +3549,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   if (Right.isOneOf(TT_TrailingReturnArrow, TT_LambdaArrow) ||
       Left.isOneOf(TT_TrailingReturnArrow, TT_LambdaArrow))
     return true;
-  if (Right.is(TT_OverloadedOperatorLParen))
-    return spaceRequiredBeforeParens(Right);
-  if (Left.is(tok::comma))
+  if (Left.is(tok::comma) && !Right.is(TT_OverloadedOperatorLParen))
     return true;
   if (Right.is(tok::comma))
     return false;
@@ -3565,9 +3672,6 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
       (Left.isOneOf(TT_BinaryOperator, TT_ConditionalExpr) &&
        !Right.is(tok::r_paren)))
     return true;
-  if (Left.is(TT_TemplateCloser) && Right.is(tok::l_paren) &&
-      Right.isNot(TT_FunctionTypeLParen))
-    return spaceRequiredBeforeParens(Right);
   if (Right.is(TT_TemplateOpener) && Left.is(tok::r_paren) &&
       Left.MatchingParen && Left.MatchingParen->is(TT_OverloadedOperatorLParen))
     return false;
@@ -3621,10 +3725,17 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     return true;
 
   if (Style.isCSharp()) {
+    if (Left.is(TT_FatArrow) && Right.is(tok::l_brace) &&
+        Style.BraceWrapping.AfterFunction)
+      return true;
     if (Right.is(TT_CSharpNamedArgumentColon) ||
         Left.is(TT_CSharpNamedArgumentColon))
       return false;
     if (Right.is(TT_CSharpGenericTypeConstraint))
+      return true;
+    if (Right.Next && Right.Next->is(TT_FatArrow) &&
+        (Right.is(tok::numeric_constant) ||
+         (Right.is(tok::identifier) && Right.TokenText == "_")))
       return true;
 
     // Break after C# [...] and before public/protected/private/internal.
@@ -3637,7 +3748,7 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
         Left.is(tok::r_square) && Right.is(tok::l_square))
       return true;
 
-  } else if (Style.Language == FormatStyle::LK_JavaScript) {
+  } else if (Style.isJavaScript()) {
     // FIXME: This might apply to other languages and token kinds.
     if (Right.is(tok::string_literal) && Left.is(tok::plus) && Left.Previous &&
         Left.Previous->is(tok::string_literal))
@@ -3727,15 +3838,13 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
   if (Style.JavaScriptWrapImports || Line.Type != LT_ImportStatement) {
     const FormatToken *BeforeClosingBrace = nullptr;
     if ((Left.isOneOf(tok::l_brace, TT_ArrayInitializerLSquare) ||
-         (Style.Language == FormatStyle::LK_JavaScript &&
-          Left.is(tok::l_paren))) &&
+         (Style.isJavaScript() && Left.is(tok::l_paren))) &&
         Left.isNot(BK_Block) && Left.MatchingParen)
       BeforeClosingBrace = Left.MatchingParen->Previous;
     else if (Right.MatchingParen &&
              (Right.MatchingParen->isOneOf(tok::l_brace,
                                            TT_ArrayInitializerLSquare) ||
-              (Style.Language == FormatStyle::LK_JavaScript &&
-               Right.MatchingParen->is(tok::l_paren))))
+              (Style.isJavaScript() && Right.MatchingParen->is(tok::l_paren))))
       BeforeClosingBrace = &Left;
     if (BeforeClosingBrace && (BeforeClosingBrace->is(tok::comma) ||
                                BeforeClosingBrace->isTrailingComment()))
@@ -3854,8 +3963,7 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
   }
 
   // Put multiple Java annotation on a new line.
-  if ((Style.Language == FormatStyle::LK_Java ||
-       Style.Language == FormatStyle::LK_JavaScript) &&
+  if ((Style.Language == FormatStyle::LK_Java || Style.isJavaScript()) &&
       Left.is(TT_LeadingJavaAnnotation) &&
       Right.isNot(TT_LeadingJavaAnnotation) && Right.isNot(tok::l_paren) &&
       (Line.Last->is(tok::l_brace) || Style.BreakAfterJavaFieldAnnotations))
@@ -3998,7 +4106,7 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
     if (Right.isOneOf(Keywords.kw_throws, Keywords.kw_extends,
                       Keywords.kw_implements))
       return true;
-  } else if (Style.Language == FormatStyle::LK_JavaScript) {
+  } else if (Style.isJavaScript()) {
     const FormatToken *NonComment = Right.getPreviousNonComment();
     if (NonComment &&
         NonComment->isOneOf(
@@ -4061,7 +4169,7 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
                       Keywords.kw_interface, Keywords.kw_type, Keywords.kw_var,
                       Keywords.kw_let, tok::kw_const))
       // See grammar for 'declare' statements at:
-      // https://github.com/Microsoft/TypeScript/blob/master/doc/spec.md#A.10
+      // https://github.com/Microsoft/TypeScript/blob/main/doc/spec-ARCHIVED.md#A.10
       return false;
     if (Left.isOneOf(Keywords.kw_module, tok::kw_namespace) &&
         Right.isOneOf(tok::identifier, tok::string_literal))

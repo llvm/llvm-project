@@ -87,6 +87,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
+#include "llvm/Analysis/CallGraph.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -110,6 +111,18 @@ using namespace llvm;
 
 namespace {
 
+namespace AMDGPU {
+/// Collect all the instructions where user \p U belongs to. \p U could be
+/// instruction itself or it could be a constant expression which is used within
+/// an instruction. If \p CollectKernelInsts is true, collect instructions only
+/// from kernels, otherwise collect instructions only from non-kernel functions.
+DenseMap<Function *, SmallPtrSet<Instruction *, 8>>
+getFunctionToInstsMap(User *U, bool CollectKernelInsts);
+
+SmallPtrSet<Function *, 8> collectNonKernelAccessorsOfLDS(GlobalVariable *GV);
+
+} // namespace AMDGPU
+
 class ReplaceLDSUseImpl {
   Module &M;
   LLVMContext &Ctx;
@@ -127,7 +140,8 @@ class ReplaceLDSUseImpl {
   // Collect LDS which requires their uses to be replaced by pointer.
   std::vector<GlobalVariable *> collectLDSRequiringPointerReplace() {
     // Collect LDS which requires module lowering.
-    std::vector<GlobalVariable *> LDSGlobals = AMDGPU::findVariablesToLower(M);
+    std::vector<GlobalVariable *> LDSGlobals =
+        llvm::AMDGPU::findVariablesToLower(M);
 
     // Remove LDS which don't qualify for replacement.
     llvm::erase_if(LDSGlobals, [&](GlobalVariable *GV) {
@@ -172,7 +186,7 @@ class ReplaceLDSUseImpl {
         AMDGPUAS::LOCAL_ADDRESS);
 
     LDSPointer->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-    LDSPointer->setAlignment(AMDGPU::getAlign(DL, LDSPointer));
+    LDSPointer->setAlignment(llvm::AMDGPU::getAlign(DL, LDSPointer));
 
     // Mark that an associated LDS pointer is created for LDS.
     LDSToPointer[GV] = LDSPointer;
@@ -245,10 +259,9 @@ class ReplaceLDSUseImpl {
       auto FunctionToInsts =
           AMDGPU::getFunctionToInstsMap(U, false /*=CollectKernelInsts*/);
 
-      for (auto FI = FunctionToInsts.begin(), FE = FunctionToInsts.end();
-           FI != FE; ++FI) {
-        Function *F = FI->first;
-        auto &Insts = FI->second;
+      for (const auto &FunctionToInst : FunctionToInsts) {
+        Function *F = FunctionToInst.first;
+        auto &Insts = FunctionToInst.second;
         for (auto *I : Insts) {
           // If `U` is a constant expression, then we need to break the
           // associated instruction into a set of separate instructions by
@@ -341,10 +354,9 @@ bool ReplaceLDSUseImpl::replaceLDSUse(GlobalVariable *GV) {
 
   // Traverse through each kernel K, check and if required, initialize the
   // LDS pointer to point to LDS within K.
-  for (auto KI = KernelToCallees.begin(), KE = KernelToCallees.end(); KI != KE;
-       ++KI) {
-    Function *K = KI->first;
-    SmallPtrSet<Function *, 8> Callees = KI->second;
+  for (const auto &KernelToCallee : KernelToCallees) {
+    Function *K = KernelToCallee.first;
+    SmallPtrSet<Function *, 8> Callees = KernelToCallee.second;
 
     // Compute reachable and LDS used callees for kernel K.
     set_intersect(Callees, LDSAccessors);
@@ -377,6 +389,184 @@ bool ReplaceLDSUseImpl::replaceLDSUse(GlobalVariable *GV) {
 
   return true;
 }
+
+namespace AMDGPU {
+
+// An helper class for collecting all reachable callees for each kernel defined
+// within the module.
+class CollectReachableCallees {
+  Module &M;
+  CallGraph CG;
+  SmallPtrSet<CallGraphNode *, 8> AddressTakenFunctions;
+
+  // Collect all address taken functions within the module.
+  void collectAddressTakenFunctions() {
+    auto *ECNode = CG.getExternalCallingNode();
+
+    for (const auto &GI : *ECNode) {
+      auto *CGN = GI.second;
+      auto *F = CGN->getFunction();
+      if (!F || F->isDeclaration() || llvm::AMDGPU::isKernelCC(F))
+        continue;
+      AddressTakenFunctions.insert(CGN);
+    }
+  }
+
+  // For given kernel, collect all its reachable non-kernel functions.
+  SmallPtrSet<Function *, 8> collectReachableCallees(Function *K) {
+    SmallPtrSet<Function *, 8> ReachableCallees;
+
+    // Call graph node which represents this kernel.
+    auto *KCGN = CG[K];
+
+    // Go through all call graph nodes reachable from the node representing this
+    // kernel, visit all their call sites, if the call site is direct, add
+    // corresponding callee to reachable callee set, if it is indirect, resolve
+    // the indirect call site to potential reachable callees, add them to
+    // reachable callee set, and repeat the process for the newly added
+    // potential callee nodes.
+    //
+    // FIXME: Need to handle bit-casted function pointers.
+    //
+    SmallVector<CallGraphNode *, 8> CGNStack(depth_first(KCGN));
+    SmallPtrSet<CallGraphNode *, 8> VisitedCGNodes;
+    while (!CGNStack.empty()) {
+      auto *CGN = CGNStack.pop_back_val();
+
+      if (!VisitedCGNodes.insert(CGN).second)
+        continue;
+
+      // Ignore call graph node which does not have associated function or
+      // associated function is not a definition.
+      if (!CGN->getFunction() || CGN->getFunction()->isDeclaration())
+        continue;
+
+      for (const auto &GI : *CGN) {
+        auto *RCB = cast<CallBase>(GI.first.getValue());
+        auto *RCGN = GI.second;
+
+        if (auto *DCallee = RCGN->getFunction()) {
+          ReachableCallees.insert(DCallee);
+        } else if (RCB->isIndirectCall()) {
+          auto *RCBFTy = RCB->getFunctionType();
+          for (auto *ACGN : AddressTakenFunctions) {
+            auto *ACallee = ACGN->getFunction();
+            if (ACallee->getFunctionType() == RCBFTy) {
+              ReachableCallees.insert(ACallee);
+              CGNStack.append(df_begin(ACGN), df_end(ACGN));
+            }
+          }
+        }
+      }
+    }
+
+    return ReachableCallees;
+  }
+
+public:
+  explicit CollectReachableCallees(Module &M) : M(M), CG(CallGraph(M)) {
+    // Collect address taken functions.
+    collectAddressTakenFunctions();
+  }
+
+  void collectReachableCallees(
+      DenseMap<Function *, SmallPtrSet<Function *, 8>> &KernelToCallees) {
+    // Collect reachable callee set for each kernel defined in the module.
+    for (Function &F : M.functions()) {
+      if (!llvm::AMDGPU::isKernelCC(&F))
+        continue;
+      Function *K = &F;
+      KernelToCallees[K] = collectReachableCallees(K);
+    }
+  }
+};
+
+/// Collect reachable callees for each kernel defined in the module \p M and
+/// return collected callees at \p KernelToCallees.
+void collectReachableCallees(
+    Module &M,
+    DenseMap<Function *, SmallPtrSet<Function *, 8>> &KernelToCallees) {
+  CollectReachableCallees CRC{M};
+  CRC.collectReachableCallees(KernelToCallees);
+}
+
+/// For the given LDS global \p GV, visit all its users and collect all
+/// non-kernel functions within which \p GV is used and return collected list of
+/// such non-kernel functions.
+SmallPtrSet<Function *, 8> collectNonKernelAccessorsOfLDS(GlobalVariable *GV) {
+  SmallPtrSet<Function *, 8> LDSAccessors;
+  SmallVector<User *, 8> UserStack(GV->users());
+  SmallPtrSet<User *, 8> VisitedUsers;
+
+  while (!UserStack.empty()) {
+    auto *U = UserStack.pop_back_val();
+
+    // `U` is already visited? continue to next one.
+    if (!VisitedUsers.insert(U).second)
+      continue;
+
+    // `U` is a global variable which is initialized with LDS. Ignore LDS.
+    if (isa<GlobalValue>(U))
+      return SmallPtrSet<Function *, 8>();
+
+    // Recursively explore constant users.
+    if (isa<Constant>(U)) {
+      append_range(UserStack, U->users());
+      continue;
+    }
+
+    // `U` should be an instruction, if it belongs to a non-kernel function F,
+    // then collect F.
+    Function *F = cast<Instruction>(U)->getFunction();
+    if (!llvm::AMDGPU::isKernelCC(F))
+      LDSAccessors.insert(F);
+  }
+
+  return LDSAccessors;
+}
+
+DenseMap<Function *, SmallPtrSet<Instruction *, 8>>
+getFunctionToInstsMap(User *U, bool CollectKernelInsts) {
+  DenseMap<Function *, SmallPtrSet<Instruction *, 8>> FunctionToInsts;
+  SmallVector<User *, 8> UserStack;
+  SmallPtrSet<User *, 8> VisitedUsers;
+
+  UserStack.push_back(U);
+
+  while (!UserStack.empty()) {
+    auto *UU = UserStack.pop_back_val();
+
+    if (!VisitedUsers.insert(UU).second)
+      continue;
+
+    if (isa<GlobalValue>(UU))
+      continue;
+
+    if (isa<Constant>(UU)) {
+      append_range(UserStack, UU->users());
+      continue;
+    }
+
+    auto *I = cast<Instruction>(UU);
+    Function *F = I->getFunction();
+    if (CollectKernelInsts) {
+      if (!llvm::AMDGPU::isKernelCC(F)) {
+        continue;
+      }
+    } else {
+      if (llvm::AMDGPU::isKernelCC(F)) {
+        continue;
+      }
+    }
+
+    FunctionToInsts.insert(std::make_pair(F, SmallPtrSet<Instruction *, 8>()));
+    FunctionToInsts[F].insert(I);
+  }
+
+  return FunctionToInsts;
+}
+
+} // namespace AMDGPU
 
 // Entry-point function which interface ReplaceLDSUseImpl with outside of the
 // class.

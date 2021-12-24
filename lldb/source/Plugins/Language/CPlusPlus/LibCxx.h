@@ -170,8 +170,8 @@ SyntheticChildrenFrontEnd *LibcxxTupleFrontEndCreator(CXXSyntheticChildren *,
                                                       lldb::ValueObjectSP);
 
 SyntheticChildrenFrontEnd *
-LibcxxOptionalFrontEndCreator(CXXSyntheticChildren *,
-                              lldb::ValueObjectSP valobj_sp);
+LibcxxOptionalSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                       lldb::ValueObjectSP valobj_sp);
 
 SyntheticChildrenFrontEnd *
 LibcxxVariantFrontEndCreator(CXXSyntheticChildren *,

@@ -118,7 +118,7 @@ body:             |
     renamable $eax = MOV32rm $rbp, 1, $noreg, -8, $noreg :: (load (s32) from %ir.2)
     $rbp = frame-destroy POP64r implicit-def $rsp, implicit $rsp
     CFI_INSTRUCTION def_cfa $rsp, 8
-    RETQ implicit $eax
+    RET64 implicit $eax
 
 ...
 

@@ -10,6 +10,7 @@
 
 #include "lldb/Core/AddressRange.h"
 #include "lldb/Core/AddressResolverFileLine.h"
+#include "lldb/Core/DataFileCache.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/FileSpecList.h"
 #include "lldb/Core/Mangled.h"
@@ -55,7 +56,10 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/DJB.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -233,8 +237,8 @@ Module::Module(const ModuleSpec &module_spec)
 Module::Module(const FileSpec &file_spec, const ArchSpec &arch,
                const ConstString *object_name, lldb::offset_t object_offset,
                const llvm::sys::TimePoint<> &object_mod_time)
-    : m_mod_time(FileSystem::Instance().GetModificationTime(file_spec)), m_arch(arch),
-      m_file(file_spec), m_object_offset(object_offset),
+    : m_mod_time(FileSystem::Instance().GetModificationTime(file_spec)),
+      m_arch(arch), m_file(file_spec), m_object_offset(object_offset),
       m_object_mod_time(object_mod_time), m_file_has_changed(false),
       m_first_file_changed_log(false) {
   // Scope for locker below...
@@ -559,9 +563,8 @@ uint32_t Module::ResolveSymbolContextForAddress(
             // that the symbol has been resolved.
             if (so_addr.GetOffset() ==
                     addr_range.GetBaseAddress().GetOffset() ||
-                so_addr.GetOffset() ==
-                    addr_range.GetBaseAddress().GetOffset() +
-                        addr_range.GetByteSize()) {
+                so_addr.GetOffset() == addr_range.GetBaseAddress().GetOffset() +
+                                           addr_range.GetByteSize()) {
               resolved_flags |= flags;
             }
           } else {
@@ -765,8 +768,7 @@ void Module::LookupInfo::Prune(SymbolContextList &sc_list,
       // pull anything out
       ConstString mangled_name(sc.GetFunctionName(Mangled::ePreferMangled));
       ConstString full_name(sc.GetFunctionName());
-      if (mangled_name != m_name && full_name != m_name)
-      {
+      if (mangled_name != m_name && full_name != m_name) {
         CPlusPlusLanguage::MethodName cpp_method(full_name);
         if (cpp_method.IsValid()) {
           if (cpp_method.GetContext().empty()) {
@@ -940,7 +942,6 @@ void Module::FindTypes_Impl(
     size_t max_matches,
     llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
     TypeMap &types) {
-  LLDB_SCOPED_TIMER();
   if (SymbolFile *symbols = GetSymbolFile())
     symbols->FindTypes(name, parent_decl_ctx, max_matches,
                        searched_symbol_files, types);
@@ -960,8 +961,8 @@ void Module::FindTypesInNamespace(ConstString type_name,
   }
 }
 
-lldb::TypeSP Module::FindFirstType(const SymbolContext &sc,
-                                   ConstString name, bool exact_match) {
+lldb::TypeSP Module::FindFirstType(const SymbolContext &sc, ConstString name,
+                                   bool exact_match) {
   TypeList type_list;
   llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
   FindTypes(name, exact_match, 1, searched_symbol_files, type_list);
@@ -1332,9 +1333,8 @@ void Module::SymbolIndicesToSymbolContextList(
   }
 }
 
-void Module::FindFunctionSymbols(ConstString name,
-                                   uint32_t name_type_mask,
-                                   SymbolContextList &sc_list) {
+void Module::FindFunctionSymbols(ConstString name, uint32_t name_type_mask,
+                                 SymbolContextList &sc_list) {
   LLDB_SCOPED_TIMERF("Module::FindSymbolsFunctions (name = %s, mask = 0x%8.8x)",
                      name.AsCString(), name_type_mask);
   if (Symtab *symtab = GetSymtab())
@@ -1342,13 +1342,10 @@ void Module::FindFunctionSymbols(ConstString name,
 }
 
 void Module::FindSymbolsWithNameAndType(ConstString name,
-                                          SymbolType symbol_type,
-                                          SymbolContextList &sc_list) {
+                                        SymbolType symbol_type,
+                                        SymbolContextList &sc_list) {
   // No need to protect this call using m_mutex all other method calls are
   // already thread safe.
-  LLDB_SCOPED_TIMERF(
-      "Module::FindSymbolsWithNameAndType (name = %s, type = %i)",
-      name.AsCString(), symbol_type);
   if (Symtab *symtab = GetSymtab()) {
     std::vector<uint32_t> symbol_indexes;
     symtab->FindAllSymbolsWithNameAndType(name, symbol_type, symbol_indexes);
@@ -1379,12 +1376,15 @@ void Module::PreloadSymbols() {
   if (!sym_file)
     return;
 
-  // Prime the symbol file first, since it adds symbols to the symbol table.
-  sym_file->PreloadSymbols();
-
-  // Now we can prime the symbol table.
+  // Load the object file symbol table and any symbols from the SymbolFile that
+  // get appended using SymbolFile::AddSymbols(...).
   if (Symtab *symtab = sym_file->GetSymtab())
     symtab->PreloadSymbols();
+
+  // Now let the symbol file preload its data and the symbol table will be
+  // available without needing to take the module lock.
+  sym_file->PreloadSymbols();
+
 }
 
 void Module::SetSymbolFileFileSpec(const FileSpec &file) {
@@ -1605,33 +1605,34 @@ bool Module::FindSourceFile(const FileSpec &orig_spec,
   return false;
 }
 
-llvm::Optional<std::string> Module::RemapSourceFile(llvm::StringRef path) const {
+llvm::Optional<std::string>
+Module::RemapSourceFile(llvm::StringRef path) const {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (auto remapped = m_source_mappings.RemapPath(path))
     return remapped->GetPath();
   return {};
 }
 
-void Module::RegisterXcodeSDK(llvm::StringRef sdk_name, llvm::StringRef sysroot) {
+void Module::RegisterXcodeSDK(llvm::StringRef sdk_name,
+                              llvm::StringRef sysroot) {
   XcodeSDK sdk(sdk_name.str());
-  ConstString sdk_path(HostInfo::GetXcodeSDKPath(sdk));
-  if (!sdk_path)
+  llvm::StringRef sdk_path(HostInfo::GetXcodeSDKPath(sdk));
+  if (sdk_path.empty())
     return;
   // If the SDK changed for a previously registered source path, update it.
   // This could happend with -fdebug-prefix-map, otherwise it's unlikely.
-  ConstString sysroot_cs(sysroot);
-  if (!m_source_mappings.Replace(sysroot_cs, sdk_path, true))
+  if (!m_source_mappings.Replace(sysroot, sdk_path, true))
     // In the general case, however, append it to the list.
-    m_source_mappings.Append(sysroot_cs, sdk_path, false);
+    m_source_mappings.Append(sysroot, sdk_path, false);
 }
 
 bool Module::MergeArchitecture(const ArchSpec &arch_spec) {
   if (!arch_spec.IsValid())
     return false;
-  LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT | LIBLLDB_LOG_MODULES),
-           "module has arch %s, merging/replacing with arch %s",
-           m_arch.GetTriple().getTriple().c_str(),
-           arch_spec.GetTriple().getTriple().c_str());
+  LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT | LIBLLDB_LOG_MODULES),
+            "module has arch %s, merging/replacing with arch %s",
+            m_arch.GetTriple().getTriple().c_str(),
+            arch_spec.GetTriple().getTriple().c_str());
   if (!m_arch.IsCompatibleMatch(arch_spec)) {
     // The new architecture is different, we just need to replace it.
     return SetArchitecture(arch_spec);
@@ -1658,4 +1659,37 @@ bool Module::GetIsDynamicLinkEditor() {
     return obj_file->GetIsDynamicLinkEditor();
 
   return false;
+}
+
+uint32_t Module::Hash() {
+  std::string identifier;
+  llvm::raw_string_ostream id_strm(identifier);
+  id_strm << m_arch.GetTriple().str() << '-' << m_file.GetPath();
+  if (m_object_name)
+    id_strm << '(' << m_object_name.GetStringRef() << ')';
+  if (m_object_offset > 0)
+    id_strm << m_object_offset;
+  const auto mtime = llvm::sys::toTimeT(m_object_mod_time);
+  if (mtime > 0)
+    id_strm << mtime;
+  return llvm::djbHash(id_strm.str());
+}
+
+std::string Module::GetCacheKey() {
+  std::string key;
+  llvm::raw_string_ostream strm(key);
+  strm << m_arch.GetTriple().str() << '-' << m_file.GetFilename();
+  if (m_object_name)
+    strm << '(' << m_object_name.GetStringRef() << ')';
+  strm << '-' << llvm::format_hex(Hash(), 10);
+  return strm.str();
+}
+
+DataFileCache *Module::GetIndexCache() {
+  if (!ModuleList::GetGlobalModuleListProperties().GetEnableLLDBIndexCache())
+    return nullptr;
+  // NOTE: intentional leak so we don't crash if global destructor chain gets
+  // called as other threads still use the result of this function
+  static DataFileCache *g_data_file_cache = new DataFileCache(ModuleList::GetGlobalModuleListProperties().GetLLDBIndexCachePath().GetPath());
+  return g_data_file_cache;
 }

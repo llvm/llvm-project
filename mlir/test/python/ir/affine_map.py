@@ -9,9 +9,11 @@ def run(f):
   f()
   gc.collect()
   assert Context._get_live_count() == 0
+  return f
 
 
 # CHECK-LABEL: TEST: testAffineMapCapsule
+@run
 def testAffineMapCapsule():
   with Context() as ctx:
     am1 = AffineMap.get_empty(ctx)
@@ -23,10 +25,8 @@ def testAffineMapCapsule():
   assert am2.context is ctx
 
 
-run(testAffineMapCapsule)
-
-
 # CHECK-LABEL: TEST: testAffineMapGet
+@run
 def testAffineMapGet():
   with Context() as ctx:
     d0 = AffineDimExpr.get(0)
@@ -100,10 +100,8 @@ def testAffineMapGet():
       print(e)
 
 
-run(testAffineMapGet)
-
-
 # CHECK-LABEL: TEST: testAffineMapDerive
+@run
 def testAffineMapDerive():
   with Context() as ctx:
     map5 = AffineMap.get_identity(5)
@@ -121,10 +119,8 @@ def testAffineMapDerive():
     print(map34)
 
 
-run(testAffineMapDerive)
-
-
 # CHECK-LABEL: TEST: testAffineMapProperties
+@run
 def testAffineMapProperties():
   with Context():
     d0 = AffineDimExpr.get(0)
@@ -147,10 +143,8 @@ def testAffineMapProperties():
     print(map3.is_projected_permutation)
 
 
-run(testAffineMapProperties)
-
-
 # CHECK-LABEL: TEST: testAffineMapExprs
+@run
 def testAffineMapExprs():
   with Context():
     d0 = AffineDimExpr.get(0)
@@ -181,10 +175,8 @@ def testAffineMapExprs():
     assert list(map3.results) == [d2, d0, d1]
 
 
-run(testAffineMapExprs)
-
-
 # CHECK-LABEL: TEST: testCompressUnusedSymbols
+@run
 def testCompressUnusedSymbols():
   with Context() as ctx:
     d0, d1, d2 = (AffineDimExpr.get(0), AffineDimExpr.get(1),
@@ -210,10 +202,8 @@ def testCompressUnusedSymbols():
     print(compressed_maps)
 
 
-run(testCompressUnusedSymbols)
-
-
 # CHECK-LABEL: TEST: testReplace
+@run
 def testReplace():
   with Context() as ctx:
     d0, d1, d2 = (AffineDimExpr.get(0), AffineDimExpr.get(1),
@@ -236,4 +226,16 @@ def testReplace():
     print(replace3)
 
 
-run(testReplace)
+# CHECK-LABEL: TEST: testHash
+@run
+def testHash():
+  with Context():
+    d0, d1 = AffineDimExpr.get(0), AffineDimExpr.get(1)
+    m1 = AffineMap.get(2, 0, [d0, d1])
+    m2 = AffineMap.get(2, 0, [d1, d0])
+    assert hash(m1) == hash(AffineMap.get(2, 0, [d0, d1]))
+
+    dictionary = dict()
+    dictionary[m1] = 1
+    dictionary[m2] = 2
+    assert m1 in dictionary

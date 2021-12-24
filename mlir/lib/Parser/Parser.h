@@ -196,8 +196,11 @@ public:
 
   /// Parse a vector type.
   VectorType parseVectorType();
+  ParseResult parseVectorDimensionList(SmallVectorImpl<int64_t> &dimensions,
+                                       unsigned &numScalableDims);
   ParseResult parseDimensionListRanked(SmallVectorImpl<int64_t> &dimensions,
                                        bool allowDynamic = true);
+  ParseResult parseIntegerInDimensionList(int64_t &value);
   ParseResult parseXInDimensionList();
 
   /// Parse strided layout specification.
@@ -301,7 +304,7 @@ protected:
   /// non-trivial state here, add it to the ParserState class.
   ParserState &state;
 };
-} // end namespace detail
-} // end namespace mlir
+} // namespace detail
+} // namespace mlir
 
 #endif // MLIR_LIB_PARSER_PARSER_H

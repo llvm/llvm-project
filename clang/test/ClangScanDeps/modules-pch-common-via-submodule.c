@@ -1,3 +1,7 @@
+// Unsupported on AIX because we don't support the requisite "__clangast"
+// section in XCOFF yet.
+// UNSUPPORTED: aix
+
 // Check that we discover dependency on a precompiled module (and generate the
 // appropriate `-fmodule-file=` argument) when it's imported by a **submodule**
 // instead of a top-level module.
@@ -47,7 +51,6 @@
 // CHECK-PCH-NEXT:         "-fno-implicit-modules"
 // CHECK-PCH-NEXT:         "-fno-implicit-module-maps"
 // CHECK-PCH-NEXT:         "-fmodule-file=[[PREFIX]]/build/[[HASH_MOD_COMMON]]/ModCommon-{{.*}}.pcm"
-// CHECK-PCH-NEXT:         "-fmodule-map-file=[[PREFIX]]/module.modulemap"
 // CHECK-PCH-NEXT:       ],
 // CHECK-PCH-NEXT:       "file-deps": [
 // CHECK-PCH-NEXT:         "[[PREFIX]]/pch.h"
@@ -112,8 +115,7 @@
 // CHECK-TU-NEXT:       "command-line": [
 // CHECK-TU-NEXT:         "-fno-implicit-modules",
 // CHECK-TU-NEXT:         "-fno-implicit-module-maps",
-// CHECK-TU-NEXT:         "-fmodule-file=[[PREFIX]]/build/[[HASH_MOD_TU:.*]]/ModTU-{{.*}}.pcm",
-// CHECK-TU-NEXT:         "-fmodule-map-file=[[PREFIX]]/module.modulemap"
+// CHECK-TU-NEXT:         "-fmodule-file=[[PREFIX]]/build/[[HASH_MOD_TU:.*]]/ModTU-{{.*}}.pcm"
 // CHECK-TU-NEXT:       ],
 // CHECK-TU-NEXT:       "file-deps": [
 // CHECK-TU-NEXT:         "[[PREFIX]]/tu.c",

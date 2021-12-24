@@ -157,7 +157,7 @@ Instruction *InstCombinerImpl::PromoteCastOfAllocation(BitCastInst &CI,
     Amt = Builder.CreateAdd(Amt, Off);
   }
 
-  AllocaInst *New = Builder.CreateAlloca(CastElTy, Amt);
+  AllocaInst *New = Builder.CreateAlloca(CastElTy, AI.getAddressSpace(), Amt);
   New->setAlignment(AI.getAlign());
   New->takeName(&AI);
   New->setUsedWithInAlloca(AI.isUsedWithInAlloca());
@@ -965,13 +965,13 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
   if (match(Src, m_VScale(DL))) {
     if (Trunc.getFunction() &&
         Trunc.getFunction()->hasFnAttribute(Attribute::VScaleRange)) {
-      unsigned MaxVScale = Trunc.getFunction()
-                               ->getFnAttribute(Attribute::VScaleRange)
-                               .getVScaleRangeArgs()
-                               .second;
-      if (MaxVScale > 0 && Log2_32(MaxVScale) < DestWidth) {
-        Value *VScale = Builder.CreateVScale(ConstantInt::get(DestTy, 1));
-        return replaceInstUsesWith(Trunc, VScale);
+      Attribute Attr =
+          Trunc.getFunction()->getFnAttribute(Attribute::VScaleRange);
+      if (Optional<unsigned> MaxVScale = Attr.getVScaleRangeMax()) {
+        if (Log2_32(MaxVScale.getValue()) < DestWidth) {
+          Value *VScale = Builder.CreateVScale(ConstantInt::get(DestTy, 1));
+          return replaceInstUsesWith(Trunc, VScale);
+        }
       }
     }
   }
@@ -1337,14 +1337,13 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &CI) {
   if (match(Src, m_VScale(DL))) {
     if (CI.getFunction() &&
         CI.getFunction()->hasFnAttribute(Attribute::VScaleRange)) {
-      unsigned MaxVScale = CI.getFunction()
-                               ->getFnAttribute(Attribute::VScaleRange)
-                               .getVScaleRangeArgs()
-                               .second;
-      unsigned TypeWidth = Src->getType()->getScalarSizeInBits();
-      if (MaxVScale > 0 && Log2_32(MaxVScale) < TypeWidth) {
-        Value *VScale = Builder.CreateVScale(ConstantInt::get(DestTy, 1));
-        return replaceInstUsesWith(CI, VScale);
+      Attribute Attr = CI.getFunction()->getFnAttribute(Attribute::VScaleRange);
+      if (Optional<unsigned> MaxVScale = Attr.getVScaleRangeMax()) {
+        unsigned TypeWidth = Src->getType()->getScalarSizeInBits();
+        if (Log2_32(MaxVScale.getValue()) < TypeWidth) {
+          Value *VScale = Builder.CreateVScale(ConstantInt::get(DestTy, 1));
+          return replaceInstUsesWith(CI, VScale);
+        }
       }
     }
   }
@@ -1608,13 +1607,12 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &CI) {
   if (match(Src, m_VScale(DL))) {
     if (CI.getFunction() &&
         CI.getFunction()->hasFnAttribute(Attribute::VScaleRange)) {
-      unsigned MaxVScale = CI.getFunction()
-                               ->getFnAttribute(Attribute::VScaleRange)
-                               .getVScaleRangeArgs()
-                               .second;
-      if (MaxVScale > 0 && Log2_32(MaxVScale) < (SrcBitSize - 1)) {
-        Value *VScale = Builder.CreateVScale(ConstantInt::get(DestTy, 1));
-        return replaceInstUsesWith(CI, VScale);
+      Attribute Attr = CI.getFunction()->getFnAttribute(Attribute::VScaleRange);
+      if (Optional<unsigned> MaxVScale = Attr.getVScaleRangeMax()) {
+        if (Log2_32(MaxVScale.getValue()) < (SrcBitSize - 1)) {
+          Value *VScale = Builder.CreateVScale(ConstantInt::get(DestTy, 1));
+          return replaceInstUsesWith(CI, VScale);
+        }
       }
     }
   }
@@ -2555,7 +2553,7 @@ Instruction *InstCombinerImpl::optimizeBitCastFromPhi(CastInst &CI,
         // As long as the user is another old PHI node, then even if we don't
         // rewrite it, the PHI web we're considering won't have any users
         // outside itself, so it'll be dead.
-        if (OldPhiNodes.count(PHI) == 0)
+        if (!OldPhiNodes.contains(PHI))
           return nullptr;
       } else {
         return nullptr;
@@ -2771,7 +2769,7 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
     if (match(Src, m_OneUse(m_InsertElt(m_OneUse(m_BitCast(m_Value(X))),
                                         m_Value(Y), m_ConstantInt(IndexC)))) &&
         DestTy->isIntegerTy() && X->getType() == DestTy &&
-        isDesirableIntType(BitWidth)) {
+        Y->getType()->isIntegerTy() && isDesirableIntType(BitWidth)) {
       // Adjust for big endian - the LSBs are at the high index.
       if (DL.isBigEndian())
         IndexC = SrcVTy->getNumElements() - 1 - IndexC;

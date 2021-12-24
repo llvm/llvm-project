@@ -116,6 +116,7 @@ Expected<std::vector<std::unique_ptr<Section>>> static extractSections(
 Error MachOReader::readLoadCommands(Object &O) const {
   // For MachO sections indices start from 1.
   uint32_t NextSectionIndex = 1;
+  static constexpr char TextSegmentName[] = "__TEXT";
   for (auto LoadCmd : MachOObj.load_commands()) {
     LoadCommand LC;
     switch (LoadCmd.C.cmd) {
@@ -123,6 +124,14 @@ Error MachOReader::readLoadCommands(Object &O) const {
       O.CodeSignatureCommandIndex = O.LoadCommands.size();
       break;
     case MachO::LC_SEGMENT:
+      // LoadCmd.Ptr might not be aligned temporarily as
+      // MachO::segment_command requires, but the segname char pointer do not
+      // have alignment restrictions.
+      if (StringRef(reinterpret_cast<const char *>(
+              LoadCmd.Ptr + offsetof(MachO::segment_command, segname))) ==
+          TextSegmentName)
+        O.TextSegmentCommandIndex = O.LoadCommands.size();
+
       if (Expected<std::vector<std::unique_ptr<Section>>> Sections =
               extractSections<MachO::section, MachO::segment_command>(
                   LoadCmd, MachOObj, NextSectionIndex))
@@ -131,6 +140,14 @@ Error MachOReader::readLoadCommands(Object &O) const {
         return Sections.takeError();
       break;
     case MachO::LC_SEGMENT_64:
+      // LoadCmd.Ptr might not be aligned temporarily as
+      // MachO::segment_command_64 requires, but the segname char pointer do
+      // not have alignment restrictions.
+      if (StringRef(reinterpret_cast<const char *>(
+              LoadCmd.Ptr + offsetof(MachO::segment_command_64, segname))) ==
+          TextSegmentName)
+        O.TextSegmentCommandIndex = O.LoadCommands.size();
+
       if (Expected<std::vector<std::unique_ptr<Section>>> Sections =
               extractSections<MachO::section_64, MachO::segment_command_64>(
                   LoadCmd, MachOObj, NextSectionIndex))
@@ -156,6 +173,12 @@ Error MachOReader::readLoadCommands(Object &O) const {
       break;
     case MachO::LC_FUNCTION_STARTS:
       O.FunctionStartsCommandIndex = O.LoadCommands.size();
+      break;
+    case MachO::LC_DYLD_EXPORTS_TRIE:
+      O.ExportsTrieCommandIndex = O.LoadCommands.size();
+      break;
+    case MachO::LC_DYLD_CHAINED_FIXUPS:
+      O.ChainedFixupsCommandIndex = O.LoadCommands.size();
       break;
     }
 #define HANDLE_LOAD_COMMAND(LCName, LCValue, LCStruct)                         \
@@ -271,10 +294,6 @@ void MachOReader::readLinkData(Object &O, Optional<size_t> LCIndex,
       arrayRefFromStringRef(MachOObj.getData().substr(LC.dataoff, LC.datasize));
 }
 
-void MachOReader::readCodeSignature(Object &O) const {
-  return readLinkData(O, O.CodeSignatureCommandIndex, O.CodeSignature);
-}
-
 void MachOReader::readDataInCodeData(Object &O) const {
   return readLinkData(O, O.DataInCodeCommandIndex, O.DataInCode);
 }
@@ -286,6 +305,14 @@ void MachOReader::readLinkerOptimizationHint(Object &O) const {
 
 void MachOReader::readFunctionStartsData(Object &O) const {
   return readLinkData(O, O.FunctionStartsCommandIndex, O.FunctionStarts);
+}
+
+void MachOReader::readExportsTrie(Object &O) const {
+  return readLinkData(O, O.ExportsTrieCommandIndex, O.ExportsTrie);
+}
+
+void MachOReader::readChainedFixups(Object &O) const {
+  return readLinkData(O, O.ChainedFixupsCommandIndex, O.ChainedFixups);
 }
 
 void MachOReader::readIndirectSymbolTable(Object &O) const {
@@ -336,10 +363,11 @@ Expected<std::unique_ptr<Object>> MachOReader::create() const {
   readWeakBindInfo(*Obj);
   readLazyBindInfo(*Obj);
   readExportInfo(*Obj);
-  readCodeSignature(*Obj);
   readDataInCodeData(*Obj);
   readLinkerOptimizationHint(*Obj);
   readFunctionStartsData(*Obj);
+  readExportsTrie(*Obj);
+  readChainedFixups(*Obj);
   readIndirectSymbolTable(*Obj);
   readSwiftVersion(*Obj);
   return std::move(Obj);

@@ -14,10 +14,13 @@
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclGroup.h"
+#include "clang/AST/Mangle.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
+#include "clang/Sema/Lookup.h"
+#include "clang/Sema/Sema.h"
 
-#include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/TargetSelect.h"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -123,6 +126,126 @@ TEST(InterpreterTest, DeclsAndStatements) {
               HasSubstr("error: unknown type name 'var1'"));
   auto Err = R2.takeError();
   EXPECT_EQ("Parsing failed.", llvm::toString(std::move(Err)));
+}
+
+static std::string MangleName(NamedDecl *ND) {
+  ASTContext &C = ND->getASTContext();
+  std::unique_ptr<MangleContext> MangleC(C.createMangleContext());
+  std::string mangledName;
+  llvm::raw_string_ostream RawStr(mangledName);
+  MangleC->mangleName(ND, RawStr);
+  return RawStr.str();
+}
+
+struct LLVMInitRAII {
+  LLVMInitRAII() {
+    llvm::InitializeNativeTarget();
+    llvm::InitializeNativeTargetAsmPrinter();
+  }
+  ~LLVMInitRAII() { llvm::llvm_shutdown(); }
+} LLVMInit;
+
+#ifdef _AIX
+TEST(IncrementalProcessing, DISABLED_FindMangledNameSymbol) {
+#else
+TEST(IncrementalProcessing, FindMangledNameSymbol) {
+#endif
+
+  std::unique_ptr<Interpreter> Interp = createInterpreter();
+
+  auto &PTU(cantFail(Interp->Parse("int f(const char*) {return 0;}")));
+  EXPECT_EQ(1U, DeclsSize(PTU.TUPart));
+  auto R1DeclRange = PTU.TUPart->decls();
+
+  NamedDecl *FD = cast<FunctionDecl>(*R1DeclRange.begin());
+  // Lower the PTU
+  if (llvm::Error Err = Interp->Execute(PTU)) {
+    // We cannot execute on the platform.
+    consumeError(std::move(Err));
+    return;
+  }
+
+  std::string MangledName = MangleName(FD);
+  auto Addr = cantFail(Interp->getSymbolAddress(MangledName));
+  EXPECT_NE(0U, Addr);
+  GlobalDecl GD(FD);
+  EXPECT_EQ(Addr, cantFail(Interp->getSymbolAddress(GD)));
+}
+
+static void *AllocateObject(TypeDecl *TD, Interpreter &Interp) {
+  std::string Name = TD->getQualifiedNameAsString();
+  const clang::Type *RDTy = TD->getTypeForDecl();
+  clang::ASTContext &C = Interp.getCompilerInstance()->getASTContext();
+  size_t Size = C.getTypeSize(RDTy);
+  void *Addr = malloc(Size);
+
+  // Tell the interpreter to call the default ctor with this memory. Synthesize:
+  // new (loc) ClassName;
+  static unsigned Counter = 0;
+  std::stringstream SS;
+  SS << "auto _v" << Counter++ << " = "
+     << "new ((void*)"
+     // Windows needs us to prefix the hexadecimal value of a pointer with '0x'.
+     << std::hex << std::showbase << (size_t)Addr << ")" << Name << "();";
+
+  auto R = Interp.ParseAndExecute(SS.str());
+  if (!R)
+    return nullptr;
+
+  return Addr;
+}
+
+static NamedDecl *LookupSingleName(Interpreter &Interp, const char *Name) {
+  Sema &SemaRef = Interp.getCompilerInstance()->getSema();
+  ASTContext &C = SemaRef.getASTContext();
+  DeclarationName DeclName = &C.Idents.get(Name);
+  LookupResult R(SemaRef, DeclName, SourceLocation(), Sema::LookupOrdinaryName);
+  SemaRef.LookupName(R, SemaRef.TUScope);
+  assert(!R.empty());
+  return R.getFoundDecl();
+}
+
+#ifdef _AIX
+TEST(IncrementalProcessing, DISABLED_InstantiateTemplate) {
+#else
+TEST(IncrementalProcessing, InstantiateTemplate) {
+#endif
+  // FIXME: We cannot yet handle delayed template parsing. If we run with
+  // -fdelayed-template-parsing we try adding the newly created decl to the
+  // active PTU which causes an assert.
+  std::vector<const char *> Args = {"-fno-delayed-template-parsing"};
+  std::unique_ptr<Interpreter> Interp = createInterpreter(Args);
+
+  llvm::cantFail(Interp->Parse("void* operator new(__SIZE_TYPE__, void* __p);"
+                               "extern \"C\" int printf(const char*,...);"
+                               "class A {};"
+                               "struct B {"
+                               "  template<typename T>"
+                               "  static int callme(T) { return 42; }"
+                               "};"));
+  auto &PTU = llvm::cantFail(Interp->Parse("auto _t = &B::callme<A*>;"));
+  auto PTUDeclRange = PTU.TUPart->decls();
+  EXPECT_EQ(1, std::distance(PTUDeclRange.begin(), PTUDeclRange.end()));
+
+  // Lower the PTU
+  if (llvm::Error Err = Interp->Execute(PTU)) {
+    // We cannot execute on the platform.
+    consumeError(std::move(Err));
+    return;
+  }
+
+  TypeDecl *TD = cast<TypeDecl>(LookupSingleName(*Interp, "A"));
+  void *NewA = AllocateObject(TD, *Interp);
+
+  // Find back the template specialization
+  VarDecl *VD = static_cast<VarDecl *>(*PTUDeclRange.begin());
+  UnaryOperator *UO = llvm::cast<UnaryOperator>(VD->getInit());
+  NamedDecl *TmpltSpec = llvm::cast<DeclRefExpr>(UO->getSubExpr())->getDecl();
+
+  std::string MangledName = MangleName(TmpltSpec);
+  typedef int (*TemplateSpecFn)(void *);
+  auto fn = (TemplateSpecFn)cantFail(Interp->getSymbolAddress(MangledName));
+  EXPECT_EQ(42, fn(NewA));
 }
 
 } // end anonymous namespace

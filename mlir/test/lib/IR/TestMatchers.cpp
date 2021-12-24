@@ -22,7 +22,7 @@ struct TestMatchers : public PassWrapper<TestMatchers, FunctionPass> {
     return "Test C++ pattern matchers.";
   }
 };
-} // end anonymous namespace
+} // namespace
 
 // This could be done better but is not worth the variadic template trouble.
 template <typename Matcher>
@@ -76,19 +76,19 @@ static void test1(FuncOp f) {
   llvm::outs() << "Pattern mul(mul(*), mul(*)) matched " << countMatches(f, p7)
                << " times\n";
 
-  auto mul_of_mulmul =
+  auto mulOfMulmul =
       m_Op<arith::MulFOp>(m_Op<arith::MulFOp>(), m_Op<arith::MulFOp>());
-  auto p8 = m_Op<arith::MulFOp>(mul_of_mulmul, mul_of_mulmul);
+  auto p8 = m_Op<arith::MulFOp>(mulOfMulmul, mulOfMulmul);
   llvm::outs()
       << "Pattern mul(mul(mul(*), mul(*)), mul(mul(*), mul(*))) matched "
       << countMatches(f, p8) << " times\n";
 
   // clang-format off
-  auto mul_of_muladd = m_Op<arith::MulFOp>(m_Op<arith::MulFOp>(), m_Op<arith::AddFOp>());
-  auto mul_of_anyadd = m_Op<arith::MulFOp>(m_Any(), m_Op<arith::AddFOp>());
+  auto mulOfMuladd = m_Op<arith::MulFOp>(m_Op<arith::MulFOp>(), m_Op<arith::AddFOp>());
+  auto mulOfAnyadd = m_Op<arith::MulFOp>(m_Any(), m_Op<arith::AddFOp>());
   auto p9 = m_Op<arith::MulFOp>(m_Op<arith::MulFOp>(
-                     mul_of_muladd, m_Op<arith::MulFOp>()),
-                   m_Op<arith::MulFOp>(mul_of_anyadd, mul_of_anyadd));
+                     mulOfMuladd, m_Op<arith::MulFOp>()),
+                   m_Op<arith::MulFOp>(mulOfAnyadd, mulOfAnyadd));
   // clang-format on
   llvm::outs() << "Pattern mul(mul(mul(mul(*), add(*)), mul(*)), mul(mul(*, "
                   "add(*)), mul(*, add(*)))) matched "
@@ -118,12 +118,12 @@ static void test1(FuncOp f) {
   llvm::outs() << "Pattern mul(a, add(b, c)) matched " << countMatches(f, p15)
                << " times\n";
 
-  auto mul_of_aany = m_Op<arith::MulFOp>(a, m_Any());
-  auto p16 = m_Op<arith::MulFOp>(mul_of_aany, m_Op<arith::AddFOp>(a, c));
+  auto mulOfAany = m_Op<arith::MulFOp>(a, m_Any());
+  auto p16 = m_Op<arith::MulFOp>(mulOfAany, m_Op<arith::AddFOp>(a, c));
   llvm::outs() << "Pattern mul(mul(a, *), add(a, c)) matched "
                << countMatches(f, p16) << " times\n";
 
-  auto p17 = m_Op<arith::MulFOp>(mul_of_aany, m_Op<arith::AddFOp>(c, b));
+  auto p17 = m_Op<arith::MulFOp>(mulOfAany, m_Op<arith::AddFOp>(c, b));
   llvm::outs() << "Pattern mul(mul(a, *), add(c, b)) matched "
                << countMatches(f, p17) << " times\n";
 }

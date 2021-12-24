@@ -67,8 +67,8 @@ func private @uint_types(ui2, ui4) -> (ui7, ui1023)
 // CHECK: func private @float_types(f80, f128)
 func private @float_types(f80, f128)
 
-// CHECK: func private @vectors(vector<1xf32>, vector<2x4xf32>)
-func private @vectors(vector<1 x f32>, vector<2x4xf32>)
+// CHECK: func private @vectors(vector<f32>, vector<1xf32>, vector<2x4xf32>)
+func private @vectors(vector<f32>, vector<1 x f32>, vector<2x4xf32>)
 
 // CHECK: func private @tensors(tensor<*xf32>, tensor<*xvector<2x4xf32>>, tensor<1x?x4x?x?xi32>, tensor<i8>)
 func private @tensors(tensor<* x f32>, tensor<* x vector<2x4xf32>>,
@@ -76,6 +76,9 @@ func private @tensors(tensor<* x f32>, tensor<* x vector<2x4xf32>>,
 
 // CHECK: func private @tensor_encoding(tensor<16x32xf64, "sparse">)
 func private @tensor_encoding(tensor<16x32xf64, "sparse">)
+
+// CHECK: func private @large_shape_dimension(tensor<9223372036854775807xf32>)
+func private @large_shape_dimension(tensor<9223372036854775807xf32>)
 
 // CHECK: func private @functions((memref<1x?x4x?x?xi32, #map0>, memref<8xi8>) -> (), () -> ())
 func private @functions((memref<1x?x4x?x?xi32, #map0, 0>, memref<8xi8, #map1, 0>) -> (), ()->())
@@ -1422,3 +1425,8 @@ test.graph_region {
 // This is an unregister operation, the printing/parsing is handled by the dialect.
 // CHECK: test.dialect_custom_printer custom_format
 test.dialect_custom_printer custom_format
+
+// This is a registered operation with no custom parser and printer, and should
+// be handled by the dialect.
+// CHECK: test.dialect_custom_format_fallback custom_format_fallback
+test.dialect_custom_format_fallback custom_format_fallback

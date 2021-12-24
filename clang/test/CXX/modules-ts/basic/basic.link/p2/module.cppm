@@ -13,8 +13,8 @@ static void internal_linkage_fn() {}
 export struct external_linkage_class {};
 struct module_linkage_class {};
 namespace {
-  struct internal_linkage_class {};
-}
+struct internal_linkage_class {};
+} // namespace
 
 void use() {
   external_linkage_fn();

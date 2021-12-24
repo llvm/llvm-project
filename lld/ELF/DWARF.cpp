@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// The -gdb-index option instructs the linker to emit a .gdb_index section.
+// The --gdb-index option instructs the linker to emit a .gdb_index section.
 // The section contains information to make gdb startup faster.
 // The format of the section is described at
 // https://sourceware.org/gdb/onlinedocs/gdb/Index-Section-Format.html.
@@ -137,9 +137,10 @@ template <class ELFT>
 Optional<RelocAddrEntry> LLDDwarfObj<ELFT>::find(const llvm::DWARFSection &s,
                                                  uint64_t pos) const {
   auto &sec = static_cast<const LLDDWARFSection &>(s);
-  if (sec.sec->areRelocsRela)
-    return findAux(*sec.sec, pos, sec.sec->template relas<ELFT>());
-  return findAux(*sec.sec, pos, sec.sec->template rels<ELFT>());
+  const RelsOrRelas<ELFT> rels = sec.sec->template relsOrRelas<ELFT>();
+  if (rels.areRelocsRel())
+    return findAux(*sec.sec, pos, rels.rels);
+  return findAux(*sec.sec, pos, rels.relas);
 }
 
 template class elf::LLDDwarfObj<ELF32LE>;

@@ -19,7 +19,7 @@ class UseNullptrCheck : public ClangTidyCheck {
 public:
   UseNullptrCheck(StringRef Name, ClangTidyContext *Context);
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
-    // FIXME this should be CPlusCplus11 but that causes test cases to
+    // FIXME this should be CPlusPlus11 but that causes test cases to
     // erroneously fail.
     return LangOpts.CPlusPlus;
   }

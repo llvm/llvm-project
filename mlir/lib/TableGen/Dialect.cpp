@@ -32,13 +32,13 @@ StringRef Dialect::getCppNamespace() const {
 std::string Dialect::getCppClassName() const {
   // Simply use the name and remove any '_' tokens.
   std::string cppName = def->getName().str();
-  llvm::erase_if(cppName, [](char c) { return c == '_'; });
+  llvm::erase_value(cppName, '_');
   return cppName;
 }
 
 static StringRef getAsStringOrEmpty(const llvm::Record &record,
                                     StringRef fieldName) {
-  if (auto valueInit = record.getValueInit(fieldName)) {
+  if (auto *valueInit = record.getValueInit(fieldName)) {
     if (llvm::isa<llvm::StringInit>(valueInit))
       return record.getValueAsString(fieldName);
   }
@@ -88,6 +88,14 @@ bool Dialect::hasRegionResultAttrVerify() const {
 
 bool Dialect::hasOperationInterfaceFallback() const {
   return def->getValueAsBit("hasOperationInterfaceFallback");
+}
+
+bool Dialect::useDefaultAttributePrinterParser() const {
+  return def->getValueAsBit("useDefaultAttributePrinterParser");
+}
+
+bool Dialect::useDefaultTypePrinterParser() const {
+  return def->getValueAsBit("useDefaultTypePrinterParser");
 }
 
 Dialect::EmitPrefix Dialect::getEmitAccessorPrefix() const {

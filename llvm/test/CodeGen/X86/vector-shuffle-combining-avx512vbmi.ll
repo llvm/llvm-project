@@ -31,18 +31,18 @@ define <16 x i8> @combine_vpermt2var_16i8_identity_mask(<16 x i8> %x0, <16 x i8>
 ; X86:       # %bb.0:
 ; X86-NEXT:    vmovdqa {{.*#+}} xmm1 = [15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
-; X86-NEXT:    vpermi2b %xmm0, %xmm0, %xmm1 {%k1} {z}
-; X86-NEXT:    vmovdqa {{.*#+}} xmm0 = [15,30,13,28,11,26,9,24,7,22,5,20,3,18,1,16]
-; X86-NEXT:    vpermi2b %xmm1, %xmm1, %xmm0 {%k1} {z}
+; X86-NEXT:    vpermt2b %xmm0, %xmm1, %xmm0 {%k1} {z}
+; X86-NEXT:    vmovdqa {{.*#+}} xmm1 = [15,30,13,28,11,26,9,24,7,22,5,20,3,18,1,16]
+; X86-NEXT:    vpermt2b %xmm0, %xmm1, %xmm0 {%k1} {z}
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: combine_vpermt2var_16i8_identity_mask:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovdqa {{.*#+}} xmm1 = [15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
 ; X64-NEXT:    kmovd %edi, %k1
-; X64-NEXT:    vpermi2b %xmm0, %xmm0, %xmm1 {%k1} {z}
-; X64-NEXT:    vmovdqa {{.*#+}} xmm0 = [15,30,13,28,11,26,9,24,7,22,5,20,3,18,1,16]
-; X64-NEXT:    vpermi2b %xmm1, %xmm1, %xmm0 {%k1} {z}
+; X64-NEXT:    vpermt2b %xmm0, %xmm1, %xmm0 {%k1} {z}
+; X64-NEXT:    vmovdqa {{.*#+}} xmm1 = [15,30,13,28,11,26,9,24,7,22,5,20,3,18,1,16]
+; X64-NEXT:    vpermt2b %xmm0, %xmm1, %xmm0 {%k1} {z}
 ; X64-NEXT:    retq
   %res0 = call <16 x i8> @llvm.x86.avx512.maskz.vpermt2var.qi.128(<16 x i8> <i8 15, i8 14, i8 13, i8 12, i8 11, i8 10, i8 9, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>, <16 x i8> %x0, <16 x i8> %x1, i16 %m)
   %res1 = call <16 x i8> @llvm.x86.avx512.maskz.vpermt2var.qi.128(<16 x i8> <i8 15, i8 30, i8 13, i8 28, i8 11, i8 26, i8 9, i8 24, i8 7, i8 22, i8 5, i8 20, i8 3, i8 18, i8 1, i8 16>, <16 x i8> %res0, <16 x i8> %res0, i16 %m)

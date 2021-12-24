@@ -58,8 +58,8 @@ public:
     // add them to the module.
     theModule = mlir::ModuleOp::create(builder.getUnknownLoc());
 
-    for (FunctionAST &F : moduleAST) {
-      auto func = mlirGen(F);
+    for (FunctionAST &f : moduleAST) {
+      auto func = mlirGen(f);
       if (!func)
         return nullptr;
       theModule.push_back(func);
@@ -93,7 +93,7 @@ private:
 
   /// Helper conversion for a Toy AST location to an MLIR location.
   mlir::Location loc(Location loc) {
-    return mlir::FileLineColLoc::get(builder.getIdentifier(*loc.file), loc.line,
+    return mlir::FileLineColLoc::get(builder.getStringAttr(*loc.file), loc.line,
                                      loc.col);
   }
 
@@ -113,16 +113,16 @@ private:
 
     // This is a generic function, the return type will be inferred later.
     // Arguments type are uniformly unranked tensors.
-    llvm::SmallVector<mlir::Type, 4> arg_types(proto.getArgs().size(),
-                                               getType(VarType{}));
-    auto func_type = builder.getFunctionType(arg_types, llvm::None);
-    return mlir::FuncOp::create(location, proto.getName(), func_type);
+    llvm::SmallVector<mlir::Type, 4> argTypes(proto.getArgs().size(),
+                                              getType(VarType{}));
+    auto funcType = builder.getFunctionType(argTypes, llvm::None);
+    return mlir::FuncOp::create(location, proto.getName(), funcType);
   }
 
   /// Emit a new function and add it to the MLIR module.
   mlir::FuncOp mlirGen(FunctionAST &funcAST) {
     // Create a scope in the symbol table to hold variable declarations.
-    ScopedHashTableScope<llvm::StringRef, mlir::Value> var_scope(symbolTable);
+    ScopedHashTableScope<llvm::StringRef, mlir::Value> varScope(symbolTable);
 
     // Create an MLIR function for the given prototype.
     mlir::FuncOp function(mlirGen(*funcAST.getProto()));
@@ -371,7 +371,7 @@ private:
   /// Future expressions will be able to reference this variable through symbol
   /// table lookup.
   mlir::Value mlirGen(VarDeclExprAST &vardecl) {
-    auto init = vardecl.getInitVal();
+    auto *init = vardecl.getInitVal();
     if (!init) {
       emitError(loc(vardecl.loc()),
                 "missing initializer in variable declaration");
@@ -398,7 +398,7 @@ private:
 
   /// Codegen a list of expression, return failure if one of them hit an error.
   mlir::LogicalResult mlirGen(ExprASTList &blockAST) {
-    ScopedHashTableScope<StringRef, mlir::Value> var_scope(symbolTable);
+    ScopedHashTableScope<StringRef, mlir::Value> varScope(symbolTable);
     for (auto &expr : blockAST) {
       // Specific handling for variable declarations, return statement, and
       // print. These can only appear in block list and not in nested

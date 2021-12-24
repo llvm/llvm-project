@@ -13,6 +13,7 @@
 #ifndef POLLY_SCHEDULETREETRANSFORM_H
 #define POLLY_SCHEDULETREETRANSFORM_H
 
+#include "polly/Support/ISLTools.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "isl/isl-noexceptions.h"
@@ -147,10 +148,42 @@ struct RecursiveScheduleTreeVisitor
 
   /// By default, recursively visit the child nodes.
   RetTy visitNode(isl::schedule_node Node, Args... args) {
-    isl_size NumChildren = Node.n_children().release();
-    for (isl_size i = 0; i < NumChildren; i += 1)
+    for (unsigned i : rangeIslSize(0, Node.n_children()))
       getDerived().visit(Node.child(i), std::forward<Args>(args)...);
     return RetTy();
+  }
+};
+
+/// Recursively visit all nodes of a schedule tree while allowing changes.
+///
+/// The visit methods return an isl::schedule_node that is used to continue
+/// visiting the tree. Structural changes such as returning a different node
+/// will confuse the visitor.
+template <typename Derived, typename... Args>
+struct ScheduleNodeRewriter
+    : public RecursiveScheduleTreeVisitor<Derived, isl::schedule_node,
+                                          Args...> {
+  Derived &getDerived() { return *static_cast<Derived *>(this); }
+  const Derived &getDerived() const {
+    return *static_cast<const Derived *>(this);
+  }
+
+  isl::schedule_node visitNode(isl::schedule_node Node, Args... args) {
+    return getDerived().visitChildren(Node);
+  }
+
+  isl::schedule_node visitChildren(isl::schedule_node Node, Args... args) {
+    if (!Node.has_children())
+      return Node;
+
+    isl::schedule_node It = Node.first_child();
+    while (true) {
+      It = getDerived().visit(It, std::forward<Args>(args)...);
+      if (!It.has_next_sibling())
+        break;
+      It = It.next_sibling();
+    }
+    return It.parent();
   }
 };
 
@@ -208,7 +241,7 @@ isl::set getPartialTilePrefixes(isl::set ScheduleRange, int VectorWidth);
 ///                      belong to the current band node.
 /// @param OutDimsNum    A number of dimensions that should belong to
 ///                      the current band node.
-isl::union_set getIsolateOptions(isl::set IsolateDomain, isl_size OutDimsNum);
+isl::union_set getIsolateOptions(isl::set IsolateDomain, unsigned OutDimsNum);
 
 /// Create an isl::union_set, which describes the specified option for the
 /// dimension of the current node.

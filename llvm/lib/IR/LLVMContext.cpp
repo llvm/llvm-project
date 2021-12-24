@@ -351,9 +351,9 @@ std::unique_ptr<DiagnosticHandler> LLVMContext::getDiagnosticHandler() {
 void LLVMContext::enableOpaquePointers() const {
   assert(pImpl->PointerTypes.empty() && pImpl->ASPointerTypes.empty() &&
          "Must be called before creating any pointer types");
-  pImpl->OpaquePointers = true;
+  pImpl->setOpaquePointers(true);
 }
 
 bool LLVMContext::supportsTypedPointers() const {
-  return !pImpl->OpaquePointers;
+  return !pImpl->getOpaquePointers();
 }

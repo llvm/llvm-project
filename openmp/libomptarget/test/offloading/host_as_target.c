@@ -7,8 +7,9 @@
 
 // RUN: %libomptarget-compile-run-and-check-generic
 
-// amdgcn does not have printf definition
+// amdgpu does not have a working printf definition
 // XFAIL: amdgcn-amd-amdhsa
+// XFAIL: amdgcn-amd-amdhsa-newRTL
 
 #include <stdio.h>
 #include <omp.h>

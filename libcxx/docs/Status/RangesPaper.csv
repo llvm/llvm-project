@@ -12,26 +12,26 @@ Section,Description,Dependencies,Assignee,Complete
 | `iter_difference_t <https://llvm.org/D99863>`_",,Christopher Di Bella,✅
 `[iterator.traits] <http://wg21.link/iterator.traits>`_,`Updates to iterator_traits <https://llvm.org/D99855>`_,"| indirectly_readable_traits
 | incrementable_traits",Christopher Di Bella,✅
-`[special.mem.concepts] <http://wg21.link/special.mem.concepts>`_,"| *no-throw-input-iterator*
-| *no-throw-sentinel-for*
-| *no-throw-input-range*
-| *no-throw-forward-iterator*
-| *no-throw-forward-range*","| [iterator.concepts]
-| [range.refinements]",Unassigned,Not started
-`[specialized.algorithms] <http://wg21.link/specialized.algorithms>`_,"| ranges::uninitialized_default_construct
-| ranges::uninitialized_default_construct_n
-| ranges::uninitialized_value_construct
-| ranges::uninitialized_value_construct_n
+`[special.mem.concepts] <http://wg21.link/special.mem.concepts>`_,"| *nothrow-input-iterator*
+| *nothrow-sentinel-for*
+| *nothrow-input-range*
+| *nothrow-forward-iterator*
+| *nothrow-forward-range*","| [iterator.concepts]
+| [range.refinements]",Konstantin Varlamov,✅
+`[specialized.algorithms] <http://wg21.link/specialized.algorithms>`_,"| `ranges::uninitialized_default_construct <https://llvm.org/D115315>`_
+| `ranges::uninitialized_default_construct_n <https://llvm.org/D115315>`_
+| `ranges::uninitialized_value_construct <https://llvm.org/D115626>`_
+| `ranges::uninitialized_value_construct_n <https://llvm.org/D115626>`_
 | ranges::uninitialized_copy
 | ranges::uninitialized_copy_n
 | ranges::uninitialized_move
 | ranges::uninitialized_move_n
-| ranges::uninitialized_fill
-| ranges::uninitialized_fill_n
+| `ranges::uninitialized_fill <https://llvm.org/D115626>`_
+| `ranges::uninitialized_fill_n <https://llvm.org/D115626>`_
 | ranges::construct_at
 | ranges::destroy
 | ranges::destroy_at
-| ranges::destroy_n",[special.mem.concepts],Unassigned,Not started
+| ranges::destroy_n",[special.mem.concepts],Konstantin Varlamov,In progress
 [strings],Adds begin/end and updates const_iterator.,[iterator.concepts],Unassigned,Not started
 [views.span],Same as [strings],[iterator.concepts],Unassigned,Not started
 `[iterator.cust.move] <http://wg21.link/iterator.cust.move>`_,`ranges::iter_move <https://llvm.org/D99873>`_,,Zoe Carver,✅

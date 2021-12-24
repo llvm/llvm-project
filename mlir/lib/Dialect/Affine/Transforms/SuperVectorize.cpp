@@ -611,7 +611,7 @@ struct Vectorize : public AffineVectorizeBase<Vectorize> {
   void runOnFunction() override;
 };
 
-} // end anonymous namespace
+} // namespace
 
 Vectorize::Vectorize(ArrayRef<int64_t> virtualVectorSize) {
   vectorSizes = virtualVectorSize;
@@ -764,7 +764,7 @@ private:
   void registerValueScalarReplacementImpl(Value replaced, Value replacement);
 };
 
-} // end namespace
+} // namespace
 
 /// Registers the vector replacement of a scalar operation and its result
 /// values. Both operations must have the same number of results.
@@ -949,7 +949,7 @@ static arith::ConstantOp vectorizeConstant(arith::ConstantOp constOp,
     return nullptr;
 
   auto vecTy = getVectorType(scalarTy, state.strategy);
-  auto vecAttr = DenseElementsAttr::get(vecTy, constOp.value());
+  auto vecAttr = DenseElementsAttr::get(vecTy, constOp.getValue());
 
   OpBuilder::InsertionGuard guard(state.builder);
   Operation *parentOp = state.builder.getInsertionBlock()->getParentOp();
@@ -1253,7 +1253,7 @@ static bool isNeutralElementConst(AtomicRMWKind reductionKind, Value value,
   Attribute valueAttr = getIdentityValueAttr(reductionKind, scalarTy,
                                              state.builder, value.getLoc());
   if (auto constOp = dyn_cast_or_null<arith::ConstantOp>(value.getDefiningOp()))
-    return constOp.value() == valueAttr;
+    return constOp.getValue() == valueAttr;
   return false;
 }
 
@@ -1494,7 +1494,7 @@ getMatchedAffineLoopsRec(NestedMatch match, unsigned currentLevel,
   // Add a new empty level to the output if it doesn't exist already.
   assert(currentLevel <= loops.size() && "Unexpected currentLevel");
   if (currentLevel == loops.size())
-    loops.push_back(SmallVector<AffineForOp, 2>());
+    loops.emplace_back();
 
   // Add current match and recursively visit its children.
   loops[currentLevel].push_back(cast<AffineForOp>(match.getMatchedOperation()));
@@ -1631,7 +1631,7 @@ static void computeIntersectionBuckets(
     // it.
     if (!intersects) {
       bucketRoots.push_back(matchRoot);
-      intersectionBuckets.push_back(SmallVector<NestedMatch, 8>());
+      intersectionBuckets.emplace_back();
       intersectionBuckets.back().push_back(match);
     }
   }

@@ -14,6 +14,7 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/CmpInstAnalysis.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -541,7 +542,7 @@ static bool canRewriteGEPAsOffset(Value *Start, Value *Base,
         if (!CI->isNoopCast(DL))
           return false;
 
-        if (Explored.count(CI->getOperand(0)) == 0)
+        if (!Explored.contains(CI->getOperand(0)))
           WorkList.push_back(CI->getOperand(0));
       }
 
@@ -553,7 +554,7 @@ static bool canRewriteGEPAsOffset(Value *Start, Value *Base,
             GEP->getType() != Start->getType())
           return false;
 
-        if (Explored.count(GEP->getOperand(0)) == 0)
+        if (!Explored.contains(GEP->getOperand(0)))
           WorkList.push_back(GEP->getOperand(0));
       }
 
@@ -575,7 +576,7 @@ static bool canRewriteGEPAsOffset(Value *Start, Value *Base,
     // Explore the PHI nodes further.
     for (auto *PN : PHIs)
       for (Value *Op : PN->incoming_values())
-        if (Explored.count(Op) == 0)
+        if (!Explored.contains(Op))
           WorkList.push_back(Op);
   }
 
@@ -589,7 +590,7 @@ static bool canRewriteGEPAsOffset(Value *Start, Value *Base,
       auto *Inst = dyn_cast<Instruction>(Val);
 
       if (Inst == Base || Inst == PHI || !Inst || !PHI ||
-          Explored.count(PHI) == 0)
+          !Explored.contains(PHI))
         continue;
 
       if (PHI->getParent() == Inst->getParent())
@@ -1270,9 +1271,8 @@ static Instruction *processUGT_ADDCST_ADD(ICmpInst &I, Value *A, Value *B,
   // This is only really a signed overflow check if the inputs have been
   // sign-extended; check for that condition. For example, if CI2 is 2^31 and
   // the operands of the add are 64 bits wide, we need at least 33 sign bits.
-  unsigned NeededSignBits = CI1->getBitWidth() - NewWidth + 1;
-  if (IC.ComputeNumSignBits(A, 0, &I) < NeededSignBits ||
-      IC.ComputeNumSignBits(B, 0, &I) < NeededSignBits)
+  if (IC.ComputeMinSignedBits(A, 0, &I) > NewWidth ||
+      IC.ComputeMinSignedBits(B, 0, &I) > NewWidth)
     return nullptr;
 
   // In order to replace the original add with a narrower
@@ -1893,23 +1893,6 @@ Instruction *InstCombinerImpl::foldICmpAndConstant(ICmpInst &Cmp,
     auto NewPred =
         Pred == CmpInst::ICMP_EQ ? CmpInst::ICMP_UGT : CmpInst::ICMP_ULE;
     return new ICmpInst(NewPred, X, SubOne(cast<Constant>(Cmp.getOperand(1))));
-  }
-
-  // (X & C2) == 0 -> (trunc X) >= 0
-  // (X & C2) != 0 -> (trunc X) <  0
-  //   iff C2 is a power of 2 and it masks the sign bit of a legal integer type.
-  const APInt *C2;
-  if (And->hasOneUse() && C.isZero() && match(Y, m_APInt(C2))) {
-    int32_t ExactLogBase2 = C2->exactLogBase2();
-    if (ExactLogBase2 != -1 && DL.isLegalInteger(ExactLogBase2 + 1)) {
-      Type *NTy = IntegerType::get(Cmp.getContext(), ExactLogBase2 + 1);
-      if (auto *AndVTy = dyn_cast<VectorType>(And->getType()))
-        NTy = VectorType::get(NTy, AndVTy->getElementCount());
-      Value *Trunc = Builder.CreateTrunc(X, NTy);
-      auto NewPred =
-          Pred == CmpInst::ICMP_EQ ? CmpInst::ICMP_SGE : CmpInst::ICMP_SLT;
-      return new ICmpInst(NewPred, Trunc, Constant::getNullValue(NTy));
-    }
   }
 
   return nullptr;
@@ -2749,6 +2732,14 @@ Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
     return new ICmpInst(ICmpInst::ICMP_NE, Builder.CreateAnd(X, ~C),
                         ConstantExpr::getNeg(cast<Constant>(Y)));
 
+  // The range test idiom can use either ult or ugt. Arbitrarily canonicalize
+  // to the ult form.
+  // X+C2 >u C -> X+(C2-C-1) <u ~C
+  if (Pred == ICmpInst::ICMP_UGT)
+    return new ICmpInst(ICmpInst::ICMP_ULT,
+                        Builder.CreateAdd(X, ConstantInt::get(Ty, *C2 - C - 1)),
+                        ConstantInt::get(Ty, ~C));
+
   return nullptr;
 }
 
@@ -2796,7 +2787,8 @@ bool InstCombinerImpl::matchThreeWayIntCompare(SelectInst *SI, Value *&LHS,
             PredB, cast<Constant>(RHS2));
     if (!FlippedStrictness)
       return false;
-    assert(FlippedStrictness->first == ICmpInst::ICMP_SGE && "Sanity check");
+    assert(FlippedStrictness->first == ICmpInst::ICMP_SGE &&
+           "basic correctness failure");
     RHS2 = FlippedStrictness->second;
     // And kind-of perform the result swap.
     std::swap(Less, Greater);
@@ -4184,8 +4176,8 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
     if (match(Op0, m_Mul(m_Value(X), m_APInt(C))) && *C != 0 &&
         match(Op1, m_Mul(m_Value(Y), m_SpecificInt(*C))) && I.isEquality())
       if (!C->countTrailingZeros() ||
-          (BO0->hasNoSignedWrap() && BO1->hasNoSignedWrap()) ||
-          (BO0->hasNoUnsignedWrap() && BO1->hasNoUnsignedWrap()))
+          (BO0 && BO1 && BO0->hasNoSignedWrap() && BO1->hasNoSignedWrap()) ||
+          (BO0 && BO1 && BO0->hasNoUnsignedWrap() && BO1->hasNoUnsignedWrap()))
       return new ICmpInst(Pred, X, Y);
   }
 
@@ -4586,6 +4578,64 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
         : new ICmpInst(ICmpInst::ICMP_UGT, CtPop, ConstantInt::get(Ty, 1));
   }
 
+  // Match icmp eq (trunc (lshr A, BW), (ashr (trunc A), BW-1)), which checks the
+  // top BW/2 + 1 bits are all the same. Create "A >=s INT_MIN && A <=s INT_MAX",
+  // which we generate as "icmp ult (add A, 2^(BW-1)), 2^BW" to skip a few steps
+  // of instcombine.
+  unsigned BitWidth = Op0->getType()->getScalarSizeInBits();
+  if (match(Op0, m_AShr(m_Trunc(m_Value(A)), m_SpecificInt(BitWidth - 1))) &&
+      match(Op1, m_Trunc(m_LShr(m_Specific(A), m_SpecificInt(BitWidth)))) &&
+      A->getType()->getScalarSizeInBits() == BitWidth * 2 &&
+      (I.getOperand(0)->hasOneUse() || I.getOperand(1)->hasOneUse())) {
+    APInt C = APInt::getOneBitSet(BitWidth * 2, BitWidth - 1);
+    Value *Add = Builder.CreateAdd(A, ConstantInt::get(A->getType(), C));
+    return new ICmpInst(Pred == ICmpInst::ICMP_EQ ? ICmpInst::ICMP_ULT
+                                                  : ICmpInst::ICMP_UGE,
+                        Add, ConstantInt::get(A->getType(), C.shl(1)));
+  }
+
+  return nullptr;
+}
+
+static Instruction *foldICmpWithTrunc(ICmpInst &ICmp,
+                                      InstCombiner::BuilderTy &Builder) {
+  ICmpInst::Predicate Pred = ICmp.getPredicate();
+  Value *Op0 = ICmp.getOperand(0), *Op1 = ICmp.getOperand(1);
+
+  // Try to canonicalize trunc + compare-to-constant into a mask + cmp.
+  // The trunc masks high bits while the compare may effectively mask low bits.
+  Value *X;
+  const APInt *C;
+  if (!match(Op0, m_OneUse(m_Trunc(m_Value(X)))) || !match(Op1, m_APInt(C)))
+    return nullptr;
+
+  // This matches patterns corresponding to tests of the signbit as well as:
+  // (trunc X) u< C --> (X & -C) == 0 (are all masked-high-bits clear?)
+  // (trunc X) u> C --> (X & ~C) != 0 (are any masked-high-bits set?)
+  APInt Mask;
+  if (decomposeBitTestICmp(Op0, Op1, Pred, X, Mask, true /* WithTrunc */)) {
+    Value *And = Builder.CreateAnd(X, Mask);
+    Constant *Zero = ConstantInt::getNullValue(X->getType());
+    return new ICmpInst(Pred, And, Zero);
+  }
+
+  unsigned SrcBits = X->getType()->getScalarSizeInBits();
+  if (Pred == ICmpInst::ICMP_ULT && C->isNegatedPowerOf2()) {
+    // If C is a negative power-of-2 (high-bit mask):
+    // (trunc X) u< C --> (X & C) != C (are any masked-high-bits clear?)
+    Constant *MaskC = ConstantInt::get(X->getType(), C->zext(SrcBits));
+    Value *And = Builder.CreateAnd(X, MaskC);
+    return new ICmpInst(ICmpInst::ICMP_NE, And, MaskC);
+  }
+
+  if (Pred == ICmpInst::ICMP_UGT && (~*C).isPowerOf2()) {
+    // If C is not-of-power-of-2 (one clear bit):
+    // (trunc X) u> C --> (X & (C+1)) == C+1 (are all masked-high-bits set?)
+    Constant *MaskC = ConstantInt::get(X->getType(), (*C + 1).zext(SrcBits));
+    Value *And = Builder.CreateAnd(X, MaskC);
+    return new ICmpInst(ICmpInst::ICMP_EQ, And, MaskC);
+  }
+
   return nullptr;
 }
 
@@ -4731,6 +4781,9 @@ Instruction *InstCombinerImpl::foldICmpWithCastOp(ICmpInst &ICmp) {
     if (NewOp1)
       return new ICmpInst(ICmp.getPredicate(), Op0Src, NewOp1);
   }
+
+  if (Instruction *R = foldICmpWithTrunc(ICmp, Builder))
+    return R;
 
   return foldICmpWithZextOrSext(ICmp, Builder);
 }

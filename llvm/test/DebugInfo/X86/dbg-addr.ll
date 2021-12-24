@@ -1,13 +1,20 @@
-; RUN: llc %s -o %t.s
+;; Run twice -- once with DBG_VALUEs, once with instruction referencing.
+; RUN: llc %s -o %t.s -experimental-debug-variable-locations=false
 ; RUN: llvm-mc -triple x86_64--linux %t.s -filetype=obj -o %t.o
 ; RUN: FileCheck < %t.s %s
 ; RUN: llvm-dwarfdump %t.o | FileCheck %s --check-prefix=DWARF
+; RUN: llc %s -o %t.s -experimental-debug-variable-locations=true
+; RUN: llvm-mc -triple x86_64--linux %t.s -filetype=obj -o %t.o
+; RUN: FileCheck < %t.s %s
+; RUN: llvm-dwarfdump %t.o | FileCheck %s --check-prefix=DWARF
+
 
 ; Unlike dbg.declare, dbg.addr should be lowered to DBG_VALUE instructions. It
 ; is control-dependent.
 
 ; CHECK-LABEL: use_dbg_addr:
 ; CHECK: #DEBUG_VALUE: use_dbg_addr:o <- [$rsp+0]
+; CHECK-NOT: #DEBUG_VALUE:
 
 ; DWARF: DW_TAG_variable
 ; DWARF-NEXT:              DW_AT_location (DW_OP_fbreg +0)

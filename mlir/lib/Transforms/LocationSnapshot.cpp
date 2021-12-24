@@ -30,12 +30,12 @@ static void generateLocationsFromIR(raw_ostream &os, StringRef fileName,
   op->print(os, state, flags);
 
   Builder builder(op->getContext());
-  Optional<Identifier> tagIdentifier;
+  Optional<StringAttr> tagIdentifier;
   if (!tag.empty())
-    tagIdentifier = builder.getIdentifier(tag);
+    tagIdentifier = builder.getStringAttr(tag);
 
   // Walk and generate new locations for each of the operations.
-  Identifier file = builder.getIdentifier(fileName);
+  StringAttr file = builder.getStringAttr(fileName);
   op->walk([&](Operation *opIt) {
     // Check to see if this operation has a mapped location. Some operations may
     // be elided from the printed form, e.g. the body terminators of some region
@@ -140,7 +140,7 @@ struct LocationSnapshotPass
   /// The printing flags to use when creating the snapshot.
   OpPrintingFlags flags;
 };
-} // end anonymous namespace
+} // namespace
 
 std::unique_ptr<Pass> mlir::createLocationSnapshotPass(OpPrintingFlags flags,
                                                        StringRef fileName,

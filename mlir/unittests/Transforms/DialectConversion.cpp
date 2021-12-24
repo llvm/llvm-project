@@ -44,6 +44,9 @@ TEST(DialectConversionTest, DynamicallyLegalOpCallbackOrder) {
   EXPECT_TRUE(target.isLegal(op));
   EXPECT_EQ(2, callbackCalled1);
   EXPECT_EQ(1, callbackCalled2);
+  EXPECT_FALSE(target.isIllegal(op));
+  EXPECT_EQ(4, callbackCalled1);
+  EXPECT_EQ(3, callbackCalled2);
   op->destroy();
 }
 
@@ -61,6 +64,8 @@ TEST(DialectConversionTest, DynamicallyLegalOpCallbackSkip) {
   auto *op = createOp(&context);
   EXPECT_FALSE(target.isLegal(op));
   EXPECT_EQ(1, callbackCalled);
+  EXPECT_FALSE(target.isIllegal(op));
+  EXPECT_EQ(2, callbackCalled);
   op->destroy();
 }
 
@@ -85,6 +90,43 @@ TEST(DialectConversionTest, DynamicallyLegalUnknownOpCallbackOrder) {
   EXPECT_TRUE(target.isLegal(op));
   EXPECT_EQ(2, callbackCalled1);
   EXPECT_EQ(1, callbackCalled2);
+  EXPECT_FALSE(target.isIllegal(op));
+  EXPECT_EQ(4, callbackCalled1);
+  EXPECT_EQ(3, callbackCalled2);
+  op->destroy();
+}
+
+TEST(DialectConversionTest, DynamicallyLegalReturnNone) {
+  MLIRContext context;
+  ConversionTarget target(context);
+
+  target.addDynamicallyLegalOp<DummyOp>(
+      [&](Operation *) -> Optional<bool> { return llvm::None; });
+
+  auto *op = createOp(&context);
+  EXPECT_FALSE(target.isLegal(op));
+  EXPECT_FALSE(target.isIllegal(op));
+
+  EXPECT_TRUE(succeeded(applyPartialConversion(op, target, {})));
+  EXPECT_TRUE(failed(applyFullConversion(op, target, {})));
+
+  op->destroy();
+}
+
+TEST(DialectConversionTest, DynamicallyLegalUnknownReturnNone) {
+  MLIRContext context;
+  ConversionTarget target(context);
+
+  target.markUnknownOpDynamicallyLegal(
+      [&](Operation *) -> Optional<bool> { return llvm::None; });
+
+  auto *op = createOp(&context);
+  EXPECT_FALSE(target.isLegal(op));
+  EXPECT_FALSE(target.isIllegal(op));
+
+  EXPECT_TRUE(succeeded(applyPartialConversion(op, target, {})));
+  EXPECT_TRUE(failed(applyFullConversion(op, target, {})));
+
   op->destroy();
 }
 } // namespace

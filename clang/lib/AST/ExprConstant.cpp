@@ -1954,11 +1954,12 @@ static bool EvaluateIgnoredValue(EvalInfo &Info, const Expr *E) {
   return true;
 }
 
-/// Should this call expression be treated as a string literal?
-static bool IsStringLiteralCall(const CallExpr *E) {
+/// Should this call expression be treated as a constant?
+static bool IsConstantCall(const CallExpr *E) {
   unsigned Builtin = E->getBuiltinCallee();
   return (Builtin == Builtin::BI__builtin___CFStringMakeConstantString ||
-          Builtin == Builtin::BI__builtin___NSStringMakeConstantString);
+          Builtin == Builtin::BI__builtin___NSStringMakeConstantString ||
+          Builtin == Builtin::BI__builtin_function_start);
 }
 
 static bool IsGlobalLValue(APValue::LValueBase B) {
@@ -2004,7 +2005,7 @@ static bool IsGlobalLValue(APValue::LValueBase B) {
   case Expr::ObjCBoxedExprClass:
     return cast<ObjCBoxedExpr>(E)->isExpressibleAsConstantInitializer();
   case Expr::CallExprClass:
-    return IsStringLiteralCall(cast<CallExpr>(E));
+    return IsConstantCall(cast<CallExpr>(E));
   // For GCC compatibility, &&label has static storage duration.
   case Expr::AddrLabelExprClass:
     return true;
@@ -2930,6 +2931,11 @@ handleCompareOpForVectorHelper(const APTy &LHSValue, BinaryOperatorKind Opcode,
     Result = (LHSValue >= RHSValue);
     break;
   }
+
+  // The boolean operations on these vector types use an instruction that
+  // results in a mask of '-1' for the 'truth' value.  Ensure that we negate 1
+  // to -1 to make sure that we produce the correct value.
+  Result.negate();
 
   return true;
 }
@@ -5319,6 +5325,11 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
       return ESR;
     }
 
+    // In error-recovery cases it's possible to get here even if we failed to
+    // synthesize the __begin and __end variables.
+    if (!FS->getBeginStmt() || !FS->getEndStmt() || !FS->getCond())
+      return ESR_Failed;
+
     // Create the __begin and __end iterators.
     ESR = EvaluateStmt(Result, Info, FS->getBeginStmt());
     if (ESR != ESR_Succeeded) {
@@ -7478,7 +7489,7 @@ public:
     const Expr *Source = E->getSourceExpr();
     if (!Source)
       return Error(E);
-    if (Source == E) { // sanity checking.
+    if (Source == E) {
       assert(0 && "OpaqueValueExpr recursively refers to itself");
       return Error(E);
     }
@@ -8957,7 +8968,7 @@ bool PointerExprEvaluator::visitNonBuiltinCallExpr(const CallExpr *E) {
 }
 
 bool PointerExprEvaluator::VisitCallExpr(const CallExpr *E) {
-  if (IsStringLiteralCall(E))
+  if (IsConstantCall(E))
     return Success(E);
 
   if (unsigned BuiltinOp = E->getBuiltinCallee())
@@ -10174,7 +10185,8 @@ namespace {
     bool VisitInitListExpr(const InitListExpr *E);
     bool VisitUnaryImag(const UnaryOperator *E);
     bool VisitBinaryOperator(const BinaryOperator *E);
-    // FIXME: Missing: unary -, unary ~, conditional operator (for GNU
+    bool VisitUnaryOperator(const UnaryOperator *E);
+    // FIXME: Missing: conditional operator (for GNU
     //                 conditional select), shufflevector, ExtVectorElementExpr
   };
 } // end anonymous namespace
@@ -10357,6 +10369,83 @@ bool VectorExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
     return false;
 
   return Success(LHSValue, E);
+}
+
+static llvm::Optional<APValue> handleVectorUnaryOperator(ASTContext &Ctx,
+                                                         QualType ResultTy,
+                                                         UnaryOperatorKind Op,
+                                                         APValue Elt) {
+  switch (Op) {
+  case UO_Plus:
+    // Nothing to do here.
+    return Elt;
+  case UO_Minus:
+    if (Elt.getKind() == APValue::Int) {
+      Elt.getInt().negate();
+    } else {
+      assert(Elt.getKind() == APValue::Float &&
+             "Vector can only be int or float type");
+      Elt.getFloat().changeSign();
+    }
+    return Elt;
+  case UO_Not:
+    // This is only valid for integral types anyway, so we don't have to handle
+    // float here.
+    assert(Elt.getKind() == APValue::Int &&
+           "Vector operator ~ can only be int");
+    Elt.getInt().flipAllBits();
+    return Elt;
+  case UO_LNot: {
+    if (Elt.getKind() == APValue::Int) {
+      Elt.getInt() = !Elt.getInt();
+      // operator ! on vectors returns -1 for 'truth', so negate it.
+      Elt.getInt().negate();
+      return Elt;
+    }
+    assert(Elt.getKind() == APValue::Float &&
+           "Vector can only be int or float type");
+    // Float types result in an int of the same size, but -1 for true, or 0 for
+    // false.
+    APSInt EltResult{Ctx.getIntWidth(ResultTy),
+                     ResultTy->isUnsignedIntegerType()};
+    if (Elt.getFloat().isZero())
+      EltResult.setAllBits();
+    else
+      EltResult.clearAllBits();
+
+    return APValue{EltResult};
+  }
+  default:
+    // FIXME: Implement the rest of the unary operators.
+    return llvm::None;
+  }
+}
+
+bool VectorExprEvaluator::VisitUnaryOperator(const UnaryOperator *E) {
+  Expr *SubExpr = E->getSubExpr();
+  const auto *VD = SubExpr->getType()->castAs<VectorType>();
+  // This result element type differs in the case of negating a floating point
+  // vector, since the result type is the a vector of the equivilant sized
+  // integer.
+  const QualType ResultEltTy = VD->getElementType();
+  UnaryOperatorKind Op = E->getOpcode();
+
+  APValue SubExprValue;
+  if (!Evaluate(SubExprValue, Info, SubExpr))
+    return false;
+
+  assert(SubExprValue.getVectorLength() == VD->getNumElements() &&
+         "Vector length doesn't match type?");
+
+  SmallVector<APValue, 4> ResultElements;
+  for (unsigned EltNum = 0; EltNum < VD->getNumElements(); ++EltNum) {
+    llvm::Optional<APValue> Elt = handleVectorUnaryOperator(
+        Info.Ctx, ResultEltTy, Op, SubExprValue.getVectorElt(EltNum));
+    if (!Elt)
+      return false;
+    ResultElements.push_back(*Elt);
+  }
+  return Success(APValue(ResultElements.data(), ResultElements.size()), E);
 }
 
 //===----------------------------------------------------------------------===//
@@ -10610,8 +10699,8 @@ bool ArrayExprEvaluator::VisitCXXConstructExpr(const CXXConstructExpr *E,
     for (unsigned I = 0; I != N; ++I)
       if (!VisitCXXConstructExpr(E, ArrayElt, &Value->getArrayInitializedElt(I),
                                  CAT->getElementType()) ||
-          !HandleLValueArrayAdjustment(Info, E, ArrayElt,
-                                       CAT->getElementType(), 1))
+          !HandleLValueArrayAdjustment(Info, E, ArrayElt, CAT->getElementType(),
+                                       1))
         return false;
 
     return true;
@@ -11072,7 +11161,7 @@ EvaluateBuiltinClassifyType(QualType T, const LangOptions &LangOpts) {
   case Type::ObjCInterface:
   case Type::ObjCObjectPointer:
   case Type::Pipe:
-  case Type::ExtInt:
+  case Type::BitInt:
     // GCC classifies vectors as None. We follow its lead and classify all
     // other types that don't fit into the regular classification the same way.
     return GCCTypeClass::None;

@@ -1,5 +1,5 @@
 // -*- C++ -*-
-//===------------------------ type_traits ---------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -550,8 +550,6 @@ template <bool _Bp, class _If, class _Then> using conditional_t = typename condi
 
 // is_same
 
-#if __has_keyword(__is_same)
-
 template <class _Tp, class _Up>
 struct _LIBCPP_TEMPLATE_VIS is_same : _BoolConstant<__is_same(_Tp, _Up)> { };
 
@@ -560,36 +558,18 @@ template <class _Tp, class _Up>
 inline constexpr bool is_same_v = __is_same(_Tp, _Up);
 #endif
 
-#else
-
-template <class _Tp, class _Up> struct _LIBCPP_TEMPLATE_VIS is_same           : public false_type {};
-template <class _Tp>            struct _LIBCPP_TEMPLATE_VIS is_same<_Tp, _Tp> : public true_type {};
-
-#if _LIBCPP_STD_VER > 14
-template <class _Tp, class _Up>
-inline constexpr bool is_same_v = is_same<_Tp, _Up>::value;
-#endif
-
-#endif // __is_same
+// _IsSame<T,U> has the same effect as is_same<T,U> but instantiates fewer types:
+// is_same<A,B> and is_same<C,D> are guaranteed to be different types, but
+// _IsSame<A,B> and _IsSame<C,D> are the same type (namely, false_type).
+// Neither GCC nor Clang can mangle the __is_same builtin, so _IsSame
+// mustn't be directly used anywhere that contributes to name-mangling
+// (such as in a dependent return type).
 
 template <class _Tp, class _Up>
-using _IsSame = _BoolConstant<
-#ifdef __clang__
-    __is_same(_Tp, _Up)
-#else
-    is_same<_Tp, _Up>::value
-#endif
->;
+using _IsSame = _BoolConstant<__is_same(_Tp, _Up)>;
 
 template <class _Tp, class _Up>
-using _IsNotSame = _BoolConstant<
-#ifdef __clang__
-    !__is_same(_Tp, _Up)
-#else
-    !is_same<_Tp, _Up>::value
-#endif
->;
-
+using _IsNotSame = _BoolConstant<!__is_same(_Tp, _Up)>;
 
 template <class _Tp>
 using __test_for_primary_template = __enable_if_t<
@@ -600,9 +580,9 @@ using __is_primary_template = _IsValidExpansion<
     __test_for_primary_template, _Tp
   >;
 
-struct __two {char __lx[2];};
+// helper class
 
-// helper class:
+struct __two {char __lx[2];};
 
 // is_const
 
@@ -852,9 +832,8 @@ inline constexpr bool is_array_v = is_array<_Tp>::value;
 
 // is_pointer
 
-// Before Clang 11 / AppleClang 12.0.5, __is_pointer didn't work for Objective-C types.
+// Before AppleClang 12.0.5, __is_pointer didn't work for Objective-C types.
 #if __has_keyword(__is_pointer) &&                                             \
-    !(defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER < 1100) &&               \
     !(defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER < 1205)
 
 template<class _Tp>
@@ -1417,9 +1396,7 @@ template<class _Tp> using type_identity_t = typename type_identity<_Tp>::type;
 
 // is_signed
 
-// Before Clang 10, __is_signed didn't work for floating-point types or enums.
-#if __has_keyword(__is_signed) &&                                              \
-    !(defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER < 1000)
+#if __has_keyword(__is_signed)
 
 template<class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_signed : _BoolConstant<__is_signed(_Tp)> { };
@@ -3956,7 +3933,7 @@ struct __nothrow_swappable_with {
 template <class _Tp, class _Up>
 struct __nothrow_swappable_with<_Tp, _Up, false> : false_type {};
 
-}  // __detail
+} // namespace __detail
 
 template <class _Tp>
 struct __is_swappable

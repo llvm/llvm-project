@@ -410,7 +410,7 @@ std::string HTMLDiagnostics::GenerateHTML(const PathDiagnostic& D, Rewriter &R,
     }
 
     // Append files to the main report file in the order they appear in the path
-    for (auto I : llvm::make_range(FileIDs.begin() + 1, FileIDs.end())) {
+    for (auto I : llvm::drop_begin(FileIDs)) {
       std::string s;
       llvm::raw_string_ostream os(s);
 
@@ -437,7 +437,7 @@ std::string HTMLDiagnostics::GenerateHTML(const PathDiagnostic& D, Rewriter &R,
   for (auto BI : *Buf)
     os << BI;
 
-  return os.str();
+  return file;
 }
 
 void HTMLDiagnostics::dumpCoverageData(
@@ -534,7 +534,7 @@ document.addEventListener("DOMContentLoaded", function() {
 </form>
 )<<<";
 
-  return os.str();
+  return s;
 }
 
 void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
@@ -792,8 +792,8 @@ void HTMLDiagnostics::RewriteFile(Rewriter &R, const PathPieces &path,
 
   // Stores the different ranges where we have reported something.
   std::vector<SourceRange> PopUpRanges;
-  for (auto I = path.rbegin(), E = path.rend(); I != E; ++I) {
-    const auto &Piece = *I->get();
+  for (const PathDiagnosticPieceRef &I : llvm::reverse(path)) {
+    const auto &Piece = *I.get();
 
     if (isa<PathDiagnosticPopUpPiece>(Piece)) {
       ++IndexMap[NumRegularPieces];
@@ -835,8 +835,8 @@ void HTMLDiagnostics::RewriteFile(Rewriter &R, const PathPieces &path,
   // Secondary indexing if we are having multiple pop-ups between two notes.
   // (e.g. [(13) 'a' is 'true'];  [(13.1) 'b' is 'false'];  [(13.2) 'c' is...)
   NumRegularPieces = TotalRegularPieces;
-  for (auto I = path.rbegin(), E = path.rend(); I != E; ++I) {
-    const auto &Piece = *I->get();
+  for (const PathDiagnosticPieceRef &I : llvm::reverse(path)) {
+    const auto &Piece = *I.get();
 
     if (const auto *PopUpP = dyn_cast<PathDiagnosticPopUpPiece>(&Piece)) {
       int PopUpPieceIndex = IndexMap[NumRegularPieces];
@@ -1202,7 +1202,7 @@ std::string getSpanBeginForControl(const char *ClassName, unsigned Index) {
   std::string Result;
   llvm::raw_string_ostream OS(Result);
   OS << "<span id=\"" << ClassName << Index << "\">";
-  return OS.str();
+  return Result;
 }
 
 std::string getSpanBeginForControlStart(unsigned Index) {

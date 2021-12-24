@@ -98,7 +98,7 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                         const char *LinkingOutput) const {
   const ToolChain &TC = getToolChain();
   const Driver &D = TC.getDriver();
-  const SanitizerArgs &Sanitize = TC.getSanitizerArgs();
+  const SanitizerArgs &Sanitize = TC.getSanitizerArgs(Args);
 
   ArgStringList CmdArgs;
 
@@ -349,29 +349,29 @@ static bool findGccVersion(StringRef LibDir, std::string &GccLibDir,
 }
 
 void toolchains::MinGW::findGccLibDir() {
-  llvm::SmallVector<llvm::SmallString<32>, 2> Archs;
-  Archs.emplace_back(getTriple().getArchName());
-  Archs[0] += "-w64-mingw32";
-  Archs.emplace_back("mingw32");
-  if (Arch.empty())
-    Arch = std::string(Archs[0].str());
+  llvm::SmallVector<llvm::SmallString<32>, 2> SubdirNames;
+  SubdirNames.emplace_back(getTriple().getArchName());
+  SubdirNames[0] += "-w64-mingw32";
+  SubdirNames.emplace_back("mingw32");
+  if (SubdirName.empty())
+    SubdirName = std::string(SubdirNames[0].str());
   // lib: Arch Linux, Ubuntu, Windows
   // lib64: openSUSE Linux
   for (StringRef CandidateLib : {"lib", "lib64"}) {
-    for (StringRef CandidateArch : Archs) {
+    for (StringRef CandidateSysroot : SubdirNames) {
       llvm::SmallString<1024> LibDir(Base);
-      llvm::sys::path::append(LibDir, CandidateLib, "gcc", CandidateArch);
+      llvm::sys::path::append(LibDir, CandidateLib, "gcc", CandidateSysroot);
       if (findGccVersion(LibDir, GccLibDir, Ver)) {
-        Arch = std::string(CandidateArch);
+        SubdirName = std::string(CandidateSysroot);
         return;
       }
     }
   }
 }
 
-llvm::ErrorOr<std::string> toolchains::MinGW::findGcc() {
+static llvm::ErrorOr<std::string> findGcc(const llvm::Triple &T) {
   llvm::SmallVector<llvm::SmallString<32>, 2> Gccs;
-  Gccs.emplace_back(getTriple().getArchName());
+  Gccs.emplace_back(T.getArchName());
   Gccs[0] += "-w64-mingw32-gcc";
   Gccs.emplace_back("mingw32-gcc");
   // Please do not add "gcc" here
@@ -381,17 +381,18 @@ llvm::ErrorOr<std::string> toolchains::MinGW::findGcc() {
   return make_error_code(std::errc::no_such_file_or_directory);
 }
 
-llvm::ErrorOr<std::string> toolchains::MinGW::findClangRelativeSysroot() {
+static llvm::ErrorOr<std::string>
+findClangRelativeSysroot(const Driver &D, const llvm::Triple &T,
+                         std::string &SubdirName) {
   llvm::SmallVector<llvm::SmallString<32>, 2> Subdirs;
-  Subdirs.emplace_back(getTriple().str());
-  Subdirs.emplace_back(getTriple().getArchName());
+  Subdirs.emplace_back(T.str());
+  Subdirs.emplace_back(T.getArchName());
   Subdirs[1] += "-w64-mingw32";
-  StringRef ClangRoot =
-      llvm::sys::path::parent_path(getDriver().getInstalledDir());
+  StringRef ClangRoot = llvm::sys::path::parent_path(D.getInstalledDir());
   StringRef Sep = llvm::sys::path::get_separator();
   for (StringRef CandidateSubdir : Subdirs) {
     if (llvm::sys::fs::is_directory(ClangRoot + Sep + CandidateSubdir)) {
-      Arch = std::string(CandidateSubdir);
+      SubdirName = std::string(CandidateSubdir);
       return (ClangRoot + Sep + CandidateSubdir).str();
     }
   }
@@ -404,13 +405,16 @@ toolchains::MinGW::MinGW(const Driver &D, const llvm::Triple &Triple,
       RocmInstallation(D, Triple, Args) {
   getProgramPaths().push_back(getDriver().getInstalledDir());
 
+  // The sequence for detecting a sysroot here should be kept in sync with
+  // the testTriple function below.
   if (getDriver().SysRoot.size())
     Base = getDriver().SysRoot;
   // Look for <clang-bin>/../<triplet>; if found, use <clang-bin>/.. as the
   // base as it could still be a base for a gcc setup with libgcc.
-  else if (llvm::ErrorOr<std::string> TargetSubdir = findClangRelativeSysroot())
+  else if (llvm::ErrorOr<std::string> TargetSubdir =
+               findClangRelativeSysroot(getDriver(), getTriple(), SubdirName))
     Base = std::string(llvm::sys::path::parent_path(TargetSubdir.get()));
-  else if (llvm::ErrorOr<std::string> GPPName = findGcc())
+  else if (llvm::ErrorOr<std::string> GPPName = findGcc(getTriple()))
     Base = std::string(llvm::sys::path::parent_path(
         llvm::sys::path::parent_path(GPPName.get())));
   else
@@ -423,10 +427,10 @@ toolchains::MinGW::MinGW(const Driver &D, const llvm::Triple &Triple,
   // correct crtbegin.o ,cetend.o would be found.
   getFilePaths().push_back(GccLibDir);
   getFilePaths().push_back(
-      (Base + Arch + llvm::sys::path::get_separator() + "lib").str());
+      (Base + SubdirName + llvm::sys::path::get_separator() + "lib").str());
   getFilePaths().push_back(Base + "lib");
   // openSUSE
-  getFilePaths().push_back(Base + Arch + "/sys-root/mingw/lib");
+  getFilePaths().push_back(Base + SubdirName + "/sys-root/mingw/lib");
 
   NativeLLVMSupport =
       Args.getLastArgValue(options::OPT_fuse_ld_EQ, CLANG_DEFAULT_LINKER)
@@ -478,7 +482,9 @@ bool toolchains::MinGW::isPICDefault() const {
          getArch() == llvm::Triple::aarch64;
 }
 
-bool toolchains::MinGW::isPIEDefault() const { return false; }
+bool toolchains::MinGW::isPIEDefault(const llvm::opt::ArgList &Args) const {
+  return false;
+}
 
 bool toolchains::MinGW::isPICDefaultForced() const {
   return getArch() == llvm::Triple::x86_64 ||
@@ -573,11 +579,12 @@ void toolchains::MinGW::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   if (GetRuntimeLibType(DriverArgs) == ToolChain::RLT_Libgcc) {
     // openSUSE
     addSystemInclude(DriverArgs, CC1Args,
-                     Base + Arch + "/sys-root/mingw/include");
+                     Base + SubdirName + "/sys-root/mingw/include");
   }
 
   addSystemInclude(DriverArgs, CC1Args,
-                   Base + Arch + llvm::sys::path::get_separator() + "include");
+                   Base + SubdirName + llvm::sys::path::get_separator() +
+                       "include");
   addSystemInclude(DriverArgs, CC1Args, Base + "include");
 }
 
@@ -596,8 +603,9 @@ void toolchains::MinGW::AddClangCXXStdlibIncludeArgs(
                                 .str();
     if (getDriver().getVFS().exists(TargetDir))
       addSystemInclude(DriverArgs, CC1Args, TargetDir);
-    addSystemInclude(DriverArgs, CC1Args, Base + Arch + Slash + "include" +
-                                              Slash + "c++" + Slash + "v1");
+    addSystemInclude(DriverArgs, CC1Args,
+                     Base + SubdirName + Slash + "include" + Slash + "c++" +
+                         Slash + "v1");
     addSystemInclude(DriverArgs, CC1Args,
                      Base + "include" + Slash + "c++" + Slash + "v1");
     break;
@@ -606,9 +614,10 @@ void toolchains::MinGW::AddClangCXXStdlibIncludeArgs(
   case ToolChain::CST_Libstdcxx:
     llvm::SmallVector<llvm::SmallString<1024>, 4> CppIncludeBases;
     CppIncludeBases.emplace_back(Base);
-    llvm::sys::path::append(CppIncludeBases[0], Arch, "include", "c++");
+    llvm::sys::path::append(CppIncludeBases[0], SubdirName, "include", "c++");
     CppIncludeBases.emplace_back(Base);
-    llvm::sys::path::append(CppIncludeBases[1], Arch, "include", "c++", Ver);
+    llvm::sys::path::append(CppIncludeBases[1], SubdirName, "include", "c++",
+                            Ver);
     CppIncludeBases.emplace_back(Base);
     llvm::sys::path::append(CppIncludeBases[2], "include", "c++", Ver);
     CppIncludeBases.emplace_back(GccLibDir);
@@ -616,9 +625,61 @@ void toolchains::MinGW::AddClangCXXStdlibIncludeArgs(
     for (auto &CppIncludeBase : CppIncludeBases) {
       addSystemInclude(DriverArgs, CC1Args, CppIncludeBase);
       CppIncludeBase += Slash;
-      addSystemInclude(DriverArgs, CC1Args, CppIncludeBase + Arch);
+      addSystemInclude(DriverArgs, CC1Args, CppIncludeBase + SubdirName);
       addSystemInclude(DriverArgs, CC1Args, CppIncludeBase + "backward");
     }
     break;
   }
+}
+
+static bool testTriple(const Driver &D, const llvm::Triple &Triple,
+                       const ArgList &Args) {
+  // If an explicit sysroot is set, that will be used and we shouldn't try to
+  // detect anything else.
+  std::string SubdirName;
+  if (D.SysRoot.size())
+    return true;
+  if (llvm::ErrorOr<std::string> TargetSubdir =
+          findClangRelativeSysroot(D, Triple, SubdirName))
+    return true;
+  if (llvm::ErrorOr<std::string> GPPName = findGcc(Triple))
+    return true;
+  // If we neither found a colocated sysroot or a matching gcc executable,
+  // conclude that we can't know if this is the correct spelling of the triple.
+  return false;
+}
+
+static llvm::Triple adjustTriple(const Driver &D, const llvm::Triple &Triple,
+                                 const ArgList &Args) {
+  // First test if the original triple can find a sysroot with the triple
+  // name.
+  if (testTriple(D, Triple, Args))
+    return Triple;
+  llvm::SmallVector<llvm::StringRef, 3> Archs;
+  // If not, test a couple other possible arch names that might be what was
+  // intended.
+  if (Triple.getArch() == llvm::Triple::x86) {
+    Archs.emplace_back("i386");
+    Archs.emplace_back("i586");
+    Archs.emplace_back("i686");
+  } else if (Triple.getArch() == llvm::Triple::arm ||
+             Triple.getArch() == llvm::Triple::thumb) {
+    Archs.emplace_back("armv7");
+  }
+  for (auto A : Archs) {
+    llvm::Triple TestTriple(Triple);
+    TestTriple.setArchName(A);
+    if (testTriple(D, TestTriple, Args))
+      return TestTriple;
+  }
+  // If none was found, just proceed with the original value.
+  return Triple;
+}
+
+void toolchains::MinGW::fixTripleArch(const Driver &D, llvm::Triple &Triple,
+                                      const ArgList &Args) {
+  if (Triple.getArch() == llvm::Triple::x86 ||
+      Triple.getArch() == llvm::Triple::arm ||
+      Triple.getArch() == llvm::Triple::thumb)
+    Triple = adjustTriple(D, Triple, Args);
 }

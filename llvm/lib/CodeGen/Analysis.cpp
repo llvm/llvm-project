@@ -221,9 +221,6 @@ ISD::CondCode llvm::getFCmpCodeWithoutNaN(ISD::CondCode CC) {
   }
 }
 
-/// getICmpCondCode - Return the ISD condition code corresponding to
-/// the given LLVM IR integer condition code.
-///
 ISD::CondCode llvm::getICmpCondCode(ICmpInst::Predicate Pred) {
   switch (Pred) {
   case ICmpInst::ICMP_EQ:  return ISD::SETEQ;
@@ -238,6 +235,33 @@ ISD::CondCode llvm::getICmpCondCode(ICmpInst::Predicate Pred) {
   case ICmpInst::ICMP_UGT: return ISD::SETUGT;
   default:
     llvm_unreachable("Invalid ICmp predicate opcode!");
+  }
+}
+
+ICmpInst::Predicate llvm::getICmpCondCode(ISD::CondCode Pred) {
+  switch (Pred) {
+  case ISD::SETEQ:
+    return ICmpInst::ICMP_EQ;
+  case ISD::SETNE:
+    return ICmpInst::ICMP_NE;
+  case ISD::SETLE:
+    return ICmpInst::ICMP_SLE;
+  case ISD::SETULE:
+    return ICmpInst::ICMP_ULE;
+  case ISD::SETGE:
+    return ICmpInst::ICMP_SGE;
+  case ISD::SETUGE:
+    return ICmpInst::ICMP_UGE;
+  case ISD::SETLT:
+    return ICmpInst::ICMP_SLT;
+  case ISD::SETULT:
+    return ICmpInst::ICMP_ULT;
+  case ISD::SETGT:
+    return ICmpInst::ICMP_SGT;
+  case ISD::SETUGT:
+    return ICmpInst::ICMP_UGT;
+  default:
+    llvm_unreachable("Invalid ISD integer condition code!");
   }
 }
 
@@ -688,8 +712,8 @@ bool llvm::returnTypeIsEligibleForTailCall(const Function *F,
     // The manipulations performed when we're looking through an insertvalue or
     // an extractvalue would happen at the front of the RetPath list, so since
     // we have to copy it anyway it's more efficient to create a reversed copy.
-    SmallVector<unsigned, 4> TmpRetPath(RetPath.rbegin(), RetPath.rend());
-    SmallVector<unsigned, 4> TmpCallPath(CallPath.rbegin(), CallPath.rend());
+    SmallVector<unsigned, 4> TmpRetPath(llvm::reverse(RetPath));
+    SmallVector<unsigned, 4> TmpCallPath(llvm::reverse(CallPath));
 
     // Finally, we can check whether the value produced by the tail call at this
     // index is compatible with the value we return.

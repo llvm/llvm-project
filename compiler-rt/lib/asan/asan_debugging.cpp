@@ -141,7 +141,7 @@ uptr __asan_get_free_stack(uptr addr, uptr *trace, uptr size, u32 *thread_id) {
 SANITIZER_INTERFACE_ATTRIBUTE
 void __asan_get_shadow_mapping(uptr *shadow_scale, uptr *shadow_offset) {
   if (shadow_scale)
-    *shadow_scale = SHADOW_SCALE;
+    *shadow_scale = ASAN_SHADOW_SCALE;
   if (shadow_offset)
-    *shadow_offset = SHADOW_OFFSET;
+    *shadow_offset = ASAN_SHADOW_OFFSET;
 }

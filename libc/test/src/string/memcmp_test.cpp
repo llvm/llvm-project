@@ -34,25 +34,25 @@ TEST(LlvmLibcMemcmpTest, LhsAfterRhsLexically) {
 }
 
 TEST(LlvmLibcMemcmpTest, Sweep) {
-  static constexpr size_t kMaxSize = 1024;
-  char lhs[kMaxSize];
-  char rhs[kMaxSize];
+  static constexpr size_t K_MAX_SIZE = 1024;
+  char lhs[K_MAX_SIZE];
+  char rhs[K_MAX_SIZE];
 
   const auto reset = [](char *const ptr) {
-    for (size_t i = 0; i < kMaxSize; ++i)
+    for (size_t i = 0; i < K_MAX_SIZE; ++i)
       ptr[i] = 'a';
   };
 
   reset(lhs);
   reset(rhs);
-  for (size_t i = 0; i < kMaxSize; ++i)
+  for (size_t i = 0; i < K_MAX_SIZE; ++i)
     EXPECT_EQ(__llvm_libc::memcmp(lhs, rhs, i), 0);
 
   reset(lhs);
   reset(rhs);
-  for (size_t i = 0; i < kMaxSize; ++i) {
+  for (size_t i = 0; i < K_MAX_SIZE; ++i) {
     rhs[i] = 'z';
-    EXPECT_LT(__llvm_libc::memcmp(lhs, rhs, kMaxSize), 0);
+    EXPECT_LT(__llvm_libc::memcmp(lhs, rhs, K_MAX_SIZE), 0);
     rhs[i] = 'a';
   }
 }

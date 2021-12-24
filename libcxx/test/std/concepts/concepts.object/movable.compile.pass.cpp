@@ -18,10 +18,13 @@
 #include <forward_list>
 #include <list>
 #include <map>
-#include <mutex>
 #include <optional>
 #include <unordered_map>
 #include <vector>
+
+#ifndef _LIBCPP_HAS_NO_THREADS
+#   include <mutex>
+#endif
 
 #include "type_classification/moveconstructible.h"
 #include "type_classification/movable.h"

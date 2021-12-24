@@ -161,7 +161,7 @@ class LargeMmapAllocator {
     return res;
   }
 
-  bool PointerIsMine(const void *p) {
+  bool PointerIsMine(const void *p) const {
     return GetBlockBegin(p) != nullptr;
   }
 
@@ -179,7 +179,7 @@ class LargeMmapAllocator {
     return GetHeader(p) + 1;
   }
 
-  void *GetBlockBegin(const void *ptr) {
+  void *GetBlockBegin(const void *ptr) const {
     uptr p = reinterpret_cast<uptr>(ptr);
     SpinMutexLock l(&mutex_);
     uptr nearest_chunk = 0;
@@ -301,7 +301,7 @@ class LargeMmapAllocator {
     return GetHeader(reinterpret_cast<uptr>(p));
   }
 
-  void *GetUser(const Header *h) {
+  void *GetUser(const Header *h) const {
     CHECK(IsAligned((uptr)h, page_size_));
     return reinterpret_cast<void*>(reinterpret_cast<uptr>(h) + page_size_);
   }
@@ -318,5 +318,5 @@ class LargeMmapAllocator {
   struct Stats {
     uptr n_allocs, n_frees, currently_allocated, max_allocated, by_size_log[64];
   } stats;
-  StaticSpinMutex mutex_;
+  mutable StaticSpinMutex mutex_;
 };

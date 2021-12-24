@@ -643,6 +643,31 @@ def Shape_SizeToIndexOp : Shape_Op<"size_to_index", [NoSideEffect]> {
   let hasCanonicalizer = 1;
 }
 
+def Shape_ValueAsShapeOp : Shape_Op<"value_as_shape", [NoSideEffect]> {
+  let summary = "Returns value as a shape";
+
+  let description = [{
+    The operations takes a ValueShape and returns a Shape corresponding to the value.
+    If the input value cannot be shape (e.g., not a 1D tensor of integral value
+    representing sizes) then this propagages the error shape. E.g.,
+
+    ```mlir
+    // The following
+    %0 = arith.constant dense<[1,2]> : tensor<2xi32>
+    %shape = shape.value_as_shape %0 : tensor<2xi32> -> !shape.shape
+    // is equivalent to
+    %shape' = shape.const_shape [1, 2] : !shape.shape
+    ```
+
+    This operation is the compliment of `shape_of` wrt ValueShape values.
+  }];
+
+  let arguments = (ins AnyTypeOf<[1DTensorOf<[AnyInteger, Index]>, Shape_ValueShapeType]>:$arg);
+  let results = (outs Shape_ShapeOrExtentTensorType:$result);
+
+  let assemblyFormat = "$arg attr-dict `:` type($arg) `->` type($result)";
+}
+
 def Shape_WithOp : Shape_Op<"with_shape", [NoSideEffect]> {
   let summary = "Returns ValueShape with given shape";
   let description = [{

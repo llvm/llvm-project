@@ -195,13 +195,12 @@ unsigned NVPTXInstrInfo::insertBranch(MachineBasicBlock &MBB,
     if (Cond.empty()) // Unconditional branch
       BuildMI(&MBB, DL, get(NVPTX::GOTO)).addMBB(TBB);
     else // Conditional branch
-      BuildMI(&MBB, DL, get(NVPTX::CBranch)).addReg(Cond[0].getReg())
-          .addMBB(TBB);
+      BuildMI(&MBB, DL, get(NVPTX::CBranch)).add(Cond[0]).addMBB(TBB);
     return 1;
   }
 
   // Two-way Conditional Branch.
-  BuildMI(&MBB, DL, get(NVPTX::CBranch)).addReg(Cond[0].getReg()).addMBB(TBB);
+  BuildMI(&MBB, DL, get(NVPTX::CBranch)).add(Cond[0]).addMBB(TBB);
   BuildMI(&MBB, DL, get(NVPTX::GOTO)).addMBB(FBB);
   return 2;
 }

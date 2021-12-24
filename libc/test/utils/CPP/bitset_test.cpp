@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "utils/CPP/Bitset.h"
+#include "src/__support/CPP/Bitset.h"
 #include "utils/UnitTest/Test.h"
 
 TEST(LlvmLibcBitsetTest, SetBitForSizeEqualToOne) {

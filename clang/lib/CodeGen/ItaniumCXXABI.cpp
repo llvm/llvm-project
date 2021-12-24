@@ -1345,7 +1345,8 @@ void ItaniumCXXABI::emitThrow(CodeGenFunction &CGF, const CXXThrowExpr *E) {
       AllocExceptionFn, llvm::ConstantInt::get(SizeTy, TypeSize), "exception");
 
   CharUnits ExnAlign = CGF.getContext().getExnObjectAlignment();
-  CGF.EmitAnyExprToExn(E->getSubExpr(), Address(ExceptionPtr, ExnAlign));
+  CGF.EmitAnyExprToExn(
+      E->getSubExpr(), Address(ExceptionPtr, CGM.Int8Ty, ExnAlign));
 
   // Now throw the exception.
   llvm::Constant *TypeInfo = CGM.GetAddrOfRTTIDescriptor(ThrowType,
@@ -2465,7 +2466,7 @@ void ItaniumCXXABI::EmitGuardedInit(CodeGenFunction &CGF,
     CGM.setStaticLocalDeclGuardAddress(&D, guard);
   }
 
-  Address guardAddr = Address(guard, guardAlignment);
+  Address guardAddr = Address(guard, guard->getValueType(), guardAlignment);
 
   // Test whether the variable has completed initialization.
   //
@@ -2880,7 +2881,7 @@ void ItaniumCXXABI::EmitThreadLocalInitFuncs(
     Guard->setAlignment(GuardAlign.getAsAlign());
 
     CodeGenFunction(CGM).GenerateCXXGlobalInitFunc(
-        InitFunc, OrderedInits, ConstantAddress(Guard, GuardAlign));
+        InitFunc, OrderedInits, ConstantAddress(Guard, CGM.Int8Ty, GuardAlign));
     // On Darwin platforms, use CXX_FAST_TLS calling convention.
     if (CGM.getTarget().getTriple().isOSDarwin()) {
       InitFunc->setCallingConv(llvm::CallingConv::CXX_FAST_TLS);
@@ -3529,7 +3530,7 @@ void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty) {
     llvm_unreachable("Pipe types shouldn't get here");
 
   case Type::Builtin:
-  case Type::ExtInt:
+  case Type::BitInt:
   // GCC treats vector and complex types as fundamental types.
   case Type::Vector:
   case Type::ExtVector:
@@ -3802,7 +3803,7 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
   case Type::Pipe:
     break;
 
-  case Type::ExtInt:
+  case Type::BitInt:
     break;
 
   case Type::ConstantArray:

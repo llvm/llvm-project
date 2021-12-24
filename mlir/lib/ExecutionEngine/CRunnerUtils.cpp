@@ -15,7 +15,7 @@
 #include "mlir/ExecutionEngine/CRunnerUtils.h"
 
 #ifndef _WIN32
-#if defined(__FreeBSD__) || defined(__NetBSD__)
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
 #include <cstdlib>
 #else
 #include <alloca.h>
@@ -109,7 +109,7 @@ extern "C" void print_flops(double flops) {
 extern "C" double rtclock() {
 #ifndef _WIN32
   struct timeval tp;
-  int stat = gettimeofday(&tp, NULL);
+  int stat = gettimeofday(&tp, nullptr);
   if (stat != 0)
     fprintf(stderr, "Error returning time from gettimeofday: %d\n", stat);
   return (tp.tv_sec + tp.tv_usec * 1.0e-6);

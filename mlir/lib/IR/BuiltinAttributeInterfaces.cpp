@@ -56,15 +56,15 @@ bool ElementsAttr::isValidIndex(Attribute elementsAttr,
   return isValidIndex(elementsAttr.getType().cast<ShapedType>(), index);
 }
 
-uint64_t ElementsAttr::getFlattenedIndex(Attribute elementsAttr,
-                                         ArrayRef<uint64_t> index) {
-  ShapedType type = elementsAttr.getType().cast<ShapedType>();
-  assert(isValidIndex(type, index) && "expected valid multi-dimensional index");
+uint64_t ElementsAttr::getFlattenedIndex(Type type, ArrayRef<uint64_t> index) {
+  ShapedType shapeType = type.cast<ShapedType>();
+  assert(isValidIndex(shapeType, index) &&
+         "expected valid multi-dimensional index");
 
   // Reduce the provided multidimensional index into a flattended 1D row-major
   // index.
-  auto rank = type.getRank();
-  auto shape = type.getShape();
+  auto rank = shapeType.getRank();
+  ArrayRef<int64_t> shape = shapeType.getShape();
   uint64_t valueIndex = 0;
   uint64_t dimMultiplier = 1;
   for (int i = rank - 1; i >= 0; --i) {

@@ -13,11 +13,13 @@
 #define IF_CPLUSPLUS(x) x
 #define IF_NOT_CPLUSPLUS(x)
 #define DEFAULT_VALUE(x) = (x)
+#define RESTRICT __restrict
 #else
 #include <stdbool.h>
 #define IF_CPLUSPLUS(x)
 #define IF_NOT_CPLUSPLUS(x) x
 #define DEFAULT_VALUE(x)
+#define RESTRICT restrict
 #endif
 
 #define FORTRAN_EXTERN_C_BEGIN IF_CPLUSPLUS(extern "C" {)

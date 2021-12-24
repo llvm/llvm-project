@@ -62,8 +62,9 @@ public:
   ///
   /// \param[in] plugin_name
   ///     An optional name of a specific dynamic loader plug-in that
-  ///     should be used. If NULL, pick the best plug-in.
-  static DynamicLoader *FindPlugin(Process *process, const char *plugin_name);
+  ///     should be used. If empty, pick the best plug-in.
+  static DynamicLoader *FindPlugin(Process *process,
+                                   llvm::StringRef plugin_name);
 
   /// Construct with a process.
   DynamicLoader(Process *process);

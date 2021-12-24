@@ -196,6 +196,7 @@ struct FragmentCompiler {
     compile(std::move(F.Index));
     compile(std::move(F.Diagnostics));
     compile(std::move(F.Completion));
+    compile(std::move(F.Hover));
   }
 
   void compile(Fragment::IfBlock &&F) {
@@ -414,6 +415,16 @@ struct FragmentCompiler {
               C.Diagnostics.Suppress.insert(N);
           });
 
+    if (F.UnusedIncludes)
+      if (auto Val = compileEnum<Config::UnusedIncludesPolicy>(
+                         "UnusedIncludes", **F.UnusedIncludes)
+                         .map("Strict", Config::UnusedIncludesPolicy::Strict)
+                         .map("None", Config::UnusedIncludesPolicy::None)
+                         .value())
+        Out.Apply.push_back([Val](const Params &, Config &C) {
+          C.Diagnostics.UnusedIncludes = *Val;
+        });
+
     compile(std::move(F.ClangTidy));
   }
 
@@ -494,6 +505,14 @@ struct FragmentCompiler {
           [AllScopes(**F.AllScopes)](const Params &, Config &C) {
             C.Completion.AllScopes = AllScopes;
           });
+    }
+  }
+
+  void compile(Fragment::HoverBlock &&F) {
+    if (F.ShowAKA) {
+      Out.Apply.push_back([ShowAKA(**F.ShowAKA)](const Params &, Config &C) {
+        C.Hover.ShowAKA = ShowAKA;
+      });
     }
   }
 

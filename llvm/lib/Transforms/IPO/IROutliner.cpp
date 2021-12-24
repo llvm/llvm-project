@@ -135,12 +135,8 @@ struct OutlinableGroup {
 /// \param SourceBB - the BasicBlock to pull Instructions from.
 /// \param TargetBB - the BasicBlock to put Instruction into.
 static void moveBBContents(BasicBlock &SourceBB, BasicBlock &TargetBB) {
-  BasicBlock::iterator BBCurr, BBEnd, BBNext;
-  for (BBCurr = SourceBB.begin(), BBEnd = SourceBB.end(); BBCurr != BBEnd;
-       BBCurr = BBNext) {
-    BBNext = std::next(BBCurr);
-    BBCurr->moveBefore(TargetBB, TargetBB.end());
-  }
+  for (Instruction &I : llvm::make_early_inc_range(SourceBB))
+    I.moveBefore(TargetBB, TargetBB.end());
 }
 
 /// A function to sort the keys of \p Map, which must be a mapping of constant
@@ -527,23 +523,20 @@ Function *IROutliner::createFunction(Module &M, OutlinableGroup &Group,
 /// \param [out] NewEnds - The return blocks of the new overall function.
 static void moveFunctionData(Function &Old, Function &New,
                              DenseMap<Value *, BasicBlock *> &NewEnds) {
-  Function::iterator CurrBB, NextBB, FinalBB;
-  for (CurrBB = Old.begin(), FinalBB = Old.end(); CurrBB != FinalBB;
-       CurrBB = NextBB) {
-    NextBB = std::next(CurrBB);
-    CurrBB->removeFromParent();
-    CurrBB->insertInto(&New);
-    Instruction *I = CurrBB->getTerminator();
+  for (BasicBlock &CurrBB : llvm::make_early_inc_range(Old)) {
+    CurrBB.removeFromParent();
+    CurrBB.insertInto(&New);
+    Instruction *I = CurrBB.getTerminator();
 
     // For each block we find a return instruction is, it is a potential exit
     // path for the function.  We keep track of each block based on the return
     // value here.
     if (ReturnInst *RI = dyn_cast<ReturnInst>(I))
-      NewEnds.insert(std::make_pair(RI->getReturnValue(), &(*CurrBB)));
+      NewEnds.insert(std::make_pair(RI->getReturnValue(), &CurrBB));
 
     std::vector<Instruction *> DebugInsts;
 
-    for (Instruction &Val : *CurrBB) {
+    for (Instruction &Val : CurrBB) {
       // We must handle the scoping of called functions differently than
       // other outlined instructions.
       if (!isa<CallInst>(&Val)) {
@@ -2213,6 +2206,7 @@ bool IROutliner::run(Module &M) {
 }
 
 // Pass Manager Boilerplate
+namespace {
 class IROutlinerLegacyPass : public ModulePass {
 public:
   static char ID;
@@ -2228,6 +2222,7 @@ public:
 
   bool runOnModule(Module &M) override;
 };
+} // namespace
 
 bool IROutlinerLegacyPass::runOnModule(Module &M) {
   if (skipModule(M))

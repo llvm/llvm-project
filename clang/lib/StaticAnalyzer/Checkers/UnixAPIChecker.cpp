@@ -182,8 +182,7 @@ void UnixAPIMisuseChecker::CheckOpenVariant(CheckerContext &C,
   ProgramStateRef state = C.getState();
 
   if (CE->getNumArgs() < MinArgCount) {
-    // The frontend should issue a warning for this case, so this is a sanity
-    // check.
+    // The frontend should issue a warning for this case. Just return.
     return;
   } else if (CE->getNumArgs() == MaxArgCount) {
     const Expr *Arg = CE->getArg(CreateModeArgIndex);
@@ -366,7 +365,7 @@ void UnixAPIPortabilityChecker::BasicAllocationCheck(CheckerContext &C,
                                                      const unsigned numArgs,
                                                      const unsigned sizeArg,
                                                      const char *fn) const {
-  // Sanity check for the correct number of arguments
+  // Check for the correct number of arguments.
   if (CE->getNumArgs() != numArgs)
     return;
 

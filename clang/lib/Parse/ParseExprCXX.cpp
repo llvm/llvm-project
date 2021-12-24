@@ -1068,8 +1068,8 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
 
     // Ensure that any ellipsis was in the right place.
     SourceLocation EllipsisLoc;
-    if (std::any_of(std::begin(EllipsisLocs), std::end(EllipsisLocs),
-                    [](SourceLocation Loc) { return Loc.isValid(); })) {
+    if (llvm::any_of(EllipsisLocs,
+                     [](SourceLocation Loc) { return Loc.isValid(); })) {
       // The '...' should appear before the identifier in an init-capture, and
       // after the identifier otherwise.
       bool InitCapture = InitKind != LambdaCaptureInitKind::NoInit;
@@ -2191,12 +2191,14 @@ void Parser::ParseCXXSimpleTypeSpecifier(DeclSpec &DS) {
     return;
   }
 
-  case tok::kw__ExtInt: {
+  case tok::kw__ExtInt:
+  case tok::kw__BitInt: {
+    DiagnoseBitIntUse(Tok);
     ExprResult ER = ParseExtIntegerArgument();
     if (ER.isInvalid())
       DS.SetTypeSpecError();
     else
-      DS.SetExtIntType(Loc, ER.get(), PrevSpec, DiagID, Policy);
+      DS.SetBitIntType(Loc, ER.get(), PrevSpec, DiagID, Policy);
 
     // Do this here because we have already consumed the close paren.
     DS.SetRangeEnd(PrevTokLocation);

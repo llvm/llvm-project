@@ -1,3 +1,4 @@
+import("//llvm/lib/Target/targets.gni")
 import("//llvm/utils/TableGen/tablegen.gni")
 import("//llvm/utils/gn/build/toolchain/compiler.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
@@ -16,13 +17,7 @@ if (current_os == "mac") {
   }
 }
 
-supported_toolchains = []
-if (android_ndk_path != "") {
-  supported_toolchains += [
-    "//llvm/utils/gn/build/toolchain:stage2_android_aarch64",
-    "//llvm/utils/gn/build/toolchain:stage2_android_arm",
-  ]
-}
+supported_toolchains = supported_android_toolchains
 
 executable("lldb") {
   configs += [ "//llvm/utils/gn/build:lldb_code" ]
@@ -43,7 +38,7 @@ executable("lldb") {
   if (current_os == "linux") {
     deps += [ "//lldb/tools/lldb-server" ]
   }
-  foreach (toolchain, supported_toolchains) {
+  foreach(toolchain, supported_toolchains) {
     deps += [ "//lldb/tools/lldb-server($toolchain)" ]
   }
 

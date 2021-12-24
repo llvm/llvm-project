@@ -61,7 +61,7 @@ public:
 
 struct CieRecord {
   EhSectionPiece *cie = nullptr;
-  std::vector<EhSectionPiece *> fdes;
+  SmallVector<EhSectionPiece *, 0> fdes;
 };
 
 // Section for .eh_frame.
@@ -79,7 +79,7 @@ public:
 
   void addSection(EhInputSection *sec);
 
-  std::vector<EhInputSection *> sections;
+  SmallVector<EhInputSection *, 0> sections;
   size_t numFdes = 0;
 
   struct FdeData {
@@ -115,7 +115,7 @@ private:
 
   uint64_t getFdePc(uint8_t *buf, size_t off, uint8_t enc) const;
 
-  std::vector<CieRecord *> cieRecords;
+  SmallVector<CieRecord *, 0> cieRecords;
 
   // CIE records are uniquified by their contents and personality functions.
   llvm::DenseMap<std::pair<ArrayRef<uint8_t>, Symbol *>, CieRecord *> cieMap;
@@ -387,7 +387,7 @@ public:
   bool hasGotPltOffRel = false;
 
 private:
-  std::vector<const Symbol *> entries;
+  SmallVector<const Symbol *, 0> entries;
 };
 
 // The IgotPltSection is a Got associated with the PltSection for GNU Ifunc
@@ -403,7 +403,7 @@ public:
   bool isNeeded() const override { return !entries.empty(); }
 
 private:
-  std::vector<const Symbol *> entries;
+  SmallVector<const Symbol *, 0> entries;
 };
 
 class StringTableSection final : public SyntheticSection {
@@ -420,7 +420,7 @@ private:
   uint64_t size = 0;
 
   llvm::DenseMap<StringRef, unsigned> stringMap;
-  std::vector<StringRef> strings;
+  SmallVector<StringRef, 0> strings;
 };
 
 class DynamicReloc {
@@ -449,21 +449,21 @@ public:
   DynamicReloc(RelType type, const InputSectionBase *inputSec,
                uint64_t offsetInSec, Kind kind, Symbol &sym, int64_t addend,
                RelExpr expr)
-      : type(type), sym(&sym), inputSec(inputSec), offsetInSec(offsetInSec),
-        kind(kind), expr(expr), addend(addend) {}
+      : sym(&sym), inputSec(inputSec), offsetInSec(offsetInSec), type(type),
+        addend(addend), kind(kind), expr(expr) {}
   /// This constructor records a relative relocation with no symbol.
   DynamicReloc(RelType type, const InputSectionBase *inputSec,
                uint64_t offsetInSec, int64_t addend = 0)
-      : type(type), sym(nullptr), inputSec(inputSec), offsetInSec(offsetInSec),
-        kind(AddendOnly), expr(R_ADDEND), addend(addend) {}
+      : sym(nullptr), inputSec(inputSec), offsetInSec(offsetInSec), type(type),
+        addend(addend), kind(AddendOnly), expr(R_ADDEND) {}
   /// This constructor records dynamic relocation settings used by the MIPS
   /// multi-GOT implementation.
   DynamicReloc(RelType type, const InputSectionBase *inputSec,
                uint64_t offsetInSec, const OutputSection *outputSec,
                int64_t addend)
-      : type(type), sym(nullptr), inputSec(inputSec), offsetInSec(offsetInSec),
-        kind(MipsMultiGotPage), expr(R_ADDEND), addend(addend),
-        outputSec(outputSec) {}
+      : sym(nullptr), outputSec(outputSec), inputSec(inputSec),
+        offsetInSec(offsetInSec), type(type), addend(addend),
+        kind(MipsMultiGotPage), expr(R_ADDEND) {}
 
   uint64_t getOffset() const;
   uint32_t getSymIndex(SymbolTableBaseSection *symTab) const;
@@ -476,25 +476,28 @@ public:
   /// address/the address of the corresponding GOT entry/etc.
   int64_t computeAddend() const;
 
-  RelType type;
+  void computeRaw(SymbolTableBaseSection *symtab);
+
   Symbol *sym;
+  const OutputSection *outputSec = nullptr;
   const InputSectionBase *inputSec;
   uint64_t offsetInSec;
+  uint64_t r_offset;
+  RelType type;
+  uint32_t r_sym;
+  // Initially input addend, then the output addend after
+  // RelocationSection<ELFT>::writeTo.
+  int64_t addend;
 
 private:
   Kind kind;
   // The kind of expression used to calculate the added (required e.g. for
   // relative GOT relocations).
   RelExpr expr;
-  int64_t addend;
-  const OutputSection *outputSec = nullptr;
 };
 
 template <class ELFT> class DynamicSection final : public SyntheticSection {
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
-
-  // finalizeContents() fills this vector with the section contents.
-  std::vector<std::pair<int32_t, std::function<uint64_t()>>> entries;
 
 public:
   DynamicSection();
@@ -503,14 +506,7 @@ public:
   size_t getSize() const override { return size; }
 
 private:
-  void add(int32_t tag, std::function<uint64_t()> fn);
-  void addInt(int32_t tag, uint64_t val);
-  void addInSec(int32_t tag, InputSection *sec);
-  void addInSecRelative(int32_t tag, InputSection *sec);
-  void addOutSec(int32_t tag, OutputSection *sec);
-  void addSize(int32_t tag, OutputSection *sec);
-  void addSym(int32_t tag, Symbol *sym);
-
+  std::vector<std::pair<int32_t, uint64_t>> computeContents();
   uint64_t size = 0;
 };
 
@@ -523,22 +519,22 @@ public:
   /// using relocations on the input section (e.g. MipsGotSection::writeTo()).
   void addReloc(const DynamicReloc &reloc);
   /// Add a dynamic relocation against \p sym with an optional addend.
-  void addSymbolReloc(RelType dynType, InputSectionBase *isec,
+  void addSymbolReloc(RelType dynType, InputSectionBase &isec,
                       uint64_t offsetInSec, Symbol &sym, int64_t addend = 0,
                       llvm::Optional<RelType> addendRelType = llvm::None);
   /// Add a relative dynamic relocation that uses the target address of \p sym
   /// (i.e. InputSection::getRelocTargetVA()) + \p addend as the addend.
-  void addRelativeReloc(RelType dynType, InputSectionBase *isec,
+  void addRelativeReloc(RelType dynType, InputSectionBase &isec,
                         uint64_t offsetInSec, Symbol &sym, int64_t addend,
                         RelType addendRelType, RelExpr expr);
   /// Add a dynamic relocation using the target address of \p sym as the addend
   /// if \p sym is non-preemptible. Otherwise add a relocation against \p sym.
   void addAddendOnlyRelocIfNonPreemptible(RelType dynType,
-                                          InputSectionBase *isec,
+                                          InputSectionBase &isec,
                                           uint64_t offsetInSec, Symbol &sym,
                                           RelType addendRelType);
   void addReloc(DynamicReloc::Kind kind, RelType dynType,
-                InputSectionBase *inputSec, uint64_t offsetInSec, Symbol &sym,
+                InputSectionBase &inputSec, uint64_t offsetInSec, Symbol &sym,
                 int64_t addend, RelExpr expr, RelType addendRelType);
   bool isNeeded() const override { return !relocs.empty(); }
   size_t getSize() const override { return relocs.size() * this->entsize; }
@@ -550,7 +546,7 @@ public:
             d->type == llvm::ELF::SHT_RELR);
   }
   int32_t dynamicTag, sizeDynamicTag;
-  std::vector<DynamicReloc> relocs;
+  SmallVector<DynamicReloc, 0> relocs;
 
 protected:
   size_t numRelativeRelocs = 0;
@@ -598,7 +594,7 @@ class RelrBaseSection : public SyntheticSection {
 public:
   RelrBaseSection();
   bool isNeeded() const override { return !relocs.empty(); }
-  std::vector<RelativeReloc> relocs;
+  SmallVector<RelativeReloc, 0> relocs;
 };
 
 // RelrSection is used to encode offsets for relative relocations.
@@ -618,7 +614,7 @@ public:
   }
 
 private:
-  std::vector<Elf_Relr> relrRelocs;
+  SmallVector<Elf_Relr, 0> relrRelocs;
 };
 
 struct SymbolTableEntry {
@@ -640,7 +636,7 @@ protected:
   void sortSymTabSymbols();
 
   // A vector of symbols and their string table offsets.
-  std::vector<SymbolTableEntry> symbols;
+  SmallVector<SymbolTableEntry, 0> symbols;
 
   StringTableSection &strTabSec;
 
@@ -679,14 +675,11 @@ public:
 
   // Adds symbols to the hash table.
   // Sorts the input to satisfy GNU hash section requirements.
-  void addSymbols(std::vector<SymbolTableEntry> &symbols);
+  void addSymbols(llvm::SmallVectorImpl<SymbolTableEntry> &symbols);
 
 private:
   // See the comment in writeBloomFilter.
   enum { Shift2 = 26 };
-
-  void writeBloomFilter(uint8_t *buf);
-  void writeHashTable(uint8_t *buf);
 
   struct Entry {
     Symbol *sym;
@@ -695,7 +688,7 @@ private:
     uint32_t bucketIdx;
   };
 
-  std::vector<Entry> symbols;
+  SmallVector<Entry, 0> symbols;
   size_t maskWords;
   size_t nBuckets = 0;
   size_t size = 0;
@@ -735,7 +728,7 @@ public:
 
   size_t headerSize;
 
-  std::vector<const Symbol *> entries;
+  SmallVector<const Symbol *, 0> entries;
 };
 
 // Used for non-preemptible ifuncs. It does not have a header. Each entry is
@@ -743,7 +736,7 @@ public:
 // runtime. PltSection can only contain entries associated with JUMP_SLOT
 // relocations, so IPLT entries are in a separate section.
 class IpltSection final : public SyntheticSection {
-  std::vector<const Symbol *> entries;
+  SmallVector<const Symbol *, 0> entries;
 
 public:
   IpltSection();
@@ -760,7 +753,7 @@ public:
   void writeTo(uint8_t *buf) override;
   size_t getSize() const override;
 
-  std::vector<const Symbol *> canonical_plts;
+  SmallVector<const Symbol *, 0> canonical_plts;
   static constexpr size_t footerSize = 64;
 };
 
@@ -793,13 +786,13 @@ public:
 
   struct GdbChunk {
     InputSection *sec;
-    std::vector<AddressEntry> addressAreas;
-    std::vector<CuEntry> compilationUnits;
+    SmallVector<AddressEntry, 0> addressAreas;
+    SmallVector<CuEntry, 0> compilationUnits;
   };
 
   struct GdbSymbol {
     llvm::CachedHashStringRef name;
-    std::vector<uint32_t> cuVector;
+    SmallVector<uint32_t, 0> cuVector;
     uint32_t nameOff;
     uint32_t cuVectorOff;
   };
@@ -872,7 +865,7 @@ private:
   StringRef getFileDefName();
 
   unsigned fileDefNameOff;
-  std::vector<unsigned> verDefNameOffs;
+  SmallVector<unsigned, 0> verDefNameOffs;
 };
 
 // The .gnu.version section specifies the required version of each symbol in the
@@ -911,7 +904,7 @@ class VersionNeedSection final : public SyntheticSection {
     std::vector<Vernaux> vernauxs;
   };
 
-  std::vector<Verneed> verneeds;
+  SmallVector<Verneed, 0> verneeds;
 
 public:
   VersionNeedSection();
@@ -928,7 +921,7 @@ public:
 class MergeSyntheticSection : public SyntheticSection {
 public:
   void addSection(MergeInputSection *ms);
-  std::vector<MergeInputSection *> sections;
+  SmallVector<MergeInputSection *, 0> sections;
 
 protected:
   MergeSyntheticSection(StringRef name, uint32_t type, uint64_t flags,
@@ -975,7 +968,7 @@ private:
 
   // String table contents
   constexpr static size_t numShards = 32;
-  std::vector<llvm::StringTableBuilder> shards;
+  SmallVector<llvm::StringTableBuilder, 0> shards;
   size_t shardOffsets[numShards];
 };
 
@@ -1133,7 +1126,7 @@ public:
   bool roundUpSizeForErrata = false;
 
 private:
-  std::vector<Thunk *> thunks;
+  SmallVector<Thunk *, 0> thunks;
   size_t size = 0;
 };
 
@@ -1164,7 +1157,7 @@ public:
   void finalizeContents() override { finalized = true; }
 
 private:
-  std::vector<std::pair<const Symbol *, int64_t>> entries;
+  SmallVector<std::pair<const Symbol *, int64_t>, 0> entries;
   llvm::DenseMap<std::pair<const Symbol *, int64_t>, uint32_t> entry_index;
   bool finalized = false;
 };
@@ -1195,8 +1188,6 @@ public:
 
 InputSection *createInterpSection();
 MergeInputSection *createCommentSection();
-MergeSyntheticSection *createMergeSynthetic(StringRef name, uint32_t type,
-                                            uint64_t flags, uint32_t alignment);
 template <class ELFT> void splitSections();
 
 template <typename ELFT> void writeEhdr(uint8_t *buf, Partition &part);

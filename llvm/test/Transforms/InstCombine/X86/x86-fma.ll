@@ -3,6 +3,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 define <4 x float> @test_vfmadd_ss(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
+;
 ; CHECK-LABEL: @test_vfmadd_ss(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
@@ -26,8 +27,9 @@ define <4 x float> @test_vfmadd_ss(<4 x float> %a, <4 x float> %b, <4 x float> %
 }
 
 define float @test_vfmadd_ss_0(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
+;
 ; CHECK-LABEL: @test_vfmadd_ss_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[C:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = call float @llvm.fma.f32(float [[TMP1]], float [[TMP2]], float [[TMP3]])
@@ -46,6 +48,7 @@ define float @test_vfmadd_ss_0(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 }
 
 define float @test_vfmadd_ss_1(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
+;
 ; CHECK-LABEL: @test_vfmadd_ss_1(
 ; CHECK-NEXT:    ret float 1.000000e+00
 ;
@@ -62,6 +65,7 @@ define float @test_vfmadd_ss_1(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 }
 
 define <2 x double> @test_vfmadd_sd(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
+;
 ; CHECK-LABEL: @test_vfmadd_sd(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[B:%.*]], i64 0
@@ -81,6 +85,7 @@ define <2 x double> @test_vfmadd_sd(<2 x double> %a, <2 x double> %b, <2 x doubl
 }
 
 define double @test_vfmadd_sd_0(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
+;
 ; CHECK-LABEL: @test_vfmadd_sd_0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[B:%.*]], i64 0
@@ -99,6 +104,7 @@ define double @test_vfmadd_sd_0(<2 x double> %a, <2 x double> %b, <2 x double> %
 }
 
 define double @test_vfmadd_sd_1(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
+;
 ; CHECK-LABEL: @test_vfmadd_sd_1(
 ; CHECK-NEXT:    ret double 1.000000e+00
 ;

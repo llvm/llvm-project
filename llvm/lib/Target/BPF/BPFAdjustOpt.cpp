@@ -15,6 +15,7 @@
 #include "BPFTargetMachine.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicsBPF.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
@@ -66,6 +67,7 @@ private:
   Module *M;
   SmallVector<PassThroughInfo, 16> PassThroughs;
 
+  bool adjustICmpToBuiltin();
   void adjustBasicBlock(BasicBlock &BB);
   bool serializeICMPCrossBB(BasicBlock &BB);
   void adjustInst(Instruction &I);
@@ -85,14 +87,72 @@ ModulePass *llvm::createBPFAdjustOpt() { return new BPFAdjustOpt(); }
 bool BPFAdjustOpt::runOnModule(Module &M) { return BPFAdjustOptImpl(&M).run(); }
 
 bool BPFAdjustOptImpl::run() {
+  bool Changed = adjustICmpToBuiltin();
+
   for (Function &F : *M)
     for (auto &BB : F) {
       adjustBasicBlock(BB);
       for (auto &I : BB)
         adjustInst(I);
     }
+  return insertPassThrough() || Changed;
+}
 
-  return insertPassThrough();
+// Commit acabad9ff6bf ("[InstCombine] try to canonicalize icmp with
+// trunc op into mask and cmp") added a transformation to
+// convert "(conv)a < power_2_const" to "a & <const>" in certain
+// cases and bpf kernel verifier has to handle the resulted code
+// conservatively and this may reject otherwise legitimate program.
+// Here, we change related icmp code to a builtin which will
+// be restored to original icmp code later to prevent that
+// InstCombine transformatin.
+bool BPFAdjustOptImpl::adjustICmpToBuiltin() {
+  bool Changed = false;
+  ICmpInst *ToBeDeleted = nullptr;
+  for (Function &F : *M)
+    for (auto &BB : F)
+      for (auto &I : BB) {
+        if (ToBeDeleted) {
+          ToBeDeleted->eraseFromParent();
+          ToBeDeleted = nullptr;
+        }
+
+        auto *Icmp = dyn_cast<ICmpInst>(&I);
+        if (!Icmp)
+          continue;
+
+        Value *Op0 = Icmp->getOperand(0);
+        if (!isa<TruncInst>(Op0))
+          continue;
+
+        auto ConstOp1 = dyn_cast<ConstantInt>(Icmp->getOperand(1));
+        if (!ConstOp1)
+          continue;
+
+        auto ConstOp1Val = ConstOp1->getValue().getZExtValue();
+        auto Op = Icmp->getPredicate();
+        if (Op == ICmpInst::ICMP_ULT || Op == ICmpInst::ICMP_UGE) {
+          if ((ConstOp1Val - 1) & ConstOp1Val)
+            continue;
+        } else if (Op == ICmpInst::ICMP_ULE || Op == ICmpInst::ICMP_UGT) {
+          if (ConstOp1Val & (ConstOp1Val + 1))
+            continue;
+        } else {
+          continue;
+        }
+
+        Constant *Opcode =
+            ConstantInt::get(Type::getInt32Ty(BB.getContext()), Op);
+        Function *Fn = Intrinsic::getDeclaration(
+            M, Intrinsic::bpf_compare, {Op0->getType(), ConstOp1->getType()});
+        auto *NewInst = CallInst::Create(Fn, {Opcode, Op0, ConstOp1});
+        BB.getInstList().insert(I.getIterator(), NewInst);
+        Icmp->replaceAllUsesWith(NewInst);
+        Changed = true;
+        ToBeDeleted = Icmp;
+      }
+
+  return Changed;
 }
 
 bool BPFAdjustOptImpl::insertPassThrough() {

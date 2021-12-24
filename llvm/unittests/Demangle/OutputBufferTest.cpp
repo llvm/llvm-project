@@ -60,3 +60,21 @@ TEST(OutputBufferTest, Insert) {
 
   std::free(OB.getBuffer());
 }
+
+TEST(OutputBufferTest, Prepend) {
+  OutputBuffer OB;
+
+  OB.prepend("n");
+  EXPECT_EQ("n", toString(OB));
+
+  OB << "abc";
+  OB.prepend("def");
+  EXPECT_EQ("defnabc", toString(OB));
+
+  OB.setCurrentPosition(3);
+
+  OB.prepend("abc");
+  EXPECT_EQ("abcdef", toString(OB));
+
+  std::free(OB.getBuffer());
+}

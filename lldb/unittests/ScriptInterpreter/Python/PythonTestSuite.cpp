@@ -8,10 +8,10 @@
 
 #include "gtest/gtest.h"
 
-#include "Plugins/ScriptInterpreter/Python/lldb-python.h"
-
+#include "Plugins/ScriptInterpreter/Python/SWIGPythonBridge.h"
 #include "Plugins/ScriptInterpreter/Python/ScriptInterpreterPython.h"
 #include "Plugins/ScriptInterpreter/Python/ScriptInterpreterPythonImpl.h"
+#include "Plugins/ScriptInterpreter/Python/lldb-python.h"
 
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
@@ -55,242 +55,217 @@ void PythonTestSuite::TearDown() {
 
 #if PY_MAJOR_VERSION >= 3
 extern "C" PyObject *PyInit__lldb(void) { return nullptr; }
-#define LLDBSwigPyInit PyInit__lldb
 #else
 extern "C" void init_lldb(void) {}
-#define LLDBSwigPyInit init_lldb
 #endif
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wreturn-type-c-linkage"
-
-// Disable warning C4190: 'LLDBSwigPythonBreakpointCallbackFunction' has
-// C-linkage specified, but returns UDT 'llvm::Expected<bool>' which is
-// incompatible with C
-#if _MSC_VER
-#pragma warning (push)
-#pragma warning (disable : 4190)
-#endif
-
-extern "C" llvm::Expected<bool> LLDBSwigPythonBreakpointCallbackFunction(
+llvm::Expected<bool> lldb_private::LLDBSwigPythonBreakpointCallbackFunction(
     const char *python_function_name, const char *session_dictionary_name,
     const lldb::StackFrameSP &sb_frame,
     const lldb::BreakpointLocationSP &sb_bp_loc,
-    StructuredDataImpl *args_impl) {
+    const StructuredDataImpl &args_impl) {
   return false;
 }
 
-#if _MSC_VER
-#pragma warning (pop)
-#endif
-
-#pragma clang diagnostic pop
-
-extern "C" bool LLDBSwigPythonWatchpointCallbackFunction(
+bool lldb_private::LLDBSwigPythonWatchpointCallbackFunction(
     const char *python_function_name, const char *session_dictionary_name,
     const lldb::StackFrameSP &sb_frame, const lldb::WatchpointSP &sb_wp) {
   return false;
 }
 
-extern "C" bool LLDBSwigPythonCallTypeScript(
-    const char *python_function_name, void *session_dictionary,
+bool lldb_private::LLDBSwigPythonCallTypeScript(
+    const char *python_function_name, const void *session_dictionary,
     const lldb::ValueObjectSP &valobj_sp, void **pyfunct_wrapper,
     const lldb::TypeSummaryOptionsSP &options_sp, std::string &retval) {
   return false;
 }
 
-extern "C" void *
-LLDBSwigPythonCreateSyntheticProvider(const char *python_class_name,
-                                      const char *session_dictionary_name,
-                                      const lldb::ValueObjectSP &valobj_sp) {
-  return nullptr;
-}
-
-extern "C" void *
-LLDBSwigPythonCreateCommandObject(const char *python_class_name,
-                                  const char *session_dictionary_name,
-                                  const lldb::DebuggerSP debugger_sp) {
-  return nullptr;
-}
-
-extern "C" void *LLDBSwigPythonCreateScriptedThreadPlan(
+void *lldb_private::LLDBSwigPythonCreateSyntheticProvider(
     const char *python_class_name, const char *session_dictionary_name,
-    StructuredDataImpl *args_data,
-    std::string &error_string,
+    const lldb::ValueObjectSP &valobj_sp) {
+  return nullptr;
+}
+
+void *lldb_private::LLDBSwigPythonCreateCommandObject(
+    const char *python_class_name, const char *session_dictionary_name,
+    lldb::DebuggerSP debugger_sp) {
+  return nullptr;
+}
+
+void *lldb_private::LLDBSwigPythonCreateScriptedThreadPlan(
+    const char *python_class_name, const char *session_dictionary_name,
+    const StructuredDataImpl &args_data, std::string &error_string,
     const lldb::ThreadPlanSP &thread_plan_sp) {
   return nullptr;
 }
 
-extern "C" bool LLDBSWIGPythonCallThreadPlan(void *implementor,
-                                             const char *method_name,
-                                             Event *event_sp, bool &got_error) {
+bool lldb_private::LLDBSWIGPythonCallThreadPlan(void *implementor,
+                                                const char *method_name,
+                                                Event *event_sp,
+                                                bool &got_error) {
   return false;
 }
 
-extern "C" void *LLDBSwigPythonCreateScriptedBreakpointResolver(
+void *lldb_private::LLDBSwigPythonCreateScriptedBreakpointResolver(
     const char *python_class_name, const char *session_dictionary_name,
-    lldb_private::StructuredDataImpl *args, lldb::BreakpointSP &bkpt_sp) {
+    const StructuredDataImpl &args, const lldb::BreakpointSP &bkpt_sp) {
   return nullptr;
 }
 
-extern "C" unsigned int
-LLDBSwigPythonCallBreakpointResolver(void *implementor, const char *method_name,
-                                     lldb_private::SymbolContext *sym_ctx) {
+unsigned int lldb_private::LLDBSwigPythonCallBreakpointResolver(
+    void *implementor, const char *method_name,
+    lldb_private::SymbolContext *sym_ctx) {
   return 0;
 }
 
-extern "C" size_t LLDBSwigPython_CalculateNumChildren(void *implementor,
-                                                      uint32_t max) {
+size_t lldb_private::LLDBSwigPython_CalculateNumChildren(PyObject *implementor,
+                                                         uint32_t max) {
   return 0;
 }
 
-extern "C" void *LLDBSwigPython_GetChildAtIndex(void *implementor,
-                                                uint32_t idx) {
+PyObject *lldb_private::LLDBSwigPython_GetChildAtIndex(PyObject *implementor,
+                                                       uint32_t idx) {
   return nullptr;
 }
 
-extern "C" int LLDBSwigPython_GetIndexOfChildWithName(void *implementor,
-                                                      const char *child_name) {
+int lldb_private::LLDBSwigPython_GetIndexOfChildWithName(
+    PyObject *implementor, const char *child_name) {
   return 0;
 }
 
-extern "C" void *LLDBSWIGPython_CastPyObjectToSBData(void *data) {
+void *lldb_private::LLDBSWIGPython_CastPyObjectToSBData(PyObject *data) {
   return nullptr;
 }
 
-extern "C" void *LLDBSWIGPython_CastPyObjectToSBError(void *data) {
+void *lldb_private::LLDBSWIGPython_CastPyObjectToSBError(PyObject *data) {
   return nullptr;
 }
 
-extern "C" void *LLDBSWIGPython_CastPyObjectToSBValue(void *data) {
+void *lldb_private::LLDBSWIGPython_CastPyObjectToSBValue(PyObject *data) {
   return nullptr;
 }
 
-extern "C" void *LLDBSWIGPython_CastPyObjectToSBMemoryRegionInfo(void *data) {
+void *
+lldb_private::LLDBSWIGPython_CastPyObjectToSBMemoryRegionInfo(PyObject *data) {
   return nullptr;
 }
 
-extern lldb::ValueObjectSP
-LLDBSWIGPython_GetValueObjectSPFromSBValue(void *data) {
+lldb::ValueObjectSP
+lldb_private::LLDBSWIGPython_GetValueObjectSPFromSBValue(void *data) {
   return nullptr;
 }
 
-extern "C" bool LLDBSwigPython_UpdateSynthProviderInstance(void *implementor) {
+bool lldb_private::LLDBSwigPython_UpdateSynthProviderInstance(
+    PyObject *implementor) {
   return false;
 }
 
-extern "C" bool
-LLDBSwigPython_MightHaveChildrenSynthProviderInstance(void *implementor) {
+bool lldb_private::LLDBSwigPython_MightHaveChildrenSynthProviderInstance(
+    PyObject *implementor) {
   return false;
 }
 
-extern "C" void *
-LLDBSwigPython_GetValueSynthProviderInstance(void *implementor) {
+PyObject *lldb_private::LLDBSwigPython_GetValueSynthProviderInstance(
+    PyObject *implementor) {
   return nullptr;
 }
 
-extern "C" bool
-LLDBSwigPythonCallCommand(const char *python_function_name,
-                          const char *session_dictionary_name,
-                          lldb::DebuggerSP &debugger, const char *args,
-                          lldb_private::CommandReturnObject &cmd_retobj,
-                          lldb::ExecutionContextRefSP exe_ctx_ref_sp) {
+bool lldb_private::LLDBSwigPythonCallCommand(
+    const char *python_function_name, const char *session_dictionary_name,
+    lldb::DebuggerSP debugger, const char *args,
+    lldb_private::CommandReturnObject &cmd_retobj,
+    lldb::ExecutionContextRefSP exe_ctx_ref_sp) {
   return false;
 }
 
-extern "C" bool
-LLDBSwigPythonCallCommandObject(void *implementor, lldb::DebuggerSP &debugger,
-                                const char *args,
-                                lldb_private::CommandReturnObject &cmd_retobj,
-                                lldb::ExecutionContextRefSP exe_ctx_ref_sp) {
+bool lldb_private::LLDBSwigPythonCallCommandObject(
+    PyObject *implementor, lldb::DebuggerSP debugger, const char *args,
+    lldb_private::CommandReturnObject &cmd_retobj,
+    lldb::ExecutionContextRefSP exe_ctx_ref_sp) {
   return false;
 }
 
-extern "C" bool
-LLDBSwigPythonCallModuleInit(const char *python_module_name,
-                             const char *session_dictionary_name,
-                             lldb::DebuggerSP &debugger) {
+bool lldb_private::LLDBSwigPythonCallModuleInit(
+    const char *python_module_name, const char *session_dictionary_name,
+    lldb::DebuggerSP debugger) {
   return false;
 }
 
-extern "C" void *
-LLDBSWIGPythonCreateOSPlugin(const char *python_class_name,
-                             const char *session_dictionary_name,
-                             const lldb::ProcessSP &process_sp) {
+void *
+lldb_private::LLDBSWIGPythonCreateOSPlugin(const char *python_class_name,
+                                           const char *session_dictionary_name,
+                                           const lldb::ProcessSP &process_sp) {
   return nullptr;
 }
 
-extern "C" void *LLDBSwigPythonCreateScriptedProcess(
+void *lldb_private::LLDBSwigPythonCreateScriptedProcess(
     const char *python_class_name, const char *session_dictionary_name,
-    const lldb::TargetSP &target_sp, StructuredDataImpl *args_impl,
+    const lldb::TargetSP &target_sp, const StructuredDataImpl &args_impl,
     std::string &error_string) {
   return nullptr;
 }
 
-extern "C" void *LLDBSwigPythonCreateScriptedThread(
+void *lldb_private::LLDBSwigPythonCreateScriptedThread(
     const char *python_class_name, const char *session_dictionary_name,
-    const lldb::TargetSP &target_sp, std::string &error_string) {
+    const lldb::ProcessSP &process_sp, const StructuredDataImpl &args_impl,
+    std::string &error_string) {
   return nullptr;
 }
 
-extern "C" void *
-LLDBSWIGPython_CreateFrameRecognizer(const char *python_class_name,
-                                     const char *session_dictionary_name) {
+void *lldb_private::LLDBSWIGPython_CreateFrameRecognizer(
+    const char *python_class_name, const char *session_dictionary_name) {
   return nullptr;
 }
 
-extern "C" void *
-LLDBSwigPython_GetRecognizedArguments(void *implementor,
-                                      const lldb::StackFrameSP &frame_sp) {
+PyObject *lldb_private::LLDBSwigPython_GetRecognizedArguments(
+    PyObject *implementor, const lldb::StackFrameSP &frame_sp) {
   return nullptr;
 }
 
-extern "C" bool LLDBSWIGPythonRunScriptKeywordProcess(
+bool lldb_private::LLDBSWIGPythonRunScriptKeywordProcess(
     const char *python_function_name, const char *session_dictionary_name,
-    lldb::ProcessSP &process, std::string &output) {
+    const lldb::ProcessSP &process, std::string &output) {
   return false;
 }
 
-extern "C" bool LLDBSWIGPythonRunScriptKeywordThread(
+llvm::Optional<std::string> lldb_private::LLDBSWIGPythonRunScriptKeywordThread(
     const char *python_function_name, const char *session_dictionary_name,
-    lldb::ThreadSP &thread, std::string &output) {
+    lldb::ThreadSP thread) {
+  return llvm::None;
+}
+
+bool lldb_private::LLDBSWIGPythonRunScriptKeywordTarget(
+    const char *python_function_name, const char *session_dictionary_name,
+    const lldb::TargetSP &target, std::string &output) {
   return false;
 }
 
-extern "C" bool LLDBSWIGPythonRunScriptKeywordTarget(
+llvm::Optional<std::string> lldb_private::LLDBSWIGPythonRunScriptKeywordFrame(
     const char *python_function_name, const char *session_dictionary_name,
-    lldb::TargetSP &target, std::string &output) {
+    lldb::StackFrameSP frame) {
+  return llvm::None;
+}
+
+bool lldb_private::LLDBSWIGPythonRunScriptKeywordValue(
+    const char *python_function_name, const char *session_dictionary_name,
+    const lldb::ValueObjectSP &value, std::string &output) {
   return false;
 }
 
-extern "C" bool LLDBSWIGPythonRunScriptKeywordFrame(
-    const char *python_function_name, const char *session_dictionary_name,
-    lldb::StackFrameSP &frame, std::string &output) {
-  return false;
-}
-
-extern "C" bool LLDBSWIGPythonRunScriptKeywordValue(
-    const char *python_function_name, const char *session_dictionary_name,
-    lldb::ValueObjectSP &value, std::string &output) {
-  return false;
-}
-
-extern "C" void *
-LLDBSWIGPython_GetDynamicSetting(void *module, const char *setting,
-                                 const lldb::TargetSP &target_sp) {
+void *lldb_private::LLDBSWIGPython_GetDynamicSetting(
+    void *module, const char *setting, const lldb::TargetSP &target_sp) {
   return nullptr;
 }
 
-extern "C" void *LLDBSwigPythonCreateScriptedStopHook(
+void *lldb_private::LLDBSwigPythonCreateScriptedStopHook(
     lldb::TargetSP target_sp, const char *python_class_name,
-    const char *session_dictionary_name,
-    lldb_private::StructuredDataImpl *args_impl, Status &error) {
+    const char *session_dictionary_name, const StructuredDataImpl &args_impl,
+    Status &error) {
   return nullptr;
 }
 
-extern "C" bool
-LLDBSwigPythonStopHookCallHandleStop(void *implementor,
-                                     lldb::ExecutionContextRefSP exc_ctx_sp,
-                                     lldb::StreamSP stream) {
+bool lldb_private::LLDBSwigPythonStopHookCallHandleStop(
+    void *implementor, lldb::ExecutionContextRefSP exc_ctx_sp,
+    lldb::StreamSP stream) {
   return false;
 }

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "environment.h"
+#include "memory.h"
 #include "tools.h"
 #include <cstdio>
 #include <cstdlib>
@@ -66,30 +67,28 @@ void ExecutionEnvironment::Configure(
     }
   }
 
+  if (auto *x{std::getenv("NO_STOP_MESSAGE")}) {
+    char *end;
+    auto n{std::strtol(x, &end, 10)};
+    if (n >= 0 && n <= 1 && *end == '\0') {
+      noStopMessage = n != 0;
+    } else {
+      std::fprintf(stderr,
+          "Fortran runtime: NO_STOP_MESSAGE=%s is invalid; ignored\n", x);
+    }
+  }
+
   // TODO: Set RP/ROUND='PROCESSOR_DEFINED' from environment
 }
 
 const char *ExecutionEnvironment::GetEnv(
-    const char *name, std::size_t name_length) {
-  if (!envp) {
-    // TODO: Ask std::getenv.
-    return nullptr;
-  }
+    const char *name, std::size_t name_length, const Terminator &terminator) {
+  RUNTIME_CHECK(terminator, name && name_length);
 
-  // envp is an array of strings of the form "name=value".
-  for (const char **var{envp}; *var != nullptr; ++var) {
-    const char *eq{std::strchr(*var, '=')};
-    if (!eq) {
-      // Found a malformed environment string, just ignore it.
-      continue;
-    }
-    if (static_cast<std::size_t>(eq - *var) != name_length) {
-      continue;
-    }
-    if (std::memcmp(*var, name, name_length) == 0) {
-      return eq + 1;
-    }
-  }
-  return nullptr;
+  OwningPtr<char> cStyleName{
+      SaveDefaultCharacter(name, name_length, terminator)};
+  RUNTIME_CHECK(terminator, cStyleName);
+
+  return std::getenv(cStyleName.get());
 }
 } // namespace Fortran::runtime

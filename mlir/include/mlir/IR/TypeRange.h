@@ -124,16 +124,14 @@ private:
 /// This class implements iteration on the types of a given range of values.
 template <typename ValueIteratorT>
 class ValueTypeIterator final
-    : public llvm::mapped_iterator<ValueIteratorT, Type (*)(Value)> {
-  static Type unwrap(Value value) { return value.getType(); }
-
+    : public llvm::mapped_iterator_base<ValueTypeIterator<ValueIteratorT>,
+                                        ValueIteratorT, Type> {
 public:
-  /// Provide a const dereference method.
-  Type operator*() const { return unwrap(*this->I); }
+  using llvm::mapped_iterator_base<ValueTypeIterator<ValueIteratorT>,
+                                   ValueIteratorT, Type>::mapped_iterator_base;
 
-  /// Initializes the type iterator to the specified value iterator.
-  ValueTypeIterator(ValueIteratorT it)
-      : llvm::mapped_iterator<ValueIteratorT, Type (*)(Value)>(it, &unwrap) {}
+  /// Map the element to the iterator result type.
+  Type mapElement(Value value) const { return value.getType(); }
 };
 
 /// This class implements iteration on the types of a given range of values.

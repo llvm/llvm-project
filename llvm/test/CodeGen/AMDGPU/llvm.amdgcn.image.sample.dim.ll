@@ -1718,8 +1718,8 @@ define amdgpu_ps float @sample_c_d_o_2darray_V1_tfe(<8 x i32> inreg %rsrc, <4 x 
 ; VERDE-NEXT:    s_mov_b32 s15, 0xf000
 ; VERDE-NEXT:    s_mov_b32 s14, -1
 ; VERDE-NEXT:    s_waitcnt vmcnt(0)
-; VERDE-NEXT:    buffer_store_dword v10, off, s[12:15], 0
 ; VERDE-NEXT:    v_mov_b32_e32 v0, v9
+; VERDE-NEXT:    buffer_store_dword v10, off, s[12:15], 0
 ; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;

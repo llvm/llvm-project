@@ -27,7 +27,7 @@ add_libc_unittest(
   SRCS
     str_to_float_test.cpp
   DEPENDS
-    libc.src.__support.str_conv_utils
+    libc.src.__support.str_to_float
 )
 
 add_executable(
@@ -48,3 +48,5 @@ add_custom_command(TARGET libc_str_to_float_comparison_test
                    DEPENDS ${float_test_file}
                    COMMENT "Test the strtof and strtod implementations against precomputed results." 
                    VERBATIM)
+
+add_subdirectory(OSUtil)

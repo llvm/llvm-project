@@ -37,7 +37,6 @@ if(DEFINED LIBCXX_ENABLE_STATIC
   message(FATAL_ERROR "LIBCXXABI_LINK_TESTS_WITH_SHARED_LIBCXX being OFF requires LIBCXX_ENABLE_STATIC to be ON")
 endif()
 
-pythonize_bool(LIBCXXABI_BUILD_32_BITS)
 pythonize_bool(LIBCXX_ENABLE_SHARED)
 pythonize_bool(LIBCXXABI_ENABLE_SHARED)
 pythonize_bool(LIBCXXABI_ENABLE_THREADS)
@@ -88,10 +87,6 @@ endif()
 
 if (LIBCXXABI_TARGET_TRIPLE)
   serialize_lit_param(target_triple "\"${LIBCXXABI_TARGET_TRIPLE}\"")
-endif()
-
-if (LIBCXXABI_BUILD_32_BITS)
-  serialize_lit_param(enable_32bit True)
 endif()
 
 foreach(param IN LISTS LIBCXXABI_TEST_PARAMS)

@@ -60,7 +60,7 @@ class AMDGPUCustomBehaviour : public CustomBehaviour {
   /// where we setup the InstrWaitCntInfo vector.
   /// The core logic for determining which CNTs an instruction
   /// interacts with is taken from SIInsertWaitcnts::updateEventWaitcntAfter().
-  /// Unfortunately, some of the logic from that function is not avalable to us
+  /// Unfortunately, some of the logic from that function is not available to us
   /// in this scope so we conservatively end up assuming that some
   /// instructions interact with more CNTs than they do in reality.
   void generateWaitCntInfo();

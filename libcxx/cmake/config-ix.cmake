@@ -1,8 +1,21 @@
 include(CMakePushCheckState)
 include(CheckLibraryExists)
+include(CheckLinkerFlag)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 include(CheckCSourceCompiles)
+
+# The compiler driver may be implicitly trying to link against libunwind.
+# This is normally ok (libcxx relies on an unwinder), but if libunwind is
+# built in the same cmake invocation as libcxx and we've got
+# LIBCXXABI_USE_LLVM_UNWINDER set, we'd be linking against the just-built
+# libunwind (and the compiler implicit -lunwind wouldn't succeed as the newly
+# built libunwind isn't installed yet). For those cases, it'd be good to
+# link with --uwnindlib=none. Check if that option works.
+llvm_check_linker_flag("--unwindlib=none" LIBCXX_SUPPORTS_UNWINDLIB_NONE_FLAG)
+if (LIBCXX_SUPPORTS_UNWINDLIB_NONE_FLAG)
+  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} --unwindlib=none")
+endif()
 
 if(WIN32 AND NOT MINGW)
   # NOTE(compnerd) this is technically a lie, there is msvcrt, but for now, lets
@@ -48,8 +61,9 @@ if (LIBCXX_SUPPORTS_NOSTDLIBXX_FLAG OR LIBCXX_SUPPORTS_NODEFAULTLIBS_FLAG)
     list(APPEND CMAKE_REQUIRED_LIBRARIES c)
   endif ()
   if (LIBCXX_USE_COMPILER_RT)
-    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -rtlib=compiler-rt")
-    find_compiler_rt_library(builtins LIBCXX_BUILTINS_LIBRARY)
+    include(HandleCompilerRT)
+    find_compiler_rt_library(builtins LIBCXX_BUILTINS_LIBRARY
+                             FLAGS ${LIBCXX_COMPILE_FLAGS})
     list(APPEND CMAKE_REQUIRED_LIBRARIES "${LIBCXX_BUILTINS_LIBRARY}")
   elseif (LIBCXX_HAS_GCC_LIB)
     list(APPEND CMAKE_REQUIRED_LIBRARIES gcc)

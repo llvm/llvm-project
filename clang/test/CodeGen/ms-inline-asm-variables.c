@@ -32,4 +32,3 @@ void t2() {
   // CHECK: mov ${{[0-9]}}[ebx + $$47], eax
   __asm mov 5 + 8 + 13 + 21[lVar + ebx], eax
 }
-

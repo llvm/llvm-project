@@ -283,6 +283,11 @@ public:
     return getTLI()->getTargetMachine().getAssumedAddrSpace(V);
   }
 
+  std::pair<const Value *, unsigned>
+  getPredicatedAddrSpace(const Value *V) const {
+    return getTLI()->getTargetMachine().getPredicatedAddrSpace(V);
+  }
+
   Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II, Value *OldV,
                                           Value *NewV) const {
     return nullptr;
@@ -665,6 +670,7 @@ public:
   }
 
   Optional<unsigned> getMaxVScale() const { return None; }
+  Optional<unsigned> getVScaleForTuning() const { return None; }
 
   /// Estimate the overhead of scalarizing an instruction. Insert and Extract
   /// are set if the demanded result elements need to be inserted and/or
@@ -1113,6 +1119,39 @@ public:
     return LT.first;
   }
 
+  InstructionCost getReplicationShuffleCost(Type *EltTy, int ReplicationFactor,
+                                            int VF,
+                                            const APInt &DemandedDstElts,
+                                            TTI::TargetCostKind CostKind) {
+    assert(DemandedDstElts.getBitWidth() == (unsigned)VF * ReplicationFactor &&
+           "Unexpected size of DemandedDstElts.");
+
+    InstructionCost Cost;
+
+    auto *SrcVT = FixedVectorType::get(EltTy, VF);
+    auto *ReplicatedVT = FixedVectorType::get(EltTy, VF * ReplicationFactor);
+
+    // The Mask shuffling cost is extract all the elements of the Mask
+    // and insert each of them Factor times into the wide vector:
+    //
+    // E.g. an interleaved group with factor 3:
+    //    %mask = icmp ult <8 x i32> %vec1, %vec2
+    //    %interleaved.mask = shufflevector <8 x i1> %mask, <8 x i1> undef,
+    //        <24 x i32> <0,0,0,1,1,1,2,2,2,3,3,3,4,4,4,5,5,5,6,6,6,7,7,7>
+    // The cost is estimated as extract all mask elements from the <8xi1> mask
+    // vector and insert them factor times into the <24xi1> shuffled mask
+    // vector.
+    APInt DemandedSrcElts = APIntOps::ScaleBitMask(DemandedDstElts, VF);
+    Cost += thisT()->getScalarizationOverhead(SrcVT, DemandedSrcElts,
+                                              /*Insert*/ false,
+                                              /*Extract*/ true);
+    Cost +=
+        thisT()->getScalarizationOverhead(ReplicatedVT, DemandedDstElts,
+                                          /*Insert*/ true, /*Extract*/ false);
+
+    return Cost;
+  }
+
   InstructionCost getMemoryOpCost(unsigned Opcode, Type *Src,
                                   MaybeAlign Alignment, unsigned AddressSpace,
                                   TTI::TargetCostKind CostKind,
@@ -1239,6 +1278,9 @@ public:
     assert(Indices.size() <= Factor &&
            "Interleaved memory op has too many members");
 
+    const APInt DemandedAllSubElts = APInt::getAllOnes(NumSubElts);
+    const APInt DemandedAllResultElts = APInt::getAllOnes(NumElts);
+
     APInt DemandedLoadStoreElts = APInt::getZero(NumElts);
     for (unsigned Index : Indices) {
       assert(Index < Factor && "Invalid index for interleaved memory op");
@@ -1256,7 +1298,8 @@ public:
       // The cost is estimated as extract elements at 0, 2, 4, 6 from the
       // <8 x i32> vector and insert them into a <4 x i32> vector.
       InstructionCost InsSubCost =
-          getScalarizationOverhead(SubVT, /*Insert*/ true, /*Extract*/ false);
+          thisT()->getScalarizationOverhead(SubVT, DemandedAllSubElts,
+                                            /*Insert*/ true, /*Extract*/ false);
       Cost += Indices.size() * InsSubCost;
       Cost +=
           thisT()->getScalarizationOverhead(VT, DemandedLoadStoreElts,
@@ -1276,7 +1319,8 @@ public:
       // excluding gaps) from both <4 x i32> vectors and insert into the <12 x
       // i32> vector.
       InstructionCost ExtSubCost =
-          getScalarizationOverhead(SubVT, /*Insert*/ false, /*Extract*/ true);
+          thisT()->getScalarizationOverhead(SubVT, DemandedAllSubElts,
+                                            /*Insert*/ false, /*Extract*/ true);
       Cost += ExtSubCost * Indices.size();
       Cost += thisT()->getScalarizationOverhead(VT, DemandedLoadStoreElts,
                                                 /*Insert*/ true,
@@ -1287,31 +1331,22 @@ public:
       return Cost;
 
     Type *I8Type = Type::getInt8Ty(VT->getContext());
-    auto *MaskVT = FixedVectorType::get(I8Type, NumElts);
-    SubVT = FixedVectorType::get(I8Type, NumSubElts);
 
-    // The Mask shuffling cost is extract all the elements of the Mask
-    // and insert each of them Factor times into the wide vector:
-    //
-    // E.g. an interleaved group with factor 3:
-    //    %mask = icmp ult <8 x i32> %vec1, %vec2
-    //    %interleaved.mask = shufflevector <8 x i1> %mask, <8 x i1> undef,
-    //        <24 x i32> <0,0,0,1,1,1,2,2,2,3,3,3,4,4,4,5,5,5,6,6,6,7,7,7>
-    // The cost is estimated as extract all mask elements from the <8xi1> mask
-    // vector and insert them factor times into the <24xi1> shuffled mask
-    // vector.
-    Cost += getScalarizationOverhead(SubVT, /*Insert*/ false, /*Extract*/ true);
-    Cost +=
-        getScalarizationOverhead(MaskVT, /*Insert*/ true, /*Extract*/ false);
+    Cost += thisT()->getReplicationShuffleCost(
+        I8Type, Factor, NumSubElts,
+        UseMaskForGaps ? DemandedLoadStoreElts : DemandedAllResultElts,
+        CostKind);
 
     // The Gaps mask is invariant and created outside the loop, therefore the
     // cost of creating it is not accounted for here. However if we have both
     // a MaskForGaps and some other mask that guards the execution of the
     // memory access, we need to account for the cost of And-ing the two masks
     // inside the loop.
-    if (UseMaskForGaps)
+    if (UseMaskForGaps) {
+      auto *MaskVT = FixedVectorType::get(I8Type, NumElts);
       Cost += thisT()->getArithmeticInstrCost(BinaryOperator::And, MaskVT,
                                               CostKind);
+    }
 
     return Cost;
   }
@@ -1991,7 +2026,7 @@ public:
   unsigned getNumberOfParts(Type *Tp) {
     std::pair<InstructionCost, MVT> LT =
         getTLI()->getTypeLegalizationCost(DL, Tp);
-    return *LT.first.getValue();
+    return LT.first.isValid() ? *LT.first.getValue() : 0;
   }
 
   InstructionCost getAddressComputationCost(Type *Ty, ScalarEvolution *,

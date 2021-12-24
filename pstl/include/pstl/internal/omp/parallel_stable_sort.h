@@ -12,6 +12,7 @@
 #define _PSTL_INTERNAL_OMP_PARALLEL_STABLE_SORT_H
 
 #include "util.h"
+#include "parallel_merge.h"
 
 namespace __pstl
 {
@@ -44,12 +45,12 @@ __parallel_move_range(_RandomAccessIterator __first1, _RandomAccessIterator __la
     }
 
     // Perform parallel moving of larger chunks
-    auto __policy = __omp_backend::__chunk_partitioner(__first1, __last1);
+    auto __policy = __pstl::__omp_backend::__chunk_partitioner(__first1, __last1);
 
     _PSTL_PRAGMA(omp taskloop)
     for (std::size_t __chunk = 0; __chunk < __policy.__n_chunks; ++__chunk)
     {
-        __omp_backend::__process_chunk(__policy, __first1, __chunk,
+        __pstl::__omp_backend::__process_chunk(__policy, __first1, __chunk,
                                        [&](auto __chunk_first, auto __chunk_last)
                                        {
                                            auto __chunk_offset = __chunk_first - __first1;
@@ -67,7 +68,7 @@ struct __move_range
     _OutputIterator
     operator()(_RandomAccessIterator __first1, _RandomAccessIterator __last1, _OutputIterator __d_first) const
     {
-        return __parallel_move_range(__first1, __last1, __d_first);
+        return __pstl::__omp_backend::__sort_details::__parallel_move_range(__first1, __last1, __d_first);
     }
 };
 } // namespace __sort_details
@@ -91,15 +92,16 @@ __parallel_stable_sort_body(_RandomAccessIterator __xs, _RandomAccessIterator __
     {
         std::size_t __size = __xe - __xs;
         auto __mid = __xs + (__size / 2);
-        __parallel_invoke_body([&]() { __parallel_stable_sort_body(__xs, __mid, __comp, __leaf_sort); },
-                               [&]() { __parallel_stable_sort_body(__mid, __xe, __comp, __leaf_sort); });
+        __pstl::__omp_backend::__parallel_invoke_body(
+            [&]() { __parallel_stable_sort_body(__xs, __mid, __comp, __leaf_sort); },
+            [&]() { __parallel_stable_sort_body(__mid, __xe, __comp, __leaf_sort); });
 
         // Perform a parallel merge of the sorted ranges into __output_data.
         _VecType __output_data(__size);
         _MoveValue __move_value;
         _MoveRange __move_range;
         __utils::__serial_move_merge __merge(__size);
-        __parallel_merge_body(
+        __pstl::__omp_backend::__parallel_merge_body(
             __mid - __xs, __xe - __mid, __xs, __mid, __mid, __xe, __output_data.begin(), __comp,
             [&__merge, &__move_value, &__move_range](_RandomAccessIterator __as, _RandomAccessIterator __ae,
                                                      _RandomAccessIterator __bs, _RandomAccessIterator __be,
@@ -107,7 +109,7 @@ __parallel_stable_sort_body(_RandomAccessIterator __xs, _RandomAccessIterator __
             { __merge(__as, __ae, __bs, __be, __cs, __comp, __move_value, __move_value, __move_range, __move_range); });
 
         // Move the values from __output_data back in the original source range.
-        __omp_backend::__sort_details::__parallel_move_range(__output_data.begin(), __output_data.end(), __xs);
+        __pstl::__omp_backend::__sort_details::__parallel_move_range(__output_data.begin(), __output_data.end(), __xs);
     }
 }
 
@@ -130,11 +132,11 @@ __parallel_stable_sort(_ExecutionPolicy&& /*__exec*/, _RandomAccessIterator __xs
     {
         if (__count <= __nsort)
         {
-            __parallel_stable_sort_body(__xs, __xe, __comp, __leaf_sort);
+            __pstl::__omp_backend::__parallel_stable_sort_body(__xs, __xe, __comp, __leaf_sort);
         }
         else
         {
-            __parallel_stable_partial_sort(__xs, __xe, __comp, __leaf_sort, __nsort);
+            __pstl::__omp_backend::__parallel_stable_partial_sort(__xs, __xe, __comp, __leaf_sort, __nsort);
         }
     }
     else
@@ -143,11 +145,11 @@ __parallel_stable_sort(_ExecutionPolicy&& /*__exec*/, _RandomAccessIterator __xs
         _PSTL_PRAGMA(omp single nowait)
         if (__count <= __nsort)
         {
-            __parallel_stable_sort_body(__xs, __xe, __comp, __leaf_sort);
+            __pstl::__omp_backend::__parallel_stable_sort_body(__xs, __xe, __comp, __leaf_sort);
         }
         else
         {
-            __parallel_stable_partial_sort(__xs, __xe, __comp, __leaf_sort, __nsort);
+            __pstl::__omp_backend::__parallel_stable_partial_sort(__xs, __xe, __comp, __leaf_sort, __nsort);
         }
     }
 }

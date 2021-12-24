@@ -29,25 +29,8 @@ static void extractFunctionBodiesFromModule(Oracle &O, Module &Program) {
     }
 }
 
-/// Counts the amount of non-declaration functions and prints their
-/// respective name & index
-static int countFunctionDefinitions(Module &Program) {
-  // TODO: Silence index with --quiet flag
-  errs() << "----------------------------\n";
-  errs() << "Function Definition Index Reference:\n";
-  int FunctionDefinitionCount = 0;
-  for (auto &F : Program)
-    if (!F.isDeclaration())
-      errs() << "\t" << ++FunctionDefinitionCount << ": " << F.getName()
-             << "\n";
-
-  errs() << "----------------------------\n";
-  return FunctionDefinitionCount;
-}
-
 void llvm::reduceFunctionBodiesDeltaPass(TestRunner &Test) {
   errs() << "*** Reducing Function Bodies...\n";
-  int Functions = countFunctionDefinitions(Test.getProgram());
-  runDeltaPass(Test, Functions, extractFunctionBodiesFromModule);
+  runDeltaPass(Test, extractFunctionBodiesFromModule);
   errs() << "----------------------------\n";
 }

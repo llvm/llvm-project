@@ -25,6 +25,7 @@
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -275,94 +276,64 @@ CleanupPointerRootUsers(GlobalVariable *GV,
 /// We just marked GV constant.  Loop over all users of the global, cleaning up
 /// the obvious ones.  This is largely just a quick scan over the use list to
 /// clean up the easy and obvious cruft.  This returns true if it made a change.
-static bool CleanupConstantGlobalUsers(
-    Value *V, Constant *Init, const DataLayout &DL,
-    function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
+static bool CleanupConstantGlobalUsers(GlobalVariable *GV,
+                                       const DataLayout &DL) {
+  Constant *Init = GV->getInitializer();
+  SmallVector<User *, 8> WorkList(GV->users());
+  SmallPtrSet<User *, 8> Visited;
   bool Changed = false;
-  // Note that we need to use a weak value handle for the worklist items. When
-  // we delete a constant array, we may also be holding pointer to one of its
-  // elements (or an element of one of its elements if we're dealing with an
-  // array of arrays) in the worklist.
-  SmallVector<WeakTrackingVH, 8> WorkList(V->users());
+
+  SmallVector<WeakTrackingVH> MaybeDeadInsts;
+  auto EraseFromParent = [&](Instruction *I) {
+    for (Value *Op : I->operands())
+      if (auto *OpI = dyn_cast<Instruction>(Op))
+        MaybeDeadInsts.push_back(OpI);
+    I->eraseFromParent();
+    Changed = true;
+  };
   while (!WorkList.empty()) {
-    Value *UV = WorkList.pop_back_val();
-    if (!UV)
+    User *U = WorkList.pop_back_val();
+    if (!Visited.insert(U).second)
       continue;
 
-    User *U = cast<User>(UV);
+    if (auto *BO = dyn_cast<BitCastOperator>(U))
+      append_range(WorkList, BO->users());
+    if (auto *ASC = dyn_cast<AddrSpaceCastOperator>(U))
+      append_range(WorkList, ASC->users());
+    else if (auto *GEP = dyn_cast<GEPOperator>(U))
+      append_range(WorkList, GEP->users());
+    else if (auto *LI = dyn_cast<LoadInst>(U)) {
+      // A load from zeroinitializer is always zeroinitializer, regardless of
+      // any applied offset.
+      Type *Ty = LI->getType();
+      if (Init->isNullValue() && !Ty->isX86_MMXTy() && !Ty->isX86_AMXTy()) {
+        LI->replaceAllUsesWith(Constant::getNullValue(Ty));
+        EraseFromParent(LI);
+        continue;
+      }
 
-    if (LoadInst *LI = dyn_cast<LoadInst>(U)) {
-      if (Init) {
-        if (auto *Casted =
-                ConstantFoldLoadThroughBitcast(Init, LI->getType(), DL)) {
-          // Replace the load with the initializer.
-          LI->replaceAllUsesWith(Casted);
-          LI->eraseFromParent();
-          Changed = true;
+      Value *PtrOp = LI->getPointerOperand();
+      APInt Offset(DL.getIndexTypeSizeInBits(PtrOp->getType()), 0);
+      PtrOp = PtrOp->stripAndAccumulateConstantOffsets(
+          DL, Offset, /* AllowNonInbounds */ true);
+      if (PtrOp == GV) {
+        if (auto *Value = ConstantFoldLoadFromConst(Init, Ty, Offset, DL)) {
+          LI->replaceAllUsesWith(Value);
+          EraseFromParent(LI);
         }
       }
     } else if (StoreInst *SI = dyn_cast<StoreInst>(U)) {
       // Store must be unreachable or storing Init into the global.
-      SI->eraseFromParent();
-      Changed = true;
-    } else if (ConstantExpr *CE = dyn_cast<ConstantExpr>(U)) {
-      if (CE->getOpcode() == Instruction::GetElementPtr) {
-        Constant *SubInit = nullptr;
-        if (Init)
-          SubInit = ConstantFoldLoadThroughGEPConstantExpr(
-              Init, CE, V->getType()->getPointerElementType(), DL);
-        Changed |= CleanupConstantGlobalUsers(CE, SubInit, DL, GetTLI);
-      } else if ((CE->getOpcode() == Instruction::BitCast &&
-                  CE->getType()->isPointerTy()) ||
-                 CE->getOpcode() == Instruction::AddrSpaceCast) {
-        // Pointer cast, delete any stores and memsets to the global.
-        Changed |= CleanupConstantGlobalUsers(CE, nullptr, DL, GetTLI);
-      }
-
-      if (CE->use_empty()) {
-        CE->destroyConstant();
-        Changed = true;
-      }
-    } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(U)) {
-      // Do not transform "gepinst (gep constexpr (GV))" here, because forming
-      // "gepconstexpr (gep constexpr (GV))" will cause the two gep's to fold
-      // and will invalidate our notion of what Init is.
-      Constant *SubInit = nullptr;
-      if (!isa<ConstantExpr>(GEP->getOperand(0))) {
-        ConstantExpr *CE = dyn_cast_or_null<ConstantExpr>(
-            ConstantFoldInstruction(GEP, DL, &GetTLI(*GEP->getFunction())));
-        if (Init && CE && CE->getOpcode() == Instruction::GetElementPtr)
-          SubInit = ConstantFoldLoadThroughGEPConstantExpr(
-              Init, CE, V->getType()->getPointerElementType(), DL);
-
-        // If the initializer is an all-null value and we have an inbounds GEP,
-        // we already know what the result of any load from that GEP is.
-        // TODO: Handle splats.
-        if (Init && isa<ConstantAggregateZero>(Init) && GEP->isInBounds())
-          SubInit = Constant::getNullValue(GEP->getResultElementType());
-      }
-      Changed |= CleanupConstantGlobalUsers(GEP, SubInit, DL, GetTLI);
-
-      if (GEP->use_empty()) {
-        GEP->eraseFromParent();
-        Changed = true;
-      }
+      EraseFromParent(SI);
     } else if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(U)) { // memset/cpy/mv
-      if (MI->getRawDest() == V) {
-        MI->eraseFromParent();
-        Changed = true;
-      }
-
-    } else if (Constant *C = dyn_cast<Constant>(U)) {
-      // If we have a chain of dead constantexprs or other things dangling from
-      // us, and if they are all dead, nuke them without remorse.
-      if (isSafeToDestroyConstant(C)) {
-        C->destroyConstant();
-        CleanupConstantGlobalUsers(V, Init, DL, GetTLI);
-        return true;
-      }
+      if (getUnderlyingObject(MI->getRawDest()) == GV)
+        EraseFromParent(MI);
     }
   }
+
+  Changed |=
+      RecursivelyDeleteTriviallyDeadInstructionsPermissive(MaybeDeadInsts);
+  GV->removeDeadConstantUsers();
   return Changed;
 }
 
@@ -397,8 +368,7 @@ static bool isSafeSROAGEP(User *U) {
       return false;
   }
 
-  return llvm::all_of(U->users(),
-                      [](User *UU) { return isSafeSROAElementUse(UU); });
+  return llvm::all_of(U->users(), isSafeSROAElementUse);
 }
 
 /// Return true if the specified instruction is a safe user of a derived
@@ -889,7 +859,7 @@ static bool OptimizeAwayTrappingUsesOfLoads(
       Changed |= CleanupPointerRootUsers(GV, GetTLI);
     } else {
       Changed = true;
-      CleanupConstantGlobalUsers(GV, nullptr, DL, GetTLI);
+      CleanupConstantGlobalUsers(GV, DL);
     }
     if (GV->use_empty()) {
       LLVM_DEBUG(dbgs() << "  *** GLOBAL NOW DEAD!\n");
@@ -1490,8 +1460,7 @@ static void makeAllConstantUsesInstructions(Constant *C) {
     append_range(UUsers, U->users());
     for (auto *UU : UUsers) {
       Instruction *UI = cast<Instruction>(UU);
-      Instruction *NewU = U->getAsInstruction();
-      NewU->insertBefore(UI);
+      Instruction *NewU = U->getAsInstruction(UI);
       UI->replaceUsesOfWith(U, NewU);
     }
     // We've replaced all the uses, so destroy the constant. (destroyConstant
@@ -1558,8 +1527,7 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
     } else {
       // Delete any stores we can find to the global.  We may not be able to
       // make it completely dead though.
-      Changed =
-          CleanupConstantGlobalUsers(GV, GV->getInitializer(), DL, GetTLI);
+      Changed = CleanupConstantGlobalUsers(GV, DL);
     }
 
     // If the global is dead now, delete it.
@@ -1584,7 +1552,7 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
     }
 
     // Clean up any obviously simplifiable users now.
-    Changed |= CleanupConstantGlobalUsers(GV, GV->getInitializer(), DL, GetTLI);
+    Changed |= CleanupConstantGlobalUsers(GV, DL);
 
     // If the global is dead now, just nuke it.
     if (GV->use_empty()) {
@@ -1629,7 +1597,7 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
       GV->setInitializer(SOVConstant);
 
       // Clean up any obviously simplifiable users now.
-      CleanupConstantGlobalUsers(GV, GV->getInitializer(), DL, GetTLI);
+      CleanupConstantGlobalUsers(GV, DL);
 
       if (GV->use_empty()) {
         LLVM_DEBUG(dbgs() << "   *** Substituting initializer allowed us to "
@@ -2606,12 +2574,11 @@ static bool OptimizeEmptyGlobalCXXDtors(Function *CXAAtExitFn) {
   // and remove them.
   bool Changed = false;
 
-  for (auto I = CXAAtExitFn->user_begin(), E = CXAAtExitFn->user_end();
-       I != E;) {
+  for (User *U : llvm::make_early_inc_range(CXAAtExitFn->users())) {
     // We're only interested in calls. Theoretically, we could handle invoke
     // instructions as well, but neither llvm-gcc nor clang generate invokes
     // to __cxa_atexit.
-    CallInst *CI = dyn_cast<CallInst>(*I++);
+    CallInst *CI = dyn_cast<CallInst>(U);
     if (!CI)
       continue;
 

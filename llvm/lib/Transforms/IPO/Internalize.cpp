@@ -201,21 +201,6 @@ bool InternalizePass::internalizeModule(Module &M, CallGraph *CG) {
     AlwaysPreserved.insert(V->getName());
   }
 
-  // Mark all functions not in the api as internal.
-  IsWasm = Triple(M.getTargetTriple()).isOSBinFormatWasm();
-  for (Function &I : M) {
-    if (!maybeInternalize(I, ComdatMap))
-      continue;
-    Changed = true;
-
-    if (ExternalNode)
-      // Remove a callgraph edge from the external node to this function.
-      ExternalNode->removeOneAbstractEdgeTo((*CG)[&I]);
-
-    ++NumFunctions;
-    LLVM_DEBUG(dbgs() << "Internalizing func " << I.getName() << "\n");
-  }
-
   // Never internalize the llvm.used symbol.  It is used to implement
   // attribute((used)).
   // FIXME: Shouldn't this just filter on llvm.metadata section??
@@ -236,6 +221,21 @@ bool InternalizePass::internalizeModule(Module &M, CallGraph *CG) {
     AlwaysPreserved.insert("__ssp_canary_word");
   else
     AlwaysPreserved.insert("__stack_chk_guard");
+
+  // Mark all functions not in the api as internal.
+  IsWasm = Triple(M.getTargetTriple()).isOSBinFormatWasm();
+  for (Function &I : M) {
+    if (!maybeInternalize(I, ComdatMap))
+      continue;
+    Changed = true;
+
+    if (ExternalNode)
+      // Remove a callgraph edge from the external node to this function.
+      ExternalNode->removeOneAbstractEdgeTo((*CG)[&I]);
+
+    ++NumFunctions;
+    LLVM_DEBUG(dbgs() << "Internalizing func " << I.getName() << "\n");
+  }
 
   // Mark all global variables with initializers that are not in the api as
   // internal as well.

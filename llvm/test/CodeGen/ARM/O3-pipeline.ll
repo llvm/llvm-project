@@ -151,12 +151,12 @@
 ; CHECK-NEXT:      Machine Natural Loop Construction
 ; CHECK-NEXT:      Machine Block Frequency Analysis
 ; CHECK-NEXT:      If Converter
-; CHECK-NEXT:      MVE VPT block insertion pass
 ; CHECK-NEXT:      Thumb IT blocks insertion pass
 ; CHECK-NEXT:      MachineDominator Tree Construction
 ; CHECK-NEXT:      Machine Natural Loop Construction
 ; CHECK-NEXT:      PostRA Machine Instruction Scheduler
 ; CHECK-NEXT:      Post RA top-down list latency scheduler
+; CHECK-NEXT:      MVE VPT block insertion pass
 ; CHECK-NEXT:      ARM Indirect Thunks
 ; CHECK-NEXT:      ARM sls hardening pass
 ; CHECK-NEXT:      Analyze Machine Code For Garbage Collection
@@ -179,6 +179,7 @@
 ; CHECK-NEXT:      Live DEBUG_VALUE analysis
 ; CHECK-NEXT:    Machine Outliner
 ; CHECK-NEXT:    FunctionPass Manager
+; CHECK-NEXT:      ARM Branch Targets
 ; CHECK-NEXT:      MachineDominator Tree Construction
 ; CHECK-NEXT:      ARM constant island placement and branch shortening pass
 ; CHECK-NEXT:      MachineDominator Tree Construction

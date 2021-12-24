@@ -278,6 +278,12 @@ struct SpecialFuncs {
   void baz();
   void bar();
   void bar(int);
+  virtual void car();
+  virtual void dar() = 0;
+
+#pragma omp declare variant(SpecialFuncs::car) match(construct={dispatch}) // expected-error {{'#pragma omp declare variant' does not support virtual functions}}
+#pragma omp declare variant(SpecialFuncs::dar) match(construct={dispatch}) // expected-error {{'#pragma omp declare variant' does not support virtual functions}}
+
 #pragma omp declare variant(SpecialFuncs::baz) match(implementation = {}) // expected-warning {{expected identifier or string literal describing a context selector; selector skipped}} expected-note {{context selector options are: 'vendor' 'extension' 'unified_address' 'unified_shared_memory' 'reverse_offload' 'dynamic_allocators' 'atomic_default_mem_order'}} expected-note {{the ignored selector spans until here}}
 #pragma omp declare variant(SpecialFuncs::bar) match(xxx = {}) // expected-warning {{'xxx' is not a valid context set in a `declare variant`; set ignored}} expected-note {{context set options are: 'construct' 'device' 'implementation' 'user'}} expected-note {{the ignored set spans until here}}
 

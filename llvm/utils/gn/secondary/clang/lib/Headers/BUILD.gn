@@ -96,6 +96,7 @@ copy("Headers") {
     "arm64intr.h",
     "arm_acle.h",
     "arm_cmse.h",
+    "arm_neon_sve_bridge.h",
     "armintr.h",
     "avx2intrin.h",
     "avx512bf16intrin.h",

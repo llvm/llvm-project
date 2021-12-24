@@ -640,24 +640,20 @@ entry:
 define dso_local <16 x i8> @no_RAUW_in_combine_during_legalize(i32* nocapture readonly %ptr, i32 signext %offset) local_unnamed_addr #0 {
 ; CHECK-P8-LABEL: no_RAUW_in_combine_during_legalize:
 ; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    addis r5, r2, .LCPI16_0@toc@ha
 ; CHECK-P8-NEXT:    sldi r4, r4, 2
-; CHECK-P8-NEXT:    xxlxor v4, v4, v4
-; CHECK-P8-NEXT:    addi r5, r5, .LCPI16_0@toc@l
-; CHECK-P8-NEXT:    lxsiwzx v2, r3, r4
-; CHECK-P8-NEXT:    lvx v3, 0, r5
-; CHECK-P8-NEXT:    vperm v2, v4, v2, v3
+; CHECK-P8-NEXT:    xxlxor v3, v3, v3
+; CHECK-P8-NEXT:    lfiwzx f0, r3, r4
+; CHECK-P8-NEXT:    xxspltd v2, f0, 0
+; CHECK-P8-NEXT:    vmrglb v2, v3, v2
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: no_RAUW_in_combine_during_legalize:
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    sldi r4, r4, 2
-; CHECK-P9-NEXT:    xxlxor v4, v4, v4
-; CHECK-P9-NEXT:    lxsiwzx v2, r3, r4
-; CHECK-P9-NEXT:    addis r3, r2, .LCPI16_0@toc@ha
-; CHECK-P9-NEXT:    addi r3, r3, .LCPI16_0@toc@l
-; CHECK-P9-NEXT:    lxv v3, 0(r3)
-; CHECK-P9-NEXT:    vperm v2, v4, v2, v3
+; CHECK-P9-NEXT:    xxlxor v3, v3, v3
+; CHECK-P9-NEXT:    lfiwzx f0, r3, r4
+; CHECK-P9-NEXT:    xxspltd v2, f0, 0
+; CHECK-P9-NEXT:    vmrglb v2, v3, v2
 ; CHECK-P9-NEXT:    blr
 ;
 ; CHECK-P9-BE-LABEL: no_RAUW_in_combine_during_legalize:
@@ -682,12 +678,9 @@ define dso_local <16 x i8> @no_RAUW_in_combine_during_legalize(i32* nocapture re
 ; CHECK-P7-LABEL: no_RAUW_in_combine_during_legalize:
 ; CHECK-P7:       # %bb.0: # %entry
 ; CHECK-P7-NEXT:    sldi r4, r4, 2
-; CHECK-P7-NEXT:    addi r5, r1, -16
 ; CHECK-P7-NEXT:    xxlxor v3, v3, v3
-; CHECK-P7-NEXT:    lwzx r3, r3, r4
-; CHECK-P7-NEXT:    std r3, -16(r1)
-; CHECK-P7-NEXT:    lxvd2x vs0, 0, r5
-; CHECK-P7-NEXT:    xxswapd v2, vs0
+; CHECK-P7-NEXT:    lfiwzx f0, r3, r4
+; CHECK-P7-NEXT:    xxspltd v2, f0, 0
 ; CHECK-P7-NEXT:    vmrglb v2, v3, v2
 ; CHECK-P7-NEXT:    blr
 entry:
@@ -831,8 +824,8 @@ entry:
 define dso_local void @testByteSplat() #0 {
 ; CHECK-P8-LABEL: testByteSplat:
 ; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    lbz r3, 0(r3)
-; CHECK-P8-NEXT:    mtvsrd v2, r3
+; CHECK-P8-NEXT:    lbzx r3, 0, r3
+; CHECK-P8-NEXT:    mtvsrwz v2, r3
 ; CHECK-P8-NEXT:    vspltb v2, v2, 7
 ; CHECK-P8-NEXT:    stvx v2, 0, r3
 ; CHECK-P8-NEXT:    blr
@@ -863,10 +856,9 @@ define dso_local void @testByteSplat() #0 {
 ;
 ; CHECK-P7-LABEL: testByteSplat:
 ; CHECK-P7:       # %bb.0: # %entry
-; CHECK-P7-NEXT:    lbz r3, 0(r3)
-; CHECK-P7-NEXT:    stb r3, -16(r1)
-; CHECK-P7-NEXT:    addi r3, r1, -16
-; CHECK-P7-NEXT:    lvx v2, 0, r3
+; CHECK-P7-NEXT:    lvsr v2, 0, r3
+; CHECK-P7-NEXT:    lvx v3, 0, r3
+; CHECK-P7-NEXT:    vperm v2, v3, v3, v2
 ; CHECK-P7-NEXT:    vspltb v2, v2, 15
 ; CHECK-P7-NEXT:    stvx v2, 0, r3
 ; CHECK-P7-NEXT:    blr

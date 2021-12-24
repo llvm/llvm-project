@@ -8,6 +8,8 @@ add_mlir_library(MLIRVectorTestPasses
   MLIRAffine
   MLIRAnalysis
   MLIRLinalg
+  MLIRLinalgTransforms
+  MLIRLLVMIR
   MLIRMemRef
   MLIRPass
   MLIRSCF
@@ -15,4 +17,5 @@ add_mlir_library(MLIRVectorTestPasses
   MLIRTransformUtils
   MLIRVector
   MLIRVectorToSCF
+  MLIRX86Vector
   )

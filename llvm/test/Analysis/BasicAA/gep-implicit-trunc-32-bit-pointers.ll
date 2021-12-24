@@ -44,15 +44,14 @@ define void @noalias_overflow_in_32_bit_constants(i8* %ptr) {
   ret void
 }
 
-; FIXME: Currently we incorrectly determine NoAlias for %gep.1 and %gep.2. The
-; GEP indices get implicitly truncated to 32 bit, so multiples of 2^32
+; The GEP indices get implicitly truncated to 32 bit, so multiples of 2^32
 ; (=4294967296) will be 0.
 ; See https://alive2.llvm.org/ce/z/HHjQgb.
 define void @mustalias_overflow_in_32_bit_add_mul_gep(i8* %ptr, i64 %i) {
 ; CHECK-LABEL: Function: mustalias_overflow_in_32_bit_add_mul_gep: 3 pointers, 1 call sites
-; CHECK-NEXT:    NoAlias:  i8* %gep.1, i8* %ptr
-; CHECK-NEXT:    NoAlias:  i8* %gep.2, i8* %ptr
-; CHECK-NEXT:    NoAlias:  i8* %gep.1, i8* %gep.2
+; CHECK-NEXT:    MayAlias: i8* %gep.1, i8* %ptr
+; CHECK-NEXT:    MayAlias: i8* %gep.2, i8* %ptr
+; CHECK-NEXT:    MayAlias: i8* %gep.1, i8* %gep.2
 ;
   %s.1 = icmp sgt i64 %i, 0
   call void @llvm.assume(i1 %s.1)
@@ -66,10 +65,9 @@ define void @mustalias_overflow_in_32_bit_add_mul_gep(i8* %ptr, i64 %i) {
   ret void
 }
 
-; FIXME: While %n is non-zero, its low 32 bits may not be.
 define void @mayalias_overflow_in_32_bit_non_zero(i8* %ptr, i64 %n) {
 ; CHECK-LABEL: Function: mayalias_overflow_in_32_bit_non_zero
-; CHECK:    NoAlias: i8* %gep, i8* %ptr
+; CHECK:    MayAlias: i8* %gep, i8* %ptr
 ;
   %c = icmp ne i64 %n, 0
   call void @llvm.assume(i1 %c)
@@ -79,12 +77,11 @@ define void @mayalias_overflow_in_32_bit_non_zero(i8* %ptr, i64 %n) {
   ret void
 }
 
-; FIXME: While %n is positive, its low 32 bits may not be.
 define void @mayalias_overflow_in_32_bit_positive(i8* %ptr, i64 %n) {
 ; CHECK-LABEL: Function: mayalias_overflow_in_32_bit_positive
 ; CHECK:    NoAlias: i8* %gep.1, i8* %ptr
-; CHECK:    NoAlias: i8* %gep.2, i8* %ptr
-; CHECK:    NoAlias: i8* %gep.1, i8* %gep.2
+; CHECK:    MayAlias: i8* %gep.2, i8* %ptr
+; CHECK:    MayAlias: i8* %gep.1, i8* %gep.2
 ;
   %c = icmp sgt i64 %n, 0
   call void @llvm.assume(i1 %c)

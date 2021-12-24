@@ -211,7 +211,7 @@ private:
   /// A symbol table used for O(1) symbol lookups during simplification.
   SymbolTableCollection symbolTable;
 };
-} // end anonymous namespace
+} // namespace
 
 ForwardDataFlowSolver::ForwardDataFlowSolver(
     ForwardDataFlowAnalysisBase &analysis, Operation *op)
@@ -756,13 +756,13 @@ void ForwardDataFlowSolver::join(Operation *owner, AbstractLatticeElement &to,
 // AbstractLatticeElement
 //===----------------------------------------------------------------------===//
 
-AbstractLatticeElement::~AbstractLatticeElement() {}
+AbstractLatticeElement::~AbstractLatticeElement() = default;
 
 //===----------------------------------------------------------------------===//
 // ForwardDataFlowAnalysisBase
 //===----------------------------------------------------------------------===//
 
-ForwardDataFlowAnalysisBase::~ForwardDataFlowAnalysisBase() {}
+ForwardDataFlowAnalysisBase::~ForwardDataFlowAnalysisBase() = default;
 
 AbstractLatticeElement &
 ForwardDataFlowAnalysisBase::getLatticeElement(Value value) {

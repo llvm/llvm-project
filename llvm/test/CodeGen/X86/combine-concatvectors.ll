@@ -48,11 +48,11 @@ define void @concat_of_broadcast_v2f64_v4f64() {
 ; AVX1-NEXT:    movl $1091567616, 30256(%rax) # imm = 0x41100000
 ; AVX1-NEXT:    movabsq $4294967297, %rcx # imm = 0x100000001
 ; AVX1-NEXT:    movq %rcx, 46348(%rax)
-; AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = <1.0E+0,1.0E+0,u,u>
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm1 = xmm0[0,0]
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
-; AVX1-NEXT:    vmovups %ymm1, 48296(%rax)
-; AVX1-NEXT:    vmovlps %xmm0, 47372(%rax)
+; AVX1-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = [7.812501848093234E-3,7.812501848093234E-3,7.812501848093234E-3,7.812501848093234E-3]
+; AVX1-NEXT:    # ymm0 = mem[0,1,0,1]
+; AVX1-NEXT:    vmovups %ymm0, 48296(%rax)
+; AVX1-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX1-NEXT:    vmovsd %xmm0, 47372(%rax)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
@@ -84,4 +84,39 @@ ifmerge.1298:                                     ; preds = %loop.4942
   store <2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x float>* bitcast (i8* getelementptr inbounds ([49216 x i8], [49216 x i8]* @qa_, i64 0, i64 48320) to <2 x float>*), align 32
   store <2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x float>* bitcast (i8* getelementptr inbounds ([49216 x i8], [49216 x i8]* @qa_, i64 0, i64 47372) to <2 x float>*), align 4
   ret void
+}
+
+define <4 x float> @concat_of_broadcast_v4f32_v8f32(<8 x float>* %a0, <8 x float>* %a1, <8 x float>* %a2) {
+; AVX1-LABEL: concat_of_broadcast_v4f32_v8f32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovaps (%rdi), %ymm0
+; AVX1-NEXT:    vmovaps (%rsi), %ymm1
+; AVX1-NEXT:    vmovaps (%rdx), %ymm2
+; AVX1-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
+; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm1[6,7]
+; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm2[0,1,2,3],ymm0[4],ymm2[5,6],ymm0[7]
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm2[3,0],xmm0[0,0]
+; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,3],xmm1[2,0]
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: concat_of_broadcast_v4f32_v8f32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovaps (%rdi), %ymm0
+; AVX2-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5]
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,1,2,0]
+; AVX2-NEXT:    vmovaps {{.*#+}} xmm1 = [6,7,4,3]
+; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = mem[0,1,2,3],ymm0[4],mem[5,6],ymm0[7]
+; AVX2-NEXT:    vpermps %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+  %ld0 = load volatile <8 x float>, <8 x float>* %a0
+  %ld1 = load volatile <8 x float>, <8 x float>* %a1
+  %ld2 = load volatile <8 x float>, <8 x float>* %a2
+  %shuffle = shufflevector <8 x float> %ld0, <8 x float> %ld1, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 4, i32 undef, i32 undef, i32 8>
+  %shuffle1 = shufflevector <8 x float> %ld2, <8 x float> %shuffle, <4 x i32> <i32 6, i32 15, i32 12, i32 3>
+  ret <4 x float> %shuffle1
 }

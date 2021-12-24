@@ -6,12 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // This test checks that we retain extern template instantiation declarations
 // for members of <locale> even when the debug mode is enabled, which is
 // necessary for correctness. See https://llvm.org/D94718 for details.
 
 // UNSUPPORTED: libcxx-no-debug-mode
 // UNSUPPORTED: libcpp-has-no-localization
+// UNSUPPORTED: cant-build-shared-library
 
 // This test relies on linking a shared library and then passing that shared
 // library as input when linking an executable; this is generally not supported
@@ -21,7 +24,7 @@
 // UNSUPPORTED: windows
 
 // RUN: %{cxx} %{flags} %{compile_flags} %s %{link_flags} -fPIC -DTU1 -D_LIBCPP_DEBUG=1 -fvisibility=hidden -shared -o %t.lib
-// RUN: cd %T && %{cxx} %{flags} %{compile_flags} %s ./%basename_t.tmp.lib %{link_flags} -fPIC -DTU2 -D_LIBCPP_DEBUG=1 -fvisibility=hidden -o %t.exe
+// RUN: cd %T && %{cxx} %{flags} %{compile_flags} %s ./%basename_t.tmp.lib %{link_flags} -DTU2 -D_LIBCPP_DEBUG=1 -fvisibility=hidden -o %t.exe
 // RUN: %{exec} %t.exe
 
 #include <cassert>

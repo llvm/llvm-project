@@ -32,7 +32,7 @@ namespace llvm {
 class DefInit;
 class Record;
 class StringInit;
-} // end namespace llvm
+} // namespace llvm
 
 namespace mlir {
 namespace tblgen {
@@ -138,6 +138,9 @@ public:
 
   // Op attribute accessors.
   NamedAttribute &getAttribute(int index) { return attributes[index]; }
+  const NamedAttribute &getAttribute(int index) const {
+    return attributes[index];
+  }
 
   // Op operand iterators.
   value_iterator operand_begin();
@@ -367,7 +370,7 @@ private:
   bool allResultsHaveKnownTypes;
 };
 
-} // end namespace tblgen
-} // end namespace mlir
+} // namespace tblgen
+} // namespace mlir
 
 #endif // MLIR_TABLEGEN_OPERATOR_H_

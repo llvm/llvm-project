@@ -59,6 +59,99 @@ define i32 @test4(i32 %x, i32 %y) {
   ret i32 %z
 }
 
+; (X ^ Y) | ~X  --> ~(X & Y)
+
+define i32 @test5(i32 %x, i32 %y) {
+; CHECK-LABEL: @test5(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    ret i32 [[Z]]
+;
+  %xor = xor i32 %x, %y
+  %notx = xor i32 %x, -1
+  %z = or i32 %xor, %notx
+  ret i32 %z
+}
+
+; Commute the 'or' operands
+; ~X | (X ^ Y) --> ~(X & Y)
+
+define <2 x i4> @test5_commuted(<2 x i4> %x, <2 x i4> %y) {
+; CHECK-LABEL: @test5_commuted(
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i4> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = xor <2 x i4> [[TMP1]], <i4 -1, i4 -1>
+; CHECK-NEXT:    ret <2 x i4> [[Z]]
+;
+  %xor = xor <2 x i4> %x, %y
+  %notx = xor <2 x i4> %x, <i4 -1, i4 -1>
+  %z = or <2 x i4> %notx, %xor
+  ret <2 x i4> %z
+}
+
+; Commute the inner 'xor' operands
+; (Y ^ X) | ~X  --> ~(Y & X)
+
+define i64 @test5_commuted_x_y(i64 %x, i64 %y) {
+; CHECK-LABEL: @test5_commuted_x_y(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = xor i64 [[TMP1]], -1
+; CHECK-NEXT:    ret i64 [[Z]]
+;
+  %xor = xor i64 %y, %x
+  %notx = xor i64 %x, -1
+  %z = or i64  %xor, %notx
+  ret i64 %z
+}
+
+
+define i8 @test5_extra_use_not(i8 %x, i8 %y, i8* %dst) {
+; CHECK-LABEL: @test5_extra_use_not(
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    store i8 [[NOTX]], i8* [[DST:%.*]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = xor i8 [[TMP1]], -1
+; CHECK-NEXT:    ret i8 [[Z]]
+;
+  %xor = xor i8 %x, %y
+  %notx = xor i8 %x, -1
+  store i8 %notx, i8* %dst
+  %z = or i8 %notx, %xor
+  ret i8 %z
+}
+
+
+define i65 @test5_extra_use_xor(i65 %x, i65 %y, i65* %dst) {
+; CHECK-LABEL: @test5_extra_use_xor(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i65 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    store i65 [[XOR]], i65* [[DST:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = and i65 [[X]], [[Y]]
+; CHECK-NEXT:    [[Z:%.*]] = xor i65 [[TMP1]], -1
+; CHECK-NEXT:    ret i65 [[Z]]
+;
+  %xor = xor i65 %x, %y
+  store i65 %xor, i65* %dst
+  %notx = xor i65 %x, -1
+  %z = or i65 %notx, %xor
+  ret i65 %z
+}
+
+define i16 @test5_extra_use_not_xor(i16 %x, i16 %y, i16* %dst_not, i16* %dst_xor) {
+; CHECK-LABEL: @test5_extra_use_not_xor(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i16 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    store i16 [[XOR]], i16* [[DST_XOR:%.*]], align 2
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i16 [[X]], -1
+; CHECK-NEXT:    store i16 [[NOTX]], i16* [[DST_NOT:%.*]], align 2
+; CHECK-NEXT:    [[Z:%.*]] = or i16 [[XOR]], [[NOTX]]
+; CHECK-NEXT:    ret i16 [[Z]]
+;
+  %xor = xor i16 %x, %y
+  store i16 %xor, i16* %dst_xor
+  %notx = xor i16 %x, -1
+  store i16 %notx, i16* %dst_not
+  %z = or i16 %notx, %xor
+  ret i16 %z
+}
+
 define i32 @test7(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:    [[Z:%.*]] = or i32 [[X:%.*]], [[Y:%.*]]
@@ -273,8 +366,10 @@ define i32 @test15_commuted(i32 %x, i32 %y) {
   ret i32 %xor
 }
 
-define i32 @test16(i32 %a, i32 %b) {
-; CHECK-LABEL: @test16(
+; ((a ^ b) & C1) | (b & C2) -> (a & C1) ^ b iff C1 == ~C2
+
+define i32 @or_and_xor_not_constant_commute0(i32 %a, i32 %b) {
+; CHECK-LABEL: @or_and_xor_not_constant_commute0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], 1
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[TMP1]], [[B:%.*]]
 ; CHECK-NEXT:    ret i32 [[XOR]]
@@ -284,6 +379,45 @@ define i32 @test16(i32 %a, i32 %b) {
   %and2 = and i32 %b, -2
   %xor = or i32 %and1, %and2
   ret i32 %xor
+}
+
+define i9 @or_and_xor_not_constant_commute1(i9 %a, i9 %b) {
+; CHECK-LABEL: @or_and_xor_not_constant_commute1(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i9 [[A:%.*]], 42
+; CHECK-NEXT:    [[XOR:%.*]] = xor i9 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    ret i9 [[XOR]]
+;
+  %or = xor i9 %b, %a
+  %and1 = and i9 %or, 42
+  %and2 = and i9 %b, -43
+  %xor = or i9 %and1, %and2
+  ret i9 %xor
+}
+
+define <2 x i9> @or_and_xor_not_constant_commute2_splat(<2 x i9> %a, <2 x i9> %b) {
+; CHECK-LABEL: @or_and_xor_not_constant_commute2_splat(
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i9> [[A:%.*]], <i9 42, i9 42>
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i9> [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    ret <2 x i9> [[XOR]]
+;
+  %or = xor <2 x i9> %b, %a
+  %and1 = and <2 x i9> %or, <i9 42, i9 42>
+  %and2 = and <2 x i9> %b, <i9 -43, i9 -43>
+  %xor = or <2 x i9> %and2, %and1
+  ret <2 x i9> %xor
+}
+
+define <2 x i9> @or_and_xor_not_constant_commute3_splat(<2 x i9> %a, <2 x i9> %b) {
+; CHECK-LABEL: @or_and_xor_not_constant_commute3_splat(
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i9> [[A:%.*]], <i9 42, i9 42>
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i9> [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    ret <2 x i9> [[XOR]]
+;
+  %or = xor <2 x i9> %a, %b
+  %and1 = and <2 x i9> %or, <i9 42, i9 42>
+  %and2 = and <2 x i9> %b, <i9 -43, i9 -43>
+  %xor = or <2 x i9> %and2, %and1
+  ret <2 x i9> %xor
 }
 
 define i8 @not_or(i8 %x) {

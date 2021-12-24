@@ -8,9 +8,11 @@ def run(f):
   f()
   gc.collect()
   assert Context._get_live_count() == 0
+  return f
 
 
 # CHECK-LABEL: TEST: testIntegerSetCapsule
+@run
 def testIntegerSetCapsule():
   with Context() as ctx:
     is1 = IntegerSet.get_empty(1, 1, ctx)
@@ -21,10 +23,9 @@ def testIntegerSetCapsule():
   assert is1 == is2
   assert is2.context is ctx
 
-run(testIntegerSetCapsule)
-
 
 # CHECK-LABEL: TEST: testIntegerSetGet
+@run
 def testIntegerSetGet():
   with Context():
     d0 = AffineDimExpr.get(0)
@@ -92,10 +93,9 @@ def testIntegerSetGet():
       # CHECK: Invalid expression (None?) when attempting to create an IntegerSet by replacing symbols
       print(e)
 
-run(testIntegerSetGet)
-
 
 # CHECK-LABEL: TEST: testIntegerSetProperties
+@run
 def testIntegerSetProperties():
   with Context():
     d0 = AffineDimExpr.get(0)
@@ -125,4 +125,17 @@ def testIntegerSetProperties():
       print(cstr.expr, end='')
       print(" == 0" if cstr.is_eq else " >= 0")
 
-run(testIntegerSetProperties)
+
+# CHECK_LABEL: TEST: testHash
+@run
+def testHash():
+  with Context():
+    d0 = AffineDimExpr.get(0)
+    d1 = AffineDimExpr.get(1)
+    set = IntegerSet.get(2, 0, [d0 + d1], [True])
+
+    assert hash(set) == hash(IntegerSet.get(2, 0, [d0 + d1], [True]))
+
+    dictionary = dict()
+    dictionary[set] = 42
+    assert set in dictionary

@@ -268,17 +268,15 @@ R600InstrInfo::getSrcs(MachineInstr &MI) const {
       {R600::OpName::src1_W, R600::OpName::src1_sel_W},
     };
 
-    for (unsigned j = 0; j < 8; j++) {
-      MachineOperand &MO =
-          MI.getOperand(getOperandIdx(MI.getOpcode(), OpTable[j][0]));
+    for (const auto &Op : OpTable) {
+      MachineOperand &MO = MI.getOperand(getOperandIdx(MI.getOpcode(), Op[0]));
       Register Reg = MO.getReg();
       if (Reg == R600::ALU_CONST) {
         MachineOperand &Sel =
-            MI.getOperand(getOperandIdx(MI.getOpcode(), OpTable[j][1]));
+            MI.getOperand(getOperandIdx(MI.getOpcode(), Op[1]));
         Result.push_back(std::make_pair(&MO, Sel.getImm()));
         continue;
       }
-
     }
     return Result;
   }
@@ -289,15 +287,14 @@ R600InstrInfo::getSrcs(MachineInstr &MI) const {
     {R600::OpName::src2, R600::OpName::src2_sel},
   };
 
-  for (unsigned j = 0; j < 3; j++) {
-    int SrcIdx = getOperandIdx(MI.getOpcode(), OpTable[j][0]);
+  for (const auto &Op : OpTable) {
+    int SrcIdx = getOperandIdx(MI.getOpcode(), Op[0]);
     if (SrcIdx < 0)
       break;
     MachineOperand &MO = MI.getOperand(SrcIdx);
     Register Reg = MO.getReg();
     if (Reg == R600::ALU_CONST) {
-      MachineOperand &Sel =
-          MI.getOperand(getOperandIdx(MI.getOpcode(), OpTable[j][1]));
+      MachineOperand &Sel = MI.getOperand(getOperandIdx(MI.getOpcode(), Op[1]));
       Result.push_back(std::make_pair(&MO, Sel.getImm()));
       continue;
     }
@@ -521,12 +518,11 @@ R600InstrInfo::fitsReadPortLimitations(const std::vector<MachineInstr *> &IG,
   ValidSwizzle.clear();
   unsigned ConstCount;
   BankSwizzle TransBS = ALU_VEC_012_SCL_210;
-  for (unsigned i = 0, e = IG.size(); i < e; ++i) {
-    IGSrcs.push_back(ExtractSrcs(*IG[i], PV, ConstCount));
-    unsigned Op = getOperandIdx(IG[i]->getOpcode(),
-        R600::OpName::bank_swizzle);
-    ValidSwizzle.push_back( (R600InstrInfo::BankSwizzle)
-        IG[i]->getOperand(Op).getImm());
+  for (MachineInstr *MI : IG) {
+    IGSrcs.push_back(ExtractSrcs(*MI, PV, ConstCount));
+    unsigned Op = getOperandIdx(MI->getOpcode(), R600::OpName::bank_swizzle);
+    ValidSwizzle.push_back(
+        (R600InstrInfo::BankSwizzle)MI->getOperand(Op).getImm());
   }
   std::vector<std::pair<int, unsigned>> TransOps;
   if (!isLastAluTrans)
@@ -542,8 +538,7 @@ R600InstrInfo::fitsReadPortLimitations(const std::vector<MachineInstr *> &IG,
     ALU_VEC_120_SCL_212,
     ALU_VEC_102_SCL_221
   };
-  for (unsigned i = 0; i < 4; i++) {
-    TransBS = TransSwz[i];
+  for (R600InstrInfo::BankSwizzle TransBS : TransSwz) {
     if (!isConstCompatible(TransBS, TransOps, ConstCount))
       continue;
     bool Result = FindSwizzleForVectorSlot(IGSrcs, ValidSwizzle, TransOps,
@@ -562,9 +557,9 @@ R600InstrInfo::fitsConstReadLimitations(const std::vector<unsigned> &Consts)
     const {
   assert (Consts.size() <= 12 && "Too many operands in instructions group");
   unsigned Pair1 = 0, Pair2 = 0;
-  for (unsigned i = 0, n = Consts.size(); i < n; ++i) {
-    unsigned ReadConstHalf = Consts[i] & 2;
-    unsigned ReadConstIndex = Consts[i] & (~3);
+  for (unsigned Const : Consts) {
+    unsigned ReadConstHalf = Const & 2;
+    unsigned ReadConstIndex = Const & (~3);
     unsigned ReadHalfConst = ReadConstIndex | ReadConstHalf;
     if (!Pair1) {
       Pair1 = ReadHalfConst;
@@ -587,12 +582,11 @@ R600InstrInfo::fitsConstReadLimitations(const std::vector<MachineInstr *> &MIs)
     const {
   std::vector<unsigned> Consts;
   SmallSet<int64_t, 4> Literals;
-  for (unsigned i = 0, n = MIs.size(); i < n; i++) {
-    MachineInstr &MI = *MIs[i];
-    if (!isALUInstr(MI.getOpcode()))
+  for (MachineInstr *MI : MIs) {
+    if (!isALUInstr(MI->getOpcode()))
       continue;
 
-    for (const auto &Src : getSrcs(MI)) {
+    for (const auto &Src : getSrcs(*MI)) {
       if (Src.first->getReg() == R600::ALU_LITERAL_X)
         Literals.insert(Src.second);
       if (Literals.size() > 4)
@@ -1330,11 +1324,11 @@ MachineInstr *R600InstrInfo::buildSlotOfVectorInstruction(
   MIB->getOperand(getOperandIdx(Opcode, R600::OpName::pred_sel))
       .setReg(MO.getReg());
 
-  for (unsigned i = 0; i < 14; i++) {
+  for (unsigned Operand : Operands) {
     MachineOperand &MO = MI->getOperand(
-        getOperandIdx(MI->getOpcode(), getSlotedOps(Operands[i], Slot)));
+        getOperandIdx(MI->getOpcode(), getSlotedOps(Operand, Slot)));
     assert (MO.isImm());
-    setImmOperand(*MIB, Operands[i], MO.getImm());
+    setImmOperand(*MIB, Operand, MO.getImm());
   }
   MIB->getOperand(20).setImm(0);
   return MIB;

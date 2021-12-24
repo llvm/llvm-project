@@ -31,7 +31,7 @@ using namespace mlir;
 namespace mlir {
 void registerConvertToTargetEnvPass();
 void registerPassManagerTestPass();
-void registerPrintOpAvailabilityPass();
+void registerPrintSpirvAvailabilityPass();
 void registerShapeFunctionTestPasses();
 void registerSideEffectTestPasses();
 void registerSliceAnalysisTestPass();
@@ -64,6 +64,7 @@ void registerTestAffineLoopParametricTilingPass();
 void registerTestAliasAnalysisPass();
 void registerTestBuiltinAttributeInterfaces();
 void registerTestCallGraphPass();
+void registerTestComprehensiveFunctionBufferize();
 void registerTestConstantFold();
 void registerTestConvVectorization();
 void registerTestGpuSerializeToCubinPass();
@@ -106,7 +107,8 @@ void registerTestPDLByteCodePass();
 void registerTestPreparationPassWithAllowedMemrefResults();
 void registerTestRecursiveTypesPass();
 void registerTestSCFUtilsPass();
-void registerTestVectorConversions();
+void registerTestSliceAnalysisPass();
+void registerTestVectorLowerings();
 } // namespace test
 } // namespace mlir
 
@@ -118,7 +120,7 @@ void registerTestDialect(DialectRegistry &);
 void registerTestPasses() {
   registerConvertToTargetEnvPass();
   registerPassManagerTestPass();
-  registerPrintOpAvailabilityPass();
+  registerPrintSpirvAvailabilityPass();
   registerShapeFunctionTestPasses();
   registerSideEffectTestPasses();
   registerSliceAnalysisTestPass();
@@ -158,6 +160,7 @@ void registerTestPasses() {
 #if MLIR_ROCM_CONVERSIONS_ENABLED
   mlir::test::registerTestGpuSerializeToHsacoPass();
 #endif
+  mlir::test::registerTestComprehensiveFunctionBufferize();
   mlir::test::registerTestConvVectorization();
   mlir::test::registerTestDecomposeCallGraphTypes();
   mlir::test::registerTestDataLayoutQuery();
@@ -195,7 +198,8 @@ void registerTestPasses() {
   mlir::test::registerTestPDLByteCodePass();
   mlir::test::registerTestRecursiveTypesPass();
   mlir::test::registerTestSCFUtilsPass();
-  mlir::test::registerTestVectorConversions();
+  mlir::test::registerTestSliceAnalysisPass();
+  mlir::test::registerTestVectorLowerings();
 }
 #endif
 

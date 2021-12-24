@@ -2,11 +2,11 @@
 ;
 ; RUN: llvm-link %s %p/type-unique-odr-b.ll -S -o - \
 ; RUN:   | %llc_dwarf -dwarf-linkage-names=All -filetype=obj -O0 \
-; RUN:   | llvm-dwarfdump -v -debug-info - \
+; RUN:   | llvm-dwarfdump -debug-info - \
 ; RUN:   | FileCheck %s
 ; RUN: llvm-link %p/type-unique-odr-b.ll %s -S -o - \
 ; RUN:   | %llc_dwarf -dwarf-linkage-names=All -filetype=obj -O0 \
-; RUN:   | llvm-dwarfdump -v -debug-info - \
+; RUN:   | llvm-dwarfdump -debug-info - \
 ; RUN:   | FileCheck %s
 ;
 ; Test ODR-based type uniquing for C++ class members.
@@ -30,16 +30,16 @@
 ; }
 ;
 ; CHECK:      DW_TAG_class_type
-; CHECK-NEXT:   DW_AT_name {{.*}} "A"
+; CHECK-NEXT:   DW_AT_name ("A")
 ; CHECK-NOT:    DW_TAG
 ; CHECK:        DW_TAG_member
-; CHECK-NEXT:     DW_AT_name {{.*}} "data"
+; CHECK-NEXT:     DW_AT_name ("data")
 ; CHECK-NOT:    DW_TAG
 ; CHECK:        DW_TAG_subprogram
 ; CHECK-NOT:    DW_TAG
-; CHECK:          DW_AT_linkage_name {{.*}} "_ZN1A6getFooEv"
+; CHECK:          DW_AT_linkage_name ("_ZN1A6getFooEv")
 ; CHECK-NOT:    DW_TAG
-; CHECK:          DW_AT_name {{.*}} "getFoo"
+; CHECK:          DW_AT_name ("getFoo")
 
 ; Ensure that there aren't any other subprograms in class A.
 ; CHECK-NOT:      DW_TAG

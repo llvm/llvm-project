@@ -28,7 +28,7 @@ struct TestAffineLoopParametricTiling
   }
   void runOnFunction() override;
 };
-} // end anonymous namespace
+} // namespace
 
 /// Checks if the function enclosing the loop nest has any arguments passed to
 /// it, which can be used as tiling parameters. Assumes that atleast 'n'

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/FPUtil/TestHelpers.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
+#include "utils/UnitTest/FPMatcher.h"
 #include "utils/UnitTest/Test.h"
 
 #include <math.h>
@@ -18,8 +18,8 @@ template <typename T> class SqrtTest : public __llvm_libc::testing::Test {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 
-  static constexpr UIntType HiddenBit =
-      UIntType(1) << __llvm_libc::fputil::MantissaWidth<T>::value;
+  static constexpr UIntType HIDDEN_BIT =
+      UIntType(1) << __llvm_libc::fputil::MantissaWidth<T>::VALUE;
 
 public:
   typedef T (*SqrtFunc)(T);
@@ -27,7 +27,7 @@ public:
   void testSpecialNumbers(SqrtFunc func) {
     ASSERT_FP_EQ(aNaN, func(aNaN));
     ASSERT_FP_EQ(inf, func(inf));
-    ASSERT_FP_EQ(aNaN, func(negInf));
+    ASSERT_FP_EQ(aNaN, func(neg_inf));
     ASSERT_FP_EQ(0.0, func(0.0));
     ASSERT_FP_EQ(-0.0, func(-0.0));
     ASSERT_FP_EQ(aNaN, func(T(-1.0)));
@@ -37,26 +37,26 @@ public:
   }
 
   void testDenormalValues(SqrtFunc func) {
-    for (UIntType mant = 1; mant < HiddenBit; mant <<= 1) {
+    for (UIntType mant = 1; mant < HIDDEN_BIT; mant <<= 1) {
       FPBits denormal(T(0.0));
-      denormal.setMantissa(mant);
+      denormal.set_mantissa(mant);
 
       ASSERT_MPFR_MATCH(mpfr::Operation::Sqrt, T(denormal), func(T(denormal)),
                         T(0.5));
     }
 
-    constexpr UIntType count = 1'000'001;
-    constexpr UIntType step = HiddenBit / count;
-    for (UIntType i = 0, v = 0; i <= count; ++i, v += step) {
+    constexpr UIntType COUNT = 1'000'001;
+    constexpr UIntType STEP = HIDDEN_BIT / COUNT;
+    for (UIntType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
       T x = *reinterpret_cast<T *>(&v);
       ASSERT_MPFR_MATCH(mpfr::Operation::Sqrt, x, func(x), 0.5);
     }
   }
 
   void testNormalRange(SqrtFunc func) {
-    constexpr UIntType count = 10'000'001;
-    constexpr UIntType step = UIntType(-1) / count;
-    for (UIntType i = 0, v = 0; i <= count; ++i, v += step) {
+    constexpr UIntType COUNT = 10'000'001;
+    constexpr UIntType STEP = UIntType(-1) / COUNT;
+    for (UIntType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
       T x = *reinterpret_cast<T *>(&v);
       if (isnan(x) || (x < 0)) {
         continue;

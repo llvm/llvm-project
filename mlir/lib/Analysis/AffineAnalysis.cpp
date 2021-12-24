@@ -58,6 +58,12 @@ static Value getSupportedReduction(AffineForOp forOp, unsigned pos,
           .Case([](arith::MulFOp) { return AtomicRMWKind::mulf; })
           .Case([](arith::AddIOp) { return AtomicRMWKind::addi; })
           .Case([](arith::MulIOp) { return AtomicRMWKind::muli; })
+          .Case([](arith::MinFOp) { return AtomicRMWKind::minf; })
+          .Case([](arith::MaxFOp) { return AtomicRMWKind::maxf; })
+          .Case([](arith::MinSIOp) { return AtomicRMWKind::mins; })
+          .Case([](arith::MaxSIOp) { return AtomicRMWKind::maxs; })
+          .Case([](arith::MinUIOp) { return AtomicRMWKind::minu; })
+          .Case([](arith::MaxUIOp) { return AtomicRMWKind::maxu; })
           .Default([](Operation *) -> Optional<AtomicRMWKind> {
             // TODO: AtomicRMW supports other kinds of reductions this is
             // currently not detecting, add those when the need arises.
@@ -449,8 +455,8 @@ LogicalResult MemRefAccess::getAccessRelation(FlatAffineRelation &rel) const {
 
   // Append domain constraints to `ret`.
   domainRel.appendRangeId(rel.getNumRangeDims());
-  domainRel.mergeLocalIds(rel);
   domainRel.mergeSymbolIds(rel);
+  domainRel.mergeLocalIds(rel);
   rel.append(domainRel);
 
   return success();

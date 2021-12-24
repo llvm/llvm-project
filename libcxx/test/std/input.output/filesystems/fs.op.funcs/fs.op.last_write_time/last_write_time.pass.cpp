@@ -8,6 +8,8 @@
 
 // UNSUPPORTED: c++03
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // The string reported on errors changed, which makes those tests fail when run
 // against already-released libc++'s.
 // XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.15
@@ -430,7 +432,6 @@ TEST_CASE(read_last_write_time_static_env_test)
 
 TEST_CASE(get_last_write_time_dynamic_env_test)
 {
-    using Clock = file_time_type::clock;
     using Sec = std::chrono::seconds;
     scoped_test_env env;
 
@@ -443,11 +444,9 @@ TEST_CASE(get_last_write_time_dynamic_env_test)
     const TimeSpec dir_write_time = dir_times.write;
 
     file_time_type ftime = last_write_time(file);
-    TEST_CHECK(Clock::to_time_t(ftime) == file_write_time.tv_sec);
     TEST_CHECK(CompareTime(ftime, file_write_time));
 
     file_time_type dtime = last_write_time(dir);
-    TEST_CHECK(Clock::to_time_t(dtime) == dir_write_time.tv_sec);
     TEST_CHECK(CompareTime(dtime, dir_write_time));
 
     SleepFor(Sec(2));

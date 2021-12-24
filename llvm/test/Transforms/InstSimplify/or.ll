@@ -58,13 +58,23 @@ define i32 @test6(i32 %A) {
 }
 
 ; A | ~A == -1
-define i32 @test7(i32 %A) {
-; CHECK-LABEL: @test7(
+
+define i32 @or_not(i32 %A) {
+; CHECK-LABEL: @or_not(
 ; CHECK-NEXT:    ret i32 -1
 ;
   %NotA = xor i32 %A, -1
   %B = or i32 %A, %NotA
   ret i32 %B
+}
+
+define <2 x i4> @or_not_commute_vec_undef(<2 x i4> %A) {
+; CHECK-LABEL: @or_not_commute_vec_undef(
+; CHECK-NEXT:    ret <2 x i4> <i4 -1, i4 -1>
+;
+  %NotA = xor <2 x i4> %A, <i4 -1, i4 undef>
+  %B = or <2 x i4> %NotA, %A
+  ret <2 x i4> %B
 }
 
 define i8 @test8(i8 %A) {
@@ -244,6 +254,44 @@ define <2 x i399> @test8_apint(<2 x i399> %V, <2 x i399> %M) {
   ret <2 x i399> %R
 }
 
+; (A & B) | A = A
+
+define i8 @or_and_common_op_commute0(i8 %a, i8 %b) {
+; CHECK-LABEL: @or_and_common_op_commute0(
+; CHECK-NEXT:    ret i8 [[A:%.*]]
+;
+  %and = and i8 %a, %b
+  %or = or i8 %and, %a
+  ret i8 %or
+}
+
+define <2 x i8> @or_and_common_op_commute1(<2 x i8> %a, <2 x i8> %b) {
+; CHECK-LABEL: @or_and_common_op_commute1(
+; CHECK-NEXT:    ret <2 x i8> [[A:%.*]]
+;
+  %and = and <2 x i8> %b, %a
+  %or = or <2 x i8> %and, %a
+  ret <2 x i8> %or
+}
+
+define i8 @or_and_common_op_commute2(i8 %a, i8 %b) {
+; CHECK-LABEL: @or_and_common_op_commute2(
+; CHECK-NEXT:    ret i8 [[A:%.*]]
+;
+  %and = and i8 %a, %b
+  %or = or i8 %a, %and
+  ret i8 %or
+}
+
+define <2 x i8> @or_and_common_op_commute3(<2 x i8> %a, <2 x i8> %b) {
+; CHECK-LABEL: @or_and_common_op_commute3(
+; CHECK-NEXT:    ret <2 x i8> [[A:%.*]]
+;
+  %and = and <2 x i8> %b, %a
+  %or = or <2 x i8> %a, %and
+  ret <2 x i8> %or
+}
+
 ; A | ~(A & B) = -1
 
 define i1 @or_with_not_op_commute1(i1 %a, i1 %b) {
@@ -300,150 +348,181 @@ define i32 @poison(i32 %x) {
   ret i32 %v
 }
 
-declare void @use(i32)
+; (~A & B) | ~(A | B) --> ~A
 
-define i32 @and_or_not_or(i32 %A, i32 %B) {
-; CHECK-LABEL: @and_or_not_or(
-; CHECK-NEXT:    [[I:%.*]] = xor i32 [[B:%.*]], -1
-; CHECK-NEXT:    ret i32 [[I]]
+define i4 @and_or_not_or_commute0(i4 %A, i4 %B) {
+; CHECK-LABEL: @and_or_not_or_commute0(
+; CHECK-NEXT:    [[NOTA:%.*]] = xor i4 [[A:%.*]], -1
+; CHECK-NEXT:    ret i4 [[NOTA]]
 ;
-  %i = xor i32 %B, -1
-  %i2 = and i32 %i, %A
-  %i3 = or i32 %B, %A
-  %i4 = xor i32 %i3, -1
-  %i5 = or i32 %i2, %i4
-  ret i32 %i5
+  %nota = xor i4 %A, -1
+  %and = and i4 %nota, %B
+  %or = or i4 %A, %B
+  %notab = xor i4 %or, -1
+  %r = or i4 %and, %notab
+  ret i4 %r
 }
 
-define i32 @and_or_not_or2(i32 %A, i32 %B) {
-; CHECK-LABEL: @and_or_not_or2(
-; CHECK-NEXT:    [[I:%.*]] = xor i32 [[A:%.*]], -1
-; CHECK-NEXT:    ret i32 [[I]]
+define i41 @and_or_not_or_commute1(i41 %A, i41 %B) {
+; CHECK-LABEL: @and_or_not_or_commute1(
+; CHECK-NEXT:    [[NOTA:%.*]] = xor i41 [[A:%.*]], -1
+; CHECK-NEXT:    ret i41 [[NOTA]]
 ;
-  %i = xor i32 %A, -1
-  %i2 = and i32 %i, %B
-  %i3 = or i32 %B, %A
-  %i4 = xor i32 %i3, -1
-  %i5 = or i32 %i2, %i4
-  ret i32 %i5
+  %nota = xor i41 %A, -1
+  %and = and i41 %B, %nota
+  %or = or i41 %A, %B
+  %notab = xor i41 %or, -1
+  %r = or i41 %and, %notab
+  ret i41 %r
 }
 
-define <4 x i32> @and_or_not_or3_vec(<4 x i32> %A, <4 x i32> %B) {
-; CHECK-LABEL: @and_or_not_or3_vec(
-; CHECK-NEXT:    [[I:%.*]] = xor <4 x i32> [[A:%.*]], <i32 -1, i32 -1, i32 -1, i32 -1>
-; CHECK-NEXT:    ret <4 x i32> [[I]]
+define i8 @and_or_not_or_commute2(i8 %A, i8 %B) {
+; CHECK-LABEL: @and_or_not_or_commute2(
+; CHECK-NEXT:    [[NOTA:%.*]] = xor i8 [[A:%.*]], -1
+; CHECK-NEXT:    ret i8 [[NOTA]]
 ;
-  %i = xor <4 x i32> %A, <i32 -1, i32 -1, i32 -1, i32 -1>
-  %i2 = and <4 x i32> %i, %B
-  %i3 = or <4 x i32> %B, %A
-  %i4 = xor <4 x i32> %i3, <i32 -1, i32 -1, i32 -1, i32 -1>
-  %i5 = or <4 x i32> %i2, %i4
-  ret <4 x i32> %i5
+  %nota = xor i8 %A, -1
+  %and = and i8 %nota, %B
+  %or = or i8 %B, %A
+  %notab = xor i8 %or, -1
+  %r = or i8 %and, %notab
+  ret i8 %r
 }
 
-define i32 @and_or_not_or4_use(i32 %A, i32 %B) {
-; CHECK-LABEL: @and_or_not_or4_use(
-; CHECK-NEXT:    [[I:%.*]] = xor i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[I2:%.*]] = and i32 [[I]], [[B:%.*]]
-; CHECK-NEXT:    tail call void @use(i32 [[I2]])
-; CHECK-NEXT:    ret i32 [[I]]
+define <2 x i4> @and_or_not_or_commute3(<2 x i4> %A, <2 x i4> %B) {
+; CHECK-LABEL: @and_or_not_or_commute3(
+; CHECK-NEXT:    [[NOTA:%.*]] = xor <2 x i4> [[A:%.*]], <i4 -1, i4 -1>
+; CHECK-NEXT:    ret <2 x i4> [[NOTA]]
 ;
-  %i = xor i32 %A, -1
-  %i2 = and i32 %i, %B
-  tail call void @use(i32 %i2)
-  %i3 = or i32 %B, %A
-  %i4 = xor i32 %i3, -1
-  %i5 = or i32 %i2, %i4
-  ret i32 %i5
+  %nota = xor <2 x i4> %A, <i4 -1, i4 -1>
+  %and = and <2 x i4> %B, %nota
+  %or = or <2 x i4> %B, %A
+  %notab = xor <2 x i4> %or, <i4 -1, i4 -1>
+  %r = or <2 x i4> %and, %notab
+  ret <2 x i4> %r
 }
 
-define i32 @and_or_not_or4_use2(i32 %A, i32 %B) {
-; CHECK-LABEL: @and_or_not_or4_use2(
-; CHECK-NEXT:    [[I:%.*]] = or i32 [[B:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[I2:%.*]] = xor i32 [[I]], -1
-; CHECK-NEXT:    tail call void @use(i32 [[I2]])
-; CHECK-NEXT:    [[I3:%.*]] = xor i32 [[A]], -1
-; CHECK-NEXT:    ret i32 [[I3]]
+define i4 @and_or_not_or_commute4(i4 %A, i4 %B) {
+; CHECK-LABEL: @and_or_not_or_commute4(
+; CHECK-NEXT:    [[NOTA:%.*]] = xor i4 [[A:%.*]], -1
+; CHECK-NEXT:    ret i4 [[NOTA]]
 ;
-  %i = or i32 %B, %A
-  %i2 = xor i32 %i, -1
-  tail call void @use(i32 %i2)
-  %i3 = xor i32 %A, -1
-  %i4 = and i32 %i3, %B
-  %i5 = or i32 %i4, %i2
-  ret i32 %i5
+  %nota = xor i4 %A, -1
+  %and = and i4 %nota, %B
+  %or = or i4 %A, %B
+  %notab = xor i4 %or, -1
+  %r = or i4 %notab, %and
+  ret i4 %r
 }
 
-define i32 @and_or_not_or4_use3(i32 %A, i32 %B) {
-; CHECK-LABEL: @and_or_not_or4_use3(
-; CHECK-NEXT:    [[I:%.*]] = or i32 [[B:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[I2:%.*]] = xor i32 [[I]], -1
-; CHECK-NEXT:    tail call void @use(i32 [[I2]])
-; CHECK-NEXT:    [[I3:%.*]] = xor i32 [[A]], -1
-; CHECK-NEXT:    [[I4:%.*]] = and i32 [[I3]], [[B]]
-; CHECK-NEXT:    tail call void @use(i32 [[I4]])
-; CHECK-NEXT:    ret i32 [[I3]]
+define i41 @and_or_not_or_commute5(i41 %A, i41 %B) {
+; CHECK-LABEL: @and_or_not_or_commute5(
+; CHECK-NEXT:    [[NOTA:%.*]] = xor i41 [[A:%.*]], -1
+; CHECK-NEXT:    ret i41 [[NOTA]]
 ;
-  %i = or i32 %B, %A
-  %i2 = xor i32 %i, -1
-  tail call void @use(i32 %i2)
-  %i3 = xor i32 %A, -1
-  %i4 = and i32 %i3, %B
-  tail call void @use(i32 %i4)
-  %i5 = or i32 %i4, %i2
-  ret i32 %i5
+  %nota = xor i41 %A, -1
+  %and = and i41 %B, %nota
+  %or = or i41 %A, %B
+  %notab = xor i41 %or, -1
+  %r = or i41 %notab, %and
+  ret i41 %r
 }
 
-define i32 @and_or_not_or5(i32 %A, i32 %B) {
-; CHECK-LABEL: @and_or_not_or5(
-; CHECK-NEXT:    [[I:%.*]] = xor i32 [[A:%.*]], -1
-; CHECK-NEXT:    ret i32 [[I]]
+define i8 @and_or_not_or_commute6(i8 %A, i8 %B) {
+; CHECK-LABEL: @and_or_not_or_commute6(
+; CHECK-NEXT:    [[NOTA:%.*]] = xor i8 [[A:%.*]], -1
+; CHECK-NEXT:    ret i8 [[NOTA]]
 ;
-  %i = xor i32 %A, -1
-  %i2 = and i32 %B, %i
-  %i3 = or i32 %B, %A
-  %i4 = xor i32 %i3, -1
-  %i5 = or i32 %i2, %i4
-  ret i32 %i5
+  %nota = xor i8 %A, -1
+  %and = and i8 %nota, %B
+  %or = or i8 %B, %A
+  %notab = xor i8 %or, -1
+  %r = or i8 %notab, %and
+  ret i8 %r
 }
 
-define i32 @and_or_not_or6(i32 %A, i32 %B) {
-; CHECK-LABEL: @and_or_not_or6(
-; CHECK-NEXT:    [[I:%.*]] = xor i32 [[A:%.*]], -1
-; CHECK-NEXT:    ret i32 [[I]]
+define <2 x i4> @and_or_not_or_commute7(<2 x i4> %A, <2 x i4> %B) {
+; CHECK-LABEL: @and_or_not_or_commute7(
+; CHECK-NEXT:    [[NOTA:%.*]] = xor <2 x i4> [[A:%.*]], <i4 -1, i4 -1>
+; CHECK-NEXT:    ret <2 x i4> [[NOTA]]
 ;
-  %i = xor i32 %A, -1
-  %i2 = and i32 %i, %B
-  %i3 = or i32 %B, %A
-  %i4 = xor i32 %i3, -1
-  %i5 = or i32 %i4, %i2
-  ret i32 %i5
+  %nota = xor <2 x i4> %A, <i4 -1, i4 -1>
+  %and = and <2 x i4> %B, %nota
+  %or = or <2 x i4> %B, %A
+  %notab = xor <2 x i4> %or, <i4 -1, i4 -1>
+  %r = or <2 x i4> %notab, %and
+  ret <2 x i4> %r
 }
 
-define i32 @and_or_not_or7(i32 %A, i32 %B) {
-; CHECK-LABEL: @and_or_not_or7(
-; CHECK-NEXT:    [[I:%.*]] = xor i32 [[A:%.*]], -1
-; CHECK-NEXT:    ret i32 [[I]]
+; negative test - It is not safe to propagate an undef element from the 'not' op.
+
+define <2 x i4> @and_or_not_or_commute7_undef_elt(<2 x i4> %A, <2 x i4> %B) {
+; CHECK-LABEL: @and_or_not_or_commute7_undef_elt(
+; CHECK-NEXT:    [[NOTA:%.*]] = xor <2 x i4> [[A:%.*]], <i4 undef, i4 -1>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i4> [[B:%.*]], [[NOTA]]
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i4> [[B]], [[A]]
+; CHECK-NEXT:    [[NOTAB:%.*]] = xor <2 x i4> [[OR]], <i4 -1, i4 -1>
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i4> [[NOTAB]], [[AND]]
+; CHECK-NEXT:    ret <2 x i4> [[R]]
 ;
-  %i = xor i32 %A, -1
-  %i2 = and i32 %B, %i
-  %i3 = or i32 %B, %A
-  %i4 = xor i32 %i3, -1
-  %i5 = or i32 %i4, %i2
-  ret i32 %i5
+  %nota = xor <2 x i4> %A, <i4 undef, i4 -1>
+  %and = and <2 x i4> %B, %nota
+  %or = or <2 x i4> %B, %A
+  %notab = xor <2 x i4> %or, <i4 -1, i4 -1>
+  %r = or <2 x i4> %notab, %and
+  ret <2 x i4> %r
 }
 
-define i32 @and_or_not_or8(i32 %A, i32 %B) {
-; CHECK-LABEL: @and_or_not_or8(
-; CHECK-NEXT:    [[I:%.*]] = xor i32 [[B:%.*]], -1
-; CHECK-NEXT:    ret i32 [[I]]
+; (A | B) | (A ^ B) --> A | B
+
+define i69 @or_or_xor(i69 %A, i69 %B) {
+; CHECK-LABEL: @or_or_xor(
+; CHECK-NEXT:    [[I1:%.*]] = or i69 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i69 [[I1]]
 ;
-  %i = xor i32 %B, -1
-  %i2 = and i32 %A, %i
-  %i3 = or i32 %B, %A
-  %i4 = xor i32 %i3, -1
-  %i5 = or i32 %i4, %i2
-  ret i32 %i5
+  %i1 = or i69 %A, %B
+  %i2 = xor i69 %A, %B
+  %i3 = or i69 %i1, %i2
+  ret i69 %i3
+}
+
+; (B | A) | (A ^ B) --> B | A
+
+define i8 @or_or_xor_inner_or_commuted(i8 %A, i8 %B) {
+; CHECK-LABEL: @or_or_xor_inner_or_commuted(
+; CHECK-NEXT:    [[I1:%.*]] = or i8 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    ret i8 [[I1]]
+;
+  %i1 = or i8 %B, %A
+  %i2 = xor i8 %A, %B
+  %i3 = or i8 %i1, %i2
+  ret i8 %i3
+}
+
+; (A ^ B) | (A | B) --> A | B
+
+define <4 x i4> @or_or_xor_commuted(<4 x i4> %A, <4 x i4> %B) {
+; CHECK-LABEL: @or_or_xor_commuted(
+; CHECK-NEXT:    [[I1:%.*]] = or <4 x i4> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret <4 x i4> [[I1]]
+;
+  %i1 = or <4 x i4> %A, %B
+  %i2 = xor <4 x i4> %A, %B
+  %i3 = or <4 x i4> %i2, %i1
+  ret <4 x i4> %i3
+}
+
+; (A ^ B) | (B | A) --> B | A
+
+define i4 @or_or_xor_inner_or_outer_or_commuted(i4 %A, i4 %B) {
+; CHECK-LABEL: @or_or_xor_inner_or_outer_or_commuted(
+; CHECK-NEXT:    [[I1:%.*]] = or i4 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    ret i4 [[I1]]
+;
+  %i1 = or i4 %B, %A
+  %i2 = xor i4 %A, %B
+  %i3 = or i4 %i2, %i1
+  ret i4 %i3
 }
 
 define i32 @shifted_all_ones(i32 %shamt) {
@@ -541,4 +620,334 @@ define i32 @shifted_all_ones_not_same_amt(i32 %shamt, i32 %other) {
   %l = shl i32 -1, %s
   %o = or i32 %r, %l
   ret i32 %o
+}
+
+; (A & B) | ~(A ^ B) --> ~(A ^ B)
+
+define i4 @or_nxor_and_commute0(i4 %a, i4 %b) {
+; CHECK-LABEL: @or_nxor_and_commute0(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i4 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor i4 [[XOR]], -1
+; CHECK-NEXT:    ret i4 [[NOT]]
+;
+  %and = and i4 %a, %b
+  %xor = xor i4 %a, %b
+  %not = xor i4 %xor, -1
+  %r = or i4 %and, %not
+  ret i4 %r
+}
+
+define <2 x i4> @or_nxor_and_commute1(<2 x i4> %a, <2 x i4> %b) {
+; CHECK-LABEL: @or_nxor_and_commute1(
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i4> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i4> [[XOR]], <i4 -1, i4 -1>
+; CHECK-NEXT:    ret <2 x i4> [[NOT]]
+;
+  %and = and <2 x i4> %a, %b
+  %xor = xor <2 x i4> %a, %b
+  %not = xor <2 x i4> %xor, <i4 -1, i4 -1>
+  %r = or <2 x i4> %not, %and
+  ret <2 x i4> %r
+}
+
+define i74 @or_nxor_and_commute2(i74 %a, i74 %b) {
+; CHECK-LABEL: @or_nxor_and_commute2(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i74 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor i74 [[XOR]], -1
+; CHECK-NEXT:    ret i74 [[NOT]]
+;
+  %and = and i74 %b, %a
+  %xor = xor i74 %a, %b
+  %not = xor i74 %xor, -1
+  %r = or i74 %and, %not
+  ret i74 %r
+}
+
+define <2 x i4> @or_nxor_and_commute3(<2 x i4> %a, <2 x i4> %b) {
+; CHECK-LABEL: @or_nxor_and_commute3(
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i4> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i4> [[XOR]], <i4 -1, i4 -1>
+; CHECK-NEXT:    ret <2 x i4> [[NOT]]
+;
+  %and = and <2 x i4> %b, %a
+  %xor = xor <2 x i4> %a, %b
+  %not = xor <2 x i4> %xor, <i4 -1, i4 -1>
+  %r = or <2 x i4> %not, %and
+  ret <2 x i4> %r
+}
+
+; negative test - must have common operands
+
+define i4 @or_nxor_and_wrong_val1(i4 %a, i4 %b, i4 %c) {
+; CHECK-LABEL: @or_nxor_and_wrong_val1(
+; CHECK-NEXT:    [[AND:%.*]] = and i4 [[A:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i4 [[A]], [[B:%.*]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor i4 [[XOR]], -1
+; CHECK-NEXT:    [[R:%.*]] = or i4 [[AND]], [[NOT]]
+; CHECK-NEXT:    ret i4 [[R]]
+;
+  %and = and i4 %a, %c
+  %xor = xor i4 %a, %b
+  %not = xor i4 %xor, -1
+  %r = or i4 %and, %not
+  ret i4 %r
+}
+
+; negative test - must have common operands
+
+define i4 @or_nxor_and_wrong_val2(i4 %a, i4 %b, i4 %c) {
+; CHECK-LABEL: @or_nxor_and_wrong_val2(
+; CHECK-NEXT:    [[AND:%.*]] = and i4 [[C:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i4 [[A:%.*]], [[B]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor i4 [[XOR]], -1
+; CHECK-NEXT:    [[R:%.*]] = or i4 [[AND]], [[NOT]]
+; CHECK-NEXT:    ret i4 [[R]]
+;
+  %and = and i4 %c, %b
+  %xor = xor i4 %a, %b
+  %not = xor i4 %xor, -1
+  %r = or i4 %and, %not
+  ret i4 %r
+}
+
+; negative test - undef in 'not' is allowed
+
+define <2 x i4> @or_nxor_and_undef_elt(<2 x i4> %a, <2 x i4> %b) {
+; CHECK-LABEL: @or_nxor_and_undef_elt(
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i4> [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i4> [[A]], [[B]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i4> [[XOR]], <i4 -1, i4 undef>
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i4> [[NOT]], [[AND]]
+; CHECK-NEXT:    ret <2 x i4> [[R]]
+;
+  %and = and <2 x i4> %b, %a
+  %xor = xor <2 x i4> %a, %b
+  %not = xor <2 x i4> %xor, <i4 -1, i4 undef>
+  %r = or <2 x i4> %not, %and
+  ret <2 x i4> %r
+}
+
+; ~(A ^ B) | (A | B) --> -1
+
+define i4 @or_nxor_or_commute0(i4 %a, i4 %b) {
+; CHECK-LABEL: @or_nxor_or_commute0(
+; CHECK-NEXT:    ret i4 -1
+;
+  %or = or i4 %a, %b
+  %xor = xor i4 %a, %b
+  %not = xor i4 %xor, -1
+  %r = or i4 %not, %or
+  ret i4 %r
+}
+
+define <2 x i4> @or_nxor_or_commute1(<2 x i4> %a, <2 x i4> %b) {
+; CHECK-LABEL: @or_nxor_or_commute1(
+; CHECK-NEXT:    ret <2 x i4> <i4 -1, i4 -1>
+;
+  %or = or <2 x i4> %a, %b
+  %xor = xor <2 x i4> %a, %b
+  %not = xor <2 x i4> %xor, <i4 -1, i4 -1>
+  %r = or <2 x i4> %or, %not
+  ret <2 x i4> %r
+}
+
+define i74 @or_nxor_or_commute2(i74 %a, i74 %b) {
+; CHECK-LABEL: @or_nxor_or_commute2(
+; CHECK-NEXT:    ret i74 -1
+;
+  %or = or i74 %b, %a
+  %xor = xor i74 %a, %b
+  %not = xor i74 %xor, -1
+  %r = or i74 %not, %or
+  ret i74 %r
+}
+
+define <2 x i4> @or_nxor_or_commute3(<2 x i4> %a, <2 x i4> %b) {
+; CHECK-LABEL: @or_nxor_or_commute3(
+; CHECK-NEXT:    ret <2 x i4> <i4 -1, i4 -1>
+;
+  %or = or <2 x i4> %b, %a
+  %xor = xor <2 x i4> %a, %b
+  %not = xor <2 x i4> %xor, <i4 -1, i4 -1>
+  %r = or <2 x i4> %or, %not
+  ret <2 x i4> %r
+}
+
+; negative test - must have common operands
+
+define i4 @or_nxor_or_wrong_val1(i4 %a, i4 %b, i4 %c) {
+; CHECK-LABEL: @or_nxor_or_wrong_val1(
+; CHECK-NEXT:    [[OR:%.*]] = or i4 [[A:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i4 [[A]], [[B:%.*]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor i4 [[XOR]], -1
+; CHECK-NEXT:    [[R:%.*]] = or i4 [[NOT]], [[OR]]
+; CHECK-NEXT:    ret i4 [[R]]
+;
+  %or = or i4 %a, %c
+  %xor = xor i4 %a, %b
+  %not = xor i4 %xor, -1
+  %r = or i4 %not, %or
+  ret i4 %r
+}
+
+; negative test - must have common operands
+
+define i4 @or_nxor_or_wrong_val2(i4 %a, i4 %b, i4 %c) {
+; CHECK-LABEL: @or_nxor_or_wrong_val2(
+; CHECK-NEXT:    [[OR:%.*]] = or i4 [[C:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i4 [[A:%.*]], [[B]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor i4 [[XOR]], -1
+; CHECK-NEXT:    [[R:%.*]] = or i4 [[NOT]], [[OR]]
+; CHECK-NEXT:    ret i4 [[R]]
+;
+  %or = or i4 %c, %b
+  %xor = xor i4 %a, %b
+  %not = xor i4 %xor, -1
+  %r = or i4 %not, %or
+  ret i4 %r
+}
+
+; negative test - undef in 'not' is allowed
+
+define <2 x i4> @or_nxor_or_undef_elt(<2 x i4> %a, <2 x i4> %b) {
+; CHECK-LABEL: @or_nxor_or_undef_elt(
+; CHECK-NEXT:    ret <2 x i4> <i4 -1, i4 -1>
+;
+  %or = or <2 x i4> %b, %a
+  %xor = xor <2 x i4> %a, %b
+  %not = xor <2 x i4> %xor, <i4 -1, i4 undef>
+  %r = or <2 x i4> %or, %not
+  ret <2 x i4> %r
+}
+
+; (A ^ B) | (~A | B) --> -1
+
+define i4 @or_xor_not_op_or(i4 %a, i4 %b){
+; CHECK-LABEL: @or_xor_not_op_or(
+; CHECK-NEXT:    ret i4 -1
+;
+  %xor = xor i4 %a, %b
+  %nota = xor i4 %a, -1
+  %or = or i4 %nota, %b
+  %r = or i4 %xor, %or
+  ret i4 %r
+}
+
+; (A ^ B) | (B | ~A) --> -1
+
+define i71  @or_xor_not_op_or_commute1(i71 %a, i71 %b){
+; CHECK-LABEL: @or_xor_not_op_or_commute1(
+; CHECK-NEXT:    ret i71 -1
+;
+  %xor = xor i71 %a, %b
+  %nota = xor i71  %a, -1
+  %or = or i71  %b, %nota
+  %r = or i71  %xor, %or
+  ret i71  %r
+}
+
+; (B ^ A) | (~A | B) --> -1
+
+define i32  @or_xor_not_op_or_commute2(i32 %a, i32 %b){
+; CHECK-LABEL: @or_xor_not_op_or_commute2(
+; CHECK-NEXT:    ret i32 -1
+;
+  %xor = xor i32 %b, %a
+  %nota = xor i32  %a, -1
+  %or = or i32  %nota, %b
+  %r = or i32  %xor, %or
+  ret i32  %r
+}
+
+; (B ^ A) | (B | ~A) --> -1
+
+define i32  @or_xor_not_op_or_commute3(i32 %a, i32 %b){
+; CHECK-LABEL: @or_xor_not_op_or_commute3(
+; CHECK-NEXT:    ret i32 -1
+;
+  %xor = xor i32 %b, %a
+  %nota = xor i32  %a, -1
+  %or = or i32  %b, %nota
+  %r = or i32  %xor, %or
+  ret i32  %r
+}
+
+; (~A | B) | (A ^ B) --> -1
+
+define i32  @or_xor_not_op_or_commute4(i32 %a, i32 %b){
+; CHECK-LABEL: @or_xor_not_op_or_commute4(
+; CHECK-NEXT:    ret i32 -1
+;
+  %xor = xor i32 %a, %b
+  %nota = xor i32  %a, -1
+  %or = or i32  %nota, %b
+  %r = or i32  %or, %xor
+  ret i32  %r
+}
+
+; (B | ~A) | (A ^ B) --> -1
+
+define i32  @or_xor_not_op_or_commute5(i32 %a, i32 %b){
+; CHECK-LABEL: @or_xor_not_op_or_commute5(
+; CHECK-NEXT:    ret i32 -1
+;
+  %xor = xor i32 %a, %b
+  %nota = xor i32  %a, -1
+  %or = or i32  %b, %nota
+  %r = or i32  %or, %xor
+  ret i32  %r
+}
+
+; (~A | B) | (B ^ A) --> -1
+
+define i32  @or_xor_not_op_or_commute6(i32 %a, i32 %b){
+; CHECK-LABEL: @or_xor_not_op_or_commute6(
+; CHECK-NEXT:    ret i32 -1
+;
+  %xor = xor i32 %b, %a
+  %nota = xor i32  %a, -1
+  %or = or i32  %nota, %b
+  %r = or i32  %or, %xor
+  ret i32  %r
+}
+
+; (B | ~A)  | (B ^ A) --> -1
+
+define i32  @or_xor_not_op_or_commute7(i32 %a, i32 %b){
+; CHECK-LABEL: @or_xor_not_op_or_commute7(
+; CHECK-NEXT:    ret i32 -1
+;
+  %xor = xor i32 %b, %a
+  %nota = xor i32  %a, -1
+  %or = or i32  %b, %nota
+  %r = or i32  %or, %xor
+  ret i32  %r
+}
+
+define <2 x i4> @or_xor_not_op_or_undef_elt(<2 x i4> %a, <2 x i4> %b) {
+; CHECK-LABEL: @or_xor_not_op_or_undef_elt(
+; CHECK-NEXT:    ret <2 x i4> <i4 -1, i4 -1>
+;
+  %xor = xor <2 x i4> %a, %b
+  %nota = xor <2 x i4> %a, <i4 -1, i4 undef>
+  %or = or <2 x i4>  %nota, %b
+  %r = or <2 x i4> %xor, %or
+  ret <2 x i4> %r
+}
+
+; negative test
+
+define i16 @or_xor_not_op_or_wrong_val(i16 %a, i16 %b, i16 %c) {
+; CHECK-LABEL: @or_xor_not_op_or_wrong_val(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i16 [[A:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[NOTA:%.*]] = xor i16 [[A]], -1
+; CHECK-NEXT:    [[OR:%.*]] = or i16 [[NOTA]], [[B:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = or i16 [[XOR]], [[OR]]
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %xor = xor i16 %a, %c
+  %nota = xor i16 %a, -1
+  %or = or i16 %nota, %b
+  %r = or i16 %xor, %or
+  ret i16 %r
 }

@@ -31,7 +31,7 @@ namespace mlir {
 
 namespace detail {
 struct IntegerSetStorage;
-} // end namespace detail
+} // namespace detail
 
 class MLIRContext;
 
@@ -117,8 +117,6 @@ public:
 
 private:
   ImplType *set;
-  /// Sets with constraints fewer than kUniquingThreshold are uniqued.
-  constexpr static unsigned kUniquingThreshold = 4;
 };
 
 // Make AffineExpr hashable.
@@ -126,7 +124,7 @@ inline ::llvm::hash_code hash_value(IntegerSet arg) {
   return ::llvm::hash_value(arg.set);
 }
 
-} // end namespace mlir
+} // namespace mlir
 namespace llvm {
 
 // IntegerSet hash just like pointers.

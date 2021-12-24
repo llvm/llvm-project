@@ -456,7 +456,7 @@ private:
   void writeBuffersAsync(ArrayRef<tpctypes::BufferWrite> Ws,
                          WriteResultFn OnWriteComplete) override;
 
-  static shared::detail::CWrapperFunctionResult
+  static shared::CWrapperFunctionResult
   jitDispatchViaWrapperFunctionManager(void *Ctx, const void *FnTag,
                                        const char *Data, size_t Size);
 

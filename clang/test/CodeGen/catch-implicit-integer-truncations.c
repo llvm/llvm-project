@@ -158,25 +158,25 @@ unsigned char explicit_conversion_interference1(unsigned int c) {
 // Sanitization is explicitly disabled.
 // ========================================================================== //
 
-// CHECK-LABEL: @blacklist_0
-__attribute__((no_sanitize("undefined"))) unsigned char blacklist_0(unsigned int src) {
+// CHECK-LABEL: @ignorelist_0
+__attribute__((no_sanitize("undefined"))) unsigned char ignorelist_0(unsigned int src) {
   // We are not in "undefined" group, so that doesn't work.
   // CHECK-SANITIZE: call
   return src;
 }
 
-// CHECK-LABEL: @blacklist_1
-__attribute__((no_sanitize("integer"))) unsigned char blacklist_1(unsigned int src) {
+// CHECK-LABEL: @ignorelist_1
+__attribute__((no_sanitize("integer"))) unsigned char ignorelist_1(unsigned int src) {
   return src;
 }
 
-// CHECK-LABEL: @blacklist_2
-__attribute__((no_sanitize("implicit-conversion"))) unsigned char blacklist_2(unsigned int src) {
+// CHECK-LABEL: @ignorelist_2
+__attribute__((no_sanitize("implicit-conversion"))) unsigned char ignorelist_2(unsigned int src) {
   return src;
 }
 
-// CHECK-LABEL: @blacklist_3
-__attribute__((no_sanitize("implicit-integer-truncation"))) unsigned char blacklist_3(unsigned int src) {
+// CHECK-LABEL: @ignorelist_3
+__attribute__((no_sanitize("implicit-integer-truncation"))) unsigned char ignorelist_3(unsigned int src) {
   return src;
 }
 

@@ -41,8 +41,8 @@ namespace {
 ///{
 
 extern "C" {
-void *malloc(uint64_t Size);
-void free(void *Ptr);
+__attribute__((leaf)) void *malloc(uint64_t Size);
+__attribute__((leaf)) void free(void *Ptr);
 }
 
 ///}
@@ -134,9 +134,12 @@ void *SharedMemorySmartStackTy::push(uint64_t Bytes) {
     return Ptr;
   }
 
-  return memory::allocGlobal(AlignedBytes,
-                             "Slow path shared memory allocation, insufficient "
-                             "shared memory stack memory!");
+  void *GlobalMemory = memory::allocGlobal(
+      AlignedBytes, "Slow path shared memory allocation, insufficient "
+                    "shared memory stack memory!");
+  ASSERT(GlobalMemory != nullptr && "nullptr returned by malloc!");
+
+  return GlobalMemory;
 }
 
 void SharedMemorySmartStackTy::pop(void *Ptr, uint32_t Bytes) {
@@ -162,7 +165,10 @@ void memory::freeShared(void *Ptr, uint64_t Bytes, const char *Reason) {
 }
 
 void *memory::allocGlobal(uint64_t Bytes, const char *Reason) {
-  return malloc(Bytes);
+  void *Ptr = malloc(Bytes);
+  if (config::isDebugMode(config::DebugKind::CommonIssues) && Ptr == nullptr)
+    PRINT("nullptr returned by malloc!\n");
+  return Ptr;
 }
 
 void memory::freeGlobal(void *Ptr, const char *Reason) { free(Ptr); }
@@ -263,9 +269,9 @@ struct ThreadStateTy {
     PreviousThreadState = nullptr;
   }
 
-  void init(ThreadStateTy &PreviousTS) {
-    ICVState = PreviousTS.ICVState;
-    PreviousThreadState = &PreviousTS;
+  void init(ThreadStateTy *PreviousTS) {
+    ICVState = PreviousTS ? PreviousTS->ICVState : TeamState.ICVState;
+    PreviousThreadState = PreviousTS;
   }
 };
 
@@ -280,6 +286,7 @@ uint32_t &lookupForModify32Impl(uint32_t ICVStateTy::*Var) {
   if (!ThreadStates[TId]) {
     ThreadStates[TId] = reinterpret_cast<ThreadStateTy *>(memory::allocGlobal(
         sizeof(ThreadStateTy), "ICV modification outside data environment"));
+    ASSERT(ThreadStates[TId] != nullptr && "Nullptr returned by malloc!");
     ThreadStates[TId]->init();
   }
   return ThreadStates[TId]->ICVState.*Var;
@@ -359,8 +366,10 @@ void *&state::lookupPtr(ValueKind Kind, bool IsReadonly) {
 
 void state::init(bool IsSPMD) {
   SharedMemorySmartStack.init(IsSPMD);
-  if (!mapping::getThreadIdInBlock())
+  if (mapping::isInitialThreadInLevel0(IsSPMD)) {
     TeamState.init(IsSPMD);
+    DebugEntryRAII::init();
+  }
 
   ThreadStates[mapping::getThreadIdInBlock()] = nullptr;
 }
@@ -369,7 +378,7 @@ void state::enterDataEnvironment() {
   unsigned TId = mapping::getThreadIdInBlock();
   ThreadStateTy *NewThreadState =
       static_cast<ThreadStateTy *>(__kmpc_alloc_shared(sizeof(ThreadStateTy)));
-  NewThreadState->init(*ThreadStates[TId]);
+  NewThreadState->init(ThreadStates[TId]);
   ThreadStates[TId] = NewThreadState;
 }
 
@@ -445,7 +454,9 @@ int omp_get_team_size(int Level) {
   return returnValIfLevelIsActive(Level, state::ParallelTeamSize, 1);
 }
 
-int omp_get_num_threads(void) { return state::ParallelTeamSize; }
+int omp_get_num_threads(void) {
+  return omp_get_level() > 1 ? 1 : state::ParallelTeamSize;
+}
 
 int omp_get_thread_limit(void) { return mapping::getKernelSize(); }
 
@@ -496,10 +507,12 @@ int omp_get_initial_device(void) { return -1; }
 
 extern "C" {
 __attribute__((noinline)) void *__kmpc_alloc_shared(uint64_t Bytes) {
+  FunctionTracingRAII();
   return memory::allocShared(Bytes, "Frontend alloc shared");
 }
 
 __attribute__((noinline)) void __kmpc_free_shared(void *Ptr, uint64_t Bytes) {
+  FunctionTracingRAII();
   memory::freeShared(Ptr, Bytes, "Frontend free shared");
 }
 
@@ -521,21 +534,26 @@ constexpr uint64_t NUM_SHARED_VARIABLES_IN_SHARED_MEM = 64;
     allocator(omp_pteam_mem_alloc)
 
 void __kmpc_begin_sharing_variables(void ***GlobalArgs, uint64_t nArgs) {
+  FunctionTracingRAII();
   if (nArgs <= NUM_SHARED_VARIABLES_IN_SHARED_MEM) {
     SharedMemVariableSharingSpacePtr = &SharedMemVariableSharingSpace[0];
   } else {
     SharedMemVariableSharingSpacePtr = (void **)memory::allocGlobal(
         nArgs * sizeof(void *), "new extended args");
+    ASSERT(SharedMemVariableSharingSpacePtr != nullptr &&
+           "Nullptr returned by malloc!");
   }
   *GlobalArgs = SharedMemVariableSharingSpacePtr;
 }
 
 void __kmpc_end_sharing_variables() {
+  FunctionTracingRAII();
   if (SharedMemVariableSharingSpacePtr != &SharedMemVariableSharingSpace[0])
     memory::freeGlobal(SharedMemVariableSharingSpacePtr, "new extended args");
 }
 
 void __kmpc_get_shared_variables(void ***GlobalArgs) {
+  FunctionTracingRAII();
   *GlobalArgs = SharedMemVariableSharingSpacePtr;
 }
 }

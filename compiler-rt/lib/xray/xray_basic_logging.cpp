@@ -345,12 +345,12 @@ static void TLDDestructor(void *P) XRAY_NEVER_INSTRUMENT {
     if (TLD.ShadowStack)
       InternalFree(TLD.ShadowStack);
     if (Verbosity())
-      Report("Cleaned up log for TID: %d\n", GetTid());
+      Report("Cleaned up log for TID: %llu\n", GetTid());
   });
 
   if (TLD.LogWriter == nullptr || TLD.BufferOffset == 0) {
     if (Verbosity())
-      Report("Skipping buffer for TID: %d; Offset = %llu\n", GetTid(),
+      Report("Skipping buffer for TID: %llu; Offset = %zu\n", GetTid(),
              TLD.BufferOffset);
     return;
   }

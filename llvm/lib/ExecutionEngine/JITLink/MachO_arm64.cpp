@@ -81,6 +81,14 @@ private:
       if (!RI.r_pcrel && !RI.r_extern && RI.r_length == 2)
         return PairedAddend;
       break;
+    case MachO::ARM64_RELOC_TLVP_LOAD_PAGE21:
+      if (RI.r_pcrel && RI.r_extern && RI.r_length == 2)
+        return TLVPage21;
+      break;
+    case MachO::ARM64_RELOC_TLVP_LOAD_PAGEOFF12:
+      if (!RI.r_pcrel && RI.r_extern && RI.r_length == 2)
+        return TLVPageOffset12;
+      break;
     }
 
     return make_error<JITLinkError>(
@@ -152,7 +160,7 @@ private:
       auto ToSymbolSec = findSectionByIndex(UnsignedRI.r_symbolnum - 1);
       if (!ToSymbolSec)
         return ToSymbolSec.takeError();
-      ToSymbol = getSymbolByAddress(ToSymbolSec->Address);
+      ToSymbol = getSymbolByAddress(*ToSymbolSec, ToSymbolSec->Address);
       assert(ToSymbol && "No symbol for section");
       FixupValue -= ToSymbol->getAddress();
     }
@@ -197,14 +205,18 @@ private:
         continue;
       }
 
-      // Skip relocations for debug symbols.
+      auto NSec =
+          findSectionByIndex(Obj.getSectionIndex(S.getRawDataRefImpl()));
+      if (!NSec)
+        return NSec.takeError();
+
+      // Skip relocations for MachO sections without corresponding graph
+      // sections.
       {
-        auto &NSec =
-            getSectionByIndex(Obj.getSectionIndex(S.getRawDataRefImpl()));
-        if (!NSec.GraphSection) {
+        if (!NSec->GraphSection) {
           LLVM_DEBUG({
             dbgs() << "  Skipping relocations for MachO section "
-                   << NSec.SegName << "/" << NSec.SectName
+                   << NSec->SegName << "/" << NSec->SectName
                    << " which has no associated graph section\n";
           });
           continue;
@@ -216,25 +228,22 @@ private:
 
         MachO::relocation_info RI = getRelocationInfo(RelItr);
 
-        // Sanity check the relocation kind.
+        // Validate the relocation kind.
         auto Kind = getRelocationKind(RI);
         if (!Kind)
           return Kind.takeError();
 
         // Find the address of the value to fix up.
         JITTargetAddress FixupAddress = SectionAddress + (uint32_t)RI.r_address;
-
         LLVM_DEBUG({
-          auto &NSec =
-              getSectionByIndex(Obj.getSectionIndex(S.getRawDataRefImpl()));
-          dbgs() << "  " << NSec.SectName << " + "
+          dbgs() << "  " << NSec->SectName << " + "
                  << formatv("{0:x8}", RI.r_address) << ":\n";
         });
 
         // Find the block that the fixup points to.
         Block *BlockToFix = nullptr;
         {
-          auto SymbolToFixOrErr = findSymbolByAddress(FixupAddress);
+          auto SymbolToFixOrErr = findSymbolByAddress(*NSec, FixupAddress);
           if (!SymbolToFixOrErr)
             return SymbolToFixOrErr.takeError();
           BlockToFix = &SymbolToFixOrErr->getBlock();
@@ -316,7 +325,11 @@ private:
           break;
         case Pointer64Anon: {
           JITTargetAddress TargetAddress = *(const ulittle64_t *)FixupContent;
-          if (auto TargetSymbolOrErr = findSymbolByAddress(TargetAddress))
+          auto TargetNSec = findSectionByIndex(RI.r_symbolnum - 1);
+          if (!TargetNSec)
+            return TargetNSec.takeError();
+          if (auto TargetSymbolOrErr =
+                  findSymbolByAddress(*TargetNSec, TargetAddress))
             TargetSymbol = &*TargetSymbolOrErr;
           else
             return TargetSymbolOrErr.takeError();
@@ -324,6 +337,7 @@ private:
           break;
         }
         case Page21:
+        case TLVPage21:
         case GOTPage21: {
           if (auto TargetSymbolOrErr = findSymbolByIndex(RI.r_symbolnum))
             TargetSymbol = TargetSymbolOrErr->GraphSymbol;
@@ -348,6 +362,7 @@ private:
                                             "encoded addend");
           break;
         }
+        case TLVPageOffset12:
         case GOTPageOffset12: {
           if (auto TargetSymbolOrErr = findSymbolByIndex(RI.r_symbolnum))
             TargetSymbol = TargetSymbolOrErr->GraphSymbol;
@@ -414,6 +429,7 @@ public:
 
   bool isGOTEdgeToFix(Edge &E) const {
     return E.getKind() == GOTPage21 || E.getKind() == GOTPageOffset12 ||
+           E.getKind() == TLVPage21 || E.getKind() == TLVPageOffset12 ||
            E.getKind() == PointerToGOT;
   }
 
@@ -425,7 +441,8 @@ public:
   }
 
   void fixGOTEdge(Edge &E, Symbol &GOTEntry) {
-    if (E.getKind() == GOTPage21 || E.getKind() == GOTPageOffset12) {
+    if (E.getKind() == GOTPage21 || E.getKind() == GOTPageOffset12 ||
+        E.getKind() == TLVPage21 || E.getKind() == TLVPageOffset12) {
       // Update the target, but leave the edge addend as-is.
       E.setTarget(GOTEntry);
     } else if (E.getKind() == PointerToGOT) {
@@ -565,6 +582,7 @@ private:
       break;
     }
     case Page21:
+    case TLVPage21:
     case GOTPage21: {
       assert((E.getKind() != GOTPage21 || E.getAddend() == 0) &&
              "GOTPAGE21 with non-zero addend");
@@ -601,6 +619,7 @@ private:
       *(ulittle32_t *)FixupPtr = FixedInstr;
       break;
     }
+    case TLVPageOffset12:
     case GOTPageOffset12: {
       assert(E.getAddend() == 0 && "GOTPAGEOF12 with non-zero addend");
 
@@ -714,6 +733,10 @@ const char *getMachOARM64RelocationKindName(Edge::Kind R) {
     return "GOTPage21";
   case GOTPageOffset12:
     return "GOTPageOffset12";
+  case TLVPage21:
+    return "TLVPage21";
+  case TLVPageOffset12:
+    return "TLVPageOffset12";
   case PointerToGOT:
     return "PointerToGOT";
   case PairedAddend:

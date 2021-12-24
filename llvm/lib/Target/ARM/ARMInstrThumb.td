@@ -1520,6 +1520,7 @@ def tTBH_JT : tPseudoInst<(outs),
 let isCall = 1, Defs = [R0, R12, LR, CPSR], Uses = [SP] in
 def tTPsoft : tPseudoInst<(outs), (ins), 4, IIC_Br,
                           [(set R0, ARMthread_pointer)]>,
+                          Requires<[IsThumb, IsReadTPSoft]>,
                           Sched<[WriteBr]>;
 
 //===----------------------------------------------------------------------===//
@@ -1575,6 +1576,8 @@ def : T1Pat<(srl (bswap (extloadi16 t_addrmode_is2:$addr)), (i32 16)),
             (tREV16 (tLDRHi t_addrmode_is2:$addr))>;
 def : T1Pat<(srl (bswap (extloadi16 t_addrmode_rr:$addr)), (i32 16)),
             (tREV16 (tLDRHr t_addrmode_rr:$addr))>;
+def : T1Pat<(srl (bswap top16Zero:$Rn), (i32 16)),
+            (tREV16 tGPR:$Rn)>;
 def : T1Pat<(truncstorei16 (srl (bswap tGPR:$Rn), (i32 16)),
                            t_addrmode_is2:$addr),
             (tSTRHi(tREV16 tGPR:$Rn), t_addrmode_is2:$addr)>;

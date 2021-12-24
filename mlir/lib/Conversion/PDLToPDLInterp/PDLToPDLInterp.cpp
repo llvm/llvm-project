@@ -43,27 +43,27 @@ private:
   using ValueMapScope = llvm::ScopedHashTableScope<Position *, Value>;
 
   /// Generate interpreter operations for the tree rooted at the given matcher
-  /// node.
-  Block *generateMatcher(MatcherNode &node);
+  /// node, in the specified region.
+  Block *generateMatcher(MatcherNode &node, Region &region);
 
-  /// Get or create an access to the provided positional value within the
-  /// current block.
-  Value getValueAt(Block *cur, Position *pos);
+  /// Get or create an access to the provided positional value in the current
+  /// block. This operation may mutate the provided block pointer if nested
+  /// regions (i.e., pdl_interp.iterate) are required.
+  Value getValueAt(Block *&currentBlock, Position *pos);
 
-  /// Create an interpreter predicate operation, branching to the provided true
-  /// and false destinations.
-  void generatePredicate(Block *currentBlock, Qualifier *question,
-                         Qualifier *answer, Value val, Block *trueDest,
-                         Block *falseDest);
+  /// Create the interpreter predicate operations. This operation may mutate the
+  /// provided current block pointer if nested regions (iterates) are required.
+  void generate(BoolNode *boolNode, Block *&currentBlock, Value val);
 
-  /// Create an interpreter switch predicate operation, with a provided default
-  /// and several case destinations.
-  void generateSwitch(SwitchNode *switchNode, Block *currentBlock,
-                      Qualifier *question, Value val, Block *defaultDest);
+  /// Create the interpreter switch / predicate operations, with several case
+  /// destinations. This operation never mutates the provided current block
+  /// pointer, because the switch operation does not need Values beyond `val`.
+  void generate(SwitchNode *switchNode, Block *currentBlock, Value val);
 
-  /// Create the interpreter operations to record a successful pattern match.
-  void generateRecordMatch(Block *currentBlock, Block *nextBlock,
-                           pdl::PatternOp pattern);
+  /// Create the interpreter operations to record a successful pattern match
+  /// using the contained root operation. This operation may mutate the current
+  /// block pointer if nested regions (i.e., pdl_interp.iterate) are required.
+  void generate(SuccessNode *successNode, Block *&currentBlock);
 
   /// Generate a rewriter function for the given pattern operation, and returns
   /// a reference to that function.
@@ -135,7 +135,7 @@ private:
   /// generated operations.
   SetVector<Value> locOps;
 };
-} // end anonymous namespace
+} // namespace
 
 PatternLowering::PatternLowering(FuncOp matcherFunc, ModuleOp rewriterModule)
     : builder(matcherFunc.getContext()), matcherFunc(matcherFunc),
@@ -156,7 +156,8 @@ void PatternLowering::lower(ModuleOp module) {
   // Generate a root matcher node from the provided PDL module.
   std::unique_ptr<MatcherNode> root = MatcherNode::generateMatcherTree(
       module, predicateBuilder, valueToPosition);
-  Block *firstMatcherBlock = generateMatcher(*root);
+  Block *firstMatcherBlock = generateMatcher(*root, matcherFunc.getBody());
+  assert(failureBlockStack.empty() && "failed to empty the stack");
 
   // After generation, merged the first matched block into the entry.
   matcherEntryBlock->getOperations().splice(matcherEntryBlock->end(),
@@ -164,9 +165,9 @@ void PatternLowering::lower(ModuleOp module) {
   firstMatcherBlock->erase();
 }
 
-Block *PatternLowering::generateMatcher(MatcherNode &node) {
+Block *PatternLowering::generateMatcher(MatcherNode &node, Region &region) {
   // Push a new scope for the values used by this matcher.
-  Block *block = matcherFunc.addBlock();
+  Block *block = &region.emplaceBlock();
   ValueMapScope scope(values);
 
   // If this is the return node, simply insert the corresponding interpreter
@@ -177,21 +178,27 @@ Block *PatternLowering::generateMatcher(MatcherNode &node) {
     return block;
   }
 
-  // If this node contains a position, get the corresponding value for this
-  // block.
-  Position *position = node.getPosition();
-  Value val = position ? getValueAt(block, position) : Value();
-
   // Get the next block in the match sequence.
+  // This is intentionally executed first, before we get the value for the
+  // position associated with the node, so that we preserve an "there exist"
+  // semantics: if getting a value requires an upward traversal (going from a
+  // value to its consumers), we want to perform the check on all the consumers
+  // before we pass control to the failure node.
   std::unique_ptr<MatcherNode> &failureNode = node.getFailureNode();
-  Block *nextBlock;
+  Block *failureBlock;
   if (failureNode) {
-    nextBlock = generateMatcher(*failureNode);
-    failureBlockStack.push_back(nextBlock);
+    failureBlock = generateMatcher(*failureNode, region);
+    failureBlockStack.push_back(failureBlock);
   } else {
     assert(!failureBlockStack.empty() && "expected valid failure block");
-    nextBlock = failureBlockStack.back();
+    failureBlock = failureBlockStack.back();
   }
+
+  // If this node contains a position, get the corresponding value for this
+  // block.
+  Block *currentBlock = block;
+  Position *position = node.getPosition();
+  Value val = position ? getValueAt(currentBlock, position) : Value();
 
   // If this value corresponds to an operation, record that we are going to use
   // its location as part of a fused location.
@@ -199,44 +206,89 @@ Block *PatternLowering::generateMatcher(MatcherNode &node) {
   if (isOperationValue)
     locOps.insert(val);
 
-  // Generate code for a boolean predicate node.
-  if (auto *boolNode = dyn_cast<BoolNode>(&node)) {
-    auto *child = generateMatcher(*boolNode->getSuccessNode());
-    generatePredicate(block, node.getQuestion(), boolNode->getAnswer(), val,
-                      child, nextBlock);
+  // Dispatch to the correct method based on derived node type.
+  TypeSwitch<MatcherNode *>(&node)
+      .Case<BoolNode, SwitchNode>([&](auto *derivedNode) {
+        this->generate(derivedNode, currentBlock, val);
+      })
+      .Case([&](SuccessNode *successNode) {
+        generate(successNode, currentBlock);
+      });
 
-    // Generate code for a switch node.
-  } else if (auto *switchNode = dyn_cast<SwitchNode>(&node)) {
-    generateSwitch(switchNode, block, node.getQuestion(), val, nextBlock);
-
-    // Generate code for a success node.
-  } else if (auto *successNode = dyn_cast<SuccessNode>(&node)) {
-    generateRecordMatch(block, nextBlock, successNode->getPattern());
+  // Pop all the failure blocks that were inserted due to nesting of
+  // pdl_interp.iterate.
+  while (failureBlockStack.back() != failureBlock) {
+    failureBlockStack.pop_back();
+    assert(!failureBlockStack.empty() && "unable to locate failure block");
   }
 
+  // Pop the new failure block.
   if (failureNode)
     failureBlockStack.pop_back();
+
   if (isOperationValue)
     locOps.remove(val);
+
   return block;
 }
 
-Value PatternLowering::getValueAt(Block *cur, Position *pos) {
+Value PatternLowering::getValueAt(Block *&currentBlock, Position *pos) {
   if (Value val = values.lookup(pos))
     return val;
 
   // Get the value for the parent position.
-  Value parentVal = getValueAt(cur, pos->getParent());
+  Value parentVal;
+  if (Position *parent = pos->getParent())
+    parentVal = getValueAt(currentBlock, pos->getParent());
 
   // TODO: Use a location from the position.
-  Location loc = parentVal.getLoc();
-  builder.setInsertionPointToEnd(cur);
+  Location loc = parentVal ? parentVal.getLoc() : builder.getUnknownLoc();
+  builder.setInsertionPointToEnd(currentBlock);
   Value value;
   switch (pos->getKind()) {
-  case Predicates::OperationPos:
-    value = builder.create<pdl_interp::GetDefiningOpOp>(
-        loc, builder.getType<pdl::OperationType>(), parentVal);
+  case Predicates::OperationPos: {
+    auto *operationPos = cast<OperationPosition>(pos);
+    if (!operationPos->isUpward()) {
+      // Standard (downward) traversal which directly follows the defining op.
+      value = builder.create<pdl_interp::GetDefiningOpOp>(
+          loc, builder.getType<pdl::OperationType>(), parentVal);
+      break;
+    }
+
+    // The first operation retrieves the representative value of a range.
+    // This applies only when the parent is a range of values.
+    if (parentVal.getType().isa<pdl::RangeType>())
+      value = builder.create<pdl_interp::ExtractOp>(loc, parentVal, 0);
+    else
+      value = parentVal;
+
+    // The second operation retrieves the users.
+    value = builder.create<pdl_interp::GetUsersOp>(loc, value);
+
+    // The third operation iterates over them.
+    assert(!failureBlockStack.empty() && "expected valid failure block");
+    auto foreach = builder.create<pdl_interp::ForEachOp>(
+        loc, value, failureBlockStack.back(), /*initLoop=*/true);
+    value = foreach.getLoopVariable();
+
+    // Create the success and continuation blocks.
+    Block *successBlock = builder.createBlock(&foreach.region());
+    Block *continueBlock = builder.createBlock(successBlock);
+    builder.create<pdl_interp::ContinueOp>(loc);
+    failureBlockStack.push_back(continueBlock);
+
+    // The fourth operation extracts the operand(s) of the user at the specified
+    // index (which can be None, indicating all operands).
+    builder.setInsertionPointToStart(&foreach.region().front());
+    Value operands = builder.create<pdl_interp::GetOperandsOp>(
+        loc, parentVal.getType(), value, operationPos->getIndex());
+
+    // The fifth operation compares the operands to the parent value / range.
+    builder.create<pdl_interp::AreEqualOp>(loc, parentVal, operands,
+                                           successBlock, continueBlock);
+    currentBlock = successBlock;
     break;
+  }
   case Predicates::OperandPos: {
     auto *operandPos = cast<OperandPosition>(pos);
     value = builder.create<pdl_interp::GetOperandOp>(
@@ -281,45 +333,80 @@ Value PatternLowering::getValueAt(Block *cur, Position *pos) {
         parentVal, resPos->getResultGroupNumber());
     break;
   }
+  case Predicates::AttributeLiteralPos: {
+    auto *attrPos = cast<AttributeLiteralPosition>(pos);
+    value =
+        builder.create<pdl_interp::CreateAttributeOp>(loc, attrPos->getValue());
+    break;
+  }
+  case Predicates::TypeLiteralPos: {
+    auto *typePos = cast<TypeLiteralPosition>(pos);
+    Attribute rawTypeAttr = typePos->getValue();
+    if (TypeAttr typeAttr = rawTypeAttr.dyn_cast<TypeAttr>())
+      value = builder.create<pdl_interp::CreateTypeOp>(loc, typeAttr);
+    else
+      value = builder.create<pdl_interp::CreateTypesOp>(
+          loc, rawTypeAttr.cast<ArrayAttr>());
+    break;
+  }
   default:
     llvm_unreachable("Generating unknown Position getter");
     break;
   }
+
   values.insert(pos, value);
   return value;
 }
 
-void PatternLowering::generatePredicate(Block *currentBlock,
-                                        Qualifier *question, Qualifier *answer,
-                                        Value val, Block *trueDest,
-                                        Block *falseDest) {
-  builder.setInsertionPointToEnd(currentBlock);
+void PatternLowering::generate(BoolNode *boolNode, Block *&currentBlock,
+                               Value val) {
   Location loc = val.getLoc();
+  Qualifier *question = boolNode->getQuestion();
+  Qualifier *answer = boolNode->getAnswer();
+  Region *region = currentBlock->getParent();
+
+  // Execute the getValue queries first, so that we create success
+  // matcher in the correct (possibly nested) region.
+  SmallVector<Value> args;
+  if (auto *equalToQuestion = dyn_cast<EqualToQuestion>(question)) {
+    args = {getValueAt(currentBlock, equalToQuestion->getValue())};
+  } else if (auto *cstQuestion = dyn_cast<ConstraintQuestion>(question)) {
+    for (Position *position : cstQuestion->getArgs())
+      args.push_back(getValueAt(currentBlock, position));
+  }
+
+  // Generate the matcher in the current (potentially nested) region
+  // and get the failure successor.
+  Block *success = generateMatcher(*boolNode->getSuccessNode(), *region);
+  Block *failure = failureBlockStack.back();
+
+  // Finally, create the predicate.
+  builder.setInsertionPointToEnd(currentBlock);
   Predicates::Kind kind = question->getKind();
   switch (kind) {
   case Predicates::IsNotNullQuestion:
-    builder.create<pdl_interp::IsNotNullOp>(loc, val, trueDest, falseDest);
+    builder.create<pdl_interp::IsNotNullOp>(loc, val, success, failure);
     break;
   case Predicates::OperationNameQuestion: {
     auto *opNameAnswer = cast<OperationNameAnswer>(answer);
     builder.create<pdl_interp::CheckOperationNameOp>(
-        loc, val, opNameAnswer->getValue().getStringRef(), trueDest, falseDest);
+        loc, val, opNameAnswer->getValue().getStringRef(), success, failure);
     break;
   }
   case Predicates::TypeQuestion: {
     auto *ans = cast<TypeAnswer>(answer);
     if (val.getType().isa<pdl::RangeType>())
       builder.create<pdl_interp::CheckTypesOp>(
-          loc, val, ans->getValue().cast<ArrayAttr>(), trueDest, falseDest);
+          loc, val, ans->getValue().cast<ArrayAttr>(), success, failure);
     else
       builder.create<pdl_interp::CheckTypeOp>(
-          loc, val, ans->getValue().cast<TypeAttr>(), trueDest, falseDest);
+          loc, val, ans->getValue().cast<TypeAttr>(), success, failure);
     break;
   }
   case Predicates::AttributeQuestion: {
     auto *ans = cast<AttributeAnswer>(answer);
     builder.create<pdl_interp::CheckAttributeOp>(loc, val, ans->getValue(),
-                                                 trueDest, falseDest);
+                                                 success, failure);
     break;
   }
   case Predicates::OperandCountAtLeastQuestion:
@@ -327,31 +414,27 @@ void PatternLowering::generatePredicate(Block *currentBlock,
     builder.create<pdl_interp::CheckOperandCountOp>(
         loc, val, cast<UnsignedAnswer>(answer)->getValue(),
         /*compareAtLeast=*/kind == Predicates::OperandCountAtLeastQuestion,
-        trueDest, falseDest);
+        success, failure);
     break;
   case Predicates::ResultCountAtLeastQuestion:
   case Predicates::ResultCountQuestion:
     builder.create<pdl_interp::CheckResultCountOp>(
         loc, val, cast<UnsignedAnswer>(answer)->getValue(),
         /*compareAtLeast=*/kind == Predicates::ResultCountAtLeastQuestion,
-        trueDest, falseDest);
+        success, failure);
     break;
   case Predicates::EqualToQuestion: {
-    auto *equalToQuestion = cast<EqualToQuestion>(question);
-    builder.create<pdl_interp::AreEqualOp>(
-        loc, val, getValueAt(currentBlock, equalToQuestion->getValue()),
-        trueDest, falseDest);
+    bool trueAnswer = isa<TrueAnswer>(answer);
+    builder.create<pdl_interp::AreEqualOp>(loc, val, args.front(),
+                                           trueAnswer ? success : failure,
+                                           trueAnswer ? failure : success);
     break;
   }
   case Predicates::ConstraintQuestion: {
     auto *cstQuestion = cast<ConstraintQuestion>(question);
-    SmallVector<Value, 2> args;
-    for (Position *position : std::get<1>(cstQuestion->getValue()))
-      args.push_back(getValueAt(currentBlock, position));
     builder.create<pdl_interp::ApplyConstraintOp>(
-        loc, std::get<0>(cstQuestion->getValue()), args,
-        std::get<2>(cstQuestion->getValue()).cast<ArrayAttr>(), trueDest,
-        falseDest);
+        loc, cstQuestion->getName(), args, cstQuestion->getParams(), success,
+        failure);
     break;
   }
   default:
@@ -373,9 +456,12 @@ static void createSwitchOp(Value val, Block *defaultDest, OpBuilder &builder,
   builder.create<OpT>(val.getLoc(), val, values, defaultDest, blocks);
 }
 
-void PatternLowering::generateSwitch(SwitchNode *switchNode,
-                                     Block *currentBlock, Qualifier *question,
-                                     Value val, Block *defaultDest) {
+void PatternLowering::generate(SwitchNode *switchNode, Block *currentBlock,
+                               Value val) {
+  Qualifier *question = switchNode->getQuestion();
+  Region *region = currentBlock->getParent();
+  Block *defaultDest = failureBlockStack.back();
+
   // If the switch question is not an exact answer, i.e. for the `at_least`
   // cases, we generate a special block sequence.
   Predicates::Kind kind = question->getKind();
@@ -407,12 +493,25 @@ void PatternLowering::generateSwitch(SwitchNode *switchNode,
     //   ...
     //
     failureBlockStack.push_back(defaultDest);
+    Location loc = val.getLoc();
     for (unsigned idx : sortedChildren) {
       auto &child = switchNode->getChild(idx);
-      Block *childBlock = generateMatcher(*child.second);
+      Block *childBlock = generateMatcher(*child.second, *region);
       Block *predicateBlock = builder.createBlock(childBlock);
-      generatePredicate(predicateBlock, question, child.first, val, childBlock,
-                        defaultDest);
+      builder.setInsertionPointToEnd(predicateBlock);
+      unsigned ans = cast<UnsignedAnswer>(child.first)->getValue();
+      switch (kind) {
+      case Predicates::OperandCountAtLeastQuestion:
+        builder.create<pdl_interp::CheckOperandCountOp>(
+            loc, val, ans, /*compareAtLeast=*/true, childBlock, defaultDest);
+        break;
+      case Predicates::ResultCountAtLeastQuestion:
+        builder.create<pdl_interp::CheckResultCountOp>(
+            loc, val, ans, /*compareAtLeast=*/true, childBlock, defaultDest);
+        break;
+      default:
+        llvm_unreachable("Generating invalid AtLeast operation");
+      }
       failureBlockStack.back() = predicateBlock;
     }
     Block *firstPredicateBlock = failureBlockStack.pop_back_val();
@@ -426,7 +525,7 @@ void PatternLowering::generateSwitch(SwitchNode *switchNode,
   // switch.
   llvm::MapVector<Qualifier *, Block *> children;
   for (auto &it : switchNode->getChildren())
-    children.insert({it.first, generateMatcher(*it.second)});
+    children.insert({it.first, generateMatcher(*it.second, *region)});
   builder.setInsertionPointToEnd(currentBlock);
 
   switch (question->getKind()) {
@@ -455,8 +554,10 @@ void PatternLowering::generateSwitch(SwitchNode *switchNode,
   }
 }
 
-void PatternLowering::generateRecordMatch(Block *currentBlock, Block *nextBlock,
-                                          pdl::PatternOp pattern) {
+void PatternLowering::generate(SuccessNode *successNode, Block *&currentBlock) {
+  pdl::PatternOp pattern = successNode->getPattern();
+  Value root = successNode->getRoot();
+
   // Generate a rewriter for the pattern this success node represents, and track
   // any values used from the match region.
   SmallVector<Position *, 8> usedMatchValues;
@@ -478,14 +579,15 @@ void PatternLowering::generateRecordMatch(Block *currentBlock, Block *nextBlock,
 
   // Grab the root kind if present.
   StringAttr rootKindAttr;
-  if (Optional<StringRef> rootKind = pattern.getRootKind())
-    rootKindAttr = builder.getStringAttr(*rootKind);
+  if (pdl::OperationOp rootOp = root.getDefiningOp<pdl::OperationOp>())
+    if (Optional<StringRef> rootKind = rootOp.name())
+      rootKindAttr = builder.getStringAttr(*rootKind);
 
   builder.setInsertionPointToEnd(currentBlock);
   builder.create<pdl_interp::RecordMatchOp>(
       pattern.getLoc(), mappedMatchValues, locOps.getArrayRef(),
       rewriterFuncRef, rootKindAttr, generatedOpsAttr, pattern.benefitAttr(),
-      nextBlock);
+      failureBlockStack.back());
 }
 
 SymbolRefAttr PatternLowering::generateRewriter(
@@ -535,8 +637,10 @@ SymbolRefAttr PatternLowering::generateRewriter(
   // method.
   pdl::RewriteOp rewriter = pattern.getRewriter();
   if (StringAttr rewriteName = rewriter.nameAttr()) {
+    SmallVector<Value> args;
+    if (rewriter.root())
+      args.push_back(mapRewriteValue(rewriter.root()));
     auto mappedArgs = llvm::map_range(rewriter.externalArgs(), mapRewriteValue);
-    SmallVector<Value, 4> args(1, mapRewriteValue(rewriter.root()));
     args.append(mappedArgs.begin(), mappedArgs.end());
     builder.create<pdl_interp::ApplyRewriteOp>(
         rewriter.getLoc(), /*resultTypes=*/TypeRange(), rewriteName, args,

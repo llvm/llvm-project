@@ -133,10 +133,9 @@ void CodeSection::writeRelocations(raw_ostream &os) const {
 
 void DataSection::finalizeContents() {
   raw_string_ostream os(dataSectionHeader);
-  unsigned segmentCount =
-      std::count_if(segments.begin(), segments.end(),
-                    [](OutputSegment *segment) { return !segment->isBss; });
-
+  unsigned segmentCount = std::count_if(
+      segments.begin(), segments.end(),
+      [](OutputSegment *segment) { return segment->requiredInBinary(); });
 #ifndef NDEBUG
   unsigned activeCount = std::count_if(
       segments.begin(), segments.end(), [](OutputSegment *segment) {
@@ -152,7 +151,7 @@ void DataSection::finalizeContents() {
   bodySize = dataSectionHeader.size();
 
   for (OutputSegment *segment : segments) {
-    if (segment->isBss)
+    if (!segment->requiredInBinary())
       continue;
     raw_string_ostream os(segment->header);
     writeUleb128(os, segment->initFlags, "init flags");
@@ -199,7 +198,7 @@ void DataSection::writeTo(uint8_t *buf) {
   memcpy(buf, dataSectionHeader.data(), dataSectionHeader.size());
 
   for (const OutputSegment *segment : segments) {
-    if (segment->isBss)
+    if (!segment->requiredInBinary())
       continue;
     // Write data segment header
     uint8_t *segStart = buf + segment->sectionOffset;
@@ -227,7 +226,7 @@ void DataSection::writeRelocations(raw_ostream &os) const {
 
 bool DataSection::isNeeded() const {
   for (const OutputSegment *seg : segments)
-    if (!seg->isBss)
+    if (seg->requiredInBinary())
       return true;
   return false;
 }

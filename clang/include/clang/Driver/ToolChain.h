@@ -162,7 +162,7 @@ private:
   Tool *getOffloadBundler() const;
   Tool *getOffloadWrapper() const;
 
-  mutable std::unique_ptr<SanitizerArgs> SanitizerArguments;
+  mutable bool SanitizerArgsChecked = false;
   mutable std::unique_ptr<XRayArgs> XRayArguments;
 
   /// The effective clang triple for the current Job.
@@ -266,7 +266,7 @@ public:
 
   const Multilib &getMultilib() const { return SelectedMultilib; }
 
-  const SanitizerArgs& getSanitizerArgs() const;
+  SanitizerArgs getSanitizerArgs(const llvm::opt::ArgList &JobArgs) const;
 
   const XRayArgs& getXRayArgs() const;
 
@@ -348,10 +348,7 @@ public:
   /// is LLD. If it's set, it can be assumed that the linker is LLD built
   /// at the same revision as clang, and clang can make assumptions about
   /// LLD's supported flags, error output, etc.
-  /// If LinkerIsLLDDarwinNew is non-nullptr, it's set if the linker is
-  /// the new version in lld/MachO.
-  std::string GetLinkerPath(bool *LinkerIsLLD = nullptr,
-                            bool *LinkerIsLLDDarwinNew = nullptr) const;
+  std::string GetLinkerPath(bool *LinkerIsLLD = nullptr) const;
 
   /// Returns the linker path for emitting a static library.
   std::string GetStaticLibToolPath() const;
@@ -386,6 +383,9 @@ public:
 
   /// Check if the toolchain should use the integrated assembler.
   virtual bool useIntegratedAs() const;
+
+  /// Check if the toolchain should use the integrated backend.
+  virtual bool useIntegratedBackend() const { return true; }
 
   /// Check if the toolchain should use AsmParser to parse inlineAsm when
   /// integrated assembler is not default.
@@ -485,15 +485,12 @@ public:
   virtual bool isPICDefault() const = 0;
 
   /// Test whether this toolchain defaults to PIE.
-  virtual bool isPIEDefault() const = 0;
-
-  /// Test whether this toolchaind defaults to non-executable stacks.
-  virtual bool isNoExecStackDefault() const;
+  virtual bool isPIEDefault(const llvm::opt::ArgList &Args) const = 0;
 
   /// Tests whether this toolchain forces its default for PIC, PIE or
   /// non-PIC.  If this returns true, any PIC related flags should be ignored
-  /// and instead the results of \c isPICDefault() and \c isPIEDefault() are
-  /// used exclusively.
+  /// and instead the results of \c isPICDefault() and \c isPIEDefault(const
+  /// llvm::opt::ArgList &Args) are used exclusively.
   virtual bool isPICDefaultForced() const = 0;
 
   /// SupportsProfiling - Does this tool chain support -pg.

@@ -23,15 +23,29 @@ namespace CodeGen {
 /// An aligned address.
 class Address {
   llvm::Value *Pointer;
+  llvm::Type *ElementType;
   CharUnits Alignment;
+
+protected:
+  Address(std::nullptr_t) : Pointer(nullptr), ElementType(nullptr) {}
+
 public:
-  Address(llvm::Value *pointer, CharUnits alignment)
-      : Pointer(pointer), Alignment(alignment) {
-    assert((!alignment.isZero() || pointer == nullptr) &&
-           "creating valid address with invalid alignment");
+  Address(llvm::Value *pointer, llvm::Type *elementType, CharUnits alignment)
+      : Pointer(pointer), ElementType(elementType), Alignment(alignment) {
+    assert(pointer != nullptr && "Pointer cannot be null");
+    assert(elementType != nullptr && "Element type cannot be null");
+    assert(llvm::cast<llvm::PointerType>(pointer->getType())
+               ->isOpaqueOrPointeeTypeMatches(elementType) &&
+           "Incorrect pointer element type");
+    assert(!alignment.isZero() && "Alignment cannot be zero");
   }
 
-  static Address invalid() { return Address(nullptr, CharUnits()); }
+  // Deprecated: Use constructor with explicit element type instead.
+  Address(llvm::Value *Pointer, CharUnits Alignment)
+      : Address(Pointer, Pointer->getType()->getPointerElementType(),
+                Alignment) {}
+
+  static Address invalid() { return Address(nullptr); }
   bool isValid() const { return Pointer != nullptr; }
 
   llvm::Value *getPointer() const {
@@ -45,11 +59,9 @@ public:
   }
 
   /// Return the type of the values stored in this address.
-  ///
-  /// When IR pointer types lose their element type, we should simply
-  /// store it in Address instead for the convenience of writing code.
   llvm::Type *getElementType() const {
-    return getType()->getElementType();
+    assert(isValid());
+    return ElementType;
   }
 
   /// Return the address space that this address resides in.
@@ -67,30 +79,42 @@ public:
     assert(isValid());
     return Alignment;
   }
+
+  /// Return address with different pointer, but same element type and
+  /// alignment.
+  Address withPointer(llvm::Value *NewPointer) const {
+    return Address(NewPointer, ElementType, Alignment);
+  }
+
+  /// Return address with different alignment, but same pointer and element
+  /// type.
+  Address withAlignment(CharUnits NewAlignment) const {
+    return Address(Pointer, ElementType, NewAlignment);
+  }
 };
 
 /// A specialization of Address that requires the address to be an
 /// LLVM Constant.
 class ConstantAddress : public Address {
+  ConstantAddress(std::nullptr_t) : Address(nullptr) {}
+
 public:
-  ConstantAddress(llvm::Constant *pointer, CharUnits alignment)
-    : Address(pointer, alignment) {}
+  ConstantAddress(llvm::Constant *pointer, llvm::Type *elementType,
+                  CharUnits alignment)
+      : Address(pointer, elementType, alignment) {}
 
   static ConstantAddress invalid() {
-    return ConstantAddress(nullptr, CharUnits());
+    return ConstantAddress(nullptr);
   }
 
   llvm::Constant *getPointer() const {
     return llvm::cast<llvm::Constant>(Address::getPointer());
   }
 
-  ConstantAddress getBitCast(llvm::Type *ty) const {
-    return ConstantAddress(llvm::ConstantExpr::getBitCast(getPointer(), ty),
-                           getAlignment());
-  }
-
-  ConstantAddress getElementBitCast(llvm::Type *ty) const {
-    return getBitCast(ty->getPointerTo(getAddressSpace()));
+  ConstantAddress getElementBitCast(llvm::Type *ElemTy) const {
+    llvm::Constant *BitCast = llvm::ConstantExpr::getBitCast(
+        getPointer(), ElemTy->getPointerTo(getAddressSpace()));
+    return ConstantAddress(BitCast, ElemTy, getAlignment());
   }
 
   static bool isaImpl(Address addr) {
@@ -98,7 +122,7 @@ public:
   }
   static ConstantAddress castImpl(Address addr) {
     return ConstantAddress(llvm::cast<llvm::Constant>(addr.getPointer()),
-                           addr.getAlignment());
+                           addr.getElementType(), addr.getAlignment());
   }
 };
 

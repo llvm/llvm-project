@@ -7,7 +7,7 @@ This analysis remarks indicates that a potential side-effect that cannot be
 guarded prevents the target region from executing in SPMD-mode. SPMD-mode
 requires that each thread is active inside the region. Any instruction that
 cannot be either recomputed by each thread independently or guarded and executed
-by a single thread prevents the region from executing in SPMD-mode. 
+by a single thread prevents the region from executing in SPMD-mode.
 
 This remark will attempt to print out the instructions preventing the region
 from being executed in SPMD-mode. Calls to functions outside the current
@@ -26,14 +26,14 @@ or operations that cannot be executed in SPMD-mode.
   extern int work();
 
   void use(int x);
-  
+
   void foo() {
   #pragma omp target teams
     {
       int x = work();
   #pragma omp parallel
         use(x);
-  
+
     }
   }
 
@@ -41,8 +41,8 @@ or operations that cannot be executed in SPMD-mode.
 .. code-block:: console
 
    $ clang++ -fopenmp -fopenmp-targets=nvptx64 -O2 -Rpass-analysis=openmp-opt omp121.cpp
-   omp121.cpp:8:13: remark: Value has potential side effects preventing SPMD-mode 
-   execution.  Add `__attribute__((assume("ompx_spmd_amenable")))` to the called function 
+   omp121.cpp:8:13: remark: Value has potential side effects preventing SPMD-mode
+   execution.  Add `__attribute__((assume("ompx_spmd_amenable")))` to the called function
    to override. [OMP121]
    int x = work();
             ^
@@ -56,14 +56,14 @@ contain any code that prevents SPMD-mode execution.
   __attribute__((assume("ompx_spmd_amenable"))) extern int work();
 
   void use(int x);
-  
+
   void foo() {
   #pragma omp target teams
     {
       int x = work();
   #pragma omp parallel
         use(x);
-  
+
     }
   }
 

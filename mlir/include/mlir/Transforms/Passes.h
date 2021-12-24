@@ -33,10 +33,6 @@ enum FusionMode { Greedy, ProducerConsumer, Sibling };
 // Passes
 //===----------------------------------------------------------------------===//
 
-/// Creates an instance of the BufferDeallocation pass to free all allocated
-/// buffers.
-std::unique_ptr<Pass> createBufferDeallocationPass();
-
 /// Creates a pass that moves allocations upwards to reduce the number of
 /// required copies that are inserted during the BufferDeallocation pass.
 std::unique_ptr<Pass> createBufferHoistingPass();
@@ -58,10 +54,6 @@ createPromoteBuffersToStackPass(unsigned maxAllocSizeInBytes = 1024,
 std::unique_ptr<Pass>
 createPromoteBuffersToStackPass(std::function<bool(Value)> isSmallAlloc);
 
-/// Creates a pass that finalizes a partial bufferization by removing remaining
-/// tensor_load and buffer_cast operations.
-std::unique_ptr<FunctionPass> createFinalizingBufferizePass();
-
 /// Creates a pass that converts memref function results to out-params.
 std::unique_ptr<Pass> createBufferResultsToOutParamsPass();
 
@@ -70,8 +62,17 @@ std::unique_ptr<Pass> createBufferResultsToOutParamsPass();
 std::unique_ptr<Pass> createCanonicalizerPass();
 
 /// Creates an instance of the Canonicalizer pass with the specified config.
+/// `disabledPatterns` is a set of labels used to filter out input patterns with
+/// a debug label or debug name in this set. `enabledPatterns` is a set of
+/// labels used to filter out input patterns that do not have one of the labels
+/// in this set. Debug labels must be set explicitly on patterns or when adding
+/// them with `RewritePatternSet::addWithLabel`. Debug names may be empty, but
+/// patterns created with `RewritePattern::create` have their default debug name
+/// set to their type name.
 std::unique_ptr<Pass>
-createCanonicalizerPass(const GreedyRewriteConfig &config);
+createCanonicalizerPass(const GreedyRewriteConfig &config,
+                        ArrayRef<std::string> disabledPatterns = llvm::None,
+                        ArrayRef<std::string> enabledPatterns = llvm::None);
 
 /// Creates a pass to perform common sub expression elimination.
 std::unique_ptr<Pass> createCSEPass();
@@ -145,6 +146,6 @@ std::unique_ptr<OperationPass<ModuleOp>> createNormalizeMemRefsPass();
 #define GEN_PASS_REGISTRATION
 #include "mlir/Transforms/Passes.h.inc"
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_TRANSFORMS_PASSES_H

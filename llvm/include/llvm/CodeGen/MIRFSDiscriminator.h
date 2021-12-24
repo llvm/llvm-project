@@ -57,6 +57,10 @@ public:
     assert(LowBit < HighBit && "HighBit needs to be greater than Lowbit");
   }
 
+  StringRef getPassName() const override {
+    return "Add FS discriminators in MIR";
+  }
+
   /// getNumFSBBs() - Return the number of machine BBs that have FS samples.
   unsigned getNumFSBBs();
 

@@ -387,16 +387,16 @@ def simm7s16 : Operand<i32> {
   let PrintMethod = "printImmScale<16>";
 }
 
-def am_sve_fi : ComplexPattern<i64, 2, "SelectAddrModeFrameIndexSVE", []>;
+def am_sve_fi : ComplexPattern<iPTR, 2, "SelectAddrModeFrameIndexSVE", []>;
 
-def am_indexed7s8   : ComplexPattern<i64, 2, "SelectAddrModeIndexed7S8", []>;
-def am_indexed7s16  : ComplexPattern<i64, 2, "SelectAddrModeIndexed7S16", []>;
-def am_indexed7s32  : ComplexPattern<i64, 2, "SelectAddrModeIndexed7S32", []>;
-def am_indexed7s64  : ComplexPattern<i64, 2, "SelectAddrModeIndexed7S64", []>;
-def am_indexed7s128 : ComplexPattern<i64, 2, "SelectAddrModeIndexed7S128", []>;
+def am_indexed7s8   : ComplexPattern<iPTR, 2, "SelectAddrModeIndexed7S8", []>;
+def am_indexed7s16  : ComplexPattern<iPTR, 2, "SelectAddrModeIndexed7S16", []>;
+def am_indexed7s32  : ComplexPattern<iPTR, 2, "SelectAddrModeIndexed7S32", []>;
+def am_indexed7s64  : ComplexPattern<iPTR, 2, "SelectAddrModeIndexed7S64", []>;
+def am_indexed7s128 : ComplexPattern<iPTR, 2, "SelectAddrModeIndexed7S128", []>;
 
-def am_indexedu6s128 : ComplexPattern<i64, 2, "SelectAddrModeIndexedU6S128", []>;
-def am_indexeds9s128 : ComplexPattern<i64, 2, "SelectAddrModeIndexedS9S128", []>;
+def am_indexedu6s128 : ComplexPattern<iPTR, 2, "SelectAddrModeIndexedU6S128", []>;
+def am_indexeds9s128 : ComplexPattern<iPTR, 2, "SelectAddrModeIndexedS9S128", []>;
 
 def UImmS1XForm : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getZExtValue(), SDLoc(N), MVT::i64);
@@ -846,13 +846,13 @@ def logical_imm64_not : Operand<i64> {
   let ParserMatchClass = LogicalImm64NotOperand;
 }
 
-// iXX_imm0_65535 predicates - True if the immediate is in the range [0,65535].
+// immXX_0_65535 predicates - True if the immediate is in the range [0,65535].
 let ParserMatchClass = AsmImmRange<0, 65535>, PrintMethod = "printImmHex" in {
-def i32_imm0_65535 : Operand<i32>, TImmLeaf<i32, [{
+def timm32_0_65535 : Operand<i32>, TImmLeaf<i32, [{
   return ((uint32_t)Imm) < 65536;
 }]>;
 
-def i64_imm0_65535 : Operand<i64>, TImmLeaf<i64, [{
+def timm64_0_65535 : Operand<i64>, TImmLeaf<i64, [{
   return ((uint64_t)Imm) < 65536;
 }]>;
 }
@@ -956,8 +956,8 @@ def imm0_3 : Operand<i64>, ImmLeaf<i64, [{
   let ParserMatchClass = Imm0_3Operand;
 }
 
-// imm32_0_7 predicate - True if the 32-bit immediate is in the range [0,7]
-def imm32_0_7 : Operand<i32>, TImmLeaf<i32, [{
+// timm32_0_7 predicate - True if the 32-bit immediate is in the range [0,7]
+def timm32_0_7 : Operand<i32>, TImmLeaf<i32, [{
   return ((uint32_t)Imm) < 8;
 }]> {
   let ParserMatchClass = Imm0_7Operand;
@@ -1426,7 +1426,7 @@ class TMSystemINoOperand<bits<4> CRm, string asm, list<dag> pattern>
 
 // System instructions for exit from transactions
 class TMSystemException<bits<3> op1, string asm, list<dag> pattern>
-    : I<(outs), (ins i64_imm0_65535:$imm), asm, "\t$imm", "", pattern>,
+    : I<(outs), (ins timm64_0_65535:$imm), asm, "\t$imm", "", pattern>,
       Sched<[WriteSys]> {
   bits<16> imm;
   let Inst{31-24} = 0b11010100;
@@ -2012,10 +2012,10 @@ class OneXRegData<bits<3> opc, string asm, SDPatternOperator node>
   let Inst{31} = 1;
 }
 
-class SignAuthOneData<bits<3> opcode_prefix, bits<2> opcode, string asm>
-  : I<(outs GPR64:$Rd), (ins GPR64:$src, GPR64sp:$Rn), asm, "\t$Rd, $Rn",
-      "$Rd = $src",
-      []>,
+class SignAuthOneData<bits<3> opcode_prefix, bits<2> opcode, string asm,
+                      SDPatternOperator op>
+  : I<(outs GPR64:$dst), (ins GPR64:$Rd, GPR64sp:$Rn), asm, "\t$Rd, $Rn",
+      "$dst = $Rd", [(set GPR64:$dst, (op GPR64:$Rd, opcode, GPR64sp:$Rn))]>,
     Sched<[WriteI, ReadI]> {
   bits<5> Rd;
   bits<5> Rn;
@@ -2026,9 +2026,11 @@ class SignAuthOneData<bits<3> opcode_prefix, bits<2> opcode, string asm>
   let Inst{4-0} = Rd;
 }
 
-class SignAuthZero<bits<3> opcode_prefix, bits<2> opcode, string asm>
-  : I<(outs GPR64:$Rd), (ins GPR64:$src), asm, "\t$Rd", "$Rd = $src",
-      []>, Sched<[]> {
+class SignAuthZero<bits<3> opcode_prefix, bits<2> opcode, string asm,
+                   SDPatternOperator op>
+  : I<(outs GPR64:$dst), (ins GPR64:$Rd), asm, "\t$Rd", "$dst = $Rd",
+      [(set GPR64:$dst, (op GPR64:$Rd, opcode, (i64 0)))]>,
+    Sched<[]> {
   bits<5> Rd;
   let Inst{31-15} = 0b11011010110000010;
   let Inst{14-12} = opcode_prefix;
@@ -3175,18 +3177,18 @@ def maski16_or_more : Operand<i32>,
 
 // (unsigned immediate)
 // Indexed for 8-bit registers. offset is in range [0,4095].
-def am_indexed8 : ComplexPattern<i64, 2, "SelectAddrModeIndexed8", []>;
-def am_indexed16 : ComplexPattern<i64, 2, "SelectAddrModeIndexed16", []>;
-def am_indexed32 : ComplexPattern<i64, 2, "SelectAddrModeIndexed32", []>;
-def am_indexed64 : ComplexPattern<i64, 2, "SelectAddrModeIndexed64", []>;
-def am_indexed128 : ComplexPattern<i64, 2, "SelectAddrModeIndexed128", []>;
+def am_indexed8 : ComplexPattern<iPTR, 2, "SelectAddrModeIndexed8", []>;
+def am_indexed16 : ComplexPattern<iPTR, 2, "SelectAddrModeIndexed16", []>;
+def am_indexed32 : ComplexPattern<iPTR, 2, "SelectAddrModeIndexed32", []>;
+def am_indexed64 : ComplexPattern<iPTR, 2, "SelectAddrModeIndexed64", []>;
+def am_indexed128 : ComplexPattern<iPTR, 2, "SelectAddrModeIndexed128", []>;
 
 // (unsigned immediate)
 // Indexed for 8-bit registers. offset is in range [0,63].
-def am_indexed8_6b : ComplexPattern<i64, 2, "SelectAddrModeIndexedUImm<1,63>", []>;
-def am_indexed16_6b : ComplexPattern<i64, 2, "SelectAddrModeIndexedUImm<2,63>", []>;
-def am_indexed32_6b : ComplexPattern<i64, 2, "SelectAddrModeIndexedUImm<4,63>", []>;
-def am_indexed64_6b : ComplexPattern<i64, 2, "SelectAddrModeIndexedUImm<8,63>", []>;
+def am_indexed8_6b : ComplexPattern<iPTR, 2, "SelectAddrModeIndexedUImm<1,63>", []>;
+def am_indexed16_6b : ComplexPattern<iPTR, 2, "SelectAddrModeIndexedUImm<2,63>", []>;
+def am_indexed32_6b : ComplexPattern<iPTR, 2, "SelectAddrModeIndexedUImm<4,63>", []>;
+def am_indexed64_6b : ComplexPattern<iPTR, 2, "SelectAddrModeIndexedUImm<8,63>", []>;
 
 def gi_am_indexed8 :
     GIComplexOperandMatcher<s64, "selectAddrModeIndexed<8>">,
@@ -3356,11 +3358,11 @@ class PrefetchLiteral<bits<2> opc, bit V, string asm, list<dag> pat>
 // Load/store register offset
 //---
 
-def ro_Xindexed8 : ComplexPattern<i64, 4, "SelectAddrModeXRO<8>", []>;
-def ro_Xindexed16 : ComplexPattern<i64, 4, "SelectAddrModeXRO<16>", []>;
-def ro_Xindexed32 : ComplexPattern<i64, 4, "SelectAddrModeXRO<32>", []>;
-def ro_Xindexed64 : ComplexPattern<i64, 4, "SelectAddrModeXRO<64>", []>;
-def ro_Xindexed128 : ComplexPattern<i64, 4, "SelectAddrModeXRO<128>", []>;
+def ro_Xindexed8 : ComplexPattern<iPTR, 4, "SelectAddrModeXRO<8>", []>;
+def ro_Xindexed16 : ComplexPattern<iPTR, 4, "SelectAddrModeXRO<16>", []>;
+def ro_Xindexed32 : ComplexPattern<iPTR, 4, "SelectAddrModeXRO<32>", []>;
+def ro_Xindexed64 : ComplexPattern<iPTR, 4, "SelectAddrModeXRO<64>", []>;
+def ro_Xindexed128 : ComplexPattern<iPTR, 4, "SelectAddrModeXRO<128>", []>;
 
 def gi_ro_Xindexed8 :
     GIComplexOperandMatcher<s64, "selectAddrModeXRO<8>">,
@@ -3378,11 +3380,11 @@ def gi_ro_Xindexed128 :
     GIComplexOperandMatcher<s64, "selectAddrModeXRO<128>">,
     GIComplexPatternEquiv<ro_Xindexed128>;
 
-def ro_Windexed8 : ComplexPattern<i64, 4, "SelectAddrModeWRO<8>", []>;
-def ro_Windexed16 : ComplexPattern<i64, 4, "SelectAddrModeWRO<16>", []>;
-def ro_Windexed32 : ComplexPattern<i64, 4, "SelectAddrModeWRO<32>", []>;
-def ro_Windexed64 : ComplexPattern<i64, 4, "SelectAddrModeWRO<64>", []>;
-def ro_Windexed128 : ComplexPattern<i64, 4, "SelectAddrModeWRO<128>", []>;
+def ro_Windexed8 : ComplexPattern<iPTR, 4, "SelectAddrModeWRO<8>", []>;
+def ro_Windexed16 : ComplexPattern<iPTR, 4, "SelectAddrModeWRO<16>", []>;
+def ro_Windexed32 : ComplexPattern<iPTR, 4, "SelectAddrModeWRO<32>", []>;
+def ro_Windexed64 : ComplexPattern<iPTR, 4, "SelectAddrModeWRO<64>", []>;
+def ro_Windexed128 : ComplexPattern<iPTR, 4, "SelectAddrModeWRO<128>", []>;
 
 def gi_ro_Windexed8 :
     GIComplexOperandMatcher<s64, "selectAddrModeWRO<8>">,
@@ -3878,11 +3880,11 @@ multiclass PrefetchRO<bits<2> sz, bit V, bits<2> opc, string asm> {
 // Load/store unscaled immediate
 //---
 
-def am_unscaled8 :  ComplexPattern<i64, 2, "SelectAddrModeUnscaled8", []>;
-def am_unscaled16 : ComplexPattern<i64, 2, "SelectAddrModeUnscaled16", []>;
-def am_unscaled32 : ComplexPattern<i64, 2, "SelectAddrModeUnscaled32", []>;
-def am_unscaled64 : ComplexPattern<i64, 2, "SelectAddrModeUnscaled64", []>;
-def am_unscaled128 :ComplexPattern<i64, 2, "SelectAddrModeUnscaled128", []>;
+def am_unscaled8 :  ComplexPattern<iPTR, 2, "SelectAddrModeUnscaled8", []>;
+def am_unscaled16 : ComplexPattern<iPTR, 2, "SelectAddrModeUnscaled16", []>;
+def am_unscaled32 : ComplexPattern<iPTR, 2, "SelectAddrModeUnscaled32", []>;
+def am_unscaled64 : ComplexPattern<iPTR, 2, "SelectAddrModeUnscaled64", []>;
+def am_unscaled128 :ComplexPattern<iPTR, 2, "SelectAddrModeUnscaled128", []>;
 
 def gi_am_unscaled8 :
     GIComplexOperandMatcher<s64, "selectAddrModeUnscaled8">,
@@ -4511,7 +4513,7 @@ multiclass MemTagStore<bits<2> opc1, string insn> {
 
 let mayLoad = 0, mayStore = 0, hasSideEffects = 1 in
 class ExceptionGeneration<bits<3> op1, bits<2> ll, string asm>
-    : I<(outs), (ins i32_imm0_65535:$imm), asm, "\t$imm", "", []>,
+    : I<(outs), (ins timm32_0_65535:$imm), asm, "\t$imm", "", []>,
       Sched<[WriteSys]> {
   bits<16> imm;
   let Inst{31-24} = 0b11010100;

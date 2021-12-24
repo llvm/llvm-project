@@ -70,5 +70,5 @@ body:  |
     $eax = MOV32ri 0, debug-location !17
     JCC_1 %bb.1, 4, implicit killed $eflags
   bb.4.bb4:
-    RETQ $eax, debug-location !17
+    RET64 $eax, debug-location !17
 ...

@@ -1,3 +1,4 @@
+// UNSUPPORTED: default-pie-on-linux
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-TRAP
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-trap=signed-integer-overflow %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-TRAP2
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=undefined -fsanitize-undefined-trap-on-error %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-TRAP
@@ -348,7 +349,7 @@
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=memory %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-PIE
 // RUN: %clang -target x86_64-unknown-freebsd -fsanitize=memory %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-PIE
 // RUN: %clang -target aarch64-linux-gnu -fsanitize=memory %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-PIE
-// RUN: %clang -target arm-linux-androideabi -fsanitize=address %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-PIC-NO-PIE
+// RUN: %clang -target arm-linux-androideabi -fsanitize=address %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-PIE
 // RUN: %clang -target arm-linux-androideabi24 -fsanitize=address %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-PIE
 // RUN: %clang -target aarch64-linux-android -fsanitize=address %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-PIE
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=address %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-PIE

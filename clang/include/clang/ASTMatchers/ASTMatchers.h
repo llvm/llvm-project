@@ -148,6 +148,7 @@ using CXXBaseSpecifierMatcher = internal::Matcher<CXXBaseSpecifier>;
 using CXXCtorInitializerMatcher = internal::Matcher<CXXCtorInitializer>;
 using TemplateArgumentMatcher = internal::Matcher<TemplateArgument>;
 using TemplateArgumentLocMatcher = internal::Matcher<TemplateArgumentLoc>;
+using LambdaCaptureMatcher = internal::Matcher<LambdaCapture>;
 using AttrMatcher = internal::Matcher<Attr>;
 /// @}
 
@@ -756,7 +757,8 @@ AST_MATCHER_P(ClassTemplateSpecializationDecl, hasSpecializedTemplate,
 /// Matches an entity that has been implicitly added by the compiler (e.g.
 /// implicit default/copy constructors).
 AST_POLYMORPHIC_MATCHER(isImplicit,
-                        AST_POLYMORPHIC_SUPPORTED_TYPES(Decl, Attr)) {
+                        AST_POLYMORPHIC_SUPPORTED_TYPES(Decl, Attr,
+                                                        LambdaCapture)) {
   return Node.isImplicit();
 }
 
@@ -4126,25 +4128,34 @@ AST_MATCHER_P(DeclRefExpr, to, internal::Matcher<Decl>,
           InnerMatcher.matches(*DeclNode, Finder, Builder));
 }
 
-/// Matches a \c DeclRefExpr that refers to a declaration through a
-/// specific using shadow declaration.
+/// Matches if a node refers to a declaration through a specific
+/// using shadow declaration.
 ///
-/// Given
+/// Examples:
 /// \code
-///   namespace a { void f() {} }
+///   namespace a { int f(); }
 ///   using a::f;
-///   void g() {
-///     f();     // Matches this ..
-///     a::f();  // .. but not this.
-///   }
+///   int x = f();
 /// \endcode
 /// declRefExpr(throughUsingDecl(anything()))
-///   matches \c f()
-AST_MATCHER_P(DeclRefExpr, throughUsingDecl,
-              internal::Matcher<UsingShadowDecl>, InnerMatcher) {
+///   matches \c f
+///
+/// \code
+///   namespace a { class X{}; }
+///   using a::X;
+///   X x;
+/// \code
+/// typeLoc(loc(usingType(throughUsingDecl(anything()))))
+///   matches \c X
+///
+/// Usable as: Matcher<DeclRefExpr>, Matcher<UsingType>
+AST_POLYMORPHIC_MATCHER_P(throughUsingDecl,
+                          AST_POLYMORPHIC_SUPPORTED_TYPES(DeclRefExpr,
+                                                          UsingType),
+                          internal::Matcher<UsingShadowDecl>, Inner) {
   const NamedDecl *FoundDecl = Node.getFoundDecl();
   if (const UsingShadowDecl *UsingDecl = dyn_cast<UsingShadowDecl>(FoundDecl))
-    return InnerMatcher.matches(*UsingDecl, Finder, Builder);
+    return Inner.matches(*UsingDecl, Finder, Builder);
   return false;
 }
 
@@ -4201,6 +4212,45 @@ AST_MATCHER_P(
   const Expr *Initializer = Node.getAnyInitializer();
   return (Initializer != nullptr &&
           InnerMatcher.matches(*Initializer, Finder, Builder));
+}
+
+/// Matches a variable serving as the implicit variable for a lambda init-
+/// capture.
+///
+/// Example matches x (matcher = varDecl(isInitCapture()))
+/// \code
+/// auto f = [x=3]() { return x; };
+/// \endcode
+AST_MATCHER(VarDecl, isInitCapture) { return Node.isInitCapture(); }
+
+/// Matches each lambda capture in a lambda expression.
+///
+/// Given
+/// \code
+///   int main() {
+///     int x, y;
+///     float z;
+///     auto f = [=]() { return x + y + z; };
+///   }
+/// \endcode
+/// lambdaExpr(forEachLambdaCapture(
+///     lambdaCapture(capturesVar(varDecl(hasType(isInteger()))))))
+/// will trigger two matches, binding for 'x' and 'y' respectively.
+AST_MATCHER_P(LambdaExpr, forEachLambdaCapture,
+              internal::Matcher<LambdaCapture>, InnerMatcher) {
+  BoundNodesTreeBuilder Result;
+  bool Matched = false;
+  for (const auto &Capture : Node.captures()) {
+    if (Finder->isTraversalIgnoringImplicitNodes() && Capture.isImplicit())
+      continue;
+    BoundNodesTreeBuilder CaptureBuilder(*Builder);
+    if (InnerMatcher.matches(Capture, Finder, &CaptureBuilder)) {
+      Matched = true;
+      Result.addMatch(CaptureBuilder);
+    }
+  }
+  *Builder = std::move(Result);
+  return Matched;
 }
 
 /// \brief Matches a static variable with local scope.
@@ -4588,49 +4638,80 @@ AST_POLYMORPHIC_MATCHER_P(hasAnyArgument,
   return false;
 }
 
-/// Matches any capture of a lambda expression.
+/// Matches lambda captures.
+///
+/// Given
+/// \code
+///   int main() {
+///     int x;
+///     auto f = [x](){};
+///     auto g = [x = 1](){};
+///   }
+/// \endcode
+/// In the matcher `lambdaExpr(hasAnyCapture(lambdaCapture()))`,
+/// `lambdaCapture()` matches `x` and `x=1`.
+extern const internal::VariadicAllOfMatcher<LambdaCapture> lambdaCapture;
+
+/// Matches any capture in a lambda expression.
+///
+/// Given
+/// \code
+///   void foo() {
+///     int t = 5;
+///     auto f = [=](){ return t; };
+///   }
+/// \endcode
+/// lambdaExpr(hasAnyCapture(lambdaCapture())) and
+/// lambdaExpr(hasAnyCapture(lambdaCapture(refersToVarDecl(hasName("t")))))
+///   both match `[=](){ return t; }`.
+AST_MATCHER_P(LambdaExpr, hasAnyCapture, internal::Matcher<LambdaCapture>,
+              InnerMatcher) {
+  for (const LambdaCapture &Capture : Node.captures()) {
+    clang::ast_matchers::internal::BoundNodesTreeBuilder Result(*Builder);
+    if (InnerMatcher.matches(Capture, Finder, &Result)) {
+      *Builder = std::move(Result);
+      return true;
+    }
+  }
+  return false;
+}
+
+/// Matches a `LambdaCapture` that refers to the specified `VarDecl`. The
+/// `VarDecl` can be a separate variable that is captured by value or
+/// reference, or a synthesized variable if the capture has an initializer.
 ///
 /// Given
 /// \code
 ///   void foo() {
 ///     int x;
 ///     auto f = [x](){};
+///     auto g = [x = 1](){};
 ///   }
 /// \endcode
-/// lambdaExpr(hasAnyCapture(anything()))
-///   matches [x](){};
-AST_MATCHER_P_OVERLOAD(LambdaExpr, hasAnyCapture, internal::Matcher<VarDecl>,
-                       InnerMatcher, 0) {
-  for (const LambdaCapture &Capture : Node.captures()) {
-    if (Capture.capturesVariable()) {
-      BoundNodesTreeBuilder Result(*Builder);
-      if (InnerMatcher.matches(*Capture.getCapturedVar(), Finder, &Result)) {
-        *Builder = std::move(Result);
-        return true;
-      }
-    }
-  }
-  return false;
+/// In the matcher
+/// lambdaExpr(hasAnyCapture(lambdaCapture(capturesVar(hasName("x")))),
+/// capturesVar(hasName("x")) matches `x` and `x = 1`.
+AST_MATCHER_P(LambdaCapture, capturesVar, internal::Matcher<VarDecl>,
+              InnerMatcher) {
+  auto *capturedVar = Node.getCapturedVar();
+  return capturedVar && InnerMatcher.matches(*capturedVar, Finder, Builder);
 }
 
-/// Matches any capture of 'this' in a lambda expression.
+/// Matches a `LambdaCapture` that refers to 'this'.
 ///
 /// Given
 /// \code
-///   struct foo {
-///     void bar() {
-///       auto f = [this](){};
-///     }
+/// class C {
+///   int cc;
+///   int f() {
+///     auto l = [this]() { return cc; };
+///     return l();
 ///   }
+/// };
 /// \endcode
-/// lambdaExpr(hasAnyCapture(cxxThisExpr()))
-///   matches [this](){};
-AST_MATCHER_P_OVERLOAD(LambdaExpr, hasAnyCapture,
-                       internal::Matcher<CXXThisExpr>, InnerMatcher, 1) {
-  return llvm::any_of(Node.captures(), [](const LambdaCapture &LC) {
-    return LC.capturesThis();
-  });
-}
+/// lambdaExpr(hasAnyCapture(lambdaCapture(capturesThis())))
+///   matches `[this]() { return cc; }`.
+AST_MATCHER(LambdaCapture, capturesThis) { return Node.capturesThis(); }
 
 /// Matches a constructor call expression which uses list initialization.
 AST_MATCHER(CXXConstructExpr, isListInitialization) {
@@ -4800,7 +4881,7 @@ AST_POLYMORPHIC_MATCHER_P2(forEachArgumentWithParamType,
     }
   }
 
-  int ParamIndex = 0;
+  unsigned ParamIndex = 0;
   bool Matched = false;
   unsigned NumArgs = Node.getNumArgs();
   if (FProto && FProto->isVariadic())
@@ -4814,7 +4895,7 @@ AST_POLYMORPHIC_MATCHER_P2(forEachArgumentWithParamType,
 
       // This test is cheaper compared to the big matcher in the next if.
       // Therefore, please keep this order.
-      if (FProto) {
+      if (FProto && FProto->getNumParams() > ParamIndex) {
         QualType ParamType = FProto->getParamType(ParamIndex);
         if (ParamMatcher.matches(ParamType, Finder, &ParamMatches)) {
           Result.addMatch(ParamMatches);
@@ -6771,7 +6852,7 @@ extern const AstTypeMatcher<DecltypeType> decltypeType;
 AST_TYPE_TRAVERSE_MATCHER(hasDeducedType, getDeducedType,
                           AST_POLYMORPHIC_SUPPORTED_TYPES(AutoType));
 
-/// Matches \c DecltypeType nodes to find out the underlying type.
+/// Matches \c DecltypeType or \c UsingType nodes to find the underlying type.
 ///
 /// Given
 /// \code
@@ -6781,9 +6862,10 @@ AST_TYPE_TRAVERSE_MATCHER(hasDeducedType, getDeducedType,
 /// decltypeType(hasUnderlyingType(isInteger()))
 ///   matches the type of "a"
 ///
-/// Usable as: Matcher<DecltypeType>
+/// Usable as: Matcher<DecltypeType>, Matcher<UsingType>
 AST_TYPE_TRAVERSE_MATCHER(hasUnderlyingType, getUnderlyingType,
-                          AST_POLYMORPHIC_SUPPORTED_TYPES(DecltypeType));
+                          AST_POLYMORPHIC_SUPPORTED_TYPES(DecltypeType,
+                                                          UsingType));
 
 /// Matches \c FunctionType nodes.
 ///
@@ -7110,6 +7192,18 @@ AST_MATCHER_P(ElaboratedType, namesType, internal::Matcher<QualType>,
               InnerMatcher) {
   return InnerMatcher.matches(Node.getNamedType(), Finder, Builder);
 }
+
+/// Matches types specified through a using declaration.
+///
+/// Given
+/// \code
+///   namespace a { struct S {}; }
+///   using a::S;
+///   S s;
+/// \endcode
+///
+/// \c usingType() matches the type of the variable declaration of \c s.
+extern const AstTypeMatcher<UsingType> usingType;
 
 /// Matches types that represent the result of substituting a type for a
 /// template type parameter.

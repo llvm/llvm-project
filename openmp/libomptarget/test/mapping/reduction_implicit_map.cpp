@@ -1,8 +1,5 @@
 // RUN: %libomptarget-compilexx-run-and-check-generic
 
-// amdgcn does not have printf definition
-// UNSUPPORTED: amdgcn-amd-amdhsa
-
 #include <stdio.h>
 
 void sum(int* input, int size, int* output)

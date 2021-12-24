@@ -105,7 +105,7 @@ body:             |
     CALL64pcrel32 @ext2, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit killed $esi, implicit-def $rsp, implicit-def $ssp, debug-location !16
     $eax = MOV32ri 123, debug-location !17
     $rcx = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !17
-    RETQ killed $eax, debug-location !17
+    RET64 killed $eax, debug-location !17
 
 ...
 
@@ -135,7 +135,7 @@ body:             |
     CALL64pcrel32 @ext3, csr_64, implicit $rsp, implicit $ssp, implicit killed $edi, implicit $esi, implicit $edx, implicit-def $rsp, implicit-def $ssp, debug-location !20
     $eax = MOV32rr killed $ebx, debug-location !20
     $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !20
-    RETQ killed $eax, debug-location !21
+    RET64 killed $eax, debug-location !21
 
 ...
 

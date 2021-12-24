@@ -4631,14 +4631,14 @@ entry:
 define <4 x double> @constrained_vector_rint_v4f64(<4 x double> %x) #0 {
 ; PC64LE-LABEL: constrained_vector_rint_v4f64:
 ; PC64LE:       # %bb.0: # %entry
-; PC64LE-NEXT:    xvrdpic 34, 34
 ; PC64LE-NEXT:    xvrdpic 35, 35
+; PC64LE-NEXT:    xvrdpic 34, 34
 ; PC64LE-NEXT:    blr
 ;
 ; PC64LE9-LABEL: constrained_vector_rint_v4f64:
 ; PC64LE9:       # %bb.0: # %entry
-; PC64LE9-NEXT:    xvrdpic 34, 34
 ; PC64LE9-NEXT:    xvrdpic 35, 35
+; PC64LE9-NEXT:    xvrdpic 34, 34
 ; PC64LE9-NEXT:    blr
 entry:
   %rint = call <4 x double> @llvm.experimental.constrained.rint.v4f64(

@@ -26,14 +26,14 @@
 // CHECK: @__clang_ast =
 
 // This type isn't anchored anywhere, expect a full definition.
-// CHECK: !DICompositeType({{.*}}, name: "AlignedCharArray<4, 16>",
+// CHECK: !DICompositeType({{.*}}, name: "AlignedCharArray<4U, 16U>",
 // CHECK-SAME:             elements:
 
 // C
 // CHECK: @__clang_ast =
 
 // Here, too.
-// CHECK: !DICompositeType({{.*}}, name: "AlignedCharArray<4, 16>",
+// CHECK: !DICompositeType({{.*}}, name: "AlignedCharArray<4U, 16U>",
 // CHECK-SAME:             elements:
 
 #include <B/B.h>

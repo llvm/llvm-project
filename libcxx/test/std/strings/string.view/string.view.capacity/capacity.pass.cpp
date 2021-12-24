@@ -16,6 +16,7 @@
 
 #include <string_view>
 #include <cassert>
+#include <limits>
 
 #include "test_macros.h"
 
@@ -41,6 +42,16 @@ void test1 () {
     assert ( sv1.empty());
     assert ( sv1.size() == sv1.length());
     assert ( sv1.max_size() > sv1.size());
+    }
+
+    // Sanity check max_size() -- a string_view can't store more bytes than a single object
+    // can contain. Any implementation that fails this check is certainly lying.
+    {
+        typedef typename SV::value_type CharT;
+        typedef typename SV::size_type Size;
+        SV sv;
+        assert(sv.max_size() <= std::numeric_limits<Size>::max() / sizeof(CharT));
+        LIBCPP_ASSERT(sv.max_size() == std::numeric_limits<Size>::max() / sizeof(CharT));
     }
 }
 

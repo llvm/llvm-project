@@ -1,4 +1,4 @@
-; RUN: opt -globalopt < %s -S -o - | FileCheck %s
+; RUN: opt -passes=globalopt < %s -S -o - | FileCheck %s
 
 ; When simplifying users of a global variable, the pass could incorrectly
 ; return false if there were still some uses left, and no further optimizations
@@ -7,11 +7,10 @@
 
 @GV1 = internal unnamed_addr global i64 1, align 8
 
-; CHECK: @GV1 = internal unnamed_addr global i64 1, align 8
+; CHECK-NOT: @GV1 =
 
 define void @test1() local_unnamed_addr {
 ; CHECK-LABEL: @test1
-; CHECK-NEXT: %val = load atomic i8
 ; CHECK-NEXT: ret void
 
   %val = load atomic i8, i8* bitcast (i64* @GV1 to i8*) acquire, align 8

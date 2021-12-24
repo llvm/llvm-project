@@ -18,10 +18,8 @@
 
 namespace llvm {
 
-template <typename T> struct DenseMapInfo;
-
 // Traits for using WasmSignature in a DenseMap.
-template <> struct DenseMapInfo<wasm::WasmSignature> {
+template <> struct DenseMapInfo<wasm::WasmSignature, void> {
   static wasm::WasmSignature getEmptyKey() {
     wasm::WasmSignature Sig;
     Sig.State = wasm::WasmSignature::Empty;
@@ -47,7 +45,7 @@ template <> struct DenseMapInfo<wasm::WasmSignature> {
 };
 
 // Traits for using WasmGlobalType in a DenseMap
-template <> struct DenseMapInfo<wasm::WasmGlobalType> {
+template <> struct DenseMapInfo<wasm::WasmGlobalType, void> {
   static wasm::WasmGlobalType getEmptyKey() {
     return wasm::WasmGlobalType{1, true};
   }
@@ -64,7 +62,7 @@ template <> struct DenseMapInfo<wasm::WasmGlobalType> {
 };
 
 // Traits for using WasmLimits in a DenseMap
-template <> struct DenseMapInfo<wasm::WasmLimits> {
+template <> struct DenseMapInfo<wasm::WasmLimits, void> {
   static wasm::WasmLimits getEmptyKey() {
     return wasm::WasmLimits{0xff, 0xff, 0xff};
   }
@@ -86,19 +84,19 @@ template <> struct DenseMapInfo<wasm::WasmLimits> {
 };
 
 // Traits for using WasmTableType in a DenseMap
-template <> struct DenseMapInfo<wasm::WasmTableType> {
+template <> struct DenseMapInfo<wasm::WasmTableType, void> {
   static wasm::WasmTableType getEmptyKey() {
-    return wasm::WasmTableType{0,
-                               DenseMapInfo<wasm::WasmLimits>::getEmptyKey()};
+    return wasm::WasmTableType{
+        0, DenseMapInfo<wasm::WasmLimits, void>::getEmptyKey()};
   }
   static wasm::WasmTableType getTombstoneKey() {
     return wasm::WasmTableType{
-        1, DenseMapInfo<wasm::WasmLimits>::getTombstoneKey()};
+        1, DenseMapInfo<wasm::WasmLimits, void>::getTombstoneKey()};
   }
   static unsigned getHashValue(const wasm::WasmTableType &TableType) {
     return hash_combine(
         TableType.ElemType,
-        DenseMapInfo<wasm::WasmLimits>::getHashValue(TableType.Limits));
+        DenseMapInfo<wasm::WasmLimits, void>::getHashValue(TableType.Limits));
   }
   static bool isEqual(const wasm::WasmTableType &LHS,
                       const wasm::WasmTableType &RHS) {

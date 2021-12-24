@@ -169,7 +169,7 @@ LogicalResult WorkGroupSizeConversion::matchAndRewrite(
     return failure();
 
   auto workGroupSizeAttr = spirv::lookupLocalWorkGroupSize(op);
-  auto val = workGroupSizeAttr.getValue<int32_t>(index.getValue());
+  auto val = workGroupSizeAttr.getValues<int32_t>()[index.getValue()];
   auto convertedType =
       getTypeConverter()->convertType(op.getResult().getType());
   if (!convertedType)
@@ -216,10 +216,10 @@ lowerAsEntryFunction(gpu::GPUFuncOp funcOp, TypeConverter &typeConverter,
       rewriter.getFunctionType(signatureConverter.getConvertedTypes(),
                                llvm::None));
   for (const auto &namedAttr : funcOp->getAttrs()) {
-    if (namedAttr.first == function_like_impl::getTypeAttrName() ||
-        namedAttr.first == SymbolTable::getSymbolAttrName())
+    if (namedAttr.getName() == function_like_impl::getTypeAttrName() ||
+        namedAttr.getName() == SymbolTable::getSymbolAttrName())
       continue;
-    newFuncOp->setAttr(namedAttr.first, namedAttr.second);
+    newFuncOp->setAttr(namedAttr.getName(), namedAttr.getValue());
   }
 
   rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
@@ -296,8 +296,8 @@ LogicalResult GPUFuncOpConversion::matchAndRewrite(
       funcOp, *getTypeConverter(), rewriter, entryPointAttr, argABI);
   if (!newFuncOp)
     return failure();
-  newFuncOp->removeAttr(Identifier::get(
-      gpu::GPUDialect::getKernelFuncAttrName(), rewriter.getContext()));
+  newFuncOp->removeAttr(
+      rewriter.getStringAttr(gpu::GPUDialect::getKernelFuncAttrName()));
   return success();
 }
 

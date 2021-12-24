@@ -7111,29 +7111,37 @@ let Predicates = [HasAVX1Only] in {
 def : Pat<(v8i32 immAllOnesV), (VCMPPSYrri (AVX_SET0), (AVX_SET0), 0xf)>;
 }
 
-multiclass vinsert_lowering<string InstrStr, ValueType From, ValueType To,
-                            PatFrag memop_frag> {
+multiclass vinsert_lowering<string InstrStr, string PermStr,
+                            ValueType From, ValueType To,
+                            PatFrag frommemop_frag, PatFrag tomemop_frag> {
   def : Pat<(vinsert128_insert:$ins (To VR256:$src1), (From VR128:$src2),
                                    (iPTR imm)),
             (!cast<Instruction>(InstrStr#rr) VR256:$src1, VR128:$src2,
                                        (INSERT_get_vinsert128_imm VR256:$ins))>;
   def : Pat<(vinsert128_insert:$ins (To VR256:$src1),
-                                    (From (memop_frag addr:$src2)),
+                                    (From (frommemop_frag addr:$src2)),
                                     (iPTR imm)),
             (!cast<Instruction>(InstrStr#rm) VR256:$src1, addr:$src2,
                                        (INSERT_get_vinsert128_imm VR256:$ins))>;
+  // Folding "To" vector - convert to perm2x128 and commute inputs.
+  def : Pat<(vinsert128_insert:$ins (To (tomemop_frag addr:$src1)),
+                                    (From VR128:$src2),
+                                    (iPTR imm)),
+            (!cast<Instruction>(PermStr#rm)
+              (INSERT_SUBREG (To (IMPLICIT_DEF)), VR128:$src2, sub_xmm),
+              addr:$src1, (INSERT_get_vperm2x128_commutedimm VR256:$ins))>;
 }
 
 let Predicates = [HasAVX, NoVLX] in {
-  defm : vinsert_lowering<"VINSERTF128", v4f32, v8f32, loadv4f32>;
-  defm : vinsert_lowering<"VINSERTF128", v2f64, v4f64, loadv2f64>;
+  defm : vinsert_lowering<"VINSERTF128", "VPERM2F128", v4f32, v8f32, loadv4f32, loadv8f32>;
+  defm : vinsert_lowering<"VINSERTF128", "VPERM2F128", v2f64, v4f64, loadv2f64, loadv4f64>;
 }
 
 let Predicates = [HasAVX1Only] in {
-  defm : vinsert_lowering<"VINSERTF128", v2i64, v4i64,  loadv2i64>;
-  defm : vinsert_lowering<"VINSERTF128", v4i32, v8i32,  loadv4i32>;
-  defm : vinsert_lowering<"VINSERTF128", v8i16, v16i16, loadv8i16>;
-  defm : vinsert_lowering<"VINSERTF128", v16i8, v32i8,  loadv16i8>;
+  defm : vinsert_lowering<"VINSERTF128", "VPERM2F128", v2i64, v4i64,  loadv2i64, loadv4i64>;
+  defm : vinsert_lowering<"VINSERTF128", "VPERM2F128", v4i32, v8i32,  loadv4i32, loadv8i32>;
+  defm : vinsert_lowering<"VINSERTF128", "VPERM2F128", v8i16, v16i16, loadv8i16, loadv16i16>;
+  defm : vinsert_lowering<"VINSERTF128", "VPERM2F128", v16i8, v32i8,  loadv16i8, loadv32i8>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -7622,6 +7630,10 @@ let Predicates = [HasAVX1Only] in {
             (VINSERTF128rr (INSERT_SUBREG (v8f32 (IMPLICIT_DEF)),
               (v4f32 (VPERMILPSri (v4f32 (COPY_TO_REGCLASS FR32:$src, VR128)), 0)), sub_xmm),
               (v4f32 (VPERMILPSri (v4f32 (COPY_TO_REGCLASS FR32:$src, VR128)), 0)), 1)>;
+  def : Pat<(v8f32 (X86VBroadcast v4f32:$src)),
+            (VINSERTF128rr (INSERT_SUBREG (v8f32 (IMPLICIT_DEF)),
+              (v4f32 (VPERMILPSri VR128:$src, 0)), sub_xmm),
+              (v4f32 (VPERMILPSri VR128:$src, 0)), 1)>;
   def : Pat<(v4f64 (X86VBroadcast FR64:$src)),
             (VINSERTF128rr (INSERT_SUBREG (v4f64 (IMPLICIT_DEF)),
               (v2f64 (VMOVDDUPrr (v2f64 (COPY_TO_REGCLASS FR64:$src, VR128)))), sub_xmm),
@@ -7742,10 +7754,10 @@ def VINSERTI128rm : AVX2AIi8<0x38, MRMSrcMem, (outs VR256:$dst),
 }
 
 let Predicates = [HasAVX2, NoVLX] in {
-  defm : vinsert_lowering<"VINSERTI128", v2i64, v4i64,  loadv2i64>;
-  defm : vinsert_lowering<"VINSERTI128", v4i32, v8i32,  loadv4i32>;
-  defm : vinsert_lowering<"VINSERTI128", v8i16, v16i16, loadv8i16>;
-  defm : vinsert_lowering<"VINSERTI128", v16i8, v32i8,  loadv16i8>;
+  defm : vinsert_lowering<"VINSERTI128", "VPERM2I128", v2i64, v4i64,  loadv2i64,  loadv4i64>;
+  defm : vinsert_lowering<"VINSERTI128", "VPERM2I128", v4i32, v8i32,  loadv4i32,  loadv8i32>;
+  defm : vinsert_lowering<"VINSERTI128", "VPERM2I128", v8i16, v16i16, loadv8i16,  loadv16i16>;
+  defm : vinsert_lowering<"VINSERTI128", "VPERM2I128", v16i8, v32i8,  loadv16i8,  loadv32i8>;
 }
 
 //===----------------------------------------------------------------------===//

@@ -13,6 +13,7 @@
 #include "Parser.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/TensorEncoding.h"
 
 using namespace mlir;
@@ -442,10 +443,9 @@ Type Parser::parseTupleType() {
 
 /// Parse a vector type.
 ///
-///   vector-type ::= `vector` `<` non-empty-static-dimension-list type `>`
-///   non-empty-static-dimension-list ::= decimal-literal `x`
-///                                       static-dimension-list
-///   static-dimension-list ::= (decimal-literal `x`)*
+/// vector-type ::= `vector` `<` vector-dim-list vector-element-type `>`
+/// vector-dim-list := (static-dim-list `x`)? (`[` static-dim-list `]` `x`)?
+/// static-dim-list ::= decimal-literal (`x` decimal-literal)*
 ///
 VectorType Parser::parseVectorType() {
   consumeToken(Token::kw_vector);
@@ -454,10 +454,9 @@ VectorType Parser::parseVectorType() {
     return nullptr;
 
   SmallVector<int64_t, 4> dimensions;
-  if (parseDimensionListRanked(dimensions, /*allowDynamic=*/false))
+  unsigned numScalableDims;
+  if (parseVectorDimensionList(dimensions, numScalableDims))
     return nullptr;
-  if (dimensions.empty())
-    return (emitError("expected dimension size in vector type"), nullptr);
   if (any_of(dimensions, [](int64_t i) { return i <= 0; }))
     return emitError(getToken().getLoc(),
                      "vector types must have positive constant sizes"),
@@ -468,11 +467,59 @@ VectorType Parser::parseVectorType() {
   auto elementType = parseType();
   if (!elementType || parseToken(Token::greater, "expected '>' in vector type"))
     return nullptr;
+
   if (!VectorType::isValidElementType(elementType))
     return emitError(typeLoc, "vector elements must be int/index/float type"),
            nullptr;
 
-  return VectorType::get(dimensions, elementType);
+  return VectorType::get(dimensions, elementType, numScalableDims);
+}
+
+/// Parse a dimension list in a vector type. This populates the dimension list,
+/// and returns the number of scalable dimensions in `numScalableDims`.
+///
+/// vector-dim-list := (static-dim-list `x`)? (`[` static-dim-list `]` `x`)?
+/// static-dim-list ::= decimal-literal (`x` decimal-literal)*
+///
+ParseResult
+Parser::parseVectorDimensionList(SmallVectorImpl<int64_t> &dimensions,
+                                 unsigned &numScalableDims) {
+  numScalableDims = 0;
+  // If there is a set of fixed-length dimensions, consume it
+  while (getToken().is(Token::integer)) {
+    int64_t value;
+    if (parseIntegerInDimensionList(value))
+      return failure();
+    dimensions.push_back(value);
+    // Make sure we have an 'x' or something like 'xbf32'.
+    if (parseXInDimensionList())
+      return failure();
+  }
+  // If there is a set of scalable dimensions, consume it
+  if (consumeIf(Token::l_square)) {
+    while (getToken().is(Token::integer)) {
+      int64_t value;
+      if (parseIntegerInDimensionList(value))
+        return failure();
+      dimensions.push_back(value);
+      numScalableDims++;
+      // Check if we have reached the end of the scalable dimension list
+      if (consumeIf(Token::r_square)) {
+        // Make sure we have something like 'xbf32'.
+        if (parseXInDimensionList())
+          return failure();
+        return success();
+      }
+      // Make sure we have an 'x'
+      if (parseXInDimensionList())
+        return failure();
+    }
+    // If we make it here, we've finished parsing the dimension list
+    // without finding ']' closing the set of scalable dimensions
+    return emitError("missing ']' closing set of scalable dimensions");
+  }
+
+  return success();
 }
 
 /// Parse a dimension list of a tensor or memref type.  This populates the
@@ -494,33 +541,40 @@ Parser::parseDimensionListRanked(SmallVectorImpl<int64_t> &dimensions,
         return emitError("expected static shape");
       dimensions.push_back(-1);
     } else {
-      // Hexadecimal integer literals (starting with `0x`) are not allowed in
-      // aggregate type declarations.  Therefore, `0xf32` should be processed as
-      // a sequence of separate elements `0`, `x`, `f32`.
-      if (getTokenSpelling().size() > 1 && getTokenSpelling()[1] == 'x') {
-        // We can get here only if the token is an integer literal.  Hexadecimal
-        // integer literals can only start with `0x` (`1x` wouldn't lex as a
-        // literal, just `1` would, at which point we don't get into this
-        // branch).
-        assert(getTokenSpelling()[0] == '0' && "invalid integer literal");
-        dimensions.push_back(0);
-        state.lex.resetPointer(getTokenSpelling().data() + 1);
-        consumeToken();
-      } else {
-        // Make sure this integer value is in bound and valid.
-        auto dimension = getToken().getUnsignedIntegerValue();
-        if (!dimension.hasValue())
-          return emitError("invalid dimension");
-        dimensions.push_back((int64_t)dimension.getValue());
-        consumeToken(Token::integer);
-      }
+      int64_t value;
+      if (parseIntegerInDimensionList(value))
+        return failure();
+      dimensions.push_back(value);
     }
-
     // Make sure we have an 'x' or something like 'xbf32'.
     if (parseXInDimensionList())
       return failure();
   }
 
+  return success();
+}
+
+ParseResult Parser::parseIntegerInDimensionList(int64_t &value) {
+  // Hexadecimal integer literals (starting with `0x`) are not allowed in
+  // aggregate type declarations.  Therefore, `0xf32` should be processed as
+  // a sequence of separate elements `0`, `x`, `f32`.
+  if (getTokenSpelling().size() > 1 && getTokenSpelling()[1] == 'x') {
+    // We can get here only if the token is an integer literal.  Hexadecimal
+    // integer literals can only start with `0x` (`1x` wouldn't lex as a
+    // literal, just `1` would, at which point we don't get into this
+    // branch).
+    assert(getTokenSpelling()[0] == '0' && "invalid integer literal");
+    value = 0;
+    state.lex.resetPointer(getTokenSpelling().data() + 1);
+    consumeToken();
+  } else {
+    // Make sure this integer value is in bound and valid.
+    Optional<uint64_t> dimension = getToken().getUInt64IntegerValue();
+    if (!dimension || *dimension > std::numeric_limits<int64_t>::max())
+      return emitError("invalid dimension");
+    value = (int64_t)dimension.getValue();
+    consumeToken(Token::integer);
+  }
   return success();
 }
 

@@ -352,7 +352,7 @@ protected:
                      DeclContext *Parent, std::size_t Extra = 0);
 
 private:
-  bool AccessDeclContextSanity() const;
+  bool AccessDeclContextCheck() const;
 
   /// Get the module ownership kind to use for a local lexical child of \p DC,
   /// which may be either a local or (rarely) an imported declaration.
@@ -472,11 +472,11 @@ public:
 
   void setAccess(AccessSpecifier AS) {
     Access = AS;
-    assert(AccessDeclContextSanity());
+    assert(AccessDeclContextCheck());
   }
 
   AccessSpecifier getAccess() const {
-    assert(AccessDeclContextSanity());
+    assert(AccessDeclContextCheck());
     return AccessSpecifier(Access);
   }
 

@@ -81,6 +81,9 @@ private:
   void addExtension(StringRef ExtName, unsigned MajorVersion,
                     unsigned MinorVersion);
 
+  Error checkDependency();
+
+  void updateImplication();
   void updateFLen();
 };
 

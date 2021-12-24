@@ -28,9 +28,7 @@ public:
                                      Debugger *debugger, Target *target,
                                      const char *repl_options);
 
-  static lldb_private::ConstString GetPluginNameStatic() {
-    return ConstString("ClangREPL");
-  }
+  static llvm::StringRef GetPluginNameStatic() { return "ClangREPL"; }
 
 protected:
   Status DoInitialization() override;

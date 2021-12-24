@@ -396,6 +396,6 @@ private:
   MLIRContext *context;
 };
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_ANALYSIS_DATAFLOWANALYSIS_H

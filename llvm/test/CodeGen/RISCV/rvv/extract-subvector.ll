@@ -282,7 +282,7 @@ define <vscale x 2 x i8> @extract_nxv32i8_nxv2i8_6(<vscale x 32 x i8> %vec) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a0, a0, 3
-; CHECK-NEXT:    addi a1, zero, 6
+; CHECK-NEXT:    li a1, 6
 ; CHECK-NEXT:    mul a0, a0, a1
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, mu
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a0
@@ -305,7 +305,7 @@ define <vscale x 2 x i8> @extract_nxv32i8_nxv2i8_22(<vscale x 32 x i8> %vec) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a0, a0, 3
-; CHECK-NEXT:    addi a1, zero, 6
+; CHECK-NEXT:    li a1, 6
 ; CHECK-NEXT:    mul a0, a0, a1
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, mu
 ; CHECK-NEXT:    vslidedown.vx v8, v10, a0

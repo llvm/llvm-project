@@ -17,6 +17,7 @@
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 
@@ -96,14 +97,7 @@ void BlockInCriticalSectionChecker::initIdentifierInfo(ASTContext &Ctx) const {
 }
 
 bool BlockInCriticalSectionChecker::isBlockingFunction(const CallEvent &Call) const {
-  if (Call.isCalled(SleepFn)
-      || Call.isCalled(GetcFn)
-      || Call.isCalled(FgetsFn)
-      || Call.isCalled(ReadFn)
-      || Call.isCalled(RecvFn)) {
-    return true;
-  }
-  return false;
+  return matchesAny(Call, SleepFn, GetcFn, FgetsFn, ReadFn, RecvFn);
 }
 
 bool BlockInCriticalSectionChecker::isLockFunction(const CallEvent &Call) const {
@@ -113,15 +107,8 @@ bool BlockInCriticalSectionChecker::isLockFunction(const CallEvent &Call) const 
       return true;
   }
 
-  if (Call.isCalled(LockFn)
-      || Call.isCalled(PthreadLockFn)
-      || Call.isCalled(PthreadTryLockFn)
-      || Call.isCalled(MtxLock)
-      || Call.isCalled(MtxTimedLock)
-      || Call.isCalled(MtxTryLock)) {
-    return true;
-  }
-  return false;
+  return matchesAny(Call, LockFn, PthreadLockFn, PthreadTryLockFn, MtxLock,
+                    MtxTimedLock, MtxTryLock);
 }
 
 bool BlockInCriticalSectionChecker::isUnlockFunction(const CallEvent &Call) const {
@@ -132,12 +119,7 @@ bool BlockInCriticalSectionChecker::isUnlockFunction(const CallEvent &Call) cons
       return true;
   }
 
-  if (Call.isCalled(UnlockFn)
-       || Call.isCalled(PthreadUnlockFn)
-       || Call.isCalled(MtxUnlock)) {
-    return true;
-  }
-  return false;
+  return matchesAny(Call, UnlockFn, PthreadUnlockFn, MtxUnlock);
 }
 
 void BlockInCriticalSectionChecker::checkPostCall(const CallEvent &Call,

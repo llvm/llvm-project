@@ -246,12 +246,16 @@ static Value *foldSelectICmpAnd(SelectInst &Sel, ICmpInst *Cmp,
 static unsigned getSelectFoldableOperands(BinaryOperator *I) {
   switch (I->getOpcode()) {
   case Instruction::Add:
+  case Instruction::FAdd:
   case Instruction::Mul:
+  case Instruction::FMul:
   case Instruction::And:
   case Instruction::Or:
   case Instruction::Xor:
     return 3;              // Can fold through either operand.
   case Instruction::Sub:   // Can only fold on the amount subtracted.
+  case Instruction::FSub:
+  case Instruction::FDiv:  // Can only fold on the divisor amount.
   case Instruction::Shl:   // Can only fold on the shift amount.
   case Instruction::LShr:
   case Instruction::AShr:
@@ -1289,8 +1293,8 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
 // Iff -C1 s<= C2 s<= C0-C1
 // Also ULT predicate can also be UGT iff C0 != -1 (+invert result)
 //      SLT predicate can also be SGT iff C2 != INT_MAX (+invert res.)
-static Instruction *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
-                                          InstCombiner::BuilderTy &Builder) {
+static Value *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
+                                    InstCombiner::BuilderTy &Builder) {
   Value *X = Sel0.getTrueValue();
   Value *Sel1 = Sel0.getFalseValue();
 
@@ -1298,36 +1302,42 @@ static Instruction *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
   // Said condition must be one-use.
   if (!Cmp0.hasOneUse())
     return nullptr;
+  ICmpInst::Predicate Pred0 = Cmp0.getPredicate();
   Value *Cmp00 = Cmp0.getOperand(0);
   Constant *C0;
   if (!match(Cmp0.getOperand(1),
              m_CombineAnd(m_AnyIntegralConstant(), m_Constant(C0))))
     return nullptr;
-  // Canonicalize Cmp0 into the form we expect.
+
+  if (!isa<SelectInst>(Sel1)) {
+    Pred0 = ICmpInst::getInversePredicate(Pred0);
+    std::swap(X, Sel1);
+  }
+
+  // Canonicalize Cmp0 into ult or uge.
   // FIXME: we shouldn't care about lanes that are 'undef' in the end?
-  switch (Cmp0.getPredicate()) {
+  switch (Pred0) {
   case ICmpInst::Predicate::ICMP_ULT:
+  case ICmpInst::Predicate::ICMP_UGE:
+    // Although icmp ult %x, 0 is an unusual thing to try and should generally
+    // have been simplified, it does not verify with undef inputs so ensure we
+    // are not in a strange state.
+    if (!match(C0, m_SpecificInt_ICMP(
+                       ICmpInst::Predicate::ICMP_NE,
+                       APInt::getZero(C0->getType()->getScalarSizeInBits()))))
+      return nullptr;
     break; // Great!
   case ICmpInst::Predicate::ICMP_ULE:
-    // We'd have to increment C0 by one, and for that it must not have all-ones
-    // element, but then it would have been canonicalized to 'ult' before
-    // we get here. So we can't do anything useful with 'ule'.
-    return nullptr;
   case ICmpInst::Predicate::ICMP_UGT:
-    // We want to canonicalize it to 'ult', so we'll need to increment C0,
-    // which again means it must not have any all-ones elements.
+    // We want to canonicalize it to 'ult' or 'uge', so we'll need to increment
+    // C0, which again means it must not have any all-ones elements.
     if (!match(C0,
                m_SpecificInt_ICMP(
                    ICmpInst::Predicate::ICMP_NE,
                    APInt::getAllOnes(C0->getType()->getScalarSizeInBits()))))
       return nullptr; // Can't do, have all-ones element[s].
     C0 = InstCombiner::AddOne(C0);
-    std::swap(X, Sel1);
     break;
-  case ICmpInst::Predicate::ICMP_UGE:
-    // The only way we'd get this predicate if this `icmp` has extra uses,
-    // but then we won't be able to do this fold.
-    return nullptr;
   default:
     return nullptr; // Unknown predicate.
   }
@@ -1337,11 +1347,16 @@ static Instruction *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
   if (!Sel1->hasOneUse())
     return nullptr;
 
+  // If the types do not match, look through any truncs to the underlying
+  // instruction.
+  if (Cmp00->getType() != X->getType() && X->hasOneUse())
+    match(X, m_TruncOrSelf(m_Value(X)));
+
   // We now can finish matching the condition of the outermost select:
   // it should either be the X itself, or an addition of some constant to X.
   Constant *C1;
   if (Cmp00 == X)
-    C1 = ConstantInt::getNullValue(Sel0.getType());
+    C1 = ConstantInt::getNullValue(X->getType());
   else if (!match(Cmp00,
                   m_Add(m_Specific(X),
                         m_CombineAnd(m_AnyIntegralConstant(), m_Constant(C1)))))
@@ -1395,6 +1410,8 @@ static Instruction *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
   // The thresholds of this clamp-like pattern.
   auto *ThresholdLowIncl = ConstantExpr::getNeg(C1);
   auto *ThresholdHighExcl = ConstantExpr::getSub(C0, C1);
+  if (Pred0 == ICmpInst::Predicate::ICMP_UGE)
+    std::swap(ThresholdLowIncl, ThresholdHighExcl);
 
   // The fold has a precondition 1: C2 s>= ThresholdLow
   auto *Precond1 = ConstantExpr::getICmp(ICmpInst::Predicate::ICMP_SGE, C2,
@@ -1407,15 +1424,29 @@ static Instruction *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
   if (!match(Precond2, m_One()))
     return nullptr;
 
+  // If we are matching from a truncated input, we need to sext the
+  // ReplacementLow and ReplacementHigh values. Only do the transform if they
+  // are free to extend due to being constants.
+  if (X->getType() != Sel0.getType()) {
+    Constant *LowC, *HighC;
+    if (!match(ReplacementLow, m_ImmConstant(LowC)) ||
+        !match(ReplacementHigh, m_ImmConstant(HighC)))
+      return nullptr;
+    ReplacementLow = ConstantExpr::getSExt(LowC, X->getType());
+    ReplacementHigh = ConstantExpr::getSExt(HighC, X->getType());
+  }
+
   // All good, finally emit the new pattern.
   Value *ShouldReplaceLow = Builder.CreateICmpSLT(X, ThresholdLowIncl);
   Value *ShouldReplaceHigh = Builder.CreateICmpSGE(X, ThresholdHighExcl);
   Value *MaybeReplacedLow =
       Builder.CreateSelect(ShouldReplaceLow, ReplacementLow, X);
-  Instruction *MaybeReplacedHigh =
-      SelectInst::Create(ShouldReplaceHigh, ReplacementHigh, MaybeReplacedLow);
 
-  return MaybeReplacedHigh;
+  // Create the final select. If we looked through a truncate above, we will
+  // need to retruncate the result.
+  Value *MaybeReplacedHigh = Builder.CreateSelect(
+      ShouldReplaceHigh, ReplacementHigh, MaybeReplacedLow);
+  return Builder.CreateTrunc(MaybeReplacedHigh, Sel0.getType());
 }
 
 // If we have
@@ -1451,7 +1482,12 @@ tryToReuseConstantFromSelectInComparison(SelectInst &Sel, ICmpInst &Cmp,
   if (C0->getType() != Sel.getType())
     return nullptr;
 
-  // FIXME: are there any magic icmp predicate+constant pairs we must not touch?
+  // ULT with 'add' of a constant is canonical. See foldICmpAddConstant().
+  // FIXME: Are there more magic icmp predicate+constant pairs we must avoid?
+  //        Or should we just abandon this transform entirely?
+  if (Pred == CmpInst::ICMP_ULT && match(X, m_Add(m_Value(), m_Constant())))
+    return nullptr;
+
 
   Value *SelVal0, *SelVal1; // We do not care which one is from where.
   match(&Sel, m_Select(m_Value(), m_Value(SelVal0), m_Value(SelVal1)));
@@ -1506,8 +1542,8 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
   if (Instruction *NewAbs = canonicalizeAbsNabs(SI, *ICI, *this))
     return NewAbs;
 
-  if (Instruction *NewAbs = canonicalizeClampLike(SI, *ICI, Builder))
-    return NewAbs;
+  if (Value *V = canonicalizeClampLike(SI, *ICI, Builder))
+    return replaceInstUsesWith(SI, V);
 
   if (Instruction *NewSel =
           tryToReuseConstantFromSelectInComparison(SI, *ICI, *this))
@@ -2278,16 +2314,6 @@ Instruction *InstCombinerImpl::matchSAddSubSat(Instruction &MinMax1) {
 
   // Create the new type (which can be a vector type)
   Type *NewTy = Ty->getWithNewBitWidth(NewBitWidth);
-  // Match the two extends from the add/sub
-  Value *A, *B;
-  if(!match(AddSub, m_BinOp(m_SExt(m_Value(A)), m_SExt(m_Value(B)))))
-    return nullptr;
-  // And check the incoming values are of a type smaller than or equal to the
-  // size of the saturation. Otherwise the higher bits can cause different
-  // results.
-  if (A->getType()->getScalarSizeInBits() > NewBitWidth ||
-      B->getType()->getScalarSizeInBits() > NewBitWidth)
-    return nullptr;
 
   Intrinsic::ID IntrinsicID;
   if (AddSub->getOpcode() == Instruction::Add)
@@ -2297,10 +2323,16 @@ Instruction *InstCombinerImpl::matchSAddSubSat(Instruction &MinMax1) {
   else
     return nullptr;
 
+  // The two operands of the add/sub must be nsw-truncatable to the NewTy. This
+  // is usually achieved via a sext from a smaller type.
+  if (ComputeMinSignedBits(AddSub->getOperand(0), 0, AddSub) > NewBitWidth ||
+      ComputeMinSignedBits(AddSub->getOperand(1), 0, AddSub) > NewBitWidth)
+    return nullptr;
+
   // Finally create and return the sat intrinsic, truncated to the new type
   Function *F = Intrinsic::getDeclaration(MinMax1.getModule(), IntrinsicID, NewTy);
-  Value *AT = Builder.CreateSExt(A, NewTy);
-  Value *BT = Builder.CreateSExt(B, NewTy);
+  Value *AT = Builder.CreateTrunc(AddSub->getOperand(0), NewTy);
+  Value *BT = Builder.CreateTrunc(AddSub->getOperand(1), NewTy);
   Value *Sat = Builder.CreateCall(F, {AT, BT});
   return CastInst::Create(Instruction::SExt, Sat, Ty);
 }
@@ -2929,10 +2961,8 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   // Canonicalize select with fcmp to fabs(). -0.0 makes this tricky. We need
   // fast-math-flags (nsz) or fsub with +0.0 (not fneg) for this to work.
   // (X <= +/-0.0) ? (0.0 - X) : X --> fabs(X)
-  Instruction *FSub;
   if (match(CondVal, m_FCmp(Pred, m_Specific(FalseVal), m_AnyZeroFP())) &&
       match(TrueVal, m_FSub(m_PosZeroFP(), m_Specific(FalseVal))) &&
-      match(TrueVal, m_Instruction(FSub)) &&
       (Pred == FCmpInst::FCMP_OLE || Pred == FCmpInst::FCMP_ULE)) {
     Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, FalseVal, &SI);
     return replaceInstUsesWith(SI, Fabs);
@@ -2940,7 +2970,6 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   // (X >  +/-0.0) ? X : (0.0 - X) --> fabs(X)
   if (match(CondVal, m_FCmp(Pred, m_Specific(TrueVal), m_AnyZeroFP())) &&
       match(FalseVal, m_FSub(m_PosZeroFP(), m_Specific(TrueVal))) &&
-      match(FalseVal, m_Instruction(FSub)) &&
       (Pred == FCmpInst::FCMP_OGT || Pred == FCmpInst::FCMP_UGT)) {
     Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, TrueVal, &SI);
     return replaceInstUsesWith(SI, Fabs);
@@ -2948,10 +2977,8 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   // With nnan and nsz:
   // (X <  +/-0.0) ? -X : X --> fabs(X)
   // (X <= +/-0.0) ? -X : X --> fabs(X)
-  Instruction *FNeg;
   if (match(CondVal, m_FCmp(Pred, m_Specific(FalseVal), m_AnyZeroFP())) &&
-      match(TrueVal, m_FNeg(m_Specific(FalseVal))) &&
-      match(TrueVal, m_Instruction(FNeg)) && SI.hasNoSignedZeros() &&
+      match(TrueVal, m_FNeg(m_Specific(FalseVal))) && SI.hasNoSignedZeros() &&
       (Pred == FCmpInst::FCMP_OLT || Pred == FCmpInst::FCMP_OLE ||
        Pred == FCmpInst::FCMP_ULT || Pred == FCmpInst::FCMP_ULE)) {
     Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, FalseVal, &SI);
@@ -2961,8 +2988,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   // (X >  +/-0.0) ? X : -X --> fabs(X)
   // (X >= +/-0.0) ? X : -X --> fabs(X)
   if (match(CondVal, m_FCmp(Pred, m_Specific(TrueVal), m_AnyZeroFP())) &&
-      match(FalseVal, m_FNeg(m_Specific(TrueVal))) &&
-      match(FalseVal, m_Instruction(FNeg)) && SI.hasNoSignedZeros() &&
+      match(FalseVal, m_FNeg(m_Specific(TrueVal))) && SI.hasNoSignedZeros() &&
       (Pred == FCmpInst::FCMP_OGT || Pred == FCmpInst::FCMP_OGE ||
        Pred == FCmpInst::FCMP_UGT || Pred == FCmpInst::FCMP_UGE)) {
     Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, TrueVal, &SI);

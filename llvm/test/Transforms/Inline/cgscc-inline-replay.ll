@@ -3,30 +3,66 @@
 ;; Check baseline inline decisions
 ; RUN: opt < %s -passes=inline -pass-remarks=inline --disable-output 2>&1 | FileCheck -check-prefix=DEFAULT %s
 
-;; Check module-scope replay inline decisions
-; RUN: opt < %s -passes=inline -cgscc-inline-replay=%S/Inputs/cgscc-inline-replay.txt -cgscc-inline-replay-scope=Module -pass-remarks=inline --disable-output 2>&1 | FileCheck -check-prefix=REPLAY %s
+;; Check Module scope Original fallback replay inline decisions
+; RUN: opt < %s -passes=inline -cgscc-inline-replay=%S/Inputs/cgscc-inline-replay.txt -cgscc-inline-replay-scope=Module -cgscc-inline-replay-fallback=Original -pass-remarks=inline --disable-output 2>&1 | FileCheck -check-prefix=REPLAY-MODULE-ORIGINAL %s
 
-;; Check function-scope inline replay decisions
-; RUN: opt < %s -passes=inline -cgscc-inline-replay=%S/Inputs/cgscc-inline-replay.txt -cgscc-inline-replay-scope=Function -pass-remarks=inline --disable-output 2>&1 | FileCheck -check-prefix=REPLAY-FUNCTION %s
+;; Check Module scope Original fallback replay inline with 'Line' format decisions
+;; The results are not different than REPLAY-MODULE-ORIGINAL, but the replay input only contains line numbers rather than line:column.discriminator
+; RUN: opt < %s -passes=inline -cgscc-inline-replay=%S/Inputs/cgscc-inline-replay-line.txt -cgscc-inline-replay-scope=Module -cgscc-inline-replay-fallback=Original -cgscc-inline-replay-format=Line -pass-remarks=inline --disable-output 2>&1 | FileCheck -check-prefix=REPLAY-MODULE-ORIGINAL %s
+
+;; Check Module scope AlwaysInline fallback replay inline decisions
+; RUN: opt < %s -passes=inline -cgscc-inline-replay=%S/Inputs/cgscc-inline-replay.txt -cgscc-inline-replay-scope=Module -cgscc-inline-replay-fallback=AlwaysInline -pass-remarks=inline --disable-output 2>&1 | FileCheck -check-prefix=REPLAY-MODULE-ALWAYS %s
+
+;; Check Module scope NeverInline fallback replay inline decisions
+; RUN: opt < %s -passes=inline -cgscc-inline-replay=%S/Inputs/cgscc-inline-replay.txt -cgscc-inline-replay-scope=Module -cgscc-inline-replay-fallback=NeverInline -pass-remarks=inline --disable-output 2>&1 | FileCheck -check-prefix=REPLAY-MODULE-NEVER %s
+
+;; Check Function scope Original fallback replay inline decisions
+; RUN: opt < %s -passes=inline -cgscc-inline-replay=%S/Inputs/cgscc-inline-replay-function.txt -cgscc-inline-replay-scope=Function -cgscc-inline-replay-fallback=Original -pass-remarks=inline --disable-output 2>&1 | FileCheck -check-prefix=REPLAY-FUNCTION-ORIGINAL %s
+
+;; Check Function scope AlwaysInline fallback replay inline decisions
+; RUN: opt < %s -passes=inline -cgscc-inline-replay=%S/Inputs/cgscc-inline-replay-function.txt -cgscc-inline-replay-scope=Function -cgscc-inline-replay-fallback=AlwaysInline -pass-remarks=inline --disable-output 2>&1 | FileCheck -check-prefix=REPLAY-FUNCTION-ALWAYS %s
+
+;; Check Function scope NeverInline fallback replay inline decisions
+; RUN: opt < %s -passes=inline -cgscc-inline-replay=%S/Inputs/cgscc-inline-replay-function.txt -cgscc-inline-replay-scope=Function -cgscc-inline-replay-fallback=NeverInline -pass-remarks=inline --disable-output 2>&1 | FileCheck -check-prefix=REPLAY-FUNCTION-NEVER %s
 
 ;; Check behavior on non-existent replay file
-; RUN: not opt < %s -passes=inline -cgscc-inline-replay=%S -pass-remarks=inline --disable-output 2>&1 | FileCheck -check-prefix=REPLAY-ERROR %s
+; RUN: not opt < %s -passes=inline -cgscc-inline-replay=%S/non-existent-dummy.txt -pass-remarks=inline --disable-output 2>&1 | FileCheck -check-prefix=REPLAY-ERROR %s
 
 ;; Check scope inlining errors out on non <Module|Function> inputs
 ; RUN: not opt < %s -passes=inline -cgscc-inline-replay=%S/Inputs/cgscc-inline-replay.txt -cgscc-inline-replay-scope=function -pass-remarks=inline --disable-output 2>&1 | FileCheck -check-prefix=REPLAY-ERROR-SCOPE %s
+
+;; Check fallback inlining errors out on non <Original|AlwaysInline|NeverInline> inputs
+; RUN: not opt < %s -passes=inline -cgscc-inline-replay=%S/Inputs/cgscc-inline-replay.txt -cgscc-inline-replay-fallback=original -pass-remarks=inline --disable-output 2>&1 | FileCheck -check-prefix=REPLAY-ERROR-FALLBACK %s
+
+;; Check format inlining errors out on non <Line|AlwayLineColumnsInline|LineDiscriminator|LineColumnDiscriminator> inputs
+; RUN: not opt < %s -passes=inline -cgscc-inline-replay=%S/Inputs/cgscc-inline-replay.txt -cgscc-inline-replay-format=line -pass-remarks=inline --disable-output 2>&1 | FileCheck -check-prefix=REPLAY-ERROR-FORMAT %s
 
 ; DEFAULT: '_Z3subii' inlined into '_Z3sumii' with (cost={{[-0-9]+}}
 ; DEFAULT: '_Z3sumii' inlined into 'main' with (cost={{[-0-9]+}}
 ; DEFAULT-NOT: '_Z3subii' inlined into 'main'
 
-; REPLAY: '_Z3sumii' inlined into 'main' with (cost=always)
-; REPLAY: '_Z3subii' inlined into 'main' with (cost=always)
+; REPLAY-MODULE-ORIGINAL: '_Z3sumii' inlined into 'main' with (cost=always)
+; REPLAY-MODULE-ORIGINAL: '_Z3subii' inlined into 'main' with (cost={{[-0-9]+}}
 
-; REPLAY-FUNCTION: '_Z3subii' inlined into '_Z3sumii' with (cost={{[-0-9]+}}
-; REPLAY-FUNCTION: '_Z3sumii' inlined into 'main' with (cost=always)
+; REPLAY-MODULE-ALWAYS: '_Z3sumii' inlined into 'main' with (cost=always)
+; REPLAY-MODULE-ALWAYS: '_Z3subii' inlined into 'main' with (cost=always)
+
+; REPLAY-MODULE-NEVER: '_Z3sumii' inlined into 'main' with (cost=always)
+; REPLAY-MODULE-NEVER-NOT: '_Z3subii' inlined into 'main'
+
+; REPLAY-FUNCTION-ORIGINAL: '_Z3subii' inlined into '_Z3sumii' with (cost={{[-0-9]+}}
+; REPLAY-FUNCTION-ORIGINAL: '_Z3sumii' inlined into 'main' with (cost={{[-0-9]+}}
+
+; REPLAY-FUNCTION-ALWAYS: '_Z3subii' inlined into '_Z3sumii' with (cost={{[-0-9]+}}
+; REPLAY-FUNCTION-ALWAYS: '_Z3sumii' inlined into 'main' with (cost=always)
+
+; REPLAY-FUNCTION-NEVER: '_Z3subii' inlined into '_Z3sumii' with (cost={{[-0-9]+}}
+; REPLAY-FUNCTION-NEVER-NOT: '_Z3sumii' inlined into 'main'
 
 ; REPLAY-ERROR: error: Could not open remarks file:
 ; REPLAY-ERROR-SCOPE: for the --cgscc-inline-replay-scope option: Cannot find option named 'function'!
+; REPLAY-ERROR-FALLBACK: for the --cgscc-inline-replay-fallback option: Cannot find option named 'original'!
+; REPLAY-ERROR-FORMAT: for the --cgscc-inline-replay-format option: Cannot find option named 'line'!
 
 @.str = private unnamed_addr constant [11 x i8] c"sum is %d\0A\00", align 1
 

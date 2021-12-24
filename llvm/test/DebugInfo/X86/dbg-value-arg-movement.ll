@@ -1,4 +1,5 @@
-; RUN: llc -mtriple=x86_64-unknown-unknown -start-after=codegenprepare -stop-before=finalize-isel %s -o - | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-unknown -start-after=codegenprepare -stop-before=finalize-isel %s -o - -experimental-debug-variable-locations=false | FileCheck %s --check-prefixes=COMMON,CHECK
+; RUN: llc -mtriple=x86_64-unknown-unknown -start-after=codegenprepare -stop-before=finalize-isel %s -o - -experimental-debug-variable-locations=true | FileCheck %s --check-prefixes=COMMON,INSTRREF
 
 ; Test the movement of dbg.values of arguments. SelectionDAG tries to be
 ; helpful and places DBG_VALUEs of Arguments at the start of functions.
@@ -9,6 +10,9 @@
 ; don't, by whether the referred to variable is a parameter to the current
 ; function. In the test below, 'xyzzy' is a parameter to an inlined function,
 ; but should not be hoisted to the start of the function.
+;
+; With instruction referencing, accuracy becomes more important than coverage,
+; so debug instructions are placed wherever they were in the IR.
 ;
 ; Original test case, in which 'xyzzy' became unavailable because its DBG_VALUE
 ; landed far from any uses, compiled "clang -O2 -g" with inlining,
@@ -39,8 +43,8 @@
 ;      return qux;
 ;    }
 
-; CHECK: [[BAZVAR:![0-9]+]] = !DILocalVariable(name: "baz",
-; CHECK: [[XYZVAR:![0-9]+]] = !DILocalVariable(name: "xyzzy",
+; COMMON: [[BAZVAR:![0-9]+]] = !DILocalVariable(name: "baz",
+; COMMON: [[XYZVAR:![0-9]+]] = !DILocalVariable(name: "xyzzy",
 
 ; Start of MIR function block,
 ; CHECK-LABEL: body
@@ -52,6 +56,12 @@
 ; CHECK-LABEL: bb.1.next
 ; Correctly place dbg.value in the 'next' block.
 ; CHECK:       DBG_VALUE [[ARGREG]], $noreg, [[XYZVAR]]
+
+; INSTRREF-LABEL: body
+; INSTRREF: DBG_PHI $edi, 1
+; INSTRREF: DBG_VALUE $edi, $noreg, [[BAZVAR]]
+; INSTRREF-LABEL: bb.1.next
+; INSTRREF: DBG_INSTR_REF 1, 0, [[XYZVAR]],
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

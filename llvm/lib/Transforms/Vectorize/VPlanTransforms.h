@@ -14,24 +14,37 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANTRANSFORMS_H
 
 #include "VPlan.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
 
 namespace llvm {
 
+class InductionDescriptor;
 class Instruction;
+class PHINode;
 class ScalarEvolution;
 
 struct VPlanTransforms {
   /// Replaces the VPInstructions in \p Plan with corresponding
   /// widen recipes.
-  static void VPInstructionsToVPRecipes(
-      Loop *OrigLoop, VPlanPtr &Plan,
-      LoopVectorizationLegality::InductionList &Inductions,
-      SmallPtrSetImpl<Instruction *> &DeadInstructions, ScalarEvolution &SE);
+  static void
+  VPInstructionsToVPRecipes(Loop *OrigLoop, VPlanPtr &Plan,
+                            function_ref<const InductionDescriptor *(PHINode *)>
+                                GetIntOrFpInductionDescriptor,
+                            SmallPtrSetImpl<Instruction *> &DeadInstructions,
+                            ScalarEvolution &SE);
 
   static bool sinkScalarOperands(VPlan &Plan);
 
   static bool mergeReplicateRegions(VPlan &Plan);
+
+  /// Remove redundant casts of inductions.
+  ///
+  /// Such redundant casts are casts of induction variables that can be ignored,
+  /// because we already proved that the casted phi is equal to the uncasted phi
+  /// in the vectorized loop. There is no need to vectorize the cast - the same
+  /// value can be used for both the phi and casts in the vector loop.
+  static void removeRedundantInductionCasts(VPlan &Plan);
 };
 
 } // namespace llvm

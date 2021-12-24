@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// This pass combines split register tuple initialization into a single psuedo:
+/// This pass combines split register tuple initialization into a single pseudo:
 ///
 ///   undef %0.sub1:sreg_64 = S_MOV_B32 1
 ///   %0.sub0:sreg_64 = S_MOV_B32 2
@@ -100,8 +100,9 @@ bool GCNPreRAOptimizations::processReg(Register Reg) {
       // Some subtargets cannot do an AGPR to AGPR copy directly, and need an
       // intermdiate temporary VGPR register. Try to find the defining
       // accvgpr_write to avoid temporary registers.
+
       if (!IsAGPRDst)
-        break;
+        return false;
 
       Register SrcReg = I.getOperand(1).getReg();
 

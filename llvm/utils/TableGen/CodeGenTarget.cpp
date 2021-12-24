@@ -576,7 +576,7 @@ bool CodeGenTarget::guessInstructionProperties() const {
 // ComplexPattern implementation
 //
 ComplexPattern::ComplexPattern(Record *R) {
-  Ty          = ::getValueType(R->getValueAsDef("Ty"));
+  Ty          = R->getValueAsDef("Ty");
   NumOperands = R->getValueAsInt("NumOperands");
   SelectFunc = std::string(R->getValueAsString("SelectFunc"));
   RootNodes   = R->getValueAsListOfDefs("RootNodes");
@@ -676,12 +676,11 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R,
   isSpeculatable = false;
   hasSideEffects = false;
 
-  if (DefName.size() <= 4 ||
-      std::string(DefName.begin(), DefName.begin() + 4) != "int_")
+  if (DefName.size() <= 4 || DefName.substr(0, 4) != "int_")
     PrintFatalError(DefLoc,
                     "Intrinsic '" + DefName + "' does not start with 'int_'!");
 
-  EnumName = std::string(DefName.begin()+4, DefName.end());
+  EnumName = DefName.substr(4);
 
   if (R->getValue("GCCBuiltinName"))  // Ignore a missing GCCBuiltinName field.
     GCCBuiltinName = std::string(R->getValueAsString("GCCBuiltinName"));
@@ -699,8 +698,7 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R,
       Name += (EnumName[i] == '_') ? '.' : EnumName[i];
   } else {
     // Verify it starts with "llvm.".
-    if (Name.size() <= 5 ||
-        std::string(Name.begin(), Name.begin() + 5) != "llvm.")
+    if (Name.size() <= 5 || Name.substr(0, 5) != "llvm.")
       PrintFatalError(DefLoc, "Intrinsic '" + DefName +
                                   "'s name does not start with 'llvm.'!");
   }
@@ -709,8 +707,7 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R,
   // "llvm.<targetprefix>.".
   if (!TargetPrefix.empty()) {
     if (Name.size() < 6+TargetPrefix.size() ||
-        std::string(Name.begin() + 5, Name.begin() + 6 + TargetPrefix.size())
-        != (TargetPrefix + "."))
+        Name.substr(5, 1 + TargetPrefix.size()) != (TargetPrefix + "."))
       PrintFatalError(DefLoc, "Intrinsic '" + DefName +
                                   "' does not start with 'llvm." +
                                   TargetPrefix + ".'!");

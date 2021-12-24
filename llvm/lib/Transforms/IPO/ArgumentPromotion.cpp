@@ -177,9 +177,8 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
         // Since loads will only have a single operand, and GEPs only a single
         // non-index operand, this will record direct loads without any indices,
         // and gep+loads with the GEP indices.
-        for (User::op_iterator II = UI->op_begin() + 1, IE = UI->op_end();
-             II != IE; ++II)
-          Indices.push_back(cast<ConstantInt>(*II)->getSExtValue());
+        for (const Use &I : llvm::drop_begin(UI->operands()))
+          Indices.push_back(cast<ConstantInt>(I)->getSExtValue());
         // GEPs with a single 0 index can be merged with direct loads
         if (Indices.size() == 1 && Indices.front() == 0)
           Indices.clear();
@@ -836,14 +835,20 @@ bool ArgumentPromotionPass::areFunctionArgsABICompatible(
     const Function &F, const TargetTransformInfo &TTI,
     SmallPtrSetImpl<Argument *> &ArgsToPromote,
     SmallPtrSetImpl<Argument *> &ByValArgsToTransform) {
+  // TODO: Check individual arguments so we can promote a subset?
+  SmallVector<Type *, 32> Types;
+  for (Argument *Arg : ArgsToPromote)
+    Types.push_back(Arg->getType()->getPointerElementType());
+  for (Argument *Arg : ByValArgsToTransform)
+    Types.push_back(Arg->getParamByValType());
+
   for (const Use &U : F.uses()) {
     CallBase *CB = dyn_cast<CallBase>(U.getUser());
     if (!CB)
       return false;
     const Function *Caller = CB->getCaller();
     const Function *Callee = CB->getCalledFunction();
-    if (!TTI.areFunctionArgsABICompatible(Caller, Callee, ArgsToPromote) ||
-        !TTI.areFunctionArgsABICompatible(Caller, Callee, ByValArgsToTransform))
+    if (!TTI.areTypesABICompatible(Caller, Callee, Types))
       return false;
   }
   return true;
@@ -1016,11 +1021,12 @@ PreservedAnalyses ArgumentPromotionPass::run(LazyCallGraph::SCC &C,
   do {
     LocalChange = false;
 
+    FunctionAnalysisManager &FAM =
+        AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
+
     for (LazyCallGraph::Node &N : C) {
       Function &OldF = N.getFunction();
 
-      FunctionAnalysisManager &FAM =
-          AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
       // FIXME: This lambda must only be used with this function. We should
       // skip the lambda and just get the AA results directly.
       auto AARGetter = [&](Function &F) -> AAResults & {
@@ -1043,6 +1049,13 @@ PreservedAnalyses ArgumentPromotionPass::run(LazyCallGraph::SCC &C,
       C.getOuterRefSCC().replaceNodeFunction(N, *NewF);
       FAM.clear(OldF, OldF.getName());
       OldF.eraseFromParent();
+
+      PreservedAnalyses FuncPA;
+      FuncPA.preserveSet<CFGAnalyses>();
+      for (auto *U : NewF->users()) {
+        auto *UserF = cast<CallBase>(U)->getFunction();
+        FAM.invalidate(*UserF, FuncPA);
+      }
     }
 
     Changed |= LocalChange;
@@ -1051,7 +1064,12 @@ PreservedAnalyses ArgumentPromotionPass::run(LazyCallGraph::SCC &C,
   if (!Changed)
     return PreservedAnalyses::all();
 
-  return PreservedAnalyses::none();
+  PreservedAnalyses PA;
+  // We've cleared out analyses for deleted functions.
+  PA.preserve<FunctionAnalysisManagerCGSCCProxy>();
+  // We've manually invalidated analyses for functions we've modified.
+  PA.preserveSet<AllAnalysesOn<Function>>();
+  return PA;
 }
 
 namespace {

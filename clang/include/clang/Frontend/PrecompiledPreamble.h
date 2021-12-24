@@ -274,7 +274,7 @@ class PreambleCallbacks {
 public:
   virtual ~PreambleCallbacks() = default;
 
-  /// Called before FrontendAction::BeginSourceFile.
+  /// Called before FrontendAction::Execute.
   /// Can be used to store references to various CompilerInstance fields
   /// (e.g. SourceManager) that may be interesting to the consumers of other
   /// callbacks.
@@ -291,7 +291,7 @@ public:
   /// used instead, but having only this method allows a simpler API.
   virtual void HandleTopLevelDecl(DeclGroupRef DG);
   /// Creates wrapper class for PPCallbacks so we can also process information
-  /// about includes that are inside of a preamble
+  /// about includes that are inside of a preamble. Called after BeforeExecute.
   virtual std::unique_ptr<PPCallbacks> createPPCallbacks();
   /// The returned CommentHandler will be added to the preprocessor if not null.
   virtual CommentHandler *getCommentHandler();

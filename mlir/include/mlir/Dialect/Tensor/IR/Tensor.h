@@ -10,6 +10,7 @@
 #define MLIR_DIALECT_TENSOR_IR_TENSOR_H_
 
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
@@ -85,6 +86,21 @@ bool canFoldIntoConsumerOp(CastOp castOp);
 /// Performs folding of any operand of `op` if it comes from a tensor::CastOp
 /// that can be folded.
 LogicalResult foldTensorCast(Operation *op);
+
+/// Create a rank-reducing ExtractSliceOp @[0 .. 0] with strides [1 .. 1] and
+/// appropriate sizes (i.e. `tensor.getSizes()`) to reduce the rank of `tensor`
+/// to that of `targetType`.
+Value createCanonicalRankReducingExtractSliceOp(OpBuilder &b, Location loc,
+                                                Value tensor,
+                                                RankedTensorType targetType);
+
+/// Create a rank-reducing InsertSliceOp @[0 .. 0] with strides [1 .. 1] and
+/// appropriate sizes (i.e. `dest.getSizes()`). The result is a new tensor with
+/// rank increased to that of `dest`, obtained by inserting `tensor` into `dest`
+/// at the canonical [0 .. 0] position.
+Value createCanonicalRankReducingInsertSliceOp(OpBuilder &b, Location loc,
+                                               Value tensor, Value dest);
+
 } // namespace tensor
 } // namespace mlir
 

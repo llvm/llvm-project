@@ -261,15 +261,15 @@ The compilation database:
 The `invocation list`:
 
 .. code-block:: bash
-  
-  "/path/to/your/project/foo.cpp": 
+
+  "/path/to/your/project/foo.cpp":
     - "clang++"
     - "-c"
     - "/path/to/your/project/foo.cpp"
     - "-o"
     - "/path/to/your/project/foo.o"
 
-  "/path/to/your/project/main.cpp": 
+  "/path/to/your/project/main.cpp":
     - "clang++"
     - "-c"
     - "/path/to/your/project/main.cpp"
@@ -374,4 +374,3 @@ We actively develop CTU with CodeChecker as the driver for feature, `scan-build-
 `scan-build-py` has various errors and issues, expect it to work only with the very basic projects only.
 
 Currently On-demand analysis is not supported with `scan-build-py`.
-

@@ -36,13 +36,12 @@ DEFAULT_FEATURES = [
   Feature(name='-fsized-deallocation',          when=lambda cfg: hasCompileFlag(cfg, '-fsized-deallocation')),
   Feature(name='-faligned-allocation',          when=lambda cfg: hasCompileFlag(cfg, '-faligned-allocation')),
   Feature(name='fdelayed-template-parsing',     when=lambda cfg: hasCompileFlag(cfg, '-fdelayed-template-parsing')),
-  Feature(name='libcpp-no-if-constexpr',        when=lambda cfg: '__cpp_if_constexpr' not in featureTestMacros(cfg)),
-  Feature(name='libcpp-no-structured-bindings', when=lambda cfg: '__cpp_structured_bindings' not in featureTestMacros(cfg)),
   Feature(name='libcpp-no-concepts',            when=lambda cfg: featureTestMacros(cfg).get('__cpp_concepts', 0) < 201907),
+  Feature(name='libcpp-no-coroutines',          when=lambda cfg: featureTestMacros(cfg).get('__cpp_impl_coroutine', 0) < 201902),
   Feature(name='has-fobjc-arc',                 when=lambda cfg: hasCompileFlag(cfg, '-xobjective-c++ -fobjc-arc') and
                                                                  sys.platform.lower().strip() == 'darwin'), # TODO: this doesn't handle cross-compiling to Apple platforms.
   Feature(name='objective-c++',                 when=lambda cfg: hasCompileFlag(cfg, '-xobjective-c++ -fobjc-arc')),
-  Feature(name='no-noexcept-function-type',     when=lambda cfg: featureTestMacros(cfg).get('__cpp_noexcept_function_type', 0) < 201510),
+  Feature(name='verify-support',                when=lambda cfg: hasCompileFlag(cfg, '-Xclang -verify-ignore-unexpected')),
 
   Feature(name='non-lockfree-atomics',
           when=lambda cfg: sourceBuilds(cfg, """
@@ -60,6 +59,30 @@ DEFAULT_FEATURES = [
             std::atomic<Large> x;
             int main(int, char**) { return x.is_lock_free(); }
           """)),
+
+  # Some tests rely on creating shared libraries which link in the C++ Standard Library. In some
+  # cases, this doesn't work (e.g. if the library was built as a static archive and wasn't compiled
+  # as position independent). This feature informs the test suite of whether it's possible to create
+  # a shared library in a shell test by using the '-shared' compiler flag.
+  #
+  # Note: To implement this check properly, we need to make sure that we use something inside the
+  # compiled library, not only in the headers. It should be safe to assume that all implementations
+  # define `operator new` in the compiled library.
+  Feature(name='cant-build-shared-library',
+          when=lambda cfg: not sourceBuilds(cfg, """
+            void f() { new int(3); }
+          """, ['-shared'])),
+
+  # Whether Bash can run on the executor.
+  # This is not always the case, for example when running on embedded systems.
+  #
+  # For the corner case of bash existing, but it being missing in the path
+  # set in %{exec} as "--env PATH=one-single-dir", the executor does find
+  # and executes bash, but bash then can't find any other common shell
+  # utilities. Test executing "bash -c 'bash --version'" to see if bash
+  # manages to find binaries to execute.
+  Feature(name='executor-has-no-bash',
+          when=lambda cfg: runScriptExitCode(cfg, ['%{exec} bash -c \'bash --version\'']) != 0),
 
   Feature(name='apple-clang',                                                                                                      when=_isAppleClang),
   Feature(name=lambda cfg: 'apple-clang-{__clang_major__}'.format(**compilerMacros(cfg)),                                          when=_isAppleClang),

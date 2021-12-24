@@ -48,7 +48,7 @@ The linker can be specified with: "-fuse-ld=lld".
 In the Itanium C++ ABI the first member of an object is a pointer to the vtable
 for its class. The vtable is often emitted into the object file with the key function
 and must be imported for classes marked dllimport. The pointers must be globally
-unique. Unfortunately, the COFF/PE file format does not provide a mechanism to 
+unique. Unfortunately, the COFF/PE file format does not provide a mechanism to
 store a runtime address from another DLL into this pointer (although runtime
 addresses are patched into the IAT). Therefore, the compiler must emit some code,
 that runs after IAT patching but before anything that might use the vtable pointers,
@@ -58,7 +58,7 @@ there is no declaration available to the compiler so this can't be done. To allo
 programs to link we currently rely on the -auto-import switch in LLD to auto-import
 references to __cxxabiv1::__class_type_info pointers (see: https://reviews.llvm.org/D43184
 for a related discussion). This allows for linking; but, code that actually uses
-such fields will not work as they these will not be fixed up at runtime. See 
+such fields will not work as they these will not be fixed up at runtime. See
 _pei386_runtime_relocator which handles the runtime component of the autoimporting
 scheme used for mingw and comments in https://reviews.llvm.org/D43184 and
 https://reviews.llvm.org/D89518 for more.

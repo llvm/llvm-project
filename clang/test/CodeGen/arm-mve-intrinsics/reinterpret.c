@@ -4,6 +4,8 @@
 // RUN: %clang_cc1 -triple thumbebv8.1m.main-arm-none-eabi -target-feature +mve.fp -mfloat-abi hard -fallow-half-arguments-and-returns -O0 -disable-O0-optnone -S -emit-llvm -o - %s | opt -S -mem2reg -sroa -early-cse | FileCheck %s --check-prefix=BOTH --check-prefix=BE
 // RUN: %clang_cc1 -triple thumbebv8.1m.main-arm-none-eabi -target-feature +mve.fp -mfloat-abi hard -fallow-half-arguments-and-returns -O0 -disable-O0-optnone -DPOLYMORPHIC -S -emit-llvm -o - %s | opt -S -mem2reg -sroa -early-cse | FileCheck %s --check-prefix=BOTH --check-prefix=BE
 
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 #include <arm_mve.h>
 
 // LE-LABEL: @test_vreinterpretq_f16_f32(

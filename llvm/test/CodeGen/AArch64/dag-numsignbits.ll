@@ -19,7 +19,7 @@ define void @signbits_vXi1(<4 x i16> %a1) {
 ; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI0_1]
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    shl v0.4h, v0.4h, #15
-; CHECK-NEXT:    sshr v0.4h, v0.4h, #15
+; CHECK-NEXT:    cmlt v0.4h, v0.4h, #0
 ; CHECK-NEXT:    umov w0, v0.h[0]
 ; CHECK-NEXT:    umov w3, v0.h[3]
 ; CHECK-NEXT:    b foo

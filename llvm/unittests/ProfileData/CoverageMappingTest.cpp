@@ -693,6 +693,9 @@ TEST_P(CoverageMappingTest, test_line_coverage_iterator) {
     ++Line;
   }
   ASSERT_EQ(11U, Line);
+
+  // Check that operator->() works / compiles.
+  ASSERT_EQ(1U, LineCoverageIterator(Data)->getLine());
 }
 
 TEST_P(CoverageMappingTest, uncovered_function) {

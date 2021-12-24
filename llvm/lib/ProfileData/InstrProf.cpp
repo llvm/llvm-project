@@ -74,53 +74,94 @@ static cl::opt<unsigned> StaticFuncStripDirNamePrefix(
     cl::desc("Strip specified level of directory name from source path in "
              "the profile counter name for static functions."));
 
-static std::string getInstrProfErrString(instrprof_error Err) {
+static std::string getInstrProfErrString(instrprof_error Err,
+                                         const std::string &ErrMsg = "") {
+  std::string Msg;
+  raw_string_ostream OS(Msg);
+
   switch (Err) {
   case instrprof_error::success:
-    return "success";
+    OS << "success";
+    break;
   case instrprof_error::eof:
-    return "end of File";
+    OS << "end of File";
+    break;
   case instrprof_error::unrecognized_format:
-    return "unrecognized instrumentation profile encoding format";
+    OS << "unrecognized instrumentation profile encoding format";
+    break;
   case instrprof_error::bad_magic:
-    return "invalid instrumentation profile data (bad magic)";
+    OS << "invalid instrumentation profile data (bad magic)";
+    break;
   case instrprof_error::bad_header:
-    return "invalid instrumentation profile data (file header is corrupt)";
+    OS << "invalid instrumentation profile data (file header is corrupt)";
+    break;
   case instrprof_error::unsupported_version:
-    return "unsupported instrumentation profile format version";
+    OS << "unsupported instrumentation profile format version";
+    break;
   case instrprof_error::unsupported_hash_type:
-    return "unsupported instrumentation profile hash type";
+    OS << "unsupported instrumentation profile hash type";
+    break;
   case instrprof_error::too_large:
-    return "too much profile data";
+    OS << "too much profile data";
+    break;
   case instrprof_error::truncated:
-    return "truncated profile data";
+    OS << "truncated profile data";
+    break;
   case instrprof_error::malformed:
-    return "malformed instrumentation profile data";
+    OS << "malformed instrumentation profile data";
+    break;
+  case instrprof_error::missing_debug_info_for_correlation:
+    OS << "debug info for correlation is required";
+    break;
+  case instrprof_error::unexpected_debug_info_for_correlation:
+    OS << "debug info for correlation is not necessary";
+    break;
+  case instrprof_error::unable_to_correlate_profile:
+    OS << "unable to correlate profile";
+    break;
+  case instrprof_error::unsupported_debug_format:
+    OS << "unsupported debug info format (only DWARF is supported)";
+    break;
   case instrprof_error::invalid_prof:
-    return "invalid profile created. Please file a bug "
-           "at: " BUG_REPORT_URL
-           " and include the profraw files that caused this error.";
+    OS << "invalid profile created. Please file a bug "
+          "at: " BUG_REPORT_URL
+          " and include the profraw files that caused this error.";
+    break;
   case instrprof_error::unknown_function:
-    return "no profile data available for function";
+    OS << "no profile data available for function";
+    break;
   case instrprof_error::hash_mismatch:
-    return "function control flow change detected (hash mismatch)";
+    OS << "function control flow change detected (hash mismatch)";
+    break;
   case instrprof_error::count_mismatch:
-    return "function basic block count change detected (counter mismatch)";
+    OS << "function basic block count change detected (counter mismatch)";
+    break;
   case instrprof_error::counter_overflow:
-    return "counter overflow";
+    OS << "counter overflow";
+    break;
   case instrprof_error::value_site_count_mismatch:
-    return "function value site count change detected (counter mismatch)";
+    OS << "function value site count change detected (counter mismatch)";
+    break;
   case instrprof_error::compress_failed:
-    return "failed to compress data (zlib)";
+    OS << "failed to compress data (zlib)";
+    break;
   case instrprof_error::uncompress_failed:
-    return "failed to uncompress data (zlib)";
+    OS << "failed to uncompress data (zlib)";
+    break;
   case instrprof_error::empty_raw_profile:
-    return "empty raw profile file";
+    OS << "empty raw profile file";
+    break;
   case instrprof_error::zlib_unavailable:
-    return "profile uses zlib compression but the profile reader was built "
-           "without zlib support";
+    OS << "profile uses zlib compression but the profile reader was built "
+          "without zlib support";
+    break;
   }
-  llvm_unreachable("A value of instrprof_error has no message.");
+
+  // If optional error message is not empty, append it to the message.
+  if (!ErrMsg.empty())
+    OS << ": " << ErrMsg;
+
+  return OS.str();
 }
 
 namespace {
@@ -217,7 +258,7 @@ void SoftInstrProfErrors::addError(instrprof_error IE) {
 }
 
 std::string InstrProfError::message() const {
-  return getInstrProfErrString(Err);
+  return getInstrProfErrString(Err, Msg);
 }
 
 char InstrProfError::ID = 0;
@@ -504,8 +545,8 @@ Error readPGOFuncNameStrings(StringRef NameStrings, InstrProfSymtab &Symtab) {
 void InstrProfRecord::accumulateCounts(CountSumOrPercent &Sum) const {
   uint64_t FuncSum = 0;
   Sum.NumEntries += Counts.size();
-  for (size_t F = 0, E = Counts.size(); F < E; ++F)
-    FuncSum += Counts[F];
+  for (uint64_t Count : Counts)
+    FuncSum += Count;
   Sum.CountSum += FuncSum;
 
   for (uint32_t VK = IPVK_First; VK <= IPVK_Last; ++VK) {
@@ -628,27 +669,26 @@ void InstrProfValueSiteRecord::merge(InstrProfValueSiteRecord &Input,
   Input.sortByTargetValues();
   auto I = ValueData.begin();
   auto IE = ValueData.end();
-  for (auto J = Input.ValueData.begin(), JE = Input.ValueData.end(); J != JE;
-       ++J) {
-    while (I != IE && I->Value < J->Value)
+  for (const InstrProfValueData &J : Input.ValueData) {
+    while (I != IE && I->Value < J.Value)
       ++I;
-    if (I != IE && I->Value == J->Value) {
+    if (I != IE && I->Value == J.Value) {
       bool Overflowed;
-      I->Count = SaturatingMultiplyAdd(J->Count, Weight, I->Count, &Overflowed);
+      I->Count = SaturatingMultiplyAdd(J.Count, Weight, I->Count, &Overflowed);
       if (Overflowed)
         Warn(instrprof_error::counter_overflow);
       ++I;
       continue;
     }
-    ValueData.insert(I, *J);
+    ValueData.insert(I, J);
   }
 }
 
 void InstrProfValueSiteRecord::scale(uint64_t N, uint64_t D,
                                      function_ref<void(instrprof_error)> Warn) {
-  for (auto I = ValueData.begin(), IE = ValueData.end(); I != IE; ++I) {
+  for (InstrProfValueData &I : ValueData) {
     bool Overflowed;
-    I->Count = SaturatingMultiply(I->Count, N, &Overflowed) / D;
+    I.Count = SaturatingMultiply(I.Count, N, &Overflowed) / D;
     if (Overflowed)
       Warn(instrprof_error::counter_overflow);
   }
@@ -878,18 +918,23 @@ static std::unique_ptr<ValueProfData> allocValueProfData(uint32_t TotalSize) {
 
 Error ValueProfData::checkIntegrity() {
   if (NumValueKinds > IPVK_Last + 1)
-    return make_error<InstrProfError>(instrprof_error::malformed);
-  // Total size needs to be mulltiple of quadword size.
+    return make_error<InstrProfError>(
+        instrprof_error::malformed, "number of value profile kinds is invalid");
+  // Total size needs to be multiple of quadword size.
   if (TotalSize % sizeof(uint64_t))
-    return make_error<InstrProfError>(instrprof_error::malformed);
+    return make_error<InstrProfError>(
+        instrprof_error::malformed, "total size is not multiples of quardword");
 
   ValueProfRecord *VR = getFirstValueProfRecord(this);
   for (uint32_t K = 0; K < this->NumValueKinds; K++) {
     if (VR->Kind > IPVK_Last)
-      return make_error<InstrProfError>(instrprof_error::malformed);
+      return make_error<InstrProfError>(instrprof_error::malformed,
+                                        "value kind is invalid");
     VR = getValueProfRecordNext(VR);
     if ((char *)VR - (char *)this > (ptrdiff_t)TotalSize)
-      return make_error<InstrProfError>(instrprof_error::malformed);
+      return make_error<InstrProfError>(
+          instrprof_error::malformed,
+          "value profile address is greater than total size");
   }
   return Error::success();
 }
@@ -1142,7 +1187,8 @@ bool canRenameComdatFunc(const Function &F, bool CheckAddressTaken) {
 // Create a COMDAT variable INSTR_PROF_RAW_VERSION_VAR to make the runtime
 // aware this is an ir_level profile so it can set the version flag.
 GlobalVariable *createIRLevelProfileFlagVar(Module &M, bool IsCS,
-                                            bool InstrEntryBBEnabled) {
+                                            bool InstrEntryBBEnabled,
+                                            bool DebugInfoCorrelate) {
   const StringRef VarName(INSTR_PROF_QUOTE(INSTR_PROF_RAW_VERSION_VAR));
   Type *IntTy64 = Type::getInt64Ty(M.getContext());
   uint64_t ProfileVersion = (INSTR_PROF_RAW_VERSION | VARIANT_MASK_IR_PROF);
@@ -1150,6 +1196,8 @@ GlobalVariable *createIRLevelProfileFlagVar(Module &M, bool IsCS,
     ProfileVersion |= VARIANT_MASK_CSIR_PROF;
   if (InstrEntryBBEnabled)
     ProfileVersion |= VARIANT_MASK_INSTR_ENTRY;
+  if (DebugInfoCorrelate)
+    ProfileVersion |= VARIANT_MASK_DBG_CORRELATE;
   auto IRLevelVersionVariable = new GlobalVariable(
       M, IntTy64, true, GlobalValue::WeakAnyLinkage,
       Constant::getIntegerValue(IntTy64, APInt(64, ProfileVersion)), VarName);

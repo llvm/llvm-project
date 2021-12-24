@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: libcpp-has-no-threads
-
 // <atomic>
 
 // template <class T>

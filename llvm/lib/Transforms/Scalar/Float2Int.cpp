@@ -372,7 +372,7 @@ bool Float2IntPass::validateAndTransform() {
       // If it does, transformation would be illegal.
       //
       // Don't count the roots, as they terminate the graphs.
-      if (Roots.count(I) == 0) {
+      if (!Roots.contains(I)) {
         // Set the type of the conversion while we're here.
         if (!ConvertedToTy)
           ConvertedToTy = I->getType();

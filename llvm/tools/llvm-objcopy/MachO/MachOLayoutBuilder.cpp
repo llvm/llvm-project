@@ -249,8 +249,12 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
   uint64_t StartOfExportTrie =
       StartOfLazyBindingInfo + O.LazyBinds.Opcodes.size();
   uint64_t StartOfFunctionStarts = StartOfExportTrie + O.Exports.Trie.size();
-  uint64_t StartOfDataInCode =
+  uint64_t StartOfDyldExportsTrie =
       StartOfFunctionStarts + O.FunctionStarts.Data.size();
+  uint64_t StartOfChainedFixups =
+      StartOfDyldExportsTrie + O.ExportsTrie.Data.size();
+  uint64_t StartOfDataInCode =
+      StartOfChainedFixups + O.ChainedFixups.Data.size();
   uint64_t StartOfLinkerOptimizationHint =
       StartOfDataInCode + O.DataInCode.Data.size();
   uint64_t StartOfSymbols =
@@ -262,10 +266,31 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
       sizeof(uint32_t) * O.IndirectSymTable.Symbols.size();
   uint64_t StartOfCodeSignature =
       StartOfSymbolStrings + StrTableBuilder.getSize();
-  if (O.CodeSignatureCommandIndex)
+  uint32_t CodeSignatureSize = 0;
+  if (O.CodeSignatureCommandIndex) {
     StartOfCodeSignature = alignTo(StartOfCodeSignature, 16);
+
+    // Note: These calculations are to be kept in sync with the same
+    // calculations performed in LLD's CodeSignatureSection.
+    const uint32_t AllHeadersSize =
+        alignTo(CodeSignature.FixedHeadersSize + OutputFileName.size() + 1,
+                CodeSignature.Align);
+    const uint32_t BlockCount =
+        (StartOfCodeSignature + CodeSignature.BlockSize - 1) /
+        CodeSignature.BlockSize;
+    const uint32_t Size =
+        alignTo(AllHeadersSize + BlockCount * CodeSignature.HashSize,
+                CodeSignature.Align);
+
+    CodeSignature.StartOffset = StartOfCodeSignature;
+    CodeSignature.AllHeadersSize = AllHeadersSize;
+    CodeSignature.BlockCount = BlockCount;
+    CodeSignature.OutputFileName = OutputFileName;
+    CodeSignature.Size = Size;
+    CodeSignatureSize = Size;
+  }
   uint64_t LinkEditSize =
-      (StartOfCodeSignature + O.CodeSignature.Data.size()) - StartOfLinkEdit;
+      StartOfCodeSignature + CodeSignatureSize - StartOfLinkEdit;
 
   // Now we have determined the layout of the contents of the __LINKEDIT
   // segment. Update its load command.
@@ -293,7 +318,7 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
     switch (cmd) {
     case MachO::LC_CODE_SIGNATURE:
       MLC.linkedit_data_command_data.dataoff = StartOfCodeSignature;
-      MLC.linkedit_data_command_data.datasize = O.CodeSignature.Data.size();
+      MLC.linkedit_data_command_data.datasize = CodeSignatureSize;
       break;
     case MachO::LC_SYMTAB:
       MLC.symtab_command_data.symoff = StartOfSymbols;
@@ -331,6 +356,14 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
     case MachO::LC_FUNCTION_STARTS:
       MLC.linkedit_data_command_data.dataoff = StartOfFunctionStarts;
       MLC.linkedit_data_command_data.datasize = O.FunctionStarts.Data.size();
+      break;
+    case MachO::LC_DYLD_CHAINED_FIXUPS:
+      MLC.linkedit_data_command_data.dataoff = StartOfChainedFixups;
+      MLC.linkedit_data_command_data.datasize = O.ChainedFixups.Data.size();
+      break;
+    case MachO::LC_DYLD_EXPORTS_TRIE:
+      MLC.linkedit_data_command_data.dataoff = StartOfDyldExportsTrie;
+      MLC.linkedit_data_command_data.datasize = O.ExportsTrie.Data.size();
       break;
     case MachO::LC_DYLD_INFO:
     case MachO::LC_DYLD_INFO_ONLY:

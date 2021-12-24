@@ -130,13 +130,6 @@ struct HeaderFileInfo {
   /// any.
   const IdentifierInfo *
   getControllingMacro(ExternalPreprocessorSource *External);
-
-  /// Determine whether this is a non-default header file info, e.g.,
-  /// it corresponds to an actual header we've included or tried to include.
-  bool isNonDefault() const {
-    return isImport || isPragmaOnce || NumIncludes || ControllingMacro ||
-      ControllingMacroID;
-  }
 };
 
 /// An external source of header file information, which may supply
@@ -450,8 +443,8 @@ public:
   /// \return false if \#including the file will have no effect or true
   /// if we should include it.
   bool ShouldEnterIncludeFile(Preprocessor &PP, const FileEntry *File,
-                              bool isImport, bool ModulesEnabled,
-                              Module *M);
+                              bool isImport, bool ModulesEnabled, Module *M,
+                              bool &IsFirstIncludeOfFile);
 
   /// Return whether the specified file is a normal header,
   /// a system header, or a C++ friendly system header.
@@ -494,11 +487,6 @@ public:
   void SetFileControllingMacro(const FileEntry *File,
                                const IdentifierInfo *ControllingMacro) {
     getFileInfo(File).ControllingMacro = ControllingMacro;
-  }
-
-  /// Return true if this is the first time encountering this header.
-  bool FirstTimeLexingFile(const FileEntry *File) {
-    return getFileInfo(File).NumIncludes == 1;
   }
 
   /// Determine whether this file is intended to be safe from

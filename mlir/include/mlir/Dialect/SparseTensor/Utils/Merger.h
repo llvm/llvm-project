@@ -13,7 +13,7 @@
 #ifndef MLIR_DIALECT_SPARSETENSOR_UTILS_MERGER_H_
 #define MLIR_DIALECT_SPARSETENSOR_UTILS_MERGER_H_
 
-#include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/BitVector.h"
 
@@ -122,7 +122,7 @@ public:
   /// invariant expressions in the kernel.
   Merger(unsigned t, unsigned l)
       : outTensor(t - 1), syntheticTensor(t), numTensors(t + 1), numLoops(l),
-        dims(t + 1, std::vector<Dim>(l, Dim::kUndef)) {}
+        hasSparseOut(false), dims(t + 1, std::vector<Dim>(l, Dim::kUndef)) {}
 
   /// Adds a tensor expression. Returns its index.
   unsigned addExp(Kind k, unsigned e0, unsigned e1 = -1u, Value v = Value());
@@ -192,13 +192,17 @@ public:
   /// Returns true if any set bit corresponds to queried dim.
   bool hasAnyDimOf(const llvm::BitVector &bits, Dim d) const;
 
-  /// Returns true if given tensor co-iterates with conjunction only in the
-  /// given tensor expression. For the output tensor, this defines a "simply
-  /// dynamic" operation [Bik96]. For instance: a(i) *=  b(i) * c(i)
-  bool isConjunction(unsigned t, unsigned e) const;
+  /// Returns true if given tensor iterates *only* in the given tensor
+  /// expression. For the output tensor, this defines a "simply dynamic"
+  /// operation [Bik96]. For instance: a(i) *= 2.0 or a(i) += a(i) for
+  /// sparse vector a.
+  bool isSingleCondition(unsigned t, unsigned e) const;
 
   /// Dimension setter.
   void setDim(unsigned t, unsigned i, Dim d) { dims[t][i] = d; }
+
+  // Has sparse output tensor setter.
+  void setHasSparseOut(bool s) { hasSparseOut = s; }
 
   /// Convenience getters to immediately access the stored nodes.
   /// Typically it is inadvisible to keep the reference around, as in
@@ -230,6 +234,7 @@ public:
                  Value v1);
 
 private:
+  /// Private helpers.
   bool maybeZero(unsigned e) const;
   bool isInvariant(unsigned e) const;
   Type inferType(unsigned e, Value src);
@@ -237,11 +242,12 @@ private:
   /// Traverses the SSA tree (possibly a DAG) to build a tensor expression.
   Optional<unsigned> buildTensorExp(linalg::GenericOp op, Value v);
 
+  /// Merger data structures.
   const unsigned outTensor;
   const unsigned syntheticTensor;
   const unsigned numTensors;
   const unsigned numLoops;
-
+  bool hasSparseOut;
   std::vector<std::vector<Dim>> dims;
   llvm::SmallVector<TensorExp, 32> tensorExps;
   llvm::SmallVector<LatPoint, 16> latPoints;

@@ -176,6 +176,12 @@ class InterfaceMap {
 
 public:
   InterfaceMap(InterfaceMap &&) = default;
+  InterfaceMap &operator=(InterfaceMap &&rhs) {
+    for (auto &it : interfaces)
+      free(it.second);
+    interfaces = std::move(rhs.interfaces);
+    return *this;
+  }
   ~InterfaceMap() {
     for (auto &it : interfaces)
       free(it.second);
@@ -264,7 +270,7 @@ private:
   SmallVector<std::pair<TypeID, void *>> interfaces;
 };
 
-} // end namespace detail
-} // end namespace mlir
+} // namespace detail
+} // namespace mlir
 
 #endif

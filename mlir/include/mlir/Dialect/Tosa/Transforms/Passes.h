@@ -19,8 +19,10 @@
 namespace mlir {
 namespace tosa {
 
+std::unique_ptr<Pass> createTosaDecomposeTransposeConvPass();
 std::unique_ptr<Pass> createTosaInferShapesPass();
 std::unique_ptr<Pass> createTosaMakeBroadcastablePass();
+std::unique_ptr<Pass> createTosaOptimizationPass();
 std::unique_ptr<Pass> createTosaTestQuantUtilAPIPass();
 
 #define GEN_PASS_REGISTRATION

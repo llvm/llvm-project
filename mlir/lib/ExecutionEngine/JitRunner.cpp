@@ -108,7 +108,7 @@ struct CompileAndExecuteConfig {
       runtimeSymbolMap;
 };
 
-} // end anonymous namespace
+} // namespace
 
 static OwningModuleRef parseMLIRInput(StringRef inputFilename,
                                       MLIRContext *context) {
@@ -125,7 +125,7 @@ static OwningModuleRef parseMLIRInput(StringRef inputFilename,
   return OwningModuleRef(parseSourceFile(sourceMgr, context));
 }
 
-static inline Error make_string_error(const Twine &message) {
+static inline Error makeStringError(const Twine &message) {
   return llvm::make_error<llvm::StringError>(message.str(),
                                              llvm::inconvertibleErrorCode());
 }
@@ -216,7 +216,7 @@ static Error compileAndExecute(Options &options, ModuleOp module,
   auto engine = std::move(*expectedEngine);
   engine->registerSymbols(runtimeSymbolMap);
 
-  auto expectedFPtr = engine->lookup(entryPoint);
+  auto expectedFPtr = engine->lookupPacked(entryPoint);
   if (!expectedFPtr)
     return expectedFPtr.takeError();
 
@@ -239,7 +239,7 @@ static Error compileAndExecuteVoidFunction(Options &options, ModuleOp module,
                                            CompileAndExecuteConfig config) {
   auto mainFunction = module.lookupSymbol<LLVM::LLVMFuncOp>(entryPoint);
   if (!mainFunction || mainFunction.empty())
-    return make_string_error("entry point not found");
+    return makeStringError("entry point not found");
   void *empty = nullptr;
   return compileAndExecute(options, module, entryPoint, config, &empty);
 }
@@ -253,7 +253,7 @@ Error checkCompatibleReturnType<int32_t>(LLVM::LLVMFuncOp mainFunction) {
                         .getReturnType()
                         .dyn_cast<IntegerType>();
   if (!resultType || resultType.getWidth() != 32)
-    return make_string_error("only single i32 function result supported");
+    return makeStringError("only single i32 function result supported");
   return Error::success();
 }
 template <>
@@ -263,7 +263,7 @@ Error checkCompatibleReturnType<int64_t>(LLVM::LLVMFuncOp mainFunction) {
                         .getReturnType()
                         .dyn_cast<IntegerType>();
   if (!resultType || resultType.getWidth() != 64)
-    return make_string_error("only single i64 function result supported");
+    return makeStringError("only single i64 function result supported");
   return Error::success();
 }
 template <>
@@ -272,7 +272,7 @@ Error checkCompatibleReturnType<float>(LLVM::LLVMFuncOp mainFunction) {
            .cast<LLVM::LLVMFunctionType>()
            .getReturnType()
            .isa<Float32Type>())
-    return make_string_error("only single f32 function result supported");
+    return makeStringError("only single f32 function result supported");
   return Error::success();
 }
 template <typename Type>
@@ -281,10 +281,10 @@ Error compileAndExecuteSingleReturnFunction(Options &options, ModuleOp module,
                                             CompileAndExecuteConfig config) {
   auto mainFunction = module.lookupSymbol<LLVM::LLVMFuncOp>(entryPoint);
   if (!mainFunction || mainFunction.isExternal())
-    return make_string_error("entry point not found");
+    return makeStringError("entry point not found");
 
   if (mainFunction.getType().cast<LLVM::LLVMFunctionType>().getNumParams() != 0)
-    return make_string_error("function inputs not supported");
+    return makeStringError("function inputs not supported");
 
   if (Error error = checkCompatibleReturnType<Type>(mainFunction))
     return error;
@@ -384,7 +384,7 @@ int mlir::JitRunnerMain(int argc, char **argv, const DialectRegistry &registry,
                     ? compileAndExecuteFn(options, m.get(),
                                           options.mainFuncName.getValue(),
                                           compileAndExecuteConfig)
-                    : make_string_error("unsupported function type");
+                    : makeStringError("unsupported function type");
 
   int exitCode = EXIT_SUCCESS;
   llvm::handleAllErrors(std::move(error),

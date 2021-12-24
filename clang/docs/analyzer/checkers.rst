@@ -313,6 +313,31 @@ cplusplus.SelfAssignment (C++)
 """"""""""""""""""""""""""""""
 Checks C++ copy and move assignment operators for self assignment.
 
+.. _cplusplus-StringChecker:
+
+cplusplus.StringChecker (C++)
+"""""""""""""""""""""""""""""
+Checks std::string operations.
+
+Checks if the cstring pointer from which the ``std::string`` object is
+constructed is ``NULL`` or not.
+If the checker cannot reason about the nullness of the pointer it will assume
+that it was non-null to satisfy the precondition of the constructor.
+
+This checker is capable of checking the `SEI CERT C++ coding rule STR51-CPP.
+Do not attempt to create a std::string from a null pointer
+<https://wiki.sei.cmu.edu/confluence/x/E3s-BQ>`__.
+
+.. code-block:: cpp
+
+ #include <string>
+
+ void f(const char *p) {
+   if (!p) {
+     std::string msg(p); // warn: The parameter must not be null
+   }
+ }
+
 .. _deadcode-checkers:
 
 deadcode
@@ -2048,90 +2073,6 @@ Warns against using one vs. many plural pattern in code when generating localize
 alpha.security
 ^^^^^^^^^^^^^^
 
-
-alpha.security.cert
-^^^^^^^^^^^^^^^^^^^
-
-SEI CERT checkers which tries to find errors based on their `C coding rules <https://wiki.sei.cmu.edu/confluence/display/c/2+Rules>`_.
-
-.. _alpha-security-cert-pos-checkers:
-
-alpha.security.cert.pos
-^^^^^^^^^^^^^^^^^^^^^^^
-
-SEI CERT checkers of `POSIX C coding rules <https://wiki.sei.cmu.edu/confluence/pages/viewpage.action?pageId=87152405>`__.
-
-.. _alpha-security-cert-pos-34c:
-
-alpha.security.cert.pos.34c
-"""""""""""""""""""""""""""
-Finds calls to the ``putenv`` function which pass a pointer to an automatic variable as the argument.
-
-.. code-block:: c
-
-  int func(const char *var) {
-    char env[1024];
-    int retval = snprintf(env, sizeof(env),"TEST=%s", var);
-    if (retval < 0 || (size_t)retval >= sizeof(env)) {
-        /* Handle error */
-    }
-
-    return putenv(env); // putenv function should not be called with auto variables
-  }
-
-alpha.security.cert.env
-^^^^^^^^^^^^^^^^^^^^^^^
-
-SEI CERT checkers of `POSIX C coding rules <https://wiki.sei.cmu.edu/confluence/x/JdcxBQ>`__.
-
-.. _alpha-security-cert-env-InvalidPtr:
-
-alpha.security.cert.env.InvalidPtr
-""""""""""""""""""""""""""""""""""
-
-Corresponds to SEI CERT Rules ENV31-C and ENV34-C.
-
-ENV31-C:
-Rule is about the possible problem with `main` function's third argument, environment pointer,
-"envp". When enviornment array is modified using some modification function
-such as putenv, setenv or others, It may happen that memory is reallocated,
-however "envp" is not updated to reflect the changes and points to old memory
-region.
-
-ENV34-C:
-Some functions return a pointer to a statically allocated buffer.
-Consequently, subsequent call of these functions will invalidate previous
-pointer. These functions include: getenv, localeconv, asctime, setlocale, strerror
-
-.. code-block:: c
-
-  int main(int argc, const char *argv[], const char *envp[]) {
-    if (setenv("MY_NEW_VAR", "new_value", 1) != 0) {
-      // setenv call may invalidate 'envp'
-      /* Handle error */
-    }
-    if (envp != NULL) {
-      for (size_t i = 0; envp[i] != NULL; ++i) {
-        puts(envp[i]);
-        // envp may no longer point to the current environment
-        // this program has unanticipated behavior, since envp
-        // does not reflect changes made by setenv function.
-      }
-    }
-    return 0;
-  }
-
-  void previous_call_invalidation() {
-    char *p, *pp;
-
-    p = getenv("VAR");
-    pp = getenv("VAR2");
-    // subsequent call to 'getenv' invalidated previous one
-
-    *p;
-    // dereferencing invalid pointer
-  }
-
 .. _alpha-security-ArrayBound:
 
 alpha.security.ArrayBound (C)
@@ -2283,12 +2224,108 @@ Check for an out-of-bound pointer being returned to callers.
    return x; // warn: undefined or garbage returned
  }
 
+
+alpha.security.cert
+^^^^^^^^^^^^^^^^^^^
+
+SEI CERT checkers which tries to find errors based on their `C coding rules <https://wiki.sei.cmu.edu/confluence/display/c/2+Rules>`_.
+
+.. _alpha-security-cert-pos-checkers:
+
+alpha.security.cert.pos
+^^^^^^^^^^^^^^^^^^^^^^^
+
+SEI CERT checkers of `POSIX C coding rules <https://wiki.sei.cmu.edu/confluence/pages/viewpage.action?pageId=87152405>`_.
+
+.. _alpha-security-cert-pos-34c:
+
+alpha.security.cert.pos.34c
+"""""""""""""""""""""""""""
+Finds calls to the ``putenv`` function which pass a pointer to an automatic variable as the argument.
+
+.. code-block:: c
+
+  int func(const char *var) {
+    char env[1024];
+    int retval = snprintf(env, sizeof(env),"TEST=%s", var);
+    if (retval < 0 || (size_t)retval >= sizeof(env)) {
+        /* Handle error */
+    }
+
+    return putenv(env); // putenv function should not be called with auto variables
+  }
+
+alpha.security.cert.env
+^^^^^^^^^^^^^^^^^^^^^^^
+
+SEI CERT checkers of `Environment C coding rules <https://wiki.sei.cmu.edu/confluence/x/JdcxBQ>`_.
+
+.. _alpha-security-cert-env-InvalidPtr:
+
+alpha.security.cert.env.InvalidPtr
+""""""""""""""""""""""""""""""""""
+
+Corresponds to SEI CERT Rules ENV31-C and ENV34-C.
+
+ENV31-C:
+Rule is about the possible problem with `main` function's third argument, environment pointer,
+"envp". When enviornment array is modified using some modification function
+such as putenv, setenv or others, It may happen that memory is reallocated,
+however "envp" is not updated to reflect the changes and points to old memory
+region.
+
+ENV34-C:
+Some functions return a pointer to a statically allocated buffer.
+Consequently, subsequent call of these functions will invalidate previous
+pointer. These functions include: getenv, localeconv, asctime, setlocale, strerror
+
+.. code-block:: c
+
+  int main(int argc, const char *argv[], const char *envp[]) {
+    if (setenv("MY_NEW_VAR", "new_value", 1) != 0) {
+      // setenv call may invalidate 'envp'
+      /* Handle error */
+    }
+    if (envp != NULL) {
+      for (size_t i = 0; envp[i] != NULL; ++i) {
+        puts(envp[i]);
+        // envp may no longer point to the current environment
+        // this program has unanticipated behavior, since envp
+        // does not reflect changes made by setenv function.
+      }
+    }
+    return 0;
+  }
+
+  void previous_call_invalidation() {
+    char *p, *pp;
+
+    p = getenv("VAR");
+    pp = getenv("VAR2");
+    // subsequent call to 'getenv' invalidated previous one
+
+    *p;
+    // dereferencing invalid pointer
+  }
+
+alpha.security.taint
+^^^^^^^^^^^^^^^^^^^^
+
+Checkers implementing `taint analysis <https://en.wikipedia.org/wiki/Taint_checking>`_.
+
 .. _alpha-security-taint-TaintPropagation:
 
 alpha.security.taint.TaintPropagation (C, C++)
 """"""""""""""""""""""""""""""""""""""""""""""
-Generate taint information used by other checkers.
-A data is tainted when it comes from an unreliable source.
+
+Taint analysis identifies untrusted sources of information (taint sources), rules as to how the untrusted data flows along the execution path (propagation rules), and points of execution where the use of tainted data is risky (taints sinks).
+The most notable examples of taint sources are:
+
+  - network originating data
+  - environment variables
+  - database originating data
+
+``GenericTaintChecker`` is the main implementation checker for this rule, and it generates taint information used by other checkers.
 
 .. code-block:: c
 
@@ -2313,6 +2350,25 @@ A data is tainted when it comes from an unreliable source.
    int *p = (int *)malloc(ts * sizeof(int));
      // warn: untrusted data as buffer size
  }
+
+There are built-in sources, propagations and sinks defined in code inside ``GenericTaintChecker``.
+These operations are handled even if no external taint configuration is provided.
+
+Default sources defined by ``GenericTaintChecker``:
+``fdopen``, ``fopen``, ``freopen``, ``getch``, ``getchar``, ``getchar_unlocked``, ``gets``, ``scanf``, ``socket``, ``wgetch``
+
+Default propagations defined by ``GenericTaintChecker``:
+``atoi``, ``atol``, ``atoll``, ``fgetc``, ``fgetln``, ``fgets``, ``fscanf``, ``sscanf``, ``getc``, ``getc_unlocked``, ``getdelim``, ``getline``, ``getw``, ``pread``, ``read``, ``strchr``, ``strrchr``, ``tolower``, ``toupper``
+
+Default sinks defined in ``GenericTaintChecker``:
+``printf``, ``setproctitle``, ``system``, ``popen``, ``execl``, ``execle``, ``execlp``, ``execv``, ``execvp``, ``execvP``, ``execve``, ``dlopen``, ``memcpy``, ``memmove``, ``strncpy``, ``strndup``, ``malloc``, ``calloc``, ``alloca``, ``memccpy``, ``realloc``, ``bcopy``
+
+The user can configure taint sources, sinks, and propagation rules by providing a configuration file via checker option ``alpha.security.taint.TaintPropagation:Config``.
+
+External taint configuration is in `YAML <http://llvm.org/docs/YamlIO.html#introduction-to-yaml>`_ format. The taint-related options defined in the config file extend but do not override the built-in sources, rules, sinks.
+The format of the external taint configuration file is not stable, and could change without any notice even in a non-backward compatible way.
+
+For a more detailed description of configuration options, please see the :doc:`user-docs/TaintAnalysisConfiguration`. For an example see :ref:`clangsa-taint-configuration-example`.
 
 alpha.unix
 ^^^^^^^^^^^

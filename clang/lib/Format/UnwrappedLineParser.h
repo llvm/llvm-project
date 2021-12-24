@@ -19,8 +19,8 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Format/Format.h"
 #include "llvm/Support/Regex.h"
-#include <list>
 #include <stack>
+#include <vector>
 
 namespace clang {
 namespace format {
@@ -36,9 +36,8 @@ struct UnwrappedLineNode;
 struct UnwrappedLine {
   UnwrappedLine();
 
-  // FIXME: Don't use std::list here.
   /// The \c Tokens comprising this \c UnwrappedLine.
-  std::list<UnwrappedLineNode> Tokens;
+  std::vector<UnwrappedLineNode> Tokens;
 
   /// The indent level of the \c UnwrappedLine.
   unsigned Level;
@@ -85,7 +84,7 @@ private:
   void reset();
   void parseFile();
   void parseLevel(bool HasOpeningBrace);
-  void parseBlock(bool MustBeDeclaration, unsigned AddLevels = 1u,
+  void parseBlock(bool MustBeDeclaration = false, unsigned AddLevels = 1u,
                   bool MunchSemi = true,
                   bool UnindentWhitesmithsBraces = false);
   void parseChildBlock();
@@ -111,6 +110,7 @@ private:
   void parseCaseLabel();
   void parseSwitch();
   void parseNamespace();
+  void parseModuleImport();
   void parseNew();
   void parseAccessSpecifier();
   bool parseEnum();
@@ -138,6 +138,7 @@ private:
   // https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/where-generic-type-constraint
   void parseCSharpGenericTypeConstraint();
   bool tryToParseLambda();
+  bool tryToParseChildBlock();
   bool tryToParseLambdaIntroducer();
   bool tryToParsePropertyAccessor();
   void tryToParseJSFunction();

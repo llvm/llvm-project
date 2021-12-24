@@ -7,11 +7,8 @@ declare void @use16(i16)
 
 define i1 @testi16i8(i16 %add) {
 ; CHECK-LABEL: @testi16i8(
-; CHECK-NEXT:    [[SH:%.*]] = lshr i16 [[ADD:%.*]], 8
-; CHECK-NEXT:    [[CONV_I:%.*]] = trunc i16 [[SH]] to i8
-; CHECK-NEXT:    [[CONV1_I:%.*]] = trunc i16 [[ADD]] to i8
-; CHECK-NEXT:    [[SHR2_I:%.*]] = ashr i8 [[CONV1_I]], 7
-; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp eq i8 [[SHR2_I]], [[CONV_I]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i16 [[ADD:%.*]], 128
+; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp ult i16 [[TMP1]], 256
 ; CHECK-NEXT:    ret i1 [[CMP_NOT_I]]
 ;
   %sh = lshr i16 %add, 8
@@ -24,11 +21,8 @@ define i1 @testi16i8(i16 %add) {
 
 define i1 @testi16i8_com(i16 %add) {
 ; CHECK-LABEL: @testi16i8_com(
-; CHECK-NEXT:    [[SH:%.*]] = lshr i16 [[ADD:%.*]], 8
-; CHECK-NEXT:    [[CONV_I:%.*]] = trunc i16 [[SH]] to i8
-; CHECK-NEXT:    [[CONV1_I:%.*]] = trunc i16 [[ADD]] to i8
-; CHECK-NEXT:    [[SHR2_I:%.*]] = ashr i8 [[CONV1_I]], 7
-; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp eq i8 [[SHR2_I]], [[CONV_I]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i16 [[ADD:%.*]], 128
+; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp ult i16 [[TMP1]], 256
 ; CHECK-NEXT:    ret i1 [[CMP_NOT_I]]
 ;
   %sh = lshr i16 %add, 8
@@ -41,11 +35,8 @@ define i1 @testi16i8_com(i16 %add) {
 
 define i1 @testi16i8_ne(i16 %add) {
 ; CHECK-LABEL: @testi16i8_ne(
-; CHECK-NEXT:    [[SH:%.*]] = lshr i16 [[ADD:%.*]], 8
-; CHECK-NEXT:    [[CONV_I:%.*]] = trunc i16 [[SH]] to i8
-; CHECK-NEXT:    [[CONV1_I:%.*]] = trunc i16 [[ADD]] to i8
-; CHECK-NEXT:    [[SHR2_I:%.*]] = ashr i8 [[CONV1_I]], 7
-; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp ne i8 [[SHR2_I]], [[CONV_I]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i16 [[ADD:%.*]], -128
+; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp ult i16 [[TMP1]], -256
 ; CHECK-NEXT:    ret i1 [[CMP_NOT_I]]
 ;
   %sh = lshr i16 %add, 8
@@ -58,11 +49,8 @@ define i1 @testi16i8_ne(i16 %add) {
 
 define i1 @testi16i8_ne_com(i16 %add) {
 ; CHECK-LABEL: @testi16i8_ne_com(
-; CHECK-NEXT:    [[SH:%.*]] = lshr i16 [[ADD:%.*]], 8
-; CHECK-NEXT:    [[CONV_I:%.*]] = trunc i16 [[SH]] to i8
-; CHECK-NEXT:    [[CONV1_I:%.*]] = trunc i16 [[ADD]] to i8
-; CHECK-NEXT:    [[SHR2_I:%.*]] = ashr i8 [[CONV1_I]], 7
-; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp ne i8 [[SHR2_I]], [[CONV_I]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i16 [[ADD:%.*]], -128
+; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp ult i16 [[TMP1]], -256
 ; CHECK-NEXT:    ret i1 [[CMP_NOT_I]]
 ;
   %sh = lshr i16 %add, 8
@@ -75,11 +63,8 @@ define i1 @testi16i8_ne_com(i16 %add) {
 
 define i1 @testi64i32(i64 %add) {
 ; CHECK-LABEL: @testi64i32(
-; CHECK-NEXT:    [[SH:%.*]] = lshr i64 [[ADD:%.*]], 32
-; CHECK-NEXT:    [[CONV_I:%.*]] = trunc i64 [[SH]] to i32
-; CHECK-NEXT:    [[CONV1_I:%.*]] = trunc i64 [[ADD]] to i32
-; CHECK-NEXT:    [[SHR2_I:%.*]] = ashr i32 [[CONV1_I]], 31
-; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp eq i32 [[SHR2_I]], [[CONV_I]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[ADD:%.*]], 2147483648
+; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp ult i64 [[TMP1]], 4294967296
 ; CHECK-NEXT:    ret i1 [[CMP_NOT_I]]
 ;
   %sh = lshr i64 %add, 32
@@ -92,11 +77,8 @@ define i1 @testi64i32(i64 %add) {
 
 define i1 @testi64i32_ne(i64 %add) {
 ; CHECK-LABEL: @testi64i32_ne(
-; CHECK-NEXT:    [[SH:%.*]] = lshr i64 [[ADD:%.*]], 32
-; CHECK-NEXT:    [[CONV_I:%.*]] = trunc i64 [[SH]] to i32
-; CHECK-NEXT:    [[CONV1_I:%.*]] = trunc i64 [[ADD]] to i32
-; CHECK-NEXT:    [[SHR2_I:%.*]] = ashr i32 [[CONV1_I]], 31
-; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp ne i32 [[SHR2_I]], [[CONV_I]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[ADD:%.*]], -2147483648
+; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp ult i64 [[TMP1]], -4294967296
 ; CHECK-NEXT:    ret i1 [[CMP_NOT_I]]
 ;
   %sh = lshr i64 %add, 32
@@ -181,11 +163,10 @@ define i1 @slt(i64 %add) {
 
 define i1 @extrause_a(i16 %add) {
 ; CHECK-LABEL: @extrause_a(
-; CHECK-NEXT:    [[SH:%.*]] = lshr i16 [[ADD:%.*]], 8
-; CHECK-NEXT:    [[CONV_I:%.*]] = trunc i16 [[SH]] to i8
-; CHECK-NEXT:    [[CONV1_I:%.*]] = trunc i16 [[ADD]] to i8
+; CHECK-NEXT:    [[CONV1_I:%.*]] = trunc i16 [[ADD:%.*]] to i8
 ; CHECK-NEXT:    [[SHR2_I:%.*]] = ashr i8 [[CONV1_I]], 7
-; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp eq i8 [[SHR2_I]], [[CONV_I]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i16 [[ADD]], 128
+; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp ult i16 [[TMP1]], 256
 ; CHECK-NEXT:    call void @use(i8 [[SHR2_I]])
 ; CHECK-NEXT:    ret i1 [[CMP_NOT_I]]
 ;
@@ -202,9 +183,8 @@ define i1 @extrause_l(i16 %add) {
 ; CHECK-LABEL: @extrause_l(
 ; CHECK-NEXT:    [[SH:%.*]] = lshr i16 [[ADD:%.*]], 8
 ; CHECK-NEXT:    [[CONV_I:%.*]] = trunc i16 [[SH]] to i8
-; CHECK-NEXT:    [[CONV1_I:%.*]] = trunc i16 [[ADD]] to i8
-; CHECK-NEXT:    [[SHR2_I:%.*]] = ashr i8 [[CONV1_I]], 7
-; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp eq i8 [[SHR2_I]], [[CONV_I]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i16 [[ADD]], 128
+; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp ult i16 [[TMP1]], 256
 ; CHECK-NEXT:    call void @use(i8 [[CONV_I]])
 ; CHECK-NEXT:    ret i1 [[CMP_NOT_I]]
 ;

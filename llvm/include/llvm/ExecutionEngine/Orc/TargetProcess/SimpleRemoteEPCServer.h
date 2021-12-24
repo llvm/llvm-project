@@ -151,9 +151,10 @@ private:
   shared::WrapperFunctionResult
   doJITDispatch(const void *FnTag, const char *ArgData, size_t ArgSize);
 
-  static shared::detail::CWrapperFunctionResult
-  jitDispatchEntry(void *DispatchCtx, const void *FnTag, const char *ArgData,
-                   size_t ArgSize);
+  static shared::CWrapperFunctionResult jitDispatchEntry(void *DispatchCtx,
+                                                         const void *FnTag,
+                                                         const char *ArgData,
+                                                         size_t ArgSize);
 
   uint64_t getNextSeqNo() { return NextSeqNo++; }
   void releaseSeqNo(uint64_t) {}

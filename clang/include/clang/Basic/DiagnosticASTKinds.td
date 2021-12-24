@@ -567,8 +567,8 @@ def remark_sanitize_address_insert_extra_padding_accepted : Remark<
 def remark_sanitize_address_insert_extra_padding_rejected : Remark<
     "-fsanitize-address-field-padding ignored for %0 because it "
     "%select{is not C++|is packed|is a union|is trivially copyable|"
-    "has trivial destructor|is standard layout|is in a blacklisted file|"
-    "is blacklisted}1">, ShowInSystemHeader,
+    "has trivial destructor|is standard layout|is in a ignorelisted file|"
+    "is ignorelisted}1">, ShowInSystemHeader,
     InGroup<SanitizeAddressRemarks>;
 
 def warn_npot_ms_struct : Warning<

@@ -124,7 +124,8 @@ namespace preferred_name {
     struct [[clang::preferred_name(iterator),
              clang::preferred_name(const_iterator)]] Iter {};
   };
-  auto it = MemberTemplate<int>::Iter<const int>();
+  template<typename T> T desugar(T);
+  auto it = desugar(MemberTemplate<int>::Iter<const int>());
   int n = it; // expected-error {{no viable conversion from 'preferred_name::MemberTemplate<int>::const_iterator' to 'int'}}
 
   template<int A, int B, typename ...T> struct Foo;

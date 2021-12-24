@@ -155,6 +155,7 @@ int main(int, char**)
     static_assert((std::is_same<decltype(div(0,0)), div_t>::value), "");
     static_assert((std::is_same<decltype(ldiv(0L,0L)), ldiv_t>::value), "");
     static_assert((std::is_same<decltype(lldiv(0LL,0LL)), lldiv_t>::value), "");
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     wchar_t* pw = 0;
     const wchar_t* pwc = 0;
     char* pc = 0;
@@ -163,6 +164,7 @@ int main(int, char**)
     static_assert((std::is_same<decltype(wctomb(pc,L' ')), int>::value), "");
     static_assert((std::is_same<decltype(mbstowcs(pw,"",0)), size_t>::value), "");
     static_assert((std::is_same<decltype(wcstombs(pc,pwc,0)), size_t>::value), "");
+#endif
 
     test_abs();
 

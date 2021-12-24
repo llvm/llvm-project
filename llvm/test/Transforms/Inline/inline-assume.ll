@@ -1,5 +1,6 @@
 ; RUN: opt -inline -S -o - < %s | FileCheck %s
 ; RUN: opt -passes='cgscc(inline)' -S < %s | FileCheck %s
+; RUN: opt -passes='module-inline' -S < %s | FileCheck %s
 
 %0 = type opaque
 %struct.Foo = type { i32, %0* }

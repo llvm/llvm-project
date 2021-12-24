@@ -1323,6 +1323,17 @@ namespace AllowParamAndReturnsOnFunctionPointerVars {
  */
 int (*functionPointerVariable)(int i);
 
+#if __cplusplus >= 201402L
+/**
+ * functionPointerVariableTemplate
+ *
+ * @param i is something.
+ * @returns integer.
+ */
+template<typename T>
+int (*functionPointerVariableTemplate)(T i);
+#endif
+
 struct HasFields {
   /**
    * functionPointerField
@@ -1331,8 +1342,21 @@ struct HasFields {
    * @returns integer.
    */
   int (*functionPointerField)(int i);
+
+#if __cplusplus >= 201402L
+  /**
+   * functionPointerTemplateMember
+   *
+   * @tparam T some type.
+   * @param i is integer.
+   * @returns integer.
+   */
+  template<typename T>
+  static int (*functionPointerTemplateMember)(int i);
+#endif
 };
 
+// expected-warning@+5 {{parameter 'p' not found in the function declaration}}
 // expected-warning@+5 {{'\returns' command used in a comment that is attached to a function returning void}}
 /**
  * functionPointerVariable
@@ -1341,6 +1365,23 @@ struct HasFields {
  * \returns integer.
  */
 void (*functionPointerVariableThatLeadsNowhere)();
+
+#if __cplusplus >= 201402L
+// expected-warning@+8 {{template parameter 'X' not found in the template declaration}}
+// expected-note@+7 {{did you mean 'T'?}}
+// expected-warning@+7 {{parameter 'p' not found in the function declaration}}
+// expected-note@+6 {{did you mean 'x'?}}
+// expected-warning@+6 {{'\returns' command used in a comment that is attached to a function returning void}}
+/**
+ * functionPointerVariable
+ *
+ * \tparam X typo
+ * \param p not here.
+ * \returns integer.
+ */
+template<typename T>
+void (*functionPointerVariableTemplateThatLeadsNowhere)(T x);
+#endif
 
 // Still warn about param/returns commands for variables that don't specify
 // the type directly:
@@ -1406,6 +1447,17 @@ typedef void (*VariadicFnType)(int a, ...);
  * now should work too.
  */
 using VariadicFnType2 = void (*)(int a, ...);
+
+/*!
+ * Function pointer type variable.
+ *
+ * @param a
+ * works
+ *
+ * @param ...
+ * now should work too.
+ */
+void (*variadicFnVar)(int a, ...);
 
 // expected-warning@+2 {{empty paragraph passed to '@note' command}}
 /**

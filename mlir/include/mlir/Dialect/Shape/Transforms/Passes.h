@@ -69,6 +69,6 @@ std::unique_ptr<FunctionPass> createShapeBufferizePass();
 #define GEN_PASS_REGISTRATION
 #include "mlir/Dialect/Shape/Transforms/Passes.h.inc"
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_DIALECT_SHAPE_TRANSFORMS_PASSES_H_

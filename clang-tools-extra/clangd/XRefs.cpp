@@ -80,6 +80,9 @@ const NamedDecl *getDefinition(const NamedDecl *D) {
     return VD->getDefinition();
   if (const auto *FD = dyn_cast<FunctionDecl>(D))
     return FD->getDefinition();
+  if (const auto *CTD = dyn_cast<ClassTemplateDecl>(D))
+    if (const auto *RD = CTD->getTemplatedDecl())
+      return RD->getDefinition();
   // Objective-C classes can have three types of declarations:
   //
   // - forward declaration: @class MyClass;
@@ -823,10 +826,9 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
         log("Found definition heuristically using nearby identifier {0}",
             NearbyIdent->text(SM));
         return ASTResults;
-      } else {
-        vlog("No definition found using nearby identifier {0} at {1}",
-             Word->Text, Word->Location.printToString(SM));
       }
+      vlog("No definition found using nearby identifier {0} at {1}", Word->Text,
+           Word->Location.printToString(SM));
     }
     // No nearby word, or it didn't refer to anything either. Try the index.
     auto TextualResults =
@@ -1328,8 +1330,6 @@ void getOverriddenMethods(const CXXMethodDecl *CMD,
 
 ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
                                 const SymbolIndex *Index) {
-  if (!Limit)
-    Limit = std::numeric_limits<uint32_t>::max();
   ReferencesResult Results;
   const SourceManager &SM = AST.getSourceManager();
   auto MainFilePath =
@@ -1345,7 +1345,7 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
     return {};
   }
 
-  llvm::DenseSet<SymbolID> IDs, OverriddenMethods;
+  llvm::DenseSet<SymbolID> IDsToQuery, OverriddenMethods;
 
   const auto *IdentifierAtCursor =
       syntax::spelledIdentifierTouching(*CurLoc, AST.getTokens());
@@ -1370,7 +1370,7 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
           Results.References.push_back(std::move(Result));
         }
       }
-      IDs.insert(MacroSID);
+      IDsToQuery.insert(MacroSID);
     }
   } else {
     // Handle references to Decls.
@@ -1379,10 +1379,19 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
         DeclRelation::TemplatePattern | DeclRelation::Alias;
     std::vector<const NamedDecl *> Decls =
         getDeclAtPosition(AST, *CurLoc, Relations);
-    llvm::DenseSet<SymbolID> Targets;
-    for (const NamedDecl *D : Decls)
-      if (auto ID = getSymbolID(D))
-        Targets.insert(ID);
+    llvm::DenseSet<SymbolID> TargetsInMainFile;
+    for (const NamedDecl *D : Decls) {
+      auto ID = getSymbolID(D);
+      if (!ID)
+        continue;
+      TargetsInMainFile.insert(ID);
+      // Not all symbols can be referenced from outside (e.g. function-locals).
+      // TODO: we could skip TU-scoped symbols here (e.g. static functions) if
+      // we know this file isn't a header. The details might be tricky.
+      if (D->getParentFunctionOrMethod())
+        continue;
+      IDsToQuery.insert(ID);
+    }
 
     RelationsRequest OverriddenBy;
     if (Index) {
@@ -1401,7 +1410,7 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
     }
 
     // We traverse the AST to find references in the main file.
-    auto MainFileRefs = findRefs(Targets, AST, /*PerToken=*/false);
+    auto MainFileRefs = findRefs(TargetsInMainFile, AST, /*PerToken=*/false);
     // We may get multiple refs with the same location and different Roles, as
     // cross-reference is only interested in locations, we deduplicate them
     // by the location to avoid emitting duplicated locations.
@@ -1425,56 +1434,52 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
       Results.References.push_back(std::move(Result));
     }
     // Add decl/def of overridding methods.
-    if (Index && Results.References.size() <= Limit &&
-        !OverriddenBy.Subjects.empty())
-      Index->relations(
-          OverriddenBy, [&](const SymbolID &Subject, const Symbol &Object) {
-            const auto LSPLocDecl =
-                toLSPLocation(Object.CanonicalDeclaration, *MainFilePath);
-            const auto LSPLocDef =
-                toLSPLocation(Object.Definition, *MainFilePath);
-            if (LSPLocDecl && LSPLocDecl != LSPLocDef) {
-              ReferencesResult::Reference Result;
-              Result.Loc = std::move(*LSPLocDecl);
-              Result.Attributes =
-                  ReferencesResult::Declaration | ReferencesResult::Override;
-              Results.References.push_back(std::move(Result));
-            }
-            if (LSPLocDef) {
-              ReferencesResult::Reference Result;
-              Result.Loc = std::move(*LSPLocDef);
-              Result.Attributes = ReferencesResult::Declaration |
-                                  ReferencesResult::Definition |
-                                  ReferencesResult::Override;
-              Results.References.push_back(std::move(Result));
-            }
-          });
-
-    if (Index && Results.References.size() <= Limit) {
-      for (const Decl *D : Decls) {
-        // Not all symbols can be referenced from outside (e.g.
-        // function-locals).
-        // TODO: we could skip TU-scoped symbols here (e.g. static functions) if
-        // we know this file isn't a header. The details might be tricky.
-        if (D->getParentFunctionOrMethod())
-          continue;
-        if (auto ID = getSymbolID(D))
-          IDs.insert(ID);
-      }
+    if (Index && !OverriddenBy.Subjects.empty()) {
+      Index->relations(OverriddenBy, [&](const SymbolID &Subject,
+                                         const Symbol &Object) {
+        if (Limit && Results.References.size() >= Limit) {
+          Results.HasMore = true;
+          return;
+        }
+        const auto LSPLocDecl =
+            toLSPLocation(Object.CanonicalDeclaration, *MainFilePath);
+        const auto LSPLocDef = toLSPLocation(Object.Definition, *MainFilePath);
+        if (LSPLocDecl && LSPLocDecl != LSPLocDef) {
+          ReferencesResult::Reference Result;
+          Result.Loc = std::move(*LSPLocDecl);
+          Result.Attributes =
+              ReferencesResult::Declaration | ReferencesResult::Override;
+          Results.References.push_back(std::move(Result));
+        }
+        if (LSPLocDef) {
+          ReferencesResult::Reference Result;
+          Result.Loc = std::move(*LSPLocDef);
+          Result.Attributes = ReferencesResult::Declaration |
+                              ReferencesResult::Definition |
+                              ReferencesResult::Override;
+          Results.References.push_back(std::move(Result));
+        }
+      });
     }
   }
   // Now query the index for references from other files.
   auto QueryIndex = [&](llvm::DenseSet<SymbolID> IDs, bool AllowAttributes,
                         bool AllowMainFileSymbols) {
+    if (IDs.empty() || !Index || Results.HasMore)
+      return;
     RefsRequest Req;
     Req.IDs = std::move(IDs);
-    Req.Limit = Limit;
-    if (Req.IDs.empty() || !Index || Results.References.size() > Limit)
-      return;
+    if (Limit) {
+      if (Limit < Results.References.size()) {
+        // We've already filled our quota, still check the index to correctly
+        // return the `HasMore` info.
+        Req.Limit = 0;
+      } else {
+        // Query index only for the remaining size.
+        Req.Limit = Limit - Results.References.size();
+      }
+    }
     Results.HasMore |= Index->refs(Req, [&](const Ref &R) {
-      // No need to continue process if we reach the limit.
-      if (Results.References.size() > Limit)
-        return;
       auto LSPLoc = toLSPLocation(R.Location, *MainFilePath);
       // Avoid indexed results for the main file - the AST is authoritative.
       if (!LSPLoc ||
@@ -1493,17 +1498,13 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
       Results.References.push_back(std::move(Result));
     });
   };
-  QueryIndex(std::move(IDs), /*AllowAttributes=*/true,
+  QueryIndex(std::move(IDsToQuery), /*AllowAttributes=*/true,
              /*AllowMainFileSymbols=*/false);
   // For a virtual method: Occurrences of BaseMethod should be treated as refs
   // and not as decl/def. Allow symbols from main file since AST does not report
   // these.
   QueryIndex(std::move(OverriddenMethods), /*AllowAttributes=*/false,
              /*AllowMainFileSymbols=*/true);
-  if (Results.References.size() > Limit) {
-    Results.HasMore = true;
-    Results.References.resize(Limit);
-  }
   return Results;
 }
 
@@ -1904,7 +1905,9 @@ prepareCallHierarchy(ParsedAST &AST, Position Pos, PathRef TUPath) {
     return Result;
   }
   for (const NamedDecl *Decl : getDeclAtPosition(AST, *Loc, {})) {
-    if (!Decl->isFunctionOrFunctionTemplate())
+    if (!(isa<DeclContext>(Decl) &&
+          cast<DeclContext>(Decl)->isFunctionOrMethod()) &&
+        Decl->getKind() != Decl::Kind::FunctionTemplate)
       continue;
     if (auto CHI = declToCallHierarchyItem(*Decl))
       Result.emplace_back(std::move(*CHI));

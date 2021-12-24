@@ -93,7 +93,7 @@ namespace ConstructorVirtualCalls {
 
     clang_analyzer_eval(obj.get() == 3); // expected-warning{{TRUE}}
 
-    // Sanity check for devirtualization.
+    // Correctness check for devirtualization.
     A *base = &obj;
     clang_analyzer_eval(base->get() == 3); // expected-warning{{TRUE}}
   }

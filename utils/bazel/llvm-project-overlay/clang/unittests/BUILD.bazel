@@ -128,6 +128,7 @@ cc_test(
         "//clang:frontend",
         "//clang:lex",
         "//llvm:Support",
+        "//llvm:TestingSupport",
         "//llvm:config",
         "//llvm:gmock",
         "//llvm:gtest",
@@ -332,6 +333,7 @@ cc_library(
         "//clang:frontend",
         "//clang:static_analyzer_core",
         "//clang:static_analyzer_frontend",
+        "//clang:testing",
         "//clang:tooling",
         "//llvm:gtest",
     ],
@@ -479,8 +481,16 @@ cc_test(
     ) + [
         "libclang/TestUtils.h",
     ],
+    args = select({
+        "@bazel_tools//src/conditions:windows": [
+            # Need to disable the VFS tests that don't use Windows friendly
+            # paths. These are also disabled on Windows in the CMake build.
+            "--gtest_filter=-*VirtualFileOverlay*",
+        ],
+        "//conditions:default": [],
+    }),
     deps = [
-        "//clang:c-bindings",
+        "//clang:libclang",
         "//llvm:Support",
         "//llvm:gtest",
         "//llvm:gtest_main",

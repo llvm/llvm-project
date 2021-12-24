@@ -2,22 +2,16 @@
 
 // CHECK-LABEL:   func @identity(
 // CHECK-SAME:                   %[[ARG:.*]]: memref<f32>) -> memref<f32> {
-// CHECK:           %[[TENSOR:.*]] = memref.tensor_load %[[ARG]] : memref<f32>
-// CHECK:           %[[MEMREF:.*]] = memref.buffer_cast %[[TENSOR]] : memref<f32>
-// CHECK:           return %[[MEMREF]] : memref<f32>
+// CHECK:           return %[[ARG]] : memref<f32>
 func @identity(%arg0: tensor<f32>) -> tensor<f32> {
   return %arg0 : tensor<f32>
 }
 
 // CHECK-LABEL:   func @block_arguments(
 // CHECK-SAME:        %[[ARG:.*]]: memref<f32>) -> memref<f32> {
-// CHECK:           %[[T1:.*]] = memref.tensor_load %[[ARG]] : memref<f32>
-// CHECK:           %[[M1:.*]] = memref.buffer_cast %[[T1]] : memref<f32>
-// CHECK:           br ^bb1(%[[M1]] : memref<f32>)
+// CHECK:           br ^bb1(%[[ARG]] : memref<f32>)
 // CHECK:         ^bb1(%[[BBARG:.*]]: memref<f32>):
-// CHECK:           %[[T2:.*]] = memref.tensor_load %[[BBARG]] : memref<f32>
-// CHECK:           %[[M2:.*]] = memref.buffer_cast %[[T2]] : memref<f32>
-// CHECK:           return %[[M2]] : memref<f32>
+// CHECK:           return %[[BBARG]] : memref<f32>
 func @block_arguments(%arg0: tensor<f32>) -> tensor<f32> {
   br ^bb1(%arg0: tensor<f32>)
 ^bb1(%bbarg: tensor<f32>):
@@ -35,9 +29,7 @@ func @call_source() -> tensor<f32> {
 }
 // CHECK-LABEL:   func @call_sink(
 // CHECK-SAME:                    %[[ARG:.*]]: memref<f32>) {
-// CHECK:           %[[TENSOR:.*]] = memref.tensor_load %[[ARG]] : memref<f32>
-// CHECK:           %[[MEMREF:.*]] = memref.buffer_cast %[[TENSOR]] : memref<f32>
-// CHECK:           call @sink(%[[MEMREF]]) : (memref<f32>) -> ()
+// CHECK:           call @sink(%[[ARG]]) : (memref<f32>) -> ()
 // CHECK:           return
 func private @sink(tensor<f32>)
 func @call_sink(%arg0: tensor<f32>) {
@@ -47,7 +39,7 @@ func @call_sink(%arg0: tensor<f32>) {
 
 // CHECK-LABEL:   func @unconverted_op_in_body() -> memref<f32> {
 // CHECK:           %[[TENSOR:.*]] = "test.source"() : () -> tensor<f32>
-// CHECK:           %[[MEMREF:.*]] = memref.buffer_cast %[[TENSOR]] : memref<f32>
+// CHECK:           %[[MEMREF:.*]] = bufferization.to_memref %[[TENSOR]] : memref<f32>
 // CHECK:           return %[[MEMREF]] : memref<f32>
 func @unconverted_op_in_body() -> tensor<f32> {
   %0 = "test.source"() : () -> tensor<f32>

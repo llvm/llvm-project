@@ -363,9 +363,8 @@ ProcessSP Process::FindPlugin(lldb::TargetSP target_sp,
   ProcessSP process_sp;
   ProcessCreateInstance create_callback = nullptr;
   if (!plugin_name.empty()) {
-    ConstString const_plugin_name(plugin_name);
     create_callback =
-        PluginManager::GetProcessCreateCallbackForPluginName(const_plugin_name);
+        PluginManager::GetProcessCreateCallbackForPluginName(plugin_name);
     if (create_callback) {
       process_sp = create_callback(target_sp, listener_sp, crash_file_path,
                                    can_connect);
@@ -1984,57 +1983,6 @@ size_t Process::ReadCStringFromMemory(addr_t addr, std::string &out_str,
   return out_str.size();
 }
 
-size_t Process::ReadStringFromMemory(addr_t addr, char *dst, size_t max_bytes,
-                                     Status &error, size_t type_width) {
-  size_t total_bytes_read = 0;
-  if (dst && max_bytes && type_width && max_bytes >= type_width) {
-    // Ensure a null terminator independent of the number of bytes that is
-    // read.
-    memset(dst, 0, max_bytes);
-    size_t bytes_left = max_bytes - type_width;
-
-    const char terminator[4] = {'\0', '\0', '\0', '\0'};
-    assert(sizeof(terminator) >= type_width && "Attempting to validate a "
-                                               "string with more than 4 bytes "
-                                               "per character!");
-
-    addr_t curr_addr = addr;
-    const size_t cache_line_size = m_memory_cache.GetMemoryCacheLineSize();
-    char *curr_dst = dst;
-
-    error.Clear();
-    while (bytes_left > 0 && error.Success()) {
-      addr_t cache_line_bytes_left =
-          cache_line_size - (curr_addr % cache_line_size);
-      addr_t bytes_to_read =
-          std::min<addr_t>(bytes_left, cache_line_bytes_left);
-      size_t bytes_read = ReadMemory(curr_addr, curr_dst, bytes_to_read, error);
-
-      if (bytes_read == 0)
-        break;
-
-      // Search for a null terminator of correct size and alignment in
-      // bytes_read
-      size_t aligned_start = total_bytes_read - total_bytes_read % type_width;
-      for (size_t i = aligned_start;
-           i + type_width <= total_bytes_read + bytes_read; i += type_width)
-        if (::memcmp(&dst[i], terminator, type_width) == 0) {
-          error.Clear();
-          return i;
-        }
-
-      total_bytes_read += bytes_read;
-      curr_dst += bytes_read;
-      curr_addr += bytes_read;
-      bytes_left -= bytes_read;
-    }
-  } else {
-    if (max_bytes)
-      error.SetErrorString("invalid arguments");
-  }
-  return total_bytes_read;
-}
-
 // Deprecated in favor of ReadStringFromMemory which has wchar support and
 // correct code to find null terminators.
 size_t Process::ReadCStringFromMemory(addr_t addr, char *dst,
@@ -2494,115 +2442,125 @@ Status Process::Launch(ProcessLaunchInfo &launch_info) {
   m_process_input_reader.reset();
 
   Module *exe_module = GetTarget().GetExecutableModulePointer();
-  if (!exe_module) {
-    error.SetErrorString("executable module does not exist");
-    return error;
-  }
 
-  char local_exec_file_path[PATH_MAX];
-  char platform_exec_file_path[PATH_MAX];
-  exe_module->GetFileSpec().GetPath(local_exec_file_path,
-                                    sizeof(local_exec_file_path));
-  exe_module->GetPlatformFileSpec().GetPath(platform_exec_file_path,
-                                            sizeof(platform_exec_file_path));
-  if (FileSystem::Instance().Exists(exe_module->GetFileSpec())) {
+  // The "remote executable path" is hooked up to the local Executable
+  // module.  But we should be able to debug a remote process even if the
+  // executable module only exists on the remote.  However, there needs to
+  // be a way to express this path, without actually having a module.
+  // The way to do that is to set the ExecutableFile in the LaunchInfo.
+  // Figure that out here:
+  
+  FileSpec exe_spec_to_use;
+  if (!exe_module) {
+    if (!launch_info.GetExecutableFile()) {
+      error.SetErrorString("executable module does not exist");
+      return error;
+    }
+    exe_spec_to_use = launch_info.GetExecutableFile();
+  } else
+    exe_spec_to_use = exe_module->GetFileSpec();
+  
+  if (exe_module && FileSystem::Instance().Exists(exe_module->GetFileSpec())) {
     // Install anything that might need to be installed prior to launching.
     // For host systems, this will do nothing, but if we are connected to a
     // remote platform it will install any needed binaries
     error = GetTarget().Install(&launch_info);
     if (error.Fail())
       return error;
+  }
+  // Listen and queue events that are broadcasted during the process launch.
+  ListenerSP listener_sp(Listener::MakeListener("LaunchEventHijack"));
+  HijackProcessEvents(listener_sp);
+  auto on_exit = llvm::make_scope_exit([this]() { RestoreProcessEvents(); });
 
-    // Listen and queue events that are broadcasted during the process launch.
-    ListenerSP listener_sp(Listener::MakeListener("LaunchEventHijack"));
-    HijackProcessEvents(listener_sp);
-    auto on_exit = llvm::make_scope_exit([this]() { RestoreProcessEvents(); });
+  if (PrivateStateThreadIsValid())
+    PausePrivateStateThread();
 
-    if (PrivateStateThreadIsValid())
-      PausePrivateStateThread();
+  error = WillLaunch(exe_module);
+  if (error.Success()) {
+    const bool restarted = false;
+    SetPublicState(eStateLaunching, restarted);
+    m_should_detach = false;
 
-    error = WillLaunch(exe_module);
-    if (error.Success()) {
-      const bool restarted = false;
-      SetPublicState(eStateLaunching, restarted);
-      m_should_detach = false;
+    if (m_public_run_lock.TrySetRunning()) {
+      // Now launch using these arguments.
+      error = DoLaunch(exe_module, launch_info);
+    } else {
+      // This shouldn't happen
+      error.SetErrorString("failed to acquire process run lock");
+    }
 
-      if (m_public_run_lock.TrySetRunning()) {
-        // Now launch using these arguments.
-        error = DoLaunch(exe_module, launch_info);
-      } else {
-        // This shouldn't happen
-        error.SetErrorString("failed to acquire process run lock");
+    if (error.Fail()) {
+      if (GetID() != LLDB_INVALID_PROCESS_ID) {
+        SetID(LLDB_INVALID_PROCESS_ID);
+        const char *error_string = error.AsCString();
+        if (error_string == nullptr)
+          error_string = "launch failed";
+        SetExitStatus(-1, error_string);
       }
+    } else {
+      EventSP event_sp;
 
-      if (error.Fail()) {
-        if (GetID() != LLDB_INVALID_PROCESS_ID) {
-          SetID(LLDB_INVALID_PROCESS_ID);
-          const char *error_string = error.AsCString();
-          if (error_string == nullptr)
-            error_string = "launch failed";
-          SetExitStatus(-1, error_string);
-        }
-      } else {
-        EventSP event_sp;
+      // Now wait for the process to launch and return control to us, and then
+      // call DidLaunch:
+      StateType state = WaitForProcessStopPrivate(event_sp, seconds(10));
 
-        // Now wait for the process to launch and return control to us, and then
-        // call DidLaunch:
-        StateType state = WaitForProcessStopPrivate(event_sp, seconds(10));
+      if (state == eStateInvalid || !event_sp) {
+        // We were able to launch the process, but we failed to catch the
+        // initial stop.
+        error.SetErrorString("failed to catch stop after launch");
+        SetExitStatus(0, "failed to catch stop after launch");
+        Destroy(false);
+      } else if (state == eStateStopped || state == eStateCrashed) {
+        DidLaunch();
 
-        if (state == eStateInvalid || !event_sp) {
-          // We were able to launch the process, but we failed to catch the
-          // initial stop.
-          error.SetErrorString("failed to catch stop after launch");
-          SetExitStatus(0, "failed to catch stop after launch");
-          Destroy(false);
-        } else if (state == eStateStopped || state == eStateCrashed) {
-          DidLaunch();
+        DynamicLoader *dyld = GetDynamicLoader();
+        if (dyld)
+          dyld->DidLaunch();
 
-          DynamicLoader *dyld = GetDynamicLoader();
-          if (dyld)
-            dyld->DidLaunch();
+        GetJITLoaders().DidLaunch();
 
-          GetJITLoaders().DidLaunch();
+        SystemRuntime *system_runtime = GetSystemRuntime();
+        if (system_runtime)
+          system_runtime->DidLaunch();
 
-          SystemRuntime *system_runtime = GetSystemRuntime();
-          if (system_runtime)
-            system_runtime->DidLaunch();
+        if (!m_os_up)
+          LoadOperatingSystemPlugin(false);
 
-          if (!m_os_up)
-            LoadOperatingSystemPlugin(false);
+        // We successfully launched the process and stopped, now it the
+        // right time to set up signal filters before resuming.
+        UpdateAutomaticSignalFiltering();
 
-          // We successfully launched the process and stopped, now it the
-          // right time to set up signal filters before resuming.
-          UpdateAutomaticSignalFiltering();
+        // Note, the stop event was consumed above, but not handled. This
+        // was done to give DidLaunch a chance to run. The target is either
+        // stopped or crashed. Directly set the state.  This is done to
+        // prevent a stop message with a bunch of spurious output on thread
+        // status, as well as not pop a ProcessIOHandler.
+        // We are done with the launch hijack listener, and this stop should
+        // go to the public state listener:
+        RestoreProcessEvents();
+        SetPublicState(state, false);
 
-          // Note, the stop event was consumed above, but not handled. This
-          // was done to give DidLaunch a chance to run. The target is either
-          // stopped or crashed. Directly set the state.  This is done to
-          // prevent a stop message with a bunch of spurious output on thread
-          // status, as well as not pop a ProcessIOHandler.
-          SetPublicState(state, false);
+        if (PrivateStateThreadIsValid())
+          ResumePrivateStateThread();
+        else
+          StartPrivateStateThread();
 
-          if (PrivateStateThreadIsValid())
-            ResumePrivateStateThread();
-          else
-            StartPrivateStateThread();
-
-          // Target was stopped at entry as was intended. Need to notify the
-          // listeners about it.
-          if (state == eStateStopped &&
-              launch_info.GetFlags().Test(eLaunchFlagStopAtEntry))
-            HandlePrivateEvent(event_sp);
-        } else if (state == eStateExited) {
-          // We exited while trying to launch somehow.  Don't call DidLaunch
-          // as that's not likely to work, and return an invalid pid.
+        // Target was stopped at entry as was intended. Need to notify the
+        // listeners about it.
+        if (state == eStateStopped &&
+            launch_info.GetFlags().Test(eLaunchFlagStopAtEntry))
           HandlePrivateEvent(event_sp);
-        }
+      } else if (state == eStateExited) {
+        // We exited while trying to launch somehow.  Don't call DidLaunch
+        // as that's not likely to work, and return an invalid pid.
+        HandlePrivateEvent(event_sp);
       }
     }
   } else {
+    std::string local_exec_file_path = exe_spec_to_use.GetPath();
     error.SetErrorStringWithFormat("file doesn't exist: '%s'",
-                                   local_exec_file_path);
+                                   local_exec_file_path.c_str());
   }
 
   return error;
@@ -2656,7 +2614,7 @@ Status Process::LoadCore() {
 
 DynamicLoader *Process::GetDynamicLoader() {
   if (!m_dyld_up)
-    m_dyld_up.reset(DynamicLoader::FindPlugin(this, nullptr));
+    m_dyld_up.reset(DynamicLoader::FindPlugin(this, ""));
   return m_dyld_up.get();
 }
 
@@ -4463,7 +4421,7 @@ public:
 protected:
   Process *m_process;
   NativeFile m_read_file;  // Read from this file (usually actual STDIN for LLDB
-  NativeFile m_write_file; // Write to this file (usually the master pty for
+  NativeFile m_write_file; // Write to this file (usually the primary pty for
                            // getting io to debuggee)
   Pipe m_pipe;
   std::atomic<bool> m_is_running{false};
@@ -4524,7 +4482,8 @@ void Process::SettingsInitialize() { Thread::SettingsInitialize(); }
 void Process::SettingsTerminate() { Thread::SettingsTerminate(); }
 
 namespace {
-// RestorePlanState is used to record the "is private", "is master" and "okay
+// RestorePlanState is used to record the "is private", "is controlling" and
+// "okay
 // to discard" fields of the plan we are running, and reset it on Clean or on
 // destruction. It will only reset the state once, so you can call Clean and
 // then monkey with the state and it won't get reset on you again.
@@ -4535,7 +4494,7 @@ public:
       : m_thread_plan_sp(thread_plan_sp), m_already_reset(false) {
     if (m_thread_plan_sp) {
       m_private = m_thread_plan_sp->GetPrivate();
-      m_is_master = m_thread_plan_sp->IsMasterPlan();
+      m_is_controlling = m_thread_plan_sp->IsControllingPlan();
       m_okay_to_discard = m_thread_plan_sp->OkayToDiscard();
     }
   }
@@ -4546,7 +4505,7 @@ public:
     if (!m_already_reset && m_thread_plan_sp) {
       m_already_reset = true;
       m_thread_plan_sp->SetPrivate(m_private);
-      m_thread_plan_sp->SetIsMasterPlan(m_is_master);
+      m_thread_plan_sp->SetIsControllingPlan(m_is_controlling);
       m_thread_plan_sp->SetOkayToDiscard(m_okay_to_discard);
     }
   }
@@ -4555,7 +4514,7 @@ private:
   lldb::ThreadPlanSP m_thread_plan_sp;
   bool m_already_reset;
   bool m_private;
-  bool m_is_master;
+  bool m_is_controlling;
   bool m_okay_to_discard;
 };
 } // anonymous namespace
@@ -4706,11 +4665,11 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
 
   thread_plan_sp->SetPrivate(false);
 
-  // The plans run with RunThreadPlan also need to be terminal master plans or
-  // when they are done we will end up asking the plan above us whether we
+  // The plans run with RunThreadPlan also need to be terminal controlling plans
+  // or when they are done we will end up asking the plan above us whether we
   // should stop, which may give the wrong answer.
 
-  thread_plan_sp->SetIsMasterPlan(true);
+  thread_plan_sp->SetIsControllingPlan(true);
   thread_plan_sp->SetOkayToDiscard(false);
 
   // If we are running some utility expression for LLDB, we now have to mark

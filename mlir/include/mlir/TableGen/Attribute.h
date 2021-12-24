@@ -21,7 +21,7 @@
 namespace llvm {
 class DefInit;
 class Record;
-} // end namespace llvm
+} // namespace llvm
 
 namespace mlir {
 namespace tblgen {
@@ -32,7 +32,7 @@ class Type;
 // in TableGen.
 class AttrConstraint : public Constraint {
 public:
-  explicit AttrConstraint(const llvm::Record *record);
+  using Constraint::Constraint;
 
   static bool classof(const Constraint *c) { return c->getKind() == CK_Attr; }
 
@@ -241,7 +241,7 @@ public:
 // Name of infer type op interface.
 extern const char *inferTypeOpInterface;
 
-} // end namespace tblgen
-} // end namespace mlir
+} // namespace tblgen
+} // namespace mlir
 
 #endif // MLIR_TABLEGEN_ATTRIBUTE_H_

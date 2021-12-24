@@ -1,5 +1,5 @@
-; RUN: llc -O2 < %s | FileCheck %s
-; RUN: llc -O2 -regalloc=basic < %s | FileCheck %s
+; RUN: llc -O2 < %s -experimental-debug-variable-locations=true | FileCheck %s
+; RUN: llc -O2 -regalloc=basic < %s -experimental-debug-variable-locations=true | FileCheck %s
 source_filename = "test/CodeGen/X86/2010-05-26-DotDebugLoc.ll"
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 target triple = "x86_64-apple-darwin10"
@@ -56,9 +56,10 @@ attributes #1 = { nounwind readnone }
 !22 = distinct !DILexicalBlock(scope: !8, file: !1, line: 17)
 !23 = !DILocation(line: 19, scope: !22)
 
-; The variable bar:myvar changes registers after the first movq.
-; It is cobbered by popq %rbx
+; The variable bar:myvar changes registers after $rdi is clobbered by a memory
+; movl. It is later clobbered by popq %rbx.
 ; CHECK: movq
+; CHECK: movl
 ; CHECK-NEXT: [[LABEL:Ltmp[0-9]*]]
 ; CHECK: .loc	1 19 0
 ; CHECK: popq

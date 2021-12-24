@@ -11,6 +11,43 @@ Overview
 For an overview of the new pass manager, see the `blog post
 <https://blog.llvm.org/posts/2021-03-26-the-new-pass-manager/>`_.
 
+Just Tell Me How To Run The Default Optimization Pipeline With The New Pass Manager
+===================================================================================
+
+.. code-block:: c++
+
+  // Create the analysis managers.
+  LoopAnalysisManager LAM;
+  FunctionAnalysisManager FAM;
+  CGSCCAnalysisManager CGAM;
+  ModuleAnalysisManager MAM;
+
+  // Create the new pass manager builder.
+  // Take a look at the PassBuilder constructor parameters for more
+  // customization, e.g. specifying a TargetMachine or various debugging
+  // options.
+  PassBuilder PB;
+
+  // Make sure to use the default alias analysis pipeline, otherwise we'll end
+  // up only using a subset of the available analyses.
+  FAM.registerPass([&] { return PB.buildDefaultAAPipeline(); });
+
+  // Register all the basic analyses with the managers.
+  PB.registerModuleAnalyses(MAM);
+  PB.registerCGSCCAnalyses(CGAM);
+  PB.registerFunctionAnalyses(FAM);
+  PB.registerLoopAnalyses(LAM);
+  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+
+  // Create the pass manager.
+  // This one corresponds to a typical -O2 optimization pipeline.
+  ModulePassManager MPM = PB.buildPerModuleDefaultPipeline(OptimizationLevel::O2);
+
+  // Optimize the IR!
+  MPM.run(MyModule, MAM);
+
+The C API also supports most of this, see ``llvm-c/Transforms/PassBuilder.h``.
+
 Adding Passes to a Pass Manager
 ===============================
 
@@ -26,7 +63,7 @@ can only contain function passes:
   // InstSimplifyPass is a function pass
   FPM.addPass(InstSimplifyPass());
 
-If you want add a loop pass that runs on all loops in a function to a
+If you want to add a loop pass that runs on all loops in a function to a
 ``FunctionPassManager``, the loop pass must be wrapped in a function pass
 adaptor that goes through all the loops in the function and runs the loop
 pass on each one.
@@ -250,7 +287,7 @@ proper analyses invalidated.
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
   return PA;
-  
+
 The pass manager will call the analysis manager's ``invalidate()`` method
 with the pass's returned ``PreservedAnalyses``. This can be also done
 manually within the pass:

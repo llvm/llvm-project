@@ -2138,9 +2138,8 @@ bool PPCInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
 }
 
 static bool MBBDefinesCTR(MachineBasicBlock &MBB) {
-  for (MachineBasicBlock::iterator I = MBB.begin(), IE = MBB.end();
-       I != IE; ++I)
-    if (I->definesRegister(PPC::CTR) || I->definesRegister(PPC::CTR8))
+  for (MachineInstr &MI : MBB)
+    if (MI.definesRegister(PPC::CTR) || MI.definesRegister(PPC::CTR8))
       return true;
   return false;
 }
@@ -2246,11 +2245,13 @@ bool PPCInstrInfo::PredicateInstruction(MachineInstr &MI,
 
     return true;
   } else if (OpC == PPC::BCTR || OpC == PPC::BCTR8 || OpC == PPC::BCTRL ||
-             OpC == PPC::BCTRL8) {
+             OpC == PPC::BCTRL8 || OpC == PPC::BCTRL_RM ||
+             OpC == PPC::BCTRL8_RM) {
     if (Pred[1].getReg() == PPC::CTR8 || Pred[1].getReg() == PPC::CTR)
       llvm_unreachable("Cannot predicate bctr[l] on the ctr register");
 
-    bool setLR = OpC == PPC::BCTRL || OpC == PPC::BCTRL8;
+    bool setLR = OpC == PPC::BCTRL || OpC == PPC::BCTRL8 ||
+                 OpC == PPC::BCTRL_RM || OpC == PPC::BCTRL8_RM;
     bool isPPC64 = Subtarget.isPPC64();
 
     if (Pred[0].getImm() == PPC::PRED_BIT_SET) {
@@ -2274,6 +2275,9 @@ bool PPCInstrInfo::PredicateInstruction(MachineInstr &MI,
       MachineInstrBuilder(*MI.getParent()->getParent(), MI)
           .addReg(isPPC64 ? PPC::LR8 : PPC::LR, RegState::Implicit)
           .addReg(isPPC64 ? PPC::LR8 : PPC::LR, RegState::ImplicitDefine);
+    if (OpC == PPC::BCTRL_RM || OpC == PPC::BCTRL8_RM)
+      MachineInstrBuilder(*MI.getParent()->getParent(), MI)
+          .addReg(PPC::RM, RegState::ImplicitDefine);
 
     return true;
   }
@@ -2326,8 +2330,7 @@ bool PPCInstrInfo::ClobbersPredicate(MachineInstr &MI,
       &PPC::CTRRCRegClass, &PPC::CTRRC8RegClass };
 
   bool Found = false;
-  for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-    const MachineOperand &MO = MI.getOperand(i);
+  for (const MachineOperand &MO : MI.operands()) {
     for (unsigned c = 0; c < array_lengthof(RCs) && !Found; ++c) {
       const TargetRegisterClass *RC = RCs[c];
       if (MO.isReg()) {

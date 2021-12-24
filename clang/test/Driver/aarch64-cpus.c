@@ -192,6 +192,9 @@
 // RUN: %clang -target aarch64 -mcpu=neoverse-n2 -### -c %s 2>&1 | FileCheck -check-prefix=NEOVERSE-N2 %s
 // NEOVERSE-N2: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "neoverse-n2"
 
+// RUN: %clang -target aarch64 -mcpu=neoverse-512tvb -### -c %s 2>&1 | FileCheck -check-prefix=NEOVERSE-512TVB %s
+// NEOVERSE-512TVB: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "neoverse-512tvb"
+
 // RUN: %clang -target aarch64 -mcpu=cortex-r82  -### -c %s 2>&1 | FileCheck -check-prefix=CORTEXR82 %s
 // CORTEXR82: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "cortex-r82"
 
@@ -401,6 +404,24 @@
 // RUN: %clang -target aarch64 -mcpu=cortex-a510+crypto -### -c %s 2>&1 | FileCheck -check-prefix=CORTEX-A510-CRYPTO %s
 // CORTEX-A510-CRYPTO: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-feature" "+sm4" "-target-feature" "+sha3" "-target-feature" "+sha2" "-target-feature" "+aes"
 
+// RUN: %clang -target aarch64 -mcpu=cortex-x2 -### -c %s 2>&1 | FileCheck -check-prefix=CORTEX-X2 %s
+// CORTEX-X2: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "cortex-x2"
+// CORTEX-X2-NOT: "-target-feature" "{{[+-]}}sm4"
+// CORTEX-X2-NOT: "-target-feature" "{{[+-]}}sha3"
+// CORTEX-X2-NOT: "-target-feature" "{{[+-]}}aes"
+// CORTEX-X2-SAME: {{$}}
+// RUN: %clang -target aarch64 -mcpu=cortex-x2+crypto -### -c %s 2>&1 | FileCheck -check-prefix=CORTEX-X2-CRYPTO %s
+// CORTEX-X2-CRYPTO: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-feature" "+sm4" "-target-feature" "+sha3" "-target-feature" "+sha2" "-target-feature" "+aes"
+
+// RUN: %clang -target aarch64 -mcpu=cortex-a710 -### -c %s 2>&1 | FileCheck -check-prefix=CORTEX-A710 %s
+// CORTEX-A710: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "cortex-a710"
+// CORTEX-A710-NOT: "-target-feature" "{{[+-]}}sm4"
+// CORTEX-A710-NOT: "-target-feature" "{{[+-]}}sha3"
+// CORTEX-A710-NOT: "-target-feature" "{{[+-]}}aes"
+// CORTEX-A710-SAME: {{$}}
+// RUN: %clang -target aarch64 -mcpu=cortex-a710+crypto -### -c %s 2>&1 | FileCheck -check-prefix=CORTEX-A710-CRYPTO %s
+// CORTEX-A710-CRYPTO: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-feature" "+sm4" "-target-feature" "+sha3" "-target-feature" "+sha2" "-target-feature" "+aes"
+
 // RUN: %clang -target aarch64_be -mcpu=cortex-a57 -### -c %s 2>&1 | FileCheck -check-prefix=CA57-BE %s
 // RUN: %clang -target aarch64 -mbig-endian -mcpu=cortex-a57 -### -c %s 2>&1 | FileCheck -check-prefix=CA57-BE %s
 // RUN: %clang -target aarch64_be -mbig-endian -mcpu=cortex-a57 -### -c %s 2>&1 | FileCheck -check-prefix=CA57-BE %s
@@ -489,6 +510,13 @@
 // MCPU-MTUNE-A73: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "cortex-a73"
 // MCPU-MTUNE-THUNDERX2T99: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "thunderx2t99"
 // MCPU-MTUNE-THUNDERX3T110: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "thunderx3t110"
+
+// RUN: %clang -target aarch64 -### -c %s 2>&1 | FileCheck -check-prefix=GENERIC-V8A %s
+// RUN: %clang -target aarch64 -march=armv8-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERIC-V8A %s
+// GENERIC-V8A: "-cc1"{{.*}} "-triple" "aarch64{{(--)?}}"{{.*}} "-target-cpu" "generic" "-target-feature" "+neon" "-target-feature" "+v8a"
+
+// RUN: %clang -target aarch64 -march=armv8-r -### -c %s 2>&1 | FileCheck -check-prefix=GENERIC-V8R %s
+// GENERIC-V8R: "-cc1"{{.*}} "-triple" "aarch64{{(--)?}}"{{.*}} "-target-cpu" "generic" "-target-feature" "+neon" "-target-feature" "+v8r"
 
 // RUN: %clang -target aarch64 -march=armv8.1a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV81A %s
 // RUN: %clang -target aarch64 -march=armv8.1-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV81A %s
@@ -781,7 +809,7 @@
 // RUN: %clang -target aarch64 -mlittle-endian -march=armv9-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV9A %s
 // RUN: %clang -target aarch64_be -mlittle-endian -march=armv9a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV9A %s
 // RUN: %clang -target aarch64_be -mlittle-endian -march=armv9-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV9A %s
-// GENERICV9A: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+neon" "-target-feature" "+v9a" "-target-feature" "+sve2"
+// GENERICV9A: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+neon" "-target-feature" "+v9a" "-target-feature" "+sve" "-target-feature" "+sve2"
 
 // SVE2 is enabled by default on Armv9-A but it can be disabled
 // RUN: %clang -target aarch64 -march=armv9a+nosve2 -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV9A-NOSVE2 %s
@@ -790,7 +818,7 @@
 // RUN: %clang -target aarch64 -mlittle-endian -march=armv9-a+nosve2 -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV9A-NOSVE2 %s
 // RUN: %clang -target aarch64_be -mlittle-endian -march=armv9a+nosve2 -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV9A-NOSVE2 %s
 // RUN: %clang -target aarch64_be -mlittle-endian -march=armv9-a+nosve2 -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV9A-NOSVE2 %s
-// GENERICV9A-NOSVE2: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+neon" "-target-feature" "+v9a" "-target-feature" "-sve2"
+// GENERICV9A-NOSVE2: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+neon" "-target-feature" "+v9a" "-target-feature" "+sve" "-target-feature" "-sve2"
 
 // RUN: %clang -target aarch64_be -march=armv9a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV9A-BE %s
 // RUN: %clang -target aarch64_be -march=armv9-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV9A-BE %s
@@ -798,7 +826,7 @@
 // RUN: %clang -target aarch64 -mbig-endian -march=armv9-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV9A-BE %s
 // RUN: %clang -target aarch64_be -mbig-endian -march=armv9a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV9A-BE %s
 // RUN: %clang -target aarch64_be -mbig-endian -march=armv9-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV9A-BE %s
-// GENERICV9A-BE: "-cc1"{{.*}} "-triple" "aarch64_be{{.*}}" "-target-cpu" "generic" "-target-feature" "+neon" "-target-feature" "+v9a" "-target-feature" "+sve2"
+// GENERICV9A-BE: "-cc1"{{.*}} "-triple" "aarch64_be{{.*}}" "-target-cpu" "generic" "-target-feature" "+neon" "-target-feature" "+v9a" "-target-feature" "+sve" "-target-feature" "+sve2"
 
 // RUN: %clang -target aarch64 -march=armv9.1a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV91A %s
 // RUN: %clang -target aarch64 -march=armv9.1-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV91A %s
@@ -806,7 +834,7 @@
 // RUN: %clang -target aarch64 -mlittle-endian -march=armv9.1-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV91A %s
 // RUN: %clang -target aarch64_be -mlittle-endian -march=armv9.1a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV91A %s
 // RUN: %clang -target aarch64_be -mlittle-endian -march=armv9.1-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV91A %s
-// GENERICV91A: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+neon" "-target-feature" "+v9.1a" "-target-feature" "+sve2"
+// GENERICV91A: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+neon" "-target-feature" "+v9.1a" "-target-feature" "+i8mm" "-target-feature" "+bf16" "-target-feature" "+sve" "-target-feature" "+sve2"
 
 // RUN: %clang -target aarch64_be -march=armv9.1a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV91A-BE %s
 // RUN: %clang -target aarch64_be -march=armv9.1-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV91A-BE %s
@@ -814,7 +842,7 @@
 // RUN: %clang -target aarch64 -mbig-endian -march=armv9.1-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV91A-BE %s
 // RUN: %clang -target aarch64_be -mbig-endian -march=armv9.1a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV91A-BE %s
 // RUN: %clang -target aarch64_be -mbig-endian -march=armv9.1-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV91A-BE %s
-// GENERICV91A-BE: "-cc1"{{.*}} "-triple" "aarch64_be{{.*}}" "-target-cpu" "generic" "-target-feature" "+neon" "-target-feature" "+v9.1a" "-target-feature" "+sve2"
+// GENERICV91A-BE: "-cc1"{{.*}} "-triple" "aarch64_be{{.*}}" "-target-cpu" "generic" "-target-feature" "+neon" "-target-feature" "+v9.1a" "-target-feature" "+i8mm" "-target-feature" "+bf16" "-target-feature" "+sve" "-target-feature" "+sve2"
 
 // RUN: %clang -target aarch64 -march=armv9.2a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV92A %s
 // RUN: %clang -target aarch64 -march=armv9.2-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV92A %s
@@ -822,7 +850,7 @@
 // RUN: %clang -target aarch64 -mlittle-endian -march=armv9.2-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV92A %s
 // RUN: %clang -target aarch64_be -mlittle-endian -march=armv9.2a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV92A %s
 // RUN: %clang -target aarch64_be -mlittle-endian -march=armv9.2-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV92A %s
-// GENERICV92A: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+neon" "-target-feature" "+v9.2a" "-target-feature" "+sve2"
+// GENERICV92A: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+neon" "-target-feature" "+v9.2a" "-target-feature" "+i8mm" "-target-feature" "+bf16" "-target-feature" "+sve" "-target-feature" "+sve2"
 
 // RUN: %clang -target aarch64_be -march=armv9.2a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV92A-BE %s
 // RUN: %clang -target aarch64_be -march=armv9.2-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV92A-BE %s
@@ -830,7 +858,7 @@
 // RUN: %clang -target aarch64 -mbig-endian -march=armv9.2-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV92A-BE %s
 // RUN: %clang -target aarch64_be -mbig-endian -march=armv9.2a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV92A-BE %s
 // RUN: %clang -target aarch64_be -mbig-endian -march=armv9.2-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV92A-BE %s
-// GENERICV92A-BE: "-cc1"{{.*}} "-triple" "aarch64_be{{.*}}" "-target-cpu" "generic" "-target-feature" "+neon" "-target-feature" "+v9.2a" "-target-feature" "+sve2"
+// GENERICV92A-BE: "-cc1"{{.*}} "-triple" "aarch64_be{{.*}}" "-target-cpu" "generic" "-target-feature" "+neon" "-target-feature" "+v9.2a" "-target-feature" "+i8mm" "-target-feature" "+bf16" "-target-feature" "+sve" "-target-feature" "+sve2"
 
 // fullfp16 is off by default for v8a, feature must not be mentioned
 // RUN: %clang -target aarch64 -march=armv8a  -### -c %s 2>&1 | FileCheck -check-prefix=V82ANOFP16 -check-prefix=GENERIC %s

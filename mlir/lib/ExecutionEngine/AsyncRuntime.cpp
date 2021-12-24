@@ -289,7 +289,7 @@ extern "C" int64_t mlirAsyncRuntimeAddTokenToGroup(AsyncToken *token,
     // then, and re-ackquire the lock.
     group->addRef();
 
-    token->awaiters.push_back([group, onTokenReady]() {
+    token->awaiters.emplace_back([group, onTokenReady]() {
       // Make sure that `dropRef` does not destroy the mutex owned by the lock.
       {
         std::unique_lock<std::mutex> lockGroup(group->mu);
@@ -408,7 +408,7 @@ extern "C" void mlirAsyncRuntimeAwaitTokenAndExecute(AsyncToken *token,
     lock.unlock();
     execute();
   } else {
-    token->awaiters.push_back([execute]() { execute(); });
+    token->awaiters.emplace_back([execute]() { execute(); });
   }
 }
 
@@ -421,7 +421,7 @@ extern "C" void mlirAsyncRuntimeAwaitValueAndExecute(AsyncValue *value,
     lock.unlock();
     execute();
   } else {
-    value->awaiters.push_back([execute]() { execute(); });
+    value->awaiters.emplace_back([execute]() { execute(); });
   }
 }
 
@@ -434,7 +434,7 @@ extern "C" void mlirAsyncRuntimeAwaitAllInGroupAndExecute(AsyncGroup *group,
     lock.unlock();
     execute();
   } else {
-    group->awaiters.push_back([execute]() { execute(); });
+    group->awaiters.emplace_back([execute]() { execute(); });
   }
 }
 
@@ -463,8 +463,10 @@ extern "C" void mlirAsyncRuntimePrintCurrentThreadId() {
 //   https://developercommunity.visualstudio.com/content/problem/475494/clexe-error-with-lambda-inside-function-templates.html
 // The bug is fixed in VS2019 16.1. Separating the declaration and definition is
 // a work around for older versions of Visual Studio.
+// NOLINTNEXTLINE(*-identifier-naming): externally called.
 extern "C" API void __mlir_runner_init(llvm::StringMap<void *> &exportSymbols);
 
+// NOLINTNEXTLINE(*-identifier-naming): externally called.
 void __mlir_runner_init(llvm::StringMap<void *> &exportSymbols) {
   auto exportSymbol = [&](llvm::StringRef name, auto ptr) {
     assert(exportSymbols.count(name) == 0 && "symbol already exists");
@@ -517,6 +519,7 @@ void __mlir_runner_init(llvm::StringMap<void *> &exportSymbols) {
                &mlir::runtime::mlirAsyncRuntimePrintCurrentThreadId);
 }
 
+// NOLINTNEXTLINE(*-identifier-naming): externally called.
 extern "C" API void __mlir_runner_destroy() { resetDefaultAsyncRuntime(); }
 
 } // namespace runtime

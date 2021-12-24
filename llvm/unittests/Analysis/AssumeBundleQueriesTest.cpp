@@ -518,8 +518,7 @@ TEST(AssumeQueryAPI, AssumptionCache) {
   BasicBlock::iterator First = F->begin()->begin();
   BasicBlock::iterator Second = F->begin()->begin();
   Second++;
-  AssumptionCacheTracker ACT;
-  AssumptionCache &AC = ACT.getAssumptionCache(*F);
+  AssumptionCache AC(*F);
   auto AR = AC.assumptionsFor(F->getArg(3));
   ASSERT_EQ(AR.size(), 0u);
   AR = AC.assumptionsFor(F->getArg(1));

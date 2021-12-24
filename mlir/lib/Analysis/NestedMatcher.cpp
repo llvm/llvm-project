@@ -171,5 +171,5 @@ bool isLoadOrStore(Operation &op) {
   return isa<AffineLoadOp, AffineStoreOp>(op);
 }
 
-} // end namespace matcher
-} // end namespace mlir
+} // namespace matcher
+} // namespace mlir

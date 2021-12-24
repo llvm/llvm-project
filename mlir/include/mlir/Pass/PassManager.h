@@ -23,23 +23,23 @@
 
 namespace llvm {
 class Any;
-} // end namespace llvm
+} // namespace llvm
 
 namespace mlir {
 class AnalysisManager;
-class Identifier;
 class MLIRContext;
 class Operation;
 class Pass;
 class PassInstrumentation;
 class PassInstrumentor;
+class StringAttr;
 
 namespace detail {
 struct OpPassManagerImpl;
 class OpToOpPassAdaptor;
 class PassCrashReproducerGenerator;
 struct PassExecutionState;
-} // end namespace detail
+} // namespace detail
 
 //===----------------------------------------------------------------------===//
 // OpPassManager
@@ -51,7 +51,7 @@ struct PassExecutionState;
 class OpPassManager {
 public:
   enum class Nesting { Implicit, Explicit };
-  OpPassManager(Identifier name, Nesting nesting = Nesting::Explicit);
+  OpPassManager(StringAttr name, Nesting nesting = Nesting::Explicit);
   OpPassManager(StringRef name, Nesting nesting = Nesting::Explicit);
   OpPassManager(OpPassManager &&rhs);
   OpPassManager(const OpPassManager &rhs);
@@ -75,7 +75,7 @@ public:
 
   /// Nest a new operation pass manager for the given operation kind under this
   /// pass manager.
-  OpPassManager &nest(Identifier nestedName);
+  OpPassManager &nest(StringAttr nestedName);
   OpPassManager &nest(StringRef nestedName);
   template <typename OpT> OpPassManager &nest() {
     return nest(OpT::getOperationName());
@@ -84,6 +84,9 @@ public:
   /// Add the given pass to this pass manager. If this pass has a concrete
   /// operation type, it must be the same type as this pass manager.
   void addPass(std::unique_ptr<Pass> pass);
+
+  /// Clear the pipeline, but not the other options set on this OpPassManager.
+  void clear();
 
   /// Add the given pass to a nested pass manager for the given operation kind
   /// `OpT`.
@@ -95,7 +98,7 @@ public:
   size_t size() const;
 
   /// Return the operation name that this pass manager operates on.
-  Identifier getOpName(MLIRContext &context) const;
+  StringAttr getOpName(MLIRContext &context) const;
 
   /// Return the operation name that this pass manager operates on.
   StringRef getOpName() const;
@@ -418,6 +421,6 @@ void applyPassManagerCLOptions(PassManager &pm);
 /// to the pass manager.
 void applyDefaultTimingPassManagerCLOptions(PassManager &pm);
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_PASS_PASSMANAGER_H

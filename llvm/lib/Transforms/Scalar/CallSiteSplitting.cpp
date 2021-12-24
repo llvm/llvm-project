@@ -467,7 +467,7 @@ static PredsWithCondsTy shouldSplitOnPredicatedArgument(CallBase &CB,
   BasicBlock *StopAt = CSDTNode ? CSDTNode->getIDom()->getBlock() : nullptr;
 
   SmallVector<std::pair<BasicBlock *, ConditionsTy>, 2> PredsCS;
-  for (auto *Pred : make_range(Preds.rbegin(), Preds.rend())) {
+  for (auto *Pred : llvm::reverse(Preds)) {
     ConditionsTy Conditions;
     // Record condition on edge BB(CS) <- Pred
     recordCondition(CB, Pred, CB.getParent(), Conditions);

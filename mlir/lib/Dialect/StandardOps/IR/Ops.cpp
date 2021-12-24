@@ -94,33 +94,11 @@ struct StdInlinerInterface : public DialectInlinerInterface {
       valuesToRepl[it.index()].replaceAllUsesWith(it.value());
   }
 };
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // StandardOpsDialect
 //===----------------------------------------------------------------------===//
-
-/// A custom binary operation printer that omits the "std." prefix from the
-/// operation names.
-static void printStandardBinaryOp(Operation *op, OpAsmPrinter &p) {
-  assert(op->getNumOperands() == 2 && "binary op should have two operands");
-  assert(op->getNumResults() == 1 && "binary op should have one result");
-
-  // If not all the operand and result types are the same, just use the
-  // generic assembly form to avoid omitting information in printing.
-  auto resultType = op->getResult(0).getType();
-  if (op->getOperand(0).getType() != resultType ||
-      op->getOperand(1).getType() != resultType) {
-    p.printGenericOp(op);
-    return;
-  }
-
-  p << ' ' << op->getOperand(0) << ", " << op->getOperand(1);
-  p.printOptionalAttrDict(op->getAttrs());
-
-  // Now we can output only one type for all operands and the result.
-  p << " : " << op->getResult(0).getType();
-}
 
 void StandardOpsDialect::initialize() {
   addOperations<
@@ -146,7 +124,7 @@ Operation *StandardOpsDialect::materializeConstant(OpBuilder &builder,
 
 LogicalResult AssertOp::canonicalize(AssertOp op, PatternRewriter &rewriter) {
   // Erase assertion if argument is constant true.
-  if (matchPattern(op.arg(), m_One())) {
+  if (matchPattern(op.getArg(), m_One())) {
     rewriter.eraseOp(op);
     return success();
   }
@@ -161,14 +139,14 @@ static LogicalResult verify(AtomicRMWOp op) {
   if (op.getMemRefType().getRank() != op.getNumOperands() - 2)
     return op.emitOpError(
         "expects the number of subscripts to be equal to memref rank");
-  switch (op.kind()) {
+  switch (op.getKind()) {
   case AtomicRMWKind::addf:
   case AtomicRMWKind::maxf:
   case AtomicRMWKind::minf:
   case AtomicRMWKind::mulf:
-    if (!op.value().getType().isa<FloatType>())
+    if (!op.getValue().getType().isa<FloatType>())
       return op.emitOpError()
-             << "with kind '" << stringifyAtomicRMWKind(op.kind())
+             << "with kind '" << stringifyAtomicRMWKind(op.getKind())
              << "' expects a floating-point type";
     break;
   case AtomicRMWKind::addi:
@@ -177,9 +155,9 @@ static LogicalResult verify(AtomicRMWOp op) {
   case AtomicRMWKind::mins:
   case AtomicRMWKind::minu:
   case AtomicRMWKind::muli:
-    if (!op.value().getType().isa<IntegerType>())
+    if (!op.getValue().getType().isa<IntegerType>())
       return op.emitOpError()
-             << "with kind '" << stringifyAtomicRMWKind(op.kind())
+             << "with kind '" << stringifyAtomicRMWKind(op.getKind())
              << "' expects an integer type";
     break;
   default:
@@ -251,35 +229,17 @@ Value mlir::getReductionOp(AtomicRMWKind op, OpBuilder &builder, Location loc,
   case AtomicRMWKind::muli:
     return builder.create<arith::MulIOp>(loc, lhs, rhs);
   case AtomicRMWKind::maxf:
-    return builder.create<SelectOp>(
-        loc,
-        builder.create<arith::CmpFOp>(loc, arith::CmpFPredicate::OGT, lhs, rhs),
-        lhs, rhs);
+    return builder.create<arith::MaxFOp>(loc, lhs, rhs);
   case AtomicRMWKind::minf:
-    return builder.create<SelectOp>(
-        loc,
-        builder.create<arith::CmpFOp>(loc, arith::CmpFPredicate::OLT, lhs, rhs),
-        lhs, rhs);
+    return builder.create<arith::MinFOp>(loc, lhs, rhs);
   case AtomicRMWKind::maxs:
-    return builder.create<SelectOp>(
-        loc,
-        builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::sgt, lhs, rhs),
-        lhs, rhs);
+    return builder.create<arith::MaxSIOp>(loc, lhs, rhs);
   case AtomicRMWKind::mins:
-    return builder.create<SelectOp>(
-        loc,
-        builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt, lhs, rhs),
-        lhs, rhs);
+    return builder.create<arith::MinSIOp>(loc, lhs, rhs);
   case AtomicRMWKind::maxu:
-    return builder.create<SelectOp>(
-        loc,
-        builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ugt, lhs, rhs),
-        lhs, rhs);
+    return builder.create<arith::MaxUIOp>(loc, lhs, rhs);
   case AtomicRMWKind::minu:
-    return builder.create<SelectOp>(
-        loc,
-        builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult, lhs, rhs),
-        lhs, rhs);
+    return builder.create<arith::MinUIOp>(loc, lhs, rhs);
   // TODO: Add remaining reduction operations.
   default:
     (void)emitOptionalError(loc, "Reduction operation type not supported");
@@ -308,7 +268,7 @@ void GenericAtomicRMWOp::build(OpBuilder &builder, OperationState &result,
 }
 
 static LogicalResult verify(GenericAtomicRMWOp op) {
-  auto &body = op.body();
+  auto &body = op.getRegion();
   if (body.getNumArguments() != 1)
     return op.emitOpError("expected single number of entry block arguments");
 
@@ -351,9 +311,9 @@ static ParseResult parseGenericAtomicRMWOp(OpAsmParser &parser,
 }
 
 static void print(OpAsmPrinter &p, GenericAtomicRMWOp op) {
-  p << ' ' << op.memref() << "[" << op.indices()
-    << "] : " << op.memref().getType();
-  p.printRegion(op.body());
+  p << ' ' << op.getMemref() << "[" << op.getIndices()
+    << "] : " << op.getMemref().getType();
+  p.printRegion(op.getRegion());
   p.printOptionalAttrDict(op->getAttrs());
 }
 
@@ -363,7 +323,7 @@ static void print(OpAsmPrinter &p, GenericAtomicRMWOp op) {
 
 static LogicalResult verify(AtomicYieldOp op) {
   Type parentType = op->getParentOp()->getResultTypes().front();
-  Type resultType = op.result().getType();
+  Type resultType = op.getResult().getType();
   if (parentType != resultType)
     return op.emitOpError() << "types mismatch between yield op: " << resultType
                             << " and its parent: " << parentType;
@@ -467,8 +427,6 @@ LogicalResult BranchOp::canonicalize(BranchOp op, PatternRewriter &rewriter) {
                  succeeded(simplifyPassThroughBr(op, rewriter)));
 }
 
-Block *BranchOp::getDest() { return getSuccessor(); }
-
 void BranchOp::setDest(Block *block) { return setSuccessor(block); }
 
 void BranchOp::eraseOperand(unsigned index) { (*this)->eraseOperand(index); }
@@ -476,10 +434,12 @@ void BranchOp::eraseOperand(unsigned index) { (*this)->eraseOperand(index); }
 Optional<MutableOperandRange>
 BranchOp::getMutableSuccessorOperands(unsigned index) {
   assert(index == 0 && "invalid successor index");
-  return destOperandsMutable();
+  return getDestOperandsMutable();
 }
 
-Block *BranchOp::getSuccessorForOperands(ArrayRef<Attribute>) { return dest(); }
+Block *BranchOp::getSuccessorForOperands(ArrayRef<Attribute>) {
+  return getDest();
+}
 
 //===----------------------------------------------------------------------===//
 // CallOp
@@ -555,7 +515,8 @@ static Type getI1SameShape(Type type) {
   if (type.isa<UnrankedTensorType>())
     return UnrankedTensorType::get(i1Type);
   if (auto vectorType = type.dyn_cast<VectorType>())
-    return VectorType::get(vectorType.getShape(), i1Type);
+    return VectorType::get(vectorType.getShape(), i1Type,
+                           vectorType.getNumScalableDims());
   return i1Type;
 }
 
@@ -579,7 +540,8 @@ struct SimplifyConstCondBranchPred : public OpRewritePattern<CondBranchOp> {
       rewriter.replaceOpWithNewOp<BranchOp>(condbr, condbr.getTrueDest(),
                                             condbr.getTrueOperands());
       return success();
-    } else if (matchPattern(condbr.getCondition(), m_Zero())) {
+    }
+    if (matchPattern(condbr.getCondition(), m_Zero())) {
       // False branch taken.
       rewriter.replaceOpWithNewOp<BranchOp>(condbr, condbr.getFalseDest(),
                                             condbr.getFalseOperands());
@@ -602,7 +564,7 @@ struct SimplifyPassThroughCondBranch : public OpRewritePattern<CondBranchOp> {
 
   LogicalResult matchAndRewrite(CondBranchOp condbr,
                                 PatternRewriter &rewriter) const override {
-    Block *trueDest = condbr.trueDest(), *falseDest = condbr.falseDest();
+    Block *trueDest = condbr.getTrueDest(), *falseDest = condbr.getFalseDest();
     ValueRange trueDestOperands = condbr.getTrueOperands();
     ValueRange falseDestOperands = condbr.getFalseOperands();
     SmallVector<Value, 4> trueDestOperandStorage, falseDestOperandStorage;
@@ -638,8 +600,8 @@ struct SimplifyCondBranchIdenticalSuccessors
                                 PatternRewriter &rewriter) const override {
     // Check that the true and false destinations are the same and have the same
     // operands.
-    Block *trueDest = condbr.trueDest();
-    if (trueDest != condbr.falseDest())
+    Block *trueDest = condbr.getTrueDest();
+    if (trueDest != condbr.getFalseDest())
       return failure();
 
     // If all of the operands match, no selects need to be generated.
@@ -707,12 +669,12 @@ struct SimplifyCondBranchFromCondBranchOnSameCondition
       return failure();
 
     // Fold this branch to an unconditional branch.
-    if (currentBlock == predBranch.trueDest())
-      rewriter.replaceOpWithNewOp<BranchOp>(condbr, condbr.trueDest(),
-                                            condbr.trueDestOperands());
+    if (currentBlock == predBranch.getTrueDest())
+      rewriter.replaceOpWithNewOp<BranchOp>(condbr, condbr.getTrueDest(),
+                                            condbr.getTrueDestOperands());
     else
-      rewriter.replaceOpWithNewOp<BranchOp>(condbr, condbr.falseDest(),
-                                            condbr.falseDestOperands());
+      rewriter.replaceOpWithNewOp<BranchOp>(condbr, condbr.getFalseDest(),
+                                            condbr.getFalseDestOperands());
     return success();
   }
 };
@@ -758,7 +720,7 @@ struct CondBranchTruthPropagation : public OpRewritePattern<CondBranchOp> {
     // op.
     if (condbr.getTrueDest()->getSinglePredecessor()) {
       for (OpOperand &use :
-           llvm::make_early_inc_range(condbr.condition().getUses())) {
+           llvm::make_early_inc_range(condbr.getCondition().getUses())) {
         if (use.getOwner()->getBlock() == condbr.getTrueDest()) {
           replaced = true;
 
@@ -773,7 +735,7 @@ struct CondBranchTruthPropagation : public OpRewritePattern<CondBranchOp> {
     }
     if (condbr.getFalseDest()->getSinglePredecessor()) {
       for (OpOperand &use :
-           llvm::make_early_inc_range(condbr.condition().getUses())) {
+           llvm::make_early_inc_range(condbr.getCondition().getUses())) {
         if (use.getOwner()->getBlock() == condbr.getFalseDest()) {
           replaced = true;
 
@@ -789,7 +751,7 @@ struct CondBranchTruthPropagation : public OpRewritePattern<CondBranchOp> {
     return success(replaced);
   }
 };
-} // end anonymous namespace
+} // namespace
 
 void CondBranchOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                MLIRContext *context) {
@@ -802,13 +764,13 @@ void CondBranchOp::getCanonicalizationPatterns(RewritePatternSet &results,
 Optional<MutableOperandRange>
 CondBranchOp::getMutableSuccessorOperands(unsigned index) {
   assert(index < getNumSuccessors() && "invalid successor index");
-  return index == trueIndex ? trueDestOperandsMutable()
-                            : falseDestOperandsMutable();
+  return index == trueIndex ? getTrueDestOperandsMutable()
+                            : getFalseDestOperandsMutable();
 }
 
 Block *CondBranchOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
   if (IntegerAttr condAttr = operands.front().dyn_cast_or_null<IntegerAttr>())
-    return condAttr.getValue().isOneValue() ? trueDest() : falseDest();
+    return condAttr.getValue().isOneValue() ? getTrueDest() : getFalseDest();
   return nullptr;
 }
 
@@ -940,120 +902,6 @@ bool ConstantOp::isBuildableWith(Attribute value, Type type) {
 }
 
 //===----------------------------------------------------------------------===//
-// MaxSIOp
-//===----------------------------------------------------------------------===//
-
-OpFoldResult MaxSIOp::fold(ArrayRef<Attribute> operands) {
-  assert(operands.size() == 2 && "binary operation takes two operands");
-
-  // maxsi(x,x) -> x
-  if (lhs() == rhs())
-    return rhs();
-
-  APInt intValue;
-  // maxsi(x,MAX_INT) -> MAX_INT
-  if (matchPattern(rhs(), m_ConstantInt(&intValue)) &&
-      intValue.isMaxSignedValue())
-    return rhs();
-
-  // maxsi(x, MIN_INT) -> x
-  if (matchPattern(rhs(), m_ConstantInt(&intValue)) &&
-      intValue.isMinSignedValue())
-    return lhs();
-
-  return constFoldBinaryOp<IntegerAttr>(
-      operands, [](APInt a, APInt b) { return llvm::APIntOps::smax(a, b); });
-}
-
-//===----------------------------------------------------------------------===//
-// MaxUIOp
-//===----------------------------------------------------------------------===//
-
-OpFoldResult MaxUIOp::fold(ArrayRef<Attribute> operands) {
-  assert(operands.size() == 2 && "binary operation takes two operands");
-
-  // maxui(x,x) -> x
-  if (lhs() == rhs())
-    return rhs();
-
-  APInt intValue;
-  // maxui(x,MAX_INT) -> MAX_INT
-  if (matchPattern(rhs(), m_ConstantInt(&intValue)) && intValue.isMaxValue())
-    return rhs();
-
-  // maxui(x, MIN_INT) -> x
-  if (matchPattern(rhs(), m_ConstantInt(&intValue)) && intValue.isMinValue())
-    return lhs();
-
-  return constFoldBinaryOp<IntegerAttr>(
-      operands, [](APInt a, APInt b) { return llvm::APIntOps::umax(a, b); });
-}
-
-//===----------------------------------------------------------------------===//
-// MinSIOp
-//===----------------------------------------------------------------------===//
-
-OpFoldResult MinSIOp::fold(ArrayRef<Attribute> operands) {
-  assert(operands.size() == 2 && "binary operation takes two operands");
-
-  // minsi(x,x) -> x
-  if (lhs() == rhs())
-    return rhs();
-
-  APInt intValue;
-  // minsi(x,MIN_INT) -> MIN_INT
-  if (matchPattern(rhs(), m_ConstantInt(&intValue)) &&
-      intValue.isMinSignedValue())
-    return rhs();
-
-  // minsi(x, MAX_INT) -> x
-  if (matchPattern(rhs(), m_ConstantInt(&intValue)) &&
-      intValue.isMaxSignedValue())
-    return lhs();
-
-  return constFoldBinaryOp<IntegerAttr>(
-      operands, [](APInt a, APInt b) { return llvm::APIntOps::smin(a, b); });
-}
-
-//===----------------------------------------------------------------------===//
-// MinUIOp
-//===----------------------------------------------------------------------===//
-
-OpFoldResult MinUIOp::fold(ArrayRef<Attribute> operands) {
-  assert(operands.size() == 2 && "binary operation takes two operands");
-
-  // minui(x,x) -> x
-  if (lhs() == rhs())
-    return rhs();
-
-  APInt intValue;
-  // minui(x,MIN_INT) -> MIN_INT
-  if (matchPattern(rhs(), m_ConstantInt(&intValue)) && intValue.isMinValue())
-    return rhs();
-
-  // minui(x, MAX_INT) -> x
-  if (matchPattern(rhs(), m_ConstantInt(&intValue)) && intValue.isMaxValue())
-    return lhs();
-
-  return constFoldBinaryOp<IntegerAttr>(
-      operands, [](APInt a, APInt b) { return llvm::APIntOps::umin(a, b); });
-}
-
-//===----------------------------------------------------------------------===//
-// RankOp
-//===----------------------------------------------------------------------===//
-
-OpFoldResult RankOp::fold(ArrayRef<Attribute> operands) {
-  // Constant fold rank when the rank of the operand is known.
-  auto type = getOperand().getType();
-  if (auto shapedType = type.dyn_cast<ShapedType>())
-    if (shapedType.hasRank())
-      return IntegerAttr::get(IndexType::get(getContext()),
-                              shapedType.getRank());
-  return IntegerAttr();
-}
-
-//===----------------------------------------------------------------------===//
 // ReturnOp
 //===----------------------------------------------------------------------===//
 
@@ -1103,7 +951,7 @@ struct SelectToNot : public OpRewritePattern<SelectOp> {
     if (!op.getType().isInteger(1))
       return failure();
 
-    rewriter.replaceOpWithNewOp<arith::XOrIOp>(op, op.condition(),
+    rewriter.replaceOpWithNewOp<arith::XOrIOp>(op, op.getCondition(),
                                                op.getFalseValue());
     return success();
   }
@@ -1131,10 +979,10 @@ OpFoldResult SelectOp::fold(ArrayRef<Attribute> operands) {
     return falseVal;
 
   if (auto cmp = dyn_cast_or_null<arith::CmpIOp>(condition.getDefiningOp())) {
-    auto pred = cmp.predicate();
+    auto pred = cmp.getPredicate();
     if (pred == arith::CmpIPredicate::eq || pred == arith::CmpIPredicate::ne) {
-      auto cmpLhs = cmp.lhs();
-      auto cmpRhs = cmp.rhs();
+      auto cmpLhs = cmp.getLhs();
+      auto cmpRhs = cmp.getRhs();
 
       // %0 = arith.cmpi eq, %arg0, %arg1
       // %1 = select %0, %arg0, %arg1 => %arg1
@@ -1322,25 +1170,26 @@ static void printSwitchOpCases(
   if (!caseValues)
     return;
 
-  for (int64_t i = 0, size = caseValues.size(); i < size; ++i) {
+  for (const auto &it : llvm::enumerate(caseValues.getValues<APInt>())) {
     p << ',';
     p.printNewline();
     p << "  ";
-    p << caseValues.getValue<APInt>(i).getLimitedValue();
+    p << it.value().getLimitedValue();
     p << ": ";
-    p.printSuccessorAndUseList(caseDestinations[i], caseOperands[i]);
+    p.printSuccessorAndUseList(caseDestinations[it.index()],
+                               caseOperands[it.index()]);
   }
   p.printNewline();
 }
 
 static LogicalResult verify(SwitchOp op) {
-  auto caseValues = op.case_values();
-  auto caseDestinations = op.caseDestinations();
+  auto caseValues = op.getCaseValues();
+  auto caseDestinations = op.getCaseDestinations();
 
   if (!caseValues && caseDestinations.empty())
     return success();
 
-  Type flagType = op.flag().getType();
+  Type flagType = op.getFlag().getType();
   Type caseValueType = caseValues->getType().getElementType();
   if (caseValueType != flagType)
     return op.emitOpError()
@@ -1359,22 +1208,22 @@ static LogicalResult verify(SwitchOp op) {
 Optional<MutableOperandRange>
 SwitchOp::getMutableSuccessorOperands(unsigned index) {
   assert(index < getNumSuccessors() && "invalid successor index");
-  return index == 0 ? defaultOperandsMutable()
+  return index == 0 ? getDefaultOperandsMutable()
                     : getCaseOperandsMutable(index - 1);
 }
 
 Block *SwitchOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
-  Optional<DenseIntElementsAttr> caseValues = case_values();
+  Optional<DenseIntElementsAttr> caseValues = getCaseValues();
 
   if (!caseValues)
-    return defaultDestination();
+    return getDefaultDestination();
 
-  SuccessorRange caseDests = caseDestinations();
+  SuccessorRange caseDests = getCaseDestinations();
   if (auto value = operands.front().dyn_cast_or_null<IntegerAttr>()) {
-    for (int64_t i = 0, size = case_values()->size(); i < size; ++i)
-      if (value == caseValues->getValue<IntegerAttr>(i))
-        return caseDests[i];
-    return defaultDestination();
+    for (const auto &it : llvm::enumerate(caseValues->getValues<APInt>()))
+      if (it.value() == value.getValue())
+        return caseDests[it.index()];
+    return getDefaultDestination();
   }
   return nullptr;
 }
@@ -1385,11 +1234,11 @@ Block *SwitchOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
 ///  -> br ^bb1
 static LogicalResult simplifySwitchWithOnlyDefault(SwitchOp op,
                                                    PatternRewriter &rewriter) {
-  if (!op.caseDestinations().empty())
+  if (!op.getCaseDestinations().empty())
     return failure();
 
-  rewriter.replaceOpWithNewOp<BranchOp>(op, op.defaultDestination(),
-                                        op.defaultOperands());
+  rewriter.replaceOpWithNewOp<BranchOp>(op, op.getDefaultDestination(),
+                                        op.getDefaultOperands());
   return success();
 }
 
@@ -1409,26 +1258,26 @@ dropSwitchCasesThatMatchDefault(SwitchOp op, PatternRewriter &rewriter) {
   SmallVector<ValueRange> newCaseOperands;
   SmallVector<APInt> newCaseValues;
   bool requiresChange = false;
-  auto caseValues = op.case_values();
-  auto caseDests = op.caseDestinations();
+  auto caseValues = op.getCaseValues();
+  auto caseDests = op.getCaseDestinations();
 
-  for (int64_t i = 0, size = caseValues->size(); i < size; ++i) {
-    if (caseDests[i] == op.defaultDestination() &&
-        op.getCaseOperands(i) == op.defaultOperands()) {
+  for (const auto &it : llvm::enumerate(caseValues->getValues<APInt>())) {
+    if (caseDests[it.index()] == op.getDefaultDestination() &&
+        op.getCaseOperands(it.index()) == op.getDefaultOperands()) {
       requiresChange = true;
       continue;
     }
-    newCaseDestinations.push_back(caseDests[i]);
-    newCaseOperands.push_back(op.getCaseOperands(i));
-    newCaseValues.push_back(caseValues->getValue<APInt>(i));
+    newCaseDestinations.push_back(caseDests[it.index()]);
+    newCaseOperands.push_back(op.getCaseOperands(it.index()));
+    newCaseValues.push_back(it.value());
   }
 
   if (!requiresChange)
     return failure();
 
-  rewriter.replaceOpWithNewOp<SwitchOp>(op, op.flag(), op.defaultDestination(),
-                                        op.defaultOperands(), newCaseValues,
-                                        newCaseDestinations, newCaseOperands);
+  rewriter.replaceOpWithNewOp<SwitchOp>(
+      op, op.getFlag(), op.getDefaultDestination(), op.getDefaultOperands(),
+      newCaseValues, newCaseDestinations, newCaseOperands);
   return success();
 }
 
@@ -1441,16 +1290,17 @@ dropSwitchCasesThatMatchDefault(SwitchOp op, PatternRewriter &rewriter) {
 /// -> br ^bb2
 static void foldSwitch(SwitchOp op, PatternRewriter &rewriter,
                        APInt caseValue) {
-  auto caseValues = op.case_values();
-  for (int64_t i = 0, size = caseValues->size(); i < size; ++i) {
-    if (caseValues->getValue<APInt>(i) == caseValue) {
-      rewriter.replaceOpWithNewOp<BranchOp>(op, op.caseDestinations()[i],
-                                            op.getCaseOperands(i));
+  auto caseValues = op.getCaseValues();
+  for (const auto &it : llvm::enumerate(caseValues->getValues<APInt>())) {
+    if (it.value() == caseValue) {
+      rewriter.replaceOpWithNewOp<BranchOp>(
+          op, op.getCaseDestinations()[it.index()],
+          op.getCaseOperands(it.index()));
       return;
     }
   }
-  rewriter.replaceOpWithNewOp<BranchOp>(op, op.defaultDestination(),
-                                        op.defaultOperands());
+  rewriter.replaceOpWithNewOp<BranchOp>(op, op.getDefaultDestination(),
+                                        op.getDefaultOperands());
 }
 
 /// switch %c_42 : i32, [
@@ -1462,7 +1312,7 @@ static void foldSwitch(SwitchOp op, PatternRewriter &rewriter,
 static LogicalResult simplifyConstSwitchValue(SwitchOp op,
                                               PatternRewriter &rewriter) {
   APInt caseValue;
-  if (!matchPattern(op.flag(), m_ConstantInt(&caseValue)))
+  if (!matchPattern(op.getFlag(), m_ConstantInt(&caseValue)))
     return failure();
 
   foldSwitch(op, rewriter, caseValue);
@@ -1485,8 +1335,8 @@ static LogicalResult simplifyPassThroughSwitch(SwitchOp op,
   SmallVector<Block *> newCaseDests;
   SmallVector<ValueRange> newCaseOperands;
   SmallVector<SmallVector<Value>> argStorage;
-  auto caseValues = op.case_values();
-  auto caseDests = op.caseDestinations();
+  auto caseValues = op.getCaseValues();
+  auto caseDests = op.getCaseDestinations();
   bool requiresChange = false;
   for (int64_t i = 0, size = caseValues->size(); i < size; ++i) {
     Block *caseDest = caseDests[i];
@@ -1499,8 +1349,8 @@ static LogicalResult simplifyPassThroughSwitch(SwitchOp op,
     newCaseOperands.push_back(caseOperands);
   }
 
-  Block *defaultDest = op.defaultDestination();
-  ValueRange defaultOperands = op.defaultOperands();
+  Block *defaultDest = op.getDefaultDestination();
+  ValueRange defaultOperands = op.getDefaultOperands();
   argStorage.emplace_back();
 
   if (succeeded(
@@ -1510,7 +1360,7 @@ static LogicalResult simplifyPassThroughSwitch(SwitchOp op,
   if (!requiresChange)
     return failure();
 
-  rewriter.replaceOpWithNewOp<SwitchOp>(op, op.flag(), defaultDest,
+  rewriter.replaceOpWithNewOp<SwitchOp>(op, op.getFlag(), defaultDest,
                                         defaultOperands, caseValues.getValue(),
                                         newCaseDests, newCaseOperands);
   return success();
@@ -1564,27 +1414,21 @@ simplifySwitchFromSwitchOnSameCondition(SwitchOp op,
   // and that it branches on the same condition and that this branch isn't the
   // default destination.
   auto predSwitch = dyn_cast<SwitchOp>(predecessor->getTerminator());
-  if (!predSwitch || op.flag() != predSwitch.flag() ||
-      predSwitch.defaultDestination() == currentBlock)
+  if (!predSwitch || op.getFlag() != predSwitch.getFlag() ||
+      predSwitch.getDefaultDestination() == currentBlock)
     return failure();
 
   // Fold this switch to an unconditional branch.
-  APInt caseValue;
-  bool isDefault = true;
-  SuccessorRange predDests = predSwitch.caseDestinations();
-  Optional<DenseIntElementsAttr> predCaseValues = predSwitch.case_values();
-  for (int64_t i = 0, size = predCaseValues->size(); i < size; ++i) {
-    if (currentBlock == predDests[i]) {
-      caseValue = predCaseValues->getValue<APInt>(i);
-      isDefault = false;
-      break;
-    }
+  SuccessorRange predDests = predSwitch.getCaseDestinations();
+  auto it = llvm::find(predDests, currentBlock);
+  if (it != predDests.end()) {
+    Optional<DenseIntElementsAttr> predCaseValues = predSwitch.getCaseValues();
+    foldSwitch(op, rewriter,
+               predCaseValues->getValues<APInt>()[it - predDests.begin()]);
+  } else {
+    rewriter.replaceOpWithNewOp<BranchOp>(op, op.getDefaultDestination(),
+                                          op.getDefaultOperands());
   }
-  if (isDefault)
-    rewriter.replaceOpWithNewOp<BranchOp>(op, op.defaultDestination(),
-                                          op.defaultOperands());
-  else
-    foldSwitch(op, rewriter, caseValue);
   return success();
 }
 
@@ -1621,41 +1465,41 @@ simplifySwitchFromDefaultSwitchOnSameCondition(SwitchOp op,
   // and that it branches on the same condition and that this branch is the
   // default destination.
   auto predSwitch = dyn_cast<SwitchOp>(predecessor->getTerminator());
-  if (!predSwitch || op.flag() != predSwitch.flag() ||
-      predSwitch.defaultDestination() != currentBlock)
+  if (!predSwitch || op.getFlag() != predSwitch.getFlag() ||
+      predSwitch.getDefaultDestination() != currentBlock)
     return failure();
 
   // Delete case values that are not possible here.
   DenseSet<APInt> caseValuesToRemove;
-  auto predDests = predSwitch.caseDestinations();
-  auto predCaseValues = predSwitch.case_values();
+  auto predDests = predSwitch.getCaseDestinations();
+  auto predCaseValues = predSwitch.getCaseValues();
   for (int64_t i = 0, size = predCaseValues->size(); i < size; ++i)
     if (currentBlock != predDests[i])
-      caseValuesToRemove.insert(predCaseValues->getValue<APInt>(i));
+      caseValuesToRemove.insert(predCaseValues->getValues<APInt>()[i]);
 
   SmallVector<Block *> newCaseDestinations;
   SmallVector<ValueRange> newCaseOperands;
   SmallVector<APInt> newCaseValues;
   bool requiresChange = false;
 
-  auto caseValues = op.case_values();
-  auto caseDests = op.caseDestinations();
-  for (int64_t i = 0, size = caseValues->size(); i < size; ++i) {
-    if (caseValuesToRemove.contains(caseValues->getValue<APInt>(i))) {
+  auto caseValues = op.getCaseValues();
+  auto caseDests = op.getCaseDestinations();
+  for (const auto &it : llvm::enumerate(caseValues->getValues<APInt>())) {
+    if (caseValuesToRemove.contains(it.value())) {
       requiresChange = true;
       continue;
     }
-    newCaseDestinations.push_back(caseDests[i]);
-    newCaseOperands.push_back(op.getCaseOperands(i));
-    newCaseValues.push_back(caseValues->getValue<APInt>(i));
+    newCaseDestinations.push_back(caseDests[it.index()]);
+    newCaseOperands.push_back(op.getCaseOperands(it.index()));
+    newCaseValues.push_back(it.value());
   }
 
   if (!requiresChange)
     return failure();
 
-  rewriter.replaceOpWithNewOp<SwitchOp>(op, op.flag(), op.defaultDestination(),
-                                        op.defaultOperands(), newCaseValues,
-                                        newCaseDestinations, newCaseOperands);
+  rewriter.replaceOpWithNewOp<SwitchOp>(
+      op, op.getFlag(), op.getDefaultDestination(), op.getDefaultOperands(),
+      newCaseValues, newCaseDestinations, newCaseOperands);
   return success();
 }
 

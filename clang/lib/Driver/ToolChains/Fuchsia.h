@@ -54,7 +54,9 @@ public:
     return true;
   }
   bool isPICDefault() const override { return false; }
-  bool isPIEDefault() const override { return true; }
+  bool isPIEDefault(const llvm::opt::ArgList &Args) const override {
+    return true;
+  }
   bool isPICDefaultForced() const override { return false; }
   llvm::DebuggerKind getDefaultDebuggerTuning() const override {
     return llvm::DebuggerKind::GDB;

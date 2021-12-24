@@ -13,7 +13,6 @@
 #include <__iterator/concepts.h>
 #include <__ranges/access.h>
 #include <__ranges/size.h>
-#include <__utility/forward.h>
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -24,19 +23,19 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if !defined(_LIBCPP_HAS_NO_RANGES)
 
-// clang-format off
-namespace ranges {
 // [range.prim.empty]
+
+namespace ranges {
 namespace __empty {
   template <class _Tp>
   concept __member_empty = requires(_Tp&& __t) {
-    bool(_VSTD::forward<_Tp>(__t).empty());
+    bool(__t.empty());
   };
 
   template<class _Tp>
   concept __can_invoke_size =
     !__member_empty<_Tp> &&
-    requires(_Tp&& __t) { ranges::size(_VSTD::forward<_Tp>(__t)); };
+    requires(_Tp&& __t) { ranges::size(__t); };
 
   template <class _Tp>
   concept __can_compare_begin_end =
@@ -51,13 +50,13 @@ namespace __empty {
     template <__member_empty _Tp>
     [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(_Tp&& __t) const
         noexcept(noexcept(bool(__t.empty()))) {
-      return __t.empty();
+      return bool(__t.empty());
     }
 
     template <__can_invoke_size _Tp>
     [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(_Tp&& __t) const
-        noexcept(noexcept(ranges::size(_VSTD::forward<_Tp>(__t)))) {
-      return ranges::size(_VSTD::forward<_Tp>(__t)) == 0;
+        noexcept(noexcept(ranges::size(__t))) {
+      return ranges::size(__t) == 0;
     }
 
     template<__can_compare_begin_end _Tp>
@@ -72,7 +71,6 @@ inline namespace __cpo {
   inline constexpr auto empty = __empty::__fn{};
 } // namespace __cpo
 } // namespace ranges
-// clang-format off
 
 #endif // !defined(_LIBCPP_HAS_NO_RANGES)
 

@@ -284,6 +284,15 @@ func @test_coordinate_of(%arr : !fir.ref<!fir.char<10>>) {
 
 // -----
 
+func @test_coordinate_of(%arr : !fir.ref<!fir.char<10, 1>>) {
+  %1 = arith.constant 10 : i32
+  // expected-error@+1 {{'fir.coordinate_of' op cannot apply coordinate_of to this type}}
+  %2 = fir.coordinate_of %arr, %1 : (!fir.ref<!fir.char<10, 1>>, i32) -> !fir.ref<f32>
+  return
+}
+
+// -----
+
 %0 = arith.constant 22 : i32
 // expected-error@+1 {{'fir.embox' op operand #0 must be any reference, but got 'i32'}}
 %1 = fir.embox %0 : (i32) -> !fir.box<i32>
@@ -428,7 +437,7 @@ fir.global internal @_QEmultiarray : !fir.array<32x32xi32> {
   %c0_i32 = arith.constant 1 : i32
   %0 = fir.undefined !fir.array<32x32xi32>
   // expected-error@+1 {{'fir.insert_on_range' op has uneven number of values in ranges}}
-  %2 = fir.insert_on_range %0, %c0_i32, [0 : index, 31 : index, 0 : index] : (!fir.array<32x32xi32>, i32) -> !fir.array<32x32xi32>
+  %2 = "fir.insert_on_range"(%0, %c0_i32) { coor = dense<[0, 31, 0]> : tensor<3xindex> } : (!fir.array<32x32xi32>, i32) -> !fir.array<32x32xi32>
   fir.has_value %2 : !fir.array<32x32xi32>
 }
 
@@ -438,7 +447,7 @@ fir.global internal @_QEmultiarray : !fir.array<32x32xi32> {
   %c0_i32 = arith.constant 1 : i32
   %0 = fir.undefined !fir.array<32x32xi32>
   // expected-error@+1 {{'fir.insert_on_range' op has uneven number of values in ranges}}
-  %2 = fir.insert_on_range %0, %c0_i32, [0 : index] : (!fir.array<32x32xi32>, i32) -> !fir.array<32x32xi32>
+  %2 = "fir.insert_on_range"(%0, %c0_i32) { coor = dense<[0]> : tensor<1xindex> }  : (!fir.array<32x32xi32>, i32) -> !fir.array<32x32xi32>
   fir.has_value %2 : !fir.array<32x32xi32>
 }
 
@@ -448,7 +457,7 @@ fir.global internal @_QEmultiarray : !fir.array<32x32xi32> {
   %c0_i32 = arith.constant 1 : i32
   %0 = fir.undefined !fir.array<32x32xi32>
   // expected-error@+1 {{'fir.insert_on_range' op negative range bound}}
-  %2 = fir.insert_on_range %0, %c0_i32, [-1 : index, 0 : index] : (!fir.array<32x32xi32>, i32) -> !fir.array<32x32xi32>
+  %2 = fir.insert_on_range %0, %c0_i32 from (-1) to (0) : (!fir.array<32x32xi32>, i32) -> !fir.array<32x32xi32>
   fir.has_value %2 : !fir.array<32x32xi32>
 }
 
@@ -458,8 +467,28 @@ fir.global internal @_QEmultiarray : !fir.array<32x32xi32> {
   %c0_i32 = arith.constant 1 : i32
   %0 = fir.undefined !fir.array<32x32xi32>
   // expected-error@+1 {{'fir.insert_on_range' op empty range}}
-  %2 = fir.insert_on_range %0, %c0_i32, [10 : index, 9 : index] : (!fir.array<32x32xi32>, i32) -> !fir.array<32x32xi32>
+  %2 = fir.insert_on_range %0, %c0_i32 from (10) to (9) : (!fir.array<32x32xi32>, i32) -> !fir.array<32x32xi32>
   fir.has_value %2 : !fir.array<32x32xi32>
+}
+
+// -----
+
+fir.global internal @_QEmultiarray : !fir.array<?xi32> {
+  %c0_i32 = arith.constant 1 : i32
+  %0 = fir.undefined !fir.array<?xi32>
+  // expected-error@+1 {{'fir.insert_on_range' op must have constant shape and size}}
+  %2 = fir.insert_on_range %0, %c0_i32 from (0) to (10) : (!fir.array<?xi32>, i32) -> !fir.array<?xi32>
+  fir.has_value %2 : !fir.array<?xi32>
+}
+
+// -----
+
+fir.global internal @_QEmultiarray : !fir.array<*:i32> {
+  %c0_i32 = arith.constant 1 : i32
+  %0 = fir.undefined !fir.array<*:i32>
+  // expected-error@+1 {{'fir.insert_on_range' op must have constant shape and size}}
+  %2 = fir.insert_on_range %0, %c0_i32 from (0) to (10) : (!fir.array<*:i32>, i32) -> !fir.array<*:i32>
+  fir.has_value %2 : !fir.array<*:i32>
 }
 
 // -----
@@ -583,6 +612,16 @@ func @test_misc_ops(%arr1 : !fir.ref<!fir.array<?x?xf32>>, %m : index, %n : inde
 
 // -----
 
+func @test_misc_ops(%arr1 : !fir.ref<!fir.array<?x?xf32>>, %m : index, %n : index, %o : index, %p : index, %f: !fir.ref<i32>) {
+  %s = fir.shape_shift %m, %n, %o, %p : (index, index, index, index) -> !fir.shapeshift<2>
+  %av1 = fir.array_load %arr1(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.array<?x?xf32>
+  // expected-error@+1 {{'fir.array_update' op does not support reference type for merge}}
+  %av2 = fir.array_update %av1, %f, %m, %n : (!fir.array<?x?xf32>, !fir.ref<i32>, index, index) -> !fir.array<?x?xf32>
+  return
+}
+
+// -----
+
 func @test_misc_ops(%arr1 : !fir.ref<!fir.array<?x?xf32>>, %m : index, %n : index, %o : index, %p : index) {
   %s = fir.shape_shift %m, %n, %o, %p : (index, index, index, index) -> !fir.shapeshift<2>
   %av1 = fir.array_load %arr1(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.array<?x?xf32>
@@ -604,5 +643,54 @@ func @bad_array_modify(%arr1 : !fir.ref<!fir.array<?x?xf32>>, %m : index, %n : i
   %addr, %av2 = fir.array_modify %av1, %i10 : (!fir.array<?x?xf32>, index) -> (!fir.ref<f32>, !fir.array<?x?xf32>)
   fir.store %f to %addr : !fir.ref<f32>
   fir.array_merge_store %av1, %av2 to %arr1 : !fir.array<?x?xf32>, !fir.array<?x?xf32>, !fir.ref<!fir.array<?x?xf32>>
+  return
+}
+
+// -----
+
+func @slice_must_be_integral() {
+  %0 = arith.constant 42 : i32
+  %1 = fir.field_index field, !fir.type<t(param:i32){field:i32}> (%0 : i32)
+  // expected-error@+1 {{'fir.slice' op operand #0 must be any integer, but got '!fir.field'}}
+  %2 = fir.slice %1, %1, %1 : (!fir.field, !fir.field, !fir.field) -> !fir.slice<1>
+  return
+}
+
+// -----
+
+func @array_coor_no_slice_substr(%a : !fir.ref<!fir.array<?x?xf32>>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %slice = fir.slice %c1, %c10, %c1 substr %c1, %c10 : (index, index, index, index, index) -> !fir.slice<1>
+  // expected-error@+1 {{'fir.array_coor' op array_coor cannot take a slice with substring}}
+  %p = fir.array_coor %a[%slice] %c1, %c1 : (!fir.ref<!fir.array<?x?xf32>>, !fir.slice<1>, index, index) -> !fir.ref<f32>
+  return
+}
+
+// -----
+
+func @array_coor_no_slice_substr(%a : !fir.ref<!fir.array<?x?xf32>>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %slice = fir.slice %c1, %c10, %c1 substr %c1, %c10 : (index, index, index, index, index) -> !fir.slice<1>
+  // expected-error@+1 {{'fir.array_load' op array_load cannot take a slice with substring}}
+  %v = fir.array_load %a[%slice] : (!fir.ref<!fir.array<?x?xf32>>, !fir.slice<1>) -> !fir.array<?x?xf32>
+  return
+}
+
+// -----
+
+func @array_merge_store_no_slice_substr(%arr1 : !fir.ref<!fir.array<?x?xf32>>, %m : index, %n : index, %o : index, %p : index, %f : f32) {
+  %i10 = arith.constant 10 : index
+  %j20 = arith.constant 20 : index
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %s = fir.shape_shift %m, %n, %o, %p : (index, index, index, index) -> !fir.shapeshift<2>
+  %slice = fir.slice %c1, %c10, %c1 substr %c1, %c10 : (index, index, index, index, index) -> !fir.slice<1>
+  %av1 = fir.array_load %arr1(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.array<?x?xf32>
+  %addr, %av2 = fir.array_modify %av1, %i10, %i10 : (!fir.array<?x?xf32>, index, index) -> (!fir.ref<f32>, !fir.array<?x?xf32>)
+  fir.store %f to %addr : !fir.ref<f32>
+  // expected-error@+1 {{'fir.array_merge_store' op array_merge_store cannot take a slice with substring}}
+  fir.array_merge_store %av1, %av2 to %arr1[%slice] : !fir.array<?x?xf32>, !fir.array<?x?xf32>, !fir.ref<!fir.array<?x?xf32>>, !fir.slice<1>
   return
 }

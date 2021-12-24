@@ -2,7 +2,8 @@ import lldb
 import binascii
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
-from gdbclientutils import *
+from lldbsuite.test.gdbclientutils import *
+from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 LLDB_INVALID_ADDRESS = lldb.LLDB_INVALID_ADDRESS
 load_address = 0x400000000
@@ -85,6 +86,8 @@ class MyResponder(MockGDBServerResponder):
 
 
 class TestWasm(GDBRemoteTestBase):
+
+    mydir = TestBase.compute_mydir(__file__)
 
     @skipIfAsan
     @skipIfXmlSupportMissing

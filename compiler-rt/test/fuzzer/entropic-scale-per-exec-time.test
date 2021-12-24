@@ -1,8 +1,0 @@
-REQUIRES: linux, x86_64
-RUN: %cpp_compiler %S/EntropicScalePerExecTimeTest.cpp -o %t-EntropicScalePerExecTimeTest
-RUN: not %run %t-EntropicScalePerExecTimeTest -entropic=1 -entropic_scale_per_exec_time=1 -seed=1 -runs=200000 -max_len=10
-
-# Without -entropic_scale_per_exec_time=1, the crash takes longer to find since
-# the slow path is explored first.  This test is disabled because it sometimes
-# finds the bug under certain configs.
-DISABLED: %run %t-EntropicScalePerExecTimeTest -entropic=1 -seed=1 -runs=200000 -max_len=10

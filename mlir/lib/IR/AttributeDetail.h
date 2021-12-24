@@ -16,7 +16,6 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Identifier.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Support/StorageUniquer.h"
@@ -317,6 +316,41 @@ struct DenseStringElementsAttrStorage : public DenseElementsAttributeStorage {
   }
 
   ArrayRef<StringRef> data;
+};
+
+//===----------------------------------------------------------------------===//
+// StringAttr
+//===----------------------------------------------------------------------===//
+
+struct StringAttrStorage : public AttributeStorage {
+  StringAttrStorage(StringRef value, Type type)
+      : AttributeStorage(type), value(value), referencedDialect(nullptr) {}
+
+  /// The hash key is a tuple of the parameter types.
+  using KeyTy = std::pair<StringRef, Type>;
+  bool operator==(const KeyTy &key) const {
+    return value == key.first && getType() == key.second;
+  }
+  static ::llvm::hash_code hashKey(const KeyTy &key) {
+    return DenseMapInfo<KeyTy>::getHashValue(key);
+  }
+
+  /// Define a construction method for creating a new instance of this
+  /// storage.
+  static StringAttrStorage *construct(AttributeStorageAllocator &allocator,
+                                      const KeyTy &key) {
+    return new (allocator.allocate<StringAttrStorage>())
+        StringAttrStorage(allocator.copyInto(key.first), key.second);
+  }
+
+  /// Initialize the storage given an MLIRContext.
+  void initialize(MLIRContext *context);
+
+  /// The raw string value.
+  StringRef value;
+  /// If the string value contains a dialect namespace prefix (e.g.
+  /// dialect.blah), this is the dialect referenced.
+  Dialect *referencedDialect;
 };
 
 } // namespace detail

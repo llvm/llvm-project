@@ -34,7 +34,9 @@ bool TCEToolChain::IsMathErrnoDefault() const { return true; }
 
 bool TCEToolChain::isPICDefault() const { return false; }
 
-bool TCEToolChain::isPIEDefault() const { return false; }
+bool TCEToolChain::isPIEDefault(const llvm::opt::ArgList &Args) const {
+  return false;
+}
 
 bool TCEToolChain::isPICDefaultForced() const { return false; }
 

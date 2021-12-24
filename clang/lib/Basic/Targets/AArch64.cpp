@@ -51,6 +51,15 @@ static StringRef getArchVersionString(llvm::AArch64::ArchKind Kind) {
   }
 }
 
+StringRef AArch64TargetInfo::getArchProfile() const {
+  switch (ArchKind) {
+  case llvm::AArch64::ArchKind::ARMV8R:
+    return "R";
+  default:
+    return "A";
+  }
+}
+
 AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
                                      const TargetOptions &Opts)
     : TargetInfo(Triple), ABI("aapcs") {
@@ -131,8 +140,8 @@ bool AArch64TargetInfo::setABI(const std::string &Name) {
 bool AArch64TargetInfo::validateBranchProtection(StringRef Spec,
                                                  BranchProtectionInfo &BPI,
                                                  StringRef &Err) const {
-  llvm::AArch64::ParsedBranchProtection PBP;
-  if (!llvm::AArch64::parseBranchProtection(Spec, PBP, Err))
+  llvm::ARM::ParsedBranchProtection PBP;
+  if (!llvm::ARM::parseBranchProtection(Spec, PBP, Err))
     return false;
 
   BPI.SignReturnAddr =
@@ -257,7 +266,7 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   // ACLE predefines. Many can only have one possible value on v8 AArch64.
   Builder.defineMacro("__ARM_ACLE", "200");
   Builder.defineMacro("__ARM_ARCH", getArchVersionString(ArchKind));
-  Builder.defineMacro("__ARM_ARCH_PROFILE", "'A'");
+  Builder.defineMacro("__ARM_ARCH_PROFILE", "'" + getArchProfile() + "'");
 
   Builder.defineMacro("__ARM_64BIT_STATE", "1");
   Builder.defineMacro("__ARM_PCS_AAPCS64", "1");
@@ -297,6 +306,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if (FPU & SveMode)
     Builder.defineMacro("__ARM_FEATURE_SVE", "1");
+
+  if ((FPU & NeonMode) && (FPU & SveMode))
+    Builder.defineMacro("__ARM_NEON_SVE_BRIDGE", "1");
 
   if (HasSVE2)
     Builder.defineMacro("__ARM_FEATURE_SVE2", "1");
@@ -451,8 +463,8 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4");
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8");
 
-  if (Opts.ArmSveVectorBits) {
-    Builder.defineMacro("__ARM_FEATURE_SVE_BITS", Twine(Opts.ArmSveVectorBits));
+  if (Opts.VScaleMin && Opts.VScaleMin == Opts.VScaleMax) {
+    Builder.defineMacro("__ARM_FEATURE_SVE_BITS", Twine(Opts.VScaleMin * 128));
     Builder.defineMacro("__ARM_FEATURE_SVE_VECTOR_OPERATORS");
   }
 }
@@ -464,12 +476,13 @@ ArrayRef<Builtin::Info> AArch64TargetInfo::getTargetBuiltins() const {
 
 Optional<std::pair<unsigned, unsigned>>
 AArch64TargetInfo::getVScaleRange(const LangOptions &LangOpts) const {
-  if (LangOpts.ArmSveVectorBits) {
-    unsigned VScale = LangOpts.ArmSveVectorBits / 128;
-    return std::pair<unsigned, unsigned>(VScale, VScale);
-  }
+  if (LangOpts.VScaleMin || LangOpts.VScaleMax)
+    return std::pair<unsigned, unsigned>(
+        LangOpts.VScaleMin ? LangOpts.VScaleMin : 1, LangOpts.VScaleMax);
+
   if (hasFeature("sve"))
-    return std::pair<unsigned, unsigned>(0, 16);
+    return std::pair<unsigned, unsigned>(1, 16);
+
   return None;
 }
 
@@ -512,7 +525,7 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   HasMatmulFP32 = false;
   HasLSE = false;
 
-  ArchKind = llvm::AArch64::ArchKind::ARMV8A;
+  ArchKind = llvm::AArch64::ArchKind::INVALID;
 
   for (const auto &Feature : Features) {
     if (Feature == "+neon")
@@ -574,6 +587,8 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasSM4 = true;
     if (Feature == "+strict-align")
       HasUnaligned = false;
+    if (Feature == "+v8a")
+      ArchKind = llvm::AArch64::ArchKind::ARMV8A;
     if (Feature == "+v8.1a")
       ArchKind = llvm::AArch64::ArchKind::ARMV8_1A;
     if (Feature == "+v8.2a")

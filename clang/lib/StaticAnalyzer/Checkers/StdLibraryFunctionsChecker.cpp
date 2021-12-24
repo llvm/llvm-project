@@ -155,7 +155,7 @@ class StdLibraryFunctionsChecker
   protected:
     ArgNo ArgN; // Argument to which we apply the constraint.
 
-    /// Do polymorphic sanity check on the constraint.
+    /// Do polymorphic validation check on the constraint.
     virtual bool checkSpecificValidity(const FunctionDecl *FD) const {
       return true;
     }
@@ -527,8 +527,8 @@ class StdLibraryFunctionsChecker
     }
 
   private:
-    // Once we know the exact type of the function then do sanity check on all
-    // the given constraints.
+    // Once we know the exact type of the function then do validation check on
+    // all the given constraints.
     bool validateByConstraints(const FunctionDecl *FD) const {
       for (const ConstraintSet &Case : CaseConstraints)
         for (const ValueConstraintPtr &Constraint : Case)

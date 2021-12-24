@@ -55,6 +55,11 @@ public:
   }
 
   static LocIdx MakeIllegalLoc() { return LocIdx(); }
+  static LocIdx MakeTombstoneLoc() {
+    LocIdx L = LocIdx();
+    --L.Location;
+    return L;
+  }
 
   bool isIllegal() const { return Location == UINT_MAX; }
 
@@ -101,36 +106,43 @@ struct SpillLoc {
 /// problematic; but by that point we should probably have bailed out of
 /// trying to analyse the function.
 class ValueIDNum {
-  uint64_t BlockNo : 20;         /// The block where the def happens.
-  uint64_t InstNo : 20;          /// The Instruction where the def happens.
-                                 /// One based, is distance from start of block.
-  uint64_t LocNo : NUM_LOC_BITS; /// The machine location where the def happens.
+  union {
+    struct {
+      uint64_t BlockNo : 20; /// The block where the def happens.
+      uint64_t InstNo : 20;  /// The Instruction where the def happens.
+                             /// One based, is distance from start of block.
+      uint64_t LocNo
+          : NUM_LOC_BITS; /// The machine location where the def happens.
+    } s;
+    uint64_t Value;
+  } u;
+
+  static_assert(sizeof(u) == 8, "Badly packed ValueIDNum?");
 
 public:
   // Default-initialize to EmptyValue. This is necessary to make IndexedMaps
   // of values to work.
-  ValueIDNum() : BlockNo(0xFFFFF), InstNo(0xFFFFF), LocNo(0xFFFFFF) {}
+  ValueIDNum() { u.Value = EmptyValue.asU64(); }
 
-  ValueIDNum(uint64_t Block, uint64_t Inst, uint64_t Loc)
-      : BlockNo(Block), InstNo(Inst), LocNo(Loc) {}
-
-  ValueIDNum(uint64_t Block, uint64_t Inst, LocIdx Loc)
-      : BlockNo(Block), InstNo(Inst), LocNo(Loc.asU64()) {}
-
-  uint64_t getBlock() const { return BlockNo; }
-  uint64_t getInst() const { return InstNo; }
-  uint64_t getLoc() const { return LocNo; }
-  bool isPHI() const { return InstNo == 0; }
-
-  uint64_t asU64() const {
-    uint64_t TmpBlock = BlockNo;
-    uint64_t TmpInst = InstNo;
-    return TmpBlock << 44ull | TmpInst << NUM_LOC_BITS | LocNo;
+  ValueIDNum(uint64_t Block, uint64_t Inst, uint64_t Loc) {
+    u.s = {Block, Inst, Loc};
   }
 
+  ValueIDNum(uint64_t Block, uint64_t Inst, LocIdx Loc) {
+    u.s = {Block, Inst, Loc.asU64()};
+  }
+
+  uint64_t getBlock() const { return u.s.BlockNo; }
+  uint64_t getInst() const { return u.s.InstNo; }
+  uint64_t getLoc() const { return u.s.LocNo; }
+  bool isPHI() const { return u.s.InstNo == 0; }
+
+  uint64_t asU64() const { return u.Value; }
+
   static ValueIDNum fromU64(uint64_t v) {
-    uint64_t L = (v & 0x3FFF);
-    return {v >> 44ull, ((v >> NUM_LOC_BITS) & 0xFFFFF), L};
+    ValueIDNum Val;
+    Val.u.Value = v;
+    return Val;
   }
 
   bool operator<(const ValueIDNum &Other) const {
@@ -138,23 +150,25 @@ public:
   }
 
   bool operator==(const ValueIDNum &Other) const {
-    return std::tie(BlockNo, InstNo, LocNo) ==
-           std::tie(Other.BlockNo, Other.InstNo, Other.LocNo);
+    return u.Value == Other.u.Value;
   }
 
   bool operator!=(const ValueIDNum &Other) const { return !(*this == Other); }
 
   std::string asString(const std::string &mlocname) const {
     return Twine("Value{bb: ")
-        .concat(Twine(BlockNo).concat(
-            Twine(", inst: ")
-                .concat((InstNo ? Twine(InstNo) : Twine("live-in"))
-                            .concat(Twine(", loc: ").concat(Twine(mlocname)))
-                            .concat(Twine("}")))))
+        .concat(Twine(u.s.BlockNo)
+                    .concat(Twine(", inst: ")
+                                .concat((u.s.InstNo ? Twine(u.s.InstNo)
+                                                    : Twine("live-in"))
+                                            .concat(Twine(", loc: ").concat(
+                                                Twine(mlocname)))
+                                            .concat(Twine("}")))))
         .str();
   }
 
   static ValueIDNum EmptyValue;
+  static ValueIDNum TombstoneValue;
 };
 
 /// Thin wrapper around an integer -- designed to give more type safety to
@@ -641,6 +655,14 @@ public:
                               const DbgValueProperties &Properties);
 };
 
+/// Types for recording sets of variable fragments that overlap. For a given
+/// local variable, we record all other fragments of that variable that could
+/// overlap it, to reduce search time.
+using FragmentOfVar =
+    std::pair<const DILocalVariable *, DIExpression::FragmentInfo>;
+using OverlapMap =
+    DenseMap<FragmentOfVar, SmallVector<DIExpression::FragmentInfo, 1>>;
+
 /// Collection of DBG_VALUEs observed when traversing a block. Records each
 /// variable and the value the DBG_VALUE refers to. Requires the machine value
 /// location dataflow algorithm to have run already, so that values can be
@@ -658,9 +680,12 @@ public:
   MapVector<DebugVariable, DbgValue> Vars;
   DenseMap<DebugVariable, const DILocation *> Scopes;
   MachineBasicBlock *MBB = nullptr;
+  const OverlapMap &OverlappingFragments;
+  DbgValueProperties EmptyProperties;
 
 public:
-  VLocTracker() {}
+  VLocTracker(const OverlapMap &O, const DIExpression *EmptyExpr)
+      : OverlappingFragments(O), EmptyProperties(EmptyExpr, false) {}
 
   void defVar(const MachineInstr &MI, const DbgValueProperties &Properties,
               Optional<ValueIDNum> ID) {
@@ -675,6 +700,8 @@ public:
     if (!Result.second)
       Result.first->second = Rec;
     Scopes[Var] = MI.getDebugLoc().get();
+
+    considerOverlaps(Var, MI.getDebugLoc().get());
   }
 
   void defVar(const MachineInstr &MI, const MachineOperand &MO) {
@@ -690,16 +717,37 @@ public:
     if (!Result.second)
       Result.first->second = Rec;
     Scopes[Var] = MI.getDebugLoc().get();
+
+    considerOverlaps(Var, MI.getDebugLoc().get());
+  }
+
+  void considerOverlaps(const DebugVariable &Var, const DILocation *Loc) {
+    auto Overlaps = OverlappingFragments.find(
+        {Var.getVariable(), Var.getFragmentOrDefault()});
+    if (Overlaps == OverlappingFragments.end())
+      return;
+
+    // Otherwise: terminate any overlapped variable locations.
+    for (auto FragmentInfo : Overlaps->second) {
+      // The "empty" fragment is stored as DebugVariable::DefaultFragment, so
+      // that it overlaps with everything, however its cannonical representation
+      // in a DebugVariable is as "None".
+      Optional<DIExpression::FragmentInfo> OptFragmentInfo = FragmentInfo;
+      if (DebugVariable::isDefaultFragment(FragmentInfo))
+        OptFragmentInfo = None;
+
+      DebugVariable Overlapped(Var.getVariable(), OptFragmentInfo,
+                               Var.getInlinedAt());
+      DbgValue Rec = DbgValue(EmptyProperties, DbgValue::Undef);
+
+      // Attempt insertion; overwrite if it's already mapped.
+      auto Result = Vars.insert(std::make_pair(Overlapped, Rec));
+      if (!Result.second)
+        Result.first->second = Rec;
+      Scopes[Overlapped] = Loc;
+    }
   }
 };
-
-/// Types for recording sets of variable fragments that overlap. For a given
-/// local variable, we record all other fragments of that variable that could
-/// overlap it, to reduce search time.
-using FragmentOfVar =
-    std::pair<const DILocalVariable *, DIExpression::FragmentInfo>;
-using OverlapMap =
-    DenseMap<FragmentOfVar, SmallVector<DIExpression::FragmentInfo, 1>>;
 
 // XXX XXX docs
 class InstrRefBasedLDV : public LDVImpl {
@@ -716,7 +764,7 @@ public:
 
   /// Machine location/value transfer function, a mapping of which locations
   /// are assigned which new values.
-  using MLocTransferMap = std::map<LocIdx, ValueIDNum>;
+  using MLocTransferMap = SmallDenseMap<LocIdx, ValueIDNum>;
 
   /// Live in/out structure for the variable values: a per-block map of
   /// variables to their values.
@@ -802,6 +850,16 @@ private:
   // Map of overlapping variable fragments.
   OverlapMap OverlapFragments;
   VarToFragments SeenFragments;
+
+  /// True if we need to examine call instructions for stack clobbers. We
+  /// normally assume that they don't clobber SP, but stack probes on Windows
+  /// do.
+  bool AdjustsStackInCalls = false;
+
+  /// If AdjustsStackInCalls is true, this holds the name of the target's stack
+  /// probe function, which is the function we expect will alter the stack
+  /// pointer.
+  StringRef StackProbeSymbolName;
 
   /// Tests whether this instruction is a spill to a stack slot.
   bool isSpillInstruction(const MachineInstr &MI, MachineFunction *MF);
@@ -889,6 +947,10 @@ private:
                          ValueIDNum **MOutLocs,
                          SmallVectorImpl<MLocTransferMap> &MLocTransfer);
 
+  /// Examine the stack indexes (i.e. offsets within the stack) to find the
+  /// basic units of interference -- like reg units, but for the stack.
+  void findStackIndexInterference(SmallVectorImpl<unsigned> &Slots);
+
   /// Install PHI values into the live-in array for each block, according to
   /// the IDF of each register.
   void placeMLocPHIs(MachineFunction &MF,
@@ -944,7 +1006,6 @@ private:
   /// \returns true if any live-ins change value, either from value propagation
   ///          or PHI elimination.
   bool vlocJoin(MachineBasicBlock &MBB, LiveIdxT &VLOCOutLocs,
-                SmallPtrSet<const MachineBasicBlock *, 8> &InScopeBlocks,
                 SmallPtrSet<const MachineBasicBlock *, 8> &BlocksToExplore,
                 DbgValue &LiveIn);
 
@@ -984,8 +1045,50 @@ public:
   void dump_mloc_transfer(const MLocTransferMap &mloc_transfer) const;
 
   bool isCalleeSaved(LocIdx L) const;
+
+  bool hasFoldedStackStore(const MachineInstr &MI) {
+    // Instruction must have a memory operand that's a stack slot, and isn't
+    // aliased, meaning it's a spill from regalloc instead of a variable.
+    // If it's aliased, we can't guarantee its value.
+    if (!MI.hasOneMemOperand())
+      return false;
+    auto *MemOperand = *MI.memoperands_begin();
+    return MemOperand->isStore() &&
+           MemOperand->getPseudoValue() &&
+           MemOperand->getPseudoValue()->kind() == PseudoSourceValue::FixedStack
+           && !MemOperand->getPseudoValue()->isAliased(MFI);
+  }
+
+  Optional<LocIdx> findLocationForMemOperand(const MachineInstr &MI);
 };
 
 } // namespace LiveDebugValues
+
+namespace llvm {
+using namespace LiveDebugValues;
+
+template <> struct DenseMapInfo<LocIdx> {
+  static inline LocIdx getEmptyKey() { return LocIdx::MakeIllegalLoc(); }
+  static inline LocIdx getTombstoneKey() { return LocIdx::MakeTombstoneLoc(); }
+
+  static unsigned getHashValue(const LocIdx &Loc) { return Loc.asU64(); }
+
+  static bool isEqual(const LocIdx &A, const LocIdx &B) { return A == B; }
+};
+
+template <> struct DenseMapInfo<ValueIDNum> {
+  static inline ValueIDNum getEmptyKey() { return ValueIDNum::EmptyValue; }
+  static inline ValueIDNum getTombstoneKey() {
+    return ValueIDNum::TombstoneValue;
+  }
+
+  static unsigned getHashValue(const ValueIDNum &Val) { return Val.asU64(); }
+
+  static bool isEqual(const ValueIDNum &A, const ValueIDNum &B) {
+    return A == B;
+  }
+};
+
+} // end namespace llvm
 
 #endif /* LLVM_LIB_CODEGEN_LIVEDEBUGVALUES_INSTRREFBASEDLDV_H */

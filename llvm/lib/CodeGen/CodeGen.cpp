@@ -58,14 +58,18 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeLiveVariablesPass(Registry);
   initializeLocalStackSlotPassPass(Registry);
   initializeLowerIntrinsicsPass(Registry);
+  initializeMIRAddFSDiscriminatorsPass(Registry);
   initializeMIRCanonicalizerPass(Registry);
   initializeMIRNamerPass(Registry);
+  initializeMIRProfileLoaderPassPass(Registry);
   initializeMachineBlockFrequencyInfoPass(Registry);
   initializeMachineBlockPlacementPass(Registry);
   initializeMachineBlockPlacementStatsPass(Registry);
   initializeMachineCSEPass(Registry);
   initializeMachineCombinerPass(Registry);
   initializeMachineCopyPropagationPass(Registry);
+  initializeMachineCycleInfoPrinterPassPass(Registry);
+  initializeMachineCycleInfoWrapperPassPass(Registry);
   initializeMachineDominatorTreePass(Registry);
   initializeMachineFunctionPrinterPassPass(Registry);
   initializeMachineLICMPass(Registry);

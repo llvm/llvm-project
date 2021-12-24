@@ -1,4 +1,4 @@
-; RUN: opt < %s -globalopt -S | FileCheck %s
+; RUN: opt < %s -passes=globalopt -S | FileCheck %s
 
 ; Don't get fooled by the inbounds keyword; it doesn't change
 ; the computed address.

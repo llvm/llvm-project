@@ -5,6 +5,8 @@
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -fsyntax-only -verify -verify-ignore-unexpected=error -verify-ignore-unexpected=note %s
 
+// REQUIRES: aarch64-registered-target
+
 #include <arm_sve.h>
 
 #ifdef SVE_OVERLOADED_FORMS
@@ -17,14 +19,16 @@
 // CHECK-LABEL: @test_svld1_bf16(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x bfloat> @llvm.aarch64.sve.ld1.nxv8bf16(<vscale x 8 x i1> [[TMP0]], bfloat* [[BASE:%.*]])
-// CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP1]]
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast bfloat* [[BASE:%.*]] to <vscale x 8 x bfloat>*
+// CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 8 x bfloat> @llvm.masked.load.nxv8bf16.p0nxv8bf16(<vscale x 8 x bfloat>* [[TMP1]], i32 1, <vscale x 8 x i1> [[TMP0]], <vscale x 8 x bfloat> zeroinitializer)
+// CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP2]]
 //
 // CPP-CHECK-LABEL: @_Z15test_svld1_bf16u10__SVBool_tPKu6__bf16(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x bfloat> @llvm.aarch64.sve.ld1.nxv8bf16(<vscale x 8 x i1> [[TMP0]], bfloat* [[BASE:%.*]])
-// CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP1]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = bitcast bfloat* [[BASE:%.*]] to <vscale x 8 x bfloat>*
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 8 x bfloat> @llvm.masked.load.nxv8bf16.p0nxv8bf16(<vscale x 8 x bfloat>* [[TMP1]], i32 1, <vscale x 8 x i1> [[TMP0]], <vscale x 8 x bfloat> zeroinitializer)
+// CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP2]]
 //
 svbfloat16_t test_svld1_bf16(svbool_t pg, const bfloat16_t *base)
 {
@@ -37,16 +41,18 @@ svbfloat16_t test_svld1_bf16(svbool_t pg, const bfloat16_t *base)
 // CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast bfloat* [[BASE:%.*]] to <vscale x 8 x bfloat>*
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <vscale x 8 x bfloat>, <vscale x 8 x bfloat>* [[TMP1]], i64 [[VNUM:%.*]], i64 0
-// CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 8 x bfloat> @llvm.aarch64.sve.ld1.nxv8bf16(<vscale x 8 x i1> [[TMP0]], bfloat* [[TMP2]])
-// CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP3]]
+// CHECK-NEXT:    [[TMP3:%.*]] = bitcast bfloat* [[TMP2]] to <vscale x 8 x bfloat>*
+// CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 8 x bfloat> @llvm.masked.load.nxv8bf16.p0nxv8bf16(<vscale x 8 x bfloat>* [[TMP3]], i32 1, <vscale x 8 x i1> [[TMP0]], <vscale x 8 x bfloat> zeroinitializer)
+// CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP4]]
 //
 // CPP-CHECK-LABEL: @_Z20test_svld1_vnum_bf16u10__SVBool_tPKu6__bf16l(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = bitcast bfloat* [[BASE:%.*]] to <vscale x 8 x bfloat>*
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <vscale x 8 x bfloat>, <vscale x 8 x bfloat>* [[TMP1]], i64 [[VNUM:%.*]], i64 0
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 8 x bfloat> @llvm.aarch64.sve.ld1.nxv8bf16(<vscale x 8 x i1> [[TMP0]], bfloat* [[TMP2]])
-// CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP3]]
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = bitcast bfloat* [[TMP2]] to <vscale x 8 x bfloat>*
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 8 x bfloat> @llvm.masked.load.nxv8bf16.p0nxv8bf16(<vscale x 8 x bfloat>* [[TMP3]], i32 1, <vscale x 8 x i1> [[TMP0]], <vscale x 8 x bfloat> zeroinitializer)
+// CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP4]]
 //
 svbfloat16_t test_svld1_vnum_bf16(svbool_t pg, const bfloat16_t *base, int64_t vnum)
 {

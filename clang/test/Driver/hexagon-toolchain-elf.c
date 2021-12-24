@@ -151,6 +151,22 @@
 // CHECK02B: "-cc1" {{.*}} "-target-cpu" "hexagonv67t"
 // CHECK02B: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v67t/crt0
 
+// RUN: %clang -### -target hexagon-unknown-elf \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv68 -fuse-ld=hexagon-link\
+// RUN:   %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK02C %s
+// CHECK02C: "-cc1" {{.*}} "-target-cpu" "hexagonv68"
+// CHECK02C: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v68/crt0
+
+// RUN: %clang -### -target hexagon-unknown-elf \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv69 -fuse-ld=hexagon-link\
+// RUN:   %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK02D %s
+// CHECK02D: "-cc1" {{.*}} "-target-cpu" "hexagonv69"
+// CHECK02D: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v69/crt0
+
 // -----------------------------------------------------------------------------
 // Test Linker related args
 // -----------------------------------------------------------------------------

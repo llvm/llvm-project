@@ -1071,7 +1071,7 @@ bool MatchableInfo::validate(StringRef CommentDelimiter, bool IsAlias) const {
   // Remove comments from the asm string.  We know that the asmstring only
   // has one line.
   if (!CommentDelimiter.empty() &&
-      StringRef(AsmString).find(CommentDelimiter) != StringRef::npos)
+      StringRef(AsmString).contains(CommentDelimiter))
     PrintFatalError(TheDef->getLoc(),
                   "asmstring for instruction has comment character in it, "
                   "mark it isCodeGenOnly");
@@ -1086,7 +1086,7 @@ bool MatchableInfo::validate(StringRef CommentDelimiter, bool IsAlias) const {
   std::set<std::string> OperandNames;
   for (const AsmOperand &Op : AsmOperands) {
     StringRef Tok = Op.Token;
-    if (Tok[0] == '$' && Tok.find(':') != StringRef::npos)
+    if (Tok[0] == '$' && Tok.contains(':'))
       PrintFatalError(TheDef->getLoc(),
                       "matchable with operand modifier '" + Tok +
                       "' not supported by asm matcher.  Mark isCodeGenOnly!");
@@ -3924,8 +3924,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
 
   if (HasDeprecation) {
     OS << "    std::string Info;\n";
-    OS << "    if (!getParser().getTargetParser().\n";
-    OS << "        getTargetOptions().MCNoDeprecatedWarn &&\n";
+    OS << "    if (!getParser().getTargetParser().getTargetOptions().MCNoDeprecatedWarn &&\n";
     OS << "        MII.getDeprecatedInfo(Inst, getSTI(), Info)) {\n";
     OS << "      SMLoc Loc = ((" << Target.getName()
        << "Operand &)*Operands[0]).getStartLoc();\n";

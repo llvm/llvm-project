@@ -88,10 +88,15 @@ DirectoryWatcherWindows::DirectoryWatcherWindows(
   // handle to the watcher and performing synchronous operations.
   {
     DWORD Size = GetFinalPathNameByHandleW(DirectoryHandle, NULL, 0, 0);
-    std::unique_ptr<WCHAR[]> Buffer{new WCHAR[Size]};
+    std::unique_ptr<WCHAR[]> Buffer{new WCHAR[Size + 1]};
     Size = GetFinalPathNameByHandleW(DirectoryHandle, Buffer.get(), Size, 0);
     Buffer[Size] = L'\0';
-    llvm::sys::windows::UTF16ToUTF8(Buffer.get(), Size, Path);
+    WCHAR *Data = Buffer.get();
+    if (Size >= 4 && ::memcmp(Data, L"\\\\?\\", 8) == 0) {
+      Data += 4;
+      Size -= 4;
+    }
+    llvm::sys::windows::UTF16ToUTF8(Data, Size, Path);
   }
 
   size_t EntrySize = sizeof(FILE_NOTIFY_INFORMATION) + MAX_PATH * sizeof(WCHAR);

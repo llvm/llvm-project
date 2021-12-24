@@ -34,8 +34,8 @@ NamedAttrList::NamedAttrList(DictionaryAttr attributes)
   dictionarySorted.setPointerAndInt(attributes, true);
 }
 
-NamedAttrList::NamedAttrList(const_iterator in_start, const_iterator in_end) {
-  assign(in_start, in_end);
+NamedAttrList::NamedAttrList(const_iterator inStart, const_iterator inEnd) {
+  assign(inStart, inEnd);
 }
 
 ArrayRef<NamedAttribute> NamedAttrList::getAttrs() const { return attrs; }
@@ -62,109 +62,94 @@ DictionaryAttr NamedAttrList::getDictionary(MLIRContext *context) const {
 
 /// Add an attribute with the specified name.
 void NamedAttrList::append(StringRef name, Attribute attr) {
-  append(Identifier::get(name, attr.getContext()), attr);
+  append(StringAttr::get(attr.getContext(), name), attr);
 }
 
 /// Replaces the attributes with new list of attributes.
-void NamedAttrList::assign(const_iterator in_start, const_iterator in_end) {
-  DictionaryAttr::sort(ArrayRef<NamedAttribute>{in_start, in_end}, attrs);
+void NamedAttrList::assign(const_iterator inStart, const_iterator inEnd) {
+  DictionaryAttr::sort(ArrayRef<NamedAttribute>{inStart, inEnd}, attrs);
   dictionarySorted.setPointerAndInt(nullptr, true);
 }
 
 void NamedAttrList::push_back(NamedAttribute newAttribute) {
-  assert(newAttribute.second && "unexpected null attribute");
   if (isSorted())
-    dictionarySorted.setInt(
-        attrs.empty() ||
-        strcmp(attrs.back().first.data(), newAttribute.first.data()) < 0);
+    dictionarySorted.setInt(attrs.empty() || attrs.back() < newAttribute);
   dictionarySorted.setPointer(nullptr);
   attrs.push_back(newAttribute);
 }
 
-/// Helper function to find attribute in possible sorted vector of
-/// NamedAttributes.
-template <typename T>
-static auto *findAttr(SmallVectorImpl<NamedAttribute> &attrs, T name,
-                      bool sorted) {
-  if (!sorted) {
-    return llvm::find_if(
-        attrs, [name](NamedAttribute attr) { return attr.first == name; });
-  }
-
-  auto *it = llvm::lower_bound(attrs, name);
-  if (it == attrs.end() || it->first != name)
-    return attrs.end();
-  return it;
-}
-
 /// Return the specified attribute if present, null otherwise.
 Attribute NamedAttrList::get(StringRef name) const {
-  auto *it = findAttr(attrs, name, isSorted());
-  return it != attrs.end() ? it->second : nullptr;
+  auto it = findAttr(*this, name);
+  return it.second ? it.first->getValue() : Attribute();
 }
-
-/// Return the specified attribute if present, null otherwise.
-Attribute NamedAttrList::get(Identifier name) const {
-  auto *it = findAttr(attrs, name, isSorted());
-  return it != attrs.end() ? it->second : nullptr;
+Attribute NamedAttrList::get(StringAttr name) const {
+  auto it = findAttr(*this, name);
+  return it.second ? it.first->getValue() : Attribute();
 }
 
 /// Return the specified named attribute if present, None otherwise.
 Optional<NamedAttribute> NamedAttrList::getNamed(StringRef name) const {
-  auto *it = findAttr(attrs, name, isSorted());
-  return it != attrs.end() ? *it : Optional<NamedAttribute>();
+  auto it = findAttr(*this, name);
+  return it.second ? *it.first : Optional<NamedAttribute>();
 }
-Optional<NamedAttribute> NamedAttrList::getNamed(Identifier name) const {
-  auto *it = findAttr(attrs, name, isSorted());
-  return it != attrs.end() ? *it : Optional<NamedAttribute>();
+Optional<NamedAttribute> NamedAttrList::getNamed(StringAttr name) const {
+  auto it = findAttr(*this, name);
+  return it.second ? *it.first : Optional<NamedAttribute>();
 }
 
 /// If the an attribute exists with the specified name, change it to the new
 /// value.  Otherwise, add a new attribute with the specified name/value.
-Attribute NamedAttrList::set(Identifier name, Attribute value) {
+Attribute NamedAttrList::set(StringAttr name, Attribute value) {
   assert(value && "attributes may never be null");
 
-  // Look for an existing value for the given name, and set it in-place.
-  auto *it = findAttr(attrs, name, isSorted());
-  if (it != attrs.end()) {
-    // Only update if the value is different from the existing.
-    Attribute oldValue = it->second;
-    if (oldValue != value) {
+  // Look for an existing attribute with the given name, and set its value
+  // in-place. Return the previous value of the attribute, if there was one.
+  auto it = findAttr(*this, name);
+  if (it.second) {
+    // Update the existing attribute by swapping out the old value for the new
+    // value. Return the old value.
+    Attribute oldValue = it.first->getValue();
+    if (it.first->getValue() != value) {
+      it.first->setValue(value);
+
+      // If the attributes have changed, the dictionary is invalidated.
       dictionarySorted.setPointer(nullptr);
-      it->second = value;
     }
     return oldValue;
   }
-
-  // Otherwise, insert the new attribute into its sorted position.
-  it = llvm::lower_bound(attrs, name);
+  // Perform a string lookup to insert the new attribute into its sorted
+  // position.
+  if (isSorted())
+    it = findAttr(*this, name.strref());
+  attrs.insert(it.first, {name, value});
+  // Invalidate the dictionary. Return null as there was no previous value.
   dictionarySorted.setPointer(nullptr);
-  attrs.insert(it, {name, value});
   return Attribute();
 }
+
 Attribute NamedAttrList::set(StringRef name, Attribute value) {
-  assert(value && "setting null attribute not supported");
-  return set(mlir::Identifier::get(name, value.getContext()), value);
+  assert(value && "attributes may never be null");
+  return set(mlir::StringAttr::get(value.getContext(), name), value);
 }
 
 Attribute
 NamedAttrList::eraseImpl(SmallVectorImpl<NamedAttribute>::iterator it) {
-  if (it == attrs.end())
-    return nullptr;
-
   // Erasing does not affect the sorted property.
-  Attribute attr = it->second;
+  Attribute attr = it->getValue();
   attrs.erase(it);
   dictionarySorted.setPointer(nullptr);
   return attr;
 }
 
-Attribute NamedAttrList::erase(Identifier name) {
-  return eraseImpl(findAttr(attrs, name, isSorted()));
+Attribute NamedAttrList::erase(StringAttr name) {
+  auto it = findAttr(*this, name);
+  return it.second ? eraseImpl(it.first) : Attribute();
 }
 
 Attribute NamedAttrList::erase(StringRef name) {
-  return eraseImpl(findAttr(attrs, name, isSorted()));
+  auto it = findAttr(*this, name);
+  return it.second ? eraseImpl(it.first) : Attribute();
 }
 
 NamedAttrList &
@@ -226,26 +211,22 @@ void OperationState::addRegions(
 // OperandStorage
 //===----------------------------------------------------------------------===//
 
-detail::OperandStorage::OperandStorage(Operation *owner, ValueRange values)
-    : inlineStorage() {
-  auto &inlineStorage = getInlineStorage();
-  inlineStorage.numOperands = inlineStorage.capacity = values.size();
-  auto *operandPtrBegin = getTrailingObjects<OpOperand>();
-  for (unsigned i = 0, e = inlineStorage.numOperands; i < e; ++i)
-    new (&operandPtrBegin[i]) OpOperand(owner, values[i]);
+detail::OperandStorage::OperandStorage(Operation *owner,
+                                       OpOperand *trailingOperands,
+                                       ValueRange values)
+    : isStorageDynamic(false), operandStorage(trailingOperands) {
+  numOperands = capacity = values.size();
+  for (unsigned i = 0; i < numOperands; ++i)
+    new (&operandStorage[i]) OpOperand(owner, values[i]);
 }
 
 detail::OperandStorage::~OperandStorage() {
-  // Destruct the current storage container.
-  if (isDynamicStorage()) {
-    TrailingOperandStorage &storage = getDynamicStorage();
-    storage.~TrailingOperandStorage();
-    // Work around -Wfree-nonheap-object false positive fixed by D102728.
-    auto *mem = &storage;
-    free(mem);
-  } else {
-    getInlineStorage().~TrailingOperandStorage();
-  }
+  for (auto &operand : getOperands())
+    operand.~OpOperand();
+
+  // If the storage is dynamic, deallocate it.
+  if (isStorageDynamic)
+    free(operandStorage);
 }
 
 /// Replace the operands contained in the storage with the ones provided in
@@ -291,24 +272,22 @@ void detail::OperandStorage::setOperands(Operation *owner, unsigned start,
 
 /// Erase an operand held by the storage.
 void detail::OperandStorage::eraseOperands(unsigned start, unsigned length) {
-  TrailingOperandStorage &storage = getStorage();
-  MutableArrayRef<OpOperand> operands = storage.getOperands();
+  MutableArrayRef<OpOperand> operands = getOperands();
   assert((start + length) <= operands.size());
-  storage.numOperands -= length;
+  numOperands -= length;
 
   // Shift all operands down if the operand to remove is not at the end.
-  if (start != storage.numOperands) {
+  if (start != numOperands) {
     auto *indexIt = std::next(operands.begin(), start);
     std::rotate(indexIt, std::next(indexIt, length), operands.end());
   }
   for (unsigned i = 0; i != length; ++i)
-    operands[storage.numOperands + i].~OpOperand();
+    operands[numOperands + i].~OpOperand();
 }
 
 void detail::OperandStorage::eraseOperands(
     const llvm::BitVector &eraseIndices) {
-  TrailingOperandStorage &storage = getStorage();
-  MutableArrayRef<OpOperand> operands = storage.getOperands();
+  MutableArrayRef<OpOperand> operands = getOperands();
   assert(eraseIndices.size() == operands.size());
 
   // Check that at least one operand is erased.
@@ -317,11 +296,11 @@ void detail::OperandStorage::eraseOperands(
     return;
 
   // Shift all of the removed operands to the end, and destroy them.
-  storage.numOperands = firstErasedIndice;
+  numOperands = firstErasedIndice;
   for (unsigned i = firstErasedIndice + 1, e = operands.size(); i < e; ++i)
     if (!eraseIndices.test(i))
-      operands[storage.numOperands++] = std::move(operands[i]);
-  for (OpOperand &operand : operands.drop_front(storage.numOperands))
+      operands[numOperands++] = std::move(operands[i]);
+  for (OpOperand &operand : operands.drop_front(numOperands))
     operand.~OpOperand();
 }
 
@@ -329,24 +308,21 @@ void detail::OperandStorage::eraseOperands(
 /// operands.
 MutableArrayRef<OpOperand> detail::OperandStorage::resize(Operation *owner,
                                                           unsigned newSize) {
-  TrailingOperandStorage &storage = getStorage();
-
   // If the number of operands is less than or equal to the current amount, we
   // can just update in place.
-  unsigned &numOperands = storage.numOperands;
-  MutableArrayRef<OpOperand> operands = storage.getOperands();
+  MutableArrayRef<OpOperand> origOperands = getOperands();
   if (newSize <= numOperands) {
     // If the number of new size is less than the current, remove any extra
     // operands.
     for (unsigned i = newSize; i != numOperands; ++i)
-      operands[i].~OpOperand();
+      origOperands[i].~OpOperand();
     numOperands = newSize;
-    return operands.take_front(newSize);
+    return origOperands.take_front(newSize);
   }
 
   // If the new size is within the original inline capacity, grow inplace.
-  if (newSize <= storage.capacity) {
-    OpOperand *opBegin = operands.data();
+  if (newSize <= capacity) {
+    OpOperand *opBegin = origOperands.data();
     for (unsigned e = newSize; numOperands != e; ++numOperands)
       new (&opBegin[numOperands]) OpOperand(owner);
     return MutableArrayRef<OpOperand>(opBegin, newSize);
@@ -354,36 +330,32 @@ MutableArrayRef<OpOperand> detail::OperandStorage::resize(Operation *owner,
 
   // Otherwise, we need to allocate a new storage.
   unsigned newCapacity =
-      std::max(unsigned(llvm::NextPowerOf2(storage.capacity + 2)), newSize);
-  auto *newStorageMem =
-      malloc(TrailingOperandStorage::totalSizeToAlloc<OpOperand>(newCapacity));
-  auto *newStorage = ::new (newStorageMem) TrailingOperandStorage();
-  newStorage->numOperands = newSize;
-  newStorage->capacity = newCapacity;
+      std::max(unsigned(llvm::NextPowerOf2(capacity + 2)), newSize);
+  OpOperand *newOperandStorage =
+      reinterpret_cast<OpOperand *>(malloc(sizeof(OpOperand) * newCapacity));
 
   // Move the current operands to the new storage.
-  MutableArrayRef<OpOperand> newOperands = newStorage->getOperands();
-  std::uninitialized_copy(std::make_move_iterator(operands.begin()),
-                          std::make_move_iterator(operands.end()),
+  MutableArrayRef<OpOperand> newOperands(newOperandStorage, newSize);
+  std::uninitialized_copy(std::make_move_iterator(origOperands.begin()),
+                          std::make_move_iterator(origOperands.end()),
                           newOperands.begin());
 
   // Destroy the original operands.
-  for (auto &operand : operands)
+  for (auto &operand : origOperands)
     operand.~OpOperand();
 
   // Initialize any new operands.
   for (unsigned e = newSize; numOperands != e; ++numOperands)
     new (&newOperands[numOperands]) OpOperand(owner);
 
-  // If the current storage is also dynamic, free it.
-  if (isDynamicStorage()) {
-    // Work around -Wfree-nonheap-object false positive fixed by D102728.
-    auto *mem = &storage;
-    free(mem);
-  }
+  // If the current storage is dynamic, free it.
+  if (isStorageDynamic)
+    free(operandStorage);
 
   // Update the storage representation to use the new dynamic storage.
-  dynamicStorage.setPointerAndInt(newStorage, true);
+  operandStorage = newOperandStorage;
+  capacity = newCapacity;
+  isStorageDynamic = true;
   return newOperands;
 }
 
@@ -393,9 +365,6 @@ MutableArrayRef<OpOperand> detail::OperandStorage::resize(Operation *owner,
 
 //===----------------------------------------------------------------------===//
 // OperandRange
-
-OperandRange::OperandRange(Operation *op)
-    : OperandRange(op->getOpOperands().data(), op->getNumOperands()) {}
 
 unsigned OperandRange::getBeginOperandIndex() const {
   assert(!empty() && "range must not be empty");
@@ -515,11 +484,12 @@ void MutableOperandRange::updateLength(unsigned newLength) {
 
   // Update any of the provided segment attributes.
   for (OperandSegment &segment : operandSegments) {
-    auto attr = segment.second.second.cast<DenseIntElementsAttr>();
+    auto attr = segment.second.getValue().cast<DenseIntElementsAttr>();
     SmallVector<int32_t, 8> segments(attr.getValues<int32_t>());
     segments[segment.first] += diff;
-    segment.second.second = DenseIntElementsAttr::get(attr.getType(), segments);
-    owner->setAttr(segment.second.first, segment.second.second);
+    segment.second.setValue(
+        DenseIntElementsAttr::get(attr.getType(), segments));
+    owner->setAttr(segment.second.getName(), segment.second.getValue());
   }
 }
 
@@ -530,21 +500,21 @@ MutableOperandRangeRange::MutableOperandRangeRange(
     const MutableOperandRange &operands, NamedAttribute operandSegmentAttr)
     : MutableOperandRangeRange(
           OwnerT(operands, operandSegmentAttr), 0,
-          operandSegmentAttr.second.cast<DenseElementsAttr>().size()) {}
+          operandSegmentAttr.getValue().cast<DenseElementsAttr>().size()) {}
 
 MutableOperandRange MutableOperandRangeRange::join() const {
   return getBase().first;
 }
 
 MutableOperandRangeRange::operator OperandRangeRange() const {
-  return OperandRangeRange(getBase().first,
-                           getBase().second.second.cast<DenseElementsAttr>());
+  return OperandRangeRange(
+      getBase().first, getBase().second.getValue().cast<DenseElementsAttr>());
 }
 
 MutableOperandRange MutableOperandRangeRange::dereference(const OwnerT &object,
                                                           ptrdiff_t index) {
   auto sizeData =
-      object.second.second.cast<DenseElementsAttr>().getValues<uint32_t>();
+      object.second.getValue().cast<DenseElementsAttr>().getValues<uint32_t>();
   uint32_t startIndex =
       std::accumulate(sizeData.begin(), sizeData.begin() + index, 0);
   return object.first.slice(
@@ -554,6 +524,10 @@ MutableOperandRange MutableOperandRangeRange::dereference(const OwnerT &object,
 
 //===----------------------------------------------------------------------===//
 // ResultRange
+
+ResultRange::ResultRange(OpResult result)
+    : ResultRange(static_cast<detail::OpResultImpl *>(Value(result).getImpl()),
+                  1) {}
 
 ResultRange::use_range ResultRange::getUses() const {
   return {use_begin(), use_end()};
@@ -603,6 +577,10 @@ void ResultRange::UseIterator::skipOverResultsWithNoUsers() {
     use = {};
   else
     use = (*it).use_begin();
+}
+
+void ResultRange::replaceAllUsesWith(Operation *op) {
+  replaceAllUsesWith(op->getResults());
 }
 
 //===----------------------------------------------------------------------===//

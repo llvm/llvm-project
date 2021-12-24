@@ -1250,6 +1250,13 @@ void ASTDeclReader::ReadObjCDefinitionData(
 
 void ASTDeclReader::MergeDefinitionData(ObjCProtocolDecl *D,
          struct ObjCProtocolDecl::DefinitionData &&NewDD) {
+  struct ObjCProtocolDecl::DefinitionData &DD = D->data();
+  if (DD.Definition != NewDD.Definition) {
+    Reader.MergedDeclContexts.insert(
+        std::make_pair(NewDD.Definition, DD.Definition));
+    Reader.mergeDefinitionVisibility(DD.Definition, NewDD.Definition);
+  }
+
   // FIXME: odr checking?
 }
 
@@ -2941,6 +2948,7 @@ uint64_t ASTReader::getGlobalBitOffset(ModuleFile &M, uint64_t LocalOffset) {
 static bool isSameTemplateParameterList(const ASTContext &C,
                                         const TemplateParameterList *X,
                                         const TemplateParameterList *Y);
+static bool isSameEntity(NamedDecl *X, NamedDecl *Y);
 
 /// Determine whether two template parameters are similar enough
 /// that they may be used in declarations of the same template.
@@ -2960,7 +2968,9 @@ static bool isSameTemplateParameter(const NamedDecl *X,
     if (!TXTC != !TYTC)
       return false;
     if (TXTC && TYTC) {
-      if (TXTC->getNamedConcept() != TYTC->getNamedConcept())
+      auto *NCX = TXTC->getNamedConcept();
+      auto *NCY = TYTC->getNamedConcept();
+      if (!NCX || !NCY || !isSameEntity(NCX, NCY))
         return false;
       if (TXTC->hasExplicitTemplateArgs() != TYTC->hasExplicitTemplateArgs())
         return false;
@@ -3104,10 +3114,11 @@ static bool hasSameOverloadableAttrs(const FunctionDecl *A,
 
 /// Determine whether the two declarations refer to the same entity.
 static bool isSameEntity(NamedDecl *X, NamedDecl *Y) {
-  assert(X->getDeclName() == Y->getDeclName() && "Declaration name mismatch!");
-
   if (X == Y)
     return true;
+
+  if (X->getDeclName() != Y->getDeclName())
+    return false;
 
   // Must be in the same context.
   //
@@ -4750,9 +4761,10 @@ void ASTDeclReader::UpdateDecl(Decl *D,
       auto AllocatorKind =
           static_cast<OMPAllocateDeclAttr::AllocatorTypeTy>(Record.readInt());
       Expr *Allocator = Record.readExpr();
+      Expr *Alignment = Record.readExpr();
       SourceRange SR = readSourceRange();
       D->addAttr(OMPAllocateDeclAttr::CreateImplicit(
-          Reader.getContext(), AllocatorKind, Allocator, SR,
+          Reader.getContext(), AllocatorKind, Allocator, Alignment, SR,
           AttributeCommonInfo::AS_Pragma));
       break;
     }

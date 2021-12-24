@@ -1,7 +1,6 @@
 #pragma once
 
 namespace std {
-namespace experimental {
 
 template <typename ret_t, typename... args_t>
 struct coroutine_traits {
@@ -13,7 +12,6 @@ struct coroutine_handle {
   static constexpr coroutine_handle from_address(void *addr) noexcept { return {}; };
 };
 
-} // namespace experimental
 } // namespace std
 
 struct never_suspend {

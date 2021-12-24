@@ -49,6 +49,7 @@ public:
   DILocalVariable *FuncVariable;
   DIBasicType *LongInt;
   DIExpression *EmptyExpr;
+  LiveDebugValues::OverlapMap Overlaps;
 
   DebugLoc OutermostLoc, InBlockLoc, NotNestedBlockLoc, InlinedLoc;
 
@@ -142,6 +143,7 @@ public:
     LDV->TRI = STI.getRegisterInfo();
     LDV->TFI = STI.getFrameLowering();
     LDV->MFI = &MF->getFrameInfo();
+    LDV->MRI = &MF->getRegInfo();
 
     DomTree = std::make_unique<MachineDominatorTree>(*MF);
     LDV->DomTree = &*DomTree;
@@ -168,7 +170,7 @@ public:
 
   void addVTracker() {
     ASSERT_TRUE(LDV);
-    VTracker = std::make_unique<VLocTracker>();
+    VTracker = std::make_unique<VLocTracker>(Overlaps, EmptyExpr);
     LDV->VTracker = &*VTracker;
   }
 
@@ -176,6 +178,13 @@ public:
   void buildMLocValueMap(ValueIDNum **MInLocs, ValueIDNum **MOutLocs,
                          SmallVectorImpl<MLocTransferMap> &MLocTransfer) {
     LDV->buildMLocValueMap(*MF, MInLocs, MOutLocs, MLocTransfer);
+  }
+
+  void placeMLocPHIs(MachineFunction &MF,
+                     SmallPtrSetImpl<MachineBasicBlock *> &AllBlocks,
+                     ValueIDNum **MInLocs,
+                     SmallVectorImpl<MLocTransferMap> &MLocTransfer) {
+    LDV->placeMLocPHIs(MF, AllBlocks, MInLocs, MLocTransfer);
   }
 
   Optional<ValueIDNum>
@@ -186,11 +195,9 @@ public:
   }
 
   bool vlocJoin(MachineBasicBlock &MBB, InstrRefBasedLDV::LiveIdxT &VLOCOutLocs,
-                SmallPtrSet<const MachineBasicBlock *, 8> &InScopeBlocks,
                 SmallPtrSet<const MachineBasicBlock *, 8> &BlocksToExplore,
                 DbgValue &InLoc) {
-    return LDV->vlocJoin(MBB, VLOCOutLocs, InScopeBlocks, BlocksToExplore,
-                         InLoc);
+    return LDV->vlocJoin(MBB, VLOCOutLocs, BlocksToExplore, InLoc);
   }
 
   void buildVLocValueMap(const DILocation *DILoc,
@@ -479,7 +486,7 @@ body:  |
 TEST_F(InstrRefLDVTest, MTransferDefs) {
   MachineFunction *MF = readMIRBlock(
    "    $rax = MOV64ri 0\n"
-   "    RETQ $rax\n");
+   "    RET64 $rax\n");
   setupLDVObj(MF);
 
   // We should start with only SP tracked.
@@ -511,7 +518,7 @@ TEST_F(InstrRefLDVTest, MTransferDefs) {
   MF = readMIRBlock(
    "    $rax = MOV64ri 0\n"
    "    $al = MOV8ri 0\n"
-   "    RETQ $rax\n");
+   "    RET64 $rax\n");
   setupLDVObj(MF);
   TransferMap.clear();
   TransferMap.resize(1);
@@ -548,7 +555,7 @@ TEST_F(InstrRefLDVTest, MTransferDefs) {
    "    $rdi = MOV64ri 0\n" // instr 4
    "    $rsi = MOV64ri 0\n" // instr 5
    "    CALL64r $rax, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit-def $rsp, implicit-def $ssp, implicit-def $rax, implicit-def $esp, implicit-def $sp\n\n\n\n" // instr 6
-   "    RETQ $rax\n"); // instr 7
+   "    RET64 $rax\n"); // instr 7
   setupLDVObj(MF);
   TransferMap.clear();
   TransferMap.resize(1);
@@ -582,7 +589,7 @@ TEST_F(InstrRefLDVTest, MTransferDefs) {
   // When we DBG_PHI something, we should track all its subregs.
   MF = readMIRBlock(
    "    DBG_PHI $rdi, 0\n"
-   "    RETQ\n");
+   "    RET64\n");
   setupLDVObj(MF);
   TransferMap.clear();
   TransferMap.resize(1);
@@ -605,7 +612,7 @@ TEST_F(InstrRefLDVTest, MTransferMeta) {
    "    $rax = MOV64ri 0\n"
    "    $rax = IMPLICIT_DEF\n"
    "    $rax = KILL killed $rax\n"
-   "    RETQ $rax\n");
+   "    RET64 $rax\n");
   setupLDVObj(MF);
   TransferMap.clear();
   TransferMap.resize(1);
@@ -624,7 +631,7 @@ TEST_F(InstrRefLDVTest, MTransferCopies) {
   MachineFunction *MF = readMIRBlock(
    "    $rax = MOV64ri 0\n"
    "    MOV64mr $rsp, 1, $noreg, 16, $noreg, $rax :: (store 8 into %stack.0)\n"
-   "    RETQ $rax\n");
+   "    RET64 $rax\n");
   setupLDVObj(MF);
   TransferMap.clear();
   TransferMap.resize(1);
@@ -649,7 +656,7 @@ TEST_F(InstrRefLDVTest, MTransferCopies) {
    "    $rax = MOV64ri 0\n"
    "    MOV64mr $rsp, 1, $noreg, 16, $noreg, $rax :: (store 8 into %stack.0)\n"
    "    $rbx = MOV64rm $rsp, 1, $noreg, 0, $noreg :: (load 8 from %stack.0)\n"
-   "    RETQ\n");
+   "    RET64\n");
   setupLDVObj(MF);
   TransferMap.clear();
   TransferMap.resize(1);
@@ -673,7 +680,7 @@ TEST_F(InstrRefLDVTest, MTransferCopies) {
    "    $rax = MOV64ri 0\n"
    "    $rcx = COPY $rax\n"
    "    $rbx = MOV64rr $rcx\n"
-   "    RETQ\n");
+   "    RET64\n");
   setupLDVObj(MF);
   TransferMap.clear();
   TransferMap.resize(1);
@@ -703,7 +710,7 @@ TEST_F(InstrRefLDVTest, MTransferCopies) {
   MF = readMIRBlock(
    "    $rax = MOV64ri 0\n"
    "    $ecx = COPY $eax\n"
-   "    RETQ\n");
+   "    RET64\n");
   setupLDVObj(MF);
   TransferMap.clear();
   TransferMap.resize(1);
@@ -733,7 +740,7 @@ TEST_F(InstrRefLDVTest, MTransferSubregSpills) {
    "    $rax = MOV64ri 0\n"
    "    MOV64mr $rsp, 1, $noreg, 16, $noreg, $rax :: (store 8 into %stack.0)\n"
    "    $rbx = MOV64rm $rsp, 1, $noreg, 0, $noreg :: (load 8 from %stack.0)\n"
-   "    RETQ\n");
+   "    RET64\n");
   setupLDVObj(MF);
   TransferMap.clear();
   TransferMap.resize(1);
@@ -780,7 +787,7 @@ TEST_F(InstrRefLDVTest, MTransferSubregSpills) {
    "    MOV64mr $rsp, 1, $noreg, 16, $noreg, $rax :: (store 8 into %stack.0)\n"
    "    MOV32mr $rsp, 1, $noreg, 16, $noreg, $eax :: (store 4 into %stack.0)\n"
    "    $rbx = MOV64rm $rsp, 1, $noreg, 0, $noreg :: (load 8 from %stack.0)\n"
-   "    RETQ\n");
+   "    RET64\n");
   setupLDVObj(MF);
   TransferMap.clear();
   TransferMap.resize(1);
@@ -831,7 +838,7 @@ TEST_F(InstrRefLDVTest, MTransferSubregSpills) {
    "    $xmm0 = IMPLICIT_DEF\n"
    "    MOVUPDmr $rsp, 1, $noreg, 16, $noreg, killed $xmm0 :: (store (s128) into %stack.0)\n"
    "    $rbx = MOV64rm $rsp, 1, $noreg, 0, $noreg :: (load 8 from %stack.0)\n"
-   "    RETQ\n");
+   "    RET64\n");
   setupLDVObj(MF);
   TransferMap.clear();
   TransferMap.resize(1);
@@ -866,7 +873,7 @@ TEST_F(InstrRefLDVTest, MTransferSubregSpills) {
    "    $rax = MOV64ri 0\n"
    "    MOV8mr $rsp, 1, $noreg, 16, $noreg, $ah :: (store 1 into %stack.0)\n"
    "    $al = MOV8rm $rsp, 1, $noreg, 0, $noreg :: (load 1 from %stack.0)\n"
-   "    RETQ\n");
+   "    RET64\n");
   setupLDVObj(MF);
   TransferMap.clear();
   TransferMap.resize(1);
@@ -896,7 +903,8 @@ TEST_F(InstrRefLDVTest, MLocSingleBlock) {
   ValueIDNum *OutLocsPtr[1] = {&OutLocs[0]};
 
   // Transfer function: nothing.
-  SmallVector<MLocTransferMap, 1> TransferFunc = {{}};
+  SmallVector<MLocTransferMap, 1> TransferFunc;
+  TransferFunc.resize(1);
 
   // Try and build value maps...
   buildMLocValueMap(InLocsPtr, OutLocsPtr, TransferFunc);
@@ -1071,6 +1079,92 @@ TEST_F(InstrRefLDVTest, MLocDiamondBlocks) {
   TransferFunc[0].clear();
   TransferFunc[1].clear();
   TransferFunc[2].clear();
+}
+
+TEST_F(InstrRefLDVTest, MLocDiamondSpills) {
+  // Test that defs in stack locations that require PHIs, cause PHIs to be
+  // installed in aliasing locations. i.e., if there's a PHI in the lower
+  // 8 bits of the stack, there should be PHIs for 16/32/64 bit locations
+  // on the stack too.
+  // Technically this isn't needed for accuracy: we should calculate PHIs
+  // independently for each location. However, because there's an optimisation
+  // that only places PHIs for the lower "interfering" parts of stack slots,
+  // test for this behaviour.
+  setupDiamondBlocks();
+
+  ASSERT_TRUE(MTracker->getNumLocs() == 1);
+  LocIdx RspLoc(0);
+
+  // Create a stack location and ensure it's tracked.
+  SpillLoc SL = {getRegByName("RSP"), StackOffset::getFixed(-8)};
+  SpillLocationNo SpillNo = MTracker->getOrTrackSpillLoc(SL);
+  ASSERT_EQ(MTracker->getNumLocs(), 10u); // Tracks all possible stack locs.
+  // Locations are: RSP, stack slots from 2^3 bits wide up to 2^9 for zmm regs,
+  // then slots for sub_8bit_hi and sub_16bit_hi ({8, 8} and {16, 16}).
+
+  // Pick out the locations on the stack that various x86 regs would be written
+  // to. HAX is the upper 16 bits of EAX.
+  unsigned ALID = MTracker->getLocID(SpillNo, {8, 0});
+  unsigned AHID = MTracker->getLocID(SpillNo, {8, 8});
+  unsigned AXID = MTracker->getLocID(SpillNo, {16, 0});
+  unsigned EAXID = MTracker->getLocID(SpillNo, {32, 0});
+  unsigned HAXID = MTracker->getLocID(SpillNo, {16, 16});
+  unsigned RAXID = MTracker->getLocID(SpillNo, {64, 0});
+  LocIdx ALStackLoc = MTracker->getSpillMLoc(ALID);
+  LocIdx AHStackLoc = MTracker->getSpillMLoc(AHID);
+  LocIdx AXStackLoc = MTracker->getSpillMLoc(AXID);
+  LocIdx EAXStackLoc = MTracker->getSpillMLoc(EAXID);
+  LocIdx HAXStackLoc = MTracker->getSpillMLoc(HAXID);
+  LocIdx RAXStackLoc = MTracker->getSpillMLoc(RAXID);
+  // There are other locations, for things like xmm0, which we're going to
+  // ignore here.
+
+  ValueIDNum InLocs[4][10];
+  ValueIDNum *InLocsPtr[4] = {InLocs[0], InLocs[1], InLocs[2], InLocs[3]};
+
+  // Transfer function: start with nothing.
+  SmallVector<MLocTransferMap, 1> TransferFunc;
+  TransferFunc.resize(4);
+
+  // Name some values.
+  unsigned EntryBlk = 0, Blk1 = 1, RetBlk = 3;
+
+  ValueIDNum LiveInRsp(EntryBlk, 0, RspLoc);
+  ValueIDNum ALLiveIn(EntryBlk, 0, ALStackLoc);
+  ValueIDNum AHLiveIn(EntryBlk, 0, AHStackLoc);
+  ValueIDNum HAXLiveIn(EntryBlk, 0, HAXStackLoc);
+  ValueIDNum ALPHI(RetBlk, 0, ALStackLoc);
+  ValueIDNum AXPHI(RetBlk, 0, AXStackLoc);
+  ValueIDNum EAXPHI(RetBlk, 0, EAXStackLoc);
+  ValueIDNum HAXPHI(RetBlk, 0, HAXStackLoc);
+  ValueIDNum RAXPHI(RetBlk, 0, RAXStackLoc);
+
+  ValueIDNum ALDefInBlk1(Blk1, 1, ALStackLoc);
+  ValueIDNum HAXDefInBlk1(Blk1, 1, HAXStackLoc);
+
+  SmallPtrSet<MachineBasicBlock *, 4> AllBlocks{MBB0, MBB1, MBB2, MBB3};
+
+  // If we put defs into one side of the diamond, for AL and HAX, then we should
+  // find all aliasing positions have PHIs placed. This isn't technically what
+  // the transfer function says to do: but we're testing that the optimisation
+  // to reduce IDF calculation does the right thing.
+  // AH should not be def'd: it don't alias AL or HAX.
+  //
+  // NB: we don't call buildMLocValueMap, because it will try to eliminate the
+  // upper-slot PHIs, and succeed because of our slightly cooked transfer
+  // function.
+  TransferFunc[1].insert({ALStackLoc, ALDefInBlk1});
+  TransferFunc[1].insert({HAXStackLoc, HAXDefInBlk1});
+  initValueArray(InLocsPtr, 4, 10);
+  placeMLocPHIs(*MF, AllBlocks, InLocsPtr, TransferFunc);
+  EXPECT_EQ(InLocs[3][ALStackLoc.asU64()], ALPHI);
+  EXPECT_EQ(InLocs[3][AXStackLoc.asU64()], AXPHI);
+  EXPECT_EQ(InLocs[3][EAXStackLoc.asU64()], EAXPHI);
+  EXPECT_EQ(InLocs[3][HAXStackLoc.asU64()], HAXPHI);
+  EXPECT_EQ(InLocs[3][RAXStackLoc.asU64()], RAXPHI);
+  // AH should be left untouched,
+  EXPECT_EQ(InLocs[3][AHStackLoc.asU64()], ValueIDNum::EmptyValue);
+
 }
 
 TEST_F(InstrRefLDVTest, MLocSimpleLoop) {
@@ -2088,14 +2182,14 @@ TEST_F(InstrRefLDVTest, vlocJoinDiamond) {
   DbgValue JoinedLoc = DbgValue(3, EmptyProps, DbgValue::NoVal);
   VLiveOuts[1] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
   VLiveOuts[2] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
-  bool Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
+  bool Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, JoinedLoc);
   EXPECT_TRUE(Result); // Output locs should have changed.
   EXPECT_EQ(JoinedLoc.Kind, DbgValue::Def);
   EXPECT_EQ(JoinedLoc.ID, LiveInRsp);
 
   // And if we did it a second time, leaving the live-ins as it was, then
   // we should report no change.
-  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
+  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, JoinedLoc);
   EXPECT_FALSE(Result);
 
   // If the live-in variable values are different, but there's no PHI placed
@@ -2104,7 +2198,7 @@ TEST_F(InstrRefLDVTest, vlocJoinDiamond) {
   VLiveOuts[1] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
   VLiveOuts[2] = DbgValue(LiveInRax, EmptyProps, DbgValue::Def);
   JoinedLoc = DbgValue(3, EmptyProps, DbgValue::NoVal);
-  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
+  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, JoinedLoc);
   EXPECT_TRUE(Result);
   EXPECT_EQ(JoinedLoc.Kind, DbgValue::Def);
   // RPO is blocks 0 2 1 3, so LiveInRax is picked as the first predecessor
@@ -2120,7 +2214,7 @@ TEST_F(InstrRefLDVTest, vlocJoinDiamond) {
   // Try placing a PHI. With differing input values (LiveInRsp, LiveInRax),
   // this PHI should not be eliminated.
   JoinedLoc = DbgValue(3, EmptyProps, DbgValue::VPHI);
-  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
+  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, JoinedLoc);
   // Expect no change.
   EXPECT_FALSE(Result);
   EXPECT_EQ(JoinedLoc.Kind, DbgValue::VPHI);
@@ -2134,7 +2228,7 @@ TEST_F(InstrRefLDVTest, vlocJoinDiamond) {
   VLiveOuts[1] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
   VLiveOuts[2] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
   JoinedLoc = DbgValue(3, EmptyProps, DbgValue::VPHI);
-  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
+  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, JoinedLoc);
   EXPECT_TRUE(Result);
   EXPECT_EQ(JoinedLoc.Kind, DbgValue::Def);
   EXPECT_EQ(JoinedLoc.ID, LiveInRsp);
@@ -2146,7 +2240,7 @@ TEST_F(InstrRefLDVTest, vlocJoinDiamond) {
   VLiveOuts[1] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
   VLiveOuts[2] = DbgValue(LiveInRax, EmptyProps, DbgValue::Def);
   JoinedLoc = DbgValue(2, EmptyProps, DbgValue::VPHI);
-  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
+  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, JoinedLoc);
   EXPECT_TRUE(Result);
   EXPECT_EQ(JoinedLoc.Kind, DbgValue::Def);
   EXPECT_EQ(JoinedLoc.ID, LiveInRax); // from block 2
@@ -2156,7 +2250,7 @@ TEST_F(InstrRefLDVTest, vlocJoinDiamond) {
   VLiveOuts[1] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
   VLiveOuts[2] = DbgValue(0, EmptyProps, DbgValue::VPHI);
   JoinedLoc = DbgValue(2, EmptyProps, DbgValue::VPHI);
-  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
+  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, JoinedLoc);
   EXPECT_TRUE(Result);
   EXPECT_EQ(JoinedLoc.Kind, DbgValue::VPHI);
   EXPECT_EQ(JoinedLoc.BlockNo, 0);
@@ -2166,7 +2260,7 @@ TEST_F(InstrRefLDVTest, vlocJoinDiamond) {
   VLiveOuts[1] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
   VLiveOuts[2] = DbgValue(LiveInRsp, PropsWithIndirect, DbgValue::Def);
   JoinedLoc = DbgValue(3, EmptyProps, DbgValue::VPHI);
-  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
+  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, JoinedLoc);
   EXPECT_FALSE(Result);
   EXPECT_EQ(JoinedLoc.Kind, DbgValue::VPHI);
   EXPECT_EQ(JoinedLoc.BlockNo, 3);
@@ -2177,7 +2271,7 @@ TEST_F(InstrRefLDVTest, vlocJoinDiamond) {
   VLiveOuts[1] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
   VLiveOuts[2] = DbgValue(LiveInRsp, PropsWithIndirect, DbgValue::Def);
   JoinedLoc = DbgValue(2, EmptyProps, DbgValue::VPHI);
-  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
+  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, JoinedLoc);
   EXPECT_TRUE(Result);
   EXPECT_EQ(JoinedLoc.Kind, DbgValue::Def);
   EXPECT_EQ(JoinedLoc.ID, LiveInRsp);
@@ -2193,7 +2287,7 @@ TEST_F(InstrRefLDVTest, vlocJoinDiamond) {
   VLiveOuts[1] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
   VLiveOuts[2] = DbgValue(LiveInRsp, PropsWithExpr, DbgValue::Def);
   JoinedLoc = DbgValue(3, EmptyProps, DbgValue::VPHI);
-  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
+  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, JoinedLoc);
   EXPECT_FALSE(Result);
 }
 
@@ -2247,7 +2341,7 @@ TEST_F(InstrRefLDVTest, vlocJoinLoops) {
   VLiveOuts[0] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
   VLiveOuts[1] = DbgValue(LiveInRax, EmptyProps, DbgValue::Def);
   DbgValue JoinedLoc = DbgValue(LiveInRax, EmptyProps, DbgValue::Def);
-  bool Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
+  bool Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, JoinedLoc);
   EXPECT_TRUE(Result);
   EXPECT_EQ(JoinedLoc.Kind, DbgValue::Def);
   EXPECT_EQ(JoinedLoc.ID, LiveInRsp);
@@ -2256,7 +2350,7 @@ TEST_F(InstrRefLDVTest, vlocJoinLoops) {
   VLiveOuts[0] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
   VLiveOuts[1] = DbgValue(LiveInRax, EmptyProps, DbgValue::Def);
   JoinedLoc = DbgValue(1, EmptyProps, DbgValue::VPHI);
-  Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
+  Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, JoinedLoc);
   EXPECT_FALSE(Result);
   EXPECT_EQ(JoinedLoc.Kind, DbgValue::VPHI);
   EXPECT_EQ(JoinedLoc.BlockNo, 1);
@@ -2265,7 +2359,7 @@ TEST_F(InstrRefLDVTest, vlocJoinLoops) {
   VLiveOuts[0] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
   VLiveOuts[1] = DbgValue(1, EmptyProps, DbgValue::VPHI);
   JoinedLoc = DbgValue(1, EmptyProps, DbgValue::VPHI);
-  Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
+  Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, JoinedLoc);
   EXPECT_TRUE(Result);
   EXPECT_EQ(JoinedLoc.Kind, DbgValue::Def);
   EXPECT_EQ(JoinedLoc.ID, LiveInRsp);
@@ -2278,7 +2372,7 @@ TEST_F(InstrRefLDVTest, vlocJoinLoops) {
   VLiveOuts[0] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
   VLiveOuts[1] = DbgValue(1, PropsWithExpr, DbgValue::VPHI);
   JoinedLoc = DbgValue(1, EmptyProps, DbgValue::VPHI);
-  Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
+  Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, JoinedLoc);
   EXPECT_FALSE(Result);
   EXPECT_EQ(JoinedLoc.Kind, DbgValue::VPHI);
   EXPECT_EQ(JoinedLoc.BlockNo, 1);
@@ -2287,7 +2381,7 @@ TEST_F(InstrRefLDVTest, vlocJoinLoops) {
   VLiveOuts[0] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
   VLiveOuts[1] = DbgValue(0, EmptyProps, DbgValue::VPHI);
   JoinedLoc = DbgValue(1, EmptyProps, DbgValue::VPHI);
-  Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
+  Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, JoinedLoc);
   EXPECT_FALSE(Result);
   EXPECT_EQ(JoinedLoc.Kind, DbgValue::VPHI);
   EXPECT_EQ(JoinedLoc.BlockNo, 1);
@@ -2351,7 +2445,7 @@ TEST_F(InstrRefLDVTest, vlocJoinBadlyNestedLoops) {
   VLiveOuts[1] = DbgValue(LiveInRax, EmptyProps, DbgValue::Def);
   VLiveOuts[2] = DbgValue(LiveInRbx, EmptyProps, DbgValue::Def);
   DbgValue JoinedLoc = DbgValue(1, EmptyProps, DbgValue::VPHI);
-  bool Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
+  bool Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, JoinedLoc);
   EXPECT_FALSE(Result);
   EXPECT_EQ(JoinedLoc.Kind, DbgValue::VPHI);
   EXPECT_EQ(JoinedLoc.BlockNo, 1);
@@ -2361,7 +2455,7 @@ TEST_F(InstrRefLDVTest, vlocJoinBadlyNestedLoops) {
   VLiveOuts[1] = DbgValue(1, EmptyProps, DbgValue::VPHI);
   VLiveOuts[2] = DbgValue(1, EmptyProps, DbgValue::VPHI);
   JoinedLoc = DbgValue(1, EmptyProps, DbgValue::VPHI);
-  Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
+  Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, JoinedLoc);
   EXPECT_TRUE(Result);
   EXPECT_EQ(JoinedLoc.Kind, DbgValue::Def);
   EXPECT_EQ(JoinedLoc.ID, LiveInRsp);
@@ -2372,7 +2466,7 @@ TEST_F(InstrRefLDVTest, vlocJoinBadlyNestedLoops) {
   VLiveOuts[1] = DbgValue(1, EmptyProps, DbgValue::VPHI);
   VLiveOuts[2] = DbgValue(1, PropsWithIndirect, DbgValue::VPHI);
   JoinedLoc = DbgValue(1, EmptyProps, DbgValue::VPHI);
-  Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
+  Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, JoinedLoc);
   EXPECT_FALSE(Result);
   EXPECT_EQ(JoinedLoc.Kind, DbgValue::VPHI);
   EXPECT_EQ(JoinedLoc.BlockNo, 1);
@@ -2382,7 +2476,7 @@ TEST_F(InstrRefLDVTest, vlocJoinBadlyNestedLoops) {
   VLiveOuts[1] = DbgValue(1, EmptyProps, DbgValue::VPHI);
   VLiveOuts[2] = DbgValue(2, EmptyProps, DbgValue::VPHI);
   JoinedLoc = DbgValue(1, EmptyProps, DbgValue::VPHI);
-  Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
+  Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, JoinedLoc);
   EXPECT_FALSE(Result);
   EXPECT_EQ(JoinedLoc.Kind, DbgValue::VPHI);
   EXPECT_EQ(JoinedLoc.BlockNo, 1);
@@ -2420,7 +2514,7 @@ TEST_F(InstrRefLDVTest, VLocSingleBlock) {
   AssignBlocks.insert(MBB0);
 
   SmallVector<VLocTracker, 1> VLocs;
-  VLocs.resize(1);
+  VLocs.resize(1, VLocTracker(Overlaps, EmptyExpr));
 
   InstrRefBasedLDV::LiveInsT Output;
 
@@ -2484,7 +2578,7 @@ TEST_F(InstrRefLDVTest, VLocDiamondBlocks) {
   AssignBlocks.insert(MBB3);
 
   SmallVector<VLocTracker, 1> VLocs;
-  VLocs.resize(4);
+  VLocs.resize(4, VLocTracker(Overlaps, EmptyExpr));
 
   InstrRefBasedLDV::LiveInsT Output;
 
@@ -2697,7 +2791,7 @@ TEST_F(InstrRefLDVTest, VLocSimpleLoop) {
   AssignBlocks.insert(MBB2);
 
   SmallVector<VLocTracker, 3> VLocs;
-  VLocs.resize(3);
+  VLocs.resize(3, VLocTracker(Overlaps, EmptyExpr));
 
   InstrRefBasedLDV::LiveInsT Output;
 
@@ -2953,7 +3047,7 @@ TEST_F(InstrRefLDVTest, VLocNestedLoop) {
   AssignBlocks.insert(MBB4);
 
   SmallVector<VLocTracker, 5> VLocs;
-  VLocs.resize(5);
+  VLocs.resize(5, VLocTracker(Overlaps, EmptyExpr));
 
   InstrRefBasedLDV::LiveInsT Output;
 

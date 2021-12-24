@@ -1,6 +1,7 @@
 // RUN: mlir-tblgen -gen-python-op-bindings -bind-dialect=test -I %S/../../include %s | FileCheck %s
 
 include "mlir/IR/OpBase.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Bindings/Python/Attributes.td"
 
 // CHECK: @_ods_cext.register_dialect
@@ -17,7 +18,7 @@ class TestOp<string mnemonic, list<OpTrait> traits = []> :
 // CHECK: @_ods_cext.register_operation(_Dialect)
 // CHECK: class AttrSizedOperandsOp(_ods_ir.OpView):
 // CHECK-LABEL: OPERATION_NAME = "test.attr_sized_operands"
-// CHECK: _ODS_OPERAND_SEGMENTS = [-1,1,-1,]
+// CHECK: _ODS_OPERAND_SEGMENTS = [-1,1,0,]
 def AttrSizedOperandsOp : TestOp<"attr_sized_operands",
                                  [AttrSizedOperandSegments]> {
   // CHECK: def __init__(self, variadic1, non_variadic, variadic2, *, loc=None, ip=None):
@@ -27,7 +28,7 @@ def AttrSizedOperandsOp : TestOp<"attr_sized_operands",
   // CHECK:   regions = None
   // CHECK:   operands.append(_get_op_results_or_values(variadic1))
   // CHECK:   operands.append(_get_op_result_or_value(non_variadic))
-  // CHECK:   if variadic2 is not None: operands.append(_get_op_result_or_value(variadic2))
+  // CHECK:   operands.append(_get_op_result_or_value(variadic2) if variadic2 is not None else None)
   // CHECK:   _ods_successors = None
   // CHECK:   super().__init__(self.build_generic(
   // CHECK:     attributes=attributes, results=results, operands=operands,
@@ -39,6 +40,7 @@ def AttrSizedOperandsOp : TestOp<"attr_sized_operands",
   // CHECK:       self.operation.operands,
   // CHECK:       self.operation.attributes["operand_segment_sizes"], 0)
   // CHECK:   return operand_range
+  // CHECK-NOT: if len(operand_range)
   //
   // CHECK: @builtins.property
   // CHECK: def non_variadic(self):
@@ -60,7 +62,7 @@ def AttrSizedOperandsOp : TestOp<"attr_sized_operands",
 // CHECK: @_ods_cext.register_operation(_Dialect)
 // CHECK: class AttrSizedResultsOp(_ods_ir.OpView):
 // CHECK-LABEL: OPERATION_NAME = "test.attr_sized_results"
-// CHECK: _ODS_RESULT_SEGMENTS = [-1,1,-1,]
+// CHECK: _ODS_RESULT_SEGMENTS = [0,1,-1,]
 def AttrSizedResultsOp : TestOp<"attr_sized_results",
                                [AttrSizedResultSegments]> {
   // CHECK: def __init__(self, variadic1, non_variadic, variadic2, *, loc=None, ip=None):
@@ -70,7 +72,7 @@ def AttrSizedResultsOp : TestOp<"attr_sized_results",
   // CHECK:   regions = None
   // CHECK:   if variadic1 is not None: results.append(variadic1)
   // CHECK:   results.append(non_variadic)
-  // CHECK:   if variadic2 is not None: results.append(variadic2)
+  // CHECK:   results.append(variadic2)
   // CHECK:   _ods_successors = None
   // CHECK:   super().__init__(self.build_generic(
   // CHECK:     attributes=attributes, results=results, operands=operands,
@@ -96,8 +98,9 @@ def AttrSizedResultsOp : TestOp<"attr_sized_results",
   // CHECK:       self.operation.results,
   // CHECK:       self.operation.attributes["result_segment_sizes"], 2)
   // CHECK:   return result_range
+  // CHECK-NOT: if len(result_range)
   let results = (outs Optional<AnyType>:$variadic1, AnyType:$non_variadic,
-                 Optional<AnyType>:$variadic2);
+                 Variadic<AnyType>:$variadic2);
 }
 
 
@@ -176,6 +179,27 @@ def AttributedOpWithOperands : TestOp<"attributed_op_with_operands"> {
   let arguments = (ins I32, UnitAttr:$in, F32, OptionalAttr<F32Attr>:$is);
 }
 
+// CHECK-LABEL: OPERATION_NAME = "test.derive_result_types_op"
+def DeriveResultTypesOp : TestOp<"derive_result_types_op", [FirstAttrDerivedResultType]> {
+  // CHECK: def __init__(self, type, *, loc=None, ip=None):
+  // CHECK:   operands = []
+  // CHECK:   results = []
+  // CHECK:   _ods_result_type_source_attr = attributes["type"]
+  // CHECK:   _ods_derived_result_type = (
+  // CHECK:       _ods_ir.TypeAttr(_ods_result_type_source_attr).value
+  // CHECK:       if _ods_ir.TypeAttr.isinstance(_ods_result_type_source_attr) else
+  // CHECK:       _ods_result_type_source_attr.type)
+  // CHECK:   results.extend([_ods_derived_result_type] * 2)
+  let arguments = (ins TypeAttr:$type);
+  let results = (outs AnyType:$res, AnyType);
+}
+
+// CHECK-LABEL: OPERATION_NAME = "test.derive_result_types_variadic_op"
+def DeriveResultTypesVariadicOp : TestOp<"derive_result_types_variadic_op", [FirstAttrDerivedResultType]> {
+  // CHECK: def __init__(self, res, _gen_res_1, type, *, loc=None, ip=None):
+  let arguments = (ins TypeAttr:$type);
+  let results = (outs AnyType:$res, Variadic<AnyType>);
+}
 
 // CHECK: @_ods_cext.register_operation(_Dialect)
 // CHECK: class EmptyOp(_ods_ir.OpView):
@@ -191,6 +215,35 @@ def EmptyOp : TestOp<"empty">;
   // CHECK:     attributes=attributes, results=results, operands=operands,
   // CHECK:     successors=_ods_successors, regions=regions, loc=loc, ip=ip))
 
+
+// CHECK-LABEL: OPERATION_NAME = "test.infer_result_types_implied_op"
+def InferResultTypesImpliedOp : TestOp<"infer_result_types_implied_op"> {
+  // CHECK:  def __init__(self, *, loc=None, ip=None):
+  // CHECK:    operands = []
+  // CHECK:    results = []
+  // CHECK:    _ods_context = _ods_get_default_loc_context(loc)
+  // CHECK:    results = _ods_ir.InferTypeOpInterface(InferResultTypesImpliedOp).inferReturnTypes(
+  // CHECK:        operands=operands,
+  // CHECK:        attributes=_ods_ir.DictAttr.get(attributes, context=_ods_context),
+  // CHECK:        context=_ods_context,
+  // CHECK:        loc=loc)
+  let results = (outs I32:$i32, F32:$f32);
+}
+
+// CHECK-LABEL: OPERATION_NAME = "test.infer_result_types_op"
+def InferResultTypesOp : TestOp<"infer_result_types_op", [InferTypeOpInterface]> {
+  // CHECK:  def __init__(self, *, loc=None, ip=None):
+  // CHECK:    operands = []
+  // CHECK:    results = []
+  // CHECK:    _ods_context = _ods_get_default_loc_context(loc)
+  // CHECK:    results = _ods_ir.InferTypeOpInterface(InferResultTypesOp).inferReturnTypes(
+  // CHECK:        operands=operands,
+  // CHECK:        attributes=_ods_ir.DictAttr.get(attributes, context=_ods_context),
+  // CHECK:        context=_ods_context,
+  // CHECK:        loc=loc)
+  let results = (outs AnyType, AnyType, AnyType);
+}
+
 // CHECK: @_ods_cext.register_operation(_Dialect)
 // CHECK: class MissingNamesOp(_ods_ir.OpView):
 // CHECK-LABEL: OPERATION_NAME = "test.missing_names"
@@ -200,12 +253,12 @@ def MissingNamesOp : TestOp<"missing_names"> {
   // CHECK:   results = []
   // CHECK:   attributes = {}
   // CHECK:   regions = None
-  // CHECK:   results.append(i32)
-  // CHECK:   results.append(_gen_res_1)
-  // CHECK:   results.append(i64)
   // CHECK:   operands.append(_get_op_result_or_value(_gen_arg_0))
   // CHECK:   operands.append(_get_op_result_or_value(f32))
   // CHECK:   operands.append(_get_op_result_or_value(_gen_arg_2))
+  // CHECK:   results.append(i32)
+  // CHECK:   results.append(_gen_res_1)
+  // CHECK:   results.append(i64)
   // CHECK:   _ods_successors = None
   // CHECK:   super().__init__(self.build_generic(
   // CHECK:     attributes=attributes, results=results, operands=operands,
@@ -223,7 +276,36 @@ def MissingNamesOp : TestOp<"missing_names"> {
   // CHECK: @builtins.property
   // CHECK: def i64(self):
   // CHECK:   return self.operation.results[2]
-  let results = (outs I32:$i32, F32, I64:$i64);
+  let results = (outs I32:$i32, AnyFloat, I64:$i64);
+}
+
+// CHECK: @_ods_cext.register_operation(_Dialect)
+// CHECK: class OneOptionalOperandOp(_ods_ir.OpView):
+// CHECK-LABEL: OPERATION_NAME = "test.one_optional_operand"
+// CHECK-NOT: _ODS_OPERAND_SEGMENTS
+// CHECK-NOT: _ODS_RESULT_SEGMENTS
+def OneOptionalOperandOp : TestOp<"one_optional_operand"> {
+  let arguments = (ins AnyType:$non_optional, Optional<AnyType>:$optional);
+  // CHECK: def __init__(self, non_optional, optional, *, loc=None, ip=None):
+  // CHECK:   operands = []
+  // CHECK:   results = []
+  // CHECK:   attributes = {}
+  // CHECK:   regions = None
+  // CHECK:   operands.append(_get_op_result_or_value(non_optional))
+  // CHECK:   if optional is not None: operands.append(_get_op_result_or_value(optional))
+  // CHECK:   _ods_successors = None
+  // CHECK:   super().__init__(self.build_generic(
+  // CHECK:     attributes=attributes, results=results, operands=operands,
+  // CHECK:     successors=_ods_successors, regions=regions, loc=loc, ip=ip))
+
+  // CHECK: @builtins.property
+  // CHECK: def non_optional(self):
+  // CHECK:   return self.operation.operands[0]
+
+  // CHECK: @builtins.property
+  // CHECK: def optional(self):
+  // CHECK:   return None if len(self.operation.operands) < 2 else self.operation.operands[1]
+
 }
 
 // CHECK: @_ods_cext.register_operation(_Dialect)
@@ -305,6 +387,24 @@ def PythonKeywordOp : TestOp<"python_keyword"> {
   // CHECK:   return self.operation.operands[0]
   let arguments = (ins AnyType:$in);
 }
+// CHECK-LABEL: OPERATION_NAME = "test.same_results"
+def SameResultsOp : TestOp<"same_results", [SameOperandsAndResultType]> {
+  // CHECK: def __init__(self, in1, in2, *, loc=None, ip=None):
+  // CHECK: operands = []
+  // CHECK: results = []
+  // CHECK: operands.append
+  // CHECK: results.extend([operands[0].type] * 1)
+  let arguments = (ins AnyType:$in1, AnyType:$in2);
+  let results = (outs AnyType:$res);
+}
+
+// CHECK-LABEL: OPERATION_NAME = "test.same_results_variadic"
+def SameResultsVariadicOp : TestOp<"same_results_variadic", [SameOperandsAndResultType]> {
+  // CHECK: def __init__(self, res, in1, in2, *, loc=None, ip=None):
+  let arguments = (ins AnyType:$in1, AnyType:$in2);
+  let results = (outs Variadic<AnyType>:$res);
+}
+
 
 // CHECK: @_ods_cext.register_operation(_Dialect)
 // CHECK: class SameVariadicOperandSizeOp(_ods_ir.OpView):
@@ -361,10 +461,10 @@ def SimpleOp : TestOp<"simple"> {
   // CHECK:   results = []
   // CHECK:   attributes = {}
   // CHECK:   regions = None
-  // CHECK:   results.append(i64)
-  // CHECK:   results.append(f64)
   // CHECK:   operands.append(_get_op_result_or_value(i32))
   // CHECK:   operands.append(_get_op_result_or_value(f32))
+  // CHECK:   results.append(i64)
+  // CHECK:   results.append(f64)
   // CHECK:   _ods_successors = None
   // CHECK:   super().__init__(self.build_generic(
   // CHECK:     attributes=attributes, results=results, operands=operands,
@@ -386,7 +486,7 @@ def SimpleOp : TestOp<"simple"> {
   // CHECK: @builtins.property
   // CHECK: def f64(self):
   // CHECK:   return self.operation.results[1]
-  let results = (outs I64:$i64, F64:$f64);
+  let results = (outs I64:$i64, AnyFloat:$f64);
 }
 
 // CHECK: class VariadicAndNormalRegionOp(_ods_ir.OpView):

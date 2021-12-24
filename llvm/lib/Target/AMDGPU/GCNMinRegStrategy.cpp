@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file defines and imlements the class GCNMinRegScheduler, which
+/// This file defines and implements the class GCNMinRegScheduler, which
 /// implements an experimental, simple scheduler whose main goal is to learn
 /// ways about consuming less possible registers for a region.
 ///

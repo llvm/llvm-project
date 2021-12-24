@@ -178,6 +178,39 @@ let isCall = 1, PPC970_Unit = 7, Defs = [LR8], hasSideEffects = 0 in {
   }
 }
 
+let isCall = 1, PPC970_Unit = 7, Defs = [LR8, RM], hasSideEffects = 0,
+    isCodeGenOnly = 1, Uses = [RM] in {
+  // Convenient aliases for call instructions
+  def BL8_RM  : IForm<18, 0, 1, (outs), (ins calltarget:$func),
+                      "bl $func", IIC_BrB, []>;  // See Pat patterns below.
+
+  def BLA8_RM : IForm<18, 1, 1, (outs), (ins abscalltarget:$func),
+                      "bla $func", IIC_BrB, [(PPCcall_rm (i64 imm:$func))]>;
+  def BL8_NOP_RM  : IForm_and_DForm_4_zero<18, 0, 1, 24,
+                           (outs), (ins calltarget:$func),
+                           "bl $func\n\tnop", IIC_BrB, []>;
+
+  def BLA8_NOP_RM : IForm_and_DForm_4_zero<18, 1, 1, 24,
+                           (outs), (ins abscalltarget:$func),
+                           "bla $func\n\tnop", IIC_BrB,
+                           [(PPCcall_nop_rm (i64 imm:$func))]>;
+  let Predicates = [PCRelativeMemops] in {
+    // BL8_NOTOC means that the caller does not use the TOC pointer and if
+    // it does use R2 then it is just a caller saved register. Therefore it is
+    // safe to emit only the bl and not the nop for this instruction. The
+    // linker will not try to restore R2 after the call.
+    def BL8_NOTOC_RM : IForm<18, 0, 1, (outs),
+                             (ins calltarget:$func),
+                             "bl $func", IIC_BrB, []>;
+  }
+  let Uses = [CTR8, RM] in {
+    let isPredicable = 1 in
+      def BCTRL8_RM : XLForm_2_ext<19, 528, 20, 0, 1, (outs), (ins),
+                                   "bctrl", IIC_BrB, [(PPCbctrl_rm)]>,
+                   Requires<[In64BitMode]>;
+  }
+}
+
 let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
     Defs = [LR8, X2], Uses = [CTR8, RM], RST = 2 in {
   def BCTRL8_LDinto_toc :
@@ -185,6 +218,16 @@ let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
                               (ins memrix:$src),
                               "bctrl\n\tld 2, $src", IIC_BrB,
                               [(PPCbctrl_load_toc iaddrX4:$src)]>,
+    Requires<[In64BitMode]>;
+}
+
+let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
+    Defs = [LR8, X2, RM], Uses = [CTR8, RM], RST = 2 in {
+  def BCTRL8_LDinto_toc_RM :
+    XLForm_2_ext_and_DSForm_1<19, 528, 20, 0, 1, 58, 0, (outs),
+                              (ins memrix:$src),
+                              "bctrl\n\tld 2, $src", IIC_BrB,
+                              [(PPCbctrl_load_toc_rm iaddrX4:$src)]>,
     Requires<[In64BitMode]>;
 }
 
@@ -214,11 +257,31 @@ def : Pat<(PPCcall_notoc (i64 tglobaladdr:$dst)),
 def : Pat<(PPCcall_notoc (i64 texternalsym:$dst)),
           (BL8_NOTOC texternalsym:$dst)>;
 
+def : Pat<(PPCcall_rm (i64 tglobaladdr:$dst)),
+          (BL8_RM tglobaladdr:$dst)>;
+def : Pat<(PPCcall_nop_rm (i64 tglobaladdr:$dst)),
+          (BL8_NOP_RM tglobaladdr:$dst)>;
+
+def : Pat<(PPCcall_rm (i64 texternalsym:$dst)),
+          (BL8_RM texternalsym:$dst)>;
+def : Pat<(PPCcall_nop_rm (i64 texternalsym:$dst)),
+          (BL8_NOP_RM texternalsym:$dst)>;
+
+def : Pat<(PPCcall_notoc_rm (i64 tglobaladdr:$dst)),
+          (BL8_NOTOC_RM tglobaladdr:$dst)>;
+def : Pat<(PPCcall_notoc_rm (i64 texternalsym:$dst)),
+          (BL8_NOTOC_RM texternalsym:$dst)>;
+
 // Calls for AIX
 def : Pat<(PPCcall (i64 mcsym:$dst)),
           (BL8 mcsym:$dst)>;
 def : Pat<(PPCcall_nop (i64 mcsym:$dst)),
           (BL8_NOP mcsym:$dst)>;
+
+def : Pat<(PPCcall_rm (i64 mcsym:$dst)),
+          (BL8_RM mcsym:$dst)>;
+def : Pat<(PPCcall_nop_rm (i64 mcsym:$dst)),
+          (BL8_NOP_RM mcsym:$dst)>;
 
 // Atomic operations
 // FIXME: some of these might be used with constant operands. This will result
@@ -709,6 +772,11 @@ def ADDI8  : DForm_2<14, (outs g8rc:$rD), (ins g8rc_nox0:$rA, s16imm64:$imm),
 def ADDIS8 : DForm_2<15, (outs g8rc:$rD), (ins g8rc_nox0:$rA, s17imm64:$imm),
                      "addis $rD, $rA, $imm", IIC_IntSimple,
                      [(set i64:$rD, (add i64:$rA, imm16ShiftedSExt:$imm))]>;
+
+def LA8     : DForm_2<14, (outs g8rc:$rD), (ins g8rc_nox0:$rA, s16imm64:$sym),
+                     "la $rD, $sym($rA)", IIC_IntGeneral,
+                     [(set i64:$rD, (add i64:$rA,
+                                    (PPClo tglobaladdr:$sym, 0)))]>;
 
 let Defs = [CARRY] in {
 def SUBFIC8: DForm_2< 8, (outs g8rc:$rD), (ins g8rc:$rA, s16imm64:$imm),
@@ -1372,6 +1440,13 @@ def ADDIStocHA8: PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, tocentr
 def ADDItocL: PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, tocentry:$disp),
                      "#ADDItocL", []>, isPPC64;
 }
+
+// Local Data Transform
+def ADDItoc8 : PPCEmitTimePseudo<(outs g8rc:$rD), (ins tocentry:$disp, g8rc_nox0:$reg),
+                   "#ADDItoc8",
+                   [(set i64:$rD,
+                     (PPCtoc_entry tglobaladdr:$disp, i64:$reg))]>, isPPC64;
+
 let mayLoad = 1 in
 def LDtocL: PPCEmitTimePseudo<(outs g8rc:$rD), (ins tocentry:$disp, g8rc_nox0:$reg),
                    "#LDtocL", []>, isPPC64;
@@ -1877,8 +1952,6 @@ def SLBSYNC : XForm_0<31, 338, (outs), (ins), "slbsync", IIC_SprSLBSYNC, []>;
 
 def : Pat<(int_ppc_stdcx ForceXForm:$dst, g8rc:$A),
           (STDCX g8rc:$A, ForceXForm:$dst)>;
-def : Pat<(int_ppc_tdw g8rc:$A, g8rc:$B, i32:$IMM),
-          (TD $IMM, $A, $B)>;
 
 // trapd
 def : Pat<(int_ppc_trapd g8rc:$A),

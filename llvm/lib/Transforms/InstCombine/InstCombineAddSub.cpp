@@ -2168,6 +2168,19 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     return replaceInstUsesWith(
         I, Builder.CreateIntrinsic(Intrinsic::umin, {I.getType()}, {Op0, Y}));
 
+  // umax(X, Op1) - Op1 --> usub.sat(X, Op1)
+  // TODO: The one-use restriction is not strictly necessary, but it may
+  //       require improving other pattern matching and/or codegen.
+  if (match(Op0, m_OneUse(m_c_UMax(m_Value(X), m_Specific(Op1)))))
+    return replaceInstUsesWith(
+        I, Builder.CreateIntrinsic(Intrinsic::usub_sat, {Ty}, {X, Op1}));
+
+  // Op0 - umax(X, Op0) --> 0 - usub.sat(X, Op0)
+  if (match(Op1, m_OneUse(m_c_UMax(m_Value(X), m_Specific(Op0))))) {
+    Value *USub = Builder.CreateIntrinsic(Intrinsic::usub_sat, {Ty}, {X, Op0});
+    return BinaryOperator::CreateNeg(USub);
+  }
+
   // C - ctpop(X) => ctpop(~X) if C is bitwidth
   if (match(Op0, m_SpecificInt(Ty->getScalarSizeInBits())) &&
       match(Op1, m_OneUse(m_Intrinsic<Intrinsic::ctpop>(m_Value(X)))))

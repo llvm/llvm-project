@@ -14,8 +14,7 @@
 
 #include "PassDetail.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "mlir/Dialect/Linalg/IR/LinalgOps.h"
-#include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
@@ -323,7 +322,7 @@ struct ReplaceUnitExtents : public OpRewritePattern<GenericOp> {
     if (origResultType == result.getType())
       return result;
     if (origResultType.isa<RankedTensorType>()) {
-      return rewriter.create<linalg::TensorExpandShapeOp>(
+      return rewriter.create<tensor::ExpandShapeOp>(
           loc, origResultType, result,
           convertAffineMapArrayToExprs(reassociationMap));
     }
@@ -349,7 +348,7 @@ struct ReplaceUnitExtents : public OpRewritePattern<GenericOp> {
           convertAffineMapArrayToExprs(reassociationMap));
     }
     if (operandType.isa<RankedTensorType>()) {
-      return rewriter.create<linalg::TensorCollapseShapeOp>(
+      return rewriter.create<tensor::CollapseShapeOp>(
           loc, newInputOutputType, operand,
           convertAffineMapArrayToExprs(reassociationMap));
     }
@@ -508,8 +507,8 @@ struct UseRankReducedExtractSliceOp
     Location loc = sliceOp.getLoc();
     Value newSlice = rewriter.create<tensor::ExtractSliceOp>(
         loc, rankReducedType, sliceOp.source(), offsets, sizes, strides);
-    rewriter.replaceOpWithNewOp<TensorExpandShapeOp>(sliceOp, resultType,
-                                                     newSlice, *reassociation);
+    rewriter.replaceOpWithNewOp<tensor::ExpandShapeOp>(
+        sliceOp, resultType, newSlice, *reassociation);
     return success();
   }
 };
@@ -530,7 +529,7 @@ struct UseRankReducedInsertSliceOp
         reassociation->size() == static_cast<size_t>(sourceType.getRank()))
       return failure();
     Location loc = insertOp.getLoc();
-    auto reshapedSource = rewriter.create<TensorCollapseShapeOp>(
+    auto reshapedSource = rewriter.create<tensor::CollapseShapeOp>(
         loc, insertOp.source(), *reassociation);
     rewriter.replaceOpWithNewOp<tensor::InsertSliceOp>(
         insertOp, reshapedSource, insertOp.dest(), insertOp.getMixedOffsets(),
@@ -548,28 +547,29 @@ void mlir::linalg::populateFoldUnitExtentDimsPatterns(
   patterns.add<FoldUnitDimLoops, ReplaceUnitExtents,
                UseRankReducedExtractSliceOp, UseRankReducedInsertSliceOp>(
       context);
-  TensorCollapseShapeOp::getCanonicalizationPatterns(patterns, context);
-  TensorExpandShapeOp::getCanonicalizationPatterns(patterns, context);
+  linalg::FillOp::getCanonicalizationPatterns(patterns, context);
+  linalg::InitTensorOp::getCanonicalizationPatterns(patterns, context);
+  tensor::CollapseShapeOp::getCanonicalizationPatterns(patterns, context);
+  tensor::ExpandShapeOp::getCanonicalizationPatterns(patterns, context);
 }
 
 namespace {
 /// Pass that removes unit-extent dims within generic ops.
 struct LinalgFoldUnitExtentDimsPass
     : public LinalgFoldUnitExtentDimsBase<LinalgFoldUnitExtentDimsPass> {
-  void runOnFunction() override {
-    FuncOp funcOp = getFunction();
-    MLIRContext *context = funcOp.getContext();
+  void runOnOperation() override {
+    Operation *op = getOperation();
+    MLIRContext *context = op->getContext();
     RewritePatternSet patterns(context);
     if (foldOneTripLoopsOnly)
       patterns.add<FoldUnitDimLoops>(context);
     else
       populateFoldUnitExtentDimsPatterns(patterns);
-    (void)applyPatternsAndFoldGreedily(funcOp.getBody(), std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
   }
 };
 } // namespace
 
-std::unique_ptr<OperationPass<FuncOp>>
-mlir::createLinalgFoldUnitExtentDimsPass() {
+std::unique_ptr<Pass> mlir::createLinalgFoldUnitExtentDimsPass() {
   return std::make_unique<LinalgFoldUnitExtentDimsPass>();
 }

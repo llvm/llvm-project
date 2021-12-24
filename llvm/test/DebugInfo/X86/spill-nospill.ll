@@ -1,5 +1,5 @@
-; RUN: llc < %s | FileCheck %s
-; RUN: llc < %s -filetype=obj | llvm-dwarfdump - | FileCheck %s --check-prefix=DWARF
+; RUN: llc < %s -experimental-debug-variable-locations=true | FileCheck %s
+; RUN: llc < %s -filetype=obj -experimental-debug-variable-locations=true | llvm-dwarfdump - | FileCheck %s --check-prefix=DWARF
 
 ; This test creates two UserValues in LiveDebugVariables with one location
 ; each. x must be spilled, but y will be allocated to a CSR. x's location
@@ -43,7 +43,8 @@
 ; DWARF:      DW_TAG_variable
 ; DWARF-NEXT:   DW_AT_location        (
 ; DWARF-NEXT:      [{{.*}}, {{.*}}): DW_OP_breg7 RSP+36
-; DWARF-NEXT:      [{{.*}}, {{.*}}): DW_OP_reg0 RAX)
+; DWARF-NEXT:      [{{.*}}, {{.*}}): DW_OP_reg0 RAX
+; DWARF-NEXT:      [{{.*}}, {{.*}}): DW_OP_breg7 RSP+36)
 ; DWARF-NEXT:   DW_AT_name    ("x")
 
 ; DWARF:      DW_TAG_variable

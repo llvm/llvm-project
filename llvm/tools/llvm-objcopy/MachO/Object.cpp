@@ -29,10 +29,24 @@ void SymbolTable::removeSymbols(
 }
 
 void Object::updateLoadCommandIndexes() {
+  static constexpr char TextSegmentName[] = "__TEXT";
   // Update indices of special load commands
   for (size_t Index = 0, Size = LoadCommands.size(); Index < Size; ++Index) {
     LoadCommand &LC = LoadCommands[Index];
     switch (LC.MachOLoadCommand.load_command_data.cmd) {
+    case MachO::LC_CODE_SIGNATURE:
+      CodeSignatureCommandIndex = Index;
+      break;
+    case MachO::LC_SEGMENT:
+      if (StringRef(LC.MachOLoadCommand.segment_command_data.segname) ==
+          TextSegmentName)
+        TextSegmentCommandIndex = Index;
+      break;
+    case MachO::LC_SEGMENT_64:
+      if (StringRef(LC.MachOLoadCommand.segment_command_64_data.segname) ==
+          TextSegmentName)
+        TextSegmentCommandIndex = Index;
+      break;
     case MachO::LC_SYMTAB:
       SymTabCommandIndex = Index;
       break;
@@ -51,6 +65,12 @@ void Object::updateLoadCommandIndexes() {
       break;
     case MachO::LC_FUNCTION_STARTS:
       FunctionStartsCommandIndex = Index;
+      break;
+    case MachO::LC_DYLD_CHAINED_FIXUPS:
+      ChainedFixupsCommandIndex = Index;
+      break;
+    case MachO::LC_DYLD_EXPORTS_TRIE:
+      ExportsTrieCommandIndex = Index;
       break;
     }
   }

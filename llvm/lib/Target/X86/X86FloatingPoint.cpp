@@ -446,11 +446,9 @@ bool FPS::processBasicBlock(MachineFunction &MF, MachineBasicBlock &BB) {
     // Get dead variables list now because the MI pointer may be deleted as part
     // of processing!
     SmallVector<unsigned, 8> DeadRegs;
-    for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-      const MachineOperand &MO = MI.getOperand(i);
+    for (const MachineOperand &MO : MI.operands())
       if (MO.isReg() && MO.isDead())
         DeadRegs.push_back(MO.getReg());
-    }
 
     switch (FPInstClass) {
     case X86II::ZeroArgFP:  handleZeroArgFP(I); break;
@@ -832,6 +830,24 @@ static const TableEntry PopTable[] = {
   { X86::UCOM_Fr   , X86::UCOM_FPr    },
 };
 
+static bool doesInstructionSetFPSW(MachineInstr &MI) {
+  if (const MachineOperand *MO = MI.findRegisterDefOperand(X86::FPSW))
+    if (!MO->isDead())
+      return true;
+  return false;
+}
+
+static MachineBasicBlock::iterator
+getNextFPInstruction(MachineBasicBlock::iterator I) {
+  MachineBasicBlock &MBB = *I->getParent();
+  while (++I != MBB.end()) {
+    MachineInstr &MI = *I;
+    if (X86::isX87Instruction(MI))
+      return I;
+  }
+  return MBB.end();
+}
+
 /// popStackAfter - Pop the current value off of the top of the FP stack after
 /// the specified instruction.  This attempts to be sneaky and combine the pop
 /// into the instruction itself if possible.  The iterator is left pointing to
@@ -853,6 +869,14 @@ void FPS::popStackAfter(MachineBasicBlock::iterator &I) {
       I->RemoveOperand(0);
     MI.dropDebugNumber();
   } else {    // Insert an explicit pop
+    // If this instruction sets FPSW, which is read in following instruction,
+    // insert pop after that reader.
+    if (doesInstructionSetFPSW(MI)) {
+      MachineBasicBlock &MBB = *MI.getParent();
+      MachineBasicBlock::iterator Next = getNextFPInstruction(I);
+      if (Next != MBB.end() && Next->readsRegister(X86::FPSW))
+        I = Next;
+    }
     I = BuildMI(*MBB, ++I, dl, TII->get(X86::ST_FPrr)).addReg(X86::ST0);
   }
 }
@@ -1418,7 +1442,7 @@ void FPS::handleTwoArgFP(MachineBasicBlock::iterator &I) {
   assert(UpdatedSlot < StackTop && Dest < 7);
   Stack[UpdatedSlot]   = Dest;
   RegMap[Dest]         = UpdatedSlot;
-  MBB->getParent()->DeleteMachineInstr(&MI); // Remove the old instruction
+  MBB->getParent()->deleteMachineInstr(&MI); // Remove the old instruction
 }
 
 /// handleCompareFP - Handle FUCOM and FUCOMI instructions, which have two FP
@@ -1646,8 +1670,7 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &Inst) {
     // Collect all FP registers (register operands with constraints "t", "u",
     // and "f") to kill afer the instruction.
     unsigned FPKills = ((1u << NumFPRegs) - 1) & ~0xff;
-    for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-      MachineOperand &Op = MI.getOperand(i);
+    for (const MachineOperand &Op : MI.operands()) {
       if (!Op.isReg() || Op.getReg() < X86::FP0 || Op.getReg() > X86::FP6)
         continue;
       unsigned FPReg = getFPReg(Op);
@@ -1733,16 +1756,14 @@ void FPS::setKillFlags(MachineBasicBlock &MBB) const {
 
   LPR.addLiveOuts(MBB);
 
-  for (MachineBasicBlock::reverse_iterator I = MBB.rbegin(), E = MBB.rend();
-       I != E; ++I) {
-    if (I->isDebugInstr())
+  for (MachineInstr &MI : llvm::reverse(MBB)) {
+    if (MI.isDebugInstr())
       continue;
 
     std::bitset<8> Defs;
     SmallVector<MachineOperand *, 2> Uses;
-    MachineInstr &MI = *I;
 
-    for (auto &MO : I->operands()) {
+    for (auto &MO : MI.operands()) {
       if (!MO.isReg())
         continue;
 

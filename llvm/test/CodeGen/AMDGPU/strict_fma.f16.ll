@@ -14,8 +14,7 @@ define half @v_constained_fma_f16_fpexcept_strict(half %x, half %y, half %z) #0 
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_fmac_f16_e32 v2, v0, v1
-; GFX10-NEXT:    v_mov_b32_e32 v0, v2
+; GFX10-NEXT:    v_fma_f16 v0, v0, v1, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %val = call half @llvm.experimental.constrained.fma.f16(half %x, half %y, half %z, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret half %val
@@ -75,9 +74,8 @@ define <3 x half> @v_constained_fma_v3f16_fpexcept_strict(<3 x half> %x, <3 x ha
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_fmac_f16_e32 v5, v1, v3
 ; GFX10-NEXT:    v_pk_fma_f16 v0, v0, v2, v4
-; GFX10-NEXT:    v_mov_b32_e32 v1, v5
+; GFX10-NEXT:    v_fma_f16 v1, v1, v3, v5
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %val = call <3 x half> @llvm.experimental.constrained.fma.v3f16(<3 x half> %x, <3 x half> %y, <3 x half> %z, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret <3 x half> %val

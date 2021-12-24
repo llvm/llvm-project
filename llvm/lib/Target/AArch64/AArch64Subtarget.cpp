@@ -82,10 +82,6 @@ void AArch64Subtarget::initializeProperties() {
   case CortexA55:
     PrefFunctionLogAlignment = 4;
     break;
-  case CortexA510:
-    PrefFunctionLogAlignment = 4;
-    VScaleForTuning = 1;
-    break;
   case CortexA57:
     MaxInterleaveFactor = 4;
     PrefFunctionLogAlignment = 4;
@@ -103,6 +99,12 @@ void AArch64Subtarget::initializeProperties() {
   case CortexR82:
   case CortexX1:
     PrefFunctionLogAlignment = 4;
+    break;
+  case CortexA510:
+  case CortexA710:
+  case CortexX2:
+    PrefFunctionLogAlignment = 4;
+    VScaleForTuning = 1;
     break;
   case A64FX:
     CacheLineSize = 256;
@@ -163,6 +165,11 @@ void AArch64Subtarget::initializeProperties() {
   case NeoverseV1:
     PrefFunctionLogAlignment = 4;
     VScaleForTuning = 2;
+    break;
+  case Neoverse512TVB:
+    PrefFunctionLogAlignment = 4;
+    VScaleForTuning = 1;
+    MaxInterleaveFactor = 4;
     break;
   case Saphira:
     MaxInterleaveFactor = 4;
@@ -339,9 +346,7 @@ bool AArch64Subtarget::supportsAddressTopByteIgnored() const {
     return false;
 
   if (TargetTriple.isiOS()) {
-    unsigned Major, Minor, Micro;
-    TargetTriple.getiOSVersion(Major, Minor, Micro);
-    return Major >= 8;
+    return TargetTriple.getiOSVersion() >= VersionTuple(8);
   }
 
   return false;

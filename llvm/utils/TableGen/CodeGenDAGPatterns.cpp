@@ -1583,7 +1583,7 @@ static TreePatternNode *getOperandNum(unsigned OpNo, TreePatternNode *N,
     OS << "Invalid operand number in type constraint "
            << (OpNo+NumResults) << " ";
     N->print(OS);
-    PrintFatalError(OS.str());
+    PrintFatalError(S);
   }
 
   return N->getChild(OpNo);
@@ -2268,7 +2268,9 @@ static TypeSetByHwMode getImplicitType(Record *R, unsigned ResNo,
     assert(ResNo == 0 && "FIXME: ComplexPattern with multiple results?");
     if (NotRegisters)
       return TypeSetByHwMode(); // Unknown.
-    return TypeSetByHwMode(CDP.getComplexPattern(R).getValueType());
+    Record *T = CDP.getComplexPattern(R).getValueType();
+    const CodeGenHwModes &CGH = CDP.getTargetInfo().getHwModes();
+    return TypeSetByHwMode(getValueTypeByHwMode(T, CGH));
   }
   if (R->isSubClassOf("PointerLikeRegClass")) {
     assert(ResNo == 0 && "Regclass can only have one result!");
@@ -2672,6 +2674,22 @@ bool TreePatternNode::ApplyTypeConstraints(TreePattern &TP, bool NotRegisters) {
 
   if (getOperator()->isSubClassOf("ComplexPattern")) {
     bool MadeChange = false;
+
+    if (!NotRegisters) {
+      assert(Types.size() == 1 && "ComplexPatterns only produce one result!");
+      Record *T = CDP.getComplexPattern(getOperator()).getValueType();
+      const CodeGenHwModes &CGH = CDP.getTargetInfo().getHwModes();
+      const ValueTypeByHwMode VVT = getValueTypeByHwMode(T, CGH);
+      // TODO: AArch64 and AMDGPU use ComplexPattern<untyped, ...> and then
+      // exclusively use those as non-leaf nodes with explicit type casts, so
+      // for backwards compatibility we do no inference in that case. This is
+      // not supported when the ComplexPattern is used as a leaf value,
+      // however; this inconsistency should be resolved, either by adding this
+      // case there or by altering the backends to not do this (e.g. using Any
+      // instead may work).
+      if (!VVT.isSimple() || VVT.getSimple() != MVT::Untyped)
+        MadeChange |= UpdateNodeType(0, VVT, TP);
+    }
 
     for (unsigned i = 0; i < getNumChildren(); ++i)
       MadeChange |= getChild(i)->ApplyTypeConstraints(TP, NotRegisters);

@@ -383,6 +383,13 @@ bool fromJSON(const llvm::json::Value &Params, ClientCapabilities &R,
           if (auto OffsetSupport = Parameter->getBoolean("labelOffsetSupport"))
             R.OffsetsInSignatureHelp = *OffsetSupport;
         }
+        if (const auto *DocumentationFormat =
+                Info->getArray("documentationFormat")) {
+          for (const auto &Format : *DocumentationFormat) {
+            if (fromJSON(Format, R.SignatureHelpDocumentationFormat, P))
+              break;
+          }
+        }
       }
     }
     if (auto *Rename = TextDocument->getObject("rename")) {
@@ -695,7 +702,8 @@ bool fromJSON(const llvm::json::Value &Params, ExecuteCommandParams &R,
   if (ArgsArray->size() > 1) {
     P.field("arguments").report("Command should have 0 or 1 argument");
     return false;
-  } else if (ArgsArray->size() == 1) {
+  }
+  if (ArgsArray->size() == 1) {
     R.argument = ArgsArray->front();
   }
   return true;
@@ -1030,7 +1038,7 @@ llvm::json::Value toJSON(const SignatureInformation &SI) {
       {"label", SI.label},
       {"parameters", llvm::json::Array(SI.parameters)},
   };
-  if (!SI.documentation.empty())
+  if (!SI.documentation.value.empty())
     Result["documentation"] = SI.documentation;
   return std::move(Result);
 }

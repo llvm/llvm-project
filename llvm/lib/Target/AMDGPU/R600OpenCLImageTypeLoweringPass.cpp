@@ -86,7 +86,7 @@ GetFunctionFromMDNode(MDNode *Node) {
   if (!F)
     return nullptr;
 
-  // Sanity checks.
+  // Validation checks.
   size_t ExpectNumArgNodeOps = F->arg_size() + 1;
   for (size_t i = 0; i < NumKernelArgMDNodes; ++i) {
     MDNode *ArgNode = dyn_cast_or_null<MDNode>(Node->getOperand(i + 1));
@@ -307,8 +307,8 @@ class R600OpenCLImageTypeLoweringPass : public ModulePass {
     // Build new MDNode.
     SmallVector<Metadata *, 6> KernelMDArgs;
     KernelMDArgs.push_back(ConstantAsMetadata::get(NewF));
-    for (unsigned i = 0; i < NumKernelArgMDNodes; ++i)
-      KernelMDArgs.push_back(MDNode::get(*Context, NewArgMDs.ArgVector[i]));
+    for (const MDVector &MDV : NewArgMDs.ArgVector)
+      KernelMDArgs.push_back(MDNode::get(*Context, MDV));
     MDNode *NewMDNode = MDNode::get(*Context, KernelMDArgs);
 
     return std::make_tuple(NewF, NewMDNode);

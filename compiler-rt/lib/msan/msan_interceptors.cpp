@@ -18,21 +18,22 @@
 #include "msan.h"
 #include "msan_chained_origin_depot.h"
 #include "msan_origin.h"
+#include "msan_poisoning.h"
 #include "msan_report.h"
 #include "msan_thread.h"
-#include "msan_poisoning.h"
-#include "sanitizer_common/sanitizer_errno_codes.h"
-#include "sanitizer_common/sanitizer_platform_limits_posix.h"
-#include "sanitizer_common/sanitizer_platform_limits_netbsd.h"
 #include "sanitizer_common/sanitizer_allocator.h"
+#include "sanitizer_common/sanitizer_allocator_dlsym.h"
 #include "sanitizer_common/sanitizer_allocator_interface.h"
-#include "sanitizer_common/sanitizer_allocator_internal.h"
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_errno.h"
-#include "sanitizer_common/sanitizer_stackdepot.h"
+#include "sanitizer_common/sanitizer_errno_codes.h"
+#include "sanitizer_common/sanitizer_glibc_version.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_linux.h"
+#include "sanitizer_common/sanitizer_platform_limits_netbsd.h"
+#include "sanitizer_common/sanitizer_platform_limits_posix.h"
+#include "sanitizer_common/sanitizer_stackdepot.h"
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
 #include "sanitizer_common/sanitizer_vector.h"
 
@@ -74,22 +75,9 @@ bool IsInInterceptorScope() {
   return in_interceptor_scope;
 }
 
-static uptr allocated_for_dlsym;
-static const uptr kDlsymAllocPoolSize = 1024;
-static uptr alloc_memory_for_dlsym[kDlsymAllocPoolSize];
-
-static bool IsInDlsymAllocPool(const void *ptr) {
-  uptr off = (uptr)ptr - (uptr)alloc_memory_for_dlsym;
-  return off < sizeof(alloc_memory_for_dlsym);
-}
-
-static void *AllocateFromLocalPool(uptr size_in_bytes) {
-  uptr size_in_words = RoundUpTo(size_in_bytes, kWordSize) / kWordSize;
-  void *mem = (void *)&alloc_memory_for_dlsym[allocated_for_dlsym];
-  allocated_for_dlsym += size_in_words;
-  CHECK_LT(allocated_for_dlsym, kDlsymAllocPoolSize);
-  return mem;
-}
+struct DlsymAlloc : public DlSymAllocator<DlsymAlloc> {
+  static bool UseImpl() { return !msan_inited; }
+};
 
 #define ENSURE_MSAN_INITED() do { \
   CHECK(!msan_init_is_running); \
@@ -220,18 +208,24 @@ INTERCEPTOR(void *, pvalloc, SIZE_T size) {
 #endif
 
 INTERCEPTOR(void, free, void *ptr) {
+  if (UNLIKELY(!ptr))
+    return;
+  if (DlsymAlloc::PointerIsMine(ptr))
+    return DlsymAlloc::Free(ptr);
   GET_MALLOC_STACK_TRACE;
-  if (!ptr || UNLIKELY(IsInDlsymAllocPool(ptr))) return;
   MsanDeallocate(&stack, ptr);
 }
 
 #if !SANITIZER_FREEBSD && !SANITIZER_NETBSD
 INTERCEPTOR(void, cfree, void *ptr) {
+  if (UNLIKELY(!ptr))
+    return;
+  if (DlsymAlloc::PointerIsMine(ptr))
+    return DlsymAlloc::Free(ptr);
   GET_MALLOC_STACK_TRACE;
-  if (!ptr || UNLIKELY(IsInDlsymAllocPool(ptr))) return;
   MsanDeallocate(&stack, ptr);
 }
-#define MSAN_MAYBE_INTERCEPT_CFREE INTERCEPT_FUNCTION(cfree)
+#  define MSAN_MAYBE_INTERCEPT_CFREE INTERCEPT_FUNCTION(cfree)
 #else
 #define MSAN_MAYBE_INTERCEPT_CFREE
 #endif
@@ -878,27 +872,15 @@ INTERCEPTOR(int, epoll_pwait, int epfd, void *events, int maxevents,
 
 INTERCEPTOR(void *, calloc, SIZE_T nmemb, SIZE_T size) {
   GET_MALLOC_STACK_TRACE;
-  if (UNLIKELY(!msan_inited))
-    // Hack: dlsym calls calloc before REAL(calloc) is retrieved from dlsym.
-    return AllocateFromLocalPool(nmemb * size);
+  if (DlsymAlloc::Use())
+    return DlsymAlloc::Callocate(nmemb, size);
   return msan_calloc(nmemb, size, &stack);
 }
 
 INTERCEPTOR(void *, realloc, void *ptr, SIZE_T size) {
+  if (DlsymAlloc::Use() || DlsymAlloc::PointerIsMine(ptr))
+    return DlsymAlloc::Realloc(ptr, size);
   GET_MALLOC_STACK_TRACE;
-  if (UNLIKELY(IsInDlsymAllocPool(ptr))) {
-    uptr offset = (uptr)ptr - (uptr)alloc_memory_for_dlsym;
-    uptr copy_size = Min(size, kDlsymAllocPoolSize - offset);
-    void *new_ptr;
-    if (UNLIKELY(!msan_inited)) {
-      new_ptr = AllocateFromLocalPool(copy_size);
-    } else {
-      copy_size = size;
-      new_ptr = msan_malloc(copy_size, &stack);
-    }
-    internal_memcpy(new_ptr, ptr, copy_size);
-    return new_ptr;
-  }
   return msan_realloc(ptr, size, &stack);
 }
 
@@ -908,16 +890,15 @@ INTERCEPTOR(void *, reallocarray, void *ptr, SIZE_T nmemb, SIZE_T size) {
 }
 
 INTERCEPTOR(void *, malloc, SIZE_T size) {
+  if (DlsymAlloc::Use())
+    return DlsymAlloc::Allocate(size);
   GET_MALLOC_STACK_TRACE;
-  if (UNLIKELY(!msan_inited))
-    // Hack: dlsym calls malloc before REAL(malloc) is retrieved from dlsym.
-    return AllocateFromLocalPool(size);
   return msan_malloc(size, &stack);
 }
 
 void __msan_allocated_memory(const void *data, uptr size) {
-  GET_MALLOC_STACK_TRACE;
   if (flags()->poison_in_malloc) {
+    GET_MALLOC_STACK_TRACE;
     stack.tag = STACK_TRACE_TAG_POISON;
     PoisonMemory(data, size, &stack);
   }
@@ -929,8 +910,8 @@ void __msan_copy_shadow(void *dest, const void *src, uptr n) {
 }
 
 void __sanitizer_dtor_callback(const void *data, uptr size) {
-  GET_MALLOC_STACK_TRACE;
   if (flags()->poison_in_dtor) {
+    GET_MALLOC_STACK_TRACE;
     stack.tag = STACK_TRACE_TAG_POISON;
     PoisonMemory(data, size, &stack);
   }
@@ -1032,6 +1013,8 @@ extern "C" int pthread_attr_destroy(void *attr);
 static void *MsanThreadStartFunc(void *arg) {
   MsanThread *t = (MsanThread *)arg;
   SetCurrentThread(t);
+  t->Init();
+  SetSigProcMask(&t->starting_sigset_, nullptr);
   return t->ThreadStart();
 }
 
@@ -1047,7 +1030,7 @@ INTERCEPTOR(int, pthread_create, void *th, void *attr, void *(*callback)(void*),
   AdjustStackSize(attr);
 
   MsanThread *t = MsanThread::Create(callback, param);
-
+  ScopedBlockSignals block(&t->starting_sigset_);
   int res = REAL(pthread_create)(th, attr, MsanThreadStartFunc, t);
 
   if (attr == &myattr)
@@ -1081,6 +1064,8 @@ INTERCEPTOR(int, pthread_join, void *th, void **retval) {
     __msan_unpoison(retval, sizeof(*retval));
   return res;
 }
+
+DEFINE_REAL_PTHREAD_FUNCTIONS
 
 extern char *tzname[2];
 
@@ -1722,6 +1707,7 @@ void InitializeInterceptors() {
 #else
   INTERCEPT_FUNCTION(pthread_create);
 #endif
+  INTERCEPT_FUNCTION(pthread_join);
   INTERCEPT_FUNCTION(pthread_key_create);
 
 #if SANITIZER_NETBSD

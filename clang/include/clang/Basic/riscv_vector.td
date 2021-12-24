@@ -1838,7 +1838,7 @@ let HasMask = false, HasPolicy = false,
       std::rotate(Ops.begin(), Ops.begin() + 1, Ops.begin() + 3);
       IntrinsicTypes = {ResultType, Ops[1]->getType(), Ops[3]->getType()};
     }] in {
-  defm vmerge : RVVOutOp1BuiltinSet<"vfmerge", "xfd",
+  defm vmerge : RVVOutOp1BuiltinSet<"vmerge", "xfd",
                                     [["vvm", "v", "vmvv"]]>;
   defm vfmerge : RVVOutOp1BuiltinSet<"vfmerge", "xfd",
                                     [["vfm", "v", "vmve"]]>;
@@ -1916,11 +1916,11 @@ defm vfwredosum : RVVFloatingWidenReductionBuiltin;
 // 16.1. Vector Mask-Register Logical Instructions
 def vmand    : RVVMaskBinBuiltin;
 def vmnand   : RVVMaskBinBuiltin;
-def vmandnot : RVVMaskBinBuiltin;
+def vmandn   : RVVMaskBinBuiltin;
 def vmxor    : RVVMaskBinBuiltin;
 def vmor     : RVVMaskBinBuiltin;
 def vmnor    : RVVMaskBinBuiltin;
-def vmornot  : RVVMaskBinBuiltin;
+def vmorn    : RVVMaskBinBuiltin;
 def vmxnor   : RVVMaskBinBuiltin;
 // pseudoinstructions
 def vmclr    : RVVMaskNullaryBuiltin;
@@ -1929,8 +1929,8 @@ defm vmmv_m : RVVPseudoMaskBuiltin<"vmand", "c">;
 defm vmnot_m : RVVPseudoMaskBuiltin<"vmnand", "c">;
 
 let HasPolicy = false in {
-// 16.2. Vector mask population count vpopc
-def vpopc : RVVMaskOp0Builtin<"um">;
+// 16.2. Vector count population in mask vcpop.m
+def vcpop : RVVMaskOp0Builtin<"um">;
 
 // 16.3. vfirst find-first-set mask bit
 def vfirst : RVVMaskOp0Builtin<"lm">;
@@ -2098,7 +2098,12 @@ let HasMask = false, HasVL = false, IRName = "" in {
       ManualCodegen = [{
       {
         ID = Intrinsic::experimental_vector_extract;
-        ScalableVectorType *VecTy = cast<ScalableVectorType>(ResultType);
+        auto *VecTy = cast<ScalableVectorType>(ResultType);
+        auto *OpVecTy = cast<ScalableVectorType>(Ops[0]->getType());
+        // Mask to only valid indices.
+        unsigned MaxIndex = OpVecTy->getMinNumElements() / VecTy->getMinNumElements();
+        assert(isPowerOf2_32(MaxIndex));
+        Ops[1] = Builder.CreateAnd(Ops[1], MaxIndex - 1);
         Ops[1] = Builder.CreateMul(Ops[1],
                                    ConstantInt::get(Ops[1]->getType(),
                                                     VecTy->getMinNumElements()));
@@ -2117,7 +2122,12 @@ let HasMask = false, HasVL = false, IRName = "" in {
       {
         ID = Intrinsic::experimental_vector_insert;
         IntrinsicTypes = {ResultType, Ops[2]->getType()};
-        ScalableVectorType *VecTy = cast<ScalableVectorType>(Ops[2]->getType());
+        auto *ResVecTy = cast<ScalableVectorType>(ResultType);
+        auto *VecTy = cast<ScalableVectorType>(Ops[2]->getType());
+        // Mask to only valid indices.
+        unsigned MaxIndex = ResVecTy->getMinNumElements() / VecTy->getMinNumElements();
+        assert(isPowerOf2_32(MaxIndex));
+        Ops[1] = Builder.CreateAnd(Ops[1], MaxIndex - 1);
         Ops[1] = Builder.CreateMul(Ops[1],
                                    ConstantInt::get(Ops[1]->getType(),
                                                     VecTy->getMinNumElements()));

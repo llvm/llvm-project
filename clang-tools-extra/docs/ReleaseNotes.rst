@@ -76,6 +76,19 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`bugprone-stringview-nullptr
+  <clang-tidy/checks/bugprone-stringview-nullptr>` check.
+
+  Checks for various ways that the ``const CharT*`` constructor of
+  ``std::basic_string_view`` can be passed a null argument.
+
+- New :doc:`abseil-cleanup-ctad
+  <clang-tidy/checks/abseil-cleanup-ctad>` check.
+
+  Suggests switching the initialization pattern of ``absl::Cleanup``
+  instances from the factory function to class template argument
+  deduction (CTAD), in C++17 and higher.
+
 - New :doc:`bugprone-suspicious-memory-comparison
   <clang-tidy/checks/bugprone-suspicious-memory-comparison>` check.
 
@@ -88,6 +101,16 @@ New checks
   Finds virtual classes whose destructor is neither public and virtual nor
   protected and non-virtual.
 
+- New :doc:`misc-misleading-identifier <clang-tidy/checks/misc-misleading-identifier>` check.
+
+  Reports identifier with unicode right-to-left characters.
+
+- New :doc:`readability-container-data-pointer
+  <clang-tidy/checks/readability-container-data-pointer>` check.
+
+  Finds cases where code could use ``data()`` rather than the address of the
+  element at index 0 in a container.
+
 - New :doc:`readability-identifier-length
   <clang-tidy/checks/readability-identifier-length>` check.
 
@@ -95,13 +118,13 @@ New checks
   variables and function parameters only.
 
 
-- New :doc:`readability-data-pointer <clang-tidy/checks/readability-data-pointer>` check.
-
-  Finds cases where code could use ``data()`` rather than the address of the
-  element at index 0 in a container.
-
 New check aliases
 ^^^^^^^^^^^^^^^^^
+
+- New alias :doc:`cert-err33-c
+  <clang-tidy/checks/cert-err33-c>` to
+  :doc:`bugprone-unused-return-value
+  <clang-tidy/checks/bugprone-unused-return-value>` was added.
 
 - New alias :doc:`cert-exp42-c
   <clang-tidy/checks/cert-exp42-c>` to
@@ -116,8 +139,24 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- Removed default setting `cppcoreguidelines-explicit-virtual-functions.IgnoreDestructors = "true"`,
+- Removed default setting ``cppcoreguidelines-explicit-virtual-functions.IgnoreDestructors = "true"``,
   to match the current state of the C++ Core Guidelines.
+
+- Updated :doc:`google-readability-casting
+  <clang-tidy/checks/google-readability-casting>` to diagnose and fix functional
+  casts, to achieve feature parity with the corresponding ``cpplint.py`` check.
+
+- Fixed a false positive in :doc:`fuchsia-trailing-return
+  <clang-tidy/checks/fuchsia-trailing-return>` for C++17 deduction guides.
+  
+- Fixed a false positive in :doc:`bugprone-throw-keyword-missing
+  <clang-tidy/checks/bugprone-throw-keyword-missing>` when creating an exception object
+  using placement new
+
+- :doc:`cppcoreguidelines-narrowing-conversions <clang-tidy/checks/cppcoreguidelines-narrowing-conversions>`
+  check now supports a `WarnOnIntegerToFloatingPointNarrowingConversion`
+  option to control whether to warn on narrowing integer to floating-point
+  conversions.
 
 
 Removed checks
@@ -143,5 +182,5 @@ Improvements to pp-trace
 
 The improvements are...
 
-Clang-tidy visual studio plugin
+Clang-tidy Visual Studio plugin
 -------------------------------

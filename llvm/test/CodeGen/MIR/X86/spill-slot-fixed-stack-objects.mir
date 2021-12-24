@@ -30,5 +30,5 @@ body: |
   bb.0.entry:
     MOV32mr $rsp, 1, _, -4, _, $edi
     $eax = COPY $edi
-    RETQ $eax
+    RET64 $eax
 ...

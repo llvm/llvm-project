@@ -365,7 +365,7 @@ bool SDWASrcOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) {
 
       if (Dst &&
           DstUnused->getImm() == AMDGPU::SDWA::DstUnused::UNUSED_PRESERVE) {
-        // This will work if the tied src is acessing WORD_0, and the dst is
+        // This will work if the tied src is accessing WORD_0, and the dst is
         // writing WORD_1. Modifiers don't matter because all the bits that
         // would be impacted are being overwritten by the dst.
         // Any other case will not work.
@@ -1170,7 +1170,7 @@ void SIPeepholeSDWA::legalizeScalarOperands(MachineInstr &MI,
 
     unsigned I = MI.getOperandNo(&Op);
     if (Desc.OpInfo[I].RegClass == -1 ||
-       !TRI->hasVGPRs(TRI->getRegClass(Desc.OpInfo[I].RegClass)))
+        !TRI->isVSSuperClass(TRI->getRegClass(Desc.OpInfo[I].RegClass)))
       continue;
 
     if (ST.hasSDWAScalar() && ConstantBusCount == 0 && Op.isReg() &&

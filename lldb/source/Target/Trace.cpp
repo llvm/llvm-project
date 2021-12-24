@@ -67,30 +67,28 @@ Trace::FindPluginForPostMortemProcess(Debugger &debugger,
   if (!json::fromJSON(trace_session_file, json_session, root))
     return root.getError();
 
-  ConstString plugin_name(json_session.trace.type);
-  if (auto create_callback = PluginManager::GetTraceCreateCallback(plugin_name))
+  if (auto create_callback =
+          PluginManager::GetTraceCreateCallback(json_session.trace.type))
     return create_callback(trace_session_file, session_file_dir, debugger);
 
   return createInvalidPlugInError(json_session.trace.type);
 }
 
-Expected<lldb::TraceSP>
-Trace::FindPluginForLiveProcess(llvm::StringRef plugin_name, Process &process) {
+Expected<lldb::TraceSP> Trace::FindPluginForLiveProcess(llvm::StringRef name,
+                                                        Process &process) {
   if (!process.IsLiveDebugSession())
     return createStringError(inconvertibleErrorCode(),
                              "Can't trace non-live processes");
 
-  ConstString name(plugin_name);
   if (auto create_callback =
           PluginManager::GetTraceCreateCallbackForLiveProcess(name))
     return create_callback(process);
 
-  return createInvalidPlugInError(plugin_name);
+  return createInvalidPlugInError(name);
 }
 
 Expected<StringRef> Trace::FindPluginSchema(StringRef name) {
-  ConstString plugin_name(name);
-  StringRef schema = PluginManager::GetTraceSchema(plugin_name);
+  StringRef schema = PluginManager::GetTraceSchema(name);
   if (!schema.empty())
     return schema;
 

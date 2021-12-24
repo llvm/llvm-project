@@ -159,7 +159,12 @@ protected:
     // If our listener is nullptr, users aren't allows to launch
     ModuleSP exe_module_sp = target->GetExecutableModule();
 
-    if (exe_module_sp == nullptr) {
+    // If the target already has an executable module, then use that.  If it
+    // doesn't then someone must be trying to launch using a path that will
+    // make sense to the remote stub, but doesn't exist on the local host.
+    // In that case use the ExecutableFile that was set in the target's
+    // ProcessLaunchInfo.
+    if (exe_module_sp == nullptr && !target->GetProcessLaunchInfo().GetExecutableFile()) {
       result.AppendError("no file in target, create a debug target using the "
                          "'target create' command");
       return false;
@@ -219,11 +224,17 @@ protected:
     if (!target_settings_argv0.empty()) {
       m_options.launch_info.GetArguments().AppendArgument(
           target_settings_argv0);
-      m_options.launch_info.SetExecutableFile(
-          exe_module_sp->GetPlatformFileSpec(), false);
+      if (exe_module_sp)
+        m_options.launch_info.SetExecutableFile(
+            exe_module_sp->GetPlatformFileSpec(), false);
+      else
+        m_options.launch_info.SetExecutableFile(target->GetProcessLaunchInfo().GetExecutableFile(), false);
     } else {
-      m_options.launch_info.SetExecutableFile(
-          exe_module_sp->GetPlatformFileSpec(), true);
+      if (exe_module_sp)
+        m_options.launch_info.SetExecutableFile(
+            exe_module_sp->GetPlatformFileSpec(), true);
+      else
+        m_options.launch_info.SetExecutableFile(target->GetProcessLaunchInfo().GetExecutableFile(), true);
     }
 
     if (launch_args.GetArgumentCount() == 0) {
@@ -250,11 +261,20 @@ protected:
         llvm::StringRef data = stream.GetString();
         if (!data.empty())
           result.AppendMessage(data);
-        const char *archname =
-            exe_module_sp->GetArchitecture().GetArchitectureName();
-        result.AppendMessageWithFormat(
-            "Process %" PRIu64 " launched: '%s' (%s)\n", process_sp->GetID(),
-            exe_module_sp->GetFileSpec().GetPath().c_str(), archname);
+        // If we didn't have a local executable, then we wouldn't have had an
+        // executable module before launch.
+        if (!exe_module_sp)
+          exe_module_sp = target->GetExecutableModule();
+        if (!exe_module_sp) {
+          result.AppendWarning("Could not get executable module after launch.");
+        } else {
+
+          const char *archname =
+              exe_module_sp->GetArchitecture().GetArchitectureName();
+          result.AppendMessageWithFormat(
+              "Process %" PRIu64 " launched: '%s' (%s)\n", process_sp->GetID(),
+              exe_module_sp->GetFileSpec().GetPath().c_str(), archname);
+        }
         result.SetStatus(eReturnStatusSuccessFinishResult);
         result.SetDidChangeProcessState(true);
       } else {

@@ -2,6 +2,8 @@
 // RUN:   -fallow-half-arguments-and-returns -disable-O0-optnone -emit-llvm -o - %s \
 // RUN: | opt -S -mem2reg | FileCheck %s
 
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 #include <arm_neon.h>
 
 // CHECK-LABEL: define{{.*}} i8 @test_vget_lane_u8(<8 x i8> %a) #0 {

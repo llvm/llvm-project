@@ -21,6 +21,11 @@ static bool isItaniumEncoding(const char *S) {
 
 static bool isRustEncoding(const char *S) { return S[0] == '_' && S[1] == 'R'; }
 
+static bool isDLangEncoding(const std::string &MangledName) {
+  return MangledName.size() >= 2 && MangledName[0] == '_' &&
+         MangledName[1] == 'D';
+}
+
 std::string llvm::demangle(const std::string &MangledName) {
   std::string Result;
   const char *S = MangledName.c_str();
@@ -47,6 +52,8 @@ bool llvm::nonMicrosoftDemangle(const char *MangledName, std::string &Result) {
     Demangled = itaniumDemangle(MangledName, nullptr, nullptr, nullptr);
   else if (isRustEncoding(MangledName))
     Demangled = rustDemangle(MangledName, nullptr, nullptr, nullptr);
+  else if (isDLangEncoding(MangledName))
+    Demangled = dlangDemangle(MangledName);
 
   if (!Demangled)
     return false;

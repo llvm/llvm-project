@@ -431,6 +431,9 @@ void MCStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
     TS->emitLabel(Symbol);
 }
 
+void MCStreamer::emitConditionalAssignment(MCSymbol *Symbol,
+                                           const MCExpr *Value) {}
+
 void MCStreamer::emitCFISections(bool EH, bool Debug) {}
 
 void MCStreamer::emitCFIStartProc(bool IsSimple, SMLoc Loc) {
@@ -1308,45 +1311,78 @@ getMachoBuildVersionPlatformType(const Triple &Target) {
   llvm_unreachable("unexpected OS type");
 }
 
-void MCStreamer::emitVersionForTarget(const Triple &Target,
-                                      const VersionTuple &SDKVersion) {
+void MCStreamer::emitVersionForTarget(
+    const Triple &Target, const VersionTuple &SDKVersion,
+    const Triple *DarwinTargetVariantTriple,
+    const VersionTuple &DarwinTargetVariantSDKVersion) {
   if (!Target.isOSBinFormatMachO() || !Target.isOSDarwin())
     return;
   // Do we even know the version?
   if (Target.getOSMajorVersion() == 0)
     return;
 
-  unsigned Major = 0;
-  unsigned Minor = 0;
-  unsigned Update = 0;
+  VersionTuple Version;
   switch (Target.getOS()) {
   case Triple::MacOSX:
   case Triple::Darwin:
-    Target.getMacOSXVersion(Major, Minor, Update);
+    Target.getMacOSXVersion(Version);
     break;
   case Triple::IOS:
   case Triple::TvOS:
-    Target.getiOSVersion(Major, Minor, Update);
+    Version = Target.getiOSVersion();
     break;
   case Triple::WatchOS:
-    Target.getWatchOSVersion(Major, Minor, Update);
+    Version = Target.getWatchOSVersion();
     break;
   default:
     llvm_unreachable("unexpected OS type");
   }
-  assert(Major != 0 && "A non-zero major version is expected");
-  auto LinkedTargetVersion = targetVersionOrMinimumSupportedOSVersion(
-      Target, VersionTuple(Major, Minor, Update));
+  assert(Version.getMajor() != 0 && "A non-zero major version is expected");
+  auto LinkedTargetVersion =
+      targetVersionOrMinimumSupportedOSVersion(Target, Version);
   auto BuildVersionOSVersion = getMachoBuildVersionSupportedOS(Target);
+  bool ShouldEmitBuildVersion = false;
   if (BuildVersionOSVersion.empty() ||
-      LinkedTargetVersion >= BuildVersionOSVersion)
-    return emitBuildVersion(getMachoBuildVersionPlatformType(Target),
-                            LinkedTargetVersion.getMajor(),
-                            *LinkedTargetVersion.getMinor(),
-                            *LinkedTargetVersion.getSubminor(), SDKVersion);
+      LinkedTargetVersion >= BuildVersionOSVersion) {
+    if (Target.isMacCatalystEnvironment() && DarwinTargetVariantTriple &&
+        DarwinTargetVariantTriple->isMacOSX()) {
+      emitVersionForTarget(*DarwinTargetVariantTriple,
+                           DarwinTargetVariantSDKVersion,
+                           /*TargetVariantTriple=*/nullptr,
+                           /*TargetVariantSDKVersion=*/VersionTuple());
+      emitDarwinTargetVariantBuildVersion(
+          getMachoBuildVersionPlatformType(Target),
+          LinkedTargetVersion.getMajor(),
+          LinkedTargetVersion.getMinor().getValueOr(0),
+          LinkedTargetVersion.getSubminor().getValueOr(0), SDKVersion);
+      return;
+    }
+    emitBuildVersion(getMachoBuildVersionPlatformType(Target),
+                     LinkedTargetVersion.getMajor(),
+                     LinkedTargetVersion.getMinor().getValueOr(0),
+                     LinkedTargetVersion.getSubminor().getValueOr(0),
+                     SDKVersion);
+    ShouldEmitBuildVersion = true;
+  }
+
+  if (const Triple *TVT = DarwinTargetVariantTriple) {
+    if (Target.isMacOSX() && TVT->isMacCatalystEnvironment()) {
+      auto TVLinkedTargetVersion =
+          targetVersionOrMinimumSupportedOSVersion(*TVT, TVT->getiOSVersion());
+      emitDarwinTargetVariantBuildVersion(
+          getMachoBuildVersionPlatformType(*TVT),
+          TVLinkedTargetVersion.getMajor(),
+          TVLinkedTargetVersion.getMinor().getValueOr(0),
+          TVLinkedTargetVersion.getSubminor().getValueOr(0),
+          DarwinTargetVariantSDKVersion);
+    }
+  }
+
+  if (ShouldEmitBuildVersion)
+    return;
 
   emitVersionMin(getMachoVersionMinLoadCommandType(Target),
                  LinkedTargetVersion.getMajor(),
-                 *LinkedTargetVersion.getMinor(),
-                 *LinkedTargetVersion.getSubminor(), SDKVersion);
+                 LinkedTargetVersion.getMinor().getValueOr(0),
+                 LinkedTargetVersion.getSubminor().getValueOr(0), SDKVersion);
 }

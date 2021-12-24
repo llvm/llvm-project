@@ -7,26 +7,26 @@
 define amdgpu_kernel void @store_lds_v3i32(<3 x i32> addrspace(3)* %out, <3 x i32> %x) {
 ; GFX9-LABEL: store_lds_v3i32:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dword s2, s[0:1], 0x24
 ; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x34
+; GFX9-NEXT:    s_load_dword s2, s[0:1], 0x24
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v3, s2
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s6
+; GFX9-NEXT:    v_mov_b32_e32 v3, s2
 ; GFX9-NEXT:    ds_write_b96 v3, v[0:2]
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX7-LABEL: store_lds_v3i32:
 ; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_load_dword s4, s[0:1], 0x9
-; GFX7-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0xd
+; GFX7-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0xd
+; GFX7-NEXT:    s_load_dword s0, s[0:1], 0x9
 ; GFX7-NEXT:    s_mov_b32 m0, -1
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX7-NEXT:    v_mov_b32_e32 v3, s4
-; GFX7-NEXT:    v_mov_b32_e32 v0, s0
-; GFX7-NEXT:    v_mov_b32_e32 v1, s1
-; GFX7-NEXT:    v_mov_b32_e32 v2, s2
+; GFX7-NEXT:    v_mov_b32_e32 v0, s4
+; GFX7-NEXT:    v_mov_b32_e32 v1, s5
+; GFX7-NEXT:    v_mov_b32_e32 v2, s6
+; GFX7-NEXT:    v_mov_b32_e32 v3, s0
 ; GFX7-NEXT:    ds_write_b96 v3, v[0:2]
 ; GFX7-NEXT:    s_endpgm
 ;
@@ -427,26 +427,26 @@ define amdgpu_kernel void @store_lds_v3i32_align8(<3 x i32> addrspace(3)* %out, 
 define amdgpu_kernel void @store_lds_v3i32_align16(<3 x i32> addrspace(3)* %out, <3 x i32> %x) {
 ; GFX9-LABEL: store_lds_v3i32_align16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dword s2, s[0:1], 0x24
 ; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x34
+; GFX9-NEXT:    s_load_dword s2, s[0:1], 0x24
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v3, s2
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s6
+; GFX9-NEXT:    v_mov_b32_e32 v3, s2
 ; GFX9-NEXT:    ds_write_b96 v3, v[0:2]
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX7-LABEL: store_lds_v3i32_align16:
 ; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_load_dword s4, s[0:1], 0x9
-; GFX7-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0xd
+; GFX7-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0xd
+; GFX7-NEXT:    s_load_dword s0, s[0:1], 0x9
 ; GFX7-NEXT:    s_mov_b32 m0, -1
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX7-NEXT:    v_mov_b32_e32 v3, s4
-; GFX7-NEXT:    v_mov_b32_e32 v0, s0
-; GFX7-NEXT:    v_mov_b32_e32 v1, s1
-; GFX7-NEXT:    v_mov_b32_e32 v2, s2
+; GFX7-NEXT:    v_mov_b32_e32 v0, s4
+; GFX7-NEXT:    v_mov_b32_e32 v1, s5
+; GFX7-NEXT:    v_mov_b32_e32 v2, s6
+; GFX7-NEXT:    v_mov_b32_e32 v3, s0
 ; GFX7-NEXT:    ds_write_b96 v3, v[0:2]
 ; GFX7-NEXT:    s_endpgm
 ;

@@ -234,16 +234,9 @@ bool HexagonPacketizer::runOnMachineFunction(MachineFunction &MF) {
   // dependence between Insn 0 and Insn 2. This can lead to incorrect
   // packetization
   for (MachineBasicBlock &MB : MF) {
-    auto End = MB.end();
-    auto MI = MB.begin();
-    while (MI != End) {
-      auto NextI = std::next(MI);
-      if (MI->isKill()) {
-        MB.erase(MI);
-        End = MB.end();
-      }
-      MI = NextI;
-    }
+    for (MachineInstr &MI : llvm::make_early_inc_range(MB))
+      if (MI.isKill())
+        MB.erase(&MI);
   }
 
   // TinyCore with Duplexes: Translate to big-instructions.
@@ -301,7 +294,7 @@ bool HexagonPacketizerList::tryAllocateResourcesForConstExt(bool Reserve) {
   bool Avail = ResourceTracker->canReserveResources(*ExtMI);
   if (Reserve && Avail)
     ResourceTracker->reserveResources(*ExtMI);
-  MF.DeleteMachineInstr(ExtMI);
+  MF.deleteMachineInstr(ExtMI);
   return Avail;
 }
 
@@ -897,7 +890,7 @@ bool HexagonPacketizerList::canPromoteToDotNew(const MachineInstr &MI,
   const MCInstrDesc &D = HII->get(NewOpcode);
   MachineInstr *NewMI = MF.CreateMachineInstr(D, DebugLoc());
   bool ResourcesAvailable = ResourceTracker->canReserveResources(*NewMI);
-  MF.DeleteMachineInstr(NewMI);
+  MF.deleteMachineInstr(NewMI);
   if (!ResourcesAvailable)
     return false;
 
@@ -1089,6 +1082,11 @@ bool HexagonPacketizerList::isSoloInstruction(const MachineInstr &MI) {
   if (HII->isSolo(MI))
     return true;
 
+  if (MI.getOpcode() == Hexagon::PATCHABLE_FUNCTION_ENTER ||
+      MI.getOpcode() == Hexagon::PATCHABLE_FUNCTION_EXIT ||
+      MI.getOpcode() == Hexagon::PATCHABLE_TAIL_CALL)
+    return true;
+
   if (MI.getOpcode() == Hexagon::A2_nop)
     return true;
 
@@ -1160,12 +1158,9 @@ bool HexagonPacketizerList::cannotCoexist(const MachineInstr &MI,
 void HexagonPacketizerList::unpacketizeSoloInstrs(MachineFunction &MF) {
   for (auto &B : MF) {
     MachineBasicBlock::iterator BundleIt;
-    MachineBasicBlock::instr_iterator NextI;
-    for (auto I = B.instr_begin(), E = B.instr_end(); I != E; I = NextI) {
-      NextI = std::next(I);
-      MachineInstr &MI = *I;
+    for (MachineInstr &MI : llvm::make_early_inc_range(B.instrs())) {
       if (MI.isBundle())
-        BundleIt = I;
+        BundleIt = MI.getIterator();
       if (!MI.isInsideBundle())
         continue;
 

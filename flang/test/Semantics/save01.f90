@@ -17,5 +17,13 @@ PURE FUNCTION pf2( )
    INTEGER :: mc
 END FUNCTION
 
+! This same subroutine appears in test save02.f90 where it is not an
+! error due to -fno-automatic.
+SUBROUTINE foo
+  INTEGER, TARGET :: t
+  !ERROR: An initial data target may not be a reference to an object 't' that lacks the SAVE attribute
+  INTEGER, POINTER :: p => t
+end
+
 END MODULE
 

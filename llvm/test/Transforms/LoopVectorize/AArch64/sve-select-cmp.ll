@@ -1,5 +1,5 @@
-; RUN: opt -loop-vectorize -scalable-vectorization=preferred -force-vector-interleave=1 -force-vector-width=4 -S < %s | FileCheck %s --check-prefix=CHECK-VF4IC1
-; RUN: opt -loop-vectorize -scalable-vectorization=preferred -force-vector-interleave=4 -force-vector-width=4 -S < %s | FileCheck %s --check-prefix=CHECK-VF4IC4
+; RUN: opt -loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -S < %s | FileCheck %s --check-prefix=CHECK-VF4IC1
+; RUN: opt -loop-vectorize -force-vector-interleave=4 -force-vector-width=4 -S < %s | FileCheck %s --check-prefix=CHECK-VF4IC4
 
 target triple = "aarch64-linux-gnu"
 
@@ -154,7 +154,7 @@ exit:                                     ; preds = %for.body
 define i32 @pred_select_const_i32_from_icmp(i32* noalias nocapture readonly %src1, i32* noalias nocapture readonly %src2, i64 %n) #0 {
 ; CHECK-VF4IC1-LABEL: @pred_select_const_i32_from_icmp
 ; CHECK-VF4IC1:      vector.body:
-; CHECK-VF4IC1:        [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 0, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), %vector.ph ], [ [[VEC_SEL:%.*]], %vector.body ]
+; CHECK-VF4IC1:        [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, %vector.ph ], [ [[VEC_SEL:%.*]], %vector.body ]
 ; CHECK-VF4IC1:        [[VEC_LOAD:%.*]] = load <vscale x 4 x i32>
 ; CHECK-VF4IC1:        [[MASK:%.*]] = icmp sgt <vscale x 4 x i32> [[VEC_LOAD]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 35, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
 ; CHECK-VF4IC1:        [[MASKED_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0nxv4i32(<vscale x 4 x i32>* {{%.*}}, i32 4, <vscale x 4 x i1> [[MASK]], <vscale x 4 x i32> poison)
@@ -162,7 +162,7 @@ define i32 @pred_select_const_i32_from_icmp(i32* noalias nocapture readonly %src
 ; CHECK-VF4IC1-NEXT:   [[VEC_SEL_TMP:%.*]] = select <vscale x 4 x i1> [[VEC_ICMP]], <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i32> [[VEC_PHI]]
 ; CHECK-VF4IC1:        [[VEC_SEL:%.*]] = select <vscale x 4 x i1> [[MASK]], <vscale x 4 x i32> [[VEC_SEL_TMP]], <vscale x 4 x i32> [[VEC_PHI]]
 ; CHECK-VF4IC1:      middle.block:
-; CHECK-VF4IC1-NEXT:   [[FIN_ICMP:%.*]] = icmp ne <vscale x 4 x i32> [[VEC_SEL]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 0, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+; CHECK-VF4IC1-NEXT:   [[FIN_ICMP:%.*]] = icmp ne <vscale x 4 x i32> [[VEC_SEL]], zeroinitializer
 ; CHECK-VF4IC1-NEXT:   [[OR_RDX:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[FIN_ICMP]])
 ; CHECK-VF4IC1-NEXT:   {{.*}} = select i1 [[OR_RDX]], i32 1, i32 0
 

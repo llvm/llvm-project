@@ -1433,7 +1433,6 @@ static void emitPredicateProlog(const RecordKeeper &Records, raw_ostream &OS) {
   for (Record *P : Prologs)
     Stream << P->getValueAsString("Code") << '\n';
 
-  Stream.flush();
   OS << Buffer;
 }
 
@@ -1492,7 +1491,6 @@ static void emitPredicates(const CodeGenSchedTransition &T,
   }
 
   SS << "return " << T.ToClassIdx << "; // " << SC.Name << '\n';
-  SS.flush();
   OS << Buffer;
 }
 
@@ -1526,9 +1524,7 @@ static void collectVariantClasses(const CodeGenSchedModels &SchedModels,
     if (OnlyExpandMCInstPredicates) {
       // Ignore this variant scheduling class no transitions use any meaningful
       // MCSchedPredicate definitions.
-      if (!any_of(SC.Transitions, [](const CodeGenSchedTransition &T) {
-            return hasMCSchedPredicates(T);
-          }))
+      if (llvm::none_of(SC.Transitions, hasMCSchedPredicates))
         continue;
     }
 
@@ -1550,8 +1546,7 @@ static void collectProcessorIndices(const CodeGenSchedClass &SC,
 }
 
 static bool isAlwaysTrue(const CodeGenSchedTransition &T) {
-  return llvm::all_of(T.PredTerm,
-                      [](const Record *R) { return isTruePredicate(R); });
+  return llvm::all_of(T.PredTerm, isTruePredicate);
 }
 
 void SubtargetEmitter::emitSchedModelHelpersImpl(

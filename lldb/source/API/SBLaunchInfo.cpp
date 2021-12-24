@@ -380,16 +380,18 @@ lldb::SBStructuredData SBLaunchInfo::GetScriptedProcessDictionary() const {
 void SBLaunchInfo::SetScriptedProcessDictionary(lldb::SBStructuredData dict) {
   LLDB_RECORD_METHOD(void, SBLaunchInfo, SetScriptedProcessDictionary,
                      (lldb::SBStructuredData), dict);
-
-  SBStream stream;
-  SBError error = dict.GetAsJSON(stream);
-
-  if (error.Fail())
+  if (!dict.IsValid() || !dict.m_impl_up)
     return;
 
-  StructuredData::DictionarySP dict_sp;
-  llvm::json::OStream s(stream.ref().AsRawOstream());
-  dict_sp->Serialize(s);
+  StructuredData::ObjectSP obj_sp = dict.m_impl_up->GetObjectSP();
+
+  if (!obj_sp)
+    return;
+
+  StructuredData::DictionarySP dict_sp =
+      std::make_shared<StructuredData::Dictionary>(obj_sp);
+  if (!dict_sp || dict_sp->GetType() == lldb::eStructuredDataTypeInvalid)
+    return;
 
   m_opaque_sp->SetScriptedProcessDictionarySP(dict_sp);
 }

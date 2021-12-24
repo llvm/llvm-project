@@ -425,3 +425,39 @@ namespace PR44992 {
     friend auto operator<=>(s const &, s const &) = default;
   };
 }
+
+namespace PR52537 {
+  template<typename T> struct X {};
+  template<typename T> bool operator==(const X<T> &, int) { return T::error; } // expected-error 2{{no members}}
+  template<typename T> int operator<=>(const X<T> &, int) { return T::error; } // expected-error 2{{no members}}
+
+  const X<int[1]> x1;
+  template<typename T> bool f1() { return x1 != 0; } // expected-note {{instantiation of}}
+  void g1() { f1<int>(); } // expected-note {{instantiation of}}
+
+  const X<int[2]> x2;
+  template<typename T> bool f2() { return 0 == x2; } // expected-note {{instantiation of}}
+  void g2() { f2<int>(); } // expected-note {{instantiation of}}
+
+  const X<int[3]> x3;
+  template<typename T> bool f3() { return x3 < 0; } // expected-note {{instantiation of}}
+  void g3() { f3<int>(); } // expected-note {{instantiation of}}
+
+  const X<int[4]> x4;
+  template<typename T> bool f4() { return 0 >= x4; } // expected-note {{instantiation of}}
+  void g4() { f4<int>(); } // expected-note {{instantiation of}}
+
+  template<typename T> struct Y {};
+  template<typename T> struct Z { Z(int) { T::error; } using nondeduced = Z; }; // expected-error 2{{no members}}
+  template<typename T> Z<T> operator<=>(const Y<T>&, int);
+  template<typename T> bool operator<(const Z<T>&, const typename Z<T>::nondeduced&);
+  template<typename T> bool operator<(const typename Z<T>::nondeduced&, const Z<T>&);
+
+  const Y<int[5]> y5;
+  template<typename T> bool f5() { return y5 < 0; } // expected-note {{instantiation of}}
+  void g5() { f5<int>(); } // expected-note {{instantiation of}}
+
+  const Y<int[6]> y6;
+  template<typename T> bool f6() { return 0 < y6; } // expected-note {{instantiation of}}
+  void g6() { f6<int>(); } // expected-note {{instantiation of}}
+}

@@ -406,11 +406,10 @@ void ScheduleDAGInstrs::addVRegDefDeps(SUnit *SU, unsigned OperIdx) {
       // register in later operands. The lanes of other defs will now be live
       // after this instruction, so these should not be treated as killed by the
       // instruction even though they appear to be killed in this one operand.
-      for (int I = OperIdx + 1, E = MI->getNumOperands(); I != E; ++I) {
-        const MachineOperand &OtherMO = MI->getOperand(I);
+      for (const MachineOperand &OtherMO :
+           llvm::drop_begin(MI->operands(), OperIdx + 1))
         if (OtherMO.isReg() && OtherMO.isDef() && OtherMO.getReg() == Reg)
           KillLaneMask &= ~getLaneMaskForMO(OtherMO);
-      }
     }
 
     // Clear undef flag, we'll re-add it later once we know which subregister
@@ -1112,7 +1111,7 @@ void ScheduleDAGInstrs::fixupKills(MachineBasicBlock &MBB) {
   LiveRegs.addLiveOuts(MBB);
 
   // Examine block from end to start...
-  for (MachineInstr &MI : make_range(MBB.rbegin(), MBB.rend())) {
+  for (MachineInstr &MI : llvm::reverse(MBB)) {
     if (MI.isDebugOrPseudoInstr())
       continue;
 

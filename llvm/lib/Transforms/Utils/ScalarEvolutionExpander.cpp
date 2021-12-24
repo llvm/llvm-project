@@ -18,6 +18,7 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -747,9 +748,8 @@ Value *SCEVExpander::visitAddExpr(const SCEVAddExpr *S) {
   // so that pointer operands are inserted first, which the code below relies on
   // to form more involved GEPs.
   SmallVector<std::pair<const Loop *, const SCEV *>, 8> OpsAndLoops;
-  for (std::reverse_iterator<SCEVAddExpr::op_iterator> I(S->op_end()),
-       E(S->op_begin()); I != E; ++I)
-    OpsAndLoops.push_back(std::make_pair(getRelevantLoop(*I), *I));
+  for (const SCEV *Op : reverse(S->operands()))
+    OpsAndLoops.push_back(std::make_pair(getRelevantLoop(Op), Op));
 
   // Sort by loop. Use a stable sort so that constants follow non-constants and
   // pointer operands precede non-pointer operands.
@@ -811,9 +811,8 @@ Value *SCEVExpander::visitMulExpr(const SCEVMulExpr *S) {
   // Collect all the mul operands in a loop, along with their associated loops.
   // Iterate in reverse so that constants are emitted last, all else equal.
   SmallVector<std::pair<const Loop *, const SCEV *>, 8> OpsAndLoops;
-  for (std::reverse_iterator<SCEVMulExpr::op_iterator> I(S->op_end()),
-       E(S->op_begin()); I != E; ++I)
-    OpsAndLoops.push_back(std::make_pair(getRelevantLoop(*I), *I));
+  for (const SCEV *Op : reverse(S->operands()))
+    OpsAndLoops.push_back(std::make_pair(getRelevantLoop(Op), Op));
 
   // Sort by loop. Use a stable sort so that constants follow non-constants.
   llvm::stable_sort(OpsAndLoops, LoopCompare(SE.DT));
@@ -1048,9 +1047,9 @@ bool SCEVExpander::hoistIVInc(Instruction *IncV, Instruction *InsertPos) {
     if (SE.DT.dominates(IncV, InsertPos))
       break;
   }
-  for (auto I = IVIncs.rbegin(), E = IVIncs.rend(); I != E; ++I) {
-    fixupInsertPoints(*I);
-    (*I)->moveBefore(InsertPos);
+  for (Instruction *I : llvm::reverse(IVIncs)) {
+    fixupInsertPoints(I);
+    I->moveBefore(InsertPos);
   }
   return true;
 }
@@ -1844,16 +1843,18 @@ SCEVExpander::FindValueInExprValueMap(const SCEV *S,
   if (CanonicalMode || !SE.containsAddRecurrence(S)) {
     // If S is scConstant, it may be worse to reuse an existing Value.
     if (S->getSCEVType() != scConstant && Set) {
-      // Choose a Value from the set which dominates the insertPt.
-      // insertPt should be inside the Value's parent loop so as not to break
+      // Choose a Value from the set which dominates the InsertPt.
+      // InsertPt should be inside the Value's parent loop so as not to break
       // the LCSSA form.
       for (auto const &VOPair : *Set) {
         Value *V = VOPair.first;
         ConstantInt *Offset = VOPair.second;
-        Instruction *EntInst = nullptr;
-        if (V && isa<Instruction>(V) && (EntInst = cast<Instruction>(V)) &&
-            S->getType() == V->getType() &&
-            EntInst->getFunction() == InsertPt->getFunction() &&
+        Instruction *EntInst = dyn_cast_or_null<Instruction>(V);
+        if (!EntInst)
+          continue;
+
+        assert(EntInst->getFunction() == InsertPt->getFunction());
+        if (S->getType() == V->getType() &&
             SE.DT.dominates(EntInst, InsertPt) &&
             (SE.LI.getLoopFor(EntInst->getParent()) == nullptr ||
              SE.LI.getLoopFor(EntInst->getParent())->contains(InsertPt)))
@@ -1935,26 +1936,36 @@ Value *SCEVExpander::expand(const SCEV *S) {
 
   if (!V)
     V = visit(S);
-  else if (VO.second) {
-    if (PointerType *Vty = dyn_cast<PointerType>(V->getType())) {
-      Type *Ety = Vty->getPointerElementType();
-      int64_t Offset = VO.second->getSExtValue();
-      int64_t ESize = SE.getTypeSizeInBits(Ety);
-      if ((Offset * 8) % ESize == 0) {
-        ConstantInt *Idx =
+  else {
+    // If we're reusing an existing instruction, we are effectively CSEing two
+    // copies of the instruction (with potentially different flags).  As such,
+    // we need to drop any poison generating flags unless we can prove that
+    // said flags must be valid for all new users.
+    if (auto *I = dyn_cast<Instruction>(V))
+      if (I->hasPoisonGeneratingFlags() && !programUndefinedIfPoison(I))
+        I->dropPoisonGeneratingFlags();
+
+    if (VO.second) {
+      if (PointerType *Vty = dyn_cast<PointerType>(V->getType())) {
+        Type *Ety = Vty->getPointerElementType();
+        int64_t Offset = VO.second->getSExtValue();
+        int64_t ESize = SE.getTypeSizeInBits(Ety);
+        if ((Offset * 8) % ESize == 0) {
+          ConstantInt *Idx =
             ConstantInt::getSigned(VO.second->getType(), -(Offset * 8) / ESize);
-        V = Builder.CreateGEP(Ety, V, Idx, "scevgep");
-      } else {
-        ConstantInt *Idx =
+          V = Builder.CreateGEP(Ety, V, Idx, "scevgep");
+        } else {
+          ConstantInt *Idx =
             ConstantInt::getSigned(VO.second->getType(), -Offset);
-        unsigned AS = Vty->getAddressSpace();
-        V = Builder.CreateBitCast(V, Type::getInt8PtrTy(SE.getContext(), AS));
-        V = Builder.CreateGEP(Type::getInt8Ty(SE.getContext()), V, Idx,
-                              "uglygep");
-        V = Builder.CreateBitCast(V, Vty);
+          unsigned AS = Vty->getAddressSpace();
+          V = Builder.CreateBitCast(V, Type::getInt8PtrTy(SE.getContext(), AS));
+          V = Builder.CreateGEP(Type::getInt8Ty(SE.getContext()), V, Idx,
+                                "uglygep");
+          V = Builder.CreateBitCast(V, Vty);
+        }
+      } else {
+        V = Builder.CreateSub(V, VO.second);
       }
-    } else {
-      V = Builder.CreateSub(V, VO.second);
     }
   }
   // Remember the expanded value for this SCEV at this location.
@@ -2005,7 +2016,9 @@ SCEVExpander::replaceCongruentIVs(Loop *L, const DominatorTree *DT,
     Phis.push_back(&PN);
 
   if (TTI)
-    llvm::sort(Phis, [](Value *LHS, Value *RHS) {
+    // Use stable_sort to preserve order of equivalent PHIs, so the order
+    // of the sorted Phis is the same from run to run on the same loop.
+    llvm::stable_sort(Phis, [](Value *LHS, Value *RHS) {
       // Put pointers at the back and make sure pointer < pointer = false.
       if (!LHS->getType()->isIntegerTy() || !RHS->getType()->isIntegerTy())
         return RHS->getType()->isIntegerTy() && !LHS->getType()->isIntegerTy();
@@ -2161,7 +2174,9 @@ SCEVExpander::getRelatedExistingExpansion(const SCEV *S, const Instruction *At,
   }
 
   // Use expand's logic which is used for reusing a previous Value in
-  // ExprValueMap.
+  // ExprValueMap.  Note that we don't currently model the cost of
+  // needing to drop poison generating flags on the instruction if we
+  // want to reuse it.  We effectively assume that has zero cost.
   ScalarEvolution::ValueOffsetPair VO = FindValueInExprValueMap(S, At);
   if (VO.first)
     return VO;
@@ -2477,13 +2492,22 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
 
   // Get the backedge taken count and truncate or extended to the AR type.
   Value *TruncTripCount = Builder.CreateZExtOrTrunc(TripCountVal, Ty);
-  auto *MulF = Intrinsic::getDeclaration(Loc->getModule(),
-                                         Intrinsic::umul_with_overflow, Ty);
 
   // Compute |Step| * Backedge
-  CallInst *Mul = Builder.CreateCall(MulF, {AbsStep, TruncTripCount}, "mul");
-  Value *MulV = Builder.CreateExtractValue(Mul, 0, "mul.result");
-  Value *OfMul = Builder.CreateExtractValue(Mul, 1, "mul.overflow");
+  Value *MulV, *OfMul;
+  if (Step->isOne()) {
+    // Special-case Step of one. Potentially-costly `umul_with_overflow` isn't
+    // needed, there is never an overflow, so to avoid artificially inflating
+    // the cost of the check, directly emit the optimized IR.
+    MulV = TruncTripCount;
+    OfMul = ConstantInt::getFalse(MulV->getContext());
+  } else {
+    auto *MulF = Intrinsic::getDeclaration(Loc->getModule(),
+                                           Intrinsic::umul_with_overflow, Ty);
+    CallInst *Mul = Builder.CreateCall(MulF, {AbsStep, TruncTripCount}, "mul");
+    MulV = Builder.CreateExtractValue(Mul, 0, "mul.result");
+    OfMul = Builder.CreateExtractValue(Mul, 1, "mul.overflow");
+  }
 
   // Compute:
   //   Start + |Step| * Backedge < Start

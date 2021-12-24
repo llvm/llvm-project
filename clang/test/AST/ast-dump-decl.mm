@@ -1,6 +1,8 @@
 // Test without serialization:
 // RUN: %clang_cc1 -Wno-unused -fblocks -ast-dump -ast-dump-filter Test %s \
 // RUN: | FileCheck --strict-whitespace %s
+// RUN: %clang_cc1 -Wno-unused -fblocks -ast-dump -triple i386-windows-pc -ast-dump-filter Test %s \
+// RUN: | FileCheck --strict-whitespace %s
 //
 // Test with serialization:
 // RUN: %clang_cc1 -Wno-unused -fblocks -emit-pch -o %t %s
@@ -55,4 +57,14 @@ struct Test {
     // CHECK-NEXT:               CXXThisExpr {{.*}} <col:8> 'Test *' this
   }
   void yada();
+  // CHECK:      CXXMethodDecl {{.*}} <line:[[@LINE-1]]:3, col:13> col:8 used yada 'void (){{.*}}'
 };
+
+@protocol P
+@end;
+
+using TestObjCPointerWithoutStar = id<P>;
+// CHECK:      TypeAliasDecl {{.+}} <{{.+}}:[[@LINE-1]]:1, col:40> col:7 TestObjCPointerWithoutStar 'id<P>'
+
+using TestObjCPointerWithStar = A *;
+// CHECK:      TypeAliasDecl {{.+}} <{{.+}}:[[@LINE-1]]:1, col:35> col:7 TestObjCPointerWithStar 'A *'

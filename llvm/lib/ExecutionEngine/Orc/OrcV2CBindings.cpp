@@ -192,8 +192,8 @@ public:
       LLVMOrcMaterializationUnitMaterializeFunction Materialize,
       LLVMOrcMaterializationUnitDiscardFunction Discard,
       LLVMOrcMaterializationUnitDestroyFunction Destroy)
-      : llvm::orc::MaterializationUnit(std::move(InitialSymbolFlags),
-                                       std::move(InitSymbol)),
+      : llvm::orc::MaterializationUnit(
+            Interface(std::move(InitialSymbolFlags), std::move(InitSymbol))),
         Name(std::move(Name)), Ctx(Ctx), Materialize(Materialize),
         Discard(Discard), Destroy(Destroy) {}
 

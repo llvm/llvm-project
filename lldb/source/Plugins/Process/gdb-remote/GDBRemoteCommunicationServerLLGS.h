@@ -104,7 +104,6 @@ protected:
   std::mutex m_saved_registers_mutex;
   std::unordered_map<uint32_t, lldb::DataBufferSP> m_saved_registers_map;
   uint32_t m_next_saved_registers_id = 1;
-  bool m_handshake_completed = false;
   bool m_thread_suffix_supported = false;
   bool m_list_threads_in_stop_reply = false;
 
@@ -288,6 +287,8 @@ private:
   const GDBRemoteCommunicationServerLLGS &
   operator=(const GDBRemoteCommunicationServerLLGS &) = delete;
 };
+
+std::string LLGSArgToURL(llvm::StringRef url_arg, bool reverse_connect);
 
 } // namespace process_gdb_remote
 } // namespace lldb_private

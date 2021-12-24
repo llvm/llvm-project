@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/TestHelpers.h"
 #include "src/math/expm1f.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
+#include "utils/UnitTest/FPMatcher.h"
 #include "utils/UnitTest/Test.h"
 #include <math.h>
 
@@ -29,7 +29,7 @@ TEST(LlvmLibcExpm1fTest, SpecialNumbers) {
   EXPECT_FP_EQ(inf, __llvm_libc::expm1f(inf));
   EXPECT_EQ(errno, 0);
 
-  EXPECT_FP_EQ(-1.0f, __llvm_libc::expm1f(negInf));
+  EXPECT_FP_EQ(-1.0f, __llvm_libc::expm1f(neg_inf));
   EXPECT_EQ(errno, 0);
 
   EXPECT_FP_EQ(0.0f, __llvm_libc::expm1f(0.0f));
@@ -93,9 +93,9 @@ TEST(LlvmLibcExpm1fTest, Borderline) {
 }
 
 TEST(LlvmLibcExpm1fTest, InFloatRange) {
-  constexpr uint32_t count = 1000000;
-  constexpr uint32_t step = UINT32_MAX / count;
-  for (uint32_t i = 0, v = 0; i <= count; ++i, v += step) {
+  constexpr uint32_t COUNT = 1000000;
+  constexpr uint32_t STEP = UINT32_MAX / COUNT;
+  for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
     float x = float(FPBits(v));
     if (isnan(x) || isinf(x))
       continue;
@@ -108,6 +108,6 @@ TEST(LlvmLibcExpm1fTest, InFloatRange) {
     // wider precision.
     if (isnan(result) || isinf(result) || errno != 0)
       continue;
-    ASSERT_MPFR_MATCH(mpfr::Operation::Expm1, x, __llvm_libc::expm1f(x), 1.5);
+    ASSERT_MPFR_MATCH(mpfr::Operation::Expm1, x, __llvm_libc::expm1f(x), 2.2);
   }
 }

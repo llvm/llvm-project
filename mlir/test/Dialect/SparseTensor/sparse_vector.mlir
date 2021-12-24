@@ -210,12 +210,11 @@ func @mul_s(%arga: tensor<1024xf32, #SparseVector>, %argb: tensor<1024xf32>, %ar
 //
 // CHECK-VEC1-LABEL: func @reduction_d
 // CHECK-VEC1-DAG:   %[[c0:.*]] = arith.constant 0 : index
-// CHECK-VEC1-DAG:   %[[i0:.*]] = arith.constant 0 : i32
 // CHECK-VEC1-DAG:   %[[c16:.*]] = arith.constant 16 : index
 // CHECK-VEC1-DAG:   %[[c1024:.*]] = arith.constant 1024 : index
 // CHECK-VEC1-DAG:   %[[v0:.*]] = arith.constant dense<0.000000e+00> : vector<16xf32>
 // CHECK-VEC1:       %[[l:.*]] = memref.load %{{.*}}[] : memref<f32>
-// CHECK-VEC1:       %[[r:.*]] = vector.insertelement %[[l]], %[[v0]][%[[i0]] : i32] : vector<16xf32>
+// CHECK-VEC1:       %[[r:.*]] = vector.insertelement %[[l]], %[[v0]][%[[c0]] : index] : vector<16xf32>
 // CHECK-VEC1:       %[[red:.*]] = scf.for %[[i:.*]] = %[[c0]] to %[[c1024]] step %[[c16]] iter_args(%[[red_in:.*]] = %[[r]]) -> (vector<16xf32>) {
 // CHECK-VEC1:         %[[la:.*]] = vector.load %{{.*}}[%[[i]]] : memref<?xf32>, vector<16xf32>
 // CHECK-VEC1:         %[[lb:.*]] = vector.load %{{.*}}[%[[i]]] : memref<1024xf32>, vector<16xf32>
@@ -228,12 +227,11 @@ func @mul_s(%arga: tensor<1024xf32, #SparseVector>, %argb: tensor<1024xf32>, %ar
 //
 // CHECK-VEC2-LABEL: func @reduction_d
 // CHECK-VEC2-DAG:   %[[c0:.*]] = arith.constant 0 : index
-// CHECK-VEC2-DAG:   %[[i0:.*]] = arith.constant 0 : i32
 // CHECK-VEC2-DAG:   %[[c16:.*]] = arith.constant 16 : index
 // CHECK-VEC2-DAG:   %[[c1024:.*]] = arith.constant 1024 : index
 // CHECK-VEC2-DAG:   %[[v0:.*]] = arith.constant dense<0.000000e+00> : vector<16xf32>
 // CHECK-VEC2:       %[[l:.*]] = memref.load %{{.*}}[] : memref<f32>
-// CHECK-VEC2:       %[[r:.*]] = vector.insertelement %[[l]], %[[v0]][%[[i0]] : i32] : vector<16xf32>
+// CHECK-VEC2:       %[[r:.*]] = vector.insertelement %[[l]], %[[v0]][%[[c0]] : index] : vector<16xf32>
 // CHECK-VEC2:       %[[red:.*]] = scf.for %[[i:.*]] = %[[c0]] to %[[c1024]] step %[[c16]] iter_args(%[[red_in:.*]] = %[[r]]) -> (vector<16xf32>) {
 // CHECK-VEC2:         %[[la:.*]] = vector.load %{{.*}}[%[[i]]] : memref<?xf32>, vector<16xf32>
 // CHECK-VEC2:         %[[lb:.*]] = vector.load %{{.*}}[%[[i]]] : memref<1024xf32>, vector<16xf32>

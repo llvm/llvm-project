@@ -1,4 +1,4 @@
-; RUN: opt -S -sccp %s
+; RUN: opt -S -passes=sccp %s
 
 @A = external constant i32
 

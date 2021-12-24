@@ -9,7 +9,7 @@
 #include "mlir/Dialect/Linalg/Passes.h"
 
 #include "PassDetail.h"
-#include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
@@ -126,8 +126,8 @@ namespace {
 class ConvertElementwiseToLinalgPass
     : public ConvertElementwiseToLinalgBase<ConvertElementwiseToLinalgPass> {
 
-  void runOnFunction() final {
-    auto func = getOperation();
+  void runOnOperation() final {
+    auto *func = getOperation();
     auto *context = &getContext();
     ConversionTarget target(*context);
     RewritePatternSet patterns(context);
@@ -143,7 +143,6 @@ class ConvertElementwiseToLinalgPass
 };
 } // namespace
 
-std::unique_ptr<OperationPass<FuncOp>>
-mlir::createConvertElementwiseToLinalgPass() {
+std::unique_ptr<Pass> mlir::createConvertElementwiseToLinalgPass() {
   return std::make_unique<ConvertElementwiseToLinalgPass>();
 }

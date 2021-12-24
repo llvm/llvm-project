@@ -26,27 +26,62 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Format/Format.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
+#include <type_traits>
 
 #define DEBUG_TYPE "format-formatter"
 
 namespace clang {
 namespace format {
 
+// FIXME: Instead of printing the diagnostic we should store it and have a
+// better way to return errors through the format APIs.
+class FatalDiagnosticConsumer : public DiagnosticConsumer {
+public:
+  void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
+                        const Diagnostic &Info) override {
+    if (DiagLevel == DiagnosticsEngine::Fatal) {
+      Fatal = true;
+      llvm::SmallVector<char, 128> Message;
+      Info.FormatDiagnostic(Message);
+      llvm::errs() << Message << "\n";
+    }
+  }
+
+  bool fatalError() const { return Fatal; }
+
+private:
+  bool Fatal = false;
+};
+
+std::unique_ptr<Environment>
+Environment::make(StringRef Code, StringRef FileName,
+                  ArrayRef<tooling::Range> Ranges, unsigned FirstStartColumn,
+                  unsigned NextStartColumn, unsigned LastStartColumn) {
+  auto Env = std::make_unique<Environment>(Code, FileName, FirstStartColumn,
+                                           NextStartColumn, LastStartColumn);
+  FatalDiagnosticConsumer Diags;
+  Env->SM.getDiagnostics().setClient(&Diags, /*ShouldOwnClient=*/false);
+  SourceLocation StartOfFile = Env->SM.getLocForStartOfFile(Env->ID);
+  for (const tooling::Range &Range : Ranges) {
+    SourceLocation Start = StartOfFile.getLocWithOffset(Range.getOffset());
+    SourceLocation End = Start.getLocWithOffset(Range.getLength());
+    Env->CharRanges.push_back(CharSourceRange::getCharRange(Start, End));
+  }
+  // Validate that we can get the buffer data without a fatal error.
+  Env->SM.getBufferData(Env->ID);
+  if (Diags.fatalError())
+    return nullptr;
+  return Env;
+}
+
 Environment::Environment(StringRef Code, StringRef FileName,
-                         ArrayRef<tooling::Range> Ranges,
                          unsigned FirstStartColumn, unsigned NextStartColumn,
                          unsigned LastStartColumn)
     : VirtualSM(new SourceManagerForFile(FileName, Code)), SM(VirtualSM->get()),
       ID(VirtualSM->get().getMainFileID()), FirstStartColumn(FirstStartColumn),
-      NextStartColumn(NextStartColumn), LastStartColumn(LastStartColumn) {
-  SourceLocation StartOfFile = SM.getLocForStartOfFile(ID);
-  for (const tooling::Range &Range : Ranges) {
-    SourceLocation Start = StartOfFile.getLocWithOffset(Range.getOffset());
-    SourceLocation End = Start.getLocWithOffset(Range.getLength());
-    CharRanges.push_back(CharSourceRange::getCharRange(Start, End));
-  }
-}
+      NextStartColumn(NextStartColumn), LastStartColumn(LastStartColumn) {}
 
 TokenAnalyzer::TokenAnalyzer(const Environment &Env, const FormatStyle &Style)
     : Style(Style), Env(Env),

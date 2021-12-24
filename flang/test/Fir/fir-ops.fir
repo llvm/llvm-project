@@ -121,7 +121,7 @@ func @instructions() {
   %31 = fir.no_reassoc %29 : i64
 
 // CHECK: fir.call @user_i64([[VAL_35]]) : (i64) -> ()
-// CHECK: fir.freemem [[VAL_5]] : !fir.heap<!fir.array<100xf32>>
+// CHECK: fir.freemem [[VAL_5]] : <!fir.array<100xf32>>
 // CHECK: [[VAL_36:%.*]] = fir.call @get_func() : () -> (() -> ())
 // CHECK: fir.call [[VAL_36]]() : () -> ()
 // CHECK: [[VAL_37:%.*]] = fir.address_of(@it1) : !fir.ref<() -> !fir.int<4>>
@@ -142,7 +142,6 @@ func @boxing_match() {
 // CHECK: [[VAL_40:%.*]] = fir.alloca !fir.char<1>
 // CHECK: [[VAL_41:%.*]] = fir.alloca tuple<i32, f64>
 // CHECK: [[VAL_42:%.*]] = fir.embox [[VAL_38]] : (!fir.ref<i32>) -> !fir.box<i32>
-// CHECK: [[VAL_43:%.*]]:6 = fir.unbox [[VAL_42]] : (!fir.box<i32>) -> (!fir.ref<i32>, i32, i32, !fir.tdesc<i32>, i32, !fir.array<3x?xindex>)
 // CHECK: [[VAL_44:%.*]] = arith.constant 8 : i32
 // CHECK: [[VAL_45:%.*]] = fir.undefined !fir.char<1>
 // CHECK: [[VAL_46:%.*]] = fir.emboxchar [[VAL_40]], [[VAL_44]] : (!fir.ref<!fir.char<1>>, i32) -> !fir.boxchar<1>
@@ -168,7 +167,6 @@ func @boxing_match() {
   %d3 = fir.alloca !fir.char<1>
   %e6 = fir.alloca tuple<i32,f64>
   %1 = fir.embox %0 : (!fir.ref<i32>) -> !fir.box<i32>
-  %2:6 = fir.unbox %1 : (!fir.box<i32>) -> (!fir.ref<i32>,i32,i32,!fir.tdesc<i32>,i32,!fir.array<3x?xindex>)
   %c8 = arith.constant 8 : i32
   %3 = fir.undefined !fir.char<1>
   %4 = fir.emboxchar %d3, %c8 : (!fir.ref<!fir.char<1>>, i32) -> !fir.boxchar<1>
@@ -619,10 +617,10 @@ func @test_misc_ops(%arr1 : !fir.ref<!fir.array<?x?xf32>>, %m : index, %n : inde
   %c1_i32 = arith.constant 9 : i32
 
   // CHECK: [[ARR2:%.*]] = fir.zero_bits !fir.array<10xi32>
-  // CHECK: [[ARR3:%.*]] = fir.insert_on_range [[ARR2]], [[C1_I32]], [2 : index, 9 : index] : (!fir.array<10xi32>, i32) -> !fir.array<10xi32>
+  // CHECK: [[ARR3:%.*]] = fir.insert_on_range [[ARR2]], [[C1_I32]] from (2) to (9) : (!fir.array<10xi32>, i32) -> !fir.array<10xi32>
   // CHECK: fir.call @noret1([[ARR3]]) : (!fir.array<10xi32>) -> ()
   %arr2 = fir.zero_bits !fir.array<10xi32>
-    %arr3 = fir.insert_on_range %arr2, %c1_i32, [2 : index, 9 : index] : (!fir.array<10xi32>, i32) -> !fir.array<10xi32>
+  %arr3 = fir.insert_on_range %arr2, %c1_i32 from (2) to (9) : (!fir.array<10xi32>, i32) -> !fir.array<10xi32>
   fir.call @noret1(%arr3) : (!fir.array<10xi32>) -> ()
 
   // CHECK: [[SHAPE:%.*]] = fir.shape_shift [[INDXM:%.*]], [[INDXN:%.*]], [[INDXO:%.*]], [[INDXP:%.*]] : (index, index, index, index) -> !fir.shapeshift<2>
@@ -646,6 +644,31 @@ func @test_misc_ops(%arr1 : !fir.ref<!fir.array<?x?xf32>>, %m : index, %n : inde
   %addr, %av4 = fir.array_modify %av3, %i10, %j20 : (!fir.array<?x?xf32>, index, index) -> (!fir.ref<f32>, !fir.array<?x?xf32>)
   fir.store %f2 to %addr : !fir.ref<f32>
   fir.array_merge_store %av3, %av4 to %arr1 : !fir.array<?x?xf32>, !fir.array<?x?xf32>, !fir.ref<!fir.array<?x?xf32>>
+  return
+}
+
+// CHECK-LABEL: @test_const_complex
+func @test_const_complex() {
+ // CHECK-DAG: {{%.*}} = fir.constc(#fir.real<2, i x3000>, #fir.real<2, i x4C40>) : !fir.complex<2>
+ // CHECK-DAG: {{%.*}} = fir.constc(#fir.real<3, i x3E80>, #fir.real<3, i x4202>) : !fir.complex<3>
+ // CHECK-DAG: {{%.*}} = fir.constc(#fir.real<4, i x3E800000>, #fir.real<4, i x42028000>) : !fir.complex<4>
+ // CHECK-DAG: {{%.*}} = fir.constc(#fir.real<8, i x3FD0000000000000>, #fir.real<8, i x4040500000000000>) : !fir.complex<8>
+ // CHECK-DAG: {{%.*}} = fir.constc(#fir.real<10, i x3FFD8000000000000000>, #fir.real<10, i x40048280000000000000>) : !fir.complex<10>
+ // CHECK-DAG: {{%.*}} = fir.constc(#fir.real<16, i x3FFD0000000000000000000000000000>, #fir.real<16, i x40040500000000000000000000000000>) : !fir.complex<16>
+  %c2 = fir.constc (#fir.real<2, 0.125>, #fir.real<2, 17.0>) : !fir.complex<2>
+  %c3 = fir.constc (#fir.real<3, 0.25>, #fir.real<3, 32.625>) : !fir.complex<3>
+  %c4 = fir.constc (#fir.real<4, 0.25>, #fir.real<4, 32.625>) : !fir.complex<4>
+  %c8 = fir.constc (#fir.real<8, 0.25>, #fir.real<8, 32.625>) : !fir.complex<8>
+  %c10 = fir.constc (#fir.real<10, 0.25>, #fir.real<10, 32.625>) : !fir.complex<10>
+  %c16 = fir.constc (#fir.real<16, 0.25>, #fir.real<16, 32.625>) : !fir.complex<16>
+  return
+}
+
+// CHECK-LABEL: @insert_on_range_multi_dim
+// CHECK-SAME: %[[ARR:.*]]: !fir.array<10x20xi32>, %[[CST:.*]]: i32
+func @insert_on_range_multi_dim(%arr : !fir.array<10x20xi32>, %cst : i32) {
+  // CHECK: fir.insert_on_range %[[ARR]], %[[CST]] from (2, 3) to (5, 6) : (!fir.array<10x20xi32>, i32) -> !fir.array<10x20xi32>
+  %arr3 = fir.insert_on_range %arr, %cst from (2, 3) to (5, 6) : (!fir.array<10x20xi32>, i32) -> !fir.array<10x20xi32>
   return
 }
 
@@ -698,4 +721,29 @@ func @char_convert() {
   // CHECK: fir.char_convert %{{.*}} for %{{.*}} to %{{.*}} : !fir.ref<!fir.char<1>>, i32, !fir.ref<!fir.array<?x!fir.char<2,?>>>
   fir.char_convert %2 for %1 to %3 : !fir.ref<!fir.char<1>>, i32, !fir.ref<!fir.array<?x!fir.char<2,?>>>
   return
+}
+
+func @slice_substr() {
+  %lb = arith.constant 0 : index
+  %ub = arith.constant 42 : index
+  %c1 = arith.constant 1 : index
+  %offset = arith.constant 10 : index
+  %0 = fir.slice %lb, %ub, %c1 substr %offset, %c1 : (index, index, index, index, index) -> !fir.slice<1>
+  // CHECK: fir.slice %{{.*}}, %{{.*}}, %{{.*}} substr %{{.*}}, %{{.*}} : (index, index, index, index, index) -> !fir.slice<1>
+  return
+}
+
+// Test load, store, coordinate_of with llvmptr type
+// CHECK-LABEL: llvm_ptr_load_store_coordinate
+// CHECK-SAME: (%[[ARG0:.*]]: !fir.ref<tuple<!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>>>, %[[ARG1:.*]]: !fir.ref<!fir.box<!fir.ptr<f32>>>)
+func @llvm_ptr_load_store_coordinate(%arg0: !fir.ref<tuple<!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>>>, %arg1: !fir.ref<!fir.box<!fir.ptr<f32>>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>> {
+  // CHECK-NEXT: %[[C0:.*]] = arith.constant 0 : i32
+  %c0_i32 = arith.constant 0 : i32
+  // CHECK-NEXT: %[[LLVMPTR:.*]] = fir.coordinate_of %[[ARG0]], %[[C0]] : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<f32>>>>
+  %0 = fir.coordinate_of %arg0, %c0_i32 : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<f32>>>>
+  // CHECK-NEXT: fir.store %[[ARG1]] to %[[LLVMPTR]] : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<f32>>>>
+  fir.store %arg1 to %0 : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<f32>>>>
+  // CHECK-NEXT: fir.load %[[LLVMPTR]] : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<f32>>>>
+  %1 = fir.load %0 : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<f32>>>>
+  return %1 : !fir.ref<!fir.box<!fir.ptr<f32>>>
 }

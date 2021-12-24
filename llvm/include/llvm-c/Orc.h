@@ -34,6 +34,13 @@
 LLVM_C_EXTERN_C_BEGIN
 
 /**
+ * @defgroup LLVMCExecutionEngineORC On-Request-Compilation
+ * @ingroup LLVMCExecutionEngine
+ *
+ * @{
+ */
+
+/**
  * Represents an address in the executor process.
  */
 typedef uint64_t LLVMOrcJITTargetAddress;
@@ -1175,6 +1182,10 @@ void LLVMOrcDisposeDumpObjects(LLVMOrcDumpObjectsRef DumpObjects);
  */
 LLVMErrorRef LLVMOrcDumpObjects_CallOperator(LLVMOrcDumpObjectsRef DumpObjects,
                                              LLVMMemoryBufferRef *ObjBuffer);
+
+/**
+ * @}
+ */
 
 LLVM_C_EXTERN_C_END
 

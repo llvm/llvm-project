@@ -1,4 +1,5 @@
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -start-after=codegenprepare -stop-before=finalize-isel -o - %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -start-after=codegenprepare -stop-before=finalize-isel -o - %s -experimental-debug-variable-locations=false | FileCheck %s --check-prefixes=COMMON,CHECK
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -start-after=codegenprepare -stop-before=finalize-isel -o - %s -experimental-debug-variable-locations=true | FileCheck %s --check-prefixes=COMMON,INSTRREF
 
 ; Input to this test looked like this and was compiled using: clang -g -O1 -mllvm -stop-after=codegenprepare -S
 ;
@@ -31,12 +32,12 @@
 
 ; Catch metadata references for involved variables.
 ;
-; CHECK-DAG: ![[T1A:.*]] = !DILocalVariable(name: "t1a"
-; CHECK-DAG: ![[LOCAL:.*]] = !DILocalVariable(name: "local"
-; CHECK-DAG: ![[T2A:.*]] = !DILocalVariable(name: "t2a"
-; CHECK-DAG: ![[T2B:.*]] = !DILocalVariable(name: "t2b"
-; CHECK-DAG: ![[T3A:.*]] = !DILocalVariable(name: "t3a"
-; CHECK-DAG: ![[TMP:.*]] = !DILocalVariable(name: "tmp"
+; COMMON-DAG: ![[T1A:.*]] = !DILocalVariable(name: "t1a"
+; COMMON-DAG: ![[LOCAL:.*]] = !DILocalVariable(name: "local"
+; COMMON-DAG: ![[T2A:.*]] = !DILocalVariable(name: "t2a"
+; COMMON-DAG: ![[T2B:.*]] = !DILocalVariable(name: "t2b"
+; COMMON-DAG: ![[T3A:.*]] = !DILocalVariable(name: "t3a"
+; COMMON-DAG: ![[TMP:.*]] = !DILocalVariable(name: "tmp"
 
 
 define dso_local void @foo_local(i32 %t1a) local_unnamed_addr #0 !dbg !7 {
@@ -52,6 +53,18 @@ define dso_local void @foo_local(i32 %t1a) local_unnamed_addr #0 !dbg !7 {
 ; CHECK:    DBG_VALUE $edi, $noreg, ![[T1A]], !DIExpression(),
 ; CHECK-NOT: DBG_VALUE
 ; CHECK:    TCRETURNdi64 @bar,
+; INSTRREF-LABEL: name:            foo_local
+; INSTRREF-NOT: DBG_
+; INSTRREF:      DBG_PHI $edi, 1
+; INSTRREF:      DBG_VALUE $edi, $noreg, ![[T1A]], !DIExpression(),
+; INSTRREF-NEXT: %0:gr32 = COPY $edi
+; INSTRREF-NEXT: DBG_VALUE 123, $noreg, ![[LOCAL]], !DIExpression(),
+; INSTRREF:      CALL64pcrel32 @bar,
+; INSTRREF-NEXT: ADJCALLSTACKUP64
+; INSTRREF:      DBG_INSTR_REF 1, 0, ![[LOCAL]], !DIExpression(),
+; INSTRREF-NOT: DBG_
+; INSTRREF:    TCRETURNdi64 @bar,
+
 entry:
   call void @llvm.dbg.value(metadata i32 %t1a, metadata !12, metadata !DIExpression()), !dbg !14
   call void @llvm.dbg.value(metadata i32 123, metadata !13, metadata !DIExpression()), !dbg !15
@@ -76,6 +89,15 @@ define dso_local void @foo_other_param(i32 %t2a, i32 %t2b) local_unnamed_addr #0
 ; CHECK: DBG_VALUE %0, $noreg, ![[T2B]], !DIExpression(),
 ; CHECK: DBG_VALUE $edi, $noreg, ![[T2A]], !DIExpression(),
 ; CHECK: TCRETURNdi64 @bar,
+; INSTRREF-LABEL: name:            foo_other_param
+; INSTRREF: DBG_PHI $edi, 1
+; INSTRREF: DBG_VALUE $edi, $noreg, ![[T2A]], !DIExpression(),
+; INSTRREF: DBG_VALUE $esi, $noreg, ![[T2B]], !DIExpression(),
+; INSTRREF: CALL64pcrel32 @bar,
+; INSTRREF: DBG_VALUE 123, $noreg, ![[T2B]], !DIExpression(),
+; INSTRREF: CALL64pcrel32 @bar,
+; INSTRREF: DBG_INSTR_REF 1, 0, ![[T2B]], !DIExpression(),
+; INSTRREF: TCRETURNdi64 @bar,
 
 entry:
   call void @llvm.dbg.value(metadata i32 %t2a, metadata !23, metadata !DIExpression()), !dbg !25
@@ -99,6 +121,16 @@ define dso_local void @foo_same_param(i32 %t3a) local_unnamed_addr #0 !dbg !31 {
 ; CHECK: CALL64pcrel32 @bar,
 ; CHECK: DBG_VALUE %0, $noreg, ![[T3A]], !DIExpression(),
 ; CHECK: TCRETURNdi64 @bar,
+; INSTRREF-LABEL: name:            foo_same_param
+; INSTRREF: DBG_PHI $edi, 2
+; INSTRREF: DBG_PHI $edi, 1
+; INSTRREF: DBG_VALUE $edi, $noreg, ![[T3A]], !DIExpression(),
+; INSTRREF: CALL64pcrel32 @bar,
+; INSTRREF: DBG_INSTR_REF 1, 0, ![[TMP]], !DIExpression(),
+; INSTRREF: DBG_VALUE 123, $noreg, ![[T3A]], !DIExpression(),
+; INSTRREF: CALL64pcrel32 @bar,
+; INSTRREF: DBG_INSTR_REF 2, 0, ![[T3A]], !DIExpression(),
+; INSTRREF: TCRETURNdi64 @bar,
 entry:
   call void @llvm.dbg.value(metadata i32 %t3a, metadata !33, metadata !DIExpression()), !dbg !35
   tail call void @bar(i32 %t3a) #3, !dbg !36

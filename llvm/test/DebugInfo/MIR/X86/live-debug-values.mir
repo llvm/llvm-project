@@ -252,6 +252,6 @@ body:             |
     CALL64pcrel32 @printf, csr_64, implicit $rsp, implicit $rdi, implicit $esi, implicit $al, implicit-def $rsp, implicit-def dead $eax, debug-location !46
     $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, debug-location !47
     $rbx = POP64r implicit-def $rsp, implicit $rsp, debug-location !47
-    RETQ $eax, debug-location !47
+    RET64 $eax, debug-location !47
 
 ...

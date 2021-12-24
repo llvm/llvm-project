@@ -35,6 +35,21 @@ namespace llvm {
 /// terms of addition of one. These aren't equivalent for all iterator
 /// categories, and respecting that adds a lot of complexity for little gain.
 ///
+/// Iterators are expected to have const rules analogous to pointers, with a
+/// single, const-qualified operator*() that returns ReferenceT. This matches
+/// the second and third pointers in the following example:
+/// \code
+///   int Value;
+///   { int *I = &Value; }             // ReferenceT 'int&'
+///   { int *const I = &Value; }       // ReferenceT 'int&'; const
+///   { const int *I = &Value; }       // ReferenceT 'const int&'
+///   { const int *const I = &Value; } // ReferenceT 'const int&'; const
+/// \endcode
+/// If an iterator facade returns a handle to its own state, then T (and
+/// PointerT and ReferenceT) should usually be const-qualified. Otherwise, if
+/// clients are expected to modify the handle itself, the field can be declared
+/// mutable or use const_cast.
+///
 /// Classes wishing to use `iterator_facade_base` should implement the following
 /// methods:
 ///
@@ -42,8 +57,7 @@ namespace llvm {
 ///   (All of the following methods)
 ///   - DerivedT &operator=(const DerivedT &R);
 ///   - bool operator==(const DerivedT &R) const;
-///   - const T &operator*() const;
-///   - T &operator*();
+///   - T &operator*() const;
 ///   - DerivedT &operator++();
 ///
 /// Bidirectional Iterators:
@@ -188,16 +202,8 @@ public:
     return !(static_cast<const DerivedT &>(*this) < RHS);
   }
 
-  PointerProxy operator->() {
-    return static_cast<DerivedT *>(this)->operator*();
-  }
   PointerProxy operator->() const {
     return static_cast<const DerivedT *>(this)->operator*();
-  }
-  ReferenceProxy operator[](DifferenceTypeT n) {
-    static_assert(IsRandomAccess,
-                  "Subscripting is only defined for random access iterators.");
-    return static_cast<DerivedT *>(this)->operator+(n);
   }
   ReferenceProxy operator[](DifferenceTypeT n) const {
     static_assert(IsRandomAccess,
@@ -348,8 +354,7 @@ public:
   explicit pointer_iterator(WrappedIteratorT u)
       : pointer_iterator::iterator_adaptor_base(std::move(u)) {}
 
-  T &operator*() { return Ptr = &*this->I; }
-  const T &operator*() const { return Ptr = &*this->I; }
+  T &operator*() const { return Ptr = &*this->I; }
 };
 
 template <typename RangeT, typename WrappedIteratorT =

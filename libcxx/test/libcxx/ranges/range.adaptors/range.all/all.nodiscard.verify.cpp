@@ -16,10 +16,8 @@
 
 void test() {
   int range[] = {1, 2, 3};
-  auto f = [](int i) { return i; };
 
   std::views::all(range); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   range | std::views::all; // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::views::transform(f) | std::views::all; // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::views::all | std::views::transform(f); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::views::all | std::views::all; // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 }

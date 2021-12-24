@@ -115,7 +115,7 @@ public:
 /// T must derive from clang::FrontendAction.
 ///
 /// Example:
-/// FrontendActionFactory *Factory =
+/// std::unique_ptr<FrontendActionFactory> Factory =
 ///   newFrontendActionFactory<clang::SyntaxOnlyAction>();
 template <typename T>
 std::unique_ptr<FrontendActionFactory> newFrontendActionFactory();
@@ -145,7 +145,7 @@ public:
 ///
 /// Example:
 /// struct ProvidesASTConsumers {
-///   clang::ASTConsumer *newASTConsumer();
+///   std::unique_ptr<clang::ASTConsumer> newASTConsumer();
 /// } Factory;
 /// std::unique_ptr<FrontendActionFactory> FactoryAdapter(
 ///   newFrontendActionFactory(&Factory));

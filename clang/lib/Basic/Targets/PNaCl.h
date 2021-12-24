@@ -69,7 +69,7 @@ public:
 
   const char *getClobbers() const override { return ""; }
 
-  bool hasExtIntType() const override { return true; }
+  bool hasBitIntType() const override { return true; }
 };
 
 // We attempt to use PNaCl (le32) frontend and Mips32EL backend.

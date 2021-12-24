@@ -200,6 +200,14 @@ namespace llvm {
     /// and 64-bit AIX.
     BCTRL_LOAD_TOC,
 
+    /// The variants that implicitly define rounding mode for calls with
+    /// strictfp semantics.
+    CALL_RM,
+    CALL_NOP_RM,
+    CALL_NOTOC_RM,
+    BCTRL_RM,
+    BCTRL_LOAD_TOC_RM,
+
     /// Return with a flag operand, matched by 'blr'
     RET_FLAG,
 
@@ -558,6 +566,14 @@ namespace llvm {
     /// VSRC, CHAIN = LD_SPLAT, CHAIN, Ptr - a splatting load memory
     /// instructions such as LXVDSX, LXVWSX.
     LD_SPLAT,
+
+    /// VSRC, CHAIN = ZEXT_LD_SPLAT, CHAIN, Ptr - a splatting load memory
+    /// that zero-extends.
+    ZEXT_LD_SPLAT,
+
+    /// VSRC, CHAIN = SEXT_LD_SPLAT, CHAIN, Ptr - a splatting load memory
+    /// that sign-extends.
+    SEXT_LD_SPLAT,
 
     /// CHAIN = STXVD2X CHAIN, VSRC, Ptr - Occurs only for little endian.
     /// Maps directly to an stxvd2x instruction that will be preceded by
@@ -1123,6 +1139,10 @@ namespace llvm {
     PPC::AddrMode SelectForceXFormMode(SDValue N, SDValue &Disp, SDValue &Base,
                                        SelectionDAG &DAG) const;
 
+    bool
+    splitValueIntoRegisterParts(SelectionDAG &DAG, const SDLoc &DL, SDValue Val,
+                                SDValue *Parts, unsigned NumParts, MVT PartVT,
+                                Optional<CallingConv::ID> CC) const override;
     /// Structure that collects some common arguments that get passed around
     /// between the functions for call lowering.
     struct CallFlags {

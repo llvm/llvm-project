@@ -138,10 +138,15 @@ Constant *ConstantFoldLoadFromConst(Constant *C, Type *Ty, const APInt &Offset,
 Constant *ConstantFoldLoadFromConst(Constant *C, Type *Ty,
                                     const DataLayout &DL);
 
-/// ConstantFoldLoadFromConstPtr - Return the value that a load from C would
-/// produce if it is constant and determinable.  If this is not determinable,
-/// return null.
-Constant *ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty, const DataLayout &DL);
+/// Return the value that a load from C with offset Offset would produce if it
+/// is constant and determinable. If this is not determinable, return null.
+Constant *ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty, APInt Offset,
+                                       const DataLayout &DL);
+
+/// Return the value that a load from C would produce if it is constant and
+/// determinable. If this is not determinable, return null.
+Constant *ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,
+                                       const DataLayout &DL);
 
 /// ConstantFoldLoadThroughGEPConstantExpr - Given a constant and a
 /// getelementptr constantexpr, return the constant value being addressed by the
@@ -149,13 +154,6 @@ Constant *ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty, const DataLayout &
 Constant *ConstantFoldLoadThroughGEPConstantExpr(Constant *C, ConstantExpr *CE,
                                                  Type *Ty,
                                                  const DataLayout &DL);
-
-/// ConstantFoldLoadThroughGEPIndices - Given a constant and getelementptr
-/// indices (with an *implied* zero pointer index that is not in the list),
-/// return the constant value being addressed by a virtual load, or null if
-/// something is funny and we can't decide.
-Constant *ConstantFoldLoadThroughGEPIndices(Constant *C,
-                                            ArrayRef<Constant *> Indices);
 
 /// canConstantFoldCallTo - Return true if its even possible to fold a call to
 /// the specified function.

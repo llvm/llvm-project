@@ -291,11 +291,6 @@ static void optimizeModuleNewPM(Module &TheModule, TargetMachine &TM,
     TLII->disableAllFunctions();
   FAM.registerPass([&] { return TargetLibraryAnalysis(*TLII); });
 
-  AAManager AA = PB.buildDefaultAAPipeline();
-
-  // Register the AA manager first so that our version is the one used.
-  FAM.registerPass([&] { return std::move(AA); });
-
   // Register all the basic analyses with the managers.
   PB.registerModuleAnalyses(MAM);
   PB.registerCGSCCAnalyses(CGAM);
@@ -383,7 +378,8 @@ std::unique_ptr<MemoryBuffer> codegenModule(Module &TheModule,
     // Run codegen now. resulting binary is in OutputBuffer.
     PM.run(TheModule);
   }
-  return std::make_unique<SmallVectorMemoryBuffer>(std::move(OutputBuffer));
+  return std::make_unique<SmallVectorMemoryBuffer>(
+      std::move(OutputBuffer), /*RequiresNullTerminator=*/false);
 }
 
 /// Manage caching for a single Module.
@@ -546,7 +542,8 @@ ProcessThinLTOModule(Module &TheModule, ModuleSummaryIndex &Index,
       auto Index = buildModuleSummaryIndex(TheModule, nullptr, &PSI);
       WriteBitcodeToFile(TheModule, OS, true, &Index);
     }
-    return std::make_unique<SmallVectorMemoryBuffer>(std::move(OutputBuffer));
+    return std::make_unique<SmallVectorMemoryBuffer>(
+        std::move(OutputBuffer), /*RequiresNullTerminator=*/false);
   }
 
   return codegenModule(TheModule, TM);

@@ -17,8 +17,9 @@
 // FIXME: vector is used because that's what clang uses for subtarget feature
 // lists, but SmallVector would probably be better
 #include "llvm/ADT/Triple.h"
-#include "llvm/Support/ARMTargetParser.h"
 #include "llvm/Support/AArch64TargetParser.h"
+#include "llvm/Support/ARMTargetParser.h"
+#include "llvm/Support/RISCVISAInfo.h"
 #include <vector>
 
 namespace llvm {
@@ -174,8 +175,21 @@ void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values, bool IsRV64);
 void fillValidTuneCPUArchList(SmallVectorImpl<StringRef> &Values, bool IsRV64);
 bool getCPUFeaturesExceptStdExt(CPUKind Kind, std::vector<StringRef> &Features);
 StringRef resolveTuneCPUAlias(StringRef TuneCPU, bool IsRV64);
+StringRef computeDefaultABIFromArch(const llvm::RISCVISAInfo &ISAInfo);
 
 } // namespace RISCV
+
+namespace ARM {
+struct ParsedBranchProtection {
+  StringRef Scope;
+  StringRef Key;
+  bool BranchTargetEnforcement;
+};
+
+bool parseBranchProtection(StringRef Spec, ParsedBranchProtection &PBP,
+                           StringRef &Err);
+
+} // namespace ARM
 
 } // namespace llvm
 

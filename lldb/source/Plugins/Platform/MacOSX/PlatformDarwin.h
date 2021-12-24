@@ -60,11 +60,9 @@ public:
   bool ModuleIsExcludedForUnconstrainedSearches(
       lldb_private::Target &target, const lldb::ModuleSP &module_sp) override;
 
-  bool ARMGetSupportedArchitectureAtIndex(uint32_t idx,
-                                          lldb_private::ArchSpec &arch);
+  void ARMGetSupportedArchitectures(std::vector<lldb_private::ArchSpec> &archs);
 
-  bool x86GetSupportedArchitectureAtIndex(uint32_t idx,
-                                          lldb_private::ArchSpec &arch);
+  void x86GetSupportedArchitectures(std::vector<lldb_private::ArchSpec> &archs);
 
   uint32_t GetResumeCountForLaunchInfo(
       lldb_private::ProcessLaunchInfo &launch_info) override;
@@ -103,6 +101,9 @@ public:
   static lldb_private::FileSpec GetCurrentCommandLineToolsDirectory();
 
 protected:
+  static const char *GetCompatibleArch(lldb_private::ArchSpec::Core core,
+                                       size_t idx);
+
   struct CrashInfoAnnotations {
     uint64_t version;          // unsigned long
     uint64_t message;          // char *

@@ -9,6 +9,7 @@
 #include "HexagonISelLowering.h"
 #include "HexagonRegisterInfo.h"
 #include "HexagonSubtarget.h"
+#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/IR/IntrinsicsHexagon.h"
 #include "llvm/Support/CommandLine.h"
 
@@ -1846,15 +1847,17 @@ HexagonTargetLowering::SplitHvxMemOp(SDValue Op, SelectionDAG &DAG) const {
   SDValue Chain = MemN->getChain();
   SDValue Base0 = MemN->getBasePtr();
   SDValue Base1 = DAG.getMemBasePlusOffset(Base0, TypeSize::Fixed(HwLen), dl);
+  unsigned MemOpc = MemN->getOpcode();
 
   MachineMemOperand *MOp0 = nullptr, *MOp1 = nullptr;
   if (MachineMemOperand *MMO = MemN->getMemOperand()) {
     MachineFunction &MF = DAG.getMachineFunction();
-    MOp0 = MF.getMachineMemOperand(MMO, 0, HwLen);
-    MOp1 = MF.getMachineMemOperand(MMO, HwLen, HwLen);
+    uint64_t MemSize = (MemOpc == ISD::MLOAD || MemOpc == ISD::MSTORE)
+                           ? (uint64_t)MemoryLocation::UnknownSize
+                           : HwLen;
+    MOp0 = MF.getMachineMemOperand(MMO, 0, MemSize);
+    MOp1 = MF.getMachineMemOperand(MMO, HwLen, MemSize);
   }
-
-  unsigned MemOpc = MemN->getOpcode();
 
   if (MemOpc == ISD::LOAD) {
     assert(cast<LoadSDNode>(Op)->isUnindexed());

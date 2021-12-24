@@ -59,7 +59,7 @@ struct LoopFusion : public AffineLoopFusionBase<LoopFusion> {
   void runOnFunction() override;
 };
 
-} // end anonymous namespace
+} // namespace
 
 std::unique_ptr<OperationPass<FuncOp>>
 mlir::createLoopFusionPass(unsigned fastMemorySpace,
@@ -198,7 +198,7 @@ public:
   // The next unique identifier to use for newly created graph nodes.
   unsigned nextNodeId = 0;
 
-  MemRefDependenceGraph() {}
+  MemRefDependenceGraph() = default;
 
   // Initializes the dependence graph based on operations in 'f'.
   // Returns true on success, false otherwise.
@@ -301,14 +301,15 @@ public:
       memrefEdgeCount[value]--;
     }
     // Remove 'srcId' from 'inEdges[dstId]'.
-    for (auto it = inEdges[dstId].begin(); it != inEdges[dstId].end(); ++it) {
+    for (auto *it = inEdges[dstId].begin(); it != inEdges[dstId].end(); ++it) {
       if ((*it).id == srcId && (*it).value == value) {
         inEdges[dstId].erase(it);
         break;
       }
     }
     // Remove 'dstId' from 'outEdges[srcId]'.
-    for (auto it = outEdges[srcId].begin(); it != outEdges[srcId].end(); ++it) {
+    for (auto *it = outEdges[srcId].begin(); it != outEdges[srcId].end();
+         ++it) {
       if ((*it).id == dstId && (*it).value == value) {
         outEdges[srcId].erase(it);
         break;
@@ -726,7 +727,7 @@ void gatherEscapingMemrefs(unsigned id, MemRefDependenceGraph *mdg,
   }
 }
 
-} // end anonymous namespace
+} // namespace
 
 // Initializes the data dependence graph by walking operations in 'f'.
 // Assigns each node in the graph a node id based on program order in 'f'.
@@ -1565,7 +1566,7 @@ public:
             // producer scenarios will still go through profitability analysis
             // if only one of the stores is involved the producer-consumer
             // relationship of the candidate loops.
-            assert(producerStores.size() > 0 && "Expected producer store");
+            assert(!producerStores.empty() && "Expected producer store");
             if (producerStores.size() > 1)
               LLVM_DEBUG(llvm::dbgs() << "Skipping profitability analysis. Not "
                                          "supported for this case\n");
@@ -1972,7 +1973,7 @@ public:
   }
 };
 
-} // end anonymous namespace
+} // namespace
 
 void LoopFusion::runOnFunction() {
   MemRefDependenceGraph g;

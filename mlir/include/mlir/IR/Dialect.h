@@ -50,7 +50,7 @@ public:
   virtual ~Dialect();
 
   /// Utility function that returns if the given string is a valid dialect
-  /// namespace.
+  /// namespace
   static bool isValidNamespace(StringRef str);
 
   MLIRContext *getContext() const { return context; }
@@ -114,7 +114,7 @@ public:
 
   /// Return the hook to parse an operation registered to this dialect, if any.
   /// By default this will lookup for registered operations and return the
-  /// `parse()` method registered on the AbstractOperation. Dialects can
+  /// `parse()` method registered on the RegisteredOperationName. Dialects can
   /// override this behavior and handle unregistered operations as well.
   virtual Optional<ParseOpHook> getParseOperationHook(StringRef opName) const;
 
@@ -194,7 +194,7 @@ protected:
   ///
   template <typename... Args> void addOperations() {
     (void)std::initializer_list<int>{
-        0, (AbstractOperation::insert<Args>(*this), 0)...};
+        0, (RegisteredOperationName::insert<Args>(*this), 0)...};
   }
 
   /// Register a set of type classes with this dialect.

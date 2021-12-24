@@ -1,14 +1,27 @@
-; RUN: llc -O1 -filetype=asm -mtriple x86_64-unknown-linux-gnu -mcpu=x86-64 -o - %s -stop-after=livedebugvars | FileCheck %s
+; RUN: llc -O1 -filetype=asm -mtriple x86_64-unknown-linux-gnu -mcpu=x86-64 \
+; RUN:    -o - %s -stop-after=livedebugvars \
+; RUN:    -experimental-debug-variable-locations=false \
+; RUN: | FileCheck %s --check-prefixes=CHECK
+; RUN: llc -O1 -filetype=asm -mtriple x86_64-unknown-linux-gnu -mcpu=x86-64 \
+; RUN:    -o - %s -stop-after=livedebugvars \
+; RUN:    -experimental-debug-variable-locations=true \
+; RUN: | FileCheck %s --check-prefixes=CHECK,INSTRREF
 
-; CHECK: $eax = MOV32rm
-; CHECK: DBG_VALUE $eax
-; CHECK: $eax = SHL32rCL killed renamable $eax
-; CHECK: DBG_VALUE $eax
-; CHECK: DBG_VALUE $rsp, 0, !{{[0-9]+}}, !DIExpression(DW_OP_constu, 4, DW_OP_minus)
-; CHECK: DBG_VALUE $eax
-; CHECK: $eax = SHL32rCL killed renamable $eax
-; CHECK: DBG_VALUE $eax
-; CHECK: RETQ $eax
+; CHECK:         $eax = MOV32rm
+; INSTRREF-SAME:      debug-instr-number 1
+; INSTRREF:      DBG_INSTR_REF 1, 0
+; CHECK:         DBG_VALUE $eax
+; CHECK:         $eax = SHL32rCL killed renamable $eax,
+; INSTRREF-SAME:      debug-instr-number 2
+; INSTRREF:      DBG_INSTR_REF 2, 0
+; CHECK:         DBG_VALUE $eax
+; CHECK:         DBG_VALUE $rsp, 0, !{{[0-9]+}}, !DIExpression(DW_OP_constu, 4, DW_OP_minus)
+; CHECK:         DBG_VALUE $eax
+; CHECK:         $eax = SHL32rCL killed renamable $eax,
+; INSTRREF-SAME:      debug-instr-number 3
+; INSTRREF:      DBG_INSTR_REF 3, 0
+; CHECK:         DBG_VALUE $eax
+; CHECK:         RET64 $eax
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -28,7 +41,7 @@ entry:
   %shl2 = shl i32 %shl, %2
   tail call void @llvm.dbg.value(metadata i32 %shl2, metadata !18, metadata !DIExpression()), !dbg !20
   store i32 %shl2, i32* @var
-  ret i32 %shl2
+  ret i32 %shl2, !dbg !20
 }
 
 declare void @llvm.dbg.value(metadata, metadata, metadata)

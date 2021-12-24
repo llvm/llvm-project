@@ -10,21 +10,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Transforms/Bufferize.h"
+#include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "PassDetail.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/Transforms/Passes.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
 
 namespace {
-class BufferizeCastOp : public OpConversionPattern<tensor::CastOp> {
-public:
+struct BufferizeCastOp : public OpConversionPattern<tensor::CastOp> {
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
   matchAndRewrite(tensor::CastOp op, OpAdaptor adaptor,
@@ -35,11 +36,8 @@ public:
     return success();
   }
 };
-} // namespace
 
-namespace {
-class BufferizeDimOp : public OpConversionPattern<tensor::DimOp> {
-public:
+struct BufferizeDimOp : public OpConversionPattern<tensor::DimOp> {
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
   matchAndRewrite(tensor::DimOp op, OpAdaptor adaptor,
@@ -49,11 +47,8 @@ public:
     return success();
   }
 };
-} // namespace
 
-namespace {
-class BufferizeExtractOp : public OpConversionPattern<tensor::ExtractOp> {
-public:
+struct BufferizeExtractOp : public OpConversionPattern<tensor::ExtractOp> {
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
   matchAndRewrite(tensor::ExtractOp op, OpAdaptor adaptor,
@@ -63,35 +58,76 @@ public:
     return success();
   }
 };
-} // namespace
 
-namespace {
-class BufferizeFromElementsOp
+struct BufferizeFromElementsOp
     : public OpConversionPattern<tensor::FromElementsOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
   matchAndRewrite(tensor::FromElementsOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    int numberOfElements = op.elements().size();
-    auto resultType = MemRefType::get(
-        {numberOfElements}, op.getType().cast<TensorType>().getElementType());
-    Value result = rewriter.create<memref::AllocOp>(op.getLoc(), resultType);
-    for (auto element : llvm::enumerate(op.elements())) {
-      Value index =
-          rewriter.create<arith::ConstantIndexOp>(op.getLoc(), element.index());
-      rewriter.create<memref::StoreOp>(op.getLoc(), element.value(), result,
-                                       index);
+    Location loc = op.getLoc();
+    auto tensorType = op.getType().cast<RankedTensorType>();
+    auto shape = tensorType.getShape();
+
+    // Allocate a buffer for the result.
+    auto resultType =
+        MemRefType::get(tensorType.getShape(), tensorType.getElementType());
+    Value buffer = rewriter.create<memref::AllocOp>(loc, resultType);
+
+    // Case: tensor<0xelem_type>.
+    if (op.elements().empty()) {
+      rewriter.replaceOp(op, {buffer});
+      return success();
     }
-    rewriter.replaceOp(op, {result});
+
+    // Case: tensor<elem_type>.
+    if (shape.empty()) {
+      rewriter.create<memref::StoreOp>(loc, op.elements().front(), buffer);
+      rewriter.replaceOp(op, {buffer});
+      return success();
+    }
+
+    // Create constants for the range of possible indices [0, max{shape_i}).
+    auto maxDim = *std::max_element(shape.begin(), shape.end());
+    SmallVector<Value, 2> constants;
+    constants.reserve(maxDim);
+    for (int i = 0; i < maxDim; ++i)
+      constants.push_back(rewriter.create<arith::ConstantIndexOp>(loc, i));
+
+    // Traverse all `elements` and create `memref.store` ops.
+    ImplicitLocOpBuilder b(loc, rewriter);
+    auto elementIt = adaptor.elements().begin();
+    SmallVector<Value, 2> indices(tensorType.getRank(), constants[0]);
+    createStores(/*dim=*/0, buffer, shape, constants, elementIt, indices, b);
+
+    rewriter.replaceOp(op, {buffer});
     return success();
   }
-};
-} // namespace
 
-namespace {
-class BufferizeGenerateOp : public OpConversionPattern<tensor::GenerateOp> {
-public:
+private:
+  // Implements backtracking to traverse indices of the output buffer while
+  // iterating over op.elements().
+  void createStores(int dim, Value buffer, ArrayRef<int64_t> shape,
+                    ArrayRef<Value> constants, ValueRange::iterator &elementIt,
+                    SmallVectorImpl<Value> &indices,
+                    ImplicitLocOpBuilder b) const {
+    if (dim == static_cast<int>(shape.size()) - 1) {
+      for (int i = 0; i < shape.back(); ++i) {
+        indices.back() = constants[i];
+        b.create<memref::StoreOp>(*elementIt, buffer, indices);
+        ++elementIt;
+      }
+      return;
+    }
+    for (int i = 0; i < shape[dim]; ++i) {
+      indices[dim] = constants[i];
+      createStores(dim + 1, buffer, shape, constants, elementIt, indices, b);
+    }
+  }
+};
+
+struct BufferizeGenerateOp : public OpConversionPattern<tensor::GenerateOp> {
   using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
@@ -149,42 +185,50 @@ public:
     return success();
   }
 };
-} // namespace
 
-void mlir::populateTensorBufferizePatterns(
-    BufferizeTypeConverter &typeConverter, RewritePatternSet &patterns) {
-  patterns.add<BufferizeCastOp, BufferizeDimOp, BufferizeExtractOp,
-               BufferizeFromElementsOp, BufferizeGenerateOp>(
-      typeConverter, patterns.getContext());
-}
+struct BufferizeRankOp : public OpConversionPattern<tensor::RankOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(tensor::RankOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<memref::RankOp>(op, op.getType(),
+                                                adaptor.tensor());
+    return success();
+  }
+};
 
-namespace {
 struct TensorBufferizePass : public TensorBufferizeBase<TensorBufferizePass> {
   void runOnFunction() override {
     auto *context = &getContext();
-    BufferizeTypeConverter typeConverter;
-    RewritePatternSet patterns(context);
+    bufferization::BufferizeTypeConverter typeConverter;
+
     ConversionTarget target(*context);
-
-    populateBufferizeMaterializationLegality(target);
-
-    populateTensorBufferizePatterns(typeConverter, patterns);
-    target.addIllegalOp<tensor::CastOp, tensor::ExtractOp,
-                        tensor::FromElementsOp, tensor::GenerateOp>();
-    target.addLegalDialect<memref::MemRefDialect>();
+    target.addLegalDialect<scf::SCFDialect, memref::MemRefDialect>();
     target.addDynamicallyLegalDialect<arith::ArithmeticDialect,
                                       StandardOpsDialect>(
         [&](Operation *op) { return typeConverter.isLegal(op); });
-    target.addLegalOp<CallOp>();
-    target.addLegalOp<ReturnOp>();
-    target.addLegalDialect<scf::SCFDialect>();
+    target.addLegalOp<CallOp, ReturnOp>();
+    target.addIllegalOp<tensor::CastOp, tensor::ExtractOp,
+                        tensor::FromElementsOp, tensor::GenerateOp>();
+    bufferization::populateBufferizeMaterializationLegality(target);
 
+    RewritePatternSet patterns(context);
+    populateTensorBufferizePatterns(typeConverter, patterns);
     if (failed(
             applyPartialConversion(getFunction(), target, std::move(patterns))))
       signalPassFailure();
   }
 };
+
 } // namespace
+
+void mlir::populateTensorBufferizePatterns(
+    bufferization::BufferizeTypeConverter &typeConverter,
+    RewritePatternSet &patterns) {
+  patterns.add<BufferizeCastOp, BufferizeDimOp, BufferizeExtractOp,
+               BufferizeFromElementsOp, BufferizeGenerateOp, BufferizeRankOp>(
+      typeConverter, patterns.getContext());
+}
 
 std::unique_ptr<Pass> mlir::createTensorBufferizePass() {
   return std::make_unique<TensorBufferizePass>();

@@ -4,7 +4,7 @@ darwin-avoid-spinlock
 =====================
 
 Finds usages of ``OSSpinlock``, which is deprecated due to potential livelock
-problems. 
+problems.
 
 This check will detect following function invocations:
 

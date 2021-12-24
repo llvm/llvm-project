@@ -611,7 +611,7 @@ ActOnSuperClassOfClassInterface(Scope *S,
       }
     }
 
-    if (!dyn_cast_or_null<TypedefNameDecl>(PrevDecl)) {
+    if (!isa_and_nonnull<TypedefNameDecl>(PrevDecl)) {
       if (!SuperClassDecl)
         Diag(SuperLoc, diag::err_undef_superclass)
           << SuperName << ClassName << SourceRange(AtInterfaceLoc, ClassLoc);
@@ -2711,8 +2711,7 @@ static void CheckProtocolMethodDefs(Sema &S,
       ProtocolsExplictImpl.reset(new ProtocolNameSet);
       findProtocolsWithExplicitImpls(Super, *ProtocolsExplictImpl);
     }
-    if (ProtocolsExplictImpl->find(PDecl->getIdentifier()) !=
-        ProtocolsExplictImpl->end())
+    if (ProtocolsExplictImpl->contains(PDecl->getIdentifier()))
       return;
 
     // If no super class conforms to the protocol, we should not search

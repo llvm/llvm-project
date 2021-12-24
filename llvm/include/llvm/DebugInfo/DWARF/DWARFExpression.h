@@ -86,24 +86,30 @@ public:
     uint64_t OperandEndOffsets[2];
 
   public:
-    Description &getDescription() { return Desc; }
-    uint8_t getCode() { return Opcode; }
-    uint64_t getRawOperand(unsigned Idx) { return Operands[Idx]; }
-    uint64_t getOperandEndOffset(unsigned Idx) { return OperandEndOffsets[Idx]; }
-    uint64_t getEndOffset() { return EndOffset; }
-    bool extract(DataExtractor Data, uint8_t AddressSize, uint64_t Offset,
-                 Optional<dwarf::DwarfFormat> Format);
-    bool isError() { return Error; }
+    const Description &getDescription() const { return Desc; }
+    uint8_t getCode() const { return Opcode; }
+    uint64_t getRawOperand(unsigned Idx) const { return Operands[Idx]; }
+    uint64_t getOperandEndOffset(unsigned Idx) const {
+      return OperandEndOffsets[Idx];
+    }
+    uint64_t getEndOffset() const { return EndOffset; }
+    bool isError() const { return Error; }
     bool print(raw_ostream &OS, DIDumpOptions DumpOpts,
                const DWARFExpression *Expr, const MCRegisterInfo *RegInfo,
-               DWARFUnit *U, bool isEH);
-    bool verify(DWARFUnit *U);
+               DWARFUnit *U, bool isEH) const;
+
+    /// Verify \p Op. Does not affect the return of \a isError().
+    static bool verify(const Operation &Op, DWARFUnit *U);
+
+  private:
+    bool extract(DataExtractor Data, uint8_t AddressSize, uint64_t Offset,
+                 Optional<dwarf::DwarfFormat> Format);
   };
 
   /// An iterator to go through the expression operations.
   class iterator
       : public iterator_facade_base<iterator, std::forward_iterator_tag,
-                                    Operation> {
+                                    const Operation> {
     friend class DWARFExpression;
     const DWARFExpression *Expr;
     uint64_t Offset;
@@ -116,19 +122,17 @@ public:
     }
 
   public:
-    class Operation &operator++() {
+    iterator &operator++() {
       Offset = Op.isError() ? Expr->Data.getData().size() : Op.EndOffset;
       Op.Error =
           Offset >= Expr->Data.getData().size() ||
           !Op.extract(Expr->Data, Expr->AddressSize, Offset, Expr->Format);
-      return Op;
+      return *this;
     }
 
-    class Operation &operator*() {
-      return Op;
-    }
+    const Operation &operator*() const { return Op; }
 
-    iterator skipBytes(uint64_t Add) {
+    iterator skipBytes(uint64_t Add) const {
       return iterator(Expr, Op.EndOffset + Add);
     }
 

@@ -60,12 +60,15 @@ class MinVersionBase<string name, I32EnumAttr scheme, I32EnumAttrCase min>
     : Availability {
   let interfaceName = name;
 
-  let queryFnRetType = scheme.returnType;
+  let queryFnRetType = "llvm::Optional<" # scheme.returnType # ">";
   let queryFnName = "getMinVersion";
 
-  let mergeAction = "$overall = static_cast<" # scheme.returnType # ">("
-                      "std::max($overall, $instance))";
-  let initializer = "static_cast<" # scheme.returnType # ">(uint32_t(0))";
+  let mergeAction = "{ "
+    "if ($overall.hasValue()) { "
+      "$overall = static_cast<" # scheme.returnType # ">("
+                  "std::max(*$overall, $instance)); "
+    "} else { $overall = $instance; }}";
+  let initializer = "::llvm::None";
   let instanceType = scheme.cppNamespace # "::" # scheme.className;
 
   let instance = scheme.cppNamespace # "::" # scheme.className # "::" #
@@ -76,12 +79,15 @@ class MaxVersionBase<string name, I32EnumAttr scheme, I32EnumAttrCase max>
     : Availability {
   let interfaceName = name;
 
-  let queryFnRetType = scheme.returnType;
+  let queryFnRetType = "llvm::Optional<" # scheme.returnType # ">";
   let queryFnName = "getMaxVersion";
 
-  let mergeAction = "$overall = static_cast<" # scheme.returnType # ">("
-                      "std::min($overall, $instance))";
-  let initializer = "static_cast<" # scheme.returnType # ">(~uint32_t(0))";
+  let mergeAction = "{ "
+    "if ($overall.hasValue()) { "
+      "$overall = static_cast<" # scheme.returnType # ">("
+                  "std::min(*$overall, $instance)); "
+    "} else { $overall = $instance; }}";
+  let initializer = "::llvm::None";
   let instanceType = scheme.cppNamespace # "::" # scheme.className;
 
   let instance = scheme.cppNamespace # "::" # scheme.className # "::" #

@@ -21,6 +21,7 @@
 #include <mutex>
 #include <pwd.h>
 #include <sys/types.h>
+#include <sys/utsname.h>
 #include <unistd.h>
 
 using namespace lldb_private;
@@ -35,6 +36,14 @@ bool HostInfoPosix::GetHostname(std::string &s) {
     return true;
   }
   return false;
+}
+
+llvm::Optional<std::string> HostInfoPosix::GetOSKernelDescription() {
+  struct utsname un;
+  if (uname(&un) < 0)
+    return llvm::None;
+
+  return std::string(un.version);
 }
 
 #ifdef __ANDROID__

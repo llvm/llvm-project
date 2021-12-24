@@ -33,10 +33,6 @@ namespace llvm {
 namespace yaml {
 using llvm::yaml::IO;
 using llvm::yaml::MappingTraits;
-template <typename T>
-struct SequenceTraits<std::deque<T>,
-    std::enable_if_t<CheckIsBool<SequenceElementTraits<T>::flow>::value>>
-    : SequenceTraitsImpl<std::deque<T>, SequenceElementTraits<T>::flow> {};
 template <> struct MappingTraits<ClauseInfo> {
   static void mapping(IO &io, ClauseInfo &info) {
     io.mapRequired("clause", info.clause);

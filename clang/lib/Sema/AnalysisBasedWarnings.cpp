@@ -464,7 +464,7 @@ static ControlFlowKind CheckFallThrough(AnalysisDeclContext &AC) {
     // No more CFGElements in the block?
     if (ri == re) {
       const Stmt *Term = B.getTerminatorStmt();
-      if (Term && isa<CXXTryStmt>(Term)) {
+      if (Term && (isa<CXXTryStmt>(Term) || isa<ObjCAtTryStmt>(Term))) {
         HasAbnormalEdge = true;
         continue;
       }
@@ -1112,10 +1112,8 @@ namespace {
           continue; // Case label is preceded with a normal label, good.
 
         if (!ReachableBlocks.count(P)) {
-          for (CFGBlock::const_reverse_iterator ElemIt = P->rbegin(),
-                                                ElemEnd = P->rend();
-               ElemIt != ElemEnd; ++ElemIt) {
-            if (Optional<CFGStmt> CS = ElemIt->getAs<CFGStmt>()) {
+          for (const CFGElement &Elem : llvm::reverse(*P)) {
+            if (Optional<CFGStmt> CS = Elem.getAs<CFGStmt>()) {
               if (const AttributedStmt *AS = asFallThroughAttr(CS->getStmt())) {
                 // Don't issue a warning for an unreachable fallthrough
                 // attribute in template instantiations as it may not be
@@ -1199,12 +1197,9 @@ namespace {
     static const Stmt *getLastStmt(const CFGBlock &B) {
       if (const Stmt *Term = B.getTerminatorStmt())
         return Term;
-      for (CFGBlock::const_reverse_iterator ElemIt = B.rbegin(),
-                                            ElemEnd = B.rend();
-                                            ElemIt != ElemEnd; ++ElemIt) {
-        if (Optional<CFGStmt> CS = ElemIt->getAs<CFGStmt>())
+      for (const CFGElement &Elem : llvm::reverse(B))
+        if (Optional<CFGStmt> CS = Elem.getAs<CFGStmt>())
           return CS->getStmt();
-      }
       // Workaround to detect a statement thrown out by CFGBuilder:
       //   case X: {} case Y:
       //   case X: ; case Y:
@@ -1634,7 +1629,7 @@ public:
 
 private:
   static bool hasAlwaysUninitializedUse(const UsesVec* vec) {
-    return std::any_of(vec->begin(), vec->end(), [](const UninitUse &U) {
+    return llvm::any_of(*vec, [](const UninitUse &U) {
       return U.getKind() == UninitUse::Always ||
              U.getKind() == UninitUse::AfterCall ||
              U.getKind() == UninitUse::AfterDecl;

@@ -25,22 +25,24 @@ public:
   // lldb_private::PluginInterface functions
   static lldb::PlatformSP CreateInstance(bool force, const ArchSpec *arch);
 
-  static ConstString GetPluginNameStatic(bool is_host);
+  static llvm::StringRef GetPluginNameStatic(bool is_host) {
+    return is_host ? Platform::GetHostPlatformName() : "remote-linux";
+  }
 
-  static const char *GetPluginDescriptionStatic(bool is_host);
+  static llvm::StringRef GetPluginDescriptionStatic(bool is_host);
 
   llvm::StringRef GetPluginName() override {
-    return GetPluginNameStatic(IsHost()).GetStringRef();
+    return GetPluginNameStatic(IsHost());
   }
 
   // lldb_private::Platform functions
-  const char *GetDescription() override {
+  llvm::StringRef GetDescription() override {
     return GetPluginDescriptionStatic(IsHost());
   }
 
   void GetStatus(Stream &strm) override;
 
-  bool GetSupportedArchitectureAtIndex(uint32_t idx, ArchSpec &arch) override;
+  std::vector<ArchSpec> GetSupportedArchitectures() override;
 
   uint32_t GetResumeCountForLaunchInfo(ProcessLaunchInfo &launch_info) override;
 
@@ -48,10 +50,15 @@ public:
 
   void CalculateTrapHandlerSymbolNames() override;
 
+  lldb::UnwindPlanSP GetTrapHandlerUnwindPlan(const llvm::Triple &triple,
+                                              ConstString name) override;
+
   MmapArgList GetMmapArgumentList(const ArchSpec &arch, lldb::addr_t addr,
                                   lldb::addr_t length, unsigned prot,
                                   unsigned flags, lldb::addr_t fd,
                                   lldb::addr_t offset) override;
+
+  std::vector<ArchSpec> m_supported_architectures;
 };
 
 } // namespace platform_linux

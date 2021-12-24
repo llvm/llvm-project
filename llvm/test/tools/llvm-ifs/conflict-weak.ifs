@@ -1,4 +1,4 @@
-# RUN: llvm-ifs --input-format=IFS --output-format=IFS -o - %s %S/func.ifs 2>&1 | \
+# RUN: llvm-ifs --input-format=IFS --output-ifs - %s %S/func.ifs 2>&1 | \
 # RUN: FileCheck %s --check-prefixes=CHECK-IFS
 
 # CHECK-IFS: Symbols:

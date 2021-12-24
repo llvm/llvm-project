@@ -1,0 +1,886 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# LLVM libc project.
+load(":libc_build_rules.bzl", "libc_function", "libc_math_function")
+load(":platforms.bzl", "PLATFORM_CPU_ARM64", "PLATFORM_CPU_X86_64")
+load("@bazel_skylib//lib:selects.bzl", "selects")
+
+package(
+    default_visibility = ["//visibility:public"],
+    licenses = ["notice"],
+)
+
+# This empty root library helps us add an include path to this directory
+# using the 'includes' attribute. The strings listed in the includes attribute
+# are relative paths wrt this library but are inherited by the dependents
+# appropriately. Hence, using this as a root dependency avoids adding include
+# paths of the kind "../../" to other libc targets.
+cc_library(
+    name = "libc_root",
+    includes = ["."],
+)
+
+############################## Support libraries #############################
+
+cc_library(
+    name = "__support_common",
+    hdrs = [
+        "src/__support/architectures.h",
+        "src/__support/common.h",
+        "src/__support/endian.h",
+        "src/__support/sanitizer.h",
+    ],
+)
+
+cc_library(
+    name = "__support_standalone_cpp",
+    hdrs = [
+        "src/__support/CPP/Array.h",
+        "src/__support/CPP/ArrayRef.h",
+        "src/__support/CPP/Bitset.h",
+        "src/__support/CPP/Functional.h",
+        "src/__support/CPP/Limits.h",
+        "src/__support/CPP/StringView.h",
+        "src/__support/CPP/TypeTraits.h",
+    ],
+    deps = [":libc_root"],
+)
+
+cc_library(
+    name = "__support_integer_operations",
+    hdrs = ["src/__support/integer_operations.h"],
+    deps = [":__support_standalone_cpp"],
+)
+
+cc_library(
+    name = "__support_ctype_utils",
+    hdrs = ["src/__support/ctype_utils.h"],
+)
+
+cc_library(
+    name = "__support_str_to_integer",
+    hdrs = ["src/__support/str_to_integer.h"],
+    deps = [
+        ":__support_ctype_utils",
+        ":__support_standalone_cpp",
+    ],
+)
+
+fputil_common_hdrs = [
+    "src/__support/FPUtil/BasicOperations.h",
+    "src/__support/FPUtil/DivisionAndRemainderOperations.h",
+    "src/__support/FPUtil/FEnvImpl.h",
+    "src/__support/FPUtil/FEnvUtils.h",
+    "src/__support/FPUtil/FPBits.h",
+    "src/__support/FPUtil/FloatProperties.h",
+    "src/__support/FPUtil/ManipulationFunctions.h",
+    "src/__support/FPUtil/NearestIntegerOperations.h",
+    "src/__support/FPUtil/NormalFloat.h",
+    "src/__support/FPUtil/PlatformDefs.h",
+    "src/__support/FPUtil/Sqrt.h",
+]
+
+fputil_hdrs = selects.with_or({
+    "//conditions:default": fputil_common_hdrs,
+    PLATFORM_CPU_X86_64: fputil_common_hdrs + [
+        "src/__support/FPUtil/x86_64/LongDoubleBits.h",
+        "src/__support/FPUtil/x86_64/NextAfterLongDouble.h",
+        "src/__support/FPUtil/x86_64/SqrtLongDouble.h",
+        "src/__support/FPUtil/x86_64/FEnvImpl.h",
+    ],
+    PLATFORM_CPU_ARM64: fputil_common_hdrs + [
+        "src/__support/FPUtil/aarch64/FEnvImpl.h",
+    ],
+})
+
+cc_library(
+    name = "__support_fputil",
+    hdrs = fputil_hdrs,
+    deps = [
+        ":__support_common",
+        ":__support_standalone_cpp",
+        ":libc_root",
+    ],
+)
+
+################################ fenv targets ################################
+
+libc_function(
+    name = "fetestexcept",
+    srcs = ["src/fenv/fetestexcept.cpp"],
+    hdrs = ["src/fenv/fetestexcept.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil",
+    ],
+)
+
+libc_function(
+    name = "feclearexcept",
+    srcs = ["src/fenv/feclearexcept.cpp"],
+    hdrs = ["src/fenv/feclearexcept.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil",
+    ],
+)
+
+libc_function(
+    name = "feraiseexcept",
+    srcs = ["src/fenv/feraiseexcept.cpp"],
+    hdrs = ["src/fenv/feraiseexcept.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil",
+    ],
+)
+
+libc_function(
+    name = "fegetround",
+    srcs = ["src/fenv/fegetround.cpp"],
+    hdrs = ["src/fenv/fegetround.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil",
+    ],
+)
+
+libc_function(
+    name = "fesetround",
+    srcs = ["src/fenv/fesetround.cpp"],
+    hdrs = ["src/fenv/fesetround.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil",
+    ],
+)
+
+libc_function(
+    name = "fedisableexcept",
+    srcs = ["src/fenv/fedisableexcept.cpp"],
+    hdrs = ["src/fenv/fedisableexcept.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil",
+    ],
+)
+
+libc_function(
+    name = "feenableexcept",
+    srcs = ["src/fenv/feenableexcept.cpp"],
+    hdrs = ["src/fenv/feenableexcept.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil",
+    ],
+)
+
+libc_function(
+    name = "fegetexcept",
+    srcs = ["src/fenv/fegetexcept.cpp"],
+    hdrs = ["src/fenv/fegetexcept.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil",
+    ],
+)
+
+libc_function(
+    name = "fegetenv",
+    srcs = ["src/fenv/fegetenv.cpp"],
+    hdrs = ["src/fenv/fegetenv.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil",
+    ],
+)
+
+libc_function(
+    name = "fesetenv",
+    srcs = ["src/fenv/fesetenv.cpp"],
+    hdrs = ["src/fenv/fesetenv.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil",
+    ],
+)
+
+libc_function(
+    name = "feupdateenv",
+    srcs = ["src/fenv/feupdateenv.cpp"],
+    hdrs = ["src/fenv/feupdateenv.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil",
+    ],
+)
+
+libc_function(
+    name = "fegetexceptflag",
+    srcs = ["src/fenv/fegetexceptflag.cpp"],
+    hdrs = ["src/fenv/fegetexceptflag.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil",
+    ],
+)
+
+libc_function(
+    name = "fesetexceptflag",
+    srcs = ["src/fenv/fesetexceptflag.cpp"],
+    hdrs = ["src/fenv/fesetexceptflag.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil",
+    ],
+)
+
+libc_function(
+    name = "feholdexcept",
+    srcs = ["src/fenv/feholdexcept.cpp"],
+    hdrs = ["src/fenv/feholdexcept.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil",
+    ],
+)
+
+################################ math targets ################################
+
+cc_library(
+    name = "math_utils",
+    srcs = ["src/math/generic/math_utils.cpp"],
+    hdrs = ["src/math/generic/math_utils.h"],
+    deps = [
+        ":__support_common",
+        ":__support_standalone_cpp",
+        ":libc_root",
+    ],
+)
+
+cc_library(
+    name = "sincosf_utils",
+    srcs = ["src/math/generic/sincosf_data.cpp"],
+    hdrs = ["src/math/generic/sincosf_utils.h"],
+    deps = [
+        ":libc_root",
+        ":math_utils",
+    ],
+)
+
+libc_math_function(name = "fabs")
+
+libc_math_function(name = "fabsf")
+
+libc_math_function(name = "fabsl")
+
+libc_math_function(name = "fdim")
+
+libc_math_function(name = "fdimf")
+
+libc_math_function(name = "fdiml")
+
+libc_math_function(
+    name = "ceil",
+    specializations = [
+        "aarch64",
+        "generic",
+    ],
+)
+
+libc_math_function(
+    name = "ceilf",
+    specializations = [
+        "aarch64",
+        "generic",
+    ],
+)
+
+libc_math_function(
+    name = "ceill",
+    specializations = [
+        "generic",
+    ],
+)
+
+libc_math_function(
+    name = "floor",
+    specializations = [
+        "aarch64",
+        "generic",
+    ],
+)
+
+libc_math_function(
+    name = "floorf",
+    specializations = [
+        "aarch64",
+        "generic",
+    ],
+)
+
+libc_math_function(name = "floorl")
+
+libc_math_function(name = "ldexp")
+
+libc_math_function(name = "ldexpf")
+
+libc_math_function(name = "ldexpl")
+
+libc_math_function(
+    name = "trunc",
+    specializations = [
+        "aarch64",
+        "generic",
+    ],
+)
+
+libc_math_function(
+    name = "truncf",
+    specializations = [
+        "aarch64",
+        "generic",
+    ],
+)
+
+libc_math_function(name = "truncl")
+
+libc_math_function(
+    name = "round",
+    specializations = [
+        "aarch64",
+        "generic",
+    ],
+)
+
+libc_math_function(
+    name = "roundf",
+    specializations = [
+        "aarch64",
+        "generic",
+    ],
+)
+
+libc_math_function(name = "roundl")
+
+libc_math_function(name = "frexp")
+
+libc_math_function(name = "frexpf")
+
+libc_math_function(name = "frexpl")
+
+libc_math_function(name = "logb")
+
+libc_math_function(name = "logbf")
+
+libc_math_function(name = "logbl")
+
+libc_math_function(name = "modf")
+
+libc_math_function(name = "modff")
+
+libc_math_function(name = "modfl")
+
+libc_math_function(name = "remquo")
+
+libc_math_function(name = "remquof")
+
+libc_math_function(name = "remquol")
+
+libc_math_function(name = "remainder")
+
+libc_math_function(name = "remainderf")
+
+libc_math_function(name = "remainderl")
+
+libc_math_function(name = "fmin")
+
+libc_math_function(name = "fminf")
+
+libc_math_function(name = "fminl")
+
+libc_math_function(name = "fmax")
+
+libc_math_function(name = "fmaxf")
+
+libc_math_function(name = "fmaxl")
+
+libc_math_function(
+    name = "cosf",
+    additional_deps = [
+        ":math_utils",
+        ":sincosf_utils",
+    ],
+)
+
+libc_math_function(
+    name = "sincosf",
+    additional_deps = [
+        ":math_utils",
+        ":sincosf_utils",
+    ],
+)
+
+libc_math_function(
+    name = "sinf",
+    additional_deps = [
+        ":math_utils",
+        ":sincosf_utils",
+    ],
+)
+
+libc_math_function(
+    name = "sqrt",
+    specializations = [
+        "aarch64",
+        "generic",
+        "x86_64",
+    ],
+)
+
+libc_math_function(
+    name = "sqrtf",
+    specializations = [
+        "aarch64",
+        "generic",
+        "x86_64",
+    ],
+)
+
+libc_math_function(
+    name = "sqrtl",
+    specializations = [
+        "generic",
+        "x86_64",
+    ],
+)
+
+libc_math_function(name = "copysign")
+
+libc_math_function(name = "copysignf")
+
+libc_math_function(name = "copysignl")
+
+libc_math_function(name = "ilogb")
+
+libc_math_function(name = "ilogbf")
+
+libc_math_function(name = "ilogbl")
+
+libc_math_function(name = "rint")
+
+libc_math_function(name = "rintf")
+
+libc_math_function(name = "rintl")
+
+libc_math_function(name = "lrint")
+
+libc_math_function(name = "lrintf")
+
+libc_math_function(name = "lrintl")
+
+libc_math_function(name = "llrint")
+
+libc_math_function(name = "llrintf")
+
+libc_math_function(name = "llrintl")
+
+libc_math_function(name = "lround")
+
+libc_math_function(name = "lroundf")
+
+libc_math_function(name = "lroundl")
+
+libc_math_function(name = "llround")
+
+libc_math_function(name = "llroundf")
+
+libc_math_function(name = "llroundl")
+
+libc_math_function(name = "nearbyint")
+
+libc_math_function(name = "nearbyintf")
+
+libc_math_function(name = "nearbyintl")
+
+libc_math_function(name = "nextafter")
+
+libc_math_function(name = "nextafterf")
+
+libc_math_function(name = "nextafterl")
+
+############################### stdlib targets ###############################
+
+libc_function(
+    name = "atoi",
+    srcs = ["src/stdlib/atoi.cpp"],
+    hdrs = ["src/stdlib/atoi.h"],
+    deps = [
+        ":__support_common",
+        ":__support_str_to_integer",
+    ],
+)
+
+libc_function(
+    name = "atol",
+    srcs = ["src/stdlib/atol.cpp"],
+    hdrs = ["src/stdlib/atol.h"],
+    deps = [
+        ":__support_common",
+        ":__support_str_to_integer",
+    ],
+)
+
+libc_function(
+    name = "atoll",
+    srcs = ["src/stdlib/atoll.cpp"],
+    hdrs = ["src/stdlib/atoll.h"],
+    deps = [
+        ":__support_common",
+        ":__support_str_to_integer",
+    ],
+)
+
+libc_function(
+    name = "bsearch",
+    srcs = ["src/stdlib/bsearch.cpp"],
+    hdrs = ["src/stdlib/bsearch.h"],
+    deps = [
+        ":__support_common",
+    ],
+)
+
+libc_function(
+    name = "qsort",
+    srcs = ["src/stdlib/qsort.cpp"],
+    hdrs = ["src/stdlib/qsort.h"],
+    deps = [
+        ":__support_common",
+    ],
+)
+
+libc_function(
+    name = "strtol",
+    srcs = ["src/stdlib/strtol.cpp"],
+    hdrs = ["src/stdlib/strtol.h"],
+    deps = [
+        ":__support_common",
+        ":__support_str_to_integer",
+    ],
+)
+
+libc_function(
+    name = "strtoll",
+    srcs = ["src/stdlib/strtoll.cpp"],
+    hdrs = ["src/stdlib/strtoll.h"],
+    deps = [
+        ":__support_common",
+        ":__support_str_to_integer",
+    ],
+)
+
+libc_function(
+    name = "strtoul",
+    srcs = ["src/stdlib/strtoul.cpp"],
+    hdrs = ["src/stdlib/strtoul.h"],
+    deps = [
+        ":__support_common",
+        ":__support_str_to_integer",
+    ],
+)
+
+libc_function(
+    name = "strtoull",
+    srcs = ["src/stdlib/strtoull.cpp"],
+    hdrs = ["src/stdlib/strtoull.h"],
+    deps = [
+        ":__support_common",
+        ":__support_str_to_integer",
+    ],
+)
+
+############################### string targets ###############################
+
+no_sanitize_features = [
+    "-asan",
+    "-msan",
+    "-tsan",
+    "-ubsan",
+]
+
+cc_library(
+    name = "string_utils",
+    hdrs = ["src/string/string_utils.h"],
+    deps = [
+        ":__support_common",
+        ":__support_standalone_cpp",
+        ":libc_root",
+    ],
+)
+
+cc_library(
+    name = "string_memory_utils",
+    hdrs = [
+        "src/string/memory_utils/elements.h",
+        "src/string/memory_utils/elements_aarch64.h",
+        "src/string/memory_utils/elements_x86.h",
+        "src/string/memory_utils/utils.h",
+    ],
+    textual_hdrs = [
+        "src/string/memory_utils/bcmp_implementations.h",
+        "src/string/memory_utils/memcmp_implementations.h",
+        "src/string/memory_utils/memcpy_implementations.h",
+        "src/string/memory_utils/memset_implementations.h",
+    ],
+    deps = [
+        ":__support_common",
+        ":libc_root",
+    ],
+)
+
+libc_function(
+    name = "memchr",
+    srcs = ["src/string/memchr.cpp"],
+    hdrs = ["src/string/memchr.h"],
+    deps = [
+        ":__support_common",
+        ":string_utils",
+    ],
+)
+
+libc_function(
+    name = "memcpy",
+    srcs = ["src/string/memcpy.cpp"],
+    hdrs = ["src/string/memcpy.h"],
+    copts = [
+        "-fno-builtin-memcpy",
+        "-fno-builtin-memmove",
+        "-mllvm -combiner-global-alias-analysis",
+        "-mllvm --tail-merge-threshold=0",
+    ],
+    features = no_sanitize_features,
+    deps = [
+        ":__support_common",
+        ":string_memory_utils",
+    ],
+)
+
+libc_function(
+    name = "memset",
+    srcs = ["src/string/memset.cpp"],
+    hdrs = ["src/string/memset.h"],
+    copts = [
+        "-fno-builtin-memset",
+        "-mllvm -combiner-global-alias-analysis",
+    ],
+    features = no_sanitize_features,
+    deps = [
+        ":__support_common",
+        ":string_memory_utils",
+    ],
+)
+
+libc_function(
+    name = "memmove",
+    srcs = ["src/string/memmove.cpp"],
+    hdrs = ["src/string/memmove.h"],
+    copts = [
+        "-fno-builtin-memmove",
+        "-mllvm -combiner-global-alias-analysis",
+    ],
+    features = no_sanitize_features,
+    deps = [
+        ":__support_common",
+        ":__support_integer_operations",
+        ":memcpy",
+        ":string_memory_utils",
+    ],
+)
+
+libc_function(
+    name = "memcmp",
+    srcs = ["src/string/memcmp.cpp"],
+    hdrs = ["src/string/memcmp.h"],
+    copts = [
+        "-fno-builtin-memcmp",
+        "-mllvm -combiner-global-alias-analysis",
+    ],
+    features = no_sanitize_features,
+    deps = [
+        ":__support_common",
+        ":__support_integer_operations",
+        ":string_memory_utils",
+    ],
+)
+
+libc_function(
+    name = "bcmp",
+    srcs = ["src/string/bcmp.cpp"],
+    hdrs = ["src/string/bcmp.h"],
+    copts = [
+        "-fno-builtin-bcmp",
+        "-fno-builtin-memcmp",
+    ],
+    features = no_sanitize_features,
+    deps = [
+        ":__support_common",
+        ":string_memory_utils",
+    ],
+)
+
+libc_function(
+    name = "bzero",
+    srcs = ["src/string/bzero.cpp"],
+    hdrs = ["src/string/bzero.h"],
+    copts = [
+        "-fno-builtin-bzero",
+        "-fno-builtin-memset",
+        "-mllvm -combiner-global-alias-analysis",
+    ],
+    features = no_sanitize_features,
+    deps = [
+        ":__support_common",
+        ":string_memory_utils",
+    ],
+)
+
+libc_function(
+    name = "memrchr",
+    srcs = ["src/string/memrchr.cpp"],
+    hdrs = ["src/string/memrchr.h"],
+    deps = [
+        ":__support_common",
+        ":string_utils",
+    ],
+)
+
+libc_function(
+    name = "strlen",
+    srcs = ["src/string/strlen.cpp"],
+    hdrs = ["src/string/strlen.h"],
+    features = no_sanitize_features,
+    deps = [
+        ":__support_common",
+        ":string_utils",
+    ],
+)
+
+libc_function(
+    name = "strcpy",
+    srcs = ["src/string/strcpy.cpp"],
+    hdrs = ["src/string/strcpy.h"],
+    features = no_sanitize_features,
+    deps = [
+        ":__support_common",
+        ":memcpy",
+        ":string_memory_utils",
+        ":string_utils",
+    ],
+)
+
+# A sanitizer instrumented flavor of strcpy to be used with unittests.
+libc_function(
+    name = "strcpy_sanitized",
+    testonly = 1,
+    srcs = ["src/string/strcpy.cpp"],
+    hdrs = ["src/string/strcpy.h"],
+    deps = [
+        ":__support_common",
+        ":memcpy",
+        ":string_memory_utils",
+        ":string_utils",
+    ],
+)
+
+libc_function(
+    name = "strcmp",
+    srcs = ["src/string/strcmp.cpp"],
+    hdrs = ["src/string/strcmp.h"],
+    deps = [
+        ":__support_common",
+        ":string_utils",
+    ],
+)
+
+libc_function(
+    name = "strchr",
+    srcs = ["src/string/strchr.cpp"],
+    hdrs = ["src/string/strchr.h"],
+    deps = [
+        ":__support_common",
+        ":string_utils",
+    ],
+)
+
+libc_function(
+    name = "strrchr",
+    srcs = ["src/string/strrchr.cpp"],
+    hdrs = ["src/string/strrchr.h"],
+    deps = [
+        ":__support_common",
+        ":string_utils",
+    ],
+)
+
+libc_function(
+    name = "strstr",
+    srcs = ["src/string/strstr.cpp"],
+    hdrs = ["src/string/strstr.h"],
+    deps = [
+        ":__support_common",
+        ":string_utils",
+    ],
+)
+
+libc_function(
+    name = "strnlen",
+    srcs = ["src/string/strnlen.cpp"],
+    hdrs = ["src/string/strnlen.h"],
+    deps = [
+        ":__support_common",
+        ":string_utils",
+    ],
+)
+
+libc_function(
+    name = "strcspn",
+    srcs = ["src/string/strcspn.cpp"],
+    hdrs = ["src/string/strcspn.h"],
+    deps = [
+        ":__support_common",
+        ":string_utils",
+    ],
+)
+
+libc_function(
+    name = "strspn",
+    srcs = ["src/string/strspn.cpp"],
+    hdrs = ["src/string/strspn.h"],
+    deps = [
+        ":__support_common",
+        ":__support_standalone_cpp",
+        ":string_utils",
+    ],
+)
+
+libc_function(
+    name = "strpbrk",
+    srcs = ["src/string/strpbrk.cpp"],
+    hdrs = ["src/string/strpbrk.h"],
+    deps = [
+        ":__support_common",
+        ":string_utils",
+    ],
+)
+
+libc_function(
+    name = "strtok",
+    srcs = ["src/string/strtok.cpp"],
+    hdrs = ["src/string/strtok.h"],
+    deps = [
+        ":__support_common",
+        ":string_utils",
+    ],
+)

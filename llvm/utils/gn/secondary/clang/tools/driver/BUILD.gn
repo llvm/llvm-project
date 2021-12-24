@@ -75,6 +75,7 @@ executable("clang") {
     "//llvm/lib/Transforms/Utils",
     "//llvm/lib/Transforms/Vectorize",
   ]
+  assert_no_deps = [ "//llvm/lib/Debuginfod" ]
   if (host_os == "mac") {
     deps += [ ":write_info_plist" ]
     plist = get_target_outputs(":write_info_plist")

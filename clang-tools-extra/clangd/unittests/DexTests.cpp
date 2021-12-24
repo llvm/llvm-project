@@ -386,30 +386,36 @@ TEST(DexTrigrams, IdentifierTrigrams) {
               trigramsAre({"c", "cl", "cla", "lan", "ang", "ngd"}));
 
   EXPECT_THAT(identifierTrigramTokens("abc_def"),
-              trigramsAre({"a", "ab", "ad", "abc", "abd", "ade", "bcd", "bde",
-                           "cde", "def"}));
+              trigramsAre({"a", "d", "ab", "ad", "de", "abc", "abd", "ade",
+                           "bcd", "bde", "cde", "def"}));
 
   EXPECT_THAT(identifierTrigramTokens("a_b_c_d_e_"),
-              trigramsAre({"a", "a_", "ab", "abc", "bcd", "cde"}));
+              trigramsAre({"a", "b", "ab", "bc", "abc", "bcd", "cde"}));
 
   EXPECT_THAT(identifierTrigramTokens("unique_ptr"),
-              trigramsAre({"u", "un", "up", "uni", "unp", "upt", "niq", "nip",
-                           "npt", "iqu", "iqp", "ipt", "que", "qup", "qpt",
-                           "uep", "ept", "ptr"}));
+              trigramsAre({"u",   "p",   "un",  "up",  "pt",  "uni", "unp",
+                           "upt", "niq", "nip", "npt", "iqu", "iqp", "ipt",
+                           "que", "qup", "qpt", "uep", "ept", "ptr"}));
 
-  EXPECT_THAT(
-      identifierTrigramTokens("TUDecl"),
-      trigramsAre({"t", "tu", "td", "tud", "tde", "ude", "dec", "ecl"}));
+  EXPECT_THAT(identifierTrigramTokens("TUDecl"),
+              trigramsAre({"t", "d", "tu", "td", "de", "tud", "tde", "ude",
+                           "dec", "ecl"}));
 
   EXPECT_THAT(identifierTrigramTokens("IsOK"),
-              trigramsAre({"i", "is", "io", "iso", "iok", "sok"}));
+              trigramsAre({"i", "o", "is", "ok", "io", "iso", "iok", "sok"}));
 
-  EXPECT_THAT(
-      identifierTrigramTokens("abc_defGhij__klm"),
-      trigramsAre({"a",   "ab",  "ad",  "abc", "abd", "ade", "adg", "bcd",
-                   "bde", "bdg", "cde", "cdg", "def", "deg", "dgh", "dgk",
-                   "efg", "egh", "egk", "fgh", "fgk", "ghi", "ghk", "gkl",
-                   "hij", "hik", "hkl", "ijk", "ikl", "jkl", "klm"}));
+  EXPECT_THAT(identifierTrigramTokens("_pb"),
+              trigramsAre({"_", "_p", "p", "pb"}));
+  EXPECT_THAT(identifierTrigramTokens("__pb"),
+              trigramsAre({"_", "_p", "p", "pb"}));
+
+  EXPECT_THAT(identifierTrigramTokens("abc_defGhij__klm"),
+              trigramsAre({"a",   "d",   "ab",  "ad",  "dg",  "de",  "abc",
+                           "abd", "ade", "adg", "bcd", "bde", "bdg", "cde",
+                           "cdg", "def", "deg", "dgh", "dgk", "efg", "egh",
+                           "egk", "fgh", "fgk", "ghi", "ghk", "gkl", "hij",
+                           "hik", "hkl", "ijk", "ikl", "jkl", "klm"}));
+  EXPECT_THAT(identifierTrigramTokens(""), IsEmpty());
 }
 
 TEST(DexTrigrams, QueryTrigrams) {
@@ -419,8 +425,16 @@ TEST(DexTrigrams, QueryTrigrams) {
 
   EXPECT_THAT(generateQueryTrigrams(""), trigramsAre({}));
   EXPECT_THAT(generateQueryTrigrams("_"), trigramsAre({"_"}));
-  EXPECT_THAT(generateQueryTrigrams("__"), trigramsAre({"__"}));
-  EXPECT_THAT(generateQueryTrigrams("___"), trigramsAre({}));
+  EXPECT_THAT(generateQueryTrigrams("__"), trigramsAre({"_"}));
+  EXPECT_THAT(generateQueryTrigrams("___"), trigramsAre({"_"}));
+
+  EXPECT_THAT(generateQueryTrigrams("m_"), trigramsAre({"m"}));
+
+  EXPECT_THAT(generateQueryTrigrams("p_b"), trigramsAre({"pb"}));
+  EXPECT_THAT(generateQueryTrigrams("pb_"), trigramsAre({"pb"}));
+  EXPECT_THAT(generateQueryTrigrams("_p"), trigramsAre({"_p"}));
+  EXPECT_THAT(generateQueryTrigrams("_pb_"), trigramsAre({"pb"}));
+  EXPECT_THAT(generateQueryTrigrams("__pb"), trigramsAre({"pb"}));
 
   EXPECT_THAT(generateQueryTrigrams("X86"), trigramsAre({"x86"}));
 
@@ -525,25 +539,45 @@ TEST(DexTest, FuzzyMatch) {
 }
 
 TEST(DexTest, ShortQuery) {
-  auto I = Dex::build(generateSymbols({"OneTwoThreeFour"}), RefSlab(),
+  auto I = Dex::build(generateSymbols({"_OneTwoFourSix"}), RefSlab(),
                       RelationSlab());
   FuzzyFindRequest Req;
   Req.AnyScope = true;
   bool Incomplete;
 
-  EXPECT_THAT(match(*I, Req, &Incomplete), ElementsAre("OneTwoThreeFour"));
+  EXPECT_THAT(match(*I, Req, &Incomplete), ElementsAre("_OneTwoFourSix"));
   EXPECT_FALSE(Incomplete) << "Empty string is not a short query";
 
-  Req.Query = "t";
+  Req.Query = "o";
+  EXPECT_THAT(match(*I, Req, &Incomplete), ElementsAre("_OneTwoFourSix"));
+  EXPECT_TRUE(Incomplete) << "Using first head as unigram";
+
+  Req.Query = "_o";
+  EXPECT_THAT(match(*I, Req, &Incomplete), ElementsAre("_OneTwoFourSix"));
+  EXPECT_TRUE(Incomplete) << "Using delimiter and first head as bigram";
+
+  Req.Query = "on";
+  EXPECT_THAT(match(*I, Req, &Incomplete), ElementsAre("_OneTwoFourSix"));
+  EXPECT_TRUE(Incomplete) << "Using first head and tail as bigram";
+
+  Req.Query = "ot";
+  EXPECT_THAT(match(*I, Req, &Incomplete), ElementsAre("_OneTwoFourSix"));
+  EXPECT_TRUE(Incomplete) << "Using first two heads as bigram";
+
+  Req.Query = "tw";
+  EXPECT_THAT(match(*I, Req, &Incomplete), ElementsAre("_OneTwoFourSix"));
+  EXPECT_TRUE(Incomplete) << "Using second head and tail as bigram";
+
+  Req.Query = "tf";
+  EXPECT_THAT(match(*I, Req, &Incomplete), ElementsAre("_OneTwoFourSix"));
+  EXPECT_TRUE(Incomplete) << "Using second and third heads as bigram";
+
+  Req.Query = "fo";
   EXPECT_THAT(match(*I, Req, &Incomplete), ElementsAre());
   EXPECT_TRUE(Incomplete) << "Short queries have different semantics";
 
-  Req.Query = "tt";
-  EXPECT_THAT(match(*I, Req, &Incomplete), ElementsAre());
-  EXPECT_TRUE(Incomplete) << "Short queries have different semantics";
-
-  Req.Query = "ttf";
-  EXPECT_THAT(match(*I, Req, &Incomplete), ElementsAre("OneTwoThreeFour"));
+  Req.Query = "tfs";
+  EXPECT_THAT(match(*I, Req, &Incomplete), ElementsAre("_OneTwoFourSix"));
   EXPECT_FALSE(Incomplete) << "3-char string is not a short query";
 }
 

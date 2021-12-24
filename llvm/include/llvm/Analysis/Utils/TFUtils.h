@@ -147,6 +147,9 @@ public:
   /// Construct a Logger. If IncludeReward is false, then logReward or
   /// logFinalReward shouldn't be called, and the reward feature won't be
   /// printed out.
+  /// NOTE: the FeatureSpecs are expected to be in the same order (i.e. have
+  /// corresponding indices) with any MLModelRunner implementations
+  /// corresponding to the model being trained/logged.
   Logger(const std::vector<LoggedFeatureSpec> &FeatureSpecs,
          const TensorSpec &RewardSpec, bool IncludeReward);
 
@@ -246,8 +249,10 @@ public:
   /// otherwise.
   bool isValid() const { return !!Impl; }
 
-private:
+  /// Untyped access to input.
   void *getUntypedInput(size_t Index);
+
+private:
   std::unique_ptr<TFModelEvaluatorImpl> Impl;
 };
 

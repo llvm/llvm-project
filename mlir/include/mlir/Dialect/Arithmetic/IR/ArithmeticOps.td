@@ -11,6 +11,7 @@
 
 include "mlir/Dialect/Arithmetic/IR/ArithmeticBase.td"
 include "mlir/Interfaces/CastInterfaces.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/VectorInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
@@ -92,16 +93,16 @@ def SignlessFixedWidthIntegerLike : TypeConstraint<Or<[
 // Cast from an integer type to another integer type.
 class Arith_IToICastOp<string mnemonic, list<OpTrait> traits = []> :
     Arith_CastOp<mnemonic, SignlessFixedWidthIntegerLike,
-                           SignlessFixedWidthIntegerLike>;
+                           SignlessFixedWidthIntegerLike, traits>;
 // Cast from an integer type to a floating point type.
 class Arith_IToFCastOp<string mnemonic, list<OpTrait> traits = []> :
-    Arith_CastOp<mnemonic, SignlessFixedWidthIntegerLike, FloatLike>;
+    Arith_CastOp<mnemonic, SignlessFixedWidthIntegerLike, FloatLike, traits>;
 // Cast from a floating point type to an integer type.
 class Arith_FToICastOp<string mnemonic, list<OpTrait> traits = []> :
-    Arith_CastOp<mnemonic, FloatLike, SignlessFixedWidthIntegerLike>;
+    Arith_CastOp<mnemonic, FloatLike, SignlessFixedWidthIntegerLike, traits>;
 // Cast from a floating point type to another floating point type.
 class Arith_FToFCastOp<string mnemonic, list<OpTrait> traits = []> :
-    Arith_CastOp<mnemonic, FloatLike, FloatLike>;
+    Arith_CastOp<mnemonic, FloatLike, FloatLike, traits>;
 
 // Base class for compare operations. Requires two operands of the same type
 // and returns a single `BoolLike` result. If the operand type is a vector or
@@ -113,6 +114,13 @@ class Arith_CompareOp<string mnemonic, list<OpTrait> traits = []> :
   let results = (outs BoolLike:$result);
 
   let assemblyFormat = "$predicate `,` $lhs `,` $rhs attr-dict `:` type($lhs)";
+}
+
+// Just like `Arith_CompareOp` but also admits 0-D vectors. Introduced
+// temporarily to allow gradual transition to 0-D vectors.
+class Arith_CompareOpOfAnyRank<string mnemonic, list<OpTrait> traits = []> :
+    Arith_CompareOp<mnemonic, traits> {
+  let results = (outs BoolLikeOfAnyRank:$result);
 }
 
 //===----------------------------------------------------------------------===//
@@ -277,6 +285,30 @@ def Arith_DivSIOp : Arith_IntBinaryOp<"divsi"> {
 }
 
 //===----------------------------------------------------------------------===//
+// CeilDivUIOp
+//===----------------------------------------------------------------------===//
+
+def Arith_CeilDivUIOp : Arith_IntBinaryOp<"ceildivui"> {
+  let summary = "unsigned ceil integer division operation";
+  let description = [{
+    Unsigned integer division. Rounds towards positive infinity. Treats the
+    leading bit as the most significant, i.e. for `i16` given two's complement
+    representation, `6 / -2 = 6 / (2^16 - 2) = 1`.
+
+    Note: the semantics of division by zero is TBD; do NOT assume any specific
+    behavior.
+
+    Example:
+
+    ```mlir
+    // Scalar unsigned integer division.
+    %a = arith.ceildivui %b, %c : i64
+    ```
+  }];
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // CeilDivSIOp
 //===----------------------------------------------------------------------===//
 
@@ -383,7 +415,7 @@ def Arith_RemSIOp : Arith_IntBinaryOp<"remsi"> {
 // AndIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_AndIOp : Arith_IntBinaryOp<"andi", [Commutative]> {
+def Arith_AndIOp : Arith_IntBinaryOp<"andi", [Commutative, Idempotent]> {
   let summary = "integer binary and";
   let description = [{
     The `andi` operation takes two operands and returns one result, each of
@@ -411,7 +443,7 @@ def Arith_AndIOp : Arith_IntBinaryOp<"andi", [Commutative]> {
 // OrIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_OrIOp : Arith_IntBinaryOp<"ori", [Commutative]> {
+def Arith_OrIOp : Arith_IntBinaryOp<"ori", [Commutative, Idempotent]> {
   let summary = "integer binary or";
   let description = [{
     The `ori` operation takes two operands and returns one result, each of these
@@ -595,6 +627,93 @@ def Arith_SubFOp : Arith_FloatBinaryOp<"subf"> {
   let summary = "floating point subtraction operation";
   let hasFolder = 1;
 }
+
+//===----------------------------------------------------------------------===//
+// MaxFOp
+//===----------------------------------------------------------------------===//
+
+def Arith_MaxFOp : Arith_FloatBinaryOp<"maxf"> {
+  let summary = "floating-point maximum operation";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `arith.maxf` ssa-use `,` ssa-use `:` type
+    ```
+
+    Returns the maximum of the two arguments, treating -0.0 as less than +0.0.
+    If one of the arguments is NaN, then the result is also NaN.
+
+    Example:
+
+    ```mlir
+    // Scalar floating-point maximum.
+    %a = arith.maxf %b, %c : f64
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// MaxSIOp
+//===----------------------------------------------------------------------===//
+
+def Arith_MaxSIOp : Arith_IntBinaryOp<"maxsi"> {
+  let summary = "signed integer maximum operation";
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// MaxUIOp
+//===----------------------------------------------------------------------===//
+
+def Arith_MaxUIOp : Arith_IntBinaryOp<"maxui"> {
+  let summary = "unsigned integer maximum operation";
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// MinFOp
+//===----------------------------------------------------------------------===//
+
+def Arith_MinFOp : Arith_FloatBinaryOp<"minf"> {
+  let summary = "floating-point minimum operation";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `arith.minf` ssa-use `,` ssa-use `:` type
+    ```
+
+    Returns the minimum of the two arguments, treating -0.0 as less than +0.0.
+    If one of the arguments is NaN, then the result is also NaN.
+
+    Example:
+
+    ```mlir
+    // Scalar floating-point minimum.
+    %a = arith.minf %b, %c : f64
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// MinSIOp
+//===----------------------------------------------------------------------===//
+
+def Arith_MinSIOp : Arith_IntBinaryOp<"minsi"> {
+  let summary = "signed integer minimum operation";
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// MinUIOp
+//===----------------------------------------------------------------------===//
+
+def Arith_MinUIOp : Arith_IntBinaryOp<"minui"> {
+  let summary = "unsigned integer minimum operation";
+  let hasFolder = 1;
+}
+
 
 //===----------------------------------------------------------------------===//
 // MulFOp
@@ -878,7 +997,7 @@ def Arith_BitcastOp : Arith_CastOp<"bitcast", BitcastTypeConstraint,
 // CmpIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_CmpIOp : Arith_CompareOp<"cmpi"> {
+def Arith_CmpIOp : Arith_CompareOpOfAnyRank<"cmpi"> {
   let summary = "integer comparison operation";
   let description = [{
     The `cmpi` operation is a generic comparison for integer-like types. Its two
@@ -945,8 +1064,8 @@ def Arith_CmpIOp : Arith_CompareOp<"cmpi"> {
   }];
 
   let arguments = (ins Arith_CmpIPredicateAttr:$predicate,
-                       SignlessIntegerLike:$lhs,
-                       SignlessIntegerLike:$rhs);
+                       SignlessIntegerLikeOfAnyRank:$lhs,
+                       SignlessIntegerLikeOfAnyRank:$rhs);
 
   let builders = [
     OpBuilder<(ins "CmpIPredicate":$predicate, "Value":$lhs, "Value":$rhs), [{
@@ -956,13 +1075,7 @@ def Arith_CmpIOp : Arith_CompareOp<"cmpi"> {
   ];
 
   let extraClassDeclaration = [{
-    static StringRef getPredicateAttrName() { return "predicate"; }
     static arith::CmpIPredicate getPredicateByName(StringRef name);
-
-    arith::CmpIPredicate getPredicate() {
-      return (arith::CmpIPredicate) (*this)->getAttrOfType<IntegerAttr>(
-          getPredicateAttrName()).getInt();
-    }
   }];
 
   let hasFolder = 1;
@@ -1012,13 +1125,7 @@ def Arith_CmpFOp : Arith_CompareOp<"cmpf"> {
   ];
 
   let extraClassDeclaration = [{
-    static StringRef getPredicateAttrName() { return "predicate"; }
     static arith::CmpFPredicate getPredicateByName(StringRef name);
-
-    arith::CmpFPredicate getPredicate() {
-      return (arith::CmpFPredicate) (*this)->getAttrOfType<IntegerAttr>(
-          getPredicateAttrName()).getInt();
-    }
   }];
 
   let hasFolder = 1;

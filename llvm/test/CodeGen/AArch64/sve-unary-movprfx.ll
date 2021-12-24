@@ -605,6 +605,180 @@ define <vscale x 2 x double> @fabs_f64_not_active(<vscale x 2 x double> %a, <vsc
 }
 
 ;
+; FSQRT (sve_fp_2op_p_zd_HSD)
+;
+
+define <vscale x 8 x half> @fsqrt_f16(<vscale x 8 x half> %a, <vscale x 8 x half> %b) #0 {
+; CHECK-LABEL: fsqrt_f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    fsqrt z0.h, p0/m, z1.h
+; CHECK-NEXT:    ret
+  %ret = tail call <vscale x 8 x half> @llvm.sqrt.nxv8f16(<vscale x 8 x half> %b)
+  ret <vscale x 8 x half> %ret
+}
+
+define <vscale x 8 x half> @fsqrt_f16_dupreg(<vscale x 8 x half> %a) #0 {
+; CHECK-LABEL: fsqrt_f16_dupreg:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    fsqrt z0.h, p0/m, z0.h
+; CHECK-NEXT:    ret
+  %ret = tail call <vscale x 8 x half> @llvm.sqrt.nxv8f16(<vscale x 8 x half> %a)
+  ret <vscale x 8 x half> %ret
+}
+
+define <vscale x 8 x half> @fsqrt_f16_undef(<vscale x 8 x half> %a, <vscale x 8 x half> %b) #0 {
+; CHECK-LABEL: fsqrt_f16_undef:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    fsqrt z0.h, p0/m, z1.h
+; CHECK-NEXT:    ret
+  %pg = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
+  %ret = tail call <vscale x 8 x half> @llvm.aarch64.sve.fsqrt.nxv8f16(<vscale x 8 x half> undef, <vscale x 8 x i1> %pg, <vscale x 8 x half> %b)
+  ret <vscale x 8 x half> %ret
+}
+
+define <vscale x 8 x half> @fsqrt_f16_active(<vscale x 8 x half> %a, <vscale x 8 x half> %b) #0 {
+; CHECK-LABEL: fsqrt_f16_active:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    fsqrt z0.h, p0/m, z1.h
+; CHECK-NEXT:    ret
+  %pg = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
+  %ret = tail call <vscale x 8 x half> @llvm.aarch64.sve.fsqrt.nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x i1> %pg, <vscale x 8 x half> %b)
+  ret <vscale x 8 x half> %ret
+}
+
+define <vscale x 8 x half> @fsqrt_f16_not_active(<vscale x 8 x half> %a, <vscale x 8 x half> %b) #0 {
+; CHECK-LABEL: fsqrt_f16_not_active:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fsqrt z0.h, p0/m, z1.h
+; CHECK-NEXT:    ret
+  %pg = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
+  %pg.to = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> %pg)
+  %pg.from = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> %pg.to)
+  %ret = tail call <vscale x 8 x half> @llvm.aarch64.sve.fsqrt.nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x i1> %pg.from, <vscale x 8 x half> %b)
+  ret <vscale x 8 x half> %ret
+}
+
+define <vscale x 4 x float> @fsqrt_f32(<vscale x 4 x float> %a, <vscale x 4 x float> %b) #0 {
+; CHECK-LABEL: fsqrt_f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    fsqrt z0.s, p0/m, z1.s
+; CHECK-NEXT:    ret
+  %ret = tail call <vscale x 4 x float> @llvm.sqrt.nxv4f32(<vscale x 4 x float> %b)
+  ret <vscale x 4 x float> %ret
+}
+
+define <vscale x 4 x float> @fsqrt_f32_dupreg(<vscale x 4 x float> %a) #0 {
+; CHECK-LABEL: fsqrt_f32_dupreg:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fsqrt z0.s, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %ret = tail call <vscale x 4 x float> @llvm.sqrt.nxv4f32(<vscale x 4 x float> %a)
+  ret <vscale x 4 x float> %ret
+}
+
+define <vscale x 4 x float> @fsqrt_f32_undef(<vscale x 4 x float> %a, <vscale x 4 x float> %b) #0 {
+; CHECK-LABEL: fsqrt_f32_undef:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    fsqrt z0.s, p0/m, z1.s
+; CHECK-NEXT:    ret
+  %pg = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
+  %ret = tail call <vscale x 4 x float> @llvm.aarch64.sve.fsqrt.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x i1> %pg, <vscale x 4 x float> %b)
+  ret <vscale x 4 x float> %ret
+}
+
+define <vscale x 4 x float> @fsqrt_f32_active(<vscale x 4 x float> %a, <vscale x 4 x float> %b) #0 {
+; CHECK-LABEL: fsqrt_f32_active:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    fsqrt z0.s, p0/m, z1.s
+; CHECK-NEXT:    ret
+  %pg = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
+  %ret = tail call <vscale x 4 x float> @llvm.aarch64.sve.fsqrt.nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x i1> %pg, <vscale x 4 x float> %b)
+  ret <vscale x 4 x float> %ret
+}
+
+define <vscale x 4 x float> @fsqrt_f32_not_active(<vscale x 4 x float> %a, <vscale x 4 x float> %b) #0 {
+; CHECK-LABEL: fsqrt_f32_not_active:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fsqrt z0.s, p0/m, z1.s
+; CHECK-NEXT:    ret
+  %pg = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
+  %pg.to = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> %pg)
+  %pg.from = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.to)
+  %ret = tail call <vscale x 4 x float> @llvm.aarch64.sve.fsqrt.nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x i1> %pg.from, <vscale x 4 x float> %b)
+  ret <vscale x 4 x float> %ret
+}
+
+define <vscale x 2 x double> @fsqrt_f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b) #0 {
+; CHECK-LABEL: fsqrt_f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    fsqrt z0.d, p0/m, z1.d
+; CHECK-NEXT:    ret
+  %ret = tail call <vscale x 2 x double> @llvm.sqrt.nxv2f64(<vscale x 2 x double> %b)
+  ret <vscale x 2 x double> %ret
+}
+
+define <vscale x 2 x double> @fsqrt_f64_dupreg(<vscale x 2 x double> %a) #0 {
+; CHECK-LABEL: fsqrt_f64_dupreg:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fsqrt z0.d, p0/m, z0.d
+; CHECK-NEXT:    ret
+  %ret = tail call <vscale x 2 x double> @llvm.sqrt.nxv2f64(<vscale x 2 x double> %a)
+  ret <vscale x 2 x double> %ret
+}
+
+define <vscale x 2 x double> @fsqrt_f64_undef(<vscale x 2 x double> %a, <vscale x 2 x double> %b) #0 {
+; CHECK-LABEL: fsqrt_f64_undef:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    fsqrt z0.d, p0/m, z1.d
+; CHECK-NEXT:    ret
+  %pg = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
+  %ret = tail call <vscale x 2 x double> @llvm.aarch64.sve.fsqrt.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x i1> %pg, <vscale x 2 x double> %b)
+  ret <vscale x 2 x double> %ret
+}
+
+define <vscale x 2 x double> @fsqrt_f64_active(<vscale x 2 x double> %a, <vscale x 2 x double> %b) #0 {
+; CHECK-LABEL: fsqrt_f64_active:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    fsqrt z0.d, p0/m, z1.d
+; CHECK-NEXT:    ret
+  %pg = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
+  %ret = tail call <vscale x 2 x double> @llvm.aarch64.sve.fsqrt.nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x i1> %pg, <vscale x 2 x double> %b)
+  ret <vscale x 2 x double> %ret
+}
+
+define <vscale x 2 x double> @fsqrt_f64_not_active(<vscale x 2 x double> %a, <vscale x 2 x double> %b, <vscale x 2 x i1> %pg) #0 {
+; CHECK-LABEL: fsqrt_f64_not_active:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fsqrt z0.d, p0/m, z1.d
+; CHECK-NEXT:    ret
+  %ret = tail call <vscale x 2 x double> @llvm.aarch64.sve.fsqrt.nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x i1> %pg, <vscale x 2 x double> %b)
+  ret <vscale x 2 x double> %ret
+}
+
+;
 ; SXTB (sve_int_un_pred_arit_0_h)
 ;
 
@@ -987,6 +1161,14 @@ declare <vscale x 2 x double> @llvm.aarch64.sve.fabs.nxv2f64(<vscale x 2 x doubl
 declare <vscale x 8 x half> @llvm.fabs.nxv8f16(<vscale x 8 x half>)
 declare <vscale x 4 x float> @llvm.fabs.nxv4f32(<vscale x 4 x float>)
 declare <vscale x 2 x double> @llvm.fabs.nxv2f64(<vscale x 2 x double>)
+
+declare <vscale x 8 x half> @llvm.aarch64.sve.fsqrt.nxv8f16(<vscale x 8 x half>, <vscale x 8 x i1>, <vscale x 8 x half>)
+declare <vscale x 4 x float> @llvm.aarch64.sve.fsqrt.nxv4f32(<vscale x 4 x float>, <vscale x 4 x i1>, <vscale x 4 x float>)
+declare <vscale x 2 x double> @llvm.aarch64.sve.fsqrt.nxv2f64(<vscale x 2 x double>, <vscale x 2 x i1>, <vscale x 2 x double>)
+
+declare <vscale x 8 x half> @llvm.sqrt.nxv8f16(<vscale x 8 x half>)
+declare <vscale x 4 x float> @llvm.sqrt.nxv4f32(<vscale x 4 x float>)
+declare <vscale x 2 x double> @llvm.sqrt.nxv2f64(<vscale x 2 x double>)
 
 declare <vscale x 8 x i16> @llvm.aarch64.sve.sxtb.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i1>, <vscale x 8 x i16>)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.sxtb.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i1>, <vscale x 4 x i32>)

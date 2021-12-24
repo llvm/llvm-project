@@ -89,7 +89,7 @@ private:
   ArrayRef<Attribute> operandConsts;
 };
 
-} // end anonymous namespace
+} // namespace
 
 /// Returns a single constant result affine map.
 AffineMap AffineMap::getConstantMap(int64_t val, MLIRContext *context) {
@@ -209,25 +209,10 @@ AffineMap AffineMap::getPermutationMap(ArrayRef<unsigned> permutation,
   SmallVector<AffineExpr, 4> affExprs;
   for (auto index : permutation)
     affExprs.push_back(getAffineDimExpr(index, context));
-  auto m = std::max_element(permutation.begin(), permutation.end());
+  const auto *m = std::max_element(permutation.begin(), permutation.end());
   auto permutationMap = AffineMap::get(*m + 1, 0, affExprs, context);
   assert(permutationMap.isPermutation() && "Invalid permutation vector");
   return permutationMap;
-}
-
-template <typename AffineExprContainer>
-static void getMaxDimAndSymbol(ArrayRef<AffineExprContainer> exprsList,
-                               int64_t &maxDim, int64_t &maxSym) {
-  for (const auto &exprs : exprsList) {
-    for (auto expr : exprs) {
-      expr.walk([&maxDim, &maxSym](AffineExpr e) {
-        if (auto d = e.dyn_cast<AffineDimExpr>())
-          maxDim = std::max(maxDim, static_cast<int64_t>(d.getPosition()));
-        if (auto s = e.dyn_cast<AffineSymbolExpr>())
-          maxSym = std::max(maxSym, static_cast<int64_t>(s.getPosition()));
-      });
-    }
-  }
 }
 
 template <typename AffineExprContainer>

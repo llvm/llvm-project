@@ -1,8 +1,8 @@
-; RUN: opt < %s -loop-vectorize -scalable-vectorization=on -mtriple aarch64-unknown-linux-gnu -mattr=+sve -force-ordered-reductions=false -hints-allow-reordering=false -S 2>%t | FileCheck %s --check-prefix=CHECK-NOT-VECTORIZED
-; RUN: opt < %s -loop-vectorize -scalable-vectorization=on -mtriple aarch64-unknown-linux-gnu -mattr=+sve -force-ordered-reductions=false -hints-allow-reordering=true  -S 2>%t | FileCheck %s --check-prefix=CHECK-UNORDERED
-; RUN: opt < %s -loop-vectorize -scalable-vectorization=on -mtriple aarch64-unknown-linux-gnu -mattr=+sve -force-ordered-reductions=true  -hints-allow-reordering=false -S 2>%t | FileCheck %s --check-prefix=CHECK-ORDERED
-; RUN: opt < %s -loop-vectorize -scalable-vectorization=on -mtriple aarch64-unknown-linux-gnu -mattr=+sve -force-ordered-reductions=true  -hints-allow-reordering=true  -S 2>%t | FileCheck %s --check-prefix=CHECK-UNORDERED
-; RUN: opt < %s -loop-vectorize -scalable-vectorization=on -mtriple aarch64-unknown-linux-gnu -mattr=+sve -hints-allow-reordering=false -S 2>%t | FileCheck %s --check-prefix=CHECK-ORDERED
+; RUN: opt < %s -loop-vectorize -mtriple aarch64-unknown-linux-gnu -mattr=+sve -force-ordered-reductions=false -hints-allow-reordering=false -S 2>%t | FileCheck %s --check-prefix=CHECK-NOT-VECTORIZED
+; RUN: opt < %s -loop-vectorize -mtriple aarch64-unknown-linux-gnu -mattr=+sve -force-ordered-reductions=false -hints-allow-reordering=true  -S 2>%t | FileCheck %s --check-prefix=CHECK-UNORDERED
+; RUN: opt < %s -loop-vectorize -mtriple aarch64-unknown-linux-gnu -mattr=+sve -force-ordered-reductions=true  -hints-allow-reordering=false -S 2>%t | FileCheck %s --check-prefix=CHECK-ORDERED
+; RUN: opt < %s -loop-vectorize -mtriple aarch64-unknown-linux-gnu -mattr=+sve -force-ordered-reductions=true  -hints-allow-reordering=true  -S 2>%t | FileCheck %s --check-prefix=CHECK-UNORDERED
+; RUN: opt < %s -loop-vectorize -mtriple aarch64-unknown-linux-gnu -mattr=+sve -hints-allow-reordering=false -S 2>%t | FileCheck %s --check-prefix=CHECK-ORDERED
 
 define float @fadd_strict(float* noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK-ORDERED-LABEL: @fadd_strict
@@ -121,9 +121,9 @@ define void @fadd_strict_interleave(float* noalias nocapture readonly %a, float*
 ; CHECK-ORDERED: %[[LOAD2:.*]] = load float, float* %[[ARRAYIDX]]
 ; CHECK-ORDERED: vector.ph
 ; CHECK-ORDERED: %[[STEPVEC1:.*]] = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
-; CHECK-ORDERED: %[[STEPVEC_ADD1:.*]] = add <vscale x 4 x i64> %[[STEPVEC1]], shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 0, i32 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer)
+; CHECK-ORDERED: %[[STEPVEC_ADD1:.*]] = add <vscale x 4 x i64> %[[STEPVEC1]], zeroinitializer
 ; CHECK-ORDERED: %[[STEPVEC_MUL:.*]] = mul <vscale x 4 x i64> %[[STEPVEC_ADD1]], shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 2, i32 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer)
-; CHECK-ORDERED: %[[INDUCTION:.*]] = add <vscale x 4 x i64> shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 0, i32 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer), %[[STEPVEC_MUL]]
+; CHECK-ORDERED: %[[INDUCTION:.*]] = add <vscale x 4 x i64> zeroinitializer, %[[STEPVEC_MUL]]
 ; CHECK-ORDERED: vector.body
 ; CHECK-ORDERED: %[[VEC_PHI2:.*]] = phi float [ %[[LOAD2]], %vector.ph ], [ %[[RDX2:.*]], %vector.body ]
 ; CHECK-ORDERED: %[[VEC_PHI1:.*]] = phi float [ %[[LOAD1]], %vector.ph ], [ %[[RDX1:.*]], %vector.body ]
@@ -147,9 +147,9 @@ define void @fadd_strict_interleave(float* noalias nocapture readonly %a, float*
 ; CHECK-UNORDERED: %[[INS_ELT2:.*]] = insertelement <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float -0.000000e+00, i32 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer), float %[[LOAD2]], i32 0
 ; CHECK-UNORDERED: %[[INS_ELT1:.*]] = insertelement <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float -0.000000e+00, i32 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer), float %[[LOAD1]], i32 0
 ; CHECK-UNORDERED: %[[STEPVEC1:.*]] = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
-; CHECK-UNORDERED: %[[STEPVEC_ADD1:.*]] = add <vscale x 4 x i64> %[[STEPVEC1]], shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 0, i32 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer)
+; CHECK-UNORDERED: %[[STEPVEC_ADD1:.*]] = add <vscale x 4 x i64> %[[STEPVEC1]], zeroinitializer
 ; CHECK-UNORDERED: %[[STEPVEC_MUL:.*]] = mul <vscale x 4 x i64> %[[STEPVEC_ADD1]], shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 2, i32 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer)
-; CHECK-UNORDERED: %[[INDUCTION:.*]] = add <vscale x 4 x i64> shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 0, i32 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer), %[[STEPVEC_MUL]]
+; CHECK-UNORDERED: %[[INDUCTION:.*]] = add <vscale x 4 x i64> zeroinitializer, %[[STEPVEC_MUL]]
 ; CHECK-UNORDERED: vector.body
 ; CHECK-UNORDERED: %[[VEC_PHI2:.*]] = phi <vscale x 4 x float> [ %[[INS_ELT2]], %vector.ph ], [ %[[VEC_FADD2:.*]], %vector.body ]
 ; CHECK-UNORDERED: %[[VEC_PHI1:.*]] = phi <vscale x 4 x float> [ %[[INS_ELT1]], %vector.ph ], [ %[[VEC_FADD1:.*]], %vector.body ]
@@ -273,7 +273,7 @@ define float @fadd_conditional(float* noalias nocapture readonly %a, float* noal
 ; CHECK-ORDERED: vector.body
 ; CHECK-ORDERED: %[[VEC_PHI:.*]] = phi float [ 1.000000e+00, %vector.ph ], [ %[[RDX:.*]], %vector.body ]
 ; CHECK-ORDERED: %[[LOAD:.*]] = load <vscale x 4 x float>, <vscale x 4 x float>*
-; CHECK-ORDERED: %[[FCMP:.*]] = fcmp une <vscale x 4 x float> %[[LOAD]], shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 0.000000e+00, i32 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer)
+; CHECK-ORDERED: %[[FCMP:.*]] = fcmp une <vscale x 4 x float> %[[LOAD]], zeroinitializer
 ; CHECK-ORDERED: %[[MASKED_LOAD:.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0nxv4f32(<vscale x 4 x float>* {{.*}}, i32 4, <vscale x 4 x i1> %[[FCMP]], <vscale x 4 x float> poison)
 ; CHECK-ORDERED: %[[XOR:.*]] = xor <vscale x 4 x i1> %[[FCMP]], shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i32 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)
 ; CHECK-ORDERED: %[[SELECT:.*]] = select <vscale x 4 x i1> %[[XOR]], <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 3.000000e+00, i32 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x float> %[[MASKED_LOAD]]
@@ -295,7 +295,7 @@ define float @fadd_conditional(float* noalias nocapture readonly %a, float* noal
 ; CHECK-UNORDERED: vector.body
 ; CHECK-UNORDERED: %[[VEC_PHI:.*]] = phi <vscale x 4 x float> [ insertelement (<vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float -0.000000e+00, i32 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer), float 1.000000e+00, i32 0), %vector.ph ], [ %[[VEC_FADD:.*]], %vector.body ]
 ; CHECK-UNORDERED: %[[LOAD1:.*]] = load <vscale x 4 x float>, <vscale x 4 x float>*
-; CHECK-UNORDERED: %[[FCMP:.*]] = fcmp une <vscale x 4 x float> %[[LOAD1]], shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 0.000000e+00, i32 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer)
+; CHECK-UNORDERED: %[[FCMP:.*]] = fcmp une <vscale x 4 x float> %[[LOAD1]], zeroinitializer
 ; CHECK-UNORDERED: %[[MASKED_LOAD:.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0nxv4f32(<vscale x 4 x float>* {{.*}}, i32 4, <vscale x 4 x i1> %[[FCMP]], <vscale x 4 x float> poison)
 ; CHECK-UNORDERED: %[[XOR:.*]] = xor <vscale x 4 x i1> %[[FCMP]], shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i32 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)
 ; CHECK-UNORDERED: %[[SELECT:.*]] = select <vscale x 4 x i1> %[[XOR]], <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 3.000000e+00, i32 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x float> %[[MASKED_LOAD]]
@@ -390,7 +390,169 @@ for.end:                                         ; preds = %for.body
   ret float %rdx
 }
 
-attributes #0 = { vscale_range(0, 16) }
+; Test case where loop has a call to the llvm.fmuladd intrinsic.
+define float @fmuladd_strict(float* %a, float* %b, i64 %n) #0 {
+; CHECK-ORDERED-LABEL: @fmuladd_strict
+; CHECK-ORDERED: vector.body:
+; CHECK-ORDERED: [[VEC_PHI:%.*]] = phi float [ 0.000000e+00, %vector.ph ], [ [[RDX3:%.*]], %vector.body ]
+; CHECK-ORDERED: [[WIDE_LOAD:%.*]] = load <vscale x 8 x float>, <vscale x 8 x float>*
+; CHECK-ORDERED: [[WIDE_LOAD1:%.*]] = load <vscale x 8 x float>, <vscale x 8 x float>*
+; CHECK-ORDERED: [[WIDE_LOAD2:%.*]] = load <vscale x 8 x float>, <vscale x 8 x float>*
+; CHECK-ORDERED: [[WIDE_LOAD3:%.*]] = load <vscale x 8 x float>, <vscale x 8 x float>*
+; CHECK-ORDERED: [[WIDE_LOAD4:%.*]] = load <vscale x 8 x float>, <vscale x 8 x float>*
+; CHECK-ORDERED: [[WIDE_LOAD5:%.*]] = load <vscale x 8 x float>, <vscale x 8 x float>*
+; CHECK-ORDERED: [[WIDE_LOAD6:%.*]] = load <vscale x 8 x float>, <vscale x 8 x float>*
+; CHECK-ORDERED: [[WIDE_LOAD7:%.*]] = load <vscale x 8 x float>, <vscale x 8 x float>*
+; CHECK-ORDERED: [[FMUL:%.*]] = fmul <vscale x 8 x float> [[WIDE_LOAD]], [[WIDE_LOAD4]]
+; CHECK-ORDERED: [[FMUL1:%.*]] = fmul <vscale x 8 x float> [[WIDE_LOAD1]], [[WIDE_LOAD5]]
+; CHECK-ORDERED: [[FMUL2:%.*]] = fmul <vscale x 8 x float> [[WIDE_LOAD2]], [[WIDE_LOAD6]]
+; CHECK-ORDERED: [[FMUL3:%.*]] = fmul <vscale x 8 x float> [[WIDE_LOAD3]], [[WIDE_LOAD7]]
+; CHECK-ORDERED: [[RDX:%.*]] = call float @llvm.vector.reduce.fadd.nxv8f32(float [[VEC_PHI]], <vscale x 8 x float> [[FMUL]])
+; CHECK-ORDERED: [[RDX1:%.*]] = call float @llvm.vector.reduce.fadd.nxv8f32(float [[RDX]], <vscale x 8 x float> [[FMUL1]])
+; CHECK-ORDERED: [[RDX2:%.*]] = call float @llvm.vector.reduce.fadd.nxv8f32(float [[RDX1]], <vscale x 8 x float> [[FMUL2]])
+; CHECK-ORDERED: [[RDX3]] = call float @llvm.vector.reduce.fadd.nxv8f32(float [[RDX2]], <vscale x 8 x float> [[FMUL3]])
+; CHECK-ORDERED: for.end
+; CHECK-ORDERED: [[RES:%.*]] = phi float [ [[SCALAR:%.*]], %for.body ], [ [[RDX3]], %middle.block ]
+; CHECK-ORDERED: ret float [[RES]]
+
+; CHECK-UNORDERED-LABEL: @fmuladd_strict
+; CHECK-UNORDERED: vector.body
+; CHECK-UNORDERED:    [[VEC_PHI:%.*]] = phi <vscale x 8 x float> [ insertelement (<vscale x 8 x float> shufflevector (<vscale x 8 x float> insertelement (<vscale x 8 x float> poison, float -0.000000e+00, i32 0), <vscale x 8 x float> poison, <vscale x 8 x i32> zeroinitializer), float 0.000000e+00, i32 0), %vector.ph ], [ [[FMULADD:%.*]], %vector.body ]
+; CHECK-UNORDERED:    [[VEC_PHI1:%.*]] = phi <vscale x 8 x float> [ shufflevector (<vscale x 8 x float> insertelement (<vscale x 8 x float> poison, float -0.000000e+00, i32 0), <vscale x 8 x float> poison, <vscale x 8 x i32> zeroinitializer), %vector.ph ], [ [[FMULADD1:%.*]], %vector.body ]
+; CHECK-UNORDERED:    [[VEC_PHI2:%.*]] = phi <vscale x 8 x float> [ shufflevector (<vscale x 8 x float> insertelement (<vscale x 8 x float> poison, float -0.000000e+00, i32 0), <vscale x 8 x float> poison, <vscale x 8 x i32> zeroinitializer), %vector.ph ], [ [[FMULADD2:%.*]], %vector.body ]
+; CHECK-UNORDERED:    [[VEC_PHI3:%.*]] = phi <vscale x 8 x float> [ shufflevector (<vscale x 8 x float> insertelement (<vscale x 8 x float> poison, float -0.000000e+00, i32 0), <vscale x 8 x float> poison, <vscale x 8 x i32> zeroinitializer), %vector.ph ], [ [[FMULADD3:%.*]], %vector.body ]
+; CHECK-UNORDERED: [[WIDE_LOAD:%.*]] = load <vscale x 8 x float>, <vscale x 8 x float>*
+; CHECK-UNORDERED: [[WIDE_LOAD1:%.*]] = load <vscale x 8 x float>, <vscale x 8 x float>*
+; CHECK-UNORDERED: [[WIDE_LOAD2:%.*]] = load <vscale x 8 x float>, <vscale x 8 x float>*
+; CHECK-UNORDERED: [[WIDE_LOAD3:%.*]] = load <vscale x 8 x float>, <vscale x 8 x float>*
+; CHECK-UNORDERED: [[WIDE_LOAD4:%.*]] = load <vscale x 8 x float>, <vscale x 8 x float>*
+; CHECK-UNORDERED: [[WIDE_LOAD5:%.*]] = load <vscale x 8 x float>, <vscale x 8 x float>*
+; CHECK-UNORDERED: [[WIDE_LOAD6:%.*]] = load <vscale x 8 x float>, <vscale x 8 x float>*
+; CHECK-UNORDERED: [[WIDE_LOAD7:%.*]] = load <vscale x 8 x float>, <vscale x 8 x float>*
+; CHECK-UNORDERED: [[FMULADD]] = call <vscale x 8 x float> @llvm.fmuladd.nxv8f32(<vscale x 8 x float> [[WIDE_LOAD]], <vscale x 8 x float> [[WIDE_LOAD4]], <vscale x 8 x float> [[VEC_PHI]])
+; CHECK-UNORDERED: [[FMULADD1]] = call <vscale x 8 x float> @llvm.fmuladd.nxv8f32(<vscale x 8 x float> [[WIDE_LOAD1]], <vscale x 8 x float> [[WIDE_LOAD5]], <vscale x 8 x float> [[VEC_PHI1]])
+; CHECK-UNORDERED: [[FMULADD2]] = call <vscale x 8 x float> @llvm.fmuladd.nxv8f32(<vscale x 8 x float> [[WIDE_LOAD2]], <vscale x 8 x float> [[WIDE_LOAD6]], <vscale x 8 x float> [[VEC_PHI2]])
+; CHECK-UNORDERED: [[FMULADD3]] = call <vscale x 8 x float> @llvm.fmuladd.nxv8f32(<vscale x 8 x float> [[WIDE_LOAD3]], <vscale x 8 x float> [[WIDE_LOAD7]], <vscale x 8 x float> [[VEC_PHI3]])
+; CHECK-UNORDERED-NOT: llvm.vector.reduce.fadd
+; CHECK-UNORDERED: middle.block
+; CHECK-UNORDERED: [[BIN_RDX:%.*]] = fadd <vscale x 8 x float> [[FMULADD1]], [[FMULADD]]
+; CHECK-UNORDERED: [[BIN_RDX1:%.*]] = fadd <vscale x 8 x float> [[FMULADD2]], [[BIN_RDX]]
+; CHECK-UNORDERED: [[BIN_RDX2:%.*]] = fadd <vscale x 8 x float> [[FMULADD3]], [[BIN_RDX1]]
+; CHECK-UNORDERED: [[RDX:%.*]] = call float @llvm.vector.reduce.fadd.nxv8f32(float -0.000000e+00, <vscale x 8 x float> [[BIN_RDX2]]
+; CHECK-UNORDERED: for.body
+; CHECK-UNORDERED: [[SUM_07:%.*]] = phi float [ [[SCALAR:%.*]], %scalar.ph ], [ [[MULADD:%.*]], %for.body ]
+; CHECK-UNORDERED: [[LOAD:%.*]] = load float, float*
+; CHECK-UNORDERED: [[LOAD1:%.*]] = load float, float*
+; CHECK-UNORDERED: [[MULADD]] = tail call float @llvm.fmuladd.f32(float [[LOAD]], float [[LOAD1]], float [[SUM_07]])
+; CHECK-UNORDERED: for.end
+; CHECK-UNORDERED: [[RES:%.*]] = phi float [ [[MULADD]], %for.body ], [ [[RDX]], %middle.block ]
+; CHECK-UNORDERED: ret float [[RES]]
+
+; CHECK-NOT-VECTORIZED-LABEL: @fmuladd_strict
+; CHECK-NOT-VECTORIZED-NOT: vector.body
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %sum.07 = phi float [ 0.000000e+00, %entry ], [ %muladd, %for.body ]
+  %arrayidx = getelementptr inbounds float, float* %a, i64 %iv
+  %0 = load float, float* %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds float, float* %b, i64 %iv
+  %1 = load float, float* %arrayidx2, align 4
+  %muladd = tail call float @llvm.fmuladd.f32(float %0, float %1, float %sum.07)
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
+  br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !1
+
+for.end:
+  ret float %muladd
+}
+
+; Same as above but where the call to the llvm.fmuladd intrinsic has a fast-math flag.
+define float @fmuladd_strict_fmf(float* %a, float* %b, i64 %n) #0 {
+; CHECK-ORDERED-LABEL: @fmuladd_strict_fmf
+; CHECK-ORDERED: vector.body:
+; CHECK-ORDERED: [[VEC_PHI:%.*]] = phi float [ 0.000000e+00, %vector.ph ], [ [[RDX3:%.*]], %vector.body ]
+; CHECK-ORDERED: [[WIDE_LOAD:%.*]] = load <vscale x 8 x float>, <vscale x 8 x float>*
+; CHECK-ORDERED: [[WIDE_LOAD1:%.*]] = load <vscale x 8 x float>, <vscale x 8 x float>*
+; CHECK-ORDERED: [[WIDE_LOAD2:%.*]] = load <vscale x 8 x float>, <vscale x 8 x float>*
+; CHECK-ORDERED: [[WIDE_LOAD3:%.*]] = load <vscale x 8 x float>, <vscale x 8 x float>*
+; CHECK-ORDERED: [[WIDE_LOAD4:%.*]] = load <vscale x 8 x float>, <vscale x 8 x float>*
+; CHECK-ORDERED: [[WIDE_LOAD5:%.*]] = load <vscale x 8 x float>, <vscale x 8 x float>*
+; CHECK-ORDERED: [[WIDE_LOAD6:%.*]] = load <vscale x 8 x float>, <vscale x 8 x float>*
+; CHECK-ORDERED: [[WIDE_LOAD7:%.*]] = load <vscale x 8 x float>, <vscale x 8 x float>*
+; CHECK-ORDERED: [[FMUL:%.*]] = fmul nnan <vscale x 8 x float> [[WIDE_LOAD]], [[WIDE_LOAD4]]
+; CHECK-ORDERED: [[FMUL1:%.*]] = fmul nnan <vscale x 8 x float> [[WIDE_LOAD1]], [[WIDE_LOAD5]]
+; CHECK-ORDERED: [[FMUL2:%.*]] = fmul nnan <vscale x 8 x float> [[WIDE_LOAD2]], [[WIDE_LOAD6]]
+; CHECK-ORDERED: [[FMUL3:%.*]] = fmul nnan <vscale x 8 x float> [[WIDE_LOAD3]], [[WIDE_LOAD7]]
+; CHECK-ORDERED: [[RDX:%.*]] = call nnan float @llvm.vector.reduce.fadd.nxv8f32(float [[VEC_PHI]], <vscale x 8 x float> [[FMUL]])
+; CHECK-ORDERED: [[RDX1:%.*]] = call nnan float @llvm.vector.reduce.fadd.nxv8f32(float [[RDX]], <vscale x 8 x float> [[FMUL1]])
+; CHECK-ORDERED: [[RDX2:%.*]] = call nnan float @llvm.vector.reduce.fadd.nxv8f32(float [[RDX1]], <vscale x 8 x float> [[FMUL2]])
+; CHECK-ORDERED: [[RDX3]] = call nnan float @llvm.vector.reduce.fadd.nxv8f32(float [[RDX2]], <vscale x 8 x float> [[FMUL3]])
+; CHECK-ORDERED: for.end
+; CHECK-ORDERED: [[RES:%.*]] = phi float [ [[SCALAR:%.*]], %for.body ], [ [[RDX3]], %middle.block ]
+; CHECK-ORDERED: ret float [[RES]]
+
+; CHECK-UNORDERED-LABEL: @fmuladd_strict_fmf
+; CHECK-UNORDERED: vector.body
+; CHECK-UNORDERED:    [[VEC_PHI:%.*]] = phi <vscale x 8 x float> [ insertelement (<vscale x 8 x float> shufflevector (<vscale x 8 x float> insertelement (<vscale x 8 x float> poison, float -0.000000e+00, i32 0), <vscale x 8 x float> poison, <vscale x 8 x i32> zeroinitializer), float 0.000000e+00, i32 0), %vector.ph ], [ [[FMULADD:%.*]], %vector.body ]
+; CHECK-UNORDERED:    [[VEC_PHI1:%.*]] = phi <vscale x 8 x float> [ shufflevector (<vscale x 8 x float> insertelement (<vscale x 8 x float> poison, float -0.000000e+00, i32 0), <vscale x 8 x float> poison, <vscale x 8 x i32> zeroinitializer), %vector.ph ], [ [[FMULADD1:%.*]], %vector.body ]
+; CHECK-UNORDERED:    [[VEC_PHI2:%.*]] = phi <vscale x 8 x float> [ shufflevector (<vscale x 8 x float> insertelement (<vscale x 8 x float> poison, float -0.000000e+00, i32 0), <vscale x 8 x float> poison, <vscale x 8 x i32> zeroinitializer), %vector.ph ], [ [[FMULADD2:%.*]], %vector.body ]
+; CHECK-UNORDERED:    [[VEC_PHI3:%.*]] = phi <vscale x 8 x float> [ shufflevector (<vscale x 8 x float> insertelement (<vscale x 8 x float> poison, float -0.000000e+00, i32 0), <vscale x 8 x float> poison, <vscale x 8 x i32> zeroinitializer), %vector.ph ], [ [[FMULADD3:%.*]], %vector.body ]
+; CHECK-UNORDERED: [[WIDE_LOAD:%.*]] = load <vscale x 8 x float>, <vscale x 8 x float>*
+; CHECK-UNORDERED: [[WIDE_LOAD1:%.*]] = load <vscale x 8 x float>, <vscale x 8 x float>*
+; CHECK-UNORDERED: [[WIDE_LOAD2:%.*]] = load <vscale x 8 x float>, <vscale x 8 x float>*
+; CHECK-UNORDERED: [[WIDE_LOAD3:%.*]] = load <vscale x 8 x float>, <vscale x 8 x float>*
+; CHECK-UNORDERED: [[WIDE_LOAD4:%.*]] = load <vscale x 8 x float>, <vscale x 8 x float>*
+; CHECK-UNORDERED: [[WIDE_LOAD5:%.*]] = load <vscale x 8 x float>, <vscale x 8 x float>*
+; CHECK-UNORDERED: [[WIDE_LOAD6:%.*]] = load <vscale x 8 x float>, <vscale x 8 x float>*
+; CHECK-UNORDERED: [[WIDE_LOAD7:%.*]] = load <vscale x 8 x float>, <vscale x 8 x float>*
+; CHECK-UNORDERED: [[FMULADD]] = call nnan <vscale x 8 x float> @llvm.fmuladd.nxv8f32(<vscale x 8 x float> [[WIDE_LOAD]], <vscale x 8 x float> [[WIDE_LOAD4]], <vscale x 8 x float> [[VEC_PHI]])
+; CHECK-UNORDERED: [[FMULADD1]] = call nnan <vscale x 8 x float> @llvm.fmuladd.nxv8f32(<vscale x 8 x float> [[WIDE_LOAD1]], <vscale x 8 x float> [[WIDE_LOAD5]], <vscale x 8 x float> [[VEC_PHI1]])
+; CHECK-UNORDERED: [[FMULADD2]] = call nnan <vscale x 8 x float> @llvm.fmuladd.nxv8f32(<vscale x 8 x float> [[WIDE_LOAD2]], <vscale x 8 x float> [[WIDE_LOAD6]], <vscale x 8 x float> [[VEC_PHI2]])
+; CHECK-UNORDERED: [[FMULADD3]] = call nnan <vscale x 8 x float> @llvm.fmuladd.nxv8f32(<vscale x 8 x float> [[WIDE_LOAD3]], <vscale x 8 x float> [[WIDE_LOAD7]], <vscale x 8 x float> [[VEC_PHI3]])
+; CHECK-UNORDERED-NOT: llvm.vector.reduce.fadd
+; CHECK-UNORDERED: middle.block
+; CHECK-UNORDERED: [[BIN_RDX:%.*]] = fadd nnan <vscale x 8 x float> [[FMULADD1]], [[FMULADD]]
+; CHECK-UNORDERED: [[BIN_RDX1:%.*]] = fadd nnan <vscale x 8 x float> [[FMULADD2]], [[BIN_RDX]]
+; CHECK-UNORDERED: [[BIN_RDX2:%.*]] = fadd nnan <vscale x 8 x float> [[FMULADD3]], [[BIN_RDX1]]
+; CHECK-UNORDERED: [[RDX:%.*]] = call nnan float @llvm.vector.reduce.fadd.nxv8f32(float -0.000000e+00, <vscale x 8 x float> [[BIN_RDX2]]
+; CHECK-UNORDERED: for.body
+; CHECK-UNORDERED: [[SUM_07:%.*]] = phi float [ [[SCALAR:%.*]], %scalar.ph ], [ [[MULADD:%.*]], %for.body ]
+; CHECK-UNORDERED: [[LOAD:%.*]] = load float, float*
+; CHECK-UNORDERED: [[LOAD1:%.*]] = load float, float*
+; CHECK-UNORDERED: [[MULADD]] = tail call nnan float @llvm.fmuladd.f32(float [[LOAD]], float [[LOAD1]], float [[SUM_07]])
+; CHECK-UNORDERED: for.end
+; CHECK-UNORDERED: [[RES:%.*]] = phi float [ [[MULADD]], %for.body ], [ [[RDX]], %middle.block ]
+; CHECK-UNORDERED: ret float [[RES]]
+
+; CHECK-NOT-VECTORIZED-LABEL: @fmuladd_strict_fmf
+; CHECK-NOT-VECTORIZED-NOT: vector.body
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %sum.07 = phi float [ 0.000000e+00, %entry ], [ %muladd, %for.body ]
+  %arrayidx = getelementptr inbounds float, float* %a, i64 %iv
+  %0 = load float, float* %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds float, float* %b, i64 %iv
+  %1 = load float, float* %arrayidx2, align 4
+  %muladd = tail call nnan float @llvm.fmuladd.f32(float %0, float %1, float %sum.07)
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
+  br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !1
+
+for.end:
+  ret float %muladd
+}
+
+declare float @llvm.fmuladd.f32(float, float, float)
+
+attributes #0 = { vscale_range(1, 16) }
 !0 = distinct !{!0, !3, !6, !8}
 !1 = distinct !{!1, !3, !7, !8}
 !2 = distinct !{!2, !4, !6, !8}

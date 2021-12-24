@@ -74,6 +74,9 @@ bool WebAssemblyAsmTypeCheck::typeError(SMLoc ErrorLoc, const Twine &Msg) {
   // which are mostly not helpful.
   if (TypeErrorThisFunction)
     return true;
+  // If we're currently in unreachable code, we surpress errors as well.
+  if (Unreachable)
+    return true;
   TypeErrorThisFunction = true;
   dumpTypeStack("current stack: ");
   return Parser.Error(ErrorLoc, Msg);
@@ -109,9 +112,18 @@ bool WebAssemblyAsmTypeCheck::getLocal(SMLoc ErrorLoc, const MCInst &Inst,
   return false;
 }
 
-bool WebAssemblyAsmTypeCheck::checkEnd(SMLoc ErrorLoc) {
+bool WebAssemblyAsmTypeCheck::checkEnd(SMLoc ErrorLoc, bool PopVals) {
   if (LastSig.Returns.size() > Stack.size())
     return typeError(ErrorLoc, "end: insufficient values on the type stack");
+  
+  if (PopVals) {
+    for (auto VT : llvm::reverse(LastSig.Returns)) {
+      if (popType(ErrorLoc, VT)) 
+        return true;
+    }
+    return false;
+  }
+  
   for (size_t i = 0; i < LastSig.Returns.size(); i++) {
     auto EVT = LastSig.Returns[i];
     auto PVT = Stack[Stack.size() - LastSig.Returns.size() + i];
@@ -170,17 +182,18 @@ bool WebAssemblyAsmTypeCheck::getGlobal(SMLoc ErrorLoc, const MCInst &Inst,
   return false;
 }
 
-void WebAssemblyAsmTypeCheck::endOfFunction(SMLoc ErrorLoc) {
+bool WebAssemblyAsmTypeCheck::endOfFunction(SMLoc ErrorLoc) {
   // Check the return types.
   for (auto RVT : llvm::reverse(ReturnTypes)) {
-    popType(ErrorLoc, RVT);
+    if (popType(ErrorLoc, RVT))
+      return true;
   }
   if (!Stack.empty()) {
-    typeError(ErrorLoc,
-              std::to_string(Stack.size()) + " superfluous return values");
+    return typeError(ErrorLoc, std::to_string(Stack.size()) +
+                                   " superfluous return values");
   }
-  // Reset the type checker state.
-  Clear();
+  Unreachable = true;
+  return false;
 }
 
 bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst) {
@@ -217,12 +230,19 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst) {
       return true;
   } else if (Name == "end_block" || Name == "end_loop" || Name == "end_if" ||
              Name == "else" || Name == "end_try") {
-    if (checkEnd(ErrorLoc))
+    if (checkEnd(ErrorLoc, Name == "else"))
+      return true;
+    if (Name == "end_block")
+      Unreachable = false;
+  } else if (Name == "return") {
+    if (endOfFunction(ErrorLoc))
       return true;
   } else if (Name == "call_indirect" || Name == "return_call_indirect") {
     // Function value.
     if (popType(ErrorLoc, wasm::ValType::I32)) return true;
     if (checkSig(ErrorLoc, LastSig)) return true;
+    if (Name == "return_call_indirect" && endOfFunction(ErrorLoc))
+      return true;
   } else if (Name == "call" || Name == "return_call") {
     const MCSymbolRefExpr *SymRef;
     if (getSymRef(ErrorLoc, Inst, SymRef))
@@ -233,6 +253,8 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst) {
       return typeError(ErrorLoc, StringRef("symbol ") + WasmSym->getName() +
                                       " missing .functype");
     if (checkSig(ErrorLoc, *Sig)) return true;
+    if (Name == "return_call" && endOfFunction(ErrorLoc))
+      return true;
   } else if (Name == "catch") {
     const MCSymbolRefExpr *SymRef;
     if (getSymRef(ErrorLoc, Inst, SymRef))
@@ -248,6 +270,8 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst) {
   } else if (Name == "ref.null") {
     auto VT = static_cast<wasm::ValType>(Inst.getOperand(0).getImm());
     Stack.push_back(VT);
+  } else if (Name == "unreachable") {
+    Unreachable = true;
   } else {
     // The current instruction is a stack instruction which doesn't have
     // explicit operands that indicate push/pop types, so we get those from

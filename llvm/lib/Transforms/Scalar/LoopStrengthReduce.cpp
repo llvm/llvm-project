@@ -2822,9 +2822,7 @@ static const SCEV *getExprBase(const SCEV *S) {
     // there's nothing more complex.
     // FIXME: not sure if we want to recognize negation.
     const SCEVAddExpr *Add = cast<SCEVAddExpr>(S);
-    for (std::reverse_iterator<SCEVAddExpr::op_iterator> I(Add->op_end()),
-           E(Add->op_begin()); I != E; ++I) {
-      const SCEV *SubExpr = *I;
+    for (const SCEV *SubExpr : reverse(Add->operands())) {
       if (SubExpr->getSCEVType() == scAddExpr)
         return getExprBase(SubExpr);
 
@@ -5870,6 +5868,7 @@ void LoopStrengthReduce::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<MemorySSAWrapperPass>();
 }
 
+namespace {
 struct SCEVDbgValueBuilder {
   SCEVDbgValueBuilder() = default;
   SCEVDbgValueBuilder(const SCEVDbgValueBuilder &Base) {
@@ -6012,7 +6011,7 @@ struct SCEVDbgValueBuilder {
     // See setFinalExpression: prepend our opcodes on the start of any old
     // expression opcodes.
     assert(!DI.hasArgList());
-    llvm::SmallVector<uint64_t, 6> FinalExpr(Expr.begin() + 2, Expr.end());
+    llvm::SmallVector<uint64_t, 6> FinalExpr(llvm::drop_begin(Expr, 2));
     auto *NewExpr =
         DIExpression::prependOpcodes(OldExpr, FinalExpr, /*StackValue*/ true);
     DI.setExpression(NewExpr);
@@ -6117,6 +6116,7 @@ struct DVIRecoveryRec {
   Metadata *LocationOp;
   const llvm::SCEV *SCEV;
 };
+} // namespace
 
 static void RewriteDVIUsingIterCount(DVIRecoveryRec CachedDVI,
                                      const SCEVDbgValueBuilder &IterationCount,
@@ -6236,7 +6236,8 @@ DbgRewriteSalvageableDVIs(llvm::Loop *L, ScalarEvolution &SE,
 }
 
 /// Identify and cache salvageable DVI locations and expressions along with the
-/// corresponding SCEV(s). Also ensure that the DVI is not deleted before
+/// corresponding SCEV(s). Also ensure that the DVI is not deleted between
+/// cacheing and salvaging.
 static void
 DbgGatherSalvagableDVI(Loop *L, ScalarEvolution &SE,
                        SmallVector<DVIRecoveryRec, 2> &SalvageableDVISCEVs,
@@ -6257,6 +6258,16 @@ DbgGatherSalvagableDVI(Loop *L, ScalarEvolution &SE,
           !SE.isSCEVable(DVI->getVariableLocationOp(0)->getType()))
         continue;
 
+      // SCEVUnknown wraps an llvm::Value, it does not have a start and stride.
+      // Therefore no translation to DIExpression is performed.
+      const SCEV *S = SE.getSCEV(DVI->getVariableLocationOp(0));
+      if (isa<SCEVUnknown>(S))
+        continue;
+
+      // Avoid wasting resources generating an expression containing undef.
+      if (SE.containsUndefs(S))
+        continue;
+
       SalvageableDVISCEVs.push_back(
           {DVI, DVI->getExpression(), DVI->getRawLocation(),
            SE.getSCEV(DVI->getVariableLocationOp(0))});
@@ -6270,33 +6281,32 @@ DbgGatherSalvagableDVI(Loop *L, ScalarEvolution &SE,
 /// surviving subsequent transforms.
 static llvm::PHINode *GetInductionVariable(const Loop &L, ScalarEvolution &SE,
                                            const LSRInstance &LSR) {
-  // For now, just pick the first IV generated and inserted. Ideally pick an IV
-  // that is unlikely to be optimised away by subsequent transforms.
+
+  auto IsSuitableIV = [&](PHINode *P) {
+    if (!SE.isSCEVable(P->getType()))
+      return false;
+    if (const SCEVAddRecExpr *Rec = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(P)))
+      return Rec->isAffine() && !SE.containsUndefs(SE.getSCEV(P));
+    return false;
+  };
+
+  // For now, just pick the first IV that was generated and inserted by
+  // ScalarEvolution. Ideally pick an IV that is unlikely to be optimised away
+  // by subsequent transforms.
   for (const WeakVH &IV : LSR.getScalarEvolutionIVs()) {
     if (!IV)
       continue;
 
-    assert(isa<PHINode>(&*IV) && "Expected PhI node.");
-    if (SE.isSCEVable((*IV).getType())) {
-      PHINode *Phi = dyn_cast<PHINode>(&*IV);
-      LLVM_DEBUG(dbgs() << "scev-salvage: IV : " << *IV
-                        << "with SCEV: " << *SE.getSCEV(Phi) << "\n");
-      return Phi;
-    }
+    // There should only be PHI node IVs.
+    PHINode *P = cast<PHINode>(&*IV);
+
+    if (IsSuitableIV(P))
+      return P;
   }
 
-  for (PHINode &Phi : L.getHeader()->phis()) {
-    if (!SE.isSCEVable(Phi.getType()))
-      continue;
-
-    const llvm::SCEV *PhiSCEV = SE.getSCEV(&Phi);
-    if (const llvm::SCEVAddRecExpr *Rec = dyn_cast<SCEVAddRecExpr>(PhiSCEV))
-      if (!Rec->isAffine())
-        continue;
-
-    LLVM_DEBUG(dbgs() << "scev-salvage: Selected IV from loop header: " << Phi
-                      << " with SCEV: " << *PhiSCEV << "\n");
-    return &Phi;
+  for (PHINode &P : L.getHeader()->phis()) {
+    if (IsSuitableIV(&P))
+      return &P;
   }
   return nullptr;
 }

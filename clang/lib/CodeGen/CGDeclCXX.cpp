@@ -172,7 +172,7 @@ void CodeGenFunction::EmitInvariantStart(llvm::Constant *Addr, CharUnits Size) {
 }
 
 void CodeGenFunction::EmitCXXGlobalVarDeclInit(const VarDecl &D,
-                                               llvm::Constant *DeclPtr,
+                                               llvm::GlobalVariable *GV,
                                                bool PerformInit) {
 
   const Expr *Init = D.getInit();
@@ -194,14 +194,16 @@ void CodeGenFunction::EmitCXXGlobalVarDeclInit(const VarDecl &D,
   // "shared" address space qualifier, but the constructor of StructWithCtor
   // expects "this" in the "generic" address space.
   unsigned ExpectedAddrSpace = getContext().getTargetAddressSpace(T);
-  unsigned ActualAddrSpace = DeclPtr->getType()->getPointerAddressSpace();
+  unsigned ActualAddrSpace = GV->getAddressSpace();
+  llvm::Constant *DeclPtr = GV;
   if (ActualAddrSpace != ExpectedAddrSpace) {
-    llvm::Type *LTy = CGM.getTypes().ConvertTypeForMem(T);
-    llvm::PointerType *PTy = llvm::PointerType::get(LTy, ExpectedAddrSpace);
+    llvm::PointerType *PTy = llvm::PointerType::getWithSamePointeeType(
+        GV->getType(), ExpectedAddrSpace);
     DeclPtr = llvm::ConstantExpr::getAddrSpaceCast(DeclPtr, PTy);
   }
 
-  ConstantAddress DeclAddr(DeclPtr, getContext().getDeclAlign(&D));
+  ConstantAddress DeclAddr(
+      DeclPtr, GV->getValueType(), getContext().getDeclAlign(&D));
 
   if (!T->isReferenceType()) {
     if (getLangOpts().OpenMP && !getLangOpts().OpenMPSimd &&

@@ -1,12 +1,13 @@
-; RUN: llc -filetype=obj %s -o - | llvm-dwarfdump -v -debug-info - | FileCheck %s
+; RUN: llc -filetype=obj %s -o - -experimental-debug-variable-locations=true | llvm-dwarfdump -v -debug-info - | FileCheck %s
 
 ; A hand-written testcase to check 64-bit constant handling in location lists.
 
 ; CHECK: .debug_info contents:
 ; CHECK: DW_TAG_variable
 ; CHECK-NEXT: DW_AT_location [DW_FORM_data4]	(
+; CHECK-NEXT:   {{.*}}: DW_OP_lit0
 ; CHECK-NEXT:   {{.*}}: DW_OP_constu 0x4000000000000000)
-; CHECK-NEXT: DW_AT_name {{.*}}"d"
+; CHECK-NEXT: DW_AT_name {{.*}}"u"
 ; CHECK: DW_TAG_variable
 ; CHECK-NEXT: DW_AT_location [DW_FORM_data4]	(
 ; CHECK-NEXT:   {{.*}}: DW_OP_consts +0
@@ -14,9 +15,8 @@
 ; CHECK-NEXT: DW_AT_name {{.*}}"i"
 ; CHECK: DW_TAG_variable
 ; CHECK-NEXT: DW_AT_location [DW_FORM_data4]	(
-; CHECK-NEXT:   {{.*}}: DW_OP_lit0
 ; CHECK-NEXT:   {{.*}}: DW_OP_constu 0x4000000000000000)
-; CHECK-NEXT: DW_AT_name {{.*}}"u"
+; CHECK-NEXT: DW_AT_name {{.*}}"d"
 
 source_filename = "test.c"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"

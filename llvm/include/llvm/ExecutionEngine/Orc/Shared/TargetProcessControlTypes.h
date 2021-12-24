@@ -69,29 +69,48 @@ inline std::string getWireProtectionFlagsStr(WireProtectionFlags WPF) {
   return Result;
 }
 
-struct SupportFunctionCall {
-  using FnTy = shared::detail::CWrapperFunctionResult(const char *ArgData,
-                                                      size_t ArgSize);
+struct WrapperFunctionCall {
   ExecutorAddr Func;
-  ExecutorAddr ArgData;
-  uint64_t ArgSize;
+  ExecutorAddrRange ArgData;
 
-  Error run() {
-    shared::WrapperFunctionResult WFR(
-        Func.toPtr<FnTy *>()(ArgData.toPtr<const char *>(), ArgSize));
+  WrapperFunctionCall() = default;
+  WrapperFunctionCall(ExecutorAddr Func, ExecutorAddr ArgData,
+                      ExecutorAddrDiff ArgSize)
+      : Func(Func), ArgData(ArgData, ArgSize) {}
+  WrapperFunctionCall(ExecutorAddr Func, ExecutorAddrRange ArgData)
+      : Func(Func), ArgData(ArgData) {}
+
+  shared::WrapperFunctionResult run() {
+    using FnTy =
+        shared::CWrapperFunctionResult(const char *ArgData, size_t ArgSize);
+    return shared::WrapperFunctionResult(
+        Func.toPtr<FnTy *>()(ArgData.Start.toPtr<const char *>(),
+                             static_cast<size_t>(ArgData.size().getValue())));
+  }
+
+  /// Run call and deserialize result using SPS.
+  template <typename SPSRetT, typename RetT> Error runWithSPSRet(RetT &RetVal) {
+    auto WFR = run();
     if (const char *ErrMsg = WFR.getOutOfBandError())
       return make_error<StringError>(ErrMsg, inconvertibleErrorCode());
-    if (!WFR.empty())
-      return make_error<StringError>("Unexpected result bytes from "
-                                     "support function call",
+    shared::SPSInputBuffer IB(WFR.data(), WFR.size());
+    if (!shared::SPSSerializationTraits<SPSRetT, RetT>::deserialize(IB, RetVal))
+      return make_error<StringError>("Could not deserialize result from "
+                                     "serialized wrapper function call",
                                      inconvertibleErrorCode());
     return Error::success();
+  }
+
+  /// Overload for SPS functions returning void.
+  Error runWithSPSRet() {
+    shared::SPSEmpty E;
+    return runWithSPSRet<shared::SPSEmpty>(E);
   }
 };
 
 struct AllocationActionsPair {
-  SupportFunctionCall Finalize;
-  SupportFunctionCall Deallocate;
+  WrapperFunctionCall Finalize;
+  WrapperFunctionCall Deallocate;
 };
 
 struct SegFinalizeRequest {
@@ -108,10 +127,9 @@ struct FinalizeRequest {
 
 template <typename T> struct UIntWrite {
   UIntWrite() = default;
-  UIntWrite(JITTargetAddress Address, T Value)
-      : Address(Address), Value(Value) {}
+  UIntWrite(ExecutorAddr Addr, T Value) : Addr(Addr), Value(Value) {}
 
-  JITTargetAddress Address = 0;
+  ExecutorAddr Addr;
   T Value = 0;
 };
 
@@ -131,10 +149,10 @@ using UInt64Write = UIntWrite<uint64_t>;
 /// For use with TargetProcessControl::MemoryAccess objects.
 struct BufferWrite {
   BufferWrite() = default;
-  BufferWrite(JITTargetAddress Address, StringRef Buffer)
-      : Address(Address), Buffer(Buffer) {}
+  BufferWrite(ExecutorAddr Addr, StringRef Buffer)
+      : Addr(Addr), Buffer(Buffer) {}
 
-  JITTargetAddress Address = 0;
+  ExecutorAddr Addr;
   StringRef Buffer;
 };
 
@@ -149,15 +167,14 @@ namespace shared {
 
 class SPSMemoryProtectionFlags {};
 
-using SPSSupportFunctionCall =
-    SPSTuple<SPSExecutorAddr, SPSExecutorAddr, uint64_t>;
+using SPSWrapperFunctionCall = SPSTuple<SPSExecutorAddr, SPSExecutorAddrRange>;
 
 using SPSSegFinalizeRequest =
     SPSTuple<SPSMemoryProtectionFlags, SPSExecutorAddr, uint64_t,
              SPSSequence<char>>;
 
 using SPSAllocationActionsPair =
-    SPSTuple<SPSSupportFunctionCall, SPSSupportFunctionCall>;
+    SPSTuple<SPSWrapperFunctionCall, SPSWrapperFunctionCall>;
 
 using SPSFinalizeRequest = SPSTuple<SPSSequence<SPSSegFinalizeRequest>,
                                     SPSSequence<SPSAllocationActionsPair>>;
@@ -196,23 +213,23 @@ public:
 };
 
 template <>
-class SPSSerializationTraits<SPSSupportFunctionCall,
-                             tpctypes::SupportFunctionCall> {
-  using AL = SPSSupportFunctionCall::AsArgList;
+class SPSSerializationTraits<SPSWrapperFunctionCall,
+                             tpctypes::WrapperFunctionCall> {
+  using AL = SPSWrapperFunctionCall::AsArgList;
 
 public:
-  static size_t size(const tpctypes::SupportFunctionCall &SFC) {
-    return AL::size(SFC.Func, SFC.ArgData, SFC.ArgSize);
+  static size_t size(const tpctypes::WrapperFunctionCall &WFC) {
+    return AL::size(WFC.Func, WFC.ArgData);
   }
 
   static bool serialize(SPSOutputBuffer &OB,
-                        const tpctypes::SupportFunctionCall &SFC) {
-    return AL::serialize(OB, SFC.Func, SFC.ArgData, SFC.ArgSize);
+                        const tpctypes::WrapperFunctionCall &WFC) {
+    return AL::serialize(OB, WFC.Func, WFC.ArgData);
   }
 
   static bool deserialize(SPSInputBuffer &IB,
-                          tpctypes::SupportFunctionCall &SFC) {
-    return AL::deserialize(IB, SFC.Func, SFC.ArgData, SFC.ArgSize);
+                          tpctypes::WrapperFunctionCall &WFC) {
+    return AL::deserialize(IB, WFC.Func, WFC.ArgData);
   }
 };
 
@@ -282,16 +299,16 @@ class SPSSerializationTraits<SPSMemoryAccessUIntWrite<T>,
                              tpctypes::UIntWrite<T>> {
 public:
   static size_t size(const tpctypes::UIntWrite<T> &W) {
-    return SPSTuple<SPSExecutorAddr, T>::AsArgList::size(W.Address, W.Value);
+    return SPSTuple<SPSExecutorAddr, T>::AsArgList::size(W.Addr, W.Value);
   }
 
   static bool serialize(SPSOutputBuffer &OB, const tpctypes::UIntWrite<T> &W) {
-    return SPSTuple<SPSExecutorAddr, T>::AsArgList::serialize(OB, W.Address,
+    return SPSTuple<SPSExecutorAddr, T>::AsArgList::serialize(OB, W.Addr,
                                                               W.Value);
   }
 
   static bool deserialize(SPSInputBuffer &IB, tpctypes::UIntWrite<T> &W) {
-    return SPSTuple<SPSExecutorAddr, T>::AsArgList::deserialize(IB, W.Address,
+    return SPSTuple<SPSExecutorAddr, T>::AsArgList::deserialize(IB, W.Addr,
                                                                 W.Value);
   }
 };
@@ -302,17 +319,17 @@ class SPSSerializationTraits<SPSMemoryAccessBufferWrite,
 public:
   static size_t size(const tpctypes::BufferWrite &W) {
     return SPSTuple<SPSExecutorAddr, SPSSequence<char>>::AsArgList::size(
-        W.Address, W.Buffer);
+        W.Addr, W.Buffer);
   }
 
   static bool serialize(SPSOutputBuffer &OB, const tpctypes::BufferWrite &W) {
     return SPSTuple<SPSExecutorAddr, SPSSequence<char>>::AsArgList ::serialize(
-        OB, W.Address, W.Buffer);
+        OB, W.Addr, W.Buffer);
   }
 
   static bool deserialize(SPSInputBuffer &IB, tpctypes::BufferWrite &W) {
     return SPSTuple<SPSExecutorAddr,
-                    SPSSequence<char>>::AsArgList ::deserialize(IB, W.Address,
+                    SPSSequence<char>>::AsArgList ::deserialize(IB, W.Addr,
                                                                 W.Buffer);
   }
 };

@@ -57,7 +57,13 @@
 // RUN:     -fcuda-include-gpubinary %t -o - -x hip\
 // RUN:   | FileCheck -allow-deprecated-dag-overlap %s --check-prefixes=ALL,WIN
 
+// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -aux-triple amdgcn -emit-llvm %s \
+// RUN:     -o - -x hip\
+// RUN:   | FileCheck -allow-deprecated-dag-overlap %s --check-prefixes=ALL,WIN,HIP,HIPNEF
+
 #include "Inputs/cuda.h"
+
+// HIPNEF: $__hip_gpubin_handle = comdat any
 
 #ifndef NOGLOBALS
 // NORDC-DAG: @device_var = internal global i32

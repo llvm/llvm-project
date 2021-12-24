@@ -76,6 +76,7 @@ namespace format {
   TYPE(LineComment)                                                            \
   TYPE(MacroBlockBegin)                                                        \
   TYPE(MacroBlockEnd)                                                          \
+  TYPE(ModulePartitionColon)                                                   \
   TYPE(NamespaceMacro)                                                         \
   TYPE(NonNullAssertion)                                                       \
   TYPE(NullCoalescingEqual)                                                    \
@@ -520,7 +521,9 @@ public:
   }
 
   /// Determine whether the token is a simple-type-specifier.
-  bool isSimpleTypeSpecifier() const;
+  LLVM_NODISCARD bool isSimpleTypeSpecifier() const;
+
+  LLVM_NODISCARD bool isTypeOrIdentifier() const;
 
   bool isObjCAccessSpecifier() const {
     return is(tok::at) && Next &&
@@ -1060,7 +1063,7 @@ struct AdditionalKeywords {
   bool IsJavaScriptIdentifier(const FormatToken &Tok,
                               bool AcceptIdentifierName = true) const {
     // Based on the list of JavaScript & TypeScript keywords here:
-    // https://github.com/microsoft/TypeScript/blob/master/src/compiler/scanner.ts#L74
+    // https://github.com/microsoft/TypeScript/blob/main/src/compiler/scanner.ts#L74
     switch (Tok.Tok.getKind()) {
     case tok::kw_break:
     case tok::kw_case:

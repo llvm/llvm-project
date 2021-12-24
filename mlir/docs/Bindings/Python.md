@@ -419,7 +419,7 @@ if operation1.results.types == operation2.operand.types:
 ```
 
 `OpView` subclasses for specific operations may provide leaner accessors to
-properties of an opeation. For example, named attributes, operand and results
+properties of an operation. For example, named attributes, operand and results
 are usually accessible as properties of the `OpView` subclass with the same
 name, such as `operation.const_value` instead of
 `operation.attributes["const_value"]`. If this name is a reserved Python
@@ -441,7 +441,7 @@ thus iterable, which provides access to the blocks. One can also use the
 `.blocks` property.
 
 ```python
-# Regions are directly iterable and give acceess to blocks.
+# Regions are directly iterable and give access to blocks.
 for block1, block2 in zip(operation.regions[0], operation.regions[0].blocks)
   assert block1 == block2
 ```
@@ -460,7 +460,7 @@ alive. This operation can be accessed using the `.owner` property.
 Attributes and types are (mostly) immutable context-owned objects. They are
 represented as either:
 
--   an opaque `Attribute` or `Type` object supporting printing and comparsion;
+-   an opaque `Attribute` or `Type` object supporting printing and comparison;
     or
 -   a concrete subclass thereof with access to properties of the attribute or
     type.
@@ -536,6 +536,68 @@ except ValueError:
   concrete = OpResult(value)
 ```
 
+#### Interfaces
+
+MLIR interfaces are a mechanism to interact with the IR without needing to know
+specific types of operations but only some of their aspects. Operation
+interfaces are available as Python classes with the same name as their C++
+counterparts. Objects of these classes can be constructed from either:
+
+-   an object of the `Operation` class or of any `OpView` subclass; in this
+    case, all interface methods are available;
+-   a subclass of `OpView` and a context; in this case, only the *static*
+    interface methods are available as there is no associated operation.
+
+In both cases, construction of the interface raises a `ValueError` if the
+operation class does not implement the interface in the given context (or, for
+operations, in the context that the operation is defined in). Similarly to
+attributes and types, the MLIR context may be set up by a surrounding context
+manager.
+
+```python
+from mlir.ir import Context, InferTypeOpInterface
+
+with Context():
+  op = <...>
+
+  # Attempt to cast the operation into an interface.
+  try:
+    iface = InferTypeOpInterface(op)
+  except ValueError:
+    print("Operation does not implement InferTypeOpInterface.")
+    raise
+
+  # All methods are available on interface objects constructed from an Operation
+  # or an OpView.
+  iface.someInstanceMethod()
+
+  # An interface object can also be constructed given an OpView subclass. It
+  # also needs a context in which the interface will be looked up. The context
+  # can be provided explicitly or set up by the surrounding context manager.
+  try:
+    iface = InferTypeOpInterface(some_dialect.SomeOp)
+  except ValueError:
+    print("SomeOp does not implement InferTypeOpInterface.")
+    raise
+
+  # Calling an instance method on an interface object constructed from a class
+  # will raise TypeError.
+  try:
+    iface.someInstanceMethod()
+  except TypeError:
+    pass
+
+  # One can still call static interface methods though.
+  iface.inferOpReturnTypes(<...>)
+```
+
+If an interface object was constructed from an `Operation` or an `OpView`, they
+are available as `.operation` and `.opview` properties of the interface object,
+respectively.
+
+Only a subset of operation interfaces are currently provided in Python bindings.
+Attribute and type interfaces are not yet available in Python bindings.
+
 ### Creating IR Objects
 
 Python bindings also support IR creation and manipulation.
@@ -544,7 +606,7 @@ Python bindings also support IR creation and manipulation.
 
 Operations can be created given a `Location` and an optional `InsertionPoint`.
 It is often easier to user context managers to specify locations and insertion
-points for several operations created in a row as decribed above.
+points for several operations created in a row as described above.
 
 Concrete operations can be created by using constructors of the corresponding
 `OpView` subclasses. The generic, default form of the constructor accepts:
@@ -855,7 +917,7 @@ from ._my_dialect_ops_gen import *
 When the python bindings need to locate a wrapper module, they consult the
 `dialect_search_path` and use it to find an appropriately named module. For the
 main repository, this search path is hard-coded to include the `mlir.dialects`
-module, which is where wrappers are emitted by the abobe build rule. Out of tree
+module, which is where wrappers are emitted by the above build rule. Out of tree
 dialects and add their modules to the search path by calling:
 
 ```python

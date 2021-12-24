@@ -489,8 +489,8 @@ int main() {
 // CHECK1-NEXT:    store double 1.000000e+00, double* [[CONV]], align 8
 // CHECK1-NEXT:    [[TMP10:%.*]] = load double*, double** [[TMP]], align 8
 // CHECK1-NEXT:    store volatile double 1.000000e+00, double* [[TMP10]], align 8
-// CHECK1-NEXT:    store i32 3, i32* [[CONV2]], align 8
-// CHECK1-NEXT:    store float 4.000000e+00, float* [[CONV3]], align 8
+// CHECK1-NEXT:    store i32 3, i32* [[CONV2]], align 4
+// CHECK1-NEXT:    store float 4.000000e+00, float* [[CONV3]], align 4
 // CHECK1-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], %class.anon.0* [[REF_TMP]], i32 0, i32 0
 // CHECK1-NEXT:    store double* [[CONV]], double** [[TMP11]], align 8
 // CHECK1-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], %class.anon.0* [[REF_TMP]], i32 0, i32 1
@@ -749,8 +749,8 @@ int main() {
 // CHECK2-NEXT:    store double 1.000000e+00, double* [[CONV]], align 8
 // CHECK2-NEXT:    [[TMP10:%.*]] = load double*, double** [[TMP]], align 8
 // CHECK2-NEXT:    store volatile double 1.000000e+00, double* [[TMP10]], align 8
-// CHECK2-NEXT:    store i32 3, i32* [[CONV2]], align 8
-// CHECK2-NEXT:    store float 4.000000e+00, float* [[CONV3]], align 8
+// CHECK2-NEXT:    store i32 3, i32* [[CONV2]], align 4
+// CHECK2-NEXT:    store float 4.000000e+00, float* [[CONV3]], align 4
 // CHECK2-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], %class.anon.0* [[REF_TMP]], i32 0, i32 0
 // CHECK2-NEXT:    store double* [[CONV]], double** [[TMP11]], align 8
 // CHECK2-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], %class.anon.0* [[REF_TMP]], i32 0, i32 1
@@ -1702,7 +1702,7 @@ int main() {
 // CHECK8-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP21]], 1
 // CHECK8-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK8-NEXT:    store i32 [[ADD]], i32* [[I]], align 4
-// CHECK8-NEXT:    [[TMP22:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK8-NEXT:    [[TMP22:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK8-NEXT:    [[TMP23:%.*]] = load i32, i32* [[I]], align 4
 // CHECK8-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP23]] to i64
 // CHECK8-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[VEC5]], i64 0, i64 [[IDXPROM]]
@@ -2150,7 +2150,7 @@ int main() {
 // CHECK8-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP21]], 1
 // CHECK8-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK8-NEXT:    store i32 [[ADD]], i32* [[I]], align 4
-// CHECK8-NEXT:    [[TMP22:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK8-NEXT:    [[TMP22:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK8-NEXT:    [[TMP23:%.*]] = load i32, i32* [[I]], align 4
 // CHECK8-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP23]] to i64
 // CHECK8-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[VEC4]], i64 0, i64 [[IDXPROM]]
@@ -2640,7 +2640,7 @@ int main() {
 // CHECK9-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP21]], 1
 // CHECK9-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK9-NEXT:    store i32 [[ADD]], i32* [[I]], align 4
-// CHECK9-NEXT:    [[TMP22:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK9-NEXT:    [[TMP22:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK9-NEXT:    [[TMP23:%.*]] = load i32, i32* [[I]], align 4
 // CHECK9-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP23]] to i64
 // CHECK9-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[VEC5]], i64 0, i64 [[IDXPROM]]
@@ -3088,7 +3088,7 @@ int main() {
 // CHECK9-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP21]], 1
 // CHECK9-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK9-NEXT:    store i32 [[ADD]], i32* [[I]], align 4
-// CHECK9-NEXT:    [[TMP22:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK9-NEXT:    [[TMP22:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK9-NEXT:    [[TMP23:%.*]] = load i32, i32* [[I]], align 4
 // CHECK9-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP23]] to i64
 // CHECK9-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[VEC4]], i64 0, i64 [[IDXPROM]]
@@ -5005,5 +5005,4 @@ int main() {
 // CHECK11-NEXT:  entry:
 // CHECK11-NEXT:    call void @__tgt_register_requires(i64 1)
 // CHECK11-NEXT:    ret void
-//
 //

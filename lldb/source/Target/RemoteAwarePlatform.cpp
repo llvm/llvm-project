@@ -72,8 +72,7 @@ Status RemoteAwarePlatform::ResolveExecutable(
   } else {
     if (m_remote_platform_sp) {
       return GetCachedExecutable(resolved_module_spec, exe_module_sp,
-                                 module_search_paths_ptr,
-                                 *m_remote_platform_sp);
+                                 module_search_paths_ptr);
     }
 
     // We may connect to a process and use the provided executable (Don't use
@@ -132,9 +131,9 @@ Status RemoteAwarePlatform::ResolveExecutable(
       // architectures that we should be using (in the correct order) and see
       // if we can find a match that way
       StreamString arch_names;
-      for (uint32_t idx = 0; GetSupportedArchitectureAtIndex(
-               idx, resolved_module_spec.GetArchitecture());
-           ++idx) {
+      llvm::ListSeparator LS;
+      for (const ArchSpec &arch : GetSupportedArchitectures()) {
+        resolved_module_spec.GetArchitecture() = arch;
         error = ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
                                             module_search_paths_ptr, nullptr, nullptr);
         // Did we find an executable using one of the
@@ -145,10 +144,7 @@ Status RemoteAwarePlatform::ResolveExecutable(
             error.SetErrorToGenericError();
         }
 
-        if (idx > 0)
-          arch_names.PutCString(", ");
-        arch_names.PutCString(
-            resolved_module_spec.GetArchitecture().GetArchitectureName());
+        arch_names << LS << arch.GetArchitectureName();
       }
 
       if (error.Fail() || !exe_module_sp) {
@@ -332,18 +328,16 @@ bool RemoteAwarePlatform::GetRemoteOSVersion() {
   return false;
 }
 
-bool RemoteAwarePlatform::GetRemoteOSBuildString(std::string &s) {
+llvm::Optional<std::string> RemoteAwarePlatform::GetRemoteOSBuildString() {
   if (m_remote_platform_sp)
-    return m_remote_platform_sp->GetRemoteOSBuildString(s);
-  s.clear();
-  return false;
+    return m_remote_platform_sp->GetRemoteOSBuildString();
+  return llvm::None;
 }
 
-bool RemoteAwarePlatform::GetRemoteOSKernelDescription(std::string &s) {
+llvm::Optional<std::string> RemoteAwarePlatform::GetRemoteOSKernelDescription() {
   if (m_remote_platform_sp)
-    return m_remote_platform_sp->GetRemoteOSKernelDescription(s);
-  s.clear();
-  return false;
+    return m_remote_platform_sp->GetRemoteOSKernelDescription();
+  return llvm::None;
 }
 
 ArchSpec RemoteAwarePlatform::GetRemoteSystemArchitecture() {

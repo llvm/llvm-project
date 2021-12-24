@@ -12,8 +12,8 @@
 // Define extension macros
 
 #if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
-// For SPIR all extensions are supported.
-#if defined(__SPIR__)
+// For SPIR and SPIR-V all extensions are supported.
+#if defined(__SPIR__) || defined(__SPIRV__)
 #define cl_khr_subgroup_extended_types 1
 #define cl_khr_subgroup_non_uniform_vote 1
 #define cl_khr_subgroup_ballot 1
@@ -45,7 +45,7 @@
 #define __opencl_c_ext_fp32_global_atomic_min_max 1
 #define __opencl_c_ext_fp32_local_atomic_min_max 1
 
-#endif // defined(__SPIR__)
+#endif // defined(__SPIR__) || defined(__SPIRV__)
 #endif // (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
 
 // Define feature macros for OpenCL C 2.0
@@ -65,8 +65,8 @@
 
 // Define header-only feature macros for OpenCL C 3.0.
 #if (__OPENCL_CPP_VERSION__ == 202100 || __OPENCL_C_VERSION__ == 300)
-// For the SPIR target all features are supported.
-#if defined(__SPIR__)
+// For the SPIR and SPIR-V target all features are supported.
+#if defined(__SPIR__) || defined(__SPIRV__)
 #define __opencl_c_atomic_scope_all_devices 1
 #endif // defined(__SPIR__)
 #endif // (__OPENCL_CPP_VERSION__ == 202100 || __OPENCL_C_VERSION__ == 300)

@@ -104,6 +104,19 @@ static const char *DemangleFunctionName(const char *function) {
   return function;
 }
 
+static void MaybeBuildIdToBuffer(const AddressInfo &info, bool PrefixSpace,
+                                 InternalScopedString *buffer) {
+  if (info.uuid_size) {
+    if (PrefixSpace)
+      buffer->append(" ");
+    buffer->append("(BuildId: ");
+    for (uptr i = 0; i < info.uuid_size; ++i) {
+      buffer->append("%02x", info.uuid[i]);
+    }
+    buffer->append(")");
+  }
+}
+
 static const char kDefaultFormat[] = "    #%n %p %F %L";
 
 void RenderFrame(InternalScopedString *buffer, const char *format, int frame_no,
@@ -139,6 +152,9 @@ void RenderFrame(InternalScopedString *buffer, const char *format, int frame_no,
       break;
     case 'o':
       buffer->append("0x%zx", info->module_offset);
+      break;
+    case 'b':
+      MaybeBuildIdToBuffer(*info, /*PrefixSpace=*/false, buffer);
       break;
     case 'f':
       buffer->append("%s", DemangleFunctionName(StripFunctionName(
@@ -181,6 +197,8 @@ void RenderFrame(InternalScopedString *buffer, const char *format, int frame_no,
       } else if (info->module) {
         RenderModuleLocation(buffer, info->module, info->module_offset,
                              info->module_arch, strip_path_prefix);
+
+        MaybeBuildIdToBuffer(*info, /*PrefixSpace=*/true, buffer);
       } else {
         buffer->append("(<unknown module>)");
       }
@@ -193,12 +211,14 @@ void RenderFrame(InternalScopedString *buffer, const char *format, int frame_no,
         // Always strip the module name for %M.
         RenderModuleLocation(buffer, StripModuleName(info->module),
                              info->module_offset, info->module_arch, "");
+        MaybeBuildIdToBuffer(*info, /*PrefixSpace=*/true, buffer);
       } else {
         buffer->append("(%p)", (void *)address);
       }
       break;
     default:
-      Report("Unsupported specifier in stack frame format: %c (%p)!\n", *p, p);
+      Report("Unsupported specifier in stack frame format: %c (%p)!\n", *p,
+             (void *)p);
       Die();
     }
   }
@@ -250,7 +270,7 @@ void RenderData(InternalScopedString *buffer, const char *format,
         break;
       default:
         Report("Unsupported specifier in stack frame format: %c (%p)!\n", *p,
-               p);
+               (void *)p);
         Die();
     }
   }

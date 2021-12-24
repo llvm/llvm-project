@@ -18,7 +18,7 @@ class SPV_AtomicUpdateOp<string mnemonic, list<OpTrait> traits = []> :
   SPV_Op<mnemonic, traits> {
   let parser = [{ return ::parseAtomicUpdateOp(parser, result, false); }];
   let printer = [{ return ::printAtomicUpdateOp(getOperation(), p); }];
-  let verifier = [{ return ::verifyAtomicUpdateOp(getOperation()); }];
+  let verifier = [{ return ::verifyAtomicUpdateOp<IntegerType>(getOperation()); }];
 
   let arguments = (ins
     SPV_AnyPtr:$pointer,
@@ -35,7 +35,7 @@ class SPV_AtomicUpdateWithValueOp<string mnemonic, list<OpTrait> traits = []> :
   SPV_Op<mnemonic, traits> {
   let parser = [{ return ::parseAtomicUpdateOp(parser, result, true); }];
   let printer = [{ return ::printAtomicUpdateOp(getOperation(), p); }];
-  let verifier = [{ return ::verifyAtomicUpdateOp(getOperation()); }];
+  let verifier = [{ return ::verifyAtomicUpdateOp<IntegerType>(getOperation()); }];
 
   let arguments = (ins
     SPV_AnyPtr:$pointer,
@@ -102,6 +102,77 @@ def SPV_AtomicAndOp : SPV_AtomicUpdateWithValueOp<"AtomicAnd", []> {
 
 // -----
 
+def SPV_AtomicCompareExchangeOp : SPV_Op<"AtomicCompareExchange", []> {
+  let summary = [{
+    Perform the following steps atomically with respect to any other atomic
+    accesses within Scope to the same location:
+  }];
+
+  let description = [{
+    1) load through Pointer to get an Original Value,
+
+    2) get a New Value from Value only if Original Value equals Comparator,
+    and
+
+    3) store the New Value back through Pointer'only if 'Original Value
+    equaled Comparator.
+
+    The instruction's result is the Original Value.
+
+    Result Type must be an integer type scalar.
+
+    Use Equal for the memory semantics of this instruction when Value and
+    Original Value compare equal.
+
+    Use Unequal for the memory semantics of this instruction when Value and
+    Original Value compare unequal. Unequal must not be set to Release or
+    Acquire and Release. In addition, Unequal cannot be set to a stronger
+    memory-order then Equal.
+
+     The type of Value must be the same as Result Type.  The type of the
+    value pointed to by Pointer must be the same as Result Type.  This type
+    must also match the type of Comparator.
+
+    Memory is a memory Scope.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    atomic-compare-exchange-op ::=
+        `spv.AtomicCompareExchange` scope memory-semantics memory-semantics
+                                    ssa-use `,` ssa-use `,` ssa-use
+                                    `:` spv-pointer-type
+    ```mlir
+
+    #### Example:
+
+    ```
+    %0 = spv.AtomicCompareExchange "Workgroup" "Acquire" "None"
+                                    %pointer, %value, %comparator
+                                    : !spv.ptr<i32, WorkGroup>
+    ```
+  }];
+
+  let arguments = (ins
+    SPV_AnyPtr:$pointer,
+    SPV_ScopeAttr:$memory_scope,
+    SPV_MemorySemanticsAttr:$equal_semantics,
+    SPV_MemorySemanticsAttr:$unequal_semantics,
+    SPV_Integer:$value,
+    SPV_Integer:$comparator
+  );
+
+  let results = (outs
+    SPV_Integer:$result
+  );
+
+  let parser = [{ return ::parseAtomicCompareExchangeImpl(parser, result); }];
+  let printer = [{ return ::printAtomicCompareExchangeImpl(*this, p); }];
+  let verifier = [{ return ::verifyAtomicCompareExchangeImpl(*this); }];
+}
+
+// -----
+
 def SPV_AtomicCompareExchangeWeakOp : SPV_Op<"AtomicCompareExchangeWeak", []> {
   let summary = "Deprecated (use OpAtomicCompareExchange).";
 
@@ -147,6 +218,127 @@ def SPV_AtomicCompareExchangeWeakOp : SPV_Op<"AtomicCompareExchangeWeak", []> {
   let results = (outs
     SPV_Integer:$result
   );
+
+  let parser = [{ return ::parseAtomicCompareExchangeImpl(parser, result); }];
+  let printer = [{ return ::printAtomicCompareExchangeImpl(*this, p); }];
+  let verifier = [{ return ::verifyAtomicCompareExchangeImpl(*this); }];
+}
+
+// -----
+
+def SPV_AtomicExchangeOp : SPV_Op<"AtomicExchange", []> {
+  let summary = [{
+    Perform the following steps atomically with respect to any other atomic
+    accesses within Scope to the same location:
+  }];
+
+  let description = [{
+    1) load through Pointer to get an Original Value,
+
+    2) get a New Value from copying Value, and
+
+    3) store the New Value back through Pointer.
+
+    The instruction's result is the Original Value.
+
+    Result Type must be a scalar of integer type or floating-point type.
+
+     The type of Value must be the same as Result Type.  The type of the
+    value pointed to by Pointer must be the same as Result Type.
+
+    Memory is a memory Scope.
+
+    <!-- End of AutoGen section -->
+
+     ```
+    atomic-exchange-op ::=
+        `spv.AtomicCompareExchange` scope memory-semantics
+                                    ssa-use `,` ssa-use `:` spv-pointer-type
+    ```mlir
+
+    #### Example:
+
+    ```
+    %0 = spv.AtomicExchange "Workgroup" "Acquire" %pointer, %value,
+                            : !spv.ptr<i32, WorkGroup>
+    ```
+  }];
+
+  let arguments = (ins
+    SPV_AnyPtr:$pointer,
+    SPV_ScopeAttr:$memory_scope,
+    SPV_MemorySemanticsAttr:$semantics,
+    SPV_Numerical:$value
+  );
+
+  let results = (outs
+    SPV_Numerical:$result
+  );
+}
+
+// -----
+
+def SPV_AtomicFAddEXTOp : SPV_Op<"AtomicFAddEXT", []> {
+  let summary = "TBD";
+
+  let description = [{
+
+
+    <!-- End of AutoGen section -->
+
+    Perform the following steps atomically with respect to any other atomic
+    accesses within Scope to the same location:
+
+    1) load through Pointer to get an Original Value,
+
+    2) get a New Value by float addition of Original Value and Value, and
+
+    3) store the New Value back through Pointer.
+
+    The instruction’s result is the Original Value.
+
+    Result Type must be a floating-point type scalar.
+
+    The type of Value must be the same as Result Type. The type of the value
+    pointed to by Pointer must be the same as Result Type.
+
+    Memory must be a valid memory Scope.
+
+    ```
+    atomic-fadd-op ::=
+        `spv.AtomicFAddEXT` scope memory-semantics
+                            ssa-use `,` ssa-use `:` spv-pointer-type
+    ```
+
+    #### Example:
+
+    ```mlir
+    %0 = spv.AtomicFAddEXT "Device" "None" %pointer, %value :
+                           !spv.ptr<f32, StorageBuffer>
+    ```mlir
+  }];
+
+  let availability = [
+    MinVersion<SPV_V_1_0>,
+    MaxVersion<SPV_V_1_5>,
+    Extension<[SPV_EXT_shader_atomic_float_add]>,
+    Capability<[SPV_C_AtomicFloat16AddEXT, SPV_C_AtomicFloat32AddEXT, SPV_C_AtomicFloat64AddEXT]>
+  ];
+
+  let arguments = (ins
+    SPV_AnyPtr:$pointer,
+    SPV_ScopeAttr:$memory_scope,
+    SPV_MemorySemanticsAttr:$semantics,
+    SPV_Float:$value
+  );
+
+  let results = (outs
+    SPV_Float:$result
+  );
+
+  let parser = [{ return ::parseAtomicUpdateOp(parser, result, true); }];
+  let printer = [{ return ::printAtomicUpdateOp(getOperation(), p); }];
+  let verifier = [{ return ::verifyAtomicUpdateOp<FloatType>(getOperation()); }];
 }
 
 // -----

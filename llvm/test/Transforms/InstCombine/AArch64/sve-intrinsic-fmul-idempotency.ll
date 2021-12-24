@@ -32,7 +32,8 @@ define <vscale x 2 x double> @idempotent_fmul_f64(<vscale x 2 x i1> %pg, <vscale
 
 define <vscale x 2 x double> @idempotent_fmul_different_argument_order(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a) #0 {
 ; CHECK-LABEL: @idempotent_fmul_different_argument_order(
-; CHECK-NEXT:    ret <vscale x 2 x double> [[A:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.fmul.nxv2f64(<vscale x 2 x i1> [[PG:%.*]], <vscale x 2 x double> shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+00, i32 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), <vscale x 2 x double> [[A:%.*]])
+; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 ;
   %1 = call <vscale x 2 x double> @llvm.aarch64.sve.dup.x.nxv2f64(double 1.0)
   ; Different argument order to the above tests.

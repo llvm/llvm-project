@@ -15,6 +15,7 @@ class MTCSimpleTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipUnlessDarwin
+    @skipIf(compiler="clang", compiler_version=['<', '9.0'])
     def test(self):
         self.mtc_dylib_path = findMainThreadCheckerDylib()
         if self.mtc_dylib_path == "":
@@ -24,6 +25,7 @@ class MTCSimpleTestCase(TestBase):
         self.mtc_tests()
 
     @skipIf(archs=['i386'])
+    @skipIf(compiler="clang", compiler_version=['<', '9.0'])
     def mtc_tests(self):
         self.assertNotEqual(self.mtc_dylib_path, "")
 

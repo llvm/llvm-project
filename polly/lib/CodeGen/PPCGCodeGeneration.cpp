@@ -22,6 +22,7 @@
 #include "polly/Options.h"
 #include "polly/ScopDetection.h"
 #include "polly/ScopInfo.h"
+#include "polly/Support/ISLTools.h"
 #include "polly/Support/SCEVValidator.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -1151,7 +1152,7 @@ Value *GPUNodeBuilder::getArrayOffset(gpu_array_info *Array) {
 
   isl::set ZeroSet = isl::set::universe(Min.get_space());
 
-  for (long i = 0, n = Min.tuple_dim().release(); i < n; i++)
+  for (unsigned i : rangeIslSize(0, Min.tuple_dim()))
     ZeroSet = ZeroSet.fix_si(isl::dim::set, i, 0);
 
   if (Min.is_subset(ZeroSet)) {
@@ -1160,7 +1161,7 @@ Value *GPUNodeBuilder::getArrayOffset(gpu_array_info *Array) {
 
   isl::ast_expr Result = isl::ast_expr::from_val(isl::val(Min.ctx(), 0));
 
-  for (long i = 0, n = Min.tuple_dim().release(); i < n; i++) {
+  for (unsigned i : rangeIslSize(0, Min.tuple_dim())) {
     if (i > 0) {
       isl::pw_aff Bound_I =
           isl::manage(isl_multi_pw_aff_get_pw_aff(Array->bound, i - 1));
@@ -2885,8 +2886,10 @@ public:
     isl::pw_aff Val = isl::aff::var_on_domain(LS, isl::dim::set, 0);
     isl::pw_aff OuterMin = AccessSet.dim_min(0);
     isl::pw_aff OuterMax = AccessSet.dim_max(0);
-    OuterMin = OuterMin.add_dims(isl::dim::in, Val.dim(isl::dim::in).release());
-    OuterMax = OuterMax.add_dims(isl::dim::in, Val.dim(isl::dim::in).release());
+    OuterMin = OuterMin.add_dims(isl::dim::in,
+                                 unsignedFromIslSize(Val.dim(isl::dim::in)));
+    OuterMax = OuterMax.add_dims(isl::dim::in,
+                                 unsignedFromIslSize(Val.dim(isl::dim::in)));
     OuterMin = OuterMin.set_tuple_id(isl::dim::in, Array->getBasePtrId());
     OuterMax = OuterMax.set_tuple_id(isl::dim::in, Array->getBasePtrId());
 
@@ -2910,7 +2913,8 @@ public:
 
       isl::pw_aff Val = isl::aff::var_on_domain(
           isl::local_space(Array->getSpace()), isl::dim::set, i);
-      PwAff = PwAff.add_dims(isl::dim::in, Val.dim(isl::dim::in).release());
+      PwAff = PwAff.add_dims(isl::dim::in,
+                             unsignedFromIslSize(Val.dim(isl::dim::in)));
       PwAff = PwAff.set_tuple_id(isl::dim::in, Val.get_tuple_id(isl::dim::in));
       isl::set Set = PwAff.gt_set(Val);
       Extent = Set.intersect(Extent);

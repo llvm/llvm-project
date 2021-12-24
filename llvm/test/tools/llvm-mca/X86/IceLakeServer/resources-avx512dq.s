@@ -51,6 +51,36 @@ vandps            %zmm16, %zmm17, %zmm19 {z}{k1}
 vandps            (%rax), %zmm17, %zmm19 {z}{k1}
 vandps            (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 
+vbroadcastf32x2   %xmm16, %zmm19
+vbroadcastf32x2   (%rax), %zmm19
+vbroadcastf32x2   %xmm16, %zmm19 {k1}
+vbroadcastf32x2   (%rax), %zmm19 {k1}
+vbroadcastf32x2   %xmm16, %zmm19 {z}{k1}
+vbroadcastf32x2   (%rax), %zmm19 {z}{k1}
+
+vbroadcastf32x8   (%rax), %zmm19
+vbroadcastf32x8   (%rax), %zmm19 {k1}
+vbroadcastf32x8   (%rax), %zmm19 {z}{k1}
+
+vbroadcastf64x2   (%rax), %zmm19
+vbroadcastf64x2   (%rax), %zmm19 {k1}
+vbroadcastf64x2   (%rax), %zmm19 {z}{k1}
+
+vbroadcasti32x2   %xmm16, %zmm19
+vbroadcasti32x2   (%rax), %zmm19
+vbroadcasti32x2   %xmm16, %zmm19 {k1}
+vbroadcasti32x2   (%rax), %zmm19 {k1}
+vbroadcasti32x2   %xmm16, %zmm19 {z}{k1}
+vbroadcasti32x2   (%rax), %zmm19 {z}{k1}
+
+vbroadcasti32x8   (%rax), %zmm19
+vbroadcasti32x8   (%rax), %zmm19 {k1}
+vbroadcasti32x8   (%rax), %zmm19 {z}{k1}
+
+vbroadcasti64x2   (%rax), %zmm19
+vbroadcasti64x2   (%rax), %zmm19 {k1}
+vbroadcasti64x2   (%rax), %zmm19 {z}{k1}
+
 vcvtqq2pd         %zmm16, %zmm19
 vcvtqq2pd         (%rax), %zmm19
 vcvtqq2pd         (%rax){1to8}, %zmm19
@@ -142,6 +172,12 @@ vxorps            %zmm16, %zmm17, %zmm19 {z}{k1}
 vxorps            (%rax), %zmm17, %zmm19 {z}{k1}
 vxorps            (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 
+vpmovm2d          %k0, %zmm0
+vpmovm2q          %k0, %zmm0
+
+vpmovd2m          %zmm0, %k0
+vpmovq2m          %zmm0, %k0
+
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
 # CHECK-NEXT: [2]: Latency
@@ -196,6 +232,30 @@ vxorps            (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  1      1     0.50                        vandps	%zmm16, %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  2      8     0.50    *                   vandps	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  2      8     0.50    *                   vandps	(%rax){1to16}, %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  1      3     1.00                        vbroadcastf32x2	%xmm16, %zmm19
+# CHECK-NEXT:  2      8     0.50    *                   vbroadcastf32x2	(%rax), %zmm19
+# CHECK-NEXT:  1      3     1.00                        vbroadcastf32x2	%xmm16, %zmm19 {%k1}
+# CHECK-NEXT:  2      8     0.50    *                   vbroadcastf32x2	(%rax), %zmm19 {%k1}
+# CHECK-NEXT:  1      3     1.00                        vbroadcastf32x2	%xmm16, %zmm19 {%k1} {z}
+# CHECK-NEXT:  2      8     0.50    *                   vbroadcastf32x2	(%rax), %zmm19 {%k1} {z}
+# CHECK-NEXT:  2      8     0.50    *                   vbroadcastf32x8	(%rax), %zmm19
+# CHECK-NEXT:  2      8     0.50    *                   vbroadcastf32x8	(%rax), %zmm19 {%k1}
+# CHECK-NEXT:  2      8     0.50    *                   vbroadcastf32x8	(%rax), %zmm19 {%k1} {z}
+# CHECK-NEXT:  2      8     0.50    *                   vbroadcastf64x2	(%rax), %zmm19
+# CHECK-NEXT:  2      8     0.50    *                   vbroadcastf64x2	(%rax), %zmm19 {%k1}
+# CHECK-NEXT:  2      8     0.50    *                   vbroadcastf64x2	(%rax), %zmm19 {%k1} {z}
+# CHECK-NEXT:  1      3     1.00                        vbroadcasti32x2	%xmm16, %zmm19
+# CHECK-NEXT:  2      8     0.50    *                   vbroadcasti32x2	(%rax), %zmm19
+# CHECK-NEXT:  1      3     1.00                        vbroadcasti32x2	%xmm16, %zmm19 {%k1}
+# CHECK-NEXT:  2      8     0.50    *                   vbroadcasti32x2	(%rax), %zmm19 {%k1}
+# CHECK-NEXT:  1      3     1.00                        vbroadcasti32x2	%xmm16, %zmm19 {%k1} {z}
+# CHECK-NEXT:  2      8     0.50    *                   vbroadcasti32x2	(%rax), %zmm19 {%k1} {z}
+# CHECK-NEXT:  2      8     0.50    *                   vbroadcasti32x8	(%rax), %zmm19
+# CHECK-NEXT:  2      8     0.50    *                   vbroadcasti32x8	(%rax), %zmm19 {%k1}
+# CHECK-NEXT:  2      8     0.50    *                   vbroadcasti32x8	(%rax), %zmm19 {%k1} {z}
+# CHECK-NEXT:  2      8     0.50    *                   vbroadcasti64x2	(%rax), %zmm19
+# CHECK-NEXT:  2      8     0.50    *                   vbroadcasti64x2	(%rax), %zmm19 {%k1}
+# CHECK-NEXT:  2      8     0.50    *                   vbroadcasti64x2	(%rax), %zmm19 {%k1} {z}
 # CHECK-NEXT:  1      4     0.50                        vcvtqq2pd	%zmm16, %zmm19
 # CHECK-NEXT:  2      11    0.50    *                   vcvtqq2pd	(%rax), %zmm19
 # CHECK-NEXT:  2      11    0.50    *                   vcvtqq2pd	(%rax){1to8}, %zmm19
@@ -276,6 +336,10 @@ vxorps            (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  1      1     0.50                        vxorps	%zmm16, %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  2      8     0.50    *                   vxorps	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  2      8     0.50    *                   vxorps	(%rax){1to16}, %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  1      1     0.25                        vpmovm2d	%k0, %zmm0
+# CHECK-NEXT:  1      1     0.25                        vpmovm2q	%k0, %zmm0
+# CHECK-NEXT:  1      1     1.00                        vpmovd2m	%zmm0, %k0
+# CHECK-NEXT:  1      1     1.00                        vpmovq2m	%zmm0, %k0
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - ICXDivider
@@ -293,7 +357,7 @@ vxorps            (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]
-# CHECK-NEXT:  -      -     57.00  4.00   37.50  37.50   -     83.00   -      -      -      -
+# CHECK-NEXT:  -      -     65.50  10.50  46.50  46.50   -     95.50  0.50    -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   Instructions:
@@ -342,6 +406,30 @@ vxorps            (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     vandps	%zmm16, %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -     0.50    -      -      -      -     vandps	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -     0.50    -      -      -      -     vandps	(%rax){1to16}, %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vbroadcastf32x2	%xmm16, %zmm19
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vbroadcastf32x2	(%rax), %zmm19
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vbroadcastf32x2	%xmm16, %zmm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vbroadcastf32x2	(%rax), %zmm19 {%k1}
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vbroadcastf32x2	%xmm16, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vbroadcastf32x2	(%rax), %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vbroadcastf32x8	(%rax), %zmm19
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vbroadcastf32x8	(%rax), %zmm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vbroadcastf32x8	(%rax), %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vbroadcastf64x2	(%rax), %zmm19
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vbroadcastf64x2	(%rax), %zmm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vbroadcastf64x2	(%rax), %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vbroadcasti32x2	%xmm16, %zmm19
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vbroadcasti32x2	(%rax), %zmm19
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vbroadcasti32x2	%xmm16, %zmm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vbroadcasti32x2	(%rax), %zmm19 {%k1}
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vbroadcasti32x2	%xmm16, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vbroadcasti32x2	(%rax), %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vbroadcasti32x8	(%rax), %zmm19
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vbroadcasti32x8	(%rax), %zmm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vbroadcasti32x8	(%rax), %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vbroadcasti64x2	(%rax), %zmm19
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vbroadcasti64x2	(%rax), %zmm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vbroadcasti64x2	(%rax), %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     vcvtqq2pd	%zmm16, %zmm19
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vcvtqq2pd	(%rax), %zmm19
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vcvtqq2pd	(%rax){1to8}, %zmm19
@@ -422,3 +510,7 @@ vxorps            (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     vxorps	%zmm16, %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -     0.50    -      -      -      -     vxorps	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -     0.50    -      -      -      -     vxorps	(%rax){1to16}, %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -      -      -     vpmovm2d	%k0, %zmm0
+# CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -      -      -     vpmovm2q	%k0, %zmm0
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -     vpmovd2m	%zmm0, %k0
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -     vpmovq2m	%zmm0, %k0

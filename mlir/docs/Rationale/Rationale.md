@@ -13,7 +13,7 @@ about their consistency or readability.
 MLIR is a compiler intermediate representation with similarities to traditional
 three-address SSA representations (like
 [LLVM IR](http://llvm.org/docs/LangRef.html) or
-[SIL](https://github.com/apple/swift/blob/master/docs/SIL.rst)), but which
+[SIL](https://github.com/apple/swift/blob/main/docs/SIL.rst)), but which
 introduces notions from the polyhedral loop optimization works as first class
 concepts. This hybrid design is optimized to represent, analyze, and transform
 high level dataflow graphs as well as target-specific code generated for high
@@ -113,7 +113,7 @@ n-ranked tensor. This disallows the equivalent of pointer arithmetic or the
 ability to index into the same memref in other ways (something which C arrays
 allow for example). Furthermore, for the affine constructs, the compiler can
 follow use-def chains (e.g. through
-[affine.apply operations](../Dialects/Affine.md/#affineapply-affineapplyop)) or
+[affine.apply operations](../Dialects/Affine.md/#affineapply-affineapplyop) or
 through the map attributes of
 [affine operations](../Dialects/Affine.md/#operations)) to precisely analyze
 references at compile-time using polyhedral techniques. This is possible because
@@ -195,10 +195,10 @@ represented in either form) but block arguments have several advantages:
     [landingpad instruction](http://llvm.org/docs/LangRef.html#landingpad-instruction)
     is a hack used to represent this. MLIR doesn't make use of this capability,
     but SIL uses it extensively, e.g. in the
-    [switch_enum instruction](https://github.com/apple/swift/blob/master/docs/SIL.rst#switch-enum).
+    [switch_enum instruction](https://github.com/apple/swift/blob/main/docs/SIL.rst#switch-enum).
 
 For more context, block arguments were previously used in the Swift
-[SIL Intermediate Representation](https://github.com/apple/swift/blob/master/docs/SIL.rst),
+[SIL Intermediate Representation](https://github.com/apple/swift/blob/main/docs/SIL.rst),
 and described in
 [a talk on YouTube](https://www.youtube.com/watch?v=Ntj8ab-5cvE). The section of
 interest

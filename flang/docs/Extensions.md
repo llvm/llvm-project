@@ -31,7 +31,8 @@ accepted if enabled by command-line options.
   This conversion allows the results of the intrinsics like
   `SIZE` that (as mentioned below) may return non-default
   `INTEGER` results by default to be passed.  A warning is
-  emitted when truncation is possible.
+  emitted when truncation is possible.  These conversions
+  are not applied in calls to non-intrinsic generic procedures.
 * We are not strict on the contents of `BLOCK DATA` subprograms
   so long as they contain no executable code, no internal subprograms,
   and allocate no storage outside a named `COMMON` block.  (C1415)
@@ -121,6 +122,7 @@ end
   files are easier to write and use.
 * $ and \ edit descriptors are supported in FORMAT to suppress newline
   output on user prompts.
+* Tabs in format strings (not `FORMAT` statements) are allowed on output.
 * REAL and DOUBLE PRECISION variable and bounds in DO loops
 * Integer literals without explicit kind specifiers that are out of range
   for the default kind of INTEGER are assumed to have the least larger kind
@@ -186,6 +188,8 @@ end
   if an actual argument acceptable to one could not be passed to
   the other & vice versa because exactly one is polymorphic or
   exactly one is unlimited polymorphic).
+* External unit 0 is predefined and connected to the standard error output,
+  and defined as `ERROR_UNIT` in the intrinsic `ISO_FORTRAN_ENV` module.
 
 ### Extensions supported when enabled by options
 
@@ -347,3 +351,12 @@ end
   the parent, allocatable or not;
   all finalization takes place before any deallocation;
   and no object or subobject will be finalized more than once.
+
+* When `RECL=` is set via the `OPEN` statement for a sequential formatted input
+  file, it functions as an effective maximum record length.
+  Longer records, if any, will appear as if they had been truncated to
+  the value of `RECL=`.
+  (Other compilers ignore `RECL=`, signal an error, or apply effective truncation
+  to some forms of input in this situation.)
+  For sequential formatted output, RECL= serves as a limit on record lengths
+  that raises an error when it is exceeded.

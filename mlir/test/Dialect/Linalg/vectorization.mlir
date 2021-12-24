@@ -6,7 +6,7 @@
 func @contraction_dot(%A: memref<1584xf32>, %B: memref<1584xf32>, %C: memref<f32>) {
 
 // CHECK: arith.mulf %{{.*}}, %{{.*}} : vector<1584xf32>
-// CHECK: vector.multi_reduction #vector.kind<add>, %{{.*}} [0] : vector<1584xf32> to f32
+// CHECK: vector.multi_reduction <add>, %{{.*}} [0] : vector<1584xf32> to f32
 // CHECK: arith.addf %{{.*}}, %{{.*}} : f32
   linalg.dot ins(%A, %B: memref<1584xf32>, memref<1584xf32>)
             outs(%C: memref<f32>)
@@ -19,7 +19,7 @@ func @contraction_dot(%A: memref<1584xf32>, %B: memref<1584xf32>, %C: memref<f32
 func @contraction_matvec(%A: memref<1584x1584xf32>, %B: memref<1584xf32>, %C: memref<1584xf32>) {
 
 // CHECK: arith.mulf %{{.*}}, %{{.*}} : vector<1584x1584xf32>
-// CHECK: vector.multi_reduction #vector.kind<add>, %{{.*}} [1] : vector<1584x1584xf32> to vector<1584xf32>
+// CHECK: vector.multi_reduction <add>, %{{.*}} [1] : vector<1584x1584xf32> to vector<1584xf32>
 // CHECK: arith.addf %{{.*}}, %{{.*}} : vector<1584xf32>
   linalg.matvec ins(%A, %B: memref<1584x1584xf32>, memref<1584xf32>)
             outs(%C: memref<1584xf32>)
@@ -31,7 +31,7 @@ func @contraction_matvec(%A: memref<1584x1584xf32>, %B: memref<1584xf32>, %C: me
 // CHECK-LABEL: contraction_matmul
 func @contraction_matmul(%A: memref<1584x1584xf32>, %B: memref<1584x1584xf32>, %C: memref<1584x1584xf32>) {
 // CHECK: arith.mulf %{{.*}}, %{{.*}} : vector<1584x1584x1584xf32>
-// CHECK: vector.multi_reduction #vector.kind<add>, %{{.*}} [2] : vector<1584x1584x1584xf32> to vector<1584x1584xf32>
+// CHECK: vector.multi_reduction <add>, %{{.*}} [2] : vector<1584x1584x1584xf32> to vector<1584x1584xf32>
 // CHECK: arith.addf %{{.*}}, %{{.*}} : vector<1584x1584xf32>
   linalg.matmul ins(%A, %B: memref<1584x1584xf32>, memref<1584x1584xf32>)
             outs(%C: memref<1584x1584xf32>)
@@ -43,7 +43,7 @@ func @contraction_matmul(%A: memref<1584x1584xf32>, %B: memref<1584x1584xf32>, %
 // CHECK-LABEL: contraction_batch_matmul
 func @contraction_batch_matmul(%A: memref<1584x1584x1584xf32>, %B: memref<1584x1584x1584xf32>, %C: memref<1584x1584x1584xf32>) {
 // CHECK: arith.mulf %{{.*}}, %{{.*}} : vector<1584x1584x1584x1584xf32>
-// CHECK: vector.multi_reduction #vector.kind<add>, %{{.*}} [3] : vector<1584x1584x1584x1584xf32> to vector<1584x1584x1584xf32>
+// CHECK: vector.multi_reduction <add>, %{{.*}} [3] : vector<1584x1584x1584x1584xf32> to vector<1584x1584x1584xf32>
 // CHECK: arith.addf %{{.*}}, %{{.*}} : vector<1584x1584x1584xf32>
   linalg.batch_matmul
     ins(%A, %B: memref<1584x1584x1584xf32>, memref<1584x1584x1584xf32>)
@@ -71,7 +71,7 @@ func @vectorization_test(%A: memref<8x16xf32>, %B: memref<16x32xf32>,
   //       CHECK: vector.transfer_read %{{.*}} : memref<16x32xf32>, vector<8x32x16xf32>
   //       CHECK: vector.transfer_read %{{.*}} : memref<8x32xf32>, vector<8x32xf32>
   //       CHECK: %[[MUL:.*]] = arith.mulf %{{.*}}, %{{.*}} : vector<8x32x16xf32>
-  //       CHECK: %[[R:.*]] = vector.multi_reduction #vector.kind<add>, %[[MUL]] [2] : vector<8x32x16xf32> to vector<8x32xf32>
+  //       CHECK: %[[R:.*]] = vector.multi_reduction <add>, %[[MUL]] [2] : vector<8x32x16xf32> to vector<8x32xf32>
   //       CHECK: arith.addf %[[R]], %{{.*}} : vector<8x32xf32>
   //       CHECK: vector.transfer_write %{{.*}}, %{{.*}} : vector<8x32xf32>, memref<8x32xf32>
   linalg.generic #matmul_trait
@@ -105,7 +105,7 @@ func @generic_output_transpose(%A: memref<8x16xf32>, %B: memref<16x32xf32>,
   //       CHECK: vector.transfer_read %{{.*}} : memref<16x32xf32>, vector<8x32x16xf32>
   //       CHECK: vector.transfer_read %{{.*}} : memref<32x8xf32>, vector<8x32xf32>
   //       CHECK: %[[MUL:.*]] = arith.mulf %{{.*}}, %{{.*}} : vector<8x32x16xf32>
-  //       CHECK: %[[R:.*]] = vector.multi_reduction #vector.kind<add>, %[[MUL]] [2] : vector<8x32x16xf32> to vector<8x32xf32>
+  //       CHECK: %[[R:.*]] = vector.multi_reduction <add>, %[[MUL]] [2] : vector<8x32x16xf32> to vector<8x32xf32>
   //       CHECK: arith.addf %[[R]], %{{.*}} : vector<8x32xf32>
   //       CHECK: vector.transfer_write %{{.*}}, %{{.*}} : vector<8x32xf32>, memref<32x8xf32>
   linalg.generic #matmul_transpose_out_trait
@@ -139,7 +139,7 @@ func @vectorization_test_integer(%A: memref<8x16xi32>, %B: memref<16x32xi32>,
   //       CHECK: vector.transfer_read %{{.*}} : memref<16x32xi32>, vector<8x32x16xi32>
   //       CHECK: vector.transfer_read %{{.*}} : memref<8x32xi32>, vector<8x32xi32>
   //       CHECK: %[[MUL:.*]] = arith.muli %{{.*}}, %{{.*}} : vector<8x32x16xi32>
-  //       CHECK: %[[R:.*]] = vector.multi_reduction #vector.kind<add>, %[[MUL]] [2] : vector<8x32x16xi32> to vector<8x32xi32>
+  //       CHECK: %[[R:.*]] = vector.multi_reduction <add>, %[[MUL]] [2] : vector<8x32x16xi32> to vector<8x32xi32>
   //       CHECK: arith.addi %[[R]], %{{.*}} : vector<8x32xi32>
 
   //       CHECK: vector.transfer_write %{{.*}}, %{{.*}} : vector<8x32xi32>, memref<8x32xi32>
@@ -160,7 +160,7 @@ func @vectorization_test_integer(%A: memref<8x16xi32>, %B: memref<16x32xi32>,
 func @vectorization_test_2(%A: memref<8x16xf32>, %B: memref<16x32xf32>,
                          %C: memref<8x32xf32>) {
   //       CHECK: arith.mulf %{{.*}}, %{{.*}} : vector<8x32x16xf32>
-  //       CHECK: vector.multi_reduction #vector.kind<add>, %{{.*}} [2] : vector<8x32x16xf32> to vector<8x32xf32>
+  //       CHECK: vector.multi_reduction <add>, %{{.*}} [2] : vector<8x32x16xf32> to vector<8x32xf32>
   //       CHECK: arith.addf %{{.*}}, %{{.*}} : vector<8x32xf32>
   linalg.matmul
     ins(%A, %B: memref<8x16xf32>, memref<16x32xf32>)
@@ -200,8 +200,8 @@ func @test_vectorize_fill(%A : memref<8x16xf32>, %arg0 : f32) {
 // CHECK-LABEL: func @test_vectorize_fill
 func @test_vectorize_fill_scalar(%A : memref<f32>, %arg0 : f32) {
   // CHECK-SAME: (%[[M:.*]]: memref<f32>, %[[val:.*]]: f32)
-  //      CHECK:   %[[VEC:.*]] = vector.broadcast %[[val]] : f32 to vector<1xf32>
-  //      CHECK:   vector.transfer_write %[[VEC]], %[[M]][] {{.*}} : vector<1xf32>, memref<f32>
+  //      CHECK:   %[[VEC:.*]] = vector.broadcast %[[val]] : f32 to vector<f32>
+  //      CHECK:   vector.transfer_write %[[VEC]], %[[M]][] : vector<f32>, memref<f32>
   linalg.fill(%arg0, %A) : f32, memref<f32>
   return
 }
@@ -221,10 +221,10 @@ func @test_vectorize_copy(%A : memref<8x16xf32>, %B : memref<8x16xf32>) {
 // CHECK-LABEL: func @test_vectorize_copy_scalar
 func @test_vectorize_copy_scalar(%A : memref<f32>, %B : memref<f32>) {
   //  CHECK-SAME: (%[[A:.*]]: memref<f32>, %[[B:.*]]: memref<f32>)
-  //       CHECK:   %[[V:.*]] = vector.transfer_read %[[A]][]{{.*}} : memref<f32>, vector<1xf32>
-  //       CHECK:   %[[val:.*]] = vector.extract %[[V]][0] : vector<1xf32>
-  //       CHECK:   %[[VV:.*]] = vector.broadcast %[[val]] : f32 to vector<1xf32>
-  //       CHECK:   vector.transfer_write %[[VV]], %[[B]][] {{.*}} : vector<1xf32>, memref<f32>
+  //       CHECK:   %[[V:.*]] = vector.transfer_read %[[A]][]{{.*}} : memref<f32>, vector<f32>
+  //       CHECK:   %[[val:.*]] = vector.extractelement %[[V]][] : vector<f32>
+  //       CHECK:   %[[VV:.*]] = vector.broadcast %[[val]] : f32 to vector<f32>
+  //       CHECK:   vector.transfer_write %[[VV]], %[[B]][] : vector<f32>, memref<f32>
   linalg.copy(%A, %B) :  memref<f32>, memref<f32>
   return
 }
@@ -523,7 +523,7 @@ func @matmul_tensors(
   // linalg matmul lowers gets expanded to a 3D reduction, canonicalization later
   // convert it to a 2D contract.
   //       CHECK:   %[[MUL:.*]] = arith.mulf %[[V0]], %[[V1]] : vector<8x12x4xf32>
-  //       CHECK:   %[[R:.*]] = vector.multi_reduction #vector.kind<add>, %[[MUL]] [2] : vector<8x12x4xf32> to vector<8x12xf32>
+  //       CHECK:   %[[R:.*]] = vector.multi_reduction <add>, %[[MUL]] [2] : vector<8x12x4xf32> to vector<8x12xf32>
   //       CHECK:   %[[ADD:.*]] = arith.addf %[[R]], %[[V2]] : vector<8x12xf32>
   //       CHECK:   %[[W:.*]] = vector.transfer_write %[[ADD]], %[[ARG2]][%[[C0]], %[[C0]]] {in_bounds = [true, true]} : vector<8x12xf32>, tensor<8x12xf32>
   %0 = linalg.matmul  ins(%arg0, %arg1: tensor<8x4xf32>, tensor<4x12xf32>)
@@ -684,7 +684,7 @@ func @pad_and_transfer_write_dynamic_static(
 
 func private @make_vector() -> tensor<12x13xf32>
 
-// CHECK-LABEL: func @pad_and_insert_slice
+// CHECK-LABEL: func @pad_and_insert_slice_source
 //  CHECK-SAME:     %[[ARG0:.*]]: tensor<5x6xf32>
 //   CHECK-NOT:   linalg.pad_tensor
 //   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
@@ -693,7 +693,7 @@ func private @make_vector() -> tensor<12x13xf32>
 //       CHECK:   %[[READ:.*]] = vector.transfer_read %[[ARG0]][%[[C0]], %[[C0]]], %[[C5]] : tensor<5x6xf32>, vector<7x9xf32>
 //       CHECK:   %[[WRITE:.*]] = vector.transfer_write %[[READ]], %[[VEC0]][%[[C0]], %[[C0]]] {in_bounds = [true, true]} : vector<7x9xf32>, tensor<12x13xf32>
 //       CHECK:   return %[[WRITE]]
-func @pad_and_insert_slice(
+func @pad_and_insert_slice_source(
     %arg0: tensor<5x6xf32>) -> tensor<12x13xf32> {
   %c0 = arith.constant 0 : index
   %c5 = arith.constant 5.0 : f32
@@ -704,6 +704,26 @@ func @pad_and_insert_slice(
   %1 = call @make_vector() : () -> tensor<12x13xf32>
   %r = tensor.insert_slice %0 into %1[0, 0][7, 9][1, 1] : tensor<7x9xf32> into tensor<12x13xf32>
   return %r : tensor<12x13xf32>
+}
+
+// -----
+
+func private @make_vector() -> tensor<12x13xf32>
+
+// CHECK-LABEL: func @pad_and_insert_slice_dest
+// Check the insert slice is not rewritten if the padded result is used by the destination operand.
+//       CHECK:   %[[T1:.*]] = call @make_vector() : () -> tensor<12x13xf32>
+//       CHECK:   = tensor.insert_slice %[[T1]] into
+func @pad_and_insert_slice_dest(
+    %arg0: tensor<1x5x6xf32>) -> tensor<1x12x13xf32> {
+  %c5 = arith.constant 5.0 : f32
+  %0 = linalg.pad_tensor %arg0 low[0, 0, 0] high[0, 7, 7] {
+    ^bb0(%arg2: index, %arg3: index, %arg4: index):
+      linalg.yield %c5 : f32
+  } : tensor<1x5x6xf32> to tensor<1x12x13xf32>
+  %1 = call @make_vector() : () -> tensor<12x13xf32>
+  %r = tensor.insert_slice %1 into %0[0, 0, 0][1, 12, 13][1, 1, 1] : tensor<12x13xf32> into tensor<1x12x13xf32>
+  return %r : tensor<1x12x13xf32>
 }
 
 // -----
@@ -744,7 +764,7 @@ func @sum_exp(%input: tensor<4x16x8xf32>, %output: tensor<4x16xf32>)
   // CHECK: vector.transfer_read {{.*}} : tensor<4x16x8xf32>, vector<4x16x8xf32>
   // CHECK: vector.transfer_read {{.*}} {in_bounds = [true, true]} : tensor<4x16xf32>, vector<4x16xf32>
   // CHECK: math.exp {{.*}} : vector<4x16x8xf32>
-  // CHECK: vector.multi_reduction #vector.kind<add>, %{{.*}} [2] : vector<4x16x8xf32> to vector<4x16xf32>
+  // CHECK: vector.multi_reduction <add>, %{{.*}} [2] : vector<4x16x8xf32> to vector<4x16xf32>
   // CHECK: addf {{.*}} : vector<4x16xf32>
   // CHECK: vector.transfer_write {{.*}} : vector<4x16xf32>, tensor<4x16xf32>
   // CHECK: return {{.*}} : tensor<4x16xf32>
@@ -779,7 +799,7 @@ func @sum_exp_2(%input: tensor<3x2xf32>, %input_2: tensor<5x4xf32>, %output: ten
   // CHECK: math.exp {{.*}} : vector<2x3x4x5xf32>
   // CHECK: math.exp {{.*}} : vector<2x3x4x5xf32>
   // CHECK: addf {{.*}} : vector<2x3x4x5xf32>
-  // CHECK: vector.multi_reduction #vector.kind<add>, {{.*}}  [1, 2] : vector<2x3x4x5xf32> to vector<2x5xf32>
+  // CHECK: vector.multi_reduction <add>, {{.*}}  [1, 2] : vector<2x3x4x5xf32> to vector<2x5xf32>
   // CHECK: addf {{.*}} : vector<2x5xf32>
   // CHECK: vector.transfer_write {{.*}} {in_bounds = [true, true], permutation_map = #[[$M3]]} : vector<2x5xf32>, tensor<5x2xf32>
   // CHECK: return {{.*}} : tensor<5x2xf32>
@@ -808,7 +828,7 @@ func @red_max_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
   // CHECK: %[[CMINF:.+]] = arith.constant dense<-3.402820e+38> : vector<4xf32>
   // CHECK: linalg.init_tensor [4] : tensor<4xf32>
   // CHECK: vector.transfer_write {{.*}} : vector<4xf32>, tensor<4xf32>
-  // CHECK: %[[R:.+]] = vector.multi_reduction #vector.kind<maxf>, {{.*}} [1] : vector<4x4xf32> to vector<4xf32>
+  // CHECK: %[[R:.+]] = vector.multi_reduction <maxf>, {{.*}} [1] : vector<4x4xf32> to vector<4xf32>
   // CHECK: maxf %[[R]], %[[CMINF]] : vector<4xf32>
   // CHECK: vector.transfer_write {{.*}} : vector<4xf32>, tensor<4xf32>
   %ident = arith.constant -3.40282e+38 : f32
@@ -819,7 +839,7 @@ func @red_max_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
                          iterator_types = ["parallel", "reduction"]}
                          ins(%arg0 : tensor<4x4xf32>) outs(%fill : tensor<4xf32>) {
   ^bb0(%in0: f32, %out0: f32):  // no predecessors
-    %max = maxf %in0, %out0 : f32
+    %max = arith.maxf %in0, %out0 : f32
     linalg.yield %max : f32
   } -> tensor<4xf32>
   return %red : tensor<4xf32>
@@ -833,8 +853,8 @@ func @red_min_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
   // CHECK: linalg.init_tensor [4] : tensor<4xf32>
   // CHECK: vector.transfer_write {{.*}} : vector<4xf32>, tensor<4xf32>
   // CHECK: vector.transfer_read {{.*}} : tensor<4x4xf32>, vector<4x4xf32>
-  // CHECK: %[[R:.+]] = vector.multi_reduction #vector.kind<minf>, {{.*}} [1] : vector<4x4xf32> to vector<4xf32>
-  // CHECK: minf %[[R]], %[[CMAXF]] : vector<4xf32>
+  // CHECK: %[[R:.+]] = vector.multi_reduction <minf>, {{.*}} [1] : vector<4x4xf32> to vector<4xf32>
+  // CHECK: arith.minf %[[R]], %[[CMAXF]] : vector<4xf32>
   // CHECK: vector.transfer_write {{.*}} : vector<4xf32>, tensor<4xf32>
   %maxf32 = arith.constant 3.40282e+38 : f32
   %init = linalg.init_tensor [4] : tensor<4xf32>
@@ -844,7 +864,7 @@ func @red_min_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
                          iterator_types = ["parallel", "reduction"]}
                          ins(%arg0 : tensor<4x4xf32>) outs(%fill : tensor<4xf32>) {
   ^bb0(%in0: f32, %out0: f32):  // no predecessors
-    %min = minf %out0, %in0 : f32
+    %min = arith.minf %out0, %in0 : f32
     linalg.yield %min : f32
   } -> tensor<4xf32>
   return %red : tensor<4xf32>
@@ -857,7 +877,7 @@ func @red_mul_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
   // CHECK: linalg.init_tensor [4] : tensor<4xf32>
   // CHECK: vector.transfer_write {{.*}} : vector<4xf32>, tensor<4xf32>
   // CHECK: vector.transfer_read {{.*}} : tensor<4x4xf32>, vector<4x4xf32>
-  // CHECK: vector.multi_reduction #vector.kind<mul>, {{.*}} [1] : vector<4x4xf32> to vector<4xf32>
+  // CHECK: vector.multi_reduction <mul>, {{.*}} [1] : vector<4x4xf32> to vector<4xf32>
   // CHECK: mulf {{.*}} : vector<4xf32>
   // CHECK: vector.transfer_write {{.*}} : vector<4xf32>, tensor<4xf32>
   %ident = arith.constant 1.0 : f32
@@ -881,7 +901,7 @@ func @red_or_2d(%arg0: tensor<4x4xi1>) -> tensor<4xi1> {
   // CHECK: linalg.init_tensor [4] : tensor<4xi1>
   // CHECK: vector.transfer_write {{.*}} : vector<4xi1>, tensor<4xi1>
   // CHECK: vector.transfer_read {{.*}} : tensor<4x4xi1>, vector<4x4xi1>
-  // CHECK: vector.multi_reduction #vector.kind<or>, {{.*}} [1] : vector<4x4xi1> to vector<4xi1>
+  // CHECK: vector.multi_reduction <or>, {{.*}} [1] : vector<4x4xi1> to vector<4xi1>
   // CHECK: vector.transfer_write {{.*}} : vector<4xi1>, tensor<4xi1>
   %ident = arith.constant false
   %init = linalg.init_tensor [4] : tensor<4xi1>
@@ -904,7 +924,7 @@ func @red_and_2d(%arg0: tensor<4x4xi1>) -> tensor<4xi1> {
   // CHECK: linalg.init_tensor [4] : tensor<4xi1>
   // CHECK: vector.transfer_write {{.*}} : vector<4xi1>, tensor<4xi1>
   // CHECK: vector.transfer_read {{.*}} : tensor<4x4xi1>, vector<4x4xi1>
-  // CHECK: vector.multi_reduction #vector.kind<and>, {{.*}} [1] : vector<4x4xi1> to vector<4xi1>
+  // CHECK: vector.multi_reduction <and>, {{.*}} [1] : vector<4x4xi1> to vector<4xi1>
   // CHECK: vector.transfer_write {{.*}} : vector<4xi1>, tensor<4xi1>
   %ident = arith.constant true
   %init = linalg.init_tensor [4] : tensor<4xi1>
@@ -927,7 +947,7 @@ func @red_xor_2d(%arg0: tensor<4x4xi1>) -> tensor<4xi1> {
   // CHECK: linalg.init_tensor [4] : tensor<4xi1>
   // CHECK: vector.transfer_write {{.*}} : vector<4xi1>, tensor<4xi1>
   // CHECK: vector.transfer_read {{.*}} : tensor<4x4xi1>, vector<4x4xi1>
-  // CHECK: vector.multi_reduction #vector.kind<xor>, {{.*}} [1] : vector<4x4xi1> to vector<4xi1>
+  // CHECK: vector.multi_reduction <xor>, {{.*}} [1] : vector<4x4xi1> to vector<4xi1>
   // CHECK: vector.transfer_write {{.*}} : vector<4xi1>, tensor<4xi1>
   %ident = arith.constant false
   %init = linalg.init_tensor [4] : tensor<4xi1>
@@ -979,7 +999,7 @@ func @fused_broadcast_red_2d(%arg0: tensor<4x4xf32>, %arg1: tensor<4x1xf32>) -> 
   // CHECK: vector.transfer_read {{.*}} {in_bounds = [true, true], permutation_map = #[[$M6]]} : tensor<4x1xf32>, vector<4x4xf32>
   // CHECK: subf {{.*}} : vector<4x4xf32>
   // CHECK: math.exp {{.*}} : vector<4x4xf32>
-  // CHECK: vector.multi_reduction #vector.kind<add>, {{.*}} : vector<4x4xf32> to vector<4xf32>
+  // CHECK: vector.multi_reduction <add>, {{.*}} : vector<4x4xf32> to vector<4xf32>
   // CHECK: addf {{.*}} : vector<4xf32>
   // CHECK: vector.transfer_write {{.*}} {in_bounds = [true]} : vector<4xf32>, tensor<4xf32>
   %c0 = arith.constant 0.0 : f32
@@ -1005,7 +1025,7 @@ func @fused_broadcast_red_2d(%arg0: tensor<4x4xf32>, %arg1: tensor<4x1xf32>) -> 
 //  CHECK-LABEL: func @reduce_1d(
 //   CHECK-SAME:   %[[A:.*]]: tensor<32xf32>
 func @reduce_1d(%arg0: tensor<32xf32>) -> tensor<f32> {
-  //  CHECK-DAG: %[[F0_v1:.*]] = arith.constant dense<0.000000e+00> : vector<1xf32>
+  //  CHECK-DAG: %[[vF0:.*]] = arith.constant dense<0.000000e+00> : vector<f32>
   //  CHECK-DAG: %[[F0:.*]] = arith.constant 0.000000e+00 : f32
   //  CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
   %f0 = arith.constant 0.000000e+00 : f32
@@ -1013,17 +1033,18 @@ func @reduce_1d(%arg0: tensor<32xf32>) -> tensor<f32> {
   //      CHECK: %[[init:.*]] = linalg.init_tensor [] : tensor<f32>
   %0 = linalg.init_tensor [] : tensor<f32>
 
-  //      CHECK: %[[f:.*]] = vector.transfer_write %[[F0_v1]], %[[init]][]
-  // CHECK-SAME:   : vector<1xf32>, tensor<f32>
+  //      CHECK: %[[f:.*]] = vector.transfer_write %[[vF0]], %[[init]][]
+  // CHECK-SAME:   : vector<f32>, tensor<f32>
   %1 = linalg.fill(%f0, %0) : f32, tensor<f32> -> tensor<f32>
   //      CHECK: %[[r:.*]] = vector.transfer_read %[[A]][%[[C0]]]
   // CHECK-SAME:   : tensor<32xf32>, vector<32xf32>
-  //      CHECK: %[[red:.*]] = vector.multi_reduction #vector.kind<add>, %[[r]] [0]
+  //      CHECK: %[[f0:.*]] = vector.extractelement %[[vF0]][] : vector<f32>
+  //      CHECK: %[[red:.*]] = vector.multi_reduction <add>, %[[r]] [0]
   // CHECK-SAME:   : vector<32xf32> to f32
-  //      CHECK: %[[a:.*]] = arith.addf %[[red]], %[[F0]] : f32
-  //      CHECK: %[[red_v1:.*]] = vector.broadcast %[[a]] : f32 to vector<1xf32>
+  //      CHECK: %[[a:.*]] = arith.addf %[[red]], %[[f0]] : f32
+  //      CHECK: %[[red_v1:.*]] = vector.broadcast %[[a]] : f32 to vector<f32>
   //      CHECK: %[[res:.*]] = vector.transfer_write %[[red_v1]], %[[f]][]
-  // CHECK-SAME:   : vector<1xf32>, tensor<f32>
+  // CHECK-SAME:   : vector<f32>, tensor<f32>
   %2 = linalg.generic {
          indexing_maps = [affine_map<(d0) -> (d0)>,
                           affine_map<(d0) -> ()>],

@@ -23,7 +23,7 @@
 #include "lldb/API/SBHostOS.h"
 #include "lldb/API/SBReproducer.h"
 #include "lldb/Host/FileSystem.h"
-#include "lldb/lldb-private.h"
+#include "lldb/Version/Version.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -165,111 +165,24 @@ const char *SBReproducer::Capture(const char *path) {
 }
 
 const char *SBReproducer::PassiveReplay(const char *path) {
-  static std::string error;
-  if (auto e = Reproducer::Initialize(ReproducerMode::PassiveReplay,
-                                      FileSpec(path))) {
-    error = llvm::toString(std::move(e));
-    return error.c_str();
-  }
-
-  if (auto *l = lldb_private::repro::Reproducer::Instance().GetLoader()) {
-    FileSpec file = l->GetFile<SBProvider::Info>();
-    auto error_or_file = llvm::MemoryBuffer::getFile(file.GetPath());
-    if (!error_or_file) {
-      error =
-          "unable to read SB API data: " + error_or_file.getError().message();
-      return error.c_str();
-    }
-    static ReplayData r(std::move(*error_or_file));
-    InstrumentationData::Initialize(r.GetDeserializer(), r.GetRegistry());
-  }
-
-  return nullptr;
+  return "Reproducer replay has been removed";
 }
 
 const char *SBReproducer::Replay(const char *path) {
-  SBReplayOptions options;
-  return SBReproducer::Replay(path, options);
+  return "Reproducer replay has been removed";
 }
 
 const char *SBReproducer::Replay(const char *path, bool skip_version_check) {
-  SBReplayOptions options;
-  options.SetCheckVersion(!skip_version_check);
-  return SBReproducer::Replay(path, options);
+  return Replay(path);
 }
 
 const char *SBReproducer::Replay(const char *path,
                                  const SBReplayOptions &options) {
-  static std::string error;
-  if (auto e = Reproducer::Initialize(ReproducerMode::Replay, FileSpec(path))) {
-    error = llvm::toString(std::move(e));
-    return error.c_str();
-  }
-
-  repro::Loader *loader = repro::Reproducer::Instance().GetLoader();
-  if (!loader) {
-    error = "unable to get replay loader.";
-    return error.c_str();
-  }
-
-  if (options.GetCheckVersion()) {
-    llvm::Expected<std::string> version = loader->LoadBuffer<VersionProvider>();
-    if (!version) {
-      error = llvm::toString(version.takeError());
-      return error.c_str();
-    }
-    if (lldb_private::GetVersion() != llvm::StringRef(*version).rtrim()) {
-      error = "reproducer capture and replay version don't match:\n";
-      error.append("reproducer captured with:\n");
-      error.append(*version);
-      error.append("reproducer replayed with:\n");
-      error.append(lldb_private::GetVersion());
-      return error.c_str();
-    }
-  }
-
-  if (options.GetVerify()) {
-    bool verification_failed = false;
-    llvm::raw_string_ostream os(error);
-    auto error_callback = [&](llvm::StringRef error) {
-      verification_failed = true;
-      os << "\nerror: " << error;
-    };
-
-    auto warning_callback = [&](llvm::StringRef warning) {
-      verification_failed = true;
-      os << "\nwarning: " << warning;
-    };
-
-    auto note_callback = [&](llvm::StringRef warning) {};
-
-    Verifier verifier(loader);
-    verifier.Verify(error_callback, warning_callback, note_callback);
-
-    if (verification_failed) {
-      os.flush();
-      return error.c_str();
-    }
-  }
-
-  FileSpec file = loader->GetFile<SBProvider::Info>();
-  if (!file) {
-    error = "unable to get replay data from reproducer.";
-    return error.c_str();
-  }
-
-  SBRegistry registry;
-  registry.Replay(file);
-
-  return nullptr;
+  return Replay(path);
 }
 
 const char *SBReproducer::Finalize(const char *path) {
   static std::string error;
-  if (auto e = Reproducer::Initialize(ReproducerMode::Replay, FileSpec(path))) {
-    error = llvm::toString(std::move(e));
-    return error.c_str();
-  }
 
   repro::Loader *loader = repro::Reproducer::Instance().GetLoader();
   if (!loader) {

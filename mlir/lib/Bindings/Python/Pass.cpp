@@ -48,7 +48,7 @@ private:
   MlirPassManager passManager;
 };
 
-} // anonymous namespace
+} // namespace
 
 /// Create the `mlir.passmanager` here.
 void mlir::python::populatePassManagerSubmodule(py::module &m) {
@@ -79,7 +79,7 @@ void mlir::python::populatePassManagerSubmodule(py::module &m) {
           [](PyPassManager &passManager, bool enable) {
             mlirPassManagerEnableVerifier(passManager.get(), enable);
           },
-          "Enable / disable verify-each.")
+          py::arg("enable"), "Enable / disable verify-each.")
       .def_static(
           "parse",
           [](const std::string pipeline, DefaultingPyMlirContext context) {
@@ -106,6 +106,7 @@ void mlir::python::populatePassManagerSubmodule(py::module &m) {
               throw SetPyError(PyExc_RuntimeError,
                                "Failure while executing pass pipeline.");
           },
+          py::arg("module"),
           "Run the pass manager on the provided module, throw a RuntimeError "
           "on failure.")
       .def(

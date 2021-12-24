@@ -1,4 +1,5 @@
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -start-after=codegenprepare -stop-before=finalize-isel -o - %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -start-after=codegenprepare -stop-before=finalize-isel -o - %s -experimental-debug-variable-locations=false | FileCheck %s --check-prefixes=CHECK,COMMON
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -start-after=codegenprepare -stop-before=finalize-isel -o - %s -experimental-debug-variable-locations=true | FileCheck %s --check-prefixes=INSTRREF,COMMON
 
 ; Test case was generated from the following C code,
 ; using: clang -g -O1 -S -emit-llvm s.c -o s.ll
@@ -17,18 +18,21 @@
 
 ; Catch metadata references for involved variables.
 ;
-; CHECK-DAG: ![[S1:.*]] = !DILocalVariable(name: "s1"
-; CHECK-DAG: ![[S2:.*]] = !DILocalVariable(name: "s2"
+; COMMON-DAG: ![[S1:.*]] = !DILocalVariable(name: "s1"
+; COMMON-DAG: ![[S2:.*]] = !DILocalVariable(name: "s2"
 
 define dso_local i32 @f(i64 %s1.coerce0, i64 %s1.coerce1, i64 %s2.coerce0, i64 %s2.coerce1) local_unnamed_addr #0 !dbg !7 {
 ; We expect DBG_VALUE instructions for the arguments at the entry.
-; CHECK-LABEL: name:            f
-; CHECK-NOT: DBG_VALUE
-; CHECK-DAG: DBG_VALUE $rdi, $noreg, ![[S1]], !DIExpression(DW_OP_LLVM_fragment, 0, 64)
-; CHECK-DAG: DBG_VALUE $rsi, $noreg, ![[S1]], !DIExpression(DW_OP_LLVM_fragment, 64, 64)
-; CHECK-DAG: DBG_VALUE $rdx, $noreg, ![[S2]], !DIExpression(DW_OP_LLVM_fragment, 0, 64)
-; CHECK-DAG: DBG_VALUE $rcx, $noreg, ![[S2]], !DIExpression(DW_OP_LLVM_fragment, 64, 64)
-; CHECK-NOT: DBG_VALUE
+; In instr-ref mode, there'll be some DBG_PHIs in there too.
+; COMMON-LABEL: name:            f
+; COMMON-NOT: DBG_VALUE
+; INSTRREF-DAG: DBG_PHI $rcx, 2
+; INSTRREF-DAG: DBG_PHI $rdx, 1
+; COMMON-DAG: DBG_VALUE $rdi, $noreg, ![[S1]], !DIExpression(DW_OP_LLVM_fragment, 0, 64)
+; COMMON-DAG: DBG_VALUE $rsi, $noreg, ![[S1]], !DIExpression(DW_OP_LLVM_fragment, 64, 64)
+; COMMON-DAG: DBG_VALUE $rdx, $noreg, ![[S2]], !DIExpression(DW_OP_LLVM_fragment, 0, 64)
+; COMMON-DAG: DBG_VALUE $rcx, $noreg, ![[S2]], !DIExpression(DW_OP_LLVM_fragment, 64, 64)
+; COMMON-NOT: DBG_
 
 ; Then arguments are copied to virtual registers.
 ; CHECK-NOT: DBG_VALUE
@@ -43,8 +47,8 @@ define dso_local i32 @f(i64 %s1.coerce0, i64 %s1.coerce1, i64 %s2.coerce0, i64 %
 ; CHECK-NOT: DBG_VALUE
 
 ; We have the call to bar.
-; CHECK:     ADJCALLSTACKDOWN
-; CHECK:     CALL64pcrel32 @bar
+; COMMON:     ADJCALLSTACKDOWN
+; COMMON:     CALL64pcrel32 @bar
 
 ; After the call we expect to find new DBG_VALUE instructions for "s1".
 ; CHECK:     ADJCALLSTACKUP
@@ -52,9 +56,16 @@ define dso_local i32 @f(i64 %s1.coerce0, i64 %s1.coerce1, i64 %s2.coerce0, i64 %
 ; CHECK-DAG: DBG_VALUE %[[R2]], $noreg, ![[S1]], !DIExpression(DW_OP_LLVM_fragment, 0, 64)
 ; CHECK-DAG: DBG_VALUE %[[R1]], $noreg, ![[S1]], !DIExpression(DW_OP_LLVM_fragment, 64, 64)
 
-; And then no more DBG_VALUE instructions before the add.
-; CHECK-NOT: DBG_VALUE
-; CHECK:     ADD32rr
+;; In instruction referencing mode, we should refer to the instruction number
+;; of the earlier DBG_PHIs.
+; INSTRREF:     ADJCALLSTACKUP
+; INSTRREF-NOT: DBG_
+; INSTRREF-DAG: DBG_INSTR_REF 1, 0, ![[S1]], !DIExpression(DW_OP_LLVM_fragment, 0, 64)
+; INSTRREF-DAG: DBG_INSTR_REF 2, 0, ![[S1]], !DIExpression(DW_OP_LLVM_fragment, 64, 64)
+
+; And then no more DBG_ instructions before the add.
+; COMMON-NOT: DBG_
+; COMMON:     ADD32rr
 
 entry:
   %tmp.sroa.0 = alloca i64, align 8

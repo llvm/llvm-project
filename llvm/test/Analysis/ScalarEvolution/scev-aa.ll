@@ -212,6 +212,130 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
-; CHECK: 14 no alias responses
-; CHECK: 26 may alias responses
+; CHECK: Function: test_no_dom: 3 pointers, 0 call sites
+; CHECK: MayAlias:	double* %addr1, double* %data
+; CHECK: NoAlias:	double* %addr2, double* %data
+; CHECK: MayAlias:	double* %addr1, double* %addr2
+
+; In this case, checking %addr1 and %add2 involves two addrecs in two
+; different loops where neither dominates the other.  This used to crash
+; because we expected the arguments to an AddExpr to have a strict
+; dominance order.
+define void @test_no_dom(double* %data) {
+entry:
+  br label %for.body
+  
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.latch ]
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  br i1 undef, label %subloop1, label %subloop2
+
+subloop1:
+  %iv1 = phi i32 [0, %for.body], [%iv1.next, %subloop1]
+  %iv1.next = add i32 %iv1, 1
+  %addr1 = getelementptr double, double* %data, i32 %iv1
+  store double 0.0, double* %addr1
+  %cmp1 = icmp slt i32 %iv1, 200
+  br i1 %cmp1, label %subloop1, label %for.latch
+
+subloop2:
+  %iv2 = phi i32 [400, %for.body], [%iv2.next, %subloop2]
+  %iv2.next = add i32 %iv2, 1
+  %addr2 = getelementptr double, double* %data, i32 %iv2
+  store double 0.0, double* %addr2
+  %cmp2 = icmp slt i32 %iv2, 600
+  br i1 %cmp2, label %subloop2, label %for.latch
+
+for.latch:
+  br label %for.body
+
+for.end:
+  ret void
+}
+
+declare double* @get_addr(i32 %i)
+
+; CHECK: Function: test_no_dom2: 3 pointers, 2 call sites
+; CHECK: MayAlias:	double* %addr1, double* %data
+; CHECK: MayAlias:	double* %addr2, double* %data
+; CHECK: MayAlias:	double* %addr1, double* %addr2
+
+; In this case, checking %addr1 and %add2 involves two addrecs in two
+; different loops where neither dominates the other.  This is analogous
+; to test_no_dom, but involves SCEVUnknown as opposed to SCEVAddRecExpr.
+define void @test_no_dom2(double* %data) {
+entry:
+  br label %for.body
+  
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.latch ]
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  br i1 undef, label %subloop1, label %subloop2
+
+subloop1:
+  %iv1 = phi i32 [0, %for.body], [%iv1.next, %subloop1]
+  %iv1.next = add i32 %iv1, 1
+  %addr1 = call double* @get_addr(i32 %iv1)
+  store double 0.0, double* %addr1
+  %cmp1 = icmp slt i32 %iv1, 200
+  br i1 %cmp1, label %subloop1, label %for.latch
+
+subloop2:
+  %iv2 = phi i32 [400, %for.body], [%iv2.next, %subloop2]
+  %iv2.next = add i32 %iv2, 1
+  %addr2 = call double* @get_addr(i32 %iv2)
+  store double 0.0, double* %addr2
+  %cmp2 = icmp slt i32 %iv2, 600
+  br i1 %cmp2, label %subloop2, label %for.latch
+
+for.latch:
+  br label %for.body
+
+for.end:
+  ret void
+}
+
+
+; CHECK: Function: test_dom: 3 pointers, 0 call sites
+; CHECK: MayAlias:	double* %addr1, double* %data
+; CHECK: NoAlias:	double* %addr2, double* %data
+; CHECK: NoAlias:	double* %addr1, double* %addr2
+
+; This is a variant of test_non_dom where the second subloop is
+; dominated by the first.  As a result of that, we can nest the
+; addrecs and cancel out the %data base pointer.
+define void @test_dom(double* %data) {
+entry:
+  br label %for.body
+  
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.latch ]
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  br label %subloop1
+
+subloop1:
+  %iv1 = phi i32 [0, %for.body], [%iv1.next, %subloop1]
+  %iv1.next = add i32 %iv1, 1
+  %addr1 = getelementptr double, double* %data, i32 %iv1
+  store double 0.0, double* %addr1
+  %cmp1 = icmp slt i32 %iv1, 200
+  br i1 %cmp1, label %subloop1, label %subloop2
+
+subloop2:
+  %iv2 = phi i32 [400, %subloop1], [%iv2.next, %subloop2]
+  %iv2.next = add i32 %iv2, 1
+  %addr2 = getelementptr double, double* %data, i32 %iv2
+  store double 0.0, double* %addr2
+  %cmp2 = icmp slt i32 %iv2, 600
+  br i1 %cmp2, label %subloop2, label %for.latch
+
+for.latch:
+  br label %for.body
+
+for.end:
+  ret void
+}
+
+; CHECK: 17 no alias responses
+; CHECK: 32 may alias responses
 ; CHECK: 18 must alias responses

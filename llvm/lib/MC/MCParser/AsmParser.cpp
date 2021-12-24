@@ -356,8 +356,14 @@ private:
   /// return the contents from the current token up to the end or comma.
   StringRef parseStringToComma();
 
-  bool parseAssignment(StringRef Name, bool allow_redef,
-                       bool NoDeadStrip = false);
+  enum class AssignmentKind {
+    Set,
+    Equiv,
+    Equal,
+    LTOSetConditional,
+  };
+
+  bool parseAssignment(StringRef Name, AssignmentKind Kind);
 
   unsigned getBinOpPrecedence(AsmToken::TokenKind K,
                               MCBinaryExpr::Opcode &Kind);
@@ -534,6 +540,7 @@ private:
     DK_ADDRSIG_SYM,
     DK_PSEUDO_PROBE,
     DK_LTO_DISCARD,
+    DK_LTO_SET_CONDITIONAL,
     DK_END
   };
 
@@ -564,8 +571,8 @@ private:
                                const fltSemantics &); // ".single", ...
   bool parseDirectiveFill(); // ".fill"
   bool parseDirectiveZero(); // ".zero"
-  // ".set", ".equ", ".equiv"
-  bool parseDirectiveSet(StringRef IDVal, bool allow_redef);
+  // ".set", ".equ", ".equiv", ".lto_set_conditional"
+  bool parseDirectiveSet(StringRef IDVal, AssignmentKind Kind);
   bool parseDirectiveOrg(); // ".org"
   // ".align{,32}", ".p2align{,w,l}"
   bool parseDirectiveAlign(bool IsPow2, unsigned ValueSize);
@@ -1968,7 +1975,7 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
     // identifier '=' ... -> assignment statement
     Lex();
 
-    return parseAssignment(IDVal, true);
+    return parseAssignment(IDVal, AssignmentKind::Equal);
 
   default: // Normal instruction or directive.
     break;
@@ -2027,9 +2034,11 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
       break;
     case DK_SET:
     case DK_EQU:
-      return parseDirectiveSet(IDVal, true);
+      return parseDirectiveSet(IDVal, AssignmentKind::Set);
     case DK_EQUIV:
-      return parseDirectiveSet(IDVal, false);
+      return parseDirectiveSet(IDVal, AssignmentKind::Equiv);
+    case DK_LTO_SET_CONDITIONAL:
+      return parseDirectiveSet(IDVal, AssignmentKind::LTOSetConditional);
     case DK_ASCII:
       return parseDirectiveAscii(IDVal, false);
     case DK_ASCIZ:
@@ -2925,11 +2934,13 @@ void AsmParser::handleMacroExit() {
   ActiveMacros.pop_back();
 }
 
-bool AsmParser::parseAssignment(StringRef Name, bool allow_redef,
-                                bool NoDeadStrip) {
+bool AsmParser::parseAssignment(StringRef Name, AssignmentKind Kind) {
   MCSymbol *Sym;
   const MCExpr *Value;
-  if (MCParserUtils::parseAssignmentExpression(Name, allow_redef, *this, Sym,
+  SMLoc ExprLoc = getTok().getLoc();
+  bool AllowRedef =
+      Kind == AssignmentKind::Set || Kind == AssignmentKind::Equal;
+  if (MCParserUtils::parseAssignmentExpression(Name, AllowRedef, *this, Sym,
                                                Value))
     return true;
 
@@ -2944,9 +2955,22 @@ bool AsmParser::parseAssignment(StringRef Name, bool allow_redef,
     return false;
 
   // Do the assignment.
-  Out.emitAssignment(Sym, Value);
-  if (NoDeadStrip)
+  switch (Kind) {
+  case AssignmentKind::Equal:
+    Out.emitAssignment(Sym, Value);
+    break;
+  case AssignmentKind::Set:
+  case AssignmentKind::Equiv:
+    Out.emitAssignment(Sym, Value);
     Out.emitSymbolAttribute(Sym, MCSA_NoDeadStrip);
+    break;
+  case AssignmentKind::LTOSetConditional:
+    if (Value->getKind() != MCExpr::SymbolRef)
+      return Error(ExprLoc, "expected identifier");
+
+    Out.emitConditionalAssignment(Sym, Value);
+    break;
+  }
 
   return false;
 }
@@ -2998,10 +3022,11 @@ bool AsmParser::parseIdentifier(StringRef &Res) {
 ///   ::= .equ identifier ',' expression
 ///   ::= .equiv identifier ',' expression
 ///   ::= .set identifier ',' expression
-bool AsmParser::parseDirectiveSet(StringRef IDVal, bool allow_redef) {
+///   ::= .lto_set_conditional identifier ',' expression
+bool AsmParser::parseDirectiveSet(StringRef IDVal, AssignmentKind Kind) {
   StringRef Name;
   if (check(parseIdentifier(Name), "expected identifier") || parseComma() ||
-      parseAssignment(Name, allow_redef, true))
+      parseAssignment(Name, Kind))
     return true;
   return false;
 }
@@ -5581,6 +5606,7 @@ void AsmParser::initializeDirectiveKindMap() {
   DirectiveKindMap[".addrsig_sym"] = DK_ADDRSIG_SYM;
   DirectiveKindMap[".pseudoprobe"] = DK_PSEUDO_PROBE;
   DirectiveKindMap[".lto_discard"] = DK_LTO_DISCARD;
+  DirectiveKindMap[".lto_set_conditional"] = DK_LTO_SET_CONDITIONAL;
 }
 
 MCAsmMacro *AsmParser::parseMacroLikeBody(SMLoc DirectiveLoc) {
@@ -6012,12 +6038,13 @@ bool AsmParser::parseMSInlineAsm(
 
       bool isOutput = (i == 1) && Desc.mayStore();
       SMLoc Start = SMLoc::getFromPointer(SymName.data());
+      int64_t Size = Operand.isMemPlaceholder(Desc) ? 0 : SymName.size();
       if (isOutput) {
         ++InputIdx;
         OutputDecls.push_back(OpDecl);
         OutputDeclsAddressOf.push_back(Operand.needAddressOf());
         OutputConstraints.push_back(("=" + Constraint).str());
-        AsmStrRewrites.emplace_back(AOK_Output, Start, SymName.size());
+        AsmStrRewrites.emplace_back(AOK_Output, Start, Size);
       } else {
         InputDecls.push_back(OpDecl);
         InputDeclsAddressOf.push_back(Operand.needAddressOf());
@@ -6025,7 +6052,7 @@ bool AsmParser::parseMSInlineAsm(
         if (Desc.OpInfo[i - 1].isBranchTarget())
           AsmStrRewrites.emplace_back(AOK_CallInput, Start, SymName.size());
         else
-          AsmStrRewrites.emplace_back(AOK_Input, Start, SymName.size());
+          AsmStrRewrites.emplace_back(AOK_Input, Start, Size);
       }
     }
 
@@ -6140,13 +6167,17 @@ bool AsmParser::parseMSInlineAsm(
       OS << Ctx.getAsmInfo()->getPrivateLabelPrefix() << AR.Label;
       break;
     case AOK_Input:
-      OS << '$' << InputIdx++;
+      if (AR.Len)
+        OS << '$' << InputIdx;
+      ++InputIdx;
       break;
     case AOK_CallInput:
       OS << "${" << InputIdx++ << ":P}";
       break;
     case AOK_Output:
-      OS << '$' << OutputIdx++;
+      if (AR.Len)
+        OS << '$' << OutputIdx;
+      ++OutputIdx;
       break;
     case AOK_SizeDirective:
       switch (AR.Val) {

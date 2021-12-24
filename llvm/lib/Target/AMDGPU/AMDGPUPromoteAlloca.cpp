@@ -274,7 +274,7 @@ AMDGPUPromoteAllocaImpl::getLocalSizeYZ(IRBuilder<> &Builder) {
 
   // We could do a single 64-bit load here, but it's likely that the basic
   // 32-bit and extract sequence is already present, and it is probably easier
-  // to CSE this. The loads should be mergable later anyway.
+  // to CSE this. The loads should be mergeable later anyway.
   Value *GEPXY = Builder.CreateConstInBoundsGEP1_64(I32Ty, CastDispatchPtr, 1);
   LoadInst *LoadXY = Builder.CreateAlignedLoad(I32Ty, GEPXY, Align(4));
 
@@ -939,7 +939,7 @@ bool AMDGPUPromoteAllocaImpl::handleAlloca(AllocaInst &I, bool SufficientLDS) {
       GlobalVariable::NotThreadLocal,
       AMDGPUAS::LOCAL_ADDRESS);
   GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-  GV->setAlignment(MaybeAlign(I.getAlignment()));
+  GV->setAlignment(I.getAlign());
 
   Value *TCntY, *TCntZ;
 

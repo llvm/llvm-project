@@ -6,10 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Transforms/Bufferize.h"
 #include "PassDetail.h"
+
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
@@ -122,7 +124,7 @@ class BufferizeTensorReshapeOp : public OpConversionPattern<TensorReshapeOp> {
 public:
   using OpConversionPattern<TensorReshapeOp>::OpConversionPattern;
   using ReshapeOp = typename std::conditional_t<
-      std::is_same<TensorReshapeOp, TensorExpandShapeOp>::value,
+      std::is_same<TensorReshapeOp, tensor::ExpandShapeOp>::value,
       memref::ExpandShapeOp, memref::CollapseShapeOp>;
 
   LogicalResult
@@ -312,14 +314,15 @@ struct LinalgBufferizePass : public LinalgBufferizeBase<LinalgBufferizePass> {
   void runOnOperation() override {
     MLIRContext &context = getContext();
     ConversionTarget target(context);
-    BufferizeTypeConverter typeConverter;
+    bufferization::BufferizeTypeConverter typeConverter;
 
     // Mark all Standard operations legal.
     target.addLegalDialect<arith::ArithmeticDialect, AffineDialect,
                            memref::MemRefDialect, StandardOpsDialect,
                            tensor::TensorDialect>();
-    target.addIllegalOp<InitTensorOp, tensor::ExtractSliceOp,
-                        tensor::InsertSliceOp, PadTensorOp>();
+    target.addIllegalOp<InitTensorOp, PadTensorOp, tensor::CollapseShapeOp,
+                        tensor::ExpandShapeOp, tensor::ExtractSliceOp,
+                        tensor::InsertSliceOp>();
 
     // Mark all Linalg operations illegal as long as they work on tensors.
     auto isLegalOperation = [&](Operation *op) {
@@ -337,22 +340,23 @@ struct LinalgBufferizePass : public LinalgBufferizeBase<LinalgBufferizePass> {
       signalPassFailure();
   }
 };
-} // end anonymous namespace
+} // namespace
 
 std::unique_ptr<OperationPass<FuncOp>> mlir::createLinalgBufferizePass() {
   return std::make_unique<LinalgBufferizePass>();
 }
 
 void mlir::linalg::populateLinalgBufferizePatterns(
-    BufferizeTypeConverter &typeConverter, RewritePatternSet &patterns) {
+    bufferization::BufferizeTypeConverter &typeConverter,
+    RewritePatternSet &patterns) {
   // TODO: Drop this once tensor constants work in standard.
   // clang-format off
   patterns.add<
       BufferizeAnyLinalgOp,
       BufferizeFillOp,
       BufferizeInitTensorOp,
-      BufferizeTensorReshapeOp<TensorExpandShapeOp>,
-      BufferizeTensorReshapeOp<TensorCollapseShapeOp>,
+      BufferizeTensorReshapeOp<tensor::ExpandShapeOp>,
+      BufferizeTensorReshapeOp<tensor::CollapseShapeOp>,
       ExtractSliceOpConverter,
       InsertSliceOpConverter,
       VectorTransferReadOpConverter,

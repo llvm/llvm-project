@@ -1496,4 +1496,57 @@ TEST(JITDylibTest, GetDFSLinkOrderCycle) {
       << "Incorrect DFS link order for libC";
 }
 
+TEST_F(CoreAPIsStandardTest, RemoveJITDylibs) {
+  // Foo will be fully materialized.
+  cantFail(JD.define(absoluteSymbols({{Foo, FooSym}})));
+
+  // Bar should not be materialized at all.
+  bool BarMaterializerDestroyed = false;
+  cantFail(JD.define(std::make_unique<SimpleMaterializationUnit>(
+      SymbolFlagsMap({{Bar, BarSym.getFlags()}}),
+      [&](std::unique_ptr<MaterializationResponsibility> MR) {
+        llvm_unreachable("Unexpected call to materialize");
+      },
+      nullptr,
+      [](const JITDylib &, SymbolStringPtr Name) {
+        llvm_unreachable("Unexpected call to discard");
+      },
+      [&]() { BarMaterializerDestroyed = true; })));
+
+  // Baz will be in the materializing state.
+  std::unique_ptr<MaterializationResponsibility> BazMR;
+  cantFail(JD.define(std::make_unique<SimpleMaterializationUnit>(
+      SymbolFlagsMap({{Baz, BazSym.getFlags()}}),
+      [&](std::unique_ptr<MaterializationResponsibility> MR) {
+        BazMR = std::move(MR);
+      })));
+
+  // Lookup to force materialization of Foo.
+  cantFail(ES.lookup(makeJITDylibSearchOrder(&JD), SymbolLookupSet({Foo})));
+
+  // Start a lookup to force materialization of Baz.
+  bool BazLookupFailed = false;
+  ES.lookup(
+      LookupKind::Static, makeJITDylibSearchOrder(&JD), SymbolLookupSet({Baz}),
+      SymbolState::Ready,
+      [&](Expected<SymbolMap> Result) {
+        if (!Result) {
+          BazLookupFailed = true;
+          consumeError(Result.takeError());
+        }
+      },
+      NoDependenciesToRegister);
+
+  // Remove the JITDylib.
+  auto Err = ES.removeJITDylib(JD);
+  EXPECT_THAT_ERROR(std::move(Err), Succeeded());
+
+  EXPECT_TRUE(BarMaterializerDestroyed);
+  EXPECT_TRUE(BazLookupFailed);
+
+  EXPECT_THAT_ERROR(BazMR->notifyResolved({{Baz, BazSym}}), Failed());
+
+  BazMR->failMaterialization();
+}
+
 } // namespace

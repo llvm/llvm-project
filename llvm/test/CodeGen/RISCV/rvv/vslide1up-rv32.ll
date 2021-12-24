@@ -149,7 +149,7 @@ define <vscale x 8 x i8> @intrinsic_vslide1up_vx_nxv8i8_nxv8i8_i8(<vscale x 8 x 
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, mu
 ; CHECK-NEXT:    vslide1up.vx v9, v8, a0
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i8> @llvm.riscv.vslide1up.nxv8i8.i8(
@@ -195,7 +195,7 @@ define <vscale x 16 x i8> @intrinsic_vslide1up_vx_nxv16i8_nxv16i8_i8(<vscale x 1
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, mu
 ; CHECK-NEXT:    vslide1up.vx v10, v8, a0
-; CHECK-NEXT:    vmv2r.v v8, v10
+; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x i8> @llvm.riscv.vslide1up.nxv16i8.i8(
@@ -241,7 +241,7 @@ define <vscale x 32 x i8> @intrinsic_vslide1up_vx_nxv32i8_nxv32i8_i8(<vscale x 3
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m4, ta, mu
 ; CHECK-NEXT:    vslide1up.vx v12, v8, a0
-; CHECK-NEXT:    vmv4r.v v8, v12
+; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 32 x i8> @llvm.riscv.vslide1up.nxv32i8.i8(
@@ -287,7 +287,7 @@ define <vscale x 64 x i8> @intrinsic_vslide1up_vx_nxv64i8_nxv64i8_i8(<vscale x 6
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, mu
 ; CHECK-NEXT:    vslide1up.vx v16, v8, a0
-; CHECK-NEXT:    vmv8r.v v8, v16
+; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 64 x i8> @llvm.riscv.vslide1up.nxv64i8.i8(
@@ -425,7 +425,7 @@ define <vscale x 4 x i16> @intrinsic_vslide1up_vx_nxv4i16_nxv4i16_i16(<vscale x 
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
 ; CHECK-NEXT:    vslide1up.vx v9, v8, a0
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i16> @llvm.riscv.vslide1up.nxv4i16.i16(
@@ -471,7 +471,7 @@ define <vscale x 8 x i16> @intrinsic_vslide1up_vx_nxv8i16_nxv8i16_i16(<vscale x 
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, mu
 ; CHECK-NEXT:    vslide1up.vx v10, v8, a0
-; CHECK-NEXT:    vmv2r.v v8, v10
+; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i16> @llvm.riscv.vslide1up.nxv8i16.i16(
@@ -517,7 +517,7 @@ define <vscale x 16 x i16> @intrinsic_vslide1up_vx_nxv16i16_nxv16i16_i16(<vscale
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, mu
 ; CHECK-NEXT:    vslide1up.vx v12, v8, a0
-; CHECK-NEXT:    vmv4r.v v8, v12
+; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x i16> @llvm.riscv.vslide1up.nxv16i16.i16(
@@ -563,7 +563,7 @@ define <vscale x 32 x i16> @intrinsic_vslide1up_vx_nxv32i16_nxv32i16_i16(<vscale
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, mu
 ; CHECK-NEXT:    vslide1up.vx v16, v8, a0
-; CHECK-NEXT:    vmv8r.v v8, v16
+; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 32 x i16> @llvm.riscv.vslide1up.nxv32i16.i16(
@@ -655,7 +655,7 @@ define <vscale x 2 x i32> @intrinsic_vslide1up_vx_nxv2i32_nxv2i32_i32(<vscale x 
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
 ; CHECK-NEXT:    vslide1up.vx v9, v8, a0
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i32> @llvm.riscv.vslide1up.nxv2i32.i32(
@@ -701,7 +701,7 @@ define <vscale x 4 x i32> @intrinsic_vslide1up_vx_nxv4i32_nxv4i32_i32(<vscale x 
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
 ; CHECK-NEXT:    vslide1up.vx v10, v8, a0
-; CHECK-NEXT:    vmv2r.v v8, v10
+; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i32> @llvm.riscv.vslide1up.nxv4i32.i32(
@@ -747,7 +747,7 @@ define <vscale x 8 x i32> @intrinsic_vslide1up_vx_nxv8i32_nxv8i32_i32(<vscale x 
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m4, ta, mu
 ; CHECK-NEXT:    vslide1up.vx v12, v8, a0
-; CHECK-NEXT:    vmv4r.v v8, v12
+; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i32> @llvm.riscv.vslide1up.nxv8i32.i32(
@@ -793,7 +793,7 @@ define <vscale x 16 x i32> @intrinsic_vslide1up_vx_nxv16i32_nxv16i32_i32(<vscale
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, mu
 ; CHECK-NEXT:    vslide1up.vx v16, v8, a0
-; CHECK-NEXT:    vmv8r.v v8, v16
+; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x i32> @llvm.riscv.vslide1up.nxv16i32.i32(

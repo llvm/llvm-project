@@ -318,7 +318,7 @@ public:
   static lldb::CommandObjectSP
   GetCommandObject(CommandInterpreter &interpreter);
 
-  static lldb_private::ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "renderscript"; }
 
   static char ID;
 
@@ -410,9 +410,7 @@ public:
   bool GetOverrideExprOptions(clang::TargetOptions &prototype);
 
   // PluginInterface protocol
-  llvm::StringRef GetPluginName() override {
-    return GetPluginNameStatic().GetStringRef();
-  }
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   static bool GetKernelCoordinate(lldb_renderscript::RSCoordinate &coord,
                                   Thread *thread_ptr);

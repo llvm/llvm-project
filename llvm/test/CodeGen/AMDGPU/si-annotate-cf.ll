@@ -5,50 +5,50 @@
 define amdgpu_kernel void @break_inserted_outside_of_loop(i32 addrspace(1)* %out, i32 %a) {
 ; SI-LABEL: break_inserted_outside_of_loop:
 ; SI:       ; %bb.0: ; %main_body
-; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
-; SI-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SI-NEXT:    s_load_dword s2, s[0:1], 0xb
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
 ; SI-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, -1, 0
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    v_and_b32_e32 v0, s0, v0
+; SI-NEXT:    v_and_b32_e32 v0, s2, v0
 ; SI-NEXT:    v_and_b32_e32 v0, 1, v0
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; SI-NEXT:    s_mov_b64 s[0:1], 0
-; SI-NEXT:  BB0_1: ; %ENDIF
+; SI-NEXT:    s_mov_b64 s[2:3], 0
+; SI-NEXT:  .LBB0_1: ; %ENDIF
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
-; SI-NEXT:    s_and_b64 s[2:3], exec, vcc
-; SI-NEXT:    s_or_b64 s[0:1], s[2:3], s[0:1]
-; SI-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; SI-NEXT:    s_cbranch_execnz BB0_1
+; SI-NEXT:    s_and_b64 s[4:5], exec, vcc
+; SI-NEXT:    s_or_b64 s[2:3], s[4:5], s[2:3]
+; SI-NEXT:    s_andn2_b64 exec, exec, s[2:3]
+; SI-NEXT:    s_cbranch_execnz .LBB0_1
 ; SI-NEXT:  ; %bb.2: ; %ENDLOOP
-; SI-NEXT:    s_or_b64 exec, exec, s[0:1]
-; SI-NEXT:    s_mov_b32 s7, 0xf000
-; SI-NEXT:    s_mov_b32 s6, -1
+; SI-NEXT:    s_or_b64 exec, exec, s[2:3]
+; SI-NEXT:    s_mov_b32 s3, 0xf000
+; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    v_mov_b32_e32 v0, 0
-; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; FLAT-LABEL: break_inserted_outside_of_loop:
 ; FLAT:       ; %bb.0: ; %main_body
-; FLAT-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
-; FLAT-NEXT:    s_load_dword s0, s[0:1], 0x2c
+; FLAT-NEXT:    s_load_dword s2, s[0:1], 0x2c
+; FLAT-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; FLAT-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; FLAT-NEXT:    s_waitcnt lgkmcnt(0)
-; FLAT-NEXT:    v_and_b32_e32 v0, s0, v0
+; FLAT-NEXT:    v_and_b32_e32 v0, s2, v0
 ; FLAT-NEXT:    v_and_b32_e32 v0, 1, v0
 ; FLAT-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; FLAT-NEXT:    s_mov_b64 s[0:1], 0
-; FLAT-NEXT:  BB0_1: ; %ENDIF
+; FLAT-NEXT:    s_mov_b64 s[2:3], 0
+; FLAT-NEXT:  .LBB0_1: ; %ENDIF
 ; FLAT-NEXT:    ; =>This Inner Loop Header: Depth=1
-; FLAT-NEXT:    s_and_b64 s[2:3], exec, vcc
-; FLAT-NEXT:    s_or_b64 s[0:1], s[2:3], s[0:1]
-; FLAT-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; FLAT-NEXT:    s_cbranch_execnz BB0_1
+; FLAT-NEXT:    s_and_b64 s[4:5], exec, vcc
+; FLAT-NEXT:    s_or_b64 s[2:3], s[4:5], s[2:3]
+; FLAT-NEXT:    s_andn2_b64 exec, exec, s[2:3]
+; FLAT-NEXT:    s_cbranch_execnz .LBB0_1
 ; FLAT-NEXT:  ; %bb.2: ; %ENDLOOP
-; FLAT-NEXT:    s_or_b64 exec, exec, s[0:1]
-; FLAT-NEXT:    s_mov_b32 s7, 0xf000
-; FLAT-NEXT:    s_mov_b32 s6, -1
+; FLAT-NEXT:    s_or_b64 exec, exec, s[2:3]
+; FLAT-NEXT:    s_mov_b32 s3, 0xf000
+; FLAT-NEXT:    s_mov_b32 s2, -1
 ; FLAT-NEXT:    v_mov_b32_e32 v0, 0
-; FLAT-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; FLAT-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; FLAT-NEXT:    s_endpgm
 main_body:
   %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
@@ -72,21 +72,21 @@ define amdgpu_kernel void @phi_cond_outside_loop(i32 %b) {
 ; SI-NEXT:    s_mov_b64 s[2:3], 0
 ; SI-NEXT:    s_mov_b64 s[4:5], 0
 ; SI-NEXT:    s_and_saveexec_b64 s[6:7], vcc
-; SI-NEXT:    s_cbranch_execz BB1_2
+; SI-NEXT:    s_cbranch_execz .LBB1_2
 ; SI-NEXT:  ; %bb.1: ; %else
 ; SI-NEXT:    s_load_dword s0, s[0:1], 0x9
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_cmp_eq_u32 s0, 0
 ; SI-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; SI-NEXT:    s_and_b64 s[4:5], s[0:1], exec
-; SI-NEXT:  BB1_2: ; %endif
+; SI-NEXT:  .LBB1_2: ; %endif
 ; SI-NEXT:    s_or_b64 exec, exec, s[6:7]
-; SI-NEXT:  BB1_3: ; %loop
+; SI-NEXT:  .LBB1_3: ; %loop
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_and_b64 s[0:1], exec, s[4:5]
 ; SI-NEXT:    s_or_b64 s[2:3], s[0:1], s[2:3]
 ; SI-NEXT:    s_andn2_b64 exec, exec, s[2:3]
-; SI-NEXT:    s_cbranch_execnz BB1_3
+; SI-NEXT:    s_cbranch_execnz .LBB1_3
 ; SI-NEXT:  ; %bb.4: ; %exit
 ; SI-NEXT:    s_endpgm
 ;
@@ -97,21 +97,21 @@ define amdgpu_kernel void @phi_cond_outside_loop(i32 %b) {
 ; FLAT-NEXT:    s_mov_b64 s[2:3], 0
 ; FLAT-NEXT:    s_mov_b64 s[4:5], 0
 ; FLAT-NEXT:    s_and_saveexec_b64 s[6:7], vcc
-; FLAT-NEXT:    s_cbranch_execz BB1_2
+; FLAT-NEXT:    s_cbranch_execz .LBB1_2
 ; FLAT-NEXT:  ; %bb.1: ; %else
 ; FLAT-NEXT:    s_load_dword s0, s[0:1], 0x24
 ; FLAT-NEXT:    s_waitcnt lgkmcnt(0)
 ; FLAT-NEXT:    s_cmp_eq_u32 s0, 0
 ; FLAT-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; FLAT-NEXT:    s_and_b64 s[4:5], s[0:1], exec
-; FLAT-NEXT:  BB1_2: ; %endif
+; FLAT-NEXT:  .LBB1_2: ; %endif
 ; FLAT-NEXT:    s_or_b64 exec, exec, s[6:7]
-; FLAT-NEXT:  BB1_3: ; %loop
+; FLAT-NEXT:  .LBB1_3: ; %loop
 ; FLAT-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; FLAT-NEXT:    s_and_b64 s[0:1], exec, s[4:5]
 ; FLAT-NEXT:    s_or_b64 s[2:3], s[0:1], s[2:3]
 ; FLAT-NEXT:    s_andn2_b64 exec, exec, s[2:3]
-; FLAT-NEXT:    s_cbranch_execnz BB1_3
+; FLAT-NEXT:    s_cbranch_execnz .LBB1_3
 ; FLAT-NEXT:  ; %bb.4: ; %exit
 ; FLAT-NEXT:    s_endpgm
 entry:
@@ -184,58 +184,58 @@ define amdgpu_kernel void @loop_land_info_assert(i32 %c0, i32 %c1, i32 %c2, i32 
 ; SI-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s8
 ; SI-NEXT:    s_and_b64 s[4:5], exec, s[4:5]
 ; SI-NEXT:    v_mov_b32_e32 v0, 3
-; SI-NEXT:    s_branch BB3_4
-; SI-NEXT:  BB3_1: ; %Flow6
+; SI-NEXT:    s_branch .LBB3_4
+; SI-NEXT:  .LBB3_1: ; %Flow6
 ; SI-NEXT:    ; in Loop: Header=BB3_4 Depth=1
 ; SI-NEXT:    s_mov_b64 s[8:9], 0
-; SI-NEXT:  BB3_2: ; %Flow5
+; SI-NEXT:  .LBB3_2: ; %Flow5
 ; SI-NEXT:    ; in Loop: Header=BB3_4 Depth=1
 ; SI-NEXT:    s_mov_b64 s[12:13], 0
-; SI-NEXT:  BB3_3: ; %Flow
+; SI-NEXT:  .LBB3_3: ; %Flow
 ; SI-NEXT:    ; in Loop: Header=BB3_4 Depth=1
 ; SI-NEXT:    s_and_b64 vcc, exec, s[10:11]
-; SI-NEXT:    s_cbranch_vccnz BB3_8
-; SI-NEXT:  BB3_4: ; %while.cond
+; SI-NEXT:    s_cbranch_vccnz .LBB3_8
+; SI-NEXT:  .LBB3_4: ; %while.cond
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_mov_b64 s[12:13], -1
 ; SI-NEXT:    s_mov_b64 s[8:9], -1
 ; SI-NEXT:    s_mov_b64 s[10:11], -1
 ; SI-NEXT:    s_mov_b64 vcc, s[0:1]
-; SI-NEXT:    s_cbranch_vccz BB3_3
+; SI-NEXT:    s_cbranch_vccz .LBB3_3
 ; SI-NEXT:  ; %bb.5: ; %convex.exit
 ; SI-NEXT:    ; in Loop: Header=BB3_4 Depth=1
 ; SI-NEXT:    s_mov_b64 s[8:9], -1
 ; SI-NEXT:    s_mov_b64 s[10:11], -1
 ; SI-NEXT:    s_mov_b64 vcc, s[2:3]
-; SI-NEXT:    s_cbranch_vccz BB3_2
+; SI-NEXT:    s_cbranch_vccz .LBB3_2
 ; SI-NEXT:  ; %bb.6: ; %if.end
 ; SI-NEXT:    ; in Loop: Header=BB3_4 Depth=1
 ; SI-NEXT:    s_mov_b64 s[10:11], -1
 ; SI-NEXT:    s_mov_b64 vcc, s[4:5]
-; SI-NEXT:    s_cbranch_vccz BB3_1
+; SI-NEXT:    s_cbranch_vccz .LBB3_1
 ; SI-NEXT:  ; %bb.7: ; %if.else
 ; SI-NEXT:    ; in Loop: Header=BB3_4 Depth=1
 ; SI-NEXT:    s_mov_b64 s[10:11], 0
 ; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    s_branch BB3_1
-; SI-NEXT:  BB3_8: ; %loop.exit.guard4
+; SI-NEXT:    s_branch .LBB3_1
+; SI-NEXT:  .LBB3_8: ; %loop.exit.guard4
 ; SI-NEXT:    ; in Loop: Header=BB3_4 Depth=1
 ; SI-NEXT:    s_and_b64 vcc, exec, s[8:9]
-; SI-NEXT:    s_cbranch_vccz BB3_4
+; SI-NEXT:    s_cbranch_vccz .LBB3_4
 ; SI-NEXT:  ; %bb.9: ; %loop.exit.guard
 ; SI-NEXT:    s_and_b64 vcc, exec, s[12:13]
-; SI-NEXT:    s_cbranch_vccz BB3_13
+; SI-NEXT:    s_cbranch_vccz .LBB3_13
 ; SI-NEXT:  ; %bb.10: ; %for.cond.preheader
 ; SI-NEXT:    s_cmpk_lt_i32 s14, 0x3e8
-; SI-NEXT:    s_cbranch_scc0 BB3_13
+; SI-NEXT:    s_cbranch_scc0 .LBB3_13
 ; SI-NEXT:  ; %bb.11: ; %for.body
 ; SI-NEXT:    s_and_b64 vcc, exec, 0
-; SI-NEXT:  BB3_12: ; %self.loop
+; SI-NEXT:  .LBB3_12: ; %self.loop
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_mov_b64 vcc, vcc
-; SI-NEXT:    s_cbranch_vccz BB3_12
-; SI-NEXT:  BB3_13: ; %DummyReturnBlock
+; SI-NEXT:    s_cbranch_vccz .LBB3_12
+; SI-NEXT:  .LBB3_13: ; %DummyReturnBlock
 ; SI-NEXT:    s_endpgm
 ;
 ; FLAT-LABEL: loop_land_info_assert:
@@ -260,58 +260,58 @@ define amdgpu_kernel void @loop_land_info_assert(i32 %c0, i32 %c1, i32 %c2, i32 
 ; FLAT-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s8
 ; FLAT-NEXT:    s_and_b64 s[4:5], exec, s[4:5]
 ; FLAT-NEXT:    v_mov_b32_e32 v0, 3
-; FLAT-NEXT:    s_branch BB3_4
-; FLAT-NEXT:  BB3_1: ; %Flow6
+; FLAT-NEXT:    s_branch .LBB3_4
+; FLAT-NEXT:  .LBB3_1: ; %Flow6
 ; FLAT-NEXT:    ; in Loop: Header=BB3_4 Depth=1
 ; FLAT-NEXT:    s_mov_b64 s[8:9], 0
-; FLAT-NEXT:  BB3_2: ; %Flow5
+; FLAT-NEXT:  .LBB3_2: ; %Flow5
 ; FLAT-NEXT:    ; in Loop: Header=BB3_4 Depth=1
 ; FLAT-NEXT:    s_mov_b64 s[12:13], 0
-; FLAT-NEXT:  BB3_3: ; %Flow
+; FLAT-NEXT:  .LBB3_3: ; %Flow
 ; FLAT-NEXT:    ; in Loop: Header=BB3_4 Depth=1
 ; FLAT-NEXT:    s_and_b64 vcc, exec, s[10:11]
-; FLAT-NEXT:    s_cbranch_vccnz BB3_8
-; FLAT-NEXT:  BB3_4: ; %while.cond
+; FLAT-NEXT:    s_cbranch_vccnz .LBB3_8
+; FLAT-NEXT:  .LBB3_4: ; %while.cond
 ; FLAT-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; FLAT-NEXT:    s_mov_b64 s[12:13], -1
 ; FLAT-NEXT:    s_mov_b64 s[8:9], -1
 ; FLAT-NEXT:    s_mov_b64 s[10:11], -1
 ; FLAT-NEXT:    s_mov_b64 vcc, s[0:1]
-; FLAT-NEXT:    s_cbranch_vccz BB3_3
+; FLAT-NEXT:    s_cbranch_vccz .LBB3_3
 ; FLAT-NEXT:  ; %bb.5: ; %convex.exit
 ; FLAT-NEXT:    ; in Loop: Header=BB3_4 Depth=1
 ; FLAT-NEXT:    s_mov_b64 s[8:9], -1
 ; FLAT-NEXT:    s_mov_b64 s[10:11], -1
 ; FLAT-NEXT:    s_mov_b64 vcc, s[2:3]
-; FLAT-NEXT:    s_cbranch_vccz BB3_2
+; FLAT-NEXT:    s_cbranch_vccz .LBB3_2
 ; FLAT-NEXT:  ; %bb.6: ; %if.end
 ; FLAT-NEXT:    ; in Loop: Header=BB3_4 Depth=1
 ; FLAT-NEXT:    s_mov_b64 s[10:11], -1
 ; FLAT-NEXT:    s_mov_b64 vcc, s[4:5]
-; FLAT-NEXT:    s_cbranch_vccz BB3_1
+; FLAT-NEXT:    s_cbranch_vccz .LBB3_1
 ; FLAT-NEXT:  ; %bb.7: ; %if.else
 ; FLAT-NEXT:    ; in Loop: Header=BB3_4 Depth=1
 ; FLAT-NEXT:    s_mov_b64 s[10:11], 0
 ; FLAT-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; FLAT-NEXT:    s_waitcnt vmcnt(0)
-; FLAT-NEXT:    s_branch BB3_1
-; FLAT-NEXT:  BB3_8: ; %loop.exit.guard4
+; FLAT-NEXT:    s_branch .LBB3_1
+; FLAT-NEXT:  .LBB3_8: ; %loop.exit.guard4
 ; FLAT-NEXT:    ; in Loop: Header=BB3_4 Depth=1
 ; FLAT-NEXT:    s_and_b64 vcc, exec, s[8:9]
-; FLAT-NEXT:    s_cbranch_vccz BB3_4
+; FLAT-NEXT:    s_cbranch_vccz .LBB3_4
 ; FLAT-NEXT:  ; %bb.9: ; %loop.exit.guard
 ; FLAT-NEXT:    s_and_b64 vcc, exec, s[12:13]
-; FLAT-NEXT:    s_cbranch_vccz BB3_13
+; FLAT-NEXT:    s_cbranch_vccz .LBB3_13
 ; FLAT-NEXT:  ; %bb.10: ; %for.cond.preheader
 ; FLAT-NEXT:    s_cmpk_lt_i32 s14, 0x3e8
-; FLAT-NEXT:    s_cbranch_scc0 BB3_13
+; FLAT-NEXT:    s_cbranch_scc0 .LBB3_13
 ; FLAT-NEXT:  ; %bb.11: ; %for.body
 ; FLAT-NEXT:    s_and_b64 vcc, exec, 0
-; FLAT-NEXT:  BB3_12: ; %self.loop
+; FLAT-NEXT:  .LBB3_12: ; %self.loop
 ; FLAT-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; FLAT-NEXT:    s_mov_b64 vcc, vcc
-; FLAT-NEXT:    s_cbranch_vccz BB3_12
-; FLAT-NEXT:  BB3_13: ; %DummyReturnBlock
+; FLAT-NEXT:    s_cbranch_vccz .LBB3_12
+; FLAT-NEXT:  .LBB3_13: ; %DummyReturnBlock
 ; FLAT-NEXT:    s_endpgm
 entry:
   %cmp = icmp sgt i32 %c0, 0

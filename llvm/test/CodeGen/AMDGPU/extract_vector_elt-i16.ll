@@ -38,9 +38,9 @@ define amdgpu_kernel void @extract_vector_elt_v2i16_dynamic_sgpr(i16 addrspace(1
 }
 
 ; GCN-LABEL: {{^}}extract_vector_elt_v2i16_dynamic_vgpr:
-; GCN-DAG: s_load_dword [[VEC:s[0-9]+]]
 ; GCN-DAG: {{flat|buffer|global}}_load_dword [[IDX:v[0-9]+]]
-; GCN: v_lshlrev_b32_e32 [[IDX_SCALED:v[0-9]+]], 4, [[IDX]]
+; GCN-DAG: v_lshlrev_b32_e32 [[IDX_SCALED:v[0-9]+]], 4, [[IDX]]
+; GCN-DAG: s_load_dword [[VEC:s[0-9]+]]
 
 ; SI: v_lshr_b32_e32 [[ELT:v[0-9]+]], [[VEC]], [[IDX_SCALED]]
 ; VI: v_lshrrev_b32_e64 [[ELT:v[0-9]+]], [[IDX_SCALED]], [[VEC]]

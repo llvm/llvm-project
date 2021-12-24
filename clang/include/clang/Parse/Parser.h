@@ -2564,6 +2564,10 @@ private:
   /// full validation of the syntactic structure of attributes.
   bool TrySkipAttributes();
 
+  /// Diagnoses use of _ExtInt as being deprecated, and diagnoses use of
+  /// _BitInt as an extension when appropriate.
+  void DiagnoseBitIntUse(const Token &Tok);
+
 public:
   TypeResult
   ParseTypeName(SourceRange *Range = nullptr,
@@ -3204,6 +3208,10 @@ private:
 
   /// Parses OpenMP context selectors.
   bool parseOMPContextSelectors(SourceLocation Loc, OMPTraitInfo &TI);
+
+  /// Parse an 'append_args' clause for '#pragma omp declare variant'.
+  bool parseOpenMPAppendArgs(
+      SmallVectorImpl<OMPDeclareVariantAttr::InteropType> &InterOpTypes);
 
   /// Parse a `match` clause for an '#pragma omp declare variant'. Return true
   /// if there was an error.

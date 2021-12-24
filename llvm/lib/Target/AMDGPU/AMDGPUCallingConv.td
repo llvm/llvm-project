@@ -20,11 +20,13 @@ def CC_SI_Gfx : CallingConv<[
   // 0-3 are reserved for the stack buffer descriptor
   // 30-31 are reserved for the return address
   // 32 is reserved for the stack pointer
+  // 33 is reserved for the frame pointer
+  // 34 is reserved for the base pointer
   CCIfInReg<CCIfType<[f32, i32, f16, i16, v2i16, v2f16] , CCAssignToReg<[
     SGPR4, SGPR5, SGPR6, SGPR7,
     SGPR8, SGPR9, SGPR10, SGPR11, SGPR12, SGPR13, SGPR14, SGPR15,
     SGPR16, SGPR17, SGPR18, SGPR19, SGPR20, SGPR21, SGPR22, SGPR23,
-    SGPR24, SGPR25, SGPR26, SGPR27, SGPR28, SGPR29,
+    SGPR24, SGPR25, SGPR26, SGPR27, SGPR28, SGPR29
   ]>>>,
 
   CCIfNotInReg<CCIfType<[f32, i32, f16, i16, v2i16, v2f16] , CCAssignToReg<[
@@ -40,17 +42,6 @@ def CC_SI_Gfx : CallingConv<[
 def RetCC_SI_Gfx : CallingConv<[
   CCIfType<[i1], CCPromoteToType<i32>>,
   CCIfType<[i1, i16], CCIfExtend<CCPromoteToType<i32>>>,
-
-  // 0-3 are reserved for the stack buffer descriptor
-  // 32 is reserved for the stack pointer
-  CCIfInReg<CCIfType<[f32, i32, f16, i16, v2i16, v2f16] , CCAssignToReg<[
-    SGPR4, SGPR5, SGPR6, SGPR7,
-    SGPR8, SGPR9, SGPR10, SGPR11, SGPR12, SGPR13, SGPR14, SGPR15,
-    SGPR16, SGPR17, SGPR18, SGPR19, SGPR20, SGPR21, SGPR22, SGPR23,
-    SGPR24, SGPR25, SGPR26, SGPR27, SGPR28, SGPR29, SGPR30, SGPR31,
-    SGPR33, SGPR34, SGPR35, SGPR36, SGPR37, SGPR38, SGPR39,
-    SGPR40, SGPR41, SGPR42, SGPR43
-  ]>>>,
 
   CCIfNotInReg<CCIfType<[f32, i32, f16, i16, v2i16, v2f16] , CCAssignToReg<[
     VGPR0, VGPR1, VGPR2, VGPR3, VGPR4, VGPR5, VGPR6, VGPR7,
@@ -139,14 +130,6 @@ def RetCC_SI_Shader : CallingConv<[
   ]>>
 ]>;
 
-def CSR_AMDGPU_VGPRs_24_255 : CalleeSavedRegs<
-  (sequence "VGPR%u", 24, 255)
->;
-
-def CSR_AMDGPU_VGPRs_32_255 : CalleeSavedRegs<
-  (sequence "VGPR%u", 32, 255)
->;
-
 def CSR_AMDGPU_VGPRs : CalleeSavedRegs<
   // The CSRs & scratch-registers are interleaved at a split boundary of 8.
   (add (sequence "VGPR%u", 40, 47),
@@ -173,6 +156,14 @@ def CSR_AMDGPU_SGPRs_32_105 : CalleeSavedRegs<
   (sequence "SGPR%u", 32, 105)
 >;
 
+def CSR_AMDGPU_SI_Gfx_SGPRs_4_29 : CalleeSavedRegs<
+  (sequence "SGPR%u", 4, 29)
+>;
+
+def CSR_AMDGPU_SI_Gfx_SGPRs_64_105 : CalleeSavedRegs<
+  (sequence "SGPR%u", 64, 105)
+>;
+
 // Just to get the regmask, not for calling convention purposes.
 def CSR_AMDGPU_AllVGPRs : CalleeSavedRegs<
   (sequence "VGPR%u", 0, 255)
@@ -196,6 +187,14 @@ def CSR_AMDGPU_HighRegs : CalleeSavedRegs<
 
 def CSR_AMDGPU_HighRegs_With_AGPRs : CalleeSavedRegs<
   (add CSR_AMDGPU_HighRegs, CSR_AMDGPU_AGPRs_32_255)
+>;
+
+def CSR_AMDGPU_SI_Gfx : CalleeSavedRegs<
+  (add CSR_AMDGPU_VGPRs, CSR_AMDGPU_SI_Gfx_SGPRs_4_29, CSR_AMDGPU_SI_Gfx_SGPRs_64_105)
+>;
+
+def CSR_AMDGPU_SI_Gfx_With_AGPRs : CalleeSavedRegs<
+  (add CSR_AMDGPU_SI_Gfx, CSR_AMDGPU_AGPRs_32_255)
 >;
 
 def CSR_AMDGPU_NoRegs : CalleeSavedRegs<(add)>;

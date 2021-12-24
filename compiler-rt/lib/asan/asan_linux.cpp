@@ -107,7 +107,7 @@ uptr FindDynamicShadowStart() {
     return FindPremappedShadowStart(shadow_size_bytes);
 #endif
 
-  return MapDynamicShadow(shadow_size_bytes, SHADOW_SCALE,
+  return MapDynamicShadow(shadow_size_bytes, ASAN_SHADOW_SCALE,
                           /*min_shadow_base_alignment*/ 0, kHighMemEnd);
 }
 
@@ -128,8 +128,8 @@ void AsanCheckIncompatibleRT() {}
 #else
 static int FindFirstDSOCallback(struct dl_phdr_info *info, size_t size,
                                 void *data) {
-  VReport(2, "info->dlpi_name = %s\tinfo->dlpi_addr = %p\n",
-          info->dlpi_name, info->dlpi_addr);
+  VReport(2, "info->dlpi_name = %s\tinfo->dlpi_addr = %p\n", info->dlpi_name,
+          (void *)info->dlpi_addr);
 
   // Continue until the first dynamic library is found
   if (!info->dlpi_name || info->dlpi_name[0] == 0)

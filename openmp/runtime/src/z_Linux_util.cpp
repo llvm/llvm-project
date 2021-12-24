@@ -1234,7 +1234,7 @@ static void __kmp_atfork_child(void) {
   // affinity in the parent
   kmp_set_thread_affinity_mask_initial();
 #endif
-  // Set default not to bind threads tightly in the child (we’re expecting
+  // Set default not to bind threads tightly in the child (we're expecting
   // over-subscription after the fork and this can improve things for
   // scripting languages that use OpenMP inside process-parallel code).
   __kmp_affinity_type = affinity_none;
@@ -1801,8 +1801,12 @@ static int __kmp_get_xproc(void) {
 
   int r = 0;
 
-#if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
-    KMP_OS_OPENBSD || KMP_OS_HURD
+#if KMP_OS_LINUX
+
+  __kmp_type_convert(sysconf(_SC_NPROCESSORS_CONF), &(r));
+
+#elif KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_OPENBSD || \
+    KMP_OS_HURD
 
   __kmp_type_convert(sysconf(_SC_NPROCESSORS_ONLN), &(r));
 

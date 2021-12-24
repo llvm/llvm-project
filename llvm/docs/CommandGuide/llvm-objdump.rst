@@ -32,7 +32,7 @@ combined with other commands:
 .. option:: -D, --disassemble-all
 
   Disassemble all sections found in the input files.
-  
+
 .. option:: --disassemble-symbols=<symbol1[,symbol2,...]>
 
   Disassemble only the specified symbols. Takes demangled symbol names when
@@ -92,7 +92,7 @@ combined with other commands:
 .. option:: -u, --unwind-info
 
   Display the unwind info of the input(s).
-  
+
   This operation is only currently supported for COFF and Mach-O object files.
 
 .. option:: -v, --version
@@ -226,7 +226,7 @@ OPTIONS
 
   When printing a PC-relative global symbol reference, print it as an offset from the leading symbol.
 
-  Only works with an X86 linked image.
+  Only works with PowerPC objects or X86 linked images.
 
   Example:
     A non-symbolized branch instruction with a local target and pc-relative memory access like

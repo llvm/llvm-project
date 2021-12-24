@@ -253,7 +253,7 @@ void *AsanDoesNotSupportStaticLinkage() {
 }
 
 uptr FindDynamicShadowStart() {
-  return MapDynamicShadow(MemToShadowSize(kHighMemEnd), SHADOW_SCALE,
+  return MapDynamicShadow(MemToShadowSize(kHighMemEnd), ASAN_SHADOW_SCALE,
                           /*min_shadow_base_alignment*/ 0, kHighMemEnd);
 }
 

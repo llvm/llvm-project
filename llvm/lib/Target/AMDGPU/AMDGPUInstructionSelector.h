@@ -132,7 +132,6 @@ private:
   bool hasVgprParts(ArrayRef<GEPInfo> AddrInfo) const;
   void getAddrModeInfo(const MachineInstr &Load, const MachineRegisterInfo &MRI,
                        SmallVectorImpl<GEPInfo> &AddrInfo) const;
-  bool selectSMRD(MachineInstr &I, ArrayRef<GEPInfo> AddrInfo) const;
 
   void initM0(MachineInstr &I) const;
   bool selectG_LOAD_STORE_ATOMICRMW(MachineInstr &I) const;
@@ -300,6 +299,10 @@ private:
   bool isInlineImmediate32(int64_t Imm) const;
   bool isInlineImmediate64(int64_t Imm) const;
   bool isInlineImmediate(const APFloat &Imm) const;
+
+  // Returns true if TargetOpcode::G_AND MachineInstr `MI`'s masking of the
+  // shift amount operand's `ShAmtBits` bits is unneeded.
+  bool isUnneededShiftMask(const MachineInstr &MI, unsigned ShAmtBits) const;
 
   const SIInstrInfo &TII;
   const SIRegisterInfo &TRI;

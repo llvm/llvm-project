@@ -268,6 +268,11 @@ unsigned TargetTransformInfo::getAssumedAddrSpace(const Value *V) const {
   return TTIImpl->getAssumedAddrSpace(V);
 }
 
+std::pair<const Value *, unsigned>
+TargetTransformInfo::getPredicatedAddrSpace(const Value *V) const {
+  return TTIImpl->getPredicatedAddrSpace(V);
+}
+
 Value *TargetTransformInfo::rewriteIntrinsicWithAddressSpace(
     IntrinsicInst *II, Value *OldV, Value *NewV) const {
   return TTIImpl->rewriteIntrinsicWithAddressSpace(II, OldV, NewV);
@@ -604,6 +609,10 @@ Optional<unsigned> TargetTransformInfo::getMaxVScale() const {
   return TTIImpl->getMaxVScale();
 }
 
+Optional<unsigned> TargetTransformInfo::getVScaleForTuning() const {
+  return TTIImpl->getVScaleForTuning();
+}
+
 bool TargetTransformInfo::shouldMaximizeVectorBandwidth() const {
   return TTIImpl->shouldMaximizeVectorBandwidth();
 }
@@ -824,6 +833,15 @@ InstructionCost TargetTransformInfo::getVectorInstrCost(unsigned Opcode,
   return Cost;
 }
 
+InstructionCost TargetTransformInfo::getReplicationShuffleCost(
+    Type *EltTy, int ReplicationFactor, int VF, const APInt &DemandedDstElts,
+    TTI::TargetCostKind CostKind) {
+  InstructionCost Cost = TTIImpl->getReplicationShuffleCost(
+      EltTy, ReplicationFactor, VF, DemandedDstElts, CostKind);
+  assert(Cost >= 0 && "TTI should not produce negative costs!");
+  return Cost;
+}
+
 InstructionCost TargetTransformInfo::getMemoryOpCost(
     unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
     TTI::TargetCostKind CostKind, const Instruction *I) const {
@@ -964,10 +982,10 @@ bool TargetTransformInfo::areInlineCompatible(const Function *Caller,
   return TTIImpl->areInlineCompatible(Caller, Callee);
 }
 
-bool TargetTransformInfo::areFunctionArgsABICompatible(
+bool TargetTransformInfo::areTypesABICompatible(
     const Function *Caller, const Function *Callee,
-    SmallPtrSetImpl<Argument *> &Args) const {
-  return TTIImpl->areFunctionArgsABICompatible(Caller, Callee, Args);
+    const ArrayRef<Type *> &Types) const {
+  return TTIImpl->areTypesABICompatible(Caller, Callee, Types);
 }
 
 bool TargetTransformInfo::isIndexedLoadLegal(MemIndexedMode Mode,
@@ -1054,8 +1072,13 @@ bool TargetTransformInfo::supportsScalableVectors() const {
   return TTIImpl->supportsScalableVectors();
 }
 
-bool TargetTransformInfo::hasActiveVectorLength() const {
-  return TTIImpl->hasActiveVectorLength();
+bool TargetTransformInfo::enableScalableVectorization() const {
+  return TTIImpl->enableScalableVectorization();
+}
+
+bool TargetTransformInfo::hasActiveVectorLength(unsigned Opcode, Type *DataType,
+                                                Align Alignment) const {
+  return TTIImpl->hasActiveVectorLength(Opcode, DataType, Alignment);
 }
 
 InstructionCost

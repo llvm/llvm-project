@@ -73,6 +73,7 @@ class AArch64AsmPrinter : public AsmPrinter {
   StackMaps SM;
   FaultMaps FM;
   const AArch64Subtarget *STI;
+  bool ShouldEmitWeakSwiftAsyncExtendedFramePointerFlags = false;
 
 public:
   AArch64AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
@@ -186,6 +187,10 @@ private:
   using MInstToMCSymbol = std::map<const MachineInstr *, MCSymbol *>;
 
   MInstToMCSymbol LOHInstToLabel;
+
+  bool shouldEmitWeakSwiftAsyncExtendedFramePointerFlags() const override {
+    return ShouldEmitWeakSwiftAsyncExtendedFramePointerFlags;
+  }
 };
 
 } // end anonymous namespace
@@ -818,18 +823,9 @@ void AArch64AsmPrinter::emitJumpTableInfo() {
   const std::vector<MachineJumpTableEntry> &JT = MJTI->getJumpTables();
   if (JT.empty()) return;
 
-  const Function &F = MF->getFunction();
   const TargetLoweringObjectFile &TLOF = getObjFileLowering();
-  bool JTInDiffSection =
-      !STI->isTargetCOFF() ||
-      !TLOF.shouldPutJumpTableInFunctionSection(
-          MJTI->getEntryKind() == MachineJumpTableInfo::EK_LabelDifference32,
-          F);
-  if (JTInDiffSection) {
-      // Drop it in the readonly section.
-      MCSection *ReadOnlySec = TLOF.getSectionForJumpTable(F, TM);
-      OutStreamer->SwitchSection(ReadOnlySec);
-  }
+  MCSection *ReadOnlySec = TLOF.getSectionForJumpTable(MF->getFunction(), TM);
+  OutStreamer->SwitchSection(ReadOnlySec);
 
   auto AFI = MF->getInfo<AArch64FunctionInfo>();
   for (unsigned JTI = 0, e = JT.size(); JTI != e; ++JTI) {
@@ -1140,6 +1136,15 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   // Do any auto-generated pseudo lowerings.
   if (emitPseudoExpansionLowering(*OutStreamer, MI))
     return;
+
+  if (MI->getOpcode() == AArch64::ADRP) {
+    for (auto &Opd : MI->operands()) {
+      if (Opd.isSymbol() && StringRef(Opd.getSymbolName()) ==
+                                "swift_async_extendedFramePointerFlags") {
+        ShouldEmitWeakSwiftAsyncExtendedFramePointerFlags = true;
+      }
+    }
+  }
 
   if (AArch64FI->getLOHRelated().count(MI)) {
     // Generate a label for LOH related instruction

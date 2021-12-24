@@ -390,13 +390,14 @@ public:
       auto argAttrRange = argAttrs.template getAsRange<DictionaryAttr>();
       result.append(argAttrRange.begin(), argAttrRange.end());
     } else {
-      result.resize(getNumArguments());
+      result.append(getNumArguments(),
+                    DictionaryAttr::get(this->getOperation()->getContext()));
     }
   }
 
   /// Return the specified attribute, if present, for the argument at 'index',
   /// null otherwise.
-  Attribute getArgAttr(unsigned index, Identifier name) {
+  Attribute getArgAttr(unsigned index, StringAttr name) {
     auto argDict = getArgAttrDict(index);
     return argDict ? argDict.get(name) : nullptr;
   }
@@ -406,7 +407,7 @@ public:
   }
 
   template <typename AttrClass>
-  AttrClass getArgAttrOfType(unsigned index, Identifier name) {
+  AttrClass getArgAttrOfType(unsigned index, StringAttr name) {
     return getArgAttr(index, name).template dyn_cast_or_null<AttrClass>();
   }
   template <typename AttrClass>
@@ -436,19 +437,19 @@ public:
 
   /// If the an attribute exists with the specified name, change it to the new
   /// value. Otherwise, add a new attribute with the specified name/value.
-  void setArgAttr(unsigned index, Identifier name, Attribute value);
+  void setArgAttr(unsigned index, StringAttr name, Attribute value);
   void setArgAttr(unsigned index, StringRef name, Attribute value) {
-    setArgAttr(index, Identifier::get(name, this->getOperation()->getContext()),
+    setArgAttr(index, StringAttr::get(this->getOperation()->getContext(), name),
                value);
   }
 
   /// Remove the attribute 'name' from the argument at 'index'. Return the
   /// attribute that was erased, or nullptr if there was no attribute with such
   /// name.
-  Attribute removeArgAttr(unsigned index, Identifier name);
+  Attribute removeArgAttr(unsigned index, StringAttr name);
   Attribute removeArgAttr(unsigned index, StringRef name) {
     return removeArgAttr(
-        index, Identifier::get(name, this->getOperation()->getContext()));
+        index, StringAttr::get(this->getOperation()->getContext(), name));
   }
 
   //===--------------------------------------------------------------------===//
@@ -479,13 +480,14 @@ public:
       auto argAttrRange = argAttrs.template getAsRange<DictionaryAttr>();
       result.append(argAttrRange.begin(), argAttrRange.end());
     } else {
-      result.resize(getNumResults());
+      result.append(getNumResults(),
+                    DictionaryAttr::get(this->getOperation()->getContext()));
     }
   }
 
   /// Return the specified attribute, if present, for the result at 'index',
   /// null otherwise.
-  Attribute getResultAttr(unsigned index, Identifier name) {
+  Attribute getResultAttr(unsigned index, StringAttr name) {
     auto argDict = getResultAttrDict(index);
     return argDict ? argDict.get(name) : nullptr;
   }
@@ -495,7 +497,7 @@ public:
   }
 
   template <typename AttrClass>
-  AttrClass getResultAttrOfType(unsigned index, Identifier name) {
+  AttrClass getResultAttrOfType(unsigned index, StringAttr name) {
     return getResultAttr(index, name).template dyn_cast_or_null<AttrClass>();
   }
   template <typename AttrClass>
@@ -525,17 +527,17 @@ public:
 
   /// If the an attribute exists with the specified name, change it to the new
   /// value. Otherwise, add a new attribute with the specified name/value.
-  void setResultAttr(unsigned index, Identifier name, Attribute value);
+  void setResultAttr(unsigned index, StringAttr name, Attribute value);
   void setResultAttr(unsigned index, StringRef name, Attribute value) {
     setResultAttr(index,
-                  Identifier::get(name, this->getOperation()->getContext()),
+                  StringAttr::get(this->getOperation()->getContext(), name),
                   value);
   }
 
   /// Remove the attribute 'name' from the result at 'index'. Return the
   /// attribute that was erased, or nullptr if there was no attribute with such
   /// name.
-  Attribute removeResultAttr(unsigned index, Identifier name);
+  Attribute removeResultAttr(unsigned index, StringAttr name);
 
 protected:
   /// Returns the dictionary attribute corresponding to the argument at 'index'.
@@ -609,10 +611,10 @@ LogicalResult FunctionLike<ConcreteType>::verifyTrait(Operation *op) {
       // that they contain a dialect prefix in their name.  Call the dialect, if
       // registered, to verify the attributes themselves.
       for (auto attr : argAttrs) {
-        if (!attr.first.strref().contains('.'))
+        if (!attr.getName().strref().contains('.'))
           return funcOp.emitOpError(
               "arguments may only have dialect attributes");
-        if (Dialect *dialect = attr.first.getDialect()) {
+        if (Dialect *dialect = attr.getNameDialect()) {
           if (failed(dialect->verifyRegionArgAttribute(op, /*regionIndex=*/0,
                                                        /*argIndex=*/i, attr)))
             return failure();
@@ -643,9 +645,9 @@ LogicalResult FunctionLike<ConcreteType>::verifyTrait(Operation *op) {
       // that they contain a dialect prefix in their name.  Call the dialect, if
       // registered, to verify the attributes themselves.
       for (auto attr : resultAttrs) {
-        if (!attr.first.strref().contains('.'))
+        if (!attr.getName().strref().contains('.'))
           return funcOp.emitOpError("results may only have dialect attributes");
-        if (Dialect *dialect = attr.first.getDialect()) {
+        if (Dialect *dialect = attr.getNameDialect()) {
           if (failed(dialect->verifyRegionResultAttribute(op, /*regionIndex=*/0,
                                                           /*resultIndex=*/i,
                                                           attr)))
@@ -718,7 +720,7 @@ void FunctionLike<ConcreteType>::setArgAttrs(unsigned index,
 /// If the an attribute exists with the specified name, change it to the new
 /// value. Otherwise, add a new attribute with the specified name/value.
 template <typename ConcreteType>
-void FunctionLike<ConcreteType>::setArgAttr(unsigned index, Identifier name,
+void FunctionLike<ConcreteType>::setArgAttr(unsigned index, StringAttr name,
                                             Attribute value) {
   NamedAttrList attributes(getArgAttrDict(index));
   Attribute oldValue = attributes.set(name, value);
@@ -731,7 +733,7 @@ void FunctionLike<ConcreteType>::setArgAttr(unsigned index, Identifier name,
 /// Remove the attribute 'name' from the argument at 'index'.
 template <typename ConcreteType>
 Attribute FunctionLike<ConcreteType>::removeArgAttr(unsigned index,
-                                                    Identifier name) {
+                                                    StringAttr name) {
   // Build an attribute list and remove the attribute at 'name'.
   NamedAttrList attributes(getArgAttrDict(index));
   Attribute removedAttr = attributes.erase(name);
@@ -770,7 +772,7 @@ void FunctionLike<ConcreteType>::setResultAttrs(unsigned index,
 /// If the an attribute exists with the specified name, change it to the new
 /// value. Otherwise, add a new attribute with the specified name/value.
 template <typename ConcreteType>
-void FunctionLike<ConcreteType>::setResultAttr(unsigned index, Identifier name,
+void FunctionLike<ConcreteType>::setResultAttr(unsigned index, StringAttr name,
                                                Attribute value) {
   NamedAttrList attributes(getResultAttrDict(index));
   Attribute oldAttr = attributes.set(name, value);
@@ -783,7 +785,7 @@ void FunctionLike<ConcreteType>::setResultAttr(unsigned index, Identifier name,
 /// Remove the attribute 'name' from the result at 'index'.
 template <typename ConcreteType>
 Attribute FunctionLike<ConcreteType>::removeResultAttr(unsigned index,
-                                                       Identifier name) {
+                                                       StringAttr name) {
   // Build an attribute list and remove the attribute at 'name'.
   NamedAttrList attributes(getResultAttrDict(index));
   Attribute removedAttr = attributes.erase(name);
@@ -794,8 +796,8 @@ Attribute FunctionLike<ConcreteType>::removeResultAttr(unsigned index,
   return removedAttr;
 }
 
-} // end namespace OpTrait
+} // namespace OpTrait
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_IR_FUNCTIONSUPPORT_H

@@ -90,6 +90,7 @@ DECLARE_REAL(int, pthread_mutexattr_gettype, void *, void *)
 DECLARE_REAL(int, fflush, __sanitizer_FILE *fp)
 DECLARE_REAL_AND_INTERCEPTOR(void *, malloc, uptr size)
 DECLARE_REAL_AND_INTERCEPTOR(void, free, void *ptr)
+extern "C" int pthread_equal(void *t1, void *t2);
 extern "C" void *pthread_self();
 extern "C" void _exit(int status);
 #if !SANITIZER_NETBSD
@@ -176,6 +177,7 @@ struct ThreadSignalContext {
 struct AtExitCtx {
   void (*f)();
   void *arg;
+  uptr pc;
 };
 
 // InterceptorContext holds all global data required for interceptors.
@@ -366,7 +368,10 @@ TSAN_INTERCEPTOR(int, pause, int fake) {
   return BLOCK_REAL(pause)(fake);
 }
 
-static void at_exit_wrapper() {
+// Note: we specifically call the function in such strange way
+// with "installed_at" because in reports it will appear between
+// callback frames and the frame that installed the callback.
+static void at_exit_callback_installed_at() {
   AtExitCtx *ctx;
   {
     // Ensure thread-safety.
@@ -378,15 +383,21 @@ static void at_exit_wrapper() {
     interceptor_ctx()->AtExitStack.PopBack();
   }
 
-  Acquire(cur_thread(), (uptr)0, (uptr)ctx);
+  ThreadState *thr = cur_thread();
+  Acquire(thr, ctx->pc, (uptr)ctx);
+  FuncEntry(thr, ctx->pc);
   ((void(*)())ctx->f)();
+  FuncExit(thr);
   Free(ctx);
 }
 
-static void cxa_at_exit_wrapper(void *arg) {
-  Acquire(cur_thread(), 0, (uptr)arg);
+static void cxa_at_exit_callback_installed_at(void *arg) {
+  ThreadState *thr = cur_thread();
   AtExitCtx *ctx = (AtExitCtx*)arg;
+  Acquire(thr, ctx->pc, (uptr)arg);
+  FuncEntry(thr, ctx->pc);
   ((void(*)(void *arg))ctx->f)(ctx->arg);
+  FuncExit(thr);
   Free(ctx);
 }
 
@@ -400,7 +411,7 @@ TSAN_INTERCEPTOR(int, atexit, void (*f)()) {
   // We want to setup the atexit callback even if we are in ignored lib
   // or after fork.
   SCOPED_INTERCEPTOR_RAW(atexit, f);
-  return setup_at_exit_wrapper(thr, pc, (void(*)())f, 0, 0);
+  return setup_at_exit_wrapper(thr, GET_CALLER_PC(), (void (*)())f, 0, 0);
 }
 #endif
 
@@ -408,7 +419,7 @@ TSAN_INTERCEPTOR(int, __cxa_atexit, void (*f)(void *a), void *arg, void *dso) {
   if (in_symbolizer())
     return 0;
   SCOPED_TSAN_INTERCEPTOR(__cxa_atexit, f, arg, dso);
-  return setup_at_exit_wrapper(thr, pc, (void(*)())f, arg, dso);
+  return setup_at_exit_wrapper(thr, GET_CALLER_PC(), (void (*)())f, arg, dso);
 }
 
 static int setup_at_exit_wrapper(ThreadState *thr, uptr pc, void(*f)(),
@@ -416,6 +427,7 @@ static int setup_at_exit_wrapper(ThreadState *thr, uptr pc, void(*f)(),
   auto *ctx = New<AtExitCtx>();
   ctx->f = f;
   ctx->arg = arg;
+  ctx->pc = pc;
   Release(thr, pc, (uptr)ctx);
   // Memory allocation in __cxa_atexit will race with free during exit,
   // because we do not see synchronization around atexit callback list.
@@ -431,25 +443,27 @@ static int setup_at_exit_wrapper(ThreadState *thr, uptr pc, void(*f)(),
     // due to atexit_mu held on exit from the calloc interceptor.
     ScopedIgnoreInterceptors ignore;
 
-    res = REAL(__cxa_atexit)((void (*)(void *a))at_exit_wrapper, 0, 0);
+    res = REAL(__cxa_atexit)((void (*)(void *a))at_exit_callback_installed_at,
+                             0, 0);
     // Push AtExitCtx on the top of the stack of callback functions
     if (!res) {
       interceptor_ctx()->AtExitStack.PushBack(ctx);
     }
   } else {
-    res = REAL(__cxa_atexit)(cxa_at_exit_wrapper, ctx, dso);
+    res = REAL(__cxa_atexit)(cxa_at_exit_callback_installed_at, ctx, dso);
   }
   ThreadIgnoreEnd(thr);
   return res;
 }
 
 #if !SANITIZER_MAC && !SANITIZER_NETBSD
-static void on_exit_wrapper(int status, void *arg) {
+static void on_exit_callback_installed_at(int status, void *arg) {
   ThreadState *thr = cur_thread();
-  uptr pc = 0;
-  Acquire(thr, pc, (uptr)arg);
   AtExitCtx *ctx = (AtExitCtx*)arg;
+  Acquire(thr, ctx->pc, (uptr)arg);
+  FuncEntry(thr, ctx->pc);
   ((void(*)(int status, void *arg))ctx->f)(status, ctx->arg);
+  FuncExit(thr);
   Free(ctx);
 }
 
@@ -460,11 +474,12 @@ TSAN_INTERCEPTOR(int, on_exit, void(*f)(int, void*), void *arg) {
   auto *ctx = New<AtExitCtx>();
   ctx->f = (void(*)())f;
   ctx->arg = arg;
+  ctx->pc = GET_CALLER_PC();
   Release(thr, pc, (uptr)ctx);
   // Memory allocation in __cxa_atexit will race with free during exit,
   // because we do not see synchronization around atexit callback list.
   ThreadIgnoreBegin(thr, pc);
-  int res = REAL(on_exit)(on_exit_wrapper, ctx);
+  int res = REAL(on_exit)(on_exit_callback_installed_at, ctx);
   ThreadIgnoreEnd(thr);
   return res;
 }
@@ -880,10 +895,11 @@ static int guard_acquire(ThreadState *thr, uptr pc, atomic_uint32_t *g,
   }
 }
 
-static void guard_release(ThreadState *thr, uptr pc, atomic_uint32_t *g) {
+static void guard_release(ThreadState *thr, uptr pc, atomic_uint32_t *g,
+                          u32 v) {
   if (!thr->in_ignored_lib)
     Release(thr, pc, (uptr)g);
-  u32 old = atomic_exchange(g, kGuardDone, memory_order_release);
+  u32 old = atomic_exchange(g, v, memory_order_release);
   if (old & kGuardWaiter)
     FutexWake(g, 1 << 30);
 }
@@ -913,12 +929,12 @@ STDCXX_INTERCEPTOR(int, __cxa_guard_acquire, atomic_uint32_t *g) {
 
 STDCXX_INTERCEPTOR(void, __cxa_guard_release, atomic_uint32_t *g) {
   SCOPED_INTERCEPTOR_RAW(__cxa_guard_release, g);
-  guard_release(thr, pc, g);
+  guard_release(thr, pc, g, kGuardDone);
 }
 
 STDCXX_INTERCEPTOR(void, __cxa_guard_abort, atomic_uint32_t *g) {
   SCOPED_INTERCEPTOR_RAW(__cxa_guard_abort, g);
-  atomic_store(g, kGuardInit, memory_order_relaxed);
+  guard_release(thr, pc, g, kGuardInit);
 }
 
 namespace __tsan {
@@ -1515,7 +1531,7 @@ TSAN_INTERCEPTOR(int, pthread_once, void *o, void (*f)()) {
   // result in crashes due to too little stack space.
   if (guard_acquire(thr, pc, a, !SANITIZER_MAC)) {
     (*f)();
-    guard_release(thr, pc, a);
+    guard_release(thr, pc, a, kGuardDone);
   }
   return 0;
 }
@@ -1665,11 +1681,10 @@ TSAN_INTERCEPTOR(int, eventfd, unsigned initval, int flags) {
 
 #if SANITIZER_LINUX
 TSAN_INTERCEPTOR(int, signalfd, int fd, void *mask, int flags) {
-  SCOPED_TSAN_INTERCEPTOR(signalfd, fd, mask, flags);
-  if (fd >= 0)
-    FdClose(thr, pc, fd);
+  SCOPED_INTERCEPTOR_RAW(signalfd, fd, mask, flags);
+  FdClose(thr, pc, fd);
   fd = REAL(signalfd)(fd, mask, flags);
-  if (fd >= 0)
+  if (!MustIgnoreInterceptor(thr))
     FdSignalCreate(thr, pc, fd);
   return fd;
 }
@@ -1746,17 +1761,15 @@ TSAN_INTERCEPTOR(int, listen, int fd, int backlog) {
 }
 
 TSAN_INTERCEPTOR(int, close, int fd) {
-  SCOPED_TSAN_INTERCEPTOR(close, fd);
-  if (fd >= 0)
-    FdClose(thr, pc, fd);
+  SCOPED_INTERCEPTOR_RAW(close, fd);
+  FdClose(thr, pc, fd);
   return REAL(close)(fd);
 }
 
 #if SANITIZER_LINUX
 TSAN_INTERCEPTOR(int, __close, int fd) {
-  SCOPED_TSAN_INTERCEPTOR(__close, fd);
-  if (fd >= 0)
-    FdClose(thr, pc, fd);
+  SCOPED_INTERCEPTOR_RAW(__close, fd);
+  FdClose(thr, pc, fd);
   return REAL(__close)(fd);
 }
 #define TSAN_MAYBE_INTERCEPT___CLOSE TSAN_INTERCEPT(__close)
@@ -1767,13 +1780,10 @@ TSAN_INTERCEPTOR(int, __close, int fd) {
 // glibc guts
 #if SANITIZER_LINUX && !SANITIZER_ANDROID
 TSAN_INTERCEPTOR(void, __res_iclose, void *state, bool free_addr) {
-  SCOPED_TSAN_INTERCEPTOR(__res_iclose, state, free_addr);
+  SCOPED_INTERCEPTOR_RAW(__res_iclose, state, free_addr);
   int fds[64];
   int cnt = ExtractResolvFDs(state, fds, ARRAY_SIZE(fds));
-  for (int i = 0; i < cnt; i++) {
-    if (fds[i] > 0)
-      FdClose(thr, pc, fds[i]);
-  }
+  for (int i = 0; i < cnt; i++) FdClose(thr, pc, fds[i]);
   REAL(__res_iclose)(state, free_addr);
 }
 #define TSAN_MAYBE_INTERCEPT___RES_ICLOSE TSAN_INTERCEPT(__res_iclose)
@@ -1854,7 +1864,7 @@ TSAN_INTERCEPTOR(int, rmdir, char *path) {
 }
 
 TSAN_INTERCEPTOR(int, closedir, void *dirp) {
-  SCOPED_TSAN_INTERCEPTOR(closedir, dirp);
+  SCOPED_INTERCEPTOR_RAW(closedir, dirp);
   if (dirp) {
     int fd = dirfd(dirp);
     FdClose(thr, pc, fd);
@@ -1965,6 +1975,7 @@ static void ReportErrnoSpoiling(ThreadState *thr, uptr pc) {
 static void CallUserSignalHandler(ThreadState *thr, bool sync, bool acquire,
                                   int sig, __sanitizer_siginfo *info,
                                   void *uctx) {
+  CHECK(thr->slot);
   __sanitizer_sigaction *sigactions = interceptor_ctx()->sigactions;
   if (acquire)
     Acquire(thr, 0, (uptr)&sigactions[sig]);
@@ -2132,11 +2143,11 @@ TSAN_INTERCEPTOR(int, pthread_kill, void *tid, int sig) {
   ThreadSignalContext *sctx = SigCtx(thr);
   CHECK_NE(sctx, 0);
   int prev = sctx->int_signal_send;
-  if (tid == pthread_self()) {
+  bool self = pthread_equal(tid, pthread_self());
+  if (self)
     sctx->int_signal_send = sig;
-  }
   int res = REAL(pthread_kill)(tid, sig);
-  if (tid == pthread_self()) {
+  if (self) {
     CHECK_EQ(sctx->int_signal_send, sig);
     sctx->int_signal_send = prev;
   }
@@ -2189,7 +2200,7 @@ void atfork_child() {
     return;
   ThreadState *thr = cur_thread();
   const uptr pc = StackTrace::GetCurrentPc();
-  ForkChildAfter(thr, pc);
+  ForkChildAfter(thr, pc, true);
   FdOnFork(thr, pc);
 }
 
@@ -2210,6 +2221,37 @@ TSAN_INTERCEPTOR(int, vfork, int fake) {
   return WRAP(fork)(fake);
 }
 
+#if SANITIZER_LINUX
+TSAN_INTERCEPTOR(int, clone, int (*fn)(void *), void *stack, int flags,
+                 void *arg, int *parent_tid, void *tls, pid_t *child_tid) {
+  SCOPED_INTERCEPTOR_RAW(clone, fn, stack, flags, arg, parent_tid, tls,
+                         child_tid);
+  struct Arg {
+    int (*fn)(void *);
+    void *arg;
+  };
+  auto wrapper = +[](void *p) -> int {
+    auto *thr = cur_thread();
+    uptr pc = GET_CURRENT_PC();
+    // Start the background thread for fork, but not for clone.
+    // For fork we did this always and it's known to work (or user code has
+    // adopted). But if we do this for the new clone interceptor some code
+    // (sandbox2) fails. So model we used to do for years and don't start the
+    // background thread after clone.
+    ForkChildAfter(thr, pc, false);
+    FdOnFork(thr, pc);
+    auto *arg = static_cast<Arg *>(p);
+    return arg->fn(arg->arg);
+  };
+  ForkBefore(thr, pc);
+  Arg arg_wrapper = {fn, arg};
+  int pid = REAL(clone)(wrapper, stack, flags, &arg_wrapper, parent_tid, tls,
+                        child_tid);
+  ForkParentAfter(thr, pc);
+  return pid;
+}
+#endif
+
 #if !SANITIZER_MAC && !SANITIZER_ANDROID
 typedef int (*dl_iterate_phdr_cb_t)(__sanitizer_dl_phdr_info *info, SIZE_T size,
                                     void *data);
@@ -2221,7 +2263,7 @@ struct dl_iterate_phdr_data {
 };
 
 static bool IsAppNotRodata(uptr addr) {
-  return IsAppMem(addr) && *MemToShadow(addr) != kShadowRodata;
+  return IsAppMem(addr) && *MemToShadow(addr) != Shadow::kRodata;
 }
 
 static int dl_iterate_phdr_cb(__sanitizer_dl_phdr_info *info, SIZE_T size,
@@ -2327,8 +2369,17 @@ static void HandleRecvmsg(ThreadState *thr, uptr pc,
 #define COMMON_INTERCEPTOR_FILE_CLOSE(ctx, file) \
   if (file) {                                    \
     int fd = fileno_unlocked(file);              \
-    if (fd >= 0) FdClose(thr, pc, fd);           \
+    FdClose(thr, pc, fd);                        \
   }
+
+#define COMMON_INTERCEPTOR_DLOPEN(filename, flag) \
+  ({                                              \
+    CheckNoDeepBind(filename, flag);              \
+    ThreadIgnoreBegin(thr, 0);                    \
+    void *res = REAL(dlopen)(filename, flag);     \
+    ThreadIgnoreEnd(thr);                         \
+    res;                                          \
+  })
 
 #define COMMON_INTERCEPTOR_LIBRARY_LOADED(filename, handle) \
   libignore()->OnLibraryLoaded(filename)
@@ -2360,8 +2411,11 @@ static void HandleRecvmsg(ThreadState *thr, uptr pc,
 #define COMMON_INTERCEPTOR_SET_THREAD_NAME(ctx, name) \
   ThreadSetName(((TsanInterceptorContext *) ctx)->thr, name)
 
-#define COMMON_INTERCEPTOR_SET_PTHREAD_NAME(ctx, thread, name) \
-  __tsan::ctx->thread_registry.SetThreadNameByUserId(thread, name)
+#define COMMON_INTERCEPTOR_SET_PTHREAD_NAME(ctx, thread, name)         \
+  if (pthread_equal(pthread_self(), reinterpret_cast<void *>(thread))) \
+    COMMON_INTERCEPTOR_SET_THREAD_NAME(ctx, name);                     \
+  else                                                                 \
+    __tsan::ctx->thread_registry.SetThreadNameByUserId(thread, name)
 
 #define COMMON_INTERCEPTOR_BLOCK_REAL(name) BLOCK_REAL(name)
 
@@ -2522,7 +2576,7 @@ static USED void syscall_release(uptr pc, uptr addr) {
 }
 
 static void syscall_fd_close(uptr pc, int fd) {
-  TSAN_SYSCALL();
+  auto *thr = cur_thread();
   FdClose(thr, pc, fd);
 }
 
@@ -2544,7 +2598,7 @@ static void syscall_post_fork(uptr pc, int pid) {
   ThreadState *thr = cur_thread();
   if (pid == 0) {
     // child
-    ForkChildAfter(thr, pc);
+    ForkChildAfter(thr, pc, true);
     FdOnFork(thr, pc);
   } else if (pid > 0) {
     // parent
@@ -2841,6 +2895,9 @@ void InitializeInterceptors() {
 
   TSAN_INTERCEPT(fork);
   TSAN_INTERCEPT(vfork);
+#if SANITIZER_LINUX
+  TSAN_INTERCEPT(clone);
+#endif
 #if !SANITIZER_ANDROID
   TSAN_INTERCEPT(dl_iterate_phdr);
 #endif

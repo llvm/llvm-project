@@ -19,6 +19,7 @@ include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/VectorInterfaces.td"
 
@@ -27,6 +28,7 @@ def StandardOps_Dialect : Dialect {
   let cppNamespace = "::mlir";
   let dependentDialects = ["arith::ArithmeticDialect"];
   let hasConstantMaterializer = 1;
+  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 
 // Base class for Standard dialect ops.
@@ -41,33 +43,6 @@ class Std_Op<string mnemonic, list<OpTrait> traits = []> :
   let printer = [{ return ::print(p, *this); }];
   let verifier = [{ return ::verify(*this); }];
   let parser = [{ return ::parse$cppClass(parser, result); }];
-}
-
-// Base class for arithmetic cast operations. Requires single operand and
-// result, but does not constrain them to specific types.
-class ArithmeticCastOp<string mnemonic, list<OpTrait> traits = []> :
-    Std_Op<mnemonic, traits # ElementwiseMappable.traits # [
-      DeclareOpInterfaceMethods<VectorUnrollOpInterface>,
-      NoSideEffect, SameOperandsAndResultShape,
-      DeclareOpInterfaceMethods<CastOpInterface>]> {
-  let arguments = (ins AnyType:$in);
-  let results = (outs AnyType:$out);
-
-  let builders = [
-    OpBuilder<(ins "Value":$source, "Type":$destType), [{
-       impl::buildCastOp($_builder, $_state, source, destType);
-    }]>
-  ];
-
-  let parser = [{
-    return impl::parseCastOp(parser, result);
-  }];
-  let printer = [{
-    return printStandardCastOp(this->getOperation(), p);
-  }];
-
-  // Cast operations are fully verified by its traits.
-  let verifier = ?;
 }
 
 // Base class for unary ops. Requires single operand and result. Individual
@@ -107,10 +82,6 @@ class ArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
   let parser = [{
     return impl::parseOneResultSameOperandTypeOp(parser, result);
   }];
-
-  let printer = [{
-    return printStandardBinaryOp(this->getOperation(), p);
-  }];
 }
 
 // Base class for standard binary arithmetic operations.
@@ -119,10 +90,6 @@ class ArithmeticBinaryOp<string mnemonic, list<OpTrait> traits = []> :
 
   let parser = [{
     return impl::parseOneResultSameOperandTypeOp(parser, result);
-  }];
-
-  let printer = [{
-    return printStandardBinaryOp(this->getOperation(), p);
   }];
 }
 
@@ -253,7 +220,7 @@ def AtomicRMWOp : Std_Op<"atomic_rmw", [
 
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
-      return memref().getType().cast<MemRefType>();
+      return getMemref().getType().cast<MemRefType>();
     }
   }];
 }
@@ -295,18 +262,21 @@ def GenericAtomicRMWOp : Std_Op<"generic_atomic_rmw", [
   let results = (outs
       AnyTypeOf<[AnySignlessInteger, AnyFloat]>:$result);
 
-  let regions = (region AnyRegion:$body);
+  let regions = (region AnyRegion:$atomic_body);
 
   let skipDefaultBuilders = 1;
   let builders = [OpBuilder<(ins "Value":$memref, "ValueRange":$ivs)>];
 
   let extraClassDeclaration = [{
+    // TODO: remove post migrating callers.
+    Region &body() { return getRegion(); }
+
     // The value stored in memref[ivs].
     Value getCurrentValue() {
-      return body().getArgument(0);
+      return getRegion().getArgument(0);
     }
     MemRefType getMemRefType() {
-      return memref().getType().cast<MemRefType>();
+      return getMemref().getType().cast<MemRefType>();
     }
   }];
 }
@@ -363,7 +333,6 @@ def BranchOp : Std_Op<"br",
   let verifier = ?;
 
   let extraClassDeclaration = [{
-    Block *getDest();
     void setDest(Block *block);
 
     /// Erase the operand at 'index' from the operand list.
@@ -423,8 +392,6 @@ def CallOp : Std_Op<"call",
     }]>];
 
   let extraClassDeclaration = [{
-    StringRef getCallee() { return callee(); }
-    StringAttr getCalleeAttr() { return calleeAttr().getAttr(); }
     FunctionType getCalleeType();
 
     /// Get the argument operands to the called function.
@@ -454,7 +421,7 @@ def CallOp : Std_Op<"call",
 def CallIndirectOp : Std_Op<"call_indirect", [
       CallOpInterface,
       TypesMatchWith<"callee input types match argument types",
-                     "callee", "operands",
+                     "callee", "callee_operands",
                      "$_self.cast<FunctionType>().getInputs()">,
       TypesMatchWith<"callee result types match result types",
                      "callee", "results",
@@ -478,7 +445,8 @@ def CallIndirectOp : Std_Op<"call_indirect", [
     ```
   }];
 
-  let arguments = (ins FunctionType:$callee, Variadic<AnyType>:$operands);
+  let arguments = (ins FunctionType:$callee,
+                       Variadic<AnyType>:$callee_operands);
   let results = (outs Variadic<AnyType>:$results);
 
   let builders = [
@@ -489,7 +457,8 @@ def CallIndirectOp : Std_Op<"call_indirect", [
     }]>];
 
   let extraClassDeclaration = [{
-    Value getCallee() { return getOperand(0); }
+    // TODO: Remove once migrated callers.
+    ValueRange operands() { return getCalleeOperands(); }
 
     /// Get the argument operands to the called function.
     operand_range getArgOperands() {
@@ -506,7 +475,8 @@ def CallIndirectOp : Std_Op<"call_indirect", [
   let verifier = ?;
   let hasCanonicalizeMethod = 1;
 
-  let assemblyFormat = "$callee `(` $operands `)` attr-dict `:` type($callee)";
+  let assemblyFormat =
+    "$callee `(` $callee_operands `)` attr-dict `:` type($callee)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -570,19 +540,6 @@ def CondBranchOp : Std_Op<"cond_br",
     // These are the indices into the dests list.
     enum { trueIndex = 0, falseIndex = 1 };
 
-    // The condition operand is the first operand in the list.
-    Value getCondition() { return getOperand(0); }
-
-    /// Return the destination if the condition is true.
-    Block *getTrueDest() {
-      return getSuccessor(trueIndex);
-    }
-
-    /// Return the destination if the condition is false.
-    Block *getFalseDest() {
-      return getSuccessor(falseIndex);
-    }
-
     // Accessors for operands to the 'true' destination.
     Value getTrueOperand(unsigned idx) {
       assert(idx < getNumTrueOperands());
@@ -594,13 +551,11 @@ def CondBranchOp : Std_Op<"cond_br",
       setOperand(getTrueDestOperandIndex() + idx, value);
     }
 
-    operand_range getTrueOperands() { return trueDestOperands(); }
-
     unsigned getNumTrueOperands()  { return getTrueOperands().size(); }
 
     /// Erase the operand at 'index' from the true operand list.
     void eraseTrueOperand(unsigned index)  {
-      trueDestOperandsMutable().erase(index);
+      getTrueDestOperandsMutable().erase(index);
     }
 
     // Accessors for operands to the 'false' destination.
@@ -613,13 +568,14 @@ def CondBranchOp : Std_Op<"cond_br",
       setOperand(getFalseDestOperandIndex() + idx, value);
     }
 
-    operand_range getFalseOperands() { return falseDestOperands(); }
+    operand_range getTrueOperands() { return getTrueDestOperands(); }
+    operand_range getFalseOperands() { return getFalseDestOperands(); }
 
     unsigned getNumFalseOperands() { return getFalseOperands().size(); }
 
     /// Erase the operand at 'index' from the false operand list.
     void eraseFalseOperand(unsigned index) {
-      falseDestOperandsMutable().erase(index);
+      getFalseDestOperandsMutable().erase(index);
     }
 
   private:
@@ -694,196 +650,12 @@ def ConstantOp : Std_Op<"constant",
   ];
 
   let extraClassDeclaration = [{
-    Attribute getValue() { return (*this)->getAttr("value"); }
-
     /// Returns true if a constant operation can be built with the given value
     /// and result type.
     static bool isBuildableWith(Attribute value, Type type);
   }];
 
   let hasFolder = 1;
-}
-
-//===----------------------------------------------------------------------===//
-// MaxFOp
-//===----------------------------------------------------------------------===//
-
-def MaxFOp : FloatBinaryOp<"maxf"> {
-  let summary = "floating-point maximum operation";
-  let description = [{
-    Syntax:
-
-    ```
-    operation ::= ssa-id `=` `maxf` ssa-use `,` ssa-use `:` type
-    ```
-
-    Returns the maximum of the two arguments, treating -0.0 as less than +0.0.
-    If one of the arguments is NaN, then the result is also NaN.
-
-    Example:
-
-    ```mlir
-    // Scalar floating-point maximum.
-    %a = maxf %b, %c : f64
-    ```
-  }];
-}
-
-//===----------------------------------------------------------------------===//
-// MaxSIOp
-//===----------------------------------------------------------------------===//
-
-def MaxSIOp : IntBinaryOp<"maxsi"> {
-  let summary = "signed integer maximum operation";
-  let description = [{
-    Syntax:
-
-    ```
-    operation ::= ssa-id `=` `maxsi` ssa-use `,` ssa-use `:` type
-    ```
-
-    Returns the larger of %a and %b comparing the values as signed integers.
-
-    Example:
-
-    ```mlir
-    // Scalar signed integer maximum.
-    %a = maxsi %b, %c : i64
-    ```
-  }];
-  let hasFolder = 1;
-}
-
-//===----------------------------------------------------------------------===//
-// MaxUIOp
-//===----------------------------------------------------------------------===//
-
-def MaxUIOp : IntBinaryOp<"maxui"> {
-  let summary = "unsigned integer maximum operation";
-  let description = [{
-    Syntax:
-
-    ```
-    operation ::= ssa-id `=` `maxui` ssa-use `,` ssa-use `:` type
-    ```
-
-    Returns the larger of %a and %b comparing the values as unsigned integers.
-
-    Example:
-
-    ```mlir
-    // Scalar unsigned integer maximum.
-    %a = maxui %b, %c : i64
-    ```
-  }];
-  let hasFolder = 1;
-}
-
-//===----------------------------------------------------------------------===//
-// MinFOp
-//===----------------------------------------------------------------------===//
-
-def MinFOp : FloatBinaryOp<"minf"> {
-  let summary = "floating-point minimum operation";
-  let description = [{
-    Syntax:
-
-    ```
-    operation ::= ssa-id `=` `minf` ssa-use `,` ssa-use `:` type
-    ```
-
-    Returns the minimum of the two arguments, treating -0.0 as less than +0.0.
-    If one of the arguments is NaN, then the result is also NaN.
-
-    Example:
-
-    ```mlir
-    // Scalar floating-point minimum.
-    %a = minf %b, %c : f64
-    ```
-  }];
-}
-
-//===----------------------------------------------------------------------===//
-// MinSIOp
-//===----------------------------------------------------------------------===//
-
-def MinSIOp : IntBinaryOp<"minsi"> {
-  let summary = "signed integer minimum operation";
-  let description = [{
-    Syntax:
-
-    ```
-    operation ::= ssa-id `=` `minsi` ssa-use `,` ssa-use `:` type
-    ```
-
-    Returns the smaller of %a and %b comparing the values as signed integers.
-
-    Example:
-
-    ```mlir
-    // Scalar signed integer minimum.
-    %a = minsi %b, %c : i64
-    ```
-  }];
-  let hasFolder = 1;
-}
-
-//===----------------------------------------------------------------------===//
-// MinUIOp
-//===----------------------------------------------------------------------===//
-
-def MinUIOp : IntBinaryOp<"minui"> {
-  let summary = "unsigned integer minimum operation";
-  let description = [{
-    Syntax:
-
-    ```
-    operation ::= ssa-id `=` `minui` ssa-use `,` ssa-use `:` type
-    ```
-
-    Returns the smaller of %a and %b comparing the values as unsigned integers.
-
-    Example:
-
-    ```mlir
-    // Scalar unsigned integer minimum.
-    %a = minui %b, %c : i64
-    ```
-  }];
-  let hasFolder = 1;
-}
-
-//===----------------------------------------------------------------------===//
-// RankOp
-//===----------------------------------------------------------------------===//
-
-def RankOp : Std_Op<"rank", [NoSideEffect]> {
-  let summary = "rank operation";
-  let description = [{
-    The `rank` operation takes a memref/tensor operand and returns its rank.
-
-    Example:
-
-    ```mlir
-    %1 = rank %arg0 : tensor<*xf32>
-    %2 = rank %arg1 : memref<*xf32>
-    ```
-  }];
-
-  let arguments = (ins AnyTypeOf<[AnyRankedOrUnrankedMemRef, AnyTensor],
-                                 "any memref or tensor type">:$memrefOrTensor);
-  let results = (outs Index);
-  let verifier = ?;
-
-  let builders = [
-    OpBuilder<(ins "Value":$tensor), [{
-      auto indexType = $_builder.getIndexType();
-      build($_builder, $_state, indexType, tensor);
-    }]>];
-
-  let hasFolder = 1;
-  let assemblyFormat = "$memrefOrTensor attr-dict `:` type($memrefOrTensor)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -964,19 +736,6 @@ def SelectOp : Std_Op<"select", [NoSideEffect,
                        AnyType:$false_value);
   let results = (outs AnyType:$result);
 
-  let builders = [
-    OpBuilder<(ins "Value":$condition, "Value":$trueValue,
-      "Value":$falseValue), [{
-      $_state.addOperands({condition, trueValue, falseValue});
-      $_state.addTypes(trueValue.getType());
-    }]>];
-
-  let extraClassDeclaration = [{
-      Value getCondition() { return condition(); }
-      Value getTrueValue() { return true_value(); }
-      Value getFalseValue() { return false_value(); }
-  }];
-
   let hasCanonicalizer = 1;
   let hasFolder = 1;
 }
@@ -1017,7 +776,8 @@ def SplatOp : Std_Op<"splat", [NoSideEffect,
 
   let arguments = (ins AnyTypeOf<[AnySignlessInteger, Index, AnyFloat],
                                  "integer/index/float type">:$input);
-  let results = (outs AnyTypeOf<[AnyVector, AnyStaticShapeTensor]>:$aggregate);
+  let results = (outs AnyTypeOf<[AnyVectorOfAnyRank,
+                                 AnyStaticShapeTensor]>:$aggregate);
 
   let builders = [
     OpBuilder<(ins "Value":$element, "Type":$aggregateType),
@@ -1103,13 +863,13 @@ def SwitchOp : Std_Op<"switch",
   let extraClassDeclaration = [{
     /// Return the operands for the case destination block at the given index.
     OperandRange getCaseOperands(unsigned index) {
-      return caseOperands()[index];
+      return getCaseOperands()[index];
     }
 
     /// Return a mutable range of operands for the case destination block at the
     /// given index.
     MutableOperandRange getCaseOperandsMutable(unsigned index) {
-      return caseOperandsMutable()[index];
+      return getCaseOperandsMutable()[index];
     }
   }];
 

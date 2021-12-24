@@ -331,5 +331,68 @@ bool getCPUFeaturesExceptStdExt(CPUKind Kind,
   return true;
 }
 
+StringRef computeDefaultABIFromArch(const llvm::RISCVISAInfo &ISAInfo) {
+  if (ISAInfo.getXLen() == 32) {
+    if (ISAInfo.hasExtension("d"))
+      return "ilp32d";
+    if (ISAInfo.hasExtension("e"))
+      return "ilp32e";
+    return "ilp32";
+  } else if (ISAInfo.getXLen() == 64) {
+    if (ISAInfo.hasExtension("d"))
+      return "lp64d";
+    return "lp64";
+  }
+  llvm_unreachable("Invalid XLEN");
+}
+
 } // namespace RISCV
 } // namespace llvm
+
+// Parse a branch protection specification, which has the form
+//   standard | none | [bti,pac-ret[+b-key,+leaf]*]
+// Returns true on success, with individual elements of the specification
+// returned in `PBP`. Returns false in error, with `Err` containing
+// an erroneous part of the spec.
+bool ARM::parseBranchProtection(StringRef Spec, ParsedBranchProtection &PBP,
+                                StringRef &Err) {
+  PBP = {"none", "a_key", false};
+  if (Spec == "none")
+    return true; // defaults are ok
+
+  if (Spec == "standard") {
+    PBP.Scope = "non-leaf";
+    PBP.BranchTargetEnforcement = true;
+    return true;
+  }
+
+  SmallVector<StringRef, 4> Opts;
+  Spec.split(Opts, "+");
+  for (int I = 0, E = Opts.size(); I != E; ++I) {
+    StringRef Opt = Opts[I].trim();
+    if (Opt == "bti") {
+      PBP.BranchTargetEnforcement = true;
+      continue;
+    }
+    if (Opt == "pac-ret") {
+      PBP.Scope = "non-leaf";
+      for (; I + 1 != E; ++I) {
+        StringRef PACOpt = Opts[I + 1].trim();
+        if (PACOpt == "leaf")
+          PBP.Scope = "all";
+        else if (PACOpt == "b-key")
+          PBP.Key = "b_key";
+        else
+          break;
+      }
+      continue;
+    }
+    if (Opt == "")
+      Err = "<empty>";
+    else
+      Err = Opt;
+    return false;
+  }
+
+  return true;
+}

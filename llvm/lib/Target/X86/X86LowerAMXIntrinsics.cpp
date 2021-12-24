@@ -498,8 +498,8 @@ X86LowerAMXIntrinsics::lowerTileDP(Instruction *TileDP) {
   Value *ResAMX =
       Builder.CreateBitCast(ResVec, Type::getX86_AMXTy(Builder.getContext()));
   // Delete TileDP intrinsic and do some clean-up.
-  for (auto UI = TileDP->use_begin(), UE = TileDP->use_end(); UI != UE;) {
-    Instruction *I = cast<Instruction>((UI++)->getUser());
+  for (Use &U : llvm::make_early_inc_range(TileDP->uses())) {
+    Instruction *I = cast<Instruction>(U.getUser());
     Value *Vec;
     if (match(I, m_BitCast(m_Value(Vec)))) {
       I->replaceAllUsesWith(ResVec);
@@ -542,9 +542,8 @@ bool X86LowerAMXIntrinsics::lowerTileLoadStore(Instruction *TileLoadStore) {
     Value *ResAMX =
         Builder.CreateBitCast(ResVec, Type::getX86_AMXTy(Builder.getContext()));
     // Delete tileloadd6 intrinsic and do some clean-up
-    for (auto UI = TileLoadStore->use_begin(), UE = TileLoadStore->use_end();
-         UI != UE;) {
-      Instruction *I = cast<Instruction>((UI++)->getUser());
+    for (Use &U : llvm::make_early_inc_range(TileLoadStore->uses())) {
+      Instruction *I = cast<Instruction>(U.getUser());
       Value *Vec;
       if (match(I, m_BitCast(m_Value(Vec)))) {
         I->replaceAllUsesWith(ResVec);
@@ -561,8 +560,8 @@ bool X86LowerAMXIntrinsics::lowerTileZero(Instruction *TileZero) {
   IRBuilder<> Builder(TileZero);
   FixedVectorType *V256I32Ty = FixedVectorType::get(Builder.getInt32Ty(), 256);
   Value *VecZero = Constant::getNullValue(V256I32Ty);
-  for (auto UI = TileZero->use_begin(), UE = TileZero->use_end(); UI != UE;) {
-    Instruction *I = cast<Instruction>((UI++)->getUser());
+  for (Use &U : llvm::make_early_inc_range(TileZero->uses())) {
+    Instruction *I = cast<Instruction>(U.getUser());
     Value *Vec;
     if (match(I, m_BitCast(m_Value(Vec)))) {
       I->replaceAllUsesWith(VecZero);
@@ -631,6 +630,7 @@ bool X86LowerAMXIntrinsics::visit() {
   return C;
 }
 
+namespace {
 class X86LowerAMXIntrinsicsLegacyPass : public FunctionPass {
 public:
   static char ID;
@@ -665,6 +665,7 @@ public:
     AU.addRequired<TargetPassConfig>();
   }
 };
+} // namespace
 
 static const char PassName[] = "Lower AMX intrinsics";
 char X86LowerAMXIntrinsicsLegacyPass::ID = 0;

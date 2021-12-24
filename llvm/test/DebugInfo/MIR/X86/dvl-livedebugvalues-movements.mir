@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=x86_64-- -run-pass livedebugvalues -o - %s | FileCheck %s --implicit-check-not=DBG_VALUE_LIST
+# RUN: llc -mtriple=x86_64-- -run-pass livedebugvalues -o - %s -experimental-debug-variable-locations=false | FileCheck %s --implicit-check-not=DBG_VALUE_LIST
 #
 # The MIR below moves values from argument registers to callee saved registers,
 # moves that are followed by DBG_VALUEs and which should also result in
@@ -84,7 +84,7 @@ body:             |
 
   bb.2:
     liveins: $rbx, $rbp
-    RETQ $rbp, debug-location !17
+    RET64 $rbp, debug-location !17
 
 ...
 

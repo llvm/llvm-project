@@ -9,6 +9,7 @@
 #include "Annotations.h"
 #include "IncludeCleaner.h"
 #include "TestTU.h"
+#include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -16,7 +17,13 @@ namespace clang {
 namespace clangd {
 namespace {
 
+using ::testing::ElementsAre;
+using ::testing::IsEmpty;
 using ::testing::UnorderedElementsAre;
+
+std::string guard(llvm::StringRef Code) {
+  return "#pragma once\n" + Code.str();
+}
 
 TEST(IncludeCleaner, ReferencedLocations) {
   struct TestCase {
@@ -34,17 +41,36 @@ TEST(IncludeCleaner, ReferencedLocations) {
           "class ^X;",
           "X *y;",
       },
+      // When definition is available, we don't need to mark forward
+      // declarations as used.
+      {
+          "class ^X {}; class X;",
+          "X *y;",
+      },
+      // We already have forward declaration in the main file, the other
+      // non-definition declarations are not needed.
+      {
+          "class ^X {}; class X;",
+          "class X; X *y;",
+      },
+      // Nested class definition can occur outside of the parent class
+      // definition. Bar declaration should be visible to its definition but
+      // it will always be because we will mark Foo definition as used.
+      {
+          "class ^Foo { class Bar; };",
+          "class Foo::Bar {};",
+      },
       // TypedefType and UsingDecls
       {
           "using ^Integer = int;",
           "Integer x;",
       },
       {
-          "namespace ns { struct ^X; struct ^X {}; }",
-          "using ns::X;",
+          "namespace ns { void ^foo(); void ^foo() {} }",
+          "using ns::foo;",
       },
       {
-          "namespace ns { struct X; struct X {}; }",
+          "namespace ns { void foo(); void foo() {}; }",
           "using namespace ns;",
       },
       {
@@ -59,6 +85,10 @@ TEST(IncludeCleaner, ReferencedLocations) {
           "struct Foo; struct ^Foo{}; typedef Foo ^Bar;",
           "Bar b;",
       },
+      {
+          "namespace ns { class X; }; using ns::^X;",
+          "X *y;",
+      },
       // MemberExpr
       {
           "struct ^X{int ^a;}; X ^foo();",
@@ -71,13 +101,30 @@ TEST(IncludeCleaner, ReferencedLocations) {
       },
       // Redecls
       {
-          "class ^X; class ^X{}; class ^X;",
-          "X *y;",
+          "void ^foo(); void ^foo() {} void ^foo();",
+          "void bar() { foo(); }",
       },
       // Constructor
       {
           "struct ^X { ^X(int) {} int ^foo(); };",
           "auto x = X(42); auto y = x.foo();",
+      },
+      // Function
+      {
+          "void ^foo();",
+          "void foo() {}",
+      },
+      {
+          "void foo() {}",
+          "void foo();",
+      },
+      {
+          "inline void ^foo() {}",
+          "void bar() { foo(); }",
+      },
+      {
+          "int ^foo(char); int ^foo(float);",
+          "template<class T> int x = foo(T{});",
       },
       // Static function
       {
@@ -103,13 +150,58 @@ TEST(IncludeCleaner, ReferencedLocations) {
           "struct ^X { enum ^Language { ^CXX = 42, Python = 9000}; };",
           "int Lang = X::CXX;",
       },
+      // Macros
       {
-          // When a type is resolved via a using declaration, the
-          // UsingShadowDecl is not referenced in the AST.
-          // Compare to TypedefType, or DeclRefExpr::getFoundDecl().
-          //                                 ^
-          "namespace ns { class ^X; }; using ns::X;",
-          "X *y;",
+          "#define ^CONSTANT 42",
+          "int Foo = CONSTANT;",
+      },
+      {
+          "#define ^FOO x",
+          "#define BAR FOO",
+      },
+      {
+          "#define INNER 42\n"
+          "#define ^OUTER INNER",
+          "int answer = OUTER;",
+      },
+      {
+          "#define ^ANSWER 42\n"
+          "#define ^SQUARE(X) X * X",
+          "int sq = SQUARE(ANSWER);",
+      },
+      {
+          "#define ^FOO\n"
+          "#define ^BAR",
+          "#if 0\n"
+          "#if FOO\n"
+          "BAR\n"
+          "#endif\n"
+          "#endif",
+      },
+      // Misc
+      {
+          "enum class ^Color : int;",
+          "enum class Color : int {};",
+      },
+      {
+          "enum class Color : int {};",
+          "enum class Color : int;",
+      },
+      {
+          "enum class ^Color;",
+          "Color c;",
+      },
+      {
+          "enum class ^Color : int;",
+          "Color c;",
+      },
+      {
+          "enum class ^Color : char;",
+          "Color *c;",
+      },
+      {
+          "enum class ^Color : char {};",
+          "Color *c;",
       }};
   for (const TestCase &T : Cases) {
     TestTU TU;
@@ -139,7 +231,9 @@ TEST(IncludeCleaner, GetUnusedHeaders) {
     #include "b.h"
     #include "dir/c.h"
     #include "dir/unused.h"
+    #include "unguarded.h"
     #include "unused.h"
+    #include <system_header.h>
     void foo() {
       a();
       b();
@@ -148,39 +242,45 @@ TEST(IncludeCleaner, GetUnusedHeaders) {
   // Build expected ast with symbols coming from headers.
   TestTU TU;
   TU.Filename = "foo.cpp";
-  TU.AdditionalFiles["foo.h"] = "void foo();";
-  TU.AdditionalFiles["a.h"] = "void a();";
-  TU.AdditionalFiles["b.h"] = "void b();";
-  TU.AdditionalFiles["dir/c.h"] = "void c();";
-  TU.AdditionalFiles["unused.h"] = "void unused();";
-  TU.AdditionalFiles["dir/unused.h"] = "void dirUnused();";
-  TU.AdditionalFiles["not_included.h"] = "void notIncluded();";
-  TU.ExtraArgs = {"-I" + testPath("dir")};
+  TU.AdditionalFiles["foo.h"] = guard("void foo();");
+  TU.AdditionalFiles["a.h"] = guard("void a();");
+  TU.AdditionalFiles["b.h"] = guard("void b();");
+  TU.AdditionalFiles["dir/c.h"] = guard("void c();");
+  TU.AdditionalFiles["unused.h"] = guard("void unused();");
+  TU.AdditionalFiles["dir/unused.h"] = guard("void dirUnused();");
+  TU.AdditionalFiles["system/system_header.h"] = guard("");
+  TU.AdditionalFiles["unguarded.h"] = "";
+  TU.ExtraArgs.push_back("-I" + testPath("dir"));
+  TU.ExtraArgs.push_back("-isystem" + testPath("system"));
   TU.Code = MainFile.str();
   ParsedAST AST = TU.build();
-  auto UnusedIncludes = computeUnusedIncludes(AST);
-  std::vector<std::string> UnusedHeaders;
-  UnusedHeaders.reserve(UnusedIncludes.size());
-  for (const auto &Include : UnusedIncludes)
-    UnusedHeaders.push_back(Include->Written);
-  EXPECT_THAT(UnusedHeaders,
+  std::vector<std::string> UnusedIncludes;
+  for (const auto &Include : computeUnusedIncludes(AST))
+    UnusedIncludes.push_back(Include->Written);
+  EXPECT_THAT(UnusedIncludes,
               UnorderedElementsAre("\"unused.h\"", "\"dir/unused.h\""));
 }
 
-TEST(IncludeCleaner, ScratchBuffer) {
+TEST(IncludeCleaner, VirtualBuffers) {
   TestTU TU;
-  TU.Filename = "foo.cpp";
   TU.Code = R"cpp(
-    #include "macro_spelling_in_scratch_buffer.h"
+    #include "macros.h"
 
     using flags::FLAGS_FOO;
+
+    // CLI will come from a define, __llvm__ is a built-in. In both cases, they
+    // come from non-existent files.
+    int y = CLI + __llvm__;
 
     int concat(a, b) = 42;
     )cpp";
   // The pasting operator in combination with DEFINE_FLAG will create
   // ScratchBuffer with `flags::FLAGS_FOO` that will have FileID but not
   // FileEntry.
-  TU.AdditionalFiles["macro_spelling_in_scratch_buffer.h"] = R"cpp(
+  TU.AdditionalFiles["macros.h"] = R"cpp(
+    #ifndef MACROS_H
+    #define MACROS_H
+
     #define DEFINE_FLAG(X) \
     namespace flags { \
     int FLAGS_##X; \
@@ -190,22 +290,124 @@ TEST(IncludeCleaner, ScratchBuffer) {
 
     #define ab x
     #define concat(x, y) x##y
+
+    #endif // MACROS_H
     )cpp";
+  TU.ExtraArgs = {"-DCLI=42"};
   ParsedAST AST = TU.build();
   auto &SM = AST.getSourceManager();
   auto &Includes = AST.getIncludeStructure();
-  auto ReferencedFiles = findReferencedFiles(findReferencedLocations(AST), SM);
-  auto Entry = SM.getFileManager().getFile(
-      testPath("macro_spelling_in_scratch_buffer.h"));
-  ASSERT_TRUE(Entry);
-  auto FID = SM.translateFile(*Entry);
-  // No "<scratch space>" FID.
-  EXPECT_THAT(ReferencedFiles, UnorderedElementsAre(FID));
-  // Should not crash due to <scratch space> "files" missing from include
-  // structure.
-  EXPECT_THAT(
-      getUnused(Includes, translateToHeaderIDs(ReferencedFiles, Includes, SM)),
-      ::testing::IsEmpty());
+
+  auto ReferencedFiles =
+      findReferencedFiles(findReferencedLocations(AST), Includes, SM);
+  llvm::StringSet<> ReferencedFileNames;
+  for (FileID FID : ReferencedFiles)
+    ReferencedFileNames.insert(
+        SM.getPresumedLoc(SM.getLocForStartOfFile(FID)).getFilename());
+  // Note we deduped the names as _number_ of <built-in>s is uninteresting.
+  EXPECT_THAT(ReferencedFileNames.keys(),
+              UnorderedElementsAre("<built-in>", "<scratch space>",
+                                   testPath("macros.h")));
+
+  // Should not crash due to FileIDs that are not headers.
+  auto ReferencedHeaders = translateToHeaderIDs(ReferencedFiles, Includes, SM);
+  std::vector<llvm::StringRef> ReferencedHeaderNames;
+  for (IncludeStructure::HeaderID HID : ReferencedHeaders)
+    ReferencedHeaderNames.push_back(Includes.getRealPath(HID));
+  // Non-header files are gone at this point.
+  EXPECT_THAT(ReferencedHeaderNames, ElementsAre(testPath("macros.h")));
+
+  // Sanity check.
+  EXPECT_THAT(getUnused(AST, ReferencedHeaders), IsEmpty());
+}
+
+TEST(IncludeCleaner, DistinctUnguardedInclusions) {
+  TestTU TU;
+  TU.Code = R"cpp(
+    #include "bar.h"
+    #include "foo.h"
+
+    int LocalFoo = foo::Variable;
+    )cpp";
+  TU.AdditionalFiles["foo.h"] = R"cpp(
+    #pragma once
+    namespace foo {
+    #include "unguarded.h"
+    }
+    )cpp";
+  TU.AdditionalFiles["bar.h"] = R"cpp(
+    #pragma once
+    namespace bar {
+    #include "unguarded.h"
+    }
+    )cpp";
+  TU.AdditionalFiles["unguarded.h"] = R"cpp(
+    constexpr int Variable = 42;
+    )cpp";
+
+  ParsedAST AST = TU.build();
+
+  auto ReferencedFiles =
+      findReferencedFiles(findReferencedLocations(AST),
+                          AST.getIncludeStructure(), AST.getSourceManager());
+  llvm::StringSet<> ReferencedFileNames;
+  auto &SM = AST.getSourceManager();
+  for (FileID FID : ReferencedFiles)
+    ReferencedFileNames.insert(
+        SM.getPresumedLoc(SM.getLocForStartOfFile(FID)).getFilename());
+  // Note that we have uplifted the referenced files from non self-contained
+  // headers to header-guarded ones.
+  EXPECT_THAT(ReferencedFileNames.keys(),
+              UnorderedElementsAre(testPath("foo.h")));
+}
+
+TEST(IncludeCleaner, NonSelfContainedHeaders) {
+  TestTU TU;
+  TU.Code = R"cpp(
+    #include "foo.h"
+
+    int LocalFoo = Variable;
+    )cpp";
+  TU.AdditionalFiles["foo.h"] = R"cpp(
+    #pragma once
+    #include "indirection.h"
+    )cpp";
+  TU.AdditionalFiles["indirection.h"] = R"cpp(
+    #include "unguarded.h"
+    )cpp";
+  TU.AdditionalFiles["unguarded.h"] = R"cpp(
+    constexpr int Variable = 42;
+    )cpp";
+
+  ParsedAST AST = TU.build();
+
+  auto ReferencedFiles =
+      findReferencedFiles(findReferencedLocations(AST),
+                          AST.getIncludeStructure(), AST.getSourceManager());
+  llvm::StringSet<> ReferencedFileNames;
+  auto &SM = AST.getSourceManager();
+  for (FileID FID : ReferencedFiles)
+    ReferencedFileNames.insert(
+        SM.getPresumedLoc(SM.getLocForStartOfFile(FID)).getFilename());
+  // Note that we have uplifted the referenced files from non self-contained
+  // headers to header-guarded ones.
+  EXPECT_THAT(ReferencedFileNames.keys(),
+              UnorderedElementsAre(testPath("foo.h")));
+}
+
+TEST(IncludeCleaner, IWYUPragmas) {
+  TestTU TU;
+  TU.Code = R"cpp(
+    #include "behind_keep.h" // IWYU pragma: keep
+    )cpp";
+  TU.AdditionalFiles["behind_keep.h"] = guard("");
+  ParsedAST AST = TU.build();
+
+  auto ReferencedFiles =
+      findReferencedFiles(findReferencedLocations(AST),
+                          AST.getIncludeStructure(), AST.getSourceManager());
+  EXPECT_TRUE(ReferencedFiles.empty());
+  EXPECT_THAT(AST.getDiagnostics(), llvm::ValueIs(IsEmpty()));
 }
 
 } // namespace

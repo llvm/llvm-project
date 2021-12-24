@@ -153,6 +153,26 @@ def GPR : RegisterClass<"CSKY", [i32], 32,
   let Size = 32;
 }
 
+// Register class for R0 - R15.
+// Some 16-bit integer instructions can only access R0 - R15.
+def sGPR : RegisterClass<"CSKY", [i32], 32,
+                        (add (sequence "R%u", 0, 3), (sequence "R%u", 12, 13), R15,
+                        (sequence "R%u", 4, 11), R14)> {
+  let Size = 32;
+}
+
+// Register class for R0 - R7.
+// Some 16-bit integer instructions can only access R0 - R7.
+def mGPR : RegisterClass<"CSKY", [i32], 32,
+                        (add (sequence "R%u", 0, 7))> {
+  let Size = 32;
+}
+
+// Register class for SP only.
+def GPRSP : RegisterClass<"CSKY", [i32], 32, (add R14)> {
+  let Size = 32;
+}
+
 def GPRPair : RegisterClass<"CSKY", [untyped], 32, (add GPRTuple)> {
   let Size = 64;
 }

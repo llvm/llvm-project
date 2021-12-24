@@ -43,8 +43,8 @@ using namespace llvm::PatternMatch;
 
 bool RecurrenceDescriptor::areAllUsesIn(Instruction *I,
                                         SmallPtrSetImpl<Instruction *> &Set) {
-  for (User::op_iterator Use = I->op_begin(), E = I->op_end(); Use != E; ++Use)
-    if (!Set.count(dyn_cast<Instruction>(*Use)))
+  for (const Use &Use : I->operands())
+    if (!Set.count(dyn_cast<Instruction>(Use)))
       return false;
   return true;
 }
@@ -81,6 +81,7 @@ bool RecurrenceDescriptor::isArithmeticRecurrenceKind(RecurKind Kind) {
   case RecurKind::Mul:
   case RecurKind::FAdd:
   case RecurKind::FMul:
+  case RecurKind::FMulAdd:
     return true;
   }
   return false;
@@ -146,12 +147,9 @@ static std::pair<Type *, bool> computeRecurrenceType(Instruction *Exit,
       // meaning that we will use sext instructions instead of zext
       // instructions to restore the original type.
       IsSigned = true;
-      if (!Bits.isNegative())
-        // If the value is not known to be negative, we don't known what the
-        // upper bit is, and therefore, we don't know what kind of extend we
-        // will need. In this case, just increase the bit width by one bit and
-        // use sext.
-        ++MaxBitWidth;
+      // Make sure at at least one sign bit is included in the result, so it
+      // will get properly sign-extended.
+      ++MaxBitWidth;
     }
   }
   if (!isPowerOf2_64(MaxBitWidth))
@@ -197,18 +195,28 @@ static void collectCastsToIgnore(Loop *TheLoop, Instruction *Exit,
 // vectorizing floating point operations without unsafe math.
 static bool checkOrderedReduction(RecurKind Kind, Instruction *ExactFPMathInst,
                                   Instruction *Exit, PHINode *Phi) {
-  // Currently only FAdd is supported
-  if (Kind != RecurKind::FAdd)
+  // Currently only FAdd and FMulAdd are supported.
+  if (Kind != RecurKind::FAdd && Kind != RecurKind::FMulAdd)
     return false;
 
-  if (Exit->getOpcode() != Instruction::FAdd || Exit != ExactFPMathInst)
+  if (Kind == RecurKind::FAdd && Exit->getOpcode() != Instruction::FAdd)
+    return false;
+
+  if (Kind == RecurKind::FMulAdd &&
+      !RecurrenceDescriptor::isFMulAddIntrinsic(Exit))
+    return false;
+
+  // Ensure the exit instruction has only one user other than the reduction PHI
+  if (Exit != ExactFPMathInst || Exit->hasNUsesOrMore(3))
     return false;
 
   // The only pattern accepted is the one in which the reduction PHI
   // is used as one of the operands of the exit instruction
-  auto *LHS = Exit->getOperand(0);
-  auto *RHS = Exit->getOperand(1);
-  if (LHS != Phi && RHS != Phi)
+  auto *Op0 = Exit->getOperand(0);
+  auto *Op1 = Exit->getOperand(1);
+  if (Kind == RecurKind::FAdd && Op0 != Phi && Op1 != Phi)
+    return false;
+  if (Kind == RecurKind::FMulAdd && Exit->getOperand(2) != Phi)
     return false;
 
   LLVM_DEBUG(dbgs() << "LV: Found an ordered reduction: Phi: " << *Phi
@@ -388,6 +396,12 @@ bool RecurrenceDescriptor::AddReductionVar(PHINode *Phi, RecurKind Kind,
     SmallVector<Instruction *, 8> PHIs;
     for (User *U : Cur->users()) {
       Instruction *UI = cast<Instruction>(U);
+
+      // If the user is a call to llvm.fmuladd then the instruction can only be
+      // the final operand.
+      if (isFMulAddIntrinsic(UI))
+        if (Cur == UI->getOperand(0) || Cur == UI->getOperand(1))
+          return false;
 
       // Check if we found the exit user.
       BasicBlock *Parent = UI->getParent();
@@ -710,6 +724,9 @@ RecurrenceDescriptor::isRecurrenceInstr(Loop *L, PHINode *OrigPhi,
            I->hasNoSignedZeros())) &&
          isFPMinMaxRecurrenceKind(Kind)))
       return isMinMaxPattern(I, Kind, Prev);
+    else if (isFMulAddIntrinsic(I))
+      return InstDesc(Kind == RecurKind::FMulAdd, I,
+                      I->hasAllowReassoc() ? nullptr : I);
     return InstDesc(false, I);
   }
 }
@@ -802,6 +819,11 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
                       DT)) {
     LLVM_DEBUG(dbgs() << "Found a float conditional select reduction PHI."
                       << " PHI." << *Phi << "\n");
+    return true;
+  }
+  if (AddReductionVar(Phi, RecurKind::FMulAdd, TheLoop, FMF, RedDes, DB, AC,
+                      DT)) {
+    LLVM_DEBUG(dbgs() << "Found an FMulAdd reduction PHI." << *Phi << "\n");
     return true;
   }
   // Not a reduction of known type.
@@ -911,7 +933,7 @@ bool RecurrenceDescriptor::isFirstOrderRecurrence(
 /// This function returns the identity element (or neutral element) for
 /// the operation K.
 Value *RecurrenceDescriptor::getRecurrenceIdentity(RecurKind K, Type *Tp,
-                                                   FastMathFlags FMF) {
+                                                   FastMathFlags FMF) const {
   switch (K) {
   case RecurKind::Xor:
   case RecurKind::Add:
@@ -927,6 +949,7 @@ Value *RecurrenceDescriptor::getRecurrenceIdentity(RecurKind K, Type *Tp,
   case RecurKind::FMul:
     // Multiplying a number by 1 does not change it.
     return ConstantFP::get(Tp, 1.0L);
+  case RecurKind::FMulAdd:
   case RecurKind::FAdd:
     // Adding zero to a number does not change it.
     // FIXME: Ideally we should not need to check FMF for FAdd and should always
@@ -974,6 +997,7 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
     return Instruction::Xor;
   case RecurKind::FMul:
     return Instruction::FMul;
+  case RecurKind::FMulAdd:
   case RecurKind::FAdd:
     return Instruction::FAdd;
   case RecurKind::SMax:
@@ -1032,6 +1056,10 @@ RecurrenceDescriptor::getReductionOpChain(PHINode *Phi, Loop *L) const {
       return SelectPatternResult::isMinOrMax(
           matchSelectPattern(Cur, LHS, RHS).Flavor);
     }
+    // Recognize a call to the llvm.fmuladd intrinsic.
+    if (isFMulAddIntrinsic(Cur))
+      return true;
+
     return Cur->getOpcode() == RedOp;
   };
 

@@ -168,10 +168,9 @@ void ResourcePriorityQueue::initNodes(std::vector<SUnit> &sunits) {
   SUnits = &sunits;
   NumNodesSolelyBlocking.resize(SUnits->size(), 0);
 
-  for (unsigned i = 0, e = SUnits->size(); i != e; ++i) {
-    SUnit *SU = &(*SUnits)[i];
-    initNumRegDefsLeft(SU);
-    SU->NodeQueueId = 0;
+  for (SUnit &SU : *SUnits) {
+    initNumRegDefsLeft(&SU);
+    SU.NodeQueueId = 0;
   }
 }
 
@@ -268,8 +267,8 @@ bool ResourcePriorityQueue::isResourceAvailable(SUnit *SU) {
 
   // Now see if there are no other dependencies
   // to instructions already in the packet.
-  for (unsigned i = 0, e = Packet.size(); i != e; ++i)
-    for (const SDep &Succ : Packet[i]->Succs) {
+  for (const SUnit *S : Packet)
+    for (const SDep &Succ : S->Succs) {
       // Since we do not add pseudos to packets, might as well
       // ignore order deps.
       if (Succ.isCtrl())

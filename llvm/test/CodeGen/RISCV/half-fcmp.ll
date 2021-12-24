@@ -3,17 +3,31 @@
 ; RUN:   -target-abi ilp32f < %s | FileCheck -check-prefix=RV32IZFH %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-zfh -verify-machineinstrs \
 ; RUN:   -target-abi lp64f < %s | FileCheck -check-prefix=RV64IZFH %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-zfh -verify-machineinstrs \
+; RUN:   < %s | FileCheck -check-prefix=RV32I %s
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-zfh -verify-machineinstrs \
+; RUN:   < %s | FileCheck -check-prefix=RV64I %s
 
 define i32 @fcmp_false(half %a, half %b) nounwind {
 ; RV32IZFH-LABEL: fcmp_false:
 ; RV32IZFH:       # %bb.0:
-; RV32IZFH-NEXT:    mv a0, zero
+; RV32IZFH-NEXT:    li a0, 0
 ; RV32IZFH-NEXT:    ret
 ;
 ; RV64IZFH-LABEL: fcmp_false:
 ; RV64IZFH:       # %bb.0:
-; RV64IZFH-NEXT:    mv a0, zero
+; RV64IZFH-NEXT:    li a0, 0
 ; RV64IZFH-NEXT:    ret
+;
+; RV32I-LABEL: fcmp_false:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a0, 0
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: fcmp_false:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a0, 0
+; RV64I-NEXT:    ret
   %1 = fcmp false half %a, %b
   %2 = zext i1 %1 to i32
   ret i32 %2
@@ -29,6 +43,20 @@ define i32 @fcmp_oeq(half %a, half %b) nounwind {
 ; RV64IZFH:       # %bb.0:
 ; RV64IZFH-NEXT:    feq.h a0, fa0, fa1
 ; RV64IZFH-NEXT:    ret
+;
+; RV32I-LABEL: fcmp_oeq:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    fmv.h.x ft0, a1
+; RV32I-NEXT:    fmv.h.x ft1, a0
+; RV32I-NEXT:    feq.h a0, ft1, ft0
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: fcmp_oeq:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    fmv.h.x ft0, a1
+; RV64I-NEXT:    fmv.h.x ft1, a0
+; RV64I-NEXT:    feq.h a0, ft1, ft0
+; RV64I-NEXT:    ret
   %1 = fcmp oeq half %a, %b
   %2 = zext i1 %1 to i32
   ret i32 %2
@@ -44,6 +72,20 @@ define i32 @fcmp_ogt(half %a, half %b) nounwind {
 ; RV64IZFH:       # %bb.0:
 ; RV64IZFH-NEXT:    flt.h a0, fa1, fa0
 ; RV64IZFH-NEXT:    ret
+;
+; RV32I-LABEL: fcmp_ogt:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    fmv.h.x ft0, a0
+; RV32I-NEXT:    fmv.h.x ft1, a1
+; RV32I-NEXT:    flt.h a0, ft1, ft0
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: fcmp_ogt:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    fmv.h.x ft0, a0
+; RV64I-NEXT:    fmv.h.x ft1, a1
+; RV64I-NEXT:    flt.h a0, ft1, ft0
+; RV64I-NEXT:    ret
   %1 = fcmp ogt half %a, %b
   %2 = zext i1 %1 to i32
   ret i32 %2
@@ -59,6 +101,20 @@ define i32 @fcmp_oge(half %a, half %b) nounwind {
 ; RV64IZFH:       # %bb.0:
 ; RV64IZFH-NEXT:    fle.h a0, fa1, fa0
 ; RV64IZFH-NEXT:    ret
+;
+; RV32I-LABEL: fcmp_oge:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    fmv.h.x ft0, a0
+; RV32I-NEXT:    fmv.h.x ft1, a1
+; RV32I-NEXT:    fle.h a0, ft1, ft0
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: fcmp_oge:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    fmv.h.x ft0, a0
+; RV64I-NEXT:    fmv.h.x ft1, a1
+; RV64I-NEXT:    fle.h a0, ft1, ft0
+; RV64I-NEXT:    ret
   %1 = fcmp oge half %a, %b
   %2 = zext i1 %1 to i32
   ret i32 %2
@@ -74,6 +130,20 @@ define i32 @fcmp_olt(half %a, half %b) nounwind {
 ; RV64IZFH:       # %bb.0:
 ; RV64IZFH-NEXT:    flt.h a0, fa0, fa1
 ; RV64IZFH-NEXT:    ret
+;
+; RV32I-LABEL: fcmp_olt:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    fmv.h.x ft0, a1
+; RV32I-NEXT:    fmv.h.x ft1, a0
+; RV32I-NEXT:    flt.h a0, ft1, ft0
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: fcmp_olt:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    fmv.h.x ft0, a1
+; RV64I-NEXT:    fmv.h.x ft1, a0
+; RV64I-NEXT:    flt.h a0, ft1, ft0
+; RV64I-NEXT:    ret
   %1 = fcmp olt half %a, %b
   %2 = zext i1 %1 to i32
   ret i32 %2
@@ -89,6 +159,20 @@ define i32 @fcmp_ole(half %a, half %b) nounwind {
 ; RV64IZFH:       # %bb.0:
 ; RV64IZFH-NEXT:    fle.h a0, fa0, fa1
 ; RV64IZFH-NEXT:    ret
+;
+; RV32I-LABEL: fcmp_ole:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    fmv.h.x ft0, a1
+; RV32I-NEXT:    fmv.h.x ft1, a0
+; RV32I-NEXT:    fle.h a0, ft1, ft0
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: fcmp_ole:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    fmv.h.x ft0, a1
+; RV64I-NEXT:    fmv.h.x ft1, a0
+; RV64I-NEXT:    fle.h a0, ft1, ft0
+; RV64I-NEXT:    ret
   %1 = fcmp ole half %a, %b
   %2 = zext i1 %1 to i32
   ret i32 %2
@@ -108,6 +192,24 @@ define i32 @fcmp_one(half %a, half %b) nounwind {
 ; RV64IZFH-NEXT:    flt.h a1, fa1, fa0
 ; RV64IZFH-NEXT:    or a0, a1, a0
 ; RV64IZFH-NEXT:    ret
+;
+; RV32I-LABEL: fcmp_one:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    fmv.h.x ft0, a1
+; RV32I-NEXT:    fmv.h.x ft1, a0
+; RV32I-NEXT:    flt.h a0, ft1, ft0
+; RV32I-NEXT:    flt.h a1, ft0, ft1
+; RV32I-NEXT:    or a0, a1, a0
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: fcmp_one:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    fmv.h.x ft0, a1
+; RV64I-NEXT:    fmv.h.x ft1, a0
+; RV64I-NEXT:    flt.h a0, ft1, ft0
+; RV64I-NEXT:    flt.h a1, ft0, ft1
+; RV64I-NEXT:    or a0, a1, a0
+; RV64I-NEXT:    ret
   %1 = fcmp one half %a, %b
   %2 = zext i1 %1 to i32
   ret i32 %2
@@ -127,6 +229,24 @@ define i32 @fcmp_ord(half %a, half %b) nounwind {
 ; RV64IZFH-NEXT:    feq.h a1, fa0, fa0
 ; RV64IZFH-NEXT:    and a0, a1, a0
 ; RV64IZFH-NEXT:    ret
+;
+; RV32I-LABEL: fcmp_ord:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    fmv.h.x ft0, a0
+; RV32I-NEXT:    fmv.h.x ft1, a1
+; RV32I-NEXT:    feq.h a0, ft1, ft1
+; RV32I-NEXT:    feq.h a1, ft0, ft0
+; RV32I-NEXT:    and a0, a1, a0
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: fcmp_ord:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    fmv.h.x ft0, a0
+; RV64I-NEXT:    fmv.h.x ft1, a1
+; RV64I-NEXT:    feq.h a0, ft1, ft1
+; RV64I-NEXT:    feq.h a1, ft0, ft0
+; RV64I-NEXT:    and a0, a1, a0
+; RV64I-NEXT:    ret
   %1 = fcmp ord half %a, %b
   %2 = zext i1 %1 to i32
   ret i32 %2
@@ -148,6 +268,26 @@ define i32 @fcmp_ueq(half %a, half %b) nounwind {
 ; RV64IZFH-NEXT:    or a0, a1, a0
 ; RV64IZFH-NEXT:    xori a0, a0, 1
 ; RV64IZFH-NEXT:    ret
+;
+; RV32I-LABEL: fcmp_ueq:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    fmv.h.x ft0, a1
+; RV32I-NEXT:    fmv.h.x ft1, a0
+; RV32I-NEXT:    flt.h a0, ft1, ft0
+; RV32I-NEXT:    flt.h a1, ft0, ft1
+; RV32I-NEXT:    or a0, a1, a0
+; RV32I-NEXT:    xori a0, a0, 1
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: fcmp_ueq:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    fmv.h.x ft0, a1
+; RV64I-NEXT:    fmv.h.x ft1, a0
+; RV64I-NEXT:    flt.h a0, ft1, ft0
+; RV64I-NEXT:    flt.h a1, ft0, ft1
+; RV64I-NEXT:    or a0, a1, a0
+; RV64I-NEXT:    xori a0, a0, 1
+; RV64I-NEXT:    ret
   %1 = fcmp ueq half %a, %b
   %2 = zext i1 %1 to i32
   ret i32 %2
@@ -165,6 +305,22 @@ define i32 @fcmp_ugt(half %a, half %b) nounwind {
 ; RV64IZFH-NEXT:    fle.h a0, fa0, fa1
 ; RV64IZFH-NEXT:    xori a0, a0, 1
 ; RV64IZFH-NEXT:    ret
+;
+; RV32I-LABEL: fcmp_ugt:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    fmv.h.x ft0, a1
+; RV32I-NEXT:    fmv.h.x ft1, a0
+; RV32I-NEXT:    fle.h a0, ft1, ft0
+; RV32I-NEXT:    xori a0, a0, 1
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: fcmp_ugt:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    fmv.h.x ft0, a1
+; RV64I-NEXT:    fmv.h.x ft1, a0
+; RV64I-NEXT:    fle.h a0, ft1, ft0
+; RV64I-NEXT:    xori a0, a0, 1
+; RV64I-NEXT:    ret
   %1 = fcmp ugt half %a, %b
   %2 = zext i1 %1 to i32
   ret i32 %2
@@ -182,6 +338,22 @@ define i32 @fcmp_uge(half %a, half %b) nounwind {
 ; RV64IZFH-NEXT:    flt.h a0, fa0, fa1
 ; RV64IZFH-NEXT:    xori a0, a0, 1
 ; RV64IZFH-NEXT:    ret
+;
+; RV32I-LABEL: fcmp_uge:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    fmv.h.x ft0, a1
+; RV32I-NEXT:    fmv.h.x ft1, a0
+; RV32I-NEXT:    flt.h a0, ft1, ft0
+; RV32I-NEXT:    xori a0, a0, 1
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: fcmp_uge:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    fmv.h.x ft0, a1
+; RV64I-NEXT:    fmv.h.x ft1, a0
+; RV64I-NEXT:    flt.h a0, ft1, ft0
+; RV64I-NEXT:    xori a0, a0, 1
+; RV64I-NEXT:    ret
   %1 = fcmp uge half %a, %b
   %2 = zext i1 %1 to i32
   ret i32 %2
@@ -199,6 +371,22 @@ define i32 @fcmp_ult(half %a, half %b) nounwind {
 ; RV64IZFH-NEXT:    fle.h a0, fa1, fa0
 ; RV64IZFH-NEXT:    xori a0, a0, 1
 ; RV64IZFH-NEXT:    ret
+;
+; RV32I-LABEL: fcmp_ult:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    fmv.h.x ft0, a0
+; RV32I-NEXT:    fmv.h.x ft1, a1
+; RV32I-NEXT:    fle.h a0, ft1, ft0
+; RV32I-NEXT:    xori a0, a0, 1
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: fcmp_ult:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    fmv.h.x ft0, a0
+; RV64I-NEXT:    fmv.h.x ft1, a1
+; RV64I-NEXT:    fle.h a0, ft1, ft0
+; RV64I-NEXT:    xori a0, a0, 1
+; RV64I-NEXT:    ret
   %1 = fcmp ult half %a, %b
   %2 = zext i1 %1 to i32
   ret i32 %2
@@ -216,6 +404,22 @@ define i32 @fcmp_ule(half %a, half %b) nounwind {
 ; RV64IZFH-NEXT:    flt.h a0, fa1, fa0
 ; RV64IZFH-NEXT:    xori a0, a0, 1
 ; RV64IZFH-NEXT:    ret
+;
+; RV32I-LABEL: fcmp_ule:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    fmv.h.x ft0, a0
+; RV32I-NEXT:    fmv.h.x ft1, a1
+; RV32I-NEXT:    flt.h a0, ft1, ft0
+; RV32I-NEXT:    xori a0, a0, 1
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: fcmp_ule:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    fmv.h.x ft0, a0
+; RV64I-NEXT:    fmv.h.x ft1, a1
+; RV64I-NEXT:    flt.h a0, ft1, ft0
+; RV64I-NEXT:    xori a0, a0, 1
+; RV64I-NEXT:    ret
   %1 = fcmp ule half %a, %b
   %2 = zext i1 %1 to i32
   ret i32 %2
@@ -233,6 +437,22 @@ define i32 @fcmp_une(half %a, half %b) nounwind {
 ; RV64IZFH-NEXT:    feq.h a0, fa0, fa1
 ; RV64IZFH-NEXT:    xori a0, a0, 1
 ; RV64IZFH-NEXT:    ret
+;
+; RV32I-LABEL: fcmp_une:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    fmv.h.x ft0, a1
+; RV32I-NEXT:    fmv.h.x ft1, a0
+; RV32I-NEXT:    feq.h a0, ft1, ft0
+; RV32I-NEXT:    xori a0, a0, 1
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: fcmp_une:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    fmv.h.x ft0, a1
+; RV64I-NEXT:    fmv.h.x ft1, a0
+; RV64I-NEXT:    feq.h a0, ft1, ft0
+; RV64I-NEXT:    xori a0, a0, 1
+; RV64I-NEXT:    ret
   %1 = fcmp une half %a, %b
   %2 = zext i1 %1 to i32
   ret i32 %2
@@ -254,6 +474,26 @@ define i32 @fcmp_uno(half %a, half %b) nounwind {
 ; RV64IZFH-NEXT:    and a0, a1, a0
 ; RV64IZFH-NEXT:    xori a0, a0, 1
 ; RV64IZFH-NEXT:    ret
+;
+; RV32I-LABEL: fcmp_uno:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    fmv.h.x ft0, a0
+; RV32I-NEXT:    fmv.h.x ft1, a1
+; RV32I-NEXT:    feq.h a0, ft1, ft1
+; RV32I-NEXT:    feq.h a1, ft0, ft0
+; RV32I-NEXT:    and a0, a1, a0
+; RV32I-NEXT:    xori a0, a0, 1
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: fcmp_uno:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    fmv.h.x ft0, a0
+; RV64I-NEXT:    fmv.h.x ft1, a1
+; RV64I-NEXT:    feq.h a0, ft1, ft1
+; RV64I-NEXT:    feq.h a1, ft0, ft0
+; RV64I-NEXT:    and a0, a1, a0
+; RV64I-NEXT:    xori a0, a0, 1
+; RV64I-NEXT:    ret
   %1 = fcmp uno half %a, %b
   %2 = zext i1 %1 to i32
   ret i32 %2
@@ -262,13 +502,23 @@ define i32 @fcmp_uno(half %a, half %b) nounwind {
 define i32 @fcmp_true(half %a, half %b) nounwind {
 ; RV32IZFH-LABEL: fcmp_true:
 ; RV32IZFH:       # %bb.0:
-; RV32IZFH-NEXT:    addi a0, zero, 1
+; RV32IZFH-NEXT:    li a0, 1
 ; RV32IZFH-NEXT:    ret
 ;
 ; RV64IZFH-LABEL: fcmp_true:
 ; RV64IZFH:       # %bb.0:
-; RV64IZFH-NEXT:    addi a0, zero, 1
+; RV64IZFH-NEXT:    li a0, 1
 ; RV64IZFH-NEXT:    ret
+;
+; RV32I-LABEL: fcmp_true:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a0, 1
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: fcmp_true:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a0, 1
+; RV64I-NEXT:    ret
   %1 = fcmp true half %a, %b
   %2 = zext i1 %1 to i32
   ret i32 %2

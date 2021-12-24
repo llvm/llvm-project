@@ -307,6 +307,11 @@ static cl::opt<bool>
                   cl::desc("Enable KernelMemorySanitizer instrumentation"),
                   cl::Hidden, cl::init(false));
 
+static cl::opt<bool>
+    ClDisableChecks("msan-disable-checks",
+                    cl::desc("Apply no_sanitize to the whole file"), cl::Hidden,
+                    cl::init(false));
+
 // This is an experiment to enable handling of cases where shadow is a non-zero
 // compile-time constant. For some unexplainable reason they were silently
 // ignored in the instrumentation.
@@ -1095,7 +1100,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   MemorySanitizerVisitor(Function &F, MemorySanitizer &MS,
                          const TargetLibraryInfo &TLI)
       : F(F), MS(MS), VAHelper(CreateVarArgHelper(F, MS, *this)), TLI(&TLI) {
-    bool SanitizeFunction = F.hasFnAttribute(Attribute::SanitizeMemory);
+    bool SanitizeFunction =
+        F.hasFnAttribute(Attribute::SanitizeMemory) && !ClDisableChecks;
     InsertChecks = SanitizeFunction;
     PropagateShadow = SanitizeFunction;
     PoisonStack = SanitizeFunction && ClPoisonStack;
@@ -1214,7 +1220,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       Value *Shadow = SI->isAtomic() ? getCleanShadow(Val) : getShadow(Val);
       Value *ShadowPtr, *OriginPtr;
       Type *ShadowTy = Shadow->getType();
-      const Align Alignment = assumeAligned(SI->getAlignment());
+      const Align Alignment = SI->getAlign();
       const Align OriginAlignment = std::max(kMinOriginAlignment, Alignment);
       std::tie(ShadowPtr, OriginPtr) =
           getShadowOriginPtr(Addr, IRB, ShadowTy, Alignment, /*isStore*/ true);
@@ -3887,8 +3893,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
           &I, IRB, IRB.getInt8Ty(), Align(1), /*isStore*/ true);
 
       Value *PoisonValue = IRB.getInt8(PoisonStack ? ClPoisonStackPattern : 0);
-      IRB.CreateMemSet(ShadowBase, PoisonValue, Len,
-                       MaybeAlign(I.getAlignment()));
+      IRB.CreateMemSet(ShadowBase, PoisonValue, Len, I.getAlign());
     }
 
     if (PoisonStack && MS.TrackOrigins) {

@@ -26,8 +26,8 @@ def SparseTensor_Dialect : Dialect {
 
     The concept of **treating sparsity as a property, not a tedious
     implementation detail**, by letting a **sparse compiler** generate
-    sparse code automatically was pioneered for dense linear algebra by
-    [Bik96] in MT1 (see https://www.aartbik.com/sparse.php) and formalized
+    sparse code automatically was pioneered for linear algebra by [Bik96]
+    in MT1 (see https://www.aartbik.com/sparse.php) and formalized
     to tensor algebra by [Kjolstad17,Kjolstad20] in the Sparse Tensor
     Algebra Compiler (TACO) project (see http://tensor-compiler.org).
 
@@ -48,18 +48,29 @@ def SparseTensor_Dialect : Dialect {
     according to the way indices are exhausted. As such these iteration
     lattices drive actual sparse code generation, which consists of a
     relatively straightforward one-to-one mapping from iteration lattices
-    to combinations of for-loops, while-loops, and if-statements.
+    to combinations of for-loops, while-loops, and if-statements. Sparse
+    tensor outputs that materialize uninitialized are handled with
+    insertions in pure lexicographical index order if all parallel loops
+    are outermost or using a 1-dimensional access pattern expansion
+    (a.k.a. workspace) where feasible [Gustavson72,Bik96,Kjolstad19].
 
     * [Bik96] Aart J.C. Bik. Compiler Support for Sparse Matrix Computations.
     PhD thesis, Leiden University, May 1996.
-    * [Kjolstad17] Fredrik Berg Kjolstad, Shoaib Ashraf Kamil, Stephen Chou, David
-    Lugato, and Saman Amarasinghe. The Tensor Algebra Compiler. Proceedings of
-    the ACM on Programming Languages, October 2017.
-    * [Kjolstad20] Fredrik Berg Kjolstad. Sparse Tensor Algebra Compilation.
-    PhD thesis, MIT, February, 2020.
     * [Chou18] Stephen Chou, Fredrik Berg Kjolstad, and Saman Amarasinghe.
     Format Abstraction for Sparse Tensor Algebra Compilers. Proceedings of
     the ACM on Programming Languages, October 2018.
+    * [Gustavson72] Fred G. Gustavson. Some basic techniques for solving
+    sparse systems of linear equations. In Sparse Matrices and Their
+    Applications, pages 41–52. Plenum Press, New York, 1972.
+    * [Kjolstad17] Fredrik Berg Kjolstad, Shoaib Ashraf Kamil, Stephen Chou, David
+    Lugato, and Saman Amarasinghe. The Tensor Algebra Compiler. Proceedings of
+    the ACM on Programming Languages, October 2017.
+    * [Kjolstad19] Fredrik Berg Kjolstad, Peter Ahrens, Shoaib Ashraf Kamil,
+    and Saman Amarasinghe. Tensor Algebra Compilation with Workspaces,
+    Proceedings of the IEEE/ACM International Symposium on Code Generation
+    and Optimization, 2019.
+    * [Kjolstad20] Fredrik Berg Kjolstad. Sparse Tensor Algebra Compilation.
+    PhD thesis, MIT, February, 2020.
   }];
 }
 

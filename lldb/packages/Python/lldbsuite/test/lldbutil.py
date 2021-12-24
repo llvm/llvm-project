@@ -730,6 +730,62 @@ def check_breakpoint_result(
             (out_module_name,
              module_name))
 
+def check_breakpoint(
+            test,
+            bpno,
+            expected_locations = None,
+            expected_resolved_count = None,
+            expected_hit_count = None,
+            location_id = None,
+            expected_location_resolved = True,
+            expected_location_hit_count = None):
+    """
+    Test breakpoint or breakpoint location.
+    Breakpoint resolved count is always checked. If not specified the assumption is that all locations 
+    should be resolved. 
+    To test a breakpoint location, breakpoint number (bpno) and location_id must be set. In this case
+    the resolved count for a breakpoint is not tested by default. The location is expected to be resolved,
+    unless expected_location_resolved is set to False.
+    test - test context
+    bpno - breakpoint number to test
+    expected_locations - expected number of locations for this breakpoint. If 'None' this parameter is not tested.
+    expected_resolved_count - expected resolved locations number for the breakpoint.  If 'None' - all locations should be resolved.
+    expected_hit_count - expected hit count for this breakpoint. If 'None' this parameter is not tested.
+    location_id - If not 'None' sets the location ID for the breakpoint to test.
+    expected_location_resolved - Extected resolved status for the location_id (True/False). Default - True.
+    expected_location_hit_count - Expected hit count for the breakpoint at location_id. Must be set if the location_id parameter is set.
+    """
+
+    if isinstance(test.target, lldb.SBTarget):
+        target = test.target
+    else:
+        target = test.target()
+    bkpt = target.FindBreakpointByID(bpno)
+
+    test.assertTrue(bkpt.IsValid(), "Breakpoint is not valid.")
+
+    if expected_locations is not None:
+        test.assertEquals(expected_locations, bkpt.GetNumLocations())
+
+    if expected_resolved_count is not None:
+        test.assertEquals(expected_resolved_count, bkpt.GetNumResolvedLocations())
+    else:
+        expected_resolved_count = bkpt.GetNumLocations()
+        if location_id is None:
+            test.assertEquals(expected_resolved_count, bkpt.GetNumResolvedLocations())
+
+    if expected_hit_count is not None:
+        test.assertEquals(expected_hit_count, bkpt.GetHitCount())
+
+    if location_id is not None:
+        loc_bkpt = bkpt.FindLocationByID(location_id)
+        test.assertTrue(loc_bkpt.IsValid(), "Breakpoint location is not valid.")
+        test.assertEquals(loc_bkpt.IsResolved(), expected_location_resolved)
+        if expected_location_hit_count is not None:
+            test.assertEquals(expected_location_hit_count, loc_bkpt.GetHitCount())
+
+
+
 # ==================================================
 # Utility functions related to Threads and Processes
 # ==================================================

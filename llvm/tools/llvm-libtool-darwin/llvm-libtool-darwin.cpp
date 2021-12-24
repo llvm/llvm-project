@@ -299,20 +299,18 @@ static Error verifyAndAddIRObject(MembersPerArchitectureMap &Members,
 
 static Error addChildMember(MembersPerArchitectureMap &Members,
                             const object::Archive::Child &M, const Config &C) {
-  Expected<NewArchiveMember> NMOrErr =
+  Expected<NewArchiveMember> NewMemberOrErr =
       NewArchiveMember::getOldMember(M, C.Deterministic);
-  if (!NMOrErr)
-    return NMOrErr.takeError();
+  if (!NewMemberOrErr)
+    return NewMemberOrErr.takeError();
+  auto &NewMember = *NewMemberOrErr;
 
-  file_magic Magic = identify_magic(NMOrErr->Buf->getBuffer());
+  file_magic Magic = identify_magic(NewMember.Buf->getBuffer());
 
   if (Magic == file_magic::bitcode)
-    return verifyAndAddIRObject(Members, std::move(*NMOrErr), C);
+    return verifyAndAddIRObject(Members, std::move(NewMember), C);
 
-  if (Error E = verifyAndAddMachOObject(Members, std::move(*NMOrErr), C))
-    return E;
-
-  return Error::success();
+  return verifyAndAddMachOObject(Members, std::move(NewMember), C);
 }
 
 static Error processArchive(MembersPerArchitectureMap &Members,
@@ -331,9 +329,10 @@ static Error processArchive(MembersPerArchitectureMap &Members,
 static Error
 addArchiveMembers(MembersPerArchitectureMap &Members,
                   std::vector<std::unique_ptr<MemoryBuffer>> &ArchiveBuffers,
-                  NewArchiveMember NM, StringRef FileName, const Config &C) {
+                  NewArchiveMember NewMember, StringRef FileName,
+                  const Config &C) {
   Expected<std::unique_ptr<Archive>> LibOrErr =
-      object::Archive::create(NM.Buf->getMemBufferRef());
+      object::Archive::create(NewMember.Buf->getMemBufferRef());
   if (!LibOrErr)
     return createFileError(FileName, LibOrErr.takeError());
 
@@ -342,16 +341,16 @@ addArchiveMembers(MembersPerArchitectureMap &Members,
 
   // Update vector ArchiveBuffers with the MemoryBuffers to transfer
   // ownership.
-  ArchiveBuffers.push_back(std::move(NM.Buf));
+  ArchiveBuffers.push_back(std::move(NewMember.Buf));
   return Error::success();
 }
 
 static Error addUniversalMembers(
     MembersPerArchitectureMap &Members,
     std::vector<std::unique_ptr<MemoryBuffer>> &UniversalBuffers,
-    NewArchiveMember NM, StringRef FileName, const Config &C) {
+    NewArchiveMember NewMember, StringRef FileName, const Config &C) {
   Expected<std::unique_ptr<MachOUniversalBinary>> BinaryOrErr =
-      MachOUniversalBinary::create(NM.Buf->getMemBufferRef());
+      MachOUniversalBinary::create(NewMember.Buf->getMemBufferRef());
   if (!BinaryOrErr)
     return createFileError(FileName, BinaryOrErr.takeError());
 
@@ -410,40 +409,39 @@ static Error addUniversalMembers(
 
   // Update vector UniversalBuffers with the MemoryBuffers to transfer
   // ownership.
-  UniversalBuffers.push_back(std::move(NM.Buf));
+  UniversalBuffers.push_back(std::move(NewMember.Buf));
   return Error::success();
 }
 
 static Error addMember(MembersPerArchitectureMap &Members,
                        std::vector<std::unique_ptr<MemoryBuffer>> &FileBuffers,
                        StringRef FileName, const Config &C) {
-  Expected<NewArchiveMember> NMOrErr =
+  Expected<NewArchiveMember> NewMemberOrErr =
       NewArchiveMember::getFile(FileName, C.Deterministic);
-  if (!NMOrErr)
-    return createFileError(FileName, NMOrErr.takeError());
+  if (!NewMemberOrErr)
+    return createFileError(FileName, NewMemberOrErr.takeError());
+  auto &NewMember = *NewMemberOrErr;
 
   // For regular archives, use the basename of the object path for the member
   // name.
-  NMOrErr->MemberName = sys::path::filename(NMOrErr->MemberName);
-  file_magic Magic = identify_magic(NMOrErr->Buf->getBuffer());
+  NewMember.MemberName = sys::path::filename(NewMember.MemberName);
+  file_magic Magic = identify_magic(NewMember.Buf->getBuffer());
 
   // Flatten archives.
   if (Magic == file_magic::archive)
-    return addArchiveMembers(Members, FileBuffers, std::move(*NMOrErr),
+    return addArchiveMembers(Members, FileBuffers, std::move(NewMember),
                              FileName, C);
 
   // Flatten universal files.
   if (Magic == file_magic::macho_universal_binary)
-    return addUniversalMembers(Members, FileBuffers, std::move(*NMOrErr),
+    return addUniversalMembers(Members, FileBuffers, std::move(NewMember),
                                FileName, C);
 
   // Bitcode files.
   if (Magic == file_magic::bitcode)
-    return verifyAndAddIRObject(Members, std::move(*NMOrErr), C);
+    return verifyAndAddIRObject(Members, std::move(NewMember), C);
 
-  if (Error E = verifyAndAddMachOObject(Members, std::move(*NMOrErr), C))
-    return E;
-  return Error::success();
+  return verifyAndAddMachOObject(Members, std::move(NewMember), C);
 }
 
 static Expected<SmallVector<Slice, 2>>
@@ -477,45 +475,41 @@ static Error createStaticLibrary(const Config &C) {
   }
 
   if (NewMembers.size() == 1) {
-    if (Error E =
-            writeArchive(OutputFile, NewMembers.begin()->second,
-                         /*WriteSymtab=*/true,
-                         /*Kind=*/object::Archive::K_DARWIN, C.Deterministic,
-                         /*Thin=*/false))
-      return E;
-  } else {
-    SmallVector<OwningBinary<Archive>, 2> OutputBinaries;
-    for (const std::pair<const uint64_t, std::vector<NewArchiveMember>> &M :
-         NewMembers) {
-      Expected<std::unique_ptr<MemoryBuffer>> OutputBufferOrErr =
-          writeArchiveToBuffer(M.second,
-                               /*WriteSymtab=*/true,
-                               /*Kind=*/object::Archive::K_DARWIN,
-                               C.Deterministic,
-                               /*Thin=*/false);
-      if (!OutputBufferOrErr)
-        return OutputBufferOrErr.takeError();
-      std::unique_ptr<MemoryBuffer> &OutputBuffer = OutputBufferOrErr.get();
-
-      Expected<std::unique_ptr<Archive>> ArchiveOrError =
-          Archive::create(OutputBuffer->getMemBufferRef());
-      if (!ArchiveOrError)
-        return ArchiveOrError.takeError();
-      std::unique_ptr<Archive> &A = ArchiveOrError.get();
-
-      OutputBinaries.push_back(
-          OwningBinary<Archive>(std::move(A), std::move(OutputBuffer)));
-    }
-
-    Expected<SmallVector<Slice, 2>> Slices = buildSlices(OutputBinaries);
-    if (!Slices)
-      return Slices.takeError();
-
-    llvm::stable_sort(*Slices);
-    if (Error E = writeUniversalBinary(*Slices, OutputFile))
-      return E;
+    return writeArchive(OutputFile, NewMembers.begin()->second,
+                        /*WriteSymtab=*/true,
+                        /*Kind=*/object::Archive::K_DARWIN, C.Deterministic,
+                        /*Thin=*/false);
   }
-  return Error::success();
+
+  SmallVector<OwningBinary<Archive>, 2> OutputBinaries;
+  for (const std::pair<const uint64_t, std::vector<NewArchiveMember>> &M :
+       NewMembers) {
+    Expected<std::unique_ptr<MemoryBuffer>> OutputBufferOrErr =
+        writeArchiveToBuffer(M.second,
+                             /*WriteSymtab=*/true,
+                             /*Kind=*/object::Archive::K_DARWIN,
+                             C.Deterministic,
+                             /*Thin=*/false);
+    if (!OutputBufferOrErr)
+      return OutputBufferOrErr.takeError();
+    std::unique_ptr<MemoryBuffer> &OutputBuffer = OutputBufferOrErr.get();
+
+    Expected<std::unique_ptr<Archive>> ArchiveOrError =
+        Archive::create(OutputBuffer->getMemBufferRef());
+    if (!ArchiveOrError)
+      return ArchiveOrError.takeError();
+    std::unique_ptr<Archive> &A = ArchiveOrError.get();
+
+    OutputBinaries.push_back(
+        OwningBinary<Archive>(std::move(A), std::move(OutputBuffer)));
+  }
+
+  Expected<SmallVector<Slice, 2>> Slices = buildSlices(OutputBinaries);
+  if (!Slices)
+    return Slices.takeError();
+
+  llvm::stable_sort(*Slices);
+  return writeUniversalBinary(*Slices, OutputFile);
 }
 
 static Expected<Config> parseCommandLine(int Argc, char **Argv) {

@@ -20,7 +20,7 @@ namespace __sanitizer {
 
 struct BufferedStackTrace;
 
-static const u32 kStackTraceMax = 256;
+static const u32 kStackTraceMax = 255;
 
 #if SANITIZER_LINUX && defined(__mips__)
 # define SANITIZER_CAN_FAST_UNWIND 0
@@ -209,11 +209,11 @@ static inline bool IsValidFrame(uptr frame, uptr stack_top, uptr stack_bottom) {
 // StackTrace::GetCurrentPc() faster.
 #if defined(__x86_64__)
 #  define GET_CURRENT_PC()                \
-    ({                                    \
+    (__extension__({                      \
       uptr pc;                            \
       asm("lea 0(%%rip), %0" : "=r"(pc)); \
       pc;                                 \
-    })
+    }))
 #else
 #  define GET_CURRENT_PC() StackTrace::GetCurrentPc()
 #endif

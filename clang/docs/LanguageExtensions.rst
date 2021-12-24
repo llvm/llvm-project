@@ -506,6 +506,83 @@ See also :ref:`langext-__builtin_shufflevector`, :ref:`langext-__builtin_convert
   If it's an extension (OpenCL) vector, it's only available in C and OpenCL C.
   And it selects base on signedness of the condition operands (OpenCL v1.1 s6.3.9).
 
+Vector Builtins
+---------------
+
+**Note: The implementation of vector builtins is work-in-progress and incomplete.**
+
+In addition to the operators mentioned above, Clang provides a set of builtins
+to perform additional operations on certain scalar and vector types.
+
+Let ``T`` be one of the following types:
+
+* an integer type (as in C2x 6.2.5p19), but excluding enumerated types and _Bool
+* the standard floating types float or double
+* a half-precision floating point type, if one is supported on the target
+* a vector type.
+
+For scalar types, consider the operation applied to a vector with a single element.
+
+*Elementwise Builtins*
+
+Each builtin returns a vector equivalent to applying the specified operation
+elementwise to the input.
+
+Unless specified otherwise operation(±0) = ±0 and operation(±infinity) = ±infinity
+
+========================================= ================================================================ =========================================
+         Name                              Operation                                                        Supported element types
+========================================= ================================================================ =========================================
+ T __builtin_elementwise_abs(T x)          return the absolute value of a number x; the absolute value of   signed integer and floating point types
+                                           the most negative integer remains the most negative integer
+ T __builtin_elementwise_ceil(T x)         return the smallest integral value greater than or equal to x    floating point types
+ T __builtin_elementwise_floor(T x)        return the largest integral value less than or equal to x        floating point types
+ T __builtin_elementwise_roundeven(T x)    round x to the nearest integer value in floating point format,   floating point types
+                                           rounding halfway cases to even (that is, to the nearest value
+                                           that is an even integer), regardless of the current rounding
+                                           direction.
+ T__builtin_elementwise_trunc(T x)         return the integral value nearest to but no larger in            floating point types
+                                           magnitude than x
+ T __builtin_elementwise_max(T x, T y)     return x or y, whichever is larger                               integer and floating point types
+ T __builtin_elementwise_min(T x, T y)     return x or y, whichever is smaller                              integer and floating point types
+========================================= ================================================================ =========================================
+
+
+*Reduction Builtins*
+
+Each builtin returns a scalar equivalent to applying the specified
+operation(x, y) as recursive even-odd pairwise reduction to all vector
+elements. ``operation(x, y)`` is repeatedly applied to each non-overlapping
+even-odd element pair with indices ``i * 2`` and ``i * 2 + 1`` with
+``i in [0, Number of elements / 2)``. If the numbers of elements is not a
+power of 2, the vector is widened with neutral elements for the reduction
+at the end to the next power of 2.
+
+Example:
+
+.. code-block:: c++
+
+    __builtin_reduce_add([e3, e2, e1, e0]) = __builtin_reduced_add([e3 + e2, e1 + e0])
+                                           = (e3 + e2) + (e1 + e0)
+
+
+Let ``VT`` be a vector type and ``ET`` the element type of ``VT``.
+
+======================================= ================================================================ ==================================
+         Name                            Operation                                                        Supported element types
+======================================= ================================================================ ==================================
+ ET __builtin_reduce_max(VT a)           return x or y, whichever is larger; If exactly one argument is   integer and floating point types
+                                         a NaN, return the other argument. If both arguments are NaNs,
+                                         fmax() return a NaN.
+ ET __builtin_reduce_min(VT a)           return x or y, whichever is smaller; If exactly one argument     integer and floating point types
+                                         is a NaN, return the other argument. If both arguments are
+                                         NaNs, fmax() return a NaN.
+ ET __builtin_reduce_add(VT a)           \+                                                               integer and floating point types
+ ET __builtin_reduce_and(VT a)           &                                                                integer types
+ ET __builtin_reduce_or(VT a)            \|                                                               integer types
+ ET __builtin_reduce_xor(VT a)           ^                                                                integer types
+======================================= ================================================================ ==================================
+
 Matrix Types
 ============
 
@@ -2440,6 +2517,48 @@ object that overloads ``operator&``.
     return __builtin_addressof(value);
   }
 
+``__builtin_function_start``
+-----------------------------
+
+``__builtin_function_start`` returns the address of a function body.
+
+**Syntax**:
+
+.. code-block:: c++
+
+  void *__builtin_function_start(function)
+
+**Example of use**:
+
+.. code-block:: c++
+
+  void a() {}
+  void *p = __builtin_function_start(a);
+
+  class A {
+  public:
+    void a(int n);
+    void a();
+  };
+
+  void A::a(int n) {}
+  void A::a() {}
+
+  void *pa1 = __builtin_function_start((void(A::*)(int)) &A::a);
+  void *pa2 = __builtin_function_start((void(A::*)()) &A::a);
+
+**Description**:
+
+The ``__builtin_function_start`` builtin accepts an argument that can be
+constant-evaluated to a function, and returns the address of the function
+body.  This builtin is not supported on all targets.
+
+The returned pointer may differ from the normally taken function address
+and is not safe to call.  For example, with ``-fsanitize=cfi``, taking a
+function address produces a callable pointer to a CFI jump table, while
+``__builtin_function_start`` returns an address that fails
+:doc:`cfi-icall<ControlFlowIntegrity>` checks.
+
 ``__builtin_operator_new`` and ``__builtin_operator_delete``
 ------------------------------------------------------------
 
@@ -2789,6 +2908,7 @@ the corresponding C11 operations, are:
 * ``__c11_atomic_fetch_and``
 * ``__c11_atomic_fetch_or``
 * ``__c11_atomic_fetch_xor``
+* ``__c11_atomic_fetch_nand`` (Nand is not presented in ``<stdatomic.h>``)
 * ``__c11_atomic_fetch_max``
 * ``__c11_atomic_fetch_min``
 
@@ -2869,7 +2989,7 @@ C++ Coroutines support builtins
 
 Clang provides experimental builtins to support C++ Coroutines as defined by
 https://wg21.link/P0057. The following four are intended to be used by the
-standard library to implement `std::experimental::coroutine_handle` type.
+standard library to implement the ``std::coroutine_handle`` type.
 
 **Syntax**:
 
@@ -2929,7 +3049,6 @@ an appropriate value during the emission.
   void  *__builtin_coro_begin(void *memory)
   void   __builtin_coro_end(void *coro_frame, bool unwind)
   char   __builtin_coro_suspend(bool final)
-  bool   __builtin_coro_param(void *original, void *copy)
 
 Note that there is no builtin matching the `llvm.coro.save` intrinsic. LLVM
 automatically will insert one if the first argument to `llvm.coro.suspend` is
@@ -3580,10 +3699,10 @@ governed by the pragma uses precise floating point semantics, effectively
 ``-ffast-math`` is disabled and ``-ffp-contract=on``
 (fused multiply add) is enabled.
 
-When ``pragma float_control(except, on)`` is enabled, the section of code governed
-by the pragma behaves as though the command-line option
+When ``pragma float_control(except, on)`` is enabled, the section of code
+governed by the pragma behaves as though the command-line option
 ``-ffp-exception-behavior=strict`` is enabled,
-when ``pragma float_control(precise, off)`` is enabled, the section of code
+when ``pragma float_control(except, off)`` is enabled, the section of code
 governed by the pragma behaves as though the command-line option
 ``-ffp-exception-behavior=ignore`` is enabled.
 
@@ -3720,7 +3839,8 @@ Multiple match rules can be specified using the ``any`` match rule, as shown
 in the example above. The ``any`` rule applies attributes to all declarations
 that are matched by at least one of the rules in the ``any``. It doesn't nest
 and can't be used inside the other match rules. Redundant match rules or rules
-that conflict with one another should not be used inside of ``any``.
+that conflict with one another should not be used inside of ``any``. Failing to
+specify a rule within the ``any`` rule results in an error.
 
 Clang supports the following match rules:
 
@@ -3956,62 +4076,67 @@ mark macros as final, meaning they cannot be undef'd or re-defined. For example:
    #undef FINAL_MACRO  // warning: FINAL_MACRO is marked final and should not be undefined
 
 This is useful for enforcing system-provided macros that should not be altered
-in user headers or code. This is controlled by ``-Wpedantic-macros``. Final 
+in user headers or code. This is controlled by ``-Wpedantic-macros``. Final
 macros will always warn on redefinition, including situations with identical
 bodies and in system headers.
+
+Line Control
+============
+
+Clang supports an extension for source line control, which takes the
+form of a preprocessor directive starting with an unsigned integral
+constant. In addition to the standard ``#line`` directive, this form
+allows control of an include stack and header file type, which is used
+in issuing diagnostics. These lines are emitted in preprocessed
+output.
+
+.. code-block:: c
+
+   # <line:number> <filename:string> <header-type:numbers>
+
+The filename is optional, and if unspecified indicates no change in
+source filename. The header-type is an optional, whitespace-delimited,
+sequence of magic numbers as follows.
+
+* ``1:`` Push the current source file name onto the include stack and
+  enter a new file.
+
+* ``2``: Pop the include stack and return to the specified file. If
+  the filename is ``""``, the name popped from the include stack is
+  used. Otherwise there is no requirement that the specified filename
+  matches the current source when originally pushed.
+
+* ``3``: Enter a system-header region. System headers often contain
+  implementation-specific source that would normally emit a diagnostic.
+
+* ``4``: Enter an implicit ``extern "C"`` region. This is not required on
+  modern systems where system headers are C++-aware.
+
+At most a single ``1`` or ``2`` can be present, and values must be in
+ascending order.
+
+Examples are:
+
+.. code-block:: c
+
+   # 57 // Advance (or return) to line 57 of the current source file
+   # 57 "frob" // Set to line 57 of "frob"
+   # 1 "foo.h" 1 // Enter "foo.h" at line 1
+   # 59 "main.c" 2 // Leave current include and return to "main.c"
+   # 1 "/usr/include/stdio.h" 1 3 // Enter a system header
+   # 60 "" 2 // return to "main.c"
+   # 1 "/usr/ancient/header.h" 1 4 // Enter an implicit extern "C" header
 
 Extended Integer Types
 ======================
 
-Clang supports a set of extended integer types under the syntax ``_ExtInt(N)``
-where ``N`` is an integer that specifies the number of bits that are used to represent
-the type, including the sign bit. The keyword ``_ExtInt`` is a type specifier, thus
-it can be used in any place a type can, including as a non-type-template-parameter,
-as the type of a bitfield, and as the underlying type of an enumeration.
+Clang supports the C23 ``_BitInt(N)`` feature as an extension in older C modes
+and in C++. This type was previously implemented in Clang with the same
+semantics, but spelled ``_ExtInt(N)``. This spelling has been deprecated in
+favor of the standard type.
 
-An extended integer can be declared either signed, or unsigned by using the
-``signed``/``unsigned`` keywords. If no sign specifier is used or if the ``signed``
-keyword is used, the extended integer type is a signed integer and can represent
-negative values.
-
-The ``N`` expression is an integer constant expression, which specifies the number
-of bits used to represent the type, following normal integer representations for
-both signed and unsigned types. Both a signed and unsigned extended integer of the
-same ``N`` value will have the same number of bits in its representation. Many
-architectures don't have a way of representing non power-of-2 integers, so these
-architectures emulate these types using larger integers. In these cases, they are
-expected to follow the 'as-if' rule and do math 'as-if' they were done at the
-specified number of bits.
-
-In order to be consistent with the C language specification, and make the extended
-integer types useful for their intended purpose, extended integers follow the C
-standard integer conversion ranks. An extended integer type has a greater rank than
-any integer type with less precision.  However, they have lower rank than any
-of the built in or other integer types (such as __int128). Usual arithmetic conversions
-also work the same, where the smaller ranked integer is converted to the larger.
-
-The one exception to the C rules for integers for these types is Integer Promotion.
-Unary +, -, and ~ operators typically will promote operands to ``int``. Doing these
-promotions would inflate the size of required hardware on some platforms, so extended
-integer types aren't subject to the integer promotion rules in these cases.
-
-In languages (such as OpenCL) that define shift by-out-of-range behavior as a mask,
-non-power-of-two versions of these types use an unsigned remainder operation to constrain
-the value to the proper range, preventing undefined behavior.
-
-Extended integer types are aligned to the next greatest power-of-2 up to 64 bits.
-The size of these types for the purposes of layout and ``sizeof`` are the number of
-bits aligned to this calculated alignment. This permits the use of these types in
-allocated arrays using common ``sizeof(Array)/sizeof(ElementType)`` pattern.
-
-Extended integer types work with the C _Atomic type modifier, however only precisions
-that are powers-of-2 greater than 8 bit are accepted.
-
-Extended integer types align with existing calling conventions. They have the same size
-and alignment as the smallest basic type that can contain them. Types that are larger
-than 64 bits are handled in the same way as _int128 is handled; they are conceptually
-treated as struct of register size chunks. They number of chunks are the smallest
-number that can contain the types which does not necessarily mean a power-of-2 size.
+Note: the ABI for ``_BitInt(N)`` is still in the process of being stabilized,
+so this type should not yet be used in interfaces that require ABI stability.
 
 Intrinsics Support within Constant Expressions
 ==============================================

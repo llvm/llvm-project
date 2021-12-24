@@ -1482,6 +1482,9 @@
 {'is_defined': True, 'name': '__ZNSt3__117__widen_from_utf8ILm32EED0Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__117__widen_from_utf8ILm32EED1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__117__widen_from_utf8ILm32EED2Ev', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__117bad_function_callD0Ev', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__117bad_function_callD1Ev', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__117bad_function_callD2Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__117declare_reachableEPv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__117iostream_categoryEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__117moneypunct_bynameIcLb0EE4initEPKc', 'type': 'FUNC'}
@@ -1643,6 +1646,7 @@
 {'is_defined': True, 'name': '__ZNSt3__14stolERKNS_12basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEEPmi', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__14wcinE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZNSt3__15alignEmmRPvRm', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__15ctypeIcE10table_sizeE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZNSt3__15ctypeIcE13classic_tableEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__15ctypeIcE2idE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZNSt3__15ctypeIcEC1EPKjbm', 'type': 'FUNC'}
@@ -1875,6 +1879,15 @@
 {'is_defined': True, 'name': '__ZNSt3__18time_getIwNS_19istreambuf_iteratorIwNS_11char_traitsIwEEEEE2idE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZNSt3__18time_putIcNS_19ostreambuf_iteratorIcNS_11char_traitsIcEEEEE2idE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZNSt3__18time_putIwNS_19ostreambuf_iteratorIwNS_11char_traitsIwEEEEE2idE', 'size': 0, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '__ZNSt3__18to_charsEPcS0_d', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__18to_charsEPcS0_dNS_12chars_formatE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__18to_charsEPcS0_dNS_12chars_formatEi', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__18to_charsEPcS0_e', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__18to_charsEPcS0_eNS_12chars_formatE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__18to_charsEPcS0_eNS_12chars_formatEi', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__18to_charsEPcS0_f', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__18to_charsEPcS0_fNS_12chars_formatE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__18to_charsEPcS0_fNS_12chars_formatEi', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__18valarrayImE6resizeEmm', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__18valarrayImEC1Em', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__18valarrayImEC2Em', 'type': 'FUNC'}
@@ -2037,6 +2050,7 @@
 {'is_defined': True, 'name': '__ZTINSt3__117__assoc_sub_stateE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTINSt3__117__widen_from_utf8ILm16EEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTINSt3__117__widen_from_utf8ILm32EEE', 'size': 0, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '__ZTINSt3__117bad_function_callE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTINSt3__117moneypunct_bynameIcLb0EEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTINSt3__117moneypunct_bynameIcLb1EEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTINSt3__117moneypunct_bynameIwLb0EEE', 'size': 0, 'type': 'OBJECT'}
@@ -2223,6 +2237,7 @@
 {'is_defined': True, 'name': '__ZTSNSt3__115time_get_bynameIwNS_19istreambuf_iteratorIwNS_11char_traitsIwEEEEEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTSNSt3__115time_put_bynameIcNS_19ostreambuf_iteratorIcNS_11char_traitsIcEEEEEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTSNSt3__115time_put_bynameIwNS_19ostreambuf_iteratorIwNS_11char_traitsIwEEEEEE', 'size': 0, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '__ZTSNSt3__117bad_function_callE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTSNSt3__117moneypunct_bynameIcLb0EEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTSNSt3__117moneypunct_bynameIcLb1EEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTSNSt3__117moneypunct_bynameIwLb0EEE', 'size': 0, 'type': 'OBJECT'}
@@ -2428,6 +2443,7 @@
 {'is_defined': True, 'name': '__ZTVNSt3__117__assoc_sub_stateE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTVNSt3__117__widen_from_utf8ILm16EEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTVNSt3__117__widen_from_utf8ILm32EEE', 'size': 0, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '__ZTVNSt3__117bad_function_callE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTVNSt3__117moneypunct_bynameIcLb0EEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTVNSt3__117moneypunct_bynameIcLb1EEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTVNSt3__117moneypunct_bynameIwLb0EEE', 'size': 0, 'type': 'OBJECT'}

@@ -25,8 +25,6 @@ class MutexSet {
   struct Desc {
     uptr addr;
     StackID stack_id;
-    u64 id;
-    u64 epoch;
     u32 seq;
     u32 count;
     bool write;
@@ -40,10 +38,7 @@ class MutexSet {
   };
 
   MutexSet();
-  // The 'id' is obtained from SyncVar::GetId().
-  void Add(u64 id, bool write, u64 epoch);
-  void Del(u64 id, bool write);
-  void Remove(u64 id);  // Removes the mutex completely (if it's destroyed).
+  void Reset();
   void AddAddr(uptr addr, StackID stack_id, bool write);
   void DelAddr(uptr addr, bool destroy = false);
   uptr Size() const;
@@ -59,18 +54,36 @@ class MutexSet {
 #endif
 };
 
+// MutexSet is too large to live on stack.
+// DynamicMutexSet can be use used to create local MutexSet's.
+class DynamicMutexSet {
+ public:
+  DynamicMutexSet();
+  ~DynamicMutexSet();
+  MutexSet* operator->() { return ptr_; }
+  operator MutexSet*() { return ptr_; }
+  DynamicMutexSet(const DynamicMutexSet&) = delete;
+  DynamicMutexSet& operator=(const DynamicMutexSet&) = delete;
+
+ private:
+  MutexSet* ptr_;
+#if SANITIZER_GO
+  MutexSet set_;
+#endif
+};
+
 // Go does not have mutexes, so do not spend memory and time.
 // (Go sync.Mutex is actually a semaphore -- can be unlocked
 // in different goroutine).
 #if SANITIZER_GO
 MutexSet::MutexSet() {}
-void MutexSet::Add(u64 id, bool write, u64 epoch) {}
-void MutexSet::Del(u64 id, bool write) {}
-void MutexSet::Remove(u64 id) {}
+void MutexSet::Reset() {}
 void MutexSet::AddAddr(uptr addr, StackID stack_id, bool write) {}
 void MutexSet::DelAddr(uptr addr, bool destroy) {}
 uptr MutexSet::Size() const { return 0; }
 MutexSet::Desc MutexSet::Get(uptr i) const { return Desc(); }
+DynamicMutexSet::DynamicMutexSet() : ptr_(&set_) {}
+DynamicMutexSet::~DynamicMutexSet() {}
 #endif
 
 }  // namespace __tsan

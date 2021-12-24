@@ -9,7 +9,6 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Identifier.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -19,7 +18,7 @@
 namespace mlir {
 
 /// Pull in generated enum utility declarations and definitions.
-#include "StructAttrGenTest.h.inc"
+#include "StructAttrGenTest.h.inc" // NOLINT
 #include "StructAttrGenTest.cpp.inc"
 
 /// Helper that returns an example test::TestStruct for testing its
@@ -62,8 +61,8 @@ TEST(StructsGenTest, ClassofExtraFalse) {
                                                        expectedValues.end());
 
   // Add an extra NamedAttribute.
-  auto wrongId = mlir::Identifier::get("wrong", &context);
-  auto wrongAttr = mlir::NamedAttribute(wrongId, expectedValues[0].second);
+  auto wrongId = mlir::StringAttr::get(&context, "wrong");
+  auto wrongAttr = mlir::NamedAttribute(wrongId, expectedValues[0].getValue());
   newValues.push_back(wrongAttr);
 
   // Make a new DictionaryAttr and validate.
@@ -83,9 +82,9 @@ TEST(StructsGenTest, ClassofBadNameFalse) {
   llvm::SmallVector<mlir::NamedAttribute, 4> newValues(
       expectedValues.begin() + 1, expectedValues.end());
 
-  // Add a copy of the first attribute with the wrong Identifier.
-  auto wrongId = mlir::Identifier::get("wrong", &context);
-  auto wrongAttr = mlir::NamedAttribute(wrongId, expectedValues[0].second);
+  // Add a copy of the first attribute with the wrong name.
+  auto wrongId = mlir::StringAttr::get(&context, "wrong");
+  auto wrongAttr = mlir::NamedAttribute(wrongId, expectedValues[0].getValue());
   newValues.push_back(wrongAttr);
 
   auto badDictionary = mlir::DictionaryAttr::get(&context, newValues);
@@ -109,7 +108,7 @@ TEST(StructsGenTest, ClassofBadTypeFalse) {
   auto elementsType = mlir::RankedTensorType::get({3}, i64Type);
   auto elementsAttr =
       mlir::DenseIntElementsAttr::get(elementsType, ArrayRef<int64_t>{1, 2, 3});
-  mlir::Identifier id = expectedValues.back().first;
+  mlir::StringAttr id = expectedValues.back().getName();
   auto wrongAttr = mlir::NamedAttribute(id, elementsAttr);
   newValues.push_back(wrongAttr);
 

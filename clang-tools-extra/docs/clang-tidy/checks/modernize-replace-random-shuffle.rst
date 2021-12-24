@@ -25,7 +25,7 @@ Both of these examples will be replaced with:
 
 The second example will also receive a warning that ``randomFunc`` is no longer supported in the same way as before so if the user wants the same functionality, the user will need to change the implementation of the ``randomFunc``.
 
-One thing to be aware of here is that ``std::random_device`` is quite expensive to initialize. So if you are using the code in a performance critical place, you probably want to initialize it elsewhere. 
+One thing to be aware of here is that ``std::random_device`` is quite expensive to initialize. So if you are using the code in a performance critical place, you probably want to initialize it elsewhere.
 Another thing is that the seeding quality of the suggested fix is quite poor: ``std::mt19937`` has an internal state of 624 32-bit integers, but is only seeded with a single integer. So if you require
 higher quality randomness, you should consider seeding better, for example:
 

@@ -9,6 +9,13 @@
 # Build a plugin for a CUDA machine if available.
 #
 ##===----------------------------------------------------------------------===##
+set(LIBOMPTARGET_BUILD_CUDA_PLUGIN TRUE CACHE BOOL
+  "Whether to build CUDA plugin")
+if (NOT LIBOMPTARGET_BUILD_CUDA_PLUGIN)
+  libomptarget_say("Not building CUDA offloading plugin: LIBOMPTARGET_BUILD_CUDA_PLUGIN is false")
+  return()
+endif()
+
 if (NOT(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)$" AND CMAKE_SYSTEM_NAME MATCHES "Linux"))
   libomptarget_say("Not building CUDA offloading plugin: only support CUDA in Linux x86_64, ppc64le, or aarch64 hosts.")
   return()
@@ -65,7 +72,7 @@ target_link_libraries(omptarget.rtl.cuda
 # Otherwise this plugin is being built speculatively and there may be no cuda available
 if (LIBOMPTARGET_CAN_LINK_LIBCUDA OR LIBOMPTARGET_FORCE_DLOPEN_LIBCUDA)
   libomptarget_say("Enable tests using CUDA plugin")
-  set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS} nvptx64-nvidia-cuda" PARENT_SCOPE)
+  set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS} nvptx64-nvidia-cuda nvptx64-nvidia-cuda-newRTL" PARENT_SCOPE)
 else()
   libomptarget_say("Disabling tests using CUDA plugin as cuda may not be available")
 endif()

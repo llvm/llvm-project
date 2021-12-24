@@ -151,20 +151,10 @@ LogicalResult mlir::verifyCompatibleShapes(TypeRange types) {
   return success();
 }
 
-OperandElementTypeIterator::OperandElementTypeIterator(
-    Operation::operand_iterator it)
-    : llvm::mapped_iterator<Operation::operand_iterator, Type (*)(Value)>(
-          it, &unwrap) {}
-
-Type OperandElementTypeIterator::unwrap(Value value) {
+Type OperandElementTypeIterator::mapElement(Value value) const {
   return value.getType().cast<ShapedType>().getElementType();
 }
 
-ResultElementTypeIterator::ResultElementTypeIterator(
-    Operation::result_iterator it)
-    : llvm::mapped_iterator<Operation::result_iterator, Type (*)(Value)>(
-          it, &unwrap) {}
-
-Type ResultElementTypeIterator::unwrap(Value value) {
+Type ResultElementTypeIterator::mapElement(Value value) const {
   return value.getType().cast<ShapedType>().getElementType();
 }

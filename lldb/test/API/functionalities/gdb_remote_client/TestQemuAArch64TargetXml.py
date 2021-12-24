@@ -1,7 +1,8 @@
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
-from gdbclientutils import *
+from lldbsuite.test.gdbclientutils import *
 from textwrap import dedent
+from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 class MyResponder(MockGDBServerResponder):
     def qXferRead(self, obj, annex, offset, length):
@@ -51,6 +52,8 @@ class MyResponder(MockGDBServerResponder):
             return None, False
 
 class TestQemuAarch64TargetXml(GDBRemoteTestBase):
+
+    mydir = TestBase.compute_mydir(__file__)
 
     @skipIfXmlSupportMissing
     @skipIfRemote

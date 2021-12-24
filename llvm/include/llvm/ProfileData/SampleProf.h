@@ -206,7 +206,8 @@ enum class SecProfSummaryFlags : uint32_t {
 enum class SecFuncMetadataFlags : uint32_t {
   SecFlagInvalid = 0,
   SecFlagIsProbeBased = (1 << 0),
-  SecFlagHasAttribute = (1 << 1)
+  SecFlagHasAttribute = (1 << 1),
+  SecFlagIsCSNested = (1 << 2),
 };
 
 enum class SecFuncOffsetFlags : uint32_t {
@@ -495,25 +496,29 @@ public:
       State = UnknownContext;
       Name = ContextStr;
     } else {
-      // Remove encapsulating '[' and ']' if any
-      ContextStr = ContextStr.substr(1, ContextStr.size() - 2);
       CSNameTable.emplace_back();
       SampleContextFrameVector &Context = CSNameTable.back();
-      /// Create a context vector from a given context string and save it in
-      /// `Context`.
-      StringRef ContextRemain = ContextStr;
-      StringRef ChildContext;
-      StringRef CalleeName;
-      while (!ContextRemain.empty()) {
-        auto ContextSplit = ContextRemain.split(" @ ");
-        ChildContext = ContextSplit.first;
-        ContextRemain = ContextSplit.second;
-        LineLocation CallSiteLoc(0, 0);
-        decodeContextString(ChildContext, CalleeName, CallSiteLoc);
-        Context.emplace_back(CalleeName, CallSiteLoc);
-      }
-
+      createCtxVectorFromStr(ContextStr, Context);
       setContext(Context, CState);
+    }
+  }
+
+  /// Create a context vector from a given context string and save it in
+  /// `Context`.
+  static void createCtxVectorFromStr(StringRef ContextStr,
+                                     SampleContextFrameVector &Context) {
+    // Remove encapsulating '[' and ']' if any
+    ContextStr = ContextStr.substr(1, ContextStr.size() - 2);
+    StringRef ContextRemain = ContextStr;
+    StringRef ChildContext;
+    StringRef CalleeName;
+    while (!ContextRemain.empty()) {
+      auto ContextSplit = ContextRemain.split(" @ ");
+      ChildContext = ContextSplit.first;
+      ContextRemain = ContextSplit.second;
+      LineLocation CallSiteLoc(0, 0);
+      decodeContextString(ChildContext, CalleeName, CallSiteLoc);
+      Context.emplace_back(CalleeName, CallSiteLoc);
     }
   }
 
@@ -587,11 +592,11 @@ public:
                         : hash_value(getName());
   }
 
-  /// Set the name of the function.
+  /// Set the name of the function and clear the current context.
   void setName(StringRef FunctionName) {
-    assert(FullContext.empty() &&
-           "setName should only be called for non-CS profile");
     Name = FunctionName;
+    FullContext = SampleContextFrames();
+    State = UnknownContext;
   }
 
   void setContext(SampleContextFrames Context,
@@ -727,6 +732,30 @@ public:
     return BodySamples[LineLocation(Index, 0)].merge(S, Weight);
   }
 
+  // Accumulate all body samples to set total samples.
+  void updateTotalSamples() {
+    setTotalSamples(0);
+    for (const auto &I : BodySamples)
+      addTotalSamples(I.second.getSamples());
+
+    for (auto &I : CallsiteSamples) {
+      for (auto &CS : I.second) {
+        CS.second.updateTotalSamples();
+        addTotalSamples(CS.second.getTotalSamples());
+      }
+    }
+  }
+
+  // Set current context and all callee contexts to be synthetic.
+  void SetContextSynthetic() {
+    Context.setState(SyntheticContext);
+    for (auto &I : CallsiteSamples) {
+      for (auto &CS : I.second) {
+        CS.second.SetContextSynthetic();
+      }
+    }
+  }
+
   /// Return the number of samples collected at the given location.
   /// Each location is specified by \p LineOffset and \p Discriminator.
   /// If the location is not found in profile, return error.
@@ -798,7 +827,7 @@ public:
   /// Return the sample count of the first instruction of the function.
   /// The function can be either a standalone symbol or an inlined function.
   uint64_t getEntrySamples() const {
-    if (FunctionSamples::ProfileIsCS && getHeadSamples()) {
+    if (FunctionSamples::ProfileIsCSFlat && getHeadSamples()) {
       // For CS profile, if we already have more accurate head samples
       // counted by branch sample from caller, use them as entry samples.
       return getHeadSamples();
@@ -990,7 +1019,13 @@ public:
   /// instruction. This is wrapper of two scenarios, the probe-based profile and
   /// regular profile, to hide implementation details from the sample loader and
   /// the context tracker.
-  static LineLocation getCallSiteIdentifier(const DILocation *DIL);
+  static LineLocation getCallSiteIdentifier(const DILocation *DIL,
+                                            bool ProfileIsFS = false);
+
+  /// Returns a unique hash code for a combination of a callsite location and
+  /// the callee function name.
+  static uint64_t getCallSiteHash(StringRef CalleeName,
+                                  const LineLocation &Callsite);
 
   /// Get the FunctionSamples of the inline instance where DIL originates
   /// from.
@@ -1009,7 +1044,9 @@ public:
 
   static bool ProfileIsProbeBased;
 
-  static bool ProfileIsCS;
+  static bool ProfileIsCSFlat;
+
+  static bool ProfileIsCSNested;
 
   SampleContext &getContext() const { return Context; }
 
@@ -1124,16 +1161,57 @@ private:
 class SampleContextTrimmer {
 public:
   SampleContextTrimmer(SampleProfileMap &Profiles) : ProfileMap(Profiles){};
-  // Trim and merge cold context profile when requested.
+  // Trim and merge cold context profile when requested. TrimBaseProfileOnly
+  // should only be effective when TrimColdContext is true. On top of
+  // TrimColdContext, TrimBaseProfileOnly can be used to specify to trim all
+  // cold profiles or only cold base profiles. Trimming base profiles only is
+  // mainly to honor the preinliner decsion. Note that when MergeColdContext is
+  // true, preinliner decsion is not honored anyway so TrimBaseProfileOnly will
+  // be ignored.
   void trimAndMergeColdContextProfiles(uint64_t ColdCountThreshold,
                                        bool TrimColdContext,
                                        bool MergeColdContext,
-                                       uint32_t ColdContextFrameLength);
+                                       uint32_t ColdContextFrameLength,
+                                       bool TrimBaseProfileOnly);
   // Canonicalize context profile name and attributes.
   void canonicalizeContextProfiles();
 
 private:
   SampleProfileMap &ProfileMap;
+};
+
+// CSProfileConverter converts a full context-sensitive flat sample profile into
+// a nested context-sensitive sample profile.
+class CSProfileConverter {
+public:
+  CSProfileConverter(SampleProfileMap &Profiles);
+  void convertProfiles();
+  struct FrameNode {
+    FrameNode(StringRef FName = StringRef(),
+              FunctionSamples *FSamples = nullptr,
+              LineLocation CallLoc = {0, 0})
+        : FuncName(FName), FuncSamples(FSamples), CallSiteLoc(CallLoc){};
+
+    // Map line+discriminator location to child frame
+    std::map<uint64_t, FrameNode> AllChildFrames;
+    // Function name for current frame
+    StringRef FuncName;
+    // Function Samples for current frame
+    FunctionSamples *FuncSamples;
+    // Callsite location in parent context
+    LineLocation CallSiteLoc;
+
+    FrameNode *getOrCreateChildFrame(const LineLocation &CallSite,
+                                     StringRef CalleeName);
+  };
+
+private:
+  // Nest all children profiles into the profile of Node.
+  void convertProfiles(FrameNode &Node);
+  FrameNode *getOrCreateContextPath(const SampleContext &Context);
+
+  SampleProfileMap &ProfileMap;
+  FrameNode RootFrame;
 };
 
 /// ProfileSymbolList records the list of function symbols shown up

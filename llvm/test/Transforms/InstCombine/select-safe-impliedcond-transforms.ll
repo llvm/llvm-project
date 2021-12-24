@@ -16,7 +16,7 @@ define i1 @a_true_implies_b_true(i8 %z, i1 %X, i1 %Y) {
 
 define <2 x i1> @a_true_implies_b_true_vec(i8 %z0, <2 x i1> %X, <2 x i1> %Y) {
 ; CHECK-LABEL: @a_true_implies_b_true_vec(
-; CHECK-NEXT:    [[A0:%.*]] = insertelement <2 x i8> poison, i8 [[Z0:%.*]], i8 0
+; CHECK-NEXT:    [[A0:%.*]] = insertelement <2 x i8> poison, i8 [[Z0:%.*]], i64 0
 ; CHECK-NEXT:    [[Z:%.*]] = shufflevector <2 x i8> [[A0]], <2 x i8> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[A:%.*]] = icmp ugt <2 x i8> [[Z]], <i8 20, i8 19>
 ; CHECK-NEXT:    [[B:%.*]] = icmp ugt i8 [[Z0]], 10

@@ -60,7 +60,7 @@ public:
 
   void DiscardAllPlans();
 
-  void DiscardConsultingMasterPlans();
+  void DiscardConsultingControllingPlans();
 
   lldb::ThreadPlanSP GetCurrentPlan() const;
 

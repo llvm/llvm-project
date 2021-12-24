@@ -231,9 +231,8 @@ struct DerivedFromTemplateVirtualBaseStruct : T {
 DerivedFromTemplateVirtualBaseStruct<PublicVirtualBaseStruct> InstantiationWithPublicVirtualBaseStruct;
 
 // Derived from template, base has *not* virtual dtor
-// CHECK-MESSAGES: :[[@LINE+8]]:8: warning: destructor of 'DerivedFromTemplateNonVirtualBaseStruct' is public and non-virtual [cppcoreguidelines-virtual-class-destructor]
-// CHECK-MESSAGES: :[[@LINE+7]]:8: note: make it public and virtual
-// CHECK-MESSAGES: :[[@LINE+6]]:8: warning: destructor of 'DerivedFromTemplateNonVirtualBaseStruct<PublicNonVirtualBaseStruct>' is public and non-virtual [cppcoreguidelines-virtual-class-destructor]
+// CHECK-MESSAGES: :[[@LINE+7]]:8: warning: destructor of 'DerivedFromTemplateNonVirtualBaseStruct<PublicNonVirtualBaseStruct>' is public and non-virtual [cppcoreguidelines-virtual-class-destructor]
+// CHECK-MESSAGES: :[[@LINE+6]]:8: note: make it public and virtual
 // CHECK-FIXES: struct DerivedFromTemplateNonVirtualBaseStruct : T {
 // CHECK-FIXES-NEXT: virtual ~DerivedFromTemplateNonVirtualBaseStruct() = default;
 // CHECK-FIXES-NEXT: virtual void foo();
@@ -256,9 +255,8 @@ using DerivedFromTemplateVirtualBaseStruct2Typedef = DerivedFromTemplateVirtualB
 DerivedFromTemplateVirtualBaseStruct2Typedef InstantiationWithPublicVirtualBaseStruct2;
 
 // Derived from template, base has *not* virtual dtor, to be used in a typedef
-// CHECK-MESSAGES: :[[@LINE+8]]:8: warning: destructor of 'DerivedFromTemplateNonVirtualBaseStruct2' is public and non-virtual [cppcoreguidelines-virtual-class-destructor]
-// CHECK-MESSAGES: :[[@LINE+7]]:8: note: make it public and virtual
-// CHECK-MESSAGES: :[[@LINE+6]]:8: warning: destructor of 'DerivedFromTemplateNonVirtualBaseStruct2<PublicNonVirtualBaseStruct>' is public and non-virtual [cppcoreguidelines-virtual-class-destructor]
+// CHECK-MESSAGES: :[[@LINE+7]]:8: warning: destructor of 'DerivedFromTemplateNonVirtualBaseStruct2<PublicNonVirtualBaseStruct>' is public and non-virtual [cppcoreguidelines-virtual-class-destructor]
+// CHECK-MESSAGES: :[[@LINE+6]]:8: note: make it public and virtual
 // CHECK-FIXES: struct DerivedFromTemplateNonVirtualBaseStruct2 : T {
 // CHECK-FIXES-NEXT: virtual ~DerivedFromTemplateNonVirtualBaseStruct2() = default;
 // CHECK-FIXES-NEXT: virtual void foo();
@@ -272,3 +270,53 @@ using DerivedFromTemplateNonVirtualBaseStruct2Typedef = DerivedFromTemplateNonVi
 DerivedFromTemplateNonVirtualBaseStruct2Typedef InstantiationWithPublicNonVirtualBaseStruct2;
 
 } // namespace Bugzilla_51912
+
+namespace macro_tests {
+#define CONCAT(x, y) x##y
+
+// CHECK-MESSAGES: :[[@LINE+2]]:7: warning: destructor of 'FooBar1' is protected and virtual [cppcoreguidelines-virtual-class-destructor]
+// CHECK-MESSAGES: :[[@LINE+1]]:7: note: make it protected and non-virtual
+class FooBar1 {
+protected:
+  CONCAT(vir, tual) CONCAT(~Foo, Bar1()); // no-fixit
+};
+
+// CHECK-MESSAGES: :[[@LINE+2]]:7: warning: destructor of 'FooBar2' is protected and virtual [cppcoreguidelines-virtual-class-destructor]
+// CHECK-MESSAGES: :[[@LINE+1]]:7: note: make it protected and non-virtual
+class FooBar2 {
+protected:
+  virtual CONCAT(~Foo, Bar2()); // FIXME: We should have a fixit for this.
+};
+
+// CHECK-MESSAGES: :[[@LINE+6]]:7: warning: destructor of 'FooBar3' is protected and virtual [cppcoreguidelines-virtual-class-destructor]
+// CHECK-MESSAGES: :[[@LINE+5]]:7: note: make it protected and non-virtual
+// CHECK-FIXES:      class FooBar3 {
+// CHECK-FIXES-NEXT: protected:
+// CHECK-FIXES-NEXT:   ~FooBar3();
+// CHECK-FIXES-NEXT: };
+class FooBar3 {
+protected:
+  CONCAT(vir, tual) ~FooBar3();
+};
+
+// CHECK-MESSAGES: :[[@LINE+6]]:7: warning: destructor of 'FooBar4' is protected and virtual [cppcoreguidelines-virtual-class-destructor]
+// CHECK-MESSAGES: :[[@LINE+5]]:7: note: make it protected and non-virtual
+// CHECK-FIXES:      class FooBar4 {
+// CHECK-FIXES-NEXT: protected:
+// CHECK-FIXES-NEXT:   ~CONCAT(Foo, Bar4());
+// CHECK-FIXES-NEXT: };
+class FooBar4 {
+protected:
+  CONCAT(vir, tual) ~CONCAT(Foo, Bar4());
+};
+
+// CHECK-MESSAGES: :[[@LINE+3]]:7: warning: destructor of 'FooBar5' is protected and virtual [cppcoreguidelines-virtual-class-destructor]
+// CHECK-MESSAGES: :[[@LINE+2]]:7: note: make it protected and non-virtual
+#define XMACRO(COLUMN1, COLUMN2) COLUMN1 COLUMN2
+class FooBar5 {
+protected:
+  XMACRO(CONCAT(vir, tual), ~CONCAT(Foo, Bar5());) // no-crash, no-fixit
+};
+#undef XMACRO
+#undef CONCAT
+} // namespace macro_tests

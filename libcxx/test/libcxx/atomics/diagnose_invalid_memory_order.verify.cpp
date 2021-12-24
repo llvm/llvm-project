@@ -11,7 +11,6 @@
 // XFAIL: msvc
 
 // REQUIRES: diagnose-if-support
-// UNSUPPORTED: libcpp-has-no-threads
 
 // <atomic>
 

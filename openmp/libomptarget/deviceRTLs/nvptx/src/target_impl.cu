@@ -102,10 +102,10 @@ EXTERN int __kmpc_get_hardware_num_blocks() {
 EXTERN int __kmpc_get_hardware_num_threads_in_block() {
   return __nvvm_read_ptx_sreg_ntid_x();
 }
+EXTERN unsigned __kmpc_get_warp_size() { return WARPSIZE; }
 EXTERN unsigned GetWarpId() {
   return __kmpc_get_hardware_thread_id_in_block() / WARPSIZE;
 }
-EXTERN unsigned GetWarpSize() { return WARPSIZE; }
 EXTERN unsigned GetLaneId() {
   return __kmpc_get_hardware_thread_id_in_block() & (WARPSIZE - 1);
 }
@@ -184,9 +184,15 @@ EXTERN int __kmpc_impl_test_lock(omp_lock_t *lock) {
 extern "C" {
 void *malloc(size_t);
 void free(void *);
+int32_t vprintf(const char *, void *);
 }
 
 EXTERN void *__kmpc_impl_malloc(size_t x) { return malloc(x); }
 EXTERN void __kmpc_impl_free(void *x) { free(x); }
+
+EXTERN int32_t __llvm_omp_vprintf(const char *Format, void *Arguments,
+                                  uint32_t) {
+  return vprintf(Format, Arguments);
+}
 
 #pragma omp end declare target

@@ -136,7 +136,8 @@ if ( APPLE )
       message(WARNING "LLVM_USE_SANITIZER=${LLVM_USE_SANITIZER} is not supported on OS X")
     endif()
     if (LIBFILE)
-      find_compiler_rt_dir(LIBDIR)
+      find_compiler_rt_library(builtins LIBCXXABI_BUILTINS_LIBRARY)
+      get_filename_component(LIBDIR "${LIBCXXABI_BUILTINS_LIBRARY}" DIRECTORY)
       if (NOT IS_DIRECTORY "${LIBDIR}")
         message(FATAL_ERROR "Cannot find compiler-rt directory on OS X required for LLVM_USE_SANITIZER")
       endif()
@@ -191,7 +192,6 @@ if (LIBCXXABI_ENABLE_SHARED)
       SOVERSION "1"
       VERSION "${LIBCXXABI_LIBRARY_VERSION}"
       DEFINE_SYMBOL ""
-      POSITION_INDEPENDENT_CODE ON
   )
 
   list(APPEND LIBCXXABI_BUILD_TARGETS "cxxabi_shared")
@@ -244,7 +244,6 @@ if (LIBCXXABI_ENABLE_STATIC)
       COMPILE_FLAGS "${LIBCXXABI_COMPILE_FLAGS}"
       LINK_FLAGS "${LIBCXXABI_LINK_FLAGS}"
       OUTPUT_NAME "c++abi"
-      POSITION_INDEPENDENT_CODE ON
     )
 
   if(LIBCXXABI_HERMETIC_STATIC_LIBRARY)

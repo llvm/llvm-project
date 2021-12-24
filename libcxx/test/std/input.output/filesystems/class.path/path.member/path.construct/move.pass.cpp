@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03
+// XFAIL: LIBCXX-AIX-FIXME
 
 // <filesystem>
 
@@ -15,8 +16,9 @@
 // path(path&&) noexcept
 
 #include "filesystem_include.h"
-#include <type_traits>
 #include <cassert>
+#include <string>
+#include <type_traits>
 
 #include "test_macros.h"
 #include "count_new.h"

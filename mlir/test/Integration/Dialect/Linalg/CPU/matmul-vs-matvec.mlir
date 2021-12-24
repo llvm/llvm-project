@@ -61,6 +61,8 @@ func @main() {
   }
   %C2_ = memref.cast %C2 : memref<?x?xf32> to memref<*xf32>
   call @print_memref_f32(%C2_) : (memref<*xf32>) -> ()
+  memref.dealloc %C1 : memref<?x?xf32>
+  memref.dealloc %C2 : memref<?x?xf32>
   return
 }
 

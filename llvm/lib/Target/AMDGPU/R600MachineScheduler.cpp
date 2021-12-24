@@ -29,7 +29,7 @@ void R600SchedStrategy::initialize(ScheduleDAGMI *dag) {
   MRI = &DAG->MRI;
   CurInstKind = IDOther;
   CurEmitted = 0;
-  OccupedSlotsMask = 31;
+  OccupiedSlotsMask = 31;
   InstKindLimit[IDAlu] = TII->getMaxAlusPerClause();
   InstKindLimit[IDOther] = 32;
   InstKindLimit[IDFetch] = ST.getTexVTXClauseSize();
@@ -124,11 +124,9 @@ SUnit* R600SchedStrategy::pickNode(bool &IsTopNode) {
     DAG->dumpNode(*SU);
   } else {
     dbgs() << "NO NODE \n";
-    for (unsigned i = 0; i < DAG->SUnits.size(); i++) {
-      const SUnit &S = DAG->SUnits[i];
+    for (const SUnit &S : DAG->SUnits)
       if (!S.isScheduled)
         DAG->dumpNode(S);
-    }
   });
 
   return SU;
@@ -138,7 +136,7 @@ void R600SchedStrategy::schedNode(SUnit *SU, bool IsTopNode) {
   if (NextInstKind != CurInstKind) {
     LLVM_DEBUG(dbgs() << "Instruction Type Switch\n");
     if (NextInstKind != IDAlu)
-      OccupedSlotsMask |= 31;
+      OccupiedSlotsMask |= 31;
     CurEmitted = 0;
     CurInstKind = NextInstKind;
   }
@@ -330,19 +328,19 @@ SUnit *R600SchedStrategy::PopInst(std::vector<SUnit *> &Q, bool AnyALU) {
 
 void R600SchedStrategy::LoadAlu() {
   std::vector<SUnit *> &QSrc = Pending[IDAlu];
-  for (unsigned i = 0, e = QSrc.size(); i < e; ++i) {
-    AluKind AK = getAluKind(QSrc[i]);
-    AvailableAlus[AK].push_back(QSrc[i]);
+  for (SUnit *SU : QSrc) {
+    AluKind AK = getAluKind(SU);
+    AvailableAlus[AK].push_back(SU);
   }
   QSrc.clear();
 }
 
 void R600SchedStrategy::PrepareNextSlot() {
   LLVM_DEBUG(dbgs() << "New Slot\n");
-  assert (OccupedSlotsMask && "Slot wasn't filled");
-  OccupedSlotsMask = 0;
-//  if (HwGen == AMDGPUSubtarget::NORTHERN_ISLANDS)
-//    OccupedSlotsMask |= 16;
+  assert(OccupiedSlotsMask && "Slot wasn't filled");
+  OccupiedSlotsMask = 0;
+  //  if (HwGen == AMDGPUSubtarget::NORTHERN_ISLANDS)
+  //    OccupiedSlotsMask |= 16;
   InstructionsGroupCandidate.clear();
   LoadAlu();
 }
@@ -400,41 +398,41 @@ unsigned R600SchedStrategy::AvailablesAluCount() const {
 
 SUnit* R600SchedStrategy::pickAlu() {
   while (AvailablesAluCount() || !Pending[IDAlu].empty()) {
-    if (!OccupedSlotsMask) {
+    if (!OccupiedSlotsMask) {
       // Bottom up scheduling : predX must comes first
       if (!AvailableAlus[AluPredX].empty()) {
-        OccupedSlotsMask |= 31;
+        OccupiedSlotsMask |= 31;
         return PopInst(AvailableAlus[AluPredX], false);
       }
       // Flush physical reg copies (RA will discard them)
       if (!AvailableAlus[AluDiscarded].empty()) {
-        OccupedSlotsMask |= 31;
+        OccupiedSlotsMask |= 31;
         return PopInst(AvailableAlus[AluDiscarded], false);
       }
       // If there is a T_XYZW alu available, use it
       if (!AvailableAlus[AluT_XYZW].empty()) {
-        OccupedSlotsMask |= 15;
+        OccupiedSlotsMask |= 15;
         return PopInst(AvailableAlus[AluT_XYZW], false);
       }
     }
-    bool TransSlotOccuped = OccupedSlotsMask & 16;
-    if (!TransSlotOccuped && VLIW5) {
+    bool TransSlotOccupied = OccupiedSlotsMask & 16;
+    if (!TransSlotOccupied && VLIW5) {
       if (!AvailableAlus[AluTrans].empty()) {
-        OccupedSlotsMask |= 16;
+        OccupiedSlotsMask |= 16;
         return PopInst(AvailableAlus[AluTrans], false);
       }
       SUnit *SU = AttemptFillSlot(3, true);
       if (SU) {
-        OccupedSlotsMask |= 16;
+        OccupiedSlotsMask |= 16;
         return SU;
       }
     }
     for (int Chan = 3; Chan > -1; --Chan) {
-      bool isOccupied = OccupedSlotsMask & (1 << Chan);
+      bool isOccupied = OccupiedSlotsMask & (1 << Chan);
       if (!isOccupied) {
         SUnit *SU = AttemptFillSlot(Chan, false);
         if (SU) {
-          OccupedSlotsMask |= (1 << Chan);
+          OccupiedSlotsMask |= (1 << Chan);
           InstructionsGroupCandidate.push_back(SU->getInstr());
           return SU;
         }

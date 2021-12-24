@@ -33,7 +33,7 @@ public:
   static lldb_private::LanguageRuntime *
   CreateInstance(Process *process, lldb::LanguageType language);
 
-  static lldb_private::ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "apple-objc-v2"; }
 
   static char ID;
 
@@ -54,9 +54,7 @@ public:
   llvm::Expected<std::unique_ptr<UtilityFunction>>
   CreateObjectChecker(std::string name, ExecutionContext &exe_ctx) override;
 
-  llvm::StringRef GetPluginName() override {
-    return GetPluginNameStatic().GetStringRef();
-  }
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   ObjCRuntimeVersions GetRuntimeVersion() const override {
     return ObjCRuntimeVersions::eAppleObjC_V2;

@@ -227,13 +227,13 @@ Property::Property(const PropertyDefinition &definition)
   }
 }
 
-Property::Property(ConstString name, ConstString desc,
-                   bool is_global, const lldb::OptionValueSP &value_sp)
+Property::Property(llvm::StringRef name, llvm::StringRef desc, bool is_global,
+                   const lldb::OptionValueSP &value_sp)
     : m_name(name), m_description(desc), m_value_sp(value_sp),
       m_is_global(is_global) {}
 
 bool Property::DumpQualifiedName(Stream &strm) const {
-  if (m_name) {
+  if (!m_name.empty()) {
     if (m_value_sp->DumpQualifiedName(strm))
       strm.PutChar('.');
     strm << m_name;
@@ -251,7 +251,7 @@ void Property::Dump(const ExecutionContext *exe_ctx, Stream &strm,
     if (dump_cmd && !transparent)
       strm << "settings set -f ";
     if (dump_desc || !transparent) {
-      if ((dump_mask & OptionValue::eDumpOptionName) && m_name) {
+      if ((dump_mask & OptionValue::eDumpOptionName) && !m_name.empty()) {
         DumpQualifiedName(strm);
         if (dump_mask & ~OptionValue::eDumpOptionName)
           strm.PutChar(' ');
@@ -295,8 +295,8 @@ void Property::DumpDescription(CommandInterpreter &interpreter, Stream &strm,
       interpreter.OutputFormattedHelpText(strm, qualified_name.GetString(),
                                           "--", desc, output_width);
     } else {
-      interpreter.OutputFormattedHelpText(strm, m_name.GetStringRef(), "--",
-                                          desc, output_width);
+      interpreter.OutputFormattedHelpText(strm, m_name, "--", desc,
+                                          output_width);
     }
   }
 }

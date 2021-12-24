@@ -2,7 +2,21 @@
 // RUN:   --sparsification --sparse-tensor-conversion \
 // RUN:   --convert-vector-to-scf --convert-scf-to-std \
 // RUN:   --func-bufferize --tensor-constant-bufferize --tensor-bufferize \
-// RUN:   --std-bufferize --finalizing-bufferize  \
+// RUN:   --std-bufferize --finalizing-bufferize --lower-affine \
+// RUN:   --convert-vector-to-llvm --convert-memref-to-llvm --convert-std-to-llvm --reconcile-unrealized-casts | \
+// RUN: TENSOR0="%mlir_integration_test_dir/data/wide.mtx" \
+// RUN: mlir-cpu-runner \
+// RUN:  -e entry -entry-point-result=void  \
+// RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
+// RUN: FileCheck %s
+//
+// Do the same run, but now with SIMDization as well. This should not change the outcome.
+//
+// RUN: mlir-opt %s \
+// RUN:   --sparsification="vectorization-strategy=2 vl=2" --sparse-tensor-conversion \
+// RUN:   --convert-vector-to-scf --convert-scf-to-std \
+// RUN:   --func-bufferize --tensor-constant-bufferize --tensor-bufferize \
+// RUN:   --std-bufferize --finalizing-bufferize --lower-affine \
 // RUN:   --convert-vector-to-llvm --convert-memref-to-llvm --convert-std-to-llvm --reconcile-unrealized-casts | \
 // RUN: TENSOR0="%mlir_integration_test_dir/data/wide.mtx" \
 // RUN: mlir-cpu-runner \
@@ -83,8 +97,8 @@ module {
         memref.store %i0, %xdata[%i, %j] : memref<?x?xf64>
       }
     }
-    %b = memref.tensor_load %bdata : memref<?x?xf64>
-    %x = memref.tensor_load %xdata : memref<?x?xf64>
+    %b = bufferization.to_tensor %bdata : memref<?x?xf64>
+    %x = bufferization.to_tensor %xdata : memref<?x?xf64>
 
     // Call kernel.
     %0 = call @kernel_spmm(%a, %b, %x)
@@ -94,7 +108,7 @@ module {
     //
     // CHECK: ( ( 3548, 3550, 3552, 3554 ), ( 6052, 6053, 6054, 6055 ), ( -56, -63, -70, -77 ), ( -13704, -13709, -13714, -13719 ) )
     //
-    %m = memref.buffer_cast %0 : memref<?x?xf64>
+    %m = bufferization.to_memref %0 : memref<?x?xf64>
     %v = vector.transfer_read %m[%c0, %c0], %i0: memref<?x?xf64>, vector<4x4xf64>
     vector.print %v : vector<4x4xf64>
 

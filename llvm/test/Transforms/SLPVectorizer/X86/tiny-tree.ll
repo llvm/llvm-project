@@ -166,19 +166,21 @@ define void @tiny_tree_not_fully_vectorizable2(float* noalias nocapture %dst, fl
 ; CHECK-NEXT:    [[DST_ADDR_022:%.*]] = phi float* [ [[ADD_PTR8:%.*]], [[FOR_BODY]] ], [ [[DST:%.*]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[SRC_ADDR_021:%.*]] = phi float* [ [[ADD_PTR:%.*]], [[FOR_BODY]] ], [ [[SRC:%.*]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, float* [[SRC_ADDR_021]], align 4
-; CHECK-NEXT:    store float [[TMP0]], float* [[DST_ADDR_022]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, float* [[SRC_ADDR_021]], i64 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds float, float* [[DST_ADDR_022]], i64 1
-; CHECK-NEXT:    store float [[TMP1]], float* [[ARRAYIDX3]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds float, float* [[SRC_ADDR_021]], i64 2
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, float* [[ARRAYIDX4]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds float, float* [[DST_ADDR_022]], i64 2
-; CHECK-NEXT:    store float [[TMP2]], float* [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds float, float* [[SRC_ADDR_021]], i64 3
-; CHECK-NEXT:    [[TMP3:%.*]] = load float, float* [[ARRAYIDX6]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float* [[ARRAYIDX4]] to <2 x float>*
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x float>, <2 x float>* [[TMP2]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds float, float* [[DST_ADDR_022]], i64 3
-; CHECK-NEXT:    store float [[TMP3]], float* [[ARRAYIDX7]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> poison, float [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> [[TMP4]], float [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x float> [[TMP5]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast float* [[DST_ADDR_022]] to <4 x float>*
+; CHECK-NEXT:    store <4 x float> [[TMP7]], <4 x float>* [[TMP8]], align 4
 ; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds float, float* [[SRC_ADDR_021]], i64 [[I_023]]
 ; CHECK-NEXT:    [[ADD_PTR8]] = getelementptr inbounds float, float* [[DST_ADDR_022]], i64 [[I_023]]
 ; CHECK-NEXT:    [[INC]] = add i64 [[I_023]], 1

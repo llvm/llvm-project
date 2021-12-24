@@ -168,19 +168,25 @@ struct DFSState {
 };
 } // namespace
 
-static void DFSPostorder(Operation *current, DFSState *state) {
-  for (Value result : current->getResults()) {
-    for (Operation *op : result.getUsers())
-      DFSPostorder(op, state);
-  }
-  bool inserted;
-  using IterTy = decltype(state->seen.begin());
-  IterTy iter;
-  std::tie(iter, inserted) = state->seen.insert(current);
-  if (inserted) {
-    if (state->toSort.count(current) > 0) {
-      state->topologicalCounts.push_back(current);
+static void dfsPostorder(Operation *root, DFSState *state) {
+  SmallVector<Operation *> queue(1, root);
+  std::vector<Operation *> ops;
+  while (!queue.empty()) {
+    Operation *current = queue.pop_back_val();
+    ops.push_back(current);
+    for (Value result : current->getResults()) {
+      for (Operation *op : result.getUsers())
+        queue.push_back(op);
     }
+    for (Region &region : current->getRegions()) {
+      for (Operation &op : region.getOps())
+        queue.push_back(&op);
+    }
+  }
+
+  for (Operation *op : llvm::reverse(ops)) {
+    if (state->seen.insert(op).second && state->toSort.count(op) > 0)
+      state->topologicalCounts.push_back(op);
   }
 }
 
@@ -194,7 +200,7 @@ mlir::topologicalSort(const SetVector<Operation *> &toSort) {
   DFSState state(toSort);
   for (auto *s : toSort) {
     assert(toSort.count(s) == 1 && "NYI: multi-sets not supported");
-    DFSPostorder(s, &state);
+    dfsPostorder(s, &state);
   }
 
   // Reorder and return.

@@ -7,6 +7,8 @@
 ; RUN: opt -cost-model -analyze -mtriple=thumbv7-apple-ios6.0.0 -mcpu=swift < %s | FileCheck %s --check-prefix=CHECK-T32
 ; RUN: opt -cost-model -analyze -mtriple=arm-none-eabi -mcpu=cortex-a53 < %s | FileCheck %s --check-prefix=CHECK-A32
 
+target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+
 define void @testi8(i8* %a, i32 %i) {
 ; CHECK-V6M-LABEL: 'testi8'
 ; CHECK-V6M-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = getelementptr inbounds i8, i8* %a, i32 0

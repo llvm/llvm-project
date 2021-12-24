@@ -13,7 +13,7 @@
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(int, feenableexcept, (int e)) {
-  return fputil::enableExcept(e);
+  return fputil::enable_except(e);
 }
 
 } // namespace __llvm_libc

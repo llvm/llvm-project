@@ -11,6 +11,7 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -417,33 +418,6 @@ OpOperandVector::operator SmallVector<Value>() {
   llvm::transform(*this, std::back_inserter(result),
                   [](OpOperand *opOperand) { return opOperand->get(); });
   return result;
-}
-
-/// Fully compose map with operands and canonicalize the result.
-/// Return the `createOrFold`'ed AffineApply op.
-static Value createFoldedComposedAffineApply(OpBuilder &b, Location loc,
-                                             AffineMap map,
-                                             ValueRange operandsRef) {
-  SmallVector<Value, 4> operands(operandsRef.begin(), operandsRef.end());
-  fullyComposeAffineMapAndOperands(&map, &operands);
-  canonicalizeMapAndOperands(&map, &operands);
-  return b.createOrFold<AffineApplyOp>(loc, map, operands);
-}
-
-SmallVector<Value, 4> mlir::linalg::applyMapToValues(OpBuilder &b, Location loc,
-                                                     AffineMap map,
-                                                     ValueRange values) {
-  SmallVector<Value, 4> res;
-  res.reserve(map.getNumResults());
-  unsigned numDims = map.getNumDims(), numSym = map.getNumSymbols();
-  // For each `expr` in `map`, applies the `expr` to the values extracted from
-  // ranges. If the resulting application can be folded into a Value, the
-  // folding occurs eagerly.
-  for (auto expr : map.getResults()) {
-    AffineMap map = AffineMap::get(numDims, numSym, expr);
-    res.push_back(createFoldedComposedAffineApply(b, loc, map, values));
-  }
-  return res;
 }
 
 /// Helper function that creates a memref::DimOp or tensor::DimOp depending on

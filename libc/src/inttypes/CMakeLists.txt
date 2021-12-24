@@ -5,7 +5,7 @@ add_entrypoint_object(
   HDRS
     strtoimax.h
   DEPENDS
-    libc.src.__support.str_conv_utils
+    libc.src.__support.str_to_integer
 )
 
 add_entrypoint_object(
@@ -15,7 +15,7 @@ add_entrypoint_object(
   HDRS
     strtoumax.h
   DEPENDS
-    libc.src.__support.str_conv_utils
+    libc.src.__support.str_to_integer
 )
 
 add_entrypoint_object(

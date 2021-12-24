@@ -160,7 +160,6 @@ TEST(AddressSanitizerInterface, DeathCallbackTest) {
 #define BAD_ACCESS(ptr, offset) \
     EXPECT_TRUE(__asan_address_is_poisoned(ptr + offset))
 
-#if !defined(ASAN_SHADOW_SCALE) || ASAN_SHADOW_SCALE == 3
 static const char* kUseAfterPoisonErrorMessage = "use-after-poison";
 
 TEST(AddressSanitizerInterface, SimplePoisonMemoryRegionTest) {
@@ -200,7 +199,6 @@ TEST(AddressSanitizerInterface, OverlappingPoisonMemoryRegionTest) {
   BAD_ACCESS(array, 96);
   free(array);
 }
-#endif  // !defined(ASAN_SHADOW_SCALE) || ASAN_SHADOW_SCALE == 3
 
 TEST(AddressSanitizerInterface, PushAndPopWithPoisoningTest) {
   // Vector of capacity 20

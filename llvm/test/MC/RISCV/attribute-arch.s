@@ -33,44 +33,46 @@
 .attribute arch, "rv32ima2p0_fdc"
 # CHECK: attribute      5, "rv32i2p0_m2p0_a2p0_f2p0_d2p0_c2p0"
 
-.attribute arch, "rv32iv"
+## Experimental extensions require version string to be explicitly specified
+
+.attribute arch, "rv32iv0p10"
 # CHECK: attribute      5, "rv32i2p0_v0p10_zvlsseg0p10"
 
-.attribute arch, "rv32izba"
+.attribute arch, "rv32izba1p0"
 # CHECK: attribute      5, "rv32i2p0_zba1p0"
 
-.attribute arch, "rv32izbb"
+.attribute arch, "rv32izbb1p0"
 # CHECK: attribute      5, "rv32i2p0_zbb1p0"
 
-.attribute arch, "rv32izbc"
+.attribute arch, "rv32izbc1p0"
 # CHECK: attribute      5, "rv32i2p0_zbc1p0"
 
-.attribute arch, "rv32izbe"
+.attribute arch, "rv32izbe0p93"
 # CHECK: attribute      5, "rv32i2p0_zbe0p93"
 
-.attribute arch, "rv32izbf"
+.attribute arch, "rv32izbf0p93"
 # CHECK: attribute      5, "rv32i2p0_zbf0p93"
 
-.attribute arch, "rv32izbm"
+.attribute arch, "rv32izbm0p93"
 # CHECK: attribute      5, "rv32i2p0_zbm0p93"
 
-.attribute arch, "rv32izbp"
+.attribute arch, "rv32izbp0p93"
 # CHECK: attribute      5, "rv32i2p0_zbp0p93"
 
-.attribute arch, "rv32izbr"
+.attribute arch, "rv32izbr0p93"
 # CHECK: attribute      5, "rv32i2p0_zbr0p93"
 
-.attribute arch, "rv32izbs"
+.attribute arch, "rv32izbs1p0"
 # CHECK: attribute      5, "rv32i2p0_zbs1p0"
 
-.attribute arch, "rv32izbt"
+.attribute arch, "rv32izbt0p93"
 # CHECK: attribute      5, "rv32i2p0_zbt0p93"
 
-.attribute arch, "rv32ifzfh"
-# CHECK: attribute      5, "rv32i2p0_f2p0_zfh0p1"
+.attribute arch, "rv32ifzfhmin0p1"
+# CHECK: attribute      5, "rv32i2p0_f2p0_zfhmin0p1"
 
-.attribute arch, "rv32ivzvamo_zvlsseg"
-# CHECK: attribute      5, "rv32i2p0_v0p10_zvamo0p10_zvlsseg0p10"
+.attribute arch, "rv32ifzfh0p1"
+# CHECK: attribute      5, "rv32i2p0_f2p0_zfh0p1_zfhmin0p1"
 
-.attribute arch, "rv32iv_zvamo0p10_zvlsseg"
-# CHECK: attribute      5, "rv32i2p0_v0p10_zvamo0p10_zvlsseg0p10"
+.attribute arch, "rv32iv0p10zvlsseg0p10"
+# CHECK: attribute      5, "rv32i2p0_v0p10_zvlsseg0p10"

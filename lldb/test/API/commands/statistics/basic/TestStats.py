@@ -82,12 +82,18 @@ class TestCase(TestBase):
             f.write(metrics_json)
         return json.loads(metrics_json)
 
+
+    def get_target_stats(self, debug_stats):
+        if "targets" in debug_stats:
+            return debug_stats["targets"][0]
+        return None
+
     def test_expressions_frame_var_counts(self):
         lldbutil.run_to_source_breakpoint(self, "// break here",
                                           lldb.SBFileSpec("main.c"))
 
         self.expect("expr patatino", substrs=['27'])
-        stats = self.get_stats()
+        stats = self.get_target_stats(self.get_stats())
         self.verify_success_fail_count(stats, 'expressionEvaluation', 1, 0)
         self.expect("expr doesnt_exist", error=True,
                     substrs=["undeclared identifier 'doesnt_exist'"])
@@ -103,14 +109,20 @@ class TestCase(TestBase):
         self.expect("expr -Z 3 -- 1", error=True,
                     substrs=["expression cannot be used with --element-count"])
         # We should have gotten 3 new failures and the previous success.
-        stats = self.get_stats()
+        stats = self.get_target_stats(self.get_stats())
         self.verify_success_fail_count(stats, 'expressionEvaluation', 2, 2)
 
         self.expect("statistics enable")
         # 'frame var' with enabled statistics will change stats.
         self.expect("frame var", substrs=['27'])
-        stats = self.get_stats()
+        stats = self.get_target_stats(self.get_stats())
         self.verify_success_fail_count(stats, 'frameVariable', 1, 0)
+
+        # Test that "stopCount" is available when the process has run
+        self.assertEqual('stopCount' in stats, True,
+                         'ensure "stopCount" is in target JSON')
+        self.assertGreater(stats['stopCount'], 0,
+                           'make sure "stopCount" is greater than zero')
 
     def test_default_no_run(self):
         """Test "statistics dump" without running the target.
@@ -123,22 +135,45 @@ class TestCase(TestBase):
 
         (lldb) statistics dump
         {
-          "targetCreateTime": 0.26566899599999999,
-          "expressionEvaluation": {
-            "failures": 0,
-            "successes": 0
-          },
-          "frameVariable": {
-            "failures": 0,
-            "successes": 0
-          },
+          "modules" : [...],
+          "targets" : [
+            {
+                "targetCreateTime": 0.26566899599999999,
+                "expressionEvaluation": {
+                    "failures": 0,
+                    "successes": 0
+                },
+                "frameVariable": {
+                    "failures": 0,
+                    "successes": 0
+                },
+                "moduleIdentifiers": [...],
+            }
+          ],
+          "totalDebugInfoByteSize": 182522234,
+          "totalDebugInfoIndexTime": 2.33343,
+          "totalDebugInfoParseTime": 8.2121400240000071,
+          "totalSymbolTableParseTime": 0.123,
+          "totalSymbolTableIndexTime": 0.234,
         }
         """
         target = self.createTestTarget()
-        stats = self.get_stats()
+        debug_stats = self.get_stats()
+        debug_stat_keys = [
+            'modules',
+            'targets',
+            'totalSymbolTableParseTime',
+            'totalSymbolTableIndexTime',
+            'totalDebugInfoByteSize',
+            'totalDebugInfoIndexTime',
+            'totalDebugInfoParseTime',
+        ]
+        self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
+        stats = debug_stats['targets'][0]
         keys_exist = [
             'expressionEvaluation',
             'frameVariable',
+            'moduleIdentifiers',
             'targetCreateTime',
         ]
         keys_missing = [
@@ -158,32 +193,181 @@ class TestCase(TestBase):
 
         (lldb) statistics dump
         {
-          "firstStopTime": 0.34164492800000001,
-          "launchOrAttachTime": 0.31969605400000001,
-          "targetCreateTime": 0.0040863039999999998
-          "expressionEvaluation": {
-            "failures": 0,
-            "successes": 0
-          },
-          "frameVariable": {
-            "failures": 0,
-            "successes": 0
-          },
+          "modules" : [...],
+          "targets" : [
+                {
+                    "firstStopTime": 0.34164492800000001,
+                    "launchOrAttachTime": 0.31969605400000001,
+                    "moduleIdentifiers": [...],
+                    "targetCreateTime": 0.0040863039999999998
+                    "expressionEvaluation": {
+                        "failures": 0,
+                        "successes": 0
+                    },
+                    "frameVariable": {
+                        "failures": 0,
+                        "successes": 0
+                    },
+                }
+            ],
+            "totalDebugInfoByteSize": 182522234,
+            "totalDebugInfoIndexTime": 2.33343,
+            "totalDebugInfoParseTime": 8.2121400240000071,
+            "totalSymbolTableParseTime": 0.123,
+            "totalSymbolTableIndexTime": 0.234,
         }
 
         """
         target = self.createTestTarget()
         lldbutil.run_to_source_breakpoint(self, "// break here",
                                           lldb.SBFileSpec("main.c"))
-        stats = self.get_stats()
+        debug_stats = self.get_stats()
+        debug_stat_keys = [
+            'modules',
+            'targets',
+            'totalSymbolTableParseTime',
+            'totalSymbolTableIndexTime',
+            'totalDebugInfoByteSize',
+            'totalDebugInfoIndexTime',
+            'totalDebugInfoParseTime',
+        ]
+        self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
+        stats = debug_stats['targets'][0]
         keys_exist = [
             'expressionEvaluation',
             'firstStopTime',
             'frameVariable',
             'launchOrAttachTime',
+            'moduleIdentifiers',
             'targetCreateTime',
         ]
         self.verify_keys(stats, '"stats"', keys_exist, None)
         self.assertGreater(stats['firstStopTime'], 0.0)
         self.assertGreater(stats['launchOrAttachTime'], 0.0)
         self.assertGreater(stats['targetCreateTime'], 0.0)
+
+    def find_module_in_metrics(self, path, stats):
+        modules = stats['modules']
+        for module in modules:
+            if module['path'] == path:
+                return module
+        return None
+
+    def test_modules(self):
+        """
+            Test "statistics dump" and the module information.
+        """
+        exe = self.getBuildArtifact("a.out")
+        target = self.createTestTarget(file_path=exe)
+        debug_stats = self.get_stats()
+        debug_stat_keys = [
+            'modules',
+            'targets',
+            'totalSymbolTableParseTime',
+            'totalSymbolTableIndexTime',
+            'totalDebugInfoParseTime',
+            'totalDebugInfoIndexTime',
+            'totalDebugInfoByteSize'
+        ]
+        self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
+        stats = debug_stats['targets'][0]
+        keys_exist = [
+            'moduleIdentifiers',
+        ]
+        self.verify_keys(stats, '"stats"', keys_exist, None)
+        exe_module = self.find_module_in_metrics(exe, debug_stats)
+        module_keys = [
+            'debugInfoByteSize',
+            'debugInfoIndexTime',
+            'debugInfoParseTime',
+            'identifier',
+            'path',
+            'symbolTableIndexTime',
+            'symbolTableParseTime',
+            'triple',
+            'uuid',
+        ]
+        self.assertNotEqual(exe_module, None)
+        self.verify_keys(exe_module, 'module dict for "%s"' % (exe), module_keys)
+
+    def test_breakpoints(self):
+        """Test "statistics dump"
+
+        Output expected to be something like:
+
+        {
+          "modules" : [...],
+          "targets" : [
+                {
+                    "firstStopTime": 0.34164492800000001,
+                    "launchOrAttachTime": 0.31969605400000001,
+                    "moduleIdentifiers": [...],
+                    "targetCreateTime": 0.0040863039999999998
+                    "expressionEvaluation": {
+                        "failures": 0,
+                        "successes": 0
+                    },
+                    "frameVariable": {
+                        "failures": 0,
+                        "successes": 0
+                    },
+                    "breakpoints": [
+                        {
+                            "details": {...},
+                            "id": 1,
+                            "resolveTime": 2.65438675
+                        },
+                        {
+                            "details": {...},
+                            "id": 2,
+                            "resolveTime": 4.3632581669999997
+                        }
+                    ]
+                }
+            ],
+            "totalDebugInfoByteSize": 182522234,
+            "totalDebugInfoIndexTime": 2.33343,
+            "totalDebugInfoParseTime": 8.2121400240000071,
+            "totalSymbolTableParseTime": 0.123,
+            "totalSymbolTableIndexTime": 0.234,
+            "totalBreakpointResolveTime": 7.0176449170000001
+        }
+
+        """
+        target = self.createTestTarget()
+        self.runCmd("b main.cpp:7")
+        self.runCmd("b a_function")
+        debug_stats = self.get_stats()
+        debug_stat_keys = [
+            'modules',
+            'targets',
+            'totalSymbolTableParseTime',
+            'totalSymbolTableIndexTime',
+            'totalDebugInfoParseTime',
+            'totalDebugInfoIndexTime',
+            'totalDebugInfoByteSize',
+        ]
+        self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
+        target_stats = debug_stats['targets'][0]
+        keys_exist = [
+            'breakpoints',
+            'expressionEvaluation',
+            'frameVariable',
+            'targetCreateTime',
+            'moduleIdentifiers',
+            'totalBreakpointResolveTime',
+        ]
+        self.verify_keys(target_stats, '"stats"', keys_exist, None)
+        self.assertGreater(target_stats['totalBreakpointResolveTime'], 0.0)
+        breakpoints = target_stats['breakpoints']
+        bp_keys_exist = [
+            'details',
+            'id',
+            'internal',
+            'numLocations',
+            'numResolvedLocations',
+            'resolveTime'
+        ]
+        for breakpoint in breakpoints:
+            self.verify_keys(breakpoint, 'target_stats["breakpoints"]',
+                             bp_keys_exist, None)

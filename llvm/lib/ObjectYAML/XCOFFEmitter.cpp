@@ -42,11 +42,13 @@ public:
 private:
   bool nameShouldBeInStringTable(StringRef SymbolName);
   bool initFileHeader(uint64_t CurrentOffset);
+  void initAuxFileHeader();
   bool initSectionHeader(uint64_t &CurrentOffset);
   bool initRelocations(uint64_t &CurrentOffset);
   bool initStringTable();
   bool assignAddressesAndIndices();
   void writeFileHeader();
+  void writeAuxFileHeader();
   void writeSectionHeader();
   bool writeSectionData();
   bool writeRelocations();
@@ -65,6 +67,7 @@ private:
       {StringRef("N_ABS"), XCOFF::N_ABS},
       {StringRef("N_UNDEF"), XCOFF::N_UNDEF}};
   XCOFFYAML::FileHeader InitFileHdr = Obj.Header;
+  XCOFFYAML::AuxiliaryHeader InitAuxFileHdr;
   std::vector<XCOFFYAML::Section> InitSections = Obj.Sections;
 };
 
@@ -83,13 +86,13 @@ bool XCOFFWriter::nameShouldBeInStringTable(StringRef SymbolName) {
 }
 
 bool XCOFFWriter::initRelocations(uint64_t &CurrentOffset) {
-  for (uint16_t I = 0, E = InitSections.size(); I < E; ++I) {
-    if (!InitSections[I].Relocations.empty()) {
-      InitSections[I].NumberOfRelocations = InitSections[I].Relocations.size();
-      InitSections[I].FileOffsetToRelocations = CurrentOffset;
+  for (XCOFFYAML::Section &InitSection : InitSections) {
+    if (!InitSection.Relocations.empty()) {
+      InitSection.NumberOfRelocations = InitSection.Relocations.size();
+      InitSection.FileOffsetToRelocations = CurrentOffset;
       uint64_t RelSize = Is64Bit ? XCOFF::RelocationSerializationSize64
                                  : XCOFF::RelocationSerializationSize32;
-      CurrentOffset += InitSections[I].NumberOfRelocations * RelSize;
+      CurrentOffset += InitSection.NumberOfRelocations * RelSize;
       if (CurrentOffset > MaxRawDataSize) {
         ErrHandler("maximum object size of" + Twine(MaxRawDataSize) +
                    "exceeded when writing relocation data");
@@ -232,21 +235,84 @@ bool XCOFFWriter::initFileHeader(uint64_t CurrentOffset) {
   return true;
 }
 
+void XCOFFWriter::initAuxFileHeader() {
+  InitAuxFileHdr = *Obj.AuxHeader;
+  // In general, an object file might contain multiple sections of a given type,
+  // but in a loadable module, there must be exactly one .text, .data, .bss, and
+  // .loader section. A loadable object might also have one .tdata section and
+  // one .tbss section.
+  // Set these section-related values if not set explicitly. We assume that the
+  // input YAML matches the format of the loadable object, but if multiple input
+  // sections still have the same type, the first section with that type
+  // prevails.
+  for (uint16_t I = 0, E = InitSections.size(); I < E; ++I) {
+    switch (InitSections[I].Flags) {
+    case XCOFF::STYP_TEXT:
+      if (!InitAuxFileHdr.TextSize)
+        InitAuxFileHdr.TextSize = InitSections[I].Size;
+      if (!InitAuxFileHdr.TextStartAddr)
+        InitAuxFileHdr.TextStartAddr = InitSections[I].Address;
+      if (!InitAuxFileHdr.SecNumOfText)
+        InitAuxFileHdr.SecNumOfText = I + 1;
+      break;
+    case XCOFF::STYP_DATA:
+      if (!InitAuxFileHdr.InitDataSize)
+        InitAuxFileHdr.InitDataSize = InitSections[I].Size;
+      if (!InitAuxFileHdr.DataStartAddr)
+        InitAuxFileHdr.DataStartAddr = InitSections[I].Address;
+      if (!InitAuxFileHdr.SecNumOfData)
+        InitAuxFileHdr.SecNumOfData = I + 1;
+      break;
+    case XCOFF::STYP_BSS:
+      if (!InitAuxFileHdr.BssDataSize)
+        InitAuxFileHdr.BssDataSize = InitSections[I].Size;
+      if (!InitAuxFileHdr.SecNumOfBSS)
+        InitAuxFileHdr.SecNumOfBSS = I + 1;
+      break;
+    case XCOFF::STYP_TDATA:
+      if (!InitAuxFileHdr.SecNumOfTData)
+        InitAuxFileHdr.SecNumOfTData = I + 1;
+      break;
+    case XCOFF::STYP_TBSS:
+      if (!InitAuxFileHdr.SecNumOfTBSS)
+        InitAuxFileHdr.SecNumOfTBSS = I + 1;
+      break;
+    case XCOFF::STYP_LOADER:
+      if (!InitAuxFileHdr.SecNumOfLoader)
+        InitAuxFileHdr.SecNumOfLoader = I + 1;
+      break;
+    default:
+      break;
+    }
+  }
+}
+
 bool XCOFFWriter::assignAddressesAndIndices() {
   uint64_t FileHdrSize =
       Is64Bit ? XCOFF::FileHeaderSize64 : XCOFF::FileHeaderSize32;
+  uint64_t AuxFileHdrSize = 0;
+  if (Obj.AuxHeader)
+    AuxFileHdrSize = Obj.Header.AuxHeaderSize
+                         ? Obj.Header.AuxHeaderSize
+                         : (Is64Bit ? XCOFF::AuxFileHeaderSize64
+                                    : XCOFF::AuxFileHeaderSize32);
   uint64_t SecHdrSize =
       Is64Bit ? XCOFF::SectionHeaderSize64 : XCOFF::SectionHeaderSize32;
-  uint64_t CurrentOffset = FileHdrSize /* TODO: + auxiliaryHeaderSize() */ +
-                           InitSections.size() * SecHdrSize;
+  uint64_t CurrentOffset =
+      FileHdrSize + AuxFileHdrSize + InitSections.size() * SecHdrSize;
 
   // Calculate section header info.
   if (!initSectionHeader(CurrentOffset))
     return false;
+  InitFileHdr.AuxHeaderSize = AuxFileHdrSize;
 
   // Calculate file header info.
   if (!initFileHeader(CurrentOffset))
     return false;
+
+  // Initialize the auxiliary file header.
+  if (Obj.AuxHeader)
+    initAuxFileHeader();
 
   // Initialize the string table.
   return initStringTable();
@@ -261,7 +327,7 @@ void XCOFFWriter::writeFileHeader() {
     W.write<uint64_t>(Obj.Header.SymbolTableOffset
                           ? Obj.Header.SymbolTableOffset
                           : InitFileHdr.SymbolTableOffset);
-    W.write<uint16_t>(Obj.Header.AuxHeaderSize);
+    W.write<uint16_t>(InitFileHdr.AuxHeaderSize);
     W.write<uint16_t>(Obj.Header.Flags);
     W.write<int32_t>(Obj.Header.NumberOfSymTableEntries
                          ? Obj.Header.NumberOfSymTableEntries
@@ -273,8 +339,69 @@ void XCOFFWriter::writeFileHeader() {
     W.write<int32_t>(Obj.Header.NumberOfSymTableEntries
                          ? Obj.Header.NumberOfSymTableEntries
                          : InitFileHdr.NumberOfSymTableEntries);
-    W.write<uint16_t>(Obj.Header.AuxHeaderSize);
+    W.write<uint16_t>(InitFileHdr.AuxHeaderSize);
     W.write<uint16_t>(Obj.Header.Flags);
+  }
+}
+
+void XCOFFWriter::writeAuxFileHeader() {
+  W.write<uint16_t>(InitAuxFileHdr.Magic.getValueOr(yaml::Hex16(1)));
+  W.write<uint16_t>(InitAuxFileHdr.Version.getValueOr(yaml::Hex16(1)));
+  if (Is64Bit) {
+    W.OS.write_zeros(4); // Reserved for debugger.
+    W.write<uint64_t>(InitAuxFileHdr.TextStartAddr.getValueOr(yaml::Hex64(0)));
+    W.write<uint64_t>(InitAuxFileHdr.DataStartAddr.getValueOr(yaml::Hex64(0)));
+    W.write<uint64_t>(InitAuxFileHdr.TOCAnchorAddr.getValueOr(yaml::Hex64(0)));
+  } else {
+    W.write<uint32_t>(InitAuxFileHdr.TextSize.getValueOr(yaml::Hex64(0)));
+    W.write<uint32_t>(InitAuxFileHdr.InitDataSize.getValueOr(yaml::Hex64(0)));
+    W.write<uint32_t>(InitAuxFileHdr.BssDataSize.getValueOr(yaml::Hex64(0)));
+    W.write<uint32_t>(InitAuxFileHdr.EntryPointAddr.getValueOr(yaml::Hex64(0)));
+    W.write<uint32_t>(InitAuxFileHdr.TextStartAddr.getValueOr(yaml::Hex64(0)));
+    W.write<uint32_t>(InitAuxFileHdr.DataStartAddr.getValueOr(yaml::Hex64(0)));
+    W.write<uint32_t>(InitAuxFileHdr.TOCAnchorAddr.getValueOr(yaml::Hex64(0)));
+  }
+  W.write<uint16_t>(InitAuxFileHdr.SecNumOfEntryPoint.getValueOr(0));
+  W.write<uint16_t>(InitAuxFileHdr.SecNumOfText.getValueOr(0));
+  W.write<uint16_t>(InitAuxFileHdr.SecNumOfData.getValueOr(0));
+  W.write<uint16_t>(InitAuxFileHdr.SecNumOfTOC.getValueOr(0));
+  W.write<uint16_t>(InitAuxFileHdr.SecNumOfLoader.getValueOr(0));
+  W.write<uint16_t>(InitAuxFileHdr.SecNumOfBSS.getValueOr(0));
+  W.write<uint16_t>(InitAuxFileHdr.MaxAlignOfText.getValueOr(yaml::Hex16(0)));
+  W.write<uint16_t>(InitAuxFileHdr.MaxAlignOfData.getValueOr(yaml::Hex16(0)));
+  W.write<uint16_t>(InitAuxFileHdr.ModuleType.getValueOr(yaml::Hex16(0)));
+  W.write<uint8_t>(InitAuxFileHdr.CpuFlag.getValueOr(yaml::Hex8(0)));
+  W.write<uint8_t>(0); // Reserved for CPU type.
+  if (Is64Bit) {
+    W.write<uint8_t>(InitAuxFileHdr.TextPageSize.getValueOr(yaml::Hex8(0)));
+    W.write<uint8_t>(InitAuxFileHdr.DataPageSize.getValueOr(yaml::Hex8(0)));
+    W.write<uint8_t>(InitAuxFileHdr.StackPageSize.getValueOr(yaml::Hex8(0)));
+    W.write<uint8_t>(
+        InitAuxFileHdr.FlagAndTDataAlignment.getValueOr(yaml::Hex8(0x80)));
+    W.write<uint64_t>(InitAuxFileHdr.TextSize.getValueOr(yaml::Hex64(0)));
+    W.write<uint64_t>(InitAuxFileHdr.InitDataSize.getValueOr(yaml::Hex64(0)));
+    W.write<uint64_t>(InitAuxFileHdr.BssDataSize.getValueOr(yaml::Hex64(0)));
+    W.write<uint64_t>(InitAuxFileHdr.EntryPointAddr.getValueOr(yaml::Hex64(0)));
+    W.write<uint64_t>(InitAuxFileHdr.MaxStackSize.getValueOr(yaml::Hex64(0)));
+    W.write<uint64_t>(InitAuxFileHdr.MaxDataSize.getValueOr(yaml::Hex64(0)));
+  } else {
+    W.write<uint32_t>(InitAuxFileHdr.MaxStackSize.getValueOr(yaml::Hex64(0)));
+    W.write<uint32_t>(InitAuxFileHdr.MaxDataSize.getValueOr(yaml::Hex64(0)));
+    W.OS.write_zeros(4); // Reserved for debugger.
+    W.write<uint8_t>(InitAuxFileHdr.TextPageSize.getValueOr(yaml::Hex8(0)));
+    W.write<uint8_t>(InitAuxFileHdr.DataPageSize.getValueOr(yaml::Hex8(0)));
+    W.write<uint8_t>(InitAuxFileHdr.StackPageSize.getValueOr(yaml::Hex8(0)));
+    W.write<uint8_t>(
+        InitAuxFileHdr.FlagAndTDataAlignment.getValueOr(yaml::Hex8(0)));
+  }
+  W.write<uint16_t>(InitAuxFileHdr.SecNumOfTData.getValueOr(0));
+  W.write<uint16_t>(InitAuxFileHdr.SecNumOfTBSS.getValueOr(0));
+  if (Is64Bit) {
+    W.write<uint16_t>(InitAuxFileHdr.Flag.getValueOr(yaml::Hex16(XCOFF::SHR_SYMTAB)));
+    if (InitFileHdr.AuxHeaderSize > XCOFF::AuxFileHeaderSize64)
+      W.OS.write_zeros(InitFileHdr.AuxHeaderSize - XCOFF::AuxFileHeaderSize64);
+  } else if (InitFileHdr.AuxHeaderSize > XCOFF::AuxFileHeaderSize32) {
+    W.OS.write_zeros(InitFileHdr.AuxHeaderSize - XCOFF::AuxFileHeaderSize32);
   }
 }
 
@@ -468,6 +595,8 @@ bool XCOFFWriter::writeXCOFF() {
     return false;
   StartOffset = W.OS.tell();
   writeFileHeader();
+  if (Obj.AuxHeader)
+    writeAuxFileHeader();
   if (!Obj.Sections.empty()) {
     writeSectionHeader();
     if (!writeSectionData())

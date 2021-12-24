@@ -458,13 +458,11 @@ const char *SBPlatform::GetOSBuild() {
 
   PlatformSP platform_sp(GetSP());
   if (platform_sp) {
-    std::string s;
-    if (platform_sp->GetOSBuildString(s)) {
-      if (!s.empty()) {
-        // Const-ify the string so we don't need to worry about the lifetime of
-        // the string
-        return ConstString(s.c_str()).GetCString();
-      }
+    std::string s = platform_sp->GetOSBuildString().getValueOr("");
+    if (!s.empty()) {
+      // Const-ify the string so we don't need to worry about the lifetime of
+      // the string
+      return ConstString(s).GetCString();
     }
   }
   return nullptr;
@@ -475,13 +473,11 @@ const char *SBPlatform::GetOSDescription() {
 
   PlatformSP platform_sp(GetSP());
   if (platform_sp) {
-    std::string s;
-    if (platform_sp->GetOSKernelDescription(s)) {
-      if (!s.empty()) {
-        // Const-ify the string so we don't need to worry about the lifetime of
-        // the string
-        return ConstString(s.c_str()).GetCString();
-      }
+    std::string s = platform_sp->GetOSKernelDescription().getValueOr("");
+    if (!s.empty()) {
+      // Const-ify the string so we don't need to worry about the lifetime of
+      // the string
+      return ConstString(s.c_str()).GetCString();
     }
   }
   return nullptr;

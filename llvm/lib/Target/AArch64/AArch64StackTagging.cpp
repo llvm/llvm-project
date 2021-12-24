@@ -488,7 +488,7 @@ Instruction *AArch64StackTagging::insertBaseTaggedPointer(
 
 void AArch64StackTagging::alignAndPadAlloca(AllocaInfo &Info) {
   const Align NewAlignment =
-      max(MaybeAlign(Info.AI->getAlignment()), kTagGranuleSize);
+      max(MaybeAlign(Info.AI->getAlign()), kTagGranuleSize);
   Info.AI->setAlignment(NewAlignment);
 
   uint64_t Size = Info.AI->getAllocationSizeInBits(*DL).getValue() / 8;
@@ -537,15 +537,14 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
   SmallVector<Instruction *, 4> UnrecognizedLifetimes;
 
   for (auto &BB : *F) {
-    for (BasicBlock::iterator IT = BB.begin(); IT != BB.end(); ++IT) {
-      Instruction *I = &*IT;
-      if (auto *AI = dyn_cast<AllocaInst>(I)) {
+    for (Instruction &I : BB) {
+      if (auto *AI = dyn_cast<AllocaInst>(&I)) {
         Allocas[AI].AI = AI;
         Allocas[AI].OldAI = AI;
         continue;
       }
 
-      if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(I)) {
+      if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I)) {
         for (Value *V : DVI->location_ops())
           if (auto *AI = dyn_cast_or_null<AllocaInst>(V))
             if (Allocas[AI].DbgVariableIntrinsics.empty() ||
@@ -554,12 +553,12 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
         continue;
       }
 
-      auto *II = dyn_cast<IntrinsicInst>(I);
+      auto *II = dyn_cast<IntrinsicInst>(&I);
       if (II && (II->getIntrinsicID() == Intrinsic::lifetime_start ||
                  II->getIntrinsicID() == Intrinsic::lifetime_end)) {
         AllocaInst *AI = findAllocaForValue(II->getArgOperand(1));
         if (!AI) {
-          UnrecognizedLifetimes.push_back(I);
+          UnrecognizedLifetimes.push_back(&I);
           continue;
         }
         if (II->getIntrinsicID() == Intrinsic::lifetime_start)
@@ -568,8 +567,8 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
           Allocas[AI].LifetimeEnd.push_back(II);
       }
 
-      if (isa<ReturnInst>(I) || isa<ResumeInst>(I) || isa<CleanupReturnInst>(I))
-        RetVec.push_back(I);
+      if (isa<ReturnInst, ResumeInst, CleanupReturnInst>(&I))
+        RetVec.push_back(&I);
     }
   }
 

@@ -31,7 +31,7 @@ define i8* @f(i8* returned %s, i32 zeroext %x, i32 signext %k) local_unnamed_add
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH_NEW]] ], [ [[INDEX_NEXT_1:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND12:%.*]] = phi <16 x i32> [ <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>, [[VECTOR_PH_NEW]] ], [ [[VEC_IND_NEXT13_1:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[NITER:%.*]] = phi i64 [ [[UNROLL_ITER]], [[VECTOR_PH_NEW]] ], [ [[NITER_NSUB_1:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[NITER:%.*]] = phi i64 [ 0, [[VECTOR_PH_NEW]] ], [ [[NITER_NEXT_1:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl <16 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>, [[VEC_IND12]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = and <16 x i32> [[TMP4]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <16 x i32> [[TMP5]], zeroinitializer
@@ -41,7 +41,7 @@ define i8* @f(i8* returned %s, i32 zeroext %x, i32 signext %k) local_unnamed_add
 ; CHECK-NEXT:    store <16 x i8> [[TMP7]], <16 x i8>* [[TMP9]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT:%.*]] = add nuw nsw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[VEC_IND_NEXT13:%.*]] = add <16 x i32> [[VEC_IND12]], <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
-; CHECK-NEXT:    [[NITER_NSUB:%.*]] = sub i64 [[NITER]], 1
+; CHECK-NEXT:    [[NITER_NEXT:%.*]] = add nuw nsw i64 [[NITER]], 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = shl <16 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>, [[VEC_IND_NEXT13]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = and <16 x i32> [[TMP10]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq <16 x i32> [[TMP11]], zeroinitializer
@@ -51,8 +51,8 @@ define i8* @f(i8* returned %s, i32 zeroext %x, i32 signext %k) local_unnamed_add
 ; CHECK-NEXT:    store <16 x i8> [[TMP13]], <16 x i8>* [[TMP15]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT_1]] = add i64 [[INDEX_NEXT]], 16
 ; CHECK-NEXT:    [[VEC_IND_NEXT13_1]] = add <16 x i32> [[VEC_IND_NEXT13]], <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
-; CHECK-NEXT:    [[NITER_NSUB_1]] = sub i64 [[NITER_NSUB]], 1
-; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NSUB_1]], 0
+; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER_NEXT]], 1
+; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label [[MIDDLE_BLOCK_UNR_LCSSA_LOOPEXIT:%.*]], label [[VECTOR_BODY]]
 ; CHECK:       middle.block.unr-lcssa.loopexit:
 ; CHECK-NEXT:    [[INDEX_UNR_PH:%.*]] = phi i64 [ [[INDEX_NEXT_1]], [[VECTOR_BODY]] ]
@@ -89,7 +89,7 @@ define i8* @f(i8* returned %s, i32 zeroext %x, i32 signext %k) local_unnamed_add
 ; CHECK-NEXT:    br label [[FOR_BODY_PROL:%.*]]
 ; CHECK:       for.body.prol:
 ; CHECK-NEXT:    [[INDVARS_IV_PROL:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_PROL:%.*]], [[FOR_BODY_PROL]] ], [ [[INDVARS_IV_PH]], [[FOR_BODY_PROL_PREHEADER]] ]
-; CHECK-NEXT:    [[PROL_ITER:%.*]] = phi i64 [ [[XTRAITER1]], [[FOR_BODY_PROL_PREHEADER]] ], [ [[PROL_ITER_SUB:%.*]], [[FOR_BODY_PROL]] ]
+; CHECK-NEXT:    [[PROL_ITER:%.*]] = phi i64 [ 0, [[FOR_BODY_PROL_PREHEADER]] ], [ [[PROL_ITER_NEXT:%.*]], [[FOR_BODY_PROL]] ]
 ; CHECK-NEXT:    [[TMP25:%.*]] = trunc i64 [[INDVARS_IV_PROL]] to i32
 ; CHECK-NEXT:    [[SHL_PROL:%.*]] = shl i32 1, [[TMP25]]
 ; CHECK-NEXT:    [[AND_PROL:%.*]] = and i32 [[SHL_PROL]], [[X]]
@@ -99,8 +99,8 @@ define i8* @f(i8* returned %s, i32 zeroext %x, i32 signext %k) local_unnamed_add
 ; CHECK-NEXT:    store i8 [[CONV_PROL]], i8* [[ARRAYIDX_PROL]], align 1
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_PROL]] = add nuw nsw i64 [[INDVARS_IV_PROL]], 1
 ; CHECK-NEXT:    [[EXITCOND_PROL:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT_PROL]], [[WIDE_TRIP_COUNT]]
-; CHECK-NEXT:    [[PROL_ITER_SUB]] = sub i64 [[PROL_ITER]], 1
-; CHECK-NEXT:    [[PROL_ITER_CMP:%.*]] = icmp ne i64 [[PROL_ITER_SUB]], 0
+; CHECK-NEXT:    [[PROL_ITER_NEXT]] = add i64 [[PROL_ITER]], 1
+; CHECK-NEXT:    [[PROL_ITER_CMP:%.*]] = icmp ne i64 [[PROL_ITER_NEXT]], [[XTRAITER1]]
 ; CHECK-NEXT:    br i1 [[PROL_ITER_CMP]], label [[FOR_BODY_PROL]], label [[FOR_BODY_PROL_LOOPEXIT_UNR_LCSSA:%.*]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       for.body.prol.loopexit.unr-lcssa:
 ; CHECK-NEXT:    [[INDVARS_IV_UNR_PH:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_PROL]], [[FOR_BODY_PROL]] ]

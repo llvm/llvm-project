@@ -978,8 +978,8 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, const MCInstrAnalysis *MIA,
                           const MCSubtargetInfo *STI, uint64_t SectionAddr,
                           uint64_t Start, uint64_t End,
                           std::unordered_map<uint64_t, std::string> &Labels) {
-  // So far only supports X86.
-  if (!STI->getTargetTriple().isX86())
+  // So far only supports PowerPC and X86.
+  if (!STI->getTargetTriple().isPPC() && !STI->getTargetTriple().isX86())
     return;
 
   Labels.clear();
@@ -999,8 +999,11 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, const MCInstrAnalysis *MIA,
     if (Disassembled && MIA) {
       uint64_t Target;
       bool TargetKnown = MIA->evaluateBranch(Inst, Index, Size, Target);
+      // On PowerPC, if the address of a branch is the same as the target, it
+      // means that it's a function call. Do not mark the label for this case.
       if (TargetKnown && (Target >= Start && Target < End) &&
-          !Labels.count(Target))
+          !Labels.count(Target) &&
+          !(STI->getTargetTriple().isPPC() && Target == Index))
         Labels[Target] = ("L" + Twine(LabelCount++)).str();
     }
 
@@ -2245,7 +2248,7 @@ static void printPrivateFileHeaders(const ObjectFile *O, bool OnlyFirst) {
     return;
   }
   if (O->isCOFF())
-    return printCOFFFileHeader(O);
+    return printCOFFFileHeader(cast<object::COFFObjectFile>(*O));
   if (O->isWasm())
     return printWasmFileHeader(O);
   if (O->isMachO()) {
@@ -2500,6 +2503,11 @@ static void parseIntArg(const llvm::opt::InputArgList &InputArgs, int ID,
   }
 }
 
+static void invalidArgValue(const opt::Arg *A) {
+  reportCmdLineError("'" + StringRef(A->getValue()) +
+                     "' is not a valid value for '" + A->getSpelling() + "'");
+}
+
 static std::vector<std::string>
 commaSeparatedValues(const llvm::opt::InputArgList &InputArgs, int ID) {
   std::vector<std::string> Values;
@@ -2573,8 +2581,11 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
       commaSeparatedValues(InputArgs, OBJDUMP_disassemble_symbols_EQ);
   DisassembleZeroes = InputArgs.hasArg(OBJDUMP_disassemble_zeroes);
   if (const opt::Arg *A = InputArgs.getLastArg(OBJDUMP_dwarf_EQ)) {
-    DwarfDumpType =
-        StringSwitch<DIDumpType>(A->getValue()).Case("frames", DIDT_DebugFrame);
+    DwarfDumpType = StringSwitch<DIDumpType>(A->getValue())
+                        .Case("frames", DIDT_DebugFrame)
+                        .Default(DIDT_Null);
+    if (DwarfDumpType == DIDT_Null)
+      invalidArgValue(A);
   }
   DynamicRelocations = InputArgs.hasArg(OBJDUMP_dynamic_reloc);
   FaultMapSection = InputArgs.hasArg(OBJDUMP_fault_map_section);
@@ -2611,7 +2622,10 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
   if (const opt::Arg *A = InputArgs.getLastArg(OBJDUMP_debug_vars_EQ)) {
     DbgVariables = StringSwitch<DebugVarsFormat>(A->getValue())
                        .Case("ascii", DVASCII)
-                       .Case("unicode", DVUnicode);
+                       .Case("unicode", DVUnicode)
+                       .Default(DVInvalid);
+    if (DbgVariables == DVInvalid)
+      invalidArgValue(A);
   }
   parseIntArg(InputArgs, OBJDUMP_debug_vars_indent_EQ, DbgIndent);
 

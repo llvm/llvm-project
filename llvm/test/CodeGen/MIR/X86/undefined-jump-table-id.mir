@@ -53,21 +53,21 @@ body: |
 
   bb.2.def:
     $eax = MOV32r0 implicit-def $eflags
-    RETQ $eax
+    RET64 $eax
 
   bb.3.lbl1:
     $eax = MOV32ri 1
-    RETQ $eax
+    RET64 $eax
 
   bb.4.lbl2:
     $eax = MOV32ri 2
-    RETQ $eax
+    RET64 $eax
 
   bb.5.lbl3:
     $eax = MOV32ri 4
-    RETQ $eax
+    RET64 $eax
 
   bb.6.lbl4:
     $eax = MOV32ri 8
-    RETQ $eax
+    RET64 $eax
 ...

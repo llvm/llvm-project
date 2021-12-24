@@ -163,7 +163,7 @@ static bool isDereferenceableForAllocaSize(const Value *V, const AllocaInst *AI,
   uint64_t AllocaSize = DL.getTypeStoreSize(AI->getAllocatedType());
   if (!AllocaSize)
     return false;
-  return isDereferenceableAndAlignedPointer(V, Align(AI->getAlignment()),
+  return isDereferenceableAndAlignedPointer(V, AI->getAlign(),
                                             APInt(64, AllocaSize), DL);
 }
 
@@ -183,7 +183,8 @@ static Instruction *simplifyAllocaArraySize(InstCombinerImpl &IC,
   if (const ConstantInt *C = dyn_cast<ConstantInt>(AI.getArraySize())) {
     if (C->getValue().getActiveBits() <= 64) {
       Type *NewTy = ArrayType::get(AI.getAllocatedType(), C->getZExtValue());
-      AllocaInst *New = IC.Builder.CreateAlloca(NewTy, nullptr, AI.getName());
+      AllocaInst *New = IC.Builder.CreateAlloca(NewTy, AI.getAddressSpace(),
+                                                nullptr, AI.getName());
       New->setAlignment(AI.getAlign());
 
       // Scan to the end of the allocation instructions, to skip over a block of
@@ -199,21 +200,13 @@ static Instruction *simplifyAllocaArraySize(InstCombinerImpl &IC,
       Type *IdxTy = IC.getDataLayout().getIntPtrType(AI.getType());
       Value *NullIdx = Constant::getNullValue(IdxTy);
       Value *Idx[2] = {NullIdx, NullIdx};
-      Instruction *NewI = GetElementPtrInst::CreateInBounds(
+      Instruction *GEP = GetElementPtrInst::CreateInBounds(
           NewTy, New, Idx, New->getName() + ".sub");
-      IC.InsertNewInstBefore(NewI, *It);
-
-      // Gracefully handle allocas in other address spaces.
-      if (AI.getType()->getPointerAddressSpace() !=
-          NewI->getType()->getPointerAddressSpace()) {
-        NewI =
-            CastInst::CreatePointerBitCastOrAddrSpaceCast(NewI, AI.getType());
-        IC.InsertNewInstBefore(NewI, *It);
-      }
+      IC.InsertNewInstBefore(GEP, *It);
 
       // Now make everything use the getelementptr instead of the original
       // allocation.
-      return IC.replaceInstUsesWith(AI, NewI);
+      return IC.replaceInstUsesWith(AI, GEP);
     }
   }
 
@@ -640,7 +633,6 @@ static Instruction *unpackLoadToAggregate(InstCombinerImpl &IC, LoadInst &LI) {
     return nullptr;
 
   StringRef Name = LI.getName();
-  assert(LI.getAlignment() && "Alignment must be set at this point");
 
   if (auto *ST = dyn_cast<StructType>(T)) {
     // If the struct only have one element, we unpack.

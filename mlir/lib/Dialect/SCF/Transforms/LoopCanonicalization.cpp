@@ -14,6 +14,7 @@
 #include "PassDetail.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/SCF/AffineCanonicalizationUtils.h"
 #include "mlir/Dialect/SCF/Passes.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/SCF/Transforms.h"
@@ -31,9 +32,9 @@ using namespace mlir::scf;
 /// Note: This function handles only simple cases. Expand as needed.
 static bool isShapePreserving(ForOp forOp, int64_t arg) {
   auto yieldOp = cast<YieldOp>(forOp.getBody()->getTerminator());
-  assert(arg < static_cast<int64_t>(yieldOp.results().size()) &&
+  assert(arg < static_cast<int64_t>(yieldOp.getResults().size()) &&
          "arg is out of bounds");
-  Value value = yieldOp.results()[arg];
+  Value value = yieldOp.getResults()[arg];
   while (value) {
     if (value == forOp.getRegionIterArgs()[arg])
       return true;
@@ -154,17 +155,17 @@ struct AffineOpSCFCanonicalizationPattern : public OpRewritePattern<OpTy> {
                                 PatternRewriter &rewriter) const override {
     auto loopMatcher = [](Value iv, Value &lb, Value &ub, Value &step) {
       if (scf::ForOp forOp = scf::getForInductionVarOwner(iv)) {
-        lb = forOp.lowerBound();
-        ub = forOp.upperBound();
-        step = forOp.step();
+        lb = forOp.getLowerBound();
+        ub = forOp.getUpperBound();
+        step = forOp.getStep();
         return success();
       }
       if (scf::ParallelOp parOp = scf::getParallelForInductionVarOwner(iv)) {
         for (unsigned idx = 0; idx < parOp.getNumLoops(); ++idx) {
           if (parOp.getInductionVars()[idx] == iv) {
-            lb = parOp.lowerBound()[idx];
-            ub = parOp.upperBound()[idx];
-            step = parOp.step()[idx];
+            lb = parOp.getLowerBound()[idx];
+            ub = parOp.getUpperBound()[idx];
+            step = parOp.getStep()[idx];
             return success();
           }
         }

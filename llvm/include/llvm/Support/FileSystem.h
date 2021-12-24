@@ -772,7 +772,8 @@ enum OpenFlags : unsigned {
   /// The file should be opened in append mode.
   OF_Append = 4,
 
-  /// Delete the file on close. Only makes a difference on windows.
+  /// The returned handle can be used for deleting the file. Only makes a
+  /// difference on windows.
   OF_Delete = 8,
 
   /// When a child process is launched, this file should remain open in the
@@ -864,6 +865,11 @@ public:
 
   // The open file descriptor.
   int FD = -1;
+
+#ifdef _WIN32
+  // Whether we need to manually remove the file on close.
+  bool RemoveOnClose = false;
+#endif
 
   // Keep this with the given name.
   Error keep(const Twine &Name);

@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -test-linalg-transform-patterns=test-interchange-pattern=4,0,3,1,2 | FileCheck %s
-// RUN: mlir-opt %s -test-linalg-transform-patterns=test-interchange-pattern=4,0,3,1,2 -test-linalg-transform-patterns=test-interchange-pattern=1,3,4,2,0 | FileCheck --check-prefix=CANCEL-OUT %s
+// RUN: mlir-opt %s -test-linalg-codegen-strategy="iterator-interchange=4,0,3,1,2" | FileCheck %s
+// RUN: mlir-opt %s -test-linalg-codegen-strategy="iterator-interchange=4,0,3,1,2" -test-linalg-codegen-strategy="iterator-interchange=1,3,4,2,0" | FileCheck --check-prefix=CANCEL-OUT %s
 
 #map0 = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2, d3, d4)>
 #map1 = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d3)>

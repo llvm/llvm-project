@@ -74,14 +74,9 @@ define amdgpu_kernel void @opencl_test_implicit_alignment(i32 addrspace(1)* %out
   ret void
 }
 
-; Mesa implies 16-bytes are always allocated, hsa requires the
-; attribute for the additional space.
 ; ALL-LABEL: {{^}}test_no_kernargs:
-; HSA: enable_sgpr_kernarg_segment_ptr = 0
-; HSA: kernarg_segment_byte_size = 0
-
-; OS-MESA3D: enable_sgpr_kernarg_segment_ptr = 1
-; OS-MESA3D: kernarg_segment_byte_size = 16
+; CO-V2: enable_sgpr_kernarg_segment_ptr = 0
+; CO-V2: kernarg_segment_byte_size = 0
 ; CO-V2: kernarg_segment_alignment = 4
 
 ; HSA: s_mov_b64 [[OFFSET_NULL:s\[[0-9]+:[0-9]+\]]], 40{{$}}
@@ -97,7 +92,7 @@ define amdgpu_kernel void @test_no_kernargs() #1 {
 
 ; ALL-LABEL: {{^}}opencl_test_implicit_alignment_no_explicit_kernargs:
 ; HSA: kernarg_segment_byte_size = 48
-; OS-MESA3d: kernarg_segment_byte_size = 16
+; OS-MESA3D: kernarg_segment_byte_size = 16
 ; CO-V2: kernarg_segment_alignment = 4
 define amdgpu_kernel void @opencl_test_implicit_alignment_no_explicit_kernargs() #2 {
   %implicitarg.ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()
@@ -131,6 +126,6 @@ declare i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr() #0
 declare i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr() #0
 
 attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind }
+attributes #1 = { nounwind "amdgpu-implicitarg-num-bytes"="0" }
 attributes #2 = { nounwind "amdgpu-implicitarg-num-bytes"="48" }
 attributes #3 = { nounwind "amdgpu-implicitarg-num-bytes"="38" }

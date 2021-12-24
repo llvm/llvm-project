@@ -189,6 +189,16 @@ size_t Communication::Write(const void *src, size_t src_len,
   return 0;
 }
 
+size_t Communication::WriteAll(const void *src, size_t src_len,
+                               ConnectionStatus &status, Status *error_ptr) {
+  size_t total_written = 0;
+  do
+    total_written += Write(static_cast<const char *>(src) + total_written,
+                           src_len - total_written, status, error_ptr);
+  while (status == eConnectionStatusSuccess && total_written < src_len);
+  return total_written;
+}
+
 bool Communication::StartReadThread(Status *error_ptr) {
   if (error_ptr)
     error_ptr->Clear();

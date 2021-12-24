@@ -66,6 +66,7 @@ uint32_t determineNumberOfThreads(int32_t NumThreadsClause) {
 // Invoke an outlined parallel function unwrapping arguments (up to 32).
 void invokeMicrotask(int32_t global_tid, int32_t bound_tid, void *fn,
                      void **args, int64_t nargs) {
+  DebugEntryRAII Entry(__FILE__, __LINE__, "<OpenMP Outlined Function>");
   switch (nargs) {
 #include "generated_microtask_cases.gen"
   default:
@@ -81,30 +82,55 @@ extern "C" {
 void __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
                         int32_t num_threads, int proc_bind, void *fn,
                         void *wrapper_fn, void **args, int64_t nargs) {
+  FunctionTracingRAII();
 
   uint32_t TId = mapping::getThreadIdInBlock();
   // Handle the serialized case first, same for SPMD/non-SPMD.
   if (OMP_UNLIKELY(!if_expr || icv::Level)) {
-    __kmpc_serialized_parallel(ident, TId);
+    state::enterDataEnvironment();
+    ++icv::Level;
     invokeMicrotask(TId, 0, fn, args, nargs);
-    __kmpc_end_serialized_parallel(ident, TId);
+    state::exitDataEnvironment();
     return;
   }
 
   uint32_t NumThreads = determineNumberOfThreads(num_threads);
   if (mapping::isSPMDMode()) {
-    synchronize::threads();
+    // Avoid the race between the read of the `icv::Level` above and the write
+    // below by synchronizing all threads here.
+    synchronize::threadsAligned();
     {
+      // Note that the order here is important. `icv::Level` has to be updated
+      // last or the other updates will cause a thread specific state to be
+      // created.
       state::ValueRAII ParallelTeamSizeRAII(state::ParallelTeamSize, NumThreads,
                                             1u, TId == 0);
       state::ValueRAII ActiveLevelRAII(icv::ActiveLevel, 1u, 0u, TId == 0);
       state::ValueRAII LevelRAII(icv::Level, 1u, 0u, TId == 0);
-      synchronize::threads();
+
+      // Synchronize all threads after the main thread (TId == 0) set up the
+      // team state properly.
+      synchronize::threadsAligned();
+
+      ASSERT(state::ParallelTeamSize == NumThreads);
+      ASSERT(icv::ActiveLevel == 1u);
+      ASSERT(icv::Level == 1u);
 
       if (TId < NumThreads)
         invokeMicrotask(TId, 0, fn, args, nargs);
-      synchronize::threads();
+
+      // Synchronize all threads at the end of a parallel region.
+      synchronize::threadsAligned();
     }
+
+    // Synchronize all threads to make sure every thread exits the scope above;
+    // otherwise the following assertions and the assumption in
+    // __kmpc_target_deinit may not hold.
+    synchronize::threadsAligned();
+
+    ASSERT(state::ParallelTeamSize == 1u);
+    ASSERT(icv::ActiveLevel == 0u);
+    ASSERT(icv::Level == 0u);
     return;
   }
 
@@ -130,6 +156,9 @@ void __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
   }
 
   {
+    // Note that the order here is important. `icv::Level` has to be updated
+    // last or the other updates will cause a thread specific state to be
+    // created.
     state::ValueRAII ParallelTeamSizeRAII(state::ParallelTeamSize, NumThreads,
                                           1u, true);
     state::ValueRAII ParallelRegionFnRAII(state::ParallelRegionFn, wrapper_fn,
@@ -149,6 +178,7 @@ void __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
 
 __attribute__((noinline)) bool
 __kmpc_kernel_parallel(ParallelRegionFnTy *WorkFn) {
+  FunctionTracingRAII();
   // Work function and arguments for L1 parallel region.
   *WorkFn = state::ParallelRegionFn;
 
@@ -163,6 +193,7 @@ __kmpc_kernel_parallel(ParallelRegionFnTy *WorkFn) {
 }
 
 __attribute__((noinline)) void __kmpc_kernel_end_parallel() {
+  FunctionTracingRAII();
   // In case we have modified an ICV for this thread before a ThreadState was
   // created. We drop it now to not contaminate the next parallel region.
   ASSERT(!mapping::isSPMDMode());
@@ -171,28 +202,24 @@ __attribute__((noinline)) void __kmpc_kernel_end_parallel() {
   ASSERT(!mapping::isSPMDMode());
 }
 
-void __kmpc_serialized_parallel(IdentTy *, uint32_t TId) {
-  state::enterDataEnvironment();
-  ++icv::Level;
+uint16_t __kmpc_parallel_level(IdentTy *, uint32_t) {
+  FunctionTracingRAII();
+  return omp_get_level();
 }
 
-void __kmpc_end_serialized_parallel(IdentTy *, uint32_t TId) {
-  state::exitDataEnvironment();
-  --icv::Level;
-}
-
-uint16_t __kmpc_parallel_level(IdentTy *, uint32_t) { return omp_get_level(); }
-
-int32_t __kmpc_global_thread_num(IdentTy *) { return omp_get_thread_num(); }
-
-void __kmpc_push_num_threads(IdentTy *, int32_t, int32_t NumThreads) {
-  icv::NThreads = NumThreads;
+int32_t __kmpc_global_thread_num(IdentTy *) {
+  FunctionTracingRAII();
+  return omp_get_thread_num();
 }
 
 void __kmpc_push_num_teams(IdentTy *loc, int32_t tid, int32_t num_teams,
-                           int32_t thread_limit) {}
+                           int32_t thread_limit) {
+  FunctionTracingRAII();
+}
 
-void __kmpc_push_proc_bind(IdentTy *loc, uint32_t tid, int proc_bind) {}
+void __kmpc_push_proc_bind(IdentTy *loc, uint32_t tid, int proc_bind) {
+  FunctionTracingRAII();
+}
 }
 
 #pragma omp end declare target

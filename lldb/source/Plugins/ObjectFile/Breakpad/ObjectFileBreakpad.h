@@ -71,7 +71,7 @@ public:
     return AddressClass::eInvalid;
   }
 
-  Symtab *GetSymtab() override;
+  void ParseSymtab(lldb_private::Symtab &symtab) override;
 
   bool IsStripped() override { return false; }
 

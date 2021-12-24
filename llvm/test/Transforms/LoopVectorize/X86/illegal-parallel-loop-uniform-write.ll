@@ -38,7 +38,7 @@ define void @foo(i32* nocapture %a, i32* nocapture %b, i32 %k, i32 %m) #0 {
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT34:%.*]] = add i64 [[INDVARS_IV33]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV35:%.*]] = trunc i64 [[INDVARS_IV_NEXT34]] to i32
 ; CHECK-NEXT:    [[EXITCOND36:%.*]] = icmp eq i32 [[LFTR_WIDEIV35]], [[M]]
-; CHECK-NEXT:    br i1 [[EXITCOND36]], label [[FOR_END15_LOOPEXIT:%.*]], label [[FOR_BODY3_LR_PH_US]], !llvm.loop !2
+; CHECK-NEXT:    br i1 [[EXITCOND36]], label [[FOR_END15_LOOPEXIT:%.*]], label [[FOR_BODY3_LR_PH_US]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       for.body3.us:
 ; CHECK-NEXT:    [[INDVARS_IV29:%.*]] = phi i64 [ [[BC_RESUME_VAL:%.*]], [[SCALAR_PH:%.*]] ], [ [[INDVARS_IV_NEXT30:%.*]], [[FOR_BODY3_US:%.*]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[INDVARS_IV29]] to i32
@@ -51,7 +51,7 @@ define void @foo(i32* nocapture %a, i32* nocapture %b, i32 %k, i32 %m) #0 {
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT30]] = add i64 [[INDVARS_IV29]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV31:%.*]] = trunc i64 [[INDVARS_IV_NEXT30]] to i32
 ; CHECK-NEXT:    [[EXITCOND32:%.*]] = icmp eq i32 [[LFTR_WIDEIV31]], [[M]]
-; CHECK-NEXT:    br i1 [[EXITCOND32]], label [[FOR_END_US:%.*]], label [[FOR_BODY3_US]], !llvm.loop !3
+; CHECK-NEXT:    br i1 [[EXITCOND32]], label [[FOR_END_US:%.*]], label [[FOR_BODY3_US]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       for.body3.lr.ph.us:
 ; CHECK-NEXT:    [[INDVARS_IV33]] = phi i64 [ [[INDVARS_IV_NEXT34]], [[FOR_END_US]] ], [ 0, [[FOR_BODY3_LR_PH_US_PREHEADER]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[TMP1]], [[INDVARS_IV33]]
@@ -62,43 +62,39 @@ define void @foo(i32* nocapture %a, i32* nocapture %b, i32 %k, i32 %m) #0 {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH]], label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:
-; CHECK-NEXT:    [[MUL:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 1, i32 [[TMP0]])
-; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i32, i1 } [[MUL]], 0
-; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i32, i1 } [[MUL]], 1
-; CHECK-NEXT:    [[TMP10:%.*]] = add i32 [[TMP8]], [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP11:%.*]] = sub i32 [[TMP8]], [[MUL_RESULT]]
+; CHECK-NEXT:    [[TMP10:%.*]] = add i32 [[TMP8]], [[TMP0]]
+; CHECK-NEXT:    [[TMP11:%.*]] = sub i32 [[TMP8]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp sgt i32 [[TMP11]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp slt i32 [[TMP10]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = select i1 false, i1 [[TMP12]], i1 [[TMP13]]
-; CHECK-NEXT:    [[TMP15:%.*]] = or i1 [[TMP14]], [[MUL_OVERFLOW]]
-; CHECK-NEXT:    [[TMP16:%.*]] = or i1 false, [[TMP15]]
-; CHECK-NEXT:    br i1 [[TMP16]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    [[TMP15:%.*]] = or i1 false, [[TMP14]]
+; CHECK-NEXT:    br i1 [[TMP15]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP17:%.*]] = trunc i64 [[INDEX]] to i32
-; CHECK-NEXT:    [[TMP18:%.*]] = add i32 [[TMP17]], 0
-; CHECK-NEXT:    [[TMP19:%.*]] = add i32 [[ADD_US]], [[TMP18]]
-; CHECK-NEXT:    [[TMP20:%.*]] = sext i32 [[TMP19]] to i64
-; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP20]]
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i32, i32* [[TMP21]], i32 0
-; CHECK-NEXT:    [[TMP23:%.*]] = bitcast i32* [[TMP22]] to <4 x i32>*
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP23]], align 4
-; CHECK-NEXT:    [[TMP24:%.*]] = add nsw <4 x i32> [[WIDE_LOAD]], <i32 1, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <4 x i32> [[TMP24]], i32 0
+; CHECK-NEXT:    [[TMP16:%.*]] = trunc i64 [[INDEX]] to i32
+; CHECK-NEXT:    [[TMP17:%.*]] = add i32 [[TMP16]], 0
+; CHECK-NEXT:    [[TMP18:%.*]] = add i32 [[ADD_US]], [[TMP17]]
+; CHECK-NEXT:    [[TMP19:%.*]] = sext i32 [[TMP18]] to i64
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP19]]
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i32, i32* [[TMP20]], i32 0
+; CHECK-NEXT:    [[TMP22:%.*]] = bitcast i32* [[TMP21]] to <4 x i32>*
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP22]], align 4
+; CHECK-NEXT:    [[TMP23:%.*]] = add nsw <4 x i32> [[WIDE_LOAD]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i32> [[TMP23]], i32 0
+; CHECK-NEXT:    store i32 [[TMP24]], i32* [[ARRAYIDX7_US]], align 4, !llvm.mem.parallel_loop_access !0
+; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <4 x i32> [[TMP23]], i32 1
 ; CHECK-NEXT:    store i32 [[TMP25]], i32* [[ARRAYIDX7_US]], align 4, !llvm.mem.parallel_loop_access !0
-; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <4 x i32> [[TMP24]], i32 1
+; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <4 x i32> [[TMP23]], i32 2
 ; CHECK-NEXT:    store i32 [[TMP26]], i32* [[ARRAYIDX7_US]], align 4, !llvm.mem.parallel_loop_access !0
-; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <4 x i32> [[TMP24]], i32 2
+; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <4 x i32> [[TMP23]], i32 3
 ; CHECK-NEXT:    store i32 [[TMP27]], i32* [[ARRAYIDX7_US]], align 4, !llvm.mem.parallel_loop_access !0
-; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <4 x i32> [[TMP24]], i32 3
-; CHECK-NEXT:    store i32 [[TMP28]], i32* [[ARRAYIDX7_US]], align 4, !llvm.mem.parallel_loop_access !0
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP29:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP29]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !5
+; CHECK-NEXT:    [[TMP28:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP28]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END_US]], label [[SCALAR_PH]]
@@ -168,7 +164,7 @@ define void @no-par-mem-metadata(i32* nocapture %a, i32* nocapture %b, i32 %k, i
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT34:%.*]] = add i64 [[INDVARS_IV33]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV35:%.*]] = trunc i64 [[INDVARS_IV_NEXT34]] to i32
 ; CHECK-NEXT:    [[EXITCOND36:%.*]] = icmp eq i32 [[LFTR_WIDEIV35]], [[M]]
-; CHECK-NEXT:    br i1 [[EXITCOND36]], label [[FOR_END15_LOOPEXIT:%.*]], label [[FOR_BODY3_LR_PH_US]], !llvm.loop !2
+; CHECK-NEXT:    br i1 [[EXITCOND36]], label [[FOR_END15_LOOPEXIT:%.*]], label [[FOR_BODY3_LR_PH_US]], !llvm.loop [[LOOP2]]
 ; CHECK:       for.body3.us:
 ; CHECK-NEXT:    [[INDVARS_IV29:%.*]] = phi i64 [ 0, [[FOR_BODY3_LR_PH_US]] ], [ [[INDVARS_IV_NEXT30:%.*]], [[FOR_BODY3_US:%.*]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[INDVARS_IV29]] to i32
@@ -181,7 +177,7 @@ define void @no-par-mem-metadata(i32* nocapture %a, i32* nocapture %b, i32 %k, i
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT30]] = add i64 [[INDVARS_IV29]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV31:%.*]] = trunc i64 [[INDVARS_IV_NEXT30]] to i32
 ; CHECK-NEXT:    [[EXITCOND32:%.*]] = icmp eq i32 [[LFTR_WIDEIV31]], [[M]]
-; CHECK-NEXT:    br i1 [[EXITCOND32]], label [[FOR_END_US:%.*]], label [[FOR_BODY3_US]], !llvm.loop !1
+; CHECK-NEXT:    br i1 [[EXITCOND32]], label [[FOR_END_US:%.*]], label [[FOR_BODY3_US]], !llvm.loop [[LOOP1:![0-9]+]]
 ; CHECK:       for.body3.lr.ph.us:
 ; CHECK-NEXT:    [[INDVARS_IV33]] = phi i64 [ [[INDVARS_IV_NEXT34]], [[FOR_END_US]] ], [ 0, [[FOR_BODY3_LR_PH_US_PREHEADER]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[INDVARS_IV33]] to i32

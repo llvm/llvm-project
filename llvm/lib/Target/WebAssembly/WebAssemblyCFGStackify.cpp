@@ -173,7 +173,7 @@ static bool explicitlyBranchesTo(MachineBasicBlock *Pred,
 // satisfying the restrictions given by BeforeSet and AfterSet. BeforeSet
 // contains instructions that should go before the marker, and AfterSet contains
 // ones that should go after the marker. In this function, AfterSet is only
-// used for sanity checking.
+// used for validation checking.
 template <typename Container>
 static MachineBasicBlock::iterator
 getEarliestInsertPos(MachineBasicBlock *MBB, const Container &BeforeSet,
@@ -182,7 +182,7 @@ getEarliestInsertPos(MachineBasicBlock *MBB, const Container &BeforeSet,
   while (InsertPos != MBB->begin()) {
     if (BeforeSet.count(&*std::prev(InsertPos))) {
 #ifndef NDEBUG
-      // Sanity check
+      // Validation check
       for (auto Pos = InsertPos, E = MBB->begin(); Pos != E; --Pos)
         assert(!AfterSet.count(&*std::prev(Pos)));
 #endif
@@ -197,7 +197,7 @@ getEarliestInsertPos(MachineBasicBlock *MBB, const Container &BeforeSet,
 // satisfying the restrictions given by BeforeSet and AfterSet. BeforeSet
 // contains instructions that should go before the marker, and AfterSet contains
 // ones that should go after the marker. In this function, BeforeSet is only
-// used for sanity checking.
+// used for validation checking.
 template <typename Container>
 static MachineBasicBlock::iterator
 getLatestInsertPos(MachineBasicBlock *MBB, const Container &BeforeSet,
@@ -206,7 +206,7 @@ getLatestInsertPos(MachineBasicBlock *MBB, const Container &BeforeSet,
   while (InsertPos != MBB->end()) {
     if (AfterSet.count(&*InsertPos)) {
 #ifndef NDEBUG
-      // Sanity check
+      // Validation check
       for (auto Pos = InsertPos, E = MBB->end(); Pos != E; ++Pos)
         assert(!BeforeSet.count(&*Pos));
 #endif
@@ -1670,8 +1670,7 @@ void WebAssemblyCFGStackify::rewriteDepthImmediates(MachineFunction &MF) {
   SmallVector<EndMarkerInfo, 8> Stack;
   SmallVector<const MachineBasicBlock *, 8> EHPadStack;
   for (auto &MBB : reverse(MF)) {
-    for (auto I = MBB.rbegin(), E = MBB.rend(); I != E; ++I) {
-      MachineInstr &MI = *I;
+    for (MachineInstr &MI : llvm::reverse(MBB)) {
       switch (MI.getOpcode()) {
       case WebAssembly::BLOCK:
       case WebAssembly::TRY:
@@ -1742,7 +1741,7 @@ void WebAssemblyCFGStackify::rewriteDepthImmediates(MachineFunction &MF) {
 
 void WebAssemblyCFGStackify::cleanupFunctionData(MachineFunction &MF) {
   if (FakeCallerBB)
-    MF.DeleteMachineBasicBlock(FakeCallerBB);
+    MF.deleteMachineBasicBlock(FakeCallerBB);
   AppendixBB = FakeCallerBB = nullptr;
 }
 

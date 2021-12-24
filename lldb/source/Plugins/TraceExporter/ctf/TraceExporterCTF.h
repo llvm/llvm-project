@@ -10,7 +10,6 @@
 #define LLDB_SOURCE_PLUGINS_TRACE_EXPORTER_CTF_H
 
 #include "lldb/Target/TraceExporter.h"
-#include "lldb/Utility/ConstString.h"
 
 namespace lldb_private {
 namespace ctf {
@@ -26,14 +25,14 @@ public:
   static llvm::Expected<lldb::TraceExporterUP> CreateInstance();
 
   llvm::StringRef GetPluginName() override {
-    return GetPluginNameStatic().GetStringRef();
+    return GetPluginNameStatic();
   }
 
   static void Initialize();
 
   static void Terminate();
 
-  static ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "ctf"; }
   /// \}
 };
 

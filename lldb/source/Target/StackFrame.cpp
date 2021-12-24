@@ -1883,14 +1883,32 @@ bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
       if (m_sc.comp_unit && m_sc.line_entry.IsValid()) {
         have_debuginfo = true;
         if (source_lines_before > 0 || source_lines_after > 0) {
+          uint32_t start_line = m_sc.line_entry.line;
+          if (!start_line && m_sc.function) {
+            FileSpec source_file;
+            m_sc.function->GetStartLineSourceInfo(source_file, start_line);
+          }
+
           size_t num_lines =
               target->GetSourceManager().DisplaySourceLinesWithLineNumbers(
-                  m_sc.line_entry.file, m_sc.line_entry.line,
-                  m_sc.line_entry.column, source_lines_before,
-                  source_lines_after, "->", &strm);
+                  m_sc.line_entry.file, start_line, m_sc.line_entry.column,
+                  source_lines_before, source_lines_after, "->", &strm);
           if (num_lines != 0)
             have_source = true;
           // TODO: Give here a one time warning if source file is missing.
+          if (!m_sc.line_entry.line) {
+            ConstString fn_name = m_sc.GetFunctionName();
+
+            if (!fn_name.IsEmpty())
+              strm.Printf(
+                  "Note: this address is compiler-generated code in function "
+                  "%s that has no source code associated with it.",
+                  fn_name.AsCString());
+            else
+              strm.Printf("Note: this address is compiler-generated code that "
+                          "has no source code associated with it.");
+            strm.EOL();
+          }
         }
       }
       switch (disasm_display) {

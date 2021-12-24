@@ -108,15 +108,7 @@ function generate-cmake-libcxx-win() {
           -DCMAKE_C_COMPILER=clang-cl \
           -DCMAKE_CXX_COMPILER=clang-cl \
           -DLIBCXX_ENABLE_FILESYSTEM=YES \
-          -DCMAKE_CXX_FLAGS="-D_LIBCPP_HAS_NO_INT128" \
-          -DLIBCXX_TEST_COMPILER_FLAGS="-D_LIBCPP_HAS_NO_INT128" \
-          "${@}"
-}
-
-function generate-cmake-aix() {
-    generate-cmake-base \
-          -S "${MONOREPO_ROOT}/llvm" \
-          -DLLVM_ENABLE_PROJECTS="libcxx;libcxxabi" \
+          -DLIBCXX_EXTRA_SITE_DEFINES="_LIBCPP_HAS_NO_INT128" \
           "${@}"
 }
 
@@ -281,24 +273,17 @@ generic-static)
                    -DLIBUNWIND_TEST_CONFIG="llvm-libunwind-static.cfg.in"
     check-runtimes
 ;;
-generic-32bit)
-    clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-32bits.cmake" \
-                   -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in" \
-                   -DLIBUNWIND_TEST_CONFIG="llvm-libunwind-shared.cfg.in"
-    check-runtimes
-;;
-generic-clang-11)
-    export CC=clang-11
-    export CXX=clang++-11
+generic-clang-12)
+    export CC=clang-12
+    export CXX=clang++-12
     clean
     generate-cmake -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in" \
                    -DLIBUNWIND_TEST_CONFIG="llvm-libunwind-shared.cfg.in"
     check-runtimes
 ;;
-generic-clang-12)
-    export CC=clang-12
-    export CXX=clang++-12
+generic-clang-13)
+    export CC=clang-13
+    export CXX=clang++-13
     clean
     generate-cmake -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in" \
                    -DLIBUNWIND_TEST_CONFIG="llvm-libunwind-shared.cfg.in"
@@ -482,7 +467,9 @@ bootstrapping-build)
           -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
           -DLLVM_ENABLE_PROJECTS="clang" \
           -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" \
-          -DLLVM_RUNTIME_TARGETS="x86_64-unknown-linux-gnu" \
+          -DLLVM_RUNTIME_TARGETS="$(c++ --print-target-triple)" \
+          -DLLVM_TARGETS_TO_BUILD="host" \
+          -DRUNTIMES_BUILD_ALLOW_DARWIN=ON \
           -DLLVM_ENABLE_ASSERTIONS=ON \
           -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-modules.cmake" \
           -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in" \
@@ -526,6 +513,7 @@ legacy-standalone)
           -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
           -DLLVM_PATH="${MONOREPO_ROOT}/llvm" \
           -DLIBCXX_CXX_ABI=libcxxabi \
+          -DLIBCXX_INCLUDE_BENCHMARKS=OFF \
           -DLIBCXX_CXX_ABI_INCLUDE_PATHS="${MONOREPO_ROOT}/libcxxabi/include" \
           -DLIBCXX_CXX_ABI_LIBRARY_PATH="${BUILD_DIR}/libcxxabi/lib"
 
@@ -601,7 +589,7 @@ armv7-noexceptions)
                    -DLIBUNWIND_TEST_CONFIG="llvm-libunwind-shared.cfg.in"
     check-runtimes
 ;;
-windows-dll)
+clang-cl-dll)
     clean
     # TODO: Currently, building with the experimental library breaks running
     # tests (the test linking look for the c++experimental library with the
@@ -609,13 +597,42 @@ windows-dll)
     # correctly when libc++ visibility attributes indicate dllimport linkage
     # anyway), thus just disable the experimental library. Remove this
     # setting when cmake and the test driver does the right thing automatically.
-    generate-cmake-libcxx-win -DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=OFF
+    generate-cmake-libcxx-win -DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=OFF \
+                              -DLIBCXX_TEST_CONFIG="llvm-libc++-shared-clangcl.cfg.in"
     echo "+++ Running the libc++ tests"
     ${NINJA} -vC "${BUILD_DIR}" check-cxx
 ;;
-windows-static)
+clang-cl-static)
     clean
-    generate-cmake-libcxx-win -DLIBCXX_ENABLE_SHARED=OFF
+    generate-cmake-libcxx-win -DLIBCXX_ENABLE_SHARED=OFF \
+                              -DLIBCXX_TEST_CONFIG="llvm-libc++-static-clangcl.cfg.in"
+    echo "+++ Running the libc++ tests"
+    ${NINJA} -vC "${BUILD_DIR}" check-cxx
+;;
+mingw-dll)
+    clean
+    # Explicitly specify the compiler with a triple prefix. The CI
+    # environment has got two installations of Clang; the default one
+    # defaults to MSVC mode, while there's an installation of llvm-mingw
+    # further back in PATH. By calling the compiler with an explicit
+    # triple prefix, we use the one that is bundled with a mingw sysroot.
+    generate-cmake \
+          -DCMAKE_C_COMPILER=x86_64-w64-mingw32-clang \
+          -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-clang++ \
+          -DLIBCXX_TEST_CONFIG="llvm-libc++-mingw.cfg.in" \
+          -C "${MONOREPO_ROOT}/libcxx/cmake/caches/MinGW.cmake"
+    echo "+++ Running the libc++ tests"
+    ${NINJA} -vC "${BUILD_DIR}" check-cxx
+;;
+mingw-static)
+    clean
+    generate-cmake \
+          -DCMAKE_C_COMPILER=x86_64-w64-mingw32-clang \
+          -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-clang++ \
+          -DLIBCXX_TEST_CONFIG="llvm-libc++-mingw.cfg.in" \
+          -C "${MONOREPO_ROOT}/libcxx/cmake/caches/MinGW.cmake" \
+          -DLIBCXX_ENABLE_SHARED=OFF \
+          -DLIBUNWIND_ENABLE_SHARED=OFF
     echo "+++ Running the libc++ tests"
     ${NINJA} -vC "${BUILD_DIR}" check-cxx
 ;;
@@ -623,9 +640,10 @@ aix)
     export CC=ibm-clang
     export CXX=ibm-clang++_r
     clean
-    generate-cmake-aix -C "${MONOREPO_ROOT}/libcxx/cmake/caches/AIX.cmake" \
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/AIX.cmake" \
                    -DLIBCXX_TEST_CONFIG="ibm-libc++-shared.cfg.in" \
-                   -DLIBCXXABI_TEST_CONFIG="ibm-libc++abi-shared.cfg.in"
+                   -DLIBCXXABI_TEST_CONFIG="ibm-libc++abi-shared.cfg.in" \
+                   -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi"
     # TODO: use check-runtimes once libunwind builds cleanly on AIX.
     ${NINJA} -vC "${BUILD_DIR}" install-cxx install-cxxabi
     ${NINJA} -vC "${BUILD_DIR}" check-cxx check-cxxabi

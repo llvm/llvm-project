@@ -8,14 +8,34 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 target triple = "x86_64-apple-darwin10.9.0"
 
 define <16 x i8> @test_8bit(<16 x i8> %lhs, <16 x i8> %tmp, i1 %tst) {
-; CHECK-LABEL: @test_8bit(
-; CHECK-NEXT:    [[MASK:%.*]] = shufflevector <16 x i8> [[TMP:%.*]], <16 x i8> poison, <16 x i32> zeroinitializer
-; CHECK-NEXT:    br i1 [[TST:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
-; CHECK:       if_true:
-; CHECK-NEXT:    ret <16 x i8> [[MASK]]
-; CHECK:       if_false:
-; CHECK-NEXT:    [[RES:%.*]] = shl <16 x i8> [[LHS:%.*]], [[MASK]]
-; CHECK-NEXT:    ret <16 x i8> [[RES]]
+; CHECK-SSE2-LABEL: @test_8bit(
+; CHECK-SSE2-NEXT:    [[MASK:%.*]] = shufflevector <16 x i8> [[TMP:%.*]], <16 x i8> poison, <16 x i32> zeroinitializer
+; CHECK-SSE2-NEXT:    br i1 [[TST:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK-SSE2:       if_true:
+; CHECK-SSE2-NEXT:    ret <16 x i8> [[MASK]]
+; CHECK-SSE2:       if_false:
+; CHECK-SSE2-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[TMP]], <16 x i8> poison, <16 x i32> zeroinitializer
+; CHECK-SSE2-NEXT:    [[RES:%.*]] = shl <16 x i8> [[LHS:%.*]], [[TMP1]]
+; CHECK-SSE2-NEXT:    ret <16 x i8> [[RES]]
+;
+; CHECK-XOP-LABEL: @test_8bit(
+; CHECK-XOP-NEXT:    [[MASK:%.*]] = shufflevector <16 x i8> [[TMP:%.*]], <16 x i8> poison, <16 x i32> zeroinitializer
+; CHECK-XOP-NEXT:    br i1 [[TST:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK-XOP:       if_true:
+; CHECK-XOP-NEXT:    ret <16 x i8> [[MASK]]
+; CHECK-XOP:       if_false:
+; CHECK-XOP-NEXT:    [[RES:%.*]] = shl <16 x i8> [[LHS:%.*]], [[MASK]]
+; CHECK-XOP-NEXT:    ret <16 x i8> [[RES]]
+;
+; CHECK-AVX-LABEL: @test_8bit(
+; CHECK-AVX-NEXT:    [[MASK:%.*]] = shufflevector <16 x i8> [[TMP:%.*]], <16 x i8> poison, <16 x i32> zeroinitializer
+; CHECK-AVX-NEXT:    br i1 [[TST:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK-AVX:       if_true:
+; CHECK-AVX-NEXT:    ret <16 x i8> [[MASK]]
+; CHECK-AVX:       if_false:
+; CHECK-AVX-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[TMP]], <16 x i8> poison, <16 x i32> zeroinitializer
+; CHECK-AVX-NEXT:    [[RES:%.*]] = shl <16 x i8> [[LHS:%.*]], [[TMP1]]
+; CHECK-AVX-NEXT:    ret <16 x i8> [[RES]]
 ;
   %mask = shufflevector <16 x i8> %tmp, <16 x i8> poison, <16 x i32> zeroinitializer
   br i1 %tst, label %if_true, label %if_false

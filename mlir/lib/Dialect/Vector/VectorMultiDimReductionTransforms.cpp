@@ -10,14 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Vector/VectorOps.h"
-#include "mlir/Dialect/Vector/VectorTransforms.h"
+#include "mlir/Dialect/Vector/VectorRewritePatterns.h"
 #include "mlir/Dialect/Vector/VectorUtils.h"
-#include "mlir/IR/AffineExpr.h"
-#include "mlir/IR/AffineMap.h"
-#include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/TypeUtilities.h"
 
@@ -35,10 +30,11 @@ class InnerOuterDimReductionConversion
 public:
   using OpRewritePattern<vector::MultiDimReductionOp>::OpRewritePattern;
 
-  explicit InnerOuterDimReductionConversion(MLIRContext *context,
-                                            bool useInnerDimsForReduction)
+  explicit InnerOuterDimReductionConversion(
+      MLIRContext *context, vector::VectorMultiReductionLowering options)
       : mlir::OpRewritePattern<vector::MultiDimReductionOp>(context),
-        useInnerDimsForReduction(useInnerDimsForReduction) {}
+        useInnerDimsForReduction(
+            options == vector::VectorMultiReductionLowering::InnerReduction) {}
 
   LogicalResult matchAndRewrite(vector::MultiDimReductionOp multiReductionOp,
                                 PatternRewriter &rewriter) const override {
@@ -60,6 +56,9 @@ public:
         parallelDims.push_back(i);
 
     // Add transpose only if inner-most/outer-most dimensions are not parallel
+    // and there are parallel dims.
+    if (parallelDims.empty())
+      return failure();
     if (useInnerDimsForReduction &&
         (parallelDims ==
          llvm::to_vector<4>(llvm::seq<int64_t>(0, parallelDims.size()))))
@@ -103,10 +102,11 @@ class ReduceMultiDimReductionRank
 public:
   using OpRewritePattern<vector::MultiDimReductionOp>::OpRewritePattern;
 
-  explicit ReduceMultiDimReductionRank(MLIRContext *context,
-                                       bool useInnerDimsForReduction)
+  explicit ReduceMultiDimReductionRank(
+      MLIRContext *context, vector::VectorMultiReductionLowering options)
       : mlir::OpRewritePattern<vector::MultiDimReductionOp>(context),
-        useInnerDimsForReduction(useInnerDimsForReduction) {}
+        useInnerDimsForReduction(
+            options == vector::VectorMultiReductionLowering::InnerReduction) {}
 
   LogicalResult matchAndRewrite(vector::MultiDimReductionOp multiReductionOp,
                                 PatternRewriter &rewriter) const override {
@@ -258,22 +258,22 @@ struct TwoDimMultiReductionToElementWise
           result = rewriter.create<arith::MulFOp>(loc, operand, result);
         break;
       case vector::CombiningKind::MINUI:
-        result = rewriter.create<MinUIOp>(loc, operand, result);
+        result = rewriter.create<arith::MinUIOp>(loc, operand, result);
         break;
       case vector::CombiningKind::MINSI:
-        result = rewriter.create<MinSIOp>(loc, operand, result);
+        result = rewriter.create<arith::MinSIOp>(loc, operand, result);
         break;
       case vector::CombiningKind::MINF:
-        result = rewriter.create<MinFOp>(loc, operand, result);
+        result = rewriter.create<arith::MinFOp>(loc, operand, result);
         break;
       case vector::CombiningKind::MAXUI:
-        result = rewriter.create<MaxUIOp>(loc, operand, result);
+        result = rewriter.create<arith::MaxUIOp>(loc, operand, result);
         break;
       case vector::CombiningKind::MAXSI:
-        result = rewriter.create<MaxSIOp>(loc, operand, result);
+        result = rewriter.create<arith::MaxSIOp>(loc, operand, result);
         break;
       case vector::CombiningKind::MAXF:
-        result = rewriter.create<MaxFOp>(loc, operand, result);
+        result = rewriter.create<arith::MaxFOp>(loc, operand, result);
         break;
       case vector::CombiningKind::AND:
         result = rewriter.create<arith::AndIOp>(loc, operand, result);
@@ -350,8 +350,9 @@ struct TwoDimMultiReductionToReduction
           loc, getElementTypeOrSelf(multiReductionOp.getDestType()),
           rewriter.getStringAttr(getKindStr(multiReductionOp.kind())), v,
           ValueRange{});
-      result = rewriter.create<vector::InsertElementOp>(loc, reducedValue,
-                                                        result, i);
+      result = rewriter.create<vector::InsertElementOp>(
+          loc, reducedValue, result,
+          rewriter.create<arith::ConstantIndexOp>(loc, i));
     }
     rewriter.replaceOp(multiReductionOp, result);
     return success();
@@ -398,11 +399,11 @@ struct OneDimMultiReductionToTwoDim
 };
 
 void mlir::vector::populateVectorMultiReductionLoweringPatterns(
-    RewritePatternSet &patterns, bool useInnerDimsForReduction) {
-  patterns.add<InnerOuterDimReductionConversion, ReduceMultiDimReductionRank,
-               OneDimMultiReductionToTwoDim>(patterns.getContext(),
-                                             useInnerDimsForReduction);
-  if (useInnerDimsForReduction)
+    RewritePatternSet &patterns, VectorMultiReductionLowering options) {
+  patterns.add<InnerOuterDimReductionConversion, ReduceMultiDimReductionRank>(
+      patterns.getContext(), options);
+  patterns.add<OneDimMultiReductionToTwoDim>(patterns.getContext());
+  if (options == VectorMultiReductionLowering ::InnerReduction)
     patterns.add<TwoDimMultiReductionToReduction>(patterns.getContext());
   else
     patterns.add<TwoDimMultiReductionToElementWise>(patterns.getContext());

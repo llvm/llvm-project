@@ -6,13 +6,16 @@ set(LLVM_LINK_COMPONENTS
 
 add_tablegen(mlir-tblgen MLIR
   AttrOrTypeDefGen.cpp
+  AttrOrTypeFormatGen.cpp
   CodeGenHelpers.cpp
   DialectGen.cpp
   DirectiveCommonGen.cpp
   EnumsGen.cpp
+  FormatGen.cpp
   LLVMIRConversionGen.cpp
   LLVMIRIntrinsicGen.cpp
   mlir-tblgen.cpp
+  OpClass.cpp
   OpDefinitionsGen.cpp
   OpDocGen.cpp
   OpFormatGen.cpp

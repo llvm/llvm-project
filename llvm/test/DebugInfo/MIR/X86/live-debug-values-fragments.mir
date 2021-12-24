@@ -1,4 +1,4 @@
-# RUN: llc %s -o - -run-pass=livedebugvalues | FileCheck %s
+# RUN: llc %s -o - -run-pass=livedebugvalues -experimental-debug-variable-locations=true | FileCheck %s
 #
 # The first func tests that, for two independent variable fragments defined in
 # blocks 1 and 2, _both_ their locations are propagated into the exit block.
@@ -15,12 +15,12 @@
 #
 # CHECK-LABEL: foo
 # CHECK-LABEL: bb.3.bb3:
-# CHECK:      DBG_VALUE $ebx, $noreg, !{{[0-9]+}},
-# CHECK-SAME:                 !DIExpression(DW_OP_LLVM_fragment, 32, 32)
-# CHECK-NEXT: DBG_VALUE $eax, $noreg, !{{[0-9]+}},
+# CHECK:      DBG_VALUE $ecx, $noreg, !{{[0-9]+}},
 # CHECK-SAME:                 !DIExpression(DW_OP_LLVM_fragment, 0, 32)
+# CHECK-NEXT: DBG_VALUE $ebx, $noreg, !{{[0-9]+}},
+# CHECK-SAME:                 !DIExpression(DW_OP_LLVM_fragment, 32, 32)
 # CHECK-NEXT: XOR32rr
-# CHECK-NEXT: RETQ
+# CHECK-NEXT: RET64
 #
 # CHECK-LABEL: bar
 # CHECK-LABEL: bb.0.entry:
@@ -37,7 +37,7 @@
 
 # CHECK-LABEL: bb.2.bb2:
 # CHECK-NOT:  DBG_VALUE
-# CHECK:      DBG_VALUE $ax, $noreg, !{{[0-9]+}},
+# CHECK:      DBG_VALUE $cx, $noreg, !{{[0-9]+}},
 # CHECK-SAME:                 !DIExpression(DW_OP_LLVM_fragment, 8, 16)
 # CHECK-NEXT: MOV32rr
 # CHECK-NEXT: ADD32ri8
@@ -46,12 +46,12 @@
 # CHECK-NEXT: JMP_1
 
 # CHECK-LABEL: bb.3.bb3:
-# CHECK:      DBG_VALUE $ebx, $noreg, !{{[0-9]+}},
-# CHECK-SAME:                 !DIExpression(DW_OP_LLVM_fragment, 32, 32)
-# CHECK-NEXT: DBG_VALUE $ax, $noreg, !{{[0-9]+}},
+# CHECK:      DBG_VALUE $cx, $noreg, !{{[0-9]+}},
 # CHECK-SAME:                 !DIExpression(DW_OP_LLVM_fragment, 8, 16)
+# CHECK-NEXT: DBG_VALUE $ebx, $noreg, !{{[0-9]+}},
+# CHECK-SAME:                 !DIExpression(DW_OP_LLVM_fragment, 32, 32)
 # CHECK-NEXT: XOR32rr
-# CHECK-NEXT: RETQ
+# CHECK-NEXT: RET64
 
 # CHECK-LABEL: baz
 # CHECK-LABEL: bb.0.entry:
@@ -81,7 +81,7 @@
 # CHECK:      DBG_VALUE $ebx, $noreg, !{{[0-9]+}},
 # CHECK-SAME:                 !DIExpression(DW_OP_LLVM_fragment, 32, 32)
 # CHECK-NEXT: XOR32rr
-# CHECK-NEXT: RETQ
+# CHECK-NEXT: RET64
 
 --- |
   target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -178,7 +178,7 @@ body:             |
   bb.3.bb3:
     liveins: $eax, $ebx
     $eax = XOR32rr killed $eax, killed $ebx, implicit-def $eflags
-    RETQ $eax, debug-location !8
+    RET64 $eax, debug-location !8
 
 ...
 ---
@@ -216,7 +216,7 @@ body:             |
   bb.3.bb3:
     liveins: $eax, $ebx
     $eax = XOR32rr killed $eax, killed $ebx, implicit-def $eflags
-    RETQ $eax, debug-location !48
+    RET64 $eax, debug-location !48
 
 ...
 ---
@@ -254,6 +254,6 @@ body:             |
   bb.3.bb3:
     liveins: $eax, $ebx
     $eax = XOR32rr killed $eax, killed $ebx, implicit-def $eflags
-    RETQ $eax, debug-location !88
+    RET64 $eax, debug-location !88
 
 ...

@@ -176,6 +176,8 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     setTargetDAGCombine(ISD::FP_ROUND);
     setTargetDAGCombine(ISD::CONCAT_VECTORS);
 
+    setTargetDAGCombine(ISD::TRUNCATE);
+
     // Support saturating add for i8x16 and i16x8
     for (auto Op : {ISD::SADDSAT, ISD::UADDSAT})
       for (auto T : {MVT::v16i8, MVT::v8i16})
@@ -644,8 +646,7 @@ LowerCallResults(MachineInstr &CallResults, DebugLoc DL, MachineBasicBlock *BB,
     Register RegFuncref =
         MF.getRegInfo().createVirtualRegister(&WebAssembly::FUNCREFRegClass);
     MachineInstr *RefNull =
-        BuildMI(MF, DL, TII.get(WebAssembly::REF_NULL_FUNCREF), RegFuncref)
-            .addImm(static_cast<int32_t>(WebAssembly::HeapType::Funcref));
+        BuildMI(MF, DL, TII.get(WebAssembly::REF_NULL_FUNCREF), RegFuncref);
     BB->insertAfter(Const0->getIterator(), RefNull);
 
     MachineInstr *TableSet =
@@ -2610,6 +2611,114 @@ performVectorTruncZeroCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   return DAG.getNode(Op, SDLoc(N), ResVT, Source);
 }
 
+// Helper to extract VectorWidth bits from Vec, starting from IdxVal.
+static SDValue extractSubVector(SDValue Vec, unsigned IdxVal, SelectionDAG &DAG,
+                                const SDLoc &DL, unsigned VectorWidth) {
+  EVT VT = Vec.getValueType();
+  EVT ElVT = VT.getVectorElementType();
+  unsigned Factor = VT.getSizeInBits() / VectorWidth;
+  EVT ResultVT = EVT::getVectorVT(*DAG.getContext(), ElVT,
+                                  VT.getVectorNumElements() / Factor);
+
+  // Extract the relevant VectorWidth bits.  Generate an EXTRACT_SUBVECTOR
+  unsigned ElemsPerChunk = VectorWidth / ElVT.getSizeInBits();
+  assert(isPowerOf2_32(ElemsPerChunk) && "Elements per chunk not power of 2");
+
+  // This is the index of the first element of the VectorWidth-bit chunk
+  // we want. Since ElemsPerChunk is a power of 2 just need to clear bits.
+  IdxVal &= ~(ElemsPerChunk - 1);
+
+  // If the input is a buildvector just emit a smaller one.
+  if (Vec.getOpcode() == ISD::BUILD_VECTOR)
+    return DAG.getBuildVector(ResultVT, DL,
+                              Vec->ops().slice(IdxVal, ElemsPerChunk));
+
+  SDValue VecIdx = DAG.getIntPtrConstant(IdxVal, DL);
+  return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ResultVT, Vec, VecIdx);
+}
+
+// Helper to recursively truncate vector elements in half with NARROW_U. DstVT
+// is the expected destination value type after recursion. In is the initial
+// input. Note that the input should have enough leading zero bits to prevent
+// NARROW_U from saturating results.
+static SDValue truncateVectorWithNARROW(EVT DstVT, SDValue In, const SDLoc &DL,
+                                        SelectionDAG &DAG) {
+  EVT SrcVT = In.getValueType();
+
+  // No truncation required, we might get here due to recursive calls.
+  if (SrcVT == DstVT)
+    return In;
+
+  unsigned SrcSizeInBits = SrcVT.getSizeInBits();
+  unsigned NumElems = SrcVT.getVectorNumElements();
+  if (!isPowerOf2_32(NumElems))
+    return SDValue();
+  assert(DstVT.getVectorNumElements() == NumElems && "Illegal truncation");
+  assert(SrcSizeInBits > DstVT.getSizeInBits() && "Illegal truncation");
+
+  LLVMContext &Ctx = *DAG.getContext();
+  EVT PackedSVT = EVT::getIntegerVT(Ctx, SrcVT.getScalarSizeInBits() / 2);
+
+  // Narrow to the largest type possible:
+  // vXi64/vXi32 -> i16x8.narrow_i32x4_u and vXi16 -> i8x16.narrow_i16x8_u.
+  EVT InVT = MVT::i16, OutVT = MVT::i8;
+  if (SrcVT.getScalarSizeInBits() > 16) {
+    InVT = MVT::i32;
+    OutVT = MVT::i16;
+  }
+  unsigned SubSizeInBits = SrcSizeInBits / 2;
+  InVT = EVT::getVectorVT(Ctx, InVT, SubSizeInBits / InVT.getSizeInBits());
+  OutVT = EVT::getVectorVT(Ctx, OutVT, SubSizeInBits / OutVT.getSizeInBits());
+
+  // Split lower/upper subvectors.
+  SDValue Lo = extractSubVector(In, 0, DAG, DL, SubSizeInBits);
+  SDValue Hi = extractSubVector(In, NumElems / 2, DAG, DL, SubSizeInBits);
+
+  // 256bit -> 128bit truncate - Narrow lower/upper 128-bit subvectors.
+  if (SrcVT.is256BitVector() && DstVT.is128BitVector()) {
+    Lo = DAG.getBitcast(InVT, Lo);
+    Hi = DAG.getBitcast(InVT, Hi);
+    SDValue Res = DAG.getNode(WebAssemblyISD::NARROW_U, DL, OutVT, Lo, Hi);
+    return DAG.getBitcast(DstVT, Res);
+  }
+
+  // Recursively narrow lower/upper subvectors, concat result and narrow again.
+  EVT PackedVT = EVT::getVectorVT(Ctx, PackedSVT, NumElems / 2);
+  Lo = truncateVectorWithNARROW(PackedVT, Lo, DL, DAG);
+  Hi = truncateVectorWithNARROW(PackedVT, Hi, DL, DAG);
+
+  PackedVT = EVT::getVectorVT(Ctx, PackedSVT, NumElems);
+  SDValue Res = DAG.getNode(ISD::CONCAT_VECTORS, DL, PackedVT, Lo, Hi);
+  return truncateVectorWithNARROW(DstVT, Res, DL, DAG);
+}
+
+static SDValue performTruncateCombine(SDNode *N,
+                                      TargetLowering::DAGCombinerInfo &DCI) {
+  auto &DAG = DCI.DAG;
+
+  SDValue In = N->getOperand(0);
+  EVT InVT = In.getValueType();
+  if (!InVT.isSimple())
+    return SDValue();
+
+  EVT OutVT = N->getValueType(0);
+  if (!OutVT.isVector())
+    return SDValue();
+
+  EVT OutSVT = OutVT.getVectorElementType();
+  EVT InSVT = InVT.getVectorElementType();
+  // Currently only cover truncate to v16i8 or v8i16.
+  if (!((InSVT == MVT::i16 || InSVT == MVT::i32 || InSVT == MVT::i64) &&
+        (OutSVT == MVT::i8 || OutSVT == MVT::i16) && OutVT.is128BitVector()))
+    return SDValue();
+
+  SDLoc DL(N);
+  APInt Mask = APInt::getLowBitsSet(InVT.getScalarSizeInBits(),
+                                    OutVT.getScalarSizeInBits());
+  In = DAG.getNode(ISD::AND, DL, InVT, In, DAG.getConstant(Mask, DL, InVT));
+  return truncateVectorWithNARROW(OutVT, In, DL, DAG);
+}
+
 SDValue
 WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
@@ -2626,5 +2735,7 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::FP_ROUND:
   case ISD::CONCAT_VECTORS:
     return performVectorTruncZeroCombine(N, DCI);
+  case ISD::TRUNCATE:
+    return performTruncateCombine(N, DCI);
   }
 }

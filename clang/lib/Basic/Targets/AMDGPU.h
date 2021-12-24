@@ -426,7 +426,7 @@ public:
 
   void setAuxTarget(const TargetInfo *Aux) override;
 
-  bool hasExtIntType() const override { return true; }
+  bool hasBitIntType() const override { return true; }
 
   // Record offload arch features since they are needed for defining the
   // pre-defined macros.

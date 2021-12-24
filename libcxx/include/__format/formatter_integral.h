@@ -133,45 +133,6 @@ _LIBCPP_HIDE_FROM_ABI constexpr size_t __buffer_size() noexcept
          + 1;                        // Reserve space for the sign.
 }
 
-_LIBCPP_HIDE_FROM_ABI inline char* __insert_sign(char* __buf, bool __negative,
-                                                 _Flags::_Sign __sign) {
-  if (__negative)
-    *__buf++ = '-';
-  else
-    switch (__sign) {
-    case _Flags::_Sign::__default:
-    case _Flags::_Sign::__minus:
-      // No sign added.
-      break;
-    case _Flags::_Sign::__plus:
-      *__buf++ = '+';
-      break;
-    case _Flags::_Sign::__space:
-      *__buf++ = ' ';
-      break;
-    }
-
-  return __buf;
-}
-
-_LIBCPP_HIDE_FROM_ABI constexpr char __hex_to_upper(char c) {
-  switch (c) {
-  case 'a':
-    return 'A';
-  case 'b':
-    return 'B';
-  case 'c':
-    return 'C';
-  case 'd':
-    return 'D';
-  case 'e':
-    return 'E';
-  case 'f':
-    return 'F';
-  }
-  return c;
-}
-
 /**
  * Determines the required grouping based on the size of the input.
  *
@@ -404,7 +365,7 @@ private:
       __out_it = _VSTD::copy(__begin, __first, _VSTD::move(__out_it));
       this->__alignment = _Flags::_Alignment::__right;
       this->__fill = _CharT('0');
-      unsigned __size = __first - __begin;
+      uint32_t __size = __first - __begin;
       this->__width -= _VSTD::min(__size, this->__width);
     }
 

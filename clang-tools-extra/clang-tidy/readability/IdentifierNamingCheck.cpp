@@ -1257,7 +1257,7 @@ StyleKind IdentifierNamingCheck::findStyleKind(
 
   if (const auto *Decl = dyn_cast<CXXMethodDecl>(D)) {
     if (Decl->isMain() || !Decl->isUserProvided() ||
-        Decl->size_overridden_methods() > 0)
+        Decl->size_overridden_methods() > 0 || Decl->hasAttr<OverrideAttr>())
       return SK_Invalid;
 
     // If this method has the same name as any base method, this is likely
@@ -1381,7 +1381,7 @@ IdentifierNamingCheck::getFailureInfo(
 }
 
 llvm::Optional<RenamerClangTidyCheck::FailureInfo>
-IdentifierNamingCheck::GetDeclFailureInfo(const NamedDecl *Decl,
+IdentifierNamingCheck::getDeclFailureInfo(const NamedDecl *Decl,
                                           const SourceManager &SM) const {
   SourceLocation Loc = Decl->getLocation();
   const FileStyle &FileStyle = getStyleForFile(SM.getFilename(Loc));
@@ -1397,7 +1397,7 @@ IdentifierNamingCheck::GetDeclFailureInfo(const NamedDecl *Decl,
 }
 
 llvm::Optional<RenamerClangTidyCheck::FailureInfo>
-IdentifierNamingCheck::GetMacroFailureInfo(const Token &MacroNameTok,
+IdentifierNamingCheck::getMacroFailureInfo(const Token &MacroNameTok,
                                            const SourceManager &SM) const {
   SourceLocation Loc = MacroNameTok.getLocation();
   const FileStyle &Style = getStyleForFile(SM.getFilename(Loc));
@@ -1410,7 +1410,7 @@ IdentifierNamingCheck::GetMacroFailureInfo(const Token &MacroNameTok,
 }
 
 RenamerClangTidyCheck::DiagInfo
-IdentifierNamingCheck::GetDiagInfo(const NamingCheckId &ID,
+IdentifierNamingCheck::getDiagInfo(const NamingCheckId &ID,
                                    const NamingCheckFailure &Failure) const {
   return DiagInfo{"invalid case style for %0 '%1'",
                   [&](DiagnosticBuilder &Diag) {

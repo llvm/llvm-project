@@ -53,7 +53,7 @@ public:
 
   MLIRContext *getContext() const { return context; }
 
-  Identifier getIdentifier(const Twine &str);
+  StringAttr getIdentifier(const Twine &str);
 
   // Locations.
   Location getUnknownLoc();
@@ -281,11 +281,28 @@ public:
   class InsertionGuard {
   public:
     InsertionGuard(OpBuilder &builder)
-        : builder(builder), ip(builder.saveInsertionPoint()) {}
-    ~InsertionGuard() { builder.restoreInsertionPoint(ip); }
+        : builder(&builder), ip(builder.saveInsertionPoint()) {}
+
+    ~InsertionGuard() {
+      if (builder)
+        builder->restoreInsertionPoint(ip);
+    }
+
+    InsertionGuard(const InsertionGuard &) = delete;
+    InsertionGuard &operator=(const InsertionGuard &) = delete;
+
+    /// Implement the move constructor to clear the builder field of `other`.
+    /// That way it does not restore the insertion point upon destruction as
+    /// that should be done exclusively by the just constructed InsertionGuard.
+    InsertionGuard(InsertionGuard &&other) noexcept
+        : builder(other.builder), ip(other.ip) {
+      other.builder = nullptr;
+    }
+
+    InsertionGuard &operator=(InsertionGuard &&other) = delete;
 
   private:
-    OpBuilder &builder;
+    OpBuilder *builder;
     OpBuilder::InsertPoint ip;
   };
 
@@ -332,7 +349,7 @@ public:
   /// Sets the insertion point to the node after the specified value. If value
   /// has a defining operation, sets the insertion point to the node after such
   /// defining operation. This will cause subsequent insertions to go right
-  /// after it. Otherwise, value is a BlockArgumen. Sets the insertion point to
+  /// after it. Otherwise, value is a BlockArgument. Sets the insertion point to
   /// the start of its block.
   void setInsertionPointAfterValue(Value val) {
     if (Operation *op = val.getDefiningOp()) {
@@ -391,8 +408,8 @@ public:
 
 private:
   /// Helper for sanity checking preconditions for create* methods below.
-  void checkHasAbstractOperation(const OperationName &name) {
-    if (LLVM_UNLIKELY(!name.getAbstractOperation()))
+  void checkHasRegisteredInfo(const OperationName &name) {
+    if (LLVM_UNLIKELY(!name.isRegistered()))
       llvm::report_fatal_error(
           "Building op `" + name.getStringRef() +
           "` but it isn't registered in this MLIRContext: the dialect may not "
@@ -406,7 +423,7 @@ public:
   template <typename OpTy, typename... Args>
   OpTy create(Location location, Args &&...args) {
     OperationState state(location, OpTy::getOperationName());
-    checkHasAbstractOperation(state.name);
+    checkHasRegisteredInfo(state.name);
     OpTy::build(*this, state, std::forward<Args>(args)...);
     auto *op = createOperation(state);
     auto result = dyn_cast<OpTy>(op);
@@ -423,7 +440,7 @@ public:
     // Create the operation without using 'createOperation' as we don't want to
     // insert it yet.
     OperationState state(location, OpTy::getOperationName());
-    checkHasAbstractOperation(state.name);
+    checkHasRegisteredInfo(state.name);
     OpTy::build(*this, state, std::forward<Args>(args)...);
     Operation *op = Operation::create(state);
 

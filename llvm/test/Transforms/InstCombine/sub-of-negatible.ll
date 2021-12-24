@@ -95,6 +95,30 @@ define i8 @t4(i8 %x, i1 %y) {
   %t1 = sub i8 %x, %t0
   ret i8 %t1
 }
+
+define i8 @select_of_constants_multi_use(i1 %b) {
+; CHECK-LABEL: @select_of_constants_multi_use(
+; CHECK-NEXT:    [[S_NEG:%.*]] = select i1 [[B:%.*]], i8 -42, i8 2
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[B]], i8 42, i8 -2
+; CHECK-NEXT:    call void @use8(i8 [[S]])
+; CHECK-NEXT:    ret i8 [[S_NEG]]
+;
+  %s = select i1 %b, i8 42, i8 -2
+  call void @use8(i8 %s)
+  %n = sub i8 0, %s
+  ret i8 %n
+}
+
+define i32 @PR52261(i1 %b) {
+; CHECK-LABEL: @PR52261(
+; CHECK-NEXT:    ret i32 2
+;
+  %s = select i1 %b, i32 2, i32 -2
+  %n = sub nsw i32 0, %s
+  %a = and i32 %s, %n
+  ret i32 %a
+}
+
 define i8 @n4(i8 %x, i1 %y) {
 ; CHECK-LABEL: @n4(
 ; CHECK-NEXT:    [[T0:%.*]] = select i1 [[Y:%.*]], i8 -42, i8 44
@@ -1329,7 +1353,7 @@ define i8 @negate_select_of_op_vs_negated_op(i8 %x, i8 %y, i1 %c) {
 ; CHECK-LABEL: @negate_select_of_op_vs_negated_op(
 ; CHECK-NEXT:    [[T0:%.*]] = sub i8 0, [[X:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[T0]])
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C:%.*]], i8 [[X]], i8 [[T0]], !prof !0
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C:%.*]], i8 [[X]], i8 [[T0]], !prof [[PROF0:![0-9]+]]
 ; CHECK-NEXT:    [[T2:%.*]] = add i8 [[TMP1]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i8 [[T2]]
 ;

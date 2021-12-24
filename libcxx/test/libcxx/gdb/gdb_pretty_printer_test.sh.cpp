@@ -43,7 +43,7 @@
 //
 //    Or
 //
-//    Call ComparePrettyPrintToChars with that variable, and a "const char*"
+//    Call ComparePrettyPrintToRegex with that variable, and a "const char*"
 //    *python* regular expression to match against the printer's output.
 //    The set of special characters in a Python regular expression overlaps
 //    with a lot of things the pretty printers print--brackets, for
@@ -171,22 +171,19 @@ using string_view = std::string_view;
 
 void string_view_test() {
   std::string_view i_am_empty;
-  ComparePrettyPrintToChars(i_am_empty, "std::string_view of length 0: \"\"");
+  ComparePrettyPrintToChars(i_am_empty, "\"\"");
 
   std::string source_string("to be or not to be");
   std::string_view to_be(source_string);
-  ComparePrettyPrintToChars(
-      to_be, "std::string_view of length 18: \"to be or not to be\"");
+  ComparePrettyPrintToChars(to_be, "\"to be or not to be\"");
 
   const char char_arr[] = "what a wonderful world";
   std::string_view wonderful(&char_arr[7], 9);
-  ComparePrettyPrintToChars(
-      wonderful, "std::string_view of length 9: \"wonderful\"");
+  ComparePrettyPrintToChars(wonderful, "\"wonderful\"");
 
   const char char_arr1[] = "namespace_stringview";
   string_view namespace_stringview(&char_arr1[10], 10);
-  ComparePrettyPrintToChars(
-      namespace_stringview, "std::string_view of length 10: \"stringview\"");
+  ComparePrettyPrintToChars(namespace_stringview, "\"stringview\"");
 }
 }
 
@@ -244,22 +241,22 @@ void unique_ptr_test() {
 
 void bitset_test() {
   std::bitset<258> i_am_empty(0);
-  ComparePrettyPrintToChars(i_am_empty, "std::bitset<258>");
+  ComparePrettyPrintToRegex(i_am_empty, "std::bitset<258(u|ul)?>");
 
   std::bitset<0> very_empty;
-  ComparePrettyPrintToChars(very_empty, "std::bitset<0>");
+  ComparePrettyPrintToRegex(very_empty, "std::bitset<0(u|ul)?>");
 
   std::bitset<15> b_000001111111100(1020);
-  ComparePrettyPrintToChars(b_000001111111100,
-      "std::bitset<15> = {[2] = 1, [3] = 1, [4] = 1, [5] = 1, [6] = 1, "
-      "[7] = 1, [8] = 1, [9] = 1}");
+  ComparePrettyPrintToRegex(b_000001111111100,
+      R"(std::bitset<15(u|ul)?> = {\[2\] = 1, \[3\] = 1, \[4\] = 1, \[5\] = 1, \[6\] = 1, )"
+      R"(\[7\] = 1, \[8\] = 1, \[9\] = 1})");
 
   std::bitset<258> b_0_129_132(0);
   b_0_129_132[0] = true;
   b_0_129_132[129] = true;
   b_0_129_132[132] = true;
-  ComparePrettyPrintToChars(b_0_129_132,
-      "std::bitset<258> = {[0] = 1, [129] = 1, [132] = 1}");
+  ComparePrettyPrintToRegex(b_0_129_132,
+      R"(std::bitset<258(u|ul)?> = {\[0\] = 1, \[129\] = 1, \[132\] = 1})");
 }
 
 void list_test() {

@@ -1,3 +1,7 @@
+// Unsupported on AIX because we don't support the requisite "__clangast"
+// section in XCOFF yet.
+// UNSUPPORTED: aix
+
 // Check that when depending on a precompiled module, we depend on the
 // **top-level** module. Submodules don't have some information present (for
 // example the path to the modulemap file) and depending on them might cause
@@ -50,7 +54,6 @@
 // CHECK-PCH-NEXT:         "-fno-implicit-modules"
 // CHECK-PCH-NEXT:         "-fno-implicit-module-maps"
 // CHECK-PCH-NEXT:         "-fmodule-file=[[PREFIX]]/build/[[HASH_MOD_COMMON]]/ModCommon-{{.*}}.pcm"
-// CHECK-PCH-NEXT:         "-fmodule-map-file=[[PREFIX]]/module.modulemap"
 // CHECK-PCH-NEXT:       ],
 // CHECK-PCH-NEXT:       "file-deps": [
 // CHECK-PCH-NEXT:         "[[PREFIX]]/pch.h"
@@ -88,7 +91,6 @@
 // CHECK-TU-NEXT:       "clang-modulemap-file": "[[PREFIX]]/module.modulemap",
 // CHECK-TU-NEXT:       "command-line": [
 // CHECK-TU-NEXT:         "-cc1"
-// CHECK-TU:              "-fmodule-map-file=[[PREFIX]]/module.modulemap"
 // CHECK-TU:              "-emit-module"
 // CHECK-TU:              "-fmodule-file=[[PREFIX]]/build/[[HASH_MOD_COMMON:.*]]/ModCommon-{{.*}}.pcm"
 // CHECK-TU:              "-fmodules"
@@ -115,8 +117,7 @@
 // CHECK-TU-NEXT:       "command-line": [
 // CHECK-TU-NEXT:         "-fno-implicit-modules",
 // CHECK-TU-NEXT:         "-fno-implicit-module-maps",
-// CHECK-TU-NEXT:         "-fmodule-file=[[PREFIX]]/build/[[HASH_MOD_TU:.*]]/ModTU-{{.*}}.pcm",
-// CHECK-TU-NEXT:         "-fmodule-map-file=[[PREFIX]]/module.modulemap"
+// CHECK-TU-NEXT:         "-fmodule-file=[[PREFIX]]/build/[[HASH_MOD_TU:.*]]/ModTU-{{.*}}.pcm"
 // CHECK-TU-NEXT:       ],
 // CHECK-TU-NEXT:       "file-deps": [
 // CHECK-TU-NEXT:         "[[PREFIX]]/tu.c",

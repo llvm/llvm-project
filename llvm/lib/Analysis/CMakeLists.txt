@@ -12,7 +12,7 @@ if (DEFINED LLVM_HAVE_TF_AOT OR DEFINED LLVM_HAVE_TF_API)
       ${LLVM_INLINER_MODEL_PATH}
       ${LLVM_INLINER_MODEL_CURRENT_URL}
       ${LLVM_INLINER_MODEL_PATH_DEFAULT}
-      "models/inlining/config.py"
+      "models/gen-inline-oz-test-model.py"
       serve
       action
       InlinerSizeModel
@@ -50,6 +50,7 @@ add_llvm_component_library(LLVMAnalysis
   CostModel.cpp
   CodeMetrics.cpp
   ConstantFolding.cpp
+  CycleAnalysis.cpp
   DDG.cpp
   DDGPrinter.cpp
   ConstraintSystem.cpp
@@ -102,9 +103,11 @@ add_llvm_component_library(LLVMAnalysis
   MemoryLocation.cpp
   MemorySSA.cpp
   MemorySSAUpdater.cpp
+  ModelUnderTrainingRunner.cpp
   ModuleDebugInfoPrinter.cpp
   ModuleSummaryAnalysis.cpp
   MustExecute.cpp
+  NoInferenceModelRunner.cpp
   ObjCARCAliasAnalysis.cpp
   ObjCARCAnalysisUtils.cpp
   ObjCARCInstKind.cpp
@@ -118,7 +121,6 @@ add_llvm_component_library(LLVMAnalysis
   RegionInfo.cpp
   RegionPass.cpp
   RegionPrinter.cpp
-  ReleaseModeModelRunner.cpp
   ReplayInlineAdvisor.cpp
   ScalarEvolution.cpp
   ScalarEvolutionAliasAnalysis.cpp

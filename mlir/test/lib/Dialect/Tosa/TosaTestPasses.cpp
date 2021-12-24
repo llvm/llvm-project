@@ -71,7 +71,7 @@ ConvertTosaNegateOp::matchAndRewrite(Operation *op,
   double typeRangeMax = double(outputElementType.getStorageTypeMax() -
                                outputElementType.getZeroPoint()) *
                         outputElementType.getScale();
-  bool narrow_range = outputElementType.getStorageTypeMin() == 1 ? true : false;
+  bool narrowRange = outputElementType.getStorageTypeMin() == 1 ? true : false;
 
   auto dstQConstType = RankedTensorType::get(
       outputType.getShape(),
@@ -81,7 +81,7 @@ ConvertTosaNegateOp::matchAndRewrite(Operation *op,
                            rewriter.getI32IntegerAttr(
                                outputElementType.getStorageTypeIntegralWidth()),
                            0, true /* signed */,
-                           rewriter.getBoolAttr(narrow_range)));
+                           rewriter.getBoolAttr(narrowRange)));
 
   ElementsAttr inputElems;
   if (!matchPattern(tosaNegateOp.input1(), m_Constant(&inputElems)))
@@ -197,7 +197,7 @@ void TosaTestQuantUtilAPI::runOnFunction() {
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
 
-} // anonymous namespace
+} // namespace
 
 namespace mlir {
 void registerTosaTestQuantUtilAPIPass() {

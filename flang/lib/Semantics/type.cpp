@@ -531,9 +531,9 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const DerivedTypeSpec &x) {
 Bound::Bound(common::ConstantSubscript bound) : expr_{bound} {}
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const Bound &x) {
-  if (x.isAssumed()) {
+  if (x.isStar()) {
     o << '*';
-  } else if (x.isDeferred()) {
+  } else if (x.isColon()) {
     o << ':';
   } else if (x.expr_) {
     x.expr_->AsFortran(o);
@@ -544,15 +544,15 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const Bound &x) {
 }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const ShapeSpec &x) {
-  if (x.lb_.isAssumed()) {
-    CHECK(x.ub_.isAssumed());
+  if (x.lb_.isStar()) {
+    CHECK(x.ub_.isStar());
     o << "..";
   } else {
-    if (!x.lb_.isDeferred()) {
+    if (!x.lb_.isColon()) {
       o << x.lb_;
     }
     o << ':';
-    if (!x.ub_.isDeferred()) {
+    if (!x.ub_.isColon()) {
       o << x.ub_;
     }
   }

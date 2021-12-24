@@ -24,6 +24,7 @@
 #include "lldb/Symbol/DebugMacros.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/SymbolFile.h"
+#include "lldb/Target/Statistics.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Flags.h"
 #include "lldb/Utility/RangeMap.h"
@@ -83,9 +84,9 @@ public:
 
   static void DebuggerInitialize(lldb_private::Debugger &debugger);
 
-  static lldb_private::ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "dwarf"; }
 
-  static const char *GetPluginDescriptionStatic();
+  static llvm::StringRef GetPluginDescriptionStatic();
 
   static lldb_private::SymbolFile *
   CreateInstance(lldb::ObjectFileSP objfile_sp);
@@ -218,9 +219,7 @@ public:
   std::recursive_mutex &GetModuleMutex() const override;
 
   // PluginInterface protocol
-  llvm::StringRef GetPluginName() override {
-    return GetPluginNameStatic().GetStringRef();
-  }
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   DWARFDebugAbbrev *DebugAbbrev();
 
@@ -254,8 +253,8 @@ public:
       ExternalTypeModuleMap;
 
   /// Return the list of Clang modules imported by this SymbolFile.
-  const ExternalTypeModuleMap& getExternalTypeModules() const {
-      return m_external_type_modules;
+  const ExternalTypeModuleMap &getExternalTypeModules() const {
+    return m_external_type_modules;
   }
 
   virtual DWARFDIE GetDIE(const DIERef &die_ref);
@@ -319,6 +318,15 @@ public:
   static lldb::LanguageType GetLanguage(DWARFUnit &unit);
   /// Same as GetLanguage() but reports all C++ versions as C++ (no version).
   static lldb::LanguageType GetLanguageFamily(DWARFUnit &unit);
+
+  lldb_private::StatsDuration GetDebugInfoParseTime() override {
+    return m_parse_time;
+  }
+  lldb_private::StatsDuration GetDebugInfoIndexTime() override;
+
+  lldb_private::StatsDuration &GetDebugInfoParseTimeRef() {
+    return m_parse_time;
+  }
 
 protected:
   typedef llvm::DenseMap<const DWARFDebugInfoEntry *, lldb_private::Type *>
@@ -419,9 +427,10 @@ protected:
   virtual lldb::TypeSP
   FindDefinitionTypeForDWARFDeclContext(const DWARFDeclContext &die_decl_ctx);
 
-  virtual lldb::TypeSP FindCompleteObjCDefinitionTypeForDIE(
-      const DWARFDIE &die, lldb_private::ConstString type_name,
-      bool must_be_implementation);
+  virtual lldb::TypeSP
+  FindCompleteObjCDefinitionTypeForDIE(const DWARFDIE &die,
+                                       lldb_private::ConstString type_name,
+                                       bool must_be_implementation);
 
   lldb_private::Symbol *
   GetObjCClassSymbol(lldb_private::ConstString objc_class_name);
@@ -550,6 +559,7 @@ protected:
   /// Try to filter out this debug info by comparing it to the lowest code
   /// address in the module.
   lldb::addr_t m_first_code_address = LLDB_INVALID_ADDRESS;
+  lldb_private::StatsDuration m_parse_time{0.0};
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_SYMBOLFILEDWARF_H

@@ -641,8 +641,8 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
     uint32_t OffsetVal = Offset->getZExtValue();
     uint32_t WidthVal = Width->getZExtValue();
 
-    ReplaceNode(N, getS_BFE(Signed ? AMDGPU::S_BFE_I32 : AMDGPU::S_BFE_U32,
-                            SDLoc(N), N->getOperand(0), OffsetVal, WidthVal));
+    ReplaceNode(N, getBFE32(Signed, SDLoc(N), N->getOperand(0), OffsetVal,
+                            WidthVal));
     return;
   }
   case AMDGPUISD::DIV_SCALE: {
@@ -654,6 +654,9 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
     SelectMAD_64_32(N);
     return;
   }
+  case ISD::SMUL_LOHI:
+  case ISD::UMUL_LOHI:
+    return SelectMUL_LOHI(N);
   case ISD::CopyToReg: {
     const SITargetLowering& Lowering =
       *static_cast<const SITargetLowering*>(getTargetLowering());
@@ -717,6 +720,18 @@ bool AMDGPUDAGToDAGISel::isUniformBr(const SDNode *N) const {
   const Instruction *Term = BB->getTerminator();
   return Term->getMetadata("amdgpu.uniform") ||
          Term->getMetadata("structurizecfg.uniform");
+}
+
+bool AMDGPUDAGToDAGISel::isUnneededShiftMask(const SDNode *N,
+                                             unsigned ShAmtBits) const {
+  assert(N->getOpcode() == ISD::AND);
+
+  const APInt &RHS = cast<ConstantSDNode>(N->getOperand(1))->getAPIntValue();
+  if (RHS.countTrailingOnes() >= ShAmtBits)
+    return true;
+
+  const APInt &LHSKnownZeros = CurDAG->computeKnownBits(N->getOperand(0)).Zero;
+  return (LHSKnownZeros | RHS).countTrailingOnes() >= ShAmtBits;
 }
 
 static bool getBaseWithOffsetUsingSplitOR(SelectionDAG &DAG, SDValue Addr,
@@ -999,6 +1014,32 @@ void AMDGPUDAGToDAGISel::SelectMAD_64_32(SDNode *N) {
   SDValue Ops[] = { N->getOperand(0), N->getOperand(1), N->getOperand(2),
                     Clamp };
   CurDAG->SelectNodeTo(N, Opc, N->getVTList(), Ops);
+}
+
+// We need to handle this here because tablegen doesn't support matching
+// instructions with multiple outputs.
+void AMDGPUDAGToDAGISel::SelectMUL_LOHI(SDNode *N) {
+  SDLoc SL(N);
+  bool Signed = N->getOpcode() == ISD::SMUL_LOHI;
+  unsigned Opc = Signed ? AMDGPU::V_MAD_I64_I32_e64 : AMDGPU::V_MAD_U64_U32_e64;
+
+  SDValue Zero = CurDAG->getTargetConstant(0, SL, MVT::i64);
+  SDValue Clamp = CurDAG->getTargetConstant(0, SL, MVT::i1);
+  SDValue Ops[] = {N->getOperand(0), N->getOperand(1), Zero, Clamp};
+  SDNode *Mad = CurDAG->getMachineNode(Opc, SL, N->getVTList(), Ops);
+  if (!SDValue(N, 0).use_empty()) {
+    SDValue Sub0 = CurDAG->getTargetConstant(AMDGPU::sub0, SL, MVT::i32);
+    SDNode *Lo = CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG, SL,
+                                        MVT::i32, SDValue(Mad, 0), Sub0);
+    ReplaceUses(SDValue(N, 0), SDValue(Lo, 0));
+  }
+  if (!SDValue(N, 1).use_empty()) {
+    SDValue Sub1 = CurDAG->getTargetConstant(AMDGPU::sub1, SL, MVT::i32);
+    SDNode *Hi = CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG, SL,
+                                        MVT::i32, SDValue(Mad, 0), Sub1);
+    ReplaceUses(SDValue(N, 1), SDValue(Hi, 0));
+  }
+  CurDAG->RemoveDeadNode(N);
 }
 
 bool AMDGPUDAGToDAGISel::isDSOffsetLegal(SDValue Base, unsigned Offset) const {
@@ -1947,9 +1988,17 @@ bool AMDGPUDAGToDAGISel::SelectMOVRELOffset(SDValue Index,
   return true;
 }
 
-SDNode *AMDGPUDAGToDAGISel::getS_BFE(unsigned Opcode, const SDLoc &DL,
+SDNode *AMDGPUDAGToDAGISel::getBFE32(bool IsSigned, const SDLoc &DL,
                                      SDValue Val, uint32_t Offset,
                                      uint32_t Width) {
+  if (Val->isDivergent()) {
+    unsigned Opcode = IsSigned ? AMDGPU::V_BFE_I32_e64 : AMDGPU::V_BFE_U32_e64;
+    SDValue Off = CurDAG->getTargetConstant(Offset, DL, MVT::i32);
+    SDValue W = CurDAG->getTargetConstant(Width, DL, MVT::i32);
+
+    return CurDAG->getMachineNode(Opcode, DL, MVT::i32, Val, Off, W);
+  }
+  unsigned Opcode = IsSigned ? AMDGPU::S_BFE_I32 : AMDGPU::S_BFE_U32;
   // Transformation function, pack the offset and width of a BFE into
   // the format expected by the S_BFE_I32 / S_BFE_U32. In the second
   // source, bits [5:0] contain the offset and bits [22:16] the width.
@@ -1974,10 +2023,8 @@ void AMDGPUDAGToDAGISel::SelectS_BFEFromShifts(SDNode *N) {
 
     if (0 < BVal && BVal <= CVal && CVal < 32) {
       bool Signed = N->getOpcode() == ISD::SRA;
-      unsigned Opcode = Signed ? AMDGPU::S_BFE_I32 : AMDGPU::S_BFE_U32;
-
-      ReplaceNode(N, getS_BFE(Opcode, SDLoc(N), Shl.getOperand(0), CVal - BVal,
-                              32 - CVal));
+      ReplaceNode(N, getBFE32(Signed, SDLoc(N), Shl.getOperand(0), CVal - BVal,
+                  32 - CVal));
       return;
     }
   }
@@ -2000,9 +2047,8 @@ void AMDGPUDAGToDAGISel::SelectS_BFE(SDNode *N) {
 
         if (isMask_32(MaskVal)) {
           uint32_t WidthVal = countPopulation(MaskVal);
-
-          ReplaceNode(N, getS_BFE(AMDGPU::S_BFE_U32, SDLoc(N),
-                                  Srl.getOperand(0), ShiftVal, WidthVal));
+          ReplaceNode(N, getBFE32(false, SDLoc(N), Srl.getOperand(0), ShiftVal,
+                                  WidthVal));
           return;
         }
       }
@@ -2022,9 +2068,8 @@ void AMDGPUDAGToDAGISel::SelectS_BFE(SDNode *N) {
 
         if (isMask_32(MaskVal)) {
           uint32_t WidthVal = countPopulation(MaskVal);
-
-          ReplaceNode(N, getS_BFE(AMDGPU::S_BFE_U32, SDLoc(N),
-                                  And.getOperand(0), ShiftVal, WidthVal));
+          ReplaceNode(N, getBFE32(false, SDLoc(N), And.getOperand(0), ShiftVal,
+                      WidthVal));
           return;
         }
       }
@@ -2051,7 +2096,7 @@ void AMDGPUDAGToDAGISel::SelectS_BFE(SDNode *N) {
       break;
 
     unsigned Width = cast<VTSDNode>(N->getOperand(1))->getVT().getSizeInBits();
-    ReplaceNode(N, getS_BFE(AMDGPU::S_BFE_I32, SDLoc(N), Src.getOperand(0),
+    ReplaceNode(N, getBFE32(true, SDLoc(N), Src.getOperand(0),
                             Amt->getZExtValue(), Width));
     return;
   }

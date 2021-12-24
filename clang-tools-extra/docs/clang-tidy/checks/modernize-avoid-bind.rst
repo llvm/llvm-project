@@ -51,7 +51,7 @@ Options
   to perform an incorrect transformation in the case where the result of the ``bind``
   is used in the context of a type erased functor such as ``std::function`` which
   allows mismatched arguments. For example:
-  
+
 
 .. code-block:: c++
 
@@ -72,7 +72,7 @@ simply ignored. Without ``PermissiveParameterList``, this would be transformed i
     return ignore_args(3, 3);
   }
 
-which will *not* compile, since the lambda does not contain an ``operator()`` that
+which will *not* compile, since the lambda does not contain an ``operator()``
 that accepts 2 arguments. With permissive parameter list, it instead generates
 
 .. code-block:: c++
@@ -84,5 +84,5 @@ that accepts 2 arguments. With permissive parameter list, it instead generates
   }
 
 which is correct.
-  
+
 This check requires using C++14 or higher to run.

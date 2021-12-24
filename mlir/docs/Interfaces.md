@@ -327,7 +327,7 @@ operations by overriding the `getRegisteredInterfaceForOp` method :
 
 ```c++
 void *TestDialect::getRegisteredInterfaceForOp(TypeID typeID,
-                                               Identifier opName) {
+                                               StringAttr opName) {
   if (typeID == TypeID::get<ExampleOpInterface>()) {
     if (isSupported(opName))
       return fallbackExampleOpInterface;

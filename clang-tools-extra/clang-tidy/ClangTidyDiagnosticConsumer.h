@@ -23,12 +23,13 @@ class CompilerInstance;
 class SourceManager;
 namespace ast_matchers {
 class MatchFinder;
-}
+} // namespace ast_matchers
 namespace tooling {
 class CompilationDatabase;
-}
+} // namespace tooling
 
 namespace tidy {
+class CachedGlobList;
 
 /// A detected error complete with information to display diagnostic and
 /// automatic fix.
@@ -45,18 +46,13 @@ struct ClangTidyError : tooling::Diagnostic {
   std::vector<std::string> EnabledDiagnosticAliases;
 };
 
-/// Contains displayed and ignored diagnostic counters for a ClangTidy
-/// run.
+/// Contains displayed and ignored diagnostic counters for a ClangTidy run.
 struct ClangTidyStats {
-  ClangTidyStats()
-      : ErrorsDisplayed(0), ErrorsIgnoredCheckFilter(0), ErrorsIgnoredNOLINT(0),
-        ErrorsIgnoredNonUserCode(0), ErrorsIgnoredLineFilter(0) {}
-
-  unsigned ErrorsDisplayed;
-  unsigned ErrorsIgnoredCheckFilter;
-  unsigned ErrorsIgnoredNOLINT;
-  unsigned ErrorsIgnoredNonUserCode;
-  unsigned ErrorsIgnoredLineFilter;
+  unsigned ErrorsDisplayed = 0;
+  unsigned ErrorsIgnoredCheckFilter = 0;
+  unsigned ErrorsIgnoredNOLINT = 0;
+  unsigned ErrorsIgnoredNonUserCode = 0;
+  unsigned ErrorsIgnoredLineFilter = 0;
 
   unsigned errorsIgnored() const {
     return ErrorsIgnoredNOLINT + ErrorsIgnoredCheckFilter +
@@ -196,7 +192,7 @@ private:
 
   std::string CurrentFile;
   ClangTidyOptions CurrentOptions;
-  class CachedGlobList;
+
   std::unique_ptr<CachedGlobList> CheckFilter;
   std::unique_ptr<CachedGlobList> WarningAsErrorFilter;
 
@@ -224,18 +220,17 @@ private:
 /// If `AllowIO` is false, the function does not attempt to read source files
 /// from disk which are not already mapped into memory; such files are treated
 /// as not containing a suppression comment.
+/// \param EnableNolintBlocks controls whether to honor NOLINTBEGIN/NOLINTEND
+/// blocks; if false, only considers line-level disabling.
 /// If suppression is not possible due to improper use of "NOLINT" comments -
 /// for example, the use of a "NOLINTBEGIN" comment that is not followed by a
 /// "NOLINTEND" comment - a diagnostic regarding the improper use is returned
 /// via the output argument `SuppressionErrors`.
-bool shouldSuppressDiagnostic(DiagnosticsEngine::Level DiagLevel,
-                              const Diagnostic &Info, ClangTidyContext &Context,
-                              bool AllowIO = true);
-
 bool shouldSuppressDiagnostic(
     DiagnosticsEngine::Level DiagLevel, const Diagnostic &Info,
     ClangTidyContext &Context,
-    SmallVectorImpl<ClangTidyError> &SuppressionErrors, bool AllowIO = true);
+    SmallVectorImpl<ClangTidyError> &SuppressionErrors, bool AllowIO = true,
+    bool EnableNolintBlocks = true);
 
 /// Gets the Fix attached to \p Diagnostic.
 /// If there isn't a Fix attached to the diagnostic and \p AnyFix is true, Check
@@ -246,15 +241,17 @@ getFixIt(const tooling::Diagnostic &Diagnostic, bool AnyFix);
 
 /// A diagnostic consumer that turns each \c Diagnostic into a
 /// \c SourceManager-independent \c ClangTidyError.
-//
 // FIXME: If we move away from unit-tests, this can be moved to a private
 // implementation file.
 class ClangTidyDiagnosticConsumer : public DiagnosticConsumer {
 public:
+  /// \param EnableNolintBlocks Enables diagnostic-disabling inside blocks of
+  /// code, delimited by NOLINTBEGIN and NOLINTEND.
   ClangTidyDiagnosticConsumer(ClangTidyContext &Ctx,
                               DiagnosticsEngine *ExternalDiagEngine = nullptr,
                               bool RemoveIncompatibleErrors = true,
-                              bool GetFixesFromNotes = false);
+                              bool GetFixesFromNotes = false,
+                              bool EnableNolintBlocks = true);
 
   // FIXME: The concept of converting between FixItHints and Replacements is
   // more generic and should be pulled out into a more useful Diagnostics
@@ -285,6 +282,7 @@ private:
   DiagnosticsEngine *ExternalDiagEngine;
   bool RemoveIncompatibleErrors;
   bool GetFixesFromNotes;
+  bool EnableNolintBlocks;
   std::vector<ClangTidyError> Errors;
   std::unique_ptr<llvm::Regex> HeaderFilter;
   bool LastErrorRelatesToUserCode;

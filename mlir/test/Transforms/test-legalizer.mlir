@@ -28,7 +28,6 @@ func @remap_input_1_to_1(%arg0: i64) {
 // CHECK-LABEL: func @remap_call_1_to_1(%arg0: f64)
 func @remap_call_1_to_1(%arg0: i64) {
   // CHECK-NEXT: call @remap_input_1_to_1(%arg0) : (f64) -> ()
-  // expected-remark@+1 {{op 'std.call' is not legalizable}}
   call @remap_input_1_to_1(%arg0) : (i64) -> ()
   // expected-remark@+1 {{op 'std.return' is not legalizable}}
   return
@@ -36,7 +35,6 @@ func @remap_call_1_to_1(%arg0: i64) {
 
 // CHECK-LABEL: func @remap_input_1_to_N({{.*}}f16, {{.*}}f16)
 func @remap_input_1_to_N(%arg0: f32) -> f32 {
-  // CHECK-NEXT: [[CAST:%.*]] = "test.cast"(%arg0, %arg1) : (f16, f16) -> f32
   // CHECK-NEXT: "test.return"{{.*}} : (f16, f16) -> ()
   "test.return"(%arg0) : (f32) -> ()
 }
@@ -308,4 +306,14 @@ builtin.module {
     "test.return"(%0) : (i32) -> ()
   }
 
+}
+
+// -----
+
+// The "passthrough_fold" folder will naively return its operand, but we don't
+// want to fold here because of the type mismatch.
+func @typemismatch(%arg: f32) -> i32 {
+  // expected-remark@+1 {{op 'test.passthrough_fold' is not legalizable}}
+  %0 = "test.passthrough_fold"(%arg) : (f32) -> (i32)
+  "test.return"(%0) : (i32) -> ()
 }

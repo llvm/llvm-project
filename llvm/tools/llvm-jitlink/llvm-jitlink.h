@@ -31,26 +31,12 @@ namespace llvm {
 
 struct Session;
 
-/// ObjectLinkingLayer with additional support for symbol promotion.
-class LLVMJITLinkObjectLinkingLayer : public orc::ObjectLinkingLayer {
-public:
-  using orc::ObjectLinkingLayer::add;
-
-  LLVMJITLinkObjectLinkingLayer(Session &S,
-                                jitlink::JITLinkMemoryManager &MemMgr);
-
-  Error add(orc::ResourceTrackerSP RT,
-            std::unique_ptr<MemoryBuffer> O) override;
-
-private:
-  Session &S;
-};
-
 struct Session {
+
   orc::ExecutionSession ES;
   orc::JITDylib *MainJD = nullptr;
-  LLVMJITLinkObjectLinkingLayer ObjLayer;
-  std::vector<orc::JITDylib *> JDSearchOrder;
+  orc::ObjectLinkingLayer ObjLayer;
+  orc::JITDylibSearchOrder JDSearchOrder;
 
   ~Session();
 

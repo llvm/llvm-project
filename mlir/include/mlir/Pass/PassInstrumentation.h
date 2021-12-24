@@ -9,7 +9,7 @@
 #ifndef MLIR_PASS_PASSINSTRUMENTATION_H_
 #define MLIR_PASS_PASSINSTRUMENTATION_H_
 
-#include "mlir/IR/Identifier.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/TypeID.h"
 
@@ -19,7 +19,7 @@ class Pass;
 
 namespace detail {
 struct PassInstrumentorImpl;
-} // end namespace detail
+} // namespace detail
 
 /// PassInstrumentation provides several entry points into the pass manager
 /// infrastructure. Instrumentations should be added directly to a PassManager
@@ -43,13 +43,13 @@ public:
   /// A callback to run before a pass pipeline is executed. This function takes
   /// the name of the operation type being operated on, and information related
   /// to the parent that spawned this pipeline.
-  virtual void runBeforePipeline(Identifier name,
+  virtual void runBeforePipeline(StringAttr name,
                                  const PipelineParentInfo &parentInfo) {}
 
   /// A callback to run after a pass pipeline has executed. This function takes
   /// the name of the operation type being operated on, and information related
   /// to the parent that spawned this pipeline.
-  virtual void runAfterPipeline(Identifier name,
+  virtual void runAfterPipeline(StringAttr name,
                                 const PipelineParentInfo &parentInfo) {}
 
   /// A callback to run before a pass is executed. This function takes a pointer
@@ -90,12 +90,12 @@ public:
 
   /// See PassInstrumentation::runBeforePipeline for details.
   void
-  runBeforePipeline(Identifier name,
+  runBeforePipeline(StringAttr name,
                     const PassInstrumentation::PipelineParentInfo &parentInfo);
 
   /// See PassInstrumentation::runAfterPipeline for details.
   void
-  runAfterPipeline(Identifier name,
+  runAfterPipeline(StringAttr name,
                    const PassInstrumentation::PipelineParentInfo &parentInfo);
 
   /// See PassInstrumentation::runBeforePass for details.
@@ -120,7 +120,7 @@ private:
   std::unique_ptr<detail::PassInstrumentorImpl> impl;
 };
 
-} // end namespace mlir
+} // namespace mlir
 
 namespace llvm {
 template <> struct DenseMapInfo<mlir::PassInstrumentation::PipelineParentInfo> {
@@ -143,6 +143,6 @@ template <> struct DenseMapInfo<mlir::PassInstrumentation::PipelineParentInfo> {
            lhs.parentPass == rhs.parentPass;
   }
 };
-} // end namespace llvm
+} // namespace llvm
 
 #endif // MLIR_PASS_PASSINSTRUMENTATION_H_

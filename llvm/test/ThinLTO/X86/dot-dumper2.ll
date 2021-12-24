@@ -15,7 +15,7 @@
 ; COMBINED-NEXT:    color = lightgrey;
 ; COMBINED-NEXT:    label =
 ; COMBINED-NEXT:    node [style=filled,fillcolor=lightblue];
-; COMBINED-NEXT:    M0_[[MAIN:[0-9]+]] [shape="record",label="main|extern (inst: 2, ffl: 000000000)}"]; // function
+; COMBINED-NEXT:    M0_[[MAIN:[0-9]+]] [shape="record",label="main|extern (inst: 2, ffl: 0000000000)}"]; // function
 ; COMBINED-NEXT:    // Edges:
 ; COMBINED-NEXT:  }
 ; COMBINED-NEXT:  // Module:

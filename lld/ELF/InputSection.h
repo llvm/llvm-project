@@ -33,6 +33,13 @@ class OutputSection;
 
 extern std::vector<Partition> partitions;
 
+// Returned by InputSectionBase::relsOrRelas. At least one member is empty.
+template <class ELFT> struct RelsOrRelas {
+  ArrayRef<typename ELFT::Rel> rels;
+  ArrayRef<typename ELFT::Rela> relas;
+  bool areRelocsRel() const { return rels.size(); }
+};
+
 // This is the base class of all sections that lld handles. Some are sections in
 // input files, some are sections in the produced output file and some exist
 // just as a convenience for implementing special ways of combining some
@@ -44,13 +51,6 @@ public:
   Kind kind() const { return (Kind)sectionKind; }
 
   StringRef name;
-
-  // This pointer points to the "real" instance of this instance.
-  // Usually Repl == this. However, if ICF merges two sections,
-  // Repl pointer of one section points to another section. So,
-  // if you need to get a pointer to this instance, do not use
-  // this but instead this->Repl.
-  SectionBase *repl;
 
   uint8_t sectionKind : 3;
 
@@ -71,7 +71,7 @@ public:
   // These corresponds to the fields in Elf_Shdr.
   uint32_t alignment;
   uint64_t flags;
-  uint64_t entsize;
+  uint32_t entsize;
   uint32_t type;
   uint32_t link;
   uint32_t info;
@@ -92,12 +92,12 @@ public:
   void markDead() { partition = 0; }
 
 protected:
-  SectionBase(Kind sectionKind, StringRef name, uint64_t flags,
-              uint64_t entsize, uint64_t alignment, uint32_t type,
-              uint32_t info, uint32_t link)
-      : name(name), repl(this), sectionKind(sectionKind), bss(false),
-        keepUnique(false), partition(0), alignment(alignment), flags(flags),
-        entsize(entsize), type(type), link(link), info(info) {}
+  constexpr SectionBase(Kind sectionKind, StringRef name, uint64_t flags,
+                        uint32_t entsize, uint32_t alignment, uint32_t type,
+                        uint32_t info, uint32_t link)
+      : name(name), sectionKind(sectionKind), bss(false), keepUnique(false),
+        partition(0), alignment(alignment), flags(flags), entsize(entsize),
+        type(type), link(link), info(info) {}
 };
 
 // This corresponds to a section of an input file.
@@ -114,15 +114,13 @@ public:
 
   static bool classof(const SectionBase *s) { return s->kind() != Output; }
 
-  // Relocations that refer to this section.
-  unsigned numRelocations : 31;
-  unsigned areRelocsRela : 1;
-  const void *firstRelocation = nullptr;
-
   // The file which contains this section. Its dynamic type is always
   // ObjFile<ELFT>, but in order to avoid ELFT, we use InputFile as
   // its static type.
   InputFile *file;
+
+  // Section index of the relocation section if exists.
+  uint32_t relSecIdx = 0;
 
   template <class ELFT> ObjFile<ELFT> *getFile() const {
     return cast_or_null<ObjFile<ELFT>>(file);
@@ -170,19 +168,7 @@ public:
   // used by --gc-sections.
   InputSectionBase *nextInSectionGroup = nullptr;
 
-  template <class ELFT> ArrayRef<typename ELFT::Rel> rels() const {
-    assert(!areRelocsRela);
-    return llvm::makeArrayRef(
-        static_cast<const typename ELFT::Rel *>(firstRelocation),
-        numRelocations);
-  }
-
-  template <class ELFT> ArrayRef<typename ELFT::Rela> relas() const {
-    assert(areRelocsRela);
-    return llvm::makeArrayRef(
-        static_cast<const typename ELFT::Rela *>(firstRelocation),
-        numRelocations);
-  }
+  template <class ELFT> RelsOrRelas<ELFT> relsOrRelas() const;
 
   // InputSections that are dependent on us (reverse dependency for GC)
   llvm::TinyPtrVector<InputSection *> dependentSections;
@@ -257,7 +243,7 @@ protected:
 // be found by looking at the next one).
 struct SectionPiece {
   SectionPiece(size_t off, uint32_t hash, bool live)
-      : inputOff(off), live(live || !config->gcSections), hash(hash >> 1) {}
+      : inputOff(off), live(live), hash(hash >> 1) {}
 
   uint32_t inputOff;
   uint32_t live : 1;
@@ -285,7 +271,7 @@ public:
 
   // Splittable sections are handled as a sequence of data
   // rather than a single large blob of data.
-  std::vector<SectionPiece> pieces;
+  SmallVector<SectionPiece, 0> pieces;
 
   // Returns I'th piece's data. This function is very hot when
   // string merging is enabled, so we want to inline.
@@ -359,8 +345,6 @@ public:
   // beginning of the output section.
   template <class ELFT> void writeTo(uint8_t *buf);
 
-  uint64_t getOffset(uint64_t offset) const { return outSecOff + offset; }
-
   OutputSection *getParent() const;
 
   // This variable has two usages. Initially, it represents an index in the
@@ -375,6 +359,10 @@ public:
 
   template <class ELFT, class RelTy>
   void relocateNonAlloc(uint8_t *buf, llvm::ArrayRef<RelTy> rels);
+
+  // Points to the canonical section. If ICF folds two sections, repl pointer of
+  // one section points to the other.
+  InputSection *repl = this;
 
   // Used by ICF.
   uint32_t eqClass[2] = {0, 0};
@@ -392,9 +380,9 @@ private:
 };
 
 #ifdef _WIN32
-static_assert(sizeof(InputSection) <= 192, "InputSection is too big");
-#else
 static_assert(sizeof(InputSection) <= 184, "InputSection is too big");
+#else
+static_assert(sizeof(InputSection) <= 176, "InputSection is too big");
 #endif
 
 inline bool isDebugSection(const InputSectionBase &sec) {
@@ -403,7 +391,7 @@ inline bool isDebugSection(const InputSectionBase &sec) {
 }
 
 // The list of all input sections.
-extern std::vector<InputSectionBase *> inputSections;
+extern SmallVector<InputSectionBase *, 0> inputSections;
 
 // The set of TOC entries (.toc + addend) for which we should not apply
 // toc-indirect to toc-relative relaxation. const Symbol * refers to the

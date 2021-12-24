@@ -240,7 +240,7 @@ bool UnrollLoopsCheck::extractValue(int &Value, const BinaryOperator *Op,
   else if (RHS->isEvaluatable(*Context))
     RHS->EvaluateAsRValue(Result, *Context);
   else
-    return false; // Cannot evalue either side.
+    return false; // Cannot evaluate either side.
   if (!Result.Val.isInt())
     return false; // Cannot check number of iterations, return false to be
                   // safe.

@@ -771,7 +771,7 @@ bool isSISrcOperand(const MCInstrDesc &Desc, unsigned OpNo);
 /// Is this floating-point operand?
 bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo);
 
-/// Does this opearnd support only inlinable literals?
+/// Does this operand support only inlinable literals?
 bool isSISrcInlinableOperand(const MCInstrDesc &Desc, unsigned OpNo);
 
 /// Get the size in bits of a register from the register class \p RC.

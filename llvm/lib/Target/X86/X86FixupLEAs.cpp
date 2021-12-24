@@ -212,7 +212,7 @@ FixupLEAPass::postRAConvertToLEA(MachineBasicBlock &MBB,
     // These instructions are all fine to convert.
     break;
   }
-  return TII->convertToThreeAddress(MI, nullptr);
+  return TII->convertToThreeAddress(MI, nullptr, nullptr);
 }
 
 FunctionPass *llvm::createX86FixupLEAs() { return new FixupLEAPass(); }
@@ -278,10 +278,9 @@ FixupLEAPass::usesRegister(MachineOperand &p, MachineBasicBlock::iterator I) {
   RegUsageState RegUsage = RU_NotUsed;
   MachineInstr &MI = *I;
 
-  for (unsigned i = 0; i < MI.getNumOperands(); ++i) {
-    MachineOperand &opnd = MI.getOperand(i);
-    if (opnd.isReg() && opnd.getReg() == p.getReg()) {
-      if (opnd.isDef())
+  for (const MachineOperand &MO : MI.operands()) {
+    if (MO.isReg() && MO.getReg() == p.getReg()) {
+      if (MO.isDef())
         return RU_Write;
       RegUsage = RU_Read;
     }

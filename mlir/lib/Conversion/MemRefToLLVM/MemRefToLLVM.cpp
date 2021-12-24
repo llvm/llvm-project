@@ -377,7 +377,10 @@ private:
       return idx;
 
     if (auto constantOp = dimOp.index().getDefiningOp<LLVM::ConstantOp>())
-      return constantOp.value().cast<IntegerAttr>().getValue().getSExtValue();
+      return constantOp.getValue()
+          .cast<IntegerAttr>()
+          .getValue()
+          .getSExtValue();
 
     return llvm::None;
   }
@@ -448,7 +451,7 @@ struct GlobalMemrefOpLowering
       // For scalar memrefs, the global variable created is of the element type,
       // so unpack the elements attribute to extract the value.
       if (type.getRank() == 0)
-        initialValue = elementsAttr.getValue({});
+        initialValue = elementsAttr.getSplatValue<Attribute>();
     }
 
     uint64_t alignment = global.alignment().getValueOr(0);
@@ -590,6 +593,28 @@ struct PrefetchOpLowering : public LoadStoreOpLowering<memref::PrefetchOp> {
     rewriter.replaceOpWithNewOp<LLVM::Prefetch>(prefetchOp, dataPtr, isWrite,
                                                 localityHint, isData);
     return success();
+  }
+};
+
+struct RankOpLowering : public ConvertOpToLLVMPattern<memref::RankOp> {
+  using ConvertOpToLLVMPattern<memref::RankOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(memref::RankOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    Type operandType = op.memref().getType();
+    if (auto unrankedMemRefType = operandType.dyn_cast<UnrankedMemRefType>()) {
+      UnrankedMemRefDescriptor desc(adaptor.memref());
+      rewriter.replaceOp(op, {desc.rank(rewriter, loc)});
+      return success();
+    }
+    if (auto rankedMemRefType = operandType.dyn_cast<MemRefType>()) {
+      rewriter.replaceOp(
+          op, {createIndexConstant(rewriter, loc, rankedMemRefType.getRank())});
+      return success();
+    }
+    return failure();
   }
 };
 
@@ -1546,6 +1571,7 @@ void mlir::populateMemRefToLLVMConversionPatterns(LLVMTypeConverter &converter,
       MemRefReinterpretCastOpLowering,
       MemRefReshapeOpLowering,
       PrefetchOpLowering,
+      RankOpLowering,
       ReassociatingReshapeOpConversion<memref::ExpandShapeOp>,
       ReassociatingReshapeOpConversion<memref::CollapseShapeOp>,
       StoreOpLowering,

@@ -37,7 +37,7 @@ namespace {
 /// that the analysis of accesses in a statement is becoming too complex. Chosen
 /// to be relatively small because all the common cases should access only few
 /// array elements per statement.
-static int const SimplifyMaxDisjuncts = 4;
+static unsigned const SimplifyMaxDisjuncts = 4;
 
 TWO_STATISTICS(ScopsProcessed, "Number of SCoPs processed");
 TWO_STATISTICS(ScopsModified, "Number of SCoPs simplified");
@@ -95,18 +95,19 @@ static isl::union_map underapproximatedAddMap(isl::union_map UMap,
 
   // Fast path: If known that we cannot exceed the disjunct limit, just add
   // them.
-  if (isl_map_n_basic_map(PrevMap.get()) + isl_map_n_basic_map(Map.get()) <=
+  if (unsignedFromIslSize(PrevMap.n_basic_map()) +
+          unsignedFromIslSize(Map.n_basic_map()) <=
       SimplifyMaxDisjuncts)
     return UMap.unite(Map);
 
   isl::map Result = isl::map::empty(PrevMap.get_space());
   for (isl::basic_map BMap : PrevMap.get_basic_map_list()) {
-    if (Result.n_basic_map().release() > SimplifyMaxDisjuncts)
+    if (unsignedFromIslSize(Result.n_basic_map()) > SimplifyMaxDisjuncts)
       break;
     Result = Result.unite(BMap);
   }
   for (isl::basic_map BMap : Map.get_basic_map_list()) {
-    if (isl_map_n_basic_map(Result.get()) > SimplifyMaxDisjuncts)
+    if (unsignedFromIslSize(Result.n_basic_map()) > SimplifyMaxDisjuncts)
       break;
     Result = Result.unite(BMap);
   }

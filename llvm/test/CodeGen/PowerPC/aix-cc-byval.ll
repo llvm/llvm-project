@@ -471,8 +471,6 @@ declare zeroext i8 @test_byval_5Byte(%struct.S5* byval(%struct.S5) align 1)
 
 ; CHECK-LABEL: name: call_test_byval_5Byte{{.*}}
 
-; ASM-LABEL: .call_test_byval_5Byte:
-
 ; The DAG block permits some invalid inputs for the benefit of allowing more valid orderings.
 ; 32BIT:       ADJCALLSTACKDOWN 56, 0, implicit-def dead $r1, implicit $r1
 ; 32BIT-NEXT:  renamable $r[[REGADDR:[0-9]+]] = LWZtoc @gS5, $r2 :: (load (s32) from got)
@@ -780,7 +778,7 @@ entry:
 ; 64BIT-DAG:    STD killed renamable $x6, 24, %fixed-stack.0 :: (store (s64) into %fixed-stack.0 + 24
 ; 64BIT-NEXT:   BLR8
 
-; ASM-LABEL: .test_byval_32Byte:
+; CHECKASM-LABEL: .test_byval_32Byte:
 
 ; ASM32:       stw 8, 44(1)
 ; ASM32:       stw 3, 24(1)

@@ -67,7 +67,7 @@ DenseMap<const Symbol *, std::pair<const InputFile *, const InputFile *>>
 SmallVector<std::tuple<std::string, const InputFile *, const Symbol &>, 0>
     elf::whyExtract;
 
-static uint64_t getSymVA(const Symbol &sym, int64_t &addend) {
+static uint64_t getSymVA(const Symbol &sym, int64_t addend) {
   switch (sym.kind()) {
   case Symbol::DefinedKind: {
     auto &d = cast<Defined>(sym);
@@ -78,7 +78,6 @@ static uint64_t getSymVA(const Symbol &sym, int64_t &addend) {
       return d.value;
 
     assert(isec != &InputSection::discarded);
-    isec = isec->repl;
 
     uint64_t offset = d.value;
 
@@ -93,10 +92,8 @@ static uint64_t getSymVA(const Symbol &sym, int64_t &addend) {
     // To make this work, we incorporate the addend into the section
     // offset (and zero out the addend for later processing) so that
     // we find the right object in the section.
-    if (d.isSection()) {
+    if (d.isSection())
       offset += addend;
-      addend = 0;
-    }
 
     // In the typical case, this is actually very simple and boils
     // down to adding together 3 numbers:
@@ -109,6 +106,8 @@ static uint64_t getSymVA(const Symbol &sym, int64_t &addend) {
     // line (and how they get built), then you have a pretty good
     // understanding of the linker.
     uint64_t va = isec->getVA(offset);
+    if (d.isSection())
+      va -= addend;
 
     // MIPS relocatable files can mix regular and microMIPS code.
     // Linker needs to distinguish such code. To do so microMIPS
@@ -120,7 +119,7 @@ static uint64_t getSymVA(const Symbol &sym, int64_t &addend) {
     // field etc) do the same trick as compiler uses to mark microMIPS
     // for CPU - set the less-significant bit.
     if (config->emachine == EM_MIPS && isMicroMips() &&
-        ((sym.stOther & STO_MIPS_MICROMIPS) || sym.needsPltAddr))
+        ((sym.stOther & STO_MIPS_MICROMIPS) || sym.needsCopy))
       va |= 1;
 
     if (d.isTls() && !config->relocatable) {
@@ -152,8 +151,7 @@ static uint64_t getSymVA(const Symbol &sym, int64_t &addend) {
 }
 
 uint64_t Symbol::getVA(int64_t addend) const {
-  uint64_t outVA = getSymVA(*this, addend);
-  return outVA + addend;
+  return getSymVA(*this, addend) + addend;
 }
 
 uint64_t Symbol::getGotVA() const {
@@ -201,7 +199,7 @@ uint64_t Symbol::getSize() const {
 OutputSection *Symbol::getOutputSection() const {
   if (auto *s = dyn_cast<Defined>(this)) {
     if (auto *sec = s->section)
-      return sec->repl->getOutputSection();
+      return sec->getOutputSection();
     return nullptr;
   }
   return nullptr;
@@ -215,7 +213,7 @@ void Symbol::parseSymbolVersion() {
     return;
   StringRef s = getName();
   size_t pos = s.find('@');
-  if (pos == 0 || pos == StringRef::npos)
+  if (pos == StringRef::npos)
     return;
   StringRef verstr = s.substr(pos + 1);
   if (verstr.empty())
@@ -256,18 +254,13 @@ void Symbol::parseSymbolVersion() {
           verstr);
 }
 
-void Symbol::fetch() const {
+void Symbol::extract() const {
   if (auto *sym = dyn_cast<LazyArchive>(this)) {
-    cast<ArchiveFile>(sym->file)->fetch(sym->sym);
-    return;
+    cast<ArchiveFile>(sym->file)->extract(sym->sym);
+  } else if (file->lazy) {
+    file->lazy = false;
+    parseFile(file);
   }
-
-  if (auto *sym = dyn_cast<LazyObject>(this)) {
-    dyn_cast<LazyObjFile>(sym->file)->fetch();
-    return;
-  }
-
-  llvm_unreachable("Symbol::fetch() is called on a non-lazy symbol");
 }
 
 MemoryBufferRef LazyArchive::getMemberBuffer() {
@@ -354,7 +347,7 @@ void elf::maybeWarnUnorderableSymbol(const Symbol *sym) {
     report(": unable to order absolute symbol: ");
   else if (d && isa<OutputSection>(d->section))
     report(": unable to order synthetic symbol: ");
-  else if (d && !d->section->repl->isLive())
+  else if (d && !d->section->isLive())
     report(": unable to order discarded symbol: ");
 }
 
@@ -478,8 +471,8 @@ void Symbol::resolveUndefined(const Undefined &other) {
     printTraceSymbol(&other);
 
   if (isLazy()) {
-    // An undefined weak will not fetch archive members. See comment on Lazy in
-    // Symbols.h for the details.
+    // An undefined weak will not extract archive members. See comment on Lazy
+    // in Symbols.h for the details.
     if (other.binding == STB_WEAK) {
       binding = STB_WEAK;
       type = other.type;
@@ -489,9 +482,9 @@ void Symbol::resolveUndefined(const Undefined &other) {
     // Do extra check for --warn-backrefs.
     //
     // --warn-backrefs is an option to prevent an undefined reference from
-    // fetching an archive member written earlier in the command line. It can be
-    // used to keep compatibility with GNU linkers to some degree.
-    // I'll explain the feature and why you may find it useful in this comment.
+    // extracting an archive member written earlier in the command line. It can
+    // be used to keep compatibility with GNU linkers to some degree. I'll
+    // explain the feature and why you may find it useful in this comment.
     //
     // lld's symbol resolution semantics is more relaxed than traditional Unix
     // linkers. For example,
@@ -538,7 +531,7 @@ void Symbol::resolveUndefined(const Undefined &other) {
     // group assignment rule simulates the traditional linker's semantics.
     bool backref = config->warnBackrefs && other.file &&
                    file->groupId < other.file->groupId;
-    fetch();
+    extract();
 
     if (!config->whyExtract.empty())
       recordWhyExtract(other.file, *file, *this);
@@ -569,22 +562,6 @@ void Symbol::resolveUndefined(const Undefined &other) {
   }
 }
 
-// Using .symver foo,foo@@VER unfortunately creates two symbols: foo and
-// foo@@VER. We want to effectively ignore foo, so give precedence to
-// foo@@VER.
-// FIXME: If users can transition to using
-// .symver foo,foo@@@VER
-// we can delete this hack.
-static int compareVersion(StringRef a, StringRef b) {
-  bool x = a.contains("@@");
-  bool y = b.contains("@@");
-  if (!x && y)
-    return 1;
-  if (x && !y)
-    return -1;
-  return 0;
-}
-
 // Compare two symbols. Return 1 if the new symbol should win, -1 if
 // the new symbol should lose, or 0 if there is a conflict.
 int Symbol::compare(const Symbol *other) const {
@@ -593,8 +570,16 @@ int Symbol::compare(const Symbol *other) const {
   if (!isDefined() && !isCommon())
     return 1;
 
-  if (int cmp = compareVersion(getName(), other->getName()))
-    return cmp;
+  // .symver foo,foo@@VER unfortunately creates two defined symbols: foo and
+  // foo@@VER. In GNU ld, if foo and foo@@VER are in the same file, foo is
+  // ignored. In our implementation, when this is foo, this->getName() may still
+  // contain @@, return 1 in this case as well.
+  if (file == other->file) {
+    if (other->getName().contains("@@"))
+      return 1;
+    if (getName().contains("@@"))
+      return -1;
+  }
 
   if (other->isWeak())
     return -1;
@@ -712,23 +697,22 @@ template <class LazyT>
 static void replaceCommon(Symbol &oldSym, const LazyT &newSym) {
   backwardReferences.erase(&oldSym);
   oldSym.replace(newSym);
-  newSym.fetch();
+  newSym.extract();
 }
 
 template <class LazyT> void Symbol::resolveLazy(const LazyT &other) {
   // For common objects, we want to look for global or weak definitions that
-  // should be fetched as the canonical definition instead.
+  // should be extracted as the canonical definition instead.
   if (isCommon() && elf::config->fortranCommon) {
     if (auto *laSym = dyn_cast<LazyArchive>(&other)) {
       ArchiveFile *archive = cast<ArchiveFile>(laSym->file);
       const Archive::Symbol &archiveSym = laSym->sym;
-      if (archive->shouldFetchForCommon(archiveSym)) {
+      if (archive->shouldExtractForCommon(archiveSym)) {
         replaceCommon(*this, other);
         return;
       }
     } else if (auto *loSym = dyn_cast<LazyObject>(&other)) {
-      LazyObjFile *obj = cast<LazyObjFile>(loSym->file);
-      if (obj->shouldFetchForCommon(loSym->getName())) {
+      if (loSym->file->shouldExtractForCommon(loSym->getName())) {
         replaceCommon(*this, other);
         return;
       }
@@ -742,7 +726,7 @@ template <class LazyT> void Symbol::resolveLazy(const LazyT &other) {
     return;
   }
 
-  // An undefined weak will not fetch archive members. See comment on Lazy in
+  // An undefined weak will not extract archive members. See comment on Lazy in
   // Symbols.h for the details.
   if (isWeak()) {
     uint8_t ty = type;
@@ -753,7 +737,7 @@ template <class LazyT> void Symbol::resolveLazy(const LazyT &other) {
   }
 
   const InputFile *oldFile = file;
-  other.fetch();
+  other.extract();
   if (!config->whyExtract.empty())
     recordWhyExtract(oldFile, *file, *this);
 }

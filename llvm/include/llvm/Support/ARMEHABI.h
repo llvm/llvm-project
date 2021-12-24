@@ -71,6 +71,10 @@ namespace EHABI {
     // Purpose: finish
     UNWIND_OPCODE_FINISH = 0xb0,
 
+    // Format: 10110100
+    // Purpose: Pop Return Address Authetication Code
+    UNWIND_OPCODE_POP_RA_AUTH_CODE = 0xb4,
+
     // Format: 10110001 0000xxxx
     // Purpose: pop r[3:0]
     // Constraint: x != 0

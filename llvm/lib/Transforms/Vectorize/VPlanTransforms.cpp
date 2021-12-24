@@ -18,7 +18,8 @@ using namespace llvm;
 
 void VPlanTransforms::VPInstructionsToVPRecipes(
     Loop *OrigLoop, VPlanPtr &Plan,
-    LoopVectorizationLegality::InductionList &Inductions,
+    function_ref<const InductionDescriptor *(PHINode *)>
+        GetIntOrFpInductionDescriptor,
     SmallPtrSetImpl<Instruction *> &DeadInstructions, ScalarEvolution &SE) {
 
   auto *TopRegion = cast<VPRegionBlock>(Plan->getEntry());
@@ -44,11 +45,9 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
       VPRecipeBase *NewRecipe = nullptr;
       if (auto *VPPhi = dyn_cast<VPWidenPHIRecipe>(&Ingredient)) {
         auto *Phi = cast<PHINode>(VPPhi->getUnderlyingValue());
-        InductionDescriptor II = Inductions.lookup(Phi);
-        if (II.getKind() == InductionDescriptor::IK_IntInduction ||
-            II.getKind() == InductionDescriptor::IK_FpInduction) {
-          VPValue *Start = Plan->getOrAddVPValue(II.getStartValue());
-          NewRecipe = new VPWidenIntOrFpInductionRecipe(Phi, Start, nullptr);
+        if (const auto *II = GetIntOrFpInductionDescriptor(Phi)) {
+          VPValue *Start = Plan->getOrAddVPValue(II->getStartValue());
+          NewRecipe = new VPWidenIntOrFpInductionRecipe(Phi, Start, *II);
         } else {
           Plan->addVPValue(Phi, VPPhi);
           continue;
@@ -158,8 +157,7 @@ bool VPlanTransforms::sinkScalarOperands(VPlan &Plan) {
       // TODO: add ".cloned" suffix to name of Clone's VPValue.
 
       Clone->insertBefore(SinkCandidate);
-      SmallVector<VPUser *, 4> Users(SinkCandidate->user_begin(),
-                                     SinkCandidate->user_end());
+      SmallVector<VPUser *, 4> Users(SinkCandidate->users());
       for (auto *U : Users) {
         auto *UI = cast<VPRecipeBase>(U);
         if (UI->getParent() == SinkTo)
@@ -266,8 +264,7 @@ bool VPlanTransforms::mergeReplicateRegions(VPlan &Plan) {
       VPValue *PredInst1 =
           cast<VPPredInstPHIRecipe>(&Phi1ToMove)->getOperand(0);
       VPValue *Phi1ToMoveV = Phi1ToMove.getVPSingleValue();
-      SmallVector<VPUser *> Users(Phi1ToMoveV->user_begin(),
-                                  Phi1ToMoveV->user_end());
+      SmallVector<VPUser *> Users(Phi1ToMoveV->users());
       for (VPUser *U : Users) {
         auto *UI = dyn_cast<VPRecipeBase>(U);
         if (!UI || UI->getParent() != Then2)
@@ -294,4 +291,36 @@ bool VPlanTransforms::mergeReplicateRegions(VPlan &Plan) {
   for (VPRegionBlock *ToDelete : DeletedRegions)
     delete ToDelete;
   return Changed;
+}
+
+void VPlanTransforms::removeRedundantInductionCasts(VPlan &Plan) {
+  SmallVector<std::pair<VPRecipeBase *, VPValue *>> CastsToRemove;
+  for (auto &Phi : Plan.getEntry()->getEntryBasicBlock()->phis()) {
+    auto *IV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
+    if (!IV || IV->getTruncInst())
+      continue;
+
+    // Visit all casts connected to IV and in Casts. Collect them.
+    // remember them for removal.
+    auto &Casts = IV->getInductionDescriptor().getCastInsts();
+    VPValue *FindMyCast = IV;
+    for (Instruction *IRCast : reverse(Casts)) {
+      VPRecipeBase *FoundUserCast = nullptr;
+      for (auto *U : FindMyCast->users()) {
+        auto *UserCast = cast<VPRecipeBase>(U);
+        if (UserCast->getNumDefinedValues() == 1 &&
+            UserCast->getVPSingleValue()->getUnderlyingValue() == IRCast) {
+          FoundUserCast = UserCast;
+          break;
+        }
+      }
+      assert(FoundUserCast && "Missing a cast to remove");
+      CastsToRemove.emplace_back(FoundUserCast, IV);
+      FindMyCast = FoundUserCast->getVPSingleValue();
+    }
+  }
+  for (auto &E : CastsToRemove) {
+    E.first->getVPSingleValue()->replaceAllUsesWith(E.second);
+    E.first->eraseFromParent();
+  }
 }

@@ -23,6 +23,6 @@ struct LogicalResult;
 LogicalResult MlirLspServerMain(int argc, char **argv,
                                 DialectRegistry &registry);
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_TOOLS_MLIRLSPSERVER_MLIRLSPSERVERMAIN_H

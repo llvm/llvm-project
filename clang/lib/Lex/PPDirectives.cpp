@@ -1451,11 +1451,15 @@ void Preprocessor::HandleDigitDirective(Token &DigitTok) {
       DiscardUntilEndOfDirective();
       return;
     }
-    FilenameID = SourceMgr.getLineTableFilenameID(Literal.GetString());
 
     // If a filename was present, read any flags that are present.
     if (ReadLineMarkerFlags(IsFileEntry, IsFileExit, FileKind, *this))
       return;
+
+    // Exiting to an empty string means pop to the including file, so leave
+    // FilenameID as -1 in that case.
+    if (!(IsFileExit && Literal.GetString().empty()))
+      FilenameID = SourceMgr.getLineTableFilenameID(Literal.GetString());
   }
 
   // Create a line note with this information.
@@ -2012,20 +2016,16 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   SourceLocation FilenameLoc = FilenameTok.getLocation();
   StringRef LookupFilename = Filename;
 
-#ifdef _WIN32
-  llvm::sys::path::Style BackslashStyle = llvm::sys::path::Style::windows;
-#else
   // Normalize slashes when compiling with -fms-extensions on non-Windows. This
   // is unnecessary on Windows since the filesystem there handles backslashes.
   SmallString<128> NormalizedPath;
-  llvm::sys::path::Style BackslashStyle = llvm::sys::path::Style::posix;
-  if (LangOpts.MicrosoftExt) {
+  llvm::sys::path::Style BackslashStyle = llvm::sys::path::Style::native;
+  if (is_style_posix(BackslashStyle) && LangOpts.MicrosoftExt) {
     NormalizedPath = Filename.str();
     llvm::sys::path::native(NormalizedPath);
     LookupFilename = NormalizedPath;
     BackslashStyle = llvm::sys::path::Style::windows;
   }
-#endif
 
   Optional<FileEntryRef> File = LookupHeaderIncludeOrImport(
       CurDir, Filename, FilenameLoc, FilenameRange, FilenameTok,
@@ -2143,12 +2143,14 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
       IsImportDecl ||
       IncludeTok.getIdentifierInfo()->getPPKeywordID() == tok::pp_import;
 
+  bool IsFirstIncludeOfFile = false;
+
   // Ask HeaderInfo if we should enter this #include file.  If not, #including
   // this file will have no effect.
   if (Action == Enter && File &&
-      !HeaderInfo.ShouldEnterIncludeFile(*this, &File->getFileEntry(),
-                                         EnterOnce, getLangOpts().Modules,
-                                         SuggestedModule.getModule())) {
+      !HeaderInfo.ShouldEnterIncludeFile(
+          *this, &File->getFileEntry(), EnterOnce, getLangOpts().Modules,
+          SuggestedModule.getModule(), IsFirstIncludeOfFile)) {
     // Even if we've already preprocessed this header once and know that we
     // don't need to see its contents again, we still need to import it if it's
     // modular because we might not have imported it from this submodule before.
@@ -2340,7 +2342,8 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   }
 
   // If all is good, enter the new file!
-  if (EnterSourceFile(FID, CurDir, FilenameTok.getLocation()))
+  if (EnterSourceFile(FID, CurDir, FilenameTok.getLocation(),
+                      IsFirstIncludeOfFile))
     return {ImportAction::None};
 
   // Determine if we're switching to building a new submodule, and which one.

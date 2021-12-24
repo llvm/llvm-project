@@ -201,6 +201,7 @@ ARM_ARCH_EXT_NAME("cdecp4",   ARM::AEK_CDECP4,   "+cdecp4",  "-cdecp4")
 ARM_ARCH_EXT_NAME("cdecp5",   ARM::AEK_CDECP5,   "+cdecp5",  "-cdecp5")
 ARM_ARCH_EXT_NAME("cdecp6",   ARM::AEK_CDECP6,   "+cdecp6",  "-cdecp6")
 ARM_ARCH_EXT_NAME("cdecp7",   ARM::AEK_CDECP7,   "+cdecp7",  "-cdecp7")
+ARM_ARCH_EXT_NAME("pacbti",   ARM::AEK_PACBTI,   "+pacbti",  "-pacbti")
 #undef ARM_ARCH_EXT_NAME
 
 #ifndef ARM_HW_DIV_NAME
@@ -311,6 +312,9 @@ ARM_CPU_NAME("cortex-a78", ARMV8_2A, FK_CRYPTO_NEON_FP_ARMV8, false,
              (ARM::AEK_FP16 | ARM::AEK_DOTPROD))
 ARM_CPU_NAME("cortex-a78c", ARMV8_2A, FK_CRYPTO_NEON_FP_ARMV8, false,
              ARM::AEK_FP16 | ARM::AEK_DOTPROD)
+ARM_CPU_NAME("cortex-a710", ARMV9A, FK_NEON_FP_ARMV8, false,
+             (ARM::AEK_DOTPROD | ARM::AEK_FP16FML | ARM::AEK_BF16 | ARM::AEK_SB |
+              ARM::AEK_I8MM))
 ARM_CPU_NAME("cortex-x1", ARMV8_2A, FK_CRYPTO_NEON_FP_ARMV8, false,
              (ARM::AEK_FP16 | ARM::AEK_DOTPROD))
 ARM_CPU_NAME("neoverse-n1", ARMV8_2A, FK_CRYPTO_NEON_FP_ARMV8, false,

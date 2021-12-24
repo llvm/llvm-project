@@ -24,12 +24,23 @@ static cl::opt<bool> ShowMmapEvents("show-mmap-events", cl::init(false),
 
 static cl::opt<bool>
     UseOffset("use-offset", cl::init(true), cl::ZeroOrMore,
-              cl::desc("Work with `--skip-symbolization` to dump the "
+              cl::desc("Work with `--skip-symbolization` or "
+                       "`--unsymbolized-profile` to write/read the "
                        "offset instead of virtual address."));
+
+static cl::opt<bool> UseLoadableSegmentAsBase(
+    "use-first-loadable-segment-as-base", cl::init(false), cl::ZeroOrMore,
+    cl::desc("Use first loadable segment address as base address "
+             "for offsets in unsymbolized profile. By default "
+             "first executable segment address is used"));
+
 static cl::opt<bool>
     IgnoreStackSamples("ignore-stack-samples", cl::init(false), cl::ZeroOrMore,
                        cl::desc("Ignore call stack samples for hybrid samples "
                                 "and produce context-insensitive profile."));
+cl::opt<bool> ShowDetailedWarning("show-detailed-warning", cl::init(false),
+                                  cl::ZeroOrMore,
+                                  cl::desc("Show detailed warning message."));
 
 extern cl::opt<std::string> PerfTraceFilename;
 extern cl::opt<bool> ShowDisassemblyOnly;
@@ -40,17 +51,44 @@ namespace llvm {
 namespace sampleprof {
 
 void VirtualUnwinder::unwindCall(UnwindState &State) {
+  uint64_t Source = State.getCurrentLBRSource();
+  // An artificial return should push an external frame and an artificial call
+  // will match it and pop the external frame so that the context before and
+  // after the external call will be the same.
+  if (State.getCurrentLBR().IsArtificial) {
+    NumExtCallBranch++;
+    // A return is matched and pop the external frame.
+    if (State.getParentFrame()->isExternalFrame()) {
+      State.popFrame();
+    } else {
+      // An artificial return is missing, it happens that the sample is just hit
+      // in the middle of the external code. In this case, the leading branch is
+      // a call to external, we just keep unwinding use a context-less stack.
+      if (State.getParentFrame() != State.getDummyRootPtr())
+        NumMissingExternalFrame++;
+      State.clearCallStack();
+      State.pushFrame(Source);
+      State.InstPtr.update(Source);
+      return;
+    }
+  }
+
+  auto *ParentFrame = State.getParentFrame();
   // The 2nd frame after leaf could be missing if stack sample is
   // taken when IP is within prolog/epilog, as frame chain isn't
   // setup yet. Fill in the missing frame in that case.
   // TODO: Currently we just assume all the addr that can't match the
   // 2nd frame is in prolog/epilog. In the future, we will switch to
   // pro/epi tracker(Dwarf CFI) for the precise check.
-  uint64_t Source = State.getCurrentLBRSource();
-  auto *ParentFrame = State.getParentFrame();
   if (ParentFrame == State.getDummyRootPtr() ||
       ParentFrame->Address != Source) {
     State.switchToFrame(Source);
+    if (ParentFrame != State.getDummyRootPtr()) {
+      if (State.getCurrentLBR().IsArtificial)
+        NumMismatchedExtCallBranch++;
+      else
+        NumMismatchedProEpiBranch++;
+    }
   } else {
     State.popFrame();
   }
@@ -106,11 +144,24 @@ void VirtualUnwinder::unwindReturn(UnwindState &State) {
   const LBREntry &LBR = State.getCurrentLBR();
   uint64_t CallAddr = Binary->getCallAddrFromFrameAddr(LBR.Target);
   State.switchToFrame(CallAddr);
+  // Push an external frame for the case of returning to external
+  // address(callback), later if an aitificial call is matched and it will be
+  // popped up. This is to 1)avoid context being interrupted by callback,
+  // context before or after the callback should be the same. 2) the call stack
+  // of function called by callback should be truncated which is done during
+  // recording the context on trie. For example:
+  //  main (call)--> foo (call)--> callback (call)--> bar (return)--> callback
+  //  (return)--> foo (return)--> main
+  // Context for bar should not include main and foo.
+  // For the code of foo, the context of before and after callback should both
+  // be [foo, main].
+  if (LBR.IsArtificial)
+    State.pushFrame(ExternalAddr);
   State.pushFrame(LBR.Source);
   State.InstPtr.update(LBR.Source);
 }
 
-void VirtualUnwinder::unwindBranchWithinFrame(UnwindState &State) {
+void VirtualUnwinder::unwindBranch(UnwindState &State) {
   // TODO: Tolerate tail call for now, as we may see tail call from libraries.
   // This is only for intra function branches, excluding tail calls.
   uint64_t Source = State.getCurrentLBRSource();
@@ -124,7 +175,6 @@ std::shared_ptr<StringBasedCtxKey> FrameStack::getContextKey() {
   KeyStr->Context = Binary->getExpandedContext(Stack, KeyStr->WasLeafInlined);
   if (KeyStr->Context.empty())
     return nullptr;
-  KeyStr->genHashCode();
   return KeyStr;
 }
 
@@ -138,8 +188,6 @@ std::shared_ptr<ProbeBasedCtxKey> ProbeStack::getContextKey() {
       ProbeBasedKey->Probes);
   CSProfileGenerator::trimContext<const MCDecodedPseudoProbe *>(
       ProbeBasedKey->Probes);
-
-  ProbeBasedKey->genHashCode();
   return ProbeBasedKey;
 }
 
@@ -171,7 +219,9 @@ template <typename T>
 void VirtualUnwinder::collectSamplesFromFrameTrie(
     UnwindState::ProfiledFrame *Cur, T &Stack) {
   if (!Cur->isDummyRoot()) {
-    if (!Stack.pushFrame(Cur)) {
+    // Truncate the context for external frame since this isn't a real call
+    // context the compiler will see.
+    if (Cur->isExternalFrame() || !Stack.pushFrame(Cur)) {
       // Process truncated context
       // Start a new traversal ignoring its bottom context
       T EmptyStack(Binary);
@@ -211,7 +261,7 @@ void VirtualUnwinder::collectSamplesFromFrameTrie(
 
 void VirtualUnwinder::recordBranchCount(const LBREntry &Branch,
                                         UnwindState &State, uint64_t Repeat) {
-  if (Branch.IsArtificial)
+  if (Branch.IsArtificial || Branch.Target == ExternalAddr)
     return;
 
   if (Binary->usePseudoProbes()) {
@@ -234,21 +284,18 @@ bool VirtualUnwinder::unwind(const PerfSample *Sample, uint64_t Repeat) {
   if (!State.validateInitialState())
     return false;
 
-  // Also do not attempt linear unwind for the leaf range as it's incomplete.
-  bool IsLeaf = true;
-
   // Now process the LBR samples in parrallel with stack sample
   // Note that we do not reverse the LBR entry order so we can
   // unwind the sample stack as we walk through LBR entries.
   while (State.hasNextLBR()) {
     State.checkStateConsistency();
 
-    // Unwind implicit calls/returns from inlining, along the linear path,
-    // break into smaller sub section each with its own calling context.
-    if (!IsLeaf) {
+    // Do not attempt linear unwind for the leaf range as it's incomplete.
+    if (!State.IsLastLBR()) {
+      // Unwind implicit calls/returns from inlining, along the linear path,
+      // break into smaller sub section each with its own calling context.
       unwindLinear(State, Repeat);
     }
-    IsLeaf = false;
 
     // Save the LBR branch before it gets unwound.
     const LBREntry &Branch = State.getCurrentLBR();
@@ -263,9 +310,15 @@ bool VirtualUnwinder::unwind(const PerfSample *Sample, uint64_t Repeat) {
       // Unwind returns - check whether the IP is indeed at a return instruction
       unwindReturn(State);
     } else {
-      // Unwind branches - for regular intra function branches, we only
-      // need to record branch with context.
-      unwindBranchWithinFrame(State);
+      // Unwind branches
+      // For regular intra function branches, we only need to record branch with
+      // context. For an artificial branch cross function boundaries, we got an
+      // issue with returning to external code. Take the two LBR enties for
+      // example: [foo:8(RETURN), ext:1] [ext:3(CALL), bar:1] After perf reader,
+      // we only get[foo:8(RETURN), bar:1], unwinder will be confused like foo
+      // return to bar. Here we detect and treat this case as BRANCH instead of
+      // RETURN which only update the source address.
+      unwindBranch(State);
     }
     State.advanceLBR();
     // Record `branch` with calling context after unwinding.
@@ -277,24 +330,29 @@ bool VirtualUnwinder::unwind(const PerfSample *Sample, uint64_t Repeat) {
   return true;
 }
 
-std::unique_ptr<PerfReaderBase> PerfReaderBase::create(ProfiledBinary *Binary,
-                                                       StringRef PerfInputFile,
-                                                       bool IsPerfData) {
-  // For perf data input, we need to convert them into perf script first.
-  if (IsPerfData) {
-    std::string ConvertedPerfScript =
-        convertPerfDataToTrace(Binary, PerfInputFile);
-    // Let commoand opt own the string for converted perf trace file name
-    PerfTraceFilename = ConvertedPerfScript;
-    PerfInputFile = PerfTraceFilename;
+std::unique_ptr<PerfReaderBase>
+PerfReaderBase::create(ProfiledBinary *Binary, PerfInputFile &PerfInput) {
+  std::unique_ptr<PerfReaderBase> PerfReader;
+
+  if (PerfInput.Format == PerfFormat::UnsymbolizedProfile) {
+    PerfReader.reset(
+        new UnsymbolizedProfileReader(Binary, PerfInput.InputFile));
+    return PerfReader;
   }
 
-  PerfScriptType PerfType = checkPerfScriptType(PerfInputFile);
-  std::unique_ptr<PerfReaderBase> PerfReader;
-  if (PerfType == PERF_LBR_STACK) {
-    PerfReader.reset(new HybridPerfReader(Binary, PerfInputFile));
-  } else if (PerfType == PERF_LBR) {
-    PerfReader.reset(new LBRPerfReader(Binary, PerfInputFile));
+  // For perf data input, we need to convert them into perf script first.
+  if (PerfInput.Format == PerfFormat::PerfData)
+    PerfInput = PerfScriptReader::convertPerfDataToTrace(Binary, PerfInput);
+
+  assert((PerfInput.Format == PerfFormat::PerfScript) &&
+         "Should be a perfscript!");
+
+  PerfInput.Content =
+      PerfScriptReader::checkPerfScriptType(PerfInput.InputFile);
+  if (PerfInput.Content == PerfContent::LBRStack) {
+    PerfReader.reset(new HybridPerfReader(Binary, PerfInput.InputFile));
+  } else if (PerfInput.Content == PerfContent::LBR) {
+    PerfReader.reset(new LBRPerfReader(Binary, PerfInput.InputFile));
   } else {
     exitWithError("Unsupported perfscript!");
   }
@@ -302,8 +360,9 @@ std::unique_ptr<PerfReaderBase> PerfReaderBase::create(ProfiledBinary *Binary,
   return PerfReader;
 }
 
-std::string PerfReaderBase::convertPerfDataToTrace(ProfiledBinary *Binary,
-                                                   StringRef PerfData) {
+PerfInputFile PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary,
+                                                       PerfInputFile &File) {
+  StringRef PerfData = File.InputFile;
   // Run perf script to retrieve PIDs matching binary we're interested in.
   auto PerfExecutable = sys::Process::FindInEnvPath("PATH", "perf");
   if (!PerfExecutable) {
@@ -348,10 +407,10 @@ std::string PerfReaderBase::convertPerfDataToTrace(ProfiledBinary *Binary,
                                   PIDs,     "-i",         PerfData};
   sys::ExecuteAndWait(PerfPath, ScriptSampleArgs, llvm::None, Redirects);
 
-  return PerfTraceFile;
+  return {PerfTraceFile, PerfFormat::PerfScript, PerfContent::UnknownContent};
 }
 
-void PerfReaderBase::updateBinaryAddress(const MMapEvent &Event) {
+void PerfScriptReader::updateBinaryAddress(const MMapEvent &Event) {
   // Drop the event which doesn't belong to user-provided binary
   StringRef BinaryName = llvm::sys::path::filename(Event.BinaryPath);
   if (Binary->getName() != BinaryName)
@@ -415,25 +474,45 @@ static std::string getContextKeyStr(ContextKey *K,
 }
 
 void HybridPerfReader::unwindSamples() {
-  std::set<uint64_t> AllUntrackedCallsites;
+  if (Binary->useFSDiscriminator())
+    exitWithError("FS discriminator is not supported in CS profile.");
+  VirtualUnwinder Unwinder(&SampleCounters, Binary);
   for (const auto &Item : AggregatedSamples) {
     const PerfSample *Sample = Item.first.getPtr();
-    VirtualUnwinder Unwinder(&SampleCounters, Binary);
     Unwinder.unwind(Sample, Item.second);
-    auto &CurrUntrackedCallsites = Unwinder.getUntrackedCallsites();
-    AllUntrackedCallsites.insert(CurrUntrackedCallsites.begin(),
-                                 CurrUntrackedCallsites.end());
   }
 
   // Warn about untracked frames due to missing probes.
-  for (auto Address : AllUntrackedCallsites)
-    WithColor::warning() << "Profile context truncated due to missing probe "
-                         << "for call instruction at "
-                         << format("0x%" PRIx64, Address) << "\n";
+  if (ShowDetailedWarning) {
+    for (auto Address : Unwinder.getUntrackedCallsites())
+      WithColor::warning() << "Profile context truncated due to missing probe "
+                           << "for call instruction at "
+                           << format("0x%" PRIx64, Address) << "\n";
+  }
+
+  emitWarningSummary(Unwinder.getUntrackedCallsites().size(),
+                     SampleCounters.size(),
+                     "of profiled contexts are truncated due to missing probe "
+                     "for call instruction.");
+
+  emitWarningSummary(
+      Unwinder.NumMismatchedExtCallBranch, Unwinder.NumTotalBranches,
+      "of branches'source is a call instruction but doesn't match call frame "
+      "stack, likely due to unwinding error of external frame.");
+
+  emitWarningSummary(
+      Unwinder.NumMismatchedProEpiBranch, Unwinder.NumTotalBranches,
+      "of branches'source is a call instruction but doesn't match call frame "
+      "stack, likely due to frame in prolog/epilog.");
+
+  emitWarningSummary(Unwinder.NumMissingExternalFrame,
+                     Unwinder.NumExtCallBranch,
+                     "of artificial call branches but doesn't have an external "
+                     "frame to match.");
 }
 
-bool PerfReaderBase::extractLBRStack(TraceStream &TraceIt,
-                                     SmallVectorImpl<LBREntry> &LBRStack) {
+bool PerfScriptReader::extractLBRStack(TraceStream &TraceIt,
+                                       SmallVectorImpl<LBREntry> &LBRStack) {
   // The raw format of LBR stack is like:
   // 0x4005c8/0x4005dc/P/-/-/0 0x40062f/0x4005b0/P/-/-/0 ...
   //                           ... 0x4005c8/0x4005dc/P/-/-/0
@@ -449,7 +528,7 @@ bool PerfReaderBase::extractLBRStack(TraceStream &TraceIt,
   // Skip the leading instruction pointer.
   size_t Index = 0;
   uint64_t LeadingAddr;
-  if (!Records.empty() && Records[0].find('/') == StringRef::npos) {
+  if (!Records.empty() && !Records[0].contains('/')) {
     if (Records[0].getAsInteger(16, LeadingAddr)) {
       WarnInvalidLBR(TraceIt);
       TraceIt.advance();
@@ -486,35 +565,32 @@ bool PerfReaderBase::extractLBRStack(TraceStream &TraceIt,
     bool IsOutgoing = SrcIsInternal && !DstIsInternal;
     bool IsArtificial = false;
 
-    // Ignore branches outside the current binary. Ignore all remaining branches
-    // if there's no incoming branch before the external branch in reverse
-    // order.
+    // Ignore branches outside the current binary.
     if (IsExternal) {
-      if (PrevTrDst)
-        continue;
-      if (!LBRStack.empty()) {
+      if (!PrevTrDst && !LBRStack.empty()) {
         WithColor::warning()
             << "Invalid transfer to external code in LBR record at line "
             << TraceIt.getLineNumber() << ": " << TraceIt.getCurrentLine()
             << "\n";
       }
-      break;
+      // Do not ignore the entire samples, the remaining LBR can still be
+      // unwound using a context-less stack.
+      continue;
     }
 
     if (IsOutgoing) {
       if (!PrevTrDst) {
-        // This is unpaired outgoing jump which is likely due to interrupt or
-        // incomplete LBR trace. Ignore current and subsequent entries since
-        // they are likely in different contexts.
-        break;
-      }
-
-      if (Binary->addressIsReturn(Src)) {
-        // In a callback case, a return from internal code, say A, to external
-        // runtime can happen. The external runtime can then call back to
-        // another internal routine, say B. Making an artificial branch that
-        // looks like a return from A to B can confuse the unwinder to treat
-        // the instruction before B as the call instruction.
+        // This is a leading outgoing LBR, we should keep processing the LBRs.
+        if (LBRStack.empty()) {
+          NumLeadingOutgoingLBR++;
+          // Record this LBR since current source and next LBR' target is still
+          // a valid range.
+          LBRStack.emplace_back(LBREntry(Src, ExternalAddr, false));
+          continue;
+        }
+        // This is middle unpaired outgoing jump which is likely due to
+        // interrupt or incomplete LBR trace. Ignore current and subsequent
+        // entries since they are likely in different contexts.
         break;
       }
 
@@ -551,8 +627,8 @@ bool PerfReaderBase::extractLBRStack(TraceStream &TraceIt,
   return !LBRStack.empty();
 }
 
-bool PerfReaderBase::extractCallstack(TraceStream &TraceIt,
-                                      SmallVectorImpl<uint64_t> &CallStack) {
+bool PerfScriptReader::extractCallstack(TraceStream &TraceIt,
+                                        SmallVectorImpl<uint64_t> &CallStack) {
   // The raw format of call stack is like:
   //            4005dc      # leaf frame
   //	          400634
@@ -571,9 +647,17 @@ bool PerfReaderBase::extractCallstack(TraceStream &TraceIt,
     }
     TraceIt.advance();
     // Currently intermixed frame from different binaries is not supported.
-    // Ignore caller frames not from binary of interest.
-    if (!Binary->addressIsCode(FrameAddr))
-      break;
+    if (!Binary->addressIsCode(FrameAddr)) {
+      if (CallStack.empty())
+        NumLeafExternalFrame++;
+      // Push a special value(ExternalAddr) for the external frames so that
+      // unwinder can still work on this with artificial Call/Return branch.
+      // After unwinding, the context will be truncated for external frame.
+      // Also deduplicate the consecutive external addresses.
+      if (CallStack.empty() || CallStack.back() != ExternalAddr)
+        CallStack.emplace_back(ExternalAddr);
+      continue;
+    }
 
     // We need to translate return address to call address for non-leaf frames.
     if (!CallStack.empty()) {
@@ -590,6 +674,10 @@ bool PerfReaderBase::extractCallstack(TraceStream &TraceIt,
 
     CallStack.emplace_back(FrameAddr);
   }
+
+  // Strip out the bottom external addr.
+  if (CallStack.size() > 1 && CallStack.back() == ExternalAddr)
+    CallStack.pop_back();
 
   // Skip other unrelated line, find the next valid LBR line
   // Note that even for empty call stack, we should skip the address at the
@@ -609,7 +697,7 @@ bool PerfReaderBase::extractCallstack(TraceStream &TraceIt,
          !Binary->addressInPrologEpilog(CallStack.front());
 }
 
-void PerfReaderBase::warnIfMissingMMap() {
+void PerfScriptReader::warnIfMissingMMap() {
   if (!Binary->getMissingMMapWarned() && !Binary->getIsLoadedByMMap()) {
     WithColor::warning() << "No relevant mmap event is matched for "
                          << Binary->getName()
@@ -663,47 +751,41 @@ void HybridPerfReader::parseSample(TraceStream &TraceIt, uint64_t Count) {
   }
 }
 
-void PerfReaderBase::writeRawProfile(StringRef Filename) {
+void PerfScriptReader::writeUnsymbolizedProfile(StringRef Filename) {
   std::error_code EC;
   raw_fd_ostream OS(Filename, EC, llvm::sys::fs::OF_TextWithCRLF);
   if (EC)
     exitWithError(EC, Filename);
-  writeRawProfile(OS);
+  writeUnsymbolizedProfile(OS);
 }
 
 // Use ordered map to make the output deterministic
 using OrderedCounterForPrint = std::map<std::string, SampleCounter *>;
 
-void PerfReaderBase::writeRawProfile(raw_fd_ostream &OS) {
-  /*
-     Format:
-     [context string]
-     number of entries in RangeCounter
-     from_1-to_1:count_1
-     from_2-to_2:count_2
-     ......
-     from_n-to_n:count_n
-     number of entries in BranchCounter
-     src_1->dst_1:count_1
-     src_2->dst_2:count_2
-     ......
-     src_n->dst_n:count_n
-  */
-
+void PerfScriptReader::writeUnsymbolizedProfile(raw_fd_ostream &OS) {
   OrderedCounterForPrint OrderedCounters;
   for (auto &CI : SampleCounters) {
     OrderedCounters[getContextKeyStr(CI.first.getPtr(), Binary)] = &CI.second;
   }
 
-  auto SCounterPrinter = [&](RangeSample Counter, StringRef Separator,
+  auto SCounterPrinter = [&](RangeSample &Counter, StringRef Separator,
                              uint32_t Indent) {
     OS.indent(Indent);
     OS << Counter.size() << "\n";
-    for (auto I : Counter) {
-      uint64_t Start = UseOffset ? I.first.first
-                                 : Binary->offsetToVirtualAddr(I.first.first);
-      uint64_t End = UseOffset ? I.first.second
-                               : Binary->offsetToVirtualAddr(I.first.second);
+    for (auto &I : Counter) {
+      uint64_t Start = I.first.first;
+      uint64_t End = I.first.second;
+
+      if (!UseOffset || (UseOffset && UseLoadableSegmentAsBase)) {
+        Start = Binary->offsetToVirtualAddr(Start);
+        End = Binary->offsetToVirtualAddr(End);
+      }
+
+      if (UseOffset && UseLoadableSegmentAsBase) {
+        Start -= Binary->getFirstLoadableAddress();
+        End -= Binary->getFirstLoadableAddress();
+      }
+
       OS.indent(Indent);
       OS << Twine::utohexstr(Start) << Separator << Twine::utohexstr(End) << ":"
          << I.second << "\n";
@@ -712,7 +794,7 @@ void PerfReaderBase::writeRawProfile(raw_fd_ostream &OS) {
 
   for (auto &CI : OrderedCounters) {
     uint32_t Indent = 0;
-    if (!CI.first.empty()) {
+    if (ProfileIsCSFlat) {
       // Context string key
       OS << "[" << CI.first << "]\n";
       Indent = 2;
@@ -724,15 +806,110 @@ void PerfReaderBase::writeRawProfile(raw_fd_ostream &OS) {
   }
 }
 
-void LBRPerfReader::computeCounterFromLBR(const PerfSample *Sample,
-                                          uint64_t Repeat) {
+// Format of input:
+// number of entries in RangeCounter
+// from_1-to_1:count_1
+// from_2-to_2:count_2
+// ......
+// from_n-to_n:count_n
+// number of entries in BranchCounter
+// src_1->dst_1:count_1
+// src_2->dst_2:count_2
+// ......
+// src_n->dst_n:count_n
+void UnsymbolizedProfileReader::readSampleCounters(TraceStream &TraceIt,
+                                                   SampleCounter &SCounters) {
+  auto exitWithErrorForTraceLine = [](TraceStream &TraceIt) {
+    std::string Msg = TraceIt.isAtEoF()
+                          ? "Invalid raw profile!"
+                          : "Invalid raw profile at line " +
+                                Twine(TraceIt.getLineNumber()).str() + ": " +
+                                TraceIt.getCurrentLine().str();
+    exitWithError(Msg);
+  };
+  auto ReadNumber = [&](uint64_t &Num) {
+    if (TraceIt.isAtEoF())
+      exitWithErrorForTraceLine(TraceIt);
+    if (TraceIt.getCurrentLine().ltrim().getAsInteger(10, Num))
+      exitWithErrorForTraceLine(TraceIt);
+    TraceIt.advance();
+  };
+
+  auto ReadCounter = [&](RangeSample &Counter, StringRef Separator) {
+    uint64_t Num = 0;
+    ReadNumber(Num);
+    while (Num--) {
+      if (TraceIt.isAtEoF())
+        exitWithErrorForTraceLine(TraceIt);
+      StringRef Line = TraceIt.getCurrentLine().ltrim();
+
+      uint64_t Count = 0;
+      auto LineSplit = Line.split(":");
+      if (LineSplit.second.empty() || LineSplit.second.getAsInteger(10, Count))
+        exitWithErrorForTraceLine(TraceIt);
+
+      uint64_t Source = 0;
+      uint64_t Target = 0;
+      auto Range = LineSplit.first.split(Separator);
+      if (Range.second.empty() || Range.first.getAsInteger(16, Source) ||
+          Range.second.getAsInteger(16, Target))
+        exitWithErrorForTraceLine(TraceIt);
+
+      if (!UseOffset || (UseOffset && UseLoadableSegmentAsBase)) {
+        uint64_t BaseAddr = 0;
+        if (UseOffset && UseLoadableSegmentAsBase)
+          BaseAddr = Binary->getFirstLoadableAddress();
+
+        Source = Binary->virtualAddrToOffset(Source + BaseAddr);
+        Target = Binary->virtualAddrToOffset(Target + BaseAddr);
+      }
+
+      Counter[{Source, Target}] += Count;
+      TraceIt.advance();
+    }
+  };
+
+  ReadCounter(SCounters.RangeCounter, "-");
+  ReadCounter(SCounters.BranchCounter, "->");
+}
+
+void UnsymbolizedProfileReader::readUnsymbolizedProfile(StringRef FileName) {
+  TraceStream TraceIt(FileName);
+  while (!TraceIt.isAtEoF()) {
+    std::shared_ptr<StringBasedCtxKey> Key =
+        std::make_shared<StringBasedCtxKey>();
+    StringRef Line = TraceIt.getCurrentLine();
+    // Read context stack for CS profile.
+    if (Line.startswith("[")) {
+      ProfileIsCSFlat = true;
+      auto I = ContextStrSet.insert(Line.str());
+      SampleContext::createCtxVectorFromStr(*I.first, Key->Context);
+      TraceIt.advance();
+    }
+    auto Ret =
+        SampleCounters.emplace(Hashable<ContextKey>(Key), SampleCounter());
+    readSampleCounters(TraceIt, Ret.first->second);
+  }
+}
+
+void UnsymbolizedProfileReader::parsePerfTraces() {
+  readUnsymbolizedProfile(PerfTraceFile);
+}
+
+void PerfScriptReader::computeCounterFromLBR(const PerfSample *Sample,
+                                             uint64_t Repeat) {
   SampleCounter &Counter = SampleCounters.begin()->second;
   uint64_t EndOffeset = 0;
   for (const LBREntry &LBR : Sample->LBRStack) {
+    assert(LBR.Source != ExternalAddr &&
+           "Branch' source should not be an external address, it should be "
+           "converted to aritificial branch.");
     uint64_t SourceOffset = Binary->virtualAddrToOffset(LBR.Source);
-    uint64_t TargetOffset = Binary->virtualAddrToOffset(LBR.Target);
+    uint64_t TargetOffset = LBR.Target == static_cast<uint64_t>(ExternalAddr)
+                                ? static_cast<uint64_t>(ExternalAddr)
+                                : Binary->virtualAddrToOffset(LBR.Target);
 
-    if (!LBR.IsArtificial) {
+    if (!LBR.IsArtificial && TargetOffset != ExternalAddr) {
       Counter.recordBranchCount(SourceOffset, TargetOffset, Repeat);
     }
 
@@ -755,14 +932,13 @@ void LBRPerfReader::parseSample(TraceStream &TraceIt, uint64_t Count) {
   }
 }
 
-void LBRPerfReader::generateRawProfile() {
+void PerfScriptReader::generateUnsymbolizedProfile() {
   // There is no context for LBR only sample, so initialize one entry with
   // fake "empty" context key.
   assert(SampleCounters.empty() &&
          "Sample counter map should be empty before raw profile generation");
   std::shared_ptr<StringBasedCtxKey> Key =
       std::make_shared<StringBasedCtxKey>();
-  Key->genHashCode();
   SampleCounters.emplace(Hashable<ContextKey>(Key), SampleCounter());
   for (const auto &Item : AggregatedSamples) {
     const PerfSample *Sample = Item.first.getPtr();
@@ -770,7 +946,7 @@ void LBRPerfReader::generateRawProfile() {
   }
 }
 
-uint64_t PerfReaderBase::parseAggregatedCount(TraceStream &TraceIt) {
+uint64_t PerfScriptReader::parseAggregatedCount(TraceStream &TraceIt) {
   // The aggregated count is optional, so do not skip the line and return 1 if
   // it's unmatched
   uint64_t Count = 1;
@@ -779,15 +955,16 @@ uint64_t PerfReaderBase::parseAggregatedCount(TraceStream &TraceIt) {
   return Count;
 }
 
-void PerfReaderBase::parseSample(TraceStream &TraceIt) {
+void PerfScriptReader::parseSample(TraceStream &TraceIt) {
+  NumTotalSample++;
   uint64_t Count = parseAggregatedCount(TraceIt);
   assert(Count >= 1 && "Aggregated count should be >= 1!");
   parseSample(TraceIt, Count);
 }
 
-bool PerfReaderBase::extractMMap2EventForBinary(ProfiledBinary *Binary,
-                                                StringRef Line,
-                                                MMapEvent &MMap) {
+bool PerfScriptReader::extractMMap2EventForBinary(ProfiledBinary *Binary,
+                                                  StringRef Line,
+                                                  MMapEvent &MMap) {
   // Parse a line like:
   //  PERF_RECORD_MMAP2 2113428/2113428: [0x7fd4efb57000(0x204000) @ 0
   //  08:04 19532229 3585508847]: r-xp /usr/lib64/libdl-2.17.so
@@ -831,21 +1008,21 @@ bool PerfReaderBase::extractMMap2EventForBinary(ProfiledBinary *Binary,
   return Binary->getName() == BinaryName;
 }
 
-void PerfReaderBase::parseMMap2Event(TraceStream &TraceIt) {
+void PerfScriptReader::parseMMap2Event(TraceStream &TraceIt) {
   MMapEvent MMap;
   if (extractMMap2EventForBinary(Binary, TraceIt.getCurrentLine(), MMap))
     updateBinaryAddress(MMap);
   TraceIt.advance();
 }
 
-void PerfReaderBase::parseEventOrSample(TraceStream &TraceIt) {
+void PerfScriptReader::parseEventOrSample(TraceStream &TraceIt) {
   if (isMMap2Event(TraceIt.getCurrentLine()))
     parseMMap2Event(TraceIt);
   else
     parseSample(TraceIt);
 }
 
-void PerfReaderBase::parseAndAggregateTrace() {
+void PerfScriptReader::parseAndAggregateTrace() {
   // Trace line iterator
   TraceStream TraceIt(PerfTraceFile);
   while (!TraceIt.isAtEoF())
@@ -856,18 +1033,18 @@ void PerfReaderBase::parseAndAggregateTrace() {
 // 40062f 0x5c6313f/0x5c63170/P/-/-/0  0x5c630e7/0x5c63130/P/-/-/0 ...
 // A heuristic for fast detection by checking whether a
 // leading "  0x" and the '/' exist.
-bool PerfReaderBase::isLBRSample(StringRef Line) {
+bool PerfScriptReader::isLBRSample(StringRef Line) {
   // Skip the leading instruction pointer
   SmallVector<StringRef, 32> Records;
   Line.trim().split(Records, " ", 2, false);
   if (Records.size() < 2)
     return false;
-  if (Records[1].startswith("0x") && Records[1].find('/') != StringRef::npos)
+  if (Records[1].startswith("0x") && Records[1].contains('/'))
     return true;
   return false;
 }
 
-bool PerfReaderBase::isMMap2Event(StringRef Line) {
+bool PerfScriptReader::isMMap2Event(StringRef Line) {
   // Short cut to avoid string find is possible.
   if (Line.empty() || Line.size() < 50)
     return false;
@@ -877,7 +1054,7 @@ bool PerfReaderBase::isMMap2Event(StringRef Line) {
 
   // PERF_RECORD_MMAP2 does not appear at the beginning of the line
   // for ` perf script  --show-mmap-events  -i ...`
-  return Line.find("PERF_RECORD_MMAP2") != StringRef::npos;
+  return Line.contains("PERF_RECORD_MMAP2");
 }
 
 // The raw hybird sample is like
@@ -890,7 +1067,7 @@ bool PerfReaderBase::isMMap2Event(StringRef Line) {
 // Determine the perfscript contains hybrid samples(call stack + LBRs) by
 // checking whether there is a non-empty call stack immediately followed by
 // a LBR sample
-PerfScriptType PerfReaderBase::checkPerfScriptType(StringRef FileName) {
+PerfContent PerfScriptReader::checkPerfScriptType(StringRef FileName) {
   TraceStream TraceIt(FileName);
   uint64_t FrameAddr = 0;
   while (!TraceIt.isAtEoF()) {
@@ -908,45 +1085,136 @@ PerfScriptType PerfReaderBase::checkPerfScriptType(StringRef FileName) {
     if (!TraceIt.isAtEoF()) {
       if (isLBRSample(TraceIt.getCurrentLine())) {
         if (Count > 0)
-          return PERF_LBR_STACK;
+          return PerfContent::LBRStack;
         else
-          return PERF_LBR;
+          return PerfContent::LBR;
       }
       TraceIt.advance();
     }
   }
 
   exitWithError("Invalid perf script input!");
-  return PERF_INVALID;
+  return PerfContent::UnknownContent;
 }
 
-void HybridPerfReader::generateRawProfile() {
-  ProfileIsCS = !IgnoreStackSamples;
-  if (ProfileIsCS)
+void HybridPerfReader::generateUnsymbolizedProfile() {
+  ProfileIsCSFlat = !IgnoreStackSamples;
+  if (ProfileIsCSFlat)
     unwindSamples();
   else
-    LBRPerfReader::generateRawProfile();
+    PerfScriptReader::generateUnsymbolizedProfile();
 }
 
-void PerfReaderBase::warnTruncatedStack() {
-  for (auto Address : InvalidReturnAddresses) {
-    WithColor::warning()
-        << "Truncated stack sample due to invalid return address at "
-        << format("0x%" PRIx64, Address)
-        << ", likely caused by frame pointer omission\n";
+void PerfScriptReader::warnTruncatedStack() {
+  if (ShowDetailedWarning) {
+    for (auto Address : InvalidReturnAddresses) {
+      WithColor::warning()
+          << "Truncated stack sample due to invalid return address at "
+          << format("0x%" PRIx64, Address)
+          << ", likely caused by frame pointer omission\n";
+    }
   }
+  emitWarningSummary(
+      InvalidReturnAddresses.size(), AggregatedSamples.size(),
+      "of truncated stack samples due to invalid return address, "
+      "likely caused by frame pointer omission.");
 }
 
-void PerfReaderBase::parsePerfTraces() {
+void PerfScriptReader::warnInvalidRange() {
+  std::unordered_map<std::pair<uint64_t, uint64_t>, uint64_t,
+                     pair_hash<uint64_t, uint64_t>>
+      Ranges;
+
+  for (const auto &Item : AggregatedSamples) {
+    const PerfSample *Sample = Item.first.getPtr();
+    uint64_t Count = Item.second;
+    uint64_t EndOffeset = 0;
+    for (const LBREntry &LBR : Sample->LBRStack) {
+      uint64_t SourceOffset = Binary->virtualAddrToOffset(LBR.Source);
+      uint64_t StartOffset = Binary->virtualAddrToOffset(LBR.Target);
+      if (EndOffeset != 0)
+        Ranges[{StartOffset, EndOffeset}] += Count;
+      EndOffeset = SourceOffset;
+    }
+  }
+
+  if (Ranges.empty()) {
+    WithColor::warning() << "No samples in perf script!\n";
+    return;
+  }
+
+  auto WarnInvalidRange =
+      [&](uint64_t StartOffset, uint64_t EndOffset, StringRef Msg) {
+        if (!ShowDetailedWarning)
+          return;
+        WithColor::warning()
+            << "["
+            << format("%8" PRIx64, Binary->offsetToVirtualAddr(StartOffset))
+            << ","
+            << format("%8" PRIx64, Binary->offsetToVirtualAddr(EndOffset))
+            << "]: " << Msg << "\n";
+      };
+
+  const char *EndNotBoundaryMsg = "Range is not on instruction boundary, "
+                                  "likely due to profile and binary mismatch.";
+  const char *DanglingRangeMsg = "Range does not belong to any functions, "
+                                 "likely from PLT, .init or .fini section.";
+  const char *RangeCrossFuncMsg =
+      "Fall through range should not cross function boundaries, likely due to "
+      "profile and binary mismatch.";
+
+  uint64_t InstNotBoundary = 0;
+  uint64_t UnmatchedRange = 0;
+  uint64_t RangeCrossFunc = 0;
+
+  for (auto &I : Ranges) {
+    uint64_t StartOffset = I.first.first;
+    uint64_t EndOffset = I.first.second;
+
+    if (!Binary->offsetIsCode(StartOffset) ||
+        !Binary->offsetIsTransfer(EndOffset)) {
+      InstNotBoundary++;
+      WarnInvalidRange(StartOffset, EndOffset, EndNotBoundaryMsg);
+    }
+
+    auto *FRange = Binary->findFuncRangeForOffset(StartOffset);
+    if (!FRange) {
+      UnmatchedRange++;
+      WarnInvalidRange(StartOffset, EndOffset, DanglingRangeMsg);
+      continue;
+    }
+
+    if (EndOffset >= FRange->EndOffset) {
+      RangeCrossFunc++;
+      WarnInvalidRange(StartOffset, EndOffset, RangeCrossFuncMsg);
+    }
+  }
+
+  uint64_t TotalRangeNum = Ranges.size();
+  emitWarningSummary(InstNotBoundary, TotalRangeNum,
+                     "of profiled ranges are not on instruction boundary.");
+  emitWarningSummary(UnmatchedRange, TotalRangeNum,
+                     "of profiled ranges do not belong to any functions.");
+  emitWarningSummary(RangeCrossFunc, TotalRangeNum,
+                     "of profiled ranges do cross function boundaries.");
+}
+
+void PerfScriptReader::parsePerfTraces() {
   // Parse perf traces and do aggregation.
   parseAndAggregateTrace();
 
+  emitWarningSummary(NumLeafExternalFrame, NumTotalSample,
+                     "of samples have leaf external frame in call stack.");
+  emitWarningSummary(NumLeadingOutgoingLBR, NumTotalSample,
+                     "of samples have leading external LBR.");
+
   // Generate unsymbolized profile.
   warnTruncatedStack();
-  generateRawProfile();
+  warnInvalidRange();
+  generateUnsymbolizedProfile();
 
   if (SkipSymbolization)
-    writeRawProfile(OutputFilename);
+    writeUnsymbolizedProfile(OutputFilename);
 }
 
 } // end namespace sampleprof

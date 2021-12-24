@@ -26,8 +26,6 @@
 
 namespace llvm {
 
-  template<typename T> struct DenseMapInfo;
-
   /// ArrayRef - Represent a constant reference to an array (0 or more elements
   /// consecutively in memory), i.e. a start pointer and a length.  It allows
   /// various APIs to take consecutive elements easily and conveniently.
@@ -572,7 +570,7 @@ namespace llvm {
   }
 
   // Provide DenseMapInfo for ArrayRefs.
-  template <typename T> struct DenseMapInfo<ArrayRef<T>> {
+  template <typename T> struct DenseMapInfo<ArrayRef<T>, void> {
     static inline ArrayRef<T> getEmptyKey() {
       return ArrayRef<T>(
           reinterpret_cast<const T *>(~static_cast<uintptr_t>(0)), size_t(0));

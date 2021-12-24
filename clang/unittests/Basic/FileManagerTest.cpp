@@ -12,6 +12,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -30,18 +31,18 @@ private:
 
   void InjectFileOrDirectory(const char *Path, ino_t INode, bool IsFile,
                              const char *StatPath) {
-#ifndef _WIN32
     SmallString<128> NormalizedPath(Path);
-    llvm::sys::path::native(NormalizedPath);
-    Path = NormalizedPath.c_str();
-
     SmallString<128> NormalizedStatPath;
-    if (StatPath) {
-      NormalizedStatPath = StatPath;
-      llvm::sys::path::native(NormalizedStatPath);
-      StatPath = NormalizedStatPath.c_str();
+    if (is_style_posix(llvm::sys::path::Style::native)) {
+      llvm::sys::path::native(NormalizedPath);
+      Path = NormalizedPath.c_str();
+
+      if (StatPath) {
+        NormalizedStatPath = StatPath;
+        llvm::sys::path::native(NormalizedStatPath);
+        StatPath = NormalizedStatPath.c_str();
+      }
     }
-#endif
 
     if (!StatPath)
       StatPath = Path;
@@ -73,11 +74,11 @@ public:
                           bool isFile,
                           std::unique_ptr<llvm::vfs::File> *F,
                           llvm::vfs::FileSystem &FS) override {
-#ifndef _WIN32
     SmallString<128> NormalizedPath(Path);
-    llvm::sys::path::native(NormalizedPath);
-    Path = NormalizedPath.c_str();
-#endif
+    if (is_style_posix(llvm::sys::path::Style::native)) {
+      llvm::sys::path::native(NormalizedPath);
+      Path = NormalizedPath.c_str();
+    }
 
     if (StatCalls.count(Path) != 0) {
       Status = StatCalls[Path];
@@ -435,13 +436,16 @@ TEST_F(FileManagerTest, getVirtualFileWithDifferentName) {
 
 #endif  // !_WIN32
 
+static StringRef getSystemRoot() {
+  return is_style_windows(llvm::sys::path::Style::native) ? "C:/" : "/";
+}
+
 TEST_F(FileManagerTest, makeAbsoluteUsesVFS) {
-  SmallString<64> CustomWorkingDir;
-#ifdef _WIN32
-  CustomWorkingDir = "C:";
-#else
-  CustomWorkingDir = "/";
-#endif
+  // FIXME: Should this be using a root path / call getSystemRoot()? For now,
+  // avoiding that and leaving the test as-is.
+  SmallString<64> CustomWorkingDir =
+      is_style_windows(llvm::sys::path::Style::native) ? StringRef("C:")
+                                                       : StringRef("/");
   llvm::sys::path::append(CustomWorkingDir, "some", "weird", "path");
 
   auto FS = IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem>(
@@ -463,12 +467,7 @@ TEST_F(FileManagerTest, makeAbsoluteUsesVFS) {
 
 // getVirtualFile should always fill the real path.
 TEST_F(FileManagerTest, getVirtualFileFillsRealPathName) {
-  SmallString<64> CustomWorkingDir;
-#ifdef _WIN32
-  CustomWorkingDir = "C:/";
-#else
-  CustomWorkingDir = "/";
-#endif
+  SmallString<64> CustomWorkingDir = getSystemRoot();
 
   auto FS = IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem>(
       new llvm::vfs::InMemoryFileSystem);
@@ -496,12 +495,7 @@ TEST_F(FileManagerTest, getVirtualFileFillsRealPathName) {
 }
 
 TEST_F(FileManagerTest, getFileDontOpenRealPath) {
-  SmallString<64> CustomWorkingDir;
-#ifdef _WIN32
-  CustomWorkingDir = "C:/";
-#else
-  CustomWorkingDir = "/";
-#endif
+  SmallString<64> CustomWorkingDir = getSystemRoot();
 
   auto FS = IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem>(
       new llvm::vfs::InMemoryFileSystem);
@@ -559,9 +553,10 @@ TEST_F(FileManagerTest, getBypassFile) {
 
   // Calling a second time should not affect the UID or size.
   unsigned VirtualUID = FE.getUID();
-  EXPECT_EQ(
-      &FE,
-      &expectedToOptional(Manager.getFileRef("/tmp/test"))->getFileEntry());
+  llvm::Optional<FileEntryRef> SearchRef;
+  ASSERT_THAT_ERROR(Manager.getFileRef("/tmp/test").moveInto(SearchRef),
+                    Succeeded());
+  EXPECT_EQ(&FE, &SearchRef->getFileEntry());
   EXPECT_EQ(FE.getUID(), VirtualUID);
   EXPECT_EQ(FE.getSize(), 10);
 
@@ -578,9 +573,9 @@ TEST_F(FileManagerTest, getBypassFile) {
   EXPECT_NE(BypassRef->getSize(), FE.getSize());
 
   // The virtual file should still be returned when searching.
-  EXPECT_EQ(
-      &FE,
-      &expectedToOptional(Manager.getFileRef("/tmp/test"))->getFileEntry());
+  ASSERT_THAT_ERROR(Manager.getFileRef("/tmp/test").moveInto(SearchRef),
+                    Succeeded());
+  EXPECT_EQ(&FE, &SearchRef->getFileEntry());
 }
 
 } // anonymous namespace

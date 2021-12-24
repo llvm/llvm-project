@@ -334,7 +334,7 @@ static void addPlaceholderArgs(const LambdaProperties &LP,
 
   ArrayRef<BindArgument> Args = LP.BindArguments;
 
-  auto MaxPlaceholderIt =
+  const auto *MaxPlaceholderIt =
       std::max_element(Args.begin(), Args.end(),
                        [](const BindArgument &B1, const BindArgument &B2) {
                          return B1.PlaceHolderIndex < B2.PlaceHolderIndex;

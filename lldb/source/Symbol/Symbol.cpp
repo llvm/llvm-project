@@ -17,6 +17,7 @@
 #include "lldb/Symbol/Symtab.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/DataEncoder.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb;
@@ -115,7 +116,8 @@ void Symbol::Clear() {
 }
 
 bool Symbol::ValueIsAddress() const {
-  return m_addr_range.GetBaseAddress().GetSection().get() != nullptr;
+  return m_addr_range.GetBaseAddress().GetSection().get() != nullptr ||
+         m_type == eSymbolTypeAbsolute;
 }
 
 ConstString Symbol::GetDisplayName() const {
@@ -593,4 +595,132 @@ void Symbol::SynthesizeNameIfNeeded() const {
     os << GetSyntheticSymbolPrefix() << GetID();
     m_mangled.SetDemangledName(ConstString(os.str()));
   }
+}
+
+bool Symbol::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
+                    const SectionList *section_list,
+                    const StringTableReader &strtab) {
+  if (!data.ValidOffsetForDataOfSize(*offset_ptr, 8))
+    return false;
+  m_uid = data.GetU32(offset_ptr);
+  m_type_data = data.GetU16(offset_ptr);
+  const uint16_t bitfields = data.GetU16(offset_ptr);
+  m_type_data_resolved = (1u << 15 & bitfields) != 0;
+  m_is_synthetic = (1u << 14 & bitfields) != 0;
+  m_is_debug = (1u << 13 & bitfields) != 0;
+  m_is_external = (1u << 12 & bitfields) != 0;
+  m_size_is_sibling = (1u << 11 & bitfields) != 0;
+  m_size_is_synthesized = (1u << 10 & bitfields) != 0;
+  m_size_is_valid = (1u << 9 & bitfields) != 0;
+  m_demangled_is_synthesized = (1u << 8 & bitfields) != 0;
+  m_contains_linker_annotations = (1u << 7 & bitfields) != 0;
+  m_is_weak = (1u << 6 & bitfields) != 0;
+  m_type = bitfields & 0x003f;
+  if (!m_mangled.Decode(data, offset_ptr, strtab))
+    return false;
+  if (!data.ValidOffsetForDataOfSize(*offset_ptr, 20))
+    return false;
+  const bool is_addr = data.GetU8(offset_ptr) != 0;
+  const uint64_t value = data.GetU64(offset_ptr);
+  if (is_addr) {
+    m_addr_range.GetBaseAddress().ResolveAddressUsingFileSections(
+        value, section_list);
+  } else {
+    m_addr_range.GetBaseAddress().Clear();
+    m_addr_range.GetBaseAddress().SetOffset(value);
+  }
+  m_addr_range.SetByteSize(data.GetU64(offset_ptr));
+  m_flags =  data.GetU32(offset_ptr);
+  return true;
+}
+
+/// The encoding format for the symbol is as follows:
+///
+/// uint32_t m_uid;
+/// uint16_t m_type_data;
+/// uint16_t bitfield_data;
+/// Mangled mangled;
+/// uint8_t is_addr;
+/// uint64_t file_addr_or_value;
+/// uint64_t size;
+/// uint32_t flags;
+///
+/// The only tricky thing in this encoding is encoding all of the bits in the
+/// bitfields. We use a trick to store all bitfields as a 16 bit value and we
+/// do the same thing when decoding the symbol. There are test that ensure this
+/// encoding works for each individual bit. Everything else is very easy to
+/// store.
+void Symbol::Encode(DataEncoder &file, ConstStringTable &strtab) const {
+  file.AppendU32(m_uid);
+  file.AppendU16(m_type_data);
+  uint16_t bitfields = m_type;
+  if (m_type_data_resolved)
+    bitfields |= 1u << 15;
+  if (m_is_synthetic)
+    bitfields |= 1u << 14;
+  if (m_is_debug)
+    bitfields |= 1u << 13;
+  if (m_is_external)
+    bitfields |= 1u << 12;
+  if (m_size_is_sibling)
+    bitfields |= 1u << 11;
+  if (m_size_is_synthesized)
+    bitfields |= 1u << 10;
+  if (m_size_is_valid)
+    bitfields |= 1u << 9;
+  if (m_demangled_is_synthesized)
+    bitfields |= 1u << 8;
+  if (m_contains_linker_annotations)
+    bitfields |= 1u << 7;
+  if (m_is_weak)
+    bitfields |= 1u << 6;
+  file.AppendU16(bitfields);
+  m_mangled.Encode(file, strtab);
+  // A symbol's value might be an address, or it might be a constant. If the
+  // symbol's base address doesn't have a section, then it is a constant value.
+  // If it does have a section, we will encode the file address and re-resolve
+  // the address when we decode it.
+  bool is_addr = m_addr_range.GetBaseAddress().GetSection().get() != NULL;
+  file.AppendU8(is_addr);
+  file.AppendU64(m_addr_range.GetBaseAddress().GetFileAddress());
+  file.AppendU64(m_addr_range.GetByteSize());
+  file.AppendU32(m_flags);
+}
+
+bool Symbol::operator==(const Symbol &rhs) const {
+  if (m_uid != rhs.m_uid)
+    return false;
+  if (m_type_data != rhs.m_type_data)
+    return false;
+  if (m_type_data_resolved != rhs.m_type_data_resolved)
+    return false;
+  if (m_is_synthetic != rhs.m_is_synthetic)
+    return false;
+  if (m_is_debug != rhs.m_is_debug)
+    return false;
+  if (m_is_external != rhs.m_is_external)
+    return false;
+  if (m_size_is_sibling != rhs.m_size_is_sibling)
+    return false;
+  if (m_size_is_synthesized != rhs.m_size_is_synthesized)
+    return false;
+  if (m_size_is_valid != rhs.m_size_is_valid)
+    return false;
+  if (m_demangled_is_synthesized != rhs.m_demangled_is_synthesized)
+    return false;
+  if (m_contains_linker_annotations != rhs.m_contains_linker_annotations)
+    return false;
+  if (m_is_weak != rhs.m_is_weak)
+    return false;
+  if (m_type != rhs.m_type)
+    return false;
+  if (m_mangled != rhs.m_mangled)
+    return false;
+  if (m_addr_range.GetBaseAddress() != rhs.m_addr_range.GetBaseAddress())
+    return false;
+  if (m_addr_range.GetByteSize() != rhs.m_addr_range.GetByteSize())
+    return false;
+  if (m_flags != rhs.m_flags)
+    return false;
+  return true;
 }

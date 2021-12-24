@@ -37,16 +37,17 @@ test(const Allocator& a)
 
 int main(int, char**)
 {
+    test_allocator_statistics alloc_stats;
     test<char>   (std::allocator<std::sub_match<const char *> >());
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test<wchar_t>(std::allocator<std::sub_match<const wchar_t *> >());
 #endif
 
-    test<char>   (test_allocator<std::sub_match<const char*> >(3));
-    assert(test_alloc_base::moved == 1);
+    test<char>   (test_allocator<std::sub_match<const char*> >(3, &alloc_stats));
+    assert(alloc_stats.moved == 1);
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-    test<wchar_t>(test_allocator<std::sub_match<const wchar_t*> >(3));
-    assert(test_alloc_base::moved == 2);
+    test<wchar_t>(test_allocator<std::sub_match<const wchar_t*> >(3, &alloc_stats));
+    assert(alloc_stats.moved == 2);
 #endif
 
   return 0;

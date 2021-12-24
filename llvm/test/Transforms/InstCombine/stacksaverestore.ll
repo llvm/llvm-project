@@ -110,3 +110,31 @@ return:
 ; CHECK: call void @llvm.stackrestore(i8* %save1)
 ; CHECK: br i1 %done, label %loop, label %return
 ; CHECK: ret void
+
+define i32 @test4(i32 %m, i32* %a, i32* %b) {
+entry:
+  br label %for.body
+
+for.body:
+  %x.012 = phi i32 [ 0, %entry ], [ %add2, %for.body ]
+  %i.011 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %0 = call i8* @llvm.stacksave()
+  %load1 = load i32, i32* %a, align 4
+  %mul1 = mul nsw i32 %load1, %m
+  %add1 = add nsw i32 %mul1, %x.012
+  call void @llvm.stackrestore(i8* %0)
+  %load2 = load i32, i32* %b, align 4
+  %mul2 = mul nsw i32 %load2, %m
+  %add2 = add nsw i32 %mul2, %add1
+  call void @llvm.stackrestore(i8* %0)
+  %inc = add nuw nsw i32 %i.011, 1
+  %exitcond.not = icmp eq i32 %inc, 100
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:
+  ret i32 %add2
+}
+
+; CHECK-LABEL: define i32 @test4(
+; CHECK-NOT: call void @llvm.stackrestore
+; CHECK: ret i32 %add2

@@ -110,6 +110,7 @@ MODULE_PASS("verify", VerifierPass())
 MODULE_PASS("wholeprogramdevirt", WholeProgramDevirtPass())
 MODULE_PASS("dfsan", DataFlowSanitizerPass())
 MODULE_PASS("msan-module", ModuleMemorySanitizerPass({}))
+MODULE_PASS("module-inline", ModuleInlinerPass())
 MODULE_PASS("tsan-module", ModuleThreadSanitizerPass())
 MODULE_PASS("sancov-module", ModuleSanitizerCoveragePass())
 MODULE_PASS("memprof-module", ModuleMemProfilerPass())
@@ -138,12 +139,10 @@ MODULE_PASS_WITH_PARAMS("hwasan",
                         "kernel;recover")
 MODULE_PASS_WITH_PARAMS("asan-module",
                         "ModuleAddressSanitizerPass",
-                        [](bool CompileKernel) {
-                          return ModuleAddressSanitizerPass(CompileKernel,
-                                                            false, true,
-                                                            false);
+                        [](AddressSanitizerOptions Opts) {
+                          return ModuleAddressSanitizerPass(Opts);
                         },
-                        parseModuleAddressSanitizerPassOptions,
+                        parseASanPassOptions,
                         "kernel")
 #undef MODULE_PASS_WITH_PARAMS
 
@@ -186,6 +185,7 @@ FUNCTION_ANALYSIS("aa", AAManager())
 FUNCTION_ANALYSIS("assumptions", AssumptionAnalysis())
 FUNCTION_ANALYSIS("block-freq", BlockFrequencyAnalysis())
 FUNCTION_ANALYSIS("branch-prob", BranchProbabilityAnalysis())
+FUNCTION_ANALYSIS("cycles", CycleAnalysis())
 FUNCTION_ANALYSIS("domtree", DominatorTreeAnalysis())
 FUNCTION_ANALYSIS("postdomtree", PostDominatorTreeAnalysis())
 FUNCTION_ANALYSIS("demanded-bits", DemandedBitsAnalysis())
@@ -202,6 +202,8 @@ FUNCTION_ANALYSIS("regions", RegionInfoAnalysis())
 FUNCTION_ANALYSIS("no-op-function", NoOpFunctionAnalysis())
 FUNCTION_ANALYSIS("opt-remark-emit", OptimizationRemarkEmitterAnalysis())
 FUNCTION_ANALYSIS("scalar-evolution", ScalarEvolutionAnalysis())
+FUNCTION_ANALYSIS("should-not-run-function-passes", ShouldNotRunFunctionPassesAnalysis())
+FUNCTION_ANALYSIS("should-run-extra-vector-passes", ShouldRunExtraVectorPasses())
 FUNCTION_ANALYSIS("stack-safety-local", StackSafetyAnalysis())
 FUNCTION_ANALYSIS("targetlibinfo", TargetLibraryAnalysis())
 FUNCTION_ANALYSIS("targetir",
@@ -253,6 +255,7 @@ FUNCTION_PASS("dse", DSEPass())
 FUNCTION_PASS("dot-cfg", CFGPrinterPass())
 FUNCTION_PASS("dot-cfg-only", CFGOnlyPrinterPass())
 FUNCTION_PASS("fix-irreducible", FixIrreduciblePass())
+FUNCTION_PASS("flattencfg", FlattenCFGPass())
 FUNCTION_PASS("make-guards-explicit", MakeGuardsExplicitPass())
 FUNCTION_PASS("gvn-hoist", GVNHoistPass())
 FUNCTION_PASS("gvn-sink", GVNSinkPass())
@@ -303,6 +306,7 @@ FUNCTION_PASS("print<assumptions>", AssumptionPrinterPass(dbgs()))
 FUNCTION_PASS("print<block-freq>", BlockFrequencyPrinterPass(dbgs()))
 FUNCTION_PASS("print<branch-prob>", BranchProbabilityPrinterPass(dbgs()))
 FUNCTION_PASS("print<cost-model>", CostModelPrinterPass(dbgs()))
+FUNCTION_PASS("print<cycles>", CycleInfoPrinterPass(dbgs()))
 FUNCTION_PASS("print<da>", DependenceAnalysisPrinterPass(dbgs()))
 FUNCTION_PASS("print<divergence>", DivergenceAnalysisPrinterPass(dbgs()))
 FUNCTION_PASS("print<domtree>", DominatorTreePrinterPass(dbgs()))
@@ -337,7 +341,7 @@ FUNCTION_PASS("sink", SinkingPass())
 FUNCTION_PASS("slp-vectorizer", SLPVectorizerPass())
 FUNCTION_PASS("slsr", StraightLineStrengthReducePass())
 FUNCTION_PASS("speculative-execution", SpeculativeExecutionPass())
-FUNCTION_PASS("sroa", SROA())
+FUNCTION_PASS("sroa", SROAPass())
 FUNCTION_PASS("strip-gc-relocates", StripGCRelocates())
 FUNCTION_PASS("structurizecfg", StructurizeCFGPass())
 FUNCTION_PASS("tailcallelim", TailCallElimPass())
@@ -436,9 +440,9 @@ FUNCTION_PASS_WITH_PARAMS("mldst-motion",
                           parseMergedLoadStoreMotionOptions,
                           "no-split-footer-bb;split-footer-bb")
 FUNCTION_PASS_WITH_PARAMS("gvn",
-                          "GVN",
+                          "GVNPass",
                            [](GVNOptions Opts) {
-                             return GVN(Opts);
+                             return GVNPass(Opts);
                            },
                           parseGVNOptions,
                           "no-pre;pre;"
@@ -453,6 +457,16 @@ FUNCTION_PASS_WITH_PARAMS("print<stack-lifetime>",
                           parseStackLifetimeOptions,
                           "may;must")
 #undef FUNCTION_PASS_WITH_PARAMS
+
+#ifndef LOOPNEST_PASS
+#define LOOPNEST_PASS(NAME, CREATE_PASS)
+#endif
+LOOPNEST_PASS("lnicm", LNICMPass())
+LOOPNEST_PASS("loop-flatten", LoopFlattenPass())
+LOOPNEST_PASS("loop-interchange", LoopInterchangePass())
+LOOPNEST_PASS("loop-unroll-and-jam", LoopUnrollAndJamPass())
+LOOPNEST_PASS("no-op-loopnest", NoOpLoopNestPass())
+#undef LOOPNEST_PASS
 
 #ifndef LOOP_ANALYSIS
 #define LOOP_ANALYSIS(NAME, CREATE_PASS)
@@ -471,11 +485,8 @@ LOOP_PASS("canon-freeze", CanonicalizeFreezeInLoopsPass())
 LOOP_PASS("dot-ddg", DDGDotPrinterPass())
 LOOP_PASS("invalidate<all>", InvalidateAllAnalysesPass())
 LOOP_PASS("licm", LICMPass())
-LOOP_PASS("lnicm", LNICMPass())
-LOOP_PASS("loop-flatten", LoopFlattenPass())
 LOOP_PASS("loop-idiom", LoopIdiomRecognizePass())
 LOOP_PASS("loop-instsimplify", LoopInstSimplifyPass())
-LOOP_PASS("loop-interchange", LoopInterchangePass())
 LOOP_PASS("loop-rotate", LoopRotatePass())
 LOOP_PASS("no-op-loop", NoOpLoopPass())
 LOOP_PASS("print", PrintLoopPass(dbgs()))
@@ -483,7 +494,6 @@ LOOP_PASS("loop-deletion", LoopDeletionPass())
 LOOP_PASS("loop-simplifycfg", LoopSimplifyCFGPass())
 LOOP_PASS("loop-reduce", LoopStrengthReducePass())
 LOOP_PASS("indvars", IndVarSimplifyPass())
-LOOP_PASS("loop-unroll-and-jam", LoopUnrollAndJamPass())
 LOOP_PASS("loop-unroll-full", LoopFullUnrollPass())
 LOOP_PASS("print-access-info", LoopAccessInfoPrinterPass(dbgs()))
 LOOP_PASS("print<ddg>", DDGAnalysisPrinterPass(dbgs()))

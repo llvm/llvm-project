@@ -13,6 +13,7 @@ define i32 @reduce_i1(i32 %arg) {
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %V32 = call i1 @llvm.vector.reduce.or.v32i1(<32 x i1> undef)
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 65 for instruction: %V64 = call i1 @llvm.vector.reduce.or.v64i1(<64 x i1> undef)
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 130 for instruction: %V128 = call i1 @llvm.vector.reduce.or.v128i1(<128 x i1> undef)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 260 for instruction: %V256 = call i1 @llvm.vector.reduce.or.v256i1(<256 x i1> undef)
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i32 undef
 ;
 ; ALL-SIZE-LABEL: 'reduce_i1'
@@ -24,6 +25,7 @@ define i32 @reduce_i1(i32 %arg) {
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %V32 = call i1 @llvm.vector.reduce.or.v32i1(<32 x i1> undef)
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 65 for instruction: %V64 = call i1 @llvm.vector.reduce.or.v64i1(<64 x i1> undef)
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 129 for instruction: %V128 = call i1 @llvm.vector.reduce.or.v128i1(<128 x i1> undef)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 257 for instruction: %V256 = call i1 @llvm.vector.reduce.or.v256i1(<256 x i1> undef)
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
   %V1   = call i1 @llvm.vector.reduce.or.v1i1(<1 x i1> undef)
@@ -34,6 +36,7 @@ define i32 @reduce_i1(i32 %arg) {
   %V32  = call i1 @llvm.vector.reduce.or.v32i1(<32 x i1> undef)
   %V64  = call i1 @llvm.vector.reduce.or.v64i1(<64 x i1> undef)
   %V128 = call i1 @llvm.vector.reduce.or.v128i1(<128 x i1> undef)
+  %V256 = call i1 @llvm.vector.reduce.or.v256i1(<256 x i1> undef)
   ret i32 undef
 }
 
@@ -45,3 +48,4 @@ declare i1 @llvm.vector.reduce.or.v16i1(<16 x i1>)
 declare i1 @llvm.vector.reduce.or.v32i1(<32 x i1>)
 declare i1 @llvm.vector.reduce.or.v64i1(<64 x i1>)
 declare i1 @llvm.vector.reduce.or.v128i1(<128 x i1>)
+declare i1 @llvm.vector.reduce.or.v256i1(<256 x i1>)

@@ -12,5 +12,5 @@ body: |
   bb.0:
     ; CHECK: renamable $eax = IMUL32rri8 $edi, 11, implicit-def dead $eflags
     renamable $eax = IMUL32rri8 $edi, 11, implicit-def dead $eflags
-    RETQ $eax
+    RET64 $eax
 ...

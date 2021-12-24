@@ -107,9 +107,9 @@ static Optional<const char *> GetCodeName(unsigned CodeID, unsigned BlockID,
   // Check to see if we have a blockinfo record for this record, with a name.
   if (const BitstreamBlockInfo::BlockInfo *Info =
           BlockInfo.getBlockInfo(BlockID)) {
-    for (unsigned i = 0, e = Info->RecordNames.size(); i != e; ++i)
-      if (Info->RecordNames[i].first == CodeID)
-        return Info->RecordNames[i].second.c_str();
+    for (const std::pair<unsigned, std::string> &RN : Info->RecordNames)
+      if (RN.first == CodeID)
+        return RN.second.c_str();
   }
 
   if (CurStreamType != LLVMIRBitstream)
@@ -219,6 +219,7 @@ static Optional<const char *> GetCodeName(unsigned CodeID, unsigned BlockID,
       STRINGIFY_CODE(CST_CODE, CE_SHUFVEC_EX)
       STRINGIFY_CODE(CST_CODE, CE_UNOP)
       STRINGIFY_CODE(CST_CODE, DSO_LOCAL_EQUIVALENT)
+      STRINGIFY_CODE(CST_CODE, NO_CFI_VALUE)
     case bitc::CST_CODE_BLOCKADDRESS:
       return "CST_CODE_BLOCKADDRESS";
       STRINGIFY_CODE(CST_CODE, DATA)
@@ -529,10 +530,9 @@ Error BitcodeAnalyzer::decodeMetadataStringsBlob(StringRef Indent,
     if (R.AtEndOfStream())
       return reportError("bad length");
 
-    Expected<uint32_t> MaybeSize = R.ReadVBR(6);
-    if (!MaybeSize)
-      return MaybeSize.takeError();
-    uint32_t Size = MaybeSize.get();
+    uint32_t Size;
+    if (Error E = R.ReadVBR(6).moveInto(Size))
+      return E;
     if (Strings.size() < Size)
       return reportError("truncated chars");
 
@@ -555,11 +555,8 @@ BitcodeAnalyzer::BitcodeAnalyzer(StringRef Buffer,
 
 Error BitcodeAnalyzer::analyze(Optional<BCDumpOptions> O,
                                Optional<StringRef> CheckHash) {
-  Expected<CurStreamTypeType> MaybeType = analyzeHeader(O, Stream);
-  if (!MaybeType)
-    return MaybeType.takeError();
-  else
-    CurStreamType = *MaybeType;
+  if (Error E = analyzeHeader(O, Stream).moveInto(CurStreamType))
+    return E;
 
   Stream.setBlockInfo(&BlockInfo);
 
@@ -567,9 +564,8 @@ Error BitcodeAnalyzer::analyze(Optional<BCDumpOptions> O,
   // The block info must be a top-level block.
   if (BlockInfoStream) {
     BitstreamCursor BlockInfoCursor(*BlockInfoStream);
-    Expected<CurStreamTypeType> H = analyzeHeader(O, BlockInfoCursor);
-    if (!H)
-      return H.takeError();
+    if (Error E = analyzeHeader(O, BlockInfoCursor).takeError())
+      return E;
 
     while (!BlockInfoCursor.AtEndOfStream()) {
       Expected<unsigned> MaybeCode = BlockInfoCursor.ReadCode();
@@ -582,12 +578,11 @@ Error BitcodeAnalyzer::analyze(Optional<BCDumpOptions> O,
       if (!MaybeBlockID)
         return MaybeBlockID.takeError();
       if (MaybeBlockID.get() == bitc::BLOCKINFO_BLOCK_ID) {
-        Expected<Optional<BitstreamBlockInfo>> MaybeNewBlockInfo =
-            BlockInfoCursor.ReadBlockInfoBlock(/*ReadBlockInfoNames=*/true);
-        if (!MaybeNewBlockInfo)
-          return MaybeNewBlockInfo.takeError();
-        Optional<BitstreamBlockInfo> NewBlockInfo =
-            std::move(MaybeNewBlockInfo.get());
+        Optional<BitstreamBlockInfo> NewBlockInfo;
+        if (Error E =
+                BlockInfoCursor.ReadBlockInfoBlock(/*ReadBlockInfoNames=*/true)
+                    .moveInto(NewBlockInfo))
+          return E;
         if (!NewBlockInfo)
           return reportError("Malformed BlockInfoBlock in block info file");
         BlockInfo = std::move(*NewBlockInfo);
@@ -652,16 +647,14 @@ void BitcodeAnalyzer::printStats(BCDumpOptions O,
 
   // Emit per-block stats.
   O.OS << "Per-block Summary:\n";
-  for (std::map<unsigned, PerBlockIDStats>::iterator I = BlockIDStats.begin(),
-                                                     E = BlockIDStats.end();
-       I != E; ++I) {
-    O.OS << "  Block ID #" << I->first;
+  for (const auto &Stat : BlockIDStats) {
+    O.OS << "  Block ID #" << Stat.first;
     if (Optional<const char *> BlockName =
-            GetBlockName(I->first, BlockInfo, CurStreamType))
+            GetBlockName(Stat.first, BlockInfo, CurStreamType))
       O.OS << " (" << *BlockName << ")";
     O.OS << ":\n";
 
-    const PerBlockIDStats &Stats = I->second;
+    const PerBlockIDStats &Stats = Stat.second;
     O.OS << "      Num Instances: " << Stats.NumInstances << "\n";
     O.OS << "         Total Size: ";
     printSize(O.OS, Stats.NumBits);
@@ -700,8 +693,8 @@ void BitcodeAnalyzer::printStats(BCDumpOptions O,
 
       O.OS << "\tRecord Histogram:\n";
       O.OS << "\t\t  Count    # Bits     b/Rec   % Abv  Record Kind\n";
-      for (unsigned i = 0, e = FreqPairs.size(); i != e; ++i) {
-        const PerRecordStats &RecStats = Stats.CodeFreq[FreqPairs[i].second];
+      for (const auto &FreqPair : FreqPairs) {
+        const PerRecordStats &RecStats = Stats.CodeFreq[FreqPair.second];
 
         O.OS << format("\t\t%7d %9lu", RecStats.NumInstances,
                        (unsigned long)RecStats.TotalBits);
@@ -720,10 +713,10 @@ void BitcodeAnalyzer::printStats(BCDumpOptions O,
 
         O.OS << "  ";
         if (Optional<const char *> CodeName = GetCodeName(
-                FreqPairs[i].second, I->first, BlockInfo, CurStreamType))
+                FreqPair.second, Stat.first, BlockInfo, CurStreamType))
           O.OS << *CodeName << "\n";
         else
-          O.OS << "UnknownCode" << FreqPairs[i].second << "\n";
+          O.OS << "UnknownCode" << FreqPair.second << "\n";
       }
       O.OS << "\n";
     }
@@ -746,12 +739,10 @@ Error BitcodeAnalyzer::parseBlock(unsigned BlockID, unsigned IndentLevel,
   if (BlockID == bitc::BLOCKINFO_BLOCK_ID) {
     if (O && !O->DumpBlockinfo)
       O->OS << Indent << "<BLOCKINFO_BLOCK/>\n";
-    Expected<Optional<BitstreamBlockInfo>> MaybeNewBlockInfo =
-        Stream.ReadBlockInfoBlock(/*ReadBlockInfoNames=*/true);
-    if (!MaybeNewBlockInfo)
-      return MaybeNewBlockInfo.takeError();
-    Optional<BitstreamBlockInfo> NewBlockInfo =
-        std::move(MaybeNewBlockInfo.get());
+    Optional<BitstreamBlockInfo> NewBlockInfo;
+    if (Error E = Stream.ReadBlockInfoBlock(/*ReadBlockInfoNames=*/true)
+                      .moveInto(NewBlockInfo))
+      return E;
     if (!NewBlockInfo)
       return reportError("Malformed BlockInfoBlock");
     BlockInfo = std::move(*NewBlockInfo);
@@ -796,11 +787,10 @@ Error BitcodeAnalyzer::parseBlock(unsigned BlockID, unsigned IndentLevel,
 
     uint64_t RecordStartBit = Stream.GetCurrentBitNo();
 
-    Expected<BitstreamEntry> MaybeEntry =
-        Stream.advance(BitstreamCursor::AF_DontAutoprocessAbbrevs);
-    if (!MaybeEntry)
-      return MaybeEntry.takeError();
-    BitstreamEntry Entry = MaybeEntry.get();
+    BitstreamEntry Entry;
+    if (Error E = Stream.advance(BitstreamCursor::AF_DontAutoprocessAbbrevs)
+                      .moveInto(Entry))
+      return E;
 
     switch (Entry.Kind) {
     case BitstreamEntry::Error:
@@ -847,10 +837,9 @@ Error BitcodeAnalyzer::parseBlock(unsigned BlockID, unsigned IndentLevel,
 
     StringRef Blob;
     uint64_t CurrentRecordPos = Stream.GetCurrentBitNo();
-    Expected<unsigned> MaybeCode = Stream.readRecord(Entry.ID, Record, &Blob);
-    if (!MaybeCode)
-      return MaybeCode.takeError();
-    unsigned Code = MaybeCode.get();
+    unsigned Code;
+    if (Error E = Stream.readRecord(Entry.ID, Record, &Blob).moveInto(Code))
+      return E;
 
     // Increment the # occurrences of this code.
     if (BlockStats.CodeFreq.size() <= Code)
@@ -967,8 +956,8 @@ Error BitcodeAnalyzer::parseBlock(unsigned BlockID, unsigned IndentLevel,
             O->OS.write_escaped(Blob, /*hex=*/true) << "'";
           } else {
             bool BlobIsPrintable = true;
-            for (unsigned i = 0, e = Blob.size(); i != e; ++i)
-              if (!isPrint(static_cast<unsigned char>(Blob[i]))) {
+            for (char C : Blob)
+              if (!isPrint(static_cast<unsigned char>(C))) {
                 BlobIsPrintable = false;
                 break;
               }

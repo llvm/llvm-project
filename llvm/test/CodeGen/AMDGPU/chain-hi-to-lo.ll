@@ -224,10 +224,10 @@ define <2 x half> @chain_hi_to_lo_global() {
 ; GCN-NEXT:    v_mov_b32_e32 v0, 2
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    global_load_ushort v0, v[0:1], off
+; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
-; GCN-NEXT:    v_mov_b32_e32 v3, 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    global_load_short_d16_hi v0, v[2:3], off
+; GCN-NEXT:    global_load_short_d16_hi v0, v[1:2], off
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -292,10 +292,10 @@ define <2 x half> @chain_hi_to_lo_flat() {
 ; GCN-NEXT:    v_mov_b32_e32 v0, 2
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    flat_load_ushort v0, v[0:1]
+; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
-; GCN-NEXT:    v_mov_b32_e32 v3, 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN-NEXT:    flat_load_short_d16_hi v0, v[2:3]
+; GCN-NEXT:    flat_load_short_d16_hi v0, v[1:2]
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -374,14 +374,14 @@ define amdgpu_kernel void @vload2_private(i16 addrspace(1)* nocapture readonly %
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    buffer_store_short v0, off, s[0:3], 0 offset:8
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
-; GFX900-NEXT:    buffer_load_ushort v0, off, s[0:3], 0 offset:4
-; GFX900-NEXT:    buffer_load_ushort v3, off, s[0:3], 0 offset:6
+; GFX900-NEXT:    buffer_load_ushort v0, off, s[0:3], 0 offset:6
+; GFX900-NEXT:    buffer_load_ushort v3, off, s[0:3], 0 offset:4
 ; GFX900-NEXT:    s_waitcnt vmcnt(1)
-; GFX900-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX900-NEXT:    s_waitcnt vmcnt(0)
-; GFX900-NEXT:    v_mov_b32_e32 v1, v3
+; GFX900-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX900-NEXT:    buffer_load_short_d16_hi v1, off, s[0:3], 0 offset:8
-; GFX900-NEXT:    v_lshl_or_b32 v0, v3, 16, v0
+; GFX900-NEXT:    s_waitcnt vmcnt(1)
+; GFX900-NEXT:    v_and_b32_e32 v3, 0xffff, v3
+; GFX900-NEXT:    v_lshl_or_b32 v0, v0, 16, v3
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    global_store_dwordx2 v2, v[0:1], s[6:7]
 ; GFX900-NEXT:    s_endpgm

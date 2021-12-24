@@ -42,7 +42,8 @@ inline uint64_t getTSCFrequency() XRAY_NEVER_INSTRUMENT {
 #include "xray_x86_64.inc"
 #elif defined(__powerpc64__)
 #include "xray_powerpc64.inc"
-#elif defined(__arm__) || defined(__aarch64__) || defined(__mips__)
+#elif defined(__arm__) || defined(__aarch64__) || defined(__mips__) ||         \
+    defined(__hexagon__)
 // Emulated TSC.
 // There is no instruction like RDTSCP in user mode on ARM. ARM's CP15 does
 //   not have a constant frequency like TSC on x86(_64), it may go faster

@@ -322,7 +322,7 @@ func @fcmp(f32, f32) -> () {
 func @index_vector(%arg0: vector<4xindex>) {
   // CHECK: %[[CST:.*]] = llvm.mlir.constant(dense<[0, 1, 2, 3]> : vector<4xindex>) : vector<4xi64>
   %0 = arith.constant dense<[0, 1, 2, 3]> : vector<4xindex>
-  // CHECK: %[[V:.*]] = llvm.add %1, %[[CST]] : vector<4xi64>
+  // CHECK: %[[V:.*]] = llvm.add %{{.*}}, %[[CST]] : vector<4xi64>
   %1 = arith.addi %arg0, %0 : vector<4xindex>
   std.return
 }
@@ -347,6 +347,17 @@ func @cmpf_2dvector(%arg0 : vector<4x3xf32>, %arg1 : vector<4x3xf32>) {
   // CHECK: %[[CMP:.*]] = llvm.fcmp "olt" %[[EXTRACT1]], %[[EXTRACT2]] : vector<3xf32>
   // CHECK: %[[INSERT:.*]] = llvm.insertvalue %[[CMP]], %2[0] : !llvm.array<4 x vector<3xi1>>
   %0 = arith.cmpf olt, %arg0, %arg1 : vector<4x3xf32>
+  std.return
+}
+
+// -----
+
+// CHECK-LABEL: func @cmpi_0dvector(
+func @cmpi_0dvector(%arg0 : vector<i32>, %arg1 : vector<i32>) {
+  // CHECK: %[[ARG0:.*]] = builtin.unrealized_conversion_cast
+  // CHECK: %[[ARG1:.*]] = builtin.unrealized_conversion_cast
+  // CHECK: %[[CMP:.*]] = llvm.icmp "ult" %[[ARG0]], %[[ARG1]] : vector<1xi32>
+  %0 = arith.cmpi ult, %arg0, %arg1 : vector<i32>
   std.return
 }
 

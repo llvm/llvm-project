@@ -170,7 +170,7 @@ private:
       auto ToSymbolSec = findSectionByIndex(UnsignedRI.r_symbolnum - 1);
       if (!ToSymbolSec)
         return ToSymbolSec.takeError();
-      ToSymbol = getSymbolByAddress(ToSymbolSec->Address);
+      ToSymbol = getSymbolByAddress(*ToSymbolSec, ToSymbolSec->Address);
       assert(ToSymbol && "No symbol for section");
       FixupValue -= ToSymbol->getAddress();
     }
@@ -216,14 +216,18 @@ private:
         continue;
       }
 
-      // Skip relocations for debug symbols.
+      auto NSec =
+          findSectionByIndex(Obj.getSectionIndex(S.getRawDataRefImpl()));
+      if (!NSec)
+        return NSec.takeError();
+
+      // Skip relocations for MachO sections without corresponding graph
+      // sections.
       {
-        auto &NSec =
-            getSectionByIndex(Obj.getSectionIndex(S.getRawDataRefImpl()));
-        if (!NSec.GraphSection) {
+        if (!NSec->GraphSection) {
           LLVM_DEBUG({
             dbgs() << "  Skipping relocations for MachO section "
-                   << NSec.SegName << "/" << NSec.SectName
+                   << NSec->SegName << "/" << NSec->SectName
                    << " which has no associated graph section\n";
           });
           continue;
@@ -240,16 +244,14 @@ private:
         JITTargetAddress FixupAddress = SectionAddress + (uint32_t)RI.r_address;
 
         LLVM_DEBUG({
-          auto &NSec =
-              getSectionByIndex(Obj.getSectionIndex(S.getRawDataRefImpl()));
-          dbgs() << "  " << NSec.SectName << " + "
+          dbgs() << "  " << NSec->SectName << " + "
                  << formatv("{0:x8}", RI.r_address) << ":\n";
         });
 
         // Find the block that the fixup points to.
         Block *BlockToFix = nullptr;
         {
-          auto SymbolToFixOrErr = findSymbolByAddress(FixupAddress);
+          auto SymbolToFixOrErr = findSymbolByAddress(*NSec, FixupAddress);
           if (!SymbolToFixOrErr)
             return SymbolToFixOrErr.takeError();
           BlockToFix = &SymbolToFixOrErr->getBlock();
@@ -270,7 +272,7 @@ private:
         Symbol *TargetSymbol = nullptr;
         uint64_t Addend = 0;
 
-        // Sanity check the relocation kind.
+        // Validate the relocation kind.
         auto MachORelocKind = getRelocKind(RI);
         if (!MachORelocKind)
           return MachORelocKind.takeError();
@@ -342,7 +344,11 @@ private:
           break;
         case MachOPointer64Anon: {
           JITTargetAddress TargetAddress = *(const ulittle64_t *)FixupContent;
-          if (auto TargetSymbolOrErr = findSymbolByAddress(TargetAddress))
+          auto TargetNSec = findSectionByIndex(RI.r_symbolnum - 1);
+          if (!TargetNSec)
+            return TargetNSec.takeError();
+          if (auto TargetSymbolOrErr =
+                  findSymbolByAddress(*TargetNSec, TargetAddress))
             TargetSymbol = &*TargetSymbolOrErr;
           else
             return TargetSymbolOrErr.takeError();
@@ -363,7 +369,11 @@ private:
         case MachOPCRel32Anon: {
           JITTargetAddress TargetAddress =
               FixupAddress + 4 + *(const little32_t *)FixupContent;
-          if (auto TargetSymbolOrErr = findSymbolByAddress(TargetAddress))
+          auto TargetNSec = findSectionByIndex(RI.r_symbolnum - 1);
+          if (!TargetNSec)
+            return TargetNSec.takeError();
+          if (auto TargetSymbolOrErr =
+                  findSymbolByAddress(*TargetNSec, TargetAddress))
             TargetSymbol = &*TargetSymbolOrErr;
           else
             return TargetSymbolOrErr.takeError();
@@ -379,7 +389,11 @@ private:
                       1ULL << (*MachORelocKind - MachOPCRel32Minus1Anon));
           JITTargetAddress TargetAddress =
               FixupAddress + Delta + *(const little32_t *)FixupContent;
-          if (auto TargetSymbolOrErr = findSymbolByAddress(TargetAddress))
+          auto TargetNSec = findSectionByIndex(RI.r_symbolnum - 1);
+          if (!TargetNSec)
+            return TargetNSec.takeError();
+          if (auto TargetSymbolOrErr =
+                  findSymbolByAddress(*TargetNSec, TargetAddress))
             TargetSymbol = &*TargetSymbolOrErr;
           else
             return TargetSymbolOrErr.takeError();

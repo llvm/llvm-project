@@ -67,10 +67,6 @@ def testTypeHash():
 
   # CHECK: hash(t1) == hash(t3): True
   print("hash(t1) == hash(t3):", t1.__hash__() == t3.__hash__())
-  # In general, hashes don't have to be unique. In this case, however, the
-  # hash is just the underlying pointer so it will be.
-  # CHECK: hash(t1) == hash(t2): False
-  print("hash(t1) == hash(t2):", t1.__hash__() == t2.__hash__())
 
   s = set()
   s.add(t1)
@@ -319,6 +315,9 @@ def testRankedTensorType():
     # Encoding should be None.
     assert RankedTensorType.get(shape, f32).encoding is None
 
+    tensor = RankedTensorType.get(shape, f32)
+    assert tensor.shape == shape
+
 
 # CHECK-LABEL: TEST: testUnrankedTensorType
 @run
@@ -399,6 +398,8 @@ def testMemRefType():
       print(e)
     else:
       print("Exception not produced")
+
+    assert memref.shape == shape
 
 
 # CHECK-LABEL: TEST: testUnrankedMemRefType

@@ -138,8 +138,8 @@ define i1 @or_icmp_ugt(i32 %arg, i8* %ptr) {
 ; CHECK-NEXT:    [[MUL:%.*]] = shl nuw nsw i32 [[TMP2]], 1
 ; CHECK-NEXT:    [[ADD0:%.*]] = add nuw nsw i32 [[MUL]], 6
 ; CHECK-NEXT:    [[CMP0:%.*]] = icmp ne i32 [[ARG:%.*]], [[ADD0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP1]], 1
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i32 [[TMP3]], 3
+; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[TMP1]], -1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i32 [[ADD1]], 3
 ; CHECK-NEXT:    [[OR:%.*]] = or i1 [[CMP0]], [[CMP1]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;

@@ -129,6 +129,7 @@ class TemplateArgumentLoc;
 class TemplateTypeParmDecl;
 class TypedefNameDecl;
 class UnresolvedUsingTypenameDecl;
+class UsingShadowDecl;
 
 using CanQualType = CanQual<Type>;
 
@@ -2128,7 +2129,7 @@ public:
   bool isOCLExtOpaqueType() const;              // Any OpenCL extension type
 
   bool isPipeType() const;                      // OpenCL pipe type
-  bool isExtIntType() const;                    // Extended Int Type
+  bool isBitIntType() const;                    // Bit-precise integer type
   bool isOpenCLSpecificType() const;            // Any OpenCL specific type
 
   /// Determines if this type, which must satisfy
@@ -4368,6 +4369,27 @@ public:
   }
 };
 
+class UsingType : public Type, public llvm::FoldingSetNode {
+  UsingShadowDecl *Found;
+  friend class ASTContext; // ASTContext creates these.
+
+  UsingType(const UsingShadowDecl *Found, QualType Underlying, QualType Canon);
+
+public:
+  UsingShadowDecl *getFoundDecl() const { return Found; }
+  QualType getUnderlyingType() const;
+
+  bool isSugared() const { return true; }
+  QualType desugar() const { return getUnderlyingType(); }
+
+  void Profile(llvm::FoldingSetNodeID &ID) { Profile(ID, Found); }
+  static void Profile(llvm::FoldingSetNodeID &ID,
+                      const UsingShadowDecl *Found) {
+    ID.AddPointer(Found);
+  }
+  static bool classof(const Type *T) { return T->getTypeClass() == Using; }
+};
+
 class TypedefType : public Type {
   TypedefNameDecl *Decl;
 
@@ -4944,29 +4966,29 @@ public:
 /// type-dependent, there is no deduced type and the type is canonical. In
 /// the latter case, it is also a dependent type.
 class DeducedType : public Type {
+  QualType DeducedAsType;
+
 protected:
   DeducedType(TypeClass TC, QualType DeducedAsType,
-              TypeDependence ExtraDependence)
-      : Type(TC,
-             // FIXME: Retain the sugared deduced type?
-             DeducedAsType.isNull() ? QualType(this, 0)
-                                    : DeducedAsType.getCanonicalType(),
+              TypeDependence ExtraDependence, QualType Canon)
+      : Type(TC, Canon,
              ExtraDependence | (DeducedAsType.isNull()
                                     ? TypeDependence::None
                                     : DeducedAsType->getDependence() &
-                                          ~TypeDependence::VariablyModified)) {}
+                                          ~TypeDependence::VariablyModified)),
+        DeducedAsType(DeducedAsType) {}
 
 public:
-  bool isSugared() const { return !isCanonicalUnqualified(); }
-  QualType desugar() const { return getCanonicalTypeInternal(); }
-
-  /// Get the type deduced for this placeholder type, or null if it's
-  /// either not been deduced or was deduced to a dependent type.
-  QualType getDeducedType() const {
-    return !isCanonicalUnqualified() ? getCanonicalTypeInternal() : QualType();
+  bool isSugared() const { return !DeducedAsType.isNull(); }
+  QualType desugar() const {
+    return isSugared() ? DeducedAsType : QualType(this, 0);
   }
+
+  /// Get the type deduced for this placeholder type, or null if it
+  /// has not been deduced.
+  QualType getDeducedType() const { return DeducedAsType; }
   bool isDeduced() const {
-    return !isCanonicalUnqualified() || isDependentType();
+    return !DeducedAsType.isNull() || isDependentType();
   }
 
   static bool classof(const Type *T) {
@@ -4983,7 +5005,7 @@ class alignas(8) AutoType : public DeducedType, public llvm::FoldingSetNode {
   ConceptDecl *TypeConstraintConcept;
 
   AutoType(QualType DeducedAsType, AutoTypeKeyword Keyword,
-           TypeDependence ExtraDependence, ConceptDecl *CD,
+           TypeDependence ExtraDependence, QualType Canon, ConceptDecl *CD,
            ArrayRef<TemplateArgument> TypeConstraintArgs);
 
   const TemplateArgument *getArgBuffer() const {
@@ -5057,7 +5079,9 @@ class DeducedTemplateSpecializationType : public DeducedType,
                     toTypeDependence(Template.getDependence()) |
                         (IsDeducedAsDependent
                              ? TypeDependence::DependentInstantiation
-                             : TypeDependence::None)),
+                             : TypeDependence::None),
+                    DeducedAsType.isNull() ? QualType(this, 0)
+                                           : DeducedAsType.getCanonicalType()),
         Template(Template) {}
 
 public:
@@ -5071,8 +5095,10 @@ public:
   static void Profile(llvm::FoldingSetNodeID &ID, TemplateName Template,
                       QualType Deduced, bool IsDependent) {
     Template.Profile(ID);
-    ID.AddPointer(Deduced.getAsOpaquePtr());
-    ID.AddBoolean(IsDependent);
+    QualType CanonicalType =
+        Deduced.isNull() ? Deduced : Deduced.getCanonicalType();
+    ID.AddPointer(CanonicalType.getAsOpaquePtr());
+    ID.AddBoolean(IsDependent || Template.isDependent());
   }
 
   static bool classof(const Type *T) {
@@ -6303,13 +6329,13 @@ public:
 };
 
 /// A fixed int type of a specified bitwidth.
-class ExtIntType final : public Type, public llvm::FoldingSetNode {
+class BitIntType final : public Type, public llvm::FoldingSetNode {
   friend class ASTContext;
   unsigned IsUnsigned : 1;
   unsigned NumBits : 24;
 
 protected:
-  ExtIntType(bool isUnsigned, unsigned NumBits);
+  BitIntType(bool isUnsigned, unsigned NumBits);
 
 public:
   bool isUnsigned() const { return IsUnsigned; }
@@ -6329,16 +6355,16 @@ public:
     ID.AddInteger(NumBits);
   }
 
-  static bool classof(const Type *T) { return T->getTypeClass() == ExtInt; }
+  static bool classof(const Type *T) { return T->getTypeClass() == BitInt; }
 };
 
-class DependentExtIntType final : public Type, public llvm::FoldingSetNode {
+class DependentBitIntType final : public Type, public llvm::FoldingSetNode {
   friend class ASTContext;
   const ASTContext &Context;
   llvm::PointerIntPair<Expr*, 1, bool> ExprAndUnsigned;
 
 protected:
-  DependentExtIntType(const ASTContext &Context, bool IsUnsigned,
+  DependentBitIntType(const ASTContext &Context, bool IsUnsigned,
                       Expr *NumBits);
 
 public:
@@ -6356,7 +6382,7 @@ public:
                       bool IsUnsigned, Expr *NumBitsExpr);
 
   static bool classof(const Type *T) {
-    return T->getTypeClass() == DependentExtInt;
+    return T->getTypeClass() == DependentBitInt;
   }
 };
 
@@ -6887,8 +6913,8 @@ inline bool Type::isPipeType() const {
   return isa<PipeType>(CanonicalType);
 }
 
-inline bool Type::isExtIntType() const {
-  return isa<ExtIntType>(CanonicalType);
+inline bool Type::isBitIntType() const {
+  return isa<BitIntType>(CanonicalType);
 }
 
 #define EXT_OPAQUE_TYPE(ExtType, Id, Ext) \
@@ -6994,7 +7020,7 @@ inline bool Type::isIntegerType() const {
     return IsEnumDeclComplete(ET->getDecl()) &&
       !IsEnumDeclScoped(ET->getDecl());
   }
-  return isExtIntType();
+  return isBitIntType();
 }
 
 inline bool Type::isFixedPointType() const {
@@ -7052,7 +7078,7 @@ inline bool Type::isScalarType() const {
          isa<MemberPointerType>(CanonicalType) ||
          isa<ComplexType>(CanonicalType) ||
          isa<ObjCObjectPointerType>(CanonicalType) ||
-         isExtIntType();
+         isBitIntType();
 }
 
 inline bool Type::isIntegralOrEnumerationType() const {
@@ -7065,7 +7091,7 @@ inline bool Type::isIntegralOrEnumerationType() const {
   if (const auto *ET = dyn_cast<EnumType>(CanonicalType))
     return IsEnumDeclComplete(ET->getDecl());
 
-  return isExtIntType();
+  return isBitIntType();
 }
 
 inline bool Type::isBooleanType() const {

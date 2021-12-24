@@ -1,3 +1,4 @@
+// UNSUPPORTED: -zos, -aix
 // Test that debug info is emitted for an Objective-C module and
 // a precompiled header.
 

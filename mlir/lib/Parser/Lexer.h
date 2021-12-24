@@ -68,6 +68,6 @@ private:
   void operator=(const Lexer &) = delete;
 };
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_LIB_PARSER_LEXER_H

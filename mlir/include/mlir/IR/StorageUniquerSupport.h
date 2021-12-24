@@ -164,8 +164,7 @@ public:
 
   /// Get an instance of the concrete type from a void pointer.
   static ConcreteT getFromOpaquePointer(const void *ptr) {
-    return ptr ? BaseT::getFromOpaquePointer(ptr).template cast<ConcreteT>()
-               : nullptr;
+    return ConcreteT((const typename BaseT::ImplType *)ptr);
   }
 
 protected:

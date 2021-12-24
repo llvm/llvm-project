@@ -57,14 +57,18 @@ public:
 protected:
   template <Part partId>
   mlir::Value extract(mlir::Value cplx) {
-    return builder.create<fir::ExtractValueOp>(loc, getComplexPartType(cplx),
-                                               cplx, createPartId<partId>());
+    return builder.create<fir::ExtractValueOp>(
+        loc, getComplexPartType(cplx), cplx,
+        builder.getArrayAttr({builder.getIntegerAttr(
+            builder.getIndexType(), static_cast<int>(partId))}));
   }
 
   template <Part partId>
   mlir::Value insert(mlir::Value cplx, mlir::Value part) {
-    return builder.create<fir::InsertValueOp>(loc, cplx.getType(), cplx, part,
-                                              createPartId<partId>());
+    return builder.create<fir::InsertValueOp>(
+        loc, cplx.getType(), cplx, part,
+        builder.getArrayAttr({builder.getIntegerAttr(
+            builder.getIndexType(), static_cast<int>(partId))}));
   }
 
   template <Part partId>

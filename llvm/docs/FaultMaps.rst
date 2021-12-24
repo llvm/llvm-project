@@ -71,15 +71,15 @@ checking if a pointer is ``null``, like:
     %ptr = call i32* @get_ptr()
     %ptr_is_null = icmp i32* %ptr, null
     br i1 %ptr_is_null, label %is_null, label %not_null, !make.implicit !0
-  
+
   not_null:
     %t = load i32, i32* %ptr
     br label %do_something_with_t
-    
+
   is_null:
     call void @HFC()
     unreachable
-  
+
   !0 = !{}
 
 to control flow implicit in the instruction loading or storing through
@@ -90,7 +90,7 @@ the pointer being null checked:
     %ptr = call i32* @get_ptr()
     %t = load i32, i32* %ptr  ;; handler-pc = label %is_null
     br label %do_something_with_t
-    
+
   is_null:
     call void @HFC()
     unreachable

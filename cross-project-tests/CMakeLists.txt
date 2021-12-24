@@ -17,6 +17,7 @@ set(CROSS_PROJECT_TESTS_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 set(CROSS_PROJECT_TEST_DEPS
   FileCheck
   count
+  llvm-dwarfdump
   llvm-config
   llvm-objdump
   check-gdb-llvm-support
@@ -54,8 +55,7 @@ if("lldb" IN_LIST LLVM_ENABLE_PROJECTS)
   list(APPEND CROSS_PROJECT_TEST_DEPS lldb lldb-server)
 endif()
 
-# The Windows builder scripts pass -fuse-ld=lld.
-if (WIN32 OR "lld" IN_LIST LLVM_ENABLE_PROJECTS)
+if ("lld" IN_LIST LLVM_ENABLE_PROJECTS)
   list(APPEND CROSS_PROJECT_TEST_DEPS lld)
 endif()
 

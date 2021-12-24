@@ -592,9 +592,9 @@ STATISTIC(ObjectVisitorArgument,
 STATISTIC(ObjectVisitorLoad,
           "Number of load instructions with unsolved size and offset");
 
-APInt ObjectSizeOffsetVisitor::align(APInt Size, uint64_t Alignment) {
+APInt ObjectSizeOffsetVisitor::align(APInt Size, MaybeAlign Alignment) {
   if (Options.RoundToAlign && Alignment)
-    return APInt(IntTyBits, alignTo(Size.getZExtValue(), Align(Alignment)));
+    return APInt(IntTyBits, alignTo(Size.getZExtValue(), Alignment));
   return Size;
 }
 
@@ -669,7 +669,7 @@ SizeOffsetType ObjectSizeOffsetVisitor::visitAllocaInst(AllocaInst &I) {
 
   APInt Size(IntTyBits, DL.getTypeAllocSize(I.getAllocatedType()));
   if (!I.isArrayAllocation())
-    return std::make_pair(align(Size, I.getAlignment()), Zero);
+    return std::make_pair(align(Size, I.getAlign()), Zero);
 
   Value *ArraySize = I.getArraySize();
   if (const ConstantInt *C = dyn_cast<ConstantInt>(ArraySize)) {
@@ -679,8 +679,8 @@ SizeOffsetType ObjectSizeOffsetVisitor::visitAllocaInst(AllocaInst &I) {
 
     bool Overflow;
     Size = Size.umul_ov(NumElems, Overflow);
-    return Overflow ? unknown() : std::make_pair(align(Size, I.getAlignment()),
-                                                 Zero);
+    return Overflow ? unknown()
+                    : std::make_pair(align(Size, I.getAlign()), Zero);
   }
   return unknown();
 }
@@ -694,7 +694,7 @@ SizeOffsetType ObjectSizeOffsetVisitor::visitArgument(Argument &A) {
   }
 
   APInt Size(IntTyBits, DL.getTypeAllocSize(MemoryTy));
-  return std::make_pair(align(Size, A.getParamAlignment()), Zero);
+  return std::make_pair(align(Size, A.getParamAlign()), Zero);
 }
 
 SizeOffsetType ObjectSizeOffsetVisitor::visitCallBase(CallBase &CB) {
@@ -800,7 +800,7 @@ SizeOffsetType ObjectSizeOffsetVisitor::visitGlobalVariable(GlobalVariable &GV){
     return unknown();
 
   APInt Size(IntTyBits, DL.getTypeAllocSize(GV.getValueType()));
-  return std::make_pair(align(Size, GV.getAlignment()), Zero);
+  return std::make_pair(align(Size, GV.getAlign()), Zero);
 }
 
 SizeOffsetType ObjectSizeOffsetVisitor::visitIntToPtrInst(IntToPtrInst&) {

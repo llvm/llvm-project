@@ -225,7 +225,7 @@ void SIModeRegister::processBlockPhase1(MachineBasicBlock &MBB,
   // RequirePending is used to indicate whether we are collecting the initial
   // requirements for the block, and need to defer the first InsertionPoint to
   // Phase 3. It is set to false once we have set FirstInsertionPoint, or when
-  // we discover an explict setreg that means this block doesn't have any
+  // we discover an explicit setreg that means this block doesn't have any
   // initial requirements.
   bool RequirePending = true;
   Status IPChange;
@@ -373,12 +373,8 @@ void SIModeRegister::processBlockPhase2(MachineBasicBlock &MBB,
     BlockInfo[ThisBlock]->Exit = TmpStatus;
     // Add the successors to the work list so we can propagate the changed exit
     // status.
-    for (MachineBasicBlock::succ_iterator S = MBB.succ_begin(),
-                                          E = MBB.succ_end();
-         S != E; S = std::next(S)) {
-      MachineBasicBlock &B = *(*S);
-      Phase2List.push(&B);
-    }
+    for (MachineBasicBlock *Succ : MBB.successors())
+      Phase2List.push(Succ);
   }
   BlockInfo[ThisBlock]->ExitSet = ExitSet;
   if (RevisitRequired)

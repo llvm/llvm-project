@@ -300,9 +300,9 @@ added in the future:
     code for the target, without having to conform to an externally
     specified ABI (Application Binary Interface). `Tail calls can only
     be optimized when this, the tailcc, the GHC or the HiPE convention is
-    used. <CodeGenerator.html#id80>`_ This calling convention does not
-    support varargs and requires the prototype of all callees to exactly
-    match the prototype of the function definition.
+    used. <CodeGenerator.html#tail-call-optimization>`_ This calling
+    convention does not support varargs and requires the prototype of all
+    callees to exactly match the prototype of the function definition.
 "``coldcc``" - The cold calling convention
     This calling convention attempts to make code in the caller as
     efficient as possible under the assumption that the call is not
@@ -329,8 +329,8 @@ added in the future:
        floating-point parameters.
 
     This calling convention supports `tail call
-    optimization <CodeGenerator.html#id80>`_ but requires both the
-    caller and callee are using it.
+    optimization <CodeGenerator.html#tail-call-optimization>`_ but requires
+    both the caller and callee are using it.
 "``cc 11``" - The HiPE calling convention
     This calling convention has been implemented specifically for use by
     the `High-Performance Erlang
@@ -340,8 +340,8 @@ added in the future:
     registers for argument passing than the ordinary C calling
     convention and defines no callee-saved registers. The calling
     convention properly supports `tail call
-    optimization <CodeGenerator.html#id80>`_ but requires that both the
-    caller and the callee use it. It uses a *register pinning*
+    optimization <CodeGenerator.html#tail-call-optimization>`_ but requires
+    that both the caller and the callee use it. It uses a *register pinning*
     mechanism, similar to GHC's convention, for keeping frequently
     accessed runtime components pinned to specific hardware registers.
     At the moment only X86 supports this convention (both 32 and 64
@@ -437,8 +437,8 @@ added in the future:
     tail call optimized. This calling convention is equivalent to fastcc,
     except for an additional guarantee that tail calls will be produced
     whenever possible. `Tail calls can only be optimized when this, the fastcc,
-    the GHC or the HiPE convention is used. <CodeGenerator.html#id80>`_ This
-    calling convention does not support varargs and requires the prototype of
+    the GHC or the HiPE convention is used. <CodeGenerator.html#tail-call-optimization>`_
+    This calling convention does not support varargs and requires the prototype of
     all callees to exactly match the prototype of the function definition.
 "``swiftcc``" - This calling convention is used for Swift language.
     - On X86-64 RCX and R8 are available for additional integer returns, and
@@ -446,7 +446,7 @@ added in the future:
     - On iOS platforms, we use AAPCS-VFP calling convention.
 "``swifttailcc``"
     This calling convention is like ``swiftcc`` in most respects, but also the
-    callee pops the argument area of the stack so that mandatory tail calls are 
+    callee pops the argument area of the stack so that mandatory tail calls are
     possible as in ``tailcc``.
 "``cfguard_checkcc``" - Windows Control Flow Guard (Check mechanism)
     This calling convention is used for the Control Flow Guard check function,
@@ -623,7 +623,7 @@ need to either ensure that a) all possible values are valid, or b)
 appropriate fencing is inserted.  Since the appropriate fencing is
 implementation defined, the optimizer can't do the latter.  The former is
 challenging as many commonly expected properties, such as
-``ptrtoint(v)-ptrtoint(v) == 0``, don't hold for non-integral types.  
+``ptrtoint(v)-ptrtoint(v) == 0``, don't hold for non-integral types.
 
 .. _globalvars:
 
@@ -2134,9 +2134,10 @@ example:
     duplicate definitions are linked together with differing values.
 ``vscale_range(<min>[, <max>])``
     This attribute indicates the minimum and maximum vscale value for the given
-    function. A value of 0 means unbounded. If the optional max value is omitted
-    then max is set to the value of min. If the attribute is not present, no
-    assumptions are made about the range of vscale.
+    function. The min must be greater than 0. A maximum value of 0 means
+    unbounded. If the optional max value is omitted then max is set to the
+    value of min. If the attribute is not present, no assumptions are made
+    about the range of vscale.
 
 Call Site Attributes
 ----------------------
@@ -2648,7 +2649,7 @@ default set of specifications which are then (possibly) overridden by
 the specifications in the ``datalayout`` keyword. The default
 specifications are given in this list:
 
--  ``E`` - big endian
+-  ``e`` - little endian
 -  ``p:64:64:64`` - 64-bit pointers with 64-bit alignment.
 -  ``p[n]:64:64:64`` - Other address spaces are assumed to be the
    same as the default address space.
@@ -2679,10 +2680,6 @@ following rules:
    given the default specifications above, the i7 type will use the
    alignment of i8 (next largest) while both i65 and i256 will use the
    alignment of i64 (largest specified).
-#. If no match is found, and the type sought is a vector type, then the
-   largest vector type that is smaller than the sought vector type will
-   be used as a fall back. This happens because <128 x double> can be
-   implemented in terms of 64 <2 x double>, for example.
 
 The function of the data layout string may not be what you expect.
 Notably, this is not a specification from the frontend of what alignment
@@ -4225,6 +4222,20 @@ may not be ``dso_local``.
 
 This is currently only supported for ELF binary formats.
 
+.. _no_cfi:
+
+No CFI
+------
+
+``no_cfi @func``
+
+With `Control-Flow Integrity (CFI)
+<https://clang.llvm.org/docs/ControlFlowIntegrity.html>`_, a '``no_cfi``'
+constant represents a function reference that does not get replaced with a
+reference to the CFI jump table in the ``LowerTypeTests`` pass. These constants
+may be useful in low-level programs, such as operating system kernels, which
+need to refer to the actual function body.
+
 .. _constantexprs:
 
 Constant Expressions
@@ -4822,7 +4833,7 @@ RISC-V:
 - ``r``: A 32- or 64-bit general-purpose register (depending on the platform
   ``XLEN``).
 - ``vr``: A vector register. (requires V extension).
-- ``vm``: A vector mask register. (requires V extension).
+- ``vm``: A vector register for masking operand. (requires V extension).
 
 Sparc:
 
@@ -12230,7 +12241,7 @@ Syntax:
 
       declare token
         @llvm.experimental.gc.statepoint(i64 <id>, i32 <num patch bytes>,
-                       func_type <target>, 
+                       func_type <target>,
                        i64 <#call args>, i64 <flags>,
                        ... (call parameters),
                        i64 0, i64 0)
@@ -12340,7 +12351,7 @@ Operands:
 
 The first and only argument is the ``gc.statepoint`` which starts
 the safepoint sequence of which this ``gc.result`` is a part.
-Despite the typing of this as a generic token, *only* the value defined 
+Despite the typing of this as a generic token, *only* the value defined
 by a ``gc.statepoint`` is legal here.
 
 Semantics:
@@ -12364,8 +12375,8 @@ Syntax:
 ::
 
       declare <pointer type>
-        @llvm.experimental.gc.relocate(token %statepoint_token, 
-                                       i32 %base_offset, 
+        @llvm.experimental.gc.relocate(token %statepoint_token,
+                                       i32 %base_offset,
                                        i32 %pointer_offset)
 
 Overview:
@@ -12379,7 +12390,7 @@ Operands:
 
 The first argument is the ``gc.statepoint`` which starts the
 safepoint sequence of which this ``gc.relocation`` is a part.
-Despite the typing of this as a generic token, *only* the value defined 
+Despite the typing of this as a generic token, *only* the value defined
 by a ``gc.statepoint`` is legal here.
 
 The second and third arguments are both indices into operands of the
@@ -17616,6 +17627,13 @@ The LLVM exception handling intrinsics (which all start with
 ``llvm.eh.`` prefix), are described in the `LLVM Exception
 Handling <ExceptionHandling.html#format-common-intrinsics>`_ document.
 
+Pointer Authentication Intrinsics
+---------------------------------
+
+The LLVM pointer authentication intrinsics (which all start with
+``llvm.ptrauth.`` prefix), are described in the `Pointer Authentication
+<PointerAuth.html#intrinsics>`_ document.
+
 .. _int_trampoline:
 
 Trampoline Intrinsics
@@ -17785,7 +17803,7 @@ This is an overloaded intrinsic.
 ::
 
       declare <16 x i32>  @llvm.vp.select.v16i32 (<16 x i1> <condition>, <16 x i32> <on_true>, <16 x i32> <on_false>, i32 <evl>)
-      declare <vscale x 4 x i64>  @llvm.vp.select.nxv4i64 (<vscale x 4 x i1> <condition>, <vscale x 4 x i32> <on_true>, <vscale x 4 x i32> <on_false>, i32 <evl>)
+      declare <vscale x 4 x i64>  @llvm.vp.select.nxv4i64 (<vscale x 4 x i1> <condition>, <vscale x 4 x i64> <on_true>, <vscale x 4 x i64> <on_false>, i32 <evl>)
 
 Overview:
 """""""""
@@ -19558,7 +19576,7 @@ This is an overloaded intrinsic.
 ::
 
       declare <2 x double> @llvm.experimental.vp.splice.v2f64(<2 x double> %vec1, <2 x double> %vec2, i32 %imm, <2 x i1> %mask, i32 %evl1, i32 %evl2)
-      declare <vscale x 4 x i32> @llvm.experimental.vp.splice.nxv4i32(<vscale x 4 x i32> %vec1, <vscale x 4 x i32> %vec2, i32 %imm, <2 x i1> %mask i32 %evl1, i32 %evl2)
+      declare <vscale x 4 x i32> @llvm.experimental.vp.splice.nxv4i32(<vscale x 4 x i32> %vec1, <vscale x 4 x i32> %vec2, i32 %imm, <vscale x 4 x i1> %mask, i32 %evl1, i32 %evl2)
 
 Overview:
 """""""""
@@ -19602,6 +19620,229 @@ Examples:
 
  llvm.experimental.vp.splice(<A,B,C,D>, <E,F,G,H>, 1, 2, 3)  ==> <B, E, F, undef> ; index
  llvm.experimental.vp.splice(<A,B,C,D>, <E,F,G,H>, -2, 3, 2) ==> <B, C, undef, undef> ; trailing elements
+
+
+.. _int_vp_load:
+
+'``llvm.vp.load``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+    declare <4 x float> @llvm.vp.load.v4f32.p0v4f32(<4 x float>* %ptr, <4 x i1> %mask, i32 %evl)
+    declare <vscale x 2 x i16> @llvm.vp.load.nxv2i16.p0nxv2i16(<vscale x 2 x i16>* %ptr, <vscale x 2 x i1> %mask, i32 %evl)
+    declare <8 x float> @llvm.vp.load.v8f32.p1v8f32(<8 x float> addrspace(1)* %ptr, <8 x i1> %mask, i32 %evl)
+    declare <vscale x 1 x i64> @llvm.vp.load.nxv1i64.p6nxv1i64(<vscale x 1 x i64> addrspace(6)* %ptr, <vscale x 1 x i1> %mask, i32 %evl)
+
+Overview:
+"""""""""
+
+The '``llvm.vp.load.*``' intrinsic is the vector length predicated version of
+the :ref:`llvm.masked.load <int_mload>` intrinsic.
+
+Arguments:
+""""""""""
+
+The first operand is the base pointer for the load. The second operand is a
+vector of boolean values with the same number of elements as the return type.
+The third is the explicit vector length of the operation. The return type and
+underlying type of the base pointer are the same vector types.
+
+The :ref:`align <attr_align>` parameter attribute can be provided for the first
+operand.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.load``' intrinsic reads a vector from memory in the same way as
+the '``llvm.masked.load``' intrinsic, where the mask is taken from the
+combination of the '``mask``' and '``evl``' operands in the usual VP way.
+Certain '``llvm.masked.load``' operands do not have corresponding operands in
+'``llvm.vp.load``': the '``passthru``' operand is implicitly ``undef``; the
+'``alignment``' operand is taken as the ``align`` parameter attribute, if
+provided. The default alignment is taken as the ABI alignment of the return
+type as specified by the :ref:`datalayout string<langref_datalayout>`.
+
+Examples:
+"""""""""
+
+.. code-block:: text
+
+     %r = call <8 x i8> @llvm.vp.load.v8i8.p0v8i8(<8 x i8>* align 2 %ptr, <8 x i1> %mask, i32 %evl)
+     ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
+
+     %also.r = call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* %ptr, i32 2, <8 x i1> %mask, <8 x i8> undef)
+
+
+.. _int_vp_store:
+
+'``llvm.vp.store``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+    declare void @llvm.vp.store.v4f32.p0v4f32(<4 x float> %val, <4 x float>* %ptr, <4 x i1> %mask, i32 %evl)
+    declare void @llvm.vp.store.nxv2i16.p0nxv2i16(<vscale x 2 x i16> %val, <vscale x 2 x i16>* %ptr, <vscale x 2 x i1> %mask, i32 %evl)
+    declare void @llvm.vp.store.v8f32.p1v8f32(<8 x float> %val, <8 x float> addrspace(1)* %ptr, <8 x i1> %mask, i32 %evl)
+    declare void @llvm.vp.store.nxv1i64.p6nxv1i64(<vscale x 1 x i64> %val, <vscale x 1 x i64> addrspace(6)* %ptr, <vscale x 1 x i1> %mask, i32 %evl)
+
+Overview:
+"""""""""
+
+The '``llvm.vp.store.*``' intrinsic is the vector length predicated version of
+the :ref:`llvm.masked.store <int_mstore>` intrinsic.
+
+Arguments:
+""""""""""
+
+The first operand is the vector value to be written to memory. The second
+operand is the base pointer for the store. It has the same underlying type as
+the value operand. The third operand is a vector of boolean values with the
+same number of elements as the return type. The fourth is the explicit vector
+length of the operation.
+
+The :ref:`align <attr_align>` parameter attribute can be provided for the
+second operand.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.store``' intrinsic reads a vector from memory in the same way as
+the '``llvm.masked.store``' intrinsic, where the mask is taken from the
+combination of the '``mask``' and '``evl``' operands in the usual VP way. The
+alignment of the operation (corresponding to the '``alignment``' operand of
+'``llvm.masked.store``') is specified by the ``align`` parameter attribute (see
+above). If it is not provided then the ABI alignment of the type of the
+'``value``' operand as specified by the :ref:`datalayout
+string<langref_datalayout>` is used instead.
+
+Examples:
+"""""""""
+
+.. code-block:: text
+
+     call void @llvm.vp.store.v8i8.p0v8i8(<8 x i8> %val, <8 x i8>* align 4 %ptr, <8 x i1> %mask, i32 %evl)
+     ;; For all lanes below %evl, the call above is lane-wise equivalent to the call below.
+
+     call void @llvm.masked.store.v8i8.p0v8i8(<8 x i8> %val, <8 x i8>* %ptr, i32 4, <8 x i1> %mask)
+
+
+.. _int_vp_gather:
+
+'``llvm.vp.gather``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+    declare <4 x double> @llvm.vp.gather.v4f64.v4p0f64(<4 x double*> %ptrs, <4 x i1> %mask, i32 %evl)
+    declare <vscale x 2 x i8> @llvm.vp.gather.nxv2i8.nxv2p0i8(<vscale x 2 x i8*> %ptrs, <vscale x 2 x i1> %mask, i32 %evl)
+    declare <2 x float> @llvm.vp.gather.v2f32.v2p2f32(<2 x float addrspace(2)*> %ptrs, <2 x i1> %mask, i32 %evl)
+    declare <vscale x 4 x i32> @llvm.vp.gather.nxv4i32.nxv4p4i32(<vscale x 4 x i32 addrspace(4)*> %ptrs, <vscale x 4 x i1> %mask, i32 %evl)
+
+Overview:
+"""""""""
+
+The '``llvm.vp.gather.*``' intrinsic is the vector length predicated version of
+the :ref:`llvm.masked.gather <int_mgather>` intrinsic.
+
+Arguments:
+""""""""""
+
+The first operand is a vector of pointers which holds all memory addresses to
+read. The second operand is a vector of boolean values with the same number of
+elements as the return type. The third is the explicit vector length of the
+operation. The return type and underlying type of the vector of pointers are
+the same vector types.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.gather``' intrinsic reads multiple scalar values from memory in
+the same way as the '``llvm.masked.gather``' intrinsic, where the mask is taken
+from the combination of the '``mask``' and '``evl``' operands in the usual VP
+way. Of the '``llvm.masked.gather``' operands not set by '``llvm.vp.gather``':
+the '``passthru``' operand is implicitly ``undef``; the '``alignment``' operand
+is taken as the ABI alignment of the source addresses as specified by the
+:ref:`datalayout string<langref_datalayout>`.
+
+Examples:
+"""""""""
+
+.. code-block:: text
+
+     %r = call <8 x i8> @llvm.vp.gather.v8i8.v8p0i8(<8 x i8*> %ptrs, <8 x i1> %mask, i32 %evl)
+     ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
+     ;; Note that since the alignment is ultimately up to the data layout
+     ;; string, 8 is used as an example.
+
+     %also.r = call <8 x i8> @llvm.masked.gather.v8i8.v8p0i8(<8 x i8*> %ptrs, i32 8, <8 x i1> %mask, <8 x i8> undef)
+
+
+.. _int_vp_scatter:
+
+'``llvm.vp.scatter``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+    declare void @llvm.vp.scatter.v4f64.v4p0f64(<4 x double> %val, <4 x double*> %ptrs, <4 x i1> %mask, i32 %evl)
+    declare void @llvm.vp.scatter.nxv2i8.nxv2p0i8(<vscale x 2 x i8> %val, <vscale x 2 x i8*> %ptrs, <vscale x 2 x i1> %mask, i32 %evl)
+    declare void @llvm.vp.scatter.v2f32.v2p2f32(<2 x float> %val, <2 x float addrspace(2)*> %ptrs, <2 x i1> %mask, i32 %evl)
+    declare void @llvm.vp.scatter.nxv4i32.nxv4p4i32(<vscale x 4 x i32> %val, <vscale x 4 x i32 addrspace(4)*> %ptrs, <vscale x 4 x i1> %mask, i32 %evl)
+
+Overview:
+"""""""""
+
+The '``llvm.vp.scatter.*``' intrinsic is the vector length predicated version of
+the :ref:`llvm.masked.scatter <int_mscatter>` intrinsic.
+
+Arguments:
+""""""""""
+
+The first operand is a vector value to be written to memory. The second operand
+is a vector of pointers, pointing to where the value elements should be stored.
+The third operand is a vector of boolean values with the same number of
+elements as the return type. The fourth is the explicit vector length of the
+operation.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.scatter``' intrinsic writes multiple scalar values to memory in
+the same way as the '``llvm.masked.scatter``' intrinsic, where the mask is
+taken from the combination of the '``mask``' and '``evl``' operands in the
+usual VP way. The '``alignment``' operand of the '``llvm.masked.scatter``'
+intrinsic is not set by '``llvm.vp.scatter``': it is taken as the ABI alignment
+of the destination addresses as specified by the :ref:`datalayout
+string<langref_datalayout>`.
+
+Examples:
+"""""""""
+
+.. code-block:: text
+
+     call void @llvm.vp.scatter.v8i8.v8p0i8(<8 x i8> %val, <8 x i8*> %ptrs, <8 x i1> %mask, i32 %evl)
+     ;; For all lanes below %evl, the call above is lane-wise equivalent to the call below.
+     ;; Note that since the alignment is ultimately up to the data layout
+     ;; string, 8 is used as an example.
+
+     call void @llvm.masked.scatter.v8i8.v8p0i8(<8 x i8> %val, <8 x i8*> %ptrs, i32 8, <8 x i1> %mask)
 
 
 .. _int_mload_mstore:

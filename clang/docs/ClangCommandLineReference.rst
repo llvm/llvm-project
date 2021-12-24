@@ -483,7 +483,7 @@ Enable migration to use NS\_NONATOMIC\_IOSONLY macro for setting property's 'ato
 
 Enable migration to annotate property with NS\_RETURNS\_INNER\_POINTER
 
-.. option:: -objcmt-whitelist-dir-path=<arg>, -objcmt-white-list-dir-path=<arg>
+.. option:: -objcmpt-allowlist-dir-path=<arg>, -objcmt-whitelist-dir-path=<arg>, -objcmt-white-list-dir-path=<arg>
 
 Only modify files with a filename contained in the provided directory path
 
@@ -1941,9 +1941,9 @@ Microsoft compiler version number to report in \_MSC\_VER (0 = don't define it (
 
 Specifies the largest alignment guaranteed by '::operator new(size\_t)'
 
-.. option:: -fnew-infallible
+.. option:: -fnew-infallible, -fno-new-infallible
 
-Treats throwing global C++ operator new as always returning valid memory (annotates with \_\_attribute\_\_((returns\_nonnull)) and throw()). This is detectable in source.
+Enable treating throwing global C++ operator new as always returning valid memory (annotates with \_\_attribute\_\_((returns\_nonnull)) and throw()). This is detectable in source.
 
 .. option:: -fnext-runtime
 
@@ -3259,6 +3259,11 @@ Thread pointer access method (AArch32/AArch64 only)
 .. option:: -munaligned-access, -mno-unaligned-access
 
 Allow memory accesses to be unaligned (AArch32/AArch64 only)
+
+.. option:: -mno-bti-at-return-twice
+
+Do not add a BTI instruction after a setjmp or other return-twice construct (Arm
+only)
 
 Hexagon
 -------

@@ -126,6 +126,8 @@ public:
 
   FILE *GetErrorFileHandle();
 
+  SBError SetInputString(const char *data);
+
   SBError SetInputFile(SBFile file);
 
   SBError SetOutputFile(SBFile file);
@@ -246,6 +248,8 @@ public:
   static bool SetDefaultArchitecture(const char *arch_name);
 
   lldb::ScriptLanguage GetScriptingLanguage(const char *script_language_name);
+
+  SBStructuredData GetScriptInterpreterInfo(ScriptLanguage);
 
   static const char *GetVersionString();
 

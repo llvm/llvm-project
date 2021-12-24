@@ -15,7 +15,7 @@ define signext i32 @func(i32 signext %x, i32 signext %y) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    mv a2, a0
 ; RV32I-NEXT:    sub a1, a0, a1
-; RV32I-NEXT:    mv a0, zero
+; RV32I-NEXT:    li a0, 0
 ; RV32I-NEXT:    bltu a2, a1, .LBB0_2
 ; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    mv a0, a1
@@ -26,7 +26,7 @@ define signext i32 @func(i32 signext %x, i32 signext %y) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    mv a2, a0
 ; RV64I-NEXT:    subw a1, a0, a1
-; RV64I-NEXT:    mv a0, zero
+; RV64I-NEXT:    li a0, 0
 ; RV64I-NEXT:    bltu a2, a1, .LBB0_2
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    mv a0, a1
@@ -62,8 +62,8 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 ; RV32I-NEXT:  .LBB1_2:
 ; RV32I-NEXT:    sltu a4, a0, a2
 ; RV32I-NEXT:  .LBB1_3:
-; RV32I-NEXT:    mv a0, zero
-; RV32I-NEXT:    mv a1, zero
+; RV32I-NEXT:    li a0, 0
+; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    bnez a4, .LBB1_5
 ; RV32I-NEXT:  # %bb.4:
 ; RV32I-NEXT:    mv a0, a2
@@ -75,7 +75,7 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    mv a2, a0
 ; RV64I-NEXT:    sub a1, a0, a1
-; RV64I-NEXT:    mv a0, zero
+; RV64I-NEXT:    li a0, 0
 ; RV64I-NEXT:    bltu a2, a1, .LBB1_2
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    mv a0, a1
@@ -95,8 +95,8 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 ; RV32IZbb-NEXT:  .LBB1_2:
 ; RV32IZbb-NEXT:    sltu a4, a0, a2
 ; RV32IZbb-NEXT:  .LBB1_3:
-; RV32IZbb-NEXT:    mv a0, zero
-; RV32IZbb-NEXT:    mv a1, zero
+; RV32IZbb-NEXT:    li a0, 0
+; RV32IZbb-NEXT:    li a1, 0
 ; RV32IZbb-NEXT:    bnez a4, .LBB1_5
 ; RV32IZbb-NEXT:  # %bb.4:
 ; RV32IZbb-NEXT:    mv a0, a2
@@ -118,7 +118,7 @@ define zeroext i16 @func16(i16 zeroext %x, i16 zeroext %y) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    mv a2, a0
 ; RV32I-NEXT:    sub a1, a0, a1
-; RV32I-NEXT:    mv a0, zero
+; RV32I-NEXT:    li a0, 0
 ; RV32I-NEXT:    bltu a2, a1, .LBB2_2
 ; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    mv a0, a1
@@ -129,7 +129,7 @@ define zeroext i16 @func16(i16 zeroext %x, i16 zeroext %y) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    mv a2, a0
 ; RV64I-NEXT:    sub a1, a0, a1
-; RV64I-NEXT:    mv a0, zero
+; RV64I-NEXT:    li a0, 0
 ; RV64I-NEXT:    bltu a2, a1, .LBB2_2
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    mv a0, a1
@@ -156,7 +156,7 @@ define zeroext i8 @func8(i8 zeroext %x, i8 zeroext %y) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    mv a2, a0
 ; RV32I-NEXT:    sub a1, a0, a1
-; RV32I-NEXT:    mv a0, zero
+; RV32I-NEXT:    li a0, 0
 ; RV32I-NEXT:    bltu a2, a1, .LBB3_2
 ; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    mv a0, a1
@@ -167,7 +167,7 @@ define zeroext i8 @func8(i8 zeroext %x, i8 zeroext %y) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    mv a2, a0
 ; RV64I-NEXT:    sub a1, a0, a1
-; RV64I-NEXT:    mv a0, zero
+; RV64I-NEXT:    li a0, 0
 ; RV64I-NEXT:    bltu a2, a1, .LBB3_2
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    mv a0, a1
@@ -194,7 +194,7 @@ define zeroext i4 @func3(i4 zeroext %x, i4 zeroext %y) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    mv a2, a0
 ; RV32I-NEXT:    sub a1, a0, a1
-; RV32I-NEXT:    mv a0, zero
+; RV32I-NEXT:    li a0, 0
 ; RV32I-NEXT:    bltu a2, a1, .LBB4_2
 ; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    mv a0, a1
@@ -205,7 +205,7 @@ define zeroext i4 @func3(i4 zeroext %x, i4 zeroext %y) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    mv a2, a0
 ; RV64I-NEXT:    sub a1, a0, a1
-; RV64I-NEXT:    mv a0, zero
+; RV64I-NEXT:    li a0, 0
 ; RV64I-NEXT:    bltu a2, a1, .LBB4_2
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    mv a0, a1

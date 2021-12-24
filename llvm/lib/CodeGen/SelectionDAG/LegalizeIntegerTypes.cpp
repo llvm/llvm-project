@@ -491,19 +491,6 @@ SDValue DAGTypeLegalizer::PromoteIntRes_BITCAST(SDNode *N) {
                      CreateStackStoreLoad(InOp, OutVT));
 }
 
-// Helper for BSWAP/BITREVERSE promotion to ensure we can fit any shift amount
-// in the VT returned by getShiftAmountTy and to return a safe VT if we can't.
-static EVT getShiftAmountTyForConstant(EVT VT, const TargetLowering &TLI,
-                                       SelectionDAG &DAG) {
-  EVT ShiftVT = TLI.getShiftAmountTy(VT, DAG.getDataLayout());
-  // If any possible shift value won't fit in the prefered type, just use
-  // something safe. It will be legalized when the shift is expanded.
-  if (!ShiftVT.isVector() &&
-      ShiftVT.getSizeInBits() < Log2_32_Ceil(VT.getSizeInBits()))
-    ShiftVT = MVT::i32;
-  return ShiftVT;
-}
-
 SDValue DAGTypeLegalizer::PromoteIntRes_FREEZE(SDNode *N) {
   SDValue V = GetPromotedInteger(N->getOperand(0));
   return DAG.getNode(ISD::FREEZE, SDLoc(N),
@@ -527,7 +514,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_BSWAP(SDNode *N) {
   }
 
   unsigned DiffBits = NVT.getScalarSizeInBits() - OVT.getScalarSizeInBits();
-  EVT ShiftVT = getShiftAmountTyForConstant(NVT, TLI, DAG);
+  EVT ShiftVT = TLI.getShiftAmountTy(NVT, DAG.getDataLayout());
   return DAG.getNode(ISD::SRL, dl, NVT, DAG.getNode(ISD::BSWAP, dl, NVT, Op),
                      DAG.getConstant(DiffBits, dl, ShiftVT));
 }
@@ -549,7 +536,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_BITREVERSE(SDNode *N) {
   }
 
   unsigned DiffBits = NVT.getScalarSizeInBits() - OVT.getScalarSizeInBits();
-  EVT ShiftVT = getShiftAmountTyForConstant(NVT, TLI, DAG);
+  EVT ShiftVT = TLI.getShiftAmountTy(NVT, DAG.getDataLayout());
   return DAG.getNode(ISD::SRL, dl, NVT,
                      DAG.getNode(ISD::BITREVERSE, dl, NVT, Op),
                      DAG.getConstant(DiffBits, dl, ShiftVT));
@@ -635,10 +622,13 @@ SDValue DAGTypeLegalizer::PromoteIntRes_CTTZ(SDNode *N) {
 
   // If the larger CTTZ isn't supported by the target, try to expand now.
   // If we expand later we'll end up with more operations since we lost the
-  // original type.
+  // original type. Don't expand if we can use CTPOP or CTLZ expansion on the
+  // larger type.
   if (!OVT.isVector() && TLI.isTypeLegal(NVT) &&
       !TLI.isOperationLegalOrCustomOrPromote(ISD::CTTZ, NVT) &&
-      !TLI.isOperationLegalOrCustomOrPromote(ISD::CTTZ_ZERO_UNDEF, NVT)) {
+      !TLI.isOperationLegalOrCustomOrPromote(ISD::CTTZ_ZERO_UNDEF, NVT) &&
+      !TLI.isOperationLegal(ISD::CTPOP, NVT) &&
+      !TLI.isOperationLegal(ISD::CTLZ, NVT)) {
     if (SDValue Result = TLI.expandCTTZ(N, DAG)) {
       Result = DAG.getNode(ISD::ANY_EXTEND, dl, NVT, Result);
       return Result;
@@ -797,11 +787,16 @@ SDValue DAGTypeLegalizer::PromoteIntRes_MLOAD(MaskedLoadSDNode *N) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   SDValue ExtPassThru = GetPromotedInteger(N->getPassThru());
 
+  ISD::LoadExtType ExtType = N->getExtensionType();
+  if (ExtType == ISD::NON_EXTLOAD)
+    ExtType = ISD::EXTLOAD;
+
   SDLoc dl(N);
   SDValue Res = DAG.getMaskedLoad(NVT, dl, N->getChain(), N->getBasePtr(),
                                   N->getOffset(), N->getMask(), ExtPassThru,
                                   N->getMemoryVT(), N->getMemOperand(),
-                                  N->getAddressingMode(), ISD::EXTLOAD);
+                                  N->getAddressingMode(), ExtType,
+                                  N->isExpandingLoad());
   // Legalize the chain result - switch anything that used the old chain to
   // use the new one.
   ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
@@ -1282,8 +1277,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_SRL(SDNode *N, bool IsVP) {
 
 SDValue DAGTypeLegalizer::PromoteIntRes_Rotate(SDNode *N) {
   // Lower the rotate to shifts and ORs which can be promoted.
-  SDValue Res;
-  TLI.expandROT(N, true /*AllowVectorOps*/, Res, DAG);
+  SDValue Res = TLI.expandROT(N, true /*AllowVectorOps*/, DAG);
   ReplaceValueWith(SDValue(N, 0), Res);
   return SDValue();
 }
@@ -1291,7 +1285,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_Rotate(SDNode *N) {
 SDValue DAGTypeLegalizer::PromoteIntRes_FunnelShift(SDNode *N) {
   SDValue Hi = GetPromotedInteger(N->getOperand(0));
   SDValue Lo = GetPromotedInteger(N->getOperand(1));
-  SDValue Amount = GetPromotedInteger(N->getOperand(2));
+  SDValue Amt = GetPromotedInteger(N->getOperand(2));
 
   SDLoc DL(N);
   EVT OldVT = N->getOperand(0).getValueType();
@@ -1302,21 +1296,20 @@ SDValue DAGTypeLegalizer::PromoteIntRes_FunnelShift(SDNode *N) {
   unsigned NewBits = VT.getScalarSizeInBits();
 
   // Amount has to be interpreted modulo the old bit width.
-  Amount =
-      DAG.getNode(ISD::UREM, DL, VT, Amount, DAG.getConstant(OldBits, DL, VT));
+  Amt = DAG.getNode(ISD::UREM, DL, VT, Amt, DAG.getConstant(OldBits, DL, VT));
 
   // If the promoted type is twice the size (or more), then we use the
   // traditional funnel 'double' shift codegen. This isn't necessary if the
   // shift amount is constant.
   // fshl(x,y,z) -> (((aext(x) << bw) | zext(y)) << (z % bw)) >> bw.
   // fshr(x,y,z) -> (((aext(x) << bw) | zext(y)) >> (z % bw)).
-  if (NewBits >= (2 * OldBits) && !isa<ConstantSDNode>(Amount) &&
+  if (NewBits >= (2 * OldBits) && !isa<ConstantSDNode>(Amt) &&
       !TLI.isOperationLegalOrCustom(Opcode, VT)) {
     SDValue HiShift = DAG.getConstant(OldBits, DL, VT);
     Hi = DAG.getNode(ISD::SHL, DL, VT, Hi, HiShift);
     Lo = DAG.getZeroExtendInReg(Lo, DL, OldVT);
     SDValue Res = DAG.getNode(ISD::OR, DL, VT, Hi, Lo);
-    Res = DAG.getNode(IsFSHR ? ISD::SRL : ISD::SHL, DL, VT, Res, Amount);
+    Res = DAG.getNode(IsFSHR ? ISD::SRL : ISD::SHL, DL, VT, Res, Amt);
     if (!IsFSHR)
       Res = DAG.getNode(ISD::SRL, DL, VT, Res, HiShift);
     return Res;
@@ -1329,9 +1322,9 @@ SDValue DAGTypeLegalizer::PromoteIntRes_FunnelShift(SDNode *N) {
   // Increase Amount to shift the result into the lower bits of the promoted
   // type.
   if (IsFSHR)
-    Amount = DAG.getNode(ISD::ADD, DL, VT, Amount, ShiftOffset);
+    Amt = DAG.getNode(ISD::ADD, DL, VT, Amt, ShiftOffset);
 
-  return DAG.getNode(Opcode, DL, VT, Hi, Lo, Amount);
+  return DAG.getNode(Opcode, DL, VT, Hi, Lo, Amt);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_TRUNCATE(SDNode *N) {
@@ -1493,7 +1486,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_XMULO(SDNode *N, unsigned ResNo) {
   if (N->getOpcode() == ISD::UMULO) {
     // Unsigned overflow occurred if the high part is non-zero.
     unsigned Shift = SmallVT.getScalarSizeInBits();
-    EVT ShiftTy = getShiftAmountTyForConstant(Mul.getValueType(), TLI, DAG);
+    EVT ShiftTy = TLI.getShiftAmountTy(Mul.getValueType(), DAG.getDataLayout());
     SDValue Hi = DAG.getNode(ISD::SRL, DL, Mul.getValueType(), Mul,
                              DAG.getConstant(Shift, DL, ShiftTy));
     Overflow = DAG.getSetCC(DL, N->getValueType(1), Hi,
@@ -1727,10 +1720,8 @@ void DAGTypeLegalizer::PromoteSetCCOperands(SDValue &NewLHS,SDValue &NewRHS,
     // If the width of OpL/OpR excluding the duplicated sign bits is no greater
     // than the width of NewLHS/NewRH, we can avoid inserting real truncate
     // instruction, which is redundant eventually.
-    unsigned OpLEffectiveBits =
-        OpL.getScalarValueSizeInBits() - DAG.ComputeNumSignBits(OpL) + 1;
-    unsigned OpREffectiveBits =
-        OpR.getScalarValueSizeInBits() - DAG.ComputeNumSignBits(OpR) + 1;
+    unsigned OpLEffectiveBits = DAG.ComputeMinSignedBits(OpL);
+    unsigned OpREffectiveBits = DAG.ComputeMinSignedBits(OpR);
     if (OpLEffectiveBits <= NewLHS.getScalarValueSizeInBits() &&
         OpREffectiveBits <= NewRHS.getScalarValueSizeInBits()) {
       NewLHS = OpL;
@@ -3153,7 +3144,7 @@ void DAGTypeLegalizer::ExpandIntRes_ABS(SDNode *N, SDValue &Lo, SDValue &Hi) {
   bool HasAddCarry = TLI.isOperationLegalOrCustom(
       ISD::ADDCARRY, TLI.getTypeToExpandTo(*DAG.getContext(), NVT));
   if (HasAddCarry) {
-    EVT ShiftAmtTy = getShiftAmountTyForConstant(NVT, TLI, DAG);
+    EVT ShiftAmtTy = TLI.getShiftAmountTy(NVT, DAG.getDataLayout());
     SDValue Sign =
         DAG.getNode(ISD::SRA, dl, NVT, Hi,
                     DAG.getConstant(NVT.getSizeInBits() - 1, dl, ShiftAmtTy));
@@ -3548,11 +3539,6 @@ void DAGTypeLegalizer::ExpandIntRes_MUL(SDNode *N,
     SDValue TL = DAG.getNode(ISD::AND, dl, NVT, T, Mask);
 
     EVT ShiftAmtTy = TLI.getShiftAmountTy(NVT, DAG.getDataLayout());
-    if (APInt::getMaxValue(ShiftAmtTy.getSizeInBits()).ult(HalfBits)) {
-      // The type from TLI is too small to fit the shift amount we want.
-      // Override it with i32. The shift will have to be legalized.
-      ShiftAmtTy = MVT::i32;
-    }
     SDValue Shift = DAG.getConstant(HalfBits, dl, ShiftAmtTy);
     SDValue TH = DAG.getNode(ISD::SRL, dl, NVT, T, Shift);
     SDValue LLH = DAG.getNode(ISD::SRL, dl, NVT, LL, Shift);
@@ -3992,9 +3978,6 @@ void DAGTypeLegalizer::ExpandIntRes_Shift(SDNode *N,
     // the new SHL_PARTS operation would need further legalization.
     SDValue ShiftOp = N->getOperand(1);
     EVT ShiftTy = TLI.getShiftAmountTy(VT, DAG.getDataLayout());
-    assert(ShiftTy.getScalarSizeInBits() >=
-           Log2_32_Ceil(VT.getScalarSizeInBits()) &&
-           "ShiftAmountTy is too small to cover the range of this type!");
     if (ShiftOp.getValueType() != ShiftTy)
       ShiftOp = DAG.getZExtOrTrunc(ShiftOp, dl, ShiftTy);
 
@@ -4393,18 +4376,45 @@ void DAGTypeLegalizer::ExpandIntRes_VECREDUCE(SDNode *N,
 
 void DAGTypeLegalizer::ExpandIntRes_Rotate(SDNode *N,
                                            SDValue &Lo, SDValue &Hi) {
-  // Lower the rotate to shifts and ORs which can be expanded.
-  SDValue Res;
-  TLI.expandROT(N, true /*AllowVectorOps*/, Res, DAG);
+  // Delegate to funnel-shift expansion.
+  SDLoc DL(N);
+  unsigned Opcode = N->getOpcode() == ISD::ROTL ? ISD::FSHL : ISD::FSHR;
+  SDValue Res = DAG.getNode(Opcode, DL, N->getValueType(0), N->getOperand(0),
+                            N->getOperand(0), N->getOperand(1));
   SplitInteger(Res, Lo, Hi);
 }
 
-void DAGTypeLegalizer::ExpandIntRes_FunnelShift(SDNode *N,
-                                                SDValue &Lo, SDValue &Hi) {
-  // Lower the funnel shift to shifts and ORs which can be expanded.
-  SDValue Res;
-  TLI.expandFunnelShift(N, Res, DAG);
-  SplitInteger(Res, Lo, Hi);
+void DAGTypeLegalizer::ExpandIntRes_FunnelShift(SDNode *N, SDValue &Lo,
+                                                SDValue &Hi) {
+  // Values numbered from least significant to most significant.
+  SDValue In1, In2, In3, In4;
+  GetExpandedInteger(N->getOperand(0), In3, In4);
+  GetExpandedInteger(N->getOperand(1), In1, In2);
+  EVT HalfVT = In1.getValueType();
+
+  SDLoc DL(N);
+  unsigned Opc = N->getOpcode();
+  SDValue ShAmt = N->getOperand(2);
+  EVT ShAmtVT = ShAmt.getValueType();
+  EVT ShAmtCCVT = getSetCCResultType(ShAmtVT);
+
+  // If the shift amount is at least half the bitwidth, swap the inputs.
+  unsigned HalfVTBits = HalfVT.getScalarSizeInBits();
+  SDValue AndNode = DAG.getNode(ISD::AND, DL, ShAmtVT, ShAmt,
+                                DAG.getConstant(HalfVTBits, DL, ShAmtVT));
+  SDValue Cond =
+      DAG.getSetCC(DL, ShAmtCCVT, AndNode, DAG.getConstant(0, DL, ShAmtVT),
+                   Opc == ISD::FSHL ? ISD::SETNE : ISD::SETEQ);
+
+  // Expand to a pair of funnel shifts.
+  EVT NewShAmtVT = TLI.getShiftAmountTy(HalfVT, DAG.getDataLayout());
+  SDValue NewShAmt = DAG.getAnyExtOrTrunc(ShAmt, DL, NewShAmtVT);
+
+  SDValue Select1 = DAG.getNode(ISD::SELECT, DL, HalfVT, Cond, In1, In2);
+  SDValue Select2 = DAG.getNode(ISD::SELECT, DL, HalfVT, Cond, In2, In3);
+  SDValue Select3 = DAG.getNode(ISD::SELECT, DL, HalfVT, Cond, In3, In4);
+  Lo = DAG.getNode(Opc, DL, HalfVT, Select2, Select1, NewShAmt);
+  Hi = DAG.getNode(Opc, DL, HalfVT, Select3, Select2, NewShAmt);
 }
 
 void DAGTypeLegalizer::ExpandIntRes_VSCALE(SDNode *N, SDValue &Lo,

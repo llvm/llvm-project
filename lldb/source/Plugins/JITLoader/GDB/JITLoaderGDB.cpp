@@ -90,7 +90,7 @@ enum {
 class PluginProperties : public Properties {
 public:
   static ConstString GetSettingName() {
-    return JITLoaderGDB::GetPluginNameStatic();
+    return ConstString(JITLoaderGDB::GetPluginNameStatic());
   }
 
   PluginProperties() {
@@ -402,11 +402,6 @@ bool JITLoaderGDB::ReadJITDescriptorImpl(bool all_entries) {
 }
 
 // PluginInterface protocol
-lldb_private::ConstString JITLoaderGDB::GetPluginNameStatic() {
-  static ConstString g_name("gdb");
-  return g_name;
-}
-
 JITLoaderSP JITLoaderGDB::CreateInstance(Process *process, bool force) {
   JITLoaderSP jit_loader_sp;
   bool enable;
@@ -427,7 +422,7 @@ JITLoaderSP JITLoaderGDB::CreateInstance(Process *process, bool force) {
   return jit_loader_sp;
 }
 
-const char *JITLoaderGDB::GetPluginDescriptionStatic() {
+llvm::StringRef JITLoaderGDB::GetPluginDescriptionStatic() {
   return "JIT loader plug-in that watches for JIT events using the GDB "
          "interface.";
 }

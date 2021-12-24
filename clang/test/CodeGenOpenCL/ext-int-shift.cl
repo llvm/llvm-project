@@ -1,6 +1,6 @@
 // RUN: %clang -cc1 -triple x86_64-linux-pc -O3 -disable-llvm-passes %s -emit-llvm -o - | FileCheck %s
 
-void Shifts(_ExtInt(12) E, int i) {
+void Shifts(_BitInt(12) E, int i) {
   E << 99;
   // CHECK: shl i12 %{{.+}}, 3
 

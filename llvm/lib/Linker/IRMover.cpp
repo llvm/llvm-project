@@ -646,7 +646,7 @@ GlobalVariable *IRLinker::copyGlobalVariableProto(const GlobalVariable *SGVar) {
                          /*init*/ nullptr, SGVar->getName(),
                          /*insertbefore*/ nullptr, SGVar->getThreadLocalMode(),
                          SGVar->getAddressSpace());
-  NewDGV->setAlignment(MaybeAlign(SGVar->getAlignment()));
+  NewDGV->setAlignment(SGVar->getAlign());
   NewDGV->copyAttributesFrom(SGVar);
   return NewDGV;
 }
@@ -877,7 +877,7 @@ IRLinker::linkAppendingVarProto(GlobalVariable *DstGV,
     if (DstGV->isConstant() != SrcGV->isConstant())
       return stringErr("Appending variables linked with different const'ness!");
 
-    if (DstGV->getAlignment() != SrcGV->getAlignment())
+    if (DstGV->getAlign() != SrcGV->getAlign())
       return stringErr(
           "Appending variables with different alignment need to be linked!");
 

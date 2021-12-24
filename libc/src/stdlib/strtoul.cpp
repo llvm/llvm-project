@@ -8,7 +8,7 @@
 
 #include "src/stdlib/strtoul.h"
 #include "src/__support/common.h"
-#include "src/__support/str_conv_utils.h"
+#include "src/__support/str_to_integer.h"
 
 namespace __llvm_libc {
 

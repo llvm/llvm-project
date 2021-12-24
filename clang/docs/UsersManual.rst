@@ -777,22 +777,22 @@ compilations steps.
     ld,"a.out",900,8000,53568
 
   The data on each row represent:
-  
+
   * file name of the tool executable,
   * output file name in quotes,
   * total execution time in microseconds,
   * execution time in user mode in microseconds,
   * peak memory usage in Kb.
-  
+
   It is possible to specify this option without any value. In this case statistics
   are printed on standard output in human readable format:
-  
+
   .. code-block:: console
 
     $ clang -fproc-stat-report foo.c
     clang-11: output=/tmp/foo-855a8e.o, total=68.000 ms, user=60.000 ms, mem=86920 Kb
     ld: output=a.out, total=8.000 ms, user=4.000 ms, mem=52320 Kb
-  
+
   The report file specified in the option is locked for write, so this option
   can be used to collect statistics in parallel builds. The report file is not
   cleared, new data is appended to it, thus making posible to accumulate build
@@ -1260,8 +1260,49 @@ installed.
 Controlling Floating Point Behavior
 -----------------------------------
 
-Clang provides a number of ways to control floating point behavior. The options
-are listed below.
+Clang provides a number of ways to control floating point behavior, including
+with command line options and source pragmas. This section
+describes the various floating point semantic modes and the corresponding options.
+
+.. csv-table:: Floating Point Semantic Modes
+  :header: "Mode", "Values"
+  :widths: 15, 30, 30
+
+  "ffp-exception-behavior", "{ignore, strict, may_trap}",
+  "fenv_access", "{off, on}", "(none)"
+  "frounding-math", "{dynamic, tonearest, downward, upward, towardzero}"
+  "ffp-contract", "{on, off, fast, fast-honor-pragmas}"
+  "fdenormal-fp-math", "{IEEE, PreserveSign, PositiveZero}"
+  "fdenormal-fp-math-fp32", "{IEEE, PreserveSign, PositiveZero}"
+  "fmath-errno", "{on, off}"
+  "fhonor-nans", "{on, off}"
+  "fhonor-infinities", "{on, off}"
+  "fsigned-zeros", "{on, off}"
+  "freciprocal-math", "{on, off}"
+  "allow_approximate_fns", "{on, off}"
+  "fassociative-math", "{on, off}"
+
+This table describes the option settings that correspond to the three
+floating point semantic models: precise (the default), strict, and fast.
+
+
+.. csv-table:: Floating Point Models
+  :header: "Mode", "Precise", "Strict", "Fast"
+  :widths: 25, 15, 15, 15
+
+  "except_behavior", "ignore", "strict", "ignore"
+  "fenv_access", "off", "on", "off"
+  "rounding_mode", "tonearest", "dynamic", "tonearest"
+  "contract", "on", "off", "fast"
+  "denormal_fp_math", "IEEE", "IEEE", "PreserveSign"
+  "denormal_fp32_math", "IEEE","IEEE", "PreserveSign"
+  "support_math_errno", "on", "on", "off"
+  "no_honor_nans", "off", "off", "on"
+  "no_honor_infinities", "off", "off", "on"
+  "no_signed_zeros", "off", "off", "on"
+  "allow_reciprocal", "off", "off", "on"
+  "allow_approximate_fns", "off", "off", "on"
+  "allow_reassociation", "off", "off", "on"
 
 .. option:: -ffast-math
 
@@ -1306,7 +1347,7 @@ are listed below.
 
    Select which denormal numbers the code is permitted to require.
 
-   Valid values are: 
+   Valid values are:
 
    * ``ieee`` - IEEE 754 denormal numbers
    * ``preserve-sign`` - the sign of a flushed-to-zero number is preserved in the sign of 0
@@ -1318,7 +1359,7 @@ are listed below.
 
 **-f[no-]strict-float-cast-overflow**
 
-   When a floating-point value is not representable in a destination integer 
+   When a floating-point value is not representable in a destination integer
    type, the code has undefined behavior according to the language standard.
    By default, Clang will not guarantee any particular result in that case.
    With the 'no-strict' option, Clang attempts to match the overflowing behavior
@@ -1467,7 +1508,7 @@ Note that floating-point operations performed as part of constant initialization
    and ``fast``.
    Details:
 
-   * ``precise`` Disables optimizations that are not value-safe on floating-point data, although FP contraction (FMA) is enabled (``-ffp-contract=fast``).  This is the default behavior.
+   * ``precise`` Disables optimizations that are not value-safe on floating-point data, although FP contraction (FMA) is enabled (``-ffp-contract=on``).  This is the default behavior.
    * ``strict`` Enables ``-frounding-math`` and ``-ffp-exception-behavior=strict``, and disables contractions (FMA).  All of the ``-ffast-math`` enablements are disabled. Enables ``STDC FENV_ACCESS``: by default ``FENV_ACCESS`` is disabled. This option setting behaves as though ``#pragma STDC FENV_ACESS ON`` appeared at the top of the source file.
    * ``fast`` Behaves identically to specifying both ``-ffast-math`` and ``ffp-contract=fast``
 
@@ -1499,7 +1540,7 @@ Note that floating-point operations performed as part of constant initialization
    the optimizer may ignore parentheses when computing arithmetic expressions
    in circumstances where the parenthesized and unparenthesized expression
    express the same mathematical value. For example (a+b)+c is the same
-   mathematical value as a+(b+c), but the optimizer is free to evaluate the 
+   mathematical value as a+(b+c), but the optimizer is free to evaluate the
    additions in any order regardless of the parentheses. When enabled, this
    option forces the optimizer to honor the order of operations with respect
    to parentheses in all circumstances.
@@ -2172,7 +2213,7 @@ instrumentation:
 2. Run the instrumented executable with inputs that reflect the typical usage.
    By default, the profile data will be written to a ``default.profraw`` file
    in the current directory. You can override that default by using option
-   ``-fprofile-instr-generate=`` or by setting the ``LLVM_PROFILE_FILE`` 
+   ``-fprofile-instr-generate=`` or by setting the ``LLVM_PROFILE_FILE``
    environment variable to specify an alternate file. If non-default file name
    is specified by both the environment variable and the command line option,
    the environment variable takes precedence. The file name pattern specified
@@ -2262,7 +2303,7 @@ programs using the same instrumentation method as ``-fprofile-generate``.
   When ``code`` is executed, the profile will be written to the file
   ``yyy/zzz/default_xxxx.profraw``.
 
-  To generate the profile data file with the compiler readable format, the 
+  To generate the profile data file with the compiler readable format, the
   ``llvm-profdata`` tool can be used with the profile directory as the input:
 
    .. code-block:: console
@@ -2526,7 +2567,7 @@ from ``-fprofile-exclude-list``.
 
    $ clang --coverage -fprofile-exclude-files="^/usr/include/.*$" \
            -fprofile-filter-files="^/usr/.*$"
-          
+
 In that case ``/usr/foo/oof.h`` is instrumented since it matches the filter regex and
 doesn't match the exclude regex, but ``/usr/include/foo.h`` doesn't since it matches
 the exclude regex.
@@ -2979,7 +3020,7 @@ tools
 
 Clang currently supports OpenCL C language standards up to v2.0. Clang mainly
 supports full profile. There is only very limited support of the embedded
-profile. 
+profile.
 Starting from clang 9 a C++ mode is available for OpenCL (see
 :ref:`C++ for OpenCL <cxx_for_opencl>`).
 
@@ -3051,6 +3092,15 @@ There is a set of concrete HW architectures that OpenCL can be compiled for.
 
 Generic Targets
 ^^^^^^^^^^^^^^^
+
+- A SPIR-V binary can be produced for 32 or 64 bit targets.
+
+   .. code-block:: console
+
+    $ clang -target spirv32 test.cl
+    $ clang -target spirv64 test.cl
+
+  More details can be found in :ref:`the SPIR-V support section <spir-v>`.
 
 - SPIR is available as a generic target to allow portable bitcode to be produced
   that can be used across GPU toolchains. The implementation follows `the SPIR
@@ -3139,7 +3189,7 @@ extension should use reserved identifier prefix e.g. amd, arm, intel.
 
 Clang also supports language extensions documented in `The OpenCL C Language
 Extensions Documentation
-<https://github.com/KhronosGroup/Khronosdotorg/blob/master/api/opencl/assets/OpenCL_LangExt.pdf>`_.
+<https://github.com/KhronosGroup/Khronosdotorg/blob/main/api/opencl/assets/OpenCL_LangExt.pdf>`_.
 
 OpenCL-Specific Attributes
 --------------------------
@@ -3172,14 +3222,14 @@ convergent
 To make sure no invalid optimizations occur for single program multiple data
 (SPMD) / single instruction multiple thread (SIMT) Clang provides attributes that
 can be used for special functions that have cross work item semantics.
-An example is the subgroup operations such as `intel_sub_group_shuffle 
+An example is the subgroup operations such as `intel_sub_group_shuffle
 <https://www.khronos.org/registry/cl/extensions/intel/cl_intel_subgroups.txt>`_
 
    .. code-block:: c
 
      // Define custom my_sub_group_shuffle(data, c)
      // that makes use of intel_sub_group_shuffle
-     r1 = ... 
+     r1 = ...
      if (r0) r1 = computeA();
      // Shuffle data from r1 into r3
      // of threads id r2.
@@ -3211,7 +3261,7 @@ would prevent this:
 Using ``convergent`` guarantees correct execution by keeping CFG equivalence
 wrt operations marked as ``convergent``. CFG ``G´`` is equivalent to ``G`` wrt
 node ``Ni`` : ``iff ∀ Nj (i≠j)`` domination and post-domination relations with
-respect to ``Ni`` remain the same in both ``G`` and ``G´``. 
+respect to ``Ni`` remain the same in both ``G`` and ``G´``.
 
 noduplicate
 ^^^^^^^^^^^
@@ -3292,7 +3342,7 @@ mode.
 
      clang test.clcpp
 
-C++ for OpenCL kernel sources can also be compiled online in drivers supporting 
+C++ for OpenCL kernel sources can also be compiled online in drivers supporting
 `cl_ext_cxx_for_opencl
 <https://www.khronos.org/registry/OpenCL/extensions/ext/cl_ext_cxx_for_opencl.html>`_
 extension.
@@ -3309,7 +3359,7 @@ constructors. However, an easy workaround is to manually enqueue the
 constructor initialization kernel that has the following name scheme
 ``_GLOBAL__sub_I_<compiled file name>``.
 This kernel is only present if there are global objects with non-trivial
-constructors present in the compiled binary. One way to check this is by 
+constructors present in the compiled binary. One way to check this is by
 passing ``CL_PROGRAM_KERNEL_NAMES`` to ``clGetProgramInfo`` (OpenCL v2.0
 s5.8.7) and then checking whether any kernel name matches the naming scheme of
 global constructor initialization kernel above.
@@ -3468,6 +3518,51 @@ Clang expects the GCC executable "gcc.exe" compiled for
 
 `Some tests might fail <https://bugs.llvm.org/show_bug.cgi?id=9072>`_ on
 ``x86_64-w64-mingw32``.
+
+.. _spir-v:
+
+SPIR-V support
+--------------
+
+Clang supports generation of SPIR-V conformant to `the OpenCL Environment
+Specification
+<https://www.khronos.org/registry/OpenCL/specs/3.0-unified/html/OpenCL_Env.html>`_.
+
+To generate SPIR-V binaries, Clang uses the external ``llvm-spirv`` tool from the
+`SPIRV-LLVM-Translator repo
+<https://github.com/KhronosGroup/SPIRV-LLVM-Translator>`_.
+
+Prior to the generation of SPIR-V binary with Clang, ``llvm-spirv``
+should be built or installed. Please refer to `the following instructions
+<https://github.com/KhronosGroup/SPIRV-LLVM-Translator#build-instructions>`_
+for more details. Clang will expects the ``llvm-spirv`` executable to
+be present in the ``PATH`` environment variable. Clang uses ``llvm-spirv``
+with `the widely adopted assembly syntax package
+<https://github.com/KhronosGroup/SPIRV-LLVM-Translator/#build-with-spirv-tools>`_.
+
+`The versioning
+<https://github.com/KhronosGroup/SPIRV-LLVM-Translator/releases>`_ of
+``llvm-spirv`` is aligned with Clang major releases. The same applies to the
+main development branch. It is therefore important to ensure the ``llvm-spirv``
+version is in alignment with the Clang version. For troubleshooting purposes
+``llvm-spirv`` can be `tested in isolation
+<https://github.com/KhronosGroup/SPIRV-LLVM-Translator#test-instructions>`_.
+
+Example usage for OpenCL kernel compilation:
+
+   .. code-block:: console
+
+     $ clang -target spirv32 test.cl
+     $ clang -target spirv64 test.cl
+
+Both invocations of Clang will result in the generation of a SPIR-V binary file
+`test.o` for 32 bit and 64 bit respectively. This file can be imported
+by an OpenCL driver that support SPIR-V consumption or it can be compiled
+further by offline SPIR-V consumer tools.
+
+Converting to SPIR-V produced with the optimization levels other than `-O0` is
+currently available as an experimental feature and it is not guaranteed to work
+in all cases.
 
 .. _clang-cl:
 
@@ -3675,7 +3770,6 @@ Execute ``clang-cl /?`` to see a list of supported options:
       /Zc:trigraphs           Enable trigraphs
       /Zc:twoPhase-           Disable two-phase name lookup in templates
       /Zc:twoPhase            Enable two-phase name lookup in templates
-      /Zd                     Emit debug line number tables only
       /Zi                     Alias for /Z7. Does not produce PDBs.
       /Zl                     Don't mention any default libraries in the object file
       /Zp                     Set the default maximum struct packing alignment to 1

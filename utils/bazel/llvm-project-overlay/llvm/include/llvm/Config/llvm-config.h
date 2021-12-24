@@ -93,6 +93,9 @@
 /* Define if we have z3 and want to build it */
 /* #undef LLVM_WITH_Z3 */
 
+/* Define if we have curl and want to use it */
+/* #undef LLVM_ENABLE_CURL */
+
 /* Define if LLVM was built with a dependency to the libtensorflow dynamic library */
 /* #undef LLVM_HAVE_TF_API */
 
@@ -107,5 +110,11 @@
 
 /* Define if the xar_open() function is supported this platform. */
 /* #undef HAVE_LIBXAR */
+
+/* Define if building libLLVM shared library */
+/* #undef LLVM_BUILD_LLVM_DYLIB */
+
+/* Define if building LLVM with BUILD_SHARED_LIBS */
+/* #undef LLVM_BUILD_SHARED_LIBS */
 
 #endif

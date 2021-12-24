@@ -29,8 +29,6 @@ class Reproducer;
 
 enum class ReproducerMode {
   Capture,
-  Replay,
-  PassiveReplay,
   Off,
 };
 
@@ -179,15 +177,12 @@ public:
 
   const FileSpec &GetRoot() const { return m_root; }
 
-  bool IsPassiveReplay() const { return m_passive_replay; }
-
 private:
   bool HasFile(llvm::StringRef file);
 
   FileSpec m_root;
   std::vector<std::string> m_files;
   bool m_loaded;
-  bool m_passive_replay;
 };
 
 /// The reproducer enables clients to obtain access to the Generator and
@@ -212,11 +207,9 @@ public:
   FileSpec GetReproducerPath() const;
 
   bool IsCapturing() { return static_cast<bool>(m_generator); };
-  bool IsReplaying() { return static_cast<bool>(m_loader); };
 
 protected:
   llvm::Error SetCapture(llvm::Optional<FileSpec> root);
-  llvm::Error SetReplay(llvm::Optional<FileSpec> root, bool passive = false);
 
 private:
   static llvm::Optional<Reproducer> &InstanceImpl();

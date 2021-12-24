@@ -96,6 +96,11 @@ uint16_t __atomic_fetch_xor_2(uint16_t *ptr, uint16_t val, int model);
 uint32_t __atomic_fetch_xor_4(uint32_t *ptr, uint32_t val, int model);
 uint64_t __atomic_fetch_xor_8(uint64_t *ptr, uint64_t val, int model);
 
+uint8_t __atomic_fetch_nand_1(uint8_t *ptr, uint8_t val, int model);
+uint16_t __atomic_fetch_nand_2(uint16_t *ptr, uint16_t val, int model);
+uint32_t __atomic_fetch_nand_4(uint32_t *ptr, uint32_t val, int model);
+uint64_t __atomic_fetch_nand_8(uint64_t *ptr, uint64_t val, int model);
+
 // We conditionally test the *_16 atomic function variants based on the same
 // condition that compiler_rt (atomic.c) uses to conditionally generate them.
 // Currently atomic.c tests if __SIZEOF_INT128__ is defined (which can be the
@@ -119,6 +124,7 @@ uint128_t __atomic_fetch_sub_16(uint128_t *ptr, uint128_t val, int model);
 uint128_t __atomic_fetch_and_16(uint128_t *ptr, uint128_t val, int model);
 uint128_t __atomic_fetch_or_16(uint128_t *ptr, uint128_t val, int model);
 uint128_t __atomic_fetch_xor_16(uint128_t *ptr, uint128_t val, int model);
+uint128_t __atomic_fetch_nand_16(uint128_t *ptr, uint128_t val, int model);
 #else
 typedef uint64_t maxuint_t;
 #endif
@@ -537,6 +543,28 @@ void test_fetch_op(void) {
 #ifdef TEST_16
     b128 = __atomic_fetch_xor_16(&a128, ONES, model);
     if (b128 != (V + m) || a128 != ((V + m) ^ ONES))
+      abort();
+#endif
+
+    // Fetch nand.
+
+    set_a_values(V + m);
+    set_b_values(0);
+    b8 = __atomic_fetch_nand_1(&a8, U8(ONES), model);
+    if (b8 != U8(V + m) || a8 != U8(~((V + m) & ONES)))
+      abort();
+    b16 = __atomic_fetch_nand_2(&a16, U16(ONES), model);
+    if (b16 != U16(V + m) || a16 != U16(~((V + m) & ONES)))
+      abort();
+    b32 = __atomic_fetch_nand_4(&a32, U32(ONES), model);
+    if (b32 != U32(V + m) || a32 != U32(~((V + m) & ONES)))
+      abort();
+    b64 = __atomic_fetch_nand_8(&a64, U64(ONES), model);
+    if (b64 != U64(V + m) || a64 != U64(~((V + m) & ONES)))
+      abort();
+#ifdef TEST_16
+    b128 = __atomic_fetch_nand_16(&a128, ONES, model);
+    if (b128 != (V + m) || a128 != ~((V + m) & ONES))
       abort();
 #endif
 

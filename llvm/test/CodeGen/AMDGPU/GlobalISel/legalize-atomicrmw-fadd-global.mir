@@ -14,8 +14,8 @@ body: |
     liveins: $sgpr0_sgpr1, $sgpr2
     ; CHECK-LABEL: name: atomicrmw_fadd_global_i32
     ; CHECK: [[COPY:%[0-9]+]]:_(p1) = COPY $sgpr0_sgpr1
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr2
-    ; CHECK: [[ATOMICRMW_FADD:%[0-9]+]]:_(s32) = G_ATOMICRMW_FADD [[COPY]](p1), [[COPY1]] :: (load store seq_cst (s32), addrspace 1)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr2
+    ; CHECK-NEXT: [[ATOMICRMW_FADD:%[0-9]+]]:_(s32) = G_ATOMICRMW_FADD [[COPY]](p1), [[COPY1]] :: (load store seq_cst (s32), addrspace 1)
     %0:_(p1) = COPY $sgpr0_sgpr1
     %1:_(s32) = COPY $sgpr2
     %2:_(s32) = G_ATOMICRMW_FADD %0, %1 :: (load store seq_cst (s32), addrspace 1)

@@ -18,6 +18,7 @@
 #include "ARMConstantPoolValue.h"
 #include "ARMFrameLowering.h"
 #include "ARMISelLowering.h"
+#include "ARMMachineFunctionInfo.h"
 #include "ARMSelectionDAGInfo.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -65,6 +66,7 @@ protected:
     CortexA77,
     CortexA78,
     CortexA78C,
+    CortexA710,
     CortexA8,
     CortexA9,
     CortexM3,
@@ -372,6 +374,8 @@ protected:
   /// HasLOB - if true, the processor supports the Low Overhead Branch extension
   bool HasLOB = false;
 
+  bool HasPACBTI = false;
+
   /// If true, the instructions "vmov.i32 d0, #0" and "vmov.i32 q0, #0" are
   /// particularly effective at zeroing a VFP register.
   bool HasZeroCycleZeroing = false;
@@ -531,6 +535,10 @@ protected:
   /// Selected instruction itineraries (one entry per itinerary class.)
   InstrItineraryData InstrItins;
 
+  /// NoBTIAtReturnTwice - Don't place a BTI instruction after
+  /// return-twice constructs (setjmp)
+  bool NoBTIAtReturnTwice = false;
+
   /// Options passed via command line that could influence the target
   const TargetOptions &Options;
 
@@ -670,6 +678,7 @@ public:
   bool hasCRC() const { return HasCRC; }
   bool hasRAS() const { return HasRAS; }
   bool hasLOB() const { return HasLOB; }
+  bool hasPACBTI() const { return HasPACBTI; }
   bool hasVirtualization() const { return HasVirtualization; }
 
   bool useNEONForSinglePrecisionFP() const {
@@ -792,14 +801,7 @@ public:
   // ARM Targets that support EHABI exception handling standard
   // Darwin uses SjLj. Other targets might need more checks.
   bool isTargetEHABICompatible() const {
-    return (TargetTriple.getEnvironment() == Triple::EABI ||
-            TargetTriple.getEnvironment() == Triple::GNUEABI ||
-            TargetTriple.getEnvironment() == Triple::MuslEABI ||
-            TargetTriple.getEnvironment() == Triple::EABIHF ||
-            TargetTriple.getEnvironment() == Triple::GNUEABIHF ||
-            TargetTriple.getEnvironment() == Triple::MuslEABIHF ||
-            isTargetAndroid()) &&
-           !isTargetDarwin() && !isTargetWindows();
+    return TargetTriple.isTargetEHABICompatible();
   }
 
   bool isTargetHardFloat() const;
@@ -843,6 +845,8 @@ public:
   /// to lr. This is always required on Thumb1-only targets, as the push and
   /// pop instructions can't access the high registers.
   bool splitFramePushPop(const MachineFunction &MF) const {
+    if (MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress())
+      return true;
     return (getFramePointerReg() == ARM::R7 &&
             MF.getTarget().Options.DisableFramePointerElim(MF)) ||
            isThumb1Only();
@@ -951,6 +955,8 @@ public:
   bool hardenSlsRetBr() const { return HardenSlsRetBr; }
   bool hardenSlsBlr() const { return HardenSlsBlr; }
   bool hardenSlsNoComdat() const { return HardenSlsNoComdat; }
+
+  bool getNoBTIAtReturnTwice() const { return NoBTIAtReturnTwice; }
 };
 
 } // end namespace llvm

@@ -36,7 +36,7 @@ struct TestMemRefDependenceCheck
   void runOnFunction() override;
 };
 
-} // end anonymous namespace
+} // namespace
 
 // Returns a result string which represents the direction vector (if there was
 // a dependence), returns the string "false" otherwise.
@@ -48,18 +48,18 @@ getDirectionVectorStr(bool ret, unsigned numCommonLoops, unsigned loopNestDepth,
   if (dependenceComponents.empty() || loopNestDepth > numCommonLoops)
     return "true";
   std::string result;
-  for (unsigned i = 0, e = dependenceComponents.size(); i < e; ++i) {
+  for (const auto &dependenceComponent : dependenceComponents) {
     std::string lbStr = "-inf";
-    if (dependenceComponents[i].lb.hasValue() &&
-        dependenceComponents[i].lb.getValue() !=
+    if (dependenceComponent.lb.hasValue() &&
+        dependenceComponent.lb.getValue() !=
             std::numeric_limits<int64_t>::min())
-      lbStr = std::to_string(dependenceComponents[i].lb.getValue());
+      lbStr = std::to_string(dependenceComponent.lb.getValue());
 
     std::string ubStr = "+inf";
-    if (dependenceComponents[i].ub.hasValue() &&
-        dependenceComponents[i].ub.getValue() !=
+    if (dependenceComponent.ub.hasValue() &&
+        dependenceComponent.ub.getValue() !=
             std::numeric_limits<int64_t>::max())
-      ubStr = std::to_string(dependenceComponents[i].ub.getValue());
+      ubStr = std::to_string(dependenceComponent.ub.getValue());
 
     result += "[" + lbStr + ", " + ubStr + "]";
   }

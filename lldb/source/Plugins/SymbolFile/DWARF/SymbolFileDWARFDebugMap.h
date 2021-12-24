@@ -40,9 +40,9 @@ public:
 
   static void Terminate();
 
-  static lldb_private::ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "dwarf-debugmap"; }
 
-  static const char *GetPluginDescriptionStatic();
+  static llvm::StringRef GetPluginDescriptionStatic();
 
   static lldb_private::SymbolFile *
   CreateInstance(lldb::ObjectFileSP objfile_sp);
@@ -140,9 +140,11 @@ public:
   void DumpClangAST(lldb_private::Stream &s) override;
 
   // PluginInterface protocol
-  llvm::StringRef GetPluginName() override {
-    return GetPluginNameStatic().GetStringRef();
-  }
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
+
+  uint64_t GetDebugInfoSize() override;
+  lldb_private::StatsDuration GetDebugInfoParseTime() override;
+  lldb_private::StatsDuration GetDebugInfoIndexTime() override;
 
 protected:
   enum { kHaveInitializedOSOs = (1 << 0), kNumFlags };

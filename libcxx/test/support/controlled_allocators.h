@@ -183,13 +183,18 @@ public:
 
     template <class ...Args, class Alloc, class Tp>
     bool checkConstruct(Alloc const&, Tp *p) const {
-      auto expectAlloc = &makeTypeID<Alloc>();
-      auto expectTp = &makeTypeID<Tp>();
-      auto expectArgs = &makeArgumentID<Args...>();
-      return last_construct_pointer == p &&
-          COMPARE_TYPEID(last_construct_alloc, expectAlloc) &&
-          COMPARE_TYPEID(last_construct_type, expectTp) &&
-          COMPARE_TYPEID(last_construct_args, expectArgs);
+        auto expectAlloc = &makeTypeID<Alloc>();
+        auto expectTp = &makeTypeID<Tp>();
+        auto expectArgs = &makeArgumentID<Args...>();
+        if (last_construct_pointer != p)
+            return false;
+        if (last_construct_alloc != expectAlloc)
+            return false;
+        if (last_construct_type != expectTp)
+            return false;
+        if (last_construct_args != expectArgs)
+            return false;
+        return true;
     }
 
     template <class Alloc, class Tp>

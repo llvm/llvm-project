@@ -76,9 +76,8 @@ bool AMDGPULowerIntrinsics::expandMemIntrinsicUses(Function &F) {
   Intrinsic::ID ID = F.getIntrinsicID();
   bool Changed = false;
 
-  for (auto I = F.user_begin(), E = F.user_end(); I != E;) {
-    Instruction *Inst = cast<Instruction>(*I);
-    ++I;
+  for (User *U : llvm::make_early_inc_range(F.users())) {
+    Instruction *Inst = cast<Instruction>(U);
 
     switch (ID) {
     case Intrinsic::memcpy: {

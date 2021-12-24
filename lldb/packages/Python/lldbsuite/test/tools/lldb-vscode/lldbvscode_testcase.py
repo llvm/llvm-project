@@ -251,7 +251,7 @@ class VSCodeTestCaseBase(TestBase):
                initCommands=None, preRunCommands=None, stopCommands=None,
                exitCommands=None, attachCommands=None, coreFile=None,
                disconnectAutomatically=True, terminateCommands=None,
-               postRunCommands=None):
+               postRunCommands=None, sourceMap=None):
         '''Build the default Makefile target, create the VSCode debug adaptor,
            and attach to the process.
         '''
@@ -271,7 +271,8 @@ class VSCodeTestCaseBase(TestBase):
             initCommands=initCommands, preRunCommands=preRunCommands,
             stopCommands=stopCommands, exitCommands=exitCommands,
             attachCommands=attachCommands, terminateCommands=terminateCommands,
-            coreFile=coreFile, postRunCommands=postRunCommands)
+            coreFile=coreFile, postRunCommands=postRunCommands,
+            sourceMap=sourceMap)
         if not (response and response['success']):
             self.assertTrue(response['success'],
                             'attach failed (%s)' % (response['message']))

@@ -6,7 +6,7 @@ cppcoreguidelines-macro-usage
 Finds macro usage that is considered problematic because better language
 constructs exist for the task.
 
-The relevant sections in the C++ Core Guidelines are 
+The relevant sections in the C++ Core Guidelines are
 `Enum.1 <https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#enum1-prefer-enumerations-over-macros>`_,
 `ES.30 <https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#es30-dont-use-macros-for-program-text-manipulation>`_,
 `ES.31 <https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#es31-dont-use-macros-for-constants-or-functions>`_ and
@@ -17,7 +17,7 @@ Options
 
 .. option:: AllowedRegexp
 
-    A regular expression to filter allowed macros. For example 
+    A regular expression to filter allowed macros. For example
     `DEBUG*|LIBTORRENT*|TORRENT*|UNI*` could be applied to filter `libtorrent`.
     Default value is `^DEBUG_*`.
 

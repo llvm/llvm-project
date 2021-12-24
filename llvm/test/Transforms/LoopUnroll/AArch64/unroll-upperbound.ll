@@ -18,8 +18,6 @@ define void @test(i1 %cond) {
 ; CHECK-NEXT:    br label [[LATCH]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    br i1 false, label [[FOR_END:%.*]], label [[FOR_BODY_1:%.*]]
-; CHECK:       for.end:
-; CHECK-NEXT:    ret void
 ; CHECK:       for.body.1:
 ; CHECK-NEXT:    switch i32 1, label [[SW_DEFAULT_1:%.*]] [
 ; CHECK-NEXT:    i32 2, label [[LATCH_1:%.*]]
@@ -38,6 +36,8 @@ define void @test(i1 %cond) {
 ; CHECK-NEXT:    br label [[LATCH_2]]
 ; CHECK:       latch.2:
 ; CHECK-NEXT:    br label [[FOR_END]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
 ;
 entry:
   %0 = select i1 %cond, i32 2, i32 3

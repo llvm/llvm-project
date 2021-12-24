@@ -32,7 +32,7 @@ public:
   CustomDialectAsmParser(StringRef fullSpec, Parser &parser)
       : AsmParserImpl<DialectAsmParser>(parser.getToken().getLoc(), parser),
         fullSpec(fullSpec) {}
-  ~CustomDialectAsmParser() override {}
+  ~CustomDialectAsmParser() override = default;
 
   /// Returns the full specification of the symbol being parsed. This allows
   /// for using a separate parser if necessary.
@@ -258,7 +258,7 @@ Attribute Parser::parseExtendedAttr(Type type) {
         // Otherwise, form a new opaque attribute.
         return OpaqueAttr::getChecked(
             [&] { return emitError(loc); },
-            Identifier::get(dialectName, state.context), symbolData,
+            StringAttr::get(state.context, dialectName), symbolData,
             attrType ? attrType : NoneType::get(state.context));
       });
 
@@ -297,7 +297,7 @@ Type Parser::parseExtendedType() {
         // Otherwise, form a new opaque type.
         return OpaqueType::getChecked(
             [&] { return emitError(loc); },
-            Identifier::get(dialectName, state.context), symbolData);
+            StringAttr::get(state.context, dialectName), symbolData);
       });
 }
 

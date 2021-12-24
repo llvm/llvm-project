@@ -23,6 +23,7 @@ TEST(Demangle, demangleTest) {
   EXPECT_EQ(demangle("foo"), "foo");
   EXPECT_EQ(demangle("_RNvC3foo3bar"), "foo::bar");
   EXPECT_EQ(demangle("__RNvC3foo3bar"), "foo::bar");
+  EXPECT_EQ(demangle("_Dmain"), "D main");
 
   // Regression test for demangling of optional template-args for vendor
   // extended type qualifier (https://bugs.llvm.org/show_bug.cgi?id=48009)

@@ -198,7 +198,7 @@ void LSPServer::Impl::onDocumentSymbol(
 
 LSPServer::LSPServer(MLIRServer &server, JSONTransport &transport)
     : impl(std::make_unique<Impl>(server, transport)) {}
-LSPServer::~LSPServer() {}
+LSPServer::~LSPServer() = default;
 
 LogicalResult LSPServer::run() {
   MessageHandler messageHandler(impl->transport);

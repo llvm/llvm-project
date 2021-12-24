@@ -190,7 +190,7 @@ static void collectInfo(Scop &S, isl_union_map *&Read,
 
 /// Fix all dimension of @p Zero to 0 and add it to @p user
 static void fixSetToZero(isl::set Zero, isl::union_set *User) {
-  for (auto i : seq<isl_size>(0, Zero.tuple_dim().release()))
+  for (auto i : rangeIslSize(0, Zero.tuple_dim()))
     Zero = Zero.fix_si(isl::dim::set, i, 0);
   *User = User->unite(Zero);
 }
@@ -680,7 +680,7 @@ bool Dependences::isValidSchedule(
   Dependences = Dependences.apply_range(Schedule);
 
   isl::set Zero = isl::set::universe(ScheduleSpace);
-  for (auto i : seq<isl_size>(0, Zero.tuple_dim().release()))
+  for (auto i : rangeIslSize(0, Zero.tuple_dim()))
     Zero = Zero.fix_si(isl::dim::set, i, 0);
 
   isl::union_set UDeltas = Dependences.deltas();

@@ -28,9 +28,9 @@ define void @caller(i32 %n) {
 ; RV32I-NEXT:    mv a1, s1
 ; RV32I-NEXT:    call callee@plt
 ; RV32I-NEXT:    addi sp, s0, -64
-; RV32I-NEXT:    lw s1, 52(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 52(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 64
 ; RV32I-NEXT:    ret
 ;
@@ -57,9 +57,9 @@ define void @caller(i32 %n) {
 ; RV64I-NEXT:    mv a1, s1
 ; RV64I-NEXT:    call callee@plt
 ; RV64I-NEXT:    addi sp, s0, -64
-; RV64I-NEXT:    ld s1, 40(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 40(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 64
 ; RV64I-NEXT:    ret
   %1 = alloca i8, i32 %n

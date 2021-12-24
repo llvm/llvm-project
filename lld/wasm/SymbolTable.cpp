@@ -63,7 +63,7 @@ void SymbolTable::addFile(InputFile *file) {
 // using LLVM functions and replaces bitcode symbols with the results.
 // Because all bitcode files that the program consists of are passed
 // to the compiler at once, it can do whole-program optimization.
-void SymbolTable::addCombinedLTOObject() {
+void SymbolTable::compileBitcodeFiles() {
   // Prevent further LTO objects being included
   BitcodeFile::doneLTO = true;
 
@@ -144,7 +144,7 @@ static bool signatureMatches(FunctionSymbol *existing,
                              const WasmSignature *newSig) {
   const WasmSignature *oldSig = existing->signature;
 
-  // If either function is missing a signature (this happend for bitcode
+  // If either function is missing a signature (this happens for bitcode
   // symbols) then assume they match.  Any mismatch will be reported later
   // when the LTO objects are added.
   if (!newSig || !oldSig)

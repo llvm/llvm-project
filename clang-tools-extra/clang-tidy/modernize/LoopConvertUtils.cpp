@@ -152,20 +152,21 @@ bool DeclFinderASTVisitor::VisitTypeLoc(TypeLoc TL) {
   return true;
 }
 
-/// Look through conversion/copy constructors to find the explicit
-/// initialization expression, returning it is found.
+/// Look through conversion/copy constructors and member functions to find the
+/// explicit initialization expression, returning it is found.
 ///
 /// The main idea is that given
 ///   vector<int> v;
 /// we consider either of these initializations
 ///   vector<int>::iterator it = v.begin();
 ///   vector<int>::iterator it(v.begin());
+///   vector<int>::const_iterator it(v.begin());
 /// and retrieve `v.begin()` as the expression used to initialize `it` but do
 /// not include
 ///   vector<int>::iterator it;
 ///   vector<int>::iterator it(v.begin(), 0); // if this constructor existed
 /// as being initialized from `v.begin()`
-const Expr *digThroughConstructors(const Expr *E) {
+const Expr *digThroughConstructorsConversions(const Expr *E) {
   if (!E)
     return nullptr;
   E = E->IgnoreImplicit();
@@ -178,8 +179,13 @@ const Expr *digThroughConstructors(const Expr *E) {
     E = ConstructExpr->getArg(0);
     if (const auto *Temp = dyn_cast<MaterializeTemporaryExpr>(E))
       E = Temp->getSubExpr();
-    return digThroughConstructors(E);
+    return digThroughConstructorsConversions(E);
   }
+  // If this is a conversion (as iterators commonly convert into their const
+  // iterator counterparts), dig through that as well.
+  if (const auto *ME = dyn_cast<CXXMemberCallExpr>(E))
+    if (isa<CXXConversionDecl>(ME->getMethodDecl()))
+      return digThroughConstructorsConversions(ME->getImplicitObjectArgument());
   return E;
 }
 
@@ -357,7 +363,7 @@ static bool isAliasDecl(ASTContext *Context, const Decl *TheDecl,
   bool OnlyCasts = true;
   const Expr *Init = VDecl->getInit()->IgnoreParenImpCasts();
   if (isa_and_nonnull<CXXConstructExpr>(Init)) {
-    Init = digThroughConstructors(Init);
+    Init = digThroughConstructorsConversions(Init);
     OnlyCasts = false;
   }
   if (!Init)

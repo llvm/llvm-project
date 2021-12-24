@@ -242,8 +242,7 @@ class BreakpointCommandTestCase(TestBase):
                              'stop reason = breakpoint'])
 
         # The breakpoint should have a hit count of 2.
-        self.expect("breakpoint list -f", BREAKPOINT_HIT_TWICE,
-                    substrs=['resolved, hit count = 2'])
+        lldbutil.check_breakpoint(self, bpno = 1, expected_hit_count = 2)
 
     def breakpoint_command_script_parameters(self):
         """Test that the frame and breakpoint location are being properly passed to the script breakpoint command function."""
@@ -264,7 +263,7 @@ class BreakpointCommandTestCase(TestBase):
 
         self.expect(side_effect.frame, exe=False, startstr="frame #0:")
         self.expect(side_effect.bp_loc, exe=False,
-                patterns=["1.* where = .*main .* resolved, hit count = 1"])
+                patterns=["1.* where = .*main .* resolved,( hardware,)? hit count = 1"])
 
     def breakpoint_commands_on_creation(self):
         """Test that setting breakpoint commands when creating the breakpoint works"""

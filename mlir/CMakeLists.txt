@@ -48,6 +48,13 @@ endif()
 check_c_compiler_flag("-Werror=implicit-function-declaration" C_SUPPORTS_WERROR_IMPLICIT_FUNCTION_DECLARATION)
 append_if(C_SUPPORTS_WERROR_IMPLICIT_FUNCTION_DECLARATION "-Werror=implicit-function-declaration" CMAKE_C_FLAGS)
 
+# Forbid mismatch between declaration and definition for class vs struct. This is
+# harmless on Unix systems, but it'll be a ticking bomb for MSVC/Windows systems
+# where it creeps into the ABI.
+check_c_compiler_flag("-Werror=mismatched-tags" C_SUPPORTS_WERROR_MISMATCHED_TAGS)
+append_if(C_SUPPORTS_WERROR_MISMATCHED_TAGS "-Werror=mismatched-tags" CMAKE_C_FLAGS)
+append_if(C_SUPPORTS_WERROR_MISMATCHED_TAGS "-Werror=mismatched-tags" CMAKE_CXX_FLAGS)
+
 # Installing the headers and docs needs to depend on generating any public
 # tablegen'd targets.
 # mlir-generic-headers are dialect-independent.
@@ -96,6 +103,8 @@ set(MLIR_INSTALL_AGGREGATE_OBJECTS 1 CACHE BOOL
     not desired. Enabling this will result in object files being written \
     under lib/objects-{CMAKE_BUILD_TYPE}.")
 
+set(MLIR_BUILD_MLIR_C_DYLIB 0 CACHE BOOL "Builds libMLIR-C shared library.")
+
 #-------------------------------------------------------------------------------
 # Python Bindings Configuration
 # Requires:
@@ -123,6 +132,7 @@ add_subdirectory(include/mlir)
 add_subdirectory(lib)
 # C API needs all dialects for registration, but should be built before tests.
 add_subdirectory(lib/CAPI)
+
 if (MLIR_INCLUDE_TESTS)
   add_definitions(-DMLIR_INCLUDE_TESTS)
   add_custom_target(MLIRUnitTests)

@@ -670,7 +670,7 @@ SDValue MSP430TargetLowering::LowerCCCArguments(
         InVals.push_back(ArgValue);
       }
     } else {
-      // Sanity check
+      // Only arguments passed on the stack should make it here. 
       assert(VA.isMemLoc());
 
       SDValue InVal;

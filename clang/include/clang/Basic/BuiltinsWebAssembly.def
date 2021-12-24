@@ -179,5 +179,10 @@ TARGET_BUILTIN(__builtin_wasm_relaxed_max_f32x4, "V4fV4fV4f", "nc", "relaxed-sim
 TARGET_BUILTIN(__builtin_wasm_relaxed_min_f64x2, "V2dV2dV2d", "nc", "relaxed-simd")
 TARGET_BUILTIN(__builtin_wasm_relaxed_max_f64x2, "V2dV2dV2d", "nc", "relaxed-simd")
 
+TARGET_BUILTIN(__builtin_wasm_relaxed_trunc_s_i32x4_f32x4, "V4iV4f", "nc", "relaxed-simd")
+TARGET_BUILTIN(__builtin_wasm_relaxed_trunc_u_i32x4_f32x4, "V4UiV4f", "nc", "relaxed-simd")
+TARGET_BUILTIN(__builtin_wasm_relaxed_trunc_zero_s_i32x4_f64x2, "V4iV2d", "nc", "relaxed-simd")
+TARGET_BUILTIN(__builtin_wasm_relaxed_trunc_zero_u_i32x4_f64x2, "V4UiV2d", "nc", "relaxed-simd")
+
 #undef BUILTIN
 #undef TARGET_BUILTIN

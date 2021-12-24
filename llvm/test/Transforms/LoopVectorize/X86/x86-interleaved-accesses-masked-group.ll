@@ -33,7 +33,7 @@ define dso_local void @masked_strided1(i8* noalias nocapture readonly %p, i8* no
 ; DISABLED_MASKED_STRIDED-LABEL: @masked_strided1(
 ; DISABLED_MASKED_STRIDED-NEXT:  entry:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[CONV:%.*]] = zext i8 [[GUARD:%.*]] to i32
-; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[CONV]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[CONV]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; DISABLED_MASKED_STRIDED:       vector.body:
@@ -41,87 +41,87 @@ define dso_local void @masked_strided1(i8* noalias nocapture readonly %p, i8* no
 ; DISABLED_MASKED_STRIDED-NEXT:    [[VEC_IND:%.*]] = phi <8 x i32> [ <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[ENTRY]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_LOAD_CONTINUE14]] ]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP0:%.*]] = icmp ugt <8 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = shl nuw nsw <8 x i32> [[VEC_IND]], <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = extractelement <8 x i1> [[TMP0]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = extractelement <8 x i1> [[TMP0]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP2]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP3:%.*]] = extractelement <8 x i32> [[TMP1]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP3:%.*]] = extractelement <8 x i32> [[TMP1]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, i8* [[P:%.*]], i32 [[TMP3]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP5:%.*]] = load i8, i8* [[TMP4]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP6:%.*]] = insertelement <8 x i8> poison, i8 [[TMP5]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP6:%.*]] = insertelement <8 x i8> poison, i8 [[TMP5]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP7:%.*]] = phi <8 x i8> [ poison, [[VECTOR_BODY]] ], [ [[TMP6]], [[PRED_LOAD_IF]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP8:%.*]] = extractelement <8 x i1> [[TMP0]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP8:%.*]] = extractelement <8 x i1> [[TMP0]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP8]], label [[PRED_LOAD_IF1:%.*]], label [[PRED_LOAD_CONTINUE2:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if1:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP9:%.*]] = extractelement <8 x i32> [[TMP1]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP9:%.*]] = extractelement <8 x i32> [[TMP1]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP9]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP11:%.*]] = load i8, i8* [[TMP10]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP12:%.*]] = insertelement <8 x i8> [[TMP7]], i8 [[TMP11]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP12:%.*]] = insertelement <8 x i8> [[TMP7]], i8 [[TMP11]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE2]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue2:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP13:%.*]] = phi <8 x i8> [ [[TMP7]], [[PRED_LOAD_CONTINUE]] ], [ [[TMP12]], [[PRED_LOAD_IF1]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP14:%.*]] = extractelement <8 x i1> [[TMP0]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP14:%.*]] = extractelement <8 x i1> [[TMP0]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP14]], label [[PRED_LOAD_IF3:%.*]], label [[PRED_LOAD_CONTINUE4:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if3:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP15:%.*]] = extractelement <8 x i32> [[TMP1]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP15:%.*]] = extractelement <8 x i32> [[TMP1]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP15]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP17:%.*]] = load i8, i8* [[TMP16]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP18:%.*]] = insertelement <8 x i8> [[TMP13]], i8 [[TMP17]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP18:%.*]] = insertelement <8 x i8> [[TMP13]], i8 [[TMP17]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE4]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue4:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP19:%.*]] = phi <8 x i8> [ [[TMP13]], [[PRED_LOAD_CONTINUE2]] ], [ [[TMP18]], [[PRED_LOAD_IF3]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP20:%.*]] = extractelement <8 x i1> [[TMP0]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP20:%.*]] = extractelement <8 x i1> [[TMP0]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP20]], label [[PRED_LOAD_IF5:%.*]], label [[PRED_LOAD_CONTINUE6:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if5:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP21:%.*]] = extractelement <8 x i32> [[TMP1]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP21:%.*]] = extractelement <8 x i32> [[TMP1]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP21]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP23:%.*]] = load i8, i8* [[TMP22]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP24:%.*]] = insertelement <8 x i8> [[TMP19]], i8 [[TMP23]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP24:%.*]] = insertelement <8 x i8> [[TMP19]], i8 [[TMP23]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE6]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue6:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP25:%.*]] = phi <8 x i8> [ [[TMP19]], [[PRED_LOAD_CONTINUE4]] ], [ [[TMP24]], [[PRED_LOAD_IF5]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP26:%.*]] = extractelement <8 x i1> [[TMP0]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP26:%.*]] = extractelement <8 x i1> [[TMP0]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP26]], label [[PRED_LOAD_IF7:%.*]], label [[PRED_LOAD_CONTINUE8:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if7:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP27:%.*]] = extractelement <8 x i32> [[TMP1]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP27:%.*]] = extractelement <8 x i32> [[TMP1]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP27]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP29:%.*]] = load i8, i8* [[TMP28]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP30:%.*]] = insertelement <8 x i8> [[TMP25]], i8 [[TMP29]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP30:%.*]] = insertelement <8 x i8> [[TMP25]], i8 [[TMP29]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE8]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue8:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP31:%.*]] = phi <8 x i8> [ [[TMP25]], [[PRED_LOAD_CONTINUE6]] ], [ [[TMP30]], [[PRED_LOAD_IF7]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP32:%.*]] = extractelement <8 x i1> [[TMP0]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP32:%.*]] = extractelement <8 x i1> [[TMP0]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP32]], label [[PRED_LOAD_IF9:%.*]], label [[PRED_LOAD_CONTINUE10:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if9:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP33:%.*]] = extractelement <8 x i32> [[TMP1]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP33:%.*]] = extractelement <8 x i32> [[TMP1]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP34:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP33]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP35:%.*]] = load i8, i8* [[TMP34]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP36:%.*]] = insertelement <8 x i8> [[TMP31]], i8 [[TMP35]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP36:%.*]] = insertelement <8 x i8> [[TMP31]], i8 [[TMP35]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE10]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue10:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP37:%.*]] = phi <8 x i8> [ [[TMP31]], [[PRED_LOAD_CONTINUE8]] ], [ [[TMP36]], [[PRED_LOAD_IF9]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP38:%.*]] = extractelement <8 x i1> [[TMP0]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP38:%.*]] = extractelement <8 x i1> [[TMP0]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP38]], label [[PRED_LOAD_IF11:%.*]], label [[PRED_LOAD_CONTINUE12:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if11:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP39:%.*]] = extractelement <8 x i32> [[TMP1]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP39:%.*]] = extractelement <8 x i32> [[TMP1]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP40:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP39]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP41:%.*]] = load i8, i8* [[TMP40]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP42:%.*]] = insertelement <8 x i8> [[TMP37]], i8 [[TMP41]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP42:%.*]] = insertelement <8 x i8> [[TMP37]], i8 [[TMP41]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE12]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue12:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP43:%.*]] = phi <8 x i8> [ [[TMP37]], [[PRED_LOAD_CONTINUE10]] ], [ [[TMP42]], [[PRED_LOAD_IF11]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP44:%.*]] = extractelement <8 x i1> [[TMP0]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP44:%.*]] = extractelement <8 x i1> [[TMP0]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP44]], label [[PRED_LOAD_IF13:%.*]], label [[PRED_LOAD_CONTINUE14]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if13:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP45:%.*]] = extractelement <8 x i32> [[TMP1]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP45:%.*]] = extractelement <8 x i32> [[TMP1]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP46:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP45]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP47:%.*]] = load i8, i8* [[TMP46]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP48:%.*]] = insertelement <8 x i8> [[TMP43]], i8 [[TMP47]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP48:%.*]] = insertelement <8 x i8> [[TMP43]], i8 [[TMP47]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE14]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue14:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP49:%.*]] = phi <8 x i8> [ [[TMP43]], [[PRED_LOAD_CONTINUE12]] ], [ [[TMP48]], [[PRED_LOAD_IF13]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP50:%.*]] = getelementptr inbounds i8, i8* [[Q:%.*]], i32 [[INDEX]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP50:%.*]] = getelementptr i8, i8* [[Q:%.*]], i32 [[INDEX]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP51:%.*]] = bitcast i8* [[TMP50]] to <8 x i8>*
 ; DISABLED_MASKED_STRIDED-NEXT:    call void @llvm.masked.store.v8i8.p0v8i8(<8 x i8> [[TMP49]], <8 x i8>* [[TMP51]], i32 1, <8 x i1> [[TMP0]])
 ; DISABLED_MASKED_STRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
@@ -134,20 +134,20 @@ define dso_local void @masked_strided1(i8* noalias nocapture readonly %p, i8* no
 ; ENABLED_MASKED_STRIDED-LABEL: @masked_strided1(
 ; ENABLED_MASKED_STRIDED-NEXT:  entry:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[CONV:%.*]] = zext i8 [[GUARD:%.*]] to i32
-; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[CONV]], i32 0
+; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[CONV]], i64 0
 ; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; ENABLED_MASKED_STRIDED:       vector.body:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[VEC_IND:%.*]] = phi <8 x i32> [ <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[ENTRY]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP0:%.*]] = icmp ugt <8 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = shl nuw nsw i32 [[INDEX]], 1
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, i8* [[P:%.*]], i32 [[TMP1]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = shl i32 [[INDEX]], 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = getelementptr i8, i8* [[P:%.*]], i32 [[TMP1]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP3:%.*]] = bitcast i8* [[TMP2]] to <16 x i8>*
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INTERLEAVED_MASK:%.*]] = shufflevector <8 x i1> [[TMP0]], <8 x i1> poison, <16 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7>
 ; ENABLED_MASKED_STRIDED-NEXT:    [[WIDE_MASKED_VEC:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* [[TMP3]], i32 1, <16 x i1> [[INTERLEAVED_MASK]], <16 x i8> poison)
 ; ENABLED_MASKED_STRIDED-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x i8> [[WIDE_MASKED_VEC]], <16 x i8> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, i8* [[Q:%.*]], i32 [[INDEX]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP4:%.*]] = getelementptr i8, i8* [[Q:%.*]], i32 [[INDEX]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP5:%.*]] = bitcast i8* [[TMP4]] to <8 x i8>*
 ; ENABLED_MASKED_STRIDED-NEXT:    call void @llvm.masked.store.v8i8.p0v8i8(<8 x i8> [[STRIDED_VEC]], <8 x i8>* [[TMP5]], i32 1, <8 x i1> [[TMP0]])
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
@@ -209,7 +209,7 @@ define dso_local void @masked_strided1_optsize(i8* noalias nocapture readonly %p
 ; DISABLED_MASKED_STRIDED-LABEL: @masked_strided1_optsize(
 ; DISABLED_MASKED_STRIDED-NEXT:  entry:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[CONV:%.*]] = zext i8 [[GUARD:%.*]] to i32
-; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[CONV]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[CONV]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; DISABLED_MASKED_STRIDED:       vector.body:
@@ -217,87 +217,87 @@ define dso_local void @masked_strided1_optsize(i8* noalias nocapture readonly %p
 ; DISABLED_MASKED_STRIDED-NEXT:    [[VEC_IND:%.*]] = phi <8 x i32> [ <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[ENTRY]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_LOAD_CONTINUE14]] ]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP0:%.*]] = icmp ugt <8 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = shl nuw nsw <8 x i32> [[VEC_IND]], <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = extractelement <8 x i1> [[TMP0]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = extractelement <8 x i1> [[TMP0]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP2]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP3:%.*]] = extractelement <8 x i32> [[TMP1]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP3:%.*]] = extractelement <8 x i32> [[TMP1]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, i8* [[P:%.*]], i32 [[TMP3]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP5:%.*]] = load i8, i8* [[TMP4]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP6:%.*]] = insertelement <8 x i8> poison, i8 [[TMP5]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP6:%.*]] = insertelement <8 x i8> poison, i8 [[TMP5]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP7:%.*]] = phi <8 x i8> [ poison, [[VECTOR_BODY]] ], [ [[TMP6]], [[PRED_LOAD_IF]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP8:%.*]] = extractelement <8 x i1> [[TMP0]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP8:%.*]] = extractelement <8 x i1> [[TMP0]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP8]], label [[PRED_LOAD_IF1:%.*]], label [[PRED_LOAD_CONTINUE2:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if1:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP9:%.*]] = extractelement <8 x i32> [[TMP1]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP9:%.*]] = extractelement <8 x i32> [[TMP1]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP9]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP11:%.*]] = load i8, i8* [[TMP10]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP12:%.*]] = insertelement <8 x i8> [[TMP7]], i8 [[TMP11]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP12:%.*]] = insertelement <8 x i8> [[TMP7]], i8 [[TMP11]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE2]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue2:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP13:%.*]] = phi <8 x i8> [ [[TMP7]], [[PRED_LOAD_CONTINUE]] ], [ [[TMP12]], [[PRED_LOAD_IF1]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP14:%.*]] = extractelement <8 x i1> [[TMP0]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP14:%.*]] = extractelement <8 x i1> [[TMP0]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP14]], label [[PRED_LOAD_IF3:%.*]], label [[PRED_LOAD_CONTINUE4:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if3:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP15:%.*]] = extractelement <8 x i32> [[TMP1]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP15:%.*]] = extractelement <8 x i32> [[TMP1]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP15]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP17:%.*]] = load i8, i8* [[TMP16]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP18:%.*]] = insertelement <8 x i8> [[TMP13]], i8 [[TMP17]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP18:%.*]] = insertelement <8 x i8> [[TMP13]], i8 [[TMP17]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE4]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue4:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP19:%.*]] = phi <8 x i8> [ [[TMP13]], [[PRED_LOAD_CONTINUE2]] ], [ [[TMP18]], [[PRED_LOAD_IF3]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP20:%.*]] = extractelement <8 x i1> [[TMP0]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP20:%.*]] = extractelement <8 x i1> [[TMP0]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP20]], label [[PRED_LOAD_IF5:%.*]], label [[PRED_LOAD_CONTINUE6:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if5:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP21:%.*]] = extractelement <8 x i32> [[TMP1]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP21:%.*]] = extractelement <8 x i32> [[TMP1]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP21]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP23:%.*]] = load i8, i8* [[TMP22]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP24:%.*]] = insertelement <8 x i8> [[TMP19]], i8 [[TMP23]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP24:%.*]] = insertelement <8 x i8> [[TMP19]], i8 [[TMP23]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE6]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue6:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP25:%.*]] = phi <8 x i8> [ [[TMP19]], [[PRED_LOAD_CONTINUE4]] ], [ [[TMP24]], [[PRED_LOAD_IF5]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP26:%.*]] = extractelement <8 x i1> [[TMP0]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP26:%.*]] = extractelement <8 x i1> [[TMP0]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP26]], label [[PRED_LOAD_IF7:%.*]], label [[PRED_LOAD_CONTINUE8:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if7:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP27:%.*]] = extractelement <8 x i32> [[TMP1]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP27:%.*]] = extractelement <8 x i32> [[TMP1]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP27]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP29:%.*]] = load i8, i8* [[TMP28]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP30:%.*]] = insertelement <8 x i8> [[TMP25]], i8 [[TMP29]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP30:%.*]] = insertelement <8 x i8> [[TMP25]], i8 [[TMP29]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE8]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue8:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP31:%.*]] = phi <8 x i8> [ [[TMP25]], [[PRED_LOAD_CONTINUE6]] ], [ [[TMP30]], [[PRED_LOAD_IF7]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP32:%.*]] = extractelement <8 x i1> [[TMP0]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP32:%.*]] = extractelement <8 x i1> [[TMP0]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP32]], label [[PRED_LOAD_IF9:%.*]], label [[PRED_LOAD_CONTINUE10:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if9:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP33:%.*]] = extractelement <8 x i32> [[TMP1]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP33:%.*]] = extractelement <8 x i32> [[TMP1]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP34:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP33]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP35:%.*]] = load i8, i8* [[TMP34]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP36:%.*]] = insertelement <8 x i8> [[TMP31]], i8 [[TMP35]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP36:%.*]] = insertelement <8 x i8> [[TMP31]], i8 [[TMP35]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE10]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue10:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP37:%.*]] = phi <8 x i8> [ [[TMP31]], [[PRED_LOAD_CONTINUE8]] ], [ [[TMP36]], [[PRED_LOAD_IF9]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP38:%.*]] = extractelement <8 x i1> [[TMP0]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP38:%.*]] = extractelement <8 x i1> [[TMP0]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP38]], label [[PRED_LOAD_IF11:%.*]], label [[PRED_LOAD_CONTINUE12:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if11:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP39:%.*]] = extractelement <8 x i32> [[TMP1]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP39:%.*]] = extractelement <8 x i32> [[TMP1]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP40:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP39]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP41:%.*]] = load i8, i8* [[TMP40]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP42:%.*]] = insertelement <8 x i8> [[TMP37]], i8 [[TMP41]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP42:%.*]] = insertelement <8 x i8> [[TMP37]], i8 [[TMP41]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE12]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue12:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP43:%.*]] = phi <8 x i8> [ [[TMP37]], [[PRED_LOAD_CONTINUE10]] ], [ [[TMP42]], [[PRED_LOAD_IF11]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP44:%.*]] = extractelement <8 x i1> [[TMP0]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP44:%.*]] = extractelement <8 x i1> [[TMP0]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP44]], label [[PRED_LOAD_IF13:%.*]], label [[PRED_LOAD_CONTINUE14]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if13:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP45:%.*]] = extractelement <8 x i32> [[TMP1]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP45:%.*]] = extractelement <8 x i32> [[TMP1]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP46:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP45]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP47:%.*]] = load i8, i8* [[TMP46]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP48:%.*]] = insertelement <8 x i8> [[TMP43]], i8 [[TMP47]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP48:%.*]] = insertelement <8 x i8> [[TMP43]], i8 [[TMP47]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE14]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue14:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP49:%.*]] = phi <8 x i8> [ [[TMP43]], [[PRED_LOAD_CONTINUE12]] ], [ [[TMP48]], [[PRED_LOAD_IF13]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP50:%.*]] = getelementptr inbounds i8, i8* [[Q:%.*]], i32 [[INDEX]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP50:%.*]] = getelementptr i8, i8* [[Q:%.*]], i32 [[INDEX]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP51:%.*]] = bitcast i8* [[TMP50]] to <8 x i8>*
 ; DISABLED_MASKED_STRIDED-NEXT:    call void @llvm.masked.store.v8i8.p0v8i8(<8 x i8> [[TMP49]], <8 x i8>* [[TMP51]], i32 1, <8 x i1> [[TMP0]])
 ; DISABLED_MASKED_STRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
@@ -310,21 +310,21 @@ define dso_local void @masked_strided1_optsize(i8* noalias nocapture readonly %p
 ; ENABLED_MASKED_STRIDED-LABEL: @masked_strided1_optsize(
 ; ENABLED_MASKED_STRIDED-NEXT:  entry:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[CONV:%.*]] = zext i8 [[GUARD:%.*]] to i32
-; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[CONV]], i32 0
+; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[CONV]], i64 0
 ; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; ENABLED_MASKED_STRIDED:       vector.body:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[VEC_IND:%.*]] = phi <8 x i32> [ <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[ENTRY]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP0:%.*]] = icmp ugt <8 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = shl nuw nsw i32 [[INDEX]], 1
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, i8* [[P:%.*]], i32 [[TMP1]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = shl i32 [[INDEX]], 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = getelementptr i8, i8* [[P:%.*]], i32 [[TMP1]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP3:%.*]] = bitcast i8* [[TMP2]] to <16 x i8>*
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INTERLEAVED_MASK:%.*]] = shufflevector <8 x i1> [[TMP0]], <8 x i1> poison, <16 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7>
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP4:%.*]] = and <16 x i1> [[INTERLEAVED_MASK]], <i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false>
 ; ENABLED_MASKED_STRIDED-NEXT:    [[WIDE_MASKED_VEC:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* [[TMP3]], i32 1, <16 x i1> [[TMP4]], <16 x i8> poison)
 ; ENABLED_MASKED_STRIDED-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x i8> [[WIDE_MASKED_VEC]], <16 x i8> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, i8* [[Q:%.*]], i32 [[INDEX]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP5:%.*]] = getelementptr i8, i8* [[Q:%.*]], i32 [[INDEX]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP6:%.*]] = bitcast i8* [[TMP5]] to <8 x i8>*
 ; ENABLED_MASKED_STRIDED-NEXT:    call void @llvm.masked.store.v8i8.p0v8i8(<8 x i8> [[STRIDED_VEC]], <8 x i8>* [[TMP6]], i32 1, <8 x i1> [[TMP0]])
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
@@ -397,9 +397,9 @@ define dso_local void @masked_strided1_optsize_unknown_tc(i8* noalias nocapture 
 ; DISABLED_MASKED_STRIDED-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 7
 ; DISABLED_MASKED_STRIDED-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -8
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = add i32 [[N]], -1
-; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer
-; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i32> poison, i32 [[CONV]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i32> poison, i32 [[CONV]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT1]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; DISABLED_MASKED_STRIDED:       vector.body:
@@ -409,87 +409,87 @@ define dso_local void @masked_strided1_optsize_unknown_tc(i8* noalias nocapture 
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = icmp ule <8 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = shl nuw nsw <8 x i32> [[VEC_IND]], <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP3:%.*]] = select <8 x i1> [[TMP1]], <8 x i1> [[TMP0]], <8 x i1> zeroinitializer
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP4:%.*]] = extractelement <8 x i1> [[TMP3]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP4:%.*]] = extractelement <8 x i1> [[TMP3]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP4]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP5:%.*]] = extractelement <8 x i32> [[TMP2]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP5:%.*]] = extractelement <8 x i32> [[TMP2]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, i8* [[P:%.*]], i32 [[TMP5]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP7:%.*]] = load i8, i8* [[TMP6]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP8:%.*]] = insertelement <8 x i8> poison, i8 [[TMP7]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP8:%.*]] = insertelement <8 x i8> poison, i8 [[TMP7]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP9:%.*]] = phi <8 x i8> [ poison, [[VECTOR_BODY]] ], [ [[TMP8]], [[PRED_LOAD_IF]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP10:%.*]] = extractelement <8 x i1> [[TMP3]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP10:%.*]] = extractelement <8 x i1> [[TMP3]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP10]], label [[PRED_LOAD_IF3:%.*]], label [[PRED_LOAD_CONTINUE4:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if3:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP11:%.*]] = extractelement <8 x i32> [[TMP2]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP11:%.*]] = extractelement <8 x i32> [[TMP2]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP11]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP13:%.*]] = load i8, i8* [[TMP12]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP14:%.*]] = insertelement <8 x i8> [[TMP9]], i8 [[TMP13]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP14:%.*]] = insertelement <8 x i8> [[TMP9]], i8 [[TMP13]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE4]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue4:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP15:%.*]] = phi <8 x i8> [ [[TMP9]], [[PRED_LOAD_CONTINUE]] ], [ [[TMP14]], [[PRED_LOAD_IF3]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP16:%.*]] = extractelement <8 x i1> [[TMP3]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP16:%.*]] = extractelement <8 x i1> [[TMP3]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP16]], label [[PRED_LOAD_IF5:%.*]], label [[PRED_LOAD_CONTINUE6:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if5:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP17:%.*]] = extractelement <8 x i32> [[TMP2]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP17:%.*]] = extractelement <8 x i32> [[TMP2]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP17]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP19:%.*]] = load i8, i8* [[TMP18]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP20:%.*]] = insertelement <8 x i8> [[TMP15]], i8 [[TMP19]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP20:%.*]] = insertelement <8 x i8> [[TMP15]], i8 [[TMP19]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE6]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue6:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP21:%.*]] = phi <8 x i8> [ [[TMP15]], [[PRED_LOAD_CONTINUE4]] ], [ [[TMP20]], [[PRED_LOAD_IF5]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP22:%.*]] = extractelement <8 x i1> [[TMP3]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP22:%.*]] = extractelement <8 x i1> [[TMP3]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP22]], label [[PRED_LOAD_IF7:%.*]], label [[PRED_LOAD_CONTINUE8:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if7:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP23:%.*]] = extractelement <8 x i32> [[TMP2]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP23:%.*]] = extractelement <8 x i32> [[TMP2]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP23]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP25:%.*]] = load i8, i8* [[TMP24]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP26:%.*]] = insertelement <8 x i8> [[TMP21]], i8 [[TMP25]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP26:%.*]] = insertelement <8 x i8> [[TMP21]], i8 [[TMP25]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE8]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue8:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP27:%.*]] = phi <8 x i8> [ [[TMP21]], [[PRED_LOAD_CONTINUE6]] ], [ [[TMP26]], [[PRED_LOAD_IF7]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP28:%.*]] = extractelement <8 x i1> [[TMP3]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP28:%.*]] = extractelement <8 x i1> [[TMP3]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP28]], label [[PRED_LOAD_IF9:%.*]], label [[PRED_LOAD_CONTINUE10:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if9:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP29:%.*]] = extractelement <8 x i32> [[TMP2]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP29:%.*]] = extractelement <8 x i32> [[TMP2]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP30:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP29]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP31:%.*]] = load i8, i8* [[TMP30]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP32:%.*]] = insertelement <8 x i8> [[TMP27]], i8 [[TMP31]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP32:%.*]] = insertelement <8 x i8> [[TMP27]], i8 [[TMP31]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE10]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue10:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP33:%.*]] = phi <8 x i8> [ [[TMP27]], [[PRED_LOAD_CONTINUE8]] ], [ [[TMP32]], [[PRED_LOAD_IF9]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP34:%.*]] = extractelement <8 x i1> [[TMP3]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP34:%.*]] = extractelement <8 x i1> [[TMP3]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP34]], label [[PRED_LOAD_IF11:%.*]], label [[PRED_LOAD_CONTINUE12:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if11:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP35:%.*]] = extractelement <8 x i32> [[TMP2]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP35:%.*]] = extractelement <8 x i32> [[TMP2]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP36:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP35]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP37:%.*]] = load i8, i8* [[TMP36]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP38:%.*]] = insertelement <8 x i8> [[TMP33]], i8 [[TMP37]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP38:%.*]] = insertelement <8 x i8> [[TMP33]], i8 [[TMP37]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE12]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue12:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP39:%.*]] = phi <8 x i8> [ [[TMP33]], [[PRED_LOAD_CONTINUE10]] ], [ [[TMP38]], [[PRED_LOAD_IF11]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP40:%.*]] = extractelement <8 x i1> [[TMP3]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP40:%.*]] = extractelement <8 x i1> [[TMP3]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP40]], label [[PRED_LOAD_IF13:%.*]], label [[PRED_LOAD_CONTINUE14:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if13:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP41:%.*]] = extractelement <8 x i32> [[TMP2]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP41:%.*]] = extractelement <8 x i32> [[TMP2]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP42:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP41]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP43:%.*]] = load i8, i8* [[TMP42]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP44:%.*]] = insertelement <8 x i8> [[TMP39]], i8 [[TMP43]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP44:%.*]] = insertelement <8 x i8> [[TMP39]], i8 [[TMP43]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE14]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue14:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP45:%.*]] = phi <8 x i8> [ [[TMP39]], [[PRED_LOAD_CONTINUE12]] ], [ [[TMP44]], [[PRED_LOAD_IF13]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP46:%.*]] = extractelement <8 x i1> [[TMP3]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP46:%.*]] = extractelement <8 x i1> [[TMP3]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP46]], label [[PRED_LOAD_IF15:%.*]], label [[PRED_LOAD_CONTINUE16]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if15:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP47:%.*]] = extractelement <8 x i32> [[TMP2]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP47:%.*]] = extractelement <8 x i32> [[TMP2]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP48:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP47]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP49:%.*]] = load i8, i8* [[TMP48]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP50:%.*]] = insertelement <8 x i8> [[TMP45]], i8 [[TMP49]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP50:%.*]] = insertelement <8 x i8> [[TMP45]], i8 [[TMP49]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE16]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue16:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP51:%.*]] = phi <8 x i8> [ [[TMP45]], [[PRED_LOAD_CONTINUE14]] ], [ [[TMP50]], [[PRED_LOAD_IF15]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP52:%.*]] = getelementptr inbounds i8, i8* [[Q:%.*]], i32 [[INDEX]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP52:%.*]] = getelementptr i8, i8* [[Q:%.*]], i32 [[INDEX]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP53:%.*]] = bitcast i8* [[TMP52]] to <8 x i8>*
 ; DISABLED_MASKED_STRIDED-NEXT:    call void @llvm.masked.store.v8i8.p0v8i8(<8 x i8> [[TMP51]], <8 x i8>* [[TMP53]], i32 1, <8 x i1> [[TMP3]])
 ; DISABLED_MASKED_STRIDED-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 8
@@ -508,9 +508,9 @@ define dso_local void @masked_strided1_optsize_unknown_tc(i8* noalias nocapture 
 ; ENABLED_MASKED_STRIDED-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 7
 ; ENABLED_MASKED_STRIDED-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -8
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = add i32 [[N]], -1
-; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i32 0
+; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i64 0
 ; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer
-; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i32> poison, i32 [[CONV]], i32 0
+; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i32> poison, i32 [[CONV]], i64 0
 ; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT1]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; ENABLED_MASKED_STRIDED:       vector.body:
@@ -518,15 +518,15 @@ define dso_local void @masked_strided1_optsize_unknown_tc(i8* noalias nocapture 
 ; ENABLED_MASKED_STRIDED-NEXT:    [[VEC_IND:%.*]] = phi <8 x i32> [ <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP0:%.*]] = icmp ugt <8 x i32> [[VEC_IND]], [[BROADCAST_SPLAT2]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = icmp ule <8 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = shl nuw nsw i32 [[INDEX]], 1
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, i8* [[P:%.*]], i32 [[TMP2]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = shl i32 [[INDEX]], 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP3:%.*]] = getelementptr i8, i8* [[P:%.*]], i32 [[TMP2]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP4:%.*]] = select <8 x i1> [[TMP1]], <8 x i1> [[TMP0]], <8 x i1> zeroinitializer
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP5:%.*]] = bitcast i8* [[TMP3]] to <16 x i8>*
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INTERLEAVED_MASK:%.*]] = shufflevector <8 x i1> [[TMP4]], <8 x i1> poison, <16 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7>
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP6:%.*]] = and <16 x i1> [[INTERLEAVED_MASK]], <i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false>
 ; ENABLED_MASKED_STRIDED-NEXT:    [[WIDE_MASKED_VEC:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* [[TMP5]], i32 1, <16 x i1> [[TMP6]], <16 x i8> poison)
 ; ENABLED_MASKED_STRIDED-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x i8> [[WIDE_MASKED_VEC]], <16 x i8> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, i8* [[Q:%.*]], i32 [[INDEX]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP7:%.*]] = getelementptr i8, i8* [[Q:%.*]], i32 [[INDEX]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP8:%.*]] = bitcast i8* [[TMP7]] to <8 x i8>*
 ; ENABLED_MASKED_STRIDED-NEXT:    call void @llvm.masked.store.v8i8.p0v8i8(<8 x i8> [[STRIDED_VEC]], <8 x i8>* [[TMP8]], i32 1, <8 x i1> [[TMP4]])
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 8
@@ -604,9 +604,9 @@ define dso_local void @masked_strided3_optsize_unknown_tc(i8* noalias nocapture 
 ; DISABLED_MASKED_STRIDED-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 7
 ; DISABLED_MASKED_STRIDED-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -8
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = add i32 [[N]], -1
-; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer
-; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i32> poison, i32 [[CONV]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i32> poison, i32 [[CONV]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT1]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; DISABLED_MASKED_STRIDED:       vector.body:
@@ -616,87 +616,87 @@ define dso_local void @masked_strided3_optsize_unknown_tc(i8* noalias nocapture 
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = icmp ule <8 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = mul nsw <8 x i32> [[VEC_IND]], <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP3:%.*]] = select <8 x i1> [[TMP1]], <8 x i1> [[TMP0]], <8 x i1> zeroinitializer
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP4:%.*]] = extractelement <8 x i1> [[TMP3]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP4:%.*]] = extractelement <8 x i1> [[TMP3]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP4]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP5:%.*]] = extractelement <8 x i32> [[TMP2]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP5:%.*]] = extractelement <8 x i32> [[TMP2]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, i8* [[P:%.*]], i32 [[TMP5]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP7:%.*]] = load i8, i8* [[TMP6]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP8:%.*]] = insertelement <8 x i8> poison, i8 [[TMP7]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP8:%.*]] = insertelement <8 x i8> poison, i8 [[TMP7]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP9:%.*]] = phi <8 x i8> [ poison, [[VECTOR_BODY]] ], [ [[TMP8]], [[PRED_LOAD_IF]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP10:%.*]] = extractelement <8 x i1> [[TMP3]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP10:%.*]] = extractelement <8 x i1> [[TMP3]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP10]], label [[PRED_LOAD_IF3:%.*]], label [[PRED_LOAD_CONTINUE4:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if3:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP11:%.*]] = extractelement <8 x i32> [[TMP2]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP11:%.*]] = extractelement <8 x i32> [[TMP2]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP11]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP13:%.*]] = load i8, i8* [[TMP12]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP14:%.*]] = insertelement <8 x i8> [[TMP9]], i8 [[TMP13]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP14:%.*]] = insertelement <8 x i8> [[TMP9]], i8 [[TMP13]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE4]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue4:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP15:%.*]] = phi <8 x i8> [ [[TMP9]], [[PRED_LOAD_CONTINUE]] ], [ [[TMP14]], [[PRED_LOAD_IF3]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP16:%.*]] = extractelement <8 x i1> [[TMP3]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP16:%.*]] = extractelement <8 x i1> [[TMP3]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP16]], label [[PRED_LOAD_IF5:%.*]], label [[PRED_LOAD_CONTINUE6:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if5:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP17:%.*]] = extractelement <8 x i32> [[TMP2]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP17:%.*]] = extractelement <8 x i32> [[TMP2]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP17]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP19:%.*]] = load i8, i8* [[TMP18]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP20:%.*]] = insertelement <8 x i8> [[TMP15]], i8 [[TMP19]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP20:%.*]] = insertelement <8 x i8> [[TMP15]], i8 [[TMP19]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE6]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue6:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP21:%.*]] = phi <8 x i8> [ [[TMP15]], [[PRED_LOAD_CONTINUE4]] ], [ [[TMP20]], [[PRED_LOAD_IF5]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP22:%.*]] = extractelement <8 x i1> [[TMP3]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP22:%.*]] = extractelement <8 x i1> [[TMP3]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP22]], label [[PRED_LOAD_IF7:%.*]], label [[PRED_LOAD_CONTINUE8:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if7:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP23:%.*]] = extractelement <8 x i32> [[TMP2]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP23:%.*]] = extractelement <8 x i32> [[TMP2]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP23]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP25:%.*]] = load i8, i8* [[TMP24]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP26:%.*]] = insertelement <8 x i8> [[TMP21]], i8 [[TMP25]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP26:%.*]] = insertelement <8 x i8> [[TMP21]], i8 [[TMP25]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE8]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue8:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP27:%.*]] = phi <8 x i8> [ [[TMP21]], [[PRED_LOAD_CONTINUE6]] ], [ [[TMP26]], [[PRED_LOAD_IF7]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP28:%.*]] = extractelement <8 x i1> [[TMP3]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP28:%.*]] = extractelement <8 x i1> [[TMP3]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP28]], label [[PRED_LOAD_IF9:%.*]], label [[PRED_LOAD_CONTINUE10:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if9:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP29:%.*]] = extractelement <8 x i32> [[TMP2]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP29:%.*]] = extractelement <8 x i32> [[TMP2]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP30:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP29]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP31:%.*]] = load i8, i8* [[TMP30]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP32:%.*]] = insertelement <8 x i8> [[TMP27]], i8 [[TMP31]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP32:%.*]] = insertelement <8 x i8> [[TMP27]], i8 [[TMP31]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE10]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue10:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP33:%.*]] = phi <8 x i8> [ [[TMP27]], [[PRED_LOAD_CONTINUE8]] ], [ [[TMP32]], [[PRED_LOAD_IF9]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP34:%.*]] = extractelement <8 x i1> [[TMP3]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP34:%.*]] = extractelement <8 x i1> [[TMP3]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP34]], label [[PRED_LOAD_IF11:%.*]], label [[PRED_LOAD_CONTINUE12:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if11:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP35:%.*]] = extractelement <8 x i32> [[TMP2]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP35:%.*]] = extractelement <8 x i32> [[TMP2]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP36:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP35]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP37:%.*]] = load i8, i8* [[TMP36]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP38:%.*]] = insertelement <8 x i8> [[TMP33]], i8 [[TMP37]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP38:%.*]] = insertelement <8 x i8> [[TMP33]], i8 [[TMP37]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE12]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue12:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP39:%.*]] = phi <8 x i8> [ [[TMP33]], [[PRED_LOAD_CONTINUE10]] ], [ [[TMP38]], [[PRED_LOAD_IF11]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP40:%.*]] = extractelement <8 x i1> [[TMP3]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP40:%.*]] = extractelement <8 x i1> [[TMP3]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP40]], label [[PRED_LOAD_IF13:%.*]], label [[PRED_LOAD_CONTINUE14:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if13:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP41:%.*]] = extractelement <8 x i32> [[TMP2]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP41:%.*]] = extractelement <8 x i32> [[TMP2]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP42:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP41]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP43:%.*]] = load i8, i8* [[TMP42]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP44:%.*]] = insertelement <8 x i8> [[TMP39]], i8 [[TMP43]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP44:%.*]] = insertelement <8 x i8> [[TMP39]], i8 [[TMP43]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE14]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue14:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP45:%.*]] = phi <8 x i8> [ [[TMP39]], [[PRED_LOAD_CONTINUE12]] ], [ [[TMP44]], [[PRED_LOAD_IF13]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP46:%.*]] = extractelement <8 x i1> [[TMP3]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP46:%.*]] = extractelement <8 x i1> [[TMP3]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP46]], label [[PRED_LOAD_IF15:%.*]], label [[PRED_LOAD_CONTINUE16]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if15:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP47:%.*]] = extractelement <8 x i32> [[TMP2]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP47:%.*]] = extractelement <8 x i32> [[TMP2]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP48:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP47]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP49:%.*]] = load i8, i8* [[TMP48]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP50:%.*]] = insertelement <8 x i8> [[TMP45]], i8 [[TMP49]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP50:%.*]] = insertelement <8 x i8> [[TMP45]], i8 [[TMP49]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE16]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue16:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP51:%.*]] = phi <8 x i8> [ [[TMP45]], [[PRED_LOAD_CONTINUE14]] ], [ [[TMP50]], [[PRED_LOAD_IF15]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP52:%.*]] = getelementptr inbounds i8, i8* [[Q:%.*]], i32 [[INDEX]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP52:%.*]] = getelementptr i8, i8* [[Q:%.*]], i32 [[INDEX]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP53:%.*]] = bitcast i8* [[TMP52]] to <8 x i8>*
 ; DISABLED_MASKED_STRIDED-NEXT:    call void @llvm.masked.store.v8i8.p0v8i8(<8 x i8> [[TMP51]], <8 x i8>* [[TMP53]], i32 1, <8 x i1> [[TMP3]])
 ; DISABLED_MASKED_STRIDED-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 8
@@ -715,9 +715,9 @@ define dso_local void @masked_strided3_optsize_unknown_tc(i8* noalias nocapture 
 ; ENABLED_MASKED_STRIDED-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 7
 ; ENABLED_MASKED_STRIDED-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -8
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = add i32 [[N]], -1
-; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i32 0
+; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i64 0
 ; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer
-; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i32> poison, i32 [[CONV]], i32 0
+; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i32> poison, i32 [[CONV]], i64 0
 ; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT1]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; ENABLED_MASKED_STRIDED:       vector.body:
@@ -725,15 +725,15 @@ define dso_local void @masked_strided3_optsize_unknown_tc(i8* noalias nocapture 
 ; ENABLED_MASKED_STRIDED-NEXT:    [[VEC_IND:%.*]] = phi <8 x i32> [ <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP0:%.*]] = icmp ugt <8 x i32> [[VEC_IND]], [[BROADCAST_SPLAT2]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = icmp ule <8 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = mul nsw i32 [[INDEX]], 3
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, i8* [[P:%.*]], i32 [[TMP2]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = mul i32 [[INDEX]], 3
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP3:%.*]] = getelementptr i8, i8* [[P:%.*]], i32 [[TMP2]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP4:%.*]] = select <8 x i1> [[TMP1]], <8 x i1> [[TMP0]], <8 x i1> zeroinitializer
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP5:%.*]] = bitcast i8* [[TMP3]] to <24 x i8>*
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INTERLEAVED_MASK:%.*]] = shufflevector <8 x i1> [[TMP4]], <8 x i1> poison, <24 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7>
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP6:%.*]] = and <24 x i1> [[INTERLEAVED_MASK]], <i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false>
 ; ENABLED_MASKED_STRIDED-NEXT:    [[WIDE_MASKED_VEC:%.*]] = call <24 x i8> @llvm.masked.load.v24i8.p0v24i8(<24 x i8>* [[TMP5]], i32 1, <24 x i1> [[TMP6]], <24 x i8> poison)
 ; ENABLED_MASKED_STRIDED-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <24 x i8> [[WIDE_MASKED_VEC]], <24 x i8> poison, <8 x i32> <i32 0, i32 3, i32 6, i32 9, i32 12, i32 15, i32 18, i32 21>
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, i8* [[Q:%.*]], i32 [[INDEX]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP7:%.*]] = getelementptr i8, i8* [[Q:%.*]], i32 [[INDEX]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP8:%.*]] = bitcast i8* [[TMP7]] to <8 x i8>*
 ; ENABLED_MASKED_STRIDED-NEXT:    call void @llvm.masked.store.v8i8.p0v8i8(<8 x i8> [[STRIDED_VEC]], <8 x i8>* [[TMP8]], i32 1, <8 x i1> [[TMP4]])
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 8
@@ -805,21 +805,21 @@ define dso_local void @unconditional_strided1_optsize(i8* noalias nocapture read
 ; DISABLED_MASKED_STRIDED-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[VEC_IND:%.*]] = phi <8 x i32> [ <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[ENTRY]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP0:%.*]] = shl nuw nsw <8 x i32> [[VEC_IND]], <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = extractelement <8 x i32> [[TMP0]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = extractelement <8 x i32> [[TMP0]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, i8* [[P:%.*]], i32 [[TMP1]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP3:%.*]] = extractelement <8 x i32> [[TMP0]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP3:%.*]] = extractelement <8 x i32> [[TMP0]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP3]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP5:%.*]] = extractelement <8 x i32> [[TMP0]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP5:%.*]] = extractelement <8 x i32> [[TMP0]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP5]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP7:%.*]] = extractelement <8 x i32> [[TMP0]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP7:%.*]] = extractelement <8 x i32> [[TMP0]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP7]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP9:%.*]] = extractelement <8 x i32> [[TMP0]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP9:%.*]] = extractelement <8 x i32> [[TMP0]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP9]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP11:%.*]] = extractelement <8 x i32> [[TMP0]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP11:%.*]] = extractelement <8 x i32> [[TMP0]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP11]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP13:%.*]] = extractelement <8 x i32> [[TMP0]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP13:%.*]] = extractelement <8 x i32> [[TMP0]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP13]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP15:%.*]] = extractelement <8 x i32> [[TMP0]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP15:%.*]] = extractelement <8 x i32> [[TMP0]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP15]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP17:%.*]] = load i8, i8* [[TMP2]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP18:%.*]] = load i8, i8* [[TMP4]], align 1
@@ -829,14 +829,14 @@ define dso_local void @unconditional_strided1_optsize(i8* noalias nocapture read
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP22:%.*]] = load i8, i8* [[TMP12]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP23:%.*]] = load i8, i8* [[TMP14]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP24:%.*]] = load i8, i8* [[TMP16]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP25:%.*]] = insertelement <8 x i8> poison, i8 [[TMP17]], i32 0
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP26:%.*]] = insertelement <8 x i8> [[TMP25]], i8 [[TMP18]], i32 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP27:%.*]] = insertelement <8 x i8> [[TMP26]], i8 [[TMP19]], i32 2
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP28:%.*]] = insertelement <8 x i8> [[TMP27]], i8 [[TMP20]], i32 3
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP29:%.*]] = insertelement <8 x i8> [[TMP28]], i8 [[TMP21]], i32 4
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP30:%.*]] = insertelement <8 x i8> [[TMP29]], i8 [[TMP22]], i32 5
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP31:%.*]] = insertelement <8 x i8> [[TMP30]], i8 [[TMP23]], i32 6
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP32:%.*]] = insertelement <8 x i8> [[TMP31]], i8 [[TMP24]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP25:%.*]] = insertelement <8 x i8> poison, i8 [[TMP17]], i64 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP26:%.*]] = insertelement <8 x i8> [[TMP25]], i8 [[TMP18]], i64 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP27:%.*]] = insertelement <8 x i8> [[TMP26]], i8 [[TMP19]], i64 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP28:%.*]] = insertelement <8 x i8> [[TMP27]], i8 [[TMP20]], i64 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP29:%.*]] = insertelement <8 x i8> [[TMP28]], i8 [[TMP21]], i64 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP30:%.*]] = insertelement <8 x i8> [[TMP29]], i8 [[TMP22]], i64 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP31:%.*]] = insertelement <8 x i8> [[TMP30]], i8 [[TMP23]], i64 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP32:%.*]] = insertelement <8 x i8> [[TMP31]], i8 [[TMP24]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP33:%.*]] = getelementptr inbounds i8, i8* [[Q:%.*]], i32 [[INDEX]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP34:%.*]] = bitcast i8* [[TMP33]] to <8 x i8>*
 ; DISABLED_MASKED_STRIDED-NEXT:    store <8 x i8> [[TMP32]], <8 x i8>* [[TMP34]], align 1
@@ -914,7 +914,7 @@ define dso_local void @unconditional_strided1_optsize_unknown_tc(i8* noalias noc
 ; DISABLED_MASKED_STRIDED-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 7
 ; DISABLED_MASKED_STRIDED-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -8
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = add i32 [[N]], -1
-; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; DISABLED_MASKED_STRIDED:       vector.body:
@@ -922,83 +922,83 @@ define dso_local void @unconditional_strided1_optsize_unknown_tc(i8* noalias noc
 ; DISABLED_MASKED_STRIDED-NEXT:    [[VEC_IND:%.*]] = phi <8 x i32> [ <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_LOAD_CONTINUE14]] ]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP0:%.*]] = icmp ule <8 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = shl nuw nsw <8 x i32> [[VEC_IND]], <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = extractelement <8 x i1> [[TMP0]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = extractelement <8 x i1> [[TMP0]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP2]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP3:%.*]] = extractelement <8 x i32> [[TMP1]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP3:%.*]] = extractelement <8 x i32> [[TMP1]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, i8* [[P:%.*]], i32 [[TMP3]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP5:%.*]] = load i8, i8* [[TMP4]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP6:%.*]] = insertelement <8 x i8> poison, i8 [[TMP5]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP6:%.*]] = insertelement <8 x i8> poison, i8 [[TMP5]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP7:%.*]] = phi <8 x i8> [ poison, [[VECTOR_BODY]] ], [ [[TMP6]], [[PRED_LOAD_IF]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP8:%.*]] = extractelement <8 x i1> [[TMP0]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP8:%.*]] = extractelement <8 x i1> [[TMP0]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP8]], label [[PRED_LOAD_IF1:%.*]], label [[PRED_LOAD_CONTINUE2:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if1:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP9:%.*]] = extractelement <8 x i32> [[TMP1]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP9:%.*]] = extractelement <8 x i32> [[TMP1]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP9]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP11:%.*]] = load i8, i8* [[TMP10]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP12:%.*]] = insertelement <8 x i8> [[TMP7]], i8 [[TMP11]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP12:%.*]] = insertelement <8 x i8> [[TMP7]], i8 [[TMP11]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE2]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue2:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP13:%.*]] = phi <8 x i8> [ [[TMP7]], [[PRED_LOAD_CONTINUE]] ], [ [[TMP12]], [[PRED_LOAD_IF1]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP14:%.*]] = extractelement <8 x i1> [[TMP0]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP14:%.*]] = extractelement <8 x i1> [[TMP0]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP14]], label [[PRED_LOAD_IF3:%.*]], label [[PRED_LOAD_CONTINUE4:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if3:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP15:%.*]] = extractelement <8 x i32> [[TMP1]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP15:%.*]] = extractelement <8 x i32> [[TMP1]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP15]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP17:%.*]] = load i8, i8* [[TMP16]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP18:%.*]] = insertelement <8 x i8> [[TMP13]], i8 [[TMP17]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP18:%.*]] = insertelement <8 x i8> [[TMP13]], i8 [[TMP17]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE4]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue4:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP19:%.*]] = phi <8 x i8> [ [[TMP13]], [[PRED_LOAD_CONTINUE2]] ], [ [[TMP18]], [[PRED_LOAD_IF3]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP20:%.*]] = extractelement <8 x i1> [[TMP0]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP20:%.*]] = extractelement <8 x i1> [[TMP0]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP20]], label [[PRED_LOAD_IF5:%.*]], label [[PRED_LOAD_CONTINUE6:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if5:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP21:%.*]] = extractelement <8 x i32> [[TMP1]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP21:%.*]] = extractelement <8 x i32> [[TMP1]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP21]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP23:%.*]] = load i8, i8* [[TMP22]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP24:%.*]] = insertelement <8 x i8> [[TMP19]], i8 [[TMP23]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP24:%.*]] = insertelement <8 x i8> [[TMP19]], i8 [[TMP23]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE6]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue6:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP25:%.*]] = phi <8 x i8> [ [[TMP19]], [[PRED_LOAD_CONTINUE4]] ], [ [[TMP24]], [[PRED_LOAD_IF5]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP26:%.*]] = extractelement <8 x i1> [[TMP0]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP26:%.*]] = extractelement <8 x i1> [[TMP0]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP26]], label [[PRED_LOAD_IF7:%.*]], label [[PRED_LOAD_CONTINUE8:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if7:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP27:%.*]] = extractelement <8 x i32> [[TMP1]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP27:%.*]] = extractelement <8 x i32> [[TMP1]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP27]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP29:%.*]] = load i8, i8* [[TMP28]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP30:%.*]] = insertelement <8 x i8> [[TMP25]], i8 [[TMP29]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP30:%.*]] = insertelement <8 x i8> [[TMP25]], i8 [[TMP29]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE8]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue8:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP31:%.*]] = phi <8 x i8> [ [[TMP25]], [[PRED_LOAD_CONTINUE6]] ], [ [[TMP30]], [[PRED_LOAD_IF7]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP32:%.*]] = extractelement <8 x i1> [[TMP0]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP32:%.*]] = extractelement <8 x i1> [[TMP0]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP32]], label [[PRED_LOAD_IF9:%.*]], label [[PRED_LOAD_CONTINUE10:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if9:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP33:%.*]] = extractelement <8 x i32> [[TMP1]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP33:%.*]] = extractelement <8 x i32> [[TMP1]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP34:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP33]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP35:%.*]] = load i8, i8* [[TMP34]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP36:%.*]] = insertelement <8 x i8> [[TMP31]], i8 [[TMP35]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP36:%.*]] = insertelement <8 x i8> [[TMP31]], i8 [[TMP35]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE10]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue10:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP37:%.*]] = phi <8 x i8> [ [[TMP31]], [[PRED_LOAD_CONTINUE8]] ], [ [[TMP36]], [[PRED_LOAD_IF9]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP38:%.*]] = extractelement <8 x i1> [[TMP0]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP38:%.*]] = extractelement <8 x i1> [[TMP0]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP38]], label [[PRED_LOAD_IF11:%.*]], label [[PRED_LOAD_CONTINUE12:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if11:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP39:%.*]] = extractelement <8 x i32> [[TMP1]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP39:%.*]] = extractelement <8 x i32> [[TMP1]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP40:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP39]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP41:%.*]] = load i8, i8* [[TMP40]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP42:%.*]] = insertelement <8 x i8> [[TMP37]], i8 [[TMP41]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP42:%.*]] = insertelement <8 x i8> [[TMP37]], i8 [[TMP41]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE12]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue12:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP43:%.*]] = phi <8 x i8> [ [[TMP37]], [[PRED_LOAD_CONTINUE10]] ], [ [[TMP42]], [[PRED_LOAD_IF11]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP44:%.*]] = extractelement <8 x i1> [[TMP0]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP44:%.*]] = extractelement <8 x i1> [[TMP0]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP44]], label [[PRED_LOAD_IF13:%.*]], label [[PRED_LOAD_CONTINUE14]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if13:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP45:%.*]] = extractelement <8 x i32> [[TMP1]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP45:%.*]] = extractelement <8 x i32> [[TMP1]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP46:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP45]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP47:%.*]] = load i8, i8* [[TMP46]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP48:%.*]] = insertelement <8 x i8> [[TMP43]], i8 [[TMP47]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP48:%.*]] = insertelement <8 x i8> [[TMP43]], i8 [[TMP47]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE14]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue14:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP49:%.*]] = phi <8 x i8> [ [[TMP43]], [[PRED_LOAD_CONTINUE12]] ], [ [[TMP48]], [[PRED_LOAD_IF13]] ]
@@ -1020,12 +1020,12 @@ define dso_local void @unconditional_strided1_optsize_unknown_tc(i8* noalias noc
 ; ENABLED_MASKED_STRIDED-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 7
 ; ENABLED_MASKED_STRIDED-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -8
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = add i32 [[N]], -1
-; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i32 0
+; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i64 0
 ; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; ENABLED_MASKED_STRIDED:       vector.body:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i32> poison, i32 [[INDEX]], i32 0
+; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i32> poison, i32 [[INDEX]], i64 0
 ; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT1]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INDUCTION:%.*]] = or <8 x i32> [[BROADCAST_SPLAT2]], <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP0:%.*]] = icmp ule <8 x i32> [[INDUCTION]], [[BROADCAST_SPLAT]]
@@ -1099,7 +1099,7 @@ define dso_local void @masked_strided2(i8* noalias nocapture readonly %p, i8* no
 ; DISABLED_MASKED_STRIDED-LABEL: @masked_strided2(
 ; DISABLED_MASKED_STRIDED-NEXT:  entry:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[CONV:%.*]] = zext i8 [[GUARD:%.*]] to i32
-; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[CONV]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[CONV]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; DISABLED_MASKED_STRIDED:       vector.body:
@@ -1107,311 +1107,311 @@ define dso_local void @masked_strided2(i8* noalias nocapture readonly %p, i8* no
 ; DISABLED_MASKED_STRIDED-NEXT:    [[VEC_IND:%.*]] = phi <8 x i32> [ <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[ENTRY]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE60]] ]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP0:%.*]] = icmp ugt <8 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = shl nuw nsw <8 x i32> [[VEC_IND]], <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = extractelement <8 x i1> [[TMP0]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = extractelement <8 x i1> [[TMP0]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP2]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP3:%.*]] = extractelement <8 x i32> [[TMP1]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP3:%.*]] = extractelement <8 x i32> [[TMP1]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, i8* [[P:%.*]], i32 [[TMP3]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP5:%.*]] = load i8, i8* [[TMP4]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP6:%.*]] = insertelement <8 x i8> poison, i8 [[TMP5]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP6:%.*]] = insertelement <8 x i8> poison, i8 [[TMP5]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP7:%.*]] = phi <8 x i8> [ poison, [[VECTOR_BODY]] ], [ [[TMP6]], [[PRED_LOAD_IF]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP8:%.*]] = extractelement <8 x i1> [[TMP0]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP8:%.*]] = extractelement <8 x i1> [[TMP0]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP8]], label [[PRED_LOAD_IF1:%.*]], label [[PRED_LOAD_CONTINUE2:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if1:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP9:%.*]] = extractelement <8 x i32> [[TMP1]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP9:%.*]] = extractelement <8 x i32> [[TMP1]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP9]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP11:%.*]] = load i8, i8* [[TMP10]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP12:%.*]] = insertelement <8 x i8> [[TMP7]], i8 [[TMP11]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP12:%.*]] = insertelement <8 x i8> [[TMP7]], i8 [[TMP11]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE2]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue2:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP13:%.*]] = phi <8 x i8> [ [[TMP7]], [[PRED_LOAD_CONTINUE]] ], [ [[TMP12]], [[PRED_LOAD_IF1]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP14:%.*]] = extractelement <8 x i1> [[TMP0]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP14:%.*]] = extractelement <8 x i1> [[TMP0]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP14]], label [[PRED_LOAD_IF3:%.*]], label [[PRED_LOAD_CONTINUE4:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if3:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP15:%.*]] = extractelement <8 x i32> [[TMP1]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP15:%.*]] = extractelement <8 x i32> [[TMP1]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP15]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP17:%.*]] = load i8, i8* [[TMP16]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP18:%.*]] = insertelement <8 x i8> [[TMP13]], i8 [[TMP17]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP18:%.*]] = insertelement <8 x i8> [[TMP13]], i8 [[TMP17]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE4]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue4:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP19:%.*]] = phi <8 x i8> [ [[TMP13]], [[PRED_LOAD_CONTINUE2]] ], [ [[TMP18]], [[PRED_LOAD_IF3]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP20:%.*]] = extractelement <8 x i1> [[TMP0]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP20:%.*]] = extractelement <8 x i1> [[TMP0]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP20]], label [[PRED_LOAD_IF5:%.*]], label [[PRED_LOAD_CONTINUE6:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if5:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP21:%.*]] = extractelement <8 x i32> [[TMP1]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP21:%.*]] = extractelement <8 x i32> [[TMP1]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP21]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP23:%.*]] = load i8, i8* [[TMP22]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP24:%.*]] = insertelement <8 x i8> [[TMP19]], i8 [[TMP23]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP24:%.*]] = insertelement <8 x i8> [[TMP19]], i8 [[TMP23]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE6]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue6:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP25:%.*]] = phi <8 x i8> [ [[TMP19]], [[PRED_LOAD_CONTINUE4]] ], [ [[TMP24]], [[PRED_LOAD_IF5]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP26:%.*]] = extractelement <8 x i1> [[TMP0]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP26:%.*]] = extractelement <8 x i1> [[TMP0]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP26]], label [[PRED_LOAD_IF7:%.*]], label [[PRED_LOAD_CONTINUE8:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if7:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP27:%.*]] = extractelement <8 x i32> [[TMP1]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP27:%.*]] = extractelement <8 x i32> [[TMP1]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP27]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP29:%.*]] = load i8, i8* [[TMP28]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP30:%.*]] = insertelement <8 x i8> [[TMP25]], i8 [[TMP29]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP30:%.*]] = insertelement <8 x i8> [[TMP25]], i8 [[TMP29]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE8]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue8:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP31:%.*]] = phi <8 x i8> [ [[TMP25]], [[PRED_LOAD_CONTINUE6]] ], [ [[TMP30]], [[PRED_LOAD_IF7]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP32:%.*]] = extractelement <8 x i1> [[TMP0]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP32:%.*]] = extractelement <8 x i1> [[TMP0]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP32]], label [[PRED_LOAD_IF9:%.*]], label [[PRED_LOAD_CONTINUE10:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if9:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP33:%.*]] = extractelement <8 x i32> [[TMP1]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP33:%.*]] = extractelement <8 x i32> [[TMP1]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP34:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP33]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP35:%.*]] = load i8, i8* [[TMP34]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP36:%.*]] = insertelement <8 x i8> [[TMP31]], i8 [[TMP35]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP36:%.*]] = insertelement <8 x i8> [[TMP31]], i8 [[TMP35]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE10]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue10:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP37:%.*]] = phi <8 x i8> [ [[TMP31]], [[PRED_LOAD_CONTINUE8]] ], [ [[TMP36]], [[PRED_LOAD_IF9]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP38:%.*]] = extractelement <8 x i1> [[TMP0]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP38:%.*]] = extractelement <8 x i1> [[TMP0]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP38]], label [[PRED_LOAD_IF11:%.*]], label [[PRED_LOAD_CONTINUE12:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if11:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP39:%.*]] = extractelement <8 x i32> [[TMP1]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP39:%.*]] = extractelement <8 x i32> [[TMP1]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP40:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP39]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP41:%.*]] = load i8, i8* [[TMP40]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP42:%.*]] = insertelement <8 x i8> [[TMP37]], i8 [[TMP41]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP42:%.*]] = insertelement <8 x i8> [[TMP37]], i8 [[TMP41]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE12]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue12:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP43:%.*]] = phi <8 x i8> [ [[TMP37]], [[PRED_LOAD_CONTINUE10]] ], [ [[TMP42]], [[PRED_LOAD_IF11]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP44:%.*]] = extractelement <8 x i1> [[TMP0]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP44:%.*]] = extractelement <8 x i1> [[TMP0]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP44]], label [[PRED_LOAD_IF13:%.*]], label [[PRED_LOAD_CONTINUE14:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if13:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP45:%.*]] = extractelement <8 x i32> [[TMP1]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP45:%.*]] = extractelement <8 x i32> [[TMP1]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP46:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP45]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP47:%.*]] = load i8, i8* [[TMP46]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP48:%.*]] = insertelement <8 x i8> [[TMP43]], i8 [[TMP47]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP48:%.*]] = insertelement <8 x i8> [[TMP43]], i8 [[TMP47]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE14]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue14:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP49:%.*]] = phi <8 x i8> [ [[TMP43]], [[PRED_LOAD_CONTINUE12]] ], [ [[TMP48]], [[PRED_LOAD_IF13]] ]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP50:%.*]] = or <8 x i32> [[TMP1]], <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP51:%.*]] = extractelement <8 x i1> [[TMP0]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP51:%.*]] = extractelement <8 x i1> [[TMP0]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP51]], label [[PRED_LOAD_IF15:%.*]], label [[PRED_LOAD_CONTINUE16:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if15:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP52:%.*]] = extractelement <8 x i32> [[TMP50]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP52:%.*]] = extractelement <8 x i32> [[TMP50]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP53:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP52]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP54:%.*]] = load i8, i8* [[TMP53]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP55:%.*]] = insertelement <8 x i8> poison, i8 [[TMP54]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP55:%.*]] = insertelement <8 x i8> poison, i8 [[TMP54]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE16]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue16:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP56:%.*]] = phi <8 x i8> [ poison, [[PRED_LOAD_CONTINUE14]] ], [ [[TMP55]], [[PRED_LOAD_IF15]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP57:%.*]] = extractelement <8 x i1> [[TMP0]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP57:%.*]] = extractelement <8 x i1> [[TMP0]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP57]], label [[PRED_LOAD_IF17:%.*]], label [[PRED_LOAD_CONTINUE18:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if17:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP58:%.*]] = extractelement <8 x i32> [[TMP50]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP58:%.*]] = extractelement <8 x i32> [[TMP50]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP59:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP58]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP60:%.*]] = load i8, i8* [[TMP59]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP61:%.*]] = insertelement <8 x i8> [[TMP56]], i8 [[TMP60]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP61:%.*]] = insertelement <8 x i8> [[TMP56]], i8 [[TMP60]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE18]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue18:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP62:%.*]] = phi <8 x i8> [ [[TMP56]], [[PRED_LOAD_CONTINUE16]] ], [ [[TMP61]], [[PRED_LOAD_IF17]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP63:%.*]] = extractelement <8 x i1> [[TMP0]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP63:%.*]] = extractelement <8 x i1> [[TMP0]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP63]], label [[PRED_LOAD_IF19:%.*]], label [[PRED_LOAD_CONTINUE20:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if19:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP64:%.*]] = extractelement <8 x i32> [[TMP50]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP64:%.*]] = extractelement <8 x i32> [[TMP50]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP65:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP64]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP66:%.*]] = load i8, i8* [[TMP65]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP67:%.*]] = insertelement <8 x i8> [[TMP62]], i8 [[TMP66]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP67:%.*]] = insertelement <8 x i8> [[TMP62]], i8 [[TMP66]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE20]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue20:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP68:%.*]] = phi <8 x i8> [ [[TMP62]], [[PRED_LOAD_CONTINUE18]] ], [ [[TMP67]], [[PRED_LOAD_IF19]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP69:%.*]] = extractelement <8 x i1> [[TMP0]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP69:%.*]] = extractelement <8 x i1> [[TMP0]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP69]], label [[PRED_LOAD_IF21:%.*]], label [[PRED_LOAD_CONTINUE22:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if21:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP70:%.*]] = extractelement <8 x i32> [[TMP50]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP70:%.*]] = extractelement <8 x i32> [[TMP50]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP71:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP70]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP72:%.*]] = load i8, i8* [[TMP71]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP73:%.*]] = insertelement <8 x i8> [[TMP68]], i8 [[TMP72]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP73:%.*]] = insertelement <8 x i8> [[TMP68]], i8 [[TMP72]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE22]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue22:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP74:%.*]] = phi <8 x i8> [ [[TMP68]], [[PRED_LOAD_CONTINUE20]] ], [ [[TMP73]], [[PRED_LOAD_IF21]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP75:%.*]] = extractelement <8 x i1> [[TMP0]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP75:%.*]] = extractelement <8 x i1> [[TMP0]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP75]], label [[PRED_LOAD_IF23:%.*]], label [[PRED_LOAD_CONTINUE24:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if23:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP76:%.*]] = extractelement <8 x i32> [[TMP50]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP76:%.*]] = extractelement <8 x i32> [[TMP50]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP77:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP76]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP78:%.*]] = load i8, i8* [[TMP77]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP79:%.*]] = insertelement <8 x i8> [[TMP74]], i8 [[TMP78]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP79:%.*]] = insertelement <8 x i8> [[TMP74]], i8 [[TMP78]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE24]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue24:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP80:%.*]] = phi <8 x i8> [ [[TMP74]], [[PRED_LOAD_CONTINUE22]] ], [ [[TMP79]], [[PRED_LOAD_IF23]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP81:%.*]] = extractelement <8 x i1> [[TMP0]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP81:%.*]] = extractelement <8 x i1> [[TMP0]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP81]], label [[PRED_LOAD_IF25:%.*]], label [[PRED_LOAD_CONTINUE26:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if25:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP82:%.*]] = extractelement <8 x i32> [[TMP50]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP82:%.*]] = extractelement <8 x i32> [[TMP50]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP83:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP82]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP84:%.*]] = load i8, i8* [[TMP83]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP85:%.*]] = insertelement <8 x i8> [[TMP80]], i8 [[TMP84]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP85:%.*]] = insertelement <8 x i8> [[TMP80]], i8 [[TMP84]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE26]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue26:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP86:%.*]] = phi <8 x i8> [ [[TMP80]], [[PRED_LOAD_CONTINUE24]] ], [ [[TMP85]], [[PRED_LOAD_IF25]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP87:%.*]] = extractelement <8 x i1> [[TMP0]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP87:%.*]] = extractelement <8 x i1> [[TMP0]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP87]], label [[PRED_LOAD_IF27:%.*]], label [[PRED_LOAD_CONTINUE28:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if27:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP88:%.*]] = extractelement <8 x i32> [[TMP50]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP88:%.*]] = extractelement <8 x i32> [[TMP50]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP89:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP88]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP90:%.*]] = load i8, i8* [[TMP89]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP91:%.*]] = insertelement <8 x i8> [[TMP86]], i8 [[TMP90]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP91:%.*]] = insertelement <8 x i8> [[TMP86]], i8 [[TMP90]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE28]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue28:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP92:%.*]] = phi <8 x i8> [ [[TMP86]], [[PRED_LOAD_CONTINUE26]] ], [ [[TMP91]], [[PRED_LOAD_IF27]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP93:%.*]] = extractelement <8 x i1> [[TMP0]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP93:%.*]] = extractelement <8 x i1> [[TMP0]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP93]], label [[PRED_LOAD_IF29:%.*]], label [[PRED_LOAD_CONTINUE30:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if29:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP94:%.*]] = extractelement <8 x i32> [[TMP50]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP94:%.*]] = extractelement <8 x i32> [[TMP50]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP95:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP94]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP96:%.*]] = load i8, i8* [[TMP95]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP97:%.*]] = insertelement <8 x i8> [[TMP92]], i8 [[TMP96]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP97:%.*]] = insertelement <8 x i8> [[TMP92]], i8 [[TMP96]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE30]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue30:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP98:%.*]] = phi <8 x i8> [ [[TMP92]], [[PRED_LOAD_CONTINUE28]] ], [ [[TMP97]], [[PRED_LOAD_IF29]] ]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP99:%.*]] = icmp slt <8 x i8> [[TMP49]], [[TMP98]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP100:%.*]] = select <8 x i1> [[TMP99]], <8 x i8> [[TMP98]], <8 x i8> [[TMP49]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP101:%.*]] = extractelement <8 x i1> [[TMP0]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP101:%.*]] = extractelement <8 x i1> [[TMP0]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP101]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP102:%.*]] = extractelement <8 x i32> [[TMP1]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP102:%.*]] = extractelement <8 x i32> [[TMP1]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP103:%.*]] = getelementptr inbounds i8, i8* [[Q:%.*]], i32 [[TMP102]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP104:%.*]] = extractelement <8 x i8> [[TMP100]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP104:%.*]] = extractelement <8 x i8> [[TMP100]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP104]], i8* [[TMP103]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP105:%.*]] = extractelement <8 x i1> [[TMP0]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP105:%.*]] = extractelement <8 x i1> [[TMP0]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP105]], label [[PRED_STORE_IF31:%.*]], label [[PRED_STORE_CONTINUE32:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if31:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP106:%.*]] = extractelement <8 x i32> [[TMP1]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP106:%.*]] = extractelement <8 x i32> [[TMP1]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP107:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP106]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP108:%.*]] = extractelement <8 x i8> [[TMP100]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP108:%.*]] = extractelement <8 x i8> [[TMP100]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP108]], i8* [[TMP107]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE32]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue32:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP109:%.*]] = extractelement <8 x i1> [[TMP0]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP109:%.*]] = extractelement <8 x i1> [[TMP0]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP109]], label [[PRED_STORE_IF33:%.*]], label [[PRED_STORE_CONTINUE34:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if33:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP110:%.*]] = extractelement <8 x i32> [[TMP1]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP110:%.*]] = extractelement <8 x i32> [[TMP1]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP111:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP110]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP112:%.*]] = extractelement <8 x i8> [[TMP100]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP112:%.*]] = extractelement <8 x i8> [[TMP100]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP112]], i8* [[TMP111]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE34]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue34:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP113:%.*]] = extractelement <8 x i1> [[TMP0]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP113:%.*]] = extractelement <8 x i1> [[TMP0]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP113]], label [[PRED_STORE_IF35:%.*]], label [[PRED_STORE_CONTINUE36:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if35:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP114:%.*]] = extractelement <8 x i32> [[TMP1]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP114:%.*]] = extractelement <8 x i32> [[TMP1]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP115:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP114]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP116:%.*]] = extractelement <8 x i8> [[TMP100]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP116:%.*]] = extractelement <8 x i8> [[TMP100]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP116]], i8* [[TMP115]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE36]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue36:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP117:%.*]] = extractelement <8 x i1> [[TMP0]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP117:%.*]] = extractelement <8 x i1> [[TMP0]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP117]], label [[PRED_STORE_IF37:%.*]], label [[PRED_STORE_CONTINUE38:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if37:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP118:%.*]] = extractelement <8 x i32> [[TMP1]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP118:%.*]] = extractelement <8 x i32> [[TMP1]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP119:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP118]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP120:%.*]] = extractelement <8 x i8> [[TMP100]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP120:%.*]] = extractelement <8 x i8> [[TMP100]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP120]], i8* [[TMP119]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE38]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue38:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP121:%.*]] = extractelement <8 x i1> [[TMP0]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP121:%.*]] = extractelement <8 x i1> [[TMP0]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP121]], label [[PRED_STORE_IF39:%.*]], label [[PRED_STORE_CONTINUE40:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if39:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP122:%.*]] = extractelement <8 x i32> [[TMP1]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP122:%.*]] = extractelement <8 x i32> [[TMP1]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP123:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP122]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP124:%.*]] = extractelement <8 x i8> [[TMP100]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP124:%.*]] = extractelement <8 x i8> [[TMP100]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP124]], i8* [[TMP123]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE40]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue40:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP125:%.*]] = extractelement <8 x i1> [[TMP0]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP125:%.*]] = extractelement <8 x i1> [[TMP0]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP125]], label [[PRED_STORE_IF41:%.*]], label [[PRED_STORE_CONTINUE42:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if41:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP126:%.*]] = extractelement <8 x i32> [[TMP1]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP126:%.*]] = extractelement <8 x i32> [[TMP1]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP127:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP126]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP128:%.*]] = extractelement <8 x i8> [[TMP100]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP128:%.*]] = extractelement <8 x i8> [[TMP100]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP128]], i8* [[TMP127]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE42]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue42:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP129:%.*]] = extractelement <8 x i1> [[TMP0]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP129:%.*]] = extractelement <8 x i1> [[TMP0]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP129]], label [[PRED_STORE_IF43:%.*]], label [[PRED_STORE_CONTINUE44:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if43:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP130:%.*]] = extractelement <8 x i32> [[TMP1]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP130:%.*]] = extractelement <8 x i32> [[TMP1]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP131:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP130]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP132:%.*]] = extractelement <8 x i8> [[TMP100]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP132:%.*]] = extractelement <8 x i8> [[TMP100]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP132]], i8* [[TMP131]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE44]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue44:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP133:%.*]] = sub <8 x i8> zeroinitializer, [[TMP100]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP134:%.*]] = extractelement <8 x i1> [[TMP0]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP134:%.*]] = extractelement <8 x i1> [[TMP0]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP134]], label [[PRED_STORE_IF45:%.*]], label [[PRED_STORE_CONTINUE46:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if45:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP135:%.*]] = extractelement <8 x i32> [[TMP50]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP135:%.*]] = extractelement <8 x i32> [[TMP50]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP136:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP135]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP137:%.*]] = extractelement <8 x i8> [[TMP133]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP137:%.*]] = extractelement <8 x i8> [[TMP133]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP137]], i8* [[TMP136]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE46]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue46:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP138:%.*]] = extractelement <8 x i1> [[TMP0]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP138:%.*]] = extractelement <8 x i1> [[TMP0]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP138]], label [[PRED_STORE_IF47:%.*]], label [[PRED_STORE_CONTINUE48:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if47:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP139:%.*]] = extractelement <8 x i32> [[TMP50]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP139:%.*]] = extractelement <8 x i32> [[TMP50]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP140:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP139]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP141:%.*]] = extractelement <8 x i8> [[TMP133]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP141:%.*]] = extractelement <8 x i8> [[TMP133]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP141]], i8* [[TMP140]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE48]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue48:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP142:%.*]] = extractelement <8 x i1> [[TMP0]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP142:%.*]] = extractelement <8 x i1> [[TMP0]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP142]], label [[PRED_STORE_IF49:%.*]], label [[PRED_STORE_CONTINUE50:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if49:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP143:%.*]] = extractelement <8 x i32> [[TMP50]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP143:%.*]] = extractelement <8 x i32> [[TMP50]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP144:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP143]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP145:%.*]] = extractelement <8 x i8> [[TMP133]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP145:%.*]] = extractelement <8 x i8> [[TMP133]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP145]], i8* [[TMP144]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE50]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue50:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP146:%.*]] = extractelement <8 x i1> [[TMP0]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP146:%.*]] = extractelement <8 x i1> [[TMP0]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP146]], label [[PRED_STORE_IF51:%.*]], label [[PRED_STORE_CONTINUE52:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if51:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP147:%.*]] = extractelement <8 x i32> [[TMP50]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP147:%.*]] = extractelement <8 x i32> [[TMP50]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP148:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP147]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP149:%.*]] = extractelement <8 x i8> [[TMP133]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP149:%.*]] = extractelement <8 x i8> [[TMP133]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP149]], i8* [[TMP148]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE52]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue52:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP150:%.*]] = extractelement <8 x i1> [[TMP0]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP150:%.*]] = extractelement <8 x i1> [[TMP0]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP150]], label [[PRED_STORE_IF53:%.*]], label [[PRED_STORE_CONTINUE54:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if53:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP151:%.*]] = extractelement <8 x i32> [[TMP50]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP151:%.*]] = extractelement <8 x i32> [[TMP50]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP152:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP151]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP153:%.*]] = extractelement <8 x i8> [[TMP133]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP153:%.*]] = extractelement <8 x i8> [[TMP133]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP153]], i8* [[TMP152]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE54]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue54:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP154:%.*]] = extractelement <8 x i1> [[TMP0]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP154:%.*]] = extractelement <8 x i1> [[TMP0]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP154]], label [[PRED_STORE_IF55:%.*]], label [[PRED_STORE_CONTINUE56:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if55:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP155:%.*]] = extractelement <8 x i32> [[TMP50]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP155:%.*]] = extractelement <8 x i32> [[TMP50]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP156:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP155]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP157:%.*]] = extractelement <8 x i8> [[TMP133]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP157:%.*]] = extractelement <8 x i8> [[TMP133]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP157]], i8* [[TMP156]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE56]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue56:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP158:%.*]] = extractelement <8 x i1> [[TMP0]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP158:%.*]] = extractelement <8 x i1> [[TMP0]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP158]], label [[PRED_STORE_IF57:%.*]], label [[PRED_STORE_CONTINUE58:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if57:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP159:%.*]] = extractelement <8 x i32> [[TMP50]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP159:%.*]] = extractelement <8 x i32> [[TMP50]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP160:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP159]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP161:%.*]] = extractelement <8 x i8> [[TMP133]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP161:%.*]] = extractelement <8 x i8> [[TMP133]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP161]], i8* [[TMP160]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE58]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue58:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP162:%.*]] = extractelement <8 x i1> [[TMP0]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP162:%.*]] = extractelement <8 x i1> [[TMP0]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP162]], label [[PRED_STORE_IF59:%.*]], label [[PRED_STORE_CONTINUE60]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if59:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP163:%.*]] = extractelement <8 x i32> [[TMP50]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP163:%.*]] = extractelement <8 x i32> [[TMP50]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP164:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP163]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP165:%.*]] = extractelement <8 x i8> [[TMP133]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP165:%.*]] = extractelement <8 x i8> [[TMP133]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP165]], i8* [[TMP164]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE60]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue60:
@@ -1425,15 +1425,15 @@ define dso_local void @masked_strided2(i8* noalias nocapture readonly %p, i8* no
 ; ENABLED_MASKED_STRIDED-LABEL: @masked_strided2(
 ; ENABLED_MASKED_STRIDED-NEXT:  entry:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[CONV:%.*]] = zext i8 [[GUARD:%.*]] to i32
-; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[CONV]], i32 0
+; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[CONV]], i64 0
 ; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; ENABLED_MASKED_STRIDED:       vector.body:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[VEC_IND:%.*]] = phi <8 x i32> [ <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[ENTRY]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP0:%.*]] = icmp ugt <8 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = shl nuw nsw i32 [[INDEX]], 1
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, i8* [[P:%.*]], i32 [[TMP1]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = shl i32 [[INDEX]], 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = getelementptr i8, i8* [[P:%.*]], i32 [[TMP1]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP3:%.*]] = bitcast i8* [[TMP2]] to <16 x i8>*
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INTERLEAVED_MASK:%.*]] = shufflevector <8 x i1> [[TMP0]], <8 x i1> poison, <16 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7>
 ; ENABLED_MASKED_STRIDED-NEXT:    [[WIDE_MASKED_VEC:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* [[TMP3]], i32 1, <16 x i1> [[INTERLEAVED_MASK]], <16 x i8> poison)
@@ -1443,8 +1443,8 @@ define dso_local void @masked_strided2(i8* noalias nocapture readonly %p, i8* no
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP5:%.*]] = icmp slt <8 x i8> [[STRIDED_VEC]], [[STRIDED_VEC1]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP6:%.*]] = select <8 x i1> [[TMP5]], <8 x i8> [[STRIDED_VEC1]], <8 x i8> [[STRIDED_VEC]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP7:%.*]] = sub <8 x i8> zeroinitializer, [[TMP6]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, i8* [[Q:%.*]], i32 -1
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, i8* [[TMP8]], i32 [[TMP4]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP8:%.*]] = getelementptr i8, i8* [[Q:%.*]], i32 -1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP9:%.*]] = getelementptr i8, i8* [[TMP8]], i32 [[TMP4]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP10:%.*]] = bitcast i8* [[TMP9]] to <16 x i8>*
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x i8> [[TMP6]], <8 x i8> [[TMP7]], <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
 ; ENABLED_MASKED_STRIDED-NEXT:    call void @llvm.masked.store.v16i8.p0v16i8(<16 x i8> [[INTERLEAVED_VEC]], <16 x i8>* [[TMP10]], i32 1, <16 x i1> [[INTERLEAVED_MASK]])
@@ -1508,328 +1508,337 @@ for.end:
 ;
 define dso_local void @masked_strided2_reverse(i8* noalias nocapture readonly %p, i8* noalias nocapture %q, i8 zeroext %guard) local_unnamed_addr  {
 ; DISABLED_MASKED_STRIDED-LABEL: @masked_strided2_reverse(
-; DISABLED_MASKED_STRIDED:         br i1 {{.*}}, label [[FOR_BODY:%.*]], label [[VECTOR_PH:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:  entry:
+; DISABLED_MASKED_STRIDED-NEXT:    [[CONV:%.*]] = zext i8 [[GUARD:%.*]] to i32
+; DISABLED_MASKED_STRIDED-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, i8* [[Q:%.*]], i32 2048
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP0:%.*]] = getelementptr i8, i8* [[Q]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = icmp ugt i8* [[TMP0]], [[SCEVGEP]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, i8* [[Q]], i32 2049
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = getelementptr i8, i8* [[Q]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP3:%.*]] = icmp ugt i8* [[TMP2]], [[SCEVGEP2]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP4:%.*]] = or i1 [[TMP1]], [[TMP3]]
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP4]], label [[FOR_BODY:%.*]], label [[VECTOR_PH:%.*]]
 ; DISABLED_MASKED_STRIDED:       vector.ph:
-; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[CONV]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[CONV]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; DISABLED_MASKED_STRIDED:       vector.body:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE65:%.*]] ]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[VEC_IND:%.*]] = phi <8 x i32> [ <i32 1024, i32 1023, i32 1022, i32 1021, i32 1020, i32 1019, i32 1018, i32 1017>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE65]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP7:%.*]] = icmp ugt <8 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP8:%.*]] = shl nuw nsw <8 x i32> [[VEC_IND]], <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP9:%.*]] = extractelement <8 x i1> [[TMP7]], i32 0
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP9]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP5:%.*]] = icmp ugt <8 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP6:%.*]] = shl nuw nsw <8 x i32> [[VEC_IND]], <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP7:%.*]] = extractelement <8 x i1> [[TMP5]], i64 0
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP7]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP10:%.*]] = extractelement <8 x i32> [[TMP8]], i32 0
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, i8* [[P:%.*]], i32 [[TMP10]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP12:%.*]] = load i8, i8* [[TMP11]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP13:%.*]] = insertelement <8 x i8> poison, i8 [[TMP12]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP8:%.*]] = extractelement <8 x i32> [[TMP6]], i64 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, i8* [[P:%.*]], i32 [[TMP8]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP10:%.*]] = load i8, i8* [[TMP9]], align 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP11:%.*]] = insertelement <8 x i8> poison, i8 [[TMP10]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP14:%.*]] = phi <8 x i8> [ poison, [[VECTOR_BODY]] ], [ [[TMP13]], [[PRED_LOAD_IF]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP15:%.*]] = extractelement <8 x i1> [[TMP7]], i32 1
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP15]], label [[PRED_LOAD_IF6:%.*]], label [[PRED_LOAD_CONTINUE7:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP12:%.*]] = phi <8 x i8> [ poison, [[VECTOR_BODY]] ], [ [[TMP11]], [[PRED_LOAD_IF]] ]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP13:%.*]] = extractelement <8 x i1> [[TMP5]], i64 1
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP13]], label [[PRED_LOAD_IF6:%.*]], label [[PRED_LOAD_CONTINUE7:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if6:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP16:%.*]] = extractelement <8 x i32> [[TMP8]], i32 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP16]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP18:%.*]] = load i8, i8* [[TMP17]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP19:%.*]] = insertelement <8 x i8> [[TMP14]], i8 [[TMP18]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP14:%.*]] = extractelement <8 x i32> [[TMP6]], i64 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP14]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP16:%.*]] = load i8, i8* [[TMP15]], align 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP17:%.*]] = insertelement <8 x i8> [[TMP12]], i8 [[TMP16]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE7]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue7:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP20:%.*]] = phi <8 x i8> [ [[TMP14]], [[PRED_LOAD_CONTINUE]] ], [ [[TMP19]], [[PRED_LOAD_IF6]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP21:%.*]] = extractelement <8 x i1> [[TMP7]], i32 2
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP21]], label [[PRED_LOAD_IF8:%.*]], label [[PRED_LOAD_CONTINUE9:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP18:%.*]] = phi <8 x i8> [ [[TMP12]], [[PRED_LOAD_CONTINUE]] ], [ [[TMP17]], [[PRED_LOAD_IF6]] ]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP19:%.*]] = extractelement <8 x i1> [[TMP5]], i64 2
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP19]], label [[PRED_LOAD_IF8:%.*]], label [[PRED_LOAD_CONTINUE9:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if8:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP22:%.*]] = extractelement <8 x i32> [[TMP8]], i32 2
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP22]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP24:%.*]] = load i8, i8* [[TMP23]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP25:%.*]] = insertelement <8 x i8> [[TMP20]], i8 [[TMP24]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP20:%.*]] = extractelement <8 x i32> [[TMP6]], i64 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP20]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP22:%.*]] = load i8, i8* [[TMP21]], align 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP23:%.*]] = insertelement <8 x i8> [[TMP18]], i8 [[TMP22]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE9]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue9:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP26:%.*]] = phi <8 x i8> [ [[TMP20]], [[PRED_LOAD_CONTINUE7]] ], [ [[TMP25]], [[PRED_LOAD_IF8]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP27:%.*]] = extractelement <8 x i1> [[TMP7]], i32 3
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP27]], label [[PRED_LOAD_IF10:%.*]], label [[PRED_LOAD_CONTINUE11:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP24:%.*]] = phi <8 x i8> [ [[TMP18]], [[PRED_LOAD_CONTINUE7]] ], [ [[TMP23]], [[PRED_LOAD_IF8]] ]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP25:%.*]] = extractelement <8 x i1> [[TMP5]], i64 3
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP25]], label [[PRED_LOAD_IF10:%.*]], label [[PRED_LOAD_CONTINUE11:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if10:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP28:%.*]] = extractelement <8 x i32> [[TMP8]], i32 3
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP29:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP28]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP30:%.*]] = load i8, i8* [[TMP29]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP31:%.*]] = insertelement <8 x i8> [[TMP26]], i8 [[TMP30]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP26:%.*]] = extractelement <8 x i32> [[TMP6]], i64 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP26]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP28:%.*]] = load i8, i8* [[TMP27]], align 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP29:%.*]] = insertelement <8 x i8> [[TMP24]], i8 [[TMP28]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE11]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue11:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP32:%.*]] = phi <8 x i8> [ [[TMP26]], [[PRED_LOAD_CONTINUE9]] ], [ [[TMP31]], [[PRED_LOAD_IF10]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP33:%.*]] = extractelement <8 x i1> [[TMP7]], i32 4
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP33]], label [[PRED_LOAD_IF12:%.*]], label [[PRED_LOAD_CONTINUE13:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP30:%.*]] = phi <8 x i8> [ [[TMP24]], [[PRED_LOAD_CONTINUE9]] ], [ [[TMP29]], [[PRED_LOAD_IF10]] ]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP31:%.*]] = extractelement <8 x i1> [[TMP5]], i64 4
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP31]], label [[PRED_LOAD_IF12:%.*]], label [[PRED_LOAD_CONTINUE13:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if12:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP34:%.*]] = extractelement <8 x i32> [[TMP8]], i32 4
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP35:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP34]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP36:%.*]] = load i8, i8* [[TMP35]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP37:%.*]] = insertelement <8 x i8> [[TMP32]], i8 [[TMP36]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP32:%.*]] = extractelement <8 x i32> [[TMP6]], i64 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP33:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP32]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP34:%.*]] = load i8, i8* [[TMP33]], align 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP35:%.*]] = insertelement <8 x i8> [[TMP30]], i8 [[TMP34]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE13]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue13:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP38:%.*]] = phi <8 x i8> [ [[TMP32]], [[PRED_LOAD_CONTINUE11]] ], [ [[TMP37]], [[PRED_LOAD_IF12]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP39:%.*]] = extractelement <8 x i1> [[TMP7]], i32 5
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP39]], label [[PRED_LOAD_IF14:%.*]], label [[PRED_LOAD_CONTINUE15:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP36:%.*]] = phi <8 x i8> [ [[TMP30]], [[PRED_LOAD_CONTINUE11]] ], [ [[TMP35]], [[PRED_LOAD_IF12]] ]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP37:%.*]] = extractelement <8 x i1> [[TMP5]], i64 5
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP37]], label [[PRED_LOAD_IF14:%.*]], label [[PRED_LOAD_CONTINUE15:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if14:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP40:%.*]] = extractelement <8 x i32> [[TMP8]], i32 5
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP41:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP40]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP42:%.*]] = load i8, i8* [[TMP41]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP43:%.*]] = insertelement <8 x i8> [[TMP38]], i8 [[TMP42]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP38:%.*]] = extractelement <8 x i32> [[TMP6]], i64 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP39:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP38]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP40:%.*]] = load i8, i8* [[TMP39]], align 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP41:%.*]] = insertelement <8 x i8> [[TMP36]], i8 [[TMP40]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE15]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue15:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP44:%.*]] = phi <8 x i8> [ [[TMP38]], [[PRED_LOAD_CONTINUE13]] ], [ [[TMP43]], [[PRED_LOAD_IF14]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP45:%.*]] = extractelement <8 x i1> [[TMP7]], i32 6
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP45]], label [[PRED_LOAD_IF16:%.*]], label [[PRED_LOAD_CONTINUE17:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP42:%.*]] = phi <8 x i8> [ [[TMP36]], [[PRED_LOAD_CONTINUE13]] ], [ [[TMP41]], [[PRED_LOAD_IF14]] ]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP43:%.*]] = extractelement <8 x i1> [[TMP5]], i64 6
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP43]], label [[PRED_LOAD_IF16:%.*]], label [[PRED_LOAD_CONTINUE17:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if16:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP46:%.*]] = extractelement <8 x i32> [[TMP8]], i32 6
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP47:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP46]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP48:%.*]] = load i8, i8* [[TMP47]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP49:%.*]] = insertelement <8 x i8> [[TMP44]], i8 [[TMP48]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP44:%.*]] = extractelement <8 x i32> [[TMP6]], i64 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP45:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP44]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP46:%.*]] = load i8, i8* [[TMP45]], align 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP47:%.*]] = insertelement <8 x i8> [[TMP42]], i8 [[TMP46]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE17]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue17:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP50:%.*]] = phi <8 x i8> [ [[TMP44]], [[PRED_LOAD_CONTINUE15]] ], [ [[TMP49]], [[PRED_LOAD_IF16]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP51:%.*]] = extractelement <8 x i1> [[TMP7]], i32 7
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP51]], label [[PRED_LOAD_IF18:%.*]], label [[PRED_LOAD_CONTINUE19:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP48:%.*]] = phi <8 x i8> [ [[TMP42]], [[PRED_LOAD_CONTINUE15]] ], [ [[TMP47]], [[PRED_LOAD_IF16]] ]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP49:%.*]] = extractelement <8 x i1> [[TMP5]], i64 7
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP49]], label [[PRED_LOAD_IF18:%.*]], label [[PRED_LOAD_CONTINUE19:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if18:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP52:%.*]] = extractelement <8 x i32> [[TMP8]], i32 7
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP53:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP52]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP54:%.*]] = load i8, i8* [[TMP53]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP55:%.*]] = insertelement <8 x i8> [[TMP50]], i8 [[TMP54]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP50:%.*]] = extractelement <8 x i32> [[TMP6]], i64 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP51:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP50]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP52:%.*]] = load i8, i8* [[TMP51]], align 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP53:%.*]] = insertelement <8 x i8> [[TMP48]], i8 [[TMP52]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE19]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue19:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP56:%.*]] = phi <8 x i8> [ [[TMP50]], [[PRED_LOAD_CONTINUE17]] ], [ [[TMP55]], [[PRED_LOAD_IF18]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP57:%.*]] = or <8 x i32> [[TMP8]], <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP58:%.*]] = extractelement <8 x i1> [[TMP7]], i32 0
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP58]], label [[PRED_LOAD_IF20:%.*]], label [[PRED_LOAD_CONTINUE21:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP54:%.*]] = phi <8 x i8> [ [[TMP48]], [[PRED_LOAD_CONTINUE17]] ], [ [[TMP53]], [[PRED_LOAD_IF18]] ]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP55:%.*]] = or <8 x i32> [[TMP6]], <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP56:%.*]] = extractelement <8 x i1> [[TMP5]], i64 0
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP56]], label [[PRED_LOAD_IF20:%.*]], label [[PRED_LOAD_CONTINUE21:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if20:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP59:%.*]] = extractelement <8 x i32> [[TMP57]], i32 0
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP60:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP59]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP61:%.*]] = load i8, i8* [[TMP60]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP62:%.*]] = insertelement <8 x i8> poison, i8 [[TMP61]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP57:%.*]] = extractelement <8 x i32> [[TMP55]], i64 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP58:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP57]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP59:%.*]] = load i8, i8* [[TMP58]], align 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP60:%.*]] = insertelement <8 x i8> poison, i8 [[TMP59]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE21]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue21:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP63:%.*]] = phi <8 x i8> [ poison, [[PRED_LOAD_CONTINUE19]] ], [ [[TMP62]], [[PRED_LOAD_IF20]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP64:%.*]] = extractelement <8 x i1> [[TMP7]], i32 1
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP64]], label [[PRED_LOAD_IF22:%.*]], label [[PRED_LOAD_CONTINUE23:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP61:%.*]] = phi <8 x i8> [ poison, [[PRED_LOAD_CONTINUE19]] ], [ [[TMP60]], [[PRED_LOAD_IF20]] ]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP62:%.*]] = extractelement <8 x i1> [[TMP5]], i64 1
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP62]], label [[PRED_LOAD_IF22:%.*]], label [[PRED_LOAD_CONTINUE23:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if22:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP65:%.*]] = extractelement <8 x i32> [[TMP57]], i32 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP66:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP65]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP67:%.*]] = load i8, i8* [[TMP66]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP68:%.*]] = insertelement <8 x i8> [[TMP63]], i8 [[TMP67]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP63:%.*]] = extractelement <8 x i32> [[TMP55]], i64 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP64:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP63]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP65:%.*]] = load i8, i8* [[TMP64]], align 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP66:%.*]] = insertelement <8 x i8> [[TMP61]], i8 [[TMP65]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE23]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue23:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP69:%.*]] = phi <8 x i8> [ [[TMP63]], [[PRED_LOAD_CONTINUE21]] ], [ [[TMP68]], [[PRED_LOAD_IF22]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP70:%.*]] = extractelement <8 x i1> [[TMP7]], i32 2
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP70]], label [[PRED_LOAD_IF24:%.*]], label [[PRED_LOAD_CONTINUE25:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP67:%.*]] = phi <8 x i8> [ [[TMP61]], [[PRED_LOAD_CONTINUE21]] ], [ [[TMP66]], [[PRED_LOAD_IF22]] ]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP68:%.*]] = extractelement <8 x i1> [[TMP5]], i64 2
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP68]], label [[PRED_LOAD_IF24:%.*]], label [[PRED_LOAD_CONTINUE25:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if24:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP71:%.*]] = extractelement <8 x i32> [[TMP57]], i32 2
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP72:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP71]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP73:%.*]] = load i8, i8* [[TMP72]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP74:%.*]] = insertelement <8 x i8> [[TMP69]], i8 [[TMP73]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP69:%.*]] = extractelement <8 x i32> [[TMP55]], i64 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP70:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP69]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP71:%.*]] = load i8, i8* [[TMP70]], align 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP72:%.*]] = insertelement <8 x i8> [[TMP67]], i8 [[TMP71]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE25]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue25:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP75:%.*]] = phi <8 x i8> [ [[TMP69]], [[PRED_LOAD_CONTINUE23]] ], [ [[TMP74]], [[PRED_LOAD_IF24]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP76:%.*]] = extractelement <8 x i1> [[TMP7]], i32 3
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP76]], label [[PRED_LOAD_IF26:%.*]], label [[PRED_LOAD_CONTINUE27:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP73:%.*]] = phi <8 x i8> [ [[TMP67]], [[PRED_LOAD_CONTINUE23]] ], [ [[TMP72]], [[PRED_LOAD_IF24]] ]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP74:%.*]] = extractelement <8 x i1> [[TMP5]], i64 3
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP74]], label [[PRED_LOAD_IF26:%.*]], label [[PRED_LOAD_CONTINUE27:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if26:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP77:%.*]] = extractelement <8 x i32> [[TMP57]], i32 3
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP78:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP77]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP79:%.*]] = load i8, i8* [[TMP78]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP80:%.*]] = insertelement <8 x i8> [[TMP75]], i8 [[TMP79]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP75:%.*]] = extractelement <8 x i32> [[TMP55]], i64 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP76:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP75]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP77:%.*]] = load i8, i8* [[TMP76]], align 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP78:%.*]] = insertelement <8 x i8> [[TMP73]], i8 [[TMP77]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE27]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue27:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP81:%.*]] = phi <8 x i8> [ [[TMP75]], [[PRED_LOAD_CONTINUE25]] ], [ [[TMP80]], [[PRED_LOAD_IF26]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP82:%.*]] = extractelement <8 x i1> [[TMP7]], i32 4
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP82]], label [[PRED_LOAD_IF28:%.*]], label [[PRED_LOAD_CONTINUE29:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP79:%.*]] = phi <8 x i8> [ [[TMP73]], [[PRED_LOAD_CONTINUE25]] ], [ [[TMP78]], [[PRED_LOAD_IF26]] ]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP80:%.*]] = extractelement <8 x i1> [[TMP5]], i64 4
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP80]], label [[PRED_LOAD_IF28:%.*]], label [[PRED_LOAD_CONTINUE29:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if28:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP83:%.*]] = extractelement <8 x i32> [[TMP57]], i32 4
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP84:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP83]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP85:%.*]] = load i8, i8* [[TMP84]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP86:%.*]] = insertelement <8 x i8> [[TMP81]], i8 [[TMP85]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP81:%.*]] = extractelement <8 x i32> [[TMP55]], i64 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP82:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP81]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP83:%.*]] = load i8, i8* [[TMP82]], align 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP84:%.*]] = insertelement <8 x i8> [[TMP79]], i8 [[TMP83]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE29]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue29:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP87:%.*]] = phi <8 x i8> [ [[TMP81]], [[PRED_LOAD_CONTINUE27]] ], [ [[TMP86]], [[PRED_LOAD_IF28]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP88:%.*]] = extractelement <8 x i1> [[TMP7]], i32 5
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP88]], label [[PRED_LOAD_IF30:%.*]], label [[PRED_LOAD_CONTINUE31:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP85:%.*]] = phi <8 x i8> [ [[TMP79]], [[PRED_LOAD_CONTINUE27]] ], [ [[TMP84]], [[PRED_LOAD_IF28]] ]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP86:%.*]] = extractelement <8 x i1> [[TMP5]], i64 5
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP86]], label [[PRED_LOAD_IF30:%.*]], label [[PRED_LOAD_CONTINUE31:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if30:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP89:%.*]] = extractelement <8 x i32> [[TMP57]], i32 5
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP90:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP89]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP91:%.*]] = load i8, i8* [[TMP90]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP92:%.*]] = insertelement <8 x i8> [[TMP87]], i8 [[TMP91]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP87:%.*]] = extractelement <8 x i32> [[TMP55]], i64 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP88:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP87]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP89:%.*]] = load i8, i8* [[TMP88]], align 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP90:%.*]] = insertelement <8 x i8> [[TMP85]], i8 [[TMP89]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE31]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue31:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP93:%.*]] = phi <8 x i8> [ [[TMP87]], [[PRED_LOAD_CONTINUE29]] ], [ [[TMP92]], [[PRED_LOAD_IF30]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP94:%.*]] = extractelement <8 x i1> [[TMP7]], i32 6
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP94]], label [[PRED_LOAD_IF32:%.*]], label [[PRED_LOAD_CONTINUE33:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP91:%.*]] = phi <8 x i8> [ [[TMP85]], [[PRED_LOAD_CONTINUE29]] ], [ [[TMP90]], [[PRED_LOAD_IF30]] ]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP92:%.*]] = extractelement <8 x i1> [[TMP5]], i64 6
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP92]], label [[PRED_LOAD_IF32:%.*]], label [[PRED_LOAD_CONTINUE33:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if32:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP95:%.*]] = extractelement <8 x i32> [[TMP57]], i32 6
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP96:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP95]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP97:%.*]] = load i8, i8* [[TMP96]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP98:%.*]] = insertelement <8 x i8> [[TMP93]], i8 [[TMP97]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP93:%.*]] = extractelement <8 x i32> [[TMP55]], i64 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP94:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP93]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP95:%.*]] = load i8, i8* [[TMP94]], align 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP96:%.*]] = insertelement <8 x i8> [[TMP91]], i8 [[TMP95]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE33]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue33:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP99:%.*]] = phi <8 x i8> [ [[TMP93]], [[PRED_LOAD_CONTINUE31]] ], [ [[TMP98]], [[PRED_LOAD_IF32]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP100:%.*]] = extractelement <8 x i1> [[TMP7]], i32 7
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP100]], label [[PRED_LOAD_IF34:%.*]], label [[PRED_LOAD_CONTINUE35:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP97:%.*]] = phi <8 x i8> [ [[TMP91]], [[PRED_LOAD_CONTINUE31]] ], [ [[TMP96]], [[PRED_LOAD_IF32]] ]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP98:%.*]] = extractelement <8 x i1> [[TMP5]], i64 7
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP98]], label [[PRED_LOAD_IF34:%.*]], label [[PRED_LOAD_CONTINUE35:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if34:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP101:%.*]] = extractelement <8 x i32> [[TMP57]], i32 7
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP102:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP101]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP103:%.*]] = load i8, i8* [[TMP102]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP104:%.*]] = insertelement <8 x i8> [[TMP99]], i8 [[TMP103]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP99:%.*]] = extractelement <8 x i32> [[TMP55]], i64 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP100:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP99]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP101:%.*]] = load i8, i8* [[TMP100]], align 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP102:%.*]] = insertelement <8 x i8> [[TMP97]], i8 [[TMP101]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE35]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue35:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP105:%.*]] = phi <8 x i8> [ [[TMP99]], [[PRED_LOAD_CONTINUE33]] ], [ [[TMP104]], [[PRED_LOAD_IF34]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP106:%.*]] = icmp slt <8 x i8> [[TMP56]], [[TMP105]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP107:%.*]] = select <8 x i1> [[TMP106]], <8 x i8> [[TMP105]], <8 x i8> [[TMP56]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP108:%.*]] = extractelement <8 x i1> [[TMP7]], i32 0
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP108]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP103:%.*]] = phi <8 x i8> [ [[TMP97]], [[PRED_LOAD_CONTINUE33]] ], [ [[TMP102]], [[PRED_LOAD_IF34]] ]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP104:%.*]] = icmp slt <8 x i8> [[TMP54]], [[TMP103]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP105:%.*]] = select <8 x i1> [[TMP104]], <8 x i8> [[TMP103]], <8 x i8> [[TMP54]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP106:%.*]] = extractelement <8 x i1> [[TMP5]], i64 0
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP106]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP109:%.*]] = extractelement <8 x i32> [[TMP8]], i32 0
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP110:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP109]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP111:%.*]] = extractelement <8 x i8> [[TMP107]], i32 0
-; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP111]], i8* [[TMP110]], align 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP107:%.*]] = extractelement <8 x i32> [[TMP6]], i64 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP108:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP107]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP109:%.*]] = extractelement <8 x i8> [[TMP105]], i64 0
+; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP109]], i8* [[TMP108]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP112:%.*]] = extractelement <8 x i1> [[TMP7]], i32 1
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP112]], label [[PRED_STORE_IF36:%.*]], label [[PRED_STORE_CONTINUE37:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP110:%.*]] = extractelement <8 x i1> [[TMP5]], i64 1
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP110]], label [[PRED_STORE_IF36:%.*]], label [[PRED_STORE_CONTINUE37:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if36:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP113:%.*]] = extractelement <8 x i32> [[TMP8]], i32 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP114:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP113]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP115:%.*]] = extractelement <8 x i8> [[TMP107]], i32 1
-; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP115]], i8* [[TMP114]], align 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP111:%.*]] = extractelement <8 x i32> [[TMP6]], i64 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP112:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP111]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP113:%.*]] = extractelement <8 x i8> [[TMP105]], i64 1
+; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP113]], i8* [[TMP112]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE37]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue37:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP116:%.*]] = extractelement <8 x i1> [[TMP7]], i32 2
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP116]], label [[PRED_STORE_IF38:%.*]], label [[PRED_STORE_CONTINUE39:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP114:%.*]] = extractelement <8 x i1> [[TMP5]], i64 2
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP114]], label [[PRED_STORE_IF38:%.*]], label [[PRED_STORE_CONTINUE39:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if38:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP117:%.*]] = extractelement <8 x i32> [[TMP8]], i32 2
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP118:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP117]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP119:%.*]] = extractelement <8 x i8> [[TMP107]], i32 2
-; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP119]], i8* [[TMP118]], align 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP115:%.*]] = extractelement <8 x i32> [[TMP6]], i64 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP116:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP115]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP117:%.*]] = extractelement <8 x i8> [[TMP105]], i64 2
+; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP117]], i8* [[TMP116]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE39]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue39:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP120:%.*]] = extractelement <8 x i1> [[TMP7]], i32 3
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP120]], label [[PRED_STORE_IF40:%.*]], label [[PRED_STORE_CONTINUE41:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP118:%.*]] = extractelement <8 x i1> [[TMP5]], i64 3
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP118]], label [[PRED_STORE_IF40:%.*]], label [[PRED_STORE_CONTINUE41:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if40:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP121:%.*]] = extractelement <8 x i32> [[TMP8]], i32 3
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP122:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP121]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP123:%.*]] = extractelement <8 x i8> [[TMP107]], i32 3
-; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP123]], i8* [[TMP122]], align 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP119:%.*]] = extractelement <8 x i32> [[TMP6]], i64 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP120:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP119]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP121:%.*]] = extractelement <8 x i8> [[TMP105]], i64 3
+; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP121]], i8* [[TMP120]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE41]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue41:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP124:%.*]] = extractelement <8 x i1> [[TMP7]], i32 4
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP124]], label [[PRED_STORE_IF42:%.*]], label [[PRED_STORE_CONTINUE43:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP122:%.*]] = extractelement <8 x i1> [[TMP5]], i64 4
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP122]], label [[PRED_STORE_IF42:%.*]], label [[PRED_STORE_CONTINUE43:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if42:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP125:%.*]] = extractelement <8 x i32> [[TMP8]], i32 4
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP126:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP125]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP127:%.*]] = extractelement <8 x i8> [[TMP107]], i32 4
-; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP127]], i8* [[TMP126]], align 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP123:%.*]] = extractelement <8 x i32> [[TMP6]], i64 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP124:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP123]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP125:%.*]] = extractelement <8 x i8> [[TMP105]], i64 4
+; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP125]], i8* [[TMP124]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE43]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue43:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP128:%.*]] = extractelement <8 x i1> [[TMP7]], i32 5
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP128]], label [[PRED_STORE_IF44:%.*]], label [[PRED_STORE_CONTINUE45:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP126:%.*]] = extractelement <8 x i1> [[TMP5]], i64 5
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP126]], label [[PRED_STORE_IF44:%.*]], label [[PRED_STORE_CONTINUE45:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if44:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP129:%.*]] = extractelement <8 x i32> [[TMP8]], i32 5
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP130:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP129]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP131:%.*]] = extractelement <8 x i8> [[TMP107]], i32 5
-; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP131]], i8* [[TMP130]], align 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP127:%.*]] = extractelement <8 x i32> [[TMP6]], i64 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP128:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP127]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP129:%.*]] = extractelement <8 x i8> [[TMP105]], i64 5
+; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP129]], i8* [[TMP128]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE45]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue45:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP132:%.*]] = extractelement <8 x i1> [[TMP7]], i32 6
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP132]], label [[PRED_STORE_IF46:%.*]], label [[PRED_STORE_CONTINUE47:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP130:%.*]] = extractelement <8 x i1> [[TMP5]], i64 6
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP130]], label [[PRED_STORE_IF46:%.*]], label [[PRED_STORE_CONTINUE47:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if46:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP133:%.*]] = extractelement <8 x i32> [[TMP8]], i32 6
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP134:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP133]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP135:%.*]] = extractelement <8 x i8> [[TMP107]], i32 6
-; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP135]], i8* [[TMP134]], align 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP131:%.*]] = extractelement <8 x i32> [[TMP6]], i64 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP132:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP131]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP133:%.*]] = extractelement <8 x i8> [[TMP105]], i64 6
+; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP133]], i8* [[TMP132]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE47]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue47:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP136:%.*]] = extractelement <8 x i1> [[TMP7]], i32 7
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP136]], label [[PRED_STORE_IF48:%.*]], label [[PRED_STORE_CONTINUE49:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP134:%.*]] = extractelement <8 x i1> [[TMP5]], i64 7
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP134]], label [[PRED_STORE_IF48:%.*]], label [[PRED_STORE_CONTINUE49:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if48:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP137:%.*]] = extractelement <8 x i32> [[TMP8]], i32 7
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP138:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP137]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP139:%.*]] = extractelement <8 x i8> [[TMP107]], i32 7
-; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP139]], i8* [[TMP138]], align 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP135:%.*]] = extractelement <8 x i32> [[TMP6]], i64 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP136:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP135]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP137:%.*]] = extractelement <8 x i8> [[TMP105]], i64 7
+; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP137]], i8* [[TMP136]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE49]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue49:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP140:%.*]] = sub <8 x i8> zeroinitializer, [[TMP107]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP141:%.*]] = extractelement <8 x i1> [[TMP7]], i32 0
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP141]], label [[PRED_STORE_IF50:%.*]], label [[PRED_STORE_CONTINUE51:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP138:%.*]] = sub <8 x i8> zeroinitializer, [[TMP105]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP139:%.*]] = extractelement <8 x i1> [[TMP5]], i64 0
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP139]], label [[PRED_STORE_IF50:%.*]], label [[PRED_STORE_CONTINUE51:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if50:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP142:%.*]] = extractelement <8 x i32> [[TMP57]], i32 0
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP143:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP142]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP144:%.*]] = extractelement <8 x i8> [[TMP140]], i32 0
-; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP144]], i8* [[TMP143]], align 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP140:%.*]] = extractelement <8 x i32> [[TMP55]], i64 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP141:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP140]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP142:%.*]] = extractelement <8 x i8> [[TMP138]], i64 0
+; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP142]], i8* [[TMP141]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE51]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue51:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP145:%.*]] = extractelement <8 x i1> [[TMP7]], i32 1
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP145]], label [[PRED_STORE_IF52:%.*]], label [[PRED_STORE_CONTINUE53:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP143:%.*]] = extractelement <8 x i1> [[TMP5]], i64 1
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP143]], label [[PRED_STORE_IF52:%.*]], label [[PRED_STORE_CONTINUE53:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if52:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP146:%.*]] = extractelement <8 x i32> [[TMP57]], i32 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP147:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP146]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP148:%.*]] = extractelement <8 x i8> [[TMP140]], i32 1
-; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP148]], i8* [[TMP147]], align 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP144:%.*]] = extractelement <8 x i32> [[TMP55]], i64 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP145:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP144]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP146:%.*]] = extractelement <8 x i8> [[TMP138]], i64 1
+; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP146]], i8* [[TMP145]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE53]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue53:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP149:%.*]] = extractelement <8 x i1> [[TMP7]], i32 2
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP149]], label [[PRED_STORE_IF54:%.*]], label [[PRED_STORE_CONTINUE55:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP147:%.*]] = extractelement <8 x i1> [[TMP5]], i64 2
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP147]], label [[PRED_STORE_IF54:%.*]], label [[PRED_STORE_CONTINUE55:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if54:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP150:%.*]] = extractelement <8 x i32> [[TMP57]], i32 2
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP151:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP150]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP152:%.*]] = extractelement <8 x i8> [[TMP140]], i32 2
-; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP152]], i8* [[TMP151]], align 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP148:%.*]] = extractelement <8 x i32> [[TMP55]], i64 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP149:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP148]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP150:%.*]] = extractelement <8 x i8> [[TMP138]], i64 2
+; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP150]], i8* [[TMP149]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE55]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue55:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP153:%.*]] = extractelement <8 x i1> [[TMP7]], i32 3
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP153]], label [[PRED_STORE_IF56:%.*]], label [[PRED_STORE_CONTINUE57:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP151:%.*]] = extractelement <8 x i1> [[TMP5]], i64 3
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP151]], label [[PRED_STORE_IF56:%.*]], label [[PRED_STORE_CONTINUE57:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if56:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP154:%.*]] = extractelement <8 x i32> [[TMP57]], i32 3
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP155:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP154]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP156:%.*]] = extractelement <8 x i8> [[TMP140]], i32 3
-; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP156]], i8* [[TMP155]], align 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP152:%.*]] = extractelement <8 x i32> [[TMP55]], i64 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP153:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP152]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP154:%.*]] = extractelement <8 x i8> [[TMP138]], i64 3
+; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP154]], i8* [[TMP153]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE57]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue57:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP157:%.*]] = extractelement <8 x i1> [[TMP7]], i32 4
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP157]], label [[PRED_STORE_IF58:%.*]], label [[PRED_STORE_CONTINUE59:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP155:%.*]] = extractelement <8 x i1> [[TMP5]], i64 4
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP155]], label [[PRED_STORE_IF58:%.*]], label [[PRED_STORE_CONTINUE59:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if58:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP158:%.*]] = extractelement <8 x i32> [[TMP57]], i32 4
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP159:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP158]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP160:%.*]] = extractelement <8 x i8> [[TMP140]], i32 4
-; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP160]], i8* [[TMP159]], align 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP156:%.*]] = extractelement <8 x i32> [[TMP55]], i64 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP157:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP156]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP158:%.*]] = extractelement <8 x i8> [[TMP138]], i64 4
+; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP158]], i8* [[TMP157]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE59]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue59:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP161:%.*]] = extractelement <8 x i1> [[TMP7]], i32 5
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP161]], label [[PRED_STORE_IF60:%.*]], label [[PRED_STORE_CONTINUE61:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP159:%.*]] = extractelement <8 x i1> [[TMP5]], i64 5
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP159]], label [[PRED_STORE_IF60:%.*]], label [[PRED_STORE_CONTINUE61:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if60:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP162:%.*]] = extractelement <8 x i32> [[TMP57]], i32 5
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP163:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP162]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP164:%.*]] = extractelement <8 x i8> [[TMP140]], i32 5
-; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP164]], i8* [[TMP163]], align 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP160:%.*]] = extractelement <8 x i32> [[TMP55]], i64 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP161:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP160]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP162:%.*]] = extractelement <8 x i8> [[TMP138]], i64 5
+; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP162]], i8* [[TMP161]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE61]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue61:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP165:%.*]] = extractelement <8 x i1> [[TMP7]], i32 6
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP165]], label [[PRED_STORE_IF62:%.*]], label [[PRED_STORE_CONTINUE63:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP163:%.*]] = extractelement <8 x i1> [[TMP5]], i64 6
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP163]], label [[PRED_STORE_IF62:%.*]], label [[PRED_STORE_CONTINUE63:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if62:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP166:%.*]] = extractelement <8 x i32> [[TMP57]], i32 6
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP167:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP166]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP168:%.*]] = extractelement <8 x i8> [[TMP140]], i32 6
-; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP168]], i8* [[TMP167]], align 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP164:%.*]] = extractelement <8 x i32> [[TMP55]], i64 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP165:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP164]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP166:%.*]] = extractelement <8 x i8> [[TMP138]], i64 6
+; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP166]], i8* [[TMP165]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE63]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue63:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP169:%.*]] = extractelement <8 x i1> [[TMP7]], i32 7
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP169]], label [[PRED_STORE_IF64:%.*]], label [[PRED_STORE_CONTINUE65]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP167:%.*]] = extractelement <8 x i1> [[TMP5]], i64 7
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP167]], label [[PRED_STORE_IF64:%.*]], label [[PRED_STORE_CONTINUE65]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if64:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP170:%.*]] = extractelement <8 x i32> [[TMP57]], i32 7
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP171:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP170]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP172:%.*]] = extractelement <8 x i8> [[TMP140]], i32 7
-; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP172]], i8* [[TMP171]], align 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP168:%.*]] = extractelement <8 x i32> [[TMP55]], i64 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP169:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP168]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP170:%.*]] = extractelement <8 x i8> [[TMP138]], i64 7
+; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP170]], i8* [[TMP169]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE65]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue65:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; DISABLED_MASKED_STRIDED-NEXT:    [[VEC_IND_NEXT]] = add <8 x i32> [[VEC_IND]], <i32 -8, i32 -8, i32 -8, i32 -8, i32 -8, i32 -8, i32 -8, i32 -8>
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP173:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP173]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP171:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP171]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; DISABLED_MASKED_STRIDED:       for.body:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[IX_024:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_INC:%.*]] ], [ 1024, [[ENTRY:%.*]] ]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[CMP1:%.*]] = icmp ugt i32 [[IX_024]], [[CONV]]
@@ -1837,12 +1846,12 @@ define dso_local void @masked_strided2_reverse(i8* noalias nocapture readonly %p
 ; DISABLED_MASKED_STRIDED:       if.then:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[MUL:%.*]] = shl nuw nsw i32 [[IX_024]], 1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[MUL]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP174:%.*]] = load i8, i8* [[ARRAYIDX]], align 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP172:%.*]] = load i8, i8* [[ARRAYIDX]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[ADD:%.*]] = or i32 [[MUL]], 1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[ADD]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP175:%.*]] = load i8, i8* [[ARRAYIDX4]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[CMP_I:%.*]] = icmp slt i8 [[TMP174]], [[TMP175]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[SPEC_SELECT_I:%.*]] = select i1 [[CMP_I]], i8 [[TMP175]], i8 [[TMP174]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP173:%.*]] = load i8, i8* [[ARRAYIDX4]], align 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[CMP_I:%.*]] = icmp slt i8 [[TMP172]], [[TMP173]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[SPEC_SELECT_I:%.*]] = select i1 [[CMP_I]], i8 [[TMP173]], i8 [[TMP172]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[MUL]]
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[SPEC_SELECT_I]], i8* [[ARRAYIDX6]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[SUB:%.*]] = sub i8 0, [[SPEC_SELECT_I]]
@@ -1852,333 +1861,342 @@ define dso_local void @masked_strided2_reverse(i8* noalias nocapture readonly %p
 ; DISABLED_MASKED_STRIDED:       for.inc:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[INC]] = add nsw i32 [[IX_024]], -1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 0
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[EXITCOND]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[EXITCOND]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; DISABLED_MASKED_STRIDED:       for.end:
 ; DISABLED_MASKED_STRIDED-NEXT:    ret void
 ;
 ; ENABLED_MASKED_STRIDED-LABEL: @masked_strided2_reverse(
-; ENABLED_MASKED_STRIDED:         br i1 {{%.*}}, label [[FOR_BODY:%.*]], label [[VECTOR_PH:%.*]]
+; ENABLED_MASKED_STRIDED-NEXT:  entry:
+; ENABLED_MASKED_STRIDED-NEXT:    [[CONV:%.*]] = zext i8 [[GUARD:%.*]] to i32
+; ENABLED_MASKED_STRIDED-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, i8* [[Q:%.*]], i32 2048
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP0:%.*]] = getelementptr i8, i8* [[Q]], i32 2
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = icmp ugt i8* [[TMP0]], [[SCEVGEP]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, i8* [[Q]], i32 2049
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = getelementptr i8, i8* [[Q]], i32 3
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP3:%.*]] = icmp ugt i8* [[TMP2]], [[SCEVGEP2]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP4:%.*]] = or i1 [[TMP1]], [[TMP3]]
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP4]], label [[FOR_BODY:%.*]], label [[VECTOR_PH:%.*]]
 ; ENABLED_MASKED_STRIDED:       vector.ph:
-; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[CONV]], i32 0
+; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[CONV]], i64 0
 ; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; ENABLED_MASKED_STRIDED:       vector.body:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE65:%.*]] ]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[VEC_IND:%.*]] = phi <8 x i32> [ <i32 1024, i32 1023, i32 1022, i32 1021, i32 1020, i32 1019, i32 1018, i32 1017>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE65]] ]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP7:%.*]] = icmp ugt <8 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP8:%.*]] = shl nuw nsw <8 x i32> [[VEC_IND]], <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP9:%.*]] = extractelement <8 x i1> [[TMP7]], i32 0
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP9]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP5:%.*]] = icmp ugt <8 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP6:%.*]] = shl nuw nsw <8 x i32> [[VEC_IND]], <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP7:%.*]] = extractelement <8 x i1> [[TMP5]], i64 0
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP7]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; ENABLED_MASKED_STRIDED:       pred.load.if:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP10:%.*]] = extractelement <8 x i32> [[TMP8]], i32 0
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, i8* [[P:%.*]], i32 [[TMP10]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP12:%.*]] = load i8, i8* [[TMP11]], align 1
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP13:%.*]] = insertelement <8 x i8> poison, i8 [[TMP12]], i32 0
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP8:%.*]] = extractelement <8 x i32> [[TMP6]], i64 0
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, i8* [[P:%.*]], i32 [[TMP8]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP10:%.*]] = load i8, i8* [[TMP9]], align 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP11:%.*]] = insertelement <8 x i8> poison, i8 [[TMP10]], i64 0
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE]]
 ; ENABLED_MASKED_STRIDED:       pred.load.continue:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP14:%.*]] = phi <8 x i8> [ poison, [[VECTOR_BODY]] ], [ [[TMP13]], [[PRED_LOAD_IF]] ]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP15:%.*]] = extractelement <8 x i1> [[TMP7]], i32 1
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP15]], label [[PRED_LOAD_IF6:%.*]], label [[PRED_LOAD_CONTINUE7:%.*]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP12:%.*]] = phi <8 x i8> [ poison, [[VECTOR_BODY]] ], [ [[TMP11]], [[PRED_LOAD_IF]] ]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP13:%.*]] = extractelement <8 x i1> [[TMP5]], i64 1
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP13]], label [[PRED_LOAD_IF6:%.*]], label [[PRED_LOAD_CONTINUE7:%.*]]
 ; ENABLED_MASKED_STRIDED:       pred.load.if6:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP16:%.*]] = extractelement <8 x i32> [[TMP8]], i32 1
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP16]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP18:%.*]] = load i8, i8* [[TMP17]], align 1
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP19:%.*]] = insertelement <8 x i8> [[TMP14]], i8 [[TMP18]], i32 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP14:%.*]] = extractelement <8 x i32> [[TMP6]], i64 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP14]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP16:%.*]] = load i8, i8* [[TMP15]], align 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP17:%.*]] = insertelement <8 x i8> [[TMP12]], i8 [[TMP16]], i64 1
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE7]]
 ; ENABLED_MASKED_STRIDED:       pred.load.continue7:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP20:%.*]] = phi <8 x i8> [ [[TMP14]], [[PRED_LOAD_CONTINUE]] ], [ [[TMP19]], [[PRED_LOAD_IF6]] ]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP21:%.*]] = extractelement <8 x i1> [[TMP7]], i32 2
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP21]], label [[PRED_LOAD_IF8:%.*]], label [[PRED_LOAD_CONTINUE9:%.*]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP18:%.*]] = phi <8 x i8> [ [[TMP12]], [[PRED_LOAD_CONTINUE]] ], [ [[TMP17]], [[PRED_LOAD_IF6]] ]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP19:%.*]] = extractelement <8 x i1> [[TMP5]], i64 2
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP19]], label [[PRED_LOAD_IF8:%.*]], label [[PRED_LOAD_CONTINUE9:%.*]]
 ; ENABLED_MASKED_STRIDED:       pred.load.if8:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP22:%.*]] = extractelement <8 x i32> [[TMP8]], i32 2
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP22]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP24:%.*]] = load i8, i8* [[TMP23]], align 1
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP25:%.*]] = insertelement <8 x i8> [[TMP20]], i8 [[TMP24]], i32 2
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP20:%.*]] = extractelement <8 x i32> [[TMP6]], i64 2
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP20]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP22:%.*]] = load i8, i8* [[TMP21]], align 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP23:%.*]] = insertelement <8 x i8> [[TMP18]], i8 [[TMP22]], i64 2
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE9]]
 ; ENABLED_MASKED_STRIDED:       pred.load.continue9:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP26:%.*]] = phi <8 x i8> [ [[TMP20]], [[PRED_LOAD_CONTINUE7]] ], [ [[TMP25]], [[PRED_LOAD_IF8]] ]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP27:%.*]] = extractelement <8 x i1> [[TMP7]], i32 3
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP27]], label [[PRED_LOAD_IF10:%.*]], label [[PRED_LOAD_CONTINUE11:%.*]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP24:%.*]] = phi <8 x i8> [ [[TMP18]], [[PRED_LOAD_CONTINUE7]] ], [ [[TMP23]], [[PRED_LOAD_IF8]] ]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP25:%.*]] = extractelement <8 x i1> [[TMP5]], i64 3
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP25]], label [[PRED_LOAD_IF10:%.*]], label [[PRED_LOAD_CONTINUE11:%.*]]
 ; ENABLED_MASKED_STRIDED:       pred.load.if10:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP28:%.*]] = extractelement <8 x i32> [[TMP8]], i32 3
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP29:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP28]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP30:%.*]] = load i8, i8* [[TMP29]], align 1
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP31:%.*]] = insertelement <8 x i8> [[TMP26]], i8 [[TMP30]], i32 3
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP26:%.*]] = extractelement <8 x i32> [[TMP6]], i64 3
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP26]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP28:%.*]] = load i8, i8* [[TMP27]], align 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP29:%.*]] = insertelement <8 x i8> [[TMP24]], i8 [[TMP28]], i64 3
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE11]]
 ; ENABLED_MASKED_STRIDED:       pred.load.continue11:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP32:%.*]] = phi <8 x i8> [ [[TMP26]], [[PRED_LOAD_CONTINUE9]] ], [ [[TMP31]], [[PRED_LOAD_IF10]] ]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP33:%.*]] = extractelement <8 x i1> [[TMP7]], i32 4
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP33]], label [[PRED_LOAD_IF12:%.*]], label [[PRED_LOAD_CONTINUE13:%.*]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP30:%.*]] = phi <8 x i8> [ [[TMP24]], [[PRED_LOAD_CONTINUE9]] ], [ [[TMP29]], [[PRED_LOAD_IF10]] ]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP31:%.*]] = extractelement <8 x i1> [[TMP5]], i64 4
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP31]], label [[PRED_LOAD_IF12:%.*]], label [[PRED_LOAD_CONTINUE13:%.*]]
 ; ENABLED_MASKED_STRIDED:       pred.load.if12:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP34:%.*]] = extractelement <8 x i32> [[TMP8]], i32 4
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP35:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP34]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP36:%.*]] = load i8, i8* [[TMP35]], align 1
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP37:%.*]] = insertelement <8 x i8> [[TMP32]], i8 [[TMP36]], i32 4
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP32:%.*]] = extractelement <8 x i32> [[TMP6]], i64 4
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP33:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP32]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP34:%.*]] = load i8, i8* [[TMP33]], align 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP35:%.*]] = insertelement <8 x i8> [[TMP30]], i8 [[TMP34]], i64 4
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE13]]
 ; ENABLED_MASKED_STRIDED:       pred.load.continue13:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP38:%.*]] = phi <8 x i8> [ [[TMP32]], [[PRED_LOAD_CONTINUE11]] ], [ [[TMP37]], [[PRED_LOAD_IF12]] ]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP39:%.*]] = extractelement <8 x i1> [[TMP7]], i32 5
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP39]], label [[PRED_LOAD_IF14:%.*]], label [[PRED_LOAD_CONTINUE15:%.*]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP36:%.*]] = phi <8 x i8> [ [[TMP30]], [[PRED_LOAD_CONTINUE11]] ], [ [[TMP35]], [[PRED_LOAD_IF12]] ]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP37:%.*]] = extractelement <8 x i1> [[TMP5]], i64 5
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP37]], label [[PRED_LOAD_IF14:%.*]], label [[PRED_LOAD_CONTINUE15:%.*]]
 ; ENABLED_MASKED_STRIDED:       pred.load.if14:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP40:%.*]] = extractelement <8 x i32> [[TMP8]], i32 5
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP41:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP40]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP42:%.*]] = load i8, i8* [[TMP41]], align 1
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP43:%.*]] = insertelement <8 x i8> [[TMP38]], i8 [[TMP42]], i32 5
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP38:%.*]] = extractelement <8 x i32> [[TMP6]], i64 5
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP39:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP38]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP40:%.*]] = load i8, i8* [[TMP39]], align 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP41:%.*]] = insertelement <8 x i8> [[TMP36]], i8 [[TMP40]], i64 5
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE15]]
 ; ENABLED_MASKED_STRIDED:       pred.load.continue15:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP44:%.*]] = phi <8 x i8> [ [[TMP38]], [[PRED_LOAD_CONTINUE13]] ], [ [[TMP43]], [[PRED_LOAD_IF14]] ]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP45:%.*]] = extractelement <8 x i1> [[TMP7]], i32 6
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP45]], label [[PRED_LOAD_IF16:%.*]], label [[PRED_LOAD_CONTINUE17:%.*]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP42:%.*]] = phi <8 x i8> [ [[TMP36]], [[PRED_LOAD_CONTINUE13]] ], [ [[TMP41]], [[PRED_LOAD_IF14]] ]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP43:%.*]] = extractelement <8 x i1> [[TMP5]], i64 6
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP43]], label [[PRED_LOAD_IF16:%.*]], label [[PRED_LOAD_CONTINUE17:%.*]]
 ; ENABLED_MASKED_STRIDED:       pred.load.if16:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP46:%.*]] = extractelement <8 x i32> [[TMP8]], i32 6
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP47:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP46]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP48:%.*]] = load i8, i8* [[TMP47]], align 1
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP49:%.*]] = insertelement <8 x i8> [[TMP44]], i8 [[TMP48]], i32 6
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP44:%.*]] = extractelement <8 x i32> [[TMP6]], i64 6
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP45:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP44]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP46:%.*]] = load i8, i8* [[TMP45]], align 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP47:%.*]] = insertelement <8 x i8> [[TMP42]], i8 [[TMP46]], i64 6
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE17]]
 ; ENABLED_MASKED_STRIDED:       pred.load.continue17:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP50:%.*]] = phi <8 x i8> [ [[TMP44]], [[PRED_LOAD_CONTINUE15]] ], [ [[TMP49]], [[PRED_LOAD_IF16]] ]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP51:%.*]] = extractelement <8 x i1> [[TMP7]], i32 7
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP51]], label [[PRED_LOAD_IF18:%.*]], label [[PRED_LOAD_CONTINUE19:%.*]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP48:%.*]] = phi <8 x i8> [ [[TMP42]], [[PRED_LOAD_CONTINUE15]] ], [ [[TMP47]], [[PRED_LOAD_IF16]] ]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP49:%.*]] = extractelement <8 x i1> [[TMP5]], i64 7
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP49]], label [[PRED_LOAD_IF18:%.*]], label [[PRED_LOAD_CONTINUE19:%.*]]
 ; ENABLED_MASKED_STRIDED:       pred.load.if18:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP52:%.*]] = extractelement <8 x i32> [[TMP8]], i32 7
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP53:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP52]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP54:%.*]] = load i8, i8* [[TMP53]], align 1
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP55:%.*]] = insertelement <8 x i8> [[TMP50]], i8 [[TMP54]], i32 7
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP50:%.*]] = extractelement <8 x i32> [[TMP6]], i64 7
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP51:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP50]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP52:%.*]] = load i8, i8* [[TMP51]], align 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP53:%.*]] = insertelement <8 x i8> [[TMP48]], i8 [[TMP52]], i64 7
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE19]]
 ; ENABLED_MASKED_STRIDED:       pred.load.continue19:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP56:%.*]] = phi <8 x i8> [ [[TMP50]], [[PRED_LOAD_CONTINUE17]] ], [ [[TMP55]], [[PRED_LOAD_IF18]] ]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP57:%.*]] = or <8 x i32> [[TMP8]], <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP58:%.*]] = extractelement <8 x i1> [[TMP7]], i32 0
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP58]], label [[PRED_LOAD_IF20:%.*]], label [[PRED_LOAD_CONTINUE21:%.*]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP54:%.*]] = phi <8 x i8> [ [[TMP48]], [[PRED_LOAD_CONTINUE17]] ], [ [[TMP53]], [[PRED_LOAD_IF18]] ]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP55:%.*]] = or <8 x i32> [[TMP6]], <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP56:%.*]] = extractelement <8 x i1> [[TMP5]], i64 0
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP56]], label [[PRED_LOAD_IF20:%.*]], label [[PRED_LOAD_CONTINUE21:%.*]]
 ; ENABLED_MASKED_STRIDED:       pred.load.if20:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP59:%.*]] = extractelement <8 x i32> [[TMP57]], i32 0
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP60:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP59]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP61:%.*]] = load i8, i8* [[TMP60]], align 1
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP62:%.*]] = insertelement <8 x i8> poison, i8 [[TMP61]], i32 0
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP57:%.*]] = extractelement <8 x i32> [[TMP55]], i64 0
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP58:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP57]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP59:%.*]] = load i8, i8* [[TMP58]], align 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP60:%.*]] = insertelement <8 x i8> poison, i8 [[TMP59]], i64 0
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE21]]
 ; ENABLED_MASKED_STRIDED:       pred.load.continue21:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP63:%.*]] = phi <8 x i8> [ poison, [[PRED_LOAD_CONTINUE19]] ], [ [[TMP62]], [[PRED_LOAD_IF20]] ]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP64:%.*]] = extractelement <8 x i1> [[TMP7]], i32 1
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP64]], label [[PRED_LOAD_IF22:%.*]], label [[PRED_LOAD_CONTINUE23:%.*]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP61:%.*]] = phi <8 x i8> [ poison, [[PRED_LOAD_CONTINUE19]] ], [ [[TMP60]], [[PRED_LOAD_IF20]] ]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP62:%.*]] = extractelement <8 x i1> [[TMP5]], i64 1
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP62]], label [[PRED_LOAD_IF22:%.*]], label [[PRED_LOAD_CONTINUE23:%.*]]
 ; ENABLED_MASKED_STRIDED:       pred.load.if22:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP65:%.*]] = extractelement <8 x i32> [[TMP57]], i32 1
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP66:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP65]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP67:%.*]] = load i8, i8* [[TMP66]], align 1
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP68:%.*]] = insertelement <8 x i8> [[TMP63]], i8 [[TMP67]], i32 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP63:%.*]] = extractelement <8 x i32> [[TMP55]], i64 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP64:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP63]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP65:%.*]] = load i8, i8* [[TMP64]], align 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP66:%.*]] = insertelement <8 x i8> [[TMP61]], i8 [[TMP65]], i64 1
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE23]]
 ; ENABLED_MASKED_STRIDED:       pred.load.continue23:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP69:%.*]] = phi <8 x i8> [ [[TMP63]], [[PRED_LOAD_CONTINUE21]] ], [ [[TMP68]], [[PRED_LOAD_IF22]] ]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP70:%.*]] = extractelement <8 x i1> [[TMP7]], i32 2
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP70]], label [[PRED_LOAD_IF24:%.*]], label [[PRED_LOAD_CONTINUE25:%.*]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP67:%.*]] = phi <8 x i8> [ [[TMP61]], [[PRED_LOAD_CONTINUE21]] ], [ [[TMP66]], [[PRED_LOAD_IF22]] ]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP68:%.*]] = extractelement <8 x i1> [[TMP5]], i64 2
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP68]], label [[PRED_LOAD_IF24:%.*]], label [[PRED_LOAD_CONTINUE25:%.*]]
 ; ENABLED_MASKED_STRIDED:       pred.load.if24:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP71:%.*]] = extractelement <8 x i32> [[TMP57]], i32 2
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP72:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP71]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP73:%.*]] = load i8, i8* [[TMP72]], align 1
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP74:%.*]] = insertelement <8 x i8> [[TMP69]], i8 [[TMP73]], i32 2
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP69:%.*]] = extractelement <8 x i32> [[TMP55]], i64 2
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP70:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP69]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP71:%.*]] = load i8, i8* [[TMP70]], align 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP72:%.*]] = insertelement <8 x i8> [[TMP67]], i8 [[TMP71]], i64 2
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE25]]
 ; ENABLED_MASKED_STRIDED:       pred.load.continue25:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP75:%.*]] = phi <8 x i8> [ [[TMP69]], [[PRED_LOAD_CONTINUE23]] ], [ [[TMP74]], [[PRED_LOAD_IF24]] ]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP76:%.*]] = extractelement <8 x i1> [[TMP7]], i32 3
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP76]], label [[PRED_LOAD_IF26:%.*]], label [[PRED_LOAD_CONTINUE27:%.*]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP73:%.*]] = phi <8 x i8> [ [[TMP67]], [[PRED_LOAD_CONTINUE23]] ], [ [[TMP72]], [[PRED_LOAD_IF24]] ]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP74:%.*]] = extractelement <8 x i1> [[TMP5]], i64 3
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP74]], label [[PRED_LOAD_IF26:%.*]], label [[PRED_LOAD_CONTINUE27:%.*]]
 ; ENABLED_MASKED_STRIDED:       pred.load.if26:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP77:%.*]] = extractelement <8 x i32> [[TMP57]], i32 3
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP78:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP77]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP79:%.*]] = load i8, i8* [[TMP78]], align 1
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP80:%.*]] = insertelement <8 x i8> [[TMP75]], i8 [[TMP79]], i32 3
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP75:%.*]] = extractelement <8 x i32> [[TMP55]], i64 3
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP76:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP75]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP77:%.*]] = load i8, i8* [[TMP76]], align 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP78:%.*]] = insertelement <8 x i8> [[TMP73]], i8 [[TMP77]], i64 3
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE27]]
 ; ENABLED_MASKED_STRIDED:       pred.load.continue27:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP81:%.*]] = phi <8 x i8> [ [[TMP75]], [[PRED_LOAD_CONTINUE25]] ], [ [[TMP80]], [[PRED_LOAD_IF26]] ]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP82:%.*]] = extractelement <8 x i1> [[TMP7]], i32 4
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP82]], label [[PRED_LOAD_IF28:%.*]], label [[PRED_LOAD_CONTINUE29:%.*]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP79:%.*]] = phi <8 x i8> [ [[TMP73]], [[PRED_LOAD_CONTINUE25]] ], [ [[TMP78]], [[PRED_LOAD_IF26]] ]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP80:%.*]] = extractelement <8 x i1> [[TMP5]], i64 4
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP80]], label [[PRED_LOAD_IF28:%.*]], label [[PRED_LOAD_CONTINUE29:%.*]]
 ; ENABLED_MASKED_STRIDED:       pred.load.if28:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP83:%.*]] = extractelement <8 x i32> [[TMP57]], i32 4
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP84:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP83]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP85:%.*]] = load i8, i8* [[TMP84]], align 1
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP86:%.*]] = insertelement <8 x i8> [[TMP81]], i8 [[TMP85]], i32 4
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP81:%.*]] = extractelement <8 x i32> [[TMP55]], i64 4
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP82:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP81]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP83:%.*]] = load i8, i8* [[TMP82]], align 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP84:%.*]] = insertelement <8 x i8> [[TMP79]], i8 [[TMP83]], i64 4
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE29]]
 ; ENABLED_MASKED_STRIDED:       pred.load.continue29:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP87:%.*]] = phi <8 x i8> [ [[TMP81]], [[PRED_LOAD_CONTINUE27]] ], [ [[TMP86]], [[PRED_LOAD_IF28]] ]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP88:%.*]] = extractelement <8 x i1> [[TMP7]], i32 5
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP88]], label [[PRED_LOAD_IF30:%.*]], label [[PRED_LOAD_CONTINUE31:%.*]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP85:%.*]] = phi <8 x i8> [ [[TMP79]], [[PRED_LOAD_CONTINUE27]] ], [ [[TMP84]], [[PRED_LOAD_IF28]] ]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP86:%.*]] = extractelement <8 x i1> [[TMP5]], i64 5
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP86]], label [[PRED_LOAD_IF30:%.*]], label [[PRED_LOAD_CONTINUE31:%.*]]
 ; ENABLED_MASKED_STRIDED:       pred.load.if30:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP89:%.*]] = extractelement <8 x i32> [[TMP57]], i32 5
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP90:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP89]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP91:%.*]] = load i8, i8* [[TMP90]], align 1
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP92:%.*]] = insertelement <8 x i8> [[TMP87]], i8 [[TMP91]], i32 5
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP87:%.*]] = extractelement <8 x i32> [[TMP55]], i64 5
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP88:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP87]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP89:%.*]] = load i8, i8* [[TMP88]], align 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP90:%.*]] = insertelement <8 x i8> [[TMP85]], i8 [[TMP89]], i64 5
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE31]]
 ; ENABLED_MASKED_STRIDED:       pred.load.continue31:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP93:%.*]] = phi <8 x i8> [ [[TMP87]], [[PRED_LOAD_CONTINUE29]] ], [ [[TMP92]], [[PRED_LOAD_IF30]] ]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP94:%.*]] = extractelement <8 x i1> [[TMP7]], i32 6
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP94]], label [[PRED_LOAD_IF32:%.*]], label [[PRED_LOAD_CONTINUE33:%.*]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP91:%.*]] = phi <8 x i8> [ [[TMP85]], [[PRED_LOAD_CONTINUE29]] ], [ [[TMP90]], [[PRED_LOAD_IF30]] ]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP92:%.*]] = extractelement <8 x i1> [[TMP5]], i64 6
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP92]], label [[PRED_LOAD_IF32:%.*]], label [[PRED_LOAD_CONTINUE33:%.*]]
 ; ENABLED_MASKED_STRIDED:       pred.load.if32:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP95:%.*]] = extractelement <8 x i32> [[TMP57]], i32 6
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP96:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP95]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP97:%.*]] = load i8, i8* [[TMP96]], align 1
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP98:%.*]] = insertelement <8 x i8> [[TMP93]], i8 [[TMP97]], i32 6
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP93:%.*]] = extractelement <8 x i32> [[TMP55]], i64 6
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP94:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP93]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP95:%.*]] = load i8, i8* [[TMP94]], align 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP96:%.*]] = insertelement <8 x i8> [[TMP91]], i8 [[TMP95]], i64 6
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE33]]
 ; ENABLED_MASKED_STRIDED:       pred.load.continue33:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP99:%.*]] = phi <8 x i8> [ [[TMP93]], [[PRED_LOAD_CONTINUE31]] ], [ [[TMP98]], [[PRED_LOAD_IF32]] ]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP100:%.*]] = extractelement <8 x i1> [[TMP7]], i32 7
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP100]], label [[PRED_LOAD_IF34:%.*]], label [[PRED_LOAD_CONTINUE35:%.*]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP97:%.*]] = phi <8 x i8> [ [[TMP91]], [[PRED_LOAD_CONTINUE31]] ], [ [[TMP96]], [[PRED_LOAD_IF32]] ]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP98:%.*]] = extractelement <8 x i1> [[TMP5]], i64 7
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP98]], label [[PRED_LOAD_IF34:%.*]], label [[PRED_LOAD_CONTINUE35:%.*]]
 ; ENABLED_MASKED_STRIDED:       pred.load.if34:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP101:%.*]] = extractelement <8 x i32> [[TMP57]], i32 7
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP102:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP101]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP103:%.*]] = load i8, i8* [[TMP102]], align 1
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP104:%.*]] = insertelement <8 x i8> [[TMP99]], i8 [[TMP103]], i32 7
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP99:%.*]] = extractelement <8 x i32> [[TMP55]], i64 7
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP100:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP99]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP101:%.*]] = load i8, i8* [[TMP100]], align 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP102:%.*]] = insertelement <8 x i8> [[TMP97]], i8 [[TMP101]], i64 7
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE35]]
 ; ENABLED_MASKED_STRIDED:       pred.load.continue35:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP105:%.*]] = phi <8 x i8> [ [[TMP99]], [[PRED_LOAD_CONTINUE33]] ], [ [[TMP104]], [[PRED_LOAD_IF34]] ]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP106:%.*]] = icmp slt <8 x i8> [[TMP56]], [[TMP105]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP107:%.*]] = select <8 x i1> [[TMP106]], <8 x i8> [[TMP105]], <8 x i8> [[TMP56]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP108:%.*]] = extractelement <8 x i1> [[TMP7]], i32 0
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP108]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP103:%.*]] = phi <8 x i8> [ [[TMP97]], [[PRED_LOAD_CONTINUE33]] ], [ [[TMP102]], [[PRED_LOAD_IF34]] ]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP104:%.*]] = icmp slt <8 x i8> [[TMP54]], [[TMP103]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP105:%.*]] = select <8 x i1> [[TMP104]], <8 x i8> [[TMP103]], <8 x i8> [[TMP54]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP106:%.*]] = extractelement <8 x i1> [[TMP5]], i64 0
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP106]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; ENABLED_MASKED_STRIDED:       pred.store.if:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP109:%.*]] = extractelement <8 x i32> [[TMP8]], i32 0
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP110:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP109]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP111:%.*]] = extractelement <8 x i8> [[TMP107]], i32 0
-; ENABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP111]], i8* [[TMP110]], align 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP107:%.*]] = extractelement <8 x i32> [[TMP6]], i64 0
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP108:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP107]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP109:%.*]] = extractelement <8 x i8> [[TMP105]], i64 0
+; ENABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP109]], i8* [[TMP108]], align 1
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; ENABLED_MASKED_STRIDED:       pred.store.continue:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP112:%.*]] = extractelement <8 x i1> [[TMP7]], i32 1
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP112]], label [[PRED_STORE_IF36:%.*]], label [[PRED_STORE_CONTINUE37:%.*]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP110:%.*]] = extractelement <8 x i1> [[TMP5]], i64 1
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP110]], label [[PRED_STORE_IF36:%.*]], label [[PRED_STORE_CONTINUE37:%.*]]
 ; ENABLED_MASKED_STRIDED:       pred.store.if36:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP113:%.*]] = extractelement <8 x i32> [[TMP8]], i32 1
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP114:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP113]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP115:%.*]] = extractelement <8 x i8> [[TMP107]], i32 1
-; ENABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP115]], i8* [[TMP114]], align 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP111:%.*]] = extractelement <8 x i32> [[TMP6]], i64 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP112:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP111]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP113:%.*]] = extractelement <8 x i8> [[TMP105]], i64 1
+; ENABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP113]], i8* [[TMP112]], align 1
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE37]]
 ; ENABLED_MASKED_STRIDED:       pred.store.continue37:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP116:%.*]] = extractelement <8 x i1> [[TMP7]], i32 2
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP116]], label [[PRED_STORE_IF38:%.*]], label [[PRED_STORE_CONTINUE39:%.*]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP114:%.*]] = extractelement <8 x i1> [[TMP5]], i64 2
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP114]], label [[PRED_STORE_IF38:%.*]], label [[PRED_STORE_CONTINUE39:%.*]]
 ; ENABLED_MASKED_STRIDED:       pred.store.if38:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP117:%.*]] = extractelement <8 x i32> [[TMP8]], i32 2
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP118:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP117]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP119:%.*]] = extractelement <8 x i8> [[TMP107]], i32 2
-; ENABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP119]], i8* [[TMP118]], align 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP115:%.*]] = extractelement <8 x i32> [[TMP6]], i64 2
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP116:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP115]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP117:%.*]] = extractelement <8 x i8> [[TMP105]], i64 2
+; ENABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP117]], i8* [[TMP116]], align 1
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE39]]
 ; ENABLED_MASKED_STRIDED:       pred.store.continue39:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP120:%.*]] = extractelement <8 x i1> [[TMP7]], i32 3
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP120]], label [[PRED_STORE_IF40:%.*]], label [[PRED_STORE_CONTINUE41:%.*]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP118:%.*]] = extractelement <8 x i1> [[TMP5]], i64 3
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP118]], label [[PRED_STORE_IF40:%.*]], label [[PRED_STORE_CONTINUE41:%.*]]
 ; ENABLED_MASKED_STRIDED:       pred.store.if40:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP121:%.*]] = extractelement <8 x i32> [[TMP8]], i32 3
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP122:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP121]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP123:%.*]] = extractelement <8 x i8> [[TMP107]], i32 3
-; ENABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP123]], i8* [[TMP122]], align 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP119:%.*]] = extractelement <8 x i32> [[TMP6]], i64 3
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP120:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP119]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP121:%.*]] = extractelement <8 x i8> [[TMP105]], i64 3
+; ENABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP121]], i8* [[TMP120]], align 1
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE41]]
 ; ENABLED_MASKED_STRIDED:       pred.store.continue41:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP124:%.*]] = extractelement <8 x i1> [[TMP7]], i32 4
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP124]], label [[PRED_STORE_IF42:%.*]], label [[PRED_STORE_CONTINUE43:%.*]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP122:%.*]] = extractelement <8 x i1> [[TMP5]], i64 4
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP122]], label [[PRED_STORE_IF42:%.*]], label [[PRED_STORE_CONTINUE43:%.*]]
 ; ENABLED_MASKED_STRIDED:       pred.store.if42:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP125:%.*]] = extractelement <8 x i32> [[TMP8]], i32 4
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP126:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP125]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP127:%.*]] = extractelement <8 x i8> [[TMP107]], i32 4
-; ENABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP127]], i8* [[TMP126]], align 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP123:%.*]] = extractelement <8 x i32> [[TMP6]], i64 4
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP124:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP123]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP125:%.*]] = extractelement <8 x i8> [[TMP105]], i64 4
+; ENABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP125]], i8* [[TMP124]], align 1
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE43]]
 ; ENABLED_MASKED_STRIDED:       pred.store.continue43:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP128:%.*]] = extractelement <8 x i1> [[TMP7]], i32 5
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP128]], label [[PRED_STORE_IF44:%.*]], label [[PRED_STORE_CONTINUE45:%.*]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP126:%.*]] = extractelement <8 x i1> [[TMP5]], i64 5
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP126]], label [[PRED_STORE_IF44:%.*]], label [[PRED_STORE_CONTINUE45:%.*]]
 ; ENABLED_MASKED_STRIDED:       pred.store.if44:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP129:%.*]] = extractelement <8 x i32> [[TMP8]], i32 5
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP130:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP129]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP131:%.*]] = extractelement <8 x i8> [[TMP107]], i32 5
-; ENABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP131]], i8* [[TMP130]], align 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP127:%.*]] = extractelement <8 x i32> [[TMP6]], i64 5
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP128:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP127]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP129:%.*]] = extractelement <8 x i8> [[TMP105]], i64 5
+; ENABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP129]], i8* [[TMP128]], align 1
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE45]]
 ; ENABLED_MASKED_STRIDED:       pred.store.continue45:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP132:%.*]] = extractelement <8 x i1> [[TMP7]], i32 6
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP132]], label [[PRED_STORE_IF46:%.*]], label [[PRED_STORE_CONTINUE47:%.*]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP130:%.*]] = extractelement <8 x i1> [[TMP5]], i64 6
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP130]], label [[PRED_STORE_IF46:%.*]], label [[PRED_STORE_CONTINUE47:%.*]]
 ; ENABLED_MASKED_STRIDED:       pred.store.if46:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP133:%.*]] = extractelement <8 x i32> [[TMP8]], i32 6
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP134:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP133]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP135:%.*]] = extractelement <8 x i8> [[TMP107]], i32 6
-; ENABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP135]], i8* [[TMP134]], align 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP131:%.*]] = extractelement <8 x i32> [[TMP6]], i64 6
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP132:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP131]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP133:%.*]] = extractelement <8 x i8> [[TMP105]], i64 6
+; ENABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP133]], i8* [[TMP132]], align 1
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE47]]
 ; ENABLED_MASKED_STRIDED:       pred.store.continue47:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP136:%.*]] = extractelement <8 x i1> [[TMP7]], i32 7
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP136]], label [[PRED_STORE_IF48:%.*]], label [[PRED_STORE_CONTINUE49:%.*]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP134:%.*]] = extractelement <8 x i1> [[TMP5]], i64 7
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP134]], label [[PRED_STORE_IF48:%.*]], label [[PRED_STORE_CONTINUE49:%.*]]
 ; ENABLED_MASKED_STRIDED:       pred.store.if48:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP137:%.*]] = extractelement <8 x i32> [[TMP8]], i32 7
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP138:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP137]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP139:%.*]] = extractelement <8 x i8> [[TMP107]], i32 7
-; ENABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP139]], i8* [[TMP138]], align 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP135:%.*]] = extractelement <8 x i32> [[TMP6]], i64 7
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP136:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP135]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP137:%.*]] = extractelement <8 x i8> [[TMP105]], i64 7
+; ENABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP137]], i8* [[TMP136]], align 1
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE49]]
 ; ENABLED_MASKED_STRIDED:       pred.store.continue49:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP140:%.*]] = sub <8 x i8> zeroinitializer, [[TMP107]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP141:%.*]] = extractelement <8 x i1> [[TMP7]], i32 0
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP141]], label [[PRED_STORE_IF50:%.*]], label [[PRED_STORE_CONTINUE51:%.*]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP138:%.*]] = sub <8 x i8> zeroinitializer, [[TMP105]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP139:%.*]] = extractelement <8 x i1> [[TMP5]], i64 0
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP139]], label [[PRED_STORE_IF50:%.*]], label [[PRED_STORE_CONTINUE51:%.*]]
 ; ENABLED_MASKED_STRIDED:       pred.store.if50:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP142:%.*]] = extractelement <8 x i32> [[TMP57]], i32 0
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP143:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP142]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP144:%.*]] = extractelement <8 x i8> [[TMP140]], i32 0
-; ENABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP144]], i8* [[TMP143]], align 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP140:%.*]] = extractelement <8 x i32> [[TMP55]], i64 0
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP141:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP140]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP142:%.*]] = extractelement <8 x i8> [[TMP138]], i64 0
+; ENABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP142]], i8* [[TMP141]], align 1
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE51]]
 ; ENABLED_MASKED_STRIDED:       pred.store.continue51:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP145:%.*]] = extractelement <8 x i1> [[TMP7]], i32 1
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP145]], label [[PRED_STORE_IF52:%.*]], label [[PRED_STORE_CONTINUE53:%.*]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP143:%.*]] = extractelement <8 x i1> [[TMP5]], i64 1
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP143]], label [[PRED_STORE_IF52:%.*]], label [[PRED_STORE_CONTINUE53:%.*]]
 ; ENABLED_MASKED_STRIDED:       pred.store.if52:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP146:%.*]] = extractelement <8 x i32> [[TMP57]], i32 1
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP147:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP146]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP148:%.*]] = extractelement <8 x i8> [[TMP140]], i32 1
-; ENABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP148]], i8* [[TMP147]], align 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP144:%.*]] = extractelement <8 x i32> [[TMP55]], i64 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP145:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP144]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP146:%.*]] = extractelement <8 x i8> [[TMP138]], i64 1
+; ENABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP146]], i8* [[TMP145]], align 1
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE53]]
 ; ENABLED_MASKED_STRIDED:       pred.store.continue53:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP149:%.*]] = extractelement <8 x i1> [[TMP7]], i32 2
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP149]], label [[PRED_STORE_IF54:%.*]], label [[PRED_STORE_CONTINUE55:%.*]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP147:%.*]] = extractelement <8 x i1> [[TMP5]], i64 2
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP147]], label [[PRED_STORE_IF54:%.*]], label [[PRED_STORE_CONTINUE55:%.*]]
 ; ENABLED_MASKED_STRIDED:       pred.store.if54:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP150:%.*]] = extractelement <8 x i32> [[TMP57]], i32 2
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP151:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP150]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP152:%.*]] = extractelement <8 x i8> [[TMP140]], i32 2
-; ENABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP152]], i8* [[TMP151]], align 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP148:%.*]] = extractelement <8 x i32> [[TMP55]], i64 2
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP149:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP148]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP150:%.*]] = extractelement <8 x i8> [[TMP138]], i64 2
+; ENABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP150]], i8* [[TMP149]], align 1
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE55]]
 ; ENABLED_MASKED_STRIDED:       pred.store.continue55:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP153:%.*]] = extractelement <8 x i1> [[TMP7]], i32 3
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP153]], label [[PRED_STORE_IF56:%.*]], label [[PRED_STORE_CONTINUE57:%.*]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP151:%.*]] = extractelement <8 x i1> [[TMP5]], i64 3
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP151]], label [[PRED_STORE_IF56:%.*]], label [[PRED_STORE_CONTINUE57:%.*]]
 ; ENABLED_MASKED_STRIDED:       pred.store.if56:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP154:%.*]] = extractelement <8 x i32> [[TMP57]], i32 3
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP155:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP154]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP156:%.*]] = extractelement <8 x i8> [[TMP140]], i32 3
-; ENABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP156]], i8* [[TMP155]], align 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP152:%.*]] = extractelement <8 x i32> [[TMP55]], i64 3
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP153:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP152]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP154:%.*]] = extractelement <8 x i8> [[TMP138]], i64 3
+; ENABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP154]], i8* [[TMP153]], align 1
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE57]]
 ; ENABLED_MASKED_STRIDED:       pred.store.continue57:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP157:%.*]] = extractelement <8 x i1> [[TMP7]], i32 4
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP157]], label [[PRED_STORE_IF58:%.*]], label [[PRED_STORE_CONTINUE59:%.*]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP155:%.*]] = extractelement <8 x i1> [[TMP5]], i64 4
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP155]], label [[PRED_STORE_IF58:%.*]], label [[PRED_STORE_CONTINUE59:%.*]]
 ; ENABLED_MASKED_STRIDED:       pred.store.if58:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP158:%.*]] = extractelement <8 x i32> [[TMP57]], i32 4
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP159:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP158]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP160:%.*]] = extractelement <8 x i8> [[TMP140]], i32 4
-; ENABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP160]], i8* [[TMP159]], align 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP156:%.*]] = extractelement <8 x i32> [[TMP55]], i64 4
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP157:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP156]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP158:%.*]] = extractelement <8 x i8> [[TMP138]], i64 4
+; ENABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP158]], i8* [[TMP157]], align 1
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE59]]
 ; ENABLED_MASKED_STRIDED:       pred.store.continue59:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP161:%.*]] = extractelement <8 x i1> [[TMP7]], i32 5
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP161]], label [[PRED_STORE_IF60:%.*]], label [[PRED_STORE_CONTINUE61:%.*]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP159:%.*]] = extractelement <8 x i1> [[TMP5]], i64 5
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP159]], label [[PRED_STORE_IF60:%.*]], label [[PRED_STORE_CONTINUE61:%.*]]
 ; ENABLED_MASKED_STRIDED:       pred.store.if60:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP162:%.*]] = extractelement <8 x i32> [[TMP57]], i32 5
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP163:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP162]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP164:%.*]] = extractelement <8 x i8> [[TMP140]], i32 5
-; ENABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP164]], i8* [[TMP163]], align 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP160:%.*]] = extractelement <8 x i32> [[TMP55]], i64 5
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP161:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP160]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP162:%.*]] = extractelement <8 x i8> [[TMP138]], i64 5
+; ENABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP162]], i8* [[TMP161]], align 1
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE61]]
 ; ENABLED_MASKED_STRIDED:       pred.store.continue61:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP165:%.*]] = extractelement <8 x i1> [[TMP7]], i32 6
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP165]], label [[PRED_STORE_IF62:%.*]], label [[PRED_STORE_CONTINUE63:%.*]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP163:%.*]] = extractelement <8 x i1> [[TMP5]], i64 6
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP163]], label [[PRED_STORE_IF62:%.*]], label [[PRED_STORE_CONTINUE63:%.*]]
 ; ENABLED_MASKED_STRIDED:       pred.store.if62:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP166:%.*]] = extractelement <8 x i32> [[TMP57]], i32 6
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP167:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP166]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP168:%.*]] = extractelement <8 x i8> [[TMP140]], i32 6
-; ENABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP168]], i8* [[TMP167]], align 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP164:%.*]] = extractelement <8 x i32> [[TMP55]], i64 6
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP165:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP164]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP166:%.*]] = extractelement <8 x i8> [[TMP138]], i64 6
+; ENABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP166]], i8* [[TMP165]], align 1
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE63]]
 ; ENABLED_MASKED_STRIDED:       pred.store.continue63:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP169:%.*]] = extractelement <8 x i1> [[TMP7]], i32 7
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP169]], label [[PRED_STORE_IF64:%.*]], label [[PRED_STORE_CONTINUE65]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP167:%.*]] = extractelement <8 x i1> [[TMP5]], i64 7
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP167]], label [[PRED_STORE_IF64:%.*]], label [[PRED_STORE_CONTINUE65]]
 ; ENABLED_MASKED_STRIDED:       pred.store.if64:
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP170:%.*]] = extractelement <8 x i32> [[TMP57]], i32 7
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP171:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP170]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP172:%.*]] = extractelement <8 x i8> [[TMP140]], i32 7
-; ENABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP172]], i8* [[TMP171]], align 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP168:%.*]] = extractelement <8 x i32> [[TMP55]], i64 7
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP169:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP168]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP170:%.*]] = extractelement <8 x i8> [[TMP138]], i64 7
+; ENABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP170]], i8* [[TMP169]], align 1
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE65]]
 ; ENABLED_MASKED_STRIDED:       pred.store.continue65:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; ENABLED_MASKED_STRIDED-NEXT:    [[VEC_IND_NEXT]] = add <8 x i32> [[VEC_IND]], <i32 -8, i32 -8, i32 -8, i32 -8, i32 -8, i32 -8, i32 -8, i32 -8>
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP173:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP173]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP171:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP171]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; ENABLED_MASKED_STRIDED:       for.body:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[IX_024:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_INC:%.*]] ], [ 1024, [[ENTRY:%.*]] ]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[CMP1:%.*]] = icmp ugt i32 [[IX_024]], [[CONV]]
@@ -2186,12 +2204,12 @@ define dso_local void @masked_strided2_reverse(i8* noalias nocapture readonly %p
 ; ENABLED_MASKED_STRIDED:       if.then:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[MUL:%.*]] = shl nuw nsw i32 [[IX_024]], 1
 ; ENABLED_MASKED_STRIDED-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[MUL]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP174:%.*]] = load i8, i8* [[ARRAYIDX]], align 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP172:%.*]] = load i8, i8* [[ARRAYIDX]], align 1
 ; ENABLED_MASKED_STRIDED-NEXT:    [[ADD:%.*]] = or i32 [[MUL]], 1
 ; ENABLED_MASKED_STRIDED-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[ADD]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP175:%.*]] = load i8, i8* [[ARRAYIDX4]], align 1
-; ENABLED_MASKED_STRIDED-NEXT:    [[CMP_I:%.*]] = icmp slt i8 [[TMP174]], [[TMP175]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[SPEC_SELECT_I:%.*]] = select i1 [[CMP_I]], i8 [[TMP175]], i8 [[TMP174]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP173:%.*]] = load i8, i8* [[ARRAYIDX4]], align 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[CMP_I:%.*]] = icmp slt i8 [[TMP172]], [[TMP173]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[SPEC_SELECT_I:%.*]] = select i1 [[CMP_I]], i8 [[TMP173]], i8 [[TMP172]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[MUL]]
 ; ENABLED_MASKED_STRIDED-NEXT:    store i8 [[SPEC_SELECT_I]], i8* [[ARRAYIDX6]], align 1
 ; ENABLED_MASKED_STRIDED-NEXT:    [[SUB:%.*]] = sub i8 0, [[SPEC_SELECT_I]]
@@ -2201,7 +2219,7 @@ define dso_local void @masked_strided2_reverse(i8* noalias nocapture readonly %p
 ; ENABLED_MASKED_STRIDED:       for.inc:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INC]] = add nsw i32 [[IX_024]], -1
 ; ENABLED_MASKED_STRIDED-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 0
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[EXITCOND]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[EXITCOND]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; ENABLED_MASKED_STRIDED:       for.end:
 ; ENABLED_MASKED_STRIDED-NEXT:    ret void
 ;
@@ -2274,9 +2292,9 @@ define dso_local void @masked_strided2_unknown_tc(i8* noalias nocapture readonly
 ; DISABLED_MASKED_STRIDED-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 7
 ; DISABLED_MASKED_STRIDED-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -8
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = add i32 [[N]], -1
-; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer
-; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i32> poison, i32 [[GUARD:%.*]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i32> poison, i32 [[GUARD:%.*]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT1]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; DISABLED_MASKED_STRIDED:       vector.body:
@@ -2286,318 +2304,318 @@ define dso_local void @masked_strided2_unknown_tc(i8* noalias nocapture readonly
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = icmp ule <8 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = shl nuw nsw <8 x i32> [[VEC_IND]], <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP3:%.*]] = select <8 x i1> [[TMP1]], <8 x i1> [[TMP0]], <8 x i1> zeroinitializer
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP4:%.*]] = extractelement <8 x i1> [[TMP3]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP4:%.*]] = extractelement <8 x i1> [[TMP3]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP4]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP5:%.*]] = extractelement <8 x i32> [[TMP2]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP5:%.*]] = extractelement <8 x i32> [[TMP2]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, i8* [[P:%.*]], i32 [[TMP5]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP7:%.*]] = load i8, i8* [[TMP6]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP8:%.*]] = insertelement <8 x i8> poison, i8 [[TMP7]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP8:%.*]] = insertelement <8 x i8> poison, i8 [[TMP7]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP9:%.*]] = phi <8 x i8> [ poison, [[VECTOR_BODY]] ], [ [[TMP8]], [[PRED_LOAD_IF]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP10:%.*]] = extractelement <8 x i1> [[TMP3]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP10:%.*]] = extractelement <8 x i1> [[TMP3]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP10]], label [[PRED_LOAD_IF3:%.*]], label [[PRED_LOAD_CONTINUE4:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if3:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP11:%.*]] = extractelement <8 x i32> [[TMP2]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP11:%.*]] = extractelement <8 x i32> [[TMP2]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP11]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP13:%.*]] = load i8, i8* [[TMP12]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP14:%.*]] = insertelement <8 x i8> [[TMP9]], i8 [[TMP13]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP14:%.*]] = insertelement <8 x i8> [[TMP9]], i8 [[TMP13]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE4]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue4:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP15:%.*]] = phi <8 x i8> [ [[TMP9]], [[PRED_LOAD_CONTINUE]] ], [ [[TMP14]], [[PRED_LOAD_IF3]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP16:%.*]] = extractelement <8 x i1> [[TMP3]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP16:%.*]] = extractelement <8 x i1> [[TMP3]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP16]], label [[PRED_LOAD_IF5:%.*]], label [[PRED_LOAD_CONTINUE6:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if5:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP17:%.*]] = extractelement <8 x i32> [[TMP2]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP17:%.*]] = extractelement <8 x i32> [[TMP2]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP17]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP19:%.*]] = load i8, i8* [[TMP18]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP20:%.*]] = insertelement <8 x i8> [[TMP15]], i8 [[TMP19]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP20:%.*]] = insertelement <8 x i8> [[TMP15]], i8 [[TMP19]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE6]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue6:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP21:%.*]] = phi <8 x i8> [ [[TMP15]], [[PRED_LOAD_CONTINUE4]] ], [ [[TMP20]], [[PRED_LOAD_IF5]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP22:%.*]] = extractelement <8 x i1> [[TMP3]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP22:%.*]] = extractelement <8 x i1> [[TMP3]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP22]], label [[PRED_LOAD_IF7:%.*]], label [[PRED_LOAD_CONTINUE8:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if7:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP23:%.*]] = extractelement <8 x i32> [[TMP2]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP23:%.*]] = extractelement <8 x i32> [[TMP2]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP23]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP25:%.*]] = load i8, i8* [[TMP24]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP26:%.*]] = insertelement <8 x i8> [[TMP21]], i8 [[TMP25]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP26:%.*]] = insertelement <8 x i8> [[TMP21]], i8 [[TMP25]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE8]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue8:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP27:%.*]] = phi <8 x i8> [ [[TMP21]], [[PRED_LOAD_CONTINUE6]] ], [ [[TMP26]], [[PRED_LOAD_IF7]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP28:%.*]] = extractelement <8 x i1> [[TMP3]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP28:%.*]] = extractelement <8 x i1> [[TMP3]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP28]], label [[PRED_LOAD_IF9:%.*]], label [[PRED_LOAD_CONTINUE10:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if9:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP29:%.*]] = extractelement <8 x i32> [[TMP2]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP29:%.*]] = extractelement <8 x i32> [[TMP2]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP30:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP29]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP31:%.*]] = load i8, i8* [[TMP30]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP32:%.*]] = insertelement <8 x i8> [[TMP27]], i8 [[TMP31]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP32:%.*]] = insertelement <8 x i8> [[TMP27]], i8 [[TMP31]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE10]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue10:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP33:%.*]] = phi <8 x i8> [ [[TMP27]], [[PRED_LOAD_CONTINUE8]] ], [ [[TMP32]], [[PRED_LOAD_IF9]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP34:%.*]] = extractelement <8 x i1> [[TMP3]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP34:%.*]] = extractelement <8 x i1> [[TMP3]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP34]], label [[PRED_LOAD_IF11:%.*]], label [[PRED_LOAD_CONTINUE12:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if11:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP35:%.*]] = extractelement <8 x i32> [[TMP2]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP35:%.*]] = extractelement <8 x i32> [[TMP2]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP36:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP35]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP37:%.*]] = load i8, i8* [[TMP36]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP38:%.*]] = insertelement <8 x i8> [[TMP33]], i8 [[TMP37]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP38:%.*]] = insertelement <8 x i8> [[TMP33]], i8 [[TMP37]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE12]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue12:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP39:%.*]] = phi <8 x i8> [ [[TMP33]], [[PRED_LOAD_CONTINUE10]] ], [ [[TMP38]], [[PRED_LOAD_IF11]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP40:%.*]] = extractelement <8 x i1> [[TMP3]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP40:%.*]] = extractelement <8 x i1> [[TMP3]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP40]], label [[PRED_LOAD_IF13:%.*]], label [[PRED_LOAD_CONTINUE14:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if13:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP41:%.*]] = extractelement <8 x i32> [[TMP2]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP41:%.*]] = extractelement <8 x i32> [[TMP2]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP42:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP41]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP43:%.*]] = load i8, i8* [[TMP42]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP44:%.*]] = insertelement <8 x i8> [[TMP39]], i8 [[TMP43]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP44:%.*]] = insertelement <8 x i8> [[TMP39]], i8 [[TMP43]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE14]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue14:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP45:%.*]] = phi <8 x i8> [ [[TMP39]], [[PRED_LOAD_CONTINUE12]] ], [ [[TMP44]], [[PRED_LOAD_IF13]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP46:%.*]] = extractelement <8 x i1> [[TMP3]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP46:%.*]] = extractelement <8 x i1> [[TMP3]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP46]], label [[PRED_LOAD_IF15:%.*]], label [[PRED_LOAD_CONTINUE16:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if15:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP47:%.*]] = extractelement <8 x i32> [[TMP2]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP47:%.*]] = extractelement <8 x i32> [[TMP2]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP48:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP47]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP49:%.*]] = load i8, i8* [[TMP48]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP50:%.*]] = insertelement <8 x i8> [[TMP45]], i8 [[TMP49]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP50:%.*]] = insertelement <8 x i8> [[TMP45]], i8 [[TMP49]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE16]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue16:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP51:%.*]] = phi <8 x i8> [ [[TMP45]], [[PRED_LOAD_CONTINUE14]] ], [ [[TMP50]], [[PRED_LOAD_IF15]] ]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP52:%.*]] = or <8 x i32> [[TMP2]], <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP53:%.*]] = extractelement <8 x i1> [[TMP3]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP53:%.*]] = extractelement <8 x i1> [[TMP3]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP53]], label [[PRED_LOAD_IF17:%.*]], label [[PRED_LOAD_CONTINUE18:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if17:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP54:%.*]] = extractelement <8 x i32> [[TMP52]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP54:%.*]] = extractelement <8 x i32> [[TMP52]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP55:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP54]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP56:%.*]] = load i8, i8* [[TMP55]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP57:%.*]] = insertelement <8 x i8> poison, i8 [[TMP56]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP57:%.*]] = insertelement <8 x i8> poison, i8 [[TMP56]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE18]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue18:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP58:%.*]] = phi <8 x i8> [ poison, [[PRED_LOAD_CONTINUE16]] ], [ [[TMP57]], [[PRED_LOAD_IF17]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP59:%.*]] = extractelement <8 x i1> [[TMP3]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP59:%.*]] = extractelement <8 x i1> [[TMP3]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP59]], label [[PRED_LOAD_IF19:%.*]], label [[PRED_LOAD_CONTINUE20:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if19:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP60:%.*]] = extractelement <8 x i32> [[TMP52]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP60:%.*]] = extractelement <8 x i32> [[TMP52]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP61:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP60]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP62:%.*]] = load i8, i8* [[TMP61]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP63:%.*]] = insertelement <8 x i8> [[TMP58]], i8 [[TMP62]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP63:%.*]] = insertelement <8 x i8> [[TMP58]], i8 [[TMP62]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE20]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue20:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP64:%.*]] = phi <8 x i8> [ [[TMP58]], [[PRED_LOAD_CONTINUE18]] ], [ [[TMP63]], [[PRED_LOAD_IF19]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP65:%.*]] = extractelement <8 x i1> [[TMP3]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP65:%.*]] = extractelement <8 x i1> [[TMP3]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP65]], label [[PRED_LOAD_IF21:%.*]], label [[PRED_LOAD_CONTINUE22:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if21:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP66:%.*]] = extractelement <8 x i32> [[TMP52]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP66:%.*]] = extractelement <8 x i32> [[TMP52]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP67:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP66]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP68:%.*]] = load i8, i8* [[TMP67]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP69:%.*]] = insertelement <8 x i8> [[TMP64]], i8 [[TMP68]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP69:%.*]] = insertelement <8 x i8> [[TMP64]], i8 [[TMP68]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE22]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue22:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP70:%.*]] = phi <8 x i8> [ [[TMP64]], [[PRED_LOAD_CONTINUE20]] ], [ [[TMP69]], [[PRED_LOAD_IF21]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP71:%.*]] = extractelement <8 x i1> [[TMP3]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP71:%.*]] = extractelement <8 x i1> [[TMP3]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP71]], label [[PRED_LOAD_IF23:%.*]], label [[PRED_LOAD_CONTINUE24:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if23:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP72:%.*]] = extractelement <8 x i32> [[TMP52]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP72:%.*]] = extractelement <8 x i32> [[TMP52]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP73:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP72]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP74:%.*]] = load i8, i8* [[TMP73]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP75:%.*]] = insertelement <8 x i8> [[TMP70]], i8 [[TMP74]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP75:%.*]] = insertelement <8 x i8> [[TMP70]], i8 [[TMP74]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE24]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue24:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP76:%.*]] = phi <8 x i8> [ [[TMP70]], [[PRED_LOAD_CONTINUE22]] ], [ [[TMP75]], [[PRED_LOAD_IF23]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP77:%.*]] = extractelement <8 x i1> [[TMP3]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP77:%.*]] = extractelement <8 x i1> [[TMP3]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP77]], label [[PRED_LOAD_IF25:%.*]], label [[PRED_LOAD_CONTINUE26:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if25:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP78:%.*]] = extractelement <8 x i32> [[TMP52]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP78:%.*]] = extractelement <8 x i32> [[TMP52]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP79:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP78]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP80:%.*]] = load i8, i8* [[TMP79]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP81:%.*]] = insertelement <8 x i8> [[TMP76]], i8 [[TMP80]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP81:%.*]] = insertelement <8 x i8> [[TMP76]], i8 [[TMP80]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE26]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue26:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP82:%.*]] = phi <8 x i8> [ [[TMP76]], [[PRED_LOAD_CONTINUE24]] ], [ [[TMP81]], [[PRED_LOAD_IF25]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP83:%.*]] = extractelement <8 x i1> [[TMP3]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP83:%.*]] = extractelement <8 x i1> [[TMP3]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP83]], label [[PRED_LOAD_IF27:%.*]], label [[PRED_LOAD_CONTINUE28:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if27:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP84:%.*]] = extractelement <8 x i32> [[TMP52]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP84:%.*]] = extractelement <8 x i32> [[TMP52]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP85:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP84]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP86:%.*]] = load i8, i8* [[TMP85]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP87:%.*]] = insertelement <8 x i8> [[TMP82]], i8 [[TMP86]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP87:%.*]] = insertelement <8 x i8> [[TMP82]], i8 [[TMP86]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE28]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue28:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP88:%.*]] = phi <8 x i8> [ [[TMP82]], [[PRED_LOAD_CONTINUE26]] ], [ [[TMP87]], [[PRED_LOAD_IF27]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP89:%.*]] = extractelement <8 x i1> [[TMP3]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP89:%.*]] = extractelement <8 x i1> [[TMP3]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP89]], label [[PRED_LOAD_IF29:%.*]], label [[PRED_LOAD_CONTINUE30:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if29:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP90:%.*]] = extractelement <8 x i32> [[TMP52]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP90:%.*]] = extractelement <8 x i32> [[TMP52]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP91:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP90]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP92:%.*]] = load i8, i8* [[TMP91]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP93:%.*]] = insertelement <8 x i8> [[TMP88]], i8 [[TMP92]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP93:%.*]] = insertelement <8 x i8> [[TMP88]], i8 [[TMP92]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE30]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue30:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP94:%.*]] = phi <8 x i8> [ [[TMP88]], [[PRED_LOAD_CONTINUE28]] ], [ [[TMP93]], [[PRED_LOAD_IF29]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP95:%.*]] = extractelement <8 x i1> [[TMP3]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP95:%.*]] = extractelement <8 x i1> [[TMP3]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP95]], label [[PRED_LOAD_IF31:%.*]], label [[PRED_LOAD_CONTINUE32:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if31:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP96:%.*]] = extractelement <8 x i32> [[TMP52]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP96:%.*]] = extractelement <8 x i32> [[TMP52]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP97:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP96]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP98:%.*]] = load i8, i8* [[TMP97]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP99:%.*]] = insertelement <8 x i8> [[TMP94]], i8 [[TMP98]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP99:%.*]] = insertelement <8 x i8> [[TMP94]], i8 [[TMP98]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE32]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue32:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP100:%.*]] = phi <8 x i8> [ [[TMP94]], [[PRED_LOAD_CONTINUE30]] ], [ [[TMP99]], [[PRED_LOAD_IF31]] ]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP101:%.*]] = icmp slt <8 x i8> [[TMP51]], [[TMP100]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP102:%.*]] = select <8 x i1> [[TMP101]], <8 x i8> [[TMP100]], <8 x i8> [[TMP51]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP103:%.*]] = extractelement <8 x i1> [[TMP3]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP103:%.*]] = extractelement <8 x i1> [[TMP3]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP103]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP104:%.*]] = extractelement <8 x i32> [[TMP2]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP104:%.*]] = extractelement <8 x i32> [[TMP2]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP105:%.*]] = getelementptr inbounds i8, i8* [[Q:%.*]], i32 [[TMP104]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP106:%.*]] = extractelement <8 x i8> [[TMP102]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP106:%.*]] = extractelement <8 x i8> [[TMP102]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP106]], i8* [[TMP105]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP107:%.*]] = extractelement <8 x i1> [[TMP3]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP107:%.*]] = extractelement <8 x i1> [[TMP3]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP107]], label [[PRED_STORE_IF33:%.*]], label [[PRED_STORE_CONTINUE34:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if33:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP108:%.*]] = extractelement <8 x i32> [[TMP2]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP108:%.*]] = extractelement <8 x i32> [[TMP2]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP109:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP108]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP110:%.*]] = extractelement <8 x i8> [[TMP102]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP110:%.*]] = extractelement <8 x i8> [[TMP102]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP110]], i8* [[TMP109]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE34]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue34:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP111:%.*]] = extractelement <8 x i1> [[TMP3]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP111:%.*]] = extractelement <8 x i1> [[TMP3]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP111]], label [[PRED_STORE_IF35:%.*]], label [[PRED_STORE_CONTINUE36:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if35:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP112:%.*]] = extractelement <8 x i32> [[TMP2]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP112:%.*]] = extractelement <8 x i32> [[TMP2]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP113:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP112]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP114:%.*]] = extractelement <8 x i8> [[TMP102]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP114:%.*]] = extractelement <8 x i8> [[TMP102]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP114]], i8* [[TMP113]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE36]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue36:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP115:%.*]] = extractelement <8 x i1> [[TMP3]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP115:%.*]] = extractelement <8 x i1> [[TMP3]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP115]], label [[PRED_STORE_IF37:%.*]], label [[PRED_STORE_CONTINUE38:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if37:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP116:%.*]] = extractelement <8 x i32> [[TMP2]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP116:%.*]] = extractelement <8 x i32> [[TMP2]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP117:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP116]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP118:%.*]] = extractelement <8 x i8> [[TMP102]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP118:%.*]] = extractelement <8 x i8> [[TMP102]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP118]], i8* [[TMP117]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE38]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue38:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP119:%.*]] = extractelement <8 x i1> [[TMP3]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP119:%.*]] = extractelement <8 x i1> [[TMP3]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP119]], label [[PRED_STORE_IF39:%.*]], label [[PRED_STORE_CONTINUE40:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if39:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP120:%.*]] = extractelement <8 x i32> [[TMP2]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP120:%.*]] = extractelement <8 x i32> [[TMP2]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP121:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP120]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP122:%.*]] = extractelement <8 x i8> [[TMP102]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP122:%.*]] = extractelement <8 x i8> [[TMP102]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP122]], i8* [[TMP121]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE40]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue40:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP123:%.*]] = extractelement <8 x i1> [[TMP3]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP123:%.*]] = extractelement <8 x i1> [[TMP3]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP123]], label [[PRED_STORE_IF41:%.*]], label [[PRED_STORE_CONTINUE42:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if41:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP124:%.*]] = extractelement <8 x i32> [[TMP2]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP124:%.*]] = extractelement <8 x i32> [[TMP2]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP125:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP124]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP126:%.*]] = extractelement <8 x i8> [[TMP102]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP126:%.*]] = extractelement <8 x i8> [[TMP102]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP126]], i8* [[TMP125]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE42]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue42:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP127:%.*]] = extractelement <8 x i1> [[TMP3]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP127:%.*]] = extractelement <8 x i1> [[TMP3]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP127]], label [[PRED_STORE_IF43:%.*]], label [[PRED_STORE_CONTINUE44:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if43:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP128:%.*]] = extractelement <8 x i32> [[TMP2]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP128:%.*]] = extractelement <8 x i32> [[TMP2]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP129:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP128]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP130:%.*]] = extractelement <8 x i8> [[TMP102]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP130:%.*]] = extractelement <8 x i8> [[TMP102]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP130]], i8* [[TMP129]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE44]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue44:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP131:%.*]] = extractelement <8 x i1> [[TMP3]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP131:%.*]] = extractelement <8 x i1> [[TMP3]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP131]], label [[PRED_STORE_IF45:%.*]], label [[PRED_STORE_CONTINUE46:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if45:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP132:%.*]] = extractelement <8 x i32> [[TMP2]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP132:%.*]] = extractelement <8 x i32> [[TMP2]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP133:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP132]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP134:%.*]] = extractelement <8 x i8> [[TMP102]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP134:%.*]] = extractelement <8 x i8> [[TMP102]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP134]], i8* [[TMP133]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE46]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue46:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP135:%.*]] = sub <8 x i8> zeroinitializer, [[TMP102]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP136:%.*]] = extractelement <8 x i1> [[TMP3]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP136:%.*]] = extractelement <8 x i1> [[TMP3]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP136]], label [[PRED_STORE_IF47:%.*]], label [[PRED_STORE_CONTINUE48:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if47:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP137:%.*]] = extractelement <8 x i32> [[TMP52]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP137:%.*]] = extractelement <8 x i32> [[TMP52]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP138:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP137]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP139:%.*]] = extractelement <8 x i8> [[TMP135]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP139:%.*]] = extractelement <8 x i8> [[TMP135]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP139]], i8* [[TMP138]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE48]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue48:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP140:%.*]] = extractelement <8 x i1> [[TMP3]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP140:%.*]] = extractelement <8 x i1> [[TMP3]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP140]], label [[PRED_STORE_IF49:%.*]], label [[PRED_STORE_CONTINUE50:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if49:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP141:%.*]] = extractelement <8 x i32> [[TMP52]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP141:%.*]] = extractelement <8 x i32> [[TMP52]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP142:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP141]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP143:%.*]] = extractelement <8 x i8> [[TMP135]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP143:%.*]] = extractelement <8 x i8> [[TMP135]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP143]], i8* [[TMP142]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE50]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue50:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP144:%.*]] = extractelement <8 x i1> [[TMP3]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP144:%.*]] = extractelement <8 x i1> [[TMP3]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP144]], label [[PRED_STORE_IF51:%.*]], label [[PRED_STORE_CONTINUE52:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if51:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP145:%.*]] = extractelement <8 x i32> [[TMP52]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP145:%.*]] = extractelement <8 x i32> [[TMP52]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP146:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP145]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP147:%.*]] = extractelement <8 x i8> [[TMP135]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP147:%.*]] = extractelement <8 x i8> [[TMP135]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP147]], i8* [[TMP146]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE52]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue52:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP148:%.*]] = extractelement <8 x i1> [[TMP3]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP148:%.*]] = extractelement <8 x i1> [[TMP3]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP148]], label [[PRED_STORE_IF53:%.*]], label [[PRED_STORE_CONTINUE54:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if53:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP149:%.*]] = extractelement <8 x i32> [[TMP52]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP149:%.*]] = extractelement <8 x i32> [[TMP52]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP150:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP149]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP151:%.*]] = extractelement <8 x i8> [[TMP135]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP151:%.*]] = extractelement <8 x i8> [[TMP135]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP151]], i8* [[TMP150]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE54]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue54:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP152:%.*]] = extractelement <8 x i1> [[TMP3]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP152:%.*]] = extractelement <8 x i1> [[TMP3]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP152]], label [[PRED_STORE_IF55:%.*]], label [[PRED_STORE_CONTINUE56:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if55:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP153:%.*]] = extractelement <8 x i32> [[TMP52]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP153:%.*]] = extractelement <8 x i32> [[TMP52]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP154:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP153]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP155:%.*]] = extractelement <8 x i8> [[TMP135]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP155:%.*]] = extractelement <8 x i8> [[TMP135]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP155]], i8* [[TMP154]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE56]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue56:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP156:%.*]] = extractelement <8 x i1> [[TMP3]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP156:%.*]] = extractelement <8 x i1> [[TMP3]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP156]], label [[PRED_STORE_IF57:%.*]], label [[PRED_STORE_CONTINUE58:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if57:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP157:%.*]] = extractelement <8 x i32> [[TMP52]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP157:%.*]] = extractelement <8 x i32> [[TMP52]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP158:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP157]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP159:%.*]] = extractelement <8 x i8> [[TMP135]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP159:%.*]] = extractelement <8 x i8> [[TMP135]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP159]], i8* [[TMP158]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE58]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue58:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP160:%.*]] = extractelement <8 x i1> [[TMP3]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP160:%.*]] = extractelement <8 x i1> [[TMP3]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP160]], label [[PRED_STORE_IF59:%.*]], label [[PRED_STORE_CONTINUE60:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if59:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP161:%.*]] = extractelement <8 x i32> [[TMP52]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP161:%.*]] = extractelement <8 x i32> [[TMP52]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP162:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP161]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP163:%.*]] = extractelement <8 x i8> [[TMP135]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP163:%.*]] = extractelement <8 x i8> [[TMP135]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP163]], i8* [[TMP162]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE60]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue60:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP164:%.*]] = extractelement <8 x i1> [[TMP3]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP164:%.*]] = extractelement <8 x i1> [[TMP3]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP164]], label [[PRED_STORE_IF61:%.*]], label [[PRED_STORE_CONTINUE62]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if61:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP165:%.*]] = extractelement <8 x i32> [[TMP52]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP165:%.*]] = extractelement <8 x i32> [[TMP52]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP166:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP165]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP167:%.*]] = extractelement <8 x i8> [[TMP135]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP167:%.*]] = extractelement <8 x i8> [[TMP135]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP167]], i8* [[TMP166]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE62]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue62:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 8
 ; DISABLED_MASKED_STRIDED-NEXT:    [[VEC_IND_NEXT]] = add <8 x i32> [[VEC_IND]], <i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8>
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP168:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP168]], label [[FOR_END]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP168]], label [[FOR_END]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; DISABLED_MASKED_STRIDED:       for.end:
 ; DISABLED_MASKED_STRIDED-NEXT:    ret void
 ;
@@ -2609,9 +2627,9 @@ define dso_local void @masked_strided2_unknown_tc(i8* noalias nocapture readonly
 ; ENABLED_MASKED_STRIDED-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 7
 ; ENABLED_MASKED_STRIDED-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -8
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = add i32 [[N]], -1
-; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i32 0
+; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i64 0
 ; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer
-; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i32> poison, i32 [[GUARD:%.*]], i32 0
+; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i32> poison, i32 [[GUARD:%.*]], i64 0
 ; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT1]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; ENABLED_MASKED_STRIDED:       vector.body:
@@ -2619,8 +2637,8 @@ define dso_local void @masked_strided2_unknown_tc(i8* noalias nocapture readonly
 ; ENABLED_MASKED_STRIDED-NEXT:    [[VEC_IND:%.*]] = phi <8 x i32> [ <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP0:%.*]] = icmp sgt <8 x i32> [[VEC_IND]], [[BROADCAST_SPLAT2]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = icmp ule <8 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = shl nuw nsw i32 [[INDEX]], 1
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, i8* [[P:%.*]], i32 [[TMP2]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = shl i32 [[INDEX]], 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP3:%.*]] = getelementptr i8, i8* [[P:%.*]], i32 [[TMP2]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP4:%.*]] = select <8 x i1> [[TMP1]], <8 x i1> [[TMP0]], <8 x i1> zeroinitializer
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP5:%.*]] = bitcast i8* [[TMP3]] to <16 x i8>*
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INTERLEAVED_MASK:%.*]] = shufflevector <8 x i1> [[TMP4]], <8 x i1> poison, <16 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7>
@@ -2631,15 +2649,15 @@ define dso_local void @masked_strided2_unknown_tc(i8* noalias nocapture readonly
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP7:%.*]] = icmp slt <8 x i8> [[STRIDED_VEC]], [[STRIDED_VEC3]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP8:%.*]] = select <8 x i1> [[TMP7]], <8 x i8> [[STRIDED_VEC3]], <8 x i8> [[STRIDED_VEC]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP9:%.*]] = sub <8 x i8> zeroinitializer, [[TMP8]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, i8* [[Q:%.*]], i32 -1
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, i8* [[TMP10]], i32 [[TMP6]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP10:%.*]] = getelementptr i8, i8* [[Q:%.*]], i32 -1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP11:%.*]] = getelementptr i8, i8* [[TMP10]], i32 [[TMP6]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP12:%.*]] = bitcast i8* [[TMP11]] to <16 x i8>*
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x i8> [[TMP8]], <8 x i8> [[TMP9]], <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
 ; ENABLED_MASKED_STRIDED-NEXT:    call void @llvm.masked.store.v16i8.p0v16i8(<16 x i8> [[INTERLEAVED_VEC]], <16 x i8>* [[TMP12]], i32 1, <16 x i1> [[INTERLEAVED_MASK]])
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 8
 ; ENABLED_MASKED_STRIDED-NEXT:    [[VEC_IND_NEXT]] = add <8 x i32> [[VEC_IND]], <i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8>
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP13]], label [[FOR_END]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP13]], label [[FOR_END]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; ENABLED_MASKED_STRIDED:       for.end:
 ; ENABLED_MASKED_STRIDED-NEXT:    ret void
 ;
@@ -2718,7 +2736,7 @@ define dso_local void @unconditional_masked_strided2_unknown_tc(i8* noalias noca
 ; DISABLED_MASKED_STRIDED-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 7
 ; DISABLED_MASKED_STRIDED-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -8
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = add i32 [[N]], -1
-; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; DISABLED_MASKED_STRIDED:       vector.body:
@@ -2726,318 +2744,318 @@ define dso_local void @unconditional_masked_strided2_unknown_tc(i8* noalias noca
 ; DISABLED_MASKED_STRIDED-NEXT:    [[VEC_IND:%.*]] = phi <8 x i32> [ <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE60]] ]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP0:%.*]] = icmp ule <8 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = shl nuw nsw <8 x i32> [[VEC_IND]], <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = extractelement <8 x i1> [[TMP0]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = extractelement <8 x i1> [[TMP0]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP2]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP3:%.*]] = extractelement <8 x i32> [[TMP1]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP3:%.*]] = extractelement <8 x i32> [[TMP1]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, i8* [[P:%.*]], i32 [[TMP3]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP5:%.*]] = load i8, i8* [[TMP4]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP6:%.*]] = insertelement <8 x i8> poison, i8 [[TMP5]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP6:%.*]] = insertelement <8 x i8> poison, i8 [[TMP5]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP7:%.*]] = phi <8 x i8> [ poison, [[VECTOR_BODY]] ], [ [[TMP6]], [[PRED_LOAD_IF]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP8:%.*]] = extractelement <8 x i1> [[TMP0]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP8:%.*]] = extractelement <8 x i1> [[TMP0]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP8]], label [[PRED_LOAD_IF1:%.*]], label [[PRED_LOAD_CONTINUE2:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if1:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP9:%.*]] = extractelement <8 x i32> [[TMP1]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP9:%.*]] = extractelement <8 x i32> [[TMP1]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP9]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP11:%.*]] = load i8, i8* [[TMP10]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP12:%.*]] = insertelement <8 x i8> [[TMP7]], i8 [[TMP11]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP12:%.*]] = insertelement <8 x i8> [[TMP7]], i8 [[TMP11]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE2]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue2:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP13:%.*]] = phi <8 x i8> [ [[TMP7]], [[PRED_LOAD_CONTINUE]] ], [ [[TMP12]], [[PRED_LOAD_IF1]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP14:%.*]] = extractelement <8 x i1> [[TMP0]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP14:%.*]] = extractelement <8 x i1> [[TMP0]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP14]], label [[PRED_LOAD_IF3:%.*]], label [[PRED_LOAD_CONTINUE4:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if3:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP15:%.*]] = extractelement <8 x i32> [[TMP1]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP15:%.*]] = extractelement <8 x i32> [[TMP1]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP15]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP17:%.*]] = load i8, i8* [[TMP16]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP18:%.*]] = insertelement <8 x i8> [[TMP13]], i8 [[TMP17]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP18:%.*]] = insertelement <8 x i8> [[TMP13]], i8 [[TMP17]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE4]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue4:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP19:%.*]] = phi <8 x i8> [ [[TMP13]], [[PRED_LOAD_CONTINUE2]] ], [ [[TMP18]], [[PRED_LOAD_IF3]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP20:%.*]] = extractelement <8 x i1> [[TMP0]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP20:%.*]] = extractelement <8 x i1> [[TMP0]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP20]], label [[PRED_LOAD_IF5:%.*]], label [[PRED_LOAD_CONTINUE6:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if5:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP21:%.*]] = extractelement <8 x i32> [[TMP1]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP21:%.*]] = extractelement <8 x i32> [[TMP1]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP21]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP23:%.*]] = load i8, i8* [[TMP22]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP24:%.*]] = insertelement <8 x i8> [[TMP19]], i8 [[TMP23]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP24:%.*]] = insertelement <8 x i8> [[TMP19]], i8 [[TMP23]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE6]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue6:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP25:%.*]] = phi <8 x i8> [ [[TMP19]], [[PRED_LOAD_CONTINUE4]] ], [ [[TMP24]], [[PRED_LOAD_IF5]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP26:%.*]] = extractelement <8 x i1> [[TMP0]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP26:%.*]] = extractelement <8 x i1> [[TMP0]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP26]], label [[PRED_LOAD_IF7:%.*]], label [[PRED_LOAD_CONTINUE8:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if7:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP27:%.*]] = extractelement <8 x i32> [[TMP1]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP27:%.*]] = extractelement <8 x i32> [[TMP1]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP27]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP29:%.*]] = load i8, i8* [[TMP28]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP30:%.*]] = insertelement <8 x i8> [[TMP25]], i8 [[TMP29]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP30:%.*]] = insertelement <8 x i8> [[TMP25]], i8 [[TMP29]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE8]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue8:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP31:%.*]] = phi <8 x i8> [ [[TMP25]], [[PRED_LOAD_CONTINUE6]] ], [ [[TMP30]], [[PRED_LOAD_IF7]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP32:%.*]] = extractelement <8 x i1> [[TMP0]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP32:%.*]] = extractelement <8 x i1> [[TMP0]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP32]], label [[PRED_LOAD_IF9:%.*]], label [[PRED_LOAD_CONTINUE10:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if9:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP33:%.*]] = extractelement <8 x i32> [[TMP1]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP33:%.*]] = extractelement <8 x i32> [[TMP1]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP34:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP33]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP35:%.*]] = load i8, i8* [[TMP34]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP36:%.*]] = insertelement <8 x i8> [[TMP31]], i8 [[TMP35]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP36:%.*]] = insertelement <8 x i8> [[TMP31]], i8 [[TMP35]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE10]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue10:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP37:%.*]] = phi <8 x i8> [ [[TMP31]], [[PRED_LOAD_CONTINUE8]] ], [ [[TMP36]], [[PRED_LOAD_IF9]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP38:%.*]] = extractelement <8 x i1> [[TMP0]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP38:%.*]] = extractelement <8 x i1> [[TMP0]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP38]], label [[PRED_LOAD_IF11:%.*]], label [[PRED_LOAD_CONTINUE12:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if11:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP39:%.*]] = extractelement <8 x i32> [[TMP1]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP39:%.*]] = extractelement <8 x i32> [[TMP1]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP40:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP39]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP41:%.*]] = load i8, i8* [[TMP40]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP42:%.*]] = insertelement <8 x i8> [[TMP37]], i8 [[TMP41]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP42:%.*]] = insertelement <8 x i8> [[TMP37]], i8 [[TMP41]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE12]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue12:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP43:%.*]] = phi <8 x i8> [ [[TMP37]], [[PRED_LOAD_CONTINUE10]] ], [ [[TMP42]], [[PRED_LOAD_IF11]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP44:%.*]] = extractelement <8 x i1> [[TMP0]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP44:%.*]] = extractelement <8 x i1> [[TMP0]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP44]], label [[PRED_LOAD_IF13:%.*]], label [[PRED_LOAD_CONTINUE14:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if13:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP45:%.*]] = extractelement <8 x i32> [[TMP1]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP45:%.*]] = extractelement <8 x i32> [[TMP1]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP46:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP45]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP47:%.*]] = load i8, i8* [[TMP46]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP48:%.*]] = insertelement <8 x i8> [[TMP43]], i8 [[TMP47]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP48:%.*]] = insertelement <8 x i8> [[TMP43]], i8 [[TMP47]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE14]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue14:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP49:%.*]] = phi <8 x i8> [ [[TMP43]], [[PRED_LOAD_CONTINUE12]] ], [ [[TMP48]], [[PRED_LOAD_IF13]] ]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP50:%.*]] = or <8 x i32> [[TMP1]], <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP51:%.*]] = extractelement <8 x i1> [[TMP0]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP51:%.*]] = extractelement <8 x i1> [[TMP0]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP51]], label [[PRED_LOAD_IF15:%.*]], label [[PRED_LOAD_CONTINUE16:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if15:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP52:%.*]] = extractelement <8 x i32> [[TMP50]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP52:%.*]] = extractelement <8 x i32> [[TMP50]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP53:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP52]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP54:%.*]] = load i8, i8* [[TMP53]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP55:%.*]] = insertelement <8 x i8> poison, i8 [[TMP54]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP55:%.*]] = insertelement <8 x i8> poison, i8 [[TMP54]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE16]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue16:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP56:%.*]] = phi <8 x i8> [ poison, [[PRED_LOAD_CONTINUE14]] ], [ [[TMP55]], [[PRED_LOAD_IF15]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP57:%.*]] = extractelement <8 x i1> [[TMP0]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP57:%.*]] = extractelement <8 x i1> [[TMP0]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP57]], label [[PRED_LOAD_IF17:%.*]], label [[PRED_LOAD_CONTINUE18:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if17:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP58:%.*]] = extractelement <8 x i32> [[TMP50]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP58:%.*]] = extractelement <8 x i32> [[TMP50]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP59:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP58]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP60:%.*]] = load i8, i8* [[TMP59]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP61:%.*]] = insertelement <8 x i8> [[TMP56]], i8 [[TMP60]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP61:%.*]] = insertelement <8 x i8> [[TMP56]], i8 [[TMP60]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE18]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue18:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP62:%.*]] = phi <8 x i8> [ [[TMP56]], [[PRED_LOAD_CONTINUE16]] ], [ [[TMP61]], [[PRED_LOAD_IF17]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP63:%.*]] = extractelement <8 x i1> [[TMP0]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP63:%.*]] = extractelement <8 x i1> [[TMP0]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP63]], label [[PRED_LOAD_IF19:%.*]], label [[PRED_LOAD_CONTINUE20:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if19:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP64:%.*]] = extractelement <8 x i32> [[TMP50]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP64:%.*]] = extractelement <8 x i32> [[TMP50]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP65:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP64]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP66:%.*]] = load i8, i8* [[TMP65]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP67:%.*]] = insertelement <8 x i8> [[TMP62]], i8 [[TMP66]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP67:%.*]] = insertelement <8 x i8> [[TMP62]], i8 [[TMP66]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE20]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue20:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP68:%.*]] = phi <8 x i8> [ [[TMP62]], [[PRED_LOAD_CONTINUE18]] ], [ [[TMP67]], [[PRED_LOAD_IF19]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP69:%.*]] = extractelement <8 x i1> [[TMP0]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP69:%.*]] = extractelement <8 x i1> [[TMP0]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP69]], label [[PRED_LOAD_IF21:%.*]], label [[PRED_LOAD_CONTINUE22:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if21:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP70:%.*]] = extractelement <8 x i32> [[TMP50]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP70:%.*]] = extractelement <8 x i32> [[TMP50]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP71:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP70]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP72:%.*]] = load i8, i8* [[TMP71]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP73:%.*]] = insertelement <8 x i8> [[TMP68]], i8 [[TMP72]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP73:%.*]] = insertelement <8 x i8> [[TMP68]], i8 [[TMP72]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE22]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue22:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP74:%.*]] = phi <8 x i8> [ [[TMP68]], [[PRED_LOAD_CONTINUE20]] ], [ [[TMP73]], [[PRED_LOAD_IF21]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP75:%.*]] = extractelement <8 x i1> [[TMP0]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP75:%.*]] = extractelement <8 x i1> [[TMP0]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP75]], label [[PRED_LOAD_IF23:%.*]], label [[PRED_LOAD_CONTINUE24:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if23:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP76:%.*]] = extractelement <8 x i32> [[TMP50]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP76:%.*]] = extractelement <8 x i32> [[TMP50]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP77:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP76]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP78:%.*]] = load i8, i8* [[TMP77]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP79:%.*]] = insertelement <8 x i8> [[TMP74]], i8 [[TMP78]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP79:%.*]] = insertelement <8 x i8> [[TMP74]], i8 [[TMP78]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE24]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue24:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP80:%.*]] = phi <8 x i8> [ [[TMP74]], [[PRED_LOAD_CONTINUE22]] ], [ [[TMP79]], [[PRED_LOAD_IF23]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP81:%.*]] = extractelement <8 x i1> [[TMP0]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP81:%.*]] = extractelement <8 x i1> [[TMP0]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP81]], label [[PRED_LOAD_IF25:%.*]], label [[PRED_LOAD_CONTINUE26:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if25:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP82:%.*]] = extractelement <8 x i32> [[TMP50]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP82:%.*]] = extractelement <8 x i32> [[TMP50]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP83:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP82]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP84:%.*]] = load i8, i8* [[TMP83]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP85:%.*]] = insertelement <8 x i8> [[TMP80]], i8 [[TMP84]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP85:%.*]] = insertelement <8 x i8> [[TMP80]], i8 [[TMP84]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE26]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue26:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP86:%.*]] = phi <8 x i8> [ [[TMP80]], [[PRED_LOAD_CONTINUE24]] ], [ [[TMP85]], [[PRED_LOAD_IF25]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP87:%.*]] = extractelement <8 x i1> [[TMP0]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP87:%.*]] = extractelement <8 x i1> [[TMP0]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP87]], label [[PRED_LOAD_IF27:%.*]], label [[PRED_LOAD_CONTINUE28:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if27:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP88:%.*]] = extractelement <8 x i32> [[TMP50]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP88:%.*]] = extractelement <8 x i32> [[TMP50]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP89:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP88]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP90:%.*]] = load i8, i8* [[TMP89]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP91:%.*]] = insertelement <8 x i8> [[TMP86]], i8 [[TMP90]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP91:%.*]] = insertelement <8 x i8> [[TMP86]], i8 [[TMP90]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE28]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue28:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP92:%.*]] = phi <8 x i8> [ [[TMP86]], [[PRED_LOAD_CONTINUE26]] ], [ [[TMP91]], [[PRED_LOAD_IF27]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP93:%.*]] = extractelement <8 x i1> [[TMP0]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP93:%.*]] = extractelement <8 x i1> [[TMP0]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP93]], label [[PRED_LOAD_IF29:%.*]], label [[PRED_LOAD_CONTINUE30:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.load.if29:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP94:%.*]] = extractelement <8 x i32> [[TMP50]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP94:%.*]] = extractelement <8 x i32> [[TMP50]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP95:%.*]] = getelementptr inbounds i8, i8* [[P]], i32 [[TMP94]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP96:%.*]] = load i8, i8* [[TMP95]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP97:%.*]] = insertelement <8 x i8> [[TMP92]], i8 [[TMP96]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP97:%.*]] = insertelement <8 x i8> [[TMP92]], i8 [[TMP96]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_LOAD_CONTINUE30]]
 ; DISABLED_MASKED_STRIDED:       pred.load.continue30:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP98:%.*]] = phi <8 x i8> [ [[TMP92]], [[PRED_LOAD_CONTINUE28]] ], [ [[TMP97]], [[PRED_LOAD_IF29]] ]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP99:%.*]] = icmp slt <8 x i8> [[TMP49]], [[TMP98]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP100:%.*]] = select <8 x i1> [[TMP99]], <8 x i8> [[TMP98]], <8 x i8> [[TMP49]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP101:%.*]] = extractelement <8 x i1> [[TMP0]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP101:%.*]] = extractelement <8 x i1> [[TMP0]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP101]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP102:%.*]] = extractelement <8 x i32> [[TMP1]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP102:%.*]] = extractelement <8 x i32> [[TMP1]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP103:%.*]] = getelementptr inbounds i8, i8* [[Q:%.*]], i32 [[TMP102]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP104:%.*]] = extractelement <8 x i8> [[TMP100]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP104:%.*]] = extractelement <8 x i8> [[TMP100]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP104]], i8* [[TMP103]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP105:%.*]] = extractelement <8 x i1> [[TMP0]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP105:%.*]] = extractelement <8 x i1> [[TMP0]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP105]], label [[PRED_STORE_IF31:%.*]], label [[PRED_STORE_CONTINUE32:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if31:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP106:%.*]] = extractelement <8 x i32> [[TMP1]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP106:%.*]] = extractelement <8 x i32> [[TMP1]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP107:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP106]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP108:%.*]] = extractelement <8 x i8> [[TMP100]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP108:%.*]] = extractelement <8 x i8> [[TMP100]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP108]], i8* [[TMP107]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE32]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue32:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP109:%.*]] = extractelement <8 x i1> [[TMP0]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP109:%.*]] = extractelement <8 x i1> [[TMP0]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP109]], label [[PRED_STORE_IF33:%.*]], label [[PRED_STORE_CONTINUE34:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if33:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP110:%.*]] = extractelement <8 x i32> [[TMP1]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP110:%.*]] = extractelement <8 x i32> [[TMP1]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP111:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP110]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP112:%.*]] = extractelement <8 x i8> [[TMP100]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP112:%.*]] = extractelement <8 x i8> [[TMP100]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP112]], i8* [[TMP111]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE34]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue34:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP113:%.*]] = extractelement <8 x i1> [[TMP0]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP113:%.*]] = extractelement <8 x i1> [[TMP0]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP113]], label [[PRED_STORE_IF35:%.*]], label [[PRED_STORE_CONTINUE36:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if35:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP114:%.*]] = extractelement <8 x i32> [[TMP1]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP114:%.*]] = extractelement <8 x i32> [[TMP1]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP115:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP114]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP116:%.*]] = extractelement <8 x i8> [[TMP100]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP116:%.*]] = extractelement <8 x i8> [[TMP100]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP116]], i8* [[TMP115]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE36]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue36:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP117:%.*]] = extractelement <8 x i1> [[TMP0]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP117:%.*]] = extractelement <8 x i1> [[TMP0]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP117]], label [[PRED_STORE_IF37:%.*]], label [[PRED_STORE_CONTINUE38:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if37:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP118:%.*]] = extractelement <8 x i32> [[TMP1]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP118:%.*]] = extractelement <8 x i32> [[TMP1]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP119:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP118]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP120:%.*]] = extractelement <8 x i8> [[TMP100]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP120:%.*]] = extractelement <8 x i8> [[TMP100]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP120]], i8* [[TMP119]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE38]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue38:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP121:%.*]] = extractelement <8 x i1> [[TMP0]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP121:%.*]] = extractelement <8 x i1> [[TMP0]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP121]], label [[PRED_STORE_IF39:%.*]], label [[PRED_STORE_CONTINUE40:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if39:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP122:%.*]] = extractelement <8 x i32> [[TMP1]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP122:%.*]] = extractelement <8 x i32> [[TMP1]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP123:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP122]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP124:%.*]] = extractelement <8 x i8> [[TMP100]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP124:%.*]] = extractelement <8 x i8> [[TMP100]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP124]], i8* [[TMP123]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE40]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue40:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP125:%.*]] = extractelement <8 x i1> [[TMP0]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP125:%.*]] = extractelement <8 x i1> [[TMP0]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP125]], label [[PRED_STORE_IF41:%.*]], label [[PRED_STORE_CONTINUE42:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if41:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP126:%.*]] = extractelement <8 x i32> [[TMP1]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP126:%.*]] = extractelement <8 x i32> [[TMP1]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP127:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP126]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP128:%.*]] = extractelement <8 x i8> [[TMP100]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP128:%.*]] = extractelement <8 x i8> [[TMP100]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP128]], i8* [[TMP127]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE42]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue42:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP129:%.*]] = extractelement <8 x i1> [[TMP0]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP129:%.*]] = extractelement <8 x i1> [[TMP0]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP129]], label [[PRED_STORE_IF43:%.*]], label [[PRED_STORE_CONTINUE44:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if43:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP130:%.*]] = extractelement <8 x i32> [[TMP1]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP130:%.*]] = extractelement <8 x i32> [[TMP1]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP131:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP130]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP132:%.*]] = extractelement <8 x i8> [[TMP100]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP132:%.*]] = extractelement <8 x i8> [[TMP100]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP132]], i8* [[TMP131]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE44]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue44:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP133:%.*]] = sub <8 x i8> zeroinitializer, [[TMP100]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP134:%.*]] = extractelement <8 x i1> [[TMP0]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP134:%.*]] = extractelement <8 x i1> [[TMP0]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP134]], label [[PRED_STORE_IF45:%.*]], label [[PRED_STORE_CONTINUE46:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if45:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP135:%.*]] = extractelement <8 x i32> [[TMP50]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP135:%.*]] = extractelement <8 x i32> [[TMP50]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP136:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP135]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP137:%.*]] = extractelement <8 x i8> [[TMP133]], i32 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP137:%.*]] = extractelement <8 x i8> [[TMP133]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP137]], i8* [[TMP136]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE46]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue46:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP138:%.*]] = extractelement <8 x i1> [[TMP0]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP138:%.*]] = extractelement <8 x i1> [[TMP0]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP138]], label [[PRED_STORE_IF47:%.*]], label [[PRED_STORE_CONTINUE48:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if47:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP139:%.*]] = extractelement <8 x i32> [[TMP50]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP139:%.*]] = extractelement <8 x i32> [[TMP50]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP140:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP139]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP141:%.*]] = extractelement <8 x i8> [[TMP133]], i32 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP141:%.*]] = extractelement <8 x i8> [[TMP133]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP141]], i8* [[TMP140]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE48]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue48:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP142:%.*]] = extractelement <8 x i1> [[TMP0]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP142:%.*]] = extractelement <8 x i1> [[TMP0]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP142]], label [[PRED_STORE_IF49:%.*]], label [[PRED_STORE_CONTINUE50:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if49:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP143:%.*]] = extractelement <8 x i32> [[TMP50]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP143:%.*]] = extractelement <8 x i32> [[TMP50]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP144:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP143]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP145:%.*]] = extractelement <8 x i8> [[TMP133]], i32 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP145:%.*]] = extractelement <8 x i8> [[TMP133]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP145]], i8* [[TMP144]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE50]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue50:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP146:%.*]] = extractelement <8 x i1> [[TMP0]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP146:%.*]] = extractelement <8 x i1> [[TMP0]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP146]], label [[PRED_STORE_IF51:%.*]], label [[PRED_STORE_CONTINUE52:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if51:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP147:%.*]] = extractelement <8 x i32> [[TMP50]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP147:%.*]] = extractelement <8 x i32> [[TMP50]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP148:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP147]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP149:%.*]] = extractelement <8 x i8> [[TMP133]], i32 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP149:%.*]] = extractelement <8 x i8> [[TMP133]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP149]], i8* [[TMP148]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE52]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue52:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP150:%.*]] = extractelement <8 x i1> [[TMP0]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP150:%.*]] = extractelement <8 x i1> [[TMP0]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP150]], label [[PRED_STORE_IF53:%.*]], label [[PRED_STORE_CONTINUE54:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if53:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP151:%.*]] = extractelement <8 x i32> [[TMP50]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP151:%.*]] = extractelement <8 x i32> [[TMP50]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP152:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP151]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP153:%.*]] = extractelement <8 x i8> [[TMP133]], i32 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP153:%.*]] = extractelement <8 x i8> [[TMP133]], i64 4
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP153]], i8* [[TMP152]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE54]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue54:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP154:%.*]] = extractelement <8 x i1> [[TMP0]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP154:%.*]] = extractelement <8 x i1> [[TMP0]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP154]], label [[PRED_STORE_IF55:%.*]], label [[PRED_STORE_CONTINUE56:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if55:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP155:%.*]] = extractelement <8 x i32> [[TMP50]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP155:%.*]] = extractelement <8 x i32> [[TMP50]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP156:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP155]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP157:%.*]] = extractelement <8 x i8> [[TMP133]], i32 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP157:%.*]] = extractelement <8 x i8> [[TMP133]], i64 5
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP157]], i8* [[TMP156]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE56]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue56:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP158:%.*]] = extractelement <8 x i1> [[TMP0]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP158:%.*]] = extractelement <8 x i1> [[TMP0]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP158]], label [[PRED_STORE_IF57:%.*]], label [[PRED_STORE_CONTINUE58:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if57:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP159:%.*]] = extractelement <8 x i32> [[TMP50]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP159:%.*]] = extractelement <8 x i32> [[TMP50]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP160:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP159]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP161:%.*]] = extractelement <8 x i8> [[TMP133]], i32 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP161:%.*]] = extractelement <8 x i8> [[TMP133]], i64 6
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP161]], i8* [[TMP160]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE58]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue58:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP162:%.*]] = extractelement <8 x i1> [[TMP0]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP162:%.*]] = extractelement <8 x i1> [[TMP0]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP162]], label [[PRED_STORE_IF59:%.*]], label [[PRED_STORE_CONTINUE60]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if59:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP163:%.*]] = extractelement <8 x i32> [[TMP50]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP163:%.*]] = extractelement <8 x i32> [[TMP50]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP164:%.*]] = getelementptr inbounds i8, i8* [[Q]], i32 [[TMP163]]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP165:%.*]] = extractelement <8 x i8> [[TMP133]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP165:%.*]] = extractelement <8 x i8> [[TMP133]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    store i8 [[TMP165]], i8* [[TMP164]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE60]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue60:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 8
 ; DISABLED_MASKED_STRIDED-NEXT:    [[VEC_IND_NEXT]] = add <8 x i32> [[VEC_IND]], <i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8>
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP166:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP166]], label [[FOR_END]], label [[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP166]], label [[FOR_END]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; DISABLED_MASKED_STRIDED:       for.end:
 ; DISABLED_MASKED_STRIDED-NEXT:    ret void
 ;
@@ -3049,12 +3067,12 @@ define dso_local void @unconditional_masked_strided2_unknown_tc(i8* noalias noca
 ; ENABLED_MASKED_STRIDED-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 7
 ; ENABLED_MASKED_STRIDED-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -8
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = add i32 [[N]], -1
-; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i32 0
+; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i64 0
 ; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; ENABLED_MASKED_STRIDED:       vector.body:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i32> poison, i32 [[INDEX]], i32 0
+; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i32> poison, i32 [[INDEX]], i64 0
 ; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT1]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INDUCTION:%.*]] = or <8 x i32> [[BROADCAST_SPLAT2]], <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP0:%.*]] = icmp ule <8 x i32> [[INDUCTION]], [[BROADCAST_SPLAT]]
@@ -3076,7 +3094,7 @@ define dso_local void @unconditional_masked_strided2_unknown_tc(i8* noalias noca
 ; ENABLED_MASKED_STRIDED-NEXT:    call void @llvm.masked.store.v16i8.p0v16i8(<16 x i8> [[INTERLEAVED_VEC]], <16 x i8>* [[TMP10]], i32 1, <16 x i1> [[INTERLEAVED_MASK]])
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 8
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP11]], label [[FOR_END]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP11]], label [[FOR_END]], label [[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; ENABLED_MASKED_STRIDED:       for.end:
 ; ENABLED_MASKED_STRIDED-NEXT:    ret void
 ;

@@ -64,7 +64,7 @@ struct Inliner : public PassWrapper<Inliner, FunctionPass> {
     }
   }
 };
-} // end anonymous namespace
+} // namespace
 
 namespace mlir {
 namespace test {

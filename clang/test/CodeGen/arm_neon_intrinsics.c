@@ -5,6 +5,8 @@
 // RUN:  -disable-O0-optnone -emit-llvm -o - %s \
 // RUN:  | opt -S -mem2reg | FileCheck %s
 
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 #include <arm_neon.h>
 
 // CHECK-LABEL: @test_vaba_s8(
@@ -20277,10 +20279,10 @@ poly8x8_t test_vtbx4_p8(poly8x8_t a, poly8x8x4_t b, uint8x8_t c) {
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.int8x8x2_t* [[AGG_RESULT]] to i8*
 // CHECK:   [[TMP1:%.*]] = bitcast i8* [[TMP0]] to <8 x i8>*
 // CHECK:   [[VTRN_I:%.*]] = shufflevector <8 x i8> %a, <8 x i8> %b, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
-// CHECK:   store <8 x i8> [[VTRN_I]], <8 x i8>* [[TMP1]], align 4, !alias.scope !3
+// CHECK:   store <8 x i8> [[VTRN_I]], <8 x i8>* [[TMP1]], align 4, !alias.scope
 // CHECK:   [[TMP2:%.*]] = getelementptr inbounds <8 x i8>, <8 x i8>* [[TMP1]], i32 1
 // CHECK:   [[VTRN1_I:%.*]] = shufflevector <8 x i8> %a, <8 x i8> %b, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
-// CHECK:   store <8 x i8> [[VTRN1_I]], <8 x i8>* [[TMP2]], align 4, !alias.scope !3
+// CHECK:   store <8 x i8> [[VTRN1_I]], <8 x i8>* [[TMP2]], align 4, !alias.scope
 // CHECK:   ret void
 int8x8x2_t test_vtrn_s8(int8x8_t a, int8x8_t b) {
   return vtrn_s8(a, b);
@@ -20292,10 +20294,10 @@ int8x8x2_t test_vtrn_s8(int8x8_t a, int8x8_t b) {
 // CHECK:   [[TMP2:%.*]] = bitcast <4 x i16> %b to <8 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast i8* [[TMP0]] to <4 x i16>*
 // CHECK:   [[VTRN_I:%.*]] = shufflevector <4 x i16> %a, <4 x i16> %b, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
-// CHECK:   store <4 x i16> [[VTRN_I]], <4 x i16>* [[TMP3]], align 4, !alias.scope !6
+// CHECK:   store <4 x i16> [[VTRN_I]], <4 x i16>* [[TMP3]], align 4, !alias.scope
 // CHECK:   [[TMP4:%.*]] = getelementptr inbounds <4 x i16>, <4 x i16>* [[TMP3]], i32 1
 // CHECK:   [[VTRN1_I:%.*]] = shufflevector <4 x i16> %a, <4 x i16> %b, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
-// CHECK:   store <4 x i16> [[VTRN1_I]], <4 x i16>* [[TMP4]], align 4, !alias.scope !6
+// CHECK:   store <4 x i16> [[VTRN1_I]], <4 x i16>* [[TMP4]], align 4, !alias.scope
 // CHECK:   ret void
 int16x4x2_t test_vtrn_s16(int16x4_t a, int16x4_t b) {
   return vtrn_s16(a, b);
@@ -20307,10 +20309,10 @@ int16x4x2_t test_vtrn_s16(int16x4_t a, int16x4_t b) {
 // CHECK:   [[TMP2:%.*]] = bitcast <2 x i32> %b to <8 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast i8* [[TMP0]] to <2 x i32>*
 // CHECK:   [[VTRN_I:%.*]] = shufflevector <2 x i32> %a, <2 x i32> %b, <2 x i32> <i32 0, i32 2>
-// CHECK:   store <2 x i32> [[VTRN_I]], <2 x i32>* [[TMP3]], align 4, !alias.scope !9
+// CHECK:   store <2 x i32> [[VTRN_I]], <2 x i32>* [[TMP3]], align 4, !alias.scope
 // CHECK:   [[TMP4:%.*]] = getelementptr inbounds <2 x i32>, <2 x i32>* [[TMP3]], i32 1
 // CHECK:   [[VTRN1_I:%.*]] = shufflevector <2 x i32> %a, <2 x i32> %b, <2 x i32> <i32 1, i32 3>
-// CHECK:   store <2 x i32> [[VTRN1_I]], <2 x i32>* [[TMP4]], align 4, !alias.scope !9
+// CHECK:   store <2 x i32> [[VTRN1_I]], <2 x i32>* [[TMP4]], align 4, !alias.scope
 // CHECK:   ret void
 int32x2x2_t test_vtrn_s32(int32x2_t a, int32x2_t b) {
   return vtrn_s32(a, b);
@@ -20320,10 +20322,10 @@ int32x2x2_t test_vtrn_s32(int32x2_t a, int32x2_t b) {
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.uint8x8x2_t* [[AGG_RESULT]] to i8*
 // CHECK:   [[TMP1:%.*]] = bitcast i8* [[TMP0]] to <8 x i8>*
 // CHECK:   [[VTRN_I:%.*]] = shufflevector <8 x i8> %a, <8 x i8> %b, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
-// CHECK:   store <8 x i8> [[VTRN_I]], <8 x i8>* [[TMP1]], align 4, !alias.scope !12
+// CHECK:   store <8 x i8> [[VTRN_I]], <8 x i8>* [[TMP1]], align 4, !alias.scope
 // CHECK:   [[TMP2:%.*]] = getelementptr inbounds <8 x i8>, <8 x i8>* [[TMP1]], i32 1
 // CHECK:   [[VTRN1_I:%.*]] = shufflevector <8 x i8> %a, <8 x i8> %b, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
-// CHECK:   store <8 x i8> [[VTRN1_I]], <8 x i8>* [[TMP2]], align 4, !alias.scope !12
+// CHECK:   store <8 x i8> [[VTRN1_I]], <8 x i8>* [[TMP2]], align 4, !alias.scope
 // CHECK:   ret void
 uint8x8x2_t test_vtrn_u8(uint8x8_t a, uint8x8_t b) {
   return vtrn_u8(a, b);
@@ -20335,10 +20337,10 @@ uint8x8x2_t test_vtrn_u8(uint8x8_t a, uint8x8_t b) {
 // CHECK:   [[TMP2:%.*]] = bitcast <4 x i16> %b to <8 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast i8* [[TMP0]] to <4 x i16>*
 // CHECK:   [[VTRN_I:%.*]] = shufflevector <4 x i16> %a, <4 x i16> %b, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
-// CHECK:   store <4 x i16> [[VTRN_I]], <4 x i16>* [[TMP3]], align 4, !alias.scope !15
+// CHECK:   store <4 x i16> [[VTRN_I]], <4 x i16>* [[TMP3]], align 4, !alias.scope
 // CHECK:   [[TMP4:%.*]] = getelementptr inbounds <4 x i16>, <4 x i16>* [[TMP3]], i32 1
 // CHECK:   [[VTRN1_I:%.*]] = shufflevector <4 x i16> %a, <4 x i16> %b, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
-// CHECK:   store <4 x i16> [[VTRN1_I]], <4 x i16>* [[TMP4]], align 4, !alias.scope !15
+// CHECK:   store <4 x i16> [[VTRN1_I]], <4 x i16>* [[TMP4]], align 4, !alias.scope
 // CHECK:   ret void
 uint16x4x2_t test_vtrn_u16(uint16x4_t a, uint16x4_t b) {
   return vtrn_u16(a, b);
@@ -20350,10 +20352,10 @@ uint16x4x2_t test_vtrn_u16(uint16x4_t a, uint16x4_t b) {
 // CHECK:   [[TMP2:%.*]] = bitcast <2 x i32> %b to <8 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast i8* [[TMP0]] to <2 x i32>*
 // CHECK:   [[VTRN_I:%.*]] = shufflevector <2 x i32> %a, <2 x i32> %b, <2 x i32> <i32 0, i32 2>
-// CHECK:   store <2 x i32> [[VTRN_I]], <2 x i32>* [[TMP3]], align 4, !alias.scope !18
+// CHECK:   store <2 x i32> [[VTRN_I]], <2 x i32>* [[TMP3]], align 4, !alias.scope
 // CHECK:   [[TMP4:%.*]] = getelementptr inbounds <2 x i32>, <2 x i32>* [[TMP3]], i32 1
 // CHECK:   [[VTRN1_I:%.*]] = shufflevector <2 x i32> %a, <2 x i32> %b, <2 x i32> <i32 1, i32 3>
-// CHECK:   store <2 x i32> [[VTRN1_I]], <2 x i32>* [[TMP4]], align 4, !alias.scope !18
+// CHECK:   store <2 x i32> [[VTRN1_I]], <2 x i32>* [[TMP4]], align 4, !alias.scope
 // CHECK:   ret void
 uint32x2x2_t test_vtrn_u32(uint32x2_t a, uint32x2_t b) {
   return vtrn_u32(a, b);
@@ -20365,10 +20367,10 @@ uint32x2x2_t test_vtrn_u32(uint32x2_t a, uint32x2_t b) {
 // CHECK:   [[TMP2:%.*]] = bitcast <2 x float> %b to <8 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast i8* [[TMP0]] to <2 x float>*
 // CHECK:   [[VTRN_I:%.*]] = shufflevector <2 x float> %a, <2 x float> %b, <2 x i32> <i32 0, i32 2>
-// CHECK:   store <2 x float> [[VTRN_I]], <2 x float>* [[TMP3]], align 4, !alias.scope !21
+// CHECK:   store <2 x float> [[VTRN_I]], <2 x float>* [[TMP3]], align 4, !alias.scope
 // CHECK:   [[TMP4:%.*]] = getelementptr inbounds <2 x float>, <2 x float>* [[TMP3]], i32 1
 // CHECK:   [[VTRN1_I:%.*]] = shufflevector <2 x float> %a, <2 x float> %b, <2 x i32> <i32 1, i32 3>
-// CHECK:   store <2 x float> [[VTRN1_I]], <2 x float>* [[TMP4]], align 4, !alias.scope !21
+// CHECK:   store <2 x float> [[VTRN1_I]], <2 x float>* [[TMP4]], align 4, !alias.scope
 // CHECK:   ret void
 float32x2x2_t test_vtrn_f32(float32x2_t a, float32x2_t b) {
   return vtrn_f32(a, b);
@@ -20378,10 +20380,10 @@ float32x2x2_t test_vtrn_f32(float32x2_t a, float32x2_t b) {
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.poly8x8x2_t* [[AGG_RESULT]] to i8*
 // CHECK:   [[TMP1:%.*]] = bitcast i8* [[TMP0]] to <8 x i8>*
 // CHECK:   [[VTRN_I:%.*]] = shufflevector <8 x i8> %a, <8 x i8> %b, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
-// CHECK:   store <8 x i8> [[VTRN_I]], <8 x i8>* [[TMP1]], align 4, !alias.scope !24
+// CHECK:   store <8 x i8> [[VTRN_I]], <8 x i8>* [[TMP1]], align 4, !alias.scope
 // CHECK:   [[TMP2:%.*]] = getelementptr inbounds <8 x i8>, <8 x i8>* [[TMP1]], i32 1
 // CHECK:   [[VTRN1_I:%.*]] = shufflevector <8 x i8> %a, <8 x i8> %b, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
-// CHECK:   store <8 x i8> [[VTRN1_I]], <8 x i8>* [[TMP2]], align 4, !alias.scope !24
+// CHECK:   store <8 x i8> [[VTRN1_I]], <8 x i8>* [[TMP2]], align 4, !alias.scope
 // CHECK:   ret void
 poly8x8x2_t test_vtrn_p8(poly8x8_t a, poly8x8_t b) {
   return vtrn_p8(a, b);
@@ -20393,10 +20395,10 @@ poly8x8x2_t test_vtrn_p8(poly8x8_t a, poly8x8_t b) {
 // CHECK:   [[TMP2:%.*]] = bitcast <4 x i16> %b to <8 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast i8* [[TMP0]] to <4 x i16>*
 // CHECK:   [[VTRN_I:%.*]] = shufflevector <4 x i16> %a, <4 x i16> %b, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
-// CHECK:   store <4 x i16> [[VTRN_I]], <4 x i16>* [[TMP3]], align 4, !alias.scope !27
+// CHECK:   store <4 x i16> [[VTRN_I]], <4 x i16>* [[TMP3]], align 4, !alias.scope
 // CHECK:   [[TMP4:%.*]] = getelementptr inbounds <4 x i16>, <4 x i16>* [[TMP3]], i32 1
 // CHECK:   [[VTRN1_I:%.*]] = shufflevector <4 x i16> %a, <4 x i16> %b, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
-// CHECK:   store <4 x i16> [[VTRN1_I]], <4 x i16>* [[TMP4]], align 4, !alias.scope !27
+// CHECK:   store <4 x i16> [[VTRN1_I]], <4 x i16>* [[TMP4]], align 4, !alias.scope
 // CHECK:   ret void
 poly16x4x2_t test_vtrn_p16(poly16x4_t a, poly16x4_t b) {
   return vtrn_p16(a, b);
@@ -20406,10 +20408,10 @@ poly16x4x2_t test_vtrn_p16(poly16x4_t a, poly16x4_t b) {
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.int8x16x2_t* [[AGG_RESULT]] to i8*
 // CHECK:   [[TMP1:%.*]] = bitcast i8* [[TMP0]] to <16 x i8>*
 // CHECK:   [[VTRN_I:%.*]] = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 0, i32 16, i32 2, i32 18, i32 4, i32 20, i32 6, i32 22, i32 8, i32 24, i32 10, i32 26, i32 12, i32 28, i32 14, i32 30>
-// CHECK:   store <16 x i8> [[VTRN_I]], <16 x i8>* [[TMP1]], align 4, !alias.scope !30
+// CHECK:   store <16 x i8> [[VTRN_I]], <16 x i8>* [[TMP1]], align 4, !alias.scope
 // CHECK:   [[TMP2:%.*]] = getelementptr inbounds <16 x i8>, <16 x i8>* [[TMP1]], i32 1
 // CHECK:   [[VTRN1_I:%.*]] = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 1, i32 17, i32 3, i32 19, i32 5, i32 21, i32 7, i32 23, i32 9, i32 25, i32 11, i32 27, i32 13, i32 29, i32 15, i32 31>
-// CHECK:   store <16 x i8> [[VTRN1_I]], <16 x i8>* [[TMP2]], align 4, !alias.scope !30
+// CHECK:   store <16 x i8> [[VTRN1_I]], <16 x i8>* [[TMP2]], align 4, !alias.scope
 // CHECK:   ret void
 int8x16x2_t test_vtrnq_s8(int8x16_t a, int8x16_t b) {
   return vtrnq_s8(a, b);
@@ -20421,10 +20423,10 @@ int8x16x2_t test_vtrnq_s8(int8x16_t a, int8x16_t b) {
 // CHECK:   [[TMP2:%.*]] = bitcast <8 x i16> %b to <16 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast i8* [[TMP0]] to <8 x i16>*
 // CHECK:   [[VTRN_I:%.*]] = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
-// CHECK:   store <8 x i16> [[VTRN_I]], <8 x i16>* [[TMP3]], align 4, !alias.scope !33
+// CHECK:   store <8 x i16> [[VTRN_I]], <8 x i16>* [[TMP3]], align 4, !alias.scope
 // CHECK:   [[TMP4:%.*]] = getelementptr inbounds <8 x i16>, <8 x i16>* [[TMP3]], i32 1
 // CHECK:   [[VTRN1_I:%.*]] = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
-// CHECK:   store <8 x i16> [[VTRN1_I]], <8 x i16>* [[TMP4]], align 4, !alias.scope !33
+// CHECK:   store <8 x i16> [[VTRN1_I]], <8 x i16>* [[TMP4]], align 4, !alias.scope
 // CHECK:   ret void
 int16x8x2_t test_vtrnq_s16(int16x8_t a, int16x8_t b) {
   return vtrnq_s16(a, b);
@@ -20436,10 +20438,10 @@ int16x8x2_t test_vtrnq_s16(int16x8_t a, int16x8_t b) {
 // CHECK:   [[TMP2:%.*]] = bitcast <4 x i32> %b to <16 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast i8* [[TMP0]] to <4 x i32>*
 // CHECK:   [[VTRN_I:%.*]] = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
-// CHECK:   store <4 x i32> [[VTRN_I]], <4 x i32>* [[TMP3]], align 4, !alias.scope !36
+// CHECK:   store <4 x i32> [[VTRN_I]], <4 x i32>* [[TMP3]], align 4, !alias.scope
 // CHECK:   [[TMP4:%.*]] = getelementptr inbounds <4 x i32>, <4 x i32>* [[TMP3]], i32 1
 // CHECK:   [[VTRN1_I:%.*]] = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
-// CHECK:   store <4 x i32> [[VTRN1_I]], <4 x i32>* [[TMP4]], align 4, !alias.scope !36
+// CHECK:   store <4 x i32> [[VTRN1_I]], <4 x i32>* [[TMP4]], align 4, !alias.scope
 // CHECK:   ret void
 int32x4x2_t test_vtrnq_s32(int32x4_t a, int32x4_t b) {
   return vtrnq_s32(a, b);
@@ -20449,10 +20451,10 @@ int32x4x2_t test_vtrnq_s32(int32x4_t a, int32x4_t b) {
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.uint8x16x2_t* [[AGG_RESULT]] to i8*
 // CHECK:   [[TMP1:%.*]] = bitcast i8* [[TMP0]] to <16 x i8>*
 // CHECK:   [[VTRN_I:%.*]] = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 0, i32 16, i32 2, i32 18, i32 4, i32 20, i32 6, i32 22, i32 8, i32 24, i32 10, i32 26, i32 12, i32 28, i32 14, i32 30>
-// CHECK:   store <16 x i8> [[VTRN_I]], <16 x i8>* [[TMP1]], align 4, !alias.scope !39
+// CHECK:   store <16 x i8> [[VTRN_I]], <16 x i8>* [[TMP1]], align 4, !alias.scope
 // CHECK:   [[TMP2:%.*]] = getelementptr inbounds <16 x i8>, <16 x i8>* [[TMP1]], i32 1
 // CHECK:   [[VTRN1_I:%.*]] = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 1, i32 17, i32 3, i32 19, i32 5, i32 21, i32 7, i32 23, i32 9, i32 25, i32 11, i32 27, i32 13, i32 29, i32 15, i32 31>
-// CHECK:   store <16 x i8> [[VTRN1_I]], <16 x i8>* [[TMP2]], align 4, !alias.scope !39
+// CHECK:   store <16 x i8> [[VTRN1_I]], <16 x i8>* [[TMP2]], align 4, !alias.scope
 // CHECK:   ret void
 uint8x16x2_t test_vtrnq_u8(uint8x16_t a, uint8x16_t b) {
   return vtrnq_u8(a, b);
@@ -20464,10 +20466,10 @@ uint8x16x2_t test_vtrnq_u8(uint8x16_t a, uint8x16_t b) {
 // CHECK:   [[TMP2:%.*]] = bitcast <8 x i16> %b to <16 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast i8* [[TMP0]] to <8 x i16>*
 // CHECK:   [[VTRN_I:%.*]] = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
-// CHECK:   store <8 x i16> [[VTRN_I]], <8 x i16>* [[TMP3]], align 4, !alias.scope !42
+// CHECK:   store <8 x i16> [[VTRN_I]], <8 x i16>* [[TMP3]], align 4, !alias.scope
 // CHECK:   [[TMP4:%.*]] = getelementptr inbounds <8 x i16>, <8 x i16>* [[TMP3]], i32 1
 // CHECK:   [[VTRN1_I:%.*]] = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
-// CHECK:   store <8 x i16> [[VTRN1_I]], <8 x i16>* [[TMP4]], align 4, !alias.scope !42
+// CHECK:   store <8 x i16> [[VTRN1_I]], <8 x i16>* [[TMP4]], align 4, !alias.scope
 // CHECK:   ret void
 uint16x8x2_t test_vtrnq_u16(uint16x8_t a, uint16x8_t b) {
   return vtrnq_u16(a, b);
@@ -20479,10 +20481,10 @@ uint16x8x2_t test_vtrnq_u16(uint16x8_t a, uint16x8_t b) {
 // CHECK:   [[TMP2:%.*]] = bitcast <4 x i32> %b to <16 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast i8* [[TMP0]] to <4 x i32>*
 // CHECK:   [[VTRN_I:%.*]] = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
-// CHECK:   store <4 x i32> [[VTRN_I]], <4 x i32>* [[TMP3]], align 4, !alias.scope !45
+// CHECK:   store <4 x i32> [[VTRN_I]], <4 x i32>* [[TMP3]], align 4, !alias.scope
 // CHECK:   [[TMP4:%.*]] = getelementptr inbounds <4 x i32>, <4 x i32>* [[TMP3]], i32 1
 // CHECK:   [[VTRN1_I:%.*]] = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
-// CHECK:   store <4 x i32> [[VTRN1_I]], <4 x i32>* [[TMP4]], align 4, !alias.scope !45
+// CHECK:   store <4 x i32> [[VTRN1_I]], <4 x i32>* [[TMP4]], align 4, !alias.scope
 // CHECK:   ret void
 uint32x4x2_t test_vtrnq_u32(uint32x4_t a, uint32x4_t b) {
   return vtrnq_u32(a, b);
@@ -20494,10 +20496,10 @@ uint32x4x2_t test_vtrnq_u32(uint32x4_t a, uint32x4_t b) {
 // CHECK:   [[TMP2:%.*]] = bitcast <4 x float> %b to <16 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast i8* [[TMP0]] to <4 x float>*
 // CHECK:   [[VTRN_I:%.*]] = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
-// CHECK:   store <4 x float> [[VTRN_I]], <4 x float>* [[TMP3]], align 4, !alias.scope !48
+// CHECK:   store <4 x float> [[VTRN_I]], <4 x float>* [[TMP3]], align 4, !alias.scope
 // CHECK:   [[TMP4:%.*]] = getelementptr inbounds <4 x float>, <4 x float>* [[TMP3]], i32 1
 // CHECK:   [[VTRN1_I:%.*]] = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
-// CHECK:   store <4 x float> [[VTRN1_I]], <4 x float>* [[TMP4]], align 4, !alias.scope !48
+// CHECK:   store <4 x float> [[VTRN1_I]], <4 x float>* [[TMP4]], align 4, !alias.scope
 // CHECK:   ret void
 float32x4x2_t test_vtrnq_f32(float32x4_t a, float32x4_t b) {
   return vtrnq_f32(a, b);
@@ -20507,10 +20509,10 @@ float32x4x2_t test_vtrnq_f32(float32x4_t a, float32x4_t b) {
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.poly8x16x2_t* [[AGG_RESULT]] to i8*
 // CHECK:   [[TMP1:%.*]] = bitcast i8* [[TMP0]] to <16 x i8>*
 // CHECK:   [[VTRN_I:%.*]] = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 0, i32 16, i32 2, i32 18, i32 4, i32 20, i32 6, i32 22, i32 8, i32 24, i32 10, i32 26, i32 12, i32 28, i32 14, i32 30>
-// CHECK:   store <16 x i8> [[VTRN_I]], <16 x i8>* [[TMP1]], align 4, !alias.scope !51
+// CHECK:   store <16 x i8> [[VTRN_I]], <16 x i8>* [[TMP1]], align 4, !alias.scope
 // CHECK:   [[TMP2:%.*]] = getelementptr inbounds <16 x i8>, <16 x i8>* [[TMP1]], i32 1
 // CHECK:   [[VTRN1_I:%.*]] = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 1, i32 17, i32 3, i32 19, i32 5, i32 21, i32 7, i32 23, i32 9, i32 25, i32 11, i32 27, i32 13, i32 29, i32 15, i32 31>
-// CHECK:   store <16 x i8> [[VTRN1_I]], <16 x i8>* [[TMP2]], align 4, !alias.scope !51
+// CHECK:   store <16 x i8> [[VTRN1_I]], <16 x i8>* [[TMP2]], align 4, !alias.scope
 // CHECK:   ret void
 poly8x16x2_t test_vtrnq_p8(poly8x16_t a, poly8x16_t b) {
   return vtrnq_p8(a, b);
@@ -20522,10 +20524,10 @@ poly8x16x2_t test_vtrnq_p8(poly8x16_t a, poly8x16_t b) {
 // CHECK:   [[TMP2:%.*]] = bitcast <8 x i16> %b to <16 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast i8* [[TMP0]] to <8 x i16>*
 // CHECK:   [[VTRN_I:%.*]] = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
-// CHECK:   store <8 x i16> [[VTRN_I]], <8 x i16>* [[TMP3]], align 4, !alias.scope !54
+// CHECK:   store <8 x i16> [[VTRN_I]], <8 x i16>* [[TMP3]], align 4, !alias.scope
 // CHECK:   [[TMP4:%.*]] = getelementptr inbounds <8 x i16>, <8 x i16>* [[TMP3]], i32 1
 // CHECK:   [[VTRN1_I:%.*]] = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
-// CHECK:   store <8 x i16> [[VTRN1_I]], <8 x i16>* [[TMP4]], align 4, !alias.scope !54
+// CHECK:   store <8 x i16> [[VTRN1_I]], <8 x i16>* [[TMP4]], align 4, !alias.scope
 // CHECK:   ret void
 poly16x8x2_t test_vtrnq_p16(poly16x8_t a, poly16x8_t b) {
   return vtrnq_p16(a, b);
@@ -20699,10 +20701,10 @@ uint16x8_t test_vtstq_p16(poly16x8_t a, poly16x8_t b) {
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.int8x8x2_t* [[AGG_RESULT]] to i8*
 // CHECK:   [[TMP1:%.*]] = bitcast i8* [[TMP0]] to <8 x i8>*
 // CHECK:   [[VUZP_I:%.*]] = shufflevector <8 x i8> %a, <8 x i8> %b, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
-// CHECK:   store <8 x i8> [[VUZP_I]], <8 x i8>* [[TMP1]], align 4, !alias.scope !57
+// CHECK:   store <8 x i8> [[VUZP_I]], <8 x i8>* [[TMP1]], align 4, !alias.scope
 // CHECK:   [[TMP2:%.*]] = getelementptr inbounds <8 x i8>, <8 x i8>* [[TMP1]], i32 1
 // CHECK:   [[VUZP1_I:%.*]] = shufflevector <8 x i8> %a, <8 x i8> %b, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
-// CHECK:   store <8 x i8> [[VUZP1_I]], <8 x i8>* [[TMP2]], align 4, !alias.scope !57
+// CHECK:   store <8 x i8> [[VUZP1_I]], <8 x i8>* [[TMP2]], align 4, !alias.scope
 // CHECK:   ret void
 int8x8x2_t test_vuzp_s8(int8x8_t a, int8x8_t b) {
   return vuzp_s8(a, b);
@@ -20714,10 +20716,10 @@ int8x8x2_t test_vuzp_s8(int8x8_t a, int8x8_t b) {
 // CHECK:   [[TMP2:%.*]] = bitcast <4 x i16> %b to <8 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast i8* [[TMP0]] to <4 x i16>*
 // CHECK:   [[VUZP_I:%.*]] = shufflevector <4 x i16> %a, <4 x i16> %b, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-// CHECK:   store <4 x i16> [[VUZP_I]], <4 x i16>* [[TMP3]], align 4, !alias.scope !60
+// CHECK:   store <4 x i16> [[VUZP_I]], <4 x i16>* [[TMP3]], align 4, !alias.scope
 // CHECK:   [[TMP4:%.*]] = getelementptr inbounds <4 x i16>, <4 x i16>* [[TMP3]], i32 1
 // CHECK:   [[VUZP1_I:%.*]] = shufflevector <4 x i16> %a, <4 x i16> %b, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-// CHECK:   store <4 x i16> [[VUZP1_I]], <4 x i16>* [[TMP4]], align 4, !alias.scope !60
+// CHECK:   store <4 x i16> [[VUZP1_I]], <4 x i16>* [[TMP4]], align 4, !alias.scope
 // CHECK:   ret void
 int16x4x2_t test_vuzp_s16(int16x4_t a, int16x4_t b) {
   return vuzp_s16(a, b);
@@ -20729,10 +20731,10 @@ int16x4x2_t test_vuzp_s16(int16x4_t a, int16x4_t b) {
 // CHECK:   [[TMP2:%.*]] = bitcast <2 x i32> %b to <8 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast i8* [[TMP0]] to <2 x i32>*
 // CHECK:   [[VUZP_I:%.*]] = shufflevector <2 x i32> %a, <2 x i32> %b, <2 x i32> <i32 0, i32 2>
-// CHECK:   store <2 x i32> [[VUZP_I]], <2 x i32>* [[TMP3]], align 4, !alias.scope !63
+// CHECK:   store <2 x i32> [[VUZP_I]], <2 x i32>* [[TMP3]], align 4, !alias.scope
 // CHECK:   [[TMP4:%.*]] = getelementptr inbounds <2 x i32>, <2 x i32>* [[TMP3]], i32 1
 // CHECK:   [[VUZP1_I:%.*]] = shufflevector <2 x i32> %a, <2 x i32> %b, <2 x i32> <i32 1, i32 3>
-// CHECK:   store <2 x i32> [[VUZP1_I]], <2 x i32>* [[TMP4]], align 4, !alias.scope !63
+// CHECK:   store <2 x i32> [[VUZP1_I]], <2 x i32>* [[TMP4]], align 4, !alias.scope
 // CHECK:   ret void
 int32x2x2_t test_vuzp_s32(int32x2_t a, int32x2_t b) {
   return vuzp_s32(a, b);
@@ -20742,10 +20744,10 @@ int32x2x2_t test_vuzp_s32(int32x2_t a, int32x2_t b) {
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.uint8x8x2_t* [[AGG_RESULT]] to i8*
 // CHECK:   [[TMP1:%.*]] = bitcast i8* [[TMP0]] to <8 x i8>*
 // CHECK:   [[VUZP_I:%.*]] = shufflevector <8 x i8> %a, <8 x i8> %b, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
-// CHECK:   store <8 x i8> [[VUZP_I]], <8 x i8>* [[TMP1]], align 4, !alias.scope !66
+// CHECK:   store <8 x i8> [[VUZP_I]], <8 x i8>* [[TMP1]], align 4, !alias.scope
 // CHECK:   [[TMP2:%.*]] = getelementptr inbounds <8 x i8>, <8 x i8>* [[TMP1]], i32 1
 // CHECK:   [[VUZP1_I:%.*]] = shufflevector <8 x i8> %a, <8 x i8> %b, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
-// CHECK:   store <8 x i8> [[VUZP1_I]], <8 x i8>* [[TMP2]], align 4, !alias.scope !66
+// CHECK:   store <8 x i8> [[VUZP1_I]], <8 x i8>* [[TMP2]], align 4, !alias.scope
 // CHECK:   ret void
 uint8x8x2_t test_vuzp_u8(uint8x8_t a, uint8x8_t b) {
   return vuzp_u8(a, b);
@@ -20757,10 +20759,10 @@ uint8x8x2_t test_vuzp_u8(uint8x8_t a, uint8x8_t b) {
 // CHECK:   [[TMP2:%.*]] = bitcast <4 x i16> %b to <8 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast i8* [[TMP0]] to <4 x i16>*
 // CHECK:   [[VUZP_I:%.*]] = shufflevector <4 x i16> %a, <4 x i16> %b, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-// CHECK:   store <4 x i16> [[VUZP_I]], <4 x i16>* [[TMP3]], align 4, !alias.scope !69
+// CHECK:   store <4 x i16> [[VUZP_I]], <4 x i16>* [[TMP3]], align 4, !alias.scope
 // CHECK:   [[TMP4:%.*]] = getelementptr inbounds <4 x i16>, <4 x i16>* [[TMP3]], i32 1
 // CHECK:   [[VUZP1_I:%.*]] = shufflevector <4 x i16> %a, <4 x i16> %b, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-// CHECK:   store <4 x i16> [[VUZP1_I]], <4 x i16>* [[TMP4]], align 4, !alias.scope !69
+// CHECK:   store <4 x i16> [[VUZP1_I]], <4 x i16>* [[TMP4]], align 4, !alias.scope
 // CHECK:   ret void
 uint16x4x2_t test_vuzp_u16(uint16x4_t a, uint16x4_t b) {
   return vuzp_u16(a, b);
@@ -20772,10 +20774,10 @@ uint16x4x2_t test_vuzp_u16(uint16x4_t a, uint16x4_t b) {
 // CHECK:   [[TMP2:%.*]] = bitcast <2 x i32> %b to <8 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast i8* [[TMP0]] to <2 x i32>*
 // CHECK:   [[VUZP_I:%.*]] = shufflevector <2 x i32> %a, <2 x i32> %b, <2 x i32> <i32 0, i32 2>
-// CHECK:   store <2 x i32> [[VUZP_I]], <2 x i32>* [[TMP3]], align 4, !alias.scope !72
+// CHECK:   store <2 x i32> [[VUZP_I]], <2 x i32>* [[TMP3]], align 4, !alias.scope
 // CHECK:   [[TMP4:%.*]] = getelementptr inbounds <2 x i32>, <2 x i32>* [[TMP3]], i32 1
 // CHECK:   [[VUZP1_I:%.*]] = shufflevector <2 x i32> %a, <2 x i32> %b, <2 x i32> <i32 1, i32 3>
-// CHECK:   store <2 x i32> [[VUZP1_I]], <2 x i32>* [[TMP4]], align 4, !alias.scope !72
+// CHECK:   store <2 x i32> [[VUZP1_I]], <2 x i32>* [[TMP4]], align 4, !alias.scope
 // CHECK:   ret void
 uint32x2x2_t test_vuzp_u32(uint32x2_t a, uint32x2_t b) {
   return vuzp_u32(a, b);
@@ -20787,10 +20789,10 @@ uint32x2x2_t test_vuzp_u32(uint32x2_t a, uint32x2_t b) {
 // CHECK:   [[TMP2:%.*]] = bitcast <2 x float> %b to <8 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast i8* [[TMP0]] to <2 x float>*
 // CHECK:   [[VUZP_I:%.*]] = shufflevector <2 x float> %a, <2 x float> %b, <2 x i32> <i32 0, i32 2>
-// CHECK:   store <2 x float> [[VUZP_I]], <2 x float>* [[TMP3]], align 4, !alias.scope !75
+// CHECK:   store <2 x float> [[VUZP_I]], <2 x float>* [[TMP3]], align 4, !alias.scope
 // CHECK:   [[TMP4:%.*]] = getelementptr inbounds <2 x float>, <2 x float>* [[TMP3]], i32 1
 // CHECK:   [[VUZP1_I:%.*]] = shufflevector <2 x float> %a, <2 x float> %b, <2 x i32> <i32 1, i32 3>
-// CHECK:   store <2 x float> [[VUZP1_I]], <2 x float>* [[TMP4]], align 4, !alias.scope !75
+// CHECK:   store <2 x float> [[VUZP1_I]], <2 x float>* [[TMP4]], align 4, !alias.scope
 // CHECK:   ret void
 float32x2x2_t test_vuzp_f32(float32x2_t a, float32x2_t b) {
   return vuzp_f32(a, b);
@@ -20800,10 +20802,10 @@ float32x2x2_t test_vuzp_f32(float32x2_t a, float32x2_t b) {
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.poly8x8x2_t* [[AGG_RESULT]] to i8*
 // CHECK:   [[TMP1:%.*]] = bitcast i8* [[TMP0]] to <8 x i8>*
 // CHECK:   [[VUZP_I:%.*]] = shufflevector <8 x i8> %a, <8 x i8> %b, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
-// CHECK:   store <8 x i8> [[VUZP_I]], <8 x i8>* [[TMP1]], align 4, !alias.scope !78
+// CHECK:   store <8 x i8> [[VUZP_I]], <8 x i8>* [[TMP1]], align 4, !alias.scope
 // CHECK:   [[TMP2:%.*]] = getelementptr inbounds <8 x i8>, <8 x i8>* [[TMP1]], i32 1
 // CHECK:   [[VUZP1_I:%.*]] = shufflevector <8 x i8> %a, <8 x i8> %b, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
-// CHECK:   store <8 x i8> [[VUZP1_I]], <8 x i8>* [[TMP2]], align 4, !alias.scope !78
+// CHECK:   store <8 x i8> [[VUZP1_I]], <8 x i8>* [[TMP2]], align 4, !alias.scope
 // CHECK:   ret void
 poly8x8x2_t test_vuzp_p8(poly8x8_t a, poly8x8_t b) {
   return vuzp_p8(a, b);
@@ -20815,10 +20817,10 @@ poly8x8x2_t test_vuzp_p8(poly8x8_t a, poly8x8_t b) {
 // CHECK:   [[TMP2:%.*]] = bitcast <4 x i16> %b to <8 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast i8* [[TMP0]] to <4 x i16>*
 // CHECK:   [[VUZP_I:%.*]] = shufflevector <4 x i16> %a, <4 x i16> %b, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-// CHECK:   store <4 x i16> [[VUZP_I]], <4 x i16>* [[TMP3]], align 4, !alias.scope !81
+// CHECK:   store <4 x i16> [[VUZP_I]], <4 x i16>* [[TMP3]], align 4, !alias.scope
 // CHECK:   [[TMP4:%.*]] = getelementptr inbounds <4 x i16>, <4 x i16>* [[TMP3]], i32 1
 // CHECK:   [[VUZP1_I:%.*]] = shufflevector <4 x i16> %a, <4 x i16> %b, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-// CHECK:   store <4 x i16> [[VUZP1_I]], <4 x i16>* [[TMP4]], align 4, !alias.scope !81
+// CHECK:   store <4 x i16> [[VUZP1_I]], <4 x i16>* [[TMP4]], align 4, !alias.scope
 // CHECK:   ret void
 poly16x4x2_t test_vuzp_p16(poly16x4_t a, poly16x4_t b) {
   return vuzp_p16(a, b);
@@ -20828,10 +20830,10 @@ poly16x4x2_t test_vuzp_p16(poly16x4_t a, poly16x4_t b) {
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.int8x16x2_t* [[AGG_RESULT]] to i8*
 // CHECK:   [[TMP1:%.*]] = bitcast i8* [[TMP0]] to <16 x i8>*
 // CHECK:   [[VUZP_I:%.*]] = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
-// CHECK:   store <16 x i8> [[VUZP_I]], <16 x i8>* [[TMP1]], align 4, !alias.scope !84
+// CHECK:   store <16 x i8> [[VUZP_I]], <16 x i8>* [[TMP1]], align 4, !alias.scope
 // CHECK:   [[TMP2:%.*]] = getelementptr inbounds <16 x i8>, <16 x i8>* [[TMP1]], i32 1
 // CHECK:   [[VUZP1_I:%.*]] = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31>
-// CHECK:   store <16 x i8> [[VUZP1_I]], <16 x i8>* [[TMP2]], align 4, !alias.scope !84
+// CHECK:   store <16 x i8> [[VUZP1_I]], <16 x i8>* [[TMP2]], align 4, !alias.scope
 // CHECK:   ret void
 int8x16x2_t test_vuzpq_s8(int8x16_t a, int8x16_t b) {
   return vuzpq_s8(a, b);
@@ -20843,10 +20845,10 @@ int8x16x2_t test_vuzpq_s8(int8x16_t a, int8x16_t b) {
 // CHECK:   [[TMP2:%.*]] = bitcast <8 x i16> %b to <16 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast i8* [[TMP0]] to <8 x i16>*
 // CHECK:   [[VUZP_I:%.*]] = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
-// CHECK:   store <8 x i16> [[VUZP_I]], <8 x i16>* [[TMP3]], align 4, !alias.scope !87
+// CHECK:   store <8 x i16> [[VUZP_I]], <8 x i16>* [[TMP3]], align 4, !alias.scope
 // CHECK:   [[TMP4:%.*]] = getelementptr inbounds <8 x i16>, <8 x i16>* [[TMP3]], i32 1
 // CHECK:   [[VUZP1_I:%.*]] = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
-// CHECK:   store <8 x i16> [[VUZP1_I]], <8 x i16>* [[TMP4]], align 4, !alias.scope !87
+// CHECK:   store <8 x i16> [[VUZP1_I]], <8 x i16>* [[TMP4]], align 4, !alias.scope
 // CHECK:   ret void
 int16x8x2_t test_vuzpq_s16(int16x8_t a, int16x8_t b) {
   return vuzpq_s16(a, b);
@@ -20858,10 +20860,10 @@ int16x8x2_t test_vuzpq_s16(int16x8_t a, int16x8_t b) {
 // CHECK:   [[TMP2:%.*]] = bitcast <4 x i32> %b to <16 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast i8* [[TMP0]] to <4 x i32>*
 // CHECK:   [[VUZP_I:%.*]] = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-// CHECK:   store <4 x i32> [[VUZP_I]], <4 x i32>* [[TMP3]], align 4, !alias.scope !90
+// CHECK:   store <4 x i32> [[VUZP_I]], <4 x i32>* [[TMP3]], align 4, !alias.scope
 // CHECK:   [[TMP4:%.*]] = getelementptr inbounds <4 x i32>, <4 x i32>* [[TMP3]], i32 1
 // CHECK:   [[VUZP1_I:%.*]] = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-// CHECK:   store <4 x i32> [[VUZP1_I]], <4 x i32>* [[TMP4]], align 4, !alias.scope !90
+// CHECK:   store <4 x i32> [[VUZP1_I]], <4 x i32>* [[TMP4]], align 4, !alias.scope
 // CHECK:   ret void
 int32x4x2_t test_vuzpq_s32(int32x4_t a, int32x4_t b) {
   return vuzpq_s32(a, b);
@@ -20871,10 +20873,10 @@ int32x4x2_t test_vuzpq_s32(int32x4_t a, int32x4_t b) {
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.uint8x16x2_t* [[AGG_RESULT]] to i8*
 // CHECK:   [[TMP1:%.*]] = bitcast i8* [[TMP0]] to <16 x i8>*
 // CHECK:   [[VUZP_I:%.*]] = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
-// CHECK:   store <16 x i8> [[VUZP_I]], <16 x i8>* [[TMP1]], align 4, !alias.scope !93
+// CHECK:   store <16 x i8> [[VUZP_I]], <16 x i8>* [[TMP1]], align 4, !alias.scope
 // CHECK:   [[TMP2:%.*]] = getelementptr inbounds <16 x i8>, <16 x i8>* [[TMP1]], i32 1
 // CHECK:   [[VUZP1_I:%.*]] = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31>
-// CHECK:   store <16 x i8> [[VUZP1_I]], <16 x i8>* [[TMP2]], align 4, !alias.scope !93
+// CHECK:   store <16 x i8> [[VUZP1_I]], <16 x i8>* [[TMP2]], align 4, !alias.scope
 // CHECK:   ret void
 uint8x16x2_t test_vuzpq_u8(uint8x16_t a, uint8x16_t b) {
   return vuzpq_u8(a, b);
@@ -20886,10 +20888,10 @@ uint8x16x2_t test_vuzpq_u8(uint8x16_t a, uint8x16_t b) {
 // CHECK:   [[TMP2:%.*]] = bitcast <8 x i16> %b to <16 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast i8* [[TMP0]] to <8 x i16>*
 // CHECK:   [[VUZP_I:%.*]] = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
-// CHECK:   store <8 x i16> [[VUZP_I]], <8 x i16>* [[TMP3]], align 4, !alias.scope !96
+// CHECK:   store <8 x i16> [[VUZP_I]], <8 x i16>* [[TMP3]], align 4, !alias.scope
 // CHECK:   [[TMP4:%.*]] = getelementptr inbounds <8 x i16>, <8 x i16>* [[TMP3]], i32 1
 // CHECK:   [[VUZP1_I:%.*]] = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
-// CHECK:   store <8 x i16> [[VUZP1_I]], <8 x i16>* [[TMP4]], align 4, !alias.scope !96
+// CHECK:   store <8 x i16> [[VUZP1_I]], <8 x i16>* [[TMP4]], align 4, !alias.scope
 // CHECK:   ret void
 uint16x8x2_t test_vuzpq_u16(uint16x8_t a, uint16x8_t b) {
   return vuzpq_u16(a, b);
@@ -20901,10 +20903,10 @@ uint16x8x2_t test_vuzpq_u16(uint16x8_t a, uint16x8_t b) {
 // CHECK:   [[TMP2:%.*]] = bitcast <4 x i32> %b to <16 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast i8* [[TMP0]] to <4 x i32>*
 // CHECK:   [[VUZP_I:%.*]] = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-// CHECK:   store <4 x i32> [[VUZP_I]], <4 x i32>* [[TMP3]], align 4, !alias.scope !99
+// CHECK:   store <4 x i32> [[VUZP_I]], <4 x i32>* [[TMP3]], align 4, !alias.scope
 // CHECK:   [[TMP4:%.*]] = getelementptr inbounds <4 x i32>, <4 x i32>* [[TMP3]], i32 1
 // CHECK:   [[VUZP1_I:%.*]] = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-// CHECK:   store <4 x i32> [[VUZP1_I]], <4 x i32>* [[TMP4]], align 4, !alias.scope !99
+// CHECK:   store <4 x i32> [[VUZP1_I]], <4 x i32>* [[TMP4]], align 4, !alias.scope
 // CHECK:   ret void
 uint32x4x2_t test_vuzpq_u32(uint32x4_t a, uint32x4_t b) {
   return vuzpq_u32(a, b);
@@ -20916,10 +20918,10 @@ uint32x4x2_t test_vuzpq_u32(uint32x4_t a, uint32x4_t b) {
 // CHECK:   [[TMP2:%.*]] = bitcast <4 x float> %b to <16 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast i8* [[TMP0]] to <4 x float>*
 // CHECK:   [[VUZP_I:%.*]] = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-// CHECK:   store <4 x float> [[VUZP_I]], <4 x float>* [[TMP3]], align 4, !alias.scope !102
+// CHECK:   store <4 x float> [[VUZP_I]], <4 x float>* [[TMP3]], align 4, !alias.scope
 // CHECK:   [[TMP4:%.*]] = getelementptr inbounds <4 x float>, <4 x float>* [[TMP3]], i32 1
 // CHECK:   [[VUZP1_I:%.*]] = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-// CHECK:   store <4 x float> [[VUZP1_I]], <4 x float>* [[TMP4]], align 4, !alias.scope !102
+// CHECK:   store <4 x float> [[VUZP1_I]], <4 x float>* [[TMP4]], align 4, !alias.scope
 // CHECK:   ret void
 float32x4x2_t test_vuzpq_f32(float32x4_t a, float32x4_t b) {
   return vuzpq_f32(a, b);
@@ -20929,10 +20931,10 @@ float32x4x2_t test_vuzpq_f32(float32x4_t a, float32x4_t b) {
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.poly8x16x2_t* [[AGG_RESULT]] to i8*
 // CHECK:   [[TMP1:%.*]] = bitcast i8* [[TMP0]] to <16 x i8>*
 // CHECK:   [[VUZP_I:%.*]] = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
-// CHECK:   store <16 x i8> [[VUZP_I]], <16 x i8>* [[TMP1]], align 4, !alias.scope !105
+// CHECK:   store <16 x i8> [[VUZP_I]], <16 x i8>* [[TMP1]], align 4, !alias.scope
 // CHECK:   [[TMP2:%.*]] = getelementptr inbounds <16 x i8>, <16 x i8>* [[TMP1]], i32 1
 // CHECK:   [[VUZP1_I:%.*]] = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31>
-// CHECK:   store <16 x i8> [[VUZP1_I]], <16 x i8>* [[TMP2]], align 4, !alias.scope !105
+// CHECK:   store <16 x i8> [[VUZP1_I]], <16 x i8>* [[TMP2]], align 4, !alias.scope
 // CHECK:   ret void
 poly8x16x2_t test_vuzpq_p8(poly8x16_t a, poly8x16_t b) {
   return vuzpq_p8(a, b);
@@ -20944,10 +20946,10 @@ poly8x16x2_t test_vuzpq_p8(poly8x16_t a, poly8x16_t b) {
 // CHECK:   [[TMP2:%.*]] = bitcast <8 x i16> %b to <16 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast i8* [[TMP0]] to <8 x i16>*
 // CHECK:   [[VUZP_I:%.*]] = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
-// CHECK:   store <8 x i16> [[VUZP_I]], <8 x i16>* [[TMP3]], align 4, !alias.scope !108
+// CHECK:   store <8 x i16> [[VUZP_I]], <8 x i16>* [[TMP3]], align 4, !alias.scope
 // CHECK:   [[TMP4:%.*]] = getelementptr inbounds <8 x i16>, <8 x i16>* [[TMP3]], i32 1
 // CHECK:   [[VUZP1_I:%.*]] = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
-// CHECK:   store <8 x i16> [[VUZP1_I]], <8 x i16>* [[TMP4]], align 4, !alias.scope !108
+// CHECK:   store <8 x i16> [[VUZP1_I]], <8 x i16>* [[TMP4]], align 4, !alias.scope
 // CHECK:   ret void
 poly16x8x2_t test_vuzpq_p16(poly16x8_t a, poly16x8_t b) {
   return vuzpq_p16(a, b);
@@ -20957,10 +20959,10 @@ poly16x8x2_t test_vuzpq_p16(poly16x8_t a, poly16x8_t b) {
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.int8x8x2_t* [[AGG_RESULT]] to i8*
 // CHECK:   [[TMP1:%.*]] = bitcast i8* [[TMP0]] to <8 x i8>*
 // CHECK:   [[VZIP_I:%.*]] = shufflevector <8 x i8> %a, <8 x i8> %b, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
-// CHECK:   store <8 x i8> [[VZIP_I]], <8 x i8>* [[TMP1]], align 4, !alias.scope !111
+// CHECK:   store <8 x i8> [[VZIP_I]], <8 x i8>* [[TMP1]], align 4, !alias.scope
 // CHECK:   [[TMP2:%.*]] = getelementptr inbounds <8 x i8>, <8 x i8>* [[TMP1]], i32 1
 // CHECK:   [[VZIP1_I:%.*]] = shufflevector <8 x i8> %a, <8 x i8> %b, <8 x i32> <i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
-// CHECK:   store <8 x i8> [[VZIP1_I]], <8 x i8>* [[TMP2]], align 4, !alias.scope !111
+// CHECK:   store <8 x i8> [[VZIP1_I]], <8 x i8>* [[TMP2]], align 4, !alias.scope
 // CHECK:   ret void
 int8x8x2_t test_vzip_s8(int8x8_t a, int8x8_t b) {
   return vzip_s8(a, b);
@@ -20972,10 +20974,10 @@ int8x8x2_t test_vzip_s8(int8x8_t a, int8x8_t b) {
 // CHECK:   [[TMP2:%.*]] = bitcast <4 x i16> %b to <8 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast i8* [[TMP0]] to <4 x i16>*
 // CHECK:   [[VZIP_I:%.*]] = shufflevector <4 x i16> %a, <4 x i16> %b, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
-// CHECK:   store <4 x i16> [[VZIP_I]], <4 x i16>* [[TMP3]], align 4, !alias.scope !114
+// CHECK:   store <4 x i16> [[VZIP_I]], <4 x i16>* [[TMP3]], align 4, !alias.scope
 // CHECK:   [[TMP4:%.*]] = getelementptr inbounds <4 x i16>, <4 x i16>* [[TMP3]], i32 1
 // CHECK:   [[VZIP1_I:%.*]] = shufflevector <4 x i16> %a, <4 x i16> %b, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
-// CHECK:   store <4 x i16> [[VZIP1_I]], <4 x i16>* [[TMP4]], align 4, !alias.scope !114
+// CHECK:   store <4 x i16> [[VZIP1_I]], <4 x i16>* [[TMP4]], align 4, !alias.scope
 // CHECK:   ret void
 int16x4x2_t test_vzip_s16(int16x4_t a, int16x4_t b) {
   return vzip_s16(a, b);
@@ -20987,10 +20989,10 @@ int16x4x2_t test_vzip_s16(int16x4_t a, int16x4_t b) {
 // CHECK:   [[TMP2:%.*]] = bitcast <2 x i32> %b to <8 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast i8* [[TMP0]] to <2 x i32>*
 // CHECK:   [[VZIP_I:%.*]] = shufflevector <2 x i32> %a, <2 x i32> %b, <2 x i32> <i32 0, i32 2>
-// CHECK:   store <2 x i32> [[VZIP_I]], <2 x i32>* [[TMP3]], align 4, !alias.scope !117
+// CHECK:   store <2 x i32> [[VZIP_I]], <2 x i32>* [[TMP3]], align 4, !alias.scope
 // CHECK:   [[TMP4:%.*]] = getelementptr inbounds <2 x i32>, <2 x i32>* [[TMP3]], i32 1
 // CHECK:   [[VZIP1_I:%.*]] = shufflevector <2 x i32> %a, <2 x i32> %b, <2 x i32> <i32 1, i32 3>
-// CHECK:   store <2 x i32> [[VZIP1_I]], <2 x i32>* [[TMP4]], align 4, !alias.scope !117
+// CHECK:   store <2 x i32> [[VZIP1_I]], <2 x i32>* [[TMP4]], align 4, !alias.scope
 // CHECK:   ret void
 int32x2x2_t test_vzip_s32(int32x2_t a, int32x2_t b) {
   return vzip_s32(a, b);
@@ -21000,10 +21002,10 @@ int32x2x2_t test_vzip_s32(int32x2_t a, int32x2_t b) {
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.uint8x8x2_t* [[AGG_RESULT]] to i8*
 // CHECK:   [[TMP1:%.*]] = bitcast i8* [[TMP0]] to <8 x i8>*
 // CHECK:   [[VZIP_I:%.*]] = shufflevector <8 x i8> %a, <8 x i8> %b, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
-// CHECK:   store <8 x i8> [[VZIP_I]], <8 x i8>* [[TMP1]], align 4, !alias.scope !120
+// CHECK:   store <8 x i8> [[VZIP_I]], <8 x i8>* [[TMP1]], align 4, !alias.scope
 // CHECK:   [[TMP2:%.*]] = getelementptr inbounds <8 x i8>, <8 x i8>* [[TMP1]], i32 1
 // CHECK:   [[VZIP1_I:%.*]] = shufflevector <8 x i8> %a, <8 x i8> %b, <8 x i32> <i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
-// CHECK:   store <8 x i8> [[VZIP1_I]], <8 x i8>* [[TMP2]], align 4, !alias.scope !120
+// CHECK:   store <8 x i8> [[VZIP1_I]], <8 x i8>* [[TMP2]], align 4, !alias.scope
 // CHECK:   ret void
 uint8x8x2_t test_vzip_u8(uint8x8_t a, uint8x8_t b) {
   return vzip_u8(a, b);
@@ -21015,10 +21017,10 @@ uint8x8x2_t test_vzip_u8(uint8x8_t a, uint8x8_t b) {
 // CHECK:   [[TMP2:%.*]] = bitcast <4 x i16> %b to <8 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast i8* [[TMP0]] to <4 x i16>*
 // CHECK:   [[VZIP_I:%.*]] = shufflevector <4 x i16> %a, <4 x i16> %b, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
-// CHECK:   store <4 x i16> [[VZIP_I]], <4 x i16>* [[TMP3]], align 4, !alias.scope !123
+// CHECK:   store <4 x i16> [[VZIP_I]], <4 x i16>* [[TMP3]], align 4, !alias.scope
 // CHECK:   [[TMP4:%.*]] = getelementptr inbounds <4 x i16>, <4 x i16>* [[TMP3]], i32 1
 // CHECK:   [[VZIP1_I:%.*]] = shufflevector <4 x i16> %a, <4 x i16> %b, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
-// CHECK:   store <4 x i16> [[VZIP1_I]], <4 x i16>* [[TMP4]], align 4, !alias.scope !123
+// CHECK:   store <4 x i16> [[VZIP1_I]], <4 x i16>* [[TMP4]], align 4, !alias.scope
 // CHECK:   ret void
 uint16x4x2_t test_vzip_u16(uint16x4_t a, uint16x4_t b) {
   return vzip_u16(a, b);
@@ -21030,10 +21032,10 @@ uint16x4x2_t test_vzip_u16(uint16x4_t a, uint16x4_t b) {
 // CHECK:   [[TMP2:%.*]] = bitcast <2 x i32> %b to <8 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast i8* [[TMP0]] to <2 x i32>*
 // CHECK:   [[VZIP_I:%.*]] = shufflevector <2 x i32> %a, <2 x i32> %b, <2 x i32> <i32 0, i32 2>
-// CHECK:   store <2 x i32> [[VZIP_I]], <2 x i32>* [[TMP3]], align 4, !alias.scope !126
+// CHECK:   store <2 x i32> [[VZIP_I]], <2 x i32>* [[TMP3]], align 4, !alias.scope
 // CHECK:   [[TMP4:%.*]] = getelementptr inbounds <2 x i32>, <2 x i32>* [[TMP3]], i32 1
 // CHECK:   [[VZIP1_I:%.*]] = shufflevector <2 x i32> %a, <2 x i32> %b, <2 x i32> <i32 1, i32 3>
-// CHECK:   store <2 x i32> [[VZIP1_I]], <2 x i32>* [[TMP4]], align 4, !alias.scope !126
+// CHECK:   store <2 x i32> [[VZIP1_I]], <2 x i32>* [[TMP4]], align 4, !alias.scope
 // CHECK:   ret void
 uint32x2x2_t test_vzip_u32(uint32x2_t a, uint32x2_t b) {
   return vzip_u32(a, b);
@@ -21045,10 +21047,10 @@ uint32x2x2_t test_vzip_u32(uint32x2_t a, uint32x2_t b) {
 // CHECK:   [[TMP2:%.*]] = bitcast <2 x float> %b to <8 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast i8* [[TMP0]] to <2 x float>*
 // CHECK:   [[VZIP_I:%.*]] = shufflevector <2 x float> %a, <2 x float> %b, <2 x i32> <i32 0, i32 2>
-// CHECK:   store <2 x float> [[VZIP_I]], <2 x float>* [[TMP3]], align 4, !alias.scope !129
+// CHECK:   store <2 x float> [[VZIP_I]], <2 x float>* [[TMP3]], align 4, !alias.scope
 // CHECK:   [[TMP4:%.*]] = getelementptr inbounds <2 x float>, <2 x float>* [[TMP3]], i32 1
 // CHECK:   [[VZIP1_I:%.*]] = shufflevector <2 x float> %a, <2 x float> %b, <2 x i32> <i32 1, i32 3>
-// CHECK:   store <2 x float> [[VZIP1_I]], <2 x float>* [[TMP4]], align 4, !alias.scope !129
+// CHECK:   store <2 x float> [[VZIP1_I]], <2 x float>* [[TMP4]], align 4, !alias.scope
 // CHECK:   ret void
 float32x2x2_t test_vzip_f32(float32x2_t a, float32x2_t b) {
   return vzip_f32(a, b);
@@ -21058,10 +21060,10 @@ float32x2x2_t test_vzip_f32(float32x2_t a, float32x2_t b) {
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.poly8x8x2_t* [[AGG_RESULT]] to i8*
 // CHECK:   [[TMP1:%.*]] = bitcast i8* [[TMP0]] to <8 x i8>*
 // CHECK:   [[VZIP_I:%.*]] = shufflevector <8 x i8> %a, <8 x i8> %b, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
-// CHECK:   store <8 x i8> [[VZIP_I]], <8 x i8>* [[TMP1]], align 4, !alias.scope !132
+// CHECK:   store <8 x i8> [[VZIP_I]], <8 x i8>* [[TMP1]], align 4, !alias.scope
 // CHECK:   [[TMP2:%.*]] = getelementptr inbounds <8 x i8>, <8 x i8>* [[TMP1]], i32 1
 // CHECK:   [[VZIP1_I:%.*]] = shufflevector <8 x i8> %a, <8 x i8> %b, <8 x i32> <i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
-// CHECK:   store <8 x i8> [[VZIP1_I]], <8 x i8>* [[TMP2]], align 4, !alias.scope !132
+// CHECK:   store <8 x i8> [[VZIP1_I]], <8 x i8>* [[TMP2]], align 4, !alias.scope
 // CHECK:   ret void
 poly8x8x2_t test_vzip_p8(poly8x8_t a, poly8x8_t b) {
   return vzip_p8(a, b);
@@ -21073,10 +21075,10 @@ poly8x8x2_t test_vzip_p8(poly8x8_t a, poly8x8_t b) {
 // CHECK:   [[TMP2:%.*]] = bitcast <4 x i16> %b to <8 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast i8* [[TMP0]] to <4 x i16>*
 // CHECK:   [[VZIP_I:%.*]] = shufflevector <4 x i16> %a, <4 x i16> %b, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
-// CHECK:   store <4 x i16> [[VZIP_I]], <4 x i16>* [[TMP3]], align 4, !alias.scope !135
+// CHECK:   store <4 x i16> [[VZIP_I]], <4 x i16>* [[TMP3]], align 4, !alias.scope
 // CHECK:   [[TMP4:%.*]] = getelementptr inbounds <4 x i16>, <4 x i16>* [[TMP3]], i32 1
 // CHECK:   [[VZIP1_I:%.*]] = shufflevector <4 x i16> %a, <4 x i16> %b, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
-// CHECK:   store <4 x i16> [[VZIP1_I]], <4 x i16>* [[TMP4]], align 4, !alias.scope !135
+// CHECK:   store <4 x i16> [[VZIP1_I]], <4 x i16>* [[TMP4]], align 4, !alias.scope
 // CHECK:   ret void
 poly16x4x2_t test_vzip_p16(poly16x4_t a, poly16x4_t b) {
   return vzip_p16(a, b);
@@ -21086,10 +21088,10 @@ poly16x4x2_t test_vzip_p16(poly16x4_t a, poly16x4_t b) {
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.int8x16x2_t* [[AGG_RESULT]] to i8*
 // CHECK:   [[TMP1:%.*]] = bitcast i8* [[TMP0]] to <16 x i8>*
 // CHECK:   [[VZIP_I:%.*]] = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 4, i32 20, i32 5, i32 21, i32 6, i32 22, i32 7, i32 23>
-// CHECK:   store <16 x i8> [[VZIP_I]], <16 x i8>* [[TMP1]], align 4, !alias.scope !138
+// CHECK:   store <16 x i8> [[VZIP_I]], <16 x i8>* [[TMP1]], align 4, !alias.scope
 // CHECK:   [[TMP2:%.*]] = getelementptr inbounds <16 x i8>, <16 x i8>* [[TMP1]], i32 1
 // CHECK:   [[VZIP1_I:%.*]] = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 8, i32 24, i32 9, i32 25, i32 10, i32 26, i32 11, i32 27, i32 12, i32 28, i32 13, i32 29, i32 14, i32 30, i32 15, i32 31>
-// CHECK:   store <16 x i8> [[VZIP1_I]], <16 x i8>* [[TMP2]], align 4, !alias.scope !138
+// CHECK:   store <16 x i8> [[VZIP1_I]], <16 x i8>* [[TMP2]], align 4, !alias.scope
 // CHECK:   ret void
 int8x16x2_t test_vzipq_s8(int8x16_t a, int8x16_t b) {
   return vzipq_s8(a, b);
@@ -21101,10 +21103,10 @@ int8x16x2_t test_vzipq_s8(int8x16_t a, int8x16_t b) {
 // CHECK:   [[TMP2:%.*]] = bitcast <8 x i16> %b to <16 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast i8* [[TMP0]] to <8 x i16>*
 // CHECK:   [[VZIP_I:%.*]] = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
-// CHECK:   store <8 x i16> [[VZIP_I]], <8 x i16>* [[TMP3]], align 4, !alias.scope !141
+// CHECK:   store <8 x i16> [[VZIP_I]], <8 x i16>* [[TMP3]], align 4, !alias.scope
 // CHECK:   [[TMP4:%.*]] = getelementptr inbounds <8 x i16>, <8 x i16>* [[TMP3]], i32 1
 // CHECK:   [[VZIP1_I:%.*]] = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
-// CHECK:   store <8 x i16> [[VZIP1_I]], <8 x i16>* [[TMP4]], align 4, !alias.scope !141
+// CHECK:   store <8 x i16> [[VZIP1_I]], <8 x i16>* [[TMP4]], align 4, !alias.scope
 // CHECK:   ret void
 int16x8x2_t test_vzipq_s16(int16x8_t a, int16x8_t b) {
   return vzipq_s16(a, b);
@@ -21116,10 +21118,10 @@ int16x8x2_t test_vzipq_s16(int16x8_t a, int16x8_t b) {
 // CHECK:   [[TMP2:%.*]] = bitcast <4 x i32> %b to <16 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast i8* [[TMP0]] to <4 x i32>*
 // CHECK:   [[VZIP_I:%.*]] = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
-// CHECK:   store <4 x i32> [[VZIP_I]], <4 x i32>* [[TMP3]], align 4, !alias.scope !144
+// CHECK:   store <4 x i32> [[VZIP_I]], <4 x i32>* [[TMP3]], align 4, !alias.scope
 // CHECK:   [[TMP4:%.*]] = getelementptr inbounds <4 x i32>, <4 x i32>* [[TMP3]], i32 1
 // CHECK:   [[VZIP1_I:%.*]] = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
-// CHECK:   store <4 x i32> [[VZIP1_I]], <4 x i32>* [[TMP4]], align 4, !alias.scope !144
+// CHECK:   store <4 x i32> [[VZIP1_I]], <4 x i32>* [[TMP4]], align 4, !alias.scope
 // CHECK:   ret void
 int32x4x2_t test_vzipq_s32(int32x4_t a, int32x4_t b) {
   return vzipq_s32(a, b);
@@ -21129,10 +21131,10 @@ int32x4x2_t test_vzipq_s32(int32x4_t a, int32x4_t b) {
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.uint8x16x2_t* [[AGG_RESULT]] to i8*
 // CHECK:   [[TMP1:%.*]] = bitcast i8* [[TMP0]] to <16 x i8>*
 // CHECK:   [[VZIP_I:%.*]] = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 4, i32 20, i32 5, i32 21, i32 6, i32 22, i32 7, i32 23>
-// CHECK:   store <16 x i8> [[VZIP_I]], <16 x i8>* [[TMP1]], align 4, !alias.scope !147
+// CHECK:   store <16 x i8> [[VZIP_I]], <16 x i8>* [[TMP1]], align 4, !alias.scope
 // CHECK:   [[TMP2:%.*]] = getelementptr inbounds <16 x i8>, <16 x i8>* [[TMP1]], i32 1
 // CHECK:   [[VZIP1_I:%.*]] = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 8, i32 24, i32 9, i32 25, i32 10, i32 26, i32 11, i32 27, i32 12, i32 28, i32 13, i32 29, i32 14, i32 30, i32 15, i32 31>
-// CHECK:   store <16 x i8> [[VZIP1_I]], <16 x i8>* [[TMP2]], align 4, !alias.scope !147
+// CHECK:   store <16 x i8> [[VZIP1_I]], <16 x i8>* [[TMP2]], align 4, !alias.scope
 // CHECK:   ret void
 uint8x16x2_t test_vzipq_u8(uint8x16_t a, uint8x16_t b) {
   return vzipq_u8(a, b);
@@ -21144,10 +21146,10 @@ uint8x16x2_t test_vzipq_u8(uint8x16_t a, uint8x16_t b) {
 // CHECK:   [[TMP2:%.*]] = bitcast <8 x i16> %b to <16 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast i8* [[TMP0]] to <8 x i16>*
 // CHECK:   [[VZIP_I:%.*]] = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
-// CHECK:   store <8 x i16> [[VZIP_I]], <8 x i16>* [[TMP3]], align 4, !alias.scope !150
+// CHECK:   store <8 x i16> [[VZIP_I]], <8 x i16>* [[TMP3]], align 4, !alias.scope
 // CHECK:   [[TMP4:%.*]] = getelementptr inbounds <8 x i16>, <8 x i16>* [[TMP3]], i32 1
 // CHECK:   [[VZIP1_I:%.*]] = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
-// CHECK:   store <8 x i16> [[VZIP1_I]], <8 x i16>* [[TMP4]], align 4, !alias.scope !150
+// CHECK:   store <8 x i16> [[VZIP1_I]], <8 x i16>* [[TMP4]], align 4, !alias.scope
 // CHECK:   ret void
 uint16x8x2_t test_vzipq_u16(uint16x8_t a, uint16x8_t b) {
   return vzipq_u16(a, b);
@@ -21159,10 +21161,10 @@ uint16x8x2_t test_vzipq_u16(uint16x8_t a, uint16x8_t b) {
 // CHECK:   [[TMP2:%.*]] = bitcast <4 x i32> %b to <16 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast i8* [[TMP0]] to <4 x i32>*
 // CHECK:   [[VZIP_I:%.*]] = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
-// CHECK:   store <4 x i32> [[VZIP_I]], <4 x i32>* [[TMP3]], align 4, !alias.scope !153
+// CHECK:   store <4 x i32> [[VZIP_I]], <4 x i32>* [[TMP3]], align 4, !alias.scope
 // CHECK:   [[TMP4:%.*]] = getelementptr inbounds <4 x i32>, <4 x i32>* [[TMP3]], i32 1
 // CHECK:   [[VZIP1_I:%.*]] = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
-// CHECK:   store <4 x i32> [[VZIP1_I]], <4 x i32>* [[TMP4]], align 4, !alias.scope !153
+// CHECK:   store <4 x i32> [[VZIP1_I]], <4 x i32>* [[TMP4]], align 4, !alias.scope
 // CHECK:   ret void
 uint32x4x2_t test_vzipq_u32(uint32x4_t a, uint32x4_t b) {
   return vzipq_u32(a, b);
@@ -21174,10 +21176,10 @@ uint32x4x2_t test_vzipq_u32(uint32x4_t a, uint32x4_t b) {
 // CHECK:   [[TMP2:%.*]] = bitcast <4 x float> %b to <16 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast i8* [[TMP0]] to <4 x float>*
 // CHECK:   [[VZIP_I:%.*]] = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
-// CHECK:   store <4 x float> [[VZIP_I]], <4 x float>* [[TMP3]], align 4, !alias.scope !156
+// CHECK:   store <4 x float> [[VZIP_I]], <4 x float>* [[TMP3]], align 4, !alias.scope
 // CHECK:   [[TMP4:%.*]] = getelementptr inbounds <4 x float>, <4 x float>* [[TMP3]], i32 1
 // CHECK:   [[VZIP1_I:%.*]] = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
-// CHECK:   store <4 x float> [[VZIP1_I]], <4 x float>* [[TMP4]], align 4, !alias.scope !156
+// CHECK:   store <4 x float> [[VZIP1_I]], <4 x float>* [[TMP4]], align 4, !alias.scope
 // CHECK:   ret void
 float32x4x2_t test_vzipq_f32(float32x4_t a, float32x4_t b) {
   return vzipq_f32(a, b);
@@ -21187,10 +21189,10 @@ float32x4x2_t test_vzipq_f32(float32x4_t a, float32x4_t b) {
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.poly8x16x2_t* [[AGG_RESULT]] to i8*
 // CHECK:   [[TMP1:%.*]] = bitcast i8* [[TMP0]] to <16 x i8>*
 // CHECK:   [[VZIP_I:%.*]] = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 4, i32 20, i32 5, i32 21, i32 6, i32 22, i32 7, i32 23>
-// CHECK:   store <16 x i8> [[VZIP_I]], <16 x i8>* [[TMP1]], align 4, !alias.scope !159
+// CHECK:   store <16 x i8> [[VZIP_I]], <16 x i8>* [[TMP1]], align 4, !alias.scope
 // CHECK:   [[TMP2:%.*]] = getelementptr inbounds <16 x i8>, <16 x i8>* [[TMP1]], i32 1
 // CHECK:   [[VZIP1_I:%.*]] = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 8, i32 24, i32 9, i32 25, i32 10, i32 26, i32 11, i32 27, i32 12, i32 28, i32 13, i32 29, i32 14, i32 30, i32 15, i32 31>
-// CHECK:   store <16 x i8> [[VZIP1_I]], <16 x i8>* [[TMP2]], align 4, !alias.scope !159
+// CHECK:   store <16 x i8> [[VZIP1_I]], <16 x i8>* [[TMP2]], align 4, !alias.scope
 // CHECK:   ret void
 poly8x16x2_t test_vzipq_p8(poly8x16_t a, poly8x16_t b) {
   return vzipq_p8(a, b);
@@ -21202,10 +21204,10 @@ poly8x16x2_t test_vzipq_p8(poly8x16_t a, poly8x16_t b) {
 // CHECK:   [[TMP2:%.*]] = bitcast <8 x i16> %b to <16 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast i8* [[TMP0]] to <8 x i16>*
 // CHECK:   [[VZIP_I:%.*]] = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
-// CHECK:   store <8 x i16> [[VZIP_I]], <8 x i16>* [[TMP3]], align 4, !alias.scope !162
+// CHECK:   store <8 x i16> [[VZIP_I]], <8 x i16>* [[TMP3]], align 4, !alias.scope
 // CHECK:   [[TMP4:%.*]] = getelementptr inbounds <8 x i16>, <8 x i16>* [[TMP3]], i32 1
 // CHECK:   [[VZIP1_I:%.*]] = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
-// CHECK:   store <8 x i16> [[VZIP1_I]], <8 x i16>* [[TMP4]], align 4, !alias.scope !162
+// CHECK:   store <8 x i16> [[VZIP1_I]], <8 x i16>* [[TMP4]], align 4, !alias.scope
 // CHECK:   ret void
 poly16x8x2_t test_vzipq_p16(poly16x8_t a, poly16x8_t b) {
   return vzipq_p16(a, b);

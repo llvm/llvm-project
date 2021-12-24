@@ -29,30 +29,24 @@ public:
 
   static void Terminate();
 
-  static lldb_private::ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "remote-macosx"; }
 
-  static const char *GetDescriptionStatic();
+  static llvm::StringRef GetDescriptionStatic();
 
-  llvm::StringRef GetPluginName() override {
-    return GetPluginNameStatic().GetStringRef();
-  }
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
-  const char *GetDescription() override { return GetDescriptionStatic(); }
+  llvm::StringRef GetDescription() override { return GetDescriptionStatic(); }
 
   lldb_private::Status
   GetFileWithUUID(const lldb_private::FileSpec &platform_file,
                   const lldb_private::UUID *uuid_ptr,
                   lldb_private::FileSpec &local_file) override;
 
-  bool GetSupportedArchitectureAtIndex(uint32_t idx,
-                                       lldb_private::ArchSpec &arch) override;
+  std::vector<lldb_private::ArchSpec> GetSupportedArchitectures() override;
 
 protected:
   llvm::StringRef GetDeviceSupportDirectoryName() override;
   llvm::StringRef GetPlatformName() override;
-
-private:
-  uint32_t m_num_arm_arches = 0;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMREMOTEMACOSX_H

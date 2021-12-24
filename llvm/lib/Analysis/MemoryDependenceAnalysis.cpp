@@ -1481,11 +1481,11 @@ void MemoryDependenceResults::removeCachedNonLocalPointerDependencies(
   // instructions from the reverse map.
   NonLocalDepInfo &PInfo = It->second.NonLocalDeps;
 
-  for (unsigned i = 0, e = PInfo.size(); i != e; ++i) {
-    Instruction *Target = PInfo[i].getResult().getInst();
+  for (const NonLocalDepEntry &DE : PInfo) {
+    Instruction *Target = DE.getResult().getInst();
     if (!Target)
       continue; // Ignore non-local dep results.
-    assert(Target->getParent() == PInfo[i].getBB());
+    assert(Target->getParent() == DE.getBB());
 
     // Eliminating the dirty entry from 'Cache', so update the reverse info.
     RemoveFromReverseMap(ReverseNonLocalPtrDeps, Target, P);

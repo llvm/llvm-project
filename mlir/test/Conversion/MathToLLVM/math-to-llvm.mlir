@@ -74,6 +74,59 @@ func @sine(%arg0 : f32) {
 
 // -----
 
+// CHECK-LABEL: func @ctlz(
+// CHECK-SAME: i32
+func @ctlz(%arg0 : i32) {
+  // CHECK: %[[ZERO:.+]] = llvm.mlir.constant(false) : i1
+  // CHECK: "llvm.intr.ctlz"(%arg0, %[[ZERO]]) : (i32, i1) -> i32
+  %0 = math.ctlz %arg0 : i32
+  std.return
+}
+
+// -----
+
+// CHECK-LABEL: func @cttz(
+// CHECK-SAME: i32
+func @cttz(%arg0 : i32) {
+  // CHECK: %[[ZERO:.+]] = llvm.mlir.constant(false) : i1
+  // CHECK: "llvm.intr.cttz"(%arg0, %[[ZERO]]) : (i32, i1) -> i32
+  %0 = math.cttz %arg0 : i32
+  std.return
+}
+
+// -----
+
+// CHECK-LABEL: func @cttz_vec(
+// CHECK-SAME: i32
+func @cttz_vec(%arg0 : vector<4xi32>) {
+  // CHECK: %[[ZERO:.+]] = llvm.mlir.constant(false) : i1
+  // CHECK: "llvm.intr.cttz"(%arg0, %[[ZERO]]) : (vector<4xi32>, i1) -> vector<4xi32>
+  %0 = math.cttz %arg0 : vector<4xi32>
+  std.return
+}
+
+// -----
+
+// CHECK-LABEL: func @ctpop(
+// CHECK-SAME: i32
+func @ctpop(%arg0 : i32) {
+  // CHECK: "llvm.intr.ctpop"(%arg0) : (i32) -> i32
+  %0 = math.ctpop %arg0 : i32
+  std.return
+}
+
+// -----
+
+// CHECK-LABEL: func @ctpop_vector(
+// CHECK-SAME: vector<3xi32>
+func @ctpop_vector(%arg0 : vector<3xi32>) {
+  // CHECK: "llvm.intr.ctpop"(%arg0) : (vector<3xi32>) -> vector<3xi32>
+  %0 = math.ctpop %arg0 : vector<3xi32>
+  std.return
+}
+
+// -----
+
 // CHECK-LABEL: func @rsqrt_double(
 // CHECK-SAME: f64
 func @rsqrt_double(%arg0 : f64) {

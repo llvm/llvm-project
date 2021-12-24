@@ -3,14 +3,14 @@
 // before exit.
 
 // RUN: %clangxx_memprof -O0 %s -o %t
-// RUN: %env_memprof_opts=log_path=stderr %run %t 2>&1 | FileCheck %s
+// RUN: %env_memprof_opts=print_text=true:log_path=stderr %run %t 2>&1 | FileCheck %s
 
 // RUN: %clangxx_memprof -DFREE -O0 %s -o %t
-// RUN: %env_memprof_opts=log_path=stderr %run %t 2>&1 | FileCheck %s
+// RUN: %env_memprof_opts=print_text=true:log_path=stderr %run %t 2>&1 | FileCheck %s
 
 // Try again with callbacks instead of inline sequences
 // RUN: %clangxx_memprof -mllvm -memprof-use-callbacks -O0 %s -o %t
-// RUN: %env_memprof_opts=log_path=stderr %run %t 2>&1 | FileCheck %s
+// RUN: %env_memprof_opts=print_text=true:log_path=stderr %run %t 2>&1 | FileCheck %s
 
 // This is actually:
 //  Memory allocation stack id = STACKID
@@ -35,7 +35,7 @@ int main() {
   for (int i = 0; i < 10; i++)
     j += p[i];
 #ifdef FREE
-  delete p;
+  delete[] p;
 #endif
 
   return 0;

@@ -116,13 +116,6 @@ cl::opt<bool> X86PadForBranchAlign(
     "x86-pad-for-branch-align", cl::init(true), cl::Hidden,
     cl::desc("Pad previous instructions to implement branch alignment"));
 
-class X86ELFObjectWriter : public MCELFObjectTargetWriter {
-public:
-  X86ELFObjectWriter(bool is64Bit, uint8_t OSABI, uint16_t EMachine,
-                     bool HasRelocationAddend, bool foobar)
-    : MCELFObjectTargetWriter(is64Bit, OSABI, EMachine, HasRelocationAddend) {}
-};
-
 class X86AsmBackend : public MCAsmBackend {
   const MCSubtargetInfo &STI;
   std::unique_ptr<const MCInstrInfo> MCII;
@@ -155,7 +148,7 @@ public:
       AlignBranchType.addKind(X86::AlignBranchJcc);
       AlignBranchType.addKind(X86::AlignBranchJmp);
     }
-    // Allow overriding defaults set by master flag
+    // Allow overriding defaults set by main flag
     if (X86AlignBranchBoundary.getNumOccurrences())
       AlignBoundary = assumeAligned(X86AlignBranchBoundary);
     if (X86AlignBranch.getNumOccurrences())
@@ -1459,9 +1452,7 @@ public:
     unsigned NumDefCFAOffsets = 0;
     int MinAbsOffset = std::numeric_limits<int>::max();
 
-    for (unsigned i = 0, e = Instrs.size(); i != e; ++i) {
-      const MCCFIInstruction &Inst = Instrs[i];
-
+    for (const MCCFIInstruction &Inst : Instrs) {
       switch (Inst.getOperation()) {
       default:
         // Any other CFI directives indicate a frame that we aren't prepared

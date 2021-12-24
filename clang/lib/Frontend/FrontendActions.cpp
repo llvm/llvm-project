@@ -842,7 +842,7 @@ void PrintPreprocessedAction::ExecuteAction() {
       const char *next = (cur != end) ? cur + 1 : end;
 
       // Limit ourselves to only scanning 256 characters into the source
-      // file.  This is mostly a sanity check in case the file has no
+      // file.  This is mostly a check in case the file has no
       // newlines whatsoever.
       if (end - cur > 256)
         end = cur + 256;

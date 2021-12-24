@@ -1284,7 +1284,7 @@ def int_amdgcn_s_dcache_inv :
 
 def int_amdgcn_s_memtime :
   GCCBuiltin<"__builtin_amdgcn_s_memtime">,
-  Intrinsic<[llvm_i64_ty], [], [IntrWillReturn]>;
+  Intrinsic<[llvm_i64_ty], [], [IntrNoMem, IntrHasSideEffects, IntrWillReturn]>;
 
 def int_amdgcn_s_sleep :
   GCCBuiltin<"__builtin_amdgcn_s_sleep">,
@@ -1535,6 +1535,16 @@ def int_amdgcn_mul_u24 : Intrinsic<[llvm_i32_ty],
   [IntrNoMem, IntrSpeculatable, IntrWillReturn]
 >;
 
+def int_amdgcn_mulhi_i24 : Intrinsic<[llvm_i32_ty],
+  [llvm_i32_ty, llvm_i32_ty],
+  [IntrNoMem, IntrSpeculatable, IntrWillReturn]
+>;
+
+def int_amdgcn_mulhi_u24 : Intrinsic<[llvm_i32_ty],
+  [llvm_i32_ty, llvm_i32_ty],
+  [IntrNoMem, IntrSpeculatable, IntrWillReturn]
+>;
+
 // llvm.amdgcn.ds.gws.init(i32 bar_val, i32 resource_id)
 //
 // bar_val is the total number of waves that will wait on this
@@ -1716,7 +1726,7 @@ def int_amdgcn_s_dcache_wb_vol :
 
 def int_amdgcn_s_memrealtime :
   GCCBuiltin<"__builtin_amdgcn_s_memrealtime">,
-  Intrinsic<[llvm_i64_ty], [], [IntrWillReturn]>;
+  Intrinsic<[llvm_i64_ty], [], [IntrNoMem, IntrHasSideEffects, IntrWillReturn]>;
 
 // llvm.amdgcn.ds.permute <index> <src>
 def int_amdgcn_ds_permute :
@@ -1779,9 +1789,11 @@ def int_amdgcn_global_atomic_csub : AMDGPUGlobalAtomicRtn<llvm_i32_ty>;
 
 // uint4 llvm.amdgcn.image.bvh.intersect.ray <node_ptr>, <ray_extent>, <ray_origin>,
 //                                           <ray_dir>, <ray_inv_dir>, <texture_descr>
+// <node_ptr> is i32 or i64.
+// <ray_dir> and <ray_inv_dir> are both v3f16 or both v3f32.
 def int_amdgcn_image_bvh_intersect_ray :
   Intrinsic<[llvm_v4i32_ty],
-            [llvm_anyint_ty, llvm_float_ty, llvm_v4f32_ty, llvm_anyvector_ty,
+            [llvm_anyint_ty, llvm_float_ty, llvm_v3f32_ty, llvm_anyvector_ty,
              LLVMMatchType<1>, llvm_v4i32_ty],
             [IntrReadMem, IntrWillReturn]>;
 

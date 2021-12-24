@@ -82,11 +82,11 @@ def testCustomOpView():
       # Create via dialects context collection.
       input1 = createInput()
       input2 = createInput()
-      op1 = ctx.dialects.arith.AddFOp(input1.type, input1, input2)
+      op1 = ctx.dialects.arith.AddFOp(input1, input2)
 
       # Create via an import
       from mlir.dialects.arith import AddFOp
-      AddFOp(input1.type, input1, op1.result)
+      AddFOp(input1, op1.result)
 
   # CHECK: %[[INPUT0:.*]] = "pytest_dummy.intinput"
   # CHECK: %[[INPUT1:.*]] = "pytest_dummy.intinput"

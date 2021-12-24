@@ -589,6 +589,8 @@ PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
       result_ptr->image_ptr = dlopen(name, RTLD_LAZY);
       if (result_ptr->image_ptr)
         result_ptr->error_str = nullptr;
+      else
+        result_ptr->error_str = dlerror();
       return nullptr;
     }
     

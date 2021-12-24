@@ -1,8 +1,8 @@
 # RUN: yaml2obj %s -o %t.o
 # RUN: not llvm-dwarfdump -debug-info -verify %t.o | FileCheck %s
 
-#      CHECK: Verifying .debug_info Unit Header Chain... 
-# CHECK-NEXT: error: DW_FORM_strp offset beyond .debug_str bounds:
+#      CHECK: Verifying non-dwo Units... 
+# CHECK-NEXT: error: DW_FORM_strp offset 4660 is beyond .debug_str bounds:
 
 --- !ELF
 FileHeader:

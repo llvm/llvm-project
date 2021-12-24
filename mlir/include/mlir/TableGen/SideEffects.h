@@ -52,7 +52,7 @@ public:
   static bool classof(const Trait *t);
 };
 
-} // end namespace tblgen
-} // end namespace mlir
+} // namespace tblgen
+} // namespace mlir
 
 #endif // MLIR_TABLEGEN_SIDEEFFECTS_H_

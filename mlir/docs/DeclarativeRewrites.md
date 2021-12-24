@@ -408,7 +408,7 @@ In the above, `$_self` is substituted by the defining operation of the first
 operand of OneAttrOp. Note that we don't support binding name to
 `NativeCodeCall` in the source pattern. To carry some return values from a
 helper function, put the names (constraint is optional) in the parameter list
-and they will be bound to the variables with correspoding type. Then these names
+and they will be bound to the variables with corresponding type. Then these names
 must be either passed by reference or pointer to the variable used as argument
 so that the matched value can be returned. In the same example, `$val` will be
 bound to a variable with `Attribute` type (as `I32Attr`) and the type of the
@@ -773,6 +773,23 @@ def : Pat<(SourceOp $arg0, $arg1),
 Explicitly-specified return types will take precedence over return types
 inferred from op traits or user-defined builders. The return types of values
 replacing root op results cannot be overridden.
+
+### `either`
+
+The `either` directive is used to specify the operands may be matched in either
+order.
+
+```tablegen
+def : Pat<(TwoArgOp (either $firstArg, (AnOp $secondArg))),
+          (...)>;
+```
+
+The above pattern will accept either `"test.TwoArgOp"(%I32Arg, %AnOpArg)` and
+`"test.TwoArgOp"(%AnOpArg, %I32Arg)`.
+
+Only operand is supported with `either` and note that an operation with
+`Commutative` trait doesn't imply that it'll have the same behavior than
+`either` while pattern matching.
 
 ## Debugging Tips
 

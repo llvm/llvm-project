@@ -31,9 +31,7 @@ struct FileInfoSubstreamHeader;
 class DbiModuleSourceFilesIterator
     : public iterator_facade_base<DbiModuleSourceFilesIterator,
                                   std::random_access_iterator_tag, StringRef> {
-  using BaseType =
-      iterator_facade_base<DbiModuleSourceFilesIterator,
-                           std::random_access_iterator_tag, StringRef>;
+  using BaseType = typename DbiModuleSourceFilesIterator::iterator_facade_base;
 
 public:
   DbiModuleSourceFilesIterator(const DbiModuleList &Modules, uint32_t Modi,

@@ -384,13 +384,12 @@ void ScheduleDAGSDNodes::BuildSchedUnits() {
 
       // There are either zero or one users of the Glue result.
       bool HasGlueUse = false;
-      for (SDNode::use_iterator UI = N->use_begin(), E = N->use_end();
-           UI != E; ++UI)
-        if (GlueVal.isOperandOf(*UI)) {
+      for (SDNode *U : N->uses())
+        if (GlueVal.isOperandOf(U)) {
           HasGlueUse = true;
           assert(N->getNodeId() == -1 && "Node already inserted!");
           N->setNodeId(NodeSUnit->NodeNum);
-          N = *UI;
+          N = U;
           if (N->isMachineOpcode() && TII->get(N->getMachineOpcode()).isCall())
             NodeSUnit->isCall = true;
           break;
@@ -443,33 +442,32 @@ void ScheduleDAGSDNodes::AddSchedEdges() {
   bool UnitLatencies = forceUnitLatencies();
 
   // Pass 2: add the preds, succs, etc.
-  for (unsigned su = 0, e = SUnits.size(); su != e; ++su) {
-    SUnit *SU = &SUnits[su];
-    SDNode *MainNode = SU->getNode();
+  for (SUnit &SU : SUnits) {
+    SDNode *MainNode = SU.getNode();
 
     if (MainNode->isMachineOpcode()) {
       unsigned Opc = MainNode->getMachineOpcode();
       const MCInstrDesc &MCID = TII->get(Opc);
       for (unsigned i = 0; i != MCID.getNumOperands(); ++i) {
         if (MCID.getOperandConstraint(i, MCOI::TIED_TO) != -1) {
-          SU->isTwoAddress = true;
+          SU.isTwoAddress = true;
           break;
         }
       }
       if (MCID.isCommutable())
-        SU->isCommutable = true;
+        SU.isCommutable = true;
     }
 
     // Find all predecessors and successors of the group.
-    for (SDNode *N = SU->getNode(); N; N = N->getGluedNode()) {
+    for (SDNode *N = SU.getNode(); N; N = N->getGluedNode()) {
       if (N->isMachineOpcode() &&
           TII->get(N->getMachineOpcode()).getImplicitDefs()) {
-        SU->hasPhysRegClobbers = true;
+        SU.hasPhysRegClobbers = true;
         unsigned NumUsed = InstrEmitter::CountResults(N);
         while (NumUsed != 0 && !N->hasAnyUseOfValue(NumUsed - 1))
           --NumUsed;    // Skip over unused values at the end.
         if (NumUsed > TII->get(N->getMachineOpcode()).getNumDefs())
-          SU->hasPhysRegDefs = true;
+          SU.hasPhysRegDefs = true;
       }
 
       for (unsigned i = 0, e = N->getNumOperands(); i != e; ++i) {
@@ -478,7 +476,8 @@ void ScheduleDAGSDNodes::AddSchedEdges() {
         if (isPassiveNode(OpN)) continue;   // Not scheduled.
         SUnit *OpSU = &SUnits[OpN->getNodeId()];
         assert(OpSU && "Node has no SUnit!");
-        if (OpSU == SU) continue;           // In the same group.
+        if (OpSU == &SU)
+          continue; // In the same group.
 
         EVT OpVT = N->getOperand(i).getValueType();
         assert(OpVT != MVT::Glue && "Glued nodes should be in same sunit!");
@@ -509,10 +508,10 @@ void ScheduleDAGSDNodes::AddSchedEdges() {
         Dep.setLatency(OpLatency);
         if (!isChain && !UnitLatencies) {
           computeOperandLatency(OpN, N, i, Dep);
-          ST.adjustSchedDependency(OpSU, DefIdx, SU, i, Dep);
+          ST.adjustSchedDependency(OpSU, DefIdx, &SU, i, Dep);
         }
 
-        if (!SU->addPred(Dep) && !Dep.isCtrl() && OpSU->NumRegDefsLeft > 1) {
+        if (!SU.addPred(Dep) && !Dep.isCtrl() && OpSU->NumRegDefsLeft > 1) {
           // Multiple register uses are combined in the same SUnit. For example,
           // we could have a set of glued nodes with all their defs consumed by
           // another set of glued nodes. Register pressure tracking sees this as
@@ -707,8 +706,8 @@ void ScheduleDAGSDNodes::dump() const {
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void ScheduleDAGSDNodes::dumpSchedule() const {
-  for (unsigned i = 0, e = Sequence.size(); i != e; i++) {
-    if (SUnit *SU = Sequence[i])
+  for (const SUnit *SU : Sequence) {
+    if (SU)
       dumpNode(*SU);
     else
       dbgs() << "**** NOOP ****\n";
@@ -722,10 +721,7 @@ void ScheduleDAGSDNodes::dumpSchedule() const {
 ///
 void ScheduleDAGSDNodes::VerifyScheduledSequence(bool isBottomUp) {
   unsigned ScheduledNodes = ScheduleDAG::VerifyScheduledDAG(isBottomUp);
-  unsigned Noops = 0;
-  for (unsigned i = 0, e = Sequence.size(); i != e; ++i)
-    if (!Sequence[i])
-      ++Noops;
+  unsigned Noops = llvm::count(Sequence, nullptr);
   assert(Sequence.size() - Noops == ScheduledNodes &&
          "The number of nodes scheduled doesn't match the expected number!");
 }
@@ -912,8 +908,7 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
     }
   }
 
-  for (unsigned i = 0, e = Sequence.size(); i != e; i++) {
-    SUnit *SU = Sequence[i];
+  for (SUnit *SU : Sequence) {
     if (!SU) {
       // Null SUnit* is a noop.
       TII->insertNoop(*Emitter.getBlock(), InsertPos);

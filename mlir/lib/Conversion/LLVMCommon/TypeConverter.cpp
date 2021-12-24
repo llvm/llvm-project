@@ -38,10 +38,82 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
       [&](UnrankedMemRefType type) { return convertUnrankedMemRefType(type); });
   addConversion([&](VectorType type) { return convertVectorType(type); });
 
-  // LLVM-compatible types are legal, so add a pass-through conversion.
+  // LLVM-compatible types are legal, so add a pass-through conversion. Do this
+  // before the conversions below since conversions are attempted in reverse
+  // order and those should take priority.
   addConversion([](Type type) {
     return LLVM::isCompatibleType(type) ? llvm::Optional<Type>(type)
                                         : llvm::None;
+  });
+
+  // LLVM container types may (recursively) contain other types that must be
+  // converted even when the outer type is compatible.
+  addConversion([&](LLVM::LLVMPointerType type) -> llvm::Optional<Type> {
+    if (auto pointee = convertType(type.getElementType()))
+      return LLVM::LLVMPointerType::get(pointee, type.getAddressSpace());
+    return llvm::None;
+  });
+  addConversion([&](LLVM::LLVMStructType type, SmallVectorImpl<Type> &results,
+                    ArrayRef<Type> callStack) -> llvm::Optional<LogicalResult> {
+    // Fastpath for types that won't be converted by this callback anyway.
+    if (LLVM::isCompatibleType(type)) {
+      results.push_back(type);
+      return success();
+    }
+
+    if (type.isIdentified()) {
+      auto convertedType = LLVM::LLVMStructType::getIdentified(
+          type.getContext(), ("_Converted_" + type.getName()).str());
+      unsigned counter = 1;
+      while (convertedType.isInitialized()) {
+        assert(counter != UINT_MAX &&
+               "about to overflow struct renaming counter in conversion");
+        convertedType = LLVM::LLVMStructType::getIdentified(
+            type.getContext(),
+            ("_Converted_" + std::to_string(counter) + type.getName()).str());
+      }
+      if (llvm::count(callStack, type) > 1) {
+        results.push_back(convertedType);
+        return success();
+      }
+
+      SmallVector<Type> convertedElemTypes;
+      convertedElemTypes.reserve(type.getBody().size());
+      if (failed(convertTypes(type.getBody(), convertedElemTypes)))
+        return llvm::None;
+
+      if (failed(convertedType.setBody(convertedElemTypes, type.isPacked())))
+        return failure();
+      results.push_back(convertedType);
+      return success();
+    }
+
+    SmallVector<Type> convertedSubtypes;
+    convertedSubtypes.reserve(type.getBody().size());
+    if (failed(convertTypes(type.getBody(), convertedSubtypes)))
+      return llvm::None;
+
+    results.push_back(LLVM::LLVMStructType::getLiteral(
+        type.getContext(), convertedSubtypes, type.isPacked()));
+    return success();
+  });
+  addConversion([&](LLVM::LLVMArrayType type) -> llvm::Optional<Type> {
+    if (auto element = convertType(type.getElementType()))
+      return LLVM::LLVMArrayType::get(element, type.getNumElements());
+    return llvm::None;
+  });
+  addConversion([&](LLVM::LLVMFunctionType type) -> llvm::Optional<Type> {
+    Type convertedResType = convertType(type.getReturnType());
+    if (!convertedResType)
+      return llvm::None;
+
+    SmallVector<Type> convertedArgTypes;
+    convertedArgTypes.reserve(type.getNumParams());
+    if (failed(convertTypes(type.getParams(), convertedArgTypes)))
+      return llvm::None;
+
+    return LLVM::LLVMFunctionType::get(convertedResType, convertedArgTypes,
+                                       type.isVarArg());
   });
 
   // Materialization for memrefs creates descriptor structs from individual
@@ -328,14 +400,19 @@ Type LLVMTypeConverter::convertMemRefToBarePtr(BaseMemRefType type) {
   return LLVM::LLVMPointerType::get(elementType, type.getMemorySpaceAsInt());
 }
 
-/// Convert an n-D vector type to an LLVM vector type via (n-1)-D array type
-/// when n > 1. For example, `vector<4 x f32>` remains as is while,
-/// `vector<4x8x16xf32>` converts to `!llvm.array<4xarray<8 x vector<16xf32>>>`.
+/// Convert an n-D vector type to an LLVM vector type:
+///  * 0-D `vector<T>` are converted to vector<1xT>
+///  * 1-D `vector<axT>` remains as is while,
+///  * n>1 `vector<ax...xkxT>` convert via an (n-1)-D array type to
+///    `!llvm.array<ax...array<jxvector<kxT>>>`.
 Type LLVMTypeConverter::convertVectorType(VectorType type) {
   auto elementType = convertType(type.getElementType());
   if (!elementType)
     return {};
-  Type vectorType = VectorType::get(type.getShape().back(), elementType);
+  if (type.getShape().empty())
+    return VectorType::get({1}, elementType);
+  Type vectorType = VectorType::get(type.getShape().back(), elementType,
+                                    type.getNumScalableDims());
   assert(LLVM::isCompatibleVectorType(vectorType) &&
          "expected vector type compatible with the LLVM dialect");
   auto shape = type.getShape();

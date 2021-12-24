@@ -10,6 +10,9 @@ void libc_api_func() {}
 // Emulate a function from the public headers like string.h
 void libc_api_func() {}
 
+// Emulate a function specifically allowed by the exception list.
+void malloc() {}
+
 namespace __llvm_libc {
 void Test() {
   // Allow calls with the fully qualified name.
@@ -37,6 +40,9 @@ void Test() {
   badPtr();
   // CHECK-MESSAGES: :[[@LINE-2]]:26: warning: 'libc_api_func' must resolve to a function declared within the '__llvm_libc' namespace
   // CHECK-MESSAGES: :11:6: note: resolves to this declaration
+
+  // Allow calling into global namespace for specific functions.
+  ::malloc();
 }
 
 } // namespace __llvm_libc

@@ -249,11 +249,11 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call,
     bool IsMustAlias = true;
     ModRefInfo AllArgsMask = ModRefInfo::NoModRef;
     if (doesAccessArgPointees(MRB)) {
-      for (auto AI = Call->arg_begin(), AE = Call->arg_end(); AI != AE; ++AI) {
-        const Value *Arg = *AI;
+      for (const auto &I : llvm::enumerate(Call->args())) {
+        const Value *Arg = I.value();
         if (!Arg->getType()->isPointerTy())
           continue;
-        unsigned ArgIdx = std::distance(Call->arg_begin(), AI);
+        unsigned ArgIdx = I.index();
         MemoryLocation ArgLoc =
             MemoryLocation::getForArgument(Call, ArgIdx, TLI);
         AliasResult ArgAlias = alias(ArgLoc, Loc, AAQI);
@@ -696,14 +696,16 @@ ModRefInfo AAResults::getModRefInfo(const Instruction *I,
   case Instruction::AtomicRMW:
     return getModRefInfo((const AtomicRMWInst *)I, Loc, AAQIP);
   case Instruction::Call:
-    return getModRefInfo((const CallInst *)I, Loc, AAQIP);
+  case Instruction::CallBr:
   case Instruction::Invoke:
-    return getModRefInfo((const InvokeInst *)I, Loc, AAQIP);
+    return getModRefInfo((const CallBase *)I, Loc, AAQIP);
   case Instruction::CatchPad:
     return getModRefInfo((const CatchPadInst *)I, Loc, AAQIP);
   case Instruction::CatchRet:
     return getModRefInfo((const CatchReturnInst *)I, Loc, AAQIP);
   default:
+    assert(!I->mayReadOrWriteMemory() &&
+           "Unhandled memory access instruction!");
     return ModRefInfo::NoModRef;
   }
 }

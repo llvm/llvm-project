@@ -34,37 +34,23 @@ entry:
 }
 
 define internal void @bar(i32* nocapture %pc) nounwind readonly {
-; IS__CGSCC_OPM: Function Attrs: nounwind readonly
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@bar
-; IS__CGSCC_OPM-SAME: (i32* nocapture [[PC:%.*]]) #[[ATTR1:[0-9]+]] {
-; IS__CGSCC_OPM-NEXT:  entry:
-; IS__CGSCC_OPM-NEXT:    br label [[INDIRECTGOTO:%.*]]
-; IS__CGSCC_OPM:       lab0:
-; IS__CGSCC_OPM-NEXT:    [[INDVAR_NEXT:%.*]] = add i32 [[INDVAR:%.*]], 1
-; IS__CGSCC_OPM-NEXT:    br label [[INDIRECTGOTO]]
-; IS__CGSCC_OPM:       end:
-; IS__CGSCC_OPM-NEXT:    ret void
-; IS__CGSCC_OPM:       indirectgoto:
-; IS__CGSCC_OPM-NEXT:    [[INDVAR]] = phi i32 [ [[INDVAR_NEXT]], [[LAB0:%.*]] ], [ 0, [[ENTRY:%.*]] ]
-; IS__CGSCC_OPM-NEXT:    [[PC_ADDR_0:%.*]] = getelementptr i32, i32* [[PC]], i32 [[INDVAR]]
-; IS__CGSCC_OPM-NEXT:    [[TMP1_PN:%.*]] = load i32, i32* [[PC_ADDR_0]], align 4
-; IS__CGSCC_OPM-NEXT:    [[INDIRECT_GOTO_DEST_IN:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* @bar.l, i32 0, i32 [[TMP1_PN]]
-; IS__CGSCC_OPM-NEXT:    [[INDIRECT_GOTO_DEST:%.*]] = load i8*, i8** [[INDIRECT_GOTO_DEST_IN]], align 8
-; IS__CGSCC_OPM-NEXT:    indirectbr i8* [[INDIRECT_GOTO_DEST]], [label [[LAB0]], label %end]
-;
-; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@bar
-; IS__CGSCC_NPM-SAME: () #[[ATTR1:[0-9]+]] {
-; IS__CGSCC_NPM-NEXT:  entry:
-; IS__CGSCC_NPM-NEXT:    br label [[INDIRECTGOTO:%.*]]
-; IS__CGSCC_NPM:       lab0:
-; IS__CGSCC_NPM-NEXT:    [[INDVAR_NEXT:%.*]] = add i32 [[INDVAR:%.*]], 1
-; IS__CGSCC_NPM-NEXT:    br label [[INDIRECTGOTO]]
-; IS__CGSCC_NPM:       end:
-; IS__CGSCC_NPM-NEXT:    ret void
-; IS__CGSCC_NPM:       indirectgoto:
-; IS__CGSCC_NPM-NEXT:    [[INDVAR]] = phi i32 [ [[INDVAR_NEXT]], [[LAB0:%.*]] ], [ 0, [[ENTRY:%.*]] ]
-; IS__CGSCC_NPM-NEXT:    indirectbr i8* undef, [label [[LAB0]], label %end]
+; IS__CGSCC____: Function Attrs: nounwind readonly
+; IS__CGSCC____-LABEL: define {{[^@]+}}@bar
+; IS__CGSCC____-SAME: (i32* nocapture [[PC:%.*]]) #[[ATTR1:[0-9]+]] {
+; IS__CGSCC____-NEXT:  entry:
+; IS__CGSCC____-NEXT:    br label [[INDIRECTGOTO:%.*]]
+; IS__CGSCC____:       lab0:
+; IS__CGSCC____-NEXT:    [[INDVAR_NEXT:%.*]] = add i32 [[INDVAR:%.*]], 1
+; IS__CGSCC____-NEXT:    br label [[INDIRECTGOTO]]
+; IS__CGSCC____:       end:
+; IS__CGSCC____-NEXT:    ret void
+; IS__CGSCC____:       indirectgoto:
+; IS__CGSCC____-NEXT:    [[INDVAR]] = phi i32 [ [[INDVAR_NEXT]], [[LAB0:%.*]] ], [ 0, [[ENTRY:%.*]] ]
+; IS__CGSCC____-NEXT:    [[PC_ADDR_0:%.*]] = getelementptr i32, i32* [[PC]], i32 [[INDVAR]]
+; IS__CGSCC____-NEXT:    [[TMP1_PN:%.*]] = load i32, i32* [[PC_ADDR_0]], align 4
+; IS__CGSCC____-NEXT:    [[INDIRECT_GOTO_DEST_IN:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* @bar.l, i32 0, i32 [[TMP1_PN]]
+; IS__CGSCC____-NEXT:    [[INDIRECT_GOTO_DEST:%.*]] = load i8*, i8** [[INDIRECT_GOTO_DEST_IN]], align 8
+; IS__CGSCC____-NEXT:    indirectbr i8* [[INDIRECT_GOTO_DEST]], [label [[LAB0]], label %end]
 ;
 entry:
   br label %indirectgoto
@@ -104,11 +90,7 @@ entry:
 ;.
 ; IS__TUNIT____: attributes #[[ATTR0]] = { nofree nosync nounwind readnone willreturn }
 ;.
-; IS__CGSCC_OPM: attributes #[[ATTR0]] = { nounwind readnone }
-; IS__CGSCC_OPM: attributes #[[ATTR1]] = { nounwind readonly }
-; IS__CGSCC_OPM: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind readnone willreturn }
-;.
-; IS__CGSCC_NPM: attributes #[[ATTR0]] = { nounwind readnone }
-; IS__CGSCC_NPM: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone }
-; IS__CGSCC_NPM: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind readnone willreturn }
+; IS__CGSCC____: attributes #[[ATTR0]] = { nounwind readnone }
+; IS__CGSCC____: attributes #[[ATTR1]] = { nounwind readonly }
+; IS__CGSCC____: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind readnone willreturn }
 ;.

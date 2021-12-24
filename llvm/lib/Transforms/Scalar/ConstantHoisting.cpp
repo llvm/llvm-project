@@ -271,8 +271,7 @@ static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
   // subtree of BB (subtree not including the BB itself).
   DenseMap<BasicBlock *, InsertPtsCostPair> InsertPtsMap;
   InsertPtsMap.reserve(Orders.size() + 1);
-  for (auto RIt = Orders.rbegin(); RIt != Orders.rend(); RIt++) {
-    BasicBlock *Node = *RIt;
+  for (BasicBlock *Node : llvm::reverse(Orders)) {
     bool NodeInBBs = BBs.count(Node);
     auto &InsertPts = InsertPtsMap[Node].first;
     BlockFrequency &InsertPtsFreq = InsertPtsMap[Node].second;
@@ -819,10 +818,9 @@ void ConstantHoistingPass::emitBaseConstants(Instruction *Base,
 
     // Aside from constant GEPs, only constant cast expressions are collected.
     assert(ConstExpr->isCast() && "ConstExpr should be a cast");
-    Instruction *ConstExprInst = ConstExpr->getAsInstruction();
+    Instruction *ConstExprInst = ConstExpr->getAsInstruction(
+        findMatInsertPt(ConstUser.Inst, ConstUser.OpndIdx));
     ConstExprInst->setOperand(0, Mat);
-    ConstExprInst->insertBefore(findMatInsertPt(ConstUser.Inst,
-                                                ConstUser.OpndIdx));
 
     // Use the same debug location as the instruction we are about to update.
     ConstExprInst->setDebugLoc(ConstUser.Inst->getDebugLoc());

@@ -9,7 +9,7 @@ void fn1a() __attribute__((example)) {}
 [[plugin::example]] void fn1c() {}
 void fn2() __attribute__((example("somestring", 1, 2.0))) {}
 // CHECK-COUNT-4: -AnnotateAttr 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} "example"
-// CHECK: -StringLiteral 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} 'const char [{{[0-9]+}}]' lvalue "somestring"
+// CHECK: -StringLiteral 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} 'const char[{{[0-9]+}}]' lvalue "somestring"
 // CHECK: -IntegerLiteral 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} 'int' 1
 // CHECK: -FloatingLiteral 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} 'double' 2.000000e+00
 

@@ -330,4 +330,79 @@ define i128 @call_i128_increment_by_val() nounwind {
 ; CHECK-NOVSX: blr
 }
 
+define i128 @callee_i128_split(i32 %i, i128 %i1280, i32 %i4, i32 %i5,
+                               i32 %i6, i32 %i7, i128 %i1281, i32 %i8, i128 %i1282){
+entry:
+  %tmp =  add i128 %i1280, %i1281
+  %tmp1 =  add i128 %tmp, %i1282
 
+  ret i128 %tmp1
+}
+; CHECK-LE-LABEL: @callee_i128_split
+; CHECK-LE-DAG: ld [[TMPREG:[0-9]+]], [[OFFSET:[0-9]+]](1)
+; CHECK-LE-DAG: addc [[TMPREG2:[0-9]+]], 4, 10
+; CHECK-LE-DAG: adde [[TMPREG3:[0-9]+]], 5, [[TMPREG]]
+
+; CHECK-LE-DAG: ld [[TMPREG4:[0-9]+]], [[OFFSET2:[0-9]+]](1)
+; CHECK-LE-DAG: ld [[TMPREG5:[0-9]+]], [[OFFSET3:[0-9]+]](1)
+; CHECK-LE-DAG: addc 3, [[TMPREG2]], [[TMPREG4]]
+; CHECK-LE-DAG: adde 4, [[TMPREG3]], [[TMPREG5]]
+
+; CHECK-BE-LABEL: @callee_i128_split
+; CHECK-BE-DAG: ld [[TMPREG:[0-9]+]], [[OFFSET:[0-9]+]](1)
+; CHECK-BE-DAG: addc [[TMPREG3:[0-9]+]], 5, [[TMPREG]]
+; CHECK-BE-DAG: adde [[TMPREG2:[0-9]+]], 4, 10
+
+; CHECK-BE-DAG: ld [[TMPREG4:[0-9]+]], [[OFFSET2:[0-9]+]](1)
+; CHECK-BE-DAG: ld [[TMPREG5:[0-9]+]], [[OFFSET3:[0-9]+]](1)
+; CHECK-BE-DAG: addc 4, [[TMPREG3]], [[TMPREG4]]
+; CHECK-BE-DAG: adde 3, [[TMPREG2]], [[TMPREG5]]
+
+define i128 @i128_split() {
+entry:
+  %0 = load i128, i128* @a, align 16
+  %1 = load i128, i128* @b, align 16
+  %call = tail call i128 @callee_i128_split(i32 1, i128 %0, i32 4, i32 5,
+                                           i32 6, i32 7, i128 %1, i32 8, i128 9)
+  ret i128 %call
+}
+
+; CHECK-LE-LABEL: @i128_split
+; CHECK-LE-DAG: li 3, 1
+; CHECK-LE-DAG: ld 4, 0([[P2BASEREG:[0-9]+]])
+; CHECK-LE-DAG: ld 5, 8([[P2BASEREG]])
+; CHECK-LE-DAG: li 6, 4
+; CHECK-LE-DAG: li 7, 5
+; CHECK-LE-DAG: li 8, 6
+; CHECK-LE-DAG: li 9, 7
+; CHECK-LE-DAG: ld 10, 0([[P7BASEREG:[0-9]+]])
+; CHECK-LE-DAG: ld [[TMPREG:[0-9]+]], 8([[P7BASEREG]])
+; CHECK-LE-DAG: std [[TMPREG]], [[OFFSET:[0-9]+]](1)
+; CHECK-LE: bl callee_i128_split
+
+
+; CHECK-BE-LABEL: @i128_split
+; CHECK-BE-DAG: li 3, 1
+; CHECK-BE-DAG: ld 4, 0([[P2BASEREG:[0-9]+]])
+; CHECK-BE-DAG: ld 5, 8([[P2BASEREG]])
+; CHECK-BE-DAG: li 6, 4
+; CHECK-BE-DAG: li 7, 5
+; CHECK-BE-DAG: li 8, 6
+; CHECK-BE-DAG: li 9, 7
+; CHECK-BE-DAG: ld 10, 0([[P7BASEREG:[0-9]+]])
+; CHECK-BE-DAG: ld [[TMPREG:[0-9]+]], 8([[P7BASEREG]])
+; CHECK-BE-DAG: std [[TMPREG]], [[OFFSET:[0-9]+]](1)
+; CHECK-BE: bl {{.?}}callee_i128_split
+
+; CHECK-NOVSX-LABEL: @i128_split
+; CHECK-NOVSX-DAG: li 3, 1
+; CHECK-NOVSX-DAG: ld 4, 0([[P2BASEREG:[0-9]+]])
+; CHECK-NOVSX-DAG: ld 5, 8([[P2BASEREG]])
+; CHECK-NOVSX-DAG: li 6, 4
+; CHECK-NOVSX-DAG: li 7, 5
+; CHECK-NOVSX-DAG: li 8, 6
+; CHECK-NOVSX-DAG: li 9, 7
+; CHECK-NOVSX-DAG: ld 10, 0([[P7BASEREG:[0-9]+]])
+; CHECK-NOVSX-DAG: ld [[TMPREG:[0-9]+]], 8([[P7BASEREG]])
+; CHECK-NOVSX-DAG: std [[TMPREG]], [[OFFSET:[0-9]+]](1)
+; CHECK-NOVSX: bl {{.?}}callee_i128_split

@@ -28,12 +28,12 @@ target device.
 .. code-block:: c++
 
   extern void use(int *x);
-  
+
   void foo() {
     int x;
     use(&x);
   }
-  
+
   int main() {
   #pragma omp target parallel
     foo();
@@ -42,8 +42,8 @@ target device.
 .. code-block:: console
 
    $ clang++ -fopenmp -fopenmp-targets=nvptx64 -O2 -Rpass-missed=openmp-opt omp113.cpp
-   missed.cpp:4:7: remark: Could not move globalized variable to the stack. Variable is 
-   potentially captured in call. Mark parameter as `__attribute__((noescape))` to 
+   missed.cpp:4:7: remark: Could not move globalized variable to the stack. Variable is
+   potentially captured in call. Mark parameter as `__attribute__((noescape))` to
    override. [OMP113]
      int x;
          ^
@@ -62,7 +62,7 @@ correct.
     int x;
     use(&x);
   }
-  
+
   int main() {
   #pragma omp target parallel
     foo();

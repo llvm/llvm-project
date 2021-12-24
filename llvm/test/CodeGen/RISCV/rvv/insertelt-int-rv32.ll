@@ -808,7 +808,7 @@ define <vscale x 8 x i64> @insertelt_nxv8i64_idx(<vscale x 8 x i64> %v, i64 %elt
 define <vscale x 2 x i64> @insertelt_nxv2i64_0_c10(<vscale x 2 x i64> %v) {
 ; CHECK-LABEL: insertelt_nxv2i64_0_c10:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 10
+; CHECK-NEXT:    li a0, 10
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m2, tu, mu
 ; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    ret
@@ -819,7 +819,7 @@ define <vscale x 2 x i64> @insertelt_nxv2i64_0_c10(<vscale x 2 x i64> %v) {
 define <vscale x 2 x i64> @insertelt_nxv2i64_imm_c10(<vscale x 2 x i64> %v) {
 ; CHECK-LABEL: insertelt_nxv2i64_imm_c10:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 10
+; CHECK-NEXT:    li a0, 10
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m2, ta, mu
 ; CHECK-NEXT:    vmv.s.x v10, a0
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, tu, mu
@@ -832,7 +832,7 @@ define <vscale x 2 x i64> @insertelt_nxv2i64_imm_c10(<vscale x 2 x i64> %v) {
 define <vscale x 2 x i64> @insertelt_nxv2i64_idx_c10(<vscale x 2 x i64> %v, i32 %idx) {
 ; CHECK-LABEL: insertelt_nxv2i64_idx_c10:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, 10
+; CHECK-NEXT:    li a1, 10
 ; CHECK-NEXT:    vsetvli a2, zero, e64, m2, ta, mu
 ; CHECK-NEXT:    vmv.s.x v10, a1
 ; CHECK-NEXT:    addi a1, a0, 1
@@ -846,7 +846,7 @@ define <vscale x 2 x i64> @insertelt_nxv2i64_idx_c10(<vscale x 2 x i64> %v, i32 
 define <vscale x 2 x i64> @insertelt_nxv2i64_0_cn1(<vscale x 2 x i64> %v) {
 ; CHECK-LABEL: insertelt_nxv2i64_0_cn1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, -1
+; CHECK-NEXT:    li a0, -1
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m2, tu, mu
 ; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    ret
@@ -857,7 +857,7 @@ define <vscale x 2 x i64> @insertelt_nxv2i64_0_cn1(<vscale x 2 x i64> %v) {
 define <vscale x 2 x i64> @insertelt_nxv2i64_imm_cn1(<vscale x 2 x i64> %v) {
 ; CHECK-LABEL: insertelt_nxv2i64_imm_cn1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, -1
+; CHECK-NEXT:    li a0, -1
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m2, ta, mu
 ; CHECK-NEXT:    vmv.s.x v10, a0
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, tu, mu
@@ -870,7 +870,7 @@ define <vscale x 2 x i64> @insertelt_nxv2i64_imm_cn1(<vscale x 2 x i64> %v) {
 define <vscale x 2 x i64> @insertelt_nxv2i64_idx_cn1(<vscale x 2 x i64> %v, i32 %idx) {
 ; CHECK-LABEL: insertelt_nxv2i64_idx_cn1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, zero, -1
+; CHECK-NEXT:    li a1, -1
 ; CHECK-NEXT:    vsetvli a2, zero, e64, m2, ta, mu
 ; CHECK-NEXT:    vmv.s.x v10, a1
 ; CHECK-NEXT:    addi a1, a0, 1

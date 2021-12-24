@@ -385,7 +385,7 @@ static CheckersList getAnalyzerCheckersAndPackages(ClangTidyContext &Context,
 #endif // CLANG_TIDY_ENABLE_STATIC_ANALYZER
 
 std::unique_ptr<clang::ASTConsumer>
-ClangTidyASTConsumerFactory::CreateASTConsumer(
+ClangTidyASTConsumerFactory::createASTConsumer(
     clang::CompilerInstance &Compiler, StringRef File) {
   // FIXME: Move this to a separate method, so that CreateASTConsumer doesn't
   // modify Compiler.
@@ -573,7 +573,7 @@ runClangTidy(clang::tidy::ClangTidyContext &Context,
       Action(ClangTidyASTConsumerFactory *Factory) : Factory(Factory) {}
       std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &Compiler,
                                                      StringRef File) override {
-        return Factory->CreateASTConsumer(Compiler, File);
+        return Factory->createASTConsumer(Compiler, File);
       }
 
     private:

@@ -372,10 +372,18 @@ public:
     return getPointerTy(DL);
   }
 
-  /// EVT is not used in-tree, but is used by out-of-tree target.
-  /// A documentation for this function would be nice...
+  /// Return the type to use for a scalar shift opcode, given the shifted amount
+  /// type. Targets should return a legal type if the input type is legal.
+  /// Targets can return a type that is too small if the input type is illegal.
   virtual MVT getScalarShiftAmountTy(const DataLayout &, EVT) const;
 
+  /// Returns the type for the shift amount of a shift opcode. For vectors,
+  /// returns the input type. For scalars, behavior depends on \p LegalTypes. If
+  /// \p LegalTypes is true, calls getScalarShiftAmountTy, otherwise uses
+  /// pointer type. If getScalarShiftAmountTy or pointer type cannot represent
+  /// all possible shift amounts, returns MVT::i32. In general, \p LegalTypes
+  /// should be set to true for calls during type legalization and after type
+  /// legalization has been completed.
   EVT getShiftAmountTy(EVT LHSTy, const DataLayout &DL,
                        bool LegalTypes = true) const;
 
@@ -414,6 +422,12 @@ public:
                                                     const DataLayout &DL) const;
 
   virtual bool isSelectSupported(SelectSupportKind /*kind*/) const {
+    return true;
+  }
+
+  /// Return true if the @llvm.get.active.lane.mask intrinsic should be expanded
+  /// using generic code in SelectionDAGBuilder.
+  virtual bool shouldExpandGetActiveLaneMask(EVT VT, EVT OpVT) const {
     return true;
   }
 
@@ -798,9 +812,12 @@ public:
   /// Return true if target always benefits from combining into FMA for a
   /// given value type. This must typically return false on targets where FMA
   /// takes more cycles to execute than FADD.
-  virtual bool enableAggressiveFMAFusion(EVT VT) const {
-    return false;
-  }
+  virtual bool enableAggressiveFMAFusion(EVT VT) const { return false; }
+
+  /// Return true if target always benefits from combining into FMA for a
+  /// given value type. This must typically return false on targets where FMA
+  /// takes more cycles to execute than FADD.
+  virtual bool enableAggressiveFMAFusion(LLT Ty) const { return false; }
 
   /// Return the ValueType of the result of SETCC operations.
   virtual EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
@@ -833,6 +850,20 @@ public:
 
   BooleanContent getBooleanContents(EVT Type) const {
     return getBooleanContents(Type.isVector(), Type.isFloatingPoint());
+  }
+
+  /// Promote the given target boolean to a target boolean of the given type.
+  /// A target boolean is an integer value, not necessarily of type i1, the bits
+  /// of which conform to getBooleanContents.
+  ///
+  /// ValVT is the type of values that produced the boolean.
+  SDValue promoteTargetBoolean(SelectionDAG &DAG, SDValue Bool,
+                               EVT ValVT) const {
+    SDLoc dl(Bool);
+    EVT BoolVT =
+        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), ValVT);
+    ISD::NodeType ExtendCode = getExtendForContent(getBooleanContents(ValVT));
+    return DAG.getNode(ExtendCode, dl, BoolVT, Bool);
   }
 
   /// Return target scheduling preference.
@@ -2702,6 +2733,14 @@ public:
   /// Return true if an fpext operation input to an \p Opcode operation is free
   /// (for instance, because half-precision floating-point numbers are
   /// implicitly extended to float-precision) for an FMA instruction.
+  virtual bool isFPExtFoldable(const MachineInstr &MI, unsigned Opcode,
+                               LLT DestTy, LLT SrcTy) const {
+    return false;
+  }
+
+  /// Return true if an fpext operation input to an \p Opcode operation is free
+  /// (for instance, because half-precision floating-point numbers are
+  /// implicitly extended to float-precision) for an FMA instruction.
   virtual bool isFPExtFoldable(const SelectionDAG &DAG, unsigned Opcode,
                                EVT DestVT, EVT SrcVT) const {
     assert(DestVT.isFloatingPoint() && SrcVT.isFloatingPoint() &&
@@ -2740,8 +2779,44 @@ public:
     return false;
   }
 
+  /// Return true if an FMA operation is faster than a pair of fmul and fadd
+  /// instructions. fmuladd intrinsics will be expanded to FMAs when this method
+  /// returns true, otherwise fmuladd is expanded to fmul + fadd.
+  ///
+  /// NOTE: This may be called before legalization on types for which FMAs are
+  /// not legal, but should return true if those types will eventually legalize
+  /// to types that support FMAs. After legalization, it will only be called on
+  /// types that support FMAs (via Legal or Custom actions)
+  virtual bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
+                                          LLT) const {
+    return false;
+  }
+
   /// IR version
   virtual bool isFMAFasterThanFMulAndFAdd(const Function &F, Type *) const {
+    return false;
+  }
+
+  /// Returns true if \p MI can be combined with another instruction to
+  /// form TargetOpcode::G_FMAD. \p N may be an TargetOpcode::G_FADD,
+  /// TargetOpcode::G_FSUB, or an TargetOpcode::G_FMUL which will be
+  /// distributed into an fadd/fsub.
+  virtual bool isFMADLegal(const MachineInstr &MI, LLT Ty) const {
+    assert((MI.getOpcode() == TargetOpcode::G_FADD ||
+            MI.getOpcode() == TargetOpcode::G_FSUB ||
+            MI.getOpcode() == TargetOpcode::G_FMUL) &&
+           "unexpected node in FMAD forming combine");
+    switch (Ty.getScalarSizeInBits()) {
+    case 16:
+      return isOperationLegal(TargetOpcode::G_FMAD, MVT::f16);
+    case 32:
+      return isOperationLegal(TargetOpcode::G_FMAD, MVT::f32);
+    case 64:
+      return isOperationLegal(TargetOpcode::G_FMAD, MVT::f64);
+    default:
+      break;
+    }
+
     return false;
   }
 
@@ -2843,6 +2918,12 @@ public:
   /// Does this target require the clearing of high-order bits in a register
   /// passed to the fp16 to fp conversion library function.
   virtual bool shouldKeepZExtForFP16Conv() const { return false; }
+
+  /// Should we generate fp_to_si_sat and fp_to_ui_sat from type FPVT to type VT
+  /// from min(max(fptoi)) saturation patterns.
+  virtual bool shouldConvertFpToSat(unsigned Op, EVT FPVT, EVT VT) const {
+    return isOperationLegalOrCustom(Op, VT);
+  }
 
   //===--------------------------------------------------------------------===//
   // Runtime Library hooks
@@ -3539,6 +3620,13 @@ public:
                                             const SelectionDAG &DAG,
                                             bool SNaN = false,
                                             unsigned Depth = 0) const;
+
+  /// Return true if vector \p Op has the same value across all \p DemandedElts,
+  /// indicating any elements which may be undef in the output \p UndefElts.
+  virtual bool isSplatValueForTargetNode(SDValue Op, const APInt &DemandedElts,
+                                         APInt &UndefElts,
+                                         unsigned Depth = 0) const;
+
   struct DAGCombinerInfo {
     void *DC;  // The DAG Combiner object.
     CombineLevel Level;
@@ -4393,18 +4481,15 @@ public:
 
   /// Expand funnel shift.
   /// \param N Node to expand
-  /// \param Result output after conversion
-  /// \returns True, if the expansion was successful, false otherwise
-  bool expandFunnelShift(SDNode *N, SDValue &Result, SelectionDAG &DAG) const;
+  /// \returns The expansion if successful, SDValue() otherwise
+  SDValue expandFunnelShift(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand rotations.
   /// \param N Node to expand
   /// \param AllowVectorOps expand vector rotate, this should only be performed
   ///        if the legalization is happening outside of LegalizeVectorOps
-  /// \param Result output after conversion
-  /// \returns True, if the expansion was successful, false otherwise
-  bool expandROT(SDNode *N, bool AllowVectorOps, SDValue &Result,
-                 SelectionDAG &DAG) const;
+  /// \returns The expansion if successful, SDValue() otherwise
+  SDValue expandROT(SDNode *N, bool AllowVectorOps, SelectionDAG &DAG) const;
 
   /// Expand shift-by-parts.
   /// \param N Node to expand

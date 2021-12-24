@@ -1,0 +1,69 @@
+## Test that note values are interpreted correctly for OpenBSD core files.
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-readelf --notes %t.o | FileCheck %s --check-prefix=GNU --strict-whitespace
+# RUN: llvm-readobj --notes %t.o | FileCheck %s --check-prefix=LLVM --strict-whitespace
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_CORE
+Sections:
+  - Name: .note.foo
+    Type: SHT_NOTE
+    Notes:
+      - Name: OpenBSD
+        Type: NT_OPENBSD_PROCINFO
+      - Name: OpenBSD
+        Type: NT_OPENBSD_AUXV
+      - Name: OpenBSD
+        Type: NT_OPENBSD_WCOOKIE
+      - Name: OpenBSD@31337
+        Type: NT_OPENBSD_REGS
+      - Name: OpenBSD@31337
+        Type: NT_OPENBSD_FPREGS
+ProgramHeaders:
+  - Type:     PT_NOTE
+    FirstSec: .note.foo
+    LastSec:  .note.foo
+
+# GNU:      Displaying notes found at file offset 0x00000078 with length 0x00000074:
+# GNU-NEXT:   Owner                Data size 	Description
+# GNU-NEXT:   OpenBSD              0x00000000	NT_OPENBSD_PROCINFO (procinfo structure)
+# GNU-NEXT:   OpenBSD              0x00000000	NT_OPENBSD_AUXV (ELF auxiliary vector data)
+# GNU-NEXT:   OpenBSD              0x00000000	NT_OPENBSD_WCOOKIE (window cookie)
+# GNU-NEXT:   OpenBSD@31337        0x00000000	NT_OPENBSD_REGS (regular registers)
+# GNU-NEXT:   OpenBSD@31337        0x00000000	NT_OPENBSD_FPREGS (floating point registers)
+
+# LLVM:      Notes [
+# LLVM-NEXT:   NoteSection {
+# LLVM-NEXT:     Name: <?>
+# LLVM-NEXT:     Offset: 0x78
+# LLVM-NEXT:     Size: 0x74
+# LLVM-NEXT:     Note {
+# LLVM-NEXT:       Owner: OpenBSD
+# LLVM-NEXT:       Data size: 0x0
+# LLVM-NEXT:       Type: NT_OPENBSD_PROCINFO (procinfo structure)
+# LLVM-NEXT:     }
+# LLVM-NEXT:     Note {
+# LLVM-NEXT:       Owner: OpenBSD
+# LLVM-NEXT:       Data size: 0x0
+# LLVM-NEXT:       Type: NT_OPENBSD_AUXV (ELF auxiliary vector data)
+# LLVM-NEXT:     }
+# LLVM-NEXT:     Note {
+# LLVM-NEXT:       Owner: OpenBSD
+# LLVM-NEXT:       Data size: 0x0
+# LLVM-NEXT:       Type: NT_OPENBSD_WCOOKIE (window cookie)
+# LLVM-NEXT:     }
+# LLVM-NEXT:     Note {
+# LLVM-NEXT:       Owner: OpenBSD@31337
+# LLVM-NEXT:       Data size: 0x0
+# LLVM-NEXT:       Type: NT_OPENBSD_REGS (regular registers)
+# LLVM-NEXT:     }
+# LLVM-NEXT:     Note {
+# LLVM-NEXT:       Owner: OpenBSD@31337
+# LLVM-NEXT:       Data size: 0x0
+# LLVM-NEXT:       Type: NT_OPENBSD_FPREGS (floating point registers)
+# LLVM-NEXT:     }
+# LLVM-NEXT:   }
+# LLVM-NEXT: ]

@@ -1,0 +1,140 @@
+import os,struct,signal
+
+from typing import Any, Dict
+
+import lldb
+from lldb.plugins.scripted_process import ScriptedProcess
+from lldb.plugins.scripted_process import ScriptedThread
+
+class StackCoreScriptedProcess(ScriptedProcess):
+    def __init__(self, target: lldb.SBTarget, args : lldb.SBStructuredData):
+        super().__init__(target, args)
+
+        self.backing_target_idx = args.GetValueForKey("backing_target_idx")
+
+        self.corefile_target = None
+        self.corefile_process = None
+        if (self.backing_target_idx and self.backing_target_idx.IsValid()):
+            if self.backing_target_idx.GetType() == lldb.eStructuredDataTypeInteger:
+                idx = self.backing_target_idx.GetIntegerValue(42)
+            if self.backing_target_idx.GetType() == lldb.eStructuredDataTypeString:
+                idx = int(self.backing_target_idx.GetStringValue(100))
+            self.corefile_target = target.GetDebugger().GetTargetAtIndex(idx)
+            self.corefile_process = self.corefile_target.GetProcess()
+
+    def get_memory_region_containing_address(self, addr: int) -> lldb.SBMemoryRegionInfo:
+        mem_region = lldb.SBMemoryRegionInfo()
+        error = self.corefile_process.GetMemoryRegionInfo(addr, mem_region)
+        if error.Fail():
+            return None
+        return mem_region
+
+    def get_thread_with_id(self, tid: int):
+        return {}
+
+    def get_registers_for_thread(self, tid: int):
+        return {}
+
+    def read_memory_at_address(self, addr: int, size: int) -> lldb.SBData:
+        data = lldb.SBData()
+        error = lldb.SBError()
+        bytes_read = self.corefile_process.ReadMemory(addr, size, error)
+
+        if error.Fail():
+            return data
+
+        data.SetDataWithOwnership(error, bytes_read,
+                                  self.corefile_target.GetByteOrder(),
+                                  self.corefile_target.GetAddressByteSize())
+
+        return data
+
+    def get_loaded_images(self):
+        # TODO: Iterate over corefile_target modules and build a data structure
+        # from it.
+        return self.loaded_images
+
+    def get_process_id(self) -> int:
+        return 42
+
+    def should_stop(self) -> bool:
+        return True
+
+    def is_alive(self) -> bool:
+        return True
+
+    def get_scripted_thread_plugin(self):
+        return StackCoreScriptedThread.__module__ + "." + StackCoreScriptedThread.__name__
+
+
+class StackCoreScriptedThread(ScriptedThread):
+    def __init__(self, process, args):
+        super().__init__(process, args)
+        self.backing_target_idx = args.GetValueForKey("backing_target_idx")
+
+        self.corefile_target = None
+        self.corefile_process = None
+        if (self.backing_target_idx and self.backing_target_idx.IsValid()):
+            if self.backing_target_idx.GetType() == lldb.eStructuredDataTypeInteger:
+                idx = self.backing_target_idx.GetIntegerValue(42)
+            if self.backing_target_idx.GetType() == lldb.eStructuredDataTypeString:
+                idx = int(self.backing_target_idx.GetStringValue(100))
+            self.corefile_target = self.target.GetDebugger().GetTargetAtIndex(idx)
+            self.corefile_process = self.corefile_target.GetProcess()
+
+    def get_thread_id(self) -> int:
+        return 0x19
+
+    def get_name(self) -> str:
+        return StackCoreScriptedThread.__name__ + ".thread-1"
+
+    def get_stop_reason(self) -> Dict[str, Any]:
+        return { "type": lldb.eStopReasonSignal, "data": {
+            "signal": signal.SIGINT
+        } }
+
+    def get_stackframes(self):
+        class ScriptedStackFrame:
+            def __init__(idx, cfa, pc, symbol_ctx):
+                self.idx = idx
+                self.cfa = cfa
+                self.pc = pc
+                self.symbol_ctx = symbol_ctx
+
+
+        symbol_ctx = lldb.SBSymbolContext()
+        frame_zero = ScriptedStackFrame(0, 0x42424242, 0x5000000, symbol_ctx)
+        self.frames.append(frame_zero)
+
+        return self.frame_zero[0:0]
+
+    def get_register_context(self) -> str:
+        thread = self.corefile_process.GetSelectedThread()
+        if not thread or thread.GetNumFrames() == 0:
+            return None
+        frame = thread.GetFrameAtIndex(0)
+
+        GPRs = None
+        registerSet = frame.registers # Returns an SBValueList.
+        for regs in registerSet:
+            if 'general purpose' in regs.name.lower():
+                GPRs = regs
+                break
+
+        if not GPRs:
+            return None
+
+        for reg in GPRs:
+            self.register_ctx[reg.name] = int(reg.value, base=16)
+
+        return struct.pack("{}Q".format(len(self.register_ctx)), *self.register_ctx.values())
+
+
+def __lldb_init_module(debugger, dict):
+    if not 'SKIP_SCRIPTED_PROCESS_LAUNCH' in os.environ:
+        debugger.HandleCommand(
+            "process launch -C %s.%s" % (__name__,
+                                     StackCoreScriptedProcess.__name__))
+    else:
+        print("Name of the class that will manage the scripted process: '%s.%s'"
+                % (__name__, StackCoreScriptedProcess.__name__))

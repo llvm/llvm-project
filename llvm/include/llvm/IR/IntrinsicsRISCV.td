@@ -642,20 +642,6 @@ let TargetPrefix = "riscv" in {
                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyint_ty,
                      LLVMMatchType<2>],
                     [ImmArg<ArgIndex<4>>, IntrNoMem]>, RISCVVIntrinsic;
-  // For atomic operations without mask
-  // Input: (base, index, value, vl)
-  class RISCVAMONoMask
-        : Intrinsic<[llvm_anyvector_ty],
-                    [LLVMPointerType<LLVMMatchType<0>>, llvm_anyvector_ty, LLVMMatchType<0>,
-                     llvm_anyint_ty],
-                    [NoCapture<ArgIndex<0>>]>, RISCVVIntrinsic;
-  // For atomic operations with mask
-  // Input: (base, index, value, mask, vl)
-  class RISCVAMOMask
-        : Intrinsic<[llvm_anyvector_ty],
-                    [LLVMPointerType<LLVMMatchType<0>>, llvm_anyvector_ty, LLVMMatchType<0>,
-                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyint_ty],
-                    [NoCapture<ArgIndex<0>>]>, RISCVVIntrinsic;
 
   // For unit stride segment load
   // Input: (pointer, vl)
@@ -930,10 +916,6 @@ let TargetPrefix = "riscv" in {
     def "int_riscv_" #NAME :RISCVConversionNoMask;
     def "int_riscv_" # NAME # "_mask" : RISCVConversionMask;
   }
-  multiclass RISCVAMO {
-    def "int_riscv_" # NAME : RISCVAMONoMask;
-    def "int_riscv_" # NAME # "_mask" : RISCVAMOMask;
-  }
   multiclass RISCVUSSegLoad<int nf> {
     def "int_riscv_" # NAME : RISCVUSSegLoad<nf>;
     def "int_riscv_" # NAME # "_mask" : RISCVUSSegLoadMask<nf>;
@@ -975,16 +957,6 @@ let TargetPrefix = "riscv" in {
 
   def int_riscv_vlm : RISCVUSLoad;
   def int_riscv_vsm : RISCVUSStore;
-
-  defm vamoswap : RISCVAMO;
-  defm vamoadd : RISCVAMO;
-  defm vamoxor : RISCVAMO;
-  defm vamoand : RISCVAMO;
-  defm vamoor : RISCVAMO;
-  defm vamomin : RISCVAMO;
-  defm vamomax : RISCVAMO;
-  defm vamominu : RISCVAMO;
-  defm vamomaxu : RISCVAMO;
 
   defm vadd : RISCVBinaryAAX;
   defm vsub : RISCVBinaryAAX;
@@ -1194,16 +1166,16 @@ let TargetPrefix = "riscv" in {
 
   def int_riscv_vmand: RISCVBinaryAAANoMask;
   def int_riscv_vmnand: RISCVBinaryAAANoMask;
-  def int_riscv_vmandnot: RISCVBinaryAAANoMask;
+  def int_riscv_vmandn: RISCVBinaryAAANoMask;
   def int_riscv_vmxor: RISCVBinaryAAANoMask;
   def int_riscv_vmor: RISCVBinaryAAANoMask;
   def int_riscv_vmnor: RISCVBinaryAAANoMask;
-  def int_riscv_vmornot: RISCVBinaryAAANoMask;
+  def int_riscv_vmorn: RISCVBinaryAAANoMask;
   def int_riscv_vmxnor: RISCVBinaryAAANoMask;
   def int_riscv_vmclr : RISCVNullaryIntrinsic;
   def int_riscv_vmset : RISCVNullaryIntrinsic;
 
-  defm vpopc : RISCVMaskUnarySOut;
+  defm vcpop : RISCVMaskUnarySOut;
   defm vfirst : RISCVMaskUnarySOut;
   defm vmsbf : RISCVMaskUnaryMOut;
   defm vmsof : RISCVMaskUnaryMOut;

@@ -1,161 +1,98 @@
-// leaving this undefined ensures we will get a linker error if we try to use SBTypeToSWIGWrapper()
-// for a type for which we did not specialze this function
-template <typename SBClass>
-PyObject*
-SBTypeToSWIGWrapper (SBClass* sb_object);
+namespace lldb_private {
+namespace python {
 
-template <typename SBClass>
-PyObject*
-SBTypeToSWIGWrapper (SBClass& sb_object)
-{
-    return SBTypeToSWIGWrapper(&sb_object);
+PyObject *SBTypeToSWIGWrapper(lldb::SBEvent &event_sb) {
+  return SWIG_NewPointerObj(&event_sb, SWIGTYPE_p_lldb__SBEvent, 0);
 }
 
-template <typename SBClass>
-PyObject*
-SBTypeToSWIGWrapper (const SBClass& sb_object)
-{
-    return SBTypeToSWIGWrapper(&sb_object);
+PyObject *SBTypeToSWIGWrapper(lldb::SBCommandReturnObject &cmd_ret_obj_sb) {
+  return SWIG_NewPointerObj(&cmd_ret_obj_sb,
+                            SWIGTYPE_p_lldb__SBCommandReturnObject, 0);
 }
 
-template <>
-PyObject*
-SBTypeToSWIGWrapper (PyObject* py_object)
-{
-    return py_object;
+PythonObject ToSWIGHelper(void *obj, swig_type_info *info) {
+  return {PyRefType::Owned, SWIG_NewPointerObj(obj, info, SWIG_POINTER_OWN)};
 }
 
-template <>
-PyObject*
-SBTypeToSWIGWrapper (unsigned int* c_int)
-{
-    if (!c_int)
-        return NULL;
-    return PyInt_FromLong(*c_int);
+PythonObject ToSWIGWrapper(std::unique_ptr<lldb::SBValue> value_sb) {
+  return ToSWIGHelper(value_sb.release(), SWIGTYPE_p_lldb__SBValue);
 }
 
-template <>
-PyObject*
-SBTypeToSWIGWrapper (lldb::SBEvent* event_sb)
-{
-    return SWIG_NewPointerObj((void *) event_sb, SWIGTYPE_p_lldb__SBEvent, 0);
+PythonObject ToSWIGWrapper(lldb::ValueObjectSP value_sp) {
+  return ToSWIGWrapper(std::make_unique<lldb::SBValue>(std::move(value_sp)));
 }
 
-template <>
-PyObject*
-SBTypeToSWIGWrapper (lldb::SBProcess* process_sb)
-{
-    return SWIG_NewPointerObj((void *) process_sb, SWIGTYPE_p_lldb__SBProcess, 0);
+PythonObject ToSWIGWrapper(lldb::TargetSP target_sp) {
+  return ToSWIGHelper(new lldb::SBTarget(std::move(target_sp)),
+                      SWIGTYPE_p_lldb__SBTarget);
 }
 
-template <>
-PyObject*
-SBTypeToSWIGWrapper (lldb::SBThread* thread_sb)
-{
-    return SWIG_NewPointerObj((void *) thread_sb, SWIGTYPE_p_lldb__SBThread, 0);
+PythonObject ToSWIGWrapper(lldb::ProcessSP process_sp) {
+  return ToSWIGHelper(new lldb::SBProcess(std::move(process_sp)),
+                      SWIGTYPE_p_lldb__SBProcess);
 }
 
-template <>
-PyObject*
-SBTypeToSWIGWrapper (lldb::SBThreadPlan* thread_plan_sb)
-{
-    return SWIG_NewPointerObj((void *) thread_plan_sb, SWIGTYPE_p_lldb__SBThreadPlan, 0);
+PythonObject ToSWIGWrapper(lldb::ThreadPlanSP thread_plan_sp) {
+  return ToSWIGHelper(new lldb::SBThreadPlan(std::move(thread_plan_sp)),
+                      SWIGTYPE_p_lldb__SBThreadPlan);
 }
 
-template <>
-PyObject*
-SBTypeToSWIGWrapper (lldb::SBTarget* target_sb)
-{
-    return SWIG_NewPointerObj((void *) target_sb, SWIGTYPE_p_lldb__SBTarget, 0);
+PythonObject ToSWIGWrapper(lldb::BreakpointSP breakpoint_sp) {
+  return ToSWIGHelper(new lldb::SBBreakpoint(std::move(breakpoint_sp)),
+                      SWIGTYPE_p_lldb__SBBreakpoint);
 }
 
-template <>
-PyObject*
-SBTypeToSWIGWrapper (lldb::SBFrame* frame_sb)
-{
-    return SWIG_NewPointerObj((void *) frame_sb, SWIGTYPE_p_lldb__SBFrame, 0);
+PythonObject ToSWIGWrapper(std::unique_ptr<lldb::SBStream> stream_sb) {
+  return ToSWIGHelper(stream_sb.release(), SWIGTYPE_p_lldb__SBStream);
 }
 
-template <>
-PyObject*
-SBTypeToSWIGWrapper (lldb::SBDebugger* debugger_sb)
-{
-    return SWIG_NewPointerObj((void *) debugger_sb, SWIGTYPE_p_lldb__SBDebugger, 0);
+PythonObject ToSWIGWrapper(std::unique_ptr<lldb::SBStructuredData> data_sb) {
+  return ToSWIGHelper(data_sb.release(), SWIGTYPE_p_lldb__SBStructuredData);
 }
 
-template <>
-PyObject*
-SBTypeToSWIGWrapper (lldb::SBBreakpoint* breakpoint_sb)
-{
-    return SWIG_NewPointerObj((void *) breakpoint_sb, SWIGTYPE_p_lldb__SBBreakpoint, 0);
+PythonObject ToSWIGWrapper(const StructuredDataImpl &data_impl) {
+  return ToSWIGWrapper(std::make_unique<lldb::SBStructuredData>(data_impl));
 }
 
-template <>
-PyObject*
-SBTypeToSWIGWrapper (lldb::SBWatchpoint* watchpoint_sb)
-{
-    return SWIG_NewPointerObj((void *) watchpoint_sb, SWIGTYPE_p_lldb__SBWatchpoint, 0);
+PythonObject ToSWIGWrapper(lldb::ThreadSP thread_sp) {
+  return ToSWIGHelper(new lldb::SBThread(std::move(thread_sp)),
+                      SWIGTYPE_p_lldb__SBThread);
 }
 
-template <>
-PyObject*
-SBTypeToSWIGWrapper (lldb::SBBreakpointLocation* breakpoint_location_sb)
-{
-    return SWIG_NewPointerObj((void *) breakpoint_location_sb, SWIGTYPE_p_lldb__SBBreakpointLocation, 0);
+PythonObject ToSWIGWrapper(lldb::StackFrameSP frame_sp) {
+  return ToSWIGHelper(new lldb::SBFrame(std::move(frame_sp)),
+                      SWIGTYPE_p_lldb__SBFrame);
 }
 
-template <>
-PyObject*
-SBTypeToSWIGWrapper (lldb::SBBreakpointName* breakpoint_name_sb)
-{
-    return SWIG_NewPointerObj((void *) breakpoint_name_sb, SWIGTYPE_p_lldb__SBBreakpointName, 0);
+PythonObject ToSWIGWrapper(lldb::DebuggerSP debugger_sp) {
+  return ToSWIGHelper(new lldb::SBDebugger(std::move(debugger_sp)),
+                      SWIGTYPE_p_lldb__SBDebugger);
 }
 
-template <>
-PyObject*
-SBTypeToSWIGWrapper (lldb::SBValue* value_sb)
-{
-    return SWIG_NewPointerObj((void *) value_sb, SWIGTYPE_p_lldb__SBValue, 0);
+PythonObject ToSWIGWrapper(lldb::WatchpointSP watchpoint_sp) {
+  return ToSWIGHelper(new lldb::SBWatchpoint(std::move(watchpoint_sp)),
+                      SWIGTYPE_p_lldb__SBWatchpoint);
 }
 
-template <>
-PyObject*
-SBTypeToSWIGWrapper (lldb::SBCommandReturnObject* cmd_ret_obj_sb)
-{
-    return SWIG_NewPointerObj((void *) cmd_ret_obj_sb, SWIGTYPE_p_lldb__SBCommandReturnObject, 0);
+PythonObject ToSWIGWrapper(lldb::BreakpointLocationSP bp_loc_sp) {
+  return ToSWIGHelper(new lldb::SBBreakpointLocation(std::move(bp_loc_sp)),
+                      SWIGTYPE_p_lldb__SBBreakpointLocation);
 }
 
-template <>
-PyObject*
-SBTypeToSWIGWrapper (lldb::SBExecutionContext* ctx_sb)
-{
-    return SWIG_NewPointerObj((void *) ctx_sb, SWIGTYPE_p_lldb__SBExecutionContext, 0);
+PythonObject ToSWIGWrapper(lldb::ExecutionContextRefSP ctx_sp) {
+  return ToSWIGHelper(new lldb::SBExecutionContext(std::move(ctx_sp)),
+                      SWIGTYPE_p_lldb__SBExecutionContext);
 }
 
-template <>
-PyObject*
-SBTypeToSWIGWrapper (lldb::SBTypeSummaryOptions* summary_options_sb)
-{
-    return SWIG_NewPointerObj((void *) summary_options_sb, SWIGTYPE_p_lldb__SBTypeSummaryOptions, 0);
+PythonObject ToSWIGWrapper(const TypeSummaryOptions &summary_options) {
+  return ToSWIGHelper(new lldb::SBTypeSummaryOptions(summary_options),
+                      SWIGTYPE_p_lldb__SBTypeSummaryOptions);
 }
 
-template <>
-PyObject*
-SBTypeToSWIGWrapper (lldb::SBStructuredData* structured_data_sb)
-{
-    return SWIG_NewPointerObj((void *) structured_data_sb, SWIGTYPE_p_lldb__SBStructuredData, 0);
+PythonObject ToSWIGWrapper(const SymbolContext &sym_ctx) {
+  return ToSWIGHelper(new lldb::SBSymbolContext(sym_ctx),
+                      SWIGTYPE_p_lldb__SBSymbolContext);
 }
 
-template <>
-PyObject*
-SBTypeToSWIGWrapper (lldb::SBSymbolContext* sym_ctx_sb)
-{
-    return SWIG_NewPointerObj((void *) sym_ctx_sb, SWIGTYPE_p_lldb__SBSymbolContext, 0);
-}
-
-template <>
-PyObject*
-SBTypeToSWIGWrapper (lldb::SBStream* stream_sb)
-{
-    return SWIG_NewPointerObj((void *) stream_sb, SWIGTYPE_p_lldb__SBStream, 0);
-}
+} // namespace python
+} // namespace lldb_private

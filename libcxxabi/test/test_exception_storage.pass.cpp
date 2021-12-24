@@ -1,4 +1,4 @@
-//===-------------------- test_exception_storage.cpp ----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -41,9 +41,7 @@ size_t                 thread_globals [ NUMTHREADS ] = { 0 };
 std::__libcpp_thread_t   threads        [ NUMTHREADS ];
 #endif
 
-int main () {
-    int retVal = 0;
-
+int main() {
 #ifndef _LIBCXXABI_HAS_NO_THREADS
 //  Make the threads, let them run, and wait for them to finish
     for ( int i = 0; i < NUMTHREADS; ++i )
@@ -51,6 +49,7 @@ int main () {
     for ( int i = 0; i < NUMTHREADS; ++i )
         std::__libcpp_thread_join ( &threads [ i ] );
 
+    int retVal = 0;
     for ( int i = 0; i < NUMTHREADS; ++i ) {
         if ( 0 == thread_globals [ i ] ) {
             std::printf("Thread #%d had a zero global\n", i);
@@ -65,12 +64,11 @@ int main () {
             retVal = 2;
         }
     }
+    return retVal;
 #else // _LIBCXXABI_HAS_NO_THREADS
     size_t thread_globals;
+    thread_code(&thread_globals);
     // Check that __cxa_get_globals() is not NULL.
-    if (thread_code(&thread_globals) == 0) {
-        retVal = 1;
-    }
+    return (thread_globals == 0) ? 1 : 0;
 #endif // !_LIBCXXABI_HAS_NO_THREADS
-    return retVal;
 }

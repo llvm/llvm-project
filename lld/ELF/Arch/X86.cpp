@@ -56,6 +56,7 @@ X86::X86() {
   iRelativeRel = R_386_IRELATIVE;
   relativeRel = R_386_RELATIVE;
   symbolicRel = R_386_32;
+  tlsDescRel = R_386_TLS_DESC;
   tlsGotRel = R_386_TLS_TPOFF;
   tlsModuleIndexRel = R_386_TLS_DTPMOD32;
   tlsOffsetRel = R_386_TLS_DTPOFF32;
@@ -71,18 +72,14 @@ X86::X86() {
 }
 
 int X86::getTlsGdRelaxSkip(RelType type) const {
-  return 2;
+  // TLSDESC relocations are processed separately. See relaxTlsGdToLe below.
+  return type == R_386_TLS_GOTDESC || type == R_386_TLS_DESC_CALL ? 1 : 2;
 }
 
 RelExpr X86::getRelExpr(RelType type, const Symbol &s,
                         const uint8_t *loc) const {
-  // There are 4 different TLS variable models with varying degrees of
-  // flexibility and performance. LocalExec and InitialExec models are fast but
-  // less-flexible models. If they are in use, we set DF_STATIC_TLS flag in the
-  // dynamic section to let runtime know about that.
-  if (type == R_386_TLS_LE || type == R_386_TLS_LE_32 || type == R_386_TLS_IE ||
-      type == R_386_TLS_GOTIE)
-    config->hasStaticTlsModel = true;
+  if (type == R_386_TLS_IE || type == R_386_TLS_GOTIE)
+    config->hasTlsIe = true;
 
   switch (type) {
   case R_386_8:
@@ -143,6 +140,10 @@ RelExpr X86::getRelExpr(RelType type, const Symbol &s,
     // the byte, we can determine whether the instruction uses the operand as an
     // absolute address (R_GOT) or a register-relative address (R_GOTPLT).
     return (loc[-1] & 0xc7) == 0x5 ? R_GOT : R_GOTPLT;
+  case R_386_TLS_GOTDESC:
+    return R_TLSDESC_GOTPLT;
+  case R_386_TLS_DESC_CALL:
+    return R_TLSDESC_CALL;
   case R_386_TLS_GOTIE:
     return R_GOTPLT;
   case R_386_GOTOFF:
@@ -167,7 +168,8 @@ RelExpr X86::adjustTlsExpr(RelType type, RelExpr expr) const {
   case R_RELAX_TLS_GD_TO_IE:
     return R_RELAX_TLS_GD_TO_IE_GOTPLT;
   case R_RELAX_TLS_GD_TO_LE:
-    return R_RELAX_TLS_GD_TO_LE_NEG;
+    return type == R_386_TLS_GD ? R_RELAX_TLS_GD_TO_LE_NEG
+                                : R_RELAX_TLS_GD_TO_LE;
   }
 }
 
@@ -259,6 +261,8 @@ int64_t X86::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_386_PC32:
   case R_386_PLT32:
   case R_386_RELATIVE:
+  case R_386_TLS_GOTDESC:
+  case R_386_TLS_DESC_CALL:
   case R_386_TLS_DTPMOD32:
   case R_386_TLS_DTPOFF32:
   case R_386_TLS_LDO_32:
@@ -273,6 +277,8 @@ int64_t X86::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_386_TLS_TPOFF:
   case R_386_TLS_TPOFF32:
     return SignExtend64<32>(read32le(buf));
+  case R_386_TLS_DESC:
+    return SignExtend64<32>(read32le(buf + 4));
   case R_386_NONE:
   case R_386_JUMP_SLOT:
     // These relocations are defined as not having an implicit addend.
@@ -323,6 +329,8 @@ void X86::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_386_PC32:
   case R_386_PLT32:
   case R_386_RELATIVE:
+  case R_386_TLS_GOTDESC:
+  case R_386_TLS_DESC_CALL:
   case R_386_TLS_DTPMOD32:
   case R_386_TLS_DTPOFF32:
   case R_386_TLS_GD:
@@ -337,39 +345,79 @@ void X86::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     checkInt(loc, val, 32, rel);
     write32le(loc, val);
     break;
+  case R_386_TLS_DESC:
+    // The addend is stored in the second 32-bit word.
+    write32le(loc + 4, val);
+    break;
   default:
     llvm_unreachable("unknown relocation");
   }
 }
 
-void X86::relaxTlsGdToLe(uint8_t *loc, const Relocation &, uint64_t val) const {
-  // Convert
-  //   leal x@tlsgd(, %ebx, 1),
-  //   call __tls_get_addr@plt
-  // to
-  //   movl %gs:0,%eax
-  //   subl $x@ntpoff,%eax
-  const uint8_t inst[] = {
-      0x65, 0xa1, 0x00, 0x00, 0x00, 0x00, // movl %gs:0, %eax
-      0x81, 0xe8, 0, 0, 0, 0,             // subl Val(%ebx), %eax
-  };
-  memcpy(loc - 3, inst, sizeof(inst));
-  write32le(loc + 5, val);
+void X86::relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
+                         uint64_t val) const {
+  if (rel.type == R_386_TLS_GD) {
+    // Convert
+    //   leal x@tlsgd(, %ebx, 1), %eax
+    //   call __tls_get_addr@plt
+    // to
+    //   movl %gs:0, %eax
+    //   subl $x@tpoff, %eax
+    const uint8_t inst[] = {
+        0x65, 0xa1, 0x00, 0x00, 0x00, 0x00, // movl %gs:0, %eax
+        0x81, 0xe8, 0,    0,    0,    0,    // subl val(%ebx), %eax
+    };
+    memcpy(loc - 3, inst, sizeof(inst));
+    write32le(loc + 5, val);
+  } else if (rel.type == R_386_TLS_GOTDESC) {
+    // Convert leal x@tlsdesc(%ebx), %eax to leal x@ntpoff, %eax.
+    //
+    // Note: call *x@tlsdesc(%eax) may not immediately follow this instruction.
+    if (memcmp(loc - 2, "\x8d\x83", 2)) {
+      error(getErrorLocation(loc - 2) +
+            "R_386_TLS_GOTDESC must be used in leal x@tlsdesc(%ebx), %eax");
+      return;
+    }
+    loc[-1] = 0x05;
+    write32le(loc, val);
+  } else {
+    // Convert call *x@tlsdesc(%eax) to xchg ax, ax.
+    assert(rel.type == R_386_TLS_DESC_CALL);
+    loc[0] = 0x66;
+    loc[1] = 0x90;
+  }
 }
 
-void X86::relaxTlsGdToIe(uint8_t *loc, const Relocation &, uint64_t val) const {
-  // Convert
-  //   leal x@tlsgd(, %ebx, 1),
-  //   call __tls_get_addr@plt
-  // to
-  //   movl %gs:0, %eax
-  //   addl x@gotntpoff(%ebx), %eax
-  const uint8_t inst[] = {
-      0x65, 0xa1, 0x00, 0x00, 0x00, 0x00, // movl %gs:0, %eax
-      0x03, 0x83, 0, 0, 0, 0,             // addl Val(%ebx), %eax
-  };
-  memcpy(loc - 3, inst, sizeof(inst));
-  write32le(loc + 5, val);
+void X86::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
+                         uint64_t val) const {
+  if (rel.type == R_386_TLS_GD) {
+    // Convert
+    //   leal x@tlsgd(, %ebx, 1), %eax
+    //   call __tls_get_addr@plt
+    // to
+    //   movl %gs:0, %eax
+    //   addl x@gotntpoff(%ebx), %eax
+    const uint8_t inst[] = {
+        0x65, 0xa1, 0x00, 0x00, 0x00, 0x00, // movl %gs:0, %eax
+        0x03, 0x83, 0,    0,    0,    0,    // addl val(%ebx), %eax
+    };
+    memcpy(loc - 3, inst, sizeof(inst));
+    write32le(loc + 5, val);
+  } else if (rel.type == R_386_TLS_GOTDESC) {
+    // Convert leal x@tlsdesc(%ebx), %eax to movl x@gotntpoff(%ebx), %eax.
+    if (memcmp(loc - 2, "\x8d\x83", 2)) {
+      error(getErrorLocation(loc - 2) +
+            "R_386_TLS_GOTDESC must be used in leal x@tlsdesc(%ebx), %eax");
+      return;
+    }
+    loc[-2] = 0x8b;
+    write32le(loc, val);
+  } else {
+    // Convert call *x@tlsdesc(%eax) to xchg ax, ax.
+    assert(rel.type == R_386_TLS_DESC_CALL);
+    loc[0] = 0x66;
+    loc[1] = 0x90;
+  }
 }
 
 // In some conditions, relocations can be optimized to avoid using GOT.

@@ -176,6 +176,7 @@ void parseSubsystem(StringRef arg, WindowsSubsystem *sys, uint32_t *major,
 
 void parseAlternateName(StringRef);
 void parseMerge(StringRef);
+void parsePDBPageSize(StringRef);
 void parseSection(StringRef);
 void parseAligncomm(StringRef);
 

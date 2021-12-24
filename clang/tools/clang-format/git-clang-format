@@ -32,12 +32,13 @@ import re
 import subprocess
 import sys
 
-usage = 'git clang-format [OPTIONS] [<commit>] [<commit>] [--] [<file>...]'
+usage = ('git clang-format [OPTIONS] [<commit>] [<commit>|--staged] '
+         '[--] [<file>...]')
 
 desc = '''
 If zero or one commits are given, run clang-format on all lines that differ
 between the working directory and <commit>, which defaults to HEAD.  Changes are
-only applied to the working directory.
+only applied to the working directory, or in the stage/index.
 
 If two commits are given (requires --diff), run clang-format on all lines in the
 second <commit> that differ from the first <commit>.
@@ -78,6 +79,7 @@ def main():
       'm',  # ObjC
       'mm',  # ObjC++
       'cc', 'cp', 'cpp', 'c++', 'cxx', 'hh', 'hpp', 'hxx',  # C++
+      'ccm', 'cppm', 'cxxm', 'c++m',  # C++ Modules
       'cu', 'cuh',  # CUDA
       # Other languages that clang-format supports
       'proto', 'protodevel',  # Protocol Buffers
@@ -112,6 +114,8 @@ def main():
                  help='select hunks interactively')
   p.add_argument('-q', '--quiet', action='count', default=0,
                  help='print less information')
+  p.add_argument('--staged', '--cached', action='store_true',
+                 help='format lines in the stage instead of the working dir')
   p.add_argument('--style',
                  default=config.get('clangformat.style', None),
                  help='passed to clang-format'),
@@ -131,12 +135,14 @@ def main():
 
   commits, files = interpret_args(opts.args, dash_dash, opts.commit)
   if len(commits) > 1:
+    if opts.staged:
+      die('--staged is not allowed when two commits are given')
     if not opts.diff:
       die('--diff is required when two commits are given')
   else:
     if len(commits) > 2:
       die('at most two commits allowed; %d given' % len(commits))
-  changed_lines = compute_diff_and_extract_lines(commits, files)
+  changed_lines = compute_diff_and_extract_lines(commits, files, opts.staged)
   if opts.verbose >= 1:
     ignored_files = set(changed_lines)
   filter_by_extension(changed_lines, opts.extensions.lower().split(','))
@@ -275,9 +281,9 @@ def get_object_type(value):
   return convert_string(stdout.strip())
 
 
-def compute_diff_and_extract_lines(commits, files):
+def compute_diff_and_extract_lines(commits, files, staged):
   """Calls compute_diff() followed by extract_lines()."""
-  diff_process = compute_diff(commits, files)
+  diff_process = compute_diff(commits, files, staged)
   changed_lines = extract_lines(diff_process.stdout)
   diff_process.stdout.close()
   diff_process.wait()
@@ -287,17 +293,21 @@ def compute_diff_and_extract_lines(commits, files):
   return changed_lines
 
 
-def compute_diff(commits, files):
+def compute_diff(commits, files, staged):
   """Return a subprocess object producing the diff from `commits`.
 
   The return value's `stdin` file object will produce a patch with the
-  differences between the working directory and the first commit if a single
-  one was specified, or the difference between both specified commits, filtered
-  on `files` (if non-empty).  Zero context lines are used in the patch."""
+  differences between the working directory (or stage if --staged is used) and
+  the first commit if a single one was specified, or the difference between
+  both specified commits, filtered on `files` (if non-empty).
+  Zero context lines are used in the patch."""
   git_tool = 'diff-index'
+  extra_args = []
   if len(commits) > 1:
     git_tool = 'diff-tree'
-  cmd = ['git', git_tool, '-p', '-U0'] + commits + ['--']
+  elif staged:
+    extra_args += ['--cached']
+  cmd = ['git', git_tool, '-p', '-U0'] + extra_args + commits + ['--']
   cmd.extend(files)
   p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
   p.stdin.close()

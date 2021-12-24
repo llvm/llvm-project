@@ -137,8 +137,10 @@ bool X86IndirectBranchTrackingPass::runOnMachineFunction(MachineFunction &MF) {
       Changed |= addENDBR(MBB, MBB.begin());
 
     for (MachineBasicBlock::iterator I = MBB.begin(); I != MBB.end(); ++I) {
-      if (I->isCall() && IsCallReturnTwice(I->getOperand(0)))
+      if (I->isCall() && I->getNumOperands() > 0 &&
+          IsCallReturnTwice(I->getOperand(0))) {
         Changed |= addENDBR(MBB, std::next(I));
+      }
     }
 
     // Exception handle may indirectly jump to catch pad, So we should add

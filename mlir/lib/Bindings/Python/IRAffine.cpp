@@ -98,10 +98,13 @@ public:
 
   static void bind(py::module &m) {
     auto cls = ClassTy(m, DerivedTy::pyClassName, py::module_local());
-    cls.def(py::init<PyAffineExpr &>());
-    cls.def_static("isinstance", [](PyAffineExpr &otherAffineExpr) -> bool {
-      return DerivedTy::isaFunction(otherAffineExpr);
-    });
+    cls.def(py::init<PyAffineExpr &>(), py::arg("expr"));
+    cls.def_static(
+        "isinstance",
+        [](PyAffineExpr &otherAffineExpr) -> bool {
+          return DerivedTy::isaFunction(otherAffineExpr);
+        },
+        py::arg("other"));
     DerivedTy::bindDerived(cls);
   }
 
@@ -205,6 +208,18 @@ public:
     return PyAffineAddExpr(lhs.getContext(), expr);
   }
 
+  static PyAffineAddExpr getRHSConstant(PyAffineExpr lhs, intptr_t rhs) {
+    MlirAffineExpr expr = mlirAffineAddExprGet(
+        lhs, mlirAffineConstantExprGet(mlirAffineExprGetContext(lhs), rhs));
+    return PyAffineAddExpr(lhs.getContext(), expr);
+  }
+
+  static PyAffineAddExpr getLHSConstant(intptr_t lhs, PyAffineExpr rhs) {
+    MlirAffineExpr expr = mlirAffineAddExprGet(
+        mlirAffineConstantExprGet(mlirAffineExprGetContext(rhs), lhs), rhs);
+    return PyAffineAddExpr(rhs.getContext(), expr);
+  }
+
   static void bindDerived(ClassTy &c) {
     c.def_static("get", &PyAffineAddExpr::get);
   }
@@ -220,6 +235,18 @@ public:
   static PyAffineMulExpr get(PyAffineExpr lhs, PyAffineExpr rhs) {
     MlirAffineExpr expr = mlirAffineMulExprGet(lhs, rhs);
     return PyAffineMulExpr(lhs.getContext(), expr);
+  }
+
+  static PyAffineMulExpr getRHSConstant(PyAffineExpr lhs, intptr_t rhs) {
+    MlirAffineExpr expr = mlirAffineMulExprGet(
+        lhs, mlirAffineConstantExprGet(mlirAffineExprGetContext(lhs), rhs));
+    return PyAffineMulExpr(lhs.getContext(), expr);
+  }
+
+  static PyAffineMulExpr getLHSConstant(intptr_t lhs, PyAffineExpr rhs) {
+    MlirAffineExpr expr = mlirAffineMulExprGet(
+        mlirAffineConstantExprGet(mlirAffineExprGetContext(rhs), lhs), rhs);
+    return PyAffineMulExpr(rhs.getContext(), expr);
   }
 
   static void bindDerived(ClassTy &c) {
@@ -239,6 +266,18 @@ public:
     return PyAffineModExpr(lhs.getContext(), expr);
   }
 
+  static PyAffineModExpr getRHSConstant(PyAffineExpr lhs, intptr_t rhs) {
+    MlirAffineExpr expr = mlirAffineModExprGet(
+        lhs, mlirAffineConstantExprGet(mlirAffineExprGetContext(lhs), rhs));
+    return PyAffineModExpr(lhs.getContext(), expr);
+  }
+
+  static PyAffineModExpr getLHSConstant(intptr_t lhs, PyAffineExpr rhs) {
+    MlirAffineExpr expr = mlirAffineModExprGet(
+        mlirAffineConstantExprGet(mlirAffineExprGetContext(rhs), lhs), rhs);
+    return PyAffineModExpr(rhs.getContext(), expr);
+  }
+
   static void bindDerived(ClassTy &c) {
     c.def_static("get", &PyAffineModExpr::get);
   }
@@ -256,6 +295,18 @@ public:
     return PyAffineFloorDivExpr(lhs.getContext(), expr);
   }
 
+  static PyAffineFloorDivExpr getRHSConstant(PyAffineExpr lhs, intptr_t rhs) {
+    MlirAffineExpr expr = mlirAffineFloorDivExprGet(
+        lhs, mlirAffineConstantExprGet(mlirAffineExprGetContext(lhs), rhs));
+    return PyAffineFloorDivExpr(lhs.getContext(), expr);
+  }
+
+  static PyAffineFloorDivExpr getLHSConstant(intptr_t lhs, PyAffineExpr rhs) {
+    MlirAffineExpr expr = mlirAffineFloorDivExprGet(
+        mlirAffineConstantExprGet(mlirAffineExprGetContext(rhs), lhs), rhs);
+    return PyAffineFloorDivExpr(rhs.getContext(), expr);
+  }
+
   static void bindDerived(ClassTy &c) {
     c.def_static("get", &PyAffineFloorDivExpr::get);
   }
@@ -271,6 +322,18 @@ public:
   static PyAffineCeilDivExpr get(PyAffineExpr lhs, PyAffineExpr rhs) {
     MlirAffineExpr expr = mlirAffineCeilDivExprGet(lhs, rhs);
     return PyAffineCeilDivExpr(lhs.getContext(), expr);
+  }
+
+  static PyAffineCeilDivExpr getRHSConstant(PyAffineExpr lhs, intptr_t rhs) {
+    MlirAffineExpr expr = mlirAffineCeilDivExprGet(
+        lhs, mlirAffineConstantExprGet(mlirAffineExprGetContext(lhs), rhs));
+    return PyAffineCeilDivExpr(lhs.getContext(), expr);
+  }
+
+  static PyAffineCeilDivExpr getLHSConstant(intptr_t lhs, PyAffineExpr rhs) {
+    MlirAffineExpr expr = mlirAffineCeilDivExprGet(
+        mlirAffineConstantExprGet(mlirAffineExprGetContext(rhs), lhs), rhs);
+    return PyAffineCeilDivExpr(rhs.getContext(), expr);
   }
 
   static void bindDerived(ClassTy &c) {
@@ -334,7 +397,7 @@ public:
 private:
   PyAffineMap affineMap;
 };
-} // end namespace
+} // namespace
 
 bool PyAffineMap::operator==(const PyAffineMap &other) {
   return mlirAffineMapEqual(affineMap, other.affineMap);
@@ -435,17 +498,19 @@ void mlir::python::populateIRAffine(py::module &m) {
       .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR,
                              &PyAffineExpr::getCapsule)
       .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyAffineExpr::createFromCapsule)
-      .def("__add__",
-           [](PyAffineExpr &self, PyAffineExpr &other) {
-             return PyAffineAddExpr::get(self, other);
-           })
-      .def("__mul__",
-           [](PyAffineExpr &self, PyAffineExpr &other) {
-             return PyAffineMulExpr::get(self, other);
-           })
-      .def("__mod__",
-           [](PyAffineExpr &self, PyAffineExpr &other) {
-             return PyAffineModExpr::get(self, other);
+      .def("__add__", &PyAffineAddExpr::get)
+      .def("__add__", &PyAffineAddExpr::getRHSConstant)
+      .def("__radd__", &PyAffineAddExpr::getRHSConstant)
+      .def("__mul__", &PyAffineMulExpr::get)
+      .def("__mul__", &PyAffineMulExpr::getRHSConstant)
+      .def("__rmul__", &PyAffineMulExpr::getRHSConstant)
+      .def("__mod__", &PyAffineModExpr::get)
+      .def("__mod__", &PyAffineModExpr::getRHSConstant)
+      .def("__rmod__",
+           [](PyAffineExpr &self, intptr_t other) {
+             return PyAffineModExpr::get(
+                 PyAffineConstantExpr::get(other, *self.getContext().get()),
+                 self);
            })
       .def("__sub__",
            [](PyAffineExpr &self, PyAffineExpr &other) {
@@ -453,6 +518,17 @@ void mlir::python::populateIRAffine(py::module &m) {
                  PyAffineConstantExpr::get(-1, *self.getContext().get());
              return PyAffineAddExpr::get(self,
                                          PyAffineMulExpr::get(negOne, other));
+           })
+      .def("__sub__",
+           [](PyAffineExpr &self, intptr_t other) {
+             return PyAffineAddExpr::get(
+                 self,
+                 PyAffineConstantExpr::get(-other, *self.getContext().get()));
+           })
+      .def("__rsub__",
+           [](PyAffineExpr &self, intptr_t other) {
+             return PyAffineAddExpr::getLHSConstant(
+                 other, PyAffineMulExpr::getLHSConstant(-1, self));
            })
       .def("__eq__", [](PyAffineExpr &self,
                         PyAffineExpr &other) { return self == other; })
@@ -474,24 +550,63 @@ void mlir::python::populateIRAffine(py::module &m) {
              printAccum.parts.append(")");
              return printAccum.join();
            })
+      .def("__hash__",
+           [](PyAffineExpr &self) {
+             return static_cast<size_t>(llvm::hash_value(self.get().ptr));
+           })
       .def_property_readonly(
           "context",
           [](PyAffineExpr &self) { return self.getContext().getObject(); })
+      .def("compose",
+           [](PyAffineExpr &self, PyAffineMap &other) {
+             return PyAffineExpr(self.getContext(),
+                                 mlirAffineExprCompose(self, other));
+           })
       .def_static(
           "get_add", &PyAffineAddExpr::get,
           "Gets an affine expression containing a sum of two expressions.")
+      .def_static("get_add", &PyAffineAddExpr::getLHSConstant,
+                  "Gets an affine expression containing a sum of a constant "
+                  "and another expression.")
+      .def_static("get_add", &PyAffineAddExpr::getRHSConstant,
+                  "Gets an affine expression containing a sum of an expression "
+                  "and a constant.")
       .def_static(
           "get_mul", &PyAffineMulExpr::get,
           "Gets an affine expression containing a product of two expressions.")
+      .def_static("get_mul", &PyAffineMulExpr::getLHSConstant,
+                  "Gets an affine expression containing a product of a "
+                  "constant and another expression.")
+      .def_static("get_mul", &PyAffineMulExpr::getRHSConstant,
+                  "Gets an affine expression containing a product of an "
+                  "expression and a constant.")
       .def_static("get_mod", &PyAffineModExpr::get,
                   "Gets an affine expression containing the modulo of dividing "
                   "one expression by another.")
+      .def_static("get_mod", &PyAffineModExpr::getLHSConstant,
+                  "Gets a semi-affine expression containing the modulo of "
+                  "dividing a constant by an expression.")
+      .def_static("get_mod", &PyAffineModExpr::getRHSConstant,
+                  "Gets an affine expression containing the module of dividing"
+                  "an expression by a constant.")
       .def_static("get_floor_div", &PyAffineFloorDivExpr::get,
                   "Gets an affine expression containing the rounded-down "
                   "result of dividing one expression by another.")
+      .def_static("get_floor_div", &PyAffineFloorDivExpr::getLHSConstant,
+                  "Gets a semi-affine expression containing the rounded-down "
+                  "result of dividing a constant by an expression.")
+      .def_static("get_floor_div", &PyAffineFloorDivExpr::getRHSConstant,
+                  "Gets an affine expression containing the rounded-down "
+                  "result of dividing an expression by a constant.")
       .def_static("get_ceil_div", &PyAffineCeilDivExpr::get,
                   "Gets an affine expression containing the rounded-up result "
                   "of dividing one expression by another.")
+      .def_static("get_ceil_div", &PyAffineCeilDivExpr::getLHSConstant,
+                  "Gets a semi-affine expression containing the rounded-up "
+                  "result of dividing a constant by an expression.")
+      .def_static("get_ceil_div", &PyAffineCeilDivExpr::getRHSConstant,
+                  "Gets an affine expression containing the rounded-up result "
+                  "of dividing an expression by a constant.")
       .def_static("get_constant", &PyAffineConstantExpr::get, py::arg("value"),
                   py::arg("context") = py::none(),
                   "Gets a constant affine expression with the given value.")
@@ -542,6 +657,10 @@ void mlir::python::populateIRAffine(py::module &m) {
              printAccum.parts.append(")");
              return printAccum.join();
            })
+      .def("__hash__",
+           [](PyAffineMap &self) {
+             return static_cast<size_t>(llvm::hash_value(self.get().ptr));
+           })
       .def_static("compress_unused_symbols",
                   [](py::list affineMaps, DefaultingPyMlirContext context) {
                     SmallVector<MlirAffineMap> maps;
@@ -557,7 +676,7 @@ void mlir::python::populateIRAffine(py::module &m) {
                     std::vector<PyAffineMap> res;
                     res.reserve(compressed.size());
                     for (auto m : compressed)
-                      res.push_back(PyAffineMap(context->getRef(), m));
+                      res.emplace_back(context->getRef(), m);
                     return res;
                   })
       .def_property_readonly(
@@ -632,41 +751,50 @@ void mlir::python::populateIRAffine(py::module &m) {
           },
           py::arg("permutation"), py::arg("context") = py::none(),
           "Gets an affine map that permutes its inputs.")
-      .def("get_submap",
-           [](PyAffineMap &self, std::vector<intptr_t> &resultPos) {
-             intptr_t numResults = mlirAffineMapGetNumResults(self);
-             for (intptr_t pos : resultPos) {
-               if (pos < 0 || pos >= numResults)
-                 throw py::value_error("result position out of bounds");
-             }
-             MlirAffineMap affineMap = mlirAffineMapGetSubMap(
-                 self, resultPos.size(), resultPos.data());
-             return PyAffineMap(self.getContext(), affineMap);
-           })
-      .def("get_major_submap",
-           [](PyAffineMap &self, intptr_t nResults) {
-             if (nResults >= mlirAffineMapGetNumResults(self))
-               throw py::value_error("number of results out of bounds");
-             MlirAffineMap affineMap =
-                 mlirAffineMapGetMajorSubMap(self, nResults);
-             return PyAffineMap(self.getContext(), affineMap);
-           })
-      .def("get_minor_submap",
-           [](PyAffineMap &self, intptr_t nResults) {
-             if (nResults >= mlirAffineMapGetNumResults(self))
-               throw py::value_error("number of results out of bounds");
-             MlirAffineMap affineMap =
-                 mlirAffineMapGetMinorSubMap(self, nResults);
-             return PyAffineMap(self.getContext(), affineMap);
-           })
-      .def("replace",
-           [](PyAffineMap &self, PyAffineExpr &expression,
-              PyAffineExpr &replacement, intptr_t numResultDims,
-              intptr_t numResultSyms) {
-             MlirAffineMap affineMap = mlirAffineMapReplace(
-                 self, expression, replacement, numResultDims, numResultSyms);
-             return PyAffineMap(self.getContext(), affineMap);
-           })
+      .def(
+          "get_submap",
+          [](PyAffineMap &self, std::vector<intptr_t> &resultPos) {
+            intptr_t numResults = mlirAffineMapGetNumResults(self);
+            for (intptr_t pos : resultPos) {
+              if (pos < 0 || pos >= numResults)
+                throw py::value_error("result position out of bounds");
+            }
+            MlirAffineMap affineMap = mlirAffineMapGetSubMap(
+                self, resultPos.size(), resultPos.data());
+            return PyAffineMap(self.getContext(), affineMap);
+          },
+          py::arg("result_positions"))
+      .def(
+          "get_major_submap",
+          [](PyAffineMap &self, intptr_t nResults) {
+            if (nResults >= mlirAffineMapGetNumResults(self))
+              throw py::value_error("number of results out of bounds");
+            MlirAffineMap affineMap =
+                mlirAffineMapGetMajorSubMap(self, nResults);
+            return PyAffineMap(self.getContext(), affineMap);
+          },
+          py::arg("n_results"))
+      .def(
+          "get_minor_submap",
+          [](PyAffineMap &self, intptr_t nResults) {
+            if (nResults >= mlirAffineMapGetNumResults(self))
+              throw py::value_error("number of results out of bounds");
+            MlirAffineMap affineMap =
+                mlirAffineMapGetMinorSubMap(self, nResults);
+            return PyAffineMap(self.getContext(), affineMap);
+          },
+          py::arg("n_results"))
+      .def(
+          "replace",
+          [](PyAffineMap &self, PyAffineExpr &expression,
+             PyAffineExpr &replacement, intptr_t numResultDims,
+             intptr_t numResultSyms) {
+            MlirAffineMap affineMap = mlirAffineMapReplace(
+                self, expression, replacement, numResultDims, numResultSyms);
+            return PyAffineMap(self.getContext(), affineMap);
+          },
+          py::arg("expr"), py::arg("replacement"), py::arg("n_result_dims"),
+          py::arg("n_result_syms"))
       .def_property_readonly(
           "is_permutation",
           [](PyAffineMap &self) { return mlirAffineMapIsPermutation(self); })
@@ -714,6 +842,10 @@ void mlir::python::populateIRAffine(py::module &m) {
              printAccum.parts.append(")");
              return printAccum.join();
            })
+      .def("__hash__",
+           [](PyIntegerSet &self) {
+             return static_cast<size_t>(llvm::hash_value(self.get().ptr));
+           })
       .def_property_readonly(
           "context",
           [](PyIntegerSet &self) { return self.getContext().getObject(); })
@@ -756,32 +888,35 @@ void mlir::python::populateIRAffine(py::module &m) {
           },
           py::arg("num_dims"), py::arg("num_symbols"),
           py::arg("context") = py::none())
-      .def("get_replaced",
-           [](PyIntegerSet &self, py::list dimExprs, py::list symbolExprs,
-              intptr_t numResultDims, intptr_t numResultSymbols) {
-             if (static_cast<intptr_t>(dimExprs.size()) !=
-                 mlirIntegerSetGetNumDims(self))
-               throw py::value_error(
-                   "Expected the number of dimension replacement expressions "
-                   "to match that of dimensions");
-             if (static_cast<intptr_t>(symbolExprs.size()) !=
-                 mlirIntegerSetGetNumSymbols(self))
-               throw py::value_error(
-                   "Expected the number of symbol replacement expressions "
-                   "to match that of symbols");
+      .def(
+          "get_replaced",
+          [](PyIntegerSet &self, py::list dimExprs, py::list symbolExprs,
+             intptr_t numResultDims, intptr_t numResultSymbols) {
+            if (static_cast<intptr_t>(dimExprs.size()) !=
+                mlirIntegerSetGetNumDims(self))
+              throw py::value_error(
+                  "Expected the number of dimension replacement expressions "
+                  "to match that of dimensions");
+            if (static_cast<intptr_t>(symbolExprs.size()) !=
+                mlirIntegerSetGetNumSymbols(self))
+              throw py::value_error(
+                  "Expected the number of symbol replacement expressions "
+                  "to match that of symbols");
 
-             SmallVector<MlirAffineExpr> dimAffineExprs, symbolAffineExprs;
-             pyListToVector<PyAffineExpr>(
-                 dimExprs, dimAffineExprs,
-                 "attempting to create an IntegerSet by replacing dimensions");
-             pyListToVector<PyAffineExpr>(
-                 symbolExprs, symbolAffineExprs,
-                 "attempting to create an IntegerSet by replacing symbols");
-             MlirIntegerSet set = mlirIntegerSetReplaceGet(
-                 self, dimAffineExprs.data(), symbolAffineExprs.data(),
-                 numResultDims, numResultSymbols);
-             return PyIntegerSet(self.getContext(), set);
-           })
+            SmallVector<MlirAffineExpr> dimAffineExprs, symbolAffineExprs;
+            pyListToVector<PyAffineExpr>(
+                dimExprs, dimAffineExprs,
+                "attempting to create an IntegerSet by replacing dimensions");
+            pyListToVector<PyAffineExpr>(
+                symbolExprs, symbolAffineExprs,
+                "attempting to create an IntegerSet by replacing symbols");
+            MlirIntegerSet set = mlirIntegerSetReplaceGet(
+                self, dimAffineExprs.data(), symbolAffineExprs.data(),
+                numResultDims, numResultSymbols);
+            return PyIntegerSet(self.getContext(), set);
+          },
+          py::arg("dim_exprs"), py::arg("symbol_exprs"),
+          py::arg("num_result_dims"), py::arg("num_result_symbols"))
       .def_property_readonly("is_canonical_empty",
                              [](PyIntegerSet &self) {
                                return mlirIntegerSetIsCanonicalEmpty(self);

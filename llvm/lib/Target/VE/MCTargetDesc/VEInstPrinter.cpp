@@ -23,14 +23,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "ve-asmprinter"
 
-// The generated AsmMatcher VEGenAsmWriter uses "VE" as the target
-// namespace.
-namespace llvm {
-namespace VE {
-using namespace VE;
-}
-} // namespace llvm
-
 #define GET_INSTRUCTION_NAME
 #define PRINT_ALIAS_INSTR
 #include "VEGenAsmWriter.inc"
@@ -62,13 +54,10 @@ void VEInstPrinter::printOperand(const MCInst *MI, int OpNum,
   }
 
   if (MO.isImm()) {
-    switch (MI->getOpcode()) {
-    default:
-      // Expects signed 32bit literals
-      int32_t TruncatedImm = static_cast<int32_t>(MO.getImm());
-      O << TruncatedImm;
-      return;
-    }
+    // Expects signed 32bit literals.
+    int32_t TruncatedImm = static_cast<int32_t>(MO.getImm());
+    O << TruncatedImm;
+    return;
   }
 
   assert(MO.isExpr() && "Unknown operand kind in printOperand");

@@ -17,6 +17,7 @@ static void race() {
 }
 
 struct X {
+  __attribute__((noinline))
   X() { atexit(race); }
 } x;
 
@@ -27,3 +28,9 @@ int main() {
 
 // CHECK: DONE
 // CHECK: WARNING: ThreadSanitizer: data race
+// CHECK:   Write of size 4
+// CHECK:     #0 thread
+// CHECK:   Previous write of size 4
+// CHECK:     #0 race
+// CHECK:     #1 at_exit_callback_installed_at
+// CHECK:     #2 X

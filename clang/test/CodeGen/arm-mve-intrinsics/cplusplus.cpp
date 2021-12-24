@@ -2,6 +2,8 @@
 // RUN: %clang_cc1 -triple thumbv8.1m.main-none-none-eabi -target-feature +mve.fp -mfloat-abi hard -fallow-half-arguments-and-returns -disable-O0-optnone -S -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s
 // RUN: %clang_cc1 -triple thumbv8.1m.main-none-none-eabi -target-feature +mve.fp -mfloat-abi hard -fallow-half-arguments-and-returns -disable-O0-optnone -DPOLYMORPHIC -S -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s
 
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 #include <arm_mve.h>
 
 // CHECK-LABEL: @_Z16test_vbicq_n_s1617__simd128_int16_t(

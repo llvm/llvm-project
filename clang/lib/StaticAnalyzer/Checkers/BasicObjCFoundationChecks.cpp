@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
@@ -20,9 +19,11 @@
 #include "clang/AST/StmtObjC.h"
 #include "clang/Analysis/DomainSpecific/CocoaConventions.h"
 #include "clang/Analysis/SelectorExtras.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExplodedGraph.h"
@@ -533,10 +534,12 @@ void CFNumberChecker::checkPreStmt(const CallExpr *CE,
 namespace {
 class CFRetainReleaseChecker : public Checker<check::PreCall> {
   mutable APIMisuse BT{this, "null passed to CF memory management function"};
-  CallDescription CFRetain{"CFRetain", 1},
-                  CFRelease{"CFRelease", 1},
-                  CFMakeCollectable{"CFMakeCollectable", 1},
-                  CFAutorelease{"CFAutorelease", 1};
+  const CallDescriptionSet ModelledCalls = {
+      {"CFRetain", 1},
+      {"CFRelease", 1},
+      {"CFMakeCollectable", 1},
+      {"CFAutorelease", 1},
+  };
 
 public:
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
@@ -550,8 +553,7 @@ void CFRetainReleaseChecker::checkPreCall(const CallEvent &Call,
     return;
 
   // Check if we called CFRetain/CFRelease/CFMakeCollectable/CFAutorelease.
-  if (!(Call.isCalled(CFRetain) || Call.isCalled(CFRelease) ||
-        Call.isCalled(CFMakeCollectable) || Call.isCalled(CFAutorelease)))
+  if (!ModelledCalls.contains(Call))
     return;
 
   // Get the argument's value.

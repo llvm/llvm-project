@@ -215,3 +215,7 @@ defm add_symbol
          "compatibility: debug, constructor, warning, indirect, synthetic, "
          "unique-object, before.">,
       MetaVarName<"name=[section:]value[,flags]">;
+
+defm update_section
+    : Eq<"update-section", "Add section <name> with contents from a file <file>.">,
+      MetaVarName<"name=file">;

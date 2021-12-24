@@ -14,6 +14,7 @@
 ; CHECK-NEXT: Scoped NoAlias Alias Analysis
 ; CHECK-NEXT: Create Garbage Collector Module Metadata
 ; CHECK-NEXT: Machine Branch Probability Analysis
+; CHECK-NEXT: Default Regalloc Eviction Advisor
 ; CHECK-NEXT:   ModulePass Manager
 ; CHECK-NEXT:     Pre-ISel Intrinsic Lowering
 ; CHECK-NEXT:     FunctionPass Manager
@@ -195,6 +196,7 @@
 ; CHECK-NEXT:       Insert XRay ops
 ; CHECK-NEXT:       Implement the 'patchable-function' attribute
 ; CHECK-NEXT:       AArch64 load / store optimization pass
+; CHECK-NEXT:       Workaround A53 erratum 835769 pass
 ; CHECK-NEXT:       AArch64 Branch Targets
 ; CHECK-NEXT:       Branch relaxation pass
 ; CHECK-NEXT:       AArch64 Compress Jump Tables

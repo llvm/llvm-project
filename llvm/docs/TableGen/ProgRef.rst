@@ -217,7 +217,7 @@ TableGen provides "bang operators" that have a wide variety of uses:
 
 .. productionlist::
    BangOperator: one of
-               : !add        !and         !cast        !con         !dag 
+               : !add        !and         !cast        !con         !dag
                : !empty      !eq          !filter      !find        !foldl
                : !foreach    !ge          !getdagop    !gt          !head
                : !if         !interleave  !isa         !le          !listconcat
@@ -550,14 +550,14 @@ files.
    Statement: `Assert` | `Class` | `Def` | `Defm` | `Defset` | `Defvar`
             :| `Foreach` | `If` | `Let` | `MultiClass`
 
-The following sections describe each of these top-level statements. 
+The following sections describe each of these top-level statements.
 
 
 ``class`` --- define an abstract record class
 ---------------------------------------------
 
 A ``class`` statement defines an abstract record class from which other
-classes and records can inherit. 
+classes and records can inherit.
 
 .. productionlist::
    Class: "class" `ClassID` [`TemplateArgList`] `RecordBody`
@@ -924,7 +924,7 @@ See `Examples: multiclasses and defms`_ for examples.
 
 Once multiclasses have been defined, you use the ``defm`` statement to
 "invoke" them and process the multiple record definitions in those
-multiclasses. Those record definitions are specified by ``def`` 
+multiclasses. Those record definitions are specified by ``def``
 statements in the multiclasses, and indirectly by ``defm`` statements.
 
 .. productionlist::
@@ -1324,7 +1324,7 @@ A directed acyclic graph can be represented directly in TableGen using the
 ``dag`` datatype. A DAG node consists of an operator and zero or more
 arguments (or operands). Each argument can be of any desired type. By using
 another DAG node as an argument, an arbitrary graph of DAG nodes can be
-built. 
+built.
 
 The syntax of a ``dag`` instance is:
 
@@ -1332,7 +1332,7 @@ The syntax of a ``dag`` instance is:
 
 The operator must be present and must be a record. There can be zero or more
 arguments, separated by commas. The operator and arguments can have three
-formats. 
+formats.
 
 ====================== =============================================
 Format                 Meaning
@@ -1398,7 +1398,7 @@ abstract records and so go through the same steps.
 
 5. Make a pass over all the fields to resolve any inter-field references.
 
-6. Add the record to the master record list.
+6. Add the record to the final record list.
 
 Because references between fields are resolved (step 5) after ``let`` bindings are
 applied (step 3), the ``let`` statement has unusual power. For example:
@@ -1625,7 +1625,7 @@ and non-0 as true.
 
 ``!eq(`` *a*\ `,` *b*\ ``)``
     This operator produces 1 if *a* is equal to *b*; 0 otherwise.
-    The arguments must be ``bit``, ``bits``, ``int``, ``string``, or 
+    The arguments must be ``bit``, ``bits``, ``int``, ``string``, or
     record values. Use ``!cast<string>`` to compare other types of objects.
 
 ``!filter(``\ *var*\ ``,`` *list*\ ``,`` *predicate*\ ``)``

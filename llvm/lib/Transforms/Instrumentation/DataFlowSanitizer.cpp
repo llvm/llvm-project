@@ -232,6 +232,12 @@ static cl::opt<int> ClTrackOrigins("dfsan-track-origins",
                                    cl::desc("Track origins of labels"),
                                    cl::Hidden, cl::init(0));
 
+static cl::opt<bool> ClIgnorePersonalityRoutine(
+    "dfsan-ignore-personality-routine",
+    cl::desc("If a personality routine is marked uninstrumented from the ABI "
+             "list, do not create a wrapper for it."),
+    cl::Hidden, cl::init(false));
+
 static StringRef getGlobalTypeString(const GlobalValue &G) {
   // Types of GlobalVariables are always pointer types.
   Type *GType = G.getValueType();
@@ -1115,7 +1121,7 @@ DataFlowSanitizer::buildWrapperFunction(Function *F, StringRef NewFName,
 
   BasicBlock *BB = BasicBlock::Create(*Ctx, "entry", NewF);
   if (F->isVarArg()) {
-    NewF->removeFnAttrs(AttrBuilder().addAttribute("split-stack"));
+    NewF->removeFnAttr("split-stack");
     CallInst::Create(DFSanVarargWrapperFn,
                      IRBuilder<>(BB).CreateGlobalStringPtr(F->getName()), "",
                      BB);
@@ -1357,34 +1363,46 @@ bool DataFlowSanitizer::runImpl(Module &M) {
   std::vector<Function *> FnsToInstrument;
   SmallPtrSet<Function *, 2> FnsWithNativeABI;
   SmallPtrSet<Function *, 2> FnsWithForceZeroLabel;
+  SmallPtrSet<Constant *, 1> PersonalityFns;
   for (Function &F : M)
-    if (!F.isIntrinsic() && !DFSanRuntimeFunctions.contains(&F))
+    if (!F.isIntrinsic() && !DFSanRuntimeFunctions.contains(&F)) {
       FnsToInstrument.push_back(&F);
+      if (F.hasPersonalityFn())
+        PersonalityFns.insert(F.getPersonalityFn()->stripPointerCasts());
+    }
+
+  if (ClIgnorePersonalityRoutine) {
+    for (auto *C : PersonalityFns) {
+      assert(isa<Function>(C) && "Personality routine is not a function!");
+      Function *F = cast<Function>(C);
+      if (!isInstrumented(F))
+        FnsToInstrument.erase(
+            std::remove(FnsToInstrument.begin(), FnsToInstrument.end(), F),
+            FnsToInstrument.end());
+    }
+  }
 
   // Give function aliases prefixes when necessary, and build wrappers where the
   // instrumentedness is inconsistent.
-  for (Module::alias_iterator AI = M.alias_begin(), AE = M.alias_end();
-       AI != AE;) {
-    GlobalAlias *GA = &*AI;
-    ++AI;
+  for (GlobalAlias &GA : llvm::make_early_inc_range(M.aliases())) {
     // Don't stop on weak.  We assume people aren't playing games with the
     // instrumentedness of overridden weak aliases.
-    auto *F = dyn_cast<Function>(GA->getAliaseeObject());
+    auto *F = dyn_cast<Function>(GA.getAliaseeObject());
     if (!F)
       continue;
 
-    bool GAInst = isInstrumented(GA), FInst = isInstrumented(F);
+    bool GAInst = isInstrumented(&GA), FInst = isInstrumented(F);
     if (GAInst && FInst) {
-      addGlobalNameSuffix(GA);
+      addGlobalNameSuffix(&GA);
     } else if (GAInst != FInst) {
       // Non-instrumented alias of an instrumented function, or vice versa.
       // Replace the alias with a native-ABI wrapper of the aliasee.  The pass
       // below will take care of instrumenting it.
       Function *NewF =
-          buildWrapperFunction(F, "", GA->getLinkage(), F->getFunctionType());
-      GA->replaceAllUsesWith(ConstantExpr::getBitCast(NewF, GA->getType()));
-      NewF->takeName(GA);
-      GA->eraseFromParent();
+          buildWrapperFunction(F, "", GA.getLinkage(), F->getFunctionType());
+      GA.replaceAllUsesWith(ConstantExpr::getBitCast(NewF, GA.getType()));
+      NewF->takeName(&GA);
+      GA.eraseFromParent();
       FnsToInstrument.push_back(NewF);
     }
   }

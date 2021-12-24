@@ -11,7 +11,7 @@ define i32 @test1(i32 %a, i32 %b) nounwind ssp {
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractvalue { i32, i1 } [[SADD]], 1
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    tail call void @throwAnExceptionOrWhatever() #2
+; CHECK-NEXT:    tail call void @throwAnExceptionOrWhatever() #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[SADD_RESULT:%.*]] = extractvalue { i32, i1 } [[SADD]], 0
@@ -49,7 +49,7 @@ define i32 @test2(i32 %a, i32 %b, i64* %P) nounwind ssp {
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[ADD_OFF]], 4294967295
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    tail call void @throwAnExceptionOrWhatever() #2
+; CHECK-NEXT:    tail call void @throwAnExceptionOrWhatever() #[[ATTR2]]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[CONV9:%.*]] = trunc i64 [[ADD]] to i32
@@ -82,11 +82,11 @@ define i64 @test3(i32 %a, i32 %b) nounwind ssp {
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[A:%.*]] to i64
 ; CHECK-NEXT:    [[CONV2:%.*]] = sext i32 [[B:%.*]] to i64
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[CONV2]], [[CONV]]
-; CHECK-NEXT:    [[ADD_OFF:%.*]] = add nsw i64 [[ADD]], 2147483648
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[ADD_OFF]], 4294967295
-; CHECK-NEXT:    br i1 [[TMP0]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[ADD]], -2147483648
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], -4294967296
+; CHECK-NEXT:    br i1 [[TMP1]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    tail call void @throwAnExceptionOrWhatever() #2
+; CHECK-NEXT:    tail call void @throwAnExceptionOrWhatever() #[[ATTR2]]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret i64 [[ADD]]
@@ -116,7 +116,7 @@ define zeroext i8 @test4(i8 signext %a, i8 signext %b) nounwind ssp {
 ; CHECK-NEXT:    [[CMP:%.*]] = extractvalue { i8, i1 } [[SADD]], 1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    tail call void @throwAnExceptionOrWhatever() #2
+; CHECK-NEXT:    tail call void @throwAnExceptionOrWhatever() #[[ATTR2]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[SADD_RESULT:%.*]] = extractvalue { i8, i1 } [[SADD]], 0
@@ -146,11 +146,11 @@ define i32 @test8(i64 %a, i64 %b) nounwind ssp {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[ADD_OFF:%.*]] = add i64 [[ADD]], 2147483648
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[ADD_OFF]], 4294967295
-; CHECK-NEXT:    br i1 [[TMP0]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[ADD]], -2147483648
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], -4294967296
+; CHECK-NEXT:    br i1 [[TMP1]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    tail call void @throwAnExceptionOrWhatever() #2
+; CHECK-NEXT:    tail call void @throwAnExceptionOrWhatever() #[[ATTR2]]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[CONV9:%.*]] = trunc i64 [[ADD]] to i32

@@ -364,6 +364,10 @@ public:
         Outer.add(ET->desugar(), Flags);
       }
 
+      void VisitUsingType(const UsingType *ET) {
+        Outer.add(ET->getFoundDecl(), Flags);
+      }
+
       void VisitInjectedClassNameType(const InjectedClassNameType *ICNT) {
         Outer.add(ICNT->getDecl(), Flags);
       }
@@ -374,7 +378,7 @@ public:
       void VisitDeducedType(const DeducedType *DT) {
         // FIXME: In practice this doesn't work: the AutoType you find inside
         // TypeLoc never has a deduced type. https://llvm.org/PR42914
-        Outer.add(DT->getDeducedType(), Flags | Rel::Underlying);
+        Outer.add(DT->getDeducedType(), Flags);
       }
       void VisitDeducedTemplateSpecializationType(
           const DeducedTemplateSpecializationType *DTST) {
@@ -853,6 +857,13 @@ refInTypeLoc(TypeLoc L, const HeuristicResolver *Resolver) {
         assert(!Ref->Qualifier.hasQualifier() && "qualifier already set");
         Ref->Qualifier = L.getQualifierLoc();
       }
+    }
+
+    void VisitUsingTypeLoc(UsingTypeLoc L) {
+      Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
+                                  L.getLocalSourceRange().getBegin(),
+                                  /*IsDecl=*/false,
+                                  {L.getFoundDecl()}});
     }
 
     void VisitTagTypeLoc(TagTypeLoc L) {

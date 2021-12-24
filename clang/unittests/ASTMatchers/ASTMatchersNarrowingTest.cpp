@@ -1439,6 +1439,22 @@ TEST_P(ASTMatchersTest, IsStaticLocal) {
   EXPECT_TRUE(notMatches("int X;", M));
 }
 
+TEST_P(ASTMatchersTest, IsInitCapture) {
+  if (!GetParam().isCXX11OrLater()) {
+    return;
+  }
+  auto M = varDecl(hasName("vd"), isInitCapture());
+  EXPECT_TRUE(notMatches(
+      "int main() { int vd = 3; auto f = [vd]() { return vd; }; }", M));
+
+  if (!GetParam().isCXX14OrLater()) {
+    return;
+  }
+  EXPECT_TRUE(matches("int main() { auto f = [vd=3]() { return vd; }; }", M));
+  EXPECT_TRUE(matches(
+      "int main() { int x = 3; auto f = [vd=x]() { return vd; }; }", M));
+}
+
 TEST_P(ASTMatchersTest, StorageDuration) {
   StringRef T =
       "void f() { int x; static int y; } int a;static int b;extern int c;";
@@ -4445,5 +4461,42 @@ TEST_P(ASTMatchersTest, HasDirectBase) {
       cxxRecordDecl(hasName("Derived"),
                     hasDirectBase(hasType(cxxRecordDecl(hasName("Base")))))));
 }
+
+TEST_P(ASTMatchersTest, CapturesThis) {
+  if (!GetParam().isCXX11OrLater()) {
+    return;
+  }
+  auto matcher = lambdaExpr(hasAnyCapture(lambdaCapture(capturesThis())));
+  EXPECT_TRUE(matches("class C { int cc; int f() { auto l = [this](){ return "
+                      "cc; }; return l(); } };",
+                      matcher));
+  EXPECT_TRUE(matches("class C { int cc; int f() { auto l = [=](){ return cc; "
+                      "}; return l(); } };",
+                      matcher));
+  EXPECT_TRUE(matches("class C { int cc; int f() { auto l = [&](){ return cc; "
+                      "}; return l(); } };",
+                      matcher));
+  EXPECT_FALSE(matches("class C { int cc; int f() { auto l = [cc](){ return "
+                       "cc; }; return l(); } };",
+                       matcher));
+  EXPECT_FALSE(matches("class C { int this; int f() { auto l = [this](){ "
+                       "return this; }; return l(); } };",
+                       matcher));
+}
+
+TEST_P(ASTMatchersTest, IsImplicit_LambdaCapture) {
+  if (!GetParam().isCXX11OrLater()) {
+    return;
+  }
+  auto matcher = lambdaExpr(hasAnyCapture(
+      lambdaCapture(isImplicit(), capturesVar(varDecl(hasName("cc"))))));
+  EXPECT_TRUE(
+      matches("int main() { int cc; auto f = [&](){ return cc; }; }", matcher));
+  EXPECT_TRUE(
+      matches("int main() { int cc; auto f = [=](){ return cc; }; }", matcher));
+  EXPECT_FALSE(matches("int main() { int cc; auto f = [cc](){ return cc; }; }",
+                       matcher));
+}
+
 } // namespace ast_matchers
 } // namespace clang

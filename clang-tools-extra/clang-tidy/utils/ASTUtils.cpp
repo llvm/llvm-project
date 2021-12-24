@@ -24,7 +24,7 @@ const FunctionDecl *getSurroundingFunction(ASTContext &Context,
                         Statement, Context));
 }
 
-bool IsBinaryOrTernary(const Expr *E) {
+bool isBinaryOrTernary(const Expr *E) {
   const Expr *EBase = E->IgnoreImpCasts();
   if (isa<BinaryOperator>(EBase) || isa<ConditionalOperator>(EBase)) {
     return true;

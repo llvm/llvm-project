@@ -17,6 +17,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "../bindings/lua/lua-swigsafecast.swig"
+#include "../source/Plugins/ScriptInterpreter/Lua/SWIGLuaBridge.h"
 
 // required headers for typemaps
 #include "lldb/Host/File.h"

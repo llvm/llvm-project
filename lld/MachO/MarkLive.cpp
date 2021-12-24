@@ -45,10 +45,15 @@ void markLive() {
   };
 
   auto addSym = [&](Symbol *s) {
+    if (s->used)
+      return;
     s->used = true;
-    if (auto *d = dyn_cast<Defined>(s))
+    if (auto *d = dyn_cast<Defined>(s)) {
       if (d->isec)
         enqueue(d->isec, d->value);
+      if (d->unwindEntry)
+        enqueue(d->unwindEntry, 0);
+    }
   };
 
   // Add GC roots.
@@ -91,8 +96,7 @@ void markLive() {
   }
   // -u symbols
   for (Symbol *sym : config->explicitUndefineds)
-    if (auto *defined = dyn_cast<Defined>(sym))
-      addSym(defined);
+    addSym(sym);
   // local symbols explicitly marked .no_dead_strip
   for (const InputFile *file : inputFiles)
     if (auto *objFile = dyn_cast<ObjFile>(file))
@@ -118,31 +122,6 @@ void markLive() {
     }
   }
 
-  // Dead strip runs before UnwindInfoSection handling so we need to keep
-  // __LD,__compact_unwind alive here.
-  // But that section contains absolute references to __TEXT,__text and
-  // keeps most code alive due to that. So we can't just enqueue() the
-  // section: We must skip the relocations for the functionAddress
-  // in each CompactUnwindEntry.
-  // See also scanEhFrameSection() in lld/ELF/MarkLive.cpp.
-  for (ConcatInputSection *isec : in.unwindInfo->getInputs()) {
-    isec->live = true;
-    const int compactUnwindEntrySize =
-        target->wordSize == 8 ? sizeof(CompactUnwindEntry<uint64_t>)
-                              : sizeof(CompactUnwindEntry<uint32_t>);
-    for (const Reloc &r : isec->relocs) {
-      // This is the relocation for the address of the function itself.
-      // Ignore it, else these would keep everything alive.
-      if (r.offset % compactUnwindEntrySize == 0)
-        continue;
-
-      if (auto *s = r.referent.dyn_cast<Symbol *>())
-        addSym(s);
-      else
-        enqueue(r.referent.get<InputSection *>(), r.addend);
-    }
-  }
-
   do {
     // Mark things reachable from GC roots as live.
     while (!worklist.empty()) {
@@ -156,6 +135,8 @@ void markLive() {
         else
           enqueue(r.referent.get<InputSection *>(), r.addend);
       }
+      for (Defined *d : s->symbols)
+        addSym(d);
     }
 
     // S_ATTR_LIVE_SUPPORT sections are live if they point _to_ a live section.

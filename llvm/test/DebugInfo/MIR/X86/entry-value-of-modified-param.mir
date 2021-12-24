@@ -1,5 +1,9 @@
-# RUN: llc -run-pass=livedebugvalues -march=x86-64 -o - %s | FileCheck %s --check-prefixes=CHECK,VARLOCLDV
-# RUN: llc -force-instr-ref-livedebugvalues=1 -run-pass=livedebugvalues -march=x86-64 -o - %s | FileCheck %s --check-prefixes=CHECK,INSTRREFLDV
+# RUN: llc -run-pass=livedebugvalues -march=x86-64 -o - %s  \
+# RUN:  -experimental-debug-variable-locations=false \
+# RUN: | FileCheck %s --check-prefixes=CHECK,VARLOCLDV
+# RUN: llc -run-pass=livedebugvalues -march=x86-64 -o - %s \
+# RUN:  -experimental-debug-variable-locations=true \
+# RUN: | FileCheck %s --check-prefixes=CHECK,INSTRREFLDV
 #
 #extern void fn1 (int, int, int);
 #
@@ -114,6 +118,6 @@ body:             |
     renamable $al = SETCCr 12, implicit killed $eflags, implicit killed $eax, implicit-def $eax, debug-location !23
     $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !26
     CFI_INSTRUCTION def_cfa_offset 8, debug-location !26
-    RETQ $eax, debug-location !26
+    RET64 $eax, debug-location !26
 
 ...

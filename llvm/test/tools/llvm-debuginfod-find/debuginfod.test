@@ -1,0 +1,77 @@
+# REQUIRES: curl
+# RUN: rm -rf %t
+# RUN: mkdir %t
+# # Query the python server for artifacts
+# RUN: DEBUGINFOD_CACHE_PATH=%t python %s --server-path %S/Inputs \
+# RUN:   --tool-cmd 'llvm-debuginfod-find --dump --executable abcdef' | \
+# RUN:   FileCheck %s --check-prefix=EXECUTABLE
+# RUN: DEBUGINFOD_CACHE_PATH=%t python %s --server-path %S/Inputs \
+# RUN:   --tool-cmd 'llvm-debuginfod-find --dump --source=/directory/file.c abcdef' | \
+# RUN:   FileCheck %s --check-prefix=SOURCE
+# RUN: DEBUGINFOD_CACHE_PATH=%t python %s --server-path %S/Inputs \
+# RUN:   --tool-cmd 'llvm-debuginfod-find --dump --debuginfo abcdef' | \
+# RUN:   FileCheck %s --check-prefix=DEBUGINFO
+
+# EXECUTABLE: fake_executable
+# SOURCE: int foo = 0;
+# DEBUGINFO: fake_debuginfo
+
+# # The artifacts should still be present in the cache without needing to query
+# # the server.
+# RUN: DEBUGINFOD_CACHE_PATH=%t llvm-debuginfod-find --dump --executable abcdef | \
+# RUN:   FileCheck %s --check-prefix=EXECUTABLE
+# RUN: DEBUGINFOD_CACHE_PATH=%t llvm-debuginfod-find --dump \
+# RUN:   --source=/directory/file.c abcdef | \
+# RUN:   FileCheck %s --check-prefix=SOURCE
+# RUN: DEBUGINFOD_CACHE_PATH=%t llvm-debuginfod-find --dump --debuginfo abcdef | \
+# RUN:   FileCheck %s --check-prefix=DEBUGINFO
+
+
+# This script is used to test the debuginfod client within a host tool.
+# It first stands up a Python HTTP static file server and then executes the tool.
+# This way the tool can make debuginfod HTTP requests to the static file server.
+import argparse
+import threading
+import http.server
+import functools
+import subprocess
+import sys
+import os
+
+
+# Serves files at the server_path, then runs the tool with specified args.
+# Sets the DEBUGINFOD_CACHE_PATH env var to point at the given cache_directory.
+# Sets the DEBUGINFOD_URLS env var to point at the local server.
+def test_tool(server_path, tool_args):
+    httpd = http.server.ThreadingHTTPServer(
+        ('',0), functools.partial(
+            http.server.SimpleHTTPRequestHandler,
+            directory=server_path))
+    port = httpd.server_port
+    thread = threading.Thread(target=httpd.serve_forever)
+    try:
+        thread.start()
+        env = os.environ
+        env['DEBUGINFOD_URLS'] = 'http://localhost:%s' % port
+        process = subprocess.Popen(
+            tool_args, env=env)
+        code = process.wait()
+        if code != 0:
+            print('nontrivial return code %s' % code)
+            return 1
+    finally:
+        httpd.shutdown()
+        thread.join()
+    return 0
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--server-path', default='./')
+    parser.add_argument('--tool-cmd', required=True, type=str)
+    args = parser.parse_args()
+    result = test_tool(args.server_path,
+        args.tool_cmd.split())
+    sys.exit(result)
+
+if __name__ == '__main__':
+    main()

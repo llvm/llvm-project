@@ -53,10 +53,7 @@ function(tablegen project ofn)
       list(APPEND LLVM_TABLEGEN_FLAGS "-gisel-coverage-file=${LLVM_GISEL_COV_PREFIX}all")
     endif()
   endif()
-  # Comments are only useful for Debug builds. Omit them if the backend
-  # supports it.
-  if (NOT (uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG" OR
-           uppercase_CMAKE_BUILD_TYPE STREQUAL "RELWITHDEBINFO"))
+  if (LLVM_OMIT_DAGISEL_COMMENTS)
     list(FIND ARGN "-gen-dag-isel" idx)
     if (NOT idx EQUAL -1)
       list(APPEND LLVM_TABLEGEN_FLAGS "-omit-comments")
@@ -78,6 +75,10 @@ function(tablegen project ofn)
     set(tblgen_change_flag)
   else()
     set(tblgen_change_flag "--write-if-changed")
+  endif()
+
+  if (NOT LLVM_ENABLE_WARNINGS)
+    list(APPEND LLVM_TABLEGEN_FLAGS "-no-warn-on-unused-template-args")
   endif()
 
   # We need both _TABLEGEN_TARGET and _TABLEGEN_EXE in the  DEPENDS list

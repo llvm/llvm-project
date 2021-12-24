@@ -254,7 +254,7 @@ lldb::ThreadPlanSP FunctionCaller::GetThreadPlanToCallFunction(
 
   lldb::ThreadPlanSP new_plan_sp(new ThreadPlanCallFunction(
       *thread, wrapper_address, CompilerType(), args, options));
-  new_plan_sp->SetIsMasterPlan(true);
+  new_plan_sp->SetIsControllingPlan(true);
   new_plan_sp->SetOkayToDiscard(false);
   return new_plan_sp;
 }

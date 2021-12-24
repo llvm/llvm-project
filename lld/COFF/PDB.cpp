@@ -975,7 +975,7 @@ void DebugSHandler::finish() {
   // size as the original. Otherwise, the file references in the line and
   // inlinee line tables will be incorrect.
   auto newChecksums = std::make_unique<DebugChecksumsSubsection>(linker.pdbStrTab);
-  for (FileChecksumEntry &fc : checksums) {
+  for (const FileChecksumEntry &fc : checksums) {
     SmallString<128> filename =
         exitOnErr(cvStrTab.getString(fc.FileNameOffset));
     pdbMakeAbsolute(filename);
@@ -1347,8 +1347,8 @@ static std::string quote(ArrayRef<StringRef> args) {
   for (StringRef a : args) {
     if (!r.empty())
       r.push_back(' ');
-    bool hasWS = a.find(' ') != StringRef::npos;
-    bool hasQ = a.find('"') != StringRef::npos;
+    bool hasWS = a.contains(' ');
+    bool hasQ = a.contains('"');
     if (hasWS || hasQ)
       r.push_back('"');
     if (hasQ) {
@@ -1588,7 +1588,7 @@ void lld::coff::createPDB(COFFLinkerContext &ctx,
 }
 
 void PDBLinker::initialize(llvm::codeview::DebugInfo *buildId) {
-  exitOnErr(builder.initialize(4096)); // 4096 is blocksize
+  exitOnErr(builder.initialize(config->pdbPageSize));
 
   buildId->Signature.CVSignature = OMF::Signature::PDB70;
   // Signature is set to a hash of the PDB contents when the PDB is done.
@@ -1781,7 +1781,7 @@ lld::coff::getFileLineCodeView(const SectionChunk *c, uint32_t addr) {
 
   Optional<uint32_t> nameIndex;
   Optional<uint32_t> lineNumber;
-  for (LineColumnEntry &entry : lines) {
+  for (const LineColumnEntry &entry : lines) {
     for (const LineNumberEntry &ln : entry.LineNumbers) {
       LineInfo li(ln.Flags);
       if (ln.Offset > offsetInLinetable) {

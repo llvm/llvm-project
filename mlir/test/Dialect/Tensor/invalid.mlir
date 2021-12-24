@@ -1,5 +1,13 @@
 // RUN: mlir-opt <%s -split-input-file -verify-diagnostics
 
+func @dim(%arg : tensor<1x?xf32>) {
+  %c2 = arith.constant 2 : index
+  tensor.dim %arg, %c2 : tensor<1x?xf32> // expected-error {{'tensor.dim' op index is out of range}}
+  return
+}
+
+// -----
+
 func @tensor.cast_mismatching_constants(%arg0: tensor<1xf32>) {
   // expected-error@+1 {{operand type 'tensor<1xf32>' and result type 'tensor<2xf32>' are cast incompatible}}
   %0 = tensor.cast %arg0 : tensor<1xf32> to tensor<2xf32>
@@ -25,7 +33,7 @@ func @insert_too_many_indices(%arg0: f32, %arg1: tensor<?xf32>) {
 // -----
 
 func @tensor.from_elements_wrong_result_type() {
-  // expected-error@+2 {{'result' must be 1D tensor of any type values, but got 'tensor<*xi32>'}}
+  // expected-error@+2 {{'result' must be statically shaped tensor of any type values, but got 'tensor<*xi32>'}}
   %c0 = arith.constant 0 : i32
   %0 = tensor.from_elements %c0 : tensor<*xi32>
   return
@@ -137,4 +145,158 @@ func @tensor.reshape_num_elements_mismatch(
   // expected-error @+1 {{source and destination tensor should have the same number of elements}}
   tensor.reshape %buf(%shape)
     : (tensor<1xf32>, tensor<1xi32>) -> tensor<10xf32>
+}
+
+// -----
+
+func @extract_slice_wrong_result_rank(%t: tensor<?xf32>, %idx : index) {
+  // expected-error @+1 {{expected rank to be smaller or equal to the other rank.}}
+  %0 = tensor.extract_slice %t[0][4][1] : tensor<?xf32> to tensor<?x?xf32>
+
+  return
+}
+
+// -----
+
+func @extract_slice_wrong_result_rank(%t: tensor<?xf32>, %idx : index) {
+  // expected-error @+1 {{expected element type to be 'f32'}}
+  %0 = tensor.extract_slice %t[0][4][1] : tensor<?xf32> to tensor<4xi8>
+
+  return
+}
+
+// -----
+
+func @extract_slice_wrong_static_type(%t: tensor<8x16x4xf32>, %idx : index) {
+  // expected-error @+1 {{expected type to be 'tensor<?x4x4xf32>' or a rank-reduced version. (size mismatch)}}
+  %0 = tensor.extract_slice %t[0, 0, 0][%idx, 4, 4][1, 1, 1]
+    : tensor<8x16x4xf32> to tensor<4x4x4xf32>
+
+  return
+}
+
+// -----
+
+func @extract_slice_wrong_dynamic_type(%t: tensor<8x16x4xf32>, %idx : index) {
+  // expected-error @+1 {{expected type to be 'tensor<4x4x4xf32>' or a rank-reduced version. (size mismatch)}}
+  %0 = tensor.extract_slice %t[0, 2, 0][4, 4, 4][1, 1, 1]
+    : tensor<8x16x4xf32> to tensor<?x4x4xf32>
+
+  return
+}
+
+// -----
+
+func @insert_slice_wrong_result_rank(%t1: tensor<?xf32>, %t2: tensor<?x?xf32>, %idx : index) {
+  // expected-error @+1 {{expected rank to be smaller or equal to the other rank.}}
+  %0 = tensor.insert_slice %t2 into %t1[0][4][1] : tensor<?x?xf32> into tensor<?xf32>
+
+  return
+}
+
+// -----
+
+func @insert_slice_wrong_result_rank(%t1: tensor<4xi8>, %t2: tensor<?xf32>, %idx : index) {
+  // expected-error @+1 {{expected element type to be 'f32'}}
+  %0 = tensor.insert_slice %t1 into %t2[0][4][1] : tensor<4xi8> into tensor<?xf32>
+
+  return
+}
+
+// -----
+
+func @insert_slice_wrong_static_type(%t1: tensor<4x4x4xf32>, %t2: tensor<8x16x4xf32>, %idx : index) {
+  // expected-error @+1 {{expected type to be 'tensor<?x4x4xf32>' or a rank-reduced version. (size mismatch)}}
+  %0 = tensor.insert_slice %t1 into %t2[0, 0, 0][%idx, 4, 4][1, 1, 1]
+    : tensor<4x4x4xf32> into tensor<8x16x4xf32>
+
+  return
+}
+
+// -----
+
+func @insert_slice_wrong_dynamic_type(%t1: tensor<?x4x4xf32>, %t2: tensor<8x16x4xf32>, %idx : index) {
+  // expected-error @+1 {{expected type to be 'tensor<4x4x4xf32>' or a rank-reduced version. (size mismatch)}}
+  %0 = tensor.insert_slice %t1 into %t2[0, 2, 0][4, 4, 4][1, 1, 1]
+    : tensor<?x4x4xf32> into tensor<8x16x4xf32>
+
+  return
+}
+
+// -----
+
+func @illegal_expanding_reshape_dynamic_tensor
+  (%arg0: tensor<?x?x?xf32>) -> tensor<?x?x?x4x?xf32> {
+  // expected-error @+1 {{invalid to have a single dimension (2) expanded into multiple dynamic dims (2,4)}}
+  %0 = tensor.expand_shape %arg0 [[0], [1], [2, 3, 4]]
+      : tensor<?x?x?xf32> into tensor<?x?x?x4x?xf32>
+  return %0 : tensor<?x?x?x4x?xf32>
+}
+
+// -----
+
+
+func @illegal_expanding_reshape_static_tensor
+    (%arg0: tensor<2x3x20xf32>) -> tensor<2x3x2x4x5xf32> {
+  // expected-error @+1 {{expected dimension 2 of collapsed type to be static value of 40}}
+  %0 = tensor.expand_shape %arg0 [[0], [1], [2, 3, 4]]
+      : tensor<2x3x20xf32> into tensor<2x3x2x4x5xf32>
+  return %0 : tensor<2x3x2x4x5xf32>
+}
+
+// -----
+
+func @illegal_collapsing_reshape_static_tensor
+    (%arg0: tensor<2x3x2x4x5xf32>) -> tensor<2x3x20xf32> {
+  // expected-error @+1 {{expected dimension 2 of collapsed type to be static value of 40}}
+  %0 = tensor.collapse_shape %arg0 [[0], [1], [2, 3, 4]]
+      : tensor<2x3x2x4x5xf32> into tensor<2x3x20xf32>
+  return %0 : tensor<2x3x20xf32>
+}
+
+// -----
+
+func @illegal_expanding_reshape_mixed_tensor(%arg0 : tensor<?x?xf32>)
+    -> tensor<?x4x5xf32> {
+  // expected-error @+1 {{expected dimension 1 of collapsed type to be static value of 5}}
+  %0 = tensor.expand_shape %arg0 [[0, 1], [2]]
+      : tensor<?x?xf32> into tensor<?x4x5xf32>
+  return %0 : tensor<?x4x5xf32>
+}
+
+// -----
+
+func @illegal_expanding_reshape_mixed_tensor_2(%arg0 : tensor<?x?xf32>)
+    -> tensor<?x4x5xf32> {
+  // expected-error @+1 {{expected dimension 1 of collapsed type to be static value of 20}}
+  %0 = tensor.expand_shape %arg0 [[0], [1, 2]]
+      : tensor<?x?xf32> into tensor<?x4x5xf32>
+  return %0 : tensor<?x4x5xf32>
+}
+
+// -----
+
+func @illegal_collapsing_reshape_mixed_tensor(%arg0 : tensor<?x4x5xf32>) -> tensor<?x?xf32> {
+  // expected-error @+1 {{expected dimension 1 of collapsed type to be static value of 5}}
+  %0 = tensor.collapse_shape %arg0 [[0, 1], [2]]
+      : tensor<?x4x5xf32> into tensor<?x?xf32>
+  return %0 : tensor<?x?xf32>
+}
+
+// -----
+
+func @illegal_collapsing_reshape_mixed_tensor_2(%arg0 : tensor<?x4x5xf32>)
+    -> tensor<?x?xf32> {
+  // expected-error @+1 {{expected dimension 1 of collapsed type to be static value of 20}}
+  %0 = tensor.collapse_shape %arg0 [[0], [1, 2]]
+      : tensor<?x4x5xf32> into tensor<?x?xf32>
+  return %0 : tensor<?x?xf32>
+}
+
+// -----
+
+func @rank(%0: f32) {
+  // expected-error@+1 {{'tensor.rank' op operand #0 must be tensor of any type values}}
+  "tensor.rank"(%0): (f32)->index
+  return
 }

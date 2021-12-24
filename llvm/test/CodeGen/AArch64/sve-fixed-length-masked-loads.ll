@@ -42,7 +42,7 @@ define <2 x half> @masked_load_v2f16(<2 x half>* %ap, <2 x half>* %bp) #0 {
 ; CHECK-NEXT:    mov v0.h[0], w8
 ; CHECK-NEXT:    mov v0.h[1], w9
 ; CHECK-NEXT:    shl v0.4h, v0.4h, #15
-; CHECK-NEXT:    sshr v0.4h, v0.4h, #15
+; CHECK-NEXT:    cmlt v0.4h, v0.4h, #0
 ; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, #0
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
@@ -268,11 +268,9 @@ define <32 x i16> @masked_load_sext_v32i8i16(<32 x i8>* %ap, <32 x i8>* %bp) #0 
 ; VBITS_GE_512-NEXT:    ptrue p0.b, vl32
 ; VBITS_GE_512-NEXT:    ld1b { z0.b }, p0/z, [x1]
 ; VBITS_GE_512-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
-; VBITS_GE_512-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; VBITS_GE_512-NEXT:    punpklo p0.h, p0.b
+; VBITS_GE_512-NEXT:    ld1sb { z0.h }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    ptrue p0.h, vl32
-; VBITS_GE_512-NEXT:    sunpklo z0.h, z0.b
-; VBITS_GE_512-NEXT:    cmpne p1.h, p0/z, z0.h, #0
-; VBITS_GE_512-NEXT:    ld1sb { z0.h }, p1/z, [x0]
 ; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x8]
 ; VBITS_GE_512-NEXT:    ret
   %b = load <32 x i8>, <32 x i8>* %bp
@@ -327,11 +325,9 @@ define <16 x i32> @masked_load_sext_v16i16i32(<16 x i16>* %ap, <16 x i16>* %bp) 
 ; VBITS_GE_512-NEXT:    ptrue p0.h, vl16
 ; VBITS_GE_512-NEXT:    ld1h { z0.h }, p0/z, [x1]
 ; VBITS_GE_512-NEXT:    cmpeq p0.h, p0/z, z0.h, #0
-; VBITS_GE_512-NEXT:    mov z0.h, p0/z, #-1 // =0xffffffffffffffff
+; VBITS_GE_512-NEXT:    punpklo p0.h, p0.b
+; VBITS_GE_512-NEXT:    ld1sh { z0.s }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
-; VBITS_GE_512-NEXT:    sunpklo z0.s, z0.h
-; VBITS_GE_512-NEXT:    cmpne p1.s, p0/z, z0.s, #0
-; VBITS_GE_512-NEXT:    ld1sh { z0.s }, p1/z, [x0]
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x8]
 ; VBITS_GE_512-NEXT:    ret
   %b = load <16 x i16>, <16 x i16>* %bp
@@ -366,11 +362,9 @@ define <8 x i64> @masked_load_sext_v8i32i64(<8 x i32>* %ap, <8 x i32>* %bp) #0 {
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x1]
 ; VBITS_GE_512-NEXT:    cmpeq p0.s, p0/z, z0.s, #0
-; VBITS_GE_512-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
+; VBITS_GE_512-NEXT:    punpklo p0.h, p0.b
+; VBITS_GE_512-NEXT:    ld1sw { z0.d }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
-; VBITS_GE_512-NEXT:    sunpklo z0.d, z0.s
-; VBITS_GE_512-NEXT:    cmpne p1.d, p0/z, z0.d, #0
-; VBITS_GE_512-NEXT:    ld1sw { z0.d }, p1/z, [x0]
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x8]
 ; VBITS_GE_512-NEXT:    ret
   %b = load <8 x i32>, <8 x i32>* %bp
@@ -386,11 +380,9 @@ define <32 x i16> @masked_load_zext_v32i8i16(<32 x i8>* %ap, <32 x i8>* %bp) #0 
 ; VBITS_GE_512-NEXT:    ptrue p0.b, vl32
 ; VBITS_GE_512-NEXT:    ld1b { z0.b }, p0/z, [x1]
 ; VBITS_GE_512-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
-; VBITS_GE_512-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; VBITS_GE_512-NEXT:    punpklo p0.h, p0.b
+; VBITS_GE_512-NEXT:    ld1b { z0.h }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    ptrue p0.h, vl32
-; VBITS_GE_512-NEXT:    sunpklo z0.h, z0.b
-; VBITS_GE_512-NEXT:    cmpne p1.h, p0/z, z0.h, #0
-; VBITS_GE_512-NEXT:    ld1b { z0.h }, p1/z, [x0]
 ; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x8]
 ; VBITS_GE_512-NEXT:    ret
   %b = load <32 x i8>, <32 x i8>* %bp
@@ -445,11 +437,9 @@ define <16 x i32> @masked_load_zext_v16i16i32(<16 x i16>* %ap, <16 x i16>* %bp) 
 ; VBITS_GE_512-NEXT:    ptrue p0.h, vl16
 ; VBITS_GE_512-NEXT:    ld1h { z0.h }, p0/z, [x1]
 ; VBITS_GE_512-NEXT:    cmpeq p0.h, p0/z, z0.h, #0
-; VBITS_GE_512-NEXT:    mov z0.h, p0/z, #-1 // =0xffffffffffffffff
+; VBITS_GE_512-NEXT:    punpklo p0.h, p0.b
+; VBITS_GE_512-NEXT:    ld1h { z0.s }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
-; VBITS_GE_512-NEXT:    sunpklo z0.s, z0.h
-; VBITS_GE_512-NEXT:    cmpne p1.s, p0/z, z0.s, #0
-; VBITS_GE_512-NEXT:    ld1h { z0.s }, p1/z, [x0]
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x8]
 ; VBITS_GE_512-NEXT:    ret
   %b = load <16 x i16>, <16 x i16>* %bp
@@ -484,11 +474,9 @@ define <8 x i64> @masked_load_zext_v8i32i64(<8 x i32>* %ap, <8 x i32>* %bp) #0 {
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x1]
 ; VBITS_GE_512-NEXT:    cmpeq p0.s, p0/z, z0.s, #0
-; VBITS_GE_512-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
+; VBITS_GE_512-NEXT:    punpklo p0.h, p0.b
+; VBITS_GE_512-NEXT:    ld1w { z0.d }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
-; VBITS_GE_512-NEXT:    sunpklo z0.d, z0.s
-; VBITS_GE_512-NEXT:    cmpne p1.d, p0/z, z0.d, #0
-; VBITS_GE_512-NEXT:    ld1w { z0.d }, p1/z, [x0]
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x8]
 ; VBITS_GE_512-NEXT:    ret
   %b = load <8 x i32>, <8 x i32>* %bp
@@ -690,6 +678,230 @@ define <8 x i64> @masked_load_zext_v8i32i64_m64(<8 x i32>* %ap, <8 x i64>* %bp) 
   ret <8 x i64> %ext
 }
 
+define <128 x i16> @masked_load_sext_v128i8i16(<128 x i8>* %ap, <128 x i8>* %bp) #0 {
+; VBITS_GE_2048-LABEL: masked_load_sext_v128i8i16:
+; VBITS_GE_2048:       // %bb.0:
+; VBITS_GE_2048-NEXT:    ptrue p0.b, vl128
+; VBITS_GE_2048-NEXT:    ld1b { z0.b }, p0/z, [x1]
+; VBITS_GE_2048-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
+; VBITS_GE_2048-NEXT:    punpklo p0.h, p0.b
+; VBITS_GE_2048-NEXT:    ld1sb { z0.h }, p0/z, [x0]
+; VBITS_GE_2048-NEXT:    ptrue p0.h, vl128
+; VBITS_GE_2048-NEXT:    st1h { z0.h }, p0, [x8]
+; VBITS_GE_2048-NEXT:    ret
+  %b = load <128 x i8>, <128 x i8>* %bp
+  %mask = icmp eq <128 x i8> %b, zeroinitializer
+  %load = call <128 x i8> @llvm.masked.load.v128i8(<128 x i8>* %ap, i32 8, <128 x i1> %mask, <128 x i8> undef)
+  %ext = sext <128 x i8> %load to <128 x i16>
+  ret <128 x i16> %ext
+}
+
+define <64 x i32> @masked_load_sext_v64i8i32(<64 x i8>* %ap, <64 x i8>* %bp) #0 {
+; VBITS_GE_2048-LABEL: masked_load_sext_v64i8i32:
+; VBITS_GE_2048:       // %bb.0:
+; VBITS_GE_2048-NEXT:    ptrue p0.b, vl64
+; VBITS_GE_2048-NEXT:    ld1b { z0.b }, p0/z, [x1]
+; VBITS_GE_2048-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
+; VBITS_GE_2048-NEXT:    punpklo p0.h, p0.b
+; VBITS_GE_2048-NEXT:    punpklo p0.h, p0.b
+; VBITS_GE_2048-NEXT:    ld1sb { z0.s }, p0/z, [x0]
+; VBITS_GE_2048-NEXT:    ptrue p0.s, vl64
+; VBITS_GE_2048-NEXT:    st1w { z0.s }, p0, [x8]
+; VBITS_GE_2048-NEXT:    ret
+  %b = load <64 x i8>, <64 x i8>* %bp
+  %mask = icmp eq <64 x i8> %b, zeroinitializer
+  %load = call <64 x i8> @llvm.masked.load.v64i8(<64 x i8>* %ap, i32 8, <64 x i1> %mask, <64 x i8> undef)
+  %ext = sext <64 x i8> %load to <64 x i32>
+  ret <64 x i32> %ext
+}
+
+define <32 x i64> @masked_load_sext_v32i8i64(<32 x i8>* %ap, <32 x i8>* %bp) #0 {
+; VBITS_GE_2048-LABEL: masked_load_sext_v32i8i64:
+; VBITS_GE_2048:       // %bb.0:
+; VBITS_GE_2048-NEXT:    ptrue p0.b, vl32
+; VBITS_GE_2048-NEXT:    ld1b { z0.b }, p0/z, [x1]
+; VBITS_GE_2048-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
+; VBITS_GE_2048-NEXT:    punpklo p0.h, p0.b
+; VBITS_GE_2048-NEXT:    punpklo p0.h, p0.b
+; VBITS_GE_2048-NEXT:    punpklo p0.h, p0.b
+; VBITS_GE_2048-NEXT:    ld1sb { z0.d }, p0/z, [x0]
+; VBITS_GE_2048-NEXT:    ptrue p0.d, vl32
+; VBITS_GE_2048-NEXT:    st1d { z0.d }, p0, [x8]
+; VBITS_GE_2048-NEXT:    ret
+  %b = load <32 x i8>, <32 x i8>* %bp
+  %mask = icmp eq <32 x i8> %b, zeroinitializer
+  %load = call <32 x i8> @llvm.masked.load.v32i8(<32 x i8>* %ap, i32 8, <32 x i1> %mask, <32 x i8> undef)
+  %ext = sext <32 x i8> %load to <32 x i64>
+  ret <32 x i64> %ext
+}
+
+define <64 x i32> @masked_load_sext_v64i16i32(<64 x i16>* %ap, <64 x i16>* %bp) #0 {
+; VBITS_GE_2048-LABEL: masked_load_sext_v64i16i32:
+; VBITS_GE_2048:       // %bb.0:
+; VBITS_GE_2048-NEXT:    ptrue p0.h, vl64
+; VBITS_GE_2048-NEXT:    ld1h { z0.h }, p0/z, [x1]
+; VBITS_GE_2048-NEXT:    cmpeq p0.h, p0/z, z0.h, #0
+; VBITS_GE_2048-NEXT:    punpklo p0.h, p0.b
+; VBITS_GE_2048-NEXT:    ld1sh { z0.s }, p0/z, [x0]
+; VBITS_GE_2048-NEXT:    ptrue p0.s, vl64
+; VBITS_GE_2048-NEXT:    st1w { z0.s }, p0, [x8]
+; VBITS_GE_2048-NEXT:    ret
+  %b = load <64 x i16>, <64 x i16>* %bp
+  %mask = icmp eq <64 x i16> %b, zeroinitializer
+  %load = call <64 x i16> @llvm.masked.load.v64i16(<64 x i16>* %ap, i32 8, <64 x i1> %mask, <64 x i16> undef)
+  %ext = sext <64 x i16> %load to <64 x i32>
+  ret <64 x i32> %ext
+}
+
+define <32 x i64> @masked_load_sext_v32i16i64(<32 x i16>* %ap, <32 x i16>* %bp) #0 {
+; VBITS_GE_2048-LABEL: masked_load_sext_v32i16i64:
+; VBITS_GE_2048:       // %bb.0:
+; VBITS_GE_2048-NEXT:    ptrue p0.h, vl32
+; VBITS_GE_2048-NEXT:    ld1h { z0.h }, p0/z, [x1]
+; VBITS_GE_2048-NEXT:    cmpeq p0.h, p0/z, z0.h, #0
+; VBITS_GE_2048-NEXT:    punpklo p0.h, p0.b
+; VBITS_GE_2048-NEXT:    punpklo p0.h, p0.b
+; VBITS_GE_2048-NEXT:    ld1sh { z0.d }, p0/z, [x0]
+; VBITS_GE_2048-NEXT:    ptrue p0.d, vl32
+; VBITS_GE_2048-NEXT:    st1d { z0.d }, p0, [x8]
+; VBITS_GE_2048-NEXT:    ret
+  %b = load <32 x i16>, <32 x i16>* %bp
+  %mask = icmp eq <32 x i16> %b, zeroinitializer
+  %load = call <32 x i16> @llvm.masked.load.v32i16(<32 x i16>* %ap, i32 8, <32 x i1> %mask, <32 x i16> undef)
+  %ext = sext <32 x i16> %load to <32 x i64>
+  ret <32 x i64> %ext
+}
+
+define <32 x i64> @masked_load_sext_v32i32i64(<32 x i32>* %ap, <32 x i32>* %bp) #0 {
+; VBITS_GE_2048-LABEL: masked_load_sext_v32i32i64:
+; VBITS_GE_2048:       // %bb.0:
+; VBITS_GE_2048-NEXT:    ptrue p0.s, vl32
+; VBITS_GE_2048-NEXT:    ld1w { z0.s }, p0/z, [x1]
+; VBITS_GE_2048-NEXT:    cmpeq p0.s, p0/z, z0.s, #0
+; VBITS_GE_2048-NEXT:    punpklo p0.h, p0.b
+; VBITS_GE_2048-NEXT:    ld1sw { z0.d }, p0/z, [x0]
+; VBITS_GE_2048-NEXT:    ptrue p0.d, vl32
+; VBITS_GE_2048-NEXT:    st1d { z0.d }, p0, [x8]
+; VBITS_GE_2048-NEXT:    ret
+  %b = load <32 x i32>, <32 x i32>* %bp
+  %mask = icmp eq <32 x i32> %b, zeroinitializer
+  %load = call <32 x i32> @llvm.masked.load.v32i32(<32 x i32>* %ap, i32 8, <32 x i1> %mask, <32 x i32> undef)
+  %ext = sext <32 x i32> %load to <32 x i64>
+  ret <32 x i64> %ext
+}
+
+define <128 x i16> @masked_load_zext_v128i8i16(<128 x i8>* %ap, <128 x i8>* %bp) #0 {
+; VBITS_GE_2048-LABEL: masked_load_zext_v128i8i16:
+; VBITS_GE_2048:       // %bb.0:
+; VBITS_GE_2048-NEXT:    ptrue p0.b, vl128
+; VBITS_GE_2048-NEXT:    ld1b { z0.b }, p0/z, [x1]
+; VBITS_GE_2048-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
+; VBITS_GE_2048-NEXT:    punpklo p0.h, p0.b
+; VBITS_GE_2048-NEXT:    ld1b { z0.h }, p0/z, [x0]
+; VBITS_GE_2048-NEXT:    ptrue p0.h, vl128
+; VBITS_GE_2048-NEXT:    st1h { z0.h }, p0, [x8]
+; VBITS_GE_2048-NEXT:    ret
+  %b = load <128 x i8>, <128 x i8>* %bp
+  %mask = icmp eq <128 x i8> %b, zeroinitializer
+  %load = call <128 x i8> @llvm.masked.load.v128i8(<128 x i8>* %ap, i32 8, <128 x i1> %mask, <128 x i8> undef)
+  %ext = zext <128 x i8> %load to <128 x i16>
+  ret <128 x i16> %ext
+}
+
+define <64 x i32> @masked_load_zext_v64i8i32(<64 x i8>* %ap, <64 x i8>* %bp) #0 {
+; VBITS_GE_2048-LABEL: masked_load_zext_v64i8i32:
+; VBITS_GE_2048:       // %bb.0:
+; VBITS_GE_2048-NEXT:    ptrue p0.b, vl64
+; VBITS_GE_2048-NEXT:    ld1b { z0.b }, p0/z, [x1]
+; VBITS_GE_2048-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
+; VBITS_GE_2048-NEXT:    punpklo p0.h, p0.b
+; VBITS_GE_2048-NEXT:    punpklo p0.h, p0.b
+; VBITS_GE_2048-NEXT:    ld1b { z0.s }, p0/z, [x0]
+; VBITS_GE_2048-NEXT:    ptrue p0.s, vl64
+; VBITS_GE_2048-NEXT:    st1w { z0.s }, p0, [x8]
+; VBITS_GE_2048-NEXT:    ret
+  %b = load <64 x i8>, <64 x i8>* %bp
+  %mask = icmp eq <64 x i8> %b, zeroinitializer
+  %load = call <64 x i8> @llvm.masked.load.v64i8(<64 x i8>* %ap, i32 8, <64 x i1> %mask, <64 x i8> undef)
+  %ext = zext <64 x i8> %load to <64 x i32>
+  ret <64 x i32> %ext
+}
+
+define <32 x i64> @masked_load_zext_v32i8i64(<32 x i8>* %ap, <32 x i8>* %bp) #0 {
+; VBITS_GE_2048-LABEL: masked_load_zext_v32i8i64:
+; VBITS_GE_2048:       // %bb.0:
+; VBITS_GE_2048-NEXT:    ptrue p0.b, vl32
+; VBITS_GE_2048-NEXT:    ld1b { z0.b }, p0/z, [x1]
+; VBITS_GE_2048-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
+; VBITS_GE_2048-NEXT:    punpklo p0.h, p0.b
+; VBITS_GE_2048-NEXT:    punpklo p0.h, p0.b
+; VBITS_GE_2048-NEXT:    punpklo p0.h, p0.b
+; VBITS_GE_2048-NEXT:    ld1b { z0.d }, p0/z, [x0]
+; VBITS_GE_2048-NEXT:    ptrue p0.d, vl32
+; VBITS_GE_2048-NEXT:    st1d { z0.d }, p0, [x8]
+; VBITS_GE_2048-NEXT:    ret
+  %b = load <32 x i8>, <32 x i8>* %bp
+  %mask = icmp eq <32 x i8> %b, zeroinitializer
+  %load = call <32 x i8> @llvm.masked.load.v32i8(<32 x i8>* %ap, i32 8, <32 x i1> %mask, <32 x i8> undef)
+  %ext = zext <32 x i8> %load to <32 x i64>
+  ret <32 x i64> %ext
+}
+
+define <64 x i32> @masked_load_zext_v64i16i32(<64 x i16>* %ap, <64 x i16>* %bp) #0 {
+; VBITS_GE_2048-LABEL: masked_load_zext_v64i16i32:
+; VBITS_GE_2048:       // %bb.0:
+; VBITS_GE_2048-NEXT:    ptrue p0.h, vl64
+; VBITS_GE_2048-NEXT:    ld1h { z0.h }, p0/z, [x1]
+; VBITS_GE_2048-NEXT:    cmpeq p0.h, p0/z, z0.h, #0
+; VBITS_GE_2048-NEXT:    punpklo p0.h, p0.b
+; VBITS_GE_2048-NEXT:    ld1h { z0.s }, p0/z, [x0]
+; VBITS_GE_2048-NEXT:    ptrue p0.s, vl64
+; VBITS_GE_2048-NEXT:    st1w { z0.s }, p0, [x8]
+; VBITS_GE_2048-NEXT:    ret
+  %b = load <64 x i16>, <64 x i16>* %bp
+  %mask = icmp eq <64 x i16> %b, zeroinitializer
+  %load = call <64 x i16> @llvm.masked.load.v64i16(<64 x i16>* %ap, i32 8, <64 x i1> %mask, <64 x i16> undef)
+  %ext = zext <64 x i16> %load to <64 x i32>
+  ret <64 x i32> %ext
+}
+
+define <32 x i64> @masked_load_zext_v32i16i64(<32 x i16>* %ap, <32 x i16>* %bp) #0 {
+; VBITS_GE_2048-LABEL: masked_load_zext_v32i16i64:
+; VBITS_GE_2048:       // %bb.0:
+; VBITS_GE_2048-NEXT:    ptrue p0.h, vl32
+; VBITS_GE_2048-NEXT:    ld1h { z0.h }, p0/z, [x1]
+; VBITS_GE_2048-NEXT:    cmpeq p0.h, p0/z, z0.h, #0
+; VBITS_GE_2048-NEXT:    punpklo p0.h, p0.b
+; VBITS_GE_2048-NEXT:    punpklo p0.h, p0.b
+; VBITS_GE_2048-NEXT:    ld1h { z0.d }, p0/z, [x0]
+; VBITS_GE_2048-NEXT:    ptrue p0.d, vl32
+; VBITS_GE_2048-NEXT:    st1d { z0.d }, p0, [x8]
+; VBITS_GE_2048-NEXT:    ret
+  %b = load <32 x i16>, <32 x i16>* %bp
+  %mask = icmp eq <32 x i16> %b, zeroinitializer
+  %load = call <32 x i16> @llvm.masked.load.v32i16(<32 x i16>* %ap, i32 8, <32 x i1> %mask, <32 x i16> undef)
+  %ext = zext <32 x i16> %load to <32 x i64>
+  ret <32 x i64> %ext
+}
+
+define <32 x i64> @masked_load_zext_v32i32i64(<32 x i32>* %ap, <32 x i32>* %bp) #0 {
+; VBITS_GE_2048-LABEL: masked_load_zext_v32i32i64:
+; VBITS_GE_2048:       // %bb.0:
+; VBITS_GE_2048-NEXT:    ptrue p0.s, vl32
+; VBITS_GE_2048-NEXT:    ld1w { z0.s }, p0/z, [x1]
+; VBITS_GE_2048-NEXT:    cmpeq p0.s, p0/z, z0.s, #0
+; VBITS_GE_2048-NEXT:    punpklo p0.h, p0.b
+; VBITS_GE_2048-NEXT:    ld1w { z0.d }, p0/z, [x0]
+; VBITS_GE_2048-NEXT:    ptrue p0.d, vl32
+; VBITS_GE_2048-NEXT:    st1d { z0.d }, p0, [x8]
+; VBITS_GE_2048-NEXT:    ret
+  %b = load <32 x i32>, <32 x i32>* %bp
+  %mask = icmp eq <32 x i32> %b, zeroinitializer
+  %load = call <32 x i32> @llvm.masked.load.v32i32(<32 x i32>* %ap, i32 8, <32 x i1> %mask, <32 x i32> undef)
+  %ext = zext <32 x i32> %load to <32 x i64>
+  ret <32 x i64> %ext
+}
+
 declare <2 x half> @llvm.masked.load.v2f16(<2 x half>*, i32, <2 x i1>, <2 x half>)
 declare <2 x float> @llvm.masked.load.v2f32(<2 x float>*, i32, <2 x i1>, <2 x float>)
 declare <4 x float> @llvm.masked.load.v4f32(<4 x float>*, i32, <4 x i1>, <4 x float>)
@@ -698,6 +910,7 @@ declare <16 x float> @llvm.masked.load.v16f32(<16 x float>*, i32, <16 x i1>, <16
 declare <32 x float> @llvm.masked.load.v32f32(<32 x float>*, i32, <32 x i1>, <32 x float>)
 declare <64 x float> @llvm.masked.load.v64f32(<64 x float>*, i32, <64 x i1>, <64 x float>)
 
+declare <128 x i8> @llvm.masked.load.v128i8(<128 x i8>*, i32, <128 x i1>, <128 x i8>)
 declare <64 x i8> @llvm.masked.load.v64i8(<64 x i8>*, i32, <64 x i1>, <64 x i8>)
 declare <32 x i8> @llvm.masked.load.v32i8(<32 x i8>*, i32, <32 x i1>, <32 x i8>)
 declare <16 x i8> @llvm.masked.load.v16i8(<16 x i8>*, i32, <16 x i1>, <16 x i8>)
@@ -705,7 +918,9 @@ declare <16 x i16> @llvm.masked.load.v16i16(<16 x i16>*, i32, <16 x i1>, <16 x i
 declare <8 x i8> @llvm.masked.load.v8i8(<8 x i8>*, i32, <8 x i1>, <8 x i8>)
 declare <8 x i16> @llvm.masked.load.v8i16(<8 x i16>*, i32, <8 x i1>, <8 x i16>)
 declare <8 x i32> @llvm.masked.load.v8i32(<8 x i32>*, i32, <8 x i1>, <8 x i32>)
+declare <32 x i32> @llvm.masked.load.v32i32(<32 x i32>*, i32, <32 x i1>, <32 x i32>)
 declare <32 x i16> @llvm.masked.load.v32i16(<32 x i16>*, i32, <32 x i1>, <32 x i16>)
+declare <64 x i16> @llvm.masked.load.v64i16(<64 x i16>*, i32, <64 x i1>, <64 x i16>)
 declare <16 x i32> @llvm.masked.load.v16i32(<16 x i32>*, i32, <16 x i1>, <16 x i32>)
 declare <8 x i64> @llvm.masked.load.v8i64(<8 x i64>*, i32, <8 x i1>, <8 x i64>)
 declare <8 x double> @llvm.masked.load.v8f64(<8 x double>*, i32, <8 x i1>, <8 x double>)

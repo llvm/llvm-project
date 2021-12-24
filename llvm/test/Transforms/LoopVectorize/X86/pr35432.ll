@@ -85,7 +85,7 @@ define i32 @main() local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[TMP29:%.*]] = zext i8 [[TMP27]] to i32
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP30:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP30]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[TMP30]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP25]], [[TMP24]]
 ; CHECK-NEXT:    [[TMP31:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX]])
@@ -102,7 +102,7 @@ define i32 @main() local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[DEC]] = add i8 [[C_04]], -1
 ; CHECK-NEXT:    [[CONV5:%.*]] = zext i8 [[DEC]] to i32
 ; CHECK-NEXT:    [[CMP6:%.*]] = icmp ult i32 [[TMP2]], [[CONV5]]
-; CHECK-NEXT:    br i1 [[CMP6]], label [[FOR_BODY8]], label [[FOR_COND4_FOR_INC9_CRIT_EDGE]], [[LOOP2:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[CMP6]], label [[FOR_BODY8]], label [[FOR_COND4_FOR_INC9_CRIT_EDGE]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       for.cond4.for.inc9_crit_edge:
 ; CHECK-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[INC]], [[FOR_BODY8]] ], [ [[TMP31]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    store i32 [[INC_LCSSA]], i32* getelementptr inbounds ([192 x [192 x i32]], [192 x [192 x i32]]* @a, i64 0, i64 0, i64 0), align 16

@@ -650,10 +650,6 @@ namespace llvm {
     // packed single precision.
     DPBF16PS,
 
-    // Save xmm argument registers to the stack, according to %al. An operator
-    // is needed so that this can be expanded with control flow.
-    VASTART_SAVE_XMM_REGS,
-
     // A stack checking function call. On Windows it's _chkstk call.
     DYN_ALLOCA,
 
@@ -871,6 +867,10 @@ namespace llvm {
     AESENCWIDE256KL,
     AESDECWIDE256KL,
 
+    // Save xmm argument registers to the stack, according to %al. An operator
+    // is needed so that this can be expanded with control flow.
+    VASTART_SAVE_XMM_REGS,
+
     // WARNING: Do not add anything in the end unless you want the node to
     // have memop! In fact, starting from FIRST_TARGET_MEMORY_OPCODE all
     // opcodes will be thought as target memory ops!
@@ -911,6 +911,25 @@ namespace llvm {
     /// as zero if AllowPartialUndefs is set, else we fail and return false.
     bool isConstantSplat(SDValue Op, APInt &SplatVal,
                          bool AllowPartialUndefs = true);
+
+    /// Check if Op is a load operation that could be folded into some other x86
+    /// instruction as a memory operand. Example: vpaddd (%rdi), %xmm0, %xmm0.
+    bool mayFoldLoad(SDValue Op, const X86Subtarget &Subtarget,
+                     bool AssumeSingleUse = false);
+
+    /// Check if Op is a load operation that could be folded into a vector splat
+    /// instruction as a memory operand. Example: vbroadcastss 16(%rdi), %xmm2.
+    bool mayFoldLoadIntoBroadcastFromMem(SDValue Op, MVT EltVT,
+                                         const X86Subtarget &Subtarget,
+                                         bool AssumeSingleUse = false);
+
+    /// Check if Op is a value that could be used to fold a store into some
+    /// other x86 instruction as a memory operand. Ex: pextrb $0, %xmm0, (%rdi).
+    bool mayFoldIntoStore(SDValue Op);
+
+    /// Check if Op is an operation that could be folded into a zero extend x86
+    /// instruction.
+    bool mayFoldIntoZeroExtend(SDValue Op);
   } // end namespace X86
 
   //===--------------------------------------------------------------------===//
@@ -1081,6 +1100,12 @@ namespace llvm {
 
     bool shouldSplatInsEltVarIndex(EVT VT) const override;
 
+    bool shouldConvertFpToSat(unsigned Op, EVT FPVT, EVT VT) const override {
+      // Converting to sat variants holds little benefit on X86 as we will just
+      // need to saturate the value back using fp arithmatic.
+      return Op != ISD::FP_TO_UINT_SAT && isOperationLegalOrCustom(Op, VT);
+    }
+
     bool convertSetCCLogicToBitwiseLogic(EVT VT) const override {
       return VT.isScalarInteger();
     }
@@ -1133,6 +1158,10 @@ namespace llvm {
     SDValue SimplifyMultipleUseDemandedBitsForTargetNode(
         SDValue Op, const APInt &DemandedBits, const APInt &DemandedElts,
         SelectionDAG &DAG, unsigned Depth) const override;
+
+    bool isSplatValueForTargetNode(SDValue Op, const APInt &DemandedElts,
+                                   APInt &UndefElts,
+                                   unsigned Depth) const override;
 
     const Constant *getTargetConstantFromLoad(LoadSDNode *LD) const override;
 

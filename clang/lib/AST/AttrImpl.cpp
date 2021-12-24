@@ -60,7 +60,7 @@ std::string LoopHintAttr::getValueString(const PrintingPolicy &Policy) const {
   else
     OS << "disable";
   OS << ")";
-  return OS.str();
+  return ValueName;
 }
 
 // Return a string suitable for identifying this attribute in diagnostics.
@@ -212,6 +212,21 @@ void OMPDeclareVariantAttr::printPrettyPragma(
   if (adjustArgsNeedDevicePtr_size()) {
     OS << " adjust_args(need_device_ptr:";
     PrintExprs(adjustArgsNeedDevicePtr_begin(), adjustArgsNeedDevicePtr_end());
+    OS << ")";
+  }
+
+  auto PrintInteropTypes = [&OS](InteropType *Begin, InteropType *End) {
+    for (InteropType *I = Begin; I != End; ++I) {
+      if (I != Begin)
+        OS << ", ";
+      OS << "interop(";
+      OS << ConvertInteropTypeToStr(*I);
+      OS << ")";
+    }
+  };
+  if (appendArgs_size()) {
+    OS << " append_args(";
+    PrintInteropTypes(appendArgs_begin(), appendArgs_end());
     OS << ")";
   }
 }

@@ -1,9 +1,5 @@
 // RUN: mlir-opt %s --sparse-tensor-conversion --canonicalize --cse | FileCheck %s
 
-#DenseVector = #sparse_tensor.encoding<{
-  dimLevelType = ["dense"]
-}>
-
 #SparseVector = #sparse_tensor.encoding<{
   dimLevelType = ["compressed"]
 }>
@@ -148,6 +144,22 @@ func @sparse_release(%arg0: tensor<128xf64, #SparseVector>) {
 func @sparse_nop_convert(%arg0: tensor<64xf32, #SparseVector>) -> tensor<64xf32, #SparseVector> {
   %0 = sparse_tensor.convert %arg0 : tensor<64xf32, #SparseVector> to tensor<64xf32, #SparseVector>
   return %0 : tensor<64xf32, #SparseVector>
+}
+
+// CHECK-LABEL: func @sparse_hidden_nop_cast(
+//  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>) -> !llvm.ptr<i8>
+//       CHECK: return %[[A]] : !llvm.ptr<i8>
+func @sparse_hidden_nop_cast(%arg0: tensor<32xf32, #SparseVector>) -> tensor<?xf32, #SparseVector> {
+  %0 = sparse_tensor.convert %arg0 : tensor<32xf32, #SparseVector> to tensor<?xf32, #SparseVector>
+  return %0 : tensor<?xf32, #SparseVector>
+}
+
+// CHECK-LABEL: func @sparse_nop_cast(
+//  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>) -> !llvm.ptr<i8>
+//       CHECK: return %[[A]] : !llvm.ptr<i8>
+func @sparse_nop_cast(%arg0: tensor<64xf32, #SparseVector>) -> tensor<?xf32, #SparseVector> {
+  %0 = tensor.cast %arg0 : tensor<64xf32, #SparseVector> to tensor<?xf32, #SparseVector>
+  return %0 : tensor<?xf32, #SparseVector>
 }
 
 // CHECK-LABEL: func @sparse_convert_1d(
@@ -399,23 +411,60 @@ func @sparse_valuesi8(%arg0: tensor<128xi8, #SparseVector>) -> memref<?xi8> {
   return %0 : memref<?xi8>
 }
 
-// CHECK-LABEL: func @sparse_reconstruct_1(
+// CHECK-LABEL: func @sparse_reconstruct(
 //  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>
 //       CHECK: return %[[A]] : !llvm.ptr<i8>
-func @sparse_reconstruct_1(%arg0: tensor<128xf32, #DenseVector> {linalg.inplaceable = true}) -> tensor<128xf32, #DenseVector> {
-  %0 = sparse_tensor.values %arg0 : tensor<128xf32, #DenseVector> to memref<?xf32>
-  %1 = sparse_tensor.tensor %0 : memref<?xf32> to tensor<128xf32, #DenseVector>
-  return %1 : tensor<128xf32, #DenseVector>
+func @sparse_reconstruct(%arg0: tensor<128xf32, #SparseVector>) -> tensor<128xf32, #SparseVector> {
+  %0 = sparse_tensor.load %arg0 : tensor<128xf32, #SparseVector>
+  return %0 : tensor<128xf32, #SparseVector>
 }
 
-// CHECK-LABEL: func @sparse_reconstruct_n(
+// CHECK-LABEL: func @sparse_reconstruct_ins(
 //  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>
+//       CHECK: call @endInsert(%[[A]]) : (!llvm.ptr<i8>) -> ()
 //       CHECK: return %[[A]] : !llvm.ptr<i8>
-func @sparse_reconstruct_n(%arg0: tensor<128xf32, #SparseVector> {linalg.inplaceable = true}) -> tensor<128xf32, #SparseVector> {
-  %c = arith.constant 0 : index
-  %0 = sparse_tensor.pointers %arg0, %c : tensor<128xf32, #SparseVector> to memref<?xindex>
-  %1 = sparse_tensor.indices %arg0, %c : tensor<128xf32, #SparseVector> to memref<?xindex>
-  %2 = sparse_tensor.values %arg0 : tensor<128xf32, #SparseVector> to memref<?xf32>
-  %3 = sparse_tensor.tensor %0, %1, %2 : memref<?xindex>, memref<?xindex>, memref<?xf32> to tensor<128xf32, #SparseVector>
-  return %3 : tensor<128xf32, #SparseVector>
+func @sparse_reconstruct_ins(%arg0: tensor<128xf32, #SparseVector>) -> tensor<128xf32, #SparseVector> {
+  %0 = sparse_tensor.load %arg0 hasInserts : tensor<128xf32, #SparseVector>
+  return %0 : tensor<128xf32, #SparseVector>
+}
+
+// CHECK-LABEL: func @sparse_insert(
+//  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>,
+//  CHECK-SAME: %[[B:.*]]: memref<?xindex>,
+//  CHECK-SAME: %[[C:.*]]: f32) {
+//       CHECK: call @lexInsertF32(%[[A]], %[[B]], %[[C]]) : (!llvm.ptr<i8>, memref<?xindex>, f32) -> ()
+//       CHECK: return
+func @sparse_insert(%arg0: tensor<128xf32, #SparseVector>,
+                    %arg1: memref<?xindex>,
+                    %arg2: f32) {
+  sparse_tensor.lex_insert %arg0, %arg1, %arg2 : tensor<128xf32, #SparseVector>, memref<?xindex>, f32
+  return
+}
+
+// CHECK-LABEL: func @sparse_expansion()
+//    %[[S:.*]] = call @sparseDimSize
+//    %[[V:.*]] = memref.alloca(%[[S]]) : memref<?xf64>
+//    %[[F:.*]] = memref.alloca(%[[S]]) : memref<?xi1>
+//    %[[A:.*]] = memref.alloca(%[[S]]) : memref<?xindex>
+//    linalg.fill(%{{.*}}, %[[V]]) : f64, memref<?xf64>
+//    linalg.fill(%{{.*}}, %[[F]]) : i1, memref<?xi1>
+//       CHECK: return
+func @sparse_expansion() {
+  %c = arith.constant 8 : index
+  %0 = sparse_tensor.init [%c, %c] : tensor<8x8xf64, #SparseMatrix>
+  %values, %filled, %added, %count = sparse_tensor.expand %0
+    : tensor<8x8xf64, #SparseMatrix> to memref<?xf64>, memref<?xi1>, memref<?xindex>, index
+  return
+}
+
+// CHECK-LABEL: func @sparse_compression(
+//  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>,
+//       CHECK: call @expInsertF64(%[[A]],
+//       CHECK: return
+func @sparse_compression(%arg0: tensor<8x8xf64, #SparseMatrix>,
+                         %arg1: memref<?xindex>, %arg2: memref<?xf64>, %arg3: memref<?xi1>,
+                         %arg4: memref<?xindex>, %arg5: index) {
+  sparse_tensor.compress %arg0, %arg1, %arg2, %arg3, %arg4, %arg5
+    : tensor<8x8xf64, #SparseMatrix>, memref<?xindex>, memref<?xf64>, memref<?xi1>, memref<?xindex>, index
+  return
 }

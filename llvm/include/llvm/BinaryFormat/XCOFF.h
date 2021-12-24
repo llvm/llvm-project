@@ -29,6 +29,8 @@ constexpr size_t FileNamePadSize = 6;
 constexpr size_t NameSize = 8;
 constexpr size_t FileHeaderSize32 = 20;
 constexpr size_t FileHeaderSize64 = 24;
+constexpr size_t AuxFileHeaderSize32 = 72;
+constexpr size_t AuxFileHeaderSize64 = 110;
 constexpr size_t SectionHeaderSize32 = 40;
 constexpr size_t SectionHeaderSize64 = 72;
 constexpr size_t SymbolTableEntrySize = 18;
@@ -40,6 +42,17 @@ constexpr uint8_t AllocRegNo = 31;
 enum ReservedSectionNum : int16_t { N_DEBUG = -2, N_ABS = -1, N_UNDEF = 0 };
 
 enum MagicNumber : uint16_t { XCOFF32 = 0x01DF, XCOFF64 = 0x01F7 };
+
+// This field only exists in the XCOFF64 definition.
+enum AuxHeaderFlags64 : uint16_t {
+  SHR_SYMTAB = 0x8000,  ///< At exec time, create shared symbol table for program
+                        ///< (main program only).
+  FORK_POLICY = 0x4000, ///< Forktree policy specified (main program only).
+  FORK_COR = 0x2000     ///< If _AOUT_FORK_POLICY is set, specify copy-on-reference
+                        ///< if this bit is set. Specify copy-on- write otherwise.
+                        ///< If _AOUT_FORK_POLICY is 0, this bit is reserved for
+                        ///< future use and should be set to 0.
+};
 
 // x_smclas field of x_csect from system header: /usr/include/syms.h
 /// Storage Mapping Class definitions.

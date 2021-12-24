@@ -2,8 +2,17 @@ include(CMakePushCheckState)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 include(CheckLibraryExists)
+include(CheckLinkerFlag)
 include(CheckSymbolExists)
 include(CheckCSourceCompiles)
+
+# The compiler driver may be implicitly trying to link against libunwind, which
+# might not work if libunwind doesn't exist yet. Try to check if
+# --unwindlib=none is supported, and use that if possible.
+llvm_check_linker_flag("--unwindlib=none" LIBUNWIND_SUPPORTS_UNWINDLIB_NONE_FLAG)
+if (LIBUNWIND_SUPPORTS_UNWINDLIB_NONE_FLAG)
+  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} --unwindlib=none")
+endif()
 
 check_library_exists(c fopen "" LIBUNWIND_HAS_C_LIB)
 
@@ -25,11 +34,11 @@ endif()
 # required for the link to go through. We remove sanitizers from the
 # configuration checks to avoid spurious link errors.
 
-check_c_compiler_flag(-nostdlib++ LIBUNWIND_SUPPORTS_NOSTDLIBXX_FLAG)
+llvm_check_linker_flag(-nostdlib++ LIBUNWIND_SUPPORTS_NOSTDLIBXX_FLAG)
 if (LIBUNWIND_SUPPORTS_NOSTDLIBXX_FLAG)
   set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdlib++")
 else()
-  check_c_compiler_flag(-nodefaultlibs LIBUNWIND_SUPPORTS_NODEFAULTLIBS_FLAG)
+  llvm_check_linker_flag(-nodefaultlibs LIBUNWIND_SUPPORTS_NODEFAULTLIBS_FLAG)
   if (LIBUNWIND_SUPPORTS_NODEFAULTLIBS_FLAG)
     set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nodefaultlibs")
   endif()
@@ -40,7 +49,9 @@ if (LIBUNWIND_SUPPORTS_NOSTDLIBXX_FLAG OR LIBUNWIND_SUPPORTS_NODEFAULTLIBS_FLAG)
     list(APPEND CMAKE_REQUIRED_LIBRARIES c)
   endif ()
   if (LIBUNWIND_USE_COMPILER_RT)
-    find_compiler_rt_library(builtins LIBUNWIND_BUILTINS_LIBRARY)
+    include(HandleCompilerRT)
+    find_compiler_rt_library(builtins LIBUNWIND_BUILTINS_LIBRARY
+                             FLAGS ${LIBUNWIND_COMPILE_FLAGS})
     list(APPEND CMAKE_REQUIRED_LIBRARIES "${LIBUNWIND_BUILTINS_LIBRARY}")
   else ()
     if (LIBUNWIND_HAS_GCC_S_LIB)

@@ -178,6 +178,8 @@ static bool hasRepeatedBaseClass(const CXXRecordDecl *StartRD) {
   SmallVector<const CXXRecordDecl*, 8> WorkList = {StartRD};
   while (!WorkList.empty()) {
     const CXXRecordDecl *RD = WorkList.pop_back_val();
+    if (RD->getTypeForDecl()->isDependentType())
+      continue;
     for (const CXXBaseSpecifier &BaseSpec : RD->bases()) {
       if (const CXXRecordDecl *B = BaseSpec.getType()->getAsCXXRecordDecl()) {
         if (!SeenBaseTypes.insert(B).second)

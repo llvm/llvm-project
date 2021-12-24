@@ -11,7 +11,9 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   set(COMPILER_RT_BUILTINS_STANDALONE_BUILD TRUE)
   list(INSERT CMAKE_MODULE_PATH 0
     "${CMAKE_SOURCE_DIR}/../../cmake"
-    "${CMAKE_SOURCE_DIR}/../../cmake/Modules")
+    "${CMAKE_SOURCE_DIR}/../../cmake/Modules"
+    "${CMAKE_SOURCE_DIR}/../../../cmake"
+    "${CMAKE_SOURCE_DIR}/../../../cmake/Modules")
   include(base-config-ix)
   include(CompilerRTUtils)
 
@@ -606,6 +608,8 @@ set(mips64el_SOURCES ${GENERIC_TF_SOURCES}
                      ${mips_SOURCES})
 
 set(powerpc_SOURCES ${GENERIC_SOURCES})
+
+set(powerpcspe_SOURCES ${GENERIC_SOURCES})
 
 set(powerpc64_SOURCES
   ppc/divtc3.c

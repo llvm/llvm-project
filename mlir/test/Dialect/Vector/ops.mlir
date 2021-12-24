@@ -4,15 +4,31 @@
 func @vector_transfer_ops_0d(%arg0: tensor<f32>, %arg1: memref<f32>)
   -> tensor<f32> {
     %f0 = arith.constant 0.0 : f32
-    %0 = vector.transfer_read %arg0[], %f0 {permutation_map = affine_map<()->(0)>} :
-      tensor<f32>, vector<1xf32>
-    %1 = vector.transfer_write %0, %arg0[] {permutation_map = affine_map<()->(0)>} :
-      vector<1xf32>, tensor<f32>
-    %2 = vector.transfer_read %arg1[], %f0 {permutation_map = affine_map<()->(0)>} :
-      memref<f32>, vector<1xf32>
-    vector.transfer_write %2, %arg1[] {permutation_map = affine_map<()->(0)>} :
-      vector<1xf32>, memref<f32>
+    %0 = vector.transfer_read %arg0[], %f0 {permutation_map = affine_map<()->()>} :
+      tensor<f32>, vector<f32>
+    %1 = vector.transfer_write %0, %arg0[] {permutation_map = affine_map<()->()>} :
+      vector<f32>, tensor<f32>
+    %2 = vector.transfer_read %arg1[], %f0 {permutation_map = affine_map<()->()>} :
+      memref<f32>, vector<f32>
+    vector.transfer_write %2, %arg1[] {permutation_map = affine_map<()->()>} :
+      vector<f32>, memref<f32>
     return %1: tensor<f32>
+}
+
+// CHECK-LABEL: func @vector_transfer_ops_0d_from_higher_d(
+func @vector_transfer_ops_0d_from_higher_d(%arg0: tensor<?xf32>, %arg1: memref<?x?xf32>)
+  -> tensor<?xf32> {
+    %c0 = arith.constant 0 : index
+    %f0 = arith.constant 0.0 : f32
+    %0 = vector.transfer_read %arg0[%c0], %f0 {permutation_map = affine_map<(d0)->()>} :
+      tensor<?xf32>, vector<f32>
+    %1 = vector.transfer_write %0, %arg0[%c0] {permutation_map = affine_map<(d0)->()>} :
+      vector<f32>, tensor<?xf32>
+    %2 = vector.transfer_read %arg1[%c0, %c0], %f0 {permutation_map = affine_map<(d0, d1)->()>} :
+      memref<?x?xf32>, vector<f32>
+    vector.transfer_write %2, %arg1[%c0, %c0] {permutation_map = affine_map<(d0, d1)->()>} :
+      vector<f32>, memref<?x?xf32>
+    return %1: tensor<?xf32>
 }
 
 // CHECK-LABEL: func @vector_transfer_ops(
@@ -133,16 +149,20 @@ func @vector_transfer_ops_tensor(%arg0: tensor<?x?xf32>,
 }
 
 // CHECK-LABEL: @vector_broadcast
-func @vector_broadcast(%a: f32, %b: vector<16xf32>, %c: vector<1x16xf32>, %d: vector<8x1xf32>) -> vector<8x16xf32> {
+func @vector_broadcast(%a: f32, %b: vector<f32>, %c: vector<16xf32>, %d: vector<1x16xf32>, %e: vector<8x1xf32>) -> vector<8x16xf32> {
+  // CHECK: vector.broadcast %{{.*}} : f32 to vector<f32>
+  %0 = vector.broadcast %a : f32 to vector<f32>
+  // CHECK: vector.broadcast %{{.*}} : vector<f32> to vector<4xf32>
+  %1 = vector.broadcast %b : vector<f32> to vector<4xf32>
   // CHECK: vector.broadcast %{{.*}} : f32 to vector<16xf32>
-  %0 = vector.broadcast %a : f32 to vector<16xf32>
+  %2 = vector.broadcast %a : f32 to vector<16xf32>
   // CHECK-NEXT: vector.broadcast %{{.*}} : vector<16xf32> to vector<8x16xf32>
-  %1 = vector.broadcast %b : vector<16xf32> to vector<8x16xf32>
+  %3 = vector.broadcast %c : vector<16xf32> to vector<8x16xf32>
   // CHECK-NEXT: vector.broadcast %{{.*}} : vector<1x16xf32> to vector<8x16xf32>
-  %2 = vector.broadcast %c : vector<1x16xf32> to vector<8x16xf32>
+  %4 = vector.broadcast %d : vector<1x16xf32> to vector<8x16xf32>
   // CHECK-NEXT: vector.broadcast %{{.*}} : vector<8x1xf32> to vector<8x16xf32>
-  %3 = vector.broadcast %d : vector<8x1xf32> to vector<8x16xf32>
-  return %3 : vector<8x16xf32>
+  %5 = vector.broadcast %e : vector<8x1xf32> to vector<8x16xf32>
+  return %4 : vector<8x16xf32>
 }
 
 // CHECK-LABEL: @shuffle1D
@@ -161,6 +181,13 @@ func @shuffle2D(%a: vector<1x4xf32>, %b: vector<2x4xf32>) -> vector<3x4xf32> {
   // CHECK: vector.shuffle %{{.*}}, %{{.*}}[0, 1, 2] : vector<1x4xf32>, vector<2x4xf32>
   %1 = vector.shuffle %a, %b[0, 1, 2] : vector<1x4xf32>, vector<2x4xf32>
   return %1 : vector<3x4xf32>
+}
+
+// CHECK-LABEL: @extract_element_0d
+func @extract_element_0d(%a: vector<f32>) -> f32 {
+  // CHECK-NEXT: vector.extractelement %{{.*}}[] : vector<f32>
+  %1 = vector.extractelement %a[] : vector<f32>
+  return %1 : f32
 }
 
 // CHECK-LABEL: @extract_element
@@ -183,6 +210,13 @@ func @extract(%arg0: vector<4x8x16xf32>) -> (vector<4x8x16xf32>, vector<8x16xf32
   // CHECK-NEXT: vector.extract {{.*}}[3, 3, 3] : vector<4x8x16xf32>
   %3 = vector.extract %arg0[3, 3, 3] : vector<4x8x16xf32>
   return %0, %1, %2, %3 : vector<4x8x16xf32>, vector<8x16xf32>, vector<16xf32>, f32
+}
+
+// CHECK-LABEL: @insert_element_0d
+func @insert_element_0d(%a: f32, %b: vector<f32>) -> vector<f32> {
+  // CHECK-NEXT: vector.insertelement %{{.*}}, %{{.*}}[] : vector<f32>
+  %1 = vector.insertelement %a, %b[] : vector<f32>
+  return %1 : vector<f32>
 }
 
 // CHECK-LABEL: @insert_element
@@ -342,6 +376,15 @@ func @create_vector_mask() {
   return
 }
 
+// CHECK-LABEL: @constant_vector_mask_0d
+func @constant_vector_mask_0d() {
+  // CHECK: vector.constant_mask [0] : vector<i1>
+  %0 = vector.constant_mask [0] : vector<i1>
+  // CHECK: vector.constant_mask [1] : vector<i1>
+  %1 = vector.constant_mask [1] : vector<i1>
+  return
+}
+
 // CHECK-LABEL: @constant_vector_mask
 func @constant_vector_mask() {
   // CHECK: vector.constant_mask [3, 2] : vector<4x3xi1>
@@ -398,8 +441,9 @@ func @shape_cast(%arg0 : vector<5x1x3x2xf32>,
 func @bitcast(%arg0 : vector<5x1x3x2xf32>,
                  %arg1 : vector<8x1xi32>,
                  %arg2 : vector<16x1x8xi8>,
-                 %arg3 : vector<8x2x1xindex>)
-  -> (vector<5x1x3x4xf16>, vector<5x1x3x8xi8>, vector<8x4xi8>, vector<8x1xf32>, vector<16x1x2xi32>, vector<16x1x4xi16>, vector<16x1x1xindex>, vector<8x2x2xf32>) {
+                 %arg3 : vector<8x2x1xindex>,
+                 %arg4 : vector<f32>)
+  -> (vector<5x1x3x4xf16>, vector<5x1x3x8xi8>, vector<8x4xi8>, vector<8x1xf32>, vector<16x1x2xi32>, vector<16x1x4xi16>, vector<16x1x1xindex>, vector<8x2x2xf32>, vector<i32>) {
 
   // CHECK: vector.bitcast %{{.*}} : vector<5x1x3x2xf32> to vector<5x1x3x4xf16>
   %0 = vector.bitcast %arg0 : vector<5x1x3x2xf32> to vector<5x1x3x4xf16>
@@ -425,7 +469,10 @@ func @bitcast(%arg0 : vector<5x1x3x2xf32>,
   // CHECK-NEXT: vector.bitcast %{{.*}} : vector<8x2x1xindex> to vector<8x2x2xf32>
   %7 = vector.bitcast %arg3 : vector<8x2x1xindex> to vector<8x2x2xf32>
 
-  return %0, %1, %2, %3, %4, %5, %6, %7 : vector<5x1x3x4xf16>, vector<5x1x3x8xi8>, vector<8x4xi8>, vector<8x1xf32>, vector<16x1x2xi32>, vector<16x1x4xi16>, vector<16x1x1xindex>, vector<8x2x2xf32>
+  // CHECK: vector.bitcast %{{.*}} : vector<f32> to vector<i32>
+  %8 = vector.bitcast %arg4 : vector<f32> to vector<i32>
+
+  return %0, %1, %2, %3, %4, %5, %6, %7, %8 : vector<5x1x3x4xf16>, vector<5x1x3x8xi8>, vector<8x4xi8>, vector<8x1xf32>, vector<16x1x2xi32>, vector<16x1x4xi16>, vector<16x1x1xindex>, vector<8x2x2xf32>, vector<i32>
 }
 
 // CHECK-LABEL: @vector_fma
@@ -524,6 +571,25 @@ func @vector_load_and_store_1d_scalar_memref(%memref : memref<200x100xf32>,
 // CHECK-LABEL: @vector_load_and_store_1d_vector_memref
 func @vector_load_and_store_1d_vector_memref(%memref : memref<200x100xvector<8xf32>>,
                                              %i : index, %j : index) {
+  // CHECK: %[[ld:.*]] = vector.load %{{.*}}[%{{.*}}] : memref<200x100xvector<8xf32>>, vector<8xf32>
+  %0 = vector.load %memref[%i, %j] : memref<200x100xvector<8xf32>>, vector<8xf32>
+  // CHECK: vector.store %[[ld]], %{{.*}}[%{{.*}}] : memref<200x100xvector<8xf32>>, vector<8xf32>
+  vector.store %0, %memref[%i, %j] : memref<200x100xvector<8xf32>>, vector<8xf32>
+  return
+}
+
+// CHECK-LABEL: @vector_load_and_store_scalable_vector_memref
+func @vector_load_and_store_scalable_vector_memref(%v: vector<[4]xi32>, %m: memref<?xi32>) -> vector<[4]xi32> {
+  %c0 = arith.constant 0 : index
+  // CHECK: vector.load {{.*}}: memref<?xi32>, vector<[4]xi32>
+  %0 = vector.load %m[%c0] : memref<?xi32>, vector<[4]xi32>
+  // CHECK: vector.store {{.*}}: memref<?xi32>, vector<[4]xi32>
+  vector.store %v, %m[%c0] : memref<?xi32>, vector<[4]xi32>
+  return %0 : vector<[4]xi32>
+}
+
+func @vector_load_and_store_1d_scalable_vector_memref(%memref : memref<200x100xvector<8xf32>>,
+                                                      %i : index, %j : index) {
   // CHECK: %[[ld:.*]] = vector.load %{{.*}}[%{{.*}}] : memref<200x100xvector<8xf32>>, vector<8xf32>
   %0 = vector.load %memref[%i, %j] : memref<200x100xvector<8xf32>>, vector<8xf32>
   // CHECK: vector.store %[[ld]], %{{.*}}[%{{.*}}] : memref<200x100xvector<8xf32>>, vector<8xf32>
@@ -638,9 +704,16 @@ func @extract_insert_map(%v: vector<32xf32>, %v2: vector<16x32xf32>,
 
 // CHECK-LABEL: @multi_reduction
 func @multi_reduction(%0: vector<4x8x16x32xf32>) -> f32 {
-  %1 = vector.multi_reduction #vector.kind<add>, %0 [1, 3] :
+  %1 = vector.multi_reduction <add>, %0 [1, 3] :
     vector<4x8x16x32xf32> to vector<4x16xf32>
-  %2 = vector.multi_reduction #vector.kind<add>, %1 [0, 1] :
+  %2 = vector.multi_reduction <add>, %1 [0, 1] :
     vector<4x16xf32> to f32
   return %2 : f32
+}
+
+// CHECK-LABEL: @get_vector_scale
+func @get_vector_scale() -> index {
+  // CHECK: vector.vscale
+  %0 = vector.vscale
+  return %0 : index
 }

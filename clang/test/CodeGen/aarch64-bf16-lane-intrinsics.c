@@ -4,6 +4,8 @@
 // RUN: %clang_cc1 -triple aarch64_be-arm-none-eabi -target-feature +neon -target-feature +bf16 \
 // RUN:  -disable-O0-optnone -emit-llvm %s -fno-legacy-pass-manager -o - | opt -S -mem2reg | FileCheck --check-prefix=CHECK-BE %s
 
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 #include <arm_neon.h>
 
 // CHECK-LE-LABEL: @test_vcopy_lane_bf16_v1(

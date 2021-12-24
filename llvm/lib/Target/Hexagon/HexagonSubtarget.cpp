@@ -75,6 +75,10 @@ static cl::opt<bool> EnableCheckBankConflict("hexagon-check-bank-conflict",
   cl::Hidden, cl::ZeroOrMore, cl::init(true),
   cl::desc("Enable checking for cache bank conflicts"));
 
+static cl::opt<bool> EnableV68FloatCodeGen(
+    "force-hvx-float", cl::Hidden, cl::ZeroOrMore, cl::init(false),
+    cl::desc("Enable the code-generation for vector float instructions on v68."));
+
 HexagonSubtarget::HexagonSubtarget(const Triple &TT, StringRef CPU,
                                    StringRef FS, const TargetMachine &TM)
     : HexagonGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS),
@@ -103,12 +107,70 @@ HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
   UseAudioOps = false;
   UseLongCalls = false;
 
-  UseBSBScheduling = hasV60Ops() && EnableBSBSched;
+  SubtargetFeatures Features(FS);
 
-  ParseSubtargetFeatures(CPUString, /*TuneCPU*/ CPUString, FS);
+  // Turn on QFloat if the HVX version is v68+.
+  // The function ParseSubtargetFeatures will set feature bits and initialize
+  // subtarget's variables all in one, so there isn't a good way to preprocess
+  // the feature string, other than by tinkering with it directly.
+  auto IsQFloatFS = [](StringRef F) {
+    return F == "+hvx-qfloat" || F == "-hvx-qfloat";
+  };
+  if (!llvm::count_if(Features.getFeatures(), IsQFloatFS)) {
+    auto getHvxVersion = [&Features](StringRef FS) -> StringRef {
+      for (StringRef F : llvm::reverse(Features.getFeatures())) {
+        if (F.startswith("+hvxv"))
+          return F;
+      }
+      for (StringRef F : llvm::reverse(Features.getFeatures())) {
+        if (F == "-hvx")
+          return StringRef();
+        if (F.startswith("+hvx") || F == "-hvx")
+          return F.take_front(4);  // Return "+hvx" or "-hvx".
+      }
+      return StringRef();
+    };
+
+    bool AddQFloat = false;
+    StringRef HvxVer = getHvxVersion(FS);
+    if (HvxVer.startswith("+hvxv")) {
+      int Ver = 0;
+      if (!HvxVer.drop_front(5).consumeInteger(10, Ver) && Ver >= 68)
+        AddQFloat = true;
+    } else if (HvxVer == "+hvx") {
+      if (hasV68Ops())
+        AddQFloat = true;
+    }
+
+    if (AddQFloat)
+      Features.AddFeature("+hvx-qfloat");
+  }
+
+  std::string FeatureString = Features.getString();
+  ParseSubtargetFeatures(CPUString, /*TuneCPU*/ CPUString, FeatureString);
+
+  // Enable float code generation only if the flag(s) are set and
+  // the feature is enabled. v68 is guarded by additional flags.
+  bool GreaterThanV68 = false;
+  if (useHVXV69Ops())
+    GreaterThanV68 = true;
+
+  // Support for deprecated qfloat/ieee codegen flags
+  if (!GreaterThanV68) {
+    if (EnableV68FloatCodeGen)
+      UseHVXFloatingPoint = true;
+  } else {
+    UseHVXFloatingPoint = true;
+  }
+
+  if (UseHVXQFloatOps && UseHVXIEEEFPOps && UseHVXFloatingPoint)
+    LLVM_DEBUG(
+        dbgs() << "Behavior is undefined for simultaneous qfloat and ieee hvx codegen...");
 
   if (OverrideLongCalls.getPosition())
     UseLongCalls = OverrideLongCalls;
+
+  UseBSBScheduling = hasV60Ops() && EnableBSBSched;
 
   if (isTinyCore()) {
     // Tiny core has a single thread, so back-to-back scheduling is enabled by
@@ -117,10 +179,10 @@ HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
       UseBSBScheduling = false;
   }
 
-  FeatureBitset Features = getFeatureBits();
+  FeatureBitset FeatureBits = getFeatureBits();
   if (HexagonDisableDuplex)
-    setFeatureBits(Features.reset(Hexagon::FeatureDuplex));
-  setFeatureBits(Hexagon_MC::completeHVXFeatures(Features));
+    setFeatureBits(FeatureBits.reset(Hexagon::FeatureDuplex));
+  setFeatureBits(Hexagon_MC::completeHVXFeatures(FeatureBits));
 
   return *this;
 }
@@ -305,8 +367,7 @@ void HexagonSubtarget::CallMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
         VRegHoldingReg[MI->getOperand(0).getReg()] = MI->getOperand(1).getReg();
         LastVRegUse.erase(MI->getOperand(1).getReg());
       } else {
-        for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-          const MachineOperand &MO = MI->getOperand(i);
+        for (const MachineOperand &MO : MI->operands()) {
           if (!MO.isReg())
             continue;
           if (MO.isUse() && !MI->isCopy() &&

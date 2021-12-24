@@ -358,3 +358,37 @@ def testSharedLibLoad():
 
 
 run(testSharedLibLoad)
+
+
+#  Test that nano time clock is available.
+# CHECK-LABEL: TEST: testNanoTime
+def testNanoTime():
+  with Context():
+    module = Module.parse("""
+      module {
+      func @main() attributes { llvm.emit_c_interface } {
+        %now = call @nano_time() : () -> i64
+        %memref = memref.alloca() : memref<1xi64>
+        %c0 = arith.constant 0 : index
+        memref.store %now, %memref[%c0] : memref<1xi64>
+        %u_memref = memref.cast %memref : memref<1xi64> to memref<*xi64>
+        call @print_memref_i64(%u_memref) : (memref<*xi64>) -> ()
+        return
+      }
+      func private @nano_time() -> i64 attributes { llvm.emit_c_interface }
+      func private @print_memref_i64(memref<*xi64>) attributes { llvm.emit_c_interface }
+    }""")
+
+    execution_engine = ExecutionEngine(
+        lowerToLLVM(module),
+        opt_level=3,
+        shared_libs=[
+            "../../../../lib/libmlir_runner_utils.so",
+            "../../../../lib/libmlir_c_runner_utils.so"
+        ])
+    execution_engine.invoke("main")
+    # CHECK: Unranked Memref
+    # CHECK: [{{.*}}]
+
+
+run(testNanoTime)

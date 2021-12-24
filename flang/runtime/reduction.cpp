@@ -15,6 +15,7 @@
 
 #include "flang/Runtime/reduction.h"
 #include "reduction-templates.h"
+#include "flang/Runtime/descriptor.h"
 #include <cinttypes>
 
 namespace Fortran::runtime {

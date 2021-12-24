@@ -74,6 +74,11 @@ std::error_code widenPath(const Twine &Path8, SmallVectorImpl<wchar_t> &Path16,
   SmallString<MAX_PATH> Path8Str;
   Path8.toVector(Path8Str);
 
+  // If the path is a long path, mangled into forward slashes, normalize
+  // back to backslashes here.
+  if (Path8Str.startswith("//?/"))
+    llvm::sys::path::native(Path8Str, path::Style::windows_backslash);
+
   if (std::error_code EC = UTF8ToUTF16(Path8Str, Path16))
     return EC;
 
@@ -100,8 +105,10 @@ std::error_code widenPath(const Twine &Path8, SmallVectorImpl<wchar_t> &Path16,
   }
 
   // Remove '.' and '..' because long paths treat these as real path components.
+  // Explicitly use the backslash form here, as we're prepending the \\?\
+  // prefix.
   llvm::sys::path::native(Path8Str, path::Style::windows);
-  llvm::sys::path::remove_dots(Path8Str, true);
+  llvm::sys::path::remove_dots(Path8Str, true, path::Style::windows);
 
   const StringRef RootName = llvm::sys::path::root_name(Path8Str);
   assert(!RootName.empty() &&
@@ -145,6 +152,7 @@ std::string getMainExecutable(const char *argv0, void *MainExecAddr) {
   if (UTF16ToUTF8(PathName.data(), PathName.size(), PathNameUTF8))
     return "";
 
+  llvm::sys::path::make_preferred(PathNameUTF8);
   return std::string(PathNameUTF8.data());
 }
 
@@ -207,7 +215,13 @@ std::error_code current_path(SmallVectorImpl<char> &result) {
   // On success, GetCurrentDirectoryW returns the number of characters not
   // including the null-terminator.
   cur_path.set_size(len);
-  return UTF16ToUTF8(cur_path.begin(), cur_path.size(), result);
+
+  if (std::error_code EC =
+          UTF16ToUTF8(cur_path.begin(), cur_path.size(), result))
+    return EC;
+
+  llvm::sys::path::make_preferred(result);
+  return std::error_code();
 }
 
 std::error_code set_current_path(const Twine &path) {
@@ -388,7 +402,11 @@ static std::error_code realPathFromHandle(HANDLE H,
   }
 
   // Convert the result from UTF-16 to UTF-8.
-  return UTF16ToUTF8(Data, CountChars, RealPath);
+  if (std::error_code EC = UTF16ToUTF8(Data, CountChars, RealPath))
+    return EC;
+
+  llvm::sys::path::make_preferred(RealPath);
+  return std::error_code();
 }
 
 std::error_code is_local(int FD, bool &Result) {
@@ -416,8 +434,7 @@ static std::error_code setDeleteDisposition(HANDLE Handle, bool Delete) {
 
   // Check if the file is on a network (non-local) drive. If so, don't
   // continue when DeleteFile is true, since it prevents opening the file for
-  // writes. Note -- this will leak temporary files on disk, but only when the
-  // target file is on a network drive.
+  // writes.
   SmallVector<wchar_t, 128> FinalPath;
   if (std::error_code EC = realPathFromHandle(Handle, FinalPath))
     return EC;
@@ -427,7 +444,7 @@ static std::error_code setDeleteDisposition(HANDLE Handle, bool Delete) {
     return EC;
 
   if (!IsLocal)
-    return std::error_code();
+    return errc::not_supported;
 
   // The file is on a local drive, we can safely set FILE_DISPOSITION_INFO's
   // flag.
@@ -1183,12 +1200,6 @@ Expected<file_t> openNativeFile(const Twine &Name, CreationDisposition Disp,
     }
   }
 
-  if (Flags & OF_Delete) {
-    if ((EC = setDeleteDisposition(Result, true))) {
-      ::CloseHandle(Result);
-      return errorCodeToError(EC);
-    }
-  }
   return Result;
 }
 
@@ -1414,6 +1425,8 @@ static bool getKnownFolderPath(KNOWNFOLDERID folderId,
 
   bool ok = !UTF16ToUTF8(path, ::wcslen(path), result);
   ::CoTaskMemFree(path);
+  if (ok)
+    llvm::sys::path::make_preferred(result);
   return ok;
 }
 
@@ -1474,6 +1487,7 @@ void system_temp_directory(bool ErasedOnReboot, SmallVectorImpl<char> &Result) {
   // Fall back to a system default.
   const char *DefaultResult = "C:\\Temp";
   Result.append(DefaultResult, DefaultResult + strlen(DefaultResult));
+  llvm::sys::path::make_preferred(Result);
 }
 } // end namespace path
 

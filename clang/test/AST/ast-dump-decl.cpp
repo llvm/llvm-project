@@ -321,7 +321,7 @@ namespace testClassTemplateDecl {
 // CHECK-NEXT:  | |-TemplateArgument type 'testClassTemplateDecl::A'
 // CHECK-NEXT:  | | `-RecordType 0{{.+}} 'testClassTemplateDecl::A'
 // CHECK-NEXT:  | |   `-CXXRecord 0x{{.+}} 'A'
-// CHECK-NEXT:  | |-CXXRecordDecl 0x{{.+}} prev 0x{{.+}} <col:24, col:30> col:30 implicit class TestClassTemplate
+// CHECK-NEXT:  | |-CXXRecordDecl 0x{{.+}} <col:24, col:30> col:30 implicit class TestClassTemplate
 // CHECK-NEXT:  | |-AccessSpecDecl 0x{{.+}} <line:[[@LINE-67]]:3, col:9> col:3 public
 // CHECK-NEXT:  | |-CXXConstructorDecl 0x{{.+}} <line:[[@LINE-67]]:5, col:23> col:5 used TestClassTemplate 'void ()'
 // CHECK-NEXT:  | |-CXXDestructorDecl 0x{{.+}} <line:[[@LINE-67]]:5, col:24> col:5 used ~TestClassTemplate 'void () noexcept'
@@ -358,7 +358,7 @@ namespace testClassTemplateDecl {
 // CHECK-NEXT:  |-TemplateArgument type 'testClassTemplateDecl::C'
 // CHECK-NEXT:  | `-RecordType 0{{.+}} 'testClassTemplateDecl::C'
 // CHECK-NEXT:  |   `-CXXRecord 0x{{.+}} 'C'
-// CHECK-NEXT:  |-CXXRecordDecl 0x{{.+}} prev 0x{{.+}} <line:[[@LINE-104]]:24, col:30> col:30 implicit class TestClassTemplate
+// CHECK-NEXT:  |-CXXRecordDecl 0x{{.+}} <line:[[@LINE-104]]:24, col:30> col:30 implicit class TestClassTemplate
 // CHECK-NEXT:  |-AccessSpecDecl 0x{{.+}} <line:[[@LINE-104]]:3, col:9> col:3 public
 // CHECK-NEXT:  |-CXXConstructorDecl 0x{{.+}} <line:[[@LINE-104]]:5, col:23> col:5 TestClassTemplate 'void ()'
 // CHECK-NEXT:  |-CXXDestructorDecl 0x{{.+}} <line:[[@LINE-104]]:5, col:24> col:5 ~TestClassTemplate 'void ()' noexcept-unevaluated 0x{{.+}}
@@ -376,7 +376,7 @@ namespace testClassTemplateDecl {
 // CHECK-NEXT:  |-TemplateArgument type 'testClassTemplateDecl::D'
 // CHECK-NEXT:  | `-RecordType 0{{.+}} 'testClassTemplateDecl::D'
 // CHECK-NEXT:  |   `-CXXRecord 0x{{.+}} 'D'
-// CHECK-NEXT:  |-CXXRecordDecl 0x{{.+}} prev 0x{{.+}} <line:[[@LINE-122]]:24, col:30> col:30 implicit class TestClassTemplate
+// CHECK-NEXT:  |-CXXRecordDecl 0x{{.+}} <line:[[@LINE-122]]:24, col:30> col:30 implicit class TestClassTemplate
 // CHECK-NEXT:  |-AccessSpecDecl 0x{{.+}} <line:[[@LINE-122]]:3, col:9> col:3 public
 // CHECK-NEXT:  |-CXXConstructorDecl 0x{{.+}} <line:[[@LINE-122]]:5, col:23> col:5 TestClassTemplate 'void ()'
 // CHECK-NEXT:  |-CXXDestructorDecl 0x{{.+}} <line:[[@LINE-122]]:5, col:24> col:5 ~TestClassTemplate 'void ()' noexcept-unevaluated 0x{{.+}}
@@ -519,7 +519,7 @@ namespace testCanonicalTemplate {
   // CHECK-NEXT:   |-TemplateArgument type 'testCanonicalTemplate::A'
   // CHECK-NEXT:   | `-RecordType 0x{{.+}} 'testCanonicalTemplate::A'
   // CHECK-NEXT:   |   `-CXXRecord 0x{{.+}} 'A'
-  // CHECK-NEXT:   |-CXXRecordDecl 0x{{.+}} prev 0x{{.+}} <col:25, col:31> col:31 implicit class TestClassTemplate
+  // CHECK-NEXT:   |-CXXRecordDecl 0x{{.+}} <col:25, col:31> col:31 implicit class TestClassTemplate
   // CHECK-NEXT:   |-FriendDecl 0x{{.+}} <line:[[@LINE-30]]:5, col:40> col:40
   // CHECK-NEXT:   | `-ClassTemplateDecl 0x{{.+}} parent 0x{{.+}} prev 0x{{.+}} <col:5, col:40> col:40 TestClassTemplate
   // CHECK-NEXT:   |   |-TemplateTypeParmDecl 0x{{.+}} <col:14, col:23> col:23 typename depth 0 index 0 T2
@@ -552,7 +552,7 @@ namespace testCanonicalTemplate {
   // CHECK-NEXT:   |-TemplateArgument type 'testCanonicalTemplate::A'
   // CHECK-NEXT:   | `-RecordType 0x{{.+}} 'testCanonicalTemplate::A'
   // CHECK-NEXT:   |   `-CXXRecord 0x{{.+}} 'A'
-  // CHECK-NEXT:   |-CXXRecordDecl 0x{{.+}} prev 0x{{.+}} <col:25, col:31> col:31 implicit class TestClassTemplate2
+  // CHECK-NEXT:   |-CXXRecordDecl 0x{{.+}} <col:25, col:31> col:31 implicit class TestClassTemplate2
   // CHECK-NEXT:   |-CXXConstructorDecl 0x{{.+}} <col:31> col:31 implicit used constexpr TestClassTemplate2 'void () noexcept' inline default trivial
   // CHECK-NEXT:   | `-CompoundStmt 0x{{.+}} <col:31>
   // CHECK-NEXT:   |-CXXConstructorDecl 0x{{.+}} <col:31> col:31 implicit constexpr TestClassTemplate2 'void (const testCanonicalTemplate::TestClassTemplate2<testCanonicalTemplate::A> &)' inline default trivial noexcept-unevaluated 0x{{.+}}

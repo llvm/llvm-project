@@ -1,24 +1,40 @@
 // RUN: mlir-opt %s -test-vector-transfer-lowering-patterns -canonicalize -split-input-file | FileCheck %s
 
-// CHECK-LABEL: func @vector_transfer_ops_0d(
+// CHECK-LABEL: func @vector_transfer_ops_0d_memref(
 //  CHECK-SAME:   %[[MEM:.*]]: memref<f32>
 //  CHECK-SAME:   %[[VV:.*]]: vector<1x1x1xf32>
-func @vector_transfer_ops_0d(%M: memref<f32>, %v: vector<1x1x1xf32>) {
+func @vector_transfer_ops_0d_memref(%M: memref<f32>, %v: vector<1x1x1xf32>) {
     %f0 = arith.constant 0.0 : f32
 
-//  CHECK-NEXT:   %[[V:.*]] = memref.load %[[MEM]][] : memref<f32>
-    %0 = vector.transfer_read %M[], %f0 {permutation_map = affine_map<()->(0)>} :
-      memref<f32>, vector<1xf32>
+//  CHECK-NEXT:   %[[s:.*]] = memref.load %[[MEM]][] : memref<f32>
+//  CHECK-NEXT:   %[[V:.*]] = vector.broadcast %[[s]] : f32 to vector<f32>
+    %0 = vector.transfer_read %M[], %f0 : memref<f32>, vector<f32>
 
-//  CHECK-NEXT:   memref.store %[[V]], %[[MEM]][] : memref<f32>
-    vector.transfer_write %0, %M[] {permutation_map = affine_map<()->(0)>} :
-      vector<1xf32>, memref<f32>
+//  CHECK-NEXT:   %[[ss:.*]] = vector.extractelement %[[V]][] : vector<f32>
+//  CHECK-NEXT:   memref.store %[[ss]], %[[MEM]][] : memref<f32>
+    vector.transfer_write %0, %M[] : vector<f32>, memref<f32>
 
 //  CHECK-NEXT:   %[[VV:.*]] = vector.extract %arg1[0, 0, 0] : vector<1x1x1xf32>
 //  CHECK-NEXT:   memref.store %[[VV]], %[[MEM]][] : memref<f32>
     vector.store %v, %M[] : memref<f32>, vector<1x1x1xf32>
 
     return
+}
+
+// -----
+
+// CHECK-LABEL: func @vector_transfer_ops_0d_tensor(
+//  CHECK-SAME:   %[[SOURCE:.*]]: tensor<f32>
+func @vector_transfer_ops_0d_tensor(%M: tensor<f32>) -> vector<1xf32> {
+    %f0 = arith.constant 0.0 : f32
+
+//  CHECK-NEXT:   %[[S:.*]] = tensor.extract %[[SOURCE]][] : tensor<f32>
+//  CHECK-NEXT:   %[[V:.*]] = vector.broadcast %[[S]] : f32 to vector<1xf32>
+    %0 = vector.transfer_read %M[], %f0 {permutation_map = affine_map<()->(0)>} :
+      tensor<f32>, vector<1xf32>
+
+//  CHECK-NEXT:   return %[[V]]
+    return %0: vector<1xf32>
 }
 
 // -----

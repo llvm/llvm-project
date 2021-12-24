@@ -205,32 +205,46 @@ TEST(DependencyScanner, ScanDepsReuseFilemanagerHasInclude) {
 }
 
 namespace dependencies {
-TEST(DependencyScanningFilesystem, IgnoredFilesHaveSeparateCache) {
+TEST(DependencyScanningFilesystem, IgnoredFilesAreCachedSeparately1) {
   auto VFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
-  VFS->addFile("/mod.h", 0, llvm::MemoryBuffer::getMemBuffer("// hi there!\n"));
+  VFS->addFile("/mod.h", 0,
+               llvm::MemoryBuffer::getMemBuffer("#include <foo.h>\n"
+                                                "// hi there!\n"));
 
   DependencyScanningFilesystemSharedCache SharedCache;
   auto Mappings = std::make_unique<ExcludedPreprocessorDirectiveSkipMapping>();
   DependencyScanningWorkerFilesystem DepFS(SharedCache, VFS, Mappings.get());
 
+  DepFS.enableMinimizationOfAllFiles(); // Let's be explicit for clarity.
   auto StatusMinimized0 = DepFS.status("/mod.h");
-  DepFS.ignoreFile("/mod.h");
+  DepFS.disableMinimization("/mod.h");
   auto StatusFull1 = DepFS.status("/mod.h");
-  DepFS.clearIgnoredFiles();
-
-  auto StatusMinimized2 = DepFS.status("/mod.h");
-  DepFS.ignoreFile("/mod.h");
-  auto StatusFull3 = DepFS.status("/mod.h");
 
   EXPECT_TRUE(StatusMinimized0);
-  EXPECT_EQ(StatusMinimized0->getSize(), 0u);
   EXPECT_TRUE(StatusFull1);
-  EXPECT_EQ(StatusFull1->getSize(), 13u);
+  EXPECT_EQ(StatusMinimized0->getSize(), 17u);
+  EXPECT_EQ(StatusFull1->getSize(), 30u);
+}
 
-  EXPECT_TRUE(StatusMinimized2);
-  EXPECT_EQ(StatusMinimized2->getSize(), 0u);
-  EXPECT_TRUE(StatusFull3);
-  EXPECT_EQ(StatusFull3->getSize(), 13u);
+TEST(DependencyScanningFilesystem, IgnoredFilesAreCachedSeparately2) {
+  auto VFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  VFS->addFile("/mod.h", 0,
+               llvm::MemoryBuffer::getMemBuffer("#include <foo.h>\n"
+                                                "// hi there!\n"));
+
+  DependencyScanningFilesystemSharedCache SharedCache;
+  auto Mappings = std::make_unique<ExcludedPreprocessorDirectiveSkipMapping>();
+  DependencyScanningWorkerFilesystem DepFS(SharedCache, VFS, Mappings.get());
+
+  DepFS.disableMinimization("/mod.h");
+  auto StatusFull0 = DepFS.status("/mod.h");
+  DepFS.enableMinimizationOfAllFiles();
+  auto StatusMinimized1 = DepFS.status("/mod.h");
+
+  EXPECT_TRUE(StatusFull0);
+  EXPECT_TRUE(StatusMinimized1);
+  EXPECT_EQ(StatusFull0->getSize(), 30u);
+  EXPECT_EQ(StatusMinimized1->getSize(), 17u);
 }
 
 } // end namespace dependencies

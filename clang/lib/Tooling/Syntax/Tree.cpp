@@ -126,7 +126,7 @@ void syntax::Tree::replaceChildRangeLowLevel(Node *Begin, Node *End,
   for (auto *N = New; N; N = N->NextSibling) {
     assert(N->Parent == nullptr);
     assert(N->getRole() != NodeRole::Detached && "Roles must be set");
-    // FIXME: sanity-check the role.
+    // FIXME: validate the role.
   }
 
   auto Reachable = [](Node *From, Node *N) {
@@ -263,7 +263,7 @@ std::string syntax::Node::dumpTokens(const SourceManager &SM) const {
       OS << " ";
     }
   });
-  return OS.str();
+  return Storage;
 }
 
 void syntax::Node::assertInvariants() const {

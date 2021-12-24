@@ -27,7 +27,6 @@ class SMLoc;
 namespace mlir {
 namespace tblgen {
 class Dialect;
-class AttrOrTypeParameter;
 
 //===----------------------------------------------------------------------===//
 // AttrOrTypeBuilder
@@ -40,6 +39,76 @@ public:
 
   /// Returns true if this builder is able to infer the MLIRContext parameter.
   bool hasInferredContextParameter() const;
+};
+
+//===----------------------------------------------------------------------===//
+// AttrOrTypeParameter
+//===----------------------------------------------------------------------===//
+
+// A wrapper class for tblgen AttrOrTypeParameter, arrays of which belong to
+// AttrOrTypeDefs to parameterize them.
+class AttrOrTypeParameter {
+public:
+  explicit AttrOrTypeParameter(const llvm::DagInit *def, unsigned index)
+      : def(def), index(index) {}
+
+  // Get the parameter name.
+  StringRef getName() const;
+
+  // If specified, get the custom allocator code for this parameter.
+  Optional<StringRef> getAllocator() const;
+
+  // If specified, get the custom comparator code for this parameter.
+  Optional<StringRef> getComparator() const;
+
+  // Get the C++ type of this parameter.
+  StringRef getCppType() const;
+
+  // Get the C++ accessor type of this parameter.
+  StringRef getCppAccessorType() const;
+
+  // Get the C++ storage type of this parameter.
+  StringRef getCppStorageType() const;
+
+  // Get an optional C++ parameter parser.
+  Optional<StringRef> getParser() const;
+
+  // Get an optional C++ parameter printer.
+  Optional<StringRef> getPrinter() const;
+
+  // Get a description of this parameter for documentation purposes.
+  Optional<StringRef> getSummary() const;
+
+  // Get the assembly syntax documentation.
+  StringRef getSyntax() const;
+
+  // Return the underlying def of this parameter.
+  const llvm::Init *getDef() const;
+
+  // The parameter is pointer-comparable.
+  bool operator==(const AttrOrTypeParameter &other) const {
+    return def == other.def && index == other.index;
+  }
+  bool operator!=(const AttrOrTypeParameter &other) const {
+    return !(*this == other);
+  }
+
+private:
+  /// The underlying tablegen parameter list this parameter is a part of.
+  const llvm::DagInit *def;
+  /// The index of the parameter within the parameter list (`def`).
+  unsigned index;
+};
+
+//===----------------------------------------------------------------------===//
+// AttributeSelfTypeParameter
+//===----------------------------------------------------------------------===//
+
+// A wrapper class for the AttributeSelfTypeParameter tblgen class. This
+// represents a parameter of mlir::Type that is the value type of an AttrDef.
+class AttributeSelfTypeParameter : public AttrOrTypeParameter {
+public:
+  static bool classof(const AttrOrTypeParameter *param);
 };
 
 //===----------------------------------------------------------------------===//
@@ -82,9 +151,8 @@ public:
   // Indicates whether or not to generate the storage class constructor.
   bool hasStorageCustomConstructor() const;
 
-  // Fill a list with this def's parameters. See AttrOrTypeDef in OpBase.td for
-  // documentation of parameter usage.
-  void getParameters(SmallVectorImpl<AttrOrTypeParameter> &) const;
+  /// Get the parameters of this attribute or type.
+  ArrayRef<AttrOrTypeParameter> getParameters() const { return parameters; }
 
   // Return the number of parameters
   unsigned getNumParameters() const;
@@ -100,6 +168,22 @@ public:
   // Returns the code to use as the parser method. If not specified, returns
   // None. Otherwise, returns the contents of that code block.
   Optional<StringRef> getParserCode() const;
+
+  // Returns the custom assembly format, if one was specified.
+  Optional<StringRef> getAssemblyFormat() const;
+
+  // An attribute or type with parameters needs a parser.
+  bool needsParserPrinter() const { return getNumParameters() != 0; }
+
+  // Returns true if this attribute or type has a generated parser.
+  bool hasGeneratedParser() const {
+    return getParserCode() || getAssemblyFormat();
+  }
+
+  // Returns true if this attribute or type has a generated printer.
+  bool hasGeneratedPrinter() const {
+    return getPrinterCode() || getAssemblyFormat();
+  }
 
   // Returns true if the accessors based on the parameters should be generated.
   bool genAccessors() const;
@@ -145,6 +229,9 @@ protected:
 
   // The traits of this definition.
   SmallVector<Trait> traits;
+
+  /// The parameters of this attribute or type.
+  SmallVector<AttrOrTypeParameter> parameters;
 };
 
 //===----------------------------------------------------------------------===//
@@ -173,60 +260,7 @@ public:
   using AttrOrTypeDef::AttrOrTypeDef;
 };
 
-//===----------------------------------------------------------------------===//
-// AttrOrTypeParameter
-//===----------------------------------------------------------------------===//
-
-// A wrapper class for tblgen AttrOrTypeParameter, arrays of which belong to
-// AttrOrTypeDefs to parameterize them.
-class AttrOrTypeParameter {
-public:
-  explicit AttrOrTypeParameter(const llvm::DagInit *def, unsigned index)
-      : def(def), index(index) {}
-
-  // Get the parameter name.
-  StringRef getName() const;
-
-  // If specified, get the custom allocator code for this parameter.
-  Optional<StringRef> getAllocator() const;
-
-  // If specified, get the custom comparator code for this parameter.
-  Optional<StringRef> getComparator() const;
-
-  // Get the C++ type of this parameter.
-  StringRef getCppType() const;
-
-  // Get the C++ accessor type of this parameter.
-  StringRef getCppAccessorType() const;
-
-  // Get a description of this parameter for documentation purposes.
-  Optional<StringRef> getSummary() const;
-
-  // Get the assembly syntax documentation.
-  StringRef getSyntax() const;
-
-  // Return the underlying def of this parameter.
-  const llvm::Init *getDef() const;
-
-private:
-  /// The underlying tablegen parameter list this parameter is a part of.
-  const llvm::DagInit *def;
-  /// The index of the parameter within the parameter list (`def`).
-  unsigned index;
-};
-
-//===----------------------------------------------------------------------===//
-// AttributeSelfTypeParameter
-//===----------------------------------------------------------------------===//
-
-// A wrapper class for the AttributeSelfTypeParameter tblgen class. This
-// represents a parameter of mlir::Type that is the value type of an AttrDef.
-class AttributeSelfTypeParameter : public AttrOrTypeParameter {
-public:
-  static bool classof(const AttrOrTypeParameter *param);
-};
-
-} // end namespace tblgen
-} // end namespace mlir
+} // namespace tblgen
+} // namespace mlir
 
 #endif // MLIR_TABLEGEN_ATTRORTYPEDEF_H

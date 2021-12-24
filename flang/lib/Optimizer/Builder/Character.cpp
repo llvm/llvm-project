@@ -680,8 +680,9 @@ fir::factory::CharacterExprHelper::createSingletonFromCode(mlir::Value code,
   auto intType = builder.getIntegerType(bits);
   auto cast = builder.createConvert(loc, intType, code);
   auto undef = builder.create<fir::UndefOp>(loc, charType);
-  auto zero = builder.createIntegerConstant(loc, builder.getIndexType(), 0);
-  return builder.create<fir::InsertValueOp>(loc, charType, undef, cast, zero);
+  auto zero = builder.getIntegerAttr(builder.getIndexType(), 0);
+  return builder.create<fir::InsertValueOp>(loc, charType, undef, cast,
+                                            builder.getArrayAttr(zero));
 }
 
 mlir::Value fir::factory::CharacterExprHelper::extractCodeFromSingleton(
@@ -690,8 +691,9 @@ mlir::Value fir::factory::CharacterExprHelper::extractCodeFromSingleton(
   assert(type.getLen() == 1);
   auto bits = builder.getKindMap().getCharacterBitsize(type.getFKind());
   auto intType = builder.getIntegerType(bits);
-  auto zero = builder.createIntegerConstant(loc, builder.getIndexType(), 0);
-  return builder.create<fir::ExtractValueOp>(loc, intType, singleton, zero);
+  auto zero = builder.getIntegerAttr(builder.getIndexType(), 0);
+  return builder.create<fir::ExtractValueOp>(loc, intType, singleton,
+                                             builder.getArrayAttr(zero));
 }
 
 mlir::Value

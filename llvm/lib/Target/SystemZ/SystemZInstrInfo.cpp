@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/MC/MCInstrDesc.h"
@@ -202,8 +203,8 @@ void SystemZInstrInfo::expandZExtPseudo(MachineInstr &MI, unsigned LowOpcode,
                Size, MI.getOperand(1).isKill(), MI.getOperand(1).isUndef());
 
   // Keep the remaining operands as-is.
-  for (unsigned I = 2; I < MI.getNumOperands(); ++I)
-    MIB.add(MI.getOperand(I));
+  for (const MachineOperand &MO : llvm::drop_begin(MI.operands(), 2))
+    MIB.add(MO);
 
   MI.eraseFromParent();
 }
@@ -942,8 +943,9 @@ static void transferMIFlag(MachineInstr *OldMI, MachineInstr *NewMI,
     NewMI->setFlag(Flag);
 }
 
-MachineInstr *SystemZInstrInfo::convertToThreeAddress(MachineInstr &MI,
-                                                      LiveVariables *LV) const {
+MachineInstr *
+SystemZInstrInfo::convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
+                                        LiveIntervals *LIS) const {
   MachineBasicBlock *MBB = MI.getParent();
 
   // Try to convert an AND into an RISBG-type instruction.
@@ -984,6 +986,8 @@ MachineInstr *SystemZInstrInfo::convertToThreeAddress(MachineInstr &MI,
             LV->replaceKillInstruction(Op.getReg(), MI, *MIB);
         }
       }
+      if (LIS)
+        LIS->ReplaceMachineInstrInMaps(MI, *MIB);
       transferDeadCC(&MI, MIB);
       return MIB;
     }
@@ -1515,6 +1519,13 @@ unsigned SystemZInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     const char *AsmStr = MI.getOperand(0).getSymbolName();
     return getInlineAsmLength(AsmStr, *MF->getTarget().getMCAsmInfo());
   }
+  else if (MI.getOpcode() == SystemZ::PATCHPOINT)
+    return PatchPointOpers(&MI).getNumPatchBytes();
+  else if (MI.getOpcode() == SystemZ::STACKMAP)
+    return MI.getOperand(1).getImm();
+  else if (MI.getOpcode() == SystemZ::FENTRY_CALL)
+    return 6;
+
   return MI.getDesc().getSize();
 }
 

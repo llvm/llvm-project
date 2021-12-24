@@ -14,6 +14,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/ExecutionEngine/RunnerUtils.h"
+#include <chrono>
+
+// NOLINTBEGIN(*-identifier-naming)
 
 extern "C" void
 _mlir_ciface_print_memref_shape_i8(UnrankedMemRefType<int8_t> *M) {
@@ -73,6 +76,14 @@ extern "C" void _mlir_ciface_print_memref_f32(UnrankedMemRefType<float> *M) {
 
 extern "C" void _mlir_ciface_print_memref_f64(UnrankedMemRefType<double> *M) {
   impl::printMemRef(*M);
+}
+
+extern "C" int64_t _mlir_ciface_nano_time() {
+  auto now = std::chrono::high_resolution_clock::now();
+  auto duration = now.time_since_epoch();
+  auto nanoseconds =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(duration);
+  return nanoseconds.count();
 }
 
 extern "C" void print_memref_i32(int64_t rank, void *ptr) {
@@ -154,3 +165,5 @@ extern "C" int64_t verifyMemRefF64(int64_t rank, void *actualPtr,
   UnrankedMemRefType<double> expectedDesc = {rank, expectedPtr};
   return _mlir_ciface_verifyMemRefF64(&actualDesc, &expectedDesc);
 }
+
+// NOLINTEND(*-identifier-naming)

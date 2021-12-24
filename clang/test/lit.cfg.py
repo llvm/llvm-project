@@ -71,7 +71,6 @@ tools = [
 
 if config.clang_examples:
     config.available_features.add('examples')
-    tools.append('clang-interpreter')
 
 def have_host_jit_support():
     clang_repl_exe = lit.util.which('clang-repl', config.clang_tools_dir)
@@ -99,7 +98,7 @@ if config.clang_staticanalyzer:
     config.available_features.add('staticanalyzer')
     tools.append('clang-check')
 
-    if config.clang_staticanalyzer_z3 == '1':
+    if config.clang_staticanalyzer_z3:
         config.available_features.add('z3')
 
     check_analyzer_fixit_path = os.path.join(
@@ -121,6 +120,9 @@ config.substitutions.append(('%host_cxx', config.host_cxx))
 # Plugins (loadable modules)
 if config.has_plugins and config.llvm_plugin_ext:
     config.available_features.add('plugins')
+
+if config.clang_default_pie_on_linux:
+    config.available_features.add('default-pie-on-linux')
 
 # Set available features we allow tests to conditionalize on.
 #

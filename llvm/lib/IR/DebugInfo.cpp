@@ -447,8 +447,7 @@ bool llvm::stripDebugInfo(Function &F) {
 
   DenseMap<MDNode *, MDNode *> LoopIDsMap;
   for (BasicBlock &BB : F) {
-    for (auto II = BB.begin(), End = BB.end(); II != End;) {
-      Instruction &I = *II++; // We may delete the instruction, increment now.
+    for (Instruction &I : llvm::make_early_inc_range(BB)) {
       if (isa<DbgInfoIntrinsic>(&I)) {
         I.eraseFromParent();
         Changed = true;

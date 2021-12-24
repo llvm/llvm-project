@@ -87,4 +87,4 @@ Unlike if statements, the check does not detect chains of conditional
 operators.
 
 Note: This check also reports situations where branches become identical only
-after preprocession.
+after preprocessing.

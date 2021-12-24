@@ -118,6 +118,37 @@ void MappingTraits<XCOFFYAML::FileHeader>::mapping(
   IO.mapOptional("Flags", FileHdr.Flags);
 }
 
+void MappingTraits<XCOFFYAML::AuxiliaryHeader>::mapping(
+    IO &IO, XCOFFYAML::AuxiliaryHeader &AuxHdr) {
+  IO.mapOptional("Magic", AuxHdr.Magic);
+  IO.mapOptional("Version", AuxHdr.Version);
+  IO.mapOptional("TextStartAddr", AuxHdr.TextStartAddr);
+  IO.mapOptional("DataStartAddr", AuxHdr.DataStartAddr);
+  IO.mapOptional("TOCAnchorAddr", AuxHdr.TOCAnchorAddr);
+  IO.mapOptional("TextSectionSize", AuxHdr.TextSize);
+  IO.mapOptional("DataSectionSize", AuxHdr.InitDataSize);
+  IO.mapOptional("BssSectionSize", AuxHdr.BssDataSize);
+  IO.mapOptional("SecNumOfEntryPoint", AuxHdr.SecNumOfEntryPoint);
+  IO.mapOptional("SecNumOfText", AuxHdr.SecNumOfText);
+  IO.mapOptional("SecNumOfData", AuxHdr.SecNumOfData);
+  IO.mapOptional("SecNumOfTOC", AuxHdr.SecNumOfTOC);
+  IO.mapOptional("SecNumOfLoader", AuxHdr.SecNumOfLoader);
+  IO.mapOptional("SecNumOfBSS", AuxHdr.SecNumOfBSS);
+  IO.mapOptional("MaxAlignOfText", AuxHdr.MaxAlignOfText);
+  IO.mapOptional("MaxAlignOfData", AuxHdr.MaxAlignOfData);
+  IO.mapOptional("ModuleType", AuxHdr.CpuFlag);
+  IO.mapOptional("TextPageSize", AuxHdr.TextPageSize);
+  IO.mapOptional("DataPageSize", AuxHdr.DataPageSize);
+  IO.mapOptional("StackPageSize", AuxHdr.StackPageSize);
+  IO.mapOptional("FlagAndTDataAlignment", AuxHdr.FlagAndTDataAlignment);
+  IO.mapOptional("EntryPointAddr", AuxHdr.EntryPointAddr);
+  IO.mapOptional("MaxStackSize", AuxHdr.MaxStackSize);
+  IO.mapOptional("MaxDataSize", AuxHdr.MaxDataSize);
+  IO.mapOptional("SecNumOfTData", AuxHdr.SecNumOfTData);
+  IO.mapOptional("SecNumOfTBSS", AuxHdr.SecNumOfTBSS);
+  IO.mapOptional("Flag", AuxHdr.Flag);
+}
+
 void MappingTraits<XCOFFYAML::Relocation>::mapping(IO &IO,
                                                    XCOFFYAML::Relocation &R) {
   IO.mapOptional("Address", R.VirtualAddress);
@@ -162,6 +193,7 @@ void MappingTraits<XCOFFYAML::StringTable>::mapping(IO &IO, XCOFFYAML::StringTab
 void MappingTraits<XCOFFYAML::Object>::mapping(IO &IO, XCOFFYAML::Object &Obj) {
   IO.mapTag("!XCOFF", true);
   IO.mapRequired("FileHeader", Obj.Header);
+  IO.mapOptional("AuxiliaryHeader", Obj.AuxHeader);
   IO.mapOptional("Sections", Obj.Sections);
   IO.mapOptional("Symbols", Obj.Symbols);
   IO.mapOptional("StringTable", Obj.StrTbl);

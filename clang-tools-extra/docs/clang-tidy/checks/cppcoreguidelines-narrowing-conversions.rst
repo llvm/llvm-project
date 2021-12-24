@@ -15,7 +15,8 @@ https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#es4
 We enforce only part of the guideline, more specifically, we flag narrowing conversions from:
  - an integer to a narrower integer (e.g. ``char`` to ``unsigned char``)
    if WarnOnIntegerNarrowingConversion Option is set,
- - an integer to a narrower floating-point (e.g. ``uint64_t`` to ``float``),
+ - an integer to a narrower floating-point (e.g. ``uint64_t`` to ``float``)
+   if WarnOnIntegerToFloatingPointNarrowingConversion Option is set,
  - a floating-point to an integer (e.g. ``double`` to ``int``),
  - a floating-point to a narrower floating-point (e.g. ``double`` to ``float``)
    if WarnOnFloatingPointNarrowingConversion Option is set.
@@ -35,6 +36,11 @@ Options
 
     When `true`, the check will warn on narrowing integer conversion
     (e.g. ``int`` to ``size_t``). `true` by default.
+
+.. option:: WarnOnIntegerToFloatingPointNarrowingConversion
+
+    When `true`, the check will warn on narrowing integer to floating-point
+    conversion (e.g. ``size_t`` to ``double``). `true` by default.
 
 .. option:: WarnOnFloatingPointNarrowingConversion
 
@@ -84,7 +90,7 @@ the range [-2^31, 2^31-1].
 
 You may have encountered messages like "narrowing conversion from 'unsigned int'
 to signed type 'int' is implementation-defined".
-The C/C++ standard does not mandate two’s complement for signed integers, and so
+The C/C++ standard does not mandate two's complement for signed integers, and so
 the compiler is free to define what the semantics are for converting an unsigned
-integer to signed integer. Clang's implementation uses the two’s complement
+integer to signed integer. Clang's implementation uses the two's complement
 format.

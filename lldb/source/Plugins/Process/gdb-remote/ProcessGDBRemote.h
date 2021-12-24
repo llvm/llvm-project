@@ -65,9 +65,9 @@ public:
 
   static void Terminate();
 
-  static ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "gdb-remote"; }
 
-  static const char *GetPluginDescriptionStatic();
+  static llvm::StringRef GetPluginDescriptionStatic();
 
   static std::chrono::seconds GetPacketTimeout();
 
@@ -103,9 +103,7 @@ public:
   void DidAttach(ArchSpec &process_arch) override;
 
   // PluginInterface protocol
-  llvm::StringRef GetPluginName() override {
-    return GetPluginNameStatic().GetStringRef();
-  }
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   // Process Control
   Status WillResume() override;
@@ -348,8 +346,6 @@ protected:
 
   size_t UpdateThreadIDsFromStopReplyThreadsValue(llvm::StringRef value);
 
-  bool HandleNotifyPacket(StringExtractorGDBRemote &packet);
-
   bool StartAsyncThread();
 
   void StopAsyncThread();
@@ -379,8 +375,6 @@ protected:
                     lldb_private::LazyBool associated_with_libdispatch_queue,
                     lldb::addr_t dispatch_queue_t, std::string &queue_name,
                     lldb::QueueKind queue_kind, uint64_t queue_serial);
-
-  void HandleStopReplySequence();
 
   void ClearThreadIDList();
 

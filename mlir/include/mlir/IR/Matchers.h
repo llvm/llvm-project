@@ -110,7 +110,7 @@ struct constant_int_op_binder {
     if (type.isa<VectorType, RankedTensorType>()) {
       if (auto splatAttr = attr.dyn_cast<SplatElementsAttr>()) {
         return attr_value_binder<IntegerAttr>(bind_value)
-            .match(splatAttr.getSplatValue());
+            .match(splatAttr.getSplatValue<Attribute>());
       }
     }
     return false;
@@ -176,6 +176,16 @@ struct AnyValueMatcher {
   bool match(Value op) const { return true; }
 };
 
+/// Terminal matcher, always returns true.
+struct AnyCapturedValueMatcher {
+  Value *what;
+  AnyCapturedValueMatcher(Value *what) : what(what) {}
+  bool match(Value op) const {
+    *what = op;
+    return true;
+  }
+};
+
 /// Binds to a specific value and matches it.
 struct PatternMatcherValue {
   PatternMatcherValue(Value val) : value(val) {}
@@ -215,7 +225,7 @@ struct RecursivePatternMatcher {
   std::tuple<OperandMatchers...> operandMatchers;
 };
 
-} // end namespace detail
+} // namespace detail
 
 /// Matches a constant foldable operation.
 inline detail::constant_op_matcher m_Constant() {
@@ -280,9 +290,10 @@ auto m_Op(Matchers... matchers) {
 
 namespace matchers {
 inline auto m_Any() { return detail::AnyValueMatcher(); }
+inline auto m_Any(Value *val) { return detail::AnyCapturedValueMatcher(val); }
 inline auto m_Val(Value v) { return detail::PatternMatcherValue(v); }
 } // namespace matchers
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_MATCHERS_H

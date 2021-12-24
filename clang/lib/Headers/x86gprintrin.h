@@ -26,8 +26,10 @@
 #endif
 
 #define __SSC_MARK(Tag)                                                        \
-  __asm__ __volatile__("movl %%ebx, %%eax; movl %0, %%ebx; .byte 0x64, 0x67, " \
-                       "0x90; movl %%eax, %%ebx;" ::"i"(Tag)                   \
+  __asm__ __volatile__("mov {%%ebx, %%eax|eax, ebx}; "                      \
+                       "mov {%0, %%ebx|ebx, %0}; "                          \
+                       ".byte 0x64, 0x67, 0x90; "                              \
+                       "mov {%%eax, %%ebx|ebx, eax};" ::"i"(Tag)            \
                        : "%eax");
 
 #endif /* __X86GPRINTRIN_H */

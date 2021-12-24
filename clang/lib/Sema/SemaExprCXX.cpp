@@ -468,7 +468,7 @@ ParsedType Sema::getDestructorTypeForDecltype(const DeclSpec &DS,
 
   assert(DS.getTypeSpecType() == DeclSpec::TST_decltype &&
          "unexpected type in getDestructorType");
-  QualType T = BuildDecltypeType(DS.getRepAsExpr(), DS.getTypeSpecTypeLoc());
+  QualType T = BuildDecltypeType(DS.getRepAsExpr());
 
   // If we know the type of the object, check that the correct destructor
   // type was named now; we can give better diagnostics this way.
@@ -1507,8 +1507,10 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
     ElemTy = Context.getBaseElementType(Ty);
   }
 
-  // There doesn't seem to be an explicit rule against this but sanity demands
-  // we only construct objects with object types.
+  // Only construct objects with object types.
+  // The standard doesn't explicitly forbid function types here, but that's an
+  // obvious oversight, as there's no way to dynamically construct a function
+  // in general.
   if (Ty->isFunctionType())
     return ExprError(Diag(TyBeginLoc, diag::err_init_for_function_type)
                        << Ty << FullRange);
@@ -7761,8 +7763,7 @@ ExprResult Sema::ActOnPseudoDestructorExpr(Scope *S, Expr *Base,
     return true;
   }
 
-  QualType T = BuildDecltypeType(DS.getRepAsExpr(), DS.getTypeSpecTypeLoc(),
-                                 false);
+  QualType T = BuildDecltypeType(DS.getRepAsExpr(), /*AsUnevaluated=*/false);
 
   TypeLocBuilder TLB;
   DecltypeTypeLoc DecltypeTL = TLB.push<DecltypeTypeLoc>(T);

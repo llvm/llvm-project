@@ -36,7 +36,7 @@ Options
 
 .. option:: UseAssignment
 
-   If this option is set to `true` (default is `false`), the check will initialise
+   If this option is set to `true` (default is `false`), the check will initialize
    members with an assignment. For example:
 
 .. code-block:: c++

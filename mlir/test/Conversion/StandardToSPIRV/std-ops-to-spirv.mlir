@@ -6,7 +6,7 @@
 
 module attributes {
   spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64], []>, {}>
+    #spv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64, Shader], []>, {}>
 } {
 
 // Check integer operation conversions.
@@ -25,13 +25,13 @@ func @int32_scalar(%lhs: i32, %rhs: i32) {
   // CHECK: spv.UMod %{{.*}}, %{{.*}}: i32
   %5 = arith.remui %lhs, %rhs: i32
   // CHECK: spv.GLSL.SMax %{{.*}}, %{{.*}}: i32
-  %6 = maxsi %lhs, %rhs : i32
+  %6 = arith.maxsi %lhs, %rhs : i32
   // CHECK: spv.GLSL.UMax %{{.*}}, %{{.*}}: i32
-  %7 = maxui %lhs, %rhs : i32
+  %7 = arith.maxui %lhs, %rhs : i32
   // CHECK: spv.GLSL.SMin %{{.*}}, %{{.*}}: i32
-  %8 = minsi %lhs, %rhs : i32
+  %8 = arith.minsi %lhs, %rhs : i32
   // CHECK: spv.GLSL.UMin %{{.*}}, %{{.*}}: i32
-  %9 = minui %lhs, %rhs : i32
+  %9 = arith.minui %lhs, %rhs : i32
   return
 }
 
@@ -76,9 +76,9 @@ func @float32_binary_scalar(%lhs: f32, %rhs: f32) {
   // CHECK: spv.FRem %{{.*}}, %{{.*}}: f32
   %4 = arith.remf %lhs, %rhs: f32
   // CHECK: spv.GLSL.FMax %{{.*}}, %{{.*}}: f32
-  %5 = maxf %lhs, %rhs: f32
+  %5 = arith.maxf %lhs, %rhs: f32
   // CHECK: spv.GLSL.FMin %{{.*}}, %{{.*}}: f32
-  %6 = minf %lhs, %rhs: f32
+  %6 = arith.minf %lhs, %rhs: f32
   return
 }
 
@@ -173,9 +173,10 @@ module attributes {
   spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
 } {
 
+// expected-error@below {{failed to materialize conversion for block argument #0 that remained live after conversion}}
 func @int_vector4_invalid(%arg0: vector<4xi64>) {
-  // expected-error @+2 {{bitwidth emulation is not implemented yet on unsigned op}}
-  // expected-error @+1 {{op requires the same type for all operands and results}}
+  // expected-error@below {{bitwidth emulation is not implemented yet on unsigned op}}
+  // expected-note@below {{see existing live user here}}
   %0 = arith.divui %arg0, %arg0: vector<4xi64>
   return
 }
@@ -931,4 +932,46 @@ func @tensor_extract_constant(%a : index, %b: index, %c: index) -> i32 {
 func @splat(%f : f32) -> vector<4xf32> {
   %splat = splat %f : vector<4xf32>
   return %splat : vector<4xf32>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// std.br, std.cond_br
+//===----------------------------------------------------------------------===//
+
+module attributes {
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
+} {
+
+// CHECK-LABEL: func @simple_loop
+func @simple_loop(index, index, index) {
+^bb0(%begin : index, %end : index, %step : index):
+// CHECK-NEXT:  spv.Branch ^bb1
+  br ^bb1
+
+// CHECK-NEXT: ^bb1:    // pred: ^bb0
+// CHECK-NEXT:  spv.Branch ^bb2({{.*}} : i32)
+^bb1:   // pred: ^bb0
+  br ^bb2(%begin : index)
+
+// CHECK:      ^bb2({{.*}}: i32):       // 2 preds: ^bb1, ^bb3
+// CHECK-NEXT:  {{.*}} = spv.SLessThan {{.*}}, {{.*}} : i32
+// CHECK-NEXT:  spv.BranchConditional {{.*}}, ^bb3, ^bb4
+^bb2(%0: index):        // 2 preds: ^bb1, ^bb3
+  %1 = arith.cmpi slt, %0, %end : index
+  cond_br %1, ^bb3, ^bb4
+
+// CHECK:      ^bb3:    // pred: ^bb2
+// CHECK-NEXT:  {{.*}} = spv.IAdd {{.*}}, {{.*}} : i32
+// CHECK-NEXT:  spv.Branch ^bb2({{.*}} : i32)
+^bb3:   // pred: ^bb2
+  %2 = arith.addi %0, %step : index
+  br ^bb2(%2 : index)
+
+// CHECK:      ^bb4:    // pred: ^bb2
+^bb4:   // pred: ^bb2
+  return
+}
+
 }

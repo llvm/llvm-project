@@ -23,12 +23,6 @@ using namespace llvm::orc;
 namespace {
 
 class LinkGraphMaterializationUnit : public MaterializationUnit {
-private:
-  struct LinkGraphInterface {
-    SymbolFlagsMap SymbolFlags;
-    SymbolStringPtr InitSymbol;
-  };
-
 public:
   static std::unique_ptr<LinkGraphMaterializationUnit>
   Create(ObjectLinkingLayer &ObjLinkingLayer, std::unique_ptr<LinkGraph> G) {
@@ -44,9 +38,9 @@ public:
   }
 
 private:
-  static LinkGraphInterface scanLinkGraph(ExecutionSession &ES, LinkGraph &G) {
+  static Interface scanLinkGraph(ExecutionSession &ES, LinkGraph &G) {
 
-    LinkGraphInterface LGI;
+    Interface LGI;
 
     for (auto *Sym : G.defined_symbols()) {
       // Skip local symbols.
@@ -77,6 +71,7 @@ private:
           Sec.getName() == "__DATA,__objc_classlist" ||
           Sec.getName() == "__TEXT,__swift5_protos" ||
           Sec.getName() == "__TEXT,__swift5_proto" ||
+          Sec.getName() == "__TEXT,__swift5_types" ||
           Sec.getName() == "__DATA,__mod_init_func")
         return true;
     return false;
@@ -97,11 +92,9 @@ private:
   }
 
   LinkGraphMaterializationUnit(ObjectLinkingLayer &ObjLinkingLayer,
-                               std::unique_ptr<LinkGraph> G,
-                               LinkGraphInterface LGI)
-      : MaterializationUnit(std::move(LGI.SymbolFlags),
-                            std::move(LGI.InitSymbol)),
-        ObjLinkingLayer(ObjLinkingLayer), G(std::move(G)) {}
+                               std::unique_ptr<LinkGraph> G, Interface LGI)
+      : MaterializationUnit(std::move(LGI)), ObjLinkingLayer(ObjLinkingLayer),
+        G(std::move(G)) {}
 
   void discard(const JITDylib &JD, const SymbolStringPtr &Name) override {
     for (auto *Sym : G->defined_symbols())
@@ -256,7 +249,8 @@ public:
 
     {
 
-      // Check that InternedResult matches up with MR->getSymbols().
+      // Check that InternedResult matches up with MR->getSymbols(), overriding
+      // flags if requested.
       // This guards against faulty transformations / compilers / object caches.
 
       // First check that there aren't any missing symbols.
@@ -265,16 +259,20 @@ public:
       SymbolNameVector MissingSymbols;
       for (auto &KV : MR->getSymbols()) {
 
+        auto I = InternedResult.find(KV.first);
+
         // If this is a materialization-side-effects only symbol then bump
         // the counter and make sure it's *not* defined, otherwise make
         // sure that it is defined.
         if (KV.second.hasMaterializationSideEffectsOnly()) {
           ++NumMaterializationSideEffectsOnlySymbols;
-          if (InternedResult.count(KV.first))
+          if (I != InternedResult.end())
             ExtraSymbols.push_back(KV.first);
           continue;
-        } else if (!InternedResult.count(KV.first))
+        } else if (I == InternedResult.end())
           MissingSymbols.push_back(KV.first);
+        else if (Layer.OverrideObjectFlags)
+          I->second.setFlags(KV.second);
       }
 
       // If there were missing symbols then report the error.
@@ -422,7 +420,8 @@ private:
     std::vector<std::pair<SymbolStringPtr, Symbol *>> NameToSym;
 
     auto ProcessSymbol = [&](Symbol *Sym) {
-      if (Sym->hasName() && Sym->getLinkage() == Linkage::Weak) {
+      if (Sym->hasName() && Sym->getLinkage() == Linkage::Weak &&
+          Sym->getScope() != Scope::Local) {
         auto Name = ES.intern(Sym->getName());
         if (!MR->getSymbols().count(ES.intern(Sym->getName()))) {
           JITSymbolFlags SF = JITSymbolFlags::Weak;
@@ -709,6 +708,9 @@ Error ObjectLinkingLayer::handleRemoveResources(ResourceKey K) {
       Allocs.erase(I);
     }
   });
+
+  if (AllocsToRemove.empty())
+    return Error::success();
 
   return MemMgr.deallocate(std::move(AllocsToRemove));
 }

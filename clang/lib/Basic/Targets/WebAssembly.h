@@ -137,7 +137,7 @@ private:
     }
   }
 
-  bool hasExtIntType() const override { return true; }
+  bool hasBitIntType() const override { return true; }
 
   bool hasProtectedVisibility() const override { return false; }
 

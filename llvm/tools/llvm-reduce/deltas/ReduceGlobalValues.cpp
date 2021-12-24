@@ -12,40 +12,52 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReduceGlobalValues.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalValue.h"
 
 using namespace llvm;
 
-static bool isValidDSOLocalReductionGV(GlobalValue &GV) {
+static bool shouldReduceDSOLocal(GlobalValue &GV) {
   return GV.isDSOLocal() && !GV.isImplicitDSOLocal();
 }
 
-/// Sets dso_local to false for all global values.
-static void extractGVsFromModule(Oracle &O, Module &Program) {
-  // remove dso_local from global values
-  for (auto &GV : Program.global_values())
-    if (isValidDSOLocalReductionGV(GV) && !O.shouldKeep()) {
-      GV.setDSOLocal(false);
-    }
+static bool shouldReduceVisibility(GlobalValue &GV) {
+  return GV.getVisibility() != GlobalValue::VisibilityTypes::DefaultVisibility;
 }
 
-/// Counts the amount of global values with dso_local and displays their
-/// respective name & index
-static int countGVs(Module &Program) {
-  // TODO: Silence index with --quiet flag
-  outs() << "----------------------------\n";
-  outs() << "GlobalValue Index Reference:\n";
-  int GVCount = 0;
-  for (auto &GV : Program.global_values())
-    if (isValidDSOLocalReductionGV(GV))
-      outs() << "\t" << ++GVCount << ": " << GV.getName() << "\n";
-  outs() << "----------------------------\n";
-  return GVCount;
+static bool shouldReduceUnnamedAddress(GlobalValue &GV) {
+  return GV.getUnnamedAddr() != GlobalValue::UnnamedAddr::None;
+}
+
+static bool shouldReduceDLLStorageClass(GlobalValue &GV) {
+  return GV.getDLLStorageClass() !=
+         GlobalValue::DLLStorageClassTypes::DefaultStorageClass;
+}
+
+static bool shouldReduceThreadLocal(GlobalValue &GV) {
+  return GV.isThreadLocal();
+}
+
+static void reduceGVs(Oracle &O, Module &Program) {
+  for (auto &GV : Program.global_values()) {
+    if (shouldReduceDSOLocal(GV) && !O.shouldKeep())
+      GV.setDSOLocal(false);
+    if (shouldReduceVisibility(GV) && !O.shouldKeep()) {
+      bool IsImplicitDSOLocal = GV.isImplicitDSOLocal();
+      GV.setVisibility(GlobalValue::VisibilityTypes::DefaultVisibility);
+      if (IsImplicitDSOLocal)
+        GV.setDSOLocal(false);
+    }
+    if (shouldReduceUnnamedAddress(GV) && !O.shouldKeep())
+      GV.setUnnamedAddr(GlobalValue::UnnamedAddr::None);
+    if (shouldReduceDLLStorageClass(GV) && !O.shouldKeep())
+      GV.setDLLStorageClass(
+          GlobalValue::DLLStorageClassTypes::DefaultStorageClass);
+    if (shouldReduceThreadLocal(GV) && !O.shouldKeep())
+      GV.setThreadLocal(false);
+  }
 }
 
 void llvm::reduceGlobalValuesDeltaPass(TestRunner &Test) {
   outs() << "*** Reducing GlobalValues...\n";
-  int GVCount = countGVs(Test.getProgram());
-  runDeltaPass(Test, GVCount, extractGVsFromModule);
+  runDeltaPass(Test, reduceGVs);
 }

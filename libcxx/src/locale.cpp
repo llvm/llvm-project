@@ -1,4 +1,4 @@
-//===------------------------- locale.cpp ---------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -987,6 +987,8 @@ ctype<wchar_t>::do_narrow(const char_type* low, const char_type* high, char dfau
 // template <> class ctype<char>;
 
 locale::id ctype<char>::id;
+
+const size_t ctype<char>::table_size;
 
 ctype<char>::ctype(const mask* tab, bool del, size_t refs)
     : locale::facet(refs),
@@ -4543,6 +4545,18 @@ static bool checked_string_to_wchar_convert(wchar_t& dest,
 }
 #endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
+#ifdef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+static bool is_narrow_non_breaking_space(const char* ptr) {
+  // https://www.fileformat.info/info/unicode/char/202f/index.htm
+  return ptr[0] == '\xe2' && ptr[1] == '\x80' && ptr[2] == '\xaf';
+}
+
+static bool is_non_breaking_space(const char* ptr) {
+  // https://www.fileformat.info/info/unicode/char/0a/index.htm
+  return ptr[0] == '\xc2' && ptr[1] == '\xa0';
+}
+#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+
 static bool checked_string_to_char_convert(char& dest,
                                            const char* ptr,
                                            locale_t __loc) {
@@ -4575,6 +4589,13 @@ static bool checked_string_to_char_convert(char& dest,
     return false;
   }
 #else // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+  // FIXME: Work around specific multibyte sequences that we can reasonably
+  // translate into a different single byte.
+  if (is_narrow_non_breaking_space(ptr) || is_non_breaking_space(ptr)) {
+    dest = ' ';
+    return true;
+  }
+
   return false;
 #endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
   _LIBCPP_UNREACHABLE();

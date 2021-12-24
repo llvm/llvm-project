@@ -99,9 +99,9 @@ define i32 @test17(i32 %A) {
 
 define i1 @test18(i32 %A) {
 ; CHECK-LABEL: @test18(
-; CHECK-NEXT:    [[A_OFF:%.*]] = add i32 [[A:%.*]], -50
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[A_OFF]], 49
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[A:%.*]], -100
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], -50
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %B = icmp sge i32 %A, 100
   %C = icmp slt i32 %A, 50
@@ -111,9 +111,9 @@ define i1 @test18(i32 %A) {
 
 define i1 @test18_logical(i32 %A) {
 ; CHECK-LABEL: @test18_logical(
-; CHECK-NEXT:    [[A_OFF:%.*]] = add i32 [[A:%.*]], -50
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[A_OFF]], 49
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[A:%.*]], -100
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], -50
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %B = icmp sge i32 %A, 100
   %C = icmp slt i32 %A, 50
@@ -121,13 +121,11 @@ define i1 @test18_logical(i32 %A) {
   ret i1 %D
 }
 
-; FIXME: Vectors should fold too.
 define <2 x i1> @test18vec(<2 x i32> %A) {
 ; CHECK-LABEL: @test18vec(
-; CHECK-NEXT:    [[B:%.*]] = icmp sgt <2 x i32> [[A:%.*]], <i32 99, i32 99>
-; CHECK-NEXT:    [[C:%.*]] = icmp slt <2 x i32> [[A]], <i32 50, i32 50>
-; CHECK-NEXT:    [[D:%.*]] = or <2 x i1> [[B]], [[C]]
-; CHECK-NEXT:    ret <2 x i1> [[D]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[A:%.*]], <i32 -100, i32 -100>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <2 x i32> [[TMP1]], <i32 -50, i32 -50>
+; CHECK-NEXT:    ret <2 x i1> [[TMP2]]
 ;
   %B = icmp sge <2 x i32> %A, <i32 100, i32 100>
   %C = icmp slt <2 x i32> %A, <i32 50, i32 50>
@@ -223,8 +221,8 @@ define i1 @test25_logical(i32 %A, i32 %B) {
 }
 
 ; PR5634
-define i1 @test26(i32 %A, i32 %B) {
-; CHECK-LABEL: @test26(
+define i1 @and_icmp_eq_0(i32 %A, i32 %B) {
+; CHECK-LABEL: @and_icmp_eq_0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[TMP2]]
@@ -236,8 +234,44 @@ define i1 @test26(i32 %A, i32 %B) {
   ret i1 %D
 }
 
-define i1 @test26_logical(i32 %A, i32 %B) {
-; CHECK-LABEL: @test26_logical(
+define <2 x i1> @and_icmp_eq_0_vector(<2 x i32> %A, <2 x i32> %B) {
+; CHECK-LABEL: @and_icmp_eq_0_vector(
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[TMP2]]
+;
+  %C1 = icmp eq <2 x i32> %A, zeroinitializer
+  %C2 = icmp eq <2 x i32> %B, zeroinitializer
+  %D = and <2 x i1> %C1, %C2
+  ret <2 x i1> %D
+}
+
+define <2 x i1> @and_icmp_eq_0_vector_undef1(<2 x i32> %A, <2 x i32> %B) {
+; CHECK-LABEL: @and_icmp_eq_0_vector_undef1(
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[TMP2]]
+;
+  %C1 = icmp eq <2 x i32> %A, <i32 0, i32 undef>
+  %C2 = icmp eq <2 x i32> %B, <i32 0, i32 undef>
+  %D = and <2 x i1> %C1, %C2
+  ret <2 x i1> %D
+}
+
+define <2 x i1> @and_icmp_eq_0_vector_undef2(<2 x i32> %A, <2 x i32> %B) {
+; CHECK-LABEL: @and_icmp_eq_0_vector_undef2(
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[TMP2]]
+;
+  %C1 = icmp eq <2 x i32> %A, <i32 0, i32 undef>
+  %C2 = icmp eq <2 x i32> %B, <i32 undef, i32 0>
+  %D = and <2 x i1> %C1, %C2
+  ret <2 x i1> %D
+}
+
+define i1 @and_icmp_eq_0_logical(i32 %A, i32 %B) {
+; CHECK-LABEL: @and_icmp_eq_0_logical(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i32 [[A:%.*]], 0
 ; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[B:%.*]], 0
 ; CHECK-NEXT:    [[D:%.*]] = select i1 [[C1]], i1 [[C2]], i1 false
@@ -341,9 +375,9 @@ define i32 @test30(i32 %A) {
 ; CHECK-NEXT:    [[E:%.*]] = or i32 [[D]], 32962
 ; CHECK-NEXT:    ret i32 [[E]]
 ;
-  %B = or i32 %A, 32962
-  %C = and i32 %A, -65536
-  %D = and i32 %B, 40186
+  %B = or i32 %A, 32962   ; 0b1000_0000_1100_0010
+  %C = and i32 %A, -65536 ; 0xffff0000
+  %D = and i32 %B, 40186  ; 0b1001_1100_1111_1010
   %E = or i32 %D, %C
   ret i32 %E
 }
@@ -481,9 +515,9 @@ define i1 @test36_logical(i32 %x) {
 
 define i1 @test37(i32 %x) {
 ; CHECK-LABEL: @test37(
-; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[X:%.*]], 7
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[ADD1]], 31
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], 7
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 31
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %add1 = add i32 %x, 7
   %cmp1 = icmp ult i32 %add1, 30
@@ -494,9 +528,9 @@ define i1 @test37(i32 %x) {
 
 define i1 @test37_logical(i32 %x) {
 ; CHECK-LABEL: @test37_logical(
-; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[X:%.*]], 7
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[ADD1]], 31
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], 7
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 31
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %add1 = add i32 %x, 7
   %cmp1 = icmp ult i32 %add1, 30
@@ -507,11 +541,9 @@ define i1 @test37_logical(i32 %x) {
 
 define <2 x i1> @test37_uniform(<2 x i32> %x) {
 ; CHECK-LABEL: @test37_uniform(
-; CHECK-NEXT:    [[ADD1:%.*]] = add <2 x i32> [[X:%.*]], <i32 7, i32 7>
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult <2 x i32> [[ADD1]], <i32 30, i32 30>
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq <2 x i32> [[X]], <i32 23, i32 23>
-; CHECK-NEXT:    [[RET1:%.*]] = or <2 x i1> [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret <2 x i1> [[RET1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[X:%.*]], <i32 7, i32 7>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <2 x i32> [[TMP1]], <i32 31, i32 31>
+; CHECK-NEXT:    ret <2 x i1> [[TMP2]]
 ;
   %add1 = add <2 x i32> %x, <i32 7, i32 7>
   %cmp1 = icmp ult <2 x i32> %add1, <i32 30, i32 30>
@@ -537,11 +569,9 @@ define <2 x i1> @test37_undef(<2 x i32> %x) {
 
 define i1 @test38(i32 %x) {
 ; CHECK-LABEL: @test38(
-; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[X:%.*]], 7
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[X]], 23
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[ADD1]], 30
-; CHECK-NEXT:    [[RET1:%.*]] = or i1 [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[RET1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], 7
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 31
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %add1 = add i32 %x, 7
   %cmp1 = icmp eq i32 %x, 23
@@ -552,11 +582,9 @@ define i1 @test38(i32 %x) {
 
 define i1 @test38_logical(i32 %x) {
 ; CHECK-LABEL: @test38_logical(
-; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[X:%.*]], 7
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[X]], 23
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[ADD1]], 30
-; CHECK-NEXT:    [[RET1:%.*]] = or i1 [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[RET1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], 7
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 31
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %add1 = add i32 %x, 7
   %cmp1 = icmp eq i32 %x, 23
@@ -578,59 +606,6 @@ define <2 x i1> @test38_nonuniform(<2 x i32> %x) {
   %cmp2 = icmp ult <2 x i32> %add1, <i32 30, i32 32>
   %ret1 = or <2 x i1> %cmp1, %cmp2
   ret <2 x i1> %ret1
-}
-
-define i32 @orsext_to_sel(i32 %x, i1 %y) {
-; CHECK-LABEL: @orsext_to_sel(
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[Y:%.*]], i32 -1, i32 [[X:%.*]]
-; CHECK-NEXT:    ret i32 [[OR]]
-;
-  %sext = sext i1 %y to i32
-  %or = or i32 %sext, %x
-  ret i32 %or
-}
-
-define i32 @orsext_to_sel_swap(i32 %x, i1 %y) {
-; CHECK-LABEL: @orsext_to_sel_swap(
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[Y:%.*]], i32 -1, i32 [[X:%.*]]
-; CHECK-NEXT:    ret i32 [[OR]]
-;
-  %sext = sext i1 %y to i32
-  %or = or i32 %x, %sext
-  ret i32 %or
-}
-
-define i32 @orsext_to_sel_multi_use(i32 %x, i1 %y) {
-; CHECK-LABEL: @orsext_to_sel_multi_use(
-; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SEXT]], [[X:%.*]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[OR]], [[SEXT]]
-; CHECK-NEXT:    ret i32 [[ADD]]
-;
-  %sext = sext i1 %y to i32
-  %or = or i32 %sext, %x
-  %add = add i32 %sext, %or
-  ret i32 %add
-}
-
-define <2 x i32> @orsext_to_sel_vec(<2 x i32> %x, <2 x i1> %y) {
-; CHECK-LABEL: @orsext_to_sel_vec(
-; CHECK-NEXT:    [[OR:%.*]] = select <2 x i1> [[Y:%.*]], <2 x i32> <i32 -1, i32 -1>, <2 x i32> [[X:%.*]]
-; CHECK-NEXT:    ret <2 x i32> [[OR]]
-;
-  %sext = sext <2 x i1> %y to <2 x i32>
-  %or = or <2 x i32> %sext, %x
-  ret <2 x i32> %or
-}
-
-define <2 x i132> @orsext_to_sel_vec_swap(<2 x i132> %x, <2 x i1> %y) {
-; CHECK-LABEL: @orsext_to_sel_vec_swap(
-; CHECK-NEXT:    [[OR:%.*]] = select <2 x i1> [[Y:%.*]], <2 x i132> <i132 -1, i132 -1>, <2 x i132> [[X:%.*]]
-; CHECK-NEXT:    ret <2 x i132> [[OR]]
-;
-  %sext = sext <2 x i1> %y to <2 x i132>
-  %or = or <2 x i132> %x, %sext
-  ret <2 x i132> %or
 }
 
 ; (~A & B) | A --> A | B
@@ -796,12 +771,10 @@ define i1 @test46_logical(i8 signext %c)  {
 
 define <2 x i1> @test46_uniform(<2 x i8> %c)  {
 ; CHECK-LABEL: @test46_uniform(
-; CHECK-NEXT:    [[C_OFF:%.*]] = add <2 x i8> [[C:%.*]], <i8 -97, i8 -97>
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult <2 x i8> [[C_OFF]], <i8 26, i8 26>
-; CHECK-NEXT:    [[C_OFF17:%.*]] = add <2 x i8> [[C]], <i8 -65, i8 -65>
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult <2 x i8> [[C_OFF17]], <i8 26, i8 26>
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i1> [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret <2 x i1> [[OR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[C:%.*]], <i8 -33, i8 -33>
+; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i8> [[TMP1]], <i8 -65, i8 -65>
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult <2 x i8> [[TMP2]], <i8 26, i8 26>
+; CHECK-NEXT:    ret <2 x i1> [[TMP3]]
 ;
   %c.off = add <2 x i8> %c, <i8 -97, i8 -97>
   %cmp1 = icmp ult <2 x i8> %c.off, <i8 26, i8 26>
@@ -1467,4 +1440,94 @@ define <2 x i1> @cmp_overlap_splat(<2 x i5> %x) {
   %isnotneg = icmp sgt <2 x i5> %negx, <i5 -1, i5 -1>
   %r = or <2 x i1> %isneg, %isnotneg
   ret <2 x i1> %r
+}
+
+define i32 @mul_no_common_bits(i32 %p1, i32 %p2) {
+; CHECK-LABEL: @mul_no_common_bits(
+; CHECK-NEXT:    [[X:%.*]] = and i32 [[P1:%.*]], 7
+; CHECK-NEXT:    [[Y:%.*]] = shl i32 [[P2:%.*]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[Y]], 1
+; CHECK-NEXT:    [[R:%.*]] = mul i32 [[X]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %x = and i32 %p1, 7
+  %y = shl i32 %p2, 3
+  %m = mul i32 %x, %y
+  %r = or i32 %m, %x
+  ret i32 %r
+}
+
+define i32 @mul_no_common_bits_const_op(i32 %p) {
+; CHECK-LABEL: @mul_no_common_bits_const_op(
+; CHECK-NEXT:    [[X:%.*]] = and i32 [[P:%.*]], 7
+; CHECK-NEXT:    [[R:%.*]] = mul nuw nsw i32 [[X]], 25
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %x = and i32 %p, 7
+  %m = mul i32 %x, 24
+  %r = or i32 %m, %x
+  ret i32 %r
+}
+
+define <2 x i12> @mul_no_common_bits_commute(<2 x i12> %p) {
+; CHECK-LABEL: @mul_no_common_bits_commute(
+; CHECK-NEXT:    [[X:%.*]] = and <2 x i12> [[P:%.*]], <i12 1, i12 1>
+; CHECK-NEXT:    [[R:%.*]] = mul nuw nsw <2 x i12> [[X]], <i12 15, i12 17>
+; CHECK-NEXT:    ret <2 x i12> [[R]]
+;
+  %x = and <2 x i12> %p, <i12 1, i12 1>
+  %m = mul <2 x i12> %x, <i12 14, i12 16>
+  %r = or <2 x i12> %x, %m
+  ret <2 x i12> %r
+}
+
+; negative test - extra use requires extra instructions
+
+define i32 @mul_no_common_bits_uses(i32 %p1, i32 %p2) {
+; CHECK-LABEL: @mul_no_common_bits_uses(
+; CHECK-NEXT:    [[X:%.*]] = and i32 [[P1:%.*]], 7
+; CHECK-NEXT:    [[Y:%.*]] = shl i32 [[P2:%.*]], 3
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[X]], [[Y]]
+; CHECK-NEXT:    call void @use(i32 [[M]])
+; CHECK-NEXT:    [[R:%.*]] = or i32 [[M]], [[X]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %x = and i32 %p1, 7
+  %y = shl i32 %p2, 3
+  %m = mul i32 %x, %y
+  call void @use(i32 %m)
+  %r = or i32 %m, %x
+  ret i32 %r
+}
+
+; negative test - probably not good to create an extra mul
+
+define i32 @mul_no_common_bits_const_op_uses(i32 %p) {
+; CHECK-LABEL: @mul_no_common_bits_const_op_uses(
+; CHECK-NEXT:    [[X:%.*]] = and i32 [[P:%.*]], 7
+; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i32 [[X]], 24
+; CHECK-NEXT:    call void @use(i32 [[M]])
+; CHECK-NEXT:    [[R:%.*]] = or i32 [[M]], [[X]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %x = and i32 %p, 7
+  %m = mul i32 %x, 24
+  call void @use(i32 %m)
+  %r = or i32 %m, %x
+  ret i32 %r
+}
+
+; negative test - %x and %m may have set 3rd bit
+
+define i32 @mul_common_bits(i32 %p) {
+; CHECK-LABEL: @mul_common_bits(
+; CHECK-NEXT:    [[X:%.*]] = and i32 [[P:%.*]], 7
+; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i32 [[X]], 12
+; CHECK-NEXT:    [[R:%.*]] = or i32 [[M]], [[X]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %x = and i32 %p, 7
+  %m = mul i32 %x, 12
+  %r = or i32 %m, %x
+  ret i32 %r
 }

@@ -1,4 +1,4 @@
-# RUN: llc -start-after=phi-node-elimination -stop-after=virtregrewriter %s -mtriple=x86_64-unknown-unknown -o - | FileCheck %s
+# RUN: llc -start-after=phi-node-elimination -stop-after=virtregrewriter %s -mtriple=x86_64-unknown-unknown -o - -experimental-debug-variable-locations=false | FileCheck %s
 #
 # Test that when a livedebugvars interval crosses a basic block boundary,
 # DBG_VALUEs are created in each covered basic block. In the IR below, control
@@ -133,6 +133,6 @@ body:             |
   
   bb.4.exit:
     $eax = COPY %5, debug-location !18
-    RETQ implicit $eax, debug-location !18
+    RET64 implicit $eax, debug-location !18
 
 ...

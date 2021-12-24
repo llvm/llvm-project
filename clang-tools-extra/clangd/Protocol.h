@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file contains structs based on the LSP specification at
-// https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md
+// https://github.com/Microsoft/language-server-protocol/blob/main/protocol.md
 //
 // This is not meant to be a complete implementation, new interfaces are added
 // when they're needed.
@@ -35,6 +35,11 @@
 #include <memory>
 #include <string>
 #include <vector>
+
+// This file is using the LSP syntax for identifier names which is different
+// from the LLVM coding standard. To avoid the clang-tidy warnings, we're
+// disabling one check here.
+// NOLINTBEGIN(readability-identifier-naming)
 
 namespace clang {
 namespace clangd {
@@ -432,6 +437,11 @@ struct ClientCapabilities {
   /// Client supports processing label offsets instead of a simple label string.
   /// textDocument.signatureHelp.signatureInformation.parameterInformation.labelOffsetSupport
   bool OffsetsInSignatureHelp = false;
+
+  /// The documentation format that should be used for
+  /// textDocument/signatureHelp.
+  /// textDocument.signatureHelp.signatureInformation.documentationFormat
+  MarkupKind SignatureHelpDocumentationFormat = MarkupKind::PlainText;
 
   /// The supported set of CompletionItemKinds for textDocument/completion.
   /// textDocument.completion.completionItemKind.valueSet
@@ -1172,7 +1182,7 @@ enum class InsertTextFormat {
   /// typing in one will update others too.
   ///
   /// See also:
-  /// https//github.com/Microsoft/vscode/blob/master/src/vs/editor/contrib/snippet/common/snippet.md
+  /// https://github.com/Microsoft/vscode/blob/main/src/vs/editor/contrib/snippet/snippet.md
   Snippet = 2,
 };
 
@@ -1278,7 +1288,7 @@ struct SignatureInformation {
   std::string label;
 
   /// The documentation of this signature. Optional.
-  std::string documentation;
+  MarkupContent documentation;
 
   /// The parameters of this signature.
   std::vector<ParameterInformation> parameters;
@@ -1793,5 +1803,7 @@ template <> struct format_provider<clang::clangd::Position> {
   }
 };
 } // namespace llvm
+
+// NOLINTEND(readability-identifier-naming)
 
 #endif

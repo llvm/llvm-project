@@ -20,7 +20,7 @@
 namespace llvm {
 class DefInit;
 class Record;
-} // end namespace llvm
+} // namespace llvm
 
 namespace mlir {
 namespace tblgen {
@@ -29,8 +29,9 @@ namespace tblgen {
 // TableGen.
 class TypeConstraint : public Constraint {
 public:
-  explicit TypeConstraint(const llvm::Record *record);
-  explicit TypeConstraint(const llvm::DefInit *init);
+  using Constraint::Constraint;
+
+  TypeConstraint(const llvm::DefInit *record);
 
   static bool classof(const Constraint *c) { return c->getKind() == CK_Type; }
 
@@ -71,7 +72,7 @@ public:
   Dialect getDialect() const;
 };
 
-} // end namespace tblgen
-} // end namespace mlir
+} // namespace tblgen
+} // namespace mlir
 
 #endif // MLIR_TABLEGEN_TYPE_H_

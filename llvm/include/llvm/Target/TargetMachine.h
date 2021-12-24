@@ -25,6 +25,7 @@
 #include "llvm/Target/CGPassBuilderOption.h"
 #include "llvm/Target/TargetOptions.h"
 #include <string>
+#include <utility>
 
 namespace llvm {
 
@@ -319,6 +320,18 @@ public:
   /// properties.
   virtual unsigned getAssumedAddrSpace(const Value *V) const { return -1; }
 
+  /// If the specified predicate checks whether a generic pointer falls within
+  /// a specified address space, return that generic pointer and the address
+  /// space being queried.
+  ///
+  /// Such predicates could be specified in @llvm.assume intrinsics for the
+  /// optimizer to assume that the given generic pointer always falls within
+  /// the address space based on that predicate.
+  virtual std::pair<const Value *, unsigned>
+  getPredicatedAddrSpace(const Value *V) const {
+    return std::make_pair(nullptr, -1);
+  }
+
   /// Get a \c TargetIRAnalysis appropriate for the target.
   ///
   /// This is used to construct the new pass manager's target IR analysis pass,
@@ -472,6 +485,10 @@ public:
   virtual bool useIPRA() const {
     return false;
   }
+
+  /// The default variant to use in unqualified `asm` instructions.
+  /// If this returns 0, `asm "$(foo$|bar$)"` will evaluate to `asm "foo"`.
+  virtual int unqualifiedInlineAsmVariant() const { return 0; }
 };
 
 /// Helper method for getting the code model, returning Default if

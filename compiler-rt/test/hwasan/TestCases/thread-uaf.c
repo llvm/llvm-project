@@ -1,8 +1,6 @@
 // Tests UAF detection where Allocate/Deallocate/Use
 // happen in separate threads.
-// RUN: %clang_hwasan %s -o %t && not %run %t > %t.out 2>&1
-// RUN: cat %t.out | FileCheck %s
-// RUN: cat %t.out | FileCheck --check-prefix=CHECK-THREAD %s
+// RUN: %clang_hwasan %s -o %t && not %run %t 2>&1 | FileCheck %s
 // REQUIRES: stable-runtime
 
 #include <pthread.h>
@@ -37,10 +35,10 @@ void *Use(void *arg) {
   // CHECK: in Deallocate
   // CHECK: previously allocated here:
   // CHECK: in Allocate
-  // CHECK-THREAD-DAG: Thread: T2 0x
-  // CHECK-THREAD-DAG: Thread: T3 0x
-  // CHECK-THREAD-DAG: Thread: T0 0x
-  // CHECK-THREAD-DAG: Thread: T1 0x
+  // CHECK-DAG: Thread: T2 0x
+  // CHECK-DAG: Thread: T3 0x
+  // CHECK-DAG: Thread: T0 0x
+  // CHECK-DAG: Thread: T1 0x
   __sync_fetch_and_add(&state, 1);
   return NULL;
 }

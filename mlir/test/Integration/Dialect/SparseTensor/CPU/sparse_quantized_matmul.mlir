@@ -10,6 +10,21 @@
 // RUN:  -e entry -entry-point-result=void  \
 // RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
+//
+// Do the same run, but now with SIMDization as well. This should not change the outcome.
+//
+// RUN: mlir-opt %s \
+// RUN:   --linalg-generalize-named-ops --linalg-fuse-elementwise-ops \
+// RUN:   --sparsification="vectorization-strategy=2 vl=2" --sparse-tensor-conversion \
+// RUN:   --convert-vector-to-scf --convert-scf-to-std \
+// RUN:   --func-bufferize --tensor-constant-bufferize --tensor-bufferize \
+// RUN:   --std-bufferize --finalizing-bufferize --lower-affine \
+// RUN:   --convert-vector-to-llvm --convert-memref-to-llvm \
+// RUN:   --convert-std-to-llvm --reconcile-unrealized-casts | \
+// RUN: mlir-cpu-runner \
+// RUN:  -e entry -entry-point-result=void  \
+// RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
+// RUN: FileCheck %s
 
 #DCSR = #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>
 
@@ -66,7 +81,7 @@ module {
     // CHECK-SAME: ( -254, 0, 256, -300, -30, -6 ),
     // CHECK-SAME: ( 1397, 0, -1408, 100, 10, 33 ) )
     //
-    %m = memref.buffer_cast %0 : memref<5x6xi32>
+    %m = bufferization.to_memref %0 : memref<5x6xi32>
     %v = vector.transfer_read %m[%c0, %c0], %i0
       : memref<5x6xi32>, vector<5x6xi32>
     vector.print %v : vector<5x6xi32>

@@ -693,6 +693,18 @@ void DWARFContext::dump(
     getDebugNames().dump(OS);
 }
 
+DWARFTypeUnit *DWARFContext::getTypeUnitForHash(uint16_t Version, uint64_t Hash,
+                                                bool IsDWO) {
+  // FIXME: Check for/use the tu_index here, if there is one.
+  for (const auto &U : IsDWO ? dwo_units() : normal_units()) {
+    if (DWARFTypeUnit *TU = dyn_cast<DWARFTypeUnit>(U.get())) {
+      if (TU->getTypeHash() == Hash)
+        return TU;
+    }
+  }
+  return nullptr;
+}
+
 DWARFCompileUnit *DWARFContext::getDWOCompileUnitForHash(uint64_t Hash) {
   parseDWOUnits(LazyParse);
 
@@ -1183,7 +1195,7 @@ void DWARFContext::addLocalsForDie(DWARFCompileUnit *CU, DWARFDie Subprogram,
             Die.getAttributeValueAsReferencedDie(DW_AT_abstract_origin))
       Die = Origin;
     if (auto NameAttr = Die.find(DW_AT_name))
-      if (Optional<const char *> Name = NameAttr->getAsCString())
+      if (Optional<const char *> Name = dwarf::toString(*NameAttr))
         Local.Name = *Name;
     if (auto Type = Die.getAttributeValueAsReferencedDie(DW_AT_type))
       Local.Size = getTypeSize(Type, getCUAddrSize());

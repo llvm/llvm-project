@@ -31,9 +31,11 @@ void test() {
   std::locale en_US{LOCALE_en_US_UTF_8};
   std::locale fr_FR{LOCALE_fr_FR_UTF_8};
   std::basic_string<CharT> string = MAKE_STRING(CharT, "string");
-  std::basic_format_args args =
-      std::make_format_args<std::basic_format_context<OutIt, CharT>>(
-          true, CharT('a'), 42, string);
+  // The type of the object is an exposition only type. The temporary is needed
+  // to extend the lifetype of the object since args stores a pointer to the
+  // data in this object.
+  auto format_arg_store = std::make_format_args<std::basic_format_context<OutIt, CharT>>(true, CharT('a'), 42, string);
+  std::basic_format_args args = format_arg_store;
 
   {
     std::basic_string<CharT> output;

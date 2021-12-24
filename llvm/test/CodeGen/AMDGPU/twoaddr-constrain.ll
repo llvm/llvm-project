@@ -13,15 +13,12 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align4(<3 x i32> addrspace(4)*
   ; CHECK-NEXT:   %0.sub1:sreg_64 = COPY killed [[COPY1]]
   ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 0, 0 :: (load (<2 x s32>) from %ir.ptr, align 4, addrspace 4)
   ; CHECK-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM killed %0, 8, 0 :: (load (s32) from %ir.ptr + 8, addrspace 4)
-  ; CHECK-NEXT:   undef %16.sub0_sub1:sgpr_96_with_sub0_sub1 = COPY killed [[S_LOAD_DWORDX2_IMM]]
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sgpr_96_with_sub0_sub1 = COPY killed %16
-  ; CHECK-NEXT:   [[COPY2]].sub2:sgpr_96_with_sub0_sub1 = COPY undef [[S_LOAD_DWORD_IMM]]
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[COPY2]].sub0
-  ; CHECK-NEXT:   $sgpr0 = COPY killed [[COPY3]]
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY killed [[COPY2]].sub1
-  ; CHECK-NEXT:   $sgpr1 = COPY killed [[COPY4]]
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY killed [[S_LOAD_DWORD_IMM]]
-  ; CHECK-NEXT:   $sgpr2 = COPY killed [[COPY5]]
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub0
+  ; CHECK-NEXT:   $sgpr0 = COPY killed [[COPY2]]
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY killed [[S_LOAD_DWORDX2_IMM]].sub1
+  ; CHECK-NEXT:   $sgpr1 = COPY killed [[COPY3]]
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY killed [[S_LOAD_DWORD_IMM]]
+  ; CHECK-NEXT:   $sgpr2 = COPY killed [[COPY4]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit killed $sgpr0, implicit killed $sgpr1, implicit killed $sgpr2
   %load = load <3 x i32>, <3 x i32> addrspace(4)* %ptr, align 4
   ret <3 x i32> %load

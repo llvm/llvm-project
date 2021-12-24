@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_INDEX_ACTION_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_INDEX_ACTION_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_INDEXACTION_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_INDEXACTION_H
 #include "Headers.h"
 #include "SymbolCollector.h"
 #include "clang/Frontend/FrontendActions.h"

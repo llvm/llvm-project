@@ -63,41 +63,14 @@ enum class Epoch : u16 {};
 constexpr uptr kEpochBits = 14;
 constexpr Epoch kEpochZero = static_cast<Epoch>(0);
 constexpr Epoch kEpochOver = static_cast<Epoch>(1 << kEpochBits);
+constexpr Epoch kEpochLast = static_cast<Epoch>((1 << kEpochBits) - 1);
 
-const int kClkBits = 42;
-const unsigned kMaxTidReuse = (1 << (64 - kClkBits)) - 1;
+inline Epoch EpochInc(Epoch epoch) {
+  return static_cast<Epoch>(static_cast<u16>(epoch) + 1);
+}
 
-struct ClockElem {
-  u64 epoch  : kClkBits;
-  u64 reused : 64 - kClkBits;  // tid reuse count
-};
+inline bool EpochOverflow(Epoch epoch) { return epoch == kEpochOver; }
 
-struct ClockBlock {
-  static const uptr kSize = 512;
-  static const uptr kTableSize = kSize / sizeof(u32);
-  static const uptr kClockCount = kSize / sizeof(ClockElem);
-  static const uptr kRefIdx = kTableSize - 1;
-  static const uptr kBlockIdx = kTableSize - 2;
-
-  union {
-    u32       table[kTableSize];
-    ClockElem clock[kClockCount];
-  };
-
-  ClockBlock() {
-  }
-};
-
-const int kTidBits = 13;
-// Reduce kMaxTid by kClockCount because one slot in ClockBlock table is
-// occupied by reference counter, so total number of elements we can store
-// in SyncClock is kClockCount * (kTableSize - 1).
-const unsigned kMaxTid = (1 << kTidBits) - ClockBlock::kClockCount;
-#if !SANITIZER_GO
-const unsigned kMaxTidInClock = kMaxTid * 2;  // This includes msb 'freed' bit.
-#else
-const unsigned kMaxTidInClock = kMaxTid;  // Go does not track freed memory.
-#endif
 const uptr kShadowStackSize = 64 * 1024;
 
 // Count of shadow values in a shadow cell.
@@ -107,7 +80,7 @@ const uptr kShadowCnt = 4;
 const uptr kShadowCell = 8;
 
 // Single shadow value.
-typedef u64 RawShadow;
+enum class RawShadow : u32 {};
 const uptr kShadowSize = sizeof(RawShadow);
 
 // Shadow memory is kShadowMultiplier times larger than user memory.
@@ -184,10 +157,13 @@ MD5Hash md5_hash(const void *data, uptr size);
 struct Processor;
 struct ThreadState;
 class ThreadContext;
+struct TidSlot;
 struct Context;
 struct ReportStack;
 class ReportDesc;
 class RegionAlloc;
+struct Trace;
+struct TracePart;
 
 typedef uptr AccessType;
 
@@ -198,6 +174,8 @@ enum : AccessType {
   kAccessVptr = 1 << 2,  // read or write of an object virtual table pointer
   kAccessFree = 1 << 3,  // synthetic memory access during memory freeing
   kAccessExternalPC = 1 << 4,  // access PC can have kExternalPCBit set
+  kAccessCheckOnly = 1 << 5,   // check for races, but don't store
+  kAccessNoRodata = 1 << 6,    // don't check for .rodata marker
 };
 
 // Descriptor of user's memory block.
@@ -219,15 +197,18 @@ enum ExternalTag : uptr {
   // as 16-bit values, see tsan_defs.h.
 };
 
-enum MutexType {
-  MutexTypeTrace = MutexLastCommon,
-  MutexTypeReport,
+enum {
+  MutexTypeReport = MutexLastCommon,
   MutexTypeSyncVar,
   MutexTypeAnnotations,
   MutexTypeAtExit,
   MutexTypeFired,
   MutexTypeRacy,
   MutexTypeGlobalProc,
+  MutexTypeInternalAlloc,
+  MutexTypeTrace,
+  MutexTypeSlot,
+  MutexTypeSlots,
 };
 
 }  // namespace __tsan

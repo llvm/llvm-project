@@ -23,7 +23,8 @@ namespace PS4cpu {
 void addProfileRTArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
                       llvm::opt::ArgStringList &CmdArgs);
 
-void addSanitizerArgs(const ToolChain &TC, llvm::opt::ArgStringList &CmdArgs);
+void addSanitizerArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
+                      llvm::opt::ArgStringList &CmdArgs);
 
 class LLVM_LIBRARY_VISIBILITY Assemble : public Tool {
 public:
@@ -79,6 +80,7 @@ public:
     return LangOptions::SSPStrong;
   }
 
+  unsigned GetDefaultDwarfVersion() const override { return 4; }
   llvm::DebuggerKind getDefaultDebuggerTuning() const override {
     return llvm::DebuggerKind::SCE;
   }

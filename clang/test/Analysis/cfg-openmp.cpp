@@ -598,19 +598,19 @@ void tls(int argc) {
 void tdpf(int argc) {
   int x, cond, fp, rd, lin, step, map;
 // CHECK-DAG:   [B1]
-// CHECK-DAG:  [[#TDPF:]]: cond
-// CHECK-DAG:  [[#TDPF+1]]: [B1.[[#TDPF]]] (ImplicitCastExpr, LValueToRValue, int)
+// CHECK-DAG:  [[#TDPF:]]: [B1.{{.+}}]
+// CHECK-DAG:  [[#TDPF+1]]: [B1.[[#TDPF+6]]] (ImplicitCastExpr, LValueToRValue, int)
 // CHECK-DAG:  [[#TDPF+2]]: [B1.[[#TDPF+1]]] (ImplicitCastExpr, IntegralToBoolean, _Bool)
-// CHECK-DAG:  [[#TDPF+3]]: [B1.[[#TDPF+6]]]
-// CHECK-DAG:  [[#TDPF+4]]: [B1.[[#TDPF+7]]]
+// CHECK-DAG:  [[#TDPF+3]]: [B1.[[#TDPF+7]]]
+// CHECK-DAG:  [[#TDPF+4]]: [B1.[[#TDPF+8]]]
 // CHECK-DAG:  [[#TDPF+5]]: #pragma omp teams distribute parallel for if(cond) firstprivate(fp) reduction(+: rd)
 // CHECK-DAG:    for (int i = 0;
 // CHECK-DAG:        [B3.[[#TDPFB:]]];
-// CHECK-DAG:  [[#TDPF+6]]: fp
-// CHECK-DAG:  [[#TDPF+7]]: rd
-// CHECK-DAG:  [[#TDPF+8]]: argc
-// CHECK-DAG:  [[#TDPF+9]]: x
-// CHECK-DAG:  [[#TDPF+10]]: cond
+// CHECK-DAG:  [[#TDPF+6]]: cond
+// CHECK-DAG:  [[#TDPF+7]]: fp
+// CHECK-DAG:  [[#TDPF+8]]: rd
+// CHECK-DAG:  [[#TDPF+9]]: argc
+// CHECK-DAG:  [[#TDPF+10]]: x
 // CHECK-DAG:  [[#TDPF+11]]: #pragma omp target
 // CHECK-DAG:   [B3]
 // CHECK-DAG:  [[#TDPFB-3]]: x
@@ -627,19 +627,19 @@ void tdpf(int argc) {
 void tdpfs(int argc) {
   int x, cond, fp, rd, lin, step, map;
 // CHECK-DAG:   [B1]
-// CHECK-DAG:  [[#TDPFS:]]: cond
-// CHECK-DAG:  [[#TDPFS+1]]: [B1.[[#TDPFS]]] (ImplicitCastExpr, LValueToRValue, int)
+// CHECK-DAG:  [[#TDPFS:]]: [B1.{{.+}}]
+// CHECK-DAG:  [[#TDPFS+1]]: [B1.[[#TDPFS+6]]] (ImplicitCastExpr, LValueToRValue, int)
 // CHECK-DAG:  [[#TDPFS+2]]: [B1.[[#TDPFS+1]]] (ImplicitCastExpr, IntegralToBoolean, _Bool)
-// CHECK-DAG:  [[#TDPFS+3]]: [B1.[[#TDPFS+6]]]
-// CHECK-DAG:  [[#TDPFS+4]]: [B1.[[#TDPFS+7]]]
+// CHECK-DAG:  [[#TDPFS+3]]: [B1.[[#TDPFS+7]]]
+// CHECK-DAG:  [[#TDPFS+4]]: [B1.[[#TDPFS+8]]]
 // CHECK-DAG:  [[#TDPFS+5]]: #pragma omp teams distribute parallel for simd if(cond) firstprivate(fp) reduction(+: rd)
 // CHECK-DAG:    for (int i = 0;
 // CHECK-DAG:        [B3.[[#TDPFSB:]]];
-// CHECK-DAG:  [[#TDPFS+6]]: fp
-// CHECK-DAG:  [[#TDPFS+7]]: rd
-// CHECK-DAG:  [[#TDPFS+8]]: argc
-// CHECK-DAG:  [[#TDPFS+9]]: x
-// CHECK-DAG:  [[#TDPFS+10]]: cond
+// CHECK-DAG:  [[#TDPFS+6]]: cond
+// CHECK-DAG:  [[#TDPFS+7]]: fp
+// CHECK-DAG:  [[#TDPFS+8]]: rd
+// CHECK-DAG:  [[#TDPFS+9]]: argc
+// CHECK-DAG:  [[#TDPFS+10]]: x
 // CHECK-DAG:  [[#TDPFS+11]]: #pragma omp target
 // CHECK-DAG:   [B3]
 // CHECK-DAG:  [[#TDPFSB-3]]: x

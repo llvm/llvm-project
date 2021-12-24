@@ -1,4 +1,4 @@
-//===--------------------------- libunwind.cpp ----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -292,6 +292,35 @@ void __unw_remove_dynamic_fde(unw_word_t fde) {
   // fde is own mh_group
   DwarfFDECache<LocalAddressSpace>::removeAllIn((LocalAddressSpace::pint_t)fde);
 }
+
+void __unw_add_dynamic_eh_frame_section(unw_word_t eh_frame_start) {
+  // The eh_frame section start serves as the mh_group
+  unw_word_t mh_group = eh_frame_start;
+  CFI_Parser<LocalAddressSpace>::CIE_Info cieInfo;
+  CFI_Parser<LocalAddressSpace>::FDE_Info fdeInfo;
+  auto p = (LocalAddressSpace::pint_t)eh_frame_start;
+  while (true) {
+    if (CFI_Parser<LocalAddressSpace>::decodeFDE(
+            LocalAddressSpace::sThisAddressSpace, p, &fdeInfo, &cieInfo,
+            true) == NULL) {
+      DwarfFDECache<LocalAddressSpace>::add((LocalAddressSpace::pint_t)mh_group,
+                                            fdeInfo.pcStart, fdeInfo.pcEnd,
+                                            fdeInfo.fdeStart);
+      p += fdeInfo.fdeLength;
+    } else if (CFI_Parser<LocalAddressSpace>::parseCIE(
+                   LocalAddressSpace::sThisAddressSpace, p, &cieInfo) == NULL) {
+      p += cieInfo.cieLength;
+    } else
+      return;
+  }
+}
+
+void __unw_remove_dynamic_eh_frame_section(unw_word_t eh_frame_start) {
+  // The eh_frame section start serves as the mh_group
+  DwarfFDECache<LocalAddressSpace>::removeAllIn(
+      (LocalAddressSpace::pint_t)eh_frame_start);
+}
+
 #endif // defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
 #endif // !defined(__USING_SJLJ_EXCEPTIONS__)
 

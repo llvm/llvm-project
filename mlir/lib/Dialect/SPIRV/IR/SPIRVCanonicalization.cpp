@@ -56,7 +56,7 @@ static Attribute extractCompositeElement(Attribute composite,
 
   if (auto vector = composite.dyn_cast<ElementsAttr>()) {
     assert(indices.size() == 1 && "must have exactly one index for a vector");
-    return vector.getValue({indices[0]});
+    return vector.getValues<Attribute>()[indices[0]];
   }
 
   if (auto array = composite.dyn_cast<ArrayAttr>()) {
@@ -74,7 +74,7 @@ static Attribute extractCompositeElement(Attribute composite,
 
 namespace {
 #include "SPIRVCanonicalization.inc"
-}
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // spv.AccessChainOp
@@ -108,7 +108,7 @@ struct CombineChainedAccessChain
     return success();
   }
 };
-} // end anonymous namespace
+} // namespace
 
 void spirv::AccessChainOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
@@ -414,7 +414,7 @@ LogicalResult ConvertSelectionOpToSelect::canCanonicalizeSelection(
 
   return success();
 }
-} // end anonymous namespace
+} // namespace
 
 void spirv::SelectionOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                      MLIRContext *context) {

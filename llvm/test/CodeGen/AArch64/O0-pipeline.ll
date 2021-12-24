@@ -60,6 +60,7 @@
 ; CHECK-NEXT:       Insert fentry calls
 ; CHECK-NEXT:       Insert XRay ops
 ; CHECK-NEXT:       Implement the 'patchable-function' attribute
+; CHECK-NEXT:       Workaround A53 erratum 835769 pass
 ; CHECK-NEXT:       AArch64 Branch Targets
 ; CHECK-NEXT:       Branch relaxation pass
 ; CHECK-NEXT:       Contiguously Lay Out Funclets

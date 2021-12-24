@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/GPU/GPUDialect.h"
-#include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -58,8 +58,8 @@ void TestLinalgDistribution::runOnFunction() {
   populateLinalgDistributeTiledLoopPattern(
       distributeTiledLoopsPatterns, getDistributionOptions(),
       LinalgTransformationFilter(
-          ArrayRef<Identifier>{},
-          {Identifier::get("distributed", funcOp.getContext())})
+          ArrayRef<StringAttr>{},
+          {StringAttr::get("distributed", funcOp.getContext())})
           .addFilter([](Operation *op) {
             return success(!op->getParentOfType<linalg::TiledLoopOp>());
           }));

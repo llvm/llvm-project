@@ -58,6 +58,7 @@ write_lit_config("lit_site_cfg") {
     # (That check also checks LLVM_HOST_TRIPLE.)
     "HOST_LDFLAGS=",
 
+    "LLVM_ENABLE_CURL=0",
     "LLVM_ENABLE_FFI=0",
     "LLVM_HAVE_OPT_VIEWER_MODULES=0",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
@@ -246,6 +247,7 @@ group("test") {
     "//llvm/tools/llvm-cxxdump",
     "//llvm/tools/llvm-cxxfilt",
     "//llvm/tools/llvm-cxxmap",
+    "//llvm/tools/llvm-debuginfod-find:symlinks",
     "//llvm/tools/llvm-diff",
     "//llvm/tools/llvm-dis",
     "//llvm/tools/llvm-dwarfdump",
@@ -286,6 +288,7 @@ group("test") {
     "//llvm/tools/llvm-strings",
     "//llvm/tools/llvm-symbolizer:symlinks",
     "//llvm/tools/llvm-tapi-diff",
+    "//llvm/tools/llvm-tli-checker",
     "//llvm/tools/llvm-undname",
     "//llvm/tools/llvm-xray",
     "//llvm/tools/lto",
@@ -301,6 +304,7 @@ group("test") {
     "//llvm/utils/TableGen:llvm-tblgen",
     "//llvm/utils/count",
     "//llvm/utils/llvm-lit",
+    "//llvm/utils/llvm-locstats",
     "//llvm/utils/not",
 
     # llvm-config wants libgtest_main.a to exist at runtime when run as in

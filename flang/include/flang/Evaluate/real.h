@@ -125,15 +125,17 @@ public:
   template <typename INT> constexpr INT EXPONENT() const {
     if (Exponent() == maxExponent) {
       return INT::HUGE();
+    } else if (IsZero()) {
+      return {0};
     } else {
-      return {UnbiasedExponent()};
+      return {UnbiasedExponent() + 1};
     }
   }
 
   static constexpr Real EPSILON() {
     Real epsilon;
     epsilon.Normalize(
-        false, exponentBias - binaryPrecision, Fraction::MASKL(1));
+        false, exponentBias + 1 - binaryPrecision, Fraction::MASKL(1));
     return epsilon;
   }
   static constexpr Real HUGE() {
@@ -150,8 +152,8 @@ public:
   static constexpr int DIGITS{binaryPrecision};
   static constexpr int PRECISION{Details::decimalPrecision};
   static constexpr int RANGE{Details::decimalRange};
-  static constexpr int MAXEXPONENT{maxExponent - 1 - exponentBias};
-  static constexpr int MINEXPONENT{1 - exponentBias};
+  static constexpr int MAXEXPONENT{maxExponent - exponentBias};
+  static constexpr int MINEXPONENT{2 - exponentBias};
 
   constexpr Real FlushSubnormalToZero() const {
     if (IsSubnormal()) {
@@ -308,6 +310,8 @@ public:
 
   // Extracts unbiased exponent value.
   // Corrects the exponent value of a subnormal number.
+  // Note that the result is one less than the EXPONENT intrinsic;
+  // UnbiasedExponent(1.0) is 0, not 1.
   constexpr int UnbiasedExponent() const {
     int exponent{Exponent() - exponentBias};
     if (IsSubnormal()) {

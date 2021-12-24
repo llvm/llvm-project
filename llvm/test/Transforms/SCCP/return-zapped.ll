@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -ipsccp | FileCheck %s
+; RUN: opt < %s -S -passes=ipsccp | FileCheck %s
 
 ; After the first round of Solver.Solve(), the return value of @testf still
 ; undefined as we hit a branch on undef. Therefore the conditional branch on

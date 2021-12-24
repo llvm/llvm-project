@@ -15,13 +15,13 @@ body: |
     ; WAVE64: liveins: $sgpr0, $vgpr0
     ; WAVE64: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; WAVE64: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; WAVE64: [[V_CMP_CLASS_F32_e64_:%[0-9]+]]:sreg_64 = V_CMP_CLASS_F32_e64 0, [[COPY]], [[COPY1]], implicit $exec
+    ; WAVE64: [[V_CMP_CLASS_F32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_CLASS_F32_e64 0, [[COPY]], [[COPY1]], implicit $exec
     ; WAVE64: S_ENDPGM 0, implicit [[V_CMP_CLASS_F32_e64_]]
     ; WAVE32-LABEL: name: class_s32_vcc_sv
     ; WAVE32: liveins: $sgpr0, $vgpr0
     ; WAVE32: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; WAVE32: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; WAVE32: [[V_CMP_CLASS_F32_e64_:%[0-9]+]]:sreg_32 = V_CMP_CLASS_F32_e64 0, [[COPY]], [[COPY1]], implicit $exec
+    ; WAVE32: [[V_CMP_CLASS_F32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_CLASS_F32_e64 0, [[COPY]], [[COPY1]], implicit $exec
     ; WAVE32: S_ENDPGM 0, implicit [[V_CMP_CLASS_F32_e64_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:vgpr(s32) = COPY $vgpr0
@@ -42,13 +42,13 @@ body: |
     ; WAVE64: liveins: $sgpr0, $vgpr0
     ; WAVE64: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE64: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; WAVE64: [[V_CMP_CLASS_F32_e64_:%[0-9]+]]:sreg_64 = V_CMP_CLASS_F32_e64 0, [[COPY]], [[COPY1]], implicit $exec
+    ; WAVE64: [[V_CMP_CLASS_F32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_CLASS_F32_e64 0, [[COPY]], [[COPY1]], implicit $exec
     ; WAVE64: S_ENDPGM 0, implicit [[V_CMP_CLASS_F32_e64_]]
     ; WAVE32-LABEL: name: class_s32_vcc_vs
     ; WAVE32: liveins: $sgpr0, $vgpr0
     ; WAVE32: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; WAVE32: [[V_CMP_CLASS_F32_e64_:%[0-9]+]]:sreg_32 = V_CMP_CLASS_F32_e64 0, [[COPY]], [[COPY1]], implicit $exec
+    ; WAVE32: [[V_CMP_CLASS_F32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_CLASS_F32_e64 0, [[COPY]], [[COPY1]], implicit $exec
     ; WAVE32: S_ENDPGM 0, implicit [[V_CMP_CLASS_F32_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:sgpr(s32) = COPY $sgpr0
@@ -69,13 +69,13 @@ body: |
     ; WAVE64: liveins: $vgpr0, $vgpr1
     ; WAVE64: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE64: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE64: [[V_CMP_CLASS_F32_e64_:%[0-9]+]]:sreg_64 = V_CMP_CLASS_F32_e64 0, [[COPY]], [[COPY1]], implicit $exec
+    ; WAVE64: [[V_CMP_CLASS_F32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_CLASS_F32_e64 0, [[COPY]], [[COPY1]], implicit $exec
     ; WAVE64: S_ENDPGM 0, implicit [[V_CMP_CLASS_F32_e64_]]
     ; WAVE32-LABEL: name: class_s32_vcc_vv
     ; WAVE32: liveins: $vgpr0, $vgpr1
     ; WAVE32: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32: [[V_CMP_CLASS_F32_e64_:%[0-9]+]]:sreg_32 = V_CMP_CLASS_F32_e64 0, [[COPY]], [[COPY1]], implicit $exec
+    ; WAVE32: [[V_CMP_CLASS_F32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_CLASS_F32_e64 0, [[COPY]], [[COPY1]], implicit $exec
     ; WAVE32: S_ENDPGM 0, implicit [[V_CMP_CLASS_F32_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
@@ -96,13 +96,13 @@ body: |
     ; WAVE64: liveins: $sgpr0_sgpr1, $vgpr0
     ; WAVE64: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
     ; WAVE64: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; WAVE64: [[V_CMP_CLASS_F64_e64_:%[0-9]+]]:sreg_64 = V_CMP_CLASS_F64_e64 0, [[COPY]], [[COPY1]], implicit $exec
+    ; WAVE64: [[V_CMP_CLASS_F64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_CLASS_F64_e64 0, [[COPY]], [[COPY1]], implicit $exec
     ; WAVE64: S_ENDPGM 0, implicit [[V_CMP_CLASS_F64_e64_]]
     ; WAVE32-LABEL: name: class_s64_vcc_sv
     ; WAVE32: liveins: $sgpr0_sgpr1, $vgpr0
     ; WAVE32: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
     ; WAVE32: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; WAVE32: [[V_CMP_CLASS_F64_e64_:%[0-9]+]]:sreg_32 = V_CMP_CLASS_F64_e64 0, [[COPY]], [[COPY1]], implicit $exec
+    ; WAVE32: [[V_CMP_CLASS_F64_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_CLASS_F64_e64 0, [[COPY]], [[COPY1]], implicit $exec
     ; WAVE32: S_ENDPGM 0, implicit [[V_CMP_CLASS_F64_e64_]]
     %0:sgpr(s64) = COPY $sgpr0_sgpr1
     %1:vgpr(s32) = COPY $vgpr0
@@ -124,13 +124,13 @@ body: |
     ; WAVE64: liveins: $sgpr0_sgpr1, $vgpr0
     ; WAVE64: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; WAVE64: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; WAVE64: [[V_CMP_CLASS_F64_e64_:%[0-9]+]]:sreg_64 = V_CMP_CLASS_F64_e64 0, [[COPY]], [[COPY1]], implicit $exec
+    ; WAVE64: [[V_CMP_CLASS_F64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_CLASS_F64_e64 0, [[COPY]], [[COPY1]], implicit $exec
     ; WAVE64: S_ENDPGM 0, implicit [[V_CMP_CLASS_F64_e64_]]
     ; WAVE32-LABEL: name: class_s64_vcc_vs
     ; WAVE32: liveins: $sgpr0_sgpr1, $vgpr0
     ; WAVE32: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; WAVE32: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; WAVE32: [[V_CMP_CLASS_F64_e64_:%[0-9]+]]:sreg_32 = V_CMP_CLASS_F64_e64 0, [[COPY]], [[COPY1]], implicit $exec
+    ; WAVE32: [[V_CMP_CLASS_F64_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_CLASS_F64_e64 0, [[COPY]], [[COPY1]], implicit $exec
     ; WAVE32: S_ENDPGM 0, implicit [[V_CMP_CLASS_F64_e64_]]
     %0:vgpr(s64) = COPY $vgpr0_vgpr1
     %1:sgpr(s32) = COPY $sgpr0
@@ -152,13 +152,13 @@ body: |
     ; WAVE64: liveins: $vgpr0_vgpr1, $vgpr2
     ; WAVE64: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; WAVE64: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; WAVE64: [[V_CMP_CLASS_F64_e64_:%[0-9]+]]:sreg_64 = V_CMP_CLASS_F64_e64 0, [[COPY]], [[COPY1]], implicit $exec
+    ; WAVE64: [[V_CMP_CLASS_F64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_CLASS_F64_e64 0, [[COPY]], [[COPY1]], implicit $exec
     ; WAVE64: S_ENDPGM 0, implicit [[V_CMP_CLASS_F64_e64_]]
     ; WAVE32-LABEL: name: class_s64_vcc_vv
     ; WAVE32: liveins: $vgpr0_vgpr1, $vgpr2
     ; WAVE32: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; WAVE32: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; WAVE32: [[V_CMP_CLASS_F64_e64_:%[0-9]+]]:sreg_32 = V_CMP_CLASS_F64_e64 0, [[COPY]], [[COPY1]], implicit $exec
+    ; WAVE32: [[V_CMP_CLASS_F64_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_CLASS_F64_e64 0, [[COPY]], [[COPY1]], implicit $exec
     ; WAVE32: S_ENDPGM 0, implicit [[V_CMP_CLASS_F64_e64_]]
     %0:vgpr(s64) = COPY $vgpr0_vgpr1
     %1:vgpr(s32) = COPY $vgpr2

@@ -12,6 +12,7 @@
 
 #include "PassDetail.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/GPU/Passes.h"
 #include "mlir/Dialect/GPU/Utils.h"
@@ -20,6 +21,7 @@
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/Parser.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/RegionUtils.h"
 
@@ -239,6 +241,31 @@ namespace {
 class GpuKernelOutliningPass
     : public GpuKernelOutliningBase<GpuKernelOutliningPass> {
 public:
+  GpuKernelOutliningPass(StringRef dlStr) {
+    if (!dlStr.empty() && !dataLayoutStr.hasValue())
+      dataLayoutStr = dlStr.str();
+  }
+
+  GpuKernelOutliningPass(const GpuKernelOutliningPass &other)
+      : dataLayoutSpec(other.dataLayoutSpec) {
+    dataLayoutStr = other.dataLayoutStr;
+  }
+
+  LogicalResult initialize(MLIRContext *context) override {
+    // Initialize the data layout specification from the data layout string.
+    if (!dataLayoutStr.empty()) {
+      Attribute resultAttr = mlir::parseAttribute(dataLayoutStr, context);
+      if (!resultAttr)
+        return failure();
+
+      dataLayoutSpec = resultAttr.dyn_cast<DataLayoutSpecInterface>();
+      if (!dataLayoutSpec)
+        return failure();
+    }
+
+    return success();
+  }
+
   void runOnOperation() override {
     SymbolTable symbolTable(getOperation());
     bool modified = false;
@@ -286,10 +313,16 @@ private:
     // a SymbolTable by the caller. SymbolTable needs to be refactored to
     // prevent manual building of Ops with symbols in code using SymbolTables
     // and then this needs to use the OpBuilder.
-    auto context = getOperation().getContext();
+    auto *context = getOperation().getContext();
     OpBuilder builder(context);
     auto kernelModule = builder.create<gpu::GPUModuleOp>(kernelFunc.getLoc(),
                                                          kernelFunc.getName());
+
+    // If a valid data layout spec was provided, attach it to the kernel module.
+    // Otherwise, the default data layout will be used.
+    if (dataLayoutSpec)
+      kernelModule->setAttr("dlspec", dataLayoutSpec);
+
     SymbolTable symbolTable(kernelModule);
     symbolTable.insert(kernelFunc);
 
@@ -313,10 +346,18 @@ private:
 
     return kernelModule;
   }
+
+  Option<std::string> dataLayoutStr{
+      *this, "data-layout-str",
+      llvm::cl::desc("String containing the data layout specification to be "
+                     "attached to the GPU kernel module")};
+
+  DataLayoutSpecInterface dataLayoutSpec;
 };
 
 } // namespace
 
-std::unique_ptr<OperationPass<ModuleOp>> mlir::createGpuKernelOutliningPass() {
-  return std::make_unique<GpuKernelOutliningPass>();
+std::unique_ptr<OperationPass<ModuleOp>>
+mlir::createGpuKernelOutliningPass(StringRef dataLayoutStr) {
+  return std::make_unique<GpuKernelOutliningPass>(dataLayoutStr);
 }

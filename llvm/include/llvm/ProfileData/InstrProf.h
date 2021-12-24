@@ -205,9 +205,9 @@ StringRef getFuncNameWithoutPrefix(StringRef PGOFuncName,
                                    StringRef FileName = "<unknown>");
 
 /// Given a vector of strings (function PGO names) \c NameStrs, the
-/// method generates a combined string \c Result thatis ready to be
+/// method generates a combined string \c Result that is ready to be
 /// serialized.  The \c Result string is comprised of three fields:
-/// The first field is the legnth of the uncompressed strings, and the
+/// The first field is the length of the uncompressed strings, and the
 /// the second field is the length of the zlib-compressed string.
 /// Both fields are encoded in ULEB128.  If \c doCompress is false, the
 ///  third field is the uncompressed strings; otherwise it is the
@@ -290,6 +290,10 @@ enum class instrprof_error {
   too_large,
   truncated,
   malformed,
+  missing_debug_info_for_correlation,
+  unexpected_debug_info_for_correlation,
+  unable_to_correlate_profile,
+  unsupported_debug_format,
   unknown_function,
   invalid_prof,
   hash_mismatch,
@@ -308,7 +312,8 @@ inline std::error_code make_error_code(instrprof_error E) {
 
 class InstrProfError : public ErrorInfo<InstrProfError> {
 public:
-  InstrProfError(instrprof_error Err) : Err(Err) {
+  InstrProfError(instrprof_error Err, const Twine &ErrStr = Twine())
+      : Err(Err), Msg(ErrStr.str()) {
     assert(Err != instrprof_error::success && "Not an error");
   }
 
@@ -321,6 +326,7 @@ public:
   }
 
   instrprof_error get() const { return Err; }
+  const std::string &getMessage() const { return Msg; }
 
   /// Consume an Error and return the raw enum value contained within it. The
   /// Error must either be a success value, or contain a single InstrProfError.
@@ -337,6 +343,7 @@ public:
 
 private:
   instrprof_error Err;
+  std::string Msg;
 };
 
 class SoftInstrProfErrors {
@@ -474,7 +481,8 @@ public:
   /// is used by the raw and text profile readers.
   Error addFuncName(StringRef FuncName) {
     if (FuncName.empty())
-      return make_error<InstrProfError>(instrprof_error::malformed);
+      return make_error<InstrProfError>(instrprof_error::malformed,
+                                        "function name is empty");
     auto Ins = NameTab.insert(FuncName);
     if (Ins.second) {
       MD5NameMap.push_back(std::make_pair(
@@ -1145,7 +1153,8 @@ void getMemOPSizeRangeFromOption(StringRef Str, int64_t &RangeStart,
 // Create a COMDAT variable INSTR_PROF_RAW_VERSION_VAR to make the runtime
 // aware this is an ir_level profile so it can set the version flag.
 GlobalVariable *createIRLevelProfileFlagVar(Module &M, bool IsCS,
-                                            bool InstrEntryBBEnabled);
+                                            bool InstrEntryBBEnabled,
+                                            bool DebugInfoCorrelate);
 
 // Create the variable for the profile file name.
 void createProfileFileNameVar(Module &M, StringRef InstrProfileOutput);

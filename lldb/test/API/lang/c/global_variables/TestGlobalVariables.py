@@ -21,7 +21,7 @@ class GlobalVariablesTestCase(TestBase):
         self.shlib_names = ["a"]
 
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24764")
-    @expectedFailureAll(archs=["arm64e"]) # <rdar://problem/37773624>
+    @expectedFailureDarwin(archs=["arm64", "arm64e"]) # <rdar://problem/37773624>
     def test_without_process(self):
         """Test that static initialized variables can be inspected without
         process."""
@@ -65,8 +65,7 @@ class GlobalVariablesTestCase(TestBase):
                              'stop reason = breakpoint'])
 
         # The breakpoint should have a hit count of 1.
-        self.expect("breakpoint list -f", BREAKPOINT_HIT_ONCE,
-                    substrs=[' resolved, hit count = 1'])
+        lldbutil.check_breakpoint(self, bpno = 1, expected_hit_count = 1)
 
         # Test that the statically initialized variable can also be
         # inspected *with* a process.

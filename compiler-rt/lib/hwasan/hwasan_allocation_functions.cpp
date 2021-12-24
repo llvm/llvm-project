@@ -14,6 +14,7 @@
 
 #include "hwasan.h"
 #include "interception/interception.h"
+#include "sanitizer_common/sanitizer_allocator_dlsym.h"
 #include "sanitizer_common/sanitizer_allocator_interface.h"
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
 
@@ -21,22 +22,9 @@
 
 using namespace __hwasan;
 
-static uptr allocated_for_dlsym;
-static const uptr kDlsymAllocPoolSize = 1024;
-static uptr alloc_memory_for_dlsym[kDlsymAllocPoolSize];
-
-static bool IsInDlsymAllocPool(const void *ptr) {
-  uptr off = (uptr)ptr - (uptr)alloc_memory_for_dlsym;
-  return off < sizeof(alloc_memory_for_dlsym);
-}
-
-static void *AllocateFromLocalPool(uptr size_in_bytes) {
-  uptr size_in_words = RoundUpTo(size_in_bytes, kWordSize) / kWordSize;
-  void *mem = (void *)&alloc_memory_for_dlsym[allocated_for_dlsym];
-  allocated_for_dlsym += size_in_words;
-  CHECK_LT(allocated_for_dlsym, kDlsymAllocPoolSize);
-  return mem;
-}
+struct DlsymAlloc : public DlSymAllocator<DlsymAlloc> {
+  static bool UseImpl() { return !hwasan_inited; }
+};
 
 extern "C" {
 
@@ -83,17 +71,21 @@ void *__sanitizer_pvalloc(uptr size) {
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __sanitizer_free(void *ptr) {
-  GET_MALLOC_STACK_TRACE;
-  if (!ptr || UNLIKELY(IsInDlsymAllocPool(ptr)))
+  if (!ptr)
     return;
+  if (DlsymAlloc::PointerIsMine(ptr))
+    return DlsymAlloc::Free(ptr);
+  GET_MALLOC_STACK_TRACE;
   hwasan_free(ptr, &stack);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __sanitizer_cfree(void *ptr) {
-  GET_MALLOC_STACK_TRACE;
-  if (!ptr || UNLIKELY(IsInDlsymAllocPool(ptr)))
+  if (!ptr)
     return;
+  if (DlsymAlloc::PointerIsMine(ptr))
+    return DlsymAlloc::Free(ptr);
+  GET_MALLOC_STACK_TRACE;
   hwasan_free(ptr, &stack);
 }
 
@@ -119,29 +111,17 @@ void __sanitizer_malloc_stats(void) {
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void *__sanitizer_calloc(uptr nmemb, uptr size) {
+  if (DlsymAlloc::Use())
+    return DlsymAlloc::Callocate(nmemb, size);
   GET_MALLOC_STACK_TRACE;
-  if (UNLIKELY(!hwasan_inited))
-    // Hack: dlsym calls calloc before REAL(calloc) is retrieved from dlsym.
-    return AllocateFromLocalPool(nmemb * size);
   return hwasan_calloc(nmemb, size, &stack);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void *__sanitizer_realloc(void *ptr, uptr size) {
+  if (DlsymAlloc::Use() || DlsymAlloc::PointerIsMine(ptr))
+    return DlsymAlloc::Realloc(ptr, size);
   GET_MALLOC_STACK_TRACE;
-  if (UNLIKELY(IsInDlsymAllocPool(ptr))) {
-    uptr offset = (uptr)ptr - (uptr)alloc_memory_for_dlsym;
-    uptr copy_size = Min(size, kDlsymAllocPoolSize - offset);
-    void *new_ptr;
-    if (UNLIKELY(!hwasan_inited)) {
-      new_ptr = AllocateFromLocalPool(copy_size);
-    } else {
-      copy_size = size;
-      new_ptr = hwasan_malloc(copy_size, &stack);
-    }
-    internal_memcpy(new_ptr, ptr, copy_size);
-    return new_ptr;
-  }
   return hwasan_realloc(ptr, size, &stack);
 }
 
@@ -153,12 +133,11 @@ void *__sanitizer_reallocarray(void *ptr, uptr nmemb, uptr size) {
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void *__sanitizer_malloc(uptr size) {
-  GET_MALLOC_STACK_TRACE;
   if (UNLIKELY(!hwasan_init_is_running))
     ENSURE_HWASAN_INITED();
-  if (UNLIKELY(!hwasan_inited))
-    // Hack: dlsym calls malloc before REAL(malloc) is retrieved from dlsym.
-    return AllocateFromLocalPool(size);
+  if (DlsymAlloc::Use())
+    return DlsymAlloc::Allocate(size);
+  GET_MALLOC_STACK_TRACE;
   return hwasan_malloc(size, &stack);
 }
 

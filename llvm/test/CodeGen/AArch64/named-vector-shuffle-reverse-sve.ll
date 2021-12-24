@@ -118,6 +118,26 @@ define <vscale x 2 x i64> @reverse_nxv2i64(<vscale x 2 x i64> %a) #0 {
   ret <vscale x 2 x i64> %res
 }
 
+define <vscale x 2 x half> @reverse_nxv2f16(<vscale x 2 x half> %a) #0 {
+; CHECK-LABEL: reverse_nxv2f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rev z0.d, z0.d
+; CHECK-NEXT:    ret
+
+  %res = call <vscale x 2 x half> @llvm.experimental.vector.reverse.nxv2f16(<vscale x 2 x half> %a)
+  ret <vscale x 2 x half> %res
+}
+
+define <vscale x 4 x half> @reverse_nxv4f16(<vscale x 4 x half> %a) #0 {
+; CHECK-LABEL: reverse_nxv4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rev z0.s, z0.s
+; CHECK-NEXT:    ret
+
+  %res = call <vscale x 4 x half> @llvm.experimental.vector.reverse.nxv4f16(<vscale x 4 x half> %a)
+  ret <vscale x 4 x half> %res
+}
+
 define <vscale x 8 x half> @reverse_nxv8f16(<vscale x 8 x half> %a) #0 {
 ; CHECK-LABEL: reverse_nxv8f16:
 ; CHECK:       // %bb.0:
@@ -126,6 +146,45 @@ define <vscale x 8 x half> @reverse_nxv8f16(<vscale x 8 x half> %a) #0 {
 
   %res = call <vscale x 8 x half> @llvm.experimental.vector.reverse.nxv8f16(<vscale x 8 x half> %a)
   ret <vscale x 8 x half> %res
+}
+
+define <vscale x 2 x bfloat> @reverse_nxv2bf16(<vscale x 2 x bfloat> %a) #1 {
+; CHECK-LABEL: reverse_nxv2bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rev z0.d, z0.d
+; CHECK-NEXT:    ret
+
+  %res = call <vscale x 2 x bfloat> @llvm.experimental.vector.reverse.nxv2bf16(<vscale x 2 x bfloat> %a)
+  ret <vscale x 2 x bfloat> %res
+}
+
+define <vscale x 4 x bfloat> @reverse_nxv4bf16(<vscale x 4 x bfloat> %a) #1 {
+; CHECK-LABEL: reverse_nxv4bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rev z0.s, z0.s
+; CHECK-NEXT:    ret
+
+  %res = call <vscale x 4 x bfloat> @llvm.experimental.vector.reverse.nxv4bf16(<vscale x 4 x bfloat> %a)
+  ret <vscale x 4 x bfloat> %res
+}
+
+define <vscale x 8 x bfloat> @reverse_nxv8bf16(<vscale x 8 x bfloat> %a) #1 {
+; CHECK-LABEL: reverse_nxv8bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rev z0.h, z0.h
+; CHECK-NEXT:    ret
+
+  %res = call <vscale x 8 x bfloat> @llvm.experimental.vector.reverse.nxv8bf16(<vscale x 8 x bfloat> %a)
+  ret <vscale x 8 x bfloat> %res
+}
+
+define <vscale x 2 x float> @reverse_nxv2f32(<vscale x 2 x float> %a) #0 {
+; CHECK-LABEL: reverse_nxv2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rev z0.d, z0.d
+; CHECK-NEXT:    ret
+
+  %res = call <vscale x 2 x float> @llvm.experimental.vector.reverse.nxv2f32(<vscale x 2 x float> %a)  ret <vscale x 2 x float> %res
 }
 
 define <vscale x 4 x float> @reverse_nxv4f32(<vscale x 4 x float> %a) #0 {
@@ -230,10 +289,17 @@ declare <vscale x 8 x i16> @llvm.experimental.vector.reverse.nxv8i16(<vscale x 8
 declare <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32>)
 declare <vscale x 8 x i32> @llvm.experimental.vector.reverse.nxv8i32(<vscale x 8 x i32>)
 declare <vscale x 2 x i64> @llvm.experimental.vector.reverse.nxv2i64(<vscale x 2 x i64>)
+declare <vscale x 2 x half> @llvm.experimental.vector.reverse.nxv2f16(<vscale x 2 x half>)
+declare <vscale x 4 x half> @llvm.experimental.vector.reverse.nxv4f16(<vscale x 4 x half>)
 declare <vscale x 8 x half> @llvm.experimental.vector.reverse.nxv8f16(<vscale x 8 x half>)
+declare <vscale x 2 x bfloat> @llvm.experimental.vector.reverse.nxv2bf16(<vscale x 2 x bfloat>)
+declare <vscale x 4 x bfloat> @llvm.experimental.vector.reverse.nxv4bf16(<vscale x 4 x bfloat>)
+declare <vscale x 8 x bfloat> @llvm.experimental.vector.reverse.nxv8bf16(<vscale x 8 x bfloat>)
+declare <vscale x 2 x float> @llvm.experimental.vector.reverse.nxv2f32(<vscale x 2 x float>)
 declare <vscale x 4 x float> @llvm.experimental.vector.reverse.nxv4f32(<vscale x 4 x float>)
 declare <vscale x 16 x float> @llvm.experimental.vector.reverse.nxv16f32(<vscale x 16 x float>)
 declare <vscale x 2 x double> @llvm.experimental.vector.reverse.nxv2f64(<vscale x 2 x double>)
 
 
 attributes #0 = { nounwind "target-features"="+sve" }
+attributes #1 = { nounwind "target-features"="+sve,+bf16" }

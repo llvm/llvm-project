@@ -190,13 +190,31 @@ static void subtractRecursively(FlatAffineConstraints &b, Simplex &simplex,
     return;
   }
   FlatAffineConstraints sI = s.getFlatAffineConstraints(i);
-  unsigned bInitNumLocals = b.getNumLocalIds();
+
+  // Below, we append some additional constraints and ids to b. We want to
+  // rollback b to its initial state before returning, which we will do by
+  // removing all constraints beyond the original number of inequalities
+  // and equalities, so we store these counts first.
+  const unsigned bInitNumIneqs = b.getNumInequalities();
+  const unsigned bInitNumEqs = b.getNumEqualities();
+  const unsigned bInitNumLocals = b.getNumLocalIds();
+  // Similarly, we also want to rollback simplex to its original state.
+  const unsigned initialSnapshot = simplex.getSnapshot();
+
+  // Automatically restore the original state when we return.
+  auto restoreState = [&]() {
+    b.removeIdRange(FlatAffineConstraints::IdKind::Local, bInitNumLocals,
+                    b.getNumLocalIds());
+    b.removeInequalityRange(bInitNumIneqs, b.getNumInequalities());
+    b.removeEqualityRange(bInitNumEqs, b.getNumEqualities());
+    simplex.rollback(initialSnapshot);
+  };
 
   // Find out which inequalities of sI correspond to division inequalities for
   // the local variables of sI.
   std::vector<llvm::Optional<std::pair<unsigned, unsigned>>> repr(
       sI.getNumLocalIds());
-  sI.getLocalReprLbUbPairs(repr);
+  sI.getLocalReprs(repr);
 
   // Add sI's locals to b, after b's locals. Also add b's locals to sI, before
   // sI's locals.
@@ -219,7 +237,6 @@ static void subtractRecursively(FlatAffineConstraints &b, Simplex &simplex,
     isDivInequality[maybePair->second] = true;
   }
 
-  unsigned initialSnapshot = simplex.getSnapshot();
   unsigned offset = simplex.getNumConstraints();
   unsigned numLocalsAdded = b.getNumLocalIds() - bInitNumLocals;
   simplex.appendVariable(numLocalsAdded);
@@ -229,9 +246,9 @@ static void subtractRecursively(FlatAffineConstraints &b, Simplex &simplex,
 
   if (simplex.isEmpty()) {
     /// b ^ s_i is empty, so b \ s_i = b. We move directly to i + 1.
-    simplex.rollback(initialSnapshot);
-    b.removeIdRange(FlatAffineConstraints::IdKind::Local, bInitNumLocals,
-                    b.getNumLocalIds());
+    /// We are ignoring level i completely, so we restore the state
+    /// *before* going to level i + 1.
+    restoreState();
     subtractRecursively(b, simplex, s, i + 1, result);
     return;
   }
@@ -270,13 +287,6 @@ static void subtractRecursively(FlatAffineConstraints &b, Simplex &simplex,
     simplex.addInequality(ineq);
   };
 
-  // processInequality appends some additional constraints to b. We want to
-  // rollback b to its initial state before returning, which we will do by
-  // removing all constraints beyond the original number of inequalities
-  // and equalities, so we store these counts first.
-  unsigned bInitNumIneqs = b.getNumInequalities();
-  unsigned bInitNumEqs = b.getNumEqualities();
-
   // Process all the inequalities, ignoring redundant inequalities and division
   // inequalities. The result is correct whether or not we ignore these, but
   // ignoring them makes the result simpler.
@@ -302,13 +312,7 @@ static void subtractRecursively(FlatAffineConstraints &b, Simplex &simplex,
       processInequality(getNegatedCoeffs(coeffs));
   }
 
-  // Rollback b and simplex to their initial states.
-  b.removeIdRange(FlatAffineConstraints::IdKind::Local, bInitNumLocals,
-                  b.getNumLocalIds());
-  b.removeInequalityRange(bInitNumIneqs, b.getNumInequalities());
-  b.removeEqualityRange(bInitNumEqs, b.getNumEqualities());
-
-  simplex.rollback(initialSnapshot);
+  restoreState();
 }
 
 /// Return the set difference fac \ set.
@@ -379,6 +383,42 @@ bool PresburgerSet::findIntegerSample(SmallVectorImpl<int64_t> &sample) {
     }
   }
   return false;
+}
+
+PresburgerSet PresburgerSet::coalesce() const {
+  PresburgerSet newSet = PresburgerSet::getEmptySet(getNumDims(), getNumSyms());
+  llvm::SmallBitVector isRedundant(getNumFACs());
+
+  for (unsigned i = 0, e = flatAffineConstraints.size(); i < e; ++i) {
+    if (isRedundant[i])
+      continue;
+    Simplex simplex(flatAffineConstraints[i]);
+
+    // Check whether the polytope of `simplex` is empty. If so, it is trivially
+    // redundant.
+    if (simplex.isEmpty()) {
+      isRedundant[i] = true;
+      continue;
+    }
+
+    // Check whether `FlatAffineConstraints[i]` is contained in any FAC, that is
+    // different from itself and not yet marked as redundant.
+    for (unsigned j = 0, e = flatAffineConstraints.size(); j < e; ++j) {
+      if (j == i || isRedundant[j])
+        continue;
+
+      if (simplex.isRationalSubsetOf(flatAffineConstraints[j])) {
+        isRedundant[i] = true;
+        break;
+      }
+    }
+  }
+
+  for (unsigned i = 0, e = flatAffineConstraints.size(); i < e; ++i)
+    if (!isRedundant[i])
+      newSet.unionFACInPlace(flatAffineConstraints[i]);
+
+  return newSet;
 }
 
 void PresburgerSet::print(raw_ostream &os) const {

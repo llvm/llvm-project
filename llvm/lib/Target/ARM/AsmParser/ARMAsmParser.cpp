@@ -137,21 +137,18 @@ public:
   int getFPReg() const { return FPReg; }
 
   void emitFnStartLocNotes() const {
-    for (Locs::const_iterator FI = FnStartLocs.begin(), FE = FnStartLocs.end();
-         FI != FE; ++FI)
-      Parser.Note(*FI, ".fnstart was specified here");
+    for (const SMLoc &Loc : FnStartLocs)
+      Parser.Note(Loc, ".fnstart was specified here");
   }
 
   void emitCantUnwindLocNotes() const {
-    for (Locs::const_iterator UI = CantUnwindLocs.begin(),
-                              UE = CantUnwindLocs.end(); UI != UE; ++UI)
-      Parser.Note(*UI, ".cantunwind was specified here");
+    for (const SMLoc &Loc : CantUnwindLocs)
+      Parser.Note(Loc, ".cantunwind was specified here");
   }
 
   void emitHandlerDataLocNotes() const {
-    for (Locs::const_iterator HI = HandlerDataLocs.begin(),
-                              HE = HandlerDataLocs.end(); HI != HE; ++HI)
-      Parser.Note(*HI, ".handlerdata was specified here");
+    for (const SMLoc &Loc : HandlerDataLocs)
+      Parser.Note(Loc, ".handlerdata was specified here");
   }
 
   void emitPersonalityLocNotes() const {
@@ -452,7 +449,8 @@ class ARMAsmParser : public MCTargetAsmParser {
   int tryParseRegister();
   bool tryParseRegisterWithWriteBack(OperandVector &);
   int tryParseShiftRegister(OperandVector &);
-  bool parseRegisterList(OperandVector &, bool EnforceOrder = true);
+  bool parseRegisterList(OperandVector &, bool EnforceOrder = true,
+                         bool AllowRAAC = false);
   bool parseMemory(OperandVector &);
   bool parseOperand(OperandVector &, StringRef Mnemonic);
   bool parsePrefix(ARMMCExpr::VariantKind &RefKind);
@@ -2572,17 +2570,15 @@ public:
   void addRegListOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     const SmallVectorImpl<unsigned> &RegList = getRegList();
-    for (SmallVectorImpl<unsigned>::const_iterator
-           I = RegList.begin(), E = RegList.end(); I != E; ++I)
-      Inst.addOperand(MCOperand::createReg(*I));
+    for (unsigned Reg : RegList)
+      Inst.addOperand(MCOperand::createReg(Reg));
   }
 
   void addRegListWithAPSROperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     const SmallVectorImpl<unsigned> &RegList = getRegList();
-    for (SmallVectorImpl<unsigned>::const_iterator
-           I = RegList.begin(), E = RegList.end(); I != E; ++I)
-      Inst.addOperand(MCOperand::createReg(*I));
+    for (unsigned Reg : RegList)
+      Inst.addOperand(MCOperand::createReg(Reg));
   }
 
   void addDPRRegListOperands(MCInst &Inst, unsigned N) const {
@@ -4464,8 +4460,8 @@ insertNoDuplicates(SmallVectorImpl<std::pair<unsigned, unsigned>> &Regs,
 }
 
 /// Parse a register list.
-bool ARMAsmParser::parseRegisterList(OperandVector &Operands,
-                                     bool EnforceOrder) {
+bool ARMAsmParser::parseRegisterList(OperandVector &Operands, bool EnforceOrder,
+                                     bool AllowRAAC) {
   MCAsmParser &Parser = getParser();
   if (Parser.getTok().isNot(AsmToken::LCurly))
     return TokError("Token is not a Left Curly Brace");
@@ -4478,7 +4474,8 @@ bool ARMAsmParser::parseRegisterList(OperandVector &Operands,
   int Reg = tryParseRegister();
   if (Reg == -1)
     return Error(RegLoc, "register expected");
-
+  if (!AllowRAAC && Reg == ARM::RA_AUTH_CODE)
+    return Error(RegLoc, "pseudo-register not allowed");
   // The reglist instructions have at most 16 registers, so reserve
   // space for that many.
   int EReg = 0;
@@ -4492,7 +4489,8 @@ bool ARMAsmParser::parseRegisterList(OperandVector &Operands,
     ++Reg;
   }
   const MCRegisterClass *RC;
-  if (ARMMCRegisterClasses[ARM::GPRRegClassID].contains(Reg))
+  if (Reg == ARM::RA_AUTH_CODE ||
+      ARMMCRegisterClasses[ARM::GPRRegClassID].contains(Reg))
     RC = &ARMMCRegisterClasses[ARM::GPRRegClassID];
   else if (ARMMCRegisterClasses[ARM::DPRRegClassID].contains(Reg))
     RC = &ARMMCRegisterClasses[ARM::DPRRegClassID];
@@ -4513,11 +4511,15 @@ bool ARMAsmParser::parseRegisterList(OperandVector &Operands,
   while (Parser.getTok().is(AsmToken::Comma) ||
          Parser.getTok().is(AsmToken::Minus)) {
     if (Parser.getTok().is(AsmToken::Minus)) {
+      if (Reg == ARM::RA_AUTH_CODE)
+        return Error(RegLoc, "pseudo-register not allowed");
       Parser.Lex(); // Eat the minus.
       SMLoc AfterMinusLoc = Parser.getTok().getLoc();
       int EndReg = tryParseRegister();
       if (EndReg == -1)
         return Error(AfterMinusLoc, "register expected");
+      if (EndReg == ARM::RA_AUTH_CODE)
+        return Error(AfterMinusLoc, "pseudo-register not allowed");
       // Allow Q regs and just interpret them as the two D sub-registers.
       if (ARMMCRegisterClasses[ARM::QPRRegClassID].contains(EndReg))
         EndReg = getDRegFromQReg(EndReg) + 1;
@@ -4526,7 +4528,9 @@ bool ARMAsmParser::parseRegisterList(OperandVector &Operands,
       if (Reg == EndReg)
         continue;
       // The register must be in the same register class as the first.
-      if (!RC->contains(EndReg))
+      if ((Reg == ARM::RA_AUTH_CODE &&
+           RC != &ARMMCRegisterClasses[ARM::GPRRegClassID]) ||
+          (Reg != ARM::RA_AUTH_CODE && !RC->contains(Reg)))
         return Error(AfterMinusLoc, "invalid register in register list");
       // Ranges must go from low to high.
       if (MRI->getEncodingValue(Reg) > MRI->getEncodingValue(EndReg))
@@ -4551,13 +4555,15 @@ bool ARMAsmParser::parseRegisterList(OperandVector &Operands,
     Reg = tryParseRegister();
     if (Reg == -1)
       return Error(RegLoc, "register expected");
+    if (!AllowRAAC && Reg == ARM::RA_AUTH_CODE)
+      return Error(RegLoc, "pseudo-register not allowed");
     // Allow Q regs and just interpret them as the two D sub-registers.
     bool isQReg = false;
     if (ARMMCRegisterClasses[ARM::QPRRegClassID].contains(Reg)) {
       Reg = getDRegFromQReg(Reg);
       isQReg = true;
     }
-    if (!RC->contains(Reg) &&
+    if (Reg != ARM::RA_AUTH_CODE && !RC->contains(Reg) &&
         RC->getID() == ARMMCRegisterClasses[ARM::GPRRegClassID].getID() &&
         ARMMCRegisterClasses[ARM::GPRwithAPSRnospRegClassID].contains(Reg)) {
       // switch the register classes, as GPRwithAPSRnospRegClassID is a partial
@@ -4577,7 +4583,9 @@ bool ARMAsmParser::parseRegisterList(OperandVector &Operands,
       continue;
     }
     // The register must be in the same register class as the first.
-    if (!RC->contains(Reg))
+    if ((Reg == ARM::RA_AUTH_CODE &&
+         RC != &ARMMCRegisterClasses[ARM::GPRRegClassID]) ||
+        (Reg != ARM::RA_AUTH_CODE && !RC->contains(Reg)))
       return Error(RegLoc, "invalid register in register list");
     // In most cases, the list must be monotonically increasing. An
     // exception is CLRM, which is order-independent anyway, so
@@ -6429,15 +6437,17 @@ StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic,
       Mnemonic == "vrintp" || Mnemonic == "vrintm" || Mnemonic == "hvc" ||
       Mnemonic.startswith("vsel") || Mnemonic == "vins" || Mnemonic == "vmovx" ||
       Mnemonic == "bxns"  || Mnemonic == "blxns" ||
-      Mnemonic == "vdot"  || Mnemonic == "vmmla"  ||
+      Mnemonic == "vdot"  || Mnemonic == "vmmla" ||
       Mnemonic == "vudot" || Mnemonic == "vsdot" ||
       Mnemonic == "vcmla" || Mnemonic == "vcadd" ||
       Mnemonic == "vfmal" || Mnemonic == "vfmsl" ||
-      Mnemonic == "wls" || Mnemonic == "le" || Mnemonic == "dls" ||
-      Mnemonic == "csel" || Mnemonic == "csinc" ||
+      Mnemonic == "wls"   || Mnemonic == "le"    || Mnemonic == "dls" ||
+      Mnemonic == "csel"  || Mnemonic == "csinc" ||
       Mnemonic == "csinv" || Mnemonic == "csneg" || Mnemonic == "cinc" ||
-      Mnemonic == "cinv" || Mnemonic == "cneg" || Mnemonic == "cset" ||
-      Mnemonic == "csetm")
+      Mnemonic == "cinv"  || Mnemonic == "cneg"  || Mnemonic == "cset" ||
+      Mnemonic == "csetm" ||
+      Mnemonic == "aut"   || Mnemonic == "pac" || Mnemonic == "pacbti" ||
+      Mnemonic == "bti")
     return Mnemonic;
 
   // First, split out any predication code. Ignore mnemonics we know aren't
@@ -6581,9 +6591,11 @@ void ARMAsmParser::getMnemonicAcceptInfo(StringRef Mnemonic,
       Mnemonic == "csinc" || Mnemonic == "csinv" || Mnemonic == "csneg" ||
       Mnemonic == "cinc" || Mnemonic == "cinv" || Mnemonic == "cneg" ||
       Mnemonic == "cset" || Mnemonic == "csetm" ||
-      Mnemonic.startswith("vpt") || Mnemonic.startswith("vpst") ||
       (hasCDE() && MS.isCDEInstr(Mnemonic) &&
        !MS.isITPredicableCDEInstr(Mnemonic)) ||
+      Mnemonic.startswith("vpt") || Mnemonic.startswith("vpst") ||
+      Mnemonic == "pac" || Mnemonic == "pacbti" || Mnemonic == "aut" ||
+      Mnemonic == "bti" ||
       (hasMVE() &&
        (Mnemonic.startswith("vst2") || Mnemonic.startswith("vld2") ||
         Mnemonic.startswith("vst4") || Mnemonic.startswith("vld4") ||
@@ -7102,13 +7114,12 @@ bool ARMAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
       return Error(Loc, "too many conditions on VPT instruction");
     }
     unsigned Mask = 8;
-    for (unsigned i = ITMask.size(); i != 0; --i) {
-      char pos = ITMask[i - 1];
-      if (pos != 't' && pos != 'e') {
+    for (char Pos : llvm::reverse(ITMask)) {
+      if (Pos != 't' && Pos != 'e') {
         return Error(Loc, "illegal IT block condition mask '" + ITMask + "'");
       }
       Mask >>= 1;
-      if (ITMask[i - 1] == 'e')
+      if (Pos == 'e')
         Mask |= 8;
     }
     Operands.push_back(ARMOperand::CreateITMask(Mask, Loc));
@@ -10961,7 +10972,7 @@ bool ARMAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
 
       // Only after the instruction is fully processed, we can validate it
       if (wasInITBlock && hasV8Ops() && isThumb() &&
-          !isV8EligibleForIT(&Inst)) {
+          !isV8EligibleForIT(&Inst) && !getTargetOptions().MCNoDeprecatedWarn) {
         Warning(IDLoc, "deprecated instruction in IT block");
       }
     }
@@ -11681,7 +11692,7 @@ bool ARMAsmParser::parseDirectiveRegSave(SMLoc L, bool IsVector) {
   SmallVector<std::unique_ptr<MCParsedAsmOperand>, 1> Operands;
 
   // Parse the register list
-  if (parseRegisterList(Operands) ||
+  if (parseRegisterList(Operands, true, true) ||
       parseToken(AsmToken::EndOfStatement, "unexpected token in directive"))
     return true;
   ARMOperand &Op = (ARMOperand &)*Operands[0];
@@ -12272,6 +12283,7 @@ bool ARMAsmParser::enableArchExtFeature(StringRef Name, SMLoc &ExtLoc) {
        {ARM::FeatureFPARMv8, ARM::FeatureFullFP16}},
       {ARM::AEK_RAS, {Feature_HasV8Bit}, {ARM::FeatureRAS}},
       {ARM::AEK_LOB, {Feature_HasV8_1MMainlineBit}, {ARM::FeatureLOB}},
+      {ARM::AEK_PACBTI, {Feature_HasV8_1MMainlineBit}, {ARM::FeaturePACBTI}},
       // FIXME: Unsupported extensions.
       {ARM::AEK_OS, {}, {}},
       {ARM::AEK_IWMMXT, {}, {}},

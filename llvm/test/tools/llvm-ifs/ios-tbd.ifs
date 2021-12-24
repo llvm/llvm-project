@@ -1,4 +1,4 @@
-# RUN: llvm-ifs --input-format=IFS --output-format=TBD  -o - %s | FileCheck %s
+# RUN: llvm-ifs --input-format=IFS --output-tbd - %s | FileCheck %s
 
 # CHECK: --- !tapi-tbd-v3
 # CHECK-NEXT: archs:           [ arm64 ]

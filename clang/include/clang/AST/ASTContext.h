@@ -248,6 +248,7 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::ContextualFoldingSet<TemplateSpecializationType, ASTContext&>
     TemplateSpecializationTypes;
   mutable llvm::FoldingSet<ParenType> ParenTypes;
+  mutable llvm::FoldingSet<UsingType> UsingTypes;
   mutable llvm::FoldingSet<ElaboratedType> ElaboratedTypes;
   mutable llvm::FoldingSet<DependentNameType> DependentNameTypes;
   mutable llvm::ContextualFoldingSet<DependentTemplateSpecializationType,
@@ -264,8 +265,8 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::FoldingSet<AtomicType> AtomicTypes;
   llvm::FoldingSet<AttributedType> AttributedTypes;
   mutable llvm::FoldingSet<PipeType> PipeTypes;
-  mutable llvm::FoldingSet<ExtIntType> ExtIntTypes;
-  mutable llvm::FoldingSet<DependentExtIntType> DependentExtIntTypes;
+  mutable llvm::FoldingSet<BitIntType> BitIntTypes;
+  mutable llvm::FoldingSet<DependentBitIntType> DependentBitIntTypes;
 
   mutable llvm::FoldingSet<QualifiedTemplateName> QualifiedTemplateNames;
   mutable llvm::FoldingSet<DependentTemplateName> DependentTemplateNames;
@@ -1350,13 +1351,13 @@ public:
   /// Return a write_only pipe type for the specified type.
   QualType getWritePipeType(QualType T) const;
 
-  /// Return an extended integer type with the specified signedness and bit
+  /// Return a bit-precise integer type with the specified signedness and bit
   /// count.
-  QualType getExtIntType(bool Unsigned, unsigned NumBits) const;
+  QualType getBitIntType(bool Unsigned, unsigned NumBits) const;
 
-  /// Return a dependent extended integer type with the specified signedness and
-  /// bit count.
-  QualType getDependentExtIntType(bool Unsigned, Expr *BitsExpr) const;
+  /// Return a dependent bit-precise integer type with the specified signedness
+  /// and bit count.
+  QualType getDependentBitIntType(bool Unsigned, Expr *BitsExpr) const;
 
   /// Gets the struct used to keep track of the extended descriptor for
   /// pointer to blocks.
@@ -1531,6 +1532,12 @@ private:
   QualType getFunctionTypeInternal(QualType ResultTy, ArrayRef<QualType> Args,
                                    const FunctionProtoType::ExtProtoInfo &EPI,
                                    bool OnlyWantCanonical) const;
+  QualType
+  getAutoTypeInternal(QualType DeducedType, AutoTypeKeyword Keyword,
+                      bool IsDependent, bool IsPack = false,
+                      ConceptDecl *TypeConstraintConcept = nullptr,
+                      ArrayRef<TemplateArgument> TypeConstraintArgs = {},
+                      bool IsCanon = false) const;
 
 public:
   /// Return the unique reference to the type for the specified type
@@ -1549,6 +1556,9 @@ public:
     return getTypeDeclTypeSlow(Decl);
   }
 
+  QualType getUsingType(const UsingShadowDecl *Found,
+                        QualType Underlying) const;
+
   /// Return the unique reference to the type for the specified
   /// typedef-name decl.
   QualType getTypedefType(const TypedefNameDecl *Decl,
@@ -1557,6 +1567,9 @@ public:
   QualType getRecordType(const RecordDecl *Decl) const;
 
   QualType getEnumType(const EnumDecl *Decl) const;
+
+  QualType
+  getUnresolvedUsingType(const UnresolvedUsingTypenameDecl *Decl) const;
 
   QualType getInjectedClassNameType(CXXRecordDecl *Decl, QualType TST) const;
 

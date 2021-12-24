@@ -34,10 +34,10 @@
 // CHECK:   Matching formal operand class MCK_GR32 against actual operand at index 2 (Reg:ecx): match success using generic matcher
 // CHECK:   Matching formal operand class InvalidMatchClass against actual operand at index 3: actual operand index out of range Opcode result: complete match, selecting this opcode
 // CHECK: AsmMatcher: found 4 encodings with mnemonic 'punpcklbw'
-// CHECK: Trying to match opcode MMX_PUNPCKLBWirr
+// CHECK: Trying to match opcode MMX_PUNPCKLBWrr
 // CHECK:   Matching formal operand class MCK_VR64 against actual operand at index 1 (Reg:mm0): match success using generic matcher
 // CHECK:   Matching formal operand class MCK_VR64 against actual operand at index 2 (Memory: ModeSize=64,Size=32,BaseReg=rsp,Scale=1): Opcode result: multiple operand mismatches, ignoring this opcode
-// CHECK: Trying to match opcode MMX_PUNPCKLBWirm
+// CHECK: Trying to match opcode MMX_PUNPCKLBWrm
 // CHECK:   Matching formal operand class MCK_VR64 against actual operand at index 1 (Reg:mm0): match success using generic matcher
 // CHECK:   Matching formal operand class MCK_Mem32 against actual operand at index 2 (Memory: ModeSize=64,Size=32,BaseReg=rsp,Scale=1): match success using generic matcher
 // CHECK:   Matching formal operand class InvalidMatchClass against actual operand at index 3: actual operand index out of range Opcode result: complete match, selecting this opcode

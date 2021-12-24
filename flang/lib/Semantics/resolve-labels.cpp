@@ -28,6 +28,12 @@ using IndexList = std::vector<std::pair<parser::CharBlock, parser::CharBlock>>;
 // A ProxyForScope is an integral proxy for a Fortran scope. This is required
 // because the parse tree does not actually have the scopes required.
 using ProxyForScope = unsigned;
+// Minimal scope information
+struct ScopeInfo {
+  ProxyForScope parent{};
+  bool isExteriorGotoFatal{false};
+  int depth{0};
+};
 struct LabeledStatementInfoTuplePOD {
   ProxyForScope proxyForScope;
   parser::CharBlock parserCharBlock;
@@ -153,14 +159,14 @@ static unsigned SayLabel(parser::Label label) {
 }
 
 struct UnitAnalysis {
-  UnitAnalysis() { scopeModel.push_back(0); }
+  UnitAnalysis() { scopeModel.emplace_back(); }
 
   SourceStmtList doStmtSources;
   SourceStmtList formatStmtSources;
   SourceStmtList otherStmtSources;
   SourceStmtList assignStmtSources;
   TargetStmtMap targetStmts;
-  std::vector<ProxyForScope> scopeModel;
+  std::vector<ScopeInfo> scopeModel;
 };
 
 // Some parse tree record for statements simply wrap construct names;
@@ -223,7 +229,8 @@ public:
     using LabeledConstructStmts = std::tuple<parser::AssociateStmt,
         parser::BlockStmt, parser::ChangeTeamStmt, parser::CriticalStmt,
         parser::IfThenStmt, parser::NonLabelDoStmt, parser::SelectCaseStmt,
-        parser::SelectRankStmt, parser::SelectTypeStmt>;
+        parser::SelectRankStmt, parser::SelectTypeStmt,
+        parser::WhereConstructStmt>;
     using LabeledConstructEndStmts = std::tuple<parser::EndAssociateStmt,
         parser::EndBlockStmt, parser::EndChangeTeamStmt,
         parser::EndCriticalStmt, parser::EndDoStmt, parser::EndForallStmt,
@@ -532,25 +539,34 @@ public:
   SemanticsContext &ErrorHandler() { return context_; }
 
 private:
-  bool PushSubscope() {
-    programUnits_.back().scopeModel.push_back(currentScope_);
-    currentScope_ = programUnits_.back().scopeModel.size() - 1;
-    return true;
+  ScopeInfo &PushScope() {
+    auto &model{programUnits_.back().scopeModel};
+    int newDepth{model.empty() ? 1 : model[currentScope_].depth + 1};
+    ScopeInfo &result{model.emplace_back()};
+    result.parent = currentScope_;
+    result.depth = newDepth;
+    currentScope_ = model.size() - 1;
+    return result;
   }
   bool InitializeNewScopeContext() {
     programUnits_.emplace_back(UnitAnalysis{});
     currentScope_ = 0u;
-    return PushSubscope();
+    PushScope();
+    return true;
   }
-  void PopScope() {
-    currentScope_ = programUnits_.back().scopeModel[currentScope_];
+  ScopeInfo &PopScope() {
+    ScopeInfo &result{programUnits_.back().scopeModel[currentScope_]};
+    currentScope_ = result.parent;
+    return result;
   }
   ProxyForScope ParentScope() {
-    return programUnits_.back().scopeModel[currentScope_];
+    return programUnits_.back().scopeModel[currentScope_].parent;
   }
   bool SwitchToNewScope() {
-    PopScope();
-    return PushSubscope();
+    ScopeInfo &oldScope{PopScope()};
+    bool isExteriorGotoFatal{oldScope.isExteriorGotoFatal};
+    PushScope().isExteriorGotoFatal = isExteriorGotoFatal;
+    return true;
   }
 
   template <typename A> bool PushConstructName(const A &a) {
@@ -558,7 +574,13 @@ private:
     if (optionalName) {
       constructNames_.emplace_back(optionalName->ToString());
     }
-    return PushSubscope();
+    // Gotos into this construct from outside it are diagnosed, and
+    // are fatal unless the construct is a DO, IF, or SELECT CASE.
+    PushScope().isExteriorGotoFatal =
+        !(std::is_same_v<A, parser::DoConstruct> ||
+            std::is_same_v<A, parser::IfConstruct> ||
+            std::is_same_v<A, parser::CaseConstruct>);
+    return true;
   }
   bool PushConstructName(const parser::BlockConstruct &blockConstruct) {
     const auto &optionalName{
@@ -567,7 +589,8 @@ private:
     if (optionalName) {
       constructNames_.emplace_back(optionalName->ToString());
     }
-    return PushSubscope();
+    PushScope().isExteriorGotoFatal = true;
+    return true;
   }
   template <typename A> void PopConstructNameIfPresent(const A &a) {
     const auto &optionalName{std::get<0>(std::get<0>(a.t).statement.t)};
@@ -796,9 +819,9 @@ private:
   std::vector<std::string> constructNames_;
 };
 
-bool InInclusiveScope(const std::vector<ProxyForScope> &scopes,
-    ProxyForScope tail, ProxyForScope head) {
-  for (; tail != head; tail = scopes[tail]) {
+bool InInclusiveScope(const std::vector<ScopeInfo> &scopes, ProxyForScope tail,
+    ProxyForScope head) {
+  for (; tail != head; tail = scopes[tail].parent) {
     if (!HasScope(tail)) {
       return false;
     }
@@ -881,13 +904,13 @@ parser::CharBlock SkipLabel(const parser::CharBlock &position) {
 }
 
 ProxyForScope ParentScope(
-    const std::vector<ProxyForScope> &scopes, ProxyForScope scope) {
-  return scopes[scope];
+    const std::vector<ScopeInfo> &scopes, ProxyForScope scope) {
+  return scopes[scope].parent;
 }
 
 void CheckLabelDoConstraints(const SourceStmtList &dos,
     const SourceStmtList &branches, const TargetStmtMap &labels,
-    const std::vector<ProxyForScope> &scopes, SemanticsContext &context) {
+    const std::vector<ScopeInfo> &scopes, SemanticsContext &context) {
   IndexList loopBodies;
   for (const auto &stmt : dos) {
     const auto &label{stmt.parserLabel};
@@ -936,7 +959,7 @@ void CheckLabelDoConstraints(const SourceStmtList &dos,
 
 // 6.2.5
 void CheckScopeConstraints(const SourceStmtList &stmts,
-    const TargetStmtMap &labels, const std::vector<ProxyForScope> &scopes,
+    const TargetStmtMap &labels, const std::vector<ScopeInfo> &scopes,
     SemanticsContext &context) {
   for (const auto &stmt : stmts) {
     const auto &label{stmt.parserLabel};
@@ -955,8 +978,22 @@ void CheckScopeConstraints(const SourceStmtList &stmts,
               TargetStatementEnum::Format)) {
         continue;
       }
+      bool isFatal{false};
+      ProxyForScope fromScope{scope};
+      for (ProxyForScope toScope{target.proxyForScope}; fromScope != toScope;
+           toScope = scopes[toScope].parent) {
+        if (scopes[toScope].isExteriorGotoFatal) {
+          isFatal = true;
+          break;
+        }
+        if (scopes[toScope].depth == scopes[fromScope].depth) {
+          fromScope = scopes[fromScope].parent;
+        }
+      }
       context.Say(position,
-          "Label '%u' is in a construct that prevents its use as a branch target here"_en_US,
+          isFatal
+              ? "Label '%u' is in a construct that prevents its use as a branch target here"_err_en_US
+              : "Label '%u' is in a construct that prevents its use as a branch target here"_en_US,
           SayLabel(label));
     }
   }
@@ -990,7 +1027,7 @@ void CheckBranchTargetConstraints(const SourceStmtList &stmts,
 }
 
 void CheckBranchConstraints(const SourceStmtList &branches,
-    const TargetStmtMap &labels, const std::vector<ProxyForScope> &scopes,
+    const TargetStmtMap &labels, const std::vector<ScopeInfo> &scopes,
     SemanticsContext &context) {
   CheckScopeConstraints(branches, labels, scopes, context);
   CheckBranchTargetConstraints(branches, labels, context);
@@ -1015,7 +1052,7 @@ void CheckDataXferTargetConstraints(const SourceStmtList &stmts,
 }
 
 void CheckDataTransferConstraints(const SourceStmtList &dataTransfers,
-    const TargetStmtMap &labels, const std::vector<ProxyForScope> &scopes,
+    const TargetStmtMap &labels, const std::vector<ScopeInfo> &scopes,
     SemanticsContext &context) {
   CheckScopeConstraints(dataTransfers, labels, scopes, context);
   CheckDataXferTargetConstraints(dataTransfers, labels, context);
@@ -1045,7 +1082,7 @@ void CheckAssignTargetConstraints(const SourceStmtList &stmts,
 }
 
 void CheckAssignConstraints(const SourceStmtList &assigns,
-    const TargetStmtMap &labels, const std::vector<ProxyForScope> &scopes,
+    const TargetStmtMap &labels, const std::vector<ScopeInfo> &scopes,
     SemanticsContext &context) {
   CheckScopeConstraints(assigns, labels, scopes, context);
   CheckAssignTargetConstraints(assigns, labels, context);

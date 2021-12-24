@@ -45,7 +45,7 @@ extern llvm::cl::opt<std::string> selectedDialect;
 // nested in the op definition.
 void mlir::tblgen::emitDescription(StringRef description, raw_ostream &os) {
   raw_indented_ostream ros(os);
-  ros.reindent(description.rtrim(" \t"));
+  ros.printReindented(description.rtrim(" \t"));
 }
 
 // Emits `str` with trailing newline if not empty.
@@ -60,7 +60,7 @@ static void emitIfNotEmpty(StringRef str, raw_ostream &os) {
 template <typename T>
 static void emitNamedConstraint(const T &it, raw_ostream &os) {
   if (!it.name.empty())
-    os << "`" << it.name << "`";
+    os << "| `" << it.name << "`";
   else
     os << "&laquo;unnamed&raquo;";
   os << " | " << it.constraint.getSummary() << "\n";
@@ -88,6 +88,61 @@ static void emitAssemblyFormat(StringRef opName, StringRef format,
   os << "```\n\n";
 }
 
+static void emitOpTraitsDoc(Operator op, raw_ostream &os) {
+  // TODO: We should link to the trait/documentation of it. That also means we
+  // should add descriptions to traits that can be queried.
+  // Collect using set to sort effects, interfaces & traits.
+  std::set<std::string> effects, interfaces, traits;
+  for (auto &trait : op.getTraits()) {
+    if (isa<PredTrait>(&trait))
+      continue;
+
+    std::string name = trait.getDef().getName().str();
+    StringRef ref = name;
+    StringRef traitName = trait.getDef().getValueAsString("trait");
+    traitName.consume_back("::Trait");
+    traitName.consume_back("::Impl");
+    if (ref.startswith("anonymous_"))
+      name = traitName.str();
+    if (isa<InterfaceTrait>(&trait)) {
+      if (trait.getDef().isSubClassOf("SideEffectsTraitBase")) {
+        auto effectName = trait.getDef().getValueAsString("baseEffectName");
+        effectName.consume_front("::");
+        effectName.consume_front("mlir::");
+        std::string effectStr;
+        llvm::raw_string_ostream os(effectStr);
+        os << effectName << "{";
+        auto list = trait.getDef().getValueAsListOfDefs("effects");
+        llvm::interleaveComma(list, os, [&](Record *rec) {
+          StringRef effect = rec->getValueAsString("effect");
+          effect.consume_front("::");
+          effect.consume_front("mlir::");
+          os << effect << " on " << rec->getValueAsString("resource");
+        });
+        os << "}";
+        effects.insert(os.str());
+        name.append(llvm::formatv(" ({0})", traitName).str());
+      }
+      interfaces.insert(name);
+      continue;
+    }
+
+    traits.insert(name);
+  }
+  if (!traits.empty()) {
+    llvm::interleaveComma(traits, os << "\nTraits: ");
+    os << "\n";
+  }
+  if (!interfaces.empty()) {
+    llvm::interleaveComma(interfaces, os << "\nInterfaces: ");
+    os << "\n";
+  }
+  if (!effects.empty()) {
+    llvm::interleaveComma(effects, os << "\nEffects: ");
+    os << "\n";
+  }
+}
+
 static void emitOpDoc(Operator op, raw_ostream &os) {
   os << llvm::formatv("### `{0}` ({1})\n", op.getOperationName(),
                       op.getQualCppClassName());
@@ -101,6 +156,8 @@ static void emitOpDoc(Operator op, raw_ostream &os) {
   if (op.hasDescription())
     mlir::tblgen::emitDescription(op.getDescription(), os);
 
+  emitOpTraitsDoc(op, os);
+
   // Emit attributes.
   if (op.getNumAttributes() != 0) {
     // TODO: Attributes are only documented by TableGen name, with no further
@@ -110,7 +167,7 @@ static void emitOpDoc(Operator op, raw_ostream &os) {
        << "| :-------: | :-------: | ----------- |\n";
     for (const auto &it : op.getAttributes()) {
       StringRef storageType = it.attr.getStorageType();
-      os << "`" << it.name << "` | " << storageType << " | "
+      os << "| `" << it.name << "` | " << storageType << " | "
          << it.attr.getSummary() << "\n";
     }
   }
@@ -169,8 +226,7 @@ static void emitTypeDoc(const Type &type, raw_ostream &os) {
 
 static void emitAttrOrTypeDefAssemblyFormat(const AttrOrTypeDef &def,
                                             raw_ostream &os) {
-  SmallVector<AttrOrTypeParameter, 4> parameters;
-  def.getParameters(parameters);
+  ArrayRef<AttrOrTypeParameter> parameters = def.getParameters();
   if (parameters.empty()) {
     os << "\nSyntax: `!" << def.getDialect().getName() << "."
        << def.getMnemonic() << "`\n";
@@ -208,8 +264,7 @@ static void emitAttrOrTypeDefDoc(const AttrOrTypeDef &def, raw_ostream &os) {
   }
 
   // Emit parameter documentation.
-  SmallVector<AttrOrTypeParameter, 4> parameters;
-  def.getParameters(parameters);
+  ArrayRef<AttrOrTypeParameter> parameters = def.getParameters();
   if (!parameters.empty()) {
     os << "\n#### Parameters:\n\n";
     os << "| Parameter | C++ type | Description |\n"

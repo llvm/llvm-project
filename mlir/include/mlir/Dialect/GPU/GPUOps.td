@@ -18,6 +18,7 @@ include "mlir/Dialect/GPU/GPUBase.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 //===----------------------------------------------------------------------===//
@@ -546,6 +547,22 @@ def GPU_LaunchOp : GPU_Op<"launch">,
   let hasCanonicalizer = 1;
 }
 
+def GPU_PrintfOp : GPU_Op<"printf", [MemoryEffects<[MemWrite]>]>,
+  Arguments<(ins StrAttr:$format,
+                Variadic<AnyTypeOf<[AnyInteger, Index, AnyFloat]>>:$args)> {
+  let summary = "Device-side printf, as in CUDA or OpenCL, for debugging";
+  let description = [{
+    `gpu.printf` takes a literal format string `format` and an arbitrary number of
+    scalar arguments that should be printed.
+
+    The format string is a C-style printf string, subject to any restrictions
+    imposed by one's target platform.
+  }];
+  let assemblyFormat = [{
+    $format attr-dict ($args^ `:` type($args))?
+  }];
+}
+
 def GPU_ReturnOp : GPU_Op<"return", [HasParent<"GPUFuncOp">, NoSideEffect,
                                      Terminator]>,
     Arguments<(ins Variadic<AnyType>:$operands)>, Results<(outs)> {
@@ -591,13 +608,13 @@ def GPU_YieldOp : GPU_Op<"yield", [NoSideEffect, Terminator]>,
 }
 
 // add, mul mirror the XLA ComparisonDirection enum.
-def GPU_AllReduceOpAdd : StrEnumAttrCase<"add">;
-def GPU_AllReduceOpAnd : StrEnumAttrCase<"and">;
-def GPU_AllReduceOpMax : StrEnumAttrCase<"max">;
-def GPU_AllReduceOpMin : StrEnumAttrCase<"min">;
-def GPU_AllReduceOpMul : StrEnumAttrCase<"mul">;
-def GPU_AllReduceOpOr : StrEnumAttrCase<"or">;
-def GPU_AllReduceOpXor : StrEnumAttrCase<"xor">;
+def GPU_AllReduceOpAdd : StrEnumAttrCase<"ADD", -1, "add">;
+def GPU_AllReduceOpAnd : StrEnumAttrCase<"AND", -1, "and">;
+def GPU_AllReduceOpMax : StrEnumAttrCase<"MAX", -1, "max">;
+def GPU_AllReduceOpMin : StrEnumAttrCase<"MIN", -1, "min">;
+def GPU_AllReduceOpMul : StrEnumAttrCase<"MUL", -1, "mul">;
+def GPU_AllReduceOpOr : StrEnumAttrCase<"OR", -1, "or">;
+def GPU_AllReduceOpXor : StrEnumAttrCase<"XOR", -1, "xor">;
 
 def GPU_AllReduceOperationAttr : StrEnumAttr<"AllReduceOperationAttr",
     "built-in reduction operations supported by gpu.allreduce.",
@@ -609,7 +626,9 @@ def GPU_AllReduceOperationAttr : StrEnumAttr<"AllReduceOperationAttr",
       GPU_AllReduceOpMul,
       GPU_AllReduceOpOr,
       GPU_AllReduceOpXor
-    ]>;
+    ]>{
+  let cppNamespace = "::mlir::gpu";
+}
 
 def GPU_AllReduceOp : GPU_Op<"all_reduce",
     [SameOperandsAndResultType, IsolatedFromAbove]>,
@@ -644,13 +663,24 @@ def GPU_AllReduceOp : GPU_Op<"all_reduce",
   let verifier = [{ return ::verifyAllReduce(*this); }];
 }
 
-def GPU_ShuffleOpXor : StrEnumAttrCase<"xor">;
+def GPU_ShuffleOpXor : StrEnumAttrCase<"XOR", -1, "xor">;
+def GPU_ShuffleOpDown : StrEnumAttrCase<"DOWN", -1, "down">;
+def GPU_ShuffleOpUp : StrEnumAttrCase<"UP", -1, "up">;
+def GPU_ShuffleOpIdx : StrEnumAttrCase<"IDX", -1, "idx">;
 
 def GPU_ShuffleModeAttr : StrEnumAttr<"ShuffleModeAttr",
     "Indexing modes supported by gpu.shuffle.",
     [
-      GPU_ShuffleOpXor,
-    ]>;
+      GPU_ShuffleOpXor, GPU_ShuffleOpUp, GPU_ShuffleOpDown, GPU_ShuffleOpIdx,
+    ]>{
+  let cppNamespace = "::mlir::gpu";
+  let storageType = "mlir::StringAttr";
+  let returnType = "::mlir::gpu::ShuffleModeAttr";
+  let convertFromStorage =
+    "*symbolizeEnum<::mlir::gpu::ShuffleModeAttr>($_self.getValue())";
+  let constBuilderCall = "$_builder.getStringAttr(stringifyEnum($0))";
+}
+
 
 def GPU_ShuffleOp : GPU_Op<"shuffle", [NoSideEffect]>,
     Arguments<(ins AnyType:$value, I32:$offset, I32:$width,
@@ -986,7 +1016,7 @@ def GPU_SubgroupMmaLoadMatrixOp : GPU_Op<"subgroup_mma_load_matrix",
     ```
   }];
 
-  let arguments = (ins Arg<MemRefRankOf<[F16, F32], [2]>, "", [MemRead]>:$srcMemref,
+  let arguments = (ins Arg<MemRefOf<[F16, F32]>, "", [MemRead]>:$srcMemref,
                   Variadic<Index>:$indices,
                   IndexAttr:$leadDimension);
 
@@ -1026,7 +1056,7 @@ def GPU_SubgroupMmaStoreMatrixOp : GPU_Op<"subgroup_mma_store_matrix",
   }];
 
   let arguments = (ins Arg<MMAMatrixOf<[F16, F32]>>:$src,
-                  Arg<MemRefRankOf<[F16, F32], [2]>, "",[MemWrite]>:$dstMemref,
+                  Arg<MemRefOf<[F16, F32]>, "",[MemWrite]>:$dstMemref,
                   Variadic<Index>:$indices,
                   IndexAttr:$leadDimension);
 
@@ -1063,8 +1093,8 @@ def GPU_SubgroupMmaComputeOp : GPU_Op<"subgroup_mma_compute",
     ```
   }];
 
-  let arguments = (ins Arg<MMAMatrixOf<[F16]>>:$opA,
-                  Arg<MMAMatrixOf<[F16]>>:$opB,
+  let arguments = (ins Arg<MMAMatrixOf<[F16, F32]>>:$opA,
+                  Arg<MMAMatrixOf<[F16, F32]>>:$opB,
                   Arg<MMAMatrixOf<[F16, F32]>>:$opC);
 
   let results = (outs GPU_MMAMatrix:$res);
@@ -1118,6 +1148,63 @@ def GPU_SubgroupMmaConstantMatrixOp : GPU_Op<"subgroup_mma_constant_matrix",
 
   let assemblyFormat = [{
     $value attr-dict `:` type($res)
+  }];
+}
+
+def GPU_ELEMENTWISE_OP_ADD : StrEnumAttrCase<"ADDF">;
+def GPU_ELEMENTWISE_OP_MUL : StrEnumAttrCase<"MULF">;
+def GPU_ELEMENTWISE_OP_MAXF : StrEnumAttrCase<"MAXF">;
+def GPU_ELEMENTWISE_OP_MINF : StrEnumAttrCase<"MINF">;
+def GPU_ELEMENTWISE_OP_DIVF : StrEnumAttrCase<"DIVF">;
+
+def MMAElementWiseAttr : StrEnumAttr<"MMAElementwiseOp",
+  "elementwise operation to apply to mma matrix",
+  [GPU_ELEMENTWISE_OP_ADD, GPU_ELEMENTWISE_OP_MUL,
+   GPU_ELEMENTWISE_OP_MAXF, GPU_ELEMENTWISE_OP_MINF, GPU_ELEMENTWISE_OP_DIVF]> {
+  let cppNamespace = "::mlir::gpu";
+  let storageType = "::mlir::StringAttr";
+  let returnType = "::mlir::gpu::MMAElementwiseOp";
+  let convertFromStorage = "*symbolizeMMAElementwiseOp($_self.getValue())";
+  let constBuilderCall = "$_builder.getStringAttr(stringifyEnum($0))";
+}
+
+def GPU_SubgroupMmaElementwiseOp : GPU_Op<"subgroup_mma_elementwise",
+    [NoSideEffect,
+     AllTypesMatch<["args"]>]>{
+
+  let summary = "GPU warp elementwise operation on a matrix";
+
+  let description = [{
+    The `gpu.subgroup_mma_elementwise` takes `!gpu.mma_matrix` inputs and
+    compute a new `!gpu.mma_matrix` by applying an elementwise operation to each
+    element.
+
+    Since the operation is elementwise and the matrix type must match, the
+    matrix elements are processed independently of the matrix layout.
+
+    This op is meant to be used along with `gpu.subgroup_mma_compute`.
+
+    Example:
+
+    ```mlir
+     %0 =  %A, %B { operation = "ADD" } :
+      (!gpu.mma_matrix<16x16xf16, "COp">, !gpu.mma_matrix<16x16xf16, "COp">)
+      -> !gpu.mma_matrix<16x16xf16, "COp">
+    ```
+  }];
+
+  let arguments = (ins Variadic<GPU_MMAMatrix>:$args, MMAElementWiseAttr:$operation);
+
+  let results = (outs GPU_MMAMatrix:$res);
+
+  let extraClassDeclaration = [{
+    gpu::MMAMatrixType getType() {
+      return res().getType().cast<gpu::MMAMatrixType>();
+    }
+  }];
+
+  let assemblyFormat = [{
+    $args attr-dict `:` functional-type($args, $res)
   }];
 }
 

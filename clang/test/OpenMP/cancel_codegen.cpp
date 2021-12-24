@@ -1324,14 +1324,6 @@ for (int i = 0; i < argc; ++i) {
 // CHECK3-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[ARGC_ADDR:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[ARGV_ADDR:%.*]] = alloca i8**, align 8
-// CHECK3-NEXT:    [[P_LASTITER:%.*]] = alloca i32, align 4
-// CHECK3-NEXT:    [[P_LOWERBOUND:%.*]] = alloca i32, align 4
-// CHECK3-NEXT:    [[P_UPPERBOUND:%.*]] = alloca i32, align 4
-// CHECK3-NEXT:    [[P_STRIDE:%.*]] = alloca i32, align 4
-// CHECK3-NEXT:    [[P_LASTITER27:%.*]] = alloca i32, align 4
-// CHECK3-NEXT:    [[P_LOWERBOUND28:%.*]] = alloca i32, align 4
-// CHECK3-NEXT:    [[P_UPPERBOUND29:%.*]] = alloca i32, align 4
-// CHECK3-NEXT:    [[P_STRIDE30:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
@@ -1348,6 +1340,14 @@ for (int i = 0; i < argc; ++i) {
 // CHECK3-NEXT:    store i32 [[ARGC]], i32* [[ARGC_ADDR]], align 4
 // CHECK3-NEXT:    store i8** [[ARGV]], i8*** [[ARGV_ADDR]], align 8
 // CHECK3-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1:[0-9]+]])
+// CHECK3-NEXT:    [[P_LASTITER:%.*]] = alloca i32, align 4
+// CHECK3-NEXT:    [[P_LOWERBOUND:%.*]] = alloca i32, align 4
+// CHECK3-NEXT:    [[P_UPPERBOUND:%.*]] = alloca i32, align 4
+// CHECK3-NEXT:    [[P_STRIDE:%.*]] = alloca i32, align 4
+// CHECK3-NEXT:    [[P_LASTITER27:%.*]] = alloca i32, align 4
+// CHECK3-NEXT:    [[P_LOWERBOUND28:%.*]] = alloca i32, align 4
+// CHECK3-NEXT:    [[P_UPPERBOUND29:%.*]] = alloca i32, align 4
+// CHECK3-NEXT:    [[P_STRIDE30:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    br label [[OMP_PARALLEL:%.*]]
 // CHECK3:       omp_parallel:
 // CHECK3-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1]], i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, i8***)* @main..omp_par to void (i32*, i32*, ...)*), i32* [[ARGC_ADDR]], i8*** [[ARGV_ADDR]])
@@ -1951,14 +1951,6 @@ for (int i = 0; i < argc; ++i) {
 // CHECK4-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK4-NEXT:    [[ARGC_ADDR:%.*]] = alloca i32, align 4
 // CHECK4-NEXT:    [[ARGV_ADDR:%.*]] = alloca i8**, align 8
-// CHECK4-NEXT:    [[P_LASTITER:%.*]] = alloca i32, align 4
-// CHECK4-NEXT:    [[P_LOWERBOUND:%.*]] = alloca i32, align 4
-// CHECK4-NEXT:    [[P_UPPERBOUND:%.*]] = alloca i32, align 4
-// CHECK4-NEXT:    [[P_STRIDE:%.*]] = alloca i32, align 4
-// CHECK4-NEXT:    [[P_LASTITER27:%.*]] = alloca i32, align 4
-// CHECK4-NEXT:    [[P_LOWERBOUND28:%.*]] = alloca i32, align 4
-// CHECK4-NEXT:    [[P_UPPERBOUND29:%.*]] = alloca i32, align 4
-// CHECK4-NEXT:    [[P_STRIDE30:%.*]] = alloca i32, align 4
 // CHECK4-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // CHECK4-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK4-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
@@ -1975,6 +1967,14 @@ for (int i = 0; i < argc; ++i) {
 // CHECK4-NEXT:    store i32 [[ARGC]], i32* [[ARGC_ADDR]], align 4
 // CHECK4-NEXT:    store i8** [[ARGV]], i8*** [[ARGV_ADDR]], align 8
 // CHECK4-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1:[0-9]+]])
+// CHECK4-NEXT:    [[P_LASTITER:%.*]] = alloca i32, align 4
+// CHECK4-NEXT:    [[P_LOWERBOUND:%.*]] = alloca i32, align 4
+// CHECK4-NEXT:    [[P_UPPERBOUND:%.*]] = alloca i32, align 4
+// CHECK4-NEXT:    [[P_STRIDE:%.*]] = alloca i32, align 4
+// CHECK4-NEXT:    [[P_LASTITER27:%.*]] = alloca i32, align 4
+// CHECK4-NEXT:    [[P_LOWERBOUND28:%.*]] = alloca i32, align 4
+// CHECK4-NEXT:    [[P_UPPERBOUND29:%.*]] = alloca i32, align 4
+// CHECK4-NEXT:    [[P_STRIDE30:%.*]] = alloca i32, align 4
 // CHECK4-NEXT:    br label [[OMP_PARALLEL:%.*]]
 // CHECK4:       omp_parallel:
 // CHECK4-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1]], i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, i8***)* @main..omp_par to void (i32*, i32*, ...)*), i32* [[ARGC_ADDR]], i8*** [[ARGV_ADDR]])
@@ -3818,14 +3818,6 @@ for (int i = 0; i < argc; ++i) {
 // CHECK9-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[ARGC_ADDR:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[ARGV_ADDR:%.*]] = alloca i8**, align 8
-// CHECK9-NEXT:    [[P_LASTITER:%.*]] = alloca i32, align 4
-// CHECK9-NEXT:    [[P_LOWERBOUND:%.*]] = alloca i32, align 4
-// CHECK9-NEXT:    [[P_UPPERBOUND:%.*]] = alloca i32, align 4
-// CHECK9-NEXT:    [[P_STRIDE:%.*]] = alloca i32, align 4
-// CHECK9-NEXT:    [[P_LASTITER27:%.*]] = alloca i32, align 4
-// CHECK9-NEXT:    [[P_LOWERBOUND28:%.*]] = alloca i32, align 4
-// CHECK9-NEXT:    [[P_UPPERBOUND29:%.*]] = alloca i32, align 4
-// CHECK9-NEXT:    [[P_STRIDE30:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
@@ -3842,6 +3834,14 @@ for (int i = 0; i < argc; ++i) {
 // CHECK9-NEXT:    store i32 [[ARGC]], i32* [[ARGC_ADDR]], align 4
 // CHECK9-NEXT:    store i8** [[ARGV]], i8*** [[ARGV_ADDR]], align 8
 // CHECK9-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1:[0-9]+]])
+// CHECK9-NEXT:    [[P_LASTITER:%.*]] = alloca i32, align 4
+// CHECK9-NEXT:    [[P_LOWERBOUND:%.*]] = alloca i32, align 4
+// CHECK9-NEXT:    [[P_UPPERBOUND:%.*]] = alloca i32, align 4
+// CHECK9-NEXT:    [[P_STRIDE:%.*]] = alloca i32, align 4
+// CHECK9-NEXT:    [[P_LASTITER27:%.*]] = alloca i32, align 4
+// CHECK9-NEXT:    [[P_LOWERBOUND28:%.*]] = alloca i32, align 4
+// CHECK9-NEXT:    [[P_UPPERBOUND29:%.*]] = alloca i32, align 4
+// CHECK9-NEXT:    [[P_STRIDE30:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    br label [[OMP_PARALLEL:%.*]]
 // CHECK9:       omp_parallel:
 // CHECK9-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1]], i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, i8***)* @main..omp_par to void (i32*, i32*, ...)*), i32* [[ARGC_ADDR]], i8*** [[ARGV_ADDR]])
@@ -4445,14 +4445,6 @@ for (int i = 0; i < argc; ++i) {
 // CHECK10-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK10-NEXT:    [[ARGC_ADDR:%.*]] = alloca i32, align 4
 // CHECK10-NEXT:    [[ARGV_ADDR:%.*]] = alloca i8**, align 8
-// CHECK10-NEXT:    [[P_LASTITER:%.*]] = alloca i32, align 4
-// CHECK10-NEXT:    [[P_LOWERBOUND:%.*]] = alloca i32, align 4
-// CHECK10-NEXT:    [[P_UPPERBOUND:%.*]] = alloca i32, align 4
-// CHECK10-NEXT:    [[P_STRIDE:%.*]] = alloca i32, align 4
-// CHECK10-NEXT:    [[P_LASTITER27:%.*]] = alloca i32, align 4
-// CHECK10-NEXT:    [[P_LOWERBOUND28:%.*]] = alloca i32, align 4
-// CHECK10-NEXT:    [[P_UPPERBOUND29:%.*]] = alloca i32, align 4
-// CHECK10-NEXT:    [[P_STRIDE30:%.*]] = alloca i32, align 4
 // CHECK10-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // CHECK10-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK10-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
@@ -4469,6 +4461,14 @@ for (int i = 0; i < argc; ++i) {
 // CHECK10-NEXT:    store i32 [[ARGC]], i32* [[ARGC_ADDR]], align 4
 // CHECK10-NEXT:    store i8** [[ARGV]], i8*** [[ARGV_ADDR]], align 8
 // CHECK10-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1:[0-9]+]])
+// CHECK10-NEXT:    [[P_LASTITER:%.*]] = alloca i32, align 4
+// CHECK10-NEXT:    [[P_LOWERBOUND:%.*]] = alloca i32, align 4
+// CHECK10-NEXT:    [[P_UPPERBOUND:%.*]] = alloca i32, align 4
+// CHECK10-NEXT:    [[P_STRIDE:%.*]] = alloca i32, align 4
+// CHECK10-NEXT:    [[P_LASTITER27:%.*]] = alloca i32, align 4
+// CHECK10-NEXT:    [[P_LOWERBOUND28:%.*]] = alloca i32, align 4
+// CHECK10-NEXT:    [[P_UPPERBOUND29:%.*]] = alloca i32, align 4
+// CHECK10-NEXT:    [[P_STRIDE30:%.*]] = alloca i32, align 4
 // CHECK10-NEXT:    br label [[OMP_PARALLEL:%.*]]
 // CHECK10:       omp_parallel:
 // CHECK10-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1]], i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, i8***)* @main..omp_par to void (i32*, i32*, ...)*), i32* [[ARGC_ADDR]], i8*** [[ARGV_ADDR]])

@@ -15,6 +15,7 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Location.h"
+#include "mlir/Target/SPIRV/SPIRVBinaryUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
@@ -103,8 +104,8 @@ spirv::Deserializer::sliceInstruction(spirv::Opcode &opcode,
 
 LogicalResult spirv::Deserializer::processInstruction(
     spirv::Opcode opcode, ArrayRef<uint32_t> operands, bool deferInstructions) {
-  LLVM_DEBUG(llvm::dbgs() << "[inst] processing instruction "
-                          << spirv::stringifyOpcode(opcode) << "\n");
+  LLVM_DEBUG(logger.startLine() << "[inst] processing instruction "
+                                << spirv::stringifyOpcode(opcode) << "\n");
 
   // First dispatch all the instructions whose opcode does not correspond to
   // those that have a direct mirror in the SPIR-V dialect
@@ -136,7 +137,8 @@ LogicalResult spirv::Deserializer::processInstruction(
   case spirv::Opcode::OpLine:
     return processDebugLine(operands);
   case spirv::Opcode::OpNoLine:
-    return clearDebugLine();
+    clearDebugLine();
+    return success();
   case spirv::Opcode::OpName:
     return processName(operands);
   case spirv::Opcode::OpString:
@@ -286,7 +288,7 @@ LogicalResult spirv::Deserializer::processOpWithoutGrammarAttr(
     valueMap[valueID] = op->getResult(0);
 
   if (op->hasTrait<OpTrait::IsTerminator>())
-    (void)clearDebugLine();
+    clearDebugLine();
 
   return success();
 }

@@ -56,10 +56,6 @@ void InstrumentationRuntimeUBSan::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-lldb_private::ConstString InstrumentationRuntimeUBSan::GetPluginNameStatic() {
-  return ConstString("UndefinedBehaviorSanitizer");
-}
-
 lldb::InstrumentationRuntimeType InstrumentationRuntimeUBSan::GetTypeStatic() {
   return eInstrumentationRuntimeTypeUndefinedBehaviorSanitizer;
 }

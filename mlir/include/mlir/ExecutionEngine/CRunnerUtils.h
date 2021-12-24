@@ -27,7 +27,8 @@
 #endif // mlir_c_runner_utils_EXPORTS
 #endif // MLIR_CRUNNERUTILS_EXPORT
 #else  // _WIN32
-#define MLIR_CRUNNERUTILS_EXPORT
+// Non-windows: use visibility attributes.
+#define MLIR_CRUNNERUTILS_EXPORT __attribute__((visibility("default")))
 #define MLIR_CRUNNERUTILS_DEFINE_FUNCTIONS
 #endif // _WIN32
 
@@ -80,8 +81,8 @@ private:
   T vector[Dim];
   char padding[nextPowerOf2(sizeof(T[Dim])) - sizeof(T[Dim])];
 };
-} // end namespace detail
-} // end namespace mlir
+} // namespace detail
+} // namespace mlir
 
 // N-D vectors recurse down to 1-D.
 template <typename T, int Dim, int... Dims>

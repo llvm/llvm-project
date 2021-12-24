@@ -12,6 +12,7 @@
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/FunctionCaller.h"
 #include "lldb/Expression/UtilityFunction.h"
+#include "lldb/Target/ABI.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Thread.h"
@@ -134,6 +135,10 @@ bool AppleThreadPlanStepThroughObjCTrampoline::ShouldStop(Event *event_ptr) {
                                           target_addr_value);
     m_impl_function->DeallocateFunctionResults(exc_ctx, m_args_addr);
     lldb::addr_t target_addr = target_addr_value.GetScalar().ULongLong();
+
+    if (ABISP abi_sp = GetThread().GetProcess()->GetABI()) {
+      target_addr = abi_sp->FixCodeAddress(target_addr);
+    }
     Address target_so_addr;
     target_so_addr.SetOpcodeLoadAddress(target_addr, exc_ctx.GetTargetPtr());
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));

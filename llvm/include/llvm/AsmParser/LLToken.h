@@ -370,6 +370,7 @@ enum Kind {
   kw_insertvalue,
   kw_blockaddress,
   kw_dso_local_equivalent,
+  kw_no_cfi,
 
   kw_freeze,
 
@@ -407,6 +408,7 @@ enum Kind {
   kw_noUnwind,
   kw_mayThrow,
   kw_hasUnknownCall,
+  kw_mustBeUnreachable,
   kw_calls,
   kw_callee,
   kw_params,

@@ -15,7 +15,7 @@
 #include "Arch/SystemZ.h"
 #include "Arch/VE.h"
 #include "Arch/X86.h"
-#include "HIP.h"
+#include "HIPAMD.h"
 #include "Hexagon.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/LangOptions.h"
@@ -787,7 +787,7 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
                          SmallVectorImpl<StringRef> &NonWholeStaticRuntimes,
                          SmallVectorImpl<StringRef> &HelperStaticRuntimes,
                          SmallVectorImpl<StringRef> &RequiredSymbols) {
-  const SanitizerArgs &SanArgs = TC.getSanitizerArgs();
+  const SanitizerArgs &SanArgs = TC.getSanitizerArgs(Args);
   // Collect shared runtimes.
   if (SanArgs.needsSharedRt()) {
     if (SanArgs.needsAsanRt() && SanArgs.linkRuntimes()) {
@@ -923,7 +923,7 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
                            NonWholeStaticRuntimes, HelperStaticRuntimes,
                            RequiredSymbols);
 
-  const SanitizerArgs &SanArgs = TC.getSanitizerArgs();
+  const SanitizerArgs &SanArgs = TC.getSanitizerArgs(Args);
   // Inject libfuzzer dependencies.
   if (SanArgs.needsFuzzer() && SanArgs.linkRuntimes() &&
       !Args.hasArg(options::OPT_shared)) {
@@ -1116,7 +1116,7 @@ tools::ParsePICArgs(const ToolChain &ToolChain, const ArgList &Args) {
   const llvm::Triple &EffectiveTriple = ToolChain.getEffectiveTriple();
   const llvm::Triple &Triple = ToolChain.getTriple();
 
-  bool PIE = ToolChain.isPIEDefault();
+  bool PIE = ToolChain.isPIEDefault(Args);
   bool PIC = PIE || ToolChain.isPICDefault();
   // The Darwin/MachO default to use PIC does not apply when using -static.
   if (Triple.isOSBinFormatMachO() && Args.hasArg(options::OPT_static))

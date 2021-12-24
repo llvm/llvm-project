@@ -57,7 +57,7 @@ static MaskFormat get1DMaskFormat(Value mask) {
     // Inspect constant dense values. We count up for bits that
     // are set, count down for bits that are cleared, and bail
     // when a mix is detected.
-    if (auto denseElts = c.value().dyn_cast<DenseIntElementsAttr>()) {
+    if (auto denseElts = c.getValue().dyn_cast<DenseIntElementsAttr>()) {
       int64_t val = 0;
       for (bool b : denseElts.getValues<bool>())
         if (b && val >= 0)
@@ -169,8 +169,8 @@ static constexpr const CombiningKind combiningKindsList[] = {
     // clang-format on
 };
 
-void CombiningKindAttr::print(DialectAsmPrinter &printer) const {
-  printer << "kind<";
+void CombiningKindAttr::print(AsmPrinter &printer) const {
+  printer << "<";
   auto kinds = llvm::make_filter_range(combiningKindsList, [&](auto kind) {
     return bitEnumContains(this->getKind(), kind);
   });
@@ -179,7 +179,7 @@ void CombiningKindAttr::print(DialectAsmPrinter &printer) const {
   printer << ">";
 }
 
-Attribute CombiningKindAttr::parse(DialectAsmParser &parser) {
+Attribute CombiningKindAttr::parse(AsmParser &parser, Type type) {
   if (failed(parser.parseLess()))
     return {};
 
@@ -207,7 +207,7 @@ Attribute VectorDialect::parseAttribute(DialectAsmParser &parser,
     return {};
 
   if (attrKind == "kind")
-    return CombiningKindAttr::parse(parser);
+    return CombiningKindAttr::parse(parser, {});
 
   parser.emitError(parser.getNameLoc(), "Unknown attribute type: ") << attrKind;
   return {};
@@ -215,10 +215,12 @@ Attribute VectorDialect::parseAttribute(DialectAsmParser &parser,
 
 void VectorDialect::printAttribute(Attribute attr,
                                    DialectAsmPrinter &os) const {
-  if (auto ck = attr.dyn_cast<CombiningKindAttr>())
+  if (auto ck = attr.dyn_cast<CombiningKindAttr>()) {
+    os << "kind";
     ck.print(os);
-  else
-    llvm_unreachable("Unknown attribute type");
+    return;
+  }
+  llvm_unreachable("Unknown attribute type");
 }
 
 //===----------------------------------------------------------------------===//
@@ -371,16 +373,28 @@ Value mlir::vector::getVectorReductionOp(AtomicRMWKind op, OpBuilder &builder,
                                                builder.getStringAttr("mul"),
                                                vector, ValueRange{});
   case AtomicRMWKind::minf:
+    return builder.create<vector::ReductionOp>(vector.getLoc(), scalarType,
+                                               builder.getStringAttr("minf"),
+                                               vector, ValueRange{});
   case AtomicRMWKind::mins:
+    return builder.create<vector::ReductionOp>(vector.getLoc(), scalarType,
+                                               builder.getStringAttr("minsi"),
+                                               vector, ValueRange{});
   case AtomicRMWKind::minu:
     return builder.create<vector::ReductionOp>(vector.getLoc(), scalarType,
-                                               builder.getStringAttr("min"),
+                                               builder.getStringAttr("minui"),
                                                vector, ValueRange{});
   case AtomicRMWKind::maxf:
+    return builder.create<vector::ReductionOp>(vector.getLoc(), scalarType,
+                                               builder.getStringAttr("maxf"),
+                                               vector, ValueRange{});
   case AtomicRMWKind::maxs:
+    return builder.create<vector::ReductionOp>(vector.getLoc(), scalarType,
+                                               builder.getStringAttr("maxsi"),
+                                               vector, ValueRange{});
   case AtomicRMWKind::maxu:
     return builder.create<vector::ReductionOp>(vector.getLoc(), scalarType,
-                                               builder.getStringAttr("max"),
+                                               builder.getStringAttr("maxui"),
                                                vector, ValueRange{});
   // TODO: Add remaining reduction operations.
   default:
@@ -460,8 +474,8 @@ static ParseResult parseContractionOp(OpAsmParser &parser,
   auto rhsType = types[1].cast<VectorType>();
   auto maskElementType = parser.getBuilder().getI1Type();
   std::array<Type, 2> maskTypes = {
-      VectorType::get(lhsType.getShape(), maskElementType),
-      VectorType::get(rhsType.getShape(), maskElementType)};
+      VectorType::Builder(lhsType).setElementType(maskElementType),
+      VectorType::Builder(rhsType).setElementType(maskElementType)};
   if (parser.resolveOperands(masksInfo, maskTypes, loc, result.operands))
     return failure();
   return success();
@@ -474,7 +488,7 @@ static void print(OpAsmPrinter &p, ContractionOp op) {
   traitAttrsSet.insert(attrNames.begin(), attrNames.end());
   SmallVector<NamedAttribute, 8> attrs;
   for (auto attr : op->getAttrs())
-    if (traitAttrsSet.count(attr.first.strref()) > 0)
+    if (traitAttrsSet.count(attr.getName().strref()) > 0)
       attrs.push_back(attr);
 
   auto dictAttr = DictionaryAttr::get(op.getContext(), attrs);
@@ -688,7 +702,7 @@ getDimMap(ArrayRef<AffineMap> indexingMaps, ArrayAttr iteratorTypes,
     int64_t lhsDim = getResultIndex(indexingMaps[0], targetExpr);
     int64_t rhsDim = getResultIndex(indexingMaps[1], targetExpr);
     if (lhsDim >= 0 && rhsDim >= 0)
-      dimMap.push_back({lhsDim, rhsDim});
+      dimMap.emplace_back(lhsDim, rhsDim);
   }
   return dimMap;
 }
@@ -790,7 +804,7 @@ struct CanonicalizeContractAdd : public OpRewritePattern<AddOpType> {
         return vector::ContractionOp();
       if (auto maybeZero = dyn_cast_or_null<arith::ConstantOp>(
               contractionOp.acc().getDefiningOp())) {
-        if (maybeZero.value() ==
+        if (maybeZero.getValue() ==
             rewriter.getZeroAttr(contractionOp.acc().getType())) {
           BlockAndValueMapping bvm;
           bvm.map(contractionOp.acc(), otherOperand);
@@ -821,22 +835,28 @@ void ContractionOp::getCanonicalizationPatterns(RewritePatternSet &results,
 //===----------------------------------------------------------------------===//
 
 void vector::ExtractElementOp::build(OpBuilder &builder, OperationState &result,
+                                     Value source) {
+  result.addOperands({source});
+  result.addTypes(source.getType().cast<VectorType>().getElementType());
+}
+
+void vector::ExtractElementOp::build(OpBuilder &builder, OperationState &result,
                                      Value source, Value position) {
   result.addOperands({source, position});
   result.addTypes(source.getType().cast<VectorType>().getElementType());
 }
 
-void vector::ExtractElementOp::build(OpBuilder &builder, OperationState &result,
-                                     Value source, int64_t position) {
-  Value pos =
-      builder.create<arith::ConstantIntOp>(result.location, position, 32);
-  build(builder, result, source, pos);
-}
-
 static LogicalResult verify(vector::ExtractElementOp op) {
   VectorType vectorType = op.getVectorType();
+  if (vectorType.getRank() == 0) {
+    if (op.position())
+      return op.emitOpError("expected position to be empty with 0-D vector");
+    return success();
+  }
   if (vectorType.getRank() != 1)
-    return op.emitOpError("expected 1-D vector");
+    return op.emitOpError("unexpected >1 vector rank");
+  if (!op.position())
+    return op.emitOpError("expected position for 1-D vector");
   return success();
 }
 
@@ -1105,11 +1125,11 @@ static Value foldExtractFromBroadcast(ExtractOp extractOp) {
   auto getRank = [](Type type) {
     return type.isa<VectorType>() ? type.cast<VectorType>().getRank() : 0;
   };
-  unsigned broadcasrSrcRank = getRank(source.getType());
+  unsigned broadcastSrcRank = getRank(source.getType());
   unsigned extractResultRank = getRank(extractOp.getType());
-  if (extractResultRank < broadcasrSrcRank) {
+  if (extractResultRank < broadcastSrcRank) {
     auto extractPos = extractVector<int64_t>(extractOp.position());
-    unsigned rankDiff = broadcasrSrcRank - extractResultRank;
+    unsigned rankDiff = broadcastSrcRank - extractResultRank;
     extractPos.erase(
         extractPos.begin(),
         std::next(extractPos.begin(), extractPos.size() - rankDiff));
@@ -1120,9 +1140,6 @@ static Value foldExtractFromBroadcast(ExtractOp extractOp) {
                        b.getI64ArrayAttr(extractPos));
     return extractOp.getResult();
   }
-  // TODO: In case the rank of the broadcast source is greater than the rank of
-  // the extract result this can be combined into a new broadcast op. This needs
-  // to be added a canonicalization pattern if needed.
   return Value();
 }
 
@@ -1203,20 +1220,54 @@ OpFoldResult ExtractOp::fold(ArrayRef<Attribute>) {
 
 namespace {
 
-// If extractOp is only removing unit dimensions it can be transformed to a
-// shapecast.
-class ExtractToShapeCast final : public OpRewritePattern<ExtractOp> {
+// Pattern to rewrite a ExtractOp(Broadcast) -> Broadcast.
+class ExtractOpFromBroadcast final : public OpRewritePattern<ExtractOp> {
 public:
   using OpRewritePattern<ExtractOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(ExtractOp extractOp,
                                 PatternRewriter &rewriter) const override {
-    auto dstVecType = extractOp.getResult().getType().dyn_cast<VectorType>();
-    if (!dstVecType || extractOp.getVectorType().getNumElements() !=
-                           dstVecType.getNumElements())
+    Operation *defOp = extractOp.vector().getDefiningOp();
+    if (!defOp || !isa<vector::BroadcastOp, SplatOp>(defOp))
       return failure();
-    rewriter.replaceOpWithNewOp<ShapeCastOp>(extractOp, dstVecType,
-                                             extractOp.vector());
+    Value source = defOp->getOperand(0);
+    if (extractOp.getType() == source.getType())
+      return failure();
+    auto getRank = [](Type type) {
+      return type.isa<VectorType>() ? type.cast<VectorType>().getRank() : 0;
+    };
+    unsigned broadcastSrcRank = getRank(source.getType());
+    unsigned extractResultRank = getRank(extractOp.getType());
+    // We only consider the case where the rank of the source is smaller than
+    // the rank of the extract dst. The other cases are handled in the folding
+    // patterns.
+    if (extractResultRank <= broadcastSrcRank)
+      return failure();
+    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
+        extractOp, extractOp.getType(), source);
+    return success();
+  }
+};
+
+// Pattern to rewrite a ExtractOp(splat ConstantOp) -> ConstantOp.
+class ExtractOpConstantFolder final : public OpRewritePattern<ExtractOp> {
+public:
+  using OpRewritePattern<ExtractOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ExtractOp extractOp,
+                                PatternRewriter &rewriter) const override {
+    // Return if 'extractStridedSliceOp' operand is not defined by a
+    // ConstantOp.
+    auto constantOp = extractOp.vector().getDefiningOp<arith::ConstantOp>();
+    if (!constantOp)
+      return failure();
+    auto dense = constantOp.getValue().dyn_cast<SplatElementsAttr>();
+    if (!dense)
+      return failure();
+    Attribute newAttr = dense.getSplatValue<Attribute>();
+    if (auto vecDstType = extractOp.getType().dyn_cast<VectorType>())
+      newAttr = DenseElementsAttr::get(vecDstType, newAttr);
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(extractOp, newAttr);
     return success();
   }
 };
@@ -1225,7 +1276,7 @@ public:
 
 void ExtractOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results.add<ExtractToShapeCast>(context);
+  results.add<ExtractOpConstantFolder, ExtractOpFromBroadcast>(context);
 }
 
 static void populateFromInt64AttrArray(ArrayAttr arrayAttr,
@@ -1383,32 +1434,11 @@ OpFoldResult BroadcastOp::fold(ArrayRef<Attribute> operands) {
   if (operands[0].getType().isIntOrIndexOrFloat())
     return DenseElementsAttr::get(vectorType, operands[0]);
   if (auto attr = operands[0].dyn_cast<SplatElementsAttr>())
-    return DenseElementsAttr::get(vectorType, attr.getSplatValue());
+    return DenseElementsAttr::get(vectorType, attr.getSplatValue<Attribute>());
   return {};
 }
 
 namespace {
-
-// BroadcastOp can only add dimensions or broadcast a dimension from 1 to N. In
-// the degenerated case where the broadcast only adds dimensions of size 1 it
-// can be replaced by a ShapeCastOp. This canonicalization checks if the total
-// number of elements is the same before and after the broadcast to detect if
-// the only change in the vector type are new dimensions of size 1.
-class BroadcastToShapeCast final : public OpRewritePattern<BroadcastOp> {
-public:
-  using OpRewritePattern<BroadcastOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(BroadcastOp broadcastOp,
-                                PatternRewriter &rewriter) const override {
-    auto srcVecType = broadcastOp.getSourceType().dyn_cast<VectorType>();
-    if (!srcVecType || broadcastOp.getVectorType().getNumElements() !=
-                           srcVecType.getNumElements())
-      return failure();
-    rewriter.replaceOpWithNewOp<ShapeCastOp>(
-        broadcastOp, broadcastOp.getVectorType(), broadcastOp.source());
-    return success();
-  }
-};
 
 // Fold broadcast1(broadcast2(x)) into broadcast1(x).
 struct BroadcastFolder : public OpRewritePattern<BroadcastOp> {
@@ -1428,7 +1458,9 @@ struct BroadcastFolder : public OpRewritePattern<BroadcastOp> {
 
 void BroadcastOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
-  results.add<BroadcastToShapeCast, BroadcastFolder>(context);
+  // BroadcastToShapeCast is not a default canonicalization, it is opt-in by
+  // calling `populateCastAwayVectorLeadingOneDimPatterns`
+  results.add<BroadcastFolder>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1439,7 +1471,10 @@ void ShuffleOp::build(OpBuilder &builder, OperationState &result, Value v1,
                       Value v2, ArrayRef<int64_t> mask) {
   result.addOperands({v1, v2});
   auto maskAttr = getVectorSubscriptAttr(builder, mask);
-  result.addTypes(v1.getType());
+  auto v1Type = v1.getType().cast<VectorType>();
+  auto shape = llvm::to_vector<4>(v1Type.getShape());
+  shape[0] = mask.size();
+  result.addTypes(VectorType::get(shape, v1Type.getElementType()));
   result.addAttribute(getMaskAttrName(), maskAttr);
 }
 
@@ -1521,22 +1556,28 @@ static ParseResult parseShuffleOp(OpAsmParser &parser, OperationState &result) {
 //===----------------------------------------------------------------------===//
 
 void InsertElementOp::build(OpBuilder &builder, OperationState &result,
+                            Value source, Value dest) {
+  result.addOperands({source, dest});
+  result.addTypes(dest.getType());
+}
+
+void InsertElementOp::build(OpBuilder &builder, OperationState &result,
                             Value source, Value dest, Value position) {
   result.addOperands({source, dest, position});
   result.addTypes(dest.getType());
 }
 
-void InsertElementOp::build(OpBuilder &builder, OperationState &result,
-                            Value source, Value dest, int64_t position) {
-  Value pos =
-      builder.create<arith::ConstantIntOp>(result.location, position, 32);
-  build(builder, result, source, dest, pos);
-}
-
 static LogicalResult verify(InsertElementOp op) {
   auto dstVectorType = op.getDestVectorType();
+  if (dstVectorType.getRank() == 0) {
+    if (op.position())
+      return op.emitOpError("expected position to be empty with 0-D vector");
+    return success();
+  }
   if (dstVectorType.getRank() != 1)
-    return op.emitOpError("expected 1-D vector");
+    return op.emitOpError("unexpected >1 vector rank");
+  if (!op.position())
+    return op.emitOpError("expected position for 1-D vector");
   return success();
 }
 
@@ -1574,8 +1615,8 @@ static LogicalResult verify(InsertOp op) {
        static_cast<unsigned>(destVectorType.getRank())))
     return op.emitOpError("expected position attribute rank + source rank to "
                           "match dest vector rank");
-  else if (!srcVectorType && (positionAttr.size() !=
-                              static_cast<unsigned>(destVectorType.getRank())))
+  if (!srcVectorType &&
+      (positionAttr.size() != static_cast<unsigned>(destVectorType.getRank())))
     return op.emitOpError(
         "expected position attribute rank to match the dest vector rank");
   for (auto en : llvm::enumerate(positionAttr)) {
@@ -1593,8 +1634,8 @@ static LogicalResult verify(InsertOp op) {
 namespace {
 
 // If insertOp is only inserting unit dimensions it can be transformed to a
-// shapecast.
-class InsertToShapeCast final : public OpRewritePattern<InsertOp> {
+// broadcast.
+class InsertToBroadcast final : public OpRewritePattern<InsertOp> {
 public:
   using OpRewritePattern<InsertOp>::OpRewritePattern;
 
@@ -1604,7 +1645,7 @@ public:
     if (!srcVecType || insertOp.getDestVectorType().getNumElements() !=
                            srcVecType.getNumElements())
       return failure();
-    rewriter.replaceOpWithNewOp<ShapeCastOp>(
+    rewriter.replaceOpWithNewOp<BroadcastOp>(
         insertOp, insertOp.getDestVectorType(), insertOp.source());
     return success();
   }
@@ -1614,7 +1655,7 @@ public:
 
 void InsertOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
-  results.add<InsertToShapeCast>(context);
+  results.add<InsertToBroadcast, BroadcastFolder>(context);
 }
 
 // Eliminates insert operations that produce values identical to their source
@@ -2135,7 +2176,7 @@ public:
                                 PatternRewriter &rewriter) const override {
     // Return if 'extractStridedSliceOp' operand is not defined by a
     // ConstantMaskOp.
-    auto defOp = extractStridedSliceOp.vector().getDefiningOp();
+    auto *defOp = extractStridedSliceOp.vector().getDefiningOp();
     auto constantMaskOp = dyn_cast_or_null<ConstantMaskOp>(defOp);
     if (!constantMaskOp)
       return failure();
@@ -2193,11 +2234,11 @@ public:
         extractStridedSliceOp.vector().getDefiningOp<arith::ConstantOp>();
     if (!constantOp)
       return failure();
-    auto dense = constantOp.value().dyn_cast<SplatElementsAttr>();
+    auto dense = constantOp.getValue().dyn_cast<SplatElementsAttr>();
     if (!dense)
       return failure();
     auto newAttr = DenseElementsAttr::get(extractStridedSliceOp.getType(),
-                                          dense.getSplatValue());
+                                          dense.getSplatValue<Attribute>());
     rewriter.replaceOpWithNewOp<arith::ConstantOp>(extractStridedSliceOp,
                                                    newAttr);
     return success();
@@ -2256,12 +2297,12 @@ public:
     auto splat = op.vector().getDefiningOp<SplatOp>();
     if (!splat)
       return failure();
-    rewriter.replaceOpWithNewOp<SplatOp>(op, op.getType(), splat.input());
+    rewriter.replaceOpWithNewOp<SplatOp>(op, op.getType(), splat.getInput());
     return success();
   }
 };
 
-} // end anonymous namespace
+} // namespace
 
 void ExtractStridedSliceOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
@@ -2274,6 +2315,59 @@ void ExtractStridedSliceOp::getCanonicalizationPatterns(
 //===----------------------------------------------------------------------===//
 // TransferReadOp
 //===----------------------------------------------------------------------===//
+
+/// 1. Builder that sets padding to zero and an empty mask (variant with attrs).
+void TransferReadOp::build(OpBuilder &builder, OperationState &result,
+                           VectorType vectorType, Value source,
+                           ValueRange indices, AffineMapAttr permutationMapAttr,
+                           /*optional*/ ArrayAttr inBoundsAttr) {
+  Type elemType = source.getType().cast<ShapedType>().getElementType();
+  Value padding = builder.create<arith::ConstantOp>(
+      result.location, elemType, builder.getZeroAttr(elemType));
+  build(builder, result, vectorType, source, indices, permutationMapAttr,
+        padding, /*mask=*/Value(), inBoundsAttr);
+}
+
+/// 2. Builder that sets padding to zero an empty mask (variant without attrs).
+void TransferReadOp::build(OpBuilder &builder, OperationState &result,
+                           VectorType vectorType, Value source,
+                           ValueRange indices, AffineMap permutationMap,
+                           Optional<ArrayRef<bool>> inBounds) {
+  auto permutationMapAttr = AffineMapAttr::get(permutationMap);
+  auto inBoundsAttr = (inBounds && !inBounds.getValue().empty())
+                          ? builder.getBoolArrayAttr(inBounds.getValue())
+                          : ArrayAttr();
+  build(builder, result, vectorType, source, indices, permutationMapAttr,
+        inBoundsAttr);
+}
+
+/// 3. Builder that sets permutation map to 'getMinorIdentityMap'.
+void TransferReadOp::build(OpBuilder &builder, OperationState &result,
+                           VectorType vectorType, Value source,
+                           ValueRange indices, Value padding,
+                           Optional<ArrayRef<bool>> inBounds) {
+  AffineMap permutationMap = getTransferMinorIdentityMap(
+      source.getType().cast<ShapedType>(), vectorType);
+  auto permutationMapAttr = AffineMapAttr::get(permutationMap);
+  auto inBoundsAttr = (inBounds && !inBounds.getValue().empty())
+                          ? builder.getBoolArrayAttr(inBounds.getValue())
+                          : ArrayAttr();
+  build(builder, result, vectorType, source, indices, permutationMapAttr,
+        padding,
+        /*mask=*/Value(), inBoundsAttr);
+}
+
+/// 4. Builder that sets padding to zero and permutation map to
+/// 'getMinorIdentityMap'.
+void TransferReadOp::build(OpBuilder &builder, OperationState &result,
+                           VectorType vectorType, Value source,
+                           ValueRange indices,
+                           Optional<ArrayRef<bool>> inBounds) {
+  Type elemType = source.getType().cast<ShapedType>().getElementType();
+  Value padding = builder.create<arith::ConstantOp>(
+      result.location, elemType, builder.getZeroAttr(elemType));
+  build(builder, result, vectorType, source, indices, padding, inBounds);
+}
 
 template <typename EmitFun>
 static LogicalResult verifyPermutationMap(AffineMap permutationMap,
@@ -2308,10 +2402,6 @@ static LogicalResult
 verifyTransferOp(VectorTransferOpInterface op, ShapedType shapedType,
                  VectorType vectorType, VectorType maskType,
                  AffineMap permutationMap, ArrayAttr inBounds) {
-  if (shapedType.getRank() == 0 && !op.isZeroD())
-    return op->emitOpError("0-d transfer requires vector<1xt> shape and () -> "
-                           "(0) permutation_map");
-
   if (op->hasAttr("masked")) {
     return op->emitOpError("masked attribute has been removed. "
                            "Use in_bounds instead.");
@@ -2320,6 +2410,7 @@ verifyTransferOp(VectorTransferOpInterface op, ShapedType shapedType,
   if (!shapedType.isa<MemRefType, RankedTensorType>())
     return op->emitOpError(
         "requires source to be a memref or ranked tensor type");
+
   auto elementType = shapedType.getElementType();
   DataLayout dataLayout = DataLayout::closest(op);
   if (auto vectorElementType = elementType.dyn_cast<VectorType>()) {
@@ -2350,9 +2441,10 @@ verifyTransferOp(VectorTransferOpInterface op, ShapedType shapedType,
       return op->emitOpError("does not support masks with vector element type");
   } else {
     // Memref or tensor has scalar element type.
+    unsigned minorSize =
+        vectorType.getRank() == 0 ? 1 : vectorType.getShape().back();
     unsigned resultVecSize =
-        dataLayout.getTypeSizeInBits(vectorType.getElementType()) *
-        vectorType.getShape().back();
+        dataLayout.getTypeSizeInBits(vectorType.getElementType()) * minorSize;
     if (resultVecSize % dataLayout.getTypeSizeInBits(elementType) != 0)
       return op->emitOpError(
           "requires the bitwidth of the minor 1-D vector to be an integral "
@@ -2373,8 +2465,8 @@ verifyTransferOp(VectorTransferOpInterface op, ShapedType shapedType,
 
   if (permutationMap.getNumSymbols() != 0)
     return op->emitOpError("requires permutation_map without symbols");
-  // TODO: implement 0-d vector corner cases.
-  if (!op.isZeroD() && permutationMap.getNumInputs() != shapedType.getRank())
+
+  if (permutationMap.getNumInputs() != shapedType.getRank())
     return op->emitOpError("requires a permutation_map with input dims of the "
                            "same rank as the source type");
 
@@ -2382,7 +2474,8 @@ verifyTransferOp(VectorTransferOpInterface op, ShapedType shapedType,
     if (permutationMap.getNumResults() != static_cast<int64_t>(inBounds.size()))
       return op->emitOpError("expects the optional in_bounds attr of same rank "
                              "as permutation_map results: ")
-             << AffineMapAttr::get(permutationMap);
+             << AffineMapAttr::get(permutationMap)
+             << " vs inBounds of size: " << inBounds.size();
     for (unsigned int i = 0; i < permutationMap.getNumResults(); ++i)
       if (permutationMap.getResult(i).isa<AffineConstantExpr>() &&
           !inBounds.getValue()[i].cast<BoolAttr>().getValue())
@@ -2390,77 +2483,6 @@ verifyTransferOp(VectorTransferOpInterface op, ShapedType shapedType,
   }
 
   return success();
-}
-
-/// Builder that sets padding to zero.
-void TransferReadOp::build(OpBuilder &builder, OperationState &result,
-                           VectorType vectorType, Value source,
-                           ValueRange indices, AffineMap permutationMap,
-                           ArrayRef<bool> inBounds) {
-  Type elemType = source.getType().cast<ShapedType>().getElementType();
-  Value padding = builder.create<arith::ConstantOp>(
-      result.location, elemType, builder.getZeroAttr(elemType));
-  if (inBounds.empty())
-    return build(builder, result, vectorType, source, indices, permutationMap,
-                 padding, ArrayAttr());
-  ArrayAttr inBoundsArrayAttr = builder.getBoolArrayAttr(inBounds);
-  build(builder, result, vectorType, source, indices, permutationMap, padding,
-        inBoundsArrayAttr);
-}
-
-/// Builder that sets permutation map to 'getMinorIdentityMap'.
-void TransferReadOp::build(OpBuilder &builder, OperationState &result,
-                           VectorType vectorType, Value source,
-                           ValueRange indices, Value padding,
-                           ArrayRef<bool> inBounds) {
-  auto permMap = getTransferMinorIdentityMap(
-      source.getType().cast<ShapedType>(), vectorType);
-  if (inBounds.empty())
-    return build(builder, result, vectorType, source, indices, permMap, padding,
-                 ArrayAttr());
-  ArrayAttr inBoundsArrayAttr = builder.getBoolArrayAttr(inBounds);
-  build(builder, result, vectorType, source, indices, permMap, padding,
-        inBoundsArrayAttr);
-}
-
-/// Builder that sets permutation map (resp. padding) to 'getMinorIdentityMap'
-/// (resp. zero).
-void TransferReadOp::build(OpBuilder &builder, OperationState &result,
-                           VectorType vectorType, Value source,
-                           ValueRange indices, ArrayRef<bool> inBounds) {
-  auto permMap = getTransferMinorIdentityMap(
-      source.getType().cast<ShapedType>(), vectorType);
-  build(builder, result, vectorType, source, indices, permMap, inBounds);
-}
-
-/// Builder that does not provide a mask.
-void TransferReadOp::build(OpBuilder &builder, OperationState &result,
-                           Type vectorType, Value source, ValueRange indices,
-                           AffineMap permutationMap, Value padding,
-                           ArrayAttr inBounds) {
-  build(builder, result, vectorType, source, indices, permutationMap, padding,
-        /*mask=*/Value(), inBounds);
-}
-
-/// Builder that does not provide a mask.
-void TransferReadOp::build(OpBuilder &builder, OperationState &result,
-                           Type vectorType, Value source, ValueRange indices,
-                           AffineMapAttr permutationMap, Value padding,
-                           ArrayAttr inBounds) {
-  build(builder, result, vectorType, source, indices, permutationMap, padding,
-        /*mask=*/Value(), inBounds);
-}
-
-Value TransferReadOp::createScalarOp(OpBuilder &builder, Location loc,
-                                     Value source, ValueRange indices,
-                                     ArrayRef<bool> inBounds) {
-  Type elemType = source.getType().cast<ShapedType>().getElementType();
-  auto vectorType = VectorType::get(ArrayRef<int64_t>{1}, elemType);
-  AffineMap map = AffineMap::get(/*numDims=*/0, /*numSymbols=*/0,
-                                 getAffineConstantExpr(0, loc.getContext()));
-  Value read = builder.create<vector::TransferReadOp>(loc, vectorType, source,
-                                                      indices, map, inBounds);
-  return builder.create<vector::ExtractOp>(loc, read, ArrayRef<int64_t>{0});
 }
 
 static void printTransferAttrs(OpAsmPrinter &p, VectorTransferOpInterface op) {
@@ -2524,6 +2546,7 @@ static ParseResult parseTransferReadOp(OpAsmParser &parser,
   Attribute mapAttr = result.attributes.get(permutationAttrName);
   if (!mapAttr) {
     auto permMap = getTransferMinorIdentityMap(shapedType, vectorType);
+    // Update `mapAttr` that is used later to determine mask type.
     mapAttr = AffineMapAttr::get(permMap);
     result.attributes.set(permutationAttrName, mapAttr);
   }
@@ -2638,8 +2661,9 @@ static bool isInBounds(TransferOp op, int64_t resultIdx, int64_t indicesIdx) {
 
 template <typename TransferOp>
 static LogicalResult foldTransferInBoundsAttribute(TransferOp op) {
-  // TODO: Be less conservative once we have 0-d vectors.
-  if (op.isZeroD())
+  // TODO: support 0-d corner case.
+  // TODO: Be less conservative.
+  if (op.getTransferRank() == 0)
     return failure();
   AffineMap permutationMap = op.permutation_map();
   bool changed = false;
@@ -2744,6 +2768,9 @@ public:
 
   LogicalResult matchAndRewrite(TransferReadOp xferOp,
                                 PatternRewriter &rewriter) const override {
+    // TODO: support 0-d corner case.
+    if (xferOp.getTransferRank() == 0)
+      return failure();
     if (xferOp.hasOutOfBoundsDim())
       return failure();
     if (!xferOp.permutation_map().isIdentity())
@@ -2775,9 +2802,9 @@ public:
                                           offset)));
     }
     SmallVector<bool> inBounds(xferOp.getTransferRank(), true);
-    rewriter.replaceOpWithNewOp<TransferReadOp>(xferOp, xferOp.getVectorType(),
-                                                extractOp.source(), newIndices,
-                                                xferOp.padding(), inBounds);
+    rewriter.replaceOpWithNewOp<TransferReadOp>(
+        xferOp, xferOp.getVectorType(), extractOp.source(), newIndices,
+        xferOp.padding(), ArrayRef<bool>{inBounds});
 
     return success();
   }
@@ -2793,69 +2820,49 @@ void TransferReadOp::getCanonicalizationPatterns(RewritePatternSet &results,
 // TransferWriteOp
 //===----------------------------------------------------------------------===//
 
+/// 1. Builder with type inference.
 void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
                             Value vector, Value dest, ValueRange indices,
-                            AffineMap permutationMap, ArrayRef<bool> inBounds) {
-  if (inBounds.empty())
-    return build(builder, result, vector, dest, indices, permutationMap,
-                 /*mask=*/Value(), ArrayAttr());
-  build(builder, result, vector, dest, indices, permutationMap,
-        /*mask=*/Value(), builder.getBoolArrayAttr(inBounds));
+                            AffineMapAttr permutationMapAttr,
+                            /*optional*/ Value mask,
+                            /*optional*/ ArrayAttr inBoundsAttr) {
+  Type resultType = dest.getType().dyn_cast<RankedTensorType>();
+  build(builder, result, resultType, vector, dest, indices, permutationMapAttr,
+        mask, inBoundsAttr);
 }
 
-/// Builder that sets permutation map to 'getMinorIdentityMap'.
+/// 2. Builder with type inference that sets an empty mask (variant with attrs).
 void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
-                            Value vector, Value source, ValueRange indices,
-                            ArrayRef<bool> inBounds) {
-  auto vectorType = vector.getType().cast<VectorType>();
-  auto permMap = getTransferMinorIdentityMap(
-      source.getType().cast<ShapedType>(), vectorType);
-  if (inBounds.empty())
-    return build(builder, result, vector, source, indices, permMap,
-                 ArrayAttr());
-  ArrayAttr inBoundsArrayAttr = builder.getBoolArrayAttr(inBounds);
-  build(builder, result, vector, source, indices, permMap, inBoundsArrayAttr);
+                            Value vector, Value dest, ValueRange indices,
+                            AffineMapAttr permutationMapAttr,
+                            /*optional*/ ArrayAttr inBoundsAttr) {
+  build(builder, result, vector, dest, indices, permutationMapAttr,
+        /*mask=*/Value(), inBoundsAttr);
 }
 
+/// 3. Builder with type inference that sets an empty mask (variant without
+/// attrs)
 void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
-                            Value vector, Value source, ValueRange indices,
-                            AffineMapAttr permutationMap,
-                            /*optional*/ ArrayAttr inBounds) {
-  Type resultType = source.getType().dyn_cast<RankedTensorType>();
-  build(builder, result, resultType, vector, source, indices, permutationMap,
-        /*mask=*/Value(), inBounds);
-}
-
-void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
-                            Value vector, Value source, ValueRange indices,
+                            Value vector, Value dest, ValueRange indices,
                             AffineMap permutationMap,
-                            /*optional*/ ArrayAttr inBounds) {
-  Type resultType = source.getType().dyn_cast<RankedTensorType>();
-  build(builder, result, resultType, vector, source, indices, permutationMap,
-        /*mask=*/Value(), inBounds);
+                            Optional<ArrayRef<bool>> inBounds) {
+  auto permutationMapAttr = AffineMapAttr::get(permutationMap);
+  auto inBoundsAttr = (inBounds && !inBounds.getValue().empty())
+                          ? builder.getBoolArrayAttr(inBounds.getValue())
+                          : ArrayAttr();
+  build(builder, result, vector, dest, indices, permutationMapAttr,
+        /*mask=*/Value(), inBoundsAttr);
 }
 
+/// 4. Builder with type inference that sets an empty mask and sets permutation
+///    map to 'getMinorIdentityMap'.
 void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
-                            Value vector, Value source, ValueRange indices,
-                            AffineMap permutationMap, /*optional*/ Value mask,
-                            /*optional*/ ArrayAttr inBounds) {
-  Type resultType = source.getType().dyn_cast<RankedTensorType>();
-  build(builder, result, resultType, vector, source, indices, permutationMap,
-        mask, inBounds);
-}
-
-Operation *TransferWriteOp::createScalarOp(OpBuilder &builder, Location loc,
-                                           Value value, Value dest,
-                                           ValueRange indices,
-                                           ArrayRef<bool> inBounds) {
-  Value vectorOfAScalar = value;
-  if (!value.getType().isa<VectorType>())
-    vectorOfAScalar = builder.create<vector::BroadcastOp>(
-        loc, VectorType::get({1}, value.getType()), value);
-  AffineMap map = AffineMap::get(/*numDims=*/0, /*numSymbols=*/0,
-                                 getAffineConstantExpr(0, loc.getContext()));
-  return builder.create<vector::TransferWriteOp>(loc, vectorOfAScalar, dest,
-                                                 indices, map, inBounds);
+                            Value vector, Value dest, ValueRange indices,
+                            Optional<ArrayRef<bool>> inBounds) {
+  auto vectorType = vector.getType().cast<VectorType>();
+  AffineMap permutationMap = getTransferMinorIdentityMap(
+      dest.getType().cast<ShapedType>(), vectorType);
+  build(builder, result, vector, dest, indices, permutationMap, inBounds);
 }
 
 static ParseResult parseTransferWriteOp(OpAsmParser &parser,
@@ -2964,6 +2971,9 @@ static LogicalResult verify(TransferWriteOp op) {
 static LogicalResult foldReadInitWrite(TransferWriteOp write,
                                        ArrayRef<Attribute>,
                                        SmallVectorImpl<OpFoldResult> &results) {
+  // TODO: support 0-d corner case.
+  if (write.getTransferRank() == 0)
+    return failure();
   auto rankedTensorType = write.source().getType().dyn_cast<RankedTensorType>();
   // If not operating on tensors, bail.
   if (!rankedTensorType)
@@ -2971,6 +2981,9 @@ static LogicalResult foldReadInitWrite(TransferWriteOp write,
   // If no read, bail.
   auto read = write.vector().getDefiningOp<vector::TransferReadOp>();
   if (!read)
+    return failure();
+  // TODO: support 0-d corner case.
+  if (read.getTransferRank() == 0)
     return failure();
   // For now, only accept minor identity. Future: composition is minor identity.
   if (!read.permutation_map().isMinorIdentity() ||
@@ -3087,7 +3100,7 @@ namespace {
 ///
 /// `%w0 = vector.transfer_write` op will be removed by DCE if it doesn't have
 /// any other uses.
-class foldWAW final : public OpRewritePattern<TransferWriteOp> {
+class FoldWaw final : public OpRewritePattern<TransferWriteOp> {
 public:
   using OpRewritePattern<TransferWriteOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(TransferWriteOp writeOp,
@@ -3140,9 +3153,14 @@ public:
                                 PatternRewriter &rewriter) const override {
     if (!insertOp.hasUnitStride())
       return failure();
+
     auto xferOp = insertOp.source().getDefiningOp<TransferWriteOp>();
     if (!xferOp)
       return failure();
+    // TODO: support 0-d corner case.
+    if (xferOp.getTransferRank() == 0)
+      return failure();
+
     if (xferOp.hasOutOfBoundsDim())
       return failure();
     if (xferOp.getVectorType().getRank() != xferOp.getShapedType().getRank())
@@ -3161,8 +3179,9 @@ public:
     SmallVector<Value> indices = getValueOrCreateConstantIndexOp(
         rewriter, insertOp.getLoc(), insertOp.getMixedOffsets());
     SmallVector<bool> inBounds(xferOp.getTransferRank(), true);
-    rewriter.replaceOpWithNewOp<TransferWriteOp>(
-        insertOp, xferOp.vector(), insertOp.dest(), indices, inBounds);
+    rewriter.replaceOpWithNewOp<TransferWriteOp>(insertOp, xferOp.vector(),
+                                                 insertOp.dest(), indices,
+                                                 ArrayRef<bool>{inBounds});
     return success();
   }
 };
@@ -3170,7 +3189,7 @@ public:
 
 void TransferWriteOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                   MLIRContext *context) {
-  results.add<foldWAW, FoldInsertSliceIntoTransferWrite>(context);
+  results.add<FoldWaw, FoldInsertSliceIntoTransferWrite>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3652,11 +3671,12 @@ public:
     if (!constantOp)
       return failure();
     // Only handle splat for now.
-    auto dense = constantOp.value().dyn_cast<SplatElementsAttr>();
+    auto dense = constantOp.getValue().dyn_cast<SplatElementsAttr>();
     if (!dense)
       return failure();
-    auto newAttr = DenseElementsAttr::get(
-        shapeCastOp.getType().cast<VectorType>(), dense.getSplatValue());
+    auto newAttr =
+        DenseElementsAttr::get(shapeCastOp.getType().cast<VectorType>(),
+                               dense.getSplatValue<Attribute>());
     rewriter.replaceOpWithNewOp<arith::ConstantOp>(shapeCastOp, newAttr);
     return success();
   }
@@ -3684,12 +3704,20 @@ static LogicalResult verify(BitCastOp op) {
   }
 
   DataLayout dataLayout = DataLayout::closest(op);
-  if (dataLayout.getTypeSizeInBits(sourceVectorType.getElementType()) *
-          sourceVectorType.getShape().back() !=
-      dataLayout.getTypeSizeInBits(resultVectorType.getElementType()) *
-          resultVectorType.getShape().back())
+  auto sourceElementBits =
+      dataLayout.getTypeSizeInBits(sourceVectorType.getElementType());
+  auto resultElementBits =
+      dataLayout.getTypeSizeInBits(resultVectorType.getElementType());
+
+  if (sourceVectorType.getRank() == 0) {
+    if (sourceElementBits != resultElementBits)
+      return op.emitOpError("source/result bitwidth of the 0-D vector element "
+                            "types must be equal");
+  } else if (sourceElementBits * sourceVectorType.getShape().back() !=
+             resultElementBits * resultVectorType.getShape().back()) {
     return op.emitOpError(
         "source/result bitwidth of the minor 1-D vectors must be equal");
+  }
 
   return success();
 }
@@ -3882,7 +3910,7 @@ public:
   }
 };
 
-} // end anonymous namespace
+} // namespace
 
 void vector::TransposeOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
@@ -3898,8 +3926,19 @@ void vector::TransposeOp::getTransp(SmallVectorImpl<int64_t> &results) {
 //===----------------------------------------------------------------------===//
 
 static LogicalResult verify(ConstantMaskOp &op) {
-  // Verify that array attr size matches the rank of the vector result.
   auto resultType = op.getResult().getType().cast<VectorType>();
+  // Check the corner case of 0-D vectors first.
+  if (resultType.getRank() == 0) {
+    if (op.mask_dim_sizes().size() != 1)
+      return op->emitError("array attr must have length 1 for 0-D vectors");
+    auto dim = op.mask_dim_sizes()[0].cast<IntegerAttr>().getInt();
+    if (dim != 0 && dim != 1)
+      return op->emitError(
+          "mask dim size must be either 0 or 1 for 0-D vectors");
+    return success();
+  }
+
+  // Verify that array attr size matches the rank of the vector result.
   if (static_cast<int64_t>(op.mask_dim_sizes().size()) != resultType.getRank())
     return op.emitOpError(
         "must specify array attr of size equal vector result rank");
@@ -3916,9 +3955,9 @@ static LogicalResult verify(ConstantMaskOp &op) {
   }
   // Verify that if one mask dim size is zero, they all should be zero (because
   // the mask region is a conjunction of each mask dimension interval).
-  bool any_zeros = llvm::is_contained(maskDimSizes, 0);
-  bool all_zeros = llvm::all_of(maskDimSizes, [](int64_t s) { return s == 0; });
-  if (any_zeros && !all_zeros)
+  bool anyZeros = llvm::is_contained(maskDimSizes, 0);
+  bool allZeros = llvm::all_of(maskDimSizes, [](int64_t s) { return s == 0; });
+  if (anyZeros && !allZeros)
     return op.emitOpError("expected all mask dim sizes to be zeros, "
                           "as a result of conjunction with zero mask dim");
   return success();
@@ -3929,11 +3968,17 @@ static LogicalResult verify(ConstantMaskOp &op) {
 //===----------------------------------------------------------------------===//
 
 static LogicalResult verify(CreateMaskOp op) {
+  auto vectorType = op.getResult().getType().cast<VectorType>();
   // Verify that an operand was specified for each result vector each dimension.
-  if (op.getNumOperands() !=
-      op.getResult().getType().cast<VectorType>().getRank())
+  if (vectorType.getRank() == 0) {
+    if (op->getNumOperands() != 1)
+      return op.emitOpError(
+          "must specify exactly one operand for 0-D create_mask");
+  } else if (op.getNumOperands() !=
+             op.getResult().getType().cast<VectorType>().getRank()) {
     return op.emitOpError(
         "must specify an operand for each result vector dimension");
+  }
   return success();
 }
 
@@ -3947,15 +3992,15 @@ public:
   LogicalResult matchAndRewrite(CreateMaskOp createMaskOp,
                                 PatternRewriter &rewriter) const override {
     // Return if any of 'createMaskOp' operands are not defined by a constant.
-    auto is_not_def_by_constant = [](Value operand) {
+    auto isNotDefByConstant = [](Value operand) {
       return !isa_and_nonnull<arith::ConstantIndexOp>(operand.getDefiningOp());
     };
-    if (llvm::any_of(createMaskOp.operands(), is_not_def_by_constant))
+    if (llvm::any_of(createMaskOp.operands(), isNotDefByConstant))
       return failure();
     // Gather constant mask dimension sizes.
     SmallVector<int64_t, 4> maskDimSizes;
     for (auto operand : createMaskOp.operands()) {
-      auto defOp = operand.getDefiningOp();
+      auto *defOp = operand.getDefiningOp();
       maskDimSizes.push_back(cast<arith::ConstantIndexOp>(defOp).value());
     }
     // Replace 'createMaskOp' with ConstantMaskOp.
@@ -3966,7 +4011,7 @@ public:
   }
 };
 
-} // end anonymous namespace
+} // namespace
 
 void CreateMaskOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                MLIRContext *context) {

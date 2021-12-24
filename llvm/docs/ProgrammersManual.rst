@@ -214,7 +214,7 @@ character array and a length) and supports the common operations available on
 
 It can be implicitly constructed using a C style null-terminated string, an
 ``std::string``, or explicitly with a character pointer and length.  For
-example, the ``StringRef`` find function is declared as:
+example, the ``StringMap`` find function is declared as:
 
 .. code-block:: c++
 
@@ -285,7 +285,7 @@ to be formatted at compile time, so it does not need a format specifier such as
 strings, especially for platform-specific types like ``size_t`` or pointer types.
 Unlike both ``printf`` and Python, it additionally fails to compile if LLVM does
 not know how to format the type.  These two properties ensure that the function
-is both safer and simpler to use than traditional formatting methods such as 
+is both safer and simpler to use than traditional formatting methods such as
 the ``printf`` family of functions.
 
 Simple formatting
@@ -303,7 +303,7 @@ multiple times, possibly with different style and/or alignment options, in any o
 the value into, and the alignment of the value within the field.  It is specified as
 an optional **alignment style** followed by a positive integral **field width**.  The
 alignment style can be one of the characters ``-`` (left align), ``=`` (center align),
-or ``+`` (right align).  The default is right aligned.  
+or ``+`` (right align).  The default is right aligned.
 
 ``style`` is an optional string consisting of a type specific that controls the
 formatting of the value.  For example, to format a floating point value as a percentage,
@@ -318,7 +318,7 @@ There are two ways to customize the formatting behavior for a type.
    type ``T`` with the appropriate static format method.
 
   .. code-block:: c++
-  
+
     namespace llvm {
       template<>
       struct format_provider<MyFooBar> {
@@ -331,16 +331,16 @@ There are two ways to customize the formatting behavior for a type.
         std::string S = formatv("{0}", X);
       }
     }
-    
+
   This is a useful extensibility mechanism for adding support for formatting your own
   custom types with your own custom Style options.  But it does not help when you want
   to extend the mechanism for formatting a type that the library already knows how to
   format.  For that, we need something else.
-    
+
 2. Provide a **format adapter** inheriting from ``llvm::FormatAdapter<T>``.
 
   .. code-block:: c++
-  
+
     namespace anything {
       struct format_int_custom : public llvm::FormatAdapter<int> {
         explicit format_int_custom(int N) : llvm::FormatAdapter<int>(N) {}
@@ -354,7 +354,7 @@ There are two ways to customize the formatting behavior for a type.
         std::string S = formatv("{0}", anything::format_int_custom(42));
       }
     }
-    
+
   If the type is detected to be derived from ``FormatAdapter<T>``, ``formatv``
   will call the
   ``format`` method on the argument passing in the specified style.  This allows
@@ -369,28 +369,28 @@ doxygen documentation or by looking at the unit test suite.
 
 
 .. code-block:: c++
-  
+
   std::string S;
   // Simple formatting of basic types and implicit string conversion.
   S = formatv("{0} ({1:P})", 7, 0.35);  // S == "7 (35.00%)"
-  
+
   // Out-of-order referencing and multi-referencing
   outs() << formatv("{0} {2} {1} {0}", 1, "test", 3); // prints "1 3 test 1"
-  
+
   // Left, right, and center alignment
   S = formatv("{0,7}",  'a');  // S == "      a";
   S = formatv("{0,-7}", 'a');  // S == "a      ";
   S = formatv("{0,=7}", 'a');  // S == "   a   ";
   S = formatv("{0,+7}", 'a');  // S == "      a";
-  
+
   // Custom styles
   S = formatv("{0:N} - {0:x} - {1:E}", 12345, 123908342); // S == "12,345 - 0x3039 - 1.24E8"
-  
+
   // Adapters
   S = formatv("{0}", fmt_align(42, AlignStyle::Center, 7));  // S == "  42   "
   S = formatv("{0}", fmt_repeat("hi", 3)); // S == "hihihi"
   S = formatv("{0}", fmt_pad("hi", 2, 6)); // S == "  hi      "
-  
+
   // Ranges
   std::vector<int> V = {8, 9, 10};
   S = formatv("{0}", make_range(V.begin(), V.end())); // S == "8, 9, 10"
@@ -4095,5 +4095,3 @@ The ``Argument`` class
 This subclass of Value defines the interface for incoming formal arguments to a
 function.  A Function maintains a list of its formal arguments.  An argument has
 a pointer to the parent Function.
-
-

@@ -233,14 +233,14 @@ typedef io_object_t io_iterator_t;
 typedef io_object_t io_service_t;
 typedef struct IONotificationPort * IONotificationPortRef;
 typedef void (*IOServiceMatchingCallback)(  void * refcon,  io_iterator_t iterator );
-io_service_t IOServiceGetMatchingService(  mach_port_t masterPort,  CFDictionaryRef matching );
-kern_return_t IOServiceGetMatchingServices(  mach_port_t masterPort,  CFDictionaryRef matching,  io_iterator_t * existing );
-kern_return_t IOServiceAddNotification(  mach_port_t masterPort,  const io_name_t notificationType,  CFDictionaryRef matching,  mach_port_t wakePort,  uintptr_t reference,  io_iterator_t * notification ) __attribute__((deprecated)); // expected-note {{'IOServiceAddNotification' has been explicitly marked deprecated here}}
+io_service_t IOServiceGetMatchingService(  mach_port_t mainPort,  CFDictionaryRef matching );
+kern_return_t IOServiceGetMatchingServices(  mach_port_t mainPort,  CFDictionaryRef matching,  io_iterator_t * existing );
+kern_return_t IOServiceAddNotification(  mach_port_t mainPort,  const io_name_t notificationType,  CFDictionaryRef matching,  mach_port_t wakePort,  uintptr_t reference,  io_iterator_t * notification ) __attribute__((deprecated)); // expected-note {{'IOServiceAddNotification' has been explicitly marked deprecated here}}
 kern_return_t IOServiceAddMatchingNotification(  IONotificationPortRef notifyPort,  const io_name_t notificationType,  CFDictionaryRef matching,         IOServiceMatchingCallback callback,         void * refCon,  io_iterator_t * notification );
 CFMutableDictionaryRef IOServiceMatching(  const char * name );
 CFMutableDictionaryRef IOServiceNameMatching(  const char * name );
-CFMutableDictionaryRef IOBSDNameMatching(  mach_port_t masterPort,  uint32_t options,  const char * bsdName );
-CFMutableDictionaryRef IOOpenFirmwarePathMatching(  mach_port_t masterPort,  uint32_t options,  const char * path );
+CFMutableDictionaryRef IOBSDNameMatching(  mach_port_t mainPort,  uint32_t options,  const char * bsdName );
+CFMutableDictionaryRef IOOpenFirmwarePathMatching(  mach_port_t mainPort,  uint32_t options,  const char * path );
 CFMutableDictionaryRef IORegistryEntryIDMatching(  uint64_t entryID );
 typedef struct __DASession * DASessionRef;
 extern DASessionRef DASessionCreate( CFAllocatorRef allocator );
@@ -1070,8 +1070,8 @@ void rdar6945561(CIContext *context, CGSize size, CFDictionaryRef d) {
 //                          checker
 //===----------------------------------------------------------------------===//
 
-void IOBSDNameMatching_wrapper(mach_port_t masterPort, uint32_t options,  const char * bsdName) {  
-  IOBSDNameMatching(masterPort, options, bsdName); // expected-warning{{leak}}
+void IOBSDNameMatching_wrapper(mach_port_t mainPort, uint32_t options,  const char * bsdName) {  
+  IOBSDNameMatching(mainPort, options, bsdName); // expected-warning{{leak}}
 }
 
 void IOServiceMatching_wrapper(const char * name) {
@@ -1084,12 +1084,12 @@ void IOServiceNameMatching_wrapper(const char * name) {
 
 CF_RETURNS_RETAINED CFDictionaryRef CreateDict();
 
-void IOServiceAddNotification_wrapper(mach_port_t masterPort, const io_name_t notificationType,
+void IOServiceAddNotification_wrapper(mach_port_t mainPort, const io_name_t notificationType,
   mach_port_t wakePort, uintptr_t reference, io_iterator_t * notification ) {
 
   CFDictionaryRef matching = CreateDict();
   CFRelease(matching);
-  IOServiceAddNotification(masterPort, notificationType, matching, // expected-warning{{used after it is released}} expected-warning{{deprecated}}
+  IOServiceAddNotification(mainPort, notificationType, matching, // expected-warning{{used after it is released}} expected-warning{{deprecated}}
                            wakePort, reference, notification);
 }
 
@@ -1097,20 +1097,20 @@ void IORegistryEntryIDMatching_wrapper(uint64_t entryID ) {
   IORegistryEntryIDMatching(entryID); // expected-warning{{leak}}
 }
 
-void IOOpenFirmwarePathMatching_wrapper(mach_port_t masterPort, uint32_t options,
+void IOOpenFirmwarePathMatching_wrapper(mach_port_t mainPort, uint32_t options,
                                         const char * path) {
-  IOOpenFirmwarePathMatching(masterPort, options, path); // expected-warning{{leak}}
+  IOOpenFirmwarePathMatching(mainPort, options, path); // expected-warning{{leak}}
 }
 
-void IOServiceGetMatchingService_wrapper(mach_port_t masterPort) {
+void IOServiceGetMatchingService_wrapper(mach_port_t mainPort) {
   CFDictionaryRef matching = CreateDict();
-  IOServiceGetMatchingService(masterPort, matching);
+  IOServiceGetMatchingService(mainPort, matching);
   CFRelease(matching); // expected-warning{{used after it is released}}
 }
 
-void IOServiceGetMatchingServices_wrapper(mach_port_t masterPort, io_iterator_t *existing) {
+void IOServiceGetMatchingServices_wrapper(mach_port_t mainPort, io_iterator_t *existing) {
   CFDictionaryRef matching = CreateDict();
-  IOServiceGetMatchingServices(masterPort, matching, existing);
+  IOServiceGetMatchingServices(mainPort, matching, existing);
   CFRelease(matching); // expected-warning{{used after it is released}}
 }
 
@@ -2271,7 +2271,7 @@ void useAfterAutorelease() {
 }
 
 void useAfterRelease() {
-  // Sanity check that the previous example would have warned with CFRelease.
+  // Verify that the previous example would have warned with CFRelease.
   extern CFTypeRef CFCreateSomething();
   CFTypeRef obj = CFCreateSomething();
   CFRelease(obj);

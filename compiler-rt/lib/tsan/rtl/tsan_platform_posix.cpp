@@ -110,27 +110,23 @@ void CheckAndProtect() {
     Die();
   }
 
-#    if defined(__aarch64__) && defined(__APPLE__) && SANITIZER_IOS
+#    if SANITIZER_IOS && !SANITIZER_IOSSIM
   ProtectRange(HeapMemEnd(), ShadowBeg());
   ProtectRange(ShadowEnd(), MetaShadowBeg());
-  ProtectRange(MetaShadowEnd(), TraceMemBeg());
-#else
+  ProtectRange(MetaShadowEnd(), HiAppMemBeg());
+#    else
   ProtectRange(LoAppMemEnd(), ShadowBeg());
   ProtectRange(ShadowEnd(), MetaShadowBeg());
   if (MidAppMemBeg()) {
     ProtectRange(MetaShadowEnd(), MidAppMemBeg());
-    ProtectRange(MidAppMemEnd(), TraceMemBeg());
+    ProtectRange(MidAppMemEnd(), HeapMemBeg());
   } else {
-    ProtectRange(MetaShadowEnd(), TraceMemBeg());
+    ProtectRange(MetaShadowEnd(), HeapMemBeg());
   }
-  // Memory for traces is mapped lazily in MapThreadTrace.
-  // Protect the whole range for now, so that user does not map something here.
-  ProtectRange(TraceMemBeg(), TraceMemEnd());
-  ProtectRange(TraceMemEnd(), HeapMemBeg());
   ProtectRange(HeapEnd(), HiAppMemBeg());
-#endif
+#    endif
 
-#if defined(__s390x__)
+#    if defined(__s390x__)
   // Protect the rest of the address space.
   const uptr user_addr_max_l4 = 0x0020000000000000ull;
   const uptr user_addr_max_l5 = 0xfffffffffffff000ull;

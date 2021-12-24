@@ -10,11 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/TableGen/Class.h"
 #include "mlir/TableGen/CodeGenHelpers.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Interfaces.h"
-#include "mlir/TableGen/OpClass.h"
 #include "mlir/TableGen/Operator.h"
 #include "mlir/TableGen/Trait.h"
 #include "llvm/ADT/Optional.h"
@@ -41,7 +41,7 @@ namespace {
 using DialectFilterIterator =
     llvm::filter_iterator<ArrayRef<llvm::Record *>::iterator,
                           std::function<bool(const llvm::Record *)>>;
-} // end anonymous namespace
+} // namespace
 
 /// Given a set of records for a T, filter the ones that correspond to
 /// the given dialect.
@@ -68,9 +68,10 @@ findSelectedDialect(ArrayRef<const llvm::Record *> dialectDefs) {
     return llvm::None;
   }
 
-  auto dialectIt = llvm::find_if(dialectDefs, [](const llvm::Record *def) {
-    return Dialect(def).getName() == selectedDialect;
-  });
+  const auto *dialectIt =
+      llvm::find_if(dialectDefs, [](const llvm::Record *def) {
+        return Dialect(def).getName() == selectedDialect;
+      });
   if (dialectIt == dialectDefs.end()) {
     llvm::errs() << "selected dialect with '-dialect' does not exist\n";
     return llvm::None;
@@ -208,9 +209,9 @@ static void emitDialectDecl(Dialect &dialect,
 
     // Check for any attributes/types registered to this dialect.  If there are,
     // add the hooks for parsing/printing.
-    if (!dialectAttrs.empty())
+    if (!dialectAttrs.empty() || dialect.useDefaultAttributePrinterParser())
       os << attrParserDecl;
-    if (!dialectTypes.empty())
+    if (!dialectTypes.empty() || dialect.useDefaultTypePrinterParser())
       os << typeParserDecl;
 
     // Add the decls for the various features of the dialect.

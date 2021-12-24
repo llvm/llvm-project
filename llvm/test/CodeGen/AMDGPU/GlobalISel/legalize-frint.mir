@@ -39,13 +39,15 @@ body: |
 
     ; SI-LABEL: name: test_frint_s32
     ; SI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; SI: $vgpr0 = COPY [[COPY]](s32)
+    ; SI: [[FRINT:%[0-9]+]]:_(s32) = G_FRINT [[COPY]]
+    ; SI: $vgpr0 = COPY [[FRINT]](s32)
     ; CI-LABEL: name: test_frint_s32
     ; CI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CI: $vgpr0 = COPY [[COPY]](s32)
+    ; CI: [[FRINT:%[0-9]+]]:_(s32) = G_FRINT [[COPY]]
+    ; CI: $vgpr0 = COPY [[FRINT]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = G_FRINT %0
-    $vgpr0 = COPY %0
+    $vgpr0 = COPY %1
 ...
 
 ---
@@ -85,13 +87,45 @@ body: |
 
     ; SI-LABEL: name: test_frint_v2s16
     ; SI: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
-    ; SI: $vgpr0 = COPY [[COPY]](<2 x s16>)
+    ; SI: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
+    ; SI: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](s32)
+    ; SI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; SI: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
+    ; SI: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
+    ; SI: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
+    ; SI: [[FRINT:%[0-9]+]]:_(s32) = G_FRINT [[FPEXT]]
+    ; SI: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[FRINT]](s32)
+    ; SI: [[FPEXT1:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC1]](s16)
+    ; SI: [[FRINT1:%[0-9]+]]:_(s32) = G_FRINT [[FPEXT1]]
+    ; SI: [[FPTRUNC1:%[0-9]+]]:_(s16) = G_FPTRUNC [[FRINT1]](s32)
+    ; SI: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC]](s16)
+    ; SI: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC1]](s16)
+    ; SI: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C]](s32)
+    ; SI: [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL]]
+    ; SI: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
+    ; SI: $vgpr0 = COPY [[BITCAST1]](<2 x s16>)
     ; CI-LABEL: name: test_frint_v2s16
     ; CI: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
-    ; CI: $vgpr0 = COPY [[COPY]](<2 x s16>)
+    ; CI: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
+    ; CI: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](s32)
+    ; CI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CI: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
+    ; CI: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
+    ; CI: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
+    ; CI: [[FRINT:%[0-9]+]]:_(s32) = G_FRINT [[FPEXT]]
+    ; CI: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[FRINT]](s32)
+    ; CI: [[FPEXT1:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC1]](s16)
+    ; CI: [[FRINT1:%[0-9]+]]:_(s32) = G_FRINT [[FPEXT1]]
+    ; CI: [[FPTRUNC1:%[0-9]+]]:_(s16) = G_FPTRUNC [[FRINT1]](s32)
+    ; CI: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC]](s16)
+    ; CI: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC1]](s16)
+    ; CI: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C]](s32)
+    ; CI: [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL]]
+    ; CI: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
+    ; CI: $vgpr0 = COPY [[BITCAST1]](<2 x s16>)
     %0:_(<2 x s16>) = COPY $vgpr0
     %1:_(<2 x s16>) = G_FRINT %0
-    $vgpr0 = COPY %0
+    $vgpr0 = COPY %1
 ...
 
 ---

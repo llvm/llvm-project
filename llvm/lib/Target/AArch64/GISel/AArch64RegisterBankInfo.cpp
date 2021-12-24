@@ -13,6 +13,8 @@
 
 #include "AArch64RegisterBankInfo.h"
 #include "AArch64InstrInfo.h"
+#include "AArch64RegisterInfo.h"
+#include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
@@ -272,6 +274,7 @@ AArch64RegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
   case AArch64::WSeqPairsClassRegClassID:
   case AArch64::XSeqPairsClassRegClassID:
   case AArch64::MatrixIndexGPR32_12_15RegClassID:
+  case AArch64::GPR64_with_sub_32_in_MatrixIndexGPR32_12_15RegClassID:
     return getRegBank(AArch64::GPRRegBankID);
   case AArch64::CCRRegClassID:
     return getRegBank(AArch64::CCRegBankID);
@@ -427,6 +430,8 @@ static bool isPreISelGenericFloatingPointOpcode(unsigned Opc) {
   case TargetOpcode::G_INTRINSIC_ROUND:
   case TargetOpcode::G_FMAXNUM:
   case TargetOpcode::G_FMINNUM:
+  case TargetOpcode::G_FMAXIMUM:
+  case TargetOpcode::G_FMINIMUM:
     return true;
   }
   return false;
@@ -597,6 +602,8 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_FSUB:
   case TargetOpcode::G_FMUL:
   case TargetOpcode::G_FDIV:
+  case TargetOpcode::G_FMAXIMUM:
+  case TargetOpcode::G_FMINIMUM:
     return getSameKindOfOperandsMapping(MI);
   case TargetOpcode::G_FPEXT: {
     LLT DstTy = MRI.getType(MI.getOperand(0).getReg());

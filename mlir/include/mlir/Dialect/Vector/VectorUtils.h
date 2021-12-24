@@ -202,7 +202,7 @@ namespace matcher {
 /// adding even 1 extra bit in the IR for now.
 bool operatesOnSuperVectorsOf(Operation &op, VectorType subVectorType);
 
-} // end namespace matcher
-} // end namespace mlir
+} // namespace matcher
+} // namespace mlir
 
 #endif // MLIR_DIALECT_VECTOR_VECTORUTILS_H_

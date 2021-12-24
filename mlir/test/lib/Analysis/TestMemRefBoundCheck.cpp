@@ -36,7 +36,7 @@ struct TestMemRefBoundCheck
   void runOnFunction() override;
 };
 
-} // end anonymous namespace
+} // namespace
 
 void TestMemRefBoundCheck::runOnFunction() {
   getFunction().walk([](Operation *opInst) {

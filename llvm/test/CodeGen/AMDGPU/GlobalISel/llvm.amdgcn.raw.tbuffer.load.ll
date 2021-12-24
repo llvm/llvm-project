@@ -119,10 +119,10 @@ define amdgpu_ps float @raw_tbuffer_load_f32__vgpr_rsrc__sgpr_voffset__vgpr_soff
   ; CHECK:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY5]], implicit $exec
   ; CHECK:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY5]], implicit $exec
   ; CHECK:   [[S_AND_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[V_CMP_EQ_U32_e64_]], [[S_AND_B32_]], implicit-def $scc
-  ; CHECK:   [[TBUFFER_LOAD_FORMAT_X_OFFEN:%[0-9]+]]:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFEN [[COPY6]], [[REG_SEQUENCE3]], [[V_READFIRSTLANE_B32_4]], 0, 78, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
   ; CHECK:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[S_AND_B32_1]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; CHECK:   [[TBUFFER_LOAD_FORMAT_X_OFFEN:%[0-9]+]]:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFEN [[COPY6]], [[REG_SEQUENCE3]], [[V_READFIRSTLANE_B32_4]], 0, 78, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
   ; CHECK:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
-  ; CHECK:   S_CBRANCH_EXECNZ %bb.2, implicit $exec
+  ; CHECK:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; CHECK: bb.3:
   ; CHECK:   successors: %bb.4(0x80000000)
   ; CHECK:   $exec_lo = S_MOV_B32_term [[S_MOV_B32_term]]

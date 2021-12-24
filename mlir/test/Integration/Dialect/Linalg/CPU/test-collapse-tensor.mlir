@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -linalg-bufferize -std-bufferize \
 // RUN: -tensor-constant-bufferize -tensor-bufferize -func-bufferize \
-// RUN: -finalizing-bufferize -convert-linalg-to-llvm \
+// RUN: -finalizing-bufferize -buffer-deallocation -convert-linalg-to-llvm \
 // RUN: -convert-memref-to-llvm -convert-std-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-cpu-runner -e main -entry-point-result=void \
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext \
@@ -33,6 +33,6 @@ func @main() {
 func private @print_memref_f32(%ptr : tensor<*xf32>)
 
 func @collapse_dynamic_shape(%arg0 : tensor<2x?x?x?xf32>) -> tensor<2x?x?xf32> {
-  %0 = linalg.tensor_collapse_shape %arg0 [[0], [1, 2], [3]]: tensor<2x?x?x?xf32> into tensor<2x?x?xf32>
+  %0 = tensor.collapse_shape %arg0 [[0], [1, 2], [3]]: tensor<2x?x?x?xf32> into tensor<2x?x?xf32>
   return %0 : tensor<2x?x?xf32>
 }

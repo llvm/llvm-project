@@ -332,11 +332,7 @@ bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
     BitVector SpillFIs(MFI.getObjectIndexEnd(), false);
 
     for (MachineBasicBlock &MBB : MF) {
-      MachineBasicBlock::iterator Next;
-      for (auto I = MBB.begin(), E = MBB.end(); I != E; I = Next) {
-        MachineInstr &MI = *I;
-        Next = std::next(I);
-
+      for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
         if (!TII->isSGPRSpill(MI))
           continue;
 
@@ -372,7 +368,7 @@ bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
     }
 
     // All those frame indices which are dead by now should be removed from the
-    // function frame. Othewise, there is a side effect such as re-mapping of
+    // function frame. Otherwise, there is a side effect such as re-mapping of
     // free frame index ids by the later pass(es) like "stack slot coloring"
     // which in turn could mess-up with the book keeping of "frame index to VGPR
     // lane".

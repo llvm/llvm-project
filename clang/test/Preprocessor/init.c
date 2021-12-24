@@ -194,6 +194,8 @@
 // MSEXT:#define _INTEGRAL_MAX_BITS 64
 // MSEXT-NOT:#define _NATIVE_WCHAR_T_DEFINED 1
 // MSEXT-NOT:#define _WCHAR_T_DEFINED 1
+// MSEXT:#define _MSVC_EXECUTION_CHARACTER_SET 65001
+// MSEXT:#define __STDC_NO_THREADS__ 1
 //
 //
 // RUN: %clang_cc1 -x c++ -fms-extensions -triple i686-pc-win32 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix MSEXT-CXX %s
@@ -1467,11 +1469,9 @@
 // RUN: %clang_cc1 -x c -std=c11 -E -dM -ffreestanding -triple=amd64-unknown-openbsd < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD-STDC %s
 // RUN: %clang_cc1 -x c -std=gnu11 -E -dM -ffreestanding -triple=amd64-unknown-openbsd < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD-STDC %s
 // RUN: %clang_cc1 -x c -std=c17 -E -dM -ffreestanding -triple=amd64-unknown-openbsd < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD-STDC %s
-// OPENBSD-STDC:#define __STDC_NO_ATOMICS__ 1
 // OPENBSD-STDC:#define __STDC_NO_THREADS__ 1
 //
 // RUN: %clang_cc1 -x c -std=c99 -E -dM -ffreestanding -triple=amd64-unknown-openbsd < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD-STDC-N %s
-// OPENBSD-STDC-N-NOT:#define __STDC_NO_ATOMICS__ 1
 // OPENBSD-STDC-N-NOT:#define __STDC_NO_THREADS__ 1
 //
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=xcore-none-none < /dev/null | FileCheck -match-full-lines -check-prefix XCORE %s

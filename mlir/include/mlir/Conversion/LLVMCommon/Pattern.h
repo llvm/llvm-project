@@ -158,44 +158,20 @@ public:
 
   /// Rewrite and Match methods that operate on the SourceOp type. These must be
   /// overridden by the derived pattern class.
-  /// NOTICE: These methods are deprecated and will be removed. All new code
-  /// should use the adaptor methods below instead.
-  virtual void rewrite(SourceOp op, ArrayRef<Value> operands,
-                       ConversionPatternRewriter &rewriter) const {
-    llvm_unreachable("must override rewrite or matchAndRewrite");
-  }
-  virtual LogicalResult
-  matchAndRewrite(SourceOp op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const {
-    if (succeeded(match(op))) {
-      rewrite(op, OpAdaptor(operands, op->getAttrDictionary()), rewriter);
-      return success();
-    }
-    return failure();
-  }
-
-  /// Rewrite and Match methods that operate on the SourceOp type. These must be
-  /// overridden by the derived pattern class.
   virtual LogicalResult match(SourceOp op) const {
     llvm_unreachable("must override match or matchAndRewrite");
   }
   virtual void rewrite(SourceOp op, OpAdaptor adaptor,
                        ConversionPatternRewriter &rewriter) const {
-    ValueRange operands = adaptor.getOperands();
-    rewrite(op,
-            ArrayRef<Value>(operands.getBase().get<const Value *>(),
-                            operands.size()),
-            rewriter);
+    llvm_unreachable("must override rewrite or matchAndRewrite");
   }
   virtual LogicalResult
   matchAndRewrite(SourceOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const {
-    ValueRange operands = adaptor.getOperands();
-    return matchAndRewrite(
-        op,
-        ArrayRef<Value>(operands.getBase().get<const Value *>(),
-                        operands.size()),
-        rewriter);
+    if (failed(match(op)))
+      return failure();
+    rewrite(op, adaptor, rewriter);
+    return success();
   }
 
 private:

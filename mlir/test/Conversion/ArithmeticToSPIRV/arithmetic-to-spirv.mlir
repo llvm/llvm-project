@@ -6,7 +6,7 @@
 
 module attributes {
   spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64], []>, {}>
+    #spv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64, Shader], []>, {}>
 } {
 
 // Check integer operation conversions.
@@ -43,14 +43,8 @@ func @scalar_srem(%lhs: i32, %rhs: i32) {
 // Check float unary operation conversions.
 // CHECK-LABEL: @float32_unary_scalar
 func @float32_unary_scalar(%arg0: f32) {
-  // CHECK: spv.GLSL.FAbs %{{.*}}: f32
-  %0 = math.abs %arg0 : f32
-  // CHECK: spv.GLSL.Ceil %{{.*}}: f32
-  %1 = math.ceil %arg0 : f32
   // CHECK: spv.FNegate %{{.*}}: f32
-  %5 = arith.negf %arg0 : f32
-  // CHECK: spv.GLSL.Floor %{{.*}}: f32
-  %10 = math.floor %arg0 : f32
+  %0 = arith.negf %arg0 : f32
   return
 }
 
@@ -161,9 +155,10 @@ module attributes {
   spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
 } {
 
+// expected-error @+1 {{failed to materialize conversion for block argument #0 that remained live after conversion, type was 'vector<4xi64>', with target type 'vector<4xi32>'}}
 func @int_vector4_invalid(%arg0: vector<4xi64>) {
   // expected-error @+2 {{bitwidth emulation is not implemented yet on unsigned op}}
-  // expected-error @+1 {{op requires the same type for all operands and results}}
+  // expected-note @+1 {{see existing live user here}}
   %0 = arith.divui %arg0, %arg0: vector<4xi64>
   return
 }
@@ -451,6 +446,17 @@ func @constant_64bit() {
   return
 }
 
+// CHECK-LABEL: @constant_size1
+func @constant_size1() {
+  // CHECK: spv.Constant true
+  %0 = arith.constant dense<true> : tensor<1xi1>
+  // CHECK: spv.Constant 4 : i64
+  %1 = arith.constant dense<4> : vector<1xi64>
+  // CHECK: spv.Constant 5.000000e+00 : f64
+  %2 = arith.constant dense<5.0> : tensor<1xf64>
+  return
+}
+
 } // end module
 
 // -----
@@ -487,6 +493,15 @@ func @constant_64bit() {
   %3 = arith.constant dense<4.0> : tensor<5xf64>
   // CHECK: spv.Constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00]> : tensor<4xf32> : !spv.array<4 x f32, stride=4>
   %4 = arith.constant dense<[[1.0, 2.0], [3.0, 4.0]]> : tensor<2x2xf16>
+  return
+}
+
+// CHECK-LABEL: @constant_size1
+func @constant_size1() {
+  // CHECK: spv.Constant 4 : i32
+  %0 = arith.constant dense<4> : vector<1xi64>
+  // CHECK: spv.Constant 5.000000e+00 : f32
+  %1 = arith.constant dense<5.0> : tensor<1xf64>
   return
 }
 
@@ -568,6 +583,15 @@ func @index_cast3(%arg0: i32) {
 func @index_cast4(%arg0: index) {
   // CHECK-NOT: spv.SConvert
   %0 = arith.index_cast %arg0 : index to i32
+  return
+}
+
+// CHECK-LABEL: @bit_cast
+func @bit_cast(%arg0: vector<2xf32>, %arg1: i64) {
+  // CHECK: spv.Bitcast %{{.+}} : vector<2xf32> to vector<2xi32>
+  %0 = arith.bitcast %arg0 : vector<2xf32> to vector<2xi32>
+  // CHECK: spv.Bitcast %{{.+}} : i64 to f64
+  %1 = arith.bitcast %arg1 : i64 to f64
   return
 }
 
@@ -829,6 +853,42 @@ func @sitofp(%arg0 : i64) -> f64 {
   // CHECK: spv.ConvertSToF %{{.*}} : i32 to f32
   %0 = arith.sitofp %arg0 : i64 to f64
   return %0: f64
+}
+
+} // end module
+
+// -----
+
+// Check OpenCL lowering of arith.remsi
+module attributes {
+  spv.target_env = #spv.target_env<
+    #spv.vce<v1.0, [Int16, Kernel], []>, {}>
+} {
+
+// CHECK-LABEL: @scalar_srem
+// CHECK-SAME: (%[[LHS:.+]]: i32, %[[RHS:.+]]: i32)
+func @scalar_srem(%lhs: i32, %rhs: i32) {
+  // CHECK: %[[LABS:.+]] = spv.OCL.s_abs %[[LHS]] : i32
+  // CHECK: %[[RABS:.+]] = spv.OCL.s_abs %[[RHS]] : i32
+  // CHECK:  %[[ABS:.+]] = spv.UMod %[[LABS]], %[[RABS]] : i32
+  // CHECK:  %[[POS:.+]] = spv.IEqual %[[LHS]], %[[LABS]] : i32
+  // CHECK:  %[[NEG:.+]] = spv.SNegate %[[ABS]] : i32
+  // CHECK:      %{{.+}} = spv.Select %[[POS]], %[[ABS]], %[[NEG]] : i1, i32
+  %0 = arith.remsi %lhs, %rhs: i32
+  return
+}
+
+// CHECK-LABEL: @vector_srem
+// CHECK-SAME: (%[[LHS:.+]]: vector<3xi16>, %[[RHS:.+]]: vector<3xi16>)
+func @vector_srem(%arg0: vector<3xi16>, %arg1: vector<3xi16>) {
+  // CHECK: %[[LABS:.+]] = spv.OCL.s_abs %[[LHS]] : vector<3xi16>
+  // CHECK: %[[RABS:.+]] = spv.OCL.s_abs %[[RHS]] : vector<3xi16>
+  // CHECK:  %[[ABS:.+]] = spv.UMod %[[LABS]], %[[RABS]] : vector<3xi16>
+  // CHECK:  %[[POS:.+]] = spv.IEqual %[[LHS]], %[[LABS]] : vector<3xi16>
+  // CHECK:  %[[NEG:.+]] = spv.SNegate %[[ABS]] : vector<3xi16>
+  // CHECK:      %{{.+}} = spv.Select %[[POS]], %[[ABS]], %[[NEG]] : vector<3xi1>, vector<3xi16>
+  %0 = arith.remsi %arg0, %arg1: vector<3xi16>
+  return
 }
 
 } // end module

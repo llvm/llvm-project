@@ -223,6 +223,8 @@ TEST(OperationFormatPrintTest, CanUseVariadicFormat) {
 
   std::string str = formatv("{0}", *op).str();
   ASSERT_STREQ(str.c_str(), "\"foo.bar\"() : () -> ()");
+
+  op->destroy();
 }
 
 TEST(NamedAttrListTest, TestAppendAssign) {
@@ -234,12 +236,12 @@ TEST(NamedAttrListTest, TestAppendAssign) {
   attrs.append("baz", b.getStringAttr("boo"));
 
   {
-    auto it = attrs.begin();
-    EXPECT_EQ(it->first, b.getIdentifier("foo"));
-    EXPECT_EQ(it->second, b.getStringAttr("bar"));
+    auto *it = attrs.begin();
+    EXPECT_EQ(it->getName(), b.getStringAttr("foo"));
+    EXPECT_EQ(it->getValue(), b.getStringAttr("bar"));
     ++it;
-    EXPECT_EQ(it->first, b.getIdentifier("baz"));
-    EXPECT_EQ(it->second, b.getStringAttr("boo"));
+    EXPECT_EQ(it->getName(), b.getStringAttr("baz"));
+    EXPECT_EQ(it->getValue(), b.getStringAttr("boo"));
   }
 
   attrs.append("foo", b.getStringAttr("zoo"));
@@ -258,15 +260,15 @@ TEST(NamedAttrListTest, TestAppendAssign) {
   ASSERT_FALSE(dup.hasValue());
 
   {
-    auto it = attrs.begin();
-    EXPECT_EQ(it->first, b.getIdentifier("foo"));
-    EXPECT_EQ(it->second, b.getStringAttr("f"));
+    auto *it = attrs.begin();
+    EXPECT_EQ(it->getName(), b.getStringAttr("foo"));
+    EXPECT_EQ(it->getValue(), b.getStringAttr("f"));
     ++it;
-    EXPECT_EQ(it->first, b.getIdentifier("zoo"));
-    EXPECT_EQ(it->second, b.getStringAttr("z"));
+    EXPECT_EQ(it->getName(), b.getStringAttr("zoo"));
+    EXPECT_EQ(it->getValue(), b.getStringAttr("z"));
   }
 
   attrs.assign({});
   ASSERT_TRUE(attrs.empty());
 }
-} // end namespace
+} // namespace

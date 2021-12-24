@@ -569,7 +569,7 @@ hash_code llvm::hash_value(const APInt &Arg) {
       hash_combine_range(Arg.U.pVal, Arg.U.pVal + Arg.getNumWords()));
 }
 
-unsigned DenseMapInfo<APInt>::getHashValue(const APInt &Key) {
+unsigned DenseMapInfo<APInt, void>::getHashValue(const APInt &Key) {
   return static_cast<unsigned>(hash_value(Key));
 }
 

@@ -355,7 +355,7 @@ uint64_t InputChunk::getVA(uint64_t offset) const {
 }
 
 // Generate code to apply relocations to the data section at runtime.
-// This is only called when generating shared libaries (PIC) where address are
+// This is only called when generating shared libraries (PIC) where address are
 // not known at static link time.
 void InputChunk::generateRelocationCode(raw_ostream &os) const {
   LLVM_DEBUG(dbgs() << "generating runtime relocations: " << getName()

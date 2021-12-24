@@ -335,7 +335,7 @@ std::string CodeCompletionString::getAsString() const {
       break;
     }
   }
-  return OS.str();
+  return Result;
 }
 
 const char *CodeCompletionString::getTypedText() const {
@@ -387,14 +387,13 @@ StringRef CodeCompletionTUInfo::getParentName(const DeclContext *DC) {
     SmallString<128> S;
     llvm::raw_svector_ostream OS(S);
     bool First = true;
-    for (unsigned I = Contexts.size(); I != 0; --I) {
+    for (const DeclContext *CurDC : llvm::reverse(Contexts)) {
       if (First)
         First = false;
       else {
         OS << "::";
       }
 
-      const DeclContext *CurDC = Contexts[I - 1];
       if (const auto *CatImpl = dyn_cast<ObjCCategoryImplDecl>(CurDC))
         CurDC = CatImpl->getCategoryDecl();
 
@@ -641,7 +640,7 @@ static std::string getOverloadAsString(const CodeCompletionString &CCS) {
       break;
     }
   }
-  return OS.str();
+  return Result;
 }
 
 void PrintingCodeCompleteConsumer::ProcessOverloadCandidates(

@@ -618,6 +618,19 @@ enum kmp_hw_t : int {
   KMP_HW_LAST
 };
 
+typedef enum kmp_hw_core_type_t {
+  KMP_HW_CORE_TYPE_UNKNOWN = 0x0,
+#if KMP_ARCH_X86 || KMP_ARCH_X86_64
+  KMP_HW_CORE_TYPE_ATOM = 0x20,
+  KMP_HW_CORE_TYPE_CORE = 0x40,
+  KMP_HW_MAX_NUM_CORE_TYPES = 3,
+#else
+  KMP_HW_MAX_NUM_CORE_TYPES = 1,
+#endif
+} kmp_hw_core_type_t;
+
+#define KMP_HW_MAX_NUM_CORE_EFFS 8
+
 #define KMP_DEBUG_ASSERT_VALID_HW_TYPE(type)                                   \
   KMP_DEBUG_ASSERT(type >= (kmp_hw_t)0 && type < KMP_HW_LAST)
 #define KMP_ASSERT_VALID_HW_TYPE(type)                                         \
@@ -629,6 +642,7 @@ enum kmp_hw_t : int {
 
 const char *__kmp_hw_get_keyword(kmp_hw_t type, bool plural = false);
 const char *__kmp_hw_get_catalog_string(kmp_hw_t type, bool plural = false);
+const char *__kmp_hw_get_core_type_string(kmp_hw_core_type_t type);
 
 /* Only Linux* OS and Windows* OS support thread affinity. */
 #if KMP_AFFINITY_SUPPORTED
@@ -1081,7 +1095,9 @@ extern void __kmp_init_target_mem();
 #define KMP_MIN_BLOCKTIME (0)
 #define KMP_MAX_BLOCKTIME                                                      \
   (INT_MAX) /* Must be this for "infinite" setting the work */
-#define KMP_DEFAULT_BLOCKTIME (200) /*  __kmp_blocktime is in milliseconds  */
+
+/* __kmp_blocktime is in milliseconds */
+#define KMP_DEFAULT_BLOCKTIME (__kmp_is_hybrid_cpu() ? (0) : (200))
 
 #if KMP_USE_MONITOR
 #define KMP_DEFAULT_MONITOR_STKSIZE ((size_t)(64 * 1024))
@@ -4271,6 +4287,15 @@ public:
                     __kmp_msg_null);
       }
     }
+  }
+  /// Instead of erroring out, return non-zero when
+  /// unsuccessful fopen() for any reason
+  int try_open(const char *filename, const char *mode) {
+    KMP_ASSERT(!f);
+    f = fopen(filename, mode);
+    if (!f)
+      return errno;
+    return 0;
   }
   /// Set the FILE* object to stdout and output there
   /// No open call should happen before this call.

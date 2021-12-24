@@ -1,4 +1,4 @@
-; RUN: opt < %s -globalopt -S | FileCheck %s
+; RUN: opt < %s -passes=globalopt -S | FileCheck %s
 
 ; When removing the store to @global in @foo, the pass would incorrectly return
 ; false. This was caught by the pass return status check that is hidden under

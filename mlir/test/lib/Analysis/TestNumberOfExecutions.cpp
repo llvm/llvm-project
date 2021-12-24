@@ -52,7 +52,7 @@ struct TestNumberOfOperationExecutionsPass
   }
 };
 
-} // end anonymous namespace
+} // namespace
 
 namespace mlir {
 namespace test {

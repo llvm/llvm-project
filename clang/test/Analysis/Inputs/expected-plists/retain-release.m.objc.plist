@@ -13527,7 +13527,7 @@
         </dict>
         <dict>
          <key>line</key><integer>1074</integer>
-         <key>col</key><integer>49</integer>
+         <key>col</key><integer>47</integer>
          <key>file</key><integer>0</integer>
         </dict>
        </array>
@@ -13592,7 +13592,7 @@
    <key>type</key><string>Leak</string>
    <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>540e0145994c1e14ea750fe91a497855</string>
+   <key>issue_hash_content_of_line_in_context</key><string>646df6701094605a8d6cfc0086d99e19</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>IOBSDNameMatching_wrapper</string>
   <key>issue_hash_function_offset</key><string>1</string>
@@ -13978,12 +13978,12 @@
        <array>
         <dict>
          <key>line</key><integer>1092</integer>
-         <key>col</key><integer>58</integer>
+         <key>col</key><integer>56</integer>
          <key>file</key><integer>0</integer>
         </dict>
         <dict>
          <key>line</key><integer>1092</integer>
-         <key>col</key><integer>65</integer>
+         <key>col</key><integer>63</integer>
          <key>file</key><integer>0</integer>
         </dict>
        </array>
@@ -14000,7 +14000,7 @@
    <key>type</key><string>Use-after-release</string>
    <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>84a53bfb58a3a929535b47e28b997382</string>
+   <key>issue_hash_content_of_line_in_context</key><string>7bb07bd5b2685d66ce9454c2eecd2fe2</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>IOServiceAddNotification_wrapper</string>
   <key>issue_hash_function_offset</key><string>4</string>
@@ -14150,7 +14150,7 @@
         </dict>
         <dict>
          <key>line</key><integer>1102</integer>
-         <key>col</key><integer>55</integer>
+         <key>col</key><integer>53</integer>
          <key>file</key><integer>0</integer>
         </dict>
        </array>
@@ -14215,7 +14215,7 @@
    <key>type</key><string>Leak</string>
    <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>ee83ca968ddc2ecad7ae4318ce7d1d95</string>
+   <key>issue_hash_content_of_line_in_context</key><string>978acda8588031f1569c1b542f39d92a</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>IOOpenFirmwarePathMatching_wrapper</string>
   <key>issue_hash_function_offset</key><string>1</string>
@@ -14320,19 +14320,19 @@
         </dict>
         <dict>
          <key>line</key><integer>1107</integer>
-         <key>col</key><integer>51</integer>
+         <key>col</key><integer>49</integer>
          <key>file</key><integer>0</integer>
         </dict>
        </array>
        <array>
         <dict>
          <key>line</key><integer>1107</integer>
-         <key>col</key><integer>43</integer>
+         <key>col</key><integer>41</integer>
          <key>file</key><integer>0</integer>
         </dict>
         <dict>
          <key>line</key><integer>1107</integer>
-         <key>col</key><integer>50</integer>
+         <key>col</key><integer>48</integer>
          <key>file</key><integer>0</integer>
         </dict>
        </array>
@@ -14517,19 +14517,19 @@
         </dict>
         <dict>
          <key>line</key><integer>1113</integer>
-         <key>col</key><integer>62</integer>
+         <key>col</key><integer>60</integer>
          <key>file</key><integer>0</integer>
         </dict>
        </array>
        <array>
         <dict>
          <key>line</key><integer>1113</integer>
-         <key>col</key><integer>44</integer>
+         <key>col</key><integer>42</integer>
          <key>file</key><integer>0</integer>
         </dict>
         <dict>
          <key>line</key><integer>1113</integer>
-         <key>col</key><integer>51</integer>
+         <key>col</key><integer>49</integer>
          <key>file</key><integer>0</integer>
         </dict>
        </array>

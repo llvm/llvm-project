@@ -201,7 +201,9 @@ bool WebAssembly::UseObjCMixedDispatch() const { return true; }
 
 bool WebAssembly::isPICDefault() const { return false; }
 
-bool WebAssembly::isPIEDefault() const { return false; }
+bool WebAssembly::isPIEDefault(const llvm::opt::ArgList &Args) const {
+  return false;
+}
 
 bool WebAssembly::isPICDefaultForced() const { return false; }
 

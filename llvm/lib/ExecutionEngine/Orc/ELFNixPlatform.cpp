@@ -28,8 +28,8 @@ class DSOHandleMaterializationUnit : public MaterializationUnit {
 public:
   DSOHandleMaterializationUnit(ELFNixPlatform &ENP,
                                const SymbolStringPtr &DSOHandleSymbol)
-      : MaterializationUnit(createDSOHandleSectionSymbols(ENP, DSOHandleSymbol),
-                            DSOHandleSymbol),
+      : MaterializationUnit(
+            createDSOHandleSectionInterface(ENP, DSOHandleSymbol)),
         ENP(ENP) {}
 
   StringRef getName() const override { return "DSOHandleMU"; }
@@ -70,12 +70,13 @@ public:
   void discard(const JITDylib &JD, const SymbolStringPtr &Sym) override {}
 
 private:
-  static SymbolFlagsMap
-  createDSOHandleSectionSymbols(ELFNixPlatform &ENP,
-                                const SymbolStringPtr &DSOHandleSymbol) {
+  static MaterializationUnit::Interface
+  createDSOHandleSectionInterface(ELFNixPlatform &ENP,
+                                  const SymbolStringPtr &DSOHandleSymbol) {
     SymbolFlagsMap SymbolFlags;
     SymbolFlags[DSOHandleSymbol] = JITSymbolFlags::Exported;
-    return SymbolFlags;
+    return MaterializationUnit::Interface(std::move(SymbolFlags),
+                                          DSOHandleSymbol);
   }
 
   ArrayRef<char> getDSOHandleContent(size_t PointerSize) {

@@ -1119,7 +1119,7 @@ Those `*Ops.td` files are organized according to the instruction categories used
 in the SPIR-V specification, for example, an op belonging to the "Atomics
 Instructions" section is put in the `SPIRVAtomicOps.td` file.
 
-`SPIRVOps.td` serves as the master op definition file that includes all files
+`SPIRVOps.td` serves as the main op definition file that includes all files
 for specific categories.
 
 `SPIRVBase.td` defines common classes and utilities used by various op
@@ -1422,8 +1422,8 @@ dialect.
 [GitHubLoweringTracking]: https://github.com/tensorflow/mlir/issues/303
 [GenSpirvUtilsPy]: https://github.com/llvm/llvm-project/blob/main/mlir/utils/spirv/gen_spirv_dialect.py
 [CustomTypeAttrTutorial]: ../Tutorials/DefiningAttributesAndTypes.md
-[VulkanExtensionPhysicalStorageBuffer]: https://github.com/KhronosGroup/SPIRV-Registry/blob/master/extensions/KHR/SPV_KHR_physical_storage_buffer.html
-[VulkanExtensionVariablePointers]: https://github.com/KhronosGroup/SPIRV-Registry/blob/master/extensions/KHR/SPV_KHR_variable_pointers.html
+[VulkanExtensionPhysicalStorageBuffer]: https://github.com/KhronosGroup/SPIRV-Registry/blob/main/extensions/KHR/SPV_KHR_physical_storage_buffer.html
+[VulkanExtensionVariablePointers]: https://github.com/KhronosGroup/SPIRV-Registry/blob/main/extensions/KHR/SPV_KHR_variable_pointers.html
 [VulkanSpirv]: https://renderdoc.org/vkspec_chunked/chap40.html#spirvenv
 [VulkanShaderInterface]: https://renderdoc.org/vkspec_chunked/chap14.html#interfaces-resources
 [VulkanShaderInterfaceStorageClass]: https://renderdoc.org/vkspec_chunked/chap15.html#interfaces

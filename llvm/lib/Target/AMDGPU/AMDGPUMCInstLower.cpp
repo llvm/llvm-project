@@ -120,7 +120,8 @@ void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
   // FIXME: Should be able to handle this with emitPseudoExpansionLowering. We
   // need to select it to the subtarget specific version, and there's no way to
   // do that with a single pseudo source operation.
-  if (Opcode == AMDGPU::S_SETPC_B64_return)
+  if (Opcode == AMDGPU::S_SETPC_B64_return ||
+      Opcode == AMDGPU::S_SETPC_B64_return_gfx)
     Opcode = AMDGPU::S_SETPC_B64;
   else if (Opcode == AMDGPU::SI_CALL) {
     // SI_CALL is just S_SWAPPC_B64 with an additional operand to track the
@@ -224,7 +225,7 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
     EmitToStreamer(*OutStreamer, TmpInst);
 
 #ifdef EXPENSIVE_CHECKS
-    // Sanity-check getInstSizeInBytes on explicitly specified CPUs (it cannot
+    // Check getInstSizeInBytes on explicitly specified CPUs (it cannot
     // work correctly for the generic CPU).
     //
     // The isPseudo check really shouldn't be here, but unfortunately there are

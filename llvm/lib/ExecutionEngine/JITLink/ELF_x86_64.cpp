@@ -156,7 +156,7 @@ private:
     using Base = ELFLinkGraphBuilder<ELFT>;
     using Self = ELFLinkGraphBuilder_x86_64;
     for (const auto &RelSect : Base::Sections) {
-      // Sanity check the section to read relocation entries from.
+      // Validate the section to read relocation entries from.
       if (RelSect.sh_type == ELF::SHT_REL)
         return make_error<StringError>(
             "No SHT_REL in valid x64 ELF object files",
@@ -189,7 +189,7 @@ private:
                   Base::GraphSymbols.size()),
           inconvertibleErrorCode());
 
-    // Sanity check the relocation kind.
+    // Validate the relocation kind.
     auto ELFRelocKind = getRelocationKind(Rel.getType(false));
     if (!ELFRelocKind)
       return ELFRelocKind.takeError();
@@ -241,7 +241,9 @@ private:
     }
     case Branch32: {
       Kind = x86_64::BranchPCRel32;
-      Addend = 0;
+      // BranchPCRel32 implicitly handles the '-4' PC adjustment, so we have to
+      // adjust the addend by '+4' to compensate.
+      Addend += 4;
       break;
     }
     }
@@ -252,7 +254,7 @@ private:
     Edge GE(Kind, Offset, *GraphSymbol, Addend);
     LLVM_DEBUG({
       dbgs() << "    ";
-      printEdge(dbgs(), *BlockToFix, GE, getELFX86RelocationKindName(Kind));
+      printEdge(dbgs(), *BlockToFix, GE, x86_64::getEdgeKindName(Kind));
       dbgs() << "\n";
     });
 

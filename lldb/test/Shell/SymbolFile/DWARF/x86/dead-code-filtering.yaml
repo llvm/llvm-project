@@ -1,5 +1,15 @@
 # RUN: yaml2obj %s > %t
+# RUN: lldb-test symbols %t | FileCheck %s --check-prefix=TEST
 # RUN: %lldb %t -o "image dump line-table a.c" -o "image lookup -n _start" -o "image lookup -n f" -o exit | FileCheck %s
+
+# TEST: Compile units:
+# TEST-NEXT: CompileUnit{0x00000000}, language = "c", file = 'a.c'
+# TEST-NEXT: Function{0x00000043}, demangled = _start, type_uid = 0x00000043
+# TEST-NEXT:     Block{0x00000043}, ranges = [0x00000080-0x00000086)
+# TEST-EMPTY:
+# TEST-EMPTY:
+# TEST-NEXT: Symtab
+
 
 # CHECK-LABEL: image dump line-table a.c
 # CHECK-NEXT: Line table for a.c
@@ -59,6 +69,8 @@ DWARF:
           Attributes:
             - Attribute:       DW_AT_producer
               Form:            DW_FORM_string
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data1
             - Attribute:       DW_AT_name
               Form:            DW_FORM_string
             - Attribute:       DW_AT_stmt_list
@@ -86,6 +98,7 @@ DWARF:
         - AbbrCode:        0x00000001
           Values:
             - CStr:            Hand-written DWARF
+            - Value:           2
             - CStr:            a.c
             - Value:           0x0000000000000000
             - Value:           0x0000000000000000

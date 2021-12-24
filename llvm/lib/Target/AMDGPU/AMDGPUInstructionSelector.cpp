@@ -3249,6 +3249,9 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
   case AMDGPU::G_SBFX:
   case AMDGPU::G_UBFX:
     return selectG_SBFX_UBFX(I);
+  case AMDGPU::G_SI_CALL:
+    I.setDesc(TII.get(AMDGPU::SI_CALL));
+    return true;
   default:
     return selectImpl(I, *CoverageInfo);
   }
@@ -3875,6 +3878,22 @@ bool AMDGPUInstructionSelector::isDSOffset2Legal(Register Base, int64_t Offset0,
   // On Southern Islands instruction with a negative base value and an offset
   // don't seem to work.
   return KnownBits->signBitIsZero(Base);
+}
+
+bool AMDGPUInstructionSelector::isUnneededShiftMask(const MachineInstr &MI,
+                                                    unsigned ShAmtBits) const {
+  assert(MI.getOpcode() == TargetOpcode::G_AND);
+
+  Optional<APInt> RHS = getIConstantVRegVal(MI.getOperand(2).getReg(), *MRI);
+  if (!RHS)
+    return false;
+
+  if (RHS->countTrailingOnes() >= ShAmtBits)
+    return true;
+
+  const APInt &LHSKnownZeros =
+      KnownBits->getKnownZeroes(MI.getOperand(1).getReg());
+  return (LHSKnownZeros | *RHS).countTrailingOnes() >= ShAmtBits;
 }
 
 InstructionSelector::ComplexRendererFns

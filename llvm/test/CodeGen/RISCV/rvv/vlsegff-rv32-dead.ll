@@ -9,7 +9,7 @@ define void @test_vlseg2ff_dead_value(i16* %base, i32 %vl, i32* %outvl) {
 ; CHECK-LABEL: test_vlseg2ff_dead_value:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, mu
-; CHECK-NEXT:    vlseg2e16ff.v v0, (a0)
+; CHECK-NEXT:    vlseg2e16ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sw a0, 0(a2)
 ; CHECK-NEXT:    ret
@@ -68,7 +68,7 @@ define void @test_vlseg2ff_dead_all(i16* %base, i32 %vl) {
 ; CHECK-LABEL: test_vlseg2ff_dead_all:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, mu
-; CHECK-NEXT:    vlseg2e16ff.v v0, (a0)
+; CHECK-NEXT:    vlseg2e16ff.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
   tail call {<vscale x 16 x i16>,<vscale x 16 x i16>, i32} @llvm.riscv.vlseg2ff.nxv16i16(i16* %base, i32 %vl)

@@ -77,6 +77,11 @@ class Pred;
 //   type constraints directly to an operand/result, $_self will be replaced
 //   by the operand/result's type. E.g., for `F32` in `F32:$operand`, its
 //   `$_self` will be expanded as `getOperand(...).getType()`.
+//
+// One thing to be noticed, while using these placeholders in the C expression,
+// the type of placeholder is only guaranteed to be the base type. For example,
+// if you have a predicate in the form `CPred<"CheckType($_self)">, the argument
+// type of the function `CheckType` should be `mlir::Type`.
 class CPred<code pred> : Pred {
   code predExpr = "(" # pred # ")";
 }
@@ -203,7 +208,21 @@ class SuccessorConstraint<Pred predicate, string summary = ""> :
 //===----------------------------------------------------------------------===//
 
 // Whether a type is a VectorType.
-def IsVectorTypePred : CPred<"$_self.isa<::mlir::VectorType>()">;
+// Explicitly disallow 0-D vectors for now until we have good enough coverage.
+def IsVectorTypePred : And<[CPred<"$_self.isa<::mlir::VectorType>()">,
+                            CPred<"$_self.cast<::mlir::VectorType>().getRank() > 0">]>;
+
+// Temporary vector type clone that allows gradual transition to 0-D vectors.
+// TODO: Remove this when all ops support 0-D vectors.
+def IsVectorOfAnyRankTypePred : CPred<"$_self.isa<::mlir::VectorType>()">;
+
+// Whether a type is a fixed-length VectorType.
+def IsFixedVectorTypePred : CPred<[{$_self.isa<::mlir::VectorType>() &&
+                                  !$_self.cast<VectorType>().isScalable()}]>;
+
+// Whether a type is a scalable VectorType.
+def IsScalableVectorTypePred : CPred<[{$_self.isa<::mlir::VectorType>() &&
+                                   $_self.cast<VectorType>().isScalable()}]>;
 
 // Whether a type is a TensorType.
 def IsTensorTypePred : CPred<"$_self.isa<::mlir::TensorType>()">;
@@ -292,6 +311,14 @@ class Dialect {
 
   // If this dialect overrides the hook for op interface fallback.
   bit hasOperationInterfaceFallback = 0;
+
+  // If this dialect should use default generated attribute parser boilerplate:
+  // it'll dispatch the parsing to every individual attributes directly.
+  bit useDefaultAttributePrinterParser = 0;
+
+  // If this dialect should use default generated type parser boilerplate:
+  // it'll dispatch the parsing to every individual types directly.
+  bit useDefaultTypePrinterParser = 0;
 
   // If this dialect overrides the hook for canonicalization patterns.
   bit hasCanonicalizer = 0;
@@ -489,6 +516,10 @@ def Index : Type<CPred<"$_self.isa<::mlir::IndexType>()">, "index",
                  "::mlir::IndexType">,
             BuildableType<"$_builder.getIndexType()">;
 
+// Any signless integer type or index type.
+def AnySignlessIntegerOrIndex : Type<CPred<"$_self.isSignlessIntOrIndex()">,
+                                     "signless integer or index">;
+
 // Floating point types.
 
 // Any float type irrespective of its width.
@@ -536,7 +567,7 @@ class OpaqueType<string dialect, string name, string summary>
   : Type<CPred<"isOpaqueTypeWithName($_self, \""#dialect#"\", \""#name#"\")">,
          summary, "::mlir::OpaqueType">,
     BuildableType<"::mlir::OpaqueType::get("
-                  "$_builder.getIdentifier(\"" # dialect # "\"), \""
+                  "$_builder.getStringAttr(\"" # dialect # "\"), \""
                   # name # "\")">;
 
 // Function Type
@@ -553,20 +584,17 @@ class ContainerType<Type etype, Pred containerPred, code elementTypeCall,
     Type<And<[containerPred,
                 SubstLeaves<"$_self", !cast<string>(elementTypeCall),
                 etype.predicate>]>,
-         descr # " of " # etype.summary # " values", cppClassName> {
-  // The type of elements in the container.
-  Type elementType = etype;
-
-  // Call to retrieve.
-  code getElementTypeCall = elementTypeCall;
-}
+         descr # " of " # etype.summary # " values", cppClassName>;
 
 class ShapedContainerType<list<Type> allowedTypes,
                           Pred containerPred, string descr,
                           string cppClassName = "::mlir::Type"> :
-    ContainerType<AnyTypeOf<allowedTypes>, containerPred,
-                  "$_self.cast<::mlir::ShapedType>().getElementType()", descr,
-                  cppClassName>;
+    Type<And<[containerPred,
+              Concat<"[](::mlir::Type elementType) { return ",
+                SubstLeaves<"$_self", "elementType",
+                AnyTypeOf<allowedTypes>.predicate>,
+                "; }($_self.cast<::mlir::ShapedType>().getElementType())">]>,
+         descr # " of " # AnyTypeOf<allowedTypes>.summary # " values", cppClassName>;
 
 // Whether a shaped type is ranked.
 def HasRankPred : CPred<"$_self.cast<::mlir::ShapedType>().hasRank()">;
@@ -584,6 +612,20 @@ class HasAnyRankOfPred<list<int> ranks> : And<[
 class VectorOf<list<Type> allowedTypes> :
   ShapedContainerType<allowedTypes, IsVectorTypePred, "vector",
                       "::mlir::VectorType">;
+
+// Temporary vector type clone that allows gradual transition to 0-D vectors.
+// TODO: Remove this when all ops support 0-D vectors.
+class VectorOfAnyRankOf<list<Type> allowedTypes> :
+  ShapedContainerType<allowedTypes, IsVectorOfAnyRankTypePred, "vector",
+                      "::mlir::VectorType">;
+
+class FixedVectorOf<list<Type> allowedTypes> :
+  ShapedContainerType<allowedTypes, IsFixedVectorTypePred,
+          "fixed-length vector", "::mlir::VectorType">;
+
+class ScalableVectorOf<list<Type> allowedTypes> :
+  ShapedContainerType<allowedTypes, IsScalableVectorTypePred,
+          "scalable vector", "::mlir::VectorType">;
 
 // Whether the number of elements of a vector is from the given
 // `allowedRanks` list
@@ -617,10 +659,42 @@ class IsVectorOfLengthPred<list<int> allowedLengths> :
                            == }]
                          # allowedlength>)>]>;
 
+// Whether the number of elements of a fixed-length vector is from the given
+// `allowedLengths` list
+class IsFixedVectorOfLengthPred<list<int> allowedLengths> :
+  And<[IsFixedVectorTypePred,
+       Or<!foreach(allowedlength, allowedLengths,
+                   CPred<[{$_self.cast<::mlir::VectorType>().getNumElements()
+                           == }]
+                         # allowedlength>)>]>;
+
+// Whether the number of elements of a scalable vector is from the given
+// `allowedLengths` list
+class IsScalableVectorOfLengthPred<list<int> allowedLengths> :
+  And<[IsScalableVectorTypePred,
+       Or<!foreach(allowedlength, allowedLengths,
+                   CPred<[{$_self.cast<::mlir::VectorType>().getNumElements()
+                           == }]
+                         # allowedlength>)>]>;
+
 // Any vector where the number of elements is from the given
 // `allowedLengths` list
 class VectorOfLength<list<int> allowedLengths> : Type<
   IsVectorOfLengthPred<allowedLengths>,
+  " of length " # !interleave(allowedLengths, "/"),
+  "::mlir::VectorType">;
+
+// Any fixed-length vector where the number of elements is from the given
+// `allowedLengths` list
+class FixedVectorOfLength<list<int> allowedLengths> : Type<
+  IsFixedVectorOfLengthPred<allowedLengths>,
+  " of length " # !interleave(allowedLengths, "/"),
+  "::mlir::VectorType">;
+
+// Any scalable vector where the number of elements is from the given
+// `allowedLengths` list
+class ScalableVectorOfLength<list<int> allowedLengths> : Type<
+  IsScalableVectorOfLengthPred<allowedLengths>,
   " of length " # !interleave(allowedLengths, "/"),
   "::mlir::VectorType">;
 
@@ -634,7 +708,33 @@ class VectorOfLengthAndType<list<int> allowedLengths,
   VectorOf<allowedTypes>.summary # VectorOfLength<allowedLengths>.summary,
   "::mlir::VectorType">;
 
+// Any fixed-length vector where the number of elements is from the given
+// `allowedLengths` list and the type is from the given `allowedTypes` list
+class FixedVectorOfLengthAndType<list<int> allowedLengths,
+                                    list<Type> allowedTypes> : Type<
+  And<[FixedVectorOf<allowedTypes>.predicate,
+       FixedVectorOfLength<allowedLengths>.predicate]>,
+  FixedVectorOf<allowedTypes>.summary #
+  FixedVectorOfLength<allowedLengths>.summary,
+  "::mlir::VectorType">;
+
+// Any scalable vector where the number of elements is from the given
+// `allowedLengths` list and the type is from the given `allowedTypes` list
+class ScalableVectorOfLengthAndType<list<int> allowedLengths,
+                                    list<Type> allowedTypes> : Type<
+  And<[ScalableVectorOf<allowedTypes>.predicate,
+       ScalableVectorOfLength<allowedLengths>.predicate]>,
+  ScalableVectorOf<allowedTypes>.summary #
+  ScalableVectorOfLength<allowedLengths>.summary,
+  "::mlir::VectorType">;
+
 def AnyVector : VectorOf<[AnyType]>;
+// Temporary vector type clone that allows gradual transition to 0-D vectors.
+def AnyVectorOfAnyRank : VectorOfAnyRankOf<[AnyType]>;
+
+def AnyFixedVector : FixedVectorOf<[AnyType]>;
+
+def AnyScalableVector : ScalableVectorOf<[AnyType]>;
 
 // Shaped types.
 
@@ -810,12 +910,28 @@ def BoolLike : TypeConstraint<Or<[I1.predicate, VectorOf<[I1]>.predicate,
                                   TensorOf<[I1]>.predicate]>,
     "bool-like">;
 
+// Temporary constraint to allow gradual transition to supporting 0-D vectors.
+// TODO: Remove this when all ops support 0-D vectors.
+def BoolLikeOfAnyRank : TypeConstraint<Or<[
+        I1.predicate,
+        VectorOfAnyRankOf<[I1]>.predicate,
+        TensorOf<[I1]>.predicate]>,
+    "bool-like">;
+
 // Type constraint for signless-integer-like types: signless integers, indices,
 // vectors of signless integers or indices, tensors of signless integers.
 def SignlessIntegerLike : TypeConstraint<Or<[
-        AnySignlessInteger.predicate, Index.predicate,
-        VectorOf<[AnySignlessInteger, Index]>.predicate,
-        TensorOf<[AnySignlessInteger, Index]>.predicate]>,
+        AnySignlessIntegerOrIndex.predicate,
+        VectorOf<[AnySignlessIntegerOrIndex]>.predicate,
+        TensorOf<[AnySignlessIntegerOrIndex]>.predicate]>,
+    "signless-integer-like">;
+
+// Temporary constraint to allow gradual transition to supporting 0-D vectors.
+// TODO: Remove this when all ops support 0-D vectors.
+def SignlessIntegerLikeOfAnyRank : TypeConstraint<Or<[
+        AnySignlessIntegerOrIndex.predicate,
+        VectorOfAnyRankOf<[AnySignlessIntegerOrIndex]>.predicate,
+        TensorOf<[AnySignlessIntegerOrIndex]>.predicate]>,
     "signless-integer-like">;
 
 // Type constraint for float-like types: floats, vectors or tensors thereof.
@@ -1182,11 +1298,11 @@ class EnumAttrCaseInfo<string sym, int intVal, string strVal> {
 }
 
 // An enum attribute case stored with StringAttr.
-class StrEnumAttrCase<string sym, int val = -1> :
-    EnumAttrCaseInfo<sym, val, sym>,
+class StrEnumAttrCase<string sym, int val = -1, string str = sym> :
+    EnumAttrCaseInfo<sym, val, str>,
     StringBasedAttr<
-      CPred<"$_self.cast<::mlir::StringAttr>().getValue() == \"" # sym # "\"">,
-      "case " # sym>;
+      CPred<"$_self.cast<::mlir::StringAttr>().getValue() == \"" # str # "\"">,
+      "case " # str>;
 
 // An enum attribute case stored with IntegerAttr, which has an integer value,
 // its representation as a string and a C++ symbol name which may be different.
@@ -1572,6 +1688,8 @@ def StrArrayAttr : TypedArrayAttrBase<StrAttr, "string array attribute"> {
 def TypeArrayAttr : TypedArrayAttrBase<TypeAttr, "type array attribute"> {
   let constBuilderCall = "$_builder.getTypeArrayAttr($0)";
 }
+def IndexListArrayAttr :
+  TypedArrayAttrBase<I64ArrayAttr, "Array of 64-bit integer array attributes">;
 
 // Attribute information for an Attribute field within a StructAttr.
 class StructFieldAttr<string thisName, Attr thisType> {
@@ -1633,6 +1751,11 @@ def FlatSymbolRefAttr : Attr<CPred<"$_self.isa<::mlir::FlatSymbolRefAttr>()">,
 
 def SymbolRefArrayAttr :
   TypedArrayAttrBase<SymbolRefAttr, "symbol ref array attribute"> {
+  let constBuilderCall = ?;
+}
+
+def FlatSymbolRefArrayAttr :
+  TypedArrayAttrBase<FlatSymbolRefAttr, "flat symbol ref array attribute"> {
   let constBuilderCall = ?;
 }
 
@@ -1738,7 +1861,7 @@ def IntNonNegative : AttrConstraint<
     "whose value is non-negative">;
 
 def IntPositive : AttrConstraint<
-    CPred<"$_self.cast<IntegerAttr>().getValue().isStrictlyPositive()">,
+    CPred<"$_self.cast<::mlir::IntegerAttr>().getValue().isStrictlyPositive()">,
     "whose value is positive">;
 
 class ArrayMinCount<int n> : AttrConstraint<
@@ -1915,7 +2038,7 @@ def ResultsBroadcastableShape :
   NativeOpTrait<"ResultsBroadcastableShape">;
 // X op Y == Y op X
 def Commutative  : NativeOpTrait<"IsCommutative">;
-// op op X == op X
+// op op X == op X (unary) / X op X == X (binary)
 def Idempotent  : NativeOpTrait<"IsIdempotent">;
 // op op X == X
 def Involution  : NativeOpTrait<"IsInvolution">;
@@ -1933,8 +2056,6 @@ def SameTypeOperands : NativeOpTrait<"SameTypeOperands">;
 def SameOperandsShape : NativeOpTrait<"SameOperandsShape">;
 // Op has same operand and result shape.
 def SameOperandsAndResultShape : NativeOpTrait<"SameOperandsAndResultShape">;
-// Op has the same operand and result type.
-def SameOperandsAndResultType : NativeOpTrait<"SameOperandsAndResultType">;
 // Op has the same element type (or type itself, if scalar) for all operands.
 def SameOperandsElementType : NativeOpTrait<"SameOperandsElementType">;
 // Op has the same operand and result element type (or type itself, if scalar).
@@ -2720,6 +2841,21 @@ def location;
 
 def returnType;
 
+// Directive used to specify the operands may be matched in either order. When
+// two adjacents are marked with `either`, it'll try to match the operands in
+// either ordering of constraints. Example:
+//
+// ```
+// (TwoArgOp (either $firstArg, (AnOp $secondArg)))
+// ```
+// The above pattern will accept either `"test.TwoArgOp"(%I32Arg, %AnOpArg)` and
+// `"test.TwoArgOp"(%AnOpArg, %I32Arg)`.
+//
+// Only operand is supported with `either` and note that an operation with
+// `Commutative` trait doesn't imply that it'll have the same behavior than
+// `either` while pattern matching.
+def either;
+
 //===----------------------------------------------------------------------===//
 // Attribute and Type generation
 //===----------------------------------------------------------------------===//
@@ -2876,6 +3012,11 @@ class AttrOrTypeDef<string valueType, string name, list<Trait> defTraits,
   code printer = ?;
   code parser = ?;
 
+  // Custom assembly format. Requires 'mnemonic' to be specified. Cannot be
+  // specified at the same time as either 'printer' or 'parser'. The generated
+  // printer requires 'genAccessors' to be true.
+  string assemblyFormat = ?;
+
   // If set, generate accessors for each parameter.
   bit genAccessors = 1;
 
@@ -2902,6 +3043,9 @@ class AttrDef<Dialect dialect, string name, list<Trait> traits = [],
 
   // The underlying C++ value type
   let returnType = dialect.cppNamespace # "::" # cppClassName;
+
+  // Make it possible to use such attributes as parameters for other attributes.
+  string cppType = dialect.cppNamespace # "::" # cppClassName;
 
   // The call expression to convert from the storage type to the return
   // type. For example, an enum can be stored as an int but returned as an
@@ -2933,6 +3077,9 @@ class TypeDef<Dialect dialect, string name, list<Trait> traits = [],
               string baseCppClass = "::mlir::Type">
     : DialectType<dialect, CPred<"">, /*descr*/"", name # "Type">,
       AttrOrTypeDef<"Type", name, traits, baseCppClass> {
+  // Make it possible to use such type as parameters for other types.
+  string cppType = dialect.cppNamespace # "::" # cppClassName;
+
   // A constant builder provided when the type has no parameters.
   let builderCall = !if(!empty(parameters),
                            "$_builder.getType<" # dialect.cppNamespace #
@@ -2954,10 +3101,22 @@ class AttrOrTypeParameter<string type, string desc, string accessorType = ""> {
   string cppType = type;
   // The C++ type of the accessor for this parameter.
   string cppAccessorType = !if(!empty(accessorType), type, accessorType);
+  // The C++ storage type of of this parameter if it is a reference, e.g.
+  // `std::string` for `StringRef` or `SmallVector` for `ArrayRef`.
+  string cppStorageType = ?;
   // One-line human-readable description of the argument.
   string summary = desc;
   // The format string for the asm syntax (documentation only).
   string syntax = ?;
+  // The default parameter parser is `::mlir::parseField<T>($_parser)`, which
+  // returns `FailureOr<T>`. Overload `parseField` to support parsing for your
+  // type. Or you can provide a customer printer. For attributes, "$_type" will
+  // be replaced with the required attribute type.
+  string parser = ?;
+  // The default parameter printer is `$_printer << $_self`. Overload the stream
+  // operator of `AsmPrinter` as necessary to print your type. Or you can
+  // provide a custom printer.
+  string printer = ?;
 }
 class AttrParameter<string type, string desc, string accessorType = "">
  : AttrOrTypeParameter<type, desc, accessorType>;
@@ -2968,6 +3127,8 @@ class TypeParameter<string type, string desc, string accessorType = "">
 class StringRefParameter<string desc = ""> :
     AttrOrTypeParameter<"::llvm::StringRef", desc> {
   let allocator = [{$_dst = $_allocator.copyInto($_self);}];
+  let printer = [{$_printer << '"' << $_self << '"';}];
+  let cppStorageType = "std::string";
 }
 
 // For APFloats, which require comparison.
@@ -2980,6 +3141,7 @@ class APFloatParameter<string desc> :
 class ArrayRefParameter<string arrayOf, string desc = ""> :
     AttrOrTypeParameter<"::llvm::ArrayRef<" # arrayOf # ">", desc> {
   let allocator = [{$_dst = $_allocator.copyInto($_self);}];
+  let cppStorageType = "::llvm::SmallVector<" # arrayOf # ">";
 }
 
 // For classes which require allocation and have their own allocateInto method.

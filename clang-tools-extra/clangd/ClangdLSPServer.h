@@ -56,6 +56,7 @@ public:
     /// Per-feature options. Generally ClangdServer lets these vary
     /// per-request, but LSP allows limited/no customizations.
     clangd::CodeCompleteOptions CodeComplete;
+    MarkupKind SignatureHelpDocumentationFormat = MarkupKind::PlainText;
     clangd::RenameOptions Rename;
     /// Returns true if the tweak should be enabled.
     std::function<bool(const Tweak &)> TweakFilter = [](const Tweak &T) {

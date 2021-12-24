@@ -95,14 +95,14 @@ protected:
     std::string Buf;
     llvm::raw_string_ostream OS{Buf};
     Ctx.dumpExpandedTextsToStream(OS);
-    return OS.str();
+    return Buf;
   }
 
   static std::string dumpExpansionRanges(const MacroExpansionContext &Ctx) {
     std::string Buf;
     llvm::raw_string_ostream OS{Buf};
     Ctx.dumpExpansionRangesToStream(OS);
-    return OS.str();
+    return Buf;
   }
 };
 

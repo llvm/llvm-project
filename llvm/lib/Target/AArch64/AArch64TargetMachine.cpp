@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
+#include "llvm/CodeGen/GlobalISel/LoadStoreOpt.h"
 #include "llvm/CodeGen/GlobalISel/Localizer.h"
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/MIRParser/MIParser.h"
@@ -116,11 +117,6 @@ static cl::opt<bool>
                   cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
-EnableA53Fix835769("aarch64-fix-cortex-a53-835769", cl::Hidden,
-                cl::desc("Work around Cortex-A53 erratum 835769"),
-                cl::init(false));
-
-static cl::opt<bool>
     EnableGEPOpt("aarch64-enable-gep-opt", cl::Hidden,
                  cl::desc("Enable optimizations on complex GEPs"),
                  cl::init(false));
@@ -174,6 +170,16 @@ static cl::opt<unsigned> SVEVectorBitsMinOpt(
     cl::init(0), cl::Hidden);
 
 extern cl::opt<bool> EnableHomogeneousPrologEpilog;
+
+static cl::opt<bool> EnableGISelLoadStoreOptPreLegal(
+    "aarch64-enable-gisel-ldst-prelegal",
+    cl::desc("Enable GlobalISel's pre-legalizer load/store optimization pass"),
+    cl::init(true), cl::Hidden);
+
+static cl::opt<bool> EnableGISelLoadStoreOptPostLegal(
+    "aarch64-enable-gisel-ldst-postlegal",
+    cl::desc("Enable GlobalISel's post-legalizer load/store optimization pass"),
+    cl::init(false), cl::Hidden);
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Target() {
   // Register the target.
@@ -371,10 +377,9 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
   unsigned MaxSVEVectorSize = 0;
   Attribute VScaleRangeAttr = F.getFnAttribute(Attribute::VScaleRange);
   if (VScaleRangeAttr.isValid()) {
-    std::tie(MinSVEVectorSize, MaxSVEVectorSize) =
-        VScaleRangeAttr.getVScaleRangeArgs();
-    MinSVEVectorSize *= 128;
-    MaxSVEVectorSize *= 128;
+    Optional<unsigned> VScaleMax = VScaleRangeAttr.getVScaleRangeMax();
+    MinSVEVectorSize = VScaleRangeAttr.getVScaleRangeMin() * 128;
+    MaxSVEVectorSize = VScaleMax ? VScaleMax.getValue() * 128 : 0;
   } else {
     MinSVEVectorSize = SVEVectorBitsMinOpt;
     MaxSVEVectorSize = SVEVectorBitsMaxOpt;
@@ -630,8 +635,11 @@ bool AArch64PassConfig::addIRTranslator() {
 void AArch64PassConfig::addPreLegalizeMachineIR() {
   if (getOptLevel() == CodeGenOpt::None)
     addPass(createAArch64O0PreLegalizerCombiner());
-  else
+  else {
     addPass(createAArch64PreLegalizerCombiner());
+    if (EnableGISelLoadStoreOptPreLegal)
+      addPass(new LoadStoreOpt());
+  }
 }
 
 bool AArch64PassConfig::addLegalizeMachineIR() {
@@ -641,8 +649,11 @@ bool AArch64PassConfig::addLegalizeMachineIR() {
 
 void AArch64PassConfig::addPreRegBankSelect() {
   bool IsOptNone = getOptLevel() == CodeGenOpt::None;
-  if (!IsOptNone)
+  if (!IsOptNone) {
     addPass(createAArch64PostLegalizerCombiner(IsOptNone));
+    if (EnableGISelLoadStoreOptPostLegal)
+      addPass(new LoadStoreOpt());
+  }
   addPass(createAArch64PostLegalizerLowering());
 }
 
@@ -748,8 +759,7 @@ void AArch64PassConfig::addPreEmitPass() {
   if (TM->getOptLevel() >= CodeGenOpt::Aggressive && EnableLoadStoreOpt)
     addPass(createAArch64LoadStoreOptimizationPass());
 
-  if (EnableA53Fix835769)
-    addPass(createAArch64A53Fix835769());
+  addPass(createAArch64A53Fix835769());
 
   if (EnableBranchTargets)
     addPass(createAArch64BranchTargetsPass());

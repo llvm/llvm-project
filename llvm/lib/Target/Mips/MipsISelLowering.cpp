@@ -3717,7 +3717,7 @@ SDValue MipsTargetLowering::LowerFormalArguments(
           LocVT = VA.getValVT();
       }
 
-      // sanity check
+      // Only arguments pased on the stack should make it here. 
       assert(VA.isMemLoc());
 
       // The stack pointer offset is relative to the caller stack frame.
@@ -4121,7 +4121,7 @@ MipsTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     case 'd': // Address register. Same as 'r' unless generating MIPS16 code.
     case 'y': // Same as 'r'. Exists for compatibility.
     case 'r':
-      if (VT == MVT::i32 || VT == MVT::i16 || VT == MVT::i8) {
+      if (VT == MVT::i32 || VT == MVT::i16 || VT == MVT::i8 || VT == MVT::i1) {
         if (Subtarget.inMips16Mode())
           return std::make_pair(0U, &Mips::CPU16RegsRegClass);
         return std::make_pair(0U, &Mips::GPR32RegClass);

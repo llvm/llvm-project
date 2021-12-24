@@ -60,4 +60,15 @@ llvm::Error IncrementalExecutor::runCtors() const {
   return Jit->initialize(Jit->getMainJITDylib());
 }
 
+llvm::Expected<llvm::JITTargetAddress>
+IncrementalExecutor::getSymbolAddress(llvm::StringRef Name,
+                                      SymbolNameKind NameKind) const {
+  auto Sym = (NameKind == LinkerName) ? Jit->lookupLinkerMangled(Name)
+                                      : Jit->lookup(Name);
+
+  if (!Sym)
+    return Sym.takeError();
+  return Sym->getAddress();
+}
+
 } // end namespace clang

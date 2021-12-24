@@ -20,49 +20,6 @@
 using namespace mlir;
 
 //===----------------------------------------------------------------------===//
-// OperationName
-//===----------------------------------------------------------------------===//
-
-/// Form the OperationName for an op with the specified string.  This either is
-/// a reference to an AbstractOperation if one is known, or a uniqued Identifier
-/// if not.
-OperationName::OperationName(StringRef name, MLIRContext *context) {
-  if (auto *op = AbstractOperation::lookup(name, context))
-    representation = op;
-  else
-    representation = Identifier::get(name, context);
-}
-
-/// Return the name of the dialect this operation is registered to.
-StringRef OperationName::getDialectNamespace() const {
-  if (Dialect *dialect = getDialect())
-    return dialect->getNamespace();
-  return getStringRef().split('.').first;
-}
-
-/// Return the operation name with dialect name stripped, if it has one.
-StringRef OperationName::stripDialect() const {
-  return getStringRef().split('.').second;
-}
-
-/// Return the name of this operation. This always succeeds.
-StringRef OperationName::getStringRef() const {
-  return getIdentifier().strref();
-}
-
-/// Return the name of this operation as an identifier. This always succeeds.
-Identifier OperationName::getIdentifier() const {
-  if (auto *op = representation.dyn_cast<const AbstractOperation *>())
-    return op->name;
-  return representation.get<Identifier>();
-}
-
-OperationName OperationName::getFromOpaquePointer(const void *pointer) {
-  return OperationName(
-      RepresentationUnion::getFromOpaqueValue(const_cast<void *>(pointer)));
-}
-
-//===----------------------------------------------------------------------===//
 // Operation
 //===----------------------------------------------------------------------===//
 
@@ -115,19 +72,15 @@ Operation *Operation::create(Location location, OperationName name,
 
   // If the operation is known to have no operands, don't allocate an operand
   // storage.
-  bool needsOperandStorage = true;
-  if (operands.empty()) {
-    if (const AbstractOperation *abstractOp = name.getAbstractOperation())
-      needsOperandStorage = !abstractOp->hasTrait<OpTrait::ZeroOperands>();
-  }
+  bool needsOperandStorage =
+      operands.empty() ? !name.hasTrait<OpTrait::ZeroOperands>() : true;
 
   // Compute the byte size for the operation and the operand storage. This takes
   // into account the size of the operation, its trailing objects, and its
   // prefixed objects.
   size_t byteSize =
-      totalSizeToAlloc<BlockOperand, Region, detail::OperandStorage>(
-          numSuccessors, numRegions, needsOperandStorage ? 1 : 0) +
-      detail::OperandStorage::additionalAllocSize(numOperands);
+      totalSizeToAlloc<detail::OperandStorage, BlockOperand, Region, OpOperand>(
+          needsOperandStorage ? 1 : 0, numSuccessors, numRegions, numOperands);
   size_t prefixByteSize = llvm::alignTo(
       Operation::prefixAllocSize(numTrailingResults, numInlineResults),
       alignof(Operation));
@@ -156,8 +109,10 @@ Operation *Operation::create(Location location, OperationName name,
     new (&op->getRegion(i)) Region(op);
 
   // Initialize the operands.
-  if (needsOperandStorage)
-    new (&op->getOperandStorage()) detail::OperandStorage(op, operands);
+  if (needsOperandStorage) {
+    new (&op->getOperandStorage()) detail::OperandStorage(
+        op, op->getTrailingObjects<OpOperand>(), operands);
+  }
 
   // Initialize the successors.
   auto blockOperands = op->getBlockOperands();
@@ -394,28 +349,28 @@ void Operation::updateOrderIfNecessary() {
 
 auto llvm::ilist_detail::SpecificNodeAccess<
     typename llvm::ilist_detail::compute_node_options<
-        ::mlir::Operation>::type>::getNodePtr(pointer N) -> node_type * {
-  return NodeAccess::getNodePtr<OptionsT>(N);
+        ::mlir::Operation>::type>::getNodePtr(pointer n) -> node_type * {
+  return NodeAccess::getNodePtr<OptionsT>(n);
 }
 
 auto llvm::ilist_detail::SpecificNodeAccess<
     typename llvm::ilist_detail::compute_node_options<
-        ::mlir::Operation>::type>::getNodePtr(const_pointer N)
+        ::mlir::Operation>::type>::getNodePtr(const_pointer n)
     -> const node_type * {
-  return NodeAccess::getNodePtr<OptionsT>(N);
+  return NodeAccess::getNodePtr<OptionsT>(n);
 }
 
 auto llvm::ilist_detail::SpecificNodeAccess<
     typename llvm::ilist_detail::compute_node_options<
-        ::mlir::Operation>::type>::getValuePtr(node_type *N) -> pointer {
-  return NodeAccess::getValuePtr<OptionsT>(N);
+        ::mlir::Operation>::type>::getValuePtr(node_type *n) -> pointer {
+  return NodeAccess::getValuePtr<OptionsT>(n);
 }
 
 auto llvm::ilist_detail::SpecificNodeAccess<
     typename llvm::ilist_detail::compute_node_options<
-        ::mlir::Operation>::type>::getValuePtr(const node_type *N)
+        ::mlir::Operation>::type>::getValuePtr(const node_type *n)
     -> const_pointer {
-  return NodeAccess::getValuePtr<OptionsT>(N);
+  return NodeAccess::getValuePtr<OptionsT>(n);
 }
 
 void llvm::ilist_traits<::mlir::Operation>::deleteNode(Operation *op) {
@@ -423,9 +378,9 @@ void llvm::ilist_traits<::mlir::Operation>::deleteNode(Operation *op) {
 }
 
 Block *llvm::ilist_traits<::mlir::Operation>::getContainingBlock() {
-  size_t Offset(size_t(&((Block *)nullptr->*Block::getSublistAccess(nullptr))));
-  iplist<Operation> *Anchor(static_cast<iplist<Operation> *>(this));
-  return reinterpret_cast<Block *>(reinterpret_cast<char *>(Anchor) - Offset);
+  size_t offset(size_t(&((Block *)nullptr->*Block::getSublistAccess(nullptr))));
+  iplist<Operation> *anchor(static_cast<iplist<Operation> *>(this));
+  return reinterpret_cast<Block *>(reinterpret_cast<char *>(anchor) - offset);
 }
 
 /// This is a trait method invoked when an operation is added to a block.  We
@@ -505,7 +460,7 @@ void Operation::moveAfter(Operation *existingOp) {
 void Operation::moveAfter(Block *block,
                           llvm::iplist<Operation>::iterator iterator) {
   assert(iterator != block->end() && "cannot move after end of block");
-  moveBefore(&*std::next(iterator));
+  moveBefore(block, std::next(iterator));
 }
 
 /// This drops all operand uses from this operation, which is an essential
@@ -542,8 +497,8 @@ LogicalResult Operation::fold(ArrayRef<Attribute> operands,
                               SmallVectorImpl<OpFoldResult> &results) {
   // If we have a registered operation definition matching this one, use it to
   // try to constant fold the operation.
-  auto *abstractOp = getAbstractOperation();
-  if (abstractOp && succeeded(abstractOp->foldHook(this, operands, results)))
+  Optional<RegisteredOperationName> info = getRegisteredInfo();
+  if (info && succeeded(info->foldHook(this, operands, results)))
     return success();
 
   // Otherwise, fall back on the dialect hook to handle it.
@@ -625,14 +580,27 @@ Operation *Operation::clone() {
 // OpState trait class.
 //===----------------------------------------------------------------------===//
 
-// The fallback for the parser is to reject the custom assembly form.
+// The fallback for the parser is to try for a dialect operation parser.
+// Otherwise, reject the custom assembly form.
 ParseResult OpState::parse(OpAsmParser &parser, OperationState &result) {
+  if (auto parseFn = result.name.getDialect()->getParseOperationHook(
+          result.name.getStringRef()))
+    return (*parseFn)(parser, result);
   return parser.emitError(parser.getNameLoc(), "has no custom assembly form");
 }
 
-// The fallback for the printer is to print in the generic assembly form.
-void OpState::print(Operation *op, OpAsmPrinter &p) { p.printGenericOp(op); }
-// The fallback for the printer is to print in the generic assembly form.
+// The fallback for the printer is to try for a dialect operation printer.
+// Otherwise, it prints the generic form.
+void OpState::print(Operation *op, OpAsmPrinter &p, StringRef defaultDialect) {
+  if (auto printFn = op->getDialect()->getOperationPrinter(op)) {
+    printOpName(op, p, defaultDialect);
+    printFn(op, p);
+  } else {
+    p.printGenericOp(op);
+  }
+}
+
+/// Print an operation name, eliding the dialect prefix if necessary.
 void OpState::printOpName(Operation *op, OpAsmPrinter &p,
                           StringRef defaultDialect) {
   StringRef name = op->getName().getStringRef();
@@ -674,9 +642,13 @@ InFlightDiagnostic OpState::emitRemark(const Twine &message) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult OpTrait::impl::foldIdempotent(Operation *op) {
-  auto *argumentOp = op->getOperand(0).getDefiningOp();
-  if (argumentOp && op->getName() == argumentOp->getName()) {
-    // Replace the outer operation output with the inner operation.
+  if (op->getNumOperands() == 1) {
+    auto *argumentOp = op->getOperand(0).getDefiningOp();
+    if (argumentOp && op->getName() == argumentOp->getName()) {
+      // Replace the outer operation output with the inner operation.
+      return op->getOperand(0);
+    }
+  } else if (op->getOperand(0) == op->getOperand(1)) {
     return op->getOperand(0);
   }
 
@@ -1052,8 +1024,7 @@ LogicalResult OpTrait::impl::verifyNoRegionArguments(Operation *op) {
       if (op->getNumRegions() > 1)
         return op->emitOpError("region #")
                << region.getRegionNumber() << " should have no arguments";
-      else
-        return op->emitOpError("region should have no arguments");
+      return op->emitOpError("region should have no arguments");
     }
   }
   return success();

@@ -38,7 +38,6 @@ public:
 
   ~GDBRemoteDynamicRegisterInfo() override = default;
 
-  void HardcodeARMRegisters(bool from_scratch);
   bool UpdateARM64SVERegistersInfos(uint64_t vg);
 };
 

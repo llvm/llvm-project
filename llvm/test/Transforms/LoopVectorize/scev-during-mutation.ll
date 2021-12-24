@@ -75,3 +75,50 @@ loop.1.latch:
 exit:
   ret void
 }
+
+; CHECK-LABEL: @pr52024(
+; CHECK: vector.body:
+;
+define void @pr52024(i32* %dst, i16 %N) {
+entry:
+  br label %loop.1
+
+loop.1:
+  %iv.1 = phi i16 [ 1, %entry ], [ %iv.1.next, %loop.1.latch ]
+  %iv.1.next = mul i16 %iv.1, 3
+  %exitcond.1 = icmp uge i16 %iv.1.next, 99
+  br i1 %exitcond.1, label %loop.1.latch, label %exit
+
+loop.1.latch:
+  %exitcond.2 = icmp eq i16 %iv.1.next, %N
+  br i1 %exitcond.2, label %loop.2.ph, label %loop.1
+
+loop.2.ph:
+  %iv.1.next.lcssa = phi i16 [ %iv.1.next, %loop.1.latch ]
+  %iv.1.next.ext = sext i16 %iv.1.next.lcssa to i64
+  br label %loop.2.header
+
+loop.2.header:
+  %iv.1.rem = urem i64 100, %iv.1.next.ext
+  %rem.trunc = trunc i64 %iv.1.rem to i16
+  br label %loop.3
+
+loop.3:
+  %iv.3 = phi i32 [ 8, %loop.2.header ], [ %iv.3.next, %loop.3 ]
+  %sub.phi = phi i16 [ 0, %loop.2.header ], [ %sub, %loop.3 ]
+  %sub = sub i16 %sub.phi, %rem.trunc
+  %sub.ext = zext i16 %sub to i32
+  %gep.dst = getelementptr i32, i32* %dst, i32 %iv.3
+  store i32 %sub.ext, i32* %gep.dst
+  %iv.3.next= add nuw nsw i32 %iv.3, 1
+  %exitcond.3 = icmp eq i32 %iv.3.next, 34
+  br i1 %exitcond.3, label %loop.2.latch, label %loop.3
+
+loop.2.latch:
+  %sub.lcssa = phi i16 [ %sub, %loop.3 ]
+  %exitcond = icmp uge i16 %sub.lcssa, 200
+  br i1 %exitcond, label %exit, label %loop.2.header
+
+exit:
+  ret void
+}

@@ -15,13 +15,9 @@ define dso_local i32 @test_500_504(i32* nocapture readonly %x) {
 ; CHECK-NEXT:    movs r2, #0
 ; CHECK-NEXT:  .LBB0_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vadd.i32 q2, q0, r1
-; CHECK-NEXT:    vdup.32 q3, r1
-; CHECK-NEXT:    vcmp.u32 hi, q3, q2
+; CHECK-NEXT:    vqadd.u32 q2, q0, r1
 ; CHECK-NEXT:    adds r1, #4
-; CHECK-NEXT:    vpnot
-; CHECK-NEXT:    vpsttt
-; CHECK-NEXT:    vcmpt.u32 hi, q1, q2
+; CHECK-NEXT:    vptt.u32 hi, q1, q2
 ; CHECK-NEXT:    vldrwt.u32 q2, [r0], #16
 ; CHECK-NEXT:    vaddvat.u32 r2, q2
 ; CHECK-NEXT:    le lr, .LBB0_1

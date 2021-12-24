@@ -99,6 +99,7 @@ static bool DynamicSymbols;
 static bool FileHeaders;
 static bool Headers;
 static std::vector<std::string> HexDump;
+static bool PrettyPrint;
 static bool PrintStackMap;
 static bool PrintStackSizes;
 static bool Relocations;
@@ -148,6 +149,9 @@ static bool COFFImports;
 static bool COFFLoadConfig;
 static bool COFFResources;
 static bool COFFTLSDirectory;
+
+// XCOFF specific options.
+static bool XCOFFAuxiliaryHeader;
 
 OutputStyleTy Output = OutputStyleTy::LLVM;
 static std::vector<std::string> InputFilenames;
@@ -227,13 +231,17 @@ static void parseOptions(const opt::InputArgList &Args) {
   opts::DynamicTable = Args.hasArg(OPT_dynamic_table);
   opts::ELFLinkerOptions = Args.hasArg(OPT_elf_linker_options);
   if (Arg *A = Args.getLastArg(OPT_elf_output_style_EQ)) {
-    StringRef V(A->getValue());
-    if (V == "LLVM")
-      opts::Output = opts::OutputStyleTy::LLVM;
-    else if (V == "GNU")
-      opts::Output = opts::OutputStyleTy::GNU;
-    else
-      error("--elf-output-style value should be either 'LLVM' or 'GNU'");
+    std::string OutputStyleChoice = A->getValue();
+    opts::Output = StringSwitch<opts::OutputStyleTy>(OutputStyleChoice)
+                       .Case("LLVM", opts::OutputStyleTy::LLVM)
+                       .Case("GNU", opts::OutputStyleTy::GNU)
+                       .Case("JSON", opts::OutputStyleTy::JSON)
+                       .Default(opts::OutputStyleTy::UNKNOWN);
+    if (opts::Output == opts::OutputStyleTy::UNKNOWN) {
+      error("--elf-output-style value should be either 'LLVM', 'GNU', or "
+            "'JSON', but was '" +
+            OutputStyleChoice + "'");
+    }
   }
   opts::GnuHashTable = Args.hasArg(OPT_gnu_hash_table);
   opts::HashSymbols = Args.hasArg(OPT_hash_symbols);
@@ -241,6 +249,7 @@ static void parseOptions(const opt::InputArgList &Args) {
   opts::HashHistogram = Args.hasArg(OPT_histogram);
   opts::NeededLibraries = Args.hasArg(OPT_needed_libs);
   opts::Notes = Args.hasArg(OPT_notes);
+  opts::PrettyPrint = Args.hasArg(OPT_pretty_print);
   opts::ProgramHeaders = Args.hasArg(OPT_program_headers);
   opts::RawRelr = Args.hasArg(OPT_raw_relr);
   opts::SectionGroups = Args.hasArg(OPT_section_groups);
@@ -267,6 +276,9 @@ static void parseOptions(const opt::InputArgList &Args) {
   opts::COFFLoadConfig = Args.hasArg(OPT_coff_load_config);
   opts::COFFResources = Args.hasArg(OPT_coff_resources);
   opts::COFFTLSDirectory = Args.hasArg(OPT_coff_tls_directory);
+
+  // XCOFF specific options.
+  opts::XCOFFAuxiliaryHeader = Args.hasArg(OPT_auxiliary_header);
 
   opts::InputFilenames = Args.getAllArgValues(OPT_INPUT);
 }
@@ -327,21 +339,13 @@ static void dumpObject(ObjectFile &Obj, ScopedPrinter &Writer,
     reportError(DumperOrErr.takeError(), FileStr);
   Dumper = (*DumperOrErr).get();
 
-  if (opts::Output == opts::LLVM || opts::InputFilenames.size() > 1 || A) {
-    Writer.startLine() << "\n";
-    Writer.printString("File", FileStr);
-  }
-  if (opts::Output == opts::LLVM) {
-    Writer.printString("Format", Obj.getFileFormatName());
-    Writer.printString("Arch", Triple::getArchTypeName(Obj.getArch()));
-    Writer.printString(
-        "AddressSize",
-        std::string(formatv("{0}bit", 8 * Obj.getBytesInAddress())));
-    Dumper->printLoadName();
-  }
+  Dumper->printFileSummary(FileStr, Obj, opts::InputFilenames, A);
 
   if (opts::FileHeaders)
     Dumper->printFileHeaders();
+
+  if (Obj.isXCOFF() && opts::XCOFFAuxiliaryHeader)
+    Dumper->printAuxiliaryHeader();
 
   // This is only used for ELF currently. In some cases, when an object is
   // corrupt (e.g. truncated), we can't dump anything except the file header.
@@ -541,6 +545,13 @@ static void dumpInput(StringRef File, ScopedPrinter &Writer) {
       OwningBinary<Binary>(std::move(Bin), std::move(Buffer)));
 }
 
+std::unique_ptr<ScopedPrinter> createWriter() {
+  if (opts::Output == opts::JSON)
+    return std::make_unique<JSONScopedPrinter>(
+        fouts(), opts::PrettyPrint ? 2 : 0, std::make_unique<ListScope>());
+  return std::make_unique<ScopedPrinter>(fouts());
+}
+
 int main(int argc, char *argv[]) {
   InitLLVM X(argc, argv);
   BumpPtrAllocator A;
@@ -577,6 +588,7 @@ int main(int argc, char *argv[]) {
 
   if (opts::All) {
     opts::FileHeaders = true;
+    opts::XCOFFAuxiliaryHeader = true;
     opts::ProgramHeaders = true;
     opts::SectionHeaders = true;
     opts::Symbols = true;
@@ -595,20 +607,22 @@ int main(int argc, char *argv[]) {
 
   if (opts::Headers) {
     opts::FileHeaders = true;
+    opts::XCOFFAuxiliaryHeader = true;
     opts::ProgramHeaders = true;
     opts::SectionHeaders = true;
   }
 
-  ScopedPrinter Writer(fouts());
+  std::unique_ptr<ScopedPrinter> Writer = createWriter();
+
   for (const std::string &I : opts::InputFilenames)
-    dumpInput(I, Writer);
+    dumpInput(I, *Writer.get());
 
   if (opts::CodeViewMergedTypes) {
     if (opts::CodeViewEnableGHash)
-      dumpCodeViewMergedTypes(Writer, CVTypes.GlobalIDTable.records(),
+      dumpCodeViewMergedTypes(*Writer.get(), CVTypes.GlobalIDTable.records(),
                               CVTypes.GlobalTypeTable.records());
     else
-      dumpCodeViewMergedTypes(Writer, CVTypes.IDTable.records(),
+      dumpCodeViewMergedTypes(*Writer.get(), CVTypes.IDTable.records(),
                               CVTypes.TypeTable.records());
   }
 

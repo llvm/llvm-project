@@ -66,6 +66,85 @@ static void printCreateOperationOpAttributes(OpAsmPrinter &p,
 }
 
 //===----------------------------------------------------------------------===//
+// pdl_interp::ForEachOp
+//===----------------------------------------------------------------------===//
+
+void ForEachOp::build(::mlir::OpBuilder &builder, ::mlir::OperationState &state,
+                      Value range, Block *successor, bool initLoop) {
+  build(builder, state, range, successor);
+  if (initLoop) {
+    // Create the block and the loop variable.
+    auto rangeType = range.getType().cast<pdl::RangeType>();
+    state.regions.front()->emplaceBlock();
+    state.regions.front()->addArgument(rangeType.getElementType());
+  }
+}
+
+static ParseResult parseForEachOp(OpAsmParser &parser, OperationState &result) {
+  // Parse the loop variable followed by type.
+  OpAsmParser::OperandType loopVariable;
+  Type loopVariableType;
+  if (parser.parseRegionArgument(loopVariable) ||
+      parser.parseColonType(loopVariableType))
+    return failure();
+
+  // Parse the "in" keyword.
+  if (parser.parseKeyword("in", " after loop variable"))
+    return failure();
+
+  // Parse the operand (value range).
+  OpAsmParser::OperandType operandInfo;
+  if (parser.parseOperand(operandInfo))
+    return failure();
+
+  // Resolve the operand.
+  Type rangeType = pdl::RangeType::get(loopVariableType);
+  if (parser.resolveOperand(operandInfo, rangeType, result.operands))
+    return failure();
+
+  // Parse the body region.
+  Region *body = result.addRegion();
+  if (parser.parseRegion(*body, {loopVariable}, {loopVariableType}))
+    return failure();
+
+  // Parse the attribute dictionary.
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+
+  // Parse the successor.
+  Block *successor;
+  if (parser.parseArrow() || parser.parseSuccessor(successor))
+    return failure();
+  result.addSuccessors(successor);
+
+  return success();
+}
+
+static void print(OpAsmPrinter &p, ForEachOp op) {
+  BlockArgument arg = op.getLoopVariable();
+  p << ' ' << arg << " : " << arg.getType() << " in " << op.values();
+  p.printRegion(op.region(), /*printEntryBlockArgs=*/false);
+  p.printOptionalAttrDict(op->getAttrs());
+  p << " -> ";
+  p.printSuccessor(op.successor());
+}
+
+static LogicalResult verify(ForEachOp op) {
+  // Verify that the operation has exactly one argument.
+  if (op.region().getNumArguments() != 1)
+    return op.emitOpError("requires exactly one argument");
+
+  // Verify that the loop variable and the operand (value range)
+  // have compatible types.
+  BlockArgument arg = op.getLoopVariable();
+  Type rangeType = pdl::RangeType::get(arg.getType());
+  if (rangeType != op.values().getType())
+    return op.emitOpError("operand must be a range of loop variable type");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // pdl_interp::GetValueTypeOp
 //===----------------------------------------------------------------------===//
 

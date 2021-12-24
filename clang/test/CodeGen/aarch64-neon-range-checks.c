@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -target-feature +neon -target-feature +sha3 -target-feature +sm4 -verify %s
 
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 #include <arm_neon.h>
 
 void test_range_check_vsm3tt1a(uint32x4_t a, uint32x4_t b, uint32x4_t c) {

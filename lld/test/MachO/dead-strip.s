@@ -67,8 +67,8 @@
 
 ## Extern symbols aren't stripped from executables with -export_dynamic
 # RUN: %lld -lSystem -dead_strip -export_dynamic -u _ref_private_extern_u \
-# RUN:     %t/basics.o -o %t/basics
-# RUN: llvm-objdump --syms --section-headers %t/basics | \
+# RUN:     %t/basics.o -o %t/basics-export-dyn
+# RUN: llvm-objdump --syms --section-headers %t/basics-export-dyn | \
 # RUN:     FileCheck --check-prefix=EXECDYN %s
 # EXECDYN-LABEL: Sections:
 # EXECDYN-LABEL: Name
@@ -248,6 +248,7 @@
 # UNWIND-NEXT:   *UND* ___gxx_personality_v0
 # UNWIND-NEXT:   *UND* ___cxa_begin_catch
 # UNWIND-NEXT:   *UND* dyld_stub_binder
+# UNWIND-NOT:    GCC_except_table0
 
 ## If a dead stripped function has a strong ref to a dylib symbol but
 ## a live function only a weak ref, the dylib is still not a WEAK_DYLIB.
@@ -636,7 +637,13 @@ _baz_refd:
 #--- unwind.s
 ## This is the output of `clang -O2 -S throw.cc` where throw.cc
 ## looks like this:
-##     void unref() {}
+##     int unref() {
+##       try {
+##         throw 0;
+##       } catch (int i) {
+##         return i + 1;
+##       }
+##     }
 ##     int main() {
 ##       try {
 ##         throw 0;
@@ -645,92 +652,175 @@ _baz_refd:
 ##       }
 ##     }
 .section __TEXT,__text,regular,pure_instructions
-
-.globl __Z5unrefv
+.globl __Z5unrefv                      ## -- Begin function _Z5unrefv
 .p2align 4, 0x90
-__Z5unrefv:
-.cfi_startproc
-  pushq %rbp
-  .cfi_def_cfa_offset 16
-  .cfi_offset %rbp, -16
-  movq %rsp, %rbp
-  .cfi_def_cfa_register %rbp
-  popq %rbp
-  retq
-  .cfi_endproc
-
-.globl _main
-.p2align 4, 0x90
-_main:
+__Z5unrefv:                             ## @_Z5unrefv
 Lfunc_begin0:
   .cfi_startproc
   .cfi_personality 155, ___gxx_personality_v0
   .cfi_lsda 16, Lexception0
-  pushq %rbp
+## %bb.0:
+  pushq  %rbp
   .cfi_def_cfa_offset 16
   .cfi_offset %rbp, -16
-  movq %rsp, %rbp
+  movq  %rsp, %rbp
   .cfi_def_cfa_register %rbp
-  pushq %rbx
-  pushq %rax
-  .cfi_offset %rbx, -24
-  movl $4, %edi
-  callq ___cxa_allocate_exception
-  movl $0, (%rax)
+  subq  $16, %rsp
+  movl  $4, %edi
+  callq  ___cxa_allocate_exception
+  movl  $0, (%rax)
 Ltmp0:
-  movq __ZTIi@GOTPCREL(%rip), %rsi
-  movq %rax, %rdi
-  xorl %edx, %edx
-  callq ___cxa_throw
+  movq  __ZTIi@GOTPCREL(%rip), %rsi
+  movq  %rax, %rdi
+  xorl  %edx, %edx
+  callq  ___cxa_throw
 Ltmp1:
+## %bb.1:
   ud2
-LBB1_2:
+LBB0_2:
 Ltmp2:
-  movq %rax, %rdi
-  callq ___cxa_begin_catch
-  movl (%rax), %ebx
-  callq ___cxa_end_catch
-  movl %ebx, %eax
-  addq $8, %rsp
-  popq %rbx
-  popq %rbp
+  leaq  -4(%rbp), %rcx
+  movq  %rax, %rdi
+  movl  %edx, %esi
+  movq  %rcx, %rdx
+  callq  __Z5unrefv.cold.1
+  movl  -4(%rbp), %eax
+  addq  $16, %rsp
+  popq  %rbp
   retq
 Lfunc_end0:
-.cfi_endproc
-
-.section __TEXT,__gcc_except_tab
-.p2align 2
-GCC_except_table1:
+  .cfi_endproc
+  .section  __TEXT,__gcc_except_tab
+  .p2align 2
+GCC_except_table0:
 Lexception0:
-  .byte 255                     ## @LPStart Encoding = omit
-  .byte 155                     ## @TType Encoding = indirect pcrel sdata4
+  .byte 255                             ## @LPStart Encoding = omit
+  .byte 155                             ## @TType Encoding = indirect pcrel sdata4
   .uleb128 Lttbase0-Lttbaseref0
 Lttbaseref0:
-  .byte 1                       ## Call site Encoding = uleb128
+  .byte 1                               ## Call site Encoding = uleb128
   .uleb128 Lcst_end0-Lcst_begin0
 Lcst_begin0:
-  .uleb128 Lfunc_begin0-Lfunc_begin0 ## >> Call Site 1 <<
-  .uleb128 Ltmp0-Lfunc_begin0   ##   Call between Lfunc_begin0 and Ltmp0
-  .byte 0                       ##     has no landing pad
-  .byte 0                       ##   On action: cleanup
-  .uleb128 Ltmp0-Lfunc_begin0   ## >> Call Site 2 <<
-  .uleb128 Ltmp1-Ltmp0          ##   Call between Ltmp0 and Ltmp1
-  .uleb128 Ltmp2-Lfunc_begin0   ##     jumps to Ltmp2
-  .byte 1                       ##   On action: 1
-  .uleb128 Ltmp1-Lfunc_begin0   ## >> Call Site 3 <<
-  .uleb128 Lfunc_end0-Ltmp1     ##   Call between Ltmp1 and Lfunc_end0
-  .byte 0                       ##     has no landing pad
-  .byte 0                       ##   On action: cleanup
+  .uleb128 Lfunc_begin0-Lfunc_begin0    ## >> Call Site 1 <<
+  .uleb128 Ltmp0-Lfunc_begin0           ##   Call between Lfunc_begin0 and Ltmp0
+  .byte 0                               ##     has no landing pad
+  .byte 0                               ##   On action: cleanup
+  .uleb128 Ltmp0-Lfunc_begin0           ## >> Call Site 2 <<
+  .uleb128 Ltmp1-Ltmp0                  ##   Call between Ltmp0 and Ltmp1
+  .uleb128 Ltmp2-Lfunc_begin0           ##     jumps to Ltmp2
+  .byte 1                               ##   On action: 1
+  .uleb128 Ltmp1-Lfunc_begin0           ## >> Call Site 3 <<
+  .uleb128 Lfunc_end0-Ltmp1             ##   Call between Ltmp1 and Lfunc_end0
+  .byte 0                               ##     has no landing pad
+  .byte 0                               ##   On action: cleanup
 Lcst_end0:
-  .byte 1                       ## >> Action Record 1 <<
-                                         ##   Catch TypeInfo 1
-  .byte 0                       ##   No further actions
+  .byte 1                               ## >> Action Record 1 <<
+                                        ##   Catch TypeInfo 1
+  .byte 0                               ##   No further actions
   .p2align 2
-                                ## >> Catch TypeInfos <<
-  .long __ZTIi@GOTPCREL+4       ## TypeInfo 1
+                                        ## >> Catch TypeInfos <<
+  .long  __ZTIi@GOTPCREL+4              ## TypeInfo 1
 Lttbase0:
   .p2align 2
-                                ## -- End function
+                                        ## -- End function
+  .section  __TEXT,__text,regular,pure_instructions
+  .globl  _main                         ## -- Begin function main
+  .p2align 4, 0x90
+_main:                                  ## @main
+Lfunc_begin1:
+  .cfi_startproc
+  .cfi_personality 155, ___gxx_personality_v0
+  .cfi_lsda 16, Lexception1
+## %bb.0:
+  pushq  %rbp
+  .cfi_def_cfa_offset 16
+  .cfi_offset %rbp, -16
+  movq  %rsp, %rbp
+  .cfi_def_cfa_register %rbp
+  pushq  %rbx
+  pushq  %rax
+  .cfi_offset %rbx, -24
+  movl  $4, %edi
+  callq  ___cxa_allocate_exception
+  movl  $0, (%rax)
+Ltmp3:
+  movq  __ZTIi@GOTPCREL(%rip), %rsi
+  movq  %rax, %rdi
+  xorl  %edx, %edx
+  callq ___cxa_throw
+Ltmp4:
+## %bb.1:
+  ud2
+LBB1_2:
+Ltmp5:
+  movq  %rax, %rdi
+  callq ___cxa_begin_catch
+  movl  (%rax), %ebx
+  callq ___cxa_end_catch
+  movl  %ebx, %eax
+  addq  $8, %rsp
+  popq  %rbx
+  popq  %rbp
+  retq
+Lfunc_end1:
+  .cfi_endproc
+  .section  __TEXT,__gcc_except_tab
+  .p2align  2
+GCC_except_table1:
+Lexception1:
+  .byte 255                             ## @LPStart Encoding = omit
+  .byte 155                             ## @TType Encoding = indirect pcrel sdata4
+  .uleb128 Lttbase1-Lttbaseref1
+Lttbaseref1:
+  .byte 1                               ## Call site Encoding = uleb128
+  .uleb128 Lcst_end1-Lcst_begin1
+Lcst_begin1:
+  .uleb128 Lfunc_begin1-Lfunc_begin1    ## >> Call Site 1 <<
+  .uleb128 Ltmp3-Lfunc_begin1           ##   Call between Lfunc_begin1 and Ltmp3
+  .byte 0                               ##     has no landing pad
+  .byte 0                               ##   On action: cleanup
+  .uleb128 Ltmp3-Lfunc_begin1           ## >> Call Site 2 <<
+  .uleb128 Ltmp4-Ltmp3                  ##   Call between Ltmp3 and Ltmp4
+  .uleb128 Ltmp5-Lfunc_begin1           ##     jumps to Ltmp5
+  .byte 1                               ##   On action: 1
+  .uleb128 Ltmp4-Lfunc_begin1           ## >> Call Site 3 <<
+  .uleb128 Lfunc_end1-Ltmp4             ##   Call between Ltmp4 and Lfunc_end1
+  .byte 0                               ##     has no landing pad
+  .byte 0                               ##   On action: cleanup
+Lcst_end1:
+  .byte 1                               ## >> Action Record 1 <<
+                                        ##   Catch TypeInfo 1
+  .byte 0                               ##   No further actions
+  .p2align 2
+                                        ## >> Catch TypeInfos <<
+  .long __ZTIi@GOTPCREL+4               ## TypeInfo 1
+Lttbase1:
+  .p2align 2
+                                        ## -- End function
+  .section __TEXT,__text,regular,pure_instructions
+  .p2align 4, 0x90                      ## -- Begin function _Z5unrefv.cold.1
+__Z5unrefv.cold.1:                      ## @_Z5unrefv.cold.1
+  .cfi_startproc
+## %bb.0:
+  pushq  %rbp
+  .cfi_def_cfa_offset 16
+  .cfi_offset %rbp, -16
+  movq  %rsp, %rbp
+  .cfi_def_cfa_register %rbp
+  pushq  %rbx
+  pushq  %rax
+  .cfi_offset %rbx, -24
+  movq  %rdx, %rbx
+  callq  ___cxa_begin_catch
+  movl  (%rax), %eax
+  incl  %eax
+  movl  %eax, (%rbx)
+  addq  $8, %rsp
+  popq  %rbx
+  popq  %rbp
+  jmp  ___cxa_end_catch                 ## TAILCALL
+  .cfi_endproc
+                                        ## -- End function
 .subsections_via_symbols
 
 #--- weak-ref.s

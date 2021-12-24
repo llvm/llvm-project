@@ -78,7 +78,7 @@ def : Proc<"M68060",  [ FeatureISA60 ]>;
 //===----------------------------------------------------------------------===//
 
 include "M68kRegisterInfo.td"
-include "GlSel/M68kRegisterBanks.td"
+include "GISel/M68kRegisterBanks.td"
 
 //===----------------------------------------------------------------------===//
 // Instruction Descriptions

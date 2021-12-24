@@ -48,16 +48,6 @@ def Linalg_Dialect : Dialect {
     constexpr const static ::llvm::StringLiteral
         kMemoizedIndexingMapsAttrName = "linalg.memoized_indexing_maps";
 
-    /// Attribute name used to mark region arguments that can be bufferized
-    /// in-place during linalg comprehensive bufferization.
-    constexpr const static ::llvm::StringLiteral
-      kInplaceableAttrName = "linalg.inplaceable";
-
-    /// Attribute name used to mark the bufferization layout for region
-    /// arguments during linalg comprehensive bufferization.
-    constexpr const static ::llvm::StringLiteral
-      kBufferLayoutAttrName = "linalg.buffer_layout";
-
     using RegionBuilderFunType =
       llvm::function_ref<void(ImplicitLocOpBuilder &b, Block &)>;
     RegionBuilderFunType getRegionBuilder(StringRef name) {
@@ -67,9 +57,5 @@ def Linalg_Dialect : Dialect {
       llvm::StringMap<RegionBuilderFunType> namedStructuredOpRegionBuilders;
   }];
 }
-
-// Whether a type is a RangeType.
-def LinalgIsRangeTypePred : CPred<"$_self.isa<RangeType>()">;
-def Range : DialectType<Linalg_Dialect, LinalgIsRangeTypePred, "range">;
 
 #endif // LINALG_BASE

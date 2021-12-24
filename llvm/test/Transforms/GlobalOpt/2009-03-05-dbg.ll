@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -globalopt -stats -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=globalopt -stats -disable-output 2>&1 | FileCheck %s
 ; CHECK: 1 globalopt - Number of global vars shrunk to booleans
 
 source_filename = "test/Transforms/GlobalOpt/2009-03-05-dbg.ll"

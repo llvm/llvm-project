@@ -526,12 +526,12 @@ protected:
       return false;
     }
 
-    // If we got a new plan, then set it to be a master plan (User level Plans
-    // should be master plans so that they can be interruptible).  Then resume
-    // the process.
+    // If we got a new plan, then set it to be a controlling plan (User level
+    // Plans should be controlling plans so that they can be interruptible).
+    // Then resume the process.
 
     if (new_plan_sp) {
-      new_plan_sp->SetIsMasterPlan(true);
+      new_plan_sp->SetIsControllingPlan(true);
       new_plan_sp->SetOkayToDiscard(false);
 
       if (m_options.m_step_count > 1) {
@@ -1021,11 +1021,12 @@ protected:
             abort_other_plans, &address_list.front(), address_list.size(),
             m_options.m_stop_others, m_options.m_frame_idx, new_plan_status);
         if (new_plan_sp) {
-          // User level plans should be master plans so they can be interrupted
+          // User level plans should be controlling plans so they can be
+          // interrupted
           // (e.g. by hitting a breakpoint) and other plans executed by the
           // user (stepping around the breakpoint) and then a "continue" will
           // resume the original plan.
-          new_plan_sp->SetIsMasterPlan(true);
+          new_plan_sp->SetIsControllingPlan(true);
           new_plan_sp->SetOkayToDiscard(false);
         } else {
           result.SetError(new_plan_status);
@@ -1929,15 +1930,14 @@ public:
             "process to different formats.",
             "thread trace export <export-plugin> [<subcommand objects>]") {
 
-    for (uint32_t i = 0; true; i++) {
-      if (const char *plugin_name =
-              PluginManager::GetTraceExporterPluginNameAtIndex(i)) {
-        if (ThreadTraceExportCommandCreator command_creator =
-                PluginManager::GetThreadTraceExportCommandCreatorAtIndex(i)) {
-          LoadSubCommand(plugin_name, command_creator(interpreter));
-        }
-      } else {
-        break;
+    unsigned i = 0;
+    for (llvm::StringRef plugin_name =
+             PluginManager::GetTraceExporterPluginNameAtIndex(i++);
+         !plugin_name.empty();
+         plugin_name = PluginManager::GetTraceExporterPluginNameAtIndex(i++)) {
+      if (ThreadTraceExportCommandCreator command_creator =
+              PluginManager::GetThreadTraceExportCommandCreatorAtIndex(i)) {
+        LoadSubCommand(plugin_name, command_creator(interpreter));
       }
     }
   }

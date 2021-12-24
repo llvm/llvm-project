@@ -65,6 +65,11 @@ public:
     return false;
   }
 
+  // renderNodesUsingHTML - If the function returns true, nodes will be
+  // rendered using HTML-like labels which allows colors, etc in the nodes
+  // and the edge source labels.
+  static bool renderNodesUsingHTML() { return false; }
+
   /// getNodeLabel - Given a node and a pointer to the top level graph, return
   /// the label to print in the node.
   template<typename GraphType>

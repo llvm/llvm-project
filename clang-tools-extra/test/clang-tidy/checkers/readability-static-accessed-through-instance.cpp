@@ -1,4 +1,5 @@
-// RUN: %check_clang_tidy %s readability-static-accessed-through-instance %t
+// RUN: %check_clang_tidy %s readability-static-accessed-through-instance %t -- -- -isystem %S/Inputs/readability-static-accessed-through-instance
+#include <__clang_cuda_builtin_vars.h>
 
 struct C {
   static void foo();
@@ -248,3 +249,17 @@ void use_inline() {
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: static member
   // CHECK-FIXES: {{^}}  Outer::S::I;{{$}}
 }
+
+// https://bugs.llvm.org/show_bug.cgi?id=48758
+namespace Bugzilla_48758 {
+
+unsigned int x1 = threadIdx.x;
+// CHECK-MESSAGES-NOT: :[[@LINE-1]]:10: warning: static member
+unsigned int x2 = blockIdx.x;
+// CHECK-MESSAGES-NOT: :[[@LINE-1]]:10: warning: static member
+unsigned int x3 = blockDim.x;
+// CHECK-MESSAGES-NOT: :[[@LINE-1]]:10: warning: static member
+unsigned int x4 = gridDim.x;
+// CHECK-MESSAGES-NOT: :[[@LINE-1]]:10: warning: static member
+
+} // namespace Bugzilla_48758

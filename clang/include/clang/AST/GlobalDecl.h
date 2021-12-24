@@ -18,6 +18,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclOpenMP.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/ABI.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/DenseMapInfo.h"
@@ -129,8 +130,12 @@ public:
   }
 
   KernelReferenceKind getKernelReferenceKind() const {
-    assert(isa<FunctionDecl>(getDecl()) &&
-           cast<FunctionDecl>(getDecl())->hasAttr<CUDAGlobalAttr>() &&
+    assert(((isa<FunctionDecl>(getDecl()) &&
+             cast<FunctionDecl>(getDecl())->hasAttr<CUDAGlobalAttr>()) ||
+            (isa<FunctionTemplateDecl>(getDecl()) &&
+             cast<FunctionTemplateDecl>(getDecl())
+                 ->getTemplatedDecl()
+                 ->hasAttr<CUDAGlobalAttr>())) &&
            "Decl is not a GPU kernel!");
     return static_cast<KernelReferenceKind>(Value.getInt());
   }

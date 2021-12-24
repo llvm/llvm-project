@@ -8,8 +8,8 @@
 
 #include "src/string/strspn.h"
 
+#include "src/__support/CPP/Bitset.h"
 #include "src/__support/common.h"
-#include "utils/CPP/Bitset.h"
 #include <stddef.h>
 
 namespace __llvm_libc {

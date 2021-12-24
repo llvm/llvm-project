@@ -172,49 +172,6 @@ cc_library(
     ],
 )
 
-cc_library(
-    name = "Core",
-    srcs = glob([
-        "lib/Core/*.cpp",
-        "lib/Core/*.h",
-    ]),
-    hdrs = glob(["include/lld/Core/*.h"]),
-    deps = [
-        ":Common",
-    ],
-)
-
-cc_library(
-    name = "YAML",
-    srcs = glob([
-        "lib/ReaderWriter/YAML/*.cpp",
-        "lib/ReaderWriter/YAML/*.h",
-    ]),
-    hdrs = ["include/lld/ReaderWriter/YamlContext.h"],
-    deps = [
-        ":Common",
-        ":Core",
-        "//llvm:Support",
-    ],
-)
-
-cc_library(
-    name = "MachOOld",
-    srcs = glob([
-        "lib/ReaderWriter/MachO/*.cpp",
-        "lib/ReaderWriter/MachO/*.h",
-    ]),
-    hdrs = ["include/lld/ReaderWriter/MachOLinkingContext.h"],
-    deps = [
-        ":Common",
-        ":Core",
-        ":YAML",
-        "//llvm:DebugInfoDWARF",
-        "//llvm:Object",
-        "//llvm:Support",
-    ],
-)
-
 gentbl(
     name = "macho_options_inc_gen",
     # See https://github.com/bazelbuild/bazel/issues/13803
@@ -242,56 +199,6 @@ cc_library(
         ":macho_options_inc_gen",
         "//libunwind:unwind_headers_only",
         "//llvm:LTO",
-    ],
-)
-
-cc_library(
-    name = "ReaderWriter",
-    srcs = glob([
-        "lib/ReaderWriter/*.cpp",
-        "lib/ReaderWriter/*.h",
-    ]),
-    deps = [
-        ":Common",
-        ":Core",
-        ":YAML",
-        "//llvm:Object",
-        "//llvm:Support",
-    ],
-)
-
-gentbl(
-    name = "darwin_driver_options_inc_gen",
-    # See https://github.com/bazelbuild/bazel/issues/13803
-    strip_include_prefix = "lib/Driver",
-    tbl_outs = [(
-        "-gen-opt-parser-defs",
-        "lib/Driver/DarwinLdOptions.inc",
-    )],
-    tblgen = "//llvm:llvm-tblgen",
-    td_file = "lib/Driver/DarwinLdOptions.td",
-    td_srcs = [
-        "//llvm:include/llvm/Option/OptParser.td",
-    ],
-)
-
-cc_library(
-    name = "Driver",
-    srcs = glob([
-        "lib/Driver/*.cpp",
-        "lib/Driver/*.h",
-    ]),
-    includes = ["lib/Driver"],
-    deps = [
-        ":Common",
-        ":Core",
-        ":MachOOld",
-        ":ReaderWriter",
-        ":YAML",
-        ":darwin_driver_options_inc_gen",
-        "//llvm:Object",
-        "//llvm:Option",
-        "//llvm:Support",
     ],
 )
 
@@ -344,15 +251,10 @@ cc_binary(
     deps = [
         ":COFF",
         ":Common",
-        ":Core",
-        ":Driver",
         ":ELF",
-        ":MachOOld",
         ":MachO",
         ":MinGW",
-        ":ReaderWriter",
         ":Wasm",
-        ":YAML",
         "//llvm:Support",
     ],
 )
@@ -368,13 +270,12 @@ genrule(
     srcs = [":lld"],
     outs = [
         "ld.lld",
-        "ld64.lld.darwinnew",
         "ld64.lld",
         "lld-link",
         "wasm-ld",
     ],
     cmd =
-        "target=$$(basename $<); for n in ld.lld ld64.lld.darwinnew ld64.lld lld-link wasm-ld; do ln -sf $$target $(@D)/$$n; done",
+        "target=$$(basename $<); for n in ld.lld ld64.lld lld-link wasm-ld; do ln -sf $$target $(@D)/$$n; done",
     output_to_bindir = 1,
     tags = [
         "manual",  # External dependency (libxml through WindowsManifest)

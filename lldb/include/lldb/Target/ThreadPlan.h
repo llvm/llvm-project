@@ -144,39 +144,42 @@ namespace lldb_private {
 //  implement DoPlanExplainsStop, the result is cached in PlanExplainsStop so
 //  the DoPlanExplainsStop itself will only get called once per stop.
 //
-//  Master plans:
+//  Controlling plans:
 //
 //  In the normal case, when we decide to stop, we will  collapse the plan
 //  stack up to the point of the plan that understood the stop reason.
 //  However, if a plan wishes to stay on the stack after an event it didn't
-//  directly handle it can designate itself a "Master" plan by responding true
-//  to IsMasterPlan, and then if it wants not to be discarded, it can return
-//  false to OkayToDiscard, and it and all its dependent plans will be
+//  directly handle it can designate itself a "Controlling" plan by responding
+//  true to IsControllingPlan, and then if it wants not to be discarded, it can
+//  return false to OkayToDiscard, and it and all its dependent plans will be
 //  preserved when we resume execution.
 //
-//  The other effect of being a master plan is that when the Master plan is
+//  The other effect of being a controlling plan is that when the Controlling
+//  plan is
 //  done , if it has set "OkayToDiscard" to false, then it will be popped &
 //  execution will stop and return to the user.  Remember that if OkayToDiscard
 //  is false, the plan will be popped and control will be given to the next
 //  plan above it on the stack  So setting OkayToDiscard to false means the
-//  user will regain control when the MasterPlan is completed.
+//  user will regain control when the ControllingPlan is completed.
 //
 //  Between these two controls this allows things like: a
-//  MasterPlan/DontDiscard Step Over to hit a breakpoint, stop and return
+//  ControllingPlan/DontDiscard Step Over to hit a breakpoint, stop and return
 //  control to the user, but then when the user continues, the step out
 //  succeeds.  Even more tricky, when the breakpoint is hit, the user can
 //  continue to step in/step over/etc, and finally when they continue, they
 //  will finish up the Step Over.
 //
-//  FIXME: MasterPlan & OkayToDiscard aren't really orthogonal.  MasterPlan
+//  FIXME: ControllingPlan & OkayToDiscard aren't really orthogonal.
+//  ControllingPlan
 //  designation means that this plan controls it's fate and the fate of plans
-//  below it.  OkayToDiscard tells whether the MasterPlan wants to stay on the
-//  stack.  I originally thought "MasterPlan-ness" would need to be a fixed
+//  below it.  OkayToDiscard tells whether the ControllingPlan wants to stay on
+//  the stack.  I originally thought "ControllingPlan-ness" would need to be a
+//  fixed
 //  characteristic of a ThreadPlan, in which case you needed the extra control.
 //  But that doesn't seem to be true.  So we should be able to convert to only
-//  MasterPlan status to mean the current "MasterPlan/DontDiscard".  Then no
-//  plans would be MasterPlans by default, and you would set the ones you
-//  wanted to be "user level" in this way.
+//  ControllingPlan status to mean the current "ControllingPlan/DontDiscard".
+//  Then no plans would be ControllingPlans by default, and you would set the
+//  ones you wanted to be "user level" in this way.
 //
 //
 //  Actually Stopping:
@@ -224,9 +227,11 @@ namespace lldb_private {
 //
 //  Cleaning up the plan stack:
 //
-//  One of the complications of MasterPlans is that you may get past the limits
+//  One of the complications of ControllingPlans is that you may get past the
+//  limits
 //  of a plan without triggering it to clean itself up.  For instance, if you
-//  are doing a MasterPlan StepOver, and hit a breakpoint in a called function,
+//  are doing a ControllingPlan StepOver, and hit a breakpoint in a called
+//  function,
 //  then step over enough times to step out of the initial StepOver range, each
 //  of the step overs will explain the stop & take themselves off the stack,
 //  but control would never be returned to the original StepOver.  Eventually,
@@ -386,11 +391,11 @@ public:
 
   virtual bool WillStop() = 0;
 
-  bool IsMasterPlan() { return m_is_master_plan; }
+  bool IsControllingPlan() { return m_is_controlling_plan; }
 
-  bool SetIsMasterPlan(bool value) {
-    bool old_value = m_is_master_plan;
-    m_is_master_plan = value;
+  bool SetIsControllingPlan(bool value) {
+    bool old_value = m_is_controlling_plan;
+    m_is_controlling_plan = value;
     return old_value;
   }
 
@@ -490,12 +495,12 @@ protected:
   virtual bool DoPlanExplainsStop(Event *event_ptr) = 0;
 
   // This pushes a plan onto the plan stack of the current plan's thread.
-  // Also sets the plans to private and not master plans.  A plan pushed by
+  // Also sets the plans to private and not controlling plans.  A plan pushed by
   // another thread plan is never either of the above.
   void PushPlan(lldb::ThreadPlanSP &thread_plan_sp) {
     GetThread().PushPlan(thread_plan_sp);
     thread_plan_sp->SetPrivate(true);
-    thread_plan_sp->SetIsMasterPlan(false);
+    thread_plan_sp->SetIsControllingPlan(false);
   }
 
   // This gets the previous plan to the current plan (for forwarding requests).
@@ -546,7 +551,7 @@ private:
   bool m_plan_complete;
   bool m_plan_private;
   bool m_okay_to_discard;
-  bool m_is_master_plan;
+  bool m_is_controlling_plan;
   bool m_plan_succeeded;
 
   lldb::ThreadPlanTracerSP m_tracer_sp;

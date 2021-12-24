@@ -4,6 +4,7 @@
 # RUN: llc %s -o - -run-pass=livedebugvalues -mtriple=x86_64-unknown-unknown \
 # RUN:   -livedebugvalues-input-bb-limit=1 \
 # RUN:   -livedebugvalues-input-dbg-value-limit=1 \
+# RUN:   -experimental-debug-variable-locations=false \
 # RUN:   | FileCheck %s -check-prefix=LDV-DISABLED
 # RUN: llc %s -o - -run-pass=livedebugvalues -mtriple=x86_64-unknown-unknown \
 # RUN:   -experimental-debug-variable-locations \
@@ -14,6 +15,7 @@
 # RUN: llc %s -o - -run-pass=livedebugvalues -mtriple=x86_64-unknown-unknown \
 # RUN:   -livedebugvalues-input-bb-limit=1 \
 # RUN:   -livedebugvalues-input-dbg-value-limit=10 \
+# RUN:   -experimental-debug-variable-locations=false \
 # RUN:   | FileCheck %s -check-prefix=LDV-ENABLED
 # RUN: llc %s -o - -run-pass=livedebugvalues -mtriple=x86_64-unknown-unknown \
 # RUN:   -experimental-debug-variable-locations \
@@ -24,6 +26,7 @@
 # RUN: llc %s -o - -run-pass=livedebugvalues -mtriple=x86_64-unknown-unknown \
 # RUN:   -livedebugvalues-input-bb-limit=10 \
 # RUN:   -livedebugvalues-input-dbg-value-limit=1 \
+# RUN:   -experimental-debug-variable-locations=false \
 # RUN:   | FileCheck %s -check-prefix=LDV-ENABLED
 # RUN: llc %s -o - -run-pass=livedebugvalues -mtriple=x86_64-unknown-unknown \
 # RUN:   -experimental-debug-variable-locations \
@@ -34,6 +37,7 @@
 # RUN: llc %s -o - -run-pass=livedebugvalues -mtriple=x86_64-unknown-unknown \
 # RUN:   -livedebugvalues-input-bb-limit=10 \
 # RUN:   -livedebugvalues-input-dbg-value-limit=10 \
+# RUN:   -experimental-debug-variable-locations=false \
 # RUN:   | FileCheck %s -check-prefix=LDV-ENABLED
 # RUN: llc %s -o - -run-pass=livedebugvalues -mtriple=x86_64-unknown-unknown \
 # RUN:   -experimental-debug-variable-locations \
@@ -114,6 +118,6 @@ body:             |
     CALL64pcrel32 @use, csr_64, implicit $rsp, implicit $ssp, implicit killed $edi, implicit-def $eax, debug-location !14
     DBG_VALUE renamable $eax, $noreg, !11, !DIExpression(), debug-location !14
     $rcx = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !15
-    RETQ implicit killed $eax, debug-location !15
+    RET64 implicit killed $eax, debug-location !15
 
 ...

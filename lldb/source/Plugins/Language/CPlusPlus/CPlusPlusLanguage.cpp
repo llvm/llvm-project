@@ -35,6 +35,7 @@
 #include "BlockPointer.h"
 #include "CPlusPlusNameParser.h"
 #include "CxxStringTypes.h"
+#include "Generic.h"
 #include "LibCxx.h"
 #include "LibCxxAtomic.h"
 #include "LibCxxVariant.h"
@@ -54,11 +55,6 @@ void CPlusPlusLanguage::Initialize() {
 
 void CPlusPlusLanguage::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
-}
-
-lldb_private::ConstString CPlusPlusLanguage::GetPluginNameStatic() {
-  static ConstString g_name("cplusplus");
-  return g_name;
 }
 
 bool CPlusPlusLanguage::SymbolNameFitsToLanguage(Mangled mangled) const {
@@ -660,7 +656,7 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                   "libc++ std::tuple synthetic children",
                   ConstString("^std::__[[:alnum:]]+::tuple<.*>(( )?&)?$"),
                   stl_synth_flags, true);
-  AddCXXSynthetic(cpp_category_sp, LibcxxOptionalFrontEndCreator,
+  AddCXXSynthetic(cpp_category_sp, LibcxxOptionalSyntheticFrontEndCreator,
                   "libc++ std::optional synthetic children",
                   ConstString("^std::__[[:alnum:]]+::optional<.+>(( )?&)?$"),
                   stl_synth_flags, true);
@@ -777,7 +773,7 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 ConstString("^std::__[[:alnum:]]+::atomic<.+>$"),
                 stl_summary_flags, true);
   AddCXXSummary(cpp_category_sp,
-                lldb_private::formatters::LibcxxOptionalSummaryProvider,
+                lldb_private::formatters::GenericOptionalSummaryProvider,
                 "libc++ std::optional summary provider",
                 ConstString("^std::__[[:alnum:]]+::optional<.+>(( )?&)?$"),
                 stl_summary_flags, true);
@@ -895,6 +891,8 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   SyntheticChildren::Flags stl_synth_flags;
   stl_synth_flags.SetCascades(true).SetSkipPointers(false).SetSkipReferences(
       false);
+  SyntheticChildren::Flags stl_deref_flags = stl_synth_flags;
+  stl_deref_flags.SetFrontEndWantsDereference();
 
   cpp_category_sp->GetRegexTypeSyntheticsContainer()->Add(
       RegularExpression("^std::vector<.+>(( )?&)?$"),
@@ -905,14 +903,49 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       RegularExpression("^std::map<.+> >(( )?&)?$"),
       SyntheticChildrenSP(new ScriptedSyntheticChildren(
           stl_synth_flags,
-          "lldb.formatters.cpp.gnu_libstdcpp.StdMapSynthProvider")));
+          "lldb.formatters.cpp.gnu_libstdcpp.StdMapLikeSynthProvider")));
+  cpp_category_sp->GetRegexTypeSyntheticsContainer()->Add(
+      RegularExpression("^std::deque<.+>(( )?&)?$"),
+      SyntheticChildrenSP(new ScriptedSyntheticChildren(
+          stl_deref_flags,
+          "lldb.formatters.cpp.gnu_libstdcpp.StdDequeSynthProvider")));
+  cpp_category_sp->GetRegexTypeSyntheticsContainer()->Add(
+      RegularExpression("^std::set<.+> >(( )?&)?$"),
+      SyntheticChildrenSP(new ScriptedSyntheticChildren(
+          stl_deref_flags,
+          "lldb.formatters.cpp.gnu_libstdcpp.StdMapLikeSynthProvider")));
+  cpp_category_sp->GetRegexTypeSyntheticsContainer()->Add(
+      RegularExpression("^std::multimap<.+> >(( )?&)?$"),
+      SyntheticChildrenSP(new ScriptedSyntheticChildren(
+          stl_deref_flags,
+          "lldb.formatters.cpp.gnu_libstdcpp.StdMapLikeSynthProvider")));
+  cpp_category_sp->GetRegexTypeSyntheticsContainer()->Add(
+      RegularExpression("^std::multiset<.+> >(( )?&)?$"),
+      SyntheticChildrenSP(new ScriptedSyntheticChildren(
+          stl_deref_flags,
+          "lldb.formatters.cpp.gnu_libstdcpp.StdMapLikeSynthProvider")));
+  cpp_category_sp->GetRegexTypeSyntheticsContainer()->Add(
+      RegularExpression("^std::unordered_(multi)?(map|set)<.+> >$"),
+      SyntheticChildrenSP(new ScriptedSyntheticChildren(
+          stl_deref_flags,
+          "lldb.formatters.cpp.gnu_libstdcpp.StdUnorderedMapSynthProvider")));
   cpp_category_sp->GetRegexTypeSyntheticsContainer()->Add(
       RegularExpression("^std::(__cxx11::)?list<.+>(( )?&)?$"),
       SyntheticChildrenSP(new ScriptedSyntheticChildren(
-          stl_synth_flags,
+          stl_deref_flags,
           "lldb.formatters.cpp.gnu_libstdcpp.StdListSynthProvider")));
+  cpp_category_sp->GetRegexTypeSyntheticsContainer()->Add(
+      RegularExpression("^std::(__cxx11::)?forward_list<.+>(( )?&)?$"),
+      SyntheticChildrenSP(new ScriptedSyntheticChildren(
+          stl_synth_flags,
+          "lldb.formatters.cpp.gnu_libstdcpp.StdForwardListSynthProvider")));
+
   stl_summary_flags.SetDontShowChildren(false);
-  stl_summary_flags.SetSkipPointers(true);
+  stl_summary_flags.SetSkipPointers(false);
+  cpp_category_sp->GetRegexTypeSummariesContainer()->Add(
+      RegularExpression("^std::bitset<.+>(( )?&)?$"),
+      TypeSummaryImplSP(
+          new StringSummaryFormat(stl_summary_flags, "size=${svar%#}")));
   cpp_category_sp->GetRegexTypeSummariesContainer()->Add(
       RegularExpression("^std::vector<.+>(( )?&)?$"),
       TypeSummaryImplSP(
@@ -922,9 +955,33 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       TypeSummaryImplSP(
           new StringSummaryFormat(stl_summary_flags, "size=${svar%#}")));
   cpp_category_sp->GetRegexTypeSummariesContainer()->Add(
+      RegularExpression("^std::set<.+> >(( )?&)?$"),
+      TypeSummaryImplSP(
+          new StringSummaryFormat(stl_summary_flags, "size=${svar%#}")));
+  cpp_category_sp->GetRegexTypeSummariesContainer()->Add(
+      RegularExpression("^std::deque<.+>(( )?&)?$"),
+      TypeSummaryImplSP(
+          new StringSummaryFormat(stl_summary_flags, "size=${svar%#}")));
+  cpp_category_sp->GetRegexTypeSummariesContainer()->Add(
+      RegularExpression("^std::multimap<.+> >(( )?&)?$"),
+      TypeSummaryImplSP(
+          new StringSummaryFormat(stl_summary_flags, "size=${svar%#}")));
+  cpp_category_sp->GetRegexTypeSummariesContainer()->Add(
+      RegularExpression("^std::multiset<.+> >(( )?&)?$"),
+      TypeSummaryImplSP(
+          new StringSummaryFormat(stl_summary_flags, "size=${svar%#}")));
+  cpp_category_sp->GetRegexTypeSummariesContainer()->Add(
+      RegularExpression("^std::unordered_(multi)?(map|set)<.+> >$"),
+      TypeSummaryImplSP(
+          new StringSummaryFormat(stl_summary_flags, "size=${svar%#}")));
+  cpp_category_sp->GetRegexTypeSummariesContainer()->Add(
       RegularExpression("^std::(__cxx11::)?list<.+>(( )?&)?$"),
       TypeSummaryImplSP(
           new StringSummaryFormat(stl_summary_flags, "size=${svar%#}")));
+  cpp_category_sp->GetRegexTypeSummariesContainer()->Add(
+      RegularExpression("^std::(__cxx11::)?forward_list<.+>(( )?&)?$"),
+      TypeSummaryImplSP(
+          new ScriptSummaryFormat(stl_summary_flags, "lldb.formatters.cpp.gnu_libstdcpp.ForwardListSummaryProvider")));
 
   AddCXXSynthetic(
       cpp_category_sp,
@@ -959,6 +1016,18 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       "std::tuple synthetic children", ConstString("^std::tuple<.+>(( )?&)?$"),
       stl_synth_flags, true);
 
+  AddCXXSynthetic(
+      cpp_category_sp,
+      lldb_private::formatters::LibStdcppBitsetSyntheticFrontEndCreator,
+      "std::bitset synthetic child", ConstString("^std::bitset<.+>(( )?&)?$"),
+      stl_deref_flags, true);
+
+  AddCXXSynthetic(
+      cpp_category_sp,
+      lldb_private::formatters::LibStdcppOptionalSyntheticFrontEndCreator,
+      "std::optional synthetic child",
+      ConstString("^std::optional<.+>(( )?&)?$"), stl_deref_flags, true);
+
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::LibStdcppUniquePointerSummaryProvider,
                 "libstdc++ std::unique_ptr summary provider",
@@ -974,6 +1043,10 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "libstdc++ std::weak_ptr summary provider",
                 ConstString("^std::weak_ptr<.+>(( )?&)?$"), stl_summary_flags,
                 true);
+  AddCXXSummary(
+      cpp_category_sp, lldb_private::formatters::GenericOptionalSummaryProvider,
+      "libstd++ std::optional summary provider",
+      ConstString("^std::optional<.+>(( )?&)?$"), stl_summary_flags, true);
 }
 
 static void LoadSystemFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
@@ -998,8 +1071,6 @@ static void LoadSystemFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       .SetShowMembersOneLiner(false)
       .SetHideItemNames(false);
 
-  // FIXME because of a bug in the FormattersContainer we need to add a summary
-  // for both X* and const X* (<rdar://problem/12717717>)
   AddCXXSummary(
       cpp_category_sp, lldb_private::formatters::Char8StringSummaryProvider,
       "char8_t * summary provider", ConstString("char8_t *"), string_flags);

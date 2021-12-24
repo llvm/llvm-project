@@ -134,9 +134,8 @@ void ilist_callback_traits<MachineBasicBlock>::addNodeToList(
 
   // Make sure the instructions have their operands in the reginfo lists.
   MachineRegisterInfo &RegInfo = MF.getRegInfo();
-  for (MachineBasicBlock::instr_iterator
-         I = N->instr_begin(), E = N->instr_end(); I != E; ++I)
-    I->AddRegOperandsToUseLists(RegInfo);
+  for (MachineInstr &MI : N->instrs())
+    MI.AddRegOperandsToUseLists(RegInfo);
 }
 
 void ilist_callback_traits<MachineBasicBlock>::removeNodeFromList(
@@ -194,7 +193,7 @@ void ilist_traits<MachineInstr>::transferNodesFromList(ilist_traits &FromList,
 
 void ilist_traits<MachineInstr>::deleteNode(MachineInstr *MI) {
   assert(!MI->getParent() && "MI is still in a block!");
-  Parent->getParent()->DeleteMachineInstr(MI);
+  Parent->getParent()->deleteMachineInstr(MI);
 }
 
 MachineBasicBlock::iterator MachineBasicBlock::getFirstNonPHI() {
@@ -281,8 +280,8 @@ MachineBasicBlock::getLastNonDebugInstr(bool SkipPseudoOp) {
 }
 
 bool MachineBasicBlock::hasEHPadSuccessor() const {
-  for (const_succ_iterator I = succ_begin(), E = succ_end(); I != E; ++I)
-    if ((*I)->isEHPad())
+  for (const MachineBasicBlock *Succ : successors())
+    if (Succ->isEHPad())
       return true;
   return false;
 }
@@ -1039,36 +1038,31 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
   // Collect a list of virtual registers killed by the terminators.
   SmallVector<Register, 4> KilledRegs;
   if (LV)
-    for (instr_iterator I = getFirstInstrTerminator(), E = instr_end();
-         I != E; ++I) {
-      MachineInstr *MI = &*I;
-      for (MachineInstr::mop_iterator OI = MI->operands_begin(),
-           OE = MI->operands_end(); OI != OE; ++OI) {
-        if (!OI->isReg() || OI->getReg() == 0 ||
-            !OI->isUse() || !OI->isKill() || OI->isUndef())
+    for (MachineInstr &MI :
+         llvm::make_range(getFirstInstrTerminator(), instr_end())) {
+      for (MachineOperand &MO : MI.operands()) {
+        if (!MO.isReg() || MO.getReg() == 0 || !MO.isUse() || !MO.isKill() ||
+            MO.isUndef())
           continue;
-        Register Reg = OI->getReg();
+        Register Reg = MO.getReg();
         if (Register::isPhysicalRegister(Reg) ||
-            LV->getVarInfo(Reg).removeKill(*MI)) {
+            LV->getVarInfo(Reg).removeKill(MI)) {
           KilledRegs.push_back(Reg);
-          LLVM_DEBUG(dbgs() << "Removing terminator kill: " << *MI);
-          OI->setIsKill(false);
+          LLVM_DEBUG(dbgs() << "Removing terminator kill: " << MI);
+          MO.setIsKill(false);
         }
       }
     }
 
   SmallVector<Register, 4> UsedRegs;
   if (LIS) {
-    for (instr_iterator I = getFirstInstrTerminator(), E = instr_end();
-         I != E; ++I) {
-      MachineInstr *MI = &*I;
-
-      for (MachineInstr::mop_iterator OI = MI->operands_begin(),
-           OE = MI->operands_end(); OI != OE; ++OI) {
-        if (!OI->isReg() || OI->getReg() == 0)
+    for (MachineInstr &MI :
+         llvm::make_range(getFirstInstrTerminator(), instr_end())) {
+      for (const MachineOperand &MO : MI.operands()) {
+        if (!MO.isReg() || MO.getReg() == 0)
           continue;
 
-        Register Reg = OI->getReg();
+        Register Reg = MO.getReg();
         if (!is_contained(UsedRegs, Reg))
           UsedRegs.push_back(Reg);
       }
@@ -1081,9 +1075,9 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
   // SlotIndexes.
   SmallVector<MachineInstr*, 4> Terminators;
   if (Indexes) {
-    for (instr_iterator I = getFirstInstrTerminator(), E = instr_end();
-         I != E; ++I)
-      Terminators.push_back(&*I);
+    for (MachineInstr &MI :
+         llvm::make_range(getFirstInstrTerminator(), instr_end()))
+      Terminators.push_back(&MI);
   }
 
   // Since we replaced all uses of Succ with NMBB, that should also be treated
@@ -1094,9 +1088,9 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
 
   if (Indexes) {
     SmallVector<MachineInstr*, 4> NewTerminators;
-    for (instr_iterator I = getFirstInstrTerminator(), E = instr_end();
-         I != E; ++I)
-      NewTerminators.push_back(&*I);
+    for (MachineInstr &MI :
+         llvm::make_range(getFirstInstrTerminator(), instr_end()))
+      NewTerminators.push_back(&MI);
 
     for (MachineInstr *Terminator : Terminators) {
       if (!is_contained(NewTerminators, Terminator))

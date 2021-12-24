@@ -165,6 +165,6 @@ bool getFusionComputeCost(AffineForOp srcForOp, LoopNestStats &srcStats,
 void gatherProducerConsumerMemrefs(ArrayRef<Operation *> srcOps,
                                    ArrayRef<Operation *> dstOps,
                                    DenseSet<Value> &producerConsumerMemrefs);
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_TRANSFORMS_LOOP_FUSION_UTILS_H

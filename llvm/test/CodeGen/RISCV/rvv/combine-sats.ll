@@ -9,7 +9,7 @@
 define <2 x i64> @add_umax_v2i64(<2 x i64> %a0) {
 ; CHECK-LABEL: add_umax_v2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 7
+; CHECK-NEXT:    li a0, 7
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
 ; CHECK-NEXT:    vssubu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -21,7 +21,7 @@ define <2 x i64> @add_umax_v2i64(<2 x i64> %a0) {
 define <vscale x 2 x i64> @add_umax_nxv2i64(<vscale x 2 x i64> %a0) {
 ; CHECK-LABEL: add_umax_nxv2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 7
+; CHECK-NEXT:    li a0, 7
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m2, ta, mu
 ; CHECK-NEXT:    vssubu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -145,7 +145,7 @@ entry:
 define <2 x i64> @vselect_add_const_v2i64(<2 x i64> %a0) {
 ; CHECK-LABEL: vselect_add_const_v2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 6
+; CHECK-NEXT:    li a0, 6
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
 ; CHECK-NEXT:    vssubu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -158,7 +158,7 @@ define <2 x i64> @vselect_add_const_v2i64(<2 x i64> %a0) {
 define <vscale x 2 x i64> @vselect_add_const_nxv2i64(<vscale x 2 x i64> %a0) {
 ; CHECK-LABEL: vselect_add_const_nxv2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 6
+; CHECK-NEXT:    li a0, 6
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m2, ta, mu
 ; CHECK-NEXT:    vssubu.vx v8, v8, a0
 ; CHECK-NEXT:    ret

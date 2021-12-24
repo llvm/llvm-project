@@ -1776,14 +1776,66 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     break;
   }
   case Intrinsic::stackrestore: {
-    // If the save is right next to the restore, remove the restore.  This can
-    // happen when variable allocas are DCE'd.
-    if (IntrinsicInst *SS = dyn_cast<IntrinsicInst>(II->getArgOperand(0))) {
-      if (SS->getIntrinsicID() == Intrinsic::stacksave) {
-        // Skip over debug info.
-        if (SS->getNextNonDebugInstruction() == II) {
-          return eraseInstFromFunction(CI);
+    enum class ClassifyResult {
+      None,
+      Alloca,
+      StackRestore,
+      CallWithSideEffects,
+    };
+    auto Classify = [](const Instruction *I) {
+      if (isa<AllocaInst>(I))
+        return ClassifyResult::Alloca;
+
+      if (auto *CI = dyn_cast<CallInst>(I)) {
+        if (auto *II = dyn_cast<IntrinsicInst>(CI)) {
+          if (II->getIntrinsicID() == Intrinsic::stackrestore)
+            return ClassifyResult::StackRestore;
+
+          if (II->mayHaveSideEffects())
+            return ClassifyResult::CallWithSideEffects;
+        } else {
+          // Consider all non-intrinsic calls to be side effects
+          return ClassifyResult::CallWithSideEffects;
         }
+      }
+
+      return ClassifyResult::None;
+    };
+
+    // If the stacksave and the stackrestore are in the same BB, and there is
+    // no intervening call, alloca, or stackrestore of a different stacksave,
+    // remove the restore. This can happen when variable allocas are DCE'd.
+    if (IntrinsicInst *SS = dyn_cast<IntrinsicInst>(II->getArgOperand(0))) {
+      if (SS->getIntrinsicID() == Intrinsic::stacksave &&
+          SS->getParent() == II->getParent()) {
+        BasicBlock::iterator BI(SS);
+        bool CannotRemove = false;
+        for (++BI; &*BI != II; ++BI) {
+          switch (Classify(&*BI)) {
+          case ClassifyResult::None:
+            // So far so good, look at next instructions.
+            break;
+
+          case ClassifyResult::StackRestore:
+            // If we found an intervening stackrestore for a different
+            // stacksave, we can't remove the stackrestore. Otherwise, continue.
+            if (cast<IntrinsicInst>(*BI).getArgOperand(0) != SS)
+              CannotRemove = true;
+            break;
+
+          case ClassifyResult::Alloca:
+          case ClassifyResult::CallWithSideEffects:
+            // If we found an alloca, a non-intrinsic call, or an intrinsic
+            // call with side effects, we can't remove the stackrestore.
+            CannotRemove = true;
+            break;
+          }
+          if (CannotRemove)
+            break;
+        }
+
+        if (!CannotRemove)
+          return eraseInstFromFunction(CI);
       }
     }
 
@@ -1793,29 +1845,25 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Instruction *TI = II->getParent()->getTerminator();
     bool CannotRemove = false;
     for (++BI; &*BI != TI; ++BI) {
-      if (isa<AllocaInst>(BI)) {
+      switch (Classify(&*BI)) {
+      case ClassifyResult::None:
+        // So far so good, look at next instructions.
+        break;
+
+      case ClassifyResult::StackRestore:
+        // If there is a stackrestore below this one, remove this one.
+        return eraseInstFromFunction(CI);
+
+      case ClassifyResult::Alloca:
+      case ClassifyResult::CallWithSideEffects:
+        // If we found an alloca, a non-intrinsic call, or an intrinsic call
+        // with side effects (such as llvm.stacksave and llvm.read_register),
+        // we can't remove the stack restore.
         CannotRemove = true;
         break;
       }
-      if (CallInst *BCI = dyn_cast<CallInst>(BI)) {
-        if (auto *II2 = dyn_cast<IntrinsicInst>(BCI)) {
-          // If there is a stackrestore below this one, remove this one.
-          if (II2->getIntrinsicID() == Intrinsic::stackrestore)
-            return eraseInstFromFunction(CI);
-
-          // Bail if we cross over an intrinsic with side effects, such as
-          // llvm.stacksave, or llvm.read_register.
-          if (II2->mayHaveSideEffects()) {
-            CannotRemove = true;
-            break;
-          }
-        } else {
-          // If we found a non-intrinsic call, we can't remove the stack
-          // restore.
-          CannotRemove = true;
-          break;
-        }
-      }
+      if (CannotRemove)
+        break;
     }
 
     // If the stack restore is in a return, resume, or unwind block and if there
@@ -2424,6 +2472,12 @@ static bool isSafeToEliminateVarargsCast(const CallBase &Call,
 Instruction *InstCombinerImpl::tryOptimizeCall(CallInst *CI) {
   if (!CI->getCalledFunction()) return nullptr;
 
+  // Skip optimizing notail and musttail calls so
+  // LibCallSimplifier::optimizeCall doesn't have to preserve those invariants.
+  // LibCallSimplifier::optimizeCall should try to preseve tail calls though.
+  if (CI->isMustTailCall() || CI->isNoTailCall())
+    return nullptr;
+
   auto InstCombineRAUW = [this](Instruction *From, Value *With) {
     replaceInstUsesWith(*From, With);
   };
@@ -2593,7 +2647,7 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
     ArgNo++;
   }
 
-  assert(ArgNo == Call.arg_size() && "sanity check");
+  assert(ArgNo == Call.arg_size() && "Call arguments not processed correctly.");
 
   if (!ArgNos.empty()) {
     AttributeList AS = Call.getAttributes();

@@ -30,7 +30,7 @@ static double mod_impl(double x, const uint64_t y_bits[3],
                        const uint64_t inv_y_bits[20], int y_exponent,
                        int inv_y_exponent) {
   FPBits bits(x);
-  int exponent = bits.getExponent();
+  int exponent = bits.get_exponent();
   int bit_drop = (exponent - 52) + inv_y_exponent + 1;
   bit_drop = bit_drop >= 0 ? bit_drop : 0;
   int word_drop = bit_drop / 64;

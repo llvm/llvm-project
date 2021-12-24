@@ -193,12 +193,7 @@ void EmulateInstructionMIPS::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-ConstString EmulateInstructionMIPS::GetPluginNameStatic() {
-  ConstString g_plugin_name("lldb.emulate-instruction.mips32");
-  return g_plugin_name;
-}
-
-const char *EmulateInstructionMIPS::GetPluginDescriptionStatic() {
+llvm::StringRef EmulateInstructionMIPS::GetPluginDescriptionStatic() {
   return "Emulate instructions for the MIPS32 architecture.";
 }
 

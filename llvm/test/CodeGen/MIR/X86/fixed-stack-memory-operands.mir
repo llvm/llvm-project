@@ -35,5 +35,5 @@ body: |
     $eax = MOV32rm $esp, 1, _, 8, _ :: (load (s32) from %fixed-stack.0, align 16)
     MOV32mr $esp, 1, _, 0, _, $eax :: (store (s32) into %ir.b)
     $edx = POP32r implicit-def $esp, implicit $esp
-    RETL $eax
+    RET32 $eax
 ...

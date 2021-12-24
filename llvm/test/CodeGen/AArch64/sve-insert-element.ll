@@ -506,18 +506,18 @@ define <vscale x 32 x i1> @test_predicate_insert_32xi1(<vscale x 32 x i1> %val, 
 ; CHECK-NEXT:    mov x8, #-1
 ; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    sxtw x9, w1
-; CHECK-NEXT:    mov x10, sp
 ; CHECK-NEXT:    mov z0.b, p1/z, #1 // =0x1
 ; CHECK-NEXT:    ptrue p1.b
-; CHECK-NEXT:    addvl x8, x8, #2
-; CHECK-NEXT:    cmp x9, x8
-; CHECK-NEXT:    st1b { z0.b }, p1, [x10, #1, mul vl]
-; CHECK-NEXT:    csel x8, x9, x8, lo
+; CHECK-NEXT:    st1b { z0.b }, p1, [sp, #1, mul vl]
 ; CHECK-NEXT:    mov z0.b, p0/z, #1 // =0x1
+; CHECK-NEXT:    addvl x8, x8, #2
 ; CHECK-NEXT:    st1b { z0.b }, p1, [sp]
-; CHECK-NEXT:    strb w0, [x10, x8]
+; CHECK-NEXT:    cmp x9, x8
+; CHECK-NEXT:    csel x8, x9, x8, lo
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    strb w0, [x9, x8]
 ; CHECK-NEXT:    ld1b { z0.b }, p1/z, [sp]
-; CHECK-NEXT:    ld1b { z1.b }, p1/z, [x10, #1, mul vl]
+; CHECK-NEXT:    ld1b { z1.b }, p1/z, [sp, #1, mul vl]
 ; CHECK-NEXT:    and z0.b, z0.b, #0x1
 ; CHECK-NEXT:    and z1.b, z1.b, #0x1
 ; CHECK-NEXT:    cmpne p0.b, p1/z, z0.b, #0

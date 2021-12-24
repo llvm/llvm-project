@@ -519,57 +519,6 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     TTI::OperandValueProperties Opd1PropInfo,
     TTI::OperandValueProperties Opd2PropInfo, ArrayRef<const Value *> Args,
     const Instruction *CxtI) {
-  EVT OrigTy = TLI->getValueType(DL, Ty);
-  if (!OrigTy.isSimple()) {
-    // FIXME: We're having to query the throughput cost so that the basic
-    // implementation tries to generate legalize and scalarization costs. Maybe
-    // we could hoist the scalarization code here?
-    if (CostKind != TTI::TCK_CodeSize)
-      return BaseT::getArithmeticInstrCost(Opcode, Ty, TTI::TCK_RecipThroughput,
-                                           Opd1Info, Opd2Info, Opd1PropInfo,
-                                           Opd2PropInfo, Args, CxtI);
-    // Scalarization
-
-    // Check if any of the operands are vector operands.
-    int ISD = TLI->InstructionOpcodeToISD(Opcode);
-    assert(ISD && "Invalid opcode");
-
-    std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
-
-    bool IsFloat = Ty->isFPOrFPVectorTy();
-    // Assume that floating point arithmetic operations cost twice as much as
-    // integer operations.
-    unsigned OpCost = (IsFloat ? 2 : 1);
-
-    if (TLI->isOperationLegalOrPromote(ISD, LT.second)) {
-      // The operation is legal. Assume it costs 1.
-      // TODO: Once we have extract/insert subvector cost we need to use them.
-      return LT.first * OpCost;
-    }
-
-    if (!TLI->isOperationExpand(ISD, LT.second)) {
-      // If the operation is custom lowered, then assume that the code is twice
-      // as expensive.
-      return LT.first * 2 * OpCost;
-    }
-
-    // Else, assume that we need to scalarize this op.
-    // TODO: If one of the types get legalized by splitting, handle this
-    // similarly to what getCastInstrCost() does.
-    if (auto *VTy = dyn_cast<VectorType>(Ty)) {
-      unsigned Num = cast<FixedVectorType>(VTy)->getNumElements();
-      InstructionCost Cost = getArithmeticInstrCost(
-          Opcode, VTy->getScalarType(), CostKind, Opd1Info, Opd2Info,
-          Opd1PropInfo, Opd2PropInfo, Args, CxtI);
-      // Return the cost of multiple scalar invocation plus the cost of
-      // inserting and extracting the values.
-      SmallVector<Type *> Tys(Args.size(), Ty);
-      return getScalarizationOverhead(VTy, Args, Tys) + Num * Cost;
-    }
-
-    // We don't know anything about this scalar instruction.
-    return OpCost;
-  }
 
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
@@ -742,40 +691,6 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 
   Type *RetTy = ICA.getReturnType();
-  EVT OrigTy = TLI->getValueType(DL, RetTy);
-  if (!OrigTy.isSimple()) {
-    if (CostKind != TTI::TCK_CodeSize)
-      return BaseT::getIntrinsicInstrCost(ICA, CostKind);
-
-    // TODO: Combine these two logic paths.
-    if (ICA.isTypeBasedOnly())
-      return getTypeBasedIntrinsicInstrCost(ICA, CostKind);
-
-    unsigned RetVF =
-        (RetTy->isVectorTy() ? cast<FixedVectorType>(RetTy)->getNumElements()
-                             : 1);
-    const IntrinsicInst *I = ICA.getInst();
-    const SmallVectorImpl<const Value *> &Args = ICA.getArgs();
-    FastMathFlags FMF = ICA.getFlags();
-    // Assume that we need to scalarize this intrinsic.
-
-    // Compute the scalarization overhead based on Args for a vector
-    // intrinsic. A vectorizer will pass a scalar RetTy and VF > 1, while
-    // CostModel will pass a vector RetTy and VF is 1.
-    InstructionCost ScalarizationCost = InstructionCost::getInvalid();
-    if (RetVF > 1) {
-      ScalarizationCost = 0;
-      if (!RetTy->isVoidTy())
-        ScalarizationCost +=
-            getScalarizationOverhead(cast<VectorType>(RetTy), true, false);
-      ScalarizationCost +=
-          getOperandsScalarizationOverhead(Args, ICA.getArgTypes());
-    }
-
-    IntrinsicCostAttributes Attrs(ICA.getID(), RetTy, ICA.getArgTypes(), FMF, I,
-                                  ScalarizationCost);
-    return getIntrinsicInstrCost(Attrs, CostKind);
-  }
 
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, RetTy);

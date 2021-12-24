@@ -188,6 +188,7 @@ template <class ELFT> TargetInfo *getMipsTargetInfo();
 struct ErrorPlace {
   InputSectionBase *isec;
   std::string loc;
+  std::string srcLoc;
 };
 
 // Returns input section and corresponding source string for the given location.
@@ -210,10 +211,6 @@ unsigned getPPCDFormOp(unsigned secondaryOp);
 // This function will return the offset (in bytes) from the global entry-point
 // to the local entry-point.
 unsigned getPPC64GlobalEntryToLocalEntryOffset(uint8_t stOther);
-
-// Returns true if a relocation is a small code model relocation that accesses
-// the .toc section.
-bool isPPC64SmallCodeModelTocReloc(RelType type);
 
 // Write a prefixed instruction, which is a 4-byte prefix followed by a 4-byte
 // instruction (regardless of endianness). Therefore, the prefix is always in

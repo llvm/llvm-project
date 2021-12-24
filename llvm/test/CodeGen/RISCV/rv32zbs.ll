@@ -4,16 +4,16 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-zbs -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV32ZBS
 
-define i32 @sbclr_i32(i32 %a, i32 %b) nounwind {
-; RV32I-LABEL: sbclr_i32:
+define i32 @bclr_i32(i32 %a, i32 %b) nounwind {
+; RV32I-LABEL: bclr_i32:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi a2, zero, 1
+; RV32I-NEXT:    li a2, 1
 ; RV32I-NEXT:    sll a1, a2, a1
 ; RV32I-NEXT:    not a1, a1
 ; RV32I-NEXT:    and a0, a1, a0
 ; RV32I-NEXT:    ret
 ;
-; RV32ZBS-LABEL: sbclr_i32:
+; RV32ZBS-LABEL: bclr_i32:
 ; RV32ZBS:       # %bb.0:
 ; RV32ZBS-NEXT:    bclr a0, a0, a1
 ; RV32ZBS-NEXT:    ret
@@ -24,16 +24,16 @@ define i32 @sbclr_i32(i32 %a, i32 %b) nounwind {
   ret i32 %and1
 }
 
-define i32 @sbclr_i32_no_mask(i32 %a, i32 %b) nounwind {
-; RV32I-LABEL: sbclr_i32_no_mask:
+define i32 @bclr_i32_no_mask(i32 %a, i32 %b) nounwind {
+; RV32I-LABEL: bclr_i32_no_mask:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi a2, zero, 1
+; RV32I-NEXT:    li a2, 1
 ; RV32I-NEXT:    sll a1, a2, a1
 ; RV32I-NEXT:    not a1, a1
 ; RV32I-NEXT:    and a0, a1, a0
 ; RV32I-NEXT:    ret
 ;
-; RV32ZBS-LABEL: sbclr_i32_no_mask:
+; RV32ZBS-LABEL: bclr_i32_no_mask:
 ; RV32ZBS:       # %bb.0:
 ; RV32ZBS-NEXT:    bclr a0, a0, a1
 ; RV32ZBS-NEXT:    ret
@@ -43,12 +43,12 @@ define i32 @sbclr_i32_no_mask(i32 %a, i32 %b) nounwind {
   ret i32 %and1
 }
 
-define i64 @sbclr_i64(i64 %a, i64 %b) nounwind {
-; RV32I-LABEL: sbclr_i64:
+define i64 @bclr_i64(i64 %a, i64 %b) nounwind {
+; RV32I-LABEL: bclr_i64:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    andi a3, a2, 63
 ; RV32I-NEXT:    addi a4, a3, -32
-; RV32I-NEXT:    addi a3, zero, 1
+; RV32I-NEXT:    li a3, 1
 ; RV32I-NEXT:    bltz a4, .LBB2_2
 ; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    sll a2, a3, a4
@@ -61,7 +61,7 @@ define i64 @sbclr_i64(i64 %a, i64 %b) nounwind {
 ; RV32I-NEXT:    and a0, a0, a2
 ; RV32I-NEXT:    ret
 ;
-; RV32ZBS-LABEL: sbclr_i64:
+; RV32ZBS-LABEL: bclr_i64:
 ; RV32ZBS:       # %bb.0:
 ; RV32ZBS-NEXT:    andi a3, a2, 63
 ; RV32ZBS-NEXT:    addi a3, a3, -32
@@ -79,15 +79,15 @@ define i64 @sbclr_i64(i64 %a, i64 %b) nounwind {
   ret i64 %and1
 }
 
-define i32 @sbset_i32(i32 %a, i32 %b) nounwind {
-; RV32I-LABEL: sbset_i32:
+define i32 @bset_i32(i32 %a, i32 %b) nounwind {
+; RV32I-LABEL: bset_i32:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi a2, zero, 1
+; RV32I-NEXT:    li a2, 1
 ; RV32I-NEXT:    sll a1, a2, a1
 ; RV32I-NEXT:    or a0, a1, a0
 ; RV32I-NEXT:    ret
 ;
-; RV32ZBS-LABEL: sbset_i32:
+; RV32ZBS-LABEL: bset_i32:
 ; RV32ZBS:       # %bb.0:
 ; RV32ZBS-NEXT:    bset a0, a0, a1
 ; RV32ZBS-NEXT:    ret
@@ -97,15 +97,15 @@ define i32 @sbset_i32(i32 %a, i32 %b) nounwind {
   ret i32 %or
 }
 
-define i32 @sbset_i32_no_mask(i32 %a, i32 %b) nounwind {
-; RV32I-LABEL: sbset_i32_no_mask:
+define i32 @bset_i32_no_mask(i32 %a, i32 %b) nounwind {
+; RV32I-LABEL: bset_i32_no_mask:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi a2, zero, 1
+; RV32I-NEXT:    li a2, 1
 ; RV32I-NEXT:    sll a1, a2, a1
 ; RV32I-NEXT:    or a0, a1, a0
 ; RV32I-NEXT:    ret
 ;
-; RV32ZBS-LABEL: sbset_i32_no_mask:
+; RV32ZBS-LABEL: bset_i32_no_mask:
 ; RV32ZBS:       # %bb.0:
 ; RV32ZBS-NEXT:    bset a0, a0, a1
 ; RV32ZBS-NEXT:    ret
@@ -114,15 +114,15 @@ define i32 @sbset_i32_no_mask(i32 %a, i32 %b) nounwind {
   ret i32 %or
 }
 
-; We can use sbsetw for 1 << x by setting the first source to zero.
-define signext i32 @sbset_i32_zero(i32 signext %a) nounwind {
-; RV32I-LABEL: sbset_i32_zero:
+; We can use bsetw for 1 << x by setting the first source to zero.
+define signext i32 @bset_i32_zero(i32 signext %a) nounwind {
+; RV32I-LABEL: bset_i32_zero:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi a1, zero, 1
+; RV32I-NEXT:    li a1, 1
 ; RV32I-NEXT:    sll a0, a1, a0
 ; RV32I-NEXT:    ret
 ;
-; RV32ZBS-LABEL: sbset_i32_zero:
+; RV32ZBS-LABEL: bset_i32_zero:
 ; RV32ZBS:       # %bb.0:
 ; RV32ZBS-NEXT:    bset a0, zero, a0
 ; RV32ZBS-NEXT:    ret
@@ -135,17 +135,17 @@ define signext i32 @sbset_i32_zero(i32 signext %a) nounwind {
 ; This test is presented here in case future expansions of the experimental-b
 ; extension introduce instructions suitable for this pattern.
 
-define i64 @sbset_i64(i64 %a, i64 %b) nounwind {
-; RV32I-LABEL: sbset_i64:
+define i64 @bset_i64(i64 %a, i64 %b) nounwind {
+; RV32I-LABEL: bset_i64:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi a3, zero, 1
+; RV32I-NEXT:    li a3, 1
 ; RV32I-NEXT:    sll a2, a3, a2
 ; RV32I-NEXT:    srai a3, a2, 31
 ; RV32I-NEXT:    or a0, a2, a0
 ; RV32I-NEXT:    or a1, a3, a1
 ; RV32I-NEXT:    ret
 ;
-; RV32ZBS-LABEL: sbset_i64:
+; RV32ZBS-LABEL: bset_i64:
 ; RV32ZBS:       # %bb.0:
 ; RV32ZBS-NEXT:    bset a3, zero, a2
 ; RV32ZBS-NEXT:    srai a3, a3, 31
@@ -160,46 +160,46 @@ define i64 @sbset_i64(i64 %a, i64 %b) nounwind {
   ret i64 %or
 }
 
-define signext i64 @sbset_i64_zero(i64 signext %a) nounwind {
-; RV32I-LABEL: sbset_i64_zero:
+define signext i64 @bset_i64_zero(i64 signext %a) nounwind {
+; RV32I-LABEL: bset_i64_zero:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi a1, a0, -32
-; RV32I-NEXT:    addi a2, zero, 1
+; RV32I-NEXT:    li a2, 1
 ; RV32I-NEXT:    bltz a1, .LBB7_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    mv a0, zero
+; RV32I-NEXT:    li a0, 0
 ; RV32I-NEXT:    sll a1, a2, a1
 ; RV32I-NEXT:    ret
 ; RV32I-NEXT:  .LBB7_2:
-; RV32I-NEXT:    mv a1, zero
+; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    sll a0, a2, a0
 ; RV32I-NEXT:    ret
 ;
-; RV32ZBS-LABEL: sbset_i64_zero:
+; RV32ZBS-LABEL: bset_i64_zero:
 ; RV32ZBS:       # %bb.0:
 ; RV32ZBS-NEXT:    addi a1, a0, -32
 ; RV32ZBS-NEXT:    bltz a1, .LBB7_2
 ; RV32ZBS-NEXT:  # %bb.1:
-; RV32ZBS-NEXT:    mv a0, zero
+; RV32ZBS-NEXT:    li a0, 0
 ; RV32ZBS-NEXT:    bset a1, zero, a1
 ; RV32ZBS-NEXT:    ret
 ; RV32ZBS-NEXT:  .LBB7_2:
-; RV32ZBS-NEXT:    mv a1, zero
+; RV32ZBS-NEXT:    li a1, 0
 ; RV32ZBS-NEXT:    bset a0, zero, a0
 ; RV32ZBS-NEXT:    ret
   %shl = shl i64 1, %a
   ret i64 %shl
 }
 
-define i32 @sbinv_i32(i32 %a, i32 %b) nounwind {
-; RV32I-LABEL: sbinv_i32:
+define i32 @binv_i32(i32 %a, i32 %b) nounwind {
+; RV32I-LABEL: binv_i32:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi a2, zero, 1
+; RV32I-NEXT:    li a2, 1
 ; RV32I-NEXT:    sll a1, a2, a1
 ; RV32I-NEXT:    xor a0, a1, a0
 ; RV32I-NEXT:    ret
 ;
-; RV32ZBS-LABEL: sbinv_i32:
+; RV32ZBS-LABEL: binv_i32:
 ; RV32ZBS:       # %bb.0:
 ; RV32ZBS-NEXT:    binv a0, a0, a1
 ; RV32ZBS-NEXT:    ret
@@ -214,17 +214,17 @@ define i32 @sbinv_i32(i32 %a, i32 %b) nounwind {
 ; This test is presented here in case future expansions of the experimental-b
 ; extension introduce instructions suitable for this pattern.
 
-define i64 @sbinv_i64(i64 %a, i64 %b) nounwind {
-; RV32I-LABEL: sbinv_i64:
+define i64 @binv_i64(i64 %a, i64 %b) nounwind {
+; RV32I-LABEL: binv_i64:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi a3, zero, 1
+; RV32I-NEXT:    li a3, 1
 ; RV32I-NEXT:    sll a2, a3, a2
 ; RV32I-NEXT:    srai a3, a2, 31
 ; RV32I-NEXT:    xor a0, a2, a0
 ; RV32I-NEXT:    xor a1, a3, a1
 ; RV32I-NEXT:    ret
 ;
-; RV32ZBS-LABEL: sbinv_i64:
+; RV32ZBS-LABEL: binv_i64:
 ; RV32ZBS:       # %bb.0:
 ; RV32ZBS-NEXT:    bset a3, zero, a2
 ; RV32ZBS-NEXT:    srai a3, a3, 31
@@ -239,14 +239,14 @@ define i64 @sbinv_i64(i64 %a, i64 %b) nounwind {
   ret i64 %xor
 }
 
-define i32 @sbext_i32(i32 %a, i32 %b) nounwind {
-; RV32I-LABEL: sbext_i32:
+define i32 @bext_i32(i32 %a, i32 %b) nounwind {
+; RV32I-LABEL: bext_i32:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    srl a0, a0, a1
 ; RV32I-NEXT:    andi a0, a0, 1
 ; RV32I-NEXT:    ret
 ;
-; RV32ZBS-LABEL: sbext_i32:
+; RV32ZBS-LABEL: bext_i32:
 ; RV32ZBS:       # %bb.0:
 ; RV32ZBS-NEXT:    bext a0, a0, a1
 ; RV32ZBS-NEXT:    ret
@@ -256,14 +256,14 @@ define i32 @sbext_i32(i32 %a, i32 %b) nounwind {
   ret i32 %and1
 }
 
-define i32 @sbext_i32_no_mask(i32 %a, i32 %b) nounwind {
-; RV32I-LABEL: sbext_i32_no_mask:
+define i32 @bext_i32_no_mask(i32 %a, i32 %b) nounwind {
+; RV32I-LABEL: bext_i32_no_mask:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    srl a0, a0, a1
 ; RV32I-NEXT:    andi a0, a0, 1
 ; RV32I-NEXT:    ret
 ;
-; RV32ZBS-LABEL: sbext_i32_no_mask:
+; RV32ZBS-LABEL: bext_i32_no_mask:
 ; RV32ZBS:       # %bb.0:
 ; RV32ZBS-NEXT:    bext a0, a0, a1
 ; RV32ZBS-NEXT:    ret
@@ -277,8 +277,8 @@ define i32 @sbext_i32_no_mask(i32 %a, i32 %b) nounwind {
 ; This test is presented here in case future expansions of the experimental-b
 ; extension introduce instructions suitable for this pattern.
 
-define i64 @sbext_i64(i64 %a, i64 %b) nounwind {
-; RV32I-LABEL: sbext_i64:
+define i64 @bext_i64(i64 %a, i64 %b) nounwind {
+; RV32I-LABEL: bext_i64:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    andi a3, a2, 63
 ; RV32I-NEXT:    addi a4, a3, -32
@@ -288,17 +288,17 @@ define i64 @sbext_i64(i64 %a, i64 %b) nounwind {
 ; RV32I-NEXT:    j .LBB12_3
 ; RV32I-NEXT:  .LBB12_2:
 ; RV32I-NEXT:    srl a0, a0, a2
-; RV32I-NEXT:    addi a2, zero, 31
+; RV32I-NEXT:    li a2, 31
 ; RV32I-NEXT:    sub a2, a2, a3
 ; RV32I-NEXT:    slli a1, a1, 1
 ; RV32I-NEXT:    sll a1, a1, a2
 ; RV32I-NEXT:    or a0, a0, a1
 ; RV32I-NEXT:  .LBB12_3:
 ; RV32I-NEXT:    andi a0, a0, 1
-; RV32I-NEXT:    mv a1, zero
+; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    ret
 ;
-; RV32ZBS-LABEL: sbext_i64:
+; RV32ZBS-LABEL: bext_i64:
 ; RV32ZBS:       # %bb.0:
 ; RV32ZBS-NEXT:    andi a3, a2, 63
 ; RV32ZBS-NEXT:    addi a4, a3, -32
@@ -308,14 +308,14 @@ define i64 @sbext_i64(i64 %a, i64 %b) nounwind {
 ; RV32ZBS-NEXT:    j .LBB12_3
 ; RV32ZBS-NEXT:  .LBB12_2:
 ; RV32ZBS-NEXT:    srl a0, a0, a2
-; RV32ZBS-NEXT:    addi a2, zero, 31
+; RV32ZBS-NEXT:    li a2, 31
 ; RV32ZBS-NEXT:    sub a2, a2, a3
 ; RV32ZBS-NEXT:    slli a1, a1, 1
 ; RV32ZBS-NEXT:    sll a1, a1, a2
 ; RV32ZBS-NEXT:    or a0, a0, a1
 ; RV32ZBS-NEXT:  .LBB12_3:
 ; RV32ZBS-NEXT:    andi a0, a0, 1
-; RV32ZBS-NEXT:    mv a1, zero
+; RV32ZBS-NEXT:    li a1, 0
 ; RV32ZBS-NEXT:    ret
   %conv = and i64 %b, 63
   %shr = lshr i64 %a, %conv
@@ -323,14 +323,14 @@ define i64 @sbext_i64(i64 %a, i64 %b) nounwind {
   ret i64 %and1
 }
 
-define i32 @sbexti_i32(i32 %a) nounwind {
-; RV32I-LABEL: sbexti_i32:
+define i32 @bexti_i32(i32 %a) nounwind {
+; RV32I-LABEL: bexti_i32:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    srli a0, a0, 5
 ; RV32I-NEXT:    andi a0, a0, 1
 ; RV32I-NEXT:    ret
 ;
-; RV32ZBS-LABEL: sbexti_i32:
+; RV32ZBS-LABEL: bexti_i32:
 ; RV32ZBS:       # %bb.0:
 ; RV32ZBS-NEXT:    bexti a0, a0, 5
 ; RV32ZBS-NEXT:    ret
@@ -339,31 +339,111 @@ define i32 @sbexti_i32(i32 %a) nounwind {
   ret i32 %and
 }
 
-define i64 @sbexti_i64(i64 %a) nounwind {
-; RV32I-LABEL: sbexti_i64:
+define i64 @bexti_i64(i64 %a) nounwind {
+; RV32I-LABEL: bexti_i64:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    srli a0, a0, 5
 ; RV32I-NEXT:    andi a0, a0, 1
-; RV32I-NEXT:    mv a1, zero
+; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    ret
 ;
-; RV32ZBS-LABEL: sbexti_i64:
+; RV32ZBS-LABEL: bexti_i64:
 ; RV32ZBS:       # %bb.0:
 ; RV32ZBS-NEXT:    bexti a0, a0, 5
-; RV32ZBS-NEXT:    mv a1, zero
+; RV32ZBS-NEXT:    li a1, 0
 ; RV32ZBS-NEXT:    ret
   %shr = lshr i64 %a, 5
   %and = and i64 %shr, 1
   ret i64 %and
 }
 
-define i32 @sbclri_i32_10(i32 %a) nounwind {
-; RV32I-LABEL: sbclri_i32_10:
+define i32 @bexti_xor_i32(i32 %a) nounwind {
+; RV32I-LABEL: bexti_xor_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    srli a0, a0, 7
+; RV32I-NEXT:    not a0, a0
+; RV32I-NEXT:    andi a0, a0, 1
+; RV32I-NEXT:    ret
+;
+; RV32ZBS-LABEL: bexti_xor_i32:
+; RV32ZBS:       # %bb.0:
+; RV32ZBS-NEXT:    bexti a0, a0, 7
+; RV32ZBS-NEXT:    xori a0, a0, 1
+; RV32ZBS-NEXT:    ret
+  %shr = lshr i32 %a, 7
+  %not = xor i32 %shr, -1
+  %and = and i32 %not, 1
+  ret i32 %and
+}
+
+define i64 @bexti_xor_i64(i64 %a) nounwind {
+; RV32I-LABEL: bexti_xor_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    srli a0, a0, 7
+; RV32I-NEXT:    not a0, a0
+; RV32I-NEXT:    andi a0, a0, 1
+; RV32I-NEXT:    li a1, 0
+; RV32I-NEXT:    ret
+;
+; RV32ZBS-LABEL: bexti_xor_i64:
+; RV32ZBS:       # %bb.0:
+; RV32ZBS-NEXT:    bexti a0, a0, 7
+; RV32ZBS-NEXT:    xori a0, a0, 1
+; RV32ZBS-NEXT:    li a1, 0
+; RV32ZBS-NEXT:    ret
+  %shr = lshr i64 %a, 7
+  %not = xor i64 %shr, -1
+  %and = and i64 %not, 1
+  ret i64 %and
+}
+
+define i32 @bexti_xor_i32_1(i32 %a) nounwind {
+; RV32I-LABEL: bexti_xor_i32_1:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    srli a0, a0, 7
+; RV32I-NEXT:    not a0, a0
+; RV32I-NEXT:    andi a0, a0, 1
+; RV32I-NEXT:    ret
+;
+; RV32ZBS-LABEL: bexti_xor_i32_1:
+; RV32ZBS:       # %bb.0:
+; RV32ZBS-NEXT:    bexti a0, a0, 7
+; RV32ZBS-NEXT:    xori a0, a0, 1
+; RV32ZBS-NEXT:    ret
+  %shr = lshr i32 %a, 7
+  %and = and i32 %shr, 1
+  %xor = xor i32 %and, 1
+  ret i32 %xor
+}
+
+define i64 @bexti_xor_i64_1(i64 %a) nounwind {
+; RV32I-LABEL: bexti_xor_i64_1:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    srli a0, a0, 7
+; RV32I-NEXT:    not a0, a0
+; RV32I-NEXT:    andi a0, a0, 1
+; RV32I-NEXT:    li a1, 0
+; RV32I-NEXT:    ret
+;
+; RV32ZBS-LABEL: bexti_xor_i64_1:
+; RV32ZBS:       # %bb.0:
+; RV32ZBS-NEXT:    bexti a0, a0, 7
+; RV32ZBS-NEXT:    xori a0, a0, 1
+; RV32ZBS-NEXT:    li a1, 0
+; RV32ZBS-NEXT:    ret
+  %shr = lshr i64 %a, 7
+  %and = and i64 %shr, 1
+  %xor = xor i64 %and, 1
+  ret i64 %xor
+}
+
+define i32 @bclri_i32_10(i32 %a) nounwind {
+; RV32I-LABEL: bclri_i32_10:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    andi a0, a0, -1025
 ; RV32I-NEXT:    ret
 ;
-; RV32ZBS-LABEL: sbclri_i32_10:
+; RV32ZBS-LABEL: bclri_i32_10:
 ; RV32ZBS:       # %bb.0:
 ; RV32ZBS-NEXT:    andi a0, a0, -1025
 ; RV32ZBS-NEXT:    ret
@@ -371,15 +451,15 @@ define i32 @sbclri_i32_10(i32 %a) nounwind {
   ret i32 %and
 }
 
-define i32 @sbclri_i32_11(i32 %a) nounwind {
-; RV32I-LABEL: sbclri_i32_11:
+define i32 @bclri_i32_11(i32 %a) nounwind {
+; RV32I-LABEL: bclri_i32_11:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a1, 1048575
 ; RV32I-NEXT:    addi a1, a1, 2047
 ; RV32I-NEXT:    and a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
-; RV32ZBS-LABEL: sbclri_i32_11:
+; RV32ZBS-LABEL: bclri_i32_11:
 ; RV32ZBS:       # %bb.0:
 ; RV32ZBS-NEXT:    bclri a0, a0, 11
 ; RV32ZBS-NEXT:    ret
@@ -387,15 +467,15 @@ define i32 @sbclri_i32_11(i32 %a) nounwind {
   ret i32 %and
 }
 
-define i32 @sbclri_i32_30(i32 %a) nounwind {
-; RV32I-LABEL: sbclri_i32_30:
+define i32 @bclri_i32_30(i32 %a) nounwind {
+; RV32I-LABEL: bclri_i32_30:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a1, 786432
 ; RV32I-NEXT:    addi a1, a1, -1
 ; RV32I-NEXT:    and a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
-; RV32ZBS-LABEL: sbclri_i32_30:
+; RV32ZBS-LABEL: bclri_i32_30:
 ; RV32ZBS:       # %bb.0:
 ; RV32ZBS-NEXT:    bclri a0, a0, 30
 ; RV32ZBS-NEXT:    ret
@@ -403,15 +483,15 @@ define i32 @sbclri_i32_30(i32 %a) nounwind {
   ret i32 %and
 }
 
-define i32 @sbclri_i32_31(i32 %a) nounwind {
-; RV32I-LABEL: sbclri_i32_31:
+define i32 @bclri_i32_31(i32 %a) nounwind {
+; RV32I-LABEL: bclri_i32_31:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a1, 524288
 ; RV32I-NEXT:    addi a1, a1, -1
 ; RV32I-NEXT:    and a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
-; RV32ZBS-LABEL: sbclri_i32_31:
+; RV32ZBS-LABEL: bclri_i32_31:
 ; RV32ZBS:       # %bb.0:
 ; RV32ZBS-NEXT:    bclri a0, a0, 31
 ; RV32ZBS-NEXT:    ret
@@ -419,15 +499,15 @@ define i32 @sbclri_i32_31(i32 %a) nounwind {
   ret i32 %and
 }
 
-define i32 @sbclri_i32_large0(i32 %a) nounwind {
-; RV32I-LABEL: sbclri_i32_large0:
+define i32 @bclri_i32_large0(i32 %a) nounwind {
+; RV32I-LABEL: bclri_i32_large0:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a1, 1044480
 ; RV32I-NEXT:    addi a1, a1, -256
 ; RV32I-NEXT:    and a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
-; RV32ZBS-LABEL: sbclri_i32_large0:
+; RV32ZBS-LABEL: bclri_i32_large0:
 ; RV32ZBS:       # %bb.0:
 ; RV32ZBS-NEXT:    andi a0, a0, -256
 ; RV32ZBS-NEXT:    bclri a0, a0, 24
@@ -436,15 +516,15 @@ define i32 @sbclri_i32_large0(i32 %a) nounwind {
   ret i32 %and
 }
 
-define i32 @sbclri_i32_large1(i32 %a) nounwind {
-; RV32I-LABEL: sbclri_i32_large1:
+define i32 @bclri_i32_large1(i32 %a) nounwind {
+; RV32I-LABEL: bclri_i32_large1:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a1, 1044464
 ; RV32I-NEXT:    addi a1, a1, -1
 ; RV32I-NEXT:    and a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
-; RV32ZBS-LABEL: sbclri_i32_large1:
+; RV32ZBS-LABEL: bclri_i32_large1:
 ; RV32ZBS:       # %bb.0:
 ; RV32ZBS-NEXT:    bclri a0, a0, 16
 ; RV32ZBS-NEXT:    bclri a0, a0, 24
@@ -453,15 +533,15 @@ define i32 @sbclri_i32_large1(i32 %a) nounwind {
   ret i32 %and
 }
 
-define i32 @sbclri_i32_large2(i32 %0) {
-; RV32I-LABEL: sbclri_i32_large2:
+define i32 @bclri_i32_large2(i32 %0) {
+; RV32I-LABEL: bclri_i32_large2:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a1, 524288
 ; RV32I-NEXT:    addi a1, a1, -5
 ; RV32I-NEXT:    and a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
-; RV32ZBS-LABEL: sbclri_i32_large2:
+; RV32ZBS-LABEL: bclri_i32_large2:
 ; RV32ZBS:       # %bb.0:
 ; RV32ZBS-NEXT:    bclri a0, a0, 2
 ; RV32ZBS-NEXT:    bclri a0, a0, 31
@@ -470,15 +550,15 @@ define i32 @sbclri_i32_large2(i32 %0) {
   ret i32 %2
 }
 
-define i32 @sbclri_i32_large3(i32 %0) {
-; RV32I-LABEL: sbclri_i32_large3:
+define i32 @bclri_i32_large3(i32 %0) {
+; RV32I-LABEL: bclri_i32_large3:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a1, 524288
 ; RV32I-NEXT:    addi a1, a1, -6
 ; RV32I-NEXT:    and a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
-; RV32ZBS-LABEL: sbclri_i32_large3:
+; RV32ZBS-LABEL: bclri_i32_large3:
 ; RV32ZBS:       # %bb.0:
 ; RV32ZBS-NEXT:    andi a0, a0, -6
 ; RV32ZBS-NEXT:    bclri a0, a0, 31
@@ -487,13 +567,13 @@ define i32 @sbclri_i32_large3(i32 %0) {
   ret i32 %2
 }
 
-define i32 @sbseti_i32_10(i32 %a) nounwind {
-; RV32I-LABEL: sbseti_i32_10:
+define i32 @bseti_i32_10(i32 %a) nounwind {
+; RV32I-LABEL: bseti_i32_10:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    ori a0, a0, 1024
 ; RV32I-NEXT:    ret
 ;
-; RV32ZBS-LABEL: sbseti_i32_10:
+; RV32ZBS-LABEL: bseti_i32_10:
 ; RV32ZBS:       # %bb.0:
 ; RV32ZBS-NEXT:    ori a0, a0, 1024
 ; RV32ZBS-NEXT:    ret
@@ -501,15 +581,15 @@ define i32 @sbseti_i32_10(i32 %a) nounwind {
   ret i32 %or
 }
 
-define i32 @sbseti_i32_11(i32 %a) nounwind {
-; RV32I-LABEL: sbseti_i32_11:
+define i32 @bseti_i32_11(i32 %a) nounwind {
+; RV32I-LABEL: bseti_i32_11:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a1, 1
 ; RV32I-NEXT:    addi a1, a1, -2048
 ; RV32I-NEXT:    or a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
-; RV32ZBS-LABEL: sbseti_i32_11:
+; RV32ZBS-LABEL: bseti_i32_11:
 ; RV32ZBS:       # %bb.0:
 ; RV32ZBS-NEXT:    bseti a0, a0, 11
 ; RV32ZBS-NEXT:    ret
@@ -517,14 +597,14 @@ define i32 @sbseti_i32_11(i32 %a) nounwind {
   ret i32 %or
 }
 
-define i32 @sbseti_i32_30(i32 %a) nounwind {
-; RV32I-LABEL: sbseti_i32_30:
+define i32 @bseti_i32_30(i32 %a) nounwind {
+; RV32I-LABEL: bseti_i32_30:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a1, 262144
 ; RV32I-NEXT:    or a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
-; RV32ZBS-LABEL: sbseti_i32_30:
+; RV32ZBS-LABEL: bseti_i32_30:
 ; RV32ZBS:       # %bb.0:
 ; RV32ZBS-NEXT:    bseti a0, a0, 30
 ; RV32ZBS-NEXT:    ret
@@ -532,14 +612,14 @@ define i32 @sbseti_i32_30(i32 %a) nounwind {
   ret i32 %or
 }
 
-define i32 @sbseti_i32_31(i32 %a) nounwind {
-; RV32I-LABEL: sbseti_i32_31:
+define i32 @bseti_i32_31(i32 %a) nounwind {
+; RV32I-LABEL: bseti_i32_31:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a1, 524288
 ; RV32I-NEXT:    or a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
-; RV32ZBS-LABEL: sbseti_i32_31:
+; RV32ZBS-LABEL: bseti_i32_31:
 ; RV32ZBS:       # %bb.0:
 ; RV32ZBS-NEXT:    bseti a0, a0, 31
 ; RV32ZBS-NEXT:    ret
@@ -547,13 +627,13 @@ define i32 @sbseti_i32_31(i32 %a) nounwind {
   ret i32 %or
 }
 
-define i32 @sbinvi_i32_10(i32 %a) nounwind {
-; RV32I-LABEL: sbinvi_i32_10:
+define i32 @binvi_i32_10(i32 %a) nounwind {
+; RV32I-LABEL: binvi_i32_10:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    xori a0, a0, 1024
 ; RV32I-NEXT:    ret
 ;
-; RV32ZBS-LABEL: sbinvi_i32_10:
+; RV32ZBS-LABEL: binvi_i32_10:
 ; RV32ZBS:       # %bb.0:
 ; RV32ZBS-NEXT:    xori a0, a0, 1024
 ; RV32ZBS-NEXT:    ret
@@ -561,15 +641,15 @@ define i32 @sbinvi_i32_10(i32 %a) nounwind {
   ret i32 %xor
 }
 
-define i32 @sbinvi_i32_11(i32 %a) nounwind {
-; RV32I-LABEL: sbinvi_i32_11:
+define i32 @binvi_i32_11(i32 %a) nounwind {
+; RV32I-LABEL: binvi_i32_11:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a1, 1
 ; RV32I-NEXT:    addi a1, a1, -2048
 ; RV32I-NEXT:    xor a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
-; RV32ZBS-LABEL: sbinvi_i32_11:
+; RV32ZBS-LABEL: binvi_i32_11:
 ; RV32ZBS:       # %bb.0:
 ; RV32ZBS-NEXT:    binvi a0, a0, 11
 ; RV32ZBS-NEXT:    ret
@@ -577,14 +657,14 @@ define i32 @sbinvi_i32_11(i32 %a) nounwind {
   ret i32 %xor
 }
 
-define i32 @sbinvi_i32_30(i32 %a) nounwind {
-; RV32I-LABEL: sbinvi_i32_30:
+define i32 @binvi_i32_30(i32 %a) nounwind {
+; RV32I-LABEL: binvi_i32_30:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a1, 262144
 ; RV32I-NEXT:    xor a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
-; RV32ZBS-LABEL: sbinvi_i32_30:
+; RV32ZBS-LABEL: binvi_i32_30:
 ; RV32ZBS:       # %bb.0:
 ; RV32ZBS-NEXT:    binvi a0, a0, 30
 ; RV32ZBS-NEXT:    ret
@@ -592,14 +672,14 @@ define i32 @sbinvi_i32_30(i32 %a) nounwind {
   ret i32 %xor
 }
 
-define i32 @sbinvi_i32_31(i32 %a) nounwind {
-; RV32I-LABEL: sbinvi_i32_31:
+define i32 @binvi_i32_31(i32 %a) nounwind {
+; RV32I-LABEL: binvi_i32_31:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a1, 524288
 ; RV32I-NEXT:    xor a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
-; RV32ZBS-LABEL: sbinvi_i32_31:
+; RV32ZBS-LABEL: binvi_i32_31:
 ; RV32ZBS:       # %bb.0:
 ; RV32ZBS-NEXT:    binvi a0, a0, 31
 ; RV32ZBS-NEXT:    ret

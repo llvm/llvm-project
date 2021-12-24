@@ -4,7 +4,7 @@
 // RUN: | opt -S -mem2reg \
 // RUN: | FileCheck %s
 
-// Test new aarch64 intrinsics and types
+// REQUIRES: aarch64-registered-target || arm-registered-target
 
 #include <arm_neon.h>
 

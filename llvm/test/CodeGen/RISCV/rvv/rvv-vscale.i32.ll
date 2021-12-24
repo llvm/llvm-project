@@ -5,7 +5,7 @@
 define i32 @vscale_zero() nounwind {
 ; CHECK-LABEL: vscale_zero:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mv a0, zero
+; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    ret
 entry:
   %0 = call i32 @llvm.vscale.i32()

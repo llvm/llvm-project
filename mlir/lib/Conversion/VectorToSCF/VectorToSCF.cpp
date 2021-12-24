@@ -20,8 +20,7 @@
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
-#include "mlir/Dialect/Vector/VectorOps.h"
-#include "mlir/Dialect/Vector/VectorUtils.h"
+#include "mlir/Dialect/Vector/VectorTransforms.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/Pass/Pass.h"
@@ -53,6 +52,8 @@ struct VectorToSCFPattern : public OpRewritePattern<OpTy> {
 /// A return value of None indicates a broadcast.
 template <typename OpTy>
 static Optional<int64_t> unpackedDim(OpTy xferOp) {
+  // TODO: support 0-d corner case.
+  assert(xferOp.getTransferRank() > 0 && "unexpected 0-d transfer");
   auto map = xferOp.permutation_map();
   if (auto expr = map.getResult(0).template dyn_cast<AffineDimExpr>()) {
     return expr.getPosition();
@@ -67,6 +68,8 @@ static Optional<int64_t> unpackedDim(OpTy xferOp) {
 /// omitted.
 template <typename OpTy>
 static AffineMap unpackedPermutationMap(OpBuilder &b, OpTy xferOp) {
+  // TODO: support 0-d corner case.
+  assert(xferOp.getTransferRank() > 0 && "unexpected 0-d transfer");
   auto map = xferOp.permutation_map();
   return AffineMap::get(map.getNumDims(), 0, map.getResults().drop_front(),
                         b.getContext());
@@ -124,9 +127,7 @@ static Value generateMaskCheck(OpBuilder &b, OpTy xferOp, Value iv) {
     return Value();
 
   Location loc = xferOp.getLoc();
-  Value ivI32 = b.create<arith::IndexCastOp>(
-      loc, IntegerType::get(b.getContext(), 32), iv);
-  return b.create<vector::ExtractElementOp>(loc, xferOp.mask(), ivI32);
+  return b.create<vector::ExtractElementOp>(loc, xferOp.mask(), iv);
 }
 
 /// Helper function TransferOpConversion and TransferOp1dConversion.
@@ -1084,6 +1085,7 @@ get1dMemrefIndices(OpBuilder &b, OpTy xferOp, Value iv,
                    SmallVector<Value, 8> &memrefIndices) {
   auto indices = xferOp.indices();
   auto map = xferOp.permutation_map();
+  assert(xferOp.getTransferRank() > 0 && "unexpected 0-d transfer");
 
   memrefIndices.append(indices.begin(), indices.end());
   assert(map.getNumResults() == 1 &&
@@ -1116,8 +1118,6 @@ struct Strategy1d<TransferReadOp> {
                                   ValueRange loopState) {
     SmallVector<Value, 8> indices;
     auto dim = get1dMemrefIndices(b, xferOp, iv, indices);
-    Value ivI32 = b.create<arith::IndexCastOp>(
-        loc, IntegerType::get(b.getContext(), 32), iv);
     auto vec = loopState[0];
 
     // In case of out-of-bounds access, leave `vec` as is (was initialized with
@@ -1127,7 +1127,7 @@ struct Strategy1d<TransferReadOp> {
         /*inBoundsCase=*/
         [&](OpBuilder &b, Location loc) {
           Value val = b.create<memref::LoadOp>(loc, xferOp.source(), indices);
-          return b.create<vector::InsertElementOp>(loc, val, vec, ivI32);
+          return b.create<vector::InsertElementOp>(loc, val, vec, iv);
         },
         /*outOfBoundsCase=*/
         [&](OpBuilder & /*b*/, Location loc) { return vec; });
@@ -1149,15 +1149,13 @@ struct Strategy1d<TransferWriteOp> {
                                   ValueRange /*loopState*/) {
     SmallVector<Value, 8> indices;
     auto dim = get1dMemrefIndices(b, xferOp, iv, indices);
-    Value ivI32 = b.create<arith::IndexCastOp>(
-        loc, IntegerType::get(b.getContext(), 32), iv);
 
     // Nothing to do in case of out-of-bounds access.
     generateInBoundsCheck(
         b, xferOp, iv, dim,
         /*inBoundsCase=*/[&](OpBuilder &b, Location loc) {
           auto val =
-              b.create<vector::ExtractElementOp>(loc, xferOp.vector(), ivI32);
+              b.create<vector::ExtractElementOp>(loc, xferOp.vector(), iv);
           b.create<memref::StoreOp>(loc, val, xferOp.source(), indices);
         });
     b.create<scf::YieldOp>(loc);
@@ -1213,6 +1211,9 @@ struct TransferOp1dConversion : public VectorToSCFPattern<OpTy> {
 
   LogicalResult matchAndRewrite(OpTy xferOp,
                                 PatternRewriter &rewriter) const override {
+    // TODO: support 0-d corner case.
+    if (xferOp.getTransferRank() == 0)
+      return failure();
     auto map = xferOp.permutation_map();
     auto memRefType = xferOp.getShapedType().template dyn_cast<MemRefType>();
 

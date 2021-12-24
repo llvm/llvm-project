@@ -24,7 +24,7 @@ def FastmathFlagsInterface : OpInterface<"FastmathFlagsInterface"> {
 
   let methods = [
     InterfaceMethod<"Get fastmath flags", "::mlir::LLVM::FastmathFlags",
-                    "fastmathFlags">,
+                    "getFastmathFlags">,
   ];
 }
 

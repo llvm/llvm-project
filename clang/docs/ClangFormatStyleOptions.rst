@@ -149,7 +149,7 @@ the configuration (without a prefix: ``Auto``).
     <https://google.github.io/styleguide/cppguide.html>`_
   * ``Chromium``
     A style complying with `Chromium's style guide
-    <https://chromium.googlesource.com/chromium/src/+/master/styleguide/styleguide.md>`_
+    <https://chromium.googlesource.com/chromium/src/+/refs/heads/main/styleguide/styleguide.md>`_
   * ``Mozilla``
     A style complying with `Mozilla's style guide
     <https://developer.mozilla.org/en-US/docs/Developer_Guide/Coding_Style>`_
@@ -2457,7 +2457,7 @@ the configuration (without a prefix: ``Auto``).
         Priority:        2
         SortPriority:    2
         CaseSensitive:   true
-      - Regex:           '^(<|"(gtest|gmock|isl|json)/)'
+      - Regex:           '^((<|")(gtest|gmock|isl|json)/)'
         Priority:        3
       - Regex:           '<[[:alnum:].]+>'
         Priority:        4
@@ -3618,7 +3618,7 @@ the configuration (without a prefix: ``Auto``).
      true:                                  false:
      class Foo : Bar {}             vs.     class Foo: Bar {}
 
-**SpaceBeforeParens** (``SpaceBeforeParensOptions``) :versionbadge:`clang-format 3.5`
+**SpaceBeforeParens** (``SpaceBeforeParensStyle``) :versionbadge:`clang-format 3.5`
   Defines in which cases to put a space before opening parentheses.
 
   Possible values:
@@ -3688,6 +3688,78 @@ the configuration (without a prefix: ``Auto``).
          }
        }
 
+  * ``SBPO_Custom`` (in configuration: ``Custom``)
+    Configure each individual space before parentheses in
+    `SpaceBeforeParensOptions`.
+
+
+
+**SpaceBeforeParensOptions** (``SpaceBeforeParensCustom``) :versionbadge:`clang-format 14`
+  Control of individual space before parentheses.
+
+  If ``SpaceBeforeParens`` is set to ``Custom``, use this to specify
+  how each individual space before parentheses case should be handled.
+  Otherwise, this is ignored.
+
+  .. code-block:: yaml
+
+    # Example of usage:
+    SpaceBeforeParens: Custom
+    SpaceBeforeParensOptions:
+      AfterControlStatements: true
+      AfterFunctionDefinitionName: true
+
+  Nested configuration flags:
+
+
+  * ``bool AfterControlStatements`` If ``true``, put space betwee control statement keywords
+    (for/if/while...) and opening parentheses.
+
+    .. code-block:: c++
+
+       true:                                  false:
+       if (...) {}                     vs.    if(...) {}
+
+  * ``bool AfterForeachMacros`` If ``true``, put space between foreach macros and opening parentheses.
+
+    .. code-block:: c++
+
+       true:                                  false:
+       FOREACH (...)                   vs.    FOREACH(...)
+         <loop-body>                            <loop-body>
+
+  * ``bool AfterFunctionDeclarationName`` If ``true``, put a space between function declaration name and opening
+    parentheses.
+
+    .. code-block:: c++
+
+       true:                                  false:
+       void f ();                      vs.    void f();
+
+  * ``bool AfterFunctionDefinitionName`` If ``true``, put a space between function definition name and opening
+    parentheses.
+
+    .. code-block:: c++
+
+       true:                                  false:
+       void f () {}                    vs.    void f() {}
+
+  * ``bool AfterIfMacros`` If ``true``, put space between if macros and opening parentheses.
+
+    .. code-block:: c++
+
+       true:                                  false:
+       IF (...)                        vs.    IF(...)
+         <conditional-body>                     <conditional-body>
+
+  * ``bool BeforeNonEmptyParentheses`` If ``true``, put a space before opening parentheses only if the
+    parentheses are not empty.
+
+    .. code-block:: c++
+
+       true:                                  false:
+       void f (int a);                 vs.    void f();
+       f (a);                                 f();
 
 
 **SpaceBeforeRangeBasedForLoopColon** (``Boolean``) :versionbadge:`clang-format 7`
@@ -3807,30 +3879,34 @@ the configuration (without a prefix: ``Auto``).
   How many spaces are allowed at the start of a line comment. To disable the
   maximum set it to ``-1``, apart from that the maximum takes precedence
   over the minimum.
-  Minimum = 1 Maximum = -1
-  // One space is forced
 
-  //  but more spaces are possible
+  .. code-block:: c++
 
-  Minimum = 0
-  Maximum = 0
-  //Forces to start every comment directly after the slashes
+    Minimum = 1
+    Maximum = -1
+    // One space is forced
+
+    //  but more spaces are possible
+
+    Minimum = 0
+    Maximum = 0
+    //Forces to start every comment directly after the slashes
 
   Note that in line comment sections the relative indent of the subsequent
   lines is kept, that means the following:
 
   .. code-block:: c++
 
-  before:                                   after:
-  Minimum: 1
-  //if (b) {                                // if (b) {
-  //  return true;                          //   return true;
-  //}                                       // }
+    before:                                   after:
+    Minimum: 1
+    //if (b) {                                // if (b) {
+    //  return true;                          //   return true;
+    //}                                       // }
 
-  Maximum: 0
-  /// List:                                 ///List:
-  ///  - Foo                                /// - Foo
-  ///    - Bar                              ///   - Bar
+    Maximum: 0
+    /// List:                                 ///List:
+    ///  - Foo                                /// - Foo
+    ///    - Bar                              ///   - Bar
 
   Nested configuration flags:
 

@@ -241,10 +241,9 @@ static Expected<std::string> readIdentificationCode(BitstreamCursor &Stream) {
         return std::move(Err);
       continue;
     case BitstreamEntry::Record:
-      if (Expected<unsigned> Skipped = Stream.skipRecord(Entry.ID))
-        continue;
-      else
-        return Skipped.takeError();
+      if (Error E = Stream.skipRecord(Entry.ID).takeError())
+        return std::move(E);
+      continue;
     }
   }
 }
@@ -320,10 +319,9 @@ static Expected<bool> hasObjCCategory(BitstreamCursor &Stream) {
       continue;
 
     case BitstreamEntry::Record:
-      if (Expected<unsigned> Skipped = Stream.skipRecord(Entry.ID))
-        continue;
-      else
-        return Skipped.takeError();
+      if (Error E = Stream.skipRecord(Entry.ID).takeError())
+        return std::move(E);
+      continue;
     }
   }
 }
@@ -490,6 +488,7 @@ class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
   BitcodeReaderValueList ValueList;
   Optional<MetadataLoader> MDLoader;
   std::vector<Comdat *> ComdatList;
+  DenseSet<GlobalObject *> ImplicitComdatObjects;
   SmallVector<Instruction *, 64> InstructionList;
 
   std::vector<std::pair<GlobalVariable *, unsigned>> GlobalInits;
@@ -934,6 +933,7 @@ static FunctionSummary::FFlags getDecodedFFlags(uint64_t RawFlags) {
   Flags.NoUnwind = (RawFlags >> 6) & 0x1;
   Flags.MayThrow = (RawFlags >> 7) & 0x1;
   Flags.HasUnknownCall = (RawFlags >> 8) & 0x1;
+  Flags.MustBeUnreachable = (RawFlags >> 9) & 0x1;
   return Flags;
 }
 
@@ -2039,14 +2039,8 @@ Expected<Value *> BitcodeReader::recordValue(SmallVectorImpl<uint64_t> &Record,
     return error("Invalid value name");
   V->setName(NameStr);
   auto *GO = dyn_cast<GlobalObject>(V);
-  if (GO) {
-    if (GO->getComdat() == reinterpret_cast<Comdat *>(1)) {
-      if (TT.supportsCOMDAT())
-        GO->setComdat(TheModule->getOrInsertComdat(V->getName()));
-      else
-        GO->setComdat(nullptr);
-    }
-  }
+  if (GO && ImplicitComdatObjects.contains(GO) && TT.supportsCOMDAT())
+    GO->setComdat(TheModule->getOrInsertComdat(V->getName()));
   return V;
 }
 
@@ -2281,7 +2275,11 @@ Error BitcodeReader::resolveGlobalAndIndirectSymbolInits() {
           return error("Alias and aliasee types don't match");
         GA->setAliasee(C);
       } else if (auto *GI = dyn_cast<GlobalIFunc>(GV)) {
-        GI->setResolver(C);
+        Type *ResolverFTy =
+            GlobalIFunc::getResolverFunctionType(GI->getValueType());
+        // Transparently fix up the type for compatiblity with older bitcode
+        GI->setResolver(
+            ConstantExpr::getBitCast(C, ResolverFTy->getPointerTo()));
       } else {
         return error("Expected an alias or an ifunc");
       }
@@ -2940,6 +2938,19 @@ Error BitcodeReader::parseConstants() {
       V = DSOLocalEquivalent::get(GV);
       break;
     }
+    case bitc::CST_CODE_NO_CFI_VALUE: {
+      if (Record.size() < 2)
+        return error("Invalid record");
+      Type *GVTy = getTypeByID(Record[0]);
+      if (!GVTy)
+        return error("Invalid record");
+      GlobalValue *GV = dyn_cast_or_null<GlobalValue>(
+          ValueList.getConstantFwdRef(Record[1], GVTy));
+      if (!GV)
+        return error("Invalid record");
+      V = NoCFIValue::get(GV);
+      break;
+    }
     }
 
     ValueList.assignValue(V, NextCstNo);
@@ -3290,7 +3301,7 @@ Error BitcodeReader::parseGlobalVarRecord(ArrayRef<uint64_t> Record) {
       NewGV->setComdat(ComdatList[ComdatID - 1]);
     }
   } else if (hasImplicitComdat(RawLinkage)) {
-    NewGV->setComdat(reinterpret_cast<Comdat *>(1));
+    ImplicitComdatObjects.insert(NewGV);
   }
 
   if (Record.size() > 12) {
@@ -3424,7 +3435,7 @@ Error BitcodeReader::parseFunctionRecord(ArrayRef<uint64_t> Record) {
       Func->setComdat(ComdatList[ComdatID - 1]);
     }
   } else if (hasImplicitComdat(RawLinkage)) {
-    Func->setComdat(reinterpret_cast<Comdat *>(1));
+    ImplicitComdatObjects.insert(Func);
   }
 
   if (Record.size() > 13)
@@ -3994,8 +4005,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       // See if anything took the address of blocks in this function.
       auto BBFRI = BasicBlockFwdRefs.find(F);
       if (BBFRI == BasicBlockFwdRefs.end()) {
-        for (unsigned i = 0, e = FunctionBBs.size(); i != e; ++i)
-          FunctionBBs[i] = BasicBlock::Create(Context, "", F);
+        for (BasicBlock *&BB : FunctionBBs)
+          BB = BasicBlock::Create(Context, "", F);
       } else {
         auto &BBRefs = BBFRI->second;
         // Check for invalid basic block references.
@@ -4603,9 +4614,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
               CaseVals.push_back(ConstantInt::get(Context, Low));
           }
           BasicBlock *DestBB = getBasicBlock(Record[CurIdx++]);
-          for (SmallVector<ConstantInt*, 1>::iterator cvi = CaseVals.begin(),
-                 cve = CaseVals.end(); cvi != cve; ++cvi)
-            SI->addCase(*cvi, DestBB);
+          for (ConstantInt *Cst : CaseVals)
+            SI->addCase(Cst, DestBB);
         }
         I = SI;
         break;
@@ -5536,21 +5546,16 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
 
   // Upgrade any old intrinsic calls in the function.
   for (auto &I : UpgradedIntrinsics) {
-    for (auto UI = I.first->materialized_user_begin(), UE = I.first->user_end();
-         UI != UE;) {
-      User *U = *UI;
-      ++UI;
+    for (User *U : llvm::make_early_inc_range(I.first->materialized_users()))
       if (CallInst *CI = dyn_cast<CallInst>(U))
         UpgradeIntrinsicCall(CI, I.second);
-    }
   }
 
   // Update calls to the remangled intrinsics
   for (auto &I : RemangledIntrinsics)
-    for (auto UI = I.first->materialized_user_begin(), UE = I.first->user_end();
-         UI != UE;)
+    for (User *U : llvm::make_early_inc_range(I.first->materialized_users()))
       // Don't expect any other users than call sites
-      cast<CallBase>(*UI++)->setCalledFunction(I.second);
+      cast<CallBase>(U)->setCalledFunction(I.second);
 
   // Finish fn->subprogram upgrade for materialized functions.
   if (DISubprogram *SP = MDLoader->lookupSubprogramForFunction(F))
@@ -6737,10 +6742,10 @@ llvm::getBitcodeFileContents(MemoryBufferRef Buffer) {
         // not have its own string table. A bitcode file may have multiple
         // string tables if it was created by binary concatenation, for example
         // with "llvm-cat -b".
-        for (auto I = F.Mods.rbegin(), E = F.Mods.rend(); I != E; ++I) {
-          if (!I->Strtab.empty())
+        for (BitcodeModule &I : llvm::reverse(F.Mods)) {
+          if (!I.Strtab.empty())
             break;
-          I->Strtab = *Strtab;
+          I.Strtab = *Strtab;
         }
         // Similarly, the string table is used by every preceding symbol table;
         // normally there will be just one unless the bitcode file was created
@@ -6772,10 +6777,9 @@ llvm::getBitcodeFileContents(MemoryBufferRef Buffer) {
       continue;
     }
     case BitstreamEntry::Record:
-      if (Expected<unsigned> StreamFailed = Stream.skipRecord(Entry.ID))
-        continue;
-      else
-        return StreamFailed.takeError();
+      if (Error E = Stream.skipRecord(Entry.ID).takeError())
+        return std::move(E);
+      continue;
     }
   }
 }
@@ -6798,12 +6802,9 @@ BitcodeModule::getModuleImpl(LLVMContext &Context, bool MaterializeAll,
   if (IdentificationBit != -1ull) {
     if (Error JumpFailed = Stream.JumpToBit(IdentificationBit))
       return std::move(JumpFailed);
-    Expected<std::string> ProducerIdentificationOrErr =
-        readIdentificationBlock(Stream);
-    if (!ProducerIdentificationOrErr)
-      return ProducerIdentificationOrErr.takeError();
-
-    ProducerIdentification = *ProducerIdentificationOrErr;
+    if (Error E =
+            readIdentificationBlock(Stream).moveInto(ProducerIdentification))
+      return std::move(E);
   }
 
   if (Error JumpFailed = Stream.JumpToBit(ModuleBit))
@@ -6877,10 +6878,9 @@ static Expected<bool> getEnableSplitLTOUnitFlag(BitstreamCursor &Stream,
   SmallVector<uint64_t, 64> Record;
 
   while (true) {
-    Expected<BitstreamEntry> MaybeEntry = Stream.advanceSkippingSubblocks();
-    if (!MaybeEntry)
-      return MaybeEntry.takeError();
-    BitstreamEntry Entry = MaybeEntry.get();
+    BitstreamEntry Entry;
+    if (Error E = Stream.advanceSkippingSubblocks().moveInto(Entry))
+      return std::move(E);
 
     switch (Entry.Kind) {
     case BitstreamEntry::SubBlock: // Handled for us already.
@@ -6925,10 +6925,9 @@ Expected<BitcodeLTOInfo> BitcodeModule::getLTOInfo() {
     return std::move(Err);
 
   while (true) {
-    Expected<llvm::BitstreamEntry> MaybeEntry = Stream.advance();
-    if (!MaybeEntry)
-      return MaybeEntry.takeError();
-    llvm::BitstreamEntry Entry = MaybeEntry.get();
+    llvm::BitstreamEntry Entry;
+    if (Error E = Stream.advance().moveInto(Entry))
+      return std::move(E);
 
     switch (Entry.Kind) {
     case BitstreamEntry::Error:

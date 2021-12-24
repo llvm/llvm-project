@@ -1,5 +1,5 @@
 // -*- C++ -*-
-//===--------------------------- tuple ------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -1200,7 +1200,7 @@ struct __find_exactly_one_checked<_T1> {
     static_assert(!is_same<_T1, _T1>::value, "type not in empty type list");
 };
 
-} // namespace __find_detail;
+} // namespace __find_detail
 
 template <typename _T1, typename... _Args>
 struct __find_exactly_one_t
@@ -1257,7 +1257,7 @@ struct __ignore_t
 
 namespace {
   constexpr __ignore_t<unsigned char> ignore = __ignore_t<unsigned char>();
-}
+} // namespace
 
 template <class... _Tp>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
@@ -1306,7 +1306,7 @@ operator==(const tuple<_Tp...>& __x, const tuple<_Up...>& __y)
     return __tuple_equal<sizeof...(_Tp)>()(__x, __y);
 }
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_SPACESHIP_OPERATOR) && !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 // operator<=>
 
@@ -1328,7 +1328,7 @@ operator<=>(const tuple<_Tp...>& __x, const tuple<_Up...>& __y)
     return _VSTD::__tuple_compare_three_way(__x, __y, index_sequence_for<_Tp...>{});
 }
 
-#else // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_SPACESHIP_OPERATOR) && !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#else // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 template <class ..._Tp, class ..._Up>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
@@ -1398,7 +1398,7 @@ operator<=(const tuple<_Tp...>& __x, const tuple<_Up...>& __y)
     return !(__y < __x);
 }
 
-#endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_SPACESHIP_OPERATOR) && !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 // tuple_cat
 

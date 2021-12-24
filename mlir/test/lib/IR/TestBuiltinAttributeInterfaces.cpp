@@ -23,7 +23,7 @@ struct TestElementsAttrInterface
   void runOnOperation() override {
     getOperation().walk([&](Operation *op) {
       for (NamedAttribute attr : op->getAttrs()) {
-        auto elementsAttr = attr.second.dyn_cast<ElementsAttr>();
+        auto elementsAttr = attr.getValue().dyn_cast<ElementsAttr>();
         if (!elementsAttr)
           continue;
         testElementsAttrIteration<uint64_t>(op, elementsAttr, "uint64_t");
@@ -50,7 +50,7 @@ struct TestElementsAttrInterface
     });
   }
 };
-} // end anonymous namespace
+} // namespace
 
 namespace mlir {
 namespace test {

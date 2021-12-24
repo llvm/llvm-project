@@ -61,8 +61,7 @@ protected:
 };
 
 /// Type trait detector that checks if a given type T is a complex type.
-template <typename T>
-struct is_complex_t : public std::false_type {};
+template <typename T> struct is_complex_t : public std::false_type {};
 template <typename T>
 struct is_complex_t<std::complex<T>> : public std::true_type {};
 } // namespace detail
@@ -82,8 +81,7 @@ public:
   /// floating point type that can be used to access the underlying element
   /// types of a DenseElementsAttr.
   // TODO: Use std::disjunction when C++17 is supported.
-  template <typename T>
-  struct is_valid_cpp_fp_type {
+  template <typename T> struct is_valid_cpp_fp_type {
     /// The type is a valid floating point type if it is a builtin floating
     /// point type, or is a potentially user defined floating point type. The
     /// latter allows for supporting users that have custom types defined for
@@ -219,6 +217,18 @@ public:
   // Iterators
   //===--------------------------------------------------------------------===//
 
+  /// The iterator range over the given iterator type T.
+  template <typename IteratorT>
+  using iterator_range_impl = detail::ElementsAttrRange<IteratorT>;
+
+  /// The iterator for the given element type T.
+  template <typename T, typename AttrT = DenseElementsAttr>
+  using iterator = decltype(std::declval<AttrT>().template value_begin<T>());
+  /// The iterator range over the given element T.
+  template <typename T, typename AttrT = DenseElementsAttr>
+  using iterator_range =
+      decltype(std::declval<AttrT>().template getValues<T>());
+
   /// A utility iterator that allows walking over the internal Attribute values
   /// of a DenseElementsAttr.
   class AttributeElementIterator
@@ -313,24 +323,46 @@ public:
 
   /// Iterator for walking over APFloat values.
   class FloatElementIterator final
-      : public llvm::mapped_iterator<IntElementIterator,
-                                     std::function<APFloat(const APInt &)>> {
+      : public llvm::mapped_iterator_base<FloatElementIterator,
+                                          IntElementIterator, APFloat> {
+  public:
+    /// Map the element to the iterator result type.
+    APFloat mapElement(const APInt &value) const {
+      return APFloat(*smt, value);
+    }
+
+  private:
     friend DenseElementsAttr;
 
     /// Initializes the float element iterator to the specified iterator.
-    FloatElementIterator(const llvm::fltSemantics &smt, IntElementIterator it);
+    FloatElementIterator(const llvm::fltSemantics &smt, IntElementIterator it)
+        : BaseT(it), smt(&smt) {}
+
+    /// The float semantics to use when constructing the APFloat.
+    const llvm::fltSemantics *smt;
   };
 
   /// Iterator for walking over complex APFloat values.
   class ComplexFloatElementIterator final
-      : public llvm::mapped_iterator<
-            ComplexIntElementIterator,
-            std::function<std::complex<APFloat>(const std::complex<APInt> &)>> {
+      : public llvm::mapped_iterator_base<ComplexFloatElementIterator,
+                                          ComplexIntElementIterator,
+                                          std::complex<APFloat>> {
+  public:
+    /// Map the element to the iterator result type.
+    std::complex<APFloat> mapElement(const std::complex<APInt> &value) const {
+      return {APFloat(*smt, value.real()), APFloat(*smt, value.imag())};
+    }
+
+  private:
     friend DenseElementsAttr;
 
     /// Initializes the float element iterator to the specified iterator.
     ComplexFloatElementIterator(const llvm::fltSemantics &smt,
-                                ComplexIntElementIterator it);
+                                ComplexIntElementIterator it)
+        : BaseT(it), smt(&smt) {}
+
+    /// The float semantics to use when constructing the APFloat.
+    const llvm::fltSemantics *smt;
   };
 
   //===--------------------------------------------------------------------===//
@@ -343,7 +375,6 @@ public:
 
   /// Return the splat value for this attribute. This asserts that the attribute
   /// corresponds to a splat.
-  Attribute getSplatValue() const { return getSplatValue<Attribute>(); }
   template <typename T>
   typename std::enable_if<!std::is_base_of<Attribute, T>::value ||
                               std::is_same<Attribute, T>::value,
@@ -358,22 +389,7 @@ public:
                               !std::is_same<Attribute, T>::value,
                           T>::type
   getSplatValue() const {
-    return getSplatValue().template cast<T>();
-  }
-
-  /// Return the value at the given index. The 'index' is expected to refer to a
-  /// valid element.
-  Attribute getValue(ArrayRef<uint64_t> index) const {
-    return getValue<Attribute>(index);
-  }
-  template <typename T>
-  T getValue(ArrayRef<uint64_t> index) const {
-    // Skip to the element corresponding to the flattened index.
-    return getFlatValue<T>(ElementsAttr::getFlattenedIndex(*this, index));
-  }
-  /// Return the value at the given flattened index.
-  template <typename T> T getFlatValue(uint64_t index) const {
-    return *std::next(value_begin<T>(), index);
+    return getSplatValue<Attribute>().template cast<T>();
   }
 
   /// Return the held element values as a range of integer or floating-point
@@ -384,12 +400,12 @@ public:
                                std::numeric_limits<T>::is_integer) ||
                               is_valid_cpp_fp_type<T>::value>::type;
   template <typename T, typename = IntFloatValueTemplateCheckT<T>>
-  llvm::iterator_range<ElementIterator<T>> getValues() const {
+  iterator_range_impl<ElementIterator<T>> getValues() const {
     assert(isValidIntOrFloat(sizeof(T), std::numeric_limits<T>::is_integer,
                              std::numeric_limits<T>::is_signed));
     const char *rawData = getRawData().data();
     bool splat = isSplat();
-    return {ElementIterator<T>(rawData, splat, 0),
+    return {Attribute::getType(), ElementIterator<T>(rawData, splat, 0),
             ElementIterator<T>(rawData, splat, getNumElements())};
   }
   template <typename T, typename = IntFloatValueTemplateCheckT<T>>
@@ -413,12 +429,12 @@ public:
                                is_valid_cpp_fp_type<ElementT>::value)>::type;
   template <typename T, typename ElementT = typename T::value_type,
             typename = ComplexValueTemplateCheckT<T, ElementT>>
-  llvm::iterator_range<ElementIterator<T>> getValues() const {
+  iterator_range_impl<ElementIterator<T>> getValues() const {
     assert(isValidComplex(sizeof(T), std::numeric_limits<ElementT>::is_integer,
                           std::numeric_limits<ElementT>::is_signed));
     const char *rawData = getRawData().data();
     bool splat = isSplat();
-    return {ElementIterator<T>(rawData, splat, 0),
+    return {Attribute::getType(), ElementIterator<T>(rawData, splat, 0),
             ElementIterator<T>(rawData, splat, getNumElements())};
   }
   template <typename T, typename ElementT = typename T::value_type,
@@ -441,11 +457,11 @@ public:
   using StringRefValueTemplateCheckT =
       typename std::enable_if<std::is_same<T, StringRef>::value>::type;
   template <typename T, typename = StringRefValueTemplateCheckT<T>>
-  llvm::iterator_range<ElementIterator<StringRef>> getValues() const {
+  iterator_range_impl<ElementIterator<StringRef>> getValues() const {
     auto stringRefs = getRawStringData();
     const char *ptr = reinterpret_cast<const char *>(stringRefs.data());
     bool splat = isSplat();
-    return {ElementIterator<StringRef>(ptr, splat, 0),
+    return {Attribute::getType(), ElementIterator<StringRef>(ptr, splat, 0),
             ElementIterator<StringRef>(ptr, splat, getNumElements())};
   }
   template <typename T, typename = StringRefValueTemplateCheckT<T>>
@@ -464,8 +480,9 @@ public:
   using AttributeValueTemplateCheckT =
       typename std::enable_if<std::is_same<T, Attribute>::value>::type;
   template <typename T, typename = AttributeValueTemplateCheckT<T>>
-  llvm::iterator_range<AttributeElementIterator> getValues() const {
-    return {value_begin<Attribute>(), value_end<Attribute>()};
+  iterator_range_impl<AttributeElementIterator> getValues() const {
+    return {Attribute::getType(), value_begin<Attribute>(),
+            value_end<Attribute>()};
   }
   template <typename T, typename = AttributeValueTemplateCheckT<T>>
   AttributeElementIterator value_begin() const {
@@ -483,23 +500,29 @@ public:
       typename std::enable_if<std::is_base_of<Attribute, T>::value &&
                               !std::is_same<Attribute, T>::value>::type;
   template <typename T>
-  using DerivedAttributeElementIterator =
-      llvm::mapped_iterator<AttributeElementIterator, T (*)(Attribute)>;
+  struct DerivedAttributeElementIterator
+      : public llvm::mapped_iterator_base<DerivedAttributeElementIterator<T>,
+                                          AttributeElementIterator, T> {
+    using llvm::mapped_iterator_base<DerivedAttributeElementIterator<T>,
+                                     AttributeElementIterator,
+                                     T>::mapped_iterator_base;
+
+    /// Map the element to the iterator result type.
+    T mapElement(Attribute attr) const { return attr.cast<T>(); }
+  };
   template <typename T, typename = DerivedAttrValueTemplateCheckT<T>>
-  llvm::iterator_range<DerivedAttributeElementIterator<T>> getValues() const {
-    auto castFn = [](Attribute attr) { return attr.template cast<T>(); };
-    return llvm::map_range(getValues<Attribute>(),
-                           static_cast<T (*)(Attribute)>(castFn));
+  iterator_range_impl<DerivedAttributeElementIterator<T>> getValues() const {
+    using DerivedIterT = DerivedAttributeElementIterator<T>;
+    return {Attribute::getType(), DerivedIterT(value_begin<Attribute>()),
+            DerivedIterT(value_end<Attribute>())};
   }
   template <typename T, typename = DerivedAttrValueTemplateCheckT<T>>
   DerivedAttributeElementIterator<T> value_begin() const {
-    auto castFn = [](Attribute attr) { return attr.template cast<T>(); };
-    return {value_begin<Attribute>(), static_cast<T (*)(Attribute)>(castFn)};
+    return {value_begin<Attribute>()};
   }
   template <typename T, typename = DerivedAttrValueTemplateCheckT<T>>
   DerivedAttributeElementIterator<T> value_end() const {
-    auto castFn = [](Attribute attr) { return attr.template cast<T>(); };
-    return {value_end<Attribute>(), static_cast<T (*)(Attribute)>(castFn)};
+    return {value_end<Attribute>()};
   }
 
   /// Return the held element values as a range of bool. The element type of
@@ -508,9 +531,9 @@ public:
   using BoolValueTemplateCheckT =
       typename std::enable_if<std::is_same<T, bool>::value>::type;
   template <typename T, typename = BoolValueTemplateCheckT<T>>
-  llvm::iterator_range<BoolElementIterator> getValues() const {
+  iterator_range_impl<BoolElementIterator> getValues() const {
     assert(isValidBool() && "bool is not the value of this elements attribute");
-    return {BoolElementIterator(*this, 0),
+    return {Attribute::getType(), BoolElementIterator(*this, 0),
             BoolElementIterator(*this, getNumElements())};
   }
   template <typename T, typename = BoolValueTemplateCheckT<T>>
@@ -530,9 +553,9 @@ public:
   using APIntValueTemplateCheckT =
       typename std::enable_if<std::is_same<T, APInt>::value>::type;
   template <typename T, typename = APIntValueTemplateCheckT<T>>
-  llvm::iterator_range<IntElementIterator> getValues() const {
+  iterator_range_impl<IntElementIterator> getValues() const {
     assert(getElementType().isIntOrIndex() && "expected integral type");
-    return {raw_int_begin(), raw_int_end()};
+    return {Attribute::getType(), raw_int_begin(), raw_int_end()};
   }
   template <typename T, typename = APIntValueTemplateCheckT<T>>
   IntElementIterator value_begin() const {
@@ -551,7 +574,7 @@ public:
   using ComplexAPIntValueTemplateCheckT = typename std::enable_if<
       std::is_same<T, std::complex<APInt>>::value>::type;
   template <typename T, typename = ComplexAPIntValueTemplateCheckT<T>>
-  llvm::iterator_range<ComplexIntElementIterator> getValues() const {
+  iterator_range_impl<ComplexIntElementIterator> getValues() const {
     return getComplexIntValues();
   }
   template <typename T, typename = ComplexAPIntValueTemplateCheckT<T>>
@@ -569,7 +592,7 @@ public:
   using APFloatValueTemplateCheckT =
       typename std::enable_if<std::is_same<T, APFloat>::value>::type;
   template <typename T, typename = APFloatValueTemplateCheckT<T>>
-  llvm::iterator_range<FloatElementIterator> getValues() const {
+  iterator_range_impl<FloatElementIterator> getValues() const {
     return getFloatValues();
   }
   template <typename T, typename = APFloatValueTemplateCheckT<T>>
@@ -587,7 +610,7 @@ public:
   using ComplexAPFloatValueTemplateCheckT = typename std::enable_if<
       std::is_same<T, std::complex<APFloat>>::value>::type;
   template <typename T, typename = ComplexAPFloatValueTemplateCheckT<T>>
-  llvm::iterator_range<ComplexFloatElementIterator> getValues() const {
+  iterator_range_impl<ComplexFloatElementIterator> getValues() const {
     return getComplexFloatValues();
   }
   template <typename T, typename = ComplexAPFloatValueTemplateCheckT<T>>
@@ -660,13 +683,13 @@ protected:
   IntElementIterator raw_int_end() const {
     return IntElementIterator(*this, getNumElements());
   }
-  llvm::iterator_range<ComplexIntElementIterator> getComplexIntValues() const;
+  iterator_range_impl<ComplexIntElementIterator> getComplexIntValues() const;
   ComplexIntElementIterator complex_value_begin() const;
   ComplexIntElementIterator complex_value_end() const;
-  llvm::iterator_range<FloatElementIterator> getFloatValues() const;
+  iterator_range_impl<FloatElementIterator> getFloatValues() const;
   FloatElementIterator float_value_begin() const;
   FloatElementIterator float_value_end() const;
-  llvm::iterator_range<ComplexFloatElementIterator>
+  iterator_range_impl<ComplexFloatElementIterator>
   getComplexFloatValues() const;
   ComplexFloatElementIterator complex_float_value_begin() const;
   ComplexFloatElementIterator complex_float_value_end() const;
@@ -872,8 +895,7 @@ public:
 //===----------------------------------------------------------------------===//
 
 template <typename T>
-auto SparseElementsAttr::getValues() const
-    -> llvm::iterator_range<iterator<T>> {
+auto SparseElementsAttr::value_begin() const -> iterator<T> {
   auto zeroValue = getZeroValue<T>();
   auto valueIt = getValues().value_begin<T>();
   const std::vector<ptrdiff_t> flatSparseIndices(getFlattenedSparseIndices());
@@ -888,17 +910,37 @@ auto SparseElementsAttr::getValues() const
         // Otherwise, return the zero value.
         return zeroValue;
       };
-  return llvm::map_range(llvm::seq<ptrdiff_t>(0, getNumElements()), mapFn);
+  return iterator<T>(llvm::seq<ptrdiff_t>(0, getNumElements()).begin(), mapFn);
 }
-template <typename T>
-auto SparseElementsAttr::value_begin() const -> iterator<T> {
-  return getValues<T>().begin();
+
+//===----------------------------------------------------------------------===//
+// StringAttr
+//===----------------------------------------------------------------------===//
+
+/// Define comparisons for StringAttr against nullptr and itself to avoid the
+/// StringRef overloads from being chosen when not desirable.
+inline bool operator==(StringAttr lhs, std::nullptr_t) { return !lhs; }
+inline bool operator!=(StringAttr lhs, std::nullptr_t) {
+  return static_cast<bool>(lhs);
 }
-template <typename T>
-auto SparseElementsAttr::value_end() const -> iterator<T> {
-  return getValues<T>().end();
+inline bool operator==(StringAttr lhs, StringAttr rhs) {
+  return (Attribute)lhs == (Attribute)rhs;
 }
-} // end namespace mlir.
+inline bool operator!=(StringAttr lhs, StringAttr rhs) { return !(lhs == rhs); }
+
+/// Allow direct comparison with StringRef.
+inline bool operator==(StringAttr lhs, StringRef rhs) {
+  return lhs.getValue() == rhs;
+}
+inline bool operator!=(StringAttr lhs, StringRef rhs) { return !(lhs == rhs); }
+inline bool operator==(StringRef lhs, StringAttr rhs) {
+  return rhs.getValue() == lhs;
+}
+inline bool operator!=(StringRef lhs, StringAttr rhs) { return !(lhs == rhs); }
+
+inline Type StringAttr::getType() const { return Attribute::getType(); }
+
+} // namespace mlir
 
 //===----------------------------------------------------------------------===//
 // Attribute Utilities
@@ -907,11 +949,29 @@ auto SparseElementsAttr::value_end() const -> iterator<T> {
 namespace llvm {
 
 template <>
+struct DenseMapInfo<mlir::StringAttr> : public DenseMapInfo<mlir::Attribute> {
+  static mlir::StringAttr getEmptyKey() {
+    const void *pointer = llvm::DenseMapInfo<const void *>::getEmptyKey();
+    return mlir::StringAttr::getFromOpaquePointer(pointer);
+  }
+  static mlir::StringAttr getTombstoneKey() {
+    const void *pointer = llvm::DenseMapInfo<const void *>::getTombstoneKey();
+    return mlir::StringAttr::getFromOpaquePointer(pointer);
+  }
+};
+template <>
+struct PointerLikeTypeTraits<mlir::StringAttr>
+    : public PointerLikeTypeTraits<mlir::Attribute> {
+  static inline mlir::StringAttr getFromVoidPointer(void *p) {
+    return mlir::StringAttr::getFromOpaquePointer(p);
+  }
+};
+
+template <>
 struct PointerLikeTypeTraits<mlir::SymbolRefAttr>
     : public PointerLikeTypeTraits<mlir::Attribute> {
   static inline mlir::SymbolRefAttr getFromVoidPointer(void *ptr) {
-    return PointerLikeTypeTraits<mlir::Attribute>::getFromVoidPointer(ptr)
-        .cast<mlir::SymbolRefAttr>();
+    return mlir::SymbolRefAttr::getFromOpaquePointer(ptr);
   }
 };
 

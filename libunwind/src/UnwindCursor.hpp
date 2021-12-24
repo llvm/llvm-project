@@ -1,4 +1,4 @@
-//===------------------------- UnwindCursor.hpp ---------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -655,7 +655,9 @@ bool UnwindCursor<A, R>::validReg(int regNum) {
 #if defined(_LIBUNWIND_TARGET_X86_64)
   if (regNum >= UNW_X86_64_RAX && regNum <= UNW_X86_64_R15) return true;
 #elif defined(_LIBUNWIND_TARGET_ARM)
-  if (regNum >= UNW_ARM_R0 && regNum <= UNW_ARM_R15) return true;
+  if ((regNum >= UNW_ARM_R0 && regNum <= UNW_ARM_R15) ||
+      regNum == UNW_ARM_RA_AUTH_CODE)
+    return true;
 #elif defined(_LIBUNWIND_TARGET_AARCH64)
   if (regNum >= UNW_AARCH64_X0 && regNum <= UNW_ARM64_X30) return true;
 #endif

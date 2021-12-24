@@ -57,6 +57,15 @@ public:
   /// Get a reference to the kind map.
   const fir::KindMapping &getKindMap() { return kindMap; }
 
+  /// The LHS and RHS are not always in agreement in terms of
+  /// type. In some cases, the disagreement is between COMPLEX and other scalar
+  /// types. In that case, the conversion must insert/extract out of a COMPLEX
+  /// value to have the proper semantics and be strongly typed. For e.g for
+  /// converting an integer/real to a complex, the real part is filled using
+  /// the integer/real after type conversion and the imaginary part is zero.
+  mlir::Value convertWithSemantics(mlir::Location loc, mlir::Type toTy,
+                                   mlir::Value val);
+
   /// Get the entry block of the current Function
   mlir::Block *getEntryBlock() { return &getFunction().front(); }
 
@@ -189,11 +198,6 @@ public:
 
   mlir::StringAttr createWeakLinkage() { return getStringAttr("weak"); }
 
-  /// Cast the input value to IndexType.
-  mlir::Value convertToIndexType(mlir::Location loc, mlir::Value val) {
-    return createConvert(loc, getIndexType(), val);
-  }
-
   /// Get a function by name. If the function exists in the current module, it
   /// is returned. Otherwise, a null FuncOp is returned.
   mlir::FuncOp getNamedFunction(llvm::StringRef name) {
@@ -243,6 +247,11 @@ public:
     return createFunction(loc, module, name, ty);
   }
 
+  /// Cast the input value to IndexType.
+  mlir::Value convertToIndexType(mlir::Location loc, mlir::Value val) {
+    return createConvert(loc, getIndexType(), val);
+  }
+
   /// Construct one of the two forms of shape op from an array box.
   mlir::Value genShape(mlir::Location loc, const fir::AbstractArrayBox &arr);
   mlir::Value genShape(mlir::Location loc, llvm::ArrayRef<mlir::Value> shift,
@@ -252,6 +261,13 @@ public:
   /// Create one of the shape ops given an extended value. For a boxed value,
   /// this may create a `fir.shift` op.
   mlir::Value createShape(mlir::Location loc, const fir::ExtendedValue &exv);
+
+  /// Create a boxed value (Fortran descriptor) to be passed to the runtime.
+  /// \p exv is an extended value holding a memory reference to the object that
+  /// must be boxed. This function will crash if provided something that is not
+  /// a memory reference type.
+  /// Array entities are boxed with a shape and character with their length.
+  mlir::Value createBox(mlir::Location loc, const fir::ExtendedValue &exv);
 
   /// Create constant i1 with value 1. if \p b is true or 0. otherwise
   mlir::Value createBool(mlir::Location loc, bool b) {
@@ -345,6 +361,10 @@ namespace fir::factory {
 mlir::Value readCharLen(fir::FirOpBuilder &builder, mlir::Location loc,
                         const fir::ExtendedValue &box);
 
+/// Read or get the extent in dimension \p dim of the array described by \p box.
+mlir::Value readExtent(fir::FirOpBuilder &builder, mlir::Location loc,
+                       const fir::ExtendedValue &box, unsigned dim);
+
 /// Read extents from \p box.
 llvm::SmallVector<mlir::Value> readExtents(fir::FirOpBuilder &builder,
                                            mlir::Location loc,
@@ -369,6 +389,12 @@ fir::ExtendedValue createStringLiteral(fir::FirOpBuilder &, mlir::Location,
 /// to hint at the origin of the identifier.
 std::string uniqueCGIdent(llvm::StringRef prefix, llvm::StringRef name);
 
+/// Lowers the extents from the sequence type to Values.
+/// Any unknown extents are lowered to undefined values.
+llvm::SmallVector<mlir::Value> createExtents(fir::FirOpBuilder &builder,
+                                             mlir::Location loc,
+                                             fir::SequenceType seqTy);
+
 //===----------------------------------------------------------------------===//
 // Location helpers
 //===----------------------------------------------------------------------===//
@@ -378,6 +404,11 @@ mlir::Value locationToFilename(fir::FirOpBuilder &, mlir::Location);
 
 /// Generate a constant of the given type with the location line number
 mlir::Value locationToLineNo(fir::FirOpBuilder &, mlir::Location, mlir::Type);
+
+/// Builds and returns the type of a ragged array header used to cache mask
+/// evaluations. RaggedArrayHeader is defined in
+/// flang/include/flang/Runtime/ragged.h.
+mlir::TupleType getRaggedArrayHeaderType(fir::FirOpBuilder &builder);
 
 } // namespace fir::factory
 

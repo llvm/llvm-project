@@ -147,38 +147,77 @@ ConstantRange ConstantRange::makeExactICmpRegion(CmpInst::Predicate Pred,
   return makeAllowedICmpRegion(Pred, C);
 }
 
-bool ConstantRange::getEquivalentICmp(CmpInst::Predicate &Pred,
-                                      APInt &RHS) const {
-  bool Success = false;
+bool ConstantRange::areInsensitiveToSignednessOfICmpPredicate(
+    const ConstantRange &CR1, const ConstantRange &CR2) {
+  if (CR1.isEmptySet() || CR2.isEmptySet())
+    return true;
 
+  return (CR1.isAllNonNegative() && CR2.isAllNonNegative()) ||
+         (CR1.isAllNegative() && CR2.isAllNegative());
+}
+
+bool ConstantRange::areInsensitiveToSignednessOfInvertedICmpPredicate(
+    const ConstantRange &CR1, const ConstantRange &CR2) {
+  if (CR1.isEmptySet() || CR2.isEmptySet())
+    return true;
+
+  return (CR1.isAllNonNegative() && CR2.isAllNegative()) ||
+         (CR1.isAllNegative() && CR2.isAllNonNegative());
+}
+
+CmpInst::Predicate ConstantRange::getEquivalentPredWithFlippedSignedness(
+    CmpInst::Predicate Pred, const ConstantRange &CR1,
+    const ConstantRange &CR2) {
+  assert(CmpInst::isIntPredicate(Pred) && CmpInst::isRelational(Pred) &&
+         "Only for relational integer predicates!");
+
+  CmpInst::Predicate FlippedSignednessPred =
+      CmpInst::getFlippedSignednessPredicate(Pred);
+
+  if (areInsensitiveToSignednessOfICmpPredicate(CR1, CR2))
+    return FlippedSignednessPred;
+
+  if (areInsensitiveToSignednessOfInvertedICmpPredicate(CR1, CR2))
+    return CmpInst::getInversePredicate(FlippedSignednessPred);
+
+  return CmpInst::Predicate::BAD_ICMP_PREDICATE;
+}
+
+void ConstantRange::getEquivalentICmp(CmpInst::Predicate &Pred,
+                                      APInt &RHS, APInt &Offset) const {
+  Offset = APInt(getBitWidth(), 0);
   if (isFullSet() || isEmptySet()) {
     Pred = isEmptySet() ? CmpInst::ICMP_ULT : CmpInst::ICMP_UGE;
     RHS = APInt(getBitWidth(), 0);
-    Success = true;
   } else if (auto *OnlyElt = getSingleElement()) {
     Pred = CmpInst::ICMP_EQ;
     RHS = *OnlyElt;
-    Success = true;
   } else if (auto *OnlyMissingElt = getSingleMissingElement()) {
     Pred = CmpInst::ICMP_NE;
     RHS = *OnlyMissingElt;
-    Success = true;
   } else if (getLower().isMinSignedValue() || getLower().isMinValue()) {
     Pred =
         getLower().isMinSignedValue() ? CmpInst::ICMP_SLT : CmpInst::ICMP_ULT;
     RHS = getUpper();
-    Success = true;
   } else if (getUpper().isMinSignedValue() || getUpper().isMinValue()) {
     Pred =
         getUpper().isMinSignedValue() ? CmpInst::ICMP_SGE : CmpInst::ICMP_UGE;
     RHS = getLower();
-    Success = true;
+  } else {
+    Pred = CmpInst::ICMP_ULT;
+    RHS = getUpper() - getLower();
+    Offset = -getLower();
   }
 
-  assert((!Success || ConstantRange::makeExactICmpRegion(Pred, RHS) == *this) &&
+  assert(ConstantRange::makeExactICmpRegion(Pred, RHS) == add(Offset) &&
          "Bad result!");
+}
 
-  return Success;
+bool ConstantRange::getEquivalentICmp(CmpInst::Predicate &Pred,
+                                      APInt &RHS) const {
+  APInt Offset;
+  getEquivalentICmp(Pred, RHS, Offset);
+  return Offset.isZero();
 }
 
 bool ConstantRange::icmp(CmpInst::Predicate Pred,
@@ -342,11 +381,10 @@ ConstantRange::isSizeStrictlySmallerThan(const ConstantRange &Other) const {
 
 bool
 ConstantRange::isSizeLargerThan(uint64_t MaxSize) const {
-  assert(MaxSize && "MaxSize can't be 0.");
   // If this a full set, we need special handling to avoid needing an extra bit
   // to represent the size.
   if (isFullSet())
-    return APInt::getMaxValue(getBitWidth()).ugt(MaxSize - 1);
+    return MaxSize == 0 || APInt::getMaxValue(getBitWidth()).ugt(MaxSize - 1);
 
   return (Upper - Lower).ugt(MaxSize);
 }
@@ -641,6 +679,24 @@ ConstantRange ConstantRange::unionWith(const ConstantRange &CR,
   APInt U = CR.Upper.ugt(Upper) ? CR.Upper : Upper;
 
   return ConstantRange(std::move(L), std::move(U));
+}
+
+Optional<ConstantRange>
+ConstantRange::exactIntersectWith(const ConstantRange &CR) const {
+  // TODO: This can be implemented more efficiently.
+  ConstantRange Result = intersectWith(CR);
+  if (Result == inverse().unionWith(CR.inverse()).inverse())
+    return Result;
+  return None;
+}
+
+Optional<ConstantRange>
+ConstantRange::exactUnionWith(const ConstantRange &CR) const {
+  // TODO: This can be implemented more efficiently.
+  ConstantRange Result = unionWith(CR);
+  if (Result == inverse().intersectWith(CR.inverse()).inverse())
+    return Result;
+  return None;
 }
 
 ConstantRange ConstantRange::castOp(Instruction::CastOps CastOp,
@@ -1510,20 +1566,15 @@ ConstantRange ConstantRange::smul_sat(const ConstantRange &Other) const {
   //   [-1,4) * [-2,3) = min(-1*-2, -1*2, 3*-2, 3*2) = -6.
   // Similarly for the upper bound, swapping min for max.
 
-  APInt this_min = getSignedMin().sext(getBitWidth() * 2);
-  APInt this_max = getSignedMax().sext(getBitWidth() * 2);
-  APInt Other_min = Other.getSignedMin().sext(getBitWidth() * 2);
-  APInt Other_max = Other.getSignedMax().sext(getBitWidth() * 2);
+  APInt Min = getSignedMin();
+  APInt Max = getSignedMax();
+  APInt OtherMin = Other.getSignedMin();
+  APInt OtherMax = Other.getSignedMax();
 
-  auto L = {this_min * Other_min, this_min * Other_max, this_max * Other_min,
-            this_max * Other_max};
+  auto L = {Min.smul_sat(OtherMin), Min.smul_sat(OtherMax),
+            Max.smul_sat(OtherMin), Max.smul_sat(OtherMax)};
   auto Compare = [](const APInt &A, const APInt &B) { return A.slt(B); };
-
-  // Note that we wanted to perform signed saturating multiplication,
-  // so since we performed plain multiplication in twice the bitwidth,
-  // we need to perform signed saturating truncation.
-  return getNonEmpty(std::min(L, Compare).truncSSat(getBitWidth()),
-                     std::max(L, Compare).truncSSat(getBitWidth()) + 1);
+  return getNonEmpty(std::min(L, Compare), std::max(L, Compare) + 1);
 }
 
 ConstantRange ConstantRange::ushl_sat(const ConstantRange &Other) const {

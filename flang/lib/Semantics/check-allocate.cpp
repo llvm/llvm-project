@@ -541,7 +541,7 @@ bool AllocationCheckerHelper::RunCoarrayRelatedChecks(
     CHECK(context.AnyFatalError());
     return false;
   }
-  if (IsCoarray(*symbol_)) {
+  if (evaluate::IsCoarray(*symbol_)) {
     if (allocateInfo_.gotTypeSpec) {
       // C938
       if (const DerivedTypeSpec *

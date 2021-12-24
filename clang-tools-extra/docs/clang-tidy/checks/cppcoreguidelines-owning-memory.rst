@@ -3,8 +3,8 @@
 cppcoreguidelines-owning-memory
 ===============================
 
-This check implements the type-based semantics of ``gsl::owner<T*>``, which allows 
-static analysis on code, that uses raw pointers to handle resources like 
+This check implements the type-based semantics of ``gsl::owner<T*>``, which allows
+static analysis on code, that uses raw pointers to handle resources like
 dynamic memory, but won't introduce RAII concepts.
 
 The relevant sections in the `C++ Core Guidelines <https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md>`_ are I.11, C.33, R.3 and GSL.Views
@@ -20,7 +20,7 @@ the `Guideline Support Library <https://github.com/isocpp/CppCoreGuidelines/blob
 All checks are purely type based and not (yet) flow sensitive.
 
 The following examples will demonstrate the correct and incorrect initializations
-of owners, assignment is handled the same way. Note that both ``new`` and 
+of owners, assignment is handled the same way. Note that both ``new`` and
 ``malloc()``-like resource functions are considered to produce resources.
 
 .. code-block:: c++
@@ -53,7 +53,7 @@ to be deleted.
   // Example Good, Ownership correctly stated
   gsl::owner<int*> Owner = new int(42); // Good
   delete Owner; // Good as well, statically enforced, that only owners get deleted
-  
+
 The check will furthermore ensure, that functions, that expect a ``gsl::owner<T*>`` as
 argument get called with either a ``gsl::owner<T*>`` or a newly created resource.
 
@@ -100,7 +100,7 @@ Options
 Limitations
 -----------
 
-Using ``gsl::owner<T*>`` in a typedef or alias is not handled correctly. 
+Using ``gsl::owner<T*>`` in a typedef or alias is not handled correctly.
 
 .. code-block:: c++
 
@@ -110,7 +110,7 @@ Using ``gsl::owner<T*>`` in a typedef or alias is not handled correctly.
 The ``gsl::owner<T*>`` is declared as a templated type alias.
 In template functions and classes, like in the example below, the information
 of the type aliases gets lost. Therefore using ``gsl::owner<T*>`` in a heavy templated
-code base might lead to false positives. 
+code base might lead to false positives.
 
 Known code constructs that do not get diagnosed correctly are:
 
@@ -127,7 +127,7 @@ Known code constructs that do not get diagnosed correctly are:
 
   gsl::owner<int*> function_that_returns_owner() { return gsl::owner<int*>(new int(42)); }
 
-  // Type deduction does not work for auto variables. 
+  // Type deduction does not work for auto variables.
   // This is caught by the check and will be noted accordingly.
   auto OwnedObject = function_that_returns_owner(); // Type of OwnedObject will be int*
 
@@ -152,9 +152,9 @@ Known code constructs that do not get diagnosed correctly are:
   };
 
   // Code, that yields a false positive.
-  OwnedValue<gsl::owner<int*>> Owner(new int(42)); // Type deduction yield T -> int * 
+  OwnedValue<gsl::owner<int*>> Owner(new int(42)); // Type deduction yield T -> int *
   // False positive, getValue returns int* and not gsl::owner<int*>
-  gsl::owner<int*> OwnedInt = Owner.getValue(); 
+  gsl::owner<int*> OwnedInt = Owner.getValue();
 
 Another limitation of the current implementation is only the type based checking.
 Suppose you have code like the following:
@@ -162,15 +162,15 @@ Suppose you have code like the following:
 .. code-block:: c++
 
   // Two owners with assigned resources
-  gsl::owner<int*> Owner1 = new int(42); 
+  gsl::owner<int*> Owner1 = new int(42);
   gsl::owner<int*> Owner2 = new int(42);
 
   Owner2 = Owner1; // Conceptual Leak of initial resource of Owner2!
   Owner1 = nullptr;
 
 The semantic of a ``gsl::owner<T*>`` is mostly like a ``std::unique_ptr<T>``, therefore
-assignment of two ``gsl::owner<T*>`` is considered a move, which requires that the 
+assignment of two ``gsl::owner<T*>`` is considered a move, which requires that the
 resource ``Owner2`` must have been released before the assignment.
-This kind of condition could be caught in later improvements of this check with 
+This kind of condition could be caught in later improvements of this check with
 flowsensitive analysis. Currently, the `Clang Static Analyzer` catches this bug
 for dynamic memory, but not for general types of resources.

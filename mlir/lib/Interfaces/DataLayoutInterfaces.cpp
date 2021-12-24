@@ -147,11 +147,11 @@ mlir::detail::filterEntriesForType(DataLayoutEntryListRef entries,
 
 DataLayoutEntryInterface
 mlir::detail::filterEntryForIdentifier(DataLayoutEntryListRef entries,
-                                       Identifier id) {
+                                       StringAttr id) {
   const auto *it = llvm::find_if(entries, [id](DataLayoutEntryInterface entry) {
-    if (!entry.getKey().is<Identifier>())
+    if (!entry.getKey().is<StringAttr>())
       return false;
-    return entry.getKey().get<Identifier>() == id;
+    return entry.getKey().get<StringAttr>() == id;
   });
   return it == entries.end() ? DataLayoutEntryInterface() : *it;
 }
@@ -384,12 +384,12 @@ unsigned mlir::DataLayout::getTypePreferredAlignment(Type t) const {
 
 void DataLayoutSpecInterface::bucketEntriesByType(
     DenseMap<TypeID, DataLayoutEntryList> &types,
-    DenseMap<Identifier, DataLayoutEntryInterface> &ids) {
+    DenseMap<StringAttr, DataLayoutEntryInterface> &ids) {
   for (DataLayoutEntryInterface entry : getEntries()) {
     if (auto type = entry.getKey().dyn_cast<Type>())
       types[type.getTypeID()].push_back(entry);
     else
-      ids[entry.getKey().get<Identifier>()] = entry;
+      ids[entry.getKey().get<StringAttr>()] = entry;
   }
 }
 
@@ -403,7 +403,7 @@ LogicalResult mlir::detail::verifyDataLayoutSpec(DataLayoutSpecInterface spec,
   // Second, dispatch verifications of entry groups to types or dialects they
   // are are associated with.
   DenseMap<TypeID, DataLayoutEntryList> types;
-  DenseMap<Identifier, DataLayoutEntryInterface> ids;
+  DenseMap<StringAttr, DataLayoutEntryInterface> ids;
   spec.bucketEntriesByType(types, ids);
 
   for (const auto &kvp : types) {
@@ -430,8 +430,8 @@ LogicalResult mlir::detail::verifyDataLayoutSpec(DataLayoutSpecInterface spec,
   }
 
   for (const auto &kvp : ids) {
-    Identifier identifier = kvp.second.getKey().get<Identifier>();
-    Dialect *dialect = identifier.getDialect();
+    StringAttr identifier = kvp.second.getKey().get<StringAttr>();
+    Dialect *dialect = identifier.getReferencedDialect();
 
     // Ignore attributes that belong to an unknown dialect, the dialect may
     // actually implement the relevant interface but we don't know about that.

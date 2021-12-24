@@ -400,8 +400,8 @@ void CodeGenFunction::EmitAnyExprToExn(const Expr *e, Address addr) {
 
   // __cxa_allocate_exception returns a void*;  we need to cast this
   // to the appropriate type for the object.
-  llvm::Type *ty = ConvertTypeForMem(e->getType())->getPointerTo();
-  Address typedAddr = Builder.CreateBitCast(addr, ty);
+  llvm::Type *ty = ConvertTypeForMem(e->getType());
+  Address typedAddr = Builder.CreateElementBitCast(addr, ty);
 
   // FIXME: this isn't quite right!  If there's a final unelided call
   // to a copy constructor, then according to [except.terminate]p1 we
@@ -421,13 +421,13 @@ void CodeGenFunction::EmitAnyExprToExn(const Expr *e, Address addr) {
 Address CodeGenFunction::getExceptionSlot() {
   if (!ExceptionSlot)
     ExceptionSlot = CreateTempAlloca(Int8PtrTy, "exn.slot");
-  return Address(ExceptionSlot, getPointerAlign());
+  return Address(ExceptionSlot, Int8PtrTy, getPointerAlign());
 }
 
 Address CodeGenFunction::getEHSelectorSlot() {
   if (!EHSelectorSlot)
     EHSelectorSlot = CreateTempAlloca(Int32Ty, "ehselector.slot");
-  return Address(EHSelectorSlot, CharUnits::fromQuantity(4));
+  return Address(EHSelectorSlot, Int32Ty, CharUnits::fromQuantity(4));
 }
 
 llvm::Value *CodeGenFunction::getExceptionFromSlot() {
@@ -477,11 +477,11 @@ void CodeGenFunction::EmitStartEHSpec(const Decl *D) {
     return;
 
   ExceptionSpecificationType EST = Proto->getExceptionSpecType();
-  if (isNoexceptExceptionSpec(EST) && Proto->canThrow() == CT_Cannot) {
-    // noexcept functions are simple terminate scopes.
-    if (!getLangOpts().EHAsynch) // -EHa: HW exception still can occur
-      EHStack.pushTerminate();
-  } else if (EST == EST_Dynamic || EST == EST_DynamicNone) {
+  // In C++17 and later, 'throw()' aka EST_DynamicNone is treated the same way
+  // as noexcept. In earlier standards, it is handled in this block, along with
+  // 'throw(X...)'.
+  if (EST == EST_Dynamic ||
+      (EST == EST_DynamicNone && !getLangOpts().CPlusPlus17)) {
     // TODO: Revisit exception specifications for the MS ABI.  There is a way to
     // encode these in an object file but MSVC doesn't do anything with it.
     if (getTarget().getCXXABI().isMicrosoft())
@@ -521,6 +521,10 @@ void CodeGenFunction::EmitStartEHSpec(const Decl *D) {
                                                         /*ForEH=*/true);
       Filter->setFilter(I, EHType);
     }
+  } else if (Proto->canThrow() == CT_Cannot) {
+    // noexcept functions are simple terminate scopes.
+    if (!getLangOpts().EHAsynch) // -EHa: HW exception still can occur
+      EHStack.pushTerminate();
   }
 }
 
@@ -580,10 +584,8 @@ void CodeGenFunction::EmitEndEHSpec(const Decl *D) {
     return;
 
   ExceptionSpecificationType EST = Proto->getExceptionSpecType();
-  if (isNoexceptExceptionSpec(EST) && Proto->canThrow() == CT_Cannot &&
-      !EHStack.empty() /* possible empty when under async exceptions */) {
-    EHStack.popTerminate();
-  } else if (EST == EST_Dynamic || EST == EST_DynamicNone) {
+  if (EST == EST_Dynamic ||
+      (EST == EST_DynamicNone && !getLangOpts().CPlusPlus17)) {
     // TODO: Revisit exception specifications for the MS ABI.  There is a way to
     // encode these in an object file but MSVC doesn't do anything with it.
     if (getTarget().getCXXABI().isMicrosoft())
@@ -599,6 +601,10 @@ void CodeGenFunction::EmitEndEHSpec(const Decl *D) {
     EHFilterScope &filterScope = cast<EHFilterScope>(*EHStack.begin());
     emitFilterDispatchBlock(*this, filterScope);
     EHStack.popFilter();
+  } else if (Proto->canThrow() == CT_Cannot &&
+              /* possible empty when under async exceptions */
+             !EHStack.empty()) {
+    EHStack.popTerminate();
   }
 }
 

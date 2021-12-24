@@ -47,7 +47,8 @@ enum {
   CCMaskFirst            = (1 << 18),
   CCMaskLast             = (1 << 19),
   IsLogical              = (1 << 20),
-  CCIfNoSignedWrap       = (1 << 21)
+  CCIfNoSignedWrap       = (1 << 21),
+  MemMemOp               = (1 << 22)
 };
 
 static inline unsigned getAccessSize(unsigned int Flags) {
@@ -271,8 +272,8 @@ public:
                             Register DestReg, int FrameIdx,
                             const TargetRegisterClass *RC,
                             const TargetRegisterInfo *TRI) const override;
-  MachineInstr *convertToThreeAddress(MachineInstr &MI,
-                                      LiveVariables *LV) const override;
+  MachineInstr *convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
+                                      LiveIntervals *LIS) const override;
   MachineInstr *
   foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
                         ArrayRef<unsigned> Ops,

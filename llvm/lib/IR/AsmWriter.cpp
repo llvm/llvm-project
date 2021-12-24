@@ -353,12 +353,11 @@ void llvm::printLLVMNameWithoutPrefix(raw_ostream &OS, StringRef Name) {
   // Scan the name to see if it needs quotes first.
   bool NeedsQuotes = isdigit(static_cast<unsigned char>(Name[0]));
   if (!NeedsQuotes) {
-    for (unsigned i = 0, e = Name.size(); i != e; ++i) {
+    for (unsigned char C : Name) {
       // By making this unsigned, the value passed in to isalnum will always be
       // in the range 0-255.  This is important when building with MSVC because
       // its implementation will assert.  This situation can arise when dealing
       // with UTF-8 multibyte characters.
-      unsigned char C = Name[i];
       if (!isalnum(static_cast<unsigned char>(C)) && C != '-' && C != '.' &&
           C != '_') {
         NeedsQuotes = true;
@@ -513,10 +512,8 @@ void TypePrinting::incorporateTypes() {
   // the unnamed ones out to a numbering and remove the anonymous structs.
   unsigned NextNumber = 0;
 
-  std::vector<StructType*>::iterator NextToUse = NamedTypes.begin(), I, E;
-  for (I = NamedTypes.begin(), E = NamedTypes.end(); I != E; ++I) {
-    StructType *STy = *I;
-
+  std::vector<StructType *>::iterator NextToUse = NamedTypes.begin();
+  for (StructType *STy : NamedTypes) {
     // Ignore anonymous types.
     if (STy->isLiteral())
       continue;
@@ -555,16 +552,13 @@ void TypePrinting::print(Type *Ty, raw_ostream &OS) {
     FunctionType *FTy = cast<FunctionType>(Ty);
     print(FTy->getReturnType(), OS);
     OS << " (";
-    for (FunctionType::param_iterator I = FTy->param_begin(),
-         E = FTy->param_end(); I != E; ++I) {
-      if (I != FTy->param_begin())
-        OS << ", ";
-      print(*I, OS);
+    ListSeparator LS;
+    for (Type *Ty : FTy->params()) {
+      OS << LS;
+      print(Ty, OS);
     }
-    if (FTy->isVarArg()) {
-      if (FTy->getNumParams()) OS << ", ";
-      OS << "...";
-    }
+    if (FTy->isVarArg())
+      OS << LS << "...";
     OS << ')';
     return;
   }
@@ -634,12 +628,11 @@ void TypePrinting::printStructBody(StructType *STy, raw_ostream &OS) {
   if (STy->getNumElements() == 0) {
     OS << "{}";
   } else {
-    StructType::element_iterator I = STy->element_begin();
     OS << "{ ";
-    print(*I++, OS);
-    for (StructType::element_iterator E = STy->element_end(); I != E; ++I) {
-      OS << ", ";
-      print(*I, OS);
+    ListSeparator LS;
+    for (Type *Ty : STy->elements()) {
+      OS << LS;
+      print(Ty, OS);
     }
 
     OS << " }";
@@ -1313,27 +1306,8 @@ static void WriteAsOperandInternal(raw_ostream &Out, const Metadata *MD,
                                    bool FromValue = false);
 
 static void WriteOptimizationInfo(raw_ostream &Out, const User *U) {
-  if (const FPMathOperator *FPO = dyn_cast<const FPMathOperator>(U)) {
-    // 'Fast' is an abbreviation for all fast-math-flags.
-    if (FPO->isFast())
-      Out << " fast";
-    else {
-      if (FPO->hasAllowReassoc())
-        Out << " reassoc";
-      if (FPO->hasNoNaNs())
-        Out << " nnan";
-      if (FPO->hasNoInfs())
-        Out << " ninf";
-      if (FPO->hasNoSignedZeros())
-        Out << " nsz";
-      if (FPO->hasAllowReciprocal())
-        Out << " arcp";
-      if (FPO->hasAllowContract())
-        Out << " contract";
-      if (FPO->hasApproxFunc())
-        Out << " afn";
-    }
-  }
+  if (const FPMathOperator *FPO = dyn_cast<const FPMathOperator>(U))
+    Out << FPO->getFastMathFlags();
 
   if (const OverflowingBinaryOperator *OBO =
         dyn_cast<OverflowingBinaryOperator>(U)) {
@@ -1474,6 +1448,12 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
     return;
   }
 
+  if (const auto *NC = dyn_cast<NoCFIValue>(CV)) {
+    Out << "no_cfi ";
+    WriteAsOperandInternal(Out, NC->getGlobalValue(), WriterCtx);
+    return;
+  }
+
   if (const ConstantArray *CA = dyn_cast<ConstantArray>(CV)) {
     Type *ETy = CA->getType()->getElementType();
     Out << '[';
@@ -1607,11 +1587,9 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
         Out << ", ";
     }
 
-    if (CE->hasIndices()) {
-      ArrayRef<unsigned> Indices = CE->getIndices();
-      for (unsigned i = 0, e = Indices.size(); i != e; ++i)
-        Out << ", " << Indices[i];
-    }
+    if (CE->hasIndices())
+      for (unsigned I : CE->getIndices())
+        Out << ", " << I;
 
     if (CE->isCast()) {
       Out << " to ";
@@ -3552,8 +3530,8 @@ void AssemblyWriter::printGlobal(const GlobalVariable *GV) {
   }
 
   maybePrintComdat(Out, *GV);
-  if (GV->getAlignment())
-    Out << ", align " << GV->getAlignment();
+  if (MaybeAlign A = GV->getAlign())
+    Out << ", align " << A->value();
 
   SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
   GV->getAllMetadata(MDs);
@@ -3661,13 +3639,13 @@ void AssemblyWriter::printTypeIdentities() {
   }
 
   auto &NamedTypes = TypePrinter.getNamedTypes();
-  for (unsigned I = 0, E = NamedTypes.size(); I != E; ++I) {
-    PrintLLVMName(Out, NamedTypes[I]->getName(), LocalPrefix);
+  for (StructType *NamedType : NamedTypes) {
+    PrintLLVMName(Out, NamedType->getName(), LocalPrefix);
     Out << " = type ";
 
     // Make sure we print out at least one level of the type structure, so
     // that we do not get %FILE = type %FILE
-    TypePrinter.printStructBody(NamedTypes[I], Out);
+    TypePrinter.printStructBody(NamedType, Out);
     Out << '\n';
   }
 }
@@ -3781,8 +3759,8 @@ void AssemblyWriter::printFunction(const Function *F) {
     Out << '"';
   }
   maybePrintComdat(Out, *F);
-  if (F->getAlignment())
-    Out << " align " << F->getAlignment();
+  if (MaybeAlign A = F->getAlign())
+    Out << " align " << A->value();
   if (F->hasGC())
     Out << " gc \"" << F->getGC() << '"';
   if (F->hasPrefixData()) {
@@ -4263,8 +4241,8 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
       Out << ", ";
       writeOperand(AI->getArraySize(), true);
     }
-    if (AI->getAlignment()) {
-      Out << ", align " << AI->getAlignment();
+    if (MaybeAlign A = AI->getAlign()) {
+      Out << ", align " << A->value();
     }
 
     unsigned AddrSpace = AI->getType()->getAddressSpace();
@@ -4334,13 +4312,13 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
   if (const LoadInst *LI = dyn_cast<LoadInst>(&I)) {
     if (LI->isAtomic())
       writeAtomic(LI->getContext(), LI->getOrdering(), LI->getSyncScopeID());
-    if (LI->getAlignment())
-      Out << ", align " << LI->getAlignment();
+    if (MaybeAlign A = LI->getAlign())
+      Out << ", align " << A->value();
   } else if (const StoreInst *SI = dyn_cast<StoreInst>(&I)) {
     if (SI->isAtomic())
       writeAtomic(SI->getContext(), SI->getOrdering(), SI->getSyncScopeID());
-    if (SI->getAlignment())
-      Out << ", align " << SI->getAlignment();
+    if (MaybeAlign A = SI->getAlign())
+      Out << ", align " << A->value();
   } else if (const AtomicCmpXchgInst *CXI = dyn_cast<AtomicCmpXchgInst>(&I)) {
     writeAtomicCmpXchg(CXI->getContext(), CXI->getSuccessOrdering(),
                        CXI->getFailureOrdering(), CXI->getSyncScopeID());

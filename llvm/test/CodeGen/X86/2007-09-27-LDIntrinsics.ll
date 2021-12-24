@@ -8,8 +8,9 @@ entry:
 	ret x86_fp80 %tmp2
         
 ; CHECK-LABEL: foo:
-; CHECK: fldt 4(%esp)
+; CHECK: fldt 16(%esp)
 ; CHECK-NEXT: fsqrt
+; CHECK-NEXT: addl $12, %esp
 ; CHECK-NEXT: ret
 }
 
@@ -20,10 +21,11 @@ entry:
 	%tmp2 = call x86_fp80 @llvm.powi.f80.i32( x86_fp80 %x, i32 3 )
 	ret x86_fp80 %tmp2
 ; CHECK-LABEL: bar:
-; CHECK: fldt 4(%esp)
+; CHECK: fldt 16(%esp)
 ; CHECK-NEXT: fld	%st(0)
 ; CHECK-NEXT: fmul	%st(1)
 ; CHECK-NEXT: fmulp
+; CHECK-NEXT: addl $12, %esp
 ; CHECK-NEXT: ret
 }
 

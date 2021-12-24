@@ -47,6 +47,86 @@ public:
   virtual StringRef getFullSymbolSpec() const = 0;
 };
 
-} // end namespace mlir
+//===----------------------------------------------------------------------===//
+// Parse Fields
+//===----------------------------------------------------------------------===//
 
-#endif
+/// Provide a template class that can be specialized by users to dispatch to
+/// parsers. Auto-generated parsers generate calls to `FieldParser<T>::parse`,
+/// where `T` is the parameter storage type, to parse custom types.
+template <typename T, typename = T>
+struct FieldParser;
+
+/// Parse an attribute.
+template <typename AttributeT>
+struct FieldParser<
+    AttributeT, std::enable_if_t<std::is_base_of<Attribute, AttributeT>::value,
+                                 AttributeT>> {
+  static FailureOr<AttributeT> parse(AsmParser &parser) {
+    AttributeT value;
+    if (parser.parseCustomAttributeWithFallback(value))
+      return failure();
+    return value;
+  }
+};
+
+/// Parse an attribute.
+template <typename TypeT>
+struct FieldParser<
+    TypeT, std::enable_if_t<std::is_base_of<Type, TypeT>::value, TypeT>> {
+  static FailureOr<TypeT> parse(AsmParser &parser) {
+    TypeT value;
+    if (parser.parseCustomTypeWithFallback(value))
+      return failure();
+    return value;
+  }
+};
+
+/// Parse any integer.
+template <typename IntT>
+struct FieldParser<IntT,
+                   std::enable_if_t<std::is_integral<IntT>::value, IntT>> {
+  static FailureOr<IntT> parse(AsmParser &parser) {
+    IntT value;
+    if (parser.parseInteger(value))
+      return failure();
+    return value;
+  }
+};
+
+/// Parse a string.
+template <>
+struct FieldParser<std::string> {
+  static FailureOr<std::string> parse(AsmParser &parser) {
+    std::string value;
+    if (parser.parseString(&value))
+      return failure();
+    return value;
+  }
+};
+
+/// Parse any container that supports back insertion as a list.
+template <typename ContainerT>
+struct FieldParser<
+    ContainerT, std::enable_if_t<std::is_member_function_pointer<
+                                     decltype(&ContainerT::push_back)>::value,
+                                 ContainerT>> {
+  using ElementT = typename ContainerT::value_type;
+  static FailureOr<ContainerT> parse(AsmParser &parser) {
+    ContainerT elements;
+    auto elementParser = [&]() {
+      auto element = FieldParser<ElementT>::parse(parser);
+      if (failed(element))
+        return failure();
+      elements.push_back(element.getValue());
+      return success();
+    };
+    if (parser.parseCommaSeparatedList(elementParser))
+      return failure();
+    return elements;
+  }
+};
+
+} // namespace mlir
+
+#endif // MLIR_IR_DIALECTIMPLEMENTATION_H

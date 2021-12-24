@@ -112,7 +112,7 @@ def linalg_structured_op(dsl_func=None,
   if dsl_func is None:
     # Curry the keyword args in for delayed application.
     return functools.partial(
-        tc_def_op, op_name=op_name, op_class_name=op_class_name)
+        linalg_structured_op, op_name=op_name, op_class_name=op_class_name)
   # Determine default names by introspecting the function.
   if op_name is None:
     op_name = dsl_func.__name__
@@ -131,9 +131,10 @@ def linalg_structured_op(dsl_func=None,
     if isinstance(param_default, (TensorDef, ScalarDef, AttributeDef)):
       tc_model.add_operand(param_name, param_default.operand_def)
     else:
-      raise ValueError(f"@tc_def_op function parameters must be defaulted as "
-                       f"TensorDef(...), ScalarDef(...), or AttributeDef(...): "
-                       f"Found {param_name}: {param_default}")
+      raise ValueError(
+          f"@linalg_structured_op function parameters must be defaulted as "
+          f"TensorDef(...), ScalarDef(...), or AttributeDef(...): "
+          f"Found {param_name}: {param_default}")
     dsl_func_args.append(param_default)
 
   # Invoke the DSL func to finish populating the model.

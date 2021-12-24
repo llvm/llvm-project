@@ -1,4 +1,9 @@
-; RUN: llc %s -stop-before finalize-isel -o - | FileCheck %s
+; RUN: llc %s -stop-before finalize-isel -o - \
+; RUN:    -experimental-debug-variable-locations=false \
+; RUN: | FileCheck %s --check-prefixes=CHECK,DBGVALUE
+; RUN: llc %s -stop-before finalize-isel -o - \
+; RUN:    -experimental-debug-variable-locations=true \
+; RUN: | FileCheck %s --check-prefixes=CHECK,INSTRREF
 
 ;--------------------------------------------------------------------
 ; This test case is basically generated from the following C code.
@@ -66,8 +71,10 @@ target triple = "x86_64-apple-macosx10.4.0"
 define i32 @test1() local_unnamed_addr #0 !dbg !17 {
 ; CHECK-LABEL: bb.0.entry1
 ; CHECK-NEXT:    DBG_VALUE 0, $noreg, ![[BAR1]], !DIExpression()
-; CHECK-NEXT:    [[REG1:%[0-9]+]]:gr64 =
-; CHECK-NEXT:    DBG_VALUE [[REG1]], $noreg, ![[FOO1]], !DIExpression()
+; CHECK-NEXT:    [[REG1:%[0-9]+]]:gr64 = LEA64r 
+; INSTRREF-SAME:    debug-instr-number 1
+; INSTRREF-NEXT:  DBG_INSTR_REF 1, 0, ![[FOO1]], !DIExpression()
+; DBGVALUE-NEXT:  DBG_VALUE [[REG1]], $noreg, ![[FOO1]], !DIExpression()
 entry1:
   call void @llvm.dbg.value(metadata %struct.SS* @S, metadata !20, metadata !DIExpression()), !dbg !23
   call void @llvm.dbg.value(metadata %struct.SS* null, metadata !22, metadata !DIExpression()), !dbg !24
@@ -77,9 +84,12 @@ entry1:
 ; Verify that the def comes before the for foo2 and bar2.
 define i32 @test2() local_unnamed_addr #0 !dbg !26 {
 ; CHECK-LABEL: bb.0.entry2
-; CHECK-NEXT:    [[REG2:%[0-9]+]]:gr64 =
-; CHECK-NEXT:    DBG_VALUE [[REG2]], $noreg, ![[FOO2]], !DIExpression()
-; CHECK-NEXT:    DBG_VALUE [[REG2]], $noreg, ![[BAR2]], !DIExpression()
+; CHECK-NEXT:    [[REG2:%[0-9]+]]:gr64 = LEA64r
+; INSTRREF-SAME:    debug-instr-number 1
+; INSTRREF-NEXT: DBG_INSTR_REF 1, 0, ![[FOO2]], !DIExpression()
+; INSTRREF-NEXT: DBG_INSTR_REF 1, 0, ![[BAR2]], !DIExpression()
+; DBGVALUE-NEXT: DBG_VALUE [[REG2]], $noreg, ![[FOO2]], !DIExpression
+; DBGVALUE-NEXT: DBG_VALUE [[REG2]], $noreg, ![[BAR2]], !DIExpression
 entry2:
   call void @llvm.dbg.value(metadata %struct.SS* @S, metadata !28, metadata !DIExpression()), !dbg !30
   call void @llvm.dbg.value(metadata %struct.SS* @S, metadata !29, metadata !DIExpression()), !dbg !31
@@ -89,9 +99,12 @@ entry2:
 ; Verify that the def comes before the for foo3 and bar3.
 define i32 @test3() local_unnamed_addr #0 !dbg !33 {
 ; CHECK-LABEL: bb.0.entry3
-; CHECK-NEXT:    [[REG3:%[0-9]+]]:gr64 =
-; CHECK-NEXT:    DBG_VALUE [[REG3]], $noreg, ![[BAR3]], !DIExpression()
-; CHECK-NEXT:    DBG_VALUE [[REG3]], $noreg, ![[FOO3]], !DIExpression()
+; CHECK-NEXT:    [[REG3:%[0-9]+]]:gr64 = LEA64r
+; INSTRREF-SAME:    debug-instr-number 1
+; INSTRREF-NEXT: DBG_INSTR_REF 1, 0, ![[BAR3]], !DIExpression()
+; INSTRREF-NEXT: DBG_INSTR_REF 1, 0, ![[FOO3]], !DIExpression()
+; DBGVALUE-NEXT: DBG_VALUE [[REG3]], $noreg, ![[BAR3]], !DIExpression()
+; DBGVALUE-NEXT: DBG_VALUE [[REG3]], $noreg, ![[FOO3]], !DIExpression()
 entry3:
   call void @llvm.dbg.value(metadata %struct.SS* @S, metadata !36, metadata !DIExpression()), !dbg !38
   call void @llvm.dbg.value(metadata %struct.SS* @S, metadata !35, metadata !DIExpression()), !dbg !37
@@ -103,8 +116,10 @@ define i32 @test4() local_unnamed_addr #0 !dbg !40 {
 ; CHECK-LABEL: bb.0.entry4
 ; CHECK-NEXT:    DBG_VALUE $noreg, $noreg, ![[FOO4]], !DIExpression()
 ; CHECK-NEXT:    DBG_VALUE 0, $noreg, ![[FOO4]], !DIExpression()
-; CHECK-NEXT:    [[REG4:%[0-9]+]]:gr64 =
-; CHECK-NEXT:    DBG_VALUE [[REG4]], $noreg, ![[BAR4]], !DIExpression()
+; CHECK-NEXT:    [[REG4:%[0-9]+]]:gr64 = LEA64r
+; INSTRREF-SAME:    debug-instr-number 1
+; INSTRREF-NEXT: DBG_INSTR_REF 1, 0, ![[BAR4]], !DIExpression()
+; DBGVALUE-NEXT: DBG_VALUE [[REG4]], $noreg, ![[BAR4]], !DIExpression()
 entry4:
   call void @llvm.dbg.value(metadata %struct.SS* @S, metadata !42, metadata !DIExpression()), !dbg !44
   call void @llvm.dbg.value(metadata %struct.SS* @S, metadata !43, metadata !DIExpression()), !dbg !45
@@ -117,9 +132,11 @@ define i32 @test5() local_unnamed_addr #0 !dbg !47 {
 ; CHECK-LABEL: bb.0.entry5:
 ; CHECK-NEXT:    DBG_VALUE $noreg, $noreg, ![[FOO5]], !DIExpression()
 ; CHECK-NEXT:    DBG_VALUE 0, $noreg, ![[FOO5]], !DIExpression()
-; CHECK-NEXT:    [[REG5:%[0-9]+]]:gr64 =
-; CHECK-NEXT:    DBG_VALUE [[REG5]], $noreg, ![[BAR5]], !DIExpression()
-; CHECK-NOT:     DBG_VALUE [[REG5]], $noreg, ![[FOO5]], !DIExpression()
+; CHECK-NEXT:    [[REG5:%[0-9]+]]:gr64 = LEA64r
+; INSTRREF-SAME:    debug-instr-number 1
+; INSTRREF-NEXT: DBG_INSTR_REF 1, 0, ![[BAR5]], !DIExpression()
+; DBGVALUE-NEXT: DBG_VALUE [[REG5]], $noreg, ![[BAR5]], !DIExpression()
+; CHECK-NOT:     DBG_{{.*}} ![[FOO5]], !DIExpression()
 ; CHECK:         RET
 entry5:
   call void @llvm.dbg.value(metadata %struct.SS* @S, metadata !49, metadata !DIExpression()), !dbg !51
@@ -141,7 +158,7 @@ attributes #1 = { nounwind readnone speculatable }
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "S", scope: !2, file: !3, line: 4, type: !8, isLocal: false, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 7.0.0 (trunk 327229) (llvm/trunk 327239)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, retainedTypes: !5, globals: !7)
-!3 = !DIFile(filename: "sdag-dangling-dbgvalue.c", directory: "/repo/uabbpet/llvm-master")
+!3 = !DIFile(filename: "sdag-dangling-dbgvalue.c", directory: "/")
 !4 = !{}
 !5 = !{!6}
 !6 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)

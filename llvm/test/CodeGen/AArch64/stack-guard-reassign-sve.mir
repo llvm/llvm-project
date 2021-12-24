@@ -1,0 +1,47 @@
+# RUN: llc -mtriple=aarch64--linux-gnu -mattr=+sve -start-before=localstackalloc -stop-after=prologepilog -o - %s | FileCheck %s
+
+--- |
+  @__stack_chk_guard = external global i8*
+  define i32 @main(i32, i8**) {
+    %StackGuardSlot = alloca i8*
+    unreachable
+  }
+...
+---
+name:            main
+tracksRegLiveness: true
+frameInfo:
+# CHECK: stackSize: 544
+# CHECK: localFrameSize: 516
+  stackProtector:  '%stack.3.StackGuardSlot'
+stack:
+# Stack objects 0 and 1 should end up in the local stack area, objects 2 and 3
+# should end up in the SVE stack area with 3 (the stack guard) on top.
+  - { id: 0, size: 512, alignment: 1, stack-id: default }
+# CHECK:       - { id: 0, name: '', type: default, offset: -528, size: 512, alignment: 1,
+# CHECK-NEXT:      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+# CHECK-NEXT:      local-offset: -512, debug-info-variable: '', debug-info-expression: '',
+# CHECK-NEXT:      debug-info-location: '' }
+  - { id: 1, size: 4, alignment: 4, stack-id: default }
+# CHECK:       - { id: 1, name: '', type: default, offset: -532, size: 4, alignment: 4,
+# CHECK-NEXT:      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+# CHECK-NEXT:      local-offset: -516, debug-info-variable: '', debug-info-expression: '',
+# CHECK-NEXT:      debug-info-location: '' }
+  - { id: 2, size: 16, alignment: 16, stack-id: scalable-vector }
+# CHECK:       - { id: 2, name: '', type: default, offset: -32, size: 16, alignment: 16,
+# CHECK-NEXT:      stack-id: scalable-vector, callee-saved-register: '', callee-saved-restored: true,
+# CHECK-NEXT:      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 3, name: StackGuardSlot, size: 8, alignment: 16, stack-id: scalable-vector }
+# CHECK:       - { id: 3, name: StackGuardSlot, type: default, offset: -16, size: 8,
+# CHECK-NEXT:      alignment: 16, stack-id: scalable-vector, callee-saved-register: '',
+# CHECK-NEXT:      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '',
+# CHECK-NEXT:      debug-info-location: '' }
+body:             |
+  bb.0:
+    %25:gpr64common = LOAD_STACK_GUARD :: (dereferenceable invariant load (s64) from @__stack_chk_guard)
+    STRXui killed %25, %stack.3.StackGuardSlot, 0 :: (volatile store (s64) into %stack.3.StackGuardSlot)
+    %28:gpr64 = LDRXui %stack.3.StackGuardSlot, 0 :: (volatile load (s64) from %stack.3.StackGuardSlot)
+    %29:gpr64common = LOAD_STACK_GUARD :: (dereferenceable invariant load (s64) from @__stack_chk_guard)
+    RET_ReallyLR implicit undef $w0, implicit killed %28, implicit killed %29
+
+...

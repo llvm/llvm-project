@@ -1,6 +1,6 @@
 // Check profile with calls to memory intrinsics.
 
-// RUN: %clangxx_memprof -O0 %s -o %t && %env_memprof_opts=log_path=stderr %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_memprof -O0 %s -o %t && %env_memprof_opts=print_text=true:log_path=stderr %run %t 2>&1 | FileCheck %s
 
 // This is actually:
 //  Memory allocation stack id = STACKIDP

@@ -18,7 +18,6 @@ def p4 : PtrValueType<i64, 4>;
 def p5 : PtrValueType<i32, 5>;
 def p6 : PtrValueType<i32, 6>;
 
-
 class BoolToList<bit Value> {
   list<int> ret = !if(Value, [1]<int>, []<int>);
 }
@@ -416,7 +415,7 @@ def FeatureDPP : SubtargetFeature<"dpp",
   "Support DPP (Data Parallel Primitives) extension"
 >;
 
-// DPP8 allows arbitrary cross-lane swizzling withing groups of 8 lanes.
+// DPP8 allows arbitrary cross-lane swizzling within groups of 8 lanes.
 def FeatureDPP8 : SubtargetFeature<"dpp8",
   "HasDPP8",
   "true",

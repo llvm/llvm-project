@@ -789,7 +789,8 @@ bool X86FastISel::handleConstantAddresses(const Value *V, X86AddressMode &AM) {
           RC  = &X86::GR32RegClass;
         }
 
-        if (Subtarget->isPICStyleRIPRel() || GVFlags == X86II::MO_GOTPCREL)
+        if (Subtarget->isPICStyleRIPRel() || GVFlags == X86II::MO_GOTPCREL ||
+            GVFlags == X86II::MO_GOTPCREL_NORELAX)
           StubAM.Base.Reg = X86::RIP;
 
         LoadReg = createResultReg(RC);
@@ -1304,11 +1305,11 @@ bool X86FastISel::X86SelectRet(const Instruction *I) {
   MachineInstrBuilder MIB;
   if (X86MFInfo->getBytesToPopOnReturn()) {
     MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
-                  TII.get(Subtarget->is64Bit() ? X86::RETIQ : X86::RETIL))
+                  TII.get(Subtarget->is64Bit() ? X86::RETI64 : X86::RETI32))
               .addImm(X86MFInfo->getBytesToPopOnReturn());
   } else {
     MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
-                  TII.get(Subtarget->is64Bit() ? X86::RETQ : X86::RETL));
+                  TII.get(Subtarget->is64Bit() ? X86::RET64 : X86::RET32));
   }
   for (unsigned i = 0, e = RetRegs.size(); i != e; ++i)
     MIB.addReg(RetRegs[i], RegState::Implicit);
@@ -3486,6 +3487,7 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
     // NonLazyBind calls or dllimport calls.
     bool NeedLoad = OpFlags == X86II::MO_DLLIMPORT ||
                     OpFlags == X86II::MO_GOTPCREL ||
+                    OpFlags == X86II::MO_GOTPCREL_NORELAX ||
                     OpFlags == X86II::MO_COFFSTUB;
     unsigned CallOpc = NeedLoad
                            ? (Is64Bit ? X86::CALL64m : X86::CALL32m)

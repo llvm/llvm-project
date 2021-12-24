@@ -230,25 +230,21 @@ define <8 x i32> @ashr_shl_v8i32_const(<8 x i32> %a) {
 
 define <8 x i32> @ashr_lshr_shl_v8i32(<8 x i32> %a, <8 x i32> %b) {
 ; SSE-LABEL: @ashr_lshr_shl_v8i32(
-; SSE-NEXT:    [[A6:%.*]] = extractelement <8 x i32> [[A:%.*]], i32 6
-; SSE-NEXT:    [[A7:%.*]] = extractelement <8 x i32> [[A]], i32 7
-; SSE-NEXT:    [[B6:%.*]] = extractelement <8 x i32> [[B:%.*]], i32 6
-; SSE-NEXT:    [[B7:%.*]] = extractelement <8 x i32> [[B]], i32 7
-; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[B]], <8 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[A:%.*]], <8 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[B:%.*]], <8 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; SSE-NEXT:    [[TMP3:%.*]] = ashr <4 x i32> [[TMP1]], [[TMP2]]
 ; SSE-NEXT:    [[TMP4:%.*]] = lshr <4 x i32> [[TMP1]], [[TMP2]]
 ; SSE-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> [[TMP4]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
 ; SSE-NEXT:    [[TMP6:%.*]] = lshr <8 x i32> [[A]], [[B]]
 ; SSE-NEXT:    [[TMP7:%.*]] = shufflevector <8 x i32> [[TMP6]], <8 x i32> poison, <2 x i32> <i32 4, i32 5>
-; SSE-NEXT:    [[AB6:%.*]] = shl i32 [[A6]], [[B6]]
-; SSE-NEXT:    [[AB7:%.*]] = shl i32 [[A7]], [[B7]]
-; SSE-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
-; SSE-NEXT:    [[TMP9:%.*]] = shufflevector <2 x i32> [[TMP7]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; SSE-NEXT:    [[R51:%.*]] = shufflevector <8 x i32> [[TMP8]], <8 x i32> [[TMP9]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 undef, i32 undef>
-; SSE-NEXT:    [[R6:%.*]] = insertelement <8 x i32> [[R51]], i32 [[AB6]], i32 6
-; SSE-NEXT:    [[R7:%.*]] = insertelement <8 x i32> [[R6]], i32 [[AB7]], i32 7
-; SSE-NEXT:    ret <8 x i32> [[R7]]
+; SSE-NEXT:    [[TMP8:%.*]] = shl <8 x i32> [[A]], [[B]]
+; SSE-NEXT:    [[TMP9:%.*]] = shufflevector <8 x i32> [[TMP8]], <8 x i32> poison, <2 x i32> <i32 6, i32 7>
+; SSE-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+; SSE-NEXT:    [[TMP11:%.*]] = shufflevector <2 x i32> [[TMP7]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; SSE-NEXT:    [[R52:%.*]] = shufflevector <8 x i32> [[TMP10]], <8 x i32> [[TMP11]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 undef, i32 undef>
+; SSE-NEXT:    [[TMP12:%.*]] = shufflevector <2 x i32> [[TMP9]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; SSE-NEXT:    [[R71:%.*]] = shufflevector <8 x i32> [[R52]], <8 x i32> [[TMP12]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 9>
+; SSE-NEXT:    ret <8 x i32> [[R71]]
 ;
 ; SLM-LABEL: @ashr_lshr_shl_v8i32(
 ; SLM-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[A:%.*]], <8 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -375,98 +371,98 @@ define <8 x i32> @add_v8i32_undefs(<8 x i32> %a) {
 
 define <8 x i32> @sdiv_v8i32_undefs(<8 x i32> %a) {
 ; SSE-LABEL: @sdiv_v8i32_undefs(
-; SSE-NEXT:    [[A1:%.*]] = extractelement <8 x i32> [[A:%.*]], i32 1
-; SSE-NEXT:    [[A2:%.*]] = extractelement <8 x i32> [[A]], i32 2
-; SSE-NEXT:    [[A3:%.*]] = extractelement <8 x i32> [[A]], i32 3
-; SSE-NEXT:    [[A5:%.*]] = extractelement <8 x i32> [[A]], i32 5
-; SSE-NEXT:    [[A6:%.*]] = extractelement <8 x i32> [[A]], i32 6
-; SSE-NEXT:    [[A7:%.*]] = extractelement <8 x i32> [[A]], i32 7
+; SSE-NEXT:    [[A1:%.*]] = extractelement <8 x i32> [[A:%.*]], i64 1
+; SSE-NEXT:    [[A2:%.*]] = extractelement <8 x i32> [[A]], i64 2
+; SSE-NEXT:    [[A3:%.*]] = extractelement <8 x i32> [[A]], i64 3
+; SSE-NEXT:    [[A5:%.*]] = extractelement <8 x i32> [[A]], i64 5
+; SSE-NEXT:    [[A6:%.*]] = extractelement <8 x i32> [[A]], i64 6
+; SSE-NEXT:    [[A7:%.*]] = extractelement <8 x i32> [[A]], i64 7
 ; SSE-NEXT:    [[AB1:%.*]] = sdiv i32 [[A1]], 4
 ; SSE-NEXT:    [[AB2:%.*]] = sdiv i32 [[A2]], 8
 ; SSE-NEXT:    [[AB3:%.*]] = sdiv i32 [[A3]], 16
 ; SSE-NEXT:    [[AB5:%.*]] = sdiv i32 [[A5]], 4
 ; SSE-NEXT:    [[AB6:%.*]] = sdiv i32 [[A6]], 8
 ; SSE-NEXT:    [[AB7:%.*]] = sdiv i32 [[A7]], 16
-; SSE-NEXT:    [[R1:%.*]] = insertelement <8 x i32> poison, i32 [[AB1]], i32 1
-; SSE-NEXT:    [[R2:%.*]] = insertelement <8 x i32> [[R1]], i32 [[AB2]], i32 2
-; SSE-NEXT:    [[R3:%.*]] = insertelement <8 x i32> [[R2]], i32 [[AB3]], i32 3
-; SSE-NEXT:    [[R5:%.*]] = insertelement <8 x i32> [[R3]], i32 [[AB5]], i32 5
-; SSE-NEXT:    [[R6:%.*]] = insertelement <8 x i32> [[R5]], i32 [[AB6]], i32 6
-; SSE-NEXT:    [[R7:%.*]] = insertelement <8 x i32> [[R6]], i32 [[AB7]], i32 7
+; SSE-NEXT:    [[R1:%.*]] = insertelement <8 x i32> poison, i32 [[AB1]], i64 1
+; SSE-NEXT:    [[R2:%.*]] = insertelement <8 x i32> [[R1]], i32 [[AB2]], i64 2
+; SSE-NEXT:    [[R3:%.*]] = insertelement <8 x i32> [[R2]], i32 [[AB3]], i64 3
+; SSE-NEXT:    [[R5:%.*]] = insertelement <8 x i32> [[R3]], i32 [[AB5]], i64 5
+; SSE-NEXT:    [[R6:%.*]] = insertelement <8 x i32> [[R5]], i32 [[AB6]], i64 6
+; SSE-NEXT:    [[R7:%.*]] = insertelement <8 x i32> [[R6]], i32 [[AB7]], i64 7
 ; SSE-NEXT:    ret <8 x i32> [[R7]]
 ;
 ; SLM-LABEL: @sdiv_v8i32_undefs(
-; SLM-NEXT:    [[A1:%.*]] = extractelement <8 x i32> [[A:%.*]], i32 1
-; SLM-NEXT:    [[A2:%.*]] = extractelement <8 x i32> [[A]], i32 2
-; SLM-NEXT:    [[A3:%.*]] = extractelement <8 x i32> [[A]], i32 3
-; SLM-NEXT:    [[A5:%.*]] = extractelement <8 x i32> [[A]], i32 5
-; SLM-NEXT:    [[A6:%.*]] = extractelement <8 x i32> [[A]], i32 6
-; SLM-NEXT:    [[A7:%.*]] = extractelement <8 x i32> [[A]], i32 7
+; SLM-NEXT:    [[A1:%.*]] = extractelement <8 x i32> [[A:%.*]], i64 1
+; SLM-NEXT:    [[A2:%.*]] = extractelement <8 x i32> [[A]], i64 2
+; SLM-NEXT:    [[A3:%.*]] = extractelement <8 x i32> [[A]], i64 3
+; SLM-NEXT:    [[A5:%.*]] = extractelement <8 x i32> [[A]], i64 5
+; SLM-NEXT:    [[A6:%.*]] = extractelement <8 x i32> [[A]], i64 6
+; SLM-NEXT:    [[A7:%.*]] = extractelement <8 x i32> [[A]], i64 7
 ; SLM-NEXT:    [[AB1:%.*]] = sdiv i32 [[A1]], 4
 ; SLM-NEXT:    [[AB2:%.*]] = sdiv i32 [[A2]], 8
 ; SLM-NEXT:    [[AB3:%.*]] = sdiv i32 [[A3]], 16
 ; SLM-NEXT:    [[AB5:%.*]] = sdiv i32 [[A5]], 4
 ; SLM-NEXT:    [[AB6:%.*]] = sdiv i32 [[A6]], 8
 ; SLM-NEXT:    [[AB7:%.*]] = sdiv i32 [[A7]], 16
-; SLM-NEXT:    [[R1:%.*]] = insertelement <8 x i32> poison, i32 [[AB1]], i32 1
-; SLM-NEXT:    [[R2:%.*]] = insertelement <8 x i32> [[R1]], i32 [[AB2]], i32 2
-; SLM-NEXT:    [[R3:%.*]] = insertelement <8 x i32> [[R2]], i32 [[AB3]], i32 3
-; SLM-NEXT:    [[R5:%.*]] = insertelement <8 x i32> [[R3]], i32 [[AB5]], i32 5
-; SLM-NEXT:    [[R6:%.*]] = insertelement <8 x i32> [[R5]], i32 [[AB6]], i32 6
-; SLM-NEXT:    [[R7:%.*]] = insertelement <8 x i32> [[R6]], i32 [[AB7]], i32 7
+; SLM-NEXT:    [[R1:%.*]] = insertelement <8 x i32> poison, i32 [[AB1]], i64 1
+; SLM-NEXT:    [[R2:%.*]] = insertelement <8 x i32> [[R1]], i32 [[AB2]], i64 2
+; SLM-NEXT:    [[R3:%.*]] = insertelement <8 x i32> [[R2]], i32 [[AB3]], i64 3
+; SLM-NEXT:    [[R5:%.*]] = insertelement <8 x i32> [[R3]], i32 [[AB5]], i64 5
+; SLM-NEXT:    [[R6:%.*]] = insertelement <8 x i32> [[R5]], i32 [[AB6]], i64 6
+; SLM-NEXT:    [[R7:%.*]] = insertelement <8 x i32> [[R6]], i32 [[AB7]], i64 7
 ; SLM-NEXT:    ret <8 x i32> [[R7]]
 ;
 ; AVX1-LABEL: @sdiv_v8i32_undefs(
-; AVX1-NEXT:    [[A1:%.*]] = extractelement <8 x i32> [[A:%.*]], i32 1
-; AVX1-NEXT:    [[A2:%.*]] = extractelement <8 x i32> [[A]], i32 2
-; AVX1-NEXT:    [[A3:%.*]] = extractelement <8 x i32> [[A]], i32 3
-; AVX1-NEXT:    [[A5:%.*]] = extractelement <8 x i32> [[A]], i32 5
-; AVX1-NEXT:    [[A6:%.*]] = extractelement <8 x i32> [[A]], i32 6
-; AVX1-NEXT:    [[A7:%.*]] = extractelement <8 x i32> [[A]], i32 7
+; AVX1-NEXT:    [[A1:%.*]] = extractelement <8 x i32> [[A:%.*]], i64 1
+; AVX1-NEXT:    [[A2:%.*]] = extractelement <8 x i32> [[A]], i64 2
+; AVX1-NEXT:    [[A3:%.*]] = extractelement <8 x i32> [[A]], i64 3
+; AVX1-NEXT:    [[A5:%.*]] = extractelement <8 x i32> [[A]], i64 5
+; AVX1-NEXT:    [[A6:%.*]] = extractelement <8 x i32> [[A]], i64 6
+; AVX1-NEXT:    [[A7:%.*]] = extractelement <8 x i32> [[A]], i64 7
 ; AVX1-NEXT:    [[AB1:%.*]] = sdiv i32 [[A1]], 4
 ; AVX1-NEXT:    [[AB2:%.*]] = sdiv i32 [[A2]], 8
 ; AVX1-NEXT:    [[AB3:%.*]] = sdiv i32 [[A3]], 16
 ; AVX1-NEXT:    [[AB5:%.*]] = sdiv i32 [[A5]], 4
 ; AVX1-NEXT:    [[AB6:%.*]] = sdiv i32 [[A6]], 8
 ; AVX1-NEXT:    [[AB7:%.*]] = sdiv i32 [[A7]], 16
-; AVX1-NEXT:    [[R1:%.*]] = insertelement <8 x i32> poison, i32 [[AB1]], i32 1
-; AVX1-NEXT:    [[R2:%.*]] = insertelement <8 x i32> [[R1]], i32 [[AB2]], i32 2
-; AVX1-NEXT:    [[R3:%.*]] = insertelement <8 x i32> [[R2]], i32 [[AB3]], i32 3
-; AVX1-NEXT:    [[R5:%.*]] = insertelement <8 x i32> [[R3]], i32 [[AB5]], i32 5
-; AVX1-NEXT:    [[R6:%.*]] = insertelement <8 x i32> [[R5]], i32 [[AB6]], i32 6
-; AVX1-NEXT:    [[R7:%.*]] = insertelement <8 x i32> [[R6]], i32 [[AB7]], i32 7
+; AVX1-NEXT:    [[R1:%.*]] = insertelement <8 x i32> poison, i32 [[AB1]], i64 1
+; AVX1-NEXT:    [[R2:%.*]] = insertelement <8 x i32> [[R1]], i32 [[AB2]], i64 2
+; AVX1-NEXT:    [[R3:%.*]] = insertelement <8 x i32> [[R2]], i32 [[AB3]], i64 3
+; AVX1-NEXT:    [[R5:%.*]] = insertelement <8 x i32> [[R3]], i32 [[AB5]], i64 5
+; AVX1-NEXT:    [[R6:%.*]] = insertelement <8 x i32> [[R5]], i32 [[AB6]], i64 6
+; AVX1-NEXT:    [[R7:%.*]] = insertelement <8 x i32> [[R6]], i32 [[AB7]], i64 7
 ; AVX1-NEXT:    ret <8 x i32> [[R7]]
 ;
 ; AVX2-LABEL: @sdiv_v8i32_undefs(
-; AVX2-NEXT:    [[A1:%.*]] = extractelement <8 x i32> [[A:%.*]], i32 1
-; AVX2-NEXT:    [[A5:%.*]] = extractelement <8 x i32> [[A]], i32 5
+; AVX2-NEXT:    [[A1:%.*]] = extractelement <8 x i32> [[A:%.*]], i64 1
+; AVX2-NEXT:    [[A5:%.*]] = extractelement <8 x i32> [[A]], i64 5
 ; AVX2-NEXT:    [[AB1:%.*]] = sdiv i32 [[A1]], 4
 ; AVX2-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> undef, <2 x i32> <i32 2, i32 3>
 ; AVX2-NEXT:    [[TMP2:%.*]] = sdiv <2 x i32> [[TMP1]], <i32 8, i32 16>
 ; AVX2-NEXT:    [[AB5:%.*]] = sdiv i32 [[A5]], 4
 ; AVX2-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> undef, <2 x i32> <i32 6, i32 7>
 ; AVX2-NEXT:    [[TMP4:%.*]] = sdiv <2 x i32> [[TMP3]], <i32 8, i32 16>
-; AVX2-NEXT:    [[R1:%.*]] = insertelement <8 x i32> poison, i32 [[AB1]], i32 1
+; AVX2-NEXT:    [[R1:%.*]] = insertelement <8 x i32> poison, i32 [[AB1]], i64 1
 ; AVX2-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; AVX2-NEXT:    [[R32:%.*]] = shufflevector <8 x i32> [[R1]], <8 x i32> [[TMP5]], <8 x i32> <i32 undef, i32 1, i32 8, i32 9, i32 undef, i32 undef, i32 undef, i32 undef>
-; AVX2-NEXT:    [[R5:%.*]] = insertelement <8 x i32> [[R32]], i32 [[AB5]], i32 5
+; AVX2-NEXT:    [[R5:%.*]] = insertelement <8 x i32> [[R32]], i32 [[AB5]], i64 5
 ; AVX2-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; AVX2-NEXT:    [[R71:%.*]] = shufflevector <8 x i32> [[R5]], <8 x i32> [[TMP6]], <8 x i32> <i32 undef, i32 1, i32 2, i32 3, i32 undef, i32 5, i32 8, i32 9>
 ; AVX2-NEXT:    ret <8 x i32> [[R71]]
 ;
 ; AVX512-LABEL: @sdiv_v8i32_undefs(
-; AVX512-NEXT:    [[A1:%.*]] = extractelement <8 x i32> [[A:%.*]], i32 1
-; AVX512-NEXT:    [[A5:%.*]] = extractelement <8 x i32> [[A]], i32 5
+; AVX512-NEXT:    [[A1:%.*]] = extractelement <8 x i32> [[A:%.*]], i64 1
+; AVX512-NEXT:    [[A5:%.*]] = extractelement <8 x i32> [[A]], i64 5
 ; AVX512-NEXT:    [[AB1:%.*]] = sdiv i32 [[A1]], 4
 ; AVX512-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> undef, <2 x i32> <i32 2, i32 3>
 ; AVX512-NEXT:    [[TMP2:%.*]] = sdiv <2 x i32> [[TMP1]], <i32 8, i32 16>
 ; AVX512-NEXT:    [[AB5:%.*]] = sdiv i32 [[A5]], 4
 ; AVX512-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> undef, <2 x i32> <i32 6, i32 7>
 ; AVX512-NEXT:    [[TMP4:%.*]] = sdiv <2 x i32> [[TMP3]], <i32 8, i32 16>
-; AVX512-NEXT:    [[R1:%.*]] = insertelement <8 x i32> poison, i32 [[AB1]], i32 1
+; AVX512-NEXT:    [[R1:%.*]] = insertelement <8 x i32> poison, i32 [[AB1]], i64 1
 ; AVX512-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; AVX512-NEXT:    [[R32:%.*]] = shufflevector <8 x i32> [[R1]], <8 x i32> [[TMP5]], <8 x i32> <i32 undef, i32 1, i32 8, i32 9, i32 undef, i32 undef, i32 undef, i32 undef>
-; AVX512-NEXT:    [[R5:%.*]] = insertelement <8 x i32> [[R32]], i32 [[AB5]], i32 5
+; AVX512-NEXT:    [[R5:%.*]] = insertelement <8 x i32> [[R32]], i32 [[AB5]], i64 5
 ; AVX512-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; AVX512-NEXT:    [[R71:%.*]] = shufflevector <8 x i32> [[R5]], <8 x i32> [[TMP6]], <8 x i32> <i32 undef, i32 1, i32 2, i32 3, i32 undef, i32 5, i32 8, i32 9>
 ; AVX512-NEXT:    ret <8 x i32> [[R71]]
@@ -500,7 +496,7 @@ define <8 x i32> @sdiv_v8i32_undefs(<8 x i32> %a) {
 
 define <8 x i32> @add_sub_v8i32_splat(<8 x i32> %a, i32 %b) {
 ; CHECK-LABEL: @add_sub_v8i32_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> poison, i32 [[B:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> poison, i32 [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = add <8 x i32> [[SHUFFLE]], [[A:%.*]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub <8 x i32> [[SHUFFLE]], [[A]]

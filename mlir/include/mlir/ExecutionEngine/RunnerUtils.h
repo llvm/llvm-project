@@ -27,7 +27,8 @@
 #endif // mlir_runner_utils_EXPORTS
 #endif // MLIR_RUNNERUTILS_EXPORT
 #else
-#define MLIR_RUNNERUTILS_EXPORT
+// Non-windows: use visibility attributes.
+#define MLIR_RUNNERUTILS_EXPORT __attribute__((visibility("default")))
 #endif // _WIN32
 
 #include <assert.h>

@@ -416,6 +416,8 @@ TEST(LinkGraphTest, MergeSections) {
   G.addDefinedSymbol(B3, 0, "S3", B2.getSize(), Linkage::Strong, Scope::Default,
                      false, false);
 
+  EXPECT_EQ(&B1.getSection(), &Sec1);
+  EXPECT_EQ(&B2.getSection(), &Sec2);
   EXPECT_EQ(G.sections_size(), 3U) << "Expected three sections initially";
   EXPECT_EQ(Sec1.blocks_size(), 1U) << "Expected one block in Sec1 initially";
   EXPECT_EQ(Sec1.symbols_size(), 1U) << "Expected one symbol in Sec1 initially";
@@ -427,6 +429,8 @@ TEST(LinkGraphTest, MergeSections) {
   // Check that self-merge is a no-op.
   G.mergeSections(Sec1, Sec1);
 
+  EXPECT_EQ(&B1.getSection(), &Sec1)
+      << "Expected B1.getSection() to remain unchanged";
   EXPECT_EQ(G.sections_size(), 3U)
       << "Expected three sections after first merge";
   EXPECT_EQ(Sec1.blocks_size(), 1U)
@@ -445,6 +449,8 @@ TEST(LinkGraphTest, MergeSections) {
   // Merge Sec2 into Sec1, removing Sec2.
   G.mergeSections(Sec1, Sec2);
 
+  EXPECT_EQ(&B2.getSection(), &Sec1)
+      << "Expected B2.getSection() to have been changed to &Sec1";
   EXPECT_EQ(G.sections_size(), 2U)
       << "Expected two sections after section merge";
   EXPECT_EQ(Sec1.blocks_size(), 2U)
@@ -486,6 +492,9 @@ TEST(LinkGraphTest, SplitBlock) {
   auto &S3 = G.addDefinedSymbol(B1, 8, "S3", 4, Linkage::Strong, Scope::Default,
                                 false, false);
   auto &S4 = G.addDefinedSymbol(B1, 12, "S4", 4, Linkage::Strong,
+                                Scope::Default, false, false);
+  // Add a symbol that extends beyond the split.
+  auto &S5 = G.addDefinedSymbol(B1, 0, "S5", 16, Linkage::Strong,
                                 Scope::Default, false, false);
 
   // Add an extra block, EB, and target symbols, and use these to add edges
@@ -531,6 +540,11 @@ TEST(LinkGraphTest, SplitBlock) {
 
   EXPECT_EQ(&S4.getBlock(), &B1);
   EXPECT_EQ(S4.getOffset(), 4U);
+
+  EXPECT_EQ(&S5.getBlock(), &B2);
+  EXPECT_EQ(S5.getOffset(), 0U);
+  // Size shrinks to fit.
+  EXPECT_EQ(S5.getSize(), 8U);
 
   // Check that edges in B1 have been transferred as expected:
   // Both blocks should now have two edges each at offsets 0 and 4.

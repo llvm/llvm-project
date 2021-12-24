@@ -121,24 +121,24 @@ After applying the check with minimum confidence level set to `reasonable` (defa
 Reverse Iterator Support
 ------------------------
 
-The converter is also capable of transforming iterator loops which use 
-``rbegin`` and ``rend`` for looping backwards over a container. Out of the box 
-this will automatically happen in C++20 mode using the ``ranges`` library, 
-however the check can be configured to work without C++20 by specifying a 
+The converter is also capable of transforming iterator loops which use
+``rbegin`` and ``rend`` for looping backwards over a container. Out of the box
+this will automatically happen in C++20 mode using the ``ranges`` library,
+however the check can be configured to work without C++20 by specifying a
 function to reverse a range and optionally the header file where that function
 lives.
 
 .. option:: UseCxx20ReverseRanges
-  
-   When set to true convert loops when in C++20 or later mode using 
+
+   When set to true convert loops when in C++20 or later mode using
    ``std::ranges::reverse_view``.
    Default value is ``true``.
 
 .. option:: MakeReverseRangeFunction
 
-   Specify the function used to reverse an iterator pair, the function should 
-   accept a class with ``rbegin`` and ``rend`` methods and return a 
-   class with ``begin`` and ``end`` methods methods that call the ``rbegin`` and
+   Specify the function used to reverse an iterator pair, the function should
+   accept a class with ``rbegin`` and ``rend`` methods and return a
+   class with ``begin`` and ``end`` methods that call the ``rbegin`` and
    ``rend`` methods respectively. Common examples are ``ranges::reverse_view``
    and ``llvm::reverse``.
    Default value is an empty string.
@@ -146,10 +146,10 @@ lives.
 .. option:: MakeReverseRangeHeader
 
    Specifies the header file where :option:`MakeReverseRangeFunction` is
-   declared. For the previous examples this option would be set to 
+   declared. For the previous examples this option would be set to
    ``range/v3/view/reverse.hpp`` and ``llvm/ADT/STLExtras.h`` respectively.
-   If this is an empty string and :option:`MakeReverseRangeFunction` is set, 
-   the check will proceed on the assumption that the function is already 
+   If this is an empty string and :option:`MakeReverseRangeFunction` is set,
+   the check will proceed on the assumption that the function is already
    available in the translation unit.
    This can be wrapped in angle brackets to signify to add the include as a
    system include.
@@ -165,7 +165,7 @@ Limitations
 
 There are certain situations where the tool may erroneously perform
 transformations that remove information and change semantics. Users of the tool
-should be aware of the behaviour and limitations of the check outlined by
+should be aware of the behavior and limitations of the check outlined by
 the cases below.
 
 Comments inside loop headers
@@ -300,7 +300,7 @@ OpenMP
 ^^^^^^
 
 As range-based for loops are only available since OpenMP 5, this check should
-not been used on code with a compatibility requirements of OpenMP prior to
+not be used on code with a compatibility requirement of OpenMP prior to
 version 5. It is **intentional** that this check does not make any attempts to
 exclude incorrect diagnostics on OpenMP for loops prior to OpenMP 5.
 

@@ -13,8 +13,7 @@
 #include "PassDetail.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
-#include "mlir/Dialect/Linalg/IR/LinalgOps.h"
-#include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
@@ -28,6 +27,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 
 using namespace mlir;
 using namespace mlir::linalg;
@@ -223,9 +223,12 @@ FailureOr<PromotionInfo> mlir::linalg::promoteSubviewAsNewBuffer(
     auto rangeValue = en.value();
     // Try to extract a tight constant.
     LLVM_DEBUG(llvm::dbgs() << "Extract tightest: " << rangeValue.size << "\n");
-    IntegerAttr sizeAttr = getSmallestBoundingIndex(rangeValue.size);
-    Value size = (!sizeAttr) ? rangeValue.size
-                             : b.create<arith::ConstantOp>(loc, sizeAttr);
+    FailureOr<int64_t> upperBound =
+        getConstantUpperBoundForIndex(rangeValue.size);
+    Value size =
+        failed(upperBound)
+            ? rangeValue.size
+            : b.create<arith::ConstantIndexOp>(loc, upperBound.getValue());
     LLVM_DEBUG(llvm::dbgs() << "Extracted tightest: " << size << "\n");
     fullSizes.push_back(size);
     partialSizes.push_back(

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: libcpp-has-no-threads
+// XFAIL: LIBCXX-AIX-FIXME
 
 // <thread>
 
@@ -20,7 +21,7 @@
 // (It's fixed in the upcoming Clang 14, by https://reviews.llvm.org/D109651.)
 // Prior to the fix, when statically linked, the unwind info for the two
 // (default and overridden) operator new implementations clash.
-// XFAIL: target={{.+}}-windows-gnu && !windows-dll && clang-13
+// UNSUPPORTED: target={{.+}}-windows-gnu && !windows-dll && clang-13
 
 #include <thread>
 #include <new>

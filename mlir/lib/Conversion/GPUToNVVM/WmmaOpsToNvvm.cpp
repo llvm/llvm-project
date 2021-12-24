@@ -11,10 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/IR/TypeUtilities.h"
 
 using namespace mlir;
 
@@ -36,26 +38,26 @@ static LogicalResult areAllLLVMTypes(Operation *op, ValueRange operands,
   return success();
 }
 
-/// Error string to emit when unimplemented WMMA variant is encountered.
-static constexpr StringRef kInvalidCaseStr =
-    "Unimplemented WMMA variant, Only M16N16K16 version implemented.";
+/// Error string to emit when an unimplemented WMMA variant is encountered.
+static constexpr StringRef kInvalidCaseStr = "Unsupported WMMA variant.";
 
-/// Return the LLVMStructureType corresponding to the MMAMatrixType `type`.
-static LLVM::LLVMStructType convertMMAToLLVMType(gpu::MMAMatrixType type) {
-  StringRef operandStr = type.getOperand();
-  assert(type.getElementType().isa<FloatType>());
-  Type baseType = type.getElementType().isF16()
-                      ? VectorType::get(2, type.getElementType())
-                      : type.getElementType();
-  auto getLLVMType = [&](int64_t numElements) {
-    return LLVM::LLVMStructType::getLiteral(
-        type.getContext(), SmallVector<Type, 8>(numElements, baseType));
-  };
-  if (operandStr.equals("AOp") || operandStr.equals("BOp"))
-    return getLLVMType(8);
+static NVVM::MMAFrag convertOperand(StringRef operandName) {
+  if (operandName.equals("AOp"))
+    return NVVM::MMAFrag::a;
+  if (operandName.equals("BOp"))
+    return NVVM::MMAFrag::b;
+  if (operandName.equals("COp"))
+    return NVVM::MMAFrag::c;
+  llvm_unreachable("Unknown operand name");
+}
+
+static NVVM::MMATypes getElementType(gpu::MMAMatrixType type) {
   if (type.getElementType().isF16())
-    return getLLVMType(4);
-  return getLLVMType(8);
+    return NVVM::MMATypes::f16;
+  if (type.getElementType().isF32())
+    return type.getOperand().equals("COp") ? NVVM::MMATypes::f32
+                                           : NVVM::MMATypes::tf32;
+  llvm_unreachable("Unsupported type");
 }
 
 /// This class implements the conversion of GPU MMA loadOp to wmma.load op
@@ -75,92 +77,49 @@ struct WmmaLoadOpToNVVMLowering
     if (failed(areAllLLVMTypes(op, adaptor.getOperands(), rewriter)))
       return failure();
 
-    unsigned indexTypeBitwidth =
-        this->getTypeConverter()->getIndexTypeBitwidth();
-
-    // The corresponding intrinsics expects leadDimension to be a 32-bit
-    // integer, so all the calculations of linearizing the load address
-    // must also follow this restriction.
-    if (indexTypeBitwidth != 32)
-      return rewriter.notifyMatchFailure(
-          op, "Expected indices to the memref to be 32-bit wide.");
-    Location loc = op->getLoc();
-
-    auto leadDimension = subgroupMmaLoadMatrixOp.leadDimensionAttr();
-
-    // MemRefDescriptor to extract alignedPtr and offset.
-    MemRefDescriptor promotedSrcOp(adaptor.srcMemref());
-
-    // Emit ops which compute the load offset using `srcOffsetI`,
-    // `srcOffsetJ`. The actualOffset is (memrefOffset + (alignedPtr +
-    // ((leadDimension * srcOffsetI) + srcOffsetJ)). The memrefs here are
-    // assumed to be normalized and hence the simple conversion works.
-    SmallVector<Value> indices(adaptor.indices());
-    Value srcOffsetIVal = indices[0];
-    Value srcOffsetJVal = indices[1];
-    Type i32Ty = rewriter.getI32Type();
-    Value leadingDim32 =
-        rewriter.create<LLVM::ConstantOp>(loc, i32Ty, leadDimension);
-    Value numElemsLeadDim =
-        rewriter.create<LLVM::MulOp>(loc, i32Ty, leadingDim32, srcOffsetIVal);
-    Value loadOffset = rewriter.create<LLVM::AddOp>(loc, i32Ty, numElemsLeadDim,
-                                                    srcOffsetJVal);
-
-    Value promotedSrcOpToUse;
-    promotedSrcOpToUse = promotedSrcOp.offset(rewriter, loc);
-    Value actualOffset = rewriter.create<LLVM::AddOp>(loc, i32Ty, loadOffset,
-                                                      promotedSrcOpToUse);
-    Value loadAddress = rewriter.create<LLVM::GEPOp>(
-        loc, promotedSrcOp.getElementPtrType(),
-        promotedSrcOp.alignedPtr(rewriter, loc), ArrayRef<Value>{actualOffset});
-
-    // Bitcast the base address pointer of the destination memref, So that
-    // values can be stored in chunks of 32-bits and semantics match with the
-    // intrinsic exposed by NVPTX backend.
-    Value loadAddressCasted = rewriter.create<LLVM::BitcastOp>(
-        loc,
-        LLVM::LLVMPointerType::get(
-            i32Ty, promotedSrcOp.getElementPtrType().getAddressSpace()),
-        loadAddress);
-
     // Get the shape of the MMAMatrix type being returned. The shape will
     // choose which intrinsic this op will be lowered to.
     gpu::MMAMatrixType retType =
         subgroupMmaLoadMatrixOp.res().getType().cast<gpu::MMAMatrixType>();
     ArrayRef<int64_t> retTypeShape = retType.getShape();
+    int64_t m = 0;
+    int64_t n = 0;
+    int64_t k = 0;
+    NVVM::MMATypes eltype = getElementType(retType);
+    // NVVM intrinsics require to give mxnxk dimensions, infer the missing
+    // dimension based on the valid intrinsics available.
+    if (retType.getOperand().equals("AOp")) {
+      m = retTypeShape[0];
+      k = retTypeShape[1];
+      n = NVVM::WMMALoadOp::inferNDimension(m, k, eltype);
+    } else if (retType.getOperand().equals("BOp")) {
+      k = retTypeShape[0];
+      n = retTypeShape[1];
+      m = NVVM::WMMALoadOp::inferMDimension(k, n, eltype);
+    } else if (retType.getOperand().equals("COp")) {
+      m = retTypeShape[0];
+      n = retTypeShape[1];
+      k = NVVM::WMMALoadOp::inferKDimension(m, n, eltype);
+    }
+    NVVM::MMALayout layout = NVVM::MMALayout::row;
+    NVVM::MMAFrag frag = convertOperand(retType.getOperand());
+    // Check that there is an exisiting instruction for the combination we need.
+    if (NVVM::WMMALoadOp::getIntrinsicID(m, n, k, layout, eltype, frag) == 0)
+      return rewriter.notifyMatchFailure(op, kInvalidCaseStr);
 
     Type resType = convertMMAToLLVMType(retType);
-    StringRef operandStr = retType.getOperand();
+    Location loc = op->getLoc();
 
     // Create nvvm.mma_load op according to the operand types.
-    SmallVector<Value, 2> loadOpOperands({loadAddressCasted, leadingDim32});
-    if (operandStr.equals("AOp")) {
-      if (retTypeShape[0] == 16 && retTypeShape[1] == 16) {
-        rewriter.replaceOpWithNewOp<NVVM::WMMALoadAM16N16K16Op>(op, resType,
-                                                                loadOpOperands);
-      } else {
-        return rewriter.notifyMatchFailure(op, kInvalidCaseStr);
-      }
-    } else if (operandStr.equals("BOp")) {
-      if (retTypeShape[0] == 16 && retTypeShape[1] == 16) {
-        rewriter.replaceOpWithNewOp<NVVM::WMMALoadBM16N16K16Op>(op, resType,
-                                                                loadOpOperands);
-      } else {
-        return rewriter.notifyMatchFailure(op, kInvalidCaseStr);
-      }
-    } else {
-      if (retTypeShape[0] == 16 && retTypeShape[1] == 16) {
-        if (retType.getElementType().isF16()) {
-          rewriter.replaceOpWithNewOp<NVVM::WMMALoadCF16M16N16K16Op>(
-              op, resType, loadOpOperands);
-        } else if (retType.getElementType().isF32()) {
-          rewriter.replaceOpWithNewOp<NVVM::WMMALoadCF32M16N16K16Op>(
-              op, resType, loadOpOperands);
-        }
-      } else {
-        return rewriter.notifyMatchFailure(op, kInvalidCaseStr);
-      }
-    }
+    Value dataPtr = getStridedElementPtr(
+        loc, subgroupMmaLoadMatrixOp.srcMemref().getType().cast<MemRefType>(),
+        adaptor.srcMemref(), adaptor.indices(), rewriter);
+
+    Value leadingDim = rewriter.create<LLVM::ConstantOp>(
+        loc, rewriter.getI32Type(),
+        subgroupMmaLoadMatrixOp.leadDimensionAttr());
+    rewriter.replaceOpWithNewOp<NVVM::WMMALoadOp>(
+        op, resType, dataPtr, leadingDim, m, n, k, layout, eltype, frag);
     return success();
   }
 };
@@ -182,61 +141,21 @@ struct WmmaStoreOpToNVVMLowering
     if (failed(areAllLLVMTypes(op, adaptor.getOperands(), rewriter)))
       return failure();
 
-    unsigned indexTypeBitwidth =
-        this->getTypeConverter()->getIndexTypeBitwidth();
-    // The corresponding intrinsics expects leadDimension to be a 32-bit
-    // integer, so all the calculations of linearizing the store address
-    // must also follow this restriction.
-    if (indexTypeBitwidth != 32)
-      return rewriter.notifyMatchFailure(
-          op, "expected indices to the memref to be 32-bit wide.");
-
     Location loc = op->getLoc();
 
-    // MemRefDescriptor to extract alignedPtr and offset.
-    MemRefDescriptor promotedDstOp(adaptor.dstMemref());
-
-    auto leadDimension = subgroupMmaStoreMatrixOp.leadDimensionAttr();
-
-    // Emit ops which compute the store offset using `dstOffsetI`,
-    // `dstOffsetJ`. The actualOffset is (memrefOffset + (alignedPtr +
-    // ((leadDimension * dstOffsetI) + dstOffsetJ)).
-    SmallVector<Value> indices(adaptor.indices());
-    Value dstOffsetIVal = indices[0];
-    Value dstOffsetJVal = indices[1];
-    Type i32Ty = rewriter.getI32Type();
-    Value leadingDim32 =
-        rewriter.create<LLVM::ConstantOp>(loc, i32Ty, leadDimension);
-    Value numElemsLeadDim =
-        rewriter.create<LLVM::MulOp>(loc, i32Ty, leadingDim32, dstOffsetIVal);
-    Value loadOffset = rewriter.create<LLVM::AddOp>(loc, i32Ty, numElemsLeadDim,
-                                                    dstOffsetJVal);
-
-    Value promotedDstOpToUse;
-    promotedDstOpToUse = promotedDstOp.offset(rewriter, loc);
-    Value actualOffset = rewriter.create<LLVM::AddOp>(loc, i32Ty, loadOffset,
-                                                      promotedDstOpToUse);
-    Value storeAddress = rewriter.create<LLVM::GEPOp>(
-        loc, promotedDstOp.getElementPtrType(),
-        promotedDstOp.alignedPtr(rewriter, loc), ArrayRef<Value>{actualOffset});
-
-    // Bitcast the base address pointer of the destination memref, So that
-    // values can be stored in chunks of 32-bits and semantics match with the
-    // intrinsic exposed by NVPTX backend.
-    Value storeAddressCasted = rewriter.create<LLVM::BitcastOp>(
-        loc,
-        LLVM::LLVMPointerType::get(
-            i32Ty, promotedDstOp.getElementPtrType().getAddressSpace()),
-        storeAddress);
-
     SmallVector<Value, 4> storeOpOperands;
-    storeOpOperands.push_back(storeAddressCasted);
-
     // Get the shape of the MMAMatrix type being stored. The shape will
     // choose which intrinsic this op will be lowered to.
     gpu::MMAMatrixType srcType =
         subgroupMmaStoreMatrixOp.src().getType().cast<gpu::MMAMatrixType>();
     ArrayRef<int64_t> srcTypeShape = srcType.getShape();
+    NVVM::MMALayout layout = NVVM::MMALayout::row;
+    NVVM::MMATypes eltype = getElementType(srcType);
+    int64_t m = srcTypeShape[0];
+    int64_t n = srcTypeShape[1];
+    int64_t k = NVVM::WMMAStoreOp::inferKDimension(m, n, eltype);
+    if (NVVM::WMMAStoreOp::getIntrinsicID(m, n, k, layout, eltype) == 0)
+      return rewriter.notifyMatchFailure(op, kInvalidCaseStr);
 
     auto matrixType = adaptor.src().getType().cast<LLVM::LLVMStructType>();
     for (unsigned i = 0, e = matrixType.getBody().size(); i < e; ++i) {
@@ -245,29 +164,16 @@ struct WmmaStoreOpToNVVMLowering
           rewriter.getI32ArrayAttr(i));
       storeOpOperands.push_back(toUse);
     }
-    storeOpOperands.push_back(leadingDim32);
-    // Unpack the results from the source.
-    if (srcType.getElementType().isF16()) {
-      // Create nvvm.mma_store op.
-      if (srcTypeShape[0] == 16 && srcTypeShape[1] == 16) {
-        rewriter.create<NVVM::WMMAStoreF16M16N16K16Op>(loc, storeOpOperands);
-      } else {
-        return rewriter.notifyMatchFailure(op, kInvalidCaseStr);
-      }
-      rewriter.eraseOp(op);
-      return success();
-    }
-    if (srcType.getElementType().isF32()) {
-      // Create nvvm.mma_store op.
-      if (srcTypeShape[0] == 16 && srcTypeShape[1] == 16)
-        rewriter.create<NVVM::WMMAStoreF32M16N16K16Op>(loc, storeOpOperands);
-      else {
-        return rewriter.notifyMatchFailure(op, kInvalidCaseStr);
-      }
-      rewriter.eraseOp(op);
-      return success();
-    }
-    return failure();
+
+    Value dataPtr = getStridedElementPtr(
+        loc, subgroupMmaStoreMatrixOp.dstMemref().getType().cast<MemRefType>(),
+        adaptor.dstMemref(), adaptor.indices(), rewriter);
+    Value leadingDim = rewriter.create<LLVM::ConstantOp>(
+        loc, rewriter.getI32Type(),
+        subgroupMmaStoreMatrixOp.leadDimensionAttr());
+    rewriter.replaceOpWithNewOp<NVVM::WMMAStoreOp>(
+        op, dataPtr, m, n, k, layout, eltype, storeOpOperands, leadingDim);
+    return success();
   }
 };
 
@@ -308,40 +214,27 @@ struct WmmaMmaOpToNVVMLowering
     gpu::MMAMatrixType aType =
         subgroupMmaComputeOp.opA().getType().cast<gpu::MMAMatrixType>();
     ArrayRef<int64_t> aTypeShape = aType.getShape();
-    gpu::MMAMatrixType bType =
-        subgroupMmaComputeOp.opB().getType().cast<gpu::MMAMatrixType>();
-    ArrayRef<int64_t> bTypeShape = bType.getShape();
     gpu::MMAMatrixType cType =
         subgroupMmaComputeOp.opC().getType().cast<gpu::MMAMatrixType>();
     ArrayRef<int64_t> cTypeShape = cType.getShape();
+    int64_t m = cTypeShape[0];
+    int64_t n = cTypeShape[1];
+    int64_t k = aTypeShape[1];
+    NVVM::MMALayout layout = NVVM::MMALayout::row;
+    NVVM::MMATypes sourceType = getElementType(aType);
+    NVVM::MMATypes destType = getElementType(cType);
+    if (NVVM::WMMAMmaOp::getIntrinsicID(m, n, k, layout, layout, sourceType,
+                                        destType) == 0)
+      return rewriter.notifyMatchFailure(op, kInvalidCaseStr);
 
     unpackOp(adaptor.opA());
     unpackOp(adaptor.opB());
     unpackOp(adaptor.opC());
 
-    if (cType.getElementType().isF16()) {
-      if (aTypeShape[0] == 16 && aTypeShape[1] == 16 && bTypeShape[0] == 16 &&
-          bTypeShape[1] == 16 && cTypeShape[0] == 16 && cTypeShape[1] == 16) {
-        // Create nvvm.wmma.mma op.
-        rewriter.replaceOpWithNewOp<NVVM::WMMAMmaF16F16M16N16K16Op>(
-            op, adaptor.opC().getType(), unpackedOps);
-
-        return success();
-      }
-      return rewriter.notifyMatchFailure(op, kInvalidCaseStr);
-    }
-    if (cType.getElementType().isF32()) {
-      if (aTypeShape[0] == 16 && aTypeShape[1] == 16 && bTypeShape[0] == 16 &&
-          bTypeShape[1] == 16 && cTypeShape[0] == 16 && cTypeShape[1] == 16) {
-        // Create nvvm.wmma.mma op.
-        rewriter.replaceOpWithNewOp<NVVM::WMMAMmaF32F32M16N16K16Op>(
-            op, adaptor.opC().getType(), unpackedOps);
-
-        return success();
-      }
-      return rewriter.notifyMatchFailure(op, kInvalidCaseStr);
-    }
-    return failure();
+    rewriter.replaceOpWithNewOp<NVVM::WMMAMmaOp>(
+        op, adaptor.opC().getType(), m, n, k, layout, layout, sourceType,
+        destType, unpackedOps);
+    return success();
   }
 };
 
@@ -384,13 +277,103 @@ struct WmmaConstantOpToNVVMLowering
   }
 };
 
-} // anonymous namespace
+static Value createMinMaxF(OpBuilder &builder, Location loc, Value lhs,
+                           Value rhs, bool isMin) {
+  auto floatType = getElementTypeOrSelf(lhs.getType()).cast<FloatType>();
+  Type i1Type = builder.getI1Type();
+  if (auto vecType = lhs.getType().dyn_cast<VectorType>())
+    i1Type = VectorType::get(vecType.getShape(), i1Type);
+  Value cmp = builder.create<LLVM::FCmpOp>(
+      loc, i1Type, isMin ? LLVM::FCmpPredicate::olt : LLVM::FCmpPredicate::ogt,
+      lhs, rhs);
+  Value sel = builder.create<LLVM::SelectOp>(loc, cmp, lhs, rhs);
+  Value isNan = builder.create<LLVM::FCmpOp>(
+      loc, i1Type, LLVM::FCmpPredicate::uno, lhs, rhs);
+  Value nan = builder.create<LLVM::ConstantOp>(
+      loc, lhs.getType(),
+      builder.getFloatAttr(floatType,
+                           APFloat::getQNaN(floatType.getFloatSemantics())));
+  return builder.create<LLVM::SelectOp>(loc, isNan, sel, nan);
+}
+
+static Value createScalarOp(OpBuilder &builder, Location loc,
+                            gpu::MMAElementwiseOp op,
+                            ArrayRef<Value> operands) {
+  switch (op) {
+  case gpu::MMAElementwiseOp::ADDF:
+    return builder.create<LLVM::FAddOp>(loc, operands[0].getType(), operands);
+  case gpu::MMAElementwiseOp::MULF:
+    return builder.create<LLVM::FMulOp>(loc, operands[0].getType(), operands);
+  case gpu::MMAElementwiseOp::DIVF:
+    return builder.create<LLVM::FDivOp>(loc, operands[0].getType(), operands);
+  case gpu::MMAElementwiseOp::MAXF:
+    return createMinMaxF(builder, loc, operands[0], operands[1],
+                         /*isMin=*/false);
+  case gpu::MMAElementwiseOp::MINF:
+    return createMinMaxF(builder, loc, operands[0], operands[1],
+                         /*isMin=*/true);
+  }
+  llvm_unreachable("unknown op");
+}
+
+/// Convert GPU MMA elementwise ops to extract + op + insert.
+struct WmmaElementwiseOpToNVVMLowering
+    : public ConvertOpToLLVMPattern<gpu::SubgroupMmaElementwiseOp> {
+  using ConvertOpToLLVMPattern<
+      gpu::SubgroupMmaElementwiseOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(gpu::SubgroupMmaElementwiseOp subgroupMmaElementwiseOp,
+                  OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (failed(areAllLLVMTypes(subgroupMmaElementwiseOp.getOperation(),
+                               adaptor.getOperands(), rewriter)))
+      return failure();
+    Location loc = subgroupMmaElementwiseOp.getLoc();
+    size_t numOperands = adaptor.getOperands().size();
+    LLVM::LLVMStructType destType = convertMMAToLLVMType(
+        subgroupMmaElementwiseOp.getType().cast<gpu::MMAMatrixType>());
+    Value matrixStruct = rewriter.create<LLVM::UndefOp>(loc, destType);
+    for (size_t i = 0, e = destType.getBody().size(); i < e; ++i) {
+      SmallVector<Value> extractedOperands;
+      for (size_t opIdx = 0; opIdx < numOperands; opIdx++) {
+        Type elementType = adaptor.getOperands()[opIdx]
+                               .getType()
+                               .cast<LLVM::LLVMStructType>()
+                               .getBody()[i];
+        extractedOperands.push_back(rewriter.create<LLVM::ExtractValueOp>(
+            loc, elementType, adaptor.getOperands()[opIdx],
+            rewriter.getI32ArrayAttr(i)));
+      }
+      Value element =
+          createScalarOp(rewriter, loc, subgroupMmaElementwiseOp.operation(),
+                         extractedOperands);
+      matrixStruct = rewriter.create<LLVM::InsertValueOp>(
+          loc, matrixStruct, element, rewriter.getI32ArrayAttr(i));
+    }
+    rewriter.replaceOp(subgroupMmaElementwiseOp, matrixStruct);
+    return success();
+  }
+};
+
+} // namespace
 
 namespace mlir {
+
+/// Return the LLVMStructureType corresponding to the MMAMatrixType `type`.
+LLVM::LLVMStructType convertMMAToLLVMType(gpu::MMAMatrixType type) {
+  NVVM::MMAFrag frag = convertOperand(type.getOperand());
+  NVVM::MMATypes eltType = getElementType(type);
+  std::pair<Type, unsigned> typeInfo =
+      inferMMAType(eltType, frag, type.getContext());
+  return LLVM::LLVMStructType::getLiteral(
+      type.getContext(), SmallVector<Type, 8>(typeInfo.second, typeInfo.first));
+}
+
 void populateGpuWMMAToNVVMConversionPatterns(LLVMTypeConverter &converter,
                                              RewritePatternSet &patterns) {
   patterns.insert<WmmaLoadOpToNVVMLowering, WmmaMmaOpToNVVMLowering,
-                  WmmaStoreOpToNVVMLowering, WmmaConstantOpToNVVMLowering>(
-      converter);
+                  WmmaStoreOpToNVVMLowering, WmmaConstantOpToNVVMLowering,
+                  WmmaElementwiseOpToNVVMLowering>(converter);
 }
 } // namespace mlir

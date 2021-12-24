@@ -15,5 +15,6 @@ def Math_Dialect : Dialect {
     The math dialect is intended to hold mathematical operations on integer and
     floating type beyond simple arithmetics.
   }];
+  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 #endif // MATH_BASE

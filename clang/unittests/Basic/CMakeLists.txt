@@ -19,3 +19,8 @@ clang_target_link_libraries(BasicTests
   clangBasic
   clangLex
   )
+
+target_link_libraries(BasicTests
+  PRIVATE
+  LLVMTestingSupport
+)

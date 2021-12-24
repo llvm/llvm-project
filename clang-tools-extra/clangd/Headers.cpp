@@ -17,17 +17,22 @@
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Lex/HeaderSearch.h"
+#include "clang/Lex/PPCallbacks.h"
+#include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Path.h"
 
 namespace clang {
 namespace clangd {
-namespace {
 
-class RecordHeaders : public PPCallbacks {
+const char IWYUPragmaKeep[] = "// IWYU pragma: keep";
+
+class IncludeStructure::RecordHeaders : public PPCallbacks,
+                                        public CommentHandler {
 public:
-  RecordHeaders(const SourceManager &SM, IncludeStructure *Out)
-      : SM(SM), Out(Out) {}
+  RecordHeaders(const CompilerInstance &CI, IncludeStructure *Out)
+      : SM(CI.getSourceManager()),
+        HeaderInfo(CI.getPreprocessor().getHeaderSearchInfo()), Out(Out) {}
 
   // Record existing #includes - both written and resolved paths. Only #includes
   // in the main file are collected.
@@ -58,6 +63,8 @@ public:
       Inc.Directive = IncludeTok.getIdentifierInfo()->getPPKeywordID();
       if (File)
         Inc.HeaderID = static_cast<unsigned>(Out->getOrCreateID(File));
+      if (LastPragmaKeepInMainFileLine == Inc.HashLine)
+        Inc.BehindPragmaKeep = true;
     }
 
     // Record include graph (not just for main-file includes)
@@ -80,32 +87,74 @@ public:
                    FileID PrevFID) override {
     switch (Reason) {
     case PPCallbacks::EnterFile:
+      ++Level;
       if (BuiltinFile.isInvalid() && SM.isWrittenInBuiltinFile(Loc)) {
         BuiltinFile = SM.getFileID(Loc);
         InBuiltinFile = true;
       }
       break;
-    case PPCallbacks::ExitFile:
+    case PPCallbacks::ExitFile: {
+      --Level;
       if (PrevFID == BuiltinFile)
         InBuiltinFile = false;
+      // At file exit time HeaderSearchInfo is valid and can be used to
+      // determine whether the file was a self-contained header or not.
+      if (const FileEntry *FE = SM.getFileEntryForID(PrevFID))
+        if (!isSelfContainedHeader(FE, PrevFID, SM, HeaderInfo))
+          Out->NonSelfContained.insert(
+              *Out->getID(SM.getFileEntryForID(PrevFID)));
       break;
+    }
     case PPCallbacks::RenameFile:
     case PPCallbacks::SystemHeaderPragma:
       break;
     }
   }
 
+  // Given:
+  //
+  // #include "foo.h"
+  // #include "bar.h" // IWYU pragma: keep
+  //
+  // The order in which the callbacks will be triggered:
+  //
+  // 1. InclusionDirective("foo.h")
+  // 2. HandleComment("// IWYU pragma: keep")
+  // 3. InclusionDirective("bar.h")
+  //
+  // HandleComment will store the last location of "IWYU pragma: keep" comment
+  // in the main file, so that when InclusionDirective is called, it will know
+  // that the next inclusion is behind the IWYU pragma.
+  bool HandleComment(Preprocessor &PP, SourceRange Range) override {
+    if (!inMainFile() || Range.getBegin().isMacroID())
+      return false;
+    bool Err = false;
+    llvm::StringRef Text = SM.getCharacterData(Range.getBegin(), &Err);
+    if (Err || !Text.consume_front(IWYUPragmaKeep))
+      return false;
+    unsigned Offset = SM.getFileOffset(Range.getBegin());
+    LastPragmaKeepInMainFileLine =
+        SM.getLineNumber(SM.getFileID(Range.getBegin()), Offset) - 1;
+    return false;
+  }
+
 private:
+  // Keeps track of include depth for the current file. It's 1 for main file.
+  int Level = 0;
+  bool inMainFile() const { return Level == 1; }
+
   const SourceManager &SM;
+  HeaderSearch &HeaderInfo;
   // Set after entering the <built-in> file.
   FileID BuiltinFile;
   // Indicates whether <built-in> file is part of include stack.
   bool InBuiltinFile = false;
 
   IncludeStructure *Out;
-};
 
-} // namespace
+  // The last line "IWYU pragma: keep" was seen in the main file, 0-indexed.
+  int LastPragmaKeepInMainFileLine = -1;
+};
 
 bool isLiteralInclude(llvm::StringRef Include) {
   return Include.startswith("<") || Include.startswith("\"");
@@ -151,10 +200,12 @@ llvm::SmallVector<llvm::StringRef, 1> getRankedIncludes(const Symbol &Sym) {
   return Headers;
 }
 
-std::unique_ptr<PPCallbacks>
-IncludeStructure::collect(const SourceManager &SM) {
+void IncludeStructure::collect(const CompilerInstance &CI) {
+  auto &SM = CI.getSourceManager();
   MainFileEntry = SM.getFileEntryForID(SM.getMainFileID());
-  return std::make_unique<RecordHeaders>(SM, this);
+  auto Collector = std::make_unique<RecordHeaders>(CI, this);
+  CI.getPreprocessor().addCommentHandler(Collector.get());
+  CI.getPreprocessor().addPPCallbacks(std::move(Collector));
 }
 
 llvm::Optional<IncludeStructure::HeaderID>

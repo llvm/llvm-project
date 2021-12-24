@@ -19,7 +19,6 @@
 
 namespace mlir {
 
-class Identifier;
 class Location;
 class WalkResult;
 
@@ -98,7 +97,7 @@ inline ::llvm::hash_code hash_value(Location arg) {
   return hash_value(arg.impl);
 }
 
-} // end namespace mlir
+} // namespace mlir
 
 //===----------------------------------------------------------------------===//
 // Tablegen Attribute Declarations

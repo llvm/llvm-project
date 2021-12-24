@@ -2263,32 +2263,35 @@ unsigned AArch64InstrInfo::getLoadStoreImmIdx(unsigned Opc) {
   case AArch64::STNPSi:
   case AArch64::LDG:
   case AArch64::STGPi:
+
   case AArch64::LD1B_IMM:
-  case AArch64::LD1H_IMM:
-  case AArch64::LD1W_IMM:
-  case AArch64::LD1D_IMM:
-  case AArch64::ST1B_IMM:
-  case AArch64::ST1H_IMM:
-  case AArch64::ST1W_IMM:
-  case AArch64::ST1D_IMM:
   case AArch64::LD1B_H_IMM:
+  case AArch64::LD1B_S_IMM:
+  case AArch64::LD1B_D_IMM:
   case AArch64::LD1SB_H_IMM:
+  case AArch64::LD1SB_S_IMM:
+  case AArch64::LD1SB_D_IMM:
+  case AArch64::LD1H_IMM:
   case AArch64::LD1H_S_IMM:
+  case AArch64::LD1H_D_IMM:
   case AArch64::LD1SH_S_IMM:
+  case AArch64::LD1SH_D_IMM:
+  case AArch64::LD1W_IMM:
   case AArch64::LD1W_D_IMM:
   case AArch64::LD1SW_D_IMM:
+  case AArch64::LD1D_IMM:
+
+  case AArch64::ST1B_IMM:
   case AArch64::ST1B_H_IMM:
-  case AArch64::ST1H_S_IMM:
-  case AArch64::ST1W_D_IMM:
-  case AArch64::LD1B_S_IMM:
-  case AArch64::LD1SB_S_IMM:
-  case AArch64::LD1H_D_IMM:
-  case AArch64::LD1SH_D_IMM:
   case AArch64::ST1B_S_IMM:
-  case AArch64::ST1H_D_IMM:
-  case AArch64::LD1B_D_IMM:
-  case AArch64::LD1SB_D_IMM:
   case AArch64::ST1B_D_IMM:
+  case AArch64::ST1H_IMM:
+  case AArch64::ST1H_S_IMM:
+  case AArch64::ST1H_D_IMM:
+  case AArch64::ST1W_IMM:
+  case AArch64::ST1W_D_IMM:
+  case AArch64::ST1D_IMM:
+
   case AArch64::LD1RB_IMM:
   case AArch64::LD1RB_H_IMM:
   case AArch64::LD1RB_S_IMM:
@@ -2305,6 +2308,32 @@ unsigned AArch64InstrInfo::getLoadStoreImmIdx(unsigned Opc) {
   case AArch64::LD1RW_D_IMM:
   case AArch64::LD1RSW_IMM:
   case AArch64::LD1RD_IMM:
+
+  case AArch64::LDNT1B_ZRI:
+  case AArch64::LDNT1H_ZRI:
+  case AArch64::LDNT1W_ZRI:
+  case AArch64::LDNT1D_ZRI:
+  case AArch64::STNT1B_ZRI:
+  case AArch64::STNT1H_ZRI:
+  case AArch64::STNT1W_ZRI:
+  case AArch64::STNT1D_ZRI:
+
+  case AArch64::LDNF1B_IMM:
+  case AArch64::LDNF1B_H_IMM:
+  case AArch64::LDNF1B_S_IMM:
+  case AArch64::LDNF1B_D_IMM:
+  case AArch64::LDNF1SB_H_IMM:
+  case AArch64::LDNF1SB_S_IMM:
+  case AArch64::LDNF1SB_D_IMM:
+  case AArch64::LDNF1H_IMM:
+  case AArch64::LDNF1H_S_IMM:
+  case AArch64::LDNF1H_D_IMM:
+  case AArch64::LDNF1SH_S_IMM:
+  case AArch64::LDNF1SH_D_IMM:
+  case AArch64::LDNF1W_IMM:
+  case AArch64::LDNF1W_D_IMM:
+  case AArch64::LDNF1SW_D_IMM:
+  case AArch64::LDNF1D_IMM:
     return 3;
   case AArch64::ADDG:
   case AArch64::STGOffset:
@@ -2855,10 +2884,22 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LD1H_IMM:
   case AArch64::LD1W_IMM:
   case AArch64::LD1D_IMM:
+  case AArch64::LDNT1B_ZRI:
+  case AArch64::LDNT1H_ZRI:
+  case AArch64::LDNT1W_ZRI:
+  case AArch64::LDNT1D_ZRI:
   case AArch64::ST1B_IMM:
   case AArch64::ST1H_IMM:
   case AArch64::ST1W_IMM:
   case AArch64::ST1D_IMM:
+  case AArch64::STNT1B_ZRI:
+  case AArch64::STNT1H_ZRI:
+  case AArch64::STNT1W_ZRI:
+  case AArch64::STNT1D_ZRI:
+  case AArch64::LDNF1B_IMM:
+  case AArch64::LDNF1H_IMM:
+  case AArch64::LDNF1W_IMM:
+  case AArch64::LDNF1D_IMM:
     // A full vectors worth of data
     // Width = mbytes * elements
     Scale = TypeSize::Scalable(16);
@@ -2875,6 +2916,12 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::ST1B_H_IMM:
   case AArch64::ST1H_S_IMM:
   case AArch64::ST1W_D_IMM:
+  case AArch64::LDNF1B_H_IMM:
+  case AArch64::LDNF1SB_H_IMM:
+  case AArch64::LDNF1H_S_IMM:
+  case AArch64::LDNF1SH_S_IMM:
+  case AArch64::LDNF1W_D_IMM:
+  case AArch64::LDNF1SW_D_IMM:
     // A half vector worth of data
     // Width = mbytes * elements
     Scale = TypeSize::Scalable(8);
@@ -2888,6 +2935,10 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LD1SH_D_IMM:
   case AArch64::ST1B_S_IMM:
   case AArch64::ST1H_D_IMM:
+  case AArch64::LDNF1B_S_IMM:
+  case AArch64::LDNF1SB_S_IMM:
+  case AArch64::LDNF1H_D_IMM:
+  case AArch64::LDNF1SH_D_IMM:
     // A quarter vector worth of data
     // Width = mbytes * elements
     Scale = TypeSize::Scalable(4);
@@ -2898,6 +2949,8 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LD1B_D_IMM:
   case AArch64::LD1SB_D_IMM:
   case AArch64::ST1B_D_IMM:
+  case AArch64::LDNF1B_D_IMM:
+  case AArch64::LDNF1SB_D_IMM:
     // A eighth vector worth of data
     // Width = mbytes * elements
     Scale = TypeSize::Scalable(2);
@@ -4288,6 +4341,10 @@ int llvm::isAArch64FrameOffsetLegal(const MachineInstr &MI,
   case AArch64::ST1Twov1d:
   case AArch64::ST1Threev1d:
   case AArch64::ST1Fourv1d:
+  case AArch64::ST1i8:
+  case AArch64::ST1i16:
+  case AArch64::ST1i32:
+  case AArch64::ST1i64:
   case AArch64::IRG:
   case AArch64::IRGstack:
   case AArch64::STGloop:
@@ -4860,6 +4917,55 @@ static bool getFMAPatterns(MachineInstr &Root,
   return Found;
 }
 
+static bool getFMULPatterns(MachineInstr &Root,
+                            SmallVectorImpl<MachineCombinerPattern> &Patterns) {
+  MachineBasicBlock &MBB = *Root.getParent();
+  bool Found = false;
+
+  auto Match = [&](unsigned Opcode, int Operand,
+                   MachineCombinerPattern Pattern) -> bool {
+    MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+    MachineOperand &MO = Root.getOperand(Operand);
+    MachineInstr *MI = nullptr;
+    if (MO.isReg() && Register::isVirtualRegister(MO.getReg()))
+      MI = MRI.getUniqueVRegDef(MO.getReg());
+    if (MI && MI->getOpcode() == Opcode) {
+      Patterns.push_back(Pattern);
+      return true;
+    }
+    return false;
+  };
+
+  typedef MachineCombinerPattern MCP;
+
+  switch (Root.getOpcode()) {
+  default:
+    return false;
+  case AArch64::FMULv2f32:
+    Found = Match(AArch64::DUPv2i32lane, 1, MCP::FMULv2i32_indexed_OP1);
+    Found |= Match(AArch64::DUPv2i32lane, 2, MCP::FMULv2i32_indexed_OP2);
+    break;
+  case AArch64::FMULv2f64:
+    Found = Match(AArch64::DUPv2i64lane, 1, MCP::FMULv2i64_indexed_OP1);
+    Found |= Match(AArch64::DUPv2i64lane, 2, MCP::FMULv2i64_indexed_OP2);
+    break;
+  case AArch64::FMULv4f16:
+    Found = Match(AArch64::DUPv4i16lane, 1, MCP::FMULv4i16_indexed_OP1);
+    Found |= Match(AArch64::DUPv4i16lane, 2, MCP::FMULv4i16_indexed_OP2);
+    break;
+  case AArch64::FMULv4f32:
+    Found = Match(AArch64::DUPv4i32lane, 1, MCP::FMULv4i32_indexed_OP1);
+    Found |= Match(AArch64::DUPv4i32lane, 2, MCP::FMULv4i32_indexed_OP2);
+    break;
+  case AArch64::FMULv8f16:
+    Found = Match(AArch64::DUPv8i16lane, 1, MCP::FMULv8i16_indexed_OP1);
+    Found |= Match(AArch64::DUPv8i16lane, 2, MCP::FMULv8i16_indexed_OP2);
+    break;
+  }
+
+  return Found;
+}
+
 /// Return true when a code sequence can improve throughput. It
 /// should be called only for instructions in loops.
 /// \param Pattern - combiner pattern
@@ -4923,6 +5029,16 @@ bool AArch64InstrInfo::isThroughputPattern(
   case MachineCombinerPattern::FMLSv2f64_OP2:
   case MachineCombinerPattern::FMLSv4i32_indexed_OP2:
   case MachineCombinerPattern::FMLSv4f32_OP2:
+  case MachineCombinerPattern::FMULv2i32_indexed_OP1:
+  case MachineCombinerPattern::FMULv2i32_indexed_OP2:
+  case MachineCombinerPattern::FMULv2i64_indexed_OP1:
+  case MachineCombinerPattern::FMULv2i64_indexed_OP2:
+  case MachineCombinerPattern::FMULv4i16_indexed_OP1:
+  case MachineCombinerPattern::FMULv4i16_indexed_OP2:
+  case MachineCombinerPattern::FMULv4i32_indexed_OP1:
+  case MachineCombinerPattern::FMULv4i32_indexed_OP2:
+  case MachineCombinerPattern::FMULv8i16_indexed_OP1:
+  case MachineCombinerPattern::FMULv8i16_indexed_OP2:
   case MachineCombinerPattern::MULADDv8i8_OP1:
   case MachineCombinerPattern::MULADDv8i8_OP2:
   case MachineCombinerPattern::MULADDv16i8_OP1:
@@ -4979,6 +5095,8 @@ bool AArch64InstrInfo::getMachineCombinerPatterns(
   if (getMaddPatterns(Root, Patterns))
     return true;
   // Floating point patterns
+  if (getFMULPatterns(Root, Patterns))
+    return true;
   if (getFMAPatterns(Root, Patterns))
     return true;
 
@@ -5065,6 +5183,42 @@ genFusedMultiply(MachineFunction &MF, MachineRegisterInfo &MRI,
   // Insert the MADD (MADD, FMA, FMS, FMLA, FMSL)
   InsInstrs.push_back(MIB);
   return MUL;
+}
+
+/// Fold (FMUL x (DUP y lane)) into (FMUL_indexed x y lane)
+static MachineInstr *
+genIndexedMultiply(MachineInstr &Root,
+                   SmallVectorImpl<MachineInstr *> &InsInstrs,
+                   unsigned IdxDupOp, unsigned MulOpc,
+                   const TargetRegisterClass *RC, MachineRegisterInfo &MRI) {
+  assert(((IdxDupOp == 1) || (IdxDupOp == 2)) &&
+         "Invalid index of FMUL operand");
+
+  MachineFunction &MF = *Root.getMF();
+  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
+
+  MachineInstr *Dup =
+      MF.getRegInfo().getUniqueVRegDef(Root.getOperand(IdxDupOp).getReg());
+
+  Register DupSrcReg = Dup->getOperand(1).getReg();
+  MRI.clearKillFlags(DupSrcReg);
+  MRI.constrainRegClass(DupSrcReg, RC);
+
+  unsigned DupSrcLane = Dup->getOperand(2).getImm();
+
+  unsigned IdxMulOp = IdxDupOp == 1 ? 2 : 1;
+  MachineOperand &MulOp = Root.getOperand(IdxMulOp);
+
+  Register ResultReg = Root.getOperand(0).getReg();
+
+  MachineInstrBuilder MIB;
+  MIB = BuildMI(MF, Root.getDebugLoc(), TII->get(MulOpc), ResultReg)
+            .add(MulOp)
+            .addReg(DupSrcReg)
+            .addImm(DupSrcLane);
+
+  InsInstrs.push_back(MIB);
+  return &Root;
 }
 
 /// genFusedMultiplyAcc - Helper to generate fused multiply accumulate
@@ -5278,15 +5432,15 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     }
     uint64_t UImm = SignExtend64(Imm, BitSize);
     uint64_t Encoding;
-    if (AArch64_AM::processLogicalImmediate(UImm, BitSize, Encoding)) {
-      MachineInstrBuilder MIB1 =
-          BuildMI(MF, Root.getDebugLoc(), TII->get(OrrOpc), NewVR)
-              .addReg(ZeroReg)
-              .addImm(Encoding);
-      InsInstrs.push_back(MIB1);
-      InstrIdxForVirtReg.insert(std::make_pair(NewVR, 0));
-      MUL = genMaddR(MF, MRI, TII, Root, InsInstrs, 1, Opc, NewVR, RC);
-    }
+    if (!AArch64_AM::processLogicalImmediate(UImm, BitSize, Encoding))
+      return;
+    MachineInstrBuilder MIB1 =
+        BuildMI(MF, Root.getDebugLoc(), TII->get(OrrOpc), NewVR)
+            .addReg(ZeroReg)
+            .addImm(Encoding);
+    InsInstrs.push_back(MIB1);
+    InstrIdxForVirtReg.insert(std::make_pair(NewVR, 0));
+    MUL = genMaddR(MF, MRI, TII, Root, InsInstrs, 1, Opc, NewVR, RC);
     break;
   }
   case MachineCombinerPattern::MULSUBW_OP1:
@@ -5369,15 +5523,15 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     }
     uint64_t UImm = SignExtend64(-Imm, BitSize);
     uint64_t Encoding;
-    if (AArch64_AM::processLogicalImmediate(UImm, BitSize, Encoding)) {
-      MachineInstrBuilder MIB1 =
-          BuildMI(MF, Root.getDebugLoc(), TII->get(OrrOpc), NewVR)
-              .addReg(ZeroReg)
-              .addImm(Encoding);
-      InsInstrs.push_back(MIB1);
-      InstrIdxForVirtReg.insert(std::make_pair(NewVR, 0));
-      MUL = genMaddR(MF, MRI, TII, Root, InsInstrs, 1, Opc, NewVR, RC);
-    }
+    if (!AArch64_AM::processLogicalImmediate(UImm, BitSize, Encoding))
+      return;
+    MachineInstrBuilder MIB1 =
+        BuildMI(MF, Root.getDebugLoc(), TII->get(OrrOpc), NewVR)
+            .addReg(ZeroReg)
+            .addImm(Encoding);
+    InsInstrs.push_back(MIB1);
+    InstrIdxForVirtReg.insert(std::make_pair(NewVR, 0));
+    MUL = genMaddR(MF, MRI, TII, Root, InsInstrs, 1, Opc, NewVR, RC);
     break;
   }
 
@@ -6025,12 +6179,50 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     }
     break;
   }
+  case MachineCombinerPattern::FMULv2i32_indexed_OP1:
+  case MachineCombinerPattern::FMULv2i32_indexed_OP2: {
+    unsigned IdxDupOp =
+        (Pattern == MachineCombinerPattern::FMULv2i32_indexed_OP1) ? 1 : 2;
+    genIndexedMultiply(Root, InsInstrs, IdxDupOp, AArch64::FMULv2i32_indexed,
+                       &AArch64::FPR128RegClass, MRI);
+    break;
+  }
+  case MachineCombinerPattern::FMULv2i64_indexed_OP1:
+  case MachineCombinerPattern::FMULv2i64_indexed_OP2: {
+    unsigned IdxDupOp =
+        (Pattern == MachineCombinerPattern::FMULv2i64_indexed_OP1) ? 1 : 2;
+    genIndexedMultiply(Root, InsInstrs, IdxDupOp, AArch64::FMULv2i64_indexed,
+                       &AArch64::FPR128RegClass, MRI);
+    break;
+  }
+  case MachineCombinerPattern::FMULv4i16_indexed_OP1:
+  case MachineCombinerPattern::FMULv4i16_indexed_OP2: {
+    unsigned IdxDupOp =
+        (Pattern == MachineCombinerPattern::FMULv4i16_indexed_OP1) ? 1 : 2;
+    genIndexedMultiply(Root, InsInstrs, IdxDupOp, AArch64::FMULv4i16_indexed,
+                       &AArch64::FPR128_loRegClass, MRI);
+    break;
+  }
+  case MachineCombinerPattern::FMULv4i32_indexed_OP1:
+  case MachineCombinerPattern::FMULv4i32_indexed_OP2: {
+    unsigned IdxDupOp =
+        (Pattern == MachineCombinerPattern::FMULv4i32_indexed_OP1) ? 1 : 2;
+    genIndexedMultiply(Root, InsInstrs, IdxDupOp, AArch64::FMULv4i32_indexed,
+                       &AArch64::FPR128RegClass, MRI);
+    break;
+  }
+  case MachineCombinerPattern::FMULv8i16_indexed_OP1:
+  case MachineCombinerPattern::FMULv8i16_indexed_OP2: {
+    unsigned IdxDupOp =
+        (Pattern == MachineCombinerPattern::FMULv8i16_indexed_OP1) ? 1 : 2;
+    genIndexedMultiply(Root, InsInstrs, IdxDupOp, AArch64::FMULv8i16_indexed,
+                       &AArch64::FPR128_loRegClass, MRI);
+    break;
+  }
   } // end switch (Pattern)
   // Record MUL and ADD/SUB for deletion
-  // FIXME: This assertion fails in CodeGen/AArch64/tailmerging_in_mbp.ll and
-  // CodeGen/AArch64/urem-seteq-nonzero.ll.
-  // assert(MUL && "MUL was never set");
-  DelInstrs.push_back(MUL);
+  if (MUL)
+    DelInstrs.push_back(MUL);
   DelInstrs.push_back(&Root);
 }
 
@@ -6573,13 +6765,8 @@ outliner::OutlinedFunction AArch64InstrInfo::getOutliningCandidateInfo(
   MachineBasicBlock::iterator MBBI = RepeatedSequenceLocs[0].front();
   for (unsigned Loc = RepeatedSequenceLocs[0].getStartIdx();
        Loc < RepeatedSequenceLocs[0].getEndIdx() + 1; Loc++) {
-    const std::vector<MCCFIInstruction> &CFIInstructions =
-        RepeatedSequenceLocs[0].getMF()->getFrameInstructions();
-    if (MBBI->isCFIInstruction()) {
-      unsigned CFIIndex = MBBI->getOperand(0).getCFIIndex();
-      MCCFIInstruction CFI = CFIInstructions[CFIIndex];
+    if (MBBI->isCFIInstruction())
       CFICount++;
-    }
     MBBI++;
   }
 
@@ -6868,6 +7055,8 @@ bool AArch64InstrInfo::isFunctionSafeToOutlineFrom(
 
 bool AArch64InstrInfo::isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
                                               unsigned &Flags) const {
+  if (!TargetInstrInfo::isMBBSafeToOutlineFrom(MBB, Flags))
+    return false;
   // Check if LR is available through all of the MBB. If it's not, then set
   // a flag.
   assert(MBB.getParent()->getRegInfo().tracksLiveness() &&

@@ -141,7 +141,9 @@ you can specify
 .Fl O2
 to set the compression level to 6.
 .It Fl -cref
-Output cross reference table.
+Output cross reference table. If
+.Fl Map
+is specified, print to the map file.
 .It Fl -define-common , Fl d
 Assign space to common symbols.
 .It Fl -defsym Ns = Ns Ar symbol Ns = Ns Ar expression
@@ -345,7 +347,7 @@ Page align sections.
 .It Fl -no-omagic
 Do not set the text data sections to be writable, page align sections.
 .It Fl -no-relax
-Disable target-specific relaxations. This is currently a no-op.
+Disable target-specific relaxations. For x86-64 this disables R_X86_64_GOTPCRELX and R_X86_64_REX_GOTPCRELX GOT optimization.
 .It Fl -no-rosegment
 Do not put read-only non-executable sections in their own segment.
 .It Fl -no-undefined-version
@@ -454,6 +456,20 @@ is specified, use SHT_ANDROID_RELR instead of SHT_RELR.
 Always generate position independent thunks.
 .It Fl -pie , Fl -pic-executable
 Create a position independent executable.
+.It Fl -power10-stubs Ns = Ns Cm mode
+Whether to use Power10 instructions in call stubs for R_PPC64_REL24_NOTOC and TOC/NOTOC interworking.
+.Ar mode
+may be:
+.Pp
+.Bl -tag -width 2n -compact
+.It Cm yes
+(default) Use.
+.It Cm auto
+Currently the same as yes.
+.It Cm no
+Don't use.
+.El
+
 .It Fl -print-gc-sections
 List removed unused sections.
 .It Fl -print-icf-sections
@@ -685,6 +701,16 @@ Make the main stack executable.
 Stack permissions are recorded in the
 .Dv PT_GNU_STACK
 segment.
+.Pp
+.It Cm bti-report Ns = Ns Ar [none|warning|error]
+Specify how to report the missing GNU_PROPERTY_AARCH64_FEATURE_1_BTI property.
+.Cm none
+is the default, linker will not report the missing property otherwise will be reported as a warning or an error.
+.Pp
+.It Cm cet-report Ns = Ns Ar [none|warning|error]
+Specify how to report the missing GNU_PROPERTY_X86_FEATURE_1_IBT or GNU_PROPERTY_X86_FEATURE_1_SHSTK properties.
+.Cm none
+is the default, linker will not report the missing property otherwise will be reported as a warning or an error.
 .Pp
 .It Cm force-bti
 Force enable AArch64 BTI instruction in PLT, warn if Input ELF file does not have GNU_PROPERTY_AARCH64_FEATURE_1_BTI property.

@@ -23,23 +23,17 @@ namespace llvm {
 namespace orc {
 namespace shared {
 
-namespace detail {
-
-// DO NOT USE DIRECTLY.
 // Must be kept in-sync with compiler-rt/lib/orc/c-api.h.
 union CWrapperFunctionResultDataUnion {
   char *ValuePtr;
   char Value[sizeof(ValuePtr)];
 };
 
-// DO NOT USE DIRECTLY.
 // Must be kept in-sync with compiler-rt/lib/orc/c-api.h.
 typedef struct {
   CWrapperFunctionResultDataUnion Data;
   size_t Size;
 } CWrapperFunctionResult;
-
-} // end namespace detail
 
 /// C++ wrapper function result: Same as CWrapperFunctionResult but
 /// auto-releases memory.
@@ -49,11 +43,11 @@ public:
   WrapperFunctionResult() { init(R); }
 
   /// Create a WrapperFunctionResult by taking ownership of a
-  /// detail::CWrapperFunctionResult.
+  /// CWrapperFunctionResult.
   ///
   /// Warning: This should only be used by clients writing wrapper-function
   /// caller utilities (like TargetProcessControl).
-  WrapperFunctionResult(detail::CWrapperFunctionResult R) : R(R) {
+  WrapperFunctionResult(CWrapperFunctionResult R) : R(R) {
     // Reset R.
     init(R);
   }
@@ -78,12 +72,12 @@ public:
       free(R.Data.ValuePtr);
   }
 
-  /// Release ownership of the contained detail::CWrapperFunctionResult.
+  /// Release ownership of the contained CWrapperFunctionResult.
   /// Warning: Do not use -- this method will be removed in the future. It only
   /// exists to temporarily support some code that will eventually be moved to
   /// the ORC runtime.
-  detail::CWrapperFunctionResult release() {
-    detail::CWrapperFunctionResult Tmp;
+  CWrapperFunctionResult release() {
+    CWrapperFunctionResult Tmp;
     init(Tmp);
     std::swap(R, Tmp);
     return Tmp;
@@ -164,12 +158,12 @@ public:
   }
 
 private:
-  static void init(detail::CWrapperFunctionResult &R) {
+  static void init(CWrapperFunctionResult &R) {
     R.Data.ValuePtr = nullptr;
     R.Size = 0;
   }
 
-  detail::CWrapperFunctionResult R;
+  CWrapperFunctionResult R;
 };
 
 namespace detail {

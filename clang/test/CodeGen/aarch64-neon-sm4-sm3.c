@@ -5,6 +5,8 @@
 // RUN: not %clang_cc1 -triple aarch64-linux-gnu -target-feature +neon \
 // RUN: -S -emit-llvm -o - %s 2>&1 | FileCheck --check-prefix=CHECK-NO-CRYPTO %s
 
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 #include <arm_neon.h>
 
 void test_vsm3partw1(uint32x4_t a, uint32x4_t b, uint32x4_t c) {

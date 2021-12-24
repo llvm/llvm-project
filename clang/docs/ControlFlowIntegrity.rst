@@ -92,7 +92,7 @@ similar to the one below before the program aborts.
     bad-cast.cpp:109:7: runtime error: control flow integrity check for type 'B' failed during base-to-derived cast (vtable address 0x000000425a50)
     0x000000425a50: note: vtable is of type 'A'
      00 00 00 00  f0 f1 41 00 00 00 00 00  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  20 5a 42 00
-                  ^ 
+                  ^
 
 If diagnostics are enabled, you can also configure CFI to continue program
 execution instead of aborting by using the :ref:`-fsanitize-recover=

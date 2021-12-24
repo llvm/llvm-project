@@ -1,6 +1,18 @@
 // RUN: %clang_cc1 -std=c99 -fsyntax-only -verify -pedantic %s
 // RUN: not %clang_cc1 -E %s 2>&1 | grep 'blonk.c:92:2: error: ABC'
 // RUN: not %clang_cc1 -E %s 2>&1 | grep 'blonk.c:93:2: error: DEF'
+// RUN: not %clang_cc1 -E %s 2>&1 | grep 'line-directive.c:11:2: error: MAIN7'
+// RUN: not %clang_cc1 -E %s 2>&1 | grep 'enter-1:118:2: error: ENTER1'
+// RUN: not %clang_cc1 -E %s 2>&1 | grep 'main:121:2: error: MAIN2'
+
+// expected-error@+1{{cannot pop empty include stack}}
+# 20 "" 2
+
+// a push/pop before any other line control
+# 10 "enter-0" 1
+# 11 "" 2 // pop to main file
+#error MAIN7
+// expected-error@-1{{MAIN7}}
 
 #line 'a'            // expected-error {{#line directive requires a positive integer argument}}
 #line 0              // expected-warning {{#line directive with zero argument is a GNU extension}}
@@ -103,4 +115,12 @@ _LINE__ == 52 ? 1: -1];  /* line marker is location of first _ */
 #line 0 "line-directive.c" // expected-warning {{#line directive with zero argument is a GNU extension}}
 undefined t; // expected-error {{unknown type name 'undefined'}}
 
-
+# 115 "main"
+# 116 "enter-1" 1
+# 117 "enter-2" 1
+# 118 "" 2 // pop to enter-1
+#error ENTER1
+// expected-error@-1{{ENTER1}}
+# 121 "" 2 // pop to "main"
+#error MAIN2
+// expected-error@-1{{MAIN2}}

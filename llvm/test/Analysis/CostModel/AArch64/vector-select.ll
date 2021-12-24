@@ -143,7 +143,7 @@ define <3 x i64> @v3i64_select_sle(<3 x i64> %a, <3 x i64> %b, <3 x i64> %c) {
 ; CODE:       bb.0
 ; CODE-NEXT:    ushll   v{{.+}}.2d, v{{.+}}.2s, #0
 ; CODE-NEXT:    shl v{{.+}}.2d, v{{.+}}.2d, #63
-; CODE-NEXT:    sshr    v{{.+}}.2d, v{{.+}}.2d, #63
+; CODE-NEXT:    cmlt    v{{.+}}.2d, v{{.+}}.2d, #0
 ; CODE-NEXT:    bif v{{.+}}.16b, v{{.+}}.16b, v{{.+}}.16b
 ; CODE-NEXT:    ret
 

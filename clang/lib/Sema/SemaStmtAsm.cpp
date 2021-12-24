@@ -296,9 +296,9 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
         checkExprMemoryConstraintCompat(*this, OutputExpr, Info, false))
       return StmtError();
 
-    // Disallow _ExtInt, since the backends tend to have difficulties with
-    // non-normal sizes.
-    if (OutputExpr->getType()->isExtIntType())
+    // Disallow bit-precise integer types, since the backends tend to have
+    // difficulties with abnormal sizes.
+    if (OutputExpr->getType()->isBitIntType())
       return StmtError(
           Diag(OutputExpr->getBeginLoc(), diag::err_asm_invalid_type)
           << OutputExpr->getType() << 0 /*Input*/
@@ -429,7 +429,7 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
       }
     }
 
-    if (InputExpr->getType()->isExtIntType())
+    if (InputExpr->getType()->isBitIntType())
       return StmtError(
           Diag(InputExpr->getBeginLoc(), diag::err_asm_invalid_type)
           << InputExpr->getType() << 1 /*Output*/
@@ -924,7 +924,7 @@ StmtResult Sema::ActOnMSAsmStmt(SourceLocation AsmLoc, SourceLocation LBraceLoc,
   setFunctionHasBranchProtectedScope();
 
   for (uint64_t I = 0; I < NumOutputs + NumInputs; ++I) {
-    if (Exprs[I]->getType()->isExtIntType())
+    if (Exprs[I]->getType()->isBitIntType())
       return StmtError(
           Diag(Exprs[I]->getBeginLoc(), diag::err_asm_invalid_type)
           << Exprs[I]->getType() << (I < NumOutputs)

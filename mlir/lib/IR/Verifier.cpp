@@ -62,7 +62,7 @@ private:
   LogicalResult verifyDominanceOfContainedRegions(Operation &op,
                                                   DominanceInfo &domInfo);
 };
-} // end anonymous namespace
+} // namespace
 
 LogicalResult OperationVerifier::verifyOpAndDominance(Operation &op) {
   SmallVector<Operation *> opsWithIsolatedRegions;
@@ -170,15 +170,15 @@ LogicalResult OperationVerifier::verifyOperation(
   /// Verify that all of the attributes are okay.
   for (auto attr : op.getAttrs()) {
     // Check for any optional dialect specific attributes.
-    if (auto *dialect = attr.first.getDialect())
+    if (auto *dialect = attr.getNameDialect())
       if (failed(dialect->verifyOperationAttribute(&op, attr)))
         return failure();
   }
 
   // If we can get operation info for this, check the custom hook.
   OperationName opName = op.getName();
-  auto *opInfo = opName.getAbstractOperation();
-  if (opInfo && failed(opInfo->verifyInvariants(&op)))
+  Optional<RegisteredOperationName> registeredInfo = opName.getRegisteredInfo();
+  if (registeredInfo && failed(registeredInfo->verifyInvariants(&op)))
     return failure();
 
   if (unsigned numRegions = op.getNumRegions()) {
@@ -218,7 +218,7 @@ LogicalResult OperationVerifier::verifyOperation(
   }
 
   // If this is a registered operation, there is nothing left to do.
-  if (opInfo)
+  if (registeredInfo)
     return success();
 
   // Otherwise, verify that the parent dialect allows un-registered operations.

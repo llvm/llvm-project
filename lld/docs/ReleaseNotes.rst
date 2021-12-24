@@ -31,6 +31,19 @@ ELF Improvements
 * ``e_entry`` no longer falls back to the address of ``.text`` if the entry symbol does not exist.
   Instead, a value of 0 will be written.
   (`D110014 <https://reviews.llvm.org/D110014>`_)
+* If ``-Map`` is specified, ``--cref`` will be printed to the specified file.
+  (`D114663 <https://reviews.llvm.org/D114663>`_)
+
+Architecture specific changes:
+
+* The x86-32 port now supports TLSDESC (``-mtls-dialect=gnu2``).
+  (`D112582 <https://reviews.llvm.org/D112582>`_)
+* The x86-64 port now handles non-RAX/non-adjacent ``R_X86_64_GOTPC32_TLSDESC``
+  and ``R_X86_64_TLSDESC_CALL`` (``-mtls-dialect=gnu2``).
+  (`D114416 <https://reviews.llvm.org/D114416>`_)
+* For x86-64, ``--no-relax`` now suppresses ``R_X86_64_GOTPCRELX`` and
+  ``R_X86_64_REX_GOTPCRELX`` GOT optimization
+  (`D113615 <https://reviews.llvm.org/D113615>`_)
 
 Breaking changes
 ----------------

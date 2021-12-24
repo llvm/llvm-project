@@ -673,7 +673,8 @@ static void emitDecorationSerialization(const Operator &op, StringRef tabs,
     // All non-argument attributes translated into OpDecorate instruction
     os << tabs << formatv("for (auto attr : {0}->getAttrs()) {{\n", opVar);
     os << tabs
-       << formatv("  if (llvm::is_contained({0}, attr.first)) {{", elidedAttrs);
+       << formatv("  if (llvm::is_contained({0}, attr.getName())) {{",
+                  elidedAttrs);
     os << tabs << "    continue;\n";
     os << tabs << "  }\n";
     os << tabs
@@ -890,7 +891,7 @@ static void emitOperandDeserialization(const Operator &op, ArrayRef<SMLoc> loc,
   unsigned operandNum = 0;
   for (unsigned i = 0, e = op.getNumArgs(); i < e; ++i) {
     auto argument = op.getArg(i);
-    if (auto valueArg = argument.dyn_cast<NamedTypeConstraint *>()) {
+    if (auto *valueArg = argument.dyn_cast<NamedTypeConstraint *>()) {
       if (valueArg->isVariableLength()) {
         if (i != e - 1) {
           PrintFatalError(loc, "SPIR-V ops can have Variadic<..> or "
@@ -920,7 +921,7 @@ static void emitOperandDeserialization(const Operator &op, ArrayRef<SMLoc> loc,
       os << tabs << "}\n";
     } else {
       os << tabs << formatv("if ({0} < {1}.size()) {{\n", wordIndex, words);
-      auto attr = argument.get<NamedAttribute *>();
+      auto *attr = argument.get<NamedAttribute *>();
       auto newtabs = tabs.str() + "  ";
       emitAttributeDeserialization(
           (attr->attr.isOptional() ? attr->attr.getBaseAttr() : attr->attr),
@@ -1102,7 +1103,7 @@ emitExtendedSetDeserializationDispatch(const RecordKeeper &recordKeeper,
     Operator op(def);
     auto setName = def->getValueAsString("extendedInstSetName");
     if (!extensionSets.count(setName)) {
-      extensionSetNames.push_back("");
+      extensionSetNames.emplace_back("");
       extensionSets.try_emplace(setName, extensionSetNames.back());
       auto &setos = extensionSets.find(setName)->second;
       setos << formatv("  if ({0} == \"{1}\") {{\n", extensionSetName, setName);

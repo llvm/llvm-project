@@ -145,7 +145,7 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const llvm::Triple::ArchType Arch = ToolChain.getArch();
   const bool IsPIE =
       !Args.hasArg(options::OPT_shared) &&
-      (Args.hasArg(options::OPT_pie) || ToolChain.isPIEDefault());
+      (Args.hasArg(options::OPT_pie) || ToolChain.isPIEDefault(Args));
   ArgStringList CmdArgs;
 
   // Silence warning for "clang -g foo.o -o foo"
@@ -293,8 +293,8 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   addLinkerCompressDebugSectionsOption(ToolChain, Args, CmdArgs);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
-  bool Profiling = Args.hasArg(options::OPT_pg) &&
-                   ToolChain.getTriple().getOSMajorVersion() < 14;
+  unsigned Major = ToolChain.getTriple().getOSMajorVersion();
+  bool Profiling = Args.hasArg(options::OPT_pg) && Major != 0 && Major < 14;
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
     // Use the static OpenMP runtime with -static-openmp
     bool StaticOpenMP = Args.hasArg(options::OPT_static_openmp) &&
@@ -391,7 +391,8 @@ FreeBSD::FreeBSD(const Driver &D, const llvm::Triple &Triple,
 }
 
 ToolChain::CXXStdlibType FreeBSD::GetDefaultCXXStdlibType() const {
-  if (getTriple().getOSMajorVersion() >= 10)
+  unsigned Major = getTriple().getOSMajorVersion();
+  if (Major >= 10 || Major == 0)
     return ToolChain::CST_Libcxx;
   return ToolChain::CST_Libstdcxx;
 }
@@ -418,8 +419,8 @@ void FreeBSD::addLibStdCxxIncludePaths(
 void FreeBSD::AddCXXStdlibLibArgs(const ArgList &Args,
                                   ArgStringList &CmdArgs) const {
   CXXStdlibType Type = GetCXXStdlibType(Args);
-  bool Profiling =
-      Args.hasArg(options::OPT_pg) && getTriple().getOSMajorVersion() < 14;
+  unsigned Major = getTriple().getOSMajorVersion();
+  bool Profiling = Args.hasArg(options::OPT_pg) && Major != 0 && Major < 14;
 
   switch (Type) {
   case ToolChain::CST_Libcxx:
@@ -467,7 +468,9 @@ bool FreeBSD::HasNativeLLVMSupport() const { return true; }
 
 bool FreeBSD::IsUnwindTablesDefault(const ArgList &Args) const { return true; }
 
-bool FreeBSD::isPIEDefault() const { return getSanitizerArgs().requiresPIE(); }
+bool FreeBSD::isPIEDefault(const llvm::opt::ArgList &Args) const {
+  return getSanitizerArgs(Args).requiresPIE();
+}
 
 SanitizerMask FreeBSD::getSupportedSanitizers() const {
   const bool IsAArch64 = getTriple().getArch() == llvm::Triple::aarch64;

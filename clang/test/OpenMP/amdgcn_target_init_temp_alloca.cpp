@@ -12,7 +12,9 @@ int test_amdgcn_target_temp_alloca() {
   int arr[N];
 
   // CHECK:      [[VAR_ADDR:%.+]] = alloca [100 x i32]*, align 8, addrspace(5)
+  // CHECK-NEXT: [[VAR2_ADDR:%.+]] = alloca i32, align 4, addrspace(5)
   // CHECK-NEXT: [[VAR_ADDR_CAST:%.+]] = addrspacecast [100 x i32]* addrspace(5)* [[VAR_ADDR]] to [100 x i32]**
+  // CHECK-NEXT: [[VAR2_ADDR_CAST:%.+]] = addrspacecast i32 addrspace(5)* [[VAR2_ADDR]] to i32*
   // CHECK:  store [100 x i32]* [[VAR:%.+]], [100 x i32]** [[VAR_ADDR_CAST]], align 8
 
 #pragma omp target

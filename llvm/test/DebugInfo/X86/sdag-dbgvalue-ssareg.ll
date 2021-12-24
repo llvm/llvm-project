@@ -1,4 +1,9 @@
-; RUN: llc -start-after=codegenprepare -stop-before finalize-isel -o - %s | FileCheck %s
+; RUN: llc -start-after=codegenprepare -stop-before finalize-isel -o - %s \
+; RUN:    -experimental-debug-variable-locations=false \
+; RUN: | FileCheck %s --check-prefixes=CHECK,DBGVALUE
+; RUN: llc -start-after=codegenprepare -stop-before finalize-isel -o - %s \
+; RUN:    -experimental-debug-variable-locations=true \
+; RUN: | FileCheck %s --check-prefixes=CHECK,INSTRREF
 
 ; Test that dbg.values of an SSA variable that's not used in a basic block,
 ; is converted to a DBG_VALUE in that same basic block. We know that %1 is
@@ -13,6 +18,8 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Function Attrs: nounwind uwtable
 define dso_local i32 @main(i32 %arg0, i32 %arg1) local_unnamed_addr !dbg !11 {
 entry:
+; CHECK-LABEL: bb.0.entry:
+; INSTRREF: ADD32ri8 {{.*}} debug-instr-number 1
   %0 = add i32 %arg0, 42, !dbg !26
   %1 = add i32 %arg1, 101, !dbg !26
   %cmp = icmp eq i32 %1, 0
@@ -23,7 +30,8 @@ nextbb:
   %2 = mul i32 %0, %arg1, !dbg !26
 ; CHECK: IMUL32rr
   call void @llvm.dbg.value(metadata i32 %1, metadata !16, metadata !DIExpression()), !dbg !27
-; CHECK-NEXT: DBG_VALUE
+; INSTRREF-NEXT: DBG_INSTR_REF 1, 0
+; DBGVALUE-NEXT: DBG_VALUE
   br label %exit, !dbg !26
 
 ; CHECK-LABEL: bb.{{.*}}.exit

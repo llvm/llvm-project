@@ -1,2 +1,4 @@
-# CHECK: (lldb) command source -s 1 {{.*\n}}
-# CHECK-NEXT: (lldb) command source -s 1 {{.*\n}}
+CHECK: start
+CHECK-NOT: source
+CHECK-NOT: lldb
+CHECK-NEXT: done

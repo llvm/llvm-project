@@ -1,7 +1,8 @@
-// REQUIRES: aarch64-registered-target
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon \
 // RUN: -disable-O0-optnone -ffp-contract=fast -emit-llvm -o - %s | opt -S -mem2reg \
 // RUN:  | FileCheck %s
+
+// REQUIRES: aarch64-registered-target
 
 // Test new aarch64 intrinsics with poly128
 // FIXME: Currently, poly128_t equals to uint128, which will be spilt into

@@ -26,8 +26,8 @@ using namespace clang;
 using namespace llvm::opt;
 
 // Default hvx-length for various versions.
-static StringRef getDefaultHvxLength(StringRef Cpu) {
-  return llvm::StringSwitch<StringRef>(Cpu)
+static StringRef getDefaultHvxLength(StringRef HvxVer) {
+  return llvm::StringSwitch<StringRef>(HvxVer)
       .Case("v60", "64b")
       .Case("v62", "64b")
       .Case("v65", "64b")
@@ -51,42 +51,107 @@ static void handleHVXTargetFeatures(const Driver &D, const ArgList &Args,
   // Handle HVX warnings.
   handleHVXWarnings(D, Args);
 
-  // Add the +hvx* features based on commandline flags.
-  StringRef HVXFeature, HVXLength;
+  auto makeFeature = [&Args](Twine T, bool Enable) -> StringRef {
+    const std::string &S = T.str();
+    StringRef Opt(S);
+    if (Opt.endswith("="))
+      Opt = Opt.drop_back(1);
+    if (Opt.startswith("mno-"))
+      Opt = Opt.drop_front(4);
+    else if (Opt.startswith("m"))
+      Opt = Opt.drop_front(1);
+    return Args.MakeArgString(Twine(Enable ? "+" : "-") + Twine(Opt));
+  };
 
-  // Handle -mhvx, -mhvx=, -mno-hvx.
-  if (Arg *A = Args.getLastArg(options::OPT_mno_hexagon_hvx,
-                               options::OPT_mhexagon_hvx,
-                               options::OPT_mhexagon_hvx_EQ)) {
-    if (A->getOption().matches(options::OPT_mno_hexagon_hvx))
-      return;
-    if (A->getOption().matches(options::OPT_mhexagon_hvx_EQ)) {
-      HasHVX = true;
-      HVXFeature = Cpu = A->getValue();
-      HVXFeature = Args.MakeArgString(llvm::Twine("+hvx") + HVXFeature.lower());
-    } else if (A->getOption().matches(options::OPT_mhexagon_hvx)) {
-      HasHVX = true;
-      HVXFeature = Args.MakeArgString(llvm::Twine("+hvx") + Cpu);
+  auto withMinus = [](StringRef S) -> std::string {
+    return "-" + S.str();
+  };
+
+  // Drop tiny core suffix for HVX version.
+  std::string HvxVer =
+      (Cpu.back() == 'T' || Cpu.back() == 't' ? Cpu.drop_back(1) : Cpu).str();
+  HasHVX = false;
+
+  // Handle -mhvx, -mhvx=, -mno-hvx. If both present, -mhvx= wins over -mhvx.
+  auto argOrNull = [&Args](auto FlagOn, auto FlagOff) -> Arg* {
+    if (Arg *A = Args.getLastArg(FlagOn, FlagOff)) {
+      if (A->getOption().matches(FlagOn))
+        return A;
     }
-    Features.push_back(HVXFeature);
+    return nullptr;
+  };
+
+  Arg *HvxBareA =
+      argOrNull(options::OPT_mhexagon_hvx, options::OPT_mno_hexagon_hvx);
+  Arg *HvxVerA =
+      argOrNull(options::OPT_mhexagon_hvx_EQ, options::OPT_mno_hexagon_hvx);
+
+  if (Arg *A = HvxVerA ? HvxVerA : HvxBareA) {
+    if (A->getOption().matches(options::OPT_mhexagon_hvx_EQ))
+      HvxVer = StringRef(A->getValue()).lower(); // lower produces std:string
+    HasHVX = true;
+    Features.push_back(makeFeature(Twine("hvx") + HvxVer, true));
+  } else if (Arg *A = Args.getLastArg(options::OPT_mno_hexagon_hvx)) {
+    // If there was an explicit -mno-hvx, add -hvx to target features.
+    Features.push_back(makeFeature(A->getOption().getName(), false));
   }
+
+  StringRef HvxLen = getDefaultHvxLength(HvxVer);
 
   // Handle -mhvx-length=.
   if (Arg *A = Args.getLastArg(options::OPT_mhexagon_hvx_length_EQ)) {
     // These flags are valid only if HVX in enabled.
     if (!HasHVX)
-      D.Diag(diag::err_drv_invalid_hvx_length);
+      D.Diag(diag::err_drv_needs_hvx) << withMinus(A->getOption().getName());
     else if (A->getOption().matches(options::OPT_mhexagon_hvx_length_EQ))
-      HVXLength = A->getValue();
+      HvxLen = A->getValue();
   }
-  // Default hvx-length based on Cpu.
-  else if (HasHVX)
-    HVXLength = getDefaultHvxLength(Cpu);
 
-  if (!HVXLength.empty()) {
-    HVXFeature =
-        Args.MakeArgString(llvm::Twine("+hvx-length") + HVXLength.lower());
-    Features.push_back(HVXFeature);
+  if (HasHVX) {
+    StringRef L = makeFeature(Twine("hvx-length") + HvxLen.lower(), true);
+    Features.push_back(L);
+  }
+
+  unsigned HvxVerNum;
+  // getAsInteger returns 'true' on error.
+  if (StringRef(HvxVer).drop_front(1).getAsInteger(10, HvxVerNum))
+    HvxVerNum = 0;
+
+  // Handle HVX floating point flags.
+  auto checkFlagHvxVersion = [&](auto FlagOn, auto FlagOff,
+                                 unsigned MinVerNum) -> Optional<StringRef> {
+    // Return an Optional<StringRef>:
+    // - None indicates a verification failure, or that the flag was not
+    //   present in Args.
+    // - Otherwise the returned value is that name of the feature to add
+    //   to Features.
+    Arg *A = Args.getLastArg(FlagOn, FlagOff);
+    if (!A)
+      return None;
+
+    StringRef OptName = A->getOption().getName();
+    if (A->getOption().matches(FlagOff))
+      return makeFeature(OptName, false);
+
+    if (!HasHVX) {
+      D.Diag(diag::err_drv_needs_hvx) << withMinus(OptName);
+      return None;
+    }
+    if (HvxVerNum < MinVerNum) {
+      D.Diag(diag::err_drv_needs_hvx_version)
+          << withMinus(OptName) << ("v" + std::to_string(HvxVerNum));
+      return None;
+    }
+    return makeFeature(OptName, true);
+  };
+
+  if (auto F = checkFlagHvxVersion(options::OPT_mhexagon_hvx_qfloat,
+                                   options::OPT_mno_hexagon_hvx_qfloat, 68)) {
+    Features.push_back(*F);
+  }
+  if (auto F = checkFlagHvxVersion(options::OPT_mhexagon_hvx_ieee_fp,
+                                   options::OPT_mno_hexagon_hvx_ieee_fp, 68)) {
+    Features.push_back(*F);
   }
 }
 
@@ -117,7 +182,7 @@ void hexagon::getHexagonTargetFeatures(const Driver &D, const ArgList &Args,
   handleHVXTargetFeatures(D, Args, Features, Cpu, HasHVX);
 
   if (HexagonToolChain::isAutoHVXEnabled(Args) && !HasHVX)
-    D.Diag(diag::warn_drv_vectorize_needs_hvx);
+    D.Diag(diag::warn_drv_needs_hvx) << "auto-vectorization";
 }
 
 // Hexagon tools start.
@@ -154,6 +219,12 @@ void hexagon::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   } else {
     assert(Output.isNothing() && "Unexpected output");
     CmdArgs.push_back("-fsyntax-only");
+  }
+
+  if (Arg *A = Args.getLastArg(options::OPT_mhexagon_hvx_ieee_fp,
+                               options::OPT_mno_hexagon_hvx_ieee_fp)) {
+    if (A->getOption().matches(options::OPT_mhexagon_hvx_ieee_fp))
+      CmdArgs.push_back("-mhvx-ieee-fp");
   }
 
   if (auto G = toolchains::HexagonToolChain::getSmallDataThreshold(Args)) {
@@ -226,6 +297,7 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
   StringRef CpuVer = toolchains::HexagonToolChain::GetTargetCPUVersion(Args);
 
   bool NeedsSanitizerDeps = addSanitizerRuntimes(HTC, Args, CmdArgs);
+  bool NeedsXRayDeps = addXRayRuntime(HTC, Args, CmdArgs);
 
   //----------------------------------------------------------------------------
   // Silence warnings for various options
@@ -297,6 +369,8 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
 
         CmdArgs.push_back("-lunwind");
       }
+      if (NeedsXRayDeps)
+        linkXRayRuntimeDeps(HTC, CmdArgs);
 
       CmdArgs.push_back("-lclang_rt.builtins-hexagon");
       CmdArgs.push_back("-lc");

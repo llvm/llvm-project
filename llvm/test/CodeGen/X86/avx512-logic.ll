@@ -907,20 +907,12 @@ define <8 x i64> @ternlog_xor_and_mask(<8 x i64> %x, <8 x i64> %y) {
 }
 
 define <16 x i32> @ternlog_maskz_or_and_mask(<16 x i32> %x, <16 x i32> %y, <16 x i32> %mask) {
-; KNL-LABEL: ternlog_maskz_or_and_mask:
-; KNL:       ## %bb.0:
-; KNL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; KNL-NEXT:    vpcmpgtd %zmm2, %zmm3, %k1
-; KNL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
-; KNL-NEXT:    vpord %zmm1, %zmm0, %zmm0 {%k1} {z}
-; KNL-NEXT:    retq
-;
-; SKX-LABEL: ternlog_maskz_or_and_mask:
-; SKX:       ## %bb.0:
-; SKX-NEXT:    vpmovd2m %zmm2, %k1
-; SKX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
-; SKX-NEXT:    vorps %zmm1, %zmm0, %zmm0 {%k1} {z}
-; SKX-NEXT:    retq
+; ALL-LABEL: ternlog_maskz_or_and_mask:
+; ALL:       ## %bb.0:
+; ALL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm3
+; ALL-NEXT:    vpsrad $31, %zmm2, %zmm0
+; ALL-NEXT:    vpternlogd $224, %zmm1, %zmm3, %zmm0
+; ALL-NEXT:    retq
   %m = icmp slt <16 x i32> %mask, zeroinitializer
   %a = and <16 x i32> %x, <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
   %b = or <16 x i32> %a, %y
@@ -929,20 +921,12 @@ define <16 x i32> @ternlog_maskz_or_and_mask(<16 x i32> %x, <16 x i32> %y, <16 x
 }
 
 define <8 x i64> @ternlog_maskz_xor_and_mask(<8 x i64> %x, <8 x i64> %y, <8 x i64> %mask) {
-; KNL-LABEL: ternlog_maskz_xor_and_mask:
-; KNL:       ## %bb.0:
-; KNL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; KNL-NEXT:    vpcmpgtq %zmm2, %zmm3, %k1
-; KNL-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
-; KNL-NEXT:    vpxorq %zmm1, %zmm0, %zmm0 {%k1} {z}
-; KNL-NEXT:    retq
-;
-; SKX-LABEL: ternlog_maskz_xor_and_mask:
-; SKX:       ## %bb.0:
-; SKX-NEXT:    vpmovq2m %zmm2, %k1
-; SKX-NEXT:    vandpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
-; SKX-NEXT:    vxorpd %zmm1, %zmm0, %zmm0 {%k1} {z}
-; SKX-NEXT:    retq
+; ALL-LABEL: ternlog_maskz_xor_and_mask:
+; ALL:       ## %bb.0:
+; ALL-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm3
+; ALL-NEXT:    vpsraq $63, %zmm2, %zmm0
+; ALL-NEXT:    vpternlogq $96, %zmm1, %zmm3, %zmm0
+; ALL-NEXT:    retq
   %m = icmp slt <8 x i64> %mask, zeroinitializer
   %a = and <8 x i64> %x, <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
   %b = xor <8 x i64> %a, %y

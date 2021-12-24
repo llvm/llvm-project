@@ -1,6 +1,7 @@
 --- |
   ; REQUIRES: asserts
-  ; RUN: llc -start-before=phi-node-elimination -stop-after=machinelicm -debug-only=machinelicm -o - %s  | FileCheck %s
+  ; RUN: llc -start-before=phi-node-elimination -stop-after=machinelicm -debug-only=machinelicm -o - %s -experimental-debug-variable-locations=false | FileCheck %s
+  ; RUN: llc -start-before=phi-node-elimination -stop-after=machinelicm -debug-only=machinelicm -early-live-intervals -o - %s -experimental-debug-variable-locations=false | FileCheck %s
   ; Ensure we execute machinelicm post register allocation.
   ; Line numbers should not be retained when loop invariant instructions are hoisted.
   ;

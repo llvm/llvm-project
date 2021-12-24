@@ -1,7 +1,7 @@
-; This is a basic sanity check for constant propagation.  The add instruction
-; should be eliminated.
+; This is a basic correctness check for constant propagation.  The add
+; instruction should be eliminated.
 
-; RUN: opt < %s -sccp -S | not grep add
+; RUN: opt < %s -passes=sccp -S | not grep add
 
 define i128 @test(i1 %B) {
 	br i1 %B, label %BB1, label %BB2

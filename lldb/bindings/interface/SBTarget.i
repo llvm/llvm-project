@@ -412,6 +412,9 @@ public:
     uint32_t
     GetCodeByteSize ();
 
+    uint32_t
+    GetMaximumNumberOfChildrenToDisplay() const;
+
     lldb::SBError
     SetSectionLoadAddress (lldb::SBSection section,
                            lldb::addr_t section_base_addr);

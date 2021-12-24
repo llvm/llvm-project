@@ -35,8 +35,9 @@ class SymbolTable {
   struct FilterOutPlaceholder {
     bool operator()(Symbol *S) const { return !S->isPlaceholder(); }
   };
-  using iterator = llvm::filter_iterator<std::vector<Symbol *>::const_iterator,
-                                         FilterOutPlaceholder>;
+  using iterator =
+      llvm::filter_iterator<SmallVector<Symbol *, 0>::const_iterator,
+                            FilterOutPlaceholder>;
 
 public:
   llvm::iterator_range<iterator> symbols() const {
@@ -64,11 +65,11 @@ public:
   llvm::DenseMap<llvm::CachedHashStringRef, const InputFile *> comdatGroups;
 
 private:
-  std::vector<Symbol *> findByVersion(SymbolVersion ver);
-  std::vector<Symbol *> findAllByVersion(SymbolVersion ver,
-                                         bool includeNonDefault);
+  SmallVector<Symbol *, 0> findByVersion(SymbolVersion ver);
+  SmallVector<Symbol *, 0> findAllByVersion(SymbolVersion ver,
+                                            bool includeNonDefault);
 
-  llvm::StringMap<std::vector<Symbol *>> &getDemangledSyms();
+  llvm::StringMap<SmallVector<Symbol *, 0>> &getDemangledSyms();
   bool assignExactVersion(SymbolVersion ver, uint16_t versionId,
                           StringRef versionName, bool includeNonDefault);
   void assignWildcardVersion(SymbolVersion ver, uint16_t versionId,
@@ -82,16 +83,16 @@ private:
   // FIXME: Experiment with passing in a custom hashing or sorting the symbols
   // once symbol resolution is finished.
   llvm::DenseMap<llvm::CachedHashStringRef, int> symMap;
-  std::vector<Symbol *> symVector;
+  SmallVector<Symbol *, 0> symVector;
 
   // A map from demangled symbol names to their symbol objects.
   // This mapping is 1:N because two symbols with different versions
   // can have the same name. We use this map to handle "extern C++ {}"
   // directive in version scripts.
-  llvm::Optional<llvm::StringMap<std::vector<Symbol *>>> demangledSyms;
+  llvm::Optional<llvm::StringMap<SmallVector<Symbol *, 0>>> demangledSyms;
 };
 
-extern SymbolTable *symtab;
+extern std::unique_ptr<SymbolTable> symtab;
 
 } // namespace elf
 } // namespace lld

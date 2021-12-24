@@ -47,10 +47,11 @@ int func(int i) { return i; }
 
 int main(int, char**)
 {
+    test_allocator_statistics alloc_stats;
     {
         std::packaged_task<double(int, char)> p(std::allocator_arg,
-                                                test_allocator<A>(), A(5));
-        assert(test_alloc_base::alloc_count > 0);
+                                                test_allocator<A>(&alloc_stats), A(5));
+        assert(alloc_stats.alloc_count > 0);
         assert(p.valid());
         std::future<double> f = p.get_future();
         p(3, 'a');
@@ -58,14 +59,14 @@ int main(int, char**)
         assert(A::n_copies == 0);
         assert(A::n_moves > 0);
     }
-    assert(test_alloc_base::alloc_count == 0);
+    assert(alloc_stats.alloc_count == 0);
     A::n_copies = 0;
     A::n_moves  = 0;
     {
         A a(5);
         std::packaged_task<double(int, char)> p(std::allocator_arg,
-                                                test_allocator<A>(), a);
-        assert(test_alloc_base::alloc_count > 0);
+                                                test_allocator<A>(&alloc_stats), a);
+        assert(alloc_stats.alloc_count > 0);
         assert(p.valid());
         std::future<double> f = p.get_future();
         p(3, 'a');
@@ -73,31 +74,31 @@ int main(int, char**)
         assert(A::n_copies > 0);
         assert(A::n_moves >= 0);
     }
-    assert(test_alloc_base::alloc_count == 0);
+    assert(alloc_stats.alloc_count == 0);
     A::n_copies = 0;
     A::n_moves  = 0;
     {
         A a(5);
-        std::packaged_task<int(int)> p(std::allocator_arg, test_allocator<A>(), &func);
-        assert(test_alloc_base::alloc_count > 0);
+        std::packaged_task<int(int)> p(std::allocator_arg, test_allocator<A>(&alloc_stats), &func);
+        assert(alloc_stats.alloc_count > 0);
         assert(p.valid());
         std::future<int> f = p.get_future();
         p(4);
         assert(f.get() == 4);
     }
-    assert(test_alloc_base::alloc_count == 0);
+    assert(alloc_stats.alloc_count == 0);
     A::n_copies = 0;
     A::n_moves  = 0;
     {
         A a(5);
-        std::packaged_task<int(int)> p(std::allocator_arg, test_allocator<A>(), func);
-        assert(test_alloc_base::alloc_count > 0);
+        std::packaged_task<int(int)> p(std::allocator_arg, test_allocator<A>(&alloc_stats), func);
+        assert(alloc_stats.alloc_count > 0);
         assert(p.valid());
         std::future<int> f = p.get_future();
         p(4);
         assert(f.get() == 4);
     }
-    assert(test_alloc_base::alloc_count == 0);
+    assert(alloc_stats.alloc_count == 0);
     A::n_copies = 0;
     A::n_moves  = 0;
     {

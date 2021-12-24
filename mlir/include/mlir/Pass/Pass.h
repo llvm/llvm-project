@@ -422,6 +422,6 @@ protected:
   }
 };
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_PASS_PASS_H

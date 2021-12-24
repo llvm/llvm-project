@@ -2,6 +2,8 @@
 // RUN:  -disable-O0-optnone -fallow-half-arguments-and-returns -emit-llvm -o - %s \
 // RUN: | opt -S -mem2reg | FileCheck %s
 
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 #include <arm_neon.h>
 
 // CHECK-LABEL: define{{.*}} <16 x i8> @test_vld1q_dup_u8(i8* %a) #0 {

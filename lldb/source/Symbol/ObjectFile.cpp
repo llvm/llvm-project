@@ -23,6 +23,8 @@
 #include "lldb/Utility/Timer.h"
 #include "lldb/lldb-private.h"
 
+#include "llvm/Support/DJB.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -244,7 +246,7 @@ ObjectFile::ObjectFile(const lldb::ModuleSP &module_sp,
       m_type(eTypeInvalid), m_strata(eStrataInvalid),
       m_file_offset(file_offset), m_length(length), m_data(), m_process_wp(),
       m_memory_addr(LLDB_INVALID_ADDRESS), m_sections_up(), m_symtab_up(),
-      m_synthetic_symbol_idx(0) {
+      m_symtab_once_up(new llvm::once_flag()) {
   if (file_spec_ptr)
     m_file = *file_spec_ptr;
   if (data_sp)
@@ -265,7 +267,7 @@ ObjectFile::ObjectFile(const lldb::ModuleSP &module_sp,
     : ModuleChild(module_sp), m_file(), m_type(eTypeInvalid),
       m_strata(eStrataInvalid), m_file_offset(0), m_length(0), m_data(),
       m_process_wp(process_sp), m_memory_addr(header_addr), m_sections_up(),
-      m_symtab_up(), m_synthetic_symbol_idx(0) {
+      m_symtab_up(), m_symtab_once_up(new llvm::once_flag()) {
   if (header_data_sp)
     m_data.SetData(header_data_sp, 0, header_data_sp->GetByteSize());
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
@@ -571,11 +573,13 @@ bool ObjectFile::SplitArchivePathWithObject(llvm::StringRef path_with_object,
 void ObjectFile::ClearSymtab() {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
-    std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
     LLDB_LOGF(log, "%p ObjectFile::ClearSymtab () symtab = %p",
               static_cast<void *>(this),
               static_cast<void *>(m_symtab_up.get()));
+    // Since we need to clear the symbol table, we need a new llvm::once_flag
+    // instance so we can safely create another symbol table
+    m_symtab_once_up.reset(new llvm::once_flag());
     m_symtab_up.reset();
   }
 }
@@ -714,4 +718,45 @@ void llvm::format_provider<ObjectFile::Strata>::format(
     OS << "jit";
     break;
   }
+}
+
+
+Symtab *ObjectFile::GetSymtab() {
+  ModuleSP module_sp(GetModule());
+  if (module_sp) {
+    // We can't take the module lock in ObjectFile::GetSymtab() or we can
+    // deadlock in DWARF indexing when any file asks for the symbol table from
+    // an object file. This currently happens in the preloading of symbols in
+    // SymbolFileDWARF::PreloadSymbols() because the main thread will take the
+    // module lock, and then threads will be spun up to index the DWARF and
+    // any of those threads might end up trying to relocate items in the DWARF
+    // sections which causes ObjectFile::GetSectionData(...) to relocate section
+    // data which requires the symbol table.
+    //
+    // So to work around this, we create the symbol table one time using
+    // llvm::once_flag, lock it, and then set the unique pointer. Any other
+    // thread that gets ahold of the symbol table before parsing is done, will
+    // not be able to access the symbol table contents since all APIs in Symtab
+    // are protected by a mutex in the Symtab object itself.
+    llvm::call_once(*m_symtab_once_up, [&]() {
+      Symtab *symtab = new Symtab(this);
+      std::lock_guard<std::recursive_mutex> symtab_guard(symtab->GetMutex());
+      m_symtab_up.reset(symtab);
+      if (!m_symtab_up->LoadFromCache()) {
+        ElapsedTime elapsed(module_sp->GetSymtabParseTime());
+        ParseSymtab(*m_symtab_up);
+        m_symtab_up->Finalize();
+      }
+    });
+  }
+  return m_symtab_up.get();
+}
+
+uint32_t ObjectFile::GetCacheHash() {
+  if (m_cache_hash)
+    return *m_cache_hash;
+  StreamString strm;
+  strm.Format("{0}-{1}-{2}", m_file, GetType(), GetStrata());
+  m_cache_hash = llvm::djbHash(strm.GetString());
+  return *m_cache_hash;
 }

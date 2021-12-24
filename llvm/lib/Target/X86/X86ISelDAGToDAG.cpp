@@ -216,6 +216,8 @@ namespace {
     bool matchAdd(SDValue &N, X86ISelAddressMode &AM, unsigned Depth);
     bool matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
                                  unsigned Depth);
+    bool matchVectorAddressRecursively(SDValue N, X86ISelAddressMode &AM,
+                                       unsigned Depth);
     bool matchAddressBase(SDValue N, X86ISelAddressMode &AM);
     bool selectAddr(SDNode *Parent, SDValue N, SDValue &Base,
                     SDValue &Scale, SDValue &Index, SDValue &Disp,
@@ -336,10 +338,9 @@ namespace {
         return false;
 
       // Walk all the users of the immediate.
-      for (SDNode::use_iterator UI = N->use_begin(),
-           UE = N->use_end(); (UI != UE) && (UseCount < 2); ++UI) {
-
-        SDNode *User = *UI;
+      for (const SDNode *User : N->uses()) {
+        if (UseCount >= 2)
+          break;
 
         // This user is already selected. Count it as a legitimate use and
         // move on.
@@ -431,6 +432,18 @@ namespace {
       uint64_t Index = N->getConstantOperandVal(2);
       MVT VecVT = N->getSimpleValueType(0);
       return getI8Imm((Index * VecVT.getScalarSizeInBits()) / VecWidth, DL);
+    }
+
+    SDValue getPermuteVINSERTCommutedImmediate(SDNode *N, unsigned VecWidth,
+                                               const SDLoc &DL) {
+      assert(VecWidth == 128 && "Unexpected vector width");
+      uint64_t Index = N->getConstantOperandVal(2);
+      MVT VecVT = N->getSimpleValueType(0);
+      uint64_t InsertIdx = (Index * VecVT.getScalarSizeInBits()) / VecWidth;
+      assert((InsertIdx == 0 || InsertIdx == 1) && "Bad insertf128 index");
+      // vinsert(0,sub,vec) -> [sub0][vec1] -> vperm2x128(0x30,vec,sub)
+      // vinsert(1,sub,vec) -> [vec0][sub0] -> vperm2x128(0x02,vec,sub)
+      return getI8Imm(InsertIdx ? 0x02 : 0x30, DL);
     }
 
     // Helper to detect unneeded and instructions on shift amounts. Called
@@ -878,16 +891,31 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       continue;
     }
 
-    /// Convert vector increment or decrement to sub/add with an all-ones
-    /// constant:
-    /// add X, <1, 1...> --> sub X, <-1, -1...>
-    /// sub X, <1, 1...> --> add X, <-1, -1...>
-    /// The all-ones vector constant can be materialized using a pcmpeq
-    /// instruction that is commonly recognized as an idiom (has no register
-    /// dependency), so that's better/smaller than loading a splat 1 constant.
+    // Convert vector increment or decrement to sub/add with an all-ones
+    // constant:
+    // add X, <1, 1...> --> sub X, <-1, -1...>
+    // sub X, <1, 1...> --> add X, <-1, -1...>
+    // The all-ones vector constant can be materialized using a pcmpeq
+    // instruction that is commonly recognized as an idiom (has no register
+    // dependency), so that's better/smaller than loading a splat 1 constant.
+    //
+    // But don't do this if it would inhibit a potentially profitable load
+    // folding opportunity for the other operand. That only occurs with the
+    // intersection of:
+    // (1) The other operand (op0) is load foldable.
+    // (2) The op is an add (otherwise, we are *creating* an add and can still
+    //     load fold the other op).
+    // (3) The target has AVX (otherwise, we have a destructive add and can't
+    //     load fold the other op without killing the constant op).
+    // (4) The constant 1 vector has multiple uses (so it is profitable to load
+    //     into a register anyway).
+    auto mayPreventLoadFold = [&]() {
+      return X86::mayFoldLoad(N->getOperand(0), *Subtarget) &&
+             N->getOpcode() == ISD::ADD && Subtarget->hasAVX() &&
+             !N->getOperand(1).hasOneUse();
+    };
     if ((N->getOpcode() == ISD::ADD || N->getOpcode() == ISD::SUB) &&
-        N->getSimpleValueType(0).isVector()) {
-
+        N->getSimpleValueType(0).isVector() && !mayPreventLoadFold()) {
       APInt SplatVal;
       if (X86::isConstantSplat(N->getOperand(1), SplatVal) &&
           SplatVal.isOne()) {
@@ -2468,10 +2496,18 @@ bool X86DAGToDAGISel::matchAddressBase(SDValue N, X86ISelAddressMode &AM) {
   return false;
 }
 
-/// Helper for selectVectorAddr. Handles things that can be folded into a
-/// gather scatter address. The index register and scale should have already
-/// been handled.
-bool X86DAGToDAGISel::matchVectorAddress(SDValue N, X86ISelAddressMode &AM) {
+bool X86DAGToDAGISel::matchVectorAddressRecursively(SDValue N,
+                                                    X86ISelAddressMode &AM,
+                                                    unsigned Depth) {
+  SDLoc dl(N);
+  LLVM_DEBUG({
+    dbgs() << "MatchVectorAddress: ";
+    AM.dump(CurDAG);
+  });
+  // Limit recursion.
+  if (Depth > 5)
+    return matchAddressBase(N, AM);
+
   // TODO: Support other operations.
   switch (N.getOpcode()) {
   case ISD::Constant: {
@@ -2484,9 +2520,39 @@ bool X86DAGToDAGISel::matchVectorAddress(SDValue N, X86ISelAddressMode &AM) {
     if (!matchWrapper(N, AM))
       return false;
     break;
+  case ISD::ADD: {
+    // Add an artificial use to this node so that we can keep track of
+    // it if it gets CSE'd with a different node.
+    HandleSDNode Handle(N);
+
+    X86ISelAddressMode Backup = AM;
+    if (!matchVectorAddressRecursively(N.getOperand(0), AM, Depth + 1) &&
+        !matchVectorAddressRecursively(Handle.getValue().getOperand(1), AM,
+                                       Depth + 1))
+      return false;
+    AM = Backup;
+
+    // Try again after commuting the operands.
+    if (!matchVectorAddressRecursively(Handle.getValue().getOperand(1), AM,
+                                       Depth + 1) &&
+        !matchVectorAddressRecursively(Handle.getValue().getOperand(0), AM,
+                                       Depth + 1))
+      return false;
+    AM = Backup;
+
+    N = Handle.getValue();
+    break;
+  }
   }
 
   return matchAddressBase(N, AM);
+}
+
+/// Helper for selectVectorAddr. Handles things that can be folded into a
+/// gather/scatter address. The index register and scale should have already
+/// been handled.
+bool X86DAGToDAGISel::matchVectorAddress(SDValue N, X86ISelAddressMode &AM) {
+  return matchVectorAddressRecursively(N, AM, 0);
 }
 
 bool X86DAGToDAGISel::selectVectorAddr(MemSDNode *Parent, SDValue BasePtr,

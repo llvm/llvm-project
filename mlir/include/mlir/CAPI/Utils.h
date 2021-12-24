@@ -45,7 +45,7 @@ private:
   void *opaqueData;
   uint64_t pos;
 };
-} // end namespace detail
-} // end namespace mlir
+} // namespace detail
+} // namespace mlir
 
 #endif // MLIR_CAPI_UTILS_H

@@ -52,7 +52,7 @@ define <vscale x 32 x i32> @caller_scalable_vector_split_indirect(<vscale x 32 x
 ; RV32-NEXT:    vsetvli a0, zero, e32, m8, ta, mu
 ; RV32-NEXT:    vmv.v.i v8, 0
 ; RV32-NEXT:    addi a0, sp, 32
-; RV32-NEXT:    vmv8r.v v16, v8
+; RV32-NEXT:    vmv.v.i v16, 0
 ; RV32-NEXT:    call callee_scalable_vector_split_indirect@plt
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 4
@@ -80,7 +80,7 @@ define <vscale x 32 x i32> @caller_scalable_vector_split_indirect(<vscale x 32 x
 ; RV64-NEXT:    vsetvli a0, zero, e32, m8, ta, mu
 ; RV64-NEXT:    vmv.v.i v8, 0
 ; RV64-NEXT:    addi a0, sp, 24
-; RV64-NEXT:    vmv8r.v v16, v8
+; RV64-NEXT:    vmv.v.i v16, 0
 ; RV64-NEXT:    call callee_scalable_vector_split_indirect@plt
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 4

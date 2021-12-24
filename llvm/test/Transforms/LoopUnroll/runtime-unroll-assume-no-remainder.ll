@@ -97,22 +97,22 @@ define dso_local void @cannotProveDivisibleTC(i8* noalias nocapture %a, i8* noal
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_011:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER_NEW]] ], [ [[INC_1:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[NITER:%.*]] = phi i32 [ [[UNROLL_ITER]], [[FOR_BODY_PREHEADER_NEW]] ], [ [[NITER_NSUB_1:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[NITER:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER_NEW]] ], [ [[NITER_NEXT_1:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, i8* [[B:%.*]], i32 [[I_011]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i8, i8* [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[TMP2]], 3
 ; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i8, i8* [[A:%.*]], i32 [[I_011]]
 ; CHECK-NEXT:    store i8 [[ADD]], i8* [[ARRAYIDX4]], align 1
 ; CHECK-NEXT:    [[INC:%.*]] = add nuw nsw i32 [[I_011]], 1
-; CHECK-NEXT:    [[NITER_NSUB:%.*]] = sub i32 [[NITER]], 1
+; CHECK-NEXT:    [[NITER_NEXT:%.*]] = add nuw nsw i32 [[NITER]], 1
 ; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i8, i8* [[B]], i32 [[INC]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i8, i8* [[ARRAYIDX_1]], align 1
 ; CHECK-NEXT:    [[ADD_1:%.*]] = add i8 [[TMP3]], 3
 ; CHECK-NEXT:    [[ARRAYIDX4_1:%.*]] = getelementptr inbounds i8, i8* [[A]], i32 [[INC]]
 ; CHECK-NEXT:    store i8 [[ADD_1]], i8* [[ARRAYIDX4_1]], align 1
 ; CHECK-NEXT:    [[INC_1]] = add nuw nsw i32 [[INC]], 1
-; CHECK-NEXT:    [[NITER_NSUB_1]] = sub i32 [[NITER_NSUB]], 1
-; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp ne i32 [[NITER_NSUB_1]], 0
+; CHECK-NEXT:    [[NITER_NEXT_1]] = add i32 [[NITER_NEXT]], 1
+; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp ne i32 [[NITER_NEXT_1]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label [[FOR_BODY]], label [[EXIT_LOOPEXIT_UNR_LCSSA_LOOPEXIT:%.*]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       exit.loopexit.unr-lcssa.loopexit:
 ; CHECK-NEXT:    [[I_011_UNR_PH:%.*]] = phi i32 [ [[INC_1]], [[FOR_BODY]] ]

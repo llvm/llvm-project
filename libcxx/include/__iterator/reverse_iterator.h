@@ -11,6 +11,8 @@
 #define _LIBCPP___ITERATOR_REVERSE_ITERATOR_H
 
 #include <__config>
+#include <__compare/compare_three_way_result.h>
+#include <__compare/three_way_comparable.h>
 #include <__iterator/iterator.h>
 #include <__iterator/iterator_traits.h>
 #include <__memory/addressof.h>
@@ -86,7 +88,7 @@ public:
     template <class _Up, class = __enable_if_t<
         !is_same<_Up, _Iter>::value &&
         is_convertible<_Up const&, _Iter>::value &&
-        is_assignable<_Up const&, _Iter>::value
+        is_assignable<_Iter, _Up const&>::value
     > >
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
     reverse_iterator& operator=(const reverse_iterator<_Up>& __u) {
@@ -111,7 +113,7 @@ public:
     template <class _Up, class = __enable_if_t<
         !is_same<_Up, _Iter>::value &&
         is_convertible<_Up const&, _Iter>::value &&
-        is_assignable<_Up const&, _Iter>::value
+        is_assignable<_Iter, _Up const&>::value
     > >
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
     reverse_iterator& operator=(const reverse_iterator<_Up>& __u) {
@@ -192,6 +194,16 @@ operator<=(const reverse_iterator<_Iter1>& __x, const reverse_iterator<_Iter2>& 
 {
     return __x.base() >= __y.base();
 }
+
+#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
+template <class _Iter1, three_way_comparable_with<_Iter1> _Iter2>
+_LIBCPP_HIDE_FROM_ABI constexpr
+compare_three_way_result_t<_Iter1, _Iter2>
+operator<=>(const reverse_iterator<_Iter1>& __x, const reverse_iterator<_Iter2>& __y)
+{
+    return __y.base() <=> __x.base();
+}
+#endif
 
 #ifndef _LIBCPP_CXX03_LANG
 template <class _Iter1, class _Iter2>

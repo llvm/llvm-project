@@ -10,7 +10,7 @@
 
 #include "../PassDetail.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
@@ -187,7 +187,7 @@ void ConvertLinalgToStandardPass::runOnOperation() {
   target.addLegalDialect<AffineDialect, arith::ArithmeticDialect,
                          memref::MemRefDialect, scf::SCFDialect,
                          StandardOpsDialect>();
-  target.addLegalOp<ModuleOp, FuncOp, ReturnOp, linalg::RangeOp>();
+  target.addLegalOp<ModuleOp, FuncOp, ReturnOp>();
   RewritePatternSet patterns(&getContext());
   populateLinalgToStandardConversionPatterns(patterns);
   if (failed(applyFullConversion(module, target, std::move(patterns))))

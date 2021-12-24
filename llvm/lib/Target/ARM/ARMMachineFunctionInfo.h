@@ -142,6 +142,17 @@ class ARMFunctionInfo : public MachineFunctionInfo {
   /// con/destructors).
   bool PreservesR0 = false;
 
+  /// True if the function should sign its return address.
+  bool SignReturnAddress = false;
+
+  /// True if the fucntion should sign its return address, even if LR is not
+  /// saved.
+  bool SignReturnAddressAll = false;
+
+  /// True if BTI instructions should be placed at potential indirect jump
+  /// destinations.
+  bool BranchTargetEnforcement = false;
+
 public:
   ARMFunctionInfo() = default;
 
@@ -268,6 +279,20 @@ public:
 
   void setPreservesR0() { PreservesR0 = true; }
   bool getPreservesR0() const { return PreservesR0; }
+
+  bool shouldSignReturnAddress() const {
+    return shouldSignReturnAddress(LRSpilled);
+  }
+
+  bool shouldSignReturnAddress(bool SpillsLR) const {
+    if (!SignReturnAddress)
+      return false;
+    if (SignReturnAddressAll)
+      return true;
+    return SpillsLR;
+  }
+
+  bool branchTargetEnforcement() const { return BranchTargetEnforcement; }
 };
 
 } // end namespace llvm

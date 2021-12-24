@@ -38,6 +38,7 @@ inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
 #if !defined(_LIBCPP_HAS_NO_RANGES)
 
 namespace ranges {
+// TODO(varconst): rename `__prev_fn` to `__fn`.
 struct __prev_fn final : private __function_like {
   _LIBCPP_HIDE_FROM_ABI
   constexpr explicit __prev_fn(__tag __x) noexcept : __function_like(__x) {}

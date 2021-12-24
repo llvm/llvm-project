@@ -146,7 +146,7 @@ class SILoadStoreOptimizer : public MachineFunctionPass {
         if (!AddrOp->isReg())
           return false;
 
-        // TODO: We should be able to merge physical reg addreses.
+        // TODO: We should be able to merge physical reg addresses.
         if (AddrOp->getReg().isPhysical())
           return false;
 
@@ -652,7 +652,7 @@ static bool canMoveInstsAcrossMemOp(MachineInstr &MemOp,
 }
 
 // This function assumes that \p A and \p B have are identical except for
-// size and offset, and they referecne adjacent memory.
+// size and offset, and they reference adjacent memory.
 static MachineMemOperand *combineKnownAdjacentMMOs(MachineFunction &MF,
                                                    const MachineMemOperand *A,
                                                    const MachineMemOperand *B) {
@@ -1609,7 +1609,7 @@ SILoadStoreOptimizer::getTargetRegisterClass(const CombineInfo &CI,
   }
 
   unsigned BitWidth = 32 * (CI.Width + Paired.Width);
-  return TRI->hasAGPRs(getDataRegClass(*CI.I))
+  return TRI->isAGPRClass(getDataRegClass(*CI.I))
              ? TRI->getAGPRClassForBitWidth(BitWidth)
              : TRI->getVGPRClassForBitWidth(BitWidth);
 }
@@ -2065,7 +2065,7 @@ SILoadStoreOptimizer::collectMergeableInsts(
     // adjacent to each other in the list, which will make it easier to find
     // matches.
     MergeList.sort(
-        [] (const CombineInfo &A, CombineInfo &B) {
+        [] (const CombineInfo &A, const CombineInfo &B) {
           return A.Offset < B.Offset;
         });
     ++I;

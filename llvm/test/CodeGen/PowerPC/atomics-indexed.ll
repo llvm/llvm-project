@@ -28,10 +28,6 @@ define i8 @load_x_i8_seq_cst([100000 x i8]* %mem) {
 ; PPC64-NEXT:    bne- cr7, .+4
 ; PPC64-NEXT:    isync
 ; PPC64-NEXT:    blr
-; CHECK-PPC32: lwsync
-; CHECK-PPC64: cmpw [[CR:cr[0-9]+]], [[VAL]], [[VAL]]
-; CHECK-PPC64: bne- [[CR]], .+4
-; CHECK-PPC64: isync
   %ptr = getelementptr inbounds [100000 x i8], [100000 x i8]* %mem, i64 0, i64 90000
   %val = load atomic i8, i8* %ptr seq_cst, align 1
   ret i8 %val
@@ -54,10 +50,6 @@ define i16 @load_x_i16_acquire([100000 x i16]* %mem) {
 ; PPC64-NEXT:    bne- cr7, .+4
 ; PPC64-NEXT:    isync
 ; PPC64-NEXT:    blr
-; CHECK-PPC32: lwsync
-; CHECK-PPC64: cmpw [[CR:cr[0-9]+]], [[VAL]], [[VAL]]
-; CHECK-PPC64: bne- [[CR]], .+4
-; CHECK-PPC64: isync
   %ptr = getelementptr inbounds [100000 x i16], [100000 x i16]* %mem, i64 0, i64 90000
   %val = load atomic i16, i16* %ptr acquire, align 2
   ret i16 %val

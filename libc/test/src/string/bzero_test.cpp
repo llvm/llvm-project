@@ -6,18 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/ArrayRef.h"
 #include "src/string/bzero.h"
-#include "utils/CPP/ArrayRef.h"
 #include "utils/UnitTest/Test.h"
 
 using __llvm_libc::cpp::Array;
 using __llvm_libc::cpp::ArrayRef;
 using Data = Array<char, 2048>;
 
-static const ArrayRef<char> kDeadcode("DEADC0DE", 8);
+static const ArrayRef<char> k_deadcode("DEADC0DE", 8);
 
 // Returns a Data object filled with a repetition of `filler`.
-Data getData(ArrayRef<char> filler) {
+Data get_data(ArrayRef<char> filler) {
   Data out;
   for (size_t i = 0; i < out.size(); ++i)
     out[i] = filler[i % filler.size()];
@@ -25,7 +25,7 @@ Data getData(ArrayRef<char> filler) {
 }
 
 TEST(LlvmLibcBzeroTest, Thorough) {
-  const Data dirty = getData(kDeadcode);
+  const Data dirty = get_data(k_deadcode);
   for (size_t count = 0; count < 1024; ++count) {
     for (size_t align = 0; align < 64; ++align) {
       auto buffer = dirty;

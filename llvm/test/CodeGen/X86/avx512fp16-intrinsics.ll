@@ -120,6 +120,15 @@ define half @test_sqrt_sh2(half %a0, half %a1) {
   ret half %2
 }
 
+define half @test_sqrt_sh3(half %a0, half %a1) {
+; CHECK-LABEL: test_sqrt_sh3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsqrtsh %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %1 = call fast half @llvm.sqrt.f16(half %a0)
+  ret half %1
+}
+
 declare half @llvm.sqrt.f16(half)
 
 define <8 x half> @test_sqrt_sh_r(<8 x half> %a0, <8 x half> %a1, <8 x half> %a2, i8 %mask) {

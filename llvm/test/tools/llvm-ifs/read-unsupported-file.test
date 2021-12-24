@@ -1,4 +1,4 @@
-# RUN: not llvm-ifs --output-format=IFS --output=- %s 2>&1| FileCheck %s
+# RUN: not llvm-ifs --output-ifs=- %s 2>&1| FileCheck %s
 
 This is just some text that cannot be read by llvm-ifs.
 

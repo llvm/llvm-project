@@ -117,8 +117,8 @@ define half @maxf16(half* noalias nocapture readonly %s1, half* noalias nocaptur
 ; CHECK-NEXT:  .LBB2_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrh.u16 q0, [r0], #16
-; CHECK-NEXT:    vabs.f16 q0, q0
 ; CHECK-NEXT:    vldrh.u16 q1, [r1], #16
+; CHECK-NEXT:    vabs.f16 q0, q0
 ; CHECK-NEXT:    vmaxnm.f16 q0, q0, q1
 ; CHECK-NEXT:    vstrh.16 q0, [r2], #16
 ; CHECK-NEXT:    letp lr, .LBB2_2

@@ -324,14 +324,14 @@ void LookupResult::configure() {
   }
 }
 
-bool LookupResult::sanity() const {
+bool LookupResult::checkDebugAssumptions() const {
   // This function is never called by NDEBUG builds.
   assert(ResultKind != NotFound || Decls.size() == 0);
   assert(ResultKind != Found || Decls.size() == 1);
   assert(ResultKind != FoundOverloaded || Decls.size() > 1 ||
          (Decls.size() == 1 &&
           isa<FunctionTemplateDecl>((*begin())->getUnderlyingDecl())));
-  assert(ResultKind != FoundUnresolvedValue || sanityCheckUnresolved());
+  assert(ResultKind != FoundUnresolvedValue || checkUnresolved());
   assert(ResultKind != Ambiguous || Decls.size() > 1 ||
          (Decls.size() == 1 && (Ambiguity == AmbiguousBaseSubobjects ||
                                 Ambiguity == AmbiguousBaseSubobjectTypes)));
@@ -2935,7 +2935,7 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
     case Type::ExtVector:
     case Type::ConstantMatrix:
     case Type::Complex:
-    case Type::ExtInt:
+    case Type::BitInt:
       break;
 
     // Non-deduced auto types only get here for error cases.

@@ -123,6 +123,6 @@ body:             |
     JCC_1 %bb.5, 6, implicit $eflags, debug-location !22
   
   bb.6:
-    RETQ debug-location !22
+    RET64 debug-location !22
 
 ...

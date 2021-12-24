@@ -53,7 +53,7 @@ public:
                                       uint32_t ContextFramesToRemove,
                                       bool DeleteNode = true);
   void removeChildContext(const LineLocation &CallSite, StringRef ChildName);
-  std::map<uint32_t, ContextTrieNode> &getAllChildContext();
+  std::map<uint64_t, ContextTrieNode> &getAllChildContext();
   StringRef getFuncName() const;
   FunctionSamples *getFunctionSamples() const;
   void setFunctionSamples(FunctionSamples *FSamples);
@@ -66,10 +66,8 @@ public:
   void dumpTree();
 
 private:
-  static uint32_t nodeHash(StringRef ChildName, const LineLocation &Callsite);
-
   // Map line+discriminator location to child context
-  std::map<uint32_t, ContextTrieNode> AllChildContext;
+  std::map<uint64_t, ContextTrieNode> AllChildContext;
 
   // Link to parent context node
   ContextTrieNode *ParentContext;

@@ -4,9 +4,11 @@
 ; RUN: opt -mtriple=armv8.1m.main -mattr=+mve.fp -cost-model -analyze -cost-kind=code-size    < %s | FileCheck %s --check-prefix=SIZE
 ; RUN: opt -mtriple=armv8.1m.main -mattr=+mve.fp -cost-model -analyze -cost-kind=size-latency < %s | FileCheck %s --check-prefix=SIZE_LATE
 
+target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+
 ; Test a cross-section of intrinsics for various cost-kinds.
 ; Other test files may check for accuracy of a particular intrinsic
-; across subtargets or types. This is just a sanity check using an
+; across subtargets or types. This is just a basic correctness check using an
 ; ARM target and a legal scalar type (i32/float) and/or an
 ; illegal vector type (16 x i32/float).
 

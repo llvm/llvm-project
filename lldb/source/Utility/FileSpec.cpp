@@ -43,9 +43,7 @@ static constexpr FileSpec::Style GetNativeStyle() {
 }
 
 bool PathStyleIsPosix(FileSpec::Style style) {
-  return (style == FileSpec::Style::posix ||
-          (style == FileSpec::Style::native &&
-           GetNativeStyle() == FileSpec::Style::posix));
+  return llvm::sys::path::is_style_posix(style);
 }
 
 const char *GetPathSeparators(FileSpec::Style style) {
@@ -312,7 +310,7 @@ llvm::Optional<FileSpec::Style> FileSpec::GuessPathStyle(llvm::StringRef absolut
     return Style::posix;
   if (absolute_path.startswith(R"(\\)"))
     return Style::windows;
-  if (absolute_path.size() > 3 && llvm::isAlpha(absolute_path[0]) &&
+  if (absolute_path.size() >= 3 && llvm::isAlpha(absolute_path[0]) &&
       absolute_path.substr(1, 2) == R"(:\)")
     return Style::windows;
   return llvm::None;

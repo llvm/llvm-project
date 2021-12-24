@@ -106,3 +106,10 @@ static_assert(!__is_interface_class(HasProp), "oops");
 static_assert(!__is_interface_class(IUnknown), "oops");
 static_assert(!__is_interface_class(IFaceStruct), "oops");
 static_assert(!__is_interface_class(IFaceInheritsStruct), "oops");
+
+template<typename>
+class TemplateContext {
+  class Base;
+  // Should not crash on an incomplete-type and dependent base specifier.
+  __interface Foo : Base {};
+};

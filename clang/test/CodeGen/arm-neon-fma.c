@@ -5,6 +5,8 @@
 // RUN:   -ffreestanding \
 // RUN:   -disable-O0-optnone -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s
 
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 #include <arm_neon.h>
 
 // CHECK-LABEL: define{{.*}} <2 x float> @test_fma_order(<2 x float> %accum, <2 x float> %lhs, <2 x float> %rhs) #0 {

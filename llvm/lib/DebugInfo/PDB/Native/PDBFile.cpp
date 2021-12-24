@@ -100,7 +100,7 @@ PDBFile::getStreamBlockList(uint32_t StreamIndex) const {
   return ContainerLayout.StreamMap[StreamIndex];
 }
 
-uint32_t PDBFile::getFileSize() const { return Buffer->getLength(); }
+uint64_t PDBFile::getFileSize() const { return Buffer->getLength(); }
 
 Expected<ArrayRef<uint8_t>> PDBFile::getBlockData(uint32_t BlockIndex,
                                                   uint32_t NumBytes) const {

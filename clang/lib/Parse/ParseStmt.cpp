@@ -2108,6 +2108,9 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
     CoawaitLoc = SourceLocation();
   }
 
+  if (CoawaitLoc.isValid() && getLangOpts().CPlusPlus20)
+    Diag(CoawaitLoc, diag::warn_deprecated_for_co_await);
+
   // We need to perform most of the semantic analysis for a C++0x for-range
   // statememt before parsing the body, in order to be able to deduce the type
   // of an auto-typed loop variable.

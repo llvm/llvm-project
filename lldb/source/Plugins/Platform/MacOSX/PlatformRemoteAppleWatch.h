@@ -30,23 +30,20 @@ public:
 
   static void Terminate();
 
-  static lldb_private::ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "remote-watchos"; }
 
-  static const char *GetDescriptionStatic();
+  static llvm::StringRef GetDescriptionStatic();
 
   // lldb_private::Platform functions
 
-  const char *GetDescription() override { return GetDescriptionStatic(); }
+  llvm::StringRef GetDescription() override { return GetDescriptionStatic(); }
 
   // lldb_private::PluginInterface functions
-  llvm::StringRef GetPluginName() override {
-    return GetPluginNameStatic().GetStringRef();
-  }
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   // lldb_private::Platform functions
 
-  bool GetSupportedArchitectureAtIndex(uint32_t idx,
-                                       lldb_private::ArchSpec &arch) override;
+  std::vector<lldb_private::ArchSpec> GetSupportedArchitectures() override;
 
 protected:
   llvm::StringRef GetDeviceSupportDirectoryName() override;

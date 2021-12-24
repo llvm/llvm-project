@@ -8,6 +8,8 @@
 
 // UNSUPPORTED: c++03
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // <filesystem>
 
 // bool is_socket(file_status s) noexcept

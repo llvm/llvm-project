@@ -85,6 +85,9 @@
 /* Define if we have z3 and want to build it */
 #cmakedefine LLVM_WITH_Z3 ${LLVM_WITH_Z3}
 
+/* Define if we have curl and want to use it */
+#cmakedefine LLVM_ENABLE_CURL ${LLVM_ENABLE_CURL}
+
 /* Define if LLVM was built with a dependency to the libtensorflow dynamic library */
 #cmakedefine LLVM_HAVE_TF_API
 
@@ -99,5 +102,11 @@
 
 /* Define if the xar_open() function is supported on this platform. */
 #cmakedefine LLVM_HAVE_LIBXAR ${LLVM_HAVE_LIBXAR}
+
+/* Define if building libLLVM shared library */
+#cmakedefine LLVM_BUILD_LLVM_DYLIB
+
+/* Define if building LLVM with BUILD_SHARED_LIBS */
+#cmakedefine LLVM_BUILD_SHARED_LIBS
 
 #endif

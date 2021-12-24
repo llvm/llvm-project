@@ -307,6 +307,14 @@ class TypeConverter {
   ///       existing value are expected to be removed during conversion. If
   ///       `llvm::None` is returned, the converter is allowed to try another
   ///       conversion function to perform the conversion.
+  ///   * Optional<LogicalResult>(T, SmallVectorImpl<Type> &, ArrayRef<Type>)
+  ///     - This form represents a 1-N type conversion supporting recursive
+  ///       types. The first two arguments and the return value are the same as
+  ///       for the regular 1-N form. The third argument is contains is the
+  ///       "call stack" of the recursive conversion: it contains the list of
+  ///       types currently being converted, with the current type being the
+  ///       last one. If it is present more than once in the list, the
+  ///       conversion concerns a recursive type.
   /// Note: When attempting to convert a type, e.g. via 'convertType', the
   ///       mostly recently added conversions will be invoked first.
   template <typename FnT,

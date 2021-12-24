@@ -1,4 +1,4 @@
-; RUN: opt -loop-vectorize -scalable-vectorization=on -S < %s | FileCheck %s
+; RUN: opt -loop-vectorize -S < %s | FileCheck %s
 
 target triple = "aarch64-unknown-linux-gnu"
 
@@ -34,7 +34,7 @@ define void @cond_inv_store_i32(i32* noalias %dst, i32* noalias readonly %src, i
 ; CHECK-NEXT:    %[[SPLAT_PTRS:.*]] = shufflevector <vscale x 4 x i32*> %[[TMP1]], <vscale x 4 x i32*> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK:       vector.body:
 ; CHECK:         %[[VECLOAD:.*]] = load <vscale x 4 x i32>, <vscale x 4 x i32>* %{{.*}}, align 4
-; CHECK-NEXT:    %[[MASK:.*]] = icmp sgt <vscale x 4 x i32> %[[VECLOAD]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 0, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+; CHECK-NEXT:    %[[MASK:.*]] = icmp sgt <vscale x 4 x i32> %[[VECLOAD]], zeroinitializer
 ; CHECK-NEXT:    call void @llvm.masked.scatter.nxv4i32.nxv4p0i32(<vscale x 4 x i32> %[[VECLOAD]], <vscale x 4 x i32*> %[[SPLAT_PTRS]], i32 4, <vscale x 4 x i1> %[[MASK]])
 entry:
   br label %for.body
@@ -59,7 +59,7 @@ for.end:                                          ; preds = %for.inc, %entry
   ret void
 }
 
-attributes #0 = { "target-features"="+neon,+sve" vscale_range(0, 16) }
+attributes #0 = { "target-features"="+neon,+sve" vscale_range(1, 16) }
 
 !0 = distinct !{!0, !1, !2, !3, !4, !5}
 !1 = !{!"llvm.loop.mustprogress"}
@@ -67,4 +67,3 @@ attributes #0 = { "target-features"="+neon,+sve" vscale_range(0, 16) }
 !3 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
 !4 = !{!"llvm.loop.vectorize.enable", i1 true}
 !5 = !{!"llvm.loop.interleave.count", i32 1}
-

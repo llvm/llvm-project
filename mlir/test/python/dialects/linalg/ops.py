@@ -68,10 +68,7 @@ def testFill():
       @builtin.FuncOp.from_py_func(RankedTensorType.get((12, -1), f32))
       def fill_tensor(out):
         zero = arith.ConstantOp(value=FloatAttr.get(f32, 0.), result=f32).result
-        # TODO: FillOp.result is None. When len(results) == 1 we expect it to
-        # be results[0] as per _linalg_ops_gen.py. This seems like an
-        # orthogonal bug in the generator of _linalg_ops_gen.py.
-        return linalg.FillOp(output=out, value=zero).results[0]
+        return linalg.FillOp(output=out, value=zero).result
 
       # CHECK-LABEL: func @fill_buffer
       #  CHECK-SAME:   %[[OUT:[0-9a-z]+]]: memref<12x?xf32>
@@ -83,49 +80,6 @@ def testFill():
         zero = arith.ConstantOp(value=FloatAttr.get(f32, 0.), result=f32).result
         linalg.FillOp(output=out, value=zero)
 
-  print(module)
-
-
-# CHECK-LABEL: TEST: testStructuredOpOnTensors
-@run
-def testStructuredOpOnTensors():
-  with Context() as ctx, Location.unknown():
-    module = Module.create()
-    f32 = F32Type.get()
-    tensor_type = RankedTensorType.get((2, 3, 4), f32)
-    with InsertionPoint(module.body):
-      func = builtin.FuncOp(
-          name="matmul_test",
-          type=FunctionType.get(
-              inputs=[tensor_type, tensor_type], results=[tensor_type]))
-      with InsertionPoint(func.add_entry_block()):
-        lhs, rhs = func.entry_block.arguments
-        result = linalg.MatmulOp([lhs, rhs], results=[tensor_type]).result
-        std.ReturnOp([result])
-
-  # CHECK: %[[R:.*]] = linalg.matmul ins(%arg0, %arg1 : tensor<2x3x4xf32>, tensor<2x3x4xf32>) -> tensor<2x3x4xf32>
-  print(module)
-
-
-# CHECK-LABEL: TEST: testStructuredOpOnBuffers
-@run
-def testStructuredOpOnBuffers():
-  with Context() as ctx, Location.unknown():
-    module = Module.create()
-    f32 = F32Type.get()
-    memref_type = MemRefType.get((2, 3, 4), f32)
-    with InsertionPoint(module.body):
-      func = builtin.FuncOp(
-          name="matmul_test",
-          type=FunctionType.get(
-              inputs=[memref_type, memref_type, memref_type], results=[]))
-      with InsertionPoint(func.add_entry_block()):
-        lhs, rhs, result = func.entry_block.arguments
-        # TODO: prperly hook up the region.
-        linalg.MatmulOp([lhs, rhs], outputs=[result])
-        std.ReturnOp([])
-
-  # CHECK: linalg.matmul ins(%arg0, %arg1 : memref<2x3x4xf32>, memref<2x3x4xf32>) outs(%arg2 : memref<2x3x4xf32>)
   print(module)
 
 

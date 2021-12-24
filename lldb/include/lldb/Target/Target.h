@@ -21,6 +21,7 @@
 #include "lldb/Core/Architecture.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/ModuleList.h"
+#include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Core/UserSettingsController.h"
 #include "lldb/Expression/Expression.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
@@ -1023,6 +1024,37 @@ public:
   size_t ReadCStringFromMemory(const Address &addr, char *dst,
                                size_t dst_max_len, Status &result_error);
 
+  /// Read a NULL terminated string from memory
+  ///
+  /// This function will read a cache page at a time until a NULL string
+  /// terminator is found. It will stop reading if an aligned sequence of NULL
+  /// termination \a type_width bytes is not found before reading \a
+  /// cstr_max_len bytes.  The results are always guaranteed to be NULL
+  /// terminated, and that no more than (max_bytes - type_width) bytes will be
+  /// read.
+  ///
+  /// \param[in] addr
+  ///     The address to start the memory read.
+  ///
+  /// \param[in] dst
+  ///     A character buffer containing at least max_bytes.
+  ///
+  /// \param[in] max_bytes
+  ///     The maximum number of bytes to read.
+  ///
+  /// \param[in] error
+  ///     The error status of the read operation.
+  ///
+  /// \param[in] type_width
+  ///     The size of the null terminator (1 to 4 bytes per
+  ///     character).  Defaults to 1.
+  ///
+  /// \return
+  ///     The error status or the number of bytes prior to the null terminator.
+  size_t ReadStringFromMemory(const Address &addr, char *dst, size_t max_bytes,
+                              Status &error, size_t type_width,
+                              bool force_live_memory = true);
+
   size_t ReadScalarIntegerFromMemory(const Address &addr, uint32_t byte_size,
                                      bool is_signed, Scalar &scalar,
                                      Status &error,
@@ -1278,8 +1310,7 @@ public:
     std::string m_class_name;
     /// This holds the dictionary of keys & values that can be used to
     /// parametrize any given callback's behavior.
-    StructuredDataImpl *m_extra_args; // We own this structured data,
-                                      // but the SD itself manages the UP.
+    StructuredDataImpl m_extra_args;
     /// This holds the python callback object.
     StructuredData::GenericSP m_implementation_sp;
 
@@ -1489,6 +1520,10 @@ private:
   void AddBreakpoint(lldb::BreakpointSP breakpoint_sp, bool internal);
 
   void FinalizeFileActions(ProcessLaunchInfo &info);
+
+  /// Return a recommended size for memory reads at \a addr, optimizing for
+  /// cache usage.
+  lldb::addr_t GetReasonableReadSize(const Address &addr);
 
   Target(const Target &) = delete;
   const Target &operator=(const Target &) = delete;

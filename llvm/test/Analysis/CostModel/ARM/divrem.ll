@@ -5,6 +5,8 @@
 ; RUN: opt -cost-model -analyze -mtriple=thumbv8m.base-none-eabi < %s | FileCheck %s --check-prefix=CHECK-V8M-BASE
 ; RUN: opt -cost-model -analyze -mtriple=armv8r-none-eabi < %s | FileCheck %s --check-prefix=CHECK-V8R
 
+target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+
 define void @i8() {
 ; CHECK-NEON-LABEL: 'i8'
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %1 = sdiv i8 undef, undef

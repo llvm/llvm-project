@@ -1,0 +1,110 @@
+# Check that it doesn't crash with unhandled opcode error, see pr52249
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass localstackalloc -o - %s | FileCheck %s
+--- |
+
+  define void @test_st1_to_sp(<2 x i32> %a, <4 x i16> %b, <8 x i8> %c, <2 x i64> %d) gc "statepoint-example" { entry: ret void }
+
+...
+---
+# CHECK-LABEL: test_st1_to_sp
+name:            test_st1_to_sp
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+failsVerification: false
+registers:
+  - { id: 0, class: fpr64, preferred-register: '' }
+  - { id: 1, class: fpr64, preferred-register: '' }
+  - { id: 2, class: fpr64, preferred-register: '' }
+  - { id: 3, class: fpr128, preferred-register: '' }
+  - { id: 4, class: fpr64, preferred-register: '' }
+  - { id: 5, class: fpr128, preferred-register: '' }
+  - { id: 6, class: fpr128, preferred-register: '' }
+  - { id: 7, class: fpr64, preferred-register: '' }
+  - { id: 8, class: fpr128, preferred-register: '' }
+  - { id: 9, class: fpr128, preferred-register: '' }
+  - { id: 10, class: fpr64, preferred-register: '' }
+  - { id: 11, class: fpr128, preferred-register: '' }
+  - { id: 12, class: fpr128, preferred-register: '' }
+  - { id: 13, class: fpr128, preferred-register: '' }
+  - { id: 14, class: gpr32all, preferred-register: '' }
+  - { id: 15, class: gpr64all, preferred-register: '' }
+liveins:
+  - { reg: '$d0', virtual-reg: '%0' }
+  - { reg: '$d1', virtual-reg: '%1' }
+  - { reg: '$d2', virtual-reg: '%2' }
+  - { reg: '$q3', virtual-reg: '%3' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    8
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:
+  - { id: 0, name: '', type: default, offset: 0, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: default, offset: 0, size: 2, alignment: 4, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, name: '', type: default, offset: 0, size: 1, alignment: 4, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 3, name: '', type: default, offset: 0, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $d0, $d1, $d2, $q3
+  
+    %3:fpr128 = COPY $q3
+    %2:fpr64 = COPY $d2
+    %1:fpr64 = COPY $d1
+    %0:fpr64 = COPY $d0
+    %4:fpr64 = SSHRv2i32_shift %0, 1
+    %6:fpr128 = IMPLICIT_DEF
+    %5:fpr128 = INSERT_SUBREG %6, killed %4, %subreg.dsub
+    %7:fpr64 = SSHRv4i16_shift %1, 1
+    %9:fpr128 = IMPLICIT_DEF
+    %8:fpr128 = INSERT_SUBREG %9, killed %7, %subreg.dsub
+    %10:fpr64 = SSHRv8i8_shift %2, 1
+    %12:fpr128 = IMPLICIT_DEF
+    %11:fpr128 = INSERT_SUBREG %12, killed %10, %subreg.dsub
+    %13:fpr128 = SSHRv2i64_shift %3, 1
+    ST1i64 killed %13, 1, %stack.3 :: (store (s64) into %stack.3)
+    ST1i16 killed %8, 1, %stack.1 :: (store (s16) into %stack.1, align 4)
+    ST1i32 killed %5, 1, %stack.0 :: (store (s32) into %stack.0)
+    ST1i8 killed %11, 1, %stack.2 :: (store (s8) into %stack.2, align 4)
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    %14:gpr32all = IMPLICIT_DEF
+    $w0 = COPY %14
+    %15:gpr64all = IMPLICIT_DEF
+    STATEPOINT 2, 4, 1, killed %15, $w0, 2, 0, 2, 0, 2, 4, 1, 4, %stack.0, 0, 1, 2, %stack.1, 0, 1, 1, %stack.2, 0, 1, 8, %stack.3, 0, 2, 0, 2, 0, 2, 0, csr_aarch64_aapcs, implicit-def $sp :: (volatile load store (s32) on %stack.0), (volatile load store (s16) on %stack.1, align 4), (volatile load store (s8) on %stack.2, align 4), (volatile load store (s64) on %stack.3)
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    RET_ReallyLR
+
+...

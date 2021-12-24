@@ -125,7 +125,7 @@ define protected amdgpu_kernel void @nand(i32 addrspace(1)* %p, %S addrspace(1)*
 ; CHECK-NEXT:    s_load_dword s6, s[0:1], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s6
-; CHECK-NEXT:  BB5_1: ; %atomicrmw.start
+; CHECK-NEXT:  .LBB5_1: ; %atomicrmw.start
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    v_mov_b32_e32 v3, v1
 ; CHECK-NEXT:    v_not_b32_e32 v1, v3
@@ -135,7 +135,7 @@ define protected amdgpu_kernel void @nand(i32 addrspace(1)* %p, %S addrspace(1)*
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v3
 ; CHECK-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
 ; CHECK-NEXT:    s_andn2_b64 exec, exec, s[4:5]
-; CHECK-NEXT:    s_cbranch_execnz BB5_1
+; CHECK-NEXT:    s_cbranch_execnz .LBB5_1
 ; CHECK-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; CHECK-NEXT:    v_mad_u64_u32 v[0:1], s[0:1], v1, 12, s[2:3]
@@ -335,7 +335,7 @@ define protected amdgpu_kernel void @fadd(float addrspace(1)* %p, %S addrspace(1
 ; CHECK-NEXT:    s_load_dword s6, s[0:1], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s6
-; CHECK-NEXT:  BB14_1: ; %atomicrmw.start
+; CHECK-NEXT:  .LBB14_1: ; %atomicrmw.start
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    v_mov_b32_e32 v3, v1
 ; CHECK-NEXT:    v_add_f32_e32 v2, 1.0, v3
@@ -344,7 +344,7 @@ define protected amdgpu_kernel void @fadd(float addrspace(1)* %p, %S addrspace(1
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v3
 ; CHECK-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
 ; CHECK-NEXT:    s_andn2_b64 exec, exec, s[4:5]
-; CHECK-NEXT:    s_cbranch_execnz BB14_1
+; CHECK-NEXT:    s_cbranch_execnz .LBB14_1
 ; CHECK-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; CHECK-NEXT:    v_cvt_u32_f32_e32 v0, v1
@@ -370,7 +370,7 @@ define protected amdgpu_kernel void @fsub(float addrspace(1)* %p, %S addrspace(1
 ; CHECK-NEXT:    s_load_dword s6, s[0:1], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s6
-; CHECK-NEXT:  BB15_1: ; %atomicrmw.start
+; CHECK-NEXT:  .LBB15_1: ; %atomicrmw.start
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    v_mov_b32_e32 v3, v1
 ; CHECK-NEXT:    v_add_f32_e32 v2, -1.0, v3
@@ -379,7 +379,7 @@ define protected amdgpu_kernel void @fsub(float addrspace(1)* %p, %S addrspace(1
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v3
 ; CHECK-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
 ; CHECK-NEXT:    s_andn2_b64 exec, exec, s[4:5]
-; CHECK-NEXT:    s_cbranch_execnz BB15_1
+; CHECK-NEXT:    s_cbranch_execnz .LBB15_1
 ; CHECK-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; CHECK-NEXT:    v_cvt_u32_f32_e32 v0, v1
@@ -448,8 +448,8 @@ define protected amdgpu_kernel void @fmax(double addrspace(1)* %p, %S addrspace(
 define protected amdgpu_kernel void @buffer.atomic.swap(<4 x i32> inreg %rsrc, i32 %vindex, %S addrspace(1)* %q) {
 ; CHECK-LABEL: buffer.atomic.swap:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; CHECK-NEXT:    s_load_dword s2, s[0:1], 0x34
+; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 1
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x3c
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 1.0
@@ -470,8 +470,8 @@ define protected amdgpu_kernel void @buffer.atomic.swap(<4 x i32> inreg %rsrc, i
 define protected amdgpu_kernel void @buffer.atomic.add(<4 x i32> inreg %rsrc, i32 %vindex, %S addrspace(1)* %q) {
 ; CHECK-LABEL: buffer.atomic.add:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; CHECK-NEXT:    s_load_dword s2, s[0:1], 0x34
+; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 1
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x3c
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 1.0
@@ -492,8 +492,8 @@ define protected amdgpu_kernel void @buffer.atomic.add(<4 x i32> inreg %rsrc, i3
 define protected amdgpu_kernel void @buffer.atomic.sub(<4 x i32> inreg %rsrc, i32 %vindex, %S addrspace(1)* %q) {
 ; CHECK-LABEL: buffer.atomic.sub:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; CHECK-NEXT:    s_load_dword s2, s[0:1], 0x34
+; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 1
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x3c
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 1.0
@@ -514,8 +514,8 @@ define protected amdgpu_kernel void @buffer.atomic.sub(<4 x i32> inreg %rsrc, i3
 define protected amdgpu_kernel void @buffer.atomic.smin(<4 x i32> inreg %rsrc, i32 %vindex, %S addrspace(1)* %q) {
 ; CHECK-LABEL: buffer.atomic.smin:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; CHECK-NEXT:    s_load_dword s2, s[0:1], 0x34
+; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 1
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x3c
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 1.0
@@ -536,8 +536,8 @@ define protected amdgpu_kernel void @buffer.atomic.smin(<4 x i32> inreg %rsrc, i
 define protected amdgpu_kernel void @buffer.atomic.smax(<4 x i32> inreg %rsrc, i32 %vindex, %S addrspace(1)* %q) {
 ; CHECK-LABEL: buffer.atomic.smax:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; CHECK-NEXT:    s_load_dword s2, s[0:1], 0x34
+; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 1
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x3c
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 1.0
@@ -558,8 +558,8 @@ define protected amdgpu_kernel void @buffer.atomic.smax(<4 x i32> inreg %rsrc, i
 define protected amdgpu_kernel void @buffer.atomic.umin(<4 x i32> inreg %rsrc, i32 %vindex, %S addrspace(1)* %q) {
 ; CHECK-LABEL: buffer.atomic.umin:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; CHECK-NEXT:    s_load_dword s2, s[0:1], 0x34
+; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 1
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x3c
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 1.0
@@ -580,8 +580,8 @@ define protected amdgpu_kernel void @buffer.atomic.umin(<4 x i32> inreg %rsrc, i
 define protected amdgpu_kernel void @buffer.atomic.umax(<4 x i32> inreg %rsrc, i32 %vindex, %S addrspace(1)* %q) {
 ; CHECK-LABEL: buffer.atomic.umax:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; CHECK-NEXT:    s_load_dword s2, s[0:1], 0x34
+; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 1
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x3c
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 1.0
@@ -602,8 +602,8 @@ define protected amdgpu_kernel void @buffer.atomic.umax(<4 x i32> inreg %rsrc, i
 define protected amdgpu_kernel void @buffer.atomic.and(<4 x i32> inreg %rsrc, i32 %vindex, %S addrspace(1)* %q) {
 ; CHECK-LABEL: buffer.atomic.and:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; CHECK-NEXT:    s_load_dword s2, s[0:1], 0x34
+; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 1
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x3c
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 1.0
@@ -624,8 +624,8 @@ define protected amdgpu_kernel void @buffer.atomic.and(<4 x i32> inreg %rsrc, i3
 define protected amdgpu_kernel void @buffer.atomic.or(<4 x i32> inreg %rsrc, i32 %vindex, %S addrspace(1)* %q) {
 ; CHECK-LABEL: buffer.atomic.or:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; CHECK-NEXT:    s_load_dword s2, s[0:1], 0x34
+; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 1
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x3c
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 1.0
@@ -646,8 +646,8 @@ define protected amdgpu_kernel void @buffer.atomic.or(<4 x i32> inreg %rsrc, i32
 define protected amdgpu_kernel void @buffer.atomic.xor(<4 x i32> inreg %rsrc, i32 %vindex, %S addrspace(1)* %q) {
 ; CHECK-LABEL: buffer.atomic.xor:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; CHECK-NEXT:    s_load_dword s2, s[0:1], 0x34
+; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 1
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x3c
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 1.0
@@ -668,8 +668,8 @@ define protected amdgpu_kernel void @buffer.atomic.xor(<4 x i32> inreg %rsrc, i3
 define protected amdgpu_kernel void @buffer.atomic.inc(<4 x i32> inreg %rsrc, i32 %vindex, %S addrspace(1)* %q) {
 ; CHECK-LABEL: buffer.atomic.inc:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; CHECK-NEXT:    s_load_dword s2, s[0:1], 0x34
+; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 1
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x3c
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 1.0
@@ -690,8 +690,8 @@ define protected amdgpu_kernel void @buffer.atomic.inc(<4 x i32> inreg %rsrc, i3
 define protected amdgpu_kernel void @buffer.atomic.dec(<4 x i32> inreg %rsrc, i32 %vindex, %S addrspace(1)* %q) {
 ; CHECK-LABEL: buffer.atomic.dec:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; CHECK-NEXT:    s_load_dword s2, s[0:1], 0x34
+; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 1
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x3c
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 1.0
@@ -712,8 +712,8 @@ define protected amdgpu_kernel void @buffer.atomic.dec(<4 x i32> inreg %rsrc, i3
 define protected amdgpu_kernel void @buffer.atomic.cmpswap(<4 x i32> inreg %rsrc, i32 %vindex, %S addrspace(1)* %q) {
 ; CHECK-LABEL: buffer.atomic.cmpswap:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; CHECK-NEXT:    s_load_dword s2, s[0:1], 0x34
+; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 2
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 1
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x3c
@@ -735,16 +735,16 @@ define protected amdgpu_kernel void @buffer.atomic.cmpswap(<4 x i32> inreg %rsrc
 define protected amdgpu_kernel void @buffer.atomic.fadd(<4 x i32> inreg %rsrc, i32 %vindex, %S addrspace(1)* %q) {
 ; CHECK-LABEL: buffer.atomic.fadd:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; CHECK-NEXT:    s_load_dword s2, s[0:1], 0x34
-; CHECK-NEXT:    v_mov_b32_e32 v0, 1.0
+; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
+; CHECK-NEXT:    v_mov_b32_e32 v1, 1.0
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x3c
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 1.0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_mov_b32_e32 v1, s2
-; CHECK-NEXT:    buffer_atomic_add_f32 v0, v1, s[4:7], 0 offen glc
+; CHECK-NEXT:    v_mov_b32_e32 v0, s2
+; CHECK-NEXT:    buffer_atomic_add_f32 v1, v0, s[4:7], 0 offen glc
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_cvt_u32_f32_e32 v0, v0
+; CHECK-NEXT:    v_cvt_u32_f32_e32 v0, v1
 ; CHECK-NEXT:    v_mad_u64_u32 v[0:1], s[0:1], v0, 12, s[0:1]
 ; CHECK-NEXT:    global_store_dword v[0:1], v2, off
 ; CHECK-NEXT:    s_endpgm
@@ -759,8 +759,8 @@ define protected amdgpu_kernel void @buffer.atomic.fadd(<4 x i32> inreg %rsrc, i
 define protected amdgpu_kernel void @buffer.atomic.fmin(<4 x i32> inreg %rsrc, i32 %vindex, %S addrspace(1)* %q) {
 ; CHECK-LABEL: buffer.atomic.fmin:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; CHECK-NEXT:    s_load_dword s2, s[0:1], 0x34
+; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0x3ff00000
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x3c
@@ -784,8 +784,8 @@ define protected amdgpu_kernel void @buffer.atomic.fmin(<4 x i32> inreg %rsrc, i
 define protected amdgpu_kernel void @buffer.atomic.fmax(<4 x i32> inreg %rsrc, i32 %vindex, %S addrspace(1)* %q) {
 ; CHECK-LABEL: buffer.atomic.fmax:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; CHECK-NEXT:    s_load_dword s2, s[0:1], 0x34
+; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0x3ff00000
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x3c

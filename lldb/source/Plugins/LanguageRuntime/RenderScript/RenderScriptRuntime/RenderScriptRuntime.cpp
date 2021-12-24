@@ -966,11 +966,6 @@ void RenderScriptRuntime::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-lldb_private::ConstString RenderScriptRuntime::GetPluginNameStatic() {
-  static ConstString plugin_name("renderscript");
-  return plugin_name;
-}
-
 RenderScriptRuntime::ModuleKind
 RenderScriptRuntime::GetModuleKind(const lldb::ModuleSP &module_sp) {
   if (module_sp) {

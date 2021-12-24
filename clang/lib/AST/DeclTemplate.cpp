@@ -202,8 +202,9 @@ bool TemplateParameterList::hasAssociatedConstraints() const {
 }
 
 bool TemplateParameterList::shouldIncludeTypeForArgument(
-    const TemplateParameterList *TPL, unsigned Idx) {
-  if (!TPL || Idx >= TPL->size())
+    const PrintingPolicy &Policy, const TemplateParameterList *TPL,
+    unsigned Idx) {
+  if (!TPL || Idx >= TPL->size() || Policy.AlwaysIncludeTypeForTemplateArgument)
     return true;
   const NamedDecl *TemplParam = TPL->getParam(Idx);
   if (const auto *ParamValueDecl =

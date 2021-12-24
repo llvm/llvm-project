@@ -149,7 +149,7 @@ void ProcessPlatformSpecificAllocations(Frontier *frontier) {
   kern_return_t err = KERN_SUCCESS;
   mach_msg_type_number_t count = VM_REGION_SUBMAP_INFO_COUNT_64;
 
-  InternalMmapVector<RootRegion> const *root_regions = GetRootRegions();
+  InternalMmapVectorNoCtor<RootRegion> const *root_regions = GetRootRegions();
 
   while (err == KERN_SUCCESS) {
     struct vm_region_submap_info_64 info;
@@ -195,11 +195,8 @@ void HandleLeaks() {}
 
 void LockStuffAndStopTheWorld(StopTheWorldCallback callback,
                               CheckForLeaksParam *argument) {
-  LockThreadRegistry();
-  LockAllocator();
+  ScopedStopTheWorldLock lock;
   StopTheWorld(callback, argument);
-  UnlockAllocator();
-  UnlockThreadRegistry();
 }
 
 } // namespace __lsan

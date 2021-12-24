@@ -18,6 +18,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 
 #define GET_INSTRINFO_HEADER
+#define GET_INSTRINFO_OPERAND_ENUM
 #include "RISCVGenInstrInfo.inc"
 
 namespace llvm {
@@ -85,10 +86,10 @@ public:
                         const DebugLoc &dl,
                         int *BytesAdded = nullptr) const override;
 
-  unsigned insertIndirectBranch(MachineBasicBlock &MBB,
-                                MachineBasicBlock &NewDestBB,
-                                const DebugLoc &DL, int64_t BrOffset,
-                                RegScavenger *RS = nullptr) const override;
+  void insertIndirectBranch(MachineBasicBlock &MBB,
+                            MachineBasicBlock &NewDestBB,
+                            MachineBasicBlock &RestoreBB, const DebugLoc &DL,
+                            int64_t BrOffset, RegScavenger *RS) const override;
 
   unsigned removeBranch(MachineBasicBlock &MBB,
                         int *BytesRemoved = nullptr) const override;
@@ -160,8 +161,8 @@ public:
                                        unsigned OpIdx1,
                                        unsigned OpIdx2) const override;
 
-  MachineInstr *convertToThreeAddress(MachineInstr &MI,
-                                      LiveVariables *LV) const override;
+  MachineInstr *convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
+                                      LiveIntervals *LIS) const override;
 
   Register getVLENFactoredAmount(
       MachineFunction &MF, MachineBasicBlock &MBB,
@@ -181,6 +182,10 @@ protected:
 };
 
 namespace RISCV {
+
+// Implemented in RISCVGenInstrInfo.inc
+int16_t getNamedOperandIdx(uint16_t Opcode, uint16_t NamedIndex);
+
 // Special immediate for AVL operand of V pseudo instructions to indicate VLMax.
 static constexpr int64_t VLMaxSentinel = -1LL;
 } // namespace RISCV

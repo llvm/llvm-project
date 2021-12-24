@@ -1,5 +1,6 @@
 executable("llvm-reduce") {
   deps = [
+    "//llvm/lib/CodeGen/MIRParser",
     "//llvm/lib/IR",
     "//llvm/lib/IRReader",
     "//llvm/lib/Support",
@@ -10,6 +11,7 @@ executable("llvm-reduce") {
   include_dirs = [ "." ]
   sources = [
     "DeltaManager.cpp",
+    "ReducerWorkItem.cpp",
     "TestRunner.cpp",
     "deltas/Delta.cpp",
     "deltas/ReduceAliases.cpp",
@@ -18,14 +20,17 @@ executable("llvm-reduce") {
     "deltas/ReduceBasicBlocks.cpp",
     "deltas/ReduceFunctionBodies.cpp",
     "deltas/ReduceFunctions.cpp",
+    "deltas/ReduceGlobalObjects.cpp",
     "deltas/ReduceGlobalValues.cpp",
     "deltas/ReduceGlobalVarInitializers.cpp",
     "deltas/ReduceGlobalVars.cpp",
     "deltas/ReduceInstructions.cpp",
+    "deltas/ReduceInstructionsMIR.cpp",
     "deltas/ReduceMetadata.cpp",
     "deltas/ReduceModuleData.cpp",
     "deltas/ReduceOperandBundles.cpp",
     "deltas/ReduceOperands.cpp",
+    "deltas/ReduceOperandsSkip.cpp",
     "deltas/ReduceOperandsToArgs.cpp",
     "deltas/ReduceSpecialGlobals.cpp",
     "llvm-reduce.cpp",

@@ -163,7 +163,7 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
       // If so, erase it.
       if (isTriviallyDead(MI, MRI)) {
         LLVM_DEBUG(dbgs() << "Is dead; erasing.\n");
-        MI.eraseFromParentAndMarkDBGValuesForRemoval();
+        MI.eraseFromParent();
         continue;
       }
 
@@ -255,8 +255,12 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
     MachineInstr *MI = nullptr;
     if (!MRI.def_empty(VReg))
       MI = &*MRI.def_instr_begin(VReg);
-    else if (!MRI.use_empty(VReg))
+    else if (!MRI.use_empty(VReg)) {
       MI = &*MRI.use_instr_begin(VReg);
+      // Debug value instruction is permitted to use undefined vregs.
+      if (MI->isDebugValue())
+        continue;
+    }
     if (!MI)
       continue;
 

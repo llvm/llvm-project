@@ -3,10 +3,18 @@
 
 ; RUN: llc -verify-machineinstrs -O0 -mcpu=pwr9 \
 ; RUN:   -mtriple=powerpc64le-unknown-unknown < %s \
-; RUN:   | FileCheck %s --check-prefix=CHECK-P9 --implicit-check-not xxswapd
+; RUN:   | FileCheck %s --check-prefix=CHECK-P9UP --implicit-check-not xxswapd
 
 ; RUN: llc -verify-machineinstrs -O0 -mcpu=pwr9 -mattr=-power9-vector \
 ; RUN:   -mtriple=powerpc64le-unknown-unknown < %s | FileCheck %s
+
+; RUN: llc -verify-machineinstrs -O0 -mcpu=pwr10 \
+; RUN:   -mtriple=powerpc64le-unknown-unknown < %s \
+; RUN:   | FileCheck %s --check-prefix=CHECK-P9UP
+
+; RUN: llc -verify-machineinstrs -O0 -mcpu=pwr10 \
+; RUN:   -mtriple=powerpc64-unknown-unknown < %s \
+; RUN:   | FileCheck %s --check-prefix=CHECK-P9UP
 
 ; Function Attrs: nounwind
 define void @test() {
@@ -26,8 +34,8 @@ entry:
 ; CHECK: lwa [[REG0:[0-9]+]],
 ; CHECK: lxvd2x [[REG1:[0-9]+]], {{[0-9]+}}, [[REG0]]
 ; CHECK: xxswapd [[REG1]], [[REG1]]
-; CHECK-P9: lwa [[REG0:[0-9]+]],
-; CHECK-P9: lxvx [[REG1:[0-9]+]], {{[0-9]+}}, [[REG0]]
+; CHECK-P9UP: lwa [[REG0:[0-9]+]],
+; CHECK-P9UP: lxvx [[REG1:[0-9]+]], {{[0-9]+}}, [[REG0]]
   store <4 x i32> %4, <4 x i32>* %j, align 16
   ret void
 }

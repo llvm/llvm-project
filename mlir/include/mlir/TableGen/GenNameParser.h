@@ -26,6 +26,6 @@ struct GenNameParser : public llvm::cl::parser<const GenInfo *> {
   void printOptionInfo(const llvm::cl::Option &O,
                        size_t GlobalWidth) const override;
 };
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_TABLEGEN_GENNAMEPARSER_H_

@@ -71,3 +71,45 @@ for.end:
   %tmp1 = phi i32 [ %r.next, %for.body ]
   ret i32 %tmp1
 }
+
+define i32 @pr51794_signed_negative(i16 %iv.start, i32 %xor.start) {
+; CHECK-LABEL: define {{.*}} @pr51794_signed_negative(
+; CHECK-NOT: vector.body:
+;
+entry:
+  br label %loop
+
+loop:
+  %xor.red = phi i32 [ %xor.start, %entry ], [ %xor, %loop ]
+  %iv = phi i16 [ %iv.start, %entry ], [ %iv.next, %loop ]
+  %iv.next = add i16 %iv, -1
+  %and = and i32 %xor.red, 1
+  %xor = xor i32 %and, -1
+  %tobool.not = icmp eq i16 %iv.next, 0
+  br i1 %tobool.not, label %exit, label %loop
+
+exit:
+  %xor.lcssa = phi i32 [ %xor, %loop ]
+  ret i32 %xor.lcssa
+}
+
+define i32 @pr52485_signed_negative(i32 %xor.start) {
+; CHECK-LABEL: define {{.*}} @pr52485_signed_negative(
+; CHECK-NOT: vector.body:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ -23, %entry ], [ %iv.next, %loop ]
+  %xor.red = phi i32 [ %xor.start, %entry ], [ %xor, %loop ]
+  %and = and i32 %xor.red, 255
+  %xor = xor i32 %and, -9
+  %iv.next = add nuw nsw i32 %iv, 2
+  %cmp.not = icmp eq i32 %iv.next, -15
+  br i1 %cmp.not, label %exit, label %loop
+
+exit:
+  %xor.lcssa = phi i32 [ %xor, %loop ]
+  ret i32 %xor.lcssa
+}

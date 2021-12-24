@@ -442,7 +442,7 @@ And for a MUCH fuller discussion of the whole state machine, see:
 https://github.com/llvm/llvm-project/blob/main/lldb/include/lldb/Target/ThreadPlan.h
 
 If you are reading those comments it is useful to know that scripted thread
-plans are set to be "MasterPlans", and not "OkayToDiscard".
+plans are set to be "ControllingPlans", and not "OkayToDiscard".
 
 To implement a scripted step, you define a python class that has the following
 methods:

@@ -25,7 +25,29 @@ namespace llvm {
 namespace sys {
 namespace path {
 
-enum class Style { windows, posix, native };
+enum class Style {
+  native,
+  posix,
+  windows_slash,
+  windows_backslash,
+  windows = windows_backslash, // deprecated
+};
+
+/// Check if \p S uses POSIX path rules.
+constexpr bool is_style_posix(Style S) {
+  if (S == Style::posix)
+    return true;
+  if (S != Style::native)
+    return false;
+#if defined(_WIN32)
+  return false;
+#else
+  return true;
+#endif
+}
+
+/// Check if \p S uses Windows path rules.
+constexpr bool is_style_windows(Style S) { return !is_style_posix(S); }
 
 /// @name Lexical Component Iterator
 /// @{
@@ -240,6 +262,17 @@ void native(const Twine &path, SmallVectorImpl<char> &result,
 ///
 /// @param path A path that is transformed to native format.
 void native(SmallVectorImpl<char> &path, Style style = Style::native);
+
+/// For Windows path styles, convert path to use the preferred path separators.
+/// For other styles, do nothing.
+///
+/// @param path A path that is transformed to preferred format.
+inline void make_preferred(SmallVectorImpl<char> &path,
+                           Style style = Style::native) {
+  if (!is_style_windows(style))
+    return;
+  native(path, style);
+}
 
 /// Replaces backslashes with slashes if Windows.
 ///

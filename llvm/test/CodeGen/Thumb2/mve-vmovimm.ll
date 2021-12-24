@@ -507,3 +507,41 @@ entry:
   %s = select <4 x i1> %l699, <4 x i32> %a, <4 x i32> %b
   ret <4 x i32> %s
 }
+
+define arm_aapcs_vfpcc <2 x i64> @v2i1and_vmov(<2 x i64> %a, <2 x i64> %b, i32 %c) {
+; CHECK-LABEL: v2i1and_vmov:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    mov.w r1, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #0, #8
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    vpsel q0, q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %c1 = icmp eq i32 %c, zeroinitializer
+  %broadcast.splatinsert1967 = insertelement <2 x i1> undef, i1 %c1, i32 0
+  %broadcast.splat1968 = shufflevector <2 x i1> %broadcast.splatinsert1967, <2 x i1> undef, <2 x i32> zeroinitializer
+  %l699 = and <2 x i1> %broadcast.splat1968, <i1 true, i1 false>
+  %s = select <2 x i1> %l699, <2 x i64> %a, <2 x i64> %b
+  ret <2 x i64> %s
+}
+
+define arm_aapcs_vfpcc <2 x i64> @v2i1or_vmov(<2 x i64> %a, <2 x i64> %b, i32 %c) {
+; CHECK-LABEL: v2i1or_vmov:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    mov.w r1, #255
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #8, #8
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    vpsel q0, q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %c1 = icmp eq i32 %c, zeroinitializer
+  %broadcast.splatinsert1967 = insertelement <2 x i1> undef, i1 %c1, i32 0
+  %broadcast.splat1968 = shufflevector <2 x i1> %broadcast.splatinsert1967, <2 x i1> undef, <2 x i32> zeroinitializer
+  %l699 = or <2 x i1> %broadcast.splat1968, <i1 true, i1 false>
+  %s = select <2 x i1> %l699, <2 x i64> %a, <2 x i64> %b
+  ret <2 x i64> %s
+}

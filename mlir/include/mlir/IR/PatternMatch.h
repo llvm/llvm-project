@@ -355,10 +355,12 @@ template <typename SourceOp>
 struct OpRewritePattern
     : public detail::OpOrInterfaceRewritePatternBase<SourceOp> {
   /// Patterns must specify the root operation name they match against, and can
-  /// also specify the benefit of the pattern matching.
-  OpRewritePattern(MLIRContext *context, PatternBenefit benefit = 1)
+  /// also specify the benefit of the pattern matching and a list of generated
+  /// ops.
+  OpRewritePattern(MLIRContext *context, PatternBenefit benefit = 1,
+                   ArrayRef<StringRef> generatedNames = {})
       : detail::OpOrInterfaceRewritePatternBase<SourceOp>(
-            SourceOp::getOperationName(), benefit, context) {}
+            SourceOp::getOperationName(), benefit, context, generatedNames) {}
 };
 
 /// OpInterfaceRewritePattern is a wrapper around RewritePattern that allows for
@@ -446,6 +448,9 @@ public:
   /// Print this value to the provided output stream.
   void print(raw_ostream &os) const;
 
+  /// Print the specified value kind to an output stream.
+  static void print(raw_ostream &os, Kind kind);
+
 private:
   /// Find the index of a given type in a range of other types.
   template <typename...>
@@ -488,6 +493,11 @@ private:
 
 inline raw_ostream &operator<<(raw_ostream &os, PDLValue value) {
   value.print(os);
+  return os;
+}
+
+inline raw_ostream &operator<<(raw_ostream &os, PDLValue::Kind kind) {
+  PDLValue::print(os, kind);
   return os;
 }
 
@@ -1079,6 +1089,6 @@ private:
   PDLPatternModule pdlPatterns;
 };
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_PATTERN_MATCH_H

@@ -357,7 +357,7 @@ What are the expectations around a revert?
 * It is customary to respond to the original commit email mentioning the
   revert.  This serves as both a notice to the original author that their
   patch was reverted, and helps others following llvm-commits track context.
-* Ideally, you should have a publicly reproducible test case ready to share.  
+* Ideally, you should have a publicly reproducible test case ready to share.
   Where possible, we encourage sharing of test cases in commit threads, or
   in PRs.  We encourage the reverter to minimize the test case and to prune
   dependencies where practical.  This even applies when reverting your own
@@ -648,17 +648,17 @@ Here's a `sample RFC
 Working with the CI system
 --------------------------
 
-The main continuous integration (CI) tool for the LLVM project is the 
-`LLVM Buildbot <https://lab.llvm.org/buildbot/>`_. It uses different *builders* 
-to cover a wide variety of sub-projects and configurations. The builds are 
-executed on different *workers*. Builders and workers are configured and 
+The main continuous integration (CI) tool for the LLVM project is the
+`LLVM Buildbot <https://lab.llvm.org/buildbot/>`_. It uses different *builders*
+to cover a wide variety of sub-projects and configurations. The builds are
+executed on different *workers*. Builders and workers are configured and
 provided by community members.
 
-The Buildbot tracks the commits on the main branch and the release branches. 
+The Buildbot tracks the commits on the main branch and the release branches.
 This means that patches are built and tested after they are merged to the these
 branches (aka post-merge testing). This also means it's okay to break the build
 occasionally, as it's unreasonable to expect contributors to build and test
-their patch with every possible configuration. 
+their patch with every possible configuration.
 
 *If your commit broke the build:*
 
@@ -669,7 +669,7 @@ their patch with every possible configuration.
 
 *If someone else broke the build and this blocks your work*
 
-* Comment on the code review in `Phabricator <https://reviews.llvm.org/>`_ 
+* Comment on the code review in `Phabricator <https://reviews.llvm.org/>`_
   (if available) or email the author, explain the problem and how this impacts
   you. Add a link to the broken build and the error message so folks can
   understand the problem.
@@ -678,14 +678,14 @@ their patch with every possible configuration.
 *If a build/worker is permanently broken*
 
 * 1st step: contact the owner of the worker. You can find the name and contact
-  information for the *Admin* of worker on the page of the build in the 
+  information for the *Admin* of worker on the page of the build in the
   *Worker* tab:
 
   .. image:: buildbot_worker_contact.png
 
-* 2nd step: If the owner does not respond or fix the worker, please escalate 
+* 2nd step: If the owner does not respond or fix the worker, please escalate
   to Galina Kostanova, the maintainer of the BuildBot master.
-* 3rd step: If Galina could not help you, please escalate to the 
+* 3rd step: If Galina could not help you, please escalate to the
   `Infrastructure Working Group <mailto:iwg@llvm.org>`_.
 
 .. _new-llvm-components:
@@ -919,6 +919,13 @@ the code.  The code is licensed under permissive `open source licensing terms`_,
 namely the Apache-2.0 with LLVM-exception license, which includes a copyright
 and `patent license`_.  When you contribute code to the LLVM project, you
 license it under these terms.
+
+In certain circumstances, code licensed under other licenses can be added
+to the codebase.  However, this may only be done with approval of the LLVM
+Foundation Board of Directors, and contributors should plan for the approval
+process to take at least 4-6 weeks.  If you would like to contribute code
+under a different license, please create a Phabricator review with the code
+you want to contribute and email board@llvm.org requesting a review.
 
 If you have questions or comments about these topics, please contact the
 `LLVM Developer's Mailing List <mailto:llvm-dev@lists.llvm.org>`_.  However,

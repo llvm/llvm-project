@@ -66,13 +66,13 @@ entry:
 ; GFX6: s_mov_b32 s2, -1
 ; GFX6: v_mov_b32_e32 v0, s4
 ; GFX6: buffer_store_dword v0, off, s[0:3], 0
-; GFX8: s_mov_b32 s7, 0xf000
-; GFX8: s_mov_b32 s6, -1
+; GFX8: s_mov_b32 s3, 0xf000
+; GFX8: s_mov_b32 s2, -1
 ; GFX8: s_waitcnt lgkmcnt(0)
-; GFX8: s_lshr_b32 s0, s0, 16
-; GFX8: s_or_b32 s0, s0, 0x50000
-; GFX8: v_mov_b32_e32 v0, s0
-; GFX8: buffer_store_dword v0, off, s[4:7], 0
+; GFX8: s_lshr_b32 s4, s4, 16
+; GFX8: s_or_b32 s4, s4, 0x50000
+; GFX8: v_mov_b32_e32 v0, s4
+; GFX8: buffer_store_dword v0, off, s[0:3], 0
 ; GFX10: v_mov_b32_e32 v0, 0
 ; GFX10: s_waitcnt lgkmcnt(0)
 ; GFX10: s_lshr_b32 s2, s2, 16

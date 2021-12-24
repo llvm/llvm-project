@@ -9,8 +9,8 @@
 #ifndef LLD_MACHO_SYMBOLS_H
 #define LLD_MACHO_SYMBOLS_H
 
+#include "Config.h"
 #include "InputFiles.h"
-#include "InputSection.h"
 #include "Target.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Strings.h"
@@ -20,7 +20,6 @@
 namespace lld {
 namespace macho {
 
-class InputSection;
 class MachHeaderSection;
 
 struct StringRefZ {
@@ -51,7 +50,7 @@ public:
     return {nameData, nameSize};
   }
 
-  bool isLive() const;
+  bool isLive() const { return used; }
 
   virtual uint64_t getVA() const { return 0; }
 
@@ -93,14 +92,14 @@ public:
 
 protected:
   Symbol(Kind k, StringRefZ name, InputFile *file)
-      : symbolKind(k), nameData(name.data), nameSize(name.size), file(file),
+      : symbolKind(k), nameData(name.data), file(file), nameSize(name.size),
         isUsedInRegularObj(!file || isa<ObjFile>(file)),
         used(!config->deadStrip) {}
 
   Kind symbolKind;
   const char *nameData;
-  mutable uint32_t nameSize;
   InputFile *file;
+  mutable uint32_t nameSize;
 
 public:
   // True if this symbol was referenced by a regular (non-bitcode) object.
@@ -114,38 +113,28 @@ class Defined : public Symbol {
 public:
   Defined(StringRefZ name, InputFile *file, InputSection *isec, uint64_t value,
           uint64_t size, bool isWeakDef, bool isExternal, bool isPrivateExtern,
-          bool isThumb, bool isReferencedDynamically, bool noDeadStrip)
-      : Symbol(DefinedKind, name, file), isec(isec), value(value), size(size),
-        overridesWeakDef(false), privateExtern(isPrivateExtern),
-        includeInSymtab(true), thumb(isThumb),
-        referencedDynamically(isReferencedDynamically),
-        noDeadStrip(noDeadStrip), weakDef(isWeakDef), external(isExternal) {
-    if (auto concatIsec = dyn_cast_or_null<ConcatInputSection>(isec))
-      concatIsec->numRefs++;
-  }
+          bool isThumb, bool isReferencedDynamically, bool noDeadStrip,
+          bool canOverrideWeakDef = false, bool isWeakDefCanBeHidden = false);
 
   bool isWeakDef() const override { return weakDef; }
   bool isExternalWeakDef() const {
     return isWeakDef() && isExternal() && !privateExtern;
   }
-  bool isTlv() const override {
-    return !isAbsolute() && isThreadLocalVariables(isec->getFlags());
-  }
+  bool isTlv() const override;
 
   bool isExternal() const { return external; }
   bool isAbsolute() const { return isec == nullptr; }
 
   uint64_t getVA() const override;
 
+  // Ensure this symbol's pointers to InputSections point to their canonical
+  // copies.
+  void canonicalize();
+
   static bool classof(const Symbol *s) { return s->kind() == DefinedKind; }
 
-  InputSection *isec;
-  // Contains the offset from the containing subsection. Note that this is
-  // different from nlist::n_value, which is the absolute address of the symbol.
-  uint64_t value;
-  // size is only calculated for regular (non-bitcode) symbols.
-  uint64_t size;
-
+  // Place the bitfields first so that they can get placed in the tail padding
+  // of the parent class, on platforms which support it.
   bool overridesWeakDef : 1;
   // Whether this symbol should appear in the output binary's export trie.
   bool privateExtern : 1;
@@ -166,9 +155,20 @@ public:
   // to the output.
   bool noDeadStrip : 1;
 
+  bool weakDefCanBeHidden : 1;
+
 private:
   const bool weakDef : 1;
   const bool external : 1;
+
+public:
+  InputSection *isec;
+  // Contains the offset from the containing subsection. Note that this is
+  // different from nlist::n_value, which is the absolute address of the symbol.
+  uint64_t value;
+  // size is only calculated for regular (non-bitcode) symbols.
+  uint64_t size;
+  ConcatInputSection *unwindEntry = nullptr;
 };
 
 // This enum does double-duty: as a symbol property, it indicates whether & how
@@ -236,7 +236,12 @@ public:
 
   uint64_t getVA() const override;
   bool isWeakDef() const override { return weakDef; }
-  bool isWeakRef() const override { return refState == RefState::Weak; }
+
+  // Symbols from weak libraries/frameworks are also weakly-referenced.
+  bool isWeakRef() const override {
+    return refState == RefState::Weak ||
+           (file && getFile()->umbrella->forceWeakImport);
+  }
   bool isReferenced() const { return refState != RefState::Unreferenced; }
   bool isTlv() const override { return tlv; }
   bool isDynamicLookup() const { return file == nullptr; }

@@ -23,7 +23,7 @@ struct Statistic {
   const char *name, *desc;
   unsigned value;
 };
-} // end anonymous namespace
+} // namespace
 
 /// Utility to print a pass entry in the statistics output.
 static void printPassEntry(raw_ostream &os, unsigned indent, StringRef pass,
@@ -92,7 +92,7 @@ static void printResultsAsList(raw_ostream &os, OpPassManager &pm) {
   // Sort the statistics by pass name and then by record name.
   std::vector<std::pair<StringRef, std::vector<Statistic>>> passAndStatistics;
   for (auto &passIt : mergedStats)
-    passAndStatistics.push_back({passIt.first(), std::move(passIt.second)});
+    passAndStatistics.emplace_back(passIt.first(), std::move(passIt.second));
   llvm::sort(passAndStatistics, [](const auto &lhs, const auto &rhs) {
     return lhs.first.compare(rhs.first) < 0;
   });

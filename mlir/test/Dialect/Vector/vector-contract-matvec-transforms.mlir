@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-vector-contraction-conversion=vector-outerproduct=1 | FileCheck %s
+// RUN: mlir-opt %s -test-vector-contraction-lowering=vector-outerproduct=1 | FileCheck %s
 
 #matvec_accesses = [
   affine_map<(i, j) -> (i, j)>,

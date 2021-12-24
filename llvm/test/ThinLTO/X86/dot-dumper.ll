@@ -21,7 +21,7 @@
 ; PERMODULE-NEXT:    label = "";
 ; PERMODULE-NEXT:    node [style=filled,fillcolor=lightblue];
 ; PERMODULE-NEXT:    M0_[[MAIN_ALIAS:[0-9]+]] [style="dotted,filled",shape="box",label="main_alias",fillcolor="red"]; // alias, dead
-; PERMODULE-NEXT:    M0_[[MAIN:[0-9]+]] [shape="record",label="main|extern (inst: 4, ffl: 000000000)}",fillcolor="red"]; // function, dead
+; PERMODULE-NEXT:    M0_[[MAIN:[0-9]+]] [shape="record",label="main|extern (inst: 4, ffl: 0000000000)}",fillcolor="red"]; // function, dead
 ; PERMODULE-NEXT:    // Edges:
 ; PERMODULE-NEXT:    M0_[[MAIN_ALIAS]] -> M0_[[MAIN]] [style=dotted]; // alias
 ; PERMODULE-NEXT:  }
@@ -40,7 +40,7 @@
 ; COMBINED-NEXT:    label = "dot-dumper{{.*}}1.bc";
 ; COMBINED-NEXT:    node [style=filled,fillcolor=lightblue];
 ; COMBINED-NEXT:    M0_[[MAIN_ALIAS:[0-9]+]] [style="dotted,filled",shape="box",label="main_alias",fillcolor="red"]; // alias, dead
-; COMBINED-NEXT:    M0_[[MAIN:[0-9]+]] [shape="record",label="main|extern (inst: 4, ffl: 000000000)}"]; // function, preserved
+; COMBINED-NEXT:    M0_[[MAIN:[0-9]+]] [shape="record",label="main|extern (inst: 4, ffl: 0000000000)}"]; // function, preserved
 ; COMBINED-NEXT:    // Edges:
 ; COMBINED-NEXT:    M0_[[MAIN_ALIAS]] -> M0_[[MAIN]] [style=dotted]; // alias
 ; COMBINED-NEXT:  }
@@ -50,10 +50,10 @@
 ; COMBINED-NEXT:    color = lightgrey;
 ; COMBINED-NEXT:    label = "dot-dumper{{.*}}2.bc";
 ; COMBINED-NEXT:    node [style=filled,fillcolor=lightblue];
-; COMBINED-NEXT:    M1_[[FOO:[0-9]+]] [shape="record",label="foo|extern (inst: 4, ffl: 000010000)}"]; // function
+; COMBINED-NEXT:    M1_[[FOO:[0-9]+]] [shape="record",label="foo|extern (inst: 4, ffl: 0000100000)}"]; // function
 ; COMBINED-NEXT:    M1_[[A:[0-9]+]] [shape="Mrecord",label="A|extern}"]; // variable, immutable
 ; COMBINED-NEXT:    M1_[[B:[0-9]+]] [shape="Mrecord",label="B|extern}"]; // variable, immutable, constant
-; COMBINED-NEXT:    M1_{{[0-9]+}} [shape="record",label="bar|extern (inst: 1, ffl: 000000000)}",fillcolor="red"]; // function, dead
+; COMBINED-NEXT:    M1_{{[0-9]+}} [shape="record",label="bar|extern (inst: 1, ffl: 0000000000)}",fillcolor="red"]; // function, dead
 ; COMBINED-NEXT:    // Edges:
 ; COMBINED-NEXT:    M1_[[FOO]] -> M1_[[B]] [style=dashed,color=forestgreen]; // const-ref
 ; COMBINED-NEXT:    M1_[[FOO]] -> M1_[[A]] [style=dashed,color=forestgreen]; // const-ref

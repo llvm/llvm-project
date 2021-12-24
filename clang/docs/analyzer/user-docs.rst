@@ -7,3 +7,4 @@ Contents:
    :maxdepth: 2
 
    user-docs/CrossTranslationUnit
+   user-docs/TaintAnalysisConfiguration

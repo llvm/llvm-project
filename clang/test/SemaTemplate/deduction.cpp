@@ -152,6 +152,16 @@ namespace test3 {
   };
 }
 
+namespace test4 {
+
+template <class> struct a { using b = const float; };
+template <class c> using d = typename a<c>::b;
+
+template <class c> void e(d<c> *, c) {}
+template void e(const float *, int);
+
+} // namespace test4
+
 // Verify that we can deduce enum-typed arguments correctly.
 namespace test14 {
   enum E { E0, E1 };

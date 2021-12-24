@@ -164,7 +164,7 @@ void mlir::function_like_impl::insertFunctionArguments(
   // Update the function type and any entry block arguments.
   op->setAttr(getTypeAttrName(), TypeAttr::get(newType));
   for (unsigned i = 0, e = argIndices.size(); i < e; ++i)
-    entry.insertArgument(argIndices[i], argTypes[i],
+    entry.insertArgument(argIndices[i] + i, argTypes[i],
                          argLocs.empty() ? Optional<Location>{} : argLocs[i]);
 }
 

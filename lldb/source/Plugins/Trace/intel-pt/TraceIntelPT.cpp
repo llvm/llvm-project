@@ -49,11 +49,6 @@ void TraceIntelPT::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstanceForSessionFile);
 }
 
-ConstString TraceIntelPT::GetPluginNameStatic() {
-  static ConstString g_name("intel-pt");
-  return g_name;
-}
-
 StringRef TraceIntelPT::GetSchema() {
   return TraceIntelPTSessionFileParser::GetSchema();
 }

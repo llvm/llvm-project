@@ -103,8 +103,9 @@ velocity, libc++ drops support for older compilers as newer ones are released.
 ============ =============== ========================== =====================
 Compiler     Versions        Restrictions               Support policy
 ============ =============== ========================== =====================
-Clang        11, 12                                     latest two stable releases per `LLVM's release page <https://releases.llvm.org>`_
+Clang        12, 13                                     latest two stable releases per `LLVM's release page <https://releases.llvm.org>`_
 AppleClang   12                                         latest stable release per `Xcode's release page <https://developer.apple.com/documentation/xcode-release-notes>`_
+Open XL      17.1 (AIX)                                 latest stable release per `Open XL's documentation page <https://www.ibm.com/docs/en/openxl-c-and-cpp-aix>`_
 GCC          11              In C++11 or later only     latest stable release per `GCC's release page <https://gcc.gnu.org/releases.html>`_
 ============ =============== ========================== =====================
 
@@ -116,7 +117,8 @@ Target platform Target architecture       Notes
 macOS 10.9+     i386, x86_64, arm64       Building the shared library itself requires targetting macOS 10.11+
 FreeBSD 10+     i386, x86_64, arm
 Linux           i386, x86_64, arm, arm64
-Windows         x86_64
+Windows         x86_64                    Both MSVC and MinGW style environments
+AIX             powerpc, powerpc64
 =============== ========================= ============================
 
 Generally speaking, libc++ should work on any platform that provides a fairly complete
@@ -175,6 +177,7 @@ Design Documents
    DesignDocs/NoexceptPolicy
    DesignDocs/ThreadingSupportAPI
    DesignDocs/UniquePtrTrivialAbi
+   DesignDocs/UnspecifiedBehaviorRandomization
    DesignDocs/VisibilityMacros
 
 

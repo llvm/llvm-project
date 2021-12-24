@@ -372,13 +372,13 @@ define i8 @test_bitreverse_i8(i8 %a) {
 ; X64-NEXT:    shlb $2, %al
 ; X64-NEXT:    shrb $2, %dil
 ; X64-NEXT:    andb $51, %dil
-; X64-NEXT:    orb %al, %dil
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    andb $85, %al
-; X64-NEXT:    addb %al, %al
-; X64-NEXT:    shrb %dil
-; X64-NEXT:    andb $85, %dil
 ; X64-NEXT:    orb %dil, %al
+; X64-NEXT:    movl %eax, %ecx
+; X64-NEXT:    andb $85, %cl
+; X64-NEXT:    addb %cl, %cl
+; X64-NEXT:    shrb %al
+; X64-NEXT:    andb $85, %al
+; X64-NEXT:    orb %cl, %al
 ; X64-NEXT:    retq
 ;
 ; X86XOP-LABEL: test_bitreverse_i8:
@@ -422,13 +422,13 @@ define i4 @test_bitreverse_i4(i4 %a) {
 ; X64-NEXT:    shlb $2, %al
 ; X64-NEXT:    shrb $2, %dil
 ; X64-NEXT:    andb $51, %dil
-; X64-NEXT:    orb %al, %dil
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    andb $80, %al
-; X64-NEXT:    addb %al, %al
-; X64-NEXT:    shrb %dil
-; X64-NEXT:    andb $80, %dil
 ; X64-NEXT:    orb %dil, %al
+; X64-NEXT:    movl %eax, %ecx
+; X64-NEXT:    andb $80, %cl
+; X64-NEXT:    addb %cl, %cl
+; X64-NEXT:    shrb %al
+; X64-NEXT:    andb $80, %al
+; X64-NEXT:    orb %cl, %al
 ; X64-NEXT:    shrb $4, %al
 ; X64-NEXT:    retq
 ;

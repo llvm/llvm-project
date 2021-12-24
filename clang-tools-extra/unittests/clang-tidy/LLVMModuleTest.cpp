@@ -9,8 +9,6 @@ namespace clang {
 namespace tidy {
 namespace test {
 
-// FIXME: It seems this might be incompatible to dos path. Investigating.
-#if !defined(_WIN32)
 static std::string runHeaderGuardCheck(StringRef Code, const Twine &Filename,
                                        Optional<StringRef> ExpectedWarning) {
   std::vector<ClangTidyError> Errors;
@@ -220,8 +218,57 @@ TEST(LLVMHeaderGuardCheckTest, FixHeaderGuards) {
             runHeaderGuardCheck(
                 "", "/llvm-project/clang-tools-extra/clangd/foo.h",
                 StringRef("header is missing header guard")));
-}
+
+  // Substitution of characters should not result in a header guard starting
+  // with "_".
+  EXPECT_EQ("#ifndef BAR_H\n"
+            "#define BAR_H\n"
+            "\n"
+            "\n"
+            "#endif\n",
+            runHeaderGuardCheck("", "include/--bar.h",
+                                StringRef("header is missing header guard")));
+
+#ifdef WIN32
+  // Check interaction with Windows-style path separators (\).
+  EXPECT_EQ(
+      "#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_FOO_H\n"
+      "#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_FOO_H\n"
+      "\n"
+      "\n"
+      "#endif\n",
+      runHeaderGuardCheck("", "llvm-project\\clang-tools-extra\\clangd\\foo.h",
+                          StringRef("header is missing header guard")));
+
+  EXPECT_EQ("#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_FOO_H\n"
+            "#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_FOO_H\n"
+            "\n"
+            "\n"
+            "#endif\n",
+            runHeaderGuardCheck(
+                "", "C:\\llvm-project\\clang-tools-extra\\clangd\\foo.h",
+                StringRef("header is missing header guard")));
+
+  EXPECT_EQ("#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_FOO_H\n"
+            "#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_FOO_H\n"
+            "\n"
+            "\n"
+            "#endif\n",
+            runHeaderGuardCheck(
+                "",
+                "\\\\SMBShare\\llvm-project\\clang-tools-extra\\clangd\\foo.h",
+                StringRef("header is missing header guard")));
+
+  EXPECT_EQ("#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_FOO_H\n"
+            "#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_FOO_H\n"
+            "\n"
+            "\n"
+            "#endif\n",
+            runHeaderGuardCheck(
+                "", "\\\\?\\C:\\llvm-project\\clang-tools-extra\\clangd\\foo.h",
+                StringRef("header is missing header guard")));
 #endif
+}
 
 } // namespace test
 } // namespace tidy

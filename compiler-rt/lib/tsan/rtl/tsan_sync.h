@@ -16,8 +16,9 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_deadlock_detector_interface.h"
 #include "tsan_defs.h"
-#include "tsan_clock.h"
 #include "tsan_dense_alloc.h"
+#include "tsan_shadow.h"
+#include "tsan_vector_clock.h"
 
 namespace __tsan {
 
@@ -53,34 +54,18 @@ struct SyncVar {
 
   uptr addr;  // overwritten by DenseSlabAlloc freelist
   Mutex mtx;
-  u64 uid;  // Globally unique id.
   StackID creation_stack_id;
   Tid owner_tid;  // Set only by exclusive owners.
-  u64 last_lock;
+  FastState last_lock;
   int recursion;
   atomic_uint32_t flags;
   u32 next;  // in MetaMap
   DDMutex dd;
-  SyncClock read_clock;  // Used for rw mutexes only.
-  // The clock is placed last, so that it is situated on a different cache line
-  // with the mtx. This reduces contention for hot sync objects.
-  SyncClock clock;
+  VectorClock *read_clock;  // Used for rw mutexes only.
+  VectorClock *clock;
 
-  void Init(ThreadState *thr, uptr pc, uptr addr, u64 uid, bool save_stack);
-  void Reset(Processor *proc);
-
-  u64 GetId() const {
-    // 48 lsb is addr, then 14 bits is low part of uid, then 2 zero bits.
-    return GetLsb((u64)addr | (uid << 48), 60);
-  }
-  bool CheckId(u64 uid) const {
-    CHECK_EQ(uid, GetLsb(uid, 14));
-    return GetLsb(this->uid, 14) == uid;
-  }
-  static uptr SplitId(u64 id, u64 *uid) {
-    *uid = id >> 48;
-    return (uptr)GetLsb(id, 48);
-  }
+  void Init(ThreadState *thr, uptr pc, uptr addr, bool save_stack);
+  void Reset();
 
   bool IsFlagSet(u32 f) const {
     return atomic_load_relaxed(&flags) & f;
@@ -110,9 +95,20 @@ class MetaMap {
   MetaMap();
 
   void AllocBlock(ThreadState *thr, uptr pc, uptr p, uptr sz);
-  uptr FreeBlock(Processor *proc, uptr p);
-  bool FreeRange(Processor *proc, uptr p, uptr sz);
-  void ResetRange(Processor *proc, uptr p, uptr sz);
+
+  // FreeBlock resets all sync objects in the range if reset=true and must not
+  // run concurrently with ResetClocks which resets all sync objects
+  // w/o any synchronization (as part of DoReset).
+  // If we don't have a thread slot (very early/late in thread lifetime or
+  // Go/Java callbacks) or the slot is not locked, then reset must be set to
+  // false. In such case sync object clocks will be reset later (when it's
+  // reused or during the next ResetClocks).
+  uptr FreeBlock(Processor *proc, uptr p, bool reset);
+  bool FreeRange(Processor *proc, uptr p, uptr sz, bool reset);
+  void ResetRange(Processor *proc, uptr p, uptr sz, bool reset);
+  // Reset vector clocks of all sync objects.
+  // Must be called when no other threads access sync objects.
+  void ResetClocks();
   MBlock* GetBlock(uptr p);
 
   SyncVar *GetSyncOrCreate(ThreadState *thr, uptr pc, uptr addr,
@@ -142,7 +138,6 @@ class MetaMap {
   typedef DenseSlabAlloc<SyncVar, 1 << 20, 1 << 10, kFlagMask> SyncAlloc;
   BlockAlloc block_alloc_;
   SyncAlloc sync_alloc_;
-  atomic_uint64_t uid_gen_;
 
   SyncVar *GetSync(ThreadState *thr, uptr pc, uptr addr, bool create,
                    bool save_stack);

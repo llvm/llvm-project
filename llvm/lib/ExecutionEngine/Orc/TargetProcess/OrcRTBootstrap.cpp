@@ -22,31 +22,30 @@ namespace orc {
 namespace rt_bootstrap {
 
 template <typename WriteT, typename SPSWriteT>
-static llvm::orc::shared::detail::CWrapperFunctionResult
+static llvm::orc::shared::CWrapperFunctionResult
 writeUIntsWrapper(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<void(SPSSequence<SPSWriteT>)>::handle(
              ArgData, ArgSize,
              [](std::vector<WriteT> Ws) {
                for (auto &W : Ws)
-                 *jitTargetAddressToPointer<decltype(W.Value) *>(W.Address) =
-                     W.Value;
+                 *W.Addr.template toPtr<decltype(W.Value) *>() = W.Value;
              })
       .release();
 }
 
-static llvm::orc::shared::detail::CWrapperFunctionResult
+static llvm::orc::shared::CWrapperFunctionResult
 writeBuffersWrapper(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<void(SPSSequence<SPSMemoryAccessBufferWrite>)>::handle(
              ArgData, ArgSize,
              [](std::vector<tpctypes::BufferWrite> Ws) {
                for (auto &W : Ws)
-                 memcpy(jitTargetAddressToPointer<char *>(W.Address),
-                        W.Buffer.data(), W.Buffer.size());
+                 memcpy(W.Addr.template toPtr<char *>(), W.Buffer.data(),
+                        W.Buffer.size());
              })
       .release();
 }
 
-static llvm::orc::shared::detail::CWrapperFunctionResult
+static llvm::orc::shared::CWrapperFunctionResult
 runAsMainWrapper(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<rt::SPSRunAsMainSignature>::handle(
              ArgData, ArgSize,

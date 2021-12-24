@@ -1,5 +1,5 @@
 // -*- C++ -*-
-//===-------------------------- utility -----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -94,6 +94,8 @@ struct pair
     void swap(pair& p) noexcept(is_nothrow_swappable_v<T1> &&
                                 is_nothrow_swappable_v<T2>);                     // constexpr in C++20
 };
+
+template<class T1, class T2> pair(T1, T2) -> pair<T1, T2>;
 
 template <class T1, class T2> bool operator==(const pair<T1,T2>&, const pair<T1,T2>&); // constexpr in C++14
 template <class T1, class T2> bool operator!=(const pair<T1,T2>&, const pair<T1,T2>&); // constexpr in C++14, removed in C++20
@@ -216,6 +218,7 @@ template <class T>
 #include <__debug>
 #include <__tuple>
 #include <__utility/as_const.h>
+#include <__utility/auto_cast.h>
 #include <__utility/cmp.h>
 #include <__utility/declval.h>
 #include <__utility/exchange.h>
@@ -225,11 +228,17 @@ template <class T>
 #include <__utility/move.h>
 #include <__utility/pair.h>
 #include <__utility/piecewise_construct.h>
+#include <__utility/priority_tag.h>
 #include <__utility/rel_ops.h>
 #include <__utility/swap.h>
 #include <__utility/to_underlying.h>
+#include <__utility/transaction.h>
 #include <compare>
 #include <initializer_list>
 #include <version>
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#pragma GCC system_header
+#endif
 
 #endif // _LIBCPP_UTILITY

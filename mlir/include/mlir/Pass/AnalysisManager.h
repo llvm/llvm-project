@@ -94,7 +94,7 @@ std::enable_if_t<!llvm::is_detected<has_is_invalidated, AnalysisT>::value, bool>
 isInvalidated(AnalysisT &analysis, const PreservedAnalyses &pa) {
   return !pa.isPreserved<AnalysisT>();
 }
-} // end namespace analysis_impl
+} // namespace analysis_impl
 
 /// The abstract polymorphic base class representing an analysis.
 struct AnalysisConcept {
@@ -212,7 +212,7 @@ private:
     return static_cast<AnalysisModel<AnalysisT> &>(*it->second).analysis;
   }
 
-  /// Construct analysis using two arguments contructor (OpT, AnalysisManager)
+  /// Construct analysis using two arguments constructor (OpT, AnalysisManager)
   template <typename AnalysisT, typename OpT,
             std::enable_if_t<std::is_constructible<
                 AnalysisT, OpT, AnalysisManager &>::value> * = nullptr>
@@ -220,7 +220,7 @@ private:
     return std::make_unique<AnalysisModel<AnalysisT>>(op, am);
   }
 
-  /// Construct analysis using single argument contructor (OpT)
+  /// Construct analysis using single argument constructor (OpT)
   template <typename AnalysisT, typename OpT,
             std::enable_if_t<!std::is_constructible<
                 AnalysisT, OpT, AnalysisManager &>::value> * = nullptr>
@@ -401,6 +401,6 @@ private:
   detail::NestedAnalysisMap analyses;
 };
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_PASS_ANALYSISMANAGER_H

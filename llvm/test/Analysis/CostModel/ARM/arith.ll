@@ -7,6 +7,8 @@
 ; RUN: opt -cost-model -analyze -mtriple=armv8r-none-eabi < %s | FileCheck %s --check-prefix=CHECK-V8R
 ; RUN: opt -cost-model -cost-kind=code-size -analyze -mtriple=thumbv8.1m.main -mattr=+mve < %s | FileCheck %s --check-prefix=CHECK-MVE-SIZE
 
+target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+
 define void @i1() {
 ; CHECK-LABEL: 'i1'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c = add i1 undef, undef

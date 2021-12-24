@@ -20,6 +20,7 @@
 #include "mlir/Dialect/ArmNeon/ArmNeonDialect.h"
 #include "mlir/Dialect/ArmSVE/ArmSVEDialect.h"
 #include "mlir/Dialect/Async/IR/Async.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
@@ -27,7 +28,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
-#include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
@@ -41,6 +42,7 @@
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Tensor/IR/TensorInferTypeOpInterfaceImpl.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/Dialect/X86Vector/X86VectorDialect.h"
@@ -57,6 +59,7 @@ inline void registerAllDialects(DialectRegistry &registry) {
                   amx::AMXDialect,
                   arm_neon::ArmNeonDialect,
                   async::AsyncDialect,
+                  bufferization::BufferizationDialect,
                   complex::ComplexDialect,
                   DLTIDialect,
                   emitc::EmitCDialect,
@@ -82,6 +85,7 @@ inline void registerAllDialects(DialectRegistry &registry) {
                   tosa::TosaDialect,
                   x86vector::X86VectorDialect>();
   // clang-format on
+  tensor::registerInferTypeOpInterfaceExternalModels(registry);
 }
 
 /// Append all the MLIR dialects to the registry contained in the given context.

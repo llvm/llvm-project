@@ -121,32 +121,27 @@ namespace {
       }
 
       // Visit the Aliases.
-      for (Module::alias_iterator I = M.alias_begin(), E = M.alias_end();
-           I != E;) {
-        Module::alias_iterator CurI = I;
-        ++I;
-
-        bool Delete = deleteStuff == (bool)Named.count(&*CurI);
-        makeVisible(*CurI, Delete);
+      for (GlobalAlias &GA : llvm::make_early_inc_range(M.aliases())) {
+        bool Delete = deleteStuff == (bool)Named.count(&GA);
+        makeVisible(GA, Delete);
 
         if (Delete) {
-          Type *Ty =  CurI->getValueType();
+          Type *Ty = GA.getValueType();
 
-          CurI->removeFromParent();
+          GA.removeFromParent();
           llvm::Value *Declaration;
           if (FunctionType *FTy = dyn_cast<FunctionType>(Ty)) {
-            Declaration = Function::Create(FTy, GlobalValue::ExternalLinkage,
-                                           CurI->getAddressSpace(),
-                                           CurI->getName(), &M);
+            Declaration =
+                Function::Create(FTy, GlobalValue::ExternalLinkage,
+                                 GA.getAddressSpace(), GA.getName(), &M);
 
           } else {
             Declaration =
-              new GlobalVariable(M, Ty, false, GlobalValue::ExternalLinkage,
-                                 nullptr, CurI->getName());
-
+                new GlobalVariable(M, Ty, false, GlobalValue::ExternalLinkage,
+                                   nullptr, GA.getName());
           }
-          CurI->replaceAllUsesWith(Declaration);
-          delete &*CurI;
+          GA.replaceAllUsesWith(Declaration);
+          delete &GA;
         }
       }
 

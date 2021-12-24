@@ -201,19 +201,7 @@ static int analyzeLoadFromClobberingWrite(Type *LoadTy, Value *LoadPtr,
   // (issue a smaller load then merge the bits in) but this seems unlikely to be
   // valuable.
   if (StoreOffset > LoadOffset ||
-      StoreOffset + StoreSize < LoadOffset + LoadSize)
-    return -1;
-
-  // If the load and store are to the exact same address, they should have been
-  // a must alias.  AA must have gotten confused.
-  // FIXME: Study to see if/when this happens.  One case is forwarding a memset
-  // to a load from the base of the memset.
-
-  // If the load and store don't overlap at all, the store doesn't provide
-  // anything to the load.  In this case, they really don't alias at all, AA
-  // must have gotten confused.  The if statement above ensure the condition
-  // that StoreOffset <= LoadOffset.
-  if (StoreOffset + int64_t(StoreSize) <= LoadOffset)
+      StoreOffset + int64_t(StoreSize) < LoadOffset + int64_t(LoadSize))
     return -1;
 
   // Okay, we can do this transformation.  Return the number of bytes into the
@@ -403,19 +391,10 @@ int analyzeLoadFromClobberingMemInst(Type *LoadTy, Value *LoadPtr,
   if (Offset == -1)
     return Offset;
 
-  unsigned AS = Src->getType()->getPointerAddressSpace();
   // Otherwise, see if we can constant fold a load from the constant with the
   // offset applied as appropriate.
-  if (Offset) {
-    Src = ConstantExpr::getBitCast(Src,
-                                   Type::getInt8PtrTy(Src->getContext(), AS));
-    Constant *OffsetCst =
-        ConstantInt::get(Type::getInt64Ty(Src->getContext()), (unsigned)Offset);
-    Src = ConstantExpr::getGetElementPtr(Type::getInt8Ty(Src->getContext()),
-                                         Src, OffsetCst);
-  }
-  Src = ConstantExpr::getBitCast(Src, PointerType::get(LoadTy, AS));
-  if (ConstantFoldLoadFromConstPtr(Src, LoadTy, DL))
+  unsigned IndexSize = DL.getIndexTypeSizeInBits(Src->getType());
+  if (ConstantFoldLoadFromConstPtr(Src, LoadTy, APInt(IndexSize, Offset), DL))
     return Offset;
   return -1;
 }
@@ -584,19 +563,11 @@ T *getMemInstValueForLoadHelper(MemIntrinsic *SrcInst, unsigned Offset,
   MemTransferInst *MTI = cast<MemTransferInst>(SrcInst);
   Constant *Src = cast<Constant>(MTI->getSource());
 
-  unsigned AS = Src->getType()->getPointerAddressSpace();
   // Otherwise, see if we can constant fold a load from the constant with the
   // offset applied as appropriate.
-  if (Offset) {
-    Src = ConstantExpr::getBitCast(Src,
-                                   Type::getInt8PtrTy(Src->getContext(), AS));
-    Constant *OffsetCst =
-        ConstantInt::get(Type::getInt64Ty(Src->getContext()), (unsigned)Offset);
-    Src = ConstantExpr::getGetElementPtr(Type::getInt8Ty(Src->getContext()),
-                                         Src, OffsetCst);
-  }
-  Src = ConstantExpr::getBitCast(Src, PointerType::get(LoadTy, AS));
-  return ConstantFoldLoadFromConstPtr(Src, LoadTy, DL);
+  unsigned IndexSize = DL.getIndexTypeSizeInBits(Src->getType());
+  return ConstantFoldLoadFromConstPtr(
+      Src, LoadTy, APInt(IndexSize, Offset), DL);
 }
 
 /// This function is called when we have a

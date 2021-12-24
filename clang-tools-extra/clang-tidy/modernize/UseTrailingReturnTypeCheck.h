@@ -18,8 +18,8 @@ namespace modernize {
 
 struct ClassifiedToken {
   Token T;
-  bool isQualifier;
-  bool isSpecifier;
+  bool IsQualifier;
+  bool IsSpecifier;
 };
 
 /// Rewrites function signatures to use a trailing return type.

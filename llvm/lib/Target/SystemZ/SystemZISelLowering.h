@@ -126,6 +126,9 @@ enum NodeType : unsigned {
   // as for MVC.
   CLC,
 
+  // Use MVC to set a block of memory after storing the first byte.
+  MEMSET_MVC,
+
   // Use an MVST-based sequence to implement stpcpy().
   STPCPY,
 
@@ -709,7 +712,8 @@ private:
   MachineBasicBlock *emitAtomicCmpSwapW(MachineInstr &MI,
                                         MachineBasicBlock *BB) const;
   MachineBasicBlock *emitMemMemWrapper(MachineInstr &MI, MachineBasicBlock *BB,
-                                       unsigned Opcode) const;
+                                       unsigned Opcode,
+                                       bool IsMemset = false) const;
   MachineBasicBlock *emitStringWrapper(MachineInstr &MI, MachineBasicBlock *BB,
                                        unsigned Opcode) const;
   MachineBasicBlock *emitTransactionBegin(MachineInstr &MI,

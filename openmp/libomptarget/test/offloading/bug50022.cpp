@@ -1,7 +1,5 @@
 // RUN: %libomptarget-compilexx-and-run-generic
 
-// UNSUPPORTED: amdgcn-amd-amdhsa
-
 #include <cassert>
 #include <iostream>
 #include <stdexcept>

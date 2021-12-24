@@ -47,7 +47,7 @@ struct LoopInvariantCodeMotion
   void runOnFunction() override;
   void runOnAffineForOp(AffineForOp forOp);
 };
-} // end anonymous namespace
+} // namespace
 
 static bool
 checkInvarianceOfNestedIfOps(Operation *op, Value indVar, ValueRange iterArgs,

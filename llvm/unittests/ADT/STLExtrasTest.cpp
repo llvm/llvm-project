@@ -307,6 +307,13 @@ TEST(STLExtrasTest, ToVector) {
     EXPECT_EQ(I, Enumerated[I].index());
     EXPECT_EQ(v[I], Enumerated[I].value());
   }
+
+  auto EnumeratedImplicitSize = to_vector(enumerate(v));
+  ASSERT_EQ(3u, EnumeratedImplicitSize.size());
+  for (size_t I = 0; I < v.size(); ++I) {
+    EXPECT_EQ(I, EnumeratedImplicitSize[I].index());
+    EXPECT_EQ(v[I], EnumeratedImplicitSize[I].value());
+  }
 }
 
 TEST(STLExtrasTest, ConcatRange) {
@@ -896,6 +903,41 @@ TEST(STLExtrasTest, AllOfZip) {
   EXPECT_EQ(false, all_of_zip(v1, v_short, [](int, int) { return true; }));
   EXPECT_EQ(false,
             all_of_zip(v1, v2, v_short, [](int, int, int) { return true; }));
+}
+
+TEST(STLExtrasTest, TypesAreDistinct) {
+  EXPECT_TRUE((llvm::TypesAreDistinct<>::value));
+  EXPECT_TRUE((llvm::TypesAreDistinct<int>::value));
+  EXPECT_FALSE((llvm::TypesAreDistinct<int, int>::value));
+  EXPECT_TRUE((llvm::TypesAreDistinct<int, float>::value));
+  EXPECT_FALSE((llvm::TypesAreDistinct<int, float, int>::value));
+  EXPECT_TRUE((llvm::TypesAreDistinct<int, float, double>::value));
+  EXPECT_FALSE((llvm::TypesAreDistinct<int, float, double, float>::value));
+  EXPECT_TRUE((llvm::TypesAreDistinct<int, int *>::value));
+  EXPECT_TRUE((llvm::TypesAreDistinct<int, int &>::value));
+  EXPECT_TRUE((llvm::TypesAreDistinct<int, int &&>::value));
+  EXPECT_TRUE((llvm::TypesAreDistinct<int, const int>::value));
+}
+
+TEST(STLExtrasTest, FirstIndexOfType) {
+  EXPECT_EQ((llvm::FirstIndexOfType<int, int>::value), 0u);
+  EXPECT_EQ((llvm::FirstIndexOfType<int, int, int>::value), 0u);
+  EXPECT_EQ((llvm::FirstIndexOfType<int, float, int>::value), 1u);
+  EXPECT_EQ((llvm::FirstIndexOfType<int const *, float, int, int const *,
+                                    const int>::value),
+            2u);
+}
+
+TEST(STLExtrasTest, TypeAtIndex) {
+  EXPECT_TRUE((std::is_same<int, llvm::TypeAtIndex<0, int>>::value));
+  EXPECT_TRUE((std::is_same<int, llvm::TypeAtIndex<0, int, float>>::value));
+  EXPECT_TRUE((std::is_same<float, llvm::TypeAtIndex<1, int, float>>::value));
+  EXPECT_TRUE(
+      (std::is_same<float, llvm::TypeAtIndex<1, int, float, double>>::value));
+  EXPECT_TRUE(
+      (std::is_same<float, llvm::TypeAtIndex<1, int, float, double>>::value));
+  EXPECT_TRUE(
+      (std::is_same<double, llvm::TypeAtIndex<2, int, float, double>>::value));
 }
 
 } // namespace

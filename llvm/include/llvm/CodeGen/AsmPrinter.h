@@ -707,7 +707,7 @@ public:
   /// ${:comment}.  Targets can override this to add support for their own
   /// strange codes.
   virtual void PrintSpecial(const MachineInstr *MI, raw_ostream &OS,
-                            const char *Code) const;
+                            StringRef Code) const;
 
   /// Print the MachineOperand as a symbol. Targets with complex handling of
   /// symbol references should override the base implementation.
@@ -799,6 +799,11 @@ private:
 
   /// This method decides whether the specified basic block requires a label.
   bool shouldEmitLabelForBasicBlock(const MachineBasicBlock &MBB) const;
+
+protected:
+  virtual bool shouldEmitWeakSwiftAsyncExtendedFramePointerFlags() const {
+    return false;
+  }
 };
 
 } // end namespace llvm

@@ -606,7 +606,7 @@ def SBWriteResGroup2 : SchedWriteRes<[SBPort5]> {
 def: InstRW<[SBWriteResGroup2], (instrs FDECSTP, FINCSTP, FFREE, FFREEP, FNOP,
                                         LD_Frr, ST_Frr, ST_FPrr)>;
 def: InstRW<[SBWriteResGroup2], (instrs LOOP, LOOPE, LOOPNE)>; // FIXME: This seems wrong compared to other Intel CPUs.
-def: InstRW<[SBWriteResGroup2], (instrs RETQ)>;
+def: InstRW<[SBWriteResGroup2], (instrs RET64)>;
 
 def SBWriteResGroup4 : SchedWriteRes<[SBPort05]> {
   let Latency = 1;
@@ -623,7 +623,7 @@ def SBWriteResGroup5 : SchedWriteRes<[SBPort15]> {
 def: InstRW<[SBWriteResGroup5], (instrs MMX_PABSBrr,
                                         MMX_PABSDrr,
                                         MMX_PABSWrr,
-                                        MMX_PADDQirr,
+                                        MMX_PADDQrr,
                                         MMX_PALIGNRrri,
                                         MMX_PSIGNBrr,
                                         MMX_PSIGNDrr,
@@ -870,7 +870,7 @@ def SBWriteResGroup59 : SchedWriteRes<[SBPort23,SBPort15]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SBWriteResGroup59], (instrs MMX_PADDQirm)>;
+def: InstRW<[SBWriteResGroup59], (instrs MMX_PADDQrm)>;
 
 def SBWriteResGroup62 : SchedWriteRes<[SBPort5,SBPort23]> {
   let Latency = 7;

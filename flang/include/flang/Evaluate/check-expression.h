@@ -34,6 +34,15 @@ extern template bool IsConstantExpr(const Expr<SomeInteger> &);
 extern template bool IsConstantExpr(const Expr<SubscriptInteger> &);
 extern template bool IsConstantExpr(const StructureConstructor &);
 
+// Predicate: true when an expression is a constant expression (in the
+// strict sense of the Fortran standard) or a dummy argument with
+// INTENT(IN) and no VALUE.  This is useful for representing explicit
+// shapes of other dummy arguments.
+template <typename A> bool IsScopeInvariantExpr(const A &);
+extern template bool IsScopeInvariantExpr(const Expr<SomeType> &);
+extern template bool IsScopeInvariantExpr(const Expr<SomeInteger> &);
+extern template bool IsScopeInvariantExpr(const Expr<SubscriptInteger> &);
+
 // Predicate: true when an expression actually is a typed Constant<T>,
 // perhaps with parentheses and wrapping around it.  False for all typeless
 // expressions, including BOZ literals.

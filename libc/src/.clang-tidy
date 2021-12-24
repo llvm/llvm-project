@@ -1,4 +1,5 @@
-Checks: '-*,llvmlibc-*'
+InheritParentConfig: true
+Checks: '-*,llvmlibc-*,readability-identifier-naming'
 HeaderFilterRegex: '.*'
 WarningsAsErrors: 'llvmlibc-*'
 CheckOptions:

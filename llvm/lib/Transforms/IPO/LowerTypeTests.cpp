@@ -1561,17 +1561,28 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
               ArrayRef<Constant *>{ConstantInt::get(IntPtrTy, 0),
                                    ConstantInt::get(IntPtrTy, I)}),
           F->getType());
-      if (Functions[I]->isExported()) {
-        if (IsJumpTableCanonical) {
-          ExportSummary->cfiFunctionDefs().insert(std::string(F->getName()));
-        } else {
-          GlobalAlias *JtAlias = GlobalAlias::create(
-              F->getValueType(), 0, GlobalValue::ExternalLinkage,
-              F->getName() + ".cfi_jt", CombinedGlobalElemPtr, &M);
+
+      const bool IsExported = Functions[I]->isExported();
+      if (!IsJumpTableCanonical) {
+        GlobalValue::LinkageTypes LT = IsExported
+                                           ? GlobalValue::ExternalLinkage
+                                           : GlobalValue::InternalLinkage;
+        GlobalAlias *JtAlias = GlobalAlias::create(F->getValueType(), 0, LT,
+                                                   F->getName() + ".cfi_jt",
+                                                   CombinedGlobalElemPtr, &M);
+        if (IsExported)
           JtAlias->setVisibility(GlobalValue::HiddenVisibility);
-          ExportSummary->cfiFunctionDecls().insert(std::string(F->getName()));
-        }
+        else
+          appendToUsed(M, {JtAlias});
       }
+
+      if (IsExported) {
+        if (IsJumpTableCanonical)
+          ExportSummary->cfiFunctionDefs().insert(std::string(F->getName()));
+        else
+          ExportSummary->cfiFunctionDecls().insert(std::string(F->getName()));
+      }
+
       if (!IsJumpTableCanonical) {
         if (F->hasExternalWeakLinkage())
           replaceWeakDeclarationWithJumpTablePtr(F, CombinedGlobalElemPtr,
@@ -1762,13 +1773,10 @@ static bool isDirectCall(Use& U) {
 void LowerTypeTestsModule::replaceCfiUses(Function *Old, Value *New,
                                           bool IsJumpTableCanonical) {
   SmallSetVector<Constant *, 4> Constants;
-  auto UI = Old->use_begin(), E = Old->use_end();
-  for (; UI != E;) {
-    Use &U = *UI;
-    ++UI;
-
-    // Skip block addresses
-    if (isa<BlockAddress>(U.getUser()))
+  for (Use &U : llvm::make_early_inc_range(Old->uses())) {
+    // Skip block addresses and no_cfi values, which refer to the function
+    // body instead of the jump table.
+    if (isa<BlockAddress, NoCFIValue>(U.getUser()))
       continue;
 
     // Skip direct calls to externally defined or non-dso_local functions
@@ -1795,7 +1803,7 @@ void LowerTypeTestsModule::replaceCfiUses(Function *Old, Value *New,
 }
 
 void LowerTypeTestsModule::replaceDirectCalls(Value *Old, Value *New) {
-  Old->replaceUsesWithIf(New, [](Use &U) { return isDirectCall(U); });
+  Old->replaceUsesWithIf(New, isDirectCall);
 }
 
 bool LowerTypeTestsModule::lower() {
@@ -1803,12 +1811,11 @@ bool LowerTypeTestsModule::lower() {
       M.getFunction(Intrinsic::getName(Intrinsic::type_test));
 
   if (DropTypeTests && TypeTestFunc) {
-    for (auto UI = TypeTestFunc->use_begin(), UE = TypeTestFunc->use_end();
-         UI != UE;) {
-      auto *CI = cast<CallInst>((*UI++).getUser());
+    for (Use &U : llvm::make_early_inc_range(TypeTestFunc->uses())) {
+      auto *CI = cast<CallInst>(U.getUser());
       // Find and erase llvm.assume intrinsics for this llvm.type.test call.
-      for (auto CIU = CI->use_begin(), CIUE = CI->use_end(); CIU != CIUE;)
-        if (auto *Assume = dyn_cast<AssumeInst>((*CIU++).getUser()))
+      for (Use &CIU : llvm::make_early_inc_range(CI->uses()))
+        if (auto *Assume = dyn_cast<AssumeInst>(CIU.getUser()))
           Assume->eraseFromParent();
       // If the assume was merged with another assume, we might have a use on a
       // phi (which will feed the assume). Simply replace the use on the phi
@@ -1846,13 +1853,9 @@ bool LowerTypeTestsModule::lower() {
     return false;
 
   if (ImportSummary) {
-    if (TypeTestFunc) {
-      for (auto UI = TypeTestFunc->use_begin(), UE = TypeTestFunc->use_end();
-           UI != UE;) {
-        auto *CI = cast<CallInst>((*UI++).getUser());
-        importTypeTest(CI);
-      }
-    }
+    if (TypeTestFunc)
+      for (Use &U : llvm::make_early_inc_range(TypeTestFunc->uses()))
+        importTypeTest(cast<CallInst>(U.getUser()));
 
     if (ICallBranchFunnelFunc && !ICallBranchFunnelFunc->use_empty())
       report_fatal_error(

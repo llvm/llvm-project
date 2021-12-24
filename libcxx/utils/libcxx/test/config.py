@@ -159,15 +159,6 @@ class Configuration(object):
         self.lit_config.note("Running against the C++ Library at {}".format(self.cxx_runtime_root))
         self.lit_config.note("Linking against the ABI Library at {}".format(self.abi_library_root))
         self.lit_config.note("Running against the ABI Library at {}".format(self.abi_runtime_root))
-        sys.stderr.flush()  # Force flushing to avoid broken output on Windows
-
-    def get_test_format(self):
-        from libcxx.test.format import LibcxxTestFormat
-        return LibcxxTestFormat(
-            self.cxx,
-            self.use_clang_verify,
-            self.executor,
-            exec_env=self.exec_env)
 
     def configure_cxx(self):
         # Gather various compiler parameters.

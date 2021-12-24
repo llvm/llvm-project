@@ -11,6 +11,7 @@
 
 #include <__config>
 #include <__algorithm/comp.h>
+#include <__algorithm/comp_ref_type.h>
 #include <__algorithm/is_heap_until.h>
 #include <__iterator/iterator_traits.h>
 
@@ -26,7 +27,8 @@ _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 bool
 is_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp)
 {
-    return _VSTD::is_heap_until(__first, __last, __comp) == __last;
+    typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
+    return _VSTD::__is_heap_until<_Comp_ref>(__first, __last, __comp) == __last;
 }
 
 template<class _RandomAccessIterator>

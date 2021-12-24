@@ -16,6 +16,6 @@ namespace mlir {
 #define GEN_PASS_CLASSES
 #include "mlir/Reducer/Passes.h.inc"
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_REDUCER_PASSDETAIL_H

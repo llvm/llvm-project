@@ -187,10 +187,7 @@ class BreakpointLocationsTestCase(TestBase):
 
         # At this point, 1.1 has a hit count of 0 and the other a hit count of
         # 1".
-        self.expect(
-            "breakpoint list -f",
-            "The breakpoints should report correct hit counts",
-            patterns=[
-                "1\.1: .+ unresolved, hit count = 0 +Options: disabled",
-                "1\.2: .+ resolved, hit count = 1",
-                "1\.3: .+ resolved, hit count = 1"])
+        lldbutil.check_breakpoint(self, bpno = 1, expected_locations = 3, expected_resolved_count = 2, expected_hit_count = 2)
+        lldbutil.check_breakpoint(self, bpno = 1, location_id = 1,  expected_location_resolved = False, expected_location_hit_count = 0)
+        lldbutil.check_breakpoint(self, bpno = 1, location_id = 2, expected_location_resolved = True, expected_location_hit_count = 1)
+        lldbutil.check_breakpoint(self, bpno = 1, location_id = 3, expected_location_resolved = True, expected_location_hit_count = 1)

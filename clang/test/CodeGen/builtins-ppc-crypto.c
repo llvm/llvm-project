@@ -132,6 +132,62 @@ vector unsigned char test_vpermxoruc(vector unsigned char a,
 // CHECK: @llvm.ppc.altivec.crypto.vpermxor
 }
 
+// CHECK-LABEL: define{{.*}} <16 x i8> @test_vpermxorb_be
+vector unsigned char test_vpermxorb_be(vector unsigned char a,
+                                       vector unsigned char b,
+                                       vector unsigned char c) {
+  return __builtin_altivec_crypto_vpermxor_be(a, b, c);
+// CHECK: @llvm.ppc.altivec.crypto.vpermxor.be
+}
+
+// CHECK-LABEL: define{{.*}} <8 x i16> @test_vpermxorh_be
+vector unsigned short test_vpermxorh_be(vector unsigned short a,
+                                        vector unsigned short b,
+                                        vector unsigned short c) {
+  return __builtin_altivec_crypto_vpermxor_be(a, b, c);
+// CHECK: @llvm.ppc.altivec.crypto.vpermxor.be
+}
+
+// CHECK-LABEL: define{{.*}} <4 x i32> @test_vpermxorw_be
+vector unsigned int test_vpermxorw_be(vector unsigned int a,
+                                      vector unsigned int b,
+                                      vector unsigned int c) {
+  return __builtin_altivec_crypto_vpermxor_be(a, b, c);
+// CHECK: @llvm.ppc.altivec.crypto.vpermxor.be
+}
+
+// CHECK-LABEL: define{{.*}} <2 x i64> @test_vpermxord_be
+vector unsigned long long test_vpermxord_be(vector unsigned long long a,
+                                            vector unsigned long long b,
+                                            vector unsigned long long c) {
+  return __builtin_altivec_crypto_vpermxor_be(a, b, c);
+// CHECK: @llvm.ppc.altivec.crypto.vpermxor.be
+}
+
+// CHECK-LABEL: define{{.*}} <16 x i8> @test_vpermxorbc_be
+vector bool char test_vpermxorbc_be(vector bool char a,
+                                    vector bool char b,
+                                    vector bool char c) {
+  return  __builtin_altivec_crypto_vpermxor_be(a, b, c);
+// CHECK: @llvm.ppc.altivec.crypto.vpermxor.be
+}
+
+// CHECK-LABEL: define{{.*}} <16 x i8> @test_vpermxorsc_be
+vector signed char test_vpermxorsc_be(vector signed char a,
+                                      vector signed char b,
+                                      vector signed char c) {
+  return  __builtin_altivec_crypto_vpermxor_be(a, b, c);
+// CHECK: @llvm.ppc.altivec.crypto.vpermxor.be
+}
+
+// CHECK-LABEL: define{{.*}} <16 x i8> @test_vpermxoruc_be
+vector unsigned char test_vpermxoruc_be(vector unsigned char a,
+                                        vector unsigned char b,
+                                        vector unsigned char c) {
+  return  __builtin_altivec_crypto_vpermxor_be(a, b, c);
+// CHECK: @llvm.ppc.altivec.crypto.vpermxor.be
+}
+
 // CHECK-LABEL: define{{.*}} <2 x i64> @test_vcipher
 vector unsigned long long test_vcipher(void)
 {

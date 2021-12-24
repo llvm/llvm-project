@@ -110,9 +110,8 @@ struct llvm::TimeTraceProfiler {
     // templates from within, we only want to add the topmost one. "topmost"
     // happens to be the ones that don't have any currently open entries above
     // itself.
-    if (std::find_if(++Stack.rbegin(), Stack.rend(), [&](const Entry &Val) {
-          return Val.Name == E.Name;
-        }) == Stack.rend()) {
+    if (llvm::none_of(llvm::drop_begin(llvm::reverse(Stack)),
+                      [&](const Entry &Val) { return Val.Name == E.Name; })) {
       auto &CountAndTotal = CountAndTotalPerName[E.Name];
       CountAndTotal.first++;
       CountAndTotal.second += Duration;
@@ -272,6 +271,7 @@ void llvm::timeTraceProfilerInitialize(unsigned TimeTraceGranularity,
 // Called from main thread.
 void llvm::timeTraceProfilerCleanup() {
   delete TimeTraceProfilerInstance;
+  TimeTraceProfilerInstance = nullptr;
   std::lock_guard<std::mutex> Lock(Mu);
   for (auto *TTP : *ThreadTimeTraceProfilerInstances)
     delete TTP;

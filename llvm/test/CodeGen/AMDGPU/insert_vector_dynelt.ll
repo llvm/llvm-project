@@ -139,9 +139,9 @@ entry:
 ; GCN-NOT: buffer_
 ; GCN:     s_lshl_b32 [[SEL:s[0-9]+]], s{{[0-9]+}}, 4
 ; GCN:     s_lshl_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}], [[SEL]]
-; GCN:     s_andn2_b64
 ; GCN:     s_mov_b32 s[[KLO:[0-9]+]], 0x3c003c00
 ; GCN:     s_mov_b32 s[[KHI:[0-9]+]], s[[KLO]]
+; GCN:     s_andn2_b64
 ; GCN:     s_and_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}], s{{\[}}[[KLO]]:[[KHI]]]
 ; GCN:     s_or_b64
 define amdgpu_kernel void @half4_inselt(<4 x half> addrspace(1)* %out, <4 x half> %vec, i32 %sel) {
@@ -219,9 +219,9 @@ entry:
 ; GCN-NOT: buffer_
 ; GCN:     s_lshl_b32 [[SEL:s[0-9]+]], s{{[0-9]+}}, 4
 ; GCN:     s_lshl_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}], [[SEL]]
-; GCN:     s_andn2_b64
 ; GCN:     s_mov_b32 s[[KLO:[0-9]+]], 0x10001
 ; GCN:     s_mov_b32 s[[KHI:[0-9]+]], s[[KLO]]
+; GCN:     s_andn2_b64
 ; GCN:     s_and_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}], s{{\[}}[[KLO]]:[[KHI]]]
 ; GCN:     s_or_b64
 define amdgpu_kernel void @short4_inselt(<4 x i16> addrspace(1)* %out, <4 x i16> %vec, i32 %sel) {
@@ -237,8 +237,8 @@ entry:
 ; GCN:     s_lshl_b32 [[SEL:s[0-9]+]], s{{[0-9]+}}, 3
 ; GCN:     s_lshl_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}], [[SEL]]
 ; GCN:     s_mov_b32 [[K:s[0-9]+]], 0x1010101
-; GCN:     s_and_b32 s3, s1, [[K]]
 ; GCN:     s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, [[K]]
+; GCN:     s_and_b32 s6, s4, [[K]]
 ; GCN:     s_andn2_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}], s[{{[0-9:]+}}]
 ; GCN:     s_or_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}], s[{{[0-9:]+}}]
 define amdgpu_kernel void @byte8_inselt(<8 x i8> addrspace(1)* %out, <8 x i8> %vec, i32 %sel) {

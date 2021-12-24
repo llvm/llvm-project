@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // <locale>
 
 // class num_put<charT, OutputIterator>

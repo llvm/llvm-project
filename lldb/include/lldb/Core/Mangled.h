@@ -12,9 +12,8 @@
 
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
-
+#include "lldb/lldb-types.h"
 #include "lldb/Utility/ConstString.h"
-
 #include "llvm/ADT/StringRef.h"
 
 #include <cstddef>
@@ -44,7 +43,8 @@ public:
     eManglingSchemeNone = 0,
     eManglingSchemeMSVC,
     eManglingSchemeItanium,
-    eManglingSchemeRustV0
+    eManglingSchemeRustV0,
+    eManglingSchemeD
   };
 
   /// Default constructor.
@@ -62,6 +62,15 @@ public:
   explicit Mangled(ConstString name);
 
   explicit Mangled(llvm::StringRef name);
+
+  bool operator==(const Mangled &rhs) const {
+    return m_mangled == rhs.m_mangled &&
+           GetDemangledName() == rhs.GetDemangledName();
+  }
+
+  bool operator!=(const Mangled &rhs) const {
+    return !(*this == rhs);
+  }
 
   /// Convert to pointer operator.
   ///
@@ -268,6 +277,35 @@ public:
   ///     eManglingSchemeNone if no known mangling scheme could be identified
   ///     for s, otherwise the enumerator for the mangling scheme detected.
   static Mangled::ManglingScheme GetManglingScheme(llvm::StringRef const name);
+
+  /// Decode a serialized version of this object from data.
+  ///
+  /// \param data
+  ///   The decoder object that references the serialized data.
+  ///
+  /// \param offset_ptr
+  ///   A pointer that contains the offset from which the data will be decoded
+  ///   from that gets updated as data gets decoded.
+  ///
+  /// \param strtab
+  ///   All strings in cache files are put into string tables for efficiency
+  ///   and cache file size reduction. Strings are stored as uint32_t string
+  ///   table offsets in the cache data.
+  bool Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
+              const StringTableReader &strtab);
+
+  /// Encode this object into a data encoder object.
+  ///
+  /// This allows this object to be serialized to disk.
+  ///
+  /// \param encoder
+  ///   A data encoder object that serialized bytes will be encoded into.
+  ///
+  /// \param strtab
+  ///   All strings in cache files are put into string tables for efficiency
+  ///   and cache file size reduction. Strings are stored as uint32_t string
+  ///   table offsets in the cache data.
+  void Encode(DataEncoder &encoder, ConstStringTable &strtab) const;
 
 private:
   /// Mangled member variables.

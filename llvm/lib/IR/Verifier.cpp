@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file defines the function verifier interface, that can be used for some
-// sanity checking of input to the system.
+// basic correctness checking of input to the system.
 //
 // Note that this does not provide full `Java style' security and verifications,
 // instead it just tries to ensure that code is well-formed.
@@ -415,15 +415,18 @@ public:
     for (const GlobalAlias &GA : M.aliases())
       visitGlobalAlias(GA);
 
+    for (const GlobalIFunc &GI : M.ifuncs())
+      visitGlobalIFunc(GI);
+
     for (const NamedMDNode &NMD : M.named_metadata())
       visitNamedMDNode(NMD);
 
     for (const StringMapEntry<Comdat> &SMEC : M.getComdatSymbolTable())
       visitComdat(SMEC.getValue());
 
-    visitModuleFlags(M);
-    visitModuleIdents(M);
-    visitModuleCommandLines(M);
+    visitModuleFlags();
+    visitModuleIdents();
+    visitModuleCommandLines();
 
     verifyCompileUnits();
 
@@ -440,6 +443,7 @@ private:
   void visitGlobalValue(const GlobalValue &GV);
   void visitGlobalVariable(const GlobalVariable &GV);
   void visitGlobalAlias(const GlobalAlias &GA);
+  void visitGlobalIFunc(const GlobalIFunc &GI);
   void visitAliaseeSubExpr(const GlobalAlias &A, const Constant &C);
   void visitAliaseeSubExpr(SmallPtrSetImpl<const GlobalAlias *> &Visited,
                            const GlobalAlias &A, const Constant &C);
@@ -448,9 +452,9 @@ private:
   void visitMetadataAsValue(const MetadataAsValue &MD, Function *F);
   void visitValueAsMetadata(const ValueAsMetadata &MD, Function *F);
   void visitComdat(const Comdat &C);
-  void visitModuleIdents(const Module &M);
-  void visitModuleCommandLines(const Module &M);
-  void visitModuleFlags(const Module &M);
+  void visitModuleIdents();
+  void visitModuleCommandLines();
+  void visitModuleFlags();
   void visitModuleFlag(const MDNode *Op,
                        DenseMap<const MDString *, const MDNode *> &SeenIDs,
                        SmallVectorImpl<const MDNode *> &Requirements);
@@ -539,7 +543,7 @@ private:
 
   void verifySwiftErrorCall(CallBase &Call, const Value *SwiftErrorVal);
   void verifySwiftErrorValue(const Value *SwiftErrorVal);
-  void verifyTailCCMustTailAttrs(AttrBuilder Attrs, StringRef Context);
+  void verifyTailCCMustTailAttrs(const AttrBuilder &Attrs, StringRef Context);
   void verifyMustTailCall(CallInst &CI);
   bool verifyAttributeCount(AttributeList Attrs, unsigned Params);
   void verifyAttributeTypes(AttributeSet Attrs, const Value *V);
@@ -598,26 +602,35 @@ void Verifier::visit(Instruction &I) {
   InstVisitor<Verifier>::visit(I);
 }
 
-// Helper to recursively iterate over indirect users. By
-// returning false, the callback can ask to stop recursing
-// further.
+// Helper to iterate over indirect users. By returning false, the callback can ask to stop traversing further.
 static void forEachUser(const Value *User,
                         SmallPtrSet<const Value *, 32> &Visited,
                         llvm::function_ref<bool(const Value *)> Callback) {
   if (!Visited.insert(User).second)
     return;
-  for (const Value *TheNextUser : User->materialized_users())
-    if (Callback(TheNextUser))
-      forEachUser(TheNextUser, Visited, Callback);
+
+  SmallVector<const Value *> WorkList;
+  append_range(WorkList, User->materialized_users());
+  while (!WorkList.empty()) {
+   const Value *Cur = WorkList.pop_back_val();
+    if (!Visited.insert(Cur).second)
+      continue;
+    if (Callback(Cur))
+      append_range(WorkList, Cur->materialized_users());
+  }
 }
 
 void Verifier::visitGlobalValue(const GlobalValue &GV) {
   Assert(!GV.isDeclaration() || GV.hasValidDeclarationLinkage(),
          "Global is external, but doesn't have external or weak linkage!", &GV);
 
-  if (const GlobalObject *GO = dyn_cast<GlobalObject>(&GV))
-    Assert(GO->getAlignment() <= Value::MaximumAlignment,
-           "huge alignment values are unsupported", GO);
+  if (const GlobalObject *GO = dyn_cast<GlobalObject>(&GV)) {
+
+    if (MaybeAlign A = GO->getAlign()) {
+      Assert(A->value() <= Value::MaximumAlignment,
+             "huge alignment values are unsupported", GO);
+    }
+  }
   Assert(!GV.hasAppendingLinkage() || isa<GlobalVariable>(GV),
          "Only global variables can have appending linkage!", &GV);
 
@@ -727,8 +740,9 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
           Value *V = Op->stripPointerCasts();
           Assert(isa<GlobalVariable>(V) || isa<Function>(V) ||
                      isa<GlobalAlias>(V),
-                 "invalid llvm.used member", V);
-          Assert(V->hasName(), "members of llvm.used must be named", V);
+                 Twine("invalid ") + GV.getName() + " member", V);
+          Assert(V->hasName(),
+                 Twine("members of ") + GV.getName() + " must be named", V);
         }
       }
     }
@@ -819,6 +833,21 @@ void Verifier::visitGlobalAlias(const GlobalAlias &GA) {
   visitAliaseeSubExpr(GA, *Aliasee);
 
   visitGlobalValue(GA);
+}
+
+void Verifier::visitGlobalIFunc(const GlobalIFunc &GI) {
+  // Pierce through ConstantExprs and GlobalAliases and check that the resolver
+  // has a Function 
+  const Function *Resolver = GI.getResolverFunction();
+  Assert(Resolver, "IFunc must have a Function resolver", &GI);
+
+  // Check that the immediate resolver operand (prior to any bitcasts) has the
+  // correct type
+  const Type *ResolverTy = GI.getResolver()->getType();
+  const Type *ResolverFuncTy =
+      GlobalIFunc::getResolverFunctionType(GI.getValueType());
+  Assert(ResolverTy == ResolverFuncTy->getPointerTo(),
+         "IFunc resolver has incorrect type", &GI);
 }
 
 void Verifier::visitNamedMDNode(const NamedMDNode &NMD) {
@@ -1476,7 +1505,7 @@ void Verifier::visitComdat(const Comdat &C) {
              "comdat global value has private linkage", GV);
 }
 
-void Verifier::visitModuleIdents(const Module &M) {
+void Verifier::visitModuleIdents() {
   const NamedMDNode *Idents = M.getNamedMetadata("llvm.ident");
   if (!Idents)
     return;
@@ -1493,7 +1522,7 @@ void Verifier::visitModuleIdents(const Module &M) {
   }
 }
 
-void Verifier::visitModuleCommandLines(const Module &M) {
+void Verifier::visitModuleCommandLines() {
   const NamedMDNode *CommandLines = M.getNamedMetadata("llvm.commandline");
   if (!CommandLines)
     return;
@@ -1511,7 +1540,7 @@ void Verifier::visitModuleCommandLines(const Module &M) {
   }
 }
 
-void Verifier::visitModuleFlags(const Module &M) {
+void Verifier::visitModuleFlags() {
   const NamedMDNode *Flags = M.getModuleFlagsMetadata();
   if (!Flags) return;
 
@@ -1564,7 +1593,7 @@ Verifier::visitModuleFlag(const MDNode *Op,
   Assert(ID, "invalid ID operand in module flag (expected metadata string)",
          Op->getOperand(1));
 
-  // Sanity check the values for behaviors with additional requirements.
+  // Check the values for behaviors with additional requirements.
   switch (MFB) {
   case Module::Error:
   case Module::Warning:
@@ -2015,10 +2044,12 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
   }
 
   if (Attrs.hasFnAttr(Attribute::VScaleRange)) {
-    std::pair<unsigned, unsigned> Args =
-        Attrs.getFnAttrs().getVScaleRangeArgs();
+    unsigned VScaleMin = Attrs.getFnAttrs().getVScaleRangeMin();
+    if (VScaleMin == 0)
+      CheckFailed("'vscale_range' minimum must be greater than 0", V);
 
-    if (Args.first > Args.second && Args.second != 0)
+    Optional<unsigned> VScaleMax = Attrs.getFnAttrs().getVScaleRangeMax();
+    if (VScaleMax && VScaleMin > VScaleMax)
       CheckFailed("'vscale_range' minimum cannot be greater than maximum", V);
   }
 
@@ -3288,7 +3319,7 @@ void Verifier::visitCallBase(CallBase &Call) {
   visitInstruction(Call);
 }
 
-void Verifier::verifyTailCCMustTailAttrs(AttrBuilder Attrs,
+void Verifier::verifyTailCCMustTailAttrs(const AttrBuilder &Attrs,
                                          StringRef Context) {
   Assert(!Attrs.contains(Attribute::InAlloca),
          Twine("inalloca attribute not allowed in ") + Context);
@@ -3693,15 +3724,15 @@ void Verifier::visitLoadInst(LoadInst &LI) {
   PointerType *PTy = dyn_cast<PointerType>(LI.getOperand(0)->getType());
   Assert(PTy, "Load operand must be a pointer.", &LI);
   Type *ElTy = LI.getType();
-  Assert(LI.getAlignment() <= Value::MaximumAlignment,
-         "huge alignment values are unsupported", &LI);
+  if (MaybeAlign A = LI.getAlign()) {
+    Assert(A->value() <= Value::MaximumAlignment,
+           "huge alignment values are unsupported", &LI);
+  }
   Assert(ElTy->isSized(), "loading unsized types is not allowed", &LI);
   if (LI.isAtomic()) {
     Assert(LI.getOrdering() != AtomicOrdering::Release &&
                LI.getOrdering() != AtomicOrdering::AcquireRelease,
            "Load cannot have Release ordering", &LI);
-    Assert(LI.getAlignment() != 0,
-           "Atomic load must specify explicit alignment", &LI);
     Assert(ElTy->isIntOrPtrTy() || ElTy->isFloatingPointTy(),
            "atomic load operand must have integer, pointer, or floating point "
            "type!",
@@ -3721,15 +3752,15 @@ void Verifier::visitStoreInst(StoreInst &SI) {
   Type *ElTy = SI.getOperand(0)->getType();
   Assert(PTy->isOpaqueOrPointeeTypeMatches(ElTy),
          "Stored value type does not match pointer operand type!", &SI, ElTy);
-  Assert(SI.getAlignment() <= Value::MaximumAlignment,
-         "huge alignment values are unsupported", &SI);
+  if (MaybeAlign A = SI.getAlign()) {
+    Assert(A->value() <= Value::MaximumAlignment,
+           "huge alignment values are unsupported", &SI);
+  }
   Assert(ElTy->isSized(), "storing unsized types is not allowed", &SI);
   if (SI.isAtomic()) {
     Assert(SI.getOrdering() != AtomicOrdering::Acquire &&
                SI.getOrdering() != AtomicOrdering::AcquireRelease,
            "Store cannot have Acquire ordering", &SI);
-    Assert(SI.getAlignment() != 0,
-           "Atomic store must specify explicit alignment", &SI);
     Assert(ElTy->isIntOrPtrTy() || ElTy->isFloatingPointTy(),
            "atomic store operand must have integer, pointer, or floating point "
            "type!",
@@ -3780,8 +3811,10 @@ void Verifier::visitAllocaInst(AllocaInst &AI) {
          "Cannot allocate unsized type", &AI);
   Assert(AI.getArraySize()->getType()->isIntegerTy(),
          "Alloca array size must have integer type", &AI);
-  Assert(AI.getAlignment() <= Value::MaximumAlignment,
-         "huge alignment values are unsupported", &AI);
+  if (MaybeAlign A = AI.getAlign()) {
+    Assert(A->value() <= Value::MaximumAlignment,
+           "huge alignment values are unsupported", &AI);
+  }
 
   if (AI.isSwiftError()) {
     verifySwiftErrorValue(&AI);
@@ -5229,24 +5262,32 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       Op0ElemTy =
           cast<VectorType>(Call.getArgOperand(0)->getType())->getElementType();
       break;
-    case Intrinsic::matrix_column_major_load:
+    case Intrinsic::matrix_column_major_load: {
       Stride = dyn_cast<ConstantInt>(Call.getArgOperand(1));
       NumRows = cast<ConstantInt>(Call.getArgOperand(3));
       NumColumns = cast<ConstantInt>(Call.getArgOperand(4));
       ResultTy = cast<VectorType>(Call.getType());
-      Op0ElemTy =
-          cast<PointerType>(Call.getArgOperand(0)->getType())->getElementType();
+
+      PointerType *Op0PtrTy =
+          cast<PointerType>(Call.getArgOperand(0)->getType());
+      if (!Op0PtrTy->isOpaque())
+        Op0ElemTy = Op0PtrTy->getElementType();
       break;
-    case Intrinsic::matrix_column_major_store:
+    }
+    case Intrinsic::matrix_column_major_store: {
       Stride = dyn_cast<ConstantInt>(Call.getArgOperand(2));
       NumRows = cast<ConstantInt>(Call.getArgOperand(4));
       NumColumns = cast<ConstantInt>(Call.getArgOperand(5));
       ResultTy = cast<VectorType>(Call.getArgOperand(0)->getType());
       Op0ElemTy =
           cast<VectorType>(Call.getArgOperand(0)->getType())->getElementType();
-      Op1ElemTy =
-          cast<PointerType>(Call.getArgOperand(1)->getType())->getElementType();
+
+      PointerType *Op1PtrTy =
+          cast<PointerType>(Call.getArgOperand(1)->getType());
+      if (!Op1PtrTy->isOpaque())
+        Op1ElemTy = Op1PtrTy->getElementType();
       break;
+    }
     default:
       llvm_unreachable("unexpected intrinsic");
     }
@@ -5255,9 +5296,10 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
            ResultTy->getElementType()->isFloatingPointTy(),
            "Result type must be an integer or floating-point type!", IF);
 
-    Assert(ResultTy->getElementType() == Op0ElemTy,
-           "Vector element type mismatch of the result and first operand "
-           "vector!", IF);
+    if (Op0ElemTy)
+      Assert(ResultTy->getElementType() == Op0ElemTy,
+             "Vector element type mismatch of the result and first operand "
+             "vector!", IF);
 
     if (Op1ElemTy)
       Assert(ResultTy->getElementType() == Op1ElemTy,
@@ -6126,11 +6168,7 @@ static bool isNewFormatTBAATypeNode(llvm::MDNode *Type) {
 
   // In the new format type nodes shall have a reference to the parent type as
   // its first operand.
-  MDNode *Parent = dyn_cast_or_null<MDNode>(Type->getOperand(0));
-  if (!Parent)
-    return false;
-
-  return true;
+  return isa_and_nonnull<MDNode>(Type->getOperand(0));
 }
 
 bool TBAAVerifier::visitTBAAMetadata(Instruction &I, const MDNode *MD) {

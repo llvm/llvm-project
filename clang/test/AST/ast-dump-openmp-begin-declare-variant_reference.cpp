@@ -120,7 +120,7 @@ int test(float &&f, short &&s) {
 // CHECK-NEXT: | | |-TemplateArgument type 'float &'
 // CHECK-NEXT: | | | `-LValueReferenceType [[ADDR_7:0x[a-z0-9]*]] 'float &'
 // CHECK-NEXT: | | |   `-BuiltinType [[ADDR_8:0x[a-z0-9]*]] 'float'
-// CHECK-NEXT: | | |-CXXRecordDecl [[ADDR_9:0x[a-z0-9]*]] prev [[ADDR_6]] <col:22, col:29> col:29 implicit struct remove_reference
+// CHECK-NEXT: | | |-CXXRecordDecl [[ADDR_9:0x[a-z0-9]*]] <col:22, col:29> col:29 implicit struct remove_reference
 // CHECK-NEXT: | | `-TypedefDecl [[ADDR_10:0x[a-z0-9]*]] <col:55, col:67> col:67 referenced type 'float':'float'
 // CHECK-NEXT: | |   `-SubstTemplateTypeParmType [[ADDR_11:0x[a-z0-9]*]] 'float' sugar
 // CHECK-NEXT: | |     |-TemplateTypeParmType [[ADDR_12:0x[a-z0-9]*]] '_Tp' dependent depth 0 index 0
@@ -137,7 +137,7 @@ int test(float &&f, short &&s) {
 // CHECK-NEXT: |   |-TemplateArgument type 'short &'
 // CHECK-NEXT: |   | `-LValueReferenceType [[ADDR_15:0x[a-z0-9]*]] 'short &'
 // CHECK-NEXT: |   |   `-BuiltinType [[ADDR_16:0x[a-z0-9]*]] 'short'
-// CHECK-NEXT: |   |-CXXRecordDecl [[ADDR_17:0x[a-z0-9]*]] prev [[ADDR_14]] <col:22, col:29> col:29 implicit struct remove_reference
+// CHECK-NEXT: |   |-CXXRecordDecl [[ADDR_17:0x[a-z0-9]*]] <col:22, col:29> col:29 implicit struct remove_reference
 // CHECK-NEXT: |   `-TypedefDecl [[ADDR_18:0x[a-z0-9]*]] <col:55, col:67> col:67 referenced type 'short':'short'
 // CHECK-NEXT: |     `-SubstTemplateTypeParmType [[ADDR_19:0x[a-z0-9]*]] 'short' sugar
 // CHECK-NEXT: |       |-TemplateTypeParmType [[ADDR_12]] '_Tp' dependent depth 0 index 0

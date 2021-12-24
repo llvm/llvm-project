@@ -1,6 +1,10 @@
 add_subdirectory(CAPI)
 add_subdirectory(lib)
 
+if (MLIR_ENABLE_BINDINGS_PYTHON)
+  add_subdirectory(python)
+endif()
+
 # Passed to lit.site.cfg.py.so that the out of tree Standalone dialect test
 # can find MLIR's CMake configuration
 set(MLIR_CMAKE_DIR
@@ -28,6 +32,7 @@ if (MLIR_INCLUDE_INTEGRATION_TESTS)
   # Copy test data over.
   file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/mttkrp_b.tns
             ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/test.mtx
+            ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/test_symmetric.mtx
             ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/test.tns
             ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/wide.mtx
             ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/zero.mtx
@@ -73,6 +78,7 @@ set(MLIR_TEST_DEPENDS
   mlir-linalg-ods-yaml-gen
   mlir-lsp-server
   mlir-opt
+  mlir-pdll
   mlir-reduce
   mlir-tblgen
   mlir-translate
@@ -124,7 +130,6 @@ endif()
 if(MLIR_ENABLE_BINDINGS_PYTHON)
   list(APPEND MLIR_TEST_DEPENDS
     MLIRPythonModules
-    MLIRPythonTestModules
   )
 endif()
 

@@ -110,6 +110,9 @@ void MappingTraits<MachOYAML::Object>::mapping(IO &IO,
   Object.DWARF.Is64BitAddrSize = Object.Header.magic == MachO::MH_MAGIC_64 ||
                                  Object.Header.magic == MachO::MH_CIGAM_64;
   IO.mapOptional("LoadCommands", Object.LoadCommands);
+
+  if (Object.RawLinkEditSegment || !IO.outputting())
+    IO.mapOptional("__LINKEDIT", Object.RawLinkEditSegment);
   if(!Object.LinkEdit.isEmpty() || !IO.outputting())
     IO.mapOptional("LinkEditData", Object.LinkEdit);
 
@@ -161,6 +164,7 @@ void MappingTraits<MachOYAML::LinkEditData>::mapping(
     IO.mapOptional("ExportTrie", LinkEditData.ExportTrie);
   IO.mapOptional("NameList", LinkEditData.NameList);
   IO.mapOptional("StringTable", LinkEditData.StringTable);
+  IO.mapOptional("IndirectSymbols", LinkEditData.IndirectSymbols);
 }
 
 void MappingTraits<MachOYAML::RebaseOpcode>::mapping(

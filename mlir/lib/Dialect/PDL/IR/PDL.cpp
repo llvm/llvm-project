@@ -11,7 +11,8 @@
 #include "mlir/Dialect/PDL/IR/PDLTypes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
-#include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::pdl;
@@ -34,41 +35,55 @@ void PDLDialect::initialize() {
 // PDL Operations
 //===----------------------------------------------------------------------===//
 
-/// Returns true if the given operation is used by a "binding" pdl operation
-/// within the main matcher body of a `pdl.pattern`.
-static bool hasBindingUseInMatcher(Operation *op, Block *matcherBlock) {
-  for (OpOperand &use : op->getUses()) {
-    Operation *user = use.getOwner();
-    if (user->getBlock() != matcherBlock)
-      continue;
-    if (isa<AttributeOp, OperandOp, OperandsOp, OperationOp>(user))
-      return true;
-    // Only the first operand of RewriteOp may be bound to, i.e. the root
-    // operation of the pattern.
-    if (isa<RewriteOp>(user) && use.getOperandNumber() == 0)
-      return true;
+/// Returns true if the given operation is used by a "binding" pdl operation.
+static bool hasBindingUse(Operation *op) {
+  for (Operation *user : op->getUsers())
     // A result by itself is not binding, it must also be bound.
-    if (isa<ResultOp, ResultsOp>(user) &&
-        hasBindingUseInMatcher(user, matcherBlock))
+    if (!isa<ResultOp, ResultsOp>(user) || hasBindingUse(user))
       return true;
-  }
   return false;
 }
 
-/// Returns success if the given operation is used by a "binding" pdl operation
-/// within the main matcher body of a `pdl.pattern`. On failure, emits an error
-/// with the given context message.
-static LogicalResult
-verifyHasBindingUseInMatcher(Operation *op,
-                             StringRef bindableContextStr = "`pdl.operation`") {
-  // If the pattern is not a pattern, there is nothing to do.
+/// Returns success if the given operation is not in the main matcher body or
+/// is used by a "binding" operation. On failure, emits an error.
+static LogicalResult verifyHasBindingUse(Operation *op) {
+  // If the parent is not a pattern, there is nothing to do.
   if (!isa<PatternOp>(op->getParentOp()))
     return success();
-  if (hasBindingUseInMatcher(op, op->getBlock()))
+  if (hasBindingUse(op))
     return success();
-  return op->emitOpError()
-         << "expected a bindable (i.e. " << bindableContextStr
-         << ") user when defined in the matcher body of a `pdl.pattern`";
+  return op->emitOpError(
+      "expected a bindable user when defined in the matcher body of a "
+      "`pdl.pattern`");
+}
+
+/// Visits all the pdl.operand(s), pdl.result(s), and pdl.operation(s)
+/// connected to the given operation.
+static void visit(Operation *op, DenseSet<Operation *> &visited) {
+  // If the parent is not a pattern, there is nothing to do.
+  if (!isa<PatternOp>(op->getParentOp()) || isa<RewriteOp>(op))
+    return;
+
+  // Ignore if already visited.
+  if (visited.contains(op))
+    return;
+
+  // Mark as visited.
+  visited.insert(op);
+
+  // Traverse the operands / parent.
+  TypeSwitch<Operation *>(op)
+      .Case<OperationOp>([&visited](auto operation) {
+        for (Value operand : operation.operands())
+          visit(operand.getDefiningOp(), visited);
+      })
+      .Case<ResultOp, ResultsOp>([&visited](auto result) {
+        visit(result.parent().getDefiningOp(), visited);
+      });
+
+  // Traverse the users.
+  for (Operation *user : op->getUsers())
+    visit(user, visited);
 }
 
 //===----------------------------------------------------------------------===//
@@ -99,29 +114,28 @@ static LogicalResult verify(AttributeOp op) {
   Value attrType = op.type();
   Optional<Attribute> attrValue = op.value();
 
-  if (!attrValue && isa<RewriteOp>(op->getParentOp()))
-    return op.emitOpError("expected constant value when specified within a "
-                          "`pdl.rewrite`");
-  if (attrValue && attrType)
+  if (!attrValue) {
+    if (isa<RewriteOp>(op->getParentOp()))
+      return op.emitOpError("expected constant value when specified within a "
+                            "`pdl.rewrite`");
+    return verifyHasBindingUse(op);
+  }
+  if (attrType)
     return op.emitOpError("expected only one of [`type`, `value`] to be set");
-  return verifyHasBindingUseInMatcher(op);
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
 // pdl::OperandOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(OperandOp op) {
-  return verifyHasBindingUseInMatcher(op);
-}
+static LogicalResult verify(OperandOp op) { return verifyHasBindingUse(op); }
 
 //===----------------------------------------------------------------------===//
 // pdl::OperandsOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(OperandsOp op) {
-  return verifyHasBindingUseInMatcher(op);
-}
+static LogicalResult verify(OperandsOp op) { return verifyHasBindingUse(op); }
 
 //===----------------------------------------------------------------------===//
 // pdl::OperationOp
@@ -237,7 +251,7 @@ static LogicalResult verify(OperationOp op) {
       return failure();
   }
 
-  return verifyHasBindingUseInMatcher(op, "`pdl.operation` or `pdl.rewrite`");
+  return verifyHasBindingUse(op);
 }
 
 bool OperationOp::hasTypeInference() {
@@ -245,9 +259,8 @@ bool OperationOp::hasTypeInference() {
   if (!opName)
     return false;
 
-  OperationName name(*opName, getContext());
-  if (const AbstractOperation *op = name.getAbstractOperation())
-    return op->getInterface<InferTypeOpInterface>();
+  if (auto rInfo = RegisteredOperationName::lookup(*opName, getContext()))
+    return rInfo->hasInterface<InferTypeOpInterface>();
   return false;
 }
 
@@ -257,15 +270,16 @@ bool OperationOp::hasTypeInference() {
 
 static LogicalResult verify(PatternOp pattern) {
   Region &body = pattern.body();
-  auto *term = body.front().getTerminator();
-  if (!isa<RewriteOp>(term)) {
+  Operation *term = body.front().getTerminator();
+  auto rewriteOp = dyn_cast<RewriteOp>(term);
+  if (!rewriteOp) {
     return pattern.emitOpError("expected body to terminate with `pdl.rewrite`")
         .attachNote(term->getLoc())
         .append("see terminator defined here");
   }
 
-  // Check that all values defined in the top-level pattern are referenced at
-  // least once in the source tree.
+  // Check that all values defined in the top-level pattern belong to the PDL
+  // dialect.
   WalkResult result = body.walk([&](Operation *op) -> WalkResult {
     if (!isa_and_nonnull<PDLDialect>(op->getDialect())) {
       pattern
@@ -276,15 +290,61 @@ static LogicalResult verify(PatternOp pattern) {
     }
     return WalkResult::advance();
   });
-  return failure(result.wasInterrupted());
+  if (result.wasInterrupted())
+    return failure();
+
+  // Check that there is at least one operation.
+  if (body.front().getOps<OperationOp>().empty())
+    return pattern.emitOpError(
+        "the pattern must contain at least one `pdl.operation`");
+
+  // Determine if the operations within the pdl.pattern form a connected
+  // component. This is determined by starting the search from the first
+  // operand/result/operation and visiting their users / parents / operands.
+  // We limit our attention to operations that have a user in pdl.rewrite,
+  // those that do not will be detected via other means (expected bindable
+  // user).
+  bool first = true;
+  DenseSet<Operation *> visited;
+  for (Operation &op : body.front()) {
+    // The following are the operations forming the connected component.
+    if (!isa<OperandOp, OperandsOp, ResultOp, ResultsOp, OperationOp>(op))
+      continue;
+
+    // Determine if the operation has a user in `pdl.rewrite`.
+    bool hasUserInRewrite = false;
+    for (Operation *user : op.getUsers()) {
+      Region *region = user->getParentRegion();
+      if (isa<RewriteOp>(user) ||
+          (region && isa<RewriteOp>(region->getParentOp()))) {
+        hasUserInRewrite = true;
+        break;
+      }
+    }
+
+    // If the operation does not have a user in `pdl.rewrite`, ignore it.
+    if (!hasUserInRewrite)
+      continue;
+
+    if (first) {
+      // For the first operation, invoke visit.
+      visit(&op, visited);
+      first = false;
+    } else if (!visited.count(&op)) {
+      // For the subsequent operations, check if already visited.
+      return pattern
+          .emitOpError("the operations must form a connected component")
+          .attachNote(op.getLoc())
+          .append("see a disconnected value / operation here");
+    }
+  }
+
+  return success();
 }
 
 void PatternOp::build(OpBuilder &builder, OperationState &state,
-                      Optional<StringRef> rootKind, Optional<uint16_t> benefit,
-                      Optional<StringRef> name) {
-  build(builder, state,
-        rootKind ? builder.getStringAttr(*rootKind) : StringAttr(),
-        builder.getI16IntegerAttr(benefit ? *benefit : 0),
+                      Optional<uint16_t> benefit, Optional<StringRef> name) {
+  build(builder, state, builder.getI16IntegerAttr(benefit ? *benefit : 0),
         name ? builder.getStringAttr(*name) : StringAttr());
   state.regions[0]->emplaceBlock();
 }
@@ -292,13 +352,6 @@ void PatternOp::build(OpBuilder &builder, OperationState &state,
 /// Returns the rewrite operation of this pattern.
 RewriteOp PatternOp::getRewriter() {
   return cast<RewriteOp>(body().front().getTerminator());
-}
-
-/// Return the root operation kind that this pattern matches, or None if
-/// there isn't a specific root.
-Optional<StringRef> PatternOp::getRootKind() {
-  OperationOp rootOp = cast<OperationOp>(getRewriter().root().getDefiningOp());
-  return rootOp.name();
 }
 
 //===----------------------------------------------------------------------===//
@@ -382,8 +435,9 @@ static LogicalResult verify(RewriteOp op) {
 //===----------------------------------------------------------------------===//
 
 static LogicalResult verify(TypeOp op) {
-  return verifyHasBindingUseInMatcher(
-      op, "`pdl.attribute`, `pdl.operand`, or `pdl.operation`");
+  if (!op.typeAttr())
+    return verifyHasBindingUse(op);
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -391,7 +445,9 @@ static LogicalResult verify(TypeOp op) {
 //===----------------------------------------------------------------------===//
 
 static LogicalResult verify(TypesOp op) {
-  return verifyHasBindingUseInMatcher(op, "`pdl.operands`, or `pdl.operation`");
+  if (!op.typesAttr())
+    return verifyHasBindingUse(op);
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

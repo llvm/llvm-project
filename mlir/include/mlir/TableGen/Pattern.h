@@ -28,7 +28,7 @@ namespace llvm {
 class DagInit;
 class Init;
 class Record;
-} // end namespace llvm
+} // namespace llvm
 
 namespace mlir {
 namespace tblgen {
@@ -113,6 +113,9 @@ public:
   void print(raw_ostream &os) const;
 
 private:
+  friend llvm::DenseMapInfo<DagLeaf>;
+  const void *getAsOpaquePointer() const { return def; }
+
   // Returns true if the TableGen Init `def` in this DagLeaf is a DefInit and
   // also a subclass of the given `superclass`.
   bool isSubClassOf(StringRef superclass) const;
@@ -182,6 +185,9 @@ public:
 
   // Returns true if this DAG node is wrapping native code call.
   bool isNativeCodeCall() const;
+
+  // Returns whether this DAG is an `either` specifier.
+  bool isEither() const;
 
   // Returns true if this DAG node is an operation.
   bool isOperation() const;
@@ -502,8 +508,8 @@ private:
   RecordOperatorMap *recordOpMap;
 };
 
-} // end namespace tblgen
-} // end namespace mlir
+} // namespace tblgen
+} // namespace mlir
 
 namespace llvm {
 template <>
@@ -523,6 +529,24 @@ struct DenseMapInfo<mlir::tblgen::DagNode> {
     return lhs.node == rhs.node;
   }
 };
-} // end namespace llvm
+
+template <>
+struct DenseMapInfo<mlir::tblgen::DagLeaf> {
+  static mlir::tblgen::DagLeaf getEmptyKey() {
+    return mlir::tblgen::DagLeaf(
+        llvm::DenseMapInfo<llvm::Init *>::getEmptyKey());
+  }
+  static mlir::tblgen::DagLeaf getTombstoneKey() {
+    return mlir::tblgen::DagLeaf(
+        llvm::DenseMapInfo<llvm::Init *>::getTombstoneKey());
+  }
+  static unsigned getHashValue(mlir::tblgen::DagLeaf leaf) {
+    return llvm::hash_value(leaf.getAsOpaquePointer());
+  }
+  static bool isEqual(mlir::tblgen::DagLeaf lhs, mlir::tblgen::DagLeaf rhs) {
+    return lhs.def == rhs.def;
+  }
+};
+} // namespace llvm
 
 #endif // MLIR_TABLEGEN_PATTERN_H_

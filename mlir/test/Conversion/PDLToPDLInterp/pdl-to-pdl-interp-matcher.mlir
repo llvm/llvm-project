@@ -384,7 +384,7 @@ module @switch_result_count_at_least {
 // -----
 
 // CHECK-LABEL: module @predicate_ordering
-module @predicate_ordering  {
+module @predicate_ordering {
   // Check that the result is checked for null first, before applying the
   // constraint. The null check is prevalent in both patterns, so should be
   // prioritized first.
@@ -408,3 +408,207 @@ module @predicate_ordering  {
     pdl.rewrite %apply with "rewriter"
   }
 }
+
+
+// -----
+
+// CHECK-LABEL: module @multi_root
+module @multi_root {
+  // Check the lowering of a simple two-root pattern.
+  // This checks that we correctly generate the pdl_interp.choose_op operation
+  // and tie the break between %root1 and %root2 in favor of %root1.
+
+  // CHECK: func @matcher(%[[ROOT1:.*]]: !pdl.operation)
+  // CHECK-DAG: %[[VAL1:.*]] = pdl_interp.get_operand 0 of %[[ROOT1]]
+  // CHECK-DAG: %[[OP1:.*]] = pdl_interp.get_defining_op of %[[VAL1]]
+  // CHECK-DAG: %[[OPS:.*]] = pdl_interp.get_users of %[[VAL1]] : !pdl.value
+  // CHECK-DAG: pdl_interp.foreach %[[ROOT2:.*]] : !pdl.operation in %[[OPS]]
+  // CHECK-DAG:   %[[OPERANDS:.*]] = pdl_interp.get_operands 0 of %[[ROOT2]]
+  // CHECK-DAG:   pdl_interp.are_equal %[[VAL1]], %[[OPERANDS]] : !pdl.value -> ^{{.*}}, ^[[CONTINUE:.*]]
+  // CHECK-DAG:   pdl_interp.continue
+  // CHECK-DAG:   %[[VAL2:.*]] = pdl_interp.get_operand 1 of %[[ROOT2]]
+  // CHECK-DAG:   %[[OP2:.*]] = pdl_interp.get_defining_op of %[[VAL2]]
+  // CHECK-DAG:   pdl_interp.is_not_null %[[OP1]] : !pdl.operation -> ^{{.*}}, ^[[CONTINUE]]
+  // CHECK-DAG:   pdl_interp.is_not_null %[[OP2]] : !pdl.operation
+  // CHECK-DAG:   pdl_interp.is_not_null %[[VAL1]] : !pdl.value
+  // CHECK-DAG:   pdl_interp.is_not_null %[[VAL2]] : !pdl.value
+  // CHECK-DAG:   pdl_interp.is_not_null %[[ROOT2]] : !pdl.operation
+  // CHECK-DAG:   pdl_interp.are_equal %[[ROOT2]], %[[ROOT1]] : !pdl.operation -> ^[[CONTINUE]]
+
+  pdl.pattern @rewrite_multi_root : benefit(1) {
+    %input1 = pdl.operand
+    %input2 = pdl.operand
+    %type = pdl.type
+    %op1 = pdl.operation(%input1 : !pdl.value) -> (%type : !pdl.type)
+    %val1 = pdl.result 0 of %op1
+    %root1 = pdl.operation(%val1 : !pdl.value)
+    %op2 = pdl.operation(%input2 : !pdl.value) -> (%type : !pdl.type)
+    %val2 = pdl.result 0 of %op2
+    %root2 = pdl.operation(%val1, %val2 : !pdl.value, !pdl.value)
+    pdl.rewrite %root1 with "rewriter"(%root2 : !pdl.operation)
+  }
+}
+
+
+// -----
+
+// CHECK-LABEL: module @overlapping_roots
+module @overlapping_roots {
+  // Check the lowering of a degenerate two-root pattern, where one root
+  // is in the subtree rooted at another.
+
+  // CHECK: func @matcher(%[[ROOT:.*]]: !pdl.operation)
+  // CHECK-DAG: %[[VAL:.*]] = pdl_interp.get_operand 0 of %[[ROOT]]
+  // CHECK-DAG: %[[OP:.*]] = pdl_interp.get_defining_op of %[[VAL]]
+  // CHECK-DAG: %[[INPUT1:.*]] = pdl_interp.get_operand 0 of %[[OP]]
+  // CHECK-DAG: %[[INPUT2:.*]] = pdl_interp.get_operand 1 of %[[OP]]
+  // CHECK-DAG: pdl_interp.is_not_null %[[VAL]] : !pdl.value
+  // CHECK-DAG: pdl_interp.is_not_null %[[OP]] : !pdl.operation
+  // CHECK-DAG: pdl_interp.is_not_null %[[INPUT1]] : !pdl.value
+  // CHECK-DAG: pdl_interp.is_not_null %[[INPUT2]] : !pdl.value
+
+  pdl.pattern @rewrite_overlapping_roots : benefit(1) {
+    %input1 = pdl.operand
+    %input2 = pdl.operand
+    %type = pdl.type
+    %op = pdl.operation(%input1, %input2 : !pdl.value, !pdl.value) -> (%type : !pdl.type)
+    %val = pdl.result 0 of %op
+    %root = pdl.operation(%val : !pdl.value)
+    pdl.rewrite with "rewriter"(%root : !pdl.operation)
+  }
+}
+
+// -----
+
+// CHECK-LABEL: module @force_overlapped_root
+module @force_overlapped_root {
+  // Check the lowering of a degenerate two-root pattern, where one root
+  // is in the subtree rooted at another, and we are forced to use this
+  // root as the root of the search tree.
+
+  // CHECK: func @matcher(%[[ROOT:.*]]: !pdl.operation)
+  // CHECK-DAG: %[[VAL:.*]] = pdl_interp.get_result 0 of %[[ROOT]]
+  // CHECK-DAG: pdl_interp.check_operand_count of %[[ROOT]] is 2
+  // CHECK-DAG: pdl_interp.check_result_count of %[[ROOT]] is 1
+  // CHECK-DAG: %[[INPUT2:.*]] = pdl_interp.get_operand 1 of %[[ROOT]]
+  // CHECK-DAG: pdl_interp.is_not_null %[[INPUT2]] : !pdl.value
+  // CHECK-DAG: %[[INPUT1:.*]] = pdl_interp.get_operand 0 of %[[ROOT]]
+  // CHECK-DAG: pdl_interp.is_not_null %[[INPUT1]] : !pdl.value
+  // CHECK-DAG: %[[OPS:.*]] = pdl_interp.get_users of %[[VAL]] : !pdl.value
+  // CHECK-DAG: pdl_interp.foreach %[[OP:.*]] : !pdl.operation in %[[OPS]]
+  // CHECK-DAG:   pdl_interp.is_not_null %[[OP]] : !pdl.operation
+  // CHECK-DAG:   pdl_interp.check_operand_count of %[[OP]] is 1
+
+  pdl.pattern @rewrite_forced_overlapped_root : benefit(1) {
+    %input1 = pdl.operand
+    %input2 = pdl.operand
+    %type = pdl.type
+    %root = pdl.operation(%input1, %input2 : !pdl.value, !pdl.value) -> (%type : !pdl.type)
+    %val = pdl.result 0 of %root
+    %op = pdl.operation(%val : !pdl.value)
+    pdl.rewrite %root with "rewriter"(%op : !pdl.operation)
+  }
+}
+
+// -----
+
+// CHECK-LABEL: module @variadic_results_all
+module @variadic_results_all {
+  // Check the correct lowering when using all results of an operation
+  // and passing it them as operands to another operation.
+
+  // CHECK: func @matcher(%[[ROOT:.*]]: !pdl.operation)
+  // CHECK-DAG: pdl_interp.check_operand_count of %[[ROOT]] is 0
+  // CHECK-DAG: %[[VALS:.*]] = pdl_interp.get_results of %[[ROOT]] : !pdl.range<value>
+  // CHECK-DAG: %[[VAL0:.*]] = pdl_interp.extract 0 of %[[VALS]]
+  // CHECK-DAG: %[[OPS:.*]] = pdl_interp.get_users of %[[VAL0]] : !pdl.value
+  // CHECK-DAG: pdl_interp.foreach %[[OP:.*]] : !pdl.operation in %[[OPS]]
+  // CHECK-DAG:   %[[OPERANDS:.*]] = pdl_interp.get_operands of %[[OP]]
+  // CHECK-DAG    pdl_interp.are_equal %[[VALS]], %[[OPERANDS]] -> ^{{.*}}, ^[[CONTINUE:.*]]
+  // CHECK-DAG:   pdl_interp.is_not_null %[[OP]]
+  // CHECK-DAG:   pdl_interp.check_result_count of %[[OP]] is 0
+  pdl.pattern @variadic_results_all : benefit(1) {
+    %types = pdl.types
+    %root = pdl.operation -> (%types : !pdl.range<type>)
+    %vals = pdl.results of %root
+    %op = pdl.operation(%vals : !pdl.range<value>)
+    pdl.rewrite %root with "rewriter"(%op : !pdl.operation)
+  }
+}
+
+// -----
+
+// CHECK-LABEL: module @variadic_results_at
+module @variadic_results_at {
+  // Check the correct lowering when using selected results of an operation
+  // and passing it them as an operand to another operation.
+
+  // CHECK: func @matcher(%[[ROOT1:.*]]: !pdl.operation)
+  // CHECK-DAG: %[[VALS:.*]] = pdl_interp.get_operands 0 of %[[ROOT1]] : !pdl.range<value>
+  // CHECK-DAG: %[[OP:.*]] = pdl_interp.get_defining_op of %[[VALS]] : !pdl.range<value>
+  // CHECK-DAG: pdl_interp.is_not_null %[[OP]] : !pdl.operation
+  // CHECK-DAG: pdl_interp.check_operand_count of %[[ROOT1]] is at_least 1
+  // CHECK-DAG: pdl_interp.check_result_count of %[[ROOT1]] is 0
+  // CHECK-DAG: %[[VAL:.*]] = pdl_interp.get_operands 1 of %[[ROOT1]] : !pdl.value
+  // CHECK-DAG: pdl_interp.is_not_null %[[VAL]]
+  // CHECK-DAG: pdl_interp.is_not_null %[[VALS]]
+  // CHECK-DAG: %[[VAL0:.*]] = pdl_interp.extract 0 of %[[VALS]]
+  // CHECK-DAG: %[[ROOTS2:.*]] = pdl_interp.get_users of %[[VAL0]] : !pdl.value
+  // CHECK-DAG: pdl_interp.foreach %[[ROOT2:.*]] : !pdl.operation in %[[ROOTS2]] {
+  // CHECK-DAG:   %[[OPERANDS:.*]] = pdl_interp.get_operands 1 of %[[ROOT2]]
+  // CHECK-DAG:   pdl_interp.are_equal %[[VALS]], %[[OPERANDS]] : !pdl.range<value> -> ^{{.*}}, ^[[CONTINUE:.*]]
+  // CHECK-DAG:   pdl_interp.is_not_null %[[ROOT2]]
+  // CHECK-DAG:   pdl_interp.check_operand_count of %[[ROOT2]] is at_least 1
+  // CHECK-DAG:   pdl_interp.check_result_count of %[[ROOT2]] is 0
+  // CHECK-DAG:   pdl_interp.check_operand_count of %[[OP]] is 0
+  // CHECK-DAG:   pdl_interp.check_result_count of %[[OP]] is at_least 1
+  pdl.pattern @variadic_results_at : benefit(1) {
+    %type = pdl.type
+    %types = pdl.types
+    %val = pdl.operand
+    %op = pdl.operation -> (%types, %type : !pdl.range<type>, !pdl.type)
+    %vals = pdl.results 0 of %op -> !pdl.range<value>
+    %root1 = pdl.operation(%vals, %val : !pdl.range<value>, !pdl.value)
+    %root2 = pdl.operation(%val, %vals : !pdl.value, !pdl.range<value>)
+    pdl.rewrite with "rewriter"(%root1, %root2 : !pdl.operation, !pdl.operation)
+  }
+}
+
+// -----
+
+// CHECK-LABEL: module @attribute_literal
+module @attribute_literal {
+  // CHECK: func @matcher(%{{.*}}: !pdl.operation)
+  // CHECK: %[[ATTR:.*]] = pdl_interp.create_attribute 10 : i64
+  // CHECK: pdl_interp.apply_constraint "constraint"(%[[ATTR]] : !pdl.attribute)
+
+  // Check the correct lowering of an attribute that hasn't been bound.
+  pdl.pattern : benefit(1) {
+    %attr = pdl.attribute 10
+    pdl.apply_native_constraint "constraint"(%attr: !pdl.attribute)
+
+    %root = pdl.operation
+    pdl.rewrite %root with "rewriter"
+  }
+}
+
+// -----
+
+// CHECK-LABEL: module @type_literal
+module @type_literal {
+  // CHECK: func @matcher(%{{.*}}: !pdl.operation)
+  // CHECK: %[[TYPE:.*]] = pdl_interp.create_type i32
+  // CHECK: %[[TYPES:.*]] = pdl_interp.create_types [i32, i64]
+  // CHECK: pdl_interp.apply_constraint "constraint"(%[[TYPE]], %[[TYPES]] : !pdl.type, !pdl.range<type>)
+
+  // Check the correct lowering of a type that hasn't been bound.
+  pdl.pattern : benefit(1) {
+    %type = pdl.type : i32
+    %types = pdl.types : [i32, i64]
+    pdl.apply_native_constraint "constraint"(%type, %types: !pdl.type, !pdl.range<type>)
+
+    %root = pdl.operation
+    pdl.rewrite %root with "rewriter"
+  }
+}
+

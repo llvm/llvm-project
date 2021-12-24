@@ -59,7 +59,8 @@ bool isa_fir_or_std_type(mlir::Type t);
 
 /// Is `t` a FIR dialect type that implies a memory (de)reference?
 inline bool isa_ref_type(mlir::Type t) {
-  return t.isa<ReferenceType>() || t.isa<PointerType>() || t.isa<HeapType>();
+  return t.isa<ReferenceType>() || t.isa<PointerType>() || t.isa<HeapType>() ||
+         t.isa<fir::LLVMPointerType>();
 }
 
 /// Is `t` a boxed type?
@@ -163,6 +164,14 @@ inline mlir::Type unwrapSequenceType(mlir::Type t) {
 
 inline mlir::Type unwrapRefType(mlir::Type t) {
   if (auto eleTy = dyn_cast_ptrEleTy(t))
+    return eleTy;
+  return t;
+}
+
+/// If `t` conforms with a pass-by-reference type (box, ref, ptr, etc.) then
+/// return the element type of `t`. Otherwise, return `t`.
+inline mlir::Type unwrapPassByRefType(mlir::Type t) {
+  if (auto eleTy = dyn_cast_ptrOrBoxEleTy(t))
     return eleTy;
   return t;
 }

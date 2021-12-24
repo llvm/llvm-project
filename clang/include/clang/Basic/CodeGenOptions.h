@@ -97,6 +97,11 @@ public:
     Embed_Marker    // Embed a marker as a placeholder for bitcode.
   };
 
+  enum InlineAsmDialectKind {
+    IAD_ATT,
+    IAD_Intel,
+  };
+
   // This field stores one of the allowed values for the option
   // -fbasic-block-sections=.  The allowed values with this option are:
   // {"labels", "all", "list=<file>", "none"}.
@@ -221,6 +226,9 @@ public:
 
   /// Output filename for the split debug info, not used in the skeleton CU.
   std::string SplitDwarfOutput;
+
+  /// Output filename used in the COFF debug information.
+  std::string ObjectFilenameForDebug;
 
   /// The name of the relocation model to use.
   llvm::Reloc::Model RelocationModel;
@@ -390,7 +398,7 @@ public:
   /// Executable and command-line used to create a given CompilerInvocation.
   /// Most of the time this will be the full -cc1 command.
   const char *Argv0 = nullptr;
-  ArrayRef<const char *> CommandLineArgs;
+  std::vector<std::string> CommandLineArgs;
 
   /// The minimum hotness value a diagnostic needs in order to be included in
   /// optimization diagnostics.
@@ -463,7 +471,8 @@ public:
   // Check if any one of SanitizeCoverage* is enabled.
   bool hasSanitizeCoverage() const {
     return SanitizeCoverageType || SanitizeCoverageIndirectCalls ||
-           SanitizeCoverageTraceCmp;
+           SanitizeCoverageTraceCmp || SanitizeCoverageTraceLoads ||
+           SanitizeCoverageTraceStores;
   }
 };
 

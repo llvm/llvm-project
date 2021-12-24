@@ -13,7 +13,7 @@
 // Do the same run, but now with SIMDization as well. This should not change the outcome.
 //
 // RUN: mlir-opt %s \
-// RUN:   --sparsification="vectorization-strategy=2 vl=2 enable-simd-index32" --sparse-tensor-conversion \
+// RUN:   --sparsification="vectorization-strategy=2 vl=2" --sparse-tensor-conversion \
 // RUN:   --convert-vector-to-scf --convert-scf-to-std \
 // RUN:   --func-bufferize --tensor-constant-bufferize --tensor-bufferize \
 // RUN:   --std-bufferize --finalizing-bufferize --lower-affine \
@@ -23,7 +23,6 @@
 // RUN:  -e entry -entry-point-result=void  \
 // RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
-//
 
 #SV = #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ] }>
 
@@ -196,7 +195,7 @@ module {
     // CHECK: ( -4, -3, -2, -1, 0, 1, 2, 3, 4, 305 )
     //
     %c0 = call @sparse_cast_s32_to_f32(%1) : (tensor<10xi32, #SV>) -> tensor<10xf32>
-    %m0 = memref.buffer_cast %c0 : memref<10xf32>
+    %m0 = bufferization.to_memref %c0 : memref<10xf32>
     %v0 = vector.transfer_read %m0[%z], %f: memref<10xf32>, vector<10xf32>
     vector.print %v0 : vector<10xf32>
 
@@ -204,7 +203,7 @@ module {
     // CHECK: ( 4.29497e+09, 4.29497e+09, 4.29497e+09, 4.29497e+09, 0, 1, 2, 3, 4, 305 )
     //
     %c1 = call @sparse_cast_u32_to_f32(%1) : (tensor<10xi32, #SV>) -> tensor<10xf32>
-    %m1 = memref.buffer_cast %c1 : memref<10xf32>
+    %m1 = bufferization.to_memref %c1 : memref<10xf32>
     %v1 = vector.transfer_read %m1[%z], %f: memref<10xf32>, vector<10xf32>
     vector.print %v1 : vector<10xf32>
 
@@ -212,7 +211,7 @@ module {
     // CHECK: ( -4, -3, -2, -1, 0, 1, 2, 3, 4, 305 )
     //
     %c2 = call @sparse_cast_f32_to_s32(%3) : (tensor<10xf32, #SV>) -> tensor<10xi32>
-    %m2 = memref.buffer_cast %c2 : memref<10xi32>
+    %m2 = bufferization.to_memref %c2 : memref<10xi32>
     %v2 = vector.transfer_read %m2[%z], %i: memref<10xi32>, vector<10xi32>
     vector.print %v2 : vector<10xi32>
 
@@ -220,7 +219,7 @@ module {
     // CHECK: ( 4294967295, 4294967294, 4294967293, 4294967292, 0, 1, 2, 3, 4, 305 )
     //
     %c3 = call @sparse_cast_f64_to_u32(%7) : (tensor<10xf64, #SV>) -> tensor<10xi32>
-    %m3 = memref.buffer_cast %c3 : memref<10xi32>
+    %m3 = bufferization.to_memref %c3 : memref<10xi32>
     %v3 = vector.transfer_read %m3[%z], %i: memref<10xi32>, vector<10xi32>
     %vu = vector.bitcast %v3 : vector<10xi32> to vector<10xui32>
     vector.print %vu : vector<10xui32>
@@ -229,7 +228,7 @@ module {
     // CHECK: ( -4.4, -3.3, -2.2, -1.1, 0, 1.1, 2.2, 3.3, 4.4, 305.5 )
     //
     %c4 = call @sparse_cast_f32_to_f64(%3) : (tensor<10xf32, #SV>) -> tensor<10xf64>
-    %m4 = memref.buffer_cast %c4 : memref<10xf64>
+    %m4 = bufferization.to_memref %c4 : memref<10xf64>
     %v4 = vector.transfer_read %m4[%z], %d: memref<10xf64>, vector<10xf64>
     vector.print %v4 : vector<10xf64>
 
@@ -237,7 +236,7 @@ module {
     // CHECK: ( -4.4, -3.3, -2.2, -1.1, 0, 1.1, 2.2, 3.3, 4.4, 305.5 )
     //
     %c5 = call @sparse_cast_f64_to_f32(%5) : (tensor<10xf64, #SV>) -> tensor<10xf32>
-    %m5 = memref.buffer_cast %c5 : memref<10xf32>
+    %m5 = bufferization.to_memref %c5 : memref<10xf32>
     %v5 = vector.transfer_read %m5[%z], %f: memref<10xf32>, vector<10xf32>
     vector.print %v5 : vector<10xf32>
 
@@ -245,7 +244,7 @@ module {
     // CHECK: ( -4, -3, -2, -1, 0, 1, 2, 3, 4, 305 )
     //
     %c6 = call @sparse_cast_s32_to_u64(%1) : (tensor<10xi32, #SV>) -> tensor<10xi64>
-    %m6 = memref.buffer_cast %c6 : memref<10xi64>
+    %m6 = bufferization.to_memref %c6 : memref<10xi64>
     %v6 = vector.transfer_read %m6[%z], %l: memref<10xi64>, vector<10xi64>
     vector.print %v6 : vector<10xi64>
 
@@ -253,7 +252,7 @@ module {
     // CHECK: ( 4294967292, 4294967293, 4294967294, 4294967295, 0, 1, 2, 3, 4, 305 )
     //
     %c7 = call @sparse_cast_u32_to_s64(%1) : (tensor<10xi32, #SV>) -> tensor<10xi64>
-    %m7 = memref.buffer_cast %c7 : memref<10xi64>
+    %m7 = bufferization.to_memref %c7 : memref<10xi64>
     %v7 = vector.transfer_read %m7[%z], %l: memref<10xi64>, vector<10xi64>
     vector.print %v7 : vector<10xi64>
 
@@ -261,7 +260,7 @@ module {
     // CHECK: ( -4, -3, -2, -1, 0, 1, 2, 3, 4, 49 )
     //
     %c8 = call @sparse_cast_i32_to_i8(%1) : (tensor<10xi32, #SV>) -> tensor<10xi8>
-    %m8 = memref.buffer_cast %c8 : memref<10xi8>
+    %m8 = bufferization.to_memref %c8 : memref<10xi8>
     %v8 = vector.transfer_read %m8[%z], %b: memref<10xi8>, vector<10xi8>
     vector.print %v8 : vector<10xi8>
 
@@ -269,7 +268,7 @@ module {
     // CHECK: ( -1064514355, -1068289229, -1072902963, -1081291571, 0, 1066192077, 1074580685, 1079194419, 1082969293, 1134084096 )
     //
     %c9 = call @sparse_cast_f32_as_s32(%3) : (tensor<10xf32, #SV>) -> tensor<10xi32>
-    %m9 = memref.buffer_cast %c9 : memref<10xi32>
+    %m9 = bufferization.to_memref %c9 : memref<10xi32>
     %v9 = vector.transfer_read %m9[%z], %i: memref<10xi32>, vector<10xi32>
     vector.print %v9 : vector<10xi32>
 

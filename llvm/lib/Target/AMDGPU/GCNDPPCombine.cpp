@@ -612,8 +612,7 @@ bool GCNDPPCombine::runOnMachineFunction(MachineFunction &MF) {
 
   bool Changed = false;
   for (auto &MBB : MF) {
-    for (auto I = MBB.rbegin(), E = MBB.rend(); I != E;) {
-      auto &MI = *I++;
+    for (MachineInstr &MI : llvm::make_early_inc_range(llvm::reverse(MBB))) {
       if (MI.getOpcode() == AMDGPU::V_MOV_B32_dpp && combineDPPMov(MI)) {
         Changed = true;
         ++NumDPPMovsCombined;

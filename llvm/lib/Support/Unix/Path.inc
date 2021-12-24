@@ -39,6 +39,9 @@
 #include <mach-o/dyld.h>
 #include <sys/attr.h>
 #include <copyfile.h>
+#if __has_include(<sys/clonefile.h>)
+#include <sys/clonefile.h>
+#endif
 #elif defined(__FreeBSD__)
 #include <osreldate.h>
 #if __FreeBSD_version >= 1300057
@@ -587,19 +590,6 @@ std::error_code rename(const Twine &from, const Twine &to) {
 }
 
 std::error_code resize_file(int FD, uint64_t Size) {
-#if defined(HAVE_POSIX_FALLOCATE)
-  // If we have posix_fallocate use it. Unlike ftruncate it always allocates
-  // space, so we get an error if the disk is full.
-  if (int Err = ::posix_fallocate(FD, 0, Size)) {
-#ifdef _AIX
-    constexpr int NotSupportedError = ENOTSUP;
-#else
-    constexpr int NotSupportedError = EOPNOTSUPP;
-#endif
-    if (Err != EINVAL && Err != NotSupportedError)
-      return std::error_code(Err, std::generic_category());
-  }
-#endif
   // Use ftruncate as a fallback. It may or may not allocate space. At least on
   // OS X with HFS+ it does.
   if (::ftruncate(FD, Size) == -1)
@@ -1457,22 +1447,37 @@ namespace fs {
 /// file descriptor variant of this function still uses the default
 /// implementation.
 std::error_code copy_file(const Twine &From, const Twine &To) {
-  uint32_t Flag = COPYFILE_DATA;
-#if __has_builtin(__builtin_available) && defined(COPYFILE_CLONE)
+  std::string FromS = From.str();
+  std::string ToS = To.str();
+#if __has_builtin(__builtin_available)
   if (__builtin_available(macos 10.12, *)) {
-    bool IsSymlink;
-    if (std::error_code Error = is_symlink_file(From, IsSymlink))
-      return Error;
-    // COPYFILE_CLONE clones the symlink instead of following it
-    // and returns EEXISTS if the target file already exists.
-    if (!IsSymlink && !exists(To))
-      Flag = COPYFILE_CLONE;
+    // Optimistically try to use clonefile() and handle errors, rather than
+    // calling stat() to see if it'll work.
+    //
+    // Note: It's okay if From is a symlink. In contrast to the behaviour of
+    // copyfile() with COPYFILE_CLONE, clonefile() clones targets (not the
+    // symlink itself) unless the flag CLONE_NOFOLLOW is passed.
+    if (!clonefile(FromS.c_str(), ToS.c_str(), 0))
+      return std::error_code();
+
+    auto Errno = errno;
+    switch (Errno) {
+      case EEXIST:  // To already exists.
+      case ENOTSUP: // Device does not support cloning.
+      case EXDEV:   // From and To are on different devices.
+        break;
+      default:
+        // Anything else will also break copyfile().
+        return std::error_code(Errno, std::generic_category());
+    }
+
+    // TODO: For EEXIST, profile calling fs::generateUniqueName() and
+    // clonefile() in a retry loop (then rename() on success) before falling
+    // back to copyfile(). Depending on the size of the file this could be
+    // cheaper.
   }
 #endif
-  int Status =
-      copyfile(From.str().c_str(), To.str().c_str(), /* State */ NULL, Flag);
-
-  if (Status == 0)
+  if (!copyfile(FromS.c_str(), ToS.c_str(), /*State=*/NULL, COPYFILE_DATA))
     return std::error_code();
   return std::error_code(errno, std::generic_category());
 }

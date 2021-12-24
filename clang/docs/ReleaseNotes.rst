@@ -53,6 +53,11 @@ Improvements to Clang's diagnostics
 
 - -Wbitwise-instead-of-logical (part of -Wbool-operation) warns about use of bitwise operators with boolean operands which have side effects.
 
+- Added diagnostic groups to control diagnostics for attribute extensions by
+  adding groups ``-Wc++N-attribute-extensions`` (where ``N`` is the standard
+  release being diagnosed against). These new groups are automatically implied
+  when passing ``-Wc++N-extensions``. Resolves PR33518.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
@@ -62,12 +67,14 @@ Non-comprehensive list of changes in this release
 New Compiler Flags
 ------------------
 
-- ...
+- Clang plugin arguments can now be passed through the compiler driver via
+  ``-fplugin-arg-pluginname-arg``, similar to GCC's ``-fplugin-arg``.
 
 Deprecated Compiler Flags
 -------------------------
 
-- ...
+- -Wweak-template-vtables has been deprecated and no longer has any effect. The
+  flag will be removed in the next release.
 
 Modified Compiler Flags
 -----------------------
@@ -139,6 +146,16 @@ C Language Changes in Clang
   ``__attribute__((warning("")))`` function attributes have been added.
 - The maximum allowed alignment has been increased from 2^29 to 2^32.
 
+- Clang now supports the ``_BitInt(N)`` family of bit-precise integer types
+  from C23. This type was previously exposed as ``_ExtInt(N)``, which is now a
+  deprecated alias for ``_BitInt(N)`` (so diagnostics will mention ``_BitInt``
+  even if source uses ``_ExtInt``). ``_BitInt(N)`` and ``_ExtInt(N)`` are the
+  same types in all respects beyond spelling and the deprecation warning.
+  ``_BitInt(N)`` is supported as an extension in older C modes and in all C++
+  modes. Note: the ABI for ``_BitInt(N)`` is still in the process of being
+  stabilized, so this type should not yet be used in interfaces that require
+  ABI stability.
+
 C++ Language Changes in Clang
 -----------------------------
 
@@ -157,7 +174,7 @@ C++2b Feature Support
 CUDA Language Changes in Clang
 ------------------------------
 
-- Clang now supports CUDA versions up to 11.4.
+- Clang now supports CUDA versions up to 11.5.
 - Default GPU architecture has been changed from sm_20 to sm_35.
 
 Objective-C Language Changes in Clang
@@ -170,6 +187,13 @@ OpenCL C Language Changes in Clang
 
 ABI Changes in Clang
 --------------------
+
+- The ``_ExtInt(N)`` extension has been standardized in C23 as ``_BitInt(N)``.
+  The mangling of this type in C++ has accordingly changed: under the Microsoft
+  ABI it is now mangled using the ``_BitInt`` spelling, and under the Itanium ABI
+  it is now mangled using a dedicated production. Note: the ABI for ``_BitInt(N)``
+  is still in the process of being stabilized, so this type should not yet be
+  used in interfaces that require ABI stability.
 
 OpenMP Support in Clang
 -----------------------
@@ -192,6 +216,9 @@ Arm and AArch64 Support in Clang
 
 - Support has been added for the following processors (command-line identifiers in parentheses):
   - Arm Cortex-A510 (``cortex-a510``)
+  - Arm Cortex-X2 (``cortex-x2``)
+  - Arm Cortex-A710 (``cortex-A710``)
+
 - The -mtune flag is no longer ignored for AArch64. It is now possible to
   tune code generation for a particular CPU with -mtune without setting any
   architectural features. For example, compiling with
@@ -200,15 +227,34 @@ Arm and AArch64 Support in Clang
   Cortex-A57 CPUs and enable the use of a more accurate scheduling model.
 
 
+Floating Point Support in Clang
+-------------------------------
+- The default setting of FP contraction (FMA) is now -ffp-contract=on (for
+  languages other than CUDA/HIP) even when optimization is off. Previously,
+  the default behavior was equivalent to -ffp-contract=off (-ffp-contract
+  was not set).
+  Related to this, the switch -ffp-model=precise now implies -ffp-contract=on
+  rather than -ffp-contract=fast, and the documentation of these features has
+  been clarified. Previously, the documentation claimed that -ffp-model=precise
+  was the default, but this was incorrect because the precise model implied
+  -ffp-contract=fast, whereas the (now corrected) default behavior is
+  -ffp-contract=on.
+  -ffp-model=precise is now exactly the default mode of the compiler.
+
 Internal API Changes
 --------------------
 
-- ...
+- A new sugar ``Type`` AST node represents types accessed via a C++ using
+  declaration. Given code ``using std::error_code; error_code x;``, ``x`` has
+  a ``UsingType`` which desugars to the previous ``RecordType``.
 
 Build System Changes
 --------------------
 
-- ...
+- Linux distros can specify ``-DCLANG_DEFAULT_PIE_ON_LINUX=On`` to use ``-fPIE`` and
+  ``-pie`` by default. This matches GCC installations on many Linux distros
+  (configured with ``--enable-default-pie``).
+  (`D113372 <https://reviews.llvm.org/D113372>`_)
 
 AST Matchers
 ------------
@@ -218,6 +264,19 @@ AST Matchers
   matcher or the ``hasReturnTypeLoc`` matcher. The addition of these matchers
   was made possible by changes to the handling of ``TypeLoc`` nodes that
   allows them to enjoy the same static type checking as other AST node kinds.
+- ``LambdaCapture`` AST Matchers are now available. These matchers allow for
+  the binding of ``LambdaCapture`` nodes. The ``LambdaCapture`` matchers added
+  include the ``lambdaCapture`` node matcher, the ``capturesVar`` traversal
+  matcher, and ``capturesThis`` narrowing matcher.
+- The ``hasAnyCapture`` matcher now only accepts an inner matcher of type
+  ``Matcher<LambdaCapture>``. The matcher originally accepted an inner matcher
+  of type ``Matcher<CXXThisExpr>`` or ``Matcher<VarDecl>``.
+- The ``usingType`` matcher is now available and needed to refer to types that
+  are referred to via using C++ using declarations.
+  The associated ``UsingShadowDecl`` can be matched using ``throughUsingDecl``
+  and the underlying ``Type`` with ``hasUnderlyingType``.
+  ``hasDeclaration`` continues to see through the alias and apply to the
+  underlying type.
 
 clang-format
 ------------
@@ -225,7 +284,7 @@ clang-format
 - Option ``AllowShortEnumsOnASingleLine: false`` has been improved, it now
   correctly places the opening brace according to ``BraceWrapping.AfterEnum``.
 
-- Option ``QualifierAligment`` has been added in order to auto-arrange the
+- Option ``QualifierAlignment`` has been added in order to auto-arrange the
   positioning of specifiers/qualifiers
   `const` `volatile` `static` `inline` `constexpr` `restrict`
   in variable and parameter declarations to be either ``Right`` aligned
@@ -234,6 +293,12 @@ clang-format
 - Option ``QualifierOrder`` has been added to allow the order
   `const` `volatile` `static` `inline` `constexpr` `restrict`
   to be controlled relative to the `type`.
+
+- Add a ``Custom`` style to ``SpaceBeforeParens``, to better configure the
+  space before parentheses. The custom options can be set using
+  ``SpaceBeforeParensOptions``.
+
+- Improved C++20 Modules and Coroutines support.
 
 libclang
 --------

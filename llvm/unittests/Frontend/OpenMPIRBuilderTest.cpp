@@ -3028,10 +3028,10 @@ sumReduction(OpenMPIRBuilder::InsertPointTy IP, Value *LHS, Value *RHS,
 }
 
 static OpenMPIRBuilder::InsertPointTy
-sumAtomicReduction(OpenMPIRBuilder::InsertPointTy IP, Value *LHS, Value *RHS) {
+sumAtomicReduction(OpenMPIRBuilder::InsertPointTy IP, Type *Ty, Value *LHS,
+                   Value *RHS) {
   IRBuilder<> Builder(IP.getBlock(), IP.getPoint());
-  Value *Partial = Builder.CreateLoad(RHS->getType()->getPointerElementType(),
-                                      RHS, "red.partial");
+  Value *Partial = Builder.CreateLoad(Ty, RHS, "red.partial");
   Builder.CreateAtomicRMW(AtomicRMWInst::FAdd, LHS, Partial, None,
                           AtomicOrdering::Monotonic);
   return Builder.saveIP();
@@ -3046,10 +3046,10 @@ xorReduction(OpenMPIRBuilder::InsertPointTy IP, Value *LHS, Value *RHS,
 }
 
 static OpenMPIRBuilder::InsertPointTy
-xorAtomicReduction(OpenMPIRBuilder::InsertPointTy IP, Value *LHS, Value *RHS) {
+xorAtomicReduction(OpenMPIRBuilder::InsertPointTy IP, Type *Ty, Value *LHS,
+                   Value *RHS) {
   IRBuilder<> Builder(IP.getBlock(), IP.getPoint());
-  Value *Partial = Builder.CreateLoad(RHS->getType()->getPointerElementType(),
-                                      RHS, "red.partial");
+  Value *Partial = Builder.CreateLoad(Ty, RHS, "red.partial");
   Builder.CreateAtomicRMW(AtomicRMWInst::Xor, LHS, Partial, None,
                           AtomicOrdering::Monotonic);
   return Builder.saveIP();
@@ -3081,13 +3081,15 @@ TEST_F(OpenMPIRBuilderTest, CreateReductions) {
   // Create variables to be reduced.
   InsertPointTy OuterAllocaIP(&F->getEntryBlock(),
                               F->getEntryBlock().getFirstInsertionPt());
+  Type *SumType = Builder.getFloatTy();
+  Type *XorType = Builder.getInt32Ty();
   Value *SumReduced;
   Value *XorReduced;
   {
     IRBuilderBase::InsertPointGuard Guard(Builder);
     Builder.restoreIP(OuterAllocaIP);
-    SumReduced = Builder.CreateAlloca(Builder.getFloatTy());
-    XorReduced = Builder.CreateAlloca(Builder.getInt32Ty());
+    SumReduced = Builder.CreateAlloca(SumType);
+    XorReduced = Builder.CreateAlloca(XorType);
   }
 
   // Store initial values of reductions into global variables.
@@ -3109,12 +3111,8 @@ TEST_F(OpenMPIRBuilderTest, CreateReductions) {
     Value *TID = OMPBuilder.getOrCreateThreadID(Ident);
     Value *SumLocal =
         Builder.CreateUIToFP(TID, Builder.getFloatTy(), "sum.local");
-    Value *SumPartial =
-        Builder.CreateLoad(SumReduced->getType()->getPointerElementType(),
-                           SumReduced, "sum.partial");
-    Value *XorPartial =
-        Builder.CreateLoad(XorReduced->getType()->getPointerElementType(),
-                           XorReduced, "xor.partial");
+    Value *SumPartial = Builder.CreateLoad(SumType, SumReduced, "sum.partial");
+    Value *XorPartial = Builder.CreateLoad(XorType, XorReduced, "xor.partial");
     Value *Sum = Builder.CreateFAdd(SumPartial, SumLocal, "sum");
     Value *Xor = Builder.CreateXor(XorPartial, TID, "xor");
     Builder.CreateStore(Sum, SumReduced);
@@ -3164,8 +3162,8 @@ TEST_F(OpenMPIRBuilderTest, CreateReductions) {
   Builder.restoreIP(AfterIP);
 
   OpenMPIRBuilder::ReductionInfo ReductionInfos[] = {
-      {SumReduced, SumPrivatized, sumReduction, sumAtomicReduction},
-      {XorReduced, XorPrivatized, xorReduction, xorAtomicReduction}};
+      {SumType, SumReduced, SumPrivatized, sumReduction, sumAtomicReduction},
+      {XorType, XorReduced, XorPrivatized, xorReduction, xorAtomicReduction}};
 
   OMPBuilder.createReductions(BodyIP, BodyAllocaIP, ReductionInfos);
 
@@ -3319,13 +3317,15 @@ TEST_F(OpenMPIRBuilderTest, CreateTwoReductions) {
   // Create variables to be reduced.
   InsertPointTy OuterAllocaIP(&F->getEntryBlock(),
                               F->getEntryBlock().getFirstInsertionPt());
+  Type *SumType = Builder.getFloatTy();
+  Type *XorType = Builder.getInt32Ty();
   Value *SumReduced;
   Value *XorReduced;
   {
     IRBuilderBase::InsertPointGuard Guard(Builder);
     Builder.restoreIP(OuterAllocaIP);
-    SumReduced = Builder.CreateAlloca(Builder.getFloatTy());
-    XorReduced = Builder.CreateAlloca(Builder.getInt32Ty());
+    SumReduced = Builder.CreateAlloca(SumType);
+    XorReduced = Builder.CreateAlloca(XorType);
   }
 
   // Store initial values of reductions into global variables.
@@ -3344,9 +3344,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTwoReductions) {
     Value *TID = OMPBuilder.getOrCreateThreadID(Ident);
     Value *SumLocal =
         Builder.CreateUIToFP(TID, Builder.getFloatTy(), "sum.local");
-    Value *SumPartial =
-        Builder.CreateLoad(SumReduced->getType()->getPointerElementType(),
-                           SumReduced, "sum.partial");
+    Value *SumPartial = Builder.CreateLoad(SumType, SumReduced, "sum.partial");
     Value *Sum = Builder.CreateFAdd(SumPartial, SumLocal, "sum");
     Builder.CreateStore(Sum, SumReduced);
 
@@ -3364,9 +3362,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTwoReductions) {
     Constant *SrcLocStr = OMPBuilder.getOrCreateSrcLocStr(Loc);
     Value *Ident = OMPBuilder.getOrCreateIdent(SrcLocStr);
     Value *TID = OMPBuilder.getOrCreateThreadID(Ident);
-    Value *XorPartial =
-        Builder.CreateLoad(XorReduced->getType()->getPointerElementType(),
-                           XorReduced, "xor.partial");
+    Value *XorPartial = Builder.CreateLoad(XorType, XorReduced, "xor.partial");
     Value *Xor = Builder.CreateXor(XorPartial, TID, "xor");
     Builder.CreateStore(Xor, XorReduced);
 
@@ -3421,10 +3417,10 @@ TEST_F(OpenMPIRBuilderTest, CreateTwoReductions) {
 
   OMPBuilder.createReductions(
       FirstBodyIP, FirstBodyAllocaIP,
-      {{SumReduced, SumPrivatized, sumReduction, sumAtomicReduction}});
+      {{SumType, SumReduced, SumPrivatized, sumReduction, sumAtomicReduction}});
   OMPBuilder.createReductions(
       SecondBodyIP, SecondBodyAllocaIP,
-      {{XorReduced, XorPrivatized, xorReduction, xorAtomicReduction}});
+      {{XorType, XorReduced, XorPrivatized, xorReduction, xorAtomicReduction}});
 
   Builder.restoreIP(AfterIP);
   Builder.CreateRetVoid();
@@ -3485,6 +3481,37 @@ TEST_F(OpenMPIRBuilderTest, CreateTwoReductions) {
   ASSERT_NE(Bitcast, nullptr);
   Opcode = Instruction::Xor;
   EXPECT_TRUE(isSimpleBinaryReduction(Bitcast, FnReductionBB, &Opcode));
+}
+
+TEST_F(OpenMPIRBuilderTest, CreateSectionsSimple) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  using BodyGenCallbackTy = llvm::OpenMPIRBuilder::StorableBodyGenCallbackTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+  llvm::SmallVector<BodyGenCallbackTy, 4> SectionCBVector;
+  llvm::SmallVector<BasicBlock *, 4> CaseBBs;
+
+  auto FiniCB = [&](InsertPointTy IP) {};
+  auto SectionCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
+                       BasicBlock &FiniBB) {
+    Builder.restoreIP(CodeGenIP);
+    Builder.CreateBr(&FiniBB);
+  };
+  SectionCBVector.push_back(SectionCB);
+
+  auto PrivCB = [](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
+                   llvm::Value &, llvm::Value &Val,
+                   llvm::Value *&ReplVal) { return CodeGenIP; };
+  IRBuilder<>::InsertPoint AllocaIP(&F->getEntryBlock(),
+                                    F->getEntryBlock().getFirstInsertionPt());
+  Builder.restoreIP(OMPBuilder.createSections(Loc, AllocaIP, SectionCBVector,
+                                              PrivCB, FiniCB, false, false));
+  Builder.CreateRetVoid(); // Required at the end of the function
+  EXPECT_NE(F->getEntryBlock().getTerminator(), nullptr);
+  EXPECT_FALSE(verifyModule(*M, &errs()));
 }
 
 TEST_F(OpenMPIRBuilderTest, CreateSections) {
@@ -3607,6 +3634,35 @@ TEST_F(OpenMPIRBuilderTest, CreateSections) {
 
   ASSERT_EQ(NumBodiesGenerated, 2U);
   ASSERT_EQ(NumFiniCBCalls, 1U);
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+}
+
+TEST_F(OpenMPIRBuilderTest, CreateSectionsNoWait) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  using BodyGenCallbackTy = llvm::OpenMPIRBuilder::StorableBodyGenCallbackTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+  IRBuilder<>::InsertPoint AllocaIP(&F->getEntryBlock(),
+                                    F->getEntryBlock().getFirstInsertionPt());
+  llvm::SmallVector<BodyGenCallbackTy, 4> SectionCBVector;
+  auto PrivCB = [](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
+                   llvm::Value &, llvm::Value &Val,
+                   llvm::Value *&ReplVal) { return CodeGenIP; };
+  auto FiniCB = [&](InsertPointTy IP) {};
+
+  Builder.restoreIP(OMPBuilder.createSections(Loc, AllocaIP, SectionCBVector,
+                                              PrivCB, FiniCB, false, true));
+  Builder.CreateRetVoid(); // Required at the end of the function
+  for (auto &Inst : instructions(*F)) {
+    EXPECT_FALSE(isa<CallInst>(Inst) &&
+                 cast<CallInst>(&Inst)->getCalledFunction()->getName() ==
+                     "__kmpc_barrier" &&
+                 "call to function __kmpc_barrier found with nowait");
+  }
 }
 
 TEST_F(OpenMPIRBuilderTest, CreateOffloadMaptypes) {

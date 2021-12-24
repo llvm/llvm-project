@@ -1,4 +1,5 @@
-# RUN: llc -run-pass=livedebugvalues -emit-call-site-info -march=x86-64 -o - %s | FileCheck %s
+# RUN: llc -run-pass=livedebugvalues -emit-call-site-info -march=x86-64 -o - \
+# RUN:    %s  -experimental-debug-variable-locations=false | FileCheck %s
 
 ## Test from PR47628.
 ## Compiled from source:
@@ -101,6 +102,6 @@ body:             |
     $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, debug-location !22
     $rcx = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !22
     CFI_INSTRUCTION def_cfa_offset 8, debug-location !22
-    RETQ killed $eax, debug-location !22
+    RET64 killed $eax, debug-location !22
 
 ...

@@ -38,7 +38,7 @@ struct PipelineDataTransfer
   std::vector<AffineForOp> forOps;
 };
 
-} // end anonymous namespace
+} // namespace
 
 /// Creates a pass to pipeline explicit movement of data across levels of the
 /// memory hierarchy.
@@ -191,7 +191,7 @@ static void findMatchingStartFinishInsts(
     // Check for dependence with outgoing DMAs. Doing this conservatively.
     // TODO: use the dependence analysis to check for
     // dependences between an incoming and outgoing DMA in the same iteration.
-    auto it = outgoingDmaOps.begin();
+    auto *it = outgoingDmaOps.begin();
     for (; it != outgoingDmaOps.end(); ++it) {
       if (it->getDstMemRef() == dmaStartOp.getSrcMemRef())
         break;

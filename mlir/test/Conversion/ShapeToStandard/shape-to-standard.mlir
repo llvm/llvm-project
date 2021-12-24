@@ -203,7 +203,7 @@ func @shape_of(%arg : tensor<*xf32>) {
 // CHECK-LABEL: @shape_of_unranked
 // CHECK-SAME: (%[[ARG:.*]]: tensor<*xf32>)
 func @shape_of_unranked(%arg : tensor<*xf32>) {
-  // CHECK: %[[RANK:.*]] = rank %[[ARG]] : tensor<*xf32>
+  // CHECK: %[[RANK:.*]] = tensor.rank %[[ARG]] : tensor<*xf32>
   // CHECK: %[[SHAPE:.*]] = tensor.generate %[[RANK]] {
   // CHECK: ^bb0(%[[I:.*]]: index):
   // CHECK:   %[[EXTENT:.*]] = tensor.dim %[[ARG]], %[[I]] : tensor<*xf32>
@@ -593,7 +593,7 @@ func @broadcast_3_shapes_different_extents(%a : tensor<2xindex>,
   return
 }
 
-// ----
+// -----
 
 // CHECK-LABEL: @broadcast_to_known_rank
 func @broadcast_to_known_rank(%a : tensor<1xindex>, %b : tensor<3xindex>)

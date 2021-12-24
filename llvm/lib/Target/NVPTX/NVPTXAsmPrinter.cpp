@@ -130,10 +130,8 @@ VisitGlobalVariableForEmission(const GlobalVariable *GV,
   for (unsigned i = 0, e = GV->getNumOperands(); i != e; ++i)
     DiscoverDependentGlobals(GV->getOperand(i), Others);
 
-  for (DenseSet<const GlobalVariable *>::iterator I = Others.begin(),
-                                                  E = Others.end();
-       I != E; ++I)
-    VisitGlobalVariableForEmission(*I, Order, Visited, Visiting);
+  for (const GlobalVariable *GV : Others)
+    VisitGlobalVariableForEmission(GV, Order, Visited, Visiting);
 
   // Now we can visit ourself
   Order.push_back(GV);
@@ -417,8 +415,7 @@ bool NVPTXAsmPrinter::isLoopHeaderOfNoUnroll(
   // llvm.loop.unroll.disable is marked on the back edges of a loop. Therefore,
   // we iterate through each back edge of the loop with header MBB, and check
   // whether its metadata contains llvm.loop.unroll.disable.
-  for (auto I = MBB.pred_begin(); I != MBB.pred_end(); ++I) {
-    const MachineBasicBlock *PMBB = *I;
+  for (const MachineBasicBlock *PMBB : MBB.predecessors()) {
     if (LI.getLoopFor(PMBB) != LI.getLoopFor(&MBB)) {
       // Edges from other loops to MBB are not back edges.
       continue;
@@ -700,35 +697,33 @@ static bool useFuncSeen(const Constant *C,
 
 void NVPTXAsmPrinter::emitDeclarations(const Module &M, raw_ostream &O) {
   DenseMap<const Function *, bool> seenMap;
-  for (Module::const_iterator FI = M.begin(), FE = M.end(); FI != FE; ++FI) {
-    const Function *F = &*FI;
-
-    if (F->getAttributes().hasFnAttr("nvptx-libcall-callee")) {
-      emitDeclaration(F, O);
+  for (const Function &F : M) {
+    if (F.getAttributes().hasFnAttr("nvptx-libcall-callee")) {
+      emitDeclaration(&F, O);
       continue;
     }
 
-    if (F->isDeclaration()) {
-      if (F->use_empty())
+    if (F.isDeclaration()) {
+      if (F.use_empty())
         continue;
-      if (F->getIntrinsicID())
+      if (F.getIntrinsicID())
         continue;
-      emitDeclaration(F, O);
+      emitDeclaration(&F, O);
       continue;
     }
-    for (const User *U : F->users()) {
+    for (const User *U : F.users()) {
       if (const Constant *C = dyn_cast<Constant>(U)) {
         if (usedInGlobalVarDef(C)) {
           // The use is in the initialization of a global variable
           // that is a function pointer, so print a declaration
           // for the original function
-          emitDeclaration(F, O);
+          emitDeclaration(&F, O);
           break;
         }
         // Emit a declaration of this function if the function that
         // uses this constant expr has already been seen.
         if (useFuncSeen(C, seenMap)) {
-          emitDeclaration(F, O);
+          emitDeclaration(&F, O);
           break;
         }
       }
@@ -747,11 +742,11 @@ void NVPTXAsmPrinter::emitDeclarations(const Module &M, raw_ostream &O) {
       // appearing in the module before the callee. so print out
       // a declaration for the callee.
       if (seenMap.find(caller) != seenMap.end()) {
-        emitDeclaration(F, O);
+        emitDeclaration(&F, O);
         break;
       }
     }
-    seenMap[F] = true;
+    seenMap[&F] = true;
   }
 }
 
@@ -888,33 +883,11 @@ bool NVPTXAsmPrinter::doFinalization(Module &M) {
     GlobalsEmitted = true;
   }
 
-  // XXX Temproarily remove global variables so that doFinalization() will not
-  // emit them again (global variables are emitted at beginning).
-
-  Module::GlobalListType &global_list = M.getGlobalList();
-  int i, n = global_list.size();
-  GlobalVariable **gv_array = new GlobalVariable *[n];
-
-  // first, back-up GlobalVariable in gv_array
-  i = 0;
-  for (Module::global_iterator I = global_list.begin(), E = global_list.end();
-       I != E; ++I)
-    gv_array[i++] = &*I;
-
-  // second, empty global_list
-  while (!global_list.empty())
-    global_list.remove(global_list.begin());
-
   // call doFinalization
   bool ret = AsmPrinter::doFinalization(M);
 
-  // now we restore global variables
-  for (i = 0; i < n; i++)
-    global_list.insert(global_list.end(), gv_array[i]);
-
   clearAnnotationCache(&M);
 
-  delete[] gv_array;
   // Close the last emitted section
   if (HasDebugInfo) {
     static_cast<NVPTXTargetStreamer *>(OutStreamer->getTargetStreamer())
@@ -1125,10 +1098,10 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
     O << " .attribute(.managed)";
   }
 
-  if (GVar->getAlignment() == 0)
-    O << " .align " << (int)DL.getPrefTypeAlignment(ETy);
+  if (MaybeAlign A = GVar->getAlign())
+    O << " .align " << A->value();
   else
-    O << " .align " << GVar->getAlignment();
+    O << " .align " << (int)DL.getPrefTypeAlignment(ETy);
 
   if (ETy->isFloatingPointTy() || ETy->isPointerTy() ||
       (ETy->isIntegerTy() && ETy->getScalarSizeInBits() <= 64)) {
@@ -1317,10 +1290,10 @@ void NVPTXAsmPrinter::emitPTXGlobalVariable(const GlobalVariable *GVar,
 
   O << ".";
   emitPTXAddressSpace(GVar->getType()->getAddressSpace(), O);
-  if (GVar->getAlignment() == 0)
-    O << " .align " << (int)DL.getPrefTypeAlignment(ETy);
+  if (MaybeAlign A = GVar->getAlign())
+    O << " .align " << A->value();
   else
-    O << " .align " << GVar->getAlignment();
+    O << " .align " << (int)DL.getPrefTypeAlignment(ETy);
 
   // Special case for i128
   if (ETy->isIntegerTy(128)) {

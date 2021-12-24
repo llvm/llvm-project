@@ -2432,9 +2432,9 @@ define internal void @dead_with_blockaddress_users(i32* nocapture %pc) nounwind 
 ; IS__CGSCC_OPM-NEXT:    [[INDIRECT_GOTO_DEST:%.*]] = load i8*, i8** [[INDIRECT_GOTO_DEST_IN]]
 ; IS__CGSCC_OPM-NEXT:    indirectbr i8* [[INDIRECT_GOTO_DEST]], [label [[LAB0]], label %end]
 ;
-; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone
+; IS__CGSCC____: Function Attrs: nounwind readonly
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@dead_with_blockaddress_users
-; IS__CGSCC____-SAME: () #[[ATTR14:[0-9]+]] {
+; IS__CGSCC____-SAME: (i32* nocapture [[PC:%.*]]) #[[ATTR14:[0-9]+]] {
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    br label [[INDIRECTGOTO:%.*]]
 ; IS__CGSCC____:       lab0:
@@ -2444,7 +2444,11 @@ define internal void @dead_with_blockaddress_users(i32* nocapture %pc) nounwind 
 ; IS__CGSCC____-NEXT:    ret void
 ; IS__CGSCC____:       indirectgoto:
 ; IS__CGSCC____-NEXT:    [[INDVAR]] = phi i32 [ [[INDVAR_NEXT]], [[LAB0:%.*]] ], [ 0, [[ENTRY:%.*]] ]
-; IS__CGSCC____-NEXT:    indirectbr i8* undef, [label [[LAB0]], label %end]
+; IS__CGSCC____-NEXT:    [[PC_ADDR_0:%.*]] = getelementptr i32, i32* [[PC]], i32 [[INDVAR]]
+; IS__CGSCC____-NEXT:    [[TMP1_PN:%.*]] = load i32, i32* [[PC_ADDR_0]], align 4
+; IS__CGSCC____-NEXT:    [[INDIRECT_GOTO_DEST_IN:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* @dead_with_blockaddress_users.l, i32 0, i32 [[TMP1_PN]]
+; IS__CGSCC____-NEXT:    [[INDIRECT_GOTO_DEST:%.*]] = load i8*, i8** [[INDIRECT_GOTO_DEST_IN]], align 8
+; IS__CGSCC____-NEXT:    indirectbr i8* [[INDIRECT_GOTO_DEST]], [label [[LAB0]], label %end]
 ;
 entry:
   br label %indirectgoto
@@ -2681,7 +2685,7 @@ declare void @llvm.lifetime.end.p0i8(i64 %0, i8* %1)
 ; IS__CGSCC____: attributes #[[ATTR11]] = { nofree norecurse noreturn nosync nounwind readnone }
 ; IS__CGSCC____: attributes #[[ATTR12]] = { nofree norecurse noreturn nosync nounwind readnone willreturn }
 ; IS__CGSCC____: attributes #[[ATTR13]] = { nofree nosync nounwind willreturn }
-; IS__CGSCC____: attributes #[[ATTR14]] = { nofree norecurse nosync nounwind readnone }
+; IS__CGSCC____: attributes #[[ATTR14]] = { nounwind readonly }
 ; IS__CGSCC____: attributes #[[ATTR15]] = { nofree nosync nounwind readnone willreturn }
 ; IS__CGSCC____: attributes #[[ATTR16:[0-9]+]] = { argmemonly nofree nosync nounwind willreturn }
 ; IS__CGSCC____: attributes #[[ATTR17]] = { nounwind willreturn }

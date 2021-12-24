@@ -531,7 +531,7 @@ void ExprEngine::handleConstructor(const Expr *E,
     // FIXME: Instead of relying on the ParentMap, we should have the
     // trigger-statement (InitListExpr in this case) passed down from CFG or
     // otherwise always available during construction.
-    if (dyn_cast_or_null<InitListExpr>(LCtx->getParentMap().getParent(E))) {
+    if (isa_and_nonnull<InitListExpr>(LCtx->getParentMap().getParent(E))) {
       MemRegionManager &MRMgr = getSValBuilder().getRegionManager();
       Target = loc::MemRegionVal(MRMgr.getCXXTempObjectRegion(E, LCtx));
       CallOpts.IsCtorOrDtorWithImproperlyModeledTargetRegion = true;

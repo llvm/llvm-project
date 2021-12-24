@@ -37,6 +37,7 @@
 #include "index/FileIndex.h"
 #include "refactor/Tweak.h"
 #include "support/ThreadsafeFS.h"
+#include "support/Trace.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Format/Format.h"
@@ -158,16 +159,15 @@ public:
   // Build preamble and AST, and index them.
   bool buildAST() {
     log("Building preamble...");
-    Preamble =
-        buildPreamble(File, *Invocation, Inputs, /*StoreInMemory=*/true,
-                      [&](ASTContext &Ctx, std::shared_ptr<Preprocessor> PP,
-                          const CanonicalIncludes &Includes) {
-                        if (!Opts.BuildDynamicSymbolIndex)
-                          return;
-                        log("Indexing headers...");
-                        Index.updatePreamble(File, /*Version=*/"null", Ctx,
-                                             std::move(PP), Includes);
-                      });
+    Preamble = buildPreamble(File, *Invocation, Inputs, /*StoreInMemory=*/true,
+                             [&](ASTContext &Ctx, Preprocessor &PP,
+                                 const CanonicalIncludes &Includes) {
+                               if (!Opts.BuildDynamicSymbolIndex)
+                                 return;
+                               log("Indexing headers...");
+                               Index.updatePreamble(File, /*Version=*/"null",
+                                                    Ctx, PP, Includes);
+                             });
     if (!Preamble) {
       elog("Failed to build preamble");
       return false;
@@ -195,6 +195,7 @@ public:
   void testLocationFeatures(
       llvm::function_ref<bool(const Position &)> ShouldCheckLine,
       const bool EnableCodeCompletion) {
+    trace::Span Trace("testLocationFeatures");
     log("Testing features at each token (may be slow in large files)");
     auto &SM = AST->getSourceManager();
     auto SpelledTokens = AST->getTokens().spelledTokens(SM.getMainFileID());
@@ -209,6 +210,10 @@ public:
 
       if (!ShouldCheckLine(Pos))
         continue;
+
+      trace::Span Trace("Token");
+      SPAN_ATTACH(Trace, "pos", Pos);
+      SPAN_ATTACH(Trace, "text", Tok.text(AST->getSourceManager()));
 
       // FIXME: dumping the tokens may leak sensitive code into bug reports.
       // Add an option to turn this off, once we decide how options work.

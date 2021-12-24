@@ -791,7 +791,7 @@ RetainSummaryManager::getUnarySummary(const FunctionType* FT,
   // Unary functions have no arg effects by definition.
   ArgEffects ScratchArgs(AF.getEmptyMap());
 
-  // Sanity check that this is *really* a unary function.  This can
+  // Verify that this is *really* a unary function.  This can
   // happen if people do weird things.
   const FunctionProtoType* FTP = dyn_cast<FunctionProtoType>(FT);
   if (!FTP || FTP->getNumParams() != 1)

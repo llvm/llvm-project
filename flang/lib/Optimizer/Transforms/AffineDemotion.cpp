@@ -42,13 +42,14 @@ using namespace fir;
 
 namespace {
 
-class AffineLoadConversion : public OpRewritePattern<mlir::AffineLoadOp> {
+class AffineLoadConversion : public OpConversionPattern<mlir::AffineLoadOp> {
 public:
-  using OpRewritePattern<mlir::AffineLoadOp>::OpRewritePattern;
+  using OpConversionPattern<mlir::AffineLoadOp>::OpConversionPattern;
 
-  LogicalResult matchAndRewrite(mlir::AffineLoadOp op,
-                                PatternRewriter &rewriter) const override {
-    SmallVector<Value> indices(op.getMapOperands());
+  LogicalResult
+  matchAndRewrite(mlir::AffineLoadOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    SmallVector<Value> indices(adaptor.indices());
     auto maybeExpandedMap =
         expandAffineMap(rewriter, op.getLoc(), op.getAffineMap(), indices);
     if (!maybeExpandedMap)
@@ -56,20 +57,21 @@ public:
 
     auto coorOp = rewriter.create<fir::CoordinateOp>(
         op.getLoc(), fir::ReferenceType::get(op.getResult().getType()),
-        op.getMemRef(), *maybeExpandedMap);
+        adaptor.memref(), *maybeExpandedMap);
 
     rewriter.replaceOpWithNewOp<fir::LoadOp>(op, coorOp.getResult());
     return success();
   }
 };
 
-class AffineStoreConversion : public OpRewritePattern<mlir::AffineStoreOp> {
+class AffineStoreConversion : public OpConversionPattern<mlir::AffineStoreOp> {
 public:
-  using OpRewritePattern<mlir::AffineStoreOp>::OpRewritePattern;
+  using OpConversionPattern<mlir::AffineStoreOp>::OpConversionPattern;
 
-  LogicalResult matchAndRewrite(mlir::AffineStoreOp op,
-                                PatternRewriter &rewriter) const override {
-    SmallVector<Value> indices(op.getMapOperands());
+  LogicalResult
+  matchAndRewrite(mlir::AffineStoreOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    SmallVector<Value> indices(op.indices());
     auto maybeExpandedMap =
         expandAffineMap(rewriter, op.getLoc(), op.getAffineMap(), indices);
     if (!maybeExpandedMap)
@@ -77,8 +79,8 @@ public:
 
     auto coorOp = rewriter.create<fir::CoordinateOp>(
         op.getLoc(), fir::ReferenceType::get(op.getValueToStore().getType()),
-        op.getMemRef(), *maybeExpandedMap);
-    rewriter.replaceOpWithNewOp<fir::StoreOp>(op, op.getValueToStore(),
+        adaptor.memref(), *maybeExpandedMap);
+    rewriter.replaceOpWithNewOp<fir::StoreOp>(op, adaptor.value(),
                                               coorOp.getResult());
     return success();
   }

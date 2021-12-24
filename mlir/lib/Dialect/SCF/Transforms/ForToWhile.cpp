@@ -35,24 +35,24 @@ struct ForLoopLoweringPattern : public OpRewritePattern<ForOp> {
     // variable is placed first, followed by the forOp.iterArgs.
     SmallVector<Type, 8> lcvTypes;
     lcvTypes.push_back(forOp.getInductionVar().getType());
-    llvm::transform(forOp.initArgs(), std::back_inserter(lcvTypes),
+    llvm::transform(forOp.getInitArgs(), std::back_inserter(lcvTypes),
                     [&](auto v) { return v.getType(); });
 
     // Build scf.WhileOp
     SmallVector<Value> initArgs;
-    initArgs.push_back(forOp.lowerBound());
-    llvm::append_range(initArgs, forOp.initArgs());
+    initArgs.push_back(forOp.getLowerBound());
+    llvm::append_range(initArgs, forOp.getInitArgs());
     auto whileOp = rewriter.create<WhileOp>(forOp.getLoc(), lcvTypes, initArgs,
                                             forOp->getAttrs());
 
     // 'before' region contains the loop condition and forwarding of iteration
     // arguments to the 'after' region.
     auto *beforeBlock = rewriter.createBlock(
-        &whileOp.before(), whileOp.before().begin(), lcvTypes, {});
-    rewriter.setInsertionPointToStart(&whileOp.before().front());
+        &whileOp.getBefore(), whileOp.getBefore().begin(), lcvTypes, {});
+    rewriter.setInsertionPointToStart(&whileOp.getBefore().front());
     auto cmpOp = rewriter.create<arith::CmpIOp>(
         whileOp.getLoc(), arith::CmpIPredicate::slt,
-        beforeBlock->getArgument(0), forOp.upperBound());
+        beforeBlock->getArgument(0), forOp.getUpperBound());
     rewriter.create<scf::ConditionOp>(whileOp.getLoc(), cmpOp.getResult(),
                                       beforeBlock->getArguments());
 
@@ -60,12 +60,12 @@ struct ForLoopLoweringPattern : public OpRewritePattern<ForOp> {
     // region. The return type of the execRegionOp does not contain the
     // iv - yields in the source for-loop contain only iterArgs.
     auto *afterBlock = rewriter.createBlock(
-        &whileOp.after(), whileOp.after().begin(), lcvTypes, {});
+        &whileOp.getAfter(), whileOp.getAfter().begin(), lcvTypes, {});
 
     // Add induction variable incrementation
     rewriter.setInsertionPointToEnd(afterBlock);
     auto ivIncOp = rewriter.create<arith::AddIOp>(
-        whileOp.getLoc(), afterBlock->getArgument(0), forOp.step());
+        whileOp.getLoc(), afterBlock->getArgument(0), forOp.getStep());
 
     // Rewrite uses of the for-loop block arguments to the new while-loop
     // "after" arguments

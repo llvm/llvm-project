@@ -792,7 +792,7 @@ attrMatcherRuleListToString(ArrayRef<attr::SubjectMatchRule> Rules) {
       OS << (I.index() == Rules.size() - 1 ? ", and " : ", ");
     OS << "'" << attr::getSubjectMatchRuleSpelling(I.value()) << "'";
   }
-  return OS.str();
+  return Result;
 }
 
 } // end anonymous namespace

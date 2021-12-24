@@ -226,8 +226,8 @@ int collectStatsSingle(OpListNode *head, ModuleStats *stats) {
     ++stats->numOpResults;
   }
 
-  for (unsigned i = 0; i < numRegions; ++i) {
-    MlirRegion region = mlirOperationGetRegion(operation, i);
+  MlirRegion region = mlirOperationGetFirstRegion(operation);
+  while (!mlirRegionIsNull(region)) {
     for (MlirBlock block = mlirRegionGetFirstBlock(region);
          !mlirBlockIsNull(block); block = mlirBlockGetNextInRegion(block)) {
       ++stats->numBlocks;
@@ -255,6 +255,7 @@ int collectStatsSingle(OpListNode *head, ModuleStats *stats) {
         head->next = node;
       }
     }
+    region = mlirRegionGetNextInOperation(region);
   }
   return 0;
 }
@@ -1393,6 +1394,13 @@ int affineMapFromExprs(MlirContext ctx) {
   if (!mlirAffineExprEqual(mlirAffineMapGetResult(map, 1), affineSymbolExpr))
     return 3;
 
+  MlirAffineExpr affineDim2Expr = mlirAffineDimExprGet(ctx, 1);
+  MlirAffineExpr composed = mlirAffineExprCompose(affineDim2Expr, map);
+  // CHECK: s1
+  mlirAffineExprDump(composed);
+  if (!mlirAffineExprEqual(composed, affineSymbolExpr))
+    return 4;
+
   return 0;
 }
 
@@ -1692,57 +1700,6 @@ static void deleteUserData(void *userData) {
           (intptr_t)userData);
 }
 
-void testDiagnostics() {
-  MlirContext ctx = mlirContextCreate();
-  MlirDiagnosticHandlerID id = mlirContextAttachDiagnosticHandler(
-      ctx, errorHandler, (void *)42, deleteUserData);
-  fprintf(stderr, "@test_diagnostics\n");
-  MlirLocation unknownLoc = mlirLocationUnknownGet(ctx);
-  mlirEmitError(unknownLoc, "test diagnostics");
-  MlirLocation fileLineColLoc = mlirLocationFileLineColGet(
-      ctx, mlirStringRefCreateFromCString("file.c"), 1, 2);
-  mlirEmitError(fileLineColLoc, "test diagnostics");
-  MlirLocation callSiteLoc = mlirLocationCallSiteGet(
-      mlirLocationFileLineColGet(
-          ctx, mlirStringRefCreateFromCString("other-file.c"), 2, 3),
-      fileLineColLoc);
-  mlirEmitError(callSiteLoc, "test diagnostics");
-  MlirLocation null = {0};
-  MlirLocation nameLoc =
-      mlirLocationNameGet(ctx, mlirStringRefCreateFromCString("named"), null);
-  mlirEmitError(nameLoc, "test diagnostics");
-  MlirLocation locs[2] = {nameLoc, callSiteLoc};
-  MlirAttribute nullAttr = {0};
-  MlirLocation fusedLoc = mlirLocationFusedGet(ctx, 2, locs, nullAttr);
-  mlirEmitError(fusedLoc, "test diagnostics");
-  mlirContextDetachDiagnosticHandler(ctx, id);
-  mlirEmitError(unknownLoc, "more test diagnostics");
-  // CHECK-LABEL: @test_diagnostics
-  // CHECK: processing diagnostic (userData: 42) <<
-  // CHECK:   test diagnostics
-  // CHECK:   loc(unknown)
-  // CHECK: >> end of diagnostic (userData: 42)
-  // CHECK: processing diagnostic (userData: 42) <<
-  // CHECK:   test diagnostics
-  // CHECK:   loc("file.c":1:2)
-  // CHECK: >> end of diagnostic (userData: 42)
-  // CHECK: processing diagnostic (userData: 42) <<
-  // CHECK:   test diagnostics
-  // CHECK:   loc(callsite("other-file.c":2:3 at "file.c":1:2))
-  // CHECK: >> end of diagnostic (userData: 42)
-  // CHECK: processing diagnostic (userData: 42) <<
-  // CHECK:   test diagnostics
-  // CHECK:   loc("named")
-  // CHECK: >> end of diagnostic (userData: 42)
-  // CHECK: processing diagnostic (userData: 42) <<
-  // CHECK:   test diagnostics
-  // CHECK:   loc(fused["named", callsite("other-file.c":2:3 at "file.c":1:2)])
-  // CHECK: deleting user data (userData: 42)
-  // CHECK-NOT: processing diagnostic
-  // CHECK:     more test diagnostics
-  mlirContextDestroy(ctx);
-}
-
 int testTypeID(MlirContext ctx) {
   fprintf(stderr, "@testTypeID\n");
 
@@ -1841,6 +1798,148 @@ int testTypeID(MlirContext ctx) {
   return 0;
 }
 
+int testSymbolTable(MlirContext ctx) {
+  fprintf(stderr, "@testSymbolTable\n");
+
+  const char *moduleString = "func private @foo()"
+                             "func private @bar()";
+  const char *otherModuleString = "func private @qux()"
+                                  "func private @foo()";
+
+  MlirModule module =
+      mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(moduleString));
+  MlirModule otherModule = mlirModuleCreateParse(
+      ctx, mlirStringRefCreateFromCString(otherModuleString));
+
+  MlirSymbolTable symbolTable =
+      mlirSymbolTableCreate(mlirModuleGetOperation(module));
+
+  MlirOperation funcFoo =
+      mlirSymbolTableLookup(symbolTable, mlirStringRefCreateFromCString("foo"));
+  if (mlirOperationIsNull(funcFoo))
+    return 1;
+
+  MlirOperation funcBar =
+      mlirSymbolTableLookup(symbolTable, mlirStringRefCreateFromCString("bar"));
+  if (mlirOperationEqual(funcFoo, funcBar))
+    return 2;
+
+  MlirOperation missing =
+      mlirSymbolTableLookup(symbolTable, mlirStringRefCreateFromCString("qux"));
+  if (!mlirOperationIsNull(missing))
+    return 3;
+
+  MlirBlock moduleBody = mlirModuleGetBody(module);
+  MlirBlock otherModuleBody = mlirModuleGetBody(otherModule);
+  MlirOperation operation = mlirBlockGetFirstOperation(otherModuleBody);
+  mlirOperationRemoveFromParent(operation);
+  mlirBlockAppendOwnedOperation(moduleBody, operation);
+
+  // At this moment, the operation is still missing from the symbol table.
+  MlirOperation stillMissing =
+      mlirSymbolTableLookup(symbolTable, mlirStringRefCreateFromCString("qux"));
+  if (!mlirOperationIsNull(stillMissing))
+    return 4;
+
+  // After it is added to the symbol table, and not only the operation with
+  // which the table is associated, it can be looked up.
+  mlirSymbolTableInsert(symbolTable, operation);
+  MlirOperation funcQux =
+      mlirSymbolTableLookup(symbolTable, mlirStringRefCreateFromCString("qux"));
+  if (!mlirOperationEqual(operation, funcQux))
+    return 5;
+
+  // Erasing from the symbol table also removes the operation.
+  mlirSymbolTableErase(symbolTable, funcBar);
+  MlirOperation nowMissing =
+      mlirSymbolTableLookup(symbolTable, mlirStringRefCreateFromCString("bar"));
+  if (!mlirOperationIsNull(nowMissing))
+    return 6;
+
+  // Adding a symbol with the same name to the table should rename.
+  MlirOperation duplicateNameOp = mlirBlockGetFirstOperation(otherModuleBody);
+  mlirOperationRemoveFromParent(duplicateNameOp);
+  mlirBlockAppendOwnedOperation(moduleBody, duplicateNameOp);
+  MlirAttribute newName = mlirSymbolTableInsert(symbolTable, duplicateNameOp);
+  MlirStringRef newNameStr = mlirStringAttrGetValue(newName);
+  if (mlirStringRefEqual(newNameStr, mlirStringRefCreateFromCString("foo")))
+    return 7;
+  MlirAttribute updatedName = mlirOperationGetAttributeByName(
+      duplicateNameOp, mlirSymbolTableGetSymbolAttributeName());
+  if (!mlirAttributeEqual(updatedName, newName))
+    return 8;
+
+  mlirOperationDump(mlirModuleGetOperation(module));
+  mlirOperationDump(mlirModuleGetOperation(otherModule));
+  // clang-format off
+  // CHECK-LABEL: @testSymbolTable
+  // CHECK: module
+  // CHECK:   func private @foo
+  // CHECK:   func private @qux
+  // CHECK:   func private @foo{{.+}}
+  // CHECK: module
+  // CHECK-NOT: @qux
+  // CHECK-NOT: @foo
+  // clang-format on
+
+  mlirSymbolTableDestroy(symbolTable);
+  mlirModuleDestroy(module);
+  mlirModuleDestroy(otherModule);
+
+  return 0;
+}
+
+void testDiagnostics() {
+  MlirContext ctx = mlirContextCreate();
+  MlirDiagnosticHandlerID id = mlirContextAttachDiagnosticHandler(
+      ctx, errorHandler, (void *)42, deleteUserData);
+  fprintf(stderr, "@test_diagnostics\n");
+  MlirLocation unknownLoc = mlirLocationUnknownGet(ctx);
+  mlirEmitError(unknownLoc, "test diagnostics");
+  MlirLocation fileLineColLoc = mlirLocationFileLineColGet(
+      ctx, mlirStringRefCreateFromCString("file.c"), 1, 2);
+  mlirEmitError(fileLineColLoc, "test diagnostics");
+  MlirLocation callSiteLoc = mlirLocationCallSiteGet(
+      mlirLocationFileLineColGet(
+          ctx, mlirStringRefCreateFromCString("other-file.c"), 2, 3),
+      fileLineColLoc);
+  mlirEmitError(callSiteLoc, "test diagnostics");
+  MlirLocation null = {0};
+  MlirLocation nameLoc =
+      mlirLocationNameGet(ctx, mlirStringRefCreateFromCString("named"), null);
+  mlirEmitError(nameLoc, "test diagnostics");
+  MlirLocation locs[2] = {nameLoc, callSiteLoc};
+  MlirAttribute nullAttr = {0};
+  MlirLocation fusedLoc = mlirLocationFusedGet(ctx, 2, locs, nullAttr);
+  mlirEmitError(fusedLoc, "test diagnostics");
+  mlirContextDetachDiagnosticHandler(ctx, id);
+  mlirEmitError(unknownLoc, "more test diagnostics");
+  // CHECK-LABEL: @test_diagnostics
+  // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   test diagnostics
+  // CHECK:   loc(unknown)
+  // CHECK: >> end of diagnostic (userData: 42)
+  // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   test diagnostics
+  // CHECK:   loc("file.c":1:2)
+  // CHECK: >> end of diagnostic (userData: 42)
+  // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   test diagnostics
+  // CHECK:   loc(callsite("other-file.c":2:3 at "file.c":1:2))
+  // CHECK: >> end of diagnostic (userData: 42)
+  // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   test diagnostics
+  // CHECK:   loc("named")
+  // CHECK: >> end of diagnostic (userData: 42)
+  // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   test diagnostics
+  // CHECK:   loc(fused["named", callsite("other-file.c":2:3 at "file.c":1:2)])
+  // CHECK: deleting user data (userData: 42)
+  // CHECK-NOT: processing diagnostic
+  // CHECK:     more test diagnostics
+  mlirContextDestroy(ctx);
+}
+
 int main() {
   MlirContext ctx = mlirContextCreate();
   mlirRegisterAllDialects(ctx);
@@ -1870,9 +1969,10 @@ int main() {
     return 11;
   if (testClone())
     return 12;
-  if (testTypeID(ctx)) {
+  if (testTypeID(ctx))
     return 13;
-  }
+  if (testSymbolTable(ctx))
+    return 14;
 
   mlirContextDestroy(ctx);
 

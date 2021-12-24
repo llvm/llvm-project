@@ -15,11 +15,36 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/PresburgerSet.h"
+#include "./AffineStructuresParser.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 namespace mlir {
+
+/// Parses a FlatAffineConstraints from a StringRef. It is expected that the
+/// string represents a valid IntegerSet, otherwise it will violate a gtest
+/// assertion.
+static FlatAffineConstraints parseFAC(StringRef str, MLIRContext *context) {
+  FailureOr<FlatAffineConstraints> fac = parseIntegerSetToFAC(str, context);
+
+  EXPECT_TRUE(succeeded(fac));
+
+  return *fac;
+}
+
+/// Parse a list of StringRefs to FlatAffineConstraints and combine them into a
+/// PresburgerSet be using the union operation. It is expected that the strings
+/// are all valid IntegerSet representation and that all of them have the same
+/// number of dimensions as is specified by the numDims argument.
+static PresburgerSet parsePresburgerSetFromFACStrings(unsigned numDims,
+                                                      ArrayRef<StringRef> strs,
+                                                      MLIRContext *context) {
+  PresburgerSet set = PresburgerSet::getEmptySet(numDims);
+  for (StringRef str : strs)
+    set.unionFACInPlace(parseFAC(str, context));
+  return set;
+}
 
 /// Compute the union of s and t, and check that each of the given points
 /// belongs to the union iff it belongs to at least one of s and t.
@@ -79,34 +104,6 @@ static void testComplementAtPoints(PresburgerSet s,
   }
 }
 
-/// Construct a FlatAffineConstraints from a set of inequality and
-/// equality constraints. `numIds` is the total number of ids, of which
-/// `numLocals` is the number of local ids.
-static FlatAffineConstraints
-makeFACFromConstraints(unsigned numIds, ArrayRef<SmallVector<int64_t, 4>> ineqs,
-                       ArrayRef<SmallVector<int64_t, 4>> eqs,
-                       unsigned numLocals = 0) {
-  FlatAffineConstraints fac(/*numReservedInequalities=*/ineqs.size(),
-                            /*numReservedEqualities=*/eqs.size(),
-                            /*numReservedCols=*/numIds + 1,
-                            /*numDims=*/numIds - numLocals,
-                            /*numSymbols=*/0, numLocals);
-  for (const SmallVector<int64_t, 4> &eq : eqs)
-    fac.addEquality(eq);
-  for (const SmallVector<int64_t, 4> &ineq : ineqs)
-    fac.addInequality(ineq);
-  return fac;
-}
-
-/// Construct a FlatAffineConstraints having `numDims` dimensions from the given
-/// set of inequality constraints. This is a convenience function to be used
-/// when the FAC to be constructed does not have any local ids and does not have
-/// equalties.
-static FlatAffineConstraints
-makeFACFromIneqs(unsigned numDims, ArrayRef<SmallVector<int64_t, 4>> ineqs) {
-  return makeFACFromConstraints(numDims, ineqs, /*eqs=*/{});
-}
-
 /// Construct a PresburgerSet having `numDims` dimensions and no symbols from
 /// the given list of FlatAffineConstraints. Each FAC in `facs` should also have
 /// `numDims` dimensions and no symbols, although it can have any number of
@@ -120,13 +117,12 @@ static PresburgerSet makeSetFromFACs(unsigned numDims,
 }
 
 TEST(SetTest, containsPoint) {
-  PresburgerSet setA =
-      makeSetFromFACs(1, {
-                             makeFACFromIneqs(1, {{1, -2},    // x >= 2.
-                                                  {-1, 8}}),  // x <= 8.
-                             makeFACFromIneqs(1, {{1, -10},   // x >= 10.
-                                                  {-1, 20}}), // x <= 20.
-                         });
+  MLIRContext context;
+
+  PresburgerSet setA = parsePresburgerSetFromFACStrings(
+      1,
+      {"(x) : (x - 2 >= 0, -x + 8 >= 0)", "(x) : (x - 10 >= 0, -x + 20 >= 0)"},
+      &context);
   for (unsigned x = 0; x <= 21; ++x) {
     if ((2 <= x && x <= 8) || (10 <= x && x <= 20))
       EXPECT_TRUE(setA.containsPoint({x}));
@@ -136,20 +132,12 @@ TEST(SetTest, containsPoint) {
 
   // A parallelogram with vertices {(3, 1), (10, -6), (24, 8), (17, 15)} union
   // a square with opposite corners (2, 2) and (10, 10).
-  PresburgerSet setB =
-      makeSetFromFACs(2, {makeFACFromIneqs(2,
-                                           {
-                                               {1, 1, -2},   // x + y >= 4.
-                                               {-1, -1, 30}, // x + y <= 32.
-                                               {1, -1, 0},   // x - y >= 2.
-                                               {-1, 1, 10},  // x - y <= 16.
-                                           }),
-                          makeFACFromIneqs(2, {
-                                                  {1, 0, -2},  // x >= 2.
-                                                  {0, 1, -2},  // y >= 2.
-                                                  {-1, 0, 10}, // x <= 10.
-                                                  {0, -1, 10}  // y <= 10.
-                                              })});
+  PresburgerSet setB = parsePresburgerSetFromFACStrings(
+      2,
+      {"(x,y) : (x + y - 4 >= 0, -x - y + 32 >= 0, "
+       "x - y - 2 >= 0, -x + y + 16 >= 0)",
+       "(x,y) : (x - 2 >= 0, y - 2 >= 0, -x + 10 >= 0, -y + 10 >= 0)"},
+      &context);
 
   for (unsigned x = 1; x <= 25; ++x) {
     for (unsigned y = -6; y <= 16; ++y) {
@@ -164,13 +152,12 @@ TEST(SetTest, containsPoint) {
 }
 
 TEST(SetTest, Union) {
-  PresburgerSet set =
-      makeSetFromFACs(1, {
-                             makeFACFromIneqs(1, {{1, -2},    // x >= 2.
-                                                  {-1, 8}}),  // x <= 8.
-                             makeFACFromIneqs(1, {{1, -10},   // x >= 10.
-                                                  {-1, 20}}), // x <= 20.
-                         });
+  MLIRContext context;
+
+  PresburgerSet set = parsePresburgerSetFromFACStrings(
+      1,
+      {"(x) : (x - 2 >= 0, -x + 8 >= 0)", "(x) : (x - 10 >= 0, -x + 20 >= 0)"},
+      &context);
 
   // Universe union set.
   testUnionAtPoints(PresburgerSet::getUniverse(1), set,
@@ -194,13 +181,12 @@ TEST(SetTest, Union) {
 }
 
 TEST(SetTest, Intersect) {
-  PresburgerSet set =
-      makeSetFromFACs(1, {
-                             makeFACFromIneqs(1, {{1, -2},    // x >= 2.
-                                                  {-1, 8}}),  // x <= 8.
-                             makeFACFromIneqs(1, {{1, -10},   // x >= 10.
-                                                  {-1, 20}}), // x <= 20.
-                         });
+  MLIRContext context;
+
+  PresburgerSet set = parsePresburgerSetFromFACStrings(
+      1,
+      {"(x) : (x - 2 >= 0, -x + 8 >= 0)", "(x) : (x - 10 >= 0, -x + 20 >= 0)"},
+      &context);
 
   // Universe intersection set.
   testIntersectAtPoints(PresburgerSet::getUniverse(1), set,
@@ -224,60 +210,40 @@ TEST(SetTest, Intersect) {
 }
 
 TEST(SetTest, Subtract) {
-  // The interval [2, 8] minus
-  // the interval [10, 20].
+  MLIRContext context;
+  // The interval [2, 8] minus the interval [10, 20].
+  testSubtractAtPoints(parsePresburgerSetFromFACStrings(
+                           1, {"(x) : (x - 2 >= 0, -x + 8 >= 0)"}, &context),
+                       parsePresburgerSetFromFACStrings(
+                           1, {"(x) : (x - 10 >= 0, -x + 20 >= 0)"}, &context),
+                       {{1}, {2}, {8}, {9}, {10}, {20}, {21}});
+
+  // Universe minus [2, 8] U [10, 20]
   testSubtractAtPoints(
-      makeSetFromFACs(1, {makeFACFromIneqs(1, {})}),
-      makeSetFromFACs(1,
-                      {
-                          makeFACFromIneqs(1, {{1, -2},    // x >= 2.
-                                               {-1, 8}}),  // x <= 8.
-                          makeFACFromIneqs(1, {{1, -10},   // x >= 10.
-                                               {-1, 20}}), // x <= 20.
-                      }),
+      parsePresburgerSetFromFACStrings(1, {"(x) : ()"}, &context),
+      parsePresburgerSetFromFACStrings(1,
+                                       {"(x) : (x - 2 >= 0, -x + 8 >= 0)",
+                                        "(x) : (x - 10 >= 0, -x + 20 >= 0)"},
+                                       &context),
       {{1}, {2}, {8}, {9}, {10}, {20}, {21}});
 
   // ((-infinity, 0] U [3, 4] U [6, 7]) - ([2, 3] U [5, 6])
   testSubtractAtPoints(
-      makeSetFromFACs(1,
-                      {
-                          makeFACFromIneqs(1,
-                                           {
-                                               {-1, 0} // x <= 0.
-                                           }),
-                          makeFACFromIneqs(1,
-                                           {
-                                               {1, -3}, // x >= 3.
-                                               {-1, 4}  // x <= 4.
-                                           }),
-                          makeFACFromIneqs(1,
-                                           {
-                                               {1, -6}, // x >= 6.
-                                               {-1, 7}  // x <= 7.
-                                           }),
-                      }),
-      makeSetFromFACs(1, {makeFACFromIneqs(1,
-                                           {
-                                               {1, -2}, // x >= 2.
-                                               {-1, 3}, // x <= 3.
-                                           }),
-                          makeFACFromIneqs(1,
-                                           {
-                                               {1, -5}, // x >= 5.
-                                               {-1, 6}  // x <= 6.
-                                           })}),
+      parsePresburgerSetFromFACStrings(1,
+                                       {"(x) : (-x >= 0)",
+                                        "(x) : (x - 3 >= 0, -x + 4 >= 0)",
+                                        "(x) : (x - 6 >= 0, -x + 7 >= 0)"},
+                                       &context),
+      parsePresburgerSetFromFACStrings(1,
+                                       {"(x) : (x - 2 >= 0, -x + 3 >= 0)",
+                                        "(x) : (x - 5 >= 0, -x + 6 >= 0)"},
+                                       &context),
       {{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}});
 
   // Expected result is {[x, y] : x > y}, i.e., {[x, y] : x >= y + 1}.
   testSubtractAtPoints(
-      makeSetFromFACs(2, {makeFACFromIneqs(2,
-                                           {
-                                               {1, -1, 0} // x >= y.
-                                           })}),
-      makeSetFromFACs(2, {makeFACFromIneqs(2,
-                                           {
-                                               {1, 1, 0} // x >= -y.
-                                           })}),
+      parsePresburgerSetFromFACStrings(2, {"(x, y) : (x - y >= 0)"}, &context),
+      parsePresburgerSetFromFACStrings(2, {"(x, y) : (x + y >= 0)"}, &context),
       {{0, 1}, {1, 1}, {1, 0}, {1, -1}, {0, -1}});
 
   // A rectangle with corners at (2, 2) and (10, 10), minus
@@ -285,20 +251,18 @@ TEST(SetTest, Subtract) {
   // This splits the former rectangle into two halves, (2, 2) to (5, 10) and
   // (7, 2) to (10, 10).
   testSubtractAtPoints(
-      makeSetFromFACs(2, {makeFACFromIneqs(2,
-                                           {
-                                               {1, 0, -2},  // x >= 2.
-                                               {0, 1, -2},  // y >= 2.
-                                               {-1, 0, 10}, // x <= 10.
-                                               {0, -1, 10}  // y <= 10.
-                                           })}),
-      makeSetFromFACs(2, {makeFACFromIneqs(2,
-                                           {
-                                               {1, 0, -5},   // x >= 5.
-                                               {0, 1, 10},   // y >= -10.
-                                               {-1, 0, 7},   // x <= 7.
-                                               {0, -1, 100}, // y <= 100.
-                                           })}),
+      parsePresburgerSetFromFACStrings(
+          2,
+          {
+              "(x, y) : (x - 2 >= 0, y - 2 >= 0, -x + 10 >= 0, -y + 10 >= 0)",
+          },
+          &context),
+      parsePresburgerSetFromFACStrings(
+          2,
+          {
+              "(x, y) : (x - 5 >= 0, y + 10 >= 0, -x + 7 >= 0, -y + 100 >= 0)",
+          },
+          &context),
       {{1, 2},  {2, 2},  {4, 2},  {5, 2},  {7, 2},  {8, 2},  {11, 2},
        {1, 1},  {2, 1},  {4, 1},  {5, 1},  {7, 1},  {8, 1},  {11, 1},
        {1, 10}, {2, 10}, {4, 10}, {5, 10}, {7, 10}, {8, 10}, {11, 10},
@@ -309,20 +273,15 @@ TEST(SetTest, Subtract) {
   // This creates a hole in the middle of the former rectangle, and the
   // resulting set can be represented as a union of four rectangles.
   testSubtractAtPoints(
-      makeSetFromFACs(2, {makeFACFromIneqs(2,
-                                           {
-                                               {1, 0, -2},  // x >= 2.
-                                               {0, 1, -2},  // y >= 2.
-                                               {-1, 0, 10}, // x <= 10.
-                                               {0, -1, 10}  // y <= 10.
-                                           })}),
-      makeSetFromFACs(2, {makeFACFromIneqs(2,
-                                           {
-                                               {1, 0, -5}, // x >= 5.
-                                               {0, 1, -4}, // y >= 4.
-                                               {-1, 0, 7}, // x <= 7.
-                                               {0, -1, 8}, // y <= 8.
-                                           })}),
+      parsePresburgerSetFromFACStrings(
+          2, {"(x, y) : (x - 2 >= 0, y -2 >= 0, -x + 10 >= 0, -y + 10 >= 0)"},
+          &context),
+      parsePresburgerSetFromFACStrings(
+          2,
+          {
+              "(x, y) : (x - 5 >= 0, y - 4 >= 0, -x + 7 >= 0, -y + 8 >= 0)",
+          },
+          &context),
       {{1, 1},
        {2, 2},
        {10, 10},
@@ -338,45 +297,25 @@ TEST(SetTest, Subtract) {
 
   // The second set is a superset of the first one, since on the line x + y = 0,
   // y <= 1 is equivalent to x >= -1. So the result is empty.
-  testSubtractAtPoints(
-      makeSetFromFACs(2, {makeFACFromConstraints(2,
-                                                 {
-                                                     {1, 0, 0} // x >= 0.
-                                                 },
-                                                 {
-                                                     {1, 1, 0} // x + y = 0.
-                                                 })}),
-      makeSetFromFACs(2, {makeFACFromConstraints(2,
-                                                 {
-                                                     {0, -1, 1} // y <= 1.
-                                                 },
-                                                 {
-                                                     {1, 1, 0} // x + y = 0.
-                                                 })}),
-      {{0, 0},
-       {1, -1},
-       {2, -2},
-       {-1, 1},
-       {-2, 2},
-       {1, 1},
-       {-1, -1},
-       {-1, 1},
-       {1, -1}});
+  testSubtractAtPoints(parsePresburgerSetFromFACStrings(
+                           2, {"(x, y) : (x >= 0, x + y == 0)"}, &context),
+                       parsePresburgerSetFromFACStrings(
+                           2, {"(x, y) : (-y + 1 >= 0, x + y == 0)"}, &context),
+                       {{0, 0},
+                        {1, -1},
+                        {2, -2},
+                        {-1, 1},
+                        {-2, 2},
+                        {1, 1},
+                        {-1, -1},
+                        {-1, 1},
+                        {1, -1}});
 
   // The result should be {0} U {2}.
   testSubtractAtPoints(
-      makeSetFromFACs(1,
-                      {
-                          makeFACFromIneqs(1, {{1, 0},    // x >= 0.
-                                               {-1, 2}}), // x <= 2.
-                      }),
-      makeSetFromFACs(1,
-                      {
-                          makeFACFromConstraints(1, {},
-                                                 {
-                                                     {1, -1} // x = 1.
-                                                 }),
-                      }),
+      parsePresburgerSetFromFACStrings(1, {"(x) : (x >= 0, -x + 2 >= 0)"},
+                                       &context),
+      parsePresburgerSetFromFACStrings(1, {"(x) : (x - 1 == 0)"}, &context),
       {{-1}, {0}, {1}, {2}, {3}});
 
   // Sets with lots of redundant inequalities to test the redundancy heuristic.
@@ -386,50 +325,19 @@ TEST(SetTest, Subtract) {
   // A parallelogram with vertices {(3, 1), (10, -6), (24, 8), (17, 15)} minus
   // a triangle with vertices {(2, 2), (10, 2), (10, 10)}.
   testSubtractAtPoints(
-      makeSetFromFACs(2, {makeFACFromIneqs(2,
-                                           {
-                                               {1, 1, -2},   // x + y >= 4.
-                                               {-1, -1, 30}, // x + y <= 32.
-                                               {1, -1, 0},   // x - y >= 2.
-                                               {-1, 1, 10},  // x - y <= 16.
-                                           })}),
-      makeSetFromFACs(
-          2, {makeFACFromIneqs(2,
-                               {
-                                   {1, 0, -2},   // x >= 2. [redundant]
-                                   {0, 1, -2},   // y >= 2.
-                                   {-1, 0, 10},  // x <= 10.
-                                   {0, -1, 10},  // y <= 10. [redundant]
-                                   {1, 1, -2},   // x + y >= 2. [redundant]
-                                   {-1, -1, 30}, // x + y <= 30. [redundant]
-                                   {1, -1, 0},   // x - y >= 0.
-                                   {-1, 1, 10},  // x - y <= 10.
-                               })}),
-      {{1, 2},  {2, 2},   {3, 2},   {4, 2},  {1, 1},   {2, 1},   {3, 1},
-       {4, 1},  {2, 0},   {3, 0},   {4, 0},  {5, 0},   {10, 2},  {11, 2},
-       {10, 1}, {10, 10}, {10, 11}, {10, 9}, {11, 10}, {10, -6}, {11, -6},
-       {24, 8}, {24, 7},  {17, 15}, {16, 15}});
-
-  testSubtractAtPoints(
-      makeSetFromFACs(2, {makeFACFromIneqs(2,
-                                           {
-                                               {1, 1, -2},   // x + y >= 4.
-                                               {-1, -1, 30}, // x + y <= 32.
-                                               {1, -1, 0},   // x - y >= 2.
-                                               {-1, 1, 10},  // x - y <= 16.
-                                           })}),
-      makeSetFromFACs(
-          2, {makeFACFromIneqs(2,
-                               {
-                                   {1, 0, -2},   // x >= 2. [redundant]
-                                   {0, 1, -2},   // y >= 2.
-                                   {-1, 0, 10},  // x <= 10.
-                                   {0, -1, 10},  // y <= 10. [redundant]
-                                   {1, 1, -2},   // x + y >= 2. [redundant]
-                                   {-1, -1, 30}, // x + y <= 30. [redundant]
-                                   {1, -1, 0},   // x - y >= 0.
-                                   {-1, 1, 10},  // x - y <= 10.
-                               })}),
+      parsePresburgerSetFromFACStrings(
+          2,
+          {
+              "(x, y) : (x + y - 4 >= 0, -x - y + 32 >= 0, x - y - 2 >= 0, "
+              "-x + y + 16 >= 0)",
+          },
+          &context),
+      parsePresburgerSetFromFACStrings(
+          2,
+          {"(x, y) : (x - 2 >= 0, y - 2 >= 0, -x + 10 >= 0, "
+           "-y + 10 >= 0, x + y - 2 >= 0, -x - y + 30 >= 0, x - y >= 0, "
+           "-x + y + 10 >= 0)"},
+          &context),
       {{1, 2},  {2, 2},   {3, 2},   {4, 2},  {1, 1},   {2, 1},   {3, 1},
        {4, 1},  {2, 0},   {3, 0},   {4, 0},  {5, 0},   {10, 2},  {11, 2},
        {10, 1}, {10, 10}, {10, 11}, {10, 9}, {11, 10}, {10, -6}, {11, -6},
@@ -438,54 +346,20 @@ TEST(SetTest, Subtract) {
   // ((-infinity, -5] U [3, 3] U [4, 4] U [5, 5]) - ([-2, -10] U [3, 4] U [6,
   // 7])
   testSubtractAtPoints(
-      makeSetFromFACs(1,
-                      {
-                          makeFACFromIneqs(1,
-                                           {
-                                               {-1, -5}, // x <= -5.
-                                           }),
-                          makeFACFromConstraints(1, {},
-                                                 {
-                                                     {1, -3} // x = 3.
-                                                 }),
-                          makeFACFromConstraints(1, {},
-                                                 {
-                                                     {1, -4} // x = 4.
-                                                 }),
-                          makeFACFromConstraints(1, {},
-                                                 {
-                                                     {1, -5} // x = 5.
-                                                 }),
-                      }),
-      makeSetFromFACs(
+      parsePresburgerSetFromFACStrings(
           1,
-          {
-              makeFACFromIneqs(1,
-                               {
-                                   {-1, -2},  // x <= -2.
-                                   {1, -10},  // x >= -10.
-                                   {-1, 0},   // x <= 0. [redundant]
-                                   {-1, 10},  // x <= 10. [redundant]
-                                   {1, -100}, // x >= -100. [redundant]
-                                   {1, -50}   // x >= -50. [redundant]
-                               }),
-              makeFACFromIneqs(1,
-                               {
-                                   {1, -3}, // x >= 3.
-                                   {-1, 4}, // x <= 4.
-                                   {1, 1},  // x >= -1. [redundant]
-                                   {1, 7},  // x >= -7. [redundant]
-                                   {-1, 10} // x <= 10. [redundant]
-                               }),
-              makeFACFromIneqs(1,
-                               {
-                                   {1, -6}, // x >= 6.
-                                   {-1, 7}, // x <= 7.
-                                   {1, 1},  // x >= -1. [redundant]
-                                   {1, -3}, // x >= -3. [redundant]
-                                   {-1, 5}  // x <= 5. [redundant]
-                               }),
-          }),
+          {"(x) : (-x - 5 >= 0)", "(x) : (x - 3 == 0)", "(x) : (x - 4 == 0)",
+           "(x) : (x - 5 == 0)"},
+          &context),
+      parsePresburgerSetFromFACStrings(
+          1,
+          {"(x) : (-x - 2 >= 0, x - 10 >= 0, -x >= 0, -x + 10 >= 0, "
+           "x - 100 >= 0, x - 50 >= 0)",
+           "(x) : (x - 3 >= 0, -x + 4 >= 0, x + 1 >= 0, "
+           "x + 7 >= 0, -x + 10 >= 0)",
+           "(x) : (x - 6 >= 0, -x + 7 >= 0, x + 1 >= 0, x - 3 >= 0, "
+           "-x + 5 >= 0)"},
+          &context),
       {{-6},
        {-5},
        {-4},
@@ -504,6 +378,8 @@ TEST(SetTest, Subtract) {
 }
 
 TEST(SetTest, Complement) {
+
+  MLIRContext context;
   // Complement of universe.
   testComplementAtPoints(
       PresburgerSet::getUniverse(1),
@@ -515,13 +391,10 @@ TEST(SetTest, Complement) {
       {{-1}, {-2}, {-8}, {1}, {2}, {8}, {9}, {10}, {20}, {21}});
 
   testComplementAtPoints(
-      makeSetFromFACs(2, {makeFACFromIneqs(2,
-                                           {
-                                               {1, 0, -2},  // x >= 2.
-                                               {0, 1, -2},  // y >= 2.
-                                               {-1, 0, 10}, // x <= 10.
-                                               {0, -1, 10}  // y <= 10.
-                                           })}),
+      parsePresburgerSetFromFACStrings(2,
+                                       {"(x,y) : (x - 2 >= 0, y - 2 >= 0, "
+                                        "-x + 10 >= 0, -y + 10 >= 0)"},
+                                       &context),
       {{1, 1},
        {2, 1},
        {1, 2},
@@ -537,16 +410,15 @@ TEST(SetTest, Complement) {
 }
 
 TEST(SetTest, isEqual) {
+
+  MLIRContext context;
   // set = [2, 8] U [10, 20].
   PresburgerSet universe = PresburgerSet::getUniverse(1);
   PresburgerSet emptySet = PresburgerSet::getEmptySet(1);
-  PresburgerSet set =
-      makeSetFromFACs(1, {
-                             makeFACFromIneqs(1, {{1, -2},    // x >= 2.
-                                                  {-1, 8}}),  // x <= 8.
-                             makeFACFromIneqs(1, {{1, -10},   // x >= 10.
-                                                  {-1, 20}}), // x <= 20.
-                         });
+  PresburgerSet set = parsePresburgerSetFromFACStrings(
+      1,
+      {"(x) : (x - 2 >= 0, -x + 8 >= 0)", "(x) : (x - 10 >= 0, -x + 20 >= 0)"},
+      &context);
 
   // universe != emptySet.
   EXPECT_FALSE(universe.isEqual(emptySet));
@@ -582,20 +454,12 @@ TEST(SetTest, isEqual) {
   EXPECT_FALSE(set.isEqual(set.unionSet(set.complement())));
 
   // square is one unit taller than rect.
-  PresburgerSet square =
-      makeSetFromFACs(2, {makeFACFromIneqs(2, {
-                                                  {1, 0, -2}, // x >= 2.
-                                                  {0, 1, -2}, // y >= 2.
-                                                  {-1, 0, 9}, // x <= 9.
-                                                  {0, -1, 9}  // y <= 9.
-                                              })});
-  PresburgerSet rect =
-      makeSetFromFACs(2, {makeFACFromIneqs(2, {
-                                                  {1, 0, -2}, // x >= 2.
-                                                  {0, 1, -2}, // y >= 2.
-                                                  {-1, 0, 9}, // x <= 9.
-                                                  {0, -1, 8}  // y <= 8.
-                                              })});
+  PresburgerSet square = parsePresburgerSetFromFACStrings(
+      2, {"(x, y) : (x - 2 >= 0, y - 2 >= 0, -x + 9 >= 0, -y + 9 >= 0)"},
+      &context);
+  PresburgerSet rect = parsePresburgerSetFromFACStrings(
+      2, {"(x, y) : (x - 2 >= 0, y - 2 >= 0, -x + 9 >= 0, -y + 8 >= 0)"},
+      &context);
   EXPECT_FALSE(square.isEqual(rect));
   PresburgerSet universeRect = square.unionSet(square.complement());
   PresburgerSet universeSquare = rect.unionSet(rect.complement());
@@ -605,28 +469,30 @@ TEST(SetTest, isEqual) {
   EXPECT_FALSE(rect.complement().isEqual(square.complement()));
 }
 
-void expectEqual(PresburgerSet s, PresburgerSet t) {
+void expectEqual(const PresburgerSet &s, const PresburgerSet &t) {
   EXPECT_TRUE(s.isEqual(t));
 }
 
 void expectEmpty(PresburgerSet s) { EXPECT_TRUE(s.isIntegerEmpty()); }
 
 TEST(SetTest, divisions) {
-  // Note: we currently need to add the equalities as inequalities to the FAC
-  // since detecting divisions based on equalities is not yet supported.
+  MLIRContext context;
 
   // evens = {x : exists q, x = 2q}.
   PresburgerSet evens{
-      makeFACFromConstraints(2, {{1, -2, 0}, {-1, 2, 1}}, {{1, -2, 0}}, 1)};
-  // odds = {x : exists q, x = 2q + 1}.
+      parseFAC("(x) : (x - 2 * (x floordiv 2) == 0)", &context)};
+
+  //  odds = {x : exists q, x = 2q + 1}.
   PresburgerSet odds{
-      makeFACFromConstraints(2, {{1, -2, 0}, {-1, 2, 1}}, {{1, -2, -1}}, 1)};
-  // multiples6 = {x : exists q, x = 6q}.
+      parseFAC("(x) : (x - 2 * (x floordiv 2) - 1 == 0)", &context)};
+
+  // multiples3 = {x : exists q, x = 3q}.
   PresburgerSet multiples3{
-      makeFACFromConstraints(2, {{1, -3, 0}, {-1, 3, 2}}, {{1, -3, 0}}, 1)};
+      parseFAC("(x) : (x - 3 * (x floordiv 3) == 0)", &context)};
+
   // multiples6 = {x : exists q, x = 6q}.
   PresburgerSet multiples6{
-      makeFACFromConstraints(2, {{1, -6, 0}, {-1, 6, 5}}, {{1, -6, 0}}, 1)};
+      parseFAC("(x) : (x - 6 * (x floordiv 6) == 0)", &context)};
 
   // evens /\ odds = empty.
   expectEmpty(PresburgerSet(evens).intersect(PresburgerSet(odds)));
@@ -636,6 +502,207 @@ TEST(SetTest, divisions) {
   expectEqual(odds.complement(), evens);
   // even multiples of 3 = multiples of 6.
   expectEqual(multiples3.intersect(evens), multiples6);
+
+  PresburgerSet setA{parseFAC("(x) : (-x >= 0)", &context)};
+  PresburgerSet setB{parseFAC("(x) : (x floordiv 2 - 4 >= 0)", &context)};
+  EXPECT_TRUE(setA.subtract(setB).isEqual(setA));
+}
+
+/// Coalesce `set` and check that the `newSet` is equal to `set and that
+/// `expectedNumFACs` matches the number of FACs in the coalesced set.
+/// If one of the two
+void expectCoalesce(size_t expectedNumFACs, const PresburgerSet set) {
+  PresburgerSet newSet = set.coalesce();
+  EXPECT_TRUE(set.isEqual(newSet));
+  EXPECT_TRUE(expectedNumFACs == newSet.getNumFACs());
+}
+
+TEST(SetTest, coalesceNoFAC) {
+  PresburgerSet set = makeSetFromFACs(0, {});
+  expectCoalesce(0, set);
+}
+
+TEST(SetTest, coalesceContainedOneDim) {
+  MLIRContext context;
+  PresburgerSet set = parsePresburgerSetFromFACStrings(
+      1, {"(x) : (x >= 0, -x + 4 >= 0)", "(x) : (x - 1 >= 0, -x + 2 >= 0)"},
+      &context);
+  expectCoalesce(1, set);
+}
+
+TEST(SetTest, coalesceFirstEmpty) {
+  MLIRContext context;
+  PresburgerSet set = parsePresburgerSetFromFACStrings(
+      1, {"(x) : ( x >= 0, -x - 1 >= 0)", "(x) : ( x - 1 >= 0, -x + 2 >= 0)"},
+      &context);
+  expectCoalesce(1, set);
+}
+
+TEST(SetTest, coalesceSecondEmpty) {
+  MLIRContext context;
+  PresburgerSet set = parsePresburgerSetFromFACStrings(
+      1, {"(x) : (x - 1 >= 0, -x + 2 >= 0)", "(x) : (x >= 0, -x - 1 >= 0)"},
+      &context);
+  expectCoalesce(1, set);
+}
+
+TEST(SetTest, coalesceBothEmpty) {
+  MLIRContext context;
+  PresburgerSet set = parsePresburgerSetFromFACStrings(
+      1, {"(x) : (x - 3 >= 0, -x - 1 >= 0)", "(x) : (x >= 0, -x - 1 >= 0)"},
+      &context);
+  expectCoalesce(0, set);
+}
+
+TEST(SetTest, coalesceFirstUniv) {
+  MLIRContext context;
+  PresburgerSet set = parsePresburgerSetFromFACStrings(
+      1, {"(x) : ()", "(x) : ( x >= 0, -x + 1 >= 0)"}, &context);
+  expectCoalesce(1, set);
+}
+
+TEST(SetTest, coalesceSecondUniv) {
+  MLIRContext context;
+  PresburgerSet set = parsePresburgerSetFromFACStrings(
+      1, {"(x) : ( x >= 0, -x + 1 >= 0)", "(x) : ()"}, &context);
+  expectCoalesce(1, set);
+}
+
+TEST(SetTest, coalesceBothUniv) {
+  MLIRContext context;
+  PresburgerSet set =
+      parsePresburgerSetFromFACStrings(1, {"(x) : ()", "(x) : ()"}, &context);
+  expectCoalesce(1, set);
+}
+
+TEST(SetTest, coalesceFirstUnivSecondEmpty) {
+  MLIRContext context;
+  PresburgerSet set = parsePresburgerSetFromFACStrings(
+      1, {"(x) : ()", "(x) : ( x >= 0, -x - 1 >= 0)"}, &context);
+  expectCoalesce(1, set);
+}
+
+TEST(SetTest, coalesceFirstEmptySecondUniv) {
+  MLIRContext context;
+  PresburgerSet set = parsePresburgerSetFromFACStrings(
+      1, {"(x) : ( x >= 0, -x - 1 >= 0)", "(x) : ()"}, &context);
+  expectCoalesce(1, set);
+}
+
+TEST(SetTest, coalesceCutOneDim) {
+  MLIRContext context;
+  PresburgerSet set =
+      parsePresburgerSetFromFACStrings(1,
+                                       {
+                                           "(x) : ( x >= 0, -x + 3 >= 0)",
+                                           "(x) : ( x - 2 >= 0, -x + 4 >= 0)",
+                                       },
+                                       &context);
+  expectCoalesce(2, set);
+}
+
+TEST(SetTest, coalesceSeparateOneDim) {
+  MLIRContext context;
+  PresburgerSet set = parsePresburgerSetFromFACStrings(
+      1, {"(x) : ( x >= 0, -x + 2 >= 0)", "(x) : ( x - 3 >= 0, -x + 4 >= 0)"},
+      &context);
+  expectCoalesce(2, set);
+}
+
+TEST(SetTest, coalesceContainedTwoDim) {
+  MLIRContext context;
+  PresburgerSet set = parsePresburgerSetFromFACStrings(
+      2,
+      {
+          "(x,y) : (x >= 0, -x + 3 >= 0, y >= 0, -y + 3 >= 0)",
+          "(x,y) : (x >= 0, -x + 3 >= 0, y - 2 >= 0, -y + 3 >= 0)",
+      },
+      &context);
+  expectCoalesce(1, set);
+}
+
+TEST(SetTest, coalesceCutTwoDim) {
+  MLIRContext context;
+  PresburgerSet set = parsePresburgerSetFromFACStrings(
+      2,
+      {
+          "(x,y) : (x >= 0, -x + 3 >= 0, y >= 0, -y + 2 >= 0)",
+          "(x,y) : (x >= 0, -x + 3 >= 0, y - 1 >= 0, -y + 3 >= 0)",
+      },
+      &context);
+  expectCoalesce(2, set);
+}
+
+TEST(SetTest, coalesceSeparateTwoDim) {
+  MLIRContext context;
+  PresburgerSet set = parsePresburgerSetFromFACStrings(
+      2,
+      {
+          "(x,y) : (x >= 0, -x + 3 >= 0, y >= 0, -y + 1 >= 0)",
+          "(x,y) : (x >= 0, -x + 3 >= 0, y - 2 >= 0, -y + 3 >= 0)",
+      },
+      &context);
+  expectCoalesce(2, set);
+}
+
+TEST(SetTest, coalesceContainedEq) {
+  MLIRContext context;
+  PresburgerSet set = parsePresburgerSetFromFACStrings(
+      2,
+      {
+          "(x,y) : (x >= 0, -x + 3 >= 0, x - y == 0)",
+          "(x,y) : (x - 1 >= 0, -x + 2 >= 0, x - y == 0)",
+      },
+      &context);
+  expectCoalesce(1, set);
+}
+
+TEST(SetTest, coalesceCuttingEq) {
+  MLIRContext context;
+  PresburgerSet set = parsePresburgerSetFromFACStrings(
+      2,
+      {
+          "(x,y) : (x - 1 >= 0, -x + 3 >= 0, x - y == 0)",
+          "(x,y) : (x >= 0, -x + 2 >= 0, x - y == 0)",
+      },
+      &context);
+  expectCoalesce(2, set);
+}
+
+TEST(SetTest, coalesceSeparateEq) {
+  MLIRContext context;
+  PresburgerSet set = parsePresburgerSetFromFACStrings(
+      2,
+      {
+          "(x,y) : (x - 3 >= 0, -x + 4 >= 0, x - y == 0)",
+          "(x,y) : (x >= 0, -x + 1 >= 0, x - y == 0)",
+      },
+      &context);
+  expectCoalesce(2, set);
+}
+
+TEST(SetTest, coalesceContainedEqAsIneq) {
+  MLIRContext context;
+  PresburgerSet set = parsePresburgerSetFromFACStrings(
+      2,
+      {
+          "(x,y) : (x >= 0, -x + 3 >= 0, x - y >= 0, -x + y >= 0)",
+          "(x,y) : (x - 1 >= 0, -x + 2 >= 0, x - y == 0)",
+      },
+      &context);
+  expectCoalesce(1, set);
+}
+
+TEST(SetTest, coalesceContainedEqComplex) {
+  MLIRContext context;
+  PresburgerSet set = parsePresburgerSetFromFACStrings(
+      2,
+      {
+          "(x,y) : (x - 2 == 0, x - y == 0)",
+          "(x,y) : (x - 1 >= 0, -x + 2 >= 0, x - y == 0)",
+      },
+      &context);
+  expectCoalesce(1, set);
 }
 
 } // namespace mlir

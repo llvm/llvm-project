@@ -355,13 +355,22 @@ bool AMDGPUCallLowering::lowerReturn(MachineIRBuilder &B, const Value *Val,
 
   auto const &ST = MF.getSubtarget<GCNSubtarget>();
 
-  unsigned ReturnOpc =
-      IsShader ? AMDGPU::SI_RETURN_TO_EPILOG : AMDGPU::S_SETPC_B64_return;
+  unsigned ReturnOpc = 0;
+  if (IsShader)
+    ReturnOpc = AMDGPU::SI_RETURN_TO_EPILOG;
+  else if (CC == CallingConv::AMDGPU_Gfx)
+    ReturnOpc = AMDGPU::S_SETPC_B64_return_gfx;
+  else
+    ReturnOpc = AMDGPU::S_SETPC_B64_return;
 
   auto Ret = B.buildInstrNoInsert(ReturnOpc);
   Register ReturnAddrVReg;
   if (ReturnOpc == AMDGPU::S_SETPC_B64_return) {
     ReturnAddrVReg = MRI.createVirtualRegister(&AMDGPU::CCR_SGPR_64RegClass);
+    Ret.addUse(ReturnAddrVReg);
+  } else if (ReturnOpc == AMDGPU::S_SETPC_B64_return_gfx) {
+    ReturnAddrVReg =
+        MRI.createVirtualRegister(&AMDGPU::Gfx_CCR_SGPR_64RegClass);
     Ret.addUse(ReturnAddrVReg);
   }
 
@@ -370,7 +379,8 @@ bool AMDGPUCallLowering::lowerReturn(MachineIRBuilder &B, const Value *Val,
   else if (!lowerReturnVal(B, Val, VRegs, Ret))
     return false;
 
-  if (ReturnOpc == AMDGPU::S_SETPC_B64_return) {
+  if (ReturnOpc == AMDGPU::S_SETPC_B64_return ||
+      ReturnOpc == AMDGPU::S_SETPC_B64_return_gfx) {
     const SIRegisterInfo *TRI = ST.getRegisterInfo();
     Register LiveInReturn = MF.addLiveIn(TRI->getReturnAddressReg(MF),
                                          &AMDGPU::SGPR_64RegClass);
@@ -642,8 +652,8 @@ bool AMDGPUCallLowering::lowerFormalArguments(
       ++PSInputNum;
 
       if (SkipArg) {
-        for (int I = 0, E = VRegs[Idx].size(); I != E; ++I)
-          B.buildUndef(VRegs[Idx][I]);
+        for (Register R : VRegs[Idx])
+          B.buildUndef(R);
 
         ++Idx;
         continue;
@@ -705,10 +715,9 @@ bool AMDGPUCallLowering::lowerFormalArguments(
   if (!MBB.empty())
     B.setInstr(*MBB.begin());
 
-  if (!IsEntryFunc) {
+  if (!IsEntryFunc && !IsGraphics) {
     // For the fixed ABI, pass workitem IDs in the last argument register.
-    if (AMDGPUTargetMachine::EnableFixedFunctionABI)
-      TLI.allocateSpecialInputVGPRsFixed(CCInfo, MF, *TRI, *Info);
+    TLI.allocateSpecialInputVGPRsFixed(CCInfo, MF, *TRI, *Info);
   }
 
   IncomingValueAssigner Assigner(AssignFn);
@@ -720,11 +729,6 @@ bool AMDGPUCallLowering::lowerFormalArguments(
     return false;
 
   uint64_t StackOffset = Assigner.StackOffset;
-
-  if (!IsEntryFunc && !AMDGPUTargetMachine::EnableFixedFunctionABI) {
-    // Special inputs come after user arguments.
-    TLI.allocateSpecialInputVGPRs(CCInfo, MF, *TRI, *Info);
-  }
 
   // Start adding system SGPRs.
   if (IsEntryFunc) {
@@ -819,9 +823,12 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
 
     if (IncomingArg) {
       LI->loadInputValue(InputReg, MIRBuilder, IncomingArg, ArgRC, ArgTy);
-    } else {
-      assert(InputID == AMDGPUFunctionArgInfo::IMPLICIT_ARG_PTR);
+    } else if (InputID == AMDGPUFunctionArgInfo::IMPLICIT_ARG_PTR) {
       LI->getImplicitArgPtr(InputReg, MRI, MIRBuilder);
+    } else {
+      // We may have proven the input wasn't needed, although the ABI is
+      // requiring it. We just need to allocate the register appropriately.
+      MIRBuilder.buildUndef(InputReg);
     }
 
     if (OutgoingArg->isRegister()) {
@@ -932,7 +939,9 @@ getAssignFnsForCC(CallingConv::ID CC, const SITargetLowering &TLI) {
 
 static unsigned getCallOpcode(const MachineFunction &CallerF, bool IsIndirect,
                               bool IsTailCall) {
-  return IsTailCall ? AMDGPU::SI_TCRETURN : AMDGPU::SI_CALL;
+  assert(!(IsIndirect && IsTailCall) && "Indirect calls can't be tail calls, "
+                                        "because the address can be divergent");
+  return IsTailCall ? AMDGPU::SI_TCRETURN : AMDGPU::G_SI_CALL;
 }
 
 // Add operands to call instruction to track the callee.
@@ -1060,6 +1069,11 @@ bool AMDGPUCallLowering::isEligibleForTailCallOptimization(
     SmallVectorImpl<ArgInfo> &InArgs, SmallVectorImpl<ArgInfo> &OutArgs) const {
   // Must pass all target-independent checks in order to tail call optimize.
   if (!Info.IsTailCall)
+    return false;
+
+  // Indirect calls can't be tail calls, because the address can be divergent.
+  // TODO Check divergence info if the call really is divergent.
+  if (Info.Callee.isReg())
     return false;
 
   MachineFunction &MF = B.getMF();
@@ -1216,8 +1230,7 @@ bool AMDGPUCallLowering::lowerTailCall(
   // after the ordinary user argument registers.
   SmallVector<std::pair<MCRegister, Register>, 12> ImplicitArgRegs;
 
-  if (AMDGPUTargetMachine::EnableFixedFunctionABI &&
-      Info.CallConv != CallingConv::AMDGPU_Gfx) {
+  if (Info.CallConv != CallingConv::AMDGPU_Gfx) {
     // With a fixed ABI, allocate fixed registers before user arguments.
     if (!passSpecialInputs(MIRBuilder, CCInfo, ImplicitArgRegs, Info))
       return false;
@@ -1283,12 +1296,6 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   const SITargetLowering &TLI = *getTLI<SITargetLowering>();
   const DataLayout &DL = F.getParent()->getDataLayout();
 
-  if (!AMDGPUTargetMachine::EnableFixedFunctionABI &&
-      Info.CallConv != CallingConv::AMDGPU_Gfx) {
-    LLVM_DEBUG(dbgs() << "Variable function ABI not implemented\n");
-    return false;
-  }
-
   SmallVector<ArgInfo, 8> OutArgs;
   for (auto &OrigArg : Info.OrigArgs)
     splitToValueTypes(OrigArg, OutArgs, DL, Info.CallConv);
@@ -1342,8 +1349,7 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // after the ordinary user argument registers.
   SmallVector<std::pair<MCRegister, Register>, 12> ImplicitArgRegs;
 
-  if (AMDGPUTargetMachine::EnableFixedFunctionABI &&
-      Info.CallConv != CallingConv::AMDGPU_Gfx) {
+  if (Info.CallConv != CallingConv::AMDGPU_Gfx) {
     // With a fixed ABI, allocate fixed registers before user arguments.
     if (!passSpecialInputs(MIRBuilder, CCInfo, ImplicitArgRegs, Info))
       return false;

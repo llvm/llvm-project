@@ -36,16 +36,16 @@ StructuredData::GenericSP ScriptedThreadPythonInterface::CreatePluginObject(
   if (class_name.empty())
     return {};
 
+  ProcessSP process_sp = exe_ctx.GetProcessSP();
+  StructuredDataImpl args_impl(args_sp);
+  std::string error_string;
+
   Locker py_lock(&m_interpreter, Locker::AcquireLock | Locker::NoSTDIN,
                  Locker::FreeLock);
 
-  std::string error_string;
-
-  TargetSP target_sp = exe_ctx.GetTargetSP();
-
   void *ret_val = LLDBSwigPythonCreateScriptedThread(
-      class_name.str().c_str(), m_interpreter.GetDictionaryName(), target_sp,
-      error_string);
+      class_name.str().c_str(), m_interpreter.GetDictionaryName(), process_sp,
+      args_impl, error_string);
 
   if (!ret_val)
     return {};

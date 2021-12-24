@@ -11,6 +11,7 @@ import pickle
 import pipes
 import platform
 import re
+import shutil
 import tempfile
 
 import libcxx.test.format
@@ -20,6 +21,14 @@ import lit.Test
 import lit.TestRunner
 import lit.util
 
+class ConfigurationError(Exception):
+  pass
+
+class ConfigurationCompilationError(ConfigurationError):
+  pass
+
+class ConfigurationRuntimeError(ConfigurationError):
+  pass
 
 def _memoizeExpensiveOperation(extractCacheKey):
   """
@@ -60,9 +69,6 @@ def _executeScriptInternal(test, commands):
     params={})
   _, tmpBase = libcxx.test.format._getTempPaths(test)
   execDir = os.path.dirname(test.getExecPath())
-  for d in (execDir, os.path.dirname(tmpBase)):
-    if not os.path.exists(d):
-      os.makedirs(d)
   res = lit.TestRunner.executeScriptInternal(test, litConfig, tmpBase, parsedCommands, execDir)
   if isinstance(res, lit.Test.Result): # Handle failure to parse the Lit test
     res = ('', res.output, 127, None)
@@ -79,66 +85,74 @@ def _executeScriptInternal(test, commands):
 
   return (out, err, exitCode, timeoutInfo)
 
-def _makeConfigTest(config, testPrefix=''):
+def _makeConfigTest(config):
+  # Make sure the support directories exist, which is needed to create
+  # the temporary file %t below.
   sourceRoot = os.path.join(config.test_exec_root, '__config_src__')
   execRoot = os.path.join(config.test_exec_root, '__config_exec__')
+  for supportDir in (sourceRoot, execRoot):
+    if not os.path.exists(supportDir):
+      os.makedirs(supportDir)
+
+  # Create a dummy test suite and single dummy test inside it. As part of
+  # the Lit configuration, automatically do the equivalent of 'mkdir %T'
+  # and 'rm -r %T' to avoid cluttering the build directory.
   suite = lit.Test.TestSuite('__config__', sourceRoot, execRoot, config)
-  if not os.path.exists(sourceRoot):
-    os.makedirs(sourceRoot)
-  tmp = tempfile.NamedTemporaryFile(dir=sourceRoot, delete=False, suffix='.cpp',
-                                    prefix=testPrefix)
+  tmp = tempfile.NamedTemporaryFile(dir=sourceRoot, delete=False, suffix='.cpp')
   tmp.close()
   pathInSuite = [os.path.relpath(tmp.name, sourceRoot)]
   class TestWrapper(lit.Test.Test):
-    def __enter__(self):       return self
-    def __exit__(self, *args): os.remove(tmp.name)
+    def __enter__(self):
+      testDir, _ = libcxx.test.format._getTempPaths(self)
+      os.makedirs(testDir)
+      return self
+    def __exit__(self, *args):
+      testDir, _ = libcxx.test.format._getTempPaths(self)
+      shutil.rmtree(testDir)
+      os.remove(tmp.name)
   return TestWrapper(suite, pathInSuite, config)
 
-@_memoizeExpensiveOperation(lambda c, s: (c.substitutions, c.environment, s))
-def sourceBuilds(config, source):
+@_memoizeExpensiveOperation(lambda c, s, f=[]: (c.substitutions, c.environment, s, f))
+def sourceBuilds(config, source, additionalFlags=[]):
   """
   Return whether the program in the given string builds successfully.
 
   This is done by compiling and linking a program that consists of the given
-  source with the %{cxx} substitution, and seeing whether that succeeds.
+  source with the %{cxx} substitution, and seeing whether that succeeds. If
+  any additional flags are passed, they are appended to the compiler invocation.
   """
   with _makeConfigTest(config) as test:
     with open(test.getSourcePath(), 'w') as sourceFile:
       sourceFile.write(source)
-    out, err, exitCode, timeoutInfo = _executeScriptInternal(test, ['%{build}'])
-    _executeScriptInternal(test, ['rm %t.exe'])
+    _, _, exitCode, _ = _executeScriptInternal(test, ['%{{build}} {}'.format(' '.join(additionalFlags))])
     return exitCode == 0
 
-@_memoizeExpensiveOperation(lambda c, p, args=None, testPrefix='': (c.substitutions, c.environment, p, args))
-def programOutput(config, program, args=None, testPrefix=''):
+@_memoizeExpensiveOperation(lambda c, p, args=None: (c.substitutions, c.environment, p, args))
+def programOutput(config, program, args=None):
   """
   Compiles a program for the test target, run it on the test target and return
   the output.
 
-  If the program fails to compile or run, None is returned instead. Note that
-  execution of the program is done through the %{exec} substitution, which means
-  that the program may be run on a remote host depending on what %{exec} does.
+  Note that execution of the program is done through the %{exec} substitution,
+  which means that the program may be run on a remote host depending on what
+  %{exec} does.
   """
   if args is None:
     args = []
-  with _makeConfigTest(config, testPrefix=testPrefix) as test:
+  with _makeConfigTest(config) as test:
     with open(test.getSourcePath(), 'w') as source:
       source.write(program)
-    try:
-      _, _, exitCode, _ = _executeScriptInternal(test, ['%{build}'])
-      if exitCode != 0:
-        return None
+    _, err, exitCode, _ = _executeScriptInternal(test, ['%{build}'])
+    if exitCode != 0:
+      raise ConfigurationCompilationError("Failed to build program, stderr is:\n{}".format(err))
 
-      out, err, exitCode, _ = _executeScriptInternal(test, ["%{{run}} {}".format(' '.join(args))])
-      if exitCode != 0:
-        return None
+    out, err, exitCode, _ = _executeScriptInternal(test, ["%{{run}} {}".format(' '.join(args))])
+    if exitCode != 0:
+      raise ConfigurationRuntimeError("Failed to run program, stderr is:\n{}".format(err))
 
-      actualOut = re.search("# command output:\n(.+)\n$", out, flags=re.DOTALL)
-      actualOut = actualOut.group(1) if actualOut else ""
-      return actualOut
-
-    finally:
-      _executeScriptInternal(test, ['rm %t.exe'])
+    actualOut = re.search("# command output:\n(.+)\n$", out, flags=re.DOTALL)
+    actualOut = actualOut.group(1) if actualOut else ""
+    return actualOut
 
 @_memoizeExpensiveOperation(lambda c, f: (c.substitutions, c.environment, f))
 def hasCompileFlag(config, flag):
@@ -154,6 +168,18 @@ def hasCompileFlag(config, flag):
     ])
     return exitCode == 0
 
+@_memoizeExpensiveOperation(lambda c, s: (c.substitutions, c.environment, s))
+def runScriptExitCode(config, script):
+  """
+  Runs the given script as a Lit test, and returns the exit code of the execution.
+
+  The script must be a list of commands, each of which being something that
+  could appear on the right-hand-side of a `RUN:` keyword.
+  """
+  with _makeConfigTest(config) as test:
+    _, _, exitCode, _ = _executeScriptInternal(test, script)
+    return exitCode
+
 @_memoizeExpensiveOperation(lambda c, l: (c.substitutions, c.environment, l))
 def hasAnyLocale(config, locales):
   """
@@ -167,22 +193,26 @@ def hasAnyLocale(config, locales):
   depending on the %{exec} substitution.
   """
   program = """
-    #include <locale.h>
-    #include <stdio.h>
-    int main(int argc, char** argv) {
-      // For debugging purposes print which locales are (not) supported.
-      for (int i = 1; i < argc; i++) {
-        if (::setlocale(LC_ALL, argv[i]) != NULL) {
-          printf("%s is supported.\\n", argv[i]);
-          return 0;
+    #include <stddef.h>
+    #if defined(_LIBCPP_HAS_NO_LOCALIZATION)
+      int main(int, char**) { return 1; }
+    #else
+      #include <locale.h>
+      int main(int argc, char** argv) {
+        for (int i = 1; i < argc; i++) {
+          if (::setlocale(LC_ALL, argv[i]) != NULL) {
+            return 0;
+          }
         }
-        printf("%s is not supported.\\n", argv[i]);
+        return 1;
       }
-      return 1;
-    }
+    #endif
   """
-  return programOutput(config, program, args=[pipes.quote(l) for l in locales],
-                       testPrefix="check_locale_" + locales[0]) is not None
+  try:
+    programOutput(config, program, args=[pipes.quote(l) for l in locales])
+  except ConfigurationRuntimeError:
+    return False
+  return True
 
 @_memoizeExpensiveOperation(lambda c, flags='': (c.substitutions, c.environment, flags))
 def compilerMacros(config, flags=''):
@@ -194,20 +224,17 @@ def compilerMacros(config, flags=''):
 
   If the optional `flags` argument (a string) is provided, these flags will
   be added to the compiler invocation when generating the macros.
-
-  If we fail to extract the compiler macros because of a compiler error, None
-  is returned instead.
   """
   with _makeConfigTest(config) as test:
     with open(test.getSourcePath(), 'w') as sourceFile:
       # Make sure files like <__config> are included, since they can define
       # additional macros.
       sourceFile.write("#include <stddef.h>")
-    unparsedOutput, err, exitCode, timeoutInfo = _executeScriptInternal(test, [
+    unparsedOutput, err, exitCode, _ = _executeScriptInternal(test, [
       "%{{cxx}} %s -dM -E %{{flags}} %{{compile_flags}} {}".format(flags)
     ])
     if exitCode != 0:
-      return None
+      raise ConfigurationCompilationError("Failed to retrieve compiler macros, stderr is:\n{}".format(err))
     parsedMacros = dict()
     defines = (l.strip() for l in unparsedOutput.split('\n') if l.startswith('#define '))
     for line in defines:

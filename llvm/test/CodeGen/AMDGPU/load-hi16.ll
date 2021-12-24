@@ -28,13 +28,13 @@ entry:
 
 ; GCN-LABEL: {{^}}load_local_lo_hi_v2i16_multi_use_hi:
 ; GFX900: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-DAG: ds_read_u16 [[LO:v[0-9]+]], v0
 ; GFX900-DAG: ds_read_u16 [[HI:v[0-9]+]], v0 offset:16
+; GFX900-DAG: ds_read_u16 [[LO:v[0-9]+]], v0
 ; GFX900-DAG: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0
 ; GFX900-DAG: v_and_b32_e32 [[AND:v[0-9]+]], 0xffff, [[LO]]
-; GFX900-DAG: s_waitcnt lgkmcnt(0)
+; GFX900-DAG: s_waitcnt lgkmcnt(1)
 ; GFX900-DAG: ds_write_b16 [[ZERO]], [[HI]]
-; GFX900: v_lshl_or_b32 [[HI]], [[HI]], 16, [[AND]]
+; GFX900: v_lshl_or_b32 v{{[0-9]+}}, [[HI]], 16, [[AND]]
 ; GFX900-NEXT: s_waitcnt lgkmcnt(0)
 ; GFX900-NEXT: s_setpc_b64 s[30:31]
 define <2 x i16> @load_local_lo_hi_v2i16_multi_use_hi(i16 addrspace(3)* noalias %in) #0 {
@@ -806,15 +806,14 @@ entry:
 ; GCN-LABEL: {{^}}load_private_hi_v2i16_reglo_vreg_to_offset:
 ; GFX900-MUBUF:        buffer_store_dword
 ; GFX900-MUBUF-NEXT:   s_waitcnt vmcnt(0)
-; GFX900-MUBUF-NEXT:   buffer_load_short_d16_hi v{{[0-9]+}}, off, s[0:3], s32 offset:4094
+; GFX900-MUBUF-NEXT:   buffer_load_short_d16_hi v{{[0-9]+}}, off, s[0:3], s32 offset:4058
 ; GFX900-MUBUF-NEXT:   s_waitcnt vmcnt(0)
 ; GFX900-FLATSCR:      scratch_store_dword
 ; GFX900-FLATSCR-NEXT: s_waitcnt vmcnt(0)
-; GFX900-FLATSCR-NEXT: scratch_load_short_d16_hi v{{[0-9]+}}, off, s32 offset:4094
+; GFX900-FLATSCR-NEXT: scratch_load_short_d16_hi v{{[0-9]+}}, off, s32 offset:4058
 ; GFX900-FLATSCR-NEXT: s_waitcnt vmcnt(0)
-define void @load_private_hi_v2i16_reglo_vreg_to_offset(i16 %reg) #0 {
+define void @load_private_hi_v2i16_reglo_vreg_to_offset(i16 %reg, [10 x i32] addrspace(5)* %obj0) #0 {
 entry:
-  %obj0 = alloca [10 x i32], align 4, addrspace(5)
   %obj1 = alloca [4096 x i16], align 2, addrspace(5)
   %bc = bitcast [10 x i32] addrspace(5)* %obj0 to i32 addrspace(5)*
   store volatile i32 123, i32 addrspace(5)* %bc
@@ -829,15 +828,14 @@ entry:
 ; GCN-LABEL: {{^}}load_private_hi_v2i16_reglo_vreg_sexti8_to_offset:
 ; GFX900-MUBUF:        buffer_store_dword
 ; GFX900-MUBUF-NEXT:   s_waitcnt vmcnt(0)
-; GFX900-MUBUF-NEXT:   buffer_load_sbyte_d16_hi v{{[0-9]+}}, off, s[0:3], s32 offset:4095
+; GFX900-MUBUF-NEXT:   buffer_load_sbyte_d16_hi v{{[0-9]+}}, off, s[0:3], s32 offset:4059
 ; GFX900-MUBUF-NEXT:   s_waitcnt vmcnt(0)
 ; GFX900-FLATSCR:      scratch_store_dword
 ; GFX900-FLATSCR-NEXT: s_waitcnt vmcnt(0)
-; GFX900-FLATSCR-NEXT: scratch_load_sbyte_d16_hi v{{[0-9]+}}, off, s32 offset:4095
+; GFX900-FLATSCR-NEXT: scratch_load_sbyte_d16_hi v{{[0-9]+}}, off, s32 offset:4059
 ; GFX900-FLATSCR-NEXT: s_waitcnt vmcnt(0)
-define void @load_private_hi_v2i16_reglo_vreg_sexti8_to_offset(i16 %reg) #0 {
+define void @load_private_hi_v2i16_reglo_vreg_sexti8_to_offset(i16 %reg, [10 x i32] addrspace(5)* %obj0) #0 {
 entry:
-  %obj0 = alloca [10 x i32], align 4, addrspace(5)
   %obj1 = alloca [4096 x i8], align 2, addrspace(5)
   %bc = bitcast [10 x i32] addrspace(5)* %obj0 to i32 addrspace(5)*
   store volatile i32 123, i32 addrspace(5)* %bc
@@ -853,15 +851,14 @@ entry:
 ; GCN-LABEL: {{^}}load_private_hi_v2i16_reglo_vreg_zexti8_to_offset:
 ; GFX900-MUBUF:        buffer_store_dword
 ; GFX900-MUBUF-NEXT:   s_waitcnt vmcnt(0)
-; GFX900-MUBUF-NEXT:   buffer_load_ubyte_d16_hi v{{[0-9]+}}, off, s[0:3], s32 offset:4095
+; GFX900-MUBUF-NEXT:   buffer_load_ubyte_d16_hi v{{[0-9]+}}, off, s[0:3], s32 offset:4059
 ; GFX900-MUBUF-NEXT:   s_waitcnt vmcnt(0)
 ; GFX900-FLATSCR:      scratch_store_dword
 ; GFX900-FLATSCR-NEXT: s_waitcnt vmcnt(0)
-; GFX900-FLATSCR-NEXT: scratch_load_ubyte_d16_hi v{{[0-9]+}}, off, s32 offset:4095
+; GFX900-FLATSCR-NEXT: scratch_load_ubyte_d16_hi v{{[0-9]+}}, off, s32 offset:4059
 ; GFX900-FLATSCR-NEXT: s_waitcnt vmcnt(0)
-define void @load_private_hi_v2i16_reglo_vreg_zexti8_to_offset(i16 %reg) #0 {
+define void @load_private_hi_v2i16_reglo_vreg_zexti8_to_offset(i16 %reg, [10 x i32] addrspace(5)* %obj0) #0 {
 entry:
-  %obj0 = alloca [10 x i32], align 4, addrspace(5)
   %obj1 = alloca [4096 x i8], align 2, addrspace(5)
   %bc = bitcast [10 x i32] addrspace(5)* %obj0 to i32 addrspace(5)*
   store volatile i32 123, i32 addrspace(5)* %bc

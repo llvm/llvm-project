@@ -256,19 +256,19 @@ declare void @g.f1()
 
 ; IFunc -- Linkage
 @ifunc.external = external ifunc void (), i8* ()* @ifunc_resolver
-; CHECK: @ifunc.external = ifunc void (), i8* ()* @ifunc_resolver
+; CHECK: @ifunc.external = ifunc void (), bitcast (i8* ()* @ifunc_resolver to void ()* ()*)
 @ifunc.private = private ifunc void (), i8* ()* @ifunc_resolver
-; CHECK: @ifunc.private = private ifunc void (), i8* ()* @ifunc_resolver
+; CHECK: @ifunc.private = private ifunc void (), bitcast (i8* ()* @ifunc_resolver to void ()* ()*)
 @ifunc.internal = internal ifunc void (), i8* ()* @ifunc_resolver
-; CHECK: @ifunc.internal = internal ifunc void (), i8* ()* @ifunc_resolver
+; CHECK: @ifunc.internal = internal ifunc void (), bitcast (i8* ()* @ifunc_resolver to void ()* ()*)
 
 ; IFunc -- Visibility
 @ifunc.default = default ifunc void (), i8* ()* @ifunc_resolver
-; CHECK: @ifunc.default = ifunc void (), i8* ()* @ifunc_resolver
+; CHECK: @ifunc.default = ifunc void (), bitcast (i8* ()* @ifunc_resolver to void ()* ()*)
 @ifunc.hidden = hidden ifunc void (), i8* ()* @ifunc_resolver
-; CHECK: @ifunc.hidden = hidden ifunc void (), i8* ()* @ifunc_resolver
+; CHECK: @ifunc.hidden = hidden ifunc void (), bitcast (i8* ()* @ifunc_resolver to void ()* ()*)
 @ifunc.protected = protected ifunc void (), i8* ()* @ifunc_resolver
-; CHECK: @ifunc.protected = protected ifunc void (), i8* ()* @ifunc_resolver
+; CHECK: @ifunc.protected = protected ifunc void (), bitcast (i8* ()* @ifunc_resolver to void ()* ()*)
 
 define i8* @ifunc_resolver() {
 entry:

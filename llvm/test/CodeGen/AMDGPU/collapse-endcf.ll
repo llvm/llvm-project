@@ -2,7 +2,7 @@
 
 ; GCN-LABEL: {{^}}simple_nested_if:
 ; GCN:      s_and_saveexec_b64 [[SAVEEXEC:s\[[0-9:]+\]]]
-; GCN-NEXT: s_cbranch_execz [[ENDIF:BB[0-9_]+]]
+; GCN-NEXT: s_cbranch_execz [[ENDIF:.LBB[0-9_]+]]
 ; GCN:      s_and_b64 exec, exec, vcc
 ; GCN-NEXT: s_cbranch_execz [[ENDIF]]
 ; GCN-NEXT: ; %bb.{{[0-9]+}}:
@@ -37,9 +37,9 @@ bb.outer.end:                                     ; preds = %bb.outer.then, %bb.
 
 ; GCN-LABEL: {{^}}uncollapsable_nested_if:
 ; GCN:      s_and_saveexec_b64 [[SAVEEXEC_OUTER:s\[[0-9:]+\]]]
-; GCN-NEXT: s_cbranch_execz [[ENDIF_OUTER:BB[0-9_]+]]
+; GCN-NEXT: s_cbranch_execz [[ENDIF_OUTER:.LBB[0-9_]+]]
 ; GCN:      s_and_saveexec_b64 [[SAVEEXEC_INNER:s\[[0-9:]+\]]]
-; GCN-NEXT: s_cbranch_execz [[ENDIF_INNER:BB[0-9_]+]]
+; GCN-NEXT: s_cbranch_execz [[ENDIF_INNER:.LBB[0-9_]+]]
 ; GCN-NEXT: ; %bb.{{[0-9]+}}:
 ; GCN:      store_dword
 ; GCN-NEXT: {{^}}[[ENDIF_INNER]]:
@@ -80,10 +80,10 @@ bb.outer.end:                                     ; preds = %bb.inner.then, %bb
 
 ; GCN-LABEL: {{^}}nested_if_if_else:
 ; GCN:      s_and_saveexec_b64 [[SAVEEXEC_OUTER:s\[[0-9:]+\]]]
-; GCN-NEXT: s_cbranch_execz [[ENDIF_OUTER:BB[0-9_]+]]
+; GCN-NEXT: s_cbranch_execz [[ENDIF_OUTER:.LBB[0-9_]+]]
 ; GCN:      s_and_saveexec_b64 [[SAVEEXEC_INNER:s\[[0-9:]+\]]]
 ; GCN-NEXT: s_xor_b64 [[SAVEEXEC_INNER2:s\[[0-9:]+\]]], exec, [[SAVEEXEC_INNER]]
-; GCN-NEXT: s_cbranch_execz [[THEN_INNER:BB[0-9_]+]]
+; GCN-NEXT: s_cbranch_execz [[THEN_INNER:.LBB[0-9_]+]]
 ; GCN-NEXT: ; %bb.{{[0-9]+}}:
 ; GCN:      store_dword
 ; GCN:      {{^}}[[THEN_INNER]]:
@@ -127,11 +127,11 @@ bb.outer.end:                                        ; preds = %bb, %bb.then, %b
 ; GCN-LABEL: {{^}}nested_if_else_if:
 ; GCN:      s_and_saveexec_b64 [[SAVEEXEC_OUTER:s\[[0-9:]+\]]]
 ; GCN-NEXT: s_xor_b64 [[SAVEEXEC_OUTER2:s\[[0-9:]+\]]], exec, [[SAVEEXEC_OUTER]]
-; GCN-NEXT: s_cbranch_execz [[THEN_OUTER:BB[0-9_]+]]
+; GCN-NEXT: s_cbranch_execz [[THEN_OUTER:.LBB[0-9_]+]]
 ; GCN-NEXT: ; %bb.{{[0-9]+}}:
 ; GCN:      store_dword
 ; GCN-NEXT: s_and_saveexec_b64 [[SAVEEXEC_INNER_IF_OUTER_ELSE:s\[[0-9:]+\]]]
-; GCN-NEXT: s_cbranch_execz [[THEN_OUTER_FLOW:BB[0-9_]+]]
+; GCN-NEXT: s_cbranch_execz [[THEN_OUTER_FLOW:.LBB[0-9_]+]]
 ; GCN-NEXT: ; %bb.{{[0-9]+}}:
 ; GCN:      store_dword
 ; GCN-NEXT: {{^}}[[THEN_OUTER_FLOW]]:
@@ -139,11 +139,11 @@ bb.outer.end:                                        ; preds = %bb, %bb.then, %b
 ; GCN:      {{^}}[[THEN_OUTER]]:
 ; GCN-NEXT: s_or_saveexec_b64 [[SAVEEXEC_OUTER3:s\[[0-9:]+\]]], [[SAVEEXEC_OUTER2]]
 ; GCN-NEXT: s_xor_b64 exec, exec, [[SAVEEXEC_OUTER3]]
-; GCN-NEXT: s_cbranch_execz [[ENDIF_OUTER:BB[0-9_]+]]
+; GCN-NEXT: s_cbranch_execz [[ENDIF_OUTER:.LBB[0-9_]+]]
 ; GCN-NEXT: ; %bb.{{[0-9]+}}:
 ; GCN:      store_dword
 ; GCN-NEXT: s_and_saveexec_b64 [[SAVEEXEC_ELSE:s\[[0-9:]+\]]],
-; GCN-NEXT: s_cbranch_execz [[FLOW1:BB[0-9_]+]]
+; GCN-NEXT: s_cbranch_execz [[FLOW1:.LBB[0-9_]+]]
 ; GCN-NEXT: ; %bb.{{[0-9]+}}:
 ; GCN:      store_dword
 ; GCN-NEXT: [[FLOW1]]:
@@ -188,7 +188,7 @@ bb.outer.end:
 
 ; GCN-LABEL: {{^}}s_endpgm_unsafe_barrier:
 ; GCN:      s_and_saveexec_b64 [[SAVEEXEC:s\[[0-9:]+\]]]
-; GCN-NEXT: s_cbranch_execz [[ENDIF:BB[0-9_]+]]
+; GCN-NEXT: s_cbranch_execz [[ENDIF:.LBB[0-9_]+]]
 ; GCN-NEXT: ; %bb.{{[0-9]+}}:
 ; GCN:      store_dword
 ; GCN-NEXT: {{^}}[[ENDIF]]:
@@ -213,15 +213,15 @@ bb.end:                                           ; preds = %bb.then, %bb
 
 ; GCN-LABEL: {{^}}scc_liveness:
 
-; GCN: [[BB1_OUTER_LOOP:BB[0-9]+_[0-9]+]]:
+; GCN: [[BB1_OUTER_LOOP:.LBB[0-9]+_[0-9]+]]:
 ; GCN: s_or_b64 exec, exec, [[SAVEEXEC_OUTER:s\[[0-9:]+\]]]
 ;
-; GCN: [[BB1_INNER_LOOP:BB[0-9]+_[0-9]+]]:
+; GCN: [[BB1_INNER_LOOP:.LBB[0-9]+_[0-9]+]]:
 ; GCN: s_or_b64 exec, exec, s{{\[[0-9]+:[0-9]+\]}}
 ; GCN: s_andn2_b64
 ; GCN-NEXT: s_cbranch_execz
 
-; GCN: [[BB1_LOOP:BB[0-9]+_[0-9]+]]:
+; GCN: [[BB1_LOOP:.LBB[0-9]+_[0-9]+]]:
 ; GCN: s_andn2_b64 exec, exec,
 ; GCN-NEXT: s_cbranch_execnz [[BB1_LOOP]]
 

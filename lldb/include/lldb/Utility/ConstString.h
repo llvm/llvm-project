@@ -409,7 +409,7 @@ public:
   static size_t StaticMemorySize();
 
 protected:
-  template <typename T> friend struct ::llvm::DenseMapInfo;
+  template <typename T, typename Enable> friend struct ::llvm::DenseMapInfo;
   /// Only used by DenseMapInfo.
   static ConstString FromStringPoolPointer(const char *ptr) {
     ConstString s;

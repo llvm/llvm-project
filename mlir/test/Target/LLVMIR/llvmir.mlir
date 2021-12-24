@@ -1,7 +1,7 @@
 // RUN: mlir-translate -mlir-to-llvmir -split-input-file %s | FileCheck %s
 
 // CHECK: @global_aligned32 = private global i64 42, align 32
-"llvm.mlir.global"() ({}) {sym_name = "global_aligned32", type = i64, value = 42 : i64, linkage = #llvm.linkage<private>, alignment = 32} : () -> ()
+"llvm.mlir.global"() ({}) {sym_name = "global_aligned32", global_type = i64, value = 42 : i64, linkage = #llvm.linkage<private>, alignment = 32} : () -> ()
 
 // CHECK: @global_aligned64 = private global i64 42, align 64
 llvm.mlir.global private @global_aligned64(42 : i64) {alignment = 64 : i64} : i64
@@ -1384,6 +1384,24 @@ llvm.mlir.global linkonce @take_self_address() : !llvm.struct<(i32, !llvm.ptr<i3
 
 // -----
 
+// CHECK: @llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 0, void ()* @foo, i8* null }]
+llvm.mlir.global_ctors { ctors = [@foo], priorities = [0 : i32]}
+
+llvm.func @foo() {
+  llvm.return
+}
+
+// -----
+
+// CHECK: @llvm.global_dtors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 0, void ()* @foo, i8* null }]
+llvm.mlir.global_dtors { dtors = [@foo], priorities = [0 : i32]}
+
+llvm.func @foo() {
+  llvm.return
+}
+
+// -----
+
 // Check that branch weight attributes are exported properly as metadata.
 llvm.func @cond_br_weights(%cond : i1, %arg0 : i32,  %arg1 : i32) -> i32 {
   // CHECK: !prof ![[NODE:[0-9]+]]
@@ -1542,7 +1560,7 @@ llvm.func @switch_args(%arg0: i32) -> i32 {
   // CHECK-NEXT:   i32 -1, label %[[SWITCHCASE_bb2:[0-9]+]]
   // CHECK-NEXT:   i32 1, label %[[SWITCHCASE_bb3:[0-9]+]]
   // CHECK-NEXT: ]
-  llvm.switch %arg0, ^bb1 [
+  llvm.switch %arg0 : i32, ^bb1 [
     -1: ^bb2(%0 : i32),
     1: ^bb3(%1, %2 : i32, i32)
   ]
@@ -1572,7 +1590,7 @@ llvm.func @switch_weights(%arg0: i32) -> i32 {
   %1 = llvm.mlir.constant(23 : i32) : i32
   %2 = llvm.mlir.constant(29 : i32) : i32
   // CHECK: !prof ![[SWITCH_WEIGHT_NODE:[0-9]+]]
-  llvm.switch %arg0, ^bb1(%0 : i32) [
+  llvm.switch %arg0 : i32, ^bb1(%0 : i32) [
     9: ^bb2(%1, %2 : i32, i32),
     99: ^bb3
   ] {branch_weights = dense<[13, 17, 19]> : vector<3xi32>}

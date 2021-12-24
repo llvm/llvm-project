@@ -929,6 +929,128 @@ TEST_F(StructuralEquivalenceTest, ExplicitBoolSame) {
   EXPECT_TRUE(testStructuralMatch(First, Second));
 }
 
+struct StructuralEquivalenceRecordContextTest : StructuralEquivalenceTest {};
+
+TEST_F(StructuralEquivalenceRecordContextTest, NamespaceNoVsNamed) {
+  auto Decls =
+      makeNamedDecls("class X;", "namespace N { class X; }", Lang_CXX03, "X");
+  EXPECT_FALSE(testStructuralMatch(Decls));
+}
+
+TEST_F(StructuralEquivalenceRecordContextTest, NamespaceNamedVsNamed) {
+  auto Decls = makeNamedDecls("namespace A { class X; }",
+                              "namespace B { class X; }", Lang_CXX03, "X");
+  EXPECT_FALSE(testStructuralMatch(Decls));
+}
+
+TEST_F(StructuralEquivalenceRecordContextTest, NamespaceAnonVsNamed) {
+  auto Decls = makeNamedDecls("namespace { class X; }",
+                              "namespace N { class X; }", Lang_CXX03, "X");
+  EXPECT_FALSE(testStructuralMatch(Decls));
+}
+
+TEST_F(StructuralEquivalenceRecordContextTest, NamespaceNoVsAnon) {
+  auto Decls =
+      makeNamedDecls("class X;", "namespace { class X; }", Lang_CXX03, "X");
+  EXPECT_FALSE(testStructuralMatch(Decls));
+}
+
+TEST_F(StructuralEquivalenceRecordContextTest, NamespaceAnonVsAnon) {
+  auto Decls = makeNamedDecls("namespace { class X; }",
+                              "namespace { class X; }", Lang_CXX03, "X");
+  EXPECT_TRUE(testStructuralMatch(Decls));
+}
+
+TEST_F(StructuralEquivalenceRecordContextTest, NamespaceAnonVsAnonAnon) {
+  auto Decls =
+      makeNamedDecls("namespace { class X; }",
+                     "namespace { namespace { class X; } }", Lang_CXX03, "X");
+  EXPECT_FALSE(testStructuralMatch(Decls));
+}
+
+TEST_F(StructuralEquivalenceRecordContextTest,
+       NamespaceNamedNamedVsNamedNamed) {
+  auto Decls = makeNamedDecls("namespace A { namespace N { class X; } }",
+                              "namespace B { namespace N { class X; } }",
+                              Lang_CXX03, "X");
+  EXPECT_FALSE(testStructuralMatch(Decls));
+}
+
+TEST_F(StructuralEquivalenceRecordContextTest, NamespaceNamedVsInline) {
+  auto Decls = makeNamedDecls("namespace A { namespace A { class X; } }",
+                              "namespace A { inline namespace A { class X; } }",
+                              Lang_CXX17, "X");
+  EXPECT_FALSE(testStructuralMatch(Decls));
+}
+
+TEST_F(StructuralEquivalenceRecordContextTest, NamespaceInlineVsInline) {
+  auto Decls = makeNamedDecls("namespace A { inline namespace A { class X; } }",
+                              "namespace A { inline namespace B { class X; } }",
+                              Lang_CXX17, "X");
+  EXPECT_TRUE(testStructuralMatch(Decls));
+}
+
+TEST_F(StructuralEquivalenceRecordContextTest, NamespaceInlineTopLevel) {
+  auto Decls =
+      makeNamedDecls("inline namespace A { class X; } }",
+                     "inline namespace B { class X; } }", Lang_CXX17, "X");
+  EXPECT_TRUE(testStructuralMatch(Decls));
+}
+
+TEST_F(StructuralEquivalenceRecordContextTest, TransparentContext) {
+  auto Decls =
+      makeNamedDecls("extern \"C\" { class X; }", "class X;", Lang_CXX03, "X");
+  EXPECT_TRUE(testStructuralMatch(Decls));
+}
+
+TEST_F(StructuralEquivalenceRecordContextTest, TransparentContextNE) {
+  auto Decls = makeNamedDecls("extern \"C\" { class X; }",
+                              "namespace { class X; }", Lang_CXX03, "X");
+  EXPECT_FALSE(testStructuralMatch(Decls));
+}
+
+TEST_F(StructuralEquivalenceRecordContextTest, TransparentContextInNamespace) {
+  auto Decls = makeNamedDecls("extern \"C\" { namespace N { class X; } }",
+                              "namespace N { extern \"C\" { class X; } }",
+                              Lang_CXX03, "X");
+  EXPECT_TRUE(testStructuralMatch(Decls));
+}
+
+TEST_F(StructuralEquivalenceTest, NamespaceOfRecordMember) {
+  auto Decls = makeNamedDecls(
+      R"(
+      class X;
+      class Y { X* x; };
+      )",
+      R"(
+      namespace N { class X; }
+      class Y { N::X* x; };
+      )",
+      Lang_CXX03, "Y");
+  EXPECT_FALSE(testStructuralMatch(Decls));
+}
+
+TEST_F(StructuralEquivalenceTest, StructDefinitionInPrototype) {
+  auto Decls =
+      makeNamedDecls("struct Param { int a; }; void foo(struct Param *p);",
+                     "void foo(struct Param { int a; } *p);", Lang_C89);
+  EXPECT_TRUE(testStructuralMatch(Decls));
+}
+
+TEST_F(StructuralEquivalenceTest, StructDefinitionInPrototypeDifferentName) {
+  auto Decls =
+      makeNamedDecls("struct Param1 { int a; }; void foo(struct Param1 *p);",
+                     "void foo(struct Param2 { int a; } *p);", Lang_C89);
+  EXPECT_FALSE(testStructuralMatch(Decls));
+}
+
+TEST_F(StructuralEquivalenceRecordContextTest, RecordInsideFunction) {
+  auto Decls = makeNamedDecls("struct Param { int a; };",
+                              "void f() { struct Param { int a; }; }", Lang_C89,
+                              "Param");
+  EXPECT_TRUE(testStructuralMatch(Decls));
+}
+
 struct StructuralEquivalenceEnumTest : StructuralEquivalenceTest {};
 
 TEST_F(StructuralEquivalenceEnumTest, FwdDeclEnumShouldBeEqualWithFwdDeclEnum) {
@@ -953,6 +1075,48 @@ TEST_F(StructuralEquivalenceEnumTest,
 TEST_F(StructuralEquivalenceEnumTest, EnumsWithDifferentBody) {
   auto t = makeNamedDecls("enum class foo { B };", "enum class foo { A };",
                           Lang_CXX11);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+struct StructuralEquivalenceEnumConstantTest : StructuralEquivalenceTest {};
+
+TEST_F(StructuralEquivalenceEnumConstantTest, EnumConstantsWithSameValues) {
+  auto t = makeNamedDecls("enum foo { foo = 1 };", "enum foo { foo = 1 };",
+                          Lang_C89);
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceEnumConstantTest,
+       EnumConstantsWithDifferentValues) {
+  auto t =
+      makeNamedDecls("enum e { foo = 1 };", "enum e { foo = 2 };", Lang_C89);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceEnumConstantTest,
+       EnumConstantsWithDifferentExprsButSameValues) {
+  auto t = makeNamedDecls("enum e { foo = 1 + 1 };", "enum e { foo = 2 };",
+                          Lang_CXX11);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceEnumConstantTest,
+       EnumConstantsWithDifferentSignedness) {
+  auto t = makeNamedDecls("enum e : unsigned { foo = 1 };",
+                          "enum e : int { foo = 1 };", Lang_CXX11);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceEnumConstantTest, EnumConstantsWithDifferentWidth) {
+  auto t = makeNamedDecls("enum e : short { foo = 1 };",
+                          "enum e : int { foo = 1 };", Lang_CXX11);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceEnumConstantTest, EnumConstantsWithDifferentName) {
+  auto t =
+      makeDecls<EnumConstantDecl>("enum e { foo = 1 };", "enum e { bar = 1 };",
+                                  Lang_CXX11, enumConstantDecl());
   EXPECT_FALSE(testStructuralMatch(t));
 }
 

@@ -50,26 +50,7 @@ static bool contractSupportsMMAMatrixType(vector::ContractionOp contract) {
   if (contract.getIndexingMaps() != infer({{m, k}, {k, n}, {m, n}}))
     return false;
 
-  // Check that the size matches what is natively supported.
-  VectorType lhsType = contract.lhs().getType().cast<VectorType>();
-  VectorType rhsType = contract.rhs().getType().cast<VectorType>();
-  VectorType accType = contract.acc().getType().cast<VectorType>();
-
-  std::tuple<int, int, int> dim(lhsType.getDimSize(0), rhsType.getDimSize(1),
-                                lhsType.getDimSize(1));
-  if (lhsType.getElementType().isInteger(8) &&
-      rhsType.getElementType().isInteger(8) &&
-      accType.getElementType().isInteger(32) &&
-      (dim == std::make_tuple(8, 8, 32) || dim == std::make_tuple(16, 16, 32) ||
-       dim == std::make_tuple(16, 8, 32)))
-    return true;
-
-  if (lhsType.getElementType().isF16() && rhsType.getElementType().isF16() &&
-      (accType.getElementType().isF16() || accType.getElementType().isF32()) &&
-      (dim == std::make_tuple(8, 8, 16) || dim == std::make_tuple(16, 16, 16) ||
-       dim == std::make_tuple(16, 8, 16)))
-    return true;
-  return false;
+  return true;
 }
 
 // Return the stide for the dimension 0 of |type| if it is a memref and has a
@@ -95,8 +76,15 @@ static bool transferReadSupportsMMAMatrixType(vector::TransferReadOp readOp) {
     return false;
   if (!getMemrefConstantHorizontalStride(readOp.getShapedType()))
     return false;
+  AffineMap map = readOp.permutation_map();
+  OpBuilder b(readOp.getContext());
+  AffineExpr innerDim = b.getAffineDimExpr(map.getNumDims() - 1);
+  AffineExpr zero = b.getAffineConstantExpr(0);
+  auto broadcastInnerDim = AffineMap::get(map.getNumDims(), 0, {zero, innerDim},
+                                          readOp.getContext());
   // TODO: Support transpose once it is added to GPU dialect ops.
-  if (!readOp.permutation_map().isMinorIdentity())
+  // For now we only support (d0, d1) -> (d0, d1) and (d0, d1) -> (0, d1).
+  if (!map.isMinorIdentity() && map != broadcastInnerDim)
     return false;
   return true;
 }
@@ -104,6 +92,10 @@ static bool transferReadSupportsMMAMatrixType(vector::TransferReadOp readOp) {
 // Return true if the transfer op can be converted to a MMA matrix store.
 static bool
 transferWriteSupportsMMAMatrixType(vector::TransferWriteOp writeOp) {
+  // TODO: support 0-d corner case.
+  if (writeOp.getTransferRank() == 0)
+    return false;
+
   if (writeOp.mask() || writeOp.hasOutOfBoundsDim() ||
       writeOp.getVectorType().getRank() != 2)
     return false;
@@ -121,13 +113,35 @@ static bool constantSupportsMMAMatrixType(arith::ConstantOp constantOp) {
   auto vecType = constantOp.getType().dyn_cast<VectorType>();
   if (!vecType || vecType.getRank() != 2)
     return false;
-  return constantOp.value().isa<SplatElementsAttr>();
+  return constantOp.getValue().isa<SplatElementsAttr>();
 }
 
 /// Return true if this is a broadcast from scalar to a 2D vector.
 static bool broadcastSupportsMMAMatrixType(vector::BroadcastOp broadcastOp) {
   return broadcastOp.getVectorType().getRank() == 2 &&
          broadcastOp.source().getType().isa<FloatType>();
+}
+
+/// Return the MMA elementwise enum associated with `op` if it is supported.
+/// Return `llvm::None` otherwise.
+static llvm::Optional<gpu::MMAElementwiseOp>
+convertElementwiseOpToMMA(Operation *op) {
+  if (isa<arith::AddFOp>(op))
+    return gpu::MMAElementwiseOp::ADDF;
+  if (isa<arith::MulFOp>(op))
+    return gpu::MMAElementwiseOp::MULF;
+  if (isa<arith::MaxFOp>(op))
+    return gpu::MMAElementwiseOp::MAXF;
+  if (isa<arith::MinFOp>(op))
+    return gpu::MMAElementwiseOp::MINF;
+  if (isa<arith::DivFOp>(op))
+    return gpu::MMAElementwiseOp::DIVF;
+  return llvm::None;
+}
+
+/// Return true if the op is supported as elementwise op on MMAMatrix type.
+static bool elementwiseSupportsMMAMatrixType(Operation *op) {
+  return convertElementwiseOpToMMA(op).hasValue();
 }
 
 static bool supportsMMaMatrixType(Operation *op) {
@@ -143,7 +157,45 @@ static bool supportsMMaMatrixType(Operation *op) {
     return constantSupportsMMAMatrixType(constant);
   if (auto broadcast = dyn_cast<vector::BroadcastOp>(op))
     return broadcastSupportsMMAMatrixType(broadcast);
-  return false;
+  return elementwiseSupportsMMAMatrixType(op);
+}
+
+/// Return an unsorted slice handling scf.for region differently than
+/// `getSlice`. In scf.for we only want to include as part of the slice elements
+/// that are part of the use/def chain.
+static SetVector<Operation *> getSliceContract(Operation *op,
+                                               TransitiveFilter backwardFilter,
+                                               TransitiveFilter forwardFilter) {
+  SetVector<Operation *> slice;
+  slice.insert(op);
+  unsigned currentIndex = 0;
+  SetVector<Operation *> backwardSlice;
+  SetVector<Operation *> forwardSlice;
+  while (currentIndex != slice.size()) {
+    auto *currentOp = (slice)[currentIndex];
+    // Compute and insert the backwardSlice starting from currentOp.
+    backwardSlice.clear();
+    getBackwardSlice(currentOp, &backwardSlice, backwardFilter);
+    slice.insert(backwardSlice.begin(), backwardSlice.end());
+
+    // Compute and insert the forwardSlice starting from currentOp.
+    forwardSlice.clear();
+    // Special case for ForOp, we don't want to include the whole region but
+    // only the value using the region arguments.
+    // TODO: We should refine this to only care about the region arguments being
+    // converted to matrix type.
+    if (auto forOp = dyn_cast<scf::ForOp>(currentOp)) {
+      for (Value forOpResult : forOp.getResults())
+        getForwardSlice(forOpResult, &forwardSlice, forwardFilter);
+      for (BlockArgument &arg : forOp.getRegionIterArgs())
+        getForwardSlice(arg, &forwardSlice, forwardFilter);
+    } else {
+      getForwardSlice(currentOp, &forwardSlice, forwardFilter);
+    }
+    slice.insert(forwardSlice.begin(), forwardSlice.end());
+    ++currentIndex;
+  }
+  return slice;
 }
 
 // Analyze slice of operations based on convert op to figure out if the whole
@@ -162,16 +214,17 @@ static SetVector<Operation *> getOpToConvert(mlir::Operation *op) {
     if (opToConvert.contains(contract.getOperation()))
       return;
     SetVector<Operation *> dependentOps =
-        getSlice(contract, hasVectorDest, hasVectorSrc);
+        getSliceContract(contract, hasVectorDest, hasVectorSrc);
     // If any instruction cannot use MMA matrix type drop the whole
-    // chaine. MMA matrix are stored in an opaque type so they cannot be used
+    // chain. MMA matrix are stored in an opaque type so they cannot be used
     // by all operations.
     if (llvm::any_of(dependentOps,
                      [](Operation *op) { return !supportsMMaMatrixType(op); }))
       return;
     opToConvert.insert(dependentOps.begin(), dependentOps.end());
   });
-  return opToConvert;
+  // Sort the operations so that we can convert them in topological order.
+  return topologicalSort(opToConvert);
 }
 
 namespace {
@@ -246,6 +299,11 @@ struct CombineTransferReadOpTranspose final
     auto transferReadOp = op.vector().getDefiningOp<vector::TransferReadOp>();
     if (!transferReadOp)
       return failure();
+
+    // TODO: support 0-d corner case.
+    if (transferReadOp.getTransferRank() == 0)
+      return failure();
+
     if (transferReadOp.mask() || transferReadOp.hasOutOfBoundsDim())
       return failure();
     SmallVector<int64_t, 2> perm;
@@ -258,8 +316,8 @@ struct CombineTransferReadOpTranspose final
     AffineMap newMap = permutationMap.compose(transferReadOp.permutation_map());
     rewriter.replaceOpWithNewOp<vector::TransferReadOp>(
         op, op.getType(), transferReadOp.source(), transferReadOp.indices(),
-        newMap, transferReadOp.padding(), transferReadOp.mask(),
-        transferReadOp.in_boundsAttr());
+        AffineMapAttr::get(newMap), transferReadOp.padding(),
+        transferReadOp.mask(), transferReadOp.in_boundsAttr());
     return success();
   }
 };
@@ -286,9 +344,16 @@ static const char *inferFragType(OpTy op) {
 
 static void convertTransferReadOp(vector::TransferReadOp op,
                                   llvm::DenseMap<Value, Value> &valueMapping) {
+  assert(op.getTransferRank() > 0 && "unexpected 0-d transfer");
   assert(transferReadSupportsMMAMatrixType(op));
   Optional<int64_t> stride =
       getMemrefConstantHorizontalStride(op.getShapedType());
+  AffineMap map = op.permutation_map();
+  // Handle broadcast by setting the stride to 0.
+  if (map.getResult(0).isa<AffineConstantExpr>()) {
+    assert(map.getResult(0).cast<AffineConstantExpr>().getValue() == 0);
+    stride = 0;
+  }
   assert(stride);
   const char *fragType = inferFragType(op);
   gpu::MMAMatrixType type =
@@ -329,7 +394,8 @@ static void convertConstantOp(arith::ConstantOp op,
                               llvm::DenseMap<Value, Value> &valueMapping) {
   assert(constantSupportsMMAMatrixType(op));
   OpBuilder b(op);
-  Attribute splat = op.value().cast<SplatElementsAttr>().getSplatValue();
+  Attribute splat =
+      op.getValue().cast<SplatElementsAttr>().getSplatValue<Attribute>();
   auto scalarConstant =
       b.create<arith::ConstantOp>(op.getLoc(), splat.getType(), splat);
   const char *fragType = inferFragType(op);
@@ -365,8 +431,8 @@ static scf::ForOp replaceForOpWithNewSignature(OpBuilder &b, scf::ForOp loop,
   auto operands = llvm::to_vector<4>(loop.getIterOperands());
   operands.append(newIterOperands.begin(), newIterOperands.end());
   scf::ForOp newLoop =
-      b.create<scf::ForOp>(loop.getLoc(), loop.lowerBound(), loop.upperBound(),
-                           loop.step(), operands);
+      b.create<scf::ForOp>(loop.getLoc(), loop.getLowerBound(),
+                           loop.getUpperBound(), loop.getStep(), operands);
   newLoop.getBody()->erase();
   newLoop.getLoopBody().getBlocks().splice(
       newLoop.getLoopBody().getBlocks().begin(),
@@ -423,6 +489,18 @@ static void convertYieldOp(scf::YieldOp op,
   op.erase();
 }
 
+/// Convert an elementwise op to the equivalent elementwise op on MMA matrix.
+static void convertElementwiseOp(Operation *op, gpu::MMAElementwiseOp opType,
+                                 llvm::DenseMap<Value, Value> &valueMapping) {
+  OpBuilder b(op);
+  SmallVector<Value> matrixOperands;
+  for (Value operand : op->getOperands())
+    matrixOperands.push_back(valueMapping.find(operand)->second);
+  Value newOp = b.create<gpu::SubgroupMmaElementwiseOp>(
+      op->getLoc(), matrixOperands[0].getType(), matrixOperands, opType);
+  valueMapping[op->getResult(0)] = newOp;
+}
+
 namespace mlir {
 
 void populatePrepareVectorToMMAPatterns(RewritePatternSet &patterns) {
@@ -448,6 +526,8 @@ void convertVectorToMMAOps(FuncOp funcOp) {
       convertForOp(forOp, valueMapping);
     } else if (auto yiledOp = dyn_cast<scf::YieldOp>(op)) {
       convertYieldOp(yiledOp, valueMapping);
+    } else if (auto elementwiseType = convertElementwiseOpToMMA(op)) {
+      convertElementwiseOp(op, *elementwiseType, valueMapping);
     }
   }
 }

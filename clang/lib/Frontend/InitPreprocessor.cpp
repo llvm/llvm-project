@@ -500,11 +500,20 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
   // Not "standard" per se, but available even with the -undef flag.
   if (LangOpts.AsmPreprocessor)
     Builder.defineMacro("__ASSEMBLER__");
-  if (LangOpts.CUDA && !LangOpts.HIP)
-    Builder.defineMacro("__CUDA__");
+  if (LangOpts.CUDA) {
+    if (LangOpts.GPURelocatableDeviceCode)
+      Builder.defineMacro("__CLANG_RDC__");
+    if (!LangOpts.HIP)
+      Builder.defineMacro("__CUDA__");
+  }
   if (LangOpts.HIP) {
     Builder.defineMacro("__HIP__");
     Builder.defineMacro("__HIPCC__");
+    Builder.defineMacro("__HIP_MEMORY_SCOPE_SINGLETHREAD", "1");
+    Builder.defineMacro("__HIP_MEMORY_SCOPE_WAVEFRONT", "2");
+    Builder.defineMacro("__HIP_MEMORY_SCOPE_WORKGROUP", "3");
+    Builder.defineMacro("__HIP_MEMORY_SCOPE_AGENT", "4");
+    Builder.defineMacro("__HIP_MEMORY_SCOPE_SYSTEM", "5");
     if (LangOpts.CUDAIsDevice)
       Builder.defineMacro("__HIP_DEVICE_COMPILE__");
   }
@@ -600,7 +609,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     //Builder.defineMacro("__cpp_consteval", "201811L");
     Builder.defineMacro("__cpp_constexpr_dynamic_alloc", "201907L");
     Builder.defineMacro("__cpp_constinit", "201907L");
-    //Builder.defineMacro("__cpp_coroutines", "201902L");
+    Builder.defineMacro("__cpp_impl_coroutine", "201902L");
     Builder.defineMacro("__cpp_designated_initializers", "201707L");
     Builder.defineMacro("__cpp_impl_three_way_comparison", "201907L");
     //Builder.defineMacro("__cpp_modules", "201907L");
@@ -1152,6 +1161,12 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     case 45:
       Builder.defineMacro("_OPENMP", "201511");
       break;
+    case 51:
+      Builder.defineMacro("_OPENMP", "202011");
+      break;
+    case 52:
+      Builder.defineMacro("_OPENMP", "202111");
+      break;
     default:
       // Default version is OpenMP 5.0
       Builder.defineMacro("_OPENMP", "201811");
@@ -1182,7 +1197,7 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   if (LangOpts.OpenCL) {
     InitializeOpenCLFeatureTestMacros(TI, LangOpts, Builder);
 
-    if (TI.getTriple().isSPIR())
+    if (TI.getTriple().isSPIR() || TI.getTriple().isSPIRV())
       Builder.defineMacro("__IMAGE_SUPPORT__");
   }
 

@@ -833,6 +833,13 @@ def warn_fortify_source_format_overflow : Warning<
   " but format string expands to at least %2">,
   InGroup<FortifySource>;
 
+def warn_fortify_scanf_overflow : Warning<
+  "'%0' may overflow; destination buffer in argument %1 has size "
+  "%2, but the corresponding specifier may require size %3">,
+  InGroup<FortifySource>;
+
+def err_function_start_invalid_type: Error<
+  "argument must be a function">;
 
 /// main()
 // static main() is not an error in C, just in C++.
@@ -1643,6 +1650,9 @@ def warn_weak_vtable : Warning<
   "%0 has no out-of-line virtual method definitions; its vtable will be "
   "emitted in every translation unit">,
   InGroup<DiagGroup<"weak-vtables">>, DefaultIgnore;
+def warn_weak_template_vtable : Warning<
+  "this warning is no longer in use and will be removed in the next release">,
+  InGroup<DiagGroup<"weak-template-vtables">>, DefaultIgnore;
 
 def ext_using_undefined_std : ExtWarn<
   "using directive refers to implicitly-defined namespace 'std'">;
@@ -2949,6 +2959,17 @@ def err_attribute_invalid_argument : Error<
 def err_attribute_wrong_number_arguments : Error<
   "%0 attribute %plural{0:takes no arguments|1:takes one argument|"
   ":requires exactly %1 arguments}1">;
+def err_attribute_wrong_number_arguments_for : Error <
+  "%0 attribute references function %1, which %plural{0:takes no arguments|1:takes one argument|"
+  ":takes exactly %2 arguments}2">;
+def err_attribute_bounds_for_function : Error<
+  "%0 attribute references parameter %1, but the function %2 has only %3 parameters">;
+def err_attribute_no_member_function : Error<
+  "%0 attribute cannot be applied to non-static member functions">;
+def err_attribute_parameter_types : Error<
+  "%0 attribute parameter types do not match: parameter %1 of function %2 has type %3, "
+  "but parameter %4 of function %5 has type %6">;
+
 def err_attribute_too_many_arguments : Error<
   "%0 attribute takes no more than %1 argument%s1">;
 def err_attribute_too_few_arguments : Error<
@@ -2972,9 +2993,13 @@ def err_attribute_requires_opencl_version : Error<
   "attribute %0 is supported in the OpenCL version %1%select{| onwards}2">;
 def err_invalid_branch_protection_spec : Error<
   "invalid or misplaced branch protection specification '%0'">;
+def warn_unsupported_branch_protection_spec : Warning<
+  "unsupported branch protection specification '%0'">, InGroup<BranchProtection>;
+
 def warn_unsupported_target_attribute
     : Warning<"%select{unsupported|duplicate|unknown}0%select{| architecture|"
-              " tune CPU}1 '%2' in the 'target' attribute string; 'target' "
+              " tune CPU}1 '%2' in the '%select{target|target_clones}3' "
+              "attribute string; '%select{target|target_clones}3' "
               "attribute ignored">,
       InGroup<IgnoredAttributes>;
 def err_attribute_unsupported
@@ -3002,7 +3027,7 @@ def err_attribute_sizeless_type : Error<
   "%0 attribute cannot be applied to sizeless type %1">;
 def err_attribute_argument_n_type : Error<
   "%0 attribute requires parameter %1 to be %select{int or bool|an integer "
-  "constant|a string|an identifier|a constant expression}2">;
+  "constant|a string|an identifier|a constant expression|a builtin function}2">;
 def err_attribute_argument_type : Error<
   "%0 attribute requires %select{int or bool|an integer "
   "constant|a string|an identifier}1">;
@@ -3274,7 +3299,8 @@ def warn_assume_aligned_too_great
       InGroup<DiagGroup<"builtin-assume-aligned-alignment">>;
 def warn_not_xl_compatible
     : Warning<"requesting an alignment of 16 bytes or greater for struct"
-              " members is not binary compatible with AIX XL 16.1 and older">,
+              " members is not binary compatible with IBM XL C/C++ for AIX"
+              " 16.1.0 and older">,
       InGroup<AIXCompat>;
 def warn_redeclaration_without_attribute_prev_attribute_ignored : Warning<
   "%q0 redeclared without %1 attribute: previous %1 ignored">,
@@ -6789,7 +6815,7 @@ def warn_taking_address_of_packed_member : Warning<
   "taking address of packed member %0 of class or structure %q1 may result in an unaligned pointer value">,
   InGroup<DiagGroup<"address-of-packed-member">>;
 def warn_param_mismatched_alignment : Warning<
-  "passing %0-byte aligned argument to %1-byte aligned parameter %2 of %3 may result in an unaligned pointer access">,
+  "passing %0-byte aligned argument to %1-byte aligned parameter %2%select{| of %4}3 may result in an unaligned pointer access">,
   InGroup<DiagGroup<"align-mismatch">>;
 
 def err_objc_object_assignment : Error<
@@ -8325,8 +8351,8 @@ def err_atomic_exclusive_builtin_pointer_size : Error<
   " 1,2,4 or 8 byte type (%0 invalid)">;
 def err_atomic_builtin_ext_int_size : Error<
   "Atomic memory operand must have a power-of-two size">;
-def err_atomic_builtin_ext_int_prohibit : Error<
-  "argument to atomic builtin of type '_ExtInt' is not supported">;
+def err_atomic_builtin_bit_int_prohibit : Error<
+  "argument to atomic builtin of type '_BitInt' is not supported">;
 def err_atomic_op_needs_atomic : Error<
   "address argument to atomic operation must be a pointer to _Atomic "
   "type (%0 invalid)">;
@@ -8362,8 +8388,8 @@ def err_overflow_builtin_must_be_int : Error<
 def err_overflow_builtin_must_be_ptr_int : Error<
   "result argument to overflow builtin must be a pointer "
   "to a non-const integer (%0 invalid)">;
-def err_overflow_builtin_ext_int_max_size : Error<
-  "__builtin_mul_overflow does not support signed _ExtInt operands of more "
+def err_overflow_builtin_bit_int_max_size : Error<
+  "__builtin_mul_overflow does not support 'signed _BitInt' operands of more "
   "than %0 bits">;
 
 def err_atomic_load_store_uses_lib : Error<
@@ -8614,11 +8640,11 @@ def warn_unused_volatile : Warning<
   InGroup<DiagGroup<"unused-volatile-lvalue">>;
 
 def ext_cxx14_attr : Extension<
-  "use of the %0 attribute is a C++14 extension">, InGroup<CXX14>;
+  "use of the %0 attribute is a C++14 extension">, InGroup<CXX14Attrs>;
 def ext_cxx17_attr : Extension<
-  "use of the %0 attribute is a C++17 extension">, InGroup<CXX17>;
+  "use of the %0 attribute is a C++17 extension">, InGroup<CXX17Attrs>;
 def ext_cxx20_attr : Extension<
-  "use of the %0 attribute is a C++20 extension">, InGroup<CXX20>;
+  "use of the %0 attribute is a C++20 extension">, InGroup<CXX20Attrs>;
 
 def warn_unused_comparison : Warning<
   "%select{equality|inequality|relational|three-way}0 comparison result unused">,
@@ -9128,15 +9154,22 @@ def warn_cxx17_compat_defaulted_comparison : Warning<
   "before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
 def err_defaulted_comparison_template : Error<
   "comparison operator template cannot be defaulted">;
-def err_defaulted_comparison_out_of_class : Error<
-  "%sub{select_defaulted_comparison_kind}0 can only be defaulted in a class "
-  "definition">;
+def err_defaulted_comparison_num_args : Error<
+  "%select{non-member|member}0 %sub{select_defaulted_comparison_kind}1"
+  " comparison operator must have %select{2|1}0 parameters">;
 def err_defaulted_comparison_param : Error<
   "invalid parameter type for defaulted %sub{select_defaulted_comparison_kind}0"
   "; found %1, expected %2%select{| or %4}3">;
+def err_defaulted_comparison_param_unknown : Error<
+  "invalid parameter type for non-member defaulted"
+  " %sub{select_defaulted_comparison_kind}0"
+  "; found %1, expected class or reference to a constant class">;
 def err_defaulted_comparison_param_mismatch : Error<
   "parameters for defaulted %sub{select_defaulted_comparison_kind}0 "
   "must have the same type%diff{ (found $ vs $)|}1,2">;
+def err_defaulted_comparison_not_friend : Error<
+  "%sub{select_defaulted_comparison_kind}0 is not a friend of"
+  " %select{|incomplete class }1%2">;
 def err_defaulted_comparison_non_const : Error<
   "defaulted member %sub{select_defaulted_comparison_kind}0 must be "
   "const-qualified">;
@@ -9799,6 +9832,10 @@ def err_ppc_builtin_only_on_arch : Error<
   "this builtin is only valid on POWER%0 or later CPUs">;
 def err_ppc_builtin_requires_vsx : Error<
   "this builtin requires VSX to be enabled">;
+def err_ppc_builtin_requires_htm : Error<
+  "this builtin requires HTM to be enabled">;
+def err_ppc_builtin_requires_abi : Error<
+  "this builtin requires ABI -mabi=%0">;
 def err_ppc_invalid_use_mma_type : Error<
   "invalid use of PPC MMA type">;
 def err_ppc_invalid_test_data_class_type : Error<
@@ -9854,6 +9891,8 @@ def warn_duplicate_attribute_exact : Warning<
 def warn_duplicate_attribute : Warning<
   "attribute %0 is already applied with different arguments">,
   InGroup<IgnoredAttributes>;
+def err_disallowed_duplicate_attribute : Error<
+  "attribute %0 cannot appear more than once on a declaration">;
 
 def warn_sync_fetch_and_nand_semantics_change : Warning<
   "the semantics of this intrinsic changed with GCC "
@@ -10470,7 +10509,7 @@ def err_omp_atomic_capture_not_compound_statement : Error<
 def note_omp_atomic_capture: Note<
   "%select{expected assignment expression|expected compound statement|expected exactly two expression statements|expected in right hand side of the first expression}0">;
 def err_omp_atomic_several_clauses : Error<
-  "directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update' or 'capture' clause">;
+  "directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update', 'capture', or 'compare' clause">;
 def err_omp_several_mem_order_clauses : Error<
   "directive '#pragma omp %0' cannot contain more than one %select{'seq_cst', 'relaxed', |}1'acq_rel', 'acquire' or 'release' clause">;
 def err_omp_atomic_incompatible_mem_order_clause : Error<
@@ -10589,6 +10628,8 @@ def err_omp_depend_sink_unexpected_expr : Error<
   "unexpected expression: number of expressions is larger than the number of associated loops">;
 def err_omp_depend_sink_expected_plus_minus : Error<
   "expected '+' or '-' operation">;
+def err_omp_taskwait_depend_mutexinoutset_not_allowed : Error<
+  "'mutexinoutset' modifier not allowed in 'depend' clause on 'taskwait' directive">;
 def err_omp_depend_sink_source_not_allowed : Error<
   "'depend(%select{source|sink:vec}0)' clause%select{|s}0 cannot be mixed with 'depend(%select{sink:vec|source}0)' clause%select{s|}0">;
 def err_omp_depend_zero_length_array_section_not_allowed : Error<
@@ -10711,8 +10752,8 @@ def err_omp_invariant_or_linear_dependency : Error<
 def err_omp_wrong_dependency_iterator_type : Error<
   "expected an integer or a pointer type of the outer loop counter '%0' for non-rectangular nests">;
 def err_target_unsupported_type
-    : Error<"%0 requires %select{|%2 bit size}1 %3 type support, but target "
-            "'%4' does not support it">;
+    : Error<"%0 requires %select{|%2 bit size}1 %3 %select{|return }4type support,"
+            " but target '%5' does not support it">;
 def err_omp_lambda_capture_in_declare_target_not_to : Error<
   "variable captured in declare target region must appear in a to clause">;
 def err_omp_device_type_mismatch : Error<
@@ -10747,9 +10788,14 @@ def err_omp_declare_variant_diff : Error<
   "function with '#pragma omp declare variant' has a different %select{calling convention"
   "|return type|constexpr specification|inline specification|storage class|"
   "linkage}0">;
+def err_omp_declare_variant_prototype_required : Error<
+  "function with '#pragma omp declare variant' must have a prototype when "
+  "'append_args' is used">;
+def err_omp_interop_type_not_found : Error<
+  "'omp_interop_t' must be defined when 'append_args' clause is used; include <omp.h>">;
 def err_omp_declare_variant_incompat_types : Error<
-  "variant in '#pragma omp declare variant' with type %0 is incompatible with type %1"
-  >;
+  "variant in '#pragma omp declare variant' with type %0 is incompatible with"
+  " type %1%select{| with appended arguments}2">;
 def warn_omp_declare_variant_marked_as_declare_variant : Warning<
   "variant function in '#pragma omp declare variant' is itself marked as '#pragma omp declare variant'"
   >, InGroup<SourceUsesOpenMP>;
@@ -10795,6 +10841,9 @@ def note_omp_protected_structured_block
     : Note<"jump bypasses OpenMP structured block">;
 def note_omp_exits_structured_block
     : Note<"jump exits scope of OpenMP structured block">;
+def err_omp_lastprivate_loop_var_non_loop_iteration : Error<
+  "only loop iteration variables are allowed in 'lastprivate' clause in "
+  "'omp loop' directives">;
 def err_omp_interop_variable_expected : Error<
   "expected%select{| non-const}0 variable of type 'omp_interop_t'">;
 def err_omp_interop_variable_wrong_type : Error<
@@ -10818,6 +10867,8 @@ def err_omp_adjust_arg_multiple_clauses : Error<
   "'adjust_arg' argument %0 used in multiple clauses">;
 def err_omp_clause_requires_dispatch_construct : Error<
   "'%0' clause requires 'dispatch' context selector">;
+def err_omp_append_args_with_varargs : Error<
+  "'append_args' is not allowed with varargs functions">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {
@@ -10988,19 +11039,27 @@ def err_coroutine_invalid_func_context : Error<
   "|a function with a deduced return type|a varargs function"
   "|a consteval function}0">;
 def err_implied_coroutine_type_not_found : Error<
-  "%0 type was not found; include <experimental/coroutine> before defining "
-  "a coroutine">;
+  "%0 type was not found; include <coroutine> before defining "
+  "a coroutine; include <experimental/coroutine> if your version "
+  "of libcxx is less than 14.0">;
+def warn_deprecated_coroutine_namespace : Warning<
+  "support for std::experimental::%0 will be removed in LLVM 15; "
+  "use std::%0 instead">,
+  InGroup<DeprecatedExperimentalCoroutine>;
+def err_mixed_use_std_and_experimental_namespace_for_coroutine : Error<
+  "mixed use of std and std::experimental namespaces for "
+  "coroutine components">;
 def err_implicit_coroutine_std_nothrow_type_not_found : Error<
   "std::nothrow was not found; include <new> before defining a coroutine which "
   "uses get_return_object_on_allocation_failure()">;
 def err_malformed_std_nothrow : Error<
   "std::nothrow must be a valid variable declaration">;
 def err_malformed_std_coroutine_handle : Error<
-  "std::experimental::coroutine_handle must be a class template">;
+  "std::coroutine_handle isn't a class template">;
 def err_coroutine_handle_missing_member : Error<
-  "std::experimental::coroutine_handle missing a member named '%0'">;
+  "std::coroutine_handle must have a member named '%0'">;
 def err_malformed_std_coroutine_traits : Error<
-  "'std::experimental::coroutine_traits' must be a class template">;
+  "std::coroutine_traits isn't a class template">;
 def err_implied_std_coroutine_traits_promise_type_not_found : Error<
   "this function cannot be a coroutine: %q0 has no member named 'promise_type'">;
 def err_implied_std_coroutine_traits_promise_type_not_class : Error<
@@ -11012,8 +11071,6 @@ def err_coroutine_type_missing_specialization : Error<
   "specialization %0">;
 def err_coroutine_promise_incompatible_return_functions : Error<
   "the coroutine promise type %0 declares both 'return_value' and 'return_void'">;
-def err_coroutine_promise_requires_return_function : Error<
-  "the coroutine promise type %0 must declare either 'return_value' or 'return_void'">;
 def note_coroutine_promise_implicit_await_transform_required_here : Note<
   "call to 'await_transform' implicitly required by 'co_await' here">;
 def note_coroutine_promise_suspend_implicitly_required : Note<
@@ -11222,9 +11279,11 @@ def err_multiversion_duplicate : Error<
   "multiversioned function redeclarations require identical target attributes">;
 def err_multiversion_noproto : Error<
   "multiversioned function must have a prototype">;
-def err_multiversion_disallowed_other_attr : Error<
-  "attribute '%select{target|cpu_specific|cpu_dispatch}0' multiversioning cannot be combined"
-  " with attribute %1">;
+def err_multiversion_disallowed_other_attr
+    : Error<"attribute "
+            "'%select{|target|cpu_specific|cpu_dispatch|target_clones}0' "
+            "multiversioning cannot be combined"
+            " with attribute %1">;
 def err_multiversion_mismatched_attrs
     : Error<"attributes on multiversioned functions must all match, attribute "
             "%0 %select{is missing|has different arguments}1">;
@@ -11232,11 +11291,14 @@ def err_multiversion_diff : Error<
   "multiversioned function declaration has a different %select{calling convention"
   "|return type|constexpr specification|inline specification|linkage|"
   "language linkage}0">;
-def err_multiversion_doesnt_support : Error<
-  "attribute '%select{target|cpu_specific|cpu_dispatch}0' multiversioned functions do not "
-  "yet support %select{function templates|virtual functions|"
-  "deduced return types|constructors|destructors|deleted functions|"
-  "defaulted functions|constexpr functions|consteval function}1">;
+def err_multiversion_doesnt_support
+    : Error<"attribute "
+            "'%select{|target|cpu_specific|cpu_dispatch|target_clones}0' "
+            "multiversioned functions do not "
+            "yet support %select{function templates|virtual functions|"
+            "deduced return types|constructors|destructors|deleted functions|"
+            "defaulted functions|constexpr functions|consteval "
+            "function|lambdas}1">;
 def err_multiversion_not_allowed_on_main : Error<
   "'main' cannot be a multiversioned function">;
 def err_multiversion_not_supported : Error<
@@ -11253,6 +11315,19 @@ def warn_multiversion_duplicate_entries : Warning<
 def warn_dispatch_body_ignored : Warning<
   "body of cpu_dispatch function will be ignored">,
   InGroup<FunctionMultiVersioning>;
+def err_target_clone_must_have_default
+    : Error<"'target_clones' multiversioning requires a default target">;
+def err_target_clone_doesnt_match
+    : Error<"'target_clones' attribute does not match previous declaration">;
+def warn_target_clone_mixed_values
+    : ExtWarn<
+          "mixing 'target_clones' specifier mechanisms is permitted for GCC "
+          "compatibility; use a comma separated sequence of string literals, "
+          "or a string literal containing a comma-separated list of versions">,
+      InGroup<TargetClonesMixedSpecifiers>;
+def warn_target_clone_duplicate_options
+    : Warning<"version list contains duplicate entries">,
+      InGroup<FunctionMultiVersioning>;
 
 // three-way comparison operator diagnostics
 def err_implied_comparison_category_type_not_found : Error<
@@ -11296,6 +11371,14 @@ def err_builtin_launder_invalid_arg : Error<
   "%select{non-pointer|function pointer|void pointer}0 argument to "
   "'__builtin_launder' is not allowed">;
 
+def err_builtin_invalid_arg_type: Error <
+  "%ordinal0 argument must be a "
+  "%select{vector, integer or floating point type|matrix|"
+  "pointer to a valid matrix element type|"
+  "signed integer or floating point type|vector type|"
+  "floating point type|"
+  "vector of integers}1 (was %2)">;
+
 def err_builtin_matrix_disabled: Error<
   "matrix types extension is disabled. Pass -fenable-matrix to enable it">;
 def err_matrix_index_not_integer: Error<
@@ -11308,11 +11391,8 @@ def err_matrix_separate_incomplete_index: Error<
   "matrix row and column subscripts cannot be separated by any expression">;
 def err_matrix_subscript_comma: Error<
   "comma expressions are not allowed as indices in matrix subscript expressions">;
-def err_builtin_matrix_arg: Error<"1st argument must be a matrix">;
 def err_builtin_matrix_scalar_unsigned_arg: Error<
   "%0 argument must be a constant unsigned integer expression">;
-def err_builtin_matrix_pointer_arg: Error<
-  "%ordinal0 argument must be a pointer to a valid matrix element type">;
 def err_builtin_matrix_pointer_arg_mismatch: Error<
   "the pointee of the 2nd argument must match the element type of the 1st argument (%0 != %1)">;
 def err_builtin_matrix_store_to_const: Error<
@@ -11364,9 +11444,9 @@ def warn_sycl_kernel_return_type : Warning<
   "function template with 'sycl_kernel' attribute must have a 'void' return type">,
   InGroup<IgnoredAttributes>;
 
-def err_ext_int_bad_size : Error<"%select{signed|unsigned}0 _ExtInt must "
+def err_bit_int_bad_size : Error<"%select{signed|unsigned}0 _BitInt must "
                                  "have a bit size of at least %select{2|1}0">;
-def err_ext_int_max_size : Error<"%select{signed|unsigned}0 _ExtInt of bit "
+def err_bit_int_max_size : Error<"%select{signed|unsigned}0 _BitInt of bit "
                                  "sizes greater than %1 not supported">;
 
 // errors of expect.with.probability

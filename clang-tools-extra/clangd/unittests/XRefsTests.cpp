@@ -675,7 +675,7 @@ TEST(LocateSymbol, All) {
 
       R"cpp(// Declaration of explicit template specialization
         template <typename T>
-        struct $decl[[Foo]] {};
+        struct $decl[[$def[[Foo]]]] {};
 
         template <>
         struct Fo^o<int> {};
@@ -683,10 +683,23 @@ TEST(LocateSymbol, All) {
 
       R"cpp(// Declaration of partial template specialization
         template <typename T>
-        struct $decl[[Foo]] {};
+        struct $decl[[$def[[Foo]]]] {};
 
         template <typename T>
         struct Fo^o<T*> {};
+      )cpp",
+
+      R"cpp(// Definition on ClassTemplateDecl
+        namespace ns {
+          // Forward declaration.
+          template<typename T>
+          struct $decl[[Foo]];
+
+          template <typename T>
+          struct $def[[Foo]] {};
+        }
+
+        using ::ns::Fo^o;
       )cpp",
 
       R"cpp(// auto builtin type (not supported)
@@ -878,6 +891,19 @@ TEST(LocateSymbol, All) {
           enum class E { [[A]], B };
           E e = E::A^;
         };
+      )cpp",
+
+      R"cpp(// Enum base
+        typedef int $decl[[MyTypeDef]];
+        enum Foo : My^TypeDef {};
+      )cpp",
+      R"cpp(// Enum base
+        typedef int $decl[[MyTypeDef]];
+        enum Foo : My^TypeDef;
+      )cpp",
+      R"cpp(// Enum base
+        using $decl[[MyTypeDef]] = int;
+        enum Foo : My^TypeDef {};
       )cpp",
 
       R"objc(
@@ -1346,7 +1372,7 @@ TEST(LocateSymbol, Alias) {
 
       R"cpp(
       namespace ns { class [[Foo]] {}; }
-      using ns::Foo;
+      using ns::[[Foo]];
       F^oo f;
     )cpp",
 
@@ -1952,6 +1978,20 @@ TEST(FindReferences, WithinAST) {
           bar<ns::S>(s);
           [[f^oo]](s);
         }
+      )cpp",
+
+      // Enum base
+      R"cpp(
+        typedef int $def[[MyTypeD^ef]];
+        enum MyEnum : [[MyTy^peDef]] { };
+      )cpp",
+      R"cpp(
+        typedef int $def[[MyType^Def]];
+        enum MyEnum : [[MyTypeD^ef]];
+      )cpp",
+      R"cpp(
+        using $def[[MyTypeD^ef]] = int;
+        enum MyEnum : [[MyTy^peDef]] { };
       )cpp",
   };
   for (const char *Test : Tests)

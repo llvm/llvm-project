@@ -273,7 +273,10 @@ def RetCC_X86_32_C : CallingConv<[
   // conv.
   CCIfInReg<CCIfSubtarget<"hasSSE2()",
     CCIfType<[f32, f64], CCAssignToReg<[XMM0,XMM1,XMM2]>>>>,
-  CCIfType<[f32,f64], CCAssignToReg<[FP0, FP1]>>,
+  CCIfSubtarget<"hasX87()",
+    CCIfType<[f32, f64], CCAssignToReg<[FP0, FP1]>>>,
+  CCIfNotSubtarget<"hasX87()",
+    CCIfType<[f32], CCAssignToReg<[EAX, EDX, ECX]>>>,
   CCIfType<[f16], CCAssignToReg<[XMM0,XMM1,XMM2]>>,
   CCDelegateTo<RetCC_X86Common>
 ]>;
@@ -862,8 +865,8 @@ def CC_X86_32_Common : CallingConv<[
   // Doubles get 8-byte slots that are 4-byte aligned.
   CCIfType<[f64], CCAssignToStack<8, 4>>,
 
-  // Long doubles get slots whose size depends on the subtarget.
-  CCIfType<[f80], CCAssignToStack<0, 4>>,
+  // Long doubles get slots whose size and alignment depends on the subtarget.
+  CCIfType<[f80], CCAssignToStack<0, 0>>,
 
   // Boolean vectors of AVX-512 are passed in SIMD registers.
   // The call from AVX to AVX-512 function should work,

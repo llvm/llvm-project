@@ -74,7 +74,7 @@
 // CXX-RV32-BAREMETAL-NOSYSROOT-ILP32: "-lstdc++" "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
 // CXX-RV32-BAREMETAL-NOSYSROOT-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1{{/|\\\\}}crtend.o"
 
-// RUN: %clang %s -### -no-canonical-prefixes -fuse-ld=ld \
+// RUN: %clang %s -### -no-canonical-prefixes -fuse-ld=ld -no-pie \
 // RUN:   -target riscv32-unknown-linux-gnu --rtlib=platform -mabi=ilp32 \
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_linux_sdk \
 // RUN:   --sysroot=%S/Inputs/multilib_riscv_linux_sdk/sysroot 2>&1 \
@@ -89,7 +89,7 @@
 // C-RV32-LINUX-MULTI-ILP32: "-L{{.*}}/Inputs/multilib_riscv_linux_sdk/sysroot/lib32/ilp32"
 // C-RV32-LINUX-MULTI-ILP32: "-L{{.*}}/Inputs/multilib_riscv_linux_sdk/sysroot/usr/lib32/ilp32"
 
-// RUN: %clang %s -### -no-canonical-prefixes -fuse-ld=ld \
+// RUN: %clang %s -### -no-canonical-prefixes -fuse-ld=ld -no-pie \
 // RUN:   -target riscv32-unknown-linux-gnu --rtlib=platform -march=rv32imafd \
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_linux_sdk \
 // RUN:   --sysroot=%S/Inputs/multilib_riscv_linux_sdk/sysroot 2>&1 \

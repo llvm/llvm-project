@@ -515,7 +515,7 @@ void CodeEmitterGen::run(raw_ostream &o) {
     << "    std::string msg;\n"
     << "    raw_string_ostream Msg(msg);\n"
     << "    Msg << \"Not supported instr: \" << MI;\n"
-    << "    report_fatal_error(Msg.str().c_str());\n"
+    << "    report_fatal_error(msg.c_str());\n"
     << "  }\n";
   if (UseAPInt)
     o << "  Inst = Value;\n";

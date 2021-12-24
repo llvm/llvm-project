@@ -136,15 +136,15 @@ def AArch64stnt1_scatter : SDNode<"AArch64ISD::SSTNT1_PRED", SDT_AArch64_SCATTER
 //
 
 // SVE CNT/INC/RDVL
-def sve_rdvl_imm : ComplexPattern<i32, 1, "SelectRDVLImm<-32, 31, 16>">;
-def sve_cnth_imm : ComplexPattern<i32, 1, "SelectRDVLImm<1, 16, 8>">;
-def sve_cntw_imm : ComplexPattern<i32, 1, "SelectRDVLImm<1, 16, 4>">;
-def sve_cntd_imm : ComplexPattern<i32, 1, "SelectRDVLImm<1, 16, 2>">;
+def sve_rdvl_imm : ComplexPattern<i64, 1, "SelectRDVLImm<-32, 31, 16>">;
+def sve_cnth_imm : ComplexPattern<i64, 1, "SelectRDVLImm<1, 16, 8>">;
+def sve_cntw_imm : ComplexPattern<i64, 1, "SelectRDVLImm<1, 16, 4>">;
+def sve_cntd_imm : ComplexPattern<i64, 1, "SelectRDVLImm<1, 16, 2>">;
 
 // SVE DEC
-def sve_cnth_imm_neg : ComplexPattern<i32, 1, "SelectRDVLImm<1, 16, -8>">;
-def sve_cntw_imm_neg : ComplexPattern<i32, 1, "SelectRDVLImm<1, 16, -4>">;
-def sve_cntd_imm_neg : ComplexPattern<i32, 1, "SelectRDVLImm<1, 16, -2>">;
+def sve_cnth_imm_neg : ComplexPattern<i64, 1, "SelectRDVLImm<1, 16, -8>">;
+def sve_cntw_imm_neg : ComplexPattern<i64, 1, "SelectRDVLImm<1, 16, -4>">;
+def sve_cntd_imm_neg : ComplexPattern<i64, 1, "SelectRDVLImm<1, 16, -2>">;
 
 def SDT_AArch64Reduce : SDTypeProfile<1, 2, [SDTCisVec<1>, SDTCisVec<2>]>;
 def AArch64faddv_p   : SDNode<"AArch64ISD::FADDV_PRED",   SDT_AArch64Reduce>;
@@ -199,6 +199,13 @@ def AArch64umax_p : SDNode<"AArch64ISD::UMAX_PRED", SDT_AArch64Arith>;
 def AArch64umin_p : SDNode<"AArch64ISD::UMIN_PRED", SDT_AArch64Arith>;
 def AArch64umulh_p : SDNode<"AArch64ISD::MULHU_PRED", SDT_AArch64Arith>;
 
+def SDT_AArch64Arith_Imm : SDTypeProfile<1, 3, [
+  SDTCisVec<0>, SDTCisVec<1>, SDTCisVec<2>, SDTCisVT<3,i32>,
+  SDTCVecEltisVT<1,i1>, SDTCisSameAs<0,2>
+]>;
+
+def AArch64asrd_m1 : SDNode<"AArch64ISD::SRAD_MERGE_OP1", SDT_AArch64Arith_Imm>;
+
 def SDT_AArch64IntExtend : SDTypeProfile<1, 4, [
   SDTCisVec<0>, SDTCisVec<1>, SDTCisVec<2>, SDTCisVT<3, OtherVT>, SDTCisVec<4>,
   SDTCVecEltisVT<1,i1>, SDTCisSameAs<0,2>, SDTCisVTSmallerThanOp<3, 2>, SDTCisSameAs<0,4>
@@ -224,6 +231,8 @@ def AArch64fsqrt_mt  : SDNode<"AArch64ISD::FSQRT_MERGE_PASSTHRU", SDT_AArch64Ari
 def AArch64frecpx_mt : SDNode<"AArch64ISD::FRECPX_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64rbit_mt   : SDNode<"AArch64ISD::BITREVERSE_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64revb_mt   : SDNode<"AArch64ISD::BSWAP_MERGE_PASSTHRU", SDT_AArch64Arith>;
+def AArch64revh_mt   : SDNode<"AArch64ISD::REVH_MERGE_PASSTHRU", SDT_AArch64Arith>;
+def AArch64revw_mt   : SDNode<"AArch64ISD::REVW_MERGE_PASSTHRU", SDT_AArch64Arith>;
 
 // These are like the above but we don't yet have need for ISD nodes. They allow
 // a single pattern to match intrinsic and ISD operand layouts.
@@ -266,6 +275,11 @@ def reinterpret_cast : SDNode<"AArch64ISD::REINTERPRET_CAST", SDTUnaryOp>;
 def AArch64mul_p_oneuse : PatFrag<(ops node:$pred, node:$src1, node:$src2),
                                   (AArch64mul_p node:$pred, node:$src1, node:$src2), [{
   return N->hasOneUse();
+}]>;
+
+def AArch64fneg_mt_nsz : PatFrag<(ops node:$pred, node:$op, node:$pt),
+                                  (AArch64fneg_mt node:$pred, node:$op, node:$pt), [{
+  return N->getFlags().hasNoSignedZeros();
 }]>;
 
 def SDT_AArch64Arith_Unpred : SDTypeProfile<1, 2, [
@@ -402,8 +416,8 @@ let Predicates = [HasSVEorStreamingSVE] in {
   defm SMIN_ZPZZ : sve_int_bin_pred_bhsd<AArch64smin_p>;
   defm UMIN_ZPZZ : sve_int_bin_pred_bhsd<AArch64umin_p>;
 
-  defm FRECPE_ZZ  : sve_fp_2op_u_zd<0b110, "frecpe",  int_aarch64_sve_frecpe_x>;
-  defm FRSQRTE_ZZ : sve_fp_2op_u_zd<0b111, "frsqrte", int_aarch64_sve_frsqrte_x>;
+  defm FRECPE_ZZ  : sve_fp_2op_u_zd<0b110, "frecpe",  AArch64frecpe>;
+  defm FRSQRTE_ZZ : sve_fp_2op_u_zd<0b111, "frsqrte", AArch64frsqrte>;
 
   defm FADD_ZPmI    : sve_fp_2op_i_p_zds<0b000, "fadd", "FADD_ZPZI", sve_fpimm_half_one, fpimm_half, fpimm_one, int_aarch64_sve_fadd>;
   defm FSUB_ZPmI    : sve_fp_2op_i_p_zds<0b001, "fsub", "FSUB_ZPZI", sve_fpimm_half_one, fpimm_half, fpimm_one, int_aarch64_sve_fsub>;
@@ -484,8 +498,8 @@ let Predicates = [HasSVE] in {
 } // End HasSVE
 
 let Predicates = [HasSVEorStreamingSVE] in {
-  defm FRECPS_ZZZ  : sve_fp_3op_u_zd<0b110, "frecps",  int_aarch64_sve_frecps_x>;
-  defm FRSQRTS_ZZZ : sve_fp_3op_u_zd<0b111, "frsqrts", int_aarch64_sve_frsqrts_x>;
+  defm FRECPS_ZZZ  : sve_fp_3op_u_zd<0b110, "frecps",  AArch64frecps>;
+  defm FRSQRTS_ZZZ : sve_fp_3op_u_zd<0b111, "frsqrts", AArch64frsqrts>;
 } // End HasSVEorStreamingSVE
 
 let Predicates = [HasSVE] in {
@@ -529,7 +543,8 @@ let Predicates = [HasSVEorStreamingSVE] in {
               (!cast<Instruction>("FNMLA_ZPZZZ_UNDEF_"#Suffix) $P, ZPR:$Za, ZPR:$Zn, ZPR:$Zm)>;
 
     // Zd = -(Za + Zn * Zm)
-    def : Pat<(AArch64fneg_mt PredTy:$P, (AArch64fma_p PredTy:$P, Ty:$Zn, Ty:$Zm, Ty:$Za), (Ty (undef))),
+    // (with nsz neg.)
+    def : Pat<(AArch64fneg_mt_nsz PredTy:$P, (AArch64fma_p PredTy:$P, Ty:$Zn, Ty:$Zm, Ty:$Za), (Ty (undef))),
               (!cast<Instruction>("FNMLA_ZPZZZ_UNDEF_"#Suffix) $P, ZPR:$Za, ZPR:$Zn, ZPR:$Zm)>;
 
     // Zda = Zda + Zn * Zm
@@ -617,13 +632,13 @@ let Predicates = [HasSVEorStreamingSVE] in {
   def : Pat<(nxv8bf16 (AArch64dup (bf16 fpimm0))), (DUP_ZI_H 0, 0)>;
 
   // Duplicate Int immediate into all vector elements
-  def : Pat<(nxv16i8 (AArch64dup (i32 (SVE8BitLslImm i32:$a, i32:$b)))),
+  def : Pat<(nxv16i8 (AArch64dup (i32 (SVE8BitLslImm32 i32:$a, i32:$b)))),
             (DUP_ZI_B $a, $b)>;
-  def : Pat<(nxv8i16 (AArch64dup (i32 (SVE8BitLslImm i32:$a, i32:$b)))),
+  def : Pat<(nxv8i16 (AArch64dup (i32 (SVE8BitLslImm32 i32:$a, i32:$b)))),
             (DUP_ZI_H $a, $b)>;
-  def : Pat<(nxv4i32 (AArch64dup (i32 (SVE8BitLslImm i32:$a, i32:$b)))),
+  def : Pat<(nxv4i32 (AArch64dup (i32 (SVE8BitLslImm32 i32:$a, i32:$b)))),
             (DUP_ZI_S $a, $b)>;
-  def : Pat<(nxv2i64 (AArch64dup (i64 (SVE8BitLslImm i32:$a, i32:$b)))),
+  def : Pat<(nxv2i64 (AArch64dup (i64 (SVE8BitLslImm64 i32:$a, i32:$b)))),
             (DUP_ZI_D $a, $b)>;
 
   // Duplicate immediate FP into all vector elements.
@@ -667,8 +682,8 @@ let Predicates = [HasSVEorStreamingSVE] in {
 
   defm RBIT_ZPmZ : sve_int_perm_rev_rbit<"rbit", AArch64rbit_mt>;
   defm REVB_ZPmZ : sve_int_perm_rev_revb<"revb", AArch64revb_mt>;
-  defm REVH_ZPmZ : sve_int_perm_rev_revh<"revh", int_aarch64_sve_revh>;
-  defm REVW_ZPmZ : sve_int_perm_rev_revw<"revw", int_aarch64_sve_revw>;
+  defm REVH_ZPmZ : sve_int_perm_rev_revh<"revh", AArch64revh_mt>;
+  defm REVW_ZPmZ : sve_int_perm_rev_revw<"revw", AArch64revw_mt>;
 
   defm REV_PP : sve_int_perm_reverse_p<"rev", vector_reverse>;
   defm REV_ZZ : sve_int_perm_reverse_z<"rev", vector_reverse>;
@@ -1575,7 +1590,7 @@ let Predicates = [HasSVEorStreamingSVE] in {
   defm ASR_ZPmI  : sve_int_bin_pred_shift_imm_right_dup<0b0000, "asr",  "ASR_ZPZI",  int_aarch64_sve_asr>;
   defm LSR_ZPmI  : sve_int_bin_pred_shift_imm_right_dup<0b0001, "lsr",  "LSR_ZPZI",  int_aarch64_sve_lsr>;
   defm LSL_ZPmI  : sve_int_bin_pred_shift_imm_left_dup< 0b0011, "lsl",  "LSL_ZPZI",  int_aarch64_sve_lsl>;
-  defm ASRD_ZPmI : sve_int_bin_pred_shift_imm_right<    0b0100, "asrd", "ASRD_ZPZI", int_aarch64_sve_asrd>;
+  defm ASRD_ZPmI : sve_int_bin_pred_shift_imm_right<    0b0100, "asrd", "ASRD_ZPZI", AArch64asrd_m1>;
 
   defm ASR_ZPZI : sve_int_shift_pred_bhsd<AArch64asr_p, SVEShiftImmR8, SVEShiftImmR16, SVEShiftImmR32, SVEShiftImmR64>;
   defm LSR_ZPZI : sve_int_shift_pred_bhsd<AArch64lsr_p, SVEShiftImmR8, SVEShiftImmR16, SVEShiftImmR32, SVEShiftImmR64>;
@@ -1586,7 +1601,7 @@ let Predicates = [HasSVEorStreamingSVE, UseExperimentalZeroingPseudos] in {
   defm ASR_ZPZZ  : sve_int_bin_pred_zeroing_bhsd<int_aarch64_sve_asr>;
   defm LSR_ZPZZ  : sve_int_bin_pred_zeroing_bhsd<int_aarch64_sve_lsr>;
   defm LSL_ZPZZ  : sve_int_bin_pred_zeroing_bhsd<int_aarch64_sve_lsl>;
-  defm ASRD_ZPZI : sve_int_bin_pred_shift_imm_right_zeroing_bhsd<int_aarch64_sve_asrd>;
+  defm ASRD_ZPZI : sve_int_bin_pred_shift_imm_right_zeroing_bhsd<AArch64asrd_m1>;
 } // End HasSVEorStreamingSVE, UseExperimentalZeroingPseudos
 
 let Predicates = [HasSVEorStreamingSVE] in {
@@ -2200,10 +2215,6 @@ let Predicates = [HasSVEorStreamingSVE] in {
       def _imm : Pat<(Store (Ty ZPR:$val), (am_sve_indexed_s4 GPR64sp:$base, simm4s1:$offset)),
                      (RegImmInst ZPR:$val, (PTrue 31), GPR64sp:$base, simm4s1:$offset)>;
     }
-    let AddedComplexity = 3 in {
-      def _fi : Pat<(Store (Ty ZPR:$val), (am_sve_fi GPR64sp:$base, simm4s1:$offset)),
-                    (RegImmInst ZPR:$val, (PTrue 31), GPR64sp:$base, simm4s1:$offset)>;
-    }
 
     def : Pat<(Store (Ty ZPR:$val), GPR64:$base),
               (RegImmInst ZPR:$val, (PTrue 31), GPR64:$base, (i64 0))>;
@@ -2238,10 +2249,6 @@ let Predicates = [HasSVEorStreamingSVE] in {
     }
     let AddedComplexity = 2 in {
       def _imm: Pat<(Ty (Load  (am_sve_indexed_s4 GPR64sp:$base, simm4s1:$offset))),
-                    (RegImmInst (PTrue 31), GPR64sp:$base, simm4s1:$offset)>;
-    }
-    let AddedComplexity = 3 in {
-      def _fi : Pat<(Ty (Load  (am_sve_fi GPR64sp:$base, simm4s1:$offset))),
                     (RegImmInst (PTrue 31), GPR64sp:$base, simm4s1:$offset)>;
     }
 
@@ -2687,13 +2694,13 @@ let Predicates = [HasSVEorStreamingSVE] in {
 
   // Splice with lane bigger or equal to 0
   def : Pat<(nxv16i8 (vector_splice (nxv16i8 ZPR:$Z1), (nxv16i8 ZPR:$Z2), (i64 (sve_ext_imm_0_255 i32:$index)))),
-            (EXT_ZZI  ZPR:$Z1, ZPR:$Z2, sve_ext_imm_0_255:$index)>;
+            (EXT_ZZI  ZPR:$Z1, ZPR:$Z2, imm0_255:$index)>;
   def : Pat<(nxv8i16 (vector_splice (nxv8i16 ZPR:$Z1), (nxv8i16 ZPR:$Z2), (i64 (sve_ext_imm_0_127 i32:$index)))),
-            (EXT_ZZI  ZPR:$Z1, ZPR:$Z2, sve_ext_imm_0_127:$index)>;
+            (EXT_ZZI  ZPR:$Z1, ZPR:$Z2, imm0_255:$index)>;
   def : Pat<(nxv4i32 (vector_splice (nxv4i32 ZPR:$Z1), (nxv4i32 ZPR:$Z2), (i64 (sve_ext_imm_0_63 i32:$index)))),
-            (EXT_ZZI  ZPR:$Z1, ZPR:$Z2, sve_ext_imm_0_63:$index)>;
+            (EXT_ZZI  ZPR:$Z1, ZPR:$Z2, imm0_255:$index)>;
   def : Pat<(nxv2i64 (vector_splice (nxv2i64 ZPR:$Z1), (nxv2i64 ZPR:$Z2), (i64 (sve_ext_imm_0_31 i32:$index)))),
-            (EXT_ZZI  ZPR:$Z1, ZPR:$Z2, sve_ext_imm_0_31:$index)>;
+            (EXT_ZZI  ZPR:$Z1, ZPR:$Z2, imm0_255:$index)>;
 
 } // End HasSVEorStreamingSVE
 

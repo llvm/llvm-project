@@ -87,13 +87,16 @@ def _match_decorator_property(expected, actual):
         return expected == actual
 
 
-def _compiler_supports(compiler, flag):
+def _compiler_supports(compiler,
+                       flag,
+                       source='int main() {}',
+                       output_file=tempfile.NamedTemporaryFile()):
     """Test whether the compiler supports the given flag."""
     if platform.system() == 'Darwin':
         compiler = "xcrun " + compiler
-    f = tempfile.NamedTemporaryFile()
     try:
-        cmd = "echo 'int main() {}' | %s %s -x c -o %s -" % (compiler, flag, f.name)
+        cmd = "echo '%s' | %s %s -x c -o %s -" % (source, compiler, flag,
+                                                  output_file.name)
         subprocess.check_call(cmd, shell=True)
     except subprocess.CalledProcessError:
         return False
@@ -755,16 +758,13 @@ def skipUnlessUndefinedBehaviorSanitizer(func):
         if is_running_under_asan():
             return "Undefined behavior sanitizer tests are disabled when runing under ASAN"
 
-        # Write out a temp file which exhibits UB.
-        inputf = tempfile.NamedTemporaryFile(suffix='.c', mode='w')
-        inputf.write('int main() { int x = 0; return x / x; }\n')
-        inputf.flush()
-
         # We need to write out the object into a named temp file for inspection.
         outputf = tempfile.NamedTemporaryFile()
 
         # Try to compile with ubsan turned on.
-        if not _compiler_supports(self.getCompiler(), '-fsanitize=undefined'):
+        if not _compiler_supports(self.getCompiler(), '-fsanitize=undefined',
+                                  'int main() { int x = 0; return x / x; }',
+                                  outputf):
             return "Compiler cannot compile with -fsanitize=undefined"
 
         # Check that we actually see ubsan instrumentation in the binary.
@@ -880,6 +880,9 @@ def skipIfXmlSupportMissing(func):
 
 def skipIfEditlineSupportMissing(func):
     return _get_bool_config_skip_if_decorator("editline")(func)
+
+def skipIfFBSDVMCoreSupportMissing(func):
+    return _get_bool_config_skip_if_decorator("fbsdvmcore")(func)
 
 def skipIfLLVMTargetMissing(target):
     config = lldb.SBDebugger.GetBuildConfiguration()

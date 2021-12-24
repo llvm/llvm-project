@@ -31,6 +31,159 @@ using namespace llvm::objdump;
 using namespace llvm::object;
 using namespace llvm::Win64EH;
 
+namespace {
+template <typename T> struct EnumEntry {
+  T Value;
+  StringRef Name;
+};
+
+class COFFDumper {
+public:
+  explicit COFFDumper(const llvm::object::COFFObjectFile &Obj) : Obj(Obj) {
+    Is64 = !Obj.getPE32Header();
+  }
+
+  template <class PEHeader> void printPEHeader(const PEHeader &Hdr) const;
+
+private:
+  template <typename T> FormattedNumber formatAddr(T V) const {
+    return format_hex_no_prefix(V, Is64 ? 16 : 8);
+  }
+
+  uint32_t getBaseOfData(const void *Hdr) const {
+    return Is64 ? 0 : static_cast<const pe32_header *>(Hdr)->BaseOfData;
+  }
+
+  const llvm::object::COFFObjectFile &Obj;
+  bool Is64;
+};
+} // namespace
+
+constexpr EnumEntry<uint16_t> PEHeaderMagic[] = {
+    {uint16_t(COFF::PE32Header::PE32), "PE32"},
+    {uint16_t(COFF::PE32Header::PE32_PLUS), "PE32+"},
+};
+
+constexpr EnumEntry<COFF::WindowsSubsystem> PEWindowsSubsystem[] = {
+    {COFF::IMAGE_SUBSYSTEM_UNKNOWN, "unspecified"},
+    {COFF::IMAGE_SUBSYSTEM_NATIVE, "NT native"},
+    {COFF::IMAGE_SUBSYSTEM_WINDOWS_GUI, "Windows GUI"},
+    {COFF::IMAGE_SUBSYSTEM_WINDOWS_CUI, "Windows CUI"},
+    {COFF::IMAGE_SUBSYSTEM_POSIX_CUI, "POSIX CUI"},
+    {COFF::IMAGE_SUBSYSTEM_WINDOWS_CE_GUI, "Wince CUI"},
+    {COFF::IMAGE_SUBSYSTEM_EFI_APPLICATION, "EFI application"},
+    {COFF::IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER, "EFI boot service driver"},
+    {COFF::IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER, "EFI runtime driver"},
+    {COFF::IMAGE_SUBSYSTEM_EFI_ROM, "SAL runtime driver"},
+    {COFF::IMAGE_SUBSYSTEM_XBOX, "XBOX"},
+};
+
+template <typename T, typename TEnum>
+static void printOptionalEnumName(T Value,
+                                  ArrayRef<EnumEntry<TEnum>> EnumValues) {
+  for (const EnumEntry<TEnum> &I : EnumValues)
+    if (I.Value == Value) {
+      outs() << "\t(" << I.Name << ')';
+      return;
+    }
+}
+
+template <class PEHeader>
+void COFFDumper::printPEHeader(const PEHeader &Hdr) const {
+  auto print = [](const char *K, auto V, const char *Fmt = "%d\n") {
+    outs() << format("%-23s ", K) << format(Fmt, V);
+  };
+  auto printU16 = [&](const char *K, support::ulittle16_t V,
+                      const char *Fmt = "%d\n") { print(K, uint16_t(V), Fmt); };
+  auto printU32 = [&](const char *K, support::ulittle32_t V,
+                      const char *Fmt = "%d\n") { print(K, uint32_t(V), Fmt); };
+  auto printAddr = [=](const char *K, uint64_t V) {
+    outs() << format("%-23s ", K) << formatAddr(V) << '\n';
+  };
+
+  printU16("Magic", Hdr.Magic, "%04x");
+  printOptionalEnumName(Hdr.Magic, makeArrayRef(PEHeaderMagic));
+  outs() << '\n';
+  print("MajorLinkerVersion", Hdr.MajorLinkerVersion);
+  print("MinorLinkerVersion", Hdr.MinorLinkerVersion);
+  printAddr("SizeOfCode", Hdr.SizeOfCode);
+  printAddr("SizeOfInitializedData", Hdr.SizeOfInitializedData);
+  printAddr("SizeOfUninitializedData", Hdr.SizeOfUninitializedData);
+  printAddr("AddressOfEntryPoint", Hdr.AddressOfEntryPoint);
+  printAddr("BaseOfCode", Hdr.BaseOfCode);
+  if (!Is64)
+    printAddr("BaseOfData", getBaseOfData(&Hdr));
+  printAddr("ImageBase", Hdr.ImageBase);
+  printU32("SectionAlignment", Hdr.SectionAlignment, "%08x\n");
+  printU32("FileAlignment", Hdr.FileAlignment, "%08x\n");
+  printU16("MajorOSystemVersion", Hdr.MajorOperatingSystemVersion);
+  printU16("MinorOSystemVersion", Hdr.MinorOperatingSystemVersion);
+  printU16("MajorImageVersion", Hdr.MajorImageVersion);
+  printU16("MinorImageVersion", Hdr.MinorImageVersion);
+  printU16("MajorSubsystemVersion", Hdr.MajorSubsystemVersion);
+  printU16("MinorSubsystemVersion", Hdr.MinorSubsystemVersion);
+  printU32("Win32Version", Hdr.Win32VersionValue, "%08x\n");
+  printU32("SizeOfImage", Hdr.SizeOfImage, "%08x\n");
+  printU32("SizeOfHeaders", Hdr.SizeOfHeaders, "%08x\n");
+  printU32("CheckSum", Hdr.CheckSum, "%08x\n");
+  printU16("Subsystem", Hdr.Subsystem, "%08x");
+  printOptionalEnumName(Hdr.Subsystem, makeArrayRef(PEWindowsSubsystem));
+  outs() << '\n';
+
+  printU16("DllCharacteristics", Hdr.DLLCharacteristics, "%08x\n");
+#define FLAG(Name)                                                             \
+  if (Hdr.DLLCharacteristics & COFF::IMAGE_DLL_CHARACTERISTICS_##Name)         \
+    outs() << "\t\t\t\t\t" << #Name << '\n';
+  FLAG(HIGH_ENTROPY_VA);
+  FLAG(DYNAMIC_BASE);
+  FLAG(FORCE_INTEGRITY);
+  FLAG(NX_COMPAT);
+  FLAG(NO_ISOLATION);
+  FLAG(NO_SEH);
+  FLAG(NO_BIND);
+  FLAG(APPCONTAINER);
+  FLAG(WDM_DRIVER);
+  FLAG(GUARD_CF);
+  FLAG(TERMINAL_SERVER_AWARE);
+#undef FLAG
+
+  printAddr("SizeOfStackReserve", Hdr.SizeOfStackReserve);
+  printAddr("SizeOfStackCommit", Hdr.SizeOfStackCommit);
+  printAddr("SizeOfHeapReserve", Hdr.SizeOfHeapReserve);
+  printAddr("SizeOfHeapCommit", Hdr.SizeOfHeapCommit);
+  printU32("LoaderFlags", Hdr.LoaderFlags, "%08x\n");
+  printU32("NumberOfRvaAndSizes", Hdr.NumberOfRvaAndSize, "%08x\n");
+
+  static const char *DirName[COFF::NUM_DATA_DIRECTORIES + 1] = {
+      "Export Directory [.edata (or where ever we found it)]",
+      "Import Directory [parts of .idata]",
+      "Resource Directory [.rsrc]",
+      "Exception Directory [.pdata]",
+      "Security Directory",
+      "Base Relocation Directory [.reloc]",
+      "Debug Directory",
+      "Description Directory",
+      "Special Directory",
+      "Thread Storage Directory [.tls]",
+      "Load Configuration Directory",
+      "Bound Import Directory",
+      "Import Address Table Directory",
+      "Delay Import Directory",
+      "CLR Runtime Header",
+      "Reserved",
+  };
+  outs() << "\nThe Data Directory\n";
+  for (uint32_t I = 0; I != array_lengthof(DirName); ++I) {
+    uint32_t Addr = 0, Size = 0;
+    if (const data_directory *Data = Obj.getDataDirectory(I)) {
+      Addr = Data->RelativeVirtualAddress;
+      Size = Data->Size;
+    }
+    outs() << format("Entry %x ", I) << formatAddr(Addr)
+           << format(" %08x %s\n", uint32_t(Size), DirName[I]);
+  }
+}
+
 // Returns the name of the unwind code.
 static StringRef getUnwindCodeTypeName(uint8_t Code) {
   switch(Code) {
@@ -278,10 +431,7 @@ static void printTLSDirectory(const COFFObjectFile *Obj) {
     return;
 
   const data_directory *DataDir = Obj->getDataDirectory(COFF::TLS_TABLE);
-  if (!DataDir)
-    reportError("missing data dir for TLS table", Obj->getFileName());
-
-  if (DataDir->RelativeVirtualAddress == 0)
+  if (!DataDir || DataDir->RelativeVirtualAddress == 0)
     return;
 
   uintptr_t IntPtr = 0;
@@ -625,12 +775,47 @@ void objdump::printCOFFUnwindInfo(const COFFObjectFile *Obj) {
   }
 }
 
-void objdump::printCOFFFileHeader(const object::ObjectFile *Obj) {
-  const COFFObjectFile *file = dyn_cast<const COFFObjectFile>(Obj);
-  printTLSDirectory(file);
-  printLoadConfiguration(file);
-  printImportTables(file);
-  printExportTable(file);
+void objdump::printCOFFFileHeader(const COFFObjectFile &Obj) {
+  COFFDumper CD(Obj);
+  const uint16_t Cha = Obj.getCharacteristics();
+  outs() << "Characteristics 0x" << Twine::utohexstr(Cha) << '\n';
+#define FLAG(F, Name)                                                          \
+  if (Cha & F)                                                                 \
+    outs() << '\t' << Name << '\n';
+  FLAG(COFF::IMAGE_FILE_RELOCS_STRIPPED, "relocations stripped");
+  FLAG(COFF::IMAGE_FILE_EXECUTABLE_IMAGE, "executable");
+  FLAG(COFF::IMAGE_FILE_LINE_NUMS_STRIPPED, "line numbers stripped");
+  FLAG(COFF::IMAGE_FILE_LOCAL_SYMS_STRIPPED, "symbols stripped");
+  FLAG(COFF::IMAGE_FILE_LARGE_ADDRESS_AWARE, "large address aware");
+  FLAG(COFF::IMAGE_FILE_BYTES_REVERSED_LO, "little endian");
+  FLAG(COFF::IMAGE_FILE_32BIT_MACHINE, "32 bit words");
+  FLAG(COFF::IMAGE_FILE_DEBUG_STRIPPED, "debugging information removed");
+  FLAG(COFF::IMAGE_FILE_REMOVABLE_RUN_FROM_SWAP,
+       "copy to swap file if on removable media");
+  FLAG(COFF::IMAGE_FILE_NET_RUN_FROM_SWAP,
+       "copy to swap file if on network media");
+  FLAG(COFF::IMAGE_FILE_SYSTEM, "system file");
+  FLAG(COFF::IMAGE_FILE_DLL, "DLL");
+  FLAG(COFF::IMAGE_FILE_UP_SYSTEM_ONLY, "run only on uniprocessor machine");
+  FLAG(COFF::IMAGE_FILE_BYTES_REVERSED_HI, "big endian");
+#undef FLAG
+
+  // TODO Support PE_IMAGE_DEBUG_TYPE_REPRO.
+  // Since ctime(3) returns a 26 character string of the form:
+  // "Sun Sep 16 01:03:52 1973\n\0"
+  // just print 24 characters.
+  const time_t Timestamp = Obj.getTimeDateStamp();
+  outs() << format("\nTime/Date               %.24s\n", ctime(&Timestamp));
+
+  if (const pe32_header *Hdr = Obj.getPE32Header())
+    CD.printPEHeader<pe32_header>(*Hdr);
+  else if (const pe32plus_header *Hdr = Obj.getPE32PlusHeader())
+    CD.printPEHeader<pe32plus_header>(*Hdr);
+
+  printTLSDirectory(&Obj);
+  printLoadConfiguration(&Obj);
+  printImportTables(&Obj);
+  printExportTable(&Obj);
 }
 
 void objdump::printCOFFSymbolTable(const object::COFFImportFile *i) {

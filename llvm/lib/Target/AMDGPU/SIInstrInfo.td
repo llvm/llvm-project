@@ -1350,11 +1350,11 @@ def PackedI16InputMods : PackedIntInputMods<PackedI16InputModsMatchClass>;
 // Complex patterns
 //===----------------------------------------------------------------------===//
 
-def DS1Addr1Offset : ComplexPattern<i32, 2, "SelectDS1Addr1Offset">;
-def DS64Bit4ByteAligned : ComplexPattern<i32, 3, "SelectDS64Bit4ByteAligned">;
-def DS128Bit8ByteAligned : ComplexPattern<i64, 3, "SelectDS128Bit8ByteAligned">;
+def DS1Addr1Offset : ComplexPattern<iPTR, 2, "SelectDS1Addr1Offset">;
+def DS64Bit4ByteAligned : ComplexPattern<iPTR, 3, "SelectDS64Bit4ByteAligned">;
+def DS128Bit8ByteAligned : ComplexPattern<iPTR, 3, "SelectDS128Bit8ByteAligned">;
 
-def MOVRELOffset : ComplexPattern<i32, 2, "SelectMOVRELOffset">;
+def MOVRELOffset : ComplexPattern<iPTR, 2, "SelectMOVRELOffset">;
 
 def VOP3Mods0 : ComplexPattern<untyped, 4, "SelectVOP3Mods0">;
 def VOP3Mods  : ComplexPattern<untyped, 2, "SelectVOP3Mods">;
@@ -2246,7 +2246,7 @@ class VOP_NO_EXT <VOPProfile p> : VOPProfile <p.ArgVT> {
   let HasExtSDWA9 = 0;
 }
 
-class VOP_PAT_GEN <VOPProfile p, int mode=PatGenMode.Pattern> : VOPProfile <p.ArgVT> {
+class VOP_PAT_GEN <VOPProfile p, int mode=PatGenMode.NoPattern> : VOPProfile <p.ArgVT> {
   let NeedPatGen = mode;
 }
 

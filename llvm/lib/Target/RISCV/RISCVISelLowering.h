@@ -263,8 +263,8 @@ enum NodeType : unsigned {
   VSEXT_VL,
   VZEXT_VL,
 
-  //  vpopc.m with additional mask and VL operands.
-  VPOPC_VL,
+  //  vcpop.m with additional mask and VL operands.
+  VCPOP_VL,
 
   // Reads value of CSR.
   // The first operand is a chain pointer. The second specifies address of the
@@ -281,6 +281,11 @@ enum NodeType : unsigned {
   // required CSR and the third is the value to write. Two results are produced,
   // the value read before the modification and the new chain pointer.
   SWAP_CSR,
+
+  // FP to 32 bit int conversions for RV64. These are used to keep track of the
+  // result being sign extended to 64 bit. These saturate out of range inputs.
+  STRICT_FCVT_W_RTZ_RV64 = ISD::FIRST_TARGET_STRICTFP_OPCODE,
+  STRICT_FCVT_WU_RTZ_RV64,
 
   // Memory opcodes start here.
   VLE_VL = ISD::FIRST_TARGET_MEMORY_OPCODE,
@@ -315,6 +320,7 @@ public:
   bool isSExtCheaperThanZExt(EVT SrcVT, EVT DstVT) const override;
   bool isCheapToSpeculateCttz() const override;
   bool isCheapToSpeculateCtlz() const override;
+  bool hasAndNotCompare(SDValue Y) const override;
   bool shouldSinkOperands(Instruction *I,
                           SmallVectorImpl<Use *> &Ops) const override;
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
@@ -381,6 +387,9 @@ public:
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *BB) const override;
+
+  void AdjustInstrPostInstrSelection(MachineInstr &MI,
+                                     SDNode *Node) const override;
 
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                          EVT VT) const override;
@@ -513,6 +522,8 @@ public:
 
   bool isLegalElementTypeForRVV(Type *ScalarTy) const;
 
+  bool shouldConvertFpToSat(unsigned Op, EVT FPVT, EVT VT) const override;
+
 private:
   /// RISCVCCAssignFn - This target-specific function extends the default
   /// CCValAssign with additional information used to lower RISC-V calling
@@ -590,6 +601,8 @@ private:
   SDValue lowerToScalableOp(SDValue Op, SelectionDAG &DAG, unsigned NewOpc,
                             bool HasMask = true) const;
   SDValue lowerVPOp(SDValue Op, SelectionDAG &DAG, unsigned RISCVISDOpc) const;
+  SDValue lowerLogicVPOp(SDValue Op, SelectionDAG &DAG, unsigned MaskOpc,
+                         unsigned VecOpc) const;
   SDValue lowerFixedLengthVectorExtendToRVV(SDValue Op, SelectionDAG &DAG,
                                             unsigned ExtendOpc) const;
   SDValue lowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
@@ -619,6 +632,14 @@ private:
   /// NOTE: Once BUILD_VECTOR can be custom lowered for all legal vector types,
   /// this override can be removed.
   bool mergeStoresAfterLegalization(EVT VT) const override;
+
+  /// Disable normalizing
+  /// select(N0&N1, X, Y) => select(N0, select(N1, X, Y), Y) and
+  /// select(N0|N1, X, Y) => select(N0, select(N1, X, Y, Y))
+  /// RISCV doesn't have flags so it's better to perform the and/or in a GPR.
+  bool shouldNormalizeToSelectSequence(LLVMContext &, EVT) const override {
+    return false;
+  };
 };
 
 namespace RISCV {

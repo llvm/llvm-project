@@ -18,26 +18,25 @@ using namespace llvm::orc::shared;
 namespace {
 
 template <typename WriteT, typename SPSWriteT>
-llvm::orc::shared::detail::CWrapperFunctionResult
-testWriteUInts(const char *ArgData, size_t ArgSize) {
+llvm::orc::shared::CWrapperFunctionResult testWriteUInts(const char *ArgData,
+                                                         size_t ArgSize) {
   return WrapperFunction<void(SPSSequence<SPSWriteT>)>::handle(
              ArgData, ArgSize,
              [](std::vector<WriteT> Ws) {
                for (auto &W : Ws)
-                 *jitTargetAddressToPointer<decltype(W.Value) *>(W.Address) =
-                     W.Value;
+                 *W.Addr.template toPtr<decltype(W.Value) *>() = W.Value;
              })
       .release();
 }
 
-llvm::orc::shared::detail::CWrapperFunctionResult
-testWriteBuffers(const char *ArgData, size_t ArgSize) {
+llvm::orc::shared::CWrapperFunctionResult testWriteBuffers(const char *ArgData,
+                                                           size_t ArgSize) {
   return WrapperFunction<void(SPSSequence<SPSMemoryAccessBufferWrite>)>::handle(
              ArgData, ArgSize,
              [](std::vector<tpctypes::BufferWrite> Ws) {
                for (auto &W : Ws)
-                 memcpy(jitTargetAddressToPointer<char *>(W.Address),
-                        W.Buffer.data(), W.Buffer.size());
+                 memcpy(W.Addr.template toPtr<char *>(), W.Buffer.data(),
+                        W.Buffer.size());
              })
       .release();
 }
@@ -65,32 +64,32 @@ TEST(EPCGenericMemoryAccessTest, MemWrites) {
   uint64_t Test_UInt64 = 0;
   char Test_Buffer[21];
 
-  auto Err1 = MemAccess->writeUInt8s(
-      {{pointerToJITTargetAddress(&Test_UInt8_1), 1},
-       {pointerToJITTargetAddress(&Test_UInt8_2), 0xFE}});
+  auto Err1 =
+      MemAccess->writeUInt8s({{ExecutorAddr::fromPtr(&Test_UInt8_1), 1},
+                              {ExecutorAddr::fromPtr(&Test_UInt8_2), 0xFE}});
 
   EXPECT_THAT_ERROR(std::move(Err1), Succeeded());
   EXPECT_EQ(Test_UInt8_1, 1U);
   EXPECT_EQ(Test_UInt8_2, 0xFE);
 
   auto Err2 =
-      MemAccess->writeUInt16s({{pointerToJITTargetAddress(&Test_UInt16), 1}});
+      MemAccess->writeUInt16s({{ExecutorAddr::fromPtr(&Test_UInt16), 1}});
   EXPECT_THAT_ERROR(std::move(Err2), Succeeded());
   EXPECT_EQ(Test_UInt16, 1U);
 
   auto Err3 =
-      MemAccess->writeUInt32s({{pointerToJITTargetAddress(&Test_UInt32), 1}});
+      MemAccess->writeUInt32s({{ExecutorAddr::fromPtr(&Test_UInt32), 1}});
   EXPECT_THAT_ERROR(std::move(Err3), Succeeded());
   EXPECT_EQ(Test_UInt32, 1U);
 
   auto Err4 =
-      MemAccess->writeUInt64s({{pointerToJITTargetAddress(&Test_UInt64), 1}});
+      MemAccess->writeUInt64s({{ExecutorAddr::fromPtr(&Test_UInt64), 1}});
   EXPECT_THAT_ERROR(std::move(Err4), Succeeded());
   EXPECT_EQ(Test_UInt64, 1U);
 
   StringRef TestMsg("test-message");
-  auto Err5 = MemAccess->writeBuffers(
-      {{pointerToJITTargetAddress(&Test_Buffer), TestMsg}});
+  auto Err5 =
+      MemAccess->writeBuffers({{ExecutorAddr::fromPtr(&Test_Buffer), TestMsg}});
   EXPECT_THAT_ERROR(std::move(Err5), Succeeded());
   EXPECT_EQ(StringRef(Test_Buffer, TestMsg.size()), TestMsg);
 

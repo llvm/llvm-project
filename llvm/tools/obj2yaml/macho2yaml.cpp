@@ -29,6 +29,7 @@ class MachODumper {
 
   const object::MachOObjectFile &Obj;
   std::unique_ptr<DWARFContext> DWARFCtx;
+  unsigned RawSegment;
   void dumpHeader(std::unique_ptr<MachOYAML::Object> &Y);
   Error dumpLoadCommands(std::unique_ptr<MachOYAML::Object> &Y);
   void dumpLinkEdit(std::unique_ptr<MachOYAML::Object> &Y);
@@ -37,6 +38,7 @@ class MachODumper {
                        ArrayRef<uint8_t> OpcodeBuffer, bool Lazy = false);
   void dumpExportTrie(std::unique_ptr<MachOYAML::Object> &Y);
   void dumpSymbols(std::unique_ptr<MachOYAML::Object> &Y);
+  void dumpIndirectSymbols(std::unique_ptr<MachOYAML::Object> &Y);
 
   template <typename SectionType>
   Expected<MachOYAML::Section> constructSectionCommon(SectionType Sec,
@@ -52,8 +54,8 @@ class MachODumper {
 
 public:
   MachODumper(const object::MachOObjectFile &O,
-              std::unique_ptr<DWARFContext> DCtx)
-      : Obj(O), DWARFCtx(std::move(DCtx)) {}
+              std::unique_ptr<DWARFContext> DCtx, unsigned RawSegments)
+      : Obj(O), DWARFCtx(std::move(DCtx)), RawSegment(RawSegments) {}
   Expected<std::unique_ptr<MachOYAML::Object>> dump();
 };
 
@@ -176,6 +178,13 @@ Expected<const char *> MachODumper::extractSections(
     if (Expected<MachOYAML::Section> S =
             constructSection(Sec, Sections.size() + 1)) {
       StringRef SecName(S->sectname);
+
+      // Copy data sections if requested.
+      if ((RawSegment & ::RawSegments::data) &&
+          StringRef(S->segname).startswith("__DATA"))
+        S->content =
+            yaml::BinaryRef(Obj.getSectionContents(Sec.offset, Sec.size));
+
       if (SecName.startswith("__debug_")) {
         // If the DWARF section cannot be successfully parsed, emit raw content
         // instead of an entry in the DWARF section of the YAML.
@@ -282,7 +291,11 @@ Expected<std::unique_ptr<MachOYAML::Object>> MachODumper::dump() {
   dumpHeader(Y);
   if (Error Err = dumpLoadCommands(Y))
     return std::move(Err);
-  dumpLinkEdit(Y);
+  if (RawSegment & ::RawSegments::linkedit)
+    Y->RawLinkEditSegment =
+        yaml::BinaryRef(Obj.getSegmentContents("__LINKEDIT"));
+  else
+    dumpLinkEdit(Y);
 
   return std::move(Y);
 }
@@ -339,6 +352,7 @@ void MachODumper::dumpLinkEdit(std::unique_ptr<MachOYAML::Object> &Y) {
                   true);
   dumpExportTrie(Y);
   dumpSymbols(Y);
+  dumpIndirectSymbols(Y);
 }
 
 void MachODumper::dumpRebaseOpcodes(std::unique_ptr<MachOYAML::Object> &Y) {
@@ -587,9 +601,18 @@ void MachODumper::dumpSymbols(std::unique_ptr<MachOYAML::Object> &Y) {
   }
 }
 
-Error macho2yaml(raw_ostream &Out, const object::MachOObjectFile &Obj) {
+void MachODumper::dumpIndirectSymbols(std::unique_ptr<MachOYAML::Object> &Y) {
+  MachOYAML::LinkEditData &LEData = Y->LinkEdit;
+
+  MachO::dysymtab_command DLC = Obj.getDysymtabLoadCommand();
+  for (unsigned i = 0; i < DLC.nindirectsyms; ++i)
+    LEData.IndirectSymbols.push_back(Obj.getIndirectSymbolTableEntry(DLC, i));
+}
+
+Error macho2yaml(raw_ostream &Out, const object::MachOObjectFile &Obj,
+                 unsigned RawSegments) {
   std::unique_ptr<DWARFContext> DCtx = DWARFContext::create(Obj);
-  MachODumper Dumper(Obj, std::move(DCtx));
+  MachODumper Dumper(Obj, std::move(DCtx), RawSegments);
   Expected<std::unique_ptr<MachOYAML::Object>> YAML = Dumper.dump();
   if (!YAML)
     return YAML.takeError();
@@ -602,7 +625,8 @@ Error macho2yaml(raw_ostream &Out, const object::MachOObjectFile &Obj) {
   return Error::success();
 }
 
-Error macho2yaml(raw_ostream &Out, const object::MachOUniversalBinary &Obj) {
+Error macho2yaml(raw_ostream &Out, const object::MachOUniversalBinary &Obj,
+                 unsigned RawSegments) {
   yaml::YamlObjectFile YAMLFile;
   YAMLFile.FatMachO.reset(new MachOYAML::UniversalBinary());
   MachOYAML::UniversalBinary &YAML = *YAMLFile.FatMachO;
@@ -624,7 +648,7 @@ Error macho2yaml(raw_ostream &Out, const object::MachOUniversalBinary &Obj) {
       return SliceObj.takeError();
 
     std::unique_ptr<DWARFContext> DCtx = DWARFContext::create(*SliceObj.get());
-    MachODumper Dumper(*SliceObj.get(), std::move(DCtx));
+    MachODumper Dumper(*SliceObj.get(), std::move(DCtx), RawSegments);
     Expected<std::unique_ptr<MachOYAML::Object>> YAMLObj = Dumper.dump();
     if (!YAMLObj)
       return YAMLObj.takeError();
@@ -636,12 +660,13 @@ Error macho2yaml(raw_ostream &Out, const object::MachOUniversalBinary &Obj) {
   return Error::success();
 }
 
-Error macho2yaml(raw_ostream &Out, const object::Binary &Binary) {
+Error macho2yaml(raw_ostream &Out, const object::Binary &Binary,
+                 unsigned RawSegments) {
   if (const auto *MachOObj = dyn_cast<object::MachOUniversalBinary>(&Binary))
-    return macho2yaml(Out, *MachOObj);
+    return macho2yaml(Out, *MachOObj, RawSegments);
 
   if (const auto *MachOObj = dyn_cast<object::MachOObjectFile>(&Binary))
-    return macho2yaml(Out, *MachOObj);
+    return macho2yaml(Out, *MachOObj, RawSegments);
 
   llvm_unreachable("unexpected Mach-O file format");
 }

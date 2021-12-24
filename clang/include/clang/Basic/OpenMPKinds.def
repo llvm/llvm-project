@@ -62,6 +62,9 @@
 #ifndef OPENMP_ADJUST_ARGS_KIND
 #define OPENMP_ADJUST_ARGS_KIND(Name)
 #endif
+#ifndef OPENMP_BIND_KIND
+#define OPENMP_BIND_KIND(Name)
+#endif
 
 // Static attributes for 'schedule' clause.
 OPENMP_SCHEDULE_KIND(static)
@@ -156,6 +159,12 @@ OPENMP_REDUCTION_MODIFIER(task)
 OPENMP_ADJUST_ARGS_KIND(nothing)
 OPENMP_ADJUST_ARGS_KIND(need_device_ptr)
 
+// Binding kinds for the 'bind' clause.
+OPENMP_BIND_KIND(teams)
+OPENMP_BIND_KIND(parallel)
+OPENMP_BIND_KIND(thread)
+
+#undef OPENMP_BIND_KIND
 #undef OPENMP_ADJUST_ARGS_KIND
 #undef OPENMP_REDUCTION_MODIFIER
 #undef OPENMP_DEVICE_MODIFIER

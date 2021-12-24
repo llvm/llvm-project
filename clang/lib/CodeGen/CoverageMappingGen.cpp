@@ -751,13 +751,11 @@ struct CounterCoverageMappingBuilder
   /// is already added to \c SourceRegions.
   bool isRegionAlreadyAdded(SourceLocation StartLoc, SourceLocation EndLoc,
                             bool isBranch = false) {
-    return SourceRegions.rend() !=
-           std::find_if(SourceRegions.rbegin(), SourceRegions.rend(),
-                        [&](const SourceMappingRegion &Region) {
-                          return Region.getBeginLoc() == StartLoc &&
-                                 Region.getEndLoc() == EndLoc &&
-                                 Region.isBranch() == isBranch;
-                        });
+    return llvm::any_of(
+        llvm::reverse(SourceRegions), [&](const SourceMappingRegion &Region) {
+          return Region.getBeginLoc() == StartLoc &&
+                 Region.getEndLoc() == EndLoc && Region.isBranch() == isBranch;
+        });
   }
 
   /// Adjust the most recently visited location to \c EndLoc.
@@ -971,7 +969,7 @@ struct CounterCoverageMappingBuilder
         // If last statement contains terminate statements, add a gap area
         // between the two statements. Skipping attributed statements, because
         // they don't have valid start location.
-        if (LastStmt && HasTerminateStmt && !dyn_cast<AttributedStmt>(Child)) {
+        if (LastStmt && HasTerminateStmt && !isa<AttributedStmt>(Child)) {
           auto Gap = findGapAreaBetween(getEnd(LastStmt), getStart(Child));
           if (Gap)
             fillGapAreaWithCount(Gap->getBegin(), Gap->getEnd(),

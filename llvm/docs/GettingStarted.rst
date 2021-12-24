@@ -38,9 +38,9 @@ This is an example workflow and configuration to get and build the LLVM source:
    * ``git clone https://github.com/llvm/llvm-project.git``
    * Or, on windows, ``git clone --config core.autocrlf=false
      https://github.com/llvm/llvm-project.git``
-   * To save storage and speed-up the checkout time, you may want to do a 
-     `shallow clone <https://git-scm.com/docs/git-clone#Documentation/git-clone.txt---depthltdepthgt>`_. 
-     For example, to get the latest revision of the LLVM project, use 
+   * To save storage and speed-up the checkout time, you may want to do a
+     `shallow clone <https://git-scm.com/docs/git-clone#Documentation/git-clone.txt---depthltdepthgt>`_.
+     For example, to get the latest revision of the LLVM project, use
      ``git clone --depth 1 https://github.com/llvm/llvm-project.git``
 
 #. Configure and build LLVM and Clang:
@@ -63,11 +63,10 @@ This is an example workflow and configuration to get and build the LLVM source:
 
      * ``-DLLVM_ENABLE_PROJECTS='...'`` --- semicolon-separated list of the LLVM
        subprojects you'd like to additionally build. Can include any of: clang,
-       clang-tools-extra, libcxx, libcxxabi, libunwind, lldb, compiler-rt, lld,
-       polly, or cross-project-tests.
+       clang-tools-extra, lldb, compiler-rt, lld, polly, or cross-project-tests.
 
        For example, to build LLVM, Clang, libcxx, and libcxxabi, use
-       ``-DLLVM_ENABLE_PROJECTS="clang;libcxx;libcxxabi"``.
+       ``-DLLVM_ENABLE_PROJECTS="clang" -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi"``.
 
      * ``-DCMAKE_INSTALL_PREFIX=directory`` --- Specify for *directory* the full
        pathname of where you want the LLVM tools and libraries to be installed
@@ -627,7 +626,7 @@ used by people developing LLVM.
 |                         | include: clang, clang-tools-extra, compiler-rt,    |
 |                         | cross-project-tests, flang, libc, libclc, libcxx,  |
 |                         | libcxxabi, libunwind, lld, lldb, mlir, openmp,     |
-|                         | parallel-libs, polly, or pstl.                     |
+|                         | polly, or pstl.                                    |
 +-------------------------+----------------------------------------------------+
 | LLVM_ENABLE_SPHINX      | Build sphinx-based documentation from the source   |
 |                         | code. This is disabled by default because it is    |
@@ -832,7 +831,7 @@ layout:
 Generates system build files.
 
 ``llvm/cmake/modules``
-  Build configuration for llvm user defined options. Checks compiler version and 
+  Build configuration for llvm user defined options. Checks compiler version and
   linker flags.
 
 ``llvm/cmake/platforms``
@@ -842,20 +841,20 @@ Generates system build files.
 ``llvm/examples``
 -----------------
 
-- Some simple examples showing how to use LLVM as a compiler for a custom 
+- Some simple examples showing how to use LLVM as a compiler for a custom
   language - including lowering, optimization, and code generation.
 
-- Kaleidoscope Tutorial: Kaleidoscope language tutorial run through the 
-  implementation of a nice little compiler for a non-trivial language 
-  including a hand-written lexer, parser, AST, as well as code generation 
-  support using LLVM- both static (ahead of time) and various approaches to 
-  Just In Time (JIT) compilation. 
-  `Kaleidoscope Tutorial for complete beginner 
+- Kaleidoscope Tutorial: Kaleidoscope language tutorial run through the
+  implementation of a nice little compiler for a non-trivial language
+  including a hand-written lexer, parser, AST, as well as code generation
+  support using LLVM- both static (ahead of time) and various approaches to
+  Just In Time (JIT) compilation.
+  `Kaleidoscope Tutorial for complete beginner
   <https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/index.html>`_.
 
-- BuildingAJIT: Examples of the `BuildingAJIT tutorial 
-  <https://llvm.org/docs/tutorial/BuildingAJIT1.html>`_ that shows how LLVM’s 
-  ORC JIT APIs interact with other parts of LLVM. It also, teaches how to 
+- BuildingAJIT: Examples of the `BuildingAJIT tutorial
+  <https://llvm.org/docs/tutorial/BuildingAJIT1.html>`_ that shows how LLVM’s
+  ORC JIT APIs interact with other parts of LLVM. It also, teaches how to
   recombine them to build a custom JIT that is suited to your use-case.
 
 ``llvm/include``
@@ -923,8 +922,8 @@ share code among the `tools`_.
 
 ``llvm/lib/MC/``
 
-  The libraries represent and process code at machine code level. Handles 
-  assembly and object-file emission. 
+  The libraries represent and process code at machine code level. Handles
+  assembly and object-file emission.
 
 ``llvm/lib/ExecutionEngine/``
 

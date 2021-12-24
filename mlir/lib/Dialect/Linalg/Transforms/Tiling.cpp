@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
-#include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
@@ -159,8 +159,13 @@ tileLinalgOpImpl(OpBuilder &b, LinalgOp op, ValueRange tileSizes,
   // Initial tile sizes may be too big, only take the first nLoops.
   tileSizes = tileSizes.take_front(nLoops);
 
-  if (llvm::all_of(tileSizes, isZero))
-    return failure();
+  if (llvm::all_of(tileSizes, isZero)) {
+    TiledLinalgOp tiledOp;
+    tiledOp.op = cast<LinalgOp>(b.clone(*op.getOperation()));
+    tiledOp.tensorResults.assign(tiledOp.op->result_begin(),
+                                 tiledOp.op->result_end());
+    return tiledOp;
+  }
 
   // 1. Build the tiled loop ranges.
   auto allShapeSizes = op.createFlatListOfOperandDims(b, op.getLoc());
@@ -346,7 +351,7 @@ static LogicalResult tilePadTensorOp(OpBuilder &builder, PadTensorOp op,
       options.tileSizeComputationFunction(builder, op);
   assert(static_cast<int64_t>(tileSizes.size()) == rank);
   // Compute lower and upper bounds of the loop nest.
-  SmallVector<Range> ranges = op.getLoopBounds(builder);
+  SmallVector<Range> ranges = op.getIterationDomain(builder);
   SmallVector<Value> lbs, dims, allDims, steps;
   for (int64_t i = 0; i < rank; ++i) {
     allDims.push_back(ranges[i].size);
@@ -447,8 +452,8 @@ public:
     auto *ctx = patterns.getContext();
     patterns.add<LinalgTilingPattern<OpTy>>(
         ctx, options,
-        LinalgTransformationFilter(ArrayRef<Identifier>{},
-                                   Identifier::get("tiled", ctx)));
+        LinalgTransformationFilter(ArrayRef<StringAttr>{},
+                                   StringAttr::get(ctx, "tiled")));
     RewritePatternList<OpTypes...>::insert(patterns, options);
   }
 };

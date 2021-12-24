@@ -27,7 +27,7 @@
 # CHECK-NEXT:          trap
 
 ## Callee address - program counter = 0x2002000 - 0x2010 = 33554416
-# CHECK-LABEL: <__long_branch_pcrel_high>:
+# CHECK-LABEL: <__gep_setup_high>:
 # CHECK-NEXT:    2010: paddi 12, 0, 33554416, 1
 # CHECK-NEXT:          mtctr 12
 # CHECK-NEXT:          bctr

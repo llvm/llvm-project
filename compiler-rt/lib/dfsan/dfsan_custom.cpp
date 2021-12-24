@@ -755,6 +755,8 @@ SANITIZER_INTERFACE_ATTRIBUTE void *__dfso_dlopen(
 static void *DFsanThreadStartFunc(void *arg) {
   DFsanThread *t = (DFsanThread *)arg;
   SetCurrentThread(t);
+  t->Init();
+  SetSigProcMask(&t->starting_sigset_, nullptr);
   return t->ThreadStart();
 }
 
@@ -775,6 +777,7 @@ static int dfsan_pthread_create(pthread_t *thread, const pthread_attr_t *attr,
   DFsanThread *t =
       DFsanThread::Create(start_routine_trampoline,
                           (thread_callback_t)start_routine, arg, track_origins);
+  ScopedBlockSignals block(&t->starting_sigset_);
   int res = pthread_create(thread, attr, DFsanThreadStartFunc, t);
 
   if (attr == &myattr)

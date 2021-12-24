@@ -43,10 +43,11 @@ int A::count = 0;
 
 int main(int, char**)
 {
+    test_allocator_statistics alloc_stats;
     {
         std::shared_ptr<B> p(new B);
         A* ptr = new A;
-        p.reset(ptr, test_deleter<A>(3), test_allocator<A>(4));
+        p.reset(ptr, test_deleter<A>(3), test_allocator<A>(4, &alloc_stats));
         assert(A::count == 1);
         assert(B::count == 1);
         assert(p.use_count() == 1);
@@ -58,18 +59,18 @@ int main(int, char**)
         assert(d);
         assert(d->state() == 3);
 #endif
-        assert(test_allocator<A>::count == 1);
-        assert(test_allocator<A>::alloc_count == 1);
+        assert(alloc_stats.count == 1);
+        assert(alloc_stats.alloc_count == 1);
     }
     assert(A::count == 0);
     assert(test_deleter<A>::count == 0);
     assert(test_deleter<A>::dealloc_count == 1);
-    assert(test_allocator<A>::count == 0);
-    assert(test_allocator<A>::alloc_count == 0);
+    assert(alloc_stats.count == 0);
+    assert(alloc_stats.alloc_count == 0);
     {
         std::shared_ptr<B> p;
         A* ptr = new A;
-        p.reset(ptr, test_deleter<A>(3), test_allocator<A>(4));
+        p.reset(ptr, test_deleter<A>(3), test_allocator<A>(4, &alloc_stats));
         assert(A::count == 1);
         assert(B::count == 1);
         assert(p.use_count() == 1);
@@ -81,14 +82,14 @@ int main(int, char**)
         assert(d);
         assert(d->state() == 3);
 #endif
-        assert(test_allocator<A>::count == 1);
-        assert(test_allocator<A>::alloc_count == 1);
+        assert(alloc_stats.count == 1);
+        assert(alloc_stats.alloc_count == 1);
     }
     assert(A::count == 0);
     assert(test_deleter<A>::count == 0);
     assert(test_deleter<A>::dealloc_count == 2);
-    assert(test_allocator<A>::count == 0);
-    assert(test_allocator<A>::alloc_count == 0);
+    assert(alloc_stats.count == 0);
+    assert(alloc_stats.alloc_count == 0);
 
 #if TEST_STD_VER > 14
     {

@@ -1031,12 +1031,7 @@ public:
     if (DarwinRefKind != MCSymbolRefExpr::VK_None)
       return false;
 
-    for (unsigned i = 0; i != AllowedModifiers.size(); ++i) {
-      if (ELFRefKind == AllowedModifiers[i])
-        return true;
-    }
-
-    return false;
+    return llvm::is_contained(AllowedModifiers, ELFRefKind);
   }
 
   bool isMovWSymbolG3() const {
@@ -1511,7 +1506,7 @@ public:
   }
 
   bool isAdrpLabel() const {
-    // Validation was handled during parsing, so we just sanity check that
+    // Validation was handled during parsing, so we just verify that
     // something didn't go haywire.
     if (!isImm())
         return false;
@@ -1527,7 +1522,7 @@ public:
   }
 
   bool isAdrLabel() const {
-    // Validation was handled during parsing, so we just sanity check that
+    // Validation was handled during parsing, so we just verify that
     // something didn't go haywire.
     if (!isImm())
         return false;
@@ -3296,6 +3291,8 @@ static const struct Extension {
 };
 
 static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
+  if (FBS[AArch64::HasV8_0aOps])
+    Str += "ARMv8a";
   if (FBS[AArch64::HasV8_1aOps])
     Str += "ARMv8.1a";
   else if (FBS[AArch64::HasV8_2aOps])
@@ -3316,6 +3313,8 @@ static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
     Str += "ARMv9.1a";
   else if (FBS[AArch64::HasV9_2aOps])
     Str += "ARMv9.2a";
+  else if (FBS[AArch64::HasV8_0rOps])
+    Str += "ARMv8r";
   else {
     SmallVector<std::string, 2> ExtMatches;
     for (const auto& Ext : ExtensionMap) {

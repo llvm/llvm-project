@@ -148,10 +148,8 @@ bool StackProtector::ContainsProtectableArray(Type *Ty, bool &IsLarge,
     return false;
 
   bool NeedsProtector = false;
-  for (StructType::element_iterator I = ST->element_begin(),
-                                    E = ST->element_end();
-       I != E; ++I)
-    if (ContainsProtectableArray(*I, IsLarge, Strong, true)) {
+  for (Type *ET : ST->elements())
+    if (ContainsProtectableArray(ET, IsLarge, Strong, true)) {
       // If the element is a protectable array and is large (>= SSPBufferSize)
       // then we are done.  If the protectable array is not large, then
       // keep looking in case a subsequent element is a large array.
@@ -164,7 +162,7 @@ bool StackProtector::ContainsProtectableArray(Type *Ty, bool &IsLarge,
 }
 
 bool StackProtector::HasAddressTaken(const Instruction *AI,
-                                     uint64_t AllocSize) {
+                                     TypeSize AllocSize) {
   const DataLayout &DL = M->getDataLayout();
   for (const User *U : AI->users()) {
     const auto *I = cast<Instruction>(U);
@@ -172,7 +170,8 @@ bool StackProtector::HasAddressTaken(const Instruction *AI,
     // the bounds of the allocated object.
     Optional<MemoryLocation> MemLoc = MemoryLocation::getOrNone(I);
     if (MemLoc.hasValue() && MemLoc->Size.hasValue() &&
-        MemLoc->Size.getValue() > AllocSize)
+        !TypeSize::isKnownGE(AllocSize,
+                             TypeSize::getFixed(MemLoc->Size.getValue())))
       return true;
     switch (I->getOpcode()) {
     case Instruction::Store:
@@ -205,13 +204,19 @@ bool StackProtector::HasAddressTaken(const Instruction *AI,
       // would use it could also be out-of-bounds meaning stack protection is
       // required.
       const GetElementPtrInst *GEP = cast<GetElementPtrInst>(I);
-      unsigned TypeSize = DL.getIndexTypeSizeInBits(I->getType());
-      APInt Offset(TypeSize, 0);
-      APInt MaxOffset(TypeSize, AllocSize);
-      if (!GEP->accumulateConstantOffset(DL, Offset) || Offset.ugt(MaxOffset))
+      unsigned IndexSize = DL.getIndexTypeSizeInBits(I->getType());
+      APInt Offset(IndexSize, 0);
+      if (!GEP->accumulateConstantOffset(DL, Offset))
+        return true;
+      TypeSize OffsetSize = TypeSize::Fixed(Offset.getLimitedValue());
+      if (!TypeSize::isKnownGT(AllocSize, OffsetSize))
         return true;
       // Adjust AllocSize to be the space remaining after this offset.
-      if (HasAddressTaken(I, AllocSize - Offset.getLimitedValue()))
+      // We can't subtract a fixed size from a scalable one, so in that case
+      // assume the scalable value is of minimum size.
+      TypeSize NewAllocSize =
+          TypeSize::Fixed(AllocSize.getKnownMinValue()) - OffsetSize;
+      if (HasAddressTaken(I, NewAllocSize))
         return true;
       break;
     }

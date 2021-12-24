@@ -211,8 +211,7 @@ bool SystemZShortenInst::processBlock(MachineBasicBlock &MBB) {
   LiveRegs.addLiveOuts(MBB);
 
   // Iterate backwards through the block looking for instructions to change.
-  for (auto MBBI = MBB.rbegin(), MBBE = MBB.rend(); MBBI != MBBE; ++MBBI) {
-    MachineInstr &MI = *MBBI;
+  for (MachineInstr &MI : llvm::reverse(MBB)) {
     switch (MI.getOpcode()) {
     case SystemZ::IILF:
       Changed |= shortenIIF(MI, SystemZ::LLILL, SystemZ::LLILH);

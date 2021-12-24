@@ -23,8 +23,8 @@ EXTERN int __kmpc_get_hardware_thread_id_in_block();
 EXTERN int GetBlockIdInKernel();
 EXTERN NOINLINE int __kmpc_get_hardware_num_blocks();
 EXTERN NOINLINE int __kmpc_get_hardware_num_threads_in_block();
+EXTERN unsigned __kmpc_get_warp_size();
 EXTERN unsigned GetWarpId();
-EXTERN unsigned GetWarpSize();
 EXTERN unsigned GetLaneId();
 
 // Atomics

@@ -34,7 +34,7 @@ public:
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
 private:
-  void AddMatcher(const ast_matchers::DeclarationMatcher &TargetRecordDecl,
+  void addMatcher(const ast_matchers::DeclarationMatcher &TargetRecordDecl,
                   StringRef VarDeclName, StringRef VarDeclStmtName,
                   const ast_matchers::DeclarationMatcher &AppendMethodDecl,
                   StringRef AppendCallName, ast_matchers::MatchFinder *Finder);

@@ -16,7 +16,7 @@
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 #include "lld/Common/Timer.h"
-#include "llvm/DebugInfo/Symbolize/Symbolize.h"
+#include "llvm/DebugInfo/DIContext.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/WindowsMachineFlag.h"
@@ -865,7 +865,7 @@ Symbol *SymbolTable::addUndefined(StringRef name) {
   return addUndefined(name, nullptr, false);
 }
 
-void SymbolTable::addCombinedLTOObjects() {
+void SymbolTable::compileBitcodeFiles() {
   if (ctx.bitcodeFileInstances.empty())
     return;
 

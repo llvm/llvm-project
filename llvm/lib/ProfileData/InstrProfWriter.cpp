@@ -32,6 +32,7 @@
 #include <vector>
 
 using namespace llvm;
+extern cl::opt<bool> DebugInfoCorrelate;
 
 // A struct to define how the data stream should be patched. For Indexed
 // profiling, only uint64_t data type is needed.
@@ -215,8 +216,7 @@ void InstrProfWriter::overlapRecord(NamedInstrProfRecord &&Other,
   InstrProfRecord &Dest = Where->second;
 
   uint64_t ValueCutoff = FuncFilter.ValueCutoff;
-  if (!FuncFilter.NameFilter.empty() &&
-      Name.find(FuncFilter.NameFilter) != Name.npos)
+  if (!FuncFilter.NameFilter.empty() && Name.contains(FuncFilter.NameFilter))
     ValueCutoff = 0;
 
   Dest.overlap(Other, Overlap, FuncLevelOverlap, ValueCutoff);
@@ -272,7 +272,7 @@ static void setSummary(IndexedInstrProf::Summary *TheSummary,
                        ProfileSummary &PS) {
   using namespace IndexedInstrProf;
 
-  std::vector<ProfileSummaryEntry> &Res = PS.getDetailedSummary();
+  const std::vector<ProfileSummaryEntry> &Res = PS.getDetailedSummary();
   TheSummary->NumSummaryFields = Summary::NumKinds;
   TheSummary->NumCutoffEntries = Res.size();
   TheSummary->set(Summary::MaxFunctionCount, PS.getMaxFunctionCount());

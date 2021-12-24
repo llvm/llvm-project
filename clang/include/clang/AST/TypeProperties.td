@@ -358,7 +358,20 @@ let Class = UnresolvedUsingType in {
   }
 
   def : Creator<[{
-    return ctx.getTypeDeclType(cast<UnresolvedUsingTypenameDecl>(declaration));
+    return ctx.getUnresolvedUsingType(cast<UnresolvedUsingTypenameDecl>(declaration));
+  }]>;
+}
+
+let Class = UsingType in {
+  def : Property<"foundDeclaration", UsingShadowDeclRef> {
+    let Read = [{ node->getFoundDecl() }];
+  }
+  def : Property<"underlyingType", QualType> {
+    let Read = [{ node->getUnderlyingType() }];
+  }
+
+  def : Creator<[{
+    return ctx.getUsingType(foundDeclaration, underlyingType);
   }]>;
 }
 
@@ -882,7 +895,7 @@ let Class = PipeType in {
   }]>;
 }
 
-let Class = ExtIntType in {
+let Class = BitIntType in {
   def : Property<"isUnsigned", Bool> {
     let Read = [{ node->isUnsigned() }];
   }
@@ -891,11 +904,11 @@ let Class = ExtIntType in {
   }
 
   def : Creator<[{
-    return ctx.getExtIntType(isUnsigned, numBits);
+    return ctx.getBitIntType(isUnsigned, numBits);
   }]>;
 }
 
-let Class = DependentExtIntType in {
+let Class = DependentBitIntType in {
   def : Property<"isUnsigned", Bool> {
     let Read = [{ node->isUnsigned() }];
   }
@@ -903,6 +916,6 @@ let Class = DependentExtIntType in {
     let Read = [{ node->getNumBitsExpr() }];
   }
   def : Creator<[{
-    return ctx.getDependentExtIntType(isUnsigned, numBitsExpr);
+    return ctx.getDependentBitIntType(isUnsigned, numBitsExpr);
   }]>;
 }

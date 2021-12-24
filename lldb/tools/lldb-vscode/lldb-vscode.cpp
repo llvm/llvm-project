@@ -616,6 +616,8 @@ void request_attach(const llvm::json::Object &request) {
   // Run any initialize LLDB commands the user specified in the launch.json
   g_vsc.RunInitCommands();
 
+  SetSourceMapFromArguments(*arguments);
+
   lldb::SBError status;
   g_vsc.SetTarget(g_vsc.CreateTargetFromArguments(*arguments, status));
   if (status.Fail()) {
@@ -656,8 +658,6 @@ void request_attach(const llvm::json::Object &request) {
     // selected target after these commands are run.
     g_vsc.target = g_vsc.debugger.GetSelectedTarget();
   }
-
-  SetSourceMapFromArguments(*arguments);
 
   if (error.Success() && core_file.empty()) {
     auto attached_pid = g_vsc.target.GetProcess().GetProcessID();
@@ -1505,7 +1505,7 @@ void request_initialize(const llvm::json::Object &request) {
   // is the behavior of LLDB CLI, that expects a TAB.
   body.try_emplace("supportsCompletionsRequest", false);
   // The debug adapter supports the modules request.
-  body.try_emplace("supportsModulesRequest", false);
+  body.try_emplace("supportsModulesRequest", true);
   // The set of additional module information exposed by the debug adapter.
   //   body.try_emplace("additionalModuleColumns"] = ColumnDescriptor
   // Checksum algorithms supported by the debug adapter.
@@ -2747,7 +2747,7 @@ void request_setVariable(const llvm::json::Object &request) {
   const auto variablesReference =
       GetUnsigned(arguments, "variablesReference", 0);
   llvm::StringRef name = GetString(arguments, "name");
-  bool is_duplicated_variable_name = name.find(" @") != llvm::StringRef::npos;
+  bool is_duplicated_variable_name = name.contains(" @");
 
   const auto value = GetString(arguments, "value");
   // Set success to false just in case we don't find the variable by name

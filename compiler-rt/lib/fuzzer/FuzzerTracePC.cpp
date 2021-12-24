@@ -391,6 +391,7 @@ void TracePC::HandleCmp(uintptr_t PC, T Arg1, T Arg2) {
   ValueProfileMap.AddValue(PC * 128 + 64 + AbsoluteDistance);
 }
 
+ATTRIBUTE_NO_SANITIZE_MEMORY
 static size_t InternalStrnlen(const char *S, size_t MaxLen) {
   size_t Len = 0;
   for (; Len < MaxLen && S[Len]; Len++) {}
@@ -399,6 +400,7 @@ static size_t InternalStrnlen(const char *S, size_t MaxLen) {
 
 // Finds min of (strlen(S1), strlen(S2)).
 // Needed because one of these strings may actually be non-zero terminated.
+ATTRIBUTE_NO_SANITIZE_MEMORY
 static size_t InternalStrnlen2(const char *S1, const char *S2) {
   size_t Len = 0;
   for (; S1[Len] && S2[Len]; Len++)  {}

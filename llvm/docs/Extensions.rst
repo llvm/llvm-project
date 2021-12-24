@@ -495,7 +495,7 @@ X86
 Relocations
 ^^^^^^^^^^^
 
-``@ABS8`` can be applied to symbols which appear as immediate operands to
+**@ABS8** can be applied to symbols which appear as immediate operands to
 instructions that have an 8-bit immediate form for that operand. It causes
 the assembler to use the 8-bit form and an 8-bit relocation (e.g. ``R_386_8``
 or ``R_X86_64_8``) for the symbol.
@@ -510,6 +510,11 @@ This causes the assembler to select the form of the 64-bit ``cmpq`` instruction
 that takes an 8-bit immediate operand that is sign extended to 64 bits, as
 opposed to ``cmpq $foo, %rdi`` which takes a 32-bit immediate operand. This
 is also not the same as ``cmpb $foo, %dil``, which is an 8-bit comparison.
+
+
+**@GOTPCREL_NORELAX** can be used in place of ``@GOTPCREL`` to guarantee that
+the assembler emits an ``R_X86_64_GOTPCREL`` relocation instead of a relaxable
+``R_X86_64[_REX]_GOTPCRELX`` relocation.
 
 Windows on ARM
 --------------

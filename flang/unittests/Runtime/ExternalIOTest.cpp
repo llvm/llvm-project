@@ -12,6 +12,7 @@
 
 #include "CrashHandlerFixture.h"
 #include "gtest/gtest.h"
+#include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/io-api.h"
 #include "flang/Runtime/main.h"
 #include "flang/Runtime/stop.h"
@@ -19,6 +20,7 @@
 #include <cstring>
 #include <string_view>
 
+using namespace Fortran::runtime;
 using namespace Fortran::runtime::io;
 
 struct ExternalIOTests : public CrashHandlerFixture {};
@@ -44,7 +46,7 @@ TEST(ExternalIOTests, TestDirectUnformatted) {
   // INQUIRE(IOLENGTH=) j
   io = IONAME(BeginInquireIoLength)(__FILE__, __LINE__);
   ASSERT_TRUE(IONAME(OutputUnformattedBlock)(
-      io, reinterpret_cast<const char *>(&buffer), 1, recl))
+      io, reinterpret_cast<const char *>(&buffer), recl, 1))
       << "OutputUnformattedBlock() for InquireIoLength";
   ASSERT_EQ(IONAME(GetIoLength)(io), recl) << "GetIoLength";
   ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
@@ -171,8 +173,23 @@ TEST(ExternalIOTests, TestSequentialFixedUnformatted) {
   io = IONAME(BeginInquireIoLength)(__FILE__, __LINE__);
   for (int j{1}; j <= 3; ++j) {
     ASSERT_TRUE(IONAME(OutputUnformattedBlock)(
-        io, reinterpret_cast<const char *>(&buffer), 1, recl))
+        io, reinterpret_cast<const char *>(&buffer), recl, 1))
         << "OutputUnformattedBlock() for InquireIoLength";
+  }
+  ASSERT_EQ(IONAME(GetIoLength)(io), 3 * recl) << "GetIoLength";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for InquireIoLength";
+
+  // INQUIRE(IOLENGTH=) j, ...
+  StaticDescriptor<0> staticDescriptor;
+  Descriptor &desc{staticDescriptor.descriptor()};
+  desc.Establish(TypeCode{CFI_type_int64_t}, recl, &buffer, 0);
+  desc.Dump(stderr);
+  desc.Check();
+  io = IONAME(BeginInquireIoLength)(__FILE__, __LINE__);
+  for (int j{1}; j <= 3; ++j) {
+    ASSERT_TRUE(IONAME(OutputDescriptor)(io, desc))
+        << "OutputDescriptor() for InquireIoLength";
   }
   ASSERT_EQ(IONAME(GetIoLength)(io), 3 * recl) << "GetIoLength";
   ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
@@ -536,4 +553,99 @@ TEST(ExternalIOTests, TestNonAvancingInput) {
         << "Input-item value after non advancing read " << j;
     j++;
   }
+}
+
+TEST(ExternalIOTests, TestWriteAfterNonAvancingInput) {
+  // OPEN(NEWUNIT=unit,ACCESS='SEQUENTIAL',ACTION='READWRITE',&
+  //   FORM='FORMATTED',STATUS='SCRATCH')
+  auto *io{IONAME(BeginOpenNewUnit)(__FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(SetAccess)(io, "SEQUENTIAL", 10))
+      << "SetAccess(SEQUENTIAL)";
+  ASSERT_TRUE(IONAME(SetAction)(io, "READWRITE", 9)) << "SetAction(READWRITE)";
+  ASSERT_TRUE(IONAME(SetForm)(io, "FORMATTED", 9)) << "SetForm(FORMATTED)";
+  ASSERT_TRUE(IONAME(SetStatus)(io, "SCRATCH", 7)) << "SetStatus(SCRATCH)";
+
+  int unit{-1};
+  ASSERT_TRUE(IONAME(GetNewUnit)(io, unit)) << "GetNewUnit()";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for OpenNewUnit";
+
+  // Write the file to be used for the input test.
+  static constexpr std::string_view records[] = {"ABCDEFGHIJKLMNOPQRST"};
+  static constexpr std::string_view fmt{"(A)"};
+  for (const auto &record : records) {
+    // WRITE(UNIT=unit,FMT=fmt) record
+    io = IONAME(BeginExternalFormattedOutput)(
+        fmt.data(), fmt.length(), unit, __FILE__, __LINE__);
+    ASSERT_TRUE(IONAME(OutputAscii)(io, record.data(), record.length()))
+        << "OutputAscii()";
+    ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+        << "EndIoStatement() for OutputAscii";
+  }
+
+  // REWIND(UNIT=unit)
+  io = IONAME(BeginRewind)(unit, __FILE__, __LINE__);
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for Rewind";
+
+  struct TestItems {
+    std::string item;
+    int expectedIoStat;
+    std::string expectedItemValue;
+  };
+  // Actual non advancing input IO test
+  TestItems inputItems[]{
+      {std::string(4, '+'), IostatOk, "ABCD"},
+      {std::string(4, '+'), IostatOk, "EFGH"},
+  };
+
+  int j{0};
+  for (auto &inputItem : inputItems) {
+    // READ(UNIT=unit, FMT=fmt, ADVANCE='NO', IOSTAT=iostat) inputItem
+    io = IONAME(BeginExternalFormattedInput)(
+        fmt.data(), fmt.length(), unit, __FILE__, __LINE__);
+    IONAME(EnableHandlers)(io, true, false, false, false, false);
+    ASSERT_TRUE(IONAME(SetAdvance)(io, "NO", 2)) << "SetAdvance(NO)" << j;
+    ASSERT_TRUE(
+        IONAME(InputAscii)(io, inputItem.item.data(), inputItem.item.length()))
+        << "InputAscii() " << j;
+    ASSERT_EQ(IONAME(EndIoStatement)(io), inputItem.expectedIoStat)
+        << "EndIoStatement() for Read " << j;
+    ASSERT_EQ(inputItem.item, inputItem.expectedItemValue)
+        << "Input-item value after non advancing read " << j;
+    j++;
+  }
+
+  // WRITE(UNIT=unit, FMT=fmt, IOSTAT=iostat) outputItem.
+  static constexpr std::string_view outputItem{"XYZ"};
+  // WRITE(UNIT=unit,FMT=fmt) record
+  io = IONAME(BeginExternalFormattedOutput)(
+      fmt.data(), fmt.length(), unit, __FILE__, __LINE__);
+  ASSERT_TRUE(IONAME(OutputAscii)(io, outputItem.data(), outputItem.length()))
+      << "OutputAscii()";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for OutputAscii";
+
+  // Verify that the output was written in the record read in non avdancing
+  // mode, after the read part, and that the end was truncated.
+
+  // REWIND(UNIT=unit)
+  io = IONAME(BeginRewind)(unit, __FILE__, __LINE__);
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for Rewind";
+
+  std::string resultRecord(20, '+');
+  std::string expectedRecord{"ABCDEFGHXYZ         "};
+  // READ(UNIT=unit, FMT=fmt, IOSTAT=iostat) result
+  io = IONAME(BeginExternalFormattedInput)(
+      fmt.data(), fmt.length(), unit, __FILE__, __LINE__);
+  IONAME(EnableHandlers)(io, true, false, false, false, false);
+  ASSERT_TRUE(
+      IONAME(InputAscii)(io, resultRecord.data(), resultRecord.length()))
+      << "InputAscii() ";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for Read ";
+
+  ASSERT_EQ(resultRecord, expectedRecord)
+      << "Record after non advancing read followed by wrote";
 }

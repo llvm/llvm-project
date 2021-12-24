@@ -130,5 +130,35 @@ define void @symmetry([0 x i8]* %ptr, i32 %a, i32 %b, i32 %c) {
   ret void
 }
 
+; %ptr.neg and %ptr.shl may alias, as the shl renders the previously
+; non-negative value potentially negative.
+define void @shl_of_non_negative(i8* %ptr, i64 %a) {
+; CHECK-LABEL: Function: shl_of_non_negative
+; CHECK: NoAlias: i8* %ptr.a, i8* %ptr.neg
+; CHECK: MayAlias: i8* %ptr.neg, i8* %ptr.shl
+  %a.cmp = icmp sge i64 %a, 0
+  call void @llvm.assume(i1 %a.cmp)
+  %ptr.neg = getelementptr i8, i8* %ptr, i64 -2
+  %ptr.a = getelementptr i8, i8* %ptr, i64 %a
+  %shl = shl i64 %a, 1
+  %ptr.shl = getelementptr i8, i8* %ptr, i64 %shl
+  ret void
+}
+
+; Unlike the previous case, %ptr.neg and %ptr.shl can't alias, because
+; shl nsw of non-negative is non-negative.
+define void @shl_nsw_of_non_negative(i8* %ptr, i64 %a) {
+; CHECK-LABEL: Function: shl_nsw_of_non_negative
+; CHECK: NoAlias: i8* %ptr.a, i8* %ptr.neg
+; CHECK: NoAlias: i8* %ptr.neg, i8* %ptr.shl
+  %a.cmp = icmp sge i64 %a, 0
+  call void @llvm.assume(i1 %a.cmp)
+  %ptr.neg = getelementptr i8, i8* %ptr, i64 -2
+  %ptr.a = getelementptr i8, i8* %ptr, i64 %a
+  %shl = shl nsw i64 %a, 1
+  %ptr.shl = getelementptr i8, i8* %ptr, i64 %shl
+  ret void
+}
+
 declare void @llvm.assume(i1 %cond)
 declare void @barrier()

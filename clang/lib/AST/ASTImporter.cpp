@@ -300,11 +300,8 @@ namespace clang {
           auto *ToNamed = cast<NamedDecl>(ToD);
           DeclContextLookupResult FromLookup =
               FromDC->lookup(FromNamed->getDeclName());
-          for (NamedDecl *ND : FromLookup)
-            if (ND == FromNamed) {
-              ToDC->makeDeclVisibleInContext(ToNamed);
-              break;
-            }
+          if (llvm::is_contained(FromLookup, FromNamed))
+            ToDC->makeDeclVisibleInContext(ToNamed);
         }
       }
     }
@@ -357,6 +354,7 @@ namespace clang {
     ExpectedType VisitTypeOfExprType(const TypeOfExprType *T);
     // FIXME: DependentTypeOfExprType
     ExpectedType VisitTypeOfType(const TypeOfType *T);
+    ExpectedType VisitUsingType(const UsingType *T);
     ExpectedType VisitDecltypeType(const DecltypeType *T);
     ExpectedType VisitUnaryTransformType(const UnaryTransformType *T);
     ExpectedType VisitAutoType(const AutoType *T);
@@ -470,18 +468,7 @@ namespace clang {
     template <typename T>
     bool hasSameVisibilityContextAndLinkage(T *Found, T *From);
 
-    bool IsStructuralMatch(Decl *From, Decl *To, bool Complain);
-    bool IsStructuralMatch(RecordDecl *FromRecord, RecordDecl *ToRecord,
-                           bool Complain = true);
-    bool IsStructuralMatch(VarDecl *FromVar, VarDecl *ToVar,
-                           bool Complain = true);
-    bool IsStructuralMatch(EnumDecl *FromEnum, EnumDecl *ToRecord);
-    bool IsStructuralMatch(EnumConstantDecl *FromEC, EnumConstantDecl *ToEC);
-    bool IsStructuralMatch(FunctionTemplateDecl *From,
-                           FunctionTemplateDecl *To);
-    bool IsStructuralMatch(FunctionDecl *From, FunctionDecl *To);
-    bool IsStructuralMatch(ClassTemplateDecl *From, ClassTemplateDecl *To);
-    bool IsStructuralMatch(VarTemplateDecl *From, VarTemplateDecl *To);
+    bool IsStructuralMatch(Decl *From, Decl *To, bool Complain = true);
     ExpectedDecl VisitDecl(Decl *D);
     ExpectedDecl VisitImportDecl(ImportDecl *D);
     ExpectedDecl VisitEmptyDecl(EmptyDecl *D);
@@ -1354,6 +1341,17 @@ ExpectedType ASTNodeImporter::VisitTypeOfType(const TypeOfType *T) {
   return Importer.getToContext().getTypeOfType(*ToUnderlyingTypeOrErr);
 }
 
+ExpectedType ASTNodeImporter::VisitUsingType(const UsingType *T) {
+  Expected<UsingShadowDecl *> FoundOrErr = import(T->getFoundDecl());
+  if (!FoundOrErr)
+    return FoundOrErr.takeError();
+  Expected<QualType> UnderlyingOrErr = import(T->getUnderlyingType());
+  if (!UnderlyingOrErr)
+    return UnderlyingOrErr.takeError();
+
+  return Importer.getToContext().getUsingType(*FoundOrErr, *UnderlyingOrErr);
+}
+
 ExpectedType ASTNodeImporter::VisitDecltypeType(const DecltypeType *T) {
   // FIXME: Make sure that the "to" context supports C++0x!
   ExpectedExpr ToExprOrErr = import(T->getUnderlyingExpr());
@@ -2181,96 +2179,17 @@ getStructuralEquivalenceKind(const ASTImporter &Importer) {
 }
 
 bool ASTNodeImporter::IsStructuralMatch(Decl *From, Decl *To, bool Complain) {
-  StructuralEquivalenceContext Ctx(
-      Importer.getFromContext(), Importer.getToContext(),
-      Importer.getNonEquivalentDecls(), getStructuralEquivalenceKind(Importer),
-      false, Complain);
-  return Ctx.IsEquivalent(From, To);
-}
-
-bool ASTNodeImporter::IsStructuralMatch(RecordDecl *FromRecord,
-                                        RecordDecl *ToRecord, bool Complain) {
   // Eliminate a potential failure point where we attempt to re-import
   // something we're trying to import while completing ToRecord.
-  Decl *ToOrigin = Importer.GetOriginalDecl(ToRecord);
+  Decl *ToOrigin = Importer.GetOriginalDecl(To);
   if (ToOrigin) {
-    auto *ToOriginRecord = dyn_cast<RecordDecl>(ToOrigin);
-    if (ToOriginRecord)
-      ToRecord = ToOriginRecord;
+    To = ToOrigin;
   }
 
-  StructuralEquivalenceContext Ctx(Importer.getFromContext(),
-                                   ToRecord->getASTContext(),
-                                   Importer.getNonEquivalentDecls(),
-                                   getStructuralEquivalenceKind(Importer),
-                                   false, Complain);
-  return Ctx.IsEquivalent(FromRecord, ToRecord);
-}
-
-bool ASTNodeImporter::IsStructuralMatch(VarDecl *FromVar, VarDecl *ToVar,
-                                        bool Complain) {
   StructuralEquivalenceContext Ctx(
       Importer.getFromContext(), Importer.getToContext(),
       Importer.getNonEquivalentDecls(), getStructuralEquivalenceKind(Importer),
       false, Complain);
-  return Ctx.IsEquivalent(FromVar, ToVar);
-}
-
-bool ASTNodeImporter::IsStructuralMatch(EnumDecl *FromEnum, EnumDecl *ToEnum) {
-  // Eliminate a potential failure point where we attempt to re-import
-  // something we're trying to import while completing ToEnum.
-  if (Decl *ToOrigin = Importer.GetOriginalDecl(ToEnum))
-    if (auto *ToOriginEnum = dyn_cast<EnumDecl>(ToOrigin))
-        ToEnum = ToOriginEnum;
-
-  StructuralEquivalenceContext Ctx(
-      Importer.getFromContext(), Importer.getToContext(),
-      Importer.getNonEquivalentDecls(), getStructuralEquivalenceKind(Importer));
-  return Ctx.IsEquivalent(FromEnum, ToEnum);
-}
-
-bool ASTNodeImporter::IsStructuralMatch(FunctionTemplateDecl *From,
-                                        FunctionTemplateDecl *To) {
-  StructuralEquivalenceContext Ctx(
-      Importer.getFromContext(), Importer.getToContext(),
-      Importer.getNonEquivalentDecls(), getStructuralEquivalenceKind(Importer),
-      false, false);
-  return Ctx.IsEquivalent(From, To);
-}
-
-bool ASTNodeImporter::IsStructuralMatch(FunctionDecl *From, FunctionDecl *To) {
-  StructuralEquivalenceContext Ctx(
-      Importer.getFromContext(), Importer.getToContext(),
-      Importer.getNonEquivalentDecls(), getStructuralEquivalenceKind(Importer),
-      false, false);
-  return Ctx.IsEquivalent(From, To);
-}
-
-bool ASTNodeImporter::IsStructuralMatch(EnumConstantDecl *FromEC,
-                                        EnumConstantDecl *ToEC) {
-  const llvm::APSInt &FromVal = FromEC->getInitVal();
-  const llvm::APSInt &ToVal = ToEC->getInitVal();
-
-  return FromVal.isSigned() == ToVal.isSigned() &&
-         FromVal.getBitWidth() == ToVal.getBitWidth() &&
-         FromVal == ToVal;
-}
-
-bool ASTNodeImporter::IsStructuralMatch(ClassTemplateDecl *From,
-                                        ClassTemplateDecl *To) {
-  StructuralEquivalenceContext Ctx(Importer.getFromContext(),
-                                   Importer.getToContext(),
-                                   Importer.getNonEquivalentDecls(),
-                                   getStructuralEquivalenceKind(Importer));
-  return Ctx.IsEquivalent(From, To);
-}
-
-bool ASTNodeImporter::IsStructuralMatch(VarTemplateDecl *From,
-                                        VarTemplateDecl *To) {
-  StructuralEquivalenceContext Ctx(Importer.getFromContext(),
-                                   Importer.getToContext(),
-                                   Importer.getNonEquivalentDecls(),
-                                   getStructuralEquivalenceKind(Importer));
   return Ctx.IsEquivalent(From, To);
 }
 
@@ -3265,13 +3184,14 @@ static bool isAncestorDeclContextOf(const DeclContext *DC, const Decl *D) {
 
 bool ASTNodeImporter::hasAutoReturnTypeDeclaredInside(FunctionDecl *D) {
   QualType FromTy = D->getType();
-  const FunctionProtoType *FromFPT = FromTy->getAs<FunctionProtoType>();
+  const auto *FromFPT = FromTy->getAs<FunctionProtoType>();
   assert(FromFPT && "Must be called on FunctionProtoType");
-  if (AutoType *AutoT = FromFPT->getReturnType()->getContainedAutoType()) {
+  if (const AutoType *AutoT =
+          FromFPT->getReturnType()->getContainedAutoType()) {
     QualType DeducedT = AutoT->getDeducedType();
-    if (const RecordType *RecordT =
-            DeducedT.isNull() ? nullptr : dyn_cast<RecordType>(DeducedT)) {
-      RecordDecl *RD = RecordT->getDecl();
+    if (const auto *RecordT =
+            !DeducedT.isNull() ? DeducedT->getAs<RecordType>() : nullptr) {
+      const RecordDecl *RD = RecordT->getDecl();
       assert(RD);
       if (isAncestorDeclContextOf(D, RD)) {
         assert(RD->getLexicalDeclContext() == RD->getDeclContext());
@@ -3279,9 +3199,8 @@ bool ASTNodeImporter::hasAutoReturnTypeDeclaredInside(FunctionDecl *D) {
       }
     }
   }
-  if (const TypedefType *TypedefT =
-          dyn_cast<TypedefType>(FromFPT->getReturnType())) {
-    TypedefNameDecl *TD = TypedefT->getDecl();
+  if (const auto *TypedefT = FromFPT->getReturnType()->getAs<TypedefType>()) {
+    const TypedefNameDecl *TD = TypedefT->getDecl();
     assert(TD);
     if (isAncestorDeclContextOf(D, TD)) {
       assert(TD->getLexicalDeclContext() == TD->getDeclContext());
@@ -6159,20 +6078,24 @@ ASTNodeImporter::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
   if (Error Err = importInto(TemplatedFD, D->getTemplatedDecl()))
     return std::move(Err);
 
-  // Template parameters of the ClassTemplateDecl and FunctionTemplateDecl are
-  // shared, if the FunctionTemplateDecl is a deduction guide for the class.
-  // At import the ClassTemplateDecl object is always created first (FIXME: is
-  // this really true?) because the dependency, then the FunctionTemplateDecl.
-  // The DeclContext of the template parameters is changed when the
-  // FunctionTemplateDecl is created, but was set already when the class
-  // template was created. So here it is not the TU (default value) any more.
-  // FIXME: The DeclContext of the parameters is now set finally to the
-  // CXXDeductionGuideDecl object that was imported later. This may not be the
-  // same that is in the original AST, specially if there are multiple deduction
-  // guides.
-  DeclContext *OldParamDC = nullptr;
-  if (Params->size() > 0)
-    OldParamDC = Params->getParam(0)->getDeclContext();
+  // At creation of the template the template parameters are "adopted"
+  // (DeclContext is changed). After this possible change the lookup table
+  // must be updated.
+  // At deduction guides the DeclContext of the template parameters may be
+  // different from what we would expect, it may be the class template, or a
+  // probably different CXXDeductionGuideDecl. This may come from the fact that
+  // the template parameter objects may be shared between deduction guides or
+  // the class template, and at creation of multiple FunctionTemplateDecl
+  // objects (for deduction guides) the same parameters are re-used. The
+  // "adoption" happens multiple times with different parent, even recursively
+  // for TemplateTemplateParmDecl. The same happens at import when the
+  // FunctionTemplateDecl objects are created, but in different order.
+  // In this way the DeclContext of these template parameters is not necessarily
+  // the same as in the "from" context.
+  SmallVector<DeclContext *, 2> OldParamDC;
+  OldParamDC.reserve(Params->size());
+  llvm::transform(*Params, std::back_inserter(OldParamDC),
+                  [](NamedDecl *ND) { return ND->getDeclContext(); });
 
   FunctionTemplateDecl *ToFunc;
   if (GetImportedOrCreateDecl(ToFunc, D, Importer.getToContext(), DC, Loc, Name,
@@ -6184,7 +6107,12 @@ ASTNodeImporter::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
   ToFunc->setAccess(D->getAccess());
   ToFunc->setLexicalDeclContext(LexicalDC);
   LexicalDC->addDeclInternal(ToFunc);
-  updateLookupTableForTemplateParameters(*Params, OldParamDC);
+
+  ASTImporterLookupTable *LT = Importer.SharedState->getLookupTable();
+  if (LT && !OldParamDC.empty()) {
+    for (unsigned int I = 0; I < OldParamDC.size(); ++I)
+      LT->updateForced(Params->getParam(I), OldParamDC[I]);
+  }
 
   if (FoundByLookup) {
     auto *Recent =

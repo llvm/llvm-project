@@ -22,6 +22,7 @@
 #include "lldb/Breakpoint/Stoppoint.h"
 #include "lldb/Breakpoint/StoppointHitCounter.h"
 #include "lldb/Core/SearchFilter.h"
+#include "lldb/Target/Statistics.h"
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/StringList.h"
 #include "lldb/Utility/StructuredData.h"
@@ -576,6 +577,12 @@ public:
   static lldb::BreakpointSP CopyFromBreakpoint(lldb::TargetSP new_target,
       const Breakpoint &bp_to_copy_from);
 
+  /// Get statistics associated with this breakpoint in JSON format.
+  llvm::json::Value GetStatistics();
+
+  /// Get the time it took to resolve all locations in this breakpoint.
+  StatsDuration GetResolveTime() const { return m_resolve_time; }
+
 protected:
   friend class Target;
   // Protected Methods
@@ -652,6 +659,8 @@ private:
   StoppointHitCounter m_hit_counter;
 
   BreakpointName::Permissions m_permissions;
+
+  StatsDuration m_resolve_time{0.0};
 
   void SendBreakpointChangedEvent(lldb::BreakpointEventType eventKind);
 

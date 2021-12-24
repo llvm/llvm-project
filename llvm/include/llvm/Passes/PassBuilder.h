@@ -23,6 +23,7 @@
 #include "llvm/Support/PGOOptions.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO/Inliner.h"
+#include "llvm/Transforms/IPO/ModuleInliner.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include <vector>
@@ -73,6 +74,15 @@ public:
   /// Tuning option to enable/disable function merging. Its default value is
   /// false.
   bool MergeFunctions;
+
+  // Experimental option to eagerly invalidate more analyses. This has the
+  // potential to decrease max memory usage in exchange for more compile time.
+  // This may affect codegen due to either passes using analyses only when
+  // cached, or invalidating and recalculating an analysis that was
+  // stale/imprecise but still valid. Currently this invalidates all function
+  // analyses after various module->function or cgscc->function adaptors in the
+  // default pipelines.
+  bool EagerlyInvalidateAnalyses;
 };
 
 /// This class provides access to building LLVM's passes.
@@ -186,6 +196,11 @@ public:
   /// the inlining-driven cleanups.
   ModuleInlinerWrapperPass buildInlinerPipeline(OptimizationLevel Level,
                                                 ThinOrFullLTOPhase Phase);
+
+  /// Construct the module pipeline that performs inlining with
+  /// module inliner pass.
+  ModulePassManager buildModuleInlinerPipeline(OptimizationLevel Level,
+                                               ThinOrFullLTOPhase Phase);
 
   /// Construct the core LLVM module optimization pipeline.
   ///

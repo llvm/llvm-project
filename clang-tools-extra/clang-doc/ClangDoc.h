@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file exposes a method to craete the FrontendActionFactory for the
+// This file exposes a method to create the FrontendActionFactory for the
 // clang-doc tool. The factory runs the clang-doc mapper on a given set of
 // source code files, storing the results key-value pairs in its
 // ExecutionContext.

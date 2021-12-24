@@ -10,15 +10,18 @@
 #define MLIR_DIALECT_TENSOR_TRANSFORMS_PASSES_H_
 
 #include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/Bufferize.h"
 
 namespace mlir {
+namespace bufferization {
+class BufferizeTypeConverter;
+} // namespace bufferization
 
 class RewritePatternSet;
 using OwningRewritePatternList = RewritePatternSet;
 
-void populateTensorBufferizePatterns(BufferizeTypeConverter &typeConverter,
-                                     RewritePatternSet &patterns);
+void populateTensorBufferizePatterns(
+    bufferization::BufferizeTypeConverter &typeConverter,
+    RewritePatternSet &patterns);
 
 /// Creates an instance of `tensor` dialect bufferization pass.
 std::unique_ptr<Pass> createTensorBufferizePass();
@@ -33,6 +36,6 @@ namespace tensor {
 #include "mlir/Dialect/Tensor/Transforms/Passes.h.inc"
 } // namespace tensor
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_DIALECT_TENSOR_TRANSFORMS_PASSES_H_

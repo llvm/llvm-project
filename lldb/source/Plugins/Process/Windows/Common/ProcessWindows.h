@@ -32,9 +32,9 @@ public:
 
   static void Terminate();
 
-  static lldb_private::ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "windows"; }
 
-  static const char *GetPluginDescriptionStatic();
+  static llvm::StringRef GetPluginDescriptionStatic();
 
   // Constructors and destructors
   ProcessWindows(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp);
@@ -45,9 +45,7 @@ public:
   size_t GetSTDERR(char *buf, size_t buf_size, Status &error) override;
   size_t PutSTDIN(const char *buf, size_t buf_size, Status &error) override;
 
-  llvm::StringRef GetPluginName() override {
-    return GetPluginNameStatic().GetStringRef();
-  }
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   Status EnableBreakpointSite(BreakpointSite *bp_site) override;
   Status DisableBreakpointSite(BreakpointSite *bp_site) override;

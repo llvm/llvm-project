@@ -1,5 +1,5 @@
 // -*- C++ -*-
-//===--------------------------- __config ---------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -74,14 +74,15 @@
 #  define _LIBCPP_ABI_FIX_UNORDERED_NODE_POINTER_UB
 #  define _LIBCPP_ABI_FORWARD_LIST_REMOVE_NODE_POINTER_UB
 #  define _LIBCPP_ABI_FIX_UNORDERED_CONTAINER_SIZE_TYPE
-// Don't use a nullptr_t simulation type in C++03 instead using C++11 nullptr
-// provided under the alternate keyword __nullptr, which changes the mangling
-// of nullptr_t. This option is ABI incompatible with GCC in C++03 mode.
-#  define _LIBCPP_ABI_ALWAYS_USE_CXX11_NULLPTR
 // Define a key function for `bad_function_call` in the library, to centralize
 // its vtable and typeinfo to libc++ rather than having all other libraries
 // using that class define their own copies.
 #  define _LIBCPP_ABI_BAD_FUNCTION_CALL_KEY_FUNCTION
+// Override the default return value of exception::what() for
+// bad_function_call::what() with a string that is specific to
+// bad_function_call (see http://wg21.link/LWG2233). This is an ABI break
+// because it changes the vtable layout of bad_function_call.
+#  define _LIBCPP_ABI_BAD_FUNCTION_CALL_GOOD_WHAT_MESSAGE
 // Enable optimized version of __do_get_(un)signed which avoids redundant copies.
 #  define _LIBCPP_ABI_OPTIMIZED_LOCALE_NUM_GET
 // In C++20 and later, don't derive std::plus from std::binary_function,
@@ -122,11 +123,33 @@
 #  endif
 #endif
 
+// By default, don't use a nullptr_t emulation type in C++03.
+//
+// This is technically an ABI break from previous releases, however it is
+// very unlikely to impact anyone. If a user is impacted by this break,
+// they can return to using the C++03 nullptr emulation by defining
+// _LIBCPP_ABI_USE_CXX03_NULLPTR_EMULATION.
+//
+// This switch will be removed entirely in favour of never providing a
+// C++03 emulation after one release.
+//
+// IMPORTANT: IF YOU ARE READING THIS AND YOU TURN THIS MACRO ON, PLEASE LEAVE
+//            A COMMENT ON https://reviews.llvm.org/D109459 OR YOU WILL BE BROKEN
+//            IN THE FUTURE WHEN WE REMOVE THE ABILITY TO USE THE C++03 EMULATION.
+#ifndef _LIBCPP_ABI_USE_CXX03_NULLPTR_EMULATION
+# define _LIBCPP_ABI_ALWAYS_USE_CXX11_NULLPTR
+#endif
+
 #if defined(_LIBCPP_BUILDING_LIBRARY) || defined(_LIBCPP_ABI_UNSTABLE) || _LIBCPP_ABI_VERSION >= 2
 // Enable additional explicit instantiations of iostreams components. This
 // reduces the number of weak definitions generated in programs that use
 // iostreams by providing a single strong definition in the shared library.
 # define _LIBCPP_ABI_ENABLE_ADDITIONAL_IOSTREAM_EXPLICIT_INSTANTIATIONS_1
+
+// Define a key function for `bad_function_call` in the library, to centralize
+// its vtable and typeinfo to libc++ rather than having all other libraries
+// using that class define their own copies.
+#  define _LIBCPP_ABI_BAD_FUNCTION_CALL_KEY_FUNCTION
 #endif
 
 #define _LIBCPP_CONCAT1(_LIBCPP_X,_LIBCPP_Y) _LIBCPP_X##_LIBCPP_Y
@@ -310,18 +333,43 @@
 #  define _LIBCPP_SHORT_WCHAR   1
 #endif
 
+// Libc++ supports various implementations of std::random_device.
+//
+// _LIBCPP_USING_DEV_RANDOM
+//      Read entropy from the given file, by default `/dev/urandom`.
+//      If a token is provided, it is assumed to be the path to a file
+//      to read entropy from. This is the default behavior if nothing
+//      else is specified. This implementation requires storing state
+//      inside `std::random_device`.
+//
+// _LIBCPP_USING_ARC4_RANDOM
+//      Use arc4random(). This allows obtaining random data even when
+//      using sandboxing mechanisms. On some platforms like Apple, this
+//      is the recommended source of entropy for user-space programs.
+//      When this option is used, the token passed to `std::random_device`'s
+//      constructor *must* be "/dev/urandom" -- anything else is an error.
+//
+// _LIBCPP_USING_GETENTROPY
+//      Use getentropy().
+//      When this option is used, the token passed to `std::random_device`'s
+//      constructor *must* be "/dev/urandom" -- anything else is an error.
+//
+// _LIBCPP_USING_NACL_RANDOM
+//      NaCl's sandbox (which PNaCl also runs in) doesn't allow filesystem access,
+//      including accesses to the special files under `/dev`. This implementation
+//      uses the NaCL syscall `nacl_secure_random_init()` to get entropy.
+//      When this option is used, the token passed to `std::random_device`'s
+//      constructor *must* be "/dev/urandom" -- anything else is an error.
+//
+// _LIBCPP_USING_WIN32_RANDOM
+//      Use rand_s(), for use on Windows.
+//      When this option is used, the token passed to `std::random_device`'s
+//      constructor *must* be "/dev/urandom" -- anything else is an error.
 #if defined(__OpenBSD__)
-   // Certain architectures provide arc4random(). Prefer using
-   // arc4random() over /dev/{u,}random to make it possible to obtain
-   // random data even when using sandboxing mechanisms such as chroots,
-   // Capsicum, etc.
 #  define _LIBCPP_USING_ARC4_RANDOM
 #elif defined(__Fuchsia__) || defined(__wasi__)
 #  define _LIBCPP_USING_GETENTROPY
 #elif defined(__native_client__)
-   // NaCl's sandbox (which PNaCl also runs in) doesn't allow filesystem access,
-   // including accesses to the special files under /dev. C++11's
-   // std::random_device is instead exposed through a NaCl syscall.
 #  define _LIBCPP_USING_NACL_RANDOM
 #elif defined(_LIBCPP_WIN32API)
 #  define _LIBCPP_USING_WIN32_RANDOM
@@ -814,12 +862,6 @@ typedef unsigned int   char32_t;
 #define _LIBCPP_HAS_NO_RANGES
 #endif
 
-#ifdef _LIBCPP_CXX03_LANG
-#  define _LIBCPP_DEFAULT {}
-#else
-#  define _LIBCPP_DEFAULT = default;
-#endif
-
 #ifdef __GNUC__
 #  define _LIBCPP_NOALIAS __attribute__((__malloc__))
 #else
@@ -848,16 +890,35 @@ typedef unsigned int   char32_t;
 // _LIBCPP_DEBUG potential values:
 //  - undefined: No assertions. This is the default.
 //  - 0:         Basic assertions
-//  - 1:         Basic assertions + iterator validity checks.
-#if !defined(_LIBCPP_DEBUG)
-# define _LIBCPP_DEBUG_LEVEL 0
-#elif _LIBCPP_DEBUG == 0
-# define _LIBCPP_DEBUG_LEVEL 1
-#elif _LIBCPP_DEBUG == 1
-# define _LIBCPP_DEBUG_LEVEL 2
-#else
-# error Supported values for _LIBCPP_DEBUG are 0 and 1
-#endif
+//  - 1:         Basic assertions + iterator validity checks + unspecified behavior randomization.
+#  if !defined(_LIBCPP_DEBUG)
+#    define _LIBCPP_DEBUG_LEVEL 0
+#  elif _LIBCPP_DEBUG == 0
+#    define _LIBCPP_DEBUG_LEVEL 1
+#  elif _LIBCPP_DEBUG == 1
+#    define _LIBCPP_DEBUG_LEVEL 2
+#  else
+#    error Supported values for _LIBCPP_DEBUG are 0 and 1
+#  endif
+
+#  if _LIBCPP_DEBUG_LEVEL >= 2 && !defined(_LIBCPP_CXX03_LANG)
+#    define _LIBCPP_DEBUG_RANDOMIZE_UNSPECIFIED_STABILITY
+#  endif
+
+#  if defined(_LIBCPP_DEBUG_RANDOMIZE_UNSPECIFIED_STABILITY)
+#    if defined(_LIBCPP_CXX03_LANG)
+#      error Support for unspecified stability is only for C++11 and higher
+#    endif
+#    define _LIBCPP_DEBUG_RANDOMIZE_RANGE(__first, __last)                                                             \
+      do {                                                                                                             \
+        if (!__builtin_is_constant_evaluated())                                                                        \
+          _VSTD::shuffle(__first, __last, __libcpp_debug_randomizer());                                                \
+      } while (false)
+#  else
+#    define _LIBCPP_DEBUG_RANDOMIZE_RANGE(__first, __last)                                                             \
+      do {                                                                                                             \
+      } while (false)
+#  endif
 
 // Libc++ allows disabling extern template instantiation declarations by
 // means of users defining _LIBCPP_DISABLE_EXTERN_TEMPLATE.
@@ -1027,12 +1088,6 @@ typedef unsigned int   char32_t;
 #  define _LIBCPP_NODISCARD_AFTER_CXX17
 #endif
 
-#if !defined(_LIBCPP_DEBUG) && _LIBCPP_STD_VER > 11
-#   define _LIBCPP_CONSTEXPR_IF_NODEBUG constexpr
-#else
-#   define _LIBCPP_CONSTEXPR_IF_NODEBUG
-#endif
-
 #if __has_attribute(no_destroy)
 #  define _LIBCPP_NO_DESTROY __attribute__((__no_destroy__))
 #else
@@ -1161,10 +1216,9 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #  define _LIBCPP_HAS_GCC_ATOMIC_IMP
 #endif
 
-#if (!defined(_LIBCPP_HAS_C_ATOMIC_IMP) && \
-     !defined(_LIBCPP_HAS_GCC_ATOMIC_IMP) && \
-     !defined(_LIBCPP_HAS_EXTERNAL_ATOMIC_IMP)) \
-     || defined(_LIBCPP_HAS_NO_THREADS)
+#if !defined(_LIBCPP_HAS_C_ATOMIC_IMP) && \
+    !defined(_LIBCPP_HAS_GCC_ATOMIC_IMP) && \
+    !defined(_LIBCPP_HAS_EXTERNAL_ATOMIC_IMP)
 #  define _LIBCPP_HAS_NO_ATOMIC_HEADER
 #else
 #  ifndef _LIBCPP_ATOMIC_FLAG_TYPE
@@ -1273,12 +1327,8 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #define _LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS
 #endif // _LIBCPP_ENABLE_CXX20_REMOVED_FEATURES
 
-#if !defined(__cpp_coroutines) || __cpp_coroutines < 201703L
-#define _LIBCPP_HAS_NO_COROUTINES
-#endif
-
-#if !defined(__cpp_impl_three_way_comparison) || __cpp_impl_three_way_comparison < 201907L
-#define _LIBCPP_HAS_NO_SPACESHIP_OPERATOR
+#if !defined(__cpp_impl_coroutine) || __cpp_impl_coroutine < 201902L
+#define _LIBCPP_HAS_NO_CXX20_COROUTINES
 #endif
 
 #if defined(_LIBCPP_COMPILER_IBM)
@@ -1352,10 +1402,12 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #endif
 
 #if defined(__GNUC__) || defined(__clang__)
-#define _LIBCPP_FORMAT_PRINTF(a, b)                                            \
-  __attribute__((__format__(__printf__, a, b)))
+  // The attribute uses 1-based indices for ordinary and static member functions.
+  // The attribute uses 2-based indices for non-static member functions.
+# define _LIBCPP_ATTRIBUTE_FORMAT(archetype, format_string_index, first_format_arg_index) \
+    __attribute__((__format__(archetype, format_string_index, first_format_arg_index)))
 #else
-#define _LIBCPP_FORMAT_PRINTF(a, b)
+# define _LIBCPP_ATTRIBUTE_FORMAT(archetype, format_string_index, first_format_arg_index) /* nothing */
 #endif
 
 #endif // __cplusplus

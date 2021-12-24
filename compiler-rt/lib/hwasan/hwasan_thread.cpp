@@ -1,14 +1,14 @@
 
-#include "hwasan.h"
-#include "hwasan_mapping.h"
 #include "hwasan_thread.h"
-#include "hwasan_poisoning.h"
-#include "hwasan_interface_internal.h"
 
+#include "hwasan.h"
+#include "hwasan_interface_internal.h"
+#include "hwasan_mapping.h"
+#include "hwasan_poisoning.h"
+#include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_file.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
-
 
 namespace __hwasan {
 
@@ -27,6 +27,7 @@ static u32 RandomSeed() {
 
 void Thread::InitRandomState() {
   random_state_ = flags()->random_tags ? RandomSeed() : unique_id_;
+  random_state_inited_ = true;
 
   // Push a random number of zeros onto the ring buffer so that the first stack
   // tag base will be random.
@@ -40,8 +41,9 @@ void Thread::Init(uptr stack_buffer_start, uptr stack_buffer_size,
   CHECK_EQ(0, stack_top_);
   CHECK_EQ(0, stack_bottom_);
 
-  static u64 unique_id;
-  unique_id_ = unique_id++;
+  static atomic_uint64_t unique_id;
+  unique_id_ = atomic_fetch_add(&unique_id, 1, memory_order_relaxed);
+
   if (auto sz = flags()->heap_history_size)
     heap_allocations_ = HeapAllocationsRingBuffer::New(sz);
 
@@ -108,10 +110,9 @@ void Thread::Destroy() {
 }
 
 void Thread::Print(const char *Prefix) {
-  Printf("%sT%zd %p stack: [%p,%p) sz: %zd tls: [%p,%p)\n", Prefix,
-         unique_id_, this, stack_bottom(), stack_top(),
-         stack_top() - stack_bottom(),
-         tls_begin(), tls_end());
+  Printf("%sT%zd %p stack: [%p,%p) sz: %zd tls: [%p,%p)\n", Prefix, unique_id_,
+         (void *)this, stack_bottom(), stack_top(),
+         stack_top() - stack_bottom(), tls_begin(), tls_end());
 }
 
 static u32 xorshift(u32 state) {
@@ -124,17 +125,21 @@ static u32 xorshift(u32 state) {
 // Generate a (pseudo-)random non-zero tag.
 tag_t Thread::GenerateRandomTag(uptr num_bits) {
   DCHECK_GT(num_bits, 0);
-  if (tagging_disabled_) return 0;
+  if (tagging_disabled_)
+    return 0;
   tag_t tag;
   const uptr tag_mask = (1ULL << num_bits) - 1;
   do {
     if (flags()->random_tags) {
-      if (!random_buffer_)
+      if (!random_buffer_) {
+        EnsureRandomStateInited();
         random_buffer_ = random_state_ = xorshift(random_state_);
+      }
       CHECK(random_buffer_);
       tag = random_buffer_ & tag_mask;
       random_buffer_ >>= num_bits;
     } else {
+      EnsureRandomStateInited();
       random_state_ += 1;
       tag = random_state_ & tag_mask;
     }

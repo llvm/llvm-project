@@ -1,11 +1,11 @@
-; RUN: opt -loop-vectorize -dce -instcombine -mtriple aarch64-linux-gnu -mattr=+sve -S %s -scalable-vectorization=on -o - | FileCheck %s
+; RUN: opt -loop-vectorize -dce -instcombine -mtriple aarch64-linux-gnu -mattr=+sve -S %s -o - | FileCheck %s
 
 define void @mloadstore_f32(float* noalias nocapture %a, float* noalias nocapture readonly %b, i64 %n) {
 ; CHECK-LABEL: @mloadstore_f32
 ; CHECK: vector.body:
 ; CHECK:       %[[LOAD1:.*]] = load <vscale x 4 x float>, <vscale x 4 x float>*
 ; CHECK-NEXT:  %[[MASK:.*]] = fcmp ogt <vscale x 4 x float> %[[LOAD1]],
-; CHECK-NEXT:  %[[GEPA:.*]] = getelementptr inbounds float, float* %a,
+; CHECK-NEXT:  %[[GEPA:.*]] = getelementptr float, float* %a,
 ; CHECK-NEXT:  %[[MLOAD_PTRS:.*]] = bitcast float* %[[GEPA]] to <vscale x 4 x float>*
 ; CHECK-NEXT:  %[[LOAD2:.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0nxv4f32(<vscale x 4 x float>* %[[MLOAD_PTRS]], i32 4, <vscale x 4 x i1> %[[MASK]]
 ; CHECK-NEXT:  %[[FADD:.*]] = fadd <vscale x 4 x float> %[[LOAD1]], %[[LOAD2]]
@@ -42,7 +42,7 @@ define void @mloadstore_i32(i32* noalias nocapture %a, i32* noalias nocapture re
 ; CHECK: vector.body:
 ; CHECK:       %[[LOAD1:.*]] = load <vscale x 4 x i32>, <vscale x 4 x i32>*
 ; CHECK-NEXT:  %[[MASK:.*]] = icmp ne <vscale x 4 x i32> %[[LOAD1]],
-; CHECK-NEXT:  %[[GEPA:.*]] = getelementptr inbounds i32, i32* %a,
+; CHECK-NEXT:  %[[GEPA:.*]] = getelementptr i32, i32* %a,
 ; CHECK-NEXT:  %[[MLOAD_PTRS:.*]] = bitcast i32* %[[GEPA]] to <vscale x 4 x i32>*
 ; CHECK-NEXT:  %[[LOAD2:.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0nxv4i32(<vscale x 4 x i32>* %[[MLOAD_PTRS]], i32 4, <vscale x 4 x i1> %[[MASK]]
 ; CHECK-NEXT:  %[[FADD:.*]] = add <vscale x 4 x i32> %[[LOAD1]], %[[LOAD2]]

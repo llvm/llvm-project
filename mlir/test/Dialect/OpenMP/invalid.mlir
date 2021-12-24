@@ -69,7 +69,62 @@ func @copyin_once(%n : memref<i32>) {
 }
 
 // -----
- 
+
+func @lastprivate_not_allowed(%n : memref<i32>) {
+  // expected-error@+1 {{lastprivate is not a valid clause for the omp.parallel operation}}
+  omp.parallel lastprivate(%n : memref<i32>) {}
+  return
+}
+
+// -----
+
+func @nowait_not_allowed(%n : memref<i32>) {
+  // expected-error@+1 {{nowait is not a valid clause for the omp.parallel operation}}
+  omp.parallel nowait {}
+  return
+}
+
+// -----
+
+func @linear_not_allowed(%data_var : memref<i32>, %linear_var : i32) {
+  // expected-error@+1 {{linear is not a valid clause for the omp.parallel operation}}
+  omp.parallel linear(%data_var = %linear_var : memref<i32>)  {}
+  return
+}
+
+// -----
+
+func @schedule_not_allowed() {
+  // expected-error@+1 {{schedule is not a valid clause for the omp.parallel operation}}
+  omp.parallel schedule(static) {}
+  return
+}
+
+// -----
+
+func @collapse_not_allowed() {
+  // expected-error@+1 {{collapse is not a valid clause for the omp.parallel operation}}
+  omp.parallel collapse(3) {}
+  return
+}
+
+// -----
+
+func @order_not_allowed() {
+  // expected-error@+1 {{order is not a valid clause for the omp.parallel operation}}
+  omp.parallel order(concurrent) {}
+  return
+}
+
+// -----
+
+func @ordered_not_allowed() {
+  // expected-error@+1 {{ordered is not a valid clause for the omp.parallel operation}}
+  omp.parallel ordered(2) {}
+}
+
+// -----
+
 func @default_once() {
   // expected-error@+1 {{at most one default clause can appear on the omp.parallel operation}}
   omp.parallel default(private) default(firstprivate) {
@@ -86,6 +141,78 @@ func @proc_bind_once() {
   }
 
   return
+}
+
+// -----
+
+func @inclusive_not_a_clause(%lb : index, %ub : index, %step : index) {
+  // expected-error @below {{inclusive is not a valid clause}}
+  omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) nowait inclusive {
+    omp.yield
+  }
+}
+
+// -----
+
+func @order_value(%lb : index, %ub : index, %step : index) {
+  // expected-error @below {{attribute 'order_val' failed to satisfy constraint: OrderKind Clause}}
+  omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) order(default) {
+    omp.yield
+  }
+}
+
+// -----
+
+func @shared_not_allowed(%lb : index, %ub : index, %step : index, %var : memref<i32>) {
+  // expected-error @below {{shared is not a valid clause for the omp.wsloop operation}}
+  omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) shared(%var) {
+    omp.yield
+  }
+}
+
+// -----
+
+func @copyin(%lb : index, %ub : index, %step : index, %var : memref<i32>) {
+  // expected-error @below {{copyin is not a valid clause for the omp.wsloop operation}}
+  omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) copyin(%var) {
+    omp.yield
+  }
+}
+
+// -----
+
+func @if_not_allowed(%lb : index, %ub : index, %step : index, %bool_var : i1) {
+  // expected-error @below {{if is not a valid clause for the omp.wsloop operation}}
+  omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) if(%bool_var: i1) {
+    omp.yield
+  }
+}
+
+// -----
+
+func @num_threads_not_allowed(%lb : index, %ub : index, %step : index, %int_var : i32) {
+  // expected-error @below {{num_threads is not a valid clause for the omp.wsloop operation}}
+  omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) num_threads(%int_var: i32) {
+    omp.yield
+  }
+}
+
+// -----
+
+func @default_not_allowed(%lb : index, %ub : index, %step : index) {
+  // expected-error @below {{default is not a valid clause for the omp.wsloop operation}}
+  omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) default(private) {
+    omp.yield
+  }
+}
+
+// -----
+
+func @proc_bind_not_allowed(%lb : index, %ub : index, %step : index) {
+  // expected-error @below {{proc_bind is not a valid clause for the omp.wsloop operation}}
+  omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) proc_bind(close) {
+    omp.yield
+  }
 }
 
 // -----
@@ -372,6 +499,328 @@ func @omp_ordered5(%arg1 : i32, %arg2 : i32, %arg3 : i32, %vec0 : i64, %vec1 : i
     omp.ordered depend_type("dependsource") depend_vec(%vec0, %vec1 : i64, i64) {num_loops_val = 2 : i64}
 
     omp.yield
+  }
+  return
+}
+
+// -----
+
+func @omp_atomic_read1(%addr : memref<i32>) {
+  // expected-error @below {{the hints omp_sync_hint_nonspeculative and omp_sync_hint_speculative cannot be combined.}}
+  %1 = omp.atomic.read %addr hint(speculative, nonspeculative) : memref<i32> -> i32
+  return
+}
+
+// -----
+
+func @omp_atomic_read2(%addr : memref<i32>) {
+  // expected-error @below {{attribute 'memory_order' failed to satisfy constraint: MemoryOrderKind Clause}}
+  %1 = omp.atomic.read %addr memory_order(xyz) : memref<i32> -> i32
+  return
+}
+
+// -----
+
+func @omp_atomic_read3(%addr : memref<i32>) {
+  // expected-error @below {{memory-order must not be acq_rel or release for atomic reads}}
+  %1 = omp.atomic.read %addr memory_order(acq_rel) : memref<i32> -> i32
+  return
+}
+
+// -----
+
+func @omp_atomic_read4(%addr : memref<i32>) {
+  // expected-error @below {{memory-order must not be acq_rel or release for atomic reads}}
+  %1 = omp.atomic.read %addr memory_order(release) : memref<i32> -> i32
+  return
+}
+
+// -----
+
+func @omp_atomic_read5(%addr : memref<i32>) {
+  // expected-error @below {{at most one memory_order clause can appear on the omp.atomic.read operation}}
+  %1 = omp.atomic.read %addr memory_order(acquire) memory_order(relaxed) : memref<i32> -> i32
+  return
+}
+
+// -----
+
+func @omp_atomic_read6(%addr : memref<i32>) {
+  // expected-error @below {{at most one hint clause can appear on the omp.atomic.read operation}}
+  %1 = omp.atomic.read  %addr hint(speculative) hint(contended) : memref<i32> -> i32
+  return
+}
+
+// -----
+
+func @omp_atomic_write1(%addr : memref<i32>, %val : i32) {
+  // expected-error @below {{the hints omp_sync_hint_uncontended and omp_sync_hint_contended cannot be combined}}
+  omp.atomic.write  %addr, %val hint(contended, uncontended) : memref<i32>, i32
+  return
+}
+
+// -----
+
+func @omp_atomic_write2(%addr : memref<i32>, %val : i32) {
+  // expected-error @below {{memory-order must not be acq_rel or acquire for atomic writes}}
+  omp.atomic.write  %addr, %val memory_order(acq_rel) : memref<i32>, i32
+  return
+}
+
+// -----
+
+func @omp_atomic_write3(%addr : memref<i32>, %val : i32) {
+  // expected-error @below {{memory-order must not be acq_rel or acquire for atomic writes}}
+  omp.atomic.write  %addr, %val memory_order(acquire) : memref<i32>, i32
+  return
+}
+
+// -----
+
+func @omp_atomic_write4(%addr : memref<i32>, %val : i32) {
+  // expected-error @below {{at most one memory_order clause can appear on the omp.atomic.write operation}}
+  omp.atomic.write  %addr, %val memory_order(release) memory_order(seq_cst) : memref<i32>, i32
+  return
+}
+
+// -----
+
+func @omp_atomic_write5(%addr : memref<i32>, %val : i32) {
+  // expected-error @below {{at most one hint clause can appear on the omp.atomic.write operation}}
+  omp.atomic.write  %addr, %val hint(contended) hint(speculative) : memref<i32>, i32
+  return
+}
+
+// -----
+
+func @omp_atomic_write6(%addr : memref<i32>, %val : i32) {
+  // expected-error @below {{attribute 'memory_order' failed to satisfy constraint: MemoryOrderKind Clause}}
+  omp.atomic.write  %addr, %val memory_order(xyz) : memref<i32>, i32
+  return
+}
+
+// -----
+
+func @omp_atomic_update1(%x: memref<i32>, %expr: i32, %foo: memref<i32>) {
+  // expected-error @below {{atomic update variable %x not found in the RHS of the assignment statement in an atomic.update operation}}
+  omp.atomic.update %x = %foo add %expr : memref<i32>, i32
+  return
+}
+
+// -----
+
+func @omp_atomic_update2(%x: memref<i32>, %expr: i32) {
+  // expected-error @below {{invalid atomic bin op in atomic update}}
+  omp.atomic.update %x = %x invalid %expr : memref<i32>, i32
+  return
+}
+
+// -----
+
+func @omp_atomic_update3(%x: memref<i32>, %expr: i32) {
+  // expected-error @below {{memory-order must not be acq_rel or acquire for atomic updates}}
+  omp.atomic.update %x = %x add %expr memory_order(acq_rel) : memref<i32>, i32
+  return
+}
+
+// -----
+
+func @omp_atomic_update4(%x: memref<i32>, %expr: i32) {
+  // expected-error @below {{memory-order must not be acq_rel or acquire for atomic updates}}
+  omp.atomic.update %x = %x add %expr memory_order(acquire) : memref<i32>, i32
+  return
+}
+
+// -----
+
+// expected-note @below {{prior use here}}
+func @omp_atomic_update5(%x: memref<i32>, %expr: i32) {
+  // expected-error @below {{use of value '%x' expects different type than prior uses: 'i32' vs 'memref<i32>'}}
+  omp.atomic.update %x = %x add %expr : i32, memref<i32>
+  return
+}
+
+// -----
+
+func @omp_sections(%data_var1 : memref<i32>, %data_var2 : memref<i32>, %data_var3 : memref<i32>) -> () {
+  // expected-error @below {{operand used in both private and firstprivate clauses}}
+  omp.sections private(%data_var1 : memref<i32>) firstprivate(%data_var1 : memref<i32>) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_sections(%data_var1 : memref<i32>, %data_var2 : memref<i32>, %data_var3 : memref<i32>) -> () {
+  // expected-error @below {{operand used in both private and lastprivate clauses}}
+  omp.sections private(%data_var1 : memref<i32>) lastprivate(%data_var1 : memref<i32>) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_sections(%data_var1 : memref<i32>, %data_var2 : memref<i32>, %data_var3 : memref<i32>) -> () {
+  // expected-error @below {{operand used in both private and lastprivate clauses}}
+  omp.sections private(%data_var1 : memref<i32>, %data_var2 : memref<i32>) lastprivate(%data_var3 : memref<i32>, %data_var2 : memref<i32>) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_sections(%data_var : memref<i32>) -> () {
+  // expected-error @below {{expected equal sizes for allocate and allocator variables}}
+  "omp.sections" (%data_var) ({
+    omp.terminator
+  }) {operand_segment_sizes = dense<[0,0,0,0,1,0]> : vector<6xi32>} : (memref<i32>) -> ()
+  return
+}
+
+// -----
+
+func @omp_sections(%data_var : memref<i32>) -> () {
+  // expected-error @below {{expected as many reduction symbol references as reduction variables}}
+  "omp.sections" (%data_var) ({
+    omp.terminator
+  }) {operand_segment_sizes = dense<[0,0,0,1,0,0]> : vector<6xi32>} : (memref<i32>) -> ()
+  return
+}
+
+// -----
+
+func @omp_sections(%data_var : memref<i32>) -> () {
+  // expected-error @below {{expected omp.section op or terminator op inside region}}
+  omp.sections {
+    "test.payload" () : () -> ()
+  }
+  return
+}
+
+// -----
+
+func @omp_sections(%cond : i1) {
+  // expected-error @below {{if is not a valid clause for the omp.sections operation}}
+  omp.sections if(%cond) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_sections() {
+  // expected-error @below {{num_threads is not a valid clause for the omp.sections operation}}
+  omp.sections num_threads(10) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_sections(%datavar : memref<i32>) {
+  // expected-error @below {{shared is not a valid clause for the omp.sections operation}}
+  omp.sections shared(%datavar : memref<i32>) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_sections(%datavar : memref<i32>) {
+  // expected-error @below {{copyin is not a valid clause for the omp.sections operation}}
+  omp.sections copyin(%datavar : memref<i32>) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_sections() {
+  // expected-error @below {{default is not a valid clause for the omp.sections operation}}
+  omp.sections default(private) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_sections() {
+  // expected-error @below {{proc_bind is not a valid clause for the omp.sections operation}}
+  omp.sections proc_bind(close) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_sections(%data_var : memref<i32>, %linear_var : i32) {
+  // expected-error @below {{linear is not a valid clause for the omp.sections operation}}
+  omp.sections linear(%data_var = %linear_var : memref<i32>) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_sections() {
+  // expected-error @below {{schedule is not a valid clause for the omp.sections operation}}
+  omp.sections schedule(static, none) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_sections() {
+  // expected-error @below {{collapse is not a valid clause for the omp.sections operation}}
+  omp.sections collapse(3) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_sections() {
+  // expected-error @below {{ordered is not a valid clause for the omp.sections operation}}
+  omp.sections ordered(2) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_sections() {
+  // expected-error @below {{order is not a valid clause for the omp.sections operation}}
+  omp.sections order(concurrent) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_sections() {
+  // expected-error @below {{failed to verify constraint: region with 1 blocks}}
+  omp.sections {
+    omp.section {
+      omp.terminator
+    }
+    omp.terminator
+  ^bb2:
+    omp.terminator
   }
   return
 }

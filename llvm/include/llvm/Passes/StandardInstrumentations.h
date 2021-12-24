@@ -333,7 +333,16 @@ public:
 
 // The data saved for comparing functions.
 template <typename T>
-class FuncDataT : public OrderedChangedData<BlockDataT<T>> {};
+class FuncDataT : public OrderedChangedData<BlockDataT<T>> {
+public:
+  FuncDataT(std::string S) : EntryBlockName(S) {}
+
+  // Return the name of the entry block
+  std::string getEntryBlockName() const { return EntryBlockName; }
+
+protected:
+  std::string EntryBlockName;
+};
 
 // The data saved for comparing IRs.
 template <typename T>
@@ -350,7 +359,6 @@ public:
   // Compare the 2 IRs. \p handleFunctionCompare is called to handle the
   // compare of a function. When \p InModule is set,
   // this function is being handled as part of comparing a module.
-
   void compare(
       bool CompareModule,
       std::function<void(bool InModule, unsigned Minor,
@@ -408,6 +416,81 @@ public:
   void registerCallbacks(PassInstrumentationCallbacks &PIC);
 };
 
+// Class that holds transitions between basic blocks.  The transitions
+// are contained in a map of values to names of basic blocks.
+class DCData {
+public:
+  // Fill the map with the transitions from basic block \p B.
+  DCData(const BasicBlock &B);
+
+  // Return an iterator to the names of the successor blocks.
+  StringMap<std::string>::const_iterator begin() const {
+    return Successors.begin();
+  }
+  StringMap<std::string>::const_iterator end() const {
+    return Successors.end();
+  }
+
+  // Return the label of the basic block reached on a transition on \p S.
+  const StringRef getSuccessorLabel(StringRef S) const {
+    assert(Successors.count(S) == 1 && "Expected to find successor.");
+    return Successors.find(S)->getValue();
+  }
+
+protected:
+  // Add a transition to \p Succ on \p Label
+  void addSuccessorLabel(StringRef Succ, StringRef Label) {
+    std::pair<std::string, std::string> SS{Succ.str(), Label.str()};
+    Successors.insert(SS);
+  }
+
+  StringMap<std::string> Successors;
+};
+
+// A change reporter that builds a website with links to pdf files showing
+// dot control flow graphs with changed instructions shown in colour.
+class DotCfgChangeReporter : public ChangeReporter<IRDataT<DCData>> {
+public:
+  DotCfgChangeReporter(bool Verbose);
+  ~DotCfgChangeReporter() override;
+  void registerCallbacks(PassInstrumentationCallbacks &PIC);
+
+protected:
+  // Initialize the HTML file and output the header.
+  bool initializeHTML();
+
+  // Called on the first IR processed.
+  void handleInitialIR(Any IR) override;
+  // Called before and after a pass to get the representation of the IR.
+  void generateIRRepresentation(Any IR, StringRef PassID,
+                                IRDataT<DCData> &Output) override;
+  // Called when the pass is not iteresting.
+  void omitAfter(StringRef PassID, std::string &Name) override;
+  // Called when an interesting IR has changed.
+  void handleAfter(StringRef PassID, std::string &Name,
+                   const IRDataT<DCData> &Before, const IRDataT<DCData> &After,
+                   Any) override;
+  // Called when an interesting pass is invalidated.
+  void handleInvalidated(StringRef PassID) override;
+  // Called when the IR or pass is not interesting.
+  void handleFiltered(StringRef PassID, std::string &Name) override;
+  // Called when an ignored pass is encountered.
+  void handleIgnored(StringRef PassID, std::string &Name) override;
+
+  // Generate the pdf file into \p Dir / \p PDFFileName using \p DotFile as
+  // input and return the html <a> tag with \Text as the content.
+  static std::string genHTML(StringRef Text, StringRef DotFile,
+                             StringRef PDFFileName);
+
+  void handleFunctionCompare(StringRef Name, StringRef Prefix, StringRef PassID,
+                             StringRef Divider, bool InModule, unsigned Minor,
+                             const FuncDataT<DCData> &Before,
+                             const FuncDataT<DCData> &After);
+
+  unsigned N = 0;
+  std::unique_ptr<raw_fd_ostream> HTML;
+};
+
 /// This class provides an interface to register all the standard pass
 /// instrumentations and manages their state (if any).
 class StandardInstrumentations {
@@ -420,6 +503,7 @@ class StandardInstrumentations {
   IRChangedPrinter PrintChangedIR;
   PseudoProbeVerifier PseudoProbeVerification;
   InLineChangePrinter PrintChangedDiff;
+  DotCfgChangeReporter WebsiteChangeReporter;
   VerifyInstrumentation Verify;
 
   bool VerifyEach;

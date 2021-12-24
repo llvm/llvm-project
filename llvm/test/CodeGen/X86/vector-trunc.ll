@@ -4,8 +4,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse4.1 | FileCheck %s --check-prefix=SSE --check-prefix=SSE41
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefix=AVX --check-prefix=AVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=AVX,AVX2,AVX2-SLOW
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2,AVX2-FAST,AVX2-FAST-ALL
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2,AVX2-FAST,AVX2-FAST-PERLANE
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2,AVX2-FAST-ALL
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2,AVX2-FAST-PERLANE
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f | FileCheck %s --check-prefix=AVX512 --check-prefix=AVX512F
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vl,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX512,AVX512VL
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vl,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX512,AVX512VL
@@ -1492,14 +1492,12 @@ define <8 x i16> @trunc2x4i64_8i16(<4 x i64> %a, <4 x i64> %b) {
 ;
 ; AVX2-LABEL: trunc2x4i64_8i16:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX2-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0],xmm3[1,2,3],xmm2[4],xmm3[5,6,7]
-; AVX2-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm3[1,2,3],xmm1[4],xmm3[5,6,7]
-; AVX2-NEXT:    vpackusdw %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vpblendw {{.*#+}} ymm1 = ymm1[0],ymm2[1,2,3],ymm1[4],ymm2[5,6,7],ymm1[8],ymm2[9,10,11],ymm1[12],ymm2[13,14,15]
+; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm3
+; AVX2-NEXT:    vpackusdw %xmm3, %xmm1, %xmm1
+; AVX2-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0],ymm2[1,2,3],ymm0[4],ymm2[5,6,7],ymm0[8],ymm2[9,10,11],ymm0[12],ymm2[13,14,15]
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; AVX2-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0],xmm3[1,2,3],xmm2[4],xmm3[5,6,7]
-; AVX2-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm3[1,2,3],xmm0[4],xmm3[5,6,7]
 ; AVX2-NEXT:    vpackusdw %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vzeroupper
@@ -1904,25 +1902,11 @@ define <8 x i16> @PR32160(<8 x i32> %x) {
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,2,2,2]
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: PR32160:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[8,9,8,9,8,9,8,9,8,9,8,9,8,9,8,9]
-; AVX1-NEXT:    vzeroupper
-; AVX1-NEXT:    retq
-;
-; AVX2-SLOW-LABEL: PR32160:
-; AVX2-SLOW:       # %bb.0:
-; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,2,2]
-; AVX2-SLOW-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[2,2,2,2,4,5,6,7]
-; AVX2-SLOW-NEXT:    vpbroadcastd %xmm0, %xmm0
-; AVX2-SLOW-NEXT:    vzeroupper
-; AVX2-SLOW-NEXT:    retq
-;
-; AVX2-FAST-LABEL: PR32160:
-; AVX2-FAST:       # %bb.0:
-; AVX2-FAST-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[8,9,8,9,8,9,8,9,8,9,8,9,8,9,8,9]
-; AVX2-FAST-NEXT:    vzeroupper
-; AVX2-FAST-NEXT:    retq
+; AVX-LABEL: PR32160:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[8,9,8,9,8,9,8,9,8,9,8,9,8,9,8,9]
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
 ;
 ; AVX512F-LABEL: PR32160:
 ; AVX512F:       # %bb.0:

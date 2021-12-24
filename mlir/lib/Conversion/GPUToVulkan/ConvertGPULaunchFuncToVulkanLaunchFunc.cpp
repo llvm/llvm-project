@@ -74,7 +74,7 @@ private:
   static constexpr unsigned kVulkanLaunchNumConfigOperands = 3;
 };
 
-} // anonymous namespace
+} // namespace
 
 void ConvertGpuLaunchFuncToVulkanLaunchFunc::runOnOperation() {
   bool done = false;

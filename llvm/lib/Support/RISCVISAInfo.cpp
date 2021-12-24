@@ -61,14 +61,36 @@ static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
     {"zbs", RISCVExtensionVersion{1, 0}},
     {"zbt", RISCVExtensionVersion{0, 93}},
 
-    {"zvamo", RISCVExtensionVersion{0, 10}},
     {"zvlsseg", RISCVExtensionVersion{0, 10}},
 
+    {"zfhmin", RISCVExtensionVersion{0, 1}},
     {"zfh", RISCVExtensionVersion{0, 1}},
 };
 
 static bool stripExperimentalPrefix(StringRef &Ext) {
   return Ext.consume_front("experimental-");
+}
+
+// This function finds the first character that doesn't belong to a version
+// (e.g. zbe0p93 is extension 'zbe' of version '0p93'). So the function will
+// consume [0-9]*p[0-9]* starting from the backward. An extension name will not
+// end with a digit or the letter 'p', so this function will parse correctly.
+// NOTE: This function is NOT able to take empty strings or strings that only
+// have version numbers and no extension name. It assumes the extension name
+// will be at least more than one character.
+static size_t findFirstNonVersionCharacter(const StringRef &Ext) {
+  if (Ext.size() == 0)
+    llvm_unreachable("Already guarded by if-statement in ::parseArchString");
+
+  int Pos = Ext.size() - 1;
+  while (Pos > 0 && isDigit(Ext[Pos]))
+    Pos--;
+  if (Pos > 0 && Ext[Pos] == 'p' && isDigit(Ext[Pos - 1])) {
+    Pos--;
+    while (Pos > 0 && isDigit(Ext[Pos]))
+      Pos--;
+  }
+  return Pos;
 }
 
 struct FindByName {
@@ -263,10 +285,6 @@ void RISCVISAInfo::toFeatures(
     if (ExtName == "zvlsseg") {
       Features.push_back("+experimental-v");
       Features.push_back("+experimental-zvlsseg");
-    } else if (ExtName == "zvamo") {
-      Features.push_back("+experimental-v");
-      Features.push_back("+experimental-zvlsseg");
-      Features.push_back("+experimental-zvamo");
     } else if (isExperimentalExtension(ExtName)) {
       Features.push_back(StrAlloc("+experimental-" + ExtName));
     } else {
@@ -389,7 +407,6 @@ RISCVISAInfo::parseFeatures(unsigned XLen,
   assert(XLen == 32 || XLen == 64);
   std::unique_ptr<RISCVISAInfo> ISAInfo(new RISCVISAInfo(XLen));
 
-  bool HasE = false;
   for (auto &Feature : Features) {
     StringRef ExtName = Feature;
     bool Experimental = false;
@@ -408,28 +425,18 @@ RISCVISAInfo::parseFeatures(unsigned XLen,
     if (ExtensionInfoIterator == ExtensionInfos.end())
       continue;
 
-    if (Add) {
-      if (ExtName == "e") {
-        if (XLen != 32)
-          return createStringError(
-              errc::invalid_argument,
-              "standard user-level extension 'e' requires 'rv32'");
-        HasE = true;
-      }
-
+    if (Add)
       ISAInfo->addExtension(ExtName, ExtensionInfoIterator->Version.Major,
                             ExtensionInfoIterator->Version.Minor);
-    } else
+    else
       ISAInfo->Exts.erase(ExtName.str());
   }
-  if (!HasE) {
-    if (auto Version = findDefaultVersion("i"))
-      ISAInfo->addExtension("i", Version->Major, Version->Minor);
-    else
-      llvm_unreachable("Default extension version for 'i' not found?");
-  }
 
+  ISAInfo->updateImplication();
   ISAInfo->updateFLen();
+
+  if (Error Result = ISAInfo->checkDependency())
+    return std::move(Result);
 
   return std::move(ISAInfo);
 }
@@ -456,7 +463,6 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
   // The canonical order specified in ISA manual.
   // Ref: Table 22.1 in RISC-V User-Level ISA V2.2
   StringRef StdExts = AllStdExts;
-  bool HasF = false, HasD = false;
   char Baseline = Arch[4];
 
   // First letter should be 'e', 'i' or 'g'.
@@ -477,8 +483,6 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
   case 'g':
     // g = imafd
     StdExts = StdExts.drop_front(4);
-    HasF = true;
-    HasD = true;
     break;
   }
 
@@ -559,34 +563,14 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
 
     // The order is OK, then push it into features.
     // TODO: Use version number when setting target features
-    switch (C) {
-    default:
-      // Currently LLVM supports only "mafdcbv".
+    // Currently LLVM supports only "mafdcbv".
+    StringRef SupportedStandardExtension = "mafdcbv";
+    if (SupportedStandardExtension.find(C) == StringRef::npos)
       return createStringError(errc::invalid_argument,
                                "unsupported standard user-level extension '%c'",
                                C);
-    case 'm':
-      ISAInfo->addExtension("m", Major, Minor);
-      break;
-    case 'a':
-      ISAInfo->addExtension("a", Major, Minor);
-      break;
-    case 'f':
-      ISAInfo->addExtension("f", Major, Minor);
-      HasF = true;
-      break;
-    case 'd':
-      ISAInfo->addExtension("d", Major, Minor);
-      HasD = true;
-      break;
-    case 'c':
-      ISAInfo->addExtension("c", Major, Minor);
-      break;
-    case 'v':
-      ISAInfo->addExtension("v", Major, Minor);
-      ISAInfo->addExtension("zvlsseg", Major, Minor);
-      break;
-    }
+    ISAInfo->addExtension(std::string(1, C), Major, Minor);
+
     // Consume full extension name and version, including any optional '_'
     // between this extension and the next
     ++I;
@@ -594,21 +578,6 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     if (*I == '_')
       ++I;
   }
-  // Dependency check.
-  // It's illegal to specify the 'd' (double-precision floating point)
-  // extension without also specifying the 'f' (single precision
-  // floating-point) extension.
-  // TODO: This has been removed in later specs, which specify that D implies F
-  if (HasD && !HasF)
-    return createStringError(errc::invalid_argument,
-                             "d requires f extension to also be specified");
-
-  // Additional dependency checks.
-  // TODO: The 'q' extension requires rv64.
-  // TODO: It is illegal to specify 'e' extensions with 'f' and 'd'.
-
-  if (OtherExts.empty())
-    return std::move(ISAInfo);
 
   // Handle other types of extensions other than the standard
   // general purpose and standard user-level extensions.
@@ -629,52 +598,53 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
   std::array<StringRef, 4> Prefix{"z", "x", "s", "sx"};
   auto I = Prefix.begin();
   auto E = Prefix.end();
+  if (Split.size() > 1 || Split[0] != "") {
+    for (StringRef Ext : Split) {
+      if (Ext.empty())
+        return createStringError(errc::invalid_argument,
+                                 "extension name missing after separator '_'");
 
-  for (StringRef Ext : Split) {
-    if (Ext.empty())
-      return createStringError(errc::invalid_argument,
-                               "extension name missing after separator '_'");
+      StringRef Type = getExtensionType(Ext);
+      StringRef Desc = getExtensionTypeDesc(Ext);
+      auto Pos = findFirstNonVersionCharacter(Ext) + 1;
+      StringRef Name(Ext.substr(0, Pos));
+      StringRef Vers(Ext.substr(Pos));
 
-    StringRef Type = getExtensionType(Ext);
-    StringRef Desc = getExtensionTypeDesc(Ext);
-    auto Pos = Ext.find_if(isDigit);
-    StringRef Name(Ext.substr(0, Pos));
-    StringRef Vers(Ext.substr(Pos));
+      if (Type.empty())
+        return createStringError(errc::invalid_argument,
+                                 "invalid extension prefix '" + Ext + "'");
 
-    if (Type.empty())
-      return createStringError(errc::invalid_argument,
-                               "invalid extension prefix '" + Ext + "'");
+      // Check ISA extensions are specified in the canonical order.
+      while (I != E && *I != Type)
+        ++I;
 
-    // Check ISA extensions are specified in the canonical order.
-    while (I != E && *I != Type)
-      ++I;
+      if (I == E)
+        return createStringError(errc::invalid_argument,
+                                 "%s not given in canonical order '%s'",
+                                 Desc.str().c_str(), Ext.str().c_str());
 
-    if (I == E)
-      return createStringError(errc::invalid_argument,
-                               "%s not given in canonical order '%s'",
-                               Desc.str().c_str(), Ext.str().c_str());
+      if (Name.size() == Type.size()) {
+        return createStringError(errc::invalid_argument,
+                                 "%s name missing after '%s'",
+                                 Desc.str().c_str(), Type.str().c_str());
+      }
 
-    if (Name.size() == Type.size()) {
-      return createStringError(errc::invalid_argument,
-                               "%s name missing after '%s'", Desc.str().c_str(),
-                               Type.str().c_str());
+      unsigned Major, Minor, ConsumeLength;
+      if (auto E = getExtensionVersion(Name, Vers, Major, Minor, ConsumeLength,
+                                       EnableExperimentalExtension,
+                                       ExperimentalExtensionVersionCheck))
+        return std::move(E);
+
+      // Check if duplicated extension.
+      if (llvm::is_contained(AllExts, Name))
+        return createStringError(errc::invalid_argument, "duplicated %s '%s'",
+                                 Desc.str().c_str(), Name.str().c_str());
+
+      ISAInfo->addExtension(Name, Major, Minor);
+      // Extension format is correct, keep parsing the extensions.
+      // TODO: Save Type, Name, Major, Minor to avoid parsing them later.
+      AllExts.push_back(Name);
     }
-
-    unsigned Major, Minor, ConsumeLength;
-    if (auto E = getExtensionVersion(Name, Vers, Major, Minor, ConsumeLength,
-                                     EnableExperimentalExtension,
-                                     ExperimentalExtensionVersionCheck))
-      return std::move(E);
-
-    // Check if duplicated extension.
-    if (llvm::is_contained(AllExts, Name))
-      return createStringError(errc::invalid_argument, "duplicated %s '%s'",
-                               Desc.str().c_str(), Name.str().c_str());
-
-    ISAInfo->addExtension(Name, Major, Minor);
-    // Extension format is correct, keep parsing the extensions.
-    // TODO: Save Type, Name, Major, Minor to avoid parsing them later.
-    AllExts.push_back(Name);
   }
 
   for (auto Ext : AllExts) {
@@ -685,9 +655,81 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     }
   }
 
+  ISAInfo->updateImplication();
   ISAInfo->updateFLen();
 
+  if (Error Result = ISAInfo->checkDependency())
+    return std::move(Result);
+
   return std::move(ISAInfo);
+}
+
+Error RISCVISAInfo::checkDependency() {
+  bool IsRv32 = XLen == 32;
+  bool HasE = Exts.count("e") == 1;
+  bool HasD = Exts.count("d") == 1;
+  bool HasF = Exts.count("f") == 1;
+
+  if (HasE && !IsRv32)
+    return createStringError(
+        errc::invalid_argument,
+        "standard user-level extension 'e' requires 'rv32'");
+
+  // It's illegal to specify the 'd' (double-precision floating point)
+  // extension without also specifying the 'f' (single precision
+  // floating-point) extension.
+  // TODO: This has been removed in later specs, which specify that D implies F
+  if (HasD && !HasF)
+    return createStringError(errc::invalid_argument,
+                             "d requires f extension to also be specified");
+
+  // Additional dependency checks.
+  // TODO: The 'q' extension requires rv64.
+  // TODO: It is illegal to specify 'e' extensions with 'f' and 'd'.
+
+  return Error::success();
+}
+
+static const char *ImpliedExtsV[] = {"zvlsseg"};
+static const char *ImpliedExtsZfh[] = {"zfhmin"};
+
+struct ImpliedExtsEntry {
+  StringLiteral Name;
+  ArrayRef<const char *> Exts;
+
+  bool operator<(const ImpliedExtsEntry &Other) const {
+    return Name < Other.Name;
+  }
+
+  bool operator<(StringRef Other) const { return Name < Other; }
+};
+
+static constexpr ImpliedExtsEntry ImpliedExts[] = {
+    {{"v"}, {ImpliedExtsV}},
+    {{"zfh"}, {ImpliedExtsZfh}},
+};
+
+void RISCVISAInfo::updateImplication() {
+  bool HasE = Exts.count("e") == 1;
+  bool HasI = Exts.count("i") == 1;
+
+  // If not in e extension and i extension does not exist, i extension is
+  // implied
+  if (!HasE && !HasI) {
+    auto Version = findDefaultVersion("i");
+    addExtension("i", Version->Major, Version->Minor);
+  }
+
+  assert(llvm::is_sorted(ImpliedExts) && "Table not sorted by Name");
+  for (auto &Ext : Exts) {
+    auto I = llvm::lower_bound(ImpliedExts, Ext.first);
+    if (I != std::end(ImpliedExts) && I->Name == Ext.first) {
+      for (auto &ImpliedExt : I->Exts) {
+        auto Version = findDefaultVersion(ImpliedExt);
+        addExtension(ImpliedExt, Version->Major, Version->Minor);
+      }
+    }
+  }
 }
 
 void RISCVISAInfo::updateFLen() {

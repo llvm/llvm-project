@@ -60,14 +60,17 @@ public:
     CortexA77,
     CortexA78,
     CortexA78C,
+    CortexA710,
     CortexR82,
     CortexX1,
+    CortexX2,
     ExynosM3,
     Falkor,
     Kryo,
     NeoverseE1,
     NeoverseN1,
     NeoverseN2,
+    Neoverse512TVB,
     NeoverseV1,
     Saphira,
     ThunderX2T99,
@@ -83,6 +86,7 @@ protected:
   /// ARMProcFamily - ARM processor family: Cortex-A53, Cortex-A57, and others.
   ARMProcFamilyEnum ARMProcFamily = Others;
 
+  bool HasV8_0aOps = false;
   bool HasV8_1aOps = false;
   bool HasV8_2aOps = false;
   bool HasV8_3aOps = false;
@@ -93,10 +97,11 @@ protected:
   bool HasV9_0aOps = false;
   bool HasV9_1aOps = false;
   bool HasV9_2aOps = false;
-
   bool HasV8_0rOps = false;
-  bool HasCONTEXTIDREL2 = false;
 
+  bool HasCONTEXTIDREL2 = false;
+  bool HasEL2VMSA = false;
+  bool HasEL3 = false;
   bool HasFPARMv8 = false;
   bool HasNEON = false;
   bool HasCrypto = false;
@@ -110,6 +115,8 @@ protected:
   bool HasFullFP16 = false;
   bool HasFP16FML = false;
   bool HasSPE = false;
+
+  bool FixCortexA53_835769 = false;
 
   // ARMv8.1 extensions
   bool HasVH = false;
@@ -349,6 +356,7 @@ public:
     return ARMProcFamily;
   }
 
+  bool hasV8_0aOps() const { return HasV8_0aOps; }
   bool hasV8_1aOps() const { return HasV8_1aOps; }
   bool hasV8_2aOps() const { return HasV8_2aOps; }
   bool hasV8_3aOps() const { return HasV8_3aOps; }
@@ -562,6 +570,10 @@ public:
   bool hasTLB_RMI() const { return HasTLB_RMI; }
   bool hasFlagM() const { return HasFlagM; }
   bool hasRCPC_IMMO() const { return HasRCPC_IMMO; }
+  bool hasEL2VMSA() const { return HasEL2VMSA; }
+  bool hasEL3() const { return HasEL3; }
+
+  bool fixCortexA53_835769() const { return FixCortexA53_835769; }
 
   bool addrSinkUsingGEPs() const override {
     // Keeping GEPs inbounds is important for exploiting AArch64
@@ -624,8 +636,7 @@ public:
     // extended frames should be flagged as present.
     const Triple &TT = getTargetTriple();
 
-    unsigned Major, Minor, Micro;
-    TT.getOSVersion(Major, Minor, Micro);
+    unsigned Major = TT.getOSVersion().getMajor();
     switch(TT.getOS()) {
     default:
       return false;

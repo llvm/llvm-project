@@ -121,14 +121,14 @@ for.body4:
 ; CHECK-NOUNROLL: br
 
 ; CHECK-UNROLL: for.body4.epil:
+; CHECK-UNROLL: for.body4.epil.1:
+; CHECK-UNROLL: for.body4.epil.2:
 ; CHECK-UNROLL: [[IV0:%[a-z.0-9]+]] = phi i32 [ 0, [[PRE:%[a-z0-9.]+]] ], [ [[IV4:%[a-z.0-9]+]], %for.body4 ]
 ; CHECK-UNROLL: [[IV1:%[a-z.0-9]+]] = add nuw nsw i32 [[IV0]], 1
 ; CHECK-UNROLL: [[IV2:%[a-z.0-9]+]] = add nuw nsw i32 [[IV1]], 1
 ; CHECK-UNROLL: [[IV3:%[a-z.0-9]+]] = add nuw nsw i32 [[IV2]], 1
 ; CHECK-UNROLL: [[IV4]] = add nuw i32 [[IV3]], 1
 ; CHECK-UNROLL: br
-; CHECK-UNROLL: for.body4.epil.1:
-; CHECK-UNROLL: for.body4.epil.2:
 
   %w.024 = phi i32 [ 0, %for.body4.lr.ph ], [ %inc, %for.body4 ]
   %add = add i32 %w.024, %mul

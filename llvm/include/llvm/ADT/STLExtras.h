@@ -144,6 +144,61 @@ template <typename ReturnType, typename... Args>
 struct function_traits<ReturnType (&)(Args...), false>
     : public function_traits<ReturnType (*)(Args...)> {};
 
+/// traits class for checking whether type T is one of any of the given
+/// types in the variadic list.
+template <typename T, typename... Ts>
+using is_one_of = disjunction<std::is_same<T, Ts>...>;
+
+/// traits class for checking whether type T is a base class for all
+///  the given types in the variadic list.
+template <typename T, typename... Ts>
+using are_base_of = conjunction<std::is_base_of<T, Ts>...>;
+
+namespace detail {
+template <typename T, typename... Us> struct TypesAreDistinct;
+template <typename T, typename... Us>
+struct TypesAreDistinct
+    : std::integral_constant<bool, !is_one_of<T, Us...>::value &&
+                                       TypesAreDistinct<Us...>::value> {};
+template <typename T> struct TypesAreDistinct<T> : std::true_type {};
+} // namespace detail
+
+/// Determine if all types in Ts are distinct.
+///
+/// Useful to statically assert when Ts is intended to describe a non-multi set
+/// of types.
+///
+/// Expensive (currently quadratic in sizeof(Ts...)), and so should only be
+/// asserted once per instantiation of a type which requires it.
+template <typename... Ts> struct TypesAreDistinct;
+template <> struct TypesAreDistinct<> : std::true_type {};
+template <typename... Ts>
+struct TypesAreDistinct
+    : std::integral_constant<bool, detail::TypesAreDistinct<Ts...>::value> {};
+
+/// Find the first index where a type appears in a list of types.
+///
+/// FirstIndexOfType<T, Us...>::value is the first index of T in Us.
+///
+/// Typically only meaningful when it is otherwise statically known that the
+/// type pack has no duplicate types. This should be guaranteed explicitly with
+/// static_assert(TypesAreDistinct<Us...>::value).
+///
+/// It is a compile-time error to instantiate when T is not present in Us, i.e.
+/// if is_one_of<T, Us...>::value is false.
+template <typename T, typename... Us> struct FirstIndexOfType;
+template <typename T, typename U, typename... Us>
+struct FirstIndexOfType<T, U, Us...>
+    : std::integral_constant<size_t, 1 + FirstIndexOfType<T, Us...>::value> {};
+template <typename T, typename... Us>
+struct FirstIndexOfType<T, T, Us...> : std::integral_constant<size_t, 0> {};
+
+/// Find the type at a given index in a list of types.
+///
+/// TypeAtIndex<I, Ts...> is the type at index I in Ts.
+template <size_t I, typename... Ts>
+using TypeAtIndex = std::tuple_element_t<I, std::tuple<Ts...>>;
+
 //===----------------------------------------------------------------------===//
 //     Extra additions to <functional>
 //===----------------------------------------------------------------------===//
@@ -307,6 +362,32 @@ auto map_range(ContainerTy &&C, FuncTy F) {
   return make_range(map_iterator(C.begin(), F), map_iterator(C.end(), F));
 }
 
+/// A base type of mapped iterator, that is useful for building derived
+/// iterators that do not need/want to store the map function (as in
+/// mapped_iterator). These iterators must simply provide a `mapElement` method
+/// that defines how to map a value of the iterator to the provided reference
+/// type.
+template <typename DerivedT, typename ItTy, typename ReferenceTy>
+class mapped_iterator_base
+    : public iterator_adaptor_base<
+          DerivedT, ItTy,
+          typename std::iterator_traits<ItTy>::iterator_category,
+          std::remove_reference_t<ReferenceTy>,
+          typename std::iterator_traits<ItTy>::difference_type,
+          std::remove_reference_t<ReferenceTy> *, ReferenceTy> {
+public:
+  using BaseT = mapped_iterator_base;
+
+  mapped_iterator_base(ItTy U)
+      : mapped_iterator_base::iterator_adaptor_base(std::move(U)) {}
+
+  ItTy getCurrent() { return this->I; }
+
+  ReferenceTy operator*() const {
+    return static_cast<const DerivedT &>(*this).mapElement(*this->I);
+  }
+};
+
 /// Helper to determine if type T has a member called rbegin().
 template <typename Ty> class has_rbegin_impl {
   using yes = char[1];
@@ -375,12 +456,7 @@ class filter_iterator_base
           typename std::common_type<
               IterTag, typename std::iterator_traits<
                            WrappedIteratorT>::iterator_category>::type> {
-  using BaseT = iterator_adaptor_base<
-      filter_iterator_base<WrappedIteratorT, PredicateT, IterTag>,
-      WrappedIteratorT,
-      typename std::common_type<
-          IterTag, typename std::iterator_traits<
-                       WrappedIteratorT>::iterator_category>::type>;
+  using BaseT = typename filter_iterator_base::iterator_adaptor_base;
 
 protected:
   WrappedIteratorT End;
@@ -415,12 +491,10 @@ template <typename WrappedIteratorT, typename PredicateT,
           typename IterTag = std::forward_iterator_tag>
 class filter_iterator_impl
     : public filter_iterator_base<WrappedIteratorT, PredicateT, IterTag> {
-  using BaseT = filter_iterator_base<WrappedIteratorT, PredicateT, IterTag>;
-
 public:
   filter_iterator_impl(WrappedIteratorT Begin, WrappedIteratorT End,
                        PredicateT Pred)
-      : BaseT(Begin, End, Pred) {}
+      : filter_iterator_impl::filter_iterator_base(Begin, End, Pred) {}
 };
 
 /// Specialization of filter_iterator_base for bidirectional iteration.
@@ -429,8 +503,8 @@ class filter_iterator_impl<WrappedIteratorT, PredicateT,
                            std::bidirectional_iterator_tag>
     : public filter_iterator_base<WrappedIteratorT, PredicateT,
                                   std::bidirectional_iterator_tag> {
-  using BaseT = filter_iterator_base<WrappedIteratorT, PredicateT,
-                                     std::bidirectional_iterator_tag>;
+  using BaseT = typename filter_iterator_impl::filter_iterator_base;
+
   void findPrevValid() {
     while (!this->Pred(*this->I))
       BaseT::operator--();
@@ -518,9 +592,7 @@ template <typename WrappedIteratorT>
 class early_inc_iterator_impl
     : public iterator_adaptor_base<early_inc_iterator_impl<WrappedIteratorT>,
                                    WrappedIteratorT, std::input_iterator_tag> {
-  using BaseT =
-      iterator_adaptor_base<early_inc_iterator_impl<WrappedIteratorT>,
-                            WrappedIteratorT, std::input_iterator_tag>;
+  using BaseT = typename early_inc_iterator_impl::iterator_adaptor_base;
 
   using PointerT = typename std::iterator_traits<WrappedIteratorT>::pointer;
 
@@ -645,9 +717,7 @@ protected:
 public:
   zip_common(Iters &&... ts) : iterators(std::forward<Iters>(ts)...) {}
 
-  value_type operator*() { return deref(std::index_sequence_for<Iters...>{}); }
-
-  const value_type operator*() const {
+  value_type operator*() const {
     return deref(std::index_sequence_for<Iters...>{});
   }
 
@@ -817,8 +887,6 @@ public:
   zip_longest_iterator(std::pair<Iters &&, Iters &&>... ts)
       : iterators(std::forward<Iters>(ts.first)...),
         end_iterators(std::forward<Iters>(ts.second)...) {}
-
-  value_type operator*() { return deref(std::index_sequence_for<Iters...>{}); }
 
   value_type operator*() const {
     return deref(std::index_sequence_for<Iters...>{});
@@ -1003,10 +1071,19 @@ public:
 private:
   std::tuple<RangeTs...> Ranges;
 
-  template <size_t... Ns> iterator begin_impl(std::index_sequence<Ns...>) {
+  template <size_t... Ns>
+  iterator begin_impl(std::index_sequence<Ns...>) {
+    return iterator(std::get<Ns>(Ranges)...);
+  }
+  template <size_t... Ns>
+  iterator begin_impl(std::index_sequence<Ns...>) const {
     return iterator(std::get<Ns>(Ranges)...);
   }
   template <size_t... Ns> iterator end_impl(std::index_sequence<Ns...>) {
+    return iterator(make_range(std::end(std::get<Ns>(Ranges)),
+                               std::end(std::get<Ns>(Ranges)))...);
+  }
+  template <size_t... Ns> iterator end_impl(std::index_sequence<Ns...>) const {
     return iterator(make_range(std::end(std::get<Ns>(Ranges)),
                                std::end(std::get<Ns>(Ranges)))...);
   }
@@ -1015,8 +1092,18 @@ public:
   concat_range(RangeTs &&... Ranges)
       : Ranges(std::forward<RangeTs>(Ranges)...) {}
 
-  iterator begin() { return begin_impl(std::index_sequence_for<RangeTs...>{}); }
-  iterator end() { return end_impl(std::index_sequence_for<RangeTs...>{}); }
+  iterator begin() {
+    return begin_impl(std::index_sequence_for<RangeTs...>{});
+  }
+  iterator begin() const {
+    return begin_impl(std::index_sequence_for<RangeTs...>{});
+  }
+  iterator end() {
+    return end_impl(std::index_sequence_for<RangeTs...>{});
+  }
+  iterator end() const {
+    return end_impl(std::index_sequence_for<RangeTs...>{});
+  }
 };
 
 } // end namespace detail
@@ -1090,8 +1177,7 @@ template <typename DerivedT, typename BaseT, typename T,
           typename PointerT = T *, typename ReferenceT = T &>
 class indexed_accessor_range_base {
 public:
-  using RangeBaseT =
-      indexed_accessor_range_base<DerivedT, BaseT, T, PointerT, ReferenceT>;
+  using RangeBaseT = indexed_accessor_range_base;
 
   /// An iterator element of this range.
   class iterator : public indexed_accessor_iterator<iterator, BaseT, T,
@@ -1104,8 +1190,7 @@ public:
 
   private:
     iterator(BaseT owner, ptrdiff_t curIndex)
-        : indexed_accessor_iterator<iterator, BaseT, T, PointerT, ReferenceT>(
-              owner, curIndex) {}
+        : iterator::indexed_accessor_iterator(owner, curIndex) {}
 
     /// Allow access to the constructor.
     friend indexed_accessor_range_base<DerivedT, BaseT, T, PointerT,
@@ -1251,20 +1336,39 @@ public:
   }
 };
 
+namespace detail {
+/// Return a reference to the first or second member of a reference. Otherwise,
+/// return a copy of the member of a temporary.
+///
+/// When passing a range whose iterators return values instead of references,
+/// the reference must be dropped from `decltype((elt.first))`, which will
+/// always be a reference, to avoid returning a reference to a temporary.
+template <typename EltTy, typename FirstTy> class first_or_second_type {
+public:
+  using type =
+      typename std::conditional_t<std::is_reference<EltTy>::value, FirstTy,
+                                  std::remove_reference_t<FirstTy>>;
+};
+} // end namespace detail
+
 /// Given a container of pairs, return a range over the first elements.
 template <typename ContainerTy> auto make_first_range(ContainerTy &&c) {
-  return llvm::map_range(
-      std::forward<ContainerTy>(c),
-      [](decltype((*std::begin(c))) elt) -> decltype((elt.first)) {
-        return elt.first;
-      });
+  using EltTy = decltype((*std::begin(c)));
+  return llvm::map_range(std::forward<ContainerTy>(c),
+                         [](EltTy elt) -> typename detail::first_or_second_type<
+                                           EltTy, decltype((elt.first))>::type {
+                           return elt.first;
+                         });
 }
 
 /// Given a container of pairs, return a range over the second elements.
 template <typename ContainerTy> auto make_second_range(ContainerTy &&c) {
+  using EltTy = decltype((*std::begin(c)));
   return llvm::map_range(
       std::forward<ContainerTy>(c),
-      [](decltype((*std::begin(c))) elt) -> decltype((elt.second)) {
+      [](EltTy elt) ->
+      typename detail::first_or_second_type<EltTy,
+                                            decltype((elt.second))>::type {
         return elt.second;
       });
 }
@@ -1894,8 +1998,7 @@ template <typename R> struct result_pair {
   }
 
   std::size_t index() const { return Index; }
-  const value_reference value() const { return *Iter; }
-  value_reference value() { return *Iter; }
+  value_reference value() const { return *Iter; }
 
 private:
   std::size_t Index = std::numeric_limits<std::size_t>::max();
@@ -1904,11 +2007,8 @@ private:
 
 template <typename R>
 class enumerator_iter
-    : public iterator_facade_base<
-          enumerator_iter<R>, std::forward_iterator_tag, result_pair<R>,
-          typename std::iterator_traits<IterOfRange<R>>::difference_type,
-          typename std::iterator_traits<IterOfRange<R>>::pointer,
-          typename std::iterator_traits<IterOfRange<R>>::reference> {
+    : public iterator_facade_base<enumerator_iter<R>, std::forward_iterator_tag,
+                                  const result_pair<R>> {
   using result_type = result_pair<R>;
 
 public:
@@ -1918,7 +2018,6 @@ public:
   enumerator_iter(std::size_t Index, IterOfRange<R> Iter)
       : Result(Index, Iter) {}
 
-  result_type &operator*() { return Result; }
   const result_type &operator*() const { return Result; }
 
   enumerator_iter &operator++() {
@@ -1952,8 +2051,14 @@ public:
   enumerator_iter<R> begin() {
     return enumerator_iter<R>(0, std::begin(TheRange));
   }
+  enumerator_iter<R> begin() const {
+    return enumerator_iter<R>(0, std::begin(TheRange));
+  }
 
   enumerator_iter<R> end() {
+    return enumerator_iter<R>(std::end(TheRange));
+  }
+  enumerator_iter<R> end() const {
     return enumerator_iter<R>(std::end(TheRange));
   }
 

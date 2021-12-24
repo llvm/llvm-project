@@ -492,6 +492,32 @@ body:             |
 ...
 
 ---
+name:            shl_s32_64_gpr
+legalized:       true
+regBankSelected: true
+
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+
+body:             |
+  bb.0:
+    liveins: $w0, $x1
+
+    ; CHECK-LABEL: name: shl_s32_64_gpr
+    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr64all = COPY $x1
+    ; CHECK: [[COPY2:%[0-9]+]]:gpr32 = COPY [[COPY1]].sub_32
+    ; CHECK: [[LSLVWr:%[0-9]+]]:gpr32 = LSLVWr [[COPY]], [[COPY2]]
+    ; CHECK: $w0 = COPY [[LSLVWr]]
+    %0(s32) = COPY $w0
+    %1(s64) = COPY $x1
+    %2(s32) = G_SHL %0, %1
+    $w0 = COPY %2(s32)
+...
+
+---
 # Same as add_s64_gpr, for G_SHL operations.
 name:            shl_s64_gpr
 legalized:       true

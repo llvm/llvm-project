@@ -43,6 +43,7 @@ class MapVector {
       "The mapped_type of the specified Map must be an integral type");
 
 public:
+  using key_type = KeyT;
   using value_type = typename VectorType::value_type;
   using size_type = typename VectorType::size_type;
 

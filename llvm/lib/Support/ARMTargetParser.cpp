@@ -307,7 +307,7 @@ StringRef ARM::getCanonicalArchName(StringRef Arch) {
   else if (A.startswith("aarch64")) {
     offset = 7;
     // AArch64 uses "_be", not "eb" suffix.
-    if (A.find("eb") != StringRef::npos)
+    if (A.contains("eb"))
       return Error;
     if (A.substr(offset, 3) == "_be")
       offset += 3;
@@ -333,7 +333,7 @@ StringRef ARM::getCanonicalArchName(StringRef Arch) {
     if (A.size() >= 2 && (A[0] != 'v' || !std::isdigit(A[1])))
       return Error;
     // Can't have an extra 'eb'.
-    if (A.find("eb") != StringRef::npos)
+    if (A.contains("eb"))
       return Error;
   }
 

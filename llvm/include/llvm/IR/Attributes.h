@@ -37,7 +37,6 @@ class AttrBuilder;
 class AttributeImpl;
 class AttributeListImpl;
 class AttributeSetNode;
-template<typename T> struct DenseMapInfo;
 class FoldingSetNodeID;
 class Function;
 class LLVMContext;
@@ -217,9 +216,12 @@ public:
   /// if not known).
   std::pair<unsigned, Optional<unsigned>> getAllocSizeArgs() const;
 
-  /// Returns the argument numbers for the vscale_range attribute (or pair(0, 0)
-  /// if not known).
-  std::pair<unsigned, unsigned> getVScaleRangeArgs() const;
+  /// Returns the minimum value for the vscale_range attribute.
+  unsigned getVScaleRangeMin() const;
+
+  /// Returns the maximum value for the vscale_range attribute or None when
+  /// unknown.
+  Optional<unsigned> getVScaleRangeMax() const;
 
   /// The Attribute is converted to a string of equivalent mnemonic. This
   /// is, presumably, for writing out the mnemonics for the assembly writer.
@@ -266,7 +268,7 @@ inline Attribute unwrap(LLVMAttributeRef Attr) {
 /// and removing string or integer attributes involves a FoldingSet lookup.
 class AttributeSet {
   friend AttributeListImpl;
-  template <typename Ty> friend struct DenseMapInfo;
+  template <typename Ty, typename Enable> friend struct DenseMapInfo;
 
   // TODO: Extract AvailableAttrs from AttributeSetNode and store them here.
   // This will allow an efficient implementation of addAttribute and
@@ -349,7 +351,8 @@ public:
   Type *getInAllocaType() const;
   Type *getElementType() const;
   std::pair<unsigned, Optional<unsigned>> getAllocSizeArgs() const;
-  std::pair<unsigned, unsigned> getVScaleRangeArgs() const;
+  unsigned getVScaleRangeMin() const;
+  Optional<unsigned> getVScaleRangeMax() const;
   std::string getAsString(bool InAttrGrp = false) const;
 
   /// Return true if this attribute set belongs to the LLVMContext.
@@ -367,7 +370,7 @@ public:
 //===----------------------------------------------------------------------===//
 /// \class
 /// Provide DenseMapInfo for AttributeSet.
-template <> struct DenseMapInfo<AttributeSet> {
+template <> struct DenseMapInfo<AttributeSet, void> {
   static AttributeSet getEmptyKey() {
     auto Val = static_cast<uintptr_t>(-1);
     Val <<= PointerLikeTypeTraits<void *>::NumLowBitsAvailable;
@@ -409,7 +412,7 @@ private:
   friend class AttributeListImpl;
   friend class AttributeSet;
   friend class AttributeSetNode;
-  template <typename Ty> friend struct DenseMapInfo;
+  template <typename Ty, typename Enable> friend struct DenseMapInfo;
 
   /// The attributes that we are managing. This can be null to represent
   /// the empty attributes list.
@@ -452,6 +455,8 @@ public:
                            ArrayRef<uint64_t> Values);
   static AttributeList get(LLVMContext &C, unsigned Index,
                            ArrayRef<StringRef> Kind);
+  static AttributeList get(LLVMContext &C, unsigned Index,
+                           AttributeSet Attrs);
   static AttributeList get(LLVMContext &C, unsigned Index,
                            const AttrBuilder &B);
 
@@ -899,7 +904,7 @@ public:
 //===----------------------------------------------------------------------===//
 /// \class
 /// Provide DenseMapInfo for AttributeList.
-template <> struct DenseMapInfo<AttributeList> {
+template <> struct DenseMapInfo<AttributeList, void> {
   static AttributeList getEmptyKey() {
     auto Val = static_cast<uintptr_t>(-1);
     Val <<= PointerLikeTypeTraits<void*>::NumLowBitsAvailable;
@@ -939,6 +944,8 @@ class AttrBuilder {
 
 public:
   AttrBuilder() = default;
+  AttrBuilder(const AttrBuilder &) = delete;
+  AttrBuilder(AttrBuilder &&) = default;
 
   AttrBuilder(const Attribute &A) {
     addAttribute(A);
@@ -1054,9 +1061,11 @@ public:
   /// doesn't exist, pair(0, 0) is returned.
   std::pair<unsigned, Optional<unsigned>> getAllocSizeArgs() const;
 
-  /// Retrieve the vscale_range args, if the vscale_range attribute exists.  If
-  /// it doesn't exist, pair(0, 0) is returned.
-  std::pair<unsigned, unsigned> getVScaleRangeArgs() const;
+  /// Retrieve the minimum value of 'vscale_range'.
+  unsigned getVScaleRangeMin() const;
+
+  /// Retrieve the maximum value of 'vscale_range' or None when unknown.
+  Optional<unsigned> getVScaleRangeMax() const;
 
   /// Add integer attribute with raw value (packed/encoded if necessary).
   AttrBuilder &addRawIntAttr(Attribute::AttrKind Kind, uint64_t Value);
@@ -1098,7 +1107,8 @@ public:
                                 const Optional<unsigned> &NumElemsArg);
 
   /// This turns two ints into the form used internally in Attribute.
-  AttrBuilder &addVScaleRangeAttr(unsigned MinValue, unsigned MaxValue);
+  AttrBuilder &addVScaleRangeAttr(unsigned MinValue,
+                                  Optional<unsigned> MaxValue);
 
   /// Add a type attribute with the given type.
   AttrBuilder &addTypeAttr(Attribute::AttrKind Kind, Type *Ty);

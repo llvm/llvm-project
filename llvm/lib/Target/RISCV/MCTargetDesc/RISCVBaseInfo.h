@@ -82,6 +82,11 @@ enum {
   // explicit operand. Used by RVV Pseudos.
   HasVecPolicyOpShift = HasVLOpShift + 1,
   HasVecPolicyOpMask = 1 << HasVecPolicyOpShift,
+
+  // Is this instruction a vector widening reduction instruction. Used by RVV
+  // Pseudos.
+  IsRVVWideningReductionShift = HasVecPolicyOpShift + 1,
+  IsRVVWideningReductionMask = 1 << IsRVVWideningReductionShift,
 };
 
 // Match with the definitions in RISCVInstrFormatsV.td
@@ -145,6 +150,10 @@ static inline bool hasVLOp(uint64_t TSFlags) {
 /// \returns true if there is a vector policy operand for this instruction.
 static inline bool hasVecPolicyOp(uint64_t TSFlags) {
   return TSFlags & HasVecPolicyOpMask;
+}
+/// \returns true if it is a vector widening reduction instruction.
+static inline bool isRVVWideningReduction(uint64_t TSFlags) {
+  return TSFlags & IsRVVWideningReductionMask;
 }
 
 // RISC-V Specific Machine Operand Flags
@@ -289,6 +298,16 @@ struct SysReg {
 #define GET_SysRegsList_DECL
 #include "RISCVGenSearchableTables.inc"
 } // end namespace RISCVSysReg
+
+namespace RISCVInsnOpcode {
+struct RISCVOpcode {
+  const char *Name;
+  unsigned Value;
+};
+
+#define GET_RISCVOpcodesList_DECL
+#include "RISCVGenSearchableTables.inc"
+} // end namespace RISCVInsnOpcode
 
 namespace RISCVABI {
 

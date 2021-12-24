@@ -43,7 +43,9 @@ class TargetTransformInfo;
 /// This class provides both the logic to recursively visit instructions and
 /// combine them.
 class LLVM_LIBRARY_VISIBILITY InstCombiner {
-  /// Only used to call target specific inst combining.
+  /// Only used to call target specific intrinsic combining.
+  /// It must **NOT** be used for any other purpose, as InstCombine is a
+  /// target-independent canonicalization transform.
   TargetTransformInfo &TTI;
 
 public:
@@ -476,6 +478,11 @@ public:
   unsigned ComputeNumSignBits(const Value *Op, unsigned Depth = 0,
                               const Instruction *CxtI = nullptr) const {
     return llvm::ComputeNumSignBits(Op, DL, Depth, &AC, CxtI, &DT);
+  }
+
+  unsigned ComputeMinSignedBits(const Value *Op, unsigned Depth = 0,
+                                const Instruction *CxtI = nullptr) const {
+    return llvm::ComputeMinSignedBits(Op, DL, Depth, &AC, CxtI, &DT);
   }
 
   OverflowResult computeOverflowForUnsignedMul(const Value *LHS,

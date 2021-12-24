@@ -1,6 +1,10 @@
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-pseudoprobe.perfscript --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin --output=%t --skip-symbolization --profile-summary-cold-count=0 --use-offset=0
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-UNWINDER
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-pseudoprobe.perfscript --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin --output=%t --profile-summary-cold-count=0
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-pseudoprobe.perfscript --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin --output=%t --skip-symbolization --profile-summary-cold-count=0 --use-offset=1
+; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-UNWINDER-OFFSET
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-pseudoprobe.perfscript --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin --output=%t --skip-symbolization --profile-summary-cold-count=0 --use-offset=1 --use-first-loadable-segment-as-base=1
+; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-UNWINDER-OFFSET2
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-pseudoprobe.perfscript --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin --output=%t --profile-summary-cold-count=0 --csspgo-preinliner=0
 ; RUN: FileCheck %s --input-file %t
 
 ; CHECK:     [main:2 @ foo]:74:0
@@ -26,6 +30,23 @@
 ; CHECK-UNWINDER-NEXT: 2
 ; CHECK-UNWINDER-NEXT: 20182b->201800:1
 ; CHECK-UNWINDER-NEXT: 201858->20180e:15
+
+
+; CHECK-UNWINDER-OFFSET:      3
+; CHECK-UNWINDER-OFFSET-NEXT: 800-858:1
+; CHECK-UNWINDER-OFFSET-NEXT: 80e-82b:1
+; CHECK-UNWINDER-OFFSET-NEXT: 80e-858:13
+; CHECK-UNWINDER-OFFSET-NEXT: 2
+; CHECK-UNWINDER-OFFSET-NEXT: 82b->800:1
+; CHECK-UNWINDER-OFFSET-NEXT: 858->80e:15
+
+; CHECK-UNWINDER-OFFSET2:      3
+; CHECK-UNWINDER-OFFSET2-NEXT: 1800-1858:1
+; CHECK-UNWINDER-OFFSET2-NEXT: 180e-182b:1
+; CHECK-UNWINDER-OFFSET2-NEXT: 180e-1858:13
+; CHECK-UNWINDER-OFFSET2-NEXT: 2
+; CHECK-UNWINDER-OFFSET2-NEXT: 182b->1800:1
+; CHECK-UNWINDER-OFFSET2-NEXT: 1858->180e:15
 
 ; clang -O3 -fexperimental-new-pass-manager -fuse-ld=lld -fpseudo-probe-for-profiling
 ; -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -Xclang -mdisable-tail-calls

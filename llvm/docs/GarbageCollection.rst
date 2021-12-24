@@ -9,20 +9,20 @@ Abstract
 ========
 
 This document covers how to integrate LLVM into a compiler for a language which
-supports garbage collection.  **Note that LLVM itself does not provide a 
-garbage collector.**  You must provide your own.  
+supports garbage collection.  **Note that LLVM itself does not provide a
+garbage collector.**  You must provide your own.
 
 Quick Start
 ============
 
-First, you should pick a collector strategy.  LLVM includes a number of built 
+First, you should pick a collector strategy.  LLVM includes a number of built
 in ones, but you can also implement a loadable plugin with a custom definition.
-Note that the collector strategy is a description of how LLVM should generate 
+Note that the collector strategy is a description of how LLVM should generate
 code such that it interacts with your collector and runtime, not a description
 of the collector itself.
 
-Next, mark your generated functions as using your chosen collector strategy.  
-From c++, you can call: 
+Next, mark your generated functions as using your chosen collector strategy.
+From c++, you can call:
 
 .. code-block:: c++
 
@@ -38,37 +38,37 @@ This will produce IR like the following fragment:
 
 When generating LLVM IR for your functions, you will need to:
 
-* Use ``@llvm.gcread`` and/or ``@llvm.gcwrite`` in place of standard load and 
-  store instructions.  These intrinsics are used to represent load and store 
-  barriers.  If you collector does not require such barriers, you can skip 
-  this step.  
+* Use ``@llvm.gcread`` and/or ``@llvm.gcwrite`` in place of standard load and
+  store instructions.  These intrinsics are used to represent load and store
+  barriers.  If you collector does not require such barriers, you can skip
+  this step.
 
-* Use the memory allocation routines provided by your garbage collector's 
+* Use the memory allocation routines provided by your garbage collector's
   runtime library.
 
-* If your collector requires them, generate type maps according to your 
-  runtime's binary interface.  LLVM is not involved in the process.  In 
-  particular, the LLVM type system is not suitable for conveying such 
+* If your collector requires them, generate type maps according to your
+  runtime's binary interface.  LLVM is not involved in the process.  In
+  particular, the LLVM type system is not suitable for conveying such
   information though the compiler.
 
-* Insert any coordination code required for interacting with your collector.  
+* Insert any coordination code required for interacting with your collector.
   Many collectors require running application code to periodically check a
-  flag and conditionally call a runtime function.  This is often referred to 
-  as a safepoint poll.  
+  flag and conditionally call a runtime function.  This is often referred to
+  as a safepoint poll.
 
-You will need to identify roots (i.e. references to heap objects your collector 
-needs to know about) in your generated IR, so that LLVM can encode them into 
-your final stack maps.  Depending on the collector strategy chosen, this is 
-accomplished by using either the ``@llvm.gcroot`` intrinsics or an 
-``gc.statepoint`` relocation sequence. 
+You will need to identify roots (i.e. references to heap objects your collector
+needs to know about) in your generated IR, so that LLVM can encode them into
+your final stack maps.  Depending on the collector strategy chosen, this is
+accomplished by using either the ``@llvm.gcroot`` intrinsics or an
+``gc.statepoint`` relocation sequence.
 
 Don't forget to create a root for each intermediate value that is generated when
-evaluating an expression.  In ``h(f(), g())``, the result of ``f()`` could 
+evaluating an expression.  In ``h(f(), g())``, the result of ``f()`` could
 easily be collected if evaluating ``g()`` triggers a collection.
 
-Finally, you need to link your runtime library with the generated program 
-executable (for a static compiler) or ensure the appropriate symbols are 
-available for the runtime linker (for a JIT compiler).  
+Finally, you need to link your runtime library with the generated program
+executable (for a static compiler) or ensure the appropriate symbols are
+available for the runtime linker (for a JIT compiler).
 
 
 Introduction
@@ -136,15 +136,15 @@ instance, the intrinsics permit:
 
 * reference counting
 
-We hope that the support built into the LLVM IR is sufficient to support a 
-broad class of garbage collected languages including Scheme, ML, Java, C#, 
+We hope that the support built into the LLVM IR is sufficient to support a
+broad class of garbage collected languages including Scheme, ML, Java, C#,
 Perl, Python, Lua, Ruby, other scripting languages, and more.
 
 Note that LLVM **does not itself provide a garbage collector** --- this should
 be part of your language's runtime library.  LLVM provides a framework for
 describing the garbage collectors requirements to the compiler.  In particular,
-LLVM provides support for generating stack maps at call sites, polling for a 
-safepoint, and emitting load and store barriers.  You can also extend LLVM - 
+LLVM provides support for generating stack maps at call sites, polling for a
+safepoint, and emitting load and store barriers.  You can also extend LLVM -
 possibly through a loadable :ref:`code generation plugins <plugin>` - to
 generate code and data structures which conforms to the *binary interface*
 specified by the *runtime library*.  This is similar to the relationship between
@@ -183,12 +183,12 @@ There are additional areas that LLVM does not directly address:
 In general, LLVM's support for GC does not include features which can be
 adequately addressed with other features of the IR and does not specify a
 particular binary interface.  On the plus side, this means that you should be
-able to integrate LLVM with an existing runtime.  On the other hand, it can 
-have the effect of leaving a lot of work for the developer of a novel 
-language.  We try to mitigate this by providing built in collector strategy 
-descriptions that can work with many common collector designs and easy 
-extension points.  If you don't already have a specific binary interface 
-you need to support, we recommend trying to use one of these built in collector 
+able to integrate LLVM with an existing runtime.  On the other hand, it can
+have the effect of leaving a lot of work for the developer of a novel
+language.  We try to mitigate this by providing built in collector strategy
+descriptions that can work with many common collector designs and easy
+extension points.  If you don't already have a specific binary interface
+you need to support, we recommend trying to use one of these built in collector
 strategies.
 
 .. _gc_intrinsics:
@@ -198,8 +198,8 @@ LLVM IR Features
 
 This section describes the garbage collection facilities provided by the
 :doc:`LLVM intermediate representation <LangRef>`.  The exact behavior of these
-IR features is specified by the selected :ref:`GC strategy description 
-<plugin>`. 
+IR features is specified by the selected :ref:`GC strategy description
+<plugin>`.
 
 Specifying GC code generation: ``gc "..."``
 -------------------------------------------
@@ -212,9 +212,9 @@ The ``gc`` function attribute is used to specify the desired GC strategy to the
 compiler.  Its programmatic equivalent is the ``setGC`` method of ``Function``.
 
 Setting ``gc "name"`` on a function triggers a search for a matching subclass
-of GCStrategy.  Some collector strategies are built in.  You can add others 
+of GCStrategy.  Some collector strategies are built in.  You can add others
 using either the loadable plugin mechanism, or by patching your copy of LLVM.
-It is the selected GC strategy which defines the exact nature of the code 
+It is the selected GC strategy which defines the exact nature of the code
 generated to support GC.  If none is found, the compiler will raise an error.
 
 Specifying the GC style on a per-function basis allows LLVM to link together
@@ -226,17 +226,17 @@ Identifying GC roots on the stack
 ----------------------------------
 
 LLVM currently supports two different mechanisms for describing references in
-compiled code at safepoints.  ``llvm.gcroot`` is the older mechanism; 
-``gc.statepoint`` has been added more recently.  At the moment, you can choose 
-either implementation (on a per :ref:`GC strategy <plugin>` basis).  Longer 
-term, we will probably either migrate away from ``llvm.gcroot`` entirely, or 
-substantially merge their implementations. Note that most new development 
-work is focused on ``gc.statepoint``.  
+compiled code at safepoints.  ``llvm.gcroot`` is the older mechanism;
+``gc.statepoint`` has been added more recently.  At the moment, you can choose
+either implementation (on a per :ref:`GC strategy <plugin>` basis).  Longer
+term, we will probably either migrate away from ``llvm.gcroot`` entirely, or
+substantially merge their implementations. Note that most new development
+work is focused on ``gc.statepoint``.
 
 Using ``gc.statepoint``
 ^^^^^^^^^^^^^^^^^^^^^^^^
-:doc:`This page <Statepoints>` contains detailed documentation for 
-``gc.statepoint``. 
+:doc:`This page <Statepoints>` contains detailed documentation for
+``gc.statepoint``.
 
 Using ``llvm.gcwrite``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -247,8 +247,8 @@ Using ``llvm.gcwrite``
 
 The ``llvm.gcroot`` intrinsic is used to inform LLVM that a stack variable
 references an object on the heap and is to be tracked for garbage collection.
-The exact impact on generated code is specified by the Function's selected 
-:ref:`GC strategy <plugin>`.  All calls to ``llvm.gcroot`` **must** reside 
+The exact impact on generated code is specified by the Function's selected
+:ref:`GC strategy <plugin>`.  All calls to ``llvm.gcroot`` **must** reside
 inside the first basic block.
 
 The first argument **must** be a value referring to an alloca instruction or a
@@ -256,12 +256,12 @@ bitcast of an alloca.  The second contains a pointer to metadata that should be
 associated with the pointer, and **must** be a constant or global value
 address.  If your target collector uses tags, use a null pointer for metadata.
 
-A compiler which performs manual SSA construction **must** ensure that SSA 
+A compiler which performs manual SSA construction **must** ensure that SSA
 values representing GC references are stored in to the alloca passed to the
-respective ``gcroot`` before every call site and reloaded after every call.  
-A compiler which uses mem2reg to raise imperative code using ``alloca`` into 
-SSA form need only add a call to ``@llvm.gcroot`` for those variables which 
-are pointers into the GC heap.  
+respective ``gcroot`` before every call site and reloaded after every call.
+A compiler which uses mem2reg to raise imperative code using ``alloca`` into
+SSA form need only add a call to ``@llvm.gcroot`` for those variables which
+are pointers into the GC heap.
 
 It is also important to mark intermediate values with ``llvm.gcroot``.  For
 example, consider ``h(f(), g())``.  Beware leaking the result of ``f()`` in the
@@ -343,13 +343,13 @@ LLVM does not enforce this relationship between the object and derived pointer
 (although a particular :ref:`collector strategy <plugin>` might).  However, it
 would be an unusual collector that violated it.
 
-The use of these intrinsics is naturally optional if the target GC does not 
-require the corresponding barrier.  The GC strategy used with such a collector 
-should replace the intrinsic calls with the corresponding ``load`` or 
+The use of these intrinsics is naturally optional if the target GC does not
+require the corresponding barrier.  The GC strategy used with such a collector
+should replace the intrinsic calls with the corresponding ``load`` or
 ``store`` instruction if they are used.
 
-One known deficiency with the current design is that the barrier intrinsics do 
-not include the size or alignment of the underlying operation performed.  It is 
+One known deficiency with the current design is that the barrier intrinsics do
+not include the size or alignment of the underlying operation performed.  It is
 currently assumed that the operation is of pointer size and the alignment is
 assumed to be the target machine's default alignment.
 
@@ -391,7 +391,7 @@ greater performance impact since pointer reads are more frequent than writes.
 Built In GC Strategies
 ======================
 
-LLVM includes built in support for several varieties of garbage collectors.  
+LLVM includes built in support for several varieties of garbage collectors.
 
 The Shadow Stack GC
 ----------------------
@@ -484,15 +484,15 @@ data structure, but there are only 20 lines of meaningful code.)
 The 'Erlang' and 'Ocaml' GCs
 -----------------------------
 
-LLVM ships with two example collectors which leverage the ``gcroot`` 
-mechanisms.  To our knowledge, these are not actually used by any language 
-runtime, but they do provide a reasonable starting point for someone interested 
-in writing an ``gcroot`` compatible GC plugin.  In particular, these are the 
-only in tree examples of how to produce a custom binary stack map format using 
+LLVM ships with two example collectors which leverage the ``gcroot``
+mechanisms.  To our knowledge, these are not actually used by any language
+runtime, but they do provide a reasonable starting point for someone interested
+in writing an ``gcroot`` compatible GC plugin.  In particular, these are the
+only in tree examples of how to produce a custom binary stack map format using
 a ``gcroot`` strategy.
 
-As there names imply, the binary format produced is intended to model that 
-used by the Erlang and OCaml compilers respectively.  
+As there names imply, the binary format produced is intended to model that
+used by the Erlang and OCaml compilers respectively.
 
 .. _statepoint_example_gc:
 
@@ -503,19 +503,19 @@ The Statepoint Example GC
 
   F.setGC("statepoint-example");
 
-This GC provides an example of how one might use the infrastructure provided 
-by ``gc.statepoint``. This example GC is compatible with the 
-:ref:`PlaceSafepoints` and :ref:`RewriteStatepointsForGC` utility passes 
-which simplify ``gc.statepoint`` sequence insertion. If you need to build a 
+This GC provides an example of how one might use the infrastructure provided
+by ``gc.statepoint``. This example GC is compatible with the
+:ref:`PlaceSafepoints` and :ref:`RewriteStatepointsForGC` utility passes
+which simplify ``gc.statepoint`` sequence insertion. If you need to build a
 custom GC strategy around the ``gc.statepoints`` mechanisms, it is recommended
 that you use this one as a starting point.
 
-This GC strategy does not support read or write barriers.  As a result, these 
+This GC strategy does not support read or write barriers.  As a result, these
 intrinsics are lowered to normal loads and stores.
 
-The stack map format generated by this GC strategy can be found in the 
-:ref:`stackmap-section` using a format documented :ref:`here 
-<statepoint-stackmap-format>`. This format is intended to be the standard 
+The stack map format generated by this GC strategy can be found in the
+:ref:`stackmap-section` using a format documented :ref:`here
+<statepoint-stackmap-format>`. This format is intended to be the standard
 format supported by LLVM going forward.
 
 The CoreCLR GC
@@ -525,15 +525,15 @@ The CoreCLR GC
 
   F.setGC("coreclr");
 
-This GC leverages the ``gc.statepoint`` mechanism to support the 
+This GC leverages the ``gc.statepoint`` mechanism to support the
 `CoreCLR <https://github.com/dotnet/coreclr>`__ runtime.
 
-Support for this GC strategy is a work in progress. This strategy will 
-differ from 
-:ref:`statepoint-example GC<statepoint_example_gc>` strategy in 
+Support for this GC strategy is a work in progress. This strategy will
+differ from
+:ref:`statepoint-example GC<statepoint_example_gc>` strategy in
 certain aspects like:
 
-* Base-pointers of interior pointers are not explicitly 
+* Base-pointers of interior pointers are not explicitly
   tracked and reported.
 
 * A different format is used for encoding stack maps.
@@ -545,24 +545,24 @@ Custom GC Strategies
 ====================
 
 If none of the built in GC strategy descriptions met your needs above, you will
-need to define a custom GCStrategy and possibly, a custom LLVM pass to perform 
-lowering.  Your best example of where to start defining a custom GCStrategy 
+need to define a custom GCStrategy and possibly, a custom LLVM pass to perform
+lowering.  Your best example of where to start defining a custom GCStrategy
 would be to look at one of the built in strategies.
 
 You may be able to structure this additional code as a loadable plugin library.
-Loadable plugins are sufficient if all you need is to enable a different 
-combination of built in functionality, but if you need to provide a custom 
-lowering pass, you will need to build a patched version of LLVM.  If you think 
-you need a patched build, please ask for advice on llvm-dev.  There may be an 
-easy way we can extend the support to make it work for your use case without 
-requiring a custom build.  
+Loadable plugins are sufficient if all you need is to enable a different
+combination of built in functionality, but if you need to provide a custom
+lowering pass, you will need to build a patched version of LLVM.  If you think
+you need a patched build, please ask for advice on llvm-dev.  There may be an
+easy way we can extend the support to make it work for your use case without
+requiring a custom build.
 
 Collector Requirements
 ----------------------
 
 You should be able to leverage any existing collector library that includes the following elements:
 
-#. A memory allocator which exposes an allocation function your compiled 
+#. A memory allocator which exposes an allocation function your compiled
    code can call.
 
 #. A binary format for the stack map.  A stack map describes the location
@@ -571,14 +571,14 @@ You should be able to leverage any existing collector library that includes the 
    which conservatively scan the stack don't require such a structure.
 
 #. A stack crawler to discover functions on the call stack, and enumerate the
-   references listed in the stack map for each call site.  
+   references listed in the stack map for each call site.
 
-#. A mechanism for identifying references in global locations (e.g. global 
+#. A mechanism for identifying references in global locations (e.g. global
    variables).
 
 #. If you collector requires them, an LLVM IR implementation of your collectors
-   load and store barriers.  Note that since many collectors don't require 
-   barriers at all, LLVM defaults to lowering such barriers to normal loads 
+   load and store barriers.  Note that since many collectors don't require
+   barriers at all, LLVM defaults to lowering such barriers to normal loads
    and stores unless you arrange otherwise.
 
 
@@ -852,12 +852,12 @@ Custom lowering of intrinsics
 For GCs which use barriers or unusual treatment of stack roots, the
 implementor is responsibly for providing a custom pass to lower the
 intrinsics with the desired semantics.  If you have opted in to custom
-lowering of a particular intrinsic your pass **must** eliminate all 
+lowering of a particular intrinsic your pass **must** eliminate all
 instances of the corresponding intrinsic in functions which opt in to
-your GC.  The best example of such a pass is the ShadowStackGC and it's 
-ShadowStackGCLowering pass.  
+your GC.  The best example of such a pass is the ShadowStackGC and it's
+ShadowStackGCLowering pass.
 
-There is currently no way to register such a custom lowering pass 
+There is currently no way to register such a custom lowering pass
 without building a custom copy of LLVM.
 
 .. _safe-points:

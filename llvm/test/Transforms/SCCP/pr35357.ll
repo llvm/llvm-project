@@ -1,4 +1,4 @@
-; RUN: opt -S %s -ipsccp | FileCheck %s
+; RUN: opt -S %s -passes=ipsccp | FileCheck %s
 
 @a = internal global i32 2
 

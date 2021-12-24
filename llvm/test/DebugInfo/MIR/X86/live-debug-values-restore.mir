@@ -1,4 +1,5 @@
-# RUN: llc -run-pass livedebugvalues -march=x86-64 -o - %s | FileCheck %s
+# RUN: llc -run-pass livedebugvalues -march=x86-64 -o - %s \
+# RUN:  -experimental-debug-variable-locations=true | FileCheck %s
 
 # Generated from the following source with:
 # clang -g -mllvm -stop-before=livedebugvalues -S -O2 test.c -o test.mir
@@ -326,7 +327,7 @@ body:             |
     liveins: $rdi, $rbx, $r12, $r13, $r14, $r15, $rbp
   
     renamable $eax = MOV32rm killed renamable $rdi, 1, $noreg, 4, $noreg, debug-location !23 :: (load (s32) from %ir.add.ptr, !tbaa !24)
-    RETQ $eax, debug-location !28
+    RET64 $eax, debug-location !28
 
 ...
 ---
@@ -401,7 +402,7 @@ body:             |
 
     renamable $eax = MOV32rm killed renamable $rsi, 1, $noreg, 4, $noreg, debug-location !123 :: (load (s32) from %ir.add.ptr, !tbaa !24)
     $rdi = MOV64ri 0
-    RETQ $eax, debug-location !128
+    RET64 $eax, debug-location !128
 
 ...
 ---
@@ -507,7 +508,7 @@ body:             |
     liveins: $rdi, $rbx, $r12, $r13, $r14, $r15, $rbp
   
     renamable $eax = MOV32rm killed renamable $rdi, 1, $noreg, 4, $noreg, debug-location !223 :: (load (s32) from %ir.add.ptr, !tbaa !24)
-    RETQ $eax, debug-location !228
+    RET64 $eax, debug-location !228
 
 
 
@@ -628,7 +629,7 @@ body:             |
   
     renamable $rdi = MOV64rm $rsp, 1, $noreg, -8, $noreg :: (load (s64) from %stack.0)
     renamable $eax = MOV32rm killed renamable $rdi, 1, $noreg, 4, $noreg, debug-location !323 :: (load (s32) from %ir.add.ptr, !tbaa !24)
-    RETQ $eax, debug-location !328
+    RET64 $eax, debug-location !328
 
 ...
 ---
@@ -731,6 +732,6 @@ body:             |
     liveins: $rdi, $rbx, $r12, $r13, $r14, $r15, $rbp
   
     renamable $eax = MOV32rm killed renamable $rdi, 1, $noreg, 4, $noreg, debug-location !414 :: (load (s32) from %ir.add.ptr, !tbaa !24)
-    RETQ $eax, debug-location !415
+    RET64 $eax, debug-location !415
 
 ...

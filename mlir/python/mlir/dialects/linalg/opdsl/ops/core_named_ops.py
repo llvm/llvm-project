@@ -310,7 +310,26 @@ def conv_3d_ndhwc_dhwcf(
            ]) * cast(U, K[D.kd, D.kh, D.kw, D.c, D.f])
 
 @linalg_structured_op
-def depthwise_conv2D_nhw(
+def depthwise_conv_1d_nwc_wc(
+    I=TensorDef(T1, S.N, S.OW * S.SW + S.KW * S.DW, S.IC),
+    K=TensorDef(T2, S.KW, S.IC),
+    O=TensorDef(U, S.N, S.OW, S.IC, output=True),
+    strides=AttributeDef(S.SW),
+    dilations=AttributeDef(S.DW)):
+  """Performs depth-wise 1-D convolution.
+
+  Numeric casting is performed on the operands to the inner multiply, promoting
+  them to the same data type as the accumulator/output. Multiplier is set to 1
+  which is a special case for most depthwise convolutions.
+  """
+  implements(ConvolutionOpInterface)
+  domain(D.n, D.ow, D.ic, D.kw)
+  O[D.n, D.ow, D.ic] += \
+      cast(U, I[D.n, D.ow * S.SW + D.kw * S.DW, D.ic]) * \
+      cast(U, K[D.kw, D.ic])
+
+@linalg_structured_op
+def depthwise_conv_2d_nhwc_hwc(
     I=TensorDef(T1, S.N, S.OH * S.SH + S.KH * S.DH, S.OW * S.SW + S.KW * S.DW, S.IC),
     K=TensorDef(T2, S.KH, S.KW, S.IC),
     O=TensorDef(U, S.N, S.OH, S.OW, S.IC, output=True),
@@ -320,7 +339,7 @@ def depthwise_conv2D_nhw(
 
   Numeric casting is performed on the operands to the inner multiply, promoting
   them to the same data type as the accumulator/output. Multiplier is set to 1
-  which is a special case for most dpethwise convolutions.
+  which is a special case for most depthwise convolutions.
   """
   implements(ConvolutionOpInterface)
   domain(D.n, D.oh, D.ow, D.ic, D.kh, D.kw)
@@ -329,7 +348,7 @@ def depthwise_conv2D_nhw(
            D.ic]) * cast(U, K[D.kh, D.kw, D.ic])
 
 @linalg_structured_op
-def depthwise_conv2D_nhw_q(
+def depthwise_conv_2d_nhwc_hwc_q(
     I=TensorDef(T1, S.N, S.OH * S.SH + S.KH * S.DH, S.OW * S.SW + S.KW * S.DW, S.IC),
     K=TensorDef(T2, S.KH, S.KW, S.IC),
     IZp=ScalarDef(I32),
@@ -350,7 +369,7 @@ def depthwise_conv2D_nhw_q(
       (cast(U, K[D.kh, D.kw, D.ic]) - cast(U, KZp)))
 
 @linalg_structured_op
-def depthwise_conv2D_nhwc(
+def depthwise_conv_2d_nhwc_hwcm(
     I=TensorDef(T1, S.N, S.OH * S.SH + S.KH * S.DH, S.OW * S.SW + S.KW * S.DW, S.IC),
     K=TensorDef(T2, S.KH, S.KW, S.IC, S.CM),
     O=TensorDef(U, S.N, S.OH, S.OW, S.IC, S.CM, output=True),
@@ -368,7 +387,7 @@ def depthwise_conv2D_nhwc(
            D.ic]) * cast(U, K[D.kh, D.kw, D.ic, D.cm])
 
 @linalg_structured_op
-def depthwise_conv2D_nhwc_q(
+def depthwise_conv_2d_nhwc_hwcm_q(
     I=TensorDef(T1, S.N, S.OH * S.SH + S.KH * S.DH, S.OW * S.SW + S.KW * S.DW, S.IC),
     K=TensorDef(T2, S.KH, S.KW, S.IC, S.CM),
     IZp=ScalarDef(I32),

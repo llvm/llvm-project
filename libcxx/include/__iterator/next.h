@@ -39,6 +39,7 @@ inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
 #if !defined(_LIBCPP_HAS_NO_RANGES)
 
 namespace ranges {
+// TODO(varconst): rename `__next_fn` to `__fn`.
 struct __next_fn final : private __function_like {
   _LIBCPP_HIDE_FROM_ABI
   constexpr explicit __next_fn(__tag __x) noexcept : __function_like(__x) {}
@@ -79,4 +80,4 @@ inline constexpr auto next = __next_fn(__function_like::__tag());
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ITERATOR_PRIMITIVES_H
+#endif // _LIBCPP___ITERATOR_NEXT_H

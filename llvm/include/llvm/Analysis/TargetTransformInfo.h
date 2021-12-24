@@ -30,6 +30,7 @@
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/InstructionCost.h"
 #include <functional>
+#include <utility>
 
 namespace llvm {
 
@@ -388,6 +389,9 @@ public:
   bool canHaveNonUndefGlobalInitializerInAddressSpace(unsigned AS) const;
 
   unsigned getAssumedAddrSpace(const Value *V) const;
+
+  std::pair<const Value *, unsigned>
+  getPredicatedAddrSpace(const Value *V) const;
 
   /// Rewrite intrinsic call \p II such that \p OldV will be replaced with \p
   /// NewV, which has a different address space. This should happen for every
@@ -916,6 +920,9 @@ public:
   ///  architectural maximum vector length, and None otherwise.
   Optional<unsigned> getMaxVScale() const;
 
+  /// \return the value of vscale to tune the cost model for.
+  Optional<unsigned> getVScaleForTuning() const;
+
   /// \return True if the vectorization factor should be chosen to
   /// make the vector of the smallest element type match the size of a
   /// vector register. For wider element types, this could result in
@@ -1113,12 +1120,29 @@ public:
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                      unsigned Index = -1) const;
 
+  /// \return The cost of replication shuffle of \p VF elements typed \p EltTy
+  /// \p ReplicationFactor times.
+  ///
+  /// For example, the mask for \p ReplicationFactor=3 and \p VF=4 is:
+  ///   <0,0,0,1,1,1,2,2,2,3,3,3>
+  InstructionCost getReplicationShuffleCost(Type *EltTy, int ReplicationFactor,
+                                            int VF,
+                                            const APInt &DemandedDstElts,
+                                            TTI::TargetCostKind CostKind);
+
   /// \return The cost of Load and Store instructions.
   InstructionCost
   getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                   unsigned AddressSpace,
                   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
                   const Instruction *I = nullptr) const;
+
+  /// \return The cost of VP Load and Store instructions.
+  InstructionCost
+  getVPMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
+                    unsigned AddressSpace,
+                    TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+                    const Instruction *I = nullptr) const;
 
   /// \return The cost of masked Load and Store instructions.
   InstructionCost getMaskedMemoryOpCost(
@@ -1274,13 +1298,12 @@ public:
   bool areInlineCompatible(const Function *Caller,
                            const Function *Callee) const;
 
-  /// \returns True if the caller and callee agree on how \p Args will be passed
+  /// \returns True if the caller and callee agree on how \p Types will be
+  /// passed to or returned from the callee.
   /// to the callee.
-  /// \param[out] Args The list of compatible arguments.  The implementation may
-  /// filter out any incompatible args from this list.
-  bool areFunctionArgsABICompatible(const Function *Caller,
-                                    const Function *Callee,
-                                    SmallPtrSetImpl<Argument *> &Args) const;
+  /// \param Types List of types to check.
+  bool areTypesABICompatible(const Function *Caller, const Function *Callee,
+                             const ArrayRef<Type *> &Types) const;
 
   /// The type of load/store indexing.
   enum MemIndexedMode {
@@ -1371,12 +1394,17 @@ public:
   /// \returns True if the target supports scalable vectors.
   bool supportsScalableVectors() const;
 
+  /// \return true when scalable vectorization is preferred.
+  bool enableScalableVectorization() const;
+
   /// \name Vector Predication Information
   /// @{
   /// Whether the target supports the %evl parameter of VP intrinsic efficiently
-  /// in hardware. (see LLVM Language Reference - "Vector Predication
-  /// Intrinsics") Use of %evl is discouraged when that is not the case.
-  bool hasActiveVectorLength() const;
+  /// in hardware, for the given opcode and type/alignment. (see LLVM Language
+  /// Reference - "Vector Predication Intrinsics").
+  /// Use of %evl is discouraged when that is not the case.
+  bool hasActiveVectorLength(unsigned Opcode, Type *DataType,
+                             Align Alignment) const;
 
   struct VPLegalization {
     enum VPTransform {
@@ -1464,6 +1492,8 @@ public:
   virtual bool
   canHaveNonUndefGlobalInitializerInAddressSpace(unsigned AS) const = 0;
   virtual unsigned getAssumedAddrSpace(const Value *V) const = 0;
+  virtual std::pair<const Value *, unsigned>
+  getPredicatedAddrSpace(const Value *V) const = 0;
   virtual Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
                                                   Value *OldV,
                                                   Value *NewV) const = 0;
@@ -1576,6 +1606,7 @@ public:
   virtual TypeSize getRegisterBitWidth(RegisterKind K) const = 0;
   virtual unsigned getMinVectorRegisterBitWidth() const = 0;
   virtual Optional<unsigned> getMaxVScale() const = 0;
+  virtual Optional<unsigned> getVScaleForTuning() const = 0;
   virtual bool shouldMaximizeVectorBandwidth() const = 0;
   virtual ElementCount getMinimumVF(unsigned ElemWidth,
                                     bool IsScalable) const = 0;
@@ -1636,11 +1667,22 @@ public:
                                              const Instruction *I) = 0;
   virtual InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                              unsigned Index) = 0;
+
+  virtual InstructionCost
+  getReplicationShuffleCost(Type *EltTy, int ReplicationFactor, int VF,
+                            const APInt &DemandedDstElts,
+                            TTI::TargetCostKind CostKind) = 0;
+
   virtual InstructionCost getMemoryOpCost(unsigned Opcode, Type *Src,
                                           Align Alignment,
                                           unsigned AddressSpace,
                                           TTI::TargetCostKind CostKind,
                                           const Instruction *I) = 0;
+  virtual InstructionCost getVPMemoryOpCost(unsigned Opcode, Type *Src,
+                                            Align Alignment,
+                                            unsigned AddressSpace,
+                                            TTI::TargetCostKind CostKind,
+                                            const Instruction *I) = 0;
   virtual InstructionCost
   getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                         unsigned AddressSpace,
@@ -1692,9 +1734,9 @@ public:
       unsigned SrcAlign, unsigned DestAlign) const = 0;
   virtual bool areInlineCompatible(const Function *Caller,
                                    const Function *Callee) const = 0;
-  virtual bool
-  areFunctionArgsABICompatible(const Function *Caller, const Function *Callee,
-                               SmallPtrSetImpl<Argument *> &Args) const = 0;
+  virtual bool areTypesABICompatible(const Function *Caller,
+                                     const Function *Callee,
+                                     const ArrayRef<Type *> &Types) const = 0;
   virtual bool isIndexedLoadLegal(MemIndexedMode Mode, Type *Ty) const = 0;
   virtual bool isIndexedStoreLegal(MemIndexedMode Mode, Type *Ty) const = 0;
   virtual unsigned getLoadStoreVecRegBitWidth(unsigned AddrSpace) const = 0;
@@ -1721,8 +1763,10 @@ public:
                                                ReductionFlags) const = 0;
   virtual bool shouldExpandReduction(const IntrinsicInst *II) const = 0;
   virtual unsigned getGISelRematGlobalCost() const = 0;
+  virtual bool enableScalableVectorization() const = 0;
   virtual bool supportsScalableVectors() const = 0;
-  virtual bool hasActiveVectorLength() const = 0;
+  virtual bool hasActiveVectorLength(unsigned Opcode, Type *DataType,
+                                     Align Alignment) const = 0;
   virtual InstructionCost getInstructionLatency(const Instruction *I) = 0;
   virtual VPLegalization
   getVPLegalizationStrategy(const VPIntrinsic &PI) const = 0;
@@ -1795,6 +1839,11 @@ public:
 
   unsigned getAssumedAddrSpace(const Value *V) const override {
     return Impl.getAssumedAddrSpace(V);
+  }
+
+  std::pair<const Value *, unsigned>
+  getPredicatedAddrSpace(const Value *V) const override {
+    return Impl.getPredicatedAddrSpace(V);
   }
 
   Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II, Value *OldV,
@@ -2037,6 +2086,9 @@ public:
   Optional<unsigned> getMaxVScale() const override {
     return Impl.getMaxVScale();
   }
+  Optional<unsigned> getVScaleForTuning() const override {
+    return Impl.getVScaleForTuning();
+  }
   bool shouldMaximizeVectorBandwidth() const override {
     return Impl.shouldMaximizeVectorBandwidth();
   }
@@ -2137,12 +2189,26 @@ public:
                                      unsigned Index) override {
     return Impl.getVectorInstrCost(Opcode, Val, Index);
   }
+  InstructionCost
+  getReplicationShuffleCost(Type *EltTy, int ReplicationFactor, int VF,
+                            const APInt &DemandedDstElts,
+                            TTI::TargetCostKind CostKind) override {
+    return Impl.getReplicationShuffleCost(EltTy, ReplicationFactor, VF,
+                                          DemandedDstElts, CostKind);
+  }
   InstructionCost getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                                   unsigned AddressSpace,
                                   TTI::TargetCostKind CostKind,
                                   const Instruction *I) override {
     return Impl.getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
                                 CostKind, I);
+  }
+  InstructionCost getVPMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
+                                    unsigned AddressSpace,
+                                    TTI::TargetCostKind CostKind,
+                                    const Instruction *I) override {
+    return Impl.getVPMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
+                                  CostKind, I);
   }
   InstructionCost getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
                                         Align Alignment, unsigned AddressSpace,
@@ -2232,10 +2298,9 @@ public:
                            const Function *Callee) const override {
     return Impl.areInlineCompatible(Caller, Callee);
   }
-  bool areFunctionArgsABICompatible(
-      const Function *Caller, const Function *Callee,
-      SmallPtrSetImpl<Argument *> &Args) const override {
-    return Impl.areFunctionArgsABICompatible(Caller, Callee, Args);
+  bool areTypesABICompatible(const Function *Caller, const Function *Callee,
+                             const ArrayRef<Type *> &Types) const override {
+    return Impl.areTypesABICompatible(Caller, Callee, Types);
   }
   bool isIndexedLoadLegal(MemIndexedMode Mode, Type *Ty) const override {
     return Impl.isIndexedLoadLegal(Mode, Ty, getDataLayout());
@@ -2299,8 +2364,13 @@ public:
     return Impl.supportsScalableVectors();
   }
 
-  bool hasActiveVectorLength() const override {
-    return Impl.hasActiveVectorLength();
+  bool enableScalableVectorization() const override {
+    return Impl.enableScalableVectorization();
+  }
+
+  bool hasActiveVectorLength(unsigned Opcode, Type *DataType,
+                             Align Alignment) const override {
+    return Impl.hasActiveVectorLength(Opcode, DataType, Alignment);
   }
 
   InstructionCost getInstructionLatency(const Instruction *I) override {

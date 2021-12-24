@@ -4,6 +4,11 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+experimental-v --riscv-v-vector-bits-min=128 -riscv-v-fixed-length-vector-lmul-max=2 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,LMULMAX2
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+experimental-v --riscv-v-vector-bits-min=128 -riscv-v-fixed-length-vector-lmul-max=1 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,LMULMAX1
 
+; RUN: llc -mtriple=riscv32 -mattr=+m,+experimental-v --riscv-v-vector-bits-min=128 -riscv-v-fixed-length-vector-lmul-max=2 -early-live-intervals -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,LMULMAX2
+; RUN: llc -mtriple=riscv32 -mattr=+m,+experimental-v --riscv-v-vector-bits-min=128 -riscv-v-fixed-length-vector-lmul-max=1 -early-live-intervals -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,LMULMAX1
+; RUN: llc -mtriple=riscv64 -mattr=+m,+experimental-v --riscv-v-vector-bits-min=128 -riscv-v-fixed-length-vector-lmul-max=2 -early-live-intervals -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,LMULMAX2
+; RUN: llc -mtriple=riscv64 -mattr=+m,+experimental-v --riscv-v-vector-bits-min=128 -riscv-v-fixed-length-vector-lmul-max=1 -early-live-intervals -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,LMULMAX1
+
 define <vscale x 8 x i32> @insert_nxv8i32_v2i32_0(<vscale x 8 x i32> %vec, <2 x i32>* %svp) {
 ; CHECK-LABEL: insert_nxv8i32_v2i32_0:
 ; CHECK:       # %bb.0:
@@ -315,7 +320,7 @@ define void @insert_v4i16_v2i16_2(<4 x i16>* %vp, <2 x i16>* %svp) {
 define void @insert_v32i1_v8i1_0(<32 x i1>* %vp, <8 x i1>* %svp) {
 ; LMULMAX2-LABEL: insert_v32i1_v8i1_0:
 ; LMULMAX2:       # %bb.0:
-; LMULMAX2-NEXT:    addi a2, zero, 32
+; LMULMAX2-NEXT:    li a2, 32
 ; LMULMAX2-NEXT:    vsetvli zero, a2, e8, m2, ta, mu
 ; LMULMAX2-NEXT:    vlm.v v8, (a0)
 ; LMULMAX2-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
@@ -347,7 +352,7 @@ define void @insert_v32i1_v8i1_0(<32 x i1>* %vp, <8 x i1>* %svp) {
 define void @insert_v32i1_v8i1_16(<32 x i1>* %vp, <8 x i1>* %svp) {
 ; LMULMAX2-LABEL: insert_v32i1_v8i1_16:
 ; LMULMAX2:       # %bb.0:
-; LMULMAX2-NEXT:    addi a2, zero, 32
+; LMULMAX2-NEXT:    li a2, 32
 ; LMULMAX2-NEXT:    vsetvli zero, a2, e8, m2, ta, mu
 ; LMULMAX2-NEXT:    vlm.v v8, (a0)
 ; LMULMAX2-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu

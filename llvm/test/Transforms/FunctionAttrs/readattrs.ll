@@ -3,11 +3,9 @@
 
 @x = global i32 0
 
-declare void @test1_1(i8* %x1_1, i8* readonly %y1_1, ...)
+declare void @test1_1(i8* %x1_1, i8* nocapture readonly %y1_1, ...)
 
-; NOTE: readonly for %y1_2 would be OK here but not for the similar situation in test13.
-;
-; CHECK: define void @test1_2(i8* %x1_2, i8* readonly %y1_2, i8* %z1_2)
+; CHECK: define void @test1_2(i8* %x1_2, i8* nocapture readonly %y1_2, i8* %z1_2)
 define void @test1_2(i8* %x1_2, i8* %y1_2, i8* %z1_2) {
   call void (i8*, i8*, ...) @test1_1(i8* %x1_2, i8* %y1_2, i8* %z1_2)
   store i32 0, i32* @x
@@ -34,7 +32,7 @@ define void @test4_2(i8* %p) {
   ret void
 }
 
-; CHECK: define void @test5(i8** nocapture %p, i8* %q)
+; CHECK: define void @test5(i8** nocapture writeonly %p, i8* %q)
 ; Missed optz'n: we could make %q readnone, but don't break test6!
 define void @test5(i8** %p, i8* %q) {
   store i8* %q, i8** %p
@@ -42,7 +40,7 @@ define void @test5(i8** %p, i8* %q) {
 }
 
 declare void @test6_1()
-; CHECK: define void @test6_2(i8** nocapture %p, i8* %q)
+; CHECK: define void @test6_2(i8** nocapture writeonly %p, i8* %q)
 ; This is not a missed optz'n.
 define void @test6_2(i8** %p, i8* %q) {
   store i8* %q, i8** %p
@@ -68,7 +66,7 @@ entry:
   ret i32* %p
 }
 
-; CHECK: define void @test8_2(i32* %p)
+; CHECK: define void @test8_2(i32* writeonly %p)
 define void @test8_2(i32* %p) {
 entry:
   %call = call i32* @test8_1(i32* %p)
@@ -130,10 +128,8 @@ declare void @escape_readonly_ptr(i8** %addr, i8* readonly %ptr)
 ; is marked as readnone/only. However, the functions can write the pointer into
 ; %addr, causing the store to write to %escaped_then_written.
 ;
-; FIXME: This test currently exposes a bug in function-attrs!
-;
-; CHECK: define void @unsound_readnone(i8* nocapture readnone %ignored, i8* readnone %escaped_then_written)
-; CHECK: define void @unsound_readonly(i8* nocapture readnone %ignored, i8* readonly %escaped_then_written)
+; CHECK: define void @unsound_readnone(i8* nocapture readnone %ignored, i8* %escaped_then_written)
+; CHECK: define void @unsound_readonly(i8* nocapture readnone %ignored, i8* %escaped_then_written)
 ;
 define void @unsound_readnone(i8* %ignored, i8* %escaped_then_written) {
   %addr = alloca i8*
@@ -148,5 +144,44 @@ define void @unsound_readonly(i8* %ignored, i8* %escaped_then_written) {
   call void @escape_readonly_ptr(i8** %addr, i8* %escaped_then_written)
   %addr.ld = load i8*, i8** %addr
   store i8 0, i8* %addr.ld
+  ret void
+}
+
+
+; CHECK: define void @fptr_test1a(i8* nocapture readnone %p, void (i8*)* nocapture readonly %f)
+define void @fptr_test1a(i8* %p, void (i8*)* %f) {
+  call void %f(i8* nocapture readnone %p)
+  ret void
+}
+
+; CHECK: define void @fptr_test1b(i8* %p, void (i8*)* nocapture readonly %f)
+define void @fptr_test1b(i8* %p, void (i8*)* %f) {
+  ; Can't infer readnone here because call might capture %p
+  call void %f(i8* readnone %p)
+  ret void
+}
+
+; CHECK: define void @fptr_test1c(i8* readnone %p, void (i8*)* nocapture readonly %f)
+define void @fptr_test1c(i8* %p, void (i8*)* %f) {
+  call void %f(i8* readnone %p) readonly
+  ret void
+}
+
+; CHECK: define void @fptr_test2a(i8* nocapture readonly %p, void (i8*)* nocapture readonly %f)
+define void @fptr_test2a(i8* %p, void (i8*)* %f) {
+  call void %f(i8* nocapture readonly %p)
+  ret void
+}
+
+; CHECK: define void @fptr_test2b(i8* %p, void (i8*)* nocapture readonly %f)
+define void @fptr_test2b(i8* %p, void (i8*)* %f) {
+  ; Can't infer readonly here because call might capture %p
+  call void %f(i8* readonly %p)
+  ret void
+}
+
+; CHECK: define void @fptr_test2c(i8* readonly %p, void (i8*)* nocapture readonly %f)
+define void @fptr_test2c(i8* %p, void (i8*)* %f) {
+  call void %f(i8* readonly %p) readonly
   ret void
 }
