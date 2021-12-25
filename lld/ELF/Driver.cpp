@@ -846,14 +846,13 @@ static bool
 processCallGraphRelocations(SmallVector<uint32_t, 32> &symbolIndices,
                             ArrayRef<typename ELFT::CGProfile> &cgProfile,
                             ObjFile<ELFT> *inputObj) {
-  symbolIndices.clear();
-  const ELFFile<ELFT> &obj = inputObj->getObj();
-  ArrayRef<Elf_Shdr_Impl<ELFT>> objSections =
-      CHECK(obj.sections(), "could not retrieve object sections");
-
   if (inputObj->cgProfileSectionIndex == SHN_UNDEF)
     return false;
 
+  ArrayRef<Elf_Shdr_Impl<ELFT>> objSections =
+      inputObj->template getELFShdrs<ELFT>();
+  symbolIndices.clear();
+  const ELFFile<ELFT> &obj = inputObj->getObj();
   cgProfile =
       check(obj.template getSectionContentsAsArray<typename ELFT::CGProfile>(
           objSections[inputObj->cgProfileSectionIndex]));

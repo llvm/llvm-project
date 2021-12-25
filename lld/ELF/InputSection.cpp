@@ -163,16 +163,16 @@ template <class ELFT> RelsOrRelas<ELFT> InputSectionBase::relsOrRelas() const {
   if (relSecIdx == 0)
     return {};
   RelsOrRelas<ELFT> ret;
-  const ELFFile<ELFT> obj = cast<ELFFileBase>(file)->getObj<ELFT>();
-  typename ELFT::Shdr shdr = cantFail(obj.sections())[relSecIdx];
+  typename ELFT::Shdr shdr =
+      cast<ELFFileBase>(file)->getELFShdrs<ELFT>()[relSecIdx];
   if (shdr.sh_type == SHT_REL) {
     ret.rels = makeArrayRef(reinterpret_cast<const typename ELFT::Rel *>(
-                                obj.base() + shdr.sh_offset),
+                                file->mb.getBufferStart() + shdr.sh_offset),
                             shdr.sh_size / sizeof(typename ELFT::Rel));
   } else {
     assert(shdr.sh_type == SHT_RELA);
     ret.relas = makeArrayRef(reinterpret_cast<const typename ELFT::Rela *>(
-                                 obj.base() + shdr.sh_offset),
+                                 file->mb.getBufferStart() + shdr.sh_offset),
                              shdr.sh_size / sizeof(typename ELFT::Rela));
   }
   return ret;
@@ -433,8 +433,7 @@ void InputSection::copyRelocations(uint8_t *buf, ArrayRef<RelTy> rels) {
             sec->name != ".gcc_except_table" && sec->name != ".got2" &&
             sec->name != ".toc") {
           uint32_t secIdx = cast<Undefined>(sym).discardedSecIdx;
-          Elf_Shdr_Impl<ELFT> sec =
-              CHECK(file->getObj().sections(), file)[secIdx];
+          Elf_Shdr_Impl<ELFT> sec = file->template getELFShdrs<ELFT>()[secIdx];
           warn("relocation refers to a discarded section: " +
                CHECK(file->getObj().getSectionName(sec), file) +
                "\n>>> referenced by " + getObjMsg(p->r_offset));
