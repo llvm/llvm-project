@@ -1525,10 +1525,16 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     return;
   }
   case ISD::SPLAT_VECTOR:
+  case RISCVISD::VMV_S_X_VL:
+  case RISCVISD::VFMV_S_F_VL:
   case RISCVISD::VMV_V_X_VL:
   case RISCVISD::VFMV_V_F_VL: {
     // Try to match splat of a scalar load to a strided load with stride of x0.
-    SDValue Src = Node->getOperand(0);
+    bool IsScalarMove = Node->getOpcode() == RISCVISD::VMV_S_X_VL ||
+                        Node->getOpcode() == RISCVISD::VFMV_S_F_VL;
+    if (IsScalarMove && !Node->getOperand(0).isUndef())
+      break;
+    SDValue Src = IsScalarMove ? Node->getOperand(1) : Node->getOperand(0);
     auto *Ld = dyn_cast<LoadSDNode>(Src);
     if (!Ld)
       break;
@@ -1543,7 +1549,13 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     SDValue VL;
     if (Node->getOpcode() == ISD::SPLAT_VECTOR)
       VL = CurDAG->getTargetConstant(RISCV::VLMaxSentinel, DL, XLenVT);
-    else
+    else if (IsScalarMove) {
+      // We could deal with more VL if we update the VSETVLI insert pass to
+      // avoid introducing more VSETVLI.
+      if (!isOneConstant(Node->getOperand(2)))
+        break;
+      selectVLOp(Node->getOperand(2), VL);
+    } else
       selectVLOp(Node->getOperand(1), VL);
 
     unsigned Log2SEW = Log2_32(VT.getScalarSizeInBits());

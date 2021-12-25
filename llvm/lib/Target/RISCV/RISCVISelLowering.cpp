@@ -2235,8 +2235,13 @@ static SDValue splatSplitI64WithVL(const SDLoc &DL, MVT VT, SDValue Scalar,
 static SDValue lowerScalarSplat(SDValue Scalar, SDValue VL, MVT VT, SDLoc DL,
                                 SelectionDAG &DAG,
                                 const RISCVSubtarget &Subtarget) {
-  if (VT.isFloatingPoint())
+  if (VT.isFloatingPoint()) {
+    // If VL is 1, we could use vfmv.s.f.
+    if (isOneConstant(VL))
+      return DAG.getNode(RISCVISD::VFMV_S_F_VL, DL, VT, DAG.getUNDEF(VT),
+                         Scalar, VL);
     return DAG.getNode(RISCVISD::VFMV_V_F_VL, DL, VT, Scalar, VL);
+  }
 
   MVT XLenVT = Subtarget.getXLenVT();
 
@@ -2249,11 +2254,22 @@ static SDValue lowerScalarSplat(SDValue Scalar, SDValue VL, MVT VT, SDLoc DL,
     unsigned ExtOpc =
         isa<ConstantSDNode>(Scalar) ? ISD::SIGN_EXTEND : ISD::ANY_EXTEND;
     Scalar = DAG.getNode(ExtOpc, DL, XLenVT, Scalar);
+    ConstantSDNode *Const = dyn_cast<ConstantSDNode>(Scalar);
+    // If VL is 1 and the scalar value won't benefit from immediate, we could
+    // use vmv.s.x.
+    if (isOneConstant(VL) &&
+        (!Const || isNullConstant(Scalar) || !isInt<5>(Const->getSExtValue())))
+      return DAG.getNode(RISCVISD::VMV_S_X_VL, DL, VT, DAG.getUNDEF(VT), Scalar,
+                         VL);
     return DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VT, Scalar, VL);
   }
 
   assert(XLenVT == MVT::i32 && Scalar.getValueType() == MVT::i64 &&
          "Unexpected scalar for splat lowering!");
+
+  if (isOneConstant(VL) && isNullConstant(Scalar))
+    return DAG.getNode(RISCVISD::VMV_S_X_VL, DL, VT, DAG.getUNDEF(VT),
+                       DAG.getConstant(0, DL, XLenVT), VL);
 
   // Otherwise use the more complicated splatting algorithm.
   return splatSplitI64WithVL(DL, VT, Scalar, VL, DAG);
