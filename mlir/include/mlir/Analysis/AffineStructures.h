@@ -292,16 +292,6 @@ public:
                         unsigned symStartPos, ArrayRef<AffineExpr> localExprs,
                         MLIRContext *context) const;
 
-  /// Gather positions of all lower and upper bounds of the identifier at `pos`,
-  /// and optionally any equalities on it. In addition, the bounds are to be
-  /// independent of identifiers in position range [`offset`, `offset` + `num`).
-  void
-  getLowerAndUpperBoundIndices(unsigned pos,
-                               SmallVectorImpl<unsigned> *lbIndices,
-                               SmallVectorImpl<unsigned> *ubIndices,
-                               SmallVectorImpl<unsigned> *eqIndices = nullptr,
-                               unsigned offset = 0, unsigned num = 0) const;
-
   /// Removes constraints that are independent of (i.e., do not have a
   /// coefficient) identifiers in the range [pos, pos + num).
   void removeIndependentConstraints(unsigned pos, unsigned num);
@@ -418,6 +408,16 @@ protected:
 
   /// Normalized each constraints by the GCD of its coefficients.
   void normalizeConstraintsByGCD();
+
+  /// Searches for a constraint with a non-zero coefficient at `colIdx` in
+  /// equality (isEq=true) or inequality (isEq=false) constraints.
+  /// Returns true and sets row found in search in `rowIdx`, false otherwise.
+  bool findConstraintWithNonZeroAt(unsigned colIdx, bool isEq,
+                                   unsigned *rowIdx) const;
+
+  /// Returns true if the pos^th column is all zero for both inequalities and
+  /// equalities.
+  bool isColZero(unsigned pos) const;
 
   /// A parameter that controls detection of an unrealistic number of
   /// constraints. If the number of constraints is this many times the number of
