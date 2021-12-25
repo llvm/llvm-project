@@ -189,6 +189,10 @@ public:
         .slice(firstGlobal);
   }
 
+  template <typename ELFT> typename ELFT::ShdrRange getELFShdrs() const {
+    return typename ELFT::ShdrRange(
+        reinterpret_cast<const typename ELFT::Shdr *>(elfShdrs), numELFShdrs);
+  }
   template <typename ELFT> typename ELFT::SymRange getELFSyms() const {
     return typename ELFT::SymRange(
         reinterpret_cast<const typename ELFT::Sym *>(elfSyms), numELFSyms);
@@ -201,7 +205,9 @@ protected:
   // Initializes this class's member variables.
   template <typename ELFT> void init();
 
+  const void *elfShdrs = nullptr;
   const void *elfSyms = nullptr;
+  uint32_t numELFShdrs = 0;
   uint32_t numELFSyms = 0;
   uint32_t firstGlobal = 0;
   StringRef stringTable;

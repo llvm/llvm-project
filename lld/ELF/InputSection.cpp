@@ -163,16 +163,16 @@ template <class ELFT> RelsOrRelas<ELFT> InputSectionBase::relsOrRelas() const {
   if (relSecIdx == 0)
     return {};
   RelsOrRelas<ELFT> ret;
-  const ELFFile<ELFT> obj = cast<ELFFileBase>(file)->getObj<ELFT>();
-  typename ELFT::Shdr shdr = cantFail(obj.sections())[relSecIdx];
+  typename ELFT::Shdr shdr =
+      cast<ELFFileBase>(file)->getELFShdrs<ELFT>()[relSecIdx];
   if (shdr.sh_type == SHT_REL) {
     ret.rels = makeArrayRef(reinterpret_cast<const typename ELFT::Rel *>(
-                                obj.base() + shdr.sh_offset),
+                                file->mb.getBufferStart() + shdr.sh_offset),
                             shdr.sh_size / sizeof(typename ELFT::Rel));
   } else {
     assert(shdr.sh_type == SHT_RELA);
     ret.relas = makeArrayRef(reinterpret_cast<const typename ELFT::Rela *>(
-                                 obj.base() + shdr.sh_offset),
+                                 file->mb.getBufferStart() + shdr.sh_offset),
                              shdr.sh_size / sizeof(typename ELFT::Rela));
   }
   return ret;
@@ -395,6 +395,7 @@ InputSectionBase *InputSection::getRelocatedSection() const {
 // for each relocation. So we copy relocations one by one.
 template <class ELFT, class RelTy>
 void InputSection::copyRelocations(uint8_t *buf, ArrayRef<RelTy> rels) {
+  const TargetInfo &target = *elf::target;
   InputSectionBase *sec = getRelocatedSection();
 
   for (const RelTy &rel : rels) {
@@ -433,8 +434,7 @@ void InputSection::copyRelocations(uint8_t *buf, ArrayRef<RelTy> rels) {
             sec->name != ".gcc_except_table" && sec->name != ".got2" &&
             sec->name != ".toc") {
           uint32_t secIdx = cast<Undefined>(sym).discardedSecIdx;
-          Elf_Shdr_Impl<ELFT> sec =
-              CHECK(file->getObj().sections(), file)[secIdx];
+          Elf_Shdr_Impl<ELFT> sec = file->template getELFShdrs<ELFT>()[secIdx];
           warn("relocation refers to a discarded section: " +
                CHECK(file->getObj().getSectionName(sec), file) +
                "\n>>> referenced by " + getObjMsg(p->r_offset));
@@ -451,10 +451,10 @@ void InputSection::copyRelocations(uint8_t *buf, ArrayRef<RelTy> rels) {
       int64_t addend = getAddend<ELFT>(rel);
       const uint8_t *bufLoc = sec->data().begin() + rel.r_offset;
       if (!RelTy::IsRela)
-        addend = target->getImplicitAddend(bufLoc, type);
+        addend = target.getImplicitAddend(bufLoc, type);
 
       if (config->emachine == EM_MIPS &&
-          target->getRelExpr(type, sym, bufLoc) == R_MIPS_GOTREL) {
+          target.getRelExpr(type, sym, bufLoc) == R_MIPS_GOTREL) {
         // Some MIPS relocations depend on "gp" value. By default,
         // this value has 0x7ff0 offset from a .got section. But
         // relocatable files produced by a compiler or a linker
@@ -471,7 +471,7 @@ void InputSection::copyRelocations(uint8_t *buf, ArrayRef<RelTy> rels) {
 
       if (RelTy::IsRela)
         p->r_addend = sym.getVA(addend) - section->getOutputSection()->addr;
-      else if (config->relocatable && type != target->noneRel)
+      else if (config->relocatable && type != target.noneRel)
         sec->relocations.push_back({R_ABS, type, rel.r_offset, addend, &sym});
     } else if (config->emachine == EM_PPC && type == R_PPC_PLTREL24 &&
                p->r_addend >= 0x8000 && sec->file->ppc32Got2) {
@@ -865,6 +865,7 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
 template <class ELFT, class RelTy>
 void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
   const unsigned bits = sizeof(typename ELFT::uint) * 8;
+  const TargetInfo &target = *elf::target;
   const bool isDebug = isDebugSection(*this);
   const bool isDebugLocOrRanges =
       isDebug && (name == ".debug_loc" || name == ".debug_ranges");
@@ -890,16 +891,16 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
     uint8_t *bufLoc = buf + offset;
     int64_t addend = getAddend<ELFT>(rel);
     if (!RelTy::IsRela)
-      addend += target->getImplicitAddend(bufLoc, type);
+      addend += target.getImplicitAddend(bufLoc, type);
 
     Symbol &sym = getFile<ELFT>()->getRelocTargetSym(rel);
-    RelExpr expr = target->getRelExpr(type, sym, bufLoc);
+    RelExpr expr = target.getRelExpr(type, sym, bufLoc);
     if (expr == R_NONE)
       continue;
 
     if (expr == R_SIZE) {
-      target->relocateNoSym(bufLoc, type,
-                            SignExtend64<bits>(sym.getSize() + addend));
+      target.relocateNoSym(bufLoc, type,
+                           SignExtend64<bits>(sym.getSize() + addend));
       continue;
     }
 
@@ -923,14 +924,14 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
       // address 0. For bug-compatibilty, we accept them with warnings. We
       // know Steel Bank Common Lisp as of 2018 have this bug.
       warn(msg);
-      target->relocateNoSym(
+      target.relocateNoSym(
           bufLoc, type,
           SignExtend64<bits>(sym.getVA(addend - offset - outSecOff)));
       continue;
     }
 
     if (tombstone ||
-        (isDebug && (type == target->symbolicRel || expr == R_DTPREL))) {
+        (isDebug && (type == target.symbolicRel || expr == R_DTPREL))) {
       // Resolve relocations in .debug_* referencing (discarded symbols or ICF
       // folded section symbols) to a tombstone value. Resolving to addend is
       // unsatisfactory because the result address range may collide with a
@@ -964,11 +965,11 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
         // If -z dead-reloc-in-nonalloc= is specified, respect it.
         const uint64_t value = tombstone ? SignExtend64<bits>(*tombstone)
                                          : (isDebugLocOrRanges ? 1 : 0);
-        target->relocateNoSym(bufLoc, type, value);
+        target.relocateNoSym(bufLoc, type, value);
         continue;
       }
     }
-    target->relocateNoSym(bufLoc, type, SignExtend64<bits>(sym.getVA(addend)));
+    target.relocateNoSym(bufLoc, type, SignExtend64<bits>(sym.getVA(addend)));
   }
 }
 
@@ -1014,6 +1015,7 @@ void InputSectionBase::relocate(uint8_t *buf, uint8_t *bufEnd) {
 void InputSectionBase::relocateAlloc(uint8_t *buf, uint8_t *bufEnd) {
   assert(flags & SHF_ALLOC);
   const unsigned bits = config->wordsize * 8;
+  const TargetInfo &target = *elf::target;
   uint64_t lastPPCRelaxedRelocOff = UINT64_C(-1);
 
   for (const Relocation &rel : relocations) {
@@ -1032,7 +1034,7 @@ void InputSectionBase::relocateAlloc(uint8_t *buf, uint8_t *bufEnd) {
     switch (rel.expr) {
     case R_RELAX_GOT_PC:
     case R_RELAX_GOT_PC_NOPIC:
-      target->relaxGot(bufLoc, rel, targetVA);
+      target.relaxGot(bufLoc, rel, targetVA);
       break;
     case R_PPC64_RELAX_GOT_PC: {
       // The R_PPC64_PCREL_OPT relocation must appear immediately after
@@ -1045,7 +1047,7 @@ void InputSectionBase::relocateAlloc(uint8_t *buf, uint8_t *bufEnd) {
         lastPPCRelaxedRelocOff = offset;
       if (rel.type == R_PPC64_PCREL_OPT && offset != lastPPCRelaxedRelocOff)
         break;
-      target->relaxGot(bufLoc, rel, targetVA);
+      target.relaxGot(bufLoc, rel, targetVA);
       break;
     }
     case R_PPC64_RELAX_TOC:
@@ -1056,25 +1058,25 @@ void InputSectionBase::relocateAlloc(uint8_t *buf, uint8_t *bufEnd) {
       // opportunities but is safe.
       if (ppc64noTocRelax.count({rel.sym, rel.addend}) ||
           !tryRelaxPPC64TocIndirection(rel, bufLoc))
-        target->relocate(bufLoc, rel, targetVA);
+        target.relocate(bufLoc, rel, targetVA);
       break;
     case R_RELAX_TLS_IE_TO_LE:
-      target->relaxTlsIeToLe(bufLoc, rel, targetVA);
+      target.relaxTlsIeToLe(bufLoc, rel, targetVA);
       break;
     case R_RELAX_TLS_LD_TO_LE:
     case R_RELAX_TLS_LD_TO_LE_ABS:
-      target->relaxTlsLdToLe(bufLoc, rel, targetVA);
+      target.relaxTlsLdToLe(bufLoc, rel, targetVA);
       break;
     case R_RELAX_TLS_GD_TO_LE:
     case R_RELAX_TLS_GD_TO_LE_NEG:
-      target->relaxTlsGdToLe(bufLoc, rel, targetVA);
+      target.relaxTlsGdToLe(bufLoc, rel, targetVA);
       break;
     case R_AARCH64_RELAX_TLS_GD_TO_IE_PAGE_PC:
     case R_RELAX_TLS_GD_TO_IE:
     case R_RELAX_TLS_GD_TO_IE_ABS:
     case R_RELAX_TLS_GD_TO_IE_GOT_OFF:
     case R_RELAX_TLS_GD_TO_IE_GOTPLT:
-      target->relaxTlsGdToIe(bufLoc, rel, targetVA);
+      target.relaxTlsGdToIe(bufLoc, rel, targetVA);
       break;
     case R_PPC64_CALL:
       // If this is a call to __tls_get_addr, it may be part of a TLS
@@ -1099,10 +1101,10 @@ void InputSectionBase::relocateAlloc(uint8_t *buf, uint8_t *bufEnd) {
         }
         write32(bufLoc + 4, 0xe8410018); // ld %r2, 24(%r1)
       }
-      target->relocate(bufLoc, rel, targetVA);
+      target.relocate(bufLoc, rel, targetVA);
       break;
     default:
-      target->relocate(bufLoc, rel, targetVA);
+      target.relocate(bufLoc, rel, targetVA);
       break;
     }
   }
@@ -1115,7 +1117,7 @@ void InputSectionBase::relocateAlloc(uint8_t *buf, uint8_t *bufEnd) {
     for (const JumpInstrMod &jumpMod : jumpInstrMods) {
       uint64_t offset = jumpMod.offset;
       uint8_t *bufLoc = buf + offset;
-      target->applyJumpInstrMod(bufLoc, jumpMod.original, jumpMod.size);
+      target.applyJumpInstrMod(bufLoc, jumpMod.original, jumpMod.size);
     }
   }
 }
