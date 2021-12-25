@@ -4,7 +4,7 @@
 // RUN: ld.lld -shared %t2.o -soname=so -o %t2.so
 // RUN: ld.lld -e main %t1.o %t2.so -o %t3
 // RUN: llvm-readobj -S -r %t3 | FileCheck %s
-// RUN: llvm-objdump -d %t3 | FileCheck --check-prefix=DISASM %s
+// RUN: llvm-objdump -d --no-show-raw-insn %t3 | FileCheck --check-prefix=DISASM %s
 
 // CHECK:      Section {
 // CHECK:      Index: 9
@@ -15,7 +15,7 @@
 // CHECK-NEXT:   SHF_WRITE
 // CHECK-NEXT: ]
 // CHECK-NEXT: Address: [[ADDR:.*]]
-// CHECK-NEXT: Offset: 0x3B0
+// CHECK-NEXT: Offset: 0x3F0
 // CHECK-NEXT: Size: 16
 // CHECK-NEXT: Link: 0
 // CHECK-NEXT: Info: 0
@@ -26,23 +26,27 @@
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section (5) .rela.dyn {
 // CHECK-NEXT:     [[ADDR]] R_X86_64_TPOFF64 tls1 0x0
-// CHECK-NEXT:     0x2023B8 R_X86_64_TPOFF64 tls0 0x0
+// CHECK-NEXT:     0x2023F8 R_X86_64_TPOFF64 tls0 0x0
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 
-// 0x2012d0 + 4313 + 7 = 0x2023B0
-// 0x2012dA + 4311 + 7 = 0x2023B8
-// 0x2012e4 + 4301 + 7 = 0x2023B8
+/// 0x2023F0 - 0x201307 = 4329
+/// 0x2023F8 - 0x201311 = 4327
+/// 0x2023F8 - 0x20131b = 4317
 // DISASM:      Disassembly of section .text:
 // DISASM-EMPTY:
 // DISASM-NEXT: <main>:
-// DISASM-NEXT: 2012d0: {{.*}} movq 4313(%rip), %rax
-// DISASM-NEXT: 2012d7: {{.*}} movl %fs:(%rax), %eax
-// DISASM-NEXT: 2012da: {{.*}} movq 4311(%rip), %rax
-// DISASM-NEXT: 2012e1: {{.*}} movl %fs:(%rax), %eax
-// DISASM-NEXT: 2012e4: {{.*}} movq 4301(%rip), %rax
-// DISASM-NEXT: 2012eb: {{.*}} movl %fs:(%rax), %eax
-// DISASM-NEXT: 2012ee: {{.*}} retq
+// DISASM-NEXT:         movq 4329(%rip), %rax
+// DISASM-NEXT: 201307: movl %fs:(%rax), %eax
+// DISASM-NEXT:         movq 4327(%rip), %rax
+// DISASM-NEXT: 201311: movl %fs:(%rax), %eax
+// DISASM-NEXT:         movq 4317(%rip), %rax
+// DISASM-NEXT: 20131b: movl %fs:(%rax), %eax
+
+/// 0x2023F0 - 0x20132e = 4290
+// DISASM-NEXT:         movq %fs:0, %rax
+// DISASM-NEXT:         addq 4290(%rip), %rax
+// DISASM-NEXT: 20132e: retq
 
 .section .tdata,"awT",@progbits
 
@@ -57,4 +61,11 @@ main:
  movl %fs:0(%rax), %eax
  movq tls0@GOTTPOFF(%rip), %rax
  movl %fs:0(%rax), %eax
+
+## Relaxed to TLS IE. Share the GOT entry with GOTTPOFF.
+ .byte   0x66
+ leaq    tls1@tlsgd(%rip), %rdi
+ .value  0x6666
+ rex64
+ call    __tls_get_addr@PLT
  ret
