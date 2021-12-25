@@ -115,8 +115,7 @@ class TestCase(TestBase):
         self.assertIn('= \\0\\e90zaZA\\v\\t\\r\\n\\f\\b\\a \n', self.getFormatted("character array", string_expr))
         self.assertIn('= \\0\\e90zaZA\\v\\t\\r\\n\\f\\b\\a \n', self.getFormatted("character", string_expr))
         self.assertIn('= ..90zaZA....... \n', self.getFormatted("printable character", string_expr))
-        # FIXME: This should probably print the characters in the uint128_t.
-        self.assertIn('= 0x2007080c0a0d090b415a617a30391b00\n', self.getFormatted("unicode8", string_expr))
+        self.assertIn('= 0x00 0x1b 0x39 0x30 0x7a 0x61 0x5a 0x41 0x0b 0x09 0x0d 0x0a 0x0c 0x08 0x07 0x20\n', self.getFormatted("unicode8", string_expr))
 
         # OSType
         ostype_expr = "(__UINT64_TYPE__)0x"
@@ -136,6 +135,9 @@ class TestCase(TestBase):
 
         # bytes with ASCII
         self.assertIn(r'= " \U0000001b\a\b\f\n\r\t\vaA09\0"', self.getFormatted("bytes with ASCII", "cstring"))
+
+        # unicode8
+        self.assertIn('= 0x78 0x56 0x34 0x12\n', self.getFormatted("unicode8", "0x12345678"))
 
         # unicode16
         self.assertIn('= U+5678 U+1234\n', self.getFormatted("unicode16", "0x12345678"))
