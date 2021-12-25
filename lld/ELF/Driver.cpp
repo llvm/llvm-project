@@ -1821,17 +1821,21 @@ static void writeDependencyFile() {
 // symbols of type CommonSymbol.
 static void replaceCommonSymbols() {
   llvm::TimeTraceScope timeScope("Replace common symbols");
-  for (Symbol *sym : symtab->symbols()) {
-    auto *s = dyn_cast<CommonSymbol>(sym);
-    if (!s)
+  for (ELFFileBase *file : objectFiles) {
+    if (!file->hasCommonSyms)
       continue;
+    for (Symbol *sym : file->getGlobalSymbols()) {
+      auto *s = dyn_cast<CommonSymbol>(sym);
+      if (!s)
+        continue;
 
-    auto *bss = make<BssSection>("COMMON", s->size, s->alignment);
-    bss->file = s->file;
-    bss->markDead();
-    inputSections.push_back(bss);
-    s->replace(Defined{s->file, s->getName(), s->binding, s->stOther, s->type,
-                       /*value=*/0, s->size, bss});
+      auto *bss = make<BssSection>("COMMON", s->size, s->alignment);
+      bss->file = s->file;
+      bss->markDead();
+      inputSections.push_back(bss);
+      s->replace(Defined{s->file, s->getName(), s->binding, s->stOther, s->type,
+                         /*value=*/0, s->size, bss});
+    }
   }
 }
 
