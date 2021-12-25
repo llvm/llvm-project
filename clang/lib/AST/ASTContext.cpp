@@ -9272,7 +9272,7 @@ void getIntersectionOfProtocols(ASTContext &Context,
   // Remove any implied protocols from the list of inherited protocols.
   if (!ImpliedProtocols.empty()) {
     llvm::erase_if(IntersectionSet, [&](ObjCProtocolDecl *proto) -> bool {
-      return ImpliedProtocols.count(proto) > 0;
+      return ImpliedProtocols.contains(proto);
     });
   }
 

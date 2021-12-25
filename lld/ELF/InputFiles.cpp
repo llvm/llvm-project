@@ -1123,6 +1123,7 @@ template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
       if (value == 0 || value >= UINT32_MAX)
         fatal(toString(this) + ": common symbol '" + name +
               "' has invalid alignment: " + Twine(value));
+      hasCommonSyms = true;
       sym->resolve(
           CommonSymbol{this, name, binding, stOther, type, value, size});
       continue;

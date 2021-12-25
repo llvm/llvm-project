@@ -312,7 +312,6 @@ void UnwindLLDB::UpdateUnwindPlanForFirstFrameIfInvalid(ABI *abi) {
   // Restore status after calling AddOneMoreFrame
   m_unwind_complete = old_m_unwind_complete;
   m_candidate_frame = old_m_candidate_frame;
-  return;
 }
 
 bool UnwindLLDB::AddOneMoreFrame(ABI *abi) {

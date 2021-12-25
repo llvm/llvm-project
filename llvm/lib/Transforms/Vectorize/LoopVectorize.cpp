@@ -2963,7 +2963,7 @@ void InnerLoopVectorizer::scalarizeInstruction(Instruction *Instr,
   // poison-generating flags (nuw/nsw, exact, inbounds, etc.). The scalarized
   // instruction could feed a poison value to the base address of the widen
   // load/store.
-  if (State.MayGeneratePoisonRecipes.count(RepRecipe) > 0)
+  if (State.MayGeneratePoisonRecipes.contains(RepRecipe))
     Cloned->dropPoisonGeneratingFlags();
 
   State.Builder.SetInsertPoint(Builder.GetInsertBlock(),
@@ -9533,7 +9533,7 @@ void VPWidenRecipe::execute(VPTransformState &State) {
         // exact, etc.). The control flow has been linearized and the
         // instruction is no longer guarded by the predicate, which could make
         // the flag properties to no longer hold.
-        if (State.MayGeneratePoisonRecipes.count(this) > 0)
+        if (State.MayGeneratePoisonRecipes.contains(this))
           VecOp->dropPoisonGeneratingFlags();
       }
 

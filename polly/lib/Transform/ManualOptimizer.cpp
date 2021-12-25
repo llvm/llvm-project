@@ -271,7 +271,6 @@ public:
       }
 
       // not a loop transformation; look for next property
-      continue;
     }
   }
 

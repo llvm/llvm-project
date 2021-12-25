@@ -1954,8 +1954,6 @@ void ClangExpressionDeclMap::AddContextClassType(NameSearchContext &context,
     return;
 
   context.AddNamedDecl(typedef_decl);
-
-  return;
 }
 
 void ClangExpressionDeclMap::AddOneType(NameSearchContext &context,

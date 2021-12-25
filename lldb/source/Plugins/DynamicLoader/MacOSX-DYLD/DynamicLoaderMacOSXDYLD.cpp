@@ -242,7 +242,6 @@ void DynamicLoaderMacOSXDYLD::DoInitialImageFetch() {
       ReadDYLDInfoFromMemoryAndSetNotificationCallback(0x8fe00000);
     }
   }
-  return;
 }
 
 // Assume that dyld is in memory at ADDR and try to parse it's load commands

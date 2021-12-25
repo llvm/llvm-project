@@ -4647,7 +4647,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
 
   // Add symbols from the trie to the symbol table.
   for (auto &e : external_sym_trie_entries) {
-    if (symbols_added.find(e.entry.address) != symbols_added.end())
+    if (symbols_added.contains(e.entry.address))
       continue;
 
     // Find the section that this trie address is in, use that to annotate

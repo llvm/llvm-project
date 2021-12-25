@@ -155,7 +155,7 @@ public:
       return false;
 
     // Ignore anonymous functions.
-    if (!dyn_cast_or_null<NamedDecl>(AC.getDecl()))
+    if (!isa_and_nonnull<NamedDecl>(AC.getDecl()))
       return false;
 
     SortedGraph = AC.getAnalysis<PostOrderCFGView>();
