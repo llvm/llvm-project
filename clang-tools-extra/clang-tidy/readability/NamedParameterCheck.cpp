@@ -71,7 +71,7 @@ void NamedParameterCheck::check(const MatchFinder::MatchResult &Result) {
     const char *Begin = SM.getCharacterData(Parm->getBeginLoc());
     const char *End = SM.getCharacterData(Parm->getLocation());
     StringRef Data(Begin, End - Begin);
-    if (Data.find("/*") != StringRef::npos)
+    if (Data.contains("/*"))
       continue;
 
     UnnamedParams.push_back(std::make_pair(Function, I));

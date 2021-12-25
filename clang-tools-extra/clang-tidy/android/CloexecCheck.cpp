@@ -87,7 +87,7 @@ void CloexecCheck::insertStringFlag(
 
   // Check if the <Mode> may be in the mode string.
   const auto *ModeStr = dyn_cast<StringLiteral>(ModeArg->IgnoreParenCasts());
-  if (!ModeStr || (ModeStr->getString().find(Mode) != StringRef::npos))
+  if (!ModeStr || ModeStr->getString().contains(Mode))
     return;
 
   std::string ReplacementText = buildFixMsgForStringFlag(
