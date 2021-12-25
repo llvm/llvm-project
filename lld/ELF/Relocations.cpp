@@ -472,8 +472,8 @@ static std::string maybeReportDiscarded(Undefined &sym) {
   if (!file || !sym.discardedSecIdx ||
       file->getSections()[sym.discardedSecIdx] != &InputSection::discarded)
     return "";
-  ArrayRef<Elf_Shdr_Impl<ELFT>> objSections =
-      CHECK(file->getObj().sections(), file);
+  ArrayRef<typename ELFT::Shdr> objSections =
+      file->template getELFShdrs<ELFT>();
 
   std::string msg;
   if (sym.type == ELF::STT_SECTION) {
