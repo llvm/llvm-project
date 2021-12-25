@@ -1145,10 +1145,9 @@ static unsigned handleMipsTlsRelocation(RelType type, Symbol &sym,
 // symbol in TLS block.
 //
 // Returns the number of relocations processed.
-template <class ELFT>
-static unsigned
-handleTlsRelocation(RelType type, Symbol &sym, InputSectionBase &c,
-                    typename ELFT::uint offset, int64_t addend, RelExpr expr) {
+static unsigned handleTlsRelocation(RelType type, Symbol &sym,
+                                    InputSectionBase &c, uint64_t offset,
+                                    int64_t addend, RelExpr expr) {
   if (!sym.isTls())
     return 0;
 
@@ -1354,8 +1353,8 @@ static void scanReloc(InputSectionBase &sec, OffsetGetter &getOffset, RelTy *&i,
                   getLocation(sec, sym, offset));
       return;
     }
-  } else if (unsigned processed = handleTlsRelocation<ELFT>(
-                 type, sym, sec, offset, addend, expr)) {
+  } else if (unsigned processed =
+                 handleTlsRelocation(type, sym, sec, offset, addend, expr)) {
     i += (processed - 1);
     return;
   }
