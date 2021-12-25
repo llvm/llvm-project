@@ -671,7 +671,7 @@ IslAstInfo IslAstAnalysis::run(Scop &S, ScopAnalysisManager &SAM,
     return SAM.getResult<DependenceAnalysis>(S, SAR).getDependences(Lvl);
   };
 
-  return std::move(*runIslAst(S, GetDeps).release());
+  return std::move(*runIslAst(S, GetDeps));
 }
 
 static __isl_give isl_printer *cbPrintUser(__isl_take isl_printer *P,
