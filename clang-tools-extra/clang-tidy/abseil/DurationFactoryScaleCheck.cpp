@@ -221,7 +221,6 @@ void DurationFactoryScaleCheck::check(const MatchFinder::MatchResult &Result) {
                 tooling::fixit::getText(*Remainder, *Result.Context) + ")")
                    .str());
   }
-  return;
 }
 
 } // namespace abseil

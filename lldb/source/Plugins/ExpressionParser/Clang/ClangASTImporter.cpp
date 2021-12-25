@@ -806,7 +806,7 @@ void ClangASTImporter::ForgetSource(clang::ASTContext *dst_ast,
   md->removeOriginsWithContext(src_ast);
 }
 
-ClangASTImporter::MapCompleter::~MapCompleter() { return; }
+ClangASTImporter::MapCompleter::~MapCompleter() {}
 
 llvm::Expected<Decl *>
 ClangASTImporter::ASTImporterDelegate::ImportImpl(Decl *From) {

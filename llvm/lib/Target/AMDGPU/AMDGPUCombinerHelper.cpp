@@ -378,5 +378,4 @@ void AMDGPUCombinerHelper::applyFoldableFneg(MachineInstr &MI,
   }
 
   MI.eraseFromParent();
-  return;
 }

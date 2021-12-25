@@ -1035,7 +1035,6 @@ public:
   void getArgKinds(ASTNodeKind ThisKind, unsigned,
                    std::vector<ArgKind> &ArgKinds) const override {
     ArgKinds.push_back(ArgKind::MakeNodeArg(ThisKind));
-    return;
   }
   bool isConvertibleTo(ASTNodeKind Kind, unsigned *Specificity = nullptr,
                        ASTNodeKind *LeastDerivedKind = nullptr) const override {

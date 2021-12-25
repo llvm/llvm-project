@@ -569,7 +569,6 @@ void PreferredTypeBuilder::enterMemAccess(Sema &S, SourceLocation Tok,
     return;
   // Keep the expected type, only update the location.
   ExpectedLoc = Tok;
-  return;
 }
 
 void PreferredTypeBuilder::enterUnary(Sema &S, SourceLocation Tok,

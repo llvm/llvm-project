@@ -1138,7 +1138,6 @@ void UnwrappedLineParser::parseModuleImport() {
   }
 
   addUnwrappedLine();
-  return;
 }
 
 // readTokenWithJavaScriptASI reads the next token and terminates the current

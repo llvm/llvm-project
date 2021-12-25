@@ -59,7 +59,7 @@ public:
   GetExternalCXXBaseSpecifiers(uint64_t Offset) override {
     return nullptr;
   }
-  void MaterializeVisibleDecls(const clang::DeclContext *DC) { return; }
+  void MaterializeVisibleDecls(const clang::DeclContext *DC) {}
 
   void InstallASTContext(TypeSystemClang &ast_context);
 

@@ -483,8 +483,6 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
 
   func_addr = m_function_load_addr;
   func_end = m_function_end_load_addr;
-
-  return;
 }
 
 IRExecutionUnit::~IRExecutionUnit() {

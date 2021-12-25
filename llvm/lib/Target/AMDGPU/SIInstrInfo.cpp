@@ -2395,8 +2395,6 @@ void SIInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
   OffsetLo->setVariableValue(MCBinaryExpr::createAnd(Offset, Mask, MCCtx));
   auto *ShAmt = MCConstantExpr::create(32, MCCtx);
   OffsetHi->setVariableValue(MCBinaryExpr::createAShr(Offset, ShAmt, MCCtx));
-
-  return;
 }
 
 unsigned SIInstrInfo::getBranchOpcode(SIInstrInfo::BranchPredicate Cond) {

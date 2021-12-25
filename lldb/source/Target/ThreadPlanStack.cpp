@@ -210,7 +210,6 @@ void ThreadPlanStack::DiscardAllPlans() {
   for (int i = stack_size - 1; i > 0; i--) {
     DiscardPlan();
   }
-  return;
 }
 
 void ThreadPlanStack::DiscardConsultingControllingPlans() {

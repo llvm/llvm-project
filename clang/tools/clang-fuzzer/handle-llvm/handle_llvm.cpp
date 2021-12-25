@@ -227,6 +227,4 @@ void clang_fuzzer::HandleLLVM(const std::string &IR,
 
   if (memcmp(OptArrays, UnoptArrays, kTotalSize))
     ErrorAndExit("!!!BUG!!!");
-
-  return;
 }

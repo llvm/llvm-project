@@ -4301,10 +4301,10 @@ public:
           PrivateDecls.push_back(VD);
     }
   }
-  void VisitOMPExecutableDirective(const OMPExecutableDirective *) { return; }
-  void VisitCapturedStmt(const CapturedStmt *) { return; }
-  void VisitLambdaExpr(const LambdaExpr *) { return; }
-  void VisitBlockExpr(const BlockExpr *) { return; }
+  void VisitOMPExecutableDirective(const OMPExecutableDirective *) {}
+  void VisitCapturedStmt(const CapturedStmt *) {}
+  void VisitLambdaExpr(const LambdaExpr *) {}
+  void VisitBlockExpr(const BlockExpr *) {}
   void VisitStmt(const Stmt *S) {
     if (!S)
       return;

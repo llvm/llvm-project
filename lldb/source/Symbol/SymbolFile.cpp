@@ -125,9 +125,7 @@ void SymbolFile::FindFunctions(const RegularExpression &regex,
 
 void SymbolFile::GetMangledNamesForFunction(
     const std::string &scope_qualified_name,
-    std::vector<ConstString> &mangled_names) {
-  return;
-}
+    std::vector<ConstString> &mangled_names) {}
 
 void SymbolFile::FindTypes(
     ConstString name, const CompilerDeclContext &parent_decl_ctx,

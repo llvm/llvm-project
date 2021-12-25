@@ -571,8 +571,6 @@ void AVRInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
   // See lib/CodeGen/RegisterRelaxation.cpp for details.
   // We end up here when a jump is too long for a RJMP instruction.
   BuildMI(&MBB, DL, get(AVR::JMPk)).addMBB(&NewDestBB);
-
-  return;
 }
 
 } // end of namespace llvm

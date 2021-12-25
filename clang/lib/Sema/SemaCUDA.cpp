@@ -886,7 +886,6 @@ void Sema::CUDACheckLambdaCapture(CXXMethodDecl *Callee,
                           diag::warn_maybe_capture_bad_target_this_ptr, Callee,
                           *this);
   }
-  return;
 }
 
 void Sema::CUDASetLambdaAttrs(CXXMethodDecl *Method) {
