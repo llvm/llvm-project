@@ -380,5 +380,4 @@ void HIPAMDToolChain::checkTargetID(
     getDriver().Diag(clang::diag::err_drv_bad_target_id)
         << PTID.OptionalTargetID.getValue();
   }
-  return;
 }

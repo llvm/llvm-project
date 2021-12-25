@@ -293,7 +293,7 @@ public:
 
     NamedDecl *to_named_decl = dyn_cast<NamedDecl>(to);
     // Check if we already completed this type.
-    if (m_decls_already_completed.count(to_named_decl) != 0)
+    if (m_decls_already_completed.contains(to_named_decl))
       return;
     // Queue this type to be completed.
     m_decls_to_complete.insert(to_named_decl);
@@ -806,7 +806,7 @@ void ClangASTImporter::ForgetSource(clang::ASTContext *dst_ast,
   md->removeOriginsWithContext(src_ast);
 }
 
-ClangASTImporter::MapCompleter::~MapCompleter() { return; }
+ClangASTImporter::MapCompleter::~MapCompleter() {}
 
 llvm::Expected<Decl *>
 ClangASTImporter::ASTImporterDelegate::ImportImpl(Decl *From) {

@@ -2324,7 +2324,6 @@ bool ShuffleVectorInst::isInsertSubvectorMask(ArrayRef<int> Mask,
     }
     Src1Elts.setBit(i);
     Src1Identity &= (M == (i + NumSrcElts));
-    continue;
   }
   assert((Src0Elts | Src1Elts | UndefElts).isAllOnes() &&
          "unknown shuffle elements");
@@ -4161,6 +4160,47 @@ bool ICmpInst::compare(const APInt &LHS, const APInt &RHS,
   };
 }
 
+bool FCmpInst::compare(const APFloat &LHS, const APFloat &RHS,
+                       FCmpInst::Predicate Pred) {
+  APFloat::cmpResult R = LHS.compare(RHS);
+  switch (Pred) {
+  default:
+    llvm_unreachable("Invalid FCmp Predicate");
+  case FCmpInst::FCMP_FALSE:
+    return false;
+  case FCmpInst::FCMP_TRUE:
+    return true;
+  case FCmpInst::FCMP_UNO:
+    return R == APFloat::cmpUnordered;
+  case FCmpInst::FCMP_ORD:
+    return R != APFloat::cmpUnordered;
+  case FCmpInst::FCMP_UEQ:
+    return R == APFloat::cmpUnordered || R == APFloat::cmpEqual;
+  case FCmpInst::FCMP_OEQ:
+    return R == APFloat::cmpEqual;
+  case FCmpInst::FCMP_UNE:
+    return R != APFloat::cmpEqual;
+  case FCmpInst::FCMP_ONE:
+    return R == APFloat::cmpLessThan || R == APFloat::cmpGreaterThan;
+  case FCmpInst::FCMP_ULT:
+    return R == APFloat::cmpUnordered || R == APFloat::cmpLessThan;
+  case FCmpInst::FCMP_OLT:
+    return R == APFloat::cmpLessThan;
+  case FCmpInst::FCMP_UGT:
+    return R == APFloat::cmpUnordered || R == APFloat::cmpGreaterThan;
+  case FCmpInst::FCMP_OGT:
+    return R == APFloat::cmpGreaterThan;
+  case FCmpInst::FCMP_ULE:
+    return R != APFloat::cmpGreaterThan;
+  case FCmpInst::FCMP_OLE:
+    return R == APFloat::cmpLessThan || R == APFloat::cmpEqual;
+  case FCmpInst::FCMP_UGE:
+    return R != APFloat::cmpLessThan;
+  case FCmpInst::FCMP_OGE:
+    return R == APFloat::cmpGreaterThan || R == APFloat::cmpEqual;
+  }
+}
+
 CmpInst::Predicate CmpInst::getFlippedSignednessPredicate(Predicate pred) {
   assert(CmpInst::isRelational(pred) &&
          "Call only with non-equality predicates!");
@@ -4407,7 +4447,7 @@ void SwitchInstProfUpdateWrapper::addCase(
     Weights.getValue()[SI.getNumSuccessors() - 1] = *W;
   } else if (Weights) {
     Changed = true;
-    Weights.getValue().push_back(W ? *W : 0);
+    Weights.getValue().push_back(W.getValueOr(0));
   }
   if (Weights)
     assert(SI.getNumSuccessors() == Weights->size() &&
