@@ -13,6 +13,7 @@
 #include "mlir/Analysis/AffineStructures.h"
 #include "mlir/Analysis/LinearTransform.h"
 #include "mlir/Analysis/Presburger/Simplex.h"
+#include "mlir/Analysis/Presburger/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
@@ -700,14 +701,13 @@ void FlatAffineValueConstraints::addAffineIfOpDomain(AffineIfOp ifOp) {
 // Searches for a constraint with a non-zero coefficient at `colIdx` in
 // equality (isEq=true) or inequality (isEq=false) constraints.
 // Returns true and sets row found in search in `rowIdx`, false otherwise.
-static bool findConstraintWithNonZeroAt(const FlatAffineConstraints &cst,
-                                        unsigned colIdx, bool isEq,
-                                        unsigned *rowIdx) {
-  assert(colIdx < cst.getNumCols() && "position out of bounds");
+bool FlatAffineConstraints::findConstraintWithNonZeroAt(
+    unsigned colIdx, bool isEq, unsigned *rowIdx) const {
+  assert(colIdx < getNumCols() && "position out of bounds");
   auto at = [&](unsigned rowIdx) -> int64_t {
-    return isEq ? cst.atEq(rowIdx, colIdx) : cst.atIneq(rowIdx, colIdx);
+    return isEq ? atEq(rowIdx, colIdx) : atIneq(rowIdx, colIdx);
   };
-  unsigned e = isEq ? cst.getNumEqualities() : cst.getNumInequalities();
+  unsigned e = isEq ? getNumEqualities() : getNumInequalities();
   for (*rowIdx = 0; *rowIdx < e; ++(*rowIdx)) {
     if (at(*rowIdx) != 0) {
       return true;
@@ -1203,145 +1203,6 @@ bool FlatAffineConstraints::containsPoint(ArrayRef<int64_t> point) const {
   return true;
 }
 
-/// Check if the pos^th identifier can be represented as a division using upper
-/// bound inequality at position `ubIneq` and lower bound inequality at position
-/// `lbIneq`.
-///
-/// Let `id` be the pos^th identifier, then `id` is equivalent to
-/// `expr floordiv divisor` if there are constraints of the form:
-///      0 <= expr - divisor * id <= divisor - 1
-/// Rearranging, we have:
-///       divisor * id - expr + (divisor - 1) >= 0  <-- Lower bound for 'id'
-///      -divisor * id + expr                 >= 0  <-- Upper bound for 'id'
-///
-/// For example:
-///     32*k >= 16*i + j - 31                 <-- Lower bound for 'k'
-///     32*k  <= 16*i + j                     <-- Upper bound for 'k'
-///     expr = 16*i + j, divisor = 32
-///     k = ( 16*i + j ) floordiv 32
-///
-///     4q >= i + j - 2                       <-- Lower bound for 'q'
-///     4q <= i + j + 1                       <-- Upper bound for 'q'
-///     expr = i + j + 1, divisor = 4
-///     q = (i + j + 1) floordiv 4
-//
-/// This function also supports detecting divisions from bounds that are
-/// strictly tighter than the division bounds described above, since tighter
-/// bounds imply the division bounds. For example:
-///     4q - i - j + 2 >= 0                       <-- Lower bound for 'q'
-///    -4q + i + j     >= 0                       <-- Tight upper bound for 'q'
-///
-/// To extract floor divisions with tighter bounds, we assume that that the
-/// constraints are of the form:
-///     c <= expr - divisior * id <= divisor - 1, where 0 <= c <= divisor - 1
-/// Rearranging, we have:
-///     divisor * id - expr + (divisor - 1) >= 0  <-- Lower bound for 'id'
-///    -divisor * id + expr - c             >= 0  <-- Upper bound for 'id'
-///
-/// If successful, `expr` is set to dividend of the division and `divisor` is
-/// set to the denominator of the division.
-static LogicalResult getDivRepr(const FlatAffineConstraints &cst, unsigned pos,
-                                unsigned ubIneq, unsigned lbIneq,
-                                SmallVector<int64_t, 8> &expr,
-                                unsigned &divisor) {
-
-  assert(pos <= cst.getNumIds() && "Invalid identifier position");
-  assert(ubIneq <= cst.getNumInequalities() &&
-         "Invalid upper bound inequality position");
-  assert(lbIneq <= cst.getNumInequalities() &&
-         "Invalid upper bound inequality position");
-
-  // Extract divisor from the lower bound.
-  divisor = cst.atIneq(lbIneq, pos);
-
-  // First, check if the constraints are opposite of each other except the
-  // constant term.
-  unsigned i = 0, e = 0;
-  for (i = 0, e = cst.getNumIds(); i < e; ++i)
-    if (cst.atIneq(ubIneq, i) != -cst.atIneq(lbIneq, i))
-      break;
-
-  if (i < e)
-    return failure();
-
-  // Then, check if the constant term is of the proper form.
-  // Due to the form of the upper/lower bound inequalities, the sum of their
-  // constants is `divisor - 1 - c`. From this, we can extract c:
-  int64_t constantSum = cst.atIneq(lbIneq, cst.getNumCols() - 1) +
-                        cst.atIneq(ubIneq, cst.getNumCols() - 1);
-  int64_t c = divisor - 1 - constantSum;
-
-  // Check if `c` satisfies the condition `0 <= c <= divisor - 1`. This also
-  // implictly checks that `divisor` is positive.
-  if (!(c >= 0 && c <= divisor - 1))
-    return failure();
-
-  // The inequality pair can be used to extract the division.
-  // Set `expr` to the dividend of the division except the constant term, which
-  // is set below.
-  expr.resize(cst.getNumCols(), 0);
-  for (i = 0, e = cst.getNumIds(); i < e; ++i)
-    if (i != pos)
-      expr[i] = cst.atIneq(ubIneq, i);
-
-  // From the upper bound inequality's form, its constant term is equal to the
-  // constant term of `expr`, minus `c`. From this,
-  // constant term of `expr` = constant term of upper bound + `c`.
-  expr.back() = cst.atIneq(ubIneq, cst.getNumCols() - 1) + c;
-
-  return success();
-}
-
-/// Check if the pos^th identifier can be expressed as a floordiv of an affine
-/// function of other identifiers (where the divisor is a positive constant).
-/// `foundRepr` contains a boolean for each identifier indicating if the
-/// explicit representation for that identifier has already been computed.
-/// Returns the upper and lower bound inequalities using which the floordiv can
-/// be computed. If the representation could be computed, `dividend` and
-/// `denominator` are set. If the representation could not be computed,
-/// `llvm::None` is returned.
-static Optional<std::pair<unsigned, unsigned>>
-computeSingleVarRepr(const FlatAffineConstraints &cst,
-                     const SmallVector<bool, 8> &foundRepr, unsigned pos,
-                     SmallVector<int64_t, 8> &dividend, unsigned &divisor) {
-  assert(pos < cst.getNumIds() && "invalid position");
-  assert(foundRepr.size() == cst.getNumIds() &&
-         "Size of foundRepr does not match total number of variables");
-
-  SmallVector<unsigned, 4> lbIndices, ubIndices;
-  cst.getLowerAndUpperBoundIndices(pos, &lbIndices, &ubIndices);
-
-  for (unsigned ubPos : ubIndices) {
-    for (unsigned lbPos : lbIndices) {
-      // Attempt to get divison representation from ubPos, lbPos.
-      if (failed(getDivRepr(cst, pos, ubPos, lbPos, dividend, divisor)))
-        continue;
-
-      // Check if the inequalities depend on a variable for which
-      // an explicit representation has not been found yet.
-      // Exit to avoid circular dependencies between divisions.
-      unsigned c, f;
-      for (c = 0, f = cst.getNumIds(); c < f; ++c) {
-        if (c == pos)
-          continue;
-        if (!foundRepr[c] && dividend[c] != 0)
-          break;
-      }
-
-      // Expression can't be constructed as it depends on a yet unknown
-      // identifier.
-      // TODO: Visit/compute the identifiers in an order so that this doesn't
-      // happen. More complex but much more efficient.
-      if (c < f)
-        continue;
-
-      return std::make_pair(ubPos, lbPos);
-    }
-  }
-
-  return llvm::None;
-}
-
 void FlatAffineConstraints::getLocalReprs(
     std::vector<llvm::Optional<std::pair<unsigned, unsigned>>> &repr) const {
   std::vector<SmallVector<int64_t, 8>> dividends(getNumLocalIds());
@@ -1378,8 +1239,9 @@ void FlatAffineConstraints::getLocalReprs(
     changed = false;
     for (unsigned i = 0, e = getNumLocalIds(); i < e; ++i) {
       if (!foundRepr[i + divOffset]) {
-        if (auto res = computeSingleVarRepr(*this, foundRepr, divOffset + i,
-                                            dividends[i], denominators[i])) {
+        if (auto res = presburger_utils::computeSingleVarRepr(
+                *this, foundRepr, divOffset + i, dividends[i],
+                denominators[i])) {
           foundRepr[i + divOffset] = true;
           repr[i] = res;
           changed = true;
@@ -1437,11 +1299,9 @@ unsigned FlatAffineConstraints::gaussianEliminateIds(unsigned posStart,
   for (pivotCol = posStart; pivotCol < posLimit; ++pivotCol) {
     // Find a row which has a non-zero coefficient in column 'j'.
     unsigned pivotRow;
-    if (!findConstraintWithNonZeroAt(*this, pivotCol, /*isEq=*/true,
-                                     &pivotRow)) {
+    if (!findConstraintWithNonZeroAt(pivotCol, /*isEq=*/true, &pivotRow)) {
       // No pivot row in equalities with non-zero at 'pivotCol'.
-      if (!findConstraintWithNonZeroAt(*this, pivotCol, /*isEq=*/false,
-                                       &pivotRow)) {
+      if (!findConstraintWithNonZeroAt(pivotCol, /*isEq=*/false, &pivotRow)) {
         // If inequalities are also non-zero in 'pivotCol', it can be
         // eliminated.
         continue;
@@ -1596,60 +1456,6 @@ static bool detectAsMod(const FlatAffineConstraints &cst, unsigned pos,
   return false;
 }
 
-/// Gather all lower and upper bounds of the identifier at `pos`, and
-/// optionally any equalities on it. In addition, the bounds are to be
-/// independent of identifiers in position range [`offset`, `offset` + `num`).
-void FlatAffineConstraints::getLowerAndUpperBoundIndices(
-    unsigned pos, SmallVectorImpl<unsigned> *lbIndices,
-    SmallVectorImpl<unsigned> *ubIndices, SmallVectorImpl<unsigned> *eqIndices,
-    unsigned offset, unsigned num) const {
-  assert(pos < getNumIds() && "invalid position");
-  assert(offset + num < getNumCols() && "invalid range");
-
-  // Checks for a constraint that has a non-zero coeff for the identifiers in
-  // the position range [offset, offset + num) while ignoring `pos`.
-  auto containsConstraintDependentOnRange = [&](unsigned r, bool isEq) {
-    unsigned c, f;
-    auto cst = isEq ? getEquality(r) : getInequality(r);
-    for (c = offset, f = offset + num; c < f; ++c) {
-      if (c == pos)
-        continue;
-      if (cst[c] != 0)
-        break;
-    }
-    return c < f;
-  };
-
-  // Gather all lower bounds and upper bounds of the variable. Since the
-  // canonical form c_1*x_1 + c_2*x_2 + ... + c_0 >= 0, a constraint is a lower
-  // bound for x_i if c_i >= 1, and an upper bound if c_i <= -1.
-  for (unsigned r = 0, e = getNumInequalities(); r < e; r++) {
-    // The bounds are to be independent of [offset, offset + num) columns.
-    if (containsConstraintDependentOnRange(r, /*isEq=*/false))
-      continue;
-    if (atIneq(r, pos) >= 1) {
-      // Lower bound.
-      lbIndices->push_back(r);
-    } else if (atIneq(r, pos) <= -1) {
-      // Upper bound.
-      ubIndices->push_back(r);
-    }
-  }
-
-  // An equality is both a lower and upper bound. Record any equalities
-  // involving the pos^th identifier.
-  if (!eqIndices)
-    return;
-
-  for (unsigned r = 0, e = getNumEqualities(); r < e; r++) {
-    if (atEq(r, pos) == 0)
-      continue;
-    if (containsConstraintDependentOnRange(r, /*isEq=*/true))
-      continue;
-    eqIndices->push_back(r);
-  }
-}
-
 /// Check if the pos^th identifier can be expressed as a floordiv of an affine
 /// function of other identifiers (where the divisor is a positive constant)
 /// given the initial set of expressions in `exprs`. If it can be, the
@@ -1670,7 +1476,8 @@ static bool detectAsFloorDiv(const FlatAffineConstraints &cst, unsigned pos,
 
   SmallVector<int64_t, 8> dividend;
   unsigned divisor;
-  auto ulPair = computeSingleVarRepr(cst, foundRepr, pos, dividend, divisor);
+  auto ulPair = presburger_utils::computeSingleVarRepr(cst, foundRepr, pos,
+                                                       dividend, divisor);
 
   // No upper-lower bound pair found for this var.
   if (!ulPair)
@@ -2109,7 +1916,7 @@ void FlatAffineConstraints::getSliceBounds(unsigned offset, unsigned num,
 
       // Detect an identifier as an expression of other identifiers.
       unsigned idx;
-      if (!findConstraintWithNonZeroAt(*this, pos, /*isEq=*/true, &idx)) {
+      if (!findConstraintWithNonZeroAt(pos, /*isEq=*/true, &idx)) {
         continue;
       }
 
@@ -3447,12 +3254,10 @@ void FlatAffineValueConstraints::getIneqAsAffineValueMap(
   vmap.reset(AffineMap::get(numDims - 1, numSyms, boundExpr), operands);
 }
 
-/// Returns true if the pos^th column is all zero for both inequalities and
-/// equalities..
-static bool isColZero(const FlatAffineConstraints &cst, unsigned pos) {
+bool FlatAffineConstraints::isColZero(unsigned pos) const {
   unsigned rowPos;
-  return !findConstraintWithNonZeroAt(cst, pos, /*isEq=*/false, &rowPos) &&
-         !findConstraintWithNonZeroAt(cst, pos, /*isEq=*/true, &rowPos);
+  return !findConstraintWithNonZeroAt(pos, /*isEq=*/false, &rowPos) &&
+         !findConstraintWithNonZeroAt(pos, /*isEq=*/true, &rowPos);
 }
 
 IntegerSet FlatAffineConstraints::getAsIntegerSet(MLIRContext *context) const {
@@ -3471,7 +3276,7 @@ IntegerSet FlatAffineConstraints::getAsIntegerSet(MLIRContext *context) const {
     SmallVector<unsigned> noLocalRepVars;
     unsigned numDimsSymbols = getNumDimAndSymbolIds();
     for (unsigned i = numDimsSymbols, e = getNumIds(); i < e; ++i) {
-      if (!memo[i] && !isColZero(*this, /*pos=*/i))
+      if (!memo[i] && !isColZero(/*pos=*/i))
         noLocalRepVars.push_back(i - numDimsSymbols);
     }
     if (!noLocalRepVars.empty()) {

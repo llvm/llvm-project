@@ -217,3 +217,57 @@ void IntegerPolyhedron::clearConstraints() {
   equalities.resizeVertically(0);
   inequalities.resizeVertically(0);
 }
+
+/// Gather all lower and upper bounds of the identifier at `pos`, and
+/// optionally any equalities on it. In addition, the bounds are to be
+/// independent of identifiers in position range [`offset`, `offset` + `num`).
+void IntegerPolyhedron::getLowerAndUpperBoundIndices(
+    unsigned pos, SmallVectorImpl<unsigned> *lbIndices,
+    SmallVectorImpl<unsigned> *ubIndices, SmallVectorImpl<unsigned> *eqIndices,
+    unsigned offset, unsigned num) const {
+  assert(pos < getNumIds() && "invalid position");
+  assert(offset + num < getNumCols() && "invalid range");
+
+  // Checks for a constraint that has a non-zero coeff for the identifiers in
+  // the position range [offset, offset + num) while ignoring `pos`.
+  auto containsConstraintDependentOnRange = [&](unsigned r, bool isEq) {
+    unsigned c, f;
+    auto cst = isEq ? getEquality(r) : getInequality(r);
+    for (c = offset, f = offset + num; c < f; ++c) {
+      if (c == pos)
+        continue;
+      if (cst[c] != 0)
+        break;
+    }
+    return c < f;
+  };
+
+  // Gather all lower bounds and upper bounds of the variable. Since the
+  // canonical form c_1*x_1 + c_2*x_2 + ... + c_0 >= 0, a constraint is a lower
+  // bound for x_i if c_i >= 1, and an upper bound if c_i <= -1.
+  for (unsigned r = 0, e = getNumInequalities(); r < e; r++) {
+    // The bounds are to be independent of [offset, offset + num) columns.
+    if (containsConstraintDependentOnRange(r, /*isEq=*/false))
+      continue;
+    if (atIneq(r, pos) >= 1) {
+      // Lower bound.
+      lbIndices->push_back(r);
+    } else if (atIneq(r, pos) <= -1) {
+      // Upper bound.
+      ubIndices->push_back(r);
+    }
+  }
+
+  // An equality is both a lower and upper bound. Record any equalities
+  // involving the pos^th identifier.
+  if (!eqIndices)
+    return;
+
+  for (unsigned r = 0, e = getNumEqualities(); r < e; r++) {
+    if (atEq(r, pos) == 0)
+      continue;
+    if (containsConstraintDependentOnRange(r, /*isEq=*/true))
+      continue;
+    eqIndices->push_back(r);
+  }
+}

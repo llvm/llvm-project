@@ -1,0 +1,155 @@
+//===- Utils.cpp - General utilities for Presburger library ---------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// Utility functions required by the Presburger Library.
+//
+//===----------------------------------------------------------------------===//
+
+#include "mlir/Analysis/Presburger/Utils.h"
+#include "mlir/Analysis/Presburger/IntegerPolyhedron.h"
+#include "mlir/Support/LogicalResult.h"
+
+using namespace mlir;
+
+/// Check if the pos^th identifier can be represented as a division using upper
+/// bound inequality at position `ubIneq` and lower bound inequality at position
+/// `lbIneq`.
+///
+/// Let `id` be the pos^th identifier, then `id` is equivalent to
+/// `expr floordiv divisor` if there are constraints of the form:
+///      0 <= expr - divisor * id <= divisor - 1
+/// Rearranging, we have:
+///       divisor * id - expr + (divisor - 1) >= 0  <-- Lower bound for 'id'
+///      -divisor * id + expr                 >= 0  <-- Upper bound for 'id'
+///
+/// For example:
+///     32*k >= 16*i + j - 31                 <-- Lower bound for 'k'
+///     32*k  <= 16*i + j                     <-- Upper bound for 'k'
+///     expr = 16*i + j, divisor = 32
+///     k = ( 16*i + j ) floordiv 32
+///
+///     4q >= i + j - 2                       <-- Lower bound for 'q'
+///     4q <= i + j + 1                       <-- Upper bound for 'q'
+///     expr = i + j + 1, divisor = 4
+///     q = (i + j + 1) floordiv 4
+//
+/// This function also supports detecting divisions from bounds that are
+/// strictly tighter than the division bounds described above, since tighter
+/// bounds imply the division bounds. For example:
+///     4q - i - j + 2 >= 0                       <-- Lower bound for 'q'
+///    -4q + i + j     >= 0                       <-- Tight upper bound for 'q'
+///
+/// To extract floor divisions with tighter bounds, we assume that that the
+/// constraints are of the form:
+///     c <= expr - divisior * id <= divisor - 1, where 0 <= c <= divisor - 1
+/// Rearranging, we have:
+///     divisor * id - expr + (divisor - 1) >= 0  <-- Lower bound for 'id'
+///    -divisor * id + expr - c             >= 0  <-- Upper bound for 'id'
+///
+/// If successful, `expr` is set to dividend of the division and `divisor` is
+/// set to the denominator of the division.
+static LogicalResult getDivRepr(const IntegerPolyhedron &cst, unsigned pos,
+                                unsigned ubIneq, unsigned lbIneq,
+                                SmallVector<int64_t, 8> &expr,
+                                unsigned &divisor) {
+
+  assert(pos <= cst.getNumIds() && "Invalid identifier position");
+  assert(ubIneq <= cst.getNumInequalities() &&
+         "Invalid upper bound inequality position");
+  assert(lbIneq <= cst.getNumInequalities() &&
+         "Invalid upper bound inequality position");
+
+  // Extract divisor from the lower bound.
+  divisor = cst.atIneq(lbIneq, pos);
+
+  // First, check if the constraints are opposite of each other except the
+  // constant term.
+  unsigned i = 0, e = 0;
+  for (i = 0, e = cst.getNumIds(); i < e; ++i)
+    if (cst.atIneq(ubIneq, i) != -cst.atIneq(lbIneq, i))
+      break;
+
+  if (i < e)
+    return failure();
+
+  // Then, check if the constant term is of the proper form.
+  // Due to the form of the upper/lower bound inequalities, the sum of their
+  // constants is `divisor - 1 - c`. From this, we can extract c:
+  int64_t constantSum = cst.atIneq(lbIneq, cst.getNumCols() - 1) +
+                        cst.atIneq(ubIneq, cst.getNumCols() - 1);
+  int64_t c = divisor - 1 - constantSum;
+
+  // Check if `c` satisfies the condition `0 <= c <= divisor - 1`. This also
+  // implictly checks that `divisor` is positive.
+  if (!(c >= 0 && c <= divisor - 1))
+    return failure();
+
+  // The inequality pair can be used to extract the division.
+  // Set `expr` to the dividend of the division except the constant term, which
+  // is set below.
+  expr.resize(cst.getNumCols(), 0);
+  for (i = 0, e = cst.getNumIds(); i < e; ++i)
+    if (i != pos)
+      expr[i] = cst.atIneq(ubIneq, i);
+
+  // From the upper bound inequality's form, its constant term is equal to the
+  // constant term of `expr`, minus `c`. From this,
+  // constant term of `expr` = constant term of upper bound + `c`.
+  expr.back() = cst.atIneq(ubIneq, cst.getNumCols() - 1) + c;
+
+  return success();
+}
+
+/// Check if the pos^th identifier can be expressed as a floordiv of an affine
+/// function of other identifiers (where the divisor is a positive constant).
+/// `foundRepr` contains a boolean for each identifier indicating if the
+/// explicit representation for that identifier has already been computed.
+/// Returns the upper and lower bound inequalities using which the floordiv can
+/// be computed. If the representation could be computed, `dividend` and
+/// `denominator` are set. If the representation could not be computed,
+/// `llvm::None` is returned.
+Optional<std::pair<unsigned, unsigned>> presburger_utils::computeSingleVarRepr(
+    const IntegerPolyhedron &cst, ArrayRef<bool> foundRepr, unsigned pos,
+    SmallVector<int64_t, 8> &dividend, unsigned &divisor) {
+  assert(pos < cst.getNumIds() && "invalid position");
+  assert(foundRepr.size() == cst.getNumIds() &&
+         "Size of foundRepr does not match total number of variables");
+
+  SmallVector<unsigned, 4> lbIndices, ubIndices;
+  cst.getLowerAndUpperBoundIndices(pos, &lbIndices, &ubIndices);
+
+  for (unsigned ubPos : ubIndices) {
+    for (unsigned lbPos : lbIndices) {
+      // Attempt to get divison representation from ubPos, lbPos.
+      if (failed(getDivRepr(cst, pos, ubPos, lbPos, dividend, divisor)))
+        continue;
+
+      // Check if the inequalities depend on a variable for which
+      // an explicit representation has not been found yet.
+      // Exit to avoid circular dependencies between divisions.
+      unsigned c, f;
+      for (c = 0, f = cst.getNumIds(); c < f; ++c) {
+        if (c == pos)
+          continue;
+        if (!foundRepr[c] && dividend[c] != 0)
+          break;
+      }
+
+      // Expression can't be constructed as it depends on a yet unknown
+      // identifier.
+      // TODO: Visit/compute the identifiers in an order so that this doesn't
+      // happen. More complex but much more efficient.
+      if (c < f)
+        continue;
+
+      return std::make_pair(ubPos, lbPos);
+    }
+  }
+
+  return llvm::None;
+}
