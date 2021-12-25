@@ -21,7 +21,7 @@ inline T makeNullableFromOptional(const Optional<T> &value) {
 
 template <class T>
 inline T *makePointerFromOptional(Optional<T *> value) {
-  return (value ? *value : nullptr);
+  return value.getValueOr(nullptr);
 }
 
 // PropertyReader is a class concept that requires the following method:

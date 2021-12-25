@@ -645,7 +645,7 @@ bool Parser::parseMatcherExpressionImpl(const TokenInfo &NameToken,
   Tokenizer->SkipNewlines();
 
   {
-    ScopedContextEntry SCE(this, Ctor ? *Ctor : nullptr);
+    ScopedContextEntry SCE(this, Ctor.getValueOr(nullptr));
 
     while (Tokenizer->nextTokenKind() != TokenInfo::TK_Eof) {
       if (Tokenizer->nextTokenKind() == TokenInfo::TK_CloseParen) {
