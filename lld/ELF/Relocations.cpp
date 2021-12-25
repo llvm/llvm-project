@@ -1158,13 +1158,10 @@ handleTlsRelocation(RelType type, Symbol &sym, InputSectionBase &c,
   if (oneof<R_AARCH64_TLSDESC_PAGE, R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC,
             R_TLSDESC_GOTPLT>(expr) &&
       config->shared) {
-    if (in.got->addDynTlsEntry(sym)) {
-      uint64_t off = in.got->getGlobalDynOffset(sym);
-      mainPart->relaDyn->addAddendOnlyRelocIfNonPreemptible(
-          target->tlsDescRel, *in.got, off, sym, target->tlsDescRel);
-    }
-    if (expr != R_TLSDESC_CALL)
+    if (expr != R_TLSDESC_CALL) {
+      sym.needsTlsDesc = true;
       c.relocations.push_back({expr, type, offset, addend, &sym});
+    }
     return 1;
   }
 
@@ -1200,14 +1197,7 @@ handleTlsRelocation(RelType type, Symbol &sym, InputSectionBase &c,
     }
     if (expr == R_TLSLD_HINT)
       return 1;
-    if (in.got->addTlsIndex()) {
-      if (isLocalInExecutable)
-        in.got->relocations.push_back(
-            {R_ADDEND, target->symbolicRel, in.got->getTlsIndexOff(), 1, &sym});
-      else
-        mainPart->relaDyn->addReloc(
-            {target->tlsModuleIndexRel, in.got, in.got->getTlsIndexOff()});
-    }
+    sym.needsTlsLd = true;
     c.relocations.push_back({expr, type, offset, addend, &sym});
     return 1;
   }
@@ -1223,12 +1213,7 @@ handleTlsRelocation(RelType type, Symbol &sym, InputSectionBase &c,
   // Local-Dynamic sequence where offset of tls variable relative to dynamic
   // thread pointer is stored in the got. This cannot be relaxed to Local-Exec.
   if (expr == R_TLSLD_GOT_OFF) {
-    if (!sym.isInGot()) {
-      in.got->addEntry(sym);
-      uint64_t off = sym.getGotOffset();
-      in.got->relocations.push_back(
-          {R_ABS, target->tlsOffsetRel, off, 0, &sym});
-    }
+    sym.needsGotDtprel = true;
     c.relocations.push_back({expr, type, offset, addend, &sym});
     return 1;
   }
@@ -1236,27 +1221,7 @@ handleTlsRelocation(RelType type, Symbol &sym, InputSectionBase &c,
   if (oneof<R_AARCH64_TLSDESC_PAGE, R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC,
             R_TLSDESC_GOTPLT, R_TLSGD_GOT, R_TLSGD_GOTPLT, R_TLSGD_PC>(expr)) {
     if (!toExecRelax) {
-      if (in.got->addDynTlsEntry(sym)) {
-        uint64_t off = in.got->getGlobalDynOffset(sym);
-
-        if (isLocalInExecutable)
-          // Write one to the GOT slot.
-          in.got->relocations.push_back(
-              {R_ADDEND, target->symbolicRel, off, 1, &sym});
-        else
-          mainPart->relaDyn->addSymbolReloc(target->tlsModuleIndexRel, *in.got,
-                                            off, sym);
-
-        // If the symbol is preemptible we need the dynamic linker to write
-        // the offset too.
-        uint64_t offsetOff = off + config->wordsize;
-        if (sym.isPreemptible)
-          mainPart->relaDyn->addSymbolReloc(target->tlsOffsetRel, *in.got,
-                                            offsetOff, sym);
-        else
-          in.got->relocations.push_back(
-              {R_ABS, target->tlsOffsetRel, offsetOff, 0, &sym});
-      }
+      sym.needsTlsGd = true;
       c.relocations.push_back({expr, type, offset, addend, &sym});
       return 1;
     }
@@ -1264,14 +1229,10 @@ handleTlsRelocation(RelType type, Symbol &sym, InputSectionBase &c,
     // Global-Dynamic relocs can be relaxed to Initial-Exec or Local-Exec
     // depending on the symbol being locally defined or not.
     if (sym.isPreemptible) {
+      sym.needsTlsGdToIe = true;
       c.relocations.push_back(
           {target->adjustTlsExpr(type, R_RELAX_TLS_GD_TO_IE), type, offset,
            addend, &sym});
-      if (!sym.isInGot()) {
-        in.got->addEntry(sym);
-        mainPart->relaDyn->addSymbolReloc(target->tlsGotRel, *in.got,
-                                          sym.getGotOffset(), sym);
-      }
     } else {
       c.relocations.push_back(
           {target->adjustTlsExpr(type, R_RELAX_TLS_GD_TO_LE), type, offset,
@@ -1288,8 +1249,7 @@ handleTlsRelocation(RelType type, Symbol &sym, InputSectionBase &c,
       c.relocations.push_back(
           {R_RELAX_TLS_IE_TO_LE, type, offset, addend, &sym});
     } else if (expr != R_TLSIE_HINT) {
-      if (!sym.isInGot())
-        addTpOffsetGotEntry(sym);
+      sym.needsTlsIe = true;
       // R_GOT needs a relative relocation for PIC on i386 and Hexagon.
       if (expr == R_GOT && config->isPic && !target->usesOnlyLowPageBits(type))
         addRelativeReloc(c, offset, sym, addend, expr, type);
@@ -1638,6 +1598,61 @@ void elf::postScanRelocations() {
         }
       }
     }
+
+    if (!sym.isTls())
+      return;
+    bool isLocalInExecutable = !sym.isPreemptible && !config->shared;
+
+    if (sym.needsTlsDesc) {
+      in.got->addDynTlsEntry(sym);
+      mainPart->relaDyn->addAddendOnlyRelocIfNonPreemptible(
+          target->tlsDescRel, *in.got, in.got->getGlobalDynOffset(sym), sym,
+          target->tlsDescRel);
+    }
+    if (sym.needsTlsGd && !sym.needsTlsDesc) {
+      // TODO Support mixed TLSDESC and TLS GD.
+      in.got->addDynTlsEntry(sym);
+      uint64_t off = in.got->getGlobalDynOffset(sym);
+      if (isLocalInExecutable)
+        // Write one to the GOT slot.
+        in.got->relocations.push_back(
+            {R_ADDEND, target->symbolicRel, off, 1, &sym});
+      else
+        mainPart->relaDyn->addSymbolReloc(target->tlsModuleIndexRel, *in.got,
+                                          off, sym);
+
+      // If the symbol is preemptible we need the dynamic linker to write
+      // the offset too.
+      uint64_t offsetOff = off + config->wordsize;
+      if (sym.isPreemptible)
+        mainPart->relaDyn->addSymbolReloc(target->tlsOffsetRel, *in.got,
+                                          offsetOff, sym);
+      else
+        in.got->relocations.push_back(
+            {R_ABS, target->tlsOffsetRel, offsetOff, 0, &sym});
+    }
+    if (sym.needsTlsGdToIe) {
+      in.got->addEntry(sym);
+      mainPart->relaDyn->addSymbolReloc(target->tlsGotRel, *in.got,
+                                        sym.getGotOffset(), sym);
+    }
+
+    if (sym.needsTlsLd && in.got->addTlsIndex()) {
+      if (isLocalInExecutable)
+        in.got->relocations.push_back(
+            {R_ADDEND, target->symbolicRel, in.got->getTlsIndexOff(), 1, &sym});
+      else
+        mainPart->relaDyn->addReloc(
+            {target->tlsModuleIndexRel, in.got, in.got->getTlsIndexOff()});
+    }
+    if (sym.needsGotDtprel) {
+      in.got->addEntry(sym);
+      in.got->relocations.push_back(
+          {R_ABS, target->tlsOffsetRel, sym.getGotOffset(), 0, &sym});
+    }
+
+    if (sym.needsTlsIe && !sym.needsTlsGdToIe)
+      addTpOffsetGotEntry(sym);
   };
   for (Symbol *sym : symtab->symbols())
     fn(*sym);
