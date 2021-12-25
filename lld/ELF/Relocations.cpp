@@ -1263,7 +1263,7 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
 
 template <class ELFT, class RelTy>
 static void scanReloc(InputSectionBase &sec, OffsetGetter &getOffset, RelTy *&i,
-                      RelTy *start, RelTy *end) {
+                      RelTy *end) {
   const RelTy &rel = *i;
   uint32_t symIndex = rel.getSymbol(config->isMips64EL);
   Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIndex);
@@ -1470,7 +1470,7 @@ static void scanRelocs(InputSectionBase &sec, ArrayRef<RelTy> rels) {
     rels = sortRels(rels, storage);
 
   for (auto i = rels.begin(), end = rels.end(); i != end;)
-    scanReloc<ELFT>(sec, getOffset, i, rels.begin(), end);
+    scanReloc<ELFT>(sec, getOffset, i, end);
 
   // Sort relocations by offset for more efficient searching for
   // R_RISCV_PCREL_HI20 and R_PPC64_ADDR64.
