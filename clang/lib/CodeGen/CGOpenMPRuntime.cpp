@@ -12788,7 +12788,7 @@ void CGOpenMPRuntime::checkAndEmitSharedLastprivateConditional(
   const CapturedStmt *CS = D.getCapturedStmt(CaptureRegions.back());
   for (const auto &Pair : It->DeclToUniqueName) {
     const auto *VD = cast<VarDecl>(Pair.first->getCanonicalDecl());
-    if (!CS->capturesVariable(VD) || IgnoredDecls.count(VD) > 0)
+    if (!CS->capturesVariable(VD) || IgnoredDecls.contains(VD))
       continue;
     auto I = LPCI->getSecond().find(Pair.first);
     assert(I != LPCI->getSecond().end() &&
