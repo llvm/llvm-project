@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -std=c++1z -fcoroutines-ts -verify %s -fcxx-exceptions -fexceptions -triple x86_64-windows-msvc -fms-extensions
 namespace std::experimental {
 template <typename... T> struct coroutine_traits;
+// expected-note@-1{{declared here}}
 
 template <class Promise = void> struct coroutine_handle {
   coroutine_handle() = default;

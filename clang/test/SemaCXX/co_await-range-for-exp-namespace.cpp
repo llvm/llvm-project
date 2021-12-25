@@ -53,6 +53,7 @@ MyForLoopArrayAwaiter g() {
   for co_await (auto i : arr) {} // expected-warning {{support for std::experimental::coroutine_traits will be removed}}
   // expected-error@-1 {{call to deleted member function 'await_transform'}}
   // expected-note@-2 {{'await_transform' implicitly required by 'co_await' here}}
+  // expected-note@Inputs/std-coroutine-exp-namespace.h:8 {{'coroutine_traits' declared here}}
 }
 
 struct ForLoopAwaiterBadBeginTransform {
