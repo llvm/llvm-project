@@ -205,12 +205,15 @@ protected:
   // Initializes this class's member variables.
   template <typename ELFT> void init();
 
+  StringRef stringTable;
   const void *elfShdrs = nullptr;
   const void *elfSyms = nullptr;
   uint32_t numELFShdrs = 0;
   uint32_t numELFSyms = 0;
   uint32_t firstGlobal = 0;
-  StringRef stringTable;
+
+public:
+  bool hasCommonSyms = false;
 };
 
 // .o file.
