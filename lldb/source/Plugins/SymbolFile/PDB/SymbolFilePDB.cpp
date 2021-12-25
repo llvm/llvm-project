@@ -239,7 +239,6 @@ void SymbolFilePDB::GetCompileUnitIndex(
     }
   }
   index = UINT32_MAX;
-  return;
 }
 
 std::unique_ptr<llvm::pdb::PDBSymbolCompiland>

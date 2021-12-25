@@ -2325,7 +2325,6 @@ bool ShuffleVectorInst::isInsertSubvectorMask(ArrayRef<int> Mask,
     }
     Src1Elts.setBit(i);
     Src1Identity &= (M == (i + NumSrcElts));
-    continue;
   }
   assert((Src0Elts | Src1Elts | UndefElts).isAllOnes() &&
          "unknown shuffle elements");
