@@ -472,7 +472,7 @@ public:
         // are strictly not necessary by tracking the invariant load as a
         // scalar.
         LoadInst *LI = dyn_cast<LoadInst>(Inst);
-        if (LI && ILS.count(LI) > 0)
+        if (LI && ILS.contains(LI))
           return false;
       }
 

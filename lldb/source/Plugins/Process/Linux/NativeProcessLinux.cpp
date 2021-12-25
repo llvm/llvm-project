@@ -874,7 +874,7 @@ void NativeProcessLinux::MonitorSignal(const siginfo_t &info,
 
   // Check if debugger should stop at this signal or just ignore it and resume
   // the inferior.
-  if (m_signals_to_ignore.find(signo) != m_signals_to_ignore.end()) {
+  if (m_signals_to_ignore.contains(signo)) {
      ResumeThread(thread, thread.GetState(), signo);
      return;
   }
