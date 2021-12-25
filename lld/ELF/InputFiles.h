@@ -91,9 +91,7 @@ public:
 
   // Returns object file symbols. It is a runtime error to call this
   // function on files of other types.
-  ArrayRef<Symbol *> getSymbols() { return getMutableSymbols(); }
-
-  MutableArrayRef<Symbol *> getMutableSymbols() {
+  ArrayRef<Symbol *> getSymbols() const {
     assert(fileKind == BinaryKind || fileKind == ObjKind ||
            fileKind == BitcodeKind);
     return symbols;
@@ -185,6 +183,10 @@ public:
   }
   ArrayRef<Symbol *> getGlobalSymbols() {
     return llvm::makeArrayRef(symbols).slice(firstGlobal);
+  }
+  MutableArrayRef<Symbol *> getMutableGlobalSymbols() {
+    return llvm::makeMutableArrayRef(symbols.data(), symbols.size())
+        .slice(firstGlobal);
   }
 
   template <typename ELFT> typename ELFT::SymRange getELFSyms() const {

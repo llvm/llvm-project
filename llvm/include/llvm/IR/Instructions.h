@@ -105,6 +105,11 @@ public:
     return cast<PointerType>(Instruction::getType());
   }
 
+  /// Return the address space for the allocation.
+  unsigned getAddressSpace() const {
+    return getType()->getAddressSpace();
+  }
+
   /// Get allocation size in bits. Returns None if size can't be determined,
   /// e.g. in case of a VLA.
   Optional<TypeSize> getAllocationSizeInBits(const DataLayout &DL) const;

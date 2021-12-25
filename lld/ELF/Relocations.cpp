@@ -2004,8 +2004,8 @@ std::pair<Thunk *, bool> ThunkCreator::getThunk(InputSection *isec,
   // non-Thunk target, so we cannot fold offset + addend.
   if (auto *d = dyn_cast<Defined>(rel.sym))
     if (!d->isInPlt() && d->section)
-      thunkVec = &thunkedSymbolsBySectionAndAddend[{
-          {d->section->repl, d->value}, keyAddend}];
+      thunkVec = &thunkedSymbolsBySectionAndAddend[{{d->section, d->value},
+                                                    keyAddend}];
   if (!thunkVec)
     thunkVec = &thunkedSymbols[{rel.sym, keyAddend}];
 

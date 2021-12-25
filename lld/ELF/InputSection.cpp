@@ -442,7 +442,7 @@ void InputSection::copyRelocations(uint8_t *buf, ArrayRef<RelTy> rels) {
         p->setSymbolAndType(0, 0, false);
         continue;
       }
-      SectionBase *section = d->section->repl;
+      SectionBase *section = d->section;
       if (!section->isLive()) {
         p->setSymbolAndType(0, 0, false);
         continue;
@@ -948,10 +948,10 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
       //
       // If the referenced symbol is discarded (made Undefined), or the
       // section defining the referenced symbol is garbage collected,
-      // sym.getOutputSection() is nullptr. `ds->section->repl != ds->section`
-      // catches the ICF folded case. However, resolving a relocation in
-      // .debug_line to -1 would stop debugger users from setting breakpoints on
-      // the folded-in function, so exclude .debug_line.
+      // sym.getOutputSection() is nullptr. `ds->folded` catches the ICF folded
+      // case. However, resolving a relocation in .debug_line to -1 would stop
+      // debugger users from setting breakpoints on the folded-in function, so
+      // exclude .debug_line.
       //
       // For pre-DWARF-v5 .debug_loc and .debug_ranges, -1 is a reserved value
       // (base address selection entry), use 1 (which is used by GNU ld for
@@ -960,8 +960,7 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
       // TODO To reduce disruption, we use 0 instead of -1 as the tombstone
       // value. Enable -1 in a future release.
       auto *ds = dyn_cast<Defined>(&sym);
-      if (!sym.getOutputSection() ||
-          (ds && ds->section->repl != ds->section && !isDebugLine)) {
+      if (!sym.getOutputSection() || (ds && ds->folded && !isDebugLine)) {
         // If -z dead-reloc-in-nonalloc= is specified, respect it.
         const uint64_t value = tombstone ? SignExtend64<bits>(*tombstone)
                                          : (isDebugLocOrRanges ? 1 : 0);
