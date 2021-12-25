@@ -2085,7 +2085,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (args.hasArg(OPT_include_optional)) {
     // Handle /includeoptional
     for (auto *arg : args.filtered(OPT_include_optional))
-      if (dyn_cast_or_null<LazyArchive>(ctx.symtab.find(arg->getValue())))
+      if (isa_and_nonnull<LazyArchive>(ctx.symtab.find(arg->getValue())))
         addUndefined(arg->getValue());
     while (run());
   }
