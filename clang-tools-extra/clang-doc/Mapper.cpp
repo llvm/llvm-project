@@ -68,7 +68,7 @@ bool MapASTVisitor::VisitCXXMethodDecl(const CXXMethodDecl *D) {
 
 bool MapASTVisitor::VisitFunctionDecl(const FunctionDecl *D) {
   // Don't visit CXXMethodDecls twice
-  if (dyn_cast<CXXMethodDecl>(D))
+  if (isa<CXXMethodDecl>(D))
     return true;
   return mapDecl(D);
 }

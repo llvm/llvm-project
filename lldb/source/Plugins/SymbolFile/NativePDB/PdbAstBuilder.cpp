@@ -1280,15 +1280,15 @@ clang::QualType PdbAstBuilder::CreateFunctionType(
 }
 
 static bool isTagDecl(clang::DeclContext &context) {
-  return !!llvm::dyn_cast<clang::TagDecl>(&context);
+  return llvm::isa<clang::TagDecl>(&context);
 }
 
 static bool isFunctionDecl(clang::DeclContext &context) {
-  return !!llvm::dyn_cast<clang::FunctionDecl>(&context);
+  return llvm::isa<clang::FunctionDecl>(&context);
 }
 
 static bool isBlockDecl(clang::DeclContext &context) {
-  return !!llvm::dyn_cast<clang::BlockDecl>(&context);
+  return llvm::isa<clang::BlockDecl>(&context);
 }
 
 void PdbAstBuilder::ParseAllNamespacesPlusChildrenOf(

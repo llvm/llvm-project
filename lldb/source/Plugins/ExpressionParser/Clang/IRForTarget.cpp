@@ -1255,7 +1255,7 @@ bool IRForTarget::MaybeHandleVariable(Value *llvm_value_ptr) {
       m_decl_map->AddValueToStruct(named_decl, lldb_private::ConstString(name),
                                    llvm_value_ptr, *value_size,
                                    value_alignment);
-  } else if (dyn_cast<llvm::Function>(llvm_value_ptr)) {
+  } else if (isa<llvm::Function>(llvm_value_ptr)) {
     LLDB_LOG(log, "Function pointers aren't handled right now");
 
     return false;

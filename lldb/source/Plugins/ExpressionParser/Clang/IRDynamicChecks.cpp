@@ -353,7 +353,7 @@ protected:
   }
 
   bool InspectInstruction(llvm::Instruction &i) override {
-    if (dyn_cast<llvm::LoadInst>(&i) || dyn_cast<llvm::StoreInst>(&i))
+    if (isa<llvm::LoadInst>(&i) || isa<llvm::StoreInst>(&i))
       RegisterInstruction(i);
 
     return true;

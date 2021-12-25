@@ -829,7 +829,7 @@ bool LoopConvertCheck::isConvertible(ASTContext *Context,
   } else if (FixerKind == LFK_PseudoArray) {
     // This call is required to obtain the container.
     const auto *EndCall = Nodes.getNodeAs<CXXMemberCallExpr>(EndCallName);
-    if (!EndCall || !dyn_cast<MemberExpr>(EndCall->getCallee()))
+    if (!EndCall || !isa<MemberExpr>(EndCall->getCallee()))
       return false;
   }
   return true;

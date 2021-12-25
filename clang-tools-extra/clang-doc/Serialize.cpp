@@ -382,7 +382,7 @@ populateParentNamespaces(llvm::SmallVector<Reference, 4> &Namespaces,
   // corresponds to a Record and if it doesn't have any namespace (because this
   // means it's in the global namespace). Also if its outermost namespace is a
   // record because that record matches the previous condition mentioned.
-  if ((Namespaces.empty() && dyn_cast<RecordDecl>(D)) ||
+  if ((Namespaces.empty() && isa<RecordDecl>(D)) ||
       (!Namespaces.empty() && Namespaces.back().RefType == InfoType::IT_record))
     Namespaces.emplace_back(SymbolID(), "GlobalNamespace",
                             InfoType::IT_namespace);
@@ -419,10 +419,10 @@ static void populateFunctionInfo(FunctionInfo &I, const FunctionDecl *D,
   populateSymbolInfo(I, D, FC, LineNumber, Filename, IsFileInRootDir,
                      IsInAnonymousNamespace);
   if (const auto *T = getDeclForType(D->getReturnType())) {
-    if (dyn_cast<EnumDecl>(T))
+    if (isa<EnumDecl>(T))
       I.ReturnType = TypeInfo(getUSRForDecl(T), T->getNameAsString(),
                               InfoType::IT_enum, getInfoRelativePath(T));
-    else if (dyn_cast<RecordDecl>(T))
+    else if (isa<RecordDecl>(T))
       I.ReturnType = TypeInfo(getUSRForDecl(T), T->getNameAsString(),
                               InfoType::IT_record, getInfoRelativePath(T));
   } else {
