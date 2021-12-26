@@ -153,12 +153,6 @@ void InputSectionBase::uncompress() const {
   uncompressedSize = -1;
 }
 
-uint64_t InputSectionBase::getOffsetInFile() const {
-  const uint8_t *fileStart = (const uint8_t *)file->mb.getBufferStart();
-  const uint8_t *secStart = data().begin();
-  return secStart - fileStart;
-}
-
 template <class ELFT> RelsOrRelas<ELFT> InputSectionBase::relsOrRelas() const {
   if (relSecIdx == 0)
     return {};
