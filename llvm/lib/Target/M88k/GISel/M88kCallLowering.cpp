@@ -90,7 +90,22 @@ struct FormalArgHandler : public M88kIncomingValueHandler {
   FormalArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI)
       : M88kIncomingValueHandler(MIRBuilder, MRI) {}
 
-  void markPhysRegUsed(unsigned PhysReg) override;
+  void markPhysRegUsed(unsigned PhysReg) override {
+    MIRBuilder.getMRI()->addLiveIn(PhysReg);
+    MIRBuilder.getMBB().addLiveIn(PhysReg);
+  }
+};
+
+struct CallReturnHandler : public M88kIncomingValueHandler {
+  CallReturnHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
+                    MachineInstrBuilder MIB)
+      : M88kIncomingValueHandler(MIRBuilder, MRI), MIB(MIB) {}
+
+  void markPhysRegUsed(unsigned PhysReg) override {
+    MIB.addDef(PhysReg, RegState::Implicit);
+  }
+
+  MachineInstrBuilder MIB;
 };
 
 } // namespace
@@ -208,11 +223,6 @@ M88kIncomingValueHandler::assignCustomValue(CallLowering::ArgInfo &Arg,
   return 1;
 }
 
-void FormalArgHandler::markPhysRegUsed(unsigned PhysReg) {
-  MIRBuilder.getMRI()->addLiveIn(PhysReg);
-  MIRBuilder.getMBB().addLiveIn(PhysReg);
-}
-
 bool M88kCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
                                    const Value *Val, ArrayRef<Register> VRegs,
                                    FunctionLoweringInfo &FLI,
@@ -268,5 +278,75 @@ bool M88kCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
 
 bool M88kCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                  CallLoweringInfo &Info) const {
-  return false;
+  MachineFunction &MF = MIRBuilder.getMF();
+  const Function &F = MF.getFunction();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  auto &DL = F.getParent()->getDataLayout();
+
+  SmallVector<ArgInfo, 8> OutArgs;
+  for (auto &OrigArg : Info.OrigArgs) {
+    splitToValueTypes(OrigArg, OutArgs, DL, Info.CallConv);
+  }
+
+  SmallVector<ArgInfo, 8> InArgs;
+  if (!Info.OrigRet.Ty->isVoidTy())
+    splitToValueTypes(Info.OrigRet, InArgs, DL, Info.CallConv);
+
+  // TODO Handle tail calls.
+
+  MachineInstrBuilder CallSeqStart;
+  CallSeqStart = MIRBuilder.buildInstr(M88k::ADJCALLSTACKDOWN);
+
+  // Create a temporarily-floating call instruction so we can add the implicit
+  // uses of arg registers.
+  unsigned Opc = Info.Callee.isReg() ? M88k::JSR : M88k::BSR;
+
+  auto MIB = MIRBuilder.buildInstrNoInsert(Opc);
+  MIB.add(Info.Callee);
+
+  // Tell the call which registers are clobbered.
+  const uint32_t *Mask;
+  const M88kSubtarget &Subtarget = MF.getSubtarget<M88kSubtarget>();
+  const auto *TRI = Subtarget.getRegisterInfo();
+
+  // Do the actual argument marshalling.
+  OutgoingValueAssigner ArgAssigner(CC_M88k);
+  OutgoingArgHandler Handler(MIRBuilder, MRI, MIB); //, /*IsReturn*/ false);
+  if (!determineAndHandleAssignments(Handler, ArgAssigner, OutArgs, MIRBuilder,
+                                     Info.CallConv, Info.IsVarArg))
+    return false;
+
+  Mask = TRI->getCallPreservedMask(MF, Info.CallConv);
+  MIB.addRegMask(Mask);
+
+  // Now we can add the actual call instruction to the correct basic block.
+  MIRBuilder.insertInstr(MIB);
+
+  // If Callee is a reg, since it is used by a target specific
+  // instruction, it must have a register class matching the
+  // constraint of that instruction.
+  if (Info.Callee.isReg())
+    constrainOperandRegClass(MF, *TRI, MRI, *Subtarget.getInstrInfo(),
+                             *Subtarget.getRegBankInfo(), *MIB, MIB->getDesc(),
+                             Info.Callee, 0);
+
+  // Finally we can copy the returned value back into its virtual-register. In
+  // symmetry with the arguments, the physical register must be an
+  // implicit-define of the call instruction.
+  if (!Info.OrigRet.Ty->isVoidTy()) {
+    OutgoingValueAssigner ArgAssigner(RetCC_M88k);
+    CallReturnHandler ReturnedArgHandler(MIRBuilder, MRI, MIB);
+    if (!determineAndHandleAssignments(
+            ReturnedArgHandler, ArgAssigner, InArgs,
+            MIRBuilder, Info.CallConv, Info.IsVarArg,
+            OutArgs[0].Regs[0]))
+      return false;
+  }
+
+  CallSeqStart.addImm(ArgAssigner.StackOffset).addImm(0);
+  MIRBuilder.buildInstr(M88k::ADJCALLSTACKUP)
+      .addImm(ArgAssigner.StackOffset)
+      .addImm(0);
+
+  return true;
 }

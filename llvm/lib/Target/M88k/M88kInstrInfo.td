@@ -33,6 +33,11 @@ def call             : SDNode<"M88kISD::CALL", SDT_Call,
                               SDNPVariadic]>;
 def retflag          : SDNode<"M88kISD::RET_FLAG", SDTNone,
                               [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_CallSeqStart,
+                                [SDNPHasChain, SDNPOutGlue]>;
+def callseq_end   : SDNode<"ISD::CALLSEQ_END", SDT_CallSeqEnd,
+                                [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
+
 
 def m88k_clr : SDNode<"M88kISD::CLR", SDTIntBinOp>;
 def m88k_set : SDNode<"M88kISD::SET", SDTIntBinOp>;
@@ -249,6 +254,17 @@ def uimm32 : IntImmLeaf<i32, [{
   uint64_t Val = Imm.getZExtValue();
   return isUInt<32>(Val) && (Val & 0xffff);
 }]>;
+
+// ---------------------------------------------------------------------------//
+// Pseudo instructions.
+// ---------------------------------------------------------------------------//
+
+let Defs = [R31], Uses = [R31], hasSideEffects = 1, isCodeGenOnly = 1 in {
+def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
+                              [(callseq_start timm:$amt1, timm:$amt2)]>;
+def ADJCALLSTACKUP : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
+                            [(callseq_end timm:$amt1, timm:$amt2)]>;
+}
 
 // ---------------------------------------------------------------------------//
 // Generic patterns.
@@ -798,13 +814,13 @@ let isTerminator = 1, isBarrier = 1 in {
                      "jmp.n", [(brind GPR:$rs2)]>;
 }
 
-let isCall = 1, isTerminator = 1, isBarrier = 1 in {
+let isCall = 1, isBarrier = 1 in {
   def JSR : F_JMP<0b11001, (outs), (ins GPR:$rs2), "jsr">;
   let hasDelaySlot = 1 in
     def JSRn : F_JMP<0b11001, (outs), (ins GPR:$rs2), "jsr.n">;
+
   def BSR : F_BRANCH<0b11001, (outs), (ins brtarget26:$d26), "bsr",
                      [(br bb:$d26)]>;
-
   let hasDelaySlot = 1 in
     def BSRn : F_BRANCH<0b11001, (outs), (ins brtarget26:$d26), "bsr.n",
                         [(br bb:$d26)]>;

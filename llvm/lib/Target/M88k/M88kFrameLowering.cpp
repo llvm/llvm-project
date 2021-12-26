@@ -125,5 +125,13 @@ bool M88kFrameLowering::restoreCalleeSavedRegisters(
 void M88kFrameLowering::emitPrologue(MachineFunction &MF,
                                      MachineBasicBlock &MBB) const {}
 
+MachineBasicBlock::iterator M88kFrameLowering::eliminateCallFramePseudoInstr(
+    MachineFunction & /*MF*/, MachineBasicBlock &MBB,
+    MachineBasicBlock::iterator I) const {
+  // TODO Implementation needed?
+  // Discard ADJCALLSTACKDOWN, ADJCALLSTACKUP instructions.
+  return MBB.erase(I);
+}
+
 void M88kFrameLowering::emitEpilogue(MachineFunction &MF,
                                      MachineBasicBlock &MBB) const {}
