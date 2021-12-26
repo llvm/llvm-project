@@ -73,9 +73,6 @@ raw_ostream &operator<<(raw_ostream &OS,
 /// Rendar a SymbolLookupFlags instance.
 raw_ostream &operator<<(raw_ostream &OS, const SymbolLookupFlags &LookupFlags);
 
-/// Render a JITDylibLookupFlags instance.
-raw_ostream &operator<<(raw_ostream &OS, const LookupKind &K);
-
 /// Render a SymbolLookupSet entry.
 raw_ostream &operator<<(raw_ostream &OS, const SymbolLookupSet::value_type &KV);
 
