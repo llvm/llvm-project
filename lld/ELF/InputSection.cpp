@@ -1227,7 +1227,7 @@ void InputSectionBase::adjustSplitStackFunctionPrologues(uint8_t *buf,
 
 template <class ELFT> void InputSection::writeTo(uint8_t *buf) {
   if (auto *s = dyn_cast<SyntheticSection>(this)) {
-    s->writeTo(buf + outSecOff);
+    s->writeTo(buf);
     return;
   }
 
@@ -1236,17 +1236,17 @@ template <class ELFT> void InputSection::writeTo(uint8_t *buf) {
   // If -r or --emit-relocs is given, then an InputSection
   // may be a relocation section.
   if (LLVM_UNLIKELY(type == SHT_RELA)) {
-    copyRelocations<ELFT>(buf + outSecOff, getDataAs<typename ELFT::Rela>());
+    copyRelocations<ELFT>(buf, getDataAs<typename ELFT::Rela>());
     return;
   }
   if (LLVM_UNLIKELY(type == SHT_REL)) {
-    copyRelocations<ELFT>(buf + outSecOff, getDataAs<typename ELFT::Rel>());
+    copyRelocations<ELFT>(buf, getDataAs<typename ELFT::Rel>());
     return;
   }
 
   // If -r is given, we may have a SHT_GROUP section.
   if (LLVM_UNLIKELY(type == SHT_GROUP)) {
-    copyShtGroup<ELFT>(buf + outSecOff);
+    copyShtGroup<ELFT>(buf);
     return;
   }
 
@@ -1254,20 +1254,19 @@ template <class ELFT> void InputSection::writeTo(uint8_t *buf) {
   // to the buffer.
   if (uncompressedSize >= 0) {
     size_t size = uncompressedSize;
-    if (Error e = zlib::uncompress(toStringRef(rawData),
-                                   (char *)(buf + outSecOff), size))
+    if (Error e = zlib::uncompress(toStringRef(rawData), (char *)buf, size))
       fatal(toString(this) +
             ": uncompress failed: " + llvm::toString(std::move(e)));
-    uint8_t *bufEnd = buf + outSecOff + size;
-    relocate<ELFT>(buf + outSecOff, bufEnd);
+    uint8_t *bufEnd = buf + size;
+    relocate<ELFT>(buf, bufEnd);
     return;
   }
 
   // Copy section contents from source object file to output file
   // and then apply relocations.
-  memcpy(buf + outSecOff, data().data(), data().size());
-  uint8_t *bufEnd = buf + outSecOff + data().size();
-  relocate<ELFT>(buf + outSecOff, bufEnd);
+  memcpy(buf, data().data(), data().size());
+  uint8_t *bufEnd = buf + data().size();
+  relocate<ELFT>(buf, bufEnd);
 }
 
 void InputSection::replace(InputSection *other) {
