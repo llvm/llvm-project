@@ -1724,7 +1724,7 @@ bool tools::GetSDLFromOffloadArchive(
     std::string OutputLib = D.GetTemporaryPath(
         Twine(Prefix + Lib + "-" + Arch + "-" + Target).str(), "a");
 
-    C.addTempFile(C.getArgs().MakeArgString(OutputLib.c_str()));
+    C.addTempFile(C.getArgs().MakeArgString(OutputLib));
 
     ArgStringList CmdArgs;
     SmallString<128> DeviceTriple;
@@ -1747,20 +1747,20 @@ bool tools::GetSDLFromOffloadArchive(
         T.getToolChain().GetProgramPath("clang-offload-bundler"));
 
     ArgStringList UBArgs;
-    UBArgs.push_back(C.getArgs().MakeArgString(UnbundleArg.c_str()));
-    UBArgs.push_back(C.getArgs().MakeArgString(TypeArg.c_str()));
-    UBArgs.push_back(C.getArgs().MakeArgString(InputArg.c_str()));
-    UBArgs.push_back(C.getArgs().MakeArgString(OffloadArg.c_str()));
-    UBArgs.push_back(C.getArgs().MakeArgString(OutputArg.c_str()));
+    UBArgs.push_back(C.getArgs().MakeArgString(UnbundleArg));
+    UBArgs.push_back(C.getArgs().MakeArgString(TypeArg));
+    UBArgs.push_back(C.getArgs().MakeArgString(InputArg));
+    UBArgs.push_back(C.getArgs().MakeArgString(OffloadArg));
+    UBArgs.push_back(C.getArgs().MakeArgString(OutputArg));
 
     // Add this flag to not exit from clang-offload-bundler if no compatible
     // code object is found in heterogenous archive library.
     std::string AdditionalArgs("-allow-missing-bundles");
-    UBArgs.push_back(C.getArgs().MakeArgString(AdditionalArgs.c_str()));
+    UBArgs.push_back(C.getArgs().MakeArgString(AdditionalArgs));
 
     C.addCommand(std::make_unique<Command>(
         JA, T, ResponseFileSupport::AtFileCurCP(), UBProgram, UBArgs, Inputs,
-        InputInfo(&JA, C.getArgs().MakeArgString(OutputLib.c_str()))));
+        InputInfo(&JA, C.getArgs().MakeArgString(OutputLib))));
     if (postClangLink)
       CC1Args.push_back("-mlink-builtin-bitcode");
 

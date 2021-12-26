@@ -9551,7 +9551,7 @@ emitMappingInformation(CodeGenFunction &CGF, llvm::OpenMPIRBuilder &OMPBuilder,
   }
 
   PresumedLoc PLoc = CGF.getContext().getSourceManager().getPresumedLoc(Loc);
-  return OMPBuilder.getOrCreateSrcLocStr(PLoc.getFilename(), ExprName.c_str(),
+  return OMPBuilder.getOrCreateSrcLocStr(PLoc.getFilename(), ExprName,
                                          PLoc.getLine(), PLoc.getColumn());
 }
 

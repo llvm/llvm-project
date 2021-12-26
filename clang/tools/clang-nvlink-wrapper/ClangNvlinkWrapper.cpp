@@ -63,7 +63,7 @@ static Error runNVLink(std::string NVLinkPath,
     NVLArgs.push_back(Arg);
   }
 
-  if (sys::ExecuteAndWait(NVLinkPath.c_str(), NVLArgs))
+  if (sys::ExecuteAndWait(NVLinkPath, NVLArgs))
     return createStringError(inconvertibleErrorCode(), "'nvlink' failed");
   return Error::success();
 }
