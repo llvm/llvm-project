@@ -355,7 +355,7 @@ template <class ELFT> void OutputSection::writeTo(uint8_t *buf) {
 
   parallelForEachN(0, sections.size(), [&](size_t i) {
     InputSection *isec = sections[i];
-    isec->writeTo<ELFT>(buf);
+    isec->writeTo<ELFT>(buf + isec->outSecOff);
 
     // Fill gaps between sections.
     if (nonZeroFiller) {
