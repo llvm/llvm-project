@@ -306,7 +306,7 @@ getChangedSymbolAssignment(const SymbolAssignmentMap &oldValues) {
 // Process INSERT [AFTER|BEFORE] commands. For each command, we move the
 // specified output section to the designated place.
 void LinkerScript::processInsertCommands() {
-  std::vector<OutputSection *> moves;
+  SmallVector<OutputSection *, 0> moves;
   for (const InsertCommand &cmd : insertCommands) {
     for (StringRef name : cmd.names) {
       // If base is empty, it may have been discarded by
@@ -490,7 +490,7 @@ SmallVector<InputSectionBase *, 0>
 LinkerScript::computeInputSections(const InputSectionDescription *cmd,
                                    ArrayRef<InputSectionBase *> sections) {
   SmallVector<InputSectionBase *, 0> ret;
-  std::vector<size_t> indexes;
+  SmallVector<size_t, 0> indexes;
   DenseSet<size_t> seen;
   auto sortByPositionThenCommandLine = [&](size_t begin, size_t end) {
     llvm::sort(MutableArrayRef<size_t>(indexes).slice(begin, end - begin));
@@ -827,7 +827,7 @@ addInputSec(StringMap<TinyPtrVector<OutputSection *>> &map,
 // Add sections that didn't match any sections command.
 void LinkerScript::addOrphanSections() {
   StringMap<TinyPtrVector<OutputSection *>> map;
-  std::vector<OutputSection *> v;
+  SmallVector<OutputSection *, 0> v;
 
   std::function<void(InputSectionBase *)> add;
   add = [&](InputSectionBase *s) {
@@ -1110,7 +1110,7 @@ bool LinkerScript::isDiscarded(const OutputSection *sec) const {
 }
 
 static void maybePropagatePhdrs(OutputSection &sec,
-                                std::vector<StringRef> &phdrs) {
+                                SmallVector<StringRef, 0> &phdrs) {
   if (sec.phdrs.empty()) {
     // To match the bfd linker script behaviour, only propagate program
     // headers to sections that are allocated.
@@ -1144,7 +1144,7 @@ void LinkerScript::adjustSectionsBeforeSorting() {
   // the previous sections. Only a few flags are needed to keep the impact low.
   uint64_t flags = SHF_ALLOC;
 
-  std::vector<StringRef> defPhdrs;
+  SmallVector<StringRef, 0> defPhdrs;
   for (SectionCommand *&cmd : sectionCommands) {
     auto *sec = dyn_cast<OutputSection>(cmd);
     if (!sec)
@@ -1215,7 +1215,7 @@ void LinkerScript::adjustSectionsAfterSorting() {
   // Below is an example of such linker script:
   // PHDRS { seg PT_LOAD; }
   // SECTIONS { .aaa : { *(.aaa) } }
-  std::vector<StringRef> defPhdrs;
+  SmallVector<StringRef, 0> defPhdrs;
   auto firstPtLoad = llvm::find_if(phdrsCommands, [](const PhdrsCommand &cmd) {
     return cmd.type == PT_LOAD;
   });
@@ -1245,7 +1245,7 @@ static uint64_t computeBase(uint64_t min, bool allocateHeaders) {
 // We check if the headers fit below the first allocated section. If there isn't
 // enough space for these sections, we'll remove them from the PT_LOAD segment,
 // and we'll also remove the PT_PHDR segment.
-void LinkerScript::allocateHeaders(std::vector<PhdrEntry *> &phdrs) {
+void LinkerScript::allocateHeaders(SmallVector<PhdrEntry *, 0> &phdrs) {
   uint64_t min = std::numeric_limits<uint64_t>::max();
   for (OutputSection *sec : outputSections)
     if (sec->flags & SHF_ALLOC)
@@ -1329,8 +1329,8 @@ const Defined *LinkerScript::assignAddresses() {
 }
 
 // Creates program headers as instructed by PHDRS linker script command.
-std::vector<PhdrEntry *> LinkerScript::createPhdrs() {
-  std::vector<PhdrEntry *> ret;
+SmallVector<PhdrEntry *, 0> LinkerScript::createPhdrs() {
+  SmallVector<PhdrEntry *, 0> ret;
 
   // Process PHDRS and FILEHDR keywords because they are not
   // real output sections and cannot be added in the following loop.
@@ -1412,8 +1412,8 @@ static Optional<size_t> getPhdrIndex(ArrayRef<PhdrsCommand> vec,
 
 // Returns indices of ELF headers containing specific section. Each index is a
 // zero based number of ELF header listed within PHDRS {} script block.
-std::vector<size_t> LinkerScript::getPhdrIndices(OutputSection *cmd) {
-  std::vector<size_t> ret;
+SmallVector<size_t, 0> LinkerScript::getPhdrIndices(OutputSection *cmd) {
+  SmallVector<size_t, 0> ret;
 
   for (StringRef s : cmd->phdrs) {
     if (Optional<size_t> idx = getPhdrIndex(phdrsCommands, s))

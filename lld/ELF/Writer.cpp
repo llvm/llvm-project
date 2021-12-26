@@ -65,7 +65,7 @@ private:
   void checkExecuteOnly();
   void setReservedSymbolSections();
 
-  std::vector<PhdrEntry *> createPhdrs(Partition &part);
+  SmallVector<PhdrEntry *, 0> createPhdrs(Partition &part);
   void addPhdrForSection(Partition &part, unsigned shType, unsigned pType,
                          unsigned pFlags);
   void assignFileOffsets();
@@ -100,7 +100,7 @@ template <class ELFT> void elf::writeResult() {
   Writer<ELFT>().run();
 }
 
-static void removeEmptyPTLoad(std::vector<PhdrEntry *> &phdrs) {
+static void removeEmptyPTLoad(SmallVector<PhdrEntry *, 0> &phdrs) {
   auto it = std::stable_partition(
       phdrs.begin(), phdrs.end(), [&](const PhdrEntry *p) {
         if (p->p_type != PT_LOAD)
@@ -1170,9 +1170,9 @@ static bool shouldSkip(SectionCommand *cmd) {
 // We want to place orphan sections so that they share as much
 // characteristics with their neighbors as possible. For example, if
 // both are rw, or both are tls.
-static std::vector<SectionCommand *>::iterator
-findOrphanPos(std::vector<SectionCommand *>::iterator b,
-              std::vector<SectionCommand *>::iterator e) {
+static SmallVectorImpl<SectionCommand *>::iterator
+findOrphanPos(SmallVectorImpl<SectionCommand *>::iterator b,
+              SmallVectorImpl<SectionCommand *>::iterator e) {
   OutputSection *sec = cast<OutputSection>(*e);
 
   // Find the first element that has as close a rank as possible.
@@ -1332,8 +1332,8 @@ static DenseMap<const InputSectionBase *, int> buildSectionOrder() {
 static void
 sortISDBySectionOrder(InputSectionDescription *isd,
                       const DenseMap<const InputSectionBase *, int> &order) {
-  std::vector<InputSection *> unorderedSections;
-  std::vector<std::pair<InputSection *, int>> orderedSections;
+  SmallVector<InputSection *, 0> unorderedSections;
+  SmallVector<std::pair<InputSection *, int>, 0> orderedSections;
   uint64_t unorderedSize = 0;
 
   for (InputSection *isec : isd->sections) {
@@ -1766,10 +1766,10 @@ template <class ELFT> void Writer<ELFT>::optimizeBasicBlockJumps() {
   //      jump to the following section as it is not required.
   //   2. If there are two consecutive jump instructions, it checks
   //      if they can be flipped and one can be deleted.
-  for (OutputSection *os : outputSections) {
-    if (!(os->flags & SHF_EXECINSTR))
+  for (OutputSection *osec : outputSections) {
+    if (!(osec->flags & SHF_EXECINSTR))
       continue;
-    std::vector<InputSection *> sections = getInputSections(os);
+    SmallVector<InputSection *, 0> sections = getInputSections(*osec);
     std::vector<unsigned> result(sections.size());
     // Delete all fall through jump instructions.  Also, check if two
     // consecutive jump instructions can be flipped so that a fall
@@ -1790,11 +1790,9 @@ template <class ELFT> void Writer<ELFT>::optimizeBasicBlockJumps() {
 
   fixSymbolsAfterShrinking();
 
-  for (OutputSection *os : outputSections) {
-    std::vector<InputSection *> sections = getInputSections(os);
-    for (InputSection *is : sections)
+  for (OutputSection *osec : outputSections)
+    for (InputSection *is : getInputSections(*osec))
       is->trim();
-  }
 }
 
 // In order to allow users to manipulate linker-synthesized sections,
@@ -2165,11 +2163,12 @@ template <class ELFT> void Writer<ELFT>::checkExecuteOnly() {
   if (!config->executeOnly)
     return;
 
-  for (OutputSection *os : outputSections)
-    if (os->flags & SHF_EXECINSTR)
-      for (InputSection *isec : getInputSections(os))
+  for (OutputSection *osec : outputSections)
+    if (osec->flags & SHF_EXECINSTR)
+      for (InputSection *isec : getInputSections(*osec))
         if (!(isec->flags & SHF_EXECINSTR))
-          error("cannot place " + toString(isec) + " into " + toString(os->name) +
+          error("cannot place " + toString(isec) + " into " +
+                toString(osec->name) +
                 ": -execute-only does not support intermingling data and code");
 }
 
@@ -2259,8 +2258,8 @@ static uint64_t computeFlags(uint64_t flags) {
 // Decide which program headers to create and which sections to include in each
 // one.
 template <class ELFT>
-std::vector<PhdrEntry *> Writer<ELFT>::createPhdrs(Partition &part) {
-  std::vector<PhdrEntry *> ret;
+SmallVector<PhdrEntry *, 0> Writer<ELFT>::createPhdrs(Partition &part) {
+  SmallVector<PhdrEntry *, 0> ret;
   auto addHdr = [&](unsigned type, unsigned flags) -> PhdrEntry * {
     ret.push_back(make<PhdrEntry>(type, flags));
     return ret.back();
