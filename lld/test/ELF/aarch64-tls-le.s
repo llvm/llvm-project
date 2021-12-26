@@ -1,15 +1,15 @@
 # REQUIRES: aarch64
-# RUN: llvm-mc -filetype=obj -triple=aarch64-unknown-freebsd %s -o %tmain.o
-# RUN: ld.lld %tmain.o -o %tout
-# RUN: llvm-objdump -d %tout | FileCheck %s
-# RUN: llvm-readobj -S -r %tout | FileCheck -check-prefix=RELOC %s
+# RUN: llvm-mc -filetype=obj -triple=aarch64 %s -o %t.o
+# RUN: ld.lld %t.o -o %t
+# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
+# RUN: llvm-readobj -S -r %t | FileCheck -check-prefix=RELOC %s
 
 #Local-Dynamic to Local-Exec relax creates no
 #RELOC:      Relocations [
 #RELOC-NEXT: ]
 
 ## Reject local-exec TLS relocations for -shared.
-# RUN: not ld.lld -shared %tmain.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR --implicit-check-not=error:
+# RUN: not ld.lld -shared %t.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR --implicit-check-not=error:
 
 # ERR: error: relocation R_AARCH64_TLSLE_ADD_TPREL_HI12 against v1 cannot be used with -shared
 # ERR: error: relocation R_AARCH64_TLSLE_ADD_TPREL_LO12_NC against v1 cannot be used with -shared
@@ -27,13 +27,13 @@ _start:
 
 # TCB size = 0x16 and foo is first element from TLS register.
 #CHECK: Disassembly of section .text:
-#CHECK: <_start>:
-#CHECK:  210158: 40 d0 3b d5     mrs     x0, TPIDR_EL0
-#CHECK:  21015c: 00 00 40 91     add     x0, x0, #0, lsl #12
-#CHECK:  210160: 00 40 00 91     add     x0, x0, #16
-#CHECK:  210164: 40 d0 3b d5     mrs     x0, TPIDR_EL0
-#CHECK:  210168: 00 fc 7f 91     add     x0, x0, #4095, lsl #12
-#CHECK:  21016c: 00 e0 3f 91     add     x0, x0, #4088
+#CHECK:      <_start>:
+#CHECK-NEXT:   mrs     x0, TPIDR_EL0
+#CHECK-NEXT:   add     x0, x0, #0, lsl #12
+#CHECK-NEXT:   add     x0, x0, #16
+#CHECK-NEXT:   mrs     x0, TPIDR_EL0
+#CHECK-NEXT:   add     x0, x0, #4095, lsl #12
+#CHECK-NEXT:   add     x0, x0, #4088
 
 .section        .tbss,"awT",@nobits
 
