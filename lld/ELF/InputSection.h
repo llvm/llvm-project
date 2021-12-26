@@ -156,8 +156,6 @@ public:
     return rawData;
   }
 
-  uint64_t getOffsetInFile() const;
-
   // Input sections are part of an output section. Special sections
   // like .eh_frame and merge sections are first combined into a
   // synthetic section that is then added to an output section. In all
