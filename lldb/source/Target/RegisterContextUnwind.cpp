@@ -1509,7 +1509,7 @@ RegisterContextUnwind::SavedLocationForRegister(
                    regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB));
       return UnwindLLDB::RegisterSearchResult::eRegisterFound;
     } else {
-      std::string unwindplan_name("");
+      std::string unwindplan_name;
       if (m_full_unwind_plan_sp) {
         unwindplan_name += "via '";
         unwindplan_name += m_full_unwind_plan_sp->GetSourceName().AsCString();
