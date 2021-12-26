@@ -455,9 +455,10 @@ private:
   /// Rebalance unknown subgraphs so as each branch splits with probabilities
   /// UnknownFirstSuccProbability and 1 - UnknownFirstSuccProbability
   void rebalanceUnknownSubgraphs() {
-    assert(UnknownFirstSuccProbability >= 0.0 &&
-           UnknownFirstSuccProbability <= 1.0 &&
-           "the share of the unknown successor should be between 0 and 1");
+    static_assert(
+        UnknownFirstSuccProbability >= 0.0 &&
+            UnknownFirstSuccProbability <= 1.0,
+        "the share of the unknown successor should be between 0 and 1");
     // Try to find unknown subgraphs from each non-unknown block
     for (uint64_t I = 0; I < Func.Blocks.size(); I++) {
       auto SrcBlock = &Func.Blocks[I];
