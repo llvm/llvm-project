@@ -28,7 +28,7 @@ std::string computeName(const FormatToken *NamespaceTok) {
   assert(NamespaceTok &&
          NamespaceTok->isOneOf(tok::kw_namespace, TT_NamespaceMacro) &&
          "expecting a namespace token");
-  std::string name = "";
+  std::string name;
   const FormatToken *Tok = NamespaceTok->getNextNonComment();
   if (NamespaceTok->is(TT_NamespaceMacro)) {
     // Collects all the non-comment tokens between opening parenthesis
@@ -224,7 +224,7 @@ std::pair<tooling::Replacements, unsigned> NamespaceEndCommentsFixer::analyze(
     return {Fixes, 0};
   }
 
-  std::string AllNamespaceNames = "";
+  std::string AllNamespaceNames;
   size_t StartLineIndex = SIZE_MAX;
   StringRef NamespaceTokenText;
   unsigned int CompactedNamespacesCount = 0;

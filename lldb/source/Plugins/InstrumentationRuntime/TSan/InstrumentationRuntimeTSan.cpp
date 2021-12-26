@@ -711,7 +711,7 @@ addr_t InstrumentationRuntimeTSan::GetMainRacyAddress(
 std::string InstrumentationRuntimeTSan::GetLocationDescription(
     StructuredData::ObjectSP report, addr_t &global_addr,
     std::string &global_name, std::string &filename, uint32_t &line) {
-  std::string result = "";
+  std::string result;
 
   ProcessSP process_sp = GetProcessSP();
 
@@ -820,8 +820,8 @@ bool InstrumentationRuntimeTSan::NotifyBreakpointHit(
     report->GetAsDictionary()->AddIntegerItem("memory_address", main_address);
 
     addr_t global_addr = 0;
-    std::string global_name = "";
-    std::string location_filename = "";
+    std::string global_name;
+    std::string location_filename;
     uint32_t location_line = 0;
     std::string location_description = instance->GetLocationDescription(
         report, global_addr, global_name, location_filename, location_line);
