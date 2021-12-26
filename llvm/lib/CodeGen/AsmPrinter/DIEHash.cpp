@@ -207,6 +207,18 @@ void DIEHash::hashDIEEntry(dwarf::Attribute Attribute, dwarf::Tag Tag,
   computeHash(Entry);
 }
 
+void DIEHash::hashRawTypeReference(const DIE &Entry) {
+  unsigned &DieNumber = Numbering[&Entry];
+  if (DieNumber) {
+    addULEB128('R');
+    addULEB128(DieNumber);
+    return;
+  }
+  DieNumber = Numbering.size();
+  addULEB128('T');
+  computeHash(Entry);
+}
+
 // Hash all of the values in a block like set of values. This assumes that
 // all of the data is going to be added as integers.
 void DIEHash::hashBlockData(const DIE::const_value_range &Values) {
