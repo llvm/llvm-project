@@ -201,7 +201,7 @@ combineOneSpec(DataLayoutSpecInterface spec,
   spec.bucketEntriesByType(newEntriesForType, newEntriesForID);
 
   // Try overwriting the old entries with the new ones.
-  for (const auto &kvp : newEntriesForType) {
+  for (auto &kvp : newEntriesForType) {
     if (!entriesForType.count(kvp.first)) {
       entriesForType[kvp.first] = std::move(kvp.second);
       continue;
