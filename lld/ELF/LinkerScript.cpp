@@ -270,8 +270,8 @@ using SymbolAssignmentMap =
 
 // Collect section/value pairs of linker-script-defined symbols. This is used to
 // check whether symbol values converge.
-static SymbolAssignmentMap getSymbolAssignmentValues(
-    const std::vector<SectionCommand *> &sectionCommands) {
+static SymbolAssignmentMap
+getSymbolAssignmentValues(ArrayRef<SectionCommand *> sectionCommands) {
   SymbolAssignmentMap ret;
   for (SectionCommand *cmd : sectionCommands) {
     if (auto *assign = dyn_cast<SymbolAssignment>(cmd)) {
@@ -486,10 +486,10 @@ static void sortInputSections(MutableArrayRef<InputSectionBase *> vec,
 }
 
 // Compute and remember which sections the InputSectionDescription matches.
-std::vector<InputSectionBase *>
+SmallVector<InputSectionBase *, 0>
 LinkerScript::computeInputSections(const InputSectionDescription *cmd,
                                    ArrayRef<InputSectionBase *> sections) {
-  std::vector<InputSectionBase *> ret;
+  SmallVector<InputSectionBase *, 0> ret;
   std::vector<size_t> indexes;
   DenseSet<size_t> seen;
   auto sortByPositionThenCommandLine = [&](size_t begin, size_t end) {
@@ -585,18 +585,15 @@ void LinkerScript::discardSynthetic(OutputSection &outCmd) {
     std::vector<InputSectionBase *> secs(part.armExidx->exidxSections.begin(),
                                          part.armExidx->exidxSections.end());
     for (SectionCommand *cmd : outCmd.commands)
-      if (auto *isd = dyn_cast<InputSectionDescription>(cmd)) {
-        std::vector<InputSectionBase *> matches =
-            computeInputSections(isd, secs);
-        for (InputSectionBase *s : matches)
+      if (auto *isd = dyn_cast<InputSectionDescription>(cmd))
+        for (InputSectionBase *s : computeInputSections(isd, secs))
           discard(*s);
-      }
   }
 }
 
-std::vector<InputSectionBase *>
+SmallVector<InputSectionBase *, 0>
 LinkerScript::createInputSectionList(OutputSection &outCmd) {
-  std::vector<InputSectionBase *> ret;
+  SmallVector<InputSectionBase *, 0> ret;
 
   for (SectionCommand *cmd : outCmd.commands) {
     if (auto *isd = dyn_cast<InputSectionDescription>(cmd)) {
@@ -612,7 +609,7 @@ LinkerScript::createInputSectionList(OutputSection &outCmd) {
 // Create output sections described by SECTIONS commands.
 void LinkerScript::processSectionCommands() {
   auto process = [this](OutputSection *osec) {
-    std::vector<InputSectionBase *> v = createInputSectionList(*osec);
+    SmallVector<InputSectionBase *, 0> v = createInputSectionList(*osec);
 
     // The output section name `/DISCARD/' is special.
     // Any input section assigned to it is discarded.
