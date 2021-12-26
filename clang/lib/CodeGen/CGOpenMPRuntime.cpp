@@ -1434,7 +1434,7 @@ llvm::Value *CGOpenMPRuntime::emitUpdateLocation(CodeGenFunction &CGF,
       Loc.isInvalid()) {
     SrcLocStr = OMPBuilder.getOrCreateDefaultSrcLocStr();
   } else {
-    std::string FunctionName = "";
+    std::string FunctionName;
     if (const auto *FD = dyn_cast_or_null<FunctionDecl>(CGF.CurFuncDecl))
       FunctionName = FD->getQualifiedNameAsString();
     PresumedLoc PLoc = CGF.getContext().getSourceManager().getPresumedLoc(Loc);
@@ -9540,7 +9540,7 @@ emitMappingInformation(CodeGenFunction &CGF, llvm::OpenMPIRBuilder &OMPBuilder,
     Loc = MapExprs.getMapDecl()->getLocation();
   }
 
-  std::string ExprName = "";
+  std::string ExprName;
   if (MapExprs.getMapExpr()) {
     PrintingPolicy P(CGF.getContext().getLangOpts());
     llvm::raw_string_ostream OS(ExprName);

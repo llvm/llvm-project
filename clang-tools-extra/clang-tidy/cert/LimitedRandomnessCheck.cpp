@@ -24,7 +24,7 @@ void LimitedRandomnessCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void LimitedRandomnessCheck::check(const MatchFinder::MatchResult &Result) {
-  std::string Msg = "";
+  std::string Msg;
   if (getLangOpts().CPlusPlus)
     Msg = "; use C++11 random library instead";
 

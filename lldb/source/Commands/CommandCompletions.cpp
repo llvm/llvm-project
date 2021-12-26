@@ -600,7 +600,7 @@ void CommandCompletions::VariablePath(CommandInterpreter &interpreter,
 void CommandCompletions::Registers(CommandInterpreter &interpreter,
                                    CompletionRequest &request,
                                    SearchFilter *searcher) {
-  std::string reg_prefix = "";
+  std::string reg_prefix;
   if (request.GetCursorArgumentPrefix().startswith("$"))
     reg_prefix = "$";
 

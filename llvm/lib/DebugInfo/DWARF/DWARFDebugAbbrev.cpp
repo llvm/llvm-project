@@ -74,7 +74,7 @@ std::string DWARFAbbreviationDeclarationSet::getCodeRange() const {
   for (const auto &Decl : Decls)
     Codes.push_back(Decl.getCode());
 
-  std::string Buffer = "";
+  std::string Buffer;
   raw_string_ostream Stream(Buffer);
   // Each iteration through this loop represents a single contiguous range in
   // the set of codes.

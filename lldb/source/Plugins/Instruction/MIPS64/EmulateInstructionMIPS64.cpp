@@ -137,7 +137,7 @@ EmulateInstructionMIPS64::EmulateInstructionMIPS64(
     break;
   }
 
-  std::string features = "";
+  std::string features;
   uint32_t arch_flags = arch.GetFlags();
   if (arch_flags & ArchSpec::eMIPSAse_msa)
     features += "+msa,";

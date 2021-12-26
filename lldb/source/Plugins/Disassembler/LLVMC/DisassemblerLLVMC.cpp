@@ -1111,7 +1111,7 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
       triple.getSubArch() == llvm::Triple::NoSubArch)
     triple.setArchName("armv8.7a");
 
-  std::string features_str = "";
+  std::string features_str;
   const char *triple_str = triple.getTriple().c_str();
 
   // ARM Cortex M0-M7 devices only execute thumb instructions

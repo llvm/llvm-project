@@ -470,7 +470,7 @@ int main(int argc, const char **argv) {
   AdjustingCompilations->appendArgumentsAdjuster(
       [&ResourceDirCache](const tooling::CommandLineArguments &Args,
                           StringRef FileName) {
-        std::string LastO = "";
+        std::string LastO;
         bool HasResourceDir = false;
         bool ClangCLMode = false;
         auto FlagsEnd = llvm::find(Args, "--");

@@ -59,7 +59,7 @@ private:
 } // namespace
 
 static std::string getName(const CallEvent &Call) {
-  std::string Name = "";
+  std::string Name;
   if (const auto *MD = dyn_cast<CXXMethodDecl>(Call.getDecl()))
     if (const CXXRecordDecl *RD = MD->getParent())
       Name += RD->getNameAsString() + "::";
