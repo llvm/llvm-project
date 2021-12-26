@@ -94,7 +94,7 @@ private:
   OutputSection *readOverlaySectionDescription();
   OutputSection *readOutputSectionDescription(StringRef outSec);
   std::vector<SectionCommand *> readOverlay();
-  std::vector<StringRef> readOutputSectionPhdrs();
+  SmallVector<StringRef, 0> readOutputSectionPhdrs();
   std::pair<uint64_t, uint64_t> readInputSectionFlags();
   InputSectionDescription *readInputSectionDescription(StringRef tok);
   StringMatcher readFilePatterns();
@@ -597,7 +597,7 @@ void ScriptParser::readSections() {
   else if (!consume("BEFORE"))
     setError("expected AFTER/BEFORE, but got '" + next() + "'");
   StringRef where = next();
-  std::vector<StringRef> names;
+  SmallVector<StringRef, 0> names;
   for (SectionCommand *cmd : v)
     if (auto *os = dyn_cast<OutputSection>(cmd))
       names.push_back(os->name);
@@ -1452,8 +1452,8 @@ Expr ScriptParser::readParenExpr() {
   return e;
 }
 
-std::vector<StringRef> ScriptParser::readOutputSectionPhdrs() {
-  std::vector<StringRef> phdrs;
+SmallVector<StringRef, 0> ScriptParser::readOutputSectionPhdrs() {
+  SmallVector<StringRef, 0> phdrs;
   while (!errorCount() && peek().startswith(":")) {
     StringRef tok = next();
     phdrs.push_back((tok.size() == 1) ? next() : tok.substr(1));

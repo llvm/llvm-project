@@ -244,7 +244,7 @@ struct ByteCommand : SectionCommand {
 };
 
 struct InsertCommand {
-  std::vector<StringRef> names;
+  SmallVector<StringRef, 0> names;
   bool isAfter;
   StringRef where;
 };
@@ -287,7 +287,7 @@ class LinkerScript final {
 
   void discardSynthetic(OutputSection &);
 
-  std::vector<size_t> getPhdrIndices(OutputSection *sec);
+  SmallVector<size_t, 0> getPhdrIndices(OutputSection *sec);
 
   std::pair<MemoryRegion *, MemoryRegion *>
   findMemoryRegion(OutputSection *sec, MemoryRegion *hint);
@@ -321,12 +321,12 @@ public:
   void adjustSectionsBeforeSorting();
   void adjustSectionsAfterSorting();
 
-  std::vector<PhdrEntry *> createPhdrs();
+  SmallVector<PhdrEntry *, 0> createPhdrs();
   bool needsInterpSection();
 
   bool shouldKeep(InputSectionBase *s);
   const Defined *assignAddresses();
-  void allocateHeaders(std::vector<PhdrEntry *> &phdrs);
+  void allocateHeaders(SmallVector<PhdrEntry *, 0> &phdrs);
   void processSectionCommands();
   void processSymbolAssignments();
   void declareSymbols();
@@ -337,10 +337,10 @@ public:
   void processInsertCommands();
 
   // SECTIONS command list.
-  std::vector<SectionCommand *> sectionCommands;
+  SmallVector<SectionCommand *, 0> sectionCommands;
 
   // PHDRS command list.
-  std::vector<PhdrsCommand> phdrsCommands;
+  SmallVector<PhdrsCommand, 0> phdrsCommands;
 
   bool hasSectionsCommand = false;
   bool errorOnMissingSection = false;
