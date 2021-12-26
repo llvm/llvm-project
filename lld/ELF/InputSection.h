@@ -178,7 +178,6 @@ public:
 
   // Get the function symbol that encloses this offset from within the
   // section.
-  template <class ELFT>
   Defined *getEnclosingFunction(uint64_t offset);
 
   // Returns a source location string. Used to construct an error message.
