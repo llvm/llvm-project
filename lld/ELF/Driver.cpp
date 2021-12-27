@@ -2369,12 +2369,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // except a few linker-synthesized ones will be added to the symbol table.
   compileBitcodeFiles<ELFT>();
 
-  // Handle --exclude-libs again because lto.tmp may reference additional
-  // libcalls symbols defined in an excluded archive. This may override
-  // versionId set by scanVersionScript().
-  if (args.hasArg(OPT_exclude_libs))
-    excludeLibs(args);
-
   // Symbol resolution finished. Report backward reference problems.
   reportBackrefs();
   if (errorCount())
@@ -2392,8 +2386,17 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
       !config->thinLTOModulesToCompile.empty())
     return;
 
+  // Handle --exclude-libs again because lto.tmp may reference additional
+  // libcalls symbols defined in an excluded archive. This may override
+  // versionId set by scanVersionScript().
+  if (args.hasArg(OPT_exclude_libs))
+    excludeLibs(args);
+
   // Apply symbol renames for --wrap and combine foo@v1 and foo@@v1.
   redirectSymbols(wrapped);
+
+  // Replace common symbols with regular symbols.
+  replaceCommonSymbols();
 
   {
     llvm::TimeTraceScope timeScope("Aggregate sections");
@@ -2478,9 +2481,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // This adds a .comment section containing a version string.
   if (!config->relocatable)
     inputSections.push_back(createCommentSection());
-
-  // Replace common symbols with regular symbols.
-  replaceCommonSymbols();
 
   // Split SHF_MERGE and .eh_frame sections into pieces in preparation for garbage collection.
   splitSections<ELFT>();
