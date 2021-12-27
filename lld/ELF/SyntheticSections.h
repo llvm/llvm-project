@@ -34,7 +34,6 @@ namespace elf {
 class Defined;
 struct PhdrEntry;
 class SymbolTableBaseSection;
-class VersionNeedBaseSection;
 
 class SyntheticSection : public InputSection {
 public:
