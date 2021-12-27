@@ -3046,7 +3046,7 @@ int main(int argc, char **argv) {
 // CHECK4-NEXT:    [[TMP2:%.*]] = load i32*, i32** [[A_ADDR]], align 8
 // CHECK4-NEXT:    [[CONV:%.*]] = bitcast i64* [[ARGC_ADDR]] to i32*
 // CHECK4-NEXT:    [[TMP3:%.*]] = load [10 x i32]*, [10 x i32]** [[D_ADDR]], align 8
-// CHECK4-NEXT:    [[C1:%.*]] = call i8* @__kmpc_alloc_shared(i64 40)
+// CHECK4-NEXT:    [[C1:%.*]] = call align 8 i8* @__kmpc_alloc_shared(i64 40)
 // CHECK4-NEXT:    [[C_ON_STACK:%.*]] = bitcast i8* [[C1]] to [10 x i32]*
 // CHECK4-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK4-NEXT:    store i32 [[TMP4]], i32* [[DOTCAPTURE_EXPR_]], align 4
@@ -3377,7 +3377,7 @@ int main(int argc, char **argv) {
 // CHECK5-NEXT:    [[TMP1:%.*]] = load [10 x i32]*, [10 x i32]** [[C_ADDR]], align 4
 // CHECK5-NEXT:    [[TMP2:%.*]] = load i32*, i32** [[A_ADDR]], align 4
 // CHECK5-NEXT:    [[TMP3:%.*]] = load [10 x i32]*, [10 x i32]** [[D_ADDR]], align 4
-// CHECK5-NEXT:    [[C1:%.*]] = call i8* @__kmpc_alloc_shared(i32 40)
+// CHECK5-NEXT:    [[C1:%.*]] = call align 8 i8* @__kmpc_alloc_shared(i32 40)
 // CHECK5-NEXT:    [[C_ON_STACK:%.*]] = bitcast i8* [[C1]] to [10 x i32]*
 // CHECK5-NEXT:    [[TMP4:%.*]] = load i32, i32* [[ARGC_ADDR]], align 4
 // CHECK5-NEXT:    store i32 [[TMP4]], i32* [[DOTCAPTURE_EXPR_]], align 4
@@ -3700,7 +3700,7 @@ int main(int argc, char **argv) {
 // CHECK6-NEXT:    [[TMP1:%.*]] = load [10 x i32]*, [10 x i32]** [[C_ADDR]], align 4
 // CHECK6-NEXT:    [[TMP2:%.*]] = load i32*, i32** [[A_ADDR]], align 4
 // CHECK6-NEXT:    [[TMP3:%.*]] = load [10 x i32]*, [10 x i32]** [[D_ADDR]], align 4
-// CHECK6-NEXT:    [[C1:%.*]] = call i8* @__kmpc_alloc_shared(i32 40)
+// CHECK6-NEXT:    [[C1:%.*]] = call align 8 i8* @__kmpc_alloc_shared(i32 40)
 // CHECK6-NEXT:    [[C_ON_STACK:%.*]] = bitcast i8* [[C1]] to [10 x i32]*
 // CHECK6-NEXT:    [[TMP4:%.*]] = load i32, i32* [[ARGC_ADDR]], align 4
 // CHECK6-NEXT:    store i32 [[TMP4]], i32* [[DOTCAPTURE_EXPR_]], align 4

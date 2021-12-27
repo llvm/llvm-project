@@ -1633,7 +1633,7 @@ int bar(int n){
 // CHECK1-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK1:       user_code.entry:
 // CHECK1-NEXT:    [[TMP1:%.*]] = load i32, i32* [[CONV]], align 4
-// CHECK1-NEXT:    [[A1:%.*]] = call i8* @__kmpc_alloc_shared(i64 4)
+// CHECK1-NEXT:    [[A1:%.*]] = call align 16 i8* @__kmpc_alloc_shared(i64 4)
 // CHECK1-NEXT:    [[A_ON_STACK:%.*]] = bitcast i8* [[A1]] to i32*
 // CHECK1-NEXT:    store i32 [[TMP1]], i32* [[A_ON_STACK]], align 4
 // CHECK1-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
@@ -1905,7 +1905,7 @@ int bar(int n){
 // CHECK2-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK2:       user_code.entry:
 // CHECK2-NEXT:    [[TMP1:%.*]] = load i32, i32* [[A_ADDR]], align 4
-// CHECK2-NEXT:    [[A1:%.*]] = call i8* @__kmpc_alloc_shared(i32 4)
+// CHECK2-NEXT:    [[A1:%.*]] = call align 4 i8* @__kmpc_alloc_shared(i32 4)
 // CHECK2-NEXT:    [[A_ON_STACK:%.*]] = bitcast i8* [[A1]] to i32*
 // CHECK2-NEXT:    store i32 [[TMP1]], i32* [[A_ON_STACK]], align 4
 // CHECK2-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
