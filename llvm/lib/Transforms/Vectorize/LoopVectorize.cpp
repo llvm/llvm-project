@@ -8457,7 +8457,6 @@ VPValue *VPRecipeBuilder::createBlockInMask(BasicBlock *BB, VPlanPtr &Plan) {
     auto NewInsertionPoint = Builder.getInsertBlock()->getFirstNonPhi();
     Builder.setInsertPoint(Builder.getInsertBlock(), NewInsertionPoint);
 
-    VPValue *BTC = Plan->getOrCreateBackedgeTakenCount();
     bool TailFolded = !CM.isScalarEpilogueAllowed();
 
     if (TailFolded && CM.TTI.emitGetActiveLaneMask()) {
@@ -8467,6 +8466,7 @@ VPValue *VPRecipeBuilder::createBlockInMask(BasicBlock *BB, VPlanPtr &Plan) {
       // happen.
       BlockMask = Builder.createNaryOp(VPInstruction::ActiveLaneMask, {IV});
     } else {
+      VPValue *BTC = Plan->getOrCreateBackedgeTakenCount();
       BlockMask = Builder.createNaryOp(VPInstruction::ICmpULE, {IV, BTC});
     }
     return BlockMaskCache[BB] = BlockMask;
