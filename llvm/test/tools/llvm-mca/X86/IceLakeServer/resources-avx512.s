@@ -1068,21 +1068,21 @@ vunpcklps         (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  1      4     0.50                        vminps	%zmm16, %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  2      11    0.50    *                   vminps	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  2      11    0.50    *                   vminps	(%rax){1to16}, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  1      1     0.33                        vmovapd	%zmm16, %zmm19
+# CHECK-NEXT:  1      1     0.50                        vmovapd	%zmm16, %zmm19
 # CHECK-NEXT:  2      8     0.50    *                   vmovapd	(%rax), %zmm19
 # CHECK-NEXT:  2      1     1.00           *            vmovapd	%zmm16, (%rax)
-# CHECK-NEXT:  1      1     0.33                        vmovapd	%zmm16, %zmm19 {%k1}
+# CHECK-NEXT:  1      1     0.50                        vmovapd	%zmm16, %zmm19 {%k1}
 # CHECK-NEXT:  2      8     0.50    *                   vmovapd	(%rax), %zmm19 {%k1}
 # CHECK-NEXT:  2      1     1.00           *            vmovapd	%zmm16, (%rax) {%k1}
-# CHECK-NEXT:  1      1     0.33                        vmovapd	%zmm16, %zmm19 {%k1} {z}
+# CHECK-NEXT:  1      1     0.50                        vmovapd	%zmm16, %zmm19 {%k1} {z}
 # CHECK-NEXT:  2      8     0.50    *                   vmovapd	(%rax), %zmm19 {%k1} {z}
-# CHECK-NEXT:  1      1     0.33                        vmovaps	%zmm16, %zmm19
+# CHECK-NEXT:  1      1     0.50                        vmovaps	%zmm16, %zmm19
 # CHECK-NEXT:  2      8     0.50    *                   vmovaps	(%rax), %zmm19
 # CHECK-NEXT:  2      1     1.00           *            vmovaps	%zmm16, (%rax)
-# CHECK-NEXT:  1      1     0.33                        vmovaps	%zmm16, %zmm19 {%k1}
+# CHECK-NEXT:  1      1     0.50                        vmovaps	%zmm16, %zmm19 {%k1}
 # CHECK-NEXT:  2      8     0.50    *                   vmovaps	(%rax), %zmm19 {%k1}
 # CHECK-NEXT:  2      1     1.00           *            vmovaps	%zmm16, (%rax) {%k1}
-# CHECK-NEXT:  1      1     0.33                        vmovaps	%zmm16, %zmm19 {%k1} {z}
+# CHECK-NEXT:  1      1     0.50                        vmovaps	%zmm16, %zmm19 {%k1} {z}
 # CHECK-NEXT:  2      8     0.50    *                   vmovaps	(%rax), %zmm19 {%k1} {z}
 # CHECK-NEXT:  1      1     1.00                        vmovddup	%zmm16, %zmm19
 # CHECK-NEXT:  2      8     0.50    *                   vmovddup	(%rax), %zmm19
@@ -1090,37 +1090,37 @@ vunpcklps         (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  2      8     0.50    *                   vmovddup	(%rax), %zmm19 {%k1}
 # CHECK-NEXT:  1      1     1.00                        vmovddup	%zmm16, %zmm19 {%k1} {z}
 # CHECK-NEXT:  2      8     0.50    *                   vmovddup	(%rax), %zmm19 {%k1} {z}
-# CHECK-NEXT:  1      1     0.33                        vmovdqa32	%zmm16, %zmm19
+# CHECK-NEXT:  1      1     0.50                        vmovdqa32	%zmm16, %zmm19
 # CHECK-NEXT:  2      8     0.50    *                   vmovdqa32	(%rax), %zmm19
 # CHECK-NEXT:  2      1     1.00           *            vmovdqa32	%zmm16, (%rax)
-# CHECK-NEXT:  1      1     0.33                        vmovdqa32	%zmm16, %zmm19 {%k1}
+# CHECK-NEXT:  1      1     0.50                        vmovdqa32	%zmm16, %zmm19 {%k1}
 # CHECK-NEXT:  2      8     0.50    *                   vmovdqa32	(%rax), %zmm19 {%k1}
 # CHECK-NEXT:  2      1     1.00           *            vmovdqa32	%zmm16, (%rax) {%k1}
-# CHECK-NEXT:  1      1     0.33                        vmovdqa32	%zmm16, %zmm19 {%k1} {z}
+# CHECK-NEXT:  1      1     0.50                        vmovdqa32	%zmm16, %zmm19 {%k1} {z}
 # CHECK-NEXT:  2      8     0.50    *                   vmovdqa32	(%rax), %zmm19 {%k1} {z}
-# CHECK-NEXT:  1      1     0.33                        vmovdqa64	%zmm16, %zmm19
+# CHECK-NEXT:  1      1     0.50                        vmovdqa64	%zmm16, %zmm19
 # CHECK-NEXT:  2      8     0.50    *                   vmovdqa64	(%rax), %zmm19
 # CHECK-NEXT:  2      1     1.00           *            vmovdqa64	%zmm16, (%rax)
-# CHECK-NEXT:  1      1     0.33                        vmovdqa64	%zmm16, %zmm19 {%k1}
+# CHECK-NEXT:  1      1     0.50                        vmovdqa64	%zmm16, %zmm19 {%k1}
 # CHECK-NEXT:  2      8     0.50    *                   vmovdqa64	(%rax), %zmm19 {%k1}
 # CHECK-NEXT:  2      1     1.00           *            vmovdqa64	%zmm16, (%rax) {%k1}
-# CHECK-NEXT:  1      1     0.33                        vmovdqa64	%zmm16, %zmm19 {%k1} {z}
+# CHECK-NEXT:  1      1     0.50                        vmovdqa64	%zmm16, %zmm19 {%k1} {z}
 # CHECK-NEXT:  2      8     0.50    *                   vmovdqa64	(%rax), %zmm19 {%k1} {z}
-# CHECK-NEXT:  1      1     0.33                        vmovdqu32	%zmm16, %zmm19
+# CHECK-NEXT:  1      1     0.50                        vmovdqu32	%zmm16, %zmm19
 # CHECK-NEXT:  2      8     0.50    *                   vmovdqu32	(%rax), %zmm19
 # CHECK-NEXT:  2      1     1.00           *            vmovdqu32	%zmm16, (%rax)
-# CHECK-NEXT:  1      1     0.33                        vmovdqu32	%zmm16, %zmm19 {%k1}
+# CHECK-NEXT:  1      1     0.50                        vmovdqu32	%zmm16, %zmm19 {%k1}
 # CHECK-NEXT:  2      8     0.50    *                   vmovdqu32	(%rax), %zmm19 {%k1}
 # CHECK-NEXT:  2      1     1.00           *            vmovdqu32	%zmm16, (%rax) {%k1}
-# CHECK-NEXT:  1      1     0.33                        vmovdqu32	%zmm16, %zmm19 {%k1} {z}
+# CHECK-NEXT:  1      1     0.50                        vmovdqu32	%zmm16, %zmm19 {%k1} {z}
 # CHECK-NEXT:  2      8     0.50    *                   vmovdqu32	(%rax), %zmm19 {%k1} {z}
-# CHECK-NEXT:  1      1     0.33                        vmovdqu64	%zmm16, %zmm19
+# CHECK-NEXT:  1      1     0.50                        vmovdqu64	%zmm16, %zmm19
 # CHECK-NEXT:  2      8     0.50    *                   vmovdqu64	(%rax), %zmm19
 # CHECK-NEXT:  2      1     1.00           *            vmovdqu64	%zmm16, (%rax)
-# CHECK-NEXT:  1      1     0.33                        vmovdqu64	%zmm16, %zmm19 {%k1}
+# CHECK-NEXT:  1      1     0.50                        vmovdqu64	%zmm16, %zmm19 {%k1}
 # CHECK-NEXT:  2      8     0.50    *                   vmovdqu64	(%rax), %zmm19 {%k1}
 # CHECK-NEXT:  2      1     1.00           *            vmovdqu64	%zmm16, (%rax) {%k1}
-# CHECK-NEXT:  1      1     0.33                        vmovdqu64	%zmm16, %zmm19 {%k1} {z}
+# CHECK-NEXT:  1      1     0.50                        vmovdqu64	%zmm16, %zmm19 {%k1} {z}
 # CHECK-NEXT:  2      8     0.50    *                   vmovdqu64	(%rax), %zmm19 {%k1} {z}
 # CHECK-NEXT:  1      1     1.00                        vmovshdup	%zmm16, %zmm19
 # CHECK-NEXT:  2      8     0.50    *                   vmovshdup	(%rax), %zmm19
@@ -1134,21 +1134,21 @@ vunpcklps         (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  2      8     0.50    *                   vmovsldup	(%rax), %zmm19 {%k1}
 # CHECK-NEXT:  1      1     1.00                        vmovsldup	%zmm16, %zmm19 {%k1} {z}
 # CHECK-NEXT:  2      8     0.50    *                   vmovsldup	(%rax), %zmm19 {%k1} {z}
-# CHECK-NEXT:  1      1     0.33                        vmovupd	%zmm16, %zmm19
+# CHECK-NEXT:  1      1     0.50                        vmovupd	%zmm16, %zmm19
 # CHECK-NEXT:  2      8     0.50    *                   vmovupd	(%rax), %zmm19
 # CHECK-NEXT:  2      1     1.00           *            vmovupd	%zmm16, (%rax)
-# CHECK-NEXT:  1      1     0.33                        vmovupd	%zmm16, %zmm19 {%k1}
+# CHECK-NEXT:  1      1     0.50                        vmovupd	%zmm16, %zmm19 {%k1}
 # CHECK-NEXT:  2      8     0.50    *                   vmovupd	(%rax), %zmm19 {%k1}
 # CHECK-NEXT:  2      1     1.00           *            vmovupd	%zmm16, (%rax) {%k1}
-# CHECK-NEXT:  1      1     0.33                        vmovupd	%zmm16, %zmm19 {%k1} {z}
+# CHECK-NEXT:  1      1     0.50                        vmovupd	%zmm16, %zmm19 {%k1} {z}
 # CHECK-NEXT:  2      8     0.50    *                   vmovupd	(%rax), %zmm19 {%k1} {z}
-# CHECK-NEXT:  1      1     0.33                        vmovups	%zmm16, %zmm19
+# CHECK-NEXT:  1      1     0.50                        vmovups	%zmm16, %zmm19
 # CHECK-NEXT:  2      8     0.50    *                   vmovups	(%rax), %zmm19
 # CHECK-NEXT:  2      1     1.00           *            vmovups	%zmm16, (%rax)
-# CHECK-NEXT:  1      1     0.33                        vmovups	%zmm16, %zmm19 {%k1}
+# CHECK-NEXT:  1      1     0.50                        vmovups	%zmm16, %zmm19 {%k1}
 # CHECK-NEXT:  2      8     0.50    *                   vmovups	(%rax), %zmm19 {%k1}
 # CHECK-NEXT:  2      1     1.00           *            vmovups	%zmm16, (%rax) {%k1}
-# CHECK-NEXT:  1      1     0.33                        vmovups	%zmm16, %zmm19 {%k1} {z}
+# CHECK-NEXT:  1      1     0.50                        vmovups	%zmm16, %zmm19 {%k1} {z}
 # CHECK-NEXT:  2      8     0.50    *                   vmovups	(%rax), %zmm19 {%k1} {z}
 # CHECK-NEXT:  1      4     0.50                        vmulpd	%zmm16, %zmm17, %zmm19
 # CHECK-NEXT:  2      11    0.50    *                   vmulpd	(%rax), %zmm17, %zmm19
@@ -1671,7 +1671,7 @@ vunpcklps         (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]
-# CHECK-NEXT:  -     612.00 236.67 57.67  278.83 278.83 16.00  555.67 2.00   5.33    -      -
+# CHECK-NEXT:  -     612.00 240.67 49.67  278.83 278.83 16.00  559.67 2.00   5.33    -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   Instructions:
@@ -1859,21 +1859,21 @@ vunpcklps         (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     vminps	%zmm16, %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -     0.50    -      -      -      -     vminps	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -     0.50    -      -      -      -     vminps	(%rax){1to16}, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -      -      -     vmovapd	%zmm16, %zmm19
+# CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     vmovapd	%zmm16, %zmm19
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vmovapd	(%rax), %zmm19
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33    -      -     vmovapd	%zmm16, (%rax)
-# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -      -      -     vmovapd	%zmm16, %zmm19 {%k1}
+# CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     vmovapd	%zmm16, %zmm19 {%k1}
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vmovapd	(%rax), %zmm19 {%k1}
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33    -      -     vmovapd	%zmm16, (%rax) {%k1}
-# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -      -      -     vmovapd	%zmm16, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     vmovapd	%zmm16, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vmovapd	(%rax), %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -      -      -     vmovaps	%zmm16, %zmm19
+# CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     vmovaps	%zmm16, %zmm19
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vmovaps	(%rax), %zmm19
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33    -      -     vmovaps	%zmm16, (%rax)
-# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -      -      -     vmovaps	%zmm16, %zmm19 {%k1}
+# CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     vmovaps	%zmm16, %zmm19 {%k1}
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vmovaps	(%rax), %zmm19 {%k1}
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33    -      -     vmovaps	%zmm16, (%rax) {%k1}
-# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -      -      -     vmovaps	%zmm16, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     vmovaps	%zmm16, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vmovaps	(%rax), %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vmovddup	%zmm16, %zmm19
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vmovddup	(%rax), %zmm19
@@ -1881,37 +1881,37 @@ vunpcklps         (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vmovddup	(%rax), %zmm19 {%k1}
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vmovddup	%zmm16, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vmovddup	(%rax), %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -      -      -     vmovdqa32	%zmm16, %zmm19
+# CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     vmovdqa32	%zmm16, %zmm19
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vmovdqa32	(%rax), %zmm19
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33    -      -     vmovdqa32	%zmm16, (%rax)
-# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -      -      -     vmovdqa32	%zmm16, %zmm19 {%k1}
+# CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     vmovdqa32	%zmm16, %zmm19 {%k1}
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vmovdqa32	(%rax), %zmm19 {%k1}
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33    -      -     vmovdqa32	%zmm16, (%rax) {%k1}
-# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -      -      -     vmovdqa32	%zmm16, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     vmovdqa32	%zmm16, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vmovdqa32	(%rax), %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -      -      -     vmovdqa64	%zmm16, %zmm19
+# CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     vmovdqa64	%zmm16, %zmm19
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vmovdqa64	(%rax), %zmm19
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33    -      -     vmovdqa64	%zmm16, (%rax)
-# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -      -      -     vmovdqa64	%zmm16, %zmm19 {%k1}
+# CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     vmovdqa64	%zmm16, %zmm19 {%k1}
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vmovdqa64	(%rax), %zmm19 {%k1}
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33    -      -     vmovdqa64	%zmm16, (%rax) {%k1}
-# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -      -      -     vmovdqa64	%zmm16, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     vmovdqa64	%zmm16, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vmovdqa64	(%rax), %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -      -      -     vmovdqu32	%zmm16, %zmm19
+# CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     vmovdqu32	%zmm16, %zmm19
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vmovdqu32	(%rax), %zmm19
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33    -      -     vmovdqu32	%zmm16, (%rax)
-# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -      -      -     vmovdqu32	%zmm16, %zmm19 {%k1}
+# CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     vmovdqu32	%zmm16, %zmm19 {%k1}
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vmovdqu32	(%rax), %zmm19 {%k1}
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33    -      -     vmovdqu32	%zmm16, (%rax) {%k1}
-# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -      -      -     vmovdqu32	%zmm16, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     vmovdqu32	%zmm16, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vmovdqu32	(%rax), %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -      -      -     vmovdqu64	%zmm16, %zmm19
+# CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     vmovdqu64	%zmm16, %zmm19
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vmovdqu64	(%rax), %zmm19
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33    -      -     vmovdqu64	%zmm16, (%rax)
-# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -      -      -     vmovdqu64	%zmm16, %zmm19 {%k1}
+# CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     vmovdqu64	%zmm16, %zmm19 {%k1}
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vmovdqu64	(%rax), %zmm19 {%k1}
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33    -      -     vmovdqu64	%zmm16, (%rax) {%k1}
-# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -      -      -     vmovdqu64	%zmm16, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     vmovdqu64	%zmm16, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vmovdqu64	(%rax), %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vmovshdup	%zmm16, %zmm19
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vmovshdup	(%rax), %zmm19
@@ -1925,21 +1925,21 @@ vunpcklps         (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vmovsldup	(%rax), %zmm19 {%k1}
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vmovsldup	%zmm16, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vmovsldup	(%rax), %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -      -      -     vmovupd	%zmm16, %zmm19
+# CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     vmovupd	%zmm16, %zmm19
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vmovupd	(%rax), %zmm19
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33    -      -     vmovupd	%zmm16, (%rax)
-# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -      -      -     vmovupd	%zmm16, %zmm19 {%k1}
+# CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     vmovupd	%zmm16, %zmm19 {%k1}
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vmovupd	(%rax), %zmm19 {%k1}
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33    -      -     vmovupd	%zmm16, (%rax) {%k1}
-# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -      -      -     vmovupd	%zmm16, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     vmovupd	%zmm16, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vmovupd	(%rax), %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -      -      -     vmovups	%zmm16, %zmm19
+# CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     vmovups	%zmm16, %zmm19
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vmovups	(%rax), %zmm19
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33    -      -     vmovups	%zmm16, (%rax)
-# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -      -      -     vmovups	%zmm16, %zmm19 {%k1}
+# CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     vmovups	%zmm16, %zmm19 {%k1}
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vmovups	(%rax), %zmm19 {%k1}
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33    -      -     vmovups	%zmm16, (%rax) {%k1}
-# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -      -      -     vmovups	%zmm16, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     vmovups	%zmm16, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vmovups	(%rax), %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     vmulpd	%zmm16, %zmm17, %zmm19
 # CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -     0.50    -      -      -      -     vmulpd	(%rax), %zmm17, %zmm19
