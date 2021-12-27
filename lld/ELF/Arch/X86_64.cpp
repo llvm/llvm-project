@@ -304,7 +304,8 @@ bool X86_64::deleteFallThruJmpInsn(InputSection &is, InputFile *file,
   JmpInsnOpcode jInvert = invertJmpOpcode(jmpOpcodeB);
   if (jInvert == J_UNKNOWN)
     return false;
-  is.jumpInstrMods.push_back({jInvert, (rB.offset - 1), 4});
+  is.jumpInstrMod = make<JumpInstrMod>();
+  *is.jumpInstrMod = {rB.offset - 1, jInvert, 4};
   // Move R's values to rB except the offset.
   rB = {r.expr, r.type, rB.offset, r.addend, r.sym};
   // Cancel R
