@@ -161,3 +161,24 @@ define void @varargs_cast_opaque_to_typed(ptr %a) {
   call void (...) @varargs(i8* byval(i8) %b)
   ret void
 }
+
+define ptr @geps_combinable(ptr %a) {
+; CHECK-LABEL: @geps_combinable(
+; CHECK-NEXT:    [[A3:%.*]] = getelementptr { i32, { i32, i32 } }, ptr [[A:%.*]], i64 0, i32 1, i32 1
+; CHECK-NEXT:    ret ptr [[A3]]
+;
+  %a2 = getelementptr { i32, { i32, i32 } }, ptr %a, i32 0, i32 1
+  %a3 = getelementptr { i32, i32 }, ptr %a2, i32 0, i32 1
+  ret ptr %a3
+}
+
+define ptr @geps_not_combinable(ptr %a) {
+; CHECK-LABEL: @geps_not_combinable(
+; CHECK-NEXT:    [[A2:%.*]] = getelementptr { i32, i32 }, ptr [[A:%.*]], i64 0, i32 1
+; CHECK-NEXT:    [[A3:%.*]] = getelementptr { i32, i32 }, ptr [[A2]], i64 0, i32 1
+; CHECK-NEXT:    ret ptr [[A3]]
+;
+  %a2 = getelementptr { i32, i32 }, ptr %a, i32 0, i32 1
+  %a3 = getelementptr { i32, i32 }, ptr %a2, i32 0, i32 1
+  ret ptr %a3
+}

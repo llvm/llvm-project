@@ -1887,8 +1887,11 @@ static Instruction *foldSelectGEP(GetElementPtrInst &GEP,
 Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
                                              GEPOperator *Src) {
   // Combine Indices - If the source pointer to this getelementptr instruction
-  // is a getelementptr instruction, combine the indices of the two
-  // getelementptr instructions into a single instruction.
+  // is a getelementptr instruction with matching element type, combine the
+  // indices of the two getelementptr instructions into a single instruction.
+  if (Src->getResultElementType() != GEP.getSourceElementType())
+    return nullptr;
+
   if (!shouldMergeGEPs(*cast<GEPOperator>(&GEP), *Src))
     return nullptr;
 
