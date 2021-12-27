@@ -1106,8 +1106,7 @@ bool HexagonExpandCondsets::isIntReg(RegisterRef RR, unsigned &BW) {
 }
 
 bool HexagonExpandCondsets::isIntraBlocks(LiveInterval &LI) {
-  for (LiveInterval::iterator I = LI.begin(), E = LI.end(); I != E; ++I) {
-    LiveRange::Segment &LR = *I;
+  for (LiveRange::Segment &LR : LI) {
     // Range must start at a register...
     if (!LR.start.isRegister())
       return false;
@@ -1160,16 +1159,16 @@ bool HexagonExpandCondsets::coalesceRegisters(RegisterRef R1, RegisterRef R2) {
   // Move all live segments from L2 to L1.
   using ValueInfoMap = DenseMap<VNInfo *, VNInfo *>;
   ValueInfoMap VM;
-  for (LiveInterval::iterator I = L2.begin(), E = L2.end(); I != E; ++I) {
-    VNInfo *NewVN, *OldVN = I->valno;
+  for (LiveRange::Segment &I : L2) {
+    VNInfo *NewVN, *OldVN = I.valno;
     ValueInfoMap::iterator F = VM.find(OldVN);
     if (F == VM.end()) {
-      NewVN = L1.getNextValue(I->valno->def, LIS->getVNInfoAllocator());
+      NewVN = L1.getNextValue(I.valno->def, LIS->getVNInfoAllocator());
       VM.insert(std::make_pair(OldVN, NewVN));
     } else {
       NewVN = F->second;
     }
-    L1.addSegment(LiveRange::Segment(I->start, I->end, NewVN));
+    L1.addSegment(LiveRange::Segment(I.start, I.end, NewVN));
   }
   while (!L2.empty())
     L2.removeSegment(*L2.begin());

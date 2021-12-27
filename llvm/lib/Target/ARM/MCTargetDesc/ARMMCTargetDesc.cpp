@@ -338,8 +338,8 @@ void ARM_MC::initLLVMToCVRegMapping(MCRegisterInfo *MRI) {
       {codeview::RegisterId::ARM_NQ14, ARM::Q14},
       {codeview::RegisterId::ARM_NQ15, ARM::Q15},
   };
-  for (unsigned I = 0; I < array_lengthof(RegMap); ++I)
-    MRI->mapLLVMRegToCVReg(RegMap[I].Reg, static_cast<int>(RegMap[I].CVReg));
+  for (const auto &I : RegMap)
+    MRI->mapLLVMRegToCVReg(I.Reg, static_cast<int>(I.CVReg));
 }
 
 static MCRegisterInfo *createARMMCRegisterInfo(const Triple &Triple) {
