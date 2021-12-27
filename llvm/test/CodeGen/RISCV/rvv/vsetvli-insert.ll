@@ -147,8 +147,7 @@ for.body:                                         ; preds = %entry, %for.body
 define <vscale x 1 x i64> @test7(<vscale x 1 x i64> %a, i64 %b, <vscale x 1 x i1> %mask) nounwind {
 ; CHECK-LABEL: test7:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, mu
-; CHECK-NEXT:    vsetivli zero, 1, e64, m1, tu, mu
+; CHECK-NEXT:    vsetvli a1, zero, e64, m1, tu, mu
 ; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    ret
 entry:
@@ -163,8 +162,7 @@ entry:
 define <vscale x 1 x i64> @test8(<vscale x 1 x i64> %a, i64 %b, <vscale x 1 x i1> %mask) nounwind {
 ; CHECK-LABEL: test8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli a1, 6, e64, m1, ta, mu
-; CHECK-NEXT:    vsetivli zero, 2, e64, m1, tu, mu
+; CHECK-NEXT:    vsetivli a1, 6, e64, m1, tu, mu
 ; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    ret
 entry:
@@ -178,7 +176,6 @@ define <vscale x 1 x i64> @test9(<vscale x 1 x i64> %a, i64 %b, <vscale x 1 x i1
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 9, e64, m1, tu, mu
 ; CHECK-NEXT:    vadd.vv v8, v8, v8, v0.t
-; CHECK-NEXT:    vsetivli zero, 2, e64, m1, tu, mu
 ; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    ret
 entry:
