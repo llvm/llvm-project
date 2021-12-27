@@ -32,17 +32,8 @@ namespace elf {
 // add*() functions, which are called by input files as they are parsed. There
 // is one add* function per symbol type.
 class SymbolTable {
-  struct FilterOutPlaceholder {
-    bool operator()(Symbol *S) const { return !S->isPlaceholder(); }
-  };
-  using iterator =
-      llvm::filter_iterator<SmallVector<Symbol *, 0>::const_iterator,
-                            FilterOutPlaceholder>;
-
 public:
-  llvm::iterator_range<iterator> symbols() const {
-    return llvm::make_filter_range(symVector, FilterOutPlaceholder());
-  }
+  ArrayRef<Symbol *> symbols() const { return symVector; }
 
   void wrap(Symbol *sym, Symbol *real, Symbol *wrap);
 

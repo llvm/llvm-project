@@ -32,20 +32,12 @@ def riscv_fmv_x_anyexth
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtZfhmin] in {
-let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
-def FLH : RVInstI<0b001, OPC_LOAD_FP, (outs FPR16:$rd),
-                  (ins GPR:$rs1, simm12:$imm12),
-                   "flh", "$rd, ${imm12}(${rs1})">,
-          Sched<[WriteFLD16, ReadFMemBase]>;
+def FLH : FPLoad_r<0b001, "flh", FPR16, WriteFLD16>;
 
 // Operands for stores are in the order srcreg, base, offset rather than
 // reflecting the order these fields are specified in the instruction
 // encoding.
-let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
-def FSH : RVInstS<0b001, OPC_STORE_FP, (outs),
-                  (ins FPR16:$rs2, GPR:$rs1, simm12:$imm12),
-                   "fsh", "$rs2, ${imm12}(${rs1})">,
-          Sched<[WriteFST16, ReadStoreData, ReadFMemBase]>;
+def FSH : FPStore_r<0b001, "fsh", FPR16, WriteFST16>;
 } // Predicates = [HasStdExtZfhmin]
 
 let Predicates = [HasStdExtZfh] in {

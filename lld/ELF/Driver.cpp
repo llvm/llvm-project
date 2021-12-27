@@ -1724,7 +1724,7 @@ static void handleUndefinedGlob(StringRef arg) {
   // symbols to the symbol table, invalidating the current iterator.
   std::vector<Symbol *> syms;
   for (Symbol *sym : symtab->symbols())
-    if (pat->match(sym->getName()))
+    if (!sym->isPlaceholder() && pat->match(sym->getName()))
       syms.push_back(sym);
 
   for (Symbol *sym : syms)
@@ -2006,7 +2006,8 @@ template <class ELFT> void LinkerDriver::compileBitcodeFiles() {
     // Parse '@' in symbol names for non-relocatable output.
     if (!config->relocatable)
       for (Symbol *sym : obj->getGlobalSymbols())
-        sym->parseSymbolVersion();
+        if (sym->hasVersionSuffix)
+          sym->parseSymbolVersion();
     objectFiles.push_back(obj);
   }
 }
@@ -2080,8 +2081,10 @@ static void redirectSymbols(ArrayRef<WrappedSymbol> wrapped) {
     map[w.real] = w.sym;
   }
   for (Symbol *sym : symtab->symbols()) {
-    // Enumerate symbols with a non-default version (foo@v1).
-    StringRef name = sym->getName();
+    // Enumerate symbols with a non-default version (foo@v1). hasVersionSuffix
+    // filters out most symbols but is not sufficient.
+    if (!sym->hasVersionSuffix)
+      continue;
     const char *suffix1 = sym->getVersionSuffix();
     if (suffix1[0] != '@' || suffix1[1] == '@')
       continue;
@@ -2090,7 +2093,7 @@ static void redirectSymbols(ArrayRef<WrappedSymbol> wrapped) {
     //
     // * There is a definition of foo@v1 and foo@@v1.
     // * There is a definition of foo@v1 and foo.
-    Defined *sym2 = dyn_cast_or_null<Defined>(symtab->find(name));
+    Defined *sym2 = dyn_cast_or_null<Defined>(symtab->find(sym->getName()));
     if (!sym2)
       continue;
     const char *suffix2 = sym2->getVersionSuffix();
@@ -2103,6 +2106,7 @@ static void redirectSymbols(ArrayRef<WrappedSymbol> wrapped) {
       sym2->resolve(*sym);
       // Eliminate foo@v1 from the symbol table.
       sym->symbolKind = Symbol::PlaceholderKind;
+      sym->isUsedInRegularObj = false;
     } else if (auto *sym1 = dyn_cast<Defined>(sym)) {
       if (sym2->versionId > VER_NDX_GLOBAL
               ? config->versionDefinitions[sym2->versionId].name == suffix1 + 1
@@ -2115,6 +2119,7 @@ static void redirectSymbols(ArrayRef<WrappedSymbol> wrapped) {
         // defined in the same place.
         map.try_emplace(sym2, sym);
         sym2->symbolKind = Symbol::PlaceholderKind;
+        sym2->isUsedInRegularObj = false;
       }
     }
   }
