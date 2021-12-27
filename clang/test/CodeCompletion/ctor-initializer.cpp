@@ -103,3 +103,23 @@ struct X : Y<T> {
 // RUN: %clang_cc1 -fsyntax-only -std=c++98 -code-completion-at=%s:100:9 %s -o - | FileCheck -check-prefix=CHECK-CC11 %s
 // RUN: %clang_cc1 -fsyntax-only -std=c++14 -code-completion-at=%s:100:9 %s -o - | FileCheck -check-prefix=CHECK-CC11 %s
 // CHECK-CC11: Pattern : Y<T>(<#Y<T>#>)
+
+// Test with incomplete init lists. (Relevant as parsing is *not* cut off).
+struct Incomplete1 {
+  Incomplete1() : mem
+
+  int member1;
+  int member2;
+};
+// RUN: not %clang_cc1 -fsyntax-only -std=c++14 -code-completion-at=%s:109:19 %s -o - | FileCheck -check-prefix=CHECK-CC12 %s
+// CHECK-CC12: COMPLETION: Pattern : member1(<#int#>)
+// CHECK-CC12: COMPLETION: Pattern : member2(<#int#>)
+
+struct Incomplete2 {
+  Incomplete2() : member2(
+
+  int member1;
+  int member2;
+};
+// RUN: not %clang_cc1 -fsyntax-only -std=c++14 -code-completion-at=%s:119:27 %s -o - | FileCheck -check-prefix=CHECK-CC13 %s
+// CHECK-CC13: PREFERRED-TYPE: int

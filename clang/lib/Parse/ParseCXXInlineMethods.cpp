@@ -140,8 +140,22 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(
   // function body.
   if (ConsumeAndStoreFunctionPrologue(Toks)) {
     // We didn't find the left-brace we expected after the
-    // constructor initializer; we already printed an error, and it's likely
-    // impossible to recover, so don't try to parse this method later.
+    // constructor initializer.
+
+    // If we're code-completing and the completion point was in the broken
+    // initializer, we want to parse it even though that will fail.
+    if (PP.isCodeCompletionEnabled() &&
+        llvm::any_of(Toks, [](const Token &Tok) {
+          return Tok.is(tok::code_completion);
+        })) {
+      // If we gave up at the completion point, the initializer list was
+      // likely truncated, so don't eat more tokens. We'll hit some extra
+      // errors, but they should be ignored in code completion.
+      return FnD;
+    }
+
+    // We already printed an error, and it's likely impossible to recover,
+    // so don't try to parse this method later.
     // Skip over the rest of the decl and back to somewhere that looks
     // reasonable.
     SkipMalformedDecl();
