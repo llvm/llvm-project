@@ -335,15 +335,7 @@ public:
   /// match.
   void mergeLocalIds(FlatAffineConstraints &other);
 
-  void print(raw_ostream &os) const;
-  void dump() const;
-
 protected:
-  /// Returns false if the fields corresponding to various identifier counts, or
-  /// equality/inequality buffer sizes aren't consistent; true otherwise. This
-  /// is meant to be used within an assert internally.
-  virtual bool hasConsistentState() const;
-
   /// Checks all rows of equality/inequality constraints for trivial
   /// contradictions (for example: 1 == 0, 0 >= 1), which may have surfaced
   /// after elimination. Returns true if an invalid constraint is found;
@@ -418,6 +410,11 @@ protected:
   /// Returns true if the pos^th column is all zero for both inequalities and
   /// equalities.
   bool isColZero(unsigned pos) const;
+
+  /// Prints the number of constraints, dimensions, symbols and locals in the
+  /// FlatAffineConstraints. Also, prints for each identifier whether there is
+  /// an SSA Value attached to it.
+  void printSpace(raw_ostream &os) const override;
 
   /// A parameter that controls detection of an unrealistic number of
   /// constraints. If the number of constraints is this many times the number of

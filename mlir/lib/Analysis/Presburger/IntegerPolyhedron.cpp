@@ -271,3 +271,42 @@ void IntegerPolyhedron::getLowerAndUpperBoundIndices(
     eqIndices->push_back(r);
   }
 }
+
+bool IntegerPolyhedron::hasConsistentState() const {
+  if (!inequalities.hasConsistentState())
+    return false;
+  if (!equalities.hasConsistentState())
+    return false;
+
+  // Catches errors where numDims, numSymbols, numIds aren't consistent.
+  if (numDims > numIds || numSymbols > numIds || numDims + numSymbols > numIds)
+    return false;
+
+  return true;
+}
+
+void IntegerPolyhedron::printSpace(raw_ostream &os) const {
+  os << "\nConstraints (" << getNumDimIds() << " dims, " << getNumSymbolIds()
+     << " symbols, " << getNumLocalIds() << " locals), (" << getNumConstraints()
+     << " constraints)\n";
+}
+
+void IntegerPolyhedron::print(raw_ostream &os) const {
+  assert(hasConsistentState());
+  printSpace(os);
+  for (unsigned i = 0, e = getNumEqualities(); i < e; ++i) {
+    for (unsigned j = 0, f = getNumCols(); j < f; ++j) {
+      os << atEq(i, j) << " ";
+    }
+    os << "= 0\n";
+  }
+  for (unsigned i = 0, e = getNumInequalities(); i < e; ++i) {
+    for (unsigned j = 0, f = getNumCols(); j < f; ++j) {
+      os << atIneq(i, j) << " ";
+    }
+    os << ">= 0\n";
+  }
+  os << '\n';
+}
+
+void IntegerPolyhedron::dump() const { print(llvm::errs()); }

@@ -747,19 +747,6 @@ void FlatAffineConstraints::normalizeConstraintsByGCD() {
   }
 }
 
-bool FlatAffineConstraints::hasConsistentState() const {
-  if (!inequalities.hasConsistentState())
-    return false;
-  if (!equalities.hasConsistentState())
-    return false;
-
-  // Catches errors where numDims, numSymbols, numIds aren't consistent.
-  if (numDims > numIds || numSymbols > numIds || numDims + numSymbols > numIds)
-    return false;
-
-  return true;
-}
-
 bool FlatAffineValueConstraints::hasConsistentState() const {
   return FlatAffineConstraints::hasConsistentState() &&
          values.size() == getNumIds();
@@ -2587,11 +2574,8 @@ bool FlatAffineConstraints::isHyperRectangular(unsigned pos,
   return true;
 }
 
-void FlatAffineConstraints::print(raw_ostream &os) const {
-  assert(hasConsistentState());
-  os << "\nConstraints (" << getNumDimIds() << " dims, " << getNumSymbolIds()
-     << " symbols, " << getNumLocalIds() << " locals), (" << getNumConstraints()
-     << " constraints)\n";
+void FlatAffineConstraints::printSpace(raw_ostream &os) const {
+  IntegerPolyhedron::printSpace(os);
   os << "(";
   for (unsigned i = 0, e = getNumIds(); i < e; i++) {
     if (auto *valueCstr = dyn_cast<const FlatAffineValueConstraints>(this)) {
@@ -2604,22 +2588,7 @@ void FlatAffineConstraints::print(raw_ostream &os) const {
     }
   }
   os << " const)\n";
-  for (unsigned i = 0, e = getNumEqualities(); i < e; ++i) {
-    for (unsigned j = 0, f = getNumCols(); j < f; ++j) {
-      os << atEq(i, j) << " ";
-    }
-    os << "= 0\n";
-  }
-  for (unsigned i = 0, e = getNumInequalities(); i < e; ++i) {
-    for (unsigned j = 0, f = getNumCols(); j < f; ++j) {
-      os << atIneq(i, j) << " ";
-    }
-    os << ">= 0\n";
-  }
-  os << '\n';
 }
-
-void FlatAffineConstraints::dump() const { print(llvm::errs()); }
 
 /// Removes duplicate constraints, trivially true constraints, and constraints
 /// that can be detected as redundant as a result of differing only in their
