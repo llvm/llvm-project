@@ -336,8 +336,8 @@ vpmovq2m          %zmm0, %k0
 # CHECK-NEXT:  1      1     1.00                        vxorps	%zmm16, %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  2      8     1.00    *                   vxorps	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  2      8     1.00    *                   vxorps	(%rax){1to16}, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  1      1     0.33                        vpmovm2d	%k0, %zmm0
-# CHECK-NEXT:  1      1     0.33                        vpmovm2q	%k0, %zmm0
+# CHECK-NEXT:  1      1     0.50                        vpmovm2d	%k0, %zmm0
+# CHECK-NEXT:  1      1     0.50                        vpmovm2q	%k0, %zmm0
 # CHECK-NEXT:  1      1     0.33                        vpmovd2m	%zmm0, %k0
 # CHECK-NEXT:  1      1     0.33                        vpmovq2m	%zmm0, %k0
 
@@ -353,7 +353,7 @@ vpmovq2m          %zmm0, %k0
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]
-# CHECK-NEXT:  -      -     9.67   41.67   -     110.67 46.50  46.50
+# CHECK-NEXT:  -      -     10.00  41.00   -     111.00 46.50  46.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]  Instructions:
@@ -506,7 +506,7 @@ vpmovq2m          %zmm0, %k0
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vxorps	%zmm16, %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vxorps	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vxorps	(%rax){1to16}, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -     0.33   0.33    -     0.33    -      -     vpmovm2d	%k0, %zmm0
-# CHECK-NEXT:  -      -     0.33   0.33    -     0.33    -      -     vpmovm2q	%k0, %zmm0
+# CHECK-NEXT:  -      -     0.50    -      -     0.50    -      -     vpmovm2d	%k0, %zmm0
+# CHECK-NEXT:  -      -     0.50    -      -     0.50    -      -     vpmovm2q	%k0, %zmm0
 # CHECK-NEXT:  -      -     0.33   0.33    -     0.33    -      -     vpmovd2m	%zmm0, %k0
 # CHECK-NEXT:  -      -     0.33   0.33    -     0.33    -      -     vpmovq2m	%zmm0, %k0
