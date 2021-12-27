@@ -1446,10 +1446,12 @@ defm : Zn3WriteResInt<WriteXCHG, [Zn3ALU0123], 0, [8], 2>;        // Compare+Exc
 defm : Zn3WriteResXMM<WriteFMove, [Zn3FPVMisc0123], 1, [1], 1>; // Empty sched class
 defm : Zn3WriteResXMM<WriteFMoveX, [], 0, [], 1>;
 defm : Zn3WriteResYMM<WriteFMoveY, [], 0, [], 1>;
+defm : X86WriteResUnsupported<WriteFMoveZ>;
 
 defm : Zn3WriteResXMM<WriteVecMove, [Zn3FPFMisc0123], 1, [1], 1>; // MMX
 defm : Zn3WriteResXMM<WriteVecMoveX, [], 0, [], 1>;
 defm : Zn3WriteResYMM<WriteVecMoveY, [], 0, [], 1>;
+defm : X86WriteResUnsupported<WriteVecMoveZ>;
 
 def : IsOptimizableRegisterMove<[
   InstructionEquivalenceClass<[

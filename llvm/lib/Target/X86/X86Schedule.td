@@ -239,6 +239,7 @@ def  WriteFMaskedStore64Y : SchedWrite;
 def  WriteFMove         : SchedWrite;
 def  WriteFMoveX        : SchedWrite;
 def  WriteFMoveY        : SchedWrite;
+def  WriteFMoveZ        : SchedWrite;
 
 defm WriteFAdd    : X86SchedWritePair<ReadAfterVecLd>;  // Floating point add/sub.
 defm WriteFAddX   : X86SchedWritePair<ReadAfterVecXLd>; // Floating point add/sub (XMM).
@@ -354,6 +355,7 @@ def  WriteVecMaskedStore64Y : SchedWrite;
 def  WriteVecMove         : SchedWrite;
 def  WriteVecMoveX        : SchedWrite;
 def  WriteVecMoveY        : SchedWrite;
+def  WriteVecMoveZ        : SchedWrite;
 def  WriteVecMoveToGpr    : SchedWrite;
 def  WriteVecMoveFromGpr  : SchedWrite;
 
@@ -516,9 +518,11 @@ def WriteFMoveLSX
  : X86SchedWriteMoveLS<WriteFMoveX, WriteFLoadX, WriteFStoreX>;
 def WriteFMoveLSY
  : X86SchedWriteMoveLS<WriteFMoveY, WriteFLoadY, WriteFStoreY>;
+def WriteFMoveLSZ
+ : X86SchedWriteMoveLS<WriteFMoveZ, WriteFLoadY, WriteFStoreY>;
 def SchedWriteFMoveLS
   : X86SchedWriteMoveLSWidths<WriteFMoveLS, WriteFMoveLSX,
-                              WriteFMoveLSY, WriteFMoveLSY>;
+                              WriteFMoveLSY, WriteFMoveLSZ>;
 
 def WriteFMoveLSNT
  : X86SchedWriteMoveLS<WriteFMove, WriteFLoad, WriteFStoreNT>;
@@ -536,9 +540,11 @@ def WriteVecMoveLSX
  : X86SchedWriteMoveLS<WriteVecMoveX, WriteVecLoadX, WriteVecStoreX>;
 def WriteVecMoveLSY
  : X86SchedWriteMoveLS<WriteVecMoveY, WriteVecLoadY, WriteVecStoreY>;
+def WriteVecMoveLSZ
+ : X86SchedWriteMoveLS<WriteVecMoveZ, WriteVecLoadY, WriteVecStoreY>;
 def SchedWriteVecMoveLS
   : X86SchedWriteMoveLSWidths<WriteVecMoveLS, WriteVecMoveLSX,
-                              WriteVecMoveLSY, WriteVecMoveLSY>;
+                              WriteVecMoveLSY, WriteVecMoveLSZ>;
 
 def WriteVecMoveLSNT
  : X86SchedWriteMoveLS<WriteVecMove, WriteVecLoadNT, WriteVecStoreNT>;
