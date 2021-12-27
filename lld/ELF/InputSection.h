@@ -379,11 +379,7 @@ private:
   template <class ELFT> void copyShtGroup(uint8_t *buf);
 };
 
-#ifdef _WIN32
-static_assert(sizeof(InputSection) <= 168, "InputSection is too big");
-#else
 static_assert(sizeof(InputSection) <= 160, "InputSection is too big");
-#endif
 
 inline bool isDebugSection(const InputSectionBase &sec) {
   return (sec.flags & llvm::ELF::SHF_ALLOC) == 0 &&
