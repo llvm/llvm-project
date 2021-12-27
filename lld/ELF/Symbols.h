@@ -144,6 +144,9 @@ public:
   // True if this symbol is specified by --trace-symbol option.
   uint8_t traced : 1;
 
+  // True if the name contains '@'.
+  uint8_t hasVersionSuffix : 1;
+
   inline void replace(const Symbol &newSym);
 
   bool includeInDynsym() const;
@@ -246,10 +249,11 @@ protected:
         type(type), stOther(stOther), symbolKind(k), visibility(stOther & 3),
         isUsedInRegularObj(!file || file->kind() == InputFile::ObjKind),
         exportDynamic(isExportDynamic(k, visibility)), inDynamicList(false),
-        canInline(false), referenced(false), traced(false), isInIplt(false),
-        gotInIgot(false), isPreemptible(false), used(!config->gcSections),
-        folded(false), needsTocRestore(false), scriptDefined(false),
-        needsCopy(false), needsGot(false), needsPlt(false), needsTlsDesc(false),
+        canInline(false), referenced(false), traced(false),
+        hasVersionSuffix(false), isInIplt(false), gotInIgot(false),
+        isPreemptible(false), used(!config->gcSections), folded(false),
+        needsTocRestore(false), scriptDefined(false), needsCopy(false),
+        needsGot(false), needsPlt(false), needsTlsDesc(false),
         needsTlsGd(false), needsTlsGdToIe(false), needsTlsLd(false),
         needsGotDtprel(false), needsTlsIe(false), hasDirectReloc(false) {}
 
@@ -575,6 +579,7 @@ void Symbol::replace(const Symbol &newSym) {
   canInline = old.canInline;
   referenced = old.referenced;
   traced = old.traced;
+  hasVersionSuffix = old.hasVersionSuffix;
   isPreemptible = old.isPreemptible;
   scriptDefined = old.scriptDefined;
   partition = old.partition;

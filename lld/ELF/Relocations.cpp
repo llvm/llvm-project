@@ -741,7 +741,7 @@ static bool maybeReportUndefined(Symbol &sym, InputSectionBase &sec,
                                  uint64_t offset) {
   // If versioned, issue an error (even if the symbol is weak) because we don't
   // know the defining filename which is required to construct a Verneed entry.
-  if (*sym.getVersionSuffix() == '@') {
+  if (sym.hasVersionSuffix) {
     undefs.push_back({&sym, {{&sec, offset}}, false});
     return true;
   }
