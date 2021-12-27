@@ -264,10 +264,8 @@ void ARMTargetAsmStreamer::emitInst(uint32_t Inst, char Suffix) {
 void ARMTargetAsmStreamer::emitUnwindRaw(int64_t Offset,
                                       const SmallVectorImpl<uint8_t> &Opcodes) {
   OS << "\t.unwind_raw " << Offset;
-  for (SmallVectorImpl<uint8_t>::const_iterator OCI = Opcodes.begin(),
-                                                OCE = Opcodes.end();
-       OCI != OCE; ++OCI)
-    OS << ", 0x" << Twine::utohexstr(*OCI);
+  for (uint8_t Opcode : Opcodes)
+    OS << ", 0x" << Twine::utohexstr(Opcode);
   OS << '\n';
 }
 
