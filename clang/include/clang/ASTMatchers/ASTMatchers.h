@@ -3725,9 +3725,8 @@ AST_MATCHER_P(ObjCMessageExpr, hasReceiver, internal::Matcher<Expr>,
 /// \endcode
 AST_MATCHER_P(ObjCMessageExpr, hasSelector, std::string, BaseName) {
   Selector Sel = Node.getSelector();
-  return BaseName.compare(Sel.getAsString()) == 0;
+  return BaseName == Sel.getAsString();
 }
-
 
 /// Matches when at least one of the supplied string equals to the
 /// Selector.getAsString()
