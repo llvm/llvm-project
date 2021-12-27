@@ -28,7 +28,7 @@ SimplexBase::SimplexBase(unsigned nVar)
   }
 }
 
-SimplexBase::SimplexBase(const FlatAffineConstraints &constraints)
+SimplexBase::SimplexBase(const IntegerPolyhedron &constraints)
     : SimplexBase(constraints.getNumIds()) {
   for (unsigned i = 0, numIneqs = constraints.getNumInequalities();
        i < numIneqs; ++i)
@@ -502,15 +502,14 @@ void SimplexBase::appendVariable(unsigned count) {
   undoLog.insert(undoLog.end(), count, UndoLogEntry::RemoveLastVariable);
 }
 
-/// Add all the constraints from the given FlatAffineConstraints.
-void SimplexBase::intersectFlatAffineConstraints(
-    const FlatAffineConstraints &fac) {
-  assert(fac.getNumIds() == getNumVariables() &&
-         "FlatAffineConstraints must have same dimensionality as simplex");
-  for (unsigned i = 0, e = fac.getNumInequalities(); i < e; ++i)
-    addInequality(fac.getInequality(i));
-  for (unsigned i = 0, e = fac.getNumEqualities(); i < e; ++i)
-    addEquality(fac.getEquality(i));
+/// Add all the constraints from the given IntegerPolyhedron.
+void SimplexBase::intersectIntegerPolyhedron(const IntegerPolyhedron &poly) {
+  assert(poly.getNumIds() == getNumVariables() &&
+         "IntegerPolyhedron must have same dimensionality as simplex");
+  for (unsigned i = 0, e = poly.getNumInequalities(); i < e; ++i)
+    addInequality(poly.getInequality(i));
+  for (unsigned i = 0, e = poly.getNumEqualities(); i < e; ++i)
+    addEquality(poly.getEquality(i));
 }
 
 Optional<Fraction> Simplex::computeRowOptimum(Direction direction,
@@ -1285,16 +1284,16 @@ void SimplexBase::print(raw_ostream &os) const {
 
 void SimplexBase::dump() const { print(llvm::errs()); }
 
-bool Simplex::isRationalSubsetOf(const FlatAffineConstraints &fac) {
+bool Simplex::isRationalSubsetOf(const IntegerPolyhedron &poly) {
   if (isEmpty())
     return true;
 
-  for (unsigned i = 0, e = fac.getNumInequalities(); i < e; ++i)
-    if (!isRedundantInequality(fac.getInequality(i)))
+  for (unsigned i = 0, e = poly.getNumInequalities(); i < e; ++i)
+    if (!isRedundantInequality(poly.getInequality(i)))
       return false;
 
-  for (unsigned i = 0, e = fac.getNumEqualities(); i < e; ++i)
-    if (!isRedundantEquality(fac.getEquality(i)))
+  for (unsigned i = 0, e = poly.getNumEqualities(); i < e; ++i)
+    if (!isRedundantEquality(poly.getEquality(i)))
       return false;
 
   return true;
