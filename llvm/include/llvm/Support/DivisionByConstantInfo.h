@@ -10,8 +10,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_DIVISON_BY_CONSTANT_INFO_H
-#define LLVM_SUPPORT_DIVISON_BY_CONSTANT_INFO_H
+#ifndef LLVM_SUPPORT_DIVISIONBYCONSTANTINFO_H
+#define LLVM_SUPPORT_DIVISIONBYCONSTANTINFO_H
 
 #include "llvm/ADT/APInt.h"
 
