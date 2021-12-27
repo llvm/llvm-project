@@ -1724,7 +1724,7 @@ static void handleUndefinedGlob(StringRef arg) {
   // symbols to the symbol table, invalidating the current iterator.
   std::vector<Symbol *> syms;
   for (Symbol *sym : symtab->symbols())
-    if (pat->match(sym->getName()))
+    if (!sym->isPlaceholder() && pat->match(sym->getName()))
       syms.push_back(sym);
 
   for (Symbol *sym : syms)
@@ -2106,6 +2106,7 @@ static void redirectSymbols(ArrayRef<WrappedSymbol> wrapped) {
       sym2->resolve(*sym);
       // Eliminate foo@v1 from the symbol table.
       sym->symbolKind = Symbol::PlaceholderKind;
+      sym->isUsedInRegularObj = false;
     } else if (auto *sym1 = dyn_cast<Defined>(sym)) {
       if (sym2->versionId > VER_NDX_GLOBAL
               ? config->versionDefinitions[sym2->versionId].name == suffix1 + 1
@@ -2118,6 +2119,7 @@ static void redirectSymbols(ArrayRef<WrappedSymbol> wrapped) {
         // defined in the same place.
         map.try_emplace(sym2, sym);
         sym2->symbolKind = Symbol::PlaceholderKind;
+        sym2->isUsedInRegularObj = false;
       }
     }
   }

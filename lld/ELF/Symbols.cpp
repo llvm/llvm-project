@@ -355,7 +355,7 @@ void elf::maybeWarnUnorderableSymbol(const Symbol *sym) {
 // Returns true if a symbol can be replaced at load-time by a symbol
 // with the same name defined in other ELF executable or DSO.
 bool elf::computeIsPreemptible(const Symbol &sym) {
-  assert(!sym.isLocal());
+  assert(!sym.isLocal() || sym.isPlaceholder());
 
   // Only symbols with default visibility that appear in dynsym can be
   // preempted. Symbols with protected visibility cannot be preempted.
