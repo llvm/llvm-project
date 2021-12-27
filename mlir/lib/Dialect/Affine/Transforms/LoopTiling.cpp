@@ -178,14 +178,23 @@ void LoopTiling::runOnFunction() {
       diag << "]\n";
     }
     SmallVector<AffineForOp, 6> tiledNest;
-    if (failed(tilePerfectlyNested(band, tileSizes, &tiledNest)))
-      return signalPassFailure();
+    if (failed(tilePerfectlyNested(band, tileSizes, &tiledNest))) {
+      // An empty band always succeeds.
+      assert(!band.empty() && "guaranteed to succeed on empty bands");
+      LLVM_DEBUG(band.front()->emitRemark("loop tiling failed!\n"));
+      continue;
+    }
 
     // Separate full and partial tiles.
     if (separate) {
       auto intraTileLoops =
           MutableArrayRef<AffineForOp>(tiledNest).drop_front(band.size());
-      (void)separateFullTiles(intraTileLoops);
+      if (failed(separateFullTiles(intraTileLoops))) {
+        assert(!intraTileLoops.empty() &&
+               "guaranteed to succeed on empty bands");
+        LLVM_DEBUG(intraTileLoops.front()->emitRemark(
+            "separation post tiling failed!\n"));
+      }
     }
   }
 }
