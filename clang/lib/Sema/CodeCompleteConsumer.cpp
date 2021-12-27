@@ -656,7 +656,7 @@ static std::string getOverloadAsString(const CodeCompletionString &CCS) {
 
 void PrintingCodeCompleteConsumer::ProcessOverloadCandidates(
     Sema &SemaRef, unsigned CurrentArg, OverloadCandidate *Candidates,
-    unsigned NumCandidates, SourceLocation OpenParLoc) {
+    unsigned NumCandidates, SourceLocation OpenParLoc, bool Braced) {
   OS << "OPENING_PAREN_LOC: ";
   OpenParLoc.print(OS, SemaRef.getSourceManager());
   OS << "\n";
@@ -664,7 +664,7 @@ void PrintingCodeCompleteConsumer::ProcessOverloadCandidates(
   for (unsigned I = 0; I != NumCandidates; ++I) {
     if (CodeCompletionString *CCS = Candidates[I].CreateSignatureString(
             CurrentArg, SemaRef, getAllocator(), CCTUInfo,
-            includeBriefComments())) {
+            includeBriefComments(), Braced)) {
       OS << "OVERLOAD: " << getOverloadAsString(*CCS) << "\n";
     }
   }

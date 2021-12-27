@@ -3833,7 +3833,8 @@ static CodeCompletionString *createTemplateSignatureString(
 CodeCompletionString *
 CodeCompleteConsumer::OverloadCandidate::CreateSignatureString(
     unsigned CurrentArg, Sema &S, CodeCompletionAllocator &Allocator,
-    CodeCompletionTUInfo &CCTUInfo, bool IncludeBriefComments) const {
+    CodeCompletionTUInfo &CCTUInfo, bool IncludeBriefComments,
+    bool Braced) const {
   PrintingPolicy Policy = getCompletionPrintingPolicy(S);
   // Show signatures of constructors as they are declared:
   //   vector(int n) rather than vector<string>(int n)
@@ -3857,9 +3858,11 @@ CodeCompleteConsumer::OverloadCandidate::CreateSignatureString(
     const FunctionType *FT = getFunctionType();
     Result.AddResultTypeChunk(Result.getAllocator().CopyString(
         FT->getReturnType().getAsString(Policy)));
-    Result.AddChunk(CodeCompletionString::CK_LeftParen);
+    Result.AddChunk(Braced ? CodeCompletionString::CK_LeftBrace
+                           : CodeCompletionString::CK_LeftParen);
     Result.AddChunk(CodeCompletionString::CK_CurrentParameter, "...");
-    Result.AddChunk(CodeCompletionString::CK_RightParen);
+    Result.AddChunk(Braced ? CodeCompletionString::CK_RightBrace
+                           : CodeCompletionString::CK_RightParen);
     return Result.TakeString();
   }
 
@@ -3879,10 +3882,12 @@ CodeCompleteConsumer::OverloadCandidate::CreateSignatureString(
         Proto->getReturnType().getAsString(Policy)));
   }
 
-  Result.AddChunk(CodeCompletionString::CK_LeftParen);
+  Result.AddChunk(Braced ? CodeCompletionString::CK_LeftBrace
+                         : CodeCompletionString::CK_LeftParen);
   AddOverloadParameterChunks(S.getASTContext(), Policy, FDecl, Proto, Result,
                              CurrentArg);
-  Result.AddChunk(CodeCompletionString::CK_RightParen);
+  Result.AddChunk(Braced ? CodeCompletionString::CK_RightBrace
+                         : CodeCompletionString::CK_RightParen);
 
   return Result.TakeString();
 }
@@ -5940,12 +5945,14 @@ static QualType getParamType(Sema &SemaRef,
 
 static QualType
 ProduceSignatureHelp(Sema &SemaRef, MutableArrayRef<ResultCandidate> Candidates,
-                     unsigned CurrentArg, SourceLocation OpenParLoc) {
+                     unsigned CurrentArg, SourceLocation OpenParLoc,
+                     bool Braced) {
   if (Candidates.empty())
     return QualType();
   if (SemaRef.getPreprocessor().isCodeCompletionReached())
     SemaRef.CodeCompleter->ProcessOverloadCandidates(
-        SemaRef, CurrentArg, Candidates.data(), Candidates.size(), OpenParLoc);
+        SemaRef, CurrentArg, Candidates.data(), Candidates.size(), OpenParLoc,
+        Braced);
   return getParamType(SemaRef, Candidates, CurrentArg);
 }
 
@@ -6047,15 +6054,16 @@ QualType Sema::ProduceCallSignatureHelp(Scope *S, Expr *Fn,
     }
   }
   mergeCandidatesWithResults(*this, Results, CandidateSet, Loc, Args.size());
-  QualType ParamType =
-      ProduceSignatureHelp(*this, Results, Args.size(), OpenParLoc);
+  QualType ParamType = ProduceSignatureHelp(*this, Results, Args.size(),
+                                            OpenParLoc, /*Braced=*/false);
   return !CandidateSet.empty() ? ParamType : QualType();
 }
 
 QualType Sema::ProduceConstructorSignatureHelp(Scope *S, QualType Type,
                                                SourceLocation Loc,
                                                ArrayRef<Expr *> Args,
-                                               SourceLocation OpenParLoc) {
+                                               SourceLocation OpenParLoc,
+                                               bool Braced) {
   if (!CodeCompleter)
     return QualType();
 
@@ -6063,6 +6071,10 @@ QualType Sema::ProduceConstructorSignatureHelp(Scope *S, QualType Type,
   CXXRecordDecl *RD =
       isCompleteType(Loc, Type) ? Type->getAsCXXRecordDecl() : nullptr;
   if (!RD)
+    return Type;
+  // FIXME: we don't support signature help for aggregate initialization, so
+  //        don't offer a confusing partial list (e.g. the copy constructor).
+  if (Braced && RD->isAggregate())
     return Type;
 
   // FIXME: Provide support for member initializers.
@@ -6072,12 +6084,20 @@ QualType Sema::ProduceConstructorSignatureHelp(Scope *S, QualType Type,
 
   for (NamedDecl *C : LookupConstructors(RD)) {
     if (auto *FD = dyn_cast<FunctionDecl>(C)) {
+      // FIXME: we can't yet provide correct signature help for initializer
+      //        list constructors, so skip them entirely.
+      if (Braced && LangOpts.CPlusPlus && isInitListConstructor(FD))
+        continue;
       AddOverloadCandidate(FD, DeclAccessPair::make(FD, C->getAccess()), Args,
                            CandidateSet,
                            /*SuppressUserConversions=*/false,
                            /*PartialOverloading=*/true,
                            /*AllowExplicit*/ true);
     } else if (auto *FTD = dyn_cast<FunctionTemplateDecl>(C)) {
+      if (Braced && LangOpts.CPlusPlus &&
+          isInitListConstructor(FTD->getTemplatedDecl()))
+        continue;
+
       AddTemplateOverloadCandidate(
           FTD, DeclAccessPair::make(FTD, C->getAccess()),
           /*ExplicitTemplateArgs=*/nullptr, Args, CandidateSet,
@@ -6088,12 +6108,13 @@ QualType Sema::ProduceConstructorSignatureHelp(Scope *S, QualType Type,
 
   SmallVector<ResultCandidate, 8> Results;
   mergeCandidatesWithResults(*this, Results, CandidateSet, Loc, Args.size());
-  return ProduceSignatureHelp(*this, Results, Args.size(), OpenParLoc);
+  return ProduceSignatureHelp(*this, Results, Args.size(), OpenParLoc, Braced);
 }
 
 QualType Sema::ProduceCtorInitMemberSignatureHelp(
     Scope *S, Decl *ConstructorDecl, CXXScopeSpec SS, ParsedType TemplateTypeTy,
-    ArrayRef<Expr *> ArgExprs, IdentifierInfo *II, SourceLocation OpenParLoc) {
+    ArrayRef<Expr *> ArgExprs, IdentifierInfo *II, SourceLocation OpenParLoc,
+    bool Braced) {
   if (!CodeCompleter)
     return QualType();
 
@@ -6106,7 +6127,7 @@ QualType Sema::ProduceCtorInitMemberSignatureHelp(
           Constructor->getParent(), SS, TemplateTypeTy, II))
     return ProduceConstructorSignatureHelp(getCurScope(), MemberDecl->getType(),
                                            MemberDecl->getLocation(), ArgExprs,
-                                           OpenParLoc);
+                                           OpenParLoc, Braced);
   return QualType();
 }
 
@@ -6159,7 +6180,8 @@ QualType Sema::ProduceTemplateArgumentSignatureHelp(
       if (const auto *TD = llvm::dyn_cast<TemplateDecl>(ND))
         Consider(TD);
   }
-  return ProduceSignatureHelp(*this, Results, Args.size(), LAngleLoc);
+  return ProduceSignatureHelp(*this, Results, Args.size(), LAngleLoc,
+                              /*Braced=*/false);
 }
 
 static QualType getDesignatedType(QualType BaseType, const Designation &Desig) {

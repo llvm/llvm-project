@@ -1081,11 +1081,11 @@ public:
 
     /// Create a new code-completion string that describes the function
     /// signature of this overload candidate.
-    CodeCompletionString *CreateSignatureString(unsigned CurrentArg,
-                                                Sema &S,
-                                      CodeCompletionAllocator &Allocator,
-                                      CodeCompletionTUInfo &CCTUInfo,
-                                      bool IncludeBriefComments) const;
+    CodeCompletionString *
+    CreateSignatureString(unsigned CurrentArg, Sema &S,
+                          CodeCompletionAllocator &Allocator,
+                          CodeCompletionTUInfo &CCTUInfo,
+                          bool IncludeBriefComments, bool Braced) const;
   };
 
   CodeCompleteConsumer(const CodeCompleteOptions &CodeCompleteOpts)
@@ -1159,7 +1159,8 @@ public:
   virtual void ProcessOverloadCandidates(Sema &S, unsigned CurrentArg,
                                          OverloadCandidate *Candidates,
                                          unsigned NumCandidates,
-                                         SourceLocation OpenParLoc) {}
+                                         SourceLocation OpenParLoc,
+                                         bool Braced) {}
   //@}
 
   /// Retrieve the allocator that will be used to allocate
@@ -1210,7 +1211,8 @@ public:
   void ProcessOverloadCandidates(Sema &S, unsigned CurrentArg,
                                  OverloadCandidate *Candidates,
                                  unsigned NumCandidates,
-                                 SourceLocation OpenParLoc) override;
+                                 SourceLocation OpenParLoc,
+                                 bool Braced) override;
 
   bool isResultFilteredOut(StringRef Filter, CodeCompletionResult Results) override;
 

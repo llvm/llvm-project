@@ -3740,8 +3740,8 @@ MemInitResult Parser::ParseMemInitializer(Decl *ConstructorDecl) {
       if (TemplateTypeTy.isInvalid())
         return QualType();
       QualType PreferredType = Actions.ProduceCtorInitMemberSignatureHelp(
-          getCurScope(), ConstructorDecl, SS, TemplateTypeTy.get(), ArgExprs, II,
-          T.getOpenLocation());
+          getCurScope(), ConstructorDecl, SS, TemplateTypeTy.get(), ArgExprs,
+          II, T.getOpenLocation(), /*Braced=*/false);
       CalledSignatureHelp = true;
       return PreferredType;
     };

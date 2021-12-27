@@ -12542,13 +12542,12 @@ public:
   QualType ProduceConstructorSignatureHelp(Scope *S, QualType Type,
                                            SourceLocation Loc,
                                            ArrayRef<Expr *> Args,
-                                           SourceLocation OpenParLoc);
-  QualType ProduceCtorInitMemberSignatureHelp(Scope *S, Decl *ConstructorDecl,
-                                              CXXScopeSpec SS,
-                                              ParsedType TemplateTypeTy,
-                                              ArrayRef<Expr *> ArgExprs,
-                                              IdentifierInfo *II,
-                                              SourceLocation OpenParLoc);
+                                           SourceLocation OpenParLoc,
+                                           bool Braced);
+  QualType ProduceCtorInitMemberSignatureHelp(
+      Scope *S, Decl *ConstructorDecl, CXXScopeSpec SS,
+      ParsedType TemplateTypeTy, ArrayRef<Expr *> ArgExprs, IdentifierInfo *II,
+      SourceLocation OpenParLoc, bool Braced);
   QualType ProduceTemplateArgumentSignatureHelp(
       TemplateTy, ArrayRef<ParsedTemplateArgument>, SourceLocation LAngleLoc);
   void CodeCompleteInitializer(Scope *S, Decl *D);
