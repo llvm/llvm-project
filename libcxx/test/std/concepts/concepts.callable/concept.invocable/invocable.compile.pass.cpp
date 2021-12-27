@@ -237,11 +237,10 @@ static_assert(!std::invocable<multiple_overloads, multiple_overloads::O>);
 } // namespace function_objects
 
 namespace pointer_to_member_functions {
-// clang-format off
   template<class Member, class T, class... Args>
   constexpr bool check_member_is_invocable()
   {
-    constexpr bool result = std::invocable<Member, T, Args...>;
+    constexpr bool result = std::invocable<Member, T&&, Args...>;
     using uncv_t = std::remove_cvref_t<T>;
     static_assert(std::invocable<Member, uncv_t*, Args...> == result);
     static_assert(std::invocable<Member, std::unique_ptr<uncv_t>, Args...> == result);
@@ -254,7 +253,6 @@ namespace pointer_to_member_functions {
     static_assert(!std::invocable<Member, S2*, Args...>);
     return result;
   }
-// clang-format on
 
 static_assert(check_member_is_invocable<int S::*, S>());
 static_assert(std::invocable<int S::*, S&>);
