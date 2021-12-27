@@ -2786,7 +2786,10 @@ struct AAHeapToSharedFunction : public AAHeapToShared {
       };
       A.emitRemark<OptimizationRemark>(CB, "OMP111", Remark);
 
-      SharedMem->setAlignment(MaybeAlign(32));
+      MaybeAlign Alignment = CB->getRetAlign();
+      assert(Alignment &&
+             "HeapToShared on allocation without alignment attribute");
+      SharedMem->setAlignment(MaybeAlign(Alignment));
 
       A.changeValueAfterManifest(*CB, *NewBuffer);
       A.deleteAfterManifest(*CB);
