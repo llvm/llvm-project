@@ -557,9 +557,6 @@ template <class ELFT> void Writer<ELFT>::run() {
   for (Partition &part : partitions)
     setPhdrs(part);
 
-  if (config->relocatable)
-    for (OutputSection *sec : outputSections)
-      sec->addr = 0;
 
   // Handle --print-map(-M)/--Map, --why-extract=, --cref and
   // --print-archive-stats=. Dump them before checkSections() because the files
@@ -1698,6 +1695,10 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       }
     }
   }
+
+  if (config->relocatable)
+    for (OutputSection *sec : outputSections)
+      sec->addr = 0;
 
   // If addrExpr is set, the address may not be a multiple of the alignment.
   // Warn because this is error-prone.
