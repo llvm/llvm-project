@@ -31,6 +31,7 @@ public:
   eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MI) const override;
   bool hasFP(const MachineFunction &MF) const override;
+  bool hasReservedCallFrame(const MachineFunction &MF) const override;
   bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MI,
                                  ArrayRef<CalleeSavedInfo> CSI,

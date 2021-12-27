@@ -108,8 +108,8 @@ void M88kMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
   OutMI.setOpcode(MI->getOpcode());
   for (unsigned I = 0, E = MI->getNumOperands(); I != E; ++I) {
     const MachineOperand &MO = MI->getOperand(I);
-    // Ignore all implicit register operands.
-    if (!MO.isReg() || !MO.isImplicit())
+    // Ignore all implicit register operands, and register masks.
+    if ((!MO.isReg() || !MO.isImplicit()) && !MO.isRegMask())
       OutMI.addOperand(lowerOperand(MO));
   }
 }

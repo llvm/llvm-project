@@ -52,7 +52,8 @@ using namespace llvm;
 void M88kInstrInfo::anchor() {}
 
 M88kInstrInfo::M88kInstrInfo(M88kSubtarget &STI)
-    : M88kGenInstrInfo(), RI(), STI(STI) {}
+    : M88kGenInstrInfo(M88k::ADJCALLSTACKDOWN, M88k::ADJCALLSTACKUP), RI(),
+      STI(STI) {}
 
 std::pair<unsigned, unsigned>
 M88kInstrInfo::decomposeMachineOperandsTargetFlags(unsigned TF) const {
@@ -94,6 +95,7 @@ void M88kInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
   BuildMI(MBB, MBBI, DL, get(M88k::STriw))
       .addReg(SrcReg, getKillRegState(isKill))
       .addFrameIndex(FrameIndex)
+      .addImm(0)
       .addMemOperand(MMO);
 }
 
@@ -104,12 +106,13 @@ void M88kInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                          const TargetRegisterInfo *TRI) const {
   DebugLoc DL;
   MachineMemOperand *MMO =
-      getMachineMemOperand(MBB, FrameIndex, MachineMemOperand::MOStore);
+      getMachineMemOperand(MBB, FrameIndex, MachineMemOperand::MOLoad);
 
   // Build an LDriw instruction.
   BuildMI(MBB, MBBI, DL, get(M88k::LDriw))
-      .addReg(DestReg)
+      .addReg(DestReg, RegState::Define)
       .addFrameIndex(FrameIndex)
+      .addImm(0)
       .addMemOperand(MMO);
 }
 

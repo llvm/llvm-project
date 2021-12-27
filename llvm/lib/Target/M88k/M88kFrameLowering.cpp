@@ -52,7 +52,23 @@ M88kFrameLowering::M88kFrameLowering()
                           /*StackRealignable0*/ false),
       RegSpillOffsets(0) {}
 
-bool M88kFrameLowering::hasFP(const MachineFunction &MF) const { return false; }
+bool M88kFrameLowering::hasFP(const MachineFunction &MF) const {
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+
+  // ABI-required frame pointer.
+  if (MF.getTarget().Options.DisableFramePointerElim(MF))
+    return true;
+
+  // Frame pointer required for use within this function.
+  return (MFI.hasCalls() || MFI.hasVarSizedObjects() ||
+          MFI.isFrameAddressTaken());
+}
+
+bool M88kFrameLowering::hasReservedCallFrame(
+    const MachineFunction &MF) const {
+  // The argument area is allocated by the caller.
+  return true;
+}
 
 StackOffset
 M88kFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
@@ -61,7 +77,6 @@ llvm::dbgs() << "Enter " << __FUNCTION__ << " for " << MF.getFunction().getName(
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
   FrameReg = hasFP(MF) ? M88k::R30 : M88k::R31;
-llvm::dbgs() << " -> Index " << FI << "\n";
   return StackOffset::getFixed(MFI.getObjectOffset(FI) + MFI.getStackSize() -
                                getOffsetOfLocalArea() +
                                MFI.getOffsetAdjustment());
@@ -128,7 +143,6 @@ void M88kFrameLowering::emitPrologue(MachineFunction &MF,
 MachineBasicBlock::iterator M88kFrameLowering::eliminateCallFramePseudoInstr(
     MachineFunction & /*MF*/, MachineBasicBlock &MBB,
     MachineBasicBlock::iterator I) const {
-  // TODO Implementation needed?
   // Discard ADJCALLSTACKDOWN, ADJCALLSTACKUP instructions.
   return MBB.erase(I);
 }
