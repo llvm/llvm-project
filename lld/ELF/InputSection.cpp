@@ -153,12 +153,6 @@ void InputSectionBase::uncompress() const {
   uncompressedSize = -1;
 }
 
-uint64_t InputSectionBase::getOffsetInFile() const {
-  const uint8_t *fileStart = (const uint8_t *)file->mb.getBufferStart();
-  const uint8_t *secStart = data().begin();
-  return secStart - fileStart;
-}
-
 template <class ELFT> RelsOrRelas<ELFT> InputSectionBase::relsOrRelas() const {
   if (relSecIdx == 0)
     return {};
@@ -274,7 +268,6 @@ InputSection *InputSectionBase::getLinkOrderDep() const {
 }
 
 // Find a function symbol that encloses a given location.
-template <class ELFT>
 Defined *InputSectionBase::getEnclosingFunction(uint64_t offset) {
   for (Symbol *b : file->getSymbols())
     if (Defined *d = dyn_cast<Defined>(b))
@@ -295,7 +288,7 @@ std::string InputSectionBase::getLocation(uint64_t offset) {
     return (config->outputFile + ":(" + secAndOffset).str();
 
   std::string file = toString(getFile<ELFT>());
-  if (Defined *d = getEnclosingFunction<ELFT>(offset))
+  if (Defined *d = getEnclosingFunction(offset))
     return file + ":(function " + toString(*d) + ": " + secAndOffset;
 
   return file + ":(" + secAndOffset;
@@ -1209,7 +1202,7 @@ void InputSectionBase::adjustSplitStackFunctionPrologues(uint8_t *buf,
     if (enclosingPrologueAttempted(rel.offset, prologues))
       continue;
 
-    if (Defined *f = getEnclosingFunction<ELFT>(rel.offset)) {
+    if (Defined *f = getEnclosingFunction(rel.offset)) {
       prologues.insert(f);
       if (target->adjustPrologueForCrossSplitStack(buf + f->value, end,
                                                    f->stOther))
