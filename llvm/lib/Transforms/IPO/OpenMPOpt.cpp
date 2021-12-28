@@ -21,6 +21,7 @@
 
 #include "llvm/ADT/EnumeratedArray.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/CallGraph.h"
@@ -2540,7 +2541,7 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
   }
 
   /// Set of basic blocks that are executed by a single thread.
-  DenseSet<const BasicBlock *> SingleThreadedBBs;
+  SmallSetVector<const BasicBlock *, 16> SingleThreadedBBs;
 
   /// Total number of basic blocks in this function.
   long unsigned NumBBs;
@@ -2564,7 +2565,7 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
   if (!A.checkForAllCallSites(PredForCallSite, *this,
                               /* RequiresAllCallSites */ true,
                               AllCallSitesKnown))
-    SingleThreadedBBs.erase(&F->getEntryBlock());
+    SingleThreadedBBs.remove(&F->getEntryBlock());
 
   auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
   auto &RFI = OMPInfoCache.RFIs[OMPRTL___kmpc_target_init];
@@ -2629,7 +2630,7 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
 
   for (auto *BB : RPOT) {
     if (!MergePredecessorStates(BB))
-      SingleThreadedBBs.erase(BB);
+      SingleThreadedBBs.remove(BB);
   }
 
   return (NumSingleThreadedBBs == SingleThreadedBBs.size())
