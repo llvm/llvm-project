@@ -341,9 +341,6 @@ struct VPTransformState {
   /// Hold the canonical scalar IV of the vector loop (start=0, step=VF*UF).
   Value *CanonicalIV = nullptr;
 
-  /// Hold the trip count of the scalar loop.
-  Value *TripCount = nullptr;
-
   /// Hold a pointer to InnerLoopVectorizer to reuse its IR generation methods.
   InnerLoopVectorizer *ILV;
 
@@ -2134,8 +2131,12 @@ class VPlan {
   // (operators '==' and '<').
   SetVector<VPValue *> VPExternalDefs;
 
-  /// Represents the backedge taken count of the original loop, for folding
+  /// Represents the trip count of the original loop, for folding
   /// the tail.
+  VPValue *TripCount = nullptr;
+
+  /// Represents the backedge taken count of the original loop, for folding
+  /// the tail. It equals TripCount - 1.
   VPValue *BackedgeTakenCount = nullptr;
 
   /// Holds a mapping between Values and their corresponding VPValue inside
@@ -2169,11 +2170,16 @@ public:
     }
     for (VPValue *VPV : VPValuesToFree)
       delete VPV;
+    if (TripCount)
+      delete TripCount;
     if (BackedgeTakenCount)
       delete BackedgeTakenCount;
     for (VPValue *Def : VPExternalDefs)
       delete Def;
   }
+
+  /// Prepare the plan for execution, setting up the required live-in values.
+  void prepareToExecute(Value *TripCount, VPTransformState &State);
 
   /// Generate the IR code for this VPlan.
   void execute(struct VPTransformState *State);
@@ -2185,6 +2191,13 @@ public:
     Entry = Block;
     Block->setPlan(this);
     return Entry;
+  }
+
+  /// The trip count of the original loop.
+  VPValue *getOrCreateTripCount() {
+    if (!TripCount)
+      TripCount = new VPValue();
+    return TripCount;
   }
 
   /// The backedge taken count of the original loop.
