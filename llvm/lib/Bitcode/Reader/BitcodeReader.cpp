@@ -3857,7 +3857,8 @@ void BitcodeReader::propagateAttributeTypes(CallBase *CB,
   for (unsigned i = 0; i != CB->arg_size(); ++i) {
     for (Attribute::AttrKind Kind : {Attribute::ByVal, Attribute::StructRet,
                                      Attribute::InAlloca}) {
-      if (!CB->paramHasAttr(i, Kind))
+      if (!CB->paramHasAttr(i, Kind) ||
+          CB->getParamAttr(i, Kind).getValueAsType())
         continue;
 
       CB->removeParamAttr(i, Kind);
