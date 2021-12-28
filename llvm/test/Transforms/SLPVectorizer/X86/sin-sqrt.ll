@@ -17,22 +17,22 @@ define void @test() {
 ; CHECK-NEXT:    [[A5:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src, i32 0, i64 5), align 8
 ; CHECK-NEXT:    [[A6:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src, i32 0, i64 6), align 8
 ; CHECK-NEXT:    [[A7:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src, i32 0, i64 7), align 8
-; CHECK-NEXT:    [[SIN0:%.*]] = call fast double @llvm.sin.f64(double [[A2]])
-; CHECK-NEXT:    [[SIN1:%.*]] = call fast double @llvm.sin.f64(double [[A3]])
-; CHECK-NEXT:    [[SQRT0:%.*]] = call fast double @llvm.sqrt.f64(double [[A0]])
-; CHECK-NEXT:    [[SQRT1:%.*]] = call fast double @llvm.sqrt.f64(double [[A1]])
-; CHECK-NEXT:    [[SIN2:%.*]] = call fast double @llvm.sin.f64(double [[A6]])
-; CHECK-NEXT:    [[SIN3:%.*]] = call fast double @llvm.sin.f64(double [[A7]])
-; CHECK-NEXT:    [[SQRT2:%.*]] = call fast double @llvm.sqrt.f64(double [[A4]])
-; CHECK-NEXT:    [[SQRT3:%.*]] = call fast double @llvm.sqrt.f64(double [[A5]])
-; CHECK-NEXT:    [[RES1:%.*]] = fadd fast double [[SQRT0]], [[SIN1]]
-; CHECK-NEXT:    [[RES2:%.*]] = fadd fast double [[SIN0]], [[SQRT1]]
-; CHECK-NEXT:    [[RES00:%.*]] = fadd fast double [[RES1]], [[RES2]]
-; CHECK-NEXT:    [[RES3:%.*]] = fadd fast double [[SQRT2]], [[SIN3]]
-; CHECK-NEXT:    [[RES4:%.*]] = fadd fast double [[SIN2]], [[SQRT3]]
-; CHECK-NEXT:    [[RES01:%.*]] = fadd fast double [[RES3]], [[RES4]]
-; CHECK-NEXT:    store double [[RES00]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst, i32 0, i64 0), align 8
-; CHECK-NEXT:    store double [[RES01]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst, i32 0, i64 1), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[A2]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[A6]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = call fast <2 x double> @llvm.sin.v2f64(<2 x double> [[TMP2]])
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> poison, double [[A3]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> [[TMP4]], double [[A7]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = call fast <2 x double> @llvm.sin.v2f64(<2 x double> [[TMP5]])
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> poison, double [[A0]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> [[TMP7]], double [[A4]], i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = call fast <2 x double> @llvm.sqrt.v2f64(<2 x double> [[TMP8]])
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x double> poison, double [[A1]], i32 0
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x double> [[TMP10]], double [[A5]], i32 1
+; CHECK-NEXT:    [[TMP12:%.*]] = call fast <2 x double> @llvm.sqrt.v2f64(<2 x double> [[TMP11]])
+; CHECK-NEXT:    [[TMP13:%.*]] = fadd fast <2 x double> [[TMP9]], [[TMP6]]
+; CHECK-NEXT:    [[TMP14:%.*]] = fadd fast <2 x double> [[TMP3]], [[TMP12]]
+; CHECK-NEXT:    [[TMP15:%.*]] = fadd fast <2 x double> [[TMP13]], [[TMP14]]
+; CHECK-NEXT:    store <2 x double> [[TMP15]], <2 x double>* bitcast ([8 x double]* @dst to <2 x double>*), align 8
 ; CHECK-NEXT:    ret void
 ;
   %a0 = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src, i32 0, i64 0), align 8
