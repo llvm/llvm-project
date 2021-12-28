@@ -324,7 +324,7 @@ public:
 
   // Splittable sections are handled as a sequence of data
   // rather than a single large blob of data.
-  std::vector<EhSectionPiece> pieces;
+  SmallVector<EhSectionPiece, 0> pieces;
 
   SyntheticSection *getParent() const;
 };
