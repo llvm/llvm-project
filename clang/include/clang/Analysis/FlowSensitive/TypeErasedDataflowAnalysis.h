@@ -19,6 +19,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Stmt.h"
 #include "clang/Analysis/CFG.h"
+#include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
 #include "llvm/ADT/Any.h"
@@ -87,6 +88,7 @@ struct TypeErasedDataflowAnalysisState {
 ///   already been transferred. States in `BlockStates` that are set to
 ///   `llvm::None` represent basic blocks that are not evaluated yet.
 TypeErasedDataflowAnalysisState transferBlock(
+    const ControlFlowContext &CFCtx,
     std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>> &BlockStates,
     const CFGBlock &Block, const Environment &InitEnv,
     TypeErasedDataflowAnalysis &Analysis,
@@ -97,13 +99,8 @@ TypeErasedDataflowAnalysisState transferBlock(
 /// Performs dataflow analysis and returns a mapping from basic block IDs to
 /// dataflow analysis states that model the respective basic blocks. Indices
 /// of the returned vector correspond to basic block IDs.
-///
-/// Requirements:
-///
-///  `Cfg` must have been built with `CFG::BuildOptions::setAllAlwaysAdd()` to
-///  ensure that all sub-expressions in a basic block are evaluated.
 std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>>
-runTypeErasedDataflowAnalysis(const CFG &Cfg,
+runTypeErasedDataflowAnalysis(const ControlFlowContext &CFCtx,
                               TypeErasedDataflowAnalysis &Analysis,
                               const Environment &InitEnv);
 

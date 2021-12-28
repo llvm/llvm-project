@@ -100,11 +100,11 @@ void elf::reportRangeError(uint8_t *loc, const Relocation &rel, const Twine &v,
                            int64_t min, uint64_t max) {
   ErrorPlace errPlace = getErrorPlace(loc);
   std::string hint;
-  if (rel.sym && !rel.sym->isLocal())
+  if (rel.sym && !rel.sym->isSection())
     hint = "; references " + lld::toString(*rel.sym);
   if (!errPlace.srcLoc.empty())
     hint += "\n>>> referenced by " + errPlace.srcLoc;
-  if (rel.sym && !rel.sym->isLocal())
+  if (rel.sym && !rel.sym->isSection())
     hint += getDefinedLocation(*rel.sym);
 
   if (errPlace.isec && errPlace.isec->name.startswith(".debug"))
@@ -741,7 +741,7 @@ static bool maybeReportUndefined(Symbol &sym, InputSectionBase &sec,
                                  uint64_t offset) {
   // If versioned, issue an error (even if the symbol is weak) because we don't
   // know the defining filename which is required to construct a Verneed entry.
-  if (*sym.getVersionSuffix() == '@') {
+  if (sym.hasVersionSuffix) {
     undefs.push_back({&sym, {{&sec, offset}}, false});
     return true;
   }
@@ -870,7 +870,7 @@ static void addGotEntry(Symbol &sym) {
 
   // If preemptible, emit a GLOB_DAT relocation.
   if (sym.isPreemptible) {
-    mainPart->relaDyn->addReloc({target->gotRel, in.got, off,
+    mainPart->relaDyn->addReloc({target->gotRel, in.got.get(), off,
                                  DynamicReloc::AgainstSymbol, sym, 0, R_ABS});
     return;
   }
@@ -1551,7 +1551,7 @@ static bool handleNonPreemptibleIfunc(Symbol &sym) {
   if (sym.hasDirectReloc) {
     // Change the value to the IPLT and redirect all references to it.
     auto &d = cast<Defined>(sym);
-    d.section = in.iplt;
+    d.section = in.iplt.get();
     d.value = sym.pltIndex * target->ipltEntrySize;
     d.size = 0;
     // It's important to set the symbol type here so that dynamic loaders
@@ -1641,8 +1641,8 @@ void elf::postScanRelocations() {
         in.got->relocations.push_back(
             {R_ADDEND, target->symbolicRel, in.got->getTlsIndexOff(), 1, &sym});
       else
-        mainPart->relaDyn->addReloc(
-            {target->tlsModuleIndexRel, in.got, in.got->getTlsIndexOff()});
+        mainPart->relaDyn->addReloc({target->tlsModuleIndexRel, in.got.get(),
+                                     in.got->getTlsIndexOff()});
     }
     if (sym.needsGotDtprel) {
       in.got->addEntry(sym);
@@ -1816,7 +1816,7 @@ void ThunkCreator::mergeThunks(ArrayRef<OutputSection *> outputSections) {
                           });
 
         // Merge sorted vectors of Thunks and InputSections by outSecOff
-        std::vector<InputSection *> tmp;
+        SmallVector<InputSection *, 0> tmp;
         tmp.reserve(isd->sections.size() + newThunks.size());
 
         std::merge(isd->sections.begin(), isd->sections.end(),

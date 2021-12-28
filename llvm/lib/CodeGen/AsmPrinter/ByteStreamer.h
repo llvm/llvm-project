@@ -33,6 +33,7 @@ class ByteStreamer {
   virtual void emitSLEB128(uint64_t DWord, const Twine &Comment = "") = 0;
   virtual void emitULEB128(uint64_t DWord, const Twine &Comment = "",
                            unsigned PadTo = 0) = 0;
+  virtual void emitDIERef(const DIE &D) = 0;
 };
 
 class APByteStreamer final : public ByteStreamer {
@@ -54,15 +55,21 @@ public:
     AP.OutStreamer->AddComment(Comment);
     AP.emitULEB128(DWord, nullptr, PadTo);
   }
+  void emitDIERef(const DIE &D) override {
+    uint64_t Offset = D.getOffset();
+    static constexpr unsigned ULEB128PadSize = 4;
+    assert(Offset < (1ULL << (ULEB128PadSize * 7)) && "Offset wont fit");
+    emitULEB128(Offset, "", ULEB128PadSize);
+  }
 };
 
 class HashingByteStreamer final : public ByteStreamer {
  private:
   DIEHash &Hash;
  public:
- HashingByteStreamer(DIEHash &H) : Hash(H) {}
-  void emitInt8(uint8_t Byte, const Twine &Comment) override {
-    Hash.update(Byte);
+   HashingByteStreamer(DIEHash &H) : Hash(H) {}
+   void emitInt8(uint8_t Byte, const Twine &Comment) override {
+     Hash.update(Byte);
   }
   void emitSLEB128(uint64_t DWord, const Twine &Comment) override {
     Hash.addSLEB128(DWord);
@@ -71,6 +78,7 @@ class HashingByteStreamer final : public ByteStreamer {
                    unsigned PadTo) override {
     Hash.addULEB128(DWord);
   }
+  void emitDIERef(const DIE &D) override { Hash.hashRawTypeReference(D); }
 };
 
 class BufferByteStreamer final : public ByteStreamer {
@@ -115,8 +123,13 @@ public:
       // with each other.
       for (size_t i = 1; i < Length; ++i)
         Comments.push_back("");
-
     }
+  }
+  void emitDIERef(const DIE &D) override {
+    uint64_t Offset = D.getOffset();
+    static constexpr unsigned ULEB128PadSize = 4;
+    assert(Offset < (1ULL << (ULEB128PadSize * 7)) && "Offset wont fit");
+    emitULEB128(Offset, "", ULEB128PadSize);
   }
 };
 

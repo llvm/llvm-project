@@ -30,21 +30,12 @@ def RISCVSplitF64     : SDNode<"RISCVISD::SplitF64", SDT_RISCVSplitF64>;
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtD] in {
-
-let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
-def FLD : RVInstI<0b011, OPC_LOAD_FP, (outs FPR64:$rd),
-                  (ins GPR:$rs1, simm12:$imm12),
-                  "fld", "$rd, ${imm12}(${rs1})">,
-          Sched<[WriteFLD64, ReadFMemBase]>;
+def FLD : FPLoad_r<0b011, "fld", FPR64, WriteFLD64>;
 
 // Operands for stores are in the order srcreg, base, offset rather than
 // reflecting the order these fields are specified in the instruction
 // encoding.
-let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
-def FSD : RVInstS<0b011, OPC_STORE_FP, (outs),
-                  (ins FPR64:$rs2, GPR:$rs1, simm12:$imm12),
-                   "fsd", "$rs2, ${imm12}(${rs1})">,
-          Sched<[WriteFST64, ReadStoreData, ReadFMemBase]>;
+def FSD : FPStore_r<0b011, "fsd", FPR64, WriteFST64>;
 
 let SchedRW = [WriteFMA64, ReadFMA64, ReadFMA64, ReadFMA64] in {
 def FMADD_D  : FPFMA_rrr_frm<OPC_MADD,  0b01, "fmadd.d",  FPR64>;

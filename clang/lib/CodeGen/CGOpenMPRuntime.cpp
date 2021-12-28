@@ -1460,7 +1460,7 @@ llvm::Value *CGOpenMPRuntime::emitUpdateLocation(CodeGenFunction &CGF,
       Loc.isInvalid() || CGM.getTriple().isAMDGCN()) {
     SrcLocStr = OMPBuilder.getOrCreateDefaultSrcLocStr();
   } else {
-    std::string FunctionName = "";
+    std::string FunctionName;
     if (const auto *FD = dyn_cast_or_null<FunctionDecl>(CGF.CurFuncDecl))
       FunctionName = FD->getQualifiedNameAsString();
     PresumedLoc PLoc = CGF.getContext().getSourceManager().getPresumedLoc(Loc);
@@ -9569,7 +9569,7 @@ emitMappingInformation(CodeGenFunction &CGF, llvm::OpenMPIRBuilder &OMPBuilder,
     Loc = MapExprs.getMapDecl()->getLocation();
   }
 
-  std::string ExprName = "";
+  std::string ExprName;
   if (MapExprs.getMapExpr()) {
     PrintingPolicy P(CGF.getContext().getLangOpts());
     llvm::raw_string_ostream OS(ExprName);
@@ -9580,7 +9580,7 @@ emitMappingInformation(CodeGenFunction &CGF, llvm::OpenMPIRBuilder &OMPBuilder,
   }
 
   PresumedLoc PLoc = CGF.getContext().getSourceManager().getPresumedLoc(Loc);
-  return OMPBuilder.getOrCreateSrcLocStr(PLoc.getFilename(), ExprName.c_str(),
+  return OMPBuilder.getOrCreateSrcLocStr(PLoc.getFilename(), ExprName,
                                          PLoc.getLine(), PLoc.getColumn());
 }
 

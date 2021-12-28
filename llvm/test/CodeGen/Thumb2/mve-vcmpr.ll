@@ -507,8 +507,6 @@ define arm_aapcs_vfpcc <2 x i32> @vcmp_multi_v2i32(<2 x i64> %a, <2 x i32> %b, <
 ; CHECK-NEXT:    sbcs.w r2, r12, r3, asr #31
 ; CHECK-NEXT:    vmov r3, s4
 ; CHECK-NEXT:    cset r2, lt
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    cset r2, ne
 ; CHECK-NEXT:    cmp r1, #0
 ; CHECK-NEXT:    cset r1, ne
 ; CHECK-NEXT:    cmp r3, #0
@@ -524,8 +522,6 @@ define arm_aapcs_vfpcc <2 x i32> @vcmp_multi_v2i32(<2 x i64> %a, <2 x i32> %b, <
 ; CHECK-NEXT:    sbcs.w r2, r12, r3, asr #31
 ; CHECK-NEXT:    vmov r3, s6
 ; CHECK-NEXT:    cset r2, lt
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    cset r2, ne
 ; CHECK-NEXT:    cmp r1, #0
 ; CHECK-NEXT:    cset r1, ne
 ; CHECK-NEXT:    cmp r3, #0
@@ -1056,8 +1052,6 @@ define arm_aapcs_vfpcc <2 x i32> @vcmp_r_multi_v2i32(<2 x i64> %a, <2 x i32> %b,
 ; CHECK-NEXT:    sbcs.w r2, r12, r3, asr #31
 ; CHECK-NEXT:    vmov r3, s4
 ; CHECK-NEXT:    cset r2, lt
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    cset r2, ne
 ; CHECK-NEXT:    cmp r1, #0
 ; CHECK-NEXT:    cset r1, ne
 ; CHECK-NEXT:    cmp r3, #0
@@ -1073,8 +1067,6 @@ define arm_aapcs_vfpcc <2 x i32> @vcmp_r_multi_v2i32(<2 x i64> %a, <2 x i32> %b,
 ; CHECK-NEXT:    sbcs.w r2, r12, r3, asr #31
 ; CHECK-NEXT:    vmov r3, s6
 ; CHECK-NEXT:    cset r2, lt
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    cset r2, ne
 ; CHECK-NEXT:    cmp r1, #0
 ; CHECK-NEXT:    cset r1, ne
 ; CHECK-NEXT:    cmp r3, #0
