@@ -5266,7 +5266,7 @@ PPCInstrInfo::isSignOrZeroExtended(const MachineInstr &MI, bool SignExt,
     if (!Register::isVirtualRegister(SrcReg))
       return false;
     const MachineInstr *SrcMI = MRI->getVRegDef(SrcReg);
-    if (SrcMI != NULL)
+    if (SrcMI != nullptr)
       return isSignOrZeroExtended(*SrcMI, SignExt, Depth);
 
     return false;
@@ -5290,7 +5290,7 @@ PPCInstrInfo::isSignOrZeroExtended(const MachineInstr &MI, bool SignExt,
     if (!Register::isVirtualRegister(SrcReg))
       return false;
     const MachineInstr *SrcMI = MRI->getVRegDef(SrcReg);
-    if (SrcMI != NULL)
+    if (SrcMI != nullptr)
       return isSignOrZeroExtended(*SrcMI, SignExt, Depth);
 
     return false;
@@ -5319,7 +5319,8 @@ PPCInstrInfo::isSignOrZeroExtended(const MachineInstr &MI, bool SignExt,
         if (!Register::isVirtualRegister(SrcReg))
           return false;
         const MachineInstr *SrcMI = MRI->getVRegDef(SrcReg);
-        if (SrcMI == NULL || !isSignOrZeroExtended(*SrcMI, SignExt, Depth+1))
+        if (SrcMI == nullptr ||
+            !isSignOrZeroExtended(*SrcMI, SignExt, Depth + 1))
           return false;
       }
       else

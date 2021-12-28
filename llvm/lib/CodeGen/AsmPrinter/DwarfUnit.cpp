@@ -1189,7 +1189,7 @@ bool DwarfUnit::applySubprogramDefinitionAttributes(const DISubprogram *SP,
       DefinitionArgs = SP->getType()->getTypeArray();
 
       if (DeclArgs.size() && DefinitionArgs.size())
-        if (DefinitionArgs[0] != NULL && DeclArgs[0] != DefinitionArgs[0])
+        if (DefinitionArgs[0] != nullptr && DeclArgs[0] != DefinitionArgs[0])
           addType(SPDie, DefinitionArgs[0]);
 
       DeclDie = getDIE(SPDecl);

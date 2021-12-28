@@ -195,12 +195,12 @@ public:
   }
 
   Polynomial(const APInt &A, unsigned ErrorMSBs = 0)
-      : ErrorMSBs(ErrorMSBs), V(NULL), B(), A(A) {}
+      : ErrorMSBs(ErrorMSBs), V(nullptr), B(), A(A) {}
 
   Polynomial(unsigned BitWidth, uint64_t A, unsigned ErrorMSBs = 0)
-      : ErrorMSBs(ErrorMSBs), V(NULL), B(), A(BitWidth, A) {}
+      : ErrorMSBs(ErrorMSBs), V(nullptr), B(), A(BitWidth, A) {}
 
-  Polynomial() : ErrorMSBs((unsigned)-1), V(NULL), B(), A() {}
+  Polynomial() : ErrorMSBs((unsigned)-1), V(nullptr), B(), A() {}
 
   /// Increment and clamp the number of undefined bits.
   void incErrorMSBs(unsigned amt) {

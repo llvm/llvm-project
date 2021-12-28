@@ -281,7 +281,7 @@ bool AVRAsmParser::invalidOperand(SMLoc const &Loc,
                                   OperandVector const &Operands,
                                   uint64_t const &ErrorInfo) {
   SMLoc ErrorLoc = Loc;
-  char const *Diag = 0;
+  char const *Diag = nullptr;
 
   if (ErrorInfo != ~0U) {
     if (ErrorInfo >= Operands.size()) {

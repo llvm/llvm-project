@@ -188,7 +188,7 @@ void SIModeRegister::insertSetreg(MachineBasicBlock &MBB, MachineInstr *MI,
     unsigned Offset = countTrailingZeros<unsigned>(InstrMode.Mask);
     unsigned Width = countTrailingOnes<unsigned>(InstrMode.Mask >> Offset);
     unsigned Value = (InstrMode.Mode >> Offset) & ((1 << Width) - 1);
-    BuildMI(MBB, MI, 0, TII->get(AMDGPU::S_SETREG_IMM32_B32))
+    BuildMI(MBB, MI, nullptr, TII->get(AMDGPU::S_SETREG_IMM32_B32))
         .addImm(Value)
         .addImm(((Width - 1) << AMDGPU::Hwreg::WIDTH_M1_SHIFT_) |
                 (Offset << AMDGPU::Hwreg::OFFSET_SHIFT_) |

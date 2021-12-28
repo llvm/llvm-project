@@ -24,7 +24,7 @@ SimpleExecutorMemoryManager::~SimpleExecutorMemoryManager() {
 Expected<ExecutorAddr> SimpleExecutorMemoryManager::allocate(uint64_t Size) {
   std::error_code EC;
   auto MB = sys::Memory::allocateMappedMemory(
-      Size, 0, sys::Memory::MF_READ | sys::Memory::MF_WRITE, EC);
+      Size, nullptr, sys::Memory::MF_READ | sys::Memory::MF_WRITE, EC);
   if (EC)
     return errorCodeToError(EC);
   std::lock_guard<std::mutex> Lock(M);

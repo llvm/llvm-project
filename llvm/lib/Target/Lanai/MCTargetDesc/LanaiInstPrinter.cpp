@@ -148,7 +148,7 @@ void LanaiInstPrinter::printInst(const MCInst *MI, uint64_t Address,
 
 void LanaiInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
                                     raw_ostream &OS, const char *Modifier) {
-  assert((Modifier == 0 || Modifier[0] == 0) && "No modifiers supported");
+  assert((Modifier == nullptr || Modifier[0] == 0) && "No modifiers supported");
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isReg())
     OS << "%" << getRegisterName(Op.getReg());
