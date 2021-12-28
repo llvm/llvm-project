@@ -10,12 +10,20 @@
 #ifndef _LIBCPP___FORMAT_PARSER_STD_FORMAT_SPEC_H
 #define _LIBCPP___FORMAT_PARSER_STD_FORMAT_SPEC_H
 
+/// \file Contains the std-format-spec parser.
+///
+/// Most of the code can be reused in the chrono-format-spec.
+/// This header has some support for the chrono-format-spec since it doesn't
+/// affect the std-format-spec.
+
 #include <__algorithm/find_if.h>
 #include <__algorithm/min.h>
 #include <__assert>
 #include <__config>
+#include <__debug>
 #include <__format/format_arg.h>
 #include <__format/format_error.h>
+#include <__format/format_parse_context.h>
 #include <__format/format_string.h>
 #include <__variant/monostate.h>
 #include <bit>
@@ -1376,6 +1384,464 @@ __get_string_alignment(const _CharT* __first, const _CharT* __last,
   return {__limit, __size, __size < __width};
 }
 #endif // _LIBCPP_HAS_NO_UNICODE
+
+/// These fields are a filter for which elements to parse.
+///
+/// They default to false so when a new field is added it needs to be opted in
+/// explicitly.
+struct __fields {
+  uint8_t __sign_ : 1 {false};
+  uint8_t __alternate_form_ : 1 {false};
+  uint8_t __zero_padding_ : 1 {false};
+  uint8_t __precision_ : 1 {false};
+  uint8_t __locale_specific_form_ : 1 {false};
+  uint8_t __type_ : 1 {false};
+};
+
+// By not placing this constant in the formatter class it's not duplicated for
+// char and wchar_t.
+inline constexpr __fields __fields_string{.__precision_ = true, .__type_ = true};
+
+enum class _LIBCPP_ENUM_VIS __alignment : uint8_t {
+  /// No alignment is set in the format string.
+  __default,
+  __left,
+  __center,
+  __right,
+  __zero_padding
+};
+
+enum class _LIBCPP_ENUM_VIS __sign : uint8_t {
+  /// No sign is set in the format string.
+  ///
+  /// The sign isn't allowed for certain format-types. By using this value
+  /// it's possible to detect whether or not the user explicitly set the sign
+  /// flag. For formatting purposes it behaves the same as \ref __minus.
+  __default,
+  __minus,
+  __plus,
+  __space
+};
+
+enum class _LIBCPP_ENUM_VIS __type : uint8_t {
+  __default,
+  __string,
+  __binary_lower_case,
+  __binary_upper_case,
+  __octal,
+  __decimal,
+  __hexadecimal_lower_case,
+  __hexadecimal_upper_case,
+  __pointer,
+  __char,
+  __hexfloat_lower_case,
+  __hexfloat_upper_case,
+  __scientific_lower_case,
+  __scientific_upper_case,
+  __fixed_lower_case,
+  __fixed_upper_case,
+  __general_lower_case,
+  __general_upper_case
+};
+
+struct __std {
+  __alignment __alignment_ : 3;
+  __sign __sign_ : 2;
+  bool __alternate_form_ : 1;
+  bool __locale_specific_form_ : 1;
+  __type __type_;
+};
+
+struct __chrono {
+  __alignment __alignment_ : 3;
+  bool __weekday_name_ : 1;
+  bool __month_name_ : 1;
+};
+
+/// Contains the parsed formatting specifications.
+///
+/// This contains information for both the std-format-spec and the
+/// chrono-format-spec. This results in some unused members for both
+/// specifications. However these unused members don't increase the size
+/// of the structure.
+///
+/// This struct doesn't cross ABI boundaries so its layout doesn't need to be
+/// kept stable.
+template <class _CharT>
+struct __parsed_specifications {
+  union {
+    // The field __alignment_ is the first element in __std_ and __chrono_.
+    // This allows the code to always inspect this value regards which member
+    // of the union is the active member [class.union.general]/2.
+    //
+    // This is needed since the generic output routines handle the alignment of
+    // the output.
+    __alignment __alignment_ : 3;
+    __std __std_;
+    __chrono __chrono_;
+  };
+
+  /// The requested width.
+  ///
+  /// When the format-spec used an arg-id for this field it has already been
+  /// replaced with the value of that arg-id.
+  int32_t __width_;
+
+  /// The requested precision.
+  ///
+  /// When the format-spec used an arg-id for this field it has already been
+  /// replaced with the value of that arg-id.
+  int32_t __precision_;
+
+  _CharT __fill_;
+
+  _LIBCPP_HIDE_FROM_ABI constexpr bool __has_width() const { return __width_ > 0; }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr bool __has_precision() const { return __precision_ >= 0; }
+};
+
+// Validate the struct is small and cheap to copy since the struct is passed by
+// value in formatting functions.
+static_assert(sizeof(__parsed_specifications<char>) == 16);
+static_assert(is_trivially_copyable_v<__parsed_specifications<char>>);
+#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+static_assert(sizeof(__parsed_specifications<wchar_t>) == 16);
+static_assert(is_trivially_copyable_v<__parsed_specifications<wchar_t>>);
+#  endif
+
+/// The parser for the std-format-spec.
+///
+/// Note this class is a member of std::formatter specializations. It's
+/// expected developers will create their own formatter specializations that
+/// inherit from the std::formatter specializations. This means this class
+/// must be ABI stable. To aid the stability the unused bits in the class are
+/// set to zero. That way they can be repurposed if a future revision of the
+/// Standards adds new fields to std-format-spec.
+template <class _CharT>
+class _LIBCPP_TEMPLATE_VIS __parser {
+public:
+  _LIBCPP_HIDE_FROM_ABI constexpr auto __parse(basic_format_parse_context<_CharT>& __parse_ctx, __fields __fields)
+      -> decltype(__parse_ctx.begin()) {
+
+    const _CharT* __begin = __parse_ctx.begin();
+    const _CharT* __end = __parse_ctx.end();
+    if (__begin == __end)
+      return __begin;
+
+    if (__parse_fill_align(__begin, __end) && __begin == __end)
+      return __begin;
+
+    if (__fields.__sign_ && __parse_sign(__begin) && __begin == __end)
+      return __begin;
+
+    if (__fields.__alternate_form_ && __parse_alternate_form(__begin) && __begin == __end)
+      return __begin;
+
+    if (__fields.__zero_padding_ && __parse_zero_padding(__begin) && __begin == __end)
+      return __begin;
+
+    if (__parse_width(__begin, __end, __parse_ctx) && __begin == __end)
+      return __begin;
+
+    if (__fields.__precision_ && __parse_precision(__begin, __end, __parse_ctx) && __begin == __end)
+      return __begin;
+
+    if (__fields.__locale_specific_form_ && __parse_locale_specific_form(__begin) && __begin == __end)
+      return __begin;
+
+    if (__fields.__type_) {
+      __parse_type(__begin);
+
+      // When __type_ is false the calling parser is expected to do additional
+      // parsing. In that case that parser should do the end of format string
+      // validation.
+      if (__begin != __end && *__begin != _CharT('}'))
+        __throw_format_error("The format-spec should consume the input or end with a '}'");
+    }
+
+    return __begin;
+  }
+
+  /// \returns the `__parsed_specifications` with the resolved dynamic sizes..
+  _LIBCPP_HIDE_FROM_ABI
+  __parsed_specifications<_CharT> __get_parsed_std_specifications(auto& __ctx) const {
+    return __parsed_specifications<_CharT>{.__std_{.__alignment_ = __alignment_,
+                                                   .__sign_ = __sign_,
+                                                   .__alternate_form_ = __alternate_form_,
+                                                   .__locale_specific_form_ = __locale_specific_form_,
+                                                   .__type_ = __type_},
+                                           .__width_{__get_width(__ctx)},
+                                           .__precision_{__get_precision(__ctx)},
+                                           .__fill_{__fill_}};
+  }
+
+  __alignment __alignment_ : 3 {__alignment::__default};
+  __sign __sign_ : 2 {__sign::__default};
+  bool __alternate_form_ : 1 {false};
+  bool __locale_specific_form_ : 1 {false};
+  bool __reserved_0_ : 1 {false};
+  __type __type_{__type::__default};
+
+  // These two flags are used for formatting chrono. Since the struct has
+  // padding space left it's added to this structure.
+  bool __weekday_name_ : 1 {false};
+  bool __month_name_ : 1 {false};
+
+  uint8_t __reserved_1_ : 6 {0};
+  uint8_t __reserved_2_ : 6 {0};
+  // These two flags are only used internally and not part of the
+  // __parsed_specifications. Therefore put them at the end.
+  bool __width_as_arg_ : 1 {false};
+  bool __precision_as_arg_ : 1 {false};
+
+  /// The requested width, either the value or the arg-id.
+  int32_t __width_{0};
+
+  /// The requested precision, either the value or the arg-id.
+  int32_t __precision_{-1};
+
+  // LWG 3576 will probably change this to always accept a Unicode code point
+  // To avoid changing the size with that change align the field so when it
+  // becomes 32-bit its alignment will remain the same. That also means the
+  // size will remain the same. (D2572 addresses the solution for LWG 3576.)
+  _CharT __fill_{_CharT(' ')};
+
+private:
+  _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_alignment(_CharT __c) {
+    switch (__c) {
+    case _CharT('<'):
+      __alignment_ = __alignment::__left;
+      return true;
+
+    case _CharT('^'):
+      __alignment_ = __alignment::__center;
+      return true;
+
+    case _CharT('>'):
+      __alignment_ = __alignment::__right;
+      return true;
+    }
+    return false;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_fill_align(const _CharT*& __begin, const _CharT* __end) {
+    _LIBCPP_ASSERT(__begin != __end, "when called with an empty input the function will cause "
+                                     "undefined behavior by evaluating data not in the input");
+    if (__begin + 1 != __end) {
+      if (__parse_alignment(*(__begin + 1))) {
+        if (*__begin == _CharT('{') || *__begin == _CharT('}'))
+          __throw_format_error("The format-spec fill field contains an invalid character");
+
+        __fill_ = *__begin;
+        __begin += 2;
+        return true;
+      }
+    }
+
+    if (!__parse_alignment(*__begin))
+      return false;
+
+    ++__begin;
+    return true;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_sign(const _CharT*& __begin) {
+    switch (*__begin) {
+    case _CharT('-'):
+      __sign_ = __sign::__minus;
+      break;
+    case _CharT('+'):
+      __sign_ = __sign::__plus;
+      break;
+    case _CharT(' '):
+      __sign_ = __sign::__space;
+      break;
+    default:
+      return false;
+    }
+    ++__begin;
+    return true;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_alternate_form(const _CharT*& __begin) {
+    if (*__begin != _CharT('#'))
+      return false;
+
+    __alternate_form_ = true;
+    ++__begin;
+    return true;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_zero_padding(const _CharT*& __begin) {
+    if (*__begin != _CharT('0'))
+      return false;
+
+    if (__alignment_ == __alignment::__default)
+      __alignment_ = __alignment::__zero_padding;
+    ++__begin;
+    return true;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_width(const _CharT*& __begin, const _CharT* __end, auto& __parse_ctx) {
+    if (*__begin == _CharT('0'))
+      __throw_format_error("A format-spec width field shouldn't have a leading zero");
+
+    if (*__begin == _CharT('{')) {
+      __format::__parse_number_result __r = __format_spec::__parse_arg_id(++__begin, __end, __parse_ctx);
+      __width_as_arg_ = true;
+      __width_ = __r.__value;
+      __begin = __r.__ptr;
+      return true;
+    }
+
+    if (*__begin < _CharT('0') || *__begin > _CharT('9'))
+      return false;
+
+    __format::__parse_number_result __r = __format::__parse_number(__begin, __end);
+    __width_ = __r.__value;
+    _LIBCPP_ASSERT(__width_ != 0, "A zero value isn't allowed and should be impossible, "
+                                  "due to validations in this function");
+    __begin = __r.__ptr;
+    return true;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_precision(const _CharT*& __begin, const _CharT* __end,
+                                                         auto& __parse_ctx) {
+    if (*__begin != _CharT('.'))
+      return false;
+
+    ++__begin;
+    if (__begin == __end)
+      __throw_format_error("End of input while parsing format-spec precision");
+
+    if (*__begin == _CharT('{')) {
+      __format::__parse_number_result __arg_id = __format_spec::__parse_arg_id(++__begin, __end, __parse_ctx);
+      __precision_as_arg_ = true;
+      __precision_ = __arg_id.__value;
+      __begin = __arg_id.__ptr;
+      return true;
+    }
+
+    if (*__begin < _CharT('0') || *__begin > _CharT('9'))
+      __throw_format_error("The format-spec precision field doesn't contain a value or arg-id");
+
+    __format::__parse_number_result __r = __format::__parse_number(__begin, __end);
+    __precision_ = __r.__value;
+    __precision_as_arg_ = false;
+    __begin = __r.__ptr;
+    return true;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_locale_specific_form(const _CharT*& __begin) {
+    if (*__begin != _CharT('L'))
+      return false;
+
+    __locale_specific_form_ = true;
+    ++__begin;
+    return true;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr void __parse_type(const _CharT*& __begin) {
+    // Determines the type. It does not validate whether the selected type is
+    // valid. Most formatters have optional fields that are only allowed for
+    // certain types. These parsers need to do validation after the type has
+    // been parsed. So its easier to implement the validation for all types in
+    // the specific parse function.
+    switch (*__begin) {
+    case 'A':
+      __type_ = __type::__hexfloat_upper_case;
+      break;
+    case 'B':
+      __type_ = __type::__binary_upper_case;
+      break;
+    case 'E':
+      __type_ = __type::__scientific_upper_case;
+      break;
+    case 'F':
+      __type_ = __type::__fixed_upper_case;
+      break;
+    case 'G':
+      __type_ = __type::__general_upper_case;
+      break;
+    case 'X':
+      __type_ = __type::__hexadecimal_upper_case;
+      break;
+    case 'a':
+      __type_ = __type::__hexfloat_lower_case;
+      break;
+    case 'b':
+      __type_ = __type::__binary_lower_case;
+      break;
+    case 'c':
+      __type_ = __type::__char;
+      break;
+    case 'd':
+      __type_ = __type::__decimal;
+      break;
+    case 'e':
+      __type_ = __type::__scientific_lower_case;
+      break;
+    case 'f':
+      __type_ = __type::__fixed_lower_case;
+      break;
+    case 'g':
+      __type_ = __type::__general_lower_case;
+      break;
+    case 'o':
+      __type_ = __type::__octal;
+      break;
+    case 'p':
+      __type_ = __type::__pointer;
+      break;
+    case 's':
+      __type_ = __type::__string;
+      break;
+    case 'x':
+      __type_ = __type::__hexadecimal_lower_case;
+      break;
+    default:
+      return;
+    }
+    ++__begin;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI
+  int32_t __get_width(auto& __ctx) const {
+    if (!__width_as_arg_)
+      return __width_;
+
+    int32_t __result = __format_spec::__substitute_arg_id(__ctx.arg(__width_));
+    if (__result == 0)
+      __throw_format_error("A format-spec width field replacement should have a positive value");
+    return __result;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI
+  int32_t __get_precision(auto& __ctx) const {
+    if (!__precision_as_arg_)
+      return __precision_;
+
+    return __format_spec::__substitute_arg_id(__ctx.arg(__precision_));
+  }
+};
+
+// Validates whether the reserved bitfields don't change the size.
+static_assert(sizeof(__parser<char>) == 16);
+#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+static_assert(sizeof(__parser<wchar_t>) == 16);
+#  endif
+
+_LIBCPP_HIDE_FROM_ABI constexpr void __process_display_type_string(__format_spec::__type __type) {
+  switch (__type) {
+  case __format_spec::__type::__default:
+  case __format_spec::__type::__string:
+    break;
+
+  default:
+    __throw_format_error("The format-spec type has a type not supported for "
+                         "a string argument");
+  }
+}
 
 } // namespace __format_spec
 
