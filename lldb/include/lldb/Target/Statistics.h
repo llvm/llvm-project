@@ -84,6 +84,10 @@ struct ModuleStats {
   double debug_parse_time = 0.0;
   double debug_index_time = 0.0;
   uint64_t debug_info_size = 0;
+  bool symtab_loaded_from_cache = false;
+  bool symtab_saved_to_cache = false;
+  bool debug_info_index_loaded_from_cache = false;
+  bool debug_info_index_saved_to_cache = false;
 };
 
 /// A class that represents statistics for a since lldb_private::Target.
