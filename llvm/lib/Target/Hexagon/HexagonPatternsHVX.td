@@ -6,6 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
+def HQ8:    PatLeaf<(VecQ8   HvxQR:$R)>;
+def HQ16:   PatLeaf<(VecQ16  HvxQR:$R)>;
+def HQ32:   PatLeaf<(VecQ32  HvxQR:$R)>;
+
+def HVI8:   PatLeaf<(VecI8   HvxVR:$R)>;
+def HVI16:  PatLeaf<(VecI16  HvxVR:$R)>;
+def HVI32:  PatLeaf<(VecI32  HvxVR:$R)>;
+def HVF16:  PatLeaf<(VecF16  HvxVR:$R)>;
+def HVF32:  PatLeaf<(VecF32  HvxVR:$R)>;
+
+def HWI8:   PatLeaf<(VecPI8  HvxWR:$R)>;
+def HWI16:  PatLeaf<(VecPI16 HvxWR:$R)>;
+def HWI32:  PatLeaf<(VecPI32 HvxWR:$R)>;
+def HWF16:  PatLeaf<(VecPF16 HvxWR:$R)>;
+def HWF32:  PatLeaf<(VecPF32 HvxWR:$R)>;
 
 def SDTVecUnaryOp:
   SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
@@ -211,6 +226,24 @@ let Predicates = [UseHVX] in {
   defm: NopCast_pat<VecPI16, VecPI32, HvxWR>;
 }
 
+let Predicates = [UseHVX, UseHVXFloatingPoint] in {
+  defm: NopCast_pat<VecI8,   VecF16,  HvxVR>;
+  defm: NopCast_pat<VecI8,   VecF32,  HvxVR>;
+  defm: NopCast_pat<VecI16,  VecF16,  HvxVR>;
+  defm: NopCast_pat<VecI16,  VecF32,  HvxVR>;
+  defm: NopCast_pat<VecI32,  VecF16,  HvxVR>;
+  defm: NopCast_pat<VecI32,  VecF32,  HvxVR>;
+  defm: NopCast_pat<VecF16,  VecF32,  HvxVR>;
+
+  defm: NopCast_pat<VecPI8,  VecPF16, HvxWR>;
+  defm: NopCast_pat<VecPI8,  VecPF32, HvxWR>;
+  defm: NopCast_pat<VecPI16, VecPF16, HvxWR>;
+  defm: NopCast_pat<VecPI16, VecPF32, HvxWR>;
+  defm: NopCast_pat<VecPI32, VecPF16, HvxWR>;
+  defm: NopCast_pat<VecPI32, VecPF32, HvxWR>;
+  defm: NopCast_pat<VecPF16, VecPF32, HvxWR>;
+}
+
 let Predicates = [UseHVX] in {
   let AddedComplexity = 100 in {
     // These should be preferred over a vsplat of 0.
@@ -248,6 +281,13 @@ let Predicates = [UseHVX] in {
   def: Pat<(HexagonVINSERTW0 HVI16:$Vu, I32:$Rt),
            (V6_vinsertwr HvxVR:$Vu, I32:$Rt)>;
   def: Pat<(HexagonVINSERTW0 HVI32:$Vu, I32:$Rt),
+           (V6_vinsertwr HvxVR:$Vu, I32:$Rt)>;
+}
+
+let Predicates = [UseHVXFloatingPoint] in {
+  def: Pat<(HexagonVINSERTW0 HVF16:$Vu, I32:$Rt),
+           (V6_vinsertwr HvxVR:$Vu, I32:$Rt)>;
+  def: Pat<(HexagonVINSERTW0 HVF32:$Vu, I32:$Rt),
            (V6_vinsertwr HvxVR:$Vu, I32:$Rt)>;
 }
 
