@@ -3054,6 +3054,63 @@ struct FormatStyle {
   bool ReflowComments;
   // clang-format on
 
+  enum SeparateDefinitionStyle {
+    /// Leave definition blocks as they are.
+    SDS_Leave,
+    /// Insert an empty line between definition blocks.
+    SDS_Always,
+    /// Remove any empty line between definition blocks.
+    SDS_Never
+  };
+
+  /// Specifies the use of empty lines to separate definition blocks, including
+  /// classes, structs, enums, and functions.
+  /// \code
+  ///    Never                  v.s.     Always
+  ///    #include <cstring>              #include <cstring>
+  ///    struct Foo {
+  ///      int a, b, c;                  struct Foo {
+  ///    };                                int a, b, c;
+  ///    namespace Ns {                  };
+  ///    class Bar {
+  ///    public:                         namespace Ns {
+  ///      struct Foobar {               class Bar {
+  ///        int a;                      public:
+  ///        int b;                        struct Foobar {
+  ///      };                                int a;
+  ///    private:                            int b;
+  ///      int t;                          };
+  ///      int method1() {
+  ///        // ...                      private:
+  ///      }                               int t;
+  ///      enum List {
+  ///        ITEM1,                        int method1() {
+  ///        ITEM2                           // ...
+  ///      };                              }
+  ///      template<typename T>
+  ///      int method2(T x) {              enum List {
+  ///        // ...                          ITEM1,
+  ///      }                                 ITEM2
+  ///      int i, j, k;                    };
+  ///      int method3(int par) {
+  ///        // ...                        template<typename T>
+  ///      }                               int method2(T x) {
+  ///    };                                  // ...
+  ///    class C {};                       }
+  ///    }
+  ///                                      int i, j, k;
+  ///
+  ///                                      int method3(int par) {
+  ///                                        // ...
+  ///                                      }
+  ///                                    };
+  ///
+  ///                                    class C {};
+  ///                                    }
+  /// \endcode
+  /// \version 14
+  SeparateDefinitionStyle SeparateDefinitionBlocks;
+
   /// The maximal number of unwrapped lines that a short namespace spans.
   /// Defaults to 1.
   ///
@@ -4032,6 +4089,17 @@ tooling::Replacements fixNamespaceEndComments(const FormatStyle &Style,
                                               StringRef Code,
                                               ArrayRef<tooling::Range> Ranges,
                                               StringRef FileName = "<stdin>");
+
+/// Inserts or removes empty lines separating definition blocks including
+/// classes, structs, functions, namespaces, and enums in the given \p Ranges in
+/// \p Code.
+///
+/// Returns the ``Replacements`` that inserts or removes empty lines separating
+/// definition blocks in all \p Ranges in \p Code.
+tooling::Replacements separateDefinitionBlocks(const FormatStyle &Style,
+                                               StringRef Code,
+                                               ArrayRef<tooling::Range> Ranges,
+                                               StringRef FileName = "<stdin>");
 
 /// Sort consecutive using declarations in the given \p Ranges in
 /// \p Code.

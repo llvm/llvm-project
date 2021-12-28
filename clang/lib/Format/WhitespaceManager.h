@@ -45,6 +45,9 @@ public:
 
   bool useCRLF() const { return UseCRLF; }
 
+  /// Infers whether the input is using CRLF.
+  static bool inputUsesCRLF(StringRef Text, bool DefaultToCRLF);
+
   /// Replaces the whitespace in front of \p Tok. Only call once for
   /// each \c AnnotatedToken.
   ///
