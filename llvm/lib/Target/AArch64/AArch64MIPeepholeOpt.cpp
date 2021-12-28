@@ -246,7 +246,7 @@ bool AArch64MIPeepholeOpt::visitORR(
   MI.getOperand(0).setReg(DefReg);
   ToBeRemoved.insert(&MI);
 
-  LLVM_DEBUG({ dbgs() << "Removed: " << MI << "\n"; });
+  LLVM_DEBUG(dbgs() << "Removed: " << MI << "\n");
 
   return true;
 }
@@ -259,8 +259,7 @@ bool AArch64MIPeepholeOpt::runOnMachineFunction(MachineFunction &MF) {
   MLI = &getAnalysis<MachineLoopInfo>();
   MRI = &MF.getRegInfo();
 
-  if (!MRI->isSSA())
-    return false;
+  assert (MRI->isSSA() && "Expected to be run on SSA form!");
 
   bool Changed = false;
   SmallSetVector<MachineInstr *, 8> ToBeRemoved;
@@ -278,6 +277,7 @@ bool AArch64MIPeepholeOpt::runOnMachineFunction(MachineFunction &MF) {
         break;
       case AArch64::ORRWrs:
         Changed = visitORR(MI, ToBeRemoved);
+        break;
       }
     }
   }
