@@ -50,9 +50,15 @@ int main(int, char**)
     test<__int128_t, false>();
     test<__uint128_t, false>();
 #endif
+#if (defined(__arm__) || defined(__aarch64__))
+    test<float, true>();
+    test<double, true>();
+    test<long double, true>();
+#else
     test<float, false>();
     test<double, false>();
     test<long double, false>();
+#endif
 
   return 0;
 }
