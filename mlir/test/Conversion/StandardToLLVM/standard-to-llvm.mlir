@@ -502,6 +502,10 @@ func @atomic_rmw(%I : memref<10xi32>, %ival : i32, %F : memref<10xf32>, %fval : 
   // CHECK: llvm.atomicrmw umin %{{.*}}, %{{.*}} acq_rel
   atomic_rmw addf %fval, %F[%i] : (f32, memref<10xf32>) -> f32
   // CHECK: llvm.atomicrmw fadd %{{.*}}, %{{.*}} acq_rel
+  atomic_rmw ori %ival, %I[%i] : (i32, memref<10xi32>) -> i32
+  // CHECK: llvm.atomicrmw _or %{{.*}}, %{{.*}} acq_rel
+  atomic_rmw andi %ival, %I[%i] : (i32, memref<10xi32>) -> i32
+  // CHECK: llvm.atomicrmw _and %{{.*}}, %{{.*}} acq_rel
   return
 }
 
