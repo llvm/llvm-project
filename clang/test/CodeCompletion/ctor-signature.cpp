@@ -42,13 +42,29 @@ int b3 = consumeBar({});
 // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:41:22 %s | FileCheck -check-prefix=CHECK-BRACED %s
 
 struct Aggregate {
-  // FIXME: no support for aggregates yet.
-  // CHECK-AGGREGATE-NOT: OVERLOAD: Aggregate{<#const Aggregate &#>}
-  // CHECK-AGGREGATE-NOT: OVERLOAD: {{.*}}first
   int first;
   int second;
+  int third;
 };
 
-Aggregate a{};
-// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:52:13 %s | FileCheck -check-prefix=CHECK-AGGREGATE %s
+Aggregate a{1, 2, 3};
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:50:13 %s | FileCheck -check-prefix=CHECK-AGGREGATE-1 %s
+// CHECK-AGGREGATE-1: OVERLOAD: Aggregate{<#int first#>, int second, int third}
+// CHECK-AGGREGATE-1: OVERLOAD: Aggregate{<#const Aggregate &#>}
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:50:16 %s | FileCheck -check-prefix=CHECK-AGGREGATE-2 %s
+// CHECK-AGGREGATE-2: OVERLOAD: Aggregate{int first, <#int second#>, int third}
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:50:18 %s | FileCheck -check-prefix=CHECK-AGGREGATE-3 %s
+// CHECK-AGGREGATE-3: OVERLOAD: Aggregate{int first, int second, <#int third#>}
 
+Aggregate d{.second=1, .first=2, 3, 4, };
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:59:13 %s | FileCheck -check-prefix=CHECK-DESIG-1 %s
+// CHECK-DESIG-1: OVERLOAD: Aggregate{<#int first#>, int second, int third}
+// CHECK-DESIG-1: OVERLOAD: Aggregate{<#const Aggregate &#>}
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:59:24 %s | FileCheck -check-prefix=CHECK-DESIG-2 %s
+// CHECK-DESIG-2: OVERLOAD: Aggregate{int first, int second, <#int third#>}
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:59:34 %s | FileCheck -check-prefix=CHECK-DESIG-3 %s
+// CHECK-DESIG-3: OVERLOAD: Aggregate{int first, <#int second#>, int third}
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:59:37 %s | FileCheck -check-prefix=CHECK-DESIG-4 %s
+// CHECK-DESIG-4: OVERLOAD: Aggregate{int first, int second, <#int third#>}
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:59:38 %s | FileCheck -check-prefix=CHECK-DESIG-5 %s --allow-empty
+// CHECK-DESIG-5-NOT: OVERLOAD

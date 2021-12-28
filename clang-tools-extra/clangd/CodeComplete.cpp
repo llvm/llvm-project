@@ -896,10 +896,7 @@ struct ScoredSignature {
 int paramIndexForArg(const CodeCompleteConsumer::OverloadCandidate &Candidate,
                      int Arg) {
   int NumParams = Candidate.getNumParams();
-  if (const auto *F = Candidate.getFunction()) {
-    if (F->isVariadic())
-      ++NumParams;
-  } else if (auto *T = Candidate.getFunctionType()) {
+  if (auto *T = Candidate.getFunctionType()) {
     if (auto *Proto = T->getAs<FunctionProtoType>()) {
       if (Proto->isVariadic())
         ++NumParams;
@@ -996,8 +993,7 @@ public:
                                     const ScoredSignature &R) {
       // Ordering follows:
       // - Less number of parameters is better.
-      // - Function is better than FunctionType which is better than
-      // Function Template.
+      // - Aggregate > Function > FunctionType > FunctionTemplate
       // - High score is better.
       // - Shorter signature is better.
       // - Alphabetically smaller is better.
@@ -1009,18 +1005,22 @@ public:
                R.Quality.NumberOfOptionalParameters;
       if (L.Quality.Kind != R.Quality.Kind) {
         using OC = CodeCompleteConsumer::OverloadCandidate;
-        switch (L.Quality.Kind) {
-        case OC::CK_Function:
-          return true;
-        case OC::CK_FunctionType:
-          return R.Quality.Kind != OC::CK_Function;
-        case OC::CK_FunctionTemplate:
-          return false;
-        case OC::CK_Template:
-          assert(false && "Never see templates and other overloads mixed");
-          return false;
-        }
-        llvm_unreachable("Unknown overload candidate type.");
+        auto KindPriority = [&](OC::CandidateKind K) {
+          switch (K) {
+          case OC::CK_Aggregate:
+            return 1;
+          case OC::CK_Function:
+            return 2;
+          case OC::CK_FunctionType:
+            return 3;
+          case OC::CK_FunctionTemplate:
+            return 4;
+          case OC::CK_Template:
+            return 5;
+          }
+          llvm_unreachable("Unknown overload candidate type.");
+        };
+        return KindPriority(L.Quality.Kind) < KindPriority(R.Quality.Kind);
       }
       if (L.Signature.label.size() != R.Signature.label.size())
         return L.Signature.label.size() < R.Signature.label.size();
@@ -1171,24 +1171,9 @@ public:
            "too many arguments");
 
     for (unsigned I = 0; I < NumCandidates; ++I) {
-      OverloadCandidate Candidate = Candidates[I];
-      NamedDecl *Param = nullptr;
-      if (auto *Func = Candidate.getFunction()) {
-        if (CurrentArg < Func->getNumParams())
-          Param = Func->getParamDecl(CurrentArg);
-      } else if (auto *Template = Candidate.getTemplate()) {
-        if (CurrentArg < Template->getTemplateParameters()->size())
-          Param = Template->getTemplateParameters()->getParam(CurrentArg);
-      }
-
-      if (!Param)
-        continue;
-      auto *Ident = Param->getIdentifier();
-      if (!Ident)
-        continue;
-      auto Name = Ident->getName();
-      if (!Name.empty())
-        ParamNames.insert(Name.str());
+      if (const NamedDecl *ND = Candidates[I].getParamDecl(CurrentArg))
+        if (const auto *II = ND->getIdentifier())
+          ParamNames.emplace(II->getName());
     }
   }
 
