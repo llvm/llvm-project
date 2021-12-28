@@ -114,21 +114,6 @@ int memcpyDtoD(const void *SrcPtr, void *DstPtr, int64_t Size,
   return OFFLOAD_SUCCESS;
 }
 
-int createEvent(void **P) {
-  CUevent Event = nullptr;
-
-  CUresult Err = cuEventCreate(&Event, CU_EVENT_DEFAULT);
-  if (Err != CUDA_SUCCESS) {
-    DP("Error when creating event event = " DPxMOD "\n", DPxPTR(Event));
-    CUDA_ERR_STRING(Err);
-    return OFFLOAD_FAIL;
-  }
-
-  *P = Event;
-
-  return OFFLOAD_SUCCESS;
-}
-
 int recordEvent(void *EventPtr, __tgt_async_info *AsyncInfo) {
   CUstream Stream = reinterpret_cast<CUstream>(AsyncInfo->Queue);
   CUevent Event = reinterpret_cast<CUevent>(EventPtr);
@@ -150,19 +135,6 @@ int syncEvent(void *EventPtr) {
   CUresult Err = cuEventSynchronize(Event);
   if (Err != CUDA_SUCCESS) {
     DP("Error when syncing event = " DPxMOD "\n", DPxPTR(Event));
-    CUDA_ERR_STRING(Err);
-    return OFFLOAD_FAIL;
-  }
-
-  return OFFLOAD_SUCCESS;
-}
-
-int destroyEvent(void *EventPtr) {
-  CUevent Event = reinterpret_cast<CUevent>(EventPtr);
-
-  CUresult Err = cuEventDestroy(Event);
-  if (Err != CUDA_SUCCESS) {
-    DP("Error when destroying event = " DPxMOD "\n", DPxPTR(Event));
     CUDA_ERR_STRING(Err);
     return OFFLOAD_FAIL;
   }
@@ -225,6 +197,28 @@ public:
       return OFFLOAD_FAIL;
     if (!checkResult(cuStreamDestroy(Stream),
                      "Error returned from cuStreamDestroy\n"))
+      return OFFLOAD_FAIL;
+
+    return OFFLOAD_SUCCESS;
+  }
+};
+
+/// Allocator for CUevent.
+template <> class AllocatorTy<CUevent> {
+public:
+  /// See AllocatorTy<T>::create.
+  int create(CUevent &Event) noexcept {
+    if (!checkResult(cuEventCreate(&Event, CU_EVENT_DEFAULT),
+                     "Error returned from cuEventCreate\n"))
+      return OFFLOAD_FAIL;
+
+    return OFFLOAD_SUCCESS;
+  }
+
+  /// See AllocatorTy<T>::destroy.
+  int destroy(CUevent Event) noexcept {
+    if (!checkResult(cuEventDestroy(Event),
+                     "Error returned from cuEventDestroy\n"))
       return OFFLOAD_FAIL;
 
     return OFFLOAD_SUCCESS;
@@ -340,6 +334,8 @@ class DeviceRTLTy {
 
   using StreamPoolTy = ResourcePoolTy<CUstream>;
   std::vector<std::unique_ptr<StreamPoolTy>> StreamPool;
+
+  ResourcePoolTy<CUevent> EventPool;
 
   std::vector<DeviceDataTy> DeviceData;
   std::vector<CUmodule> Modules;
@@ -493,7 +489,7 @@ public:
   DeviceRTLTy()
       : NumberOfDevices(0), EnvNumTeams(-1), EnvTeamLimit(-1),
         EnvTeamThreadLimit(-1), RequiresFlags(OMP_REQ_UNDEFINED),
-        DynamicMemorySize(0) {
+        DynamicMemorySize(0), EventPool(AllocatorTy<CUevent>()) {
 
     DP("Start initializing CUDA\n");
 
@@ -574,6 +570,8 @@ public:
 
     for (auto &S : StreamPool)
       S.reset();
+
+    EventPool.clear();
 
     for (DeviceDataTy &D : DeviceData) {
       // Destroy context
@@ -1395,6 +1393,19 @@ public:
     printf("    Compute Capabilities: \t\t%d%d \n", TmpInt, TmpInt2);
   }
 
+  int createEvent(void **P) {
+    CUevent Event = nullptr;
+    if (EventPool.acquire(Event) != OFFLOAD_SUCCESS)
+      return OFFLOAD_FAIL;
+    *P = Event;
+    return OFFLOAD_SUCCESS;
+  }
+
+  int destroyEvent(void *EventPtr) {
+    EventPool.release(reinterpret_cast<CUevent>(EventPtr));
+    return OFFLOAD_SUCCESS;
+  }
+
   int waitEvent(const int DeviceId, __tgt_async_info *AsyncInfo,
                 void *EventPtr) const {
     CUstream Stream = getStream(DeviceId, AsyncInfo);
@@ -1620,7 +1631,7 @@ void __tgt_rtl_print_device_info(int32_t device_id) {
 
 int32_t __tgt_rtl_create_event(int32_t device_id, void **event) {
   assert(event && "event is nullptr");
-  return createEvent(event);
+  return DeviceRTL.createEvent(event);
 }
 
 int32_t __tgt_rtl_record_event(int32_t device_id, void *event_ptr,
@@ -1650,7 +1661,7 @@ int32_t __tgt_rtl_sync_event(int32_t device_id, void *event_ptr) {
 int32_t __tgt_rtl_destroy_event(int32_t device_id, void *event_ptr) {
   assert(event_ptr && "event is nullptr");
 
-  return destroyEvent(event_ptr);
+  return DeviceRTL.destroyEvent(event_ptr);
 }
 
 #ifdef __cplusplus
