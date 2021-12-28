@@ -215,3 +215,24 @@ define i1 @global_gep_sgt_global_neg_offset() {
   %cmp = icmp sgt [2 x i32]* %gep, @g
   ret i1 %cmp
 }
+
+define i1 @global_gep_ugt_global_gep() {
+; CHECK-LABEL: @global_gep_ugt_global_gep(
+; CHECK-NEXT:    ret i1 true
+;
+  %gep1 = getelementptr inbounds [2 x i32], [2 x i32]* @g, i64 0, i64 0
+  %gep2 = getelementptr inbounds [2 x i32], [2 x i32]* @g, i64 0, i64 1
+  %cmp = icmp ugt i32* %gep2, %gep1
+  ret i1 %cmp
+}
+
+; TODO: Should not fold due to signed comparison.
+define i1 @global_gep_sgt_global_gep() {
+; CHECK-LABEL: @global_gep_sgt_global_gep(
+; CHECK-NEXT:    ret i1 true
+;
+  %gep1 = getelementptr inbounds [2 x i32], [2 x i32]* @g, i64 0, i64 0
+  %gep2 = getelementptr inbounds [2 x i32], [2 x i32]* @g, i64 0, i64 1
+  %cmp = icmp sgt i32* %gep2, %gep1
+  ret i1 %cmp
+}
