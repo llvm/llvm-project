@@ -222,6 +222,35 @@ _LIBCPP_HIDE_FROM_ABI auto __write_transformed(const _CharT* __first, const _Cha
   return _VSTD::fill_n(_VSTD::move(__out_it), __padding.__after_, __specs.__fill_);
 }
 
+/// Writes additional zero's for the precision before the exponent.
+/// This is used when the precision requested in the format string is larger
+/// than the maximum precision of the floating-point type. These precision
+/// digits are always 0.
+///
+/// \param __exponent           The location of the exponent character.
+/// \param __num_trailing_zeros The number of 0's to write before the exponent
+///                             character.
+template <class _CharT, class _ParserCharT>
+_LIBCPP_HIDE_FROM_ABI auto __write_using_trailing_zeros(
+    const _CharT* __first,
+    const _CharT* __last,
+    output_iterator<const _CharT&> auto __out_it,
+    __format_spec::__parsed_specifications<_ParserCharT> __specs,
+    size_t __size,
+    const _CharT* __exponent,
+    size_t __num_trailing_zeros) -> decltype(__out_it) {
+  _LIBCPP_ASSERT(__first <= __last, "Not a valid range");
+  _LIBCPP_ASSERT(__num_trailing_zeros > 0, "The overload not writing trailing zeros should have been used");
+
+  __padding_size_result_v2 __padding =
+      __padding_size_v2(__size + __num_trailing_zeros, __specs.__width_, __specs.__alignment_);
+  __out_it = _VSTD::fill_n(_VSTD::move(__out_it), __padding.__before_, __specs.__fill_);
+  __out_it = _VSTD::copy(__first, __exponent, _VSTD::move(__out_it));
+  __out_it = _VSTD::fill_n(_VSTD::move(__out_it), __num_trailing_zeros, _CharT('0'));
+  __out_it = _VSTD::copy(__exponent, __last, _VSTD::move(__out_it));
+  return _VSTD::fill_n(_VSTD::move(__out_it), __padding.__after_, __specs.__fill_);
+}
+
 #  ifndef _LIBCPP_HAS_NO_UNICODE
 template <class _CharT>
 _LIBCPP_HIDE_FROM_ABI auto __write_unicode_no_precision(basic_string_view<_CharT> __str,
