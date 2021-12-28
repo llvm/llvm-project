@@ -1030,3 +1030,11 @@ unsigned HexagonMCInstrInfo::SubregisterBit(unsigned Consumer,
     return Consumer == Producer;
   return 0;
 }
+
+bool HexagonMCInstrInfo::IsABranchingInst(MCInstrInfo const &MCII,
+                                          MCSubtargetInfo const &STI,
+                                          MCInst const &I) {
+  assert(!HexagonMCInstrInfo::isBundle(I));
+  MCInstrDesc const &Desc = HexagonMCInstrInfo::getDesc(MCII, I);
+  return (Desc.isBranch() || Desc.isCall() || Desc.isReturn());
+}

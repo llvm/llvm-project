@@ -95,6 +95,8 @@ bool canonicalizePacket(MCInstrInfo const &MCII, MCSubtargetInfo const &STI,
                         MCContext &Context, MCInst &MCB,
                         HexagonMCChecker *Checker,
                         bool AttemptCompatibility = false);
+bool IsABranchingInst(MCInstrInfo const &MCII, MCSubtargetInfo const &STI,
+                      MCInst const &I);
 
 // Create a duplex instruction given the two subinsts
 MCInst *deriveDuplex(MCContext &Context, unsigned iClass, MCInst const &inst0,
