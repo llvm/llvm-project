@@ -21,6 +21,7 @@
 %Ty = type { i32, i32 }
 @B = external global %Ty
 
+; @9 and @11 will be folded by the target-dependent constant folder instead.
 @9 = global i1 icmp ult (i64* @A, i64* getelementptr (i64, i64* @A, i64 1))        ; true
 @10 = global i1 icmp slt (i64* @A, i64* getelementptr (i64, i64* @A, i64 0))        ; false
 @11 = global i1 icmp ult (i32* getelementptr (%Ty, %Ty* @B, i64 0, i32 0),
@@ -50,9 +51,9 @@
 ; CHECK: @[[GLOB7:[0-9]+]] = global i64 -1
 ; CHECK: @[[GLOB8:[0-9]+]] = global i64* @A
 ; CHECK: @[[B:[a-zA-Z0-9_$"\\.-]+]] = external global [[TY:%.*]]
-; CHECK: @[[GLOB9:[0-9]+]] = global i1 true
+; CHECK: @[[GLOB9:[0-9]+]] = global i1 icmp ugt (i64* getelementptr inbounds (i64, i64* @A, i64 1), i64* @A)
 ; CHECK: @[[GLOB10:[0-9]+]] = global i1 false
-; CHECK: @[[GLOB11:[0-9]+]] = global i1 true
+; CHECK: @[[GLOB11:[0-9]+]] = global i1 icmp ult (i32* getelementptr inbounds ([[TY:%.*]], %Ty* @B, i64 0, i32 0), i32* getelementptr inbounds ([[TY]], %Ty* @B, i64 0, i32 1))
 ; CHECK: @[[CONS:[a-zA-Z0-9_$"\\.-]+]] = weak global i32 0, align 8
 ; CHECK: @[[GLOB12:[0-9]+]] = global i64 0
 ; CHECK: @[[GLOB13:[0-9]+]] = global <2 x i8*> undef

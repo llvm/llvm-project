@@ -198,9 +198,10 @@ define i1 @global_gep_sgt_global() {
   ret i1 %cmp
 }
 
+; This should not fold to true, as the offset is negative.
 define i1 @global_gep_ugt_global_neg_offset() {
 ; CHECK-LABEL: @global_gep_ugt_global_neg_offset(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    ret i1 icmp ugt ([2 x i32]* getelementptr ([2 x i32], [2 x i32]* @g, i64 -1), [2 x i32]* @g)
 ;
   %gep = getelementptr [2 x i32], [2 x i32]* @g, i64 -1
   %cmp = icmp ugt [2 x i32]* %gep, @g
@@ -239,7 +240,7 @@ define i1 @global_gep_sgt_global_gep() {
 
 define i1 @global_gep_ugt_global_gep_complex() {
 ; CHECK-LABEL: @global_gep_ugt_global_gep_complex(
-; CHECK-NEXT:    ret i1 icmp ugt (i32* bitcast (i8* getelementptr inbounds (i8, i8* bitcast ([2 x i32]* @g to i8*), i64 2) to i32*), i32* getelementptr inbounds ([2 x i32], [2 x i32]* @g, i64 0, i64 0))
+; CHECK-NEXT:    ret i1 true
 ;
   %gep1 = getelementptr inbounds [2 x i32], [2 x i32]* @g, i64 0, i64 0
   %gep2 = getelementptr inbounds [2 x i32], [2 x i32]* @g, i64 0, i64 0

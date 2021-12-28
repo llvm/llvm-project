@@ -1171,10 +1171,11 @@ Constant *llvm::ConstantFoldInstOperands(Instruction *I,
   return ConstantFoldInstOperandsImpl(I, I->getOpcode(), Ops, DL, TLI);
 }
 
-Constant *llvm::ConstantFoldCompareInstOperands(unsigned Predicate,
+Constant *llvm::ConstantFoldCompareInstOperands(unsigned IntPredicate,
                                                 Constant *Ops0, Constant *Ops1,
                                                 const DataLayout &DL,
                                                 const TargetLibraryInfo *TLI) {
+  CmpInst::Predicate Predicate = (CmpInst::Predicate)IntPredicate;
   // fold: icmp (inttoptr x), null         -> icmp x, 0
   // fold: icmp null, (inttoptr x)         -> icmp 0, x
   // fold: icmp (ptrtoint x), 0            -> icmp x, null
@@ -1248,10 +1249,30 @@ Constant *llvm::ConstantFoldCompareInstOperands(unsigned Predicate,
         Predicate == ICmpInst::ICMP_EQ ? Instruction::And : Instruction::Or;
       return ConstantFoldBinaryOpOperands(OpC, LHS, RHS, DL);
     }
+
+    // Convert pointer comparison (base+offset1) pred (base+offset2) into
+    // offset1 pred offset2, for the case where the offset is inbounds. This
+    // only works for equality and unsigned comparison, as inbounds permits
+    // crossing the sign boundary. However, the offset comparison itself is
+    // signed.
+    if (Ops0->getType()->isPointerTy() && !ICmpInst::isSigned(Predicate)) {
+      unsigned IndexWidth = DL.getIndexTypeSizeInBits(Ops0->getType());
+      APInt Offset0(IndexWidth, 0);
+      Value *Stripped0 =
+          Ops0->stripAndAccumulateInBoundsConstantOffsets(DL, Offset0);
+      APInt Offset1(IndexWidth, 0);
+      Value *Stripped1 =
+          Ops1->stripAndAccumulateInBoundsConstantOffsets(DL, Offset1);
+      if (Stripped0 == Stripped1)
+        return ConstantExpr::getCompare(
+            ICmpInst::getSignedPredicate(Predicate),
+            ConstantInt::get(CE0->getContext(), Offset0),
+            ConstantInt::get(CE0->getContext(), Offset1));
+    }
   } else if (isa<ConstantExpr>(Ops1)) {
     // If RHS is a constant expression, but the left side isn't, swap the
     // operands and try again.
-    Predicate = ICmpInst::getSwappedPredicate((ICmpInst::Predicate)Predicate);
+    Predicate = ICmpInst::getSwappedPredicate(Predicate);
     return ConstantFoldCompareInstOperands(Predicate, Ops1, Ops0, DL, TLI);
   }
 
