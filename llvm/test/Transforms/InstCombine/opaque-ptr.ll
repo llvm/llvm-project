@@ -182,3 +182,27 @@ define ptr @geps_not_combinable(ptr %a) {
   %a3 = getelementptr { i32, i32 }, ptr %a2, i32 0, i32 1
   ret ptr %a3
 }
+
+define i1 @compare_geps_same_indices(ptr %a, ptr %b, i64 %idx) {
+; CHECK-LABEL: @compare_geps_same_indices(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %a2 = getelementptr i32, ptr %a, i64 %idx
+  %b2 = getelementptr i32, ptr %b, i64 %idx
+  %c = icmp eq ptr %a2, %b2
+  ret i1 %c
+}
+
+define i1 @compare_geps_same_indices_different_types(ptr %a, ptr %b, i64 %idx) {
+; CHECK-LABEL: @compare_geps_same_indices_different_types(
+; CHECK-NEXT:    [[A2:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[B2:%.*]] = getelementptr i64, ptr [[B:%.*]], i64 [[IDX]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[A2]], [[B2]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %a2 = getelementptr i32, ptr %a, i64 %idx
+  %b2 = getelementptr i64, ptr %b, i64 %idx
+  %c = icmp eq ptr %a2, %b2
+  ret i1 %c
+}

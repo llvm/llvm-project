@@ -151,8 +151,22 @@ define i1 @test10({ i32, i32 }* %x, { i32, i32 }* %y) {
 ;
   %t1 = getelementptr { i32, i32 }, { i32, i32 }* %x, i32 0, i32 1
   %t3 = getelementptr { i32, i32 }, { i32, i32 }* %y, i32 0, i32 1
-  ;; seteq x, y
   %t4 = icmp eq i32* %t1, %t3
+  ret i1 %t4
+}
+
+define i1 @test10_addrspacecast({ i32, i32 }* %x, { i32, i32 } addrspace(3)* %y) {
+; CHECK-LABEL: @test10_addrspacecast(
+; CHECK-NEXT:    [[T1:%.*]] = getelementptr { i32, i32 }, { i32, i32 }* [[X:%.*]], i64 0, i32 1
+; CHECK-NEXT:    [[T3:%.*]] = getelementptr { i32, i32 }, { i32, i32 } addrspace(3)* [[Y:%.*]], i64 0, i32 1
+; CHECK-NEXT:    [[T3_C:%.*]] = addrspacecast i32 addrspace(3)* [[T3]] to i32*
+; CHECK-NEXT:    [[T4:%.*]] = icmp eq i32* [[T1]], [[T3_C]]
+; CHECK-NEXT:    ret i1 [[T4]]
+;
+  %t1 = getelementptr { i32, i32 }, { i32, i32 }* %x, i32 0, i32 1
+  %t3 = getelementptr { i32, i32 }, { i32, i32 } addrspace(3)* %y, i32 0, i32 1
+  %t3.c = addrspacecast i32 addrspace(3)* %t3 to i32*
+  %t4 = icmp eq i32* %t1, %t3.c
   ret i1 %t4
 }
 
