@@ -263,3 +263,14 @@ bb:
 bb2:
   ret ptr %RHS
 }
+
+define ptr addrspace(1) @gep_of_addrspace_cast(ptr %ptr) {
+; CHECK-LABEL: @gep_of_addrspace_cast(
+; CHECK-NEXT:    [[CAST1:%.*]] = addrspacecast ptr [[PTR:%.*]] to ptr addrspace(1)
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[CAST1]], i64 1
+; CHECK-NEXT:    ret ptr addrspace(1) [[GEP]]
+;
+  %cast1 = addrspacecast ptr %ptr to ptr addrspace(1)
+  %gep = getelementptr inbounds i32, ptr addrspace(1) %cast1, i64 1
+  ret ptr addrspace(1) %gep
+}

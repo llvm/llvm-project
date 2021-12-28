@@ -2244,7 +2244,11 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   Value *StrippedPtr = PtrOp->stripPointerCasts();
   PointerType *StrippedPtrTy = cast<PointerType>(StrippedPtr->getType());
 
-  if (StrippedPtr != PtrOp) {
+  // TODO: The basic approach of these folds is not compatible with opaque
+  // pointers, because we can't use bitcasts as a hint for a desirable GEP
+  // type. Instead, we should perform canonicalization directly on the GEP
+  // type. For now, skip these.
+  if (StrippedPtr != PtrOp && !StrippedPtrTy->isOpaque()) {
     bool HasZeroPointerIndex = false;
     Type *StrippedPtrEltTy = StrippedPtrTy->getElementType();
 

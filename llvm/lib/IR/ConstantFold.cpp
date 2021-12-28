@@ -1668,8 +1668,8 @@ static ICmpInst::Predicate evaluateICmpRelation(Constant *V1, Constant *V2,
                  ++i, ++GTI)
               switch (IdxCompare(CE1->getOperand(i),
                                  CE2->getOperand(i), GTI.getIndexedType())) {
-              case -1: return isSigned ? ICmpInst::ICMP_SLT:ICmpInst::ICMP_ULT;
-              case 1:  return isSigned ? ICmpInst::ICMP_SGT:ICmpInst::ICMP_UGT;
+              case -1: return ICmpInst::ICMP_ULT;
+              case 1:  return ICmpInst::ICMP_UGT;
               case -2: return ICmpInst::BAD_ICMP_PREDICATE;
               }
 
@@ -1678,7 +1678,7 @@ static ICmpInst::Predicate evaluateICmpRelation(Constant *V1, Constant *V2,
             for (; i < CE1->getNumOperands(); ++i)
               if (!CE1->getOperand(i)->isNullValue()) {
                 if (isa<ConstantInt>(CE1->getOperand(i)))
-                  return isSigned ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT;
+                  return ICmpInst::ICMP_UGT;
                 else
                   return ICmpInst::BAD_ICMP_PREDICATE; // Might be equal.
               }
@@ -1686,7 +1686,7 @@ static ICmpInst::Predicate evaluateICmpRelation(Constant *V1, Constant *V2,
             for (; i < CE2->getNumOperands(); ++i)
               if (!CE2->getOperand(i)->isNullValue()) {
                 if (isa<ConstantInt>(CE2->getOperand(i)))
-                  return isSigned ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT;
+                  return ICmpInst::ICMP_ULT;
                 else
                   return ICmpInst::BAD_ICMP_PREDICATE; // Might be equal.
               }
