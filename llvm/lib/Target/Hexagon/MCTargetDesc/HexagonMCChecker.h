@@ -103,11 +103,6 @@ class HexagonMCChecker {
 
   static void compoundRegisterMap(unsigned &);
 
-  bool isPredicateRegister(unsigned R) const {
-    return (Hexagon::P0 == R || Hexagon::P1 == R || Hexagon::P2 == R ||
-            Hexagon::P3 == R);
-  }
-
   bool isLoopRegister(unsigned R) const {
     return (Hexagon::SA0 == R || Hexagon::LC0 == R || Hexagon::SA1 == R ||
             Hexagon::LC1 == R);
