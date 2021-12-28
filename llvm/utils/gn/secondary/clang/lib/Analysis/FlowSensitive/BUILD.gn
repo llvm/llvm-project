@@ -5,5 +5,8 @@ static_library("FlowSensitive") {
     "//clang/lib/AST",
     "//clang/lib/Analysis",
   ]
-  sources = [ "TypeErasedDataflowAnalysis.cpp" ]
+  sources = [
+    "ControlFlowContext.cpp",
+    "TypeErasedDataflowAnalysis.cpp",
+  ]
 }
