@@ -59,7 +59,7 @@ class VPRecipeBuilder {
   /// Cross-iteration reduction & first-order recurrence phis for which we need
   /// to add the incoming value from the backedge after all recipes have been
   /// created.
-  SmallVector<VPWidenPHIRecipe *, 4> PhisToFix;
+  SmallVector<VPHeaderPHIRecipe *, 4> PhisToFix;
 
   /// Check if \p I can be widened at the start of \p Range and possibly
   /// decrease the range such that the returned value holds for the entire \p
