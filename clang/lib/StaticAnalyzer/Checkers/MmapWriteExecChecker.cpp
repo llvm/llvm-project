@@ -23,7 +23,6 @@
 
 using namespace clang;
 using namespace ento;
-using llvm::APSInt;
 
 namespace {
 class MmapWriteExecChecker : public Checker<check::PreCall> {
