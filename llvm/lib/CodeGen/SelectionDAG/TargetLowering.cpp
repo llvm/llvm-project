@@ -6438,12 +6438,6 @@ bool TargetLowering::expandMUL_LOHI(unsigned Opcode, EVT VT, const SDLoc &dl,
 
   unsigned ShiftAmount = OuterBitSize - InnerBitSize;
   EVT ShiftAmountTy = getShiftAmountTy(VT, DAG.getDataLayout());
-  if (APInt::getMaxValue(ShiftAmountTy.getSizeInBits()).ult(ShiftAmount)) {
-    // FIXME getShiftAmountTy does not always return a sensible result when VT
-    // is an illegal type, and so the type may be too small to fit the shift
-    // amount. Override it with i32. The shift will have to be legalized.
-    ShiftAmountTy = MVT::i32;
-  }
   SDValue Shift = DAG.getConstant(ShiftAmount, dl, ShiftAmountTy);
 
   if (!LH.getNode() && !RH.getNode() &&
