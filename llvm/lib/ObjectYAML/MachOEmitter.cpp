@@ -481,9 +481,9 @@ void MachOWriter::writeLinkEditData(raw_ostream &OS) {
   typedef std::pair<uint64_t, writeHandler> writeOperation;
   std::vector<writeOperation> WriteQueue;
 
-  MachO::dyld_info_command *DyldInfoOnlyCmd = 0;
-  MachO::symtab_command *SymtabCmd = 0;
-  MachO::dysymtab_command *DSymtabCmd = 0;
+  MachO::dyld_info_command *DyldInfoOnlyCmd = nullptr;
+  MachO::symtab_command *SymtabCmd = nullptr;
+  MachO::dysymtab_command *DSymtabCmd = nullptr;
   for (auto &LC : Obj.LoadCommands) {
     switch (LC.Data.load_command_data.cmd) {
     case MachO::LC_SYMTAB:
