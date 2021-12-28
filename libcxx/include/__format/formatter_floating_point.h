@@ -514,7 +514,7 @@ _LIBCPP_HIDE_FROM_ABI _OutIt __format_locale_specific_form(
       __grouping.size() -                  // Grouping contains one
       !__grouping.empty();                 // additional character
 
-  __formatter::__padding_size_result_v2 __padding = {0, 0};
+  __formatter::__padding_size_result __padding    = {0, 0};
   bool __zero_padding                             = __specs.__alignment_ == __format_spec::__alignment::__zero_padding;
   if (__size < __specs.__width_) {
     if (__zero_padding) {
@@ -522,7 +522,7 @@ _LIBCPP_HIDE_FROM_ABI _OutIt __format_locale_specific_form(
       __specs.__fill_      = _CharT('0');
     }
 
-    __padding = __formatter::__padding_size_v2(__size, __specs.__width_, __specs.__alignment_);
+    __padding = __formatter::__padding_size(__size, __specs.__width_, __specs.__alignment_);
   }
 
   // sign and (zero padding or alignment)
