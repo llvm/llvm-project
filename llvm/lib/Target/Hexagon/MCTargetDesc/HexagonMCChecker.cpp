@@ -65,7 +65,8 @@ void HexagonMCChecker::init() {
 
 void HexagonMCChecker::initReg(MCInst const &MCI, unsigned R, unsigned &PredReg,
                                bool &isTrue) {
-  if (HexagonMCInstrInfo::isPredicated(MCII, MCI) && isPredicateRegister(R)) {
+  if (HexagonMCInstrInfo::isPredicated(MCII, MCI) &&
+      HexagonMCInstrInfo::isPredReg(RI, R)) {
     // Note an used predicate register.
     PredReg = R;
     isTrue = HexagonMCInstrInfo::isPredicatedTrue(MCII, MCI);
@@ -123,7 +124,7 @@ void HexagonMCChecker::init(MCInst const &MCI) {
         // same packet with an instruction that modifies is explicitly. Deal
         // with such situations individually.
         SoftDefs.insert(R);
-      else if (isPredicateRegister(R) &&
+      else if (HexagonMCInstrInfo::isPredReg(RI, R) &&
                HexagonMCInstrInfo::isPredicateLate(MCII, MCI))
         // Include implicit late predicates.
         LatePreds.insert(R);
@@ -167,7 +168,7 @@ void HexagonMCChecker::init(MCInst const &MCI) {
         // side-effect, then note as a soft definition.
         SoftDefs.insert(*SRI);
       else if (HexagonMCInstrInfo::isPredicateLate(MCII, MCI) &&
-               isPredicateRegister(*SRI))
+               HexagonMCInstrInfo::isPredReg(RI, *SRI))
         // Some insns produce predicates too late to be used in the same packet.
         LatePreds.insert(*SRI);
       else if (i == 0 && HexagonMCInstrInfo::getType(MCII, MCI) ==
@@ -193,7 +194,7 @@ void HexagonMCChecker::init(MCInst const &MCI) {
       if (MCI.getOperand(i).isReg()) {
         unsigned P = MCI.getOperand(i).getReg();
 
-        if (isPredicateRegister(P))
+        if (HexagonMCInstrInfo::isPredReg(RI, P))
           NewPreds.insert(P);
       }
 }
@@ -599,7 +600,7 @@ bool HexagonMCChecker::checkRegisters() {
       reportErrorRegisters(BadR);
       return false;
     }
-    if (!isPredicateRegister(R) && Defs[R].size() > 1) {
+    if (!HexagonMCInstrInfo::isPredReg(RI, R) && Defs[R].size() > 1) {
       // Check for multiple register definitions.
       PredSet &PM = Defs[R];
 
