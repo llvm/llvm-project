@@ -1,5 +1,7 @@
 add_mlir_conversion_library(MLIRTosaToLinalg
   TosaToLinalg.cpp
+  TosaToLinalgNamed.cpp
+  TosaToLinalgNamedPass.cpp
   TosaToLinalgPass.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -18,6 +20,7 @@ add_mlir_conversion_library(MLIRTosaToLinalg
   MLIRMath
   MLIRPass
   MLIRTensor
+  MLIRTransforms
   MLIRTosa
   MLIRTosaTransforms
   MLIRSupport
