@@ -3217,9 +3217,7 @@ static void RenderSSPOptions(const Driver &D, const ToolChain &TC,
         return;
       }
       // Check whether the target subarch supports the hardware TLS register
-      if (arm::getARMSubArchVersionNumber(EffectiveTriple) < 7 &&
-          llvm::ARM::parseArch(EffectiveTriple.getArchName()) !=
-              llvm::ARM::ArchKind::ARMV6T2) {
+      if (!arm::isHardTPSupported(EffectiveTriple)) {
         D.Diag(diag::err_target_unsupported_tp_hard)
             << EffectiveTriple.getArchName();
         return;
