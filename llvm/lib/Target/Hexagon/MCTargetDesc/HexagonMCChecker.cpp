@@ -317,8 +317,7 @@ bool HexagonMCChecker::checkAXOK() {
 
 void HexagonMCChecker::reportBranchErrors() {
   for (auto const &I : HexagonMCInstrInfo::bundleInstructions(MCII, MCB)) {
-    MCInstrDesc const &Desc = HexagonMCInstrInfo::getDesc(MCII, I);
-    if (Desc.isBranch() || Desc.isCall() || Desc.isReturn())
+    if (HexagonMCInstrInfo::IsABranchingInst(MCII, STI, I))
       reportNote(I.getLoc(), "Branching instruction");
   }
 }
@@ -328,8 +327,7 @@ bool HexagonMCChecker::checkHWLoop() {
       !HexagonMCInstrInfo::isOuterLoop(MCB))
     return true;
   for (auto const &I : HexagonMCInstrInfo::bundleInstructions(MCII, MCB)) {
-    MCInstrDesc const &Desc = HexagonMCInstrInfo::getDesc(MCII, I);
-    if (Desc.isBranch() || Desc.isCall() || Desc.isReturn()) {
+    if (HexagonMCInstrInfo::IsABranchingInst(MCII, STI, I)) {
       reportError(MCB.getLoc(),
                   "Branches cannot be in a packet with hardware loops");
       reportBranchErrors();
@@ -342,8 +340,7 @@ bool HexagonMCChecker::checkHWLoop() {
 bool HexagonMCChecker::checkCOFMax1() {
   SmallVector<MCInst const *, 2> BranchLocations;
   for (auto const &I : HexagonMCInstrInfo::bundleInstructions(MCII, MCB)) {
-    MCInstrDesc const &Desc = HexagonMCInstrInfo::getDesc(MCII, I);
-    if (Desc.isBranch() || Desc.isCall() || Desc.isReturn())
+    if (HexagonMCInstrInfo::IsABranchingInst(MCII, STI, I))
       BranchLocations.push_back(&I);
   }
   for (unsigned J = 0, N = BranchLocations.size(); J < N; ++J) {
