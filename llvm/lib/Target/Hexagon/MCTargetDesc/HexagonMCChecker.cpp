@@ -16,6 +16,7 @@
 #include "MCTargetDesc/HexagonMCInstrInfo.h"
 #include "MCTargetDesc/HexagonMCShuffler.h"
 #include "MCTargetDesc/HexagonMCTargetDesc.h"
+
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInst.h"
@@ -425,81 +426,109 @@ bool HexagonMCChecker::checkPredicates() {
 
 // Check legal use of new values.
 bool HexagonMCChecker::checkNewValues() {
-  for (auto const &I : HexagonMCInstrInfo::bundleInstructions(MCII, MCB)) {
-    if (!HexagonMCInstrInfo::isNewValue(MCII, I))
+  for (auto const &ConsumerInst :
+       HexagonMCInstrInfo::bundleInstructions(MCII, MCB)) {
+    if (!HexagonMCInstrInfo::isNewValue(MCII, ConsumerInst))
       continue;
-    auto Consumer = HexagonMCInstrInfo::predicateInfo(MCII, I);
-    bool Branch = HexagonMCInstrInfo::getDesc(MCII, I).isBranch();
-    MCOperand const &Op = HexagonMCInstrInfo::getNewValueOperand(MCII, I);
+
+    const HexagonMCInstrInfo::PredicateInfo ConsumerPredInfo =
+        HexagonMCInstrInfo::predicateInfo(MCII, ConsumerInst);
+
+    bool Branch = HexagonMCInstrInfo::getDesc(MCII, ConsumerInst).isBranch();
+    MCOperand const &Op =
+        HexagonMCInstrInfo::getNewValueOperand(MCII, ConsumerInst);
     assert(Op.isReg());
-    auto Producer = registerProducer(Op.getReg(), Consumer);
-    if (std::get<0>(Producer) == nullptr) {
-      reportError(I.getLoc(), "New value register consumer has no producer");
+
+    auto Producer = registerProducer(Op.getReg(), ConsumerPredInfo);
+    const MCInst *const ProducerInst = std::get<0>(Producer);
+    const HexagonMCInstrInfo::PredicateInfo ProducerPredInfo =
+        std::get<2>(Producer);
+
+    if (ProducerInst == nullptr) {
+      reportError(ConsumerInst.getLoc(),
+                  "New value register consumer has no producer");
       return false;
     }
     if (!RelaxNVChecks) {
       // Checks that statically prove correct new value consumption
-      if (std::get<2>(Producer).isPredicated() &&
-          (!Consumer.isPredicated() ||
-           llvm::HexagonMCInstrInfo::getType(MCII, I) == HexagonII::TypeNCJ)) {
+      if (ProducerPredInfo.isPredicated() &&
+          (!ConsumerPredInfo.isPredicated() ||
+           llvm::HexagonMCInstrInfo::getType(MCII, ConsumerInst) ==
+               HexagonII::TypeNCJ)) {
         reportNote(
-            std::get<0>(Producer)->getLoc(),
+            ProducerInst->getLoc(),
             "Register producer is predicated and consumer is unconditional");
-        reportError(I.getLoc(),
+        reportError(ConsumerInst.getLoc(),
                     "Instruction does not have a valid new register producer");
         return false;
       }
-      if (std::get<2>(Producer).Register != Hexagon::NoRegister &&
-          std::get<2>(Producer).Register != Consumer.Register) {
-        reportNote(std::get<0>(Producer)->getLoc(),
+      if (ProducerPredInfo.Register != Hexagon::NoRegister &&
+          ProducerPredInfo.Register != ConsumerPredInfo.Register) {
+        reportNote(ProducerInst->getLoc(),
                    "Register producer does not use the same predicate "
                    "register as the consumer");
-        reportError(I.getLoc(),
+        reportError(ConsumerInst.getLoc(),
                     "Instruction does not have a valid new register producer");
         return false;
       }
     }
-    if (std::get<2>(Producer).Register == Consumer.Register &&
-        Consumer.PredicatedTrue != std::get<2>(Producer).PredicatedTrue) {
+    if (ProducerPredInfo.Register == ConsumerPredInfo.Register &&
+        ConsumerPredInfo.PredicatedTrue != ProducerPredInfo.PredicatedTrue) {
       reportNote(
-          std::get<0>(Producer)->getLoc(),
+          ProducerInst->getLoc(),
           "Register producer has the opposite predicate sense as consumer");
-      reportError(I.getLoc(),
+      reportError(ConsumerInst.getLoc(),
                   "Instruction does not have a valid new register producer");
       return false;
     }
-    MCInstrDesc const &Desc =
-        HexagonMCInstrInfo::getDesc(MCII, *std::get<0>(Producer));
-    if (Desc.OpInfo[std::get<1>(Producer)].RegClass ==
+
+    MCInstrDesc const &Desc = HexagonMCInstrInfo::getDesc(MCII, *ProducerInst);
+    const unsigned ProducerOpIndex = std::get<1>(Producer);
+
+    if (Desc.OpInfo[ProducerOpIndex].RegClass ==
         Hexagon::DoubleRegsRegClassID) {
-      reportNote(std::get<0>(Producer)->getLoc(),
+      reportNote(ProducerInst->getLoc(),
                  "Double registers cannot be new-value producers");
-      reportError(I.getLoc(),
+      reportError(ConsumerInst.getLoc(),
                   "Instruction does not have a valid new register producer");
       return false;
     }
-    if ((Desc.mayLoad() && std::get<1>(Producer) == 1) ||
-        (Desc.mayStore() && std::get<1>(Producer) == 0)) {
-      unsigned Mode =
-          HexagonMCInstrInfo::getAddrMode(MCII, *std::get<0>(Producer));
+
+    // The ProducerOpIsMemIndex logic checks for the index of the producer
+    // register operand.  Z-reg load instructions have an implicit operand
+    // that's not encoded, so the producer won't appear as the 1-th def, it
+    // will be at the 0-th.
+    const unsigned ProducerOpSearchIndex =
+        (HexagonMCInstrInfo::getType(MCII, *ProducerInst) ==
+         HexagonII::TypeCVI_ZW)
+            ? 0
+            : 1;
+
+    const bool ProducerOpIsMemIndex =
+        ((Desc.mayLoad() && ProducerOpIndex == ProducerOpSearchIndex) ||
+         (Desc.mayStore() && ProducerOpIndex == 0));
+
+    if (ProducerOpIsMemIndex) {
+      unsigned Mode = HexagonMCInstrInfo::getAddrMode(MCII, *ProducerInst);
+
       StringRef ModeError;
       if (Mode == HexagonII::AbsoluteSet)
         ModeError = "Absolute-set";
       if (Mode == HexagonII::PostInc)
         ModeError = "Auto-increment";
       if (!ModeError.empty()) {
-        reportNote(std::get<0>(Producer)->getLoc(),
+        reportNote(ProducerInst->getLoc(),
                    ModeError + " registers cannot be a new-value "
                                "producer");
-        reportError(I.getLoc(),
+        reportError(ConsumerInst.getLoc(),
                     "Instruction does not have a valid new register producer");
         return false;
       }
     }
-    if (Branch && HexagonMCInstrInfo::isFloat(MCII, *std::get<0>(Producer))) {
-      reportNote(std::get<0>(Producer)->getLoc(),
+    if (Branch && HexagonMCInstrInfo::isFloat(MCII, *ProducerInst)) {
+      reportNote(ProducerInst->getLoc(),
                  "FPU instructions cannot be new-value producers for jumps");
-      reportError(I.getLoc(),
+      reportError(ConsumerInst.getLoc(),
                   "Instruction does not have a valid new register producer");
       return false;
     }
@@ -542,9 +571,11 @@ HexagonMCChecker::registerProducer(
     unsigned Register, HexagonMCInstrInfo::PredicateInfo ConsumerPredicate) {
   std::tuple<MCInst const *, unsigned, HexagonMCInstrInfo::PredicateInfo>
       WrongSense;
+
   for (auto const &I : HexagonMCInstrInfo::bundleInstructions(MCII, MCB)) {
     MCInstrDesc const &Desc = HexagonMCInstrInfo::getDesc(MCII, I);
     auto ProducerPredicate = HexagonMCInstrInfo::predicateInfo(MCII, I);
+
     for (unsigned J = 0, N = Desc.getNumDefs(); J < N; ++J)
       for (auto K = MCRegAliasIterator(I.getOperand(J).getReg(), &RI, true);
            K.isValid(); ++K)
