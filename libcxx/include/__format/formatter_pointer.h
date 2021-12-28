@@ -49,7 +49,7 @@ public:
     char __buffer[2 + 2 * sizeof(uintptr_t)];
     __buffer[0] = '0';
     __buffer[1] = 'x';
-    char* __last = __to_buffer(__buffer + 2, _VSTD::end(__buffer), reinterpret_cast<uintptr_t>(__ptr), 16);
+    char* __last = __formatter::__to_buffer(__buffer + 2, _VSTD::end(__buffer), reinterpret_cast<uintptr_t>(__ptr), 16);
 
     unsigned __size = __last - __buffer;
     if (__size >= this->__width)

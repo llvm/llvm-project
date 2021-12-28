@@ -447,7 +447,7 @@ _LIBCPP_HIDE_FROM_ABI _OutIt __format_locale_specific_form(_OutIt __out_it, cons
     if (__digits <= __grouping[0])
       __grouping.clear();
     else
-      __grouping = __determine_grouping(__digits, __grouping);
+      __grouping = __formatter::__determine_grouping(__digits, __grouping);
   }
 
   size_t __size = __result.__last - __buffer.begin() + // Formatted string
