@@ -226,10 +226,10 @@ define i1 @global_gep_ugt_global_gep() {
   ret i1 %cmp
 }
 
-; TODO: Should not fold due to signed comparison.
+; Should not fold due to signed comparison.
 define i1 @global_gep_sgt_global_gep() {
 ; CHECK-LABEL: @global_gep_sgt_global_gep(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    ret i1 icmp sgt (i32* getelementptr inbounds ([2 x i32], [2 x i32]* @g, i64 0, i64 1), i32* getelementptr inbounds ([2 x i32], [2 x i32]* @g, i64 0, i64 0))
 ;
   %gep1 = getelementptr inbounds [2 x i32], [2 x i32]* @g, i64 0, i64 0
   %gep2 = getelementptr inbounds [2 x i32], [2 x i32]* @g, i64 0, i64 1
