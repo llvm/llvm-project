@@ -857,8 +857,10 @@ void CodeViewDebug::emitCompilerInformation() {
   StringRef CompilerVersion = CU->getProducer();
   Version FrontVer = parseVersion(CompilerVersion);
   OS.AddComment("Frontend version");
-  for (int N : FrontVer.Part)
+  for (int N : FrontVer.Part) {
+    N = std::min<int>(N, std::numeric_limits<uint16_t>::max());
     OS.emitInt16(N);
+  }
 
   // Some Microsoft tools, like Binscope, expect a backend version number of at
   // least 8.something, so we'll coerce the LLVM version into a form that
