@@ -21,7 +21,7 @@
 
 @9 = global i1 icmp ult (i64* @A, i64* getelementptr (i64, i64* @A, i64 1))        ; true
 @10 = global i1 icmp slt (i64* @A, i64* getelementptr (i64, i64* @A, i64 0))        ; false
-@11 = global i1 icmp slt (i32* getelementptr (%Ty, %Ty* @B, i64 0, i32 0),
+@11 = global i1 icmp ult (i32* getelementptr (%Ty, %Ty* @B, i64 0, i32 0),
                    i32* getelementptr (%Ty, %Ty* @B, i64 0, i32 1))            ; true
 ;global i1 icmp ne (i64* @A, i64* bitcast (%Ty* @B to i64*))                 ; true
 
