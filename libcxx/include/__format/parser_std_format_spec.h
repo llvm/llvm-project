@@ -1407,6 +1407,7 @@ inline constexpr __fields __fields_integral{
     .__locale_specific_form_ = true,
     .__type_                 = true};
 inline constexpr __fields __fields_string{.__precision_ = true, .__type_ = true};
+inline constexpr __fields __fields_pointer{.__type_ = true};
 
 enum class _LIBCPP_ENUM_VIS __alignment : uint8_t {
   /// No alignment is set in the format string.
@@ -1945,6 +1946,17 @@ _LIBCPP_HIDE_FROM_ABI constexpr void __process_parsed_integer(__parser<_CharT>& 
 
   default:
     std::__throw_format_error("The format-spec type has a type not supported for an integer argument");
+  }
+}
+
+_LIBCPP_HIDE_FROM_ABI constexpr void __process_display_type_pointer(__format_spec::__type __type) {
+  switch (__type) {
+  case __format_spec::__type::__default:
+  case __format_spec::__type::__pointer:
+    break;
+
+  default:
+    std::__throw_format_error("The format-spec type has a type not supported for a pointer argument");
   }
 }
 
