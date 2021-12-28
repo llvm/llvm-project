@@ -12,6 +12,7 @@
 #ifndef LLVM_PROFILEDATA_INSTRPROFCORRELATOR_H
 #define LLVM_PROFILEDATA_INSTRPROFCORRELATOR_H
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
@@ -110,6 +111,7 @@ private:
                           std::unique_ptr<InstrProfCorrelator::Context> Ctx)
       : InstrProfCorrelator(Kind, std::move(Ctx)){};
   std::vector<std::string> Names;
+  llvm::DenseSet<IntPtrT> CounterOffsets;
 
   // Byte-swap the value if necessary.
   template <class T> T maybeSwap(T Value) const {
