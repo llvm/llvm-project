@@ -153,14 +153,6 @@ IndexedInstrProfReader::create(std::unique_ptr<MemoryBuffer> Buffer,
   return std::move(Result);
 }
 
-void InstrProfIterator::Increment() {
-  if (auto E = Reader->readNextRecord(Record)) {
-    // Handle errors in the reader.
-    InstrProfError::take(std::move(E));
-    *this = InstrProfIterator();
-  }
-}
-
 bool TextInstrProfReader::hasFormat(const MemoryBuffer &Buffer) {
   // Verify that this really looks like plain ASCII text by checking a
   // 'reasonable' number of characters (up to profile magic size).
