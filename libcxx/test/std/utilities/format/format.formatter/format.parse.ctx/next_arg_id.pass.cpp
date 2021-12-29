@@ -37,9 +37,9 @@ void test_exception() {
   context.check_arg_id(0);
 
   try {
-    context.next_arg_id();
+    TEST_IGNORE_NODISCARD context.next_arg_id();
     assert(false);
-  } catch (const std::format_error& e) {
+  } catch ([[maybe_unused]] const std::format_error& e) {
     LIBCPP_ASSERT(strcmp(e.what(), "Using automatic argument numbering in manual "
                                    "argument numbering mode") == 0);
     return;

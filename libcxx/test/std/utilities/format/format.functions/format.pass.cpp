@@ -67,11 +67,10 @@ auto test_exception = []<class CharT, class... Args>(
     return;
   }
   assert(false);
-#else
+#endif
   (void)what;
   (void)fmt;
   (void)sizeof...(args);
-#endif
 };
 
 int main(int, char**) {

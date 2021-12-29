@@ -74,16 +74,15 @@ auto test_exception = []<class CharT, class... Args>(
     std::vformat_to(std::back_inserter(out), std::locale(), fmt,
                     std::make_format_args<context_t<CharT>>(args...));
     assert(false);
-  } catch (std::format_error& e) {
+  } catch ([[maybe_unused]] std::format_error& e) {
     LIBCPP_ASSERT(e.what() == what);
     return;
   }
   assert(false);
-#else
+#endif
   (void)what;
   (void)fmt;
   (void)sizeof...(args);
-#endif
 };
 
 int main(int, char**) {

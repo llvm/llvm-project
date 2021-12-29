@@ -36,19 +36,18 @@ auto test_exception = []<class CharT, class... Args>(
     std::string_view what, std::basic_string<CharT> fmt, const Args&... args) {
 #ifndef TEST_HAS_NO_EXCEPTIONS
   try {
-    std::vformat(std::locale(), fmt,
-                 std::make_format_args<context_t<CharT>>(args...));
+    (void) std::vformat(std::locale(), fmt,
+                        std::make_format_args<context_t<CharT>>(args...));
     assert(false);
-  } catch (std::format_error& e) {
+  } catch ([[maybe_unused]] std::format_error& e) {
     LIBCPP_ASSERT(e.what() == what);
     return;
   }
   assert(false);
-#else
+#endif
   (void)what;
   (void)fmt;
   (void)sizeof...(args);
-#endif
 };
 
 int main(int, char**) {

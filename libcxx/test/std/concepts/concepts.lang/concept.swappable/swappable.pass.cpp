@@ -70,55 +70,59 @@ constexpr bool check_swap_23(T x, T y) {
 constexpr bool check_lvalue_adl_swappable() {
   auto x = lvalue_adl_swappable(0);
   auto y = lvalue_adl_swappable(1);
-  constexpr auto is_noexcept = noexcept(std::ranges::swap(x, y));
-  return check_swap_21(x, y) && is_noexcept;
+  ASSERT_NOEXCEPT(std::ranges::swap(x, y));
+  assert(check_swap_21(x, y));
+  return true;
 }
 static_assert(check_lvalue_adl_swappable());
 
 constexpr bool check_rvalue_adl_swappable() {
-  constexpr auto is_noexcept = noexcept(
-      std::ranges::swap(rvalue_adl_swappable(0), rvalue_adl_swappable(1)));
-  return check_swap_21(rvalue_adl_swappable(0), rvalue_adl_swappable(1)) &&
-         is_noexcept;
+  ASSERT_NOEXCEPT(std::ranges::swap(rvalue_adl_swappable(0), rvalue_adl_swappable(1)));
+  assert(check_swap_21(rvalue_adl_swappable(0), rvalue_adl_swappable(1)));
+  return true;
 }
 static_assert(check_rvalue_adl_swappable());
 
 constexpr bool check_lvalue_rvalue_adl_swappable() {
   auto x = lvalue_rvalue_adl_swappable(0);
-  constexpr auto is_noexcept =
-      noexcept(std::ranges::swap(x, lvalue_rvalue_adl_swappable(1)));
-  return check_swap_21(x, lvalue_rvalue_adl_swappable(1)) && is_noexcept;
+  ASSERT_NOEXCEPT(std::ranges::swap(x, lvalue_rvalue_adl_swappable(1)));
+  assert(check_swap_21(x, lvalue_rvalue_adl_swappable(1)));
+  return true;
 }
 static_assert(check_lvalue_rvalue_adl_swappable());
 
 constexpr bool check_rvalue_lvalue_adl_swappable() {
   auto x = rvalue_lvalue_adl_swappable(0);
-  constexpr auto is_noexcept =
-      noexcept(std::ranges::swap(rvalue_lvalue_adl_swappable(1), x));
-  return check_swap_21(rvalue_lvalue_adl_swappable(1), x) && is_noexcept;
+  ASSERT_NOEXCEPT(std::ranges::swap(rvalue_lvalue_adl_swappable(1), x));
+  assert(check_swap_21(rvalue_lvalue_adl_swappable(1), x));
+  return true;
 }
 static_assert(check_rvalue_lvalue_adl_swappable());
 
 constexpr bool check_throwable_swappable() {
   auto x = throwable_adl_swappable{0};
   auto y = throwable_adl_swappable{1};
-  constexpr auto not_noexcept = !noexcept(std::ranges::swap(x, y));
-  return check_swap_21(x, y) && not_noexcept;
+  ASSERT_NOT_NOEXCEPT(std::ranges::swap(x, y));
+  assert(check_swap_21(x, y));
+  return true;
 }
 static_assert(check_throwable_swappable());
 
 constexpr bool check_non_move_constructible_adl_swappable() {
   auto x = non_move_constructible_adl_swappable{0};
   auto y = non_move_constructible_adl_swappable{1};
-  constexpr auto is_noexcept = noexcept(std::ranges::swap(x, y));
-  return check_swap_21(x, y) && is_noexcept;
+  ASSERT_NOEXCEPT(std::ranges::swap(x, y));
+  assert(check_swap_21(x, y));
+  return true;
 }
 static_assert(check_non_move_constructible_adl_swappable());
 
 constexpr bool check_non_move_assignable_adl_swappable() {
   auto x = non_move_assignable_adl_swappable{0};
   auto y = non_move_assignable_adl_swappable{1};
-  return check_swap_21(x, y) && noexcept(std::ranges::swap(x, y));
+  ASSERT_NOEXCEPT(std::ranges::swap(x, y));
+  assert(check_swap_21(x, y));
+  return true;
 }
 static_assert(check_non_move_assignable_adl_swappable());
 
@@ -136,43 +140,50 @@ static_assert(std::swappable<swappable_namespace::scoped>);
 constexpr bool check_swap_arrays() {
   int x[] = {0, 1, 2, 3, 4};
   int y[] = {5, 6, 7, 8, 9};
-  return check_swap_22(x, y) && noexcept(std::ranges::swap(x, y));
+  ASSERT_NOEXCEPT(std::ranges::swap(x, y));
+  assert(check_swap_22(x, y));
+  return true;
 }
 static_assert(check_swap_arrays());
 
 constexpr bool check_lvalue_adl_swappable_arrays() {
   lvalue_adl_swappable x[] = {{0}, {1}, {2}, {3}};
   lvalue_adl_swappable y[] = {{4}, {5}, {6}, {7}};
-  return check_swap_22(x, y) && noexcept(std::ranges::swap(x, y));
+  ASSERT_NOEXCEPT(std::ranges::swap(x, y));
+  assert(check_swap_22(x, y));
+  return true;
 }
 static_assert(check_lvalue_adl_swappable_arrays());
 
 constexpr bool check_throwable_adl_swappable_arrays() {
   throwable_adl_swappable x[] = {{0}, {1}, {2}, {3}};
   throwable_adl_swappable y[] = {{4}, {5}, {6}, {7}};
-  return check_swap_22(x, y) && !noexcept(std::ranges::swap(x, y));
+  ASSERT_NOT_NOEXCEPT(std::ranges::swap(x, y));
+  assert(check_swap_22(x, y));
+  return true;
 }
 static_assert(check_throwable_adl_swappable_arrays());
 
-inline auto global_x = 0;
-static_assert(check_swap_23(0, 0) &&
-              noexcept(std::ranges::swap(global_x, global_x)));
-static_assert(check_swap_23(0, 1) &&
-              noexcept(std::ranges::swap(global_x, global_x)));
-static_assert(check_swap_23(1, 0) &&
-              noexcept(std::ranges::swap(global_x, global_x)));
+auto global_x = 0;
+ASSERT_NOEXCEPT(std::ranges::swap(global_x, global_x));
+static_assert(check_swap_23(0, 0));
+static_assert(check_swap_23(0, 1));
+static_assert(check_swap_23(1, 0));
 
 constexpr bool check_swappable_references() {
   int x = 42;
   int y = 64;
-  return check_swap_23<int&>(x, y) && noexcept(std::ranges::swap(x, y));
+  ASSERT_NOEXCEPT(std::ranges::swap(x, y));
+  assert(check_swap_23(x, y));
+  return true;
 }
 static_assert(check_swappable_references());
 
 constexpr bool check_swappable_pointers() {
   char const* x = "hello";
-  return check_swap_23<char const*>(x, nullptr) &&
-         noexcept(std::ranges::swap(x, x));
+  ASSERT_NOEXCEPT(std::ranges::swap(x, x));
+  assert(check_swap_23(x, {}));
+  return true;
 }
 static_assert(check_swappable_pointers());
 
@@ -184,7 +195,7 @@ union adl_swappable {
 
 void swap(adl_swappable&, adl_swappable&);
 void swap(adl_swappable&&, adl_swappable&&);
-}; // namespace union_swap
+} // namespace union_swap
 static_assert(std::swappable<union_swap::adl_swappable>);
 static_assert(std::swappable<union_swap::adl_swappable&>);
 static_assert(std::swappable<union_swap::adl_swappable&&>);
@@ -224,7 +235,9 @@ static_assert(std::assignable_from<swap_type&, swap_type const&>);
 static_assert(std::assignable_from<swap_type&, swap_type const>);
 static_assert(std::swappable<swap_type>);
 
-template <bool is_noexcept, std::swappable T>
+enum class nothrow { no, yes };
+
+template <nothrow is_noexcept, std::swappable T>
 void check_swap(expected<T> const& e) {
   auto a = e.y;
   auto b = e.x;
@@ -237,7 +250,7 @@ void check_swap(expected<T> const& e) {
   assert(a == e.y);
   assert(b == e.x);
 
-  static_assert(noexcept(std::ranges::swap(a, b)) == is_noexcept);
+  static_assert(noexcept(std::ranges::swap(a, b)) == bool(is_noexcept));
 }
 
 int main(int, char**) {
@@ -246,42 +259,42 @@ int main(int, char**) {
         .x = {6, 7, 8, 9},
         .y = {0, 1, 2, 3, 4, 5},
     };
-    check_swap</*is_noexcept=*/true>(e);
+    check_swap<nothrow::yes>(e);
   }
   {
     auto const e = expected<std::map<int, std::string> >{
         .x = {{0, "whole"}, {1, "cashews"}},
         .y = {{-1, "roasted"}, {2, "&"}, {-3, "salted"}},
     };
-    check_swap</*is_noexcept=*/true>(e);
+    check_swap<nothrow::yes>(e);
   }
   {
     auto const e = expected<std::string>{
         .x = "hello there",
         .y = "general kenobi",
     };
-    check_swap</*is_noexcept=*/true>(e);
+    check_swap<nothrow::yes>(e);
   }
   {
     auto const e = expected<std::optional<lvalue_adl_swappable> >{
         .x = {10},
         .y = {20},
     };
-    check_swap</*is_noexcept=*/true>(e);
+    check_swap<nothrow::yes>(e);
   }
   {
     auto const e = expected<std::optional<throwable_adl_swappable> >{
         .x = {10},
         .y = {20},
     };
-    check_swap</*is_noexcept=*/false>(e);
+    check_swap<nothrow::no>(e);
   }
   {
     auto const e = expected<std::unordered_map<int, std::string> >{
         .x = {{0, "whole"}, {1, "cashews"}},
         .y = {{-1, "roasted"}, {2, "&"}, {-3, "salted"}},
     };
-    check_swap</*is_noexcept=*/true>(e);
+    check_swap<nothrow::yes>(e);
   }
   {
     auto const e = expected<std::vector<int> >{
@@ -289,7 +302,7 @@ int main(int, char**) {
         .y = {6, 7, 8, 9},
     };
 
-    check_swap</*is_noexcept=*/true>(e);
+    check_swap<nothrow::yes>(e);
   }
   return 0;
 }
