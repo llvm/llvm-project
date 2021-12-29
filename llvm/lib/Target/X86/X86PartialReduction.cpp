@@ -76,9 +76,6 @@ static bool matchVPDPBUSDPattern(const X86Subtarget *ST, BinaryOperator *Mul,
   if (isa<SExtInst>(LHS))
     std::swap(LHS, RHS);
 
-  if (!isa<ZExtInst>(LHS))
-    return false;
-
   auto IsFreeTruncation = [&](Value *Op) {
     if (auto *Cast = dyn_cast<CastInst>(Op)) {
       if (Cast->getParent() == Mul->getParent() &&
@@ -87,8 +84,8 @@ static bool matchVPDPBUSDPattern(const X86Subtarget *ST, BinaryOperator *Mul,
           Cast->getOperand(0)->getType()->getScalarSizeInBits() <= 8)
         return true;
     }
-    // TODO: Support constant in ISel.
-    return false;
+
+    return isa<Constant>(Op);
   };
 
   // (dpbusd (zext a), (sext, b)). Since the first operand should be unsigned
