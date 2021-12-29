@@ -875,14 +875,18 @@ public:
 
     switch (improveShuffleKindFromMask(Kind, Mask)) {
     case TTI::SK_Broadcast:
-      return getBroadcastShuffleOverhead(cast<FixedVectorType>(Tp));
+      if (auto *FVT = dyn_cast<FixedVectorType>(Tp))
+        return getBroadcastShuffleOverhead(FVT);
+      return InstructionCost::getInvalid();
     case TTI::SK_Select:
     case TTI::SK_Splice:
     case TTI::SK_Reverse:
     case TTI::SK_Transpose:
     case TTI::SK_PermuteSingleSrc:
     case TTI::SK_PermuteTwoSrc:
-      return getPermuteShuffleOverhead(cast<FixedVectorType>(Tp));
+      if (auto *FVT = dyn_cast<FixedVectorType>(Tp))
+        return getPermuteShuffleOverhead(FVT);
+      return InstructionCost::getInvalid();
     case TTI::SK_ExtractSubvector:
       return getExtractSubvectorOverhead(Tp, Index,
                                          cast<FixedVectorType>(SubTp));
