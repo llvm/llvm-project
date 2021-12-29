@@ -663,31 +663,28 @@ public:
   Function *getOrCreateRuntimeFunctionPtr(omp::RuntimeFunction FnID);
 
   /// Return the (LLVM-IR) string describing the source location \p LocStr.
-  Constant *getOrCreateSrcLocStr(StringRef LocStr, uint32_t &SrcLocStrSize);
+  Constant *getOrCreateSrcLocStr(StringRef LocStr);
 
   /// Return the (LLVM-IR) string describing the default source location.
-  Constant *getOrCreateDefaultSrcLocStr(uint32_t &SrcLocStrSize);
+  Constant *getOrCreateDefaultSrcLocStr();
 
   /// Return the (LLVM-IR) string describing the source location identified by
   /// the arguments.
   Constant *getOrCreateSrcLocStr(StringRef FunctionName, StringRef FileName,
-                                 unsigned Line, unsigned Column,
-                                 uint32_t &SrcLocStrSize);
+                                 unsigned Line, unsigned Column);
 
   /// Return the (LLVM-IR) string describing the DebugLoc \p DL. Use \p F as
   /// fallback if \p DL does not specify the function name.
-  Constant *getOrCreateSrcLocStr(DebugLoc DL, uint32_t &SrcLocStrSize,
-                                 Function *F = nullptr);
+  Constant *getOrCreateSrcLocStr(DebugLoc DL, Function *F = nullptr);
 
   /// Return the (LLVM-IR) string describing the source location \p Loc.
-  Constant *getOrCreateSrcLocStr(const LocationDescription &Loc,
-                                 uint32_t &SrcLocStrSize);
+  Constant *getOrCreateSrcLocStr(const LocationDescription &Loc);
 
   /// Return an ident_t* encoding the source location \p SrcLocStr and \p Flags.
   /// TODO: Create a enum class for the Reserve2Flags
-  Constant *getOrCreateIdent(Constant *SrcLocStr, uint32_t SrcLocStrSize,
-                             omp::IdentFlag Flags = omp::IdentFlag(0),
-                             unsigned Reserve2Flags = 0);
+  Value *getOrCreateIdent(Constant *SrcLocStr,
+                          omp::IdentFlag Flags = omp::IdentFlag(0),
+                          unsigned Reserve2Flags = 0);
 
   /// Create a global flag \p Namein the module with initial value \p Value.
   GlobalValue *createGlobalFlag(unsigned Value, StringRef Name);
@@ -757,7 +754,7 @@ public:
   StringMap<Constant *> SrcLocStrMap;
 
   /// Map to remember existing ident_t*.
-  DenseMap<std::pair<Constant *, uint64_t>, Constant *> IdentMap;
+  DenseMap<std::pair<Constant *, uint64_t>, Value *> IdentMap;
 
   /// Helper that contains information about regions we need to outline
   /// during finalization.

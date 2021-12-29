@@ -113,7 +113,6 @@
 ; AMDGPU: @[[__OMP_OFFLOADING_FD02_2044372E_DO_NOT_SPMDIZE_TARGET_L65_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 1
 ; AMDGPU: @[[__OMP_OFFLOADING_FD02_2044372E_DO_NOT_SPMDIZE_TASK_L74_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 1
 ; AMDGPU: @[[LLVM_COMPILER_USED:[a-zA-Z0-9_$"\\.-]+]] = appending global [6 x i8*] [i8* @__omp_offloading_fd02_2044372e_sequential_loop_l5_exec_mode, i8* @__omp_offloading_fd02_2044372e_sequential_loop_to_stack_var_l20_exec_mode, i8* @__omp_offloading_fd02_2044372e_sequential_loop_to_shared_var_l35_exec_mode, i8* @__omp_offloading_fd02_2044372e_sequential_loop_to_shared_var_guarded_l50_exec_mode, i8* @__omp_offloading_fd02_2044372e_do_not_spmdize_target_l65_exec_mode, i8* @__omp_offloading_fd02_2044372e_do_not_spmdize_task_l74_exec_mode], section "llvm.metadata"
-; AMDGPU: @[[GLOB2:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 22, i8* getelementptr inbounds ([23 x i8], [23 x i8]* @[[GLOB0]], i32 0, i32 0) }, align 8
 ; AMDGPU: @[[X:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [4 x i8] undef, align 4
 ; AMDGPU: @[[X_1:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [4 x i8] undef, align 4
 ; AMDGPU: @[[__OMP_OUTLINED__9_WRAPPER_ID:[a-zA-Z0-9_$"\\.-]+]] = private constant i8 undef
@@ -127,7 +126,6 @@
 ; NVPTX: @[[__OMP_OFFLOADING_FD02_2044372E_DO_NOT_SPMDIZE_TARGET_L65_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 1
 ; NVPTX: @[[__OMP_OFFLOADING_FD02_2044372E_DO_NOT_SPMDIZE_TASK_L74_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 1
 ; NVPTX: @[[LLVM_COMPILER_USED:[a-zA-Z0-9_$"\\.-]+]] = appending global [6 x i8*] [i8* @__omp_offloading_fd02_2044372e_sequential_loop_l5_exec_mode, i8* @__omp_offloading_fd02_2044372e_sequential_loop_to_stack_var_l20_exec_mode, i8* @__omp_offloading_fd02_2044372e_sequential_loop_to_shared_var_l35_exec_mode, i8* @__omp_offloading_fd02_2044372e_sequential_loop_to_shared_var_guarded_l50_exec_mode, i8* @__omp_offloading_fd02_2044372e_do_not_spmdize_target_l65_exec_mode, i8* @__omp_offloading_fd02_2044372e_do_not_spmdize_task_l74_exec_mode], section "llvm.metadata"
-; NVPTX: @[[GLOB2:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 22, i8* getelementptr inbounds ([23 x i8], [23 x i8]* @[[GLOB0]], i32 0, i32 0) }, align 8
 ; NVPTX: @[[X:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [4 x i8] undef, align 4
 ; NVPTX: @[[X1:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [4 x i8] undef, align 4
 ; NVPTX: @[[__OMP_OUTLINED__9_WRAPPER_ID:[a-zA-Z0-9_$"\\.-]+]] = private constant i8 undef
@@ -1439,7 +1437,7 @@ define internal void @__omp_outlined__6(i32* noalias %.global_tid., i32* noalias
 ; AMDGPU:       region.guarded.end:
 ; AMDGPU-NEXT:    br label [[REGION_BARRIER]]
 ; AMDGPU:       region.barrier:
-; AMDGPU-NEXT:    call void @__kmpc_barrier_simple_spmd(%struct.ident_t* @[[GLOB2]], i32 [[TMP0]])
+; AMDGPU-NEXT:    call void @__kmpc_barrier_simple_spmd(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]])
 ; AMDGPU-NEXT:    br label [[REGION_EXIT:%.*]]
 ; AMDGPU:       region.exit:
 ; AMDGPU-NEXT:    br label [[FOR_COND:%.*]]
@@ -1475,7 +1473,7 @@ define internal void @__omp_outlined__6(i32* noalias %.global_tid., i32* noalias
 ; NVPTX:       region.guarded.end:
 ; NVPTX-NEXT:    br label [[REGION_BARRIER]]
 ; NVPTX:       region.barrier:
-; NVPTX-NEXT:    call void @__kmpc_barrier_simple_spmd(%struct.ident_t* @[[GLOB2]], i32 [[TMP0]])
+; NVPTX-NEXT:    call void @__kmpc_barrier_simple_spmd(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]])
 ; NVPTX-NEXT:    br label [[REGION_EXIT:%.*]]
 ; NVPTX:       region.exit:
 ; NVPTX-NEXT:    br label [[FOR_COND:%.*]]
