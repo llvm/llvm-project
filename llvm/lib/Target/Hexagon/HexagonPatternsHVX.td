@@ -265,9 +265,7 @@ let Predicates = [UseHVX] in {
     // These should be preferred over a vsplat of 0.
     def: Pat<(VecI8   vzero), (V6_vd0)>;
     def: Pat<(VecI16  vzero), (V6_vd0)>;
-    def: Pat<(VecF16  vzero), (V6_vd0)>;
     def: Pat<(VecI32  vzero), (V6_vd0)>;
-    def: Pat<(VecF32  vzero), (V6_vd0)>;
     def: Pat<(VecPI8  vzero), (PS_vdd0)>;
     def: Pat<(VecPI16 vzero), (PS_vdd0)>;
     def: Pat<(VecPI32 vzero), (PS_vdd0)>;
@@ -303,7 +301,22 @@ let Predicates = [UseHVX] in {
            (V6_vinsertwr HvxVR:$Vu, I32:$Rt)>;
 }
 
-let Predicates = [UseHVXFloatingPoint] in {
+let Predicates = [UseHVX, UseHVXFloatingPoint] in {
+  let AddedComplexity = 100 in {
+    def: Pat<(VecF16  vzero), (V6_vd0)>;
+    def: Pat<(VecF32  vzero), (V6_vd0)>;
+    def: Pat<(VecPF16 vzero), (PS_vdd0)>;
+    def: Pat<(VecPF32 vzero), (PS_vdd0)>;
+
+    def: Pat<(concat_vectors (VecF16 vzero), (VecF16 vzero)), (PS_vdd0)>;
+    def: Pat<(concat_vectors (VecF32 vzero), (VecF32 vzero)), (PS_vdd0)>;
+  }
+
+  def: Pat<(VecPF16 (concat_vectors HVF16:$Vs, HVF16:$Vt)),
+           (Combinev HvxVR:$Vt, HvxVR:$Vs)>;
+  def: Pat<(VecPF32 (concat_vectors HVF32:$Vs, HVF32:$Vt)),
+           (Combinev HvxVR:$Vt, HvxVR:$Vs)>;
+
   def: Pat<(HexagonVINSERTW0 HVF16:$Vu, I32:$Rt),
            (V6_vinsertwr HvxVR:$Vu, I32:$Rt)>;
   def: Pat<(HexagonVINSERTW0 HVF32:$Vu, I32:$Rt),

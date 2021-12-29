@@ -402,9 +402,8 @@ define <64 x half> @f24(i16 %a0) #2 {
 ; CHECK-LABEL: f24:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v0.h = vsplat(r1)
+; CHECK-NEXT:     v0.h = vsplat(r0)
 ; CHECK-NEXT:     jumpr r31
-; CHECK-NEXT:     vmem(r0+#0) = v0.new
 ; CHECK-NEXT:    }
   %v0 = bitcast i16 %a0 to half
   %v1 = insertelement <64 x half> undef, half %v0, i32 0
@@ -417,9 +416,8 @@ define <32 x float> @f25(float %a0) #2 {
 ; CHECK-LABEL: f25:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v0 = vsplat(r1)
+; CHECK-NEXT:     v0 = vsplat(r0)
 ; CHECK-NEXT:     jumpr r31
-; CHECK-NEXT:     vmem(r0+#0) = v0.new
 ; CHECK-NEXT:    }
   %v0 = insertelement <32 x float> undef, float %a0, i32 0
   %v1 = shufflevector <32 x float> %v0, <32 x float> undef, <32 x i32> zeroinitializer
