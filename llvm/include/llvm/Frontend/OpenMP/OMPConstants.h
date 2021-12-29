@@ -140,6 +140,14 @@ enum OMPTgtExecModeFlags : int8_t {
   LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue */ OMP_TGT_EXEC_MODE_GENERIC_SPMD)
 };
 
+enum class AddressSpace : unsigned {
+  Generic = 0,
+  Global = 1,
+  Shared = 3,
+  Constant = 4,
+  Local = 5,
+};
+
 } // end namespace omp
 
 } // end namespace llvm
