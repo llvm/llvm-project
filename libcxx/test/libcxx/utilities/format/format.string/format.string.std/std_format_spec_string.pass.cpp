@@ -206,12 +206,6 @@ constexpr void test() {
   test({.precision = 1, .precision_as_arg = true}, 4, CSTR(".{1}}"));
 
   test_exception<Parser<CharT>>(
-      "A format-spec precision field shouldn't have a leading zero",
-      CSTR(".00"));
-  test_exception<Parser<CharT>>(
-      "A format-spec precision field shouldn't have a leading zero",
-      CSTR(".01"));
-  test_exception<Parser<CharT>>(
       "The format-spec precision field doesn't contain a value or arg-id",
       CSTR(".a"));
   test_exception<Parser<CharT>>(
