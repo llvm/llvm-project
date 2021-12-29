@@ -612,8 +612,8 @@ bool HexagonEarlyIfConversion::visitBlock(MachineBasicBlock *B,
   // Simply keep a list of children of B, and traverse that list.
   using DTNodeVectType = SmallVector<MachineDomTreeNode *, 4>;
   DTNodeVectType Cn(GTN::child_begin(N), GTN::child_end(N));
-  for (DTNodeVectType::iterator I = Cn.begin(), E = Cn.end(); I != E; ++I) {
-    MachineBasicBlock *SB = (*I)->getBlock();
+  for (auto &I : Cn) {
+    MachineBasicBlock *SB = I->getBlock();
     if (!Deleted.count(SB))
       Changed |= visitBlock(SB, L);
   }
@@ -648,8 +648,8 @@ bool HexagonEarlyIfConversion::visitLoop(MachineLoop *L) {
              << "\n");
   bool Changed = false;
   if (L) {
-    for (MachineLoop::iterator I = L->begin(), E = L->end(); I != E; ++I)
-      Changed |= visitLoop(*I);
+    for (MachineLoop *I : *L)
+      Changed |= visitLoop(I);
   }
 
   MachineBasicBlock *EntryB = GraphTraits<MachineFunction*>::getEntryNode(MFN);
@@ -964,8 +964,8 @@ void HexagonEarlyIfConversion::removeBlock(MachineBasicBlock *B) {
     using DTNodeVectType = SmallVector<MachineDomTreeNode *, 4>;
 
     DTNodeVectType Cn(GTN::child_begin(N), GTN::child_end(N));
-    for (DTNodeVectType::iterator I = Cn.begin(), E = Cn.end(); I != E; ++I) {
-      MachineBasicBlock *SB = (*I)->getBlock();
+    for (auto &I : Cn) {
+      MachineBasicBlock *SB = I->getBlock();
       MDT->changeImmediateDominator(SB, IDB);
     }
   }
@@ -973,8 +973,8 @@ void HexagonEarlyIfConversion::removeBlock(MachineBasicBlock *B) {
   while (!B->succ_empty())
     B->removeSuccessor(B->succ_begin());
 
-  for (auto I = B->pred_begin(), E = B->pred_end(); I != E; ++I)
-    (*I)->removeSuccessor(B, true);
+  for (MachineBasicBlock *Pred : B->predecessors())
+    Pred->removeSuccessor(B, true);
 
   Deleted.insert(B);
   MDT->eraseNode(B);
@@ -1064,8 +1064,8 @@ bool HexagonEarlyIfConversion::runOnMachineFunction(MachineFunction &MF) {
   Deleted.clear();
   bool Changed = false;
 
-  for (MachineLoopInfo::iterator I = MLI->begin(), E = MLI->end(); I != E; ++I)
-    Changed |= visitLoop(*I);
+  for (MachineLoop *L : *MLI)
+    Changed |= visitLoop(L);
   Changed |= visitLoop(nullptr);
 
   return Changed;

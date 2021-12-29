@@ -15,19 +15,15 @@ define <2 x i64> @v2i64(i32 %index, i32 %TC, <2 x i64> %V1, <2 x i64> %V2) {
 ; CHECK-NEXT:    adds r6, r0, #1
 ; CHECK-NEXT:    adc r4, r4, #0
 ; CHECK-NEXT:    subs.w r0, lr, #-1
-; CHECK-NEXT:    sbcs r0, r12, #0
 ; CHECK-NEXT:    vmov q1[2], q1[0], lr, r6
-; CHECK-NEXT:    cset r0, lo
+; CHECK-NEXT:    sbcs r0, r12, #0
 ; CHECK-NEXT:    vmov q1[3], q1[1], r12, r4
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    mov.w r0, #0
-; CHECK-NEXT:    csetm r12, ne
+; CHECK-NEXT:    csetm r12, lo
 ; CHECK-NEXT:    subs.w r6, r6, #-1
-; CHECK-NEXT:    sbcs r6, r4, #0
 ; CHECK-NEXT:    bfi r5, r12, #0, #8
-; CHECK-NEXT:    cset r6, lo
-; CHECK-NEXT:    cmp r6, #0
-; CHECK-NEXT:    csetm r6, ne
+; CHECK-NEXT:    sbcs r6, r4, #0
+; CHECK-NEXT:    mov.w r0, #0
+; CHECK-NEXT:    csetm r6, lo
 ; CHECK-NEXT:    bfi r5, r6, #8, #8
 ; CHECK-NEXT:    vmsr p0, r5
 ; CHECK-NEXT:    vpsel q1, q1, q0
@@ -38,17 +34,13 @@ define <2 x i64> @v2i64(i32 %index, i32 %TC, <2 x i64> %V1, <2 x i64> %V2) {
 ; CHECK-NEXT:    subs r1, r6, r1
 ; CHECK-NEXT:    sbcs.w r1, r5, r4
 ; CHECK-NEXT:    vmov r5, r4, d1
-; CHECK-NEXT:    cset r1, lo
+; CHECK-NEXT:    csetm r1, lo
 ; CHECK-NEXT:    vldr d1, [sp, #16]
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, ne
 ; CHECK-NEXT:    bfi r0, r1, #0, #8
 ; CHECK-NEXT:    vmov r1, r6, d3
 ; CHECK-NEXT:    subs r1, r1, r5
 ; CHECK-NEXT:    sbcs.w r1, r6, r4
-; CHECK-NEXT:    cset r1, lo
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, ne
+; CHECK-NEXT:    csetm r1, lo
 ; CHECK-NEXT:    bfi r0, r1, #8, #8
 ; CHECK-NEXT:    vmsr p0, r0
 ; CHECK-NEXT:    add r0, sp, #24

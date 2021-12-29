@@ -97,9 +97,10 @@ bool elf::link(ArrayRef<const char *> args, bool canExitEarly,
     whyExtract.clear();
 
     tar = nullptr;
-    memset(&in, 0, sizeof(in));
+    in.reset();
 
-    partitions = {Partition()};
+    partitions.clear();
+    partitions.emplace_back();
 
     SharedFile::vernauxNum = 0;
   };
@@ -116,7 +117,8 @@ bool elf::link(ArrayRef<const char *> args, bool canExitEarly,
   script = std::make_unique<LinkerScript>();
   symtab = std::make_unique<SymbolTable>();
 
-  partitions = {Partition()};
+  partitions.clear();
+  partitions.emplace_back();
 
   config->progName = args[0];
 
@@ -846,14 +848,13 @@ static bool
 processCallGraphRelocations(SmallVector<uint32_t, 32> &symbolIndices,
                             ArrayRef<typename ELFT::CGProfile> &cgProfile,
                             ObjFile<ELFT> *inputObj) {
-  symbolIndices.clear();
-  const ELFFile<ELFT> &obj = inputObj->getObj();
-  ArrayRef<Elf_Shdr_Impl<ELFT>> objSections =
-      CHECK(obj.sections(), "could not retrieve object sections");
-
   if (inputObj->cgProfileSectionIndex == SHN_UNDEF)
     return false;
 
+  ArrayRef<Elf_Shdr_Impl<ELFT>> objSections =
+      inputObj->template getELFShdrs<ELFT>();
+  symbolIndices.clear();
+  const ELFFile<ELFT> &obj = inputObj->getObj();
   cgProfile =
       check(obj.template getSectionContentsAsArray<typename ELFT::CGProfile>(
           objSections[inputObj->cgProfileSectionIndex]));
@@ -1725,7 +1726,7 @@ static void handleUndefinedGlob(StringRef arg) {
   // symbols to the symbol table, invalidating the current iterator.
   std::vector<Symbol *> syms;
   for (Symbol *sym : symtab->symbols())
-    if (pat->match(sym->getName()))
+    if (!sym->isPlaceholder() && pat->match(sym->getName()))
       syms.push_back(sym);
 
   for (Symbol *sym : syms)
@@ -1822,17 +1823,21 @@ static void writeDependencyFile() {
 // symbols of type CommonSymbol.
 static void replaceCommonSymbols() {
   llvm::TimeTraceScope timeScope("Replace common symbols");
-  for (Symbol *sym : symtab->symbols()) {
-    auto *s = dyn_cast<CommonSymbol>(sym);
-    if (!s)
+  for (ELFFileBase *file : objectFiles) {
+    if (!file->hasCommonSyms)
       continue;
+    for (Symbol *sym : file->getGlobalSymbols()) {
+      auto *s = dyn_cast<CommonSymbol>(sym);
+      if (!s)
+        continue;
 
-    auto *bss = make<BssSection>("COMMON", s->size, s->alignment);
-    bss->file = s->file;
-    bss->markDead();
-    inputSections.push_back(bss);
-    s->replace(Defined{s->file, s->getName(), s->binding, s->stOther, s->type,
-                       /*value=*/0, s->size, bss});
+      auto *bss = make<BssSection>("COMMON", s->size, s->alignment);
+      bss->file = s->file;
+      bss->markDead();
+      inputSections.push_back(bss);
+      s->replace(Defined{s->file, s->getName(), s->binding, s->stOther, s->type,
+                         /*value=*/0, s->size, bss});
+    }
   }
 }
 
@@ -2003,7 +2008,8 @@ template <class ELFT> void LinkerDriver::compileBitcodeFiles() {
     // Parse '@' in symbol names for non-relocatable output.
     if (!config->relocatable)
       for (Symbol *sym : obj->getGlobalSymbols())
-        sym->parseSymbolVersion();
+        if (sym->hasVersionSuffix)
+          sym->parseSymbolVersion();
     objectFiles.push_back(obj);
   }
 }
@@ -2077,8 +2083,10 @@ static void redirectSymbols(ArrayRef<WrappedSymbol> wrapped) {
     map[w.real] = w.sym;
   }
   for (Symbol *sym : symtab->symbols()) {
-    // Enumerate symbols with a non-default version (foo@v1).
-    StringRef name = sym->getName();
+    // Enumerate symbols with a non-default version (foo@v1). hasVersionSuffix
+    // filters out most symbols but is not sufficient.
+    if (!sym->hasVersionSuffix)
+      continue;
     const char *suffix1 = sym->getVersionSuffix();
     if (suffix1[0] != '@' || suffix1[1] == '@')
       continue;
@@ -2087,7 +2095,7 @@ static void redirectSymbols(ArrayRef<WrappedSymbol> wrapped) {
     //
     // * There is a definition of foo@v1 and foo@@v1.
     // * There is a definition of foo@v1 and foo.
-    Defined *sym2 = dyn_cast_or_null<Defined>(symtab->find(name));
+    Defined *sym2 = dyn_cast_or_null<Defined>(symtab->find(sym->getName()));
     if (!sym2)
       continue;
     const char *suffix2 = sym2->getVersionSuffix();
@@ -2100,6 +2108,7 @@ static void redirectSymbols(ArrayRef<WrappedSymbol> wrapped) {
       sym2->resolve(*sym);
       // Eliminate foo@v1 from the symbol table.
       sym->symbolKind = Symbol::PlaceholderKind;
+      sym->isUsedInRegularObj = false;
     } else if (auto *sym1 = dyn_cast<Defined>(sym)) {
       if (sym2->versionId > VER_NDX_GLOBAL
               ? config->versionDefinitions[sym2->versionId].name == suffix1 + 1
@@ -2112,6 +2121,7 @@ static void redirectSymbols(ArrayRef<WrappedSymbol> wrapped) {
         // defined in the same place.
         map.try_emplace(sym2, sym);
         sym2->symbolKind = Symbol::PlaceholderKind;
+        sym2->isUsedInRegularObj = false;
       }
     }
   }
@@ -2361,12 +2371,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // except a few linker-synthesized ones will be added to the symbol table.
   compileBitcodeFiles<ELFT>();
 
-  // Handle --exclude-libs again because lto.tmp may reference additional
-  // libcalls symbols defined in an excluded archive. This may override
-  // versionId set by scanVersionScript().
-  if (args.hasArg(OPT_exclude_libs))
-    excludeLibs(args);
-
   // Symbol resolution finished. Report backward reference problems.
   reportBackrefs();
   if (errorCount())
@@ -2384,8 +2388,17 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
       !config->thinLTOModulesToCompile.empty())
     return;
 
+  // Handle --exclude-libs again because lto.tmp may reference additional
+  // libcalls symbols defined in an excluded archive. This may override
+  // versionId set by scanVersionScript().
+  if (args.hasArg(OPT_exclude_libs))
+    excludeLibs(args);
+
   // Apply symbol renames for --wrap and combine foo@v1 and foo@@v1.
   redirectSymbols(wrapped);
+
+  // Replace common symbols with regular symbols.
+  replaceCommonSymbols();
 
   {
     llvm::TimeTraceScope timeScope("Aggregate sections");
@@ -2470,9 +2483,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // This adds a .comment section containing a version string.
   if (!config->relocatable)
     inputSections.push_back(createCommentSection());
-
-  // Replace common symbols with regular symbols.
-  replaceCommonSymbols();
 
   // Split SHF_MERGE and .eh_frame sections into pieces in preparation for garbage collection.
   splitSections<ELFT>();

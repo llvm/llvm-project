@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_REFACTOR_RENAME_USR_LOC_FINDER_H
-#define LLVM_CLANG_TOOLING_REFACTOR_RENAME_USR_LOC_FINDER_H
+#ifndef LLVM_CLANG_TOOLING_REFACTORING_RENAME_USRLOCFINDER_H
+#define LLVM_CLANG_TOOLING_REFACTORING_RENAME_USRLOCFINDER_H
 
 #include "clang/AST/AST.h"
 #include "clang/Tooling/Core/Replacement.h"
@@ -49,4 +49,4 @@ SymbolOccurrences getOccurrencesOfUSRs(ArrayRef<std::string> USRs,
 } // end namespace tooling
 } // end namespace clang
 
-#endif // LLVM_CLANG_TOOLING_REFACTOR_RENAME_USR_LOC_FINDER_H
+#endif // LLVM_CLANG_TOOLING_REFACTORING_RENAME_USRLOCFINDER_H

@@ -1884,6 +1884,139 @@ static Instruction *foldSelectGEP(GetElementPtrInst &GEP,
   return SelectInst::Create(Cond, NewTrueC, NewFalseC, "", nullptr, Sel);
 }
 
+Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
+                                             GEPOperator *Src) {
+  // Combine Indices - If the source pointer to this getelementptr instruction
+  // is a getelementptr instruction with matching element type, combine the
+  // indices of the two getelementptr instructions into a single instruction.
+  if (Src->getResultElementType() != GEP.getSourceElementType())
+    return nullptr;
+
+  if (!shouldMergeGEPs(*cast<GEPOperator>(&GEP), *Src))
+    return nullptr;
+
+  if (Src->getNumOperands() == 2 && GEP.getNumOperands() == 2 &&
+      Src->hasOneUse()) {
+    Value *GO1 = GEP.getOperand(1);
+    Value *SO1 = Src->getOperand(1);
+
+    if (LI) {
+      // Try to reassociate loop invariant GEP chains to enable LICM.
+      if (Loop *L = LI->getLoopFor(GEP.getParent())) {
+        // Reassociate the two GEPs if SO1 is variant in the loop and GO1 is
+        // invariant: this breaks the dependence between GEPs and allows LICM
+        // to hoist the invariant part out of the loop.
+        if (L->isLoopInvariant(GO1) && !L->isLoopInvariant(SO1)) {
+          // We have to be careful here.
+          // We have something like:
+          //  %src = getelementptr <ty>, <ty>* %base, <ty> %idx
+          //  %gep = getelementptr <ty>, <ty>* %src, <ty> %idx2
+          // If we just swap idx & idx2 then we could inadvertantly
+          // change %src from a vector to a scalar, or vice versa.
+          // Cases:
+          //  1) %base a scalar & idx a scalar & idx2 a vector
+          //      => Swapping idx & idx2 turns %src into a vector type.
+          //  2) %base a scalar & idx a vector & idx2 a scalar
+          //      => Swapping idx & idx2 turns %src in a scalar type
+          //  3) %base, %idx, and %idx2 are scalars
+          //      => %src & %gep are scalars
+          //      => swapping idx & idx2 is safe
+          //  4) %base a vector
+          //      => %src is a vector
+          //      => swapping idx & idx2 is safe.
+          auto *SO0 = Src->getOperand(0);
+          auto *SO0Ty = SO0->getType();
+          if (!isa<VectorType>(GEP.getType()) || // case 3
+              isa<VectorType>(SO0Ty)) { // case 4
+            Src->setOperand(1, GO1);
+            GEP.setOperand(1, SO1);
+            return &GEP;
+          } else {
+            // Case 1 or 2
+            // -- have to recreate %src & %gep
+            // put NewSrc at same location as %src
+            Builder.SetInsertPoint(cast<Instruction>(Src));
+            Value *NewSrc = Builder.CreateGEP(
+                GEP.getSourceElementType(), SO0, GO1, Src->getName());
+            // Propagate 'inbounds' if the new source was not constant-folded.
+            if (auto *NewSrcGEPI = dyn_cast<GetElementPtrInst>(NewSrc))
+              NewSrcGEPI->setIsInBounds(Src->isInBounds());
+            GetElementPtrInst *NewGEP = GetElementPtrInst::Create(
+                GEP.getSourceElementType(), NewSrc, {SO1});
+            NewGEP->setIsInBounds(GEP.isInBounds());
+            return NewGEP;
+          }
+        }
+      }
+    }
+  }
+
+  // Note that if our source is a gep chain itself then we wait for that
+  // chain to be resolved before we perform this transformation.  This
+  // avoids us creating a TON of code in some cases.
+  if (auto *SrcGEP = dyn_cast<GEPOperator>(Src->getOperand(0)))
+    if (SrcGEP->getNumOperands() == 2 && shouldMergeGEPs(*Src, *SrcGEP))
+      return nullptr;   // Wait until our source is folded to completion.
+
+  SmallVector<Value*, 8> Indices;
+
+  // Find out whether the last index in the source GEP is a sequential idx.
+  bool EndsWithSequential = false;
+  for (gep_type_iterator I = gep_type_begin(*Src), E = gep_type_end(*Src);
+       I != E; ++I)
+    EndsWithSequential = I.isSequential();
+
+  // Can we combine the two pointer arithmetics offsets?
+  if (EndsWithSequential) {
+    // Replace: gep (gep %P, long B), long A, ...
+    // With:    T = long A+B; gep %P, T, ...
+    Value *SO1 = Src->getOperand(Src->getNumOperands()-1);
+    Value *GO1 = GEP.getOperand(1);
+
+    // If they aren't the same type, then the input hasn't been processed
+    // by the loop above yet (which canonicalizes sequential index types to
+    // intptr_t).  Just avoid transforming this until the input has been
+    // normalized.
+    if (SO1->getType() != GO1->getType())
+      return nullptr;
+
+    Value *Sum =
+        SimplifyAddInst(GO1, SO1, false, false, SQ.getWithInstruction(&GEP));
+    // Only do the combine when we are sure the cost after the
+    // merge is never more than that before the merge.
+    if (Sum == nullptr)
+      return nullptr;
+
+    // Update the GEP in place if possible.
+    if (Src->getNumOperands() == 2) {
+      GEP.setIsInBounds(isMergedGEPInBounds(*Src, *cast<GEPOperator>(&GEP)));
+      replaceOperand(GEP, 0, Src->getOperand(0));
+      replaceOperand(GEP, 1, Sum);
+      return &GEP;
+    }
+    Indices.append(Src->op_begin()+1, Src->op_end()-1);
+    Indices.push_back(Sum);
+    Indices.append(GEP.op_begin()+2, GEP.op_end());
+  } else if (isa<Constant>(*GEP.idx_begin()) &&
+             cast<Constant>(*GEP.idx_begin())->isNullValue() &&
+             Src->getNumOperands() != 1) {
+    // Otherwise we can do the fold if the first index of the GEP is a zero
+    Indices.append(Src->op_begin()+1, Src->op_end());
+    Indices.append(GEP.idx_begin()+1, GEP.idx_end());
+  }
+
+  if (!Indices.empty())
+    return isMergedGEPInBounds(*Src, *cast<GEPOperator>(&GEP))
+               ? GetElementPtrInst::CreateInBounds(
+                     Src->getSourceElementType(), Src->getOperand(0), Indices,
+                     GEP.getName())
+               : GetElementPtrInst::Create(Src->getSourceElementType(),
+                                           Src->getOperand(0), Indices,
+                                           GEP.getName());
+
+  return nullptr;
+}
+
 Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   SmallVector<Value *, 8> Ops(GEP.operands());
   Type *GEPType = GEP.getType();
@@ -2063,132 +2196,9 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     PtrOp = NewGEP;
   }
 
-  // Combine Indices - If the source pointer to this getelementptr instruction
-  // is a getelementptr instruction, combine the indices of the two
-  // getelementptr instructions into a single instruction.
-  if (auto *Src = dyn_cast<GEPOperator>(PtrOp)) {
-    if (!shouldMergeGEPs(*cast<GEPOperator>(&GEP), *Src))
-      return nullptr;
-
-    if (Src->getNumOperands() == 2 && GEP.getNumOperands() == 2 &&
-        Src->hasOneUse()) {
-      Value *GO1 = GEP.getOperand(1);
-      Value *SO1 = Src->getOperand(1);
-
-      if (LI) {
-        // Try to reassociate loop invariant GEP chains to enable LICM.
-        if (Loop *L = LI->getLoopFor(GEP.getParent())) {
-          // Reassociate the two GEPs if SO1 is variant in the loop and GO1 is
-          // invariant: this breaks the dependence between GEPs and allows LICM
-          // to hoist the invariant part out of the loop.
-          if (L->isLoopInvariant(GO1) && !L->isLoopInvariant(SO1)) {
-            // We have to be careful here.
-            // We have something like:
-            //  %src = getelementptr <ty>, <ty>* %base, <ty> %idx
-            //  %gep = getelementptr <ty>, <ty>* %src, <ty> %idx2
-            // If we just swap idx & idx2 then we could inadvertantly
-            // change %src from a vector to a scalar, or vice versa.
-            // Cases:
-            //  1) %base a scalar & idx a scalar & idx2 a vector
-            //      => Swapping idx & idx2 turns %src into a vector type.
-            //  2) %base a scalar & idx a vector & idx2 a scalar
-            //      => Swapping idx & idx2 turns %src in a scalar type
-            //  3) %base, %idx, and %idx2 are scalars
-            //      => %src & %gep are scalars
-            //      => swapping idx & idx2 is safe
-            //  4) %base a vector
-            //      => %src is a vector
-            //      => swapping idx & idx2 is safe.
-            auto *SO0 = Src->getOperand(0);
-            auto *SO0Ty = SO0->getType();
-            if (!isa<VectorType>(GEPType) || // case 3
-                isa<VectorType>(SO0Ty)) {    // case 4
-              Src->setOperand(1, GO1);
-              GEP.setOperand(1, SO1);
-              return &GEP;
-            } else {
-              // Case 1 or 2
-              // -- have to recreate %src & %gep
-              // put NewSrc at same location as %src
-              Builder.SetInsertPoint(cast<Instruction>(PtrOp));
-              Value *NewSrc =
-                  Builder.CreateGEP(GEPEltType, SO0, GO1, Src->getName());
-              // Propagate 'inbounds' if the new source was not constant-folded.
-              if (auto *NewSrcGEPI = dyn_cast<GetElementPtrInst>(NewSrc))
-                NewSrcGEPI->setIsInBounds(Src->isInBounds());
-              GetElementPtrInst *NewGEP =
-                  GetElementPtrInst::Create(GEPEltType, NewSrc, {SO1});
-              NewGEP->setIsInBounds(GEP.isInBounds());
-              return NewGEP;
-            }
-          }
-        }
-      }
-    }
-
-    // Note that if our source is a gep chain itself then we wait for that
-    // chain to be resolved before we perform this transformation.  This
-    // avoids us creating a TON of code in some cases.
-    if (auto *SrcGEP = dyn_cast<GEPOperator>(Src->getOperand(0)))
-      if (SrcGEP->getNumOperands() == 2 && shouldMergeGEPs(*Src, *SrcGEP))
-        return nullptr;   // Wait until our source is folded to completion.
-
-    SmallVector<Value*, 8> Indices;
-
-    // Find out whether the last index in the source GEP is a sequential idx.
-    bool EndsWithSequential = false;
-    for (gep_type_iterator I = gep_type_begin(*Src), E = gep_type_end(*Src);
-         I != E; ++I)
-      EndsWithSequential = I.isSequential();
-
-    // Can we combine the two pointer arithmetics offsets?
-    if (EndsWithSequential) {
-      // Replace: gep (gep %P, long B), long A, ...
-      // With:    T = long A+B; gep %P, T, ...
-      Value *SO1 = Src->getOperand(Src->getNumOperands()-1);
-      Value *GO1 = GEP.getOperand(1);
-
-      // If they aren't the same type, then the input hasn't been processed
-      // by the loop above yet (which canonicalizes sequential index types to
-      // intptr_t).  Just avoid transforming this until the input has been
-      // normalized.
-      if (SO1->getType() != GO1->getType())
-        return nullptr;
-
-      Value *Sum =
-          SimplifyAddInst(GO1, SO1, false, false, SQ.getWithInstruction(&GEP));
-      // Only do the combine when we are sure the cost after the
-      // merge is never more than that before the merge.
-      if (Sum == nullptr)
-        return nullptr;
-
-      // Update the GEP in place if possible.
-      if (Src->getNumOperands() == 2) {
-        GEP.setIsInBounds(isMergedGEPInBounds(*Src, *cast<GEPOperator>(&GEP)));
-        replaceOperand(GEP, 0, Src->getOperand(0));
-        replaceOperand(GEP, 1, Sum);
-        return &GEP;
-      }
-      Indices.append(Src->op_begin()+1, Src->op_end()-1);
-      Indices.push_back(Sum);
-      Indices.append(GEP.op_begin()+2, GEP.op_end());
-    } else if (isa<Constant>(*GEP.idx_begin()) &&
-               cast<Constant>(*GEP.idx_begin())->isNullValue() &&
-               Src->getNumOperands() != 1) {
-      // Otherwise we can do the fold if the first index of the GEP is a zero
-      Indices.append(Src->op_begin()+1, Src->op_end());
-      Indices.append(GEP.idx_begin()+1, GEP.idx_end());
-    }
-
-    if (!Indices.empty())
-      return isMergedGEPInBounds(*Src, *cast<GEPOperator>(&GEP))
-                 ? GetElementPtrInst::CreateInBounds(
-                       Src->getSourceElementType(), Src->getOperand(0), Indices,
-                       GEP.getName())
-                 : GetElementPtrInst::Create(Src->getSourceElementType(),
-                                             Src->getOperand(0), Indices,
-                                             GEP.getName());
-  }
+  if (auto *Src = dyn_cast<GEPOperator>(PtrOp))
+    if (Instruction *I = visitGEPOfGEP(GEP, Src))
+      return I;
 
   // Skip if GEP source element type is scalable. The type alloc size is unknown
   // at compile-time.
@@ -2234,7 +2244,11 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   Value *StrippedPtr = PtrOp->stripPointerCasts();
   PointerType *StrippedPtrTy = cast<PointerType>(StrippedPtr->getType());
 
-  if (StrippedPtr != PtrOp) {
+  // TODO: The basic approach of these folds is not compatible with opaque
+  // pointers, because we can't use bitcasts as a hint for a desirable GEP
+  // type. Instead, we should perform canonicalization directly on the GEP
+  // type. For now, skip these.
+  if (StrippedPtr != PtrOp && !StrippedPtrTy->isOpaque()) {
     bool HasZeroPointerIndex = false;
     Type *StrippedPtrEltTy = StrippedPtrTy->getElementType();
 

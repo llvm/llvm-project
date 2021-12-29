@@ -892,6 +892,7 @@ def Arith_UIToFPOp : Arith_IToFCastOp<"uitofp"> {
     rounded using the default rounding mode. When operating on vectors, casts
     elementwise.
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -906,6 +907,7 @@ def Arith_SIToFPOp : Arith_IToFCastOp<"sitofp"> {
     rounded using the default rounding mode. When operating on vectors, casts
     elementwise.
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -919,6 +921,7 @@ def Arith_FPToUIOp : Arith_FToICastOp<"fptoui"> {
     towards zero) unsigned integer value. When operating on vectors, casts
     elementwise.
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -932,6 +935,7 @@ def Arith_FPToSIOp : Arith_FToICastOp<"fptosi"> {
     towards zero) signed integer value. When operating on vectors, casts
     elementwise.
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//

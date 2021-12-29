@@ -693,7 +693,7 @@ const UnixSignalsSP &PlatformRemoteGDBServer::GetRemoteUnixSignals() {
         if (object_sp && object_sp->IsValid())
           notify = object_sp->GetBooleanValue();
 
-        std::string description{""};
+        std::string description;
         object_sp = dict->GetValueForKey("description");
         if (object_sp && object_sp->IsValid())
           description = std::string(object_sp->GetStringValue());

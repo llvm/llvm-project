@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_BASIC_ALIGNED_ALLOCATION_H
-#define LLVM_CLANG_BASIC_ALIGNED_ALLOCATION_H
+#ifndef LLVM_CLANG_BASIC_ALIGNEDALLOCATION_H
+#define LLVM_CLANG_BASIC_ALIGNEDALLOCATION_H
 
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -42,4 +42,4 @@ inline llvm::VersionTuple alignedAllocMinVersion(llvm::Triple::OSType OS) {
 
 } // end namespace clang
 
-#endif // LLVM_CLANG_BASIC_ALIGNED_ALLOCATION_H
+#endif // LLVM_CLANG_BASIC_ALIGNEDALLOCATION_H

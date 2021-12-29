@@ -125,8 +125,8 @@ namespace {
     };
 
     LatticeCell() : Kind(Top), Size(0), IsSpecial(false) {
-      for (unsigned i = 0; i < MaxCellSize; ++i)
-        Values[i] = nullptr;
+      for (const Constant *&Value : Values)
+        Value = nullptr;
     }
 
     bool meet(const LatticeCell &L);
@@ -1029,8 +1029,8 @@ bool MachineConstPropagator::rewrite(MachineFunction &MF) {
           ToRemove.push_back(const_cast<MachineBasicBlock*>(SB));
         Targets.remove(SB);
       }
-      for (unsigned i = 0, n = ToRemove.size(); i < n; ++i)
-        removeCFGEdge(B, ToRemove[i]);
+      for (MachineBasicBlock *MBB : ToRemove)
+        removeCFGEdge(B, MBB);
       // If there are any blocks left in the computed targets, it means that
       // we think that the block could go somewhere, but the CFG does not.
       // This could legitimately happen in blocks that have non-returning

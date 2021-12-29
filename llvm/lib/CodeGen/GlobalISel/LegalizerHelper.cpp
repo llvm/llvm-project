@@ -302,7 +302,6 @@ void LegalizerHelper::mergeMixedSubvectors(Register DstReg,
     appendVectorElts(AllElts, Leftover);
 
   MIRBuilder.buildMerge(DstReg, AllElts);
-  return;
 }
 
 /// Append the result registers of G_UNMERGE_VALUES \p MI to \p Regs.
@@ -3656,7 +3655,6 @@ static bool hasSameNumEltsOnAllVectorOperands(
     if (!Ty.isVector()) {
       if (!is_contained(NonVecOpIndices, OpIdx))
         return false;
-      is_contained(NonVecOpIndices, OpIdx);
       continue;
     }
 

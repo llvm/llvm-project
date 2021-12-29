@@ -55,6 +55,12 @@ HexagonTargetLowering::initializeHVXLowering() {
     addRegisterClass(MVT::v32i1, &Hexagon::HvxQRRegClass);
     addRegisterClass(MVT::v64i1, &Hexagon::HvxQRRegClass);
     addRegisterClass(MVT::v128i1, &Hexagon::HvxQRRegClass);
+    if (Subtarget.useHVXV68Ops() && Subtarget.useHVXFloatingPoint()) {
+      addRegisterClass(MVT::v32f32, &Hexagon::HvxVRRegClass);
+      addRegisterClass(MVT::v64f16, &Hexagon::HvxVRRegClass);
+      addRegisterClass(MVT::v64f32, &Hexagon::HvxWRRegClass);
+      addRegisterClass(MVT::v128f16, &Hexagon::HvxWRRegClass);
+    }
   }
 
   // Set up operation actions.
@@ -82,6 +88,27 @@ HexagonTargetLowering::initializeHVXLowering() {
   setOperationAction(ISD::VECTOR_SHUFFLE,     ByteV,      Legal);
   setOperationAction(ISD::VECTOR_SHUFFLE,     ByteW,      Legal);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
+
+  if (Subtarget.useHVX128BOps() && Subtarget.useHVXV68Ops() &&
+      Subtarget.useHVXFloatingPoint()) {
+    // Handle ISD::BUILD_VECTOR for v32f32 in a custom way to generate vsplat
+    setOperationAction(ISD::BUILD_VECTOR, MVT::v32f32, Custom);
+
+    // BUILD_VECTOR with f16 operands cannot be promoted without
+    // promoting the result, so lower the node to vsplat or constant pool
+    setOperationAction(ISD::BUILD_VECTOR,      MVT::f16,    Custom);
+    setOperationAction(ISD::SPLAT_VECTOR,      MVT::f16,    Custom);
+    setOperationAction(ISD::SPLAT_VECTOR,      MVT::v64f16, Legal);
+    setOperationAction(ISD::SPLAT_VECTOR,      MVT::v32f32, Legal);
+
+    // Custom-lower BUILD_VECTOR for vector pairs. The standard (target-
+    // independent) handling of it would convert it to a load, which is
+    // not always the optimal choice.
+    setOperationAction(ISD::BUILD_VECTOR, MVT::v64f32, Custom);
+    // Make concat-vectors custom to handle concats of more than 2 vectors.
+    setOperationAction(ISD::CONCAT_VECTORS, MVT::v128f16, Custom);
+    setOperationAction(ISD::CONCAT_VECTORS, MVT::v64f32, Custom);
+  }
 
   for (MVT T : LegalV) {
     setIndexedLoadAction(ISD::POST_INC,  T, Legal);
@@ -497,7 +524,9 @@ HexagonTargetLowering::buildHvxVectorReg(ArrayRef<SDValue> Values,
   assert(ElemSize*VecLen == HwLen);
   SmallVector<SDValue,32> Words;
 
-  if (VecTy.getVectorElementType() != MVT::i32) {
+  if (VecTy.getVectorElementType() != MVT::i32 &&
+      !(Subtarget.useHVXFloatingPoint() &&
+      VecTy.getVectorElementType() == MVT::f32)) {
     assert((ElemSize == 1 || ElemSize == 2) && "Invalid element size");
     unsigned OpsPerWord = (ElemSize == 1) ? 4 : 2;
     MVT PartVT = MVT::getVectorVT(VecTy.getVectorElementType(), OpsPerWord);
@@ -506,22 +535,31 @@ HexagonTargetLowering::buildHvxVectorReg(ArrayRef<SDValue> Values,
       Words.push_back(DAG.getBitcast(MVT::i32, W));
     }
   } else {
-    Words.assign(Values.begin(), Values.end());
+    for (SDValue V : Values)
+      Words.push_back(DAG.getBitcast(MVT::i32, V));
   }
+  auto isSplat = [] (ArrayRef<SDValue> Values, SDValue &SplatV) {
+    unsigned NumValues = Values.size();
+    assert(NumValues > 0);
+    bool IsUndef = true;
+    for (unsigned i = 0; i != NumValues; ++i) {
+      if (Values[i].isUndef())
+        continue;
+      IsUndef = false;
+      if (!SplatV.getNode())
+        SplatV = Values[i];
+      else if (SplatV != Values[i])
+        return false;
+    }
+    if (IsUndef)
+      SplatV = Values[0];
+    return true;
+  };
 
   unsigned NumWords = Words.size();
-  bool IsSplat = true, IsUndef = true;
   SDValue SplatV;
-  for (unsigned i = 0; i != NumWords && IsSplat; ++i) {
-    if (isUndef(Words[i]))
-      continue;
-    IsUndef = false;
-    if (!SplatV.getNode())
-      SplatV = Words[i];
-    else if (SplatV != Words[i])
-      IsSplat = false;
-  }
-  if (IsUndef)
+  bool IsSplat = isSplat(Words, SplatV);
+  if (IsSplat && isUndef(SplatV))
     return DAG.getUNDEF(VecTy);
   if (IsSplat) {
     assert(SplatV.getNode());
@@ -618,24 +656,44 @@ HexagonTargetLowering::buildHvxVectorReg(ArrayRef<SDValue> Values,
     }
   }
 
-  // Construct two halves in parallel, then or them together.
+  // Find most common element to initialize vector with. This is to avoid
+  // unnecessary vinsert/valign for cases where the same value is present
+  // many times. Creates a histogram of the vector's elements to find the
+  // most common element.
   assert(4*Words.size() == Subtarget.getVectorLength());
-  SDValue HalfV0 = getInstr(Hexagon::V6_vd0, dl, VecTy, {}, DAG);
-  SDValue HalfV1 = getInstr(Hexagon::V6_vd0, dl, VecTy, {}, DAG);
-  SDValue S = DAG.getConstant(4, dl, MVT::i32);
-  for (unsigned i = 0; i != NumWords/2; ++i) {
-    SDValue N = DAG.getNode(HexagonISD::VINSERTW0, dl, VecTy,
-                            {HalfV0, Words[i]});
-    SDValue M = DAG.getNode(HexagonISD::VINSERTW0, dl, VecTy,
-                            {HalfV1, Words[i+NumWords/2]});
-    HalfV0 = DAG.getNode(HexagonISD::VROR, dl, VecTy, {N, S});
-    HalfV1 = DAG.getNode(HexagonISD::VROR, dl, VecTy, {M, S});
+  SmallVector<int,32> VecHist(32);
+  int MaxAt = 0;
+  for (unsigned i = 0; i != NumWords; ++i) {
+    VecHist[i] = 0;
+    if (Words[i].isUndef())
+      continue;
+    for (unsigned j = i; j != NumWords; ++j)
+      if (Words[i] == Words[j])
+        VecHist[i]++;
+
+    if (VecHist[i] > VecHist[MaxAt])
+      MaxAt = i;
   }
 
-  HalfV0 = DAG.getNode(HexagonISD::VROR, dl, VecTy,
-                       {HalfV0, DAG.getConstant(HwLen/2, dl, MVT::i32)});
-  SDValue DstV = DAG.getNode(ISD::OR, dl, VecTy, {HalfV0, HalfV1});
-  return DstV;
+  // If each value is different, don't do splat, just insert them one by one.
+  bool NoSplat = VecHist[MaxAt] <= 1;
+  SDValue RotV = NoSplat
+                     ? DAG.getUNDEF(VecTy)
+                     : DAG.getNode(ISD::SPLAT_VECTOR, dl, VecTy, Words[MaxAt]);
+  int Rn = 0;
+  for (unsigned i = 0; i != NumWords; ++i) {
+    // Rotate by element count since last insertion.
+    if (NoSplat || Words[i] != Words[MaxAt]) {
+      RotV = DAG.getNode(HexagonISD::VROR, dl, VecTy,
+                         {RotV, DAG.getConstant(Rn, dl, MVT::i32)});
+      RotV = DAG.getNode(HexagonISD::VINSERTW0, dl, VecTy, {RotV, Words[i]});
+      Rn = 0;
+    }
+    Rn += 4;
+  }
+  // Perform last rotation.
+  return DAG.getNode(HexagonISD::VROR, dl, VecTy,
+                     {RotV, DAG.getConstant(Rn, dl, MVT::i32)});
 }
 
 SDValue
@@ -1237,6 +1295,19 @@ HexagonTargetLowering::LowerHvxBuildVector(SDValue Op, SelectionDAG &DAG)
   if (VecTy.getVectorElementType() == MVT::i1)
     return buildHvxVectorPred(Ops, dl, VecTy, DAG);
 
+  // In case of MVT::f16 BUILD_VECTOR, since MVT::f16 is
+  // not a legal type, just bitcast the node to use i16
+  // types and bitcast the result back to f16
+  if (VecTy.getVectorElementType() == MVT::f16) {
+    SmallVector<SDValue,64> NewOps;
+    for (unsigned i = 0; i != Size; i++)
+      NewOps.push_back(DAG.getBitcast(MVT::i16, Ops[i]));
+
+    SDValue T0 = DAG.getNode(ISD::BUILD_VECTOR, dl,
+        tyVector(VecTy, MVT::i16), NewOps);
+    return DAG.getBitcast(tyVector(VecTy, MVT::f16), T0);
+  }
+
   if (VecTy.getSizeInBits() == 16*Subtarget.getVectorLength()) {
     ArrayRef<SDValue> A(Ops);
     MVT SingleTy = typeSplit(VecTy).first;
@@ -1246,6 +1317,24 @@ HexagonTargetLowering::LowerHvxBuildVector(SDValue Op, SelectionDAG &DAG)
   }
 
   return buildHvxVectorReg(Ops, dl, VecTy, DAG);
+}
+
+SDValue
+HexagonTargetLowering::LowerHvxSplatVector(SDValue Op, SelectionDAG &DAG)
+      const {
+  const SDLoc &dl(Op);
+  MVT VecTy = ty(Op);
+  MVT ArgTy = ty(Op.getOperand(0));
+
+  if (ArgTy == MVT::f16) {
+    MVT SplatTy =  MVT::getVectorVT(MVT::i16, VecTy.getVectorNumElements());
+    SDValue ToInt16 = DAG.getBitcast(MVT::i16, Op.getOperand(0));
+    SDValue ToInt32 = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i32, ToInt16);
+    SDValue Splat = DAG.getNode(ISD::SPLAT_VECTOR, dl, SplatTy, ToInt32);
+    return DAG.getBitcast(VecTy, Splat);
+  }
+
+  return SDValue();
 }
 
 SDValue
@@ -2134,6 +2223,7 @@ HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
     default:
       break;
     case ISD::BUILD_VECTOR:            return LowerHvxBuildVector(Op, DAG);
+    case ISD::SPLAT_VECTOR:            return LowerHvxSplatVector(Op, DAG);
     case ISD::CONCAT_VECTORS:          return LowerHvxConcatVectors(Op, DAG);
     case ISD::INSERT_SUBVECTOR:        return LowerHvxInsertSubvector(Op, DAG);
     case ISD::INSERT_VECTOR_ELT:       return LowerHvxInsertElement(Op, DAG);

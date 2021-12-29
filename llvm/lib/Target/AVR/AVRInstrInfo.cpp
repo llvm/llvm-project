@@ -304,11 +304,11 @@ bool AVRInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
       }
 
       Cond.clear();
-      FBB = 0;
+      FBB = nullptr;
 
       // Delete the JMP if it's equivalent to a fall-through.
       if (MBB.isLayoutSuccessor(I->getOperand(0).getMBB())) {
-        TBB = 0;
+        TBB = nullptr;
         I->eraseFromParent();
         I = MBB.end();
         UnCondBrIter = MBB.end();
@@ -571,8 +571,6 @@ void AVRInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
   // See lib/CodeGen/RegisterRelaxation.cpp for details.
   // We end up here when a jump is too long for a RJMP instruction.
   BuildMI(&MBB, DL, get(AVR::JMPk)).addMBB(&NewDestBB);
-
-  return;
 }
 
 } // end of namespace llvm

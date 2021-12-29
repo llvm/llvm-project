@@ -2804,7 +2804,8 @@ bool ConditionBRVisitor::patternMatch(const Expr *Ex,
       Out << '\''
           << Lexer::getSourceText(
                  CharSourceRange::getTokenRange(Ex->getSourceRange()),
-                 BRC.getSourceManager(), BRC.getASTContext().getLangOpts(), 0)
+                 BRC.getSourceManager(), BRC.getASTContext().getLangOpts(),
+                 nullptr)
           << '\'';
   }
 

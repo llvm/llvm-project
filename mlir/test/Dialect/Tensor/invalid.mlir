@@ -300,3 +300,20 @@ func @rank(%0: f32) {
   "tensor.rank"(%0): (f32)->index
   return
 }
+
+// -----
+
+func @illegal_num_offsets(%arg0 : tensor<?x?x?xf32>, %arg1 : index, %arg2 : index) {
+  // expected-error@+1 {{expected 3 offset values}}
+  %0 = tensor.extract_slice %arg0[0, 0] [%arg1, %arg2] [1, 1] : tensor<?x?x?xf32> to tensor<?x?x?xf32>
+  return
+}
+
+// -----
+
+func @illegal_num_offsets(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?x?xf32>,
+    %arg2 : index, %arg3 : index) {
+  // expected-error@+1 {{expected 3 offset values}}
+  %0 = tensor.insert_slice %arg0 into %arg1[0, 0] [%arg2, %arg3] [1, 1] : tensor<?x?xf32> into tensor<?x?x?xf32>
+  return
+}

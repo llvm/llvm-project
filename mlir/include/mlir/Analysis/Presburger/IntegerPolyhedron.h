@@ -185,7 +185,29 @@ public:
   /// Removes all equalities and inequalities.
   void clearConstraints();
 
+  /// Gather positions of all lower and upper bounds of the identifier at `pos`,
+  /// and optionally any equalities on it. In addition, the bounds are to be
+  /// independent of identifiers in position range [`offset`, `offset` + `num`).
+  void
+  getLowerAndUpperBoundIndices(unsigned pos,
+                               SmallVectorImpl<unsigned> *lbIndices,
+                               SmallVectorImpl<unsigned> *ubIndices,
+                               SmallVectorImpl<unsigned> *eqIndices = nullptr,
+                               unsigned offset = 0, unsigned num = 0) const;
+
+  void print(raw_ostream &os) const;
+  void dump() const;
+
 protected:
+  /// Returns false if the fields corresponding to various identifier counts, or
+  /// equality/inequality buffer sizes aren't consistent; true otherwise. This
+  /// is meant to be used within an assert internally.
+  virtual bool hasConsistentState() const;
+
+  /// Prints the number of constraints, dimensions, symbols and locals in the
+  /// IntegerPolyhedron.
+  virtual void printSpace(raw_ostream &os) const;
+
   /// Return the index at which the specified kind of id starts.
   unsigned getIdKindOffset(IdKind kind) const;
 

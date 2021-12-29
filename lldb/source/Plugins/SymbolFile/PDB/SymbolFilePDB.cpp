@@ -239,7 +239,6 @@ void SymbolFilePDB::GetCompileUnitIndex(
     }
   }
   index = UINT32_MAX;
-  return;
 }
 
 std::unique_ptr<llvm::pdb::PDBSymbolCompiland>
@@ -402,7 +401,7 @@ static size_t ParseFunctionBlocksForPDBSymbol(
         block = parent_block;
       else
         break;
-    } else if (llvm::dyn_cast<PDBSymbolBlock>(pdb_symbol)) {
+    } else if (llvm::isa<PDBSymbolBlock>(pdb_symbol)) {
       auto uid = pdb_symbol->getSymIndexId();
       if (parent_block->FindBlockByID(uid))
         break;

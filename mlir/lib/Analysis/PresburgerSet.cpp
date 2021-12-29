@@ -242,7 +242,7 @@ static void subtractRecursively(FlatAffineConstraints &b, Simplex &simplex,
   simplex.appendVariable(numLocalsAdded);
 
   unsigned snapshotBeforeIntersect = simplex.getSnapshot();
-  simplex.intersectFlatAffineConstraints(sI);
+  simplex.intersectIntegerPolyhedron(sI);
 
   if (simplex.isEmpty()) {
     /// b ^ s_i is empty, so b \ s_i = b. We move directly to i + 1.

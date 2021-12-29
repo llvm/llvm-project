@@ -155,7 +155,7 @@ public:
       return false;
 
     // Ignore anonymous functions.
-    if (!dyn_cast_or_null<NamedDecl>(AC.getDecl()))
+    if (!isa_and_nonnull<NamedDecl>(AC.getDecl()))
       return false;
 
     SortedGraph = AC.getAnalysis<PostOrderCFGView>();
@@ -517,4 +517,4 @@ void printSCFG(CFGWalker &Walker);
 } // namespace threadSafety
 } // namespace clang
 
-#endif // LLVM_CLANG_THREAD_SAFETY_COMMON_H
+#endif // LLVM_CLANG_ANALYSIS_ANALYSES_THREADSAFETYCOMMON_H

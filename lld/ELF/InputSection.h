@@ -130,13 +130,16 @@ public:
   // one or two jump instructions at the end that could be relaxed to a smaller
   // instruction. The members below help trimming the trailing jump instruction
   // and shrinking a section.
-  unsigned bytesDropped = 0;
+  uint8_t bytesDropped = 0;
 
   // Whether the section needs to be padded with a NOP filler due to
   // deleteFallThruJmpInsn.
   bool nopFiller = false;
 
-  void drop_back(uint64_t num) { bytesDropped += num; }
+  void drop_back(unsigned num) {
+    assert(bytesDropped + num < 256);
+    bytesDropped += num;
+  }
 
   void push_back(uint64_t num) {
     assert(bytesDropped >= num);
@@ -155,8 +158,6 @@ public:
       uncompress();
     return rawData;
   }
-
-  uint64_t getOffsetInFile() const;
 
   // Input sections are part of an output section. Special sections
   // like .eh_frame and merge sections are first combined into a
@@ -180,7 +181,6 @@ public:
 
   // Get the function symbol that encloses this offset from within the
   // section.
-  template <class ELFT>
   Defined *getEnclosingFunction(uint64_t offset);
 
   // Returns a source location string. Used to construct an error message.
@@ -206,7 +206,7 @@ public:
   // block sections are enabled.  Basic block sections creates opportunities to
   // relax jump instructions at basic block boundaries after reordering the
   // basic blocks.
-  SmallVector<JumpInstrMod, 0> jumpInstrMods;
+  JumpInstrMod *jumpInstrMod = nullptr;
 
   // A function compiled with -fsplit-stack calling a function
   // compiled without -fsplit-stack needs its prologue adjusted. Find
@@ -324,7 +324,7 @@ public:
 
   // Splittable sections are handled as a sequence of data
   // rather than a single large blob of data.
-  std::vector<EhSectionPiece> pieces;
+  SmallVector<EhSectionPiece, 0> pieces;
 
   SyntheticSection *getParent() const;
 };
@@ -379,11 +379,7 @@ private:
   template <class ELFT> void copyShtGroup(uint8_t *buf);
 };
 
-#ifdef _WIN32
-static_assert(sizeof(InputSection) <= 184, "InputSection is too big");
-#else
-static_assert(sizeof(InputSection) <= 176, "InputSection is too big");
-#endif
+static_assert(sizeof(InputSection) <= 160, "InputSection is too big");
 
 inline bool isDebugSection(const InputSectionBase &sec) {
   return (sec.flags & llvm::ELF::SHF_ALLOC) == 0 &&

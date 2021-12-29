@@ -54,7 +54,7 @@ define void @fn2(i64 %arg) {
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br i1 false, label [[FIRSTPHIBLOCK:%.*]], label [[TEMP:%.*]]
 ; CHECK:       firstphiblock:
-; CHECK-NEXT:    [[FIRSTPHI:%.*]] = phi i64 [ undef, [[IF_THEN]] ], [ [[SECONDPHI:%.*]], [[SECONDPHIBLOCK:%.*]] ]
+; CHECK-NEXT:    [[FIRSTPHI:%.*]] = phi i64 [ poison, [[IF_THEN]] ], [ [[SECONDPHI:%.*]], [[SECONDPHIBLOCK:%.*]] ]
 ; CHECK-NEXT:    br i1 undef, label %for.cond17thread-pre-split, label [[SECONDPHIBLOCK]]
 ; CHECK:       secondphiblock:
 ; CHECK-NEXT:    [[SECONDPHI]] = phi i64 [ [[THIRDPHI:%.*]], [[THIRDPHIBLOCK:%.*]] ], [ [[FIRSTPHI]], [[FIRSTPHIBLOCK]] ]
@@ -105,7 +105,7 @@ define void @fn3() {
 ; CHECK-NEXT:    [[F_0:%.*]] = phi i32* [ @b, [[ENTRY:%.*]] ], [ @a, [[L1_LOOPEXIT:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond.loopexit:
-; CHECK-NEXT:    store i8 undef, i8* null
+; CHECK-NEXT:    store i8 poison, i8* null
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    br i1 undef, label [[FOR_END14:%.*]], label [[FOR_COND1_PREHEADER:%.*]]

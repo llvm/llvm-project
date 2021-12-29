@@ -185,6 +185,13 @@ OPTIONS
  inlined by PGO early inliner and it will not be adjusted based on sample
  profile.
 
+.. option:: -debug-info=path
+
+ Specify the executable or ``.dSYM`` that contains debug info for the raw profile.
+ When ``-debug-info-correlate`` was used for instrumentation, use this option
+ to correlate the raw profile.
+
+
 EXAMPLES
 ^^^^^^^^
 Basic Usage
@@ -197,7 +204,7 @@ Merge three profiles:
 
 Weighted Input
 ++++++++++++++
-The input file `foo.profdata` is especially important, multiply its counts by 10:
+The input file ``foo.profdata`` is especially important, multiply its counts by 10:
 
 ::
 

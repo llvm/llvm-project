@@ -14,6 +14,8 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 
+#include "llvm/ADT/APSInt.h"
+
 using namespace mlir;
 using namespace mlir::arith;
 
@@ -881,6 +883,18 @@ bool arith::UIToFPOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   return checkIntFloatCast<IntegerType, FloatType>(inputs, outputs);
 }
 
+OpFoldResult arith::UIToFPOp::fold(ArrayRef<Attribute> operands) {
+  if (auto lhs = operands[0].dyn_cast_or_null<IntegerAttr>()) {
+    const APInt &api = lhs.getValue();
+    FloatType floatTy = getType().cast<FloatType>();
+    APFloat apf(floatTy.getFloatSemantics(),
+                APInt::getZero(floatTy.getWidth()));
+    apf.convertFromAPInt(api, /*signed=*/false, APFloat::rmNearestTiesToEven);
+    return FloatAttr::get(floatTy, apf);
+  }
+  return {};
+}
+
 //===----------------------------------------------------------------------===//
 // SIToFPOp
 //===----------------------------------------------------------------------===//
@@ -889,6 +903,17 @@ bool arith::SIToFPOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   return checkIntFloatCast<IntegerType, FloatType>(inputs, outputs);
 }
 
+OpFoldResult arith::SIToFPOp::fold(ArrayRef<Attribute> operands) {
+  if (auto lhs = operands[0].dyn_cast_or_null<IntegerAttr>()) {
+    const APInt &api = lhs.getValue();
+    FloatType floatTy = getType().cast<FloatType>();
+    APFloat apf(floatTy.getFloatSemantics(),
+                APInt::getZero(floatTy.getWidth()));
+    apf.convertFromAPInt(api, /*signed=*/true, APFloat::rmNearestTiesToEven);
+    return FloatAttr::get(floatTy, apf);
+  }
+  return {};
+}
 //===----------------------------------------------------------------------===//
 // FPToUIOp
 //===----------------------------------------------------------------------===//
@@ -897,12 +922,48 @@ bool arith::FPToUIOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   return checkIntFloatCast<FloatType, IntegerType>(inputs, outputs);
 }
 
+OpFoldResult arith::FPToUIOp::fold(ArrayRef<Attribute> operands) {
+  if (auto lhs = operands[0].dyn_cast_or_null<FloatAttr>()) {
+    const APFloat &apf = lhs.getValue();
+    IntegerType intTy = getType().cast<IntegerType>();
+    bool ignored;
+    APSInt api(intTy.getWidth(), /*unsigned=*/true);
+    if (APFloat::opInvalidOp ==
+        apf.convertToInteger(api, APFloat::rmTowardZero, &ignored)) {
+      // Undefined behavior invoked - the destination type can't represent
+      // the input constant.
+      return {};
+    }
+    return IntegerAttr::get(getType(), api);
+  }
+
+  return {};
+}
+
 //===----------------------------------------------------------------------===//
 // FPToSIOp
 //===----------------------------------------------------------------------===//
 
 bool arith::FPToSIOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   return checkIntFloatCast<FloatType, IntegerType>(inputs, outputs);
+}
+
+OpFoldResult arith::FPToSIOp::fold(ArrayRef<Attribute> operands) {
+  if (auto lhs = operands[0].dyn_cast_or_null<FloatAttr>()) {
+    const APFloat &apf = lhs.getValue();
+    IntegerType intTy = getType().cast<IntegerType>();
+    bool ignored;
+    APSInt api(intTy.getWidth(), /*unsigned=*/false);
+    if (APFloat::opInvalidOp ==
+        apf.convertToInteger(api, APFloat::rmTowardZero, &ignored)) {
+      // Undefined behavior invoked - the destination type can't represent
+      // the input constant.
+      return {};
+    }
+    return IntegerAttr::get(getType(), api);
+  }
+
+  return {};
 }
 
 //===----------------------------------------------------------------------===//

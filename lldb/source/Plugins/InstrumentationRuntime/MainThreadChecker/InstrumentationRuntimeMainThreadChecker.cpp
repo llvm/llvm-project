@@ -100,14 +100,14 @@ InstrumentationRuntimeMainThreadChecker::RetrieveReportData(
   if (!apiname_ptr)
     return StructuredData::ObjectSP();
 
-  std::string apiName = "";
+  std::string apiName;
   Status read_error;
   target.ReadCStringFromMemory(apiname_ptr, apiName, read_error);
   if (read_error.Fail())
     return StructuredData::ObjectSP();
 
-  std::string className = "";
-  std::string selector = "";
+  std::string className;
+  std::string selector;
   if (apiName.substr(0, 2) == "-[") {
     size_t spacePos = apiName.find(' ');
     if (spacePos != std::string::npos) {

@@ -410,7 +410,7 @@ void AMDGPUTargetID::setTargetIDFromTargetIDStream(StringRef TargetID) {
 }
 
 std::string AMDGPUTargetID::toString() const {
-  std::string StringRep = "";
+  std::string StringRep;
   raw_string_ostream StreamRep(StringRep);
 
   auto TargetTriple = STI.getTargetTriple();
@@ -421,7 +421,7 @@ std::string AMDGPUTargetID::toString() const {
             << TargetTriple.getOSName() << '-'
             << TargetTriple.getEnvironmentName() << '-';
 
-  std::string Processor = "";
+  std::string Processor;
   // TODO: Following else statement is present here because we used various
   // alias names for GPUs up until GFX9 (e.g. 'fiji' is same as 'gfx803').
   // Remove once all aliases are removed from GCNProcessors.td.
@@ -432,7 +432,7 @@ std::string AMDGPUTargetID::toString() const {
                  Twine(Version.Stepping))
                     .str();
 
-  std::string Features = "";
+  std::string Features;
   if (Optional<uint8_t> HsaAbiVersion = getHsaAbiVersion(&STI)) {
     switch (*HsaAbiVersion) {
     case ELF::ELFABIVERSION_AMDGPU_HSA_V2:

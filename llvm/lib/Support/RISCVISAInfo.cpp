@@ -565,7 +565,7 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     // TODO: Use version number when setting target features
     // Currently LLVM supports only "mafdcbv".
     StringRef SupportedStandardExtension = "mafdcbv";
-    if (SupportedStandardExtension.find(C) == StringRef::npos)
+    if (!SupportedStandardExtension.contains(C))
       return createStringError(errc::invalid_argument,
                                "unsupported standard user-level extension '%c'",
                                C);

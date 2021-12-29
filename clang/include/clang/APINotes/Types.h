@@ -240,7 +240,7 @@ public:
   }
   void setSwiftImportAsNonGeneric(llvm::Optional<bool> Value) {
     SwiftImportAsNonGenericSpecified = Value.hasValue();
-    SwiftImportAsNonGeneric = Value.hasValue() ? *Value : false;
+    SwiftImportAsNonGeneric = Value.getValueOr(false);
   }
 
   llvm::Optional<bool> getSwiftObjCMembers() const {
@@ -249,7 +249,7 @@ public:
   }
   void setSwiftObjCMembers(llvm::Optional<bool> Value) {
     SwiftObjCMembersSpecified = Value.hasValue();
-    SwiftObjCMembers = Value.hasValue() ? *Value : false;
+    SwiftObjCMembers = Value.getValueOr(false);
   }
 
   /// Strip off any information within the class information structure that is
@@ -368,7 +368,7 @@ public:
   }
   void setSwiftImportAsAccessors(llvm::Optional<bool> Value) {
     SwiftImportAsAccessorsSpecified = Value.hasValue();
-    SwiftImportAsAccessors = Value.hasValue() ? *Value : false;
+    SwiftImportAsAccessors = Value.getValueOr(false);
   }
 
   friend bool operator==(const ObjCPropertyInfo &, const ObjCPropertyInfo &);
@@ -433,7 +433,7 @@ public:
   }
   void setNoEscape(llvm::Optional<bool> Value) {
     NoEscapeSpecified = Value.hasValue();
-    NoEscape = Value.hasValue() ? *Value : false;
+    NoEscape = Value.getValueOr(false);
   }
 
   llvm::Optional<RetainCountConventionKind> getRetainCountConvention() const {
@@ -671,7 +671,7 @@ public:
   }
   void setFlagEnum(llvm::Optional<bool> Value) {
     HasFlagEnum = Value.hasValue();
-    IsFlagEnum = Value.hasValue() ? *Value : false;
+    IsFlagEnum = Value.getValueOr(false);
   }
 
   TagInfo &operator|=(const TagInfo &RHS) {

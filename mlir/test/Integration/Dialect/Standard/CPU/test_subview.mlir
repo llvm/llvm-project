@@ -13,7 +13,7 @@ func @main() {
   %0 = memref.get_global @__constant_5x3xf32 : memref<5x3xf32>
 
   /// Subview with only leading operands.
-  %1 = memref.subview %0[2][3][1]: memref<5x3xf32> to memref<3x3xf32, offset: 6, strides: [3, 1]>
+  %1 = memref.subview %0[2, 0][3, 3][1, 1]: memref<5x3xf32> to memref<3x3xf32, offset: 6, strides: [3, 1]>
   %unranked = memref.cast %1 : memref<3x3xf32, offset: 6, strides: [3, 1]> to memref<*xf32>
   call @print_memref_f32(%unranked) : (memref<*xf32>) -> ()
 
@@ -50,7 +50,7 @@ func @main() {
   // CHECK-NEXT: [2,  5,  8,  11,  14]
 
   /// Rank-reducing subview with only leading operands.
-  %4 = memref.subview %0[1][1][1]: memref<5x3xf32> to memref<3xf32, offset: 3, strides: [1]>
+  %4 = memref.subview %0[1, 0][1, 3][1, 1]: memref<5x3xf32> to memref<3xf32, offset: 3, strides: [1]>
   %unranked4 = memref.cast %4 : memref<3xf32, offset: 3, strides: [1]> to memref<*xf32>
   call @print_memref_f32(%unranked4) : (memref<*xf32>) -> ()
   //      CHECK: Unranked Memref base@ = {{0x[-9a-f]*}}

@@ -677,7 +677,7 @@ void VPInstruction::generateInstruction(VPTransformState &State,
     // Get first lane of vector induction variable.
     Value *VIVElem0 = State.get(getOperand(0), VPIteration(Part, 0));
     // Get the original loop tripcount.
-    Value *ScalarTC = State.TripCount;
+    Value *ScalarTC = State.get(getOperand(1), Part);
 
     auto *Int1Ty = Type::getInt1Ty(Builder.getContext());
     auto *PredTy = FixedVectorType::get(Int1Ty, State.VF.getKnownMinValue());
@@ -786,23 +786,31 @@ void VPInstruction::setFastMathFlags(FastMathFlags FMFNew) {
   FMF = FMFNew;
 }
 
+void VPlan::prepareToExecute(Value *TripCountV, VPTransformState &State) {
+  // Check if the trip count is needed, and if so build it.
+  if (TripCount && TripCount->getNumUsers()) {
+    for (unsigned Part = 0, UF = State.UF; Part < UF; ++Part)
+      State.set(TripCount, TripCountV, Part);
+  }
+
+  // Check if the backedge taken count is needed, and if so build it.
+  if (BackedgeTakenCount && BackedgeTakenCount->getNumUsers()) {
+    IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
+    auto *TCMO = Builder.CreateSub(TripCountV,
+                                   ConstantInt::get(TripCountV->getType(), 1),
+                                   "trip.count.minus.1");
+    auto VF = State.VF;
+    Value *VTCMO =
+        VF.isScalar() ? TCMO : Builder.CreateVectorSplat(VF, TCMO, "broadcast");
+    for (unsigned Part = 0, UF = State.UF; Part < UF; ++Part)
+      State.set(BackedgeTakenCount, VTCMO, Part);
+  }
+}
+
 /// Generate the code inside the body of the vectorized loop. Assumes a single
 /// LoopVectorBody basic-block was created for this. Introduce additional
 /// basic-blocks as needed, and fill them all.
 void VPlan::execute(VPTransformState *State) {
-  // -1. Check if the backedge taken count is needed, and if so build it.
-  if (BackedgeTakenCount && BackedgeTakenCount->getNumUsers()) {
-    Value *TC = State->TripCount;
-    IRBuilder<> Builder(State->CFG.PrevBB->getTerminator());
-    auto *TCMO = Builder.CreateSub(TC, ConstantInt::get(TC->getType(), 1),
-                                   "trip.count.minus.1");
-    auto VF = State->VF;
-    Value *VTCMO =
-        VF.isScalar() ? TCMO : Builder.CreateVectorSplat(VF, TCMO, "broadcast");
-    for (unsigned Part = 0, UF = State->UF; Part < UF; ++Part)
-      State->set(BackedgeTakenCount, VTCMO, Part);
-  }
-
   // 0. Set the reverse mapping from VPValues to Values for code generation.
   for (auto &Entry : Value2VPValue)
     State->VPValue2Value[Entry.second] = Entry.first;
@@ -838,7 +846,7 @@ void VPlan::execute(VPTransformState *State) {
   // vector loop.
   VPBasicBlock *Header = Entry->getEntryBasicBlock();
   for (VPRecipeBase &R : Header->phis()) {
-    auto *PhiR = dyn_cast<VPWidenPHIRecipe>(&R);
+    auto *PhiR = dyn_cast<VPHeaderPHIRecipe>(&R);
     if (!PhiR || !(isa<VPFirstOrderRecurrencePHIRecipe>(&R) ||
                    isa<VPReductionPHIRecipe>(&R)))
       continue;
@@ -1461,7 +1469,7 @@ void VPInterleavedAccessInfo::visitBlock(VPBlockBase *Block, Old2NewTy &Old2New,
                                          InterleavedAccessInfo &IAI) {
   if (VPBasicBlock *VPBB = dyn_cast<VPBasicBlock>(Block)) {
     for (VPRecipeBase &VPI : *VPBB) {
-      if (isa<VPWidenPHIRecipe>(&VPI))
+      if (isa<VPHeaderPHIRecipe>(&VPI))
         continue;
       assert(isa<VPInstruction>(&VPI) && "Can only handle VPInstructions");
       auto *VPInst = cast<VPInstruction>(&VPI);

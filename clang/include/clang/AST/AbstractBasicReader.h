@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef CLANG_AST_ABSTRACTBASICREADER_H
-#define CLANG_AST_ABSTRACTBASICREADER_H
+#ifndef LLVM_CLANG_AST_ABSTRACTBASICREADER_H
+#define LLVM_CLANG_AST_ABSTRACTBASICREADER_H
 
 #include "clang/AST/DeclTemplate.h"
 
@@ -21,7 +21,7 @@ inline T makeNullableFromOptional(const Optional<T> &value) {
 
 template <class T>
 inline T *makePointerFromOptional(Optional<T *> value) {
-  return (value ? *value : nullptr);
+  return value.getValueOr(nullptr);
 }
 
 // PropertyReader is a class concept that requires the following method:
