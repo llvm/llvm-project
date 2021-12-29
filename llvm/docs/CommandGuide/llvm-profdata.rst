@@ -187,8 +187,8 @@ OPTIONS
 
 .. option:: -debug-info=path
 
- Specify the executable or `.dSYM` that contains debug info for the raw profile.
- When `-debug-info-correlate` was used for instrumentation, use this option
+ Specify the executable or ``.dSYM`` that contains debug info for the raw profile.
+ When ``-debug-info-correlate`` was used for instrumentation, use this option
  to correlate the raw profile.
 
 
@@ -204,7 +204,7 @@ Merge three profiles:
 
 Weighted Input
 ++++++++++++++
-The input file `foo.profdata` is especially important, multiply its counts by 10:
+The input file ``foo.profdata`` is especially important, multiply its counts by 10:
 
 ::
 
