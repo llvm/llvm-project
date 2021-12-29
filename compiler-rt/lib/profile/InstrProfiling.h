@@ -86,8 +86,8 @@ const __llvm_profile_data *__llvm_profile_begin_data(void);
 const __llvm_profile_data *__llvm_profile_end_data(void);
 const char *__llvm_profile_begin_names(void);
 const char *__llvm_profile_end_names(void);
-uint64_t *__llvm_profile_begin_counters(void);
-uint64_t *__llvm_profile_end_counters(void);
+char *__llvm_profile_begin_counters(void);
+char *__llvm_profile_end_counters(void);
 ValueProfNode *__llvm_profile_begin_vnodes();
 ValueProfNode *__llvm_profile_end_vnodes();
 uint32_t *__llvm_profile_begin_orderfile();
@@ -260,16 +260,25 @@ uint64_t __llvm_profile_get_magic(void);
 uint64_t __llvm_profile_get_version(void);
 
 /*! \brief Get the number of entries in the profile data section. */
+uint64_t __llvm_profile_get_num_data(const __llvm_profile_data *Begin,
+                                     const __llvm_profile_data *End);
+
+/*! \brief Get the size of the profile data section in bytes. */
 uint64_t __llvm_profile_get_data_size(const __llvm_profile_data *Begin,
                                       const __llvm_profile_data *End);
+
+/*! \brief Get the size in bytes of a single counter entry. */
+size_t __llvm_profile_counter_entry_size(void);
+
+/*! \brief Get the number of entries in the profile counters section. */
+uint64_t __llvm_profile_get_num_counters(const char *Begin, const char *End);
+
+/*! \brief Get the size of the profile counters section in bytes. */
+uint64_t __llvm_profile_get_counters_size(const char *Begin, const char *End);
 
 /* ! \brief Given the sizes of the data and counter information, return the
  * number of padding bytes before and after the counters, and after the names,
  * in the raw profile.
- *
- * Note: In this context, "size" means "number of entries", i.e. the first two
- * arguments must be the result of __llvm_profile_get_data_size() and of
- * (__llvm_profile_end_counters() - __llvm_profile_begin_counters()) resp.
  *
  * Note: When mmap() mode is disabled, no padding bytes before/after counters
  * are needed. However, in mmap() mode, the counter section in the raw profile

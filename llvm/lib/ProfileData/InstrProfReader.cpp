@@ -383,22 +383,21 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
 
   CountersDelta = swap(Header.CountersDelta);
   NamesDelta = swap(Header.NamesDelta);
-  auto DataSize = swap(Header.DataSize);
+  auto NumData = swap(Header.NumData);
   auto PaddingBytesBeforeCounters = swap(Header.PaddingBytesBeforeCounters);
-  auto CountersSize = swap(Header.CountersSize);
+  auto CountersSize = swap(Header.NumCounters) * getCounterTypeSize();
   auto PaddingBytesAfterCounters = swap(Header.PaddingBytesAfterCounters);
   auto NamesSize = swap(Header.NamesSize);
   ValueKindLast = swap(Header.ValueKindLast);
 
-  auto DataSizeInBytes = DataSize * sizeof(RawInstrProf::ProfileData<IntPtrT>);
+  auto DataSize = NumData * sizeof(RawInstrProf::ProfileData<IntPtrT>);
   auto PaddingSize = getNumPaddingBytes(NamesSize);
 
   // Profile data starts after profile header and binary ids if exist.
   ptrdiff_t DataOffset = sizeof(RawInstrProf::Header) + BinaryIdsSize;
-  ptrdiff_t CountersOffset =
-      DataOffset + DataSizeInBytes + PaddingBytesBeforeCounters;
-  ptrdiff_t NamesOffset = CountersOffset + (sizeof(uint64_t) * CountersSize) +
-                          PaddingBytesAfterCounters;
+  ptrdiff_t CountersOffset = DataOffset + DataSize + PaddingBytesBeforeCounters;
+  ptrdiff_t NamesOffset =
+      CountersOffset + CountersSize + PaddingBytesAfterCounters;
   ptrdiff_t ValueDataOffset = NamesOffset + NamesSize + PaddingSize;
 
   auto *Start = reinterpret_cast<const char *>(&Header);
@@ -417,7 +416,7 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
   } else {
     Data = reinterpret_cast<const RawInstrProf::ProfileData<IntPtrT> *>(
         Start + DataOffset);
-    DataEnd = Data + DataSize;
+    DataEnd = Data + NumData;
     NamesStart = Start + NamesOffset;
     NamesEnd = NamesStart + NamesSize;
   }
@@ -425,7 +424,8 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
   // Binary ids start just after the header.
   BinaryIdsStart =
       reinterpret_cast<const uint8_t *>(&Header) + sizeof(RawInstrProf::Header);
-  CountersStart = reinterpret_cast<const uint64_t *>(Start + CountersOffset);
+  CountersStart = Start + CountersOffset;
+  CountersEnd = CountersStart + CountersSize;
   ValueDataStart = reinterpret_cast<const uint8_t *>(Start + ValueDataOffset);
 
   const uint8_t *BufferEnd = (const uint8_t *)DataBuffer->getBufferEnd();
@@ -459,58 +459,36 @@ Error RawInstrProfReader<IntPtrT>::readRawCounts(
   if (NumCounters == 0)
     return error(instrprof_error::malformed, "number of counters is zero");
 
-  ArrayRef<uint64_t> RawCounts;
-  if (Correlator) {
-    uint64_t CounterOffset = swap<IntPtrT>(Data->CounterPtr) / sizeof(uint64_t);
-    RawCounts =
-        makeArrayRef<uint64_t>(CountersStart + CounterOffset, NumCounters);
-  } else {
-    IntPtrT CounterPtr = Data->CounterPtr;
-    ptrdiff_t CounterOffset = getCounterOffset(CounterPtr);
-    if (CounterOffset < 0)
-      return error(
-          instrprof_error::malformed,
-          ("counter offset " + Twine(CounterOffset) + " is negative").str());
+  ptrdiff_t CounterBaseOffset = swap(Data->CounterPtr) - CountersDelta;
+  if (CounterBaseOffset < 0)
+    return error(
+        instrprof_error::malformed,
+        ("counter offset " + Twine(CounterBaseOffset) + " is negative").str());
 
-    // Check bounds. Note that the counter pointer embedded in the data record
-    // may itself be corrupt.
-    auto *NamesStartAsCounter = reinterpret_cast<const uint64_t *>(NamesStart);
-    ptrdiff_t MaxNumCounters = NamesStartAsCounter - CountersStart;
-    if (MaxNumCounters < 0 || NumCounters > (uint32_t)MaxNumCounters)
-      return error(instrprof_error::malformed,
-                   "counter pointer is out of bounds");
-    // We need to compute the in-buffer counter offset from the in-memory
-    // address distance. The initial CountersDelta is the in-memory address
-    // difference start(__llvm_prf_cnts)-start(__llvm_prf_data), so
-    // SrcData->CounterPtr - CountersDelta computes the offset into the
-    // in-buffer counter section.
-    if (CounterOffset > MaxNumCounters)
-      return error(instrprof_error::malformed,
-                   ("counter offset " + Twine(CounterOffset) +
-                    " is greater than the maximum number of counters " +
-                    Twine((uint32_t)MaxNumCounters))
-                       .str());
+  if (CounterBaseOffset >= CountersEnd - CountersStart)
+    return error(instrprof_error::malformed,
+                 ("counter offset " + Twine(CounterBaseOffset) +
+                  " is greater than the maximum counter offset " +
+                  Twine(CountersEnd - CountersStart - 1))
+                     .str());
 
-    if (((uint32_t)CounterOffset + NumCounters) > (uint32_t)MaxNumCounters)
-      return error(instrprof_error::malformed,
-                   ("number of counters " +
-                    Twine(((uint32_t)CounterOffset + NumCounters)) +
-                    " is greater than the maximum number of counters " +
-                    Twine((uint32_t)MaxNumCounters))
-                       .str());
-    // CountersDelta decreases as we advance to the next data record.
-    CountersDelta -= sizeof(*Data);
+  uint64_t MaxNumCounters =
+      (CountersEnd - (CountersStart + CounterBaseOffset)) /
+      getCounterTypeSize();
+  if (NumCounters > MaxNumCounters)
+    return error(instrprof_error::malformed,
+                 ("number of counters " + Twine(NumCounters) +
+                  " is greater than the maximum number of counters " +
+                  Twine(MaxNumCounters))
+                     .str());
 
-    RawCounts = makeArrayRef(getCounter(CounterOffset), NumCounters);
+  Record.Counts.clear();
+  Record.Counts.reserve(NumCounters);
+  for (uint32_t I = 0; I < NumCounters; I++) {
+    const auto *CounterValue = reinterpret_cast<const uint64_t *>(
+        CountersStart + CounterBaseOffset + I * getCounterTypeSize());
+    Record.Counts.push_back(swap(*CounterValue));
   }
-
-  if (ShouldSwapBytes) {
-    Record.Counts.clear();
-    Record.Counts.reserve(RawCounts.size());
-    for (uint64_t Count : RawCounts)
-      Record.Counts.push_back(swap(Count));
-  } else
-    Record.Counts = RawCounts;
 
   return success();
 }

@@ -20,8 +20,8 @@ static const __llvm_profile_data *DataFirst = NULL;
 static const __llvm_profile_data *DataLast = NULL;
 static const char *NamesFirst = NULL;
 static const char *NamesLast = NULL;
-static uint64_t *CountersFirst = NULL;
-static uint64_t *CountersLast = NULL;
+static char *CountersFirst = NULL;
+static char *CountersLast = NULL;
 static uint32_t *OrderFileFirst = NULL;
 
 static const void *getMinAddr(const void *A1, const void *A2) {
@@ -46,19 +46,21 @@ void __llvm_profile_register_function(void *Data_) {
   if (!DataFirst) {
     DataFirst = Data;
     DataLast = Data + 1;
-    CountersFirst = (uint64_t *)((uintptr_t)Data_ + Data->CounterPtr);
-    CountersLast = CountersFirst + Data->NumCounters;
+    CountersFirst = (char *)((uintptr_t)Data_ + Data->CounterPtr);
+    CountersLast =
+        CountersFirst + Data->NumCounters * __llvm_profile_counter_entry_size();
     return;
   }
 
   DataFirst = (const __llvm_profile_data *)getMinAddr(DataFirst, Data);
-  CountersFirst = (uint64_t *)getMinAddr(
-      CountersFirst, (uint64_t *)((uintptr_t)Data_ + Data->CounterPtr));
+  CountersFirst = (char *)getMinAddr(
+      CountersFirst, (char *)((uintptr_t)Data_ + Data->CounterPtr));
 
   DataLast = (const __llvm_profile_data *)getMaxAddr(DataLast, Data + 1);
-  CountersLast = (uint64_t *)getMaxAddr(
+  CountersLast = (char *)getMaxAddr(
       CountersLast,
-      (uint64_t *)((uintptr_t)Data_ + Data->CounterPtr) + Data->NumCounters);
+      (char *)((uintptr_t)Data_ + Data->CounterPtr) +
+          Data->NumCounters * __llvm_profile_counter_entry_size());
 }
 
 COMPILER_RT_VISIBILITY
@@ -83,9 +85,9 @@ const char *__llvm_profile_begin_names(void) { return NamesFirst; }
 COMPILER_RT_VISIBILITY
 const char *__llvm_profile_end_names(void) { return NamesLast; }
 COMPILER_RT_VISIBILITY
-uint64_t *__llvm_profile_begin_counters(void) { return CountersFirst; }
+char *__llvm_profile_begin_counters(void) { return CountersFirst; }
 COMPILER_RT_VISIBILITY
-uint64_t *__llvm_profile_end_counters(void) { return CountersLast; }
+char *__llvm_profile_end_counters(void) { return CountersLast; }
 /* TODO: correctly set up OrderFileFirst. */
 COMPILER_RT_VISIBILITY
 uint32_t *__llvm_profile_begin_orderfile(void) { return OrderFileFirst; }
