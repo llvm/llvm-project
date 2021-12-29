@@ -2,9 +2,9 @@
 # RUN:   %p/Inputs/ret42.obj
 # RUN: llvm-readobj --file-headers %t.exe | FileCheck -check-prefix=CHECK1 %s
 
-CHECK1: MajorOperatingSystemVersion: 6
+CHECK1: MajorOperatingSystemVersion: 4
 CHECK1: MinorOperatingSystemVersion: 0
-CHECK1: MajorSubsystemVersion: 6
+CHECK1: MajorSubsystemVersion: 4
 CHECK1: MinorSubsystemVersion: 0
 CHECK1: Subsystem: IMAGE_SUBSYSTEM_WINDOWS_GUI
 
@@ -37,7 +37,7 @@ CHECK3: MinorSubsystemVersion: 9
 
 CHECK4: MajorOperatingSystemVersion: 1
 CHECK4: MinorOperatingSystemVersion: 2
-CHECK4: MajorSubsystemVersion: 6
+CHECK4: MajorSubsystemVersion: 4
 CHECK4: MinorSubsystemVersion: 0
 
 # RUN: lld-link /entry:main /out:%t.exe /osversion:1.2 /subsystem:default,3.4 \
