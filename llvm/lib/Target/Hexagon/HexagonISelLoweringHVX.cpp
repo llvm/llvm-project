@@ -96,6 +96,9 @@ HexagonTargetLowering::initializeHVXLowering() {
     // BUILD_VECTOR with f16 operands cannot be promoted without
     // promoting the result, so lower the node to vsplat or constant pool
     setOperationAction(ISD::BUILD_VECTOR,      MVT::f16,    Custom);
+    setOperationAction(ISD::SPLAT_VECTOR,      MVT::f16,    Custom);
+    setOperationAction(ISD::SPLAT_VECTOR,      MVT::v64f16, Legal);
+    setOperationAction(ISD::SPLAT_VECTOR,      MVT::v32f32, Legal);
 
     // Custom-lower BUILD_VECTOR for vector pairs. The standard (target-
     // independent) handling of it would convert it to a load, which is
@@ -1300,6 +1303,24 @@ HexagonTargetLowering::LowerHvxBuildVector(SDValue Op, SelectionDAG &DAG)
 }
 
 SDValue
+HexagonTargetLowering::LowerHvxSplatVector(SDValue Op, SelectionDAG &DAG)
+      const {
+  const SDLoc &dl(Op);
+  MVT VecTy = ty(Op);
+  MVT ArgTy = ty(Op.getOperand(0));
+
+  if (ArgTy == MVT::f16) {
+    MVT SplatTy =  MVT::getVectorVT(MVT::i16, VecTy.getVectorNumElements());
+    SDValue ToInt16 = DAG.getBitcast(MVT::i16, Op.getOperand(0));
+    SDValue ToInt32 = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i32, ToInt16);
+    SDValue Splat = DAG.getNode(ISD::SPLAT_VECTOR, dl, SplatTy, ToInt32);
+    return DAG.getBitcast(VecTy, Splat);
+  }
+
+  return SDValue();
+}
+
+SDValue
 HexagonTargetLowering::LowerHvxConcatVectors(SDValue Op, SelectionDAG &DAG)
       const {
   // Vector concatenation of two integer (non-bool) vectors does not need
@@ -2185,6 +2206,7 @@ HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
     default:
       break;
     case ISD::BUILD_VECTOR:            return LowerHvxBuildVector(Op, DAG);
+    case ISD::SPLAT_VECTOR:            return LowerHvxSplatVector(Op, DAG);
     case ISD::CONCAT_VECTORS:          return LowerHvxConcatVectors(Op, DAG);
     case ISD::INSERT_SUBVECTOR:        return LowerHvxInsertSubvector(Op, DAG);
     case ISD::INSERT_VECTOR_ELT:       return LowerHvxInsertElement(Op, DAG);
