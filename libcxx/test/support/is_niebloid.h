@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LIBCXX_TEST_SUPPORT_TEST_STANDARD_FUNCTION_H
-#define LIBCXX_TEST_SUPPORT_TEST_STANDARD_FUNCTION_H
+#ifndef LIBCXX_TEST_SUPPORT_IS_NIEBLOID_H
+#define LIBCXX_TEST_SUPPORT_IS_NIEBLOID_H
 
 #include "test_macros.h"
 
@@ -17,7 +17,7 @@ constexpr bool is_addressable = requires(T t) {
 };
 
 template <class T>
-constexpr bool is_function_like() {
+constexpr bool is_niebloid() {
   using X = std::remove_cvref_t<T>;
   static_assert(!is_addressable<X>);
   static_assert(!is_addressable<X const>);
@@ -36,4 +36,4 @@ constexpr bool is_function_like() {
 }
 #endif
 
-#endif // LIBCXX_TEST_SUPPORT_TEST_STANDARD_FUNCTION_H
+#endif // LIBCXX_TEST_SUPPORT_IS_NIEBLOID_H
