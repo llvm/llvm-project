@@ -164,7 +164,7 @@ private:
 
   static Status SetDefaultPtraceOpts(const lldb::pid_t);
 
-  void MonitorCallback(lldb::pid_t pid, bool exited, WaitStatus status);
+  void MonitorCallback(lldb::pid_t pid, WaitStatus status);
 
   void WaitForCloneNotification(::pid_t pid);
 
@@ -176,8 +176,7 @@ private:
 
   void MonitorWatchpoint(NativeThreadLinux &thread, uint32_t wp_index);
 
-  void MonitorSignal(const siginfo_t &info, NativeThreadLinux &thread,
-                     bool exited);
+  void MonitorSignal(const siginfo_t &info, NativeThreadLinux &thread);
 
   bool HasThreadNoLock(lldb::tid_t thread_id);
 
