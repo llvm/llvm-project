@@ -157,6 +157,10 @@ h:
 .section .init_array,"aw",@progbits
   .quad 0
 
+# Work around https://github.com/rust-lang/rust/issues/92181
+.section .init_array.00001,"aw",@progbits
+  .quad 0
+
 .section .preinit_array,"aw",@preinit_array
   .quad 0
 

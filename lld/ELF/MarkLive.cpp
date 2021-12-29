@@ -177,11 +177,12 @@ static bool isReserved(InputSectionBase *sec) {
     // SHT_NOTE sections in a group are subject to garbage collection.
     return !sec->nextInSectionGroup;
   default:
-    // Support SHT_PROGBITS .init_array for a while
-    // (https://golang.org/issue/50295).
+    // Support SHT_PROGBITS .init_array (https://golang.org/issue/50295) and
+    // .init_array.N (https://github.com/rust-lang/rust/issues/92181) for a
+    // while.
     StringRef s = sec->name;
-    return s == ".init" || s == ".fini" || s == ".init_array" || s == ".jcr" ||
-           s.startswith(".ctors") || s.startswith(".dtors");
+    return s == ".init" || s == ".fini" || s.startswith(".init_array") ||
+           s == ".jcr" || s.startswith(".ctors") || s.startswith(".dtors");
   }
 }
 
