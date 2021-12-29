@@ -89,4 +89,4 @@ QualType getFullyQualifiedType(QualType QT, const ASTContext &Ctx,
                                bool WithGlobalNsPrefix = false);
 } // end namespace TypeName
 } // end namespace clang
-#endif // LLVM_CLANG_TOOLING_CORE_QUALTYPENAMES_H
+#endif // LLVM_CLANG_AST_QUALTYPENAMES_H

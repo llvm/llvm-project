@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_REFACTOR_REFACTORING_RESULT_CONSUMER_H
-#define LLVM_CLANG_TOOLING_REFACTOR_REFACTORING_RESULT_CONSUMER_H
+#ifndef LLVM_CLANG_TOOLING_REFACTORING_REFACTORINGRESULTCONSUMER_H
+#define LLVM_CLANG_TOOLING_REFACTORING_REFACTORINGRESULTCONSUMER_H
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Tooling/Refactoring/AtomicChange.h"
@@ -48,4 +48,4 @@ private:
 } // end namespace tooling
 } // end namespace clang
 
-#endif // LLVM_CLANG_TOOLING_REFACTOR_REFACTORING_RESULT_CONSUMER_H
+#endif // LLVM_CLANG_TOOLING_REFACTORING_REFACTORINGRESULTCONSUMER_H
