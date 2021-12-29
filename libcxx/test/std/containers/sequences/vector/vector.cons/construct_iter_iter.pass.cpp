@@ -165,14 +165,14 @@ void test_ctor_with_different_value_type() {
     // Make sure initialization is performed with each element value, not with
     // a memory blob.
     float array[3] = {0.0f, 1.0f, 2.0f};
-#ifdef TEST_COMPILER_C1XX
+#ifdef TEST_COMPILER_MSVC
     #pragma warning(push)
     #pragma warning(disable: 4244) // conversion from 'float' to 'int', possible loss of data
-#endif // TEST_COMPILER_C1XX
+#endif // TEST_COMPILER_MSVC
     std::vector<int> v(array, array + 3);
-#ifdef TEST_COMPILER_C1XX
+#ifdef TEST_COMPILER_MSVC
     #pragma warning(pop)
-#endif // TEST_COMPILER_C1XX
+#endif // TEST_COMPILER_MSVC
     assert(v[0] == 0);
     assert(v[1] == 1);
     assert(v[2] == 2);

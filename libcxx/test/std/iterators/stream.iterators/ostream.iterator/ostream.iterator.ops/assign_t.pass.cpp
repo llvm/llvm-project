@@ -22,7 +22,7 @@
 #pragma clang diagnostic ignored "-Wliteral-conversion"
 #endif
 
-#ifdef TEST_COMPILER_C1XX
+#ifdef TEST_COMPILER_MSVC
 #pragma warning(disable: 4244) // conversion from 'X' to 'Y', possible loss of data
 #endif
 

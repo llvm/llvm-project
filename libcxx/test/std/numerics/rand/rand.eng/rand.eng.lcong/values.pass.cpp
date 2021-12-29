@@ -44,10 +44,10 @@ test1()
     assert((LCE::min() == (c == 0u ? 1u: 0u)));
 #endif
 
-#ifdef TEST_COMPILER_C1XX
+#ifdef TEST_COMPILER_MSVC
     #pragma warning(push)
     #pragma warning(disable: 4310) // cast truncates constant value
-#endif // TEST_COMPILER_C1XX
+#endif // TEST_COMPILER_MSVC
 
 #if TEST_STD_VER >= 11
     static_assert((LCE::max() == result_type(m - 1u)), "");
@@ -55,9 +55,9 @@ test1()
     assert((LCE::max() == result_type(m - 1u)));
 #endif
 
-#ifdef TEST_COMPILER_C1XX
+#ifdef TEST_COMPILER_MSVC
     #pragma warning(pop)
-#endif // TEST_COMPILER_C1XX
+#endif // TEST_COMPILER_MSVC
 
     static_assert((LCE::default_seed == 1), "");
     where(LCE::multiplier);

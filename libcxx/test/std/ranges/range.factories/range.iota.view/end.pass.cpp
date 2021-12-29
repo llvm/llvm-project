@@ -10,7 +10,13 @@
 // UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
-// ADDITIONAL_COMPILE_FLAGS: -Wno-sign-compare
+#include "test_macros.h"
+
+#if defined(TEST_COMPILER_CLANG) || defined(TEST_COMPILER_GCC)
+#pragma GCC diagnostic ignored "-Wsign-compare"
+#elif defined(TEST_COMPILER_MSVC)
+#pragma warning(disable: 4018 4389) // various "signed/unsigned mismatch"
+#endif
 
 // constexpr auto end() const;
 // constexpr iterator end() const requires same_as<W, Bound>;
@@ -18,7 +24,6 @@
 #include <ranges>
 #include <cassert>
 
-#include "test_macros.h"
 #include "types.h"
 
 template<class T, class U>
