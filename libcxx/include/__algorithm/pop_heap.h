@@ -31,7 +31,7 @@ __pop_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare
     if (__len > 1)
     {
         swap(*__first, *--__last);
-        _VSTD::__sift_down<_Compare>(__first, __last, __comp, __len - 1, __first);
+        _VSTD::__sift_down<_Compare>(__first, __comp, __len - 1, __first);
     }
 }
 

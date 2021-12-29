@@ -32,7 +32,7 @@ __make_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compar
         // start from the first parent, there is no need to consider children
         for (difference_type __start = (__n - 2) / 2; __start >= 0; --__start)
         {
-            _VSTD::__sift_down<_Compare>(__first, __last, __comp, __n, __first + __start);
+            _VSTD::__sift_down<_Compare>(__first, __comp, __n, __first + __start);
         }
     }
 }
