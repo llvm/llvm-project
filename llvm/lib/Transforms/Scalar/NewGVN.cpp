@@ -4128,21 +4128,25 @@ bool NewGVN::eliminateInstructions(Function &F) {
 unsigned int NewGVN::getRank(const Value *V) const {
   // Prefer constants to undef to anything else
   // Undef is a constant, have to check it first.
+  // Prefer poison to undef as it's less defined.
   // Prefer smaller constants to constantexprs
+  // Note that the order here matters because of class inheritance
   if (isa<ConstantExpr>(V))
-    return 2;
-  if (isa<UndefValue>(V))
+    return 3;
+  if (isa<PoisonValue>(V))
     return 1;
+  if (isa<UndefValue>(V))
+    return 2;
   if (isa<Constant>(V))
     return 0;
-  else if (auto *A = dyn_cast<Argument>(V))
-    return 3 + A->getArgNo();
+  if (auto *A = dyn_cast<Argument>(V))
+    return 4 + A->getArgNo();
 
-  // Need to shift the instruction DFS by number of arguments + 3 to account for
+  // Need to shift the instruction DFS by number of arguments + 5 to account for
   // the constant and argument ranking above.
   unsigned Result = InstrToDFSNum(V);
   if (Result > 0)
-    return 4 + NumFuncArgs + Result;
+    return 5 + NumFuncArgs + Result;
   // Unreachable or something else, just return a really large number.
   return ~0;
 }
