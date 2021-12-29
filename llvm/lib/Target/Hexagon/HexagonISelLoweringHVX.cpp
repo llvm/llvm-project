@@ -659,10 +659,10 @@ HexagonTargetLowering::buildHvxVectorReg(ArrayRef<SDValue> Values,
   // Find most common element to initialize vector with. This is to avoid
   // unnecessary vinsert/valign for cases where the same value is present
   // many times. Creates a histogram of the vector's elements to find the
-  // most common element n.
+  // most common element.
   assert(4*Words.size() == Subtarget.getVectorLength());
-  int VecHist[32];
-  int n = 0;
+  SmallVector<int,32> VecHist(32);
+  int MaxAt = 0;
   for (unsigned i = 0; i != NumWords; ++i) {
     VecHist[i] = 0;
     if (Words[i].isUndef())
@@ -671,60 +671,29 @@ HexagonTargetLowering::buildHvxVectorReg(ArrayRef<SDValue> Values,
       if (Words[i] == Words[j])
         VecHist[i]++;
 
-    if (VecHist[i] > VecHist[n])
-      n = i;
+    if (VecHist[i] > VecHist[MaxAt])
+      MaxAt = i;
   }
 
-  SDValue HalfV = getZero(dl, VecTy, DAG);
-  if (VecHist[n] > 1) {
-    SDValue SplatV = DAG.getNode(ISD::SPLAT_VECTOR, dl, VecTy, Words[n]);
-    HalfV = DAG.getNode(HexagonISD::VALIGN, dl, VecTy,
-                       {HalfV, SplatV, DAG.getConstant(HwLen/2, dl, MVT::i32)});
-  }
-  SDValue HalfV0 = HalfV;
-  SDValue HalfV1 = HalfV;
-
-  // Construct two halves in parallel, then or them together. Rn and Rm count
-  // number of rotations needed before the next element. One last rotation is
-  // performed post-loop to position the last element.
-  int Rn = 0, Rm = 0;
-  SDValue Sn, Sm;
-  SDValue N = HalfV0;
-  SDValue M = HalfV1;
-  for (unsigned i = 0; i != NumWords/2; ++i) {
-
+  // If each value is different, don't do splat, just insert them one by one.
+  bool NoSplat = VecHist[MaxAt] <= 1;
+  SDValue RotV = NoSplat
+                     ? DAG.getUNDEF(VecTy)
+                     : DAG.getNode(ISD::SPLAT_VECTOR, dl, VecTy, Words[MaxAt]);
+  int Rn = 0;
+  for (unsigned i = 0; i != NumWords; ++i) {
     // Rotate by element count since last insertion.
-    if (Words[i] != Words[n] || VecHist[n] <= 1) {
-      Sn = DAG.getConstant(Rn, dl, MVT::i32);
-      HalfV0 = DAG.getNode(HexagonISD::VROR, dl, VecTy, {N, Sn});
-      N = DAG.getNode(HexagonISD::VINSERTW0, dl, VecTy,
-                      {HalfV0, Words[i]});
+    if (NoSplat || Words[i] != Words[MaxAt]) {
+      RotV = DAG.getNode(HexagonISD::VROR, dl, VecTy,
+                         {RotV, DAG.getConstant(Rn, dl, MVT::i32)});
+      RotV = DAG.getNode(HexagonISD::VINSERTW0, dl, VecTy, {RotV, Words[i]});
       Rn = 0;
     }
-    if (Words[i+NumWords/2] != Words[n] || VecHist[n] <= 1) {
-      Sm = DAG.getConstant(Rm, dl, MVT::i32);
-      HalfV1 = DAG.getNode(HexagonISD::VROR, dl, VecTy, {M, Sm});
-      M = DAG.getNode(HexagonISD::VINSERTW0, dl, VecTy,
-                      {HalfV1, Words[i+NumWords/2]});
-      Rm = 0;
-    }
     Rn += 4;
-    Rm += 4;
   }
   // Perform last rotation.
-  Sn = DAG.getConstant(Rn+HwLen/2, dl, MVT::i32);
-  Sm = DAG.getConstant(Rm, dl, MVT::i32);
-  HalfV0 = DAG.getNode(HexagonISD::VROR, dl, VecTy, {N, Sn});
-  HalfV1 = DAG.getNode(HexagonISD::VROR, dl, VecTy, {M, Sm});
-
-  SDValue T0 = DAG.getBitcast(tyVector(VecTy, MVT::i32), HalfV0);
-  SDValue T1 = DAG.getBitcast(tyVector(VecTy, MVT::i32), HalfV1);
-
-  SDValue DstV = DAG.getNode(ISD::OR, dl, ty(T0), {T0, T1});
-
-  SDValue OutV =
-      DAG.getBitcast(tyVector(ty(DstV), VecTy.getVectorElementType()), DstV);
-  return OutV;
+  return DAG.getNode(HexagonISD::VROR, dl, VecTy,
+                     {RotV, DAG.getConstant(Rn, dl, MVT::i32)});
 }
 
 SDValue
