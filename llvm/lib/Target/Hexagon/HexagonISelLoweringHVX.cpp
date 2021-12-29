@@ -59,6 +59,7 @@ HexagonTargetLowering::initializeHVXLowering() {
       addRegisterClass(MVT::v32f32, &Hexagon::HvxVRRegClass);
       addRegisterClass(MVT::v64f16, &Hexagon::HvxVRRegClass);
       addRegisterClass(MVT::v64f32, &Hexagon::HvxWRRegClass);
+      addRegisterClass(MVT::v128f16, &Hexagon::HvxWRRegClass);
     }
   }
 
@@ -104,6 +105,9 @@ HexagonTargetLowering::initializeHVXLowering() {
     // independent) handling of it would convert it to a load, which is
     // not always the optimal choice.
     setOperationAction(ISD::BUILD_VECTOR, MVT::v64f32, Custom);
+    // Make concat-vectors custom to handle concats of more than 2 vectors.
+    setOperationAction(ISD::CONCAT_VECTORS, MVT::v128f16, Custom);
+    setOperationAction(ISD::CONCAT_VECTORS, MVT::v64f32, Custom);
   }
 
   for (MVT T : LegalV) {
