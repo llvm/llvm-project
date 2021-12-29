@@ -1727,6 +1727,20 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits) const {
       if (Bits < Subtarget->getXLen() - User->getConstantOperandVal(1))
         return false;
       break;
+    case RISCV::ANDI:
+      if (Bits < (64 - countLeadingZeros(User->getConstantOperandVal(1))))
+        return false;
+      break;
+    case RISCV::SEXTB:
+      if (Bits < 8)
+        return false;
+      break;
+    case RISCV::SEXTH:
+    case RISCV::ZEXTH_RV32:
+    case RISCV::ZEXTH_RV64:
+      if (Bits < 16)
+        return false;
+      break;
     case RISCV::ADDUW:
     case RISCV::SH1ADDUW:
     case RISCV::SH2ADDUW:
