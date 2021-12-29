@@ -1847,7 +1847,8 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
   if (AMDGPU::getGlobalSaddrOp(MI.getOpcode()) < 0)
     return false;
 
-  if (MI.mayLoad() && TII->getNamedOperand(MI, AMDGPU::OpName::vdata) != NULL)
+  if (MI.mayLoad() &&
+      TII->getNamedOperand(MI, AMDGPU::OpName::vdata) != nullptr)
     return false;
 
   if (AnchorList.count(&MI))

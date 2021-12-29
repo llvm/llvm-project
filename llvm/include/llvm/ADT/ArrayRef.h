@@ -141,7 +141,7 @@ namespace llvm {
     template <typename U, typename A>
     ArrayRef(const std::vector<U *, A> &Vec,
              std::enable_if_t<std::is_convertible<U *const *, T const *>::value>
-                 * = 0)
+                 * = nullptr)
         : Data(Vec.data()), Length(Vec.size()) {}
 
     /// @}
