@@ -8458,9 +8458,9 @@ VPValue *VPRecipeBuilder::createBlockInMask(BasicBlock *BB, VPlanPtr &Plan) {
     auto NewInsertionPoint = Builder.getInsertBlock()->getFirstNonPhi();
     Builder.setInsertPoint(Builder.getInsertBlock(), NewInsertionPoint);
 
-    bool TailFolded = !CM.isScalarEpilogueAllowed();
+    assert(CM.foldTailByMasking() && "must fold the tail");
 
-    if (TailFolded && CM.TTI.emitGetActiveLaneMask()) {
+    if (CM.TTI.emitGetActiveLaneMask()) {
       VPValue *TC = Plan->getOrCreateTripCount();
       BlockMask = Builder.createNaryOp(VPInstruction::ActiveLaneMask, {IV, TC});
     } else {
