@@ -16,11 +16,13 @@
 #include "M88kTargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelectorImpl.h"
+#include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "M88k-isel"
 
 using namespace llvm;
+using namespace MIPatternMatch;
 
 #define GET_GLOBALISEL_PREDICATE_BITSET
 #include "M88kGenGlobalISel.inc"
@@ -158,7 +160,54 @@ bool M88kInstructionSelector::select(MachineInstr &I) {
   if (selectImpl(I, *CoverageInfo))
     return true;
 
-  return false;
+  MachineInstr *MI = nullptr;
+  switch (I.getOpcode()) {
+  case TargetOpcode::G_LOAD:
+  case TargetOpcode::G_STORE: {
+    auto MMO = *I.memoperands_begin();
+    MachineOperand Ptr = I.getOperand(1);
+    uint64_t UnsignedOffset = 0;
+
+    // Try to fold load/store + G_PTR_ADD + G_CONSTANT
+
+    Register AddrReg;
+    int64_t Offset;
+    MachineInstr *Base;
+    if (!mi_match(Ptr.getReg(), MRI,
+                  m_GPtrAdd(m_MInstr(Base), m_ICst(Offset)))) {
+      return false;
+    }
+    if (Base->getOpcode() == TargetOpcode::COPY)
+      AddrReg = Base->getOperand(1).getReg();
+    else
+      AddrReg = Base->getOperand(0).getReg();
+    if (isUInt<16>(Offset))
+      UnsignedOffset = Offset;
+    else {
+      return false;
+    }
+
+    // No unaligned memory access
+    if (MMO->getAlign() < MMO->getSize()) {
+      return false;
+    }
+
+    const unsigned NewOpc =
+        (I.getOpcode() == TargetOpcode::G_LOAD) ? M88k::LDriw : M88k::STriw;
+
+    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(NewOpc))
+             .add(I.getOperand(0))
+             .addReg(AddrReg)
+             .addImm(UnsignedOffset)
+             .addMemOperand(MMO);
+    break;
+  }
+  default:
+    return false;
+  }
+
+  I.eraseFromParent();
+  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
 }
 
 namespace llvm {

@@ -773,22 +773,25 @@ multiclass Xmem {
   }
 }
 
-defm LD : LoadIndexImm<0b0001, "ld">;
-defm ST : StoreIndexImm;
+let mayLoad = 1 in {
+  defm LD : LoadIndexImm<0b0001, "ld">;
+  defm LD : LoadUnsigned<>;
+  defm LD : LoadUnscaled<0b0001, "ld">;
+  defm LD : LoadScaled<0b0001, "ld">;
 
-defm LD : LoadUnsigned<>;
+  defm LDA : LoadAddr<>; // TODO Does inst touch memory?
 
-defm LD : LoadUnscaled<0b0001, "ld">;
-defm LD : LoadScaled<0b0001, "ld">;
-defm ST : StoreUnscaled<0b0010, "st">;
-defm ST : StoreScaled<0b0010, "st">;
+  let Predicates = [IsMC881100] in {
+    def LDxri : LoadXR<0b000001, "ld", f32>;
+    def LDxrid : LoadXR<0b000000, "ld.d", f64>;
+    def LDxrix : LoadXR<0b001111, "ld.x", f80>;
+  }
+}
 
-defm LDA : LoadAddr<>;
-
-let Predicates = [IsMC881100] in {
-  def LDxri : LoadXR<0b000001, "ld", f32>;
-  def LDxrid : LoadXR<0b000000, "ld.d", f64>;
-  def LDxrix : LoadXR<0b001111, "ld.x", f80>;
+let mayStore = 1 in {
+  defm ST : StoreIndexImm;
+  defm ST : StoreUnscaled<0b0010, "st">;
+  defm ST : StoreScaled<0b0010, "st">;
 }
 
 defm XMEM : Xmem<>;

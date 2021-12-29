@@ -45,15 +45,11 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
                              std::function<void()> *Thunk = nullptr) override;
 
   void assignValueToAddress(Register ValVReg, Register Addr, LLT MemTy,
-                            MachinePointerInfo &MPO, CCValAssign &VA) override {
-    llvm_unreachable("assignValueToAddress not implemented");
-  }
+                            MachinePointerInfo &MPO, CCValAssign &VA) override;
 
   Register getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO,
-                           ISD::ArgFlagsTy Flags) override {
-    llvm_unreachable("unimplemented");
-  }
+                           ISD::ArgFlagsTy Flags) override;
 
   MachineInstrBuilder MIB;
 };
@@ -63,9 +59,6 @@ struct M88kIncomingValueHandler : public CallLowering::IncomingValueHandler {
                            MachineRegisterInfo &MRI)
       : CallLowering::IncomingValueHandler(MIRBuilder, MRI) {}
 
-  uint64_t StackUsed;
-
-private:
   void assignValueToReg(Register ValVReg, Register PhysReg,
                         CCValAssign VA) override;
 
@@ -155,6 +148,36 @@ unsigned OutgoingArgHandler::assignCustomValue(CallLowering::ArgInfo &Arg,
   return 1;
 }
 
+void OutgoingArgHandler::assignValueToAddress(Register ValVReg,
+                                                    Register Addr, LLT MemTy,
+                                                    MachinePointerInfo &MPO,
+                                                    CCValAssign &VA) {
+  MachineFunction &MF = MIRBuilder.getMF();
+  uint64_t LocMemOffset = VA.getLocMemOffset();
+
+  auto MMO = MF.getMachineMemOperand(
+      MPO, MachineMemOperand::MOStore, MemTy,
+      commonAlignment(Align(16) /*STI.getStackAlignment()*/, LocMemOffset));
+
+  Register ExtReg = extendRegister(ValVReg, VA);
+  MIRBuilder.buildStore(ExtReg, Addr, *MMO);
+}
+
+Register OutgoingArgHandler::getStackAddress(uint64_t Size, int64_t Offset,
+                                             MachinePointerInfo &MPO,
+                                             ISD::ArgFlagsTy Flags) {
+  MachineFunction &MF = MIRBuilder.getMF();
+  MPO = MachinePointerInfo::getStack(MF, Offset);
+
+  LLT p0 = LLT::pointer(0, 32);
+  LLT s32 = LLT::scalar(32);
+  auto SPReg = MIRBuilder.buildCopy(p0, Register(M88k::R31));
+
+  auto OffsetReg = MIRBuilder.buildConstant(s32, Offset);
+  auto AddrReg = MIRBuilder.buildPtrAdd(p0, SPReg, OffsetReg);
+  return AddrReg.getReg(0);
+}
+
 void M88kIncomingValueHandler::assignValueToReg(Register ValVReg,
                                                 Register PhysReg,
                                                 CCValAssign VA) {
@@ -182,10 +205,8 @@ Register M88kIncomingValueHandler::getStackAddress(uint64_t Size,
   MPO = MachinePointerInfo::getFixedStack(MIRBuilder.getMF(), FI);
 
   // Build Frame Index
-  llvm::LLT FramePtr = LLT::pointer(
-      0, MIRBuilder.getMF().getDataLayout().getPointerSizeInBits());
+  llvm::LLT FramePtr = LLT::pointer(0, 32);
   MachineInstrBuilder AddrReg = MIRBuilder.buildFrameIndex(FramePtr, FI);
-  StackUsed = std::max(StackUsed, Size + Offset);
   return AddrReg.getReg(0);
 }
 

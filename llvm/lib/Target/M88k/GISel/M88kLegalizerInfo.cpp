@@ -21,9 +21,12 @@ using namespace llvm;
 
 M88kLegalizerInfo::M88kLegalizerInfo(const M88kSubtarget &ST) {
   using namespace TargetOpcode;
+  const LLT S8 = LLT::scalar(8);
+  const LLT S16 = LLT::scalar(16);
   const LLT S32 = LLT::scalar(32);
   const LLT S64 = LLT::scalar(64);
   const LLT S80 = LLT::scalar(80);
+  const LLT S128 = LLT::scalar(128);
   const LLT P0 = LLT::pointer(0, 32);
   getActionDefinitionsBuilder(G_PHI).legalFor({S32});
   getActionDefinitionsBuilder({G_IMPLICIT_DEF, G_FREEZE}).legalFor({S32});
@@ -36,7 +39,15 @@ M88kLegalizerInfo::M88kLegalizerInfo(const M88kSubtarget &ST) {
   getActionDefinitionsBuilder(G_PTRTOINT)
       .legalFor({{S32, P0}})
       .minScalar(0, S32);
-  getActionDefinitionsBuilder(G_LOAD).legalFor({S32});
+  getActionDefinitionsBuilder(G_LOAD).legalFor({S32, S64});
+  getActionDefinitionsBuilder(G_STORE).legalForTypesWithMemDesc(
+      {{S8, P0, S8, 8},
+       {S16, P0, S16, 16},
+       {S32, P0, S32, 32},
+       {S64, P0, S64, 64}});
+  getActionDefinitionsBuilder(G_PTR_ADD)
+      .legalFor({{P0, S32}})
+      .clampScalar(1, S32, S32);
   getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({P0});
   getActionDefinitionsBuilder(G_ADD).legalFor({S32});
   getActionDefinitionsBuilder(G_SUB).legalFor({S32});
