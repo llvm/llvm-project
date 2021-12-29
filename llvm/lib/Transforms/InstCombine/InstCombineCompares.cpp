@@ -3949,6 +3949,33 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
       (Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_ULE))
     return new ICmpInst(Pred, X, Builder.CreateNot(Op0));
 
+  {
+    // Similar to above: an unsigned overflow comparison may use offset + mask:
+    // ((Op1 + C) & C) u<  Op1 --> Op1 != 0
+    // ((Op1 + C) & C) u>= Op1 --> Op1 == 0
+    // Op0 u>  ((Op0 + C) & C) --> Op0 != 0
+    // Op0 u<= ((Op0 + C) & C) --> Op0 == 0
+    BinaryOperator *BO;
+    const APInt *C;
+    if ((Pred == ICmpInst::ICMP_ULT || Pred == ICmpInst::ICMP_UGE) &&
+        match(Op0, m_And(m_BinOp(BO), m_LowBitMask(C))) &&
+        match(BO, m_Add(m_Specific(Op1), m_SpecificIntAllowUndef(*C)))) {
+      CmpInst::Predicate NewPred =
+          Pred == ICmpInst::ICMP_ULT ? ICmpInst::ICMP_NE : ICmpInst::ICMP_EQ;
+      Constant *Zero = ConstantInt::getNullValue(Op1->getType());
+      return new ICmpInst(NewPred, Op1, Zero);
+    }
+
+    if ((Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_ULE) &&
+        match(Op1, m_And(m_BinOp(BO), m_LowBitMask(C))) &&
+        match(BO, m_Add(m_Specific(Op0), m_SpecificIntAllowUndef(*C)))) {
+      CmpInst::Predicate NewPred =
+          Pred == ICmpInst::ICMP_UGT ? ICmpInst::ICMP_NE : ICmpInst::ICMP_EQ;
+      Constant *Zero = ConstantInt::getNullValue(Op1->getType());
+      return new ICmpInst(NewPred, Op0, Zero);
+    }
+  }
+
   bool NoOp0WrapProblem = false, NoOp1WrapProblem = false;
   if (BO0 && isa<OverflowingBinaryOperator>(BO0))
     NoOp0WrapProblem =

@@ -200,9 +200,7 @@ define i1 @n15_wrong_pred7(i8 %x, i8 %y) {
 
 define i1 @low_bitmask_ult(i8 %x) {
 ; CHECK-LABEL: @low_bitmask_ult(
-; CHECK-NEXT:    [[A:%.*]] = add i8 [[X:%.*]], 31
-; CHECK-NEXT:    [[M:%.*]] = and i8 [[A]], 31
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[M]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[X:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %a = add i8 %x, 31
@@ -213,9 +211,7 @@ define i1 @low_bitmask_ult(i8 %x) {
 
 define <2 x i1> @low_bitmask_uge(<2 x i8> %x) {
 ; CHECK-LABEL: @low_bitmask_uge(
-; CHECK-NEXT:    [[A:%.*]] = add <2 x i8> [[X:%.*]], <i8 15, i8 undef>
-; CHECK-NEXT:    [[M:%.*]] = and <2 x i8> [[A]], <i8 15, i8 15>
-; CHECK-NEXT:    [[R:%.*]] = icmp uge <2 x i8> [[M]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[X:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %a = add <2 x i8> %x, <i8 15, i8 undef>
@@ -227,9 +223,7 @@ define <2 x i1> @low_bitmask_uge(<2 x i8> %x) {
 define i1 @low_bitmask_ugt(i8 %px) {
 ; CHECK-LABEL: @low_bitmask_ugt(
 ; CHECK-NEXT:    [[X:%.*]] = mul i8 [[PX:%.*]], [[PX]]
-; CHECK-NEXT:    [[A:%.*]] = add i8 [[X]], 127
-; CHECK-NEXT:    [[M:%.*]] = and i8 [[A]], 127
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[X]], [[M]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[X]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = mul i8 %px, %px
@@ -242,9 +236,7 @@ define i1 @low_bitmask_ugt(i8 %px) {
 define <2 x i1> @low_bitmask_ule(<2 x i8> %px) {
 ; CHECK-LABEL: @low_bitmask_ule(
 ; CHECK-NEXT:    [[X:%.*]] = mul <2 x i8> [[PX:%.*]], [[PX]]
-; CHECK-NEXT:    [[A:%.*]] = add <2 x i8> [[X]], <i8 3, i8 3>
-; CHECK-NEXT:    [[M:%.*]] = and <2 x i8> [[A]], <i8 3, i8 3>
-; CHECK-NEXT:    [[R:%.*]] = icmp ule <2 x i8> [[X]], [[M]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[X]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %x = mul <2 x i8> %px, %px
@@ -259,7 +251,7 @@ define i1 @low_bitmask_ult_use(i8 %x) {
 ; CHECK-NEXT:    [[A:%.*]] = add i8 [[X:%.*]], 7
 ; CHECK-NEXT:    [[M:%.*]] = and i8 [[A]], 7
 ; CHECK-NEXT:    call void @use8(i8 [[M]])
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[M]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[X]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %a = add i8 %x, 7
@@ -274,8 +266,7 @@ define i1 @low_bitmask_ugt_use(i8 %px) {
 ; CHECK-NEXT:    [[X:%.*]] = mul i8 [[PX:%.*]], [[PX]]
 ; CHECK-NEXT:    [[A:%.*]] = add i8 [[X]], 3
 ; CHECK-NEXT:    call void @use8(i8 [[A]])
-; CHECK-NEXT:    [[M:%.*]] = and i8 [[A]], 3
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[X]], [[M]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[X]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = mul i8 %px, %px
@@ -285,6 +276,8 @@ define i1 @low_bitmask_ugt_use(i8 %px) {
   %r = icmp ugt i8 %x, %m
   ret i1 %r
 }
+
+; negative test - need same low bitmask
 
 define i1 @low_bitmask_ult_wrong_mask1(i8 %x) {
 ; CHECK-LABEL: @low_bitmask_ult_wrong_mask1(
@@ -299,6 +292,8 @@ define i1 @low_bitmask_ult_wrong_mask1(i8 %x) {
   ret i1 %r
 }
 
+; negative test - need same low bitmask
+
 define i1 @low_bitmask_uge_wrong_mask2(i8 %x) {
 ; CHECK-LABEL: @low_bitmask_uge_wrong_mask2(
 ; CHECK-NEXT:    [[A:%.*]] = add i8 [[X:%.*]], 31
@@ -312,6 +307,8 @@ define i1 @low_bitmask_uge_wrong_mask2(i8 %x) {
   ret i1 %r
 }
 
+; negative test - predicate mandates operand order
+
 define i1 @low_bitmask_ugt_swapped(i8 %x) {
 ; CHECK-LABEL: @low_bitmask_ugt_swapped(
 ; CHECK-NEXT:    [[A:%.*]] = add i8 [[X:%.*]], 127
@@ -324,6 +321,8 @@ define i1 @low_bitmask_ugt_swapped(i8 %x) {
   %r = icmp ugt i8 %m, %x
   ret i1 %r
 }
+
+; negative test - unsigned preds only
 
 define i1 @low_bitmask_sgt(i8 %px) {
 ; CHECK-LABEL: @low_bitmask_sgt(
@@ -339,6 +338,8 @@ define i1 @low_bitmask_sgt(i8 %px) {
   %r = icmp sgt i8 %x, %m
   ret i1 %r
 }
+
+; negative test - specific operand must match
 
 define i1 @low_bitmask_ult_specific_op(i8 %x, i8 %y) {
 ; CHECK-LABEL: @low_bitmask_ult_specific_op(
