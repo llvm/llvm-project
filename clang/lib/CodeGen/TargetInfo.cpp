@@ -8693,7 +8693,7 @@ Address HexagonABIInfo::EmitVAArgForHexagonLinux(CodeGenFunction &CGF,
                             llvm::ConstantInt::get(CGF.Int32Ty, ArgSize),
                             "__new_saved_reg_area_pointer");
 
-  llvm::Value *UsingStack = 0;
+  llvm::Value *UsingStack = nullptr;
   UsingStack = CGF.Builder.CreateICmpSGT(__new_saved_reg_area_pointer,
                                          __saved_reg_area_end_pointer);
 

@@ -2548,9 +2548,9 @@ static bool isEndOfBlockCommentWithEscapedNewLine(const char *CurPtr,
   assert(CurPtr[0] == '\n' || CurPtr[0] == '\r');
 
   // Position of the first trigraph in the ending sequence.
-  const char *TrigraphPos = 0;
+  const char *TrigraphPos = nullptr;
   // Position of the first whitespace after a '\' in the ending sequence.
-  const char *SpacePos = 0;
+  const char *SpacePos = nullptr;
 
   while (true) {
     // Back up off the newline.

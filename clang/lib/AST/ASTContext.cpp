@@ -8476,8 +8476,8 @@ static TypedefDecl *CreateHexagonBuiltinVaListDecl(const ASTContext *Context) {
     FieldDecl *Field = FieldDecl::Create(
         const_cast<ASTContext &>(*Context), VaListTagDecl, SourceLocation(),
         SourceLocation(), &Context->Idents.get(FieldNames[i]), FieldTypes[i],
-        /*TInfo=*/0,
-        /*BitWidth=*/0,
+        /*TInfo=*/nullptr,
+        /*BitWidth=*/nullptr,
         /*Mutable=*/false, ICIS_NoInit);
     Field->setAccess(AS_public);
     VaListTagDecl->addDecl(Field);
