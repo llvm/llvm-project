@@ -40,7 +40,7 @@ __partial_sort(_RandomAccessIterator __first, _RandomAccessIterator __middle, _R
         if (__comp(*__i, *__first))
         {
             swap(*__i, *__first);
-            _VSTD::__sift_down<_Compare>(__first, __middle, __comp, __len, __first);
+            _VSTD::__sift_down<_Compare>(__first, __comp, __len, __first);
         }
     }
     _VSTD::__sort_heap<_Compare>(__first, __middle, __comp);
