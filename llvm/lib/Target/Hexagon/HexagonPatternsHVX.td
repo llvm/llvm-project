@@ -6,6 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
+def HQ8:    PatLeaf<(VecQ8   HvxQR:$R)>;
+def HQ16:   PatLeaf<(VecQ16  HvxQR:$R)>;
+def HQ32:   PatLeaf<(VecQ32  HvxQR:$R)>;
+
+def HVI8:   PatLeaf<(VecI8   HvxVR:$R)>;
+def HVI16:  PatLeaf<(VecI16  HvxVR:$R)>;
+def HVI32:  PatLeaf<(VecI32  HvxVR:$R)>;
+def HVF16:  PatLeaf<(VecF16  HvxVR:$R)>;
+def HVF32:  PatLeaf<(VecF32  HvxVR:$R)>;
+
+def HWI8:   PatLeaf<(VecPI8  HvxWR:$R)>;
+def HWI16:  PatLeaf<(VecPI16 HvxWR:$R)>;
+def HWI32:  PatLeaf<(VecPI32 HvxWR:$R)>;
+def HWF16:  PatLeaf<(VecPF16 HvxWR:$R)>;
+def HWF32:  PatLeaf<(VecPF32 HvxWR:$R)>;
 
 def SDTVecUnaryOp:
   SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
@@ -150,12 +165,19 @@ let Predicates = [UseHVX] in {
   defm: HvxLda_pat<V6_vL32b_ai,               alignedload, VecI8,  IsVecOff>;
   defm: HvxLda_pat<V6_vL32b_ai,               alignedload, VecI16, IsVecOff>;
   defm: HvxLda_pat<V6_vL32b_ai,               alignedload, VecI32, IsVecOff>;
-
   defm: HvxLd_pat<V6_vL32Ub_ai,             unalignedload, VecI8,  IsVecOff>;
   defm: HvxLd_pat<V6_vL32Ub_ai,             unalignedload, VecI16, IsVecOff>;
   defm: HvxLd_pat<V6_vL32Ub_ai,             unalignedload, VecI32, IsVecOff>;
 }
 
+let Predicates = [UseHVXV68] in {
+  defm: HvxLda_pat<V6_vL32b_nt_ai, alignednontemporalload, VecF16, IsVecOff>;
+  defm: HvxLda_pat<V6_vL32b_nt_ai, alignednontemporalload, VecF32, IsVecOff>;
+  defm: HvxLda_pat<V6_vL32b_ai,               alignedload, VecF16, IsVecOff>;
+  defm: HvxLda_pat<V6_vL32b_ai,               alignedload, VecF32, IsVecOff>;
+  defm: HvxLd_pat<V6_vL32Ub_ai,             unalignedload, VecF16, IsVecOff>;
+  defm: HvxLd_pat<V6_vL32Ub_ai,             unalignedload, VecF32, IsVecOff>;
+}
 
 // HVX stores
 
@@ -199,6 +221,15 @@ let Predicates = [UseHVX] in {
   defm: HvxSt_pat<V6_vS32Ub_ai,            unalignedstore, HVI32, IsVecOff>;
 }
 
+let Predicates = [UseHVXV68] in {
+  defm: HvxSt_pat<V6_vS32b_nt_ai, alignednontemporalstore, HVF16, IsVecOff>;
+  defm: HvxSt_pat<V6_vS32b_nt_ai, alignednontemporalstore, HVF32, IsVecOff>;
+  defm: HvxSt_pat<V6_vS32b_ai,               alignedstore, HVF16, IsVecOff>;
+  defm: HvxSt_pat<V6_vS32b_ai,               alignedstore, HVF32, IsVecOff>;
+  defm: HvxSt_pat<V6_vS32Ub_ai,            unalignedstore, HVF16, IsVecOff>;
+  defm: HvxSt_pat<V6_vS32Ub_ai,            unalignedstore, HVF32, IsVecOff>;
+}
+
 // Bitcasts between same-size vector types are no-ops, except for the
 // actual type change.
 let Predicates = [UseHVX] in {
@@ -209,6 +240,24 @@ let Predicates = [UseHVX] in {
   defm: NopCast_pat<VecPI8,  VecPI16, HvxWR>;
   defm: NopCast_pat<VecPI8,  VecPI32, HvxWR>;
   defm: NopCast_pat<VecPI16, VecPI32, HvxWR>;
+}
+
+let Predicates = [UseHVX, UseHVXFloatingPoint] in {
+  defm: NopCast_pat<VecI8,   VecF16,  HvxVR>;
+  defm: NopCast_pat<VecI8,   VecF32,  HvxVR>;
+  defm: NopCast_pat<VecI16,  VecF16,  HvxVR>;
+  defm: NopCast_pat<VecI16,  VecF32,  HvxVR>;
+  defm: NopCast_pat<VecI32,  VecF16,  HvxVR>;
+  defm: NopCast_pat<VecI32,  VecF32,  HvxVR>;
+  defm: NopCast_pat<VecF16,  VecF32,  HvxVR>;
+
+  defm: NopCast_pat<VecPI8,  VecPF16, HvxWR>;
+  defm: NopCast_pat<VecPI8,  VecPF32, HvxWR>;
+  defm: NopCast_pat<VecPI16, VecPF16, HvxWR>;
+  defm: NopCast_pat<VecPI16, VecPF32, HvxWR>;
+  defm: NopCast_pat<VecPI32, VecPF16, HvxWR>;
+  defm: NopCast_pat<VecPI32, VecPF32, HvxWR>;
+  defm: NopCast_pat<VecPF16, VecPF32, HvxWR>;
 }
 
 let Predicates = [UseHVX] in {
@@ -248,6 +297,13 @@ let Predicates = [UseHVX] in {
   def: Pat<(HexagonVINSERTW0 HVI16:$Vu, I32:$Rt),
            (V6_vinsertwr HvxVR:$Vu, I32:$Rt)>;
   def: Pat<(HexagonVINSERTW0 HVI32:$Vu, I32:$Rt),
+           (V6_vinsertwr HvxVR:$Vu, I32:$Rt)>;
+}
+
+let Predicates = [UseHVXFloatingPoint] in {
+  def: Pat<(HexagonVINSERTW0 HVF16:$Vu, I32:$Rt),
+           (V6_vinsertwr HvxVR:$Vu, I32:$Rt)>;
+  def: Pat<(HexagonVINSERTW0 HVF32:$Vu, I32:$Rt),
            (V6_vinsertwr HvxVR:$Vu, I32:$Rt)>;
 }
 

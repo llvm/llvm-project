@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_PCH_CONTAINER_OPERATIONS_H
-#define LLVM_CLANG_PCH_CONTAINER_OPERATIONS_H
+#ifndef LLVM_CLANG_FRONTEND_PCHCONTAINEROPERATIONS_H
+#define LLVM_CLANG_FRONTEND_PCHCONTAINEROPERATIONS_H
 
 #include "clang/Serialization/PCHContainerOperations.h"
 

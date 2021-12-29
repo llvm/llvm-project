@@ -186,4 +186,4 @@ private:
 }  // namespace ast_matchers
 }  // namespace clang
 
-#endif  // LLVM_CLANG_AST_MATCHERS_DYNAMIC_DIAGNOSTICS_H
+#endif // LLVM_CLANG_ASTMATCHERS_DYNAMIC_DIAGNOSTICS_H

@@ -87,18 +87,6 @@ def V8I8:   PatLeaf<(v8i8    DoubleRegs:$R)>;
 def V4I16:  PatLeaf<(v4i16   DoubleRegs:$R)>;
 def V2I32:  PatLeaf<(v2i32   DoubleRegs:$R)>;
 
-def HQ8:    PatLeaf<(VecQ8   HvxQR:$R)>;
-def HQ16:   PatLeaf<(VecQ16  HvxQR:$R)>;
-def HQ32:   PatLeaf<(VecQ32  HvxQR:$R)>;
-
-def HVI8:   PatLeaf<(VecI8   HvxVR:$R)>;
-def HVI16:  PatLeaf<(VecI16  HvxVR:$R)>;
-def HVI32:  PatLeaf<(VecI32  HvxVR:$R)>;
-
-def HWI8:   PatLeaf<(VecPI8  HvxWR:$R)>;
-def HWI16:  PatLeaf<(VecPI16 HvxWR:$R)>;
-def HWI32:  PatLeaf<(VecPI32 HvxWR:$R)>;
-
 def SDTVecLeaf:
   SDTypeProfile<1, 0, [SDTCisVec<0>]>;
 def SDTVecVecIntOp:

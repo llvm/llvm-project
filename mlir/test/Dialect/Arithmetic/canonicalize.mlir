@@ -484,3 +484,65 @@ func @test_minui(%arg0 : i8) -> (i8, i8, i8, i8) {
   %3 = arith.minui %arg0, %c0 : i8
   return %0, %1, %2, %3: i8, i8, i8, i8
 }
+
+// -----
+
+// CHECK-LABEL: @constant_FPtoUI(
+func @constant_FPtoUI() -> i32 {
+  // CHECK: %[[C0:.+]] = arith.constant 2 : i32
+  // CHECK: return %[[C0]]
+  %c0 = arith.constant 2.0 : f32
+  %res = arith.fptoui %c0 : f32 to i32
+  return %res : i32
+}
+
+// -----
+// CHECK-LABEL: @invalid_constant_FPtoUI(
+func @invalid_constant_FPtoUI() -> i32 {
+  // CHECK: %[[C0:.+]] = arith.constant -2.000000e+00 : f32
+  // CHECK: %[[C1:.+]] = arith.fptoui %[[C0]] : f32 to i32
+  // CHECK: return %[[C1]]
+  %c0 = arith.constant -2.0 : f32
+  %res = arith.fptoui %c0 : f32 to i32
+  return %res : i32
+}
+
+// -----
+// CHECK-LABEL: @constant_FPtoSI(
+func @constant_FPtoSI() -> i32 {
+  // CHECK: %[[C0:.+]] = arith.constant -2 : i32
+  // CHECK: return %[[C0]]
+  %c0 = arith.constant -2.0 : f32
+  %res = arith.fptosi %c0 : f32 to i32
+  return %res : i32
+}
+
+// -----
+// CHECK-LABEL: @invalid_constant_FPtoSI(
+func @invalid_constant_FPtoSI() -> i8 {
+  // CHECK: %[[C0:.+]] = arith.constant 2.000000e+10 : f32
+  // CHECK: %[[C1:.+]] = arith.fptosi %[[C0]] : f32 to i8
+  // CHECK: return %[[C1]]
+  %c0 = arith.constant 2.0e10 : f32
+  %res = arith.fptosi %c0 : f32 to i8
+  return %res : i8
+}
+
+// CHECK-LABEL: @constant_SItoFP(
+func @constant_SItoFP() -> f32 {
+  // CHECK: %[[C0:.+]] = arith.constant -2.000000e+00 : f32
+  // CHECK: return %[[C0]]
+  %c0 = arith.constant -2 : i32
+  %res = arith.sitofp %c0 : i32 to f32
+  return %res : f32
+}
+
+// -----
+// CHECK-LABEL: @constant_UItoFP(
+func @constant_UItoFP() -> f32 {
+  // CHECK: %[[C0:.+]] = arith.constant 2.000000e+00 : f32
+  // CHECK: return %[[C0]]
+  %c0 = arith.constant 2 : i32
+  %res = arith.sitofp %c0 : i32 to f32
+  return %res : f32
+}

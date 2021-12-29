@@ -21,6 +21,7 @@
 
 #include "llvm/ADT/EnumeratedArray.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/CallGraph.h"
@@ -152,14 +153,6 @@ static constexpr auto TAG = "[" DEBUG_TYPE "]";
 #endif
 
 namespace {
-
-enum class AddressSpace : unsigned {
-  Generic = 0,
-  Global = 1,
-  Shared = 3,
-  Constant = 4,
-  Local = 5,
-};
 
 struct AAHeapToShared;
 
@@ -1597,8 +1590,10 @@ private:
             &F.getEntryBlock(), F.getEntryBlock().begin()));
       // Create a fallback location if non was found.
       // TODO: Use the debug locations of the calls instead.
-      Constant *Loc = OMPInfoCache.OMPBuilder.getOrCreateDefaultSrcLocStr();
-      Ident = OMPInfoCache.OMPBuilder.getOrCreateIdent(Loc);
+      uint32_t SrcLocStrSize;
+      Constant *Loc =
+          OMPInfoCache.OMPBuilder.getOrCreateDefaultSrcLocStr(SrcLocStrSize);
+      Ident = OMPInfoCache.OMPBuilder.getOrCreateIdent(Loc, SrcLocStrSize);
     }
     return Ident;
   }
@@ -2548,7 +2543,7 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
   }
 
   /// Set of basic blocks that are executed by a single thread.
-  DenseSet<const BasicBlock *> SingleThreadedBBs;
+  SmallSetVector<const BasicBlock *, 16> SingleThreadedBBs;
 
   /// Total number of basic blocks in this function.
   long unsigned NumBBs;
@@ -2572,7 +2567,7 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
   if (!A.checkForAllCallSites(PredForCallSite, *this,
                               /* RequiresAllCallSites */ true,
                               AllCallSitesKnown))
-    SingleThreadedBBs.erase(&F->getEntryBlock());
+    SingleThreadedBBs.remove(&F->getEntryBlock());
 
   auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
   auto &RFI = OMPInfoCache.RFIs[OMPRTL___kmpc_target_init];
@@ -2637,7 +2632,7 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
 
   for (auto *BB : RPOT) {
     if (!MergePredecessorStates(BB))
-      SingleThreadedBBs.erase(BB);
+      SingleThreadedBBs.remove(BB);
   }
 
   return (NumSingleThreadedBBs == SingleThreadedBBs.size())
@@ -2816,7 +2811,7 @@ struct AAHeapToSharedFunction : public AAHeapToShared {
       if (CallBase *CB = dyn_cast<CallBase>(U))
         if (!isa<ConstantInt>(CB->getArgOperand(0)) ||
             !ED.isExecutedByInitialThreadOnly(*CB))
-          MallocCalls.erase(CB);
+          MallocCalls.remove(CB);
     }
 
     findPotentialRemovedFreeCalls(A);
@@ -2828,7 +2823,7 @@ struct AAHeapToSharedFunction : public AAHeapToShared {
   }
 
   /// Collection of all malloc calls in a function.
-  SmallPtrSet<CallBase *, 4> MallocCalls;
+  SmallSetVector<CallBase *, 4> MallocCalls;
   /// Collection of potentially removed free calls in a function.
   SmallPtrSet<CallBase *, 4> PotentialRemovedFreeCalls;
 };
@@ -3228,8 +3223,11 @@ struct AAKernelInfoFunction : AAKernelInfo {
       OpenMPIRBuilder::LocationDescription Loc(
           InsertPointTy(ParentBB, ParentBB->end()), DL);
       OMPInfoCache.OMPBuilder.updateToLocation(Loc);
-      auto *SrcLocStr = OMPInfoCache.OMPBuilder.getOrCreateSrcLocStr(Loc);
-      Value *Ident = OMPInfoCache.OMPBuilder.getOrCreateIdent(SrcLocStr);
+      uint32_t SrcLocStrSize;
+      auto *SrcLocStr =
+          OMPInfoCache.OMPBuilder.getOrCreateSrcLocStr(Loc, SrcLocStrSize);
+      Value *Ident =
+          OMPInfoCache.OMPBuilder.getOrCreateIdent(SrcLocStr, SrcLocStrSize);
       BranchInst::Create(RegionCheckTidBB, ParentBB)->setDebugLoc(DL);
 
       // Add check for Tid in RegionCheckTidBB
@@ -4511,6 +4509,8 @@ void OpenMPOpt::registerAAs(bool IsModulePass) {
         bool UsedAssumedInformation = false;
         A.getAssumedSimplified(IRPosition::value(*LI), /* AA */ nullptr,
                                UsedAssumedInformation);
+      } else if (auto *SI = dyn_cast<StoreInst>(&I)) {
+        A.getOrCreateAAFor<AAIsDead>(IRPosition::value(*SI));
       }
     }
   }

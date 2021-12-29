@@ -623,7 +623,8 @@ bool AMDGPULibCalls::fold(CallInst *CI, AliasAnalysis *AA) {
   Function *Callee = CI->getCalledFunction();
 
   // Ignore indirect calls.
-  if (Callee == 0) return false;
+  if (Callee == nullptr)
+    return false;
 
   BasicBlock *BB = CI->getParent();
   LLVMContext &Context = CI->getParent()->getContext();
@@ -1402,8 +1403,8 @@ AllocaInst* AMDGPULibCalls::insertAlloca(CallInst *UI, IRBuilder<> &B,
   Function *UCallee = UI->getCalledFunction();
   Type *RetType = UCallee->getReturnType();
   B.SetInsertPoint(&*ItNew);
-  AllocaInst *Alloc = B.CreateAlloca(RetType, 0,
-    std::string(prefix) + UI->getName());
+  AllocaInst *Alloc =
+      B.CreateAlloca(RetType, nullptr, std::string(prefix) + UI->getName());
   Alloc->setAlignment(
       Align(UCallee->getParent()->getDataLayout().getTypeAllocSize(RetType)));
   return Alloc;
@@ -1724,7 +1725,8 @@ bool AMDGPUSimplifyLibCalls::runOnFunction(Function &F) {
 
       // Ignore indirect calls.
       Function *Callee = CI->getCalledFunction();
-      if (Callee == 0) continue;
+      if (Callee == nullptr)
+        continue;
 
       LLVM_DEBUG(dbgs() << "AMDIC: try folding " << *CI << "\n";
                  dbgs().flush());
@@ -1757,7 +1759,7 @@ PreservedAnalyses AMDGPUSimplifyLibCallsPass::run(Function &F,
 
       // Ignore indirect calls.
       Function *Callee = CI->getCalledFunction();
-      if (Callee == 0)
+      if (Callee == nullptr)
         continue;
 
       LLVM_DEBUG(dbgs() << "AMDIC: try folding " << *CI << "\n";
@@ -1783,9 +1785,10 @@ bool AMDGPUUseNativeCalls::runOnFunction(Function &F) {
 
       // Ignore indirect calls.
       Function *Callee = CI->getCalledFunction();
-      if (Callee == 0) continue;
+      if (Callee == nullptr)
+        continue;
 
-      if(Simplifier.useNative(CI))
+      if (Simplifier.useNative(CI))
         Changed = true;
     }
   }
@@ -1811,7 +1814,7 @@ PreservedAnalyses AMDGPUUseNativeCallsPass::run(Function &F,
 
       // Ignore indirect calls.
       Function *Callee = CI->getCalledFunction();
-      if (Callee == 0)
+      if (Callee == nullptr)
         continue;
 
       if (Simplifier.useNative(CI))

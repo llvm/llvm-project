@@ -13142,6 +13142,9 @@ public:
   /// Adds Callee to DeviceCallGraph if we don't know if its caller will be
   /// codegen'ed yet.
   bool checkSYCLDeviceFunction(SourceLocation Loc, FunctionDecl *Callee);
+  void deepTypeCheckForSYCLDevice(SourceLocation UsedAt,
+                                  llvm::DenseSet<QualType> Visited,
+                                  ValueDecl *DeclToCheck);
 };
 
 /// RAII object that enters a new expression evaluation context.

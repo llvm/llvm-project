@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_REFACTOR_REFACTORING_ACTION_RULES_INTERNAL_H
-#define LLVM_CLANG_TOOLING_REFACTOR_REFACTORING_ACTION_RULES_INTERNAL_H
+#ifndef LLVM_CLANG_TOOLING_REFACTORING_REFACTORINGACTIONRULESINTERNAL_H
+#define LLVM_CLANG_TOOLING_REFACTORING_REFACTORINGACTIONRULESINTERNAL_H
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Tooling/Refactoring/RefactoringActionRule.h"
@@ -154,4 +154,4 @@ createRefactoringActionRule(const RequirementTypes &... Requirements) {
 } // end namespace tooling
 } // end namespace clang
 
-#endif // LLVM_CLANG_TOOLING_REFACTOR_REFACTORING_ACTION_RULES_INTERNAL_H
+#endif // LLVM_CLANG_TOOLING_REFACTORING_REFACTORINGACTIONRULESINTERNAL_H
