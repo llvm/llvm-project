@@ -22,8 +22,6 @@
 
 using IterSwapT = decltype(std::ranges::iter_swap);
 
-static_assert(std::semiregular<std::remove_cv_t<IterSwapT>>);
-
 struct HasIterSwap {
   int &value_;
   explicit HasIterSwap(int &value) : value_(value) { assert(value == 0); }
