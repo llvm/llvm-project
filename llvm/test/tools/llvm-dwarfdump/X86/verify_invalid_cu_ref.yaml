@@ -2,6 +2,7 @@
 # RUN: not llvm-dwarfdump -debug-info -verify %t.o | FileCheck %s
 
 #      CHECK: Verifying non-dwo Units...
+# CHECK-NEXT: Verifying unit: 1 / 1, "/tmp/main.c"
 # CHECK-NEXT: error: DW_FORM_ref4 CU offset 0x00001234 is invalid (must be less than CU size of 0x0000001a):
 
 --- !ELF
