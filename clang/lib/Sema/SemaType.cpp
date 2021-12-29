@@ -2501,7 +2501,7 @@ QualType Sema::BuildArrayType(QualType T, ArrayType::ArraySizeModifier ASM,
         Diag(ArraySize->getBeginLoc(),
              isSFINAEContext() ? diag::err_typecheck_zero_array_size
                                : diag::ext_typecheck_zero_array_size)
-            << ArraySize->getSourceRange();
+            << 0 << ArraySize->getSourceRange();
       }
 
       // Is the array too large?
