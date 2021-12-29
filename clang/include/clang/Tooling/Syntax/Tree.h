@@ -18,8 +18,8 @@
 // This is still work in progress and highly experimental, we leave room for
 // ourselves to completely change the design and/or implementation.
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_CLANG_TOOLING_SYNTAX_TREE_CASCADE_H
-#define LLVM_CLANG_TOOLING_SYNTAX_TREE_CASCADE_H
+#ifndef LLVM_CLANG_TOOLING_SYNTAX_TREE_H
+#define LLVM_CLANG_TOOLING_SYNTAX_TREE_H
 
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"

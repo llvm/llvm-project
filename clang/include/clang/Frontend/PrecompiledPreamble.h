@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_FRONTEND_PRECOMPILED_PREAMBLE_H
-#define LLVM_CLANG_FRONTEND_PRECOMPILED_PREAMBLE_H
+#ifndef LLVM_CLANG_FRONTEND_PRECOMPILEDPREAMBLE_H
+#define LLVM_CLANG_FRONTEND_PRECOMPILEDPREAMBLE_H
 
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"

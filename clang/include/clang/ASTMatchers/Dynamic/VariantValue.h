@@ -356,4 +356,4 @@ private:
 } // end namespace ast_matchers
 } // end namespace clang
 
-#endif  // LLVM_CLANG_AST_MATCHERS_DYNAMIC_VARIANT_VALUE_H
+#endif // LLVM_CLANG_ASTMATCHERS_DYNAMIC_VARIANTVALUE_H

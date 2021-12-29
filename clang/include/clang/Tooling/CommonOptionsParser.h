@@ -141,4 +141,4 @@ private:
 }  // namespace tooling
 }  // namespace clang
 
-#endif  // LLVM_TOOLS_CLANG_INCLUDE_CLANG_TOOLING_COMMONOPTIONSPARSER_H
+#endif // LLVM_CLANG_TOOLING_COMMONOPTIONSPARSER_H

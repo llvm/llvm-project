@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_REFACTOR_RECURSIVE_SYMBOL_VISITOR_H
-#define LLVM_CLANG_TOOLING_REFACTOR_RECURSIVE_SYMBOL_VISITOR_H
+#ifndef LLVM_CLANG_TOOLING_REFACTORING_RECURSIVESYMBOLVISITOR_H
+#define LLVM_CLANG_TOOLING_REFACTORING_RECURSIVESYMBOLVISITOR_H
 
 #include "clang/AST/AST.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -150,4 +150,4 @@ private:
 } // end namespace tooling
 } // end namespace clang
 
-#endif // LLVM_CLANG_TOOLING_REFACTOR_RECURSIVE_SYMBOL_VISITOR_H
+#endif // LLVM_CLANG_TOOLING_REFACTORING_RECURSIVESYMBOLVISITOR_H

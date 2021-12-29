@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_TRANSFORMER_REWRITE_RULE_H_
-#define LLVM_CLANG_TOOLING_TRANSFORMER_REWRITE_RULE_H_
+#ifndef LLVM_CLANG_TOOLING_TRANSFORMER_REWRITERULE_H
+#define LLVM_CLANG_TOOLING_TRANSFORMER_REWRITERULE_H
 
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -450,4 +450,4 @@ findSelectedCase(const ast_matchers::MatchFinder::MatchResult &Result,
 } // namespace transformer
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLING_TRANSFORMER_REWRITE_RULE_H_
+#endif // LLVM_CLANG_TOOLING_TRANSFORMER_REWRITERULE_H

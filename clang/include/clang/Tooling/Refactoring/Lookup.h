@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_REFACTOR_LOOKUP_H
-#define LLVM_CLANG_TOOLING_REFACTOR_LOOKUP_H
+#ifndef LLVM_CLANG_TOOLING_REFACTORING_LOOKUP_H
+#define LLVM_CLANG_TOOLING_REFACTORING_LOOKUP_H
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
@@ -47,4 +47,4 @@ std::string replaceNestedName(const NestedNameSpecifier *Use,
 } // end namespace tooling
 } // end namespace clang
 
-#endif // LLVM_CLANG_TOOLING_REFACTOR_LOOKUP_H
+#endif // LLVM_CLANG_TOOLING_REFACTORING_LOOKUP_H

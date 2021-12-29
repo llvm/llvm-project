@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_LIB_ANALYSIS_SELECTOREXTRAS_H
-#define LLVM_CLANG_LIB_ANALYSIS_SELECTOREXTRAS_H
+#ifndef LLVM_CLANG_ANALYSIS_SELECTOREXTRAS_H
+#define LLVM_CLANG_ANALYSIS_SELECTOREXTRAS_H
 
 #include "clang/AST/ASTContext.h"
 

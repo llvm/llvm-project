@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_ANALYSIS_RETAINSUMMARY_MANAGER_H
-#define LLVM_CLANG_ANALYSIS_RETAINSUMMARY_MANAGER_H
+#ifndef LLVM_CLANG_ANALYSIS_RETAINSUMMARYMANAGER_H
+#define LLVM_CLANG_ANALYSIS_RETAINSUMMARYMANAGER_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"

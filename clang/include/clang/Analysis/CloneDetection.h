@@ -11,8 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_AST_CLONEDETECTION_H
-#define LLVM_CLANG_AST_CLONEDETECTION_H
+#ifndef LLVM_CLANG_ANALYSIS_CLONEDETECTION_H
+#define LLVM_CLANG_ANALYSIS_CLONEDETECTION_H
 
 #include "clang/AST/StmtVisitor.h"
 #include "llvm/Support/Regex.h"
@@ -441,4 +441,4 @@ struct MatchingVariablePatternConstraint {
 
 } // end namespace clang
 
-#endif // LLVM_CLANG_AST_CLONEDETECTION_H
+#endif // LLVM_CLANG_ANALYSIS_CLONEDETECTION_H

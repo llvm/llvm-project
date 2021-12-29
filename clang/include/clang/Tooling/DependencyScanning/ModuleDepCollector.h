@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_DEPENDENCY_SCANNING_MODULE_DEP_COLLECTOR_H
-#define LLVM_CLANG_TOOLING_DEPENDENCY_SCANNING_MODULE_DEP_COLLECTOR_H
+#ifndef LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_MODULEDEPCOLLECTOR_H
+#define LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_MODULEDEPCOLLECTOR_H
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceManager.h"
@@ -234,4 +234,4 @@ private:
 } // end namespace tooling
 } // end namespace clang
 
-#endif // LLVM_CLANG_TOOLING_DEPENDENCY_SCANNING_MODULE_DEP_COLLECTOR_H
+#endif // LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_MODULEDEPCOLLECTOR_H

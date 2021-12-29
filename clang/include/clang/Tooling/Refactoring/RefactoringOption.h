@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_REFACTOR_REFACTORING_OPTION_H
-#define LLVM_CLANG_TOOLING_REFACTOR_REFACTORING_OPTION_H
+#ifndef LLVM_CLANG_TOOLING_REFACTORING_REFACTORINGOPTION_H
+#define LLVM_CLANG_TOOLING_REFACTORING_REFACTORINGOPTION_H
 
 #include "clang/Basic/LLVM.h"
 #include <memory>
@@ -60,4 +60,4 @@ std::shared_ptr<OptionType> createRefactoringOption() {
 } // end namespace tooling
 } // end namespace clang
 
-#endif // LLVM_CLANG_TOOLING_REFACTOR_REFACTORING_OPTION_H
+#endif // LLVM_CLANG_TOOLING_REFACTORING_REFACTORINGOPTION_H

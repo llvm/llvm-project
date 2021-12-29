@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_REFACTOR_REFACTORING_OPTION_VISITOR_H
-#define LLVM_CLANG_TOOLING_REFACTOR_REFACTORING_OPTION_VISITOR_H
+#ifndef LLVM_CLANG_TOOLING_REFACTORING_REFACTORINGOPTIONVISITOR_H
+#define LLVM_CLANG_TOOLING_REFACTORING_REFACTORINGOPTIONVISITOR_H
 
 #include "clang/Basic/LLVM.h"
 #include <type_traits>
@@ -58,4 +58,4 @@ struct IsValidOptionType : internal::HasHandle<T>::Type {};
 } // end namespace tooling
 } // end namespace clang
 
-#endif // LLVM_CLANG_TOOLING_REFACTOR_REFACTORING_OPTION_VISITOR_H
+#endif // LLVM_CLANG_TOOLING_REFACTORING_REFACTORINGOPTIONVISITOR_H

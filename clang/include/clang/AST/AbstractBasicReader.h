@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef CLANG_AST_ABSTRACTBASICREADER_H
-#define CLANG_AST_ABSTRACTBASICREADER_H
+#ifndef LLVM_CLANG_AST_ABSTRACTBASICREADER_H
+#define LLVM_CLANG_AST_ABSTRACTBASICREADER_H
 
 #include "clang/AST/DeclTemplate.h"
 

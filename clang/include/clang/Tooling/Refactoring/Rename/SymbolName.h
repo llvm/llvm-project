@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_REFACTOR_RENAME_SYMBOL_NAME_H
-#define LLVM_CLANG_TOOLING_REFACTOR_RENAME_SYMBOL_NAME_H
+#ifndef LLVM_CLANG_TOOLING_REFACTORING_RENAME_SYMBOLNAME_H
+#define LLVM_CLANG_TOOLING_REFACTORING_RENAME_SYMBOLNAME_H
 
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -45,4 +45,4 @@ private:
 } // end namespace tooling
 } // end namespace clang
 
-#endif // LLVM_CLANG_TOOLING_REFACTOR_RENAME_SYMBOL_NAME_H
+#endif // LLVM_CLANG_TOOLING_REFACTORING_RENAME_SYMBOLNAME_H

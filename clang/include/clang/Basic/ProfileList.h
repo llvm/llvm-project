@@ -10,8 +10,8 @@
 // functions.
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_CLANG_BASIC_INSTRPROFLIST_H
-#define LLVM_CLANG_BASIC_INSTRPROFLIST_H
+#ifndef LLVM_CLANG_BASIC_PROFILELIST_H
+#define LLVM_CLANG_BASIC_PROFILELIST_H
 
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/LLVM.h"

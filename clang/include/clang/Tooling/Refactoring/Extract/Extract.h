@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_REFACTOR_EXTRACT_EXTRACT_H
-#define LLVM_CLANG_TOOLING_REFACTOR_EXTRACT_EXTRACT_H
+#ifndef LLVM_CLANG_TOOLING_REFACTORING_EXTRACT_EXTRACT_H
+#define LLVM_CLANG_TOOLING_REFACTORING_EXTRACT_EXTRACT_H
 
 #include "clang/Tooling/Refactoring/ASTSelection.h"
 #include "clang/Tooling/Refactoring/RefactoringActionRules.h"
@@ -49,4 +49,4 @@ private:
 } // end namespace tooling
 } // end namespace clang
 
-#endif // LLVM_CLANG_TOOLING_REFACTOR_EXTRACT_EXTRACT_H
+#endif // LLVM_CLANG_TOOLING_REFACTORING_EXTRACT_EXTRACT_H

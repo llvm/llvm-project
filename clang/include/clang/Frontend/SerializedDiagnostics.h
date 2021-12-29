@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_FRONTEND_SERIALIZE_DIAGNOSTICS_H_
-#define LLVM_CLANG_FRONTEND_SERIALIZE_DIAGNOSTICS_H_
+#ifndef LLVM_CLANG_FRONTEND_SERIALIZEDDIAGNOSTICS_H
+#define LLVM_CLANG_FRONTEND_SERIALIZEDDIAGNOSTICS_H
 
 #include "llvm/Bitstream/BitCodes.h"
 

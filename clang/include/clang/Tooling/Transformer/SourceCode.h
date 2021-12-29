@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_TRANSFORMER_SOURCE_CODE_H
-#define LLVM_CLANG_TOOLING_TRANSFORMER_SOURCE_CODE_H
+#ifndef LLVM_CLANG_TOOLING_TRANSFORMER_SOURCECODE_H
+#define LLVM_CLANG_TOOLING_TRANSFORMER_SOURCECODE_H
 
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/SourceLocation.h"
@@ -100,4 +100,4 @@ getRangeForEdit(const CharSourceRange &EditRange, const ASTContext &Context) {
 }
 } // namespace tooling
 } // namespace clang
-#endif // LLVM_CLANG_TOOLING_TRANSFORMER_SOURCE_CODE_H
+#endif // LLVM_CLANG_TOOLING_TRANSFORMER_SOURCECODE_H

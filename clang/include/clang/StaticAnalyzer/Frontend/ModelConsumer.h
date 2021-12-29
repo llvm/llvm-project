@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_GR_MODELCONSUMER_H
-#define LLVM_CLANG_GR_MODELCONSUMER_H
+#ifndef LLVM_CLANG_STATICANALYZER_FRONTEND_MODELCONSUMER_H
+#define LLVM_CLANG_STATICANALYZER_FRONTEND_MODELCONSUMER_H
 
 #include "clang/AST/ASTConsumer.h"
 #include "llvm/ADT/StringMap.h"
