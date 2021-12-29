@@ -30,7 +30,7 @@ define void @hoge(i32 %arg) {
 ; CHECK:       bb8:
 ; CHECK-NEXT:    br i1 false, label [[BB9:%.*]], label [[BB3:%.*]]
 ; CHECK:       bb9:
-; CHECK-NEXT:    store i8 undef, i8* null, align 1
+; CHECK-NEXT:    store i8 poison, i8* null, align 1
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb10:
 ; CHECK-NEXT:    store i32 0, i32* @global, align 4, !h !0

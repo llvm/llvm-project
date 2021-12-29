@@ -31,7 +31,7 @@ define i32 @_Z1ii(i32 %p) {
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br i1 true, label [[BB2]], label [[BB2]]
 ; CHECK:       0:
-; CHECK-NEXT:    store i8 undef, i8* null, align 1
+; CHECK-NEXT:    store i8 poison, i8* null, align 1
 ; CHECK-NEXT:    ret i32 [[P]]
 ;
 entry:
@@ -82,7 +82,7 @@ define i32 @_Z1ik(i32 %p) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 false)
 ; CHECK-NEXT:    ret i32 15
 ; CHECK:       bb3:
-; CHECK-NEXT:    store i8 undef, i8* null, align 1
+; CHECK-NEXT:    store i8 poison, i8* null, align 1
 ; CHECK-NEXT:    ret i32 17
 ;
 entry:

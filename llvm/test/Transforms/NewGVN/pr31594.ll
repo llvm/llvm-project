@@ -77,7 +77,7 @@ define void @foo(i8* %arg) {
 ; CHECK-NEXT:    i8 6, label [[BB8:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb8:
-; CHECK-NEXT:    store i8 undef, i8* null, align 1
+; CHECK-NEXT:    store i8 poison, i8* null, align 1
 ; CHECK-NEXT:    br label [[BB4]]
 ; CHECK:       bb9:
 ; CHECK-NEXT:    store i8 0, i8* [[ARG]], align 1, !g !0

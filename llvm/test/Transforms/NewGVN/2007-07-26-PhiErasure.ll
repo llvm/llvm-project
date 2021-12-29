@@ -20,8 +20,8 @@ define i32 @reload(%struct.rtx_def* %first, i32 %global, %struct.FILE* %dumpfile
 ; CHECK:       cond_next2943:
 ; CHECK-NEXT:    br i1 false, label [[BB2982_PREHEADER:%.*]], label [[BB2928]]
 ; CHECK:       bb2982.preheader:
-; CHECK-NEXT:    store i8 undef, i8* null
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    store i8 poison, i8* null
+; CHECK-NEXT:    ret i32 poison
 ;
 cond_next2835.1:		; preds = %cond_next2861
   %tmp2922 = load i32, i32* @n_spills, align 4		; <i32> [#uses=0]

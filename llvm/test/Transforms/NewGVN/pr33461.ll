@@ -8,7 +8,7 @@ define void @patatino() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[FOR_COND1:%.*]], label [[FOR_INC:%.*]]
 ; CHECK:       for.cond1:
-; CHECK-NEXT:    [[PHIOFOPS:%.*]] = phi i16 [ undef, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_INC]] ]
+; CHECK-NEXT:    [[PHIOFOPS:%.*]] = phi i16 [ poison, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_INC]] ]
 ; CHECK-NEXT:    store i16 [[PHIOFOPS]], i16* @b, align 2
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
