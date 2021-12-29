@@ -26,7 +26,8 @@ class ModuleCacheTestcaseSimple(TestBase):
 
 
     def get_module_cache_files(self, basename):
-        module_file_glob = os.path.join(self.cache_dir, "llvmcache-*%s*" % (basename))
+        module_file_glob = os.path.join(self.cache_dir,
+                "llvmcache-*%s*-symtab-*" % (basename))
         return glob.glob(module_file_glob)
 
     # Doesn't depend on any specific debug information.
