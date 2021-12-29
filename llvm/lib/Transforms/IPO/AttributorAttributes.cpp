@@ -1293,8 +1293,15 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
       LLVM_DEBUG(dbgs() << "[AAPointerInfo] User not handled " << *Usr << "\n");
       return false;
     };
+    auto EquivalentUseCB = [&](const Use &OldU, const Use &NewU) {
+      if (OffsetInfoMap.count(NewU))
+        return OffsetInfoMap[NewU] == OffsetInfoMap[OldU];
+      OffsetInfoMap[NewU] = OffsetInfoMap[OldU];
+      return true;
+    };
     if (!A.checkForAllUses(UsePred, *this, AssociatedValue,
-                           /* CheckBBLivenessOnly */ true))
+                           /* CheckBBLivenessOnly */ true, DepClassTy::OPTIONAL,
+                           EquivalentUseCB))
       return indicatePessimisticFixpoint();
 
     LLVM_DEBUG({
