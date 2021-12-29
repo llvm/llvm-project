@@ -46,6 +46,7 @@
 # CHECK-NEXT: DW_AT_decl_file [DW_FORM_data1]	(0x01)
 # CHECK-NEXT: DW_AT_decl_line [DW_FORM_data1]	(2)
 # CHECK-NEXT: DW_AT_use_location [DW_FORM_ref4]	(cu + 0x0053 => {0x00000053}){{[[:space:]]}}
+# CHECK-NEXT: Verifying unit: 2 / 2 
 # CHECK-NEXT: error: Compilation unit root DIE is not a unit DIE: DW_TAG_null.
 # CHECK-NEXT: error: Compilation unit type (DW_UT_compile) and root DIE (DW_TAG_null) do not match.
 

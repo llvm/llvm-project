@@ -2,6 +2,7 @@
 # RUN: not llvm-dwarfdump -verify %t.o | FileCheck %s
 
 #      CHECK: Verifying non-dwo Units...
+# CHECK-NEXT: Verifying unit: 1 / 1, "/tmp/main.c"
 # CHECK-NEXT: error: Invalid address range
 
 --- !ELF
