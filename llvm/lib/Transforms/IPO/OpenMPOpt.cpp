@@ -2808,7 +2808,7 @@ struct AAHeapToSharedFunction : public AAHeapToShared {
       if (CallBase *CB = dyn_cast<CallBase>(U))
         if (!isa<ConstantInt>(CB->getArgOperand(0)) ||
             !ED.isExecutedByInitialThreadOnly(*CB))
-          MallocCalls.erase(CB);
+          MallocCalls.remove(CB);
     }
 
     findPotentialRemovedFreeCalls(A);
@@ -2820,7 +2820,7 @@ struct AAHeapToSharedFunction : public AAHeapToShared {
   }
 
   /// Collection of all malloc calls in a function.
-  SmallPtrSet<CallBase *, 4> MallocCalls;
+  SmallSetVector<CallBase *, 4> MallocCalls;
   /// Collection of potentially removed free calls in a function.
   SmallPtrSet<CallBase *, 4> PotentialRemovedFreeCalls;
 };
