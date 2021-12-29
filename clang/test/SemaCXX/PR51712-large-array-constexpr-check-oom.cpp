@@ -2,7 +2,7 @@
 // (There's nothing really platform-specific being tested, this is just ulimit).
 //
 // REQUIRES: shell
-// REQUIRES: linux
+// REQUIRES: system-linux
 // UNSUPPORTED: msan
 // UNSUPPORTED: asan
 //
