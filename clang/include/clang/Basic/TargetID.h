@@ -21,7 +21,7 @@ namespace clang {
 /// postfixed by a plus or minus sign delimited by colons, e.g.
 /// gfx908:xnack+:sramecc-. Each processor have a limited
 /// number of predefined features when showing up in a target ID.
-const llvm::SmallVector<llvm::StringRef, 4>
+llvm::SmallVector<llvm::StringRef, 4>
 getAllPossibleTargetIDFeatures(const llvm::Triple &T,
                                llvm::StringRef Processor);
 
