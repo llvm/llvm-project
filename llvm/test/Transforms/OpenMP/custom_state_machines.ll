@@ -995,9 +995,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; AMDGPU-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; AMDGPU-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; AMDGPU-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; AMDGPU-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; AMDGPU-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; AMDGPU-NEXT:    call void @__omp_outlined__2(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; AMDGPU-NEXT:    ret void
@@ -1021,9 +1018,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; AMDGPU-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; AMDGPU-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; AMDGPU-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; AMDGPU-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; AMDGPU-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; AMDGPU-NEXT:    call void @__omp_outlined__3(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; AMDGPU-NEXT:    ret void
@@ -1147,9 +1141,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; AMDGPU-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; AMDGPU-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; AMDGPU-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; AMDGPU-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; AMDGPU-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; AMDGPU-NEXT:    call void @__omp_outlined__5(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; AMDGPU-NEXT:    ret void
@@ -1269,9 +1260,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; AMDGPU-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; AMDGPU-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; AMDGPU-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; AMDGPU-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; AMDGPU-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; AMDGPU-NEXT:    call void @__omp_outlined__7(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; AMDGPU-NEXT:    ret void
@@ -1295,9 +1283,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; AMDGPU-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; AMDGPU-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; AMDGPU-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; AMDGPU-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; AMDGPU-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; AMDGPU-NEXT:    call void @__omp_outlined__8(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; AMDGPU-NEXT:    ret void
@@ -1393,9 +1378,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; AMDGPU-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; AMDGPU-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; AMDGPU-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; AMDGPU-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; AMDGPU-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; AMDGPU-NEXT:    call void @__omp_outlined__10(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; AMDGPU-NEXT:    ret void
@@ -1419,9 +1401,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; AMDGPU-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; AMDGPU-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; AMDGPU-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; AMDGPU-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; AMDGPU-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; AMDGPU-NEXT:    call void @__omp_outlined__11(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; AMDGPU-NEXT:    ret void
@@ -1517,9 +1496,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; AMDGPU-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; AMDGPU-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; AMDGPU-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; AMDGPU-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; AMDGPU-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; AMDGPU-NEXT:    call void @__omp_outlined__13(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; AMDGPU-NEXT:    ret void
@@ -1543,9 +1519,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; AMDGPU-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; AMDGPU-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; AMDGPU-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; AMDGPU-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; AMDGPU-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; AMDGPU-NEXT:    call void @__omp_outlined__14(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; AMDGPU-NEXT:    ret void
@@ -1729,9 +1702,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; AMDGPU-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; AMDGPU-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; AMDGPU-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; AMDGPU-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; AMDGPU-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; AMDGPU-NEXT:    call void @__omp_outlined__17(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; AMDGPU-NEXT:    ret void
@@ -1755,9 +1725,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; AMDGPU-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; AMDGPU-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; AMDGPU-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; AMDGPU-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; AMDGPU-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; AMDGPU-NEXT:    call void @__omp_outlined__18(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; AMDGPU-NEXT:    ret void
@@ -1803,9 +1770,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; AMDGPU-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; AMDGPU-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; AMDGPU-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; AMDGPU-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; AMDGPU-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; AMDGPU-NEXT:    call void @__omp_outlined__19(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; AMDGPU-NEXT:    ret void
@@ -1964,9 +1928,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; NVPTX-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; NVPTX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; NVPTX-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; NVPTX-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; NVPTX-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; NVPTX-NEXT:    call void @__omp_outlined__2(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; NVPTX-NEXT:    ret void
@@ -1990,9 +1951,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; NVPTX-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; NVPTX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; NVPTX-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; NVPTX-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; NVPTX-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; NVPTX-NEXT:    call void @__omp_outlined__3(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; NVPTX-NEXT:    ret void
@@ -2115,9 +2073,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; NVPTX-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; NVPTX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; NVPTX-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; NVPTX-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; NVPTX-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; NVPTX-NEXT:    call void @__omp_outlined__5(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; NVPTX-NEXT:    ret void
@@ -2236,9 +2191,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; NVPTX-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; NVPTX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; NVPTX-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; NVPTX-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; NVPTX-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; NVPTX-NEXT:    call void @__omp_outlined__7(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; NVPTX-NEXT:    ret void
@@ -2262,9 +2214,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; NVPTX-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; NVPTX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; NVPTX-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; NVPTX-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; NVPTX-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; NVPTX-NEXT:    call void @__omp_outlined__8(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; NVPTX-NEXT:    ret void
@@ -2359,9 +2308,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; NVPTX-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; NVPTX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; NVPTX-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; NVPTX-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; NVPTX-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; NVPTX-NEXT:    call void @__omp_outlined__10(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; NVPTX-NEXT:    ret void
@@ -2385,9 +2331,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; NVPTX-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; NVPTX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; NVPTX-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; NVPTX-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; NVPTX-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; NVPTX-NEXT:    call void @__omp_outlined__11(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; NVPTX-NEXT:    ret void
@@ -2482,9 +2425,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; NVPTX-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; NVPTX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; NVPTX-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; NVPTX-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; NVPTX-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; NVPTX-NEXT:    call void @__omp_outlined__13(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; NVPTX-NEXT:    ret void
@@ -2508,9 +2448,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; NVPTX-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; NVPTX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; NVPTX-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; NVPTX-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; NVPTX-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; NVPTX-NEXT:    call void @__omp_outlined__14(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; NVPTX-NEXT:    ret void
@@ -2692,9 +2629,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; NVPTX-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; NVPTX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; NVPTX-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; NVPTX-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; NVPTX-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; NVPTX-NEXT:    call void @__omp_outlined__17(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; NVPTX-NEXT:    ret void
@@ -2718,9 +2652,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; NVPTX-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; NVPTX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; NVPTX-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; NVPTX-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; NVPTX-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; NVPTX-NEXT:    call void @__omp_outlined__18(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; NVPTX-NEXT:    ret void
@@ -2766,9 +2697,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; NVPTX-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; NVPTX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; NVPTX-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; NVPTX-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; NVPTX-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; NVPTX-NEXT:    call void @__omp_outlined__19(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; NVPTX-NEXT:    ret void
@@ -2893,9 +2821,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-DISABLED-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; AMDGPU-DISABLED-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU-DISABLED-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; AMDGPU-DISABLED-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; AMDGPU-DISABLED-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; AMDGPU-DISABLED-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; AMDGPU-DISABLED-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; AMDGPU-DISABLED-NEXT:    call void @__omp_outlined__2(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; AMDGPU-DISABLED-NEXT:    ret void
@@ -2919,9 +2844,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-DISABLED-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; AMDGPU-DISABLED-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU-DISABLED-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; AMDGPU-DISABLED-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; AMDGPU-DISABLED-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; AMDGPU-DISABLED-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; AMDGPU-DISABLED-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; AMDGPU-DISABLED-NEXT:    call void @__omp_outlined__3(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; AMDGPU-DISABLED-NEXT:    ret void
@@ -3004,9 +2926,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-DISABLED-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; AMDGPU-DISABLED-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU-DISABLED-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; AMDGPU-DISABLED-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; AMDGPU-DISABLED-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; AMDGPU-DISABLED-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; AMDGPU-DISABLED-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; AMDGPU-DISABLED-NEXT:    call void @__omp_outlined__5(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; AMDGPU-DISABLED-NEXT:    ret void
@@ -3089,9 +3008,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-DISABLED-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; AMDGPU-DISABLED-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU-DISABLED-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; AMDGPU-DISABLED-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; AMDGPU-DISABLED-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; AMDGPU-DISABLED-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; AMDGPU-DISABLED-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; AMDGPU-DISABLED-NEXT:    call void @__omp_outlined__7(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; AMDGPU-DISABLED-NEXT:    ret void
@@ -3115,9 +3031,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-DISABLED-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; AMDGPU-DISABLED-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU-DISABLED-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; AMDGPU-DISABLED-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; AMDGPU-DISABLED-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; AMDGPU-DISABLED-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; AMDGPU-DISABLED-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; AMDGPU-DISABLED-NEXT:    call void @__omp_outlined__8(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; AMDGPU-DISABLED-NEXT:    ret void
@@ -3178,9 +3091,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-DISABLED-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; AMDGPU-DISABLED-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU-DISABLED-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; AMDGPU-DISABLED-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; AMDGPU-DISABLED-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; AMDGPU-DISABLED-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; AMDGPU-DISABLED-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; AMDGPU-DISABLED-NEXT:    call void @__omp_outlined__10(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; AMDGPU-DISABLED-NEXT:    ret void
@@ -3204,9 +3114,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-DISABLED-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; AMDGPU-DISABLED-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU-DISABLED-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; AMDGPU-DISABLED-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; AMDGPU-DISABLED-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; AMDGPU-DISABLED-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; AMDGPU-DISABLED-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; AMDGPU-DISABLED-NEXT:    call void @__omp_outlined__11(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; AMDGPU-DISABLED-NEXT:    ret void
@@ -3267,9 +3174,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-DISABLED-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; AMDGPU-DISABLED-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU-DISABLED-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; AMDGPU-DISABLED-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; AMDGPU-DISABLED-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; AMDGPU-DISABLED-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; AMDGPU-DISABLED-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; AMDGPU-DISABLED-NEXT:    call void @__omp_outlined__13(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; AMDGPU-DISABLED-NEXT:    ret void
@@ -3293,9 +3197,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-DISABLED-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; AMDGPU-DISABLED-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU-DISABLED-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; AMDGPU-DISABLED-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; AMDGPU-DISABLED-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; AMDGPU-DISABLED-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; AMDGPU-DISABLED-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; AMDGPU-DISABLED-NEXT:    call void @__omp_outlined__14(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; AMDGPU-DISABLED-NEXT:    ret void
@@ -3423,9 +3324,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-DISABLED-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; AMDGPU-DISABLED-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU-DISABLED-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; AMDGPU-DISABLED-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; AMDGPU-DISABLED-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; AMDGPU-DISABLED-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; AMDGPU-DISABLED-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; AMDGPU-DISABLED-NEXT:    call void @__omp_outlined__17(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; AMDGPU-DISABLED-NEXT:    ret void
@@ -3449,9 +3347,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-DISABLED-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; AMDGPU-DISABLED-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU-DISABLED-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; AMDGPU-DISABLED-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; AMDGPU-DISABLED-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; AMDGPU-DISABLED-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; AMDGPU-DISABLED-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; AMDGPU-DISABLED-NEXT:    call void @__omp_outlined__18(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; AMDGPU-DISABLED-NEXT:    ret void
@@ -3497,9 +3392,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-DISABLED-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; AMDGPU-DISABLED-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU-DISABLED-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; AMDGPU-DISABLED-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; AMDGPU-DISABLED-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; AMDGPU-DISABLED-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; AMDGPU-DISABLED-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; AMDGPU-DISABLED-NEXT:    call void @__omp_outlined__19(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; AMDGPU-DISABLED-NEXT:    ret void
@@ -3624,9 +3516,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-DISABLED-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; NVPTX-DISABLED-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX-DISABLED-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; NVPTX-DISABLED-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; NVPTX-DISABLED-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; NVPTX-DISABLED-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; NVPTX-DISABLED-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; NVPTX-DISABLED-NEXT:    call void @__omp_outlined__2(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; NVPTX-DISABLED-NEXT:    ret void
@@ -3650,9 +3539,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-DISABLED-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; NVPTX-DISABLED-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX-DISABLED-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; NVPTX-DISABLED-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; NVPTX-DISABLED-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; NVPTX-DISABLED-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; NVPTX-DISABLED-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; NVPTX-DISABLED-NEXT:    call void @__omp_outlined__3(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; NVPTX-DISABLED-NEXT:    ret void
@@ -3735,9 +3621,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-DISABLED-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; NVPTX-DISABLED-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX-DISABLED-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; NVPTX-DISABLED-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; NVPTX-DISABLED-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; NVPTX-DISABLED-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; NVPTX-DISABLED-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; NVPTX-DISABLED-NEXT:    call void @__omp_outlined__5(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; NVPTX-DISABLED-NEXT:    ret void
@@ -3820,9 +3703,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-DISABLED-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; NVPTX-DISABLED-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX-DISABLED-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; NVPTX-DISABLED-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; NVPTX-DISABLED-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; NVPTX-DISABLED-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; NVPTX-DISABLED-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; NVPTX-DISABLED-NEXT:    call void @__omp_outlined__7(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; NVPTX-DISABLED-NEXT:    ret void
@@ -3846,9 +3726,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-DISABLED-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; NVPTX-DISABLED-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX-DISABLED-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; NVPTX-DISABLED-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; NVPTX-DISABLED-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; NVPTX-DISABLED-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; NVPTX-DISABLED-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; NVPTX-DISABLED-NEXT:    call void @__omp_outlined__8(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; NVPTX-DISABLED-NEXT:    ret void
@@ -3909,9 +3786,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-DISABLED-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; NVPTX-DISABLED-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX-DISABLED-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; NVPTX-DISABLED-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; NVPTX-DISABLED-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; NVPTX-DISABLED-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; NVPTX-DISABLED-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; NVPTX-DISABLED-NEXT:    call void @__omp_outlined__10(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; NVPTX-DISABLED-NEXT:    ret void
@@ -3935,9 +3809,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-DISABLED-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; NVPTX-DISABLED-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX-DISABLED-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; NVPTX-DISABLED-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; NVPTX-DISABLED-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; NVPTX-DISABLED-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; NVPTX-DISABLED-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; NVPTX-DISABLED-NEXT:    call void @__omp_outlined__11(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; NVPTX-DISABLED-NEXT:    ret void
@@ -3998,9 +3869,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-DISABLED-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; NVPTX-DISABLED-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX-DISABLED-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; NVPTX-DISABLED-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; NVPTX-DISABLED-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; NVPTX-DISABLED-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; NVPTX-DISABLED-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; NVPTX-DISABLED-NEXT:    call void @__omp_outlined__13(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; NVPTX-DISABLED-NEXT:    ret void
@@ -4024,9 +3892,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-DISABLED-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; NVPTX-DISABLED-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX-DISABLED-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; NVPTX-DISABLED-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; NVPTX-DISABLED-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; NVPTX-DISABLED-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; NVPTX-DISABLED-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; NVPTX-DISABLED-NEXT:    call void @__omp_outlined__14(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; NVPTX-DISABLED-NEXT:    ret void
@@ -4154,9 +4019,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-DISABLED-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; NVPTX-DISABLED-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX-DISABLED-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; NVPTX-DISABLED-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; NVPTX-DISABLED-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; NVPTX-DISABLED-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; NVPTX-DISABLED-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; NVPTX-DISABLED-NEXT:    call void @__omp_outlined__17(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; NVPTX-DISABLED-NEXT:    ret void
@@ -4180,9 +4042,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-DISABLED-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; NVPTX-DISABLED-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX-DISABLED-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; NVPTX-DISABLED-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; NVPTX-DISABLED-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; NVPTX-DISABLED-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; NVPTX-DISABLED-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; NVPTX-DISABLED-NEXT:    call void @__omp_outlined__18(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; NVPTX-DISABLED-NEXT:    ret void
@@ -4228,9 +4087,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-DISABLED-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; NVPTX-DISABLED-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX-DISABLED-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; NVPTX-DISABLED-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; NVPTX-DISABLED-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; NVPTX-DISABLED-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; NVPTX-DISABLED-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; NVPTX-DISABLED-NEXT:    call void @__omp_outlined__19(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; NVPTX-DISABLED-NEXT:    ret void

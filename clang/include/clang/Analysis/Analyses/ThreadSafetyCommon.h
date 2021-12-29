@@ -517,4 +517,4 @@ void printSCFG(CFGWalker &Walker);
 } // namespace threadSafety
 } // namespace clang
 
-#endif // LLVM_CLANG_THREAD_SAFETY_COMMON_H
+#endif // LLVM_CLANG_ANALYSIS_ANALYSES_THREADSAFETYCOMMON_H

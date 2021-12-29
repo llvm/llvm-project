@@ -1161,6 +1161,10 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
       return true;
     };
 
+    const auto *TLI = getAnchorScope()
+                          ? A.getInfoCache().getTargetLibraryInfoForFunction(
+                                *getAnchorScope())
+                          : nullptr;
     auto UsePred = [&](const Use &U, bool &Follow) -> bool {
       Value *CurPtr = U.get();
       User *Usr = U.getUser();
@@ -1271,6 +1275,8 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
       if (auto *CB = dyn_cast<CallBase>(Usr)) {
         if (CB->isLifetimeStartOrEnd())
           return true;
+        if (TLI && isFreeCall(CB, TLI))
+          return true;
         if (CB->isArgOperand(&U)) {
           unsigned ArgNo = CB->getArgOperandNo(&U);
           const auto &CSArgPI = A.getAAFor<AAPointerInfo>(
@@ -1289,8 +1295,15 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
       LLVM_DEBUG(dbgs() << "[AAPointerInfo] User not handled " << *Usr << "\n");
       return false;
     };
+    auto EquivalentUseCB = [&](const Use &OldU, const Use &NewU) {
+      if (OffsetInfoMap.count(NewU))
+        return OffsetInfoMap[NewU] == OffsetInfoMap[OldU];
+      OffsetInfoMap[NewU] = OffsetInfoMap[OldU];
+      return true;
+    };
     if (!A.checkForAllUses(UsePred, *this, AssociatedValue,
-                           /* CheckBBLivenessOnly */ true))
+                           /* CheckBBLivenessOnly */ true, DepClassTy::OPTIONAL,
+                           EquivalentUseCB))
       return indicatePessimisticFixpoint();
 
     LLVM_DEBUG({
@@ -2321,6 +2334,8 @@ struct AANoRecurseFunction final : AANoRecurseImpl {
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     AANoRecurseImpl::initialize(A);
+    // TODO: We should build a call graph ourselves to enable this in the module
+    // pass as well.
     if (const Function *F = getAnchorScope())
       if (A.getInfoCache().getSccSize(*F) != 1)
         indicatePessimisticFixpoint();
@@ -5232,6 +5247,8 @@ struct AAValueSimplifyImpl : AAValueSimplify {
     if (!AA::getAssumedUnderlyingObjects(A, Ptr, Objects, AA, &L))
       return false;
 
+    const auto *TLI =
+        A.getInfoCache().getTargetLibraryInfoForFunction(*L.getFunction());
     for (Value *Obj : Objects) {
       LLVM_DEBUG(dbgs() << "Visit underlying object " << *Obj << "\n");
       if (isa<UndefValue>(Obj))
@@ -5246,9 +5263,10 @@ struct AAValueSimplifyImpl : AAValueSimplify {
           continue;
         return false;
       }
-      if (!isa<AllocaInst>(Obj) && !isa<GlobalVariable>(Obj))
+      if (!isa<AllocaInst>(Obj) && !isa<GlobalVariable>(Obj) &&
+          !isNoAliasFn(Obj, TLI))
         return false;
-      Constant *InitialVal = AA::getInitialValueForObj(*Obj, *L.getType());
+      Constant *InitialVal = AA::getInitialValueForObj(*Obj, *L.getType(), TLI);
       if (!InitialVal || !Union(*InitialVal))
         return false;
 

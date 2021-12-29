@@ -155,6 +155,8 @@ static LogicalResult verify(AtomicRMWOp op) {
   case AtomicRMWKind::mins:
   case AtomicRMWKind::minu:
   case AtomicRMWKind::muli:
+  case AtomicRMWKind::ori:
+  case AtomicRMWKind::andi:
     if (!op.getValue().getType().isa<IntegerType>())
       return op.emitOpError()
              << "with kind '" << stringifyAtomicRMWKind(op.getKind())
@@ -178,7 +180,12 @@ Attribute mlir::getIdentityValueAttr(AtomicRMWKind kind, Type resultType,
   case AtomicRMWKind::addf:
   case AtomicRMWKind::addi:
   case AtomicRMWKind::maxu:
+  case AtomicRMWKind::ori:
     return builder.getZeroAttr(resultType);
+  case AtomicRMWKind::andi:
+    return builder.getIntegerAttr(
+        resultType,
+        APInt::getAllOnes(resultType.cast<IntegerType>().getWidth()));
   case AtomicRMWKind::maxs:
     return builder.getIntegerAttr(
         resultType,
@@ -240,6 +247,10 @@ Value mlir::getReductionOp(AtomicRMWKind op, OpBuilder &builder, Location loc,
     return builder.create<arith::MaxUIOp>(loc, lhs, rhs);
   case AtomicRMWKind::minu:
     return builder.create<arith::MinUIOp>(loc, lhs, rhs);
+  case AtomicRMWKind::ori:
+    return builder.create<arith::OrIOp>(loc, lhs, rhs);
+  case AtomicRMWKind::andi:
+    return builder.create<arith::AndIOp>(loc, lhs, rhs);
   // TODO: Add remaining reduction operations.
   default:
     (void)emitOptionalError(loc, "Reduction operation type not supported");

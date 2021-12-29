@@ -968,7 +968,7 @@ static int merge_main(int argc, const char *argv[]) {
       "gen-cs-nested-profile", cl::Hidden, cl::init(false),
       cl::desc("Generate nested function profiles for CSSPGO"));
   cl::opt<std::string> DebugInfoFilename(
-      "debug-info", cl::init(""), cl::Hidden,
+      "debug-info", cl::init(""),
       cl::desc("Use the provided debug info to correlate the raw profile."));
 
   cl::ParseCommandLineOptions(argc, argv, "LLVM profile data merger\n");

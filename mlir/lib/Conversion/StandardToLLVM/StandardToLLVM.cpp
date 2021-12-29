@@ -792,6 +792,10 @@ static Optional<LLVM::AtomicBinOp> matchSimpleAtomicOp(AtomicRMWOp atomicOp) {
     return LLVM::AtomicBinOp::min;
   case AtomicRMWKind::minu:
     return LLVM::AtomicBinOp::umin;
+  case AtomicRMWKind::ori:
+    return LLVM::AtomicBinOp::_or;
+  case AtomicRMWKind::andi:
+    return LLVM::AtomicBinOp::_and;
   default:
     return llvm::None;
   }
