@@ -185,6 +185,13 @@ OPTIONS
  inlined by PGO early inliner and it will not be adjusted based on sample
  profile.
 
+.. option:: -debug-info=path
+
+ Specify the executable or `.dSYM` that contains debug info for the raw profile.
+ When `-debug-info-correlate` was used for instrumentation, use this option
+ to correlate the raw profile.
+
+
 EXAMPLES
 ^^^^^^^^
 Basic Usage
