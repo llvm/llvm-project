@@ -165,12 +165,19 @@ let Predicates = [UseHVX] in {
   defm: HvxLda_pat<V6_vL32b_ai,               alignedload, VecI8,  IsVecOff>;
   defm: HvxLda_pat<V6_vL32b_ai,               alignedload, VecI16, IsVecOff>;
   defm: HvxLda_pat<V6_vL32b_ai,               alignedload, VecI32, IsVecOff>;
-
   defm: HvxLd_pat<V6_vL32Ub_ai,             unalignedload, VecI8,  IsVecOff>;
   defm: HvxLd_pat<V6_vL32Ub_ai,             unalignedload, VecI16, IsVecOff>;
   defm: HvxLd_pat<V6_vL32Ub_ai,             unalignedload, VecI32, IsVecOff>;
 }
 
+let Predicates = [UseHVXV68] in {
+  defm: HvxLda_pat<V6_vL32b_nt_ai, alignednontemporalload, VecF16, IsVecOff>;
+  defm: HvxLda_pat<V6_vL32b_nt_ai, alignednontemporalload, VecF32, IsVecOff>;
+  defm: HvxLda_pat<V6_vL32b_ai,               alignedload, VecF16, IsVecOff>;
+  defm: HvxLda_pat<V6_vL32b_ai,               alignedload, VecF32, IsVecOff>;
+  defm: HvxLd_pat<V6_vL32Ub_ai,             unalignedload, VecF16, IsVecOff>;
+  defm: HvxLd_pat<V6_vL32Ub_ai,             unalignedload, VecF32, IsVecOff>;
+}
 
 // HVX stores
 
@@ -212,6 +219,15 @@ let Predicates = [UseHVX] in {
   defm: HvxSt_pat<V6_vS32Ub_ai,            unalignedstore,  HVI8, IsVecOff>;
   defm: HvxSt_pat<V6_vS32Ub_ai,            unalignedstore, HVI16, IsVecOff>;
   defm: HvxSt_pat<V6_vS32Ub_ai,            unalignedstore, HVI32, IsVecOff>;
+}
+
+let Predicates = [UseHVXV68] in {
+  defm: HvxSt_pat<V6_vS32b_nt_ai, alignednontemporalstore, HVF16, IsVecOff>;
+  defm: HvxSt_pat<V6_vS32b_nt_ai, alignednontemporalstore, HVF32, IsVecOff>;
+  defm: HvxSt_pat<V6_vS32b_ai,               alignedstore, HVF16, IsVecOff>;
+  defm: HvxSt_pat<V6_vS32b_ai,               alignedstore, HVF32, IsVecOff>;
+  defm: HvxSt_pat<V6_vS32Ub_ai,            unalignedstore, HVF16, IsVecOff>;
+  defm: HvxSt_pat<V6_vS32Ub_ai,            unalignedstore, HVF32, IsVecOff>;
 }
 
 // Bitcasts between same-size vector types are no-ops, except for the
