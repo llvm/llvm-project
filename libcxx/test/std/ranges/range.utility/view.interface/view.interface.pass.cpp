@@ -32,8 +32,6 @@ static_assert(!ValidViewInterfaceType<Empty const>);
 static_assert(!ValidViewInterfaceType<Empty &>);
 static_assert( ValidViewInterfaceType<Empty>);
 
-static_assert(std::derived_from<std::ranges::view_interface<Empty>, std::ranges::view_base>);
-
 using InputIter = cpp20_input_iterator<const int*>;
 
 struct InputRange : std::ranges::view_interface<InputRange> {
