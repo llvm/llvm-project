@@ -2159,7 +2159,8 @@ void SymbolFileDWARF::FindGlobalVariables(
 
   llvm::StringRef basename;
   llvm::StringRef context;
-  bool name_is_mangled = (bool)Mangled(name);
+  bool name_is_mangled = Mangled::GetManglingScheme(name.GetStringRef()) !=
+                         Mangled::eManglingSchemeNone;
 
   if (!CPlusPlusLanguage::ExtractContextAndIdentifier(name.GetCString(),
                                                       context, basename))
