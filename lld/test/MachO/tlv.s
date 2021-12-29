@@ -24,12 +24,12 @@
 # RUN: llvm-objdump -d --bind --rebase %t/regular-and-tbss | FileCheck %s --check-prefixes=REG,TBSS,LINKEDIT
 # RUN: llvm-objdump --macho --section=__DATA,__thread_vars %t/regular-and-tbss | \
 # RUN:   FileCheck %s --check-prefix=REG-TBSS-TLVP
-# RUN: llvm-objdump --section-headers %t/regular-and-tbss | FileCheck %s --check-prefix=SECTION-ORDER
+# RUN: llvm-objdump --section-headers %t/regular-and-tbss | FileCheck %s --check-prefix=SECTIONS
 
 ## Check that we always put __thread_bss immediately after __thread_data,
 ## regardless of the order of the input files.
 # RUN: %lld -lSystem %t/tbss.o %t/regular.o -o %t/regular-and-tbss
-# RUN: llvm-objdump --section-headers %t/regular-and-tbss | FileCheck %s --check-prefix=SECTION-ORDER
+# RUN: llvm-objdump --section-headers %t/regular-and-tbss | FileCheck %s --check-prefix=SECTIONS
 
 # HEADER: MH_HAS_TLV_DESCRIPTORS
 
@@ -41,6 +41,7 @@
 # TBSS:       <_f>:
 # TBSS-NEXT:  leaq    {{.*}}(%rip), %rax  ## {{.*}} <_baz>
 # TBSS-NEXT:  leaq    {{.*}}(%rip), %rax  ## {{.*}} <_qux>
+# TBSS-NEXT:  leaq    {{.*}}(%rip), %rax  ## {{.*}} <_hoge>
 # TBSS-NEXT:  retq
 
 # REG-TLVP:      00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
@@ -53,10 +54,12 @@
 
 # REG-TBSS-TLVP:      00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 # REG-TBSS-TLVP-NEXT: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-# REG-TBSS-TLVP-NEXT: 00 00 00 00 00 00 00 00 08 00 00 00 00 00 00 00
+# REG-TBSS-TLVP-NEXT: 00 00 00 00 00 00 00 00 10 00 00 00 00 00 00 00
 # REG-TBSS-TLVP-NEXT: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-# REG-TBSS-TLVP-NEXT: 10 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-# REG-TBSS-TLVP-NEXT: 00 00 00 00 00 00 00 00 18 00 00 00 00 00 00 00
+# REG-TBSS-TLVP-NEXT: 20 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+# REG-TBSS-TLVP-NEXT: 00 00 00 00 00 00 00 00 28 00 00 00 00 00 00 00
+# REG-TBSS-TLVP-NEXT: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+# REG-TBSS-TLVP-NEXT: 30 00 00 00 00 00 00 00
 
 ## Make sure we don't emit rebase opcodes for relocations in __thread_vars.
 # LINKEDIT:       Rebase table:
@@ -66,9 +69,14 @@
 # LINKEDIT:       __DATA  __thread_vars   0x{{[0-9a-f]*}}  pointer 0 libSystem __tlv_bootstrap
 # LINKEDIT:       __DATA  __thread_vars   0x{{[0-9a-f]*}}  pointer 0 libSystem __tlv_bootstrap
 
-# SECTION-ORDER:      __thread_data
-# SECTION-ORDER:      more_thread_data
-# SECTION-ORDER-NEXT: __thread_bss
+## Make sure we have an odd number of tlv vars, and that the __thread_vars
+## section starts 16-bytes aligned. This is the setup required for __thread_data
+## not to be automatically 16-bytes aligned, ensuring the linker does its
+## expected job of aligning _hoge$tlv$init.
+# SECTIONS:      __thread_vars {{[0-9]+}}8 {{[0-9]+}}0
+# SECTIONS:      __thread_data
+# SECTIONS:      more_thread_data
+# SECTIONS-NEXT: __thread_bss
 
 #--- regular.s
 .globl _main
@@ -102,10 +110,12 @@ _bar:
 _f:
   mov _baz@TLVP(%rip), %rax
   mov _qux@TLVP(%rip), %rax
+  mov _hoge@TLVP(%rip), %rax
   ret
 
 .tbss _baz$tlv$init, 8, 3
 .tbss _qux$tlv$init, 8, 3
+.tbss _hoge$tlv$init, 16, 4
 
 .section __DATA,__thread_vars,thread_local_variables
 _baz:
@@ -116,3 +126,7 @@ _qux:
   .quad  __tlv_bootstrap
   .quad  0
   .quad  _qux$tlv$init
+_hoge:
+  .quad  __tlv_bootstrap
+  .quad  0
+  .quad  _hoge$tlv$init
