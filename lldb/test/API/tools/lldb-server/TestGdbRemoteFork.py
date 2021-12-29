@@ -6,6 +6,40 @@ from lldbsuite.test import lldbutil
 class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
     mydir = TestBase.compute_mydir(__file__)
 
+    @add_test_categories(["fork"])
+    def test_fork_multithreaded(self):
+        self.build()
+        self.prep_debug_monitor_and_inferior(inferior_args=["thread:new"]*2 + ["fork"])
+        self.add_qSupported_packets(["multiprocess+", "fork-events+"])
+        ret = self.expect_gdbremote_sequence()
+        self.assertIn("fork-events+", ret["qSupported_response"])
+        self.reset_test_sequence()
+
+        # continue and expect fork
+        fork_regex = "[$]T.*;fork:p([0-9a-f]+)[.]([0-9a-f]+).*"
+        self.test_sequence.add_log_lines([
+            "read packet: $c#00",
+            {"direction": "send", "regex": fork_regex,
+             "capture": {1: "pid", 2: "tid"}},
+        ], True)
+        ret = self.expect_gdbremote_sequence()
+        pid = int(ret["pid"], 16)
+        self.reset_test_sequence()
+
+        # detach the forked child
+        self.test_sequence.add_log_lines([
+            "read packet: $D;{:x}#00".format(pid),
+            {"direction": "send", "regex": r"[$]OK#.*"},
+        ], True)
+        ret = self.expect_gdbremote_sequence()
+        self.reset_test_sequence()
+
+        # resume the parent
+        self.test_sequence.add_log_lines([
+            "read packet: $k#00",
+        ], True)
+        self.expect_gdbremote_sequence()
+
     def fork_and_detach_test(self, variant):
         self.build()
         self.prep_debug_monitor_and_inferior(inferior_args=[variant])
