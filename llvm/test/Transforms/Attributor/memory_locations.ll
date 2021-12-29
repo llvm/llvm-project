@@ -122,11 +122,18 @@ return:                                           ; preds = %if.end, %if.then
 
 define dso_local i8* @internal_only_rec_static_helper_malloc_noescape(i32 %arg) {
 ; FIXME: This is actually inaccessiblememonly because the malloced memory does not escape
-; CHECK-LABEL: define {{[^@]+}}@internal_only_rec_static_helper_malloc_noescape
-; CHECK-SAME: (i32 [[ARG:%.*]]) {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call noalias i8* @internal_only_rec_static_malloc_noescape(i32 [[ARG]])
-; CHECK-NEXT:    ret i8* [[CALL]]
+; IS__TUNIT____-LABEL: define {{[^@]+}}@internal_only_rec_static_helper_malloc_noescape
+; IS__TUNIT____-SAME: (i32 [[ARG:%.*]]) {
+; IS__TUNIT____-NEXT:  entry:
+; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call noalias i8* @internal_only_rec_static_malloc_noescape(i32 [[ARG]])
+; IS__TUNIT____-NEXT:    ret i8* [[CALL]]
+;
+; IS__CGSCC____: Function Attrs: inaccessiblememonly
+; IS__CGSCC____-LABEL: define {{[^@]+}}@internal_only_rec_static_helper_malloc_noescape
+; IS__CGSCC____-SAME: (i32 [[ARG:%.*]]) #[[ATTR0]] {
+; IS__CGSCC____-NEXT:  entry:
+; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call noalias i8* @internal_only_rec_static_malloc_noescape(i32 [[ARG]])
+; IS__CGSCC____-NEXT:    ret i8* [[CALL]]
 ;
 entry:
   %call = call i8* @internal_only_rec_static_malloc_noescape(i32 %arg)
@@ -135,24 +142,42 @@ entry:
 
 define internal i8* @internal_only_rec_static_malloc_noescape(i32 %arg) {
 ; FIXME: This is actually inaccessiblememonly because the malloced memory does not escape
-; CHECK-LABEL: define {{[^@]+}}@internal_only_rec_static_malloc_noescape
-; CHECK-SAME: (i32 [[ARG:%.*]]) {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[REM:%.*]] = srem i32 [[ARG]], 2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[REM]], 1
-; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
-; CHECK:       if.then:
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[ARG]], 2
-; CHECK-NEXT:    [[CALL:%.*]] = call noalias i8* @internal_only_rec(i32 [[DIV]])
-; CHECK-NEXT:    br label [[RETURN:%.*]]
-; CHECK:       if.end:
-; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[ARG]] to i64
-; CHECK-NEXT:    [[CALL1:%.*]] = call noalias i8* @malloc(i64 [[CONV]])
-; CHECK-NEXT:    store i8 0, i8* [[CALL1]], align 1
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       return:
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i8* [ [[CALL]], [[IF_THEN]] ], [ null, [[IF_END]] ]
-; CHECK-NEXT:    ret i8* [[RETVAL_0]]
+; IS__TUNIT____-LABEL: define {{[^@]+}}@internal_only_rec_static_malloc_noescape
+; IS__TUNIT____-SAME: (i32 [[ARG:%.*]]) {
+; IS__TUNIT____-NEXT:  entry:
+; IS__TUNIT____-NEXT:    [[REM:%.*]] = srem i32 [[ARG]], 2
+; IS__TUNIT____-NEXT:    [[CMP:%.*]] = icmp eq i32 [[REM]], 1
+; IS__TUNIT____-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; IS__TUNIT____:       if.then:
+; IS__TUNIT____-NEXT:    [[DIV:%.*]] = sdiv i32 [[ARG]], 2
+; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call noalias i8* @internal_only_rec(i32 [[DIV]])
+; IS__TUNIT____-NEXT:    br label [[RETURN:%.*]]
+; IS__TUNIT____:       if.end:
+; IS__TUNIT____-NEXT:    [[CONV:%.*]] = sext i32 [[ARG]] to i64
+; IS__TUNIT____-NEXT:    [[CALL1:%.*]] = call noalias i8* @malloc(i64 [[CONV]])
+; IS__TUNIT____-NEXT:    br label [[RETURN]]
+; IS__TUNIT____:       return:
+; IS__TUNIT____-NEXT:    [[RETVAL_0:%.*]] = phi i8* [ [[CALL]], [[IF_THEN]] ], [ null, [[IF_END]] ]
+; IS__TUNIT____-NEXT:    ret i8* [[RETVAL_0]]
+;
+; IS__CGSCC____: Function Attrs: inaccessiblememonly
+; IS__CGSCC____-LABEL: define {{[^@]+}}@internal_only_rec_static_malloc_noescape
+; IS__CGSCC____-SAME: (i32 [[ARG:%.*]]) #[[ATTR0]] {
+; IS__CGSCC____-NEXT:  entry:
+; IS__CGSCC____-NEXT:    [[REM:%.*]] = srem i32 [[ARG]], 2
+; IS__CGSCC____-NEXT:    [[CMP:%.*]] = icmp eq i32 [[REM]], 1
+; IS__CGSCC____-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; IS__CGSCC____:       if.then:
+; IS__CGSCC____-NEXT:    [[DIV:%.*]] = sdiv i32 [[ARG]], 2
+; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call noalias i8* @internal_only_rec(i32 [[DIV]])
+; IS__CGSCC____-NEXT:    br label [[RETURN:%.*]]
+; IS__CGSCC____:       if.end:
+; IS__CGSCC____-NEXT:    [[CONV:%.*]] = sext i32 [[ARG]] to i64
+; IS__CGSCC____-NEXT:    [[CALL1:%.*]] = call noalias i8* @malloc(i64 [[CONV]])
+; IS__CGSCC____-NEXT:    br label [[RETURN]]
+; IS__CGSCC____:       return:
+; IS__CGSCC____-NEXT:    [[RETVAL_0:%.*]] = phi i8* [ [[CALL]], [[IF_THEN]] ], [ null, [[IF_END]] ]
+; IS__CGSCC____-NEXT:    ret i8* [[RETVAL_0]]
 ;
 entry:
   %rem = srem i32 %arg, 2
