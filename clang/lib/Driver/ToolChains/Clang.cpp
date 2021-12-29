@@ -4370,9 +4370,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       IsHeaderModulePrecompile ? HeaderModuleInput : Inputs[0];
 
   InputInfoList ModuleHeaderInputs;
+  InputInfoList OpenMPHostInputs;
   const InputInfo *CudaDeviceInput = nullptr;
   const InputInfo *OpenMPDeviceInput = nullptr;
-  const InputInfo *OpenMPHostInput = nullptr;
   for (const InputInfo &I : Inputs) {
     if (&I == &Input) {
       // This is the primary input.
@@ -4389,8 +4389,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CudaDeviceInput = &I;
     } else if (IsOpenMPDevice && !OpenMPDeviceInput) {
       OpenMPDeviceInput = &I;
-    } else if (IsOpenMPHost && !OpenMPHostInput) {
-      OpenMPHostInput = &I;
+    } else if (IsOpenMPHost) {
+      OpenMPHostInputs.push_back(I);
     } else {
       llvm_unreachable("unexpectedly given multiple inputs");
     }
@@ -6894,6 +6894,25 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (OpenMPDeviceInput) {
       CmdArgs.push_back("-fopenmp-host-ir-file-path");
       CmdArgs.push_back(Args.MakeArgString(OpenMPDeviceInput->getFilename()));
+    }
+  }
+
+  // Host-side OpenMP offloading recieves the device object files and embeds it
+  // in a named section including the associated target triple and architecture.
+  if (IsOpenMPHost && !OpenMPHostInputs.empty()) {
+    auto InputFile = OpenMPHostInputs.begin();
+    auto OpenMPTCs = C.getOffloadToolChains<Action::OFK_OpenMP>();
+    for (auto TI = OpenMPTCs.first, TE = OpenMPTCs.second; TI != TE;
+         ++TI, ++InputFile) {
+      const ToolChain *TC = TI->second;
+      const ArgList &TCArgs = C.getArgsForToolChain(TC, "", Action::OFK_OpenMP);
+      StringRef File =
+          C.getArgs().MakeArgString(TC->getInputFilename(*InputFile));
+      StringRef InputName = Clang::getBaseInputStem(Args, Inputs);
+
+      CmdArgs.push_back(Args.MakeArgString(
+          "-fembed-offload-object=" + File + "," + TC->getTripleString() + "." +
+          TCArgs.getLastArgValue(options::OPT_march_EQ) + "." + InputName));
     }
   }
 
