@@ -83,6 +83,9 @@ Improvements to clang-tidy
 - Generalized the `modernize-use-default-member-init` check to handle non-default
   constructors.
 
+- Eliminated false positives for `cppcoreguidelines-macro-usage` by restricting
+  the warning about using constants to only macros that expand to literals.
+
 New checks
 ^^^^^^^^^^
 
