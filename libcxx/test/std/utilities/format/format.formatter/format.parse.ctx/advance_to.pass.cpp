@@ -26,10 +26,10 @@ constexpr void test(const CharT* fmt) {
     std::basic_format_parse_context<CharT> context(fmt);
 
     context.advance_to(context.begin() + 1);
-    assert(context.begin() == &fmt[1]);
+    assert(std::to_address(context.begin()) == fmt + 1);
 
     context.advance_to(context.begin() + 1);
-    assert(context.begin() == &fmt[2]);
+    assert(std::to_address(context.begin()) == fmt + 2);
 
     context.advance_to(context.begin() + 1);
     assert(context.begin() == context.end());
@@ -39,10 +39,10 @@ constexpr void test(const CharT* fmt) {
     std::basic_format_parse_context context(view);
 
     context.advance_to(context.begin() + 1);
-    assert(std::to_address(context.begin()) == std::to_address(view.begin()) + 1);
+    assert(std::to_address(context.begin()) == fmt + 1);
 
     context.advance_to(context.begin() + 1);
-    assert(std::to_address(context.begin()) == std::to_address(view.begin()) + 2);
+    assert(std::to_address(context.begin()) == fmt + 2);
 
     context.advance_to(context.begin() + 1);
     assert(context.begin() == context.end());

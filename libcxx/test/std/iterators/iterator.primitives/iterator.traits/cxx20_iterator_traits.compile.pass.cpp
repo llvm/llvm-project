@@ -53,169 +53,116 @@ constexpr bool has_iterator_concept_v = requires {
   typename Traits::iterator_concept;
 };
 
+template <class Iter, class Category, class ValueType, class DiffType, class RefType, class PtrType>
+constexpr bool test() {
+  using Traits = std::iterator_traits<Iter>;
+  static_assert(std::same_as<typename Traits::iterator_category, Category>);
+  static_assert(std::same_as<typename Traits::value_type, ValueType>);
+  static_assert(std::same_as<typename Traits::difference_type, DiffType>);
+  static_assert(std::same_as<typename Traits::reference, RefType>);
+  static_assert(std::same_as<typename Traits::pointer, PtrType>);
+  if constexpr (std::is_pointer_v<Iter>) {
+    static_assert(std::same_as<typename Traits::iterator_concept, std::contiguous_iterator_tag>);
+  } else {
+    static_assert(!has_iterator_concept_v<Traits>);
+  }
+
+  return true;
+}
+
 template <class Iter, class Category>
 constexpr bool testIOIterator() {
-  using Traits = std::iterator_traits<Iter>;
-  static_assert(std::same_as<typename Traits::iterator_category, Category>);
-  static_assert(std::same_as<typename Traits::value_type, void>);
-  static_assert(std::same_as<typename Traits::difference_type, std::ptrdiff_t>);
-  static_assert(std::same_as<typename Traits::reference, void>);
-  static_assert(std::same_as<typename Traits::pointer, void>);
-  static_assert(!has_iterator_concept_v<Traits>);
-
-  return true;
+  return test<Iter, Category, void, std::ptrdiff_t, void, void>();
 }
 
-template <class Iter, class ValueType, class Category>
-constexpr bool testConstWithoutConcept() {
-  using Traits = std::iterator_traits<Iter>;
-  static_assert(std::same_as<typename Traits::iterator_category, Category>);
-  static_assert(std::same_as<typename Traits::value_type, ValueType>);
-  static_assert(std::same_as<typename Traits::difference_type, std::ptrdiff_t>);
-  static_assert(std::same_as<typename Traits::reference, const ValueType&>);
-  static_assert(std::same_as<typename Traits::pointer, const ValueType*>);
-  static_assert(!has_iterator_concept_v<Traits>);
-
-  return true;
+template <class Iter, class Category, class ValueType>
+constexpr bool testConst() {
+  return test<Iter, Category, ValueType, std::ptrdiff_t, const ValueType&, const ValueType*>();
 }
 
-template <class Iter, class ValueType, class Category, class IterConcept>
-constexpr bool testConstWithConcept() {
-  using Traits = std::iterator_traits<Iter>;
-  static_assert(std::same_as<typename Traits::iterator_category, Category>);
-  static_assert(std::same_as<typename Traits::value_type, ValueType>);
-  static_assert(std::same_as<typename Traits::difference_type, std::ptrdiff_t>);
-  static_assert(std::same_as<typename Traits::reference, const ValueType&>);
-  static_assert(std::same_as<typename Traits::pointer, const ValueType*>);
-  static_assert(std::same_as<typename Traits::iterator_concept, IterConcept>);
-
-  return true;
-}
-
-template <class Iter, class ValueType, class Category>
-constexpr bool testWithoutConcept() {
-  using Traits = std::iterator_traits<Iter>;
-  static_assert(std::same_as<typename Traits::iterator_category, Category>);
-  static_assert(std::same_as<typename Traits::value_type, ValueType>);
-  static_assert(std::same_as<typename Traits::difference_type, std::ptrdiff_t>);
-  static_assert(std::same_as<typename Traits::reference, ValueType&>);
-  static_assert(std::same_as<typename Traits::pointer, ValueType*>);
-  static_assert(!has_iterator_concept_v<Traits>);
-
-  return true;
-}
-
-template <class Iter, class ValueType, class Category, class IterConcept>
-constexpr bool testWithConcept() {
-  using Traits = std::iterator_traits<Iter>;
-  static_assert(std::same_as<typename Traits::iterator_category, Category>);
-  static_assert(std::same_as<typename Traits::value_type, ValueType>);
-  static_assert(std::same_as<typename Traits::difference_type, std::ptrdiff_t>);
-  static_assert(std::same_as<typename Traits::reference, ValueType&>);
-  static_assert(std::same_as<typename Traits::pointer, ValueType*>);
-  static_assert(std::same_as<typename Traits::iterator_concept, IterConcept>);
-
-  return true;
-}
-
-template <class Iter, class ValueType, class DiffType, class RefType, class PtrType, class Category>
-constexpr bool testWithoutConcept() {
-  using Traits = std::iterator_traits<Iter>;
-  static_assert(std::same_as<typename Traits::iterator_category, Category>);
-  static_assert(std::same_as<typename Traits::value_type, ValueType>);
-  static_assert(std::same_as<typename Traits::difference_type, DiffType>);
-  static_assert(std::same_as<typename Traits::reference, RefType>);
-  static_assert(std::same_as<typename Traits::pointer, PtrType>);
-  static_assert(!has_iterator_concept_v<Traits>);
-
-  return true;
-}
-
-template <class Iter, class ValueType, class DiffType, class RefType, class PtrType, class Category, class IterConcept>
-constexpr bool testWithConcept() {
-  using Traits = std::iterator_traits<Iter>;
-  static_assert(std::same_as<typename Traits::iterator_category, Category>);
-  static_assert(std::same_as<typename Traits::value_type, ValueType>);
-  static_assert(std::same_as<typename Traits::difference_type, DiffType>);
-  static_assert(std::same_as<typename Traits::reference, RefType>);
-  static_assert(std::same_as<typename Traits::pointer, PtrType>);
-  static_assert(std::same_as<typename Traits::iterator_concept, IterConcept>);
-
-  return true;
+template <class Iter, class Category, class ValueType>
+constexpr bool testMutable() {
+  return test<Iter, Category, ValueType, std::ptrdiff_t, ValueType&, ValueType*>();
 }
 
 // Standard types.
 
-// These tests depend on implementation details of libc++,
-// e.g. that std::array::iterator is a raw pointer type but std::string::iterator is not.
-// The Standard does not specify whether iterator_traits<It>::iterator_concept exists for any particular non-pointer type.
+// The Standard does not specify whether iterator_traits<It>::iterator_concept
+// exists for any particular non-pointer type, we assume it is present
+// only for pointers.
 //
-static_assert(testWithConcept<std::array<int, 10>::iterator, int, std::random_access_iterator_tag, std::contiguous_iterator_tag>());
-static_assert(testConstWithConcept<std::array<int, 10>::const_iterator, int, std::random_access_iterator_tag, std::contiguous_iterator_tag>());
-static_assert(testWithoutConcept<std::string::iterator, char, std::random_access_iterator_tag>());
-static_assert(testConstWithoutConcept<std::string::const_iterator, char, std::random_access_iterator_tag>());
-static_assert(testConstWithConcept<std::string_view::iterator, char, std::random_access_iterator_tag, std::contiguous_iterator_tag>());
-static_assert(testConstWithConcept<std::string_view::const_iterator, char, std::random_access_iterator_tag, std::contiguous_iterator_tag>());
-static_assert(testWithoutConcept<std::vector<int>::iterator, int, std::random_access_iterator_tag>());
-static_assert(testConstWithoutConcept<std::vector<int>::const_iterator, int, std::random_access_iterator_tag>());
+static_assert(testMutable<std::array<int, 10>::iterator, std::random_access_iterator_tag, int>());
+static_assert(testConst<std::array<int, 10>::const_iterator, std::random_access_iterator_tag, int>());
+static_assert(testMutable<std::string::iterator, std::random_access_iterator_tag, char>());
+static_assert(testConst<std::string::const_iterator, std::random_access_iterator_tag, char>());
+static_assert(testConst<std::string_view::iterator, std::random_access_iterator_tag, char>());
+static_assert(testConst<std::string_view::const_iterator, std::random_access_iterator_tag, char>());
+static_assert(testMutable<std::vector<int>::iterator, std::random_access_iterator_tag, int>());
+static_assert(testConst<std::vector<int>::const_iterator, std::random_access_iterator_tag, int>());
 
-static_assert(testWithoutConcept<std::deque<int>::iterator, int, std::random_access_iterator_tag>());
-static_assert(testConstWithoutConcept<std::deque<int>::const_iterator, int, std::random_access_iterator_tag>());
-static_assert(testWithoutConcept<std::forward_list<int>::iterator, int, std::forward_iterator_tag>());
-static_assert(testConstWithoutConcept<std::forward_list<int>::const_iterator, int, std::forward_iterator_tag>());
-static_assert(testWithoutConcept<std::list<int>::iterator, int, std::bidirectional_iterator_tag>());
-static_assert(testConstWithoutConcept<std::list<int>::const_iterator, int, std::bidirectional_iterator_tag>());
+static_assert(testMutable<std::deque<int>::iterator, std::random_access_iterator_tag, int>());
+static_assert(testConst<std::deque<int>::const_iterator, std::random_access_iterator_tag, int>());
+static_assert(testMutable<std::forward_list<int>::iterator, std::forward_iterator_tag, int>());
+static_assert(testConst<std::forward_list<int>::const_iterator, std::forward_iterator_tag, int>());
+static_assert(testMutable<std::list<int>::iterator, std::bidirectional_iterator_tag, int>());
+static_assert(testConst<std::list<int>::const_iterator, std::bidirectional_iterator_tag, int>());
 
-static_assert(testWithoutConcept<std::map<int, int>::iterator, std::pair<const int, int>, std::bidirectional_iterator_tag>());
-static_assert(testConstWithoutConcept<std::map<int, int>::const_iterator, std::pair<const int, int>, std::bidirectional_iterator_tag>());
-static_assert(testWithoutConcept<std::multimap<int, int>::iterator, std::pair<const int, int>, std::bidirectional_iterator_tag>());
-static_assert(testConstWithoutConcept<std::multimap<int, int>::const_iterator, std::pair<const int, int>, std::bidirectional_iterator_tag>());
+static_assert(testMutable<std::map<int, int>::iterator, std::bidirectional_iterator_tag, std::pair<const int, int>>());
+static_assert(testConst<std::map<int, int>::const_iterator, std::bidirectional_iterator_tag, std::pair<const int, int>>());
+static_assert(testMutable<std::multimap<int, int>::iterator, std::bidirectional_iterator_tag, std::pair<const int, int>>());
+static_assert(testConst<std::multimap<int, int>::const_iterator, std::bidirectional_iterator_tag, std::pair<const int, int>>());
 
-static_assert(testConstWithoutConcept<std::set<int>::iterator, int, std::bidirectional_iterator_tag>());
-static_assert(testConstWithoutConcept<std::set<int>::const_iterator, int, std::bidirectional_iterator_tag>());
-static_assert(testConstWithoutConcept<std::multiset<int>::iterator, int, std::bidirectional_iterator_tag>());
-static_assert(testConstWithoutConcept<std::multiset<int>::const_iterator, int, std::bidirectional_iterator_tag>());
+static_assert(testConst<std::set<int>::iterator, std::bidirectional_iterator_tag, int>());
+static_assert(testConst<std::set<int>::const_iterator, std::bidirectional_iterator_tag, int>());
+static_assert(testConst<std::multiset<int>::iterator, std::bidirectional_iterator_tag, int>());
+static_assert(testConst<std::multiset<int>::const_iterator, std::bidirectional_iterator_tag, int>());
 
-static_assert(testWithoutConcept<std::unordered_map<int, int>::iterator, std::pair<const int, int>, std::forward_iterator_tag>());
-static_assert(testConstWithoutConcept<std::unordered_map<int, int>::const_iterator, std::pair<const int, int>, std::forward_iterator_tag>());
-static_assert(testWithoutConcept<std::unordered_map<int, int>::local_iterator, std::pair<const int, int>, std::forward_iterator_tag>());
-static_assert(testConstWithoutConcept<std::unordered_map<int, int>::const_local_iterator, std::pair<const int, int>, std::forward_iterator_tag>());
-static_assert(testWithoutConcept<std::unordered_multimap<int, int>::iterator, std::pair<const int, int>, std::forward_iterator_tag>());
-static_assert(testConstWithoutConcept<std::unordered_multimap<int, int>::const_iterator, std::pair<const int, int>, std::forward_iterator_tag>());
-static_assert(testWithoutConcept<std::unordered_multimap<int, int>::local_iterator, std::pair<const int, int>, std::forward_iterator_tag>());
-static_assert(testConstWithoutConcept<std::unordered_multimap<int, int>::const_local_iterator, std::pair<const int, int>, std::forward_iterator_tag>());
+#ifdef _MSVC_STL_VERSION
+using unordered_iterator_category = std::bidirectional_iterator_tag;
+#else // ^^^ MSVC STL / other vvv
+using unordered_iterator_category = std::forward_iterator_tag;
+#endif // _MSVC_STL_VERSION
 
-static_assert(testConstWithoutConcept<std::unordered_set<int>::iterator, int, std::forward_iterator_tag>());
-static_assert(testConstWithoutConcept<std::unordered_set<int>::const_iterator, int, std::forward_iterator_tag>());
-static_assert(testConstWithoutConcept<std::unordered_set<int>::local_iterator, int, std::forward_iterator_tag>());
-static_assert(testConstWithoutConcept<std::unordered_set<int>::const_local_iterator, int, std::forward_iterator_tag>());
-static_assert(testConstWithoutConcept<std::unordered_multiset<int>::iterator, int, std::forward_iterator_tag>());
-static_assert(testConstWithoutConcept<std::unordered_multiset<int>::const_iterator, int, std::forward_iterator_tag>());
-static_assert(testConstWithoutConcept<std::unordered_multiset<int>::local_iterator, int, std::forward_iterator_tag>());
-static_assert(testConstWithoutConcept<std::unordered_multiset<int>::const_local_iterator, int, std::forward_iterator_tag>());
+static_assert(testMutable<std::unordered_map<int, int>::iterator, unordered_iterator_category, std::pair<const int, int>>());
+static_assert(testConst<std::unordered_map<int, int>::const_iterator, unordered_iterator_category, std::pair<const int, int>>());
+static_assert(testMutable<std::unordered_map<int, int>::local_iterator, unordered_iterator_category, std::pair<const int, int>>());
+static_assert(testConst<std::unordered_map<int, int>::const_local_iterator, unordered_iterator_category, std::pair<const int, int>>());
+static_assert(testMutable<std::unordered_multimap<int, int>::iterator, unordered_iterator_category, std::pair<const int, int>>());
+static_assert(testConst<std::unordered_multimap<int, int>::const_iterator, unordered_iterator_category, std::pair<const int, int>>());
+static_assert(testMutable<std::unordered_multimap<int, int>::local_iterator, unordered_iterator_category, std::pair<const int, int>>());
+static_assert(testConst<std::unordered_multimap<int, int>::const_local_iterator, unordered_iterator_category, std::pair<const int, int>>());
 
-static_assert(testWithoutConcept<std::reverse_iterator<int*>, int, std::random_access_iterator_tag>());
+static_assert(testConst<std::unordered_set<int>::iterator, unordered_iterator_category, int>());
+static_assert(testConst<std::unordered_set<int>::const_iterator, unordered_iterator_category, int>());
+static_assert(testConst<std::unordered_set<int>::local_iterator, unordered_iterator_category, int>());
+static_assert(testConst<std::unordered_set<int>::const_local_iterator, unordered_iterator_category, int>());
+static_assert(testConst<std::unordered_multiset<int>::iterator, unordered_iterator_category, int>());
+static_assert(testConst<std::unordered_multiset<int>::const_iterator, unordered_iterator_category, int>());
+static_assert(testConst<std::unordered_multiset<int>::local_iterator, unordered_iterator_category, int>());
+static_assert(testConst<std::unordered_multiset<int>::const_local_iterator, unordered_iterator_category, int>());
+
+static_assert(testMutable<std::reverse_iterator<int*>, std::random_access_iterator_tag, int>());
 static_assert(testIOIterator<std::back_insert_iterator<std::vector<int>>, std::output_iterator_tag>());
 static_assert(testIOIterator<std::front_insert_iterator<std::vector<int>>, std::output_iterator_tag>());
 static_assert(testIOIterator<std::insert_iterator<std::vector<int>>, std::output_iterator_tag>());
-static_assert(testConstWithoutConcept<std::istream_iterator<int, char>, int, std::input_iterator_tag>());
+static_assert(testConst<std::istream_iterator<int, char>, std::input_iterator_tag, int>());
 
 #if !defined(TEST_HAS_NO_LOCALIZATION)
-static_assert(testWithoutConcept<std::istreambuf_iterator<char>, char, long long, char, char*, std::input_iterator_tag>());
-static_assert(testWithoutConcept<std::move_iterator<int*>, int, std::ptrdiff_t, int&&, int*, std::random_access_iterator_tag>());
+// libc++-specific since pointer type is unspecified:
+LIBCPP_STATIC_ASSERT(test<std::istreambuf_iterator<char>, std::input_iterator_tag, char, long long, char, char*>());
+static_assert(test<std::move_iterator<int*>, std::random_access_iterator_tag, int, std::ptrdiff_t, int&&, int*>());
 static_assert(testIOIterator<std::ostream_iterator<int, char>, std::output_iterator_tag>());
 static_assert(testIOIterator<std::ostreambuf_iterator<int, char>, std::output_iterator_tag>());
-static_assert(testConstWithoutConcept<std::cregex_iterator, std::cmatch, std::forward_iterator_tag>());
-static_assert(testConstWithoutConcept<std::cregex_token_iterator, std::csub_match, std::forward_iterator_tag>());
+static_assert(testConst<std::cregex_iterator, std::forward_iterator_tag, std::cmatch>());
+static_assert(testConst<std::cregex_token_iterator, std::forward_iterator_tag, std::csub_match>());
 #endif // !TEST_HAS_NO_LOCALIZATION
 
 #ifndef TEST_HAS_NO_FILESYSTEM_LIBRARY
-static_assert(testWithoutConcept<std::filesystem::directory_iterator, std::filesystem::directory_entry, std::ptrdiff_t,
-                                 const std::filesystem::directory_entry&, const std::filesystem::directory_entry*,
-                                 std::input_iterator_tag>());
-static_assert(testWithoutConcept<std::filesystem::recursive_directory_iterator, std::filesystem::directory_entry,
-                                 std::ptrdiff_t, const std::filesystem::directory_entry&,
-                                 const std::filesystem::directory_entry*, std::input_iterator_tag>());
+static_assert(test<std::filesystem::directory_iterator, std::input_iterator_tag, std::filesystem::directory_entry,
+                   std::ptrdiff_t, const std::filesystem::directory_entry&, const std::filesystem::directory_entry*>());
+static_assert(test<std::filesystem::recursive_directory_iterator, std::input_iterator_tag,
+                   std::filesystem::directory_entry, std::ptrdiff_t, const std::filesystem::directory_entry&,
+                   const std::filesystem::directory_entry*>());
 #endif
 
 // Local test iterators.
