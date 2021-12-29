@@ -149,7 +149,7 @@ func @transpose_wrong_type(%v : memref<?x?xf32, affine_map<(i, j)[off, M]->(off 
 // -----
 
 func @memref_reinterpret_cast_too_many_offsets(%in: memref<?xf32>) {
-  // expected-error @+1 {{expected <= 1 offset values}}
+  // expected-error @+1 {{expected 1 offset values}}
   %out = memref.reinterpret_cast %in to
            offset: [0, 0], sizes: [10, 10], strides: [10, 1]
            : memref<?xf32> to memref<10x10xf32, offset: 0, strides: [10, 1]>
@@ -580,7 +580,7 @@ func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = memref.alloc() : memref<8x16x4xf32>
-  // expected-error@+1 {{expected <= 3 offset values}}
+  // expected-error@+1 {{expected 3 offset values}}
   %1 = memref.subview %0[%arg0, %arg1, 0, 0][%arg2, 0, 0, 0][1, 1, 1, 1]
     : memref<8x16x4xf32> to
       memref<8x?x4xf32, offset: 0, strides:[?, ?, 4]>
@@ -839,4 +839,12 @@ func @rank(%0: f32) {
   // expected-error@+1 {{'memref.rank' op operand #0 must be unranked.memref of any type values or memref of any type values}}
   "memref.rank"(%0): (f32)->index
   return
+}
+
+// -----
+
+#map = affine_map<(d0, d1, d2)[s0, s1, s2, s3] -> (s0 + d0 * s1 + d1 * s2 + d2 * s3)>
+func @illegal_num_offsets(%arg0 : memref<?x?x?xf32>, %arg1 : index, %arg2 : index) {
+  // expected-error@+1 {{expected 3 offset values}}
+  %0 = memref.subview %arg0[0, 0] [%arg1, %arg2] [1, 1] : memref<?x?x?xf32> to memref<?x?x?xf32, #map>
 }

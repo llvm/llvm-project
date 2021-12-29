@@ -1495,28 +1495,14 @@ Wrapper operator*(Wrapper a, int64_t b) {
 /// static representation of offsets, sizes and strides. Special sentinels
 /// encode the dynamic case.
 Type SubViewOp::inferResultType(MemRefType sourceMemRefType,
-                                ArrayRef<int64_t> leadingStaticOffsets,
-                                ArrayRef<int64_t> leadingStaticSizes,
-                                ArrayRef<int64_t> leadingStaticStrides) {
-  // A subview may specify only a leading subset of offset/sizes/strides in
-  // which case we complete with offset=0, sizes from memref type and strides=1.
+                                ArrayRef<int64_t> staticOffsets,
+                                ArrayRef<int64_t> staticSizes,
+                                ArrayRef<int64_t> staticStrides) {
   unsigned rank = sourceMemRefType.getRank();
-  assert(leadingStaticOffsets.size() <= rank &&
-         "unexpected leadingStaticOffsets overflow");
-  assert(leadingStaticSizes.size() <= rank &&
-         "unexpected leadingStaticSizes overflow");
-  assert(leadingStaticStrides.size() <= rank &&
-         "unexpected leadingStaticStrides overflow");
-  auto staticOffsets = llvm::to_vector<4>(leadingStaticOffsets);
-  auto staticSizes = llvm::to_vector<4>(leadingStaticSizes);
-  auto staticStrides = llvm::to_vector<4>(leadingStaticStrides);
-  unsigned numTrailingOffsets = rank - staticOffsets.size();
-  unsigned numTrailingSizes = rank - staticSizes.size();
-  unsigned numTrailingStrides = rank - staticStrides.size();
-  staticOffsets.append(numTrailingOffsets, 0);
-  llvm::append_range(staticSizes,
-                     sourceMemRefType.getShape().take_back(numTrailingSizes));
-  staticStrides.append(numTrailingStrides, 1);
+  (void)rank;
+  assert(staticOffsets.size() == rank && "unexpected staticOffsets overflow");
+  assert(staticSizes.size() == rank && "unexpected staticSizes overflow");
+  assert(staticStrides.size() == rank && "unexpected staticStrides overflow");
 
   // Extract source offset and strides.
   int64_t sourceOffset;
@@ -1553,29 +1539,28 @@ Type SubViewOp::inferResultType(MemRefType sourceMemRefType,
 }
 
 Type SubViewOp::inferResultType(MemRefType sourceMemRefType,
-                                ArrayRef<OpFoldResult> leadingStaticOffsets,
-                                ArrayRef<OpFoldResult> leadingStaticSizes,
-                                ArrayRef<OpFoldResult> leadingStaticStrides) {
+                                ArrayRef<OpFoldResult> offsets,
+                                ArrayRef<OpFoldResult> sizes,
+                                ArrayRef<OpFoldResult> strides) {
   SmallVector<int64_t> staticOffsets, staticSizes, staticStrides;
   SmallVector<Value> dynamicOffsets, dynamicSizes, dynamicStrides;
-  dispatchIndexOpFoldResults(leadingStaticOffsets, dynamicOffsets,
-                             staticOffsets, ShapedType::kDynamicStrideOrOffset);
-  dispatchIndexOpFoldResults(leadingStaticSizes, dynamicSizes, staticSizes,
+  dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets,
+                             ShapedType::kDynamicStrideOrOffset);
+  dispatchIndexOpFoldResults(sizes, dynamicSizes, staticSizes,
                              ShapedType::kDynamicSize);
-  dispatchIndexOpFoldResults(leadingStaticStrides, dynamicStrides,
-                             staticStrides, ShapedType::kDynamicStrideOrOffset);
+  dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides,
+                             ShapedType::kDynamicStrideOrOffset);
   return SubViewOp::inferResultType(sourceMemRefType, staticOffsets,
                                     staticSizes, staticStrides);
 }
 
-Type SubViewOp::inferRankReducedResultType(
-    unsigned resultRank, MemRefType sourceRankedTensorType,
-    ArrayRef<int64_t> leadingStaticOffsets,
-    ArrayRef<int64_t> leadingStaticSizes,
-    ArrayRef<int64_t> leadingStaticStrides) {
+Type SubViewOp::inferRankReducedResultType(unsigned resultRank,
+                                           MemRefType sourceRankedTensorType,
+                                           ArrayRef<int64_t> offsets,
+                                           ArrayRef<int64_t> sizes,
+                                           ArrayRef<int64_t> strides) {
   auto inferredType =
-      inferResultType(sourceRankedTensorType, leadingStaticOffsets,
-                      leadingStaticSizes, leadingStaticStrides)
+      inferResultType(sourceRankedTensorType, offsets, sizes, strides)
           .cast<MemRefType>();
   assert(inferredType.getRank() >= resultRank && "expected ");
   int rankDiff = inferredType.getRank() - resultRank;
@@ -1598,19 +1583,19 @@ Type SubViewOp::inferRankReducedResultType(
   return inferredType;
 }
 
-Type SubViewOp::inferRankReducedResultType(
-    unsigned resultRank, MemRefType sourceRankedTensorType,
-    ArrayRef<OpFoldResult> leadingStaticOffsets,
-    ArrayRef<OpFoldResult> leadingStaticSizes,
-    ArrayRef<OpFoldResult> leadingStaticStrides) {
+Type SubViewOp::inferRankReducedResultType(unsigned resultRank,
+                                           MemRefType sourceRankedTensorType,
+                                           ArrayRef<OpFoldResult> offsets,
+                                           ArrayRef<OpFoldResult> sizes,
+                                           ArrayRef<OpFoldResult> strides) {
   SmallVector<int64_t> staticOffsets, staticSizes, staticStrides;
   SmallVector<Value> dynamicOffsets, dynamicSizes, dynamicStrides;
-  dispatchIndexOpFoldResults(leadingStaticOffsets, dynamicOffsets,
-                             staticOffsets, ShapedType::kDynamicStrideOrOffset);
-  dispatchIndexOpFoldResults(leadingStaticSizes, dynamicSizes, staticSizes,
+  dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets,
+                             ShapedType::kDynamicStrideOrOffset);
+  dispatchIndexOpFoldResults(sizes, dynamicSizes, staticSizes,
                              ShapedType::kDynamicSize);
-  dispatchIndexOpFoldResults(leadingStaticStrides, dynamicStrides,
-                             staticStrides, ShapedType::kDynamicStrideOrOffset);
+  dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides,
+                             ShapedType::kDynamicStrideOrOffset);
   return SubViewOp::inferRankReducedResultType(
       resultRank, sourceRankedTensorType, staticOffsets, staticSizes,
       staticStrides);
@@ -1893,6 +1878,43 @@ static MemRefType getCanonicalSubViewResultType(
                                        mixedStrides);
 }
 
+/// Helper method to check if a `subview` operation is trivially a no-op. This
+/// is the case if the all offsets are zero, all strides are 1, and the source
+/// shape is same as the size of the subview. In such cases, the subview can be
+/// folded into its source.
+static bool isTrivialSubViewOp(SubViewOp subViewOp) {
+  if (subViewOp.getSourceType().getRank() != subViewOp.getType().getRank())
+    return false;
+
+  auto mixedOffsets = subViewOp.getMixedOffsets();
+  auto mixedSizes = subViewOp.getMixedSizes();
+  auto mixedStrides = subViewOp.getMixedStrides();
+
+  // Check offsets are zero.
+  if (llvm::any_of(mixedOffsets, [](OpFoldResult ofr) {
+        Optional<int64_t> intValue = getConstantIntValue(ofr);
+        return !intValue || intValue.getValue() != 0;
+      }))
+    return false;
+
+  // Check strides are one.
+  if (llvm::any_of(mixedStrides, [](OpFoldResult ofr) {
+        Optional<int64_t> intValue = getConstantIntValue(ofr);
+        return !intValue || intValue.getValue() != 1;
+      }))
+    return false;
+
+  // Check all size values are static and matches the (static) source shape.
+  ArrayRef<int64_t> sourceShape = subViewOp.getSourceType().getShape();
+  for (auto size : llvm::enumerate(mixedSizes)) {
+    Optional<int64_t> intValue = getConstantIntValue(size.value());
+    if (!intValue || intValue.getValue() != sourceShape[size.index()])
+      return false;
+  }
+  // All conditions met. The `SubViewOp` is foldable as a no-op.
+  return true;
+}
+
 namespace {
 /// Pattern to rewrite a subview op with MemRefCast arguments.
 /// This essentially pushes memref.cast past its consuming subview when
@@ -1950,6 +1972,26 @@ public:
     return success();
   }
 };
+
+/// Canonicalize subview ops that are no-ops. When the source shape is not same
+/// as a result shape due to use of `affine_map`.
+class TrivialSubViewOpFolder final : public OpRewritePattern<SubViewOp> {
+public:
+  using OpRewritePattern<SubViewOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(SubViewOp subViewOp,
+                                PatternRewriter &rewriter) const override {
+    if (!isTrivialSubViewOp(subViewOp))
+      return failure();
+    if (subViewOp.getSourceType() == subViewOp.getType()) {
+      rewriter.replaceOp(subViewOp, subViewOp.source());
+      return success();
+    }
+    rewriter.replaceOpWithNewOp<CastOp>(subViewOp, subViewOp.source(),
+                                        subViewOp.getType());
+    return success();
+  }
+};
 } // namespace
 
 /// Return the canonical type of the result of a subview.
@@ -1975,7 +2017,7 @@ void SubViewOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results
       .add<OpWithOffsetSizesAndStridesConstantArgumentFolder<
                SubViewOp, SubViewReturnTypeCanonicalizer, SubViewCanonicalizer>,
-           SubViewOpMemRefCastFolder>(context);
+           SubViewOpMemRefCastFolder, TrivialSubViewOpFolder>(context);
 }
 
 OpFoldResult SubViewOp::fold(ArrayRef<Attribute> operands) {
