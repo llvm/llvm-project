@@ -36,6 +36,7 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Overload.h"
 #include "clang/Sema/ParsedAttr.h"
+#include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
@@ -3757,6 +3758,78 @@ static void AddOverloadParameterChunks(ASTContext &Context,
   }
 }
 
+static std::string
+formatTemplateParameterPlaceholder(const NamedDecl *Param, bool &Optional,
+                                   const PrintingPolicy &Policy) {
+  if (const auto *Type = dyn_cast<TemplateTypeParmDecl>(Param)) {
+    Optional = Type->hasDefaultArgument();
+  } else if (const auto *NonType = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
+    Optional = NonType->hasDefaultArgument();
+  } else if (const auto *Template = dyn_cast<TemplateTemplateParmDecl>(Param)) {
+    Optional = Template->hasDefaultArgument();
+  }
+  std::string Result;
+  llvm::raw_string_ostream OS(Result);
+  Param->print(OS, Policy);
+  return Result;
+}
+
+static std::string templateResultType(const TemplateDecl *TD,
+                                      const PrintingPolicy &Policy) {
+  if (const auto *CTD = dyn_cast<ClassTemplateDecl>(TD))
+    return CTD->getTemplatedDecl()->getKindName().str();
+  if (const auto *VTD = dyn_cast<VarTemplateDecl>(TD))
+    return VTD->getTemplatedDecl()->getType().getAsString(Policy);
+  if (const auto *FTD = dyn_cast<FunctionTemplateDecl>(TD))
+    return FTD->getTemplatedDecl()->getReturnType().getAsString(Policy);
+  if (isa<TypeAliasTemplateDecl>(TD))
+    return "type";
+  if (isa<TemplateTemplateParmDecl>(TD))
+    return "class";
+  if (isa<ConceptDecl>(TD))
+    return "concept";
+  return "";
+}
+
+static CodeCompletionString *createTemplateSignatureString(
+    const TemplateDecl *TD, CodeCompletionBuilder &Builder, unsigned CurrentArg,
+    const PrintingPolicy &Policy) {
+  llvm::ArrayRef<NamedDecl *> Params = TD->getTemplateParameters()->asArray();
+  CodeCompletionBuilder OptionalBuilder(Builder.getAllocator(),
+                                        Builder.getCodeCompletionTUInfo());
+  std::string ResultType = templateResultType(TD, Policy);
+  if (!ResultType.empty())
+    Builder.AddResultTypeChunk(Builder.getAllocator().CopyString(ResultType));
+  Builder.AddTextChunk(
+      Builder.getAllocator().CopyString(TD->getNameAsString()));
+  Builder.AddChunk(CodeCompletionString::CK_LeftAngle);
+  // Initially we're writing into the main string. Once we see an optional arg
+  // (with default), we're writing into the nested optional chunk.
+  CodeCompletionBuilder *Current = &Builder;
+  for (unsigned I = 0; I < Params.size(); ++I) {
+    bool Optional = false;
+    std::string Placeholder =
+        formatTemplateParameterPlaceholder(Params[I], Optional, Policy);
+    if (Optional)
+      Current = &OptionalBuilder;
+    if (I > 0)
+      Current->AddChunk(CodeCompletionString::CK_Comma);
+    Current->AddChunk(I == CurrentArg
+                          ? CodeCompletionString::CK_CurrentParameter
+                          : CodeCompletionString::CK_Placeholder,
+                      Current->getAllocator().CopyString(Placeholder));
+  }
+  // Add the optional chunk to the main string if we ever used it.
+  if (Current == &OptionalBuilder)
+    Builder.AddOptionalChunk(OptionalBuilder.TakeString());
+  Builder.AddChunk(CodeCompletionString::CK_RightAngle);
+  // For function templates, ResultType was the function's return type.
+  // Give some clue this is a function. (Don't show the possibly-bulky params).
+  if (isa<FunctionTemplateDecl>(TD))
+    Builder.AddInformativeChunk("()");
+  return Builder.TakeString();
+}
+
 CodeCompletionString *
 CodeCompleteConsumer::OverloadCandidate::CreateSignatureString(
     unsigned CurrentArg, Sema &S, CodeCompletionAllocator &Allocator,
@@ -3770,6 +3843,11 @@ CodeCompleteConsumer::OverloadCandidate::CreateSignatureString(
   // FIXME: Set priority, availability appropriately.
   CodeCompletionBuilder Result(Allocator, CCTUInfo, 1,
                                CXAvailability_Available);
+
+  if (getKind() == CK_Template)
+    return createTemplateSignatureString(getTemplate(), Result, CurrentArg,
+                                         Policy);
+
   FunctionDecl *FDecl = getFunction();
   const FunctionProtoType *Proto =
       dyn_cast<FunctionProtoType>(getFunctionType());
@@ -5843,6 +5921,7 @@ static QualType getParamType(Sema &SemaRef,
   // overload candidates.
   QualType ParamType;
   for (auto &Candidate : Candidates) {
+    // FIXME: handle non-type-template-parameters by merging with D116326
     if (const auto *FType = Candidate.getFunctionType())
       if (const auto *Proto = dyn_cast<FunctionProtoType>(FType))
         if (N < Proto->getNumParams()) {
@@ -5860,8 +5939,7 @@ static QualType getParamType(Sema &SemaRef,
 }
 
 static QualType
-ProduceSignatureHelp(Sema &SemaRef, Scope *S,
-                     MutableArrayRef<ResultCandidate> Candidates,
+ProduceSignatureHelp(Sema &SemaRef, MutableArrayRef<ResultCandidate> Candidates,
                      unsigned CurrentArg, SourceLocation OpenParLoc) {
   if (Candidates.empty())
     return QualType();
@@ -5970,7 +6048,7 @@ QualType Sema::ProduceCallSignatureHelp(Scope *S, Expr *Fn,
   }
   mergeCandidatesWithResults(*this, Results, CandidateSet, Loc, Args.size());
   QualType ParamType =
-      ProduceSignatureHelp(*this, S, Results, Args.size(), OpenParLoc);
+      ProduceSignatureHelp(*this, Results, Args.size(), OpenParLoc);
   return !CandidateSet.empty() ? ParamType : QualType();
 }
 
@@ -6010,7 +6088,7 @@ QualType Sema::ProduceConstructorSignatureHelp(Scope *S, QualType Type,
 
   SmallVector<ResultCandidate, 8> Results;
   mergeCandidatesWithResults(*this, Results, CandidateSet, Loc, Args.size());
-  return ProduceSignatureHelp(*this, S, Results, Args.size(), OpenParLoc);
+  return ProduceSignatureHelp(*this, Results, Args.size(), OpenParLoc);
 }
 
 QualType Sema::ProduceCtorInitMemberSignatureHelp(
@@ -6030,6 +6108,58 @@ QualType Sema::ProduceCtorInitMemberSignatureHelp(
                                            MemberDecl->getLocation(), ArgExprs,
                                            OpenParLoc);
   return QualType();
+}
+
+static bool argMatchesTemplateParams(const ParsedTemplateArgument &Arg,
+                                     unsigned Index,
+                                     const TemplateParameterList &Params) {
+  const NamedDecl *Param;
+  if (Index < Params.size())
+    Param = Params.getParam(Index);
+  else if (Params.hasParameterPack())
+    Param = Params.asArray().back();
+  else
+    return false; // too many args
+
+  switch (Arg.getKind()) {
+  case ParsedTemplateArgument::Type:
+    return llvm::isa<TemplateTypeParmDecl>(Param); // constraints not checked
+  case ParsedTemplateArgument::NonType:
+    return llvm::isa<NonTypeTemplateParmDecl>(Param); // type not checked
+  case ParsedTemplateArgument::Template:
+    return llvm::isa<TemplateTemplateParmDecl>(Param); // signature not checked
+  }
+}
+
+QualType Sema::ProduceTemplateArgumentSignatureHelp(
+    TemplateTy ParsedTemplate, ArrayRef<ParsedTemplateArgument> Args,
+    SourceLocation LAngleLoc) {
+  if (!CodeCompleter || !ParsedTemplate)
+    return QualType();
+
+  SmallVector<ResultCandidate, 8> Results;
+  auto Consider = [&](const TemplateDecl *TD) {
+    // Only add if the existing args are compatible with the template.
+    bool Matches = true;
+    for (unsigned I = 0; I < Args.size(); ++I) {
+      if (!argMatchesTemplateParams(Args[I], I, *TD->getTemplateParameters())) {
+        Matches = false;
+        break;
+      }
+    }
+    if (Matches)
+      Results.emplace_back(TD);
+  };
+
+  TemplateName Template = ParsedTemplate.get();
+  if (const auto *TD = Template.getAsTemplateDecl()) {
+    Consider(TD);
+  } else if (const auto *OTS = Template.getAsOverloadedTemplate()) {
+    for (const NamedDecl *ND : *OTS)
+      if (const auto *TD = llvm::dyn_cast<TemplateDecl>(ND))
+        Consider(TD);
+  }
+  return ProduceSignatureHelp(*this, Results, Args.size(), LAngleLoc);
 }
 
 static QualType getDesignatedType(QualType BaseType, const Designation &Desig) {

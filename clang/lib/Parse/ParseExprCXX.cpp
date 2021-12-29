@@ -2454,8 +2454,8 @@ bool Parser::ParseUnqualifiedIdTemplateId(
   // Parse the enclosed template argument list.
   SourceLocation LAngleLoc, RAngleLoc;
   TemplateArgList TemplateArgs;
-  if (ParseTemplateIdAfterTemplateName(true, LAngleLoc, TemplateArgs,
-                                       RAngleLoc))
+  if (ParseTemplateIdAfterTemplateName(true, LAngleLoc, TemplateArgs, RAngleLoc,
+                                       Template))
     return true;
 
   // If this is a non-template, we already issued a diagnostic.

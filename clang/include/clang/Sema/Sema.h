@@ -12549,6 +12549,8 @@ public:
                                               ArrayRef<Expr *> ArgExprs,
                                               IdentifierInfo *II,
                                               SourceLocation OpenParLoc);
+  QualType ProduceTemplateArgumentSignatureHelp(
+      TemplateTy, ArrayRef<ParsedTemplateArgument>, SourceLocation LAngleLoc);
   void CodeCompleteInitializer(Scope *S, Decl *D);
   /// Trigger code completion for a record of \p BaseType. \p InitExprs are
   /// expressions in the initializer list seen so far and \p D is the current

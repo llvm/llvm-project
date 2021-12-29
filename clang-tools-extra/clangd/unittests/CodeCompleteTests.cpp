@@ -3453,6 +3453,25 @@ TEST(SignatureHelp, DocFormat) {
   }
 }
 
+TEST(SignatureHelp, TemplateArguments) {
+  std::string Top = R"cpp(
+    template <typename T, int> bool foo(char);
+    template <int I, int> bool foo(float);
+  )cpp";
+
+  auto First = signatures(Top + "bool x = foo<^");
+  EXPECT_THAT(
+      First.signatures,
+      UnorderedElementsAre(Sig("foo<[[typename T]], [[int]]>() -> bool"),
+                           Sig("foo<[[int I]], [[int]]>() -> bool")));
+  EXPECT_EQ(First.activeParameter, 0);
+
+  auto Second = signatures(Top + "bool x = foo<1, ^");
+  EXPECT_THAT(Second.signatures,
+              ElementsAre(Sig("foo<[[int I]], [[int]]>() -> bool")));
+  EXPECT_EQ(Second.activeParameter, 1);
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

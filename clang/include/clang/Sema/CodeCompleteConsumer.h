@@ -1009,12 +1009,15 @@ public:
       /// The candidate is a function declaration.
       CK_Function,
 
-      /// The candidate is a function template.
+      /// The candidate is a function template, arguments are being completed.
       CK_FunctionTemplate,
 
       /// The "candidate" is actually a variable, expression, or block
       /// for which we only have a function prototype.
-      CK_FunctionType
+      CK_FunctionType,
+
+      /// The candidate is a template, template arguments are being completed.
+      CK_Template,
     };
 
   private:
@@ -1033,6 +1036,10 @@ public:
       /// The function type that describes the entity being called,
       /// when Kind == CK_FunctionType.
       const FunctionType *Type;
+
+      /// The template overload candidate, available when
+      /// Kind == CK_Template.
+      const TemplateDecl *Template;
     };
 
   public:
@@ -1044,6 +1051,9 @@ public:
 
     OverloadCandidate(const FunctionType *Type)
         : Kind(CK_FunctionType), Type(Type) {}
+
+    OverloadCandidate(const TemplateDecl *Template)
+        : Kind(CK_Template), Template(Template) {}
 
     /// Determine the kind of overload candidate.
     CandidateKind getKind() const { return Kind; }
@@ -1061,6 +1071,13 @@ public:
     /// Retrieve the function type of the entity, regardless of how the
     /// function is stored.
     const FunctionType *getFunctionType() const;
+
+    const TemplateDecl *getTemplate() const {
+      assert(getKind() == CK_Template && "Not a template");
+      return Template;
+    }
+
+    unsigned getNumParams() const;
 
     /// Create a new code-completion string that describes the function
     /// signature of this overload candidate.
