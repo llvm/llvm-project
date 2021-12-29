@@ -32,7 +32,7 @@ define void @kernel() {
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* nonnull null, i8 1, i1 false, i1 true)
 ; CHECK-NEXT:    call void @foo() #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    call void @bar() #[[ATTR4]]
-; CHECK-NEXT:    call void @unknown_no_openmp()
+; CHECK-NEXT:    call void @unknown_no_openmp() #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* nonnull null, i8 1, i1 true)
 ; CHECK-NEXT:    ret void
 ;
@@ -41,7 +41,7 @@ define void @kernel() {
 ; CHECK-DISABLED-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* nonnull null, i8 1, i1 false, i1 true)
 ; CHECK-DISABLED-NEXT:    call void @foo() #[[ATTR4:[0-9]+]]
 ; CHECK-DISABLED-NEXT:    call void @bar() #[[ATTR4]]
-; CHECK-DISABLED-NEXT:    call void @unknown_no_openmp()
+; CHECK-DISABLED-NEXT:    call void @unknown_no_openmp() #[[ATTR3:[0-9]+]]
 ; CHECK-DISABLED-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* nonnull null, i8 1, i1 true)
 ; CHECK-DISABLED-NEXT:    ret void
 ;
@@ -183,14 +183,14 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ; CHECK: attributes #[[ATTR0]] = { nosync nounwind }
 ; CHECK: attributes #[[ATTR1]] = { nofree nosync nounwind readnone willreturn }
 ; CHECK: attributes #[[ATTR2]] = { nofree nosync nounwind willreturn writeonly }
-; CHECK: attributes #[[ATTR3:[0-9]+]] = { "llvm.assume"="omp_no_openmp" }
+; CHECK: attributes #[[ATTR3]] = { "llvm.assume"="omp_no_openmp" }
 ; CHECK: attributes #[[ATTR4]] = { nounwind }
 ; CHECK: attributes #[[ATTR5]] = { nosync nounwind writeonly }
 ;.
 ; CHECK-DISABLED: attributes #[[ATTR0]] = { nosync nounwind }
 ; CHECK-DISABLED: attributes #[[ATTR1]] = { nofree nosync nounwind readnone willreturn }
 ; CHECK-DISABLED: attributes #[[ATTR2]] = { nofree nosync nounwind willreturn writeonly }
-; CHECK-DISABLED: attributes #[[ATTR3:[0-9]+]] = { "llvm.assume"="omp_no_openmp" }
+; CHECK-DISABLED: attributes #[[ATTR3]] = { "llvm.assume"="omp_no_openmp" }
 ; CHECK-DISABLED: attributes #[[ATTR4]] = { nounwind }
 ; CHECK-DISABLED: attributes #[[ATTR5]] = { nosync nounwind writeonly }
 ;.

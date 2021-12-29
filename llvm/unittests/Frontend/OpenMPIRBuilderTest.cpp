@@ -303,8 +303,7 @@ TEST_F(OpenMPIRBuilderTest, CreateCancel) {
   EXPECT_EQ(Barrier->getNumUses(), 0U);
   EXPECT_EQ(CancelBBTI->getSuccessor(1)->getTerminator()->getNumSuccessors(),
             1U);
-  EXPECT_EQ(CancelBBTI->getSuccessor(1)->getTerminator()->getSuccessor(0),
-            CBB);
+  EXPECT_EQ(CancelBBTI->getSuccessor(1)->getTerminator()->getSuccessor(0), CBB);
 
   EXPECT_EQ(cast<CallInst>(Cancel)->getArgOperand(1), GTID);
 
@@ -342,7 +341,6 @@ TEST_F(OpenMPIRBuilderTest, CreateCancelIfCond) {
   BB = BB->getTerminator()->getSuccessor(0);
   EXPECT_EQ(BB->size(), 4U);
 
-
   CallInst *GTID = dyn_cast<CallInst>(&BB->front());
   EXPECT_NE(GTID, nullptr);
   EXPECT_EQ(GTID->arg_size(), 1U);
@@ -360,7 +358,8 @@ TEST_F(OpenMPIRBuilderTest, CreateCancelIfCond) {
   Instruction *CancelBBTI = Cancel->getParent()->getTerminator();
   EXPECT_EQ(CancelBBTI->getNumSuccessors(), 2U);
   EXPECT_EQ(CancelBBTI->getSuccessor(0)->size(), 1U);
-  EXPECT_EQ(CancelBBTI->getSuccessor(0)->getUniqueSuccessor(), NewIP.getBlock());
+  EXPECT_EQ(CancelBBTI->getSuccessor(0)->getUniqueSuccessor(),
+            NewIP.getBlock());
   EXPECT_EQ(CancelBBTI->getSuccessor(1)->size(), 3U);
   CallInst *GTID1 = dyn_cast<CallInst>(&CancelBBTI->getSuccessor(1)->front());
   EXPECT_NE(GTID1, nullptr);
@@ -377,8 +376,7 @@ TEST_F(OpenMPIRBuilderTest, CreateCancelIfCond) {
   EXPECT_EQ(Barrier->getNumUses(), 0U);
   EXPECT_EQ(CancelBBTI->getSuccessor(1)->getTerminator()->getNumSuccessors(),
             1U);
-  EXPECT_EQ(CancelBBTI->getSuccessor(1)->getTerminator()->getSuccessor(0),
-            CBB);
+  EXPECT_EQ(CancelBBTI->getSuccessor(1)->getTerminator()->getSuccessor(0), CBB);
 
   EXPECT_EQ(cast<CallInst>(Cancel)->getArgOperand(1), GTID);
 
@@ -502,8 +500,8 @@ TEST_F(OpenMPIRBuilderTest, ParallelSimple) {
     Builder.CreateStore(F->arg_begin(), PrivAI);
 
     Builder.restoreIP(CodeGenIP);
-    Value *PrivLoad = Builder.CreateLoad(PrivAI->getAllocatedType(), PrivAI,
-                                         "local.use");
+    Value *PrivLoad =
+        Builder.CreateLoad(PrivAI->getAllocatedType(), PrivAI, "local.use");
     Value *Cmp = Builder.CreateICmpNE(F->arg_begin(), PrivLoad);
     Instruction *ThenTerm, *ElseTerm;
     SplitBlockAndInsertIfThenElse(Cmp, CodeGenIP.getBlock()->getTerminator(),
@@ -809,8 +807,8 @@ TEST_F(OpenMPIRBuilderTest, ParallelIfCond) {
     Builder.CreateStore(F->arg_begin(), PrivAI);
 
     Builder.restoreIP(CodeGenIP);
-    Value *PrivLoad = Builder.CreateLoad(PrivAI->getAllocatedType(), PrivAI,
-                                         "local.use");
+    Value *PrivLoad =
+        Builder.CreateLoad(PrivAI->getAllocatedType(), PrivAI, "local.use");
     Value *Cmp = Builder.CreateICmpNE(F->arg_begin(), PrivLoad);
     Instruction *ThenTerm, *ElseTerm;
     SplitBlockAndInsertIfThenElse(Cmp, CodeGenIP.getBlock()->getTerminator(),
@@ -2011,8 +2009,8 @@ TEST_F(OpenMPIRBuilderTest, MasterDirective) {
     EntryBB = ThenBB->getUniquePredecessor();
 
     // simple instructions for body
-    Value *PrivLoad = Builder.CreateLoad(PrivAI->getAllocatedType(), PrivAI,
-                                         "local.use");
+    Value *PrivLoad =
+        Builder.CreateLoad(PrivAI->getAllocatedType(), PrivAI, "local.use");
     Builder.CreateICmpNE(F->arg_begin(), PrivLoad);
   };
 
@@ -2164,8 +2162,8 @@ TEST_F(OpenMPIRBuilderTest, CriticalDirective) {
     // body begin
     Builder.restoreIP(CodeGenIP);
     Builder.CreateStore(F->arg_begin(), PrivAI);
-    Value *PrivLoad = Builder.CreateLoad(PrivAI->getAllocatedType(), PrivAI,
-                                         "local.use");
+    Value *PrivLoad =
+        Builder.CreateLoad(PrivAI->getAllocatedType(), PrivAI, "local.use");
     Builder.CreateICmpNE(F->arg_begin(), PrivLoad);
   };
 
@@ -2538,32 +2536,33 @@ TEST_F(OpenMPIRBuilderTest, CopyinBlocks) {
 
   OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
 
-  IntegerType* Int32 = Type::getInt32Ty(M->getContext());
-  AllocaInst* MasterAddress = Builder.CreateAlloca(Int32->getPointerTo());
-	AllocaInst* PrivAddress = Builder.CreateAlloca(Int32->getPointerTo());
+  IntegerType *Int32 = Type::getInt32Ty(M->getContext());
+  AllocaInst *MasterAddress = Builder.CreateAlloca(Int32->getPointerTo());
+  AllocaInst *PrivAddress = Builder.CreateAlloca(Int32->getPointerTo());
 
   BasicBlock *EntryBB = BB;
 
   OMPBuilder.createCopyinClauseBlocks(Builder.saveIP(), MasterAddress,
                                       PrivAddress, Int32, /*BranchtoEnd*/ true);
 
-  BranchInst* EntryBr = dyn_cast_or_null<BranchInst>(EntryBB->getTerminator());
+  BranchInst *EntryBr = dyn_cast_or_null<BranchInst>(EntryBB->getTerminator());
 
   EXPECT_NE(EntryBr, nullptr);
   EXPECT_TRUE(EntryBr->isConditional());
 
-  BasicBlock* NotMasterBB = EntryBr->getSuccessor(0);
-  BasicBlock* CopyinEnd = EntryBr->getSuccessor(1);
-  CmpInst* CMP = dyn_cast_or_null<CmpInst>(EntryBr->getCondition());
+  BasicBlock *NotMasterBB = EntryBr->getSuccessor(0);
+  BasicBlock *CopyinEnd = EntryBr->getSuccessor(1);
+  CmpInst *CMP = dyn_cast_or_null<CmpInst>(EntryBr->getCondition());
 
   EXPECT_NE(CMP, nullptr);
   EXPECT_NE(NotMasterBB, nullptr);
   EXPECT_NE(CopyinEnd, nullptr);
 
-  BranchInst* NotMasterBr = dyn_cast_or_null<BranchInst>(NotMasterBB->getTerminator());
+  BranchInst *NotMasterBr =
+      dyn_cast_or_null<BranchInst>(NotMasterBB->getTerminator());
   EXPECT_NE(NotMasterBr, nullptr);
   EXPECT_FALSE(NotMasterBr->isConditional());
-  EXPECT_EQ(CopyinEnd,NotMasterBr->getSuccessor(0));
+  EXPECT_EQ(CopyinEnd, NotMasterBr->getSuccessor(0));
 }
 
 TEST_F(OpenMPIRBuilderTest, SingleDirective) {
@@ -2602,8 +2601,8 @@ TEST_F(OpenMPIRBuilderTest, SingleDirective) {
     EntryBB = ThenBB->getUniquePredecessor();
 
     // simple instructions for body
-    Value *PrivLoad = Builder.CreateLoad(PrivAI->getAllocatedType(), PrivAI,
-                                         "local.use");
+    Value *PrivLoad =
+        Builder.CreateLoad(PrivAI->getAllocatedType(), PrivAI, "local.use");
     Builder.CreateICmpNE(F->arg_begin(), PrivLoad);
   };
 
@@ -3106,8 +3105,9 @@ TEST_F(OpenMPIRBuilderTest, CreateReductions) {
     IRBuilderBase::InsertPointGuard Guard(Builder);
     Builder.restoreIP(CodeGenIP);
 
-    Constant *SrcLocStr = OMPBuilder.getOrCreateSrcLocStr(Loc);
-    Value *Ident = OMPBuilder.getOrCreateIdent(SrcLocStr);
+    uint32_t StrSize;
+    Constant *SrcLocStr = OMPBuilder.getOrCreateSrcLocStr(Loc, StrSize);
+    Value *Ident = OMPBuilder.getOrCreateIdent(SrcLocStr, StrSize);
     Value *TID = OMPBuilder.getOrCreateThreadID(Ident);
     Value *SumLocal =
         Builder.CreateUIToFP(TID, Builder.getFloatTy(), "sum.local");
@@ -3339,8 +3339,9 @@ TEST_F(OpenMPIRBuilderTest, CreateTwoReductions) {
     IRBuilderBase::InsertPointGuard Guard(Builder);
     Builder.restoreIP(CodeGenIP);
 
-    Constant *SrcLocStr = OMPBuilder.getOrCreateSrcLocStr(Loc);
-    Value *Ident = OMPBuilder.getOrCreateIdent(SrcLocStr);
+    uint32_t StrSize;
+    Constant *SrcLocStr = OMPBuilder.getOrCreateSrcLocStr(Loc, StrSize);
+    Value *Ident = OMPBuilder.getOrCreateIdent(SrcLocStr, StrSize);
     Value *TID = OMPBuilder.getOrCreateThreadID(Ident);
     Value *SumLocal =
         Builder.CreateUIToFP(TID, Builder.getFloatTy(), "sum.local");
@@ -3359,8 +3360,9 @@ TEST_F(OpenMPIRBuilderTest, CreateTwoReductions) {
     IRBuilderBase::InsertPointGuard Guard(Builder);
     Builder.restoreIP(CodeGenIP);
 
-    Constant *SrcLocStr = OMPBuilder.getOrCreateSrcLocStr(Loc);
-    Value *Ident = OMPBuilder.getOrCreateIdent(SrcLocStr);
+    uint32_t StrSize;
+    Constant *SrcLocStr = OMPBuilder.getOrCreateSrcLocStr(Loc, StrSize);
+    Value *Ident = OMPBuilder.getOrCreateIdent(SrcLocStr, StrSize);
     Value *TID = OMPBuilder.getOrCreateThreadID(Ident);
     Value *XorPartial = Builder.CreateLoad(XorType, XorReduced, "xor.partial");
     Value *Xor = Builder.CreateXor(XorPartial, TID, "xor");
@@ -3695,8 +3697,11 @@ TEST_F(OpenMPIRBuilderTest, CreateOffloadMapnames) {
 
   IRBuilder<> Builder(BB);
 
-  Constant *Cst1 = OMPBuilder.getOrCreateSrcLocStr("array1", "file1", 2, 5);
-  Constant *Cst2 = OMPBuilder.getOrCreateSrcLocStr("array2", "file1", 3, 5);
+  uint32_t StrSize;
+  Constant *Cst1 =
+      OMPBuilder.getOrCreateSrcLocStr("array1", "file1", 2, 5, StrSize);
+  Constant *Cst2 =
+      OMPBuilder.getOrCreateSrcLocStr("array2", "file1", 3, 5, StrSize);
   SmallVector<llvm::Constant *> Names = {Cst1, Cst2};
 
   GlobalVariable *OffloadMaptypesGlobal =
@@ -3798,11 +3803,15 @@ TEST_F(OpenMPIRBuilderTest, EmitMapperCall) {
 
   SmallVector<uint64_t> Flags = {0, 2};
 
-  Constant *SrcLocCst = OMPBuilder.getOrCreateSrcLocStr("", "file1", 2, 5);
-  Value *SrcLocInfo = OMPBuilder.getOrCreateIdent(SrcLocCst);
+  uint32_t StrSize;
+  Constant *SrcLocCst =
+      OMPBuilder.getOrCreateSrcLocStr("", "file1", 2, 5, StrSize);
+  Value *SrcLocInfo = OMPBuilder.getOrCreateIdent(SrcLocCst, StrSize);
 
-  Constant *Cst1 = OMPBuilder.getOrCreateSrcLocStr("array1", "file1", 2, 5);
-  Constant *Cst2 = OMPBuilder.getOrCreateSrcLocStr("array2", "file1", 3, 5);
+  Constant *Cst1 =
+      OMPBuilder.getOrCreateSrcLocStr("array1", "file1", 2, 5, StrSize);
+  Constant *Cst2 =
+      OMPBuilder.getOrCreateSrcLocStr("array2", "file1", 3, 5, StrSize);
   SmallVector<llvm::Constant *> Names = {Cst1, Cst2};
 
   GlobalVariable *Maptypes =
