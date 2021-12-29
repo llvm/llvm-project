@@ -557,6 +557,10 @@ OpFoldResult arith::XOrIOp::fold(ArrayRef<Attribute> operands) {
   /// xor(x, x) -> 0
   if (getLhs() == getRhs())
     return Builder(getContext()).getZeroAttr(getType());
+  /// xor(xor(x, a), a) -> x
+  if (arith::XOrIOp prev = getLhs().getDefiningOp<arith::XOrIOp>())
+    if (prev.getRhs() == getRhs())
+      return prev.getLhs();
 
   return constFoldBinaryOp<IntegerAttr>(
       operands, [](APInt a, const APInt &b) { return std::move(a) ^ b; });
@@ -859,13 +863,19 @@ bool arith::ExtFOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::TruncIOp::fold(ArrayRef<Attribute> operands) {
+  assert(operands.size() == 1 && "unary operation takes one operand");
+
   // trunci(zexti(a)) -> a
   // trunci(sexti(a)) -> a
   if (matchPattern(getOperand(), m_Op<arith::ExtUIOp>()) ||
       matchPattern(getOperand(), m_Op<arith::ExtSIOp>()))
     return getOperand().getDefiningOp()->getOperand(0);
 
-  assert(operands.size() == 1 && "unary operation takes one operand");
+  // trunci(trunci(a)) -> trunci(a))
+  if (matchPattern(getOperand(), m_Op<arith::TruncIOp>())) {
+    setOperand(getOperand().getDefiningOp()->getOperand(0));
+    return getResult();
+  }
 
   if (!operands[0])
     return {};
