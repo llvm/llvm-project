@@ -112,8 +112,8 @@ CheckPropertyAgainstProtocol(Sema &S, ObjCPropertyDecl *Prop,
     return;
 
   // Look for a property with the same name.
-  if (ObjCPropertyDecl *ProtoProp =
-      Proto->lookup(Prop->getDeclName()).find_first<ObjCPropertyDecl>()) {
+  if (ObjCPropertyDecl *ProtoProp = Proto->getProperty(
+          Prop->getIdentifier(), Prop->isInstanceProperty())) {
     S.DiagnosePropertyMismatch(Prop, ProtoProp, Proto->getIdentifier(), true);
     return;
   }
@@ -231,8 +231,8 @@ Decl *Sema::ActOnProperty(Scope *S, SourceLocation AtLoc,
     bool FoundInSuper = false;
     ObjCInterfaceDecl *CurrentInterfaceDecl = IFace;
     while (ObjCInterfaceDecl *Super = CurrentInterfaceDecl->getSuperClass()) {
-      if (ObjCPropertyDecl *SuperProp =
-          Super->lookup(Res->getDeclName()).find_first<ObjCPropertyDecl>()) {
+      if (ObjCPropertyDecl *SuperProp = Super->getProperty(
+              Res->getIdentifier(), Res->isInstanceProperty())) {
         DiagnosePropertyMismatch(Res, SuperProp, Super->getIdentifier(), false);
         FoundInSuper = true;
         break;
