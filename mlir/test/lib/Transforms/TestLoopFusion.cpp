@@ -186,7 +186,7 @@ void TestLoopFusion::runOnFunction() {
 
       // Try to fuse all combinations of src/dst loop nests in 'depthToLoops'.
     } while (iterateLoops(depthToLoops, testLoopFusionTransformation,
-                          /*return_on_change=*/true));
+                          /*returnOnChange=*/true));
     return;
   }
 

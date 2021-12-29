@@ -275,9 +275,9 @@ void NormalizeMemRefs::updateFunctionSignature(FuncOp funcOp,
                                           /*indexRemap=*/layoutMap,
                                           /*extraOperands=*/{},
                                           /*symbolOperands=*/{},
-                                          /*domInstFilter=*/nullptr,
-                                          /*postDomInstFilter=*/nullptr,
-                                          /*allowDereferencingOps=*/true,
+                                          /*domOpFilter=*/nullptr,
+                                          /*postDomOpFilter=*/nullptr,
+                                          /*allowNonDereferencingOps=*/true,
                                           /*replaceInDeallocOp=*/true))) {
         // If it failed (due to escapes for example), bail out.
         // It should never hit this part of the code because it is called by
@@ -370,8 +370,8 @@ void NormalizeMemRefs::normalizeFuncOpMemRefs(FuncOp funcOp,
                                         /*indexRemap=*/layoutMap,
                                         /*extraOperands=*/{},
                                         /*symbolOperands=*/{},
-                                        /*domInstFilter=*/nullptr,
-                                        /*postDomInstFilter=*/nullptr,
+                                        /*domOpFilter=*/nullptr,
+                                        /*postDomOpFilter=*/nullptr,
                                         /*allowNonDereferencingOps=*/true,
                                         /*replaceInDeallocOp=*/true))) {
       // If it failed (due to escapes for example), bail out. Removing the
@@ -419,9 +419,9 @@ void NormalizeMemRefs::normalizeFuncOpMemRefs(FuncOp funcOp,
                                               /*indexRemap=*/layoutMap,
                                               /*extraOperands=*/{},
                                               /*symbolOperands=*/{},
-                                              /*domInstFilter=*/nullptr,
-                                              /*postDomInstFilter=*/nullptr,
-                                              /*allowDereferencingOps=*/true,
+                                              /*domOpFilter=*/nullptr,
+                                              /*postDomOpFilter=*/nullptr,
+                                              /*allowNonDereferencingOps=*/true,
                                               /*replaceInDeallocOp=*/true))) {
             newOp->erase();
             replacingMemRefUsesFailed = true;

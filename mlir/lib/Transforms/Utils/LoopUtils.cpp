@@ -2882,8 +2882,8 @@ static LogicalResult generateCopy(
                                  /*extraIndices=*/{}, indexRemap,
                                  /*extraOperands=*/regionSymbols,
                                  /*symbolOperands=*/{},
-                                 /*domInstFilter=*/&*begin,
-                                 /*postDomInstFilter=*/&*postDomFilter);
+                                 /*domOpFilter=*/&*begin,
+                                 /*postDomOpFilter=*/&*postDomFilter);
 
   *nBegin = isBeginAtStartOfBlock ? block->begin() : std::next(prevOfBegin);
 
@@ -3258,7 +3258,7 @@ static AffineIfOp createSeparationCondition(MutableArrayRef<AffineForOp> loops,
                                1);
     unsigned fullTileLbPos, fullTileUbPos;
     if (!cst.getConstantBoundOnDimSize(0, /*lb=*/nullptr,
-                                       /*lbFloorDivisor=*/nullptr,
+                                       /*boundFloorDivisor=*/nullptr,
                                        /*ub=*/nullptr, &fullTileLbPos,
                                        &fullTileUbPos)) {
       LLVM_DEBUG(llvm::dbgs() << "Can't get constant diff pair for a loop\n");
