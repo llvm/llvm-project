@@ -173,7 +173,7 @@ define i8 @test_cttz_i8(i8 %a) nounwind {
 ; RV64I-NEXT:    andi a0, a0, 51
 ; RV64I-NEXT:    add a0, a1, a0
 ; RV64I-NEXT:    srli a1, a0, 4
-; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    addw a0, a0, a1
 ; RV64I-NEXT:    andi a0, a0, 15
 ; RV64I-NEXT:    ret
 ; RV64I-NEXT:  .LBB3_2:
@@ -596,7 +596,7 @@ define i8 @test_cttz_i8_zero_undef(i8 %a) nounwind {
 ; RV64I-NEXT:    andi a0, a0, 51
 ; RV64I-NEXT:    add a0, a1, a0
 ; RV64I-NEXT:    srli a1, a0, 4
-; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    addw a0, a0, a1
 ; RV64I-NEXT:    andi a0, a0, 15
 ; RV64I-NEXT:    ret
   %tmp = call i8 @llvm.cttz.i8(i8 %a, i1 true)
