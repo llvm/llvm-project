@@ -42,7 +42,7 @@ struct ToIter {
     typedef char *pointer;
     typedef char &reference;
     typedef char value_type;
-    typedef value_type difference_type;
+    typedef signed char difference_type;
 
     explicit TEST_CONSTEXPR_CXX17 ToIter() : m_value(0) {}
     TEST_CONSTEXPR_CXX17 ToIter(const ToIter &src) : m_value(src.m_value) {}
@@ -57,6 +57,8 @@ struct ToIter {
         return *this;
     }
     char *m_value;
+
+    reference operator*() const;
 };
 
 TEST_CONSTEXPR_CXX17 bool test_conv_assign()
