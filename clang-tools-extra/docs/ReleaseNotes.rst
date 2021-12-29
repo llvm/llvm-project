@@ -67,6 +67,9 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- Ignore warnings from macros defined in system headers, if not using the
+  `-system-headers` flag.
+
 - Added support for globbing in `NOLINT*` expressions, to simplify suppressing
   multiple warnings in the same line.
 
@@ -151,7 +154,7 @@ Changes in existing checks
 
 - Fixed a false positive in :doc:`fuchsia-trailing-return
   <clang-tidy/checks/fuchsia-trailing-return>` for C++17 deduction guides.
-  
+
 - Fixed a false positive in :doc:`bugprone-throw-keyword-missing
   <clang-tidy/checks/bugprone-throw-keyword-missing>` when creating an exception object
   using placement new

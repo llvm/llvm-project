@@ -9,6 +9,8 @@
 //       file-filter\header*.h due to code order between '/' and '\\'.
 // RUN: clang-tidy -checks='-*,google-explicit-constructor' -header-filter='.*' -system-headers %s -- -I %S/Inputs/file-filter/system/.. -isystem %S/Inputs/file-filter/system 2>&1 | FileCheck --check-prefix=CHECK4 %s
 // RUN: clang-tidy -checks='-*,google-explicit-constructor' -header-filter='.*' -system-headers -quiet %s -- -I %S/Inputs/file-filter/system/.. -isystem %S/Inputs/file-filter/system 2>&1 | FileCheck --check-prefix=CHECK4-QUIET %s
+// RUN: clang-tidy -checks='-*,cppcoreguidelines-pro-type-cstyle-cast' -header-filter='.*' -system-headers %s -- -I %S/Inputs/file-filter/system/.. -isystem %S/Inputs/file-filter/system 2>&1 | FileCheck --check-prefix=CHECK5 %s
+// RUN: clang-tidy -checks='-*,cppcoreguidelines-pro-type-cstyle-cast' -header-filter='.*' %s -- -I %S/Inputs/file-filter/system/.. -isystem %S/Inputs/file-filter/system 2>&1 | FileCheck --check-prefix=CHECK5-NO-SYSTEM-HEADERS %s
 
 #include "header1.h"
 // CHECK-NOT: warning:
@@ -71,3 +73,8 @@ class A { A(int); };
 // CHECK4-NOT: Suppressed {{.*}} warnings
 // CHECK4-NOT: Use -header-filter=.* {{.*}}
 // CHECK4-QUIET-NOT: Suppressed
+
+int x = 123;
+auto x_ptr = TO_FLOAT_PTR(&x);
+// CHECK5: :[[@LINE-1]]:14: warning: do not use C-style cast to convert between unrelated types
+// CHECK5-NO-SYSTEM-HEADERS-NOT: :[[@LINE-2]]:14: warning: do not use C-style cast to convert between unrelated types
