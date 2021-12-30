@@ -77,6 +77,19 @@ inline bool isProgramMemoryAccess(MemSDNode const *N) {
   return false;
 }
 
+// Get the index of the program memory bank.
+//  -1: not program memory
+//   0: ordinary program memory
+// 1~5: extended program memory
+inline int getProgramMemoryBank(MemSDNode const *N) {
+  auto *V = N->getMemOperand()->getValue();
+  if (V == nullptr || !isProgramMemoryAddress(V))
+    return -1;
+  AddressSpace AS = getAddressSpace(V);
+  assert(ProgramMemory <= AS && AS <= ProgramMemory5);
+  return static_cast<int>(AS - ProgramMemory);
+}
+
 } // end of namespace AVR
 
 } // end namespace llvm
