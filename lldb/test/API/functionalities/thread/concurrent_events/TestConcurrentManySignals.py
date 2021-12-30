@@ -19,5 +19,5 @@ class ConcurrentManySignals(ConcurrentEventsBase):
     @skipIfOutOfTreeDebugserver
     def test(self):
         """Test 100 signals from 100 threads."""
-        self.build(dictionary=self.getBuildFlags())
+        self.build()
         self.do_thread_actions(num_signal_threads=100)
