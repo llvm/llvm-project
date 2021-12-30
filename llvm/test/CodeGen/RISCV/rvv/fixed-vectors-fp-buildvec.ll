@@ -86,9 +86,8 @@ define void @buildvec_dominant0_v2f32(<2 x float>* %x) {
 ; CHECK-NEXT:    addi a1, a1, %lo(.LCPI2_0)
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
 ; CHECK-NEXT:    vlse32.v v8, (a1), zero
-; CHECK-NEXT:    fmv.w.x ft0, zero
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
-; CHECK-NEXT:    vfmv.s.f v8, ft0
+; CHECK-NEXT:    vmv.s.x v8, zero
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   store <2 x float> <float 0.0, float 1.0>, <2 x float>* %x
@@ -118,8 +117,7 @@ define void @buildvec_dominant0_v4f32(<4 x float>* %x) {
 ; CHECK-NEXT:    lui a1, %hi(.LCPI4_0)
 ; CHECK-NEXT:    addi a1, a1, %lo(.LCPI4_0)
 ; CHECK-NEXT:    vlse32.v v8, (a1), zero
-; CHECK-NEXT:    fmv.w.x ft0, zero
-; CHECK-NEXT:    vfmv.s.f v9, ft0
+; CHECK-NEXT:    vmv.s.x v9, zero
 ; CHECK-NEXT:    vsetivli zero, 3, e32, m1, tu, mu
 ; CHECK-NEXT:    vslideup.vi v8, v9, 2
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
@@ -132,9 +130,8 @@ define void @buildvec_dominant0_v4f32(<4 x float>* %x) {
 define void @buildvec_dominant1_v4f32(<4 x float>* %x, float %f) {
 ; CHECK-LABEL: buildvec_dominant1_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fmv.w.x ft0, zero
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; CHECK-NEXT:    vfmv.s.f v8, ft0
+; CHECK-NEXT:    vmv.s.x v8, zero
 ; CHECK-NEXT:    vfmv.v.f v9, fa0
 ; CHECK-NEXT:    vsetivli zero, 2, e32, m1, tu, mu
 ; CHECK-NEXT:    vslideup.vi v9, v8, 1

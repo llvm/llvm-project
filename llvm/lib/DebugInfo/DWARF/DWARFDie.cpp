@@ -802,6 +802,8 @@ void DWARFDie::getFullName(raw_string_ostream &OS,
   const char *NamePtr = getShortName();
   if (!NamePtr)
     return;
+  if (getTag() == DW_TAG_GNU_template_parameter_pack)
+    return;
   DWARFTypePrinter(OS).appendUnqualifiedName(*this, OriginalFullName);
 }
 
