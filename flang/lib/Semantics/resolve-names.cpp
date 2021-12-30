@@ -4903,7 +4903,7 @@ void DeclarationVisitor::AddSaveName(
     std::set<SourceName> &set, const SourceName &name) {
   auto pair{set.insert(name)};
   if (!pair.second) {
-    Say2(name, "SAVE attribute was already specified on '%s'"_err_en_US,
+    Say2(name, "SAVE attribute was already specified on '%s'"_en_US,
         *pair.first, "Previous specification of SAVE attribute"_en_US);
   }
 }
