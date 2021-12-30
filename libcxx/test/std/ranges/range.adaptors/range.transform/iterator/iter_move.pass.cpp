@@ -10,7 +10,8 @@
 // UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
-// transform_view::<iterator>::operator[]
+// friend constexpr decltype(auto) iter_move(const iterator& i)
+//    noexcept(noexcept(invoke(i.parent_->fun_, *i.current_)))
 
 #include <ranges>
 
