@@ -287,10 +287,10 @@ def : Pat<(i32 (riscv_fcvt_x_rtz FPR16:$rs1)), (FCVT_W_H $rs1, 0b001)>;
 def : Pat<(i32 (riscv_fcvt_xu_rtz FPR16:$rs1)), (FCVT_WU_H $rs1, 0b001)>;
 
 // half->int32 with current rounding mode.
-def : Pat<(i32 (lrint FPR16:$rs1)), (FCVT_W_H $rs1, 0b111)>;
+def : Pat<(i32 (any_lrint FPR16:$rs1)), (FCVT_W_H $rs1, 0b111)>;
 
 // half->int32 rounded to nearest with ties rounded away from zero.
-def : Pat<(i32 (lround FPR16:$rs1)), (FCVT_W_H $rs1, 0b100)>;
+def : Pat<(i32 (any_lround FPR16:$rs1)), (FCVT_W_H $rs1, 0b100)>;
 
 // [u]int->half. Match GCC and default to using dynamic rounding mode.
 def : Pat<(any_sint_to_fp (i32 GPR:$rs1)), (FCVT_H_W $rs1, 0b111)>;
@@ -313,12 +313,12 @@ def : Pat<(i64 (riscv_fcvt_x_rtz FPR16:$rs1)), (FCVT_L_H $rs1, 0b001)>;
 def : Pat<(i64 (riscv_fcvt_xu_rtz FPR16:$rs1)), (FCVT_LU_H $rs1, 0b001)>;
 
 // half->int64 with current rounding mode.
-def : Pat<(i64 (lrint FPR16:$rs1)), (FCVT_L_H $rs1, 0b111)>;
-def : Pat<(i64 (llrint FPR16:$rs1)), (FCVT_L_H $rs1, 0b111)>;
+def : Pat<(i64 (any_lrint FPR16:$rs1)), (FCVT_L_H $rs1, 0b111)>;
+def : Pat<(i64 (any_llrint FPR16:$rs1)), (FCVT_L_H $rs1, 0b111)>;
 
 // half->int64 rounded to nearest with ties rounded away from zero.
-def : Pat<(i64 (lround FPR16:$rs1)), (FCVT_L_H $rs1, 0b100)>;
-def : Pat<(i64 (llround FPR16:$rs1)), (FCVT_L_H $rs1, 0b100)>;
+def : Pat<(i64 (any_lround FPR16:$rs1)), (FCVT_L_H $rs1, 0b100)>;
+def : Pat<(i64 (any_llround FPR16:$rs1)), (FCVT_L_H $rs1, 0b100)>;
 
 // [u]int->fp. Match GCC and default to using dynamic rounding mode.
 def : Pat<(any_sint_to_fp (i64 (sexti32 (i64 GPR:$rs1)))), (FCVT_H_W $rs1, 0b111)>;

@@ -330,6 +330,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::LLRINT, MVT::f16, Legal);
     setOperationAction(ISD::LROUND, MVT::f16, Legal);
     setOperationAction(ISD::LLROUND, MVT::f16, Legal);
+    setOperationAction(ISD::STRICT_LRINT, MVT::f16, Legal);
+    setOperationAction(ISD::STRICT_LLRINT, MVT::f16, Legal);
+    setOperationAction(ISD::STRICT_LROUND, MVT::f16, Legal);
+    setOperationAction(ISD::STRICT_LLROUND, MVT::f16, Legal);
     setOperationAction(ISD::STRICT_FADD, MVT::f16, Legal);
     setOperationAction(ISD::STRICT_FMA, MVT::f16, Legal);
     setOperationAction(ISD::STRICT_FSUB, MVT::f16, Legal);
@@ -363,6 +367,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FLOG2,      MVT::f16, Promote);
     setOperationAction(ISD::FLOG10,     MVT::f16, Promote);
 
+    // FIXME: Need to promote f16 STRICT_* to f32 libcalls, but we don't have
+    // complete support for all operations in LegalizeDAG.
+
     // We need to custom promote this.
     if (Subtarget.is64Bit())
       setOperationAction(ISD::FPOWI, MVT::i32, Custom);
@@ -375,6 +382,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::LLRINT, MVT::f32, Legal);
     setOperationAction(ISD::LROUND, MVT::f32, Legal);
     setOperationAction(ISD::LLROUND, MVT::f32, Legal);
+    setOperationAction(ISD::STRICT_LRINT, MVT::f32, Legal);
+    setOperationAction(ISD::STRICT_LLRINT, MVT::f32, Legal);
+    setOperationAction(ISD::STRICT_LROUND, MVT::f32, Legal);
+    setOperationAction(ISD::STRICT_LLROUND, MVT::f32, Legal);
     setOperationAction(ISD::STRICT_FADD, MVT::f32, Legal);
     setOperationAction(ISD::STRICT_FMA, MVT::f32, Legal);
     setOperationAction(ISD::STRICT_FSUB, MVT::f32, Legal);
@@ -402,6 +413,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::LLRINT, MVT::f64, Legal);
     setOperationAction(ISD::LROUND, MVT::f64, Legal);
     setOperationAction(ISD::LLROUND, MVT::f64, Legal);
+    setOperationAction(ISD::STRICT_LRINT, MVT::f64, Legal);
+    setOperationAction(ISD::STRICT_LLRINT, MVT::f64, Legal);
+    setOperationAction(ISD::STRICT_LROUND, MVT::f64, Legal);
+    setOperationAction(ISD::STRICT_LLROUND, MVT::f64, Legal);
     setOperationAction(ISD::STRICT_FMA, MVT::f64, Legal);
     setOperationAction(ISD::STRICT_FADD, MVT::f64, Legal);
     setOperationAction(ISD::STRICT_FSUB, MVT::f64, Legal);
