@@ -84,13 +84,13 @@ private:
 
   /// Estimate a cost of Broadcast as an extract and sequence of insert
   /// operations.
-  InstructionCost getBroadcastShuffleOverhead(VectorType *VTy) {
+  InstructionCost getBroadcastShuffleOverhead(FixedVectorType *VTy) {
     InstructionCost Cost = 0;
     // Broadcast cost is equal to the cost of extracting the zero'th element
     // plus the cost of inserting it into every element of the result vector.
     Cost += thisT()->getVectorInstrCost(Instruction::ExtractElement, VTy, 0);
 
-    for (int i = 0, e = VTy->getElementCount().getKnownMinValue(); i < e; ++i) {
+    for (int i = 0, e = VTy->getNumElements(); i < e; ++i) {
       Cost += thisT()->getVectorInstrCost(Instruction::InsertElement, VTy, i);
     }
     return Cost;
@@ -875,7 +875,7 @@ public:
 
     switch (improveShuffleKindFromMask(Kind, Mask)) {
     case TTI::SK_Broadcast:
-      return getBroadcastShuffleOverhead(Tp);
+      return getBroadcastShuffleOverhead(cast<FixedVectorType>(Tp));
     case TTI::SK_Select:
     case TTI::SK_Splice:
     case TTI::SK_Reverse:
