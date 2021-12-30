@@ -155,6 +155,26 @@ public:
   static constexpr int MAXEXPONENT{maxExponent - exponentBias};
   static constexpr int MINEXPONENT{2 - exponentBias};
 
+  // SCALE(); also known as IEEE_SCALB and (in IEEE-754 '08) ScaleB.
+  template <typename INT>
+  ValueWithRealFlags<Real> SCALE(
+      const INT &by, Rounding rounding = defaultRounding) const {
+    auto expo{exponentBias + by.ToInt64()};
+    if (IsZero()) {
+      expo = exponentBias; // ignore by, don't overflow
+    } else if (by > INT{maxExponent}) {
+      expo = maxExponent;
+    } else if (by < INT{-exponentBias}) {
+      expo = -1;
+    }
+    Real twoPow;
+    RealFlags flags{
+        twoPow.Normalize(false, static_cast<int>(expo), Fraction::MASKL(1))};
+    ValueWithRealFlags<Real> result{Multiply(twoPow, rounding)};
+    result.flags |= flags;
+    return result;
+  }
+
   constexpr Real FlushSubnormalToZero() const {
     if (IsSubnormal()) {
       return Real{};

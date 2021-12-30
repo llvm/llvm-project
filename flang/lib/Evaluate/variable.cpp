@@ -685,6 +685,9 @@ bool DescriptorInquiry::operator==(const DescriptorInquiry &that) const {
       dimension_ == that.dimension_;
 }
 
+#ifdef _MSC_VER // disable bogus warning about missing definitions
+#pragma warning(disable : 4661)
+#endif
 INSTANTIATE_VARIABLE_TEMPLATES
 } // namespace Fortran::evaluate
 

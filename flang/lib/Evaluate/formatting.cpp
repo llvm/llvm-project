@@ -785,6 +785,9 @@ llvm::raw_ostream &Assignment::AsFortran(llvm::raw_ostream &o) const {
   return o;
 }
 
+#ifdef _MSC_VER // disable bogus warning about missing definitions
+#pragma warning(disable : 4661)
+#endif
 INSTANTIATE_CONSTANT_TEMPLATES
 INSTANTIATE_EXPRESSION_TEMPLATES
 INSTANTIATE_VARIABLE_TEMPLATES

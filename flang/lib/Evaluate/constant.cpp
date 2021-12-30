@@ -342,5 +342,8 @@ bool ComponentCompare::operator()(SymbolRef x, SymbolRef y) const {
   return semantics::SymbolSourcePositionCompare{}(x, y);
 }
 
+#ifdef _MSC_VER // disable bogus warning about missing definitions
+#pragma warning(disable : 4661)
+#endif
 INSTANTIATE_CONSTANT_TEMPLATES
 } // namespace Fortran::evaluate
