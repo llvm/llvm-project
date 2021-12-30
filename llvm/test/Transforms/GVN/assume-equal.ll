@@ -217,7 +217,7 @@ entry:
 bb2:
   ; CHECK-NOT: %cmp3 = 
   %cmp3 = icmp eq i32 %p, 43
-  ; CHECK: store i8 undef, i8* null
+  ; CHECK: store i8 poison, i8* null
   call void @llvm.assume(i1 %cmp3)
   ret i32 15
 bb3:
