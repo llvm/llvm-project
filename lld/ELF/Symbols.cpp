@@ -26,9 +26,16 @@ using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf;
 
+// Returns a symbol for an error message.
+static std::string demangle(StringRef symName) {
+  if (elf::config->demangle)
+    return demangleItanium(symName);
+  return std::string(symName);
+}
+
 std::string lld::toString(const elf::Symbol &sym) {
   StringRef name = sym.getName();
-  std::string ret = demangle(name, config->demangle);
+  std::string ret = demangle(name);
 
   const char *suffix = sym.getVersionSuffix();
   if (*suffix == '@')
@@ -37,7 +44,7 @@ std::string lld::toString(const elf::Symbol &sym) {
 }
 
 std::string lld::toELFString(const Archive::Symbol &b) {
-  return demangle(b.getName(), config->demangle);
+  return demangle(b.getName());
 }
 
 Defined *ElfSym::bss;
