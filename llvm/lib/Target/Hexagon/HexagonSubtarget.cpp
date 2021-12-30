@@ -228,7 +228,9 @@ bool HexagonSubtarget::isTypeForHVX(Type *VecTy, bool IncludeBool) const {
   if (!VecTy->isVectorTy() || isa<ScalableVectorType>(VecTy))
     return false;
   // Avoid types like <2 x i32*>.
-  if (!cast<VectorType>(VecTy)->getElementType()->isIntegerTy())
+  Type *ScalTy = VecTy->getScalarType();
+  if (!ScalTy->isIntegerTy() &&
+      !(ScalTy->isFloatingPointTy() && useHVXFloatingPoint()))
     return false;
   // The given type may be something like <17 x i32>, which is not MVT,
   // but can be represented as (non-simple) EVT.
