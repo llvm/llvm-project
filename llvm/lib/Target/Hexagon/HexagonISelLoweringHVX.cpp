@@ -119,6 +119,16 @@ HexagonTargetLowering::initializeHVXLowering() {
     // Make concat-vectors custom to handle concats of more than 2 vectors.
     setOperationAction(ISD::CONCAT_VECTORS, MVT::v128f16, Custom);
     setOperationAction(ISD::CONCAT_VECTORS, MVT::v64f32, Custom);
+
+    setOperationAction(ISD::LOAD,    MVT::v64f32, Custom);
+    setOperationAction(ISD::STORE,   MVT::v64f32, Custom);
+
+    setOperationAction(ISD::MLOAD, MVT::v32f32, Custom);
+    setOperationAction(ISD::MSTORE, MVT::v32f32, Custom);
+    setOperationAction(ISD::MLOAD, MVT::v64f16, Custom);
+    setOperationAction(ISD::MSTORE, MVT::v64f16, Custom);
+    setOperationAction(ISD::MLOAD, MVT::v64f32, Custom);
+    setOperationAction(ISD::MSTORE, MVT::v64f32, Custom);
   }
 
   for (MVT T : LegalV) {
