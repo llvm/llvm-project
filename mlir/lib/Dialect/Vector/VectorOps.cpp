@@ -359,41 +359,42 @@ static void print(OpAsmPrinter &p, ReductionOp op) {
   p << " : " << op.vector().getType() << " into " << op.dest().getType();
 }
 
-Value mlir::vector::getVectorReductionOp(AtomicRMWKind op, OpBuilder &builder,
-                                         Location loc, Value vector) {
+Value mlir::vector::getVectorReductionOp(arith::AtomicRMWKind op,
+                                         OpBuilder &builder, Location loc,
+                                         Value vector) {
   Type scalarType = vector.getType().cast<ShapedType>().getElementType();
   switch (op) {
-  case AtomicRMWKind::addf:
-  case AtomicRMWKind::addi:
+  case arith::AtomicRMWKind::addf:
+  case arith::AtomicRMWKind::addi:
     return builder.create<vector::ReductionOp>(vector.getLoc(), scalarType,
                                                builder.getStringAttr("add"),
                                                vector, ValueRange{});
-  case AtomicRMWKind::mulf:
-  case AtomicRMWKind::muli:
+  case arith::AtomicRMWKind::mulf:
+  case arith::AtomicRMWKind::muli:
     return builder.create<vector::ReductionOp>(vector.getLoc(), scalarType,
                                                builder.getStringAttr("mul"),
                                                vector, ValueRange{});
-  case AtomicRMWKind::minf:
+  case arith::AtomicRMWKind::minf:
     return builder.create<vector::ReductionOp>(vector.getLoc(), scalarType,
                                                builder.getStringAttr("minf"),
                                                vector, ValueRange{});
-  case AtomicRMWKind::mins:
+  case arith::AtomicRMWKind::mins:
     return builder.create<vector::ReductionOp>(vector.getLoc(), scalarType,
                                                builder.getStringAttr("minsi"),
                                                vector, ValueRange{});
-  case AtomicRMWKind::minu:
+  case arith::AtomicRMWKind::minu:
     return builder.create<vector::ReductionOp>(vector.getLoc(), scalarType,
                                                builder.getStringAttr("minui"),
                                                vector, ValueRange{});
-  case AtomicRMWKind::maxf:
+  case arith::AtomicRMWKind::maxf:
     return builder.create<vector::ReductionOp>(vector.getLoc(), scalarType,
                                                builder.getStringAttr("maxf"),
                                                vector, ValueRange{});
-  case AtomicRMWKind::maxs:
+  case arith::AtomicRMWKind::maxs:
     return builder.create<vector::ReductionOp>(vector.getLoc(), scalarType,
                                                builder.getStringAttr("maxsi"),
                                                vector, ValueRange{});
-  case AtomicRMWKind::maxu:
+  case arith::AtomicRMWKind::maxu:
     return builder.create<vector::ReductionOp>(vector.getLoc(), scalarType,
                                                builder.getStringAttr("maxui"),
                                                vector, ValueRange{});

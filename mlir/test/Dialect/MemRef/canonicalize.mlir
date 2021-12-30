@@ -499,3 +499,14 @@ func @no_fold_dynamic_no_op_subview(%arg0 : memref<?x?xf32>) -> memref<?x?xf32, 
 // CHECK-LABEL: func @no_fold_dynamic_no_op_subview(
 //       CHECK:   %[[SUBVIEW:.+]] = memref.subview
 //       CHECK:    return %[[SUBVIEW]]
+
+// -----
+
+func @atomicrmw_cast_fold(%arg0 : f32, %arg1 : memref<4xf32>, %c : index) {
+  %v = memref.cast %arg1 : memref<4xf32> to memref<?xf32>
+  %a = memref.atomic_rmw addf %arg0, %v[%c] : (f32, memref<?xf32>) -> f32
+  return
+}
+
+// CHECK-LABEL: func @atomicrmw_cast_fold
+// CHECK-NEXT: memref.atomic_rmw addf %arg0, %arg1[%arg2] : (f32, memref<4xf32>) -> f32

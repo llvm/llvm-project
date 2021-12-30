@@ -772,61 +772,6 @@ struct SplatNdOpLowering : public ConvertOpToLLVMPattern<SplatOp> {
   }
 };
 
-} // namespace
-
-/// Try to match the kind of a std.atomic_rmw to determine whether to use a
-/// lowering to llvm.atomicrmw or fallback to llvm.cmpxchg.
-static Optional<LLVM::AtomicBinOp> matchSimpleAtomicOp(AtomicRMWOp atomicOp) {
-  switch (atomicOp.getKind()) {
-  case AtomicRMWKind::addf:
-    return LLVM::AtomicBinOp::fadd;
-  case AtomicRMWKind::addi:
-    return LLVM::AtomicBinOp::add;
-  case AtomicRMWKind::assign:
-    return LLVM::AtomicBinOp::xchg;
-  case AtomicRMWKind::maxs:
-    return LLVM::AtomicBinOp::max;
-  case AtomicRMWKind::maxu:
-    return LLVM::AtomicBinOp::umax;
-  case AtomicRMWKind::mins:
-    return LLVM::AtomicBinOp::min;
-  case AtomicRMWKind::minu:
-    return LLVM::AtomicBinOp::umin;
-  case AtomicRMWKind::ori:
-    return LLVM::AtomicBinOp::_or;
-  case AtomicRMWKind::andi:
-    return LLVM::AtomicBinOp::_and;
-  default:
-    return llvm::None;
-  }
-  llvm_unreachable("Invalid AtomicRMWKind");
-}
-
-namespace {
-
-struct AtomicRMWOpLowering : public LoadStoreOpLowering<AtomicRMWOp> {
-  using Base::Base;
-
-  LogicalResult
-  matchAndRewrite(AtomicRMWOp atomicOp, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    if (failed(match(atomicOp)))
-      return failure();
-    auto maybeKind = matchSimpleAtomicOp(atomicOp);
-    if (!maybeKind)
-      return failure();
-    auto resultType = adaptor.getValue().getType();
-    auto memRefType = atomicOp.getMemRefType();
-    auto dataPtr =
-        getStridedElementPtr(atomicOp.getLoc(), memRefType, adaptor.getMemref(),
-                             adaptor.getIndices(), rewriter);
-    rewriter.replaceOpWithNewOp<LLVM::AtomicRMWOp>(
-        atomicOp, resultType, *maybeKind, dataPtr, adaptor.getValue(),
-        LLVM::AtomicOrdering::acq_rel);
-    return success();
-  }
-};
-
 /// Wrap a llvm.cmpxchg operation in a while loop so that the operation can be
 /// retried until it succeeds in atomically storing a new value into memory.
 ///
@@ -962,7 +907,6 @@ void mlir::populateStdToLLVMConversionPatterns(LLVMTypeConverter &converter,
   // clang-format off
   patterns.add<
       AssertOpLowering,
-      AtomicRMWOpLowering,
       BranchOpLowering,
       CallIndirectOpLowering,
       CallOpLowering,

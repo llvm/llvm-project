@@ -325,14 +325,6 @@ func @unranked_tensor_load_store(%0 : memref<*xi32>, %1 : tensor<*xi32>) {
   return
 }
 
-// CHECK-LABEL: func @atomic_rmw
-// CHECK-SAME: ([[BUF:%.*]]: memref<10xf32>, [[VAL:%.*]]: f32, [[I:%.*]]: index)
-func @atomic_rmw(%I: memref<10xf32>, %val: f32, %i : index) {
-  %x = atomic_rmw addf %val, %I[%i] : (f32, memref<10xf32>) -> f32
-  // CHECK: atomic_rmw addf [[VAL]], [[BUF]]{{\[}}[[I]]]
-  return
-}
-
 // CHECK-LABEL: func @generic_atomic_rmw
 // CHECK-SAME: ([[BUF:%.*]]: memref<1x2xf32>, [[I:%.*]]: index, [[J:%.*]]: index)
 func @generic_atomic_rmw(%I: memref<1x2xf32>, %i : index, %j : index) {
