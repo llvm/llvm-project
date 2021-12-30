@@ -22,4 +22,6 @@ CSKYMCAsmInfo::CSKYMCAsmInfo(const Triple &TargetTriple) {
   AlignmentIsInBytes = false;
   SupportsDebugInformation = true;
   CommentString = "#";
+
+  ExceptionsType = ExceptionHandling::DwarfCFI;
 }

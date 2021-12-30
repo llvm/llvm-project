@@ -1057,6 +1057,153 @@ let Predicates = [iHas2E3] in {
   def : Pat<(and GPR:$src, 65535), (ZEXT32 GPR:$src, 15, 0)>;
 }
 
+// Branch Patterns.
+let Predicates = [iHasE2] in {
+  def : Pat<(brcond CARRY:$ca, bb:$imm16),
+          (BT32 CARRY:$ca, bb:$imm16)>;
+
+  def : Pat<(brcond (i32 (setne GPR:$rs1, uimm16:$rs2)), bb:$imm16),
+          (BT32 (CMPNEI32 GPR:$rs1, uimm16:$rs2), bb:$imm16)>;
+  def : Pat<(brcond (i32 (seteq GPR:$rs1, uimm16:$rs2)), bb:$imm16),
+          (BF32 (CMPNEI32 GPR:$rs1, uimm16:$rs2), bb:$imm16)>;
+  def : Pat<(brcond (i32 (setuge GPR:$rs1, oimm16:$rs2)), bb:$imm16),
+          (BT32 (CMPHSI32 GPR:$rs1, oimm16:$rs2), bb:$imm16)>;
+  def : Pat<(brcond (i32 (setult GPR:$rs1, oimm16:$rs2)), bb:$imm16),
+          (BF32 (CMPHSI32 GPR:$rs1, oimm16:$rs2), bb:$imm16)>;
+  def : Pat<(brcond (i32 (setlt GPR:$rs1, oimm16:$rs2)), bb:$imm16),
+          (BT32 (CMPLTI32 GPR:$rs1, oimm16:$rs2), bb:$imm16)>;
+  def : Pat<(brcond (i32 (setge GPR:$rs1, oimm16:$rs2)), bb:$imm16),
+          (BF32 (CMPLTI32 GPR:$rs1, oimm16:$rs2), bb:$imm16)>;
+
+}
+
+let Predicates = [iHas2E3] in {
+
+def : Pat<(brcond (i32 (setne GPR:$rs1, GPR:$rs2)), bb:$imm16),
+          (BT32 (CMPNE32 GPR:$rs1, GPR:$rs2), bb:$imm16)>;
+def : Pat<(brcond (i32 (seteq GPR:$rs1, GPR:$rs2)), bb:$imm16),
+          (BF32 (CMPNE32 GPR:$rs1, GPR:$rs2), bb:$imm16)>;
+def : Pat<(brcond (i32 (setuge GPR:$rs1, GPR:$rs2)), bb:$imm16),
+          (BT32 (CMPHS32 GPR:$rs1, GPR:$rs2), bb:$imm16)>;
+def : Pat<(brcond (i32 (setule GPR:$rs1, GPR:$rs2)), bb:$imm16),
+          (BT32 (CMPHS32 GPR:$rs2, GPR:$rs1), bb:$imm16)>;
+def : Pat<(brcond (i32 (setult GPR:$rs1, GPR:$rs2)), bb:$imm16),
+          (BF32 (CMPHS32 GPR:$rs1, GPR:$rs2), bb:$imm16)>;
+def : Pat<(brcond (i32 (setugt GPR:$rs1, GPR:$rs2)), bb:$imm16),
+          (BF32 (CMPHS32 GPR:$rs2, GPR:$rs1), bb:$imm16)>;
+def : Pat<(brcond (i32 (setlt GPR:$rs1, GPR:$rs2)), bb:$imm16),
+          (BT32 (CMPLT32 GPR:$rs1, GPR:$rs2), bb:$imm16)>;
+def : Pat<(brcond (i32 (setgt GPR:$rs1, GPR:$rs2)), bb:$imm16),
+          (BT32 (CMPLT32 GPR:$rs2, GPR:$rs1), bb:$imm16)>;
+def : Pat<(brcond (i32 (setge GPR:$rs1, GPR:$rs2)), bb:$imm16),
+          (BF32 (CMPLT32 GPR:$rs1, GPR:$rs2), bb:$imm16)>;
+def : Pat<(brcond (i32 (setle GPR:$rs1, GPR:$rs2)), bb:$imm16),
+          (BF32 (CMPLT32 GPR:$rs2, GPR:$rs1), bb:$imm16)>;
+
+def : Pat<(brcond (i32 (seteq GPR:$rs1, (i32 0))), bb:$imm16),
+          (BEZ32 GPR:$rs1, bb:$imm16)>;
+def : Pat<(brcond (i32 (setne GPR:$rs1, (i32 0))), bb:$imm16),
+          (BNEZ32 GPR:$rs1, bb:$imm16)>;
+def : Pat<(brcond (i32 (setlt GPR:$rs1, (i32 0))), bb:$imm16),
+          (BLZ32 GPR:$rs1, bb:$imm16)>;
+def : Pat<(brcond (i32 (setge GPR:$rs1, (i32 0))), bb:$imm16),
+          (BHSZ32 GPR:$rs1, bb:$imm16)>;
+def : Pat<(brcond (i32 (setgt GPR:$rs1, (i32 0))), bb:$imm16),
+          (BHZ32 GPR:$rs1, bb:$imm16)>;
+def : Pat<(brcond (i32 (setle GPR:$rs1, (i32 0))), bb:$imm16),
+          (BLSZ32 GPR:$rs1, bb:$imm16)>;
+}
+
+// Compare Patterns.
+let Predicates = [iHas2E3] in {
+  def : Pat<(setne GPR:$rs1, GPR:$rs2),
+            (CMPNE32 GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(i32 (seteq GPR:$rs1, GPR:$rs2)),
+            (MVCV32 (CMPNE32 GPR:$rs1, GPR:$rs2))>;
+  def : Pat<(setuge GPR:$rs1, GPR:$rs2),
+            (CMPHS32 GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(setule GPR:$rs1, GPR:$rs2),
+            (CMPHS32 GPR:$rs2, GPR:$rs1)>;
+  def : Pat<(i32 (setult GPR:$rs1, GPR:$rs2)),
+            (MVCV32 (CMPHS32 GPR:$rs1, GPR:$rs2))>;
+  def : Pat<(i32 (setugt GPR:$rs1, GPR:$rs2)),
+            (MVCV32 (CMPHS32 GPR:$rs2, GPR:$rs1))>;
+  def : Pat<(setlt GPR:$rs1, GPR:$rs2),
+            (CMPLT32 GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(setgt GPR:$rs1, GPR:$rs2),
+            (CMPLT32 GPR:$rs2, GPR:$rs1)>;
+  def : Pat<(i32 (setge GPR:$rs1, GPR:$rs2)),
+            (MVCV32 (CMPLT32 GPR:$rs1, GPR:$rs2))>;
+  def : Pat<(i32 (setle GPR:$rs1, GPR:$rs2)),
+            (MVCV32 (CMPLT32 GPR:$rs2, GPR:$rs1))>;
+}
+
+let Predicates = [iHasE2] in {
+  def : Pat<(setne GPR:$rs1, uimm16:$rs2),
+            (CMPNEI32 GPR:$rs1, uimm16:$rs2)>;
+  let Predicates = [iHas2E3] in
+  def : Pat<(i32 (seteq GPR:$rs1, uimm16:$rs2)),
+            (MVCV32 (CMPNEI32 GPR:$rs1, uimm16:$rs2))>;
+  def : Pat<(setuge GPR:$rs1, oimm16:$rs2),
+            (CMPHSI32 GPR:$rs1, oimm16:$rs2)>;
+  let Predicates = [iHas2E3] in
+  def : Pat<(i32 (setult GPR:$rs1, oimm16:$rs2)),
+            (MVCV32 (CMPHSI32 GPR:$rs1, oimm16:$rs2))>;
+  def : Pat<(setlt GPR:$rs1, oimm16:$rs2),
+            (CMPLTI32 GPR:$rs1, oimm16:$rs2)>;
+  let Predicates = [iHas2E3] in
+  def : Pat<(i32 (setge GPR:$rs1, oimm16:$rs2)),
+            (MVCV32 (CMPLTI32 GPR:$rs1, oimm16:$rs2))>;
+}
+
+// Select Patterns.
+let Predicates = [iHasE2] in {
+def : Pat<(select CARRY:$ca, GPR:$rx, GPR:$false),
+          (MOVT32 CARRY:$ca, GPR:$rx, GPR:$false)>;
+def : Pat<(select (and CARRY:$ca, 1), GPR:$rx, GPR:$false),
+          (MOVT32 CARRY:$ca, GPR:$rx, GPR:$false)>;
+
+def : Pat<(select (i32 (setne GPR:$rs1, GPR:$rs2)), GPR:$rx, GPR:$false),
+          (MOVT32 (CMPNE32 GPR:$rs1, GPR:$rs2), GPR:$rx, GPR:$false)>;
+def : Pat<(select (i32 (setne GPR:$rs1, uimm16:$rs2)), GPR:$rx, GPR:$false),
+          (MOVT32 (CMPNEI32 GPR:$rs1, uimm16:$rs2), GPR:$rx, GPR:$false)>;
+def : Pat<(select (i32 (seteq GPR:$rs1, GPR:$rs2)), GPR:$rx, GPR:$false),
+          (MOVF32 (CMPNE32 GPR:$rs1, GPR:$rs2), GPR:$rx, GPR:$false)>;
+def : Pat<(select (i32 (seteq GPR:$rs1, uimm16:$rs2)), GPR:$rx, GPR:$false),
+          (MOVF32 (CMPNEI32 GPR:$rs1, uimm16:$rs2), GPR:$rx, GPR:$false)>;
+
+def : Pat<(select (i32 (setuge GPR:$rs1, GPR:$rs2)), GPR:$rx, GPR:$false),
+          (MOVT32 (CMPHS32 GPR:$rs1, GPR:$rs2), GPR:$rx, GPR:$false)>;
+def : Pat<(select (i32 (setuge GPR:$rs1, oimm16:$rs2)), GPR:$rx, GPR:$false),
+          (MOVT32 (CMPHSI32 GPR:$rs1, oimm16:$rs2), GPR:$rx, GPR:$false)>;
+def : Pat<(select (i32 (setule GPR:$rs1, GPR:$rs2)), GPR:$rx, GPR:$false),
+          (MOVT32 (CMPHS32 GPR:$rs2, GPR:$rs1), GPR:$rx, GPR:$false)>;
+def : Pat<(select (i32 (setult GPR:$rs1, GPR:$rs2)), GPR:$rx, GPR:$false),
+          (MOVF32 (CMPHS32 GPR:$rs1, GPR:$rs2), GPR:$rx, GPR:$false)>;
+def : Pat<(select (i32 (setult GPR:$rs1, oimm16:$rs2)), GPR:$rx, GPR:$false),
+          (MOVF32 (CMPHSI32 GPR:$rs1, oimm16:$rs2), GPR:$rx, GPR:$false)>;
+def : Pat<(select (i32 (setugt GPR:$rs1, GPR:$rs2)), GPR:$rx, GPR:$false),
+          (MOVF32 (CMPHS32 GPR:$rs2, GPR:$rs1), GPR:$rx, GPR:$false)>;
+
+def : Pat<(select (i32 (setlt GPR:$rs1, GPR:$rs2)), GPR:$rx, GPR:$false),
+          (MOVT32 (CMPLT32 GPR:$rs1, GPR:$rs2), GPR:$rx, GPR:$false)>;
+def : Pat<(select (i32 (setlt GPR:$rs1, oimm16:$rs2)), GPR:$rx, GPR:$false),
+          (MOVT32 (CMPLTI32 GPR:$rs1, oimm16:$rs2), GPR:$rx, GPR:$false)>;
+def : Pat<(select (i32 (setgt GPR:$rs1, GPR:$rs2)), GPR:$rx, GPR:$false),
+          (MOVT32 (CMPLT32 GPR:$rs2, GPR:$rs1), GPR:$rx, GPR:$false)>;
+def : Pat<(select (i32 (setge GPR:$rs1, GPR:$rs2)), GPR:$rx, GPR:$false),
+          (MOVF32 (CMPLT32 GPR:$rs1, GPR:$rs2), GPR:$rx, GPR:$false)>;
+def : Pat<(select (i32 (setge GPR:$rs1, oimm16:$rs2)), GPR:$rx, GPR:$false),
+          (MOVF32 (CMPLTI32 GPR:$rs1, oimm16:$rs2), GPR:$rx, GPR:$false)>;
+def : Pat<(select (i32 (setle GPR:$rs1, GPR:$rs2)), GPR:$rx, GPR:$false),
+          (MOVF32 (CMPLT32 GPR:$rs2, GPR:$rs1), GPR:$rx, GPR:$false)>;
+
+def : Pat<(select CARRY:$ca, GPR:$rx, GPR:$false),
+          (ISEL32 CARRY:$ca, GPR:$rx, GPR:$false)>;
+def : Pat<(select (and CARRY:$ca, 1), GPR:$rx, GPR:$false),
+          (ISEL32 CARRY:$ca, GPR:$rx, GPR:$false)>;
+}
+
 // Constant materialize patterns.
 let Predicates = [iHasE2] in
   def : Pat<(i32 imm:$imm),
