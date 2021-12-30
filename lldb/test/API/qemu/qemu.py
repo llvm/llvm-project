@@ -56,6 +56,7 @@ def main():
     parser = argparse.ArgumentParser(description=_description,
             formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('-g', metavar="unix-socket", required=True)
+    parser.add_argument('-0', metavar="arg0")
     parser.add_argument('-fake-arg', dest="fake-arg")
     parser.add_argument('program', help="The program to 'emulate'.")
     parser.add_argument("args", nargs=argparse.REMAINDER)

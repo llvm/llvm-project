@@ -241,3 +241,11 @@ class TestQemuLaunch(TestBase):
                 "%s=from platform,%s=from target" % (var(1), var(2)))
         self.assertEqual(state["environ"]["QEMU_UNSET_ENV"],
                 "%s,%s,QEMU_SET_ENV,QEMU_UNSET_ENV" % (var(3), var(4)))
+
+    def test_arg0(self):
+        target = self._create_target()
+        self.runCmd("settings set target.arg0 ARG0")
+        state = self._run_and_get_state(target)
+
+        self.assertEqual(state["program"], self.getBuildArtifact())
+        self.assertEqual(state["0"], "ARG0")
