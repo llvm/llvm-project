@@ -215,15 +215,16 @@ struct DWARFTypePrinter {
       OS << "void";
       return DWARFDie();
     }
-    DWARFDie Inner = resolveReferencedType(D);
+    DWARFDie InnerDIE;
+    auto Inner = [&] { return InnerDIE = resolveReferencedType(D); };
     const dwarf::Tag T = D.getTag();
     switch (T) {
     case DW_TAG_pointer_type: {
-      appendPointerLikeTypeBefore(D, Inner, "*");
+      appendPointerLikeTypeBefore(D, Inner(), "*");
       break;
     }
     case DW_TAG_subroutine_type: {
-      appendQualifiedNameBefore(Inner);
+      appendQualifiedNameBefore(Inner());
       if (Word) {
         OS << ' ';
       }
@@ -231,18 +232,18 @@ struct DWARFTypePrinter {
       break;
     }
     case DW_TAG_array_type: {
-      appendQualifiedNameBefore(Inner);
+      appendQualifiedNameBefore(Inner());
       break;
     }
     case DW_TAG_reference_type:
-      appendPointerLikeTypeBefore(D, Inner, "&");
+      appendPointerLikeTypeBefore(D, Inner(), "&");
       break;
     case DW_TAG_rvalue_reference_type:
-      appendPointerLikeTypeBefore(D, Inner, "&&");
+      appendPointerLikeTypeBefore(D, Inner(), "&&");
       break;
     case DW_TAG_ptr_to_member_type: {
-      appendQualifiedNameBefore(Inner);
-      if (needsParens(Inner))
+      appendQualifiedNameBefore(Inner());
+      if (needsParens(InnerDIE))
         OS << '(';
       else if (Word)
         OS << ' ';
@@ -284,7 +285,7 @@ struct DWARFTypePrinter {
       const char *NamePtr = dwarf::toString(D.find(DW_AT_name), nullptr);
       if (!NamePtr) {
         appendTypeTagName(D.getTag());
-        return Inner;
+        return DWARFDie();
       }
       Word = true;
       StringRef Name = NamePtr;
@@ -317,7 +318,7 @@ struct DWARFTypePrinter {
       break;
     }
     }
-    return Inner;
+    return InnerDIE;
   }
 
   void appendUnqualifiedNameAfter(DWARFDie D, DWARFDie Inner,
@@ -800,6 +801,8 @@ void DWARFDie::getFullName(raw_string_ostream &OS,
                            std::string *OriginalFullName) const {
   const char *NamePtr = getShortName();
   if (!NamePtr)
+    return;
+  if (getTag() == DW_TAG_GNU_template_parameter_pack)
     return;
   DWARFTypePrinter(OS).appendUnqualifiedName(*this, OriginalFullName);
 }

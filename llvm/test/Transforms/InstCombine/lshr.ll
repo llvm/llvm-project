@@ -162,6 +162,64 @@ define <2 x i8> @lshr_exact_splat_vec(<2 x i8> %x) {
   ret <2 x i8> %lshr
 }
 
+define i8 @shl_add(i8 %x, i8 %y) {
+; CHECK-LABEL: @shl_add(
+; CHECK-NEXT:    [[L:%.*]] = shl i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[L]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = lshr i8 [[A]], 2
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %l = shl i8 %x, 2
+  %a = add i8 %l, %y
+  %r = lshr i8 %a, 2
+  ret i8 %r
+}
+
+define <2 x i8> @shl_add_commute_vec(<2 x i8> %x, <2 x i8> %py) {
+; CHECK-LABEL: @shl_add_commute_vec(
+; CHECK-NEXT:    [[Y:%.*]] = mul <2 x i8> [[PY:%.*]], [[PY]]
+; CHECK-NEXT:    [[L:%.*]] = shl <2 x i8> [[X:%.*]], <i8 3, i8 3>
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i8> [[Y]], [[L]]
+; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i8> [[A]], <i8 3, i8 3>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %y = mul <2 x i8> %py, %py ; thwart complexity-based canonicalization
+  %l = shl <2 x i8> %x, <i8 3, i8 3>
+  %a = add <2 x i8> %y, %l
+  %r = lshr <2 x i8> %a, <i8 3, i8 3>
+  ret <2 x i8> %r
+}
+
+define i32 @shl_add_use1(i32 %x, i32 %y) {
+; CHECK-LABEL: @shl_add_use1(
+; CHECK-NEXT:    [[L:%.*]] = shl i32 [[X:%.*]], 2
+; CHECK-NEXT:    call void @use(i32 [[L]])
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[L]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[A]], 2
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %l = shl i32 %x, 2
+  call void @use(i32 %l)
+  %a = add i32 %l, %y
+  %r = lshr i32 %a, 2
+  ret i32 %r
+}
+
+define i32 @shl_add_use2(i32 %x, i32 %y) {
+; CHECK-LABEL: @shl_add_use2(
+; CHECK-NEXT:    [[L:%.*]] = shl i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[L]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use(i32 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[A]], 2
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %l = shl i32 %x, 2
+  %a = add i32 %l, %y
+  call void @use(i32 %a)
+  %r = lshr i32 %a, 2
+  ret i32 %r
+}
+
 define i16 @bool_zext(i1 %x) {
 ; CHECK-LABEL: @bool_zext(
 ; CHECK-NEXT:    [[HIBIT:%.*]] = zext i1 [[X:%.*]] to i16

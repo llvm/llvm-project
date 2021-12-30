@@ -194,7 +194,7 @@ void ConstantArrayType::Profile(llvm::FoldingSetNodeID &ID,
   ID.AddInteger(ArraySize.getZExtValue());
   ID.AddInteger(SizeMod);
   ID.AddInteger(TypeQuals);
-  ID.AddBoolean(SizeExpr != 0);
+  ID.AddBoolean(SizeExpr != nullptr);
   if (SizeExpr)
     SizeExpr->Profile(ID, Context, true);
 }
