@@ -829,8 +829,10 @@ void __kmpc_omp_wait_deps(ident_t *loc_ref, kmp_int32 gtid, kmp_int32 ndeps,
   bool ignore = current_task->td_flags.team_serial ||
                 current_task->td_flags.tasking_ser ||
                 current_task->td_flags.final;
-  ignore = ignore && thread->th.th_task_team != NULL &&
-           thread->th.th_task_team->tt.tt_found_proxy_tasks == FALSE;
+  ignore =
+      ignore && thread->th.th_task_team != NULL &&
+      thread->th.th_task_team->tt.tt_found_proxy_tasks == FALSE &&
+      thread->th.th_task_team->tt.tt_hidden_helper_task_encountered == FALSE;
   ignore = ignore || current_task->td_dephash == NULL;
 
   if (ignore) {

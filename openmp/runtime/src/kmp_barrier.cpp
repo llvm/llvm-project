@@ -2037,8 +2037,10 @@ static int __kmp_barrier_template(enum barrier_type bt, int gtid, int is_split,
         }
 #endif
 
-        KMP_DEBUG_ASSERT(this_thr->th.th_task_team->tt.tt_found_proxy_tasks ==
-                         TRUE);
+        KMP_DEBUG_ASSERT(
+            this_thr->th.th_task_team->tt.tt_found_proxy_tasks == TRUE ||
+            this_thr->th.th_task_team->tt.tt_hidden_helper_task_encountered ==
+                TRUE);
         __kmp_task_team_wait(this_thr, team USE_ITT_BUILD_ARG(itt_sync_obj));
         __kmp_task_team_setup(this_thr, team, 0);
 

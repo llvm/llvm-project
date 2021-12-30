@@ -3074,6 +3074,18 @@ static inline int __kmp_execute_tasks_template(
       return FALSE;
     }
 
+    // Check the flag again to see if it has already done in case to be trapped
+    // into infinite loop when a if0 task depends on a hidden helper task
+    // outside any parallel region. Detached tasks are not impacted in this case
+    // because the only thread executing this function has to execute the proxy
+    // task so it is in another code path that has the same check.
+    if (flag == NULL || (!final_spin && flag->done_check())) {
+      KA_TRACE(15,
+               ("__kmp_execute_tasks_template: T#%d spin condition satisfied\n",
+                gtid));
+      return TRUE;
+    }
+
     // We could be getting tasks from target constructs; if this is the only
     // thread, keep trying to execute tasks from own queue
     if (nthreads == 1 &&
@@ -3478,6 +3490,7 @@ static kmp_task_team_t *__kmp_allocate_task_team(kmp_info_t *thread,
 
   TCW_4(task_team->tt.tt_found_tasks, FALSE);
   TCW_4(task_team->tt.tt_found_proxy_tasks, FALSE);
+  TCW_4(task_team->tt.tt_hidden_helper_task_encountered, FALSE);
   task_team->tt.tt_nproc = nthreads = team->t.t_nproc;
 
   KMP_ATOMIC_ST_REL(&task_team->tt.tt_unfinished_threads, nthreads);
@@ -3640,6 +3653,7 @@ void __kmp_task_team_setup(kmp_info_t *this_thr, kmp_team_t *team, int always) {
         TCW_4(task_team->tt.tt_nproc, team->t.t_nproc);
         TCW_4(task_team->tt.tt_found_tasks, FALSE);
         TCW_4(task_team->tt.tt_found_proxy_tasks, FALSE);
+        TCW_4(task_team->tt.tt_hidden_helper_task_encountered, FALSE);
         KMP_ATOMIC_ST_REL(&task_team->tt.tt_unfinished_threads,
                           team->t.t_nproc);
         TCW_4(task_team->tt.tt_active, TRUE);
@@ -3732,8 +3746,10 @@ void __kmp_task_team_wait(
          "setting active to false, setting local and team's pointer to NULL\n",
          __kmp_gtid_from_thread(this_thr), task_team));
     KMP_DEBUG_ASSERT(task_team->tt.tt_nproc > 1 ||
-                     task_team->tt.tt_found_proxy_tasks == TRUE);
+                     task_team->tt.tt_found_proxy_tasks == TRUE ||
+                     task_team->tt.tt_hidden_helper_task_encountered == TRUE);
     TCW_SYNC_4(task_team->tt.tt_found_proxy_tasks, FALSE);
+    TCW_SYNC_4(task_team->tt.tt_hidden_helper_task_encountered, FALSE);
     KMP_CHECK_UPDATE(task_team->tt.tt_untied_task_encountered, 0);
     TCW_SYNC_4(task_team->tt.tt_active, FALSE);
     KMP_MB();
