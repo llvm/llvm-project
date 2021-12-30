@@ -25,7 +25,7 @@ class ThreadStateTestCase(TestBase):
     @expectedFailureNetBSD
     def test_state_after_breakpoint(self):
         """Test thread state after breakpoint."""
-        self.build(dictionary=self.getBuildFlags(use_cpp11=False))
+        self.build()
         self.thread_state_after_breakpoint_test()
 
     @skipIfDarwin  # 'llvm.org/pr23669', cause Python crash randomly
@@ -35,7 +35,7 @@ class ThreadStateTestCase(TestBase):
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24660")
     def test_state_after_continue(self):
         """Test thread state after continue."""
-        self.build(dictionary=self.getBuildFlags(use_cpp11=False))
+        self.build()
         self.thread_state_after_continue_test()
 
     @skipIfDarwin  # 'llvm.org/pr23669', cause Python crash randomly
@@ -46,7 +46,7 @@ class ThreadStateTestCase(TestBase):
     @expectedFailure("llvm.org/pr16712")
     def test_state_after_expression(self):
         """Test thread state after expression."""
-        self.build(dictionary=self.getBuildFlags(use_cpp11=False))
+        self.build()
         self.thread_state_after_expression_test()
 
     # thread states not properly maintained
@@ -58,7 +58,7 @@ class ThreadStateTestCase(TestBase):
     @expectedFailureNetBSD
     def test_process_state(self):
         """Test thread states (comprehensive)."""
-        self.build(dictionary=self.getBuildFlags(use_cpp11=False))
+        self.build()
         self.thread_states_test()
 
     def setUp(self):
@@ -193,7 +193,7 @@ class ThreadStateTestCase(TestBase):
     @no_debug_info_test
     def test_process_interrupt(self):
         """Test process interrupt and continue."""
-        self.build(dictionary=self.getBuildFlags(use_cpp11=False))
+        self.build()
         exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 

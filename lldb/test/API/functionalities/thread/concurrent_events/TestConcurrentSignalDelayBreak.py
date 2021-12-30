@@ -16,7 +16,7 @@ class ConcurrentSignalDelayBreak(ConcurrentEventsBase):
     @expectedFlakeyNetBSD
     def test(self):
         """Test signal and a (1 second delay) breakpoint in multiple threads."""
-        self.build(dictionary=self.getBuildFlags())
+        self.build()
         self.do_thread_actions(
             num_delay_breakpoint_threads=1,
             num_signal_threads=1)

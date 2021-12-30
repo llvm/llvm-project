@@ -18,7 +18,7 @@ class ConcurrentTwoBreakpointsOneDelaySignal(ConcurrentEventsBase):
                         bugnumber="llvm.org/pr49433")
     def test(self):
         """Test two threads that trigger a breakpoint and one (1 second delay) signal thread. """
-        self.build(dictionary=self.getBuildFlags())
+        self.build()
         self.do_thread_actions(
             num_breakpoint_threads=2,
             num_delay_signal_threads=1)

@@ -20,5 +20,5 @@ class ConcurrentManyWatchpoints(ConcurrentEventsBase):
     @skipIfOutOfTreeDebugserver
     def test(self):
         """Test 100 watchpoints from 100 threads."""
-        self.build(dictionary=self.getBuildFlags())
+        self.build()
         self.do_thread_actions(num_watchpoint_threads=100)

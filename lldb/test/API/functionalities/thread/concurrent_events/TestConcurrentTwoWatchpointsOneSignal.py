@@ -21,5 +21,5 @@ class ConcurrentTwoWatchpointsOneSignal(ConcurrentEventsBase):
     @add_test_categories(["watchpoint"])
     def test(self):
         """Test two threads that trigger a watchpoint and one signal thread. """
-        self.build(dictionary=self.getBuildFlags())
+        self.build()
         self.do_thread_actions(num_watchpoint_threads=2, num_signal_threads=1)

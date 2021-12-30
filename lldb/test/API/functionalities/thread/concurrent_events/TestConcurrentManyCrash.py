@@ -16,5 +16,5 @@ class ConcurrentManyCrash(ConcurrentEventsBase):
     @skipIfOutOfTreeDebugserver
     def test(self):
         """Test 100 threads that cause a segfault."""
-        self.build(dictionary=self.getBuildFlags())
+        self.build()
         self.do_thread_actions(num_crash_threads=100)

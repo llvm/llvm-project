@@ -16,7 +16,7 @@ class ConcurrentCrashWithWatchpointBreakpointSignal(ConcurrentEventsBase):
     @add_test_categories(["watchpoint"])
     def test(self):
         """ Test a thread that crashes while other threads generate a signal and hit a watchpoint and breakpoint. """
-        self.build(dictionary=self.getBuildFlags())
+        self.build()
         self.do_thread_actions(num_crash_threads=1,
                                num_breakpoint_threads=1,
                                num_signal_threads=1,
