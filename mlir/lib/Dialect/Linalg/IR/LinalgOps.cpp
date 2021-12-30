@@ -2318,16 +2318,15 @@ static LogicalResult verify(IndexOp op) {
 /// Return the dims that are `iteratorTypeName` loops in the LinalgOp `op`.
 /// Assumes `op` is a LinalgOp.
 void mlir::linalg::getDimsOfType(Operation *op, StringRef iteratorTypeName,
-                                 SmallVectorImpl<AffineExpr> &res) {
+                                 SmallVectorImpl<unsigned> &res) {
   if (!cast<LinalgOp>(op).iterator_types())
     return;
 
   unsigned dim = 0;
-  MLIRContext *ctx = op->getContext();
   for (auto tn :
        cast<LinalgOp>(op).iterator_types().getAsValueRange<StringAttr>()) {
     if (tn == iteratorTypeName)
-      res.push_back(getAffineDimExpr(dim, ctx));
+      res.push_back(dim);
     ++dim;
   }
 }

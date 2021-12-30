@@ -158,7 +158,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       }],
       /*retTy=*/"void",
       /*methodName=*/"getParallelDims",
-      /*args=*/(ins "SmallVectorImpl<AffineExpr> &":$res),
+      /*args=*/(ins "SmallVectorImpl<unsigned> &":$res),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return getDimsOfType($_op, getParallelIteratorTypeName(), res);
@@ -183,7 +183,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       }],
       /*retTy=*/"void",
       /*methodName=*/"getReductionDims",
-      /*args=*/(ins "SmallVectorImpl<AffineExpr> &":$res),
+      /*args=*/(ins "SmallVectorImpl<unsigned> &":$res),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return getDimsOfType($_op, getReductionIteratorTypeName(), res);
@@ -208,7 +208,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       }],
       /*retTy=*/"void",
       /*methodName=*/"getWindowDims",
-      /*args=*/(ins "SmallVectorImpl<AffineExpr> &":$res),
+      /*args=*/(ins "SmallVectorImpl<unsigned> &":$res),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return getDimsOfType($_op.getOperation(), getWindowIteratorTypeName(), res);
