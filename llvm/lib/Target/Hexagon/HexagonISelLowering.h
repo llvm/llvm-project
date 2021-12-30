@@ -458,6 +458,7 @@ private:
                           SelectionDAG &DAG) const;
 
   SDValue LowerHvxBuildVector(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxSplatVector(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxConcatVectors(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxExtractElement(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxInsertElement(SDValue Op, SelectionDAG &DAG) const;

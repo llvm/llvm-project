@@ -15,7 +15,7 @@ class ConcurrentDelaySignalBreak(ConcurrentEventsBase):
     @skipIf(triple='^mips')
     def test(self):
         """Test (1-second delay) signal and a breakpoint in multiple threads."""
-        self.build(dictionary=self.getBuildFlags())
+        self.build()
         self.do_thread_actions(
             num_breakpoint_threads=1,
             num_delay_signal_threads=1)

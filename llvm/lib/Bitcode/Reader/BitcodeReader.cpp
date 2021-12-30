@@ -2824,6 +2824,7 @@ Error BitcodeReader::parseConstants() {
       for (unsigned i = 0; i != ConstStrSize; ++i)
         ConstrStr += (char)Record[3+AsmStrSize+i];
       UpgradeInlineAsmString(&AsmStr);
+      // FIXME: support upgrading in opaque pointers mode.
       V = InlineAsm::get(
           cast<FunctionType>(cast<PointerType>(CurTy)->getElementType()),
           AsmStr, ConstrStr, HasSideEffects, IsAlignStack);
@@ -2850,6 +2851,7 @@ Error BitcodeReader::parseConstants() {
       for (unsigned i = 0; i != ConstStrSize; ++i)
         ConstrStr += (char)Record[3+AsmStrSize+i];
       UpgradeInlineAsmString(&AsmStr);
+      // FIXME: support upgrading in opaque pointers mode.
       V = InlineAsm::get(
           cast<FunctionType>(cast<PointerType>(CurTy)->getElementType()),
           AsmStr, ConstrStr, HasSideEffects, IsAlignStack,
@@ -2857,30 +2859,68 @@ Error BitcodeReader::parseConstants() {
       break;
     }
     // This version adds support for the unwind keyword.
-    case bitc::CST_CODE_INLINEASM: {
+    case bitc::CST_CODE_INLINEASM_OLD3: {
       if (Record.size() < 2)
         return error("Invalid record");
+      unsigned OpNum = 0;
       std::string AsmStr, ConstrStr;
-      bool HasSideEffects = Record[0] & 1;
-      bool IsAlignStack = (Record[0] >> 1) & 1;
-      unsigned AsmDialect = (Record[0] >> 2) & 1;
-      bool CanThrow = (Record[0] >> 3) & 1;
-      unsigned AsmStrSize = Record[1];
-      if (2 + AsmStrSize >= Record.size())
+      bool HasSideEffects = Record[OpNum] & 1;
+      bool IsAlignStack = (Record[OpNum] >> 1) & 1;
+      unsigned AsmDialect = (Record[OpNum] >> 2) & 1;
+      bool CanThrow = (Record[OpNum] >> 3) & 1;
+      ++OpNum;
+      unsigned AsmStrSize = Record[OpNum];
+      ++OpNum;
+      if (OpNum + AsmStrSize >= Record.size())
         return error("Invalid record");
-      unsigned ConstStrSize = Record[2 + AsmStrSize];
-      if (3 + AsmStrSize + ConstStrSize > Record.size())
+      unsigned ConstStrSize = Record[OpNum + AsmStrSize];
+      if (OpNum + 1 + AsmStrSize + ConstStrSize > Record.size())
         return error("Invalid record");
 
       for (unsigned i = 0; i != AsmStrSize; ++i)
-        AsmStr += (char)Record[2 + i];
+        AsmStr += (char)Record[OpNum + i];
+      ++OpNum;
       for (unsigned i = 0; i != ConstStrSize; ++i)
-        ConstrStr += (char)Record[3 + AsmStrSize + i];
+        ConstrStr += (char)Record[OpNum + AsmStrSize + i];
       UpgradeInlineAsmString(&AsmStr);
+      // FIXME: support upgrading in opaque pointers mode.
       V = InlineAsm::get(
           cast<FunctionType>(cast<PointerType>(CurTy)->getElementType()),
           AsmStr, ConstrStr, HasSideEffects, IsAlignStack,
           InlineAsm::AsmDialect(AsmDialect), CanThrow);
+      break;
+    }
+    // This version adds explicit function type.
+    case bitc::CST_CODE_INLINEASM: {
+      if (Record.size() < 3)
+        return error("Invalid record");
+      unsigned OpNum = 0;
+      auto *FnTy = dyn_cast_or_null<FunctionType>(getTypeByID(Record[OpNum]));
+      ++OpNum;
+      if (!FnTy)
+        return error("Invalid record");
+      std::string AsmStr, ConstrStr;
+      bool HasSideEffects = Record[OpNum] & 1;
+      bool IsAlignStack = (Record[OpNum] >> 1) & 1;
+      unsigned AsmDialect = (Record[OpNum] >> 2) & 1;
+      bool CanThrow = (Record[OpNum] >> 3) & 1;
+      ++OpNum;
+      unsigned AsmStrSize = Record[OpNum];
+      ++OpNum;
+      if (OpNum + AsmStrSize >= Record.size())
+        return error("Invalid record");
+      unsigned ConstStrSize = Record[OpNum + AsmStrSize];
+      if (OpNum + 1 + AsmStrSize + ConstStrSize > Record.size())
+        return error("Invalid record");
+
+      for (unsigned i = 0; i != AsmStrSize; ++i)
+        AsmStr += (char)Record[OpNum + i];
+      ++OpNum;
+      for (unsigned i = 0; i != ConstStrSize; ++i)
+        ConstrStr += (char)Record[OpNum + AsmStrSize + i];
+      UpgradeInlineAsmString(&AsmStr);
+      V = InlineAsm::get(FnTy, AsmStr, ConstrStr, HasSideEffects, IsAlignStack,
+                         InlineAsm::AsmDialect(AsmDialect), CanThrow);
       break;
     }
     case bitc::CST_CODE_BLOCKADDRESS:{
@@ -4779,7 +4819,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
             cast<PointerType>(Callee->getType())->getElementType());
         if (!FTy)
           return error("Callee is not of pointer to function type");
-      } else if (cast<PointerType>(Callee->getType())->getElementType() != FTy)
+      } else if (!OpTy->isOpaqueOrPointeeTypeMatches(FTy))
         return error("Explicit call type does not match pointee type of "
                      "callee operand");
       if (Record.size() < FTy->getNumParams() + OpNum)

@@ -9,8 +9,6 @@ mlir::MLIRContext Context;
 
 auto Identifier = mlir::Identifier::get("foo", &Context);
 mlir::OperationName OperationName("FooOp", &Context);
-mlir::Value Value({reinterpret_cast<void *>(0x8),
-                   mlir::Value::Kind::TrailingOpResult});
 
 mlir::Type Type(nullptr);
 mlir::Type IndexType = mlir::IndexType::get(&Context);
@@ -22,6 +20,10 @@ mlir::Type UnrankedMemRefType = mlir::UnrankedMemRefType::get(IntegerType, 6);
 mlir::Type VectorType = mlir::VectorType::get({1, 2}, FloatType);
 mlir::Type TupleType =
     mlir::TupleType::get(&Context, mlir::TypeRange({IndexType, FloatType}));
+
+
+mlir::detail::OutOfLineOpResult Result(FloatType, 42);
+mlir::Value Value(&Result);
 
 auto UnknownLoc = mlir::UnknownLoc::get(&Context);
 auto FileLineColLoc = mlir::FileLineColLoc::get(&Context, "file", 7, 8);

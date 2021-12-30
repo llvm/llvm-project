@@ -64,7 +64,7 @@ def HexagonVPACKL:     SDNode<"HexagonISD::VPACKL",     SDTVecUnaryOp>;
 def HexagonVUNPACK:    SDNode<"HexagonISD::VUNPACK",    SDTVecUnaryOp>;
 def HexagonVUNPACKU:   SDNode<"HexagonISD::VUNPACKU",   SDTVecUnaryOp>;
 
-def vzero:  PatFrag<(ops), (splat_vector (i32 0))>;
+def vzero:  PatFrags<(ops), [(splat_vector (i32 0)), (splat_vector (f32zero))]>;
 def qtrue:  PatFrag<(ops), (HexagonQTRUE)>;
 def qfalse: PatFrag<(ops), (HexagonQFALSE)>;
 def qcat:   PatFrag<(ops node:$Qs, node:$Qt),
@@ -269,6 +269,7 @@ let Predicates = [UseHVX] in {
     def: Pat<(VecPI8  vzero), (PS_vdd0)>;
     def: Pat<(VecPI16 vzero), (PS_vdd0)>;
     def: Pat<(VecPI32 vzero), (PS_vdd0)>;
+    def: Pat<(VecPF32 vzero), (PS_vdd0)>;
 
     def: Pat<(concat_vectors  (VecI8 vzero),  (VecI8 vzero)), (PS_vdd0)>;
     def: Pat<(concat_vectors (VecI16 vzero), (VecI16 vzero)), (PS_vdd0)>;
@@ -300,7 +301,22 @@ let Predicates = [UseHVX] in {
            (V6_vinsertwr HvxVR:$Vu, I32:$Rt)>;
 }
 
-let Predicates = [UseHVXFloatingPoint] in {
+let Predicates = [UseHVX, UseHVXFloatingPoint] in {
+  let AddedComplexity = 100 in {
+    def: Pat<(VecF16  vzero), (V6_vd0)>;
+    def: Pat<(VecF32  vzero), (V6_vd0)>;
+    def: Pat<(VecPF16 vzero), (PS_vdd0)>;
+    def: Pat<(VecPF32 vzero), (PS_vdd0)>;
+
+    def: Pat<(concat_vectors (VecF16 vzero), (VecF16 vzero)), (PS_vdd0)>;
+    def: Pat<(concat_vectors (VecF32 vzero), (VecF32 vzero)), (PS_vdd0)>;
+  }
+
+  def: Pat<(VecPF16 (concat_vectors HVF16:$Vs, HVF16:$Vt)),
+           (Combinev HvxVR:$Vt, HvxVR:$Vs)>;
+  def: Pat<(VecPF32 (concat_vectors HVF32:$Vs, HVF32:$Vt)),
+           (Combinev HvxVR:$Vt, HvxVR:$Vs)>;
+
   def: Pat<(HexagonVINSERTW0 HVF16:$Vu, I32:$Rt),
            (V6_vinsertwr HvxVR:$Vu, I32:$Rt)>;
   def: Pat<(HexagonVINSERTW0 HVF32:$Vu, I32:$Rt),
@@ -361,6 +377,18 @@ let Predicates = [UseHVX,UseHVXV62] in {
     def: Pat<(VecPI8  (splat_vector I32:$Rs)), (Rep (V62splatrb $Rs))>;
     def: Pat<(VecPI16 (splat_vector I32:$Rs)), (Rep (V62splatrh $Rs))>;
     def: Pat<(VecPI32 (splat_vector I32:$Rs)), (Rep (V62splatrw $Rs))>;
+  }
+}
+let Predicates = [UseHVXV68, UseHVXFloatingPoint] in {
+  let AddedComplexity = 30 in {
+    def: Pat<(VecF16  (splat_vector u16_0ImmPred:$V)), (V62splatih imm:$V)>;
+    def: Pat<(VecF32  (splat_vector anyint:$V)),       (V62splatiw imm:$V)>;
+    def: Pat<(VecF32  (splat_vector f32ImmPred:$V)),   (V62splatiw (ftoi $V))>;
+  }
+  let AddedComplexity = 20 in {
+    def: Pat<(VecF16  (splat_vector I32:$Rs)), (V62splatrh $Rs)>;
+    def: Pat<(VecF32  (splat_vector I32:$Rs)), (V62splatrw $Rs)>;
+    def: Pat<(VecF32  (splat_vector F32:$Rs)), (V62splatrw $Rs)>;
   }
 }
 
