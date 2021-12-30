@@ -7509,6 +7509,7 @@ td_library(
     ],
     includes = ["include"],
     deps = [
+        ":ArithmeticOpsTdFiles",
         ":CastInterfacesTdFiles",
         ":ControlFlowInterfacesTdFiles",
         ":CopyOpInterfaceTdFiles",
