@@ -162,7 +162,10 @@ lldb::ProcessSP PlatformQemuUser::DebugProcess(ProcessLaunchInfo &launch_info,
                                                Target &target, Status &error) {
   Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM);
 
-  std::string qemu = GetGlobalProperties().GetEmulatorPath().GetPath();
+  FileSpec qemu = GetGlobalProperties().GetEmulatorPath();
+  if (!qemu)
+    qemu.SetPath(("qemu-" + GetGlobalProperties().GetArchitecture()).str());
+  FileSystem::Instance().ResolveExecutableLocation(qemu);
 
   llvm::SmallString<0> socket_model, socket_path;
   HostInfo::GetProcessTempDir().GetPath(socket_model);
@@ -171,7 +174,7 @@ lldb::ProcessSP PlatformQemuUser::DebugProcess(ProcessLaunchInfo &launch_info,
     llvm::sys::fs::createUniquePath(socket_model, socket_path, false);
   } while (FileSystem::Instance().Exists(socket_path));
 
-  Args args({qemu, "-g", socket_path});
+  Args args({qemu.GetPath(), "-g", socket_path});
   args.AppendArguments(GetGlobalProperties().GetEmulatorArgs());
   args.AppendArgument("--");
   args.AppendArgument(launch_info.GetExecutableFile().GetPath());
