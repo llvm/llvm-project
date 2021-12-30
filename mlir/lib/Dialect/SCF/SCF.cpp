@@ -1631,8 +1631,8 @@ struct CombineNestedIfs : public OpRewritePattern<IfOp> {
       return failure();
 
     Location loc = op.getLoc();
-    Value newCondition = rewriter.create<arith::AndIOp>(loc, op.condition(),
-                                                        nestedIf.condition());
+    Value newCondition = rewriter.create<arith::AndIOp>(
+        loc, op.getCondition(), nestedIf.getCondition());
     auto newIf = rewriter.create<IfOp>(loc, newCondition);
     Block *newIfBlock = newIf.thenBlock();
     rewriter.eraseOp(newIfBlock->getTerminator());
