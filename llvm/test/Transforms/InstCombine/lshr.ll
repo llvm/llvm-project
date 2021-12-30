@@ -138,9 +138,8 @@ define i8 @lshr_cttz_zero_is_undef_vec(<2 x i8> %x) {
 
 define i8 @lshr_exact(i8 %x) {
 ; CHECK-LABEL: @lshr_exact(
-; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[X:%.*]], 2
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[SHL]], 4
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr exact i8 [[ADD]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[LSHR:%.*]] = and i8 [[TMP1]], 63
 ; CHECK-NEXT:    ret i8 [[LSHR]]
 ;
   %shl = shl i8 %x, 2
@@ -151,9 +150,8 @@ define i8 @lshr_exact(i8 %x) {
 
 define <2 x i8> @lshr_exact_splat_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @lshr_exact_splat_vec(
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i8> [[X:%.*]], <i8 2, i8 2>
-; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i8> [[SHL]], <i8 4, i8 4>
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr exact <2 x i8> [[ADD]], <i8 2, i8 2>
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[X:%.*]], <i8 1, i8 1>
+; CHECK-NEXT:    [[LSHR:%.*]] = and <2 x i8> [[TMP1]], <i8 63, i8 63>
 ; CHECK-NEXT:    ret <2 x i8> [[LSHR]]
 ;
   %shl = shl <2 x i8> %x, <i8 2, i8 2>
@@ -164,9 +162,9 @@ define <2 x i8> @lshr_exact_splat_vec(<2 x i8> %x) {
 
 define i8 @shl_add(i8 %x, i8 %y) {
 ; CHECK-LABEL: @shl_add(
-; CHECK-NEXT:    [[L:%.*]] = shl i8 [[X:%.*]], 2
-; CHECK-NEXT:    [[A:%.*]] = add i8 [[L]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = lshr i8 [[A]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 [[Y:%.*]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = add i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[TMP2]], 63
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %l = shl i8 %x, 2
@@ -178,9 +176,9 @@ define i8 @shl_add(i8 %x, i8 %y) {
 define <2 x i8> @shl_add_commute_vec(<2 x i8> %x, <2 x i8> %py) {
 ; CHECK-LABEL: @shl_add_commute_vec(
 ; CHECK-NEXT:    [[Y:%.*]] = mul <2 x i8> [[PY:%.*]], [[PY]]
-; CHECK-NEXT:    [[L:%.*]] = shl <2 x i8> [[X:%.*]], <i8 3, i8 3>
-; CHECK-NEXT:    [[A:%.*]] = add <2 x i8> [[Y]], [[L]]
-; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i8> [[A]], <i8 3, i8 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i8> [[Y]], <i8 3, i8 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i8> [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[TMP2]], <i8 31, i8 31>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %y = mul <2 x i8> %py, %py ; thwart complexity-based canonicalization
