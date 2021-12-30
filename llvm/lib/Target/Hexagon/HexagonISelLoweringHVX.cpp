@@ -91,15 +91,26 @@ HexagonTargetLowering::initializeHVXLowering() {
 
   if (Subtarget.useHVX128BOps() && Subtarget.useHVXV68Ops() &&
       Subtarget.useHVXFloatingPoint()) {
+    setOperationAction(ISD::INSERT_SUBVECTOR,  MVT::v64f16, Custom);
+    setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v64f16, Custom);
+    setOperationAction(ISD::INSERT_SUBVECTOR,  MVT::v32f32, Custom);
+    setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v32f32, Custom);
+
     // Handle ISD::BUILD_VECTOR for v32f32 in a custom way to generate vsplat
     setOperationAction(ISD::BUILD_VECTOR, MVT::v32f32, Custom);
 
     // BUILD_VECTOR with f16 operands cannot be promoted without
     // promoting the result, so lower the node to vsplat or constant pool
     setOperationAction(ISD::BUILD_VECTOR,      MVT::f16,    Custom);
+    setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::f16,    Custom);
     setOperationAction(ISD::SPLAT_VECTOR,      MVT::f16,    Custom);
     setOperationAction(ISD::SPLAT_VECTOR,      MVT::v64f16, Legal);
     setOperationAction(ISD::SPLAT_VECTOR,      MVT::v32f32, Legal);
+    // Vector shuffle is always promoted to ByteV and a bitcast to f16 is
+    // generated.
+    setPromoteTo(ISD::VECTOR_SHUFFLE, MVT::v64f16, ByteV);
+    setPromoteTo(ISD::VECTOR_SHUFFLE, MVT::v64f32, ByteW);
+    setPromoteTo(ISD::VECTOR_SHUFFLE, MVT::v32f32, ByteV);
 
     // Custom-lower BUILD_VECTOR for vector pairs. The standard (target-
     // independent) handling of it would convert it to a load, which is
@@ -1483,12 +1494,21 @@ SDValue
 HexagonTargetLowering::LowerHvxInsertElement(SDValue Op, SelectionDAG &DAG)
       const {
   const SDLoc &dl(Op);
+  MVT VecTy = ty(Op);
   SDValue VecV = Op.getOperand(0);
   SDValue ValV = Op.getOperand(1);
   SDValue IdxV = Op.getOperand(2);
   MVT ElemTy = ty(VecV).getVectorElementType();
   if (ElemTy == MVT::i1)
     return insertHvxElementPred(VecV, IdxV, ValV, dl, DAG);
+
+  if (ElemTy == MVT::f16) {
+    SDValue T0 = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl,
+        tyVector(VecTy, MVT::i16),
+        DAG.getBitcast(tyVector(VecTy, MVT::i16), VecV),
+        DAG.getBitcast(MVT::i16, ValV), IdxV);
+    return DAG.getBitcast(tyVector(VecTy, MVT::f16), T0);
+  }
 
   return insertHvxElementReg(VecV, IdxV, ValV, dl, DAG);
 }
