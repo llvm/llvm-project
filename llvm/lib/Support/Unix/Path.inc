@@ -870,6 +870,12 @@ void mapped_file_region::unmapImpl() {
     ::munmap(Mapping, Size);
 }
 
+void mapped_file_region::dontNeedImpl() {
+  assert(Mode == mapped_file_region::readonly);
+  if (Mapping)
+    ::madvise(Mapping, Size, MADV_DONTNEED);
+}
+
 int mapped_file_region::alignment() {
   return Process::getPageSizeEstimate();
 }
