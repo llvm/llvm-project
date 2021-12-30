@@ -1368,6 +1368,11 @@ let Predicates = [HasVInstructionsAnyF] in {
 // 17.2. Floating-Point Scalar Move Instructions
 foreach vti = AllFloatVectors in {
   def : Pat<(vti.Vector (riscv_vfmv_s_f_vl (vti.Vector vti.RegClass:$merge),
+                                           (vti.Scalar (fpimm0)),
+                                           VLOpFrag)),
+            (!cast<Instruction>("PseudoVMV_S_X_"#vti.LMul.MX)
+                vti.RegClass:$merge, X0, GPR:$vl, vti.Log2SEW)>;
+  def : Pat<(vti.Vector (riscv_vfmv_s_f_vl (vti.Vector vti.RegClass:$merge),
                                            vti.ScalarRegClass:$rs1,
                                            VLOpFrag)),
             (!cast<Instruction>("PseudoVFMV_S_"#vti.ScalarSuffix#"_"#vti.LMul.MX)
