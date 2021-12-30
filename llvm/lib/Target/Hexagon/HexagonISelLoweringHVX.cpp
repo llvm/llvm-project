@@ -93,6 +93,12 @@ HexagonTargetLowering::initializeHVXLowering() {
       Subtarget.useHVXFloatingPoint()) {
     setOperationAction(ISD::FMINNUM, MVT::v64f16, Legal);
     setOperationAction(ISD::FMAXNUM, MVT::v64f16, Legal);
+    setOperationAction(ISD::FADD,    MVT::v64f16, Legal);
+    setOperationAction(ISD::FSUB,    MVT::v64f16, Legal);
+    setOperationAction(ISD::FMUL,    MVT::v64f16, Legal);
+    setOperationAction(ISD::FADD,    MVT::v32f32, Legal);
+    setOperationAction(ISD::FSUB,    MVT::v32f32, Legal);
+    setOperationAction(ISD::FMUL,    MVT::v32f32, Legal);
     setOperationAction(ISD::FMINNUM, MVT::v32f32, Legal);
     setOperationAction(ISD::FMAXNUM, MVT::v32f32, Legal);
     setOperationAction(ISD::INSERT_SUBVECTOR,  MVT::v64f16, Custom);
@@ -126,6 +132,9 @@ HexagonTargetLowering::initializeHVXLowering() {
 
     setOperationAction(ISD::LOAD,    MVT::v64f32, Custom);
     setOperationAction(ISD::STORE,   MVT::v64f32, Custom);
+    setOperationAction(ISD::FADD,    MVT::v64f32, Custom);
+    setOperationAction(ISD::FSUB,    MVT::v64f32, Custom);
+    setOperationAction(ISD::FMUL,    MVT::v64f32, Custom);
     setOperationAction(ISD::FMINNUM, MVT::v64f32, Custom);
     setOperationAction(ISD::FMAXNUM, MVT::v64f32, Custom);
     setOperationAction(ISD::VSELECT, MVT::v64f32, Custom);
@@ -2291,6 +2300,9 @@ HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
       case ISD::CTLZ:
       case ISD::CTTZ:
       case ISD::MUL:
+      case ISD::FADD:
+      case ISD::FSUB:
+      case ISD::FMUL:
       case ISD::FMINNUM:
       case ISD::FMAXNUM:
       case ISD::MULHS:
