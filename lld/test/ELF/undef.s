@@ -31,18 +31,6 @@
 # CHECK-NEXT: >>> referenced by undef.s
 # CHECK-NEXT: >>>               {{.*}}:(.text+0x1A)
 
-# CHECK:      error: undefined symbol: Pi
-# CHECK-NEXT: >>> referenced by undef.s
-# CHECK-NEXT: >>>               {{.*}}:(.text+0x1F)
-
-# CHECK:      error: undefined symbol: D main
-# CHECK-NEXT: >>> referenced by undef.s
-# CHECK-NEXT: >>>               {{.*}}:(.text+0x24)
-
-# CHECK:      error: undefined symbol: a::main
-# CHECK-NEXT: >>> referenced by undef.s
-# CHECK-NEXT: >>>               {{.*}}:(.text+0x29)
-
 # CHECK:      error: undefined symbol: zed2
 # CHECK-NEXT: >>> referenced by {{.*}}.o:(.text+0x0) in archive {{.*}}2.a
 
@@ -96,6 +84,3 @@ _start:
   call _Z3fooi
   call _ZTV3Foo
   call __Z3fooi
-  call Pi
-  call _Dmain
-  call _RNvC1a4main

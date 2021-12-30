@@ -9,7 +9,6 @@
 #include "Symbols.h"
 #include "InputFiles.h"
 #include "SyntheticSections.h"
-#include "lld/Common/Strings.h"
 
 using namespace llvm;
 using namespace lld;
@@ -28,12 +27,17 @@ static_assert(sizeof(void *) != 8 || sizeof(Defined) == 80,
 static_assert(sizeof(SymbolUnion) == sizeof(Defined),
               "Defined should be the largest Symbol kind");
 
-std::string lld::toString(const Symbol &sym) {
-  return demangle(sym.getName(), config->demangle);
+// Returns a symbol for an error message.
+static std::string demangle(StringRef symName) {
+  if (config->demangle)
+    return demangleItanium(symName);
+  return std::string(symName);
 }
 
+std::string lld::toString(const Symbol &sym) { return demangle(sym.getName()); }
+
 std::string lld::toMachOString(const object::Archive::Symbol &b) {
-  return demangle(b.getName(), config->demangle);
+  return demangle(b.getName());
 }
 
 uint64_t Symbol::getStubVA() const { return in.stubs->getVA(stubsIndex); }
