@@ -24,7 +24,7 @@
 #include "test_macros.h"
 
 void test(const auto& store) {
-#if _LIBCPP_VERSION
+#ifdef _LIBCPP_VERSION
   for (const auto& arg : store.__args) {
     assert(arg);
     assert(static_cast<bool>(arg));
