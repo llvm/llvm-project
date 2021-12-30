@@ -27,12 +27,10 @@ define dso_local <16 x i16> @interleave(<8 x i16> %v0, <8 x i16> %v1) {
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, tu, mu
 ; CHECK-NEXT:    vslideup.vi v12, v8, 8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, mu
-; CHECK-NEXT:    vrgather.vv v8, v20, v16
 ; CHECK-NEXT:    lui a0, 11
 ; CHECK-NEXT:    addiw a0, a0, -1366
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, mu
 ; CHECK-NEXT:    vmv.s.x v0, a0
-; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
+; CHECK-NEXT:    vrgather.vv v8, v20, v16
 ; CHECK-NEXT:    vrgather.vv v8, v12, v18, v0.t
 ; CHECK-NEXT:    ret
 entry:
