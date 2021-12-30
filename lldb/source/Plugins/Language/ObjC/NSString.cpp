@@ -8,14 +8,13 @@
 
 #include "NSString.h"
 
-#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/Target/Language.h"
-#include "lldb/Target/ProcessStructReader.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Status.h"
@@ -29,24 +28,6 @@ std::map<ConstString, CXXFunctionSummaryFormat::Callback> &
 NSString_Additionals::GetAdditionalSummaries() {
   static std::map<ConstString, CXXFunctionSummaryFormat::Callback> g_map;
   return g_map;
-}
-
-static CompilerType GetNSPathStore2Type(Target &target) {
-  static ConstString g_type_name("__lldb_autogen_nspathstore2");
-
-  TypeSystemClang *ast_ctx = ScratchTypeSystemClang::GetForTarget(target);
-
-  if (!ast_ctx)
-    return CompilerType();
-
-  CompilerType voidstar =
-      ast_ctx->GetBasicType(lldb::eBasicTypeVoid).GetPointerType();
-  CompilerType uint32 =
-      ast_ctx->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 32);
-
-  return ast_ctx->GetOrCreateStructForIdentifier(
-      g_type_name,
-      {{"isa", voidstar}, {"lengthAndRef", uint32}, {"buffer", voidstar}});
 }
 
 bool lldb_private::formatters::NSStringSummaryProvider(
@@ -229,11 +210,17 @@ bool lldb_private::formatters::NSStringSummaryProvider(
     return StringPrinter::ReadStringAndDumpToStream<
         StringPrinter::StringElementType::UTF16>(options);
   } else if (is_path_store) {
-    ProcessStructReader reader(valobj.GetProcessSP().get(),
-                               valobj.GetValueAsUnsigned(0),
-                               GetNSPathStore2Type(*valobj.GetTargetSP()));
-    explicit_length =
-        reader.GetField<uint32_t>(ConstString("lengthAndRef")) >> 20;
+    // _lengthAndRefCount is the first ivar of NSPathStore2 (after the isa).
+    uint64_t length_ivar_offset = 1 * ptr_size;
+    CompilerType length_type = valobj.GetCompilerType().GetBasicTypeFromAST(
+        lldb::eBasicTypeUnsignedInt);
+    ValueObjectSP length_valobj_sp =
+        valobj.GetSyntheticChildAtOffset(length_ivar_offset, length_type, true,
+                                         ConstString("_lengthAndRefCount"));
+    if (!length_valobj_sp)
+      return false;
+    // Get the length out of _lengthAndRefCount.
+    explicit_length = length_valobj_sp->GetValueAsUnsigned(0) >> 20;
     lldb::addr_t location = valobj.GetValueAsUnsigned(0) + ptr_size + 4;
 
     options.SetLocation(location);
