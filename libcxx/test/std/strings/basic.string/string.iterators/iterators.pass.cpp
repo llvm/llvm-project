@@ -54,7 +54,6 @@ TEST_CONSTEXPR_CXX20 void test()
         C a;
         typename C::iterator i1 = a.begin();
         typename C::iterator i2;
-        assert ( i1 != i2 );
         i2 = i1;
         assert ( i1 == i2 );
     }

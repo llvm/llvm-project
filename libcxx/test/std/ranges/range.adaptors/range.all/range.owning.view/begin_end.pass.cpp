@@ -117,10 +117,10 @@ constexpr bool test()
     // Test a non-view.
     std::array<int, 2> a = {1, 2};
     auto ov = std::ranges::owning_view(std::move(a));
-    assert(ov.begin() != a.begin()); // because it points into the copy
-    assert(std::as_const(ov).begin() != a.begin());
-    assert(ov.end() != a.end());
-    assert(std::as_const(ov).end() != a.end());
+    assert(std::to_address(ov.begin()) != std::to_address(a.begin())); // because it points into the copy
+    assert(std::to_address(std::as_const(ov).begin()) != std::to_address(a.begin()));
+    assert(std::to_address(ov.end()) != std::to_address(a.end()));
+    assert(std::to_address(std::as_const(ov).end()) != std::to_address(a.end()));
   }
   return true;
 }
