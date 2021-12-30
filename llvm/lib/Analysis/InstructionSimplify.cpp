@@ -620,6 +620,10 @@ static Value *SimplifyAddInst(Value *Op0, Value *Op1, bool IsNSW, bool IsNUW,
   if (Constant *C = foldOrCommuteConstant(Instruction::Add, Op0, Op1, Q))
     return C;
 
+  // X + poison -> poison
+  if (isa<PoisonValue>(Op1))
+    return Op1;
+
   // X + undef -> undef
   if (Q.isUndefValue(Op1))
     return Op1;
