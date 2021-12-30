@@ -91,6 +91,10 @@ HexagonTargetLowering::initializeHVXLowering() {
 
   if (Subtarget.useHVX128BOps() && Subtarget.useHVXV68Ops() &&
       Subtarget.useHVXFloatingPoint()) {
+    setOperationAction(ISD::FMINNUM, MVT::v64f16, Legal);
+    setOperationAction(ISD::FMAXNUM, MVT::v64f16, Legal);
+    setOperationAction(ISD::FMINNUM, MVT::v32f32, Legal);
+    setOperationAction(ISD::FMAXNUM, MVT::v32f32, Legal);
     setOperationAction(ISD::INSERT_SUBVECTOR,  MVT::v64f16, Custom);
     setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v64f16, Custom);
     setOperationAction(ISD::INSERT_SUBVECTOR,  MVT::v32f32, Custom);
@@ -122,6 +126,9 @@ HexagonTargetLowering::initializeHVXLowering() {
 
     setOperationAction(ISD::LOAD,    MVT::v64f32, Custom);
     setOperationAction(ISD::STORE,   MVT::v64f32, Custom);
+    setOperationAction(ISD::FMINNUM, MVT::v64f32, Custom);
+    setOperationAction(ISD::FMAXNUM, MVT::v64f32, Custom);
+    setOperationAction(ISD::VSELECT, MVT::v64f32, Custom);
 
     setOperationAction(ISD::MLOAD, MVT::v32f32, Custom);
     setOperationAction(ISD::MSTORE, MVT::v32f32, Custom);
@@ -247,6 +254,32 @@ HexagonTargetLowering::initializeHVXLowering() {
       setOperationAction(ISD::UMAX,   T, Custom);
     }
   }
+
+  setCondCodeAction(ISD::SETNE,  MVT::v64f16, Expand);
+  setCondCodeAction(ISD::SETLE,  MVT::v64f16, Expand);
+  setCondCodeAction(ISD::SETGE,  MVT::v64f16, Expand);
+  setCondCodeAction(ISD::SETLT,  MVT::v64f16, Expand);
+  setCondCodeAction(ISD::SETONE, MVT::v64f16, Expand);
+  setCondCodeAction(ISD::SETOLE, MVT::v64f16, Expand);
+  setCondCodeAction(ISD::SETOGE, MVT::v64f16, Expand);
+  setCondCodeAction(ISD::SETOLT, MVT::v64f16, Expand);
+  setCondCodeAction(ISD::SETUNE, MVT::v64f16, Expand);
+  setCondCodeAction(ISD::SETULE, MVT::v64f16, Expand);
+  setCondCodeAction(ISD::SETUGE, MVT::v64f16, Expand);
+  setCondCodeAction(ISD::SETULT, MVT::v64f16, Expand);
+
+  setCondCodeAction(ISD::SETNE,  MVT::v32f32, Expand);
+  setCondCodeAction(ISD::SETLE,  MVT::v32f32, Expand);
+  setCondCodeAction(ISD::SETGE,  MVT::v32f32, Expand);
+  setCondCodeAction(ISD::SETLT,  MVT::v32f32, Expand);
+  setCondCodeAction(ISD::SETONE, MVT::v32f32, Expand);
+  setCondCodeAction(ISD::SETOLE, MVT::v32f32, Expand);
+  setCondCodeAction(ISD::SETOGE, MVT::v32f32, Expand);
+  setCondCodeAction(ISD::SETOLT, MVT::v32f32, Expand);
+  setCondCodeAction(ISD::SETUNE, MVT::v32f32, Expand);
+  setCondCodeAction(ISD::SETULE, MVT::v32f32, Expand);
+  setCondCodeAction(ISD::SETUGE, MVT::v32f32, Expand);
+  setCondCodeAction(ISD::SETULT, MVT::v32f32, Expand);
 
   // Boolean vectors.
 
@@ -2258,6 +2291,8 @@ HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
       case ISD::CTLZ:
       case ISD::CTTZ:
       case ISD::MUL:
+      case ISD::FMINNUM:
+      case ISD::FMAXNUM:
       case ISD::MULHS:
       case ISD::MULHU:
       case ISD::AND:
