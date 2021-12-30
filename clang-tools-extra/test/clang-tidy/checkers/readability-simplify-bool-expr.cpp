@@ -581,19 +581,19 @@ void complex_conditional_assignment_statements(int i) {
   // Unchanged: multiple statements.
   bool g;
   if (j > 10)
-    f = true;
+    g = true;
   else {
     j = 20;
-    f = false;
+    g = false;
   }
 
   // Unchanged: multiple statements.
   bool h;
   if (j > 10) {
     j = 10;
-    f = true;
+    h = true;
   } else
-    f = false;
+    h = false;
 }
 
 // Unchanged: chained return statements, but ChainedConditionalReturn not set.
