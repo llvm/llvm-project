@@ -227,3 +227,13 @@ func @rank(%t : memref<4x4x?xf32>) {
   %1 = memref.rank %t : memref<4x4x?xf32>
   return
 }
+
+// ------
+
+// CHECK-LABEL: func @atomic_rmw
+// CHECK-SAME: ([[BUF:%.*]]: memref<10xf32>, [[VAL:%.*]]: f32, [[I:%.*]]: index)
+func @atomic_rmw(%I: memref<10xf32>, %val: f32, %i : index) {
+  %x = memref.atomic_rmw addf %val, %I[%i] : (f32, memref<10xf32>) -> f32
+  // CHECK: memref.atomic_rmw addf [[VAL]], [[BUF]]{{\[}}[[I]]]
+  return
+}

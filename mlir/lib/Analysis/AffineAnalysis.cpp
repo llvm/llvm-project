@@ -40,7 +40,7 @@ using llvm::dbgs;
 /// reduction kind suitable for use in affine parallel loop builder. If the
 /// reduction is not supported, returns null.
 static Value getSupportedReduction(AffineForOp forOp, unsigned pos,
-                                   AtomicRMWKind &kind) {
+                                   arith::AtomicRMWKind &kind) {
   SmallVector<Operation *> combinerOps;
   Value reducedVal =
       matchReduction(forOp.getRegionIterArgs(), pos, combinerOps);
@@ -52,21 +52,21 @@ static Value getSupportedReduction(AffineForOp forOp, unsigned pos,
     return nullptr;
 
   Operation *combinerOp = combinerOps.back();
-  Optional<AtomicRMWKind> maybeKind =
-      TypeSwitch<Operation *, Optional<AtomicRMWKind>>(combinerOp)
-          .Case([](arith::AddFOp) { return AtomicRMWKind::addf; })
-          .Case([](arith::MulFOp) { return AtomicRMWKind::mulf; })
-          .Case([](arith::AddIOp) { return AtomicRMWKind::addi; })
-          .Case([](arith::AndIOp) { return AtomicRMWKind::andi; })
-          .Case([](arith::OrIOp) { return AtomicRMWKind::ori; })
-          .Case([](arith::MulIOp) { return AtomicRMWKind::muli; })
-          .Case([](arith::MinFOp) { return AtomicRMWKind::minf; })
-          .Case([](arith::MaxFOp) { return AtomicRMWKind::maxf; })
-          .Case([](arith::MinSIOp) { return AtomicRMWKind::mins; })
-          .Case([](arith::MaxSIOp) { return AtomicRMWKind::maxs; })
-          .Case([](arith::MinUIOp) { return AtomicRMWKind::minu; })
-          .Case([](arith::MaxUIOp) { return AtomicRMWKind::maxu; })
-          .Default([](Operation *) -> Optional<AtomicRMWKind> {
+  Optional<arith::AtomicRMWKind> maybeKind =
+      TypeSwitch<Operation *, Optional<arith::AtomicRMWKind>>(combinerOp)
+          .Case([](arith::AddFOp) { return arith::AtomicRMWKind::addf; })
+          .Case([](arith::MulFOp) { return arith::AtomicRMWKind::mulf; })
+          .Case([](arith::AddIOp) { return arith::AtomicRMWKind::addi; })
+          .Case([](arith::AndIOp) { return arith::AtomicRMWKind::andi; })
+          .Case([](arith::OrIOp) { return arith::AtomicRMWKind::ori; })
+          .Case([](arith::MulIOp) { return arith::AtomicRMWKind::muli; })
+          .Case([](arith::MinFOp) { return arith::AtomicRMWKind::minf; })
+          .Case([](arith::MaxFOp) { return arith::AtomicRMWKind::maxf; })
+          .Case([](arith::MinSIOp) { return arith::AtomicRMWKind::mins; })
+          .Case([](arith::MaxSIOp) { return arith::AtomicRMWKind::maxs; })
+          .Case([](arith::MinUIOp) { return arith::AtomicRMWKind::minu; })
+          .Case([](arith::MaxUIOp) { return arith::AtomicRMWKind::maxu; })
+          .Default([](Operation *) -> Optional<arith::AtomicRMWKind> {
             // TODO: AtomicRMW supports other kinds of reductions this is
             // currently not detecting, add those when the need arises.
             return llvm::None;
@@ -86,7 +86,7 @@ void mlir::getSupportedReductions(
     return;
   supportedReductions.reserve(numIterArgs);
   for (unsigned i = 0; i < numIterArgs; ++i) {
-    AtomicRMWKind kind;
+    arith::AtomicRMWKind kind;
     if (Value value = getSupportedReduction(forOp, i, kind))
       supportedReductions.emplace_back(LoopReduction{kind, i, value});
   }

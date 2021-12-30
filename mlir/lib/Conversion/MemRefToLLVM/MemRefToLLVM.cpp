@@ -1553,6 +1553,62 @@ struct ViewOpLowering : public ConvertOpToLLVMPattern<memref::ViewOp> {
   }
 };
 
+//===----------------------------------------------------------------------===//
+// AtomicRMWOpLowering
+//===----------------------------------------------------------------------===//
+
+/// Try to match the kind of a std.atomic_rmw to determine whether to use a
+/// lowering to llvm.atomicrmw or fallback to llvm.cmpxchg.
+static Optional<LLVM::AtomicBinOp>
+matchSimpleAtomicOp(memref::AtomicRMWOp atomicOp) {
+  switch (atomicOp.kind()) {
+  case arith::AtomicRMWKind::addf:
+    return LLVM::AtomicBinOp::fadd;
+  case arith::AtomicRMWKind::addi:
+    return LLVM::AtomicBinOp::add;
+  case arith::AtomicRMWKind::assign:
+    return LLVM::AtomicBinOp::xchg;
+  case arith::AtomicRMWKind::maxs:
+    return LLVM::AtomicBinOp::max;
+  case arith::AtomicRMWKind::maxu:
+    return LLVM::AtomicBinOp::umax;
+  case arith::AtomicRMWKind::mins:
+    return LLVM::AtomicBinOp::min;
+  case arith::AtomicRMWKind::minu:
+    return LLVM::AtomicBinOp::umin;
+  case arith::AtomicRMWKind::ori:
+    return LLVM::AtomicBinOp::_or;
+  case arith::AtomicRMWKind::andi:
+    return LLVM::AtomicBinOp::_and;
+  default:
+    return llvm::None;
+  }
+  llvm_unreachable("Invalid AtomicRMWKind");
+}
+
+struct AtomicRMWOpLowering : public LoadStoreOpLowering<memref::AtomicRMWOp> {
+  using Base::Base;
+
+  LogicalResult
+  matchAndRewrite(memref::AtomicRMWOp atomicOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (failed(match(atomicOp)))
+      return failure();
+    auto maybeKind = matchSimpleAtomicOp(atomicOp);
+    if (!maybeKind)
+      return failure();
+    auto resultType = adaptor.value().getType();
+    auto memRefType = atomicOp.getMemRefType();
+    auto dataPtr =
+        getStridedElementPtr(atomicOp.getLoc(), memRefType, adaptor.memref(),
+                             adaptor.indices(), rewriter);
+    rewriter.replaceOpWithNewOp<LLVM::AtomicRMWOp>(
+        atomicOp, resultType, *maybeKind, dataPtr, adaptor.value(),
+        LLVM::AtomicOrdering::acq_rel);
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::populateMemRefToLLVMConversionPatterns(LLVMTypeConverter &converter,
@@ -1561,6 +1617,7 @@ void mlir::populateMemRefToLLVMConversionPatterns(LLVMTypeConverter &converter,
   patterns.add<
       AllocaOpLowering,
       AllocaScopeOpLowering,
+      AtomicRMWOpLowering,
       AssumeAlignmentOpLowering,
       DimOpLowering,
       GlobalMemrefOpLowering,
