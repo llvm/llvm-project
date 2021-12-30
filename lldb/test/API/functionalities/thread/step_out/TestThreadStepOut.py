@@ -27,7 +27,7 @@ class ThreadStepOutTestCase(TestBase):
     @expectedFailureNetBSD
     def test_step_single_thread(self):
         """Test thread step out on one thread via command interpreter. """
-        self.build(dictionary=self.getBuildFlags())
+        self.build()
         self.step_out_test(self.step_out_single_thread_with_cmd)
 
     # Test occasionally times out on the Linux build bot
@@ -44,7 +44,7 @@ class ThreadStepOutTestCase(TestBase):
     @expectedFailureNetBSD
     def test_step_all_threads(self):
         """Test thread step out on all threads via command interpreter. """
-        self.build(dictionary=self.getBuildFlags())
+        self.build()
         self.step_out_test(self.step_out_all_threads_with_cmd)
 
     # Test occasionally times out on the Linux build bot
@@ -60,7 +60,7 @@ class ThreadStepOutTestCase(TestBase):
     @expectedFailureNetBSD
     def test_python(self):
         """Test thread step out on one thread via Python API (dwarf)."""
-        self.build(dictionary=self.getBuildFlags())
+        self.build()
         self.step_out_test(self.step_out_with_python)
         
     def setUp(self):
