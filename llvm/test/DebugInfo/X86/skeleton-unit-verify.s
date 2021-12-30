@@ -6,7 +6,7 @@
 # CHECK-NEXT: Verifying .debug_types Unit Header Chain...
 # CHECK-NEXT: Verifying non-dwo Units...
 # CHECK-NEXT: Verifying unit: 1 / 2, "test.cpp"
-# CHECK-NEXT: Verifying unit: 2 / 2
+# CHECK-NEXT: Verifying unit: 2 / 2{{$}}
 # CHECK-NEXT: warning: DW_TAG_skeleton_unit has DW_CHILDREN_yes but DIE has no children
 # CHECK-NEXT: DW_TAG_skeleton_unit
 # CHECK-NEXT: error: Skeleton compilation unit has children.

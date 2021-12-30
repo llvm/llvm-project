@@ -322,7 +322,7 @@ unsigned DWARFVerifier::verifyUnits(const DWARFUnitVector &Units) {
   unsigned NumDebugInfoErrors = 0;
   ReferenceMap CrossUnitReferences;
 
-  unsigned int Index = 1;
+  unsigned Index = 1;
   for (const auto &Unit : Units) {
     OS << "Verifying unit: " << Index << " / " << Units.getNumUnits();
     if (const char* Name = Unit->getUnitDIE(true).getShortName())
