@@ -8142,3 +8142,28 @@ void OffloadWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       Args.MakeArgString(getToolChain().GetProgramPath(getShortName())),
       CmdArgs, Inputs, Output));
 }
+
+void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
+                                 const InputInfo &Output,
+                                 const InputInfoList &Inputs,
+                                 const ArgList &Args,
+                                 const char *LinkingOutput) const {
+  ArgStringList CmdArgs;
+
+  // Construct the link job so we can wrap around it.
+  Linker->ConstructJob(C, JA, Output, Inputs, Args, LinkingOutput);
+  const auto &LinkCommand = C.getJobs().getJobs().back();
+
+  CmdArgs.push_back("-linker-path");
+  CmdArgs.push_back(LinkCommand->getExecutable());
+  for (const char *LinkArg : LinkCommand->getArguments())
+    CmdArgs.push_back(LinkArg);
+
+  const char *Exec =
+      Args.MakeArgString(getToolChain().GetProgramPath("clang-linker-wrapper"));
+
+  // Replace the executable and arguments associated with the link job to the
+  // wrapper.
+  LinkCommand->replaceExecutable(Exec);
+  LinkCommand->replaceArguments(CmdArgs);
+}

@@ -3955,14 +3955,16 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     // Check if this Linker Job should emit a static library.
     if (ShouldEmitStaticLibrary(Args)) {
       LA = C.MakeAction<StaticLibJobAction>(LinkerInputs, types::TY_Image);
+    } else if (Args.hasArg(options::OPT_fopenmp_new_driver) &&
+               OffloadKinds != Action::OFK_None) {
+      LA = C.MakeAction<LinkerWrapperJobAction>(LinkerInputs, types::TY_Image);
+      LA->propagateHostOffloadInfo(OffloadKinds,
+                                   /*BoundArch=*/nullptr);
     } else {
       LA = C.MakeAction<LinkJobAction>(LinkerInputs, types::TY_Image);
     }
     if (!Args.hasArg(options::OPT_fopenmp_new_driver))
       LA = OffloadBuilder.processHostLinkAction(LA);
-    if (Args.hasArg(options::OPT_fopenmp_new_driver))
-      LA->propagateHostOffloadInfo(OffloadKinds,
-                                   /*BoundArch=*/nullptr);
     Actions.push_back(LA);
   }
 

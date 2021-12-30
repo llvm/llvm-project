@@ -257,7 +257,7 @@ OpenMP Support in Clang
 -----------------------
 
 - ``clang-nvlink-wrapper`` tool introduced to support linking of cubin files archived in an archive. See :doc:`ClangNvlinkWrapper`.
-
+- ``clang-linker-wrapper`` tool introduced to support linking using a new OpenMP target offloading method. See :doc:`ClangLinkerWrapper`.
 
 CUDA Support in Clang
 ---------------------

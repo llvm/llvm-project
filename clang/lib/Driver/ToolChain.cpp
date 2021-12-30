@@ -327,6 +327,12 @@ Tool *ToolChain::getOffloadWrapper() const {
   return OffloadWrapper.get();
 }
 
+Tool *ToolChain::getLinkerWrapper() const {
+  if (!LinkerWrapper)
+    LinkerWrapper.reset(new tools::LinkerWrapper(*this, getLink()));
+  return LinkerWrapper.get();
+}
+
 Tool *ToolChain::getTool(Action::ActionClass AC) const {
   switch (AC) {
   case Action::AssembleJobClass:
@@ -365,6 +371,8 @@ Tool *ToolChain::getTool(Action::ActionClass AC) const {
 
   case Action::OffloadWrapperJobClass:
     return getOffloadWrapper();
+  case Action::LinkerWrapperJobClass:
+    return getLinkerWrapper();
   }
 
   llvm_unreachable("Invalid tool kind.");
