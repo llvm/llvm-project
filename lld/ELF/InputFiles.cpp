@@ -43,6 +43,7 @@ using namespace lld::elf;
 bool InputFile::isInGroup;
 uint32_t InputFile::nextGroupId;
 
+SmallVector<std::unique_ptr<MemoryBuffer>> elf::memoryBuffers;
 SmallVector<ArchiveFile *, 0> elf::archiveFiles;
 SmallVector<BinaryFile *, 0> elf::binaryFiles;
 SmallVector<BitcodeFile *, 0> elf::bitcodeFiles;
@@ -122,9 +123,8 @@ Optional<MemoryBufferRef> elf::readFile(StringRef path) {
     return None;
   }
 
-  std::unique_ptr<MemoryBuffer> &mb = *mbOrErr;
-  MemoryBufferRef mbref = mb->getMemBufferRef();
-  make<std::unique_ptr<MemoryBuffer>>(std::move(mb)); // take MB ownership
+  MemoryBufferRef mbref = (*mbOrErr)->getMemBufferRef();
+  memoryBuffers.push_back(std::move(*mbOrErr)); // take MB ownership
 
   if (tar)
     tar->append(relativeToRoot(path), mbref.getBuffer());
