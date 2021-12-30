@@ -1457,8 +1457,8 @@ TEST_F(SymbolCollectorTest, CanonicalSTLHeader) {
       namespace std {
         class string {};
         // Move overloads have special handling.
-        template <typename T> T&& move(T&&);
-        template <typename I, typename O> O move(I, I, O);
+        template <typename _T> T&& move(_T&& __value);
+        template <typename _I, typename _O> _O move(_I, _I, _O);
       }
       )cpp",
       /*Main=*/"");
@@ -1468,7 +1468,8 @@ TEST_F(SymbolCollectorTest, CanonicalSTLHeader) {
           QName("std"),
           AllOf(QName("std::string"), DeclURI(TestHeaderURI),
                 IncludeHeader("<string>")),
-          AllOf(Labeled("move(T &&)"), IncludeHeader("<utility>")),
+          // Parameter names are demangled.
+          AllOf(Labeled("move(T &&value)"), IncludeHeader("<utility>")),
           AllOf(Labeled("move(I, I, O)"), IncludeHeader("<algorithm>"))));
 }
 

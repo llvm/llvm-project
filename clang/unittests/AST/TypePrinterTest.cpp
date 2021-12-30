@@ -63,3 +63,20 @@ TEST(TypePrinter, TemplateId) {
       Code, {}, Matcher, "const N::Type<T> &",
       [](PrintingPolicy &Policy) { Policy.FullyQualifiedName = true; }));
 }
+
+TEST(TypePrinter, ParamsUglified) {
+  llvm::StringLiteral Code = R"cpp(
+    template <typename _Tp, template <typename> class __f>
+    const __f<_Tp&> *A = nullptr;
+  )cpp";
+  auto Clean = [](PrintingPolicy &Policy) {
+    Policy.CleanUglifiedParameters = true;
+  };
+
+  ASSERT_TRUE(PrintedTypeMatches(Code, {},
+                                 varDecl(hasType(qualType().bind("id"))),
+                                 "const __f<_Tp &> *", nullptr));
+  ASSERT_TRUE(PrintedTypeMatches(Code, {},
+                                 varDecl(hasType(qualType().bind("id"))),
+                                 "const f<Tp &> *", Clean));
+}
