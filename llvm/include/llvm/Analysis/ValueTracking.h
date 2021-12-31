@@ -33,7 +33,6 @@ class APInt;
 class AssumptionCache;
 class DominatorTree;
 class GEPOperator;
-class IntrinsicInst;
 class LoadInst;
 class WithOverflowInst;
 struct KnownBits;
