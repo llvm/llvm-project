@@ -1,3 +1,5 @@
+include(GNUInstallDirs)
+
 # Check if lld is built as a standalone project.
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   project(lld)
@@ -34,8 +36,8 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   set(LLVM_MAIN_INCLUDE_DIR ${MAIN_INCLUDE_DIR} CACHE PATH "path to llvm/include")
   set(LLVM_MAIN_SRC_DIR ${MAIN_SRC_DIR} CACHE PATH "Path to LLVM source tree")
 
-  file(TO_CMAKE_PATH ${LLVM_OBJ_ROOT} LLVM_BINARY_DIR)
-  file(TO_CMAKE_PATH ${LLVM_CMAKE_DIR} LLVM_CMAKE_DIR)
+  file(TO_CMAKE_PATH "${LLVM_OBJ_ROOT}" LLVM_BINARY_DIR)
+  file(TO_CMAKE_PATH "${LLVM_CMAKE_DIR}" LLVM_CMAKE_DIR)
 
   if(NOT EXISTS "${LLVM_CMAKE_DIR}/LLVMConfig.cmake")
     message(FATAL_ERROR "LLVMConfig.cmake not found")
@@ -151,7 +153,11 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
 "`CMakeFiles'. Please delete them.")
 endif()
 
-list (APPEND CMAKE_MODULE_PATH "${LLD_SOURCE_DIR}/cmake/modules")
+# Add path for custom modules.
+list(INSERT CMAKE_MODULE_PATH 0
+  "${LLD_SOURCE_DIR}/cmake/modules"
+  "${LLD_SOURCE_DIR}/../cmake/Modules"
+  )
 
 include(AddLLD)
 
@@ -188,7 +194,7 @@ include_directories(BEFORE
 
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   install(DIRECTORY include/
-    DESTINATION include
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
     FILES_MATCHING
     PATTERN "*.h"
     )
