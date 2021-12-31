@@ -439,14 +439,8 @@ define i64 @dont_fold_srem_i64(i64 %x) nounwind {
 ;
 ; RV64IM-LABEL: dont_fold_srem_i64:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    lui a1, 2675
-; RV64IM-NEXT:    addiw a1, a1, -251
-; RV64IM-NEXT:    slli a1, a1, 13
-; RV64IM-NEXT:    addi a1, a1, 1839
-; RV64IM-NEXT:    slli a1, a1, 13
-; RV64IM-NEXT:    addi a1, a1, 167
-; RV64IM-NEXT:    slli a1, a1, 13
-; RV64IM-NEXT:    addi a1, a1, 1505
+; RV64IM-NEXT:    lui a1, %hi(.LCPI8_0)
+; RV64IM-NEXT:    ld a1, %lo(.LCPI8_0)(a1)
 ; RV64IM-NEXT:    mulh a1, a0, a1
 ; RV64IM-NEXT:    srli a2, a1, 63
 ; RV64IM-NEXT:    srai a1, a1, 5

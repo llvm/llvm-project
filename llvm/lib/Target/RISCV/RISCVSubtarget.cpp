@@ -50,6 +50,16 @@ static cl::opt<unsigned> RVVVectorELENMax(
     cl::desc("The maximum ELEN value to use for fixed length vectors."),
     cl::init(64), cl::Hidden);
 
+static cl::opt<bool> RISCVDisableUsingConstantPoolForLargeInts(
+    "riscv-disable-using-constant-pool-for-large-ints",
+    cl::desc("Disable using constant pool for large integers."),
+    cl::init(false), cl::Hidden);
+
+static cl::opt<unsigned> RISCVMaxBuildIntsCost(
+    "riscv-max-build-ints-cost",
+    cl::desc("The maximum cost used for building integers."), cl::init(0),
+    cl::Hidden);
+
 void RISCVSubtarget::anchor() {}
 
 RISCVSubtarget &
@@ -108,6 +118,21 @@ const LegalizerInfo *RISCVSubtarget::getLegalizerInfo() const {
 
 const RegisterBankInfo *RISCVSubtarget::getRegBankInfo() const {
   return RegBankInfo.get();
+}
+
+bool RISCVSubtarget::useConstantPoolForLargeInts() const {
+  return !RISCVDisableUsingConstantPoolForLargeInts;
+}
+
+unsigned RISCVSubtarget::getMaxBuildIntsCost() const {
+  // Loading integer from constant pool needs two instructions (the reason why
+  // the minimum cost is 2): an address calculation instruction and a load
+  // instruction. Usually, address calculation and instructions used for
+  // building integers (addi, slli, etc.) can be done in one cycle, so here we
+  // set the default cost to (LoadLatency + 1) if no threshold is provided.
+  return RISCVMaxBuildIntsCost == 0
+             ? getSchedModel().LoadLatency + 1
+             : std::max<unsigned>(2, RISCVMaxBuildIntsCost);
 }
 
 unsigned RISCVSubtarget::getMaxRVVVectorSizeInBits() const {

@@ -264,16 +264,10 @@ define i64 @dont_fold_urem_i64(i64 %x) nounwind {
 ;
 ; RV64IM-LABEL: dont_fold_urem_i64:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    srli a1, a0, 1
-; RV64IM-NEXT:    lui a2, 2675
-; RV64IM-NEXT:    addiw a2, a2, -251
-; RV64IM-NEXT:    slli a2, a2, 13
-; RV64IM-NEXT:    addi a2, a2, 1839
-; RV64IM-NEXT:    slli a2, a2, 13
-; RV64IM-NEXT:    addi a2, a2, 167
-; RV64IM-NEXT:    slli a2, a2, 13
-; RV64IM-NEXT:    addi a2, a2, 1505
-; RV64IM-NEXT:    mulhu a1, a1, a2
+; RV64IM-NEXT:    lui a1, %hi(.LCPI6_0)
+; RV64IM-NEXT:    ld a1, %lo(.LCPI6_0)(a1)
+; RV64IM-NEXT:    srli a2, a0, 1
+; RV64IM-NEXT:    mulhu a1, a2, a1
 ; RV64IM-NEXT:    srli a1, a1, 4
 ; RV64IM-NEXT:    li a2, 98
 ; RV64IM-NEXT:    mul a1, a1, a2

@@ -5,9 +5,6 @@
 ; RUN:   | FileCheck -check-prefix=RV64IFD %s
 
 define double @double_imm() nounwind {
-; TODO: Should probably prefer fld or ld on RV64 rather than materialising an
-; expensive constant.
-;
 ; RV32IFD-LABEL: double_imm:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    lui a0, 345155
@@ -18,14 +15,8 @@ define double @double_imm() nounwind {
 ;
 ; RV64IFD-LABEL: double_imm:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    lui a0, 512
-; RV64IFD-NEXT:    addiw a0, a0, 1169
-; RV64IFD-NEXT:    slli a0, a0, 15
-; RV64IFD-NEXT:    addi a0, a0, -299
-; RV64IFD-NEXT:    slli a0, a0, 14
-; RV64IFD-NEXT:    addi a0, a0, 1091
-; RV64IFD-NEXT:    slli a0, a0, 12
-; RV64IFD-NEXT:    addi a0, a0, -744
+; RV64IFD-NEXT:    lui a0, %hi(.LCPI0_0)
+; RV64IFD-NEXT:    ld a0, %lo(.LCPI0_0)(a0)
 ; RV64IFD-NEXT:    ret
   ret double 3.1415926535897931159979634685441851615905761718750
 }

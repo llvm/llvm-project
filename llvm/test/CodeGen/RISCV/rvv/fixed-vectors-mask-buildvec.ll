@@ -469,14 +469,8 @@ define <64 x i1> @buildvec_mask_v64i1() {
 ;
 ; RV64-LMULMAX4-LABEL: buildvec_mask_v64i1:
 ; RV64-LMULMAX4:       # %bb.0:
-; RV64-LMULMAX4-NEXT:    lui a0, 1048429
-; RV64-LMULMAX4-NEXT:    addiw a0, a0, 1735
-; RV64-LMULMAX4-NEXT:    slli a0, a0, 13
-; RV64-LMULMAX4-NEXT:    addi a0, a0, 1023
-; RV64-LMULMAX4-NEXT:    slli a0, a0, 13
-; RV64-LMULMAX4-NEXT:    addi a0, a0, -1189
-; RV64-LMULMAX4-NEXT:    slli a0, a0, 17
-; RV64-LMULMAX4-NEXT:    addi a0, a0, 1776
+; RV64-LMULMAX4-NEXT:    lui a0, %hi(.LCPI19_0)
+; RV64-LMULMAX4-NEXT:    ld a0, %lo(.LCPI19_0)(a0)
 ; RV64-LMULMAX4-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; RV64-LMULMAX4-NEXT:    vmv.s.x v0, a0
 ; RV64-LMULMAX4-NEXT:    ret
@@ -496,14 +490,8 @@ define <64 x i1> @buildvec_mask_v64i1() {
 ;
 ; RV64-LMULMAX8-LABEL: buildvec_mask_v64i1:
 ; RV64-LMULMAX8:       # %bb.0:
-; RV64-LMULMAX8-NEXT:    lui a0, 1048429
-; RV64-LMULMAX8-NEXT:    addiw a0, a0, 1735
-; RV64-LMULMAX8-NEXT:    slli a0, a0, 13
-; RV64-LMULMAX8-NEXT:    addi a0, a0, 1023
-; RV64-LMULMAX8-NEXT:    slli a0, a0, 13
-; RV64-LMULMAX8-NEXT:    addi a0, a0, -1189
-; RV64-LMULMAX8-NEXT:    slli a0, a0, 17
-; RV64-LMULMAX8-NEXT:    addi a0, a0, 1776
+; RV64-LMULMAX8-NEXT:    lui a0, %hi(.LCPI19_0)
+; RV64-LMULMAX8-NEXT:    ld a0, %lo(.LCPI19_0)(a0)
 ; RV64-LMULMAX8-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; RV64-LMULMAX8-NEXT:    vmv.s.x v0, a0
 ; RV64-LMULMAX8-NEXT:    ret
@@ -613,23 +601,13 @@ define <128 x i1> @buildvec_mask_v128i1() {
 ;
 ; RV64-LMULMAX4-LABEL: buildvec_mask_v128i1:
 ; RV64-LMULMAX4:       # %bb.0:
-; RV64-LMULMAX4-NEXT:    lui a0, 841543
-; RV64-LMULMAX4-NEXT:    addiw a0, a0, 511
-; RV64-LMULMAX4-NEXT:    slli a0, a0, 14
-; RV64-LMULMAX4-NEXT:    addi a0, a0, 859
-; RV64-LMULMAX4-NEXT:    slli a0, a0, 17
-; RV64-LMULMAX4-NEXT:    addi a0, a0, 1776
+; RV64-LMULMAX4-NEXT:    lui a0, %hi(.LCPI20_0)
+; RV64-LMULMAX4-NEXT:    ld a0, %lo(.LCPI20_0)(a0)
+; RV64-LMULMAX4-NEXT:    lui a1, %hi(.LCPI20_1)
+; RV64-LMULMAX4-NEXT:    ld a1, %lo(.LCPI20_1)(a1)
 ; RV64-LMULMAX4-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
-; RV64-LMULMAX4-NEXT:    vmv.s.x v8, a0
-; RV64-LMULMAX4-NEXT:    lui a0, 1048429
-; RV64-LMULMAX4-NEXT:    addiw a0, a0, 1735
-; RV64-LMULMAX4-NEXT:    slli a0, a0, 13
-; RV64-LMULMAX4-NEXT:    addi a0, a0, 1023
-; RV64-LMULMAX4-NEXT:    slli a0, a0, 13
-; RV64-LMULMAX4-NEXT:    addi a0, a0, -1189
-; RV64-LMULMAX4-NEXT:    slli a0, a0, 17
-; RV64-LMULMAX4-NEXT:    addi a0, a0, 1776
 ; RV64-LMULMAX4-NEXT:    vmv.s.x v0, a0
+; RV64-LMULMAX4-NEXT:    vmv.s.x v8, a1
 ; RV64-LMULMAX4-NEXT:    ret
 ;
 ; RV32-LMULMAX8-LABEL: buildvec_mask_v128i1:
@@ -659,23 +637,13 @@ define <128 x i1> @buildvec_mask_v128i1() {
 ;
 ; RV64-LMULMAX8-LABEL: buildvec_mask_v128i1:
 ; RV64-LMULMAX8:       # %bb.0:
-; RV64-LMULMAX8-NEXT:    lui a0, 841543
-; RV64-LMULMAX8-NEXT:    addiw a0, a0, 511
-; RV64-LMULMAX8-NEXT:    slli a0, a0, 14
-; RV64-LMULMAX8-NEXT:    addi a0, a0, 859
-; RV64-LMULMAX8-NEXT:    slli a0, a0, 17
-; RV64-LMULMAX8-NEXT:    addi a0, a0, 1776
+; RV64-LMULMAX8-NEXT:    lui a0, %hi(.LCPI20_0)
+; RV64-LMULMAX8-NEXT:    ld a0, %lo(.LCPI20_0)(a0)
+; RV64-LMULMAX8-NEXT:    lui a1, %hi(.LCPI20_1)
+; RV64-LMULMAX8-NEXT:    ld a1, %lo(.LCPI20_1)(a1)
 ; RV64-LMULMAX8-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
 ; RV64-LMULMAX8-NEXT:    vmv.s.x v8, a0
-; RV64-LMULMAX8-NEXT:    lui a0, 1048429
-; RV64-LMULMAX8-NEXT:    addiw a0, a0, 1735
-; RV64-LMULMAX8-NEXT:    slli a0, a0, 13
-; RV64-LMULMAX8-NEXT:    addi a0, a0, 1023
-; RV64-LMULMAX8-NEXT:    slli a0, a0, 13
-; RV64-LMULMAX8-NEXT:    addi a0, a0, -1189
-; RV64-LMULMAX8-NEXT:    slli a0, a0, 17
-; RV64-LMULMAX8-NEXT:    addi a0, a0, 1776
-; RV64-LMULMAX8-NEXT:    vmv.s.x v0, a0
+; RV64-LMULMAX8-NEXT:    vmv.s.x v0, a1
 ; RV64-LMULMAX8-NEXT:    vsetvli zero, zero, e64, m1, tu, mu
 ; RV64-LMULMAX8-NEXT:    vslideup.vi v0, v8, 1
 ; RV64-LMULMAX8-NEXT:    ret
@@ -775,23 +743,13 @@ define <128 x i1> @buildvec_mask_optsize_v128i1() optsize {
 ;
 ; RV64-LMULMAX4-LABEL: buildvec_mask_optsize_v128i1:
 ; RV64-LMULMAX4:       # %bb.0:
-; RV64-LMULMAX4-NEXT:    lui a0, 841543
-; RV64-LMULMAX4-NEXT:    addiw a0, a0, 511
-; RV64-LMULMAX4-NEXT:    slli a0, a0, 14
-; RV64-LMULMAX4-NEXT:    addi a0, a0, 859
-; RV64-LMULMAX4-NEXT:    slli a0, a0, 17
-; RV64-LMULMAX4-NEXT:    addi a0, a0, 1776
+; RV64-LMULMAX4-NEXT:    lui a0, %hi(.LCPI21_0)
+; RV64-LMULMAX4-NEXT:    ld a0, %lo(.LCPI21_0)(a0)
+; RV64-LMULMAX4-NEXT:    lui a1, %hi(.LCPI21_1)
+; RV64-LMULMAX4-NEXT:    ld a1, %lo(.LCPI21_1)(a1)
 ; RV64-LMULMAX4-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
-; RV64-LMULMAX4-NEXT:    vmv.s.x v8, a0
-; RV64-LMULMAX4-NEXT:    lui a0, 1048429
-; RV64-LMULMAX4-NEXT:    addiw a0, a0, 1735
-; RV64-LMULMAX4-NEXT:    slli a0, a0, 13
-; RV64-LMULMAX4-NEXT:    addi a0, a0, 1023
-; RV64-LMULMAX4-NEXT:    slli a0, a0, 13
-; RV64-LMULMAX4-NEXT:    addi a0, a0, -1189
-; RV64-LMULMAX4-NEXT:    slli a0, a0, 17
-; RV64-LMULMAX4-NEXT:    addi a0, a0, 1776
 ; RV64-LMULMAX4-NEXT:    vmv.s.x v0, a0
+; RV64-LMULMAX4-NEXT:    vmv.s.x v8, a1
 ; RV64-LMULMAX4-NEXT:    ret
 ;
 ; RV32-LMULMAX8-LABEL: buildvec_mask_optsize_v128i1:

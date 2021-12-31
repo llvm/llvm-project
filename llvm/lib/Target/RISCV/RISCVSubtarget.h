@@ -157,6 +157,12 @@ public:
   const LegalizerInfo *getLegalizerInfo() const override;
   const RegisterBankInfo *getRegBankInfo() const override;
 
+  bool useConstantPoolForLargeInts() const;
+
+  // Maximum cost used for building integers, integers will be put into constant
+  // pool if exceeded.
+  unsigned getMaxBuildIntsCost() const;
+
   // Return the known range for the bit length of RVV data registers. A value
   // of 0 means nothing is known about that particular limit beyond what's
   // implied by the architecture.
