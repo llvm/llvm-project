@@ -93,7 +93,7 @@ TEST_F(OpenMPContextTest, ApplicabilityNonConstruct) {
   EXPECT_FALSE(isVariantApplicableInContext(DeviceArchArm, DeviceNVPTX));
 
   VariantMatchInfo LLVMHostUserCondTrue;
-  LLVMHostUserCondTrue.addTrait(TraitProperty::implementation_vendor_llvm, "");
+  LLVMHostUserCondTrue.addTrait(TraitProperty::implementation_vendor_amd, "");
   LLVMHostUserCondTrue.addTrait(TraitProperty::device_kind_host, "");
   LLVMHostUserCondTrue.addTrait(TraitProperty::device_kind_any, "");
   LLVMHostUserCondTrue.addTrait(TraitProperty::user_condition_true, "");
@@ -177,7 +177,7 @@ TEST_F(OpenMPContextTest, ApplicabilityAllTraits) {
 
     APInt Score(32, 1000);
     VariantMatchInfo LLVMHostUserCondTrue;
-    LLVMHostUserCondTrue.addTrait(TraitProperty::implementation_vendor_llvm,
+    LLVMHostUserCondTrue.addTrait(TraitProperty::implementation_vendor_amd,
                                   "");
     LLVMHostUserCondTrue.addTrait(TraitProperty::device_kind_host, "");
     LLVMHostUserCondTrue.addTrait(TraitProperty::device_kind_any, "");
@@ -237,7 +237,7 @@ TEST_F(OpenMPContextTest, ApplicabilityAllTraits) {
 
     VariantMatchInfo LLVMHostUserCondTrueParallel;
     LLVMHostUserCondTrueParallel.addTrait(
-        TraitProperty::implementation_vendor_llvm, "");
+        TraitProperty::implementation_vendor_amd, "");
     LLVMHostUserCondTrueParallel.addTrait(TraitProperty::device_kind_host, "");
     LLVMHostUserCondTrueParallel.addTrait(TraitProperty::device_kind_any, "");
     LLVMHostUserCondTrueParallel.addTrait(TraitProperty::user_condition_true,

@@ -73,9 +73,8 @@ OMPContext::OMPContext(bool IsDeviceCompilation, Triple TargetTriple) {
   //       The discussion on the list did not seem to have come to an agreed
   //       upon solution.
 
-  // LLVM is the "OpenMP vendor" but we could also interpret vendor as the
-  // target vendor.
-  ActiveTraits.set(unsigned(TraitProperty::implementation_vendor_llvm));
+  // AMD should be the "OpenMP Compiler vendor" for Rocmcc Unified compiler.
+  ActiveTraits.set(unsigned(TraitProperty::implementation_vendor_amd));
 
   // The user condition true is accepted but not false.
   ActiveTraits.set(unsigned(TraitProperty::user_condition_true));

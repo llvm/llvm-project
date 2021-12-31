@@ -10,7 +10,7 @@
 void func() {
   // Test where a valid when clause contains empty directive.
   // The directive will be ignored and code for a serial for loop will be generated.
-#pragma omp metadirective when(implementation = {vendor(llvm)} \
+#pragma omp metadirective when(implementation = {vendor(amd)} \
                                :) default(parallel for)
   for (int i = 0; i < N; i++)
     ;

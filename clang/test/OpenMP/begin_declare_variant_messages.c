@@ -66,7 +66,7 @@ const int var;
 #pragma omp end declare variant
 #pragma omp begin declare variant match(implementation={vendor(score(foo()) ibm)}) // expected-warning {{expected '':'' after the score expression; '':'' assumed}}
 #pragma omp end declare variant
-#pragma omp begin declare variant match(implementation={vendor(score(5): ibm), vendor(llvm)}) // expected-warning {{the context selector 'vendor' was used already in the same 'omp declare variant' directive; selector ignored}} expected-note {{the previous context selector 'vendor' used here}} expected-note {{the ignored selector spans until here}}
+#pragma omp begin declare variant match(implementation={vendor(score(5): ibm), vendor(amd)}) // expected-warning {{the context selector 'vendor' was used already in the same 'omp declare variant' directive; selector ignored}} expected-note {{the previous context selector 'vendor' used here}} expected-note {{the ignored selector spans until here}}
 #pragma omp end declare variant
 #pragma omp begin declare variant match(implementation={vendor(score(5): ibm), kind(cpu)}) // expected-warning {{the context selector 'kind' is not valid for the context set 'implementation'; selector ignored}} expected-note {{the context selector 'kind' can be nested in the context set 'device'; try 'match(device={kind(property)})'}} expected-note {{the ignored selector spans until here}}
 #pragma omp end declare variant
@@ -86,9 +86,9 @@ const int var;
 #pragma omp end declare variant
 #pragma omp begin declare variant match(device={kind(score(foo()) ibm)}) // expected-warning {{expected '':'' after the score expression; '':'' assumed}} expected-warning {{the context selector 'kind' in the context set 'device' cannot have a score ('foo()'); score ignored}} expected-warning {{'ibm' is not a valid context property for the context selector 'kind' and the context set 'device'; property ignored}} expected-note {{try 'match(implementation={vendor(ibm)})'}} expected-note {{the ignored property spans until here}}
 #pragma omp end declare variant
-#pragma omp begin declare variant match(device={kind(score(5): host), kind(llvm)}) // expected-warning {{the context selector 'kind' in the context set 'device' cannot have a score ('5'); score ignored}} expected-warning {{the context selector 'kind' was used already in the same 'omp declare variant' directive; selector ignored}} expected-note {{the previous context selector 'kind' used here}} expected-note {{the ignored selector spans until here}}
+#pragma omp begin declare variant match(device={kind(score(5): host), kind(amd)}) // expected-warning {{the context selector 'kind' in the context set 'device' cannot have a score ('5'); score ignored}} expected-warning {{the context selector 'kind' was used already in the same 'omp declare variant' directive; selector ignored}} expected-note {{the previous context selector 'kind' used here}} expected-note {{the ignored selector spans until here}}
 #pragma omp end declare variant
-#pragma omp begin declare variant match(device={kind(score(5): nohost), vendor(llvm)}) // expected-warning {{the context selector 'kind' in the context set 'device' cannot have a score ('5'); score ignored}} expected-warning {{the context selector 'vendor' is not valid for the context set 'device'; selector ignored}} expected-note {{the context selector 'vendor' can be nested in the context set 'implementation'; try 'match(implementation={vendor(property)})'}} expected-note {{the ignored selector spans until here}}
+#pragma omp begin declare variant match(device={kind(score(5): nohost), vendor(amd)}) // expected-warning {{the context selector 'kind' in the context set 'device' cannot have a score ('5'); score ignored}} expected-warning {{the context selector 'vendor' is not valid for the context set 'device'; selector ignored}} expected-note {{the context selector 'vendor' can be nested in the context set 'implementation'; try 'match(implementation={vendor(property)})'}} expected-note {{the ignored selector spans until here}}
 #pragma omp end declare variant
 #pragma omp begin declare variant match(device = {kind(score(foo()): cpu}) // expected-error {{expected ')'}} expected-warning {{the context selector 'kind' in the context set 'device' cannot have a score ('foo()'); score ignored}} expected-note {{to match this '('}}
 #pragma omp end declare variant
@@ -97,11 +97,11 @@ const int var;
 #pragma omp begin declare variant match(device = {kind(score(foo()): cpu)} // expected-error {{expected ')'}} expected-warning {{the context selector 'kind' in the context set 'device' cannot have a score ('foo()'); score ignored}} expected-note {{to match this '('}}
 #pragma omp end declare variant
 
-#pragma omp begin declare variant match(implementation = {vendor(score(foo) :llvm)})
+#pragma omp begin declare variant match(implementation = {vendor(score(foo) :amd)})
 #pragma omp end declare variant
-#pragma omp begin declare variant match(implementation = {vendor(score(foo()) :llvm)})
+#pragma omp begin declare variant match(implementation = {vendor(score(foo()) :amd)})
 #pragma omp end declare variant
-#pragma omp begin declare variant match(implementation = {vendor(score(<expr>) :llvm)}) // expected-error {{expected expression}} expected-error {{use of undeclared identifier 'expr'}} expected-error {{expected expression}}
+#pragma omp begin declare variant match(implementation = {vendor(score(<expr>) :amd)}) // expected-error {{expected expression}} expected-error {{use of undeclared identifier 'expr'}} expected-error {{expected expression}}
 #pragma omp end declare variant
 #pragma omp begin declare variant match(user = {condition(foo)})
 #pragma omp end declare variant

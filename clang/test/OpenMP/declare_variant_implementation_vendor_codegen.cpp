@@ -24,23 +24,23 @@
 
 int foo() { return 2; }
 
-#pragma omp declare variant(foo) match(implementation = {vendor(llvm)})
+#pragma omp declare variant(foo) match(implementation = {vendor(amd)})
 int bar() { return 3; }
 
 int bazzz();
-#pragma omp declare variant(bazzz) match(implementation = {vendor(llvm)})
+#pragma omp declare variant(bazzz) match(implementation = {vendor(amd)})
 int baz() { return 4; }
 
 int test();
-#pragma omp declare variant(test) match(implementation = {vendor(llvm)})
+#pragma omp declare variant(test) match(implementation = {vendor(amd)})
 int call() { return 5; }
 
 static int stat_unused_();
-#pragma omp declare variant(stat_unused_) match(implementation = {vendor(llvm)})
+#pragma omp declare variant(stat_unused_) match(implementation = {vendor(amd)})
 static int stat_unused() { return 6; }
 
 static int stat_used_();
-#pragma omp declare variant(stat_used_) match(implementation = {vendor(llvm)})
+#pragma omp declare variant(stat_used_) match(implementation = {vendor(amd)})
 static int stat_used() { return 7; }
 
 int main() { return bar() + baz() + call() + stat_used(); }
@@ -56,10 +56,10 @@ struct SpecialFuncs {
 
   int method_() { return 11; }
 #pragma omp declare variant(SpecialFuncs::method_)                             \
-    match(implementation = {vendor(llvm)})
+    match(implementation = {vendor(amd)})
   int method() { return 12; }
 #pragma omp declare variant(SpecialFuncs::method_)                             \
-    match(implementation = {vendor(llvm)})
+    match(implementation = {vendor(amd)})
   int Method();
 } s;
 
@@ -72,10 +72,10 @@ struct SpecSpecialFuncs {
 
   int method_();
 #pragma omp declare variant(SpecSpecialFuncs::method_)                         \
-    match(implementation = {vendor(llvm)})
+    match(implementation = {vendor(amd)})
   int method() { return 14; }
 #pragma omp declare variant(SpecSpecialFuncs::method_)                         \
-    match(implementation = {vendor(llvm)})
+    match(implementation = {vendor(amd)})
   int Method();
 } s1;
 
@@ -90,33 +90,33 @@ void xxx() {
 int prio() { return 17; }
 int prio1() { return 18; }
 
-#pragma omp declare variant(prio) match(implementation = {vendor(llvm)})
-#pragma omp declare variant(prio1) match(implementation = {vendor(score(1): llvm)})
+#pragma omp declare variant(prio) match(implementation = {vendor(amd)})
+#pragma omp declare variant(prio1) match(implementation = {vendor(score(1): amd)})
 int prio_() { return 19; }
 
 static int prio2() { return 20; }
 static int prio3() { return 21; }
 static int prio4() { return 22; }
 
-#pragma omp declare variant(prio4) match(implementation = {vendor(score(3): llvm)})
-#pragma omp declare variant(prio2) match(implementation = {vendor(score(5): llvm)})
-#pragma omp declare variant(prio3) match(implementation = {vendor(score(1): llvm)})
+#pragma omp declare variant(prio4) match(implementation = {vendor(score(3): amd)})
+#pragma omp declare variant(prio2) match(implementation = {vendor(score(5): amd)})
+#pragma omp declare variant(prio3) match(implementation = {vendor(score(1): amd)})
 static int prio1_() { return 23; }
 
 int int_fn() { return prio1_(); }
 
 int fn_linkage_variant() { return 24; }
 extern "C" {
-#pragma omp declare variant(fn_linkage_variant) match(implementation = {vendor(llvm)})
+#pragma omp declare variant(fn_linkage_variant) match(implementation = {vendor(amd)})
 int fn_linkage() { return 25; }
 }
 
 extern "C" int fn_linkage_variant1() { return 26; }
-#pragma omp declare variant(fn_linkage_variant1) match(implementation = {vendor(llvm)})
+#pragma omp declare variant(fn_linkage_variant1) match(implementation = {vendor(amd)})
 int fn_linkage1() { return 27; }
 
 int fn_variant2() { return 28; }
-#pragma omp declare variant(fn_variant2) match(implementation = {vendor(llvm, ibm)})
+#pragma omp declare variant(fn_variant2) match(implementation = {vendor(amd, ibm)})
 int fn2() { return 29; }
 
 #endif // HEADER
