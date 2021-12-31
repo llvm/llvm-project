@@ -172,12 +172,11 @@ define <4 x i32> @build_vec_v4i32_3_binops(<2 x i32> %v0, <2 x i32> %v1) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> [[TMP2]], <2 x i32> <i32 1, i32 2>
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> [[TMP2]], <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor <2 x i32> [[V0]], [[V1]]
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP5]], <2 x i32> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = xor <2 x i32> [[V0]], [[V1]]
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i32> [[TMP7]], <2 x i32> poison, <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP9:%.*]] = add <2 x i32> [[TMP4]], [[TMP3]]
-; CHECK-NEXT:    [[TMP10:%.*]] = add <2 x i32> [[TMP6]], [[TMP8]]
-; CHECK-NEXT:    [[TMP3_31:%.*]] = shufflevector <2 x i32> [[TMP9]], <2 x i32> [[TMP10]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[TMP5]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP6:%.*]] = xor <2 x i32> [[V0]], [[V1]]
+; CHECK-NEXT:    [[TMP7:%.*]] = add <2 x i32> [[TMP4]], [[TMP3]]
+; CHECK-NEXT:    [[TMP8:%.*]] = add <2 x i32> [[SHUFFLE]], [[TMP6]]
+; CHECK-NEXT:    [[TMP3_31:%.*]] = shufflevector <2 x i32> [[TMP7]], <2 x i32> [[TMP8]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    ret <4 x i32> [[TMP3_31]]
 ;
   %v0.0 = extractelement <2 x i32> %v0, i32 0
