@@ -190,6 +190,55 @@ entry:
   ret <vscale x 1 x i64> %y
 }
 
+define <vscale x 1 x double> @test10(<vscale x 1 x double> %a, double %b) nounwind {
+; CHECK-LABEL: test10:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    fmv.d.x ft0, a0
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, tu, mu
+; CHECK-NEXT:    vfmv.s.f v8, ft0
+; CHECK-NEXT:    ret
+entry:
+  %x = tail call i64 @llvm.riscv.vsetvlimax(i64 3, i64 0)
+  %y = call <vscale x 1 x double> @llvm.riscv.vfmv.s.f.nxv1f64(
+    <vscale x 1 x double> %a, double %b, i64 1)
+  ret <vscale x 1 x double> %y
+}
+
+define <vscale x 1 x double> @test11(<vscale x 1 x double> %a, double %b) nounwind {
+; CHECK-LABEL: test11:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    fmv.d.x ft0, a0
+; CHECK-NEXT:    vsetivli a0, 6, e64, m1, tu, mu
+; CHECK-NEXT:    vfmv.s.f v8, ft0
+; CHECK-NEXT:    ret
+entry:
+  %x = tail call i64 @llvm.riscv.vsetvli(i64 6, i64 3, i64 0)
+  %y = call <vscale x 1 x double> @llvm.riscv.vfmv.s.f.nxv1f64(
+    <vscale x 1 x double> %a, double %b, i64 2)
+  ret <vscale x 1 x double> %y
+}
+
+define <vscale x 1 x double> @test12(<vscale x 1 x double> %a, double %b, <vscale x 1 x i1> %mask) nounwind {
+; CHECK-LABEL: test12:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    fmv.d.x ft0, a0
+; CHECK-NEXT:    vsetivli zero, 9, e64, m1, tu, mu
+; CHECK-NEXT:    vfadd.vv v8, v8, v8, v0.t
+; CHECK-NEXT:    vfmv.s.f v8, ft0
+; CHECK-NEXT:    ret
+entry:
+  %x = call <vscale x 1 x double> @llvm.riscv.vfadd.mask.nxv1f64.f64(
+    <vscale x 1 x double> %a,
+    <vscale x 1 x double> %a,
+    <vscale x 1 x double> %a,
+    <vscale x 1 x i1> %mask,
+    i64 9,
+    i64 0)
+  %y = call <vscale x 1 x double> @llvm.riscv.vfmv.s.f.nxv1f64(
+    <vscale x 1 x double> %x, double %b, i64 2)
+  ret <vscale x 1 x double> %y
+}
+
 declare <vscale x 1 x i64> @llvm.riscv.vadd.mask.nxv1i64.nxv1i64(
   <vscale x 1 x i64>,
   <vscale x 1 x i64>,
@@ -198,10 +247,24 @@ declare <vscale x 1 x i64> @llvm.riscv.vadd.mask.nxv1i64.nxv1i64(
   i64,
   i64);
 
+declare <vscale x 1 x double> @llvm.riscv.vfadd.mask.nxv1f64.f64(
+  <vscale x 1 x double>,
+  <vscale x 1 x double>,
+  <vscale x 1 x double>,
+  <vscale x 1 x i1>,
+  i64,
+  i64);
+
 declare <vscale x 1 x i64> @llvm.riscv.vmv.s.x.nxv1i64(
   <vscale x 1 x i64>,
   i64,
   i64);
+
+declare <vscale x 1 x double> @llvm.riscv.vfmv.s.f.nxv1f64
+  (<vscale x 1 x double>,
+  double,
+  i64)
+
 declare i64 @llvm.riscv.vsetvli.i64(i64, i64 immarg, i64 immarg)
 declare <vscale x 2 x i32> @llvm.riscv.vle.nxv2i32.i64(<vscale x 2 x i32>* nocapture, i64)
 declare <vscale x 2 x i1> @llvm.riscv.vmslt.nxv2i32.i32.i64(<vscale x 2 x i32>, i32, i64)
