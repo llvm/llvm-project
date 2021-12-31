@@ -30,7 +30,6 @@
 namespace llvm {
 // Forward declarations.
 class MachineRegisterInfo;
-class TargetTransformInfo;
 namespace GISelAddressing {
 /// Helper struct to store a base, index and offset that forms an address
 struct BaseIndexOffset {

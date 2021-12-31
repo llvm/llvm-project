@@ -10,7 +10,6 @@
 #define LLVM_CODEGEN_MACHINELOOPUTILS_H
 
 namespace llvm {
-class MachineLoop;
 class MachineBasicBlock;
 class MachineRegisterInfo;
 class TargetInstrInfo;

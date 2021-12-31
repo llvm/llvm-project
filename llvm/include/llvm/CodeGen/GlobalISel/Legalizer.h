@@ -25,7 +25,6 @@
 
 namespace llvm {
 
-class MachineRegisterInfo;
 class LostDebugLocObserver;
 
 class Legalizer : public MachineFunctionPass {
