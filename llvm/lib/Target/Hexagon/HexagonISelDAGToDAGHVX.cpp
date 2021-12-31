@@ -230,8 +230,7 @@ bool Coloring::color() {
       WorkQ.push_back(N);
   }
 
-  for (unsigned I = 0; I < WorkQ.size(); ++I) {
-    Node N = WorkQ[I];
+  for (Node N : WorkQ) {
     NodeSet &Ns = Edges[N];
     auto P = getUniqueColor(Ns);
     if (P.first) {
@@ -270,8 +269,7 @@ bool Coloring::color() {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void Coloring::dump() const {
   dbgs() << "{ Order:   {";
-  for (unsigned I = 0; I != Order.size(); ++I) {
-    Node P = Order[I];
+  for (Node P : Order) {
     if (P != Ignore)
       dbgs() << ' ' << P;
     else
@@ -761,8 +759,7 @@ void ResultStack::print(raw_ostream &OS, const SelectionDAG &G) const {
 namespace {
 struct ShuffleMask {
   ShuffleMask(ArrayRef<int> M) : Mask(M) {
-    for (unsigned I = 0, E = Mask.size(); I != E; ++I) {
-      int M = Mask[I];
+    for (int M : Mask) {
       if (M == -1)
         continue;
       MinSrc = (MinSrc == -1) ? M : std::min(MinSrc, M);
@@ -935,8 +932,7 @@ static SmallVector<unsigned, 4> getInputSegmentList(ShuffleMask SM,
   unsigned Shift = Log2_32(SegLen);
   BitVector Segs(alignTo(SM.MaxSrc + 1, SegLen) >> Shift);
 
-  for (int I = 0, E = SM.Mask.size(); I != E; ++I) {
-    int M = SM.Mask[I];
+  for (int M : SM.Mask) {
     if (M >= 0)
       Segs.set(M >> Shift);
   }
