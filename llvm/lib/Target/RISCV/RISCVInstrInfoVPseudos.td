@@ -2384,35 +2384,35 @@ multiclass VPseudoConversionW_V {
 
 multiclass VPseudoVWCVTI_V {
   defvar constraint = "@earlyclobber $rd";
-  foreach m = MxList[0-5] in
+  foreach m = MxListW in
     defm _V : VPseudoConversion<m.wvrclass, m.vrclass, m, constraint>,
               Sched<[WriteVFWCvtFToIV, ReadVFWCvtFToIV, ReadVMask]>;
 }
 
 multiclass VPseudoVWCVTF_V {
   defvar constraint = "@earlyclobber $rd";
-  foreach m = MxList[0-5] in
+  foreach m = MxListW in
     defm _V : VPseudoConversion<m.wvrclass, m.vrclass, m, constraint>,
               Sched<[WriteVFWCvtIToFV, ReadVFWCvtIToFV, ReadVMask]>;
 }
 
 multiclass VPseudoVWCVTD_V {
   defvar constraint = "@earlyclobber $rd";
-  foreach m = MxList[0-5] in
+  foreach m = MxListW in
     defm _V : VPseudoConversion<m.wvrclass, m.vrclass, m, constraint>,
               Sched<[WriteVFWCvtFToFV, ReadVFWCvtFToFV, ReadVMask]>;
 }
 
 multiclass VPseudoVNCVTI_W {
   defvar constraint = "@earlyclobber $rd";
-  foreach m = MxList[0-5] in
+  foreach m = MxListW in
     defm _W : VPseudoConversion<m.vrclass, m.wvrclass, m, constraint>,
               Sched<[WriteVFNCvtFToIV, ReadVFNCvtFToIV, ReadVMask]>;
 }
 
 multiclass VPseudoVNCVTF_W {
   defvar constraint = "@earlyclobber $rd";
-  foreach m = MxList[0-5] in
+  foreach m = MxListW in
     defm _W : VPseudoConversion<m.vrclass, m.wvrclass, m, constraint>,
               Sched<[WriteVFNCvtIToFV, ReadVFNCvtIToFV, ReadVMask]>;
 }
