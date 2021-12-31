@@ -20,6 +20,7 @@
     __cpp_lib_constexpr_algorithms           201806L [C++20]
     __cpp_lib_parallel_algorithm             201603L [C++17]
     __cpp_lib_ranges                         201811L [C++20]
+    __cpp_lib_ranges_starts_ends_with        202106L [C++2b]
     __cpp_lib_robust_nonmodifying_seq_ops    201304L [C++14]
     __cpp_lib_sample                         201603L [C++17]
     __cpp_lib_shift                          201806L [C++20]
@@ -44,6 +45,10 @@
 
 # ifdef __cpp_lib_ranges
 #   error "__cpp_lib_ranges should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_ranges_starts_ends_with
+#   error "__cpp_lib_ranges_starts_ends_with should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_robust_nonmodifying_seq_ops
@@ -74,6 +79,10 @@
 
 # ifdef __cpp_lib_ranges
 #   error "__cpp_lib_ranges should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_ranges_starts_ends_with
+#   error "__cpp_lib_ranges_starts_ends_with should not be defined before c++2b"
 # endif
 
 # ifndef __cpp_lib_robust_nonmodifying_seq_ops
@@ -119,6 +128,10 @@
 
 # ifdef __cpp_lib_ranges
 #   error "__cpp_lib_ranges should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_ranges_starts_ends_with
+#   error "__cpp_lib_ranges_starts_ends_with should not be defined before c++2b"
 # endif
 
 # ifndef __cpp_lib_robust_nonmodifying_seq_ops
@@ -181,6 +194,10 @@
 #   endif
 # endif
 
+# ifdef __cpp_lib_ranges_starts_ends_with
+#   error "__cpp_lib_ranges_starts_ends_with should not be defined before c++2b"
+# endif
+
 # ifndef __cpp_lib_robust_nonmodifying_seq_ops
 #   error "__cpp_lib_robust_nonmodifying_seq_ops should be defined in c++20"
 # endif
@@ -241,6 +258,19 @@
 # else // _LIBCPP_VERSION
 #   ifdef __cpp_lib_ranges
 #     error "__cpp_lib_ranges should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_ranges_starts_ends_with
+#     error "__cpp_lib_ranges_starts_ends_with should be defined in c++2b"
+#   endif
+#   if __cpp_lib_ranges_starts_ends_with != 202106L
+#     error "__cpp_lib_ranges_starts_ends_with should have the value 202106L in c++2b"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_ranges_starts_ends_with
+#     error "__cpp_lib_ranges_starts_ends_with should not be defined because it is unimplemented in libc++!"
 #   endif
 # endif
 

@@ -21,6 +21,7 @@
     __cpp_lib_exchange_function               201304L [C++14]
     __cpp_lib_integer_comparison_functions    202002L [C++20]
     __cpp_lib_integer_sequence                201304L [C++14]
+    __cpp_lib_ranges_zip                      202110L [C++2b]
     __cpp_lib_to_underlying                   202102L [C++2b]
     __cpp_lib_tuples_by_type                  201304L [C++14]
 */
@@ -48,6 +49,10 @@
 
 # ifdef __cpp_lib_integer_sequence
 #   error "__cpp_lib_integer_sequence should not be defined before c++14"
+# endif
+
+# ifdef __cpp_lib_ranges_zip
+#   error "__cpp_lib_ranges_zip should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_to_underlying
@@ -84,6 +89,10 @@
 # endif
 # if __cpp_lib_integer_sequence != 201304L
 #   error "__cpp_lib_integer_sequence should have the value 201304L in c++14"
+# endif
+
+# ifdef __cpp_lib_ranges_zip
+#   error "__cpp_lib_ranges_zip should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_to_underlying
@@ -126,6 +135,10 @@
 # endif
 # if __cpp_lib_integer_sequence != 201304L
 #   error "__cpp_lib_integer_sequence should have the value 201304L in c++17"
+# endif
+
+# ifdef __cpp_lib_ranges_zip
+#   error "__cpp_lib_ranges_zip should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_to_underlying
@@ -182,6 +195,10 @@
 #   error "__cpp_lib_integer_sequence should have the value 201304L in c++20"
 # endif
 
+# ifdef __cpp_lib_ranges_zip
+#   error "__cpp_lib_ranges_zip should not be defined before c++2b"
+# endif
+
 # ifdef __cpp_lib_to_underlying
 #   error "__cpp_lib_to_underlying should not be defined before c++2b"
 # endif
@@ -234,6 +251,19 @@
 # endif
 # if __cpp_lib_integer_sequence != 201304L
 #   error "__cpp_lib_integer_sequence should have the value 201304L in c++2b"
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_ranges_zip
+#     error "__cpp_lib_ranges_zip should be defined in c++2b"
+#   endif
+#   if __cpp_lib_ranges_zip != 202110L
+#     error "__cpp_lib_ranges_zip should have the value 202110L in c++2b"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_ranges_zip
+#     error "__cpp_lib_ranges_zip should not be defined because it is unimplemented in libc++!"
+#   endif
 # endif
 
 # ifndef __cpp_lib_to_underlying
