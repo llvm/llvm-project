@@ -2258,12 +2258,19 @@ static Value *simplifyOrLogic(Value *X, Value *Y) {
       match(Y, m_Not(m_c_Or(m_Specific(A), m_Specific(B)))))
     return NotA;
 
-  // ~(A ^ B) | (A & B) --> ~(A & B)
-  // ~(A ^ B) | (B & A) --> ~(A & B)
+  // ~(A ^ B) | (A & B) --> ~(A ^ B)
+  // ~(A ^ B) | (B & A) --> ~(A ^ B)
   Value *NotAB;
   if (match(X, m_CombineAnd(m_NotForbidUndef(m_Xor(m_Value(A), m_Value(B))),
                             m_Value(NotAB))) &&
       match(Y, m_c_And(m_Specific(A), m_Specific(B))))
+    return NotAB;
+
+  // ~(A & B) | (A ^ B) --> ~(A & B)
+  // ~(A & B) | (B ^ A) --> ~(A & B)
+  if (match(X, m_CombineAnd(m_NotForbidUndef(m_And(m_Value(A), m_Value(B))),
+                            m_Value(NotAB))) &&
+      match(Y, m_c_Xor(m_Specific(A), m_Specific(B))))
     return NotAB;
 
   return nullptr;
