@@ -43,7 +43,6 @@ class BlockFrequencyInfo;
 class DominatorTree;
 class BranchInst;
 class CallBase;
-class ExtractElementInst;
 class Function;
 class GlobalValue;
 class InstCombiner;
