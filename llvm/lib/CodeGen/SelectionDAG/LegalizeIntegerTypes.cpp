@@ -1704,7 +1704,7 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
 
 /// PromoteSetCCOperands - Promote the operands of a comparison.  This code is
 /// shared among BR_CC, SELECT_CC, and SETCC handlers.
-void DAGTypeLegalizer::PromoteSetCCOperands(SDValue &NewLHS,SDValue &NewRHS,
+void DAGTypeLegalizer::PromoteSetCCOperands(SDValue &LHS, SDValue &RHS,
                                             ISD::CondCode CCCode) {
   // We have to insert explicit sign or zero extends. Note that we could
   // insert sign extends for ALL conditions. For those operations where either
@@ -1714,22 +1714,22 @@ void DAGTypeLegalizer::PromoteSetCCOperands(SDValue &NewLHS,SDValue &NewRHS,
   default: llvm_unreachable("Unknown integer comparison!");
   case ISD::SETEQ:
   case ISD::SETNE: {
-    SDValue OpL = GetPromotedInteger(NewLHS);
-    SDValue OpR = GetPromotedInteger(NewRHS);
+    SDValue OpL = GetPromotedInteger(LHS);
+    SDValue OpR = GetPromotedInteger(RHS);
 
     // We would prefer to promote the comparison operand with sign extension.
     // If the width of OpL/OpR excluding the duplicated sign bits is no greater
-    // than the width of NewLHS/NewRH, we can avoid inserting real truncate
+    // than the width of LHS/RHS, we can avoid inserting real truncate
     // instruction, which is redundant eventually.
     unsigned OpLEffectiveBits = DAG.ComputeMinSignedBits(OpL);
     unsigned OpREffectiveBits = DAG.ComputeMinSignedBits(OpR);
-    if (OpLEffectiveBits <= NewLHS.getScalarValueSizeInBits() &&
-        OpREffectiveBits <= NewRHS.getScalarValueSizeInBits()) {
-      NewLHS = OpL;
-      NewRHS = OpR;
+    if (OpLEffectiveBits <= LHS.getScalarValueSizeInBits() &&
+        OpREffectiveBits <= RHS.getScalarValueSizeInBits()) {
+      LHS = OpL;
+      RHS = OpR;
     } else {
-      NewLHS = SExtOrZExtPromotedInteger(NewLHS);
-      NewRHS = SExtOrZExtPromotedInteger(NewRHS);
+      LHS = SExtOrZExtPromotedInteger(LHS);
+      RHS = SExtOrZExtPromotedInteger(RHS);
     }
     break;
   }
@@ -1737,15 +1737,15 @@ void DAGTypeLegalizer::PromoteSetCCOperands(SDValue &NewLHS,SDValue &NewRHS,
   case ISD::SETUGT:
   case ISD::SETULE:
   case ISD::SETULT:
-    NewLHS = SExtOrZExtPromotedInteger(NewLHS);
-    NewRHS = SExtOrZExtPromotedInteger(NewRHS);
+    LHS = SExtOrZExtPromotedInteger(LHS);
+    RHS = SExtOrZExtPromotedInteger(RHS);
     break;
   case ISD::SETGE:
   case ISD::SETGT:
   case ISD::SETLT:
   case ISD::SETLE:
-    NewLHS = SExtPromotedInteger(NewLHS);
-    NewRHS = SExtPromotedInteger(NewRHS);
+    LHS = SExtPromotedInteger(LHS);
+    RHS = SExtPromotedInteger(RHS);
     break;
   }
 }
