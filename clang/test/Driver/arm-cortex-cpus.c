@@ -369,6 +369,23 @@
 // RUN: %clang -target arm -march=armebv8.7-a -mbig-endian -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-V87A %s
 // CHECK-BE-V87A: "-cc1"{{.*}} "-triple" "armebv8.7{{.*}}" "-target-cpu" "generic"
 
+// RUN: %clang -target armv8.8a -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-V88A %s
+// RUN: %clang -target arm -march=armv8.8a -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-V88A %s
+// RUN: %clang -target arm -march=armv8.8-a -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-V88A %s
+// RUN: %clang -target arm -march=armv8.8a -mlittle-endian -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-V88A %s
+// RUN: %clang -target armv8.8a -mlittle-endian -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-V88A %s
+// RUN: %clang -target arm -march=armv8.8a -mlittle-endian -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-V88A %s
+// RUN: %clang -target arm -mlittle-endian -march=armv8.8-a -mlittle-endian -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-V88A %s
+// CHECK-V88A: "-cc1"{{.*}} "-triple" "armv8.8{{.*}}" "-target-cpu" "generic"
+
+// RUN: %clang -target armebv8.8a -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-V88A %s
+// RUN: %clang -target armv8.8a -mbig-endian -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-V88A %s
+// RUN: %clang -target armeb -march=armebv8.8a -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-V88A %s
+// RUN: %clang -target armeb -march=armebv8.8-a -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-V88A %s
+// RUN: %clang -target arm -march=armebv8.8a -mbig-endian -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-V88A %s
+// RUN: %clang -target arm -march=armebv8.8-a -mbig-endian -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-V88A %s
+// CHECK-BE-V88A: "-cc1"{{.*}} "-triple" "armebv8.8{{.*}}" "-target-cpu" "generic"
+
 // RUN: %clang -target armv9a -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-V9A %s
 // RUN: %clang -target arm -march=armv9a -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-V9A %s
 // RUN: %clang -target arm -march=armv9-a -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-V9A %s
