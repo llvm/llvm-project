@@ -38,6 +38,12 @@ public:
                     const InputInfo &Output, const InputInfoList &Inputs,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
+private:
+  void addWaveSizeToFlangArgs(const llvm::opt::ArgList &DriverArgs,
+                         llvm::opt::ArgStringList &FlangArgs) const;
+
+  void addTargetArchToFlangArgs(const llvm::opt::ArgList &DriverArgs,
+                         llvm::opt::ArgStringList &FlangArgs) const;
 };
 
 } // end namespace tools

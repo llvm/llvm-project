@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDFlang.h"
+#include "AMDGPU.h"
 #include "CommonArgs.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/LangOptions.h"
@@ -1058,6 +1059,10 @@ if(Args.getAllArgValues(options::OPT_fopenmp_targets_EQ).size() > 0) {
       LowerCmdArgs.push_back(Args.MakeArgString(OutFile));
       LowerCmdArgs.push_back("-asm");
       LowerCmdArgs.push_back(Args.MakeArgString(TargetInfoAsm.str()));
+
+      addWaveSizeToFlangArgs(Args, LowerCmdArgs);
+      addTargetArchToFlangArgs(Args, LowerCmdArgs);
+
     } else {
       LowerCmdArgs.push_back("-fopenmp-targets-asm");
       LowerCmdArgs.push_back(Args.MakeArgString(TargetInfoAsm.str()));
@@ -1072,6 +1077,27 @@ if(Args.getAllArgValues(options::OPT_fopenmp_targets_EQ).size() > 0) {
   C.addCommand(std::make_unique<Command>(
       JA, *this, ResponseFileSupport::AtFileCurCP(), LowerExec, LowerCmdArgs,
       Inputs, InputInfo(&JA, Args.MakeArgString(OutFile))));
+}
+
+void AMDFlang::addWaveSizeToFlangArgs(const llvm::opt::ArgList &DriverArgs,
+    llvm::opt::ArgStringList &FlangArgs) const {
+
+  auto Kind = llvm::AMDGPU::parseArchAMDGCN(StringRef(getToolChain().getTargetID()));
+  FlangArgs.push_back("-warp_size");
+  if(toolchains::AMDGPUToolChain::isWave64(DriverArgs, Kind)) {
+    FlangArgs.push_back("64");
+  }else {
+    FlangArgs.push_back("32");
+  }
+}
+
+void AMDFlang::addTargetArchToFlangArgs(const llvm::opt::ArgList &DriverArgs,
+    llvm::opt::ArgStringList &FlangArgs) const {
+
+  for (auto Arg : DriverArgs.filtered(options::OPT_march_EQ) ) {
+    FlangArgs.push_back("-march");
+    FlangArgs.push_back(Arg->getValue(0));
+  }
 }
 
 AMDFlang::AMDFlang(const ToolChain &TC) : Tool("flang", "flang frontend", TC) {}
