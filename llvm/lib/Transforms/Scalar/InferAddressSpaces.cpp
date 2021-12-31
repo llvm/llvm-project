@@ -250,12 +250,6 @@ public:
 
 char InferAddressSpaces::ID = 0;
 
-namespace llvm {
-
-void initializeInferAddressSpacesPass(PassRegistry &);
-
-} // end namespace llvm
-
 INITIALIZE_PASS_BEGIN(InferAddressSpaces, DEBUG_TYPE, "Infer address spaces",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
