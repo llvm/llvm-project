@@ -175,6 +175,10 @@ lldb::ProcessSP PlatformQemuUser::DebugProcess(ProcessLaunchInfo &launch_info,
   } while (FileSystem::Instance().Exists(socket_path));
 
   Args args({qemu.GetPath(), "-g", socket_path});
+  if (!launch_info.GetArg0().empty()) {
+    args.AppendArgument("-0");
+    args.AppendArgument(launch_info.GetArg0());
+  }
   args.AppendArguments(GetGlobalProperties().GetEmulatorArgs());
   args.AppendArgument("--");
   args.AppendArgument(launch_info.GetExecutableFile().GetPath());
