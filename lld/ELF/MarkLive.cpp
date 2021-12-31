@@ -68,8 +68,8 @@ private:
   SmallVector<InputSection *, 0> queue;
 
   // There are normally few input sections whose names are valid C
-  // identifiers, so we just store a std::vector instead of a multimap.
-  DenseMap<StringRef, std::vector<InputSectionBase *>> cNamedSections;
+  // identifiers, so we just store a SmallVector instead of a multimap.
+  DenseMap<StringRef, SmallVector<InputSectionBase *, 0>> cNamedSections;
 };
 } // namespace
 
