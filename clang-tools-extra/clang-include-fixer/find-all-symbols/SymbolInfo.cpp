@@ -13,8 +13,6 @@
 #include "llvm/Support/raw_ostream.h"
 
 using llvm::yaml::MappingTraits;
-using llvm::yaml::IO;
-using llvm::yaml::Input;
 using ContextType = clang::find_all_symbols::SymbolInfo::ContextType;
 using clang::find_all_symbols::SymbolInfo;
 using clang::find_all_symbols::SymbolAndSignals;
