@@ -467,27 +467,27 @@ static bool isScalarMoveInstr(const MachineInstr &MI) {
   case RISCV::PseudoVMV_S_X_MF2:
   case RISCV::PseudoVMV_S_X_MF4:
   case RISCV::PseudoVMV_S_X_MF8:
-  case RISCV::PseudoVFMV_F16_S_M1:
-  case RISCV::PseudoVFMV_F16_S_M2:
-  case RISCV::PseudoVFMV_F16_S_M4:
-  case RISCV::PseudoVFMV_F16_S_M8:
-  case RISCV::PseudoVFMV_F16_S_MF2:
-  case RISCV::PseudoVFMV_F16_S_MF4:
-  case RISCV::PseudoVFMV_F16_S_MF8:
-  case RISCV::PseudoVFMV_F32_S_M1:
-  case RISCV::PseudoVFMV_F32_S_M2:
-  case RISCV::PseudoVFMV_F32_S_M4:
-  case RISCV::PseudoVFMV_F32_S_M8:
-  case RISCV::PseudoVFMV_F32_S_MF2:
-  case RISCV::PseudoVFMV_F32_S_MF4:
-  case RISCV::PseudoVFMV_F32_S_MF8:
-  case RISCV::PseudoVFMV_F64_S_M1:
-  case RISCV::PseudoVFMV_F64_S_M2:
-  case RISCV::PseudoVFMV_F64_S_M4:
-  case RISCV::PseudoVFMV_F64_S_M8:
-  case RISCV::PseudoVFMV_F64_S_MF2:
-  case RISCV::PseudoVFMV_F64_S_MF4:
-  case RISCV::PseudoVFMV_F64_S_MF8:
+  case RISCV::PseudoVFMV_S_F16_M1:
+  case RISCV::PseudoVFMV_S_F16_M2:
+  case RISCV::PseudoVFMV_S_F16_M4:
+  case RISCV::PseudoVFMV_S_F16_M8:
+  case RISCV::PseudoVFMV_S_F16_MF2:
+  case RISCV::PseudoVFMV_S_F16_MF4:
+  case RISCV::PseudoVFMV_S_F16_MF8:
+  case RISCV::PseudoVFMV_S_F32_M1:
+  case RISCV::PseudoVFMV_S_F32_M2:
+  case RISCV::PseudoVFMV_S_F32_M4:
+  case RISCV::PseudoVFMV_S_F32_M8:
+  case RISCV::PseudoVFMV_S_F32_MF2:
+  case RISCV::PseudoVFMV_S_F32_MF4:
+  case RISCV::PseudoVFMV_S_F32_MF8:
+  case RISCV::PseudoVFMV_S_F64_M1:
+  case RISCV::PseudoVFMV_S_F64_M2:
+  case RISCV::PseudoVFMV_S_F64_M4:
+  case RISCV::PseudoVFMV_S_F64_M8:
+  case RISCV::PseudoVFMV_S_F64_MF2:
+  case RISCV::PseudoVFMV_S_F64_MF4:
+  case RISCV::PseudoVFMV_S_F64_MF8:
     return true;
   }
 }
