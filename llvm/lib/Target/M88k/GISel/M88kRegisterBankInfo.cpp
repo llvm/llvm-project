@@ -34,6 +34,7 @@ M88kRegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
                                              LLT Ty) const {
   switch (RC.getID()) {
   case M88k::GPRRCRegClassID:
+  case M88k::GPR64RCRegClassID:
     return getRegBank(M88k::GRRegBankID);
   case M88k::XRRCRegClassID:
     return getRegBank(M88k::XRRegBankID);
@@ -154,10 +155,16 @@ M88kRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_FMUL:
   case TargetOpcode::G_FDIV:
     return getSameKindOfOperandsMapping(MI);
-  case TargetOpcode::G_CONSTANT:
+  case TargetOpcode::G_LOAD:
+  case TargetOpcode::G_STORE:
     return getInstructionMapping(DefaultMappingID, /*Cost=*/1,
-            getOperandsMapping({getValueMapping(PMI_GPR32), nullptr}),
+                                 getValueMapping(PMI_GPR32),
                                  /*NumOperands*/ MI.getNumOperands());
+  case TargetOpcode::G_CONSTANT:
+    return getInstructionMapping(
+        DefaultMappingID, /*Cost=*/1,
+        getOperandsMapping({getValueMapping(PMI_GPR32), nullptr}),
+        /*NumOperands*/ MI.getNumOperands());
   case TargetOpcode::COPY: {
     Register DstReg = MI.getOperand(0).getReg();
     Register SrcReg = MI.getOperand(1).getReg();

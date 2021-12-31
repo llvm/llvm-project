@@ -33,7 +33,7 @@ void M88kSubtarget::anchor() {}
 M88kSubtarget::M88kSubtarget(const Triple &TT, const std::string &CPU,
                              const std::string &FS, const TargetMachine &TM)
     : M88kGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS), TargetTriple(TT),
-      InstrInfo(*this), TLInfo(TM, *this), FrameLowering() {
+      InstrInfo(*this), TLInfo(TM, *this), FrameLowering(*this) {
   // GlobalISEL
   CallLoweringInfo.reset(new M88kCallLowering(*getTargetLowering()));
   Legalizer.reset(new M88kLegalizerInfo(*this));

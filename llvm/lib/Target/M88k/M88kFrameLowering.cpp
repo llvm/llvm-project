@@ -25,32 +25,52 @@
  * +-------------------------+ High Address
  * |                         |
  * |                         |
- * | Argument Area           |
- * +-------------------------+ <- SP before call
- * |                         |    Pointer to last allocated word
- * | Temporary Space /       |    16-byte aligned
+ * | Argument Area           | <- SP before call
+ * +-------------------------+    Pointer to last allocated word
+ * |                         |    16-byte aligned
+ * | Temporary Space /       |
  * | Local Variable Space    |
  * | (optional)              |
- * +-------------------------+
+ * | return address          |
+ * | previous FP             | <- FP after prologue
+ * +-------------------------+    16-byte aligned
  * |                         |
- * | Argument Area           |
- * | (at least 32 bytes,     |
- * |  equals 8 registers)    |
- * +-------------------------+ <- SP after call
+ * |                         |
+ * | Argument Area           | <- SP after call
+ * +-------------------------+    16-byte aligned
  * |                         |
  * |                         |
  * +-------------------------+ <- Low Address
  *
+ * Prologue pattern:
+ * 1. Allocate new stack frame
+ * 2. Store r30 (FP) and r1 (RA)
+ * 3. Setup new frame pointer
  *
+ * The stack frame consists of the local variable space and the argument area.
+ * The frame pointer is set up in the way that
+ * - r30: previous frame pointer r30
+ * - r30 + 4: return address r1
+ * - r30 + 8: first free local variable slot
+ *
+ * E.g.
+ *   subu     %r31,%r31,32 | Allocate 32 bytes
+ *   st       %r1,%r31,20  | Store r1 aka RA
+ *   st       %r30,%r31,16 | Store r30 aka FP
+ *   addu     %r30,%r31,16 | Establish new FP
+ *
+ * SP and FP are 16-byte aligned.
+ *
+ * The frame pointer can be omitted in leaf functions upon request.
  */
 
 using namespace llvm;
 
-M88kFrameLowering::M88kFrameLowering()
+M88kFrameLowering::M88kFrameLowering(const M88kSubtarget &Subtarget)
     : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, Align(16),
                           /*LocalAreaOffset=*/0, Align(8),
-                          /*StackRealignable0*/ false),
-      RegSpillOffsets(0) {}
+                          /*StackRealignable=*/false),
+      STI(Subtarget), RegSpillOffsets(0) {}
 
 bool M88kFrameLowering::hasFP(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -64,8 +84,7 @@ bool M88kFrameLowering::hasFP(const MachineFunction &MF) const {
           MFI.isFrameAddressTaken());
 }
 
-bool M88kFrameLowering::hasReservedCallFrame(
-    const MachineFunction &MF) const {
+bool M88kFrameLowering::hasReservedCallFrame(const MachineFunction &MF) const {
   // The argument area is allocated by the caller.
   return true;
 }
@@ -73,49 +92,30 @@ bool M88kFrameLowering::hasReservedCallFrame(
 StackOffset
 M88kFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
                                           Register &FrameReg) const {
-llvm::dbgs() << "Enter " << __FUNCTION__ << " for " << MF.getFunction().getName() << "\n";
-  const MachineFrameInfo &MFI = MF.getFrameInfo();
-
-  FrameReg = hasFP(MF) ? M88k::R30 : M88k::R31;
-  return StackOffset::getFixed(MFI.getObjectOffset(FI) + MFI.getStackSize() -
-                               getOffsetOfLocalArea() +
-                               MFI.getOffsetAdjustment());
+  return StackOffset::getFixed(resolveFrameIndexReference(MF, FI, FrameReg));
 }
 
-bool M88kFrameLowering::spillCalleeSavedRegisters(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    ArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
+int64_t
+M88kFrameLowering::resolveFrameIndexReference(const MachineFunction &MF, int FI,
+                                              Register &FrameReg) const {
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
 
-  MachineFunction *MF = MBB.getParent();
-  const TargetSubtargetInfo &STI = MF->getSubtarget();
-  const TargetInstrInfo *TII = STI.getInstrInfo();
-  const Register RAReg = STI.getRegisterInfo()->getRARegister();
-
-  for (auto &CS : CSI) {
-    // Add the callee-saved register as live-in.
-    Register Reg = CS.getReg();
-    bool IsRetAddrIsTaken =
-        Reg == M88k::R1 && MF->getFrameInfo().isReturnAddressTaken();
-    if (!IsRetAddrIsTaken)
-      MBB.addLiveIn(Reg);
-
-    // Save in the normal TargetInstrInfo way.
-    bool IsKill = !IsRetAddrIsTaken;
-    // TODO const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-    const TargetRegisterClass &RC = M88k::GPRRCRegClass;
-    TII->storeRegToStackSlot(MBB, MBBI, Reg, IsKill, CS.getFrameIdx(), &RC,
-                             TRI);
-  }
-
-  // TODO Check correct handling of R1.
-  // R1 is marked as used in the RET pseudo instruction.
-  // R1 is also part of the callee-saved register list.
-  // In case R1 needs to be saved, it becomes part of CSI,
-  // and is automatically marked as live-in.
-
-  // Mark the return address register as live in.
-  MBB.addLiveIn(M88k::R1);
-  return true;
+  /* The offsets are against the incoming stack pointer. A negative offset
+   * refers to a local variable or spill slot, while a non-negative offset
+   * refers to an argument in the argument area of the caller. Because the stack
+   * grows down, all objects are allocated with decreasing offsets. However, the
+   * ELF ABI assumes that all objects are allocated with increasing offsets from
+   * the SP/FP of the callee. We achieve this by "mirroring" the offsets.
+   */
+  const bool HasFP = hasFP(MF);
+  FrameReg = HasFP ? M88k::R30 : M88k::R31;
+  int64_t Offset = HasFP ? 0 : MFI.getStackSize() - MFI.getMaxCallFrameSize();
+  int64_t ObjectOffset = MFI.getObjectOffset(FI);
+  if (ObjectOffset < 0)
+    Offset += -ObjectOffset - MFI.getObjectSize(FI);
+  else
+    Offset += ObjectOffset;
+  return Offset;
 }
 
 void M88kFrameLowering::determineCalleeSaves(MachineFunction &MF,
@@ -129,23 +129,166 @@ void M88kFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // address register will be clobbered.
   if (MFFrame.hasCalls())
     SavedRegs.set(M88k::R1);
+
+  // If the function uses a FP, then add %r30 to the list.
+  if (hasFP(MF))
+    SavedRegs.set(M88k::R30);
+}
+
+bool M88kFrameLowering::assignCalleeSavedSpillSlots(
+    MachineFunction &MF, const TargetRegisterInfo *TRI,
+    std::vector<CalleeSavedInfo> &CSI) const {
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+
+  // Allocate spill stack slots for registers. The order is determined by the
+  // callee save register definition.
+  int64_t CurOffset = -4;
+  for (auto &CS : CSI) {
+    Register Reg = CS.getReg();
+    if (M88k::GPRRCRegClass.contains(Reg)) {
+      CS.setFrameIdx(MFI.CreateFixedSpillStackObject(4, CurOffset));
+      CurOffset -= 4;
+    } else {
+      const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+      Align Alignment = TRI->getSpillAlign(*RC);
+      unsigned Size = TRI->getSpillSize(*RC);
+      Alignment = std::min(Alignment, getStackAlign());
+      CS.setFrameIdx(MFI.CreateSpillStackObject(Size, Alignment));
+    }
+  }
+  return true;
 }
 
 bool M88kFrameLowering::restoreCalleeSavedRegisters(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
     MutableArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
+  // TODO Identify register pairs and use them to restore.
   return false;
 }
 
+bool M88kFrameLowering::spillCalleeSavedRegisters(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    ArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
+  MachineFunction *MF = MBB.getParent();
+  const TargetSubtargetInfo &STI = MF->getSubtarget();
+  const TargetInstrInfo *TII = STI.getInstrInfo();
+  const Register RAReg = STI.getRegisterInfo()->getRARegister();
+
+  for (auto &CS : CSI) {
+    // Add the callee-saved register as live-in.
+    Register Reg = CS.getReg();
+    bool IsRetAddrIsTaken =
+        Reg == M88k::R1 && MF->getFrameInfo().isReturnAddressTaken();
+    if (!IsRetAddrIsTaken)
+      MBB.addLiveIn(Reg);
+
+    // We save all registers except %r1 and %r30, which are saved as part of the
+    // prologue code.
+    // Save in the normal TargetInstrInfo way.
+    // TODO Identify register pairs and use them to save two registers at once.
+    if (Reg != M88k::R1 && Reg != M88k::R30) {
+      bool IsKill = !IsRetAddrIsTaken;
+      const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+      // const TargetRegisterClass &RC = M88k::GPRRCRegClass;
+      TII->storeRegToStackSlot(MBB, MBBI, Reg, /*isKill=*/IsKill,
+                               CS.getFrameIdx(), RC, TRI);
+    }
+  }
+
+  return true;
+}
+
+void M88kFrameLowering::processFunctionBeforeFrameFinalized(
+    MachineFunction &MF, RegScavenger *RS) const {
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+
+  // Make sure that the call frame size has stack alignment.
+  // The same effect could also be reached by align the size of each call frame.
+  assert(MFI.isMaxCallFrameSizeComputed() && "MaxCallFrame not computed");
+  unsigned MaxCallFrameSize = MFI.getMaxCallFrameSize();
+  MaxCallFrameSize = alignTo(MaxCallFrameSize, getStackAlign());
+  MFI.setMaxCallFrameSize(MaxCallFrameSize);
+}
+
 void M88kFrameLowering::emitPrologue(MachineFunction &MF,
-                                     MachineBasicBlock &MBB) const {}
+                                     MachineBasicBlock &MBB) const {
+  assert(&MF.front() == &MBB && "Shrink-wrapping not yet supported");
+
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  const M88kInstrInfo &LII =
+      *static_cast<const M88kInstrInfo *>(STI.getInstrInfo());
+  MachineBasicBlock::iterator MBBI = MBB.begin();
+
+  // Debug location must be unknown since the first debug location is used
+  // to determine the end of the prologue.
+  DebugLoc DL;
+
+  unsigned StackSize = MFI.getStackSize();
+  assert(isInt<16>(StackSize) && "Larger stack frame not yet implemented");
+
+  unsigned MaxCallFrameSize = MFI.getMaxCallFrameSize();
+
+  bool setupFP = hasFP(MF);
+  assert((setupFP || MaxCallFrameSize == 0) && "Call frame without FP");
+
+  if (StackSize) {
+    // Create subu %r31, %r31, StackSize
+    BuildMI(MBB, MBBI, DL, LII.get(M88k::SUBUri))
+        .addReg(M88k::R31, RegState::Define)
+        .addReg(M88k::R31)
+        .addImm(StackSize)
+        .setMIFlag(MachineInstr::FrameSetup);
+    if (MFI.hasCalls())
+      // Spill %r1: st %r1, %r31, <SP+4> or <new FP+4>
+      BuildMI(MBB, MBBI, DL, LII.get(M88k::STriw))
+          .addReg(M88k::R1, MFI.isReturnAddressTaken() ? RegState::Kill : 0)
+          .addReg(M88k::R31)
+          .addImm(StackSize - MaxCallFrameSize + 4)
+          .setMIFlag(MachineInstr::FrameSetup);
+    if (setupFP) {
+      // Spill %r30: st %r30, %r31, <SP> or <new FP+4>
+      BuildMI(MBB, MBBI, DL, LII.get(M88k::STriw))
+          .addReg(M88k::R30)
+          .addReg(M88k::R31)
+          .addImm(StackSize - MaxCallFrameSize)
+          .setMIFlag(MachineInstr::FrameSetup);
+      // Install FP: addu %r30, %r31, MaxCallFrameSize
+      BuildMI(MBB, MBBI, DL, LII.get(M88k::ADDUri))
+          .addReg(M88k::R30, RegState::Define)
+          .addReg(M88k::R31)
+          .addImm(MaxCallFrameSize)
+          .setMIFlag(MachineInstr::FrameSetup);
+    }
+  }
+}
 
 MachineBasicBlock::iterator M88kFrameLowering::eliminateCallFramePseudoInstr(
-    MachineFunction & /*MF*/, MachineBasicBlock &MBB,
+    MachineFunction &MF, MachineBasicBlock &MBB,
     MachineBasicBlock::iterator I) const {
   // Discard ADJCALLSTACKDOWN, ADJCALLSTACKUP instructions.
   return MBB.erase(I);
 }
 
 void M88kFrameLowering::emitEpilogue(MachineFunction &MF,
-                                     MachineBasicBlock &MBB) const {}
+                                     MachineBasicBlock &MBB) const {
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  const M88kInstrInfo &LII =
+      *static_cast<const M88kInstrInfo *>(STI.getInstrInfo());
+  MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
+  DebugLoc DL = MBBI->getDebugLoc();
+
+  // The epilogue generation is not symmetric to prologue generation, because we
+  // can restore all spilled registers using references to FP/SP (in
+  // restoreCalleeSavedRegisters())
+
+  unsigned StackSize = MFI.getStackSize();
+
+  if (StackSize) {
+    // Restore %r31: add %r31, %r31, StackSize
+    BuildMI(MBB, MBBI, DL, LII.get(M88k::ADDUri))
+        .addReg(M88k::R31, RegState::Define)
+        .addReg(M88k::R31)
+        .addImm(StackSize)
+        .setMIFlag(MachineInstr::FrameDestroy);
+  }
+}

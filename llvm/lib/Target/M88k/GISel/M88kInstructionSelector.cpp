@@ -165,41 +165,56 @@ bool M88kInstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_STORE: {
     auto MMO = *I.memoperands_begin();
-    MachineOperand Ptr = I.getOperand(1);
-    uint64_t UnsignedOffset = 0;
 
-    // Try to fold load/store + G_PTR_ADD + G_CONSTANT
-
-    Register AddrReg;
-    int64_t Offset;
-    MachineInstr *Base;
-    if (!mi_match(Ptr.getReg(), MRI,
-                  m_GPtrAdd(m_MInstr(Base), m_ICst(Offset)))) {
-      return false;
-    }
-    if (Base->getOpcode() == TargetOpcode::COPY)
-      AddrReg = Base->getOperand(1).getReg();
-    else
-      AddrReg = Base->getOperand(0).getReg();
-    if (isUInt<16>(Offset))
-      UnsignedOffset = Offset;
-    else {
-      return false;
-    }
-
-    // No unaligned memory access
+    // No unaligned memory access.
     if (MMO->getAlign() < MMO->getSize()) {
       return false;
     }
 
-    const unsigned NewOpc =
-        (I.getOpcode() == TargetOpcode::G_LOAD) ? M88k::LDriw : M88k::STriw;
+    // Try to fold load/store + G_PTR_ADD.
 
-    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(NewOpc))
-             .add(I.getOperand(0))
-             .addReg(AddrReg)
-             .addImm(UnsignedOffset)
-             .addMemOperand(MMO);
+    MachineOperand Ptr = I.getOperand(1);
+    int64_t Offset;
+    MachineInstr *Base, *Addend;
+    if (mi_match(Ptr.getReg(), MRI,
+                 m_GPtrAdd(m_MInstr(Base), m_ICst(Offset))) &&
+        isUInt<16>(Offset)) {
+
+      Register AddrReg =
+          Base->getOperand(Base->getOpcode() == TargetOpcode::COPY ? 1 : 0)
+              .getReg();
+
+      // TODO Need to consider memory size.
+      const unsigned NewOpc =
+          (I.getOpcode() == TargetOpcode::G_LOAD) ? M88k::LDriw : M88k::STriw;
+
+      MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(NewOpc))
+               .add(I.getOperand(0))
+               .addReg(AddrReg)
+               .addImm(Offset)
+               .addMemOperand(MMO);
+    } else if (mi_match(Ptr.getReg(), MRI,
+                        m_GPtrAdd(m_MInstr(Base), m_MInstr(Addend)))) {
+      Register AddrReg =
+          Base->getOperand(Base->getOpcode() == TargetOpcode::COPY ? 1 : 0)
+              .getReg();
+      Register IndexReg =
+          Base->getOperand(Addend->getOpcode() == TargetOpcode::COPY ? 1 : 0)
+              .getReg();
+
+      // TODO Need to consider memory size.
+      const unsigned NewOpc =
+          (I.getOpcode() == TargetOpcode::G_LOAD) ? M88k::LDrruw : M88k::STrruw;
+
+      MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(NewOpc))
+               .add(I.getOperand(0))
+               .addReg(AddrReg)
+               .addReg(IndexReg)
+               .addMemOperand(MMO);
+    } else {
+      // TODO Should we match a load/store with immediate 0 here?
+      return false;
+    }
     break;
   }
   default:

@@ -67,6 +67,9 @@ M88kLegalizerInfo::M88kLegalizerInfo(const M88kSubtarget &ST) {
       .clampScalar(0, S32, S32)
       .clampScalar(1, S32, S32);
 
+  getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({P0});
+  getActionDefinitionsBuilder(G_GLOBAL_VALUE).legalFor({P0});
+
   getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FNEG})
       .legalFor({S32, S64, S80});
   getLegacyLegalizerInfo().computeTables();

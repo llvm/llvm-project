@@ -258,8 +258,7 @@ def uimm32 : IntImmLeaf<i32, [{
 // ---------------------------------------------------------------------------//
 // Pseudo instructions.
 // ---------------------------------------------------------------------------//
-
-let Defs = [R31], Uses = [R31], hasSideEffects = 1, isCodeGenOnly = 1 in {
+let hasSideEffects = 1 in {
 def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
                               [(callseq_start timm:$amt1, timm:$amt2)]>;
 def ADJCALLSTACKUP : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
