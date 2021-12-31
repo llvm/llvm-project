@@ -384,6 +384,9 @@ public:
   /// Check if the toolchain should use the integrated assembler.
   virtual bool useIntegratedAs() const;
 
+  /// Check if the toolchain should use the integrated backend.
+  virtual bool useIntegratedBackend() const { return true; }
+
   /// Check if the toolchain should use AsmParser to parse inlineAsm when
   /// integrated assembler is not default.
   virtual bool parseInlineAsmUsingAsmParser() const { return false; }

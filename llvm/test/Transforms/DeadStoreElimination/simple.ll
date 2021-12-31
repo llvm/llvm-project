@@ -194,12 +194,9 @@ define void @test11() {
   ret void
 }
 
-; TODO: Specialized store intrinsics should be removed if dead.
+; Specialized store intrinsics should be removed if dead.
 define void @test_matrix_store(i64 %stride) {
 ; CHECK-LABEL: @test_matrix_store(
-; CHECK-NEXT:    [[A:%.*]] = alloca [6 x float], align 4
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast [6 x float]* [[A]] to float*
-; CHECK-NEXT:    call void @llvm.matrix.column.major.store.v6f32.i64(<6 x float> zeroinitializer, float* [[CAST]], i64 [[STRIDE:%.*]], i1 false, i32 3, i32 2)
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca [6 x float]

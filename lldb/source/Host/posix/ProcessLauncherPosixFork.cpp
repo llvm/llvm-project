@@ -86,7 +86,6 @@ static void DupDescriptor(int error_fd, const FileSpec &file_spec, int fd,
     ExitWithError(error_fd, "DupDescriptor-dup2");
 
   ::close(target_fd);
-  return;
 }
 
 [[noreturn]] static void ChildFunc(int error_fd,

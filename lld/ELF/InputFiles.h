@@ -41,6 +41,7 @@ namespace elf {
 
 using llvm::object::Archive;
 
+class InputSection;
 class Symbol;
 
 // If --reproduce is specified, all input files are written to this tar archive.
@@ -90,9 +91,7 @@ public:
 
   // Returns object file symbols. It is a runtime error to call this
   // function on files of other types.
-  ArrayRef<Symbol *> getSymbols() { return getMutableSymbols(); }
-
-  MutableArrayRef<Symbol *> getMutableSymbols() {
+  ArrayRef<Symbol *> getSymbols() const {
     assert(fileKind == BinaryKind || fileKind == ObjKind ||
            fileKind == BitcodeKind);
     return symbols;
@@ -114,12 +113,12 @@ public:
 
   SmallVector<Symbol *, 0> symbols;
 
+  // .got2 in the current file. This is used by PPC32 -fPIC/-fPIE to compute
+  // offsets in PLT call stubs.
+  InputSection *ppc32Got2 = nullptr;
+
   // Index of MIPS GOT built for this file.
   uint32_t mipsGotIndex = -1;
-
-  // outSecOff of .got2 in the current file. This is used by PPC32 -fPIC/-fPIE
-  // to compute offsets in PLT call stubs.
-  uint32_t ppc32Got2OutSecOff = 0;
 
   // groupId is used for --warn-backrefs which is an optional error
   // checking feature. All files within the same --{start,end}-group or
@@ -185,7 +184,15 @@ public:
   ArrayRef<Symbol *> getGlobalSymbols() {
     return llvm::makeArrayRef(symbols).slice(firstGlobal);
   }
+  MutableArrayRef<Symbol *> getMutableGlobalSymbols() {
+    return llvm::makeMutableArrayRef(symbols.data(), symbols.size())
+        .slice(firstGlobal);
+  }
 
+  template <typename ELFT> typename ELFT::ShdrRange getELFShdrs() const {
+    return typename ELFT::ShdrRange(
+        reinterpret_cast<const typename ELFT::Shdr *>(elfShdrs), numELFShdrs);
+  }
   template <typename ELFT> typename ELFT::SymRange getELFSyms() const {
     return typename ELFT::SymRange(
         reinterpret_cast<const typename ELFT::Sym *>(elfSyms), numELFSyms);
@@ -198,10 +205,15 @@ protected:
   // Initializes this class's member variables.
   template <typename ELFT> void init();
 
+  StringRef stringTable;
+  const void *elfShdrs = nullptr;
   const void *elfSyms = nullptr;
+  uint32_t numELFShdrs = 0;
   uint32_t numELFSyms = 0;
   uint32_t firstGlobal = 0;
-  StringRef stringTable;
+
+public:
+  bool hasCommonSyms = false;
 };
 
 // .o file.

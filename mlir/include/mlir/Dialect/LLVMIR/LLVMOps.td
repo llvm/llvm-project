@@ -1447,6 +1447,10 @@ def LLVM_MemcpyInlineOp : LLVM_ZeroResultIntrOp<"memcpy.inline", [0, 1, 2]> {
   let arguments = (ins LLVM_Type:$dst, LLVM_Type:$src, LLVM_Type:$len,
                    LLVM_Type:$isVolatile);
 }
+def LLVM_MemmoveOp : LLVM_ZeroResultIntrOp<"memmove", [0, 1, 2]> {
+  let arguments = (ins LLVM_Type:$dst, LLVM_Type:$src, LLVM_Type:$len,
+                   LLVM_Type:$isVolatile);
+}
 
 def LLVM_MemsetOp : LLVM_ZeroResultIntrOp<"memset", [0, 2]> {
   let arguments = (ins LLVM_Type:$dst, LLVM_Type:$val, LLVM_Type:$len,

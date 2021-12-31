@@ -250,7 +250,7 @@ public:
   DIE *getOrCreateTypeDIE(const MDNode *TyNode);
 
   /// Get context owner's DIE.
-  virtual DIE *getOrCreateContextDIE(const DIScope *Context);
+  DIE *getOrCreateContextDIE(const DIScope *Context);
 
   /// Construct DIEs for types that contain vtables.
   void constructContainingTypeDIEs();

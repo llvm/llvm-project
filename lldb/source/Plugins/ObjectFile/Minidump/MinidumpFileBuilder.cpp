@@ -115,7 +115,7 @@ Status MinidumpFileBuilder::AddSystemInfo(const llvm::Triple &target_triple) {
   sys_info.PlatformId = platform_id;
   m_data.AppendData(&sys_info, sizeof(llvm::minidump::SystemInfo));
 
-  std::string csd_string = "";
+  std::string csd_string;
 
   error = WriteString(csd_string, &m_data);
   if (error.Fail()) {

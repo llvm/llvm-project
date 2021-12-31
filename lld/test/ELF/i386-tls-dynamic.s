@@ -66,35 +66,35 @@ addl tls1@gotntpoff(%ebx),%eax
 
 # CHECK: Relocations [
 # CHECK:      Section ({{.+}}) .rel.dyn {
-# CHECK-NEXT: 0x2368 R_386_TLS_DTPMOD32 -
+# CHECK-NEXT: 0x2370 R_386_TLS_DTPMOD32 -
 # CHECK-NEXT: 0x2358 R_386_TLS_DTPMOD32 tls0
 # CHECK-NEXT: 0x235C R_386_TLS_DTPOFF32 tls0
-# CHECK-NEXT: 0x2370 R_386_TLS_TPOFF tls0
-# CHECK-NEXT: 0x2360 R_386_TLS_DTPMOD32 tls1
-# CHECK-NEXT: 0x2364 R_386_TLS_DTPOFF32 tls1
-# CHECK-NEXT: 0x2374 R_386_TLS_TPOFF tls1
+# CHECK-NEXT: 0x2360 R_386_TLS_TPOFF tls0
+# CHECK-NEXT: 0x2364 R_386_TLS_DTPMOD32 tls1
+# CHECK-NEXT: 0x2368 R_386_TLS_DTPOFF32 tls1
+# CHECK-NEXT: 0x236C R_386_TLS_TPOFF tls1
 # CHECK-NEXT: }
 
 # DIS:      Disassembly of section .text:
 # DIS-EMPTY:
 # DIS-NEXT: <_start>:
 ## General dynamic model:
-## -4128 and -4120 are first and second GOT entries offsets.
+## -4128 and -4116 are first and second GOT entries offsets.
 ## Each one is a pair of records.
 # DIS-NEXT: 1260:       leal -4128(,%ebx), %eax
 # DIS-NEXT: 1267:       calll 0x12d0
-# DIS-NEXT: 126c:       leal -4120(,%ebx), %eax
+# DIS-NEXT: 126c:       leal -4116(,%ebx), %eax
 # DIS-NEXT: 1273:       calll 0x12d0
 ## Local dynamic model:
 ## -16 is a local module tls index offset.
-# DIS-NEXT: 1278:       leal -4112(%ebx), %eax
+# DIS-NEXT: 1278:       leal -4104(%ebx), %eax
 # DIS-NEXT: 127e:       calll 0x12d0
 # DIS-NEXT: 1283:       leal 8(%eax), %edx
-# DIS-NEXT: 1289:       leal -4112(%ebx), %eax
+# DIS-NEXT: 1289:       leal -4104(%ebx), %eax
 # DIS-NEXT: 128f:       calll 0x12d0
 # DIS-NEXT: 1294:       leal 12(%eax), %edx
 ## Initial exec model:
 # DIS-NEXT: 129a:       movl %gs:0, %eax
-# DIS-NEXT: 12a0:       addl -4104(%ebx), %eax
+# DIS-NEXT: 12a0:       addl -4120(%ebx), %eax
 # DIS-NEXT: 12a6:       movl %gs:0, %eax
-# DIS-NEXT: 12ac:       addl -4100(%ebx), %eax
+# DIS-NEXT: 12ac:       addl -4108(%ebx), %eax

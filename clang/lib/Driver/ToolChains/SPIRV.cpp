@@ -13,6 +13,7 @@
 #include "clang/Driver/Options.h"
 
 using namespace clang::driver;
+using namespace clang::driver::toolchains;
 using namespace clang::driver::tools;
 using namespace llvm::opt;
 
@@ -27,7 +28,7 @@ void SPIRV::constructTranslateCommand(Compilation &C, const Tool &T,
   if (Input.getType() == types::TY_PP_Asm)
     CmdArgs.push_back("-to-binary");
   if (Output.getType() == types::TY_PP_Asm)
-    CmdArgs.push_back("-spirv-text");
+    CmdArgs.push_back("--spirv-tools-dis");
 
   CmdArgs.append({"-o", Output.getFilename()});
 
@@ -46,4 +47,26 @@ void SPIRV::Translator::ConstructJob(Compilation &C, const JobAction &JA,
   if (Inputs.size() != 1)
     llvm_unreachable("Invalid number of input files.");
   constructTranslateCommand(C, *this, JA, Output, Inputs[0], {});
+}
+
+clang::driver::Tool *SPIRVToolChain::getTranslator() const {
+  if (!Translator)
+    Translator = std::make_unique<SPIRV::Translator>(*this);
+  return Translator.get();
+}
+
+clang::driver::Tool *SPIRVToolChain::SelectTool(const JobAction &JA) const {
+  Action::ActionClass AC = JA.getKind();
+  return SPIRVToolChain::getTool(AC);
+}
+
+clang::driver::Tool *SPIRVToolChain::getTool(Action::ActionClass AC) const {
+  switch (AC) {
+  default:
+    break;
+  case Action::BackendJobClass:
+  case Action::AssembleJobClass:
+    return SPIRVToolChain::getTranslator();
+  }
+  return ToolChain::getTool(AC);
 }

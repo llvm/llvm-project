@@ -465,6 +465,7 @@ public:
   struct VGPRSpillToAGPR {
     SmallVector<MCPhysReg, 32> Lanes;
     bool FullyAllocated = false;
+    bool IsDead = false;
   };
 
   // Map WWM VGPR to a stack slot that is used to save/restore it in the
@@ -544,6 +545,12 @@ public:
     auto I = VGPRToAGPRSpills.find(FrameIndex);
     return (I == VGPRToAGPRSpills.end()) ? (MCPhysReg)AMDGPU::NoRegister
                                          : I->second.Lanes[Lane];
+  }
+
+  void setVGPRToAGPRSpillDead(int FrameIndex) {
+    auto I = VGPRToAGPRSpills.find(FrameIndex);
+    if (I != VGPRToAGPRSpills.end())
+      I->second.IsDead = true;
   }
 
   bool haveFreeLanesForSGPRSpill(const MachineFunction &MF,

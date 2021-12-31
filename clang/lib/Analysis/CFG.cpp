@@ -1820,8 +1820,6 @@ void CFGBuilder::addScopesEnd(LocalScope::const_iterator B,
 
   for (VarDecl *VD : llvm::reverse(DeclsWithEndedScope))
     appendScopeEnd(Block, VD, S);
-
-  return;
 }
 
 /// addAutomaticObjDtors - Add to current block automatic objects destructors

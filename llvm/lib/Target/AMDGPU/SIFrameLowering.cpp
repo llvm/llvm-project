@@ -1167,11 +1167,13 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
   if (SpillVGPRToAGPR) {
     // To track the spill frame indices handled in this pass.
     BitVector SpillFIs(MFI.getObjectIndexEnd(), false);
+    BitVector NonVGPRSpillFIs(MFI.getObjectIndexEnd(), false);
 
     bool SeenDbgInstr = false;
 
     for (MachineBasicBlock &MBB : MF) {
       for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
+        int FrameIndex;
         if (MI.isDebugInstr())
           SeenDbgInstr = true;
 
@@ -1191,9 +1193,17 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
             SpillFIs.set(FI);
             continue;
           }
-        }
+        } else if (TII->isStoreToStackSlot(MI, FrameIndex) ||
+                   TII->isLoadFromStackSlot(MI, FrameIndex))
+          NonVGPRSpillFIs.set(FrameIndex);
       }
     }
+
+    // Stack slot coloring may assign different objets to the same stack slot.
+    // If not, then the VGPR to AGPR spill slot is dead.
+    for (unsigned FI : SpillFIs.set_bits())
+      if (!NonVGPRSpillFIs.test(FI))
+        FuncInfo->setVGPRToAGPRSpillDead(FI);
 
     for (MachineBasicBlock &MBB : MF) {
       for (MCPhysReg Reg : FuncInfo->getVGPRSpillAGPRs())

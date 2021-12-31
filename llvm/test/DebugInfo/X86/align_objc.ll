@@ -16,14 +16,7 @@
 ; }
 
 ; CHECK: DW_TAG_compile_unit
-
-; CHECK:   DW_TAG_subprogram
-; CHECK:     DW_TAG_variable
-; CHECK:     DW_TAG_variable
-; CHECK:       DW_AT_name{{.*}}"i"
-; CHECK:       DW_AT_alignment{{.*}}32
 ; CHECK:   DW_TAG_variable
-
 ; CHECK:   DW_TAG_typedef
 ; CHECK:     DW_AT_name{{.*}}"S0"
 
@@ -31,6 +24,12 @@
 ; CHECK:     DW_AT_alignment{{.*}}128
 ; CHECK:     DW_TAG_member
 ; CHECK:   DW_TAG_base_type
+
+; CHECK:   DW_TAG_subprogram
+; CHECK:     DW_TAG_variable
+; CHECK:     DW_TAG_variable
+; CHECK:       DW_AT_name{{.*}}"i"
+; CHECK:       DW_AT_alignment{{.*}}32
 
 ; CHECK:   DW_TAG_typedef
 ; CHECK:     DW_AT_name{{.*}}"S1"
