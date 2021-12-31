@@ -565,7 +565,7 @@ unsigned decodeLgkmcnt(const IsaVersion &Version, unsigned Waitcnt);
 ///     \p Vmcnt = \p Waitcnt[15:14,3:0]  (gfx9,10)
 ///     \p Vmcnt = \p Waitcnt[15:10]      (gfx11+)
 ///     \p Expcnt = \p Waitcnt[6:4]       (pre-gfx11)
-///     \p Expcnt = \p Waitcnt[2:0]       (gfx11+)
+///     \p Expcnt = \p Waitcnt[3:0]       (gfx11+)
 ///     \p Lgkmcnt = \p Waitcnt[11:8]     (pre-gfx10)
 ///     \p Lgkmcnt = \p Waitcnt[13:8]     (gfx10)
 ///     \p Lgkmcnt = \p Waitcnt[9:4]      (gfx11+)
@@ -590,7 +590,7 @@ unsigned encodeLgkmcnt(const IsaVersion &Version, unsigned Waitcnt,
 /// \p Version.
 ///
 /// \details \p Vmcnt, \p Expcnt and \p Lgkmcnt are encoded as follows:
-///     Waitcnt[2:0]   = \p Expcnt      (gfx11+)
+///     Waitcnt[3:0]   = \p Expcnt      (gfx11+)
 ///     Waitcnt[3:0]   = \p Vmcnt       (pre-gfx9)
 ///     Waitcnt[3:0]   = \p Vmcnt[3:0]  (gfx9,10)
 ///     Waitcnt[6:4]   = \p Expcnt      (pre-gfx11)
