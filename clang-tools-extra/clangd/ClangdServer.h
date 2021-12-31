@@ -282,6 +282,10 @@ public:
   void findImplementations(PathRef File, Position Pos,
                            Callback<std::vector<LocatedSymbol>> CB);
 
+  /// Retrieve symbols for types referenced at \p Pos.
+  void findType(PathRef File, Position Pos,
+                Callback<std::vector<LocatedSymbol>> CB);
+
   /// Retrieve locations for symbol references.
   void findReferences(PathRef File, Position Pos, uint32_t Limit,
                       Callback<ReferencesResult> CB);
