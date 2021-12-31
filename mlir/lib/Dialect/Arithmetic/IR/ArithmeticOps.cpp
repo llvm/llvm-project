@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/CommonFolders.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
@@ -1206,6 +1207,101 @@ OpFoldResult arith::CmpFOp::fold(ArrayRef<Attribute> operands) {
 
   auto val = applyCmpPredicate(getPredicate(), lhs.getValue(), rhs.getValue());
   return BoolAttr::get(getContext(), val);
+}
+
+//===----------------------------------------------------------------------===//
+// Atomic Enum
+//===----------------------------------------------------------------------===//
+
+/// Returns the identity value attribute associated with an AtomicRMWKind op.
+Attribute mlir::arith::getIdentityValueAttr(AtomicRMWKind kind, Type resultType,
+                                            OpBuilder &builder, Location loc) {
+  switch (kind) {
+  case AtomicRMWKind::maxf:
+    return builder.getFloatAttr(
+        resultType,
+        APFloat::getInf(resultType.cast<FloatType>().getFloatSemantics(),
+                        /*Negative=*/true));
+  case AtomicRMWKind::addf:
+  case AtomicRMWKind::addi:
+  case AtomicRMWKind::maxu:
+  case AtomicRMWKind::ori:
+    return builder.getZeroAttr(resultType);
+  case AtomicRMWKind::andi:
+    return builder.getIntegerAttr(
+        resultType,
+        APInt::getAllOnes(resultType.cast<IntegerType>().getWidth()));
+  case AtomicRMWKind::maxs:
+    return builder.getIntegerAttr(
+        resultType,
+        APInt::getSignedMinValue(resultType.cast<IntegerType>().getWidth()));
+  case AtomicRMWKind::minf:
+    return builder.getFloatAttr(
+        resultType,
+        APFloat::getInf(resultType.cast<FloatType>().getFloatSemantics(),
+                        /*Negative=*/false));
+  case AtomicRMWKind::mins:
+    return builder.getIntegerAttr(
+        resultType,
+        APInt::getSignedMaxValue(resultType.cast<IntegerType>().getWidth()));
+  case AtomicRMWKind::minu:
+    return builder.getIntegerAttr(
+        resultType,
+        APInt::getMaxValue(resultType.cast<IntegerType>().getWidth()));
+  case AtomicRMWKind::muli:
+    return builder.getIntegerAttr(resultType, 1);
+  case AtomicRMWKind::mulf:
+    return builder.getFloatAttr(resultType, 1);
+  // TODO: Add remaining reduction operations.
+  default:
+    (void)emitOptionalError(loc, "Reduction operation type not supported");
+    break;
+  }
+  return nullptr;
+}
+
+/// Returns the identity value associated with an AtomicRMWKind op.
+Value mlir::arith::getIdentityValue(AtomicRMWKind op, Type resultType,
+                                    OpBuilder &builder, Location loc) {
+  Attribute attr = getIdentityValueAttr(op, resultType, builder, loc);
+  return builder.create<arith::ConstantOp>(loc, attr);
+}
+
+/// Return the value obtained by applying the reduction operation kind
+/// associated with a binary AtomicRMWKind op to `lhs` and `rhs`.
+Value mlir::arith::getReductionOp(AtomicRMWKind op, OpBuilder &builder,
+                                  Location loc, Value lhs, Value rhs) {
+  switch (op) {
+  case AtomicRMWKind::addf:
+    return builder.create<arith::AddFOp>(loc, lhs, rhs);
+  case AtomicRMWKind::addi:
+    return builder.create<arith::AddIOp>(loc, lhs, rhs);
+  case AtomicRMWKind::mulf:
+    return builder.create<arith::MulFOp>(loc, lhs, rhs);
+  case AtomicRMWKind::muli:
+    return builder.create<arith::MulIOp>(loc, lhs, rhs);
+  case AtomicRMWKind::maxf:
+    return builder.create<arith::MaxFOp>(loc, lhs, rhs);
+  case AtomicRMWKind::minf:
+    return builder.create<arith::MinFOp>(loc, lhs, rhs);
+  case AtomicRMWKind::maxs:
+    return builder.create<arith::MaxSIOp>(loc, lhs, rhs);
+  case AtomicRMWKind::mins:
+    return builder.create<arith::MinSIOp>(loc, lhs, rhs);
+  case AtomicRMWKind::maxu:
+    return builder.create<arith::MaxUIOp>(loc, lhs, rhs);
+  case AtomicRMWKind::minu:
+    return builder.create<arith::MinUIOp>(loc, lhs, rhs);
+  case AtomicRMWKind::ori:
+    return builder.create<arith::OrIOp>(loc, lhs, rhs);
+  case AtomicRMWKind::andi:
+    return builder.create<arith::AndIOp>(loc, lhs, rhs);
+  // TODO: Add remaining reduction operations.
+  default:
+    (void)emitOptionalError(loc, "Reduction operation type not supported");
+    break;
+  }
+  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//

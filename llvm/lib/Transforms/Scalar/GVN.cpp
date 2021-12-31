@@ -1769,7 +1769,7 @@ bool GVNPass::processAssumeIntrinsic(AssumeInst *IntrinsicI) {
       // Insert a new store to null instruction before the load to indicate that
       // this code is not reachable.  FIXME: We could insert unreachable
       // instruction directly because we can modify the CFG.
-      auto *NewS = new StoreInst(UndefValue::get(Int8Ty),
+      auto *NewS = new StoreInst(PoisonValue::get(Int8Ty),
                                  Constant::getNullValue(Int8Ty->getPointerTo()),
                                  IntrinsicI);
       if (MSSAU) {
@@ -2991,12 +2991,12 @@ void GVNPass::addDeadBlock(BasicBlock *BB) {
       }
     }
 
-    // Now undef the incoming values from the dead predecessors.
+    // Now poison the incoming values from the dead predecessors.
     for (BasicBlock *P : predecessors(B)) {
       if (!DeadBlocks.count(P))
         continue;
       for (PHINode &Phi : B->phis()) {
-        Phi.setIncomingValueForBlock(P, UndefValue::get(Phi.getType()));
+        Phi.setIncomingValueForBlock(P, PoisonValue::get(Phi.getType()));
         if (MD)
           MD->invalidateCachedPointerInfo(&Phi);
       }

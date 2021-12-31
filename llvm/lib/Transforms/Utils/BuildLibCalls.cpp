@@ -233,6 +233,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
 
   switch (TheLibFunc) {
   case LibFunc_strlen:
+  case LibFunc_strnlen:
   case LibFunc_wcslen:
     Changed |= setOnlyReadsMemory(F);
     Changed |= setDoesNotThrow(F);
@@ -1158,7 +1159,6 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
   case LibFunc_sqrt:
   case LibFunc_sqrtf:
   case LibFunc_sqrtl:
-  case LibFunc_strnlen:
   case LibFunc_tan:
   case LibFunc_tanf:
   case LibFunc_tanh:

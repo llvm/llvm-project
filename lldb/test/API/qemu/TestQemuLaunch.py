@@ -154,6 +154,24 @@ class TestQemuLaunch(TestBase):
             state = json.load(s)
         self.assertEqual(state["stdin"], "STDIN CONTENT")
 
+    def test_find_in_PATH(self):
+        emulator = self.getBuildArtifact("qemu-" + self.getArchitecture())
+        os.rename(self.getBuildArtifact("qemu.py"), emulator)
+        self.set_emulator_setting("emulator-path", "''")
+
+        original_path = os.environ["PATH"]
+        os.environ["PATH"] = (self.getBuildDir() +
+            self.platformContext.shlib_path_separator + original_path)
+        def cleanup():
+            os.environ["PATH"] = original_path
+
+        self.addTearDownHook(cleanup)
+        state = self._run_and_get_state()
+
+        self.assertEqual(state["program"], self.getBuildArtifact())
+        self.assertEqual(state["args"],
+                ["dump:" + self.getBuildArtifact("state.log")])
+
     def test_bad_emulator_path(self):
         self.set_emulator_setting("emulator-path",
                 self.getBuildArtifact("nonexistent.file"))

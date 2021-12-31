@@ -72,3 +72,83 @@ EXIT:
   %w = phi i32 [%v, %A], [poison, %B]
   ret i32 %w
 }
+
+define i32 @undef(i1 %cond, i32 %v) {
+; CHECK-LABEL: @undef(
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[A:%.*]], label [[B:%.*]]
+; CHECK:       A:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       B:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       EXIT:
+; CHECK-NEXT:    ret i32 [[V:%.*]]
+;
+  br i1 %cond, label %A, label %B
+A:
+  br label %EXIT
+B:
+  br label %EXIT
+EXIT:
+  %w = phi i32 [%v, %A], [undef, %B]
+  ret i32 %w
+}
+
+define i8 @undef_poison(i1 %cond) {
+; CHECK-LABEL: @undef_poison(
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[A:%.*]], label [[B:%.*]]
+; CHECK:       A:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       B:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       EXIT:
+; CHECK-NEXT:    ret i8 undef
+;
+  br i1 %cond, label %A, label %B
+A:
+  br label %EXIT
+B:
+  br label %EXIT
+EXIT:
+  %r = phi i8 [undef, %A], [poison, %B]
+  ret i8 %r
+}
+
+define i8 @only_undef(i1 %cond) {
+; CHECK-LABEL: @only_undef(
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[A:%.*]], label [[B:%.*]]
+; CHECK:       A:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       B:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       EXIT:
+; CHECK-NEXT:    ret i8 undef
+;
+  br i1 %cond, label %A, label %B
+A:
+  br label %EXIT
+B:
+  br label %EXIT
+EXIT:
+  %r = phi i8 [undef, %A], [undef, %B]
+  ret i8 %r
+}
+
+define i8 @only_poison(i1 %cond) {
+; CHECK-LABEL: @only_poison(
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[A:%.*]], label [[B:%.*]]
+; CHECK:       A:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       B:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       EXIT:
+; CHECK-NEXT:    ret i8 undef
+;
+  br i1 %cond, label %A, label %B
+A:
+  br label %EXIT
+B:
+  br label %EXIT
+EXIT:
+  %r = phi i8 [poison, %A], [poison, %B]
+  ret i8 %r
+}

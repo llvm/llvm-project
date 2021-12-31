@@ -15,6 +15,7 @@
 #ifndef MLIR_ANALYSIS_AFFINE_ANALYSIS_H
 #define MLIR_ANALYSIS_AFFINE_ANALYSIS_H
 
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/Optional.h"
@@ -32,7 +33,7 @@ class Operation;
 /// A description of a (parallelizable) reduction in an affine loop.
 struct LoopReduction {
   /// Reduction kind.
-  AtomicRMWKind kind;
+  arith::AtomicRMWKind kind;
 
   /// Position of the iteration argument that acts as accumulator.
   unsigned iterArgPosition;
