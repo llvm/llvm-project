@@ -22,7 +22,6 @@
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
-class IntrinsicInst;
 class AssumptionCache;
 class DominatorTree;
 

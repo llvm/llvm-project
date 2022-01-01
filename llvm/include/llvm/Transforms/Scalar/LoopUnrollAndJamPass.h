@@ -13,7 +13,6 @@
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 
 namespace llvm {
-class Function;
 
 /// A simple loop rotation transformation.
 class LoopUnrollAndJamPass : public PassInfoMixin<LoopUnrollAndJamPass> {

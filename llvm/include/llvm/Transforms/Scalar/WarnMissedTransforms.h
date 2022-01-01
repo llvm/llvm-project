@@ -17,8 +17,6 @@
 
 namespace llvm {
 class Function;
-class Loop;
-class LPMUpdater;
 
 // New pass manager boilerplate.
 class WarnMissedTransformationsPass
