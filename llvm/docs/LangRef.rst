@@ -23103,7 +23103,7 @@ Syntax:
 
 ::
 
-      declare void @llvm.sideeffect() inaccessiblememonly nounwind
+      declare void @llvm.sideeffect() inaccessiblememonly nounwind willreturn
 
 Overview:
 """""""""
