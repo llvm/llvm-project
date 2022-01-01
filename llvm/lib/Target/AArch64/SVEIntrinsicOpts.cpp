@@ -40,10 +40,6 @@ using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "aarch64-sve-intrinsic-opts"
 
-namespace llvm {
-void initializeSVEIntrinsicOptsPass(PassRegistry &);
-}
-
 namespace {
 struct SVEIntrinsicOpts : public ModulePass {
   static char ID; // Pass identification, replacement for typeid
