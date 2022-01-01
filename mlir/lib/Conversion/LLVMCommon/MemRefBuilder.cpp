@@ -487,7 +487,7 @@ Value UnrankedMemRefDescriptor::size(OpBuilder &builder, Location loc,
 }
 
 void UnrankedMemRefDescriptor::setSize(OpBuilder &builder, Location loc,
-                                       LLVMTypeConverter typeConverter,
+                                       LLVMTypeConverter &typeConverter,
                                        Value sizeBasePtr, Value index,
                                        Value size) {
   Type indexPtrTy = LLVM::LLVMPointerType::get(typeConverter.getIndexType());
@@ -505,7 +505,7 @@ Value UnrankedMemRefDescriptor::strideBasePtr(OpBuilder &builder, Location loc,
 }
 
 Value UnrankedMemRefDescriptor::stride(OpBuilder &builder, Location loc,
-                                       LLVMTypeConverter typeConverter,
+                                       LLVMTypeConverter &typeConverter,
                                        Value strideBasePtr, Value index,
                                        Value stride) {
   Type indexPtrTy = LLVM::LLVMPointerType::get(typeConverter.getIndexType());
@@ -515,7 +515,7 @@ Value UnrankedMemRefDescriptor::stride(OpBuilder &builder, Location loc,
 }
 
 void UnrankedMemRefDescriptor::setStride(OpBuilder &builder, Location loc,
-                                         LLVMTypeConverter typeConverter,
+                                         LLVMTypeConverter &typeConverter,
                                          Value strideBasePtr, Value index,
                                          Value stride) {
   Type indexPtrTy = LLVM::LLVMPointerType::get(typeConverter.getIndexType());
