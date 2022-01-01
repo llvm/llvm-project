@@ -242,7 +242,6 @@ struct CodegenStrategy {
   promoteIf(bool b, StringRef opName, linalg::LinalgPromotionOptions options,
             LinalgTransformationFilter::FilterFunction f = nullptr) {
     return b ? promote(opName, options, f) : *this;
-    return *this;
   }
   /// Append a pattern to generalize named operations.
   CodegenStrategy &
@@ -257,7 +256,6 @@ struct CodegenStrategy {
   generalizeIf(bool b, StringRef opName,
                LinalgTransformationFilter::FilterFunction f = nullptr) {
     return b ? generalize(opName, f) : *this;
-    return *this;
   }
   /// Append a pattern to interchange iterators.
   CodegenStrategy &
@@ -272,7 +270,6 @@ struct CodegenStrategy {
   interchangeIf(bool b, ArrayRef<int64_t> iteratorInterchange,
                 LinalgTransformationFilter::FilterFunction f = nullptr) {
     return b ? interchange(iteratorInterchange, f) : *this;
-    return *this;
   }
   /// Append patterns to decompose convolutions.
   CodegenStrategy &
@@ -284,7 +281,6 @@ struct CodegenStrategy {
   CodegenStrategy &
   decomposeIf(bool b, LinalgTransformationFilter::FilterFunction f = nullptr) {
     return b ? decompose(f) : *this;
-    return *this;
   }
   /// Append a pattern to rewrite `LinalgOpType` as a vector operation.
   CodegenStrategy &
@@ -302,7 +298,6 @@ struct CodegenStrategy {
               LinalgTransformationFilter::FilterFunction f = nullptr,
               bool vectorizePadding = false) {
     return b ? vectorize(opName, f, vectorizePadding) : *this;
-    return *this;
   }
   /// Append a pattern to lower all vector operations.
   CodegenStrategy &vectorLowering(LinalgVectorLoweringOptions options) {
