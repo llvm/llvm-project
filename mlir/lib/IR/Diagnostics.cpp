@@ -907,7 +907,7 @@ struct ParallelDiagnosticHandlerImpl : public llvm::PrettyStackTraceEntry {
       return;
 
     os << "In-Flight Diagnostics:\n";
-    emitDiagnostics([&](Diagnostic diag) {
+    emitDiagnostics([&](const Diagnostic &diag) {
       os.indent(4);
 
       // Print each diagnostic with the format:
