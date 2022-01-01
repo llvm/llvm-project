@@ -97,8 +97,8 @@ private:
 
   class EvalResult {
   public:
-    EvalResult() : Value(0), ErrorMsg("") {}
-    EvalResult(uint64_t Value) : Value(Value), ErrorMsg("") {}
+    EvalResult() : Value(0) {}
+    EvalResult(uint64_t Value) : Value(Value) {}
     EvalResult(std::string ErrorMsg)
         : Value(0), ErrorMsg(std::move(ErrorMsg)) {}
     uint64_t getValue() const { return Value; }
