@@ -153,10 +153,14 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
 "`CMakeFiles'. Please delete them.")
 endif()
 
+if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
+  set(LLVM_COMMON_CMAKE_UTILS ${LLD_SOURCE_DIR}/../cmake)
+endif()
+
 # Add path for custom modules.
 list(INSERT CMAKE_MODULE_PATH 0
   "${LLD_SOURCE_DIR}/cmake/modules"
-  "${LLD_SOURCE_DIR}/../cmake/Modules"
+  "${LLVM_COMMON_CMAKE_UTILS}/Modules"
   )
 
 include(AddLLD)
