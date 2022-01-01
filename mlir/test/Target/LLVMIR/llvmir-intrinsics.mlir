@@ -485,6 +485,13 @@ llvm.func @coro_resume(%arg0: !llvm.ptr<i8>) {
   llvm.return
 }
 
+// CHECK-LABEL: @eh_typeid_for
+llvm.func @eh_typeid_for(%arg0 : !llvm.ptr<i8>) {
+    // CHECK: call i32 @llvm.eh.typeid.for
+    %0 = llvm.intr.eh.typeid.for %arg0 : i32
+    llvm.return
+}
+
 // CHECK-LABEL: @stack_save
 llvm.func @stack_save() {
   // CHECK: call i8* @llvm.stacksave
