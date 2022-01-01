@@ -543,9 +543,8 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // The Glue is necessary since all emitted instructions must be
   // stuck together.
   if (!CLI.IsTailCall) {
-    for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i) {
-      Chain = DAG.getCopyToReg(Chain, dl, RegsToPass[i].first,
-                               RegsToPass[i].second, Glue);
+    for (const auto &R : RegsToPass) {
+      Chain = DAG.getCopyToReg(Chain, dl, R.first, R.second, Glue);
       Glue = Chain.getValue(1);
     }
   } else {
@@ -560,9 +559,8 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     //
     // Do not flag preceding copytoreg stuff together with the following stuff.
     Glue = SDValue();
-    for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i) {
-      Chain = DAG.getCopyToReg(Chain, dl, RegsToPass[i].first,
-                               RegsToPass[i].second, Glue);
+    for (const auto &R : RegsToPass) {
+      Chain = DAG.getCopyToReg(Chain, dl, R.first, R.second, Glue);
       Glue = Chain.getValue(1);
     }
     Glue = SDValue();
@@ -589,10 +587,8 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // Add argument registers to the end of the list so that they are
   // known live into the call.
-  for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i) {
-    Ops.push_back(DAG.getRegister(RegsToPass[i].first,
-                                  RegsToPass[i].second.getValueType()));
-  }
+  for (const auto &R : RegsToPass)
+    Ops.push_back(DAG.getRegister(R.first, R.second.getValueType()));
 
   const uint32_t *Mask = HRI.getCallPreservedMask(MF, CallConv);
   assert(Mask && "Missing call preserved mask for calling convention");
@@ -2204,8 +2200,7 @@ HexagonTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG)
   // Express the shuffle mask in terms of bytes.
   SmallVector<int,8> ByteMask;
   unsigned ElemBytes = VecTy.getVectorElementType().getSizeInBits() / 8;
-  for (unsigned i = 0, e = Mask.size(); i != e; ++i) {
-    int M = Mask[i];
+  for (int M : Mask) {
     if (M < 0) {
       for (unsigned j = 0; j != ElemBytes; ++j)
         ByteMask.push_back(-1);

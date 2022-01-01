@@ -578,8 +578,7 @@ void HexagonSplitDoubleRegs::collectIndRegs(LoopRegMap &IRM) {
     append_range(WorkQ, *WorkQ[i]);
 
   USet Rs;
-  for (unsigned i = 0, n = WorkQ.size(); i < n; ++i) {
-    MachineLoop *L = WorkQ[i];
+  for (MachineLoop *L : WorkQ) {
     Rs.clear();
     collectIndRegsForLoop(L, Rs);
     if (!Rs.empty())
