@@ -32,8 +32,6 @@
 
 using namespace mlir;
 
-using llvm::dbgs;
-
 /// Get the value that is being reduced by `pos`-th reduction in the loop if
 /// such a reduction can be performed by affine parallel loops. This assumes
 /// floating-point operations are commutative. On success, `kind` will be the

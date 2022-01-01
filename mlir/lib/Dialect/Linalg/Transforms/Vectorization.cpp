@@ -38,8 +38,6 @@
 using namespace mlir;
 using namespace mlir::linalg;
 
-using llvm::dbgs;
-
 #define DEBUG_TYPE "linalg-vectorization"
 
 #define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")

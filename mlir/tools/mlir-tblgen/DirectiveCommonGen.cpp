@@ -22,7 +22,6 @@ using llvm::Clause;
 using llvm::ClauseVal;
 using llvm::raw_ostream;
 using llvm::RecordKeeper;
-using llvm::Twine;
 
 // LLVM has multiple places (Clang, Flang, MLIR) where information about
 // the directives (OpenMP/OpenACC), and clauses are needed. It is good software
