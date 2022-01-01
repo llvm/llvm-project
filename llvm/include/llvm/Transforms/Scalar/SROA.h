@@ -27,7 +27,6 @@ class AllocaInst;
 class AssumptionCache;
 class DominatorTree;
 class Function;
-class Instruction;
 class LLVMContext;
 class PHINode;
 class SelectInst;

@@ -133,7 +133,6 @@ struct InformationCache;
 struct AAIsDead;
 struct AttributorCallGraph;
 
-class AAManager;
 class AAResults;
 class Function;
 
