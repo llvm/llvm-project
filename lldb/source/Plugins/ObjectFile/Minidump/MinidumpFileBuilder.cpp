@@ -272,8 +272,7 @@ Status MinidumpFileBuilder::AddModuleList(Target &target) {
         mod->GetObjectFile()->GetBaseAddress().GetLoadAddress(&target));
     m.SizeOfImage = static_cast<llvm::support::ulittle32_t>(mod_size);
     m.Checksum = static_cast<llvm::support::ulittle32_t>(0);
-    m.TimeDateStamp =
-        static_cast<llvm::support::ulittle32_t>(std::time(nullptr));
+    m.TimeDateStamp = static_cast<llvm::support::ulittle32_t>(std::time(0));
     m.ModuleNameRVA = static_cast<llvm::support::ulittle32_t>(
         size_before + module_stream_size + helper_data.GetByteSize());
     m.VersionInfo = info;
@@ -720,7 +719,7 @@ Status MinidumpFileBuilder::Dump(lldb::FileUP &core_file) const {
   header.Checksum = static_cast<llvm::support::ulittle32_t>(
       0u), // not used in most of the writers
       header.TimeDateStamp =
-          static_cast<llvm::support::ulittle32_t>(std::time(nullptr));
+          static_cast<llvm::support::ulittle32_t>(std::time(0));
   header.Flags =
       static_cast<llvm::support::ulittle64_t>(0u); // minidump normal flag
 
