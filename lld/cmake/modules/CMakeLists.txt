@@ -1,15 +1,20 @@
+include(GNUInstallPackageDir)
 include(ExtendPath)
 include(FindPrefixFromConfig)
 
 # Generate a list of CMake library targets so that other CMake projects can
 # link against them. LLVM calls its version of this file LLVMExports.cmake, but
 # the usual CMake convention seems to be ${Project}Targets.cmake.
-set(LLD_INSTALL_PACKAGE_DIR lib${LLVM_LIBDIR_SUFFIX}/cmake/lld)
-set(lld_cmake_builddir "${CMAKE_BINARY_DIR}/${LLD_INSTALL_PACKAGE_DIR}")
+set(LLD_INSTALL_PACKAGE_DIR "${CMAKE_INSTALL_PACKAGEDIR}/lld" CACHE STRING
+  "Path for CMake subdirectory for LLD (defaults to '${CMAKE_INSTALL_PACKAGEDIR}/lld')")
+# CMAKE_INSTALL_PACKAGEDIR might be absolute, so don't reuse below.
+set(lld_cmake_builddir "${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/lld")
 
 # Keep this in sync with llvm/cmake/CMakeLists.txt!
-set(LLVM_INSTALL_PACKAGE_DIR lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm)
-set(llvm_cmake_builddir "${LLVM_BINARY_DIR}/${LLVM_INSTALL_PACKAGE_DIR}")
+set(LLVM_INSTALL_PACKAGE_DIR "${CMAKE_INSTALL_PACKAGEDIR}/llvm" CACHE STRING
+  "Path for CMake subdirectory for LLVM (defaults to '${CMAKE_INSTALL_PACKAGEDIR}/llvm')")
+# CMAKE_INSTALL_PACKAGEDIR might be absolute, so don't reuse below.
+set(llvm_cmake_builddir "${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm")
 
 get_property(LLD_EXPORTS GLOBAL PROPERTY LLD_EXPORTS)
 export(TARGETS ${LLD_EXPORTS} FILE ${lld_cmake_builddir}/LLDTargets.cmake)
@@ -31,8 +36,8 @@ set(LLD_CONFIG_LLVM_CMAKE_DIR)
 
 # Generate LLDConfig.cmake for the install tree.
 find_prefix_from_config(LLD_CONFIG_CODE LLD_INSTALL_PREFIX "${LLD_INSTALL_PACKAGE_DIR}")
-set(LLD_CONFIG_CMAKE_DIR "\${LLD_INSTALL_PREFIX}/${LLD_INSTALL_PACKAGE_DIR}")
-set(LLD_CONFIG_LLVM_CMAKE_DIR "\${LLD_INSTALL_PREFIX}/${LLVM_INSTALL_PACKAGE_DIR}")
+extend_path(LLD_CONFIG_CMAKE_DIR "\${LLD_INSTALL_PREFIX}" "${LLD_INSTALL_PACKAGE_DIR}")
+extend_path(LLD_CONFIG_LLVM_CMAKE_DIR "\${LLD_INSTALL_PREFIX}" "${LLVM_INSTALL_PACKAGE_DIR}")
 get_config_exports_includes(LLD LLD_CONFIG_INCLUDE_EXPORTS)
 extend_path(LLD_CONFIG_INCLUDE_DIRS "\${LLD_INSTALL_PREFIX}" "${CMAKE_INSTALL_INCLUDEDIR}")
 configure_file(
