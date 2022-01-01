@@ -87,24 +87,6 @@ private:
     double& Res1, Constant *copr0, Constant *copr1, Constant *copr2);
   bool evaluateCall(CallInst *aCI, const FuncInfo &FInfo);
 
-  // exp
-  bool fold_exp(CallInst *CI, IRBuilder<> &B, const FuncInfo &FInfo);
-
-  // exp2
-  bool fold_exp2(CallInst *CI, IRBuilder<> &B, const FuncInfo &FInfo);
-
-  // exp10
-  bool fold_exp10(CallInst *CI, IRBuilder<> &B, const FuncInfo &FInfo);
-
-  // log
-  bool fold_log(CallInst *CI, IRBuilder<> &B, const FuncInfo &FInfo);
-
-  // log2
-  bool fold_log2(CallInst *CI, IRBuilder<> &B, const FuncInfo &FInfo);
-
-  // log10
-  bool fold_log10(CallInst *CI, IRBuilder<> &B, const FuncInfo &FInfo);
-
   // sqrt
   bool fold_sqrt(CallInst *CI, IRBuilder<> &B, const FuncInfo &FInfo);
 
