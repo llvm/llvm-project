@@ -276,8 +276,10 @@ int collectStats(MlirOperation operation) {
 
   do {
     int retval = collectStatsSingle(head, &stats);
-    if (retval)
+    if (retval) {
+      free(head);
       return retval;
+    }
     OpListNode *next = head->next;
     free(head);
     head = next;

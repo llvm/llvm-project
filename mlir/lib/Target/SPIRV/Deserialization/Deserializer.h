@@ -500,7 +500,7 @@ private:
 
   OpBuilder opBuilder;
 
-  spirv::Version version;
+  spirv::Version version = spirv::Version::V_1_0;
 
   /// The list of capabilities used by the module.
   llvm::SmallSetVector<spirv::Capability, 4> capabilities;

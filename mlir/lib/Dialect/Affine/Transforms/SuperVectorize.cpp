@@ -755,7 +755,7 @@ struct VectorizationState {
   DenseMap<Operation *, Value> vecLoopToMask;
 
   // The strategy drives which loop to vectorize by which amount.
-  const VectorizationStrategy *strategy;
+  const VectorizationStrategy *strategy = nullptr;
 
 private:
   /// Internal implementation to map input scalar values to new vector or scalar

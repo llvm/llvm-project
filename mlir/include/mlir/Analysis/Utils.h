@@ -333,7 +333,7 @@ struct MemRefRegion {
   Value memref;
 
   /// Read or write.
-  bool write;
+  bool write = false;
 
   /// If there is more than one load/store op associated with the region, the
   /// location information would correspond to one of those op's.
