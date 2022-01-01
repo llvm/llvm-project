@@ -4612,7 +4612,7 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
     Type *PhiType = II.getStep()->getType();
 
     // Build a pointer phi
-    Value *ScalarStartValue = II.getStartValue();
+    Value *ScalarStartValue = PhiR->getStartValue()->getLiveInIRValue();
     Type *ScStValueType = ScalarStartValue->getType();
     PHINode *NewPointerPhi =
         PHINode::Create(ScStValueType, 2, "pointer.phi", Induction);
@@ -8874,11 +8874,14 @@ VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
           Phi->getIncomingValueForBlock(OrigLoop->getLoopLatch())));
       PhisToFix.push_back(PhiRecipe);
     } else {
-      // TODO: record start and backedge value for remaining pointer induction
-      // phis.
+      // TODO: record backedge value for remaining pointer induction phis.
       assert(Phi->getType()->isPointerTy() &&
              "only pointer phis should be handled here");
-      PhiRecipe = new VPWidenPHIRecipe(Phi);
+      assert(Legal->getInductionVars().count(Phi) &&
+             "Not an induction variable");
+      InductionDescriptor II = Legal->getInductionVars().lookup(Phi);
+      VPValue *Start = Plan->getOrAddVPValue(II.getStartValue());
+      PhiRecipe = new VPWidenPHIRecipe(Phi, Start);
     }
 
     return toVPRecipeResult(PhiRecipe);
