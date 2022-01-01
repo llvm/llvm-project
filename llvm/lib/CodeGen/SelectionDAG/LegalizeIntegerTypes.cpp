@@ -1708,46 +1708,62 @@ void DAGTypeLegalizer::PromoteSetCCOperands(SDValue &LHS, SDValue &RHS,
                                             ISD::CondCode CCCode) {
   // We have to insert explicit sign or zero extends. Note that we could
   // insert sign extends for ALL conditions. For those operations where either
-  // zero or sign extension would be valid, use SExtOrZExtPromotedInteger
-  // which will choose the cheapest for the target.
-  switch (CCCode) {
-  default: llvm_unreachable("Unknown integer comparison!");
-  case ISD::SETEQ:
-  case ISD::SETNE: {
-    SDValue OpL = GetPromotedInteger(LHS);
-    SDValue OpR = GetPromotedInteger(RHS);
+  // zero or sign extension would be valid, we ask the target which extension
+  // it would prefer.
 
-    // We would prefer to promote the comparison operand with sign extension.
-    // If the width of OpL/OpR excluding the duplicated sign bits is no greater
-    // than the width of LHS/RHS, we can avoid inserting real truncate
-    // instruction, which is redundant eventually.
+  // Signed comparisons always require sign extension.
+  if (ISD::isSignedIntSetCC(CCCode)) {
+    LHS = SExtPromotedInteger(LHS);
+    RHS = SExtPromotedInteger(RHS);
+    return;
+  }
+
+  assert((ISD::isUnsignedIntSetCC(CCCode) || ISD::isIntEqualitySetCC(CCCode)) &&
+         "Unknown integer comparison!");
+
+  SDValue OpL = GetPromotedInteger(LHS);
+  SDValue OpR = GetPromotedInteger(RHS);
+
+  if (TLI.isSExtCheaperThanZExt(LHS.getValueType(), OpL.getValueType())) {
+    // The target would prefer to promote the comparison operand with sign
+    // extension. Honor that unless the promoted values are already zero
+    // extended.
+    unsigned OpLEffectiveBits =
+        DAG.computeKnownBits(OpL).countMaxActiveBits();
+    unsigned OpREffectiveBits =
+        DAG.computeKnownBits(OpR).countMaxActiveBits();
+    if (OpLEffectiveBits <= LHS.getScalarValueSizeInBits() &&
+        OpREffectiveBits <= RHS.getScalarValueSizeInBits()) {
+      LHS = OpL;
+      RHS = OpR;
+      return;
+    }
+
+    // The promoted values aren't zero extended, use a sext_inreg.
+    LHS = SExtPromotedInteger(LHS);
+    RHS = SExtPromotedInteger(RHS);
+    return;
+  }
+
+  // Prefer to promote the comparison operand with zero extension.
+
+  // If this is an equality comparison and the width of OpL/OpR excluding the
+  // duplicated sign bits is no greater than the width of LHS/RHS, we can avoid
+  // inserting a zext_inreg operation that we might not be able to remove.
+  if (ISD::isIntEqualitySetCC(CCCode)) {
     unsigned OpLEffectiveBits = DAG.ComputeMinSignedBits(OpL);
     unsigned OpREffectiveBits = DAG.ComputeMinSignedBits(OpR);
     if (OpLEffectiveBits <= LHS.getScalarValueSizeInBits() &&
         OpREffectiveBits <= RHS.getScalarValueSizeInBits()) {
       LHS = OpL;
       RHS = OpR;
-    } else {
-      LHS = SExtOrZExtPromotedInteger(LHS);
-      RHS = SExtOrZExtPromotedInteger(RHS);
+      return;
     }
-    break;
   }
-  case ISD::SETUGE:
-  case ISD::SETUGT:
-  case ISD::SETULE:
-  case ISD::SETULT:
-    LHS = SExtOrZExtPromotedInteger(LHS);
-    RHS = SExtOrZExtPromotedInteger(RHS);
-    break;
-  case ISD::SETGE:
-  case ISD::SETGT:
-  case ISD::SETLT:
-  case ISD::SETLE:
-    LHS = SExtPromotedInteger(LHS);
-    RHS = SExtPromotedInteger(RHS);
-    break;
-  }
+
+  // Otherwise, use zext_inreg.
+  LHS = ZExtPromotedInteger(LHS);
+  RHS = ZExtPromotedInteger(RHS);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_ANY_EXTEND(SDNode *N) {

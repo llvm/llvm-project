@@ -745,13 +745,12 @@ define i32 @fcvt_wu_h_multiple_use(half %x, i32* %y) {
 ; RV64I-NEXT:    and a0, a0, a1
 ; RV64I-NEXT:    call __gnu_h2f_ieee@plt
 ; RV64I-NEXT:    call __fixunssfdi@plt
-; RV64I-NEXT:    sext.w a2, a0
-; RV64I-NEXT:    li a1, 1
-; RV64I-NEXT:    beqz a2, .LBB7_2
-; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    mv a1, a0
-; RV64I-NEXT:  .LBB7_2:
+; RV64I-NEXT:    li a0, 1
+; RV64I-NEXT:    beqz a1, .LBB7_2
+; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    mv a0, a1
+; RV64I-NEXT:  .LBB7_2:
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
