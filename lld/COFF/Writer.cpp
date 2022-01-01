@@ -1500,6 +1500,12 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
 
   // Write section table
   for (OutputSection *sec : ctx.outputSections) {
+    // Fix the characteristics of some sections like ".voltbl".
+    // Or the program will be crash sometimes.
+    if (sec->header.Characteristics == 0) {
+      sec->header.Characteristics |= IMAGE_SCN_CNT_INITIALIZED_DATA |
+                                     IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE;
+    }
     sec->writeHeaderTo(buf);
     buf += sizeof(coff_section);
   }
