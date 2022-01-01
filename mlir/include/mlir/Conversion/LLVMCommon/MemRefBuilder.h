@@ -219,7 +219,7 @@ public:
                            LLVM::LLVMPointerType elemPtrPtrType);
   /// Builds IR extracting the size[index] from the descriptor.
   static Value size(OpBuilder &builder, Location loc,
-                    LLVMTypeConverter typeConverter, Value sizeBasePtr,
+                    LLVMTypeConverter &typeConverter, Value sizeBasePtr,
                     Value index);
   /// Builds IR inserting the size[index] into the descriptor.
   static void setSize(OpBuilder &builder, Location loc,
