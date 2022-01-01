@@ -478,7 +478,7 @@ Value UnrankedMemRefDescriptor::sizeBasePtr(
 }
 
 Value UnrankedMemRefDescriptor::size(OpBuilder &builder, Location loc,
-                                     LLVMTypeConverter typeConverter,
+                                     LLVMTypeConverter &typeConverter,
                                      Value sizeBasePtr, Value index) {
   Type indexPtrTy = LLVM::LLVMPointerType::get(typeConverter.getIndexType());
   Value sizeStoreGep = builder.create<LLVM::GEPOp>(loc, indexPtrTy, sizeBasePtr,
