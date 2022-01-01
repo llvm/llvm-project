@@ -680,7 +680,7 @@ void Symbol::Encode(DataEncoder &file, ConstStringTable &strtab) const {
   // symbol's base address doesn't have a section, then it is a constant value.
   // If it does have a section, we will encode the file address and re-resolve
   // the address when we decode it.
-  bool is_addr = m_addr_range.GetBaseAddress().GetSection().get() != NULL;
+  bool is_addr = m_addr_range.GetBaseAddress().GetSection().get() != nullptr;
   file.AppendU8(is_addr);
   file.AppendU64(m_addr_range.GetBaseAddress().GetFileAddress());
   file.AppendU64(m_addr_range.GetByteSize());
