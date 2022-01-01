@@ -38,8 +38,6 @@
 using namespace mlir;
 using namespace mlir::linalg;
 
-using llvm::dbgs;
-
 /// Implements a simple high-level fusion pass on linalg structured operations.
 ///
 /// In each block, linalg ops are processed in reverse textual order.

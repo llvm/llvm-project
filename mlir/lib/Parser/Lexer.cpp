@@ -20,7 +20,6 @@
 using namespace mlir;
 
 using llvm::SMLoc;
-using llvm::SourceMgr;
 
 // Returns true if 'c' is an allowable punctuation character: [$._-]
 // Returns false otherwise.

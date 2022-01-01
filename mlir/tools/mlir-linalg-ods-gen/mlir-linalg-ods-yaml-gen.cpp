@@ -30,7 +30,6 @@
 using namespace mlir;
 
 using llvm::yaml::Input;
-using llvm::yaml::IO;
 using llvm::yaml::MappingTraits;
 using llvm::yaml::ScalarEnumerationTraits;
 using llvm::yaml::ScalarTraits;
