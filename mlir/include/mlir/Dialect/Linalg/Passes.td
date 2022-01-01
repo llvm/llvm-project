@@ -237,6 +237,12 @@ def LinalgDetensorize : Pass<"linalg-detensorize", ""> {
     run on others. This is because it performs specific legalization of the
     blocks that make up the body, which it assumes has a FunctionLike trait.
   }];
+  let options = [
+    Option<"aggressiveMode", "aggressive-mode", "bool", /*default=*/"false",
+           "Detensorize all ops that qualify for detensoring along with branch"
+           " operands and basic-block arguments.">
+
+  ];
 }
 
 def LinalgStrategyTileAndFusePass

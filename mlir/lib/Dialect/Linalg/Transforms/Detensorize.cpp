@@ -196,8 +196,6 @@ struct ExtractFromReshapeFromElements
 /// @see LinalgDetensorize in Linalg/Passes.td for more details.
 struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
   LinalgDetensorize() = default;
-  LinalgDetensorize(const LinalgDetensorize &pass)
-      : LinalgDetensorizeBase<LinalgDetensorize>() {}
 
   class CostModel {
   public:
@@ -600,11 +598,6 @@ struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
                                             std::move(canonPatterns))))
       signalPassFailure();
   }
-
-  Option<bool> aggressiveMode{
-      *this, "aggressive-mode",
-      llvm::cl::desc("Detensorize all ops that qualify for detensoring along "
-                     "with branch operands and basic-block arguments.")};
 };
 } // namespace
 
