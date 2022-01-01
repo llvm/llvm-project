@@ -1502,7 +1502,8 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   for (OutputSection *sec : ctx.outputSections) {
     // Fix the characteristics of some sections like ".voltbl".
     // Or the program will be crash sometimes.
-    if (sec->header.Characteristics == 0) {
+    if (sec->header.Characteristics == 0 && 
+        sec->name.contains(".voltbl")) {
       sec->header.Characteristics |= IMAGE_SCN_CNT_INITIALIZED_DATA |
                                      IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE;
     }
