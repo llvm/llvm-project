@@ -39,7 +39,7 @@ constexpr lldb_private::HostInfo::SharedLibraryDirectoryHelper
 
 #else
 constexpr lldb_private::HostInfo::SharedLibraryDirectoryHelper
-    *g_shlib_dir_helper = 0;
+    *g_shlib_dir_helper = nullptr;
 #endif
 
 using namespace lldb_private;
