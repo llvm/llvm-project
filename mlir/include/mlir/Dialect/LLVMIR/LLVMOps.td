@@ -1543,6 +1543,15 @@ def LLVM_CoroResumeOp : LLVM_IntrOp<"coro.resume", [], [], [], 0> {
 }
 
 //
+// Exception handling intrinsics.
+//
+
+def LLVM_EhTypeidForOp : LLVM_OneResultIntrOp<"eh.typeid.for"> {
+    let arguments = (ins LLVM_i8Ptr:$type_info);
+    let assemblyFormat = "$type_info attr-dict `:` type($res)";
+}
+
+//
 // Stack save/restore intrinsics.
 //
 
