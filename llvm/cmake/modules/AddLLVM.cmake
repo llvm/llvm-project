@@ -1089,8 +1089,11 @@ function(process_llvm_pass_plugins)
 
       ## Part 1: Extension header to be included whenever we need extension
       #  processing.
-      set(LLVM_INSTALL_PACKAGE_DIR lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm)
-      set(llvm_cmake_builddir "${LLVM_BINARY_DIR}/${LLVM_INSTALL_PACKAGE_DIR}")
+      if(NOT DEFINED LLVM_INSTALL_PACKAGE_DIR)
+          message(FATAL_ERROR "LLVM_INSTALL_PACKAGE_DIR must be defined and writable. GEN_CONFIG should only be passe when building LLVM proper.")
+      endif()
+      # LLVM_INSTALL_PACKAGE_DIR might be absolute, so don't reuse below.
+      set(llvm_cmake_builddir "${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm")
       file(WRITE
           "${llvm_cmake_builddir}/LLVMConfigExtensions.cmake"
           "set(LLVM_STATIC_EXTENSIONS ${LLVM_STATIC_EXTENSIONS})")

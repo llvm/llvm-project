@@ -1,10 +1,19 @@
 # Keep this in sync with llvm/cmake/CMakeLists.txt!
 
+include(GNUInstallPackageDir)
 include(ExtendPath)
 include(FindPrefixFromConfig)
 
-set(LLVM_INSTALL_PACKAGE_DIR "lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm")
-set(POLLY_INSTALL_PACKAGE_DIR "lib${LLVM_LIBDIR_SUFFIX}/cmake/polly")
+set(POLLY_INSTALL_PACKAGE_DIR "${CMAKE_INSTALL_PACKAGEDIR}/polly" CACHE STRING
+  "Path for CMake subdirectory for Polly (defaults to '${CMAKE_INSTALL_PACKAGEDIR}/polly')")
+# CMAKE_INSTALL_PACKAGEDIR might be absolute, so don't reuse below.
+set(polly_cmake_builddir "${POLLY_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/polly")
+
+set(LLVM_INSTALL_PACKAGE_DIR "${CMAKE_INSTALL_PACKAGEDIR}/llvm" CACHE STRING
+  "Path for CMake subdirectory for LLVM (defaults to '${CMAKE_INSTALL_PACKAGEDIR}/llvm')")
+# CMAKE_INSTALL_PACKAGEDIR might be absolute, so don't reuse below.
+set(llvm_cmake_builddir "${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm")
+
 if (CMAKE_CONFIGURATION_TYPES)
   set(POLLY_EXPORTS_FILE_NAME "PollyExports-$<LOWER_CASE:$<CONFIG>>.cmake")
 else()
@@ -28,9 +37,6 @@ foreach(tgt IN LISTS POLLY_CONFIG_EXPORTED_TARGETS)
   set(POLLY_CONFIG_TARGET_${tgt}_TYPE ${tgt_type})
 endforeach()
 
-set(llvm_cmake_builddir "${LLVM_BINARY_DIR}/${LLVM_INSTALL_PACKAGE_DIR}")
-set(POLLY_CONFIG_LLVM_CMAKE_DIR "${llvm_cmake_builddir}")
-
 # generate the import code for bundled/undbundled libisl versions
 if (NOT POLLY_BUNDLED_ISL)
   get_property(incl TARGET ISL PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
@@ -50,7 +56,8 @@ endif()
 
 # Generate PollyConfig.cmake for the build tree.
 set(POLLY_CONFIG_CODE "")
-set(POLLY_CONFIG_CMAKE_DIR "${CMAKE_BINARY_DIR}/${POLLY_INSTALL_PACKAGE_DIR}")
+set(POLLY_CONFIG_LLVM_CMAKE_DIR "${llvm_cmake_builddir}")
+set(POLLY_CONFIG_CMAKE_DIR "${polly_cmake_builddir}")
 set(POLLY_CONFIG_INCLUDE_DIRS
   ${POLLY_SOURCE_DIR}/include
   ${ISL_INCLUDE_DIRS}
@@ -73,11 +80,11 @@ endforeach(tgt)
 # the imported locations
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/PollyConfig.cmake.in
-  ${POLLY_CONFIG_CMAKE_DIR}/PollyConfig.cmake
+  ${polly_cmake_builddir}/PollyConfig.cmake
   @ONLY)
 
 file(GENERATE
-  OUTPUT ${POLLY_CONFIG_CMAKE_DIR}/${POLLY_EXPORTS_FILE_NAME}
+  OUTPUT ${polly_cmake_builddir}/${POLLY_EXPORTS_FILE_NAME}
   CONTENT "${POLLY_EXPORTS}")
 
 
