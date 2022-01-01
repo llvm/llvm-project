@@ -34,7 +34,7 @@ namespace {
 struct TestLinalgTransforms
     : public PassWrapper<TestLinalgTransforms, FunctionPass> {
   TestLinalgTransforms() = default;
-  TestLinalgTransforms(const TestLinalgTransforms &pass) {}
+  TestLinalgTransforms(const TestLinalgTransforms &pass) : PassWrapper(pass) {}
 
   void getDependentDialects(DialectRegistry &registry) const override {
     // clang-format off

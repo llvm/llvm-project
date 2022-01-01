@@ -49,7 +49,8 @@ struct TestComprehensiveFunctionBufferize
 
   TestComprehensiveFunctionBufferize() = default;
   TestComprehensiveFunctionBufferize(
-      const TestComprehensiveFunctionBufferize &pass) {}
+      const TestComprehensiveFunctionBufferize &pass)
+      : PassWrapper(pass) {}
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<bufferization::BufferizationDialect, linalg::LinalgDialect,

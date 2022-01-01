@@ -34,7 +34,7 @@ struct TestAffineDataCopy
     return "Tests affine data copy utility functions.";
   }
   TestAffineDataCopy() = default;
-  TestAffineDataCopy(const TestAffineDataCopy &pass){};
+  TestAffineDataCopy(const TestAffineDataCopy &pass) : PassWrapper(pass){};
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<memref::MemRefDialect>();

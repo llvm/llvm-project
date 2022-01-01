@@ -33,7 +33,8 @@ struct TestLinalgCodegenStrategy
     return "Test Linalg Codegen Strategy.";
   }
   TestLinalgCodegenStrategy() = default;
-  TestLinalgCodegenStrategy(const TestLinalgCodegenStrategy &pass) {}
+  TestLinalgCodegenStrategy(const TestLinalgCodegenStrategy &pass)
+      : PassWrapper(pass) {}
 
   void getDependentDialects(DialectRegistry &registry) const override {
     // clang-format off
