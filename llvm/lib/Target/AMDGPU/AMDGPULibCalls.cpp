@@ -58,9 +58,6 @@ private:
   // "FuncName" exists. It may create a new function prototype in pre-link mode.
   FunctionCallee getFunction(Module *M, const FuncInfo &fInfo);
 
-  // Replace a normal function with its native version.
-  bool replaceWithNative(CallInst *CI, const FuncInfo &FInfo);
-
   bool parseFunctionName(const StringRef &FMangledName, FuncInfo &FInfo);
 
   bool TDOFold(CallInst *CI, const FuncInfo &FInfo);
@@ -776,27 +773,6 @@ bool AMDGPULibCalls::TDOFold(CallInst *CI, const FuncInfo &FInfo) {
     }
   }
 
-  return false;
-}
-
-bool AMDGPULibCalls::replaceWithNative(CallInst *CI, const FuncInfo &FInfo) {
-  Module *M = CI->getModule();
-  if (getArgType(FInfo) != AMDGPULibFunc::F32 ||
-      FInfo.getPrefix() != AMDGPULibFunc::NOPFX ||
-      !HasNative(FInfo.getId()))
-    return false;
-
-  AMDGPULibFunc nf = FInfo;
-  nf.setPrefix(AMDGPULibFunc::NATIVE);
-  if (FunctionCallee FPExpr = getFunction(M, nf)) {
-    LLVM_DEBUG(dbgs() << "AMDIC: " << *CI << " ---> ");
-
-    CI->setCalledFunction(FPExpr);
-
-    LLVM_DEBUG(dbgs() << *CI << '\n');
-
-    return true;
-  }
   return false;
 }
 
