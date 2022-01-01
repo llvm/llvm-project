@@ -85,6 +85,7 @@ static_library("LLVMMipsCodeGen") {
     "MipsMCInstLower.cpp",
     "MipsMachineFunction.cpp",
     "MipsModuleISelDAGToDAG.cpp",
+    "MipsMulMulBugPass.cpp",
     "MipsOptimizePICCall.cpp",
     "MipsOs16.cpp",
     "MipsPreLegalizerCombiner.cpp",
