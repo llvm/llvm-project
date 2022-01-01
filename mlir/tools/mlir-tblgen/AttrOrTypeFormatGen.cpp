@@ -265,8 +265,8 @@ private:
   std::vector<std::unique_ptr<Element>> elements;
 
   /// Flags for printing spaces.
-  bool shouldEmitSpace;
-  bool lastWasPunctuation;
+  bool shouldEmitSpace = false;
+  bool lastWasPunctuation = false;
 };
 } // namespace
 

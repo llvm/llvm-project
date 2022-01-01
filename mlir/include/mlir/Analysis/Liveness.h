@@ -131,7 +131,7 @@ public:
 
 private:
   /// The underlying block.
-  Block *block;
+  Block *block = nullptr;
 
   /// The set of all live in values.
   ValueSetT inValues;

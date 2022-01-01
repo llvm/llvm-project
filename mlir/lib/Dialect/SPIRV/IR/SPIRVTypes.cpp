@@ -773,7 +773,7 @@ struct spirv::detail::StructTypeStorage : public TypeStorage {
   /// in order to mutate the storage object providing the actual content.
   StructTypeStorage(StringRef identifier)
       : memberTypesAndIsBodySet(nullptr, false), offsetInfo(nullptr),
-        numMemberDecorations(0), memberDecorationsInfo(nullptr),
+        numMembers(0), numMemberDecorations(0), memberDecorationsInfo(nullptr),
         identifier(identifier) {}
 
   /// Construct a storage object for a literal struct type. A struct type

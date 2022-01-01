@@ -105,7 +105,7 @@ private:
   /// The current module being created.
   ModuleOp module;
   /// The entry block of the current function being processed.
-  Block *currentEntryBlock;
+  Block *currentEntryBlock = nullptr;
 
   /// Globals are inserted before the first function, if any.
   Block::iterator getGlobalInsertPt() {
