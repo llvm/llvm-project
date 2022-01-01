@@ -1181,12 +1181,15 @@ auto HexagonVectorCombine::rescale(IRBuilder<> &Builder, Value *Mask,
   int ToCount = (FromCount * FromSize) / ToSize;
   assert((FromCount * FromSize) % ToSize == 0);
 
+  auto *FromITy = IntegerType::get(F.getContext(), FromSize * 8);
+  auto *ToITy = IntegerType::get(F.getContext(), ToSize * 8);
+
   // Mask <N x i1> -> sext to <N x FromTy> -> bitcast to <M x ToTy> ->
   // -> trunc to <M x i1>.
   Value *Ext = Builder.CreateSExt(
-      Mask, VectorType::get(FromSTy, FromCount, /*Scalable*/ false));
+      Mask, VectorType::get(FromITy, FromCount, /*Scalable*/ false));
   Value *Cast = Builder.CreateBitCast(
-      Ext, VectorType::get(ToSTy, ToCount, /*Scalable*/ false));
+      Ext, VectorType::get(ToITy, ToCount, /*Scalable*/ false));
   return Builder.CreateTrunc(
       Cast, VectorType::get(getBoolTy(), ToCount, /*Scalable*/ false));
 }

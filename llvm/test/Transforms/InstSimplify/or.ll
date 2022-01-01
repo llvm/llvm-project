@@ -951,3 +951,91 @@ define i16 @or_xor_not_op_or_wrong_val(i16 %a, i16 %b, i16 %c) {
   %r = or i16 %xor, %or
   ret i16 %r
 }
+
+; ~(x & y) | (x ^ y) --> ~(x & y)
+
+define i4 @or_nand_xor(i4 %x, i4 %y) {
+; CHECK-LABEL: @or_nand_xor(
+; CHECK-NEXT:    [[AND:%.*]] = and i4 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[NAND:%.*]] = xor i4 [[AND]], -1
+; CHECK-NEXT:    ret i4 [[NAND]]
+;
+  %and = and i4 %x, %y
+  %xor = xor i4 %x, %y
+  %nand = xor i4 %and, -1
+  %or = or i4 %xor, %nand
+  ret i4 %or
+}
+
+define <2 x i4> @or_nand_xor_commute1(<2 x i4> %x, <2 x i4> %y) {
+; CHECK-LABEL: @or_nand_xor_commute1(
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i4> [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[NAND:%.*]] = xor <2 x i4> [[AND]], <i4 -1, i4 -1>
+; CHECK-NEXT:    ret <2 x i4> [[NAND]]
+;
+  %and = and <2 x i4> %y, %x
+  %xor = xor <2 x i4> %x, %y
+  %nand = xor <2 x i4> %and, <i4 -1, i4 -1>
+  %or = or <2 x i4> %xor, %nand
+  ret <2 x i4> %or
+}
+
+define i71 @or_nand_xor_commute2(i71 %x, i71 %y) {
+; CHECK-LABEL: @or_nand_xor_commute2(
+; CHECK-NEXT:    [[AND:%.*]] = and i71 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[NAND:%.*]] = xor i71 [[AND]], -1
+; CHECK-NEXT:    ret i71 [[NAND]]
+;
+  %and = and i71 %x, %y
+  %xor = xor i71 %x, %y
+  %nand = xor i71 %and, -1
+  %or = or i71 %nand, %xor
+  ret i71 %or
+}
+
+define i4 @or_nand_xor_commute3(i4 %x, i4 %y) {
+; CHECK-LABEL: @or_nand_xor_commute3(
+; CHECK-NEXT:    [[AND:%.*]] = and i4 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[NAND:%.*]] = xor i4 [[AND]], -1
+; CHECK-NEXT:    ret i4 [[NAND]]
+;
+  %and = and i4 %y, %x
+  %xor = xor i4 %x, %y
+  %nand = xor i4 %and, -1
+  %or = or i4 %nand, %xor
+  ret i4 %or
+}
+
+; negative test wrong operand
+
+define i4 @or_nand_xor_wrong_val(i4 %x, i4 %y, i4 %z) {
+; CHECK-LABEL: @or_nand_xor_wrong_val(
+; CHECK-NEXT:    [[AND:%.*]] = and i4 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i4 [[X]], [[Z:%.*]]
+; CHECK-NEXT:    [[NAND:%.*]] = xor i4 [[AND]], -1
+; CHECK-NEXT:    [[OR:%.*]] = or i4 [[XOR]], [[NAND]]
+; CHECK-NEXT:    ret i4 [[OR]]
+;
+  %and = and i4 %x, %y
+  %xor = xor i4 %x, %z
+  %nand = xor i4 %and, -1
+  %or = or i4 %xor, %nand
+  ret i4 %or
+}
+
+; negative test - undef element in 'not' is not allowed
+
+define <2 x i4> @or_nand_xor_undef_elt(<2 x i4> %x, <2 x i4> %y) {
+; CHECK-LABEL: @or_nand_xor_undef_elt(
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i4> [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i4> [[X]], [[Y]]
+; CHECK-NEXT:    [[NAND:%.*]] = xor <2 x i4> [[AND]], <i4 undef, i4 -1>
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i4> [[XOR]], [[NAND]]
+; CHECK-NEXT:    ret <2 x i4> [[OR]]
+;
+  %and = and <2 x i4> %y, %x
+  %xor = xor <2 x i4> %x, %y
+  %nand = xor <2 x i4> %and, <i4 undef, i4 -1>
+  %or = or <2 x i4> %xor, %nand
+  ret <2 x i4> %or
+}

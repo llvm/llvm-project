@@ -125,11 +125,36 @@ void RISCVDAGToDAGISel::PostprocessISelDAG() {
     CurDAG->RemoveDeadNodes();
 }
 
-static SDNode *selectImm(SelectionDAG *CurDAG, const SDLoc &DL, int64_t Imm,
-                         const RISCVSubtarget &Subtarget) {
+static SDNode *selectImmWithConstantPool(SelectionDAG *CurDAG, const SDLoc &DL,
+                                         const MVT VT, int64_t Imm,
+                                         const RISCVSubtarget &Subtarget) {
+  assert(VT == MVT::i64 && "Expecting MVT::i64");
+  const RISCVTargetLowering *TLI = Subtarget.getTargetLowering();
+  ConstantPoolSDNode *CP = cast<ConstantPoolSDNode>(CurDAG->getConstantPool(
+      ConstantInt::get(EVT(VT).getTypeForEVT(*CurDAG->getContext()), Imm), VT));
+  SDValue Addr = TLI->getAddr(CP, *CurDAG);
+  SDValue Offset = CurDAG->getTargetConstant(0, DL, VT);
+  // Since there is no data race, the chain can be the entry node.
+  SDNode *Load = CurDAG->getMachineNode(RISCV::LD, DL, VT, Addr, Offset,
+                                        CurDAG->getEntryNode());
+  MachineFunction &MF = CurDAG->getMachineFunction();
+  MachineMemOperand *MemOp = MF.getMachineMemOperand(
+      MachinePointerInfo::getConstantPool(MF), MachineMemOperand::MOLoad,
+      LLT(VT), CP->getAlign());
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(Load), {MemOp});
+  return Load;
+}
+
+static SDNode *selectImm(SelectionDAG *CurDAG, const SDLoc &DL, const MVT VT,
+                         int64_t Imm, const RISCVSubtarget &Subtarget) {
   MVT XLenVT = Subtarget.getXLenVT();
   RISCVMatInt::InstSeq Seq =
       RISCVMatInt::generateInstSeq(Imm, Subtarget.getFeatureBits());
+
+  // If Imm is expensive to build, then we put it into constant pool.
+  if (Subtarget.useConstantPoolForLargeInts() &&
+      Seq.size() > Subtarget.getMaxBuildIntsCost())
+    return selectImmWithConstantPool(CurDAG, DL, VT, Imm, Subtarget);
 
   SDNode *Result = nullptr;
   SDValue SrcReg = CurDAG->getRegister(RISCV::X0, XLenVT);
@@ -498,7 +523,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     if (!isInt<32>(Imm) && isUInt<32>(Imm) && hasAllWUsers(Node))
       Imm = SignExtend64(Imm, 32);
 
-    ReplaceNode(Node, selectImm(CurDAG, DL, Imm, *Subtarget));
+    ReplaceNode(Node, selectImm(CurDAG, DL, VT, Imm, *Subtarget));
     return;
   }
   case ISD::FrameIndex: {
@@ -774,7 +799,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       ShiftedC1 = SignExtend64(ShiftedC1, 32);
 
     // Create (mulhu (slli X, lzcnt(C2)), C1 << (XLen - lzcnt(C2))).
-    SDNode *Imm = selectImm(CurDAG, DL, ShiftedC1, *Subtarget);
+    SDNode *Imm = selectImm(CurDAG, DL, VT, ShiftedC1, *Subtarget);
     SDNode *SLLI =
         CurDAG->getMachineNode(RISCV::SLLI, DL, VT, N0.getOperand(0),
                                CurDAG->getTargetConstant(LeadingZeros, DL, VT));

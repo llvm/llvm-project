@@ -1,3 +1,5 @@
+include(ExtendPath)
+
 # Generate a list of CMake library targets so that other CMake projects can
 # link against them. LLVM calls its version of this file LLVMExports.cmake, but
 # the usual CMake convention seems to be ${Project}Targets.cmake.
@@ -40,7 +42,7 @@ endforeach(p)
 set(LLD_CONFIG_CMAKE_DIR "\${LLD_INSTALL_PREFIX}/${LLD_INSTALL_PACKAGE_DIR}")
 set(LLD_CONFIG_LLVM_CMAKE_DIR "\${LLD_INSTALL_PREFIX}/${LLVM_INSTALL_PACKAGE_DIR}")
 get_config_exports_includes(LLD LLD_CONFIG_INCLUDE_EXPORTS)
-set(LLD_CONFIG_INCLUDE_DIRS "\${LLD_INSTALL_PREFIX}/include")
+extend_path(LLD_CONFIG_INCLUDE_DIRS "\${LLD_INSTALL_PREFIX}" "${CMAKE_INSTALL_INCLUDEDIR}")
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/LLDConfig.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/LLDConfig.cmake

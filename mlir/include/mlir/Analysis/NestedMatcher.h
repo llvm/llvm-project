@@ -65,7 +65,7 @@ private:
   NestedMatch() = default;
 
   /// Payload, holds a NestedMatch and all its children along this branch.
-  Operation *matchedOperation;
+  Operation *matchedOperation = nullptr;
   ArrayRef<NestedMatch> matchedChildren;
 };
 

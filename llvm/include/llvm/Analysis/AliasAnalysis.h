@@ -60,7 +60,6 @@ class CatchReturnInst;
 class DominatorTree;
 class FenceInst;
 class Function;
-class InvokeInst;
 class LoopInfo;
 class PreservedAnalyses;
 class TargetLibraryInfo;

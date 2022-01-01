@@ -843,6 +843,8 @@ a special character, which is the convention used by GNU Make. The -MV
 option tells Clang to put double-quotes around the entire filename, which
 is the convention used by NMake and Jom.
 
+.. _configuration-files:
+
 Configuration files
 -------------------
 
@@ -916,6 +918,22 @@ Files included by `@file` directives in configuration files are resolved
 relative to the including file. For example, if a configuration file
 `~/.llvm/target.cfg` contains the directive `@os/linux.opts`, the file
 `linux.opts` is searched for in the directory `~/.llvm/os`.
+
+To generate paths relative to the configuration file, the `<CFGDIR>` token may
+be used. This will expand to the absolute path of the directory containing the
+configuration file.
+
+In cases where a configuration file is deployed alongside SDK contents, the
+SDK directory can remain fully portable by using `<CFGDIR>` prefixed paths.
+In this way, the user may only need to specify a root configuration file with
+`--config` to establish every aspect of the SDK with the compiler:
+
+::
+
+    --target=foo
+    -isystem <CFGDIR>/include
+    -L <CFGDIR>/lib
+    -T <CFGDIR>/ldscripts/link.ld
 
 Language and Target-Independent Features
 ========================================

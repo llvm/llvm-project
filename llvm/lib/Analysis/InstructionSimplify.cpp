@@ -620,6 +620,10 @@ static Value *SimplifyAddInst(Value *Op0, Value *Op1, bool IsNSW, bool IsNUW,
   if (Constant *C = foldOrCommuteConstant(Instruction::Add, Op0, Op1, Q))
     return C;
 
+  // X + poison -> poison
+  if (isa<PoisonValue>(Op1))
+    return Op1;
+
   // X + undef -> undef
   if (Q.isUndefValue(Op1))
     return Op1;
@@ -2254,12 +2258,19 @@ static Value *simplifyOrLogic(Value *X, Value *Y) {
       match(Y, m_Not(m_c_Or(m_Specific(A), m_Specific(B)))))
     return NotA;
 
-  // ~(A ^ B) | (A & B) --> ~(A & B)
-  // ~(A ^ B) | (B & A) --> ~(A & B)
+  // ~(A ^ B) | (A & B) --> ~(A ^ B)
+  // ~(A ^ B) | (B & A) --> ~(A ^ B)
   Value *NotAB;
   if (match(X, m_CombineAnd(m_NotForbidUndef(m_Xor(m_Value(A), m_Value(B))),
                             m_Value(NotAB))) &&
       match(Y, m_c_And(m_Specific(A), m_Specific(B))))
+    return NotAB;
+
+  // ~(A & B) | (A ^ B) --> ~(A & B)
+  // ~(A & B) | (B ^ A) --> ~(A & B)
+  if (match(X, m_CombineAnd(m_NotForbidUndef(m_And(m_Value(A), m_Value(B))),
+                            m_Value(NotAB))) &&
+      match(Y, m_c_Xor(m_Specific(A), m_Specific(B))))
     return NotAB;
 
   return nullptr;

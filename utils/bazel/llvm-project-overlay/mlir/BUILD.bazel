@@ -965,6 +965,7 @@ td_library(
     ],
     includes = ["include"],
     deps = [
+        ":ArithmeticOpsTdFiles",
         ":LoopLikeInterfaceTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
@@ -985,11 +986,17 @@ gentbl_cc_library(
             "include/mlir/Dialect/Affine/IR/AffineOps.cpp.inc",
         ),
         (
-            ["-gen-dialect-decls"],
+            [
+                "-gen-dialect-decls",
+                "-dialect=affine",
+            ],
             "include/mlir/Dialect/Affine/IR/AffineOpsDialect.h.inc",
         ),
         (
-            ["-gen-dialect-defs"],
+            [
+                "-gen-dialect-defs",
+                "-dialect=affine",
+            ],
             "include/mlir/Dialect/Affine/IR/AffineOpsDialect.cpp.inc",
         ),
     ],
@@ -1864,7 +1871,6 @@ td_library(
     name = "StdOpsTdFiles",
     srcs = [
         "include/mlir/Dialect/StandardOps/IR/Ops.td",
-        "include/mlir/Dialect/StandardOps/IR/StandardOpsBase.td",
     ],
     includes = ["include"],
     deps = [
@@ -7509,6 +7515,7 @@ td_library(
     ],
     includes = ["include"],
     deps = [
+        ":ArithmeticOpsTdFiles",
         ":CastInterfacesTdFiles",
         ":ControlFlowInterfacesTdFiles",
         ":CopyOpInterfaceTdFiles",

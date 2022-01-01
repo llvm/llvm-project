@@ -152,7 +152,7 @@ private:
   Type type;
 
   /// The abstract descriptor for this attribute.
-  const AbstractAttribute *abstractAttribute;
+  const AbstractAttribute *abstractAttribute = nullptr;
 };
 
 /// Default storage type for attributes that require no additional

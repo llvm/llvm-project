@@ -353,11 +353,11 @@ public:
 private:
   // Same meaning as AffineMap's fields.
   SmallVector<AffineExpr, 8> results;
-  unsigned numDims;
-  unsigned numSymbols;
+  unsigned numDims = 0;
+  unsigned numSymbols = 0;
   /// A pointer to the IR's context to store all newly created
   /// AffineExprStorage's.
-  MLIRContext *context;
+  MLIRContext *context = nullptr;
 };
 
 /// Simplifies an affine map by simplifying its underlying AffineExpr results.

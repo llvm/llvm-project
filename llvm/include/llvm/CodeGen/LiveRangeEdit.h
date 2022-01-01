@@ -34,9 +34,7 @@ namespace llvm {
 
 class AAResults;
 class LiveIntervals;
-class MachineBlockFrequencyInfo;
 class MachineInstr;
-class MachineLoopInfo;
 class MachineOperand;
 class TargetInstrInfo;
 class TargetRegisterInfo;
