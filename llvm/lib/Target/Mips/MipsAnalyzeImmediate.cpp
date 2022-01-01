@@ -25,8 +25,8 @@ void MipsAnalyzeImmediate::AddInstr(InstSeqLs &SeqLs, const Inst &I) {
     return;
   }
 
-  for (InstSeqLs::iterator Iter = SeqLs.begin(); Iter != SeqLs.end(); ++Iter)
-    Iter->push_back(I);
+  for (auto &S : SeqLs)
+    S.push_back(I);
 }
 
 void MipsAnalyzeImmediate::GetInstSeqLsADDiu(uint64_t Imm, unsigned RemSize,

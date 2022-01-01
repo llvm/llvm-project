@@ -81,10 +81,9 @@ void HexagonMCShuffler::copyTo(MCInst &MCB) {
   MCB.addOperand(MCOperand::createImm(BundleFlags));
   MCB.setLoc(Loc);
   // Copy the results into the bundle.
-  for (HexagonShuffler::iterator I = begin(); I != end(); ++I) {
-
-    MCInst const &MI = I->getDesc();
-    MCInst const *Extender = I->getExtender();
+  for (auto &I : *this) {
+    MCInst const &MI = I.getDesc();
+    MCInst const *Extender = I.getExtender();
     if (Extender)
       MCB.addOperand(MCOperand::createInst(Extender));
     MCB.addOperand(MCOperand::createInst(&MI));
