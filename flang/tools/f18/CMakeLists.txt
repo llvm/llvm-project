@@ -38,7 +38,7 @@ foreach(filename ${MODULES})
     DEPENDS ${base}.mod
     COMMAND ${CMAKE_COMMAND} -E copy ${base}.mod ${base}.f18.mod)
   list(APPEND MODULE_FILES ${base}.mod ${base}.f18.mod)
-  install(FILES ${base}.mod ${base}.f18.mod DESTINATION include/flang)
+  install(FILES ${base}.mod ${base}.f18.mod DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang")
 endforeach()
 
 add_custom_target(module_files ALL DEPENDS ${MODULE_FILES})
@@ -48,5 +48,5 @@ if (NOT WIN32)
   file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/flang
     DESTINATION ${CMAKE_BINARY_DIR}/bin
     FILE_PERMISSIONS OWNER_EXECUTE OWNER_READ OWNER_WRITE)
-  install(PROGRAMS ${CMAKE_BINARY_DIR}/bin/flang DESTINATION bin)
+  install(PROGRAMS ${CMAKE_BINARY_DIR}/bin/flang DESTINATION "${CMAKE_INSTALL_BINDIR}")
 endif()

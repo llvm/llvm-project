@@ -212,6 +212,8 @@ StringRef ARMTargetInfo::getCPUAttr() const {
     return "8_6A";
   case llvm::ARM::ArchKind::ARMV8_7A:
     return "8_7A";
+  case llvm::ARM::ArchKind::ARMV8_8A:
+    return "8_8A";
   case llvm::ARM::ArchKind::ARMV9A:
     return "9A";
   case llvm::ARM::ArchKind::ARMV9_1A:
@@ -930,6 +932,7 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   case llvm::ARM::ArchKind::ARMV8_4A:
   case llvm::ARM::ArchKind::ARMV8_5A:
   case llvm::ARM::ArchKind::ARMV8_6A:
+  case llvm::ARM::ArchKind::ARMV8_8A:
   case llvm::ARM::ArchKind::ARMV9A:
   case llvm::ARM::ArchKind::ARMV9_1A:
   case llvm::ARM::ArchKind::ARMV9_2A:
