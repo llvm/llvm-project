@@ -212,6 +212,10 @@ Enable linker job to emit a static library.
 
 Trivial automatic variable initialization to zero is only here for benchmarks, it'll eventually be removed, and I'm OK with that because I'm only using it to benchmark
 
+.. option:: --end-no-unused-arguments
+
+Start emitting warnings for unused driver arguments
+
 .. option:: -exported\_symbols\_list <arg>
 
 .. option:: -faligned-new=<arg>
@@ -662,6 +666,10 @@ Serialize compiler diagnostics to a file
 Dynamically link the sanitizer runtime
 
 .. option:: -single\_module
+
+.. option:: --start-no-unused-arguments
+
+Don't emit warnings about unused arguments for the following arguments
 
 .. option:: -static-libgcc
 

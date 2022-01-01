@@ -367,7 +367,20 @@ DerivedArgList *Driver::TranslateInputArgs(const InputArgList &Args) const {
   bool HasNostdlib = Args.hasArg(options::OPT_nostdlib);
   bool HasNostdlibxx = Args.hasArg(options::OPT_nostdlibxx);
   bool HasNodefaultlib = Args.hasArg(options::OPT_nodefaultlibs);
+  bool IgnoreUnused = false;
   for (Arg *A : Args) {
+    if (IgnoreUnused)
+      A->claim();
+
+    if (A->getOption().matches(options::OPT_start_no_unused_arguments)) {
+      IgnoreUnused = true;
+      continue;
+    }
+    if (A->getOption().matches(options::OPT_end_no_unused_arguments)) {
+      IgnoreUnused = false;
+      continue;
+    }
+
     // Unfortunately, we have to parse some forwarding options (-Xassembler,
     // -Xlinker, -Xpreprocessor) because we either integrate their functionality
     // (assembler and preprocessor), or bypass a previous driver ('collect2').
