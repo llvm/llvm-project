@@ -1137,7 +1137,6 @@ void test_hypot()
     static_assert((std::is_same<decltype(std::hypot((float)0, (bool)0, (float)0)), double>::value), "");
     static_assert((std::is_same<decltype(std::hypot((float)0, (unsigned short)0, (double)0)), double>::value), "");
     static_assert((std::is_same<decltype(std::hypot((float)0, (int)0, (long double)0)), long double>::value), "");
-    static_assert((std::is_same<decltype(std::hypot((float)0, (unsigned int)0)), double>::value), "");
     static_assert((std::is_same<decltype(std::hypot((float)0, (double)0, (long)0)), double>::value), "");
     static_assert((std::is_same<decltype(std::hypot((float)0, (long double)0, (unsigned long)0)), long double>::value), "");
     static_assert((std::is_same<decltype(std::hypot((float)0, (int)0, (long long)0)), double>::value), "");
