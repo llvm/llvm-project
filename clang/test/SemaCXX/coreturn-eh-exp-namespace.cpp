@@ -40,6 +40,7 @@ VoidTagReturnValue test() {
   object x = {};
   try {
     co_return {}; // expected-warning {{support for std::experimental::coroutine_traits will be removed}}
+    // expected-note@Inputs/std-coroutine-exp-namespace.h:8 {{'coroutine_traits' declared here}}
   } catch (...) {
     throw;
   }

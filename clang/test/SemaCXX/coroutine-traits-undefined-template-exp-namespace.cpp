@@ -6,7 +6,7 @@
 namespace std {
 namespace experimental {
 template <typename... T>
-struct coroutine_traits {
+struct coroutine_traits { // expected-note{{declared here}}
   struct promise_type {};
 };
 
