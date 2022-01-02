@@ -340,13 +340,13 @@ static ParseResult parseReductionOp(OpAsmParser &parser,
       parser.parseComma() || parser.parseOperandList(operandsInfo) ||
       parser.parseColonType(redType) ||
       parser.parseKeywordType("into", resType) ||
-      (operandsInfo.size() > 0 &&
+      (!operandsInfo.empty() &&
        parser.resolveOperand(operandsInfo[0], redType, result.operands)) ||
       (operandsInfo.size() > 1 &&
        parser.resolveOperand(operandsInfo[1], resType, result.operands)) ||
       parser.addTypeToList(resType, result.types))
     return failure();
-  if (operandsInfo.size() < 1 || operandsInfo.size() > 2)
+  if (operandsInfo.empty() || operandsInfo.size() > 2)
     return parser.emitError(parser.getNameLoc(),
                             "unsupported number of operands");
   return success();
@@ -546,7 +546,7 @@ static LogicalResult verifyOutputShape(
   }
 
   // Verify 'expectedResultDims'.
-  if (expectedResultDims.size() == 0) {
+  if (expectedResultDims.empty()) {
     // No batch or free dimension implies a scalar result.
     if (resType.isa<VectorType>() || accType.isa<VectorType>())
       return op.emitOpError("invalid accumulator/result vector shape");
