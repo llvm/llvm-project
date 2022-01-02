@@ -277,7 +277,7 @@ struct TiledLoopToSCFPattern : public OpRewritePattern<TiledLoopOp> {
     // Collect loop control parameters for parallel and sequential dimensions.
     SmallVector<Value, 3> seqLBs, seqUBs, seqSteps, seqIVs;
     SmallVector<Value, 3> parLBs, parUBs, parSteps, parIVs;
-    for (auto en : llvm::enumerate(
+    for (const auto &en : llvm::enumerate(
              llvm::zip(tiledLoop.lowerBound(), tiledLoop.upperBound(),
                        tiledLoop.step(), tiledLoop.getInductionVars()))) {
       Value lb, ub, step, iv;

@@ -54,7 +54,7 @@ static void injectGpuIndexOperations(Location loc, Region &launchFuncOpBody,
   createForAllDimensions<gpu::BlockDimOp>(builder, loc, indexOps);
   // Replace the leading 12 function args with the respective thread/block index
   // operations. Iterate backwards since args are erased and indices change.
-  for (auto indexOp : enumerate(indexOps))
+  for (const auto &indexOp : enumerate(indexOps))
     map.map(firstBlock.getArgument(indexOp.index()), indexOp.value());
 }
 
@@ -174,7 +174,7 @@ static gpu::GPUFuncOp outlineKernelFuncImpl(gpu::LaunchOp launchOp,
   // Map arguments from gpu.launch region to the arguments of the gpu.func
   // operation.
   Block &entryBlock = outlinedFuncBody.front();
-  for (auto operand : enumerate(operands))
+  for (const auto &operand : enumerate(operands))
     map.map(operand.value(), entryBlock.getArgument(operand.index()));
 
   // Clone the region of the gpu.launch operation into the gpu.func operation.

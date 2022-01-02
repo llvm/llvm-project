@@ -252,7 +252,7 @@ public:
     op->setLoc(loc);
     op->setAttrs(attrs);
     op->setOperands(operands);
-    for (auto it : llvm::enumerate(successors))
+    for (const auto &it : llvm::enumerate(successors))
       op->setSuccessor(it.value(), it.index());
   }
 
@@ -1256,7 +1256,7 @@ LogicalResult ConversionPatternRewriterImpl::remapValues(
   remapped.reserve(llvm::size(values));
 
   SmallVector<Type, 1> legalTypes;
-  for (auto it : llvm::enumerate(values)) {
+  for (const auto &it : llvm::enumerate(values)) {
     Value operand = it.value();
     Type origType = operand.getType();
 

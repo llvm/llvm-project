@@ -395,7 +395,7 @@ bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
       };
       if (!checkCompatible(aOffset, bOffset))
         return false;
-      for (auto aStride : enumerate(aStrides))
+      for (const auto &aStride : enumerate(aStrides))
         if (!checkCompatible(aStride.value(), bStrides[aStride.index()]))
           return false;
     }
@@ -515,7 +515,7 @@ computeMemRefRankReductionMask(MemRefType originalType, MemRefType reducedType,
   if (originalType.getRank() == reducedType.getRank())
     return unusedDims;
 
-  for (auto dim : llvm::enumerate(sizes))
+  for (const auto &dim : llvm::enumerate(sizes))
     if (auto attr = dim.value().dyn_cast<Attribute>())
       if (attr.cast<IntegerAttr>().getInt() == 1)
         unusedDims.insert(dim.index());
@@ -1851,7 +1851,7 @@ static MemRefType getCanonicalSubViewResultType(
   if (!unusedDims)
     return nullptr;
   SmallVector<int64_t> shape;
-  for (auto sizes : llvm::enumerate(nonRankReducedType.getShape())) {
+  for (const auto &sizes : llvm::enumerate(nonRankReducedType.getShape())) {
     if (unusedDims->count(sizes.index()))
       continue;
     shape.push_back(sizes.value());
@@ -1903,7 +1903,7 @@ static bool isTrivialSubViewOp(SubViewOp subViewOp) {
 
   // Check all size values are static and matches the (static) source shape.
   ArrayRef<int64_t> sourceShape = subViewOp.getSourceType().getShape();
-  for (auto size : llvm::enumerate(mixedSizes)) {
+  for (const auto &size : llvm::enumerate(mixedSizes)) {
     Optional<int64_t> intValue = getConstantIntValue(size.value());
     if (!intValue || intValue.getValue() != sourceShape[size.index()])
       return false;
@@ -2040,7 +2040,7 @@ static MemRefType inferTransposeResultType(MemRefType memRefType,
   auto originalSizes = memRefType.getShape();
   // Compute permuted sizes.
   SmallVector<int64_t, 4> sizes(rank, 0);
-  for (auto en : llvm::enumerate(permutationMap.getResults()))
+  for (const auto &en : llvm::enumerate(permutationMap.getResults()))
     sizes[en.index()] =
         originalSizes[en.value().cast<AffineDimExpr>().getPosition()];
 

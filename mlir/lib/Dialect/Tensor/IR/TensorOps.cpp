@@ -1017,7 +1017,7 @@ llvm::SmallDenseSet<unsigned> ExtractSliceOp::getDroppedDims() {
   ArrayRef<int64_t> resultShape = getType().getShape();
   SmallVector<OpFoldResult> mixedSizes = getMixedSizes();
   unsigned shapePos = 0;
-  for (auto size : enumerate(mixedSizes)) {
+  for (const auto &size : enumerate(mixedSizes)) {
     Optional<int64_t> sizeVal = getConstantIntValue(size.value());
     // If the size is not 1, or if the current matched dimension of the result
     // is the same static shape as the size value (which is 1), then the
@@ -1039,7 +1039,7 @@ LogicalResult ExtractSliceOp::reifyResultShapes(
   SmallVector<OpFoldResult> mixedSizes = getMixedSizes();
   llvm::SmallDenseSet<unsigned> droppedDims = getDroppedDims();
   Location loc = getLoc();
-  for (auto size : enumerate(mixedSizes)) {
+  for (const auto &size : enumerate(mixedSizes)) {
     if (droppedDims.count(size.index()))
       continue;
     if (auto attr = size.value().dyn_cast<Attribute>()) {

@@ -1669,7 +1669,7 @@ static LogicalResult verify(ReduceOp op) {
           "ReduceOp operates on an extent tensor");
   }
 
-  for (auto type : llvm::enumerate(op.getInitVals()))
+  for (const auto &type : llvm::enumerate(op.getInitVals()))
     if (block.getArgument(type.index() + 2).getType() != type.value().getType())
       return op.emitOpError()
              << "type mismatch between argument " << type.index() + 2

@@ -25,7 +25,7 @@ static void updateFuncOp(FuncOp func,
   // Collect information about the results will become appended arguments.
   SmallVector<Type, 6> erasedResultTypes;
   SmallVector<unsigned, 6> erasedResultIndices;
-  for (auto resultType : llvm::enumerate(functionType.getResults())) {
+  for (const auto &resultType : llvm::enumerate(functionType.getResults())) {
     if (resultType.value().isa<BaseMemRefType>()) {
       erasedResultIndices.push_back(resultType.index());
       erasedResultTypes.push_back(resultType.value());

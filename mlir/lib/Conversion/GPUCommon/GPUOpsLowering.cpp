@@ -21,7 +21,7 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
 
   SmallVector<LLVM::GlobalOp, 3> workgroupBuffers;
   workgroupBuffers.reserve(gpuFuncOp.getNumWorkgroupAttributions());
-  for (auto en : llvm::enumerate(gpuFuncOp.getWorkgroupAttributions())) {
+  for (const auto &en : llvm::enumerate(gpuFuncOp.getWorkgroupAttributions())) {
     Value attribution = en.value();
 
     auto type = attribution.getType().dyn_cast<MemRefType>();
@@ -88,7 +88,7 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
     if (!workgroupBuffers.empty())
       zero = rewriter.create<LLVM::ConstantOp>(loc, i32Type,
                                                rewriter.getI32IntegerAttr(0));
-    for (auto en : llvm::enumerate(workgroupBuffers)) {
+    for (const auto &en : llvm::enumerate(workgroupBuffers)) {
       LLVM::GlobalOp global = en.value();
       Value address = rewriter.create<LLVM::AddressOfOp>(loc, global);
       auto elementType =
@@ -111,7 +111,7 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
     // Rewrite private memory attributions to alloca'ed buffers.
     unsigned numWorkgroupAttributions = gpuFuncOp.getNumWorkgroupAttributions();
     auto int64Ty = IntegerType::get(rewriter.getContext(), 64);
-    for (auto en : llvm::enumerate(gpuFuncOp.getPrivateAttributions())) {
+    for (const auto &en : llvm::enumerate(gpuFuncOp.getPrivateAttributions())) {
       Value attribution = en.value();
       auto type = attribution.getType().cast<MemRefType>();
       assert(type && type.hasStaticShape() && "unexpected type in attribution");

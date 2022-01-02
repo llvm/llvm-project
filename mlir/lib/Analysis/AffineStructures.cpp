@@ -3346,7 +3346,7 @@ AffineMap mlir::alignAffineMapWithValues(AffineMap map, ValueRange operands,
     newSyms->append(syms.begin(), syms.end());
   }
 
-  for (auto operand : llvm::enumerate(operands)) {
+  for (const auto &operand : llvm::enumerate(operands)) {
     // Compute replacement dim/sym of operand.
     AffineExpr replacement;
     auto dimIt = std::find(dims.begin(), dims.end(), operand.value());

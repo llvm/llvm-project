@@ -565,7 +565,7 @@ LogicalResult ExpansionInfo::compute(LinalgOp linalgOp,
   // dimension of the original op.
   SmallVector<unsigned> numExpandedDims(fusedIndexMap.getNumDims(), 1);
   expandedShapeMap.resize(fusedIndexMap.getNumDims());
-  for (auto resultExpr : llvm::enumerate(fusedIndexMap.getResults())) {
+  for (const auto &resultExpr : llvm::enumerate(fusedIndexMap.getResults())) {
     unsigned pos = resultExpr.value().cast<AffineDimExpr>().getPosition();
     AffineMap foldedDims = reassociationMaps[resultExpr.index()];
     numExpandedDims[pos] = foldedDims.getNumResults();
@@ -581,7 +581,7 @@ LogicalResult ExpansionInfo::compute(LinalgOp linalgOp,
   // Compute reassociation map from the original op to the expanded op.
   unsigned sum = 0;
   reassociation.reserve(fusedIndexMap.getNumDims());
-  for (auto numFoldedDim : llvm::enumerate(numExpandedDims)) {
+  for (const auto &numFoldedDim : llvm::enumerate(numExpandedDims)) {
     auto seq = llvm::seq<int64_t>(sum, sum + numFoldedDim.value());
     reassociation.emplace_back(seq.begin(), seq.end());
     sum += numFoldedDim.value();
@@ -861,7 +861,7 @@ struct FoldProducerReshapeOpByLinearization
     if (!genericOp.hasTensorSemantics())
       return failure();
     SmallVector<OpOperand *> inputOperands = genericOp.getInputOperands();
-    for (auto en : llvm::enumerate(inputOperands)) {
+    for (const auto &en : llvm::enumerate(inputOperands)) {
       auto reshapeOp = en.value()->get().getDefiningOp<TensorReshapeOp>();
       if (!reshapeOp)
         continue;
@@ -976,7 +976,7 @@ struct PushExpandingReshape : public OpRewritePattern<GenericOp> {
     // 1. Look for tensor_expand_shape operands and figure out save the
     // dimensions merged.
     SmallVector<OpOperand *> inputOperands = genericOp.getInputOperands();
-    for (auto en : llvm::enumerate(inputOperands)) {
+    for (const auto &en : llvm::enumerate(inputOperands)) {
       auto reshapeOp =
           en.value()->get().template getDefiningOp<tensor::ExpandShapeOp>();
       if (!reshapeOp)
@@ -1010,7 +1010,7 @@ struct PushExpandingReshape : public OpRewritePattern<GenericOp> {
     // 2. Verify that we can merge the dimensions in the linalg and that we
     // don't need to create new reshapes operands. Inserting new reshape
     // operands would defeat the purpose of the transformation.
-    for (auto en : llvm::enumerate(inputOperands)) {
+    for (const auto &en : llvm::enumerate(inputOperands)) {
       if (en.value()->get() == newOperands[en.index()]) {
         AffineMap map = genericOp.getTiedIndexingMap(en.value());
         for (unsigned i : llvm::seq(unsigned(0), map.getNumResults())) {
@@ -1060,7 +1060,7 @@ struct PushExpandingReshape : public OpRewritePattern<GenericOp> {
                                 newOp.region().begin());
     // 6. Reshape the so that the type matches the uses.
     SmallVector<Value> newResults;
-    for (auto result : llvm::enumerate(newOp->getResults())) {
+    for (const auto &result : llvm::enumerate(newOp->getResults())) {
       newResults.push_back(rewriter.create<tensor::ExpandShapeOp>(
           genericOp->getLoc(), genericOp.getOutputTensorTypes()[result.index()],
           result.value(), reassociation));
@@ -1407,7 +1407,7 @@ public:
     // All inputs should be constants.
     int numInputs = genericOp.getNumInputs();
     SmallVector<DenseIntOrFPElementsAttr> inputValues(numInputs);
-    for (auto operand : llvm::enumerate(genericOp.getInputOperands())) {
+    for (const auto &operand : llvm::enumerate(genericOp.getInputOperands())) {
       if (!matchPattern(operand.value()->get(),
                         m_Constant(&inputValues[operand.index()])))
         return failure();
@@ -1712,7 +1712,7 @@ struct RemoveOutsDependency : public OpRewritePattern<GenericOp> {
           continue;
         modifiedOutput = true;
         SmallVector<Value> dynamicDims;
-        for (auto dim : llvm::enumerate(operandType.getShape())) {
+        for (const auto &dim : llvm::enumerate(operandType.getShape())) {
           if (dim.value() != ShapedType::kDynamicSize)
             continue;
           dynamicDims.push_back(rewriter.createOrFold<tensor::DimOp>(

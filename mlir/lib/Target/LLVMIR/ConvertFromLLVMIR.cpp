@@ -821,7 +821,7 @@ LogicalResult Importer::processFunction(llvm::Function *f) {
   currentEntryBlock = blockList[0];
 
   // Add function arguments to the entry block.
-  for (auto kv : llvm::enumerate(f->args()))
+  for (const auto &kv : llvm::enumerate(f->args()))
     instMap[&kv.value()] =
         blockList[0]->addArgument(functionType.getParamType(kv.index()));
 

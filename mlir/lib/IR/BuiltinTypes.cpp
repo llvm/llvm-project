@@ -1036,7 +1036,7 @@ AffineMap mlir::makeStridedLinearLayoutMap(ArrayRef<int64_t> strides,
   }
 
   // AffineExpr for strides.
-  for (auto en : llvm::enumerate(strides)) {
+  for (const auto &en : llvm::enumerate(strides)) {
     auto dim = en.index();
     auto stride = en.value();
     assert(stride != 0 && "Invalid stride specification");

@@ -3353,7 +3353,7 @@ createFullTiles(MutableArrayRef<AffineForOp> inputNest,
 
   // Add the body for the full tile loop nest.
   BlockAndValueMapping operandMap;
-  for (auto loopEn : llvm::enumerate(inputNest))
+  for (const auto &loopEn : llvm::enumerate(inputNest))
     operandMap.map(loopEn.value().getInductionVar(),
                    fullTileLoops[loopEn.index()].getInductionVar());
   b = OpBuilder::atBlockTerminator(fullTileLoops.back().getBody());

@@ -53,7 +53,7 @@ static Optional<int64_t> getResultIndex(AffineMap map, int64_t index) {
 static SmallVector<Attribute, 4> adjustIter(ArrayAttr iteratorTypes,
                                             int64_t index) {
   SmallVector<Attribute, 4> results;
-  for (auto it : llvm::enumerate(iteratorTypes)) {
+  for (const auto &it : llvm::enumerate(iteratorTypes)) {
     int64_t idx = it.index();
     if (idx == index)
       continue;
@@ -871,7 +871,7 @@ struct MultiReduceToContract
     auto srcMap = rewriter.getMultiDimIdentityMap(reductionMask.size());
     SmallVector<AffineExpr> exprs;
     SmallVector<StringRef> iteratorTypes;
-    for (auto isReduceDim : llvm::enumerate(reductionMask)) {
+    for (const auto &isReduceDim : llvm::enumerate(reductionMask)) {
       if (!isReduceDim.value()) {
         iteratorTypes.push_back(getParallelIteratorTypeName());
         exprs.push_back(rewriter.getAffineDimExpr(isReduceDim.index()));
@@ -997,7 +997,7 @@ struct CombineContractBroadcast
           broadcast.getVectorType().getRank() - srcType.getRank();
       bool innerDimBroadcast = false;
       SmallVector<AffineExpr> originalDims;
-      for (auto dim : llvm::enumerate(srcType.getShape())) {
+      for (const auto &dim : llvm::enumerate(srcType.getShape())) {
         if (dim.value() !=
             broadcast.getVectorType().getDimSize(rankDiff + dim.index())) {
           innerDimBroadcast = true;

@@ -940,7 +940,7 @@ static LogicalResult verify(gpu::ReturnOp returnOp) {
         .attachNote(function.getLoc())
         .append("return type declared here");
 
-  for (auto pair : llvm::enumerate(
+  for (const auto &pair : llvm::enumerate(
            llvm::zip(function.getType().getResults(), returnOp.operands()))) {
     Type type;
     Value operand;

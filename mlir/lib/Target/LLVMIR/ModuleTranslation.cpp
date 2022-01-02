@@ -381,7 +381,7 @@ static Value getPHISourceValue(Block *current, Block *pred,
     // the case branch that was taken.
     if (switchOp.getDefaultDestination() == current)
       return switchOp.getDefaultOperands()[index];
-    for (auto i : llvm::enumerate(switchOp.getCaseDestinations()))
+    for (const auto &i : llvm::enumerate(switchOp.getCaseDestinations()))
       if (i.value() == current)
         return switchOp.getCaseOperands(i.index())[index];
   }

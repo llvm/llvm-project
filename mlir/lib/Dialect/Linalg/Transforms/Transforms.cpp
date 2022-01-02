@@ -194,7 +194,7 @@ static LogicalResult padOperandToSmallestStaticBoundingBox(
   SmallVector<int64_t> staticSizes;
   staticSizes.reserve(shape.size());
   auto shapedOp = cast<OffsetSizeAndStrideOpInterface>(sliceOp.getOperation());
-  for (auto en : enumerate(shapedOp.getMixedSizes())) {
+  for (const auto &en : enumerate(shapedOp.getMixedSizes())) {
     // Skip dropped dimensions.
     if (droppedDims.contains(en.index()))
       continue;
@@ -269,7 +269,7 @@ linalg::rewriteAsPaddedOp(OpBuilder &b, LinalgOp opToPad,
   // linalg op around because it uses the dims of the original results.
   SmallVector<Value> paddedSubviewResults;
   paddedSubviewResults.reserve(opToPad->getNumResults());
-  for (auto en : llvm::enumerate(paddedOp->getResults())) {
+  for (const auto &en : llvm::enumerate(paddedOp->getResults())) {
     Value paddedResult = en.value();
     int64_t resultNumber = en.index();
     int64_t rank = paddedResult.getType().cast<RankedTensorType>().getRank();
@@ -443,7 +443,7 @@ LogicalResult mlir::linalg::LinalgBaseTileAndFusePattern::matchAndRewrite(
   // Tile the unfused loops;
   SmallVector<Value, 4> unfusedLoopTileSizes;
   Value zero = rewriter.create<arith::ConstantIndexOp>(op->getLoc(), 0);
-  for (auto tileSize : enumerate(tileSizes)) {
+  for (const auto &tileSize : enumerate(tileSizes)) {
     if (tiledAndFusedOps->fusedLoopDims.count(tileSize.index()))
       unfusedLoopTileSizes.push_back(zero);
     else
@@ -524,7 +524,7 @@ LogicalResult mlir::linalg::LinalgPaddingPattern::matchAndRewrite(
   }
 
   // Hoist the padding.
-  for (auto en : enumerate(depths)) {
+  for (const auto &en : enumerate(depths)) {
     OpOperand &opOperand = paddedOp->getOpOperand(en.index());
     auto padTensorOp = opOperand.get().getDefiningOp<PadTensorOp>();
     if (!padTensorOp || en.value() == 0)

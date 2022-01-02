@@ -1093,7 +1093,7 @@ static LogicalResult verify(PadTensorOp op) {
     return op.emitError("expected the block to have ") << rank << " arguments";
 
   // Note: the number and type of yield values are checked in the YieldOp.
-  for (auto en : llvm::enumerate(block.getArgumentTypes())) {
+  for (const auto &en : llvm::enumerate(block.getArgumentTypes())) {
     if (!en.value().isIndex())
       return op.emitOpError("expected block argument ")
              << (en.index() + 1) << " to be an index";
@@ -1204,7 +1204,7 @@ PadTensorOp PadTensorOp::createPadHighOp(Type type, Value source, Value pad,
   SmallVector<OpFoldResult, 4> low, high;
   auto rankedTensorType = type.cast<RankedTensorType>();
   assert(rankedTensorType.hasStaticShape());
-  for (auto en : enumerate(rankedTensorType.getShape())) {
+  for (const auto &en : enumerate(rankedTensorType.getShape())) {
     AffineExpr d0;
     bindDims(b.getContext(), d0);
     auto dimOp = b.createOrFold<tensor::DimOp>(loc, source, en.index());
@@ -1275,7 +1275,7 @@ SmallVector<Range> PadTensorOp::getIterationDomain(OpBuilder &b) {
   // Initialize all the ranges to {zero, one, one}. All the `ub`s are
   // overwritten.
   SmallVector<Range> loopRanges(reifiedShapes[0].size(), {zero, one, one});
-  for (auto ub : enumerate(reifiedShapes[0]))
+  for (const auto &ub : enumerate(reifiedShapes[0]))
     loopRanges[ub.index()].size = ub.value();
   return loopRanges;
 }
@@ -2001,7 +2001,7 @@ struct TiledLoopInputsFolder : public OpRewritePattern<linalg::TiledLoopOp> {
     // Store ids of the corresponding old and new input operands.
     SmallVector<int64_t, 2> oldInputIdToNew(tiledLoop.inputs().size(),
                                             kNoMatch);
-    for (auto en : llvm::enumerate(
+    for (const auto &en : llvm::enumerate(
              llvm::zip(tiledLoop.inputs(), tiledLoop.getRegionInputArgs()))) {
       Value in, bbArg;
       size_t index = en.index();
@@ -2215,7 +2215,7 @@ struct TiledLoopResultsFolder : public OpRewritePattern<linalg::TiledLoopOp> {
     SmallVector<int64_t, 2> oldResultIdToNew(tiledLoop.getNumResults(),
                                              kNoMatch);
     SmallVector<Value, 2> resultReplacement(tiledLoop.getNumResults());
-    for (auto en : llvm::enumerate(
+    for (const auto &en : llvm::enumerate(
              llvm::zip(tiledLoop.outputs(), tiledLoop.getRegionOutputArgs()))) {
       size_t index = en.index();
       Value out = std::get<0>(en.value());

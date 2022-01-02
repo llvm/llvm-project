@@ -69,7 +69,7 @@ struct ForLoopLoweringPattern : public OpRewritePattern<ForOp> {
 
     // Rewrite uses of the for-loop block arguments to the new while-loop
     // "after" arguments
-    for (auto barg : enumerate(forOp.getBody(0)->getArguments()))
+    for (const auto &barg : enumerate(forOp.getBody(0)->getArguments()))
       barg.value().replaceAllUsesWith(afterBlock->getArgument(barg.index()));
 
     // Inline for-loop body operations into 'after' region.
@@ -87,7 +87,7 @@ struct ForLoopLoweringPattern : public OpRewritePattern<ForOp> {
     // an extra value (the induction variable escapes the loop through being
     // carried in the set of iterargs). Instead, rewrite uses of the forOp
     // results.
-    for (auto arg : llvm::enumerate(forOp.getResults()))
+    for (const auto &arg : llvm::enumerate(forOp.getResults()))
       arg.value().replaceAllUsesWith(whileOp.getResult(arg.index() + 1));
 
     rewriter.eraseOp(forOp);
