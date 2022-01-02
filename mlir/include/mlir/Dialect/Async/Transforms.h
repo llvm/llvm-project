@@ -32,7 +32,7 @@ using AsyncMinTaskSizeComputationFunction =
 /// operations.
 void populateAsyncParallelForPatterns(
     RewritePatternSet &patterns, bool asyncDispatch, int32_t numWorkerThreads,
-    AsyncMinTaskSizeComputationFunction computeMinTaskSize);
+    const AsyncMinTaskSizeComputationFunction &computeMinTaskSize);
 
 } // namespace async
 } // namespace mlir

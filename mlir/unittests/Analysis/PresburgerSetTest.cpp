@@ -48,7 +48,7 @@ static PresburgerSet parsePresburgerSetFromFACStrings(unsigned numDims,
 
 /// Compute the union of s and t, and check that each of the given points
 /// belongs to the union iff it belongs to at least one of s and t.
-static void testUnionAtPoints(PresburgerSet s, PresburgerSet t,
+static void testUnionAtPoints(const PresburgerSet &s, const PresburgerSet &t,
                               ArrayRef<SmallVector<int64_t, 4>> points) {
   PresburgerSet unionSet = s.unionSet(t);
   for (const SmallVector<int64_t, 4> &point : points) {
@@ -61,7 +61,8 @@ static void testUnionAtPoints(PresburgerSet s, PresburgerSet t,
 
 /// Compute the intersection of s and t, and check that each of the given points
 /// belongs to the intersection iff it belongs to both s and t.
-static void testIntersectAtPoints(PresburgerSet s, PresburgerSet t,
+static void testIntersectAtPoints(const PresburgerSet &s,
+                                  const PresburgerSet &t,
                                   ArrayRef<SmallVector<int64_t, 4>> points) {
   PresburgerSet intersection = s.intersect(t);
   for (const SmallVector<int64_t, 4> &point : points) {
@@ -74,7 +75,7 @@ static void testIntersectAtPoints(PresburgerSet s, PresburgerSet t,
 
 /// Compute the set difference s \ t, and check that each of the given points
 /// belongs to the difference iff it belongs to s and does not belong to t.
-static void testSubtractAtPoints(PresburgerSet s, PresburgerSet t,
+static void testSubtractAtPoints(const PresburgerSet &s, const PresburgerSet &t,
                                  ArrayRef<SmallVector<int64_t, 4>> points) {
   PresburgerSet diff = s.subtract(t);
   for (const SmallVector<int64_t, 4> &point : points) {
@@ -90,7 +91,7 @@ static void testSubtractAtPoints(PresburgerSet s, PresburgerSet t,
 
 /// Compute the complement of s, and check that each of the given points
 /// belongs to the complement iff it does not belong to s.
-static void testComplementAtPoints(PresburgerSet s,
+static void testComplementAtPoints(const PresburgerSet &s,
                                    ArrayRef<SmallVector<int64_t, 4>> points) {
   PresburgerSet complement = s.complement();
   complement.complement();
@@ -473,7 +474,7 @@ void expectEqual(const PresburgerSet &s, const PresburgerSet &t) {
   EXPECT_TRUE(s.isEqual(t));
 }
 
-void expectEmpty(PresburgerSet s) { EXPECT_TRUE(s.isIntegerEmpty()); }
+void expectEmpty(const PresburgerSet &s) { EXPECT_TRUE(s.isIntegerEmpty()); }
 
 TEST(SetTest, divisions) {
   MLIRContext context;
@@ -511,7 +512,7 @@ TEST(SetTest, divisions) {
 /// Coalesce `set` and check that the `newSet` is equal to `set and that
 /// `expectedNumFACs` matches the number of FACs in the coalesced set.
 /// If one of the two
-void expectCoalesce(size_t expectedNumFACs, const PresburgerSet set) {
+void expectCoalesce(size_t expectedNumFACs, const PresburgerSet &set) {
   PresburgerSet newSet = set.coalesce();
   EXPECT_TRUE(set.isEqual(newSet));
   EXPECT_TRUE(expectedNumFACs == newSet.getNumFACs());

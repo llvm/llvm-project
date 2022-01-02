@@ -203,8 +203,9 @@ public:
 
   /// Enter and exit the context manager.
   pybind11::object contextEnter();
-  void contextExit(pybind11::object excType, pybind11::object excVal,
-                   pybind11::object excTb);
+  void contextExit(const pybind11::object &excType,
+                   const pybind11::object &excVal,
+                   const pybind11::object &excTb);
 
 private:
   PyMlirContext(MlirContext context);
@@ -316,8 +317,9 @@ public:
 
   /// Enter and exit the context manager.
   pybind11::object contextEnter();
-  void contextExit(pybind11::object excType, pybind11::object excVal,
-                   pybind11::object excTb);
+  void contextExit(const pybind11::object &excType,
+                   const pybind11::object &excVal,
+                   const pybind11::object &excTb);
 
   /// Gets a capsule wrapping the void* within the MlirLocation.
   pybind11::object getCapsule();
@@ -482,11 +484,11 @@ public:
 
   /// Creates an operation. See corresponding python docstring.
   static pybind11::object
-  create(std::string name, llvm::Optional<std::vector<PyType *>> results,
+  create(const std::string &name, llvm::Optional<std::vector<PyType *>> results,
          llvm::Optional<std::vector<PyValue *>> operands,
          llvm::Optional<pybind11::dict> attributes,
          llvm::Optional<std::vector<PyBlock *>> successors, int regions,
-         DefaultingPyLocation location, pybind11::object ip);
+         DefaultingPyLocation location, const pybind11::object &ip);
 
   /// Creates an OpView suitable for this operation.
   pybind11::object createOpView();
@@ -524,15 +526,15 @@ private:
 /// python types.
 class PyOpView : public PyOperationBase {
 public:
-  PyOpView(pybind11::object operationObject);
+  PyOpView(const pybind11::object &operationObject);
   PyOperation &getOperation() override { return operation; }
 
-  static pybind11::object createRawSubclass(pybind11::object userClass);
+  static pybind11::object createRawSubclass(const pybind11::object &userClass);
 
   pybind11::object getOperationObject() { return operationObject; }
 
   static pybind11::object
-  buildGeneric(pybind11::object cls, pybind11::list resultTypeList,
+  buildGeneric(const pybind11::object &cls, pybind11::list resultTypeList,
                pybind11::list operandList,
                llvm::Optional<pybind11::dict> attributes,
                llvm::Optional<std::vector<PyBlock *>> successors,
@@ -607,8 +609,9 @@ public:
 
   /// Enter and exit the context manager.
   pybind11::object contextEnter();
-  void contextExit(pybind11::object excType, pybind11::object excVal,
-                   pybind11::object excTb);
+  void contextExit(const pybind11::object &excType,
+                   const pybind11::object &excVal,
+                   const pybind11::object &excTb);
 
   PyBlock &getBlock() { return block; }
 

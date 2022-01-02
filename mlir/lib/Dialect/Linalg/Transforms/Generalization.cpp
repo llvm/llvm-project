@@ -78,7 +78,7 @@ void LinalgGeneralizationPass::runOnFunction() {
 }
 
 void mlir::linalg::populateLinalgNamedOpsGeneralizationPatterns(
-    RewritePatternSet &patterns, LinalgTransformationFilter marker) {
+    RewritePatternSet &patterns, const LinalgTransformationFilter &marker) {
   patterns.add<LinalgGeneralizationPattern>(patterns.getContext(), marker);
 }
 

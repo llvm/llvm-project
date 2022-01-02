@@ -264,7 +264,7 @@ using VectorizableOpFun = std::function<bool(AffineForOp, Operation &)>;
 
 static bool
 isVectorizableLoopBodyWithOpCond(AffineForOp loop,
-                                 VectorizableOpFun isVectorizableOp,
+                                 const VectorizableOpFun &isVectorizableOp,
                                  NestedPattern &vectorTransferMatcher) {
   auto *forOp = loop.getOperation();
 

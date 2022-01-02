@@ -93,8 +93,8 @@ TEST(SimplexTest, addInequality_rollback) {
 }
 
 Simplex simplexFromConstraints(unsigned nDim,
-                               SmallVector<SmallVector<int64_t, 8>, 8> ineqs,
-                               SmallVector<SmallVector<int64_t, 8>, 8> eqs) {
+                               ArrayRef<SmallVector<int64_t, 8>> ineqs,
+                               ArrayRef<SmallVector<int64_t, 8>> eqs) {
   Simplex simplex(nDim);
   for (const auto &ineq : ineqs)
     simplex.addInequality(ineq);

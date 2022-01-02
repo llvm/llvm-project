@@ -2217,7 +2217,7 @@ private:
   /// attribute.
   void handleTypesMatchConstraint(
       llvm::StringMap<TypeResolutionInstance> &variableTyResolver,
-      llvm::Record def);
+      const llvm::Record &def);
 
   /// Returns an argument or attribute with the given name that has been seen
   /// within the format.
@@ -2621,7 +2621,7 @@ void FormatParser::handleSameTypesConstraint(
 
 void FormatParser::handleTypesMatchConstraint(
     llvm::StringMap<TypeResolutionInstance> &variableTyResolver,
-    llvm::Record def) {
+    const llvm::Record &def) {
   StringRef lhsName = def.getValueAsString("lhs");
   StringRef rhsName = def.getValueAsString("rhs");
   StringRef transformer = def.getValueAsString("transformer");

@@ -50,7 +50,7 @@ template <typename NamedStructuredOpType>
 static void fillStructuredOpRegion(
     OpBuilder &opBuilder, Region &region, TypeRange inputTypes,
     TypeRange outputTypes,
-    std::function<void(unsigned, unsigned)> errorHandler = nullptr);
+    llvm::function_ref<void(unsigned, unsigned)> errorHandler = nullptr);
 
 /// Generic entry point to create both the region and the block of a LinalgOp.
 template <typename NamedStructuredOpType>
@@ -323,7 +323,7 @@ public:
     builder.create<YieldOp>(first.getLoc(), values);
   }
 
-  Value constant(std::string value) {
+  Value constant(const std::string &value) {
     OpBuilder builder = getBuilder();
     Location loc = builder.getUnknownLoc();
     Attribute valueAttr = parseAttribute(value, builder.getContext());
@@ -2406,10 +2406,10 @@ std::string mlir::linalg::generateLibraryCallName(Operation *op) {
 /// to the elemental types of `inputTypes` and `outputTypes`, which are asserted
 /// to be ShapedType.
 template <typename NamedStructuredOpType>
-static void
-fillStructuredOpRegion(OpBuilder &opBuilder, Region &region,
-                       TypeRange inputTypes, TypeRange outputTypes,
-                       std::function<void(unsigned, unsigned)> errorHandler) {
+static void fillStructuredOpRegion(
+    OpBuilder &opBuilder, Region &region, TypeRange inputTypes,
+    TypeRange outputTypes,
+    llvm::function_ref<void(unsigned, unsigned)> errorHandler) {
   assert(llvm::all_of(outputTypes, [](Type t) { return t.isa<ShapedType>(); }));
 
   // TODO: atm all operands go through getElementTypeOrSelf,

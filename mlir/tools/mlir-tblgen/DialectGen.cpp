@@ -185,10 +185,11 @@ static const char *const operationInterfaceFallbackDecl = R"(
 )";
 
 /// Generate the declaration for the given dialect class.
-static void emitDialectDecl(Dialect &dialect,
-                            iterator_range<DialectFilterIterator> dialectAttrs,
-                            iterator_range<DialectFilterIterator> dialectTypes,
-                            raw_ostream &os) {
+static void
+emitDialectDecl(Dialect &dialect,
+                const iterator_range<DialectFilterIterator> &dialectAttrs,
+                const iterator_range<DialectFilterIterator> &dialectTypes,
+                raw_ostream &os) {
   /// Build the list of dependent dialects
   std::string dependentDialectRegistrations;
   {

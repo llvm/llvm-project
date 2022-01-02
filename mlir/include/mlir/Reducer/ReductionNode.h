@@ -48,7 +48,7 @@ public:
 
   using Range = std::pair<int, int>;
 
-  ReductionNode(ReductionNode *parent, std::vector<Range> range,
+  ReductionNode(ReductionNode *parent, const std::vector<Range> &range,
                 llvm::SpecificBumpPtrAllocator<ReductionNode> &allocator);
 
   ReductionNode *getParent() const { return parent; }

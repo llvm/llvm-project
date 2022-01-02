@@ -13,6 +13,7 @@
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/Error.h"
 #include <system_error>
+#include <utility>
 
 using namespace mlir;
 using namespace mlir::lsp;
@@ -87,7 +88,7 @@ bool MessageHandler::onNotify(llvm::StringRef method, llvm::json::Value value) {
   } else {
     auto it = notificationHandlers.find(method);
     if (it != notificationHandlers.end())
-      it->second(value);
+      it->second(std::move(value));
   }
   return true;
 }
@@ -100,7 +101,7 @@ bool MessageHandler::onCall(llvm::StringRef method, llvm::json::Value params,
 
   auto it = methodHandlers.find(method);
   if (it != methodHandlers.end()) {
-    it->second(params, std::move(reply));
+    it->second(std::move(params), std::move(reply));
   } else {
     reply(llvm::make_error<LSPError>("method not found: " + method.str(),
                                      ErrorCode::MethodNotFound));

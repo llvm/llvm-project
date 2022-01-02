@@ -563,7 +563,7 @@ private:
 
 InlinerPass::InlinerPass() : InlinerPass(defaultInlinerOptPipeline) {}
 InlinerPass::InlinerPass(std::function<void(OpPassManager &)> defaultPipeline)
-    : defaultPipeline(defaultPipeline) {
+    : defaultPipeline(std::move(defaultPipeline)) {
   opPipelines.push_back({});
 
   // Initialize the pass options with the provided arguments.

@@ -78,7 +78,8 @@ static bool isSinkingBeneficiary(Operation *op) {
 /// is updated with results that will be available after sinking the identified
 /// ops.
 static bool
-extractBeneficiaryOps(Operation *op, SetVector<Value> existingDependencies,
+extractBeneficiaryOps(Operation *op,
+                      const SetVector<Value> &existingDependencies,
                       SetVector<Operation *> &beneficiaryOps,
                       llvm::SmallPtrSetImpl<Value> &availableValues) {
   if (beneficiaryOps.count(op))

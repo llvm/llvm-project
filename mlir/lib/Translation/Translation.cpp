@@ -94,7 +94,7 @@ TranslateToMLIRRegistration::TranslateToMLIRRegistration(
 
 TranslateFromMLIRRegistration::TranslateFromMLIRRegistration(
     StringRef name, const TranslateFromMLIRFunction &function,
-    std::function<void(DialectRegistry &)> dialectRegistration) {
+    const std::function<void(DialectRegistry &)> &dialectRegistration) {
   registerTranslation(name, [function, dialectRegistration](
                                 llvm::SourceMgr &sourceMgr, raw_ostream &output,
                                 MLIRContext *context) {

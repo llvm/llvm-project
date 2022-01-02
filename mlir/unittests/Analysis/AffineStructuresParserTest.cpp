@@ -73,7 +73,7 @@ TEST(ParseFACTest, InvalidInputTest) {
 
 /// Parses and compares the `str` to the `ex`. The equality check is performed
 /// by using PresburgerSet::isEqual
-static bool parseAndCompare(StringRef str, FlatAffineConstraints ex,
+static bool parseAndCompare(StringRef str, const FlatAffineConstraints &ex,
                             MLIRContext *context) {
   FailureOr<FlatAffineConstraints> fac = parseIntegerSetToFAC(str, context);
 

@@ -285,7 +285,7 @@ bool mlir::linalg::comprehensive_bufferize::BufferizationState::isValueRead(
 llvm::SetVector<Value>
 mlir::linalg::comprehensive_bufferize::BufferizationState::
     findValueInReverseUseDefChain(Value value,
-                                  std::function<bool(Value)> condition) {
+                                  llvm::function_ref<bool(Value)> condition) {
   llvm::SetVector<Value> result, workingSet;
   workingSet.insert(value);
 

@@ -223,9 +223,9 @@ struct BasicIRPrinterConfig : public PassManager::IRPrinterConfig {
       raw_ostream &out)
       : IRPrinterConfig(printModuleScope, printAfterOnlyOnChange,
                         printAfterOnlyOnFailure, opPrintingFlags),
-        shouldPrintBeforePass(shouldPrintBeforePass),
-        shouldPrintAfterPass(shouldPrintAfterPass), out(out) {
-    assert((shouldPrintBeforePass || shouldPrintAfterPass) &&
+        shouldPrintBeforePass(std::move(shouldPrintBeforePass)),
+        shouldPrintAfterPass(std::move(shouldPrintAfterPass)), out(out) {
+    assert((this->shouldPrintBeforePass || this->shouldPrintAfterPass) &&
            "expected at least one valid filter function");
   }
 

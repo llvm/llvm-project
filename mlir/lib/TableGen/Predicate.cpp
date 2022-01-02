@@ -286,7 +286,8 @@ propagateGroundTruth(PredNode *node,
 // Combine a list of predicate expressions using a binary combiner.  If a list
 // is empty, return "init".
 static std::string combineBinary(ArrayRef<std::string> children,
-                                 std::string combiner, std::string init) {
+                                 const std::string &combiner,
+                                 std::string init) {
   if (children.empty())
     return init;
 
