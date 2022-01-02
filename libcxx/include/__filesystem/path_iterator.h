@@ -38,15 +38,13 @@ public:
   };
 
 public:
-  typedef bidirectional_iterator_tag iterator_category;
+  typedef input_iterator_tag iterator_category;
+  typedef bidirectional_iterator_tag iterator_concept;
 
   typedef path value_type;
   typedef ptrdiff_t difference_type;
   typedef const path* pointer;
-  typedef const path& reference;
-
-  typedef void
-      __stashing_iterator_tag; // See reverse_iterator and __is_stashing_iterator
+  typedef path reference;
 
 public:
   _LIBCPP_INLINE_VISIBILITY

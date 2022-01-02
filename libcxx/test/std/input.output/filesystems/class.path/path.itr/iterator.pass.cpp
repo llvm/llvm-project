@@ -19,28 +19,25 @@
 
 
 #include "filesystem_include.h"
+#include <cassert>
 #include <iterator>
 #include <type_traits>
-#include <cassert>
 
 #include "test_macros.h"
 #include "filesystem_test_helper.h"
-
-
-
-template <class It>
-std::reverse_iterator<It> mkRev(It it) {
-  return std::reverse_iterator<It>(it);
-}
 
 void checkIteratorConcepts() {
   using namespace fs;
   using It = path::iterator;
   using Traits = std::iterator_traits<It>;
-  ASSERT_SAME_TYPE(Traits::iterator_category, std::bidirectional_iterator_tag);
+  ASSERT_SAME_TYPE(path::const_iterator, It);
+#if TEST_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_RANGES)
+  static_assert(std::bidirectional_iterator<It>);
+#endif
   ASSERT_SAME_TYPE(Traits::value_type, path);
-  ASSERT_SAME_TYPE(Traits::pointer,   path const*);
-  ASSERT_SAME_TYPE(Traits::reference, path const&);
+  LIBCPP_STATIC_ASSERT(std::is_same<Traits::iterator_category, std::input_iterator_tag>::value, "");
+  LIBCPP_STATIC_ASSERT(std::is_same<Traits::pointer, path const*>::value, "");
+  LIBCPP_STATIC_ASSERT(std::is_same<Traits::reference, path>::value, "");
   {
     It it;
     ASSERT_SAME_TYPE(It&, decltype(++it));
@@ -93,16 +90,13 @@ void checkBeginEndBasic() {
 #endif
     assert(checkCollectionsEqual(p.begin(), p.end(), std::begin(expect), std::end(expect)));
     assert(checkCollectionsEqualBackwards(p.begin(), p.end(), std::begin(expect), std::end(expect)));
-
   }
   {
     path p("////foo/bar/baz///");
     const path expect[] = {"/", "foo", "bar", "baz", ""};
     assert(checkCollectionsEqual(p.begin(), p.end(), std::begin(expect), std::end(expect)));
     assert(checkCollectionsEqualBackwards(p.begin(), p.end(), std::begin(expect), std::end(expect)));
-
   }
-
 }
 
 int main(int, char**) {

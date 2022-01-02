@@ -97,6 +97,18 @@ API Changes
   from all modes. Their symbols are still provided by the dynamic library for the benefit of
   existing compiled code. All of these functions have always behaved as no-ops.
 
+- ``std::filesystem::path::iterator``, which (in our implementation) stashes
+  a ``path`` value inside itself similar to ``istream_iterator``, now sets its
+  ``reference`` type to ``path`` and its ``iterator_category`` to ``input_iterator_tag``,
+  so that it is a conforming input iterator in C++17 and a conforming
+  ``std::bidirectional_iterator`` in C++20. Before this release, it had set its
+  ``reference`` type to ``const path&`` and its ``iterator_category`` to
+  ``bidirectional_iterator_tag``, making it a non-conforming bidirectional iterator.
+  After this change, ``for`` loops of the form ``for (auto& c : path)`` must be rewritten
+  as either ``for (auto&& c : path)`` or ``for (const auto& c : path)``.
+  ``std::reverse_iterator<path::iterator>`` is no longer rejected.
+
+
 ABI Changes
 -----------
 
