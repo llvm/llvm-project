@@ -1150,6 +1150,25 @@ OpFoldResult arith::CmpIOp::fold(ArrayRef<Attribute> operands) {
     return getBoolAttribute(getType(), getContext(), val);
   }
 
+  if (matchPattern(getRhs(), m_Zero())) {
+    if (auto extOp = getLhs().getDefiningOp<ExtSIOp>()) {
+      if (extOp.getOperand().getType().cast<IntegerType>().getWidth() == 1) {
+        // extsi(%x : i1 -> iN) != 0  ->  %x
+        if (getPredicate() == arith::CmpIPredicate::ne) {
+          return extOp.getOperand();
+        }
+      }
+    }
+    if (auto extOp = getLhs().getDefiningOp<ExtUIOp>()) {
+      if (extOp.getOperand().getType().cast<IntegerType>().getWidth() == 1) {
+        // extui(%x : i1 -> iN) != 0  ->  %x
+        if (getPredicate() == arith::CmpIPredicate::ne) {
+          return extOp.getOperand();
+        }
+      }
+    }
+  }
+
   auto lhs = operands.front().dyn_cast_or_null<IntegerAttr>();
   auto rhs = operands.back().dyn_cast_or_null<IntegerAttr>();
   if (!lhs || !rhs)
