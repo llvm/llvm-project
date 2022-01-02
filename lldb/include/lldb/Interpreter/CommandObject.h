@@ -172,11 +172,6 @@ public:
     return nullptr;
   }
 
-  virtual void AproposAllSubCommands(llvm::StringRef prefix,
-                                     llvm::StringRef search_word,
-                                     StringList &commands_found,
-                                     StringList &commands_help) {}
-
   void FormatLongHelpText(Stream &output_strm, llvm::StringRef long_help);
 
   void GenerateHelpText(CommandReturnObject &result);

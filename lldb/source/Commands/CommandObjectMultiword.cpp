@@ -302,31 +302,6 @@ const char *CommandObjectMultiword::GetRepeatCommand(Args &current_command_args,
   return sub_command_object->GetRepeatCommand(current_command_args, index);
 }
 
-void CommandObjectMultiword::AproposAllSubCommands(llvm::StringRef prefix,
-                                                   llvm::StringRef search_word,
-                                                   StringList &commands_found,
-                                                   StringList &commands_help) {
-  CommandObject::CommandMap::const_iterator pos;
-
-  for (pos = m_subcommand_dict.begin(); pos != m_subcommand_dict.end(); ++pos) {
-    const char *command_name = pos->first.c_str();
-    CommandObject *sub_cmd_obj = pos->second.get();
-    StreamString complete_command_name;
-
-    complete_command_name << prefix << " " << command_name;
-
-    if (sub_cmd_obj->HelpTextContainsWord(search_word)) {
-      commands_found.AppendString(complete_command_name.GetString());
-      commands_help.AppendString(sub_cmd_obj->GetHelp());
-    }
-
-    if (sub_cmd_obj->IsMultiwordObject())
-      sub_cmd_obj->AproposAllSubCommands(complete_command_name.GetString(),
-                                         search_word, commands_found,
-                                         commands_help);
-  }
-}
-
 CommandObjectProxy::CommandObjectProxy(CommandInterpreter &interpreter,
                                        const char *name, const char *help,
                                        const char *syntax, uint32_t flags)
@@ -407,16 +382,6 @@ CommandObject *CommandObjectProxy::GetSubcommandObject(llvm::StringRef sub_cmd,
   if (proxy_command)
     return proxy_command->GetSubcommandObject(sub_cmd, matches);
   return nullptr;
-}
-
-void CommandObjectProxy::AproposAllSubCommands(llvm::StringRef prefix,
-                                               llvm::StringRef search_word,
-                                               StringList &commands_found,
-                                               StringList &commands_help) {
-  CommandObject *proxy_command = GetProxyCommandObject();
-  if (proxy_command)
-    return proxy_command->AproposAllSubCommands(prefix, search_word,
-                                                commands_found, commands_help);
 }
 
 bool CommandObjectProxy::LoadSubCommand(
