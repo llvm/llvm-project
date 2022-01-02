@@ -1761,8 +1761,9 @@ ClassTemplateDecl *Sema::lookupCoroutineTraits(SourceLocation KwLoc,
       auto *Found = *ResExp.begin();
       Diag(Found->getLocation(), diag::note_entity_declared_at) << Found;
 
-      if (InStd) {
-        // Also found in std
+      if (InStd &&
+          StdCoroutineTraitsCache != ResExp.getAsSingle<ClassTemplateDecl>()) {
+        // Also found something different in std
         Diag(KwLoc,
              diag::err_mixed_use_std_and_experimental_namespace_for_coroutine);
         Diag(StdCoroutineTraitsCache->getLocation(),
