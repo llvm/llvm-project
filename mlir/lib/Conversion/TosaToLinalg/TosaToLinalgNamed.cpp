@@ -82,7 +82,7 @@ static mlir::Value applyPad(Location loc, Value input, ArrayRef<int64_t> pad,
       .result();
 }
 
-static SmallVector<Value> filterDynamicDims(SmallVector<Value> dynDims) {
+static SmallVector<Value> filterDynamicDims(const SmallVector<Value> &dynDims) {
   SmallVector<Value> filteredDims;
   for (auto dim : dynDims)
     if (dim)
