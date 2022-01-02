@@ -70,6 +70,12 @@ void IRInstructionData::initializeInstruction() {
 
     OperVals.push_back(OI.get());
   }
+
+  // We capture the incoming BasicBlocks as values as well as the incoming
+  // Values in order to check for structural similarity.
+  if (PHINode *PN = dyn_cast<PHINode>(Inst))
+    for (BasicBlock *BB : PN->blocks())
+      OperVals.push_back(BB);
 }
 
 IRInstructionData::IRInstructionData(IRInstructionDataList &IDList)
@@ -106,6 +112,34 @@ void IRInstructionData::setCalleeName(bool MatchByName) {
   CalleeName = "";
   if (!CI->isIndirectCall() && MatchByName)
     CalleeName = CI->getCalledFunction()->getName().str();
+}
+
+void IRInstructionData::setPHIPredecessors(
+    DenseMap<BasicBlock *, unsigned> &BasicBlockToInteger) {
+  assert(isa<PHINode>(Inst) && "Instruction must be phi node");
+
+  PHINode *PN = cast<PHINode>(Inst);
+  DenseMap<BasicBlock *, unsigned>::iterator BBNumIt;
+
+  BBNumIt = BasicBlockToInteger.find(PN->getParent());
+  assert(BBNumIt != BasicBlockToInteger.end() &&
+         "Could not find location for BasicBlock!");
+
+  int CurrentBlockNumber = static_cast<int>(BBNumIt->second);
+
+  // Convert the incoming blocks of the PHINode to an integer value, based on
+  // the relative distances between the current block and the incoming block.
+  for (unsigned Idx = 0; Idx < PN->getNumIncomingValues(); Idx++) {
+    BasicBlock *Incoming = PN->getIncomingBlock(Idx);
+    BBNumIt = BasicBlockToInteger.find(Incoming);
+    assert(BBNumIt != BasicBlockToInteger.end() &&
+           "Could not find number for BasicBlock!");
+    int OtherBlockNumber = static_cast<int>(BBNumIt->second);
+
+    int Relative = OtherBlockNumber - CurrentBlockNumber;
+    RelativeBlockLocations.push_back(Relative);
+    RelativeBlockLocations.push_back(Relative);
+  }
 }
 
 CmpInst::Predicate IRInstructionData::predicateForConsistency(CmpInst *CI) {
@@ -269,6 +303,9 @@ unsigned IRInstructionMapper::mapToLegalUnsigned(
 
   if (isa<CallInst>(*It))
     ID->setCalleeName(EnableMatchCallsByName);
+
+  if (isa<PHINode>(*It))
+    ID->setPHIPredecessors(BasicBlockToInteger);
 
   // Add to the instruction list
   bool WasInserted;

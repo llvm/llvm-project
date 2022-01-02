@@ -342,8 +342,7 @@ private:
     bool visitBranchInst(BranchInst &BI) { 
       return EnableBranches;
     }
-    // TODO: Determine a scheme to resolve when the labels are similar enough.
-    bool visitPHINode(PHINode &PN) { return false; }
+    bool visitPHINode(PHINode &PN) { return EnableBranches; }
     // TODO: Handle allocas.
     bool visitAllocaInst(AllocaInst &AI) { return false; }
     // VAArg instructions are not allowed since this could cause difficulty when

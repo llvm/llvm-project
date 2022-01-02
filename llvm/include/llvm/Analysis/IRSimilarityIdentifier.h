@@ -214,6 +214,16 @@ struct IRInstructionData
   /// function name as a differentiating parameter.
   void setCalleeName(bool MatchByName = true);
 
+  /// For an IRInstructionData containing a PHINode, finds the
+  /// relative distances from the incoming basic block to the current block by
+  /// taking the difference of the number assigned to the current basic block
+  /// and the incoming basic block of the branch.
+  ///
+  /// \param BasicBlockToInteger - The mapping of basic blocks to their location
+  /// in the module.
+  void
+  setPHIPredecessors(DenseMap<BasicBlock *, unsigned> &BasicBlockToInteger);
+
   /// Hashes \p Value based on its opcode, types, and operand types.
   /// Two IRInstructionData instances produce the same hash when they perform
   /// the same operation.
@@ -497,8 +507,11 @@ struct IRInstructionMapper {
         return Legal;
       return Illegal;
     }
-    // TODO: Determine a scheme to resolve when the labels are similar enough.
-    InstrType visitPHINode(PHINode &PN) { return Illegal; }
+    InstrType visitPHINode(PHINode &PN) { 
+      if (EnableBranches)
+        return Legal;
+      return Illegal;
+    }
     // TODO: Handle allocas.
     InstrType visitAllocaInst(AllocaInst &AI) { return Illegal; }
     // We exclude variable argument instructions since variable arguments
