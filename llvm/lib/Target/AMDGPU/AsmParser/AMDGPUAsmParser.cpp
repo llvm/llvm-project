@@ -62,7 +62,7 @@ class AMDGPUOperand : public MCParsedAsmOperand {
 
 public:
   AMDGPUOperand(KindTy Kind_, const AMDGPUAsmParser *AsmParser_)
-    : MCParsedAsmOperand(), Kind(Kind_), AsmParser(AsmParser_) {}
+      : Kind(Kind_), AsmParser(AsmParser_) {}
 
   using Ptr = std::unique_ptr<AMDGPUOperand>;
 

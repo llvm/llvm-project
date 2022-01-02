@@ -36,7 +36,7 @@ class RetireStage final : public Stage {
 
 public:
   RetireStage(RetireControlUnit &R, RegisterFile &F, LSUnitBase &LS)
-      : Stage(), RCU(R), PRF(F), LSU(LS) {}
+      : RCU(R), PRF(F), LSU(LS) {}
 
   bool hasWorkToComplete() const override { return !RCU.isEmpty(); }
   Error cycleStart() override;

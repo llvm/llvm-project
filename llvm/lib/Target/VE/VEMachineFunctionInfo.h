@@ -29,10 +29,9 @@ private:
   bool IsLeafProc;
 
 public:
-  VEMachineFunctionInfo()
-      : GlobalBaseReg(), VarArgsFrameOffset(0), IsLeafProc(false) {}
+  VEMachineFunctionInfo() : VarArgsFrameOffset(0), IsLeafProc(false) {}
   explicit VEMachineFunctionInfo(MachineFunction &MF)
-      : GlobalBaseReg(), VarArgsFrameOffset(0), IsLeafProc(false) {}
+      : VarArgsFrameOffset(0), IsLeafProc(false) {}
 
   Register getGlobalBaseReg() const { return GlobalBaseReg; }
   void setGlobalBaseReg(Register Reg) { GlobalBaseReg = Reg; }

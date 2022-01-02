@@ -211,12 +211,10 @@ struct HexagonOperand : public MCParsedAsmOperand {
     struct ImmTy Imm;
   };
 
-  HexagonOperand(KindTy K, MCContext &Context)
-      : MCParsedAsmOperand(), Kind(K), Context(Context) {}
+  HexagonOperand(KindTy K, MCContext &Context) : Kind(K), Context(Context) {}
 
 public:
-  HexagonOperand(const HexagonOperand &o)
-      : MCParsedAsmOperand(), Context(o.Context) {
+  HexagonOperand(const HexagonOperand &o) : Context(o.Context) {
     Kind = o.Kind;
     StartLoc = o.StartLoc;
     EndLoc = o.EndLoc;

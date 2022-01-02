@@ -48,7 +48,7 @@ struct RemarkSerializer {
 
   RemarkSerializer(Format SerializerFormat, raw_ostream &OS,
                    SerializerMode Mode)
-      : SerializerFormat(SerializerFormat), OS(OS), Mode(Mode), StrTab() {}
+      : SerializerFormat(SerializerFormat), OS(OS), Mode(Mode) {}
 
   /// This is just an interface.
   virtual ~RemarkSerializer() = default;

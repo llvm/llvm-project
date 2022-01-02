@@ -356,7 +356,7 @@ protected:
 /// Wrapper class for AMDGPULIbFuncImpl
 class AMDGPULibFunc : public AMDGPULibFuncBase {
 public:
-  explicit AMDGPULibFunc() : Impl(std::unique_ptr<AMDGPULibFuncImpl>()) {}
+  explicit AMDGPULibFunc() {}
   AMDGPULibFunc(const AMDGPULibFunc &F);
   /// Clone a mangled library func with the Id \p Id and argument info from \p
   /// CopyFrom.

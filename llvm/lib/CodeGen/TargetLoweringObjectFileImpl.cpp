@@ -108,8 +108,7 @@ static void GetObjCImageInfo(Module &M, unsigned &Version, unsigned &Flags,
 //                                  ELF
 //===----------------------------------------------------------------------===//
 
-TargetLoweringObjectFileELF::TargetLoweringObjectFileELF()
-    : TargetLoweringObjectFile() {
+TargetLoweringObjectFileELF::TargetLoweringObjectFileELF() {
   SupportDSOLocalEquivalentLowering = true;
 }
 
@@ -1141,8 +1140,7 @@ TargetLoweringObjectFileELF::InitializeELF(bool UseInitArray_) {
 //                                 MachO
 //===----------------------------------------------------------------------===//
 
-TargetLoweringObjectFileMachO::TargetLoweringObjectFileMachO()
-  : TargetLoweringObjectFile() {
+TargetLoweringObjectFileMachO::TargetLoweringObjectFileMachO() {
   SupportIndirectSymViaGOTPCRel = true;
 }
 
@@ -2545,8 +2543,7 @@ MCSection *TargetLoweringObjectFileXCOFF::getSectionForTOCEntry(
 //===----------------------------------------------------------------------===//
 //                                  GOFF
 //===----------------------------------------------------------------------===//
-TargetLoweringObjectFileGOFF::TargetLoweringObjectFileGOFF()
-    : TargetLoweringObjectFile() {}
+TargetLoweringObjectFileGOFF::TargetLoweringObjectFileGOFF() {}
 
 MCSection *TargetLoweringObjectFileGOFF::getExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
