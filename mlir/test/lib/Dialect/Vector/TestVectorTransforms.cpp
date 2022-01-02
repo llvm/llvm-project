@@ -391,9 +391,7 @@ struct TestVectorToLoopPatterns
           type.getNumElements() % multiplicity != 0)
         return mlir::WalkResult::advance();
       auto filterAlloc = [](Operation *op) {
-        if (isa<arith::ConstantOp, memref::AllocOp, CallOp>(op))
-          return false;
-        return true;
+        return !isa<arith::ConstantOp, memref::AllocOp, CallOp>(op);
       };
       auto dependentOps = getSlice(op, filterAlloc);
       // Create a loop and move instructions from the Op slice into the loop.

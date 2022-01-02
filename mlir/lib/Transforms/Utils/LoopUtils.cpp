@@ -1345,9 +1345,7 @@ static bool areInnerBoundsInvariant(AffineForOp forOp) {
     }
     return WalkResult::advance();
   });
-  if (walkResult.wasInterrupted())
-    return false;
-  return true;
+  return !walkResult.wasInterrupted();
 }
 
 // Gathers all maximal sub-blocks of operations that do not themselves
