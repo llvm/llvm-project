@@ -259,7 +259,7 @@ void LinkerDriver::enqueuePath(StringRef path, bool wholeArchive, bool lazy) {
       // directory.
       std::string nearest;
       if (optTable.findNearest(pathStr, nearest) > 1)
-        error(msg);
+        warn(msg); //[MSVC Compatibility]
       else
         error(msg + "; did you mean '" + nearest + "'");
     } else
