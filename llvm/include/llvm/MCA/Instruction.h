@@ -406,7 +406,7 @@ public:
   bool operator<(const CycleSegment &Other) const {
     return Begin < Other.Begin;
   }
-  CycleSegment &operator--(void) {
+  CycleSegment &operator--() {
     if (Begin)
       Begin--;
     if (End)
