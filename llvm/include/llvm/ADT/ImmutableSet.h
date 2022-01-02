@@ -169,20 +169,6 @@ public:
   ///  is logarithmic in the size of the tree.
   bool contains(key_type_ref K) { return (bool) find(K); }
 
-  /// foreach - A member template the accepts invokes operator() on a functor
-  ///  object (specified by Callback) for every node/subtree in the tree.
-  ///  Nodes are visited using an inorder traversal.
-  template <typename Callback>
-  void foreach(Callback& C) {
-    if (ImutAVLTree* L = getLeft())
-      L->foreach(C);
-
-    C(value);
-
-    if (ImutAVLTree* R = getRight())
-      R->foreach(C);
-  }
-
   /// validateTree - A utility method that checks that the balancing and
   ///  ordering invariants of the tree are satisfied.  It is a recursive
   ///  method that returns the height of the tree, which is then consumed
@@ -1062,12 +1048,6 @@ public:
   /// isSingleton - Return true if the set contains exactly one element.
   ///   This method runs in constant time.
   bool isSingleton() const { return getHeight() == 1; }
-
-  template <typename Callback>
-  void foreach(Callback& C) { if (Root) Root->foreach(C); }
-
-  template <typename Callback>
-  void foreach() { if (Root) { Callback C; Root->foreach(C); } }
 
   //===--------------------------------------------------===//
   // Iterators.
