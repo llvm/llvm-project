@@ -49,11 +49,11 @@ class CGCalleeInfo {
   GlobalDecl CalleeDecl;
 
 public:
-  explicit CGCalleeInfo() : CalleeProtoTy(nullptr), CalleeDecl() {}
+  explicit CGCalleeInfo() : CalleeProtoTy(nullptr) {}
   CGCalleeInfo(const FunctionProtoType *calleeProtoTy, GlobalDecl calleeDecl)
       : CalleeProtoTy(calleeProtoTy), CalleeDecl(calleeDecl) {}
   CGCalleeInfo(const FunctionProtoType *calleeProtoTy)
-      : CalleeProtoTy(calleeProtoTy), CalleeDecl() {}
+      : CalleeProtoTy(calleeProtoTy) {}
   CGCalleeInfo(GlobalDecl calleeDecl)
       : CalleeProtoTy(nullptr), CalleeDecl(calleeDecl) {}
 

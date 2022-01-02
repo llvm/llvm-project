@@ -779,17 +779,13 @@ private:
         LParenLoc(LParenLocation), DeclType(T), DeclTypeSourceInfo(TSI),
         PropertyAttributes(ObjCPropertyAttribute::kind_noattr),
         PropertyAttributesAsWritten(ObjCPropertyAttribute::kind_noattr),
-        PropertyImplementation(propControl), GetterName(Selector()),
-        SetterName(Selector()) {}
+        PropertyImplementation(propControl) {}
 
 public:
-  static ObjCPropertyDecl *Create(ASTContext &C, DeclContext *DC,
-                                  SourceLocation L,
-                                  IdentifierInfo *Id, SourceLocation AtLocation,
-                                  SourceLocation LParenLocation,
-                                  QualType T,
-                                  TypeSourceInfo *TSI,
-                                  PropertyControl propControl = None);
+  static ObjCPropertyDecl *
+  Create(ASTContext &C, DeclContext *DC, SourceLocation L, IdentifierInfo *Id,
+         SourceLocation AtLocation, SourceLocation LParenLocation, QualType T,
+         TypeSourceInfo *TSI, PropertyControl propControl = None);
 
   static ObjCPropertyDecl *CreateDeserialized(ASTContext &C, unsigned ID);
 

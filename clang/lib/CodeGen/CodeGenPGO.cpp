@@ -131,7 +131,7 @@ public:
   static_assert(LastHashType <= TooBig, "Too many types in HashType");
 
   PGOHash(PGOHashVersion HashVersion)
-      : Working(0), Count(0), HashVersion(HashVersion), MD5() {}
+      : Working(0), Count(0), HashVersion(HashVersion) {}
   void combine(HashType Type);
   uint64_t finalize();
   PGOHashVersion getHashVersion() const { return HashVersion; }

@@ -1365,10 +1365,10 @@ public:
     };
 
   private:
-    llvm::PointerIntPair<CXXMethodDecl*, 2> Pair;
+    llvm::PointerIntPair<CXXMethodDecl *, 2> Pair;
 
   public:
-    SpecialMemberOverloadResult() : Pair() {}
+    SpecialMemberOverloadResult() {}
     SpecialMemberOverloadResult(CXXMethodDecl *MD)
         : Pair(MD, MD->isDeleted() ? NoMemberOrDeleted : Success) {}
 
@@ -7520,7 +7520,7 @@ public:
     RequiredTemplateKind(SourceLocation TemplateKWLoc = SourceLocation())
         : TemplateKW(TemplateKWLoc) {}
     /// Template name is unconditionally required.
-    RequiredTemplateKind(TemplateNameIsRequiredTag) : TemplateKW() {}
+    RequiredTemplateKind(TemplateNameIsRequiredTag) {}
 
     SourceLocation getTemplateKeywordLoc() const {
       return TemplateKW.getValueOr(SourceLocation());
@@ -13061,7 +13061,7 @@ private:
     ValueDecl *MD;
     CharUnits Alignment;
 
-    MisalignedMember() : E(), RD(), MD(), Alignment() {}
+    MisalignedMember() : E(), RD(), MD() {}
     MisalignedMember(Expr *E, RecordDecl *RD, ValueDecl *MD,
                      CharUnits Alignment)
         : E(E), RD(RD), MD(MD), Alignment(Alignment) {}
