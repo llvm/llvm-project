@@ -1107,13 +1107,12 @@ void PyOperation::erase() {
 // PyOpView
 //------------------------------------------------------------------------------
 
-py::object
-PyOpView::buildGeneric(const py::object &cls, py::list resultTypeList,
-                       py::list operandList,
-                       llvm::Optional<py::dict> attributes,
-                       llvm::Optional<std::vector<PyBlock *>> successors,
-                       llvm::Optional<int> regions,
-                       DefaultingPyLocation location, py::object maybeIp) {
+py::object PyOpView::buildGeneric(
+    const py::object &cls, py::list resultTypeList, py::list operandList,
+    llvm::Optional<py::dict> attributes,
+    llvm::Optional<std::vector<PyBlock *>> successors,
+    llvm::Optional<int> regions, DefaultingPyLocation location,
+    const py::object &maybeIp) {
   PyMlirContextRef context = location->getContext();
   // Class level operation construction metadata.
   std::string name = py::cast<std::string>(cls.attr("OPERATION_NAME"));

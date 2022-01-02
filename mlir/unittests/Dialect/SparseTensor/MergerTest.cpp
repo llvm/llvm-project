@@ -99,14 +99,15 @@ protected:
 
   /// Wrapper over latPointWithinRange for readability of tests.
   void expectLatPointWithinRange(unsigned s, unsigned p, unsigned n,
-                                 std::shared_ptr<Pattern> pattern,
-                                 llvm::BitVector bits) {
+                                 const std::shared_ptr<Pattern> &pattern,
+                                 const llvm::BitVector &bits) {
     EXPECT_TRUE(latPointWithinRange(s, p, n, pattern, bits));
   }
 
   /// Wrapper over expectLatPointWithinRange for a single lat point.
-  void expectLatPoint(unsigned s, unsigned p, std::shared_ptr<Pattern> pattern,
-                      llvm::BitVector bits) {
+  void expectLatPoint(unsigned s, unsigned p,
+                      const std::shared_ptr<Pattern> &pattern,
+                      const llvm::BitVector &bits) {
     EXPECT_TRUE(latPointWithinRange(s, p, 1, pattern, bits));
   }
 
