@@ -92,7 +92,7 @@ static LogicalResult findOptimal(ModuleOp module, Region &region,
       {0, std::distance(region.op_begin(), region.op_end())}};
 
   ReductionNode *root = allocator.Allocate();
-  new (root) ReductionNode(nullptr, std::move(ranges), allocator);
+  new (root) ReductionNode(nullptr, ranges, allocator);
   // Duplicate the module for root node and locate the region in the copy.
   if (failed(root->initialize(module, region)))
     llvm_unreachable("unexpected initialization failure");

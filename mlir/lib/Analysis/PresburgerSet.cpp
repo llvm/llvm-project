@@ -117,9 +117,9 @@ PresburgerSet PresburgerSet::intersect(const PresburgerSet &set) const {
     for (const FlatAffineConstraints &csB : set.flatAffineConstraints) {
       FlatAffineConstraints csACopy = csA, csBCopy = csB;
       csACopy.mergeLocalIds(csBCopy);
-      csACopy.append(std::move(csBCopy));
+      csACopy.append(csBCopy);
       if (!csACopy.isEmpty())
-        result.unionFACInPlace(std::move(csACopy));
+        result.unionFACInPlace(csACopy);
     }
   }
   return result;
