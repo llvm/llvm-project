@@ -16,6 +16,7 @@
 #include "ContainerSizeEmptyCheck.h"
 #include "ConvertMemberFunctionsToStatic.h"
 #include "DeleteNullPointerCheck.h"
+#include "DuplicateIncludeCheck.h"
 #include "ElseAfterReturnCheck.h"
 #include "FunctionCognitiveComplexityCheck.h"
 #include "FunctionSizeCheck.h"
@@ -71,6 +72,8 @@ public:
         "readability-convert-member-functions-to-static");
     CheckFactories.registerCheck<DeleteNullPointerCheck>(
         "readability-delete-null-pointer");
+    CheckFactories.registerCheck<DuplicateIncludeCheck>(
+        "readability-duplicate-include");
     CheckFactories.registerCheck<ElseAfterReturnCheck>(
         "readability-else-after-return");
     CheckFactories.registerCheck<FunctionCognitiveComplexityCheck>(
