@@ -264,7 +264,8 @@ struct TestLinalgTileAndFuseSequencePass
   }
   TestLinalgTileAndFuseSequencePass() = default;
   TestLinalgTileAndFuseSequencePass(
-      const TestLinalgTileAndFuseSequencePass &pass){};
+      const TestLinalgTileAndFuseSequencePass &pass)
+      : PassWrapper(pass){};
 
   ListOption<int64_t> tileSizes{
       *this, "tile-sizes", llvm::cl::desc("Tile sizes to use for ops"),

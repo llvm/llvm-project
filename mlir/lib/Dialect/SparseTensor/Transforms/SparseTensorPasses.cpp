@@ -34,7 +34,7 @@ struct SparsificationPass : public SparsificationBase<SparsificationPass> {
 
   SparsificationPass() = default;
   SparsificationPass(const SparsificationPass &pass)
-      : SparsificationBase<SparsificationPass>() {}
+      : SparsificationBase<SparsificationPass>(pass) {}
 
   /// Returns parallelization strategy given on command line.
   SparseParallelizationStrategy parallelOption() {
