@@ -471,9 +471,7 @@ void Thread::SetStopInfoToNothing() {
       StopInfo::CreateStopReasonWithSignal(*this, LLDB_INVALID_SIGNAL_NUMBER));
 }
 
-bool Thread::ThreadStoppedForAReason(void) {
-  return (bool)GetPrivateStopInfo();
-}
+bool Thread::ThreadStoppedForAReason() { return (bool)GetPrivateStopInfo(); }
 
 bool Thread::CheckpointThreadState(ThreadStateCheckpoint &saved_state) {
   saved_state.register_backup_sp.reset();

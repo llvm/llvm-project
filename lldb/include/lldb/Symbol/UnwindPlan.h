@@ -442,7 +442,7 @@ public:
     m_return_addr_register = regnum;
   }
 
-  uint32_t GetReturnAddressRegister(void) { return m_return_addr_register; }
+  uint32_t GetReturnAddressRegister() { return m_return_addr_register; }
 
   uint32_t GetInitialCFARegister() const {
     if (m_row_list.empty())
