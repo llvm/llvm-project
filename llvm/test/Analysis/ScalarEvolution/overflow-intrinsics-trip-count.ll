@@ -163,3 +163,202 @@ for.body:                                         ; preds = %for.body.preheader,
 for.end:                                          ; preds = %for.body, %entry
   ret void
 }
+
+define void @uadd_symbolic_start(i16 %start) {
+; CHECK-LABEL: 'uadd_symbolic_start'
+; CHECK-NEXT:  Determining loop execution counts for: @uadd_symbolic_start
+; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
+;
+entry:
+  br i1 undef, label %for.end, label %for.body.preheader
+
+for.body.preheader:                               ; preds = %entry
+  br label %for.body
+
+for.body:                                         ; preds = %for.body.preheader, %for.body
+  %indvars.iv = phi i16 [ %math, %for.body ], [ %start, %for.body.preheader ]
+  %0 = call { i16, i1 } @llvm.uadd.with.overflow.i16(i16 %indvars.iv, i16 1)
+  %math = extractvalue { i16, i1 } %0, 0
+  %ov = extractvalue { i16, i1 } %0, 1
+  br i1 %ov, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+define void @sadd_symbolic_start(i16 %start) {
+; CHECK-LABEL: 'sadd_symbolic_start'
+; CHECK-NEXT:  Determining loop execution counts for: @sadd_symbolic_start
+; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
+;
+entry:
+  br i1 undef, label %for.end, label %for.body.preheader
+
+for.body.preheader:                               ; preds = %entry
+  br label %for.body
+
+for.body:                                         ; preds = %for.body.preheader, %for.body
+  %indvars.iv = phi i16 [ %math, %for.body ], [ %start, %for.body.preheader ]
+  %0 = call { i16, i1 } @llvm.sadd.with.overflow.i16(i16 %indvars.iv, i16 1)
+  %math = extractvalue { i16, i1 } %0, 0
+  %ov = extractvalue { i16, i1 } %0, 1
+  br i1 %ov, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+define void @sadd_symbolic_start2(i16 %start) {
+; CHECK-LABEL: 'sadd_symbolic_start2'
+; CHECK-NEXT:  Determining loop execution counts for: @sadd_symbolic_start2
+; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
+;
+entry:
+  br i1 undef, label %for.end, label %for.body.preheader
+
+for.body.preheader:                               ; preds = %entry
+  br label %for.body
+
+for.body:                                         ; preds = %for.body.preheader, %for.body
+  %indvars.iv = phi i16 [ %math, %for.body ], [ %start, %for.body.preheader ]
+  %0 = call { i16, i1 } @llvm.sadd.with.overflow.i16(i16 %indvars.iv, i16 1)
+  %math = extractvalue { i16, i1 } %0, 0
+  %ov = extractvalue { i16, i1 } %0, 1
+  %not = xor i1 true, %ov
+  br i1 %not, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+define void @usub_symbolic_start(i16 %start) {
+; CHECK-LABEL: 'usub_symbolic_start'
+; CHECK-NEXT:  Determining loop execution counts for: @usub_symbolic_start
+; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
+;
+entry:
+  br i1 undef, label %for.end, label %for.body.preheader
+
+for.body.preheader:                               ; preds = %entry
+  br label %for.body
+
+for.body:                                         ; preds = %for.body.preheader, %for.body
+  %indvars.iv = phi i16 [ %math, %for.body ], [ %start, %for.body.preheader ]
+  %0 = call { i16, i1 } @llvm.usub.with.overflow.i16(i16 %indvars.iv, i16 1)
+  %math = extractvalue { i16, i1 } %0, 0
+  %ov = extractvalue { i16, i1 } %0, 1
+  br i1 %ov, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+define void @ssub_symbolic_start(i16 %start) {
+; CHECK-LABEL: 'ssub_symbolic_start'
+; CHECK-NEXT:  Determining loop execution counts for: @ssub_symbolic_start
+; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
+;
+entry:
+  br i1 undef, label %for.end, label %for.body.preheader
+
+for.body.preheader:                               ; preds = %entry
+  br label %for.body
+
+for.body:                                         ; preds = %for.body.preheader, %for.body
+  %indvars.iv = phi i16 [ %math, %for.body ], [ %start, %for.body.preheader ]
+  %0 = call { i16, i1 } @llvm.ssub.with.overflow.i16(i16 %indvars.iv, i16 1)
+  %math = extractvalue { i16, i1 } %0, 0
+  %ov = extractvalue { i16, i1 } %0, 1
+  br i1 %ov, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+define void @smul_symbolic_start(i16 %start) {
+; CHECK-LABEL: 'smul_symbolic_start'
+; CHECK-NEXT:  Determining loop execution counts for: @smul_symbolic_start
+; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
+;
+entry:
+  br i1 undef, label %for.end, label %for.body.preheader
+
+for.body.preheader:                               ; preds = %entry
+  br label %for.body
+
+for.body:                                         ; preds = %for.body.preheader, %for.body
+  %indvars.iv = phi i16 [ %math, %for.body ], [ %start, %for.body.preheader ]
+  %0 = call { i16, i1 } @llvm.smul.with.overflow.i16(i16 %indvars.iv, i16 2)
+  %math = extractvalue { i16, i1 } %0, 0
+  %ov = extractvalue { i16, i1 } %0, 1
+  br i1 %ov, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+define void @umul_symbolic_start(i16 %start) {
+; CHECK-LABEL: 'umul_symbolic_start'
+; CHECK-NEXT:  Determining loop execution counts for: @umul_symbolic_start
+; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
+;
+entry:
+  br i1 undef, label %for.end, label %for.body.preheader
+
+for.body.preheader:                               ; preds = %entry
+  br label %for.body
+
+for.body:                                         ; preds = %for.body.preheader, %for.body
+  %indvars.iv = phi i16 [ %math, %for.body ], [ %start, %for.body.preheader ]
+  %0 = call { i16, i1 } @llvm.umul.with.overflow.i16(i16 %indvars.iv, i16 2)
+  %math = extractvalue { i16, i1 } %0, 0
+  %ov = extractvalue { i16, i1 } %0, 1
+  br i1 %ov, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+define void @sadd_symbolic_non_latch(i16 %start) {
+; CHECK-LABEL: 'sadd_symbolic_non_latch'
+; CHECK-NEXT:  Determining loop execution counts for: @sadd_symbolic_non_latch
+; CHECK-NEXT:  Loop %for.body: <multiple exits> Unpredictable backedge-taken count.
+; CHECK-NEXT:    exit count for for.body: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    exit count for for.latch: (230 + (-1 * %start))
+; CHECK-NEXT:  Loop %for.body: max backedge-taken count is -1
+; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
+;
+entry:
+  br i1 undef, label %for.end, label %for.body.preheader
+
+for.body.preheader:                               ; preds = %entry
+  br label %for.body
+
+for.body:                                         ; preds = %for.body.preheader, %for.body
+  %indvars.iv = phi i16 [ %math, %for.latch ], [ %start, %for.body.preheader ]
+  %0 = call { i16, i1 } @llvm.sadd.with.overflow.i16(i16 %indvars.iv, i16 1)
+  %math = extractvalue { i16, i1 } %0, 0
+  %ov = extractvalue { i16, i1 } %0, 1
+  br i1 %ov, label %for.end, label %for.latch
+
+for.latch:
+  %cmp = icmp eq i16 %math, 231
+  br i1 %cmp, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
