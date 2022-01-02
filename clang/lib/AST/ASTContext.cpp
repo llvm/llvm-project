@@ -10430,6 +10430,8 @@ QualType ASTContext::getCorrespondingSignedType(QualType T) const {
     return SatFractTy;
   case BuiltinType::SatULongFract:
     return SatLongFractTy;
+  case BuiltinType::Bool: //[MSVC Compatibility]
+    return BoolTy;
   default:
     llvm_unreachable("Unexpected unsigned integer or fixed point type");
   }
