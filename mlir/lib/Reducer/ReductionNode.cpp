@@ -28,8 +28,7 @@ ReductionNode::ReductionNode(
     llvm::SpecificBumpPtrAllocator<ReductionNode> &allocator)
     /// Root node will have the parent pointer point to themselves.
     : parent(parentNode == nullptr ? this : parentNode),
-      size(std::numeric_limits<size_t>::max()),
-      interesting(Tester::Interestingness::Untested), ranges(ranges),
+      size(std::numeric_limits<size_t>::max()), ranges(ranges),
       startRanges(ranges), allocator(allocator) {
   if (parent != this)
     if (failed(initialize(parent->getModule(), parent->getRegion())))
