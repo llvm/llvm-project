@@ -277,7 +277,7 @@ public:
     }
   }
 
-  virtual ~SparseTensorStorage() = default;
+  ~SparseTensorStorage() override = default;
 
   /// Get the rank of the tensor.
   uint64_t getRank() const { return sizes.size(); }
