@@ -817,9 +817,9 @@ mlir::computeSliceUnion(ArrayRef<Operation *> opsA, ArrayRef<Operation *> opsB,
   FlatAffineValueConstraints sliceUnionCst;
   assert(sliceUnionCst.getNumDimAndSymbolIds() == 0);
   std::vector<std::pair<Operation *, Operation *>> dependentOpPairs;
-  for (auto i : opsA) {
+  for (auto *i : opsA) {
     MemRefAccess srcAccess(i);
-    for (auto j : opsB) {
+    for (auto *j : opsB) {
       MemRefAccess dstAccess(j);
       if (srcAccess.memref != dstAccess.memref)
         continue;
