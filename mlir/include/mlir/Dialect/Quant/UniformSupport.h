@@ -31,7 +31,7 @@ namespace quant {
 /// process.
 struct ExpressedToQuantizedConverter {
   /// Creates a converter for the given input type.
-  static const ExpressedToQuantizedConverter forInputType(Type inputType);
+  static ExpressedToQuantizedConverter forInputType(Type inputType);
 
   /// Converts the inputType to be based on the given elemental type,
   /// returning the new type (or nullptr and emit an error on failure).

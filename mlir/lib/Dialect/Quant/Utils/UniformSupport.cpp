@@ -17,7 +17,7 @@ static bool isQuantizablePrimitiveType(Type inputType) {
   return inputType.isa<FloatType>();
 }
 
-const ExpressedToQuantizedConverter
+ExpressedToQuantizedConverter
 ExpressedToQuantizedConverter::forInputType(Type inputType) {
   if (inputType.isa<TensorType, VectorType>()) {
     Type elementType = inputType.cast<ShapedType>().getElementType();
