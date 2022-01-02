@@ -69,8 +69,7 @@ private:
 RISCVInstructionSelector::RISCVInstructionSelector(
     const RISCVTargetMachine &TM, const RISCVSubtarget &STI,
     const RISCVRegisterBankInfo &RBI)
-    : InstructionSelector(), STI(STI), TII(*STI.getInstrInfo()),
-      TRI(*STI.getRegisterInfo()), RBI(RBI),
+    : STI(STI), TII(*STI.getInstrInfo()), TRI(*STI.getRegisterInfo()), RBI(RBI),
 
 #define GET_GLOBALISEL_PREDICATES_INIT
 #include "RISCVGenGlobalISel.inc"

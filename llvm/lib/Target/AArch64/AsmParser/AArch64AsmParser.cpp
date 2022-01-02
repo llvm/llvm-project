@@ -491,7 +491,7 @@ private:
 public:
   AArch64Operand(KindTy K, MCContext &Ctx) : Kind(K), Ctx(Ctx) {}
 
-  AArch64Operand(const AArch64Operand &o) : MCParsedAsmOperand(), Ctx(o.Ctx) {
+  AArch64Operand(const AArch64Operand &o) : Ctx(o.Ctx) {
     Kind = o.Kind;
     StartLoc = o.StartLoc;
     EndLoc = o.EndLoc;

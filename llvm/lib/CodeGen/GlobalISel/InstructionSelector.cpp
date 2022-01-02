@@ -29,7 +29,7 @@
 using namespace llvm;
 
 InstructionSelector::MatcherState::MatcherState(unsigned MaxRenderers)
-    : Renderers(MaxRenderers), MIs() {}
+    : Renderers(MaxRenderers) {}
 
 InstructionSelector::InstructionSelector() = default;
 

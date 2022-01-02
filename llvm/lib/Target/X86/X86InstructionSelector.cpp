@@ -153,8 +153,8 @@ private:
 X86InstructionSelector::X86InstructionSelector(const X86TargetMachine &TM,
                                                const X86Subtarget &STI,
                                                const X86RegisterBankInfo &RBI)
-    : InstructionSelector(), TM(TM), STI(STI), TII(*STI.getInstrInfo()),
-      TRI(*STI.getRegisterInfo()), RBI(RBI),
+    : TM(TM), STI(STI), TII(*STI.getInstrInfo()), TRI(*STI.getRegisterInfo()),
+      RBI(RBI),
 #define GET_GLOBALISEL_PREDICATES_INIT
 #include "X86GenGlobalISel.inc"
 #undef GET_GLOBALISEL_PREDICATES_INIT

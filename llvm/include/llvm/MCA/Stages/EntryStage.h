@@ -36,7 +36,7 @@ class EntryStage final : public Stage {
   EntryStage &operator=(const EntryStage &Other) = delete;
 
 public:
-  EntryStage(SourceMgr &SM) : CurrentInstruction(), SM(SM), NumRetired(0) { }
+  EntryStage(SourceMgr &SM) : SM(SM), NumRetired(0) {}
 
   bool isAvailable(const InstRef &IR) const override;
   bool hasWorkToComplete() const override;

@@ -52,7 +52,7 @@ public:
   };
 
   DDGNode() = delete;
-  DDGNode(const NodeKind K) : DDGNodeBase(), Kind(K) {}
+  DDGNode(const NodeKind K) : Kind(K) {}
   DDGNode(const DDGNode &N) : DDGNodeBase(N), Kind(N.Kind) {}
   DDGNode(DDGNode &&N) : DDGNodeBase(std::move(N)), Kind(N.Kind) {}
   virtual ~DDGNode() = 0;

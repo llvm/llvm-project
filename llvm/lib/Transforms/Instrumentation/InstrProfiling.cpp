@@ -248,8 +248,7 @@ public:
   PGOCounterPromoter(
       DenseMap<Loop *, SmallVector<LoadStorePair, 8>> &LoopToCands,
       Loop &CurLoop, LoopInfo &LI, BlockFrequencyInfo *BFI)
-      : LoopToCandidates(LoopToCands), ExitBlocks(), InsertPts(), L(CurLoop),
-        LI(LI), BFI(BFI) {
+      : LoopToCandidates(LoopToCands), L(CurLoop), LI(LI), BFI(BFI) {
 
     // Skip collection of ExitBlocks and InsertPts for loops that will not be
     // able to have counters promoted.

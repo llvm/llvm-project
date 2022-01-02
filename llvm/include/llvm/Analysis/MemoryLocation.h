@@ -284,8 +284,7 @@ public:
     return T.isScalable() ? UnknownSize : T.getFixedSize();
   }
 
-  MemoryLocation()
-      : Ptr(nullptr), Size(LocationSize::beforeOrAfterPointer()), AATags() {}
+  MemoryLocation() : Ptr(nullptr), Size(LocationSize::beforeOrAfterPointer()) {}
 
   explicit MemoryLocation(const Value *Ptr, LocationSize Size,
                           const AAMDNodes &AATags = AAMDNodes())

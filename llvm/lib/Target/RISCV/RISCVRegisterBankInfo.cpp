@@ -22,5 +22,4 @@
 
 using namespace llvm;
 
-RISCVRegisterBankInfo::RISCVRegisterBankInfo(const TargetRegisterInfo &TRI)
-    : RISCVGenRegisterBankInfo() {}
+RISCVRegisterBankInfo::RISCVRegisterBankInfo(const TargetRegisterInfo &TRI) {}

@@ -254,7 +254,7 @@ IVStrideUse &IVUsers::AddUser(Instruction *User, Value *Operand) {
 
 IVUsers::IVUsers(Loop *L, AssumptionCache *AC, LoopInfo *LI, DominatorTree *DT,
                  ScalarEvolution *SE)
-    : L(L), AC(AC), LI(LI), DT(DT), SE(SE), IVUses() {
+    : L(L), AC(AC), LI(LI), DT(DT), SE(SE) {
   // Collect ephemeral values so that AddUsersIfInteresting skips them.
   EphValues.clear();
   CodeMetrics::collectEphemeralValues(L, AC, EphValues);

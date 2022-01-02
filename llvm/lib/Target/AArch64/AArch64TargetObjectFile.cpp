@@ -25,8 +25,7 @@ void AArch64_ELFTargetObjectFile::Initialize(MCContext &Ctx,
   SupportDebugThreadLocalLocation = false;
 }
 
-AArch64_MachoTargetObjectFile::AArch64_MachoTargetObjectFile()
-  : TargetLoweringObjectFileMachO() {
+AArch64_MachoTargetObjectFile::AArch64_MachoTargetObjectFile() {
   SupportGOTPCRelWithOffset = false;
 }
 

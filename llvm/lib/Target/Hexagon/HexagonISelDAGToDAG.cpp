@@ -1652,7 +1652,7 @@ struct WeightedLeaf {
   int Weight;
   int InsertionOrder;
 
-  WeightedLeaf() : Value(SDValue()) { }
+  WeightedLeaf() {}
 
   WeightedLeaf(SDValue Value, int Weight, int InsertionOrder) :
     Value(Value), Weight(Weight), InsertionOrder(InsertionOrder) {

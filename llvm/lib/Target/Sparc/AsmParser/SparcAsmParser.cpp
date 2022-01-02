@@ -257,7 +257,7 @@ private:
   };
 
 public:
-  SparcOperand(KindTy K) : MCParsedAsmOperand(), Kind(K) {}
+  SparcOperand(KindTy K) : Kind(K) {}
 
   bool isToken() const override { return Kind == k_Token; }
   bool isReg() const override { return Kind == k_Register; }
