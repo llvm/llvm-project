@@ -339,6 +339,7 @@ void Preprocessor::RegisterBuiltinMacros() {
   //[MSVC Compatibility]
 #ifdef _WIN32
   Ident__FUNCTION__ = RegisterBuiltinMacro(*this, "__FUNCTION__");
+  Ident__LINE__ = RegisterBuiltinMacro(*this, "__LINE__");
 #else
   Ident__FUNCTION__ = Ident__LINE__ = RegisterBuiltinMacro(*this, "__LINE__");
 #endif
