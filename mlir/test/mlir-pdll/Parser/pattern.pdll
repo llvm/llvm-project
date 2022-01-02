@@ -23,3 +23,11 @@ Pattern NamedPattern {
 Pattern NamedPattern with benefit(10), recursion {
   erase _: Op;
 }
+
+// -----
+
+// CHECK: Module
+// CHECK: `-PatternDecl {{.*}} Name<NamedPattern>
+// CHECK:   `-CompoundStmt
+// CHECK:     `-EraseStmt
+Pattern NamedPattern => erase _: Op;
