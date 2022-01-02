@@ -1400,19 +1400,28 @@ MachineBasicBlock::iterator RISCVInstrInfo::insertOutlinedCall(
 #define CASE_VFMA_OPCODE_COMMON(OP, TYPE, LMUL)                                \
   RISCV::PseudoV##OP##_##TYPE##_##LMUL
 
-#define CASE_VFMA_OPCODE_LMULS(OP, TYPE)                                       \
-  CASE_VFMA_OPCODE_COMMON(OP, TYPE, MF8):                                      \
-  case CASE_VFMA_OPCODE_COMMON(OP, TYPE, MF4):                                 \
-  case CASE_VFMA_OPCODE_COMMON(OP, TYPE, MF2):                                 \
-  case CASE_VFMA_OPCODE_COMMON(OP, TYPE, M1):                                  \
+#define CASE_VFMA_OPCODE_LMULS_M1(OP, TYPE)                                    \
+  CASE_VFMA_OPCODE_COMMON(OP, TYPE, M1):                                       \
   case CASE_VFMA_OPCODE_COMMON(OP, TYPE, M2):                                  \
   case CASE_VFMA_OPCODE_COMMON(OP, TYPE, M4):                                  \
   case CASE_VFMA_OPCODE_COMMON(OP, TYPE, M8)
 
+#define CASE_VFMA_OPCODE_LMULS_MF2(OP, TYPE)                                   \
+  CASE_VFMA_OPCODE_COMMON(OP, TYPE, MF2):                                      \
+  case CASE_VFMA_OPCODE_LMULS_M1(OP, TYPE)
+
+#define CASE_VFMA_OPCODE_LMULS_MF4(OP, TYPE)                                   \
+  CASE_VFMA_OPCODE_COMMON(OP, TYPE, MF4):                                      \
+  case CASE_VFMA_OPCODE_LMULS_MF2(OP, TYPE)
+
+#define CASE_VFMA_OPCODE_LMULS(OP, TYPE)                                       \
+  CASE_VFMA_OPCODE_COMMON(OP, TYPE, MF8):                                      \
+  case CASE_VFMA_OPCODE_LMULS_MF4(OP, TYPE)
+
 #define CASE_VFMA_SPLATS(OP)                                                   \
-  CASE_VFMA_OPCODE_LMULS(OP, VF16):                                            \
-  case CASE_VFMA_OPCODE_LMULS(OP, VF32):                                       \
-  case CASE_VFMA_OPCODE_LMULS(OP, VF64)
+  CASE_VFMA_OPCODE_LMULS_MF4(OP, VF16):                                        \
+  case CASE_VFMA_OPCODE_LMULS_MF2(OP, VF32):                                   \
+  case CASE_VFMA_OPCODE_LMULS_M1(OP, VF64)
 // clang-format on
 
 bool RISCVInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
@@ -1534,19 +1543,28 @@ bool RISCVInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
     Opc = RISCV::PseudoV##NEWOP##_##TYPE##_##LMUL;                             \
     break;
 
-#define CASE_VFMA_CHANGE_OPCODE_LMULS(OLDOP, NEWOP, TYPE)                      \
-  CASE_VFMA_CHANGE_OPCODE_COMMON(OLDOP, NEWOP, TYPE, MF8)                      \
-  CASE_VFMA_CHANGE_OPCODE_COMMON(OLDOP, NEWOP, TYPE, MF4)                      \
-  CASE_VFMA_CHANGE_OPCODE_COMMON(OLDOP, NEWOP, TYPE, MF2)                      \
+#define CASE_VFMA_CHANGE_OPCODE_LMULS_M1(OLDOP, NEWOP, TYPE)                   \
   CASE_VFMA_CHANGE_OPCODE_COMMON(OLDOP, NEWOP, TYPE, M1)                       \
   CASE_VFMA_CHANGE_OPCODE_COMMON(OLDOP, NEWOP, TYPE, M2)                       \
   CASE_VFMA_CHANGE_OPCODE_COMMON(OLDOP, NEWOP, TYPE, M4)                       \
   CASE_VFMA_CHANGE_OPCODE_COMMON(OLDOP, NEWOP, TYPE, M8)
 
+#define CASE_VFMA_CHANGE_OPCODE_LMULS_MF2(OLDOP, NEWOP, TYPE)                  \
+  CASE_VFMA_CHANGE_OPCODE_COMMON(OLDOP, NEWOP, TYPE, MF2)                      \
+  CASE_VFMA_CHANGE_OPCODE_LMULS_M1(OLDOP, NEWOP, TYPE)
+
+#define CASE_VFMA_CHANGE_OPCODE_LMULS_MF4(OLDOP, NEWOP, TYPE)                  \
+  CASE_VFMA_CHANGE_OPCODE_COMMON(OLDOP, NEWOP, TYPE, MF4)                      \
+  CASE_VFMA_CHANGE_OPCODE_LMULS_MF2(OLDOP, NEWOP, TYPE)
+
+#define CASE_VFMA_CHANGE_OPCODE_LMULS(OLDOP, NEWOP, TYPE)                      \
+  CASE_VFMA_CHANGE_OPCODE_COMMON(OLDOP, NEWOP, TYPE, MF8)                      \
+  CASE_VFMA_CHANGE_OPCODE_LMULS_MF4(OLDOP, NEWOP, TYPE)
+
 #define CASE_VFMA_CHANGE_OPCODE_SPLATS(OLDOP, NEWOP)                           \
-  CASE_VFMA_CHANGE_OPCODE_LMULS(OLDOP, NEWOP, VF16)                            \
-  CASE_VFMA_CHANGE_OPCODE_LMULS(OLDOP, NEWOP, VF32)                            \
-  CASE_VFMA_CHANGE_OPCODE_LMULS(OLDOP, NEWOP, VF64)
+  CASE_VFMA_CHANGE_OPCODE_LMULS_MF4(OLDOP, NEWOP, VF16)                        \
+  CASE_VFMA_CHANGE_OPCODE_LMULS_MF2(OLDOP, NEWOP, VF32)                        \
+  CASE_VFMA_CHANGE_OPCODE_LMULS_M1(OLDOP, NEWOP, VF64)
 
 MachineInstr *RISCVInstrInfo::commuteInstructionImpl(MachineInstr &MI,
                                                      bool NewMI,
