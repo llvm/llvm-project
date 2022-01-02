@@ -75,7 +75,7 @@ public:
       : Style(Style), Line(Line), CurrentToken(Line.First), AutoFound(false),
         Keywords(Keywords) {
     Contexts.push_back(Context(tok::unknown, 1, /*IsExpression=*/false));
-    resetTokenMetadata(CurrentToken);
+    resetTokenMetadata();
   }
 
 private:
@@ -1409,8 +1409,8 @@ private:
            Tok.Next->Next->Next && Tok.Next->Next->Next->is(tok::l_paren);
   }
 
-  void resetTokenMetadata(FormatToken *Token) {
-    if (!Token)
+  void resetTokenMetadata() {
+    if (!CurrentToken)
       return;
 
     // Reset token type in case we have already looked at it and then
@@ -1439,7 +1439,7 @@ private:
       CurrentToken = CurrentToken->Next;
     }
 
-    resetTokenMetadata(CurrentToken);
+    resetTokenMetadata();
   }
 
   /// A struct to hold information valid in a specific context, e.g.
