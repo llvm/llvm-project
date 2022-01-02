@@ -508,7 +508,7 @@ namespace {
 /// This struct represents the possible data entries in a parsed pass pipeline
 /// list.
 struct PassArgData {
-  PassArgData() {}
+  PassArgData() = default;
   PassArgData(const PassRegistryEntry *registryEntry)
       : registryEntry(registryEntry) {}
 
