@@ -269,7 +269,7 @@ protected:
     ExtractUnitDIENoDwoIfNeeded();
     // m_first_die_mutex is not required as m_first_die is never cleared.
     if (!m_first_die)
-      return NULL;
+      return nullptr;
     return &m_first_die;
   }
 
@@ -277,7 +277,7 @@ protected:
   const DWARFDebugInfoEntry *DIEPtr() {
     ExtractDIEsIfNeeded();
     if (m_die_array.empty())
-      return NULL;
+      return nullptr;
     return &m_die_array[0];
   }
 

@@ -1359,7 +1359,6 @@ static void printAtomicReadOp(OpAsmPrinter &p, AtomicReadOp op) {
   if (op.hintAttr())
     printSynchronizationHint(p << " ", op, op.hintAttr());
   p << ": " << op.address().getType() << " -> " << op.getType();
-  return;
 }
 
 /// Verifier for AtomicReadOp
@@ -1409,7 +1408,6 @@ static void printAtomicWriteOp(OpAsmPrinter &p, AtomicWriteOp op) {
   if (op.hintAttr())
     printSynchronizationHint(p, op, op.hintAttr());
   p << ": " << op.address().getType() << ", " << op.value().getType();
-  return;
 }
 
 /// Verifier for AtomicWriteOp

@@ -3486,9 +3486,9 @@ int HexagonInstrInfo::getDuplexOpcode(const MachineInstr &MI,
     if (Iter != DupMap.end())
       return Iter->second;
   } else { // Conversion to Tiny core.
-    for (auto Iter = DupMap.begin(), End = DupMap.end(); Iter != End; ++Iter)
-      if (Iter->second == OpNum)
-        return Iter->first;
+    for (const auto &Iter : DupMap)
+      if (Iter.second == OpNum)
+        return Iter.first;
   }
   return -1;
 }

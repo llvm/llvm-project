@@ -168,8 +168,7 @@ bool SparcDAGToDAGISel::tryInlineAsm(SDNode *N){
   // placement.
 
   SDLoc dl(N);
-  SDValue Glue = N->getGluedNode() ? N->getOperand(NumOps-1)
-                                   : SDValue(nullptr,0);
+  SDValue Glue = N->getGluedNode() ? N->getOperand(NumOps - 1) : SDValue();
 
   SmallVector<bool, 8> OpChanged;
   // Glue node will be appended late.

@@ -1756,7 +1756,7 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(
 
       // Add the segment attribute.
       body << "  {\n"
-           << "    SmallVector<int32_t> rangeSegments;\n"
+           << "    ::llvm::SmallVector<int32_t> rangeSegments;\n"
            << "    for (::mlir::ValueRange range : " << argName << ")\n"
            << "      rangeSegments.push_back(range.size());\n"
            << "    " << builderOpState << ".addAttribute("

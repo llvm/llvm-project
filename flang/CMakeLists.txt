@@ -227,10 +227,14 @@ include_directories(BEFORE
   ${FLANG_BINARY_DIR}/include
   ${FLANG_SOURCE_DIR}/include)
 
+if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
+  set(LLVM_COMMON_CMAKE_UTILS ${FLANG_SOURCE_DIR}/../cmake)
+endif()
+
 # Add Flang-centric modules to cmake path.
 list(INSERT CMAKE_MODULE_PATH 0
   "${FLANG_SOURCE_DIR}/cmake/modules"
-  "${FLANG_SOURCE_DIR}/../cmake/Modules"
+  "${LLVM_COMMON_CMAKE_UTILS}/Modules"
   )
 include(AddFlang)
 

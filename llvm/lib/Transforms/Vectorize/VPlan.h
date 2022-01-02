@@ -1118,13 +1118,11 @@ class VPWidenPHIRecipe : public VPHeaderPHIRecipe {
   SmallVector<VPBasicBlock *, 2> IncomingBlocks;
 
 public:
-  /// Create a VPWidenPHIRecipe for \p Phi
-  VPWidenPHIRecipe(PHINode *Phi)
-      : VPHeaderPHIRecipe(VPVWidenPHISC, VPWidenPHISC, Phi) {}
-
   /// Create a new VPWidenPHIRecipe for \p Phi with start value \p Start.
-  VPWidenPHIRecipe(PHINode *Phi, VPValue &Start) : VPWidenPHIRecipe(Phi) {
-    addOperand(&Start);
+  VPWidenPHIRecipe(PHINode *Phi, VPValue *Start = nullptr)
+      : VPHeaderPHIRecipe(VPVWidenPHISC, VPWidenPHISC, Phi) {
+    if (Start)
+      addOperand(Start);
   }
 
   ~VPWidenPHIRecipe() override = default;
