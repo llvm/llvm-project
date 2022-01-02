@@ -61,37 +61,6 @@ static mlir::SelectOp clampHelper(Location loc, Value arg,
   return rewriter.create<mlir::SelectOp>(loc, largerThanMax, max, minOrArg);
 }
 
-static mlir::Value applyPad(Location loc, Value input, ArrayRef<int64_t> pad,
-                            Attribute padAttr, OpBuilder &rewriter) {
-  // Input should be padded if necessary.
-  if (llvm::all_of(pad, [](int64_t p) { return p == 0; }))
-    return input;
-
-  ShapedType inputTy = input.getType().cast<ShapedType>();
-  Type inputETy = inputTy.getElementType();
-  auto inputShape = inputTy.getShape();
-
-  assert((inputShape.size() * 2) == pad.size());
-
-  SmallVector<int64_t, 4> paddedShape;
-  SmallVector<OpFoldResult, 8> lowIndices;
-  SmallVector<OpFoldResult, 8> highIndices;
-  for (int i = 0, s = inputShape.size(); i < s; i++) {
-    auto lowPad = pad[i * 2];
-    auto highPad = pad[i * 2 + 1];
-    paddedShape.push_back(inputShape[i] + highPad + lowPad);
-    lowIndices.push_back(rewriter.getIndexAttr(lowPad));
-    highIndices.push_back(rewriter.getIndexAttr(highPad));
-  }
-
-  Value padValue = rewriter.create<arith::ConstantOp>(loc, padAttr);
-
-  return linalg::PadTensorOp::createPadScalarOp(
-             RankedTensorType::get(paddedShape, inputETy), input, padValue,
-             lowIndices, highIndices, /*nofold=*/false, loc, rewriter)
-      .result();
-}
-
 static SmallVector<Value> filterDynamicDims(const SmallVector<Value> &dynDims) {
   SmallVector<Value> filteredDims;
   for (auto dim : dynDims)
