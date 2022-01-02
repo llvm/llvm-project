@@ -85,26 +85,27 @@ defvar MxListVF4 = [V_MF2, V_M1, V_M2, V_M4, V_M8];
 // Use for zext/sext.vf8
 defvar MxListVF8 = [V_M1, V_M2, V_M4, V_M8];
 
-class FPR_Info<RegisterClass regclass, string fx> {
-  RegisterClass fprclass = regclass;
-  string FX = fx;
-}
-
-def SCALAR_F16 : FPR_Info<FPR16, "F16">;
-def SCALAR_F32 : FPR_Info<FPR32, "F32">;
-def SCALAR_F64 : FPR_Info<FPR64, "F64">;
-
-defvar FPList = [SCALAR_F16, SCALAR_F32, SCALAR_F64];
-
-// Used for widening instructions. It excludes F64.
-defvar FPListW = [SCALAR_F16, SCALAR_F32];
-
 class MxSet<int eew> {
   list<LMULInfo> m = !cond(!eq(eew, 8) : [V_MF8, V_MF4, V_MF2, V_M1, V_M2, V_M4, V_M8],
                            !eq(eew, 16) : [V_MF4, V_MF2, V_M1, V_M2, V_M4, V_M8],
                            !eq(eew, 32) : [V_MF2, V_M1, V_M2, V_M4, V_M8],
                            !eq(eew, 64) : [V_M1, V_M2, V_M4, V_M8]);
 }
+
+class FPR_Info<RegisterClass regclass, string fx, list<LMULInfo> mxlist> {
+  RegisterClass fprclass = regclass;
+  string FX = fx;
+  list<LMULInfo> MxList = mxlist;
+}
+
+def SCALAR_F16 : FPR_Info<FPR16, "F16", MxSet<16>.m>;
+def SCALAR_F32 : FPR_Info<FPR32, "F32", MxSet<32>.m>;
+def SCALAR_F64 : FPR_Info<FPR64, "F64", MxSet<64>.m>;
+
+defvar FPList = [SCALAR_F16, SCALAR_F32, SCALAR_F64];
+
+// Used for widening instructions. It excludes F64.
+defvar FPListW = [SCALAR_F16, SCALAR_F32];
 
 class NFSet<LMULInfo m> {
   list<int> L = !cond(!eq(m.value, V_M8.value): [],
@@ -1619,15 +1620,15 @@ multiclass VPseudoVSLD1_VX<string Constraint = ""> {
 }
 
 multiclass VPseudoBinaryV_VF<string Constraint = ""> {
-  foreach m = MxList in
-    foreach f = FPList in
+  foreach f = FPList in
+    foreach m = f.MxList in
       defm "_V" # f.FX : VPseudoBinary<m.vrclass, m.vrclass,
                                        f.fprclass, m, Constraint>;
 }
 
 multiclass VPseudoVSLD1_VF<string Constraint = ""> {
-  foreach m = MxList in
-    foreach f = FPList in
+  foreach f = FPList in
+    foreach m = f.MxList in
       defm "_V" # f.FX :
         VPseudoBinary<m.vrclass, m.vrclass, f.fprclass, m, Constraint>,
         Sched<[WriteVFSlide1F, ReadVFSlideV, ReadVFSlideF, ReadVMask]>;
@@ -1666,8 +1667,8 @@ multiclass VPseudoBinaryW_VX {
 }
 
 multiclass VPseudoBinaryW_VF {
-  foreach m = MxListW in
-    foreach f = FPListW in
+  foreach f = FPListW in
+    foreach m = f.MxList in
       defm "_V" # f.FX : VPseudoBinary<m.wvrclass, m.vrclass,
                                        f.fprclass, m,
                                        "@earlyclobber $rd">;
@@ -1688,8 +1689,8 @@ multiclass VPseudoBinaryW_WX {
 }
 
 multiclass VPseudoBinaryW_WF {
-  foreach m = MxListW in
-    foreach f = FPListW in
+  foreach f = FPListW in
+    foreach m = f.MxList in
       defm "_W" # f.FX : VPseudoBinary<m.wvrclass, m.wvrclass,
                                        f.fprclass, m>;
 }
@@ -1741,8 +1742,8 @@ multiclass VPseudoBinaryV_XM<bit CarryOut = 0, bit CarryIn = 1,
 }
 
 multiclass VPseudoVMRG_FM {
-  foreach m = MxList in
-    foreach f = FPList in
+  foreach f = FPList in
+    foreach m = f.MxList in
       def "_V" # f.FX # "M_" # m.MX :
         VPseudoBinaryCarryIn<GetVRegNoV0<m.vrclass>.R,
                              m.vrclass, f.fprclass, m, /*CarryIn=*/1, "">,
@@ -1773,8 +1774,8 @@ multiclass VPseudoUnaryVMV_V_X_I {
 }
 
 multiclass VPseudoVMV_F {
-  foreach m = MxList in {
-    foreach f = FPList in {
+  foreach f = FPList in {
+    foreach m = f.MxList in {
       let VLMul = m.value in {
         def "_" # f.FX # "_" # m.MX :
           VPseudoUnaryNoDummyMask<m.vrclass, f.fprclass>,
@@ -1884,8 +1885,8 @@ multiclass VPseudoBinaryM_VX {
 }
 
 multiclass VPseudoBinaryM_VF {
-  foreach m = MxList in
-    foreach f = FPList in
+  foreach f = FPList in
+    foreach m = f.MxList in
       defm "_V" # f.FX :
         VPseudoBinaryM<VR, m.vrclass, f.fprclass, m,
                        !if(!ge(m.octuple, 16), "@earlyclobber $rd", "")>;
@@ -2209,8 +2210,8 @@ multiclass VPseudoTernaryV_VX_AAXA<string Constraint = ""> {
 }
 
 multiclass VPseudoTernaryV_VF_AAXA<string Constraint = ""> {
-  foreach m = MxList in
-    foreach f = FPList in
+  foreach f = FPList in
+    foreach m = f.MxList in
       defm "_V" # f.FX : VPseudoTernaryWithPolicy<m.vrclass, f.fprclass,
                                                   m.vrclass, m, Constraint,
                                                   /*Commutable*/1>;
@@ -2232,8 +2233,8 @@ multiclass VPseudoTernaryW_VX {
 
 multiclass VPseudoTernaryW_VF {
   defvar constraint = "@earlyclobber $rd";
-  foreach m = MxListW in
-    foreach f = FPListW in
+  foreach f = FPListW in
+    foreach m = f.MxList in
       defm "_V" # f.FX : VPseudoTernaryWithPolicy<m.wvrclass, f.fprclass,
                                                   m.vrclass, m, constraint>;
 }
@@ -4362,8 +4363,8 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
 
 let Predicates = [HasVInstructionsAnyF] in {
 let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
-  foreach m = MxList in {
-    foreach f = FPList in {
+  foreach f = FPList in {
+    foreach m = f.MxList in {
       let VLMul = m.value in {
         let HasSEWOp = 1, BaseInstr = VFMV_F_S in
         def "PseudoVFMV_" # f.FX # "_S_" # m.MX :

@@ -296,7 +296,7 @@ struct ForOpInterface
     // Given a range of values, apply `func` to those marked in `indices`.
     // Otherwise, store the unmodified value in the result vector.
     auto convert = [&](ValueRange values,
-                       std::function<Value(Value, int64_t)> func) {
+                       llvm::function_ref<Value(Value, int64_t)> func) {
       SmallVector<Value> result;
       for (const auto &it : llvm::enumerate(values)) {
         size_t idx = it.index();

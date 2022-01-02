@@ -16,6 +16,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include <iterator>
 #include <memory>
+#include <utility>
 
 using namespace mlir;
 using namespace mlir::linalg;
@@ -97,7 +98,7 @@ struct FunctionNonEntryBlockConversion : public ConversionPattern {
       : ConversionPattern(converter, MatchTraitOpTypeTag(),
                           TypeID::get<OpTrait::FunctionLike>(), /*benefit=*/1,
                           ctx),
-        blockArgsToDetensor(blockArgsToDetensor) {}
+        blockArgsToDetensor(std::move(blockArgsToDetensor)) {}
 
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
@@ -542,14 +543,11 @@ struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
       if (op->hasTrait<OpTrait::FunctionLike>()) {
         auto &body = function_like_impl::getFunctionBody(op);
         return llvm::all_of(llvm::drop_begin(body, 1), [&](Block &block) {
-          if (llvm::any_of(
-                  blockArgsToDetensor, [&](BlockArgument blockArgument) {
-                    return blockArgument.getOwner() == &block &&
-                           !typeConverter.isLegal(blockArgument.getType());
-                  })) {
-            return false;
-          }
-          return true;
+          return !llvm::any_of(
+              blockArgsToDetensor, [&](BlockArgument blockArgument) {
+                return blockArgument.getOwner() == &block &&
+                       !typeConverter.isLegal(blockArgument.getType());
+              });
         });
       }
 

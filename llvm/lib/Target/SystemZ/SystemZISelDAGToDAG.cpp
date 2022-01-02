@@ -62,8 +62,7 @@ struct SystemZAddressingMode {
   bool IncludesDynAlloc;
 
   SystemZAddressingMode(AddrForm form, DispRange dr)
-    : Form(form), DR(dr), Base(), Disp(0), Index(),
-      IncludesDynAlloc(false) {}
+      : Form(form), DR(dr), Disp(0), IncludesDynAlloc(false) {}
 
   // True if the address can have an index register.
   bool hasIndexField() { return Form != FormBD; }

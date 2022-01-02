@@ -24,7 +24,7 @@
 using namespace mlir;
 
 ReductionNode::ReductionNode(
-    ReductionNode *parentNode, std::vector<Range> ranges,
+    ReductionNode *parentNode, const std::vector<Range> &ranges,
     llvm::SpecificBumpPtrAllocator<ReductionNode> &allocator)
     /// Root node will have the parent pointer point to themselves.
     : parent(parentNode == nullptr ? this : parentNode),
@@ -61,7 +61,7 @@ ArrayRef<ReductionNode *> ReductionNode::generateNewVariants() {
   // If we haven't created new variant, then we can create varients by removing
   // each of them respectively. For example, given {{1, 3}, {4, 9}}, we can
   // produce variants with range {{1, 3}} and {{4, 9}}.
-  if (variants.size() == 0 && getRanges().size() > 1) {
+  if (variants.empty() && getRanges().size() > 1) {
     for (const Range &range : getRanges()) {
       std::vector<Range> subRanges = getRanges();
       llvm::erase_value(subRanges, range);

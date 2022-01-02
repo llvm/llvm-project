@@ -384,7 +384,7 @@ AffineMap::partialConstantFold(ArrayRef<Attribute> operandConstants,
 
 /// Walk all of the AffineExpr's in this mapping. Each node in an expression
 /// tree is visited in postorder.
-void AffineMap::walkExprs(std::function<void(AffineExpr)> callback) const {
+void AffineMap::walkExprs(llvm::function_ref<void(AffineExpr)> callback) const {
   for (auto expr : getResults())
     expr.walk(callback);
 }

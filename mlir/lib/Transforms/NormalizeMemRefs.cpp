@@ -92,13 +92,11 @@ void NormalizeMemRefs::runOnOperation() {
 /// are satisfied will the value become a candidate for replacement.
 /// TODO: Extend this for DimOps.
 static bool isMemRefNormalizable(Value::user_range opUsers) {
-  if (llvm::any_of(opUsers, [](Operation *op) {
-        if (op->hasTrait<OpTrait::MemRefsNormalizable>())
-          return false;
-        return true;
-      }))
-    return false;
-  return true;
+  return !llvm::any_of(opUsers, [](Operation *op) {
+    if (op->hasTrait<OpTrait::MemRefsNormalizable>())
+      return false;
+    return true;
+  });
 }
 
 /// Set all the calling functions and the callees of the function as not
@@ -275,9 +273,9 @@ void NormalizeMemRefs::updateFunctionSignature(FuncOp funcOp,
                                           /*indexRemap=*/layoutMap,
                                           /*extraOperands=*/{},
                                           /*symbolOperands=*/{},
-                                          /*domInstFilter=*/nullptr,
-                                          /*postDomInstFilter=*/nullptr,
-                                          /*allowDereferencingOps=*/true,
+                                          /*domOpFilter=*/nullptr,
+                                          /*postDomOpFilter=*/nullptr,
+                                          /*allowNonDereferencingOps=*/true,
                                           /*replaceInDeallocOp=*/true))) {
         // If it failed (due to escapes for example), bail out.
         // It should never hit this part of the code because it is called by
@@ -370,8 +368,8 @@ void NormalizeMemRefs::normalizeFuncOpMemRefs(FuncOp funcOp,
                                         /*indexRemap=*/layoutMap,
                                         /*extraOperands=*/{},
                                         /*symbolOperands=*/{},
-                                        /*domInstFilter=*/nullptr,
-                                        /*postDomInstFilter=*/nullptr,
+                                        /*domOpFilter=*/nullptr,
+                                        /*postDomOpFilter=*/nullptr,
                                         /*allowNonDereferencingOps=*/true,
                                         /*replaceInDeallocOp=*/true))) {
       // If it failed (due to escapes for example), bail out. Removing the
@@ -419,9 +417,9 @@ void NormalizeMemRefs::normalizeFuncOpMemRefs(FuncOp funcOp,
                                               /*indexRemap=*/layoutMap,
                                               /*extraOperands=*/{},
                                               /*symbolOperands=*/{},
-                                              /*domInstFilter=*/nullptr,
-                                              /*postDomInstFilter=*/nullptr,
-                                              /*allowDereferencingOps=*/true,
+                                              /*domOpFilter=*/nullptr,
+                                              /*postDomOpFilter=*/nullptr,
+                                              /*allowNonDereferencingOps=*/true,
                                               /*replaceInDeallocOp=*/true))) {
             newOp->erase();
             replacingMemRefUsesFailed = true;

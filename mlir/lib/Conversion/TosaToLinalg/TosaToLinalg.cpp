@@ -34,7 +34,7 @@ static SmallVector<StringRef> getNParallelLoopsAttrs(unsigned nParallelLoops) {
 
 template <typename T>
 static arith::ConstantOp
-createConstFromIntAttribute(Operation *op, std::string attrName,
+createConstFromIntAttribute(Operation *op, const std::string &attrName,
                             Type requiredAttrType, OpBuilder &rewriter) {
   auto castedN = static_cast<T>(
       op->getAttr(attrName).cast<IntegerAttr>().getValue().getSExtValue());
@@ -61,7 +61,7 @@ static mlir::SelectOp clampHelper(Location loc, Value arg,
   return rewriter.create<mlir::SelectOp>(loc, largerThanMax, max, minOrArg);
 }
 
-static SmallVector<Value> filterDynamicDims(SmallVector<Value> dynDims) {
+static SmallVector<Value> filterDynamicDims(const SmallVector<Value> &dynDims) {
   SmallVector<Value> filteredDims;
   for (auto dim : dynDims)
     if (dim)
@@ -1014,11 +1014,7 @@ static bool createReassociationMapsForCollapse(
 
   // If both iterators didn't reach the end, we have leftover dimentions which
   // implies that we have a mismatch in shape.
-  if (currSrcDim != srcShape.size() || currDstDim != dstShape.size()) {
-    return false;
-  }
-
-  return true;
+  return !(currSrcDim != srcShape.size() || currDstDim != dstShape.size());
 }
 
 namespace {

@@ -2267,7 +2267,7 @@ void OpEmitter::genOperandResultVerifier(MethodBody &body,
 
   body << "  {\n    unsigned index = 0; (void)index;\n";
 
-  for (auto staticValue : llvm::enumerate(values)) {
+  for (const auto &staticValue : llvm::enumerate(values)) {
     const NamedTypeConstraint &value = staticValue.value();
 
     bool hasPredicate = value.hasPredicate();
@@ -2332,7 +2332,7 @@ void OpEmitter::genRegionVerifier(MethodBody &body) {
     return;
 
   body << "  {\n    unsigned index = 0; (void)index;\n";
-  for (auto it : llvm::enumerate(regions)) {
+  for (const auto &it : llvm::enumerate(regions)) {
     const auto &region = it.value();
     if (canSkip(region))
       continue;

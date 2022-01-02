@@ -352,7 +352,7 @@ public:
   /// { 2, 7, 8, 5 }
   llvm::SetVector<Value>
   findValueInReverseUseDefChain(Value value,
-                                std::function<bool(Value)> condition);
+                                llvm::function_ref<bool(Value)> condition);
 
   /// Find the Value of the last preceding write of a given Value.
   ///

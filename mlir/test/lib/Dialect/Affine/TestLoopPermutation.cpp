@@ -32,7 +32,7 @@ struct TestLoopPermutation
     return "Tests affine loop permutation utility";
   }
   TestLoopPermutation() = default;
-  TestLoopPermutation(const TestLoopPermutation &pass){};
+  TestLoopPermutation(const TestLoopPermutation &pass) : PassWrapper(pass){};
 
   void runOnFunction() override;
 

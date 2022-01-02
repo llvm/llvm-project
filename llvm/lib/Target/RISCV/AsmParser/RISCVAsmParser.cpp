@@ -302,10 +302,10 @@ struct RISCVOperand : public MCParsedAsmOperand {
     struct VTypeOp VType;
   };
 
-  RISCVOperand(KindTy K) : MCParsedAsmOperand(), Kind(K) {}
+  RISCVOperand(KindTy K) : Kind(K) {}
 
 public:
-  RISCVOperand(const RISCVOperand &o) : MCParsedAsmOperand() {
+  RISCVOperand(const RISCVOperand &o) {
     Kind = o.Kind;
     IsRV64 = o.IsRV64;
     StartLoc = o.StartLoc;

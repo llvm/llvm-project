@@ -70,7 +70,8 @@ using ControlElementwiseOpsFusionFn =
 /// loop in the generic op.
 void populateFoldReshapeOpsByExpansionPatterns(
     RewritePatternSet &patterns,
-    ControlElementwiseOpsFusionFn controlFoldingReshapes = skipUnitDimReshape);
+    const ControlElementwiseOpsFusionFn &controlFoldingReshapes =
+        skipUnitDimReshape);
 
 /// Patterns to fold a collapsing (expanding) tensor_reshape operation with its
 /// producer (consumer) generic operation by linearizing the indexing map used
@@ -356,7 +357,7 @@ struct PromotionInfo {
 };
 FailureOr<PromotionInfo>
 promoteSubviewAsNewBuffer(OpBuilder &b, Location loc, memref::SubViewOp subView,
-                          AllocBufferCallbackFn allocationFn,
+                          const AllocBufferCallbackFn &allocationFn,
                           DataLayout &layout);
 
 /// Promotes the `subViews` into a new buffer allocated at the insertion point
@@ -370,7 +371,7 @@ promoteSubviewAsNewBuffer(OpBuilder &b, Location loc, memref::SubViewOp subView,
 /// Returns the modified linalg op (the modification happens in place) as well
 /// as all the copy ops created.
 FailureOr<LinalgOp> promoteSubViews(OpBuilder &b, LinalgOp op,
-                                    LinalgPromotionOptions options);
+                                    const LinalgPromotionOptions &options);
 
 /// Emit a suitable vector form for a Linalg op with fully static shape.
 LogicalResult vectorizeLinalgOp(OpBuilder &builder, Operation *op,
@@ -437,7 +438,7 @@ struct LinalgTransformationFilter {
       Optional<StringAttr> replacement = None);
 
   explicit LinalgTransformationFilter(
-      FilterFunction f, ArrayRef<StringAttr> matchDisjunction = {},
+      const FilterFunction &f, ArrayRef<StringAttr> matchDisjunction = {},
       Optional<StringAttr> replacement = None);
 
   LinalgTransformationFilter(LinalgTransformationFilter &&) = default;
@@ -1180,7 +1181,7 @@ private:
 /// linalg.generic ops.
 void populateLinalgNamedOpsGeneralizationPatterns(
     RewritePatternSet &patterns,
-    LinalgTransformationFilter filter = LinalgTransformationFilter());
+    const LinalgTransformationFilter &filter = LinalgTransformationFilter());
 
 /// Linalg decompose convolutions patterns
 
@@ -1189,7 +1190,7 @@ void populateLinalgNamedOpsGeneralizationPatterns(
 /// vectorize the low-D convolution ops.
 void populateDecomposeConvolutionPatterns(
     RewritePatternSet &patterns,
-    LinalgTransformationFilter filter = LinalgTransformationFilter(),
+    const LinalgTransformationFilter &filter = LinalgTransformationFilter(),
     PatternBenefit benefit = 1);
 
 /// Linalg distribution patterns

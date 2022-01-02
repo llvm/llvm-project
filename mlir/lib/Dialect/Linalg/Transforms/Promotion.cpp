@@ -212,7 +212,7 @@ LinalgOpInstancePromotionOptions::LinalgOpInstancePromotionOptions(
 // by a partial `copy` op.
 FailureOr<PromotionInfo> mlir::linalg::promoteSubviewAsNewBuffer(
     OpBuilder &b, Location loc, memref::SubViewOp subView,
-    AllocBufferCallbackFn allocationFn, DataLayout &layout) {
+    const AllocBufferCallbackFn &allocationFn, DataLayout &layout) {
   auto viewType = subView.getType();
   auto rank = viewType.getRank();
   SmallVector<Value, 4> fullSizes;
@@ -379,7 +379,7 @@ mlir::linalg::promoteSubviewsPrecondition(Operation *op,
 
 FailureOr<LinalgOp>
 mlir::linalg::promoteSubViews(OpBuilder &builder, LinalgOp linalgOp,
-                              LinalgPromotionOptions options) {
+                              const LinalgPromotionOptions &options) {
   LinalgOpInstancePromotionOptions linalgOptions(linalgOp, options);
   auto layout = DataLayout::closest(linalgOp);
   ImplicitLocOpBuilder b(linalgOp.getLoc(), builder);

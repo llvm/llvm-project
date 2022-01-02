@@ -20,7 +20,7 @@ namespace gsym {
 /// string at offset zero. Strings must be UTF8 NULL terminated strings.
 struct StringTable {
   StringRef Data;
-  StringTable() : Data() {}
+  StringTable() {}
   StringTable(StringRef D) : Data(D) {}
   StringRef operator[](size_t Offset) const { return getString(Offset); }
   StringRef getString(uint32_t Offset) const {

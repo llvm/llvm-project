@@ -17,7 +17,7 @@ using namespace mlir;
 using namespace mlir::python::adaptors;
 
 void mlir::python::populateDialectSparseTensorSubmodule(
-    py::module m, const py::module &irModule) {
+    const py::module &m, const py::module &irModule) {
   auto attributeClass = irModule.attr("Attribute");
 
   py::enum_<MlirSparseTensorDimLevelType>(m, "DimLevelType", py::module_local())

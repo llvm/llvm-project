@@ -46,7 +46,7 @@ public:
     auto reductionDimsRange =
         multiReductionOp.reduction_dims().getAsValueRange<IntegerAttr>();
     auto reductionDims = llvm::to_vector<4>(llvm::map_range(
-        reductionDimsRange, [](APInt a) { return a.getZExtValue(); }));
+        reductionDimsRange, [](const APInt &a) { return a.getZExtValue(); }));
     llvm::SmallDenseSet<int64_t> reductionDimsSet(reductionDims.begin(),
                                                   reductionDims.end());
     int64_t reductionSize = reductionDims.size();
@@ -141,12 +141,12 @@ public:
     // 2. Compute flattened parallel and reduction sizes.
     int flattenedParallelDim = 0;
     int flattenedReductionDim = 0;
-    if (parallelShapes.size() > 0) {
+    if (!parallelShapes.empty()) {
       flattenedParallelDim = 1;
       for (auto d : parallelShapes)
         flattenedParallelDim *= d;
     }
-    if (reductionShapes.size() > 0) {
+    if (!reductionShapes.empty()) {
       flattenedReductionDim = 1;
       for (auto d : reductionShapes)
         flattenedReductionDim *= d;

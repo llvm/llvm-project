@@ -30,7 +30,7 @@ namespace comprehensive_bufferize {
 
 #define DEBUG_TYPE "bufferizable-op-interface"
 #define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
-#define LDBG(X) LLVM_DEBUG(DBGS() << X)
+#define LDBG(X) LLVM_DEBUG(DBGS() << (X))
 
 using namespace mlir;
 using namespace linalg::comprehensive_bufferize;
@@ -285,7 +285,7 @@ bool mlir::linalg::comprehensive_bufferize::BufferizationState::isValueRead(
 llvm::SetVector<Value>
 mlir::linalg::comprehensive_bufferize::BufferizationState::
     findValueInReverseUseDefChain(Value value,
-                                  std::function<bool(Value)> condition) {
+                                  llvm::function_ref<bool(Value)> condition) {
   llvm::SetVector<Value> result, workingSet;
   workingSet.insert(value);
 

@@ -561,7 +561,7 @@ void DefGen::emitConstruct() {
       MethodParameter("const KeyTy &", "tblgenKey"));
   if (!def.hasStorageCustomConstructor()) {
     auto &body = construct->body().indent();
-    for (auto it : llvm::enumerate(params)) {
+    for (const auto &it : llvm::enumerate(params)) {
       body << formatv("auto {0} = std::get<{1}>(tblgenKey);\n",
                       it.value().getName(), it.index());
     }

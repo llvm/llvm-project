@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <utility>
+
 #include "IRModule.h"
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/Interfaces.h"
@@ -58,7 +60,7 @@ public:
   /// operation or a subclass of OpView. In the latter case, only the static
   /// methods of the interface are accessible to the caller.
   PyConcreteOpInterface(py::object object, DefaultingPyMlirContext context)
-      : obj(object) {
+      : obj(std::move(object)) {
     try {
       operation = &py::cast<PyOperation &>(obj);
     } catch (py::cast_error &err) {

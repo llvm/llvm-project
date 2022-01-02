@@ -82,7 +82,6 @@ GIMatchTreeBuilderLeafInfo::GIMatchTreeBuilderLeafInfo(
     GIMatchTreeBuilder &Builder, StringRef Name, unsigned RootIdx,
     const GIMatchDag &MatchDag, void *Data)
     : Builder(Builder), Info(Name, RootIdx, Data), MatchDag(MatchDag),
-      InstrNodeToInfo(),
       RemainingInstrNodes(BitVector(MatchDag.getNumInstrNodes(), true)),
       RemainingEdges(BitVector(MatchDag.getNumEdges(), true)),
       RemainingPredicates(BitVector(MatchDag.getNumPredicates(), true)),

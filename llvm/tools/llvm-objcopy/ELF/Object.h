@@ -934,8 +934,7 @@ class BinaryELFBuilder : public BasicELFBuilder {
 
 public:
   BinaryELFBuilder(MemoryBuffer *MB, uint8_t NewSymbolVisibility)
-      : BasicELFBuilder(), MemBuf(MB),
-        NewSymbolVisibility(NewSymbolVisibility) {}
+      : MemBuf(MB), NewSymbolVisibility(NewSymbolVisibility) {}
 
   Expected<std::unique_ptr<Object>> build();
 };
@@ -946,8 +945,7 @@ class IHexELFBuilder : public BasicELFBuilder {
   void addDataSections();
 
 public:
-  IHexELFBuilder(const std::vector<IHexRecord> &Records)
-      : BasicELFBuilder(), Records(Records) {}
+  IHexELFBuilder(const std::vector<IHexRecord> &Records) : Records(Records) {}
 
   Expected<std::unique_ptr<Object>> build();
 };
