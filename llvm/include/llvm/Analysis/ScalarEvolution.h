@@ -1719,10 +1719,8 @@ private:
   /// has a materialized ICmp.
   ExitLimit computeExitLimitFromICmp(const Loop *L, ICmpInst::Predicate Pred,
                                      const SCEV *LHS, const SCEV *RHS,
-                                     bool ExitIfTrue,
                                      bool IsSubExpr,
                                      bool AllowPredicates = false);
-
 
   /// Compute the number of times the backedge of the specified loop will
   /// execute if its exit condition were a switch with a single exiting case
