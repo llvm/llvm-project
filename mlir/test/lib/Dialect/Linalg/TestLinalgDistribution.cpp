@@ -43,8 +43,7 @@ struct TestLinalgDistribution
   StringRef getArgument() const final { return "test-linalg-distribution"; }
   StringRef getDescription() const final { return "Test Linalg distribution."; }
   TestLinalgDistribution() = default;
-  TestLinalgDistribution(const TestLinalgDistribution &pass)
-      : PassWrapper(pass) {}
+  TestLinalgDistribution(const TestLinalgDistribution &pass) = default;
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<AffineDialect, gpu::GPUDialect>();
   }

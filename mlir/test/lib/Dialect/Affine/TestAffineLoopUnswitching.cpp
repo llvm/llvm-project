@@ -30,8 +30,7 @@ struct TestAffineLoopUnswitching
     return "Tests affine loop unswitching / if/else hoisting";
   }
   TestAffineLoopUnswitching() = default;
-  TestAffineLoopUnswitching(const TestAffineLoopUnswitching &pass)
-      : PassWrapper(pass) {}
+  TestAffineLoopUnswitching(const TestAffineLoopUnswitching &pass) = default;
 
   void runOnFunction() override;
 

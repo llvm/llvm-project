@@ -552,8 +552,7 @@ struct TestVectorTransferCollapseInnerMostContiguousDims
                          FunctionPass> {
   TestVectorTransferCollapseInnerMostContiguousDims() = default;
   TestVectorTransferCollapseInnerMostContiguousDims(
-      const TestVectorTransferCollapseInnerMostContiguousDims &pass)
-      : PassWrapper(pass) {}
+      const TestVectorTransferCollapseInnerMostContiguousDims &pass) = default;
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<memref::MemRefDialect, AffineDialect>();
