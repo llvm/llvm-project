@@ -160,19 +160,14 @@ constexpr void test_as_string() {
 
   test_exception<Parser<CharT>>("End of input while parsing format-spec arg-id",
                                 CSTR("{"));
-  test_exception<Parser<CharT>>(
-      "A format-spec arg-id should terminate at a '}'", CSTR("{0"));
+  test_exception<Parser<CharT>>("Invalid arg-id", CSTR("{0"));
   test_exception<Parser<CharT>>(
       "The arg-id of the format-spec starts with an invalid character",
       CSTR("{a"));
-  test_exception<Parser<CharT>>(
-      "A format-spec arg-id should terminate at a '}'", CSTR("{1"));
-  test_exception<Parser<CharT>>(
-      "A format-spec arg-id should terminate at a '}'", CSTR("{9"));
-  test_exception<Parser<CharT>>(
-      "A format-spec arg-id should terminate at a '}'", CSTR("{9:"));
-  test_exception<Parser<CharT>>(
-      "A format-spec arg-id should terminate at a '}'", CSTR("{9a"));
+  test_exception<Parser<CharT>>("Invalid arg-id", CSTR("{1"));
+  test_exception<Parser<CharT>>("Invalid arg-id", CSTR("{9"));
+  test_exception<Parser<CharT>>("Invalid arg-id", CSTR("{9:"));
+  test_exception<Parser<CharT>>("Invalid arg-id", CSTR("{9a"));
 
   static_assert(std::__format::__number_max == 2'147'483'647,
                 "Update the assert and the test.");

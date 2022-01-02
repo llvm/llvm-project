@@ -214,7 +214,7 @@ __parse_arg_id(const _CharT* __begin, const _CharT* __end, auto& __parse_ctx) {
       __format::__parse_arg_id(__begin, __end, __parse_ctx);
 
   if (__r.__ptr == __end || *__r.__ptr != _CharT('}'))
-    __throw_format_error("A format-spec arg-id should terminate at a '}'");
+    __throw_format_error("Invalid arg-id");
 
   ++__r.__ptr;
   return __r;
