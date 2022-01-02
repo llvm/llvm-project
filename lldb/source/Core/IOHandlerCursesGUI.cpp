@@ -78,8 +78,6 @@
 
 using namespace lldb;
 using namespace lldb_private;
-using llvm::None;
-using llvm::Optional;
 using llvm::StringRef;
 
 // we may want curses to be disabled for some builds for instance, windows

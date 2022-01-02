@@ -19,7 +19,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Process.h"
 
-using llvm::MemoryBufferRef;
 using llvm::object::ELFObjectFile;
 
 using namespace llvm;
