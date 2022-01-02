@@ -223,6 +223,33 @@ Pattern {
 
 // -----
 
+Constraint Foo();
+
+Pattern {
+  // CHECK: unable to define variable of `Constraint` type
+  let foo = Foo;
+}
+
+// -----
+
+Rewrite Foo();
+
+Pattern {
+  // CHECK: unable to define variable of `Rewrite` type
+  let foo = Foo;
+}
+
+// -----
+
+Constraint MultiConstraint(arg1: Value, arg2: Value);
+
+Pattern {
+  // CHECK: `Constraint`s applied via a variable constraint list must take a single input, but got 2
+  let foo: MultiConstraint;
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // `replace`
 //===----------------------------------------------------------------------===//
@@ -277,6 +304,17 @@ Pattern {
 // -----
 
 //===----------------------------------------------------------------------===//
+// `return`
+//===----------------------------------------------------------------------===//
+
+// CHECK: expected `;` after statement
+Constraint Foo(arg: Value) -> Value {
+  return arg
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // `rewrite`
 //===----------------------------------------------------------------------===//
 
@@ -305,5 +343,14 @@ Pattern {
   // CHECK: expected dialect namespace
   rewrite root: Op with {
       op<>;
+  };
+}
+
+// -----
+
+Pattern {
+  // CHECK: `return` statements are only permitted within a `Constraint` or `Rewrite` body
+  rewrite root: Op with {
+      return root;
   };
 }

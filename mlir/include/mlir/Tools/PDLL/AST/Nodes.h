@@ -301,6 +301,31 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
+// ReturnStmt
+//===----------------------------------------------------------------------===//
+
+/// This statement represents a return from a "callable" like decl, e.g. a
+/// Constraint or a Rewrite.
+class ReturnStmt final : public Node::NodeBase<ReturnStmt, Stmt> {
+public:
+  static ReturnStmt *create(Context &ctx, SMRange loc, Expr *resultExpr);
+
+  /// Return the result expression of this statement.
+  Expr *getResultExpr() { return resultExpr; }
+  const Expr *getResultExpr() const { return resultExpr; }
+
+  /// Set the result expression of this statement.
+  void setResultExpr(Expr *expr) { resultExpr = expr; }
+
+private:
+  ReturnStmt(SMRange loc, Expr *resultExpr)
+      : Base(loc), resultExpr(resultExpr) {}
+
+  // The result expression of this statement.
+  Expr *resultExpr;
+};
+
+//===----------------------------------------------------------------------===//
 // Expr
 //===----------------------------------------------------------------------===//
 
@@ -343,6 +368,43 @@ private:
 
   /// The value referenced by this expression.
   StringRef value;
+};
+
+//===----------------------------------------------------------------------===//
+// CallExpr
+//===----------------------------------------------------------------------===//
+
+/// This expression represents a call to a decl, such as a
+/// UserConstraintDecl/UserRewriteDecl.
+class CallExpr final : public Node::NodeBase<CallExpr, Expr>,
+                       private llvm::TrailingObjects<CallExpr, Expr *> {
+public:
+  static CallExpr *create(Context &ctx, SMRange loc, Expr *callable,
+                          ArrayRef<Expr *> arguments, Type resultType);
+
+  /// Return the callable of this call.
+  Expr *getCallableExpr() const { return callable; }
+
+  /// Return the arguments of this call.
+  MutableArrayRef<Expr *> getArguments() {
+    return {getTrailingObjects<Expr *>(), numArgs};
+  }
+  ArrayRef<Expr *> getArguments() const {
+    return const_cast<CallExpr *>(this)->getArguments();
+  }
+
+private:
+  CallExpr(SMRange loc, Type type, Expr *callable, unsigned numArgs)
+      : Base(loc, type), callable(callable), numArgs(numArgs) {}
+
+  /// The callable of this call.
+  Expr *callable;
+
+  /// The number of arguments of the call.
+  unsigned numArgs;
+
+  /// TrailingObject utilities.
+  friend llvm::TrailingObjects<CallExpr, Expr *>;
 };
 
 //===----------------------------------------------------------------------===//
@@ -739,6 +801,114 @@ protected:
 };
 
 //===----------------------------------------------------------------------===//
+// UserConstraintDecl
+//===----------------------------------------------------------------------===//
+
+/// This decl represents a user defined constraint. This is either:
+///   * an imported native constraint
+///     - Similar to an external function declaration. This is a native
+///       constraint defined externally, and imported into PDLL via a
+///       declaration.
+///   * a native constraint defined in PDLL
+///     - This is a native constraint, i.e. a constraint whose implementation is
+///       defined in C++(or potentially some other non-PDLL language). The
+///       implementation of this constraint is specified as a string code block
+///       in PDLL.
+///   * a PDLL constraint
+///     - This is a constraint which is defined using only PDLL constructs.
+class UserConstraintDecl final
+    : public Node::NodeBase<UserConstraintDecl, ConstraintDecl>,
+      llvm::TrailingObjects<UserConstraintDecl, VariableDecl *> {
+public:
+  /// Create a native constraint with the given optional code block.
+  static UserConstraintDecl *createNative(Context &ctx, const Name &name,
+                                          ArrayRef<VariableDecl *> inputs,
+                                          ArrayRef<VariableDecl *> results,
+                                          Optional<StringRef> codeBlock,
+                                          Type resultType) {
+    return createImpl(ctx, name, inputs, results, codeBlock, /*body=*/nullptr,
+                      resultType);
+  }
+
+  /// Create a PDLL constraint with the given body.
+  static UserConstraintDecl *createPDLL(Context &ctx, const Name &name,
+                                        ArrayRef<VariableDecl *> inputs,
+                                        ArrayRef<VariableDecl *> results,
+                                        const CompoundStmt *body,
+                                        Type resultType) {
+    return createImpl(ctx, name, inputs, results, /*codeBlock=*/llvm::None,
+                      body, resultType);
+  }
+
+  /// Return the name of the constraint.
+  const Name &getName() const { return *Decl::getName(); }
+
+  /// Return the input arguments of this constraint.
+  MutableArrayRef<VariableDecl *> getInputs() {
+    return {getTrailingObjects<VariableDecl *>(), numInputs};
+  }
+  ArrayRef<VariableDecl *> getInputs() const {
+    return const_cast<UserConstraintDecl *>(this)->getInputs();
+  }
+
+  /// Return the explicit results of the constraint declaration. May be empty,
+  /// even if the constraint has results (e.g. in the case of inferred results).
+  MutableArrayRef<VariableDecl *> getResults() {
+    return {getTrailingObjects<VariableDecl *>() + numInputs, numResults};
+  }
+  ArrayRef<VariableDecl *> getResults() const {
+    return const_cast<UserConstraintDecl *>(this)->getResults();
+  }
+
+  /// Return the optional code block of this constraint, if this is a native
+  /// constraint with a provided implementation.
+  Optional<StringRef> getCodeBlock() const { return codeBlock; }
+
+  /// Return the body of this constraint if this constraint is a PDLL
+  /// constraint, otherwise returns nullptr.
+  const CompoundStmt *getBody() const { return constraintBody; }
+
+  /// Return the result type of this constraint.
+  Type getResultType() const { return resultType; }
+
+  /// Returns true if this constraint is external.
+  bool isExternal() const { return !constraintBody && !codeBlock; }
+
+private:
+  /// Create either a PDLL constraint or a native constraint with the given
+  /// components.
+  static UserConstraintDecl *
+  createImpl(Context &ctx, const Name &name, ArrayRef<VariableDecl *> inputs,
+             ArrayRef<VariableDecl *> results, Optional<StringRef> codeBlock,
+             const CompoundStmt *body, Type resultType);
+
+  UserConstraintDecl(const Name &name, unsigned numInputs, unsigned numResults,
+                     Optional<StringRef> codeBlock, const CompoundStmt *body,
+                     Type resultType)
+      : Base(name.getLoc(), &name), numInputs(numInputs),
+        numResults(numResults), codeBlock(codeBlock), constraintBody(body),
+        resultType(resultType) {}
+
+  /// The number of inputs to this constraint.
+  unsigned numInputs;
+
+  /// The number of explicit results to this constraint.
+  unsigned numResults;
+
+  /// The optional code block of this constraint.
+  Optional<StringRef> codeBlock;
+
+  /// The optional body of this constraint.
+  const CompoundStmt *constraintBody;
+
+  /// The result type of the constraint.
+  Type resultType;
+
+  /// Allow access to various internals.
+  friend llvm::TrailingObjects<UserConstraintDecl, VariableDecl *>;
+};
+
+//===----------------------------------------------------------------------===//
 // NamedAttributeDecl
 //===----------------------------------------------------------------------===//
 
@@ -827,6 +997,149 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
+// UserRewriteDecl
+//===----------------------------------------------------------------------===//
+
+/// This decl represents a user defined rewrite. This is either:
+///   * an imported native rewrite
+///     - Similar to an external function declaration. This is a native
+///       rewrite defined externally, and imported into PDLL via a declaration.
+///   * a native rewrite defined in PDLL
+///     - This is a native rewrite, i.e. a rewrite whose implementation is
+///       defined in C++(or potentially some other non-PDLL language). The
+///       implementation of this rewrite is specified as a string code block
+///       in PDLL.
+///   * a PDLL rewrite
+///     - This is a rewrite which is defined using only PDLL constructs.
+class UserRewriteDecl final
+    : public Node::NodeBase<UserRewriteDecl, Decl>,
+      llvm::TrailingObjects<UserRewriteDecl, VariableDecl *> {
+public:
+  /// Create a native rewrite with the given optional code block.
+  static UserRewriteDecl *createNative(Context &ctx, const Name &name,
+                                       ArrayRef<VariableDecl *> inputs,
+                                       ArrayRef<VariableDecl *> results,
+                                       Optional<StringRef> codeBlock,
+                                       Type resultType) {
+    return createImpl(ctx, name, inputs, results, codeBlock, /*body=*/nullptr,
+                      resultType);
+  }
+
+  /// Create a PDLL rewrite with the given body.
+  static UserRewriteDecl *createPDLL(Context &ctx, const Name &name,
+                                     ArrayRef<VariableDecl *> inputs,
+                                     ArrayRef<VariableDecl *> results,
+                                     const CompoundStmt *body,
+                                     Type resultType) {
+    return createImpl(ctx, name, inputs, results, /*codeBlock=*/llvm::None,
+                      body, resultType);
+  }
+
+  /// Return the name of the rewrite.
+  const Name &getName() const { return *Decl::getName(); }
+
+  /// Return the input arguments of this rewrite.
+  MutableArrayRef<VariableDecl *> getInputs() {
+    return {getTrailingObjects<VariableDecl *>(), numInputs};
+  }
+  ArrayRef<VariableDecl *> getInputs() const {
+    return const_cast<UserRewriteDecl *>(this)->getInputs();
+  }
+
+  /// Return the explicit results of the rewrite declaration. May be empty,
+  /// even if the rewrite has results (e.g. in the case of inferred results).
+  MutableArrayRef<VariableDecl *> getResults() {
+    return {getTrailingObjects<VariableDecl *>() + numInputs, numResults};
+  }
+  ArrayRef<VariableDecl *> getResults() const {
+    return const_cast<UserRewriteDecl *>(this)->getResults();
+  }
+
+  /// Return the optional code block of this rewrite, if this is a native
+  /// rewrite with a provided implementation.
+  Optional<StringRef> getCodeBlock() const { return codeBlock; }
+
+  /// Return the body of this rewrite if this rewrite is a PDLL rewrite,
+  /// otherwise returns nullptr.
+  const CompoundStmt *getBody() const { return rewriteBody; }
+
+  /// Return the result type of this rewrite.
+  Type getResultType() const { return resultType; }
+
+  /// Returns true if this rewrite is external.
+  bool isExternal() const { return !rewriteBody && !codeBlock; }
+
+private:
+  /// Create either a PDLL rewrite or a native rewrite with the given
+  /// components.
+  static UserRewriteDecl *createImpl(Context &ctx, const Name &name,
+                                     ArrayRef<VariableDecl *> inputs,
+                                     ArrayRef<VariableDecl *> results,
+                                     Optional<StringRef> codeBlock,
+                                     const CompoundStmt *body, Type resultType);
+
+  UserRewriteDecl(const Name &name, unsigned numInputs, unsigned numResults,
+                  Optional<StringRef> codeBlock, const CompoundStmt *body,
+                  Type resultType)
+      : Base(name.getLoc(), &name), numInputs(numInputs),
+        numResults(numResults), codeBlock(codeBlock), rewriteBody(body),
+        resultType(resultType) {}
+
+  /// The number of inputs to this rewrite.
+  unsigned numInputs;
+
+  /// The number of explicit results to this rewrite.
+  unsigned numResults;
+
+  /// The optional code block of this rewrite.
+  Optional<StringRef> codeBlock;
+
+  /// The optional body of this rewrite.
+  const CompoundStmt *rewriteBody;
+
+  /// The result type of the rewrite.
+  Type resultType;
+
+  /// Allow access to various internals.
+  friend llvm::TrailingObjects<UserRewriteDecl, VariableDecl *>;
+};
+
+//===----------------------------------------------------------------------===//
+// CallableDecl
+//===----------------------------------------------------------------------===//
+
+/// This decl represents a shared interface for all callable decls.
+class CallableDecl : public Decl {
+public:
+  /// Return the callable type of this decl.
+  StringRef getCallableType() const {
+    if (isa<UserConstraintDecl>(this))
+      return "constraint";
+    assert(isa<UserRewriteDecl>(this) && "unknown callable type");
+    return "rewrite";
+  }
+
+  /// Return the inputs of this decl.
+  ArrayRef<VariableDecl *> getInputs() const {
+    if (const auto *cst = dyn_cast<UserConstraintDecl>(this))
+      return cst->getInputs();
+    return cast<UserRewriteDecl>(this)->getInputs();
+  }
+
+  /// Return the result type of this decl.
+  Type getResultType() const {
+    if (const auto *cst = dyn_cast<UserConstraintDecl>(this))
+      return cst->getResultType();
+    return cast<UserRewriteDecl>(this)->getResultType();
+  }
+
+  /// Support LLVM type casting facilities.
+  static bool classof(const Node *decl) {
+    return isa<UserConstraintDecl, UserRewriteDecl>(decl);
+  }
+};
+
+//===----------------------------------------------------------------------===//
 // VariableDecl
 //===----------------------------------------------------------------------===//
 
@@ -912,11 +1225,11 @@ private:
 
 inline bool Decl::classof(const Node *node) {
   return isa<ConstraintDecl, NamedAttributeDecl, OpNameDecl, PatternDecl,
-             VariableDecl>(node);
+             UserRewriteDecl, VariableDecl>(node);
 }
 
 inline bool ConstraintDecl::classof(const Node *node) {
-  return isa<CoreConstraintDecl>(node);
+  return isa<CoreConstraintDecl, UserConstraintDecl>(node);
 }
 
 inline bool CoreConstraintDecl::classof(const Node *node) {
