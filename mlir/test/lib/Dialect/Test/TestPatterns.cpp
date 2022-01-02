@@ -182,7 +182,7 @@ static void reifyReturnShape(Operation *op) {
   if (failed(shapedOp.reifyReturnTypeShapes(b, op->getOperands(), shapes)) ||
       !llvm::hasSingleElement(shapes))
     return;
-  for (auto it : llvm::enumerate(shapes)) {
+  for (const auto &it : llvm::enumerate(shapes)) {
     op->emitRemark() << "value " << it.index() << ": "
                      << it.value().getDefiningOp();
   }

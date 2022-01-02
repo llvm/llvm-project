@@ -360,7 +360,7 @@ static std::string interleaveToString(Container &container,
 
 static Optional<int>
 findTensorDefArgIndex(StringRef name, SmallVectorImpl<LinalgOperandDef> &args) {
-  for (auto it : llvm::enumerate(args)) {
+  for (const auto &it : llvm::enumerate(args)) {
     if (it.value().name == name)
       return it.index();
   }
@@ -381,7 +381,7 @@ findTypeValue(StringRef typeVar, SmallVectorImpl<LinalgOperandDef> &args) {
     return std::string("helper.getFloat64Type()");
 
   // Search all argument types.
-  for (auto it : llvm::enumerate(args)) {
+  for (const auto &it : llvm::enumerate(args)) {
     if (it.value().typeVar == typeVar)
       return llvm::formatv("block.getArgument({0}).getType()", it.index())
           .str();

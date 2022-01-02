@@ -235,7 +235,7 @@ static void emitAttrOrTypeDefAssemblyFormat(const AttrOrTypeDef &def,
 
   os << "\nSyntax:\n\n```\n!" << def.getDialect().getName() << "."
      << def.getMnemonic() << "<\n";
-  for (auto it : llvm::enumerate(parameters)) {
+  for (const auto &it : llvm::enumerate(parameters)) {
     const AttrOrTypeParameter &param = it.value();
     os << "  " << param.getSyntax();
     if (it.index() < (parameters.size() - 1))

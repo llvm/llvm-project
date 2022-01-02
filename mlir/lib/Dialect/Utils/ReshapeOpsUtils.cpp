@@ -253,7 +253,7 @@ bool mlir::isReassociationValid(ArrayRef<AffineMap> reassociation,
     return true;
   unsigned nDims = reassociation[0].getNumDims();
   unsigned nextExpectedDim = 0;
-  for (auto it : llvm::enumerate(reassociation)) {
+  for (const auto &it : llvm::enumerate(reassociation)) {
     auto m = it.value();
     if (m.getNumDims() != nDims || m.getNumSymbols() != 0) {
       if (invalidIndex)
