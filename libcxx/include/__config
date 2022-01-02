@@ -354,6 +354,12 @@
 //      When this option is used, the token passed to `std::random_device`'s
 //      constructor *must* be "/dev/urandom" -- anything else is an error.
 //
+// _LIBCPP_USING_FUCHSIA_CPRNG
+//      Use Fuchsia's zx_cprng_draw() system call, which is specified to
+//      deliver high-quality entropy and cannot fail.
+//      When this option is used, the token passed to `std::random_device`'s
+//      constructor *must* be "/dev/urandom" -- anything else is an error.
+//
 // _LIBCPP_USING_NACL_RANDOM
 //      NaCl's sandbox (which PNaCl also runs in) doesn't allow filesystem access,
 //      including accesses to the special files under `/dev`. This implementation
@@ -367,8 +373,10 @@
 //      constructor *must* be "/dev/urandom" -- anything else is an error.
 #if defined(__OpenBSD__)
 #  define _LIBCPP_USING_ARC4_RANDOM
-#elif defined(__Fuchsia__) || defined(__wasi__)
+#elif defined(__wasi__)
 #  define _LIBCPP_USING_GETENTROPY
+#elif defined(__Fuchsia__)
+#  define _LIBCPP_USING_FUCHSIA_CPRNG
 #elif defined(__native_client__)
 #  define _LIBCPP_USING_NACL_RANDOM
 #elif defined(_LIBCPP_WIN32API)
