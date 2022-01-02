@@ -486,10 +486,7 @@ bool toolchains::MinGW::isPIEDefault(const llvm::opt::ArgList &Args) const {
   return false;
 }
 
-bool toolchains::MinGW::isPICDefaultForced() const {
-  return getArch() == llvm::Triple::x86_64 ||
-         getArch() == llvm::Triple::aarch64;
-}
+bool toolchains::MinGW::isPICDefaultForced() const { return true; }
 
 llvm::ExceptionHandling
 toolchains::MinGW::GetExceptionModel(const ArgList &Args) const {
