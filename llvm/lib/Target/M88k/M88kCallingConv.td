@@ -46,4 +46,4 @@ def RetCC_M88k : CallingConv<[
 ]>;
 
 // M88k 32-bit ELF C callee saved registers.
-def CSR_M88k : CalleeSavedRegs<(add (sequence "R%d", 14, 25), R1, R30)>;
+def CSR_M88k : CalleeSavedRegs<(add R30, R1, (sequence "R%d", 14, 25))>;

@@ -189,7 +189,6 @@ bool M88kFrameLowering::spillCalleeSavedRegisters(
     if (Reg != M88k::R1 && Reg != M88k::R30) {
       bool IsKill = !IsRetAddrIsTaken;
       const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-      // const TargetRegisterClass &RC = M88k::GPRRCRegClass;
       TII->storeRegToStackSlot(MBB, MBBI, Reg, /*isKill=*/IsKill,
                                CS.getFrameIdx(), RC, TRI);
     }
@@ -248,7 +247,7 @@ void M88kFrameLowering::emitPrologue(MachineFunction &MF,
     if (setupFP) {
       // Spill %r30: st %r30, %r31, <SP> or <new FP+4>
       BuildMI(MBB, MBBI, DL, LII.get(M88k::STriw))
-          .addReg(M88k::R30)
+          .addReg(M88k::R30, RegState::Kill)
           .addReg(M88k::R31)
           .addImm(StackSize - MaxCallFrameSize)
           .setMIFlag(MachineInstr::FrameSetup);
@@ -258,6 +257,14 @@ void M88kFrameLowering::emitPrologue(MachineFunction &MF,
           .addReg(M88k::R31)
           .addImm(MaxCallFrameSize)
           .setMIFlag(MachineInstr::FrameSetup);
+
+      // Mark the frame pointer register %r30 as live-in in every block except
+      // the first.
+      // TODO Re-visit this after conditional branches are implemented.
+      //      The frame pointer register is reserved, so this should not be
+      //      necessary.
+      for (MachineBasicBlock &EveryMBB : llvm::drop_begin(MF))
+        EveryMBB.addLiveIn(M88k::R30);
     }
   }
 }

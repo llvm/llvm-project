@@ -176,9 +176,20 @@ bool M88kInstructionSelector::select(MachineInstr &I) {
     MachineOperand Ptr = I.getOperand(1);
     int64_t Offset;
     MachineInstr *Base, *Addend;
-    if (mi_match(Ptr.getReg(), MRI,
-                 m_GPtrAdd(m_MInstr(Base), m_ICst(Offset))) &&
-        isUInt<16>(Offset)) {
+    if (MachineInstr *FrameIdxMI =
+            getOpcodeDef(TargetOpcode::G_FRAME_INDEX, Ptr.getReg(), MRI)) {
+      const unsigned NewOpc =
+          (I.getOpcode() == TargetOpcode::G_LOAD) ? M88k::LDriw : M88k::STriw;
+      int FrameIdx = FrameIdxMI->getOperand(1).getIndex();
+
+      MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(NewOpc))
+               .add(I.getOperand(0))
+               .addFrameIndex(FrameIdx)
+               .addImm(0)
+               .addMemOperand(MMO);
+    } else if (mi_match(Ptr.getReg(), MRI,
+                        m_GPtrAdd(m_MInstr(Base), m_ICst(Offset))) &&
+               isUInt<16>(Offset)) {
 
       Register AddrReg =
           Base->getOperand(Base->getOpcode() == TargetOpcode::COPY ? 1 : 0)

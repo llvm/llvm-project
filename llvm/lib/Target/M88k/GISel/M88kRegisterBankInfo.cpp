@@ -160,6 +160,8 @@ M88kRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     return getInstructionMapping(DefaultMappingID, /*Cost=*/1,
                                  getValueMapping(PMI_GPR32),
                                  /*NumOperands*/ MI.getNumOperands());
+  case TargetOpcode::G_FRAME_INDEX:
+  case TargetOpcode::G_GLOBAL_VALUE:
   case TargetOpcode::G_CONSTANT:
     return getInstructionMapping(
         DefaultMappingID, /*Cost=*/1,

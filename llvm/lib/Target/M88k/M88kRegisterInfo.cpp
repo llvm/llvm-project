@@ -49,6 +49,10 @@ BitVector M88kRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // R31 is the stack pointer.
   Reserved.set(M88k::R31);
 
+  // If the function uses the frame pointer, then R30 is reserved.
+  if (getFrameLowering(MF)->hasFP(MF))
+    Reserved.set(M88k::R30);
+
   return Reserved;
 }
 
