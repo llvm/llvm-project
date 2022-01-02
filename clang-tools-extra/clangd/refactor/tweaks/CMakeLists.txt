@@ -26,6 +26,7 @@ add_clang_library(clangDaemonTweaks OBJECT
   PopulateSwitch.cpp
   RawStringLiteral.cpp
   RemoveUsingNamespace.cpp
+  SpecialMembers.cpp
   SwapIfBranches.cpp
 
   LINK_LIBS

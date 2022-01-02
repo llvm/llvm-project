@@ -629,6 +629,8 @@ const ASTContext &ParsedAST::getASTContext() const {
   return Clang->getASTContext();
 }
 
+Sema &ParsedAST::getSema() { return Clang->getSema(); }
+
 Preprocessor &ParsedAST::getPreprocessor() { return Clang->getPreprocessor(); }
 
 std::shared_ptr<Preprocessor> ParsedAST::getPreprocessorPtr() {
