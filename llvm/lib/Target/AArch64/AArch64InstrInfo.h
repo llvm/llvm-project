@@ -26,7 +26,6 @@
 namespace llvm {
 
 class AArch64Subtarget;
-class AArch64TargetMachine;
 
 static const MachineMemOperand::Flags MOSuppressPair =
     MachineMemOperand::MOTargetFlag1;

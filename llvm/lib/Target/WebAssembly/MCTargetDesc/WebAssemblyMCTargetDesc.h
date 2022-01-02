@@ -26,7 +26,6 @@ class MCAsmBackend;
 class MCCodeEmitter;
 class MCInstrInfo;
 class MCObjectTargetWriter;
-class MVT;
 class Triple;
 
 MCCodeEmitter *createWebAssemblyMCCodeEmitter(const MCInstrInfo &MCII);

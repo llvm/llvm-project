@@ -381,7 +381,6 @@ enum {
 } // end namespace SystemZICMP
 
 class SystemZSubtarget;
-class SystemZTargetMachine;
 
 class SystemZTargetLowering : public TargetLowering {
 public:

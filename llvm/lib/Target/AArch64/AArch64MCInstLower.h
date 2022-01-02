@@ -14,15 +14,12 @@
 
 namespace llvm {
 class AsmPrinter;
-class MCAsmInfo;
 class MCContext;
 class MCInst;
 class MCOperand;
 class MCSymbol;
 class MachineInstr;
-class MachineModuleInfoMachO;
 class MachineOperand;
-class Mangler;
 
 /// AArch64MCInstLower - This class is used to lower an MachineInstr
 /// into an MCInst.

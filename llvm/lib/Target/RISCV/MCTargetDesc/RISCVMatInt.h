@@ -15,7 +15,6 @@
 
 namespace llvm {
 class APInt;
-class MCSubtargetInfo;
 
 namespace RISCVMatInt {
 struct Inst {
