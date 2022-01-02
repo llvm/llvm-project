@@ -696,8 +696,7 @@ void mlir::python::populateIRAffine(py::module &m) {
              DefaultingPyMlirContext context) {
             SmallVector<MlirAffineExpr> affineExprs;
             pyListToVector<PyAffineExpr, MlirAffineExpr>(
-                std::move(exprs), affineExprs,
-                "attempting to create an AffineMap");
+                exprs, affineExprs, "attempting to create an AffineMap");
             MlirAffineMap map =
                 mlirAffineMapGet(context->get(), dimCount, symbolCount,
                                  affineExprs.size(), affineExprs.data());

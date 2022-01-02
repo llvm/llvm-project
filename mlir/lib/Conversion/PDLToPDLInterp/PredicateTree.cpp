@@ -271,7 +271,7 @@ static void getConstraintPredicates(pdl::ApplyNativeConstraintOp op,
   Position *pos = *std::max_element(allPositions.begin(), allPositions.end(),
                                     comparePosDepth);
   PredicateBuilder::Predicate pred =
-      builder.getConstraint(op.name(), std::move(allPositions), parameters);
+      builder.getConstraint(op.name(), allPositions, parameters);
   predList.emplace_back(pos, pred);
 }
 
