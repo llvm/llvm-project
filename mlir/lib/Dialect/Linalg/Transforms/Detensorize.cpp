@@ -543,14 +543,11 @@ struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
       if (op->hasTrait<OpTrait::FunctionLike>()) {
         auto &body = function_like_impl::getFunctionBody(op);
         return llvm::all_of(llvm::drop_begin(body, 1), [&](Block &block) {
-          if (llvm::any_of(
-                  blockArgsToDetensor, [&](BlockArgument blockArgument) {
-                    return blockArgument.getOwner() == &block &&
-                           !typeConverter.isLegal(blockArgument.getType());
-                  })) {
-            return false;
-          }
-          return true;
+          return !llvm::any_of(
+              blockArgsToDetensor, [&](BlockArgument blockArgument) {
+                return blockArgument.getOwner() == &block &&
+                       !typeConverter.isLegal(blockArgument.getType());
+              });
         });
       }
 

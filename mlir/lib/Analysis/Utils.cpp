@@ -564,7 +564,7 @@ LogicalResult MemRefRegion::compute(Operation *op, unsigned loopDepth,
   for (auto id : ids) {
     AffineForOp iv;
     if ((iv = getForInductionVarOwner(id)) &&
-        llvm::is_contained(enclosingIVs, iv) == false) {
+        !llvm::is_contained(enclosingIVs, iv)) {
       cst.projectOut(id);
     }
   }

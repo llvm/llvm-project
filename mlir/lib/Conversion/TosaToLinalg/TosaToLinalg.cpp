@@ -1014,11 +1014,7 @@ static bool createReassociationMapsForCollapse(
 
   // If both iterators didn't reach the end, we have leftover dimentions which
   // implies that we have a mismatch in shape.
-  if (currSrcDim != srcShape.size() || currDstDim != dstShape.size()) {
-    return false;
-  }
-
-  return true;
+  return !(currSrcDim != srcShape.size() || currDstDim != dstShape.size());
 }
 
 namespace {

@@ -472,10 +472,7 @@ wouldCreateWriteToNonWritableBuffer(OpOperand &opOperand, OpResult opResult,
   bool hasWrite = aliasesInPlaceWrite(opResult, aliasInfo, state) ||
                   aliasesInPlaceWrite(opOperand.get(), aliasInfo, state) ||
                   state.bufferizesToMemoryWrite(opOperand);
-  if (!hasWrite)
-    return false;
-
-  return true;
+  return hasWrite;
 }
 
 //===----------------------------------------------------------------------===//

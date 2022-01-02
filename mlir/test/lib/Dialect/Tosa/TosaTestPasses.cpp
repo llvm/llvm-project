@@ -71,7 +71,7 @@ ConvertTosaNegateOp::matchAndRewrite(Operation *op,
   double typeRangeMax = double(outputElementType.getStorageTypeMax() -
                                outputElementType.getZeroPoint()) *
                         outputElementType.getScale();
-  bool narrowRange = outputElementType.getStorageTypeMin() == 1 ? true : false;
+  bool narrowRange = outputElementType.getStorageTypeMin() == 1;
 
   auto dstQConstType = RankedTensorType::get(
       outputType.getShape(),

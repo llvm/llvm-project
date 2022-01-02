@@ -302,11 +302,7 @@ bool matcher::operatesOnSuperVectorsOf(Operation &op,
   // This could be useful information if we wanted to reshape at the level of
   // the vector type (but we would have to look at the compute and distinguish
   // between parallel, reduction and possibly other cases.
-  if (!ratio.hasValue()) {
-    return false;
-  }
-
-  return true;
+  return ratio.hasValue();
 }
 
 bool mlir::isDisjointTransferIndices(VectorTransferOpInterface transferA,

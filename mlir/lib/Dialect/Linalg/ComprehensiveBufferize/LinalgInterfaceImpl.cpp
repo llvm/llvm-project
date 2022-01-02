@@ -425,12 +425,10 @@ LogicalResult mlir::linalg::comprehensive_bufferize::linalg_ext::
             // TODO: Support cases such as extract_slice(init_tensor).
             SmallVector<OpOperand *> opOperands =
                 state.getAliasingOpOperand(opResult);
-            if (!llvm::all_of(opOperands, [&](OpOperand *operand) {
-                  return aliasInfo.areEquivalentBufferizedValues(operand->get(),
-                                                                 opResult);
-                }))
-              return true;
-            return false;
+            return !llvm::all_of(opOperands, [&](OpOperand *operand) {
+              return aliasInfo.areEquivalentBufferizedValues(operand->get(),
+                                                             opResult);
+            });
           });
 
       // Replace only if the reverse use-def chain ends at exactly one
