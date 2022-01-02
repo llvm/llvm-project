@@ -669,7 +669,7 @@ getElementType(Type type, Attribute indices,
     emitErrorFn("expected a 32-bit integer array attribute for 'indices'");
     return nullptr;
   }
-  if (!indicesArrayAttr.size()) {
+  if (indicesArrayAttr.empty()) {
     emitErrorFn("expected at least one index for spv.CompositeExtract");
     return nullptr;
   }
@@ -1929,7 +1929,7 @@ static void print(spirv::ExecutionModeOp execModeOp, OpAsmPrinter &printer) {
   printer << " \"" << stringifyExecutionMode(execModeOp.execution_mode())
           << "\"";
   auto values = execModeOp.values();
-  if (!values.size())
+  if (values.empty())
     return;
   printer << ", ";
   llvm::interleaveComma(values, printer, [&](Attribute a) {

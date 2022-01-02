@@ -591,7 +591,7 @@ convertOmpSections(Operation &opInst, llvm::IRBuilderBase &builder,
   // No sections within omp.sections operation - skip generation. This situation
   // is only possible if there is only a terminator operation inside the
   // sections operation
-  if (sectionCBs.size() == 0)
+  if (sectionCBs.empty())
     return success();
 
   assert(isa<omp::SectionOp>(*sectionsOp.region().op_begin()));

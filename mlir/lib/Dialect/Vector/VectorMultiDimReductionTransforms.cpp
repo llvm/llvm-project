@@ -141,12 +141,12 @@ public:
     // 2. Compute flattened parallel and reduction sizes.
     int flattenedParallelDim = 0;
     int flattenedReductionDim = 0;
-    if (parallelShapes.size() > 0) {
+    if (!parallelShapes.empty()) {
       flattenedParallelDim = 1;
       for (auto d : parallelShapes)
         flattenedParallelDim *= d;
     }
-    if (reductionShapes.size() > 0) {
+    if (!reductionShapes.empty()) {
       flattenedReductionDim = 1;
       for (auto d : reductionShapes)
         flattenedReductionDim *= d;
