@@ -83,7 +83,7 @@ static Value broadcast(ImplicitLocOpBuilder &builder, Value value,
 static Value
 handleMultidimensionalVectors(ImplicitLocOpBuilder &builder,
                               ValueRange operands, int64_t vectorWidth,
-                              std::function<Value(ValueRange)> compute) {
+                              llvm::function_ref<Value(ValueRange)> compute) {
   assert(!operands.empty() && "operands must be not empty");
   assert(vectorWidth > 0 && "vector width must be larger than 0");
 

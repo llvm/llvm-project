@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <utility>
+
 #include "mlir/Analysis/NestedMatcher.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
@@ -55,7 +57,7 @@ void NestedPattern::freeNested() {
 
 NestedPattern::NestedPattern(ArrayRef<NestedPattern> nested,
                              FilterFunctionType filter)
-    : nestedPatterns(), filter(filter), skip(nullptr) {
+    : nestedPatterns(), filter(std::move(filter)), skip(nullptr) {
   copyNestedToThis(nested);
 }
 
@@ -132,13 +134,13 @@ namespace mlir {
 namespace matcher {
 
 NestedPattern Op(FilterFunctionType filter) {
-  return NestedPattern({}, filter);
+  return NestedPattern({}, std::move(filter));
 }
 
-NestedPattern If(NestedPattern child) {
+NestedPattern If(const NestedPattern &child) {
   return NestedPattern(child, isAffineIfOp);
 }
-NestedPattern If(FilterFunctionType filter, NestedPattern child) {
+NestedPattern If(const FilterFunctionType &filter, const NestedPattern &child) {
   return NestedPattern(child, [filter](Operation &op) {
     return isAffineIfOp(op) && filter(op);
   });
@@ -146,23 +148,26 @@ NestedPattern If(FilterFunctionType filter, NestedPattern child) {
 NestedPattern If(ArrayRef<NestedPattern> nested) {
   return NestedPattern(nested, isAffineIfOp);
 }
-NestedPattern If(FilterFunctionType filter, ArrayRef<NestedPattern> nested) {
+NestedPattern If(const FilterFunctionType &filter,
+                 ArrayRef<NestedPattern> nested) {
   return NestedPattern(nested, [filter](Operation &op) {
     return isAffineIfOp(op) && filter(op);
   });
 }
 
-NestedPattern For(NestedPattern child) {
+NestedPattern For(const NestedPattern &child) {
   return NestedPattern(child, isAffineForOp);
 }
-NestedPattern For(FilterFunctionType filter, NestedPattern child) {
+NestedPattern For(const FilterFunctionType &filter,
+                  const NestedPattern &child) {
   return NestedPattern(
       child, [=](Operation &op) { return isAffineForOp(op) && filter(op); });
 }
 NestedPattern For(ArrayRef<NestedPattern> nested) {
   return NestedPattern(nested, isAffineForOp);
 }
-NestedPattern For(FilterFunctionType filter, ArrayRef<NestedPattern> nested) {
+NestedPattern For(const FilterFunctionType &filter,
+                  ArrayRef<NestedPattern> nested) {
   return NestedPattern(
       nested, [=](Operation &op) { return isAffineForOp(op) && filter(op); });
 }

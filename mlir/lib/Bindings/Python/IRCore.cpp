@@ -21,6 +21,8 @@
 #include "llvm/ADT/SmallVector.h"
 #include <pybind11/stl.h>
 
+#include <utility>
+
 namespace py = pybind11;
 using namespace mlir;
 using namespace mlir::python;
@@ -176,7 +178,7 @@ static MlirStringRef toMlirStringRef(const std::string &s) {
 struct PyGlobalDebugFlag {
   static void set(py::object &o, bool enable) { mlirEnableGlobalDebug(enable); }
 
-  static bool get(py::object) { return mlirIsGlobalDebugEnabled(); }
+  static bool get(const py::object &) { return mlirIsGlobalDebugEnabled(); }
 
   static void bind(py::module &m) {
     // Debug flags.
@@ -320,7 +322,7 @@ public:
     throw SetPyError(PyExc_IndexError, "attempt to access out of bounds block");
   }
 
-  PyBlock appendBlock(py::args pyArgTypes) {
+  PyBlock appendBlock(const py::args &pyArgTypes) {
     operation->checkValid();
     llvm::SmallVector<MlirType, 4> argTypes;
     argTypes.reserve(pyArgTypes.size());
@@ -503,9 +505,9 @@ pybind11::object PyMlirContext::contextEnter() {
   return PyThreadContextEntry::pushContext(*this);
 }
 
-void PyMlirContext::contextExit(pybind11::object excType,
-                                pybind11::object excVal,
-                                pybind11::object excTb) {
+void PyMlirContext::contextExit(const pybind11::object &excType,
+                                const pybind11::object &excVal,
+                                const pybind11::object &excTb) {
   PyThreadContextEntry::popContext(*this);
 }
 
@@ -689,8 +691,9 @@ py::object PyLocation::contextEnter() {
   return PyThreadContextEntry::pushLocation(*this);
 }
 
-void PyLocation::contextExit(py::object excType, py::object excVal,
-                             py::object excTb) {
+void PyLocation::contextExit(const pybind11::object &excType,
+                             const pybind11::object &excVal,
+                             const pybind11::object &excTb) {
   PyThreadContextEntry::popLocation(*this);
 }
 
@@ -945,11 +948,11 @@ py::object PyOperation::createFromCapsule(py::object capsule) {
 }
 
 py::object PyOperation::create(
-    std::string name, llvm::Optional<std::vector<PyType *>> results,
+    const std::string &name, llvm::Optional<std::vector<PyType *>> results,
     llvm::Optional<std::vector<PyValue *>> operands,
     llvm::Optional<py::dict> attributes,
     llvm::Optional<std::vector<PyBlock *>> successors, int regions,
-    DefaultingPyLocation location, py::object maybeIp) {
+    DefaultingPyLocation location, const py::object &maybeIp) {
   llvm::SmallVector<MlirValue, 4> mlirOperands;
   llvm::SmallVector<MlirType, 4> mlirResults;
   llvm::SmallVector<MlirBlock, 4> mlirSuccessors;
@@ -1105,7 +1108,7 @@ void PyOperation::erase() {
 //------------------------------------------------------------------------------
 
 py::object
-PyOpView::buildGeneric(py::object cls, py::list resultTypeList,
+PyOpView::buildGeneric(const py::object &cls, py::list resultTypeList,
                        py::list operandList,
                        llvm::Optional<py::dict> attributes,
                        llvm::Optional<std::vector<PyBlock *>> successors,
@@ -1359,16 +1362,17 @@ PyOpView::buildGeneric(py::object cls, py::list resultTypeList,
                              /*operands=*/std::move(operands),
                              /*attributes=*/std::move(attributes),
                              /*successors=*/std::move(successors),
-                             /*regions=*/*regions, location, maybeIp);
+                             /*regions=*/*regions, location,
+                             std::move(maybeIp));
 }
 
-PyOpView::PyOpView(py::object operationObject)
+PyOpView::PyOpView(const py::object &operationObject)
     // Casting through the PyOperationBase base-class and then back to the
     // Operation lets us accept any PyOperationBase subclass.
     : operation(py::cast<PyOperationBase &>(operationObject).getOperation()),
       operationObject(operation.getRef().getObject()) {}
 
-py::object PyOpView::createRawSubclass(py::object userClass) {
+py::object PyOpView::createRawSubclass(const py::object &userClass) {
   // This is... a little gross. The typical pattern is to have a pure python
   // class that extends OpView like:
   //   class AddFOp(_cext.ir.OpView):
@@ -1465,9 +1469,9 @@ py::object PyInsertionPoint::contextEnter() {
   return PyThreadContextEntry::pushInsertionPoint(*this);
 }
 
-void PyInsertionPoint::contextExit(pybind11::object excType,
-                                   pybind11::object excVal,
-                                   pybind11::object excTb) {
+void PyInsertionPoint::contextExit(const pybind11::object &excType,
+                                   const pybind11::object &excVal,
+                                   const pybind11::object &excTb) {
   PyThreadContextEntry::popInsertionPoint(*this);
 }
 
@@ -1954,7 +1958,8 @@ private:
 /// attributes, or by index, producing named attributes.
 class PyOpAttributeMap {
 public:
-  PyOpAttributeMap(PyOperationRef operation) : operation(operation) {}
+  PyOpAttributeMap(PyOperationRef operation)
+      : operation(std::move(operation)) {}
 
   PyAttribute dunderGetItemNamed(const std::string &name) {
     MlirAttribute attr = mlirOperationGetAttributeByName(operation->get(),
@@ -1979,7 +1984,7 @@ public:
                     mlirIdentifierStr(namedAttr.name).length));
   }
 
-  void dunderSetItem(const std::string &name, PyAttribute attr) {
+  void dunderSetItem(const std::string &name, const PyAttribute &attr) {
     mlirOperationSetAttributeByName(operation->get(), toMlirStringRef(name),
                                     attr);
   }

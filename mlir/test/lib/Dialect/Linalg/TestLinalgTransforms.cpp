@@ -567,7 +567,7 @@ static void applyExtractSliceOfPadTensorSwapPattern(FuncOp funcOp) {
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 }
 
-static void applyTilePattern(FuncOp funcOp, std::string loopType,
+static void applyTilePattern(FuncOp funcOp, const std::string &loopType,
                              ArrayRef<int64_t> tileSizes,
                              ArrayRef<int64_t> peeledLoops,
                              bool scalarizeDynamicDims) {

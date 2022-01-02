@@ -24,7 +24,7 @@
 using namespace mlir;
 
 ReductionNode::ReductionNode(
-    ReductionNode *parentNode, std::vector<Range> ranges,
+    ReductionNode *parentNode, const std::vector<Range> &ranges,
     llvm::SpecificBumpPtrAllocator<ReductionNode> &allocator)
     /// Root node will have the parent pointer point to themselves.
     : parent(parentNode == nullptr ? this : parentNode),

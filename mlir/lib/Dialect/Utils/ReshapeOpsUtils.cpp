@@ -215,7 +215,7 @@ ArrayAttr mlir::getReassociationIndicesAttribute(
     OpBuilder &b, ArrayRef<ReassociationIndices> reassociation) {
   SmallVector<Attribute, 4> reassociationAttr =
       llvm::to_vector<4>(llvm::map_range(
-          reassociation, [&](ReassociationIndices indices) -> Attribute {
+          reassociation, [&](const ReassociationIndices &indices) -> Attribute {
             return b.getI64ArrayAttr(indices).cast<Attribute>();
           }));
   return b.getArrayAttr(reassociationAttr);

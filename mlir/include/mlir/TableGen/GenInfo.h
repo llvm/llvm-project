@@ -64,7 +64,8 @@ private:
 ///   // At namespace scope.
 ///   static GenRegistration Print("print", "Print records", [](...){...});
 struct GenRegistration {
-  GenRegistration(StringRef arg, StringRef description, GenFunction function);
+  GenRegistration(StringRef arg, StringRef description,
+                  const GenFunction &function);
 };
 
 } // namespace mlir
