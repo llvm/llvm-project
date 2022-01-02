@@ -982,7 +982,7 @@ static Value createPrivateMemRef(AffineForOp forOp, Operation *srcStoreOpInst,
       replaceAllMemRefUsesWith(oldMemRef, newMemRef, {}, indexRemap,
                                /*extraOperands=*/outerIVs,
                                /*symbolOperands=*/{},
-                               /*domInstFilter=*/&*forOp.getBody()->begin());
+                               /*domOpFilter=*/&*forOp.getBody()->begin());
   assert(succeeded(res) &&
          "replaceAllMemrefUsesWith should always succeed here");
   (void)res;

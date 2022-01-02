@@ -421,7 +421,7 @@ LogApproximationBase<Op>::logMatchAndRewrite(Op op, PatternRewriter &rewriter,
   x = max(builder, x, cstMinNormPos);
 
   // Extract significant in the range [0.5,1) and exponent.
-  std::pair<Value, Value> pair = frexp(builder, x, /*is_positive=*/true);
+  std::pair<Value, Value> pair = frexp(builder, x, /*isPositive=*/true);
   x = pair.first;
   Value e = pair.second;
 
