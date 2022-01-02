@@ -40,6 +40,10 @@ namespace llvm {
 extern cl::opt<bool> DisableBranches;
 } // namespace llvm
 
+// A command flag to be used for debugging to indirect calls from similarity
+// matching and outlining.
+extern cl::opt<bool> DisableIndirectCalls;
+
 // Set to true if the user wants the ir outliner to run on linkonceodr linkage
 // functions. This is false by default because the linker can dedupe linkonceodr
 // functions. Since the outliner is confined to a single module (modulo LTO),
@@ -2519,6 +2523,7 @@ bool IROutliner::extractSection(OutlinableRegion &Region) {
 unsigned IROutliner::doOutline(Module &M) {
   // Find the possible similarity sections.
   InstructionClassifier.EnableBranches = !DisableBranches;
+  InstructionClassifier.EnableIndirectCalls = !DisableIndirectCalls;
   IRSimilarityIdentifier &Identifier = getIRSI(M);
   SimilarityGroupList &SimilarityCandidates = *Identifier.getSimilarity();
 
