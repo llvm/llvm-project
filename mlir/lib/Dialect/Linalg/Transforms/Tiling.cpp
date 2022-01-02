@@ -181,7 +181,7 @@ tileLinalgOpImpl(OpBuilder &b, LinalgOp op, ValueRange tileSizes,
       b, op.getLoc(), shapeSizesToLoopsMap, allShapeSizes, tileSizes);
 
   SmallVector<Attribute, 4> iteratorTypes;
-  for (auto attr :
+  for (const auto &attr :
        enumerate(op.iterator_types().cast<ArrayAttr>().getValue())) {
     if (loopIndexToRangeIndex.count(attr.index()))
       iteratorTypes.push_back(attr.value());

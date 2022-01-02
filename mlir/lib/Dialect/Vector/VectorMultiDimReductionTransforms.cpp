@@ -126,7 +126,7 @@ public:
     // 1. Separate reduction and parallel dims.
     SmallVector<int64_t, 4> parallelDims, parallelShapes;
     SmallVector<int64_t, 4> reductionDims, reductionShapes;
-    for (auto it : llvm::enumerate(reductionMask)) {
+    for (const auto &it : llvm::enumerate(reductionMask)) {
       int64_t i = it.index();
       bool isReduction = it.value();
       if (isReduction) {

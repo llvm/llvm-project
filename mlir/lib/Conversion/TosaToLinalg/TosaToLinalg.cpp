@@ -694,7 +694,7 @@ elementwiseMatchAndRewriteHelper(Operation *operation,
     SmallVector<int64_t, 5> newShape;
     SmallVector<AffineExpr, 4> affineExprs;
     newShape.reserve(type.getRank());
-    for (auto it : llvm::enumerate(type.getShape())) {
+    for (const auto &it : llvm::enumerate(type.getShape())) {
       if (it.value() == resultTy.getDimSize(it.index())) {
         newShape.push_back(it.value());
         affineExprs.push_back(
@@ -1175,7 +1175,7 @@ public:
     SmallVector<AffineExpr, 2> inputExprs;
     inputExprs.resize(resultTy.getRank());
     auto operandTy = input.getType().cast<ShapedType>();
-    for (auto permutation : llvm::enumerate(perms.getValues<APInt>())) {
+    for (const auto &permutation : llvm::enumerate(perms.getValues<APInt>())) {
       auto index = permutation.index();
       auto value = permutation.value().getZExtValue();
       if (!operandTy.hasRank() || operandTy.isDynamicDim(index)) {

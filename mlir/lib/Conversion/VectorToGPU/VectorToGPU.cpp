@@ -449,7 +449,7 @@ static void convertForOp(scf::ForOp op,
                          llvm::DenseMap<Value, Value> &valueMapping) {
   SmallVector<Value> newOperands;
   SmallVector<std::pair<size_t, size_t>> argMapping;
-  for (auto operand : llvm::enumerate(op.getIterOperands())) {
+  for (const auto &operand : llvm::enumerate(op.getIterOperands())) {
     auto it = valueMapping.find(operand.value());
     if (it == valueMapping.end())
       continue;
@@ -474,7 +474,7 @@ static void convertYieldOp(scf::YieldOp op,
   OpBuilder b(op);
   auto loop = cast<scf::ForOp>(op->getParentOp());
   auto yieldOperands = llvm::to_vector<4>(op.getOperands());
-  for (auto operand : llvm::enumerate(op.getOperands())) {
+  for (const auto &operand : llvm::enumerate(op.getOperands())) {
     auto it = valueMapping.find(operand.value());
     if (it == valueMapping.end())
       continue;

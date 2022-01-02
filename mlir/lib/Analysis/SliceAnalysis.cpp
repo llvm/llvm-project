@@ -86,7 +86,7 @@ static void getBackwardSliceImpl(Operation *op,
   if (filter && !filter(op))
     return;
 
-  for (auto en : llvm::enumerate(op->getOperands())) {
+  for (const auto &en : llvm::enumerate(op->getOperands())) {
     auto operand = en.value();
     if (auto *definingOp = operand.getDefiningOp()) {
       if (backwardSlice->count(definingOp) == 0)

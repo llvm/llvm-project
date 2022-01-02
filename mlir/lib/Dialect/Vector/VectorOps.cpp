@@ -270,7 +270,7 @@ void vector::MultiDimReductionOp::build(OpBuilder &builder,
   result.addTypes(targetType);
 
   SmallVector<int64_t> reductionDims;
-  for (auto en : llvm::enumerate(reductionMask))
+  for (const auto &en : llvm::enumerate(reductionMask))
     if (en.value())
       reductionDims.push_back(en.index());
   result.addAttribute(getReductionDimsAttrName(),
@@ -615,7 +615,7 @@ static LogicalResult verify(ContractionOp op) {
   // that the number of map outputs equals the rank of its associated
   // vector operand.
   unsigned numIterators = op.iterator_types().getValue().size();
-  for (auto it : llvm::enumerate(op.indexing_maps())) {
+  for (const auto &it : llvm::enumerate(op.indexing_maps())) {
     auto index = it.index();
     auto map = it.value().cast<AffineMapAttr>().getValue();
     if (map.getNumSymbols() != 0)
@@ -695,7 +695,7 @@ static std::vector<std::pair<int64_t, int64_t>>
 getDimMap(ArrayRef<AffineMap> indexingMaps, ArrayAttr iteratorTypes,
           StringRef targetIteratorTypeName, MLIRContext *context) {
   std::vector<std::pair<int64_t, int64_t>> dimMap;
-  for (auto it : llvm::enumerate(iteratorTypes)) {
+  for (const auto &it : llvm::enumerate(iteratorTypes)) {
     auto iteratorTypeName = it.value().cast<StringAttr>().getValue();
     if (iteratorTypeName != targetIteratorTypeName)
       continue;
@@ -715,7 +715,7 @@ void ContractionOp::getIterationBounds(
   auto resVectorType = getResultType().dyn_cast<VectorType>();
   SmallVector<AffineMap, 4> indexingMaps(getIndexingMaps());
   SmallVector<int64_t, 2> iterationShape;
-  for (auto it : llvm::enumerate(iterator_types())) {
+  for (const auto &it : llvm::enumerate(iterator_types())) {
     // Search lhs/rhs map results for 'targetExpr'.
     auto targetExpr = getAffineDimExpr(it.index(), getContext());
     auto iteratorTypeName = it.value().cast<StringAttr>().getValue();
@@ -738,7 +738,7 @@ void ContractionOp::getIterationIndexMap(
     std::vector<DenseMap<int64_t, int64_t>> &iterationIndexMap) {
   unsigned numMaps = indexing_maps().getValue().size();
   iterationIndexMap.resize(numMaps);
-  for (auto it : llvm::enumerate(indexing_maps())) {
+  for (const auto &it : llvm::enumerate(indexing_maps())) {
     auto index = it.index();
     auto map = it.value().cast<AffineMapAttr>().getValue();
     for (unsigned i = 0, e = map.getNumResults(); i < e; ++i) {
@@ -933,7 +933,7 @@ static LogicalResult verify(vector::ExtractOp op) {
   if (positionAttr.size() > static_cast<unsigned>(op.getVectorType().getRank()))
     return op.emitOpError(
         "expected position attribute of rank smaller than vector rank");
-  for (auto en : llvm::enumerate(positionAttr)) {
+  for (const auto &en : llvm::enumerate(positionAttr)) {
     auto attr = en.value().dyn_cast<IntegerAttr>();
     if (!attr || attr.getInt() < 0 ||
         attr.getInt() >= op.getVectorType().getDimSize(en.index()))
@@ -1511,7 +1511,7 @@ static LogicalResult verify(ShuffleOp op) {
     return op.emitOpError("mask length mismatch");
   // Verify all indices.
   int64_t indexSize = v1Type.getDimSize(0) + v2Type.getDimSize(0);
-  for (auto en : llvm::enumerate(maskAttr)) {
+  for (const auto &en : llvm::enumerate(maskAttr)) {
     auto attr = en.value().dyn_cast<IntegerAttr>();
     if (!attr || attr.getInt() < 0 || attr.getInt() >= indexSize)
       return op.emitOpError("mask index #")
@@ -1621,7 +1621,7 @@ static LogicalResult verify(InsertOp op) {
       (positionAttr.size() != static_cast<unsigned>(destVectorType.getRank())))
     return op.emitOpError(
         "expected position attribute rank to match the dest vector rank");
-  for (auto en : llvm::enumerate(positionAttr)) {
+  for (const auto &en : llvm::enumerate(positionAttr)) {
     auto attr = en.value().dyn_cast<IntegerAttr>();
     if (!attr || attr.getInt() < 0 ||
         attr.getInt() >= destVectorType.getDimSize(en.index()))
@@ -2822,7 +2822,7 @@ public:
       newIndices.push_back(getValueOrCreateConstantIndexOp(
           rewriter, extractOp.getLoc(), offset));
     }
-    for (auto it : llvm::enumerate(xferOp.indices())) {
+    for (const auto &it : llvm::enumerate(xferOp.indices())) {
       OpFoldResult offset =
           extractOp.getMixedOffsets()[it.index() + rankReduced];
       newIndices.push_back(rewriter.create<arith::AddIOp>(
@@ -3913,7 +3913,7 @@ static LogicalResult verify(vector::TransposeOp op) {
   if (rank != size)
     return op.emitOpError("transposition length mismatch: ") << size;
   SmallVector<bool, 8> seen(rank, false);
-  for (auto ta : llvm::enumerate(transpAttr)) {
+  for (const auto &ta : llvm::enumerate(transpAttr)) {
     int64_t i = ta.value().cast<IntegerAttr>().getInt();
     if (i < 0 || i >= rank)
       return op.emitOpError("transposition index out of range: ") << i;
@@ -4004,7 +4004,7 @@ static LogicalResult verify(ConstantMaskOp &op) {
   // result dimension size.
   auto resultShape = resultType.getShape();
   SmallVector<int64_t, 4> maskDimSizes;
-  for (auto it : llvm::enumerate(op.mask_dim_sizes())) {
+  for (const auto &it : llvm::enumerate(op.mask_dim_sizes())) {
     int64_t attrValue = it.value().cast<IntegerAttr>().getInt();
     if (attrValue < 0 || attrValue > resultShape[it.index()])
       return op.emitOpError(

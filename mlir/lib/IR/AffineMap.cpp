@@ -121,7 +121,7 @@ bool AffineMap::isMinorIdentityWithBroadcasting(
   if (getNumDims() < getNumResults())
     return false;
   unsigned suffixStart = getNumDims() - getNumResults();
-  for (auto idxAndExpr : llvm::enumerate(getResults())) {
+  for (const auto &idxAndExpr : llvm::enumerate(getResults())) {
     unsigned resIdx = idxAndExpr.index();
     AffineExpr expr = idxAndExpr.value();
     if (auto constExpr = expr.dyn_cast<AffineConstantExpr>()) {
@@ -168,7 +168,7 @@ bool AffineMap::isPermutationOfMinorIdentityWithBroadcasting(
       getNumResults() > getNumInputs() ? getNumResults() - getNumInputs() : 0;
   llvm::SmallBitVector dimFound(std::max(getNumInputs(), getNumResults()),
                                 false);
-  for (auto idxAndExpr : llvm::enumerate(getResults())) {
+  for (const auto &idxAndExpr : llvm::enumerate(getResults())) {
     unsigned resIdx = idxAndExpr.index();
     AffineExpr expr = idxAndExpr.value();
     // Each result may be either a constant 0 (broadcast dimension) or a
@@ -675,7 +675,7 @@ AffineMap mlir::inversePermutation(AffineMap map) {
     return map;
   assert(map.getNumSymbols() == 0 && "expected map without symbols");
   SmallVector<AffineExpr, 4> exprs(map.getNumDims());
-  for (auto en : llvm::enumerate(map.getResults())) {
+  for (const auto &en : llvm::enumerate(map.getResults())) {
     auto expr = en.value();
     // Skip non-permutations.
     if (auto d = expr.dyn_cast<AffineDimExpr>()) {

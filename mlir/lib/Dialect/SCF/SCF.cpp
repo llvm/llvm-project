@@ -1247,7 +1247,7 @@ struct RemoveUnusedResults : public OpRewritePattern<IfOp> {
 
     // Replace the operation by the new one.
     SmallVector<Value, 4> repResults(op.getNumResults());
-    for (auto en : llvm::enumerate(usedResults))
+    for (const auto &en : llvm::enumerate(usedResults))
       repResults[en.value().getResultNumber()] = newOp.getResult(en.index());
     rewriter.replaceOp(op, repResults);
     return success();
@@ -1296,7 +1296,8 @@ struct ConvertTrivialIfToSelect : public OpRewritePattern<IfOp> {
     SmallVector<Value> results(op->getNumResults());
     assert(thenYieldArgs.size() == results.size());
     assert(elseYieldArgs.size() == results.size());
-    for (auto it : llvm::enumerate(llvm::zip(thenYieldArgs, elseYieldArgs))) {
+    for (const auto &it :
+         llvm::enumerate(llvm::zip(thenYieldArgs, elseYieldArgs))) {
       Value trueVal = std::get<0>(it.value());
       Value falseVal = std::get<1>(it.value());
       if (trueVal == falseVal)
@@ -1564,7 +1565,7 @@ struct CombineIfs : public OpRewritePattern<IfOp> {
 
     SmallVector<Value> prevValues;
     SmallVector<Value> nextValues;
-    for (auto pair : llvm::enumerate(combinedIf.getResults())) {
+    for (const auto &pair : llvm::enumerate(combinedIf.getResults())) {
       if (pair.index() < prevIf.getNumResults())
         prevValues.push_back(pair.value());
       else
@@ -2368,7 +2369,7 @@ struct WhileUnusedResult : public OpRewritePattern<WhileOp> {
     SmallVector<Type> newResultTypes;
     SmallVector<Value> newTermArgs;
     bool needUpdate = false;
-    for (auto it :
+    for (const auto &it :
          llvm::enumerate(llvm::zip(op.getResults(), afterArgs, termArgs))) {
       auto i = static_cast<unsigned>(it.index());
       Value result = std::get<0>(it.value());
@@ -2403,7 +2404,7 @@ struct WhileUnusedResult : public OpRewritePattern<WhileOp> {
     // null).
     SmallVector<Value> newResults(op.getNumResults());
     SmallVector<Value> newAfterBlockArgs(op.getNumResults());
-    for (auto it : llvm::enumerate(newResultsIndices)) {
+    for (const auto &it : llvm::enumerate(newResultsIndices)) {
       newResults[it.value()] = newWhile.getResult(it.index());
       newAfterBlockArgs[it.value()] = newAfterBlock.getArgument(it.index());
     }

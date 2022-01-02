@@ -1155,7 +1155,7 @@ PyOpView::buildGeneric(const py::object &cls, py::list resultTypeList,
   resultTypes.reserve(resultTypeList.size());
   if (resultSegmentSpecObj.is_none()) {
     // Non-variadic result unpacking.
-    for (auto it : llvm::enumerate(resultTypeList)) {
+    for (const auto &it : llvm::enumerate(resultTypeList)) {
       try {
         resultTypes.push_back(py::cast<PyType *>(it.value()));
         if (!resultTypes.back())
@@ -1179,7 +1179,7 @@ PyOpView::buildGeneric(const py::object &cls, py::list resultTypeList,
                                 .str());
     }
     resultSegmentLengths.reserve(resultTypeList.size());
-    for (auto it :
+    for (const auto &it :
          llvm::enumerate(llvm::zip(resultTypeList, resultSegmentSpec))) {
       int segmentSpec = std::get<1>(it.value());
       if (segmentSpec == 1 || segmentSpec == 0) {
@@ -1240,7 +1240,7 @@ PyOpView::buildGeneric(const py::object &cls, py::list resultTypeList,
   operands.reserve(operands.size());
   if (operandSegmentSpecObj.is_none()) {
     // Non-sized operand unpacking.
-    for (auto it : llvm::enumerate(operandList)) {
+    for (const auto &it : llvm::enumerate(operandList)) {
       try {
         operands.push_back(py::cast<PyValue *>(it.value()));
         if (!operands.back())
@@ -1264,7 +1264,7 @@ PyOpView::buildGeneric(const py::object &cls, py::list resultTypeList,
                                 .str());
     }
     operandSegmentLengths.reserve(operandList.size());
-    for (auto it :
+    for (const auto &it :
          llvm::enumerate(llvm::zip(operandList, operandSegmentSpec))) {
       int segmentSpec = std::get<1>(it.value());
       if (segmentSpec == 1 || segmentSpec == 0) {

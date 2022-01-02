@@ -162,7 +162,7 @@ static void getTreePredicates(std::vector<PositionalPredicate> &predList,
                       builder.getAllOperands(opPos));
   } else {
     bool foundVariableLength = false;
-    for (auto operandIt : llvm::enumerate(operands)) {
+    for (const auto &operandIt : llvm::enumerate(operands)) {
       bool isVariadic = operandIt.value().getType().isa<pdl::RangeType>();
       foundVariableLength |= isVariadic;
 
@@ -460,7 +460,7 @@ static void buildCostGraph(ArrayRef<Value> roots, RootOrderingGraph &graph,
             }
 
             // Default case: visit all the operands.
-            for (auto p : llvm::enumerate(operationOp.operands()))
+            for (const auto &p : llvm::enumerate(operationOp.operands()))
               toVisit.emplace(p.value(), entry.value, p.index(),
                               entry.depth + 1);
           })

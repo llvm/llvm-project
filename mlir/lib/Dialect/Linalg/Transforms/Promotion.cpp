@@ -87,7 +87,7 @@ defaultAllocBufferCallBack(const LinalgPromotionOptions &options,
   auto one = b.createOrFold<arith::ConstantIndexOp>(1);
 
   Value allocSize = one;
-  for (auto size : llvm::enumerate(boundingSubViewSize))
+  for (const auto &size : llvm::enumerate(boundingSubViewSize))
     allocSize = b.createOrFold<arith::MulIOp>(allocSize, size.value());
   Value buffer = allocBuffer(b, options, viewType.getElementType(), allocSize,
                              layout, alignment);
@@ -219,7 +219,7 @@ FailureOr<PromotionInfo> mlir::linalg::promoteSubviewAsNewBuffer(
   SmallVector<OpFoldResult> partialSizes;
   fullSizes.reserve(rank);
   partialSizes.reserve(rank);
-  for (auto en : llvm::enumerate(subView.getOrCreateRanges(b, loc))) {
+  for (const auto &en : llvm::enumerate(subView.getOrCreateRanges(b, loc))) {
     auto rangeValue = en.value();
     // Try to extract a tight constant.
     LLVM_DEBUG(llvm::dbgs() << "Extract tightest: " << rangeValue.size << "\n");

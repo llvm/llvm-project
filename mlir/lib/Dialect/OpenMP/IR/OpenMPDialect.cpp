@@ -249,7 +249,7 @@ verifyScheduleModifiers(OpAsmParser &parser,
                         SmallVectorImpl<SmallString<12>> &modifiers) {
   if (modifiers.size() > 2)
     return parser.emitError(parser.getNameLoc()) << " unexpected modifier(s)";
-  for (auto mod : modifiers) {
+  for (const auto &mod : modifiers) {
     // Translate the string. If it has no value, then it was not a valid
     // modifier!
     auto symbol = symbolizeScheduleModifier(mod);

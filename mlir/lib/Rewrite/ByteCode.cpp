@@ -198,9 +198,9 @@ public:
         maxTypeRangeMemoryIndex(maxTypeRangeMemoryIndex),
         maxValueRangeMemoryIndex(maxValueRangeMemoryIndex),
         maxLoopLevel(maxLoopLevel) {
-    for (auto it : llvm::enumerate(constraintFns))
+    for (const auto &it : llvm::enumerate(constraintFns))
       constraintToMemIndex.try_emplace(it.value().first(), it.index());
-    for (auto it : llvm::enumerate(rewriteFns))
+    for (const auto &it : llvm::enumerate(rewriteFns))
       externalRewriterToMemIndex.try_emplace(it.value().first(), it.index());
   }
 
@@ -631,7 +631,7 @@ void Generator::allocateMemoryIndices(FuncOp matcherFunc,
     ByteCodeLiveRange &defRange = defIt.second;
 
     // Try to allocate to an existing index.
-    for (auto existingIndexIt : llvm::enumerate(allocatedIndices)) {
+    for (const auto &existingIndexIt : llvm::enumerate(allocatedIndices)) {
       ByteCodeLiveRange &existingRange = existingIndexIt.value();
       if (!defRange.overlaps(existingRange)) {
         existingRange.unionWith(defRange);
