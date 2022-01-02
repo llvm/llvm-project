@@ -691,7 +691,7 @@ extern "C" {
 /// type is 64-bit, but targets with different "index" bit widths should link
 /// with an alternatively built runtime support library.
 // TODO: support such targets?
-typedef uint64_t index_t;
+using index_t = uint64_t;
 
 //===----------------------------------------------------------------------===//
 //
