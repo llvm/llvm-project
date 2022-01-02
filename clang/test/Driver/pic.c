@@ -301,3 +301,13 @@
 // RUN:   | FileCheck %s --check-prefix=CHECK-PIC2
 // RUN: %clang -c %s -target aarch64-windows-gnu -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-PIC2
+//
+// On MinGW, allow specifying -fPIC & friends but ignore them
+// RUN: %clang -fno-PIC -c %s -target x86_64-pc-windows-gnu -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIC2
+// RUN: %clang -fPIC -c %s -target i686-pc-windows-gnu -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-NO-PIC
+// RUN: %clang -fno-PIC -c %s -target aarch64-pc-windows-gnu -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIC2
+// RUN: %clang -fPIC -c %s -target armv7-pc-windows-gnu -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-NO-PIC
