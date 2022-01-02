@@ -448,26 +448,31 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
   // current style uses wrapping before or after operators for the given
   // operator.
   if (Previous.is(TT_BinaryOperator) && Current.CanBreakBefore) {
-    // If we need to break somewhere inside the LHS of a binary expression, we
-    // should also break after the operator. Otherwise, the formatting would
-    // hide the operator precedence, e.g. in:
-    //   if (aaaaaaaaaaaaaa ==
-    //           bbbbbbbbbbbbbb && c) {..
-    // For comparisons, we only apply this rule, if the LHS is a binary
-    // expression itself as otherwise, the line breaks seem superfluous.
-    // We need special cases for ">>" which we have split into two ">" while
-    // lexing in order to make template parsing easier.
-    bool IsComparison = (Previous.getPrecedence() == prec::Relational ||
-                         Previous.getPrecedence() == prec::Equality ||
-                         Previous.getPrecedence() == prec::Spaceship) &&
-                        Previous.Previous &&
-                        Previous.Previous->isNot(TT_BinaryOperator); // For >>.
-    bool LHSIsBinaryExpr =
-        Previous.Previous && Previous.Previous->EndsBinaryExpression;
-    if ((!IsComparison || LHSIsBinaryExpr) && !Current.isTrailingComment() &&
-        Previous.getPrecedence() != prec::Assignment &&
-        CurrentState.BreakBeforeParameter)
-      return true;
+    const auto PreviousPrecedence = Previous.getPrecedence();
+    if (PreviousPrecedence != prec::Assignment &&
+        CurrentState.BreakBeforeParameter && !Current.isTrailingComment()) {
+      const bool LHSIsBinaryExpr =
+          Previous.Previous && Previous.Previous->EndsBinaryExpression;
+      if (LHSIsBinaryExpr)
+        return true;
+      // If we need to break somewhere inside the LHS of a binary expression, we
+      // should also break after the operator. Otherwise, the formatting would
+      // hide the operator precedence, e.g. in:
+      //   if (aaaaaaaaaaaaaa ==
+      //           bbbbbbbbbbbbbb && c) {..
+      // For comparisons, we only apply this rule, if the LHS is a binary
+      // expression itself as otherwise, the line breaks seem superfluous.
+      // We need special cases for ">>" which we have split into two ">" while
+      // lexing in order to make template parsing easier.
+      const bool IsComparison =
+          (PreviousPrecedence == prec::Relational ||
+           PreviousPrecedence == prec::Equality ||
+           PreviousPrecedence == prec::Spaceship) &&
+          Previous.Previous &&
+          Previous.Previous->isNot(TT_BinaryOperator); // For >>.
+      if (!IsComparison)
+        return true;
+    }
   } else if (Current.is(TT_BinaryOperator) && Current.CanBreakBefore &&
              CurrentState.BreakBeforeParameter) {
     return true;
