@@ -1431,13 +1431,14 @@ private:
   }
 
   void next() {
-    if (CurrentToken) {
-      CurrentToken->NestingLevel = Contexts.size() - 1;
-      CurrentToken->BindingStrength = Contexts.back().BindingStrength;
-      modifyContext(*CurrentToken);
-      determineTokenType(*CurrentToken);
-      CurrentToken = CurrentToken->Next;
-    }
+    if (!CurrentToken)
+      return;
+
+    CurrentToken->NestingLevel = Contexts.size() - 1;
+    CurrentToken->BindingStrength = Contexts.back().BindingStrength;
+    modifyContext(*CurrentToken);
+    determineTokenType(*CurrentToken);
+    CurrentToken = CurrentToken->Next;
 
     resetTokenMetadata();
   }
