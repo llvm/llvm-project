@@ -30,7 +30,7 @@ namespace comprehensive_bufferize {
 
 #define DEBUG_TYPE "bufferizable-op-interface"
 #define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
-#define LDBG(X) LLVM_DEBUG(DBGS() << X)
+#define LDBG(X) LLVM_DEBUG(DBGS() << (X))
 
 using namespace mlir;
 using namespace linalg::comprehensive_bufferize;
