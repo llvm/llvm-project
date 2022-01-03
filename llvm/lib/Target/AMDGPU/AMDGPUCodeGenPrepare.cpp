@@ -450,7 +450,7 @@ unsigned AMDGPUCodeGenPrepare::numBitsUnsigned(Value *Op) const {
 }
 
 unsigned AMDGPUCodeGenPrepare::numBitsSigned(Value *Op) const {
-  return ComputeMinSignedBits(Op, *DL, 0, AC);
+  return ComputeMaxSignificantBits(Op, *DL, 0, AC);
 }
 
 static void extractValues(IRBuilder<> &Builder,
