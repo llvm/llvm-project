@@ -1377,7 +1377,7 @@ public:
   ///
   /// Accessing this object after finalization will result in undefined
   /// behavior.
-  JITLinkMemoryManager::AllocActions &allocActions() { return AAs; }
+  AllocActions &allocActions() { return AAs; }
 
   /// Dump the graph.
   void dump(raw_ostream &OS);
@@ -1395,7 +1395,7 @@ private:
   SectionList Sections;
   ExternalSymbolSet ExternalSymbols;
   ExternalSymbolSet AbsoluteSymbols;
-  JITLinkMemoryManager::AllocActions AAs;
+  AllocActions AAs;
 };
 
 inline MutableArrayRef<char> Block::getMutableContent(LinkGraph &G) {

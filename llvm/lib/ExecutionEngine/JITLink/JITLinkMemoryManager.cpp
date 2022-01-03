@@ -64,7 +64,7 @@ namespace jitlink {
 JITLinkMemoryManager::~JITLinkMemoryManager() = default;
 JITLinkMemoryManager::InFlightAlloc::~InFlightAlloc() = default;
 
-static Error runAllocAction(JITLinkMemoryManager::AllocActionCall &C) {
+static Error runAllocAction(AllocActionCall &C) {
   using WrapperFnTy = CWrapperFunctionResult (*)(const void *, size_t);
   auto *Fn = jitTargetAddressToPointer<WrapperFnTy>(C.FnAddr);
 
@@ -189,9 +189,7 @@ Error BasicLayout::apply() {
   return Error::success();
 }
 
-JITLinkMemoryManager::AllocActions &BasicLayout::graphAllocActions() {
-  return G.allocActions();
-}
+AllocActions &BasicLayout::graphAllocActions() { return G.allocActions(); }
 
 void SimpleSegmentAlloc::Create(JITLinkMemoryManager &MemMgr,
                                 const JITLinkDylib *JD, SegmentMap Segments,
