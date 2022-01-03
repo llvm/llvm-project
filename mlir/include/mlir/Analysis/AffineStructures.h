@@ -81,6 +81,9 @@ public:
                               1,
                           numDims, numSymbols, numLocals) {}
 
+  explicit FlatAffineConstraints(const IntegerPolyhedron &poly)
+      : IntegerPolyhedron(poly) {}
+
   /// Return a system with no constraints, i.e., one which is satisfied by all
   /// points.
   static FlatAffineConstraints getUniverse(unsigned numDims = 0,
@@ -211,10 +214,6 @@ public:
   // mark exactness for example.
   void projectOut(unsigned pos, unsigned num);
   inline void projectOut(unsigned pos) { return projectOut(pos, 1); }
-
-  /// Sets the `values.size()` identifiers starting at `po`s to the specified
-  /// values and removes them.
-  void setAndEliminate(unsigned pos, ArrayRef<int64_t> values);
 
   /// Changes the partition between dimensions and symbols. Depending on the new
   /// symbol count, either a chunk of trailing dimensional identifiers becomes

@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Support for linear transforms and applying them to FlatAffineConstraints.
+// Support for linear transforms and applying them to an IntegerPolyhedron.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef MLIR_ANALYSIS_LINEARTRANSFORM_H
 #define MLIR_ANALYSIS_LINEARTRANSFORM_H
 
-#include "mlir/Analysis/AffineStructures.h"
+#include "mlir/Analysis/Presburger/IntegerPolyhedron.h"
 #include "mlir/Analysis/Presburger/Matrix.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -33,9 +33,9 @@ public:
   static std::pair<unsigned, LinearTransform>
   makeTransformToColumnEchelon(Matrix m);
 
-  // Returns a FlatAffineConstraints having a constraint vector vT for every
-  // constraint vector v in fac, where T is this transform.
-  FlatAffineConstraints applyTo(const FlatAffineConstraints &fac) const;
+  // Returns an IntegerPolyhedron having a constraint vector vT for every
+  // constraint vector v in poly, where T is this transform.
+  IntegerPolyhedron applyTo(const IntegerPolyhedron &poly) const;
 
   // The given vector is interpreted as a row vector v. Post-multiply v with
   // this transform, say T, and return vT.

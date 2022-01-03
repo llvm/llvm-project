@@ -185,6 +185,10 @@ public:
   /// Removes all equalities and inequalities.
   void clearConstraints();
 
+  /// Sets the `values.size()` identifiers starting at `po`s to the specified
+  /// values and removes them.
+  void setAndEliminate(unsigned pos, ArrayRef<int64_t> values);
+
   /// Gather positions of all lower and upper bounds of the identifier at `pos`,
   /// and optionally any equalities on it. In addition, the bounds are to be
   /// independent of identifiers in position range [`offset`, `offset` + `num`).
