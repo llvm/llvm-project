@@ -383,6 +383,8 @@ ProfileGenerator::getTopLevelFunctionProfile(StringRef FuncName) {
 void ProfileGenerator::generateProfile() {
   if (Binary->usePseudoProbes()) {
     // TODO: Support probe based profile generation
+    exitWithError("Probe based profile generation not supported for AutoFDO, "
+      "consider dropping `--ignore-stack-samples` or adding `--use-dwarf-correlation`.");
   } else {
     generateLineNumBasedProfile();
   }
