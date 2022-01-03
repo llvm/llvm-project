@@ -15,7 +15,7 @@ define i32 @f1(i32 %a, i32 %b) {
 ; Check two register operands, second operand inverted.
 define i32 @f2(i32 %a, i32 %b) {
 ; CHECK-LABEL: f2:
-; CHECK: xor.c %r2, %r3, %r2
+; CHECK: xor.c %r2, %r2, %r3
 ; CHECK: jmp %r1
   %notb = xor i32 %b, -1
   %res = xor i32 %a, %notb
