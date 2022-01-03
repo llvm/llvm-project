@@ -232,25 +232,25 @@ defset list<VTypeInfo> AllVectors = {
 
     defset list<GroupVTypeInfo> GroupFloatVectors = {
       def VF16M2: GroupVTypeInfo<vfloat16m2_t, vfloat16m1_t, vbool8_t, 16,
-                                  VRM2, V_M2, f16, FPR16>;
+                                 VRM2, V_M2, f16, FPR16>;
       def VF16M4: GroupVTypeInfo<vfloat16m4_t, vfloat16m1_t, vbool4_t, 16,
-                                  VRM4, V_M4, f16, FPR16>;
+                                 VRM4, V_M4, f16, FPR16>;
       def VF16M8: GroupVTypeInfo<vfloat16m8_t, vfloat16m1_t, vbool2_t, 16,
-                                  VRM8, V_M8, f16, FPR16>;
+                                 VRM8, V_M8, f16, FPR16>;
 
       def VF32M2: GroupVTypeInfo<vfloat32m2_t, vfloat32m1_t, vbool16_t, 32,
-                                  VRM2, V_M2, f32, FPR32>;
+                                 VRM2, V_M2, f32, FPR32>;
       def VF32M4: GroupVTypeInfo<vfloat32m4_t, vfloat32m1_t, vbool8_t,  32,
-                                  VRM4, V_M4, f32, FPR32>;
+                                 VRM4, V_M4, f32, FPR32>;
       def VF32M8: GroupVTypeInfo<vfloat32m8_t, vfloat32m1_t, vbool4_t,  32,
-                                  VRM8, V_M8, f32, FPR32>;
+                                 VRM8, V_M8, f32, FPR32>;
 
       def VF64M2: GroupVTypeInfo<vfloat64m2_t, vfloat64m1_t, vbool32_t, 64,
-                                  VRM2, V_M2, f64, FPR64>;
+                                 VRM2, V_M2, f64, FPR64>;
       def VF64M4: GroupVTypeInfo<vfloat64m4_t, vfloat64m1_t, vbool16_t, 64,
-                                  VRM4, V_M4, f64, FPR64>;
+                                 VRM4, V_M4, f64, FPR64>;
       def VF64M8: GroupVTypeInfo<vfloat64m8_t, vfloat64m1_t, vbool8_t,  64,
-                                  VRM8, V_M8, f64, FPR64>;
+                                 VRM8, V_M8, f64, FPR64>;
     }
   }
 }
