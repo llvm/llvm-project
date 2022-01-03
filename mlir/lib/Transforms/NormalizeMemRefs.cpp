@@ -92,8 +92,8 @@ void NormalizeMemRefs::runOnOperation() {
 /// are satisfied will the value become a candidate for replacement.
 /// TODO: Extend this for DimOps.
 static bool isMemRefNormalizable(Value::user_range opUsers) {
-  return !llvm::any_of(opUsers, [](Operation *op) {
-    return !op->hasTrait<OpTrait::MemRefsNormalizable>();
+  return llvm::all_of(opUsers, [](Operation *op) {
+    return op->hasTrait<OpTrait::MemRefsNormalizable>();
   });
 }
 
