@@ -2857,6 +2857,8 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
       Left.Previous->isOneOf(tok::identifier, tok::greater))
     return 500;
 
+  if (Left.is(tok::l_paren) && Style.PenaltyBreakOpenParenthesis != 0)
+    return Style.PenaltyBreakOpenParenthesis;
   if (Left.is(tok::l_paren) && InFunctionDecl &&
       Style.AlignAfterOpenBracket != FormatStyle::BAS_DontAlign)
     return 100;

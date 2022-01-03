@@ -3198,6 +3198,9 @@ the configuration (without a prefix: ``Auto``).
 **PenaltyBreakTemplateDeclaration** (``Unsigned``) :versionbadge:`clang-format 7`
   The penalty for breaking after template declaration.
 
+**PenaltyBreakOpenParenthesis** (``Unsigned``) :versionbadge:`clang-format 14`
+  The penalty for breaking after ``(``.
+
 **PenaltyExcessCharacter** (``Unsigned``) :versionbadge:`clang-format 3.7`
   The penalty for each character outside of the column limit.
 
