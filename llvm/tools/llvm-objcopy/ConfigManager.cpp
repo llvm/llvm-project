@@ -11,6 +11,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CRC.h"
@@ -675,6 +676,7 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
 
   ConfigManager ConfigMgr;
   CommonConfig &Config = ConfigMgr.Common;
+  COFFConfig &COFFConfig = ConfigMgr.COFF;
   ELFConfig &ELFConfig = ConfigMgr.ELF;
   MachOConfig &MachOConfig = ConfigMgr.MachO;
   Config.InputFilename = Positional[0];
@@ -731,6 +733,46 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
       return createStringError(errc::invalid_argument,
                                "'%s' is not a valid symbol visibility",
                                VisibilityStr.str().c_str());
+  }
+
+  for (const auto *Arg : InputArgs.filtered(OBJCOPY_subsystem)) {
+    StringRef Subsystem, Version;
+    std::tie(Subsystem, Version) = StringRef(Arg->getValue()).split(':');
+    COFFConfig.Subsystem =
+        StringSwitch<unsigned>(Subsystem.lower())
+            .Case("boot_application",
+                  COFF::IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION)
+            .Case("console", COFF::IMAGE_SUBSYSTEM_WINDOWS_CUI)
+            .Case("efi_application", COFF::IMAGE_SUBSYSTEM_EFI_APPLICATION)
+            .Case("efi_boot_service_driver",
+                  COFF::IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER)
+            .Case("efi_rom", COFF::IMAGE_SUBSYSTEM_EFI_ROM)
+            .Case("efi_runtime_driver",
+                  COFF::IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER)
+            .Case("native", COFF::IMAGE_SUBSYSTEM_NATIVE)
+            .Case("posix", COFF::IMAGE_SUBSYSTEM_POSIX_CUI)
+            .Case("windows", COFF::IMAGE_SUBSYSTEM_WINDOWS_GUI)
+            .Default(COFF::IMAGE_SUBSYSTEM_UNKNOWN);
+    if (*COFFConfig.Subsystem == COFF::IMAGE_SUBSYSTEM_UNKNOWN)
+      return createStringError(errc::invalid_argument,
+                               "'%s' is not a valid subsystem",
+                               Subsystem.str().c_str());
+    if (!Version.empty()) {
+      StringRef Major, Minor;
+      std::tie(Major, Minor) = Version.split('.');
+      unsigned Number;
+      if (Major.getAsInteger(10, Number))
+        return createStringError(errc::invalid_argument,
+                                 "'%s' is not a valid subsystem major version",
+                                 Major.str().c_str());
+      COFFConfig.MajorSubsystemVersion = Number;
+      Number = 0;
+      if (!Minor.empty() && Minor.getAsInteger(10, Number))
+        return createStringError(errc::invalid_argument,
+                                 "'%s' is not a valid subsystem minor version",
+                                 Minor.str().c_str());
+      COFFConfig.MinorSubsystemVersion = Number;
+    }
   }
 
   Config.OutputFormat = StringSwitch<FileFormat>(OutputFormat)

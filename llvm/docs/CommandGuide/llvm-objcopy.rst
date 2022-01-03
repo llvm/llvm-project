@@ -477,6 +477,13 @@ MACH-O-SPECIFIC OPTIONS
 
  Keep undefined symbols, even if they would otherwise be stripped.
 
+COFF-SPECIFIC OPTIONS
+---------------------
+
+.. option:: --subsystem <name>[:<version>]
+
+ Set the PE subsystem, and optionally subsystem version.
+
 SUPPORTED FORMATS
 -----------------
 

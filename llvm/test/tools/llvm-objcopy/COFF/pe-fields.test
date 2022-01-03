@@ -1,0 +1,20 @@
+## Test that options for altering PE header fields error out on object files.
+
+# RUN: yaml2obj %s -o %t.in.obj
+
+# RUN: not llvm-objcopy --subsystem windows %t.in.obj %t.out.obj 2>&1 | FileCheck %s -DFILE=%t.out.obj
+
+# CHECK: '[[FILE]]': unable to set subsystem on a relocatable object file
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .text
+    Characteristics: [  ]
+    VirtualAddress:  4096
+    VirtualSize:     1
+    SectionData:     C3
+symbols:
+...
