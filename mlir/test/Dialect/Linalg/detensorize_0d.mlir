@@ -19,8 +19,7 @@ func @detensor_simple(%arg1: tensor<f32>, %arg2: tensor<f32>) -> tensor<f32> att
 // CHECK-DAG:     %[[arg2_val:.*]] = tensor.extract %[[arg2]]
 // CHECK:         %[[detensored_res:.*]] = arith.addf %[[arg1_val]], %[[arg2_val]]
 // CHECK:         %[[new_tensor_res:.*]] = tensor.from_elements %[[detensored_res]]
-// CHECK:         %[[reshaped_tensor_res:.*]] = tensor.collapse_shape %[[new_tensor_res]]
-// CHECK:         return %[[reshaped_tensor_res]]
+// CHECK:         return %[[new_tensor_res]]
 
 func @detensor_op_sequence(%arg1: tensor<f32>, %arg2: tensor<f32>) -> tensor<f32> attributes {iree.module.export} {
   %0 = linalg.init_tensor [] : tensor<f32>
@@ -60,8 +59,7 @@ func @detensor_op_sequence(%arg1: tensor<f32>, %arg2: tensor<f32>) -> tensor<f32
 // CHECK:         %[[detensored_res2:.*]] = arith.mulf %[[arg1_val]], %[[detensored_res]]
 // CHECK:         %[[detensored_res3:.*]] = arith.divf %[[detensored_res]], %[[detensored_res2]]
 // CHECK:         %[[new_tensor_res:.*]] = tensor.from_elements %[[detensored_res3]]
-// CHECK:         %[[reshaped_tensor_res:.*]] = tensor.collapse_shape %[[new_tensor_res]]
-// CHECK:         return %[[reshaped_tensor_res]]
+// CHECK:         return %[[new_tensor_res]]
 
 func @detensor_multiple_ops(%arg1: tensor<f32>, %arg2: tensor<f32>) -> tensor<f32> attributes {iree.module.export} {
   %0 = linalg.init_tensor [] : tensor<f32>
@@ -82,8 +80,7 @@ func @detensor_multiple_ops(%arg1: tensor<f32>, %arg2: tensor<f32>) -> tensor<f3
 // CHECK:         %[[detensored_res:.*]] = arith.addf %[[arg1_val]], %[[arg2_val]]
 // CHECK:         %[[detensored_res2:.*]] = arith.mulf %[[detensored_res]], %[[arg2_val]]
 // CHECK:         %[[new_tensor_res:.*]] = tensor.from_elements %[[detensored_res2]]
-// CHECK:         %[[reshaped_tensor_res:.*]] = tensor.collapse_shape %[[new_tensor_res]]
-// CHECK:         return %[[reshaped_tensor_res]]
+// CHECK:         return %[[new_tensor_res]]
 
 func @detensor_foreign_op(%arg1: tensor<f32>, %arg2: tensor<f32>) -> tensor<f32> attributes {iree.module.export} {
   %0 = linalg.init_tensor [] : tensor<f32>
@@ -102,5 +99,4 @@ func @detensor_foreign_op(%arg1: tensor<f32>, %arg2: tensor<f32>) -> tensor<f32>
 // CHECK-DAG:     %[[arg2_val:.*]] = tensor.extract %[[arg2]]
 // CHECK:         %[[detensored_res:.*]] = "foreign.do_something"(%[[arg1_val]], %[[arg2_val]])
 // CHECK:         %[[new_tensor_res:.*]] = tensor.from_elements %[[detensored_res]]
-// CHECK:         %[[reshaped_tensor_res:.*]] = tensor.collapse_shape %[[new_tensor_res]]
-// CHECK:         return %[[reshaped_tensor_res]]
+// CHECK:         return %[[new_tensor_res]]
