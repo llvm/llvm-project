@@ -5,10 +5,6 @@ add_mlir_library(MLIRPresburger
   Simplex.cpp
   Utils.cpp
 
-  DEPENDS
-  MLIRBuiltinLocationAttributesIncGen
-
   LINK_LIBS PUBLIC
-  MLIRIR
   MLIRSupport
   )
