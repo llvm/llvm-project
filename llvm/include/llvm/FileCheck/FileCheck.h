@@ -80,7 +80,8 @@ class FileCheckType {
   std::bitset<FileCheckKindModifier::Size> Modifiers;
 
 public:
-  FileCheckType(FileCheckKind Kind = CheckNone) : Kind(Kind), Count(1) {}
+  FileCheckType(FileCheckKind Kind = CheckNone)
+      : Kind(Kind), Count(1), Modifiers() {}
   FileCheckType(const FileCheckType &) = default;
   FileCheckType &operator=(const FileCheckType &) = default;
 

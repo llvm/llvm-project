@@ -185,7 +185,7 @@ class Polynomial {
   APInt A;
 
 public:
-  Polynomial(Value *V) : ErrorMSBs((unsigned)-1), V(V) {
+  Polynomial(Value *V) : ErrorMSBs((unsigned)-1), V(V), B(), A() {
     IntegerType *Ty = dyn_cast<IntegerType>(V->getType());
     if (Ty) {
       ErrorMSBs = 0;
@@ -195,12 +195,12 @@ public:
   }
 
   Polynomial(const APInt &A, unsigned ErrorMSBs = 0)
-      : ErrorMSBs(ErrorMSBs), V(nullptr), A(A) {}
+      : ErrorMSBs(ErrorMSBs), V(nullptr), B(), A(A) {}
 
   Polynomial(unsigned BitWidth, uint64_t A, unsigned ErrorMSBs = 0)
-      : ErrorMSBs(ErrorMSBs), V(nullptr), A(BitWidth, A) {}
+      : ErrorMSBs(ErrorMSBs), V(nullptr), B(), A(BitWidth, A) {}
 
-  Polynomial() : ErrorMSBs((unsigned)-1), V(nullptr) {}
+  Polynomial() : ErrorMSBs((unsigned)-1), V(nullptr), B(), A() {}
 
   /// Increment and clamp the number of undefined bits.
   void incErrorMSBs(unsigned amt) {
@@ -677,7 +677,7 @@ public:
   FixedVectorType *const VTy;
 
   VectorInfo(FixedVectorType *VTy)
-      : BB(nullptr), PV(nullptr), SVI(nullptr), VTy(VTy) {
+      : BB(nullptr), PV(nullptr), LIs(), Is(), SVI(nullptr), VTy(VTy) {
     EI = new ElementInfo[VTy->getNumElements()];
   }
 

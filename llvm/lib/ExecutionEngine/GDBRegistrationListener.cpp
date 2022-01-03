@@ -96,7 +96,7 @@ class GDBJITRegistrationListener : public JITEventListener {
 
 public:
   /// Instantiates the JIT service.
-  GDBJITRegistrationListener() {}
+  GDBJITRegistrationListener() : ObjectBufferMap() {}
 
   /// Unregisters each object that was previously registered and releases all
   /// internal resources.

@@ -204,7 +204,7 @@ HexagonMCChecker::HexagonMCChecker(MCContext &Context, MCInstrInfo const &MCII,
                                    MCSubtargetInfo const &STI, MCInst &mcb,
                                    MCRegisterInfo const &ri, bool ReportErrors)
     : Context(Context), MCB(mcb), RI(ri), MCII(MCII), STI(STI),
-      ReportErrors(ReportErrors) {
+      ReportErrors(ReportErrors), ReversePairs() {
   init();
 }
 
@@ -212,7 +212,8 @@ HexagonMCChecker::HexagonMCChecker(HexagonMCChecker const &Other,
                                    MCSubtargetInfo const &STI,
                                    bool CopyReportErrors)
     : Context(Other.Context), MCB(Other.MCB), RI(Other.RI), MCII(Other.MCII),
-      STI(STI), ReportErrors(CopyReportErrors ? Other.ReportErrors : false) {
+      STI(STI), ReportErrors(CopyReportErrors ? Other.ReportErrors : false),
+      ReversePairs() {
   init();
 }
 

@@ -193,7 +193,9 @@ public:
 
 }
 AMDGPURegisterBankInfo::AMDGPURegisterBankInfo(const GCNSubtarget &ST)
-    : Subtarget(ST), TRI(Subtarget.getRegisterInfo()),
+    : AMDGPUGenRegisterBankInfo(),
+      Subtarget(ST),
+      TRI(Subtarget.getRegisterInfo()),
       TII(Subtarget.getInstrInfo()) {
 
   // HACK: Until this is fully tablegen'd.
