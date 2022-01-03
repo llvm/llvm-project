@@ -1837,7 +1837,7 @@ defm rewrite_includes : BoolFOption<"rewrite-includes",
   PosFlag<SetTrue, [CC1Option]>, NegFlag<SetFalse>>;
 
 defm delete_null_pointer_checks : BoolFOption<"delete-null-pointer-checks",
-  CodeGenOpts<"NullPointerIsValid">, DefaultFalse,
+  CodeGenOpts<"NullPointerIsValid">, DefaultTrue,
   NegFlag<SetTrue, [CC1Option], "Do not treat usage of null pointers as undefined behavior">,
   PosFlag<SetFalse, [], "Treat usage of null pointers as undefined behavior (default)">,
   BothFlags<[CoreOption]>>;
