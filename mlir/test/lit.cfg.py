@@ -65,6 +65,7 @@ tools = [
     'mlir-capi-llvm-test',
     'mlir-capi-pass-test',
     'mlir-capi-sparse-tensor-test',
+    'mlir-capi-quant-test',
     'mlir-cpu-runner',
     'mlir-linalg-ods-yaml-gen',
     'mlir-reduce',
