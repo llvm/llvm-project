@@ -48,10 +48,15 @@ endif ()
 set(POLLY_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(POLLY_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
-# Add path for custom modules
-set(CMAKE_MODULE_PATH
-  ${CMAKE_MODULE_PATH}
-  "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
+if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
+  set(LLVM_COMMON_CMAKE_UTILS ${POLLY_SOURCE_DIR}/../cmake)
+endif()
+
+# Make sure that our source directory is on the current cmake module path so that
+# we can include cmake files from this directory.
+list(INSERT CMAKE_MODULE_PATH 0
+  "${POLLY_SOURCE_DIR}/cmake"
+  "${LLVM_COMMON_CMAKE_UTILS}/Modules"
   )
 
 include("polly_macros")
@@ -67,9 +72,6 @@ elseif (MSVC)
 else ()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions -fno-rtti")
 endif ()
-
-# Add path for custom modules
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${POLLY_SOURCE_DIR}/cmake")
 
 SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
