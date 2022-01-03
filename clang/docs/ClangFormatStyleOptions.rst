@@ -152,7 +152,7 @@ the configuration (without a prefix: ``Auto``).
     <https://chromium.googlesource.com/chromium/src/+/refs/heads/main/styleguide/styleguide.md>`_
   * ``Mozilla``
     A style complying with `Mozilla's style guide
-    <https://developer.mozilla.org/en-US/docs/Developer_Guide/Coding_Style>`_
+    <https://firefox-source-docs.mozilla.org/code-quality/coding-style/index.html>`_
   * ``WebKit``
     A style complying with `WebKit's style guide
     <https://www.webkit.org/coding/coding-style.html>`_

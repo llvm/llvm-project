@@ -3888,7 +3888,7 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language);
 FormatStyle getChromiumStyle(FormatStyle::LanguageKind Language);
 
 /// Returns a format style complying with Mozilla's style guide:
-/// https://developer.mozilla.org/en-US/docs/Developer_Guide/Coding_Style.
+/// https://firefox-source-docs.mozilla.org/code-quality/coding-style/index.html.
 FormatStyle getMozillaStyle();
 
 /// Returns a format style complying with Webkit's style guide:
