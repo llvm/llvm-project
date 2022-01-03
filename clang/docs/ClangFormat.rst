@@ -82,6 +82,10 @@ to format C/C++/Java/JavaScript/JSON/Objective-C/Protobuf/C# code.
                                  .clang-format file located in one of the parent
                                  directories of the source file (or current
                                  directory for stdin).
+                                 Use -style=file:<format_file_path> to load style
+                                 configuration from a format file located at
+                                 <format_file_path>. This path can be absolute or
+                                 relative to the working directory.
                                  Use -style="{key: value, ...}" to set specific
                                  parameters, e.g.:
                                    -style="{BasedOnStyle: llvm, IndentWidth: 8}"

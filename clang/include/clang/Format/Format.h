@@ -4066,6 +4066,8 @@ extern const char *DefaultFallbackStyle;
 /// * "file" - Load style configuration from a file called ``.clang-format``
 /// located in one of the parent directories of ``FileName`` or the current
 /// directory if ``FileName`` is empty.
+/// * "file:<format_file_path>" to explicitly specify the configuration file to
+/// use.
 ///
 /// \param[in] StyleName Style name to interpret according to the description
 /// above.
