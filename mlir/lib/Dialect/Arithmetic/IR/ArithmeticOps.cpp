@@ -194,6 +194,16 @@ OpFoldResult arith::AddIOp::fold(ArrayRef<Attribute> operands) {
   if (matchPattern(getRhs(), m_Zero()))
     return getLhs();
 
+  // add(sub(a, b), b) -> a
+  if (auto sub = getLhs().getDefiningOp<SubIOp>())
+    if (getRhs() == sub.getRhs())
+      return sub.getLhs();
+
+  // add(b, sub(a, b)) -> a
+  if (auto sub = getRhs().getDefiningOp<SubIOp>())
+    if (getLhs() == sub.getRhs())
+      return sub.getLhs();
+
   return constFoldBinaryOp<IntegerAttr>(
       operands, [](APInt a, const APInt &b) { return std::move(a) + b; });
 }
