@@ -2913,7 +2913,7 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
     }
 
     if (!CallerPAL.isEmpty() && !Caller->use_empty()) {
-      AttrBuilder RAttrs(CallerPAL, AttributeList::ReturnIndex);
+      AttrBuilder RAttrs(FT->getContext(), CallerPAL, AttributeList::ReturnIndex);
       if (RAttrs.overlaps(AttributeFuncs::typeIncompatible(NewRetTy)))
         return false;   // Attribute not compatible with transformed value.
     }
@@ -2959,7 +2959,7 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
     if (!CastInst::isBitOrNoopPointerCastable(ActTy, ParamTy, DL))
       return false;   // Cannot transform this parameter value.
 
-    if (AttrBuilder(CallerPAL.getParamAttrs(i))
+    if (AttrBuilder(FT->getContext(), CallerPAL.getParamAttrs(i))
             .overlaps(AttributeFuncs::typeIncompatible(ParamTy)))
       return false;   // Attribute not compatible with transformed value.
 
@@ -3024,7 +3024,7 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
   ArgAttrs.reserve(NumActualArgs);
 
   // Get any return attributes.
-  AttrBuilder RAttrs(CallerPAL, AttributeList::ReturnIndex);
+  AttrBuilder RAttrs(FT->getContext(), CallerPAL, AttributeList::ReturnIndex);
 
   // If the return value is not being used, the type may not be compatible
   // with the existing attributes.  Wipe out any problematic attributes.
@@ -3042,7 +3042,7 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
 
     // Add any parameter attributes.
     if (CallerPAL.hasParamAttr(i, Attribute::ByVal)) {
-      AttrBuilder AB(CallerPAL.getParamAttrs(i));
+      AttrBuilder AB(FT->getContext(), CallerPAL.getParamAttrs(i));
       AB.addByValAttr(NewArg->getType()->getPointerElementType());
       ArgAttrs.push_back(AttributeSet::get(Ctx, AB));
     } else

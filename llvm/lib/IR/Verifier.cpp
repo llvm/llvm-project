@@ -3381,13 +3381,13 @@ static bool isTypeCongruent(Type *L, Type *R) {
   return PL->getAddressSpace() == PR->getAddressSpace();
 }
 
-static AttrBuilder getParameterABIAttributes(unsigned I, AttributeList Attrs) {
+static AttrBuilder getParameterABIAttributes(LLVMContext& C, unsigned I, AttributeList Attrs) {
   static const Attribute::AttrKind ABIAttrs[] = {
       Attribute::StructRet,  Attribute::ByVal,          Attribute::InAlloca,
       Attribute::InReg,      Attribute::StackAlignment, Attribute::SwiftSelf,
       Attribute::SwiftAsync, Attribute::SwiftError,     Attribute::Preallocated,
       Attribute::ByRef};
-  AttrBuilder Copy;
+  AttrBuilder Copy(C);
   for (auto AK : ABIAttrs) {
     Attribute Attr = Attrs.getParamAttrs(I).getAttribute(AK);
     if (Attr.isValid())
@@ -3450,12 +3450,12 @@ void Verifier::verifyMustTailCall(CallInst &CI) {
     // - Only sret, byval, swiftself, and swiftasync ABI-impacting attributes
     //   are allowed in swifttailcc call
     for (unsigned I = 0, E = CallerTy->getNumParams(); I != E; ++I) {
-      AttrBuilder ABIAttrs = getParameterABIAttributes(I, CallerAttrs);
+      AttrBuilder ABIAttrs = getParameterABIAttributes(F->getContext(), I, CallerAttrs);
       SmallString<32> Context{CCName, StringRef(" musttail caller")};
       verifyTailCCMustTailAttrs(ABIAttrs, Context);
     }
     for (unsigned I = 0, E = CalleeTy->getNumParams(); I != E; ++I) {
-      AttrBuilder ABIAttrs = getParameterABIAttributes(I, CalleeAttrs);
+      AttrBuilder ABIAttrs = getParameterABIAttributes(F->getContext(), I, CalleeAttrs);
       SmallString<32> Context{CCName, StringRef(" musttail callee")};
       verifyTailCCMustTailAttrs(ABIAttrs, Context);
     }
@@ -3482,8 +3482,8 @@ void Verifier::verifyMustTailCall(CallInst &CI) {
   // - All ABI-impacting function attributes, such as sret, byval, inreg,
   //   returned, preallocated, and inalloca, must match.
   for (unsigned I = 0, E = CallerTy->getNumParams(); I != E; ++I) {
-    AttrBuilder CallerABIAttrs = getParameterABIAttributes(I, CallerAttrs);
-    AttrBuilder CalleeABIAttrs = getParameterABIAttributes(I, CalleeAttrs);
+    AttrBuilder CallerABIAttrs = getParameterABIAttributes(F->getContext(), I, CallerAttrs);
+    AttrBuilder CalleeABIAttrs = getParameterABIAttributes(F->getContext(), I, CalleeAttrs);
     Assert(CallerABIAttrs == CalleeABIAttrs,
            "cannot guarantee tail call due to mismatched ABI impacting "
            "function attributes",
