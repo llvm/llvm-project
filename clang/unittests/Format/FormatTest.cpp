@@ -21156,6 +21156,16 @@ TEST_F(FormatTest, SpacesInAngles) {
   verifyFormat("A< A< int > >();", Spaces);
   verifyFormat("A<A<int > >();", Spaces);
   verifyFormat("A< A< int>>();", Spaces);
+
+  Spaces.SpacesInAngles = FormatStyle::SIAS_Always;
+  verifyFormat("// clang-format off\n"
+               "foo<<<1, 1>>>();\n"
+               "// clang-format on\n",
+               Spaces);
+  verifyFormat("// clang-format off\n"
+               "foo< < <1, 1> > >();\n"
+               "// clang-format on\n",
+               Spaces);
 }
 
 TEST_F(FormatTest, SpaceAfterTemplateKeyword) {
