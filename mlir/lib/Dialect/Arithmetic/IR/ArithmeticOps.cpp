@@ -357,25 +357,30 @@ OpFoldResult arith::CeilDivSIOp::fold(ArrayRef<Attribute> operands) {
           overflowOrDiv0 = true;
           return a;
         }
+        if (!a)
+          return a;
+        // After this point we know that neither a or b are zero.
         unsigned bits = a.getBitWidth();
         APInt zero = APInt::getZero(bits);
-        if (a.sgt(zero) && b.sgt(zero)) {
+        bool aGtZero = a.sgt(zero);
+        bool bGtZero = b.sgt(zero);
+        if (aGtZero && bGtZero) {
           // Both positive, return ceil(a, b).
           return signedCeilNonnegInputs(a, b, overflowOrDiv0);
         }
-        if (a.slt(zero) && b.slt(zero)) {
+        if (!aGtZero && !bGtZero) {
           // Both negative, return ceil(-a, -b).
           APInt posA = zero.ssub_ov(a, overflowOrDiv0);
           APInt posB = zero.ssub_ov(b, overflowOrDiv0);
           return signedCeilNonnegInputs(posA, posB, overflowOrDiv0);
         }
-        if (a.slt(zero) && b.sgt(zero)) {
+        if (!aGtZero && bGtZero) {
           // A is negative, b is positive, return - ( -a / b).
           APInt posA = zero.ssub_ov(a, overflowOrDiv0);
           APInt div = posA.sdiv_ov(b, overflowOrDiv0);
           return zero.ssub_ov(div, overflowOrDiv0);
         }
-        // A is positive (or zero), b is negative, return - (a / -b).
+        // A is positive, b is negative, return - (a / -b).
         APInt posB = zero.ssub_ov(b, overflowOrDiv0);
         APInt div = a.sdiv_ov(posB, overflowOrDiv0);
         return zero.ssub_ov(div, overflowOrDiv0);
@@ -407,19 +412,24 @@ OpFoldResult arith::FloorDivSIOp::fold(ArrayRef<Attribute> operands) {
           overflowOrDiv0 = true;
           return a;
         }
+        if (!a)
+          return a;
+        // After this point we know that neither a or b are zero.
         unsigned bits = a.getBitWidth();
         APInt zero = APInt::getZero(bits);
-        if (a.sge(zero) && b.sgt(zero)) {
-          // Both positive (or a is zero), return a / b.
+        bool aGtZero = a.sgt(zero);
+        bool bGtZero = b.sgt(zero);
+        if (aGtZero && bGtZero) {
+          // Both positive, return a / b.
           return a.sdiv_ov(b, overflowOrDiv0);
         }
-        if (a.sle(zero) && b.slt(zero)) {
-          // Both negative (or a is zero), return -a / -b.
+        if (!aGtZero && !bGtZero) {
+          // Both negative, return -a / -b.
           APInt posA = zero.ssub_ov(a, overflowOrDiv0);
           APInt posB = zero.ssub_ov(b, overflowOrDiv0);
           return posA.sdiv_ov(posB, overflowOrDiv0);
         }
-        if (a.slt(zero) && b.sgt(zero)) {
+        if (!aGtZero && bGtZero) {
           // A is negative, b is positive, return - ceil(-a, b).
           APInt posA = zero.ssub_ov(a, overflowOrDiv0);
           APInt ceil = signedCeilNonnegInputs(posA, b, overflowOrDiv0);
