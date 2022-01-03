@@ -2898,15 +2898,6 @@ Optional<InlineResult> llvm::getAttributeBasedInliningDecision(
   if (Call.isNoInline())
     return InlineResult::failure("noinline call site attribute");
 
-  // Don't inline functions if one does not have any stack protector attribute
-  // but the other does.
-  if (Caller->hasStackProtectorFnAttr() && !Callee->hasStackProtectorFnAttr())
-    return InlineResult::failure(
-        "stack protected caller but callee requested no stack protector");
-  if (Callee->hasStackProtectorFnAttr() && !Caller->hasStackProtectorFnAttr())
-    return InlineResult::failure(
-        "stack protected callee but caller requested no stack protector");
-
   return None;
 }
 

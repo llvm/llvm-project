@@ -1921,6 +1921,12 @@ static void setOR(Function &Caller, const Function &Callee) {
 /// If the inlined function had a higher stack protection level than the
 /// calling function, then bump up the caller's stack protection level.
 static void adjustCallerSSPLevel(Function &Caller, const Function &Callee) {
+  // If the calling function has *no* stack protection level (e.g. it was built
+  // with Clang's -fno-stack-protector or no_stack_protector attribute), don't
+  // change it as that could change the program's semantics.
+  if (!Caller.hasStackProtectorFnAttr())
+    return;
+
   // If upgrading the SSP attribute, clear out the old SSP Attributes first.
   // Having multiple SSP attributes doesn't actually hurt, but it adds useless
   // clutter to the IR.
