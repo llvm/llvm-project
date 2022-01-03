@@ -129,7 +129,7 @@ TestI64ElementsAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 
 LogicalResult
 TestAttrWithFormatAttr::verify(function_ref<InFlightDiagnostic()> emitError,
-                               int64_t one, StringRef two, IntegerAttr three,
+                               int64_t one, std::string two, IntegerAttr three,
                                ArrayRef<int> four) {
   if (four.size() != static_cast<unsigned>(one))
     return emitError() << "expected 'one' to equal 'four.size()'";
