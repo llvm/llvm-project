@@ -51,6 +51,21 @@ def try_run(args, raise_error=True):
   return process_output
 
 
+# This class represents the appearance of a message prefix in a file.
+class MessagePrefix:
+  def __init__(self, label):
+    self.has_message = False
+    self.prefixes = []
+    self.label = label
+
+  def check(self, file_check_suffix, input_text):
+    self.prefix = self.label + file_check_suffix
+    self.has_message = self.prefix in input_text
+    if self.has_message:
+      self.prefixes.append(self.prefix)
+    return self.has_message
+
+
 class CheckRunner:
   def __init__(self, args, extra_args):
     self.resource_dir = args.resource_dir
@@ -63,12 +78,12 @@ class CheckRunner:
     self.std = args.std
     self.check_suffix = args.check_suffix
     self.input_text = ''
-    self.check_fixes_prefixes = []
-    self.check_messages_prefixes = []
-    self.check_notes_prefixes = []
     self.has_check_fixes = False
     self.has_check_messages = False
     self.has_check_notes = False
+    self.fixes = MessagePrefix('CHECK-FIXES')
+    self.messages = MessagePrefix('CHECK-MESSAGES')
+    self.notes = MessagePrefix('CHECK-NOTES')
 
     file_name_with_extension = self.assume_file_name or self.input_file_name
     _, extension = os.path.splitext(file_name_with_extension)
@@ -109,38 +124,29 @@ class CheckRunner:
       self.input_text = input_file.read()
 
   def get_prefixes(self):
-    for check in self.check_suffix:
-      if check and not re.match('^[A-Z0-9\\-]+$', check):
+    for suffix in self.check_suffix:
+      if suffix and not re.match('^[A-Z0-9\\-]+$', suffix):
         sys.exit('Only A..Z, 0..9 and "-" are allowed in check suffixes list,'
-                 + ' but "%s" was given' % check)
+                 + ' but "%s" was given' % suffix)
 
-      file_check_suffix = ('-' + check) if check else ''
-      check_fixes_prefix = 'CHECK-FIXES' + file_check_suffix
-      check_messages_prefix = 'CHECK-MESSAGES' + file_check_suffix
-      check_notes_prefix = 'CHECK-NOTES' + file_check_suffix
+      file_check_suffix = ('-' + suffix) if suffix else ''
 
-      has_check_fix = check_fixes_prefix in self.input_text
-      has_check_message = check_messages_prefix in self.input_text
-      has_check_note = check_notes_prefix in self.input_text
+      has_check_fix = self.fixes.check(file_check_suffix, self.input_text)
+      self.has_check_fixes = self.has_check_fixes or has_check_fix
+
+      has_check_message = self.messages.check(file_check_suffix, self.input_text)
+      self.has_check_messages = self.has_check_messages or has_check_message
+
+      has_check_note = self.notes.check(file_check_suffix, self.input_text)
+      self.has_check_notes = self.has_check_notes or has_check_note
 
       if has_check_note and has_check_message:
         sys.exit('Please use either %s or %s but not both' %
-          (check_notes_prefix, check_messages_prefix))
+          (self.notes.prefix, self.messages.prefix))
 
       if not has_check_fix and not has_check_message and not has_check_note:
         sys.exit('%s, %s or %s not found in the input' %
-          (check_fixes_prefix, check_messages_prefix, check_notes_prefix))
-
-      self.has_check_fixes = self.has_check_fixes or has_check_fix
-      self.has_check_messages = self.has_check_messages or has_check_message
-      self.has_check_notes = self.has_check_notes or has_check_note
-
-      if has_check_fix:
-        self.check_fixes_prefixes.append(check_fixes_prefix)
-      if has_check_message:
-        self.check_messages_prefixes.append(check_messages_prefix)
-      if has_check_note:
-        self.check_notes_prefixes.append(check_notes_prefix)
+          (self.fixes.prefix, self.messages.prefix, self.notes.prefix))
 
     assert self.has_check_fixes or self.has_check_messages or self.has_check_notes
 
@@ -173,7 +179,7 @@ class CheckRunner:
   def check_fixes(self):
     if self.has_check_fixes:
       try_run(['FileCheck', '-input-file=' + self.temp_file_name, self.input_file_name,
-              '-check-prefixes=' + ','.join(self.check_fixes_prefixes),
+              '-check-prefixes=' + ','.join(self.fixes.prefixes),
               '-strict-whitespace'])
 
   def check_messages(self, clang_tidy_output):
@@ -181,7 +187,7 @@ class CheckRunner:
       messages_file = self.temp_file_name + '.msg'
       write_file(messages_file, clang_tidy_output)
       try_run(['FileCheck', '-input-file=' + messages_file, self.input_file_name,
-             '-check-prefixes=' + ','.join(self.check_messages_prefixes),
+             '-check-prefixes=' + ','.join(self.messages.prefixes),
              '-implicit-check-not={{warning|error}}:'])
 
   def check_notes(self, clang_tidy_output):
@@ -191,7 +197,7 @@ class CheckRunner:
                          if not ("note: FIX-IT applied" in line)]
       write_file(notes_file, '\n'.join(filtered_output))
       try_run(['FileCheck', '-input-file=' + notes_file, self.input_file_name,
-             '-check-prefixes=' + ','.join(self.check_notes_prefixes),
+             '-check-prefixes=' + ','.join(self.notes.prefixes),
              '-implicit-check-not={{note|warning|error}}:'])
 
   def run(self):
