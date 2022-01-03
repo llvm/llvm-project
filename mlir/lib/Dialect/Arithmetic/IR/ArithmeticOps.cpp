@@ -902,6 +902,24 @@ bool arith::TruncFOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
 }
 
 //===----------------------------------------------------------------------===//
+// AndIOp
+//===----------------------------------------------------------------------===//
+
+void arith::AndIOp::getCanonicalizationPatterns(
+    OwningRewritePatternList &patterns, MLIRContext *context) {
+  patterns.insert<AndOfExtUI, AndOfExtSI>(context);
+}
+
+//===----------------------------------------------------------------------===//
+// OrIOp
+//===----------------------------------------------------------------------===//
+
+void arith::OrIOp::getCanonicalizationPatterns(
+    OwningRewritePatternList &patterns, MLIRContext *context) {
+  patterns.insert<OrOfExtUI, OrOfExtSI>(context);
+}
+
+//===----------------------------------------------------------------------===//
 // Verifiers for casts between integers and floats.
 //===----------------------------------------------------------------------===//
 
