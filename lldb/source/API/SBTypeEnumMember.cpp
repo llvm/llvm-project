@@ -21,7 +21,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBTypeEnumMember::SBTypeEnumMember() : m_opaque_sp() {
+SBTypeEnumMember::SBTypeEnumMember() {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBTypeEnumMember);
 }
 
@@ -31,8 +31,7 @@ SBTypeEnumMember::SBTypeEnumMember(
     const lldb::TypeEnumMemberImplSP &enum_member_sp)
     : m_opaque_sp(enum_member_sp) {}
 
-SBTypeEnumMember::SBTypeEnumMember(const SBTypeEnumMember &rhs)
-    : m_opaque_sp() {
+SBTypeEnumMember::SBTypeEnumMember(const SBTypeEnumMember &rhs) {
   LLDB_RECORD_CONSTRUCTOR(SBTypeEnumMember, (const lldb::SBTypeEnumMember &),
                           rhs);
 

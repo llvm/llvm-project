@@ -67,7 +67,7 @@ SBThread::SBThread(const ThreadSP &lldb_object_sp)
   LLDB_RECORD_CONSTRUCTOR(SBThread, (const lldb::ThreadSP &), lldb_object_sp);
 }
 
-SBThread::SBThread(const SBThread &rhs) : m_opaque_sp() {
+SBThread::SBThread(const SBThread &rhs) {
   LLDB_RECORD_CONSTRUCTOR(SBThread, (const lldb::SBThread &), rhs);
 
   m_opaque_sp = clone(rhs.m_opaque_sp);
