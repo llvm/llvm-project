@@ -1299,23 +1299,6 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
   return nullptr;
 }
 
-/// This type is zero-sized if it's an array or structure of zero-sized types.
-/// The only leaf zero-sized type is an empty structure.
-static bool isMaybeZeroSizedType(Type *Ty) {
-  if (StructType *STy = dyn_cast<StructType>(Ty)) {
-    if (STy->isOpaque()) return true;  // Can't say.
-
-    // If all of elements have zero size, this does too.
-    for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i)
-      if (!isMaybeZeroSizedType(STy->getElementType(i))) return false;
-    return true;
-
-  } else if (ArrayType *ATy = dyn_cast<ArrayType>(Ty)) {
-    return isMaybeZeroSizedType(ATy->getElementType());
-  }
-  return false;
-}
-
 /// This function determines if there is anything we can decide about the two
 /// constants provided. This doesn't need to handle simple things like
 /// ConstantFP comparisons, but should instead handle ConstantExprs.
