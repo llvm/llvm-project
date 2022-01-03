@@ -871,13 +871,6 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
   Function *newFunction = Function::Create(
       funcType, GlobalValue::InternalLinkage, oldFunction->getAddressSpace(),
       oldFunction->getName() + "." + SuffixToUse, M);
-  // If the old function is no-throw, so is the new one.
-  if (oldFunction->doesNotThrow())
-    newFunction->setDoesNotThrow();
-
-  // Inherit the uwtable attribute if we need to.
-  if (oldFunction->hasUWTable())
-    newFunction->setHasUWTable();
 
   // Inherit all of the target dependent attributes and white-listed
   // target independent attributes.
