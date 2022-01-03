@@ -1212,6 +1212,10 @@ struct ExpectedParameter {
   std::string Text;
   std::pair<unsigned, unsigned> Offsets;
 };
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                              const ExpectedParameter &P) {
+  return OS << P.Text;
+}
 MATCHER_P(ParamsAre, P, "") {
   if (P.size() != arg.parameters.size())
     return false;
@@ -1258,6 +1262,36 @@ TEST(SignatureHelpTest, Overloads) {
   // We always prefer the first signature.
   EXPECT_EQ(0, Results.activeSignature);
   EXPECT_EQ(0, Results.activeParameter);
+}
+
+TEST(SignatureHelpTest, Constructors) {
+  std::string Top = R"cpp(
+    struct S {
+      S(int);
+      S(const S &) = delete;
+    };
+  )cpp";
+
+  auto CheckParenInit = [&](std::string Init) {
+    EXPECT_THAT(signatures(Top + Init).signatures,
+                UnorderedElementsAre(Sig("S([[int]])")))
+        << Init;
+  };
+  CheckParenInit("S s(^);");
+  CheckParenInit("auto s = S(^);");
+  CheckParenInit("auto s = new S(^);");
+
+  auto CheckBracedInit = [&](std::string Init) {
+    EXPECT_THAT(signatures(Top + Init).signatures,
+                UnorderedElementsAre(Sig("S{[[int]]}")))
+        << Init;
+  };
+  CheckBracedInit("S s{^};");
+  CheckBracedInit("S s = {^};");
+  CheckBracedInit("auto s = S{^};");
+  // FIXME: doesn't work: no ExpectedType set in ParseCXXNewExpression.
+  // CheckBracedInit("auto s = new S{^};");
+  CheckBracedInit("int x(S); int i = x({^});");
 }
 
 TEST(SignatureHelpTest, OverloadInitListRegression) {

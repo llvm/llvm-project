@@ -1878,7 +1878,7 @@ Parser::ParseCXXTypeConstructExpression(const DeclSpec &DS) {
       if (TypeRep)
         PreferredType = Actions.ProduceConstructorSignatureHelp(
             getCurScope(), TypeRep.get()->getCanonicalTypeInternal(),
-            DS.getEndLoc(), Exprs, T.getOpenLocation());
+            DS.getEndLoc(), Exprs, T.getOpenLocation(), /*Braced=*/false);
       CalledSignatureHelp = true;
       return PreferredType;
     };
@@ -3168,7 +3168,8 @@ Parser::ParseCXXNewExpression(bool UseGlobal, SourceLocation Start) {
         if (TypeRep)
           PreferredType = Actions.ProduceConstructorSignatureHelp(
               getCurScope(), TypeRep.get()->getCanonicalTypeInternal(),
-              DeclaratorInfo.getEndLoc(), ConstructorArgs, ConstructorLParen);
+              DeclaratorInfo.getEndLoc(), ConstructorArgs, ConstructorLParen,
+              /*Braced=*/false);
         CalledSignatureHelp = true;
         return PreferredType;
       };
