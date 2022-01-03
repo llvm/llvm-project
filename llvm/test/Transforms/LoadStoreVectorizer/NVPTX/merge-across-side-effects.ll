@@ -200,10 +200,10 @@ define void @store_fn_readnone(i32* %p) #0 {
 }
 
 
-attributes #0 = { nounwind }
-attributes #1 = { nounwind writeonly }
-attributes #2 = { nounwind readonly }
+attributes #0 = { nounwind willreturn }
+attributes #1 = { nounwind willreturn writeonly }
+attributes #2 = { nounwind readonly willreturn }
 attributes #3 = { writeonly }
 attributes #4 = { readonly }
 ; readnone implies nounwind, so no need to test separately
-attributes #5 = { nounwind readnone }
+attributes #5 = { nounwind willreturn readnone }

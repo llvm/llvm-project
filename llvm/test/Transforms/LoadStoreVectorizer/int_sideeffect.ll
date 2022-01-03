@@ -44,8 +44,8 @@ define void @test_sideeffect(float* %p) {
 
 declare void @foo()
 
-define void @test_inaccessiblememonly(float* %p) {
-; CHECK-LABEL: @test_inaccessiblememonly(
+define void @test_inaccessiblememonly_nounwind_willreturn(float* %p) {
+; CHECK-LABEL: @test_inaccessiblememonly_nounwind_willreturn(
 ; CHECK-NEXT:    [[P0:%.*]] = getelementptr float, float* [[P:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[P0]] to <4 x float>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 16
@@ -70,10 +70,80 @@ define void @test_inaccessiblememonly(float* %p) {
   %l0 = load float, float* %p0, align 16
   %l1 = load float, float* %p1
   %l2 = load float, float* %p2
+  call void @foo() inaccessiblememonly nounwind willreturn
+  %l3 = load float, float* %p3
+  store float %l0, float* %p0, align 16
+  call void @foo() inaccessiblememonly nounwind willreturn
+  store float %l1, float* %p1
+  store float %l2, float* %p2
+  store float %l3, float* %p3
+  ret void
+}
+
+define void @test_inaccessiblememonly_not_willreturn(float* %p) {
+; CHECK-LABEL: @test_inaccessiblememonly_not_willreturn(
+; CHECK-NEXT:    [[P0:%.*]] = getelementptr float, float* [[P:%.*]], i64 0
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr float, float* [[P]], i64 1
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr float, float* [[P]], i64 2
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr float, float* [[P]], i64 3
+; CHECK-NEXT:    [[L0:%.*]] = load float, float* [[P0]], align 16
+; CHECK-NEXT:    [[L1:%.*]] = load float, float* [[P1]], align 4
+; CHECK-NEXT:    [[L2:%.*]] = load float, float* [[P2]], align 4
+; CHECK-NEXT:    call void @foo() #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    [[L3:%.*]] = load float, float* [[P3]], align 4
+; CHECK-NEXT:    store float [[L0]], float* [[P0]], align 16
+; CHECK-NEXT:    call void @foo() #[[ATTR2]]
+; CHECK-NEXT:    store float [[L1]], float* [[P1]], align 4
+; CHECK-NEXT:    store float [[L2]], float* [[P2]], align 4
+; CHECK-NEXT:    store float [[L3]], float* [[P3]], align 4
+; CHECK-NEXT:    ret void
+;
+  %p0 = getelementptr float, float* %p, i64 0
+  %p1 = getelementptr float, float* %p, i64 1
+  %p2 = getelementptr float, float* %p, i64 2
+  %p3 = getelementptr float, float* %p, i64 3
+  %l0 = load float, float* %p0, align 16
+  %l1 = load float, float* %p1
+  %l2 = load float, float* %p2
   call void @foo() inaccessiblememonly nounwind
   %l3 = load float, float* %p3
   store float %l0, float* %p0, align 16
   call void @foo() inaccessiblememonly nounwind
+  store float %l1, float* %p1
+  store float %l2, float* %p2
+  store float %l3, float* %p3
+  ret void
+}
+
+define void @test_inaccessiblememonly_not_nounwind(float* %p) {
+; CHECK-LABEL: @test_inaccessiblememonly_not_nounwind(
+; CHECK-NEXT:    [[P0:%.*]] = getelementptr float, float* [[P:%.*]], i64 0
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr float, float* [[P]], i64 1
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr float, float* [[P]], i64 2
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr float, float* [[P]], i64 3
+; CHECK-NEXT:    [[L0:%.*]] = load float, float* [[P0]], align 16
+; CHECK-NEXT:    [[L1:%.*]] = load float, float* [[P1]], align 4
+; CHECK-NEXT:    [[L2:%.*]] = load float, float* [[P2]], align 4
+; CHECK-NEXT:    call void @foo() #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    [[L3:%.*]] = load float, float* [[P3]], align 4
+; CHECK-NEXT:    store float [[L0]], float* [[P0]], align 16
+; CHECK-NEXT:    call void @foo() #[[ATTR3]]
+; CHECK-NEXT:    store float [[L1]], float* [[P1]], align 4
+; CHECK-NEXT:    store float [[L2]], float* [[P2]], align 4
+; CHECK-NEXT:    store float [[L3]], float* [[P3]], align 4
+; CHECK-NEXT:    ret void
+;
+  %p0 = getelementptr float, float* %p, i64 0
+  %p1 = getelementptr float, float* %p, i64 1
+  %p2 = getelementptr float, float* %p, i64 2
+  %p3 = getelementptr float, float* %p, i64 3
+  %l0 = load float, float* %p0, align 16
+  %l1 = load float, float* %p1
+  %l2 = load float, float* %p2
+  call void @foo() inaccessiblememonly willreturn
+  %l3 = load float, float* %p3
+  store float %l0, float* %p0, align 16
+  call void @foo() inaccessiblememonly willreturn
   store float %l1, float* %p1
   store float %l2, float* %p2
   store float %l3, float* %p3
