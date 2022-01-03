@@ -6,8 +6,9 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @b = external local_unnamed_addr global i32, align 4
 
+declare i1 @unknown(i32) readonly nounwind willreturn
 
-define void @main(i1 %c) local_unnamed_addr #0 {
+define void @main() local_unnamed_addr #0 {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:  ph1:
 ; CHECK-NEXT:    br label [[H1:%.*]]
@@ -19,21 +20,26 @@ define void @main(i1 %c) local_unnamed_addr #0 {
 ; CHECK:       h2:
 ; CHECK-NEXT:    br label [[H3:%.*]]
 ; CHECK:       h3:
-; CHECK-NEXT:    br i1 [[C:%.*]], label [[LATCH3:%.*]], label [[EXIT_LOOPEXIT:%.*]]
+; CHECK-NEXT:    [[C1:%.*]] = call i1 @unknown(i32 0)
+; CHECK-NEXT:    br i1 [[C1]], label [[LATCH3:%.*]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       latch3:
-; CHECK-NEXT:    br i1 false, label [[EXIT3:%.*]], label [[H3]]
+; CHECK-NEXT:    [[C2:%.*]] = call i1 @unknown(i32 0)
+; CHECK-NEXT:    br i1 [[C2]], label [[EXIT3:%.*]], label [[H3]]
 ; CHECK:       exit3:
 ; CHECK-NEXT:    br label [[LATCH2:%.*]]
 ; CHECK:       latch2:
 ; CHECK-NEXT:    br label [[H3_1:%.*]]
 ; CHECK:       h3.1:
-; CHECK-NEXT:    br i1 [[C]], label [[LATCH3_1:%.*]], label [[EXIT_LOOPEXIT1:%.*]]
+; CHECK-NEXT:    [[C1_1:%.*]] = call i1 @unknown(i32 1)
+; CHECK-NEXT:    br i1 [[C1_1]], label [[LATCH3_1:%.*]], label [[EXIT_LOOPEXIT1:%.*]]
 ; CHECK:       latch3.1:
-; CHECK-NEXT:    br i1 false, label [[EXIT3_1:%.*]], label [[H3_1]]
+; CHECK-NEXT:    [[C2_1:%.*]] = call i1 @unknown(i32 1)
+; CHECK-NEXT:    br i1 [[C2_1]], label [[EXIT3_1:%.*]], label [[H3_1]]
 ; CHECK:       exit3.1:
 ; CHECK-NEXT:    br label [[LATCH2_1:%.*]]
 ; CHECK:       latch2.1:
-; CHECK-NEXT:    br i1 [[C]], label [[LATCH1]], label [[PH2]]
+; CHECK-NEXT:    [[C3:%.*]] = call i1 @unknown(i32 [[D_0]])
+; CHECK-NEXT:    br i1 [[C3]], label [[LATCH1]], label [[PH2]]
 ; CHECK:       latch1:
 ; CHECK-NEXT:    [[TMP0]] = load i32, i32* @b, align 4
 ; CHECK-NEXT:    br label [[H1]]
@@ -62,10 +68,12 @@ h2:
   br label %h3
 
 h3:
-  br i1 %c, label %latch3, label %exit
+  %c1 = call i1 @unknown(i32 %0)
+  br i1 %c1, label %latch3, label %exit
 
 latch3:
-  br i1 false, label %exit3, label %h3
+  %c2 = call i1 @unknown(i32 %0)
+  br i1 %c2, label %exit3, label %h3
 
 exit3:
   br label %latch2
@@ -76,7 +84,8 @@ latch2:
   br i1 %cmp, label %h2, label %exit2
 
 exit2:
-  br i1 %c, label %latch1, label %ph2
+  %c3 = call i1 @unknown(i32 %d.0)
+  br i1 %c3, label %latch1, label %ph2
 
 latch1:                 ; preds = %exit2
   %1 = load i32, i32* @b, align 4
