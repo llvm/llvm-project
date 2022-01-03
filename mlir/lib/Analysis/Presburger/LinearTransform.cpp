@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Analysis/LinearTransform.h"
-#include "mlir/Analysis/AffineStructures.h"
+#include "mlir/Analysis/Presburger/LinearTransform.h"
+#include "mlir/Analysis/Presburger/IntegerPolyhedron.h"
 
 namespace mlir {
 
@@ -135,12 +135,12 @@ LinearTransform::preMultiplyColumn(ArrayRef<int64_t> colVec) const {
   return result;
 }
 
-FlatAffineConstraints
-LinearTransform::applyTo(const FlatAffineConstraints &fac) const {
-  FlatAffineConstraints result(fac.getNumIds());
+IntegerPolyhedron
+LinearTransform::applyTo(const IntegerPolyhedron &poly) const {
+  IntegerPolyhedron result(poly.getNumIds());
 
-  for (unsigned i = 0, e = fac.getNumEqualities(); i < e; ++i) {
-    ArrayRef<int64_t> eq = fac.getEquality(i);
+  for (unsigned i = 0, e = poly.getNumEqualities(); i < e; ++i) {
+    ArrayRef<int64_t> eq = poly.getEquality(i);
 
     int64_t c = eq.back();
 
@@ -149,8 +149,8 @@ LinearTransform::applyTo(const FlatAffineConstraints &fac) const {
     result.addEquality(newEq);
   }
 
-  for (unsigned i = 0, e = fac.getNumInequalities(); i < e; ++i) {
-    ArrayRef<int64_t> ineq = fac.getInequality(i);
+  for (unsigned i = 0, e = poly.getNumInequalities(); i < e; ++i) {
+    ArrayRef<int64_t> ineq = poly.getInequality(i);
 
     int64_t c = ineq.back();
 

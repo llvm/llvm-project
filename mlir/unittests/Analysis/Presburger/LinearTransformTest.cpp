@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Analysis/LinearTransform.h"
+#include "mlir/Analysis/Presburger/LinearTransform.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
