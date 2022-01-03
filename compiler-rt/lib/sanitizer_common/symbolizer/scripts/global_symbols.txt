@@ -94,6 +94,7 @@ isxdigit U
 log10 U
 lseek U
 lseek64 U
+madvise U
 malloc U
 mbrlen U
 mbrtowc U
