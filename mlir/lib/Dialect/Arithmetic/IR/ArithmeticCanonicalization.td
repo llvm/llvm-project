@@ -128,4 +128,12 @@ def IndexCastOfExtSI :
 def BitcastOfBitcast :
     Pat<(Arith_BitcastOp (Arith_BitcastOp $x)), (replaceWithValue $x)>;
 
+//===----------------------------------------------------------------------===//
+// ExtSIOp
+//===----------------------------------------------------------------------===//
+
+// extsi(extui(x iN : iM) : iL) -> extui(x : iL)
+def ExtSIOfExtUI :
+    Pat<(Arith_ExtSIOp (Arith_ExtUIOp $x)), (Arith_ExtUIOp $x)>;
+
 #endif // ARITHMETIC_PATTERNS

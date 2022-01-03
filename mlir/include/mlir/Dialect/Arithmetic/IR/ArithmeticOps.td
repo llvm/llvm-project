@@ -818,6 +818,7 @@ def Arith_ExtSIOp : Arith_IToICastOp<"extsi"> {
   }];
 
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
   let verifier = [{ return verifyExtOp<IntegerType>(*this); }];
 }
 

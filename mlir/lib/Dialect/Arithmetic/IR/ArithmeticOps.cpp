@@ -788,6 +788,11 @@ OpFoldResult arith::ExtUIOp::fold(ArrayRef<Attribute> operands) {
     return IntegerAttr::get(
         getType(), lhs.getValue().zext(getType().getIntOrFloatBitWidth()));
 
+  if (auto lhs = getIn().getDefiningOp<ExtUIOp>()) {
+    getInMutable().assign(lhs.getIn());
+    return getResult();
+  }
+
   return {};
 }
 
@@ -804,11 +809,21 @@ OpFoldResult arith::ExtSIOp::fold(ArrayRef<Attribute> operands) {
     return IntegerAttr::get(
         getType(), lhs.getValue().sext(getType().getIntOrFloatBitWidth()));
 
+  if (auto lhs = getIn().getDefiningOp<ExtSIOp>()) {
+    getInMutable().assign(lhs.getIn());
+    return getResult();
+  }
+
   return {};
 }
 
 bool arith::ExtSIOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   return checkWidthChangeCast<std::greater, IntegerType>(inputs, outputs);
+}
+
+void arith::ExtSIOp::getCanonicalizationPatterns(
+    OwningRewritePatternList &patterns, MLIRContext *context) {
+  patterns.insert<ExtSIOfExtUI>(context);
 }
 
 //===----------------------------------------------------------------------===//

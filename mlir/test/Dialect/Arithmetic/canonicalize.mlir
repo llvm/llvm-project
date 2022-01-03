@@ -70,6 +70,35 @@ func @cmpOfExtUI(%arg0: i1) -> i1 {
 
 // -----
 
+// CHECK-LABEL: @extSIOfExtUI
+//       CHECK:   %[[res:.+]] = arith.extui %arg0 : i1 to i64
+//       CHECK:   return %[[res]]
+func @extSIOfExtUI(%arg0: i1) -> i64 {
+  %ext1 = arith.extui %arg0 : i1 to i8
+  %ext2 = arith.extsi %ext1 : i8 to i64
+  return %ext2 : i64
+}
+
+// CHECK-LABEL: @extUIOfExtUI
+//       CHECK:   %[[res:.+]] = arith.extui %arg0 : i1 to i64
+//       CHECK:   return %[[res]]
+func @extUIOfExtUI(%arg0: i1) -> i64 {
+  %ext1 = arith.extui %arg0 : i1 to i8
+  %ext2 = arith.extui %ext1 : i8 to i64
+  return %ext2 : i64
+}
+
+// CHECK-LABEL: @extSIOfExtSI
+//       CHECK:   %[[res:.+]] = arith.extsi %arg0 : i1 to i64
+//       CHECK:   return %[[res]]
+func @extSIOfExtSI(%arg0: i1) -> i64 {
+  %ext1 = arith.extsi %arg0 : i1 to i8
+  %ext2 = arith.extsi %ext1 : i8 to i64
+  return %ext2 : i64
+}
+
+// -----
+
 // CHECK-LABEL: @indexCastOfSignExtend
 //       CHECK:   %[[res:.+]] = arith.index_cast %arg0 : i8 to index
 //       CHECK:   return %[[res]]
