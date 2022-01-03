@@ -506,9 +506,20 @@ CodeCompleteConsumer::OverloadCandidate::getFunctionType() const {
 
   case CK_FunctionType:
     return Type;
+
+  case CK_Template:
+    return nullptr;
   }
 
   llvm_unreachable("Invalid CandidateKind!");
+}
+
+unsigned CodeCompleteConsumer::OverloadCandidate::getNumParams() const {
+  if (Kind == CK_Template)
+    return Template->getTemplateParameters()->size();
+  if (const auto *FPT = dyn_cast_or_null<FunctionProtoType>(getFunctionType()))
+    return FPT->getNumParams();
+  return 0;
 }
 
 //===----------------------------------------------------------------------===//
