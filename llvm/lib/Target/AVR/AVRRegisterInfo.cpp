@@ -44,10 +44,7 @@ AVRRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
 const uint32_t *
 AVRRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
                                       CallingConv::ID CC) const {
-  const AVRMachineFunctionInfo *AFI = MF.getInfo<AVRMachineFunctionInfo>();
-
-  return AFI->isInterruptOrSignalHandler() ? CSR_Interrupts_RegMask
-                                           : CSR_Normal_RegMask;
+  return CSR_Normal_RegMask;
 }
 
 BitVector AVRRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
