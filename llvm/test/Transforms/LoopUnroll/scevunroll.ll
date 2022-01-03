@@ -213,7 +213,7 @@ define i32 @multiExitIncomplete(i32* %base) nounwind {
 ; CHECK:       l1.5:
 ; CHECK-NEXT:    br i1 false, label [[L2_5:%.*]], label [[EXIT1:%.*]]
 ; CHECK:       l2.5:
-; CHECK-NEXT:    br label [[L3_5:%.*]]
+; CHECK-NEXT:    br i1 true, label [[L3_5:%.*]], label [[EXIT2:%.*]]
 ; CHECK:       l3.5:
 ; CHECK-NEXT:    br label [[EXIT3]]
 ; CHECK:       exit1:
@@ -316,10 +316,10 @@ define void @nsw_latch(i32* %a) nounwind {
 ; CHECK:       for.body.1:
 ; CHECK-NEXT:    br i1 false, label [[FOR_COND_1:%.*]], label [[RETURN]]
 ; CHECK:       for.cond.1:
-; CHECK-NEXT:    br label [[FOR_BODY]]
+; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
-; CHECK-NEXT:    [[B_03_LCSSA:%.*]] = phi i32 [ 0, [[FOR_COND]] ], [ 8, [[FOR_BODY_1]] ]
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ 0, [[FOR_COND]] ], [ 1, [[FOR_BODY_1]] ]
+; CHECK-NEXT:    [[B_03_LCSSA:%.*]] = phi i32 [ 0, [[FOR_COND]] ], [ 8, [[FOR_BODY_1]] ], [ 0, [[FOR_COND_1]] ]
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ 0, [[FOR_COND]] ], [ 1, [[FOR_BODY_1]] ], [ 0, [[FOR_COND_1]] ]
 ; CHECK-NEXT:    store i32 [[B_03_LCSSA]], i32* [[A:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
