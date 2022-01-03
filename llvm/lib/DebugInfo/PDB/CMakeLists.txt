@@ -4,7 +4,7 @@ macro(add_pdb_impl_folder group)
 endmacro()
 
 if(LLVM_ENABLE_DIA_SDK)
-  include_directories(${MSVC_DIA_SDK_DIR}/include)
+  include_directories(SYSTEM ${MSVC_DIA_SDK_DIR}/include)
   set(LIBPDB_LINK_FOLDERS "${MSVC_DIA_SDK_DIR}\\lib")
 
   if ("$ENV{VSCMD_ARG_TGT_ARCH}" STREQUAL "arm64")
