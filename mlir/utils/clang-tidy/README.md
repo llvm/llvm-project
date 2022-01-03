@@ -12,8 +12,8 @@ the root of the repo:
 { time \
   CLANG_TIDY=build-clang/bin/clang-tidy \
   TIMING_TIDY=time \
-  ./mlir/utils/apply-clang-tidy.sh build mlir ~/clang-tidy-fails/
-; } 2>&1 | tee ~/clang-tidy.log
+  ./mlir/utils/clang-tidy/apply-clang-tidy.sh build mlir ~/clang-tidy-fails/
+} 2>&1 | tee ~/clang-tidy.log
 ```
 
 - `build-clang/` contains the result of a build of clang-tidy, configured
