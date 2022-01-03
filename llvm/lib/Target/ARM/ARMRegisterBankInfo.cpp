@@ -129,7 +129,8 @@ static void checkValueMappings() {
 } // end namespace arm
 } // end namespace llvm
 
-ARMRegisterBankInfo::ARMRegisterBankInfo(const TargetRegisterInfo &TRI) {
+ARMRegisterBankInfo::ARMRegisterBankInfo(const TargetRegisterInfo &TRI)
+    : ARMGenRegisterBankInfo() {
   // We have only one set of register banks, whatever the subtarget
   // is. Therefore, the initialization of the RegBanks table should be
   // done only once. Indeed the table of all register banks

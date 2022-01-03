@@ -20,7 +20,7 @@
 using namespace llvm;
 using namespace llvm::remarks;
 
-StringTable::StringTable(const ParsedStringTable &Other) {
+StringTable::StringTable(const ParsedStringTable &Other) : StrTab() {
   for (unsigned i = 0, e = Other.size(); i < e; ++i)
     if (Expected<StringRef> MaybeStr = Other[i])
       add(*MaybeStr);

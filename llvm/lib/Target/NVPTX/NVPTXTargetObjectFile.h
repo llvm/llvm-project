@@ -17,7 +17,7 @@ namespace llvm {
 
 class NVPTXTargetObjectFile : public TargetLoweringObjectFile {
 public:
-  NVPTXTargetObjectFile() {}
+  NVPTXTargetObjectFile() : TargetLoweringObjectFile() {}
 
   ~NVPTXTargetObjectFile() override;
 

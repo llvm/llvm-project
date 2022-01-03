@@ -73,7 +73,8 @@ RegisterBankInfo::ValueMapping ValueMappings[] = {
 
 using namespace llvm;
 
-MipsRegisterBankInfo::MipsRegisterBankInfo(const TargetRegisterInfo &TRI) {}
+MipsRegisterBankInfo::MipsRegisterBankInfo(const TargetRegisterInfo &TRI)
+    : MipsGenRegisterBankInfo() {}
 
 const RegisterBank &
 MipsRegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,

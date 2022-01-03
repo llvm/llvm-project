@@ -89,7 +89,7 @@ SystemZSubtarget::SystemZSubtarget(const Triple &TT, const std::string &CPU,
       HasSoftFloat(false), TargetTriple(TT),
       SpecialRegisters(initializeSpecialRegisters()),
       InstrInfo(initializeSubtargetDependencies(CPU, FS)), TLInfo(TM, *this),
-      FrameLowering(SystemZFrameLowering::create(*this)) {}
+      TSInfo(), FrameLowering(SystemZFrameLowering::create(*this)) {}
 
 bool SystemZSubtarget::enableSubRegLiveness() const {
   return UseSubRegLiveness;

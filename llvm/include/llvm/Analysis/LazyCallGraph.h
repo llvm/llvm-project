@@ -1190,7 +1190,7 @@ private:
   }
 };
 
-inline LazyCallGraph::Edge::Edge() {}
+inline LazyCallGraph::Edge::Edge() : Value() {}
 inline LazyCallGraph::Edge::Edge(Node &N, Kind K) : Value(&N, K) {}
 
 inline LazyCallGraph::Edge::operator bool() const {

@@ -63,7 +63,7 @@ class CodeRegion {
 
 public:
   CodeRegion(llvm::StringRef Desc, llvm::SMLoc Start)
-      : Description(Desc), RangeStart(Start) {}
+      : Description(Desc), RangeStart(Start), RangeEnd() {}
 
   void addInstruction(const llvm::MCInst &Instruction) {
     Instructions.emplace_back(Instruction);

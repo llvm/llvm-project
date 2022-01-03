@@ -68,7 +68,9 @@ struct IntelExpr {
   StringRef OffsetName;
   unsigned Scale;
 
-  IntelExpr() : NeedBracs(false), Imm(0), Scale(1) {}
+  IntelExpr()
+      : NeedBracs(false), Imm(0), BaseReg(StringRef()), IndexReg(StringRef()),
+        OffsetName(StringRef()), Scale(1) {}
   // [BaseReg + IndexReg * ScaleExpression + OFFSET name + ImmediateExpression]
   IntelExpr(StringRef baseReg, StringRef indexReg, unsigned scale,
             StringRef offsetName, int64_t imm, bool needBracs)

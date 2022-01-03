@@ -30,7 +30,8 @@ using namespace llvm;
 
 char RGPassManager::ID = 0;
 
-RGPassManager::RGPassManager() : FunctionPass(ID) {
+RGPassManager::RGPassManager()
+  : FunctionPass(ID), PMDataManager() {
   RI = nullptr;
   CurrentRegion = nullptr;
 }

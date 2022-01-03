@@ -69,7 +69,8 @@ char PrintLoopPassWrapper::ID = 0;
 
 char LPPassManager::ID = 0;
 
-LPPassManager::LPPassManager() : FunctionPass(ID) {
+LPPassManager::LPPassManager()
+  : FunctionPass(ID), PMDataManager() {
   LI = nullptr;
   CurrentLoop = nullptr;
 }

@@ -25,7 +25,8 @@ using namespace llvm;
 #define GET_TARGET_REGBANK_INFO_IMPL
 #include "X86GenRegisterBankInfo.def"
 
-X86RegisterBankInfo::X86RegisterBankInfo(const TargetRegisterInfo &TRI) {
+X86RegisterBankInfo::X86RegisterBankInfo(const TargetRegisterInfo &TRI)
+    : X86GenRegisterBankInfo() {
 
   // validate RegBank initialization.
   const RegisterBank &RBGPR = getRegBank(X86::GPRRegBankID);

@@ -101,10 +101,10 @@ struct BPFOperand : public MCParsedAsmOperand {
     ImmOp Imm;
   };
 
-  BPFOperand(KindTy K) : Kind(K) {}
+  BPFOperand(KindTy K) : MCParsedAsmOperand(), Kind(K) {}
 
 public:
-  BPFOperand(const BPFOperand &o) {
+  BPFOperand(const BPFOperand &o) : MCParsedAsmOperand() {
     Kind = o.Kind;
     StartLoc = o.StartLoc;
     EndLoc = o.EndLoc;

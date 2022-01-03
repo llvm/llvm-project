@@ -702,7 +702,7 @@ public:
 
   LineCoverageIterator(const CoverageData &CD, unsigned Line)
       : CD(CD), WrappedSegment(nullptr), Next(CD.begin()), Ended(false),
-        Line(Line) {
+        Line(Line), Segments(), Stats() {
     this->operator++();
   }
 

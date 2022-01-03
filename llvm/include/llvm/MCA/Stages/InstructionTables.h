@@ -32,7 +32,7 @@ class InstructionTables final : public Stage {
 
 public:
   InstructionTables(const MCSchedModel &Model)
-      : SM(Model), Masks(Model.getNumProcResourceKinds()) {
+      : Stage(), SM(Model), Masks(Model.getNumProcResourceKinds()) {
     computeProcResourceMasks(Model, Masks);
   }
 
