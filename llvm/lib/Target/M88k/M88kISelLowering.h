@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the interfaces that M88k uses to lower LLVM code into a
-// selection DAG.
+// This file defines the interfaces for the M88kTargetLowering class.
+// Only functions required by GlobalISel are implemented.
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,9 +15,6 @@
 #define LLVM_LIB_TARGET_M88K_M88KISELLOWERING_H
 
 #include "M88k.h"
-#include "M88kInstrInfo.h"
-#include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
 
 namespace llvm {
@@ -61,36 +58,6 @@ class M88kTargetLowering : public TargetLowering {
 public:
   explicit M88kTargetLowering(const TargetMachine &TM,
                               const M88kSubtarget &STI);
-
-  // Override TargetLowering methods.
-  bool hasAndNot(SDValue X) const override { return true; }
-  const char *getTargetNodeName(unsigned Opcode) const override;
-
-  SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
-
-  SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
-
-  // Override required hooks.
-  SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
-                               bool IsVarArg,
-                               const SmallVectorImpl<ISD::InputArg> &Ins,
-                               const SDLoc &DL, SelectionDAG &DAG,
-                               SmallVectorImpl<SDValue> &InVals) const override;
-
-  SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
-                      const SmallVectorImpl<ISD::OutputArg> &Outs,
-                      const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
-                      SelectionDAG &DAG) const override;
-
-  SDValue LowerCall(CallLoweringInfo &CLI,
-                    SmallVectorImpl<SDValue> &InVals) const override;
-
-  SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
-
-private:
-  SDValue getTargetNode(GlobalAddressSDNode *N, EVT Ty, SelectionDAG &DAG,
-                        unsigned Flag) const;
 };
 
 } // end namespace llvm

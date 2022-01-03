@@ -5,7 +5,6 @@ set(LLVM_TARGET_DEFINITIONS M88k.td)
 tablegen(LLVM M88kGenAsmMatcher.inc -gen-asm-matcher)
 tablegen(LLVM M88kGenAsmWriter.inc -gen-asm-writer)
 tablegen(LLVM M88kGenCallingConv.inc -gen-callingconv)
-tablegen(LLVM M88kGenDAGISel.inc -gen-dag-isel)
 tablegen(LLVM M88kGenDisassemblerTables.inc -gen-disassembler)
 tablegen(LLVM M88kGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM M88kGenMCCodeEmitter.inc -gen-emitter)
@@ -19,6 +18,9 @@ tablegen(LLVM M88kGenPostLegalizeGICombiner.inc -gen-global-isel-combiner
 tablegen(LLVM M88kGenPostLegalizeGILowering.inc -gen-global-isel-combiner
               -combiners="M88kPostLegalizerLoweringHelper")
 
+# Generate DAGIsel to identify problems only. It's not used.
+tablegen(LLVM M88kGenDAGISel.inc -gen-dag-isel)
+
 add_public_tablegen_target(M88kCommonTableGen)
 
 add_llvm_target(M88kCodeGen
@@ -29,7 +31,6 @@ add_llvm_target(M88kCodeGen
   GISel/M88kRegisterBankInfo.cpp
   M88kAsmPrinter.cpp
   M88kFrameLowering.cpp
-  M88kISelDAGToDAG.cpp
   M88kISelLowering.cpp
   M88kInstrInfo.cpp
 #  M88kMachineFunctionInfo.cpp

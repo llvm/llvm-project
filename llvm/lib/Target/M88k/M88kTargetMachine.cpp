@@ -89,6 +89,11 @@ M88kTargetMachine::M88kTargetMachine(const Target &T, const Triple &TT,
                         getEffectiveCodeModel(CM, CodeModel::Medium), OL),
       TLOF(std::make_unique<TargetLoweringObjectFileELF>()) {
   initAsmInfo();
+
+  // Only GlobalISel is implemented. Disable the fallback mode, because there is
+  // no fallback.
+  setGlobalISel(true);
+  setGlobalISelAbort(GlobalISelAbortMode::Enable);
 }
 
 M88kTargetMachine::~M88kTargetMachine() {}
@@ -128,7 +133,6 @@ public:
     return getTM<M88kTargetMachine>();
   }
 
-  bool addInstSelector() override;
   void addPreEmitPass() override;
 
   // GlobalISEL
@@ -142,11 +146,6 @@ public:
 
 TargetPassConfig *M88kTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new M88kPassConfig(*this, PM);
-}
-
-bool M88kPassConfig::addInstSelector() {
-  addPass(createM88kISelDag(getM88kTargetMachine(), getOptLevel()));
-  return false;
 }
 
 void M88kPassConfig::addPreEmitPass() {

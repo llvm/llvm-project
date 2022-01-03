@@ -12,14 +12,12 @@ The code is based on the example from my book "Learn LLVM 12" (see
 [Packt](https://www.packtpub.com/product/learn-llvm-12/9781839213502) or
 [Amazon](https://www.amazon.com/Learn-LLVM-12-beginners-libraries/dp/1839213507/)).
 It differs in the following ways:
+- Uses only GlobalISel. SelectionDAG support has been removed.
 - Minimal clang support. Makes it easy to crash the backend.
 - All machine instructions are implemented.
 - Assembler supports `.requires81100` directive.
 - Updates/refactoring of AsmParser, register definition, calling convention, etc.
-
-Future direction:
-- Exclusively use new scheduler model. No Itineries!
-- Further development concentrates on GlobalISel.
+- Removed all Itineries in favor of the new scheduling model.
 
 ## Building LLVM with the m88k backend
 
