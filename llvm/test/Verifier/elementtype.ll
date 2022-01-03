@@ -14,7 +14,7 @@ define void @type_mismatch2() {
   ret void
 }
 
-; CHECK: Attribute 'elementtype' can only be applied to intrinsics.
+; CHECK: Attribute 'elementtype' can only be applied to intrinsics and inline asm.
 define void @not_intrinsic() {
   call void @some_function(i32* elementtype(i32) null)
   ret void
