@@ -297,7 +297,7 @@ void awesome_f2();
 
 def get_actual_filename(dirname, filename):
   if not os.path.isdir(dirname): 
-    return ""
+    return ''
   name = os.path.join(dirname, filename)
   if (os.path.isfile(name)):
     return name
@@ -305,7 +305,7 @@ def get_actual_filename(dirname, filename):
   for file in os.listdir(dirname):
     if (file.lower() == caselessname):
       return os.path.join(dirname, file)
-  return ""
+  return ''
 
 
 # Recreates the list of checks in the docs/clang-tidy/checks directory.
@@ -321,7 +321,7 @@ def update_checks_list(clang_tidy_path):
   doc_files.sort()
 
   def has_auto_fix(check_name):
-    dirname, _, check_name = check_name.partition("-")
+    dirname, _, check_name = check_name.partition('-')
 
     checker_code = get_actual_filename(os.path.join(clang_tidy_path, dirname),
                                        get_camel_check_name(check_name) + '.cpp')
@@ -338,7 +338,7 @@ def update_checks_list(clang_tidy_path):
         if needle in code:
           # Some simple heuristics to figure out if a checker has an autofix or not.
           return ' "Yes"'
-    return ""
+    return ''
 
   def process_doc(doc_file):
     check_name = doc_file.replace('.rst', '')
@@ -389,7 +389,7 @@ def update_checks_list(clang_tidy_path):
   with io.open(filename, 'w', encoding='utf8', newline='\n') as f:
     for line in lines:
       f.write(line)
-      if line.strip() == ".. csv-table::":
+      if line.strip() == '.. csv-table::':
         # We dump the checkers
         f.write('   :header: "Name", "Offers fixes"\n\n')
         f.writelines(checks)
