@@ -3888,7 +3888,7 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language);
 FormatStyle getChromiumStyle(FormatStyle::LanguageKind Language);
 
 /// Returns a format style complying with Mozilla's style guide:
-/// https://developer.mozilla.org/en-US/docs/Developer_Guide/Coding_Style.
+/// https://firefox-source-docs.mozilla.org/code-quality/coding-style/index.html.
 FormatStyle getMozillaStyle();
 
 /// Returns a format style complying with Webkit's style guide:
@@ -4066,6 +4066,8 @@ extern const char *DefaultFallbackStyle;
 /// * "file" - Load style configuration from a file called ``.clang-format``
 /// located in one of the parent directories of ``FileName`` or the current
 /// directory if ``FileName`` is empty.
+/// * "file:<format_file_path>" to explicitly specify the configuration file to
+/// use.
 ///
 /// \param[in] StyleName Style name to interpret according to the description
 /// above.

@@ -437,6 +437,7 @@ def Arith_AndIOp : Arith_IntBinaryOp<"andi", [Commutative, Idempotent]> {
     ```
   }];
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -465,6 +466,7 @@ def Arith_OrIOp : Arith_IntBinaryOp<"ori", [Commutative, Idempotent]> {
     ```
   }];
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -818,6 +820,7 @@ def Arith_ExtSIOp : Arith_IToICastOp<"extsi"> {
   }];
 
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
   let verifier = [{ return verifyExtOp<IntegerType>(*this); }];
 }
 

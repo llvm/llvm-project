@@ -249,7 +249,14 @@ public:
       return countMinLeadingZeros();
     if (isNegative())
       return countMinLeadingOnes();
-    return 0;
+    // Every value has at least 1 sign bit.
+    return 1;
+  }
+
+  /// Returns the maximum number of bits needed to represent all possible
+  /// signed values with these known bits.
+  unsigned countMaxSignedBits() const {
+    return getBitWidth() - countMinSignBits() + 1;
   }
 
   /// Returns the maximum number of trailing zero bits possible.

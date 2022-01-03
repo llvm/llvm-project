@@ -301,6 +301,10 @@ clang-format
   space before parentheses. The custom options can be set using
   ``SpaceBeforeParensOptions``.
 
+- The command line argument `-style=<string>` has been extended so that a specific
+  format file at location <format_file_path> can be selected. This is supported
+  via the syntax: `-style=file:<format_file_path>`.
+
 - Improved C++20 Modules and Coroutines support.
 
 libclang

@@ -187,8 +187,6 @@ CmpIOpLowering::matchAndRewrite(arith::CmpIOp op, OpAdaptor adaptor,
             adaptor.getLhs(), adaptor.getRhs());
       },
       rewriter);
-
-  return success();
 }
 
 //===----------------------------------------------------------------------===//

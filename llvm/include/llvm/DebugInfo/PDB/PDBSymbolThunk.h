@@ -46,7 +46,7 @@ public:
   FORWARD_SYMBOL_METHOD(getVirtualBaseOffset)
   FORWARD_SYMBOL_METHOD(isVolatileType)
 };
+} // namespace pdb
 } // namespace llvm
-}
 
 #endif // LLVM_DEBUGINFO_PDB_PDBSYMBOLTHUNK_H

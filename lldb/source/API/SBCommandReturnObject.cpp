@@ -55,8 +55,7 @@ SBCommandReturnObject::SBCommandReturnObject(CommandReturnObject &ref)
                           (lldb_private::CommandReturnObject &), ref);
 }
 
-SBCommandReturnObject::SBCommandReturnObject(const SBCommandReturnObject &rhs)
-    : m_opaque_up() {
+SBCommandReturnObject::SBCommandReturnObject(const SBCommandReturnObject &rhs) {
   LLDB_RECORD_CONSTRUCTOR(SBCommandReturnObject,
                           (const lldb::SBCommandReturnObject &), rhs);
 

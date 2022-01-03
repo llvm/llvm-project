@@ -357,25 +357,30 @@ OpFoldResult arith::CeilDivSIOp::fold(ArrayRef<Attribute> operands) {
           overflowOrDiv0 = true;
           return a;
         }
+        if (!a)
+          return a;
+        // After this point we know that neither a or b are zero.
         unsigned bits = a.getBitWidth();
         APInt zero = APInt::getZero(bits);
-        if (a.sgt(zero) && b.sgt(zero)) {
+        bool aGtZero = a.sgt(zero);
+        bool bGtZero = b.sgt(zero);
+        if (aGtZero && bGtZero) {
           // Both positive, return ceil(a, b).
           return signedCeilNonnegInputs(a, b, overflowOrDiv0);
         }
-        if (a.slt(zero) && b.slt(zero)) {
+        if (!aGtZero && !bGtZero) {
           // Both negative, return ceil(-a, -b).
           APInt posA = zero.ssub_ov(a, overflowOrDiv0);
           APInt posB = zero.ssub_ov(b, overflowOrDiv0);
           return signedCeilNonnegInputs(posA, posB, overflowOrDiv0);
         }
-        if (a.slt(zero) && b.sgt(zero)) {
+        if (!aGtZero && bGtZero) {
           // A is negative, b is positive, return - ( -a / b).
           APInt posA = zero.ssub_ov(a, overflowOrDiv0);
           APInt div = posA.sdiv_ov(b, overflowOrDiv0);
           return zero.ssub_ov(div, overflowOrDiv0);
         }
-        // A is positive (or zero), b is negative, return - (a / -b).
+        // A is positive, b is negative, return - (a / -b).
         APInt posB = zero.ssub_ov(b, overflowOrDiv0);
         APInt div = a.sdiv_ov(posB, overflowOrDiv0);
         return zero.ssub_ov(div, overflowOrDiv0);
@@ -407,19 +412,24 @@ OpFoldResult arith::FloorDivSIOp::fold(ArrayRef<Attribute> operands) {
           overflowOrDiv0 = true;
           return a;
         }
+        if (!a)
+          return a;
+        // After this point we know that neither a or b are zero.
         unsigned bits = a.getBitWidth();
         APInt zero = APInt::getZero(bits);
-        if (a.sge(zero) && b.sgt(zero)) {
-          // Both positive (or a is zero), return a / b.
+        bool aGtZero = a.sgt(zero);
+        bool bGtZero = b.sgt(zero);
+        if (aGtZero && bGtZero) {
+          // Both positive, return a / b.
           return a.sdiv_ov(b, overflowOrDiv0);
         }
-        if (a.sle(zero) && b.slt(zero)) {
-          // Both negative (or a is zero), return -a / -b.
+        if (!aGtZero && !bGtZero) {
+          // Both negative, return -a / -b.
           APInt posA = zero.ssub_ov(a, overflowOrDiv0);
           APInt posB = zero.ssub_ov(b, overflowOrDiv0);
           return posA.sdiv_ov(posB, overflowOrDiv0);
         }
-        if (a.slt(zero) && b.sgt(zero)) {
+        if (!aGtZero && bGtZero) {
           // A is negative, b is positive, return - ceil(-a, b).
           APInt posA = zero.ssub_ov(a, overflowOrDiv0);
           APInt ceil = signedCeilNonnegInputs(posA, b, overflowOrDiv0);
@@ -788,6 +798,11 @@ OpFoldResult arith::ExtUIOp::fold(ArrayRef<Attribute> operands) {
     return IntegerAttr::get(
         getType(), lhs.getValue().zext(getType().getIntOrFloatBitWidth()));
 
+  if (auto lhs = getIn().getDefiningOp<ExtUIOp>()) {
+    getInMutable().assign(lhs.getIn());
+    return getResult();
+  }
+
   return {};
 }
 
@@ -804,11 +819,21 @@ OpFoldResult arith::ExtSIOp::fold(ArrayRef<Attribute> operands) {
     return IntegerAttr::get(
         getType(), lhs.getValue().sext(getType().getIntOrFloatBitWidth()));
 
+  if (auto lhs = getIn().getDefiningOp<ExtSIOp>()) {
+    getInMutable().assign(lhs.getIn());
+    return getResult();
+  }
+
   return {};
 }
 
 bool arith::ExtSIOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   return checkWidthChangeCast<std::greater, IntegerType>(inputs, outputs);
+}
+
+void arith::ExtSIOp::getCanonicalizationPatterns(
+    OwningRewritePatternList &patterns, MLIRContext *context) {
+  patterns.insert<ExtSIOfExtUI>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -874,6 +899,24 @@ OpFoldResult arith::TruncFOp::fold(ArrayRef<Attribute> operands) {
 
 bool arith::TruncFOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   return checkWidthChangeCast<std::less, FloatType>(inputs, outputs);
+}
+
+//===----------------------------------------------------------------------===//
+// AndIOp
+//===----------------------------------------------------------------------===//
+
+void arith::AndIOp::getCanonicalizationPatterns(
+    OwningRewritePatternList &patterns, MLIRContext *context) {
+  patterns.insert<AndOfExtUI, AndOfExtSI>(context);
+}
+
+//===----------------------------------------------------------------------===//
+// OrIOp
+//===----------------------------------------------------------------------===//
+
+void arith::OrIOp::getCanonicalizationPatterns(
+    OwningRewritePatternList &patterns, MLIRContext *context) {
+  patterns.insert<OrOfExtUI, OrOfExtSI>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1148,6 +1191,25 @@ OpFoldResult arith::CmpIOp::fold(ArrayRef<Attribute> operands) {
   if (getLhs() == getRhs()) {
     auto val = applyCmpPredicateToEqualOperands(getPredicate());
     return getBoolAttribute(getType(), getContext(), val);
+  }
+
+  if (matchPattern(getRhs(), m_Zero())) {
+    if (auto extOp = getLhs().getDefiningOp<ExtSIOp>()) {
+      if (extOp.getOperand().getType().cast<IntegerType>().getWidth() == 1) {
+        // extsi(%x : i1 -> iN) != 0  ->  %x
+        if (getPredicate() == arith::CmpIPredicate::ne) {
+          return extOp.getOperand();
+        }
+      }
+    }
+    if (auto extOp = getLhs().getDefiningOp<ExtUIOp>()) {
+      if (extOp.getOperand().getType().cast<IntegerType>().getWidth() == 1) {
+        // extui(%x : i1 -> iN) != 0  ->  %x
+        if (getPredicate() == arith::CmpIPredicate::ne) {
+          return extOp.getOperand();
+        }
+      }
+    }
   }
 
   auto lhs = operands.front().dyn_cast_or_null<IntegerAttr>();

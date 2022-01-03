@@ -168,16 +168,16 @@ void IntegerPolyhedron::removeInequality(unsigned pos) {
   inequalities.removeRow(pos);
 }
 
-void IntegerPolyhedron::removeEqualityRange(unsigned begin, unsigned end) {
-  if (begin >= end)
+void IntegerPolyhedron::removeEqualityRange(unsigned start, unsigned end) {
+  if (start >= end)
     return;
-  equalities.removeRows(begin, end - begin);
+  equalities.removeRows(start, end - start);
 }
 
-void IntegerPolyhedron::removeInequalityRange(unsigned begin, unsigned end) {
-  if (begin >= end)
+void IntegerPolyhedron::removeInequalityRange(unsigned start, unsigned end) {
+  if (start >= end)
     return;
-  inequalities.removeRows(begin, end - begin);
+  inequalities.removeRows(start, end - start);
 }
 
 void IntegerPolyhedron::swapId(unsigned posA, unsigned posB) {
@@ -283,6 +283,24 @@ bool IntegerPolyhedron::hasConsistentState() const {
     return false;
 
   return true;
+}
+
+void IntegerPolyhedron::setAndEliminate(unsigned pos,
+                                        ArrayRef<int64_t> values) {
+  if (values.empty())
+    return;
+  assert(pos + values.size() <= getNumIds() &&
+         "invalid position or too many values");
+  // Setting x_j = p in sum_i a_i x_i + c is equivalent to adding p*a_j to the
+  // constant term and removing the id x_j. We do this for all the ids
+  // pos, pos + 1, ... pos + values.size() - 1.
+  for (unsigned r = 0, e = getNumInequalities(); r < e; r++)
+    for (unsigned i = 0, numVals = values.size(); i < numVals; ++i)
+      atIneq(r, getNumCols() - 1) += atIneq(r, pos + i) * values[i];
+  for (unsigned r = 0, e = getNumEqualities(); r < e; r++)
+    for (unsigned i = 0, numVals = values.size(); i < numVals; ++i)
+      atEq(r, getNumCols() - 1) += atEq(r, pos + i) * values[i];
+  removeIdRange(pos, pos + values.size());
 }
 
 void IntegerPolyhedron::printSpace(raw_ostream &os) const {

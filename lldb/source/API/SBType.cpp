@@ -26,7 +26,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBType::SBType() : m_opaque_sp() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBType); }
+SBType::SBType() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBType); }
 
 SBType::SBType(const CompilerType &type)
     : m_opaque_sp(new TypeImpl(
@@ -38,7 +38,7 @@ SBType::SBType(const lldb::TypeSP &type_sp)
 SBType::SBType(const lldb::TypeImplSP &type_impl_sp)
     : m_opaque_sp(type_impl_sp) {}
 
-SBType::SBType(const SBType &rhs) : m_opaque_sp() {
+SBType::SBType(const SBType &rhs) {
   LLDB_RECORD_CONSTRUCTOR(SBType, (const lldb::SBType &), rhs);
 
   if (this != &rhs) {
@@ -649,13 +649,11 @@ uint32_t SBTypeList::GetSize() {
 
 SBTypeList::~SBTypeList() = default;
 
-SBTypeMember::SBTypeMember() : m_opaque_up() {
-  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBTypeMember);
-}
+SBTypeMember::SBTypeMember() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBTypeMember); }
 
 SBTypeMember::~SBTypeMember() = default;
 
-SBTypeMember::SBTypeMember(const SBTypeMember &rhs) : m_opaque_up() {
+SBTypeMember::SBTypeMember(const SBTypeMember &rhs) {
   LLDB_RECORD_CONSTRUCTOR(SBTypeMember, (const lldb::SBTypeMember &), rhs);
 
   if (this != &rhs) {
@@ -780,7 +778,7 @@ TypeMemberImpl &SBTypeMember::ref() {
 
 const TypeMemberImpl &SBTypeMember::ref() const { return *m_opaque_up; }
 
-SBTypeMemberFunction::SBTypeMemberFunction() : m_opaque_sp() {
+SBTypeMemberFunction::SBTypeMemberFunction() {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBTypeMemberFunction);
 }
 

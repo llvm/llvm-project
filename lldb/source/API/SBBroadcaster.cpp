@@ -16,7 +16,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBBroadcaster::SBBroadcaster() : m_opaque_sp() {
+SBBroadcaster::SBBroadcaster() {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBBroadcaster);
 }
 

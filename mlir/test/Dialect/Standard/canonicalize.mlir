@@ -29,6 +29,41 @@ func @select_cmp_ne_select(%arg0: i64, %arg1: i64) -> i64 {
 
 // -----
 
+// CHECK-LABEL: @select_extui
+//       CHECK:   %[[res:.+]] = arith.extui %arg0 : i1 to i64
+//       CHECK:   return %[[res]]
+func @select_extui(%arg0: i1) -> i64 {
+  %c0_i64 = arith.constant 0 : i64
+  %c1_i64 = arith.constant 1 : i64
+  %res = select %arg0, %c1_i64, %c0_i64 : i64
+  return %res : i64
+}
+
+// CHECK-LABEL: @select_extui2
+// CHECK-DAG:  %true = arith.constant true
+// CHECK-DAG:  %[[xor:.+]] = arith.xori %arg0, %true : i1
+// CHECK-DAG:  %[[res:.+]] = arith.extui %[[xor]] : i1 to i64
+//       CHECK:   return %[[res]]
+func @select_extui2(%arg0: i1) -> i64 {
+  %c0_i64 = arith.constant 0 : i64
+  %c1_i64 = arith.constant 1 : i64
+  %res = select %arg0, %c0_i64, %c1_i64 : i64
+  return %res : i64
+}
+
+// -----
+
+// CHECK-LABEL: @select_extui_i1
+//  CHECK-NEXT:   return %arg0
+func @select_extui_i1(%arg0: i1) -> i1 {
+  %c0_i1 = arith.constant false
+  %c1_i1 = arith.constant true
+  %res = select %arg0, %c1_i1, %c0_i1 : i1
+  return %res : i1
+}
+
+// -----
+
 // CHECK-LABEL: @branchCondProp
 //       CHECK:       %[[trueval:.+]] = arith.constant true
 //       CHECK:       %[[falseval:.+]] = arith.constant false

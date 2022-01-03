@@ -23,7 +23,7 @@ SBModuleSpec::SBModuleSpec() : m_opaque_up(new lldb_private::ModuleSpec()) {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBModuleSpec);
 }
 
-SBModuleSpec::SBModuleSpec(const SBModuleSpec &rhs) : m_opaque_up() {
+SBModuleSpec::SBModuleSpec(const SBModuleSpec &rhs) {
   LLDB_RECORD_CONSTRUCTOR(SBModuleSpec, (const lldb::SBModuleSpec &), rhs);
 
   m_opaque_up = clone(rhs.m_opaque_up);
