@@ -79,7 +79,7 @@ public:
   uint32_t getCompilandId() const;
 };
 
+} // namespace pdb
 } // namespace llvm
-}
 
 #endif // LLVM_DEBUGINFO_PDB_PDBSYMBOLFUNC_H
