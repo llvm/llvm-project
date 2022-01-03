@@ -107,6 +107,25 @@ class TestGDBRemotePlatformFile(GDBPlatformClientTestBase):
             "vFile:close:5",
             ])
 
+        self.runCmd("platform disconnect")
+
+        # For a new onnection, we should attempt vFile:size once again.
+        server2 = MockGDBServer(self.server_socket_class())
+        server2.responder = Responder()
+        server2.start()
+        self.addTearDownHook(lambda:server2.stop())
+        self.runCmd("platform connect " + server2.get_connect_url())
+        self.match("platform get-size /other/file.txt",
+                   [r"File size of /other/file\.txt \(remote\): 66051"])
+
+        self.assertPacketLogContains([
+            "vFile:size:2f6f746865722f66696c652e747874",
+            "vFile:open:2f6f746865722f66696c652e747874,00000000,00000000",
+            "vFile:fstat:5",
+            "vFile:close:5",
+            ],
+            log=server2.responder.packetLog)
+
     @skipIfWindows
     def test_file_permissions(self):
         """Test 'platform get-permissions'"""
