@@ -72,8 +72,8 @@ define void @test_basic() #0 {
 ; X64-Linux-NEXT:    .cfi_def_cfa_offset 8
 ; X64-Linux-NEXT:    retq
 ; X64-Linux-NEXT:  .LBB0_1:
-; X64-Linux-NEXT:    movabsq $40, %r10
-; X64-Linux-NEXT:    movabsq $0, %r11
+; X64-Linux-NEXT:    movl $40, %r10d
+; X64-Linux-NEXT:    movl $0, %r11d
 ; X64-Linux-NEXT:    callq __morestack
 ; X64-Linux-NEXT:    retq
 ; X64-Linux-NEXT:    jmp .LBB0_2
@@ -93,8 +93,8 @@ define void @test_basic() #0 {
 ; X64-Linux-Large-NEXT:    .cfi_def_cfa_offset 8
 ; X64-Linux-Large-NEXT:    retq
 ; X64-Linux-Large-NEXT:  .LBB0_1:
-; X64-Linux-Large-NEXT:    movabsq $40, %r10
-; X64-Linux-Large-NEXT:    movabsq $0, %r11
+; X64-Linux-Large-NEXT:    movl $40, %r10d
+; X64-Linux-Large-NEXT:    movl $0, %r11d
 ; X64-Linux-Large-NEXT:    callq *__morestack_addr(%rip)
 ; X64-Linux-Large-NEXT:    retq
 ; X64-Linux-Large-NEXT:    jmp .LBB0_2
@@ -153,8 +153,8 @@ define void @test_basic() #0 {
 ; X64-Darwin-NEXT:    addq $40, %rsp
 ; X64-Darwin-NEXT:    retq
 ; X64-Darwin-NEXT:  LBB0_1:
-; X64-Darwin-NEXT:    movabsq $40, %r10
-; X64-Darwin-NEXT:    movabsq $0, %r11
+; X64-Darwin-NEXT:    movl $40, %r10d
+; X64-Darwin-NEXT:    movl $0, %r11d
 ; X64-Darwin-NEXT:    callq ___morestack
 ; X64-Darwin-NEXT:    retq
 ; X64-Darwin-NEXT:    jmp LBB0_2
@@ -196,8 +196,8 @@ define void @test_basic() #0 {
 ; X64-FreeBSD-NEXT:    .cfi_def_cfa_offset 8
 ; X64-FreeBSD-NEXT:    retq
 ; X64-FreeBSD-NEXT:  .LBB0_1:
-; X64-FreeBSD-NEXT:    movabsq $40, %r10
-; X64-FreeBSD-NEXT:    movabsq $0, %r11
+; X64-FreeBSD-NEXT:    movl $40, %r10d
+; X64-FreeBSD-NEXT:    movl $0, %r11d
 ; X64-FreeBSD-NEXT:    callq __morestack
 ; X64-FreeBSD-NEXT:    retq
 ; X64-FreeBSD-NEXT:    jmp .LBB0_2
@@ -239,8 +239,8 @@ define void @test_basic() #0 {
 ; X64-DFlyBSD-NEXT:    .cfi_def_cfa_offset 8
 ; X64-DFlyBSD-NEXT:    retq
 ; X64-DFlyBSD-NEXT:  .LBB0_1:
-; X64-DFlyBSD-NEXT:    movabsq $40, %r10
-; X64-DFlyBSD-NEXT:    movabsq $0, %r11
+; X64-DFlyBSD-NEXT:    movl $40, %r10d
+; X64-DFlyBSD-NEXT:    movl $0, %r11d
 ; X64-DFlyBSD-NEXT:    callq __morestack
 ; X64-DFlyBSD-NEXT:    retq
 ; X64-DFlyBSD-NEXT:    jmp .LBB0_2
@@ -260,8 +260,8 @@ define void @test_basic() #0 {
 ; X64-MinGW-NEXT:    addq $72, %rsp
 ; X64-MinGW-NEXT:    retq
 ; X64-MinGW-NEXT:  .LBB0_1:
-; X64-MinGW-NEXT:    movabsq $72, %r10
-; X64-MinGW-NEXT:    movabsq $32, %r11
+; X64-MinGW-NEXT:    movl $72, %r10d
+; X64-MinGW-NEXT:    movl $32, %r11d
 ; X64-MinGW-NEXT:    callq __morestack
 ; X64-MinGW-NEXT:    retq
 ; X64-MinGW-NEXT:    jmp .LBB0_2
@@ -332,8 +332,8 @@ define i32 @test_nested(i32 * nest %closure, i32 %other) #0 {
 ; X64-Linux-NEXT:  .LBB1_1:
 ; X64-Linux-NEXT:    .cfi_restore %rbx
 ; X64-Linux-NEXT:    movq %r10, %rax
-; X64-Linux-NEXT:    movabsq $56, %r10
-; X64-Linux-NEXT:    movabsq $0, %r11
+; X64-Linux-NEXT:    movl $56, %r10d
+; X64-Linux-NEXT:    movl $0, %r11d
 ; X64-Linux-NEXT:    callq __morestack
 ; X64-Linux-NEXT:    retq
 ; X64-Linux-NEXT:    movq %rax, %r10
@@ -364,8 +364,8 @@ define i32 @test_nested(i32 * nest %closure, i32 %other) #0 {
 ; X64-Linux-Large-NEXT:  .LBB1_1:
 ; X64-Linux-Large-NEXT:    .cfi_restore %rbx
 ; X64-Linux-Large-NEXT:    movq %r10, %rax
-; X64-Linux-Large-NEXT:    movabsq $56, %r10
-; X64-Linux-Large-NEXT:    movabsq $0, %r11
+; X64-Linux-Large-NEXT:    movl $56, %r10d
+; X64-Linux-Large-NEXT:    movl $0, %r11d
 ; X64-Linux-Large-NEXT:    callq *__morestack_addr(%rip)
 ; X64-Linux-Large-NEXT:    retq
 ; X64-Linux-Large-NEXT:    movq %rax, %r10
@@ -451,8 +451,8 @@ define i32 @test_nested(i32 * nest %closure, i32 %other) #0 {
 ; X64-Darwin-NEXT:    retq
 ; X64-Darwin-NEXT:  LBB1_1:
 ; X64-Darwin-NEXT:    movq %r10, %rax
-; X64-Darwin-NEXT:    movabsq $56, %r10
-; X64-Darwin-NEXT:    movabsq $0, %r11
+; X64-Darwin-NEXT:    movl $56, %r10d
+; X64-Darwin-NEXT:    movl $0, %r11d
 ; X64-Darwin-NEXT:    callq ___morestack
 ; X64-Darwin-NEXT:    retq
 ; X64-Darwin-NEXT:    movq %rax, %r10
@@ -515,8 +515,8 @@ define i32 @test_nested(i32 * nest %closure, i32 %other) #0 {
 ; X64-FreeBSD-NEXT:  .LBB1_1:
 ; X64-FreeBSD-NEXT:    .cfi_restore %rbx
 ; X64-FreeBSD-NEXT:    movq %r10, %rax
-; X64-FreeBSD-NEXT:    movabsq $56, %r10
-; X64-FreeBSD-NEXT:    movabsq $0, %r11
+; X64-FreeBSD-NEXT:    movl $56, %r10d
+; X64-FreeBSD-NEXT:    movl $0, %r11d
 ; X64-FreeBSD-NEXT:    callq __morestack
 ; X64-FreeBSD-NEXT:    retq
 ; X64-FreeBSD-NEXT:    movq %rax, %r10
@@ -580,8 +580,8 @@ define i32 @test_nested(i32 * nest %closure, i32 %other) #0 {
 ; X64-DFlyBSD-NEXT:  .LBB1_1:
 ; X64-DFlyBSD-NEXT:    .cfi_restore %rbx
 ; X64-DFlyBSD-NEXT:    movq %r10, %rax
-; X64-DFlyBSD-NEXT:    movabsq $56, %r10
-; X64-DFlyBSD-NEXT:    movabsq $0, %r11
+; X64-DFlyBSD-NEXT:    movl $56, %r10d
+; X64-DFlyBSD-NEXT:    movl $0, %r11d
 ; X64-DFlyBSD-NEXT:    callq __morestack
 ; X64-DFlyBSD-NEXT:    retq
 ; X64-DFlyBSD-NEXT:    movq %rax, %r10
@@ -608,8 +608,8 @@ define i32 @test_nested(i32 * nest %closure, i32 %other) #0 {
 ; X64-MinGW-NEXT:    retq
 ; X64-MinGW-NEXT:  .LBB1_1:
 ; X64-MinGW-NEXT:    movq %r10, %rax
-; X64-MinGW-NEXT:    movabsq $88, %r10
-; X64-MinGW-NEXT:    movabsq $32, %r11
+; X64-MinGW-NEXT:    movl $88, %r10d
+; X64-MinGW-NEXT:    movl $32, %r11d
 ; X64-MinGW-NEXT:    callq __morestack
 ; X64-MinGW-NEXT:    retq
 ; X64-MinGW-NEXT:    movq %rax, %r10
@@ -662,8 +662,8 @@ define void @test_large() #0 {
 ; X64-Linux-NEXT:    .cfi_def_cfa_offset 8
 ; X64-Linux-NEXT:    retq
 ; X64-Linux-NEXT:  .LBB2_1:
-; X64-Linux-NEXT:    movabsq $40008, %r10 # imm = 0x9C48
-; X64-Linux-NEXT:    movabsq $0, %r11
+; X64-Linux-NEXT:    movl $40008, %r10d # imm = 0x9C48
+; X64-Linux-NEXT:    movl $0, %r11d
 ; X64-Linux-NEXT:    callq __morestack
 ; X64-Linux-NEXT:    retq
 ; X64-Linux-NEXT:    jmp .LBB2_2
@@ -684,8 +684,8 @@ define void @test_large() #0 {
 ; X64-Linux-Large-NEXT:    .cfi_def_cfa_offset 8
 ; X64-Linux-Large-NEXT:    retq
 ; X64-Linux-Large-NEXT:  .LBB2_1:
-; X64-Linux-Large-NEXT:    movabsq $40008, %r10 # imm = 0x9C48
-; X64-Linux-Large-NEXT:    movabsq $0, %r11
+; X64-Linux-Large-NEXT:    movl $40008, %r10d # imm = 0x9C48
+; X64-Linux-Large-NEXT:    movl $0, %r11d
 ; X64-Linux-Large-NEXT:    callq *__morestack_addr(%rip)
 ; X64-Linux-Large-NEXT:    retq
 ; X64-Linux-Large-NEXT:    jmp .LBB2_2
@@ -747,8 +747,8 @@ define void @test_large() #0 {
 ; X64-Darwin-NEXT:    addq $40008, %rsp ## imm = 0x9C48
 ; X64-Darwin-NEXT:    retq
 ; X64-Darwin-NEXT:  LBB2_1:
-; X64-Darwin-NEXT:    movabsq $40008, %r10 ## imm = 0x9C48
-; X64-Darwin-NEXT:    movabsq $0, %r11
+; X64-Darwin-NEXT:    movl $40008, %r10d ## imm = 0x9C48
+; X64-Darwin-NEXT:    movl $0, %r11d
 ; X64-Darwin-NEXT:    callq ___morestack
 ; X64-Darwin-NEXT:    retq
 ; X64-Darwin-NEXT:    jmp LBB2_2
@@ -793,8 +793,8 @@ define void @test_large() #0 {
 ; X64-FreeBSD-NEXT:    .cfi_def_cfa_offset 8
 ; X64-FreeBSD-NEXT:    retq
 ; X64-FreeBSD-NEXT:  .LBB2_1:
-; X64-FreeBSD-NEXT:    movabsq $40008, %r10 # imm = 0x9C48
-; X64-FreeBSD-NEXT:    movabsq $0, %r11
+; X64-FreeBSD-NEXT:    movl $40008, %r10d # imm = 0x9C48
+; X64-FreeBSD-NEXT:    movl $0, %r11d
 ; X64-FreeBSD-NEXT:    callq __morestack
 ; X64-FreeBSD-NEXT:    retq
 ; X64-FreeBSD-NEXT:    jmp .LBB2_2
@@ -838,8 +838,8 @@ define void @test_large() #0 {
 ; X64-DFlyBSD-NEXT:    .cfi_def_cfa_offset 8
 ; X64-DFlyBSD-NEXT:    retq
 ; X64-DFlyBSD-NEXT:  .LBB2_1:
-; X64-DFlyBSD-NEXT:    movabsq $40008, %r10 # imm = 0x9C48
-; X64-DFlyBSD-NEXT:    movabsq $0, %r11
+; X64-DFlyBSD-NEXT:    movl $40008, %r10d # imm = 0x9C48
+; X64-DFlyBSD-NEXT:    movl $0, %r11d
 ; X64-DFlyBSD-NEXT:    callq __morestack
 ; X64-DFlyBSD-NEXT:    retq
 ; X64-DFlyBSD-NEXT:    jmp .LBB2_2
@@ -862,8 +862,8 @@ define void @test_large() #0 {
 ; X64-MinGW-NEXT:    addq $40040, %rsp # imm = 0x9C68
 ; X64-MinGW-NEXT:    retq
 ; X64-MinGW-NEXT:  .LBB2_1:
-; X64-MinGW-NEXT:    movabsq $40040, %r10 # imm = 0x9C68
-; X64-MinGW-NEXT:    movabsq $32, %r11
+; X64-MinGW-NEXT:    movl $40040, %r10d # imm = 0x9C68
+; X64-MinGW-NEXT:    movl $32, %r11d
 ; X64-MinGW-NEXT:    callq __morestack
 ; X64-MinGW-NEXT:    retq
 ; X64-MinGW-NEXT:    jmp .LBB2_2
@@ -911,8 +911,8 @@ define fastcc void @test_fastcc() #0 {
 ; X64-Linux-NEXT:    .cfi_def_cfa_offset 8
 ; X64-Linux-NEXT:    retq
 ; X64-Linux-NEXT:  .LBB3_1:
-; X64-Linux-NEXT:    movabsq $40, %r10
-; X64-Linux-NEXT:    movabsq $0, %r11
+; X64-Linux-NEXT:    movl $40, %r10d
+; X64-Linux-NEXT:    movl $0, %r11d
 ; X64-Linux-NEXT:    callq __morestack
 ; X64-Linux-NEXT:    retq
 ; X64-Linux-NEXT:    jmp .LBB3_2
@@ -932,8 +932,8 @@ define fastcc void @test_fastcc() #0 {
 ; X64-Linux-Large-NEXT:    .cfi_def_cfa_offset 8
 ; X64-Linux-Large-NEXT:    retq
 ; X64-Linux-Large-NEXT:  .LBB3_1:
-; X64-Linux-Large-NEXT:    movabsq $40, %r10
-; X64-Linux-Large-NEXT:    movabsq $0, %r11
+; X64-Linux-Large-NEXT:    movl $40, %r10d
+; X64-Linux-Large-NEXT:    movl $0, %r11d
 ; X64-Linux-Large-NEXT:    callq *__morestack_addr(%rip)
 ; X64-Linux-Large-NEXT:    retq
 ; X64-Linux-Large-NEXT:    jmp .LBB3_2
@@ -992,8 +992,8 @@ define fastcc void @test_fastcc() #0 {
 ; X64-Darwin-NEXT:    addq $40, %rsp
 ; X64-Darwin-NEXT:    retq
 ; X64-Darwin-NEXT:  LBB3_1:
-; X64-Darwin-NEXT:    movabsq $40, %r10
-; X64-Darwin-NEXT:    movabsq $0, %r11
+; X64-Darwin-NEXT:    movl $40, %r10d
+; X64-Darwin-NEXT:    movl $0, %r11d
 ; X64-Darwin-NEXT:    callq ___morestack
 ; X64-Darwin-NEXT:    retq
 ; X64-Darwin-NEXT:    jmp LBB3_2
@@ -1035,8 +1035,8 @@ define fastcc void @test_fastcc() #0 {
 ; X64-FreeBSD-NEXT:    .cfi_def_cfa_offset 8
 ; X64-FreeBSD-NEXT:    retq
 ; X64-FreeBSD-NEXT:  .LBB3_1:
-; X64-FreeBSD-NEXT:    movabsq $40, %r10
-; X64-FreeBSD-NEXT:    movabsq $0, %r11
+; X64-FreeBSD-NEXT:    movl $40, %r10d
+; X64-FreeBSD-NEXT:    movl $0, %r11d
 ; X64-FreeBSD-NEXT:    callq __morestack
 ; X64-FreeBSD-NEXT:    retq
 ; X64-FreeBSD-NEXT:    jmp .LBB3_2
@@ -1078,8 +1078,8 @@ define fastcc void @test_fastcc() #0 {
 ; X64-DFlyBSD-NEXT:    .cfi_def_cfa_offset 8
 ; X64-DFlyBSD-NEXT:    retq
 ; X64-DFlyBSD-NEXT:  .LBB3_1:
-; X64-DFlyBSD-NEXT:    movabsq $40, %r10
-; X64-DFlyBSD-NEXT:    movabsq $0, %r11
+; X64-DFlyBSD-NEXT:    movl $40, %r10d
+; X64-DFlyBSD-NEXT:    movl $0, %r11d
 ; X64-DFlyBSD-NEXT:    callq __morestack
 ; X64-DFlyBSD-NEXT:    retq
 ; X64-DFlyBSD-NEXT:    jmp .LBB3_2
@@ -1099,8 +1099,8 @@ define fastcc void @test_fastcc() #0 {
 ; X64-MinGW-NEXT:    addq $72, %rsp
 ; X64-MinGW-NEXT:    retq
 ; X64-MinGW-NEXT:  .LBB3_1:
-; X64-MinGW-NEXT:    movabsq $72, %r10
-; X64-MinGW-NEXT:    movabsq $32, %r11
+; X64-MinGW-NEXT:    movl $72, %r10d
+; X64-MinGW-NEXT:    movl $32, %r11d
 ; X64-MinGW-NEXT:    callq __morestack
 ; X64-MinGW-NEXT:    retq
 ; X64-MinGW-NEXT:    jmp .LBB3_2
@@ -1150,8 +1150,8 @@ define fastcc void @test_fastcc_large() #0 {
 ; X64-Linux-NEXT:    .cfi_def_cfa_offset 8
 ; X64-Linux-NEXT:    retq
 ; X64-Linux-NEXT:  .LBB4_1:
-; X64-Linux-NEXT:    movabsq $40008, %r10 # imm = 0x9C48
-; X64-Linux-NEXT:    movabsq $0, %r11
+; X64-Linux-NEXT:    movl $40008, %r10d # imm = 0x9C48
+; X64-Linux-NEXT:    movl $0, %r11d
 ; X64-Linux-NEXT:    callq __morestack
 ; X64-Linux-NEXT:    retq
 ; X64-Linux-NEXT:    jmp .LBB4_2
@@ -1172,8 +1172,8 @@ define fastcc void @test_fastcc_large() #0 {
 ; X64-Linux-Large-NEXT:    .cfi_def_cfa_offset 8
 ; X64-Linux-Large-NEXT:    retq
 ; X64-Linux-Large-NEXT:  .LBB4_1:
-; X64-Linux-Large-NEXT:    movabsq $40008, %r10 # imm = 0x9C48
-; X64-Linux-Large-NEXT:    movabsq $0, %r11
+; X64-Linux-Large-NEXT:    movl $40008, %r10d # imm = 0x9C48
+; X64-Linux-Large-NEXT:    movl $0, %r11d
 ; X64-Linux-Large-NEXT:    callq *__morestack_addr(%rip)
 ; X64-Linux-Large-NEXT:    retq
 ; X64-Linux-Large-NEXT:    jmp .LBB4_2
@@ -1235,8 +1235,8 @@ define fastcc void @test_fastcc_large() #0 {
 ; X64-Darwin-NEXT:    addq $40008, %rsp ## imm = 0x9C48
 ; X64-Darwin-NEXT:    retq
 ; X64-Darwin-NEXT:  LBB4_1:
-; X64-Darwin-NEXT:    movabsq $40008, %r10 ## imm = 0x9C48
-; X64-Darwin-NEXT:    movabsq $0, %r11
+; X64-Darwin-NEXT:    movl $40008, %r10d ## imm = 0x9C48
+; X64-Darwin-NEXT:    movl $0, %r11d
 ; X64-Darwin-NEXT:    callq ___morestack
 ; X64-Darwin-NEXT:    retq
 ; X64-Darwin-NEXT:    jmp LBB4_2
@@ -1281,8 +1281,8 @@ define fastcc void @test_fastcc_large() #0 {
 ; X64-FreeBSD-NEXT:    .cfi_def_cfa_offset 8
 ; X64-FreeBSD-NEXT:    retq
 ; X64-FreeBSD-NEXT:  .LBB4_1:
-; X64-FreeBSD-NEXT:    movabsq $40008, %r10 # imm = 0x9C48
-; X64-FreeBSD-NEXT:    movabsq $0, %r11
+; X64-FreeBSD-NEXT:    movl $40008, %r10d # imm = 0x9C48
+; X64-FreeBSD-NEXT:    movl $0, %r11d
 ; X64-FreeBSD-NEXT:    callq __morestack
 ; X64-FreeBSD-NEXT:    retq
 ; X64-FreeBSD-NEXT:    jmp .LBB4_2
@@ -1326,8 +1326,8 @@ define fastcc void @test_fastcc_large() #0 {
 ; X64-DFlyBSD-NEXT:    .cfi_def_cfa_offset 8
 ; X64-DFlyBSD-NEXT:    retq
 ; X64-DFlyBSD-NEXT:  .LBB4_1:
-; X64-DFlyBSD-NEXT:    movabsq $40008, %r10 # imm = 0x9C48
-; X64-DFlyBSD-NEXT:    movabsq $0, %r11
+; X64-DFlyBSD-NEXT:    movl $40008, %r10d # imm = 0x9C48
+; X64-DFlyBSD-NEXT:    movl $0, %r11d
 ; X64-DFlyBSD-NEXT:    callq __morestack
 ; X64-DFlyBSD-NEXT:    retq
 ; X64-DFlyBSD-NEXT:    jmp .LBB4_2
@@ -1350,8 +1350,8 @@ define fastcc void @test_fastcc_large() #0 {
 ; X64-MinGW-NEXT:    addq $40040, %rsp # imm = 0x9C68
 ; X64-MinGW-NEXT:    retq
 ; X64-MinGW-NEXT:  .LBB4_1:
-; X64-MinGW-NEXT:    movabsq $40040, %r10 # imm = 0x9C68
-; X64-MinGW-NEXT:    movabsq $32, %r11
+; X64-MinGW-NEXT:    movl $40040, %r10d # imm = 0x9C68
+; X64-MinGW-NEXT:    movl $32, %r11d
 ; X64-MinGW-NEXT:    callq __morestack
 ; X64-MinGW-NEXT:    retq
 ; X64-MinGW-NEXT:    jmp .LBB4_2
@@ -1403,8 +1403,8 @@ define fastcc void @test_fastcc_large_with_ecx_arg(i32 %a) #0 {
 ; X64-Linux-NEXT:    .cfi_def_cfa_offset 8
 ; X64-Linux-NEXT:    retq
 ; X64-Linux-NEXT:  .LBB5_1:
-; X64-Linux-NEXT:    movabsq $40008, %r10 # imm = 0x9C48
-; X64-Linux-NEXT:    movabsq $0, %r11
+; X64-Linux-NEXT:    movl $40008, %r10d # imm = 0x9C48
+; X64-Linux-NEXT:    movl $0, %r11d
 ; X64-Linux-NEXT:    callq __morestack
 ; X64-Linux-NEXT:    retq
 ; X64-Linux-NEXT:    jmp .LBB5_2
@@ -1425,8 +1425,8 @@ define fastcc void @test_fastcc_large_with_ecx_arg(i32 %a) #0 {
 ; X64-Linux-Large-NEXT:    .cfi_def_cfa_offset 8
 ; X64-Linux-Large-NEXT:    retq
 ; X64-Linux-Large-NEXT:  .LBB5_1:
-; X64-Linux-Large-NEXT:    movabsq $40008, %r10 # imm = 0x9C48
-; X64-Linux-Large-NEXT:    movabsq $0, %r11
+; X64-Linux-Large-NEXT:    movl $40008, %r10d # imm = 0x9C48
+; X64-Linux-Large-NEXT:    movl $0, %r11d
 ; X64-Linux-Large-NEXT:    callq *__morestack_addr(%rip)
 ; X64-Linux-Large-NEXT:    retq
 ; X64-Linux-Large-NEXT:    jmp .LBB5_2
@@ -1490,8 +1490,8 @@ define fastcc void @test_fastcc_large_with_ecx_arg(i32 %a) #0 {
 ; X64-Darwin-NEXT:    addq $40008, %rsp ## imm = 0x9C48
 ; X64-Darwin-NEXT:    retq
 ; X64-Darwin-NEXT:  LBB5_1:
-; X64-Darwin-NEXT:    movabsq $40008, %r10 ## imm = 0x9C48
-; X64-Darwin-NEXT:    movabsq $0, %r11
+; X64-Darwin-NEXT:    movl $40008, %r10d ## imm = 0x9C48
+; X64-Darwin-NEXT:    movl $0, %r11d
 ; X64-Darwin-NEXT:    callq ___morestack
 ; X64-Darwin-NEXT:    retq
 ; X64-Darwin-NEXT:    jmp LBB5_2
@@ -1536,8 +1536,8 @@ define fastcc void @test_fastcc_large_with_ecx_arg(i32 %a) #0 {
 ; X64-FreeBSD-NEXT:    .cfi_def_cfa_offset 8
 ; X64-FreeBSD-NEXT:    retq
 ; X64-FreeBSD-NEXT:  .LBB5_1:
-; X64-FreeBSD-NEXT:    movabsq $40008, %r10 # imm = 0x9C48
-; X64-FreeBSD-NEXT:    movabsq $0, %r11
+; X64-FreeBSD-NEXT:    movl $40008, %r10d # imm = 0x9C48
+; X64-FreeBSD-NEXT:    movl $0, %r11d
 ; X64-FreeBSD-NEXT:    callq __morestack
 ; X64-FreeBSD-NEXT:    retq
 ; X64-FreeBSD-NEXT:    jmp .LBB5_2
@@ -1581,8 +1581,8 @@ define fastcc void @test_fastcc_large_with_ecx_arg(i32 %a) #0 {
 ; X64-DFlyBSD-NEXT:    .cfi_def_cfa_offset 8
 ; X64-DFlyBSD-NEXT:    retq
 ; X64-DFlyBSD-NEXT:  .LBB5_1:
-; X64-DFlyBSD-NEXT:    movabsq $40008, %r10 # imm = 0x9C48
-; X64-DFlyBSD-NEXT:    movabsq $0, %r11
+; X64-DFlyBSD-NEXT:    movl $40008, %r10d # imm = 0x9C48
+; X64-DFlyBSD-NEXT:    movl $0, %r11d
 ; X64-DFlyBSD-NEXT:    callq __morestack
 ; X64-DFlyBSD-NEXT:    retq
 ; X64-DFlyBSD-NEXT:    jmp .LBB5_2
@@ -1605,8 +1605,8 @@ define fastcc void @test_fastcc_large_with_ecx_arg(i32 %a) #0 {
 ; X64-MinGW-NEXT:    addq $40040, %rsp # imm = 0x9C68
 ; X64-MinGW-NEXT:    retq
 ; X64-MinGW-NEXT:  .LBB5_1:
-; X64-MinGW-NEXT:    movabsq $40040, %r10 # imm = 0x9C68
-; X64-MinGW-NEXT:    movabsq $32, %r11
+; X64-MinGW-NEXT:    movl $40040, %r10d # imm = 0x9C68
+; X64-MinGW-NEXT:    movl $32, %r11d
 ; X64-MinGW-NEXT:    callq __morestack
 ; X64-MinGW-NEXT:    retq
 ; X64-MinGW-NEXT:    jmp .LBB5_2
@@ -1737,8 +1737,8 @@ define i32 @test_sibling_call_empty_frame(i32 %x) #0 {
 ; X64-Linux-NEXT:  # %bb.2:
 ; X64-Linux-NEXT:    jmp callee@PLT # TAILCALL
 ; X64-Linux-NEXT:  .LBB8_1:
-; X64-Linux-NEXT:    movabsq $0, %r10
-; X64-Linux-NEXT:    movabsq $0, %r11
+; X64-Linux-NEXT:    movl $0, %r10d
+; X64-Linux-NEXT:    movl $0, %r11d
 ; X64-Linux-NEXT:    callq __morestack
 ; X64-Linux-NEXT:    retq
 ; X64-Linux-NEXT:    jmp callee@PLT # TAILCALL
@@ -1751,8 +1751,8 @@ define i32 @test_sibling_call_empty_frame(i32 %x) #0 {
 ; X64-Linux-Large-NEXT:    movabsq $callee, %rax
 ; X64-Linux-Large-NEXT:    jmpq *%rax # TAILCALL
 ; X64-Linux-Large-NEXT:  .LBB8_1:
-; X64-Linux-Large-NEXT:    movabsq $0, %r10
-; X64-Linux-Large-NEXT:    movabsq $0, %r11
+; X64-Linux-Large-NEXT:    movl $0, %r10d
+; X64-Linux-Large-NEXT:    movl $0, %r11d
 ; X64-Linux-Large-NEXT:    callq *__morestack_addr(%rip)
 ; X64-Linux-Large-NEXT:    retq
 ; X64-Linux-Large-NEXT:    movabsq $callee, %rax
@@ -1792,8 +1792,8 @@ define i32 @test_sibling_call_empty_frame(i32 %x) #0 {
 ; X64-Darwin-NEXT:  ## %bb.2:
 ; X64-Darwin-NEXT:    jmp _callee ## TAILCALL
 ; X64-Darwin-NEXT:  LBB8_1:
-; X64-Darwin-NEXT:    movabsq $0, %r10
-; X64-Darwin-NEXT:    movabsq $0, %r11
+; X64-Darwin-NEXT:    movl $0, %r10d
+; X64-Darwin-NEXT:    movl $0, %r11d
 ; X64-Darwin-NEXT:    callq ___morestack
 ; X64-Darwin-NEXT:    retq
 ; X64-Darwin-NEXT:    jmp _callee ## TAILCALL
@@ -1818,8 +1818,8 @@ define i32 @test_sibling_call_empty_frame(i32 %x) #0 {
 ; X64-FreeBSD-NEXT:  # %bb.2:
 ; X64-FreeBSD-NEXT:    jmp callee@PLT # TAILCALL
 ; X64-FreeBSD-NEXT:  .LBB8_1:
-; X64-FreeBSD-NEXT:    movabsq $0, %r10
-; X64-FreeBSD-NEXT:    movabsq $0, %r11
+; X64-FreeBSD-NEXT:    movl $0, %r10d
+; X64-FreeBSD-NEXT:    movl $0, %r11d
 ; X64-FreeBSD-NEXT:    callq __morestack
 ; X64-FreeBSD-NEXT:    retq
 ; X64-FreeBSD-NEXT:    jmp callee@PLT # TAILCALL
@@ -1844,8 +1844,8 @@ define i32 @test_sibling_call_empty_frame(i32 %x) #0 {
 ; X64-DFlyBSD-NEXT:  # %bb.2:
 ; X64-DFlyBSD-NEXT:    jmp callee@PLT # TAILCALL
 ; X64-DFlyBSD-NEXT:  .LBB8_1:
-; X64-DFlyBSD-NEXT:    movabsq $0, %r10
-; X64-DFlyBSD-NEXT:    movabsq $0, %r11
+; X64-DFlyBSD-NEXT:    movl $0, %r10d
+; X64-DFlyBSD-NEXT:    movl $0, %r11d
 ; X64-DFlyBSD-NEXT:    callq __morestack
 ; X64-DFlyBSD-NEXT:    retq
 ; X64-DFlyBSD-NEXT:    jmp callee@PLT # TAILCALL
@@ -1857,8 +1857,8 @@ define i32 @test_sibling_call_empty_frame(i32 %x) #0 {
 ; X64-MinGW-NEXT:  # %bb.2:
 ; X64-MinGW-NEXT:    jmp callee # TAILCALL
 ; X64-MinGW-NEXT:  .LBB8_1:
-; X64-MinGW-NEXT:    movabsq $0, %r10
-; X64-MinGW-NEXT:    movabsq $32, %r11
+; X64-MinGW-NEXT:    movl $0, %r10d
+; X64-MinGW-NEXT:    movl $32, %r11d
 ; X64-MinGW-NEXT:    callq __morestack
 ; X64-MinGW-NEXT:    retq
 ; X64-MinGW-NEXT:    jmp callee # TAILCALL
@@ -1910,8 +1910,8 @@ define i32 @test_nested_unused(i32 * nest %unused) #0 {
 ; X64-Linux-NEXT:    .cfi_def_cfa_offset 8
 ; X64-Linux-NEXT:    retq
 ; X64-Linux-NEXT:  .LBB9_1:
-; X64-Linux-NEXT:    movabsq $40, %r10
-; X64-Linux-NEXT:    movabsq $0, %r11
+; X64-Linux-NEXT:    movl $40, %r10d
+; X64-Linux-NEXT:    movl $0, %r11d
 ; X64-Linux-NEXT:    callq __morestack
 ; X64-Linux-NEXT:    retq
 ; X64-Linux-NEXT:    jmp .LBB9_2
@@ -1932,8 +1932,8 @@ define i32 @test_nested_unused(i32 * nest %unused) #0 {
 ; X64-Linux-Large-NEXT:    .cfi_def_cfa_offset 8
 ; X64-Linux-Large-NEXT:    retq
 ; X64-Linux-Large-NEXT:  .LBB9_1:
-; X64-Linux-Large-NEXT:    movabsq $40, %r10
-; X64-Linux-Large-NEXT:    movabsq $0, %r11
+; X64-Linux-Large-NEXT:    movl $40, %r10d
+; X64-Linux-Large-NEXT:    movl $0, %r11d
 ; X64-Linux-Large-NEXT:    callq *__morestack_addr(%rip)
 ; X64-Linux-Large-NEXT:    retq
 ; X64-Linux-Large-NEXT:    jmp .LBB9_2
@@ -1995,8 +1995,8 @@ define i32 @test_nested_unused(i32 * nest %unused) #0 {
 ; X64-Darwin-NEXT:    addq $40, %rsp
 ; X64-Darwin-NEXT:    retq
 ; X64-Darwin-NEXT:  LBB9_1:
-; X64-Darwin-NEXT:    movabsq $40, %r10
-; X64-Darwin-NEXT:    movabsq $0, %r11
+; X64-Darwin-NEXT:    movl $40, %r10d
+; X64-Darwin-NEXT:    movl $0, %r11d
 ; X64-Darwin-NEXT:    callq ___morestack
 ; X64-Darwin-NEXT:    retq
 ; X64-Darwin-NEXT:    jmp LBB9_2
@@ -2042,8 +2042,8 @@ define i32 @test_nested_unused(i32 * nest %unused) #0 {
 ; X64-FreeBSD-NEXT:    .cfi_def_cfa_offset 8
 ; X64-FreeBSD-NEXT:    retq
 ; X64-FreeBSD-NEXT:  .LBB9_1:
-; X64-FreeBSD-NEXT:    movabsq $40, %r10
-; X64-FreeBSD-NEXT:    movabsq $0, %r11
+; X64-FreeBSD-NEXT:    movl $40, %r10d
+; X64-FreeBSD-NEXT:    movl $0, %r11d
 ; X64-FreeBSD-NEXT:    callq __morestack
 ; X64-FreeBSD-NEXT:    retq
 ; X64-FreeBSD-NEXT:    jmp .LBB9_2
@@ -2089,8 +2089,8 @@ define i32 @test_nested_unused(i32 * nest %unused) #0 {
 ; X64-DFlyBSD-NEXT:    .cfi_def_cfa_offset 8
 ; X64-DFlyBSD-NEXT:    retq
 ; X64-DFlyBSD-NEXT:  .LBB9_1:
-; X64-DFlyBSD-NEXT:    movabsq $40, %r10
-; X64-DFlyBSD-NEXT:    movabsq $0, %r11
+; X64-DFlyBSD-NEXT:    movl $40, %r10d
+; X64-DFlyBSD-NEXT:    movl $0, %r11d
 ; X64-DFlyBSD-NEXT:    callq __morestack
 ; X64-DFlyBSD-NEXT:    retq
 ; X64-DFlyBSD-NEXT:    jmp .LBB9_2
@@ -2110,8 +2110,8 @@ define i32 @test_nested_unused(i32 * nest %unused) #0 {
 ; X64-MinGW-NEXT:    addq $72, %rsp
 ; X64-MinGW-NEXT:    retq
 ; X64-MinGW-NEXT:  .LBB9_1:
-; X64-MinGW-NEXT:    movabsq $72, %r10
-; X64-MinGW-NEXT:    movabsq $32, %r11
+; X64-MinGW-NEXT:    movl $72, %r10d
+; X64-MinGW-NEXT:    movl $32, %r11d
 ; X64-MinGW-NEXT:    callq __morestack
 ; X64-MinGW-NEXT:    retq
 ; X64-MinGW-NEXT:    jmp .LBB9_2
