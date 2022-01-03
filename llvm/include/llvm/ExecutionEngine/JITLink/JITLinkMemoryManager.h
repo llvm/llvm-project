@@ -33,52 +33,53 @@ class Block;
 class LinkGraph;
 class Section;
 
+/// Represents a call to a graph-memory-management support function in the
+/// executor.
+///
+/// Support functions are called as:
+///
+///   auto *Result =
+///       ((char*(*)(const void*, size_t))FnAddr)(
+///           (const void*)CtxAddr, (size_t)CtxSize)
+///
+/// A null result is interpreted as success.
+///
+/// A non-null result is interpreted as a heap-allocated string containing
+/// an error message to report to the allocator (the allocator's
+/// executor-side implementation code is responsible for freeing the error
+/// string).
+struct AllocActionCall {
+  JITTargetAddress FnAddr = 0;
+  JITTargetAddress CtxAddr = 0;
+  JITTargetAddress CtxSize = 0;
+};
+
+/// A pair of AllocActionCalls, one to be run at finalization time, one to be
+/// run at deallocation time.
+///
+/// AllocActionCallPairs should be constructed for paired operations (e.g.
+/// __register_ehframe and __deregister_ehframe for eh-frame registration).
+/// See comments for AllocActions for execution ordering.
+///
+/// For unpaired operations one or the other member can be left unused, as
+/// AllocationActionCalls with an FnAddr of zero will be skipped.
+struct AllocActionCallPair {
+  AllocActionCall Finalize;
+  AllocActionCall Dealloc;
+};
+
+/// A vector of allocation actions to be run for this allocation.
+///
+/// Finalize allocations will be run in order at finalize time. Dealloc
+/// actions will be run in reverse order at deallocation time.
+using AllocActions = std::vector<AllocActionCallPair>;
+
 /// Manages allocations of JIT memory.
 ///
 /// Instances of this class may be accessed concurrently from multiple threads
 /// and their implemetations should include any necessary synchronization.
 class JITLinkMemoryManager {
 public:
-  /// Represents a call to a graph-memory-management support function in the
-  /// executor.
-  ///
-  /// Support functions are called as:
-  ///
-  ///   auto *Result =
-  ///       ((char*(*)(const void*, size_t))FnAddr)(
-  ///           (const void*)CtxAddr, (size_t)CtxSize)
-  ///
-  /// A null result is interpreted as success.
-  ///
-  /// A non-null result is interpreted as a heap-allocated string containing
-  /// an error message to report to the allocator (the allocator's
-  /// executor-side implementation code is responsible for freeing the error
-  /// string).
-  struct AllocActionCall {
-    JITTargetAddress FnAddr = 0;
-    JITTargetAddress CtxAddr = 0;
-    JITTargetAddress CtxSize = 0;
-  };
-
-  /// A pair of AllocActionCalls, one to be run at finalization time, one to be
-  /// run at deallocation time.
-  ///
-  /// AllocActionCallPairs should be constructed for paired operations (e.g.
-  /// __register_ehframe and __deregister_ehframe for eh-frame registration).
-  /// See comments for AllocActions for execution ordering.
-  ///
-  /// For unpaired operations one or the other member can be left unused, as
-  /// AllocationActionCalls with an FnAddr of zero will be skipped.
-  struct AllocActionCallPair {
-    AllocActionCall Finalize;
-    AllocActionCall Dealloc;
-  };
-
-  /// A vector of allocation actions to be run for this allocation.
-  ///
-  /// Finalize allocations will be run in order at finalize time. Dealloc
-  /// actions will be run in reverse order at deallocation time.
-  using AllocActions = std::vector<AllocActionCallPair>;
 
   /// Represents a finalized allocation.
   ///
@@ -312,7 +313,7 @@ public:
   /// Returns a reference to the AllocActions in the graph.
   /// This convenience function saves callers from having to #include
   /// LinkGraph.h if all they need are allocation actions.
-  JITLinkMemoryManager::AllocActions &graphAllocActions();
+  AllocActions &graphAllocActions();
 
 private:
   LinkGraph &G;
