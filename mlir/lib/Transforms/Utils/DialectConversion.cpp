@@ -1931,7 +1931,7 @@ OperationLegalizer::legalizeWithFold(Operation *op,
     Operation *cstOp = rewriterImpl.createdOps[i];
     if (failed(legalize(cstOp, rewriter))) {
       LLVM_DEBUG(logFailure(rewriterImpl.logger,
-                            "generated constant '{0}' was illegal",
+                            "failed to legalize generated constant '{0}'",
                             cstOp->getName()));
       rewriterImpl.resetState(curState);
       return failure();
@@ -2106,7 +2106,7 @@ LogicalResult OperationLegalizer::legalizePatternCreatedOperations(
     Operation *op = impl.createdOps[i];
     if (failed(legalize(op, rewriter))) {
       LLVM_DEBUG(logFailure(impl.logger,
-                            "generated operation '{0}'({1}) was illegal",
+                            "failed to legalize generated operation '{0}'({1})",
                             op->getName(), op));
       return failure();
     }
@@ -2120,9 +2120,9 @@ LogicalResult OperationLegalizer::legalizePatternRootUpdates(
   for (int i = state.numRootUpdates, e = newState.numRootUpdates; i != e; ++i) {
     Operation *op = impl.rootUpdates[i].getOperation();
     if (failed(legalize(op, rewriter))) {
-      LLVM_DEBUG(logFailure(impl.logger,
-                            "operation updated in-place '{0}' was illegal",
-                            op->getName()));
+      LLVM_DEBUG(logFailure(
+          impl.logger, "failed to legalize operation updated in-place '{0}'",
+          op->getName()));
       return failure();
     }
   }
