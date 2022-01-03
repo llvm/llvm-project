@@ -1665,6 +1665,7 @@ public:
       rewriter.create<linalg::YieldOp>(loc, result);
       return success();
     }
+    return failure();
   }
 };
 
