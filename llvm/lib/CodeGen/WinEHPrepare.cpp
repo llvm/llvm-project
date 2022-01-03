@@ -392,7 +392,6 @@ static void calculateCXXStateNumbers(WinEHFuncInfo &FuncInfo,
     if (IsPreOrder)
       addTryBlockMapEntry(FuncInfo, TryLow, TryHigh, CatchLow, Handlers);
     unsigned TBMEIdx = FuncInfo.TryBlockMap.size() - 1;
-    FuncInfo.EHPadStateMap[CatchPad] = TryState;
     for (const auto *CatchPad : Handlers) {
       FuncInfo.FuncletBaseStateMap[CatchPad] = CatchLow;
       FuncInfo.EHPadStateMap[CatchPad] = CatchLow;
