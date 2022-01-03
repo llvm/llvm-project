@@ -47,7 +47,7 @@ public:
   // inequalities.
   FlatAffineConstraints localVarCst;
 
-  AffineExprFlattener(unsigned nDims, unsigned nSymbols, MLIRContext *ctx)
+  AffineExprFlattener(unsigned nDims, unsigned nSymbols)
       : SimpleAffineExprFlattener(nDims, nSymbols) {
     localVarCst.reset(nDims, nSymbols, /*numLocals=*/0);
   }
@@ -81,7 +81,7 @@ getFlattenedAffineExprs(ArrayRef<AffineExpr> exprs, unsigned numDims,
     return success();
   }
 
-  AffineExprFlattener flattener(numDims, numSymbols, exprs[0].getContext());
+  AffineExprFlattener flattener(numDims, numSymbols);
   // Use the same flattener to simplify each expression successively. This way
   // local identifiers / expressions are shared.
   for (auto expr : exprs) {
