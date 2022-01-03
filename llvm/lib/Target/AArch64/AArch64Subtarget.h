@@ -189,6 +189,9 @@ protected:
   bool HasHCX = false;
   bool HasLS64 = false;
 
+  // Armv8.8-A Extensions
+  bool HasHBC = false;
+
   // Arm SVE2 extensions
   bool HasSVE2 = false;
   bool HasSVE2AES = false;
@@ -573,6 +576,7 @@ public:
   bool hasRCPC_IMMO() const { return HasRCPC_IMMO; }
   bool hasEL2VMSA() const { return HasEL2VMSA; }
   bool hasEL3() const { return HasEL3; }
+  bool hasHBC() const { return HasHBC; }
 
   bool fixCortexA53_835769() const { return FixCortexA53_835769; }
 
