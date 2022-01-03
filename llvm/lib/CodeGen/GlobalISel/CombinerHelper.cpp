@@ -3878,39 +3878,48 @@ bool CombinerHelper::matchOrShiftToFunnelShift(MachineInstr &MI,
   LLT Ty = MRI.getType(Dst);
   unsigned BitWidth = Ty.getScalarSizeInBits();
 
-  Register ShlSrc, ShlAmt, LShrSrc, LShrAmt;
+  Register ShlSrc, ShlAmt, LShrSrc, LShrAmt, Amt;
   unsigned FshOpc = 0;
 
-  // Match (or (shl x, amt), (lshr y, sub(bw, amt))).
-  if (mi_match(
-          Dst, MRI,
-          // m_GOr() handles the commuted version as well.
-          m_GOr(m_GShl(m_Reg(ShlSrc), m_Reg(ShlAmt)),
-                m_GLShr(m_Reg(LShrSrc), m_GSub(m_SpecificICstOrSplat(BitWidth),
-                                               m_Reg(LShrAmt)))))) {
+  // Match (or (shl ...), (lshr ...)).
+  if (!mi_match(Dst, MRI,
+                // m_GOr() handles the commuted version as well.
+                m_GOr(m_GShl(m_Reg(ShlSrc), m_Reg(ShlAmt)),
+                      m_GLShr(m_Reg(LShrSrc), m_Reg(LShrAmt)))))
+    return false;
+
+  // Given constants C0 and C1 such that C0 + C1 is bit-width:
+  // (or (shl x, C0), (lshr y, C1)) -> (fshl x, y, C0) or (fshr x, y, C1)
+  // TODO: Match constant splat.
+  int64_t CstShlAmt, CstLShrAmt;
+  if (mi_match(ShlAmt, MRI, m_ICst(CstShlAmt)) &&
+      mi_match(LShrAmt, MRI, m_ICst(CstLShrAmt)) &&
+      CstShlAmt + CstLShrAmt == BitWidth) {
+    FshOpc = TargetOpcode::G_FSHR;
+    Amt = LShrAmt;
+
+  } else if (mi_match(LShrAmt, MRI,
+                      m_GSub(m_SpecificICstOrSplat(BitWidth), m_Reg(Amt))) &&
+             ShlAmt == Amt) {
+    // (or (shl x, amt), (lshr y, (sub bw, amt))) -> (fshl x, y, amt)
     FshOpc = TargetOpcode::G_FSHL;
 
-    // Match (or (shl x, sub(bw, amt)), (lshr y, amt)).
-  } else if (mi_match(Dst, MRI,
-                      m_GOr(m_GLShr(m_Reg(LShrSrc), m_Reg(LShrAmt)),
-                            m_GShl(m_Reg(ShlSrc),
-                                   m_GSub(m_SpecificICstOrSplat(BitWidth),
-                                          m_Reg(ShlAmt)))))) {
+  } else if (mi_match(ShlAmt, MRI,
+                      m_GSub(m_SpecificICstOrSplat(BitWidth), m_Reg(Amt))) &&
+             LShrAmt == Amt) {
+    // (or (shl x, (sub bw, amt)), (lshr y, amt)) -> (fshr x, y, amt)
     FshOpc = TargetOpcode::G_FSHR;
 
   } else {
     return false;
   }
 
-  if (ShlAmt != LShrAmt)
-    return false;
-
-  LLT AmtTy = MRI.getType(ShlAmt);
+  LLT AmtTy = MRI.getType(Amt);
   if (!isLegalOrBeforeLegalizer({FshOpc, {Ty, AmtTy}}))
     return false;
 
   MatchInfo = [=](MachineIRBuilder &B) {
-    B.buildInstr(FshOpc, {Dst}, {ShlSrc, LShrSrc, ShlAmt});
+    B.buildInstr(FshOpc, {Dst}, {ShlSrc, LShrSrc, Amt});
   };
   return true;
 }

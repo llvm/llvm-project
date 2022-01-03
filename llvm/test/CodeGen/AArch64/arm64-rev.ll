@@ -216,8 +216,7 @@ define i64 @test_rev16_x(i64 %a) nounwind {
 ; GISEL-LABEL: test_rev16_x:
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    rev x8, x0
-; GISEL-NEXT:    lsl x9, x8, #48
-; GISEL-NEXT:    orr x0, x9, x8, lsr #16
+; GISEL-NEXT:    ror x0, x8, #16
 ; GISEL-NEXT:    ret
 entry:
   %0 = tail call i64 @llvm.bswap.i64(i64 %a)
@@ -235,9 +234,7 @@ define i64 @test_rev32_x(i64 %a) nounwind {
 ;
 ; GISEL-LABEL: test_rev32_x:
 ; GISEL:       // %bb.0: // %entry
-; GISEL-NEXT:    rev x8, x0
-; GISEL-NEXT:    lsl x9, x8, #32
-; GISEL-NEXT:    orr x0, x9, x8, lsr #32
+; GISEL-NEXT:    rev32 x0, x0
 ; GISEL-NEXT:    ret
 entry:
   %0 = tail call i64 @llvm.bswap.i64(i64 %a)
