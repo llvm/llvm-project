@@ -21464,8 +21464,8 @@ TEST(FormatStyle, GetStyleOfFile) {
   ASSERT_TRUE((bool)StyleTd);
   ASSERT_EQ(*StyleTd, getLLVMStyle(FormatStyle::LK_TableGen));
 
-  // Test 9.1: overwriting a file style, when parent no file exists with no
-  // fallback style
+  // Test 9.1.1: overwriting a file style, when no parent file exists with no
+  // fallback style.
   ASSERT_TRUE(FS.addFile(
       "/e/sub/.clang-format", 0,
       llvm::MemoryBuffer::getMemBuffer("BasedOnStyle: InheritParentConfig\n"
@@ -21477,6 +21477,25 @@ TEST(FormatStyle, GetStyleOfFile) {
   ASSERT_EQ(*Style9, [] {
     auto Style = getNoStyle();
     Style.ColumnLimit = 20;
+    return Style;
+  }());
+
+  // Test 9.1.2: propagate more than one level with no parent file.
+  ASSERT_TRUE(FS.addFile("/e/sub/sub/code.cpp", 0,
+                         llvm::MemoryBuffer::getMemBuffer("int i;")));
+  ASSERT_TRUE(FS.addFile("/e/sub/sub/.clang-format", 0,
+                         llvm::MemoryBuffer::getMemBuffer(
+                             "BasedOnStyle: InheritParentConfig\n"
+                             "WhitespaceSensitiveMacros: ['FOO', 'BAR']")));
+  std::vector<std::string> NonDefaultWhiteSpaceMacros{"FOO", "BAR"};
+
+  ASSERT_NE(Style9->WhitespaceSensitiveMacros, NonDefaultWhiteSpaceMacros);
+  Style9 = getStyle("file", "/e/sub/sub/code.cpp", "none", "", &FS);
+  ASSERT_TRUE(static_cast<bool>(Style9));
+  ASSERT_EQ(*Style9, [&NonDefaultWhiteSpaceMacros] {
+    auto Style = getNoStyle();
+    Style.ColumnLimit = 20;
+    Style.WhitespaceSensitiveMacros = NonDefaultWhiteSpaceMacros;
     return Style;
   }());
 
@@ -21503,15 +21522,7 @@ TEST(FormatStyle, GetStyleOfFile) {
     return Style;
   }());
 
-  // Test 9.4: propagate more than one level
-  ASSERT_TRUE(FS.addFile("/e/sub/sub/code.cpp", 0,
-                         llvm::MemoryBuffer::getMemBuffer("int i;")));
-  ASSERT_TRUE(FS.addFile("/e/sub/sub/.clang-format", 0,
-                         llvm::MemoryBuffer::getMemBuffer(
-                             "BasedOnStyle: InheritParentConfig\n"
-                             "WhitespaceSensitiveMacros: ['FOO', 'BAR']")));
-  std::vector<std::string> NonDefaultWhiteSpaceMacros{"FOO", "BAR"};
-
+  // Test 9.4: propagate more than one level with a parent file.
   const auto SubSubStyle = [&NonDefaultWhiteSpaceMacros] {
     auto Style = getGoogleStyle();
     Style.ColumnLimit = 20;
