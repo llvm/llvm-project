@@ -4,6 +4,104 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+experimental-zfh,+experimental-v -target-abi=lp64d \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s
 
+declare <vscale x 1 x i1> @llvm.vp.select.nxv1i1(<vscale x 1 x i1>, <vscale x 1 x i1>, <vscale x 1 x i1>, i32)
+
+define <vscale x 1 x i1> @select_nxv1i1(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b, <vscale x 1 x i1> %c, i32 zeroext %evl) {
+; CHECK-LABEL: select_nxv1i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, mu
+; CHECK-NEXT:    vmandn.mm v9, v9, v0
+; CHECK-NEXT:    vmand.mm v8, v8, v0
+; CHECK-NEXT:    vmor.mm v0, v8, v9
+; CHECK-NEXT:    ret
+  %v = call <vscale x 1 x i1> @llvm.vp.select.nxv1i1(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b, <vscale x 1 x i1> %c, i32 %evl)
+  ret <vscale x 1 x i1> %v
+}
+
+declare <vscale x 2 x i1> @llvm.vp.select.nxv2i1(<vscale x 2 x i1>, <vscale x 2 x i1>, <vscale x 2 x i1>, i32)
+
+define <vscale x 2 x i1> @select_nxv2i1(<vscale x 2 x i1> %a, <vscale x 2 x i1> %b, <vscale x 2 x i1> %c, i32 zeroext %evl) {
+; CHECK-LABEL: select_nxv2i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, mu
+; CHECK-NEXT:    vmandn.mm v9, v9, v0
+; CHECK-NEXT:    vmand.mm v8, v8, v0
+; CHECK-NEXT:    vmor.mm v0, v8, v9
+; CHECK-NEXT:    ret
+  %v = call <vscale x 2 x i1> @llvm.vp.select.nxv2i1(<vscale x 2 x i1> %a, <vscale x 2 x i1> %b, <vscale x 2 x i1> %c, i32 %evl)
+  ret <vscale x 2 x i1> %v
+}
+
+declare <vscale x 4 x i1> @llvm.vp.select.nxv4i1(<vscale x 4 x i1>, <vscale x 4 x i1>, <vscale x 4 x i1>, i32)
+
+define <vscale x 4 x i1> @select_nxv4i1(<vscale x 4 x i1> %a, <vscale x 4 x i1> %b, <vscale x 4 x i1> %c, i32 zeroext %evl) {
+; CHECK-LABEL: select_nxv4i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, mu
+; CHECK-NEXT:    vmandn.mm v9, v9, v0
+; CHECK-NEXT:    vmand.mm v8, v8, v0
+; CHECK-NEXT:    vmor.mm v0, v8, v9
+; CHECK-NEXT:    ret
+  %v = call <vscale x 4 x i1> @llvm.vp.select.nxv4i1(<vscale x 4 x i1> %a, <vscale x 4 x i1> %b, <vscale x 4 x i1> %c, i32 %evl)
+  ret <vscale x 4 x i1> %v
+}
+
+declare <vscale x 8 x i1> @llvm.vp.select.nxv8i1(<vscale x 8 x i1>, <vscale x 8 x i1>, <vscale x 8 x i1>, i32)
+
+define <vscale x 8 x i1> @select_nxv8i1(<vscale x 8 x i1> %a, <vscale x 8 x i1> %b, <vscale x 8 x i1> %c, i32 zeroext %evl) {
+; CHECK-LABEL: select_nxv8i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, mu
+; CHECK-NEXT:    vmandn.mm v9, v9, v0
+; CHECK-NEXT:    vmand.mm v8, v8, v0
+; CHECK-NEXT:    vmor.mm v0, v8, v9
+; CHECK-NEXT:    ret
+  %v = call <vscale x 8 x i1> @llvm.vp.select.nxv8i1(<vscale x 8 x i1> %a, <vscale x 8 x i1> %b, <vscale x 8 x i1> %c, i32 %evl)
+  ret <vscale x 8 x i1> %v
+}
+
+declare <vscale x 16 x i1> @llvm.vp.select.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, i32)
+
+define <vscale x 16 x i1> @select_nxv16i1(<vscale x 16 x i1> %a, <vscale x 16 x i1> %b, <vscale x 16 x i1> %c, i32 zeroext %evl) {
+; CHECK-LABEL: select_nxv16i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, mu
+; CHECK-NEXT:    vmandn.mm v9, v9, v0
+; CHECK-NEXT:    vmand.mm v8, v8, v0
+; CHECK-NEXT:    vmor.mm v0, v8, v9
+; CHECK-NEXT:    ret
+  %v = call <vscale x 16 x i1> @llvm.vp.select.nxv16i1(<vscale x 16 x i1> %a, <vscale x 16 x i1> %b, <vscale x 16 x i1> %c, i32 %evl)
+  ret <vscale x 16 x i1> %v
+}
+
+declare <vscale x 32 x i1> @llvm.vp.select.nxv32i1(<vscale x 32 x i1>, <vscale x 32 x i1>, <vscale x 32 x i1>, i32)
+
+define <vscale x 32 x i1> @select_nxv32i1(<vscale x 32 x i1> %a, <vscale x 32 x i1> %b, <vscale x 32 x i1> %c, i32 zeroext %evl) {
+; CHECK-LABEL: select_nxv32i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, mu
+; CHECK-NEXT:    vmandn.mm v9, v9, v0
+; CHECK-NEXT:    vmand.mm v8, v8, v0
+; CHECK-NEXT:    vmor.mm v0, v8, v9
+; CHECK-NEXT:    ret
+  %v = call <vscale x 32 x i1> @llvm.vp.select.nxv32i1(<vscale x 32 x i1> %a, <vscale x 32 x i1> %b, <vscale x 32 x i1> %c, i32 %evl)
+  ret <vscale x 32 x i1> %v
+}
+
+declare <vscale x 64 x i1> @llvm.vp.select.nxv64i1(<vscale x 64 x i1>, <vscale x 64 x i1>, <vscale x 64 x i1>, i32)
+
+define <vscale x 64 x i1> @select_nxv64i1(<vscale x 64 x i1> %a, <vscale x 64 x i1> %b, <vscale x 64 x i1> %c, i32 zeroext %evl) {
+; CHECK-LABEL: select_nxv64i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, mu
+; CHECK-NEXT:    vmandn.mm v9, v9, v0
+; CHECK-NEXT:    vmand.mm v8, v8, v0
+; CHECK-NEXT:    vmor.mm v0, v8, v9
+; CHECK-NEXT:    ret
+  %v = call <vscale x 64 x i1> @llvm.vp.select.nxv64i1(<vscale x 64 x i1> %a, <vscale x 64 x i1> %b, <vscale x 64 x i1> %c, i32 %evl)
+  ret <vscale x 64 x i1> %v
+}
+
 declare <vscale x 1 x i8> @llvm.vp.select.nxv1i8(<vscale x 1 x i1>, <vscale x 1 x i8>, <vscale x 1 x i8>, i32)
 
 define <vscale x 1 x i8> @select_nxv1i8(<vscale x 1 x i1> %a, <vscale x 1 x i8> %b, <vscale x 1 x i8> %c, i32 zeroext %evl) {
