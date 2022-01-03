@@ -85,7 +85,7 @@ struct WrapperFunctionCall {
         shared::CWrapperFunctionResult(const char *ArgData, size_t ArgSize);
     return shared::WrapperFunctionResult(
         Func.toPtr<FnTy *>()(ArgData.Start.toPtr<const char *>(),
-                             static_cast<size_t>(ArgData.size().getValue())));
+                             static_cast<size_t>(ArgData.size())));
   }
 
   /// Run call and deserialize result using SPS.
