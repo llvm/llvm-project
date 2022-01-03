@@ -157,20 +157,20 @@ bool M88kInstructionSelector::selectICmp(MachineInstr &I,
 }
 
 enum class ICC : unsigned {
-  EQ = 1 << 2,  // equal
-  NE = 1 << 3,  // not equal
-  GT = 1 << 4,  // signed greater than
-  LE = 1 << 5,  // signed less than or equal
-  LT = 1 << 6,  // signed less than
-  GE = 1 << 7,  // signed greater than or equal
-  HI = 1 << 8,  // unsigned greater than
-  LS = 1 << 9,  // unsigned less than or equal
-  LO = 1 << 10, // unsigned less than
-  HS = 1 << 11, // unsigned greater than or equal
-  BE = 1 << 12, // any byte equal
-  NB = 1 << 13, // no byte equal
-  HE = 1 << 14, // any half-word equal
-  NH = 1 << 15  // no half-word equal
+  EQ = 2,  // equal
+  NE = 3,  // not equal
+  GT = 4,  // signed greater than
+  LE = 5,  // signed less than or equal
+  LT = 6,  // signed less than
+  GE = 7,  // signed greater than or equal
+  HI = 8,  // unsigned greater than
+  LS = 9,  // unsigned less than or equal
+  LO = 10, // unsigned less than
+  HS = 11, // unsigned greater than or equal
+  BE = 12, // any byte equal
+  NB = 13, // no byte equal
+  HE = 14, // any half-word equal
+  NH = 15  // no half-word equal
 };
 
 static ICC getCCforICMP(CmpInst::Predicate Pred) {
