@@ -830,7 +830,6 @@ void PatternLowering::generateOperationResultTypeRewriter(
   // Look for an operation that was replaced by `op`. The result types will be
   // inferred from the results that were replaced.
   Block *rewriterBlock = op->getBlock();
-  Value replacedOp;
   for (OpOperand &use : op.op().getUses()) {
     // Check that the use corresponds to a ReplaceOp and that it is the
     // replacement value, not the operation being replaced.
