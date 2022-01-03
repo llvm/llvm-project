@@ -371,6 +371,7 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     llvm::Type *ty = moduleTranslation.convertType(lpOp.getType());
     llvm::LandingPadInst *lpi =
         builder.CreateLandingPad(ty, lpOp.getNumOperands());
+    lpi->setCleanup(lpOp.getCleanup());
 
     // Add clauses
     for (llvm::Value *operand :
