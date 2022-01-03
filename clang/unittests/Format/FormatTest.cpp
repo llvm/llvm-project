@@ -2758,10 +2758,9 @@ TEST_F(FormatTest, FormatsLabels) {
 }
 
 TEST_F(FormatTest, MultiLineControlStatements) {
-  FormatStyle Style = getLLVMStyle();
+  FormatStyle Style = getLLVMStyleWithColumns(20);
   Style.BreakBeforeBraces = FormatStyle::BraceBreakingStyle::BS_Custom;
   Style.BraceWrapping.AfterControlStatement = FormatStyle::BWACS_MultiLine;
-  Style.ColumnLimit = 20;
   // Short lines should keep opening brace on same line.
   EXPECT_EQ("if (foo) {\n"
             "  bar();\n"
@@ -3328,8 +3327,7 @@ TEST_F(FormatTest, FormatsEnumTypes) {
 }
 
 TEST_F(FormatTest, FormatsTypedefEnum) {
-  FormatStyle Style = getLLVMStyle();
-  Style.ColumnLimit = 40;
+  FormatStyle Style = getLLVMStyleWithColumns(40);
   verifyFormat("typedef enum {} EmptyEnum;");
   verifyFormat("typedef enum { A, B, C } ShortEnum;");
   verifyFormat("typedef enum {\n"
@@ -4808,9 +4806,8 @@ TEST_F(FormatTest, LayoutMacroDefinitionsStatementsSpanningBlocks) {
 }
 
 TEST_F(FormatTest, IndentPreprocessorDirectives) {
-  FormatStyle Style = getLLVMStyle();
+  FormatStyle Style = getLLVMStyleWithColumns(40);
   Style.IndentPPDirectives = FormatStyle::PPDIS_None;
-  Style.ColumnLimit = 40;
   verifyFormat("#ifdef _WIN32\n"
                "#define A 0\n"
                "#ifdef VAR2\n"
@@ -6000,10 +5997,9 @@ TEST_F(FormatTest, BreakingBeforeNonAssigmentOperators) {
 }
 
 TEST_F(FormatTest, AllowBinPackingInsideArguments) {
-  FormatStyle Style = getLLVMStyle();
+  FormatStyle Style = getLLVMStyleWithColumns(40);
   Style.BreakBeforeBinaryOperators = FormatStyle::BOS_NonAssignment;
   Style.BinPackArguments = false;
-  Style.ColumnLimit = 40;
   verifyFormat("void test() {\n"
                "  someFunction(\n"
                "      this + argument + is + quite\n"
@@ -6182,9 +6178,8 @@ TEST_F(FormatTest, ConstructorInitializers) {
 }
 
 TEST_F(FormatTest, AllowAllConstructorInitializersOnNextLine) {
-  FormatStyle Style = getLLVMStyle();
+  FormatStyle Style = getLLVMStyleWithColumns(60);
   Style.BreakConstructorInitializers = FormatStyle::BCIS_BeforeComma;
-  Style.ColumnLimit = 60;
   Style.BinPackParameters = false;
 
   for (int i = 0; i < 4; ++i) {
@@ -6312,8 +6307,7 @@ TEST_F(FormatTest, AllowAllConstructorInitializersOnNextLine) {
 }
 
 TEST_F(FormatTest, AllowAllArgumentsOnNextLine) {
-  FormatStyle Style = getLLVMStyle();
-  Style.ColumnLimit = 60;
+  FormatStyle Style = getLLVMStyleWithColumns(60);
   Style.BinPackArguments = false;
   for (int i = 0; i < 4; ++i) {
     // Test all combinations of parameters that should not have an effect.
@@ -6367,8 +6361,7 @@ TEST_F(FormatTest, AllowAllArgumentsOnNextLine) {
 TEST_F(FormatTest, AllowAllArgumentsOnNextLineDontAlign) {
   // Check that AllowAllArgumentsOnNextLine is respected for both BAS_DontAlign
   // and BAS_Align.
-  auto Style = getLLVMStyle();
-  Style.ColumnLimit = 35;
+  FormatStyle Style = getLLVMStyleWithColumns(35);
   StringRef Input = "functionCall(paramA, paramB, paramC);\n"
                     "void functionDecl(int A, int B, int C);";
   Style.AllowAllArgumentsOnNextLine = false;
@@ -6869,8 +6862,7 @@ TEST_F(FormatTest, DeductionGuides) {
 TEST_F(FormatTest, BreaksFunctionDeclarationsWithTrailingTokens) {
   // Avoid breaking before trailing 'const' or other trailing annotations, if
   // they are not function-like.
-  FormatStyle Style = getGoogleStyle();
-  Style.ColumnLimit = 47;
+  FormatStyle Style = getGoogleStyleWithColumns(47);
   verifyFormat("void someLongFunction(\n"
                "    int someLoooooooooooooongParameter) const {\n}",
                getLLVMStyleWithColumns(47));
@@ -7689,8 +7681,7 @@ TEST_F(FormatTest, BreaksConditionalExpressions) {
                "                     : a;");
 
   // Chained conditionals
-  FormatStyle Style = getLLVMStyle();
-  Style.ColumnLimit = 70;
+  FormatStyle Style = getLLVMStyleWithColumns(70);
   Style.AlignOperands = FormatStyle::OAS_Align;
   verifyFormat("return aaaaaaaaaaaaaaaa ? 1111111111111111\n"
                "       : bbbbbbbbbbbbbb ? 2222222222222222\n"
@@ -7843,9 +7834,8 @@ TEST_F(FormatTest, BreaksConditionalExpressions) {
 }
 
 TEST_F(FormatTest, BreaksConditionalExpressionsAfterOperator) {
-  FormatStyle Style = getLLVMStyle();
+  FormatStyle Style = getLLVMStyleWithColumns(70);
   Style.BreakBeforeTernaryOperators = false;
-  Style.ColumnLimit = 70;
   verifyFormat(
       "aaaa(aaaaaaaaaaaaaaaaaaaa, aaaaaaaaaaaaaaaaaaaaaaaaaa ?\n"
       "                               aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa :\n"
@@ -11994,8 +11984,7 @@ TEST_F(FormatTest, PullTrivialFunctionDefinitionsIntoSingleLine) {
                "};",
                getGoogleStyle());
 
-  FormatStyle NoColumnLimit = getLLVMStyle();
-  NoColumnLimit.ColumnLimit = 0;
+  FormatStyle NoColumnLimit = getLLVMStyleWithColumns(0);
   EXPECT_EQ("A() : b(0) {}", format("A():b(0){}", NoColumnLimit));
   EXPECT_EQ("class C {\n"
             "  A() : b(0) {}\n"
@@ -12154,12 +12143,11 @@ TEST_F(FormatTest, PullInlineOnlyFunctionDefinitionsIntoSingleLine) {
 }
 
 TEST_F(FormatTest, SplitEmptyFunction) {
-  FormatStyle Style = getLLVMStyle();
+  FormatStyle Style = getLLVMStyleWithColumns(40);
   Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_None;
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
   Style.BraceWrapping.AfterFunction = true;
   Style.BraceWrapping.SplitEmptyFunction = false;
-  Style.ColumnLimit = 40;
 
   verifyFormat("int f()\n"
                "{}",
@@ -12222,13 +12210,12 @@ TEST_F(FormatTest, SplitEmptyFunction) {
 }
 
 TEST_F(FormatTest, SplitEmptyFunctionButNotRecord) {
-  FormatStyle Style = getLLVMStyle();
+  FormatStyle Style = getLLVMStyleWithColumns(40);
   Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_None;
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
   Style.BraceWrapping.AfterFunction = true;
   Style.BraceWrapping.SplitEmptyFunction = true;
   Style.BraceWrapping.SplitEmptyRecord = false;
-  Style.ColumnLimit = 40;
 
   verifyFormat("class C {};", Style);
   verifyFormat("struct C {};", Style);
@@ -17411,14 +17398,13 @@ TEST_F(FormatTest, AllmanBraceBreaking) {
 }
 
 TEST_F(FormatTest, WhitesmithsBraceBreaking) {
-  FormatStyle WhitesmithsBraceStyle = getLLVMStyle();
+  FormatStyle WhitesmithsBraceStyle = getLLVMStyleWithColumns(0);
   WhitesmithsBraceStyle.BreakBeforeBraces = FormatStyle::BS_Whitesmiths;
 
   // Make a few changes to the style for testing purposes
   WhitesmithsBraceStyle.AllowShortFunctionsOnASingleLine =
       FormatStyle::SFS_Empty;
   WhitesmithsBraceStyle.AllowShortLambdasOnASingleLine = FormatStyle::SLS_None;
-  WhitesmithsBraceStyle.ColumnLimit = 0;
 
   // FIXME: this test case can't decide whether there should be a blank line
   // after the ~D() line or not. It adds one if one doesn't exist in the test
@@ -18407,8 +18393,7 @@ TEST_F(FormatTest, UnderstandPragmaOption) {
 }
 
 TEST_F(FormatTest, OptimizeBreakPenaltyVsExcess) {
-  FormatStyle Style = getLLVMStyle();
-  Style.ColumnLimit = 20;
+  FormatStyle Style = getLLVMStyleWithColumns(20);
 
   // See PR41213
   EXPECT_EQ("/*\n"
@@ -20865,8 +20850,7 @@ TEST_F(FormatTest, FormatsBlocks) {
 }
 
 TEST_F(FormatTest, FormatsBlocksWithZeroColumnWidth) {
-  FormatStyle ZeroColumn = getLLVMStyle();
-  ZeroColumn.ColumnLimit = 0;
+  FormatStyle ZeroColumn = getLLVMStyleWithColumns(0);
 
   verifyFormat("[[SessionService sharedService] "
                "loadWindowWithCompletionBlock:^(SessionWindow *window) {\n"
@@ -22266,8 +22250,7 @@ TEST_F(FormatTest, WhitespaceSensitiveMacros) {
 TEST_F(FormatTest, VeryLongNamespaceCommentSplit) {
   // These tests are not in NamespaceFixer because that doesn't
   // test its interaction with line wrapping
-  FormatStyle Style = getLLVMStyle();
-  Style.ColumnLimit = 80;
+  FormatStyle Style = getLLVMStyleWithColumns(80);
   verifyFormat("namespace {\n"
                "int i;\n"
                "int j;\n"
@@ -22974,8 +22957,7 @@ TEST_F(FormatTest, CoroutineCoAwait) {
   verifyFormat("co_await [this](int a, int b) -> Task { co_return co_await "
                "foo(); }(x, y);");
 
-  FormatStyle Style = getLLVMStyle();
-  Style.ColumnLimit = 40;
+  FormatStyle Style = getLLVMStyleWithColumns(40);
   verifyFormat("co_await [this](int a, int b) -> Task {\n"
                "  co_return co_await foo();\n"
                "}(x, y);",
