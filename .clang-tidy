@@ -16,4 +16,5 @@ CheckOptions:
     value:           CamelCase
   - key:             readability-identifier-naming.IgnoreMainLikeFunctions
     value:           1
-
+  - key:             readability-redundant-member-init.IgnoreBaseInCopyConstructors
+    value:           1
