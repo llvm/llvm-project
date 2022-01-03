@@ -81,7 +81,7 @@ public:
                              TTI::PeelingPreferences &PP);
 
   unsigned getMinVectorRegisterBitWidth() const {
-    return ST->hasVInstructions() ? ST->getMinRVVVectorSizeInBits() : 0;
+    return ST->useRVVForFixedLengthVectors() ? 16 : 0;
   }
 
   InstructionCost getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
