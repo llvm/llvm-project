@@ -442,14 +442,14 @@ TEST(KnownBitsTest, CountMaxActiveBits) {
   });
 }
 
-TEST(KnownBitsTest, CountMaxSignedBits) {
+TEST(KnownBitsTest, CountMaxSignificantBits) {
   unsigned Bits = 4;
   ForeachKnownBits(Bits, [&](const KnownBits &Known) {
     unsigned Expected = 0;
     ForeachNumInKnownBits(Known, [&](const APInt &N) {
-      Expected = std::max(Expected, N.getMinSignedBits());
+      Expected = std::max(Expected, N.getSignificantBits());
     });
-    EXPECT_EQ(Expected, Known.countMaxSignedBits());
+    EXPECT_EQ(Expected, Known.countMaxSignificantBits());
   });
 }
 

@@ -51,7 +51,7 @@ unsigned AMDGPUTargetLowering::numBitsUnsigned(SDValue Op, SelectionDAG &DAG) {
 unsigned AMDGPUTargetLowering::numBitsSigned(SDValue Op, SelectionDAG &DAG) {
   // In order for this to be a signed 24-bit value, bit 23, must
   // be a sign bit.
-  return DAG.ComputeMinSignedBits(Op);
+  return DAG.ComputeMaxSignificantBits(Op);
 }
 
 AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,

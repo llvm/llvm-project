@@ -1751,8 +1751,8 @@ void DAGTypeLegalizer::PromoteSetCCOperands(SDValue &LHS, SDValue &RHS,
   // duplicated sign bits is no greater than the width of LHS/RHS, we can avoid
   // inserting a zext_inreg operation that we might not be able to remove.
   if (ISD::isIntEqualitySetCC(CCCode)) {
-    unsigned OpLEffectiveBits = DAG.ComputeMinSignedBits(OpL);
-    unsigned OpREffectiveBits = DAG.ComputeMinSignedBits(OpR);
+    unsigned OpLEffectiveBits = DAG.ComputeMaxSignificantBits(OpL);
+    unsigned OpREffectiveBits = DAG.ComputeMaxSignificantBits(OpR);
     if (OpLEffectiveBits <= LHS.getScalarValueSizeInBits() &&
         OpREffectiveBits <= RHS.getScalarValueSizeInBits()) {
       LHS = OpL;

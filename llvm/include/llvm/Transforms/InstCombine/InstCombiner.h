@@ -480,9 +480,9 @@ public:
     return llvm::ComputeNumSignBits(Op, DL, Depth, &AC, CxtI, &DT);
   }
 
-  unsigned ComputeMinSignedBits(const Value *Op, unsigned Depth = 0,
-                                const Instruction *CxtI = nullptr) const {
-    return llvm::ComputeMinSignedBits(Op, DL, Depth, &AC, CxtI, &DT);
+  unsigned ComputeMaxSignificantBits(const Value *Op, unsigned Depth = 0,
+                                     const Instruction *CxtI = nullptr) const {
+    return llvm::ComputeMaxSignificantBits(Op, DL, Depth, &AC, CxtI, &DT);
   }
 
   OverflowResult computeOverflowForUnsignedMul(const Value *LHS,
