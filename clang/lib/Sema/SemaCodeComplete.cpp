@@ -6108,6 +6108,7 @@ static bool argMatchesTemplateParams(const ParsedTemplateArgument &Arg,
   case ParsedTemplateArgument::Template:
     return llvm::isa<TemplateTemplateParmDecl>(Param); // signature not checked
   }
+  llvm_unreachable("Unhandled switch case");
 }
 
 QualType Sema::ProduceTemplateArgumentSignatureHelp(
