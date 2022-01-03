@@ -1001,6 +1001,10 @@ static void ompt_tsan_dependences(ompt_data_t *task_data,
   if (ndeps > 0) {
     // Copy the data to use it in task_switch and task_end.
     TaskData *Data = ToTaskData(task_data);
+    if (!Data->Parent) {
+      // Return since doacross dependences are not supported yet.
+      return;
+    }
     if (!Data->Parent->DependencyMap)
       Data->Parent->DependencyMap =
           new std::unordered_map<void *, DependencyData *>();
