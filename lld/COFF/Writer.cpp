@@ -1425,8 +1425,9 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
     pe->DLLCharacteristics |= IMAGE_DLL_CHARACTERISTICS_FORCE_INTEGRITY;
   if (setNoSEHCharacteristic || config->noSEH)
     pe->DLLCharacteristics |= IMAGE_DLL_CHARACTERISTICS_NO_SEH;
-  if (config->terminalServerAware)
-    pe->DLLCharacteristics |= IMAGE_DLL_CHARACTERISTICS_TERMINAL_SERVER_AWARE;
+  // [MSVC Compatibility] unused DLLCharacteristics
+  /*if (config->terminalServerAware)
+    pe->DLLCharacteristics |= IMAGE_DLL_CHARACTERISTICS_TERMINAL_SERVER_AWARE;*/
   pe->NumberOfRvaAndSize = numberOfDataDirectory;
   if (textSec->getVirtualSize()) {
     pe->BaseOfCode = textSec->getRVA();
