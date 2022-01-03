@@ -118,8 +118,8 @@ define i32 @test_basic(i32 %l) #0 {
 ; X64-NEXT:  .LBB0_1:
 ; X64-NEXT:    .cfi_restore %rbx
 ; X64-NEXT:    .cfi_restore %rbp
-; X64-NEXT:    movabsq $24, %r10
-; X64-NEXT:    movabsq $0, %r11
+; X64-NEXT:    movl $24, %r10d
+; X64-NEXT:    movl $0, %r11d
 ; X64-NEXT:    callq __morestack
 ; X64-NEXT:    retq
 ; X64-NEXT:    jmp .LBB0_2
