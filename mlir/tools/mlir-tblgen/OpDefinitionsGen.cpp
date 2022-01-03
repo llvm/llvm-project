@@ -2065,8 +2065,8 @@ void OpEmitter::genTypeInterfaceMethods() {
     return;
   // Generate 'inferReturnTypes' method declaration using the interface method
   // declared in 'InferTypeOpInterface' op interface.
-  const auto *trait = dyn_cast<InterfaceTrait>(
-      op.getTrait("::mlir::InferTypeOpInterface::Trait"));
+  const auto *trait =
+      cast<InterfaceTrait>(op.getTrait("::mlir::InferTypeOpInterface::Trait"));
   Interface interface = trait->getInterface();
   Method *method = [&]() -> Method * {
     for (const InterfaceMethod &interfaceMethod : interface.getMethods()) {
