@@ -279,6 +279,7 @@
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
 #include "llvm/Transforms/Utils/SSAUpdaterBulk.h"
 
@@ -1118,20 +1119,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runEHOnFunction(Function &F) {
     } else {
       // This can't throw, and we don't need this invoke, just replace it with a
       // call+branch
-      SmallVector<Value *, 16> Args(II->args());
-      CallInst *NewCall =
-          IRB.CreateCall(II->getFunctionType(), II->getCalledOperand(), Args);
-      NewCall->takeName(II);
-      NewCall->setCallingConv(II->getCallingConv());
-      NewCall->setDebugLoc(II->getDebugLoc());
-      NewCall->setAttributes(II->getAttributes());
-      II->replaceAllUsesWith(NewCall);
-      ToErase.push_back(II);
-
-      IRB.CreateBr(II->getNormalDest());
-
-      // Remove any PHI node entries from the exception destination
-      II->getUnwindDest()->removePredecessor(&BB);
+      changeToCall(II);
     }
   }
 
@@ -1659,18 +1647,18 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForWasmSjLj(
       BasicBlock::Create(C, "setjmp.dispatch", &F, OrigEntry);
   cast<BranchInst>(Entry->getTerminator())->setSuccessor(0, SetjmpDispatchBB);
 
-  // Create catch.dispatch.longjmp BB a catchswitch instruction
-  BasicBlock *CatchSwitchBB =
+  // Create catch.dispatch.longjmp BB and a catchswitch instruction
+  BasicBlock *CatchDispatchLongjmpBB =
       BasicBlock::Create(C, "catch.dispatch.longjmp", &F);
-  IRB.SetInsertPoint(CatchSwitchBB);
-  CatchSwitchInst *CatchSwitch =
+  IRB.SetInsertPoint(CatchDispatchLongjmpBB);
+  CatchSwitchInst *CatchSwitchLongjmp =
       IRB.CreateCatchSwitch(ConstantTokenNone::get(C), nullptr, 1);
 
   // Create catch.longjmp BB and a catchpad instruction
   BasicBlock *CatchLongjmpBB = BasicBlock::Create(C, "catch.longjmp", &F);
-  CatchSwitch->addHandler(CatchLongjmpBB);
+  CatchSwitchLongjmp->addHandler(CatchLongjmpBB);
   IRB.SetInsertPoint(CatchLongjmpBB);
-  CatchPadInst *CatchPad = IRB.CreateCatchPad(CatchSwitch, {});
+  CatchPadInst *CatchPad = IRB.CreateCatchPad(CatchSwitchLongjmp, {});
 
   // Wasm throw and catch instructions can throw and catch multiple values, but
   // that requires multivalue support in the toolchain, which is currently not
@@ -1736,9 +1724,9 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForWasmSjLj(
 
   // Convert all longjmpable call instructions to invokes that unwind to the
   // newly created catch.dispatch.longjmp BB.
-  SmallVector<Instruction *, 64> ToErase;
+  SmallVector<CallInst *, 64> LongjmpableCalls;
   for (auto *BB = &*F.begin(); BB; BB = BB->getNextNode()) {
-    for (Instruction &I : *BB) {
+    for (auto &I : *BB) {
       auto *CI = dyn_cast<CallInst>(&I);
       if (!CI)
         continue;
@@ -1756,32 +1744,18 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForWasmSjLj(
       // setjmps in this function. We should not convert this call to an invoke.
       if (CI == WasmLongjmpCI)
         continue;
-      ToErase.push_back(CI);
-
-      // Even if the callee function has attribute 'nounwind', which is true for
-      // all C functions, it can longjmp, which means it can throw a Wasm
-      // exception now.
-      CI->removeFnAttr(Attribute::NoUnwind);
-      if (Function *CalleeF = CI->getCalledFunction()) {
-        CalleeF->removeFnAttr(Attribute::NoUnwind);
-      }
-
-      IRB.SetInsertPoint(CI);
-      BasicBlock *Tail = SplitBlock(BB, CI->getNextNode());
-      // We will add a new invoke. So remove the branch created when we split
-      // the BB
-      ToErase.push_back(BB->getTerminator());
-      SmallVector<Value *, 8> Args(CI->args());
-      InvokeInst *II =
-          IRB.CreateInvoke(CI->getFunctionType(), CI->getCalledOperand(), Tail,
-                           CatchSwitchBB, Args);
-      II->takeName(CI);
-      II->setDebugLoc(CI->getDebugLoc());
-      II->setAttributes(CI->getAttributes());
-      CI->replaceAllUsesWith(II);
+      LongjmpableCalls.push_back(CI);
     }
   }
-
-  for (Instruction *I : ToErase)
-    I->eraseFromParent();
+  for (auto *CI : LongjmpableCalls) {
+    // Even if the callee function has attribute 'nounwind', which is true for
+    // all C functions, it can longjmp, which means it can throw a Wasm
+    // exception now.
+    CI->removeFnAttr(Attribute::NoUnwind);
+    if (Function *CalleeF = CI->getCalledFunction())
+      CalleeF->removeFnAttr(Attribute::NoUnwind);
+    // Change it to an invoke and make it unwind to the catch.dispatch.longjmp
+    // BB.
+    changeToInvokeAndSplitBasicBlock(CI, CatchDispatchLongjmpBB);
+  }
 }

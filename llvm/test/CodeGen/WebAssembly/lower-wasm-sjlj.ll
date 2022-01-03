@@ -52,9 +52,9 @@ entry:
 ; CHECK-NEXT: %arraydecay1 = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %buf8, i32 0, i32 0
 ; CHECK-NEXT: %env = bitcast %struct.__jmp_buf_tag* %arraydecay1 to i8*
 ; CHECK-NEXT: invoke void @__wasm_longjmp(i8* %env, i32 1)
-; CHECK-NEXT:         to label %entry.split.split.split unwind label %catch.dispatch.longjmp
+; CHECK-NEXT:         to label %.noexc unwind label %catch.dispatch.longjmp
 
-; CHECK:    entry.split.split.split:
+; CHECK:    .noexc:
 ; CHECK-NEXT: unreachable
 
 ; CHECK:    catch.dispatch.longjmp:
@@ -101,7 +101,7 @@ entry:
 ; CHECK:   invoke void @foo()
 ; CHECK:           to label %{{.*}} unwind label %catch.dispatch.longjmp
 
-; CHECK: entry.split.split.split:
+; CHECK: .noexc:
 ; CHECK:   invoke void @foo()
 ; CHECK:           to label %{{.*}} unwind label %catch.dispatch.longjmp
 }
