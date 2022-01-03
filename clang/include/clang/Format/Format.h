@@ -3054,6 +3054,7 @@ struct FormatStyle {
   bool ReflowComments;
   // clang-format on
 
+  /// \brief The style if definition blocks should be separated.
   enum SeparateDefinitionStyle {
     /// Leave definition blocks as they are.
     SDS_Leave,
@@ -3862,6 +3863,7 @@ struct FormatStyle {
            QualifierOrder == R.QualifierOrder &&
            RawStringFormats == R.RawStringFormats &&
            ReferenceAlignment == R.ReferenceAlignment &&
+           SeparateDefinitionBlocks == R.SeparateDefinitionBlocks &&
            ShortNamespaceLines == R.ShortNamespaceLines &&
            SortIncludes == R.SortIncludes &&
            SortJavaStaticImport == R.SortJavaStaticImport &&
