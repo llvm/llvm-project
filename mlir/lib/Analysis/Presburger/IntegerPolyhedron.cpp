@@ -168,16 +168,16 @@ void IntegerPolyhedron::removeInequality(unsigned pos) {
   inequalities.removeRow(pos);
 }
 
-void IntegerPolyhedron::removeEqualityRange(unsigned begin, unsigned end) {
-  if (begin >= end)
+void IntegerPolyhedron::removeEqualityRange(unsigned start, unsigned end) {
+  if (start >= end)
     return;
-  equalities.removeRows(begin, end - begin);
+  equalities.removeRows(start, end - start);
 }
 
-void IntegerPolyhedron::removeInequalityRange(unsigned begin, unsigned end) {
-  if (begin >= end)
+void IntegerPolyhedron::removeInequalityRange(unsigned start, unsigned end) {
+  if (start >= end)
     return;
-  inequalities.removeRows(begin, end - begin);
+  inequalities.removeRows(start, end - start);
 }
 
 void IntegerPolyhedron::swapId(unsigned posA, unsigned posB) {
