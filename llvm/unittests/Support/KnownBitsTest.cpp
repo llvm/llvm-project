@@ -442,6 +442,17 @@ TEST(KnownBitsTest, CountMaxActiveBits) {
   });
 }
 
+TEST(KnownBitsTest, CountMaxSignedBits) {
+  unsigned Bits = 4;
+  ForeachKnownBits(Bits, [&](const KnownBits &Known) {
+    unsigned Expected = 0;
+    ForeachNumInKnownBits(Known, [&](const APInt &N) {
+      Expected = std::max(Expected, N.getMinSignedBits());
+    });
+    EXPECT_EQ(Expected, Known.countMaxSignedBits());
+  });
+}
+
 TEST(KnownBitsTest, SExtOrTrunc) {
   const unsigned NarrowerSize = 4;
   const unsigned BaseSize = 6;
