@@ -2887,6 +2887,10 @@ struct FormatStyle {
   /// \version 3.7
   unsigned PenaltyBreakFirstLessLess;
 
+  /// The penalty for breaking after ``(``.
+  /// \version 14
+  unsigned PenaltyBreakOpenParenthesis;
+
   /// The penalty for each line break introduced inside a string literal.
   /// \version 3.7
   unsigned PenaltyBreakString;
@@ -3781,6 +3785,7 @@ struct FormatStyle {
                R.PenaltyBreakBeforeFirstCallParameter &&
            PenaltyBreakComment == R.PenaltyBreakComment &&
            PenaltyBreakFirstLessLess == R.PenaltyBreakFirstLessLess &&
+           PenaltyBreakOpenParenthesis == R.PenaltyBreakOpenParenthesis &&
            PenaltyBreakString == R.PenaltyBreakString &&
            PenaltyExcessCharacter == R.PenaltyExcessCharacter &&
            PenaltyReturnTypeOnItsOwnLine == R.PenaltyReturnTypeOnItsOwnLine &&

@@ -756,6 +756,8 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("PenaltyBreakComment", Style.PenaltyBreakComment);
     IO.mapOptional("PenaltyBreakFirstLessLess",
                    Style.PenaltyBreakFirstLessLess);
+    IO.mapOptional("PenaltyBreakOpenParenthesis",
+                   Style.PenaltyBreakOpenParenthesis);
     IO.mapOptional("PenaltyBreakString", Style.PenaltyBreakString);
     IO.mapOptional("PenaltyBreakTemplateDeclaration",
                    Style.PenaltyBreakTemplateDeclaration);
@@ -1232,6 +1234,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.PenaltyExcessCharacter = 1000000;
   LLVMStyle.PenaltyReturnTypeOnItsOwnLine = 60;
   LLVMStyle.PenaltyBreakBeforeFirstCallParameter = 19;
+  LLVMStyle.PenaltyBreakOpenParenthesis = 0;
   LLVMStyle.PenaltyBreakTemplateDeclaration = prec::Relational;
   LLVMStyle.PenaltyIndentedWhitespace = 0;
 
