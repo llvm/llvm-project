@@ -3135,6 +3135,7 @@ class StringRefParameter<string desc = ""> :
 class APFloatParameter<string desc> :
     AttrOrTypeParameter<"::llvm::APFloat", desc> {
   let comparator = "$_lhs.bitwiseIsEqual($_rhs)";
+  let cppAccessorType = "const ::llvm::APFloat &";
 }
 
 // For standard ArrayRefs, which require allocation.
