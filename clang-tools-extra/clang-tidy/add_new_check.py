@@ -37,7 +37,7 @@ def adapt_cmake(module_path, check_name_camel):
       return False
 
   print('Updating %s...' % filename)
-  with io.open(filename, 'w', encoding='utf8') as f:
+  with io.open(filename, 'w', encoding='utf8', newline='\n') as f:
     cpp_found = False
     file_added = False
     for line in lines:
@@ -57,7 +57,7 @@ def write_header(module_path, module, namespace, check_name, check_name_camel):
   check_name_dashes = module + '-' + check_name
   filename = os.path.join(module_path, check_name_camel) + '.h'
   print('Creating %s...' % filename)
-  with io.open(filename, 'w', encoding='utf8') as f:
+  with io.open(filename, 'w', encoding='utf8', newline='\n') as f:
     header_guard = ('LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_' + module.upper() + '_'
                     + check_name_camel.upper() + '_H')
     f.write('//===--- ')
@@ -110,7 +110,7 @@ public:
 def write_implementation(module_path, module, namespace, check_name_camel):
   filename = os.path.join(module_path, check_name_camel) + '.cpp'
   print('Creating %s...' % filename)
-  with io.open(filename, 'w', encoding='utf8') as f:
+  with io.open(filename, 'w', encoding='utf8', newline='\n') as f:
     f.write('//===--- ')
     f.write(os.path.basename(filename))
     f.write(' - clang-tidy ')
@@ -168,7 +168,7 @@ def adapt_module(module_path, module, check_name, check_name_camel):
     lines = f.readlines()
 
   print('Updating %s...' % filename)
-  with io.open(filename, 'w', encoding='utf8') as f:
+  with io.open(filename, 'w', encoding='utf8', newline='\n') as f:
     header_added = False
     header_found = False
     check_added = False
@@ -231,7 +231,7 @@ def add_release_notes(module_path, module, check_name):
   checkMatcher = re.compile('- New :doc:`(.*)')
 
   print('Updating %s...' % filename)
-  with io.open(filename, 'w', encoding='utf8') as f:
+  with io.open(filename, 'w', encoding='utf8', newline='\n') as f:
     note_added = False
     header_found = False
     add_note_here = False
@@ -277,7 +277,7 @@ def write_test(module_path, module, check_name, test_extension):
   filename = os.path.normpath(os.path.join(module_path, '../../test/clang-tidy/checkers',
                                            check_name_dashes + '.' + test_extension))
   print('Creating %s...' % filename)
-  with io.open(filename, 'w', encoding='utf8') as f:
+  with io.open(filename, 'w', encoding='utf8', newline='\n') as f:
     f.write("""// RUN: %%check_clang_tidy %%s %(check_name_dashes)s %%t
 
 // FIXME: Add something that triggers the check here.
@@ -386,7 +386,7 @@ def update_checks_list(clang_tidy_path):
   checks_alias = map(format_link_alias, doc_files)
 
   print('Updating %s...' % filename)
-  with io.open(filename, 'w', encoding='utf8') as f:
+  with io.open(filename, 'w', encoding='utf8', newline='\n') as f:
     for line in lines:
       f.write(line)
       if line.strip() == ".. csv-table::":
@@ -407,7 +407,7 @@ def write_docs(module_path, module, check_name):
   filename = os.path.normpath(os.path.join(
       module_path, '../../docs/clang-tidy/checks/', check_name_dashes + '.rst'))
   print('Creating %s...' % filename)
-  with io.open(filename, 'w', encoding='utf8') as f:
+  with io.open(filename, 'w', encoding='utf8', newline='\n') as f:
     f.write(""".. title:: clang-tidy - %(check_name_dashes)s
 
 %(check_name_dashes)s
