@@ -163,9 +163,21 @@ M88kRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_FRAME_INDEX:
   case TargetOpcode::G_GLOBAL_VALUE:
   case TargetOpcode::G_CONSTANT:
+  case TargetOpcode::G_BRCOND:
     return getInstructionMapping(
         DefaultMappingID, /*Cost=*/1,
         getOperandsMapping({getValueMapping(PMI_GPR32), nullptr}),
+        /*NumOperands*/ MI.getNumOperands());
+  case TargetOpcode::G_BR:
+    return getInstructionMapping(DefaultMappingID, /*Cost=*/1,
+                                 getOperandsMapping({nullptr}),
+                                 /*NumOperands*/ MI.getNumOperands());
+  case TargetOpcode::G_ICMP:
+    return getInstructionMapping(
+        DefaultMappingID, /*Cost=*/1,
+        getOperandsMapping({getValueMapping(PMI_GPR32), nullptr,
+                            getValueMapping(PMI_GPR32),
+                            getValueMapping(PMI_GPR32)}),
         /*NumOperands*/ MI.getNumOperands());
   case TargetOpcode::COPY: {
     Register DstReg = MI.getOperand(0).getReg();

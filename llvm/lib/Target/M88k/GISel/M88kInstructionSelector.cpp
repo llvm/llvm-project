@@ -46,8 +46,12 @@ private:
   void renderHI16(MachineInstrBuilder &MIB, const MachineInstr &I,
                   int OpIdx = -1) const;
 
-  MachineInstr *selectLoadStore(MachineInstr &I, MachineBasicBlock &MBB,
-                                MachineRegisterInfo &MRI) const;
+  bool selectICmp(MachineInstr &I, MachineBasicBlock &MBB,
+                  MachineRegisterInfo &MRI) const;
+  bool selectCondBr(MachineInstr &I, MachineBasicBlock &MBB,
+                    MachineRegisterInfo &MRI) const;
+  bool selectLoadStore(MachineInstr &I, MachineBasicBlock &MBB,
+                       MachineRegisterInfo &MRI) const;
 
   const M88kTargetMachine &TM;
   const M88kInstrInfo &TII;
@@ -144,8 +148,151 @@ void M88kInstructionSelector::renderHI16(MachineInstrBuilder &MIB,
   MIB.addImm(Val);
 }
 
-MachineInstr *M88kInstructionSelector::selectLoadStore(
-    MachineInstr &I, MachineBasicBlock &MBB, MachineRegisterInfo &MRI) const {
+bool M88kInstructionSelector::selectICmp(MachineInstr &I,
+                                         MachineBasicBlock &MBB,
+                                         MachineRegisterInfo &MRI) const {
+  // cmp + extu
+  llvm_unreachable("Not yet implemented");
+  return false;
+}
+
+enum class ICC : unsigned {
+  EQ = 1 << 2,  // equal
+  NE = 1 << 3,  // not equal
+  GT = 1 << 4,  // signed greater than
+  LE = 1 << 5,  // signed less than or equal
+  LT = 1 << 6,  // signed less than
+  GE = 1 << 7,  // signed greater than or equal
+  HI = 1 << 8,  // unsigned greater than
+  LS = 1 << 9,  // unsigned less than or equal
+  LO = 1 << 10, // unsigned less than
+  HS = 1 << 11, // unsigned greater than or equal
+  BE = 1 << 12, // any byte equal
+  NB = 1 << 13, // no byte equal
+  HE = 1 << 14, // any half-word equal
+  NH = 1 << 15  // no half-word equal
+};
+
+static ICC getCCforICMP(CmpInst::Predicate Pred) {
+  switch (Pred) {
+  case CmpInst::ICMP_EQ:
+    return ICC::EQ;
+  case CmpInst::ICMP_NE:
+    return ICC::NE;
+  case CmpInst::ICMP_UGT:
+    return ICC::HI;
+  case CmpInst::ICMP_UGE:
+    return ICC::HS;
+  case CmpInst::ICMP_ULT:
+    return ICC::LO;
+  case CmpInst::ICMP_ULE:
+    return ICC::LS;
+  case CmpInst::ICMP_SGT:
+    return ICC::GT;
+  case CmpInst::ICMP_SGE:
+    return ICC::GE;
+  case CmpInst::ICMP_SLT:
+    return ICC::LT;
+  case CmpInst::ICMP_SLE:
+    return ICC::LE;
+  default:
+    llvm_unreachable("Unexpected predicate");
+  }
+}
+
+enum class CC0 : unsigned {
+  EQ0 = 0x2,
+  NE0 = 0xd,
+  GT0 = 0x1,
+  LT0 = 0xc,
+  GE0 = 0x3,
+  LE0 = 0xe
+};
+
+static CC0 getCCforBCOND(CmpInst::Predicate Pred) {
+  switch (Pred) {
+  case CmpInst::ICMP_EQ:
+    return CC0::EQ0;
+  case CmpInst::ICMP_NE:
+    return CC0::NE0;
+  case CmpInst::ICMP_SGT:
+    return CC0::GT0;
+  case CmpInst::ICMP_SGE:
+    return CC0::GE0;
+  case CmpInst::ICMP_SLT:
+    return CC0::LT0;
+  case CmpInst::ICMP_SLE:
+    return CC0::LE0;
+  default:
+    llvm_unreachable("Unexpected predicate");
+  }
+}
+
+bool M88kInstructionSelector::selectCondBr(MachineInstr &I,
+                                           MachineBasicBlock &MBB,
+                                           MachineRegisterInfo &MRI) const {
+  assert(I.getOpcode() == TargetOpcode::G_BRCOND && "Unexpected G code");
+  // Match combinations of G_BRCND and G_ICMP/G_FCMP
+
+  // G_ICMP: $tst, $src1, $src2
+  // G_BRCOND: $tst, $truebb
+  MachineInstr *MI = nullptr;
+  MachineOperand CC = I.getOperand(0);
+  MachineOperand BB = I.getOperand(1);
+  CmpInst::Predicate Pred;
+  Register LHS, RHS;
+  int64_t SImm16;
+  if (mi_match(CC.getReg(), MRI,
+               m_GICmp(m_Pred(Pred), m_Reg(LHS), m_ICst(SImm16))) &&
+      isInt<16>(SImm16)) {
+    if (SImm16 == 0) {
+      CC0 CCCode = getCCforBCOND(Pred);
+      MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::BCND))
+               .addImm(static_cast<int64_t>(CCCode))
+               .addReg(LHS)
+               .add(BB);
+    } else {
+      Register Temp = MRI.createVirtualRegister(&M88k::GPRRCRegClass);
+      ICC CCCode = getCCforICMP(Pred);
+      MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::CMPri))
+               .addReg(Temp, RegState::Define)
+               .addReg(LHS)
+               .addImm(SImm16);
+      if (!constrainSelectedInstRegOperands(*MI, TII, TRI, RBI))
+        return false;
+      MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::BB1))
+               .addImm(static_cast<int64_t>(CCCode))
+               .addReg(Temp, RegState::Kill)
+               .add(BB);
+    }
+  } else if (mi_match(CC.getReg(), MRI,
+                      m_GICmp(m_Pred(Pred), m_Reg(LHS), m_Reg(RHS)))) {
+    Register Temp = MRI.createVirtualRegister(&M88k::GPRRCRegClass);
+    ICC CCCode = getCCforICMP(Pred);
+    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::CMPrr))
+             .addReg(Temp, RegState::Define)
+             .addReg(LHS)
+             .addReg(RHS);
+    if (!constrainSelectedInstRegOperands(*MI, TII, TRI, RBI))
+      return false;
+    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::BB1))
+             .addImm(static_cast<int64_t>(CCCode))
+             .addReg(Temp, RegState::Kill)
+             .add(BB);
+  } else {
+    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::BB1))
+             .add(I.getOperand(0))
+             .addImm(0)
+             .add(I.getOperand(1));
+  }
+
+  I.eraseFromParent();
+  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+}
+
+bool M88kInstructionSelector::selectLoadStore(MachineInstr &I,
+                                              MachineBasicBlock &MBB,
+                                              MachineRegisterInfo &MRI) const {
   auto MMO = *I.memoperands_begin();
 
   // No unaligned memory access.
@@ -206,8 +353,11 @@ MachineInstr *M88kInstructionSelector::selectLoadStore(
              .addReg(AddrReg)
              .addReg(IndexReg)
              .addMemOperand(MMO);
-  }
-  return MI;
+  } else
+    return false;
+
+  I.eraseFromParent();
+  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
 }
 
 bool M88kInstructionSelector::select(MachineInstr &I) {
@@ -229,20 +379,15 @@ bool M88kInstructionSelector::select(MachineInstr &I) {
   if (selectImpl(I, *CoverageInfo))
     return true;
 
-  MachineInstr *MI = nullptr;
   switch (I.getOpcode()) {
+  case TargetOpcode::G_BRCOND:
+    return selectCondBr(I, MBB, MRI);
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_STORE:
-    MI = selectLoadStore(I, MBB, MRI);
-    break;
+    return selectLoadStore(I, MBB, MRI);
   default:
-    break;
-  }
-  if (MI == nullptr)
     return false;
-
-  I.eraseFromParent();
-  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+  }
 }
 
 namespace llvm {

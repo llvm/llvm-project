@@ -21,6 +21,7 @@ using namespace llvm;
 
 M88kLegalizerInfo::M88kLegalizerInfo(const M88kSubtarget &ST) {
   using namespace TargetOpcode;
+  const LLT S1 = LLT::scalar(1);
   const LLT S8 = LLT::scalar(8);
   const LLT S16 = LLT::scalar(16);
   const LLT S32 = LLT::scalar(32);
@@ -66,6 +67,11 @@ M88kLegalizerInfo::M88kLegalizerInfo(const M88kSubtarget &ST) {
       .legalFor({{S32, S32}})
       .clampScalar(0, S32, S32)
       .clampScalar(1, S32, S32);
+
+  getActionDefinitionsBuilder(G_ICMP)
+      .legalForCartesianProduct({S1}, {S32, P0})
+      .minScalar(1, S32);
+  getActionDefinitionsBuilder(G_BRCOND).legalFor({S1});
 
   getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({P0});
   getActionDefinitionsBuilder(G_GLOBAL_VALUE).legalFor({P0});

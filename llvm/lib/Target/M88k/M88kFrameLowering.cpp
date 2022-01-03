@@ -257,14 +257,6 @@ void M88kFrameLowering::emitPrologue(MachineFunction &MF,
           .addReg(M88k::R31)
           .addImm(MaxCallFrameSize)
           .setMIFlag(MachineInstr::FrameSetup);
-
-      // Mark the frame pointer register %r30 as live-in in every block except
-      // the first.
-      // TODO Re-visit this after conditional branches are implemented.
-      //      The frame pointer register is reserved, so this should not be
-      //      necessary.
-      for (MachineBasicBlock &EveryMBB : llvm::drop_begin(MF))
-        EveryMBB.addLiveIn(M88k::R30);
     }
   }
 }

@@ -148,10 +148,10 @@ unsigned OutgoingArgHandler::assignCustomValue(CallLowering::ArgInfo &Arg,
   return 1;
 }
 
-void OutgoingArgHandler::assignValueToAddress(Register ValVReg,
-                                                    Register Addr, LLT MemTy,
-                                                    MachinePointerInfo &MPO,
-                                                    CCValAssign &VA) {
+void OutgoingArgHandler::assignValueToAddress(Register ValVReg, Register Addr,
+                                              LLT MemTy,
+                                              MachinePointerInfo &MPO,
+                                              CCValAssign &VA) {
   MachineFunction &MF = MIRBuilder.getMF();
   uint64_t LocMemOffset = VA.getLocMemOffset();
 
@@ -248,12 +248,21 @@ bool M88kCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
                                    const Value *Val, ArrayRef<Register> VRegs,
                                    FunctionLoweringInfo &FLI,
                                    Register SwiftErrorVReg) const {
-  auto MIB = MIRBuilder.buildInstrNoInsert(M88k::RET);
-  bool Success = true;
   MachineFunction &MF = MIRBuilder.getMF();
   const Function &F = MF.getFunction();
   MachineRegisterInfo &MRI = MF.getRegInfo();
+  const M88kSubtarget &STI = MF.getSubtarget<M88kSubtarget>();
+  const M88kInstrInfo &TII = *STI.getInstrInfo();
   auto &DL = F.getParent()->getDataLayout();
+
+  // Setup virtual register to hold incoming return address register aka %r1.
+  Register ReturnAddrVReg =
+      getFunctionLiveInPhysReg(MF, TII, M88k::R1, M88k::GPRRCRegClass);
+  MRI.setType(ReturnAddrVReg, LLT::pointer(0, 32));
+
+  auto MIB = MIRBuilder.buildInstrNoInsert(M88k::RET);
+
+  bool Success = true;
   if (!VRegs.empty()) {
     SmallVector<ArgInfo, 8> SplitArgs;
     ArgInfo OrigArg{VRegs, Val->getType(), 0};
@@ -265,6 +274,9 @@ bool M88kCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
                                             MIRBuilder, F.getCallingConv(),
                                             F.isVarArg());
   }
+
+  // Copy virtual return address register to %r1. It's used by RET.
+  MIRBuilder.buildCopy(M88k::R1, ReturnAddrVReg);
   MIRBuilder.insertInstr(MIB);
   return Success;
 }
@@ -273,10 +285,6 @@ bool M88kCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                                             const Function &F,
                                             ArrayRef<ArrayRef<Register>> VRegs,
                                             FunctionLoweringInfo &FLI) const {
-  // Add register holding return address as live-in.
-  MIRBuilder.getMRI()->addLiveIn(M88k::R1);
-  MIRBuilder.getMBB().addLiveIn(M88k::R1);
-
   MachineFunction &MF = MIRBuilder.getMF();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const auto &DL = F.getParent()->getDataLayout();
@@ -357,10 +365,9 @@ bool M88kCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   if (!Info.OrigRet.Ty->isVoidTy()) {
     OutgoingValueAssigner ArgAssigner(RetCC_M88k);
     CallReturnHandler ReturnedArgHandler(MIRBuilder, MRI, MIB);
-    if (!determineAndHandleAssignments(
-            ReturnedArgHandler, ArgAssigner, InArgs,
-            MIRBuilder, Info.CallConv, Info.IsVarArg,
-            OutArgs[0].Regs[0]))
+    if (!determineAndHandleAssignments(ReturnedArgHandler, ArgAssigner, InArgs,
+                                       MIRBuilder, Info.CallConv, Info.IsVarArg,
+                                       OutArgs[0].Regs[0]))
       return false;
   }
 
