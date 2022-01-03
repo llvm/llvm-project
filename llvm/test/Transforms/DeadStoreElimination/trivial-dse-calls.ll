@@ -305,14 +305,11 @@ define i32 @test_neg_dse_unsized(i32* %a) {
   ret i32 %v
 }
 
+@G = global i8 0
 
-@G = external global i8
-
-; TODO: Should be able to kill call in analogous manner to test_dse_overwrite.
-; Difference is non-alloca object.
+; Same as test_dse_overwrite, but with a non-alloca object.
 define void @test_dse_non_alloca() {
 ; CHECK-LABEL: @test_dse_non_alloca(
-; CHECK-NEXT:    call void @f(i8* nocapture writeonly @G) #[[ATTR1]]
 ; CHECK-NEXT:    store i8 0, i8* @G, align 1
 ; CHECK-NEXT:    ret void
 ;
