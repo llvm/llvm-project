@@ -3294,6 +3294,11 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     return Right.WhitespaceRange.getBegin() != Right.WhitespaceRange.getEnd();
   };
 
+  // If the token is finalized don't touch it (as it could be in a
+  // clang-format-off section).
+  if (Left.Finalized)
+    return HasExistingWhitespace();
+
   if (Right.Tok.getIdentifierInfo() && Left.Tok.getIdentifierInfo())
     return true; // Never ever merge two identifiers.
 
