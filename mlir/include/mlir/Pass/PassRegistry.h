@@ -197,12 +197,20 @@ template <> struct PassPipelineRegistration<EmptyPipelineOptions> {
   }
 };
 
-/// This function parses the textual representation of a pass pipeline, and adds
-/// the result to 'pm' on success. This function returns failure if the given
-/// pipeline was invalid. 'errorStream' is the output stream used to emit errors
-/// found during parsing.
+/// Parse the textual representation of a pass pipeline, adding the result to
+/// 'pm' on success. Returns failure if the given pipeline was invalid.
+/// 'errorStream' is the output stream used to emit errors found during parsing.
 LogicalResult parsePassPipeline(StringRef pipeline, OpPassManager &pm,
                                 raw_ostream &errorStream = llvm::errs());
+
+/// Parse the given textual representation of a pass pipeline, and return the
+/// parsed pipeline on success. The given pipeline string should be wrapped with
+/// the desired type of operation to root the created operation, i.e.
+/// `builtin.module(cse)` over `cse`. Returns failure if the given pipeline was
+/// invalid. 'errorStream' is the output stream used to emit errors found during
+/// parsing.
+FailureOr<OpPassManager>
+parsePassPipeline(StringRef pipeline, raw_ostream &errorStream = llvm::errs());
 
 //===----------------------------------------------------------------------===//
 // PassPipelineCLParser

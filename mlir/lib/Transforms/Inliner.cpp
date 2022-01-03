@@ -754,16 +754,10 @@ LogicalResult InlinerPass::initializeOptions(StringRef options) {
     // Skip empty pipelines.
     if (pipeline.empty())
       continue;
-
-    // Pipelines are expected to be of the form `<op-name>(<pipeline>)`.
-    size_t pipelineStart = pipeline.find_first_of('(');
-    if (pipelineStart == StringRef::npos || !pipeline.consume_back(")"))
+    FailureOr<OpPassManager> pm = parsePassPipeline(pipeline);
+    if (failed(pm))
       return failure();
-    StringRef opName = pipeline.take_front(pipelineStart);
-    OpPassManager pm(opName);
-    if (failed(parsePassPipeline(pipeline.drop_front(1 + pipelineStart), pm)))
-      return failure();
-    pipelines.try_emplace(opName, std::move(pm));
+    pipelines.try_emplace(pm->getOpName(), std::move(*pm));
   }
   opPipelines.assign({std::move(pipelines)});
 
