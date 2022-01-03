@@ -29,7 +29,6 @@ enum : uint64_t {
 };
 }
 
-class AMDGPUTargetMachine;
 class DFAPacketizer;
 class MachineFunction;
 class MachineInstr;

@@ -736,7 +736,7 @@ void PatternLowering::generateRewriter(
   bool seenVariableLength = false;
   Type valueTy = builder.getType<pdl::ValueType>();
   Type valueRangeTy = pdl::RangeType::get(valueTy);
-  for (auto it : llvm::enumerate(resultTys)) {
+  for (const auto &it : llvm::enumerate(resultTys)) {
     Value &type = rewriteValues[it.value()];
     if (type)
       continue;
@@ -862,7 +862,7 @@ void PatternLowering::generateOperationResultTypeRewriter(
   // Otherwise, handle inference for each of the result types individually.
   OperandRange resultTypeValues = op.types();
   types.reserve(resultTypeValues.size());
-  for (auto it : llvm::enumerate(resultTypeValues)) {
+  for (const auto &it : llvm::enumerate(resultTypeValues)) {
     Value resultType = it.value();
 
     // Check for an already translated value.

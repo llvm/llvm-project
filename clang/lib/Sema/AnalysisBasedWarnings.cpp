@@ -128,7 +128,7 @@ class LogicalErrorHandler : public CFGCallback {
   Sema &S;
 
 public:
-  LogicalErrorHandler(Sema &S) : CFGCallback(), S(S) {}
+  LogicalErrorHandler(Sema &S) : S(S) {}
 
   static bool HasMacroID(const Expr *E) {
     if (E->getExprLoc().isMacroID())

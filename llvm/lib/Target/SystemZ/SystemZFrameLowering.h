@@ -17,7 +17,6 @@
 #include "llvm/Support/TypeSize.h"
 
 namespace llvm {
-class SystemZTargetMachine;
 class SystemZSubtarget;
 
 class SystemZFrameLowering : public TargetFrameLowering {

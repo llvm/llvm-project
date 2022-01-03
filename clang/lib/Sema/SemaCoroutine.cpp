@@ -1740,29 +1740,38 @@ ClassTemplateDecl *Sema::lookupCoroutineTraits(SourceLocation KwLoc,
       return nullptr;
     }
 
-    if (!InStd) {
-      // Found only in std::experimental.
-      Diag(KwLoc, diag::warn_deprecated_coroutine_namespace)
-          << "coroutine_traits";
-    } else if (InExp) {
-      // Found in std and std::experimental.
-      Diag(KwLoc,
-           diag::err_mixed_use_std_and_experimental_namespace_for_coroutine);
-      Diag(KwLoc, diag::warn_deprecated_coroutine_namespace)
-          << "coroutine_traits";
-      return nullptr;
-    }
-
     // Prefer ::std to std::experimental.
     auto &Result = InStd ? ResStd : ResExp;
     CoroTraitsNamespaceCache = InStd ? StdSpace : ExpSpace;
 
     // coroutine_traits is required to be a class template.
-    if (!(StdCoroutineTraitsCache = Result.getAsSingle<ClassTemplateDecl>())) {
+    StdCoroutineTraitsCache = Result.getAsSingle<ClassTemplateDecl>();
+    if (!StdCoroutineTraitsCache) {
       Result.suppressDiagnostics();
       NamedDecl *Found = *Result.begin();
       Diag(Found->getLocation(), diag::err_malformed_std_coroutine_traits);
       return nullptr;
+    }
+
+    if (InExp) {
+      // Found in std::experimental
+      Diag(KwLoc, diag::warn_deprecated_coroutine_namespace)
+          << "coroutine_traits";
+      ResExp.suppressDiagnostics();
+      auto *Found = *ResExp.begin();
+      Diag(Found->getLocation(), diag::note_entity_declared_at) << Found;
+
+      if (InStd &&
+          StdCoroutineTraitsCache != ResExp.getAsSingle<ClassTemplateDecl>()) {
+        // Also found something different in std
+        Diag(KwLoc,
+             diag::err_mixed_use_std_and_experimental_namespace_for_coroutine);
+        Diag(StdCoroutineTraitsCache->getLocation(),
+             diag::note_entity_declared_at)
+            << StdCoroutineTraitsCache;
+
+        return nullptr;
+      }
     }
   }
   Namespace = CoroTraitsNamespaceCache;

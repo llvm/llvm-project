@@ -36,8 +36,7 @@ struct LinalgComprehensiveModuleBufferize
   LinalgComprehensiveModuleBufferize() = default;
 
   LinalgComprehensiveModuleBufferize(
-      const LinalgComprehensiveModuleBufferize &p)
-      : LinalgComprehensiveModuleBufferizeBase(p) {}
+      const LinalgComprehensiveModuleBufferize &p) = default;
 
   void runOnOperation() override;
 

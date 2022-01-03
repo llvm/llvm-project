@@ -98,7 +98,7 @@ private:
     unsigned SingleDeclIndex;
 
   public:
-    ShadowMapEntry() : DeclOrVector(), SingleDeclIndex(0) {}
+    ShadowMapEntry() : SingleDeclIndex(0) {}
     ShadowMapEntry(const ShadowMapEntry &) = delete;
     ShadowMapEntry(ShadowMapEntry &&Move) { *this = std::move(Move); }
     ShadowMapEntry &operator=(const ShadowMapEntry &) = delete;

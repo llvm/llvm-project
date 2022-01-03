@@ -103,7 +103,7 @@ LinalgDependenceGraph::buildDependenceGraph(Aliases &aliases, FuncOp f) {
 LinalgDependenceGraph::LinalgDependenceGraph(Aliases &aliases,
                                              ArrayRef<LinalgOp> ops)
     : aliases(aliases), linalgOps(ops.begin(), ops.end()) {
-  for (auto en : llvm::enumerate(linalgOps)) {
+  for (const auto &en : llvm::enumerate(linalgOps)) {
     linalgOpPositions.insert(
         std::make_pair(en.value().getOperation(), en.index()));
   }

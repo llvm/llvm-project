@@ -736,8 +736,7 @@ LogicalResult CppEmitter::emitAttribute(Location loc, Attribute attr) {
   }
   if (auto dense = attr.dyn_cast<DenseFPElementsAttr>()) {
     os << '{';
-    interleaveComma(dense, os,
-                    [&](APFloat val) { printFloat(std::move(val)); });
+    interleaveComma(dense, os, [&](const APFloat &val) { printFloat(val); });
     os << '}';
     return success();
   }
@@ -759,8 +758,8 @@ LogicalResult CppEmitter::emitAttribute(Location loc, Attribute attr) {
                          .getElementType()
                          .dyn_cast<IntegerType>()) {
       os << '{';
-      interleaveComma(dense, os, [&](APInt val) {
-        printInt(std::move(val), shouldMapToUnsigned(iType.getSignedness()));
+      interleaveComma(dense, os, [&](const APInt &val) {
+        printInt(val, shouldMapToUnsigned(iType.getSignedness()));
       });
       os << '}';
       return success();
@@ -771,7 +770,7 @@ LogicalResult CppEmitter::emitAttribute(Location loc, Attribute attr) {
                          .dyn_cast<IndexType>()) {
       os << '{';
       interleaveComma(dense, os,
-                      [&](APInt val) { printInt(std::move(val), false); });
+                      [&](const APInt &val) { printInt(val, false); });
       os << '}';
       return success();
     }

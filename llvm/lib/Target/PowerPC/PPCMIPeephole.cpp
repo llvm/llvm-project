@@ -107,10 +107,10 @@ private:
   void initialize(MachineFunction &MFParm);
 
   // Perform peepholes.
-  bool simplifyCode(void);
+  bool simplifyCode();
 
   // Perform peepholes.
-  bool eliminateRedundantCompare(void);
+  bool eliminateRedundantCompare();
   bool eliminateRedundantTOCSaves(std::map<MachineInstr *, bool> &TOCSaves);
   bool combineSEXTAndSHL(MachineInstr &MI, MachineInstr *&ToErase);
   bool emitRLDICWhenLoweringJumpTables(MachineInstr &MI);
@@ -381,7 +381,7 @@ static void convertUnprimedAccPHIs(const PPCInstrInfo *TII,
 }
 
 // Perform peephole optimizations.
-bool PPCMIPeephole::simplifyCode(void) {
+bool PPCMIPeephole::simplifyCode() {
   bool Simplified = false;
   bool TrapOpt = false;
   MachineInstr* ToErase = nullptr;
@@ -1334,7 +1334,7 @@ bool PPCMIPeephole::eliminateRedundantTOCSaves(
 //   cmpwi  r3, 0       ; greather than -1 means greater or equal to 0
 //   bge    0, .LBB0_4
 
-bool PPCMIPeephole::eliminateRedundantCompare(void) {
+bool PPCMIPeephole::eliminateRedundantCompare() {
   bool Simplified = false;
 
   for (MachineBasicBlock &MBB2 : *MF) {

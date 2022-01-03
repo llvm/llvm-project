@@ -633,9 +633,6 @@ protected:
   /// Returns true if we should generate a scalar version of \p IV.
   bool needsScalarInduction(Instruction *IV) const;
 
-  /// Generate a shuffle sequence that will reverse the vector Vec.
-  virtual Value *reverseVector(Value *Vec);
-
   /// Returns (and creates if needed) the original loop trip count.
   Value *getOrCreateTripCount(Loop *NewLoop);
 
@@ -849,7 +846,6 @@ public:
 
 private:
   Value *getBroadcastInstrs(Value *V) override;
-  Value *reverseVector(Value *Vec) override;
 };
 
 /// Encapsulate information regarding vectorization of a loop and its epilogue.
@@ -2701,11 +2697,6 @@ void InnerLoopVectorizer::packScalarIntoVectorValue(VPValue *Def,
   State.set(Def, VectorValue, Instance.Part);
 }
 
-Value *InnerLoopVectorizer::reverseVector(Value *Vec) {
-  assert(Vec->getType()->isVectorTy() && "Invalid type");
-  return Builder.CreateVectorReverse(Vec, "reverse");
-}
-
 // Return whether we allow using masked interleave-groups (for dealing with
 // strided loads/stores that reside in predicated blocks, or for dealing
 // with gaps).
@@ -2868,7 +2859,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
         }
 
         if (Group->isReverse())
-          StridedVec = reverseVector(StridedVec);
+          StridedVec = Builder.CreateVectorReverse(StridedVec, "reverse");
 
         State.set(VPDefs[J], StridedVec, Part);
       }
@@ -2904,7 +2895,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
       Value *StoredVec = State.get(StoredValues[i], Part);
 
       if (Group->isReverse())
-        StoredVec = reverseVector(StoredVec);
+        StoredVec = Builder.CreateVectorReverse(StoredVec, "reverse");
 
       // If this member has different type, cast it to a unified type.
 
@@ -8042,8 +8033,6 @@ void LoopVectorizationPlanner::collectTriviallyDeadInstructions(
   }
 }
 
-Value *InnerLoopUnroller::reverseVector(Value *Vec) { return Vec; }
-
 Value *InnerLoopUnroller::getBroadcastInstrs(Value *V) { return V; }
 
 static void AddRuntimeUnrollDisableMetaData(Loop *L) {
@@ -8442,25 +8431,24 @@ VPValue *VPRecipeBuilder::createBlockInMask(BasicBlock *BB, VPlanPtr &Plan) {
       return BlockMaskCache[BB] = BlockMask; // Loop incoming mask is all-one.
 
     // Introduce the early-exit compare IV <= BTC to form header block mask.
-    // This is used instead of IV < TC because TC may wrap, unlike BTC.
-    // Start by constructing the desired canonical IV in the header block.
+    // This is used instead of IV < TC because TC may wrap, unlike BTC. Start by
+    // constructing the desired canonical IV in the header block as its first
+    // non-phi instructions.
+    assert(CM.foldTailByMasking() && "must fold the tail");
+    VPBasicBlock *HeaderVPBB = Plan->getEntry()->getEntryBasicBlock();
+    auto NewInsertionPoint = HeaderVPBB->getFirstNonPhi();
+
     VPValue *IV = nullptr;
     if (Legal->getPrimaryInduction())
       IV = Plan->getOrAddVPValue(Legal->getPrimaryInduction());
     else {
-      VPBasicBlock *HeaderVPBB = Plan->getEntry()->getEntryBasicBlock();
       auto *IVRecipe = new VPWidenCanonicalIVRecipe();
-      HeaderVPBB->insert(IVRecipe, HeaderVPBB->getFirstNonPhi());
+      HeaderVPBB->insert(IVRecipe, NewInsertionPoint);
       IV = IVRecipe;
     }
 
-    // Create the block in mask as the first non-phi instruction in the block.
     VPBuilder::InsertPointGuard Guard(Builder);
-    auto NewInsertionPoint = Builder.getInsertBlock()->getFirstNonPhi();
-    Builder.setInsertPoint(Builder.getInsertBlock(), NewInsertionPoint);
-
-    assert(CM.foldTailByMasking() && "must fold the tail");
-
+    Builder.setInsertPoint(HeaderVPBB, NewInsertionPoint);
     if (CM.TTI.emitGetActiveLaneMask()) {
       VPValue *TC = Plan->getOrCreateTripCount();
       BlockMask = Builder.createNaryOp(VPInstruction::ActiveLaneMask, {IV, TC});

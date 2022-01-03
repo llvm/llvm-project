@@ -905,7 +905,7 @@ OpFoldResult arith::UIToFPOp::fold(ArrayRef<Attribute> operands) {
     FloatType floatTy = getType().cast<FloatType>();
     APFloat apf(floatTy.getFloatSemantics(),
                 APInt::getZero(floatTy.getWidth()));
-    apf.convertFromAPInt(api, /*signed=*/false, APFloat::rmNearestTiesToEven);
+    apf.convertFromAPInt(api, /*IsSigned=*/false, APFloat::rmNearestTiesToEven);
     return FloatAttr::get(floatTy, apf);
   }
   return {};
@@ -925,7 +925,7 @@ OpFoldResult arith::SIToFPOp::fold(ArrayRef<Attribute> operands) {
     FloatType floatTy = getType().cast<FloatType>();
     APFloat apf(floatTy.getFloatSemantics(),
                 APInt::getZero(floatTy.getWidth()));
-    apf.convertFromAPInt(api, /*signed=*/true, APFloat::rmNearestTiesToEven);
+    apf.convertFromAPInt(api, /*IsSigned=*/true, APFloat::rmNearestTiesToEven);
     return FloatAttr::get(floatTy, apf);
   }
   return {};
@@ -943,7 +943,7 @@ OpFoldResult arith::FPToUIOp::fold(ArrayRef<Attribute> operands) {
     const APFloat &apf = lhs.getValue();
     IntegerType intTy = getType().cast<IntegerType>();
     bool ignored;
-    APSInt api(intTy.getWidth(), /*unsigned=*/true);
+    APSInt api(intTy.getWidth(), /*isUnsigned=*/true);
     if (APFloat::opInvalidOp ==
         apf.convertToInteger(api, APFloat::rmTowardZero, &ignored)) {
       // Undefined behavior invoked - the destination type can't represent
@@ -969,7 +969,7 @@ OpFoldResult arith::FPToSIOp::fold(ArrayRef<Attribute> operands) {
     const APFloat &apf = lhs.getValue();
     IntegerType intTy = getType().cast<IntegerType>();
     bool ignored;
-    APSInt api(intTy.getWidth(), /*unsigned=*/false);
+    APSInt api(intTy.getWidth(), /*isUnsigned=*/false);
     if (APFloat::opInvalidOp ==
         apf.convertToInteger(api, APFloat::rmTowardZero, &ignored)) {
       // Undefined behavior invoked - the destination type can't represent

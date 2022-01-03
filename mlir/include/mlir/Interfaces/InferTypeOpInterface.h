@@ -165,10 +165,7 @@ public:
   ValueShapeRange(const std::initializer_list<Value> &values)
       : ValueShapeRange(ValueRange(values)) {}
 
-  ValueShapeRange(const ValueShapeRange &other) : RangeBaseT(other) {
-    operandShape = other.operandShape;
-    valueToShape = other.valueToShape;
-  }
+  ValueShapeRange(const ValueShapeRange &) = default;
 
   /// Sets the Value to ShapeAdaptor mapping function and returns this.
   ValueShapeRange &setValueToShapeMapping(ValueShapeMapFn fn) {

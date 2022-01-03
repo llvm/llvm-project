@@ -254,7 +254,7 @@ protected:
           rewriter.getNamedAttr(function_like_impl::getArgDictAttrName(),
                                 rewriter.getArrayAttr(newArgAttrs)));
     }
-    for (auto pair : llvm::enumerate(attributes)) {
+    for (const auto &pair : llvm::enumerate(attributes)) {
       if (pair.value().getName() == "llvm.linkage") {
         attributes.erase(attributes.begin() + pair.index());
         break;

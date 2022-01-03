@@ -539,7 +539,7 @@ public:
                llvm::Optional<pybind11::dict> attributes,
                llvm::Optional<std::vector<PyBlock *>> successors,
                llvm::Optional<int> regions, DefaultingPyLocation location,
-               pybind11::object maybeIp);
+               const pybind11::object &maybeIp);
 
 private:
   PyOperation &operation;           // For efficient, cast-free access from C++

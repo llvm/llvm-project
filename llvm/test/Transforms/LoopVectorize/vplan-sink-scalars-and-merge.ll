@@ -312,12 +312,12 @@ define void @pred_cfg1(i32 %k, i32 %j) {
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT: loop:
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
+; CHECK-NEXT:   EMIT vp<[[MASK1:%.+]]> = icmp ule ir<%iv> vp<[[BTC]]>
 ; CHECK-NEXT:   WIDEN ir<%c.1> = icmp ir<%iv>, ir<%j>
 ; CHECK-NEXT:   WIDEN ir<%mul> = mul ir<%iv>, ir<10>
 ; CHECK-NEXT: Successor(s): then.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT: then.0:
-; CHECK-NEXT:   EMIT vp<[[MASK1:%.+]]> = icmp ule ir<%iv> vp<[[BTC]]>
 ; CHECK-NEXT:   EMIT vp<[[MASK2:%.+]]> = select vp<[[MASK1]]> ir<%c.1> ir<false>
 ; CHECK-NEXT: Successor(s): pred.load
 ; CHECK-EMPTY:
@@ -408,13 +408,13 @@ define void @pred_cfg2(i32 %k, i32 %j) {
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT: loop:
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
+; CHECK-NEXT:   EMIT vp<[[MASK1:%.+]]> = icmp ule ir<%iv> vp<[[BTC]]>
 ; CHECK-NEXT:   WIDEN ir<%mul> = mul ir<%iv>, ir<10>
 ; CHECK-NEXT:   WIDEN ir<%c.0> = icmp ir<%iv>, ir<%j>
 ; CHECK-NEXT:   WIDEN ir<%c.1> = icmp ir<%iv>, ir<%j>
 ; CHECK-NEXT: Successor(s): then.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT: then.0:
-; CHECK-NEXT:   EMIT vp<[[MASK1:%.+]]> = icmp ule ir<%iv> vp<[[BTC]]>
 ; CHECK-NEXT:   EMIT vp<[[MASK2:%.+]]> = select vp<[[MASK1]]> ir<%c.0> ir<false>
 ; CHECK-NEXT: Successor(s): pred.load
 ; CHECK-EMPTY:
@@ -519,12 +519,12 @@ define void @pred_cfg3(i32 %k, i32 %j) {
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT: loop:
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
+; CHECK-NEXT:   EMIT vp<[[MASK1:%.+]]> = icmp ule ir<%iv> vp<[[BTC]]>
 ; CHECK-NEXT:   WIDEN ir<%mul> = mul ir<%iv>, ir<10>
 ; CHECK-NEXT:   WIDEN ir<%c.0> = icmp ir<%iv>, ir<%j>
 ; CHECK-NEXT: Successor(s): then.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT: then.0:
-; CHECK-NEXT:   EMIT vp<[[MASK1:%.+]]> = icmp ule ir<%iv> vp<[[BTC]]>
 ; CHECK-NEXT:   EMIT vp<[[MASK2:%.+]]> = select vp<[[MASK1:%.+]]> ir<%c.0> ir<false>
 ; CHECK-NEXT: Successor(s): pred.load
 ; CHECK-EMPTY:

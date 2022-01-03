@@ -85,11 +85,10 @@ PresburgerSet PresburgerSet::unionSet(const PresburgerSet &set) const {
 
 /// A point is contained in the union iff any of the parts contain the point.
 bool PresburgerSet::containsPoint(ArrayRef<int64_t> point) const {
-  for (const FlatAffineConstraints &fac : flatAffineConstraints) {
-    if (fac.containsPoint(point))
-      return true;
-  }
-  return false;
+  return llvm::any_of(flatAffineConstraints,
+                      [&](const FlatAffineConstraints &fac) {
+                        return (fac.containsPoint(point));
+                      });
 }
 
 PresburgerSet PresburgerSet::getUniverse(unsigned nDim, unsigned nSym) {
@@ -117,9 +116,9 @@ PresburgerSet PresburgerSet::intersect(const PresburgerSet &set) const {
     for (const FlatAffineConstraints &csB : set.flatAffineConstraints) {
       FlatAffineConstraints csACopy = csA, csBCopy = csB;
       csACopy.mergeLocalIds(csBCopy);
-      csACopy.append(std::move(csBCopy));
+      csACopy.append(csBCopy);
       if (!csACopy.isEmpty())
-        result.unionFACInPlace(std::move(csACopy));
+        result.unionFACInPlace(csACopy);
     }
   }
   return result;

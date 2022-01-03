@@ -28,8 +28,7 @@ ReductionNode::ReductionNode(
     llvm::SpecificBumpPtrAllocator<ReductionNode> &allocator)
     /// Root node will have the parent pointer point to themselves.
     : parent(parentNode == nullptr ? this : parentNode),
-      size(std::numeric_limits<size_t>::max()),
-      interesting(Tester::Interestingness::Untested), ranges(ranges),
+      size(std::numeric_limits<size_t>::max()), ranges(ranges),
       startRanges(ranges), allocator(allocator) {
   if (parent != this)
     if (failed(initialize(parent->getModule(), parent->getRegion())))
@@ -53,9 +52,8 @@ LogicalResult ReductionNode::initialize(ModuleOp parentModule,
 ArrayRef<ReductionNode *> ReductionNode::generateNewVariants() {
   int oldNumVariant = getVariants().size();
 
-  auto createNewNode = [this](std::vector<Range> ranges) {
-    return new (allocator.Allocate())
-        ReductionNode(this, std::move(ranges), allocator);
+  auto createNewNode = [this](const std::vector<Range> &ranges) {
+    return new (allocator.Allocate()) ReductionNode(this, ranges, allocator);
   };
 
   // If we haven't created new variant, then we can create varients by removing

@@ -14,10 +14,6 @@
 
 namespace llvm {
 
-class SIInstrInfo;
-class SIRegisterInfo;
-class GCNSubtarget;
-
 class SIFrameLowering final : public AMDGPUFrameLowering {
 public:
   SIFrameLowering(StackDirection D, Align StackAl, int LAO,

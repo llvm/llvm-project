@@ -43,7 +43,7 @@ allocateBuffersForResults(Location loc, LinalgOp linalgOp, ValueRange outputs,
 
   // Allocate a buffer for every tensor result.
   assert(linalgOp.getNumOutputs() == linalgOp->getNumResults());
-  for (auto en : llvm::enumerate(linalgOp->getResultTypes())) {
+  for (const auto &en : llvm::enumerate(linalgOp->getResultTypes())) {
     size_t resultIndex = en.index();
     Type resultType = en.value();
 

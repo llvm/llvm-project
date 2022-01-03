@@ -1022,7 +1022,7 @@ static AffineExpr getSemiAffineExprFromFlatForm(ArrayRef<int64_t> flatExprs,
   // as lhs/rhs, and store the indices, constant coefficient corresponding to
   // the indices in `coefficients` map, and affine expression corresponding to
   // in indices in `indexToExprMap` map.
-  for (auto it : llvm::enumerate(localExprs)) {
+  for (const auto &it : llvm::enumerate(localExprs)) {
     AffineExpr expr = it.value();
     if (flatExprs[numDims + numSymbols + it.index()] == 0)
       continue;
