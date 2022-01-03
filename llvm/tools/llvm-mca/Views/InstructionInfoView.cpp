@@ -32,14 +32,30 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
   TempStream << "\n\nInstruction Info:\n";
   TempStream << "[1]: #uOps\n[2]: Latency\n[3]: RThroughput\n"
              << "[4]: MayLoad\n[5]: MayStore\n[6]: HasSideEffects (U)\n";
+  if (PrintBarriers) {
+    TempStream << "[7]: LoadBarrier\n[8]: StoreBarrier\n";
+  }
   if (PrintEncodings) {
-    TempStream << "[7]: Encoding Size\n";
-    TempStream << "\n[1]    [2]    [3]    [4]    [5]    [6]    [7]    "
-               << "Encodings:                    Instructions:\n";
+    if (PrintBarriers) {
+      TempStream << "[9]: Encoding Size\n";
+      TempStream << "\n[1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    "
+                 << "[9]    Encodings:                    Instructions:\n";
+    } else {
+      TempStream << "[7]: Encoding Size\n";
+      TempStream << "\n[1]    [2]    [3]    [4]    [5]    [6]    [7]    "
+                 << "Encodings:                    Instructions:\n";
+    }
   } else {
-    TempStream << "\n[1]    [2]    [3]    [4]    [5]    [6]    Instructions:\n";
+    if (PrintBarriers) {
+      TempStream << "\n[1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    "
+                 << "Instructions:\n";
+    } else {
+      TempStream << "\n[1]    [2]    [3]    [4]    [5]    [6]    "
+                 << "Instructions:\n";
+    }
   }
 
+  int Index = 0;
   for (const auto &I : enumerate(zip(IIVD, Source))) {
     const InstructionInfoViewData &IIVDEntry = std::get<0>(I.value());
 
@@ -68,6 +84,13 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
     TempStream << (IIVDEntry.mayStore ? " *     " : "       ");
     TempStream << (IIVDEntry.hasUnmodeledSideEffects ? " U     " : "       ");
 
+    if (PrintBarriers) {
+      TempStream << (LoweredInsts[Index]->isALoadBarrier() ? " *     "
+                                                           : "       ");
+      TempStream << (LoweredInsts[Index]->isAStoreBarrier() ? " *     "
+                                                            : "       ");
+    }
+
     if (PrintEncodings) {
       StringRef Encoding(CE.getEncoding(I.index()));
       unsigned EncodingSize = Encoding.size();
@@ -83,6 +106,7 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
 
     const MCInst &Inst = std::get<1>(I.value());
     TempStream << printInstructionString(Inst) << '\n';
+    ++Index;
   }
 
   TempStream.flush();
