@@ -310,6 +310,7 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     unsigned TripMultiple;
     unsigned BreakoutTrip;
     bool ExitOnTrue;
+    bool InvariantExit;
     SmallVector<BasicBlock *> ExitingBlocks;
   };
   DenseMap<BasicBlock *, ExitInfo> ExitInfos;
@@ -333,6 +334,8 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
           (unsigned)GreatestCommonDivisor64(ULO.Count, Info.TripMultiple);
     }
     Info.ExitOnTrue = !L->contains(BI->getSuccessor(0));
+    Info.InvariantExit = L->isLoopInvariant(BI->getCondition()) &&
+      DT->dominates(ExitingBlock, LatchBlock);
     Info.ExitingBlocks.push_back(ExitingBlock);
     LLVM_DEBUG(dbgs() << "  Exiting block %" << ExitingBlock->getName()
                       << ": TripCount=" << Info.TripCount
@@ -685,6 +688,8 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
   auto WillExit = [&](const ExitInfo &Info, unsigned i, unsigned j,
                       bool IsLatch) -> Optional<bool> {
+    if (Info.InvariantExit && i != 0)
+      return false;
     if (CompletelyUnroll) {
       if (PreserveOnlyFirst) {
         if (i == 0)
