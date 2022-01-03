@@ -105,6 +105,75 @@ static bool paramReferredExactlyOnce(const CXXConstructorDecl *Ctor,
   return ExactlyOneUsageVisitor(ParamDecl).hasExactlyOneUsageIn(Ctor);
 }
 
+/// Returns true if the given constructor is part of a lvalue/rvalue reference
+/// pair, i.e. `Param` is of lvalue reference type, and there exists another
+/// constructor such that:
+///  - it has the same number of parameters as `Ctor`.
+///  - the parameter at the same index as `Param` is an rvalue reference
+///    of the same pointee type
+///  - all other parameters have the same type as the corresponding parameter in
+///    `Ctor` or are rvalue references with the same pointee type.
+/// Examples:
+///  A::A(const B& Param)
+///  A::A(B&&)
+///
+///  A::A(const B& Param, const C&)
+///  A::A(B&& Param, C&&)
+///
+///  A::A(const B&, const C& Param)
+///  A::A(B&&, C&& Param)
+///
+///  A::A(const B&, const C& Param)
+///  A::A(const B&, C&& Param)
+///
+///  A::A(const B& Param, int)
+///  A::A(B&& Param, int)
+static bool hasRValueOverload(const CXXConstructorDecl *Ctor,
+                              const ParmVarDecl *Param) {
+  if (!Param->getType().getCanonicalType()->isLValueReferenceType()) {
+    // The parameter is passed by value.
+    return false;
+  }
+  const int ParamIdx = Param->getFunctionScopeIndex();
+  const CXXRecordDecl *Record = Ctor->getParent();
+
+  // Check whether a ctor `C` forms a pair with `Ctor` under the aforementionned
+  // rules.
+  const auto IsRValueOverload = [&Ctor, ParamIdx](const CXXConstructorDecl *C) {
+    if (C == Ctor || C->isDeleted() ||
+        C->getNumParams() != Ctor->getNumParams())
+      return false;
+    for (int I = 0, E = C->getNumParams(); I < E; ++I) {
+      const clang::QualType CandidateParamType =
+          C->parameters()[I]->getType().getCanonicalType();
+      const clang::QualType CtorParamType =
+          Ctor->parameters()[I]->getType().getCanonicalType();
+      const bool IsLValueRValuePair =
+          CtorParamType->isLValueReferenceType() &&
+          CandidateParamType->isRValueReferenceType() &&
+          CandidateParamType->getPointeeType()->getUnqualifiedDesugaredType() ==
+              CtorParamType->getPointeeType()->getUnqualifiedDesugaredType();
+      if (I == ParamIdx) {
+        // The parameter of interest must be paired.
+        if (!IsLValueRValuePair)
+          return false;
+      } else {
+        // All other parameters can be similar or paired.
+        if (!(CandidateParamType == CtorParamType || IsLValueRValuePair))
+          return false;
+      }
+    }
+    return true;
+  };
+
+  for (const auto *Candidate : Record->ctors()) {
+    if (IsRValueOverload(Candidate)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /// Find all references to \p ParamDecl across all of the
 /// redeclarations of \p Ctor.
 static SmallVector<const ParmVarDecl *, 2>
@@ -186,6 +255,10 @@ void PassByValueCheck::check(const MatchFinder::MatchResult &Result) {
   // copyable type will cause a problem with performance-move-const-arg
   if (ParamDecl->getType().getNonReferenceType().isTriviallyCopyableType(
           *Result.Context))
+    return;
+
+  // Do not trigger if we find a paired constructor with an rvalue.
+  if (hasRValueOverload(Ctor, ParamDecl))
     return;
 
   auto Diag = diag(ParamDecl->getBeginLoc(), "pass by value and use std::move");
