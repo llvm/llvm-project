@@ -61,8 +61,8 @@ def B_CompoundAttrA : TestAttr<"CompoundA"> {
   let genVerifyDecl = 1;
 
 // DECL-LABEL: class CompoundAAttr : public ::mlir::Attribute
-// DECL: static CompoundAAttr getChecked(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, ::mlir::MLIRContext *context, int widthOfSomething, ::test::SimpleTypeA exampleTdType, const ::llvm::APFloat &apFloat, ::llvm::ArrayRef<int> dims, ::mlir::Type inner);
-// DECL: static ::mlir::LogicalResult verify(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, int widthOfSomething, ::test::SimpleTypeA exampleTdType, const ::llvm::APFloat &apFloat, ::llvm::ArrayRef<int> dims, ::mlir::Type inner);
+// DECL: static CompoundAAttr getChecked(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, ::mlir::MLIRContext *context, int widthOfSomething, ::test::SimpleTypeA exampleTdType, ::llvm::APFloat apFloat, ::llvm::ArrayRef<int> dims, ::mlir::Type inner);
+// DECL: static ::mlir::LogicalResult verify(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, int widthOfSomething, ::test::SimpleTypeA exampleTdType, ::llvm::APFloat apFloat, ::llvm::ArrayRef<int> dims, ::mlir::Type inner);
 // DECL: static constexpr ::llvm::StringLiteral getMnemonic() {
 // DECL:   return {"cmpnd_a"};
 // DECL: }
@@ -71,7 +71,7 @@ def B_CompoundAttrA : TestAttr<"CompoundA"> {
 // DECL: void print(::mlir::AsmPrinter &printer) const;
 // DECL: int getWidthOfSomething() const;
 // DECL: ::test::SimpleTypeA getExampleTdType() const;
-// DECL: const ::llvm::APFloat &getApFloat() const;
+// DECL: ::llvm::APFloat getApFloat() const;
 
 // Check that AttributeSelfTypeParameter is handled properly.
 // DEF-LABEL: struct CompoundAAttrStorage
@@ -139,5 +139,5 @@ def F_ParamWithAccessorTypeAttr : TestAttr<"ParamWithAccessorType"> {
 // DECL-LABEL: class ParamWithAccessorTypeAttr
 // DECL: StringRef getParam()
 // DEF: ParamWithAccessorTypeAttrStorage
-// DEF: ParamWithAccessorTypeAttrStorage(StringRef param)
+// DEF: ParamWithAccessorTypeAttrStorage(std::string param)
 // DEF: StringRef ParamWithAccessorTypeAttr::getParam()

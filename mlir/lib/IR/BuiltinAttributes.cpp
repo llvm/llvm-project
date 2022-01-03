@@ -283,7 +283,7 @@ double FloatAttr::getValueAsDouble(APFloat value) {
 }
 
 LogicalResult FloatAttr::verify(function_ref<InFlightDiagnostic()> emitError,
-                                Type type, const APFloat &value) {
+                                Type type, APFloat value) {
   // Verify that the type is correct.
   if (!type.isa<FloatType>())
     return emitError() << "expected floating point type";

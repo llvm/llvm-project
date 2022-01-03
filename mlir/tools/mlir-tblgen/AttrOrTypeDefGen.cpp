@@ -315,7 +315,7 @@ DefGen::getBuilderParams(std::initializer_list<MethodParameter> prefix) const {
   SmallVector<MethodParameter> builderParams;
   builderParams.append(prefix.begin(), prefix.end());
   for (auto &param : params)
-    builderParams.emplace_back(param.getCppAccessorType(), param.getName());
+    builderParams.emplace_back(param.getCppType(), param.getName());
   return builderParams;
 }
 
