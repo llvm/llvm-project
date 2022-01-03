@@ -154,7 +154,6 @@ def: F<"end-group">;
 def: Flag<["--"], "full-shutdown">;
 defm: EqNoHelp<"major-image-version">;
 defm: EqNoHelp<"minor-image-version">;
-def: F<"no-as-needed">;
 def: F<"no-undefined">;
 def: F<"pic-executable">;
 defm: EqNoHelp<"plugin">;
