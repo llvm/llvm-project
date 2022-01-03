@@ -1,18 +1,36 @@
-; RUN: llc < %s -mtriple=i386-unknown-linux-gnu | FileCheck %s -check-prefix=LINUX
+; RUN: llc < %s -mtriple=i386-unknown-linux-gnu | FileCheck %s
 
 declare i32 @foo()
-@G0 = global i32 ()* @foo, section ".init_array"
 
-; LINUX:  .section  .init_array,"aw"
-; LINUX:  .globl G0
+@init_array1 = global i32 ()* @foo, section ".init_array"
+@init_array2 = global i32 ()* @foo, section ".init_array.00001"
+@init_array3 = global i32 ()* @foo, section ".init_arrayfoo"
 
-@G1 = global i32 ()* @foo, section ".fini_array"
+; CHECK-LABEL: .section  .init_array,"aw",@init_array
+; CHECK: init_array1:
+; CHECK-LABEL: .section  .init_array.00001,"aw",@init_array
+; CHECK: init_array2:
+; CHECK-LABEL: .section  .init_arrayfoo,"aw",@progbits
+; CHECK: init_array3:
 
-; LINUX:  .section  .fini_array,"aw"
-; LINUX:  .globl G1
+@fini_array1 = global i32 ()* @foo, section ".fini_array"
+@fini_array2 = global i32 ()* @foo, section ".fini_array.00001"
+@fini_array3 = global i32 ()* @foo, section ".fini_arrayfoo"
 
-@G2 = global i32 ()* @foo, section ".preinit_array"
+; CHECK-LABEL: .section  .fini_array,"aw",@fini_array
+; CHECK: fini_array1:
+; CHECK-LABEL: .section  .fini_array.00001,"aw",@fini_array
+; CHECK: fini_array2:
+; CHECK-LABEL: .section  .fini_arrayfoo,"aw",@progbits
+; CHECK: fini_array3:
 
-; LINUX:  .section .preinit_array,"aw"
-; LINUX:  .globl G2
+@preinit_array1 = global i32 ()* @foo, section ".preinit_array"
+@preinit_array2 = global i32 ()* @foo, section ".preinit_array.00001"
+@preinit_array3 = global i32 ()* @foo, section ".preinit_arrayfoo"
 
+; CHECK-LABEL: .section  .preinit_array,"aw",@preinit_array
+; CHECK: preinit_array1:
+; CHECK-LABEL: .section  .preinit_array.00001,"aw",@preinit_array
+; CHECK: preinit_array2:
+; CHECK-LABEL: .section  .preinit_arrayfoo,"aw",@progbits
+; CHECK: preinit_array3:
