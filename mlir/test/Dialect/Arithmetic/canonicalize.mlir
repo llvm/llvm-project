@@ -50,6 +50,26 @@ func @cmpi_equal_vector_operands(%arg0: vector<1x8xi64>)
 
 // -----
 
+// CHECK-LABEL: @cmpOfExtSI
+//  CHECK-NEXT:   return %arg0
+func @cmpOfExtSI(%arg0: i1) -> i1 {
+  %ext = arith.extsi %arg0 : i1 to i64
+  %c0 = arith.constant 0 : i64
+  %res = arith.cmpi ne, %ext, %c0 : i64
+  return %res : i1
+}
+
+// CHECK-LABEL: @cmpOfExtUI
+//  CHECK-NEXT:   return %arg0
+func @cmpOfExtUI(%arg0: i1) -> i1 {
+  %ext = arith.extui %arg0 : i1 to i64
+  %c0 = arith.constant 0 : i64
+  %res = arith.cmpi ne, %ext, %c0 : i64
+  return %res : i1
+}
+
+// -----
+
 // CHECK-LABEL: @indexCastOfSignExtend
 //       CHECK:   %[[res:.+]] = arith.index_cast %arg0 : i8 to index
 //       CHECK:   return %[[res]]
