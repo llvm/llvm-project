@@ -391,7 +391,7 @@ private:
       }
     }
 
-    // Try to merge a block with left brace wrapped that wasn't yet covered
+    // Try to merge a block with left brace unwrapped that wasn't yet covered
     if (TheLine->Last->is(tok::l_brace)) {
       const FormatToken *Tok = TheLine->First;
       bool ShouldMerge = false;
