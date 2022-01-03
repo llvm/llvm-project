@@ -1288,10 +1288,9 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
         State.Stack[i].NoLineBreak = true;
     State.Stack[State.Stack.size() - 2].NestedBlockInlined = false;
   }
-  if (Previous &&
-      (Previous->isOneOf(tok::l_paren, tok::comma, tok::colon) ||
-       Previous->isOneOf(TT_BinaryOperator, TT_ConditionalExpr)) &&
-      !Previous->isOneOf(TT_DictLiteral, TT_ObjCMethodExpr)) {
+  if (Previous && (Previous->isOneOf(TT_BinaryOperator, TT_ConditionalExpr) ||
+                   (Previous->isOneOf(tok::l_paren, tok::comma, tok::colon) &&
+                    !Previous->isOneOf(TT_DictLiteral, TT_ObjCMethodExpr)))) {
     State.Stack.back().NestedBlockInlined =
         !Newline && hasNestedBlockInlined(Previous, Current, Style);
   }
