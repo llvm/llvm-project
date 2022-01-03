@@ -53,6 +53,10 @@ using namespace CodeGen;
 /// markers.
 static bool shouldEmitLifetimeMarkers(const CodeGenOptions &CGOpts,
                                       const LangOptions &LangOpts) {
+  //[SEH] when we enable EHAsynch, we should not emit life time mark
+  if (LangOpts.EHAsynch)
+    return false;
+
   if (CGOpts.DisableLifetimeMarkers)
     return false;
 

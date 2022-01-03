@@ -170,6 +170,14 @@ bool FunctionPass::skipFunction(const Function &F) const {
                       << F.getName() << "\n");
     return true;
   }
+
+  // [SEH] skip ehpad (include seh) opt
+  for (auto &BB : F) {
+    if (BB.isEHPad()) {
+      return true;
+    }
+  }
+
   return false;
 }
 

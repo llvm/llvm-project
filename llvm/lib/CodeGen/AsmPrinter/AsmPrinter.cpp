@@ -1318,9 +1318,11 @@ void AsmPrinter::emitFunctionBody() {
         //  Div with variable opnds won't be the first instruction in
         //  an EH region as it must be led by at least a Load
         {
+          // Include inline asm
           auto MI2 = std::next(MI.getIterator());
           if (IsEHa && MI2 != MBB.end() &&
-              (MI2->mayLoadOrStore() || MI2->mayRaiseFPException()))
+              (MI2->mayLoadOrStore() || MI2->mayRaiseFPException() ||
+               MI2->isInlineAsm()))
             emitNops(1);
         }
         break;
