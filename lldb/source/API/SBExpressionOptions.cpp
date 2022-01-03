@@ -20,8 +20,7 @@ SBExpressionOptions::SBExpressionOptions()
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBExpressionOptions);
 }
 
-SBExpressionOptions::SBExpressionOptions(const SBExpressionOptions &rhs)
-    : m_opaque_up() {
+SBExpressionOptions::SBExpressionOptions(const SBExpressionOptions &rhs) {
   LLDB_RECORD_CONSTRUCTOR(SBExpressionOptions,
                           (const lldb::SBExpressionOptions &), rhs);
 

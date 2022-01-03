@@ -49,9 +49,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBProcess::SBProcess() : m_opaque_wp() {
-  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBProcess);
-}
+SBProcess::SBProcess() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBProcess); }
 
 // SBProcess constructor
 

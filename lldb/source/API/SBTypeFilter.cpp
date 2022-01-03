@@ -16,9 +16,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBTypeFilter::SBTypeFilter() : m_opaque_sp() {
-  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBTypeFilter);
-}
+SBTypeFilter::SBTypeFilter() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBTypeFilter); }
 
 SBTypeFilter::SBTypeFilter(uint32_t options)
     : m_opaque_sp(TypeFilterImplSP(new TypeFilterImpl(options))) {

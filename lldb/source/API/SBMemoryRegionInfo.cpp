@@ -46,8 +46,7 @@ SBMemoryRegionInfo::SBMemoryRegionInfo(const MemoryRegionInfo *lldb_object_ptr)
     ref() = *lldb_object_ptr;
 }
 
-SBMemoryRegionInfo::SBMemoryRegionInfo(const SBMemoryRegionInfo &rhs)
-    : m_opaque_up() {
+SBMemoryRegionInfo::SBMemoryRegionInfo(const SBMemoryRegionInfo &rhs) {
   LLDB_RECORD_CONSTRUCTOR(SBMemoryRegionInfo,
                           (const lldb::SBMemoryRegionInfo &), rhs);
   m_opaque_up = clone(rhs.m_opaque_up);

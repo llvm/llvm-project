@@ -17,7 +17,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBTypeNameSpecifier::SBTypeNameSpecifier() : m_opaque_sp() {
+SBTypeNameSpecifier::SBTypeNameSpecifier() {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBTypeNameSpecifier);
 }
 
@@ -30,7 +30,7 @@ SBTypeNameSpecifier::SBTypeNameSpecifier(const char *name, bool is_regex)
     m_opaque_sp.reset();
 }
 
-SBTypeNameSpecifier::SBTypeNameSpecifier(SBType type) : m_opaque_sp() {
+SBTypeNameSpecifier::SBTypeNameSpecifier(SBType type) {
   LLDB_RECORD_CONSTRUCTOR(SBTypeNameSpecifier, (lldb::SBType), type);
 
   if (type.IsValid())

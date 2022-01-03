@@ -25,8 +25,7 @@ SBCommandInterpreterRunOptions::SBCommandInterpreterRunOptions() {
 }
 
 SBCommandInterpreterRunOptions::SBCommandInterpreterRunOptions(
-    const SBCommandInterpreterRunOptions &rhs)
-    : m_opaque_up() {
+    const SBCommandInterpreterRunOptions &rhs) {
   LLDB_RECORD_CONSTRUCTOR(SBCommandInterpreterRunOptions,
                           (const lldb::SBCommandInterpreterRunOptions &), rhs);
 
@@ -215,8 +214,7 @@ SBCommandInterpreterRunResult::SBCommandInterpreterRunResult(
 }
 
 SBCommandInterpreterRunResult::SBCommandInterpreterRunResult(
-    const CommandInterpreterRunResult &rhs)
-    : m_opaque_up() {
+    const CommandInterpreterRunResult &rhs) {
   m_opaque_up = std::make_unique<CommandInterpreterRunResult>(rhs);
 }
 

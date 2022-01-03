@@ -59,7 +59,7 @@ private:
 class ReplayData {
 public:
   ReplayData(std::unique_ptr<llvm::MemoryBuffer> memory_buffer)
-      : m_memory_buffer(std::move(memory_buffer)), m_registry(),
+      : m_memory_buffer(std::move(memory_buffer)),
         m_deserializer(m_memory_buffer->getBuffer()) {}
   Deserializer &GetDeserializer() { return m_deserializer; }
   Registry &GetRegistry() { return m_registry; }

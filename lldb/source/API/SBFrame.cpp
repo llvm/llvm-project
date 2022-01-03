@@ -64,7 +64,7 @@ SBFrame::SBFrame(const StackFrameSP &lldb_object_sp)
                           lldb_object_sp);
 }
 
-SBFrame::SBFrame(const SBFrame &rhs) : m_opaque_sp() {
+SBFrame::SBFrame(const SBFrame &rhs) {
   LLDB_RECORD_CONSTRUCTOR(SBFrame, (const lldb::SBFrame &), rhs);
 
   m_opaque_sp = clone(rhs.m_opaque_sp);

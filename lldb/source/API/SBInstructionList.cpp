@@ -21,7 +21,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBInstructionList::SBInstructionList() : m_opaque_sp() {
+SBInstructionList::SBInstructionList() {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBInstructionList);
 }
 

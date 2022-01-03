@@ -26,11 +26,11 @@ using namespace lldb_private;
 
 typedef std::pair<lldb::TypeCategoryImplSP, user_id_t> ImplType;
 
-SBTypeCategory::SBTypeCategory() : m_opaque_sp() {
+SBTypeCategory::SBTypeCategory() {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBTypeCategory);
 }
 
-SBTypeCategory::SBTypeCategory(const char *name) : m_opaque_sp() {
+SBTypeCategory::SBTypeCategory(const char *name) {
   DataVisualization::Categories::GetCategory(ConstString(name), m_opaque_sp);
 }
 

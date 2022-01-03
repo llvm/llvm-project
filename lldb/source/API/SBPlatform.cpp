@@ -30,10 +30,7 @@ using namespace lldb_private;
 
 // PlatformConnectOptions
 struct PlatformConnectOptions {
-  PlatformConnectOptions(const char *url = nullptr)
-      : m_url(), m_rsync_options(), m_rsync_remote_path_prefix(),
-
-        m_local_cache_directory() {
+  PlatformConnectOptions(const char *url = nullptr) {
     if (url && url[0])
       m_url = url;
   }
@@ -52,7 +49,7 @@ struct PlatformConnectOptions {
 struct PlatformShellCommand {
   PlatformShellCommand(llvm::StringRef shell_interpreter,
                        llvm::StringRef shell_command)
-      : m_command(), m_working_dir(), m_status(0), m_signo(0) {
+      : m_status(0), m_signo(0) {
     if (!shell_interpreter.empty())
       m_shell = shell_interpreter.str();
 
@@ -60,8 +57,7 @@ struct PlatformShellCommand {
       m_command = shell_command.str();
   }
 
-  PlatformShellCommand(llvm::StringRef shell_command = llvm::StringRef())
-      : m_shell(), m_command(), m_working_dir() {
+  PlatformShellCommand(llvm::StringRef shell_command = llvm::StringRef()) {
     if (!shell_command.empty())
       m_command = shell_command.str();
   }
@@ -313,11 +309,9 @@ const char *SBPlatformShellCommand::GetOutput() {
 }
 
 // SBPlatform
-SBPlatform::SBPlatform() : m_opaque_sp() {
-  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBPlatform);
-}
+SBPlatform::SBPlatform() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBPlatform); }
 
-SBPlatform::SBPlatform(const char *platform_name) : m_opaque_sp() {
+SBPlatform::SBPlatform(const char *platform_name) {
   LLDB_RECORD_CONSTRUCTOR(SBPlatform, (const char *), platform_name);
 
   Status error;

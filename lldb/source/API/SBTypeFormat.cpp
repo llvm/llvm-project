@@ -16,9 +16,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBTypeFormat::SBTypeFormat() : m_opaque_sp() {
-  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBTypeFormat);
-}
+SBTypeFormat::SBTypeFormat() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBTypeFormat); }
 
 SBTypeFormat::SBTypeFormat(lldb::Format format, uint32_t options)
     : m_opaque_sp(

@@ -14,7 +14,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBThreadCollection::SBThreadCollection() : m_opaque_sp() {
+SBThreadCollection::SBThreadCollection() {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBThreadCollection);
 }
 

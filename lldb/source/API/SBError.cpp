@@ -17,9 +17,9 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBError::SBError() : m_opaque_up() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBError); }
+SBError::SBError() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBError); }
 
-SBError::SBError(const SBError &rhs) : m_opaque_up() {
+SBError::SBError(const SBError &rhs) {
   LLDB_RECORD_CONSTRUCTOR(SBError, (const lldb::SBError &), rhs);
 
   m_opaque_up = clone(rhs.m_opaque_up);

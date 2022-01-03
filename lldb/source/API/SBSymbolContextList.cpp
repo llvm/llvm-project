@@ -20,8 +20,7 @@ SBSymbolContextList::SBSymbolContextList()
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBSymbolContextList);
 }
 
-SBSymbolContextList::SBSymbolContextList(const SBSymbolContextList &rhs)
-    : m_opaque_up() {
+SBSymbolContextList::SBSymbolContextList(const SBSymbolContextList &rhs) {
   LLDB_RECORD_CONSTRUCTOR(SBSymbolContextList,
                           (const lldb::SBSymbolContextList &), rhs);
 

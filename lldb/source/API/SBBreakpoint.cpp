@@ -821,7 +821,7 @@ BreakpointSP SBBreakpoint::GetSP() const { return m_opaque_wp.lock(); }
 // This is simple collection of breakpoint id's and their target.
 class SBBreakpointListImpl {
 public:
-  SBBreakpointListImpl(lldb::TargetSP target_sp) : m_target_wp() {
+  SBBreakpointListImpl(lldb::TargetSP target_sp) {
     if (target_sp && target_sp->IsValid())
       m_target_wp = target_sp;
   }

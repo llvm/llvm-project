@@ -66,7 +66,7 @@ protected:
 using namespace lldb;
 using namespace lldb_private;
 
-SBInstruction::SBInstruction() : m_opaque_sp() {
+SBInstruction::SBInstruction() {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBInstruction);
 }
 

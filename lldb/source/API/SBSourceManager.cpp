@@ -24,10 +24,9 @@ namespace lldb_private {
 class SourceManagerImpl {
 public:
   SourceManagerImpl(const lldb::DebuggerSP &debugger_sp)
-      : m_debugger_wp(debugger_sp), m_target_wp() {}
+      : m_debugger_wp(debugger_sp) {}
 
-  SourceManagerImpl(const lldb::TargetSP &target_sp)
-      : m_debugger_wp(), m_target_wp(target_sp) {}
+  SourceManagerImpl(const lldb::TargetSP &target_sp) : m_target_wp(target_sp) {}
 
   SourceManagerImpl(const SourceManagerImpl &rhs) {
     if (&rhs == this)

@@ -14,17 +14,14 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBStringList::SBStringList() : m_opaque_up() {
-  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBStringList);
-}
+SBStringList::SBStringList() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBStringList); }
 
-SBStringList::SBStringList(const lldb_private::StringList *lldb_strings_ptr)
-    : m_opaque_up() {
+SBStringList::SBStringList(const lldb_private::StringList *lldb_strings_ptr) {
   if (lldb_strings_ptr)
     m_opaque_up = std::make_unique<StringList>(*lldb_strings_ptr);
 }
 
-SBStringList::SBStringList(const SBStringList &rhs) : m_opaque_up() {
+SBStringList::SBStringList(const SBStringList &rhs) {
   LLDB_RECORD_CONSTRUCTOR(SBStringList, (const lldb::SBStringList &), rhs);
 
   m_opaque_up = clone(rhs.m_opaque_up);

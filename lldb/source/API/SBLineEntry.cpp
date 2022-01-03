@@ -19,18 +19,15 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBLineEntry::SBLineEntry() : m_opaque_up() {
-  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBLineEntry);
-}
+SBLineEntry::SBLineEntry() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBLineEntry); }
 
-SBLineEntry::SBLineEntry(const SBLineEntry &rhs) : m_opaque_up() {
+SBLineEntry::SBLineEntry(const SBLineEntry &rhs) {
   LLDB_RECORD_CONSTRUCTOR(SBLineEntry, (const lldb::SBLineEntry &), rhs);
 
   m_opaque_up = clone(rhs.m_opaque_up);
 }
 
-SBLineEntry::SBLineEntry(const lldb_private::LineEntry *lldb_object_ptr)
-    : m_opaque_up() {
+SBLineEntry::SBLineEntry(const lldb_private::LineEntry *lldb_object_ptr) {
   if (lldb_object_ptr)
     m_opaque_up = std::make_unique<LineEntry>(*lldb_object_ptr);
 }

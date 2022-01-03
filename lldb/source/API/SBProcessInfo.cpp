@@ -15,11 +15,11 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBProcessInfo::SBProcessInfo() : m_opaque_up() {
+SBProcessInfo::SBProcessInfo() {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBProcessInfo);
 }
 
-SBProcessInfo::SBProcessInfo(const SBProcessInfo &rhs) : m_opaque_up() {
+SBProcessInfo::SBProcessInfo(const SBProcessInfo &rhs) {
   LLDB_RECORD_CONSTRUCTOR(SBProcessInfo, (const lldb::SBProcessInfo &), rhs);
 
   m_opaque_up = clone(rhs.m_opaque_up);

@@ -58,8 +58,8 @@ public:
   ValueImpl(lldb::ValueObjectSP in_valobj_sp,
             lldb::DynamicValueType use_dynamic, bool use_synthetic,
             const char *name = nullptr)
-      : m_valobj_sp(), m_use_dynamic(use_dynamic),
-        m_use_synthetic(use_synthetic), m_name(name) {
+      : m_use_dynamic(use_dynamic), m_use_synthetic(use_synthetic),
+        m_name(name) {
     if (in_valobj_sp) {
       if ((m_valobj_sp = in_valobj_sp->GetQualifiedRepresentationIfAvailable(
                lldb::eNoDynamicValues, false))) {
@@ -215,7 +215,7 @@ private:
   Status m_lock_error;
 };
 
-SBValue::SBValue() : m_opaque_sp() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBValue); }
+SBValue::SBValue() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBValue); }
 
 SBValue::SBValue(const lldb::ValueObjectSP &value_sp) {
   LLDB_RECORD_CONSTRUCTOR(SBValue, (const lldb::ValueObjectSP &), value_sp);

@@ -19,7 +19,7 @@ using namespace lldb_private;
 
 class ValueListImpl {
 public:
-  ValueListImpl() : m_values() {}
+  ValueListImpl() {}
 
   ValueListImpl(const ValueListImpl &rhs) : m_values(rhs.m_values) {}
 
@@ -67,18 +67,16 @@ private:
   std::vector<lldb::SBValue> m_values;
 };
 
-SBValueList::SBValueList() : m_opaque_up() {
-  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBValueList);
-}
+SBValueList::SBValueList() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBValueList); }
 
-SBValueList::SBValueList(const SBValueList &rhs) : m_opaque_up() {
+SBValueList::SBValueList(const SBValueList &rhs) {
   LLDB_RECORD_CONSTRUCTOR(SBValueList, (const lldb::SBValueList &), rhs);
 
   if (rhs.IsValid())
     m_opaque_up = std::make_unique<ValueListImpl>(*rhs);
 }
 
-SBValueList::SBValueList(const ValueListImpl *lldb_object_ptr) : m_opaque_up() {
+SBValueList::SBValueList(const ValueListImpl *lldb_object_ptr) {
   if (lldb_object_ptr)
     m_opaque_up = std::make_unique<ValueListImpl>(*lldb_object_ptr);
 }
