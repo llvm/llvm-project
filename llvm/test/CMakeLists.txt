@@ -228,6 +228,7 @@ set_target_properties(check-llvm PROPERTIES FOLDER "Tests")
 add_lit_testsuites(LLVM ${CMAKE_CURRENT_SOURCE_DIR}
   ${exclude_from_check_all}
   DEPENDS ${LLVM_TEST_DEPENDS}
+  FOLDER "Tests/Subdirectories"
   )
 
 # Setup an alias for 'check-all'.
