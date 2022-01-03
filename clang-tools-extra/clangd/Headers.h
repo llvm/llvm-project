@@ -38,6 +38,7 @@ namespace clangd {
 
 // clangd has a built-in database of standard library symbols.
 namespace stdlib {
+class Symbol;
 
 // A standard library header, such as <iostream>
 // Lightweight class, in fact just an index into a table.
@@ -53,7 +54,7 @@ public:
 private:
   Header(unsigned ID) : ID(ID) {}
   unsigned ID;
-  friend class Symbol;
+  friend Symbol;
   friend llvm::DenseMapInfo<Header>;
   friend bool operator==(const Header &L, const Header &R) {
     return L.ID == R.ID;
