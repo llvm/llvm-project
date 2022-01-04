@@ -44117,7 +44117,7 @@ static SDValue combineSetCCMOVMSK(SDValue EFLAGS, X86::CondCode &CC,
         BCNumEltBits > NumEltBits &&
         DAG.ComputeNumSignBits(BC) > (BCNumEltBits - NumEltBits)) {
       SDLoc DL(EFLAGS);
-      unsigned CmpMask = IsAnyOf ? 0 : ((1 << BCNumElts) - 1);
+      APInt CmpMask = APInt::getLowBitsSet(32, IsAnyOf ? 0 : BCNumElts);
       return DAG.getNode(X86ISD::CMP, DL, MVT::i32,
                          DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, BC),
                          DAG.getConstant(CmpMask, DL, MVT::i32));
