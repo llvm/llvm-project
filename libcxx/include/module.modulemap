@@ -594,6 +594,7 @@ module std [system] {
       module erase_if_container    { private header "__iterator/erase_if_container.h" }
       module front_insert_iterator { private header "__iterator/front_insert_iterator.h" }
       module incrementable_traits  { private header "__iterator/incrementable_traits.h" }
+      module indirectly_comparable { private header "__iterator/indirectly_comparable.h" }
       module insert_iterator       { private header "__iterator/insert_iterator.h" }
       module istream_iterator      { private header "__iterator/istream_iterator.h" }
       module istreambuf_iterator   { private header "__iterator/istreambuf_iterator.h" }
