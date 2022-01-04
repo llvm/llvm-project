@@ -1877,8 +1877,8 @@ Parser::ParseCXXTypeConstructExpression(const DeclSpec &DS) {
       QualType PreferredType;
       if (TypeRep)
         PreferredType = Actions.ProduceConstructorSignatureHelp(
-            getCurScope(), TypeRep.get()->getCanonicalTypeInternal(),
-            DS.getEndLoc(), Exprs, T.getOpenLocation(), /*Braced=*/false);
+            TypeRep.get()->getCanonicalTypeInternal(), DS.getEndLoc(), Exprs,
+            T.getOpenLocation(), /*Braced=*/false);
       CalledSignatureHelp = true;
       return PreferredType;
     };
@@ -3167,7 +3167,7 @@ Parser::ParseCXXNewExpression(bool UseGlobal, SourceLocation Start) {
         // `new decltype(invalid) (^)`.
         if (TypeRep)
           PreferredType = Actions.ProduceConstructorSignatureHelp(
-              getCurScope(), TypeRep.get()->getCanonicalTypeInternal(),
+              TypeRep.get()->getCanonicalTypeInternal(),
               DeclaratorInfo.getEndLoc(), ConstructorArgs, ConstructorLParen,
               /*Braced=*/false);
         CalledSignatureHelp = true;

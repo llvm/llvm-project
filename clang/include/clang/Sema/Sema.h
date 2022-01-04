@@ -12537,17 +12537,16 @@ public:
   /// signatures that were considered.
   ///
   /// FIXME: rename to GuessCallArgumentType to reduce confusion.
-  QualType ProduceCallSignatureHelp(Scope *S, Expr *Fn, ArrayRef<Expr *> Args,
+  QualType ProduceCallSignatureHelp(Expr *Fn, ArrayRef<Expr *> Args,
                                     SourceLocation OpenParLoc);
-  QualType ProduceConstructorSignatureHelp(Scope *S, QualType Type,
-                                           SourceLocation Loc,
+  QualType ProduceConstructorSignatureHelp(QualType Type, SourceLocation Loc,
                                            ArrayRef<Expr *> Args,
                                            SourceLocation OpenParLoc,
                                            bool Braced);
   QualType ProduceCtorInitMemberSignatureHelp(
-      Scope *S, Decl *ConstructorDecl, CXXScopeSpec SS,
-      ParsedType TemplateTypeTy, ArrayRef<Expr *> ArgExprs, IdentifierInfo *II,
-      SourceLocation OpenParLoc, bool Braced);
+      Decl *ConstructorDecl, CXXScopeSpec SS, ParsedType TemplateTypeTy,
+      ArrayRef<Expr *> ArgExprs, IdentifierInfo *II, SourceLocation OpenParLoc,
+      bool Braced);
   QualType ProduceTemplateArgumentSignatureHelp(
       TemplateTy, ArrayRef<ParsedTemplateArgument>, SourceLocation LAngleLoc);
   void CodeCompleteInitializer(Scope *S, Decl *D);

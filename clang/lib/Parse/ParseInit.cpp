@@ -466,8 +466,8 @@ ExprResult Parser::ParseBraceInitializer() {
     QualType PreferredType;
     if (!LikelyType.isNull())
       PreferredType = Actions.ProduceConstructorSignatureHelp(
-          getCurScope(), LikelyType->getCanonicalTypeInternal(),
-          T.getOpenLocation(), InitExprs, T.getOpenLocation(), /*Braced=*/true);
+          LikelyType->getCanonicalTypeInternal(), T.getOpenLocation(),
+          InitExprs, T.getOpenLocation(), /*Braced=*/true);
     CalledSignatureHelp = true;
     return PreferredType;
   };
