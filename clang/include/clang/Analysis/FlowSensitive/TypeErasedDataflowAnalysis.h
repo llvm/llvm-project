@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_TYPEERASEDDATAFLOWANALYSIS_H
 #define LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_TYPEERASEDDATAFLOWANALYSIS_H
 
+#include <utility>
 #include <vector>
 
 #include "clang/AST/ASTContext.h"
@@ -75,6 +76,9 @@ struct TypeErasedDataflowAnalysisState {
 
   /// Model of the state of the program (store and heap).
   Environment Env;
+
+  TypeErasedDataflowAnalysisState(TypeErasedLattice Lattice, Environment Env)
+      : Lattice(std::move(Lattice)), Env(std::move(Env)) {}
 };
 
 /// Transfers the state of a basic block by evaluating each of its statements in

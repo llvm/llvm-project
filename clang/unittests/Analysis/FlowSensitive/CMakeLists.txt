@@ -7,6 +7,7 @@ add_clang_unittest(ClangAnalysisFlowSensitiveTests
   SingleVarConstantPropagationTest.cpp
   TestingSupport.cpp
   TestingSupportTest.cpp
+  TransferTest.cpp
   TypeErasedDataflowAnalysisTest.cpp
   )
 

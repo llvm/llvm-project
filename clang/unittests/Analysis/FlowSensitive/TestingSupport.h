@@ -98,7 +98,8 @@ void checkDataflow(
   auto CFCtx = ControlFlowContext::build(F, F->getBody(), &F->getASTContext());
   ASSERT_TRUE((bool)CFCtx) << "Could not build ControlFlowContext.";
 
-  Environment Env;
+  DataflowAnalysisContext DACtx;
+  Environment Env(DACtx);
   auto Analysis = MakeAnalysis(Context, Env);
 
   llvm::Expected<llvm::DenseMap<const clang::Stmt *, std::string>>
