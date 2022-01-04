@@ -532,13 +532,13 @@ static Value *emitCallMaybeConstrainedFPBuiltin(CodeGenFunction &CGF,
 
 // Emit a simple mangled intrinsic that has 1 argument and a return type
 // matching the argument type.
-static Value *emitUnaryBuiltin(CodeGenFunction &CGF, const CallExpr *E,
-                               unsigned IntrinsicID,
-                               llvm::StringRef Name = "") {
+static Value *emitUnaryBuiltin(CodeGenFunction &CGF,
+                               const CallExpr *E,
+                               unsigned IntrinsicID) {
   llvm::Value *Src0 = CGF.EmitScalarExpr(E->getArg(0));
 
   Function *F = CGF.CGM.getIntrinsic(IntrinsicID, Src0->getType());
-  return CGF.Builder.CreateCall(F, Src0, Name);
+  return CGF.Builder.CreateCall(F, Src0);
 }
 
 // Emit an intrinsic that has 2 operands of the same type as its result.
@@ -3122,24 +3122,23 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   }
 
   case Builtin::BI__builtin_elementwise_abs: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
     Value *Result;
-    QualType QT = E->getArg(0)->getType();
-
-    if (auto *VecTy = QT->getAs<VectorType>())
-      QT = VecTy->getElementType();
-    if (QT->isIntegerType())
+    if (Op0->getType()->isIntOrIntVectorTy())
       Result = Builder.CreateBinaryIntrinsic(
-          llvm::Intrinsic::abs, EmitScalarExpr(E->getArg(0)),
-          Builder.getFalse(), nullptr, "elt.abs");
+          llvm::Intrinsic::abs, Op0, Builder.getFalse(), nullptr, "elt.abs");
     else
-      Result = emitUnaryBuiltin(*this, E, llvm::Intrinsic::fabs, "elt.abs");
-
+      Result = Builder.CreateUnaryIntrinsic(llvm::Intrinsic::fabs, Op0, nullptr,
+                                            "elt.abs");
     return RValue::get(Result);
   }
 
-  case Builtin::BI__builtin_elementwise_ceil:
-    return RValue::get(
-        emitUnaryBuiltin(*this, E, llvm::Intrinsic::ceil, "elt.ceil"));
+  case Builtin::BI__builtin_elementwise_ceil: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Result = Builder.CreateUnaryIntrinsic(llvm::Intrinsic::ceil, Op0,
+                                                 nullptr, "elt.ceil");
+    return RValue::get(Result);
+  }
 
   case Builtin::BI__builtin_elementwise_max: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
@@ -3175,39 +3174,49 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   }
 
   case Builtin::BI__builtin_reduce_max: {
-    auto GetIntrinsicID = [](QualType QT) {
-      if (auto *VecTy = QT->getAs<VectorType>())
-        QT = VecTy->getElementType();
-      if (QT->isSignedIntegerType())
-        return llvm::Intrinsic::vector_reduce_smax;
-      if (QT->isUnsignedIntegerType())
-        return llvm::Intrinsic::vector_reduce_umax;
-      assert(QT->isFloatingType() && "must have a float here");
+    auto GetIntrinsicID = [](QualType QT, llvm::Type *IrTy) {
+      if (IrTy->isIntOrIntVectorTy()) {
+        if (auto *VecTy = QT->getAs<VectorType>())
+          QT = VecTy->getElementType();
+        if (QT->isSignedIntegerType())
+          return llvm::Intrinsic::vector_reduce_smax;
+        else
+          return llvm::Intrinsic::vector_reduce_umax;
+      }
       return llvm::Intrinsic::vector_reduce_fmax;
     };
-    return RValue::get(emitUnaryBuiltin(
-        *this, E, GetIntrinsicID(E->getArg(0)->getType()), "rdx.min"));
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Result = Builder.CreateUnaryIntrinsic(
+        GetIntrinsicID(E->getArg(0)->getType(), Op0->getType()), Op0, nullptr,
+        "rdx.min");
+    return RValue::get(Result);
   }
 
   case Builtin::BI__builtin_reduce_min: {
-    auto GetIntrinsicID = [](QualType QT) {
-      if (auto *VecTy = QT->getAs<VectorType>())
-        QT = VecTy->getElementType();
-      if (QT->isSignedIntegerType())
-        return llvm::Intrinsic::vector_reduce_smin;
-      if (QT->isUnsignedIntegerType())
-        return llvm::Intrinsic::vector_reduce_umin;
-      assert(QT->isFloatingType() && "must have a float here");
+    auto GetIntrinsicID = [](QualType QT, llvm::Type *IrTy) {
+      if (IrTy->isIntOrIntVectorTy()) {
+        if (auto *VecTy = QT->getAs<VectorType>())
+          QT = VecTy->getElementType();
+        if (QT->isSignedIntegerType())
+          return llvm::Intrinsic::vector_reduce_smin;
+        else
+          return llvm::Intrinsic::vector_reduce_umin;
+      }
       return llvm::Intrinsic::vector_reduce_fmin;
     };
-
-    return RValue::get(emitUnaryBuiltin(
-        *this, E, GetIntrinsicID(E->getArg(0)->getType()), "rdx.min"));
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Result = Builder.CreateUnaryIntrinsic(
+        GetIntrinsicID(E->getArg(0)->getType(), Op0->getType()), Op0, nullptr,
+        "rdx.min");
+    return RValue::get(Result);
   }
 
-  case Builtin::BI__builtin_reduce_xor:
-    return RValue::get(emitUnaryBuiltin(
-        *this, E, llvm::Intrinsic::vector_reduce_xor, "rdx.xor"));
+  case Builtin::BI__builtin_reduce_xor: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Result = Builder.CreateUnaryIntrinsic(
+        llvm::Intrinsic::vector_reduce_xor, Op0, nullptr, "rdx.xor");
+    return RValue::get(Result);
+  }
 
   case Builtin::BI__builtin_matrix_transpose: {
     const auto *MatrixTy = E->getArg(0)->getType()->getAs<ConstantMatrixType>();
