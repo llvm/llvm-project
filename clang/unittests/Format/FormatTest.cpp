@@ -2535,6 +2535,13 @@ TEST_F(FormatTest, ShortEnums) {
                "  C\n"
                "} ShortEnum1, ShortEnum2;",
                Style);
+  verifyFormat("typedef enum\n"
+               "{\n"
+               "  A,\n"
+               "  B,\n"
+               "  C\n"
+               "} ShortEnum1, ShortEnum2;",
+               Style);
 }
 
 TEST_F(FormatTest, ShortCaseLabels) {
@@ -18517,6 +18524,66 @@ TEST_F(FormatTest, OptimizeBreakPenaltyVsExcess) {
             format("int a = /* long block comment */ 42;", Style));
 }
 
+TEST_F(FormatTest, BreakPenaltyAfterLParen) {
+  FormatStyle Style = getLLVMStyle();
+  Style.ColumnLimit = 8;
+  Style.PenaltyExcessCharacter = 15;
+  verifyFormat("int foo(\n"
+               "    int aaaaaaaaaaaaaaaaaaaaaaaa);",
+               Style);
+  Style.PenaltyBreakOpenParenthesis = 200;
+  EXPECT_EQ("int foo(int aaaaaaaaaaaaaaaaaaaaaaaa);",
+            format("int foo(\n"
+                   "    int aaaaaaaaaaaaaaaaaaaaaaaa);",
+                   Style));
+}
+
+TEST_F(FormatTest, BreakPenaltyAfterCastLParen) {
+  FormatStyle Style = getLLVMStyle();
+  Style.ColumnLimit = 5;
+  Style.PenaltyExcessCharacter = 150;
+  verifyFormat("foo((\n"
+               "    int)aaaaaaaaaaaaaaaaaaaaaaaa);",
+
+               Style);
+  Style.PenaltyBreakOpenParenthesis = 100000;
+  EXPECT_EQ("foo((int)\n"
+            "        aaaaaaaaaaaaaaaaaaaaaaaa);",
+            format("foo((\n"
+                   "int)aaaaaaaaaaaaaaaaaaaaaaaa);",
+                   Style));
+}
+
+TEST_F(FormatTest, BreakPenaltyAfterForLoopLParen) {
+  FormatStyle Style = getLLVMStyle();
+  Style.ColumnLimit = 4;
+  Style.PenaltyExcessCharacter = 100;
+  verifyFormat("for (\n"
+               "    int iiiiiiiiiiiiiiiii =\n"
+               "        0;\n"
+               "    iiiiiiiiiiiiiiiii <\n"
+               "    2;\n"
+               "    iiiiiiiiiiiiiiiii++) {\n"
+               "}",
+
+               Style);
+  Style.PenaltyBreakOpenParenthesis = 1250;
+  EXPECT_EQ("for (int iiiiiiiiiiiiiiiii =\n"
+            "         0;\n"
+            "     iiiiiiiiiiiiiiiii <\n"
+            "     2;\n"
+            "     iiiiiiiiiiiiiiiii++) {\n"
+            "}",
+            format("for (\n"
+                   "    int iiiiiiiiiiiiiiiii =\n"
+                   "        0;\n"
+                   "    iiiiiiiiiiiiiiiii <\n"
+                   "    2;\n"
+                   "    iiiiiiiiiiiiiiiii++) {\n"
+                   "}",
+                   Style));
+}
+
 #define EXPECT_ALL_STYLES_EQUAL(Styles)                                        \
   for (size_t i = 1; i < Styles.size(); ++i)                                   \
   EXPECT_EQ(Styles[0], Styles[i])                                              \
@@ -18722,6 +18789,8 @@ TEST_F(FormatTest, ParsesConfiguration) {
               PenaltyBreakBeforeFirstCallParameter, 1234u);
   CHECK_PARSE("PenaltyBreakTemplateDeclaration: 1234",
               PenaltyBreakTemplateDeclaration, 1234u);
+  CHECK_PARSE("PenaltyBreakOpenParenthesis: 1234", PenaltyBreakOpenParenthesis,
+              1234u);
   CHECK_PARSE("PenaltyExcessCharacter: 1234", PenaltyExcessCharacter, 1234u);
   CHECK_PARSE("PenaltyReturnTypeOnItsOwnLine: 1234",
               PenaltyReturnTypeOnItsOwnLine, 1234u);

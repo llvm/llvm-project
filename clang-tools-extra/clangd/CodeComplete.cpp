@@ -895,14 +895,12 @@ struct ScoredSignature {
 // part of it.
 int paramIndexForArg(const CodeCompleteConsumer::OverloadCandidate &Candidate,
                      int Arg) {
-  int NumParams = 0;
+  int NumParams = Candidate.getNumParams();
   if (const auto *F = Candidate.getFunction()) {
-    NumParams = F->getNumParams();
     if (F->isVariadic())
       ++NumParams;
   } else if (auto *T = Candidate.getFunctionType()) {
     if (auto *Proto = T->getAs<FunctionProtoType>()) {
-      NumParams = Proto->getNumParams();
       if (Proto->isVariadic())
         ++NumParams;
     }
@@ -923,7 +921,8 @@ public:
   void ProcessOverloadCandidates(Sema &S, unsigned CurrentArg,
                                  OverloadCandidate *Candidates,
                                  unsigned NumCandidates,
-                                 SourceLocation OpenParLoc) override {
+                                 SourceLocation OpenParLoc,
+                                 bool Braced) override {
     assert(!OpenParLoc.isInvalid());
     SourceManager &SrcMgr = S.getSourceManager();
     OpenParLoc = SrcMgr.getFileLoc(OpenParLoc);
@@ -963,8 +962,9 @@ public:
             paramIndexForArg(Candidate, SigHelp.activeParameter);
       }
 
-      const auto *CCS = Candidate.CreateSignatureString(
-          CurrentArg, S, *Allocator, CCTUInfo, true);
+      const auto *CCS =
+          Candidate.CreateSignatureString(CurrentArg, S, *Allocator, CCTUInfo,
+                                          /*IncludeBriefComment=*/true, Braced);
       assert(CCS && "Expected the CodeCompletionString to be non-null");
       ScoredSignatures.push_back(processOverloadCandidate(
           Candidate, *CCS,
@@ -1015,6 +1015,9 @@ public:
         case OC::CK_FunctionType:
           return R.Quality.Kind != OC::CK_Function;
         case OC::CK_FunctionTemplate:
+          return false;
+        case OC::CK_Template:
+          assert(false && "Never see templates and other overloads mixed");
           return false;
         }
         llvm_unreachable("Unknown overload candidate type.");
@@ -1162,19 +1165,25 @@ public:
   void ProcessOverloadCandidates(Sema &S, unsigned CurrentArg,
                                  OverloadCandidate *Candidates,
                                  unsigned NumCandidates,
-                                 SourceLocation OpenParLoc) override {
+                                 SourceLocation OpenParLoc,
+                                 bool Braced) override {
     assert(CurrentArg <= (unsigned)std::numeric_limits<int>::max() &&
            "too many arguments");
 
     for (unsigned I = 0; I < NumCandidates; ++I) {
       OverloadCandidate Candidate = Candidates[I];
-      auto *Func = Candidate.getFunction();
-      if (!Func || Func->getNumParams() <= CurrentArg)
+      NamedDecl *Param = nullptr;
+      if (auto *Func = Candidate.getFunction()) {
+        if (CurrentArg < Func->getNumParams())
+          Param = Func->getParamDecl(CurrentArg);
+      } else if (auto *Template = Candidate.getTemplate()) {
+        if (CurrentArg < Template->getTemplateParameters()->size())
+          Param = Template->getTemplateParameters()->getParam(CurrentArg);
+      }
+
+      if (!Param)
         continue;
-      auto *PVD = Func->getParamDecl(CurrentArg);
-      if (!PVD)
-        continue;
-      auto *Ident = PVD->getIdentifier();
+      auto *Ident = Param->getIdentifier();
       if (!Ident)
         continue;
       auto Name = Ident->getName();

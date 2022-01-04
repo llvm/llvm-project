@@ -55,7 +55,7 @@ public:
   MemoryGroup()
       : NumPredecessors(0), NumExecutingPredecessors(0),
         NumExecutedPredecessors(0), NumInstructions(0), NumExecuting(0),
-        NumExecuted(0), CriticalPredecessor() {}
+        NumExecuted(0), CriticalPredecessor(), CriticalMemoryInstruction() {}
   MemoryGroup(MemoryGroup &&) = default;
 
   size_t getNumSuccessors() const {

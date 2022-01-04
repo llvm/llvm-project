@@ -1816,10 +1816,10 @@ def am_brcond : Operand<OtherVT> {
   let OperandType = "OPERAND_PCREL";
 }
 
-class BranchCond : I<(outs), (ins ccode:$cond, am_brcond:$target),
-                     "b", ".$cond\t$target", "",
-                     [(AArch64brcond bb:$target, imm:$cond, NZCV)]>,
-                   Sched<[WriteBr]> {
+class BranchCond<bit bit4, string mnemonic>
+   : I<(outs), (ins ccode:$cond, am_brcond:$target),
+       mnemonic, ".$cond\t$target", "",
+       [(AArch64brcond bb:$target, imm:$cond, NZCV)]>, Sched<[WriteBr]> {
   let isBranch = 1;
   let isTerminator = 1;
   let Uses = [NZCV];
@@ -1828,7 +1828,7 @@ class BranchCond : I<(outs), (ins ccode:$cond, am_brcond:$target),
   bits<19> target;
   let Inst{31-24} = 0b01010100;
   let Inst{23-5} = target;
-  let Inst{4} = 0;
+  let Inst{4} = bit4;
   let Inst{3-0} = cond;
 }
 

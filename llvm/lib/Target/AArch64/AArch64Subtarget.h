@@ -98,6 +98,7 @@ protected:
   bool HasV9_0aOps = false;
   bool HasV9_1aOps = false;
   bool HasV9_2aOps = false;
+  bool HasV9_3aOps = false;
   bool HasV8_0rOps = false;
 
   bool HasCONTEXTIDREL2 = false;
@@ -188,6 +189,9 @@ protected:
   bool HasWFxT = false;
   bool HasHCX = false;
   bool HasLS64 = false;
+
+  // Armv8.8-A Extensions
+  bool HasHBC = false;
 
   // Arm SVE2 extensions
   bool HasSVE2 = false;
@@ -366,6 +370,7 @@ public:
   bool hasV9_0aOps() const { return HasV9_0aOps; }
   bool hasV9_1aOps() const { return HasV9_1aOps; }
   bool hasV9_2aOps() const { return HasV9_2aOps; }
+  bool hasV9_3aOps() const { return HasV9_3aOps; }
   bool hasV8_0rOps() const { return HasV8_0rOps; }
 
   bool hasZeroCycleRegMove() const { return HasZeroCycleRegMove; }
@@ -573,6 +578,7 @@ public:
   bool hasRCPC_IMMO() const { return HasRCPC_IMMO; }
   bool hasEL2VMSA() const { return HasEL2VMSA; }
   bool hasEL3() const { return HasEL3; }
+  bool hasHBC() const { return HasHBC; }
 
   bool fixCortexA53_835769() const { return FixCortexA53_835769; }
 

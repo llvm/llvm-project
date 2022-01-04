@@ -16,6 +16,7 @@
 #include "AffectedRangeManager.h"
 #include "BreakableToken.h"
 #include "ContinuationIndenter.h"
+#include "DefinitionBlockSeparator.h"
 #include "FormatInternal.h"
 #include "FormatTokenLexer.h"
 #include "NamespaceEndCommentsFixer.h"
@@ -430,6 +431,15 @@ template <> struct ScalarEnumerationTraits<FormatStyle::PointerAlignmentStyle> {
 };
 
 template <>
+struct ScalarEnumerationTraits<FormatStyle::SeparateDefinitionStyle> {
+  static void enumeration(IO &IO, FormatStyle::SeparateDefinitionStyle &Value) {
+    IO.enumCase(Value, "Leave", FormatStyle::SDS_Leave);
+    IO.enumCase(Value, "Always", FormatStyle::SDS_Always);
+    IO.enumCase(Value, "Never", FormatStyle::SDS_Never);
+  }
+};
+
+template <>
 struct ScalarEnumerationTraits<FormatStyle::SpaceAroundPointerQualifiersStyle> {
   static void
   enumeration(IO &IO, FormatStyle::SpaceAroundPointerQualifiersStyle &Value) {
@@ -756,6 +766,8 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("PenaltyBreakComment", Style.PenaltyBreakComment);
     IO.mapOptional("PenaltyBreakFirstLessLess",
                    Style.PenaltyBreakFirstLessLess);
+    IO.mapOptional("PenaltyBreakOpenParenthesis",
+                   Style.PenaltyBreakOpenParenthesis);
     IO.mapOptional("PenaltyBreakString", Style.PenaltyBreakString);
     IO.mapOptional("PenaltyBreakTemplateDeclaration",
                    Style.PenaltyBreakTemplateDeclaration);
@@ -769,6 +781,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("RawStringFormats", Style.RawStringFormats);
     IO.mapOptional("ReferenceAlignment", Style.ReferenceAlignment);
     IO.mapOptional("ReflowComments", Style.ReflowComments);
+    IO.mapOptional("SeparateDefinitionBlocks", Style.SeparateDefinitionBlocks);
     IO.mapOptional("ShortNamespaceLines", Style.ShortNamespaceLines);
     IO.mapOptional("SortIncludes", Style.SortIncludes);
     IO.mapOptional("SortJavaStaticImport", Style.SortJavaStaticImport);
@@ -1193,6 +1206,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.ObjCSpaceBeforeProtocolList = true;
   LLVMStyle.PointerAlignment = FormatStyle::PAS_Right;
   LLVMStyle.ReferenceAlignment = FormatStyle::RAS_Pointer;
+  LLVMStyle.SeparateDefinitionBlocks = FormatStyle::SDS_Leave;
   LLVMStyle.ShortNamespaceLines = 1;
   LLVMStyle.SpacesBeforeTrailingComments = 1;
   LLVMStyle.Standard = FormatStyle::LS_Latest;
@@ -1232,6 +1246,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.PenaltyExcessCharacter = 1000000;
   LLVMStyle.PenaltyReturnTypeOnItsOwnLine = 60;
   LLVMStyle.PenaltyBreakBeforeFirstCallParameter = 19;
+  LLVMStyle.PenaltyBreakOpenParenthesis = 0;
   LLVMStyle.PenaltyBreakTemplateDeclaration = prec::Relational;
   LLVMStyle.PenaltyIndentedWhitespace = 0;
 
@@ -1840,7 +1855,7 @@ public:
     WhitespaceManager Whitespaces(
         Env.getSourceManager(), Style,
         Style.DeriveLineEnding
-            ? inputUsesCRLF(
+            ? WhitespaceManager::inputUsesCRLF(
                   Env.getSourceManager().getBufferData(Env.getFileID()),
                   Style.UseCRLF)
             : Style.UseCRLF);
@@ -1864,12 +1879,6 @@ public:
   }
 
 private:
-  static bool inputUsesCRLF(StringRef Text, bool DefaultToCRLF) {
-    size_t LF = Text.count('\n');
-    size_t CR = Text.count('\r') * 2;
-    return LF == CR ? DefaultToCRLF : CR > LF;
-  }
-
   bool
   hasCpp03IncompatibleFormat(const SmallVectorImpl<AnnotatedLine *> &Lines) {
     for (const AnnotatedLine *Line : Lines) {
@@ -3050,6 +3059,11 @@ reformat(const FormatStyle &Style, StringRef Code,
       });
   }
 
+  if (Style.SeparateDefinitionBlocks != FormatStyle::SDS_Leave)
+    Passes.emplace_back([&](const Environment &Env) {
+      return DefinitionBlockSeparator(Env, Expanded).process();
+    });
+
   if (Style.isJavaScript() && Style.JavaScriptQuotes != FormatStyle::JSQS_Leave)
     Passes.emplace_back([&](const Environment &Env) {
       return JavaScriptRequoter(Env, Expanded).process();
@@ -3136,6 +3150,16 @@ tooling::Replacements fixNamespaceEndComments(const FormatStyle &Style,
   if (!Env)
     return {};
   return NamespaceEndCommentsFixer(*Env, Style).process().first;
+}
+
+tooling::Replacements separateDefinitionBlocks(const FormatStyle &Style,
+                                               StringRef Code,
+                                               ArrayRef<tooling::Range> Ranges,
+                                               StringRef FileName) {
+  auto Env = Environment::make(Code, FileName, Ranges);
+  if (!Env)
+    return {};
+  return DefinitionBlockSeparator(*Env, Style).process().first;
 }
 
 tooling::Replacements sortUsingDeclarations(const FormatStyle &Style,

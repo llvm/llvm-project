@@ -87,7 +87,7 @@ private:
 
 public:
   PlainPrinterBase(raw_ostream &OS, raw_ostream &ES, PrinterConfig &Config)
-      : OS(OS), ES(ES), Config(Config) {}
+      : DIPrinter(), OS(OS), ES(ES), Config(Config) {}
 
   void print(const Request &Request, const DILineInfo &Info) override;
   void print(const Request &Request, const DIInliningInfo &Info) override;
@@ -138,7 +138,7 @@ private:
 
 public:
   JSONPrinter(raw_ostream &OS, PrinterConfig &Config)
-      : OS(OS), Config(Config) {}
+      : DIPrinter(), OS(OS), Config(Config) {}
 
   void print(const Request &Request, const DILineInfo &Info) override;
   void print(const Request &Request, const DIInliningInfo &Info) override;

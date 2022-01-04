@@ -12542,13 +12542,14 @@ public:
   QualType ProduceConstructorSignatureHelp(Scope *S, QualType Type,
                                            SourceLocation Loc,
                                            ArrayRef<Expr *> Args,
-                                           SourceLocation OpenParLoc);
-  QualType ProduceCtorInitMemberSignatureHelp(Scope *S, Decl *ConstructorDecl,
-                                              CXXScopeSpec SS,
-                                              ParsedType TemplateTypeTy,
-                                              ArrayRef<Expr *> ArgExprs,
-                                              IdentifierInfo *II,
-                                              SourceLocation OpenParLoc);
+                                           SourceLocation OpenParLoc,
+                                           bool Braced);
+  QualType ProduceCtorInitMemberSignatureHelp(
+      Scope *S, Decl *ConstructorDecl, CXXScopeSpec SS,
+      ParsedType TemplateTypeTy, ArrayRef<Expr *> ArgExprs, IdentifierInfo *II,
+      SourceLocation OpenParLoc, bool Braced);
+  QualType ProduceTemplateArgumentSignatureHelp(
+      TemplateTy, ArrayRef<ParsedTemplateArgument>, SourceLocation LAngleLoc);
   void CodeCompleteInitializer(Scope *S, Decl *D);
   /// Trigger code completion for a record of \p BaseType. \p InitExprs are
   /// expressions in the initializer list seen so far and \p D is the current

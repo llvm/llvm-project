@@ -416,6 +416,9 @@ def FeatureHCX : SubtargetFeature<
 def FeatureLS64 : SubtargetFeature<"ls64", "HasLS64",
     "true", "Enable Armv8.7-A LD64B/ST64B Accelerator Extension">;
 
+def FeatureHBC : SubtargetFeature<"hbc", "HasHBC",
+    "true", "Enable Armv8.8-A Hinted Conditional Branches Extension">;
+
 def FeatureBRBE : SubtargetFeature<"brbe", "HasBRBE",
     "true", "Enable Branch Record Buffer Extension">;
 
@@ -499,7 +502,7 @@ def HasV8_7aOps : SubtargetFeature<
 
 def HasV8_8aOps : SubtargetFeature<
   "v8.8a", "HasV8_8aOps", "true", "Support ARM v8.8a instructions",
-  [HasV8_7aOps]>;
+  [HasV8_7aOps, FeatureHBC]>;
 
 def HasV9_0aOps : SubtargetFeature<
   "v9a", "HasV9_0aOps", "true", "Support ARM v9a instructions",
@@ -512,6 +515,10 @@ def HasV9_1aOps : SubtargetFeature<
 def HasV9_2aOps : SubtargetFeature<
   "v9.2a", "HasV9_2aOps", "true", "Support ARM v9.2a instructions",
   [HasV8_7aOps, HasV9_1aOps]>;
+
+def HasV9_3aOps : SubtargetFeature<
+  "v9.3a", "HasV9_3aOps", "true", "Support ARM v9.3a instructions",
+  [HasV8_8aOps, HasV9_2aOps]>;
 
 def HasV8_0rOps : SubtargetFeature<
   "v8r", "HasV8_0rOps", "true", "Support ARM v8r instructions",

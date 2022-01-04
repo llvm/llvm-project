@@ -40,10 +40,10 @@ class MachineFunctionAnalysisManager : public AnalysisManager<MachineFunction> {
 public:
   using Base = AnalysisManager<MachineFunction>;
 
-  MachineFunctionAnalysisManager() : FAM(nullptr), MAM(nullptr) {}
+  MachineFunctionAnalysisManager() : Base(), FAM(nullptr), MAM(nullptr) {}
   MachineFunctionAnalysisManager(FunctionAnalysisManager &FAM,
                                  ModuleAnalysisManager &MAM)
-      : FAM(&FAM), MAM(&MAM) {}
+      : Base(), FAM(&FAM), MAM(&MAM) {}
   MachineFunctionAnalysisManager(MachineFunctionAnalysisManager &&) = default;
   MachineFunctionAnalysisManager &
   operator=(MachineFunctionAnalysisManager &&) = default;
@@ -135,7 +135,7 @@ public:
   MachineFunctionPassManager(bool DebugLogging = false,
                              bool RequireCodeGenSCCOrder = false,
                              bool VerifyMachineFunction = false)
-      : RequireCodeGenSCCOrder(RequireCodeGenSCCOrder),
+      : Base(), RequireCodeGenSCCOrder(RequireCodeGenSCCOrder),
         VerifyMachineFunction(VerifyMachineFunction) {}
   MachineFunctionPassManager(MachineFunctionPassManager &&) = default;
   MachineFunctionPassManager &

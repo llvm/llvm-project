@@ -396,10 +396,10 @@ unsigned llvm::ComputeNumSignBits(const Value *V, const DataLayout &DL,
       V, Depth, Query(DL, AC, safeCxtI(V, CxtI), DT, UseInstrInfo));
 }
 
-unsigned llvm::ComputeMinSignedBits(const Value *V, const DataLayout &DL,
-                                    unsigned Depth, AssumptionCache *AC,
-                                    const Instruction *CxtI,
-                                    const DominatorTree *DT) {
+unsigned llvm::ComputeMaxSignificantBits(const Value *V, const DataLayout &DL,
+                                         unsigned Depth, AssumptionCache *AC,
+                                         const Instruction *CxtI,
+                                         const DominatorTree *DT) {
   unsigned SignBits = ComputeNumSignBits(V, DL, Depth, AC, CxtI, DT);
   return V->getType()->getScalarSizeInBits() - SignBits + 1;
 }

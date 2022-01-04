@@ -42,7 +42,7 @@ private:
 
 public:
   RegisterBank(const Record &TheDef)
-      : TheDef(TheDef), RCWithLargestRegsSize(nullptr) {}
+      : TheDef(TheDef), RCs(), RCWithLargestRegsSize(nullptr) {}
 
   /// Get the human-readable name for the bank.
   StringRef getName() const { return TheDef.getValueAsString("Name"); }

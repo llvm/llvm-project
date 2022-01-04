@@ -191,7 +191,8 @@ struct FunctionCoverageSummary {
   BranchCoverageInfo BranchCoverage;
 
   FunctionCoverageSummary(const std::string &Name)
-      : Name(Name), ExecutionCount(0) {}
+      : Name(Name), ExecutionCount(0), RegionCoverage(), LineCoverage(),
+        BranchCoverage() {}
 
   FunctionCoverageSummary(const std::string &Name, uint64_t ExecutionCount,
                           const RegionCoverageInfo &RegionCoverage,
@@ -222,7 +223,9 @@ struct FileCoverageSummary {
   FunctionCoverageInfo FunctionCoverage;
   FunctionCoverageInfo InstantiationCoverage;
 
-  FileCoverageSummary(StringRef Name) : Name(Name) {}
+  FileCoverageSummary(StringRef Name)
+      : Name(Name), RegionCoverage(), LineCoverage(), FunctionCoverage(),
+        InstantiationCoverage() {}
 
   FileCoverageSummary &operator+=(const FileCoverageSummary &RHS) {
     RegionCoverage += RHS.RegionCoverage;

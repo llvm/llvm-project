@@ -847,6 +847,7 @@ TEST(TargetParserTest, ARMparseArchProfile) {
     case ARM::ArchKind::ARMV9A:
     case ARM::ArchKind::ARMV9_1A:
     case ARM::ArchKind::ARMV9_2A:
+    case ARM::ArchKind::ARMV9_3A:
       EXPECT_EQ(ARM::ProfileKind::A, ARM::parseArchProfile(ARMArch[i]));
       break;
     default:

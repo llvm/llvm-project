@@ -220,7 +220,9 @@ class LowerMatrixIntrinsics {
     bool IsColumnMajor = true;
 
   public:
-    MatrixTy() : IsColumnMajor(MatrixLayout == MatrixLayoutTy::ColumnMajor) {}
+    MatrixTy()
+        : Vectors(),
+          IsColumnMajor(MatrixLayout == MatrixLayoutTy::ColumnMajor) {}
     MatrixTy(ArrayRef<Value *> Vectors)
         : Vectors(Vectors.begin(), Vectors.end()),
           IsColumnMajor(MatrixLayout == MatrixLayoutTy::ColumnMajor) {}
@@ -1830,7 +1832,7 @@ public:
                    const DenseMap<Value *, SmallPtrSet<Value *, 2>> &Shared,
                    const SmallSetVector<Value *, 32> &ExprsInSubprogram,
                    Value *Leaf)
-        : Stream(Str), DL(DL), Inst2Matrix(Inst2Matrix), Shared(Shared),
+        : Str(), Stream(Str), DL(DL), Inst2Matrix(Inst2Matrix), Shared(Shared),
           ExprsInSubprogram(ExprsInSubprogram), Leaf(Leaf) {}
 
     void indent(unsigned N) {

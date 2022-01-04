@@ -299,6 +299,22 @@ func @tripleSubSub3(%arg0: index) -> index {
   return %add2 : index
 }
 
+// CHECK-LABEL: @doubleAddSub1
+//  CHECK-NEXT:   return %arg0
+func @doubleAddSub1(%arg0: index, %arg1 : index) -> index {
+  %sub = arith.subi %arg0, %arg1 : index
+  %add = arith.addi %sub, %arg1 : index
+  return %add : index
+}
+
+// CHECK-LABEL: @doubleAddSub2
+//  CHECK-NEXT:   return %arg0
+func @doubleAddSub2(%arg0: index, %arg1 : index) -> index {
+  %sub = arith.subi %arg0, %arg1 : index
+  %add = arith.addi %arg1, %sub : index
+  return %add : index
+}
+
 // CHECK-LABEL: @notCmpEQ
 //       CHECK:   %[[cres:.+]] = arith.cmpi ne, %arg0, %arg1 : i8
 //       CHECK:   return %[[cres]]

@@ -211,10 +211,12 @@ private:
     const AnnotatedLine *TheLine = *I;
     if (TheLine->Last->is(TT_LineComment))
       return 0;
-    if (I[1]->Type == LT_Invalid || I[1]->First->MustBreakBefore)
+    const auto &NextLine = *I[1];
+    const auto &PreviousLine = *I[-1];
+    if (NextLine.Type == LT_Invalid || NextLine.First->MustBreakBefore)
       return 0;
     if (TheLine->InPPDirective &&
-        (!I[1]->InPPDirective || I[1]->First->HasUnescapedNewline))
+        (!NextLine.InPPDirective || NextLine.First->HasUnescapedNewline))
       return 0;
 
     if (Style.ColumnLimit > 0 && Indent > Style.ColumnLimit)
@@ -231,15 +233,15 @@ private:
     if (TheLine->Last->is(TT_FunctionLBrace) &&
         TheLine->First == TheLine->Last &&
         !Style.BraceWrapping.SplitEmptyFunction &&
-        I[1]->First->is(tok::r_brace))
+        NextLine.First->is(tok::r_brace))
       return tryMergeSimpleBlock(I, E, Limit);
 
     // Handle empty record blocks where the brace has already been wrapped
     if (TheLine->Last->is(tok::l_brace) && TheLine->First == TheLine->Last &&
         I != AnnotatedLines.begin()) {
-      bool EmptyBlock = I[1]->First->is(tok::r_brace);
+      bool EmptyBlock = NextLine.First->is(tok::r_brace);
 
-      const FormatToken *Tok = I[-1]->First;
+      const FormatToken *Tok = PreviousLine.First;
       if (Tok && Tok->is(tok::comment))
         Tok = Tok->getNextNonComment();
 
@@ -267,7 +269,7 @@ private:
     bool MergeShortFunctions =
         Style.AllowShortFunctionsOnASingleLine == FormatStyle::SFS_All ||
         (Style.AllowShortFunctionsOnASingleLine >= FormatStyle::SFS_Empty &&
-         I[1]->First->is(tok::r_brace)) ||
+         NextLine.First->is(tok::r_brace)) ||
         (Style.AllowShortFunctionsOnASingleLine & FormatStyle::SFS_InlineOnly &&
          TheLine->Level != 0);
 
@@ -312,73 +314,75 @@ private:
       return MergeShortFunctions ? tryMergeSimpleBlock(I, E, Limit) : 0;
     }
     // Try to merge a control statement block with left brace unwrapped
-    if (TheLine->Last->is(tok::l_brace) && TheLine->First != TheLine->Last &&
+    if (TheLine->Last->is(tok::l_brace) &&
         TheLine->First->isOneOf(tok::kw_if, tok::kw_while, tok::kw_for)) {
       return Style.AllowShortBlocksOnASingleLine != FormatStyle::SBS_Never
                  ? tryMergeSimpleBlock(I, E, Limit)
                  : 0;
     }
     // Try to merge a control statement block with left brace wrapped
-    if (I[1]->First->is(tok::l_brace) &&
-        (TheLine->First->isOneOf(tok::kw_if, tok::kw_else, tok::kw_while,
-                                 tok::kw_for, tok::kw_switch, tok::kw_try,
-                                 tok::kw_do, TT_ForEachMacro) ||
-         (TheLine->First->is(tok::r_brace) && TheLine->First->Next &&
-          TheLine->First->Next->isOneOf(tok::kw_else, tok::kw_catch))) &&
-        Style.BraceWrapping.AfterControlStatement ==
-            FormatStyle::BWACS_MultiLine) {
-      // If possible, merge the next line's wrapped left brace with the current
-      // line. Otherwise, leave it on the next line, as this is a multi-line
-      // control statement.
-      return (Style.ColumnLimit == 0 ||
-              TheLine->Last->TotalLength <= Style.ColumnLimit)
-                 ? 1
-                 : 0;
-    } else if (I[1]->First->is(tok::l_brace) &&
-               TheLine->First->isOneOf(tok::kw_if, tok::kw_else, tok::kw_while,
-                                       tok::kw_for)) {
-      return (Style.BraceWrapping.AfterControlStatement ==
-              FormatStyle::BWACS_Always)
-                 ? tryMergeSimpleBlock(I, E, Limit)
-                 : 0;
-    } else if (I[1]->First->is(tok::l_brace) &&
-               TheLine->First->isOneOf(tok::kw_else, tok::kw_catch) &&
-               Style.BraceWrapping.AfterControlStatement ==
-                   FormatStyle::BWACS_MultiLine) {
-      // This case if different from the upper BWACS_MultiLine processing
-      // in that a preceding r_brace is not on the same line as else/catch
-      // most likely because of BeforeElse/BeforeCatch set to true.
-      // If the line length doesn't fit ColumnLimit, leave l_brace on the
-      // next line to respect the BWACS_MultiLine.
-      return (Style.ColumnLimit == 0 ||
-              TheLine->Last->TotalLength <= Style.ColumnLimit)
-                 ? 1
-                 : 0;
+    if (NextLine.First->is(tok::l_brace)) {
+      if ((TheLine->First->isOneOf(tok::kw_if, tok::kw_else, tok::kw_while,
+                                   tok::kw_for, tok::kw_switch, tok::kw_try,
+                                   tok::kw_do, TT_ForEachMacro) ||
+           (TheLine->First->is(tok::r_brace) && TheLine->First->Next &&
+            TheLine->First->Next->isOneOf(tok::kw_else, tok::kw_catch))) &&
+          Style.BraceWrapping.AfterControlStatement ==
+              FormatStyle::BWACS_MultiLine) {
+        // If possible, merge the next line's wrapped left brace with the
+        // current line. Otherwise, leave it on the next line, as this is a
+        // multi-line control statement.
+        return (Style.ColumnLimit == 0 ||
+                TheLine->Last->TotalLength <= Style.ColumnLimit)
+                   ? 1
+                   : 0;
+      }
+      if (TheLine->First->isOneOf(tok::kw_if, tok::kw_else, tok::kw_while,
+                                  tok::kw_for)) {
+        return (Style.BraceWrapping.AfterControlStatement ==
+                FormatStyle::BWACS_Always)
+                   ? tryMergeSimpleBlock(I, E, Limit)
+                   : 0;
+      }
+      if (TheLine->First->isOneOf(tok::kw_else, tok::kw_catch) &&
+          Style.BraceWrapping.AfterControlStatement ==
+              FormatStyle::BWACS_MultiLine) {
+        // This case if different from the upper BWACS_MultiLine processing
+        // in that a preceding r_brace is not on the same line as else/catch
+        // most likely because of BeforeElse/BeforeCatch set to true.
+        // If the line length doesn't fit ColumnLimit, leave l_brace on the
+        // next line to respect the BWACS_MultiLine.
+        return (Style.ColumnLimit == 0 ||
+                TheLine->Last->TotalLength <= Style.ColumnLimit)
+                   ? 1
+                   : 0;
+      }
     }
     // Don't merge block with left brace wrapped after ObjC special blocks
     if (TheLine->First->is(tok::l_brace) && I != AnnotatedLines.begin() &&
-        I[-1]->First->is(tok::at) && I[-1]->First->Next) {
-      tok::ObjCKeywordKind kwId = I[-1]->First->Next->Tok.getObjCKeywordID();
+        PreviousLine.First->is(tok::at) && PreviousLine.First->Next) {
+      tok::ObjCKeywordKind kwId =
+          PreviousLine.First->Next->Tok.getObjCKeywordID();
       if (kwId == clang::tok::objc_autoreleasepool ||
           kwId == clang::tok::objc_synchronized)
         return 0;
     }
     // Don't merge block with left brace wrapped after case labels
     if (TheLine->First->is(tok::l_brace) && I != AnnotatedLines.begin() &&
-        I[-1]->First->isOneOf(tok::kw_case, tok::kw_default))
+        PreviousLine.First->isOneOf(tok::kw_case, tok::kw_default))
       return 0;
 
     // Don't merge an empty template class or struct if SplitEmptyRecords
     // is defined.
     if (Style.BraceWrapping.SplitEmptyRecord &&
         TheLine->Last->is(tok::l_brace) && I != AnnotatedLines.begin() &&
-        I[-1]->Last) {
-      const FormatToken *Previous = I[-1]->Last;
+        PreviousLine.Last) {
+      const FormatToken *Previous = PreviousLine.Last;
       if (Previous) {
         if (Previous->is(tok::comment))
           Previous = Previous->getPreviousNonComment();
         if (Previous) {
-          if (Previous->is(tok::greater) && !I[-1]->InPPDirective)
+          if (Previous->is(tok::greater) && !PreviousLine.InPPDirective)
             return 0;
           if (Previous->is(tok::identifier)) {
             const FormatToken *PreviousPrevious =
@@ -401,21 +405,21 @@ private:
       }
       if (Tok->isOneOf(tok::kw_class, tok::kw_struct)) {
         ShouldMerge = !Style.BraceWrapping.AfterClass ||
-                      (I[1]->First->is(tok::r_brace) &&
+                      (NextLine.First->is(tok::r_brace) &&
                        !Style.BraceWrapping.SplitEmptyRecord);
       } else if (Tok->is(tok::kw_enum)) {
         ShouldMerge = Style.AllowShortEnumsOnASingleLine;
       } else {
         ShouldMerge = !Style.BraceWrapping.AfterFunction ||
-                      (I[1]->First->is(tok::r_brace) &&
+                      (NextLine.First->is(tok::r_brace) &&
                        !Style.BraceWrapping.SplitEmptyFunction);
       }
       return ShouldMerge ? tryMergeSimpleBlock(I, E, Limit) : 0;
     }
     // Try to merge a function block with left brace wrapped
-    if (I[1]->First->is(TT_FunctionLBrace) &&
+    if (NextLine.First->is(TT_FunctionLBrace) &&
         Style.BraceWrapping.AfterFunction) {
-      if (I[1]->Last->is(TT_LineComment))
+      if (NextLine.Last->is(TT_LineComment))
         return 0;
 
       // Check for Limit <= 2 to account for the " {".
@@ -426,7 +430,7 @@ private:
       unsigned MergedLines = 0;
       if (MergeShortFunctions ||
           (Style.AllowShortFunctionsOnASingleLine >= FormatStyle::SFS_Empty &&
-           I[1]->First == I[1]->Last && I + 2 != E &&
+           NextLine.First == NextLine.Last && I + 2 != E &&
            I[2]->First->is(tok::r_brace))) {
         MergedLines = tryMergeSimpleBlock(I + 1, E, Limit);
         // If we managed to merge the block, count the function header, which is
@@ -1060,9 +1064,9 @@ private:
 
       FormatDecision LastFormat = Node->State.NextToken->getDecision();
       if (LastFormat == FD_Unformatted || LastFormat == FD_Continue)
-        addNextStateToQueue(Penalty, Node, /*NewLine=*/false, Count, Queue);
+        addNextStateToQueue(Penalty, Node, /*NewLine=*/false, &Count, &Queue);
       if (LastFormat == FD_Unformatted || LastFormat == FD_Break)
-        addNextStateToQueue(Penalty, Node, /*NewLine=*/true, Count, Queue);
+        addNextStateToQueue(Penalty, Node, /*NewLine=*/true, &Count, &Queue);
     }
 
     if (Queue.empty()) {
@@ -1088,7 +1092,7 @@ private:
   /// Assume the current state is \p PreviousNode and has been reached with a
   /// penalty of \p Penalty. Insert a line break if \p NewLine is \c true.
   void addNextStateToQueue(unsigned Penalty, StateNode *PreviousNode,
-                           bool NewLine, unsigned &Count, QueueType &Queue) {
+                           bool NewLine, unsigned *Count, QueueType *Queue) {
     if (NewLine && !Indenter->canBreak(PreviousNode->State))
       return;
     if (!NewLine && Indenter->mustBreak(PreviousNode->State))
@@ -1101,8 +1105,8 @@ private:
 
     Penalty += Indenter->addTokenToState(Node->State, NewLine, true);
 
-    Queue.push(QueueItem(OrderedPenalty(Penalty, Count), Node));
-    ++Count;
+    Queue->push(QueueItem(OrderedPenalty(Penalty, *Count), Node));
+    ++(*Count);
   }
 
   /// Applies the best formatting by reconstructing the path in the

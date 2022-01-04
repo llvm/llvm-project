@@ -53,7 +53,7 @@ class PipelinePrinter {
 public:
   PipelinePrinter(Pipeline &Pipe, const CodeRegion &R, unsigned Idx,
                   const MCSubtargetInfo &STI, const PipelineOptions &PO)
-      : P(Pipe), Region(R), RegionIdx(Idx), STI(STI), PO(PO) {}
+      : P(Pipe), Region(R), RegionIdx(Idx), STI(STI), PO(PO), Views() {}
 
   void addView(std::unique_ptr<View> V) {
     P.addEventListener(V.get());

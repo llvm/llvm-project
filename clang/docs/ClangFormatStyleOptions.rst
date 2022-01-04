@@ -3198,6 +3198,9 @@ the configuration (without a prefix: ``Auto``).
 **PenaltyBreakTemplateDeclaration** (``Unsigned``) :versionbadge:`clang-format 7`
   The penalty for breaking after template declaration.
 
+**PenaltyBreakOpenParenthesis** (``Unsigned``) :versionbadge:`clang-format 14`
+  The penalty for breaking after ``(``.
+
 **PenaltyExcessCharacter** (``Unsigned``) :versionbadge:`clang-format 3.7`
   The penalty for each character outside of the column limit.
 
@@ -3398,6 +3401,65 @@ the configuration (without a prefix: ``Auto``).
      // information
      /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
       * information */
+
+**SeparateDefinitionBlocks** (``SeparateDefinitionStyle``) :versionbadge:`clang-format 14`
+  Specifies the use of empty lines to separate definition blocks, including classes,
+  structs, enums, and functions.
+
+  Possible values:
+
+  * ``SDS_Leave`` (in configuration: ``Leave``)
+    Leave definition blocks as they are.
+
+  * ``SDS_Always`` (in configuration: ``Always``)
+    Insert an empty line between definition blocks.
+
+  * ``SDS_Never`` (in configuration: ``Never``)
+    Remove any empty line between definition blocks.
+
+  .. code-block:: c++
+
+     Never                  v.s.     Always
+     #include <cstring>              #include <cstring>
+     struct Foo {
+       int a, b, c;                  struct Foo {
+     };                                int a, b, c;
+     namespace Ns {                  };
+     class Bar {
+     public:                         namespace Ns {
+       struct Foobar {               class Bar {
+         int a;                      public:
+         int b;                        struct Foobar {
+       };                                int a;
+     private:                            int b;
+       int t;                          };
+       int method1() {
+         // ...                      private:
+       }                               int t;
+       enum List {
+         ITEM1,                        int method1() {
+         ITEM2                           // ...
+       };                              }
+       template<typename T>
+       int method2(T x) {              enum List {
+         // ...                          ITEM1,
+       }                                 ITEM2
+       int i, j, k;                    };
+       int method3(int par) {
+         // ...                        template<typename T>
+       }                               int method2(T x) {
+     };                                  // ...
+     class C {};                       }
+     }
+                                       int i, j, k;
+
+                                       int method3(int par) {
+                                         // ...
+                                       }
+                                     };
+
+                                     class C {};
+                                     }
 
 **ShortNamespaceLines** (``Unsigned``) :versionbadge:`clang-format 14`
   The maximal number of unwrapped lines that a short namespace spans.

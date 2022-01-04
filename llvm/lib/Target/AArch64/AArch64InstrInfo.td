@@ -33,6 +33,8 @@ def HasV9_1a         : Predicate<"Subtarget->hasV9_1aOps()">,
                                  AssemblerPredicate<(all_of HasV9_1aOps), "armv9.1a">;
 def HasV9_2a         : Predicate<"Subtarget->hasV9_2aOps()">,
                                  AssemblerPredicate<(all_of HasV9_2aOps), "armv9.2a">;
+def HasV9_3a         : Predicate<"Subtarget->hasV9_3aOps()">,
+                                 AssemblerPredicate<(all_of HasV9_3aOps), "armv9.3a">;
 def HasV8_0r         : Predicate<"Subtarget->hasV8_0rOps()">,
                                  AssemblerPredicate<(all_of HasV8_0rOps), "armv8-r">;
 
@@ -198,6 +200,8 @@ def HasBRBE          : Predicate<"Subtarget->hasBRBE()">,
                        AssemblerPredicate<(all_of FeatureBRBE), "brbe">;
 def HasSPE_EEF       : Predicate<"Subtarget->hasSPE_EEF()">,
                        AssemblerPredicate<(all_of FeatureSPE_EEF), "spe-eef">;
+def HasHBC            : Predicate<"Subtarget->hasHBC()">,
+                       AssemblerPredicate<(all_of FeatureHBC), "hbc">;
 def IsLE             : Predicate<"Subtarget->isLittleEndian()">;
 def IsBE             : Predicate<"!Subtarget->isLittleEndian()">;
 def IsWindows        : Predicate<"Subtarget->isTargetWindows()">;
@@ -2362,7 +2366,12 @@ def : Pat<(AArch64tlsdesc_callseq texternalsym:$sym),
 //===----------------------------------------------------------------------===//
 // Conditional branch (immediate) instruction.
 //===----------------------------------------------------------------------===//
-def Bcc : BranchCond;
+def Bcc : BranchCond<0, "b">;
+
+// Armv8.8-A variant form which hints to the branch predictor that
+// this branch is very likely to go the same way nearly all the time
+// (even though it is not known at compile time _which_ way that is).
+def BCcc : BranchCond<1, "bc">, Requires<[HasHBC]>;
 
 //===----------------------------------------------------------------------===//
 // Compare-and-branch instructions.

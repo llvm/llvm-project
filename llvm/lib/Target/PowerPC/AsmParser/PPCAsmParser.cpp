@@ -201,10 +201,9 @@ struct PPCOperand : public MCParsedAsmOperand {
     struct TLSRegOp TLSReg;
   };
 
-  PPCOperand(KindTy K) : Kind(K) {}
-
+  PPCOperand(KindTy K) : MCParsedAsmOperand(), Kind(K) {}
 public:
-  PPCOperand(const PPCOperand &o) {
+  PPCOperand(const PPCOperand &o) : MCParsedAsmOperand() {
     Kind = o.Kind;
     StartLoc = o.StartLoc;
     EndLoc = o.EndLoc;
