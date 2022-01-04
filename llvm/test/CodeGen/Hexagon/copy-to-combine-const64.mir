@@ -1,0 +1,29 @@
+# RUN: llc -march=hexagon -run-pass hexagon-copy-combine -o - %s -disable-const64=0 | FileCheck --check-prefix CHECK64 %s
+# RUN: llc -march=hexagon -run-pass hexagon-copy-combine -o - %s -disable-const64=1 | FileCheck --check-prefix CHECKNO64 %s
+
+# CHECK64: CONST64
+# CHECKNO64-NOT: CONST64
+
+--- |
+  define void @f0() optsize {
+  entry:
+    call void @f1(i32 32768, i32 32768, i8 zeroext 1)
+    ret void
+  }
+
+  declare void @f1(i32, i32, i8 zeroext)
+...
+
+name: f0
+tracksRegLiveness: true
+stack:
+  - { id: 0, offset: 0, size: 4, alignment: 8 }
+body: |
+  bb.0:
+    $r29 = S2_allocframe $r29, 0, implicit-def $r30, implicit $framekey, implicit $framelimit, implicit $r30, implicit $r31 :: (store (s32) into stack)
+    $r0 = A2_tfrsi 32768
+    $r1 = A2_tfrsi 32768
+    $r2 = A2_tfrsi 1
+    J2_call @f1, hexagoncsr, implicit-def dead $pc, implicit-def dead $r31, implicit $r29, implicit killed $r0, implicit killed $r1, implicit killed $r2, implicit-def $r29
+    $d15 = L4_return $r30, implicit-def $pc, implicit-def $r29, implicit $framekey, implicit-def dead $pc
+...

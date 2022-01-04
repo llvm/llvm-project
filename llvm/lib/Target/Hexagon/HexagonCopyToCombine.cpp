@@ -70,9 +70,7 @@ class HexagonCopyToCombine : public MachineFunctionPass  {
 public:
   static char ID;
 
-  HexagonCopyToCombine() : MachineFunctionPass(ID) {
-    initializeHexagonCopyToCombinePass(*PassRegistry::getPassRegistry());
-  }
+  HexagonCopyToCombine() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     MachineFunctionPass::getAnalysisUsage(AU);
