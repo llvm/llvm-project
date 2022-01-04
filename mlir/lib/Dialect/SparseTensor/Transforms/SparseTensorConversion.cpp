@@ -260,21 +260,7 @@ static Value genIndexAndValueForDense(ConversionPatternRewriter &rewriter,
 static void genAddEltCall(ConversionPatternRewriter &rewriter, Operation *op,
                           Type eltType, Value ptr, Value val, Value ind,
                           Value perm) {
-  StringRef name;
-  if (eltType.isF64())
-    name = "addEltF64";
-  else if (eltType.isF32())
-    name = "addEltF32";
-  else if (eltType.isInteger(64))
-    name = "addEltI64";
-  else if (eltType.isInteger(32))
-    name = "addEltI32";
-  else if (eltType.isInteger(16))
-    name = "addEltI16";
-  else if (eltType.isInteger(8))
-    name = "addEltI8";
-  else
-    llvm_unreachable("Unknown element type");
+  SmallString<9> name{"addElt", primaryTypeFunctionSuffix(eltType)};
   SmallVector<Value, 4> params{ptr, val, ind, perm};
   Type pTp = getOpaquePointerType(rewriter);
   createFuncCall(rewriter, op, name, pTp, params, EmitCInterface::On);
@@ -287,21 +273,7 @@ static void genAddEltCall(ConversionPatternRewriter &rewriter, Operation *op,
 static Value genGetNextCall(ConversionPatternRewriter &rewriter, Operation *op,
                             Value iter, Value ind, Value elemPtr) {
   Type elemTp = elemPtr.getType().cast<ShapedType>().getElementType();
-  StringRef name;
-  if (elemTp.isF64())
-    name = "getNextF64";
-  else if (elemTp.isF32())
-    name = "getNextF32";
-  else if (elemTp.isInteger(64))
-    name = "getNextI64";
-  else if (elemTp.isInteger(32))
-    name = "getNextI32";
-  else if (elemTp.isInteger(16))
-    name = "getNextI16";
-  else if (elemTp.isInteger(8))
-    name = "getNextI8";
-  else
-    llvm_unreachable("Unknown element type");
+  SmallString<10> name{"getNext", primaryTypeFunctionSuffix(elemTp)};
   SmallVector<Value, 3> params{iter, ind, elemPtr};
   Type i1 = rewriter.getI1Type();
   return createFuncCall(rewriter, op, name, i1, params, EmitCInterface::On)
@@ -668,20 +640,8 @@ public:
   matchAndRewrite(ToPointersOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Type resType = op.getType();
-    Type eltType = resType.cast<ShapedType>().getElementType();
-    StringRef name;
-    if (eltType.isIndex())
-      name = "sparsePointers";
-    else if (eltType.isInteger(64))
-      name = "sparsePointers64";
-    else if (eltType.isInteger(32))
-      name = "sparsePointers32";
-    else if (eltType.isInteger(16))
-      name = "sparsePointers16";
-    else if (eltType.isInteger(8))
-      name = "sparsePointers8";
-    else
-      return failure();
+    Type ptrType = resType.cast<ShapedType>().getElementType();
+    SmallString<16> name{"sparsePointers", overheadTypeFunctionSuffix(ptrType)};
     replaceOpWithFuncCall(rewriter, op, name, resType, adaptor.getOperands(),
                           EmitCInterface::On);
     return success();
@@ -696,20 +656,8 @@ public:
   matchAndRewrite(ToIndicesOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Type resType = op.getType();
-    Type eltType = resType.cast<ShapedType>().getElementType();
-    StringRef name;
-    if (eltType.isIndex())
-      name = "sparseIndices";
-    else if (eltType.isInteger(64))
-      name = "sparseIndices64";
-    else if (eltType.isInteger(32))
-      name = "sparseIndices32";
-    else if (eltType.isInteger(16))
-      name = "sparseIndices16";
-    else if (eltType.isInteger(8))
-      name = "sparseIndices8";
-    else
-      return failure();
+    Type indType = resType.cast<ShapedType>().getElementType();
+    SmallString<15> name{"sparseIndices", overheadTypeFunctionSuffix(indType)};
     replaceOpWithFuncCall(rewriter, op, name, resType, adaptor.getOperands(),
                           EmitCInterface::On);
     return success();
@@ -725,21 +673,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     Type resType = op.getType();
     Type eltType = resType.cast<ShapedType>().getElementType();
-    StringRef name;
-    if (eltType.isF64())
-      name = "sparseValuesF64";
-    else if (eltType.isF32())
-      name = "sparseValuesF32";
-    else if (eltType.isInteger(64))
-      name = "sparseValuesI64";
-    else if (eltType.isInteger(32))
-      name = "sparseValuesI32";
-    else if (eltType.isInteger(16))
-      name = "sparseValuesI16";
-    else if (eltType.isInteger(8))
-      name = "sparseValuesI8";
-    else
-      return failure();
+    SmallString<15> name{"sparseValues", primaryTypeFunctionSuffix(eltType)};
     replaceOpWithFuncCall(rewriter, op, name, resType, adaptor.getOperands(),
                           EmitCInterface::On);
     return success();
@@ -772,23 +706,8 @@ public:
   LogicalResult
   matchAndRewrite(LexInsertOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    Type srcType = op.tensor().getType();
-    Type eltType = srcType.cast<ShapedType>().getElementType();
-    StringRef name;
-    if (eltType.isF64())
-      name = "lexInsertF64";
-    else if (eltType.isF32())
-      name = "lexInsertF32";
-    else if (eltType.isInteger(64))
-      name = "lexInsertI64";
-    else if (eltType.isInteger(32))
-      name = "lexInsertI32";
-    else if (eltType.isInteger(16))
-      name = "lexInsertI16";
-    else if (eltType.isInteger(8))
-      name = "lexInsertI8";
-    else
-      llvm_unreachable("Unknown element type");
+    Type elemTp = op.tensor().getType().cast<ShapedType>().getElementType();
+    SmallString<12> name{"lexInsert", primaryTypeFunctionSuffix(elemTp)};
     TypeRange noTp;
     replaceOpWithFuncCall(rewriter, op, name, noTp, adaptor.getOperands(),
                           EmitCInterface::On);
@@ -843,23 +762,8 @@ public:
     // all-zero/false by only iterating over the set elements, so the
     // complexity remains proportional to the sparsity of the expanded
     // access pattern.
-    Type srcType = op.tensor().getType();
-    Type eltType = srcType.cast<ShapedType>().getElementType();
-    StringRef name;
-    if (eltType.isF64())
-      name = "expInsertF64";
-    else if (eltType.isF32())
-      name = "expInsertF32";
-    else if (eltType.isInteger(64))
-      name = "expInsertI64";
-    else if (eltType.isInteger(32))
-      name = "expInsertI32";
-    else if (eltType.isInteger(16))
-      name = "expInsertI16";
-    else if (eltType.isInteger(8))
-      name = "expInsertI8";
-    else
-      return failure();
+    Type elemTp = op.tensor().getType().cast<ShapedType>().getElementType();
+    SmallString<12> name{"expInsert", primaryTypeFunctionSuffix(elemTp)};
     TypeRange noTp;
     replaceOpWithFuncCall(rewriter, op, name, noTp, adaptor.getOperands(),
                           EmitCInterface::On);

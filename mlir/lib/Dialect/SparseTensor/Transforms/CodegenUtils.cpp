@@ -34,6 +34,14 @@ OverheadType mlir::sparse_tensor::overheadTypeEncoding(unsigned width) {
   llvm_unreachable("Unsupported overhead bitwidth");
 }
 
+OverheadType mlir::sparse_tensor::overheadTypeEncoding(Type tp) {
+  if (tp.isIndex())
+    return OverheadType::kIndex;
+  if (auto intTp = tp.dyn_cast<IntegerType>())
+    return overheadTypeEncoding(intTp.getWidth());
+  llvm_unreachable("Unknown overhead type");
+}
+
 Type mlir::sparse_tensor::getOverheadType(Builder &builder, OverheadType ot) {
   switch (ot) {
   case OverheadType::kIndex:
@@ -61,6 +69,26 @@ Type mlir::sparse_tensor::getIndexOverheadType(
   return getOverheadType(builder, overheadTypeEncoding(enc.getIndexBitWidth()));
 }
 
+StringRef mlir::sparse_tensor::overheadTypeFunctionSuffix(OverheadType ot) {
+  switch (ot) {
+  case OverheadType::kIndex:
+    return "";
+  case OverheadType::kU64:
+    return "64";
+  case OverheadType::kU32:
+    return "32";
+  case OverheadType::kU16:
+    return "16";
+  case OverheadType::kU8:
+    return "8";
+  }
+  llvm_unreachable("Unknown OverheadType");
+}
+
+StringRef mlir::sparse_tensor::overheadTypeFunctionSuffix(Type tp) {
+  return overheadTypeFunctionSuffix(overheadTypeEncoding(tp));
+}
+
 PrimaryType mlir::sparse_tensor::primaryTypeEncoding(Type elemTp) {
   if (elemTp.isF64())
     return PrimaryType::kF64;
@@ -75,6 +103,28 @@ PrimaryType mlir::sparse_tensor::primaryTypeEncoding(Type elemTp) {
   if (elemTp.isInteger(8))
     return PrimaryType::kI8;
   llvm_unreachable("Unknown primary type");
+}
+
+StringRef mlir::sparse_tensor::primaryTypeFunctionSuffix(PrimaryType pt) {
+  switch (pt) {
+  case PrimaryType::kF64:
+    return "F64";
+  case PrimaryType::kF32:
+    return "F32";
+  case PrimaryType::kI64:
+    return "I64";
+  case PrimaryType::kI32:
+    return "I32";
+  case PrimaryType::kI16:
+    return "I16";
+  case PrimaryType::kI8:
+    return "I8";
+  }
+  llvm_unreachable("Unknown PrimaryType");
+}
+
+StringRef mlir::sparse_tensor::primaryTypeFunctionSuffix(Type elemTp) {
+  return primaryTypeFunctionSuffix(primaryTypeEncoding(elemTp));
 }
 
 DimLevelType mlir::sparse_tensor::dimLevelTypeEncoding(
