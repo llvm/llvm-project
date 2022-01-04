@@ -69,9 +69,10 @@ public:
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
     __wrap_iter& operator=(const __wrap_iter& __x)
     {
-        if (this != _VSTD::addressof(__x) && !__libcpp_is_constant_evaluated())
+        if (this != _VSTD::addressof(__x))
         {
-            __get_db()->__iterator_copy(this, _VSTD::addressof(__x));
+            if (!__libcpp_is_constant_evaluated())
+                __get_db()->__iterator_copy(this, _VSTD::addressof(__x));
             __i = __x.__i;
         }
         return *this;
