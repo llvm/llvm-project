@@ -935,7 +935,7 @@ SSANameState::SSANameState(
 void SSANameState::printValueID(Value value, bool printResultNo,
                                 raw_ostream &stream) const {
   if (!value) {
-    stream << "<<NULL>>";
+    stream << "<<NULL VALUE>>";
     return;
   }
 
@@ -2826,6 +2826,11 @@ void IntegerSet::print(raw_ostream &os) const {
 }
 
 void Value::print(raw_ostream &os) {
+  if (!impl) {
+    os << "<<NULL VALUE>>";
+    return;
+  }
+
   if (auto *op = getDefiningOp())
     return op->print(os);
   // TODO: Improve BlockArgument print'ing.
@@ -2834,6 +2839,11 @@ void Value::print(raw_ostream &os) {
      << "' at index: " << arg.getArgNumber();
 }
 void Value::print(raw_ostream &os, AsmState &state) {
+  if (!impl) {
+    os << "<<NULL VALUE>>";
+    return;
+  }
+
   if (auto *op = getDefiningOp())
     return op->print(os, state);
 
