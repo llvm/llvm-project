@@ -1770,12 +1770,24 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
 
       // Force parsing of the CUs to extract the SDK info.
       XcodeSDK sdk;
+      bool found_public_sdk = false;
+      bool found_internal_sdk = false;
       if (SymbolFile *sym_file = module.GetSymbolFile())
-        for (unsigned i = 0; i < sym_file->GetNumCompileUnits(); ++i) {
+        for (unsigned i = 0; i < sym_file->GetNumCompileUnits(); ++i)
           if (auto cu_sp = sym_file->GetCompileUnitAtIndex(i))
-            if (cu_sp->GetLanguage() == lldb::eLanguageTypeSwift)
-              sdk.Merge(sym_file->ParseXcodeSDK(*cu_sp));
-        }
+            if (cu_sp->GetLanguage() == lldb::eLanguageTypeSwift) {
+              auto cu_sdk = sym_file->ParseXcodeSDK(*cu_sp);
+              sdk.Merge(cu_sdk);
+              bool is_internal_sdk = cu_sdk.IsAppleInternalSDK();
+              found_public_sdk |= !is_internal_sdk;
+              found_internal_sdk |= is_internal_sdk;
+            }
+
+      if (found_public_sdk && found_internal_sdk)
+        HEALTH_LOG_PRINTF("Unsupported mixing of public and internal SDKs in "
+                          "'%s'. Mixed use of SDKs indicates use of different "
+                          "toolchains, which is not supported.",
+                          module.GetFileSpec().GetFilename().GetCString());
 
       std::string sdk_path = HostInfo::GetXcodeSDKPath(sdk).str();
       LOG_PRINTF(LIBLLDB_LOG_TYPES, "Host SDK path for sdk %s is %s.",
