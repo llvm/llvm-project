@@ -511,6 +511,57 @@ void PyMlirContext::contextExit(const pybind11::object &excType,
   PyThreadContextEntry::popContext(*this);
 }
 
+py::object PyMlirContext::attachDiagnosticHandler(py::object callback) {
+  // Note that ownership is transferred to the delete callback below by way of
+  // an explicit inc_ref (borrow).
+  PyDiagnosticHandler *pyHandler =
+      new PyDiagnosticHandler(get(), std::move(callback));
+  py::object pyHandlerObject =
+      py::cast(pyHandler, py::return_value_policy::take_ownership);
+  pyHandlerObject.inc_ref();
+
+  // In these C callbacks, the userData is a PyDiagnosticHandler* that is
+  // guaranteed to be known to pybind.
+  auto handlerCallback =
+      +[](MlirDiagnostic diagnostic, void *userData) -> MlirLogicalResult {
+    PyDiagnostic *pyDiagnostic = new PyDiagnostic(diagnostic);
+    py::object pyDiagnosticObject =
+        py::cast(pyDiagnostic, py::return_value_policy::take_ownership);
+
+    auto *pyHandler = static_cast<PyDiagnosticHandler *>(userData);
+    bool result = false;
+    {
+      // Since this can be called from arbitrary C++ contexts, always get the
+      // gil.
+      py::gil_scoped_acquire gil;
+      try {
+        result = py::cast<bool>(pyHandler->callback(pyDiagnostic));
+      } catch (std::exception &e) {
+        fprintf(stderr, "MLIR Python Diagnostic handler raised exception: %s\n",
+                e.what());
+        pyHandler->hadError = true;
+      }
+    }
+
+    pyDiagnostic->invalidate();
+    return result ? mlirLogicalResultSuccess() : mlirLogicalResultFailure();
+  };
+  auto deleteCallback = +[](void *userData) {
+    auto *pyHandler = static_cast<PyDiagnosticHandler *>(userData);
+    assert(pyHandler->registeredID && "handler is not registered");
+    pyHandler->registeredID.reset();
+
+    // Decrement reference, balancing the inc_ref() above.
+    py::object pyHandlerObject =
+        py::cast(pyHandler, py::return_value_policy::reference);
+    pyHandlerObject.dec_ref();
+  };
+
+  pyHandler->registeredID = mlirContextAttachDiagnosticHandler(
+      get(), handlerCallback, static_cast<void *>(pyHandler), deleteCallback);
+  return pyHandlerObject;
+}
+
 PyMlirContext &DefaultingPyMlirContext::resolve() {
   PyMlirContext *context = PyThreadContextEntry::getDefaultContext();
   if (!context) {
@@ -654,6 +705,78 @@ void PyThreadContextEntry::popLocation(PyLocation &location) {
   if (tos.frameKind != FrameKind::Location && tos.getLocation() != &location)
     throw SetPyError(PyExc_RuntimeError, "Unbalanced Location enter/exit");
   stack.pop_back();
+}
+
+//------------------------------------------------------------------------------
+// PyDiagnostic*
+//------------------------------------------------------------------------------
+
+void PyDiagnostic::invalidate() {
+  valid = false;
+  if (materializedNotes) {
+    for (auto &noteObject : *materializedNotes) {
+      PyDiagnostic *note = py::cast<PyDiagnostic *>(noteObject);
+      note->invalidate();
+    }
+  }
+}
+
+PyDiagnosticHandler::PyDiagnosticHandler(MlirContext context,
+                                         py::object callback)
+    : context(context), callback(std::move(callback)) {}
+
+PyDiagnosticHandler::~PyDiagnosticHandler() {}
+
+void PyDiagnosticHandler::detach() {
+  if (!registeredID)
+    return;
+  MlirDiagnosticHandlerID localID = *registeredID;
+  mlirContextDetachDiagnosticHandler(context, localID);
+  assert(!registeredID && "should have unregistered");
+  // Not strictly necessary but keeps stale pointers from being around to cause
+  // issues.
+  context = {nullptr};
+}
+
+void PyDiagnostic::checkValid() {
+  if (!valid) {
+    throw std::invalid_argument(
+        "Diagnostic is invalid (used outside of callback)");
+  }
+}
+
+MlirDiagnosticSeverity PyDiagnostic::getSeverity() {
+  checkValid();
+  return mlirDiagnosticGetSeverity(diagnostic);
+}
+
+PyLocation PyDiagnostic::getLocation() {
+  checkValid();
+  MlirLocation loc = mlirDiagnosticGetLocation(diagnostic);
+  MlirContext context = mlirLocationGetContext(loc);
+  return PyLocation(PyMlirContext::forContext(context), loc);
+}
+
+py::str PyDiagnostic::getMessage() {
+  checkValid();
+  py::object fileObject = py::module::import("io").attr("StringIO")();
+  PyFileAccumulator accum(fileObject, /*binary=*/false);
+  mlirDiagnosticPrint(diagnostic, accum.getCallback(), accum.getUserData());
+  return fileObject.attr("getvalue")();
+}
+
+py::tuple PyDiagnostic::getNotes() {
+  checkValid();
+  if (materializedNotes)
+    return *materializedNotes;
+  intptr_t numNotes = mlirDiagnosticGetNumNotes(diagnostic);
+  materializedNotes = py::tuple(numNotes);
+  for (intptr_t i = 0; i < numNotes; ++i) {
+    MlirDiagnostic noteDiag = mlirDiagnosticGetNote(diagnostic, i);
+    py::object pyNoteDiag = py::cast(PyDiagnostic(noteDiag));
+    PyTuple_SET_ITEM(materializedNotes->ptr(), i, pyNoteDiag.ptr());
+  }
+  return *materializedNotes;
 }
 
 //------------------------------------------------------------------------------
@@ -2025,6 +2148,36 @@ private:
 
 void mlir::python::populateIRCore(py::module &m) {
   //----------------------------------------------------------------------------
+  // Enums.
+  //----------------------------------------------------------------------------
+  py::enum_<MlirDiagnosticSeverity>(m, "DiagnosticSeverity", py::module_local())
+      .value("ERROR", MlirDiagnosticError)
+      .value("WARNING", MlirDiagnosticWarning)
+      .value("NOTE", MlirDiagnosticNote)
+      .value("REMARK", MlirDiagnosticRemark);
+
+  //----------------------------------------------------------------------------
+  // Mapping of Diagnostics.
+  //----------------------------------------------------------------------------
+  py::class_<PyDiagnostic>(m, "Diagnostic", py::module_local())
+      .def_property_readonly("severity", &PyDiagnostic::getSeverity)
+      .def_property_readonly("location", &PyDiagnostic::getLocation)
+      .def_property_readonly("message", &PyDiagnostic::getMessage)
+      .def_property_readonly("notes", &PyDiagnostic::getNotes)
+      .def("__str__", [](PyDiagnostic &self) -> py::str {
+        if (!self.isValid())
+          return "<Invalid Diagnostic>";
+        return self.getMessage();
+      });
+
+  py::class_<PyDiagnosticHandler>(m, "DiagnosticHandler", py::module_local())
+      .def("detach", &PyDiagnosticHandler::detach)
+      .def_property_readonly("attached", &PyDiagnosticHandler::isAttached)
+      .def_property_readonly("had_error", &PyDiagnosticHandler::getHadError)
+      .def("__enter__", &PyDiagnosticHandler::contextEnter)
+      .def("__exit__", &PyDiagnosticHandler::contextExit);
+
+  //----------------------------------------------------------------------------
   // Mapping of MlirContext.
   //----------------------------------------------------------------------------
   py::class_<PyMlirContext>(m, "Context", py::module_local())
@@ -2079,6 +2232,9 @@ void mlir::python::populateIRCore(py::module &m) {
           [](PyMlirContext &self, bool value) {
             mlirContextSetAllowUnregisteredDialects(self.get(), value);
           })
+      .def("attach_diagnostic_handler", &PyMlirContext::attachDiagnosticHandler,
+           py::arg("callback"),
+           "Attaches a diagnostic handler that will receive callbacks")
       .def(
           "enable_multithreading",
           [](PyMlirContext &self, bool enable) {
@@ -2204,7 +2360,8 @@ void mlir::python::populateIRCore(py::module &m) {
           py::arg("context") = py::none(), kContextGetFileLocationDocstring)
       .def_static(
           "fused",
-          [](const std::vector<PyLocation> &pyLocations, llvm::Optional<PyAttribute> metadata,
+          [](const std::vector<PyLocation> &pyLocations,
+             llvm::Optional<PyAttribute> metadata,
              DefaultingPyMlirContext context) {
             if (pyLocations.empty())
               throw py::value_error("No locations provided");
@@ -2236,6 +2393,12 @@ void mlir::python::populateIRCore(py::module &m) {
           "context",
           [](PyLocation &self) { return self.getContext().getObject(); },
           "Context that owns the Location")
+      .def(
+          "emit_error",
+          [](PyLocation &self, std::string message) {
+            mlirEmitError(self, message.c_str());
+          },
+          py::arg("message"), "Emits an error at this location")
       .def("__repr__", [](PyLocation &self) {
         PyPrintAccumulator printAccum;
         mlirLocationPrint(self, printAccum.getCallback(),
