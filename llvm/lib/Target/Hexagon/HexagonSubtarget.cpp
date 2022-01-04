@@ -477,19 +477,35 @@ void HexagonSubtarget::adjustSchedDependency(SUnit *Src, int SrcOpIdx,
 
   // If it's a REG_SEQUENCE/COPY, use its destination instruction to determine
   // the correct latency.
-  if ((DstInst->isRegSequence() || DstInst->isCopy()) && Dst->NumSuccs == 1) {
+  // If there are multiple uses of the def of COPY/REG_SEQUENCE, set the latency
+  // only if the latencies on all the uses are equal, otherwise set it to
+  // default.
+  if ((DstInst->isRegSequence() || DstInst->isCopy())) {
     Register DReg = DstInst->getOperand(0).getReg();
-    MachineInstr *DDst = Dst->Succs[0].getSUnit()->getInstr();
-    unsigned UseIdx = -1;
-    for (unsigned OpNum = 0; OpNum < DDst->getNumOperands(); OpNum++) {
-      const MachineOperand &MO = DDst->getOperand(OpNum);
-      if (MO.isReg() && MO.getReg() && MO.isUse() && MO.getReg() == DReg) {
-        UseIdx = OpNum;
+    int DLatency = -1;
+    for (const auto &DDep : Dst->Succs) {
+      MachineInstr *DDst = DDep.getSUnit()->getInstr();
+      unsigned UseIdx = -1;
+      for (unsigned OpNum = 0; OpNum < DDst->getNumOperands(); OpNum++) {
+        const MachineOperand &MO = DDst->getOperand(OpNum);
+        if (MO.isReg() && MO.getReg() && MO.isUse() && MO.getReg() == DReg) {
+          UseIdx = OpNum;
+          break;
+        }
+      }
+      int Latency = (InstrInfo.getOperandLatency(&InstrItins, *SrcInst, 0,
+                                                 *DDst, UseIdx));
+      // Set DLatency for the first time.
+      DLatency = (DLatency == -1) ? Latency : DLatency;
+
+      // For multiple uses, if the Latency is different across uses, reset
+      // DLatency.
+      if (DLatency != Latency) {
+        DLatency = -1;
         break;
       }
     }
-    int DLatency = (InstrInfo.getOperandLatency(&InstrItins, *SrcInst,
-                                                0, *DDst, UseIdx));
+
     DLatency = std::max(DLatency, 0);
     Dep.setLatency((unsigned)DLatency);
   }
