@@ -392,16 +392,22 @@ SDValue AVRTargetLowering::LowerShifts(SDValue Op, SelectionDAG &DAG) const {
         Victim = DAG.getNode(AVRISD::LSLWN, dl, VT, Victim,
                              DAG.getConstant(8, dl, VT));
         ShiftAmount -= 8;
+        // Only operate on the higher byte for remaining shift bits.
+        Opc8 = AVRISD::LSLHI;
         break;
       case ISD::SRL:
         Victim = DAG.getNode(AVRISD::LSRWN, dl, VT, Victim,
                              DAG.getConstant(8, dl, VT));
         ShiftAmount -= 8;
+        // Only operate on the lower byte for remaining shift bits.
+        Opc8 = AVRISD::LSRLO;
         break;
       case ISD::SRA:
         Victim = DAG.getNode(AVRISD::ASRWN, dl, VT, Victim,
                              DAG.getConstant(8, dl, VT));
         ShiftAmount -= 8;
+        // Only operate on the lower byte for remaining shift bits.
+        Opc8 = AVRISD::ASRLO;
         break;
       default:
         break;
@@ -412,11 +418,22 @@ SDValue AVRTargetLowering::LowerShifts(SDValue Op, SelectionDAG &DAG) const {
         Victim = DAG.getNode(AVRISD::LSLWN, dl, VT, Victim,
                              DAG.getConstant(12, dl, VT));
         ShiftAmount -= 12;
+        // Only operate on the higher byte for remaining shift bits.
+        Opc8 = AVRISD::LSLHI;
         break;
       case ISD::SRL:
         Victim = DAG.getNode(AVRISD::LSRWN, dl, VT, Victim,
                              DAG.getConstant(12, dl, VT));
         ShiftAmount -= 12;
+        // Only operate on the lower byte for remaining shift bits.
+        Opc8 = AVRISD::LSRLO;
+        break;
+      case ISD::SRA:
+        Victim = DAG.getNode(AVRISD::ASRWN, dl, VT, Victim,
+                             DAG.getConstant(8, dl, VT));
+        ShiftAmount -= 8;
+        // Only operate on the lower byte for remaining shift bits.
+        Opc8 = AVRISD::ASRLO;
         break;
       default:
         break;

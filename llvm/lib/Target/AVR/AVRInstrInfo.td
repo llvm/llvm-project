@@ -60,6 +60,9 @@ def AVRlsr : SDNode<"AVRISD::LSR", SDTIntUnaryOp>;
 def AVRrol : SDNode<"AVRISD::ROL", SDTIntUnaryOp>;
 def AVRror : SDNode<"AVRISD::ROR", SDTIntUnaryOp>;
 def AVRasr : SDNode<"AVRISD::ASR", SDTIntUnaryOp>;
+def AVRlslhi : SDNode<"AVRISD::LSLHI", SDTIntUnaryOp>;
+def AVRlsrlo : SDNode<"AVRISD::LSRLO", SDTIntUnaryOp>;
+def AVRasrlo : SDNode<"AVRISD::ASRLO", SDTIntUnaryOp>;
 def AVRlslbn : SDNode<"AVRISD::LSLBN", SDTIntBinOp>;
 def AVRlsrbn : SDNode<"AVRISD::LSRBN", SDTIntBinOp>;
 def AVRasrbn : SDNode<"AVRISD::ASRBN", SDTIntBinOp>;
@@ -1848,6 +1851,9 @@ let Constraints = "$src = $rd", Defs = [SREG] in {
                                 : $src)),
                        (implicit SREG)]>;
 
+  def LSLWHiRd : Pseudo<(outs DREGS:$rd), (ins DREGS:$src), "lslwhi\t$rd",
+                        [(set i16:$rd, (AVRlslhi i16:$src)), (implicit SREG)]>;
+
   def LSLWNRd : Pseudo<(outs DLDREGS
                         : $rd),
                        (ins DREGS
@@ -1894,6 +1900,9 @@ let Constraints = "$src = $rd", Defs = [SREG] in {
                         : $rd, (AVRlsr i16
                                 : $src)),
                        (implicit SREG)]>;
+
+  def LSRWLoRd : Pseudo<(outs DREGS:$rd), (ins DREGS:$src), "lsrwlo\t$rd",
+                        [(set i16:$rd, (AVRlsrlo i16:$src)), (implicit SREG)]>;
 
   def LSRWNRd : Pseudo<(outs DLDREGS
                         : $rd),
@@ -1967,6 +1976,9 @@ let Constraints = "$src = $rd", Defs = [SREG] in {
                         : $rd, (AVRasr i16
                                 : $src)),
                        (implicit SREG)]>;
+
+  def ASRWLoRd : Pseudo<(outs DREGS:$rd), (ins DREGS:$src), "asrwlo\t$rd",
+                        [(set i16:$rd, (AVRasrlo i16:$src)), (implicit SREG)]>;
 
   def ROLBRd : Pseudo<(outs GPR8
                        : $rd),

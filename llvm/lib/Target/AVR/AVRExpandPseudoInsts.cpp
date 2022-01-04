@@ -1412,6 +1412,30 @@ bool AVRExpandPseudo::expand<AVR::LSLWRd>(Block &MBB, BlockIt MBBI) {
   return true;
 }
 
+template <>
+bool AVRExpandPseudo::expand<AVR::LSLWHiRd>(Block &MBB, BlockIt MBBI) {
+  MachineInstr &MI = *MBBI;
+  Register DstLoReg, DstHiReg;
+  Register DstReg = MI.getOperand(0).getReg();
+  bool DstIsDead = MI.getOperand(0).isDead();
+  bool DstIsKill = MI.getOperand(1).isKill();
+  bool ImpIsDead = MI.getOperand(2).isDead();
+  TRI->splitReg(DstReg, DstLoReg, DstHiReg);
+
+  // add hireg, hireg <==> lsl hireg
+  auto MILSL =
+      buildMI(MBB, MBBI, AVR::ADDRdRr)
+          .addReg(DstHiReg, RegState::Define, getDeadRegState(DstIsDead))
+          .addReg(DstHiReg, getKillRegState(DstIsKill))
+          .addReg(DstHiReg, getKillRegState(DstIsKill));
+
+  if (ImpIsDead)
+    MILSL->getOperand(3).setIsDead();
+
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AVRExpandPseudo::expandLSLW4Rd(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstLoReg, DstHiReg;
@@ -1582,6 +1606,29 @@ bool AVRExpandPseudo::expand<AVR::LSRWRd>(Block &MBB, BlockIt MBBI) {
 
   // SREG is always implicitly killed
   MIBLO->getOperand(3).setIsKill();
+
+  MI.eraseFromParent();
+  return true;
+}
+
+template <>
+bool AVRExpandPseudo::expand<AVR::LSRWLoRd>(Block &MBB, BlockIt MBBI) {
+  MachineInstr &MI = *MBBI;
+  Register DstLoReg, DstHiReg;
+  Register DstReg = MI.getOperand(0).getReg();
+  bool DstIsDead = MI.getOperand(0).isDead();
+  bool DstIsKill = MI.getOperand(1).isKill();
+  bool ImpIsDead = MI.getOperand(2).isDead();
+  TRI->splitReg(DstReg, DstLoReg, DstHiReg);
+
+  // lsr loreg
+  auto MILSR =
+      buildMI(MBB, MBBI, AVR::LSRRd)
+          .addReg(DstLoReg, RegState::Define | getDeadRegState(DstIsDead))
+          .addReg(DstLoReg, getKillRegState(DstIsKill));
+
+  if (ImpIsDead)
+    MILSR->getOperand(2).setIsDead();
 
   MI.eraseFromParent();
   return true;
@@ -1769,6 +1816,29 @@ bool AVRExpandPseudo::expand<AVR::ASRWRd>(Block &MBB, BlockIt MBBI) {
 
   // SREG is always implicitly killed
   MIBLO->getOperand(3).setIsKill();
+
+  MI.eraseFromParent();
+  return true;
+}
+
+template <>
+bool AVRExpandPseudo::expand<AVR::ASRWLoRd>(Block &MBB, BlockIt MBBI) {
+  MachineInstr &MI = *MBBI;
+  Register DstLoReg, DstHiReg;
+  Register DstReg = MI.getOperand(0).getReg();
+  bool DstIsDead = MI.getOperand(0).isDead();
+  bool DstIsKill = MI.getOperand(1).isKill();
+  bool ImpIsDead = MI.getOperand(2).isDead();
+  TRI->splitReg(DstReg, DstLoReg, DstHiReg);
+
+  // asr loreg
+  auto MIASR =
+      buildMI(MBB, MBBI, AVR::ASRRd)
+          .addReg(DstLoReg, RegState::Define | getDeadRegState(DstIsDead))
+          .addReg(DstLoReg, getKillRegState(DstIsKill));
+
+  if (ImpIsDead)
+    MIASR->getOperand(2).setIsDead();
 
   MI.eraseFromParent();
   return true;
@@ -2230,6 +2300,9 @@ bool AVRExpandPseudo::expandMI(Block &MBB, BlockIt MBBI) {
     EXPAND(AVR::RORWRd);
     EXPAND(AVR::ROLWRd);
     EXPAND(AVR::ASRWRd);
+    EXPAND(AVR::LSLWHiRd);
+    EXPAND(AVR::LSRWLoRd);
+    EXPAND(AVR::ASRWLoRd);
     EXPAND(AVR::LSLWNRd);
     EXPAND(AVR::LSRWNRd);
     EXPAND(AVR::ASRWNRd);
