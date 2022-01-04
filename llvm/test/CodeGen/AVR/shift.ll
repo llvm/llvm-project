@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=avr | FileCheck %s
+; RUN: llc < %s -march=avr -verify-machineinstrs | FileCheck %s
 
 ; Optimize for speed.
 ; CHECK-LABEL: shift_i8_i8_speed
@@ -168,6 +168,16 @@ define i8 @lsr_i8_7(i8 %a) {
 ; CHECK-NEXT: clr r24
 ; CHECK-NEXT: rol r24
   %result = lshr i8 %a, 7
+  ret i8 %result
+}
+
+define i8 @asr_i8_6(i8 %a) {
+; CHECK-LABEL: asr_i8_6
+; CHECK:      bst r24, 6
+; CHECK-NEXT: lsl r24
+; CHECK-NEXT: sbc r24, r24
+; CHECK-NEXT: bld r24, 0
+  %result = ashr i8 %a, 6
   ret i8 %result
 }
 
