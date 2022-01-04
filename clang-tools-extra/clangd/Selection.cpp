@@ -58,6 +58,7 @@ void recordMetrics(const SelectionTree &S, const LangOptions &Lang) {
     SelectionUsedRecovery.record(0, LanguageLabel); // unused.
 }
 
+// Return the range covering a node and all its children.
 SourceRange getSourceRange(const DynTypedNode &N) {
   // MemberExprs to implicitly access anonymous fields should not claim any
   // tokens for themselves. Given:
@@ -702,7 +703,7 @@ private:
   void pop() {
     Node &N = *Stack.top();
     dlog("{1}pop: {0}", printNodeToString(N.ASTNode, PrintPolicy), indent(-1));
-    claimRange(getSourceRange(N.ASTNode), N.Selected);
+    claimTokensFor(N.ASTNode, N.Selected);
     if (N.Selected == NoTokens)
       N.Selected = SelectionTree::Unselected;
     if (N.Selected || !N.Children.empty()) {
@@ -742,6 +743,28 @@ private:
       return CCI->getMemberLocation();
     }
     return SourceRange();
+  }
+
+  // Claim tokens for N, after processing its children.
+  // By default this claims all unclaimed tokens in getSourceRange().
+  // We override this if we want to claim fewer tokens (e.g. there are gaps).
+  void claimTokensFor(const DynTypedNode &N, SelectionTree::Selection &Result) {
+    if (const auto *TL = N.get<TypeLoc>()) {
+      // e.g. EltType Foo[OuterSize][InnerSize];
+      //      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ArrayTypeLoc (Outer)
+      //      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ |-ArrayTypeLoc (Inner)
+      //      ~~~~~~~                           | |-RecordType
+      //                             ~~~~~~~~~  | `-Expr (InnerSize)
+      //                  ~~~~~~~~~             `-Expr (OuterSize)
+      // Inner ATL must not claim its whole SourceRange, or it clobbers Outer.
+      if (TL->getAs<ArrayTypeLoc>()) {
+        claimRange(TL->getLocalSourceRange(), Result);
+        return;
+      }
+      // FIXME: maybe LocalSourceRange is a better default for TypeLocs.
+      // It doesn't seem to be usable for FunctionTypeLocs.
+    }
+    claimRange(getSourceRange(N), Result);
   }
 
   // Perform hit-testing of a complete Node against the selection.
