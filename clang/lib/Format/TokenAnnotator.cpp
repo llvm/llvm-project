@@ -2923,9 +2923,15 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
 }
 
 bool TokenAnnotator::spaceRequiredBeforeParens(const FormatToken &Right) const {
-  return Style.SpaceBeforeParens == FormatStyle::SBPO_Always ||
-         (Style.SpaceBeforeParensOptions.BeforeNonEmptyParentheses &&
-          Right.ParameterCount > 0);
+  if (Style.SpaceBeforeParens == FormatStyle::SBPO_Always)
+    return true;
+  if (Right.is(TT_OverloadedOperatorLParen) &&
+      Style.SpaceBeforeParensOptions.AfterOverloadedOperator)
+    return true;
+  if (Style.SpaceBeforeParensOptions.BeforeNonEmptyParentheses &&
+      Right.ParameterCount > 0)
+    return true;
+  return false;
 }
 
 bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,

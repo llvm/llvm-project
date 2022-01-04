@@ -14536,6 +14536,24 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
   // verifyFormat("X A::operator++ (T);", SomeSpace2);
   verifyFormat("int x = int (y);", SomeSpace2);
   verifyFormat("auto lambda = []() { return 0; };", SomeSpace2);
+
+  FormatStyle SpaceAfterOverloadedOperator = getLLVMStyle();
+  SpaceAfterOverloadedOperator.SpaceBeforeParens = FormatStyle::SBPO_Custom;
+  SpaceAfterOverloadedOperator.SpaceBeforeParensOptions
+      .AfterOverloadedOperator = true;
+
+  verifyFormat("auto operator++ () -> int;", SpaceAfterOverloadedOperator);
+  verifyFormat("X A::operator++ ();", SpaceAfterOverloadedOperator);
+  verifyFormat("some_object.operator++ ();", SpaceAfterOverloadedOperator);
+  verifyFormat("auto func() -> int;", SpaceAfterOverloadedOperator);
+
+  SpaceAfterOverloadedOperator.SpaceBeforeParensOptions
+      .AfterOverloadedOperator = false;
+
+  verifyFormat("auto operator++() -> int;", SpaceAfterOverloadedOperator);
+  verifyFormat("X A::operator++();", SpaceAfterOverloadedOperator);
+  verifyFormat("some_object.operator++();", SpaceAfterOverloadedOperator);
+  verifyFormat("auto func() -> int;", SpaceAfterOverloadedOperator);
 }
 
 TEST_F(FormatTest, SpaceAfterLogicalNot) {
@@ -18771,6 +18789,15 @@ TEST_F(FormatTest, ParsesConfigurationBools) {
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, SplitEmptyFunction);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, SplitEmptyRecord);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, SplitEmptyNamespace);
+  CHECK_PARSE_NESTED_BOOL(SpaceBeforeParensOptions, AfterControlStatements);
+  CHECK_PARSE_NESTED_BOOL(SpaceBeforeParensOptions, AfterForeachMacros);
+  CHECK_PARSE_NESTED_BOOL(SpaceBeforeParensOptions,
+                          AfterFunctionDeclarationName);
+  CHECK_PARSE_NESTED_BOOL(SpaceBeforeParensOptions,
+                          AfterFunctionDefinitionName);
+  CHECK_PARSE_NESTED_BOOL(SpaceBeforeParensOptions, AfterIfMacros);
+  CHECK_PARSE_NESTED_BOOL(SpaceBeforeParensOptions, AfterOverloadedOperator);
+  CHECK_PARSE_NESTED_BOOL(SpaceBeforeParensOptions, BeforeNonEmptyParentheses);
 }
 
 #undef CHECK_PARSE_BOOL
