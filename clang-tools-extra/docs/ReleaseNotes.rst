@@ -73,6 +73,9 @@ Improvements to clang-tidy
 - Added support for `NOLINTBEGIN` ... `NOLINTEND` comments to suppress
   Clang-Tidy warnings over multiple lines.
 
+- Generalized the `modernize-use-default-member-init` check to handle non-default
+  constructors.
+
 New checks
 ^^^^^^^^^^
 
