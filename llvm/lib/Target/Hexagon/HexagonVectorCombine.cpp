@@ -718,7 +718,7 @@ auto AlignVectors::realignGroup(const MoveGroup &Move) const -> bool {
 
   // Maximum alignment present in the whole address group.
   const AddrInfo &WithMaxAlign =
-      getMaxOf(BaseInfos, [](const AddrInfo &AI) { return AI.HaveAlign; });
+      getMaxOf(MoveInfos, [](const AddrInfo &AI) { return AI.HaveAlign; });
   Align MaxGiven = WithMaxAlign.HaveAlign;
 
   // Minimum alignment present in the move address group.
