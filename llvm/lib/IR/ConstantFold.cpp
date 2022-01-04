@@ -1539,17 +1539,7 @@ static ICmpInst::Predicate evaluateICmpRelation(Constant *V1, Constant *V2,
           // so the result is greater-than
           if (!GV->hasExternalWeakLinkage())
             return ICmpInst::ICMP_UGT;
-        } else if (isa<ConstantPointerNull>(CE1Op0)) {
-          // If we are indexing from a null pointer, check to see if we have any
-          // non-zero indices.
-          for (unsigned i = 1, e = CE1->getNumOperands(); i != e; ++i)
-            if (!CE1->getOperand(i)->isNullValue())
-              // Offsetting from null, must not be equal.
-              return ICmpInst::ICMP_UGT;
-          // Only zero indexes from null, must still be zero.
-          return ICmpInst::ICMP_EQ;
         }
-        // Otherwise, we can't really say if the first operand is null or not.
       } else if (const GlobalValue *GV2 = dyn_cast<GlobalValue>(V2)) {
         if (isa<ConstantPointerNull>(CE1Op0)) {
           // If its not weak linkage, the GVal must have a non-zero address
