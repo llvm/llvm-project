@@ -2620,6 +2620,42 @@ argument.
   int *pb =__builtin_preserve_access_index(&v->c[3].b);
   __builtin_preserve_access_index(v->j);
 
+``__builtin_debugtrap``
+-----------------------
+
+``__builtin_debugtrap`` causes the program to stop its execution in such a way that a debugger can catch it.
+
+**Syntax**:
+
+.. code-block:: c++
+
+    __builtin_debugtrap()
+
+**Description**
+
+``__builtin_debugtrap`` is lowered to the ` ``llvm.debugtrap`` <https://llvm.org/docs/LangRef.html#llvm-debugtrap-intrinsic>`_ builtin. It should have the same effect as setting a breakpoint on the line where the builtin is called.
+
+Query for this feature with ``__has_builtin(__builtin_debugtrap)``.
+
+
+``__builtin_trap``
+------------------
+
+``__builtin_trap`` causes the program to stop its execution abnormally.
+
+**Syntax**:
+
+.. code-block:: c++
+
+    __builtin_trap()
+
+**Description**
+
+``__builtin_trap`` is lowered to the ` ``llvm.trap`` <https://llvm.org/docs/LangRef.html#llvm-trap-intrinsic>`_ builtin.
+
+Query for this feature with ``__has_builtin(__builtin_trap)``.
+
+
 ``__builtin_sycl_unique_stable_name``
 -------------------------------------
 
