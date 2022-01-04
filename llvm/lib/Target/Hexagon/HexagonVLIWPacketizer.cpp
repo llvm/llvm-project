@@ -886,7 +886,8 @@ bool HexagonPacketizerList::canPromoteToDotNew(const MachineInstr &MI,
 
   // Create a dot new machine instruction to see if resources can be
   // allocated. If not, bail out now.
-  int NewOpcode = HII->getDotNewOp(MI);
+  int NewOpcode = (RC != &Hexagon::PredRegsRegClass) ? HII->getDotNewOp(MI) :
+    HII->getDotNewPredOp(MI, MBPI);
   const MCInstrDesc &D = HII->get(NewOpcode);
   MachineInstr *NewMI = MF.CreateMachineInstr(D, DebugLoc());
   bool ResourcesAvailable = ResourceTracker->canReserveResources(*NewMI);
@@ -1105,6 +1106,11 @@ static bool cannotCoexistAsymm(const MachineInstr &MI, const MachineInstr &MJ,
   const MachineFunction *MF = MI.getParent()->getParent();
   if (MF->getSubtarget<HexagonSubtarget>().hasV60OpsOnly() &&
       HII.isHVXMemWithAIndirect(MI, MJ))
+    return true;
+
+  // Don't allow a store and an instruction that must be in slot0 and
+  // doesn't allow a slot1 instruction.
+  if (MI.mayStore() && HII.isRestrictNoSlot1Store(MJ) && HII.isPureSlot0(MJ))
     return true;
 
   // An inline asm cannot be together with a branch, because we may not be
@@ -1526,6 +1532,13 @@ bool HexagonPacketizerList::isLegalToPacketizeTogether(SUnit *SUI, SUnit *SUJ) {
       bool IsVecJ = HII->isHVXVec(J);
       bool IsVecI = HII->isHVXVec(I);
 
+      // Don't reorder the loads if there is an order dependence. This would
+      // occur if the first instruction must go in slot0.
+      if (LoadJ && LoadI && HII->isPureSlot0(J)) {
+        FoundSequentialDependence = true;
+        break;
+      }
+
       if (Slot1Store && MF.getSubtarget<HexagonSubtarget>().hasV65Ops() &&
           ((LoadJ && StoreI && !NVStoreI) ||
            (StoreJ && LoadI && !NVStoreJ)) &&
@@ -1821,14 +1834,6 @@ bool HexagonPacketizerList::shouldAddToPacket(const MachineInstr &MI) {
   if (Minimal)
     return false;
 
-  // Constrainst for not packetizing this MI with existing instructions in a
-  // packet.
-  //	MI is a store instruction.
-  //	CurrentPacketMIs has a SLOT0 only instruction with constraint
-  //    A_RESTRICT_NOSLOT1_STORE/isRestrictNoSlot1Store.
-  if (MI.mayStore() && isPureSlot0InsnWithNoSlot1Store(MI))
-    return false;
-
   if (producesStall(MI))
     return false;
 
@@ -1866,18 +1871,6 @@ bool HexagonPacketizerList::shouldAddToPacket(const MachineInstr &MI) {
   }
 
   return true;
-}
-
-bool HexagonPacketizerList::isPureSlot0InsnWithNoSlot1Store(
-    const MachineInstr &MI) {
-  bool noSlot1Store = false;
-  bool isSlot0Only = false;
-  for (auto J : CurrentPacketMIs) {
-    noSlot1Store |= HII->isRestrictNoSlot1Store(*J);
-    isSlot0Only |= HII->isPureSlot0(*J);
-  }
-
-  return (noSlot1Store && isSlot0Only);
 }
 
 // V60 forward scheduling.
