@@ -686,13 +686,6 @@ static SparseTensorCOO<V> *openSparseTensorCOO(char *filename, uint64_t rank,
 
 extern "C" {
 
-/// This type is used in the public API at all places where MLIR expects
-/// values with the built-in type "index". For now, we simply assume that
-/// type is 64-bit, but targets with different "index" bit widths should link
-/// with an alternatively built runtime support library.
-// TODO: support such targets?
-using index_t = uint64_t;
-
 //===----------------------------------------------------------------------===//
 //
 // Public API with methods that operate on MLIR buffers (memrefs) to interact
@@ -821,6 +814,12 @@ using index_t = uint64_t;
         cursor, values, filled, added, count);                                 \
   }
 
+// Assume index_t is in fact uint64_t, so that _mlir_ciface_newSparseTensor
+// can safely rewrite kIndex to kU64.  We make this assertion to guarantee
+// that this file cannot get out of sync with its header.
+static_assert(std::is_same<index_t, uint64_t>::value,
+              "Expected index_t == uint64_t");
+
 /// Constructs a new sparse tensor. This is the "swiss army knife"
 /// method for materializing sparse tensors into the computation.
 ///
@@ -845,6 +844,13 @@ _mlir_ciface_newSparseTensor(StridedMemRefType<DimLevelType, 1> *aref, // NOLINT
   const index_t *sizes = sref->data + sref->offset;
   const index_t *perm = pref->data + pref->offset;
   uint64_t rank = aref->sizes[0];
+
+  // Rewrite kIndex to kU64, to avoid introducing a bunch of new cases.
+  // This is safe because of the static_assert above.
+  if (ptrTp == OverheadType::kIndex)
+    ptrTp = OverheadType::kU64;
+  if (indTp == OverheadType::kIndex)
+    indTp = OverheadType::kU64;
 
   // Double matrices with all combinations of overhead storage.
   CASE(OverheadType::kU64, OverheadType::kU64, PrimaryType::kF64, uint64_t,

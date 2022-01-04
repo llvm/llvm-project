@@ -20,7 +20,7 @@ using namespace mlir::sparse_tensor;
 
 OverheadType mlir::sparse_tensor::overheadTypeEncoding(unsigned width) {
   switch (width) {
-  default:
+  case 64:
     return OverheadType::kU64;
   case 32:
     return OverheadType::kU32;
@@ -28,11 +28,16 @@ OverheadType mlir::sparse_tensor::overheadTypeEncoding(unsigned width) {
     return OverheadType::kU16;
   case 8:
     return OverheadType::kU8;
+  case 0:
+    return OverheadType::kIndex;
   }
+  llvm_unreachable("Unsupported overhead bitwidth");
 }
 
 Type mlir::sparse_tensor::getOverheadType(Builder &builder, OverheadType ot) {
   switch (ot) {
+  case OverheadType::kIndex:
+    return builder.getIndexType();
   case OverheadType::kU64:
     return builder.getIntegerType(64);
   case OverheadType::kU32:
@@ -47,20 +52,13 @@ Type mlir::sparse_tensor::getOverheadType(Builder &builder, OverheadType ot) {
 
 Type mlir::sparse_tensor::getPointerOverheadType(
     Builder &builder, const SparseTensorEncodingAttr &enc) {
-  // NOTE(wrengr): This workaround will be fixed in D115010.
-  unsigned width = enc.getPointerBitWidth();
-  if (width == 0)
-    return builder.getIndexType();
-  return getOverheadType(builder, overheadTypeEncoding(width));
+  return getOverheadType(builder,
+                         overheadTypeEncoding(enc.getPointerBitWidth()));
 }
 
 Type mlir::sparse_tensor::getIndexOverheadType(
     Builder &builder, const SparseTensorEncodingAttr &enc) {
-  // NOTE(wrengr): This workaround will be fixed in D115010.
-  unsigned width = enc.getIndexBitWidth();
-  if (width == 0)
-    return builder.getIndexType();
-  return getOverheadType(builder, overheadTypeEncoding(width));
+  return getOverheadType(builder, overheadTypeEncoding(enc.getIndexBitWidth()));
 }
 
 PrimaryType mlir::sparse_tensor::primaryTypeEncoding(Type elemTp) {
