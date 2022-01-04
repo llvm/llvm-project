@@ -2221,6 +2221,17 @@ static SDValue splatPartsI64WithVL(const SDLoc &DL, MVT VT, SDValue Lo,
     // node in order to try and match RVV vector/scalar instructions.
     if ((LoC >> 31) == HiC)
       return DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VT, Lo, VL);
+
+    // If vl is equal to VLMax and Hi constant is equal to Lo, we could use
+    // vmv.v.x whose EEW = 32 to lower it.
+    auto *Const = dyn_cast<ConstantSDNode>(VL);
+    if (LoC == HiC && Const && Const->getSExtValue() == RISCV::VLMaxSentinel) {
+      MVT InterVT = MVT::getVectorVT(MVT::i32, VT.getVectorElementCount() * 2);
+      // TODO: if vl <= min(VLMAX), we can also do this. But we could not
+      // access the subtarget here now.
+      auto InterVec = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, InterVT, Lo, VL);
+      return DAG.getNode(ISD::BITCAST, DL, VT, InterVec);
+    }
   }
 
   // Fall back to a stack store and stride x0 vector load.
