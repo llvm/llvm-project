@@ -168,7 +168,7 @@ define i1 @null_gep_ugt_null_constant_int() {
 
 define i1 @null_gep_ne_global() {
 ; CHECK-LABEL: @null_gep_ne_global(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    ret i1 icmp ne (i8* getelementptr (i8, i8* null, i64 ptrtoint (i8* @g3 to i64)), i8* @g3)
 ;
   %gep = getelementptr i8, i8* null, i64 ptrtoint (i8* @g3 to i64)
   %cmp = icmp ne i8* %gep, @g3
@@ -177,7 +177,7 @@ define i1 @null_gep_ne_global() {
 
 define i1 @null_gep_ult_global() {
 ; CHECK-LABEL: @null_gep_ult_global(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    ret i1 icmp ult (i8* getelementptr (i8, i8* null, i64 ptrtoint (i8* @g3 to i64)), i8* @g3)
 ;
   %gep = getelementptr i8, i8* null, i64 ptrtoint (i8* @g3 to i64)
   %cmp = icmp ult i8* %gep, @g3
