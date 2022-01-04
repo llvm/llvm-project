@@ -721,6 +721,11 @@ struct OrderedPredicate {
   /// opposed to those shared across patterns.
   unsigned secondary = 0;
 
+  /// The tie breaking ID, used to preserve a deterministic (insertion) order
+  /// among all the predicates with the same priority, depth, and position /
+  /// predicate dependency.
+  unsigned id = 0;
+
   /// A map between a pattern operation and the answer to the predicate question
   /// within that pattern.
   DenseMap<Operation *, Qualifier *> patternToAnswer;
@@ -733,12 +738,13 @@ struct OrderedPredicate {
     // * lower depth
     // * lower position dependency
     // * lower predicate dependency
+    // * lower tie breaking ID
     auto *rhsPos = rhs.position;
     return std::make_tuple(primary, secondary, rhsPos->getOperationDepth(),
-                           rhsPos->getKind(), rhs.question->getKind()) >
+                           rhsPos->getKind(), rhs.question->getKind(), rhs.id) >
            std::make_tuple(rhs.primary, rhs.secondary,
                            position->getOperationDepth(), position->getKind(),
-                           question->getKind());
+                           question->getKind(), id);
   }
 };
 
@@ -903,6 +909,9 @@ MatcherNode::generateMatcherTree(ModuleOp module, PredicateBuilder &builder,
       auto it = uniqued.insert(predicate);
       it.first->patternToAnswer.try_emplace(patternAndPredList.pattern,
                                             predicate.answer);
+      // Mark the insertion order (0-based indexing).
+      if (it.second)
+        it.first->id = uniqued.size() - 1;
     }
   }
 
@@ -939,9 +948,9 @@ MatcherNode::generateMatcherTree(ModuleOp module, PredicateBuilder &builder,
   ordered.reserve(uniqued.size());
   for (auto &ip : uniqued)
     ordered.push_back(&ip);
-  std::stable_sort(
-      ordered.begin(), ordered.end(),
-      [](OrderedPredicate *lhs, OrderedPredicate *rhs) { return *lhs < *rhs; });
+  llvm::sort(ordered, [](OrderedPredicate *lhs, OrderedPredicate *rhs) {
+    return *lhs < *rhs;
+  });
 
   // Build the matchers for each of the pattern predicate lists.
   std::unique_ptr<MatcherNode> root;
