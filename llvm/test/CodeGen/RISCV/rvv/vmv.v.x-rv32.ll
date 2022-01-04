@@ -724,3 +724,83 @@ entry:
 
   ret <vscale x 8 x i64> %a
 }
+
+define <vscale x 1 x i64> @intrinsic_vmv.v.x_i_nxv1i64_vlmax() nounwind {
+; CHECK-LABEL: intrinsic_vmv.v.x_i_nxv1i64_vlmax:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    li a0, 3
+; CHECK-NEXT:    sw a0, 12(sp)
+; CHECK-NEXT:    sw a0, 8(sp)
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, mu
+; CHECK-NEXT:    addi a0, sp, 8
+; CHECK-NEXT:    vlse64.v v8, (a0), zero
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+entry:
+  %a = call <vscale x 1 x i64> @llvm.riscv.vmv.v.x.nxv1i64(
+    i64 12884901891,
+    i32 -1)
+
+  ret <vscale x 1 x i64> %a
+}
+
+define <vscale x 2 x i64> @intrinsic_vmv.v.x_i_nxv2i64_vlmax() nounwind {
+; CHECK-LABEL: intrinsic_vmv.v.x_i_nxv2i64_vlmax:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    li a0, 3
+; CHECK-NEXT:    sw a0, 12(sp)
+; CHECK-NEXT:    sw a0, 8(sp)
+; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
+; CHECK-NEXT:    addi a0, sp, 8
+; CHECK-NEXT:    vlse64.v v8, (a0), zero
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+entry:
+  %a = call <vscale x 2 x i64> @llvm.riscv.vmv.v.x.nxv2i64(
+    i64 12884901891,
+    i32 -1)
+
+  ret <vscale x 2 x i64> %a
+}
+
+define <vscale x 4 x i64> @intrinsic_vmv.v.x_i_nxv4i64_vlmax() nounwind {
+; CHECK-LABEL: intrinsic_vmv.v.x_i_nxv4i64_vlmax:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    li a0, 3
+; CHECK-NEXT:    sw a0, 12(sp)
+; CHECK-NEXT:    sw a0, 8(sp)
+; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, mu
+; CHECK-NEXT:    addi a0, sp, 8
+; CHECK-NEXT:    vlse64.v v8, (a0), zero
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+entry:
+  %a = call <vscale x 4 x i64> @llvm.riscv.vmv.v.x.nxv4i64(
+    i64 12884901891,
+    i32 -1)
+
+  ret <vscale x 4 x i64> %a
+}
+
+define <vscale x 8 x i64> @intrinsic_vmv.v.x_i_nxv8i64_vlmax() nounwind {
+; CHECK-LABEL: intrinsic_vmv.v.x_i_nxv8i64_vlmax:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    li a0, 3
+; CHECK-NEXT:    sw a0, 12(sp)
+; CHECK-NEXT:    sw a0, 8(sp)
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
+; CHECK-NEXT:    addi a0, sp, 8
+; CHECK-NEXT:    vlse64.v v8, (a0), zero
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+entry:
+  %a = call <vscale x 8 x i64> @llvm.riscv.vmv.v.x.nxv8i64(
+    i64 12884901891,
+    i32 -1)
+
+  ret <vscale x 8 x i64> %a
+}
