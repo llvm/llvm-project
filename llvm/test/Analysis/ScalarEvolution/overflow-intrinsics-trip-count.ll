@@ -167,9 +167,11 @@ for.end:                                          ; preds = %for.body, %entry
 define void @uadd_symbolic_start(i16 %start) {
 ; CHECK-LABEL: 'uadd_symbolic_start'
 ; CHECK-NEXT:  Determining loop execution counts for: @uadd_symbolic_start
-; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %for.body: Unpredictable max backedge-taken count.
-; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is (-1 + (-1 * %start))
+; CHECK-NEXT:  Loop %for.body: max backedge-taken count is -1
+; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + (-1 * %start))
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %for.body: Trip multiple is 1
 ;
 entry:
   br i1 undef, label %for.end, label %for.body.preheader
@@ -191,9 +193,11 @@ for.end:                                          ; preds = %for.body, %entry
 define void @sadd_symbolic_start(i16 %start) {
 ; CHECK-LABEL: 'sadd_symbolic_start'
 ; CHECK-NEXT:  Determining loop execution counts for: @sadd_symbolic_start
-; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %for.body: Unpredictable max backedge-taken count.
-; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is (32767 + (-1 * %start))
+; CHECK-NEXT:  Loop %for.body: max backedge-taken count is -1
+; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (32767 + (-1 * %start))
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %for.body: Trip multiple is 1
 ;
 entry:
   br i1 undef, label %for.end, label %for.body.preheader
@@ -264,9 +268,11 @@ for.end:                                          ; preds = %for.body, %entry
 define void @usub_symbolic_start(i16 %start) {
 ; CHECK-LABEL: 'usub_symbolic_start'
 ; CHECK-NEXT:  Determining loop execution counts for: @usub_symbolic_start
-; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %for.body: Unpredictable max backedge-taken count.
-; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is %start
+; CHECK-NEXT:  Loop %for.body: max backedge-taken count is -1
+; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is %start
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %for.body: Trip multiple is 1
 ;
 entry:
   br i1 undef, label %for.end, label %for.body.preheader
@@ -288,9 +294,11 @@ for.end:                                          ; preds = %for.body, %entry
 define void @ssub_symbolic_start(i16 %start) {
 ; CHECK-LABEL: 'ssub_symbolic_start'
 ; CHECK-NEXT:  Determining loop execution counts for: @ssub_symbolic_start
-; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %for.body: Unpredictable max backedge-taken count.
-; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is (-32768 + %start)
+; CHECK-NEXT:  Loop %for.body: max backedge-taken count is -1
+; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-32768 + %start)
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %for.body: Trip multiple is 1
 ;
 entry:
   br i1 undef, label %for.end, label %for.body.preheader
@@ -360,11 +368,13 @@ for.end:                                          ; preds = %for.body, %entry
 define void @sadd_symbolic_non_latch(i16 %start) {
 ; CHECK-LABEL: 'sadd_symbolic_non_latch'
 ; CHECK-NEXT:  Determining loop execution counts for: @sadd_symbolic_non_latch
-; CHECK-NEXT:  Loop %for.body: <multiple exits> Unpredictable backedge-taken count.
-; CHECK-NEXT:    exit count for for.body: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:  Loop %for.body: <multiple exits> backedge-taken count is ((230 + (-1 * %start)) umin (32767 + (-1 * %start)))
+; CHECK-NEXT:    exit count for for.body: (32767 + (-1 * %start))
 ; CHECK-NEXT:    exit count for for.latch: (230 + (-1 * %start))
 ; CHECK-NEXT:  Loop %for.body: max backedge-taken count is -1
-; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is ((230 + (-1 * %start)) umin (32767 + (-1 * %start)))
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %for.body: Trip multiple is 1
 ;
 entry:
   br i1 undef, label %for.end, label %for.body.preheader

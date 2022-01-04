@@ -8093,6 +8093,29 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromCondImpl(
       return getZero(CI->getType());
   }
 
+  // If we're exiting based on the overflow flag of an x.with.overflow intrinsic
+  // with a constant step, we can form an equivalent icmp predicate and figure
+  // out how many iterations will be taken before we exit.
+  const WithOverflowInst *WO;
+  const APInt *C;
+  if (match(ExitCond, m_ExtractValue<1>(m_WithOverflowInst(WO))) &&
+      match(WO->getRHS(), m_APInt(C))) {
+    ConstantRange NWR =
+      ConstantRange::makeExactNoWrapRegion(WO->getBinaryOp(), *C,
+                                           WO->getNoWrapKind());
+    CmpInst::Predicate Pred;
+    APInt NewRHSC, Offset;
+    NWR.getEquivalentICmp(Pred, NewRHSC, Offset);
+    if (!ExitIfTrue)
+      Pred = ICmpInst::getInversePredicate(Pred);
+    auto *LHS = getSCEV(WO->getLHS());
+    if (Offset != 0)
+      LHS = getAddExpr(LHS, getConstant(Offset));
+    auto EL = computeExitLimitFromICmp(L, Pred, LHS, getConstant(NewRHSC),
+                                       ControlsExit, AllowPredicates);
+    if (EL.hasAnyInfo()) return EL;
+  }
+
   // If it's not an integer or pointer comparison then compute it the hard way.
   return computeExitCountExhaustively(L, ExitCond, ExitIfTrue);
 }
