@@ -639,11 +639,10 @@ private:
   // Nodes *usually* nest nicely: a child's getSourceRange() lies within the
   // parent's, and a node (transitively) owns all tokens in its range.
   //
-  // Exception 1: child range claims tokens that should be owned by the parent.
-  //              e.g. in `void foo(int);`, the FunctionTypeLoc should own
-  //              `void (int)` but the parent FunctionDecl should own `foo`.
-  // To handle this case, certain nodes claim small token ranges *before*
-  // their children are traversed. (see earlySourceRange).
+  // Exception 1: when declarators nest, *inner* declarator is the *outer* type.
+  //              e.g. void foo[5](int) is an array of functions.
+  // To handle this case, declarators are careful to only claim the tokens they
+  // own, rather than claim a range and rely on claim ordering.
   //
   // Exception 2: siblings both claim the same node.
   //              e.g. `int x, y;` produces two sibling VarDecls.
@@ -690,16 +689,13 @@ private:
   }
 
   // Pushes a node onto the ancestor stack. Pairs with pop().
-  // Performs early hit detection for some nodes (on the earlySourceRange).
   void push(DynTypedNode Node) {
-    SourceRange Early = earlySourceRange(Node);
     dlog("{1}push: {0}", printNodeToString(Node, PrintPolicy), indent());
     Nodes.emplace_back();
     Nodes.back().ASTNode = std::move(Node);
     Nodes.back().Parent = Stack.top();
     Nodes.back().Selected = NoTokens;
     Stack.push(&Nodes.back());
-    claimRange(Early, Nodes.back().Selected);
   }
 
   // Pops a node off the ancestor stack, and finalizes it. Pairs with push().
@@ -721,52 +717,65 @@ private:
     Stack.pop();
   }
 
-  // Returns the range of tokens that this node will claim directly, and
-  // is not available to the node's children.
-  // Usually empty, but sometimes children cover tokens but shouldn't own them.
-  SourceRange earlySourceRange(const DynTypedNode &N) {
-    if (const Decl *D = N.get<Decl>()) {
-      // We want constructor name to be claimed by TypeLoc not the constructor
-      // itself. Similar for deduction guides, we rather want to select the
-      // underlying TypeLoc.
-      // FIXME: Unfortunately this doesn't work, even though RecursiveASTVisitor
-      // traverses the underlying TypeLoc inside DeclarationName, it is null for
-      // constructors.
-      if (isa<CXXConstructorDecl>(D) || isa<CXXDeductionGuideDecl>(D))
-        return SourceRange();
-      // This will capture Field, Function, MSProperty, NonTypeTemplateParm and
-      // VarDecls. We want the name in the declarator to be claimed by the decl
-      // and not by any children. For example:
-      // void [[foo]]();
-      // int (*[[s]])();
-      // struct X { int [[hash]] [32]; [[operator]] int();}
-      if (const auto *DD = llvm::dyn_cast<DeclaratorDecl>(D))
-        return DD->getLocation();
-    } else if (const auto *CCI = N.get<CXXCtorInitializer>()) {
-      // : [[b_]](42)
-      return CCI->getMemberLocation();
-    }
-    return SourceRange();
-  }
-
   // Claim tokens for N, after processing its children.
   // By default this claims all unclaimed tokens in getSourceRange().
   // We override this if we want to claim fewer tokens (e.g. there are gaps).
   void claimTokensFor(const DynTypedNode &N, SelectionTree::Selection &Result) {
+    // CXXConstructExpr often shows implicit construction, like `string s;`.
+    // Don't associate any tokens with it unless there's some syntax like {}.
+    // This prevents it from claiming 's', its primary location.
+    if (const auto *CCE = N.get<CXXConstructExpr>()) {
+      claimRange(CCE->getParenOrBraceRange(), Result);
+      return;
+    }
+    // ExprWithCleanups is always implicit. It often wraps CXXConstructExpr.
+    // Prevent it claiming 's' in the case above.
+    if (N.get<ExprWithCleanups>())
+      return;
+
+    // Declarators nest "inside out", with parent types inside child ones.
+    // Instead of claiming the whole range (clobbering parent tokens), carefully
+    // claim the tokens owned by this node and non-declarator children.
+    // (We could manipulate traversal order instead, but this is easier).
+    //
+    // Non-declarator types nest normally, and are handled like other nodes.
+    //
+    // Example:
+    //   Vec<R<int>(*[2])(A<char>)> is a Vec of arrays of pointers to functions,
+    //                              which accept A<int> and return R<char>.
+    // The TypeLoc hierarchy:
+    //   Vec<R<int>(*[2])(A<char>)> m;
+    //   Vec<--------------------->      TemplateSpecialization Vec
+    //       --------[2]----------       `-Array
+    //       -------*-------------         `-Pointer
+    //       ------(----)---------           `-Paren
+    //       ------------(-------)             `-Function
+    //       R<--->                              |-TemplateSpecialization R
+    //         int                               | `-Builtin int
+    //                    A<---->                `-TemplateSpecialization A
+    //                      char                   `-Builtin int
+    //
+    // In each row, --- represents unclaimed parts of the SourceRange.
+    // For declarator types, we are careful never to claim these.
+    // For non-declarator types, children are guaranteed to claim them first.
     if (const auto *TL = N.get<TypeLoc>()) {
-      // e.g. EltType Foo[OuterSize][InnerSize];
-      //      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ArrayTypeLoc (Outer)
-      //      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ |-ArrayTypeLoc (Inner)
-      //      ~~~~~~~                           | |-RecordType
-      //                             ~~~~~~~~~  | `-Expr (InnerSize)
-      //                  ~~~~~~~~~             `-Expr (OuterSize)
-      // Inner ATL must not claim its whole SourceRange, or it clobbers Outer.
-      if (TL->getAs<ArrayTypeLoc>()) {
-        claimRange(TL->getLocalSourceRange(), Result);
+      if (auto PTL = TL->getAs<ParenTypeLoc>()) {
+        claimRange(PTL.getLParenLoc(), Result);
+        claimRange(PTL.getRParenLoc(), Result);
         return;
       }
-      // FIXME: maybe LocalSourceRange is a better default for TypeLocs.
-      // It doesn't seem to be usable for FunctionTypeLocs.
+      if (auto ATL = TL->getAs<ArrayTypeLoc>()) {
+        claimRange(ATL.getBracketsRange(), Result);
+        return;
+      }
+      if (auto PTL = TL->getAs<PointerTypeLoc>()) {
+        claimRange(PTL.getStarLoc(), Result);
+        return;
+      }
+      if (auto FTL = TL->getAs<FunctionTypeLoc>()) {
+        claimRange(SourceRange(FTL.getLParenLoc(), FTL.getEndLoc()), Result);
+        return;
+      }
     }
     claimRange(getSourceRange(N), Result);
   }
@@ -774,7 +783,7 @@ private:
   // Perform hit-testing of a complete Node against the selection.
   // This runs for every node in the AST, and must be fast in common cases.
   // This is usually called from pop(), so we can take children into account.
-  // The existing state of Result is relevant (early/late claims can interact).
+  // The existing state of Result is relevant.
   void claimRange(SourceRange S, SelectionTree::Selection &Result) {
     for (const auto &ClaimedRange :
          UnclaimedExpandedTokens.erase(TokenBuf.expandedTokens(S)))

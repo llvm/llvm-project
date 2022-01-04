@@ -204,9 +204,12 @@ TEST(SelectionTest, CommonAncestor) {
       {
           R"cpp(
             struct S { S(const char*); };
-            S [[s ^= "foo"]];
+            [[S s ^= "foo"]];
           )cpp",
-          "CXXConstructExpr",
+          // The AST says a CXXConstructExpr covers the = sign in C++14.
+          // But we consider CXXConstructExpr to only own brackets.
+          // (It's not the interesting constructor anyway, just S(&&)).
+          "VarDecl",
       },
       {
           R"cpp(
@@ -231,7 +234,7 @@ TEST(SelectionTest, CommonAncestor) {
           R"cpp(
             [[void (^*S)(int)]] = nullptr;
           )cpp",
-          "FunctionProtoTypeLoc",
+          "PointerTypeLoc",
       },
       {
           R"cpp(
@@ -243,7 +246,7 @@ TEST(SelectionTest, CommonAncestor) {
           R"cpp(
             [[void ^(*S)(int)]] = nullptr;
           )cpp",
-          "FunctionProtoTypeLoc",
+          "ParenTypeLoc",
       },
       {
           R"cpp(
@@ -325,6 +328,8 @@ TEST(SelectionTest, CommonAncestor) {
       {"const int x = 1, y = 2; int array[x][^[[10]]][y];", "IntegerLiteral"},
       {"const int x = 1, y = 2; [[i^nt]] array[x][10][y];", "BuiltinTypeLoc"},
       {"void func(int x) { int v_array[^[[x]]][10]; }", "DeclRefExpr"},
+
+      {"int (*getFunc([[do^uble]]))(int);", "BuiltinTypeLoc"},
 
       // FIXME: the AST has no location info for qualifiers.
       {"const [[a^uto]] x = 42;", "AutoTypeLoc"},
