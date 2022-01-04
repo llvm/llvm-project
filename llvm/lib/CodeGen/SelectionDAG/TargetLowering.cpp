@@ -3678,9 +3678,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
       }
 
       // Figure out how many bits we need to preserve this constant.
-      unsigned ReqdBits = Signed ?
-        C1.getBitWidth() - C1.getNumSignBits() + 1 :
-        C1.getActiveBits();
+      unsigned ReqdBits = Signed ? C1.getMinSignedBits() : C1.getActiveBits();
 
       // Make sure we're not losing bits from the constant.
       if (MinBits > 0 &&
