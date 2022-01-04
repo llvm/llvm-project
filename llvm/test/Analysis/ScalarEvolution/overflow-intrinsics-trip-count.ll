@@ -237,6 +237,30 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
+define void @sadd_symbolic_swapped(i16 %start) {
+; CHECK-LABEL: 'sadd_symbolic_swapped'
+; CHECK-NEXT:  Determining loop execution counts for: @sadd_symbolic_swapped
+; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable predicated backedge-taken count.
+;
+entry:
+  br i1 undef, label %for.end, label %for.body.preheader
+
+for.body.preheader:                               ; preds = %entry
+  br label %for.body
+
+for.body:                                         ; preds = %for.body.preheader, %for.body
+  %indvars.iv = phi i16 [ %math, %for.body ], [ %start, %for.body.preheader ]
+  %0 = call { i16, i1 } @llvm.sadd.with.overflow.i16(i16 %indvars.iv, i16 1)
+  %math = extractvalue { i16, i1 } %0, 0
+  %ov = extractvalue { i16, i1 } %0, 1
+  br i1 %ov, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
 define void @usub_symbolic_start(i16 %start) {
 ; CHECK-LABEL: 'usub_symbolic_start'
 ; CHECK-NEXT:  Determining loop execution counts for: @usub_symbolic_start
