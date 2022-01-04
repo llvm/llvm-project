@@ -1368,23 +1368,6 @@ Constant *llvm::ConstantFoldCastOperand(unsigned Opcode, Constant *C,
   }
 }
 
-Constant *llvm::ConstantFoldLoadThroughGEPConstantExpr(Constant *C,
-                                                       ConstantExpr *CE,
-                                                       Type *Ty,
-                                                       const DataLayout &DL) {
-  if (!CE->getOperand(1)->isNullValue())
-    return nullptr;  // Do not allow stepping over the value!
-
-  // Loop over all of the operands, tracking down which value we are
-  // addressing.
-  for (unsigned i = 2, e = CE->getNumOperands(); i != e; ++i) {
-    C = C->getAggregateElement(CE->getOperand(i));
-    if (!C)
-      return nullptr;
-  }
-  return ConstantFoldLoadThroughBitcast(C, Ty, DL);
-}
-
 //===----------------------------------------------------------------------===//
 //  Constant Folding for Calls
 //
