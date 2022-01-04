@@ -43,7 +43,7 @@ extern B array[5];
 // CHECK-NEXT:    call void @_ZN1AC1Ev(%struct.A* nonnull align 1 dereferenceable(1) [[A]])
 // CHECK-NEXT:    store [5 x %struct.B]* @array, [5 x %struct.B]** [[__RANGE1]], align 8
 // CHECK-NEXT:    store %struct.B* getelementptr inbounds ([5 x %struct.B], [5 x %struct.B]* @array, i64 0, i64 0), %struct.B** [[__BEGIN1]], align 8
-// CHECK-NEXT:    store %struct.B* getelementptr inbounds ([[STRUCT_B]], %struct.B* getelementptr inbounds ([5 x %struct.B], [5 x %struct.B]* @array, i64 0, i64 0), i64 5), %struct.B** [[__END1]], align 8
+// CHECK-NEXT:    store %struct.B* getelementptr inbounds ([5 x %struct.B], [5 x %struct.B]* @array, i64 1, i64 0), %struct.B** [[__END1]], align 8
 // CHECK-NEXT:    br label [[FOR_COND:%.*]]
 // CHECK:       for.cond:
 // CHECK-NEXT:    [[TMP0:%.*]] = load %struct.B*, %struct.B** [[__BEGIN1]], align 8
