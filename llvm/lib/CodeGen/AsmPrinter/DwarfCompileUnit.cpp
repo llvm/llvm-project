@@ -260,9 +260,20 @@ void DwarfCompileUnit::addLocationAttribute(
 
     if (Global) {
       const MCSymbol *Sym = Asm->getSymbol(Global);
-      unsigned PointerSize = Asm->getDataLayout().getPointerSize();
-      assert((PointerSize == 4 || PointerSize == 8) &&
-             "Add support for other sizes if necessary");
+      // 16-bit platforms like MSP430 and AVR take this path, so sink this
+      // assert to platforms that use it.
+      auto GetPointerSizedFormAndOp = [this]() {
+        unsigned PointerSize = Asm->getDataLayout().getPointerSize();
+        assert((PointerSize == 4 || PointerSize == 8) &&
+               "Add support for other sizes if necessary");
+        struct FormAndOp {
+          dwarf::Form Form;
+          dwarf::LocationAtom Op;
+        };
+        return PointerSize == 4
+                   ? FormAndOp{dwarf::DW_FORM_data4, dwarf::DW_OP_const4u}
+                   : FormAndOp{dwarf::DW_FORM_data8, dwarf::DW_OP_const8u};
+      };
       if (Global->isThreadLocal()) {
         if (Asm->TM.useEmulatedTLS()) {
           // TODO: add debug info for emulated thread local mode.
@@ -270,15 +281,12 @@ void DwarfCompileUnit::addLocationAttribute(
           // FIXME: Make this work with -gsplit-dwarf.
           // Based on GCC's support for TLS:
           if (!DD->useSplitDwarf()) {
+            auto FormAndOp = GetPointerSizedFormAndOp();
             // 1) Start with a constNu of the appropriate pointer size
-            addUInt(*Loc, dwarf::DW_FORM_data1,
-                    PointerSize == 4 ? dwarf::DW_OP_const4u
-                                     : dwarf::DW_OP_const8u);
+            addUInt(*Loc, dwarf::DW_FORM_data1, FormAndOp.Op);
             // 2) containing the (relocated) offset of the TLS variable
             //    within the module's TLS block.
-            addExpr(*Loc,
-                    PointerSize == 4 ? dwarf::DW_FORM_data4
-                                     : dwarf::DW_FORM_data8,
+            addExpr(*Loc, FormAndOp.Form,
                     Asm->getObjFileLowering().getDebugThreadLocalSymbol(Sym));
           } else {
             addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_GNU_const_index);
@@ -292,13 +300,11 @@ void DwarfCompileUnit::addLocationAttribute(
         }
       } else if (Asm->TM.getRelocationModel() == Reloc::RWPI ||
                  Asm->TM.getRelocationModel() == Reloc::ROPI_RWPI) {
+        auto FormAndOp = GetPointerSizedFormAndOp();
         // Constant
-        addUInt(*Loc, dwarf::DW_FORM_data1,
-                PointerSize == 4 ? dwarf::DW_OP_const4u
-                                 : dwarf::DW_OP_const8u);
+        addUInt(*Loc, dwarf::DW_FORM_data1, FormAndOp.Op);
         // Relocation offset
-        addExpr(*Loc, PointerSize == 4 ? dwarf::DW_FORM_data4
-                                       : dwarf::DW_FORM_data8,
+        addExpr(*Loc, FormAndOp.Form,
                 Asm->getObjFileLowering().getIndirectSymViaRWPI(Sym));
         // Base register
         Register BaseReg = Asm->getObjFileLowering().getStaticBase();
