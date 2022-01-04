@@ -25,8 +25,8 @@ static int globalBuff[2];
 struct Incomplete;
 
 static_assert(!std::is_invocable_v<RangeDataT, Incomplete[]>);
-static_assert(!std::is_invocable_v<RangeDataT, Incomplete[2]>);
-static_assert(!std::is_invocable_v<RangeDataT, Incomplete[2][2]>);
+static_assert(!std::is_invocable_v<RangeDataT, Incomplete(&&)[2]>);
+static_assert(!std::is_invocable_v<RangeDataT, Incomplete(&&)[2][2]>);
 static_assert(!std::is_invocable_v<RangeDataT, int [1]>);
 static_assert(!std::is_invocable_v<RangeDataT, int (&&)[1]>);
 static_assert( std::is_invocable_v<RangeDataT, int (&)[1]>);
