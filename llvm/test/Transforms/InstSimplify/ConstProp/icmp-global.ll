@@ -118,9 +118,11 @@ define i1 @global_gep_sgt_null() {
   ret i1 %cmp
 }
 
+; @g2_weak may be null, in which case this is a zero-index GEP and the pointers
+; are equal.
 define i1 @null_gep_ne_null() {
 ; CHECK-LABEL: @null_gep_ne_null(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    ret i1 icmp ne (i8* getelementptr (i8, i8* null, i64 ptrtoint (i32* @g2_weak to i64)), i8* null)
 ;
   %gep = getelementptr i8, i8* null, i64 ptrtoint (i32* @g2_weak to i64)
   %cmp = icmp ne i8* %gep, null
@@ -129,7 +131,7 @@ define i1 @null_gep_ne_null() {
 
 define i1 @null_gep_ugt_null() {
 ; CHECK-LABEL: @null_gep_ugt_null(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    ret i1 icmp ugt (i8* getelementptr (i8, i8* null, i64 ptrtoint (i32* @g2_weak to i64)), i8* null)
 ;
   %gep = getelementptr i8, i8* null, i64 ptrtoint (i32* @g2_weak to i64)
   %cmp = icmp ugt i8* %gep, null
