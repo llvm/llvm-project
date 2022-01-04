@@ -161,15 +161,6 @@ static uint32_t extractBits(uint32_t Num, unsigned Low, unsigned Size) {
   return (Num & (((1ULL << (Size + 1)) - 1) << Low)) >> Low;
 }
 
-static inline bool isInRangeForImmS32(int64_t Value) {
-  return (Value >= std::numeric_limits<int32_t>::min() &&
-          Value <= std::numeric_limits<int32_t>::max());
-}
-
-static inline bool isInRangeForImmU32(uint64_t Value) {
-  return Value <= std::numeric_limits<uint32_t>::max();
-}
-
 class ELFJITLinker_riscv : public JITLinker<ELFJITLinker_riscv> {
   friend class JITLinker<ELFJITLinker_riscv>;
 
@@ -198,18 +189,14 @@ private:
       break;
     }
     case R_RISCV_HI20: {
-      uint64_t Value = E.getTarget().getAddress() + E.getAddend();
-      if (LLVM_UNLIKELY(!isInRangeForImmU32(Value)))
-        return makeTargetOutOfRangeError(G, B, E);
+      int64_t Value = E.getTarget().getAddress() + E.getAddend();
       int32_t Hi = (Value + 0x800) & 0xFFFFF000;
       uint32_t RawInstr = *(little32_t *)FixupPtr;
       *(little32_t *)FixupPtr = (RawInstr & 0xFFF) | static_cast<uint32_t>(Hi);
       break;
     }
     case R_RISCV_LO12_I: {
-      uint64_t Value = E.getTarget().getAddress() + E.getAddend();
-      if (LLVM_UNLIKELY(!isInRangeForImmU32(Value)))
-        return makeTargetOutOfRangeError(G, B, E);
+      int64_t Value = E.getTarget().getAddress() + E.getAddend();
       int32_t Lo = Value & 0xFFF;
       uint32_t RawInstr = *(little32_t *)FixupPtr;
       *(little32_t *)FixupPtr =
@@ -218,8 +205,6 @@ private:
     }
     case R_RISCV_CALL: {
       int64_t Value = E.getTarget().getAddress() + E.getAddend() - FixupAddress;
-      if (LLVM_UNLIKELY(!isInRangeForImmS32(Value)))
-        return makeTargetOutOfRangeError(G, B, E);
       int32_t Hi = (Value + 0x800) & 0xFFFFF000;
       int32_t Lo = Value & 0xFFF;
       uint32_t RawInstrAuipc = *(little32_t *)FixupPtr;
@@ -231,8 +216,6 @@ private:
     }
     case R_RISCV_PCREL_HI20: {
       int64_t Value = E.getTarget().getAddress() + E.getAddend() - FixupAddress;
-      if (LLVM_UNLIKELY(!isInRangeForImmS32(Value)))
-        return makeTargetOutOfRangeError(G, B, E);
       int32_t Hi = (Value + 0x800) & 0xFFFFF000;
       uint32_t RawInstr = *(little32_t *)FixupPtr;
       *(little32_t *)FixupPtr = (RawInstr & 0xFFF) | static_cast<uint32_t>(Hi);
@@ -244,8 +227,6 @@ private:
         return RelHI20.takeError();
       int64_t Value = RelHI20->getTarget().getAddress() +
                       RelHI20->getAddend() - E.getTarget().getAddress();
-      if (LLVM_UNLIKELY(!isInRangeForImmS32(Value)))
-        return makeTargetOutOfRangeError(G, B, E);
       int64_t Lo = Value & 0xFFF;
       uint32_t RawInstr = *(little32_t *)FixupPtr;
       *(little32_t *)FixupPtr =
@@ -256,8 +237,6 @@ private:
       auto RelHI20 = getRISCVPCRelHi20(E);
       int64_t Value = RelHI20->getTarget().getAddress() +
                       RelHI20->getAddend() - E.getTarget().getAddress();
-      if (LLVM_UNLIKELY(!isInRangeForImmS32(Value)))
-        return makeTargetOutOfRangeError(G, B, E);
       int64_t Lo = Value & 0xFFF;
       uint32_t Imm31_25 = extractBits(Lo, 5, 7) << 25;
       uint32_t Imm11_7 = extractBits(Lo, 0, 5) << 7;
