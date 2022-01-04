@@ -836,17 +836,38 @@ public:
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildCopy(const DstOp &Res, const SrcOp &Op);
 
+
+  /// Build and insert G_ASSERT_SEXT, G_ASSERT_ZEXT, or G_ASSERT_ALIGN
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildAssertOp(unsigned Opc, const DstOp &Res, const SrcOp &Op,
+				    unsigned Val) {
+    return buildInstr(Opc, Res, Op).addImm(Val);
+  }
+
   /// Build and insert \p Res = G_ASSERT_ZEXT Op, Size
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildAssertZExt(const DstOp &Res, const SrcOp &Op,
-                                      unsigned Size);
+                                      unsigned Size) {
+    return buildAssertOp(TargetOpcode::G_ASSERT_ZEXT, Res, Op, Size);
+  }
 
   /// Build and insert \p Res = G_ASSERT_SEXT Op, Size
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildAssertSExt(const DstOp &Res, const SrcOp &Op,
-                                      unsigned Size);
+                                      unsigned Size) {
+    return buildAssertOp(TargetOpcode::G_ASSERT_SEXT, Res, Op, Size);
+  }
+
+  /// Build and insert \p Res = G_ASSERT_ALIGN Op, AlignVal
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildAssertAlign(const DstOp &Res, const SrcOp &Op,
+				       Align AlignVal) {
+    return buildAssertOp(TargetOpcode::G_ASSERT_ALIGN, Res, Op, AlignVal.value());
+  }
 
   /// Build and insert `Res = G_LOAD Addr, MMO`.
   ///

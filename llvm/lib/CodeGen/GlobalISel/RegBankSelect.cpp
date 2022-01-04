@@ -626,7 +626,8 @@ bool RegBankSelect::assignInstr(MachineInstr &MI) {
   unsigned Opc = MI.getOpcode();
   if (isPreISelGenericOptimizationHint(Opc)) {
     assert((Opc == TargetOpcode::G_ASSERT_ZEXT ||
-            Opc == TargetOpcode::G_ASSERT_SEXT) &&
+            Opc == TargetOpcode::G_ASSERT_SEXT ||
+            Opc == TargetOpcode::G_ASSERT_ALIGN) &&
            "Unexpected hint opcode!");
     // The only correct mapping for these is to always use the source register
     // bank.
