@@ -1466,6 +1466,11 @@ public:
 #endif // _LIBCPP_DEBUG_LEVEL == 2
 
 private:
+    _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI static bool __fits_in_sso(size_type __sz) {
+        // SSO is disabled during constant evaluation because `__is_long` isn't constexpr friendly
+        return !__libcpp_is_constant_evaluated() && (__sz < __min_cap);
+    }
+
     _LIBCPP_INLINE_VISIBILITY
     allocator_type& __alloc() _NOEXCEPT
         {return __r_.second();}
@@ -1864,7 +1869,7 @@ void basic_string<_CharT, _Traits, _Allocator>::__init(const value_type* __s,
     if (__reserve > max_size())
         this->__throw_length_error();
     pointer __p;
-    if (__reserve < __min_cap)
+    if (__fits_in_sso(__reserve))
     {
         __set_short_size(__sz);
         __p = __get_short_pointer();
@@ -1888,7 +1893,7 @@ basic_string<_CharT, _Traits, _Allocator>::__init(const value_type* __s, size_ty
     if (__sz > max_size())
         this->__throw_length_error();
     pointer __p;
-    if (__sz < __min_cap)
+    if (__fits_in_sso(__sz))
     {
         __set_short_size(__sz);
         __p = __get_short_pointer();
@@ -1964,7 +1969,7 @@ template <class _CharT, class _Traits, class _Allocator>
 void basic_string<_CharT, _Traits, _Allocator>::__init_copy_ctor_external(
     const value_type* __s, size_type __sz) {
   pointer __p;
-  if (__sz < __min_cap) {
+  if (__fits_in_sso(__sz)) {
     __p = __get_short_pointer();
     __set_short_size(__sz);
   } else {
@@ -2027,7 +2032,7 @@ basic_string<_CharT, _Traits, _Allocator>::__init(size_type __n, value_type __c)
     if (__n > max_size())
         this->__throw_length_error();
     pointer __p;
-    if (__n < __min_cap)
+    if (__fits_in_sso(__n))
     {
         __set_short_size(__n);
         __p = __get_short_pointer();
@@ -2158,7 +2163,7 @@ basic_string<_CharT, _Traits, _Allocator>::__init(_ForwardIterator __first, _For
     if (__sz > max_size())
         this->__throw_length_error();
     pointer __p;
-    if (__sz < __min_cap)
+    if (__fits_in_sso(__sz))
     {
         __set_short_size(__sz);
         __p = __get_short_pointer();
@@ -2350,7 +2355,7 @@ basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::assign(const value_type* __s, size_type __n)
 {
     _LIBCPP_ASSERT(__n == 0 || __s != nullptr, "string::assign received nullptr");
-    return (__builtin_constant_p(__n) && __n < __min_cap)
+    return (__builtin_constant_p(__n) && __fits_in_sso(__n))
                ? __assign_short(__s, __n)
                : __assign_external(__s, __n);
 }
@@ -2553,7 +2558,7 @@ basic_string<_CharT, _Traits, _Allocator>::assign(const value_type* __s)
 {
     _LIBCPP_ASSERT(__s != nullptr, "string::assign received nullptr");
     return __builtin_constant_p(*__s)
-               ? (traits_type::length(__s) < __min_cap
+               ? (__fits_in_sso(traits_type::length(__s))
                       ? __assign_short(__s, traits_type::length(__s))
                       : __assign_external(__s, traits_type::length(__s)))
                : __assign_external(__s);
