@@ -59,21 +59,26 @@ public:
 };
 
 class TestSCFIfUtilsPass
-    : public PassWrapper<TestSCFIfUtilsPass, FunctionPass> {
+    : public PassWrapper<TestSCFIfUtilsPass, OperationPass<ModuleOp>> {
 public:
   StringRef getArgument() const final { return "test-scf-if-utils"; }
   StringRef getDescription() const final { return "test scf.if utils"; }
   explicit TestSCFIfUtilsPass() = default;
 
-  void runOnFunction() override {
+  void runOnOperation() override {
     int count = 0;
-    FuncOp func = getFunction();
-    func.walk([&](scf::IfOp ifOp) {
+    getOperation().walk([&](scf::IfOp ifOp) {
       auto strCount = std::to_string(count++);
       FuncOp thenFn, elseFn;
       OpBuilder b(ifOp);
-      outlineIfOp(b, ifOp, &thenFn, std::string("outlined_then") + strCount,
-                  &elseFn, std::string("outlined_else") + strCount);
+      IRRewriter rewriter(b);
+      if (failed(outlineIfOp(rewriter, ifOp, &thenFn,
+                             std::string("outlined_then") + strCount, &elseFn,
+                             std::string("outlined_else") + strCount))) {
+        this->signalPassFailure();
+        return WalkResult::interrupt();
+      }
+      return WalkResult::advance();
     });
   }
 };
