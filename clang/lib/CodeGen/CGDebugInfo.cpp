@@ -4731,6 +4731,8 @@ llvm::DILocalVariable *CGDebugInfo::EmitDef(const VarDecl *VD,
     // all union fields.
     const RecordDecl *RD = RT->getDecl();
     if (RD->isUnion() && RD->isAnonymousStructOrUnion()) {
+      llvm::DIExprBuilder UnionExprBuilder{ExprBuilder};
+      llvm::DIExpr *UnionExpr = UnionExprBuilder.intoExpr();
       // GDB has trouble finding local variables in anonymous unions, so we emit
       // artificial local variables for each of the members.
       //
@@ -4753,11 +4755,11 @@ llvm::DILocalVariable *CGDebugInfo::EmitDef(const VarDecl *VD,
             Flags | llvm::DINode::FlagArtificial, FieldAlign);
 
         // Insert an llvm.dbg.def into the current block.
-        DBuilder.insertDef(
-            DBuilder.createBoundedLifetime(D, ExprBuilder.intoExpr()), Storage,
-            llvm::DILocation::get(CGM.getLLVMContext(), Line, Column, Scope,
-                                  CurInlinedAt),
-            Builder.GetInsertBlock());
+        DBuilder.insertDef(DBuilder.createBoundedLifetime(D, UnionExpr),
+                           Storage,
+                           llvm::DILocation::get(CGM.getLLVMContext(), Line,
+                                                 Column, Scope, CurInlinedAt),
+                           Builder.GetInsertBlock());
       }
     }
   }
