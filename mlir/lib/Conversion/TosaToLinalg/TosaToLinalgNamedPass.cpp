@@ -38,7 +38,7 @@ public:
                     tensor::TensorDialect, scf::SCFDialect>();
   }
 
-  void runOnFunction() override {
+  void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     ConversionTarget target(getContext());
     target.addLegalDialect<linalg::LinalgDialect, StandardOpsDialect,
@@ -55,7 +55,7 @@ public:
 
     target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
 
-    FuncOp func = getFunction();
+    FuncOp func = getOperation();
     mlir::tosa::populateTosaToLinalgNamedConversionPatterns(&patterns);
     if (failed(applyFullConversion(func, target, std::move(patterns))))
       signalPassFailure();

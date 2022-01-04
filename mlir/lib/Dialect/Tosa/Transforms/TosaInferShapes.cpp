@@ -278,7 +278,7 @@ void propagateShapesInRegion(Region &region) {
 /// migrating to within the regions of if/while operations.
 struct TosaInferShapes : public TosaInferShapesBase<TosaInferShapes> {
 public:
-  void runOnFunction() override {
+  void runOnOperation() override {
     FuncOp func = getOperation();
 
     IRRewriter rewriter(func.getContext());

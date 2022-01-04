@@ -121,7 +121,7 @@ public:
 };
 
 struct StdExpandOpsPass : public StdExpandOpsBase<StdExpandOpsPass> {
-  void runOnFunction() override {
+  void runOnOperation() override {
     MLIRContext &ctx = getContext();
 
     RewritePatternSet patterns(&ctx);
@@ -138,8 +138,8 @@ struct StdExpandOpsPass : public StdExpandOpsBase<StdExpandOpsPass> {
     target.addDynamicallyLegalOp<memref::ReshapeOp>([](memref::ReshapeOp op) {
       return !op.shape().getType().cast<MemRefType>().hasStaticShape();
     });
-    if (failed(
-            applyPartialConversion(getFunction(), target, std::move(patterns))))
+    if (failed(applyPartialConversion(getOperation(), target,
+                                      std::move(patterns))))
       signalPassFailure();
   }
 };

@@ -32,7 +32,7 @@ using namespace mlir;
 namespace {
 struct PipelineDataTransfer
     : public AffinePipelineDataTransferBase<PipelineDataTransfer> {
-  void runOnFunction() override;
+  void runOnOperation() override;
   void runOnAffineForOp(AffineForOp forOp);
 
   std::vector<AffineForOp> forOps;
@@ -124,14 +124,14 @@ static bool doubleBuffer(Value oldMemRef, AffineForOp forOp) {
 }
 
 /// Returns success if the IR is in a valid state.
-void PipelineDataTransfer::runOnFunction() {
+void PipelineDataTransfer::runOnOperation() {
   // Do a post order walk so that inner loop DMAs are processed first. This is
   // necessary since 'affine.for' operations nested within would otherwise
   // become invalid (erased) when the outer loop is pipelined (the pipelined one
   // gets deleted and replaced by a prologue, a new steady-state loop and an
   // epilogue).
   forOps.clear();
-  getFunction().walk([&](AffineForOp forOp) { forOps.push_back(forOp); });
+  getOperation().walk([&](AffineForOp forOp) { forOps.push_back(forOp); });
   for (auto forOp : forOps)
     runOnAffineForOp(forOp);
 }

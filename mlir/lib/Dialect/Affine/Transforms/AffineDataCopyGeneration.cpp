@@ -65,7 +65,7 @@ struct AffineDataCopyGeneration
     this->fastMemoryCapacity = fastMemCapacityBytes / 1024;
   }
 
-  void runOnFunction() override;
+  void runOnOperation() override;
   void runOnBlock(Block *block, DenseSet<Operation *> &copyNests);
 
   // Constant zero index to avoid too many duplicates.
@@ -196,8 +196,8 @@ void AffineDataCopyGeneration::runOnBlock(Block *block,
   }
 }
 
-void AffineDataCopyGeneration::runOnFunction() {
-  FuncOp f = getFunction();
+void AffineDataCopyGeneration::runOnOperation() {
+  FuncOp f = getOperation();
   OpBuilder topBuilder(f.getBody());
   zeroIndex = topBuilder.create<arith::ConstantIndexOp>(f.getLoc(), 0);
 

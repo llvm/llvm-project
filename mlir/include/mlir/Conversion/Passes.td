@@ -78,7 +78,7 @@ def ConvertAffineToStandard : Pass<"lower-affine"> {
 // ArithmeticToLLVM
 //===----------------------------------------------------------------------===//
 
-def ConvertArithmeticToLLVM : FunctionPass<"convert-arith-to-llvm"> {
+def ConvertArithmeticToLLVM : Pass<"convert-arith-to-llvm", "FuncOp"> {
   let summary = "Convert Arithmetic dialect to LLVM dialect";
   let description = [{
     This pass converts supported Arithmetic ops to LLVM dialect instructions.
@@ -96,7 +96,7 @@ def ConvertArithmeticToLLVM : FunctionPass<"convert-arith-to-llvm"> {
 // ArithmeticToSPIRV
 //===----------------------------------------------------------------------===//
 
-def ConvertArithmeticToSPIRV : FunctionPass<"convert-arith-to-spirv"> {
+def ConvertArithmeticToSPIRV : Pass<"convert-arith-to-spirv", "FuncOp"> {
   let summary = "Convert Arithmetic dialect to SPIR-V dialect";
   let constructor = "mlir::arith::createConvertArithmeticToSPIRVPass()";
   let dependentDialects = ["spirv::SPIRVDialect"];
@@ -175,7 +175,7 @@ def ConvertComplexToLLVM : Pass<"convert-complex-to-llvm", "ModuleOp"> {
 // ComplexToStandard
 //===----------------------------------------------------------------------===//
 
-def ConvertComplexToStandard : FunctionPass<"convert-complex-to-standard"> {
+def ConvertComplexToStandard : Pass<"convert-complex-to-standard", "FuncOp"> {
   let summary = "Convert Complex dialect to standard dialect";
   let constructor = "mlir::createConvertComplexToStandardPass()";
   let dependentDialects = ["math::MathDialect"];
@@ -343,7 +343,7 @@ def ConvertMathToLibm : Pass<"convert-math-to-libm", "ModuleOp"> {
 // MathToLLVM
 //===----------------------------------------------------------------------===//
 
-def ConvertMathToLLVM : FunctionPass<"convert-math-to-llvm"> {
+def ConvertMathToLLVM : Pass<"convert-math-to-llvm", "FuncOp"> {
   let summary = "Convert Math dialect to LLVM dialect";
   let description = [{
     This pass converts supported Math ops to LLVM dialect intrinsics.
@@ -503,7 +503,7 @@ def SCFToStandard : Pass<"convert-scf-to-std"> {
 // SCFToGPU
 //===----------------------------------------------------------------------===//
 
-def ConvertAffineForToGPU : FunctionPass<"convert-affine-for-to-gpu"> {
+def ConvertAffineForToGPU : Pass<"convert-affine-for-to-gpu", "FuncOp"> {
   let summary = "Convert top-level AffineFor Ops to GPU kernels";
   let constructor = "mlir::createAffineForToGPUPass()";
   let dependentDialects = ["gpu::GPUDialect"];
@@ -635,7 +635,7 @@ def ConvertStandardToSPIRV : Pass<"convert-std-to-spirv", "ModuleOp"> {
 // TosaToLinalg
 //===----------------------------------------------------------------------===//
 
-def TosaToLinalg : FunctionPass<"tosa-to-linalg"> {
+def TosaToLinalg : Pass<"tosa-to-linalg", "FuncOp"> {
   let summary = "Lower TOSA to LinAlg on tensors";
   let description = [{
     Pass that converts TOSA operations to the equivalent operations using the
@@ -649,7 +649,7 @@ def TosaToLinalg : FunctionPass<"tosa-to-linalg"> {
 // TosaToLinalgNamed
 //===----------------------------------------------------------------------===//
 
-def TosaToLinalgNamed : FunctionPass<"tosa-to-linalg-named"> {
+def TosaToLinalgNamed : Pass<"tosa-to-linalg-named", "FuncOp"> {
   let summary = "Lower TOSA to LinAlg named operations";
   let description = [{
     Pass that converts TOSA operations to the equivalent operations using the
@@ -697,7 +697,7 @@ def TosaToStandard : Pass<"tosa-to-standard"> {
 // VectorToGPU
 //===----------------------------------------------------------------------===//
 
-def ConvertVectorToGPU : FunctionPass<"convert-vector-to-gpu"> {
+def ConvertVectorToGPU : Pass<"convert-vector-to-gpu", "FuncOp"> {
   let summary = "Lower the operations from the vector dialect into the GPU "
                 "dialect";
   let constructor = "mlir::createConvertVectorToGPUPass()";
@@ -711,7 +711,7 @@ def ConvertVectorToGPU : FunctionPass<"convert-vector-to-gpu"> {
 // VectorToSCF
 //===----------------------------------------------------------------------===//
 
-def ConvertVectorToSCF : FunctionPass<"convert-vector-to-scf"> {
+def ConvertVectorToSCF : Pass<"convert-vector-to-scf", "FuncOp"> {
   let summary = "Lower the operations from the vector dialect into the SCF "
                 "dialect";
   let constructor = "mlir::createConvertVectorToSCFPass()";

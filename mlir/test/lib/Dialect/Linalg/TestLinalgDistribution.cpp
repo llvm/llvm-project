@@ -38,7 +38,7 @@ static LinalgLoopDistributionOptions getDistributionOptions() {
 
 namespace {
 struct TestLinalgDistribution
-    : public PassWrapper<TestLinalgDistribution, FunctionPass> {
+    : public PassWrapper<TestLinalgDistribution, OperationPass<FuncOp>> {
   StringRef getArgument() const final { return "test-linalg-distribution"; }
   StringRef getDescription() const final { return "Test Linalg distribution."; }
   TestLinalgDistribution() = default;
@@ -47,12 +47,12 @@ struct TestLinalgDistribution
     registry.insert<AffineDialect, gpu::GPUDialect>();
   }
 
-  void runOnFunction() override;
+  void runOnOperation() override;
 };
 } // namespace
 
-void TestLinalgDistribution::runOnFunction() {
-  auto funcOp = getFunction();
+void TestLinalgDistribution::runOnOperation() {
+  auto funcOp = getOperation();
   OwningRewritePatternList distributeTiledLoopsPatterns(&getContext());
   populateLinalgDistributeTiledLoopPattern(
       distributeTiledLoopsPatterns, getDistributionOptions(),

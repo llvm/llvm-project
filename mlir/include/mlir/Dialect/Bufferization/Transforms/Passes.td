@@ -11,7 +11,7 @@
 
 include "mlir/Pass/PassBase.td"
 
-def BufferDeallocation : FunctionPass<"buffer-deallocation"> {
+def BufferDeallocation : Pass<"buffer-deallocation", "FuncOp"> {
   let summary = "Adds all required dealloc operations for all allocations in "
                 "the input program";
   let description = [{
@@ -88,7 +88,7 @@ def BufferDeallocation : FunctionPass<"buffer-deallocation"> {
   let constructor = "mlir::bufferization::createBufferDeallocationPass()";
 }
 
-def FinalizingBufferize : FunctionPass<"finalizing-bufferize"> {
+def FinalizingBufferize : Pass<"finalizing-bufferize", "FuncOp"> {
   let summary = "Finalize a partial bufferization";
   let description = [{
     A bufferize pass that finalizes a partial bufferization by removing

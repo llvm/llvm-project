@@ -55,11 +55,11 @@ NumElementsOpConverter::matchAndRewrite(NumElementsOp op,
 namespace {
 struct ShapeToShapeLowering
     : public ShapeToShapeLoweringBase<ShapeToShapeLowering> {
-  void runOnFunction() override;
+  void runOnOperation() override;
 };
 } // namespace
 
-void ShapeToShapeLowering::runOnFunction() {
+void ShapeToShapeLowering::runOnOperation() {
   MLIRContext &ctx = getContext();
 
   RewritePatternSet patterns(&ctx);
@@ -69,7 +69,7 @@ void ShapeToShapeLowering::runOnFunction() {
   target.addLegalDialect<arith::ArithmeticDialect, ShapeDialect,
                          StandardOpsDialect>();
   target.addIllegalOp<NumElementsOp>();
-  if (failed(mlir::applyPartialConversion(getFunction(), target,
+  if (failed(mlir::applyPartialConversion(getOperation(), target,
                                           std::move(patterns))))
     signalPassFailure();
 }

@@ -23,13 +23,14 @@ using namespace mlir;
 
 namespace {
 struct TestMathPolynomialApproximationPass
-    : public PassWrapper<TestMathPolynomialApproximationPass, FunctionPass> {
+    : public PassWrapper<TestMathPolynomialApproximationPass,
+                         OperationPass<FuncOp>> {
   TestMathPolynomialApproximationPass() = default;
   TestMathPolynomialApproximationPass(
       const TestMathPolynomialApproximationPass &pass)
       : PassWrapper(pass) {}
 
-  void runOnFunction() override;
+  void runOnOperation() override;
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<arith::ArithmeticDialect, math::MathDialect,
                     vector::VectorDialect>();
@@ -51,7 +52,7 @@ struct TestMathPolynomialApproximationPass
 };
 } // namespace
 
-void TestMathPolynomialApproximationPass::runOnFunction() {
+void TestMathPolynomialApproximationPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   MathPolynomialApproximationOptions approxOptions;
   approxOptions.enableAvx2 = enableAvx2;

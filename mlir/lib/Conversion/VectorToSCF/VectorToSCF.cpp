@@ -1284,7 +1284,7 @@ struct ConvertVectorToSCFPass
     this->lowerTensors = options.lowerTensors;
   }
 
-  void runOnFunction() override {
+  void runOnOperation() override {
     VectorTransferToSCFOptions options;
     options.unroll = fullUnroll;
     options.targetRank = targetRank;
@@ -1293,16 +1293,16 @@ struct ConvertVectorToSCFPass
 
     // Lower permutation maps first.
     if (lowerPermutationMaps) {
-      RewritePatternSet lowerTransferPatterns(getFunction().getContext());
+      RewritePatternSet lowerTransferPatterns(getOperation().getContext());
       mlir::vector::populateVectorTransferPermutationMapLoweringPatterns(
           lowerTransferPatterns);
-      (void)applyPatternsAndFoldGreedily(getFunction(),
+      (void)applyPatternsAndFoldGreedily(getOperation(),
                                          std::move(lowerTransferPatterns));
     }
 
-    RewritePatternSet patterns(getFunction().getContext());
+    RewritePatternSet patterns(getOperation().getContext());
     populateVectorToSCFConversionPatterns(patterns, options);
-    (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
 

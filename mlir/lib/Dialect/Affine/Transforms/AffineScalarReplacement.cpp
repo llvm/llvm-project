@@ -29,16 +29,17 @@ using namespace mlir;
 namespace {
 struct AffineScalarReplacement
     : public AffineScalarReplacementBase<AffineScalarReplacement> {
-  void runOnFunction() override;
+  void runOnOperation() override;
 };
 
 } // namespace
 
-std::unique_ptr<FunctionPass> mlir::createAffineScalarReplacementPass() {
+std::unique_ptr<OperationPass<FuncOp>>
+mlir::createAffineScalarReplacementPass() {
   return std::make_unique<AffineScalarReplacement>();
 }
 
-void AffineScalarReplacement::runOnFunction() {
-  affineScalarReplace(getFunction(), getAnalysis<DominanceInfo>(),
+void AffineScalarReplacement::runOnOperation() {
+  affineScalarReplace(getOperation(), getAnalysis<DominanceInfo>(),
                       getAnalysis<PostDominanceInfo>());
 }

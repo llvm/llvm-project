@@ -535,12 +535,12 @@ namespace {
 
 struct ConvertVectorToGPUPass
     : public ConvertVectorToGPUBase<ConvertVectorToGPUPass> {
-  void runOnFunction() override {
-    RewritePatternSet patterns(getFunction().getContext());
+  void runOnOperation() override {
+    RewritePatternSet patterns(getOperation().getContext());
     populatePrepareVectorToMMAPatterns(patterns);
-    (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
 
-    convertVectorToMMAOps(getFunction());
+    convertVectorToMMAOps(getOperation());
   }
 };
 

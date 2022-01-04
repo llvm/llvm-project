@@ -38,7 +38,7 @@ struct LoopTiling : public AffineLoopTilingBase<LoopTiling> {
     this->cacheSizeInKiB = cacheSizeBytes / 1024;
   }
 
-  void runOnFunction() override;
+  void runOnOperation() override;
   void getTileSizes(ArrayRef<AffineForOp> band,
                     SmallVectorImpl<unsigned> *tileSizes);
 
@@ -160,10 +160,10 @@ void LoopTiling::getTileSizes(ArrayRef<AffineForOp> band,
     adjustToDivisorsOfTripCounts(band, tileSizes);
 }
 
-void LoopTiling::runOnFunction() {
+void LoopTiling::runOnOperation() {
   // Bands of loops to tile.
   std::vector<SmallVector<AffineForOp, 6>> bands;
-  getTileableBands(getFunction(), &bands);
+  getTileableBands(getOperation(), &bands);
 
   // Tile each band.
   for (auto &band : bands) {

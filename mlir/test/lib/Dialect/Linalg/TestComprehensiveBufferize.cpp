@@ -39,7 +39,8 @@ namespace {
 /// A helper struct for FunctionBufferize and ModuleBufferize. Both passes are
 /// mostly identical.
 struct TestComprehensiveFunctionBufferize
-    : public PassWrapper<TestComprehensiveFunctionBufferize, FunctionPass> {
+    : public PassWrapper<TestComprehensiveFunctionBufferize,
+                         OperationPass<FuncOp>> {
   StringRef getArgument() const final {
     return "test-comprehensive-function-bufferize";
   }
@@ -68,7 +69,7 @@ struct TestComprehensiveFunctionBufferize
     vector_ext::registerBufferizableOpInterfaceExternalModels(registry);
   }
 
-  void runOnFunction() override;
+  void runOnOperation() override;
 
   Option<bool> allowReturnMemref{
       *this, "allow-return-memref",
@@ -99,7 +100,7 @@ struct TestComprehensiveFunctionBufferize
 };
 } // namespace
 
-void TestComprehensiveFunctionBufferize::runOnFunction() {
+void TestComprehensiveFunctionBufferize::runOnOperation() {
   auto options = std::make_unique<BufferizationOptions>();
 
   if (!allowReturnMemref)
@@ -117,7 +118,7 @@ void TestComprehensiveFunctionBufferize::runOnFunction() {
       options->dialectFilter->insert(dialectNamespace);
   }
 
-  Operation *op = getFunction().getOperation();
+  Operation *op = getOperation().getOperation();
   if (failed(runComprehensiveBufferize(op, std::move(options))))
     return;
 

@@ -11,14 +11,14 @@
 
 include "mlir/Pass/PassBase.td"
 
-def StdBufferize : FunctionPass<"std-bufferize"> {
+def StdBufferize : Pass<"std-bufferize", "FuncOp"> {
   let summary = "Bufferize the std dialect";
   let constructor = "mlir::createStdBufferizePass()";
   let dependentDialects = ["bufferization::BufferizationDialect",
                            "memref::MemRefDialect", "scf::SCFDialect"];
 }
 
-def StdExpandOps : FunctionPass<"std-expand"> {
+def StdExpandOps : Pass<"std-expand", "FuncOp"> {
   let summary = "Legalize std operations to be convertible to LLVM.";
   let constructor = "mlir::createStdExpandOpsPass()";
 }

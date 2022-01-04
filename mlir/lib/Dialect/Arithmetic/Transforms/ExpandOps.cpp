@@ -189,7 +189,7 @@ public:
 
 struct ArithmeticExpandOpsPass
     : public ArithmeticExpandOpsBase<ArithmeticExpandOpsPass> {
-  void runOnFunction() override {
+  void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     ConversionTarget target(getContext());
 
@@ -209,8 +209,8 @@ struct ArithmeticExpandOpsPass
       arith::MinUIOp
     >();
     // clang-format on
-    if (failed(
-            applyPartialConversion(getFunction(), target, std::move(patterns))))
+    if (failed(applyPartialConversion(getOperation(), target,
+                                      std::move(patterns))))
       signalPassFailure();
   }
 };

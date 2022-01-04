@@ -233,7 +233,7 @@ struct ConvertArithmeticToLLVMPass
     : public ConvertArithmeticToLLVMBase<ConvertArithmeticToLLVMPass> {
   ConvertArithmeticToLLVMPass() = default;
 
-  void runOnFunction() override {
+  void runOnOperation() override {
     LLVMConversionTarget target(getContext());
     RewritePatternSet patterns(&getContext());
 
@@ -245,8 +245,8 @@ struct ConvertArithmeticToLLVMPass
     mlir::arith::populateArithmeticToLLVMConversionPatterns(converter,
                                                             patterns);
 
-    if (failed(
-            applyPartialConversion(getFunction(), target, std::move(patterns))))
+    if (failed(applyPartialConversion(getOperation(), target,
+                                      std::move(patterns))))
       signalPassFailure();
   }
 };

@@ -37,7 +37,7 @@ void populateShapeRewritePatterns(RewritePatternSet &patterns);
 //
 // After this pass, no cstr_ operations exist.
 void populateRemoveShapeConstraintsPatterns(RewritePatternSet &patterns);
-std::unique_ptr<FunctionPass> createRemoveShapeConstraintsPass();
+std::unique_ptr<OperationPass<FuncOp>> createRemoveShapeConstraintsPass();
 
 /// Populates patterns for shape dialect structural type conversions and sets up
 /// the provided ConversionTarget with the appropriate legality configuration
@@ -59,7 +59,7 @@ void populateShapeStructuralTypeConversionsAndLegality(
 // Note that most shape dialect ops must be converted to std before
 // bufferization happens, as they are intended to be bufferized at the std
 // level.
-std::unique_ptr<FunctionPass> createShapeBufferizePass();
+std::unique_ptr<OperationPass<FuncOp>> createShapeBufferizePass();
 
 //===----------------------------------------------------------------------===//
 // Registration

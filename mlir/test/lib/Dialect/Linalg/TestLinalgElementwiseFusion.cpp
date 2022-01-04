@@ -46,7 +46,7 @@ static bool setFusedOpOperandLimit(const OpResult &producer,
 
 namespace {
 struct TestLinalgElementwiseFusion
-    : public PassWrapper<TestLinalgElementwiseFusion, FunctionPass> {
+    : public PassWrapper<TestLinalgElementwiseFusion, OperationPass<FuncOp>> {
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<AffineDialect, linalg::LinalgDialect, memref::MemRefDialect,
                     tensor::TensorDialect>();
@@ -58,9 +58,9 @@ struct TestLinalgElementwiseFusion
     return "Test Linalg element wise operation fusion patterns";
   }
 
-  void runOnFunction() override {
+  void runOnOperation() override {
     MLIRContext *context = &this->getContext();
-    FuncOp funcOp = this->getFunction();
+    FuncOp funcOp = this->getOperation();
     RewritePatternSet fusionPatterns(context);
 
     linalg::populateElementwiseOpsFusionPatterns(
@@ -74,7 +74,8 @@ struct TestLinalgElementwiseFusion
 };
 
 struct TestLinalgControlFuseByExpansion
-    : public PassWrapper<TestLinalgControlFuseByExpansion, FunctionPass> {
+    : public PassWrapper<TestLinalgControlFuseByExpansion,
+                         OperationPass<FuncOp>> {
   void getDependentDialects(DialectRegistry &registry) const override {
     registry
         .insert<AffineDialect, linalg::LinalgDialect, tensor::TensorDialect>();
@@ -87,9 +88,9 @@ struct TestLinalgControlFuseByExpansion
            "expansion";
   }
 
-  void runOnFunction() override {
+  void runOnOperation() override {
     MLIRContext *context = &this->getContext();
-    FuncOp funcOp = this->getFunction();
+    FuncOp funcOp = this->getOperation();
     RewritePatternSet fusionPatterns(context);
 
     linalg::ControlElementwiseOpsFusionFn controlReshapeFusionFn =
@@ -120,7 +121,7 @@ struct TestLinalgControlFuseByExpansion
 };
 
 struct TestPushExpandingReshape
-    : public PassWrapper<TestPushExpandingReshape, FunctionPass> {
+    : public PassWrapper<TestPushExpandingReshape, OperationPass<FuncOp>> {
   void getDependentDialects(DialectRegistry &registry) const override {
     registry
         .insert<AffineDialect, linalg::LinalgDialect, tensor::TensorDialect>();
@@ -130,9 +131,9 @@ struct TestPushExpandingReshape
     return "Test Linalg reshape push patterns";
   }
 
-  void runOnFunction() override {
+  void runOnOperation() override {
     MLIRContext *context = &this->getContext();
-    FuncOp funcOp = this->getFunction();
+    FuncOp funcOp = this->getOperation();
     RewritePatternSet patterns(context);
     linalg::populatePushReshapeOpsPatterns(patterns);
     (void)applyPatternsAndFoldGreedily(funcOp.getBody(), std::move(patterns));

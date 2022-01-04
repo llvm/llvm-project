@@ -20,7 +20,7 @@ using namespace mlir::linalg;
 
 namespace {
 struct TestLinalgHoisting
-    : public PassWrapper<TestLinalgHoisting, FunctionPass> {
+    : public PassWrapper<TestLinalgHoisting, OperationPass<FuncOp>> {
   TestLinalgHoisting() = default;
   TestLinalgHoisting(const TestLinalgHoisting &pass) : PassWrapper(pass) {}
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -31,7 +31,7 @@ struct TestLinalgHoisting
     return "Test Linalg hoisting functions.";
   }
 
-  void runOnFunction() override;
+  void runOnOperation() override;
 
   Option<bool> testHoistRedundantTransfers{
       *this, "test-hoist-redundant-transfers",
@@ -40,10 +40,10 @@ struct TestLinalgHoisting
 };
 } // namespace
 
-void TestLinalgHoisting::runOnFunction() {
+void TestLinalgHoisting::runOnOperation() {
   if (testHoistRedundantTransfers) {
-    hoistRedundantVectorTransfers(getFunction());
-    hoistRedundantVectorTransfersOnTensor(getFunction());
+    hoistRedundantVectorTransfers(getOperation());
+    hoistRedundantVectorTransfersOnTensor(getOperation());
     return;
   }
 }

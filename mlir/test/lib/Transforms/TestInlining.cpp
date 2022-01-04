@@ -25,14 +25,14 @@ using namespace mlir;
 using namespace test;
 
 namespace {
-struct Inliner : public PassWrapper<Inliner, FunctionPass> {
+struct Inliner : public PassWrapper<Inliner, OperationPass<FuncOp>> {
   StringRef getArgument() const final { return "test-inline"; }
   StringRef getDescription() const final {
     return "Test inlining region calls";
   }
 
-  void runOnFunction() override {
-    auto function = getFunction();
+  void runOnOperation() override {
+    auto function = getOperation();
 
     // Collect each of the direct function calls within the module.
     SmallVector<CallIndirectOp, 16> callers;

@@ -28,7 +28,7 @@ static llvm::cl::OptionCategory clOptionsCategory(PASS_NAME " options");
 namespace {
 
 struct TestAffineDataCopy
-    : public PassWrapper<TestAffineDataCopy, FunctionPass> {
+    : public PassWrapper<TestAffineDataCopy, OperationPass<FuncOp>> {
   StringRef getArgument() const final { return PASS_NAME; }
   StringRef getDescription() const final {
     return "Tests affine data copy utility functions.";
@@ -39,7 +39,7 @@ struct TestAffineDataCopy
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<memref::MemRefDialect>();
   }
-  void runOnFunction() override;
+  void runOnOperation() override;
 
 private:
   Option<bool> clMemRefFilter{
@@ -55,10 +55,10 @@ private:
 
 } // namespace
 
-void TestAffineDataCopy::runOnFunction() {
+void TestAffineDataCopy::runOnOperation() {
   // Gather all AffineForOps by loop depth.
   std::vector<SmallVector<AffineForOp, 2>> depthToLoops;
-  gatherLoops(getFunction(), depthToLoops);
+  gatherLoops(getOperation(), depthToLoops);
   assert(!depthToLoops.empty() && "Loop nest not found");
 
   // Only support tests with a single loop nest and a single innermost loop

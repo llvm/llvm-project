@@ -32,7 +32,7 @@ using namespace mlir;
 namespace {
 /// Convert all parallel affine.for op into 1-D affine.parallel op.
 struct AffineParallelize : public AffineParallelizeBase<AffineParallelize> {
-  void runOnFunction() override;
+  void runOnOperation() override;
 };
 
 /// Descriptor of a potentially parallelizable loop.
@@ -47,8 +47,8 @@ struct ParallelizationCandidate {
 };
 } // namespace
 
-void AffineParallelize::runOnFunction() {
-  FuncOp f = getFunction();
+void AffineParallelize::runOnOperation() {
+  FuncOp f = getOperation();
 
   // The walker proceeds in pre-order to process the outer loops first
   // and control the number of outer parallel loops.
