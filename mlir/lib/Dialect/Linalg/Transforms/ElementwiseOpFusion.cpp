@@ -608,31 +608,6 @@ LogicalResult ExpansionInfo::compute(LinalgOp linalgOp,
 LogicalResult isGenericOpExpandable(GenericOp genericOp,
                                     const ExpansionInfo &expansionInfo,
                                     PatternRewriter &rewriter) {
-  // Current reshape only supports expansion of a dynamic dim when only one of
-  // the expanded dims are dynamic.
-  for (const auto &originalShape :
-       llvm::enumerate(expansionInfo.getOriginalShape()))
-    if (ShapedType::isDynamic(originalShape.value())) {
-      // All but one of the expanded dims must be static.
-      bool foundDynamicExpandedDim = false;
-      for (auto expandedShape :
-           expansionInfo.getExpandedShapeOfDim(originalShape.index())) {
-        if (ShapedType::isDynamic(expandedShape)) {
-          if (foundDynamicExpandedDim) {
-            return rewriter.notifyMatchFailure(
-                genericOp,
-                "cannot expanded dynamic dims into multiple dynamic dims");
-          }
-          foundDynamicExpandedDim = true;
-        }
-      }
-      if (!foundDynamicExpandedDim) {
-        return rewriter.notifyMatchFailure(
-            genericOp, "dynamic dim expansion needs at least one dynamic dim "
-                       "in result shape");
-      }
-    }
-
   if (!genericOp.hasIndexSemantics())
     return success();
   for (unsigned i : llvm::seq<unsigned>(0, expansionInfo.getOrigOpNumDims())) {
@@ -793,13 +768,21 @@ fuseWithReshapeByExpansion(GenericOp genericOp, Operation *reshapeOp,
     }
     if (genericOp.isInputTensor(opOperand)) {
       AffineMap indexingMap = genericOp.getTiedIndexingMap(opOperand);
+      auto opOperandType = opOperand->get().getType().cast<RankedTensorType>();
       RankedTensorType expandedOperandType =
-          getExpandedType(opOperand->get().getType().cast<RankedTensorType>(),
-                          indexingMap, expansionInfo);
+          getExpandedType(opOperandType, indexingMap, expansionInfo);
       if (expandedOperandType != opOperand->get().getType()) {
         // Reshape the operand to get the right type.
         SmallVector<ReassociationIndices> reassociation =
             getReassociationForExpansion(indexingMap, expansionInfo);
+        if (failed(reshapeLikeShapesAreCompatible(
+                [&](const Twine &msg) {
+                  return rewriter.notifyMatchFailure(genericOp, msg);
+                },
+                opOperandType.getShape(), expandedOperandType.getShape(),
+                reassociation,
+                /*isExpandingReshape=*/true)))
+          return llvm::None;
         expandedOpOperands.push_back(rewriter.create<tensor::ExpandShapeOp>(
             genericOp.getLoc(), expandedOperandType, opOperand->get(),
             reassociation));
@@ -813,12 +796,20 @@ fuseWithReshapeByExpansion(GenericOp genericOp, Operation *reshapeOp,
   SmallVector<Value> outputs;
   for (OpOperand *opOperand : genericOp.getOutputOperands()) {
     AffineMap indexingMap = genericOp.getTiedIndexingMap(opOperand);
+    auto opOperandType = opOperand->get().getType().cast<RankedTensorType>();
     RankedTensorType expandedOutputType =
-        getExpandedType(opOperand->get().getType().cast<RankedTensorType>(),
-                        indexingMap, expansionInfo);
+        getExpandedType(opOperandType, indexingMap, expansionInfo);
     if (expandedOutputType != opOperand->get().getType()) {
       SmallVector<ReassociationIndices> reassociation =
           getReassociationForExpansion(indexingMap, expansionInfo);
+      if (failed(reshapeLikeShapesAreCompatible(
+              [&](const Twine &msg) {
+                return rewriter.notifyMatchFailure(genericOp, msg);
+              },
+              opOperandType.getShape(), expandedOutputType.getShape(),
+              reassociation,
+              /*isExpandingReshape=*/true)))
+        return llvm::None;
       outputs.push_back(rewriter.create<tensor::ExpandShapeOp>(
           genericOp.getLoc(), expandedOutputType, opOperand->get(),
           reassociation));
