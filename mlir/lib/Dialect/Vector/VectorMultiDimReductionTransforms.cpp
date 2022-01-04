@@ -237,7 +237,6 @@ struct TwoDimMultiReductionToElementWise
     if (!elementType.isIntOrIndexOrFloat())
       return failure();
 
-    Value condition;
     Value result =
         rewriter.create<vector::ExtractOp>(loc, multiReductionOp.source(), 0)
             .getResult();
