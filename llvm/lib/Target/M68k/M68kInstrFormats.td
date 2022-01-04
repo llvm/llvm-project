@@ -1,4 +1,4 @@
-//=== M68kInstrFormats.td - M68k Instruction Formats ---*- tablegen -*-===//
+//===-- M68kInstrFormats.td - M68k Instruction Formats -----*- tablegen -*-===//
 //                     The LLVM Compiler Infrastructure
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
