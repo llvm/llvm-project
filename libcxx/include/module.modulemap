@@ -592,10 +592,7 @@ module std [system] {
 
     module __iterator {
       module access                { private header "__iterator/access.h" }
-      module advance               {
-        private header "__iterator/advance.h"
-        export __function_like
-      }
+      module advance               { private header "__iterator/advance.h" }
       module back_insert_iterator  { private header "__iterator/back_insert_iterator.h" }
       module common_iterator       { private header "__iterator/common_iterator.h" }
       module concepts              { private header "__iterator/concepts.h" }
@@ -616,16 +613,10 @@ module std [system] {
       module iterator              { private header "__iterator/iterator.h" }
       module iterator_traits       { private header "__iterator/iterator_traits.h" }
       module move_iterator         { private header "__iterator/move_iterator.h" }
-      module next                  {
-        private header "__iterator/next.h"
-        export __function_like
-      }
+      module next                  { private header "__iterator/next.h" }
       module ostream_iterator      { private header "__iterator/ostream_iterator.h" }
       module ostreambuf_iterator   { private header "__iterator/ostreambuf_iterator.h" }
-      module prev                  {
-        private header "__iterator/prev.h"
-        export __function_like
-      }
+      module prev                  { private header "__iterator/prev.h" }
       module projected             { private header "__iterator/projected.h" }
       module readable_traits       { private header "__iterator/readable_traits.h" }
       module reverse_access        { private header "__iterator/reverse_access.h" }
@@ -673,14 +664,8 @@ module std [system] {
       module concepts                        { private header "__memory/concepts.h" }
       module construct_at                    { private header "__memory/construct_at.h" }
       module pointer_traits                  { private header "__memory/pointer_traits.h" }
-      module ranges_construct_at {
-        private header "__memory/ranges_construct_at.h"
-        export __function_like
-      }
-      module ranges_uninitialized_algorithms {
-        private header "__memory/ranges_uninitialized_algorithms.h"
-        export __function_like
-      }
+      module ranges_construct_at             { private header "__memory/ranges_construct_at.h" }
+      module ranges_uninitialized_algorithms { private header "__memory/ranges_uninitialized_algorithms.h" }
       module raw_storage_iterator            { private header "__memory/raw_storage_iterator.h" }
       module shared_ptr                      { private header "__memory/shared_ptr.h" }
       module temporary_buffer                { private header "__memory/temporary_buffer.h" }
@@ -988,7 +973,6 @@ module std [system] {
   module __bits              { private header "__bits"              export * }
   module __debug             {         header "__debug"             export * }
   module __errc              { private header "__errc"              export * }
-  module __function_like     { private header "__function_like.h"   export * }
   module __hash_table        {         header "__hash_table"        export * }
   module __locale            { private header "__locale"            export * }
   module __mbstate_t         { private header "__mbstate_t.h"       export * }
