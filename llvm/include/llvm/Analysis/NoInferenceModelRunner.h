@@ -26,6 +26,10 @@ public:
   NoInferenceModelRunner(LLVMContext &Ctx,
                          const std::vector<TensorSpec> &Inputs);
 
+  static bool classof(const MLModelRunner *R) {
+    return R->getKind() == MLModelRunner::Kind::NoOp;
+  }
+
 private:
   void *evaluateUntyped() override {
     llvm_unreachable("We shouldn't call run on this model runner.");

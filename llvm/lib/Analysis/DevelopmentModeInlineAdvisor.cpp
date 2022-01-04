@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "llvm/Config/config.h"
+#include "llvm/Support/Casting.h"
 #if defined(LLVM_HAVE_TF_API)
 
 #include "llvm/Analysis/CallGraph.h"
@@ -150,7 +151,7 @@ public:
   DevelopmentModeMLInlineAdvisor(
       Module &M, ModuleAnalysisManager &MAM,
       std::unique_ptr<MLModelRunner> ModelRunner,
-      std::function<bool(CallBase &)> GetDefaultAdvice, bool IsDoingInference,
+      std::function<bool(CallBase &)> GetDefaultAdvice,
       std::unique_ptr<TrainingLogger> Logger);
 
   size_t getTotalSizeEstimate();
@@ -341,10 +342,11 @@ void TrainingLogger::print() {
 DevelopmentModeMLInlineAdvisor::DevelopmentModeMLInlineAdvisor(
     Module &M, ModuleAnalysisManager &MAM,
     std::unique_ptr<MLModelRunner> ModelRunner,
-    std::function<bool(CallBase &)> GetDefaultAdvice, bool IsDoingInference,
+    std::function<bool(CallBase &)> GetDefaultAdvice,
     std::unique_ptr<TrainingLogger> Logger)
     : MLInlineAdvisor(M, MAM, std::move(ModelRunner)),
-      GetDefaultAdvice(GetDefaultAdvice), IsDoingInference(IsDoingInference),
+      GetDefaultAdvice(GetDefaultAdvice),
+      IsDoingInference(isa<ModelUnderTrainingRunner>(getModelRunner())),
       Logger(std::move(Logger)),
       InitialNativeSize(isLogging() ? getTotalSizeEstimate() : 0),
       CurrentNativeSize(InitialNativeSize) {
@@ -422,30 +424,20 @@ std::unique_ptr<InlineAdvisor> llvm::getDevelopmentModeAdvisor(
     std::function<bool(CallBase &)> GetDefaultAdvice) {
   auto &Ctx = M.getContext();
   std::unique_ptr<MLModelRunner> Runner;
-  ModelUnderTrainingRunner *MUTRPtr = nullptr;
-  bool IsDoingInference = false;
   if (TFModelUnderTrainingPath.empty())
     Runner.reset(new NoInferenceModelRunner(Ctx, getInputFeatures()));
-  else {
-    std::unique_ptr<ModelUnderTrainingRunner> MUTR;
-    if (auto MaybeOutputSpecs = loadOutputSpecs(
-            Ctx, DecisionName, TFModelUnderTrainingPath, TFOutputSpecOverride))
-      MUTR = std::make_unique<ModelUnderTrainingRunner>(
-          Ctx, TFModelUnderTrainingPath, getInputFeatures(), *MaybeOutputSpecs);
-    if (!MUTR || !MUTR->isValid()) {
-      Ctx.emitError("Could not load the policy model from the provided path");
-      return nullptr;
-    }
-    IsDoingInference = true;
-    MUTRPtr = MUTR.get();
-    Runner = std::move(MUTR);
-  }
+  else
+    Runner = ModelUnderTrainingRunner::createAndEnsureValid(
+        Ctx, TFModelUnderTrainingPath, DecisionName, getInputFeatures(),
+        TFOutputSpecOverride);
+  if (!Runner)
+    return nullptr;
   std::unique_ptr<TrainingLogger> Logger;
   if (!TrainingLog.empty())
-    Logger = std::make_unique<TrainingLogger>(TrainingLog, MUTRPtr);
+    Logger = std::make_unique<TrainingLogger>(
+        TrainingLog, dyn_cast<ModelUnderTrainingRunner>(Runner.get()));
 
   return std::make_unique<DevelopmentModeMLInlineAdvisor>(
-      M, MAM, std::move(Runner), GetDefaultAdvice, IsDoingInference,
-      std::move(Logger));
+      M, MAM, std::move(Runner), GetDefaultAdvice, std::move(Logger));
 }
 #endif // defined(LLVM_HAVE_TF_API)
