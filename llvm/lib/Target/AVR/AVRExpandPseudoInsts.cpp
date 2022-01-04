@@ -1927,7 +1927,6 @@ bool AVRExpandPseudo::expandASRB6Rd(Block &MBB, BlockIt MBBI) {
   Register DstReg = MI.getOperand(0).getReg();
   bool DstIsDead = MI.getOperand(0).isDead();
   bool DstIsKill = MI.getOperand(1).isKill();
-  bool ImpIsDead = MI.getOperand(3).isDead();
 
   // bst r24, 6
   // lsl r24
