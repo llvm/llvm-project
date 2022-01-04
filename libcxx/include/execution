@@ -11,6 +11,7 @@
 #define _LIBCPP_EXECUTION
 
 #include <__config>
+#include <version>
 
 #if defined(_LIBCPP_HAS_PARALLEL_ALGORITHMS) && _LIBCPP_STD_VER >= 17
 #   include <__pstl_execution>
