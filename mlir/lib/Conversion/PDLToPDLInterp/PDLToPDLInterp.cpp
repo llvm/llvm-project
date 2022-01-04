@@ -239,7 +239,7 @@ Value PatternLowering::getValueAt(Block *&currentBlock, Position *pos) {
   // Get the value for the parent position.
   Value parentVal;
   if (Position *parent = pos->getParent())
-    parentVal = getValueAt(currentBlock, pos->getParent());
+    parentVal = getValueAt(currentBlock, parent);
 
   // TODO: Use a location from the position.
   Location loc = parentVal ? parentVal.getLoc() : builder.getUnknownLoc();
