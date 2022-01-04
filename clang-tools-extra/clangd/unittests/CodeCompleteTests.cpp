@@ -1294,6 +1294,25 @@ TEST(SignatureHelpTest, Constructors) {
   CheckBracedInit("int x(S); int i = x({^});");
 }
 
+TEST(SignatureHelpTest, Aggregates) {
+  std::string Top = R"cpp(
+    struct S {
+      int a, b, c, d;
+    };
+  )cpp";
+  auto AggregateSig = Sig("S{[[int a]], [[int b]], [[int c]], [[int d]]}");
+  EXPECT_THAT(signatures(Top + "S s{^}").signatures,
+              UnorderedElementsAre(AggregateSig, Sig("S{}"),
+                                   Sig("S{[[const S &]]}"),
+                                   Sig("S{[[S &&]]}")));
+  EXPECT_THAT(signatures(Top + "S s{1,^}").signatures,
+              ElementsAre(AggregateSig));
+  EXPECT_EQ(signatures(Top + "S s{1,^}").activeParameter, 1);
+  EXPECT_THAT(signatures(Top + "S s{.c=3,^}").signatures,
+              ElementsAre(AggregateSig));
+  EXPECT_EQ(signatures(Top + "S s{.c=3,^}").activeParameter, 3);
+}
+
 TEST(SignatureHelpTest, OverloadInitListRegression) {
   auto Results = signatures(R"cpp(
     struct A {int x;};
