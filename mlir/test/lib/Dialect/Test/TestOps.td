@@ -2139,6 +2139,12 @@ def FormatInferTypeOp : TEST_Op<"format_infer_type", [InferTypeOpInterface]> {
    }];
 }
 
+// Check that formatget supports DeclareOpInterfaceMethods.
+def FormatInferType2Op : TEST_Op<"format_infer_type2", [DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
+  let results = (outs AnyType);
+  let assemblyFormat = "attr-dict";
+}
+
 // Base class for testing mixing allOperandTypes, allOperands, and
 // inferResultTypes.
 class FormatInferAllTypesBaseOp<string mnemonic, list<OpTrait> traits = []>
