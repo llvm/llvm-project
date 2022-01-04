@@ -4903,7 +4903,8 @@ public:
 
   StmtResult ActOnReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
                              Scope *CurScope);
-  StmtResult BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp);
+  StmtResult BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
+                             bool AllowRecovery = false);
   StmtResult ActOnCapScopeReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
                                      NamedReturnInfo &NRInfo,
                                      bool SupressSimplerImplicitMoves);

@@ -876,14 +876,12 @@ namespace VirtualFromBase {
 namespace Lifetime {
   constexpr int &get(int &&r) { return r; }
   // cxx2b-error@-1 {{non-const lvalue reference to type 'int' cannot bind to a temporary of type 'int'}}
-  // cxx2b-error@-2 {{no return statement in constexpr function}} See PR40598
   constexpr int f() {
     int &r = get(123);
     return r;
-    // cxx2b-note@-1 {{use of reference outside its lifetime is not allowed in a constant expression}}
-    // cxx14_20-note@-2 {{read of object outside its lifetime}}
+    // cxx14_20-note@-1 {{read of object outside its lifetime}}
   }
-  static_assert(f() == 123, ""); // expected-error {{constant expression}} expected-note {{in call}}
+  static_assert(f() == 123, ""); // expected-error {{constant expression}} cxx14_20-note {{in call}}
 
   constexpr int g() {
     int *p = 0;
