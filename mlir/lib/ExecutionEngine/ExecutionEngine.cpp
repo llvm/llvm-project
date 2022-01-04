@@ -217,9 +217,15 @@ ExecutionEngine::ExecutionEngine(bool enableObjectCache,
       gdbListener(enableGDBNotificationListener
                       ? llvm::JITEventListener::createGDBRegistrationListener()
                       : nullptr),
-      perfListener(enablePerfNotificationListener
-                       ? llvm::JITEventListener::createPerfJITEventListener()
-                       : nullptr) {}
+      perfListener(nullptr) {
+  if (enablePerfNotificationListener) {
+    if (auto *listener = llvm::JITEventListener::createPerfJITEventListener())
+      perfListener = listener;
+    else if (auto *listener =
+                 llvm::JITEventListener::createIntelJITEventListener())
+      perfListener = listener;
+  }
+}
 
 Expected<std::unique_ptr<ExecutionEngine>> ExecutionEngine::create(
     ModuleOp m,
