@@ -69,9 +69,9 @@
 #include <utility>
 
 namespace llvm {
-class RAGreedy : public MachineFunctionPass,
-                 public RegAllocBase,
-                 private LiveRangeEdit::Delegate {
+class LLVM_LIBRARY_VISIBILITY RAGreedy : public MachineFunctionPass,
+                                         public RegAllocBase,
+                                         private LiveRangeEdit::Delegate {
   // Convenient shortcuts.
   using PQueue = std::priority_queue<std::pair<unsigned, unsigned>>;
   using SmallLISet = SmallPtrSet<LiveInterval *, 4>;
