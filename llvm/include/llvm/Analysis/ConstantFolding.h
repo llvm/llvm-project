@@ -148,13 +148,6 @@ Constant *ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty, APInt Offset,
 Constant *ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,
                                        const DataLayout &DL);
 
-/// ConstantFoldLoadThroughGEPConstantExpr - Given a constant and a
-/// getelementptr constantexpr, return the constant value being addressed by the
-/// constant expression, or null if something is funny and we can't decide.
-Constant *ConstantFoldLoadThroughGEPConstantExpr(Constant *C, ConstantExpr *CE,
-                                                 Type *Ty,
-                                                 const DataLayout &DL);
-
 /// canConstantFoldCallTo - Return true if its even possible to fold a call to
 /// the specified function.
 bool canConstantFoldCallTo(const CallBase *Call, const Function *F);
