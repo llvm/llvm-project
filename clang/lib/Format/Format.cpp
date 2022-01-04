@@ -868,6 +868,7 @@ template <> struct MappingTraits<FormatStyle::SpaceBeforeParensCustom> {
     IO.mapOptional("AfterFunctionDeclarationName",
                    Spacing.AfterFunctionDeclarationName);
     IO.mapOptional("AfterIfMacros", Spacing.AfterIfMacros);
+    IO.mapOptional("AfterOverloadedOperator", Spacing.AfterOverloadedOperator);
     IO.mapOptional("BeforeNonEmptyParentheses",
                    Spacing.BeforeNonEmptyParentheses);
   }

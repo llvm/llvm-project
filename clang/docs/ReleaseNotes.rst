@@ -311,6 +311,9 @@ clang-format
 
 - Improved C++20 Modules and Coroutines support.
 
+- Option ``AfterOverloadedOperator`` has been added in ``SpaceBeforeParensOptions``
+  to allow space between overloaded operator and opening parentheses.
+
 libclang
 --------
 
