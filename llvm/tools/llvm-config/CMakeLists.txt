@@ -6,6 +6,12 @@ set(BUILDVARIABLES_OBJPATH ${CMAKE_CURRENT_BINARY_DIR}/BuildVariables.inc)
 # Add the llvm-config tool.
 add_llvm_tool(llvm-config
   llvm-config.cpp
+  # This utility doesn't use much of LLVM, so linking a shared library for the
+  # entire thing is overkill. Avoiding that especially saves on build time when cross
+  # compiling LLVM and building both cross and native `llvm-config`s. We don't
+  # want to build an entire native libLLVM.so in addition to the cross one just
+  # for the native `llvm-config`!
+  DISABLE_LLVM_LINK_LLVM_DYLIB
   )
 
 # Compute the substitution values for various items.
