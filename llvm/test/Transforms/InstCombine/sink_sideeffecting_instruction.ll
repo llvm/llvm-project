@@ -330,6 +330,123 @@ use_block:
   ret i32 %var3
 }
 
+define i32 @sink_lifetime1(i1 %c) {
+; CHECK-LABEL: @sink_lifetime1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAR:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast i32* [[VAR]] to i8*
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull [[BITCAST]])
+; CHECK-NEXT:    [[VAR3:%.*]] = call i32 @unknown(i32* nonnull [[VAR]]) #[[ATTR1]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[EARLY_RETURN:%.*]], label [[USE_BLOCK:%.*]]
+; CHECK:       early_return:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       use_block:
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull [[BITCAST]])
+; CHECK-NEXT:    ret i32 [[VAR3]]
+;
+entry:
+  %var = alloca i32, align 4
+  %bitcast = bitcast i32* %var to i8*
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %bitcast)
+  %var3 = call i32 @unknown(i32* %var) argmemonly nounwind willreturn
+  br i1 %c, label %early_return, label %use_block
+
+early_return:
+  ret i32 0
+
+use_block:
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* %bitcast)
+  ret i32 %var3
+}
+
+define i32 @sink_lifetime2(i1 %c) {
+; CHECK-LABEL: @sink_lifetime2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAR:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast i32* [[VAR]] to i8*
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull [[BITCAST]])
+; CHECK-NEXT:    [[VAR3:%.*]] = call i32 @unknown(i32* nonnull [[VAR]]) #[[ATTR1]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[MERGE:%.*]], label [[USE_BLOCK:%.*]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[RET:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[VAR3]], [[USE_BLOCK]] ]
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull [[BITCAST]])
+; CHECK-NEXT:    ret i32 [[RET]]
+; CHECK:       use_block:
+; CHECK-NEXT:    br label [[MERGE]]
+;
+entry:
+  %var = alloca i32, align 4
+  %bitcast = bitcast i32* %var to i8*
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %bitcast)
+  %var3 = call i32 @unknown(i32* %var) argmemonly nounwind willreturn
+  br i1 %c, label %merge, label %use_block
+
+merge:
+  %ret = phi i32 [0, %entry], [%var3, %use_block]
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* %bitcast)
+  ret i32 %ret
+
+use_block:
+  br label %merge
+}
+
+define i32 @sink_lifetime3(i1 %c) {
+; CHECK-LABEL: @sink_lifetime3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAR:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[VAR3:%.*]] = call i32 @unknown(i32* nonnull [[VAR]]) #[[ATTR1]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[EARLY_RETURN:%.*]], label [[USE_BLOCK:%.*]]
+; CHECK:       early_return:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       use_block:
+; CHECK-NEXT:    ret i32 [[VAR3]]
+;
+entry:
+  %var = alloca i32, align 4
+  %bitcast = bitcast i32* %var to i8*
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %bitcast)
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* %bitcast)
+  ; If unknown accesses %var, that's UB
+  %var3 = call i32 @unknown(i32* %var) argmemonly nounwind willreturn
+  br i1 %c, label %early_return, label %use_block
+
+early_return:
+  ret i32 0
+
+use_block:
+  ret i32 %var3
+}
+
+define i32 @sink_lifetime4(i1 %c) {
+; CHECK-LABEL: @sink_lifetime4(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAR:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast i32* [[VAR]] to i8*
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull [[BITCAST]])
+; CHECK-NEXT:    [[VAR3:%.*]] = call i32 @unknown(i32* nonnull [[VAR]]) #[[ATTR1]]
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull [[BITCAST]])
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[EARLY_RETURN:%.*]], label [[USE_BLOCK:%.*]]
+; CHECK:       early_return:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       use_block:
+; CHECK-NEXT:    ret i32 [[VAR3]]
+;
+entry:
+  %var = alloca i32, align 4
+  %bitcast = bitcast i32* %var to i8*
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %bitcast)
+  %var3 = call i32 @unknown(i32* %var) argmemonly nounwind willreturn
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* %bitcast)
+  br i1 %c, label %early_return, label %use_block
+
+early_return:
+  ret i32 0
+
+use_block:
+  ret i32 %var3
+}
+
 declare i32 @bar()
 declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
 declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
+
