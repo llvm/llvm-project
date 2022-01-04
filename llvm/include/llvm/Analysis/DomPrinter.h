@@ -14,6 +14,20 @@
 #ifndef LLVM_ANALYSIS_DOMPRINTER_H
 #define LLVM_ANALYSIS_DOMPRINTER_H
 
+#include "llvm/IR/PassManager.h"
+
+namespace llvm {
+class DomTreePrinterPass : public PassInfoMixin<DomTreePrinterPass> {
+public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
+class DomTreeOnlyPrinterPass : public PassInfoMixin<DomTreeOnlyPrinterPass> {
+public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+} // namespace llvm
+
 namespace llvm {
   class FunctionPass;
   FunctionPass *createDomPrinterPass();
