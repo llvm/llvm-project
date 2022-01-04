@@ -2252,16 +2252,17 @@ void CodeGenFunction::emitArrayDestroy(llvm::Value *begin,
 
   // Shift the address back by one element.
   llvm::Value *negativeOne = llvm::ConstantInt::get(SizeTy, -1, true);
+  llvm::Type *llvmElementType = ConvertTypeForMem(elementType);
   llvm::Value *element = Builder.CreateInBoundsGEP(
-      elementPast->getType()->getPointerElementType(), elementPast, negativeOne,
-      "arraydestroy.element");
+      llvmElementType, elementPast, negativeOne, "arraydestroy.element");
 
   if (useEHCleanup)
     pushRegularPartialArrayCleanup(begin, element, elementType, elementAlign,
                                    destroyer);
 
   // Perform the actual destruction there.
-  destroyer(*this, Address(element, elementAlign), elementType);
+  destroyer(*this, Address(element, llvmElementType, elementAlign),
+            elementType);
 
   if (useEHCleanup)
     PopCleanupBlock();
