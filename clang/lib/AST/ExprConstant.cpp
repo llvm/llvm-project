@@ -10434,6 +10434,15 @@ bool VectorExprEvaluator::VisitUnaryOperator(const UnaryOperator *E) {
   if (!Evaluate(SubExprValue, Info, SubExpr))
     return false;
 
+  // FIXME: This vector evaluator someday needs to be changed to be LValue
+  // aware/keep LValue information around, rather than dealing with just vector
+  // types directly. Until then, we cannot handle cases where the operand to
+  // these unary operators is an LValue. The only case I've been able to see
+  // cause this is operator++ assigning to a member expression (only valid in
+  // altivec compilations) in C mode, so this shouldn't limit us too much.
+  if (SubExprValue.isLValue())
+    return false;
+
   assert(SubExprValue.getVectorLength() == VD->getNumElements() &&
          "Vector length doesn't match type?");
 
