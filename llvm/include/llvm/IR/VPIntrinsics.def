@@ -39,9 +39,9 @@
 // same name.  Since the operands are also the same, we open the property
 // scopes for both the VPIntrinsic and the SDNode at once.
 // \p VPSD     The SelectionDAG Node id (eg VP_ADD).
-// \p LEGALPOS The operand position of the SDNode that is used for legalizing
-//             this SDNode. This can be `-1`, in which case the return type of
-//             the SDNode is used.
+// \p LEGALPOS The operand position of the SDNode that is used for legalizing.
+//             If LEGALPOS < 0, then the return type given by
+//             TheNode->getValueType(-1-LEGALPOS) is used.
 // \p TDNAME   The name of the TableGen definition of this SDNode.
 // \p MASKPOS  The mask operand position.
 // \p EVLPOS   The explicit vector length operand position.
