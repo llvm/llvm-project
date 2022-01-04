@@ -20,18 +20,14 @@
 
 template<class T>
 struct ForwardView : std::ranges::view_base {
-  friend forward_iterator<T*> begin(ForwardView&) { return forward_iterator<T*>(nullptr); }
-  friend forward_iterator<T*> begin(ForwardView const&) { return forward_iterator<T*>(nullptr); }
-  friend forward_iterator<T*> end(ForwardView&) { return forward_iterator<T*>(nullptr); }
-  friend forward_iterator<T*> end(ForwardView const&) { return forward_iterator<T*>(nullptr); }
+  forward_iterator<T*> begin() const;
+  sentinel_wrapper<forward_iterator<T*>> end() const;
 };
 
 template<class T>
 struct InputView : std::ranges::view_base {
-  friend cpp17_input_iterator<T*> begin(InputView&) { return cpp17_input_iterator<T*>(nullptr); }
-  friend cpp17_input_iterator<T*> begin(InputView const&) { return cpp17_input_iterator<T*>(nullptr); }
-  friend cpp17_input_iterator<T*> end(InputView&) { return cpp17_input_iterator<T*>(nullptr); }
-  friend cpp17_input_iterator<T*> end(InputView const&) { return cpp17_input_iterator<T*>(nullptr); }
+  cpp17_input_iterator<T*> begin() const;
+  sentinel_wrapper<cpp17_input_iterator<T*>> end() const;
 };
 
 template<class T>
