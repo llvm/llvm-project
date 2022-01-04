@@ -476,11 +476,11 @@ let Predicates = [UseHVXV68, UseHVXQFloat] in {
   // since the qfloat arithmetic instructions above always generate the
   // accompanying conversions as part of their pattern
   def: Pat<(VecF16 (pf1<fpround> HWF32:$Vuu)),
-          (V6_vdealh (V6_vconv_hf_qf32
-              (VecPF32 (Combinev (V6_vadd_sf (HiVec HvxWR:$Vuu), (V6_vd0)),
-                                 (V6_vadd_sf (LoVec HvxWR:$Vuu), (V6_vd0))
-              ))))>;
-
+           (V6_vdealh (V6_vconv_hf_qf32
+             (VecPF32 (Combinev (V6_vadd_sf (HiVec HvxWR:$Vuu), (V6_vd0)),
+                                (V6_vadd_sf (LoVec HvxWR:$Vuu), (V6_vd0))
+             ))))>;
+  // fpextend for QFloat is handled manually in HexagonISelLoweringHVX.cpp.
 }
 
 // HVX IEEE arithmetic Instructions
@@ -497,6 +497,23 @@ let Predicates = [UseHVXV68, UseHVXIEEEFP] in {
            (V6_vmpy_hf_hf HVF16:$Rs, HVF16:$Rt)>;
   def: Pat<(fmul HVF32:$Rs, HVF32:$Rt),
            (V6_vmpy_sf_sf HVF32:$Rs, HVF32:$Rt)>;
+
+  def: Pat<(VecF16 (pf1<fpround> HWF32:$Vuu)),
+           (V6_vdealh (V6_vcvt_hf_sf (HiVec HvxWR:$Vuu), (LoVec HvxWR:$Vuu)))>;
+  def: Pat<(VecPF32 (pf1<fpextend> HVF16:$Vu)),
+           (V6_vcvt_sf_hf (V6_vshuffh HvxVR:$Vu))>;
+
+  def: OpR_R_pat<V6_vcvt_h_hf,  Fptosi, VecI16, HVF16>;
+  def: OpR_R_pat<V6_vcvt_uh_hf, Fptoui, VecI16, HVF16>;
+  def: OpR_R_pat<V6_vcvt_hf_h,  Sitofp, VecF16, HVI16>;
+  def: OpR_R_pat<V6_vcvt_hf_uh, Uitofp, VecF16, HVI16>;
+
+  def: Pat<(VecI8 (Fptosi HWF16:$Vu)),
+           (V6_vcvt_b_hf (HiVec $Vu), (LoVec $Vu))>;
+  def: Pat<(VecI8 (Fptoui HWF16:$Vu)),
+           (V6_vcvt_ub_hf (HiVec $Vu), (LoVec $Vu))>;
+  def: Pat<(VecPF16 (Sitofp HVI8:$Vu)), (V6_vcvt_hf_b HvxVR:$Vu)>;
+  def: Pat<(VecPF16 (Uitofp HVI8:$Vu)), (V6_vcvt_hf_ub HvxVR:$Vu)>;
 }
 
 let Predicates = [UseHVXV68, UseHVXFloatingPoint] in {
