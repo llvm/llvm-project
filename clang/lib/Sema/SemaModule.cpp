@@ -395,7 +395,7 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
     // [module.interface]p1:
     // An export-declaration shall inhabit a namespace scope and appear in the
     // purview of a module interface unit.
-    Diag(ExportLoc, diag::err_export_not_in_module_interface);
+    Diag(ExportLoc, diag::err_export_not_in_module_interface) << 0;
   }
 
   return Import;
