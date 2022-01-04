@@ -22,7 +22,6 @@ namespace mlir {
 // Forward declarations.
 class Block;
 class ConversionPatternRewriter;
-class FuncOp;
 class MLIRContext;
 class Operation;
 class Type;
@@ -506,11 +505,6 @@ void populateFunctionLikeTypeConversionPattern(RewritePatternSet &patterns,
   populateFunctionLikeTypeConversionPattern(FuncOpT::getOperationName(),
                                             patterns, converter);
 }
-
-/// Add a pattern to the given pattern list to convert the signature of a FuncOp
-/// with the given type converter.
-void populateFuncOpTypeConversionPattern(RewritePatternSet &patterns,
-                                         TypeConverter &converter);
 
 //===----------------------------------------------------------------------===//
 // Conversion PatternRewriter
