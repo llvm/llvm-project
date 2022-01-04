@@ -1298,31 +1298,29 @@ llvm.func @invokeLandingpad() -> i32 attributes { personality = @__gxx_personali
 
 // -----
 
-llvm.mlir.global external constant @_ZTIi() : !llvm.ptr<i8>
 llvm.func @foo() -> i8
 llvm.func @__gxx_personality_v0(...) -> i32
 
 // CHECK-LABEL: @invoke_result
 // CHECK-SAME: %[[a0:[0-9]+]]
 llvm.func @invoke_result(%arg0 : !llvm.ptr<i8>) attributes { personality = @__gxx_personality_v0 } {
-    %0 = llvm.mlir.addressof @_ZTIi : !llvm.ptr<ptr<i8>>
 // CHECK: %[[a1:[0-9]+]] = invoke i8 @foo()
 // CHECK-NEXT: to label %[[normal:[0-9]+]] unwind label %[[unwind:[0-9]+]]
-    %1 = llvm.invoke @foo() to ^bb1 unwind ^bb2 : () -> i8
+    %0 = llvm.invoke @foo() to ^bb1 unwind ^bb2 : () -> i8
 
 // CHECK: [[normal]]:
 // CHECK-NEXT: store i8 %[[a1]], i8* %[[a0]]
 // CHECK-NEXT: ret void
 ^bb1:
-    llvm.store %1, %arg0 : !llvm.ptr<i8>
+    llvm.store %0, %arg0 : !llvm.ptr<i8>
     llvm.return
 
 // CHECK: [[unwind]]:
 // CHECK-NEXT: landingpad { i8*, i32 }
-// CHECK-NEXT: catch i8** @_ZTIi
+// CHECK-NEXT: cleanup
 // CHECK-NEXT: ret void
 ^bb2:
-    %7 = llvm.landingpad (catch %0 : !llvm.ptr<ptr<i8>>) : !llvm.struct<(ptr<i8>, i32)>
+    %7 = llvm.landingpad cleanup : !llvm.struct<(ptr<i8>, i32)>
     llvm.return
 }
 
