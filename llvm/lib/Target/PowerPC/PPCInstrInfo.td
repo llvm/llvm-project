@@ -5530,6 +5530,30 @@ def DWBytes3210 {
     (i64 (INSERT_SUBREG (i64 (IMPLICIT_DEF)), Word, sub_32));
 }
 
+// These instructions store a hash computed from the value of the link register
+// and the value of the stack pointer.
+let mayStore = 1 in {
+def HASHST : XForm_XD6_RA5_RB5<31, 722, (outs),
+                               (ins gprc:$RB, memrihash:$D_RA_XD),
+                               "hashst $RB, $D_RA_XD", IIC_IntGeneral, []>;
+def HASHSTP : XForm_XD6_RA5_RB5<31, 658, (outs),
+                                (ins gprc:$RB, memrihash:$D_RA_XD),
+                                "hashstp $RB, $D_RA_XD", IIC_IntGeneral, []>;
+}
+
+// These instructions check a hash computed from the value of the link register
+// and the value of the stack pointer. The hasSideEffects flag is needed as the
+// instruction may TRAP if the hash does not match the hash stored at the
+// specified address.
+let mayLoad = 1, hasSideEffects = 1 in {
+def HASHCHK : XForm_XD6_RA5_RB5<31, 754, (outs),
+                                (ins gprc:$RB, memrihash:$D_RA_XD),
+                                "hashchk $RB, $D_RA_XD", IIC_IntGeneral, []>;
+def HASHCHKP : XForm_XD6_RA5_RB5<31, 690, (outs),
+                                 (ins gprc:$RB, memrihash:$D_RA_XD),
+                                 "hashchkp $RB, $D_RA_XD", IIC_IntGeneral, []>;
+}
+
 // Now both high word and low word are reversed, next
 // swap the high word and low word.
 def : Pat<(i64 (bitreverse i64:$A)),
