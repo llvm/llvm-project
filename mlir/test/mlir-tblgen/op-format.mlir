@@ -409,7 +409,10 @@ test.format_infer_variadic_type_from_non_variadic %i64, %i64 : i64
 //===----------------------------------------------------------------------===//
 
 // CHECK: test.format_infer_type
-%ignored_res7 = test.format_infer_type
+%ignored_res7a = test.format_infer_type
+
+// CHECK: test.format_infer_type2
+%ignored_res7b = test.format_infer_type2
 
 // CHECK: test.format_infer_type_all_operands_and_types(%[[I64]], %[[I32]]) : i64, i32
 %ignored_res8:2 = test.format_infer_type_all_operands_and_types(%i64, %i32) : i64, i32

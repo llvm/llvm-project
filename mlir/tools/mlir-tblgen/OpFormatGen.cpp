@@ -2345,9 +2345,16 @@ LogicalResult FormatParser::parse() {
       handleSameTypesConstraint(variableTyResolver, /*includeResults=*/true);
     } else if (def.isSubClassOf("TypesMatchWith")) {
       handleTypesMatchConstraint(variableTyResolver, def);
-    } else if (def.getName() == "InferTypeOpInterface" &&
-               !op.allResultTypesKnown()) {
-      canInferResultTypes = true;
+    } else if (!op.allResultTypesKnown()) {
+      // This doesn't check the name directly to handle
+      //    DeclareOpInterfaceMethods<InferTypeOpInterface>
+      // and the like.
+      // TODO: Add hasCppInterface check.
+      if (auto name = def.getValueAsOptionalString("cppClassName")) {
+        if (*name == "InferTypeOpInterface" &&
+            def.getValueAsString("cppNamespace") == "::mlir")
+          canInferResultTypes = true;
+      }
     }
   }
 
