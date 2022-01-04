@@ -56,12 +56,14 @@ llvm::raw_ostream &ConstantBase<RESULT, VALUE>::AsFortran(
     } else if constexpr (Result::category == TypeCategory::Character) {
       o << Result::kind << '_' << parser::QuoteCharacterLiteral(value, true);
     } else if constexpr (Result::category == TypeCategory::Logical) {
-      if (value.IsTrue()) {
-        o << ".true.";
+      if (!value.IsCanonical()) {
+        o << "transfer(" << value.word().ToInt64() << "_8,.false._"
+          << Result::kind << ')';
+      } else if (value.IsTrue()) {
+        o << ".true." << '_' << Result::kind;
       } else {
-        o << ".false.";
+        o << ".false." << '_' << Result::kind;
       }
-      o << '_' << Result::kind;
     } else {
       StructureConstructor{result_.derivedTypeSpec(), value}.AsFortran(o);
     }

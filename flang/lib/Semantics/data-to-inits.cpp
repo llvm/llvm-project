@@ -284,6 +284,18 @@ DataInitializationCompiler<DSV>::ConvertElement(
       return {std::make_pair(std::move(*converted), true)};
     }
   }
+  SemanticsContext &context{exprAnalyzer_.context()};
+  if (context.IsEnabled(common::LanguageFeature::LogicalIntegerAssignment)) {
+    if (MaybeExpr converted{evaluate::DataConstantConversionExtension(
+            exprAnalyzer_.GetFoldingContext(), type, expr)}) {
+      if (context.ShouldWarn(
+              common::LanguageFeature::LogicalIntegerAssignment)) {
+        context.Say("nonstandard usage: initialization of %s with %s"_en_US,
+            type.AsFortran(), expr.GetType().value().AsFortran());
+      }
+      return {std::make_pair(std::move(*converted), false)};
+    }
+  }
   return std::nullopt;
 }
 

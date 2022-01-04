@@ -1030,6 +1030,11 @@ Constant<T> PackageConstant(std::vector<Scalar<T>> &&elements,
   }
 }
 
+// Nonstandard conversions of constants (integer->logical, logical->integer)
+// that can appear in DATA statements as an extension.
+std::optional<Expr<SomeType>> DataConstantConversionExtension(
+    FoldingContext &, const DynamicType &, const Expr<SomeType> &);
+
 } // namespace Fortran::evaluate
 
 namespace Fortran::semantics {
