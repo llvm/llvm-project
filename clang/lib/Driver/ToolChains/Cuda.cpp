@@ -619,8 +619,9 @@ void NVPTX::OpenMPLinker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(CubinF);
   }
 
-  AddStaticDeviceLibsLinking(C, *this, JA, Inputs, Args, CmdArgs, "nvptx", GPUArch,
-                      false, false);
+  AddStaticDeviceLibsLinking(C, *this, JA, Inputs, Args, CmdArgs, "nvptx",
+                             GPUArch, /*isBitCodeSDL=*/false,
+                             /*postClangLink=*/false);
 
   // Find nvlink and pass it as "--nvlink-path=" argument of
   // clang-nvlink-wrapper.
@@ -777,8 +778,9 @@ void CudaToolChain::addClangTargetOptions(
 
     addOpenMPDeviceRTL(getDriver(), DriverArgs, CC1Args, BitcodeSuffix,
                        getTriple());
-    AddStaticDeviceLibsPostLinking(getDriver(), DriverArgs, CC1Args, "nvptx", GpuArch,
-                        /* bitcode SDL?*/ true, /* PostClang Link? */ true);
+    AddStaticDeviceLibsPostLinking(getDriver(), DriverArgs, CC1Args, "nvptx",
+                                   GpuArch, /*isBitCodeSDL=*/true,
+                                   /*postClangLink=*/true);
   }
 }
 

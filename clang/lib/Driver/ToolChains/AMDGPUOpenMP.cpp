@@ -303,6 +303,7 @@ const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
       });
     }
   }
+
   // Add an intermediate output file.
   CmdArgs.push_back("-o");
   auto OutputFileName = getOutputFileName(C, OutputFilePrefix, "-linked", "bc");

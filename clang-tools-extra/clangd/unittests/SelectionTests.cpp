@@ -318,6 +318,14 @@ TEST(SelectionTest, CommonAncestor) {
       {"[[st^ruct {int x;}]] y;", "CXXRecordDecl"},
       {"[[struct {int x;} ^y]];", "VarDecl"},
       {"struct {[[int ^x]];} y;", "FieldDecl"},
+
+      // Tricky case: nested ArrayTypeLocs have the same token range.
+      {"const int x = 1, y = 2; int array[^[[x]]][10][y];", "DeclRefExpr"},
+      {"const int x = 1, y = 2; int array[x][10][^[[y]]];", "DeclRefExpr"},
+      {"const int x = 1, y = 2; int array[x][^[[10]]][y];", "IntegerLiteral"},
+      {"const int x = 1, y = 2; [[i^nt]] array[x][10][y];", "BuiltinTypeLoc"},
+      {"void func(int x) { int v_array[^[[x]]][10]; }", "DeclRefExpr"},
+
       // FIXME: the AST has no location info for qualifiers.
       {"const [[a^uto]] x = 42;", "AutoTypeLoc"},
       {"[[co^nst auto x = 42]];", "VarDecl"},
@@ -377,6 +385,7 @@ TEST(SelectionTest, CommonAncestor) {
         decltype([[^a]] + a) b;
         )cpp",
           "DeclRefExpr"},
+      {"[[decltype]]^(1) b;", "DecltypeTypeLoc"}, // Not the VarDecl.
 
       // Objective-C nullability attributes.
       {

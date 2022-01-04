@@ -18,6 +18,7 @@
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/DataflowWorklist.h"
+#include "clang/Analysis/FlowSensitive/Transfer.h"
 #include "clang/Analysis/FlowSensitive/TypeErasedDataflowAnalysis.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
@@ -39,12 +40,6 @@ static TypeErasedDataflowAnalysisState computeBlockInputState(
     std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>> &BlockStates,
     const CFGBlock &Block, const Environment &InitEnv,
     TypeErasedDataflowAnalysis &Analysis) {
-  // FIXME: Consider passing `Block` to `Analysis.typeErasedInitialElement()`
-  // to enable building analyses like computation of dominators that initialize
-  // the state of each basic block differently.
-  TypeErasedDataflowAnalysisState State = {Analysis.typeErasedInitialElement(),
-                                           InitEnv};
-
   llvm::DenseSet<const CFGBlock *> Preds;
   Preds.insert(Block.pred_begin(), Block.pred_end());
   if (Block.getTerminator().isTemporaryDtorsBranch()) {
@@ -77,6 +72,7 @@ static TypeErasedDataflowAnalysisState computeBlockInputState(
     }
   }
 
+  llvm::Optional<TypeErasedDataflowAnalysisState> MaybeState;
   for (const CFGBlock *Pred : Preds) {
     // Skip if the `Block` is unreachable or control flow cannot get past it.
     if (!Pred || Pred->hasNoReturnElement())
@@ -91,10 +87,20 @@ static TypeErasedDataflowAnalysisState computeBlockInputState(
 
     const TypeErasedDataflowAnalysisState &PredState =
         MaybePredState.getValue();
-    Analysis.joinTypeErased(State.Lattice, PredState.Lattice);
-    State.Env.join(PredState.Env);
+    if (MaybeState.hasValue()) {
+      Analysis.joinTypeErased(MaybeState->Lattice, PredState.Lattice);
+      MaybeState->Env.join(PredState.Env);
+    } else {
+      MaybeState = PredState;
+    }
   }
-  return State;
+  if (!MaybeState.hasValue()) {
+    // FIXME: Consider passing `Block` to `Analysis.typeErasedInitialElement()`
+    // to enable building analyses like computation of dominators that
+    // initialize the state of each basic block differently.
+    MaybeState.emplace(Analysis.typeErasedInitialElement(), InitEnv);
+  }
+  return *MaybeState;
 }
 
 TypeErasedDataflowAnalysisState transferBlock(
@@ -109,16 +115,18 @@ TypeErasedDataflowAnalysisState transferBlock(
       computeBlockInputState(CFCtx, BlockStates, Block, InitEnv, Analysis);
   for (const CFGElement &Element : Block) {
     // FIXME: Evaluate other kinds of `CFGElement`.
-    const llvm::Optional<CFGStmt> Stmt = Element.getAs<CFGStmt>();
-    if (!Stmt.hasValue())
+    const llvm::Optional<CFGStmt> CfgStmt = Element.getAs<CFGStmt>();
+    if (!CfgStmt.hasValue())
       continue;
 
-    // FIXME: Evaluate the statement contained in `Stmt`.
+    const Stmt *S = CfgStmt.getValue().getStmt();
+    assert(S != nullptr);
 
-    State.Lattice = Analysis.transferTypeErased(Stmt.getValue().getStmt(),
-                                                State.Lattice, State.Env);
+    transfer(*S, State.Env);
+    State.Lattice = Analysis.transferTypeErased(S, State.Lattice, State.Env);
+
     if (HandleTransferredStmt != nullptr)
-      HandleTransferredStmt(Stmt.getValue(), State);
+      HandleTransferredStmt(CfgStmt.getValue(), State);
   }
   return State;
 }

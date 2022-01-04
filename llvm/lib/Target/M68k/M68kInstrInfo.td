@@ -1,4 +1,4 @@
-//== M68kInstrInfo.td - Main M68k Instruction Definition -*- tablegen -*-=//
+//===-- M68kInstrInfo.td - Main M68k Instruction Definition -*- tablegen -*-==//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -587,8 +587,8 @@ class MxType<ValueType vt, string prefix, string postfix,
              // qOp:  Supported PCD operand
              // qPat: What PCD pattern is used
              MxOperand qOp, ComplexPattern qPat,
-             // kOp:  Supported PCD operand
-             // kPat: What PCD pattern is used
+             // kOp:  Supported PCI operand
+             // kPat: What PCI pattern is used
              MxOperand kOp, ComplexPattern kPat,
              // iOp:  Supported immediate operand
              // iPat: What immediate pattern is used

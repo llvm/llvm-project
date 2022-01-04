@@ -1539,17 +1539,7 @@ static ICmpInst::Predicate evaluateICmpRelation(Constant *V1, Constant *V2,
           // so the result is greater-than
           if (!GV->hasExternalWeakLinkage())
             return ICmpInst::ICMP_UGT;
-        } else if (isa<ConstantPointerNull>(CE1Op0)) {
-          // If we are indexing from a null pointer, check to see if we have any
-          // non-zero indices.
-          for (unsigned i = 1, e = CE1->getNumOperands(); i != e; ++i)
-            if (!CE1->getOperand(i)->isNullValue())
-              // Offsetting from null, must not be equal.
-              return ICmpInst::ICMP_UGT;
-          // Only zero indexes from null, must still be zero.
-          return ICmpInst::ICMP_EQ;
         }
-        // Otherwise, we can't really say if the first operand is null or not.
       } else if (const GlobalValue *GV2 = dyn_cast<GlobalValue>(V2)) {
         if (isa<ConstantPointerNull>(CE1Op0)) {
           // If its not weak linkage, the GVal must have a non-zero address
@@ -1563,26 +1553,17 @@ static ICmpInst::Predicate evaluateICmpRelation(Constant *V1, Constant *V2,
             return ICmpInst::BAD_ICMP_PREDICATE;
           }
         }
-      } else {
-        ConstantExpr *CE2 = cast<ConstantExpr>(V2);
-        Constant *CE2Op0 = CE2->getOperand(0);
-
-        // There are MANY other foldings that we could perform here.  They will
-        // probably be added on demand, as they seem needed.
-        switch (CE2->getOpcode()) {
-        default: break;
-        case Instruction::GetElementPtr:
-          // By far the most common case to handle is when the base pointers are
-          // obviously to the same global.
-          if (isa<GlobalValue>(CE1Op0) && isa<GlobalValue>(CE2Op0)) {
-            // Don't know relative ordering, but check for inequality.
-            if (CE1Op0 != CE2Op0) {
-              GEPOperator *CE2GEP = cast<GEPOperator>(CE2);
-              if (CE1GEP->hasAllZeroIndices() && CE2GEP->hasAllZeroIndices())
-                return areGlobalsPotentiallyEqual(cast<GlobalValue>(CE1Op0),
-                                                  cast<GlobalValue>(CE2Op0));
-              return ICmpInst::BAD_ICMP_PREDICATE;
-            }
+      } else if (const auto *CE2GEP = dyn_cast<GEPOperator>(V2)) {
+        // By far the most common case to handle is when the base pointers are
+        // obviously to the same global.
+        const Constant *CE2Op0 = cast<Constant>(CE2GEP->getPointerOperand());
+        if (isa<GlobalValue>(CE1Op0) && isa<GlobalValue>(CE2Op0)) {
+          // Don't know relative ordering, but check for inequality.
+          if (CE1Op0 != CE2Op0) {
+            if (CE1GEP->hasAllZeroIndices() && CE2GEP->hasAllZeroIndices())
+              return areGlobalsPotentiallyEqual(cast<GlobalValue>(CE1Op0),
+                                                cast<GlobalValue>(CE2Op0));
+            return ICmpInst::BAD_ICMP_PREDICATE;
           }
         }
       }

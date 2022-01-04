@@ -65,6 +65,7 @@ define i1 @ult_constexpr_constexpr_one(i8* %x) {
 
 @g = global [2 x i32] [i32 1, i32 2]
 @g2 = global i32 0
+@g2_weak = extern_weak global i32
 
 define i1 @global_ne_null() {
 ; CHECK-LABEL: @global_ne_null(
@@ -117,30 +118,50 @@ define i1 @global_gep_sgt_null() {
   ret i1 %cmp
 }
 
+; @g2_weak may be null, in which case this is a zero-index GEP and the pointers
+; are equal.
 define i1 @null_gep_ne_null() {
 ; CHECK-LABEL: @null_gep_ne_null(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    ret i1 icmp ne (i8* getelementptr (i8, i8* null, i64 ptrtoint (i32* @g2_weak to i64)), i8* null)
 ;
-  %gep = getelementptr i8, i8* null, i64 ptrtoint (i32* @g2 to i64)
+  %gep = getelementptr i8, i8* null, i64 ptrtoint (i32* @g2_weak to i64)
   %cmp = icmp ne i8* %gep, null
   ret i1 %cmp
 }
 
 define i1 @null_gep_ugt_null() {
 ; CHECK-LABEL: @null_gep_ugt_null(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    ret i1 icmp ugt (i8* getelementptr (i8, i8* null, i64 ptrtoint (i32* @g2_weak to i64)), i8* null)
 ;
-  %gep = getelementptr i8, i8* null, i64 ptrtoint (i32* @g2 to i64)
+  %gep = getelementptr i8, i8* null, i64 ptrtoint (i32* @g2_weak to i64)
   %cmp = icmp ugt i8* %gep, null
   ret i1 %cmp
 }
 
 define i1 @null_gep_sgt_null() {
 ; CHECK-LABEL: @null_gep_sgt_null(
-; CHECK-NEXT:    ret i1 icmp sgt (i8* getelementptr (i8, i8* null, i64 ptrtoint (i32* @g2 to i64)), i8* null)
+; CHECK-NEXT:    ret i1 icmp sgt (i8* getelementptr (i8, i8* null, i64 ptrtoint (i32* @g2_weak to i64)), i8* null)
 ;
-  %gep = getelementptr i8, i8* null, i64 ptrtoint (i32* @g2 to i64)
+  %gep = getelementptr i8, i8* null, i64 ptrtoint (i32* @g2_weak to i64)
   %cmp = icmp sgt i8* %gep, null
+  ret i1 %cmp
+}
+
+define i1 @null_gep_ne_null_constant_int() {
+; CHECK-LABEL: @null_gep_ne_null_constant_int(
+; CHECK-NEXT:    ret i1 true
+;
+  %gep = getelementptr i8, i8* null, i64 1
+  %cmp = icmp ne i8* %gep, null
+  ret i1 %cmp
+}
+
+define i1 @null_gep_ugt_null_constant_int() {
+; CHECK-LABEL: @null_gep_ugt_null_constant_int(
+; CHECK-NEXT:    ret i1 true
+;
+  %gep = getelementptr i8, i8* null, i64 1
+  %cmp = icmp ugt i8* %gep, null
   ret i1 %cmp
 }
 

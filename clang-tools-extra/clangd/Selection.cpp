@@ -58,7 +58,23 @@ void recordMetrics(const SelectionTree &S, const LangOptions &Lang) {
     SelectionUsedRecovery.record(0, LanguageLabel); // unused.
 }
 
+// Return the range covering a node and all its children.
 SourceRange getSourceRange(const DynTypedNode &N) {
+  // DeclTypeTypeLoc::getSourceRange() is incomplete, which would lead to
+  // failing to descend into the child expression.
+  // decltype(2+2);
+  // ~~~~~~~~~~~~~ <-- correct range
+  // ~~~~~~~~      <-- range reported by getSourceRange()
+  // ~~~~~~~~~~~~  <-- range with this hack(i.e, missing closing paren)
+  // FIXME: Alter DecltypeTypeLoc to contain parentheses locations and get
+  // rid of this patch.
+  if (const auto *TL = N.get<TypeLoc>()) {
+    if (auto DT = TL->getAs<DecltypeTypeLoc>()) {
+      SourceRange S = DT.getSourceRange();
+      S.setEnd(DT.getUnderlyingExpr()->getEndLoc());
+      return S;
+    }
+  }
   // MemberExprs to implicitly access anonymous fields should not claim any
   // tokens for themselves. Given:
   //   struct A { struct { int b; }; };
@@ -646,17 +662,6 @@ private:
       // heuristics. We should consider only pruning critical TypeLoc nodes, to
       // be more robust.
 
-      // DeclTypeTypeLoc::getSourceRange() is incomplete, which would lead to
-      // failing
-      // to descend into the child expression.
-      // decltype(2+2);
-      // ~~~~~~~~~~~~~ <-- correct range
-      // ~~~~~~~~      <-- range reported by getSourceRange()
-      // ~~~~~~~~~~~~  <-- range with this hack(i.e, missing closing paren)
-      // FIXME: Alter DecltypeTypeLoc to contain parentheses locations and get
-      // rid of this patch.
-      if (auto DT = TL->getAs<DecltypeTypeLoc>())
-        S.setEnd(DT.getUnderlyingExpr()->getEndLoc());
       // AttributedTypeLoc may point to the attribute's range, NOT the modified
       // type's range.
       if (auto AT = TL->getAs<AttributedTypeLoc>())
@@ -702,7 +707,7 @@ private:
   void pop() {
     Node &N = *Stack.top();
     dlog("{1}pop: {0}", printNodeToString(N.ASTNode, PrintPolicy), indent(-1));
-    claimRange(getSourceRange(N.ASTNode), N.Selected);
+    claimTokensFor(N.ASTNode, N.Selected);
     if (N.Selected == NoTokens)
       N.Selected = SelectionTree::Unselected;
     if (N.Selected || !N.Children.empty()) {
@@ -742,6 +747,28 @@ private:
       return CCI->getMemberLocation();
     }
     return SourceRange();
+  }
+
+  // Claim tokens for N, after processing its children.
+  // By default this claims all unclaimed tokens in getSourceRange().
+  // We override this if we want to claim fewer tokens (e.g. there are gaps).
+  void claimTokensFor(const DynTypedNode &N, SelectionTree::Selection &Result) {
+    if (const auto *TL = N.get<TypeLoc>()) {
+      // e.g. EltType Foo[OuterSize][InnerSize];
+      //      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ArrayTypeLoc (Outer)
+      //      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ |-ArrayTypeLoc (Inner)
+      //      ~~~~~~~                           | |-RecordType
+      //                             ~~~~~~~~~  | `-Expr (InnerSize)
+      //                  ~~~~~~~~~             `-Expr (OuterSize)
+      // Inner ATL must not claim its whole SourceRange, or it clobbers Outer.
+      if (TL->getAs<ArrayTypeLoc>()) {
+        claimRange(TL->getLocalSourceRange(), Result);
+        return;
+      }
+      // FIXME: maybe LocalSourceRange is a better default for TypeLocs.
+      // It doesn't seem to be usable for FunctionTypeLocs.
+    }
+    claimRange(getSourceRange(N), Result);
   }
 
   // Perform hit-testing of a complete Node against the selection.

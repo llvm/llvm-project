@@ -5956,8 +5956,7 @@ ProduceSignatureHelp(Sema &SemaRef, MutableArrayRef<ResultCandidate> Candidates,
   return getParamType(SemaRef, Candidates, CurrentArg);
 }
 
-QualType Sema::ProduceCallSignatureHelp(Scope *S, Expr *Fn,
-                                        ArrayRef<Expr *> Args,
+QualType Sema::ProduceCallSignatureHelp(Expr *Fn, ArrayRef<Expr *> Args,
                                         SourceLocation OpenParLoc) {
   Fn = unwrapParenList(Fn);
   if (!CodeCompleter || !Fn)
@@ -6059,7 +6058,7 @@ QualType Sema::ProduceCallSignatureHelp(Scope *S, Expr *Fn,
   return !CandidateSet.empty() ? ParamType : QualType();
 }
 
-QualType Sema::ProduceConstructorSignatureHelp(Scope *S, QualType Type,
+QualType Sema::ProduceConstructorSignatureHelp(QualType Type,
                                                SourceLocation Loc,
                                                ArrayRef<Expr *> Args,
                                                SourceLocation OpenParLoc,
@@ -6112,7 +6111,7 @@ QualType Sema::ProduceConstructorSignatureHelp(Scope *S, QualType Type,
 }
 
 QualType Sema::ProduceCtorInitMemberSignatureHelp(
-    Scope *S, Decl *ConstructorDecl, CXXScopeSpec SS, ParsedType TemplateTypeTy,
+    Decl *ConstructorDecl, CXXScopeSpec SS, ParsedType TemplateTypeTy,
     ArrayRef<Expr *> ArgExprs, IdentifierInfo *II, SourceLocation OpenParLoc,
     bool Braced) {
   if (!CodeCompleter)
@@ -6125,7 +6124,7 @@ QualType Sema::ProduceCtorInitMemberSignatureHelp(
   // FIXME: Add support for Base class constructors as well.
   if (ValueDecl *MemberDecl = tryLookupCtorInitMemberDecl(
           Constructor->getParent(), SS, TemplateTypeTy, II))
-    return ProduceConstructorSignatureHelp(getCurScope(), MemberDecl->getType(),
+    return ProduceConstructorSignatureHelp(MemberDecl->getType(),
                                            MemberDecl->getLocation(), ArgExprs,
                                            OpenParLoc, Braced);
   return QualType();

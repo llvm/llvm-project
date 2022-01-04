@@ -52,6 +52,8 @@ enum Kind : unsigned {
   TypePos,
   AttributeLiteralPos,
   TypeLiteralPos,
+  UsersPos,
+  ForEachPos,
 
   // Questions, ordered by dependency and decreasing priority.
   IsNotNullQuestion,
@@ -186,6 +188,20 @@ struct AttributeLiteralPosition
 };
 
 //===----------------------------------------------------------------------===//
+// ForEachPosition
+
+/// A position describing an iterative choice of an operation.
+struct ForEachPosition : public PredicateBase<ForEachPosition, Position,
+                                              std::pair<Position *, unsigned>,
+                                              Predicates::ForEachPos> {
+  explicit ForEachPosition(const KeyTy &key) : Base(key) { parent = key.first; }
+
+  /// Returns the ID, for differentiating various loops.
+  /// For upward traversals, this is the index of the root.
+  unsigned getID() const { return key.second; }
+};
+
+//===----------------------------------------------------------------------===//
 // OperandPosition
 
 /// A position describing an operand of an operation.
@@ -229,14 +245,11 @@ struct OperandGroupPosition
 
 /// An operation position describes an operation node in the IR. Other position
 /// kinds are formed with respect to an operation position.
-struct OperationPosition
-    : public PredicateBase<OperationPosition, Position,
-                           std::tuple<Position *, Optional<unsigned>, unsigned>,
-                           Predicates::OperationPos> {
-  static constexpr unsigned kDown = std::numeric_limits<unsigned>::max();
-
+struct OperationPosition : public PredicateBase<OperationPosition, Position,
+                                                std::pair<Position *, unsigned>,
+                                                Predicates::OperationPos> {
   explicit OperationPosition(const KeyTy &key) : Base(key) {
-    parent = std::get<0>(key);
+    parent = key.first;
   }
 
   /// Returns a hash suitable for the given keytype.
@@ -246,31 +259,22 @@ struct OperationPosition
 
   /// Gets the root position.
   static OperationPosition *getRoot(StorageUniquer &uniquer) {
-    return Base::get(uniquer, nullptr, kDown, 0);
+    return Base::get(uniquer, nullptr, 0);
   }
 
-  /// Gets an downward operation position with the given parent.
+  /// Gets an operation position with the given parent.
   static OperationPosition *get(StorageUniquer &uniquer, Position *parent) {
-    return Base::get(uniquer, parent, kDown, parent->getOperationDepth() + 1);
+    return Base::get(uniquer, parent, parent->getOperationDepth() + 1);
   }
-
-  /// Gets an upward operation position with the given parent and operand.
-  static OperationPosition *get(StorageUniquer &uniquer, Position *parent,
-                                Optional<unsigned> operand) {
-    return Base::get(uniquer, parent, operand, parent->getOperationDepth() + 1);
-  }
-
-  /// Returns the operand index for an upward operation position.
-  Optional<unsigned> getIndex() const { return std::get<1>(key); }
-
-  /// Returns if this operation position is upward, accepting an input.
-  bool isUpward() const { return getIndex().getValueOr(0) != kDown; }
 
   /// Returns the depth of this position.
-  unsigned getDepth() const { return std::get<2>(key); }
+  unsigned getDepth() const { return key.second; }
 
   /// Returns if this operation position corresponds to the root.
   bool isRoot() const { return getDepth() == 0; }
+
+  /// Returns if this operation represents an operand defining op.
+  bool isOperandDefiningOp() const;
 };
 
 //===----------------------------------------------------------------------===//
@@ -338,6 +342,26 @@ struct TypeLiteralPosition
     : public PredicateBase<TypeLiteralPosition, Position, Attribute,
                            Predicates::TypeLiteralPos> {
   using PredicateBase::PredicateBase;
+};
+
+//===----------------------------------------------------------------------===//
+// UsersPosition
+
+/// A position describing the users of a value or a range of values. The second
+/// value in the key indicates whether we choose users of a representative for
+/// a range (this is true, e.g., in the upward traversals).
+struct UsersPosition
+    : public PredicateBase<UsersPosition, Position, std::pair<Position *, bool>,
+                           Predicates::UsersPos> {
+  explicit UsersPosition(const KeyTy &key) : Base(key) { parent = key.first; }
+
+  /// Returns a hash suitable for the given keytype.
+  static llvm::hash_code hashKey(const KeyTy &key) {
+    return llvm::hash_value(key);
+  }
+
+  /// Indicates whether to compute a range of a representative.
+  bool useRepresentative() const { return key.second; }
 };
 
 //===----------------------------------------------------------------------===//
@@ -496,6 +520,7 @@ public:
     // Register the types of Positions with the uniquer.
     registerParametricStorageType<AttributePosition>();
     registerParametricStorageType<AttributeLiteralPosition>();
+    registerParametricStorageType<ForEachPosition>();
     registerParametricStorageType<OperandPosition>();
     registerParametricStorageType<OperandGroupPosition>();
     registerParametricStorageType<OperationPosition>();
@@ -503,6 +528,7 @@ public:
     registerParametricStorageType<ResultGroupPosition>();
     registerParametricStorageType<TypePosition>();
     registerParametricStorageType<TypeLiteralPosition>();
+    registerParametricStorageType<UsersPosition>();
 
     // Register the types of Questions with the uniquer.
     registerParametricStorageType<AttributeAnswer>();
@@ -550,12 +576,10 @@ public:
     return OperationPosition::get(uniquer, p);
   }
 
-  /// Returns the position of operation using the value at the given index.
-  OperationPosition *getUsersOp(Position *p, Optional<unsigned> operand) {
-    assert((isa<OperandPosition, OperandGroupPosition, ResultPosition,
-                ResultGroupPosition>(p)) &&
-           "expected result position");
-    return OperationPosition::get(uniquer, p, operand);
+  /// Returns the operation position equivalent to the given position.
+  OperationPosition *getPassthroughOp(Position *p) {
+    assert((isa<ForEachPosition>(p)) && "expected users position");
+    return OperationPosition::get(uniquer, p);
   }
 
   /// Returns an attribute position for an attribute of the given operation.
@@ -566,6 +590,10 @@ public:
   /// Returns an attribute position for the given attribute.
   Position *getAttributeLiteral(Attribute attr) {
     return AttributeLiteralPosition::get(uniquer, attr);
+  }
+
+  Position *getForEach(Position *p, unsigned id) {
+    return ForEachPosition::get(uniquer, p, id);
   }
 
   /// Returns an operand position for an operand of the given operation.
@@ -603,6 +631,14 @@ public:
   /// as either a TypeAttr, or an ArrayAttr of TypeAttr.
   Position *getTypeLiteral(Attribute attr) {
     return TypeLiteralPosition::get(uniquer, attr);
+  }
+
+  /// Returns the users of a position using the value at the given operand.
+  UsersPosition *getUsers(Position *p, bool useRepresentative) {
+    assert((isa<OperandPosition, OperandGroupPosition, ResultPosition,
+                ResultGroupPosition>(p)) &&
+           "expected result position");
+    return UsersPosition::get(uniquer, p, useRepresentative);
   }
 
   //===--------------------------------------------------------------------===//
