@@ -92,6 +92,7 @@ private:
   /// Specific shift implementation.
   bool expandLSLB7Rd(Block &MBB, BlockIt MBBI);
   bool expandLSRB7Rd(Block &MBB, BlockIt MBBI);
+  bool expandASRB6Rd(Block &MBB, BlockIt MBBI);
   bool expandASRB7Rd(Block &MBB, BlockIt MBBI);
   bool expandLSLW4Rd(Block &MBB, BlockIt MBBI);
   bool expandLSRW4Rd(Block &MBB, BlockIt MBBI);
@@ -1921,6 +1922,49 @@ bool AVRExpandPseudo::expand<AVR::LSRBNRd>(Block &MBB, BlockIt MBBI) {
   }
 }
 
+bool AVRExpandPseudo::expandASRB6Rd(Block &MBB, BlockIt MBBI) {
+  MachineInstr &MI = *MBBI;
+  Register DstReg = MI.getOperand(0).getReg();
+  bool DstIsDead = MI.getOperand(0).isDead();
+  bool DstIsKill = MI.getOperand(1).isKill();
+  bool ImpIsDead = MI.getOperand(3).isDead();
+
+  // bst r24, 6
+  // lsl r24
+  // sbc r24, r24
+  // bld r24, 0
+
+  buildMI(MBB, MBBI, AVR::BST)
+      .addReg(DstReg, getKillRegState(DstIsKill))
+      .addImm(6)
+      ->getOperand(2)
+      .setIsUndef(true);
+
+  buildMI(MBB, MBBI, AVR::ADDRdRr) // LSL Rd <==> ADD Rd, Rd
+      .addReg(DstReg, RegState::Define | getDeadRegState(DstIsDead))
+      .addReg(DstReg, getKillRegState(DstIsKill))
+      .addReg(DstReg, getKillRegState(DstIsKill));
+
+  auto MISBC =
+      buildMI(MBB, MBBI, AVR::SBCRdRr)
+          .addReg(DstReg, RegState::Define | getDeadRegState(DstIsDead))
+          .addReg(DstReg, getKillRegState(DstIsKill))
+          .addReg(DstReg, getKillRegState(DstIsKill));
+
+  buildMI(MBB, MBBI, AVR::BLD)
+      .addReg(DstReg, RegState::Define | getDeadRegState(DstIsDead))
+      .addReg(DstReg, getKillRegState(DstIsKill))
+      .addImm(0)
+      ->getOperand(3)
+      .setIsKill();
+
+  if (ImpIsDead)
+    MISBC->getOperand(3).setIsDead();
+
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AVRExpandPseudo::expandASRB7Rd(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstReg = MI.getOperand(0).getReg();
@@ -1957,6 +2001,8 @@ bool AVRExpandPseudo::expand<AVR::ASRBNRd>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   unsigned Imm = MI.getOperand(2).getImm();
   switch (Imm) {
+  case 6:
+    return expandASRB6Rd(MBB, MBBI);
   case 7:
     return expandASRB7Rd(MBB, MBBI);
   default:
