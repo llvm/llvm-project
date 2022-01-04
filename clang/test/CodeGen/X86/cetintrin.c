@@ -37,11 +37,23 @@ unsigned int test_rdsspd(unsigned int a) {
   return _rdsspd(a);
 }
 
+unsigned int test_rdsspd_i32() {
+  // CHECK-LABEL: @test_rdsspd_i32
+  // CHECK:       call i32 @llvm.x86.rdsspd(i32 %{{[a-z0-9.]+}})
+  return _rdsspd_i32();
+}
+
 #ifdef __x86_64__
 unsigned long long test_rdsspq(unsigned long long a) {
   // X86_64-LABEL: @test_rdsspq
   // X86_64:       call i64 @llvm.x86.rdsspq(i64 %{{[a-z0-9.]+}})
   return _rdsspq(a);
+}
+
+unsigned long long test_rdsspq_i64() {
+  // X86_64-LABEL: @test_rdsspq_i64
+  // X86_64:       call i64 @llvm.x86.rdsspq(i64 %{{[a-z0-9.]+}})
+  return _rdsspq_i64();
 }
 
 unsigned long long test_get_ssp(void) {
