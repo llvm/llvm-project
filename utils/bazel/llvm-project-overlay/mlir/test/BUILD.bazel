@@ -260,6 +260,7 @@ cc_library(
     ],
     deps = [
         "//mlir:IR",
+        "//mlir:PDLInterpDialect",
         "//mlir:Pass",
         "//mlir:Support",
         "//mlir:TransformUtils",
