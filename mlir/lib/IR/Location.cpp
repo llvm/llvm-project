@@ -106,10 +106,18 @@ Location FusedLoc::get(ArrayRef<Location> locs, Attribute metadata,
   }
   locs = decomposedLocs.getArrayRef();
 
-  // Handle the simple cases of less than two locations.
-  if (locs.empty())
-    return UnknownLoc::get(context);
-  if (locs.size() == 1)
+  // Handle the simple cases of less than two locations. Ensure the metadata (if
+  // provided) is not dropped.
+  if (locs.empty()) {
+    if (!metadata)
+      return UnknownLoc::get(context);
+    // TODO: Investigate ASAN failure when using implicit conversion from
+    // Location to ArrayRef<Location> below.
+    return Base::get(context, ArrayRef<Location>{UnknownLoc::get(context)},
+                     metadata);
+  }
+  if (locs.size() == 1 && !metadata)
     return locs.front();
+
   return Base::get(context, locs, metadata);
 }

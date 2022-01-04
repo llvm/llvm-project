@@ -2363,8 +2363,6 @@ void mlir::python::populateIRCore(py::module &m) {
           [](const std::vector<PyLocation> &pyLocations,
              llvm::Optional<PyAttribute> metadata,
              DefaultingPyMlirContext context) {
-            if (pyLocations.empty())
-              throw py::value_error("No locations provided");
             llvm::SmallVector<MlirLocation, 4> locations;
             locations.reserve(pyLocations.size());
             for (auto &pyLocation : pyLocations)
