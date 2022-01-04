@@ -16,6 +16,8 @@
 // libraries.
 // XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11}}
 
+// ALLOW_RETRIES: 3
+
 // <thread>
 
 // template <class Rep, class Period>
