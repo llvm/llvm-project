@@ -3047,7 +3047,10 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
     break;
   case ISD::SIGN_EXTEND_INREG: Res = WidenVecRes_InregOp(N); break;
   case ISD::VSELECT:
-  case ISD::SELECT:            Res = WidenVecRes_SELECT(N); break;
+  case ISD::SELECT:
+  case ISD::VP_SELECT:
+    Res = WidenVecRes_Select(N);
+    break;
   case ISD::SELECT_CC:         Res = WidenVecRes_SELECT_CC(N); break;
   case ISD::SETCC:             Res = WidenVecRes_SETCC(N); break;
   case ISD::UNDEF:             Res = WidenVecRes_UNDEF(N); break;
@@ -4522,19 +4525,19 @@ SDValue DAGTypeLegalizer::WidenVSELECTMask(SDNode *N) {
   return Mask;
 }
 
-SDValue DAGTypeLegalizer::WidenVecRes_SELECT(SDNode *N) {
+SDValue DAGTypeLegalizer::WidenVecRes_Select(SDNode *N) {
   EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   ElementCount WidenEC = WidenVT.getVectorElementCount();
 
   SDValue Cond1 = N->getOperand(0);
   EVT CondVT = Cond1.getValueType();
+  unsigned Opcode = N->getOpcode();
   if (CondVT.isVector()) {
     if (SDValue WideCond = WidenVSELECTMask(N)) {
       SDValue InOp1 = GetWidenedVector(N->getOperand(1));
       SDValue InOp2 = GetWidenedVector(N->getOperand(2));
       assert(InOp1.getValueType() == WidenVT && InOp2.getValueType() == WidenVT);
-      return DAG.getNode(N->getOpcode(), SDLoc(N),
-                         WidenVT, WideCond, InOp1, InOp2);
+      return DAG.getNode(Opcode, SDLoc(N), WidenVT, WideCond, InOp1, InOp2);
     }
 
     EVT CondEltVT = CondVT.getVectorElementType();
@@ -4560,8 +4563,10 @@ SDValue DAGTypeLegalizer::WidenVecRes_SELECT(SDNode *N) {
   SDValue InOp1 = GetWidenedVector(N->getOperand(1));
   SDValue InOp2 = GetWidenedVector(N->getOperand(2));
   assert(InOp1.getValueType() == WidenVT && InOp2.getValueType() == WidenVT);
-  return DAG.getNode(N->getOpcode(), SDLoc(N),
-                     WidenVT, Cond1, InOp1, InOp2);
+  return Opcode == ISD::VP_SELECT
+             ? DAG.getNode(Opcode, SDLoc(N), WidenVT, Cond1, InOp1, InOp2,
+                           N->getOperand(3))
+             : DAG.getNode(Opcode, SDLoc(N), WidenVT, Cond1, InOp1, InOp2);
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_SELECT_CC(SDNode *N) {
