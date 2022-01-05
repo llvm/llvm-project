@@ -60,7 +60,7 @@ struct ExecuteRegionOpInterface
     return true;
   }
 
-  LogicalResult bufferize(Operation *op, OpBuilder &b,
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           BufferizationState &state) const {
     // TODO: Add bufferization support when needed. scf.execute_region should be
     // bufferized similar to scf.if.
@@ -135,14 +135,9 @@ struct IfOpInterface
     return true;
   }
 
-  LogicalResult bufferize(Operation *op, OpBuilder &b,
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           BufferizationState &state) const {
     auto ifOp = cast<scf::IfOp>(op);
-
-    // Use IRRewriter instead of OpBuilder because it has additional helper
-    // functions.
-    IRRewriter rewriter(op->getContext());
-    rewriter.setInsertionPoint(ifOp);
 
     // Compute new types of the bufferized scf.if op.
     SmallVector<Type> newTypes;
@@ -276,15 +271,10 @@ struct ForOpInterface
     return true;
   }
 
-  LogicalResult bufferize(Operation *op, OpBuilder & /*b*/,
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           BufferizationState &state) const {
     auto forOp = cast<scf::ForOp>(op);
     Block *oldLoopBody = &forOp.getLoopBody().front();
-
-    // Use IRRewriter instead of OpBuilder because it has additional helper
-    // functions.
-    IRRewriter rewriter(op->getContext());
-    rewriter.setInsertionPoint(forOp);
 
     // Indices of all iter_args that have tensor type. These are the ones that
     // are bufferized.
@@ -438,7 +428,7 @@ struct YieldOpInterface
     return OpResult();
   }
 
-  LogicalResult bufferize(Operation *op, OpBuilder &b,
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           BufferizationState &state) const {
     auto yieldOp = cast<scf::YieldOp>(op);
     if (!isa<scf::ExecuteRegionOp, scf::IfOp, scf::ForOp>(

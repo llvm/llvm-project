@@ -651,7 +651,8 @@ annotateOpsWithBufferizationMarkers(Operation *op,
 
 LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
     Operation *op, std::unique_ptr<BufferizationOptions> options) {
-  BufferizationState state(op, *options);
+  IRRewriter rewriter(op->getContext());
+  BufferizationState state(op, *options, rewriter);
   return runComprehensiveBufferize(op, *options, state);
 }
 

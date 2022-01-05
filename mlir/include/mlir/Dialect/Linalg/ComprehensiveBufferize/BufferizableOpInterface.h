@@ -14,6 +14,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/SetVector.h"
@@ -296,7 +297,8 @@ struct DialectBufferizationState {
 /// * `replaceOp` replaces an op with new values.
 class BufferizationState {
 public:
-  BufferizationState(Operation *op, const BufferizationOptions &options);
+  BufferizationState(Operation *op, const BufferizationOptions &options,
+                     RewriterBase &rewriter);
 
   // BufferizationState should be passed as a reference.
   BufferizationState(const BufferizationState &) = delete;
@@ -387,9 +389,10 @@ public:
   /// Replace an op with a new op. Tensor OpResults must be replaced with memref
   /// values.
   template <typename OpTy, typename... Args>
-  OpTy replaceOpWithNewOp(OpBuilder &b, Operation *op, Args &&...args) {
+  OpTy replaceOpWithNewOp(RewriterBase &rewriter, Operation *op,
+                          Args &&...args) {
     Operation *newOp =
-        b.create<OpTy>(op->getLoc(), std::forward<Args>(args)...);
+        rewriter.create<OpTy>(op->getLoc(), std::forward<Args>(args)...);
     replaceOp(op, newOp->getResults());
     return cast<OpTy>(newOp);
   }
@@ -417,8 +420,8 @@ public:
   /// Return a reference to the BufferizationOptions.
   const BufferizationOptions &getOptions() const { return options; }
 
-  /// Return a reference to the OpBuilder.
-  OpBuilder &getBuilder() { return builder; }
+  /// Return a reference to the rewriter.
+  RewriterBase &getRewriter() { return rewriter; }
 
 private:
   friend LogicalResult
@@ -440,7 +443,7 @@ private:
   const BufferizationOptions &options;
 
   /// The OpBuilder used during bufferization.
-  OpBuilder builder;
+  RewriterBase &rewriter;
 };
 
 /// Bufferize all ops in the given region.
@@ -523,7 +526,7 @@ struct AllocationHoistingBarrierOnly
     return false;
   }
 
-  LogicalResult bufferize(Operation *op, OpBuilder &b,
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           BufferizationState &state) const {
     auto isaTensor = [](Type t) { return t.isa<TensorType>(); };
     if (any_of(op->getOperandTypes(), isaTensor) ||

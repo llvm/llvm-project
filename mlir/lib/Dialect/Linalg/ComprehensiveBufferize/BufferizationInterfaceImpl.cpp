@@ -50,15 +50,14 @@ struct ToMemrefOpInterface
     return OpResult();
   }
 
-  LogicalResult bufferize(Operation *op, OpBuilder &b,
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           BufferizationState &state) const {
     auto toMemrefOp = cast<bufferization::ToMemrefOp>(op);
 
     // Fold to_memref(to_tensor(x)) to x.
     if (auto toTensorOp =
             toMemrefOp.tensor().getDefiningOp<bufferization::ToTensorOp>()) {
-      toMemrefOp.replaceAllUsesWith(toTensorOp.memref());
-      toMemrefOp.erase();
+      rewriter.replaceOp(toMemrefOp, toTensorOp.memref());
       return success();
     }
 
@@ -86,7 +85,7 @@ struct ToMemrefOpInterface
 struct ToTensorOpInterface
     : public BufferizableOpInterface::ExternalModel<ToTensorOpInterface,
                                                     bufferization::ToTensorOp> {
-  LogicalResult bufferize(Operation *op, OpBuilder &b,
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           BufferizationState &state) const {
     return success();
   }
