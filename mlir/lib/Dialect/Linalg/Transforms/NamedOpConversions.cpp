@@ -137,7 +137,7 @@ struct SimplifyDepthwiseConvQOp
 struct LinalgNamedOpConversionPass
     : public LinalgNamedOpConversionBase<LinalgNamedOpConversionPass> {
   LinalgNamedOpConversionPass() = default;
-  LinalgNamedOpConversionPass(const LinalgNamedOpConversionPass &) {}
+  LinalgNamedOpConversionPass(const LinalgNamedOpConversionPass &) = default;
 
   void runOnOperation() override {
     Operation *op = getOperation();
