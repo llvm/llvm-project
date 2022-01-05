@@ -23,7 +23,7 @@ namespace arith_ext {
 struct ConstantOpInterface
     : public BufferizableOpInterface::ExternalModel<ConstantOpInterface,
                                                     arith::ConstantOp> {
-  LogicalResult bufferize(Operation *op, OpBuilder &b,
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           BufferizationState &state) const {
     auto constantOp = cast<arith::ConstantOp>(op);
     assert(constantOp.getType().dyn_cast<RankedTensorType>() &&
@@ -35,8 +35,8 @@ struct ConstantOpInterface
 
     GlobalCreator globalCreator(moduleOp);
     auto globalMemref = globalCreator.getGlobalFor(constantOp);
-    state.replaceOpWithNewOp<memref::GetGlobalOp>(b, op, globalMemref.type(),
-                                                  globalMemref.getName());
+    state.replaceOpWithNewOp<memref::GetGlobalOp>(
+        rewriter, op, globalMemref.type(), globalMemref.getName());
     return success();
   }
 

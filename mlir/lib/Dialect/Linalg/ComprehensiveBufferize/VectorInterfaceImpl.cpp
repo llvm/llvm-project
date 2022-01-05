@@ -39,7 +39,7 @@ struct TransferReadOpInterface
     return OpResult();
   }
 
-  LogicalResult bufferize(Operation *op, OpBuilder &b,
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           BufferizationState &state) const {
     auto readOp = cast<vector::TransferReadOp>(op);
     assert(readOp.getShapedType().isa<TensorType>() &&
@@ -47,7 +47,7 @@ struct TransferReadOpInterface
 
     // TransferReadOp always reads from the bufferized op.source().
     Value buffer = state.lookupBuffer(readOp.source());
-    Value read = b.create<vector::TransferReadOp>(
+    Value read = rewriter.create<vector::TransferReadOp>(
         readOp.getLoc(), readOp.getVectorType(), buffer, readOp.indices(),
         readOp.permutation_map(), readOp.padding(), readOp.mask(),
         readOp.in_boundsAttr());
@@ -86,7 +86,7 @@ struct TransferWriteOpInterface
     return BufferRelation::Equivalent;
   }
 
-  LogicalResult bufferize(Operation *op, OpBuilder &b,
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           BufferizationState &state) const {
     auto writeOp = cast<vector::TransferWriteOp>(op);
     assert(writeOp.getShapedType().isa<TensorType>() &&
@@ -98,7 +98,7 @@ struct TransferWriteOpInterface
     Value resultBuffer = state.getResultBuffer(op->getResult(0));
     if (!resultBuffer)
       return failure();
-    b.create<vector::TransferWriteOp>(
+    rewriter.create<vector::TransferWriteOp>(
         writeOp.getLoc(), writeOp.vector(), resultBuffer, writeOp.indices(),
         writeOp.permutation_mapAttr(), writeOp.in_boundsAttr());
     state.replaceOp(op, resultBuffer);

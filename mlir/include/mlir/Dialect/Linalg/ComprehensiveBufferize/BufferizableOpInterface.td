@@ -209,7 +209,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         }],
         /*retType=*/"LogicalResult",
         /*methodName=*/"bufferize",
-        /*args=*/(ins "OpBuilder &":$b,
+        /*args=*/(ins "RewriterBase &":$rewriter,
                       "BufferizationState &":$state),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{

@@ -725,7 +725,8 @@ static void annotateOpsWithBufferizationMarkers(FuncOp funcOp,
 
 LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
     ModuleOp moduleOp, std::unique_ptr<BufferizationOptions> options) {
-  BufferizationState state(moduleOp, *options);
+  IRRewriter rewriter(moduleOp.getContext());
+  BufferizationState state(moduleOp, *options, rewriter);
   ModuleBufferizationState &moduleState = getModuleBufferizationState(state);
   BufferizationAliasInfo &aliasInfo = state.aliasInfo;
 
