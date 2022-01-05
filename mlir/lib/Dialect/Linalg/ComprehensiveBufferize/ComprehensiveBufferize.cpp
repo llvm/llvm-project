@@ -651,8 +651,7 @@ annotateOpsWithBufferizationMarkers(Operation *op,
 
 LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
     Operation *op, std::unique_ptr<BufferizationOptions> options) {
-  IRRewriter rewriter(op->getContext());
-  BufferizationState state(op, *options, rewriter);
+  BufferizationState state(op, *options);
   return runComprehensiveBufferize(op, *options, state);
 }
 
@@ -660,6 +659,7 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
     Operation *op, const BufferizationOptions &options,
     BufferizationState &state) {
 
+  IRRewriter rewriter(op->getContext());
   DominanceInfo domInfo(op);
   BufferizationAliasInfo &aliasInfo = state.aliasInfo;
 
@@ -690,7 +690,7 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
   }
 
   // Bufferize the op and its nested ops.
-  if (failed(bufferize(op, state)))
+  if (failed(bufferize(rewriter, op, state)))
     return failure();
 
   return success();

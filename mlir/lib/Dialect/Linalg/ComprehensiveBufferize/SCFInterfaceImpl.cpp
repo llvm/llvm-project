@@ -70,8 +70,8 @@ struct ExecuteRegionOpInterface
     if (hasTensorReturnType)
       return op->emitError(
           "scf.execute_region with tensor result not supported");
-    return comprehensive_bufferize::bufferize(&executeRegionOp.getRegion(),
-                                              state);
+    return comprehensive_bufferize::bufferize(
+        rewriter, &executeRegionOp.getRegion(), state);
   }
 
   BufferRelation bufferRelation(Operation *op, OpResult opResult,
@@ -194,12 +194,14 @@ struct IfOpInterface
     }
 
     // Replace op results.
-    state.replaceOp(op, newIfOp->getResults());
+    state.replaceOp(rewriter, op, newIfOp->getResults());
 
     // Bufferize then/else blocks.
-    if (failed(comprehensive_bufferize::bufferize(newIfOp.thenBlock(), state)))
+    if (failed(comprehensive_bufferize::bufferize(rewriter, newIfOp.thenBlock(),
+                                                  state)))
       return failure();
-    if (failed(comprehensive_bufferize::bufferize(newIfOp.elseBlock(), state)))
+    if (failed(comprehensive_bufferize::bufferize(rewriter, newIfOp.elseBlock(),
+                                                  state)))
       return failure();
 
     return success();
@@ -299,7 +301,7 @@ struct ForOpInterface
     // Construct a new scf.for op with memref instead of tensor values.
     SmallVector<Value> initArgs =
         convert(forOp.getInitArgs(), [&](Value val, int64_t index) {
-          return state.getResultBuffer(forOp->getOpResult(index));
+          return state.getResultBuffer(rewriter, forOp->getOpResult(index));
         });
     auto newForOp = rewriter.create<scf::ForOp>(
         forOp.getLoc(), forOp.getLowerBound(), forOp.getUpperBound(),
@@ -333,10 +335,10 @@ struct ForOpInterface
     yieldOp.getResultsMutable().assign(yieldValues);
 
     // Replace loop results.
-    state.replaceOp(op, newForOp->getResults());
+    state.replaceOp(rewriter, op, newForOp->getResults());
 
     // Bufferize loop body.
-    if (failed(comprehensive_bufferize::bufferize(loopBody, state)))
+    if (failed(comprehensive_bufferize::bufferize(rewriter, loopBody, state)))
       return failure();
 
     return success();

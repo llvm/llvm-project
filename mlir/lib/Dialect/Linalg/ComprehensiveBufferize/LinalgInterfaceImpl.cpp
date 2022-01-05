@@ -45,14 +45,14 @@ static LogicalResult bufferizeLinalgOp(RewriterBase &rewriter, LinalgOp op,
       newInputBuffers.push_back(opOperand->get());
       continue;
     }
-    newInputBuffers.push_back(state.lookupBuffer(opOperand->get()));
+    newInputBuffers.push_back(state.lookupBuffer(rewriter, opOperand->get()));
   }
 
   SmallVector<Value> newOutputBuffers;
   for (OpOperand *opOperand : op.getOutputOperands()) {
     OpResult opResult = op.getTiedOpResult(opOperand);
     assert(opResult && "could not find correspond OpResult");
-    Value resultBuffer = state.getResultBuffer(opResult);
+    Value resultBuffer = state.getResultBuffer(rewriter, opResult);
     if (!resultBuffer)
       return failure();
     newOutputBuffers.push_back(resultBuffer);
@@ -68,9 +68,10 @@ static LogicalResult bufferizeLinalgOp(RewriterBase &rewriter, LinalgOp op,
       rewriter, op.getLoc(), /*resultTypes=*/TypeRange{}, newOperands));
 
   // Replace the results of the old op with the new output buffers.
-  state.replaceOp(op, newOutputBuffers);
+  state.replaceOp(rewriter, op, newOutputBuffers);
 
-  return comprehensive_bufferize::bufferize(bufferizedOp.getBlock(), state);
+  return comprehensive_bufferize::bufferize(rewriter, bufferizedOp.getBlock(),
+                                            state);
 }
 
 /// Linalg OpResults usually bufferize inplace with their tied (output
@@ -202,7 +203,7 @@ struct InitTensorOpInterface
 
     Value alloc = state.createAllocDeallocPair(rewriter, initTensorOp->getLoc(),
                                                initTensorOp.result());
-    state.replaceOp(op, alloc);
+    state.replaceOp(rewriter, op, alloc);
     return success();
   }
 };
@@ -259,7 +260,7 @@ struct TiledLoopOpInterface
     SmallVector<Value> newInputs, newOutputs, newResults;
     for (Value value : tiledLoopOp.inputs()) {
       if (value.getType().isa<TensorType>()) {
-        newInputs.push_back(state.lookupBuffer(value));
+        newInputs.push_back(state.lookupBuffer(rewriter, value));
       } else {
         newInputs.push_back(value);
       }
@@ -267,8 +268,8 @@ struct TiledLoopOpInterface
     int nextResultNum = 0;
     for (Value value : tiledLoopOp.outputs()) {
       if (value.getType().isa<TensorType>()) {
-        Value buffer =
-            state.getResultBuffer(tiledLoopOp->getResult(nextResultNum++));
+        Value buffer = state.getResultBuffer(
+            rewriter, tiledLoopOp->getResult(nextResultNum++));
         newOutputs.push_back(buffer);
         newResults.push_back(buffer);
       } else {
@@ -328,10 +329,11 @@ struct TiledLoopOpInterface
     rewriter.eraseOp(oldTerminator);
 
     // Replace results and delete old op.
-    state.replaceOp(op, newResults);
+    state.replaceOp(rewriter, op, newResults);
 
     // Bufferize loop body.
-    return comprehensive_bufferize::bufferize(newTiledLoopOp.getBody(), state);
+    return comprehensive_bufferize::bufferize(rewriter,
+                                              newTiledLoopOp.getBody(), state);
   }
 };
 
