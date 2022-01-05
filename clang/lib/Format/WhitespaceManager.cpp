@@ -368,6 +368,13 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
             Changes[i].Tok->Previous->is(TT_ConditionalExpr))
           return true;
 
+        // Continued braced list.
+        if (ScopeStart > Start + 1 &&
+            Changes[ScopeStart - 2].Tok->isNot(tok::identifier) &&
+            Changes[ScopeStart - 1].Tok->is(tok::l_brace) &&
+            Changes[i].Tok->isNot(tok::r_brace))
+          return true;
+
         return false;
       };
 
