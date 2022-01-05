@@ -949,7 +949,8 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
   // Check whether src is captured by the called function, in which case there
   // may be further indirect uses of src.
   bool SrcIsCaptured = any_of(C->args(), [&](Use &U) {
-    return U == cpySrc && !C->doesNotCapture(C->getArgOperandNo(&U));
+    return U->stripPointerCasts() == cpySrc &&
+           !C->doesNotCapture(C->getArgOperandNo(&U));
   });
 
   // If src is captured, then check whether there are any potential uses of
