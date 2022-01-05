@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RegAllocEvictionAdvisor.h"
+#include "RegAllocGreedy.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
@@ -62,12 +63,8 @@ public:
 
 private:
   std::unique_ptr<RegAllocEvictionAdvisor>
-  getAdvisor(const MachineFunction &MF, LiveRegMatrix *Matrix,
-             LiveIntervals *LIS, VirtRegMap *VRM,
-             const RegisterClassInfo &RegClassInfo,
-             ExtraRegInfo *ExtraInfo) override {
-    return std::make_unique<DefaultEvictionAdvisor>(MF, Matrix, LIS, VRM,
-                                                    RegClassInfo, ExtraInfo);
+  getAdvisor(const MachineFunction &MF, const RAGreedy &RA) override {
+    return std::make_unique<DefaultEvictionAdvisor>(MF, RA);
   }
   bool doInitialization(Module &M) override {
     if (NotAsRequested)
@@ -109,13 +106,12 @@ StringRef RegAllocEvictionAdvisorAnalysis::getPassName() const {
   llvm_unreachable("Unknown advisor kind");
 }
 
-RegAllocEvictionAdvisor::RegAllocEvictionAdvisor(
-    const MachineFunction &MF, LiveRegMatrix *Matrix, LiveIntervals *LIS,
-    VirtRegMap *VRM, const RegisterClassInfo &RegClassInfo,
-    ExtraRegInfo *ExtraInfo)
-    : MF(MF), Matrix(Matrix), LIS(LIS), VRM(VRM), MRI(&VRM->getRegInfo()),
-      TRI(MF.getSubtarget().getRegisterInfo()), RegClassInfo(RegClassInfo),
-      RegCosts(TRI->getRegisterCosts(MF)), ExtraInfo(ExtraInfo),
+RegAllocEvictionAdvisor::RegAllocEvictionAdvisor(const MachineFunction &MF,
+                                                 const RAGreedy &RA)
+    : MF(MF), RA(RA), Matrix(RA.getInterferenceMatrix()),
+      LIS(RA.getLiveIntervals()), VRM(RA.getVirtRegMap()),
+      MRI(&VRM->getRegInfo()), TRI(MF.getSubtarget().getRegisterInfo()),
+      RegClassInfo(RA.getRegClassInfo()), RegCosts(TRI->getRegisterCosts(MF)),
       EnableLocalReassign(EnableLocalReassignment ||
                           MF.getSubtarget().enableRALocalReassignment(
                               MF.getTarget().getOptLevel())) {}

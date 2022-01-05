@@ -258,7 +258,7 @@ void RAGreedy::LRE_DidCloneVirtReg(Register New, Register Old) {
   ExtraInfo->LRE_DidCloneVirtReg(New, Old);
 }
 
-void ExtraRegInfo::LRE_DidCloneVirtReg(Register New, Register Old) {
+void RAGreedy::ExtraRegInfo::LRE_DidCloneVirtReg(Register New, Register Old) {
   // Cloning a register we haven't even heard about yet?  Just ignore it.
   if (!Info.inBounds(Old))
     return;
@@ -456,7 +456,7 @@ Register RegAllocEvictionAdvisor::canReassign(LiveInterval &VirtReg,
 bool DefaultEvictionAdvisor::shouldEvict(LiveInterval &A, bool IsHint,
                                          LiveInterval &B,
                                          bool BreaksHint) const {
-  bool CanSplit = ExtraInfo->getStage(B) < RS_Spill;
+  bool CanSplit = RA.getExtraInfo().getStage(B) < RS_Spill;
 
   // Be fairly aggressive about following hints as long as the evictee can be
   // split.
@@ -506,7 +506,7 @@ bool DefaultEvictionAdvisor::canEvictInterferenceBasedOnCost(
   //
   // This works out so a register without a cascade number is allowed to evict
   // anything, and it can be evicted by anything.
-  unsigned Cascade = ExtraInfo->getCascadeOrCurrentNext(VirtReg.reg());
+  unsigned Cascade = RA.getExtraInfo().getCascadeOrCurrentNext(VirtReg.reg());
 
   EvictionCost Cost;
   for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
@@ -528,7 +528,7 @@ bool DefaultEvictionAdvisor::canEvictInterferenceBasedOnCost(
         return false;
 
       // Never evict spill products. They cannot split or spill.
-      if (ExtraInfo->getStage(*Intf) == RS_Done)
+      if (RA.getExtraInfo().getStage(*Intf) == RS_Done)
         return false;
       // Once a live range becomes small enough, it is urgent that we find a
       // register for it. This is indicated by an infinite spill weight. These
@@ -543,7 +543,7 @@ bool DefaultEvictionAdvisor::canEvictInterferenceBasedOnCost(
                RegClassInfo.getNumAllocatableRegs(
                    MRI->getRegClass(Intf->reg())));
       // Only evict older cascades or live ranges without a cascade.
-      unsigned IntfCascade = ExtraInfo->getCascade(Intf->reg());
+      unsigned IntfCascade = RA.getExtraInfo().getCascade(Intf->reg());
       if (Cascade <= IntfCascade) {
         if (!Urgent)
           return false;
@@ -2914,8 +2914,8 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   SA.reset(new SplitAnalysis(*VRM, *LIS, *Loops));
   SE.reset(new SplitEditor(*SA, *AA, *LIS, *VRM, *DomTree, *MBFI, *VRAI));
   ExtraInfo.emplace();
-  EvictAdvisor = getAnalysis<RegAllocEvictionAdvisorAnalysis>().getAdvisor(
-      *MF, Matrix, LIS, VRM, RegClassInfo, &*ExtraInfo);
+  EvictAdvisor =
+      getAnalysis<RegAllocEvictionAdvisorAnalysis>().getAdvisor(*MF, *this);
   IntfCache.init(MF, Matrix->getLiveUnions(), Indexes, LIS, TRI);
   GlobalCand.resize(32);  // This will grow as needed.
   SetOfBrokenHints.clear();
