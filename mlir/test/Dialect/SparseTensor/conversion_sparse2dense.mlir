@@ -27,16 +27,15 @@
 //   CHECK-DAG: %[[PermS:.*]] = memref.alloca() : memref<1xindex>
 //   CHECK-DAG: %[[PermD:.*]] = memref.cast %[[PermS]] : memref<1xindex> to memref<?xindex>
 //   CHECK-DAG: memref.store %[[I0]], %[[PermS]][%[[I0]]] : memref<1xindex>
-//   CHECK-DAG: %[[SecTp:.*]] = arith.constant 1 : i32
+//   CHECK-DAG: %[[zeroI32:.*]] = arith.constant 0 : i32
 //   CHECK-DAG: %[[ElemTp:.*]] = arith.constant 4 : i32
 //   CHECK-DAG: %[[ActionToIter:.*]] = arith.constant 5 : i32
-//   CHECK-DAG: %[[Iter:.*]] = call @newSparseTensor(%[[AttrsD]], %[[SizesD]], %[[PermD]], %[[SecTp]], %[[SecTp]], %[[ElemTp]], %[[ActionToIter]], %[[Arg]]) : (memref<?xi8>, memref<?xindex>, memref<?xindex>, i32, i32, i32, i32, !llvm.ptr<i8>) -> !llvm.ptr<i8>
+//   CHECK-DAG: %[[Iter:.*]] = call @newSparseTensor(%[[AttrsD]], %[[SizesD]], %[[PermD]], %[[zeroI32]], %[[zeroI32]], %[[ElemTp]], %[[ActionToIter]], %[[Arg]]) : (memref<?xi8>, memref<?xindex>, memref<?xindex>, i32, i32, i32, i32, !llvm.ptr<i8>) -> !llvm.ptr<i8>
 //   CHECK-DAG: %[[IndS:.*]] = memref.alloca() : memref<1xindex>
 //   CHECK-DAG: %[[IndD:.*]] = memref.cast %[[IndS]] : memref<1xindex> to memref<?xindex>
 //   CHECK-DAG: %[[ElemBuffer:.*]] = memref.alloca() : memref<i32>
 //   CHECK-DAG: %[[M:.*]] = memref.alloc() : memref<13xi32>
-//   CHECK-DAG: %[[E0:.*]] = arith.constant 0 : i32
-//   CHECK-DAG: linalg.fill(%[[E0]], %[[M]]) : i32, memref<13xi32>
+//   CHECK-DAG: linalg.fill(%[[zeroI32]], %[[M]]) : i32, memref<13xi32>
 //       CHECK: scf.while : () -> () {
 //       CHECK:   %[[Cond:.*]] = call @getNextI32(%[[Iter]], %[[IndD]], %[[ElemBuffer]]) : (!llvm.ptr<i8>, memref<?xindex>, memref<i32>) -> i1
 //       CHECK:   scf.condition(%[[Cond]])
@@ -67,16 +66,15 @@ func @sparse_convert_1d(%arg0: tensor<13xi32, #SparseVector>) -> tensor<13xi32> 
 //   CHECK-DAG: %[[PermS:.*]] = memref.alloca() : memref<1xindex>
 //   CHECK-DAG: %[[PermD:.*]] = memref.cast %[[PermS]] : memref<1xindex> to memref<?xindex>
 //   CHECK-DAG: memref.store %[[I0]], %[[PermS]][%[[I0]]] : memref<1xindex>
-//   CHECK-DAG: %[[SecTp:.*]] = arith.constant 1 : i32
+//   CHECK-DAG: %[[zeroI32:.*]] = arith.constant 0 : i32
 //   CHECK-DAG: %[[ElemTp:.*]] = arith.constant 4 : i32
 //   CHECK-DAG: %[[ActionToIter:.*]] = arith.constant 5 : i32
-//   CHECK-DAG: %[[Iter:.*]] = call @newSparseTensor(%[[AttrsD]], %[[SizesD]], %[[PermD]], %[[SecTp]], %[[SecTp]], %[[ElemTp]], %[[ActionToIter]], %[[Arg]]) : (memref<?xi8>, memref<?xindex>, memref<?xindex>, i32, i32, i32, i32, !llvm.ptr<i8>) -> !llvm.ptr<i8>
+//   CHECK-DAG: %[[Iter:.*]] = call @newSparseTensor(%[[AttrsD]], %[[SizesD]], %[[PermD]], %[[zeroI32]], %[[zeroI32]], %[[ElemTp]], %[[ActionToIter]], %[[Arg]]) : (memref<?xi8>, memref<?xindex>, memref<?xindex>, i32, i32, i32, i32, !llvm.ptr<i8>) -> !llvm.ptr<i8>
 //   CHECK-DAG: %[[IndS:.*]] = memref.alloca() : memref<1xindex>
 //   CHECK-DAG: %[[IndD:.*]] = memref.cast %[[IndS]] : memref<1xindex> to memref<?xindex>
 //   CHECK-DAG: %[[ElemBuffer:.*]] = memref.alloca() : memref<i32>
 //   CHECK-DAG: %[[M:.*]] = memref.alloc(%[[SizeI0]]) : memref<?xi32>
-//   CHECK-DAG: %[[E0:.*]] = arith.constant 0 : i32
-//   CHECK-DAG: linalg.fill(%[[E0]], %[[M]]) : i32, memref<?xi32>
+//   CHECK-DAG: linalg.fill(%[[zeroI32]], %[[M]]) : i32, memref<?xi32>
 //       CHECK: scf.while : () -> () {
 //       CHECK:   %[[Cond:.*]] = call @getNextI32(%[[Iter]], %[[IndD]], %[[ElemBuffer]]) : (!llvm.ptr<i8>, memref<?xindex>, memref<i32>) -> i1
 //       CHECK:   scf.condition(%[[Cond]])
