@@ -3866,16 +3866,14 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
            (Right.NewlinesBefore > 0 && Right.HasUnescapedNewline);
   if (Left.isTrailingComment())
     return true;
-  if (Right.Previous->IsUnterminatedLiteral)
+  if (Left.IsUnterminatedLiteral)
     return true;
-  if (Right.is(tok::lessless) && Right.Next &&
-      Right.Previous->is(tok::string_literal) &&
+  if (Right.is(tok::lessless) && Right.Next && Left.is(tok::string_literal) &&
       Right.Next->is(tok::string_literal))
     return true;
   // Can break after template<> declaration
-  if (Right.Previous->ClosesTemplateDeclaration &&
-      Right.Previous->MatchingParen &&
-      Right.Previous->MatchingParen->NestingLevel == 0) {
+  if (Left.ClosesTemplateDeclaration && Left.MatchingParen &&
+      Left.MatchingParen->NestingLevel == 0) {
     // Put concepts on the next line e.g.
     // template<typename T>
     // concept ...
@@ -3908,9 +3906,8 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     // has made a deliberate choice and might have aligned the contents of the
     // string literal accordingly. Thus, we try keep existing line breaks.
     return Right.IsMultiline && Right.NewlinesBefore > 0;
-  if ((Right.Previous->is(tok::l_brace) ||
-       (Right.Previous->is(tok::less) && Right.Previous->Previous &&
-        Right.Previous->Previous->is(tok::equal))) &&
+  if ((Left.is(tok::l_brace) || (Left.is(tok::less) && Left.Previous &&
+                                 Left.Previous->is(tok::equal))) &&
       Right.NestingLevel == 1 && Style.Language == FormatStyle::LK_Proto) {
     // Don't put enums or option definitions onto single lines in protocol
     // buffers.
@@ -4014,7 +4011,7 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
       Right.is(TT_SelectorName) && !Right.is(tok::r_square) && Right.Next) {
     // Keep `@submessage` together in:
     // @submessage { key: value }
-    if (Right.Previous && Right.Previous->is(tok::at))
+    if (Left.is(tok::at))
       return false;
     // Look for the scope opener after selector in cases like:
     // selector { ...
