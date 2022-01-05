@@ -4,7 +4,7 @@ RUN: llvm-strings -h | FileCheck %s
 RUN: llvm-strings --help | FileCheck %s
 
 CHECK: OVERVIEW: llvm string dumper
-CHECK: USAGE: llvm-strings [options] <input object files>{{$}}
+CHECK: USAGE: {{.*}}llvm-strings{{(.exe)?}} [options] <input object files>{{$}}
 CHECK: OPTIONS:
 CHECK:   --all
 CHECK:   -a
