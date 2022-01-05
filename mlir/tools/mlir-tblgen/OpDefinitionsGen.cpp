@@ -715,6 +715,33 @@ void OpEmitter::genAttrNameGetters() {
   }
 }
 
+// Emit the getter for an attribute with the return type specified.
+// It is templated to be shared between the Op and the adaptor class.
+template <typename OpClassOrAdaptor>
+static void emitAttrGetterWithReturnType(FmtContext &fctx,
+                                         OpClassOrAdaptor &opClass,
+                                         const Operator &op, StringRef name,
+                                         Attribute attr) {
+  auto *method = opClass.addMethod(attr.getReturnType(), name);
+  ERROR_IF_PRUNED(method, name, op);
+  auto &body = method->body();
+  body << "  auto attr = " << name << "Attr();\n";
+  if (attr.hasDefaultValue()) {
+    // Returns the default value if not set.
+    // TODO: this is inefficient, we are recreating the attribute for every
+    // call. This should be set instead.
+    std::string defaultValue = std::string(
+        tgfmt(attr.getConstBuilderTemplate(), &fctx, attr.getDefaultValue()));
+    body << "    if (!attr)\n      return "
+         << tgfmt(attr.getConvertFromStorageCall(),
+                  &fctx.withSelf(defaultValue))
+         << ";\n";
+  }
+  body << "  return "
+       << tgfmt(attr.getConvertFromStorageCall(), &fctx.withSelf("attr"))
+       << ";\n";
+}
+
 void OpEmitter::genAttrGetters() {
   FmtContext fctx;
   fctx.withBuilder("::mlir::Builder((*this)->getContext())");
@@ -723,28 +750,6 @@ void OpEmitter::genAttrGetters() {
   auto emitDerivedAttr = [&](StringRef name, Attribute attr) {
     if (auto *method = opClass.addMethod(attr.getReturnType(), name))
       method->body() << "  " << attr.getDerivedCodeBody() << "\n";
-  };
-
-  // Emit with return type specified.
-  auto emitAttrWithReturnType = [&](StringRef name, Attribute attr) {
-    auto *method = opClass.addMethod(attr.getReturnType(), name);
-    ERROR_IF_PRUNED(method, name, op);
-    auto &body = method->body();
-    body << "  auto attr = " << name << "Attr();\n";
-    if (attr.hasDefaultValue()) {
-      // Returns the default value if not set.
-      // TODO: this is inefficient, we are recreating the attribute for every
-      // call. This should be set instead.
-      std::string defaultValue = std::string(
-          tgfmt(attr.getConstBuilderTemplate(), &fctx, attr.getDefaultValue()));
-      body << "    if (!attr)\n      return "
-           << tgfmt(attr.getConvertFromStorageCall(),
-                    &fctx.withSelf(defaultValue))
-           << ";\n";
-    }
-    body << "  return "
-         << tgfmt(attr.getConvertFromStorageCall(), &fctx.withSelf("attr"))
-         << ";\n";
   };
 
   // Generate named accessor with Attribute return type. This is a wrapper class
@@ -767,7 +772,7 @@ void OpEmitter::genAttrGetters() {
         emitDerivedAttr(name, namedAttr.attr);
       } else {
         emitAttrWithStorageType(name, namedAttr.attr);
-        emitAttrWithReturnType(name, namedAttr.attr);
+        emitAttrGetterWithReturnType(fctx, opClass, op, name, namedAttr.attr);
       }
     }
   }
@@ -2588,9 +2593,11 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
   FmtContext fctx;
   fctx.withBuilder("::mlir::Builder(odsAttrs.getContext())");
 
-  auto emitAttr = [&](StringRef name, StringRef emitName, Attribute attr) {
-    auto *method = adaptor.addMethod(attr.getStorageType(), emitName);
-    ERROR_IF_PRUNED(method, "Adaptor::" + emitName, op);
+  // Generate named accessor with Attribute return type.
+  auto emitAttrWithStorageType = [&](StringRef name, StringRef emitName,
+                                     Attribute attr) {
+    auto *method = adaptor.addMethod(attr.getStorageType(), emitName + "Attr");
+    ERROR_IF_PRUNED(method, "Adaptor::" + emitName + "Attr", op);
     auto &body = method->body();
     body << "  assert(odsAttrs && \"no attributes when constructing adapter\");"
          << "\n  " << attr.getStorageType() << " attr = "
@@ -2620,9 +2627,11 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
   for (auto &namedAttr : op.getAttributes()) {
     const auto &name = namedAttr.name;
     const auto &attr = namedAttr.attr;
-    if (!attr.isDerivedAttr()) {
-      for (const auto &emitName : op.getGetterNames(name))
-        emitAttr(name, emitName, attr);
+    if (attr.isDerivedAttr())
+      continue;
+    for (const auto &emitName : op.getGetterNames(name)) {
+      emitAttrWithStorageType(name, emitName, attr);
+      emitAttrGetterWithReturnType(fctx, adaptor, op, emitName, attr);
     }
   }
 
