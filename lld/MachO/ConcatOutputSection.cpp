@@ -244,7 +244,7 @@ void ConcatOutputSection::finalize() {
     // contains several branch instructions in succession, then the distance
     // from the current position to the position where the thunks are inserted
     // grows. So leave room for a bunch of thunks.
-    unsigned slop = 100 * thunkSize;
+    unsigned slop = 256 * thunkSize;
     while (finalIdx < endIdx && isecAddr + inputs[finalIdx]->getSize() <
                                     isecVA + forwardBranchRange - slop)
       finalizeOne(inputs[finalIdx++]);
