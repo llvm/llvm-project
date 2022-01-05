@@ -217,8 +217,10 @@ uptr internal_strnlen(const char *s, uptr maxlen) {
 
 char *internal_strstr(const char *haystack, const char *needle) {
   // This is O(N^2), but we are not using it in hot places.
-  uptr len1 = internal_strlen(haystack);
   uptr len2 = internal_strlen(needle);
+  if (len2 == 0)
+    return const_cast<char *>(haystack);
+  uptr len1 = internal_strlen(haystack);
   if (len1 < len2) return nullptr;
   for (uptr pos = 0; pos <= len1 - len2; pos++) {
     if (internal_memcmp(haystack + pos, needle, len2) == 0)
