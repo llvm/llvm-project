@@ -1696,9 +1696,12 @@ HexagonPacketizerList::addToPacket(MachineInstr &MI) {
   MachineBasicBlock::iterator MII = MI.getIterator();
   MachineBasicBlock *MBB = MI.getParent();
 
-  if (CurrentPacketMIs.empty())
+  if (CurrentPacketMIs.empty()) {
     PacketStalls = false;
+    PacketStallCycles = 0;
+  }
   PacketStalls |= producesStall(MI);
+  PacketStallCycles = std::max(PacketStallCycles, calcStall(MI));
 
   if (MI.isImplicitDef()) {
     // Add to the packet to allow subsequent instructions to be checked
@@ -1878,12 +1881,7 @@ bool HexagonPacketizerList::isPureSlot0InsnWithNoSlot1Store(
 }
 
 // V60 forward scheduling.
-bool HexagonPacketizerList::producesStall(const MachineInstr &I) {
-  // If the packet already stalls, then ignore the stall from a subsequent
-  // instruction in the same packet.
-  if (PacketStalls)
-    return false;
-
+unsigned int HexagonPacketizerList::calcStall(const MachineInstr &I) {
   // Check whether the previous packet is in a different loop. If this is the
   // case, there is little point in trying to avoid a stall because that would
   // favor the rare case (loop entry) over the common case (loop iteration).
@@ -1895,10 +1893,12 @@ bool HexagonPacketizerList::producesStall(const MachineInstr &I) {
     auto *OldBB = OldPacketMIs.front()->getParent();
     auto *ThisBB = I.getParent();
     if (MLI->getLoopFor(OldBB) != MLI->getLoopFor(ThisBB))
-      return false;
+      return 0;
   }
 
   SUnit *SUI = MIToSUnit[const_cast<MachineInstr *>(&I)];
+  if (!SUI)
+    return 0;
 
   // If the latency is 0 and there is a data dependence between this
   // instruction and any instruction in the current packet, we disregard any
@@ -1927,7 +1927,7 @@ bool HexagonPacketizerList::producesStall(const MachineInstr &I) {
       if (Pred.getSUnit() == SUJ)
         if ((Pred.getLatency() == 0 && Pred.isAssignedRegDep()) ||
             HII->isNewValueJump(I) || HII->isToBeScheduledASAP(*J, I))
-          return false;
+          return 0;
   }
 
   // Check if the latency is greater than one between this instruction and any
@@ -1936,10 +1936,20 @@ bool HexagonPacketizerList::producesStall(const MachineInstr &I) {
     SUnit *SUJ = MIToSUnit[J];
     for (auto &Pred : SUI->Preds)
       if (Pred.getSUnit() == SUJ && Pred.getLatency() > 1)
-        return true;
+        return Pred.getLatency();
   }
 
-  return false;
+  return 0;
+}
+
+bool HexagonPacketizerList::producesStall(const MachineInstr &I) {
+  unsigned int Latency = calcStall(I);
+  if (Latency == 0)
+    return false;
+  // Ignore stall unless it stalls more than previous instruction in packet
+  if (PacketStalls)
+    return Latency > PacketStallCycles;
+  return true;
 }
 
 //===----------------------------------------------------------------------===//
