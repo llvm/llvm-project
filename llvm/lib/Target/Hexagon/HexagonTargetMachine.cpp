@@ -139,6 +139,7 @@ namespace llvm {
   void initializeHexagonBitSimplifyPass(PassRegistry&);
   void initializeHexagonConstExtendersPass(PassRegistry&);
   void initializeHexagonConstPropagationPass(PassRegistry&);
+  void initializeHexagonCopyToCombinePass(PassRegistry&);
   void initializeHexagonEarlyIfConversionPass(PassRegistry&);
   void initializeHexagonExpandCondsetsPass(PassRegistry&);
   void initializeHexagonGenMuxPass(PassRegistry&);
@@ -199,6 +200,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeHexagonTarget() {
   initializeHexagonBitSimplifyPass(PR);
   initializeHexagonConstExtendersPass(PR);
   initializeHexagonConstPropagationPass(PR);
+  initializeHexagonCopyToCombinePass(PR);
   initializeHexagonEarlyIfConversionPass(PR);
   initializeHexagonGenMuxPass(PR);
   initializeHexagonHardwareLoopsPass(PR);
