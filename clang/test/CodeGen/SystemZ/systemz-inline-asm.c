@@ -6,31 +6,31 @@ unsigned long gl;
 void test_store_m(unsigned int i) {
   asm("st %1, %0" : "=m" (gi) : "r" (i));
 // CHECK-LABEL: define{{.*}} void @test_store_m(i32 zeroext %i)
-// CHECK: call void asm "st $1, $0", "=*m,r"(i32* nonnull @gi, i32 %i)
+// CHECK: call void asm "st $1, $0", "=*m,r"(i32* nonnull elementtype(i32) @gi, i32 %i)
 }
 
 void test_store_Q(unsigned int i) {
   asm("st %1, %0" : "=Q" (gi) : "r" (i));
 // CHECK-LABEL: define{{.*}} void @test_store_Q(i32 zeroext %i)
-// CHECK: call void asm "st $1, $0", "=*Q,r"(i32* nonnull @gi, i32 %i)
+// CHECK: call void asm "st $1, $0", "=*Q,r"(i32* nonnull elementtype(i32) @gi, i32 %i)
 }
 
 void test_store_R(unsigned int i) {
   asm("st %1, %0" : "=R" (gi) : "r" (i));
 // CHECK-LABEL: define{{.*}} void @test_store_R(i32 zeroext %i)
-// CHECK: call void asm "st $1, $0", "=*R,r"(i32* nonnull @gi, i32 %i)
+// CHECK: call void asm "st $1, $0", "=*R,r"(i32* nonnull elementtype(i32) @gi, i32 %i)
 }
 
 void test_store_S(unsigned int i) {
   asm("st %1, %0" : "=S" (gi) : "r" (i));
 // CHECK-LABEL: define{{.*}} void @test_store_S(i32 zeroext %i)
-// CHECK: call void asm "st $1, $0", "=*S,r"(i32* nonnull @gi, i32 %i)
+// CHECK: call void asm "st $1, $0", "=*S,r"(i32* nonnull elementtype(i32) @gi, i32 %i)
 }
 
 void test_store_T(unsigned int i) {
   asm("st %1, %0" : "=T" (gi) : "r" (i));
 // CHECK-LABEL: define{{.*}} void @test_store_T(i32 zeroext %i)
-// CHECK: call void asm "st $1, $0", "=*T,r"(i32* nonnull @gi, i32 %i)
+// CHECK: call void asm "st $1, $0", "=*T,r"(i32* nonnull elementtype(i32) @gi, i32 %i)
 }
 
 int test_load_m() {
@@ -38,7 +38,7 @@ int test_load_m() {
   asm("l %0, %1" : "=r" (i) : "m" (gi));
   return i;
 // CHECK-LABEL: define{{.*}} signext i32 @test_load_m()
-// CHECK: call i32 asm "l $0, $1", "=r,*m"(i32* nonnull @gi)
+// CHECK: call i32 asm "l $0, $1", "=r,*m"(i32* nonnull elementtype(i32) @gi)
 }
 
 int test_load_Q() {
@@ -46,7 +46,7 @@ int test_load_Q() {
   asm("l %0, %1" : "=r" (i) : "Q" (gi));
   return i;
 // CHECK-LABEL: define{{.*}} signext i32 @test_load_Q()
-// CHECK: call i32 asm "l $0, $1", "=r,*Q"(i32* nonnull @gi)
+// CHECK: call i32 asm "l $0, $1", "=r,*Q"(i32* nonnull elementtype(i32) @gi)
 }
 
 int test_load_R() {
@@ -54,7 +54,7 @@ int test_load_R() {
   asm("l %0, %1" : "=r" (i) : "R" (gi));
   return i;
 // CHECK-LABEL: define{{.*}} signext i32 @test_load_R()
-// CHECK: call i32 asm "l $0, $1", "=r,*R"(i32* nonnull @gi)
+// CHECK: call i32 asm "l $0, $1", "=r,*R"(i32* nonnull elementtype(i32) @gi)
 }
 
 int test_load_S() {
@@ -62,7 +62,7 @@ int test_load_S() {
   asm("l %0, %1" : "=r" (i) : "S" (gi));
   return i;
 // CHECK-LABEL: define{{.*}} signext i32 @test_load_S()
-// CHECK: call i32 asm "l $0, $1", "=r,*S"(i32* nonnull @gi)
+// CHECK: call i32 asm "l $0, $1", "=r,*S"(i32* nonnull elementtype(i32) @gi)
 }
 
 int test_load_T() {
@@ -70,13 +70,13 @@ int test_load_T() {
   asm("l %0, %1" : "=r" (i) : "T" (gi));
   return i;
 // CHECK-LABEL: define{{.*}} signext i32 @test_load_T()
-// CHECK: call i32 asm "l $0, $1", "=r,*T"(i32* nonnull @gi)
+// CHECK: call i32 asm "l $0, $1", "=r,*T"(i32* nonnull elementtype(i32) @gi)
 }
 
 void test_mI(unsigned char *c) {
   asm volatile("cli %0, %1" :: "Q" (*c), "I" (100));
 // CHECK-LABEL: define{{.*}} void @test_mI(i8* %c)
-// CHECK: call void asm sideeffect "cli $0, $1", "*Q,I"(i8* %c, i32 100)
+// CHECK: call void asm sideeffect "cli $0, $1", "*Q,I"(i8* elementtype(i8) %c, i32 100)
 }
 
 unsigned int test_dJa(unsigned int i, unsigned int j) {

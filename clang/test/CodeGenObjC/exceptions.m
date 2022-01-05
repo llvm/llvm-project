@@ -54,14 +54,14 @@ int f2() {
   // CHECK-NEXT:   br i1 [[CAUGHT]]
   @try {
     // Landing pad.  Note that we elide the re-enter.
-    // CHECK:      call void asm sideeffect "", "=*m,=*m"(i32* nonnull [[X]]
+    // CHECK:      call void asm sideeffect "", "=*m,=*m"(i32* nonnull elementtype(i32) [[X]]
     // CHECK-NEXT: call i8* @objc_exception_extract
     // CHECK-NEXT: [[T1:%.*]] = load i32, i32* [[X]]
     // CHECK-NEXT: [[T2:%.*]] = add nsw i32 [[T1]], -1
 
     // CHECK: store i32 6, i32* [[X]]
     x++;
-    // CHECK-NEXT: call void asm sideeffect "", "*m,*m"(i32* nonnull [[X]]
+    // CHECK-NEXT: call void asm sideeffect "", "*m,*m"(i32* nonnull elementtype(i32) [[X]]
     // CHECK-NEXT: call void @foo()
     // CHECK-NEXT: call void @objc_exception_try_exit
     // CHECK-NEXT: [[T:%.*]] = load i32, i32* [[X]]

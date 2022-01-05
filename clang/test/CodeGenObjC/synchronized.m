@@ -32,7 +32,7 @@ void foo(id a) {
   // CHECK:      call i32 @_setjmp
   @synchronized(a) {
     // This is unreachable, but the optimizers can't know that.
-    // CHECK: call void asm sideeffect "", "=*m,=*m,=*m"(i8** nonnull [[A]], i8** nonnull [[SYNC]]
+    // CHECK: call void asm sideeffect "", "=*m,=*m,=*m"(i8** nonnull elementtype(i8*) [[A]], i8** nonnull elementtype(i8*) [[SYNC]]
     // CHECK: call i32 @objc_sync_exit
     // CHECK: call i8* @objc_exception_extract
     // CHECK: call void @objc_exception_throw

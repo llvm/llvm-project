@@ -38,7 +38,7 @@ void invoke(void* that, unsigned methodIndex,
 // CHECK-SAME: pop ebp
 // CHECK-SAME: ret
 // CHECK: "=*m,*m,*m,*m,*m,~{eax},~{ebp},~{ecx},~{edx},~{flags},~{esp},~{dirflag},~{fpsr},~{flags}"
-// CHECK: (i8** %8, i32* %7, void (...)* bitcast (void ()* @invoke_copy_to_stack to void (...)*), i8** %5, i32* %6)
+// CHECK: (i8** elementtype(i8*) %8, i32* elementtype(i32) %7, void (...)* elementtype(void (...)) bitcast (void ()* @invoke_copy_to_stack to void (...)*), i8** elementtype(i8*) %5, i32* elementtype(i32) %6)
 // CHECK: ret void
     __asm {
         mov     edx,paramCount

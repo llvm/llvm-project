@@ -123,144 +123,144 @@ void single_Y()
 // CHECK: @single_I
 void single_I()
 {
-  // CHECK: asm "foo $1,$0", "=*m,I[[CLOBBERS]](i32* @mout0, i32 1)
+  // CHECK: asm "foo $1,$0", "=*m,I[[CLOBBERS]](i32* elementtype(i32) @mout0, i32 1)
   asm("foo %1,%0" : "=m" (mout0) : "I" (1));
 }
 
 // CHECK: @single_J
 void single_J()
 {
-  // CHECK: asm "foo $1,$0", "=*m,J[[CLOBBERS]](i32* @mout0, i32 1)
+  // CHECK: asm "foo $1,$0", "=*m,J[[CLOBBERS]](i32* elementtype(i32) @mout0, i32 1)
   asm("foo %1,%0" : "=m" (mout0) : "J" (1));
 }
 
 // CHECK: @single_K
 void single_K()
 {
-  // CHECK: asm "foo $1,$0", "=*m,K[[CLOBBERS]](i32* @mout0, i32 1)
+  // CHECK: asm "foo $1,$0", "=*m,K[[CLOBBERS]](i32* elementtype(i32) @mout0, i32 1)
   asm("foo %1,%0" : "=m" (mout0) : "K" (1));
 }
 
 // CHECK: @single_L
 void single_L()
 {
-  // CHECK: asm "foo $1,$0", "=*m,L[[CLOBBERS]](i32* @mout0, i32 255)
+  // CHECK: asm "foo $1,$0", "=*m,L[[CLOBBERS]](i32* elementtype(i32) @mout0, i32 255)
   asm("foo %1,%0" : "=m" (mout0) : "L" (0xff));
-  // CHECK: asm "foo $1,$0", "=*m,L[[CLOBBERS]](i32* @mout0, i32 65535)
+  // CHECK: asm "foo $1,$0", "=*m,L[[CLOBBERS]](i32* elementtype(i32) @mout0, i32 65535)
   asm("foo %1,%0" : "=m" (mout0) : "L" (0xffff));
-  // CHECK: asm "foo $1,$0", "=*m,L[[CLOBBERS]](i32* @mout0, i32 -1)
+  // CHECK: asm "foo $1,$0", "=*m,L[[CLOBBERS]](i32* elementtype(i32) @mout0, i32 -1)
   asm("foo %1,%0" : "=m" (mout0) : "L" (0xffffffff));
 }
 
 // CHECK: @single_M
 void single_M()
 {
-  // CHECK: asm "foo $1,$0", "=*m,M[[CLOBBERS]](i32* @mout0, i32 1)
+  // CHECK: asm "foo $1,$0", "=*m,M[[CLOBBERS]](i32* elementtype(i32) @mout0, i32 1)
   asm("foo %1,%0" : "=m" (mout0) : "M" (1));
 }
 
 // CHECK: @single_N
 void single_N()
 {
-  // CHECK: asm "foo $1,$0", "=*m,N[[CLOBBERS]](i32* @mout0, i32 1)
+  // CHECK: asm "foo $1,$0", "=*m,N[[CLOBBERS]](i32* elementtype(i32) @mout0, i32 1)
   asm("foo %1,%0" : "=m" (mout0) : "N" (1));
 }
 
 // CHECK: @single_G
 void single_G()
 {
-  // CHECK: asm "foo $1,$0", "=*m,G[[CLOBBERS]](i32* @mout0, double {{1.[0]+e[+]*[0]+}})
+  // CHECK: asm "foo $1,$0", "=*m,G[[CLOBBERS]](i32* elementtype(i32) @mout0, double {{1.[0]+e[+]*[0]+}})
   asm("foo %1,%0" : "=m" (mout0) : "G" (1.0));
 }
 
 // CHECK: @single_C
 void single_C()
 {
-  // CHECK: asm "foo $1,$0", "=*m,C[[CLOBBERS]](i32* @mout0, double {{1.[0]+e[+]*[0]+}})
+  // CHECK: asm "foo $1,$0", "=*m,C[[CLOBBERS]](i32* elementtype(i32) @mout0, double {{1.[0]+e[+]*[0]+}})
   asm("foo %1,%0" : "=m" (mout0) : "C" (1.0));
 }
 
 // CHECK: @single_e
 void single_e()
 {
-  // CHECK: asm "foo $1,$0", "=*m,e[[CLOBBERS]](i32* @mout0, i32 1)
+  // CHECK: asm "foo $1,$0", "=*m,e[[CLOBBERS]](i32* elementtype(i32) @mout0, i32 1)
   asm("foo %1,%0" : "=m" (mout0) : "e" (1));
 }
 
 // CHECK: @single_Z
 void single_Z()
 {
-  // CHECK: asm "foo $1,$0", "=*m,Z[[CLOBBERS]](i32* @mout0, i32 1)
+  // CHECK: asm "foo $1,$0", "=*m,Z[[CLOBBERS]](i32* elementtype(i32) @mout0, i32 1)
   asm("foo %1,%0" : "=m" (mout0) : "Z" (1));
 }
 
 // CHECK: @multi_R
 void multi_R()
 {
-  // CHECK: asm "foo $1,$0", "=*r|R|m,r|R|m[[CLOBBERS]](i32* @mout0, i32 {{[a-zA-Z0-9@%]+}})
+  // CHECK: asm "foo $1,$0", "=*r|R|m,r|R|m[[CLOBBERS]](i32* elementtype(i32) @mout0, i32 {{[a-zA-Z0-9@%]+}})
   asm("foo %1,%0" : "=r,R,m" (mout0) : "r,R,m" (min1));
 }
 
 // CHECK: @multi_q
 void multi_q()
 {
-  // CHECK: asm "foo $1,$0", "=*r|q|m,r|q|m[[CLOBBERS]](i32* @mout0, i32 {{[a-zA-Z0-9@%]+}})
+  // CHECK: asm "foo $1,$0", "=*r|q|m,r|q|m[[CLOBBERS]](i32* elementtype(i32) @mout0, i32 {{[a-zA-Z0-9@%]+}})
   asm("foo %1,%0" : "=r,q,m" (mout0) : "r,q,m" (min1));
 }
 
 // CHECK: @multi_Q
 void multi_Q()
 {
-  // CHECK: asm "foo $1,$0", "=*r|Q|m,r|Q|m[[CLOBBERS]](i32* @mout0, i32 {{[a-zA-Z0-9@%]+}})
+  // CHECK: asm "foo $1,$0", "=*r|Q|m,r|Q|m[[CLOBBERS]](i32* elementtype(i32) @mout0, i32 {{[a-zA-Z0-9@%]+}})
   asm("foo %1,%0" : "=r,Q,m" (mout0) : "r,Q,m" (min1));
 }
 
 // CHECK: @multi_a
 void multi_a()
 {
-  // CHECK: asm "foo $1,$0", "=*r|{ax}|m,r|{ax}|m[[CLOBBERS]](i32* @mout0, i32 {{[a-zA-Z0-9@%]+}})
+  // CHECK: asm "foo $1,$0", "=*r|{ax}|m,r|{ax}|m[[CLOBBERS]](i32* elementtype(i32) @mout0, i32 {{[a-zA-Z0-9@%]+}})
   asm("foo %1,%0" : "=r,a,m" (mout0) : "r,a,m" (min1));
 }
 
 // CHECK: @multi_b
 void multi_b()
 {
-  // CHECK: asm "foo $1,$0", "=*r|{bx}|m,r|{bx}|m[[CLOBBERS]](i32* @mout0, i32 {{[a-zA-Z0-9@%]+}})
+  // CHECK: asm "foo $1,$0", "=*r|{bx}|m,r|{bx}|m[[CLOBBERS]](i32* elementtype(i32) @mout0, i32 {{[a-zA-Z0-9@%]+}})
   asm("foo %1,%0" : "=r,b,m" (mout0) : "r,b,m" (min1));
 }
 
 // CHECK: @multi_c
 void multi_c()
 {
-  // CHECK: asm "foo $1,$0", "=*r|{cx}|m,r|{cx}|m[[CLOBBERS]](i32* @mout0, i32 {{[a-zA-Z0-9@%]+}})
+  // CHECK: asm "foo $1,$0", "=*r|{cx}|m,r|{cx}|m[[CLOBBERS]](i32* elementtype(i32) @mout0, i32 {{[a-zA-Z0-9@%]+}})
   asm("foo %1,%0" : "=r,c,m" (mout0) : "r,c,m" (min1));
 }
 
 // CHECK: @multi_d
 void multi_d()
 {
-  // CHECK: asm "foo $1,$0", "=*r|{dx}|m,r|{dx}|m[[CLOBBERS]](i32* @mout0, i32 {{[a-zA-Z0-9@%]+}})
+  // CHECK: asm "foo $1,$0", "=*r|{dx}|m,r|{dx}|m[[CLOBBERS]](i32* elementtype(i32) @mout0, i32 {{[a-zA-Z0-9@%]+}})
   asm("foo %1,%0" : "=r,d,m" (mout0) : "r,d,m" (min1));
 }
 
 // CHECK: @multi_S
 void multi_S()
 {
-  // CHECK: asm "foo $1,$0", "=*r|{si}|m,r|{si}|m[[CLOBBERS]](i32* @mout0, i32 {{[a-zA-Z0-9@%]+}})
+  // CHECK: asm "foo $1,$0", "=*r|{si}|m,r|{si}|m[[CLOBBERS]](i32* elementtype(i32) @mout0, i32 {{[a-zA-Z0-9@%]+}})
   asm("foo %1,%0" : "=r,S,m" (mout0) : "r,S,m" (min1));
 }
 
 // CHECK: @multi_D
 void multi_D()
 {
-  // CHECK: asm "foo $1,$0", "=*r|{di}|m,r|{di}|m[[CLOBBERS]](i32* @mout0, i32 {{[a-zA-Z0-9@%]+}})
+  // CHECK: asm "foo $1,$0", "=*r|{di}|m,r|{di}|m[[CLOBBERS]](i32* elementtype(i32) @mout0, i32 {{[a-zA-Z0-9@%]+}})
   asm("foo %1,%0" : "=r,D,m" (mout0) : "r,D,m" (min1));
 }
 
 // CHECK: @multi_A
 void multi_A()
 {
-  // CHECK: asm "foo $1,$0", "=*r|A|m,r|A|m[[CLOBBERS]](i32* @mout0, i32 {{[a-zA-Z0-9@%]+}})
+  // CHECK: asm "foo $1,$0", "=*r|A|m,r|A|m[[CLOBBERS]](i32* elementtype(i32) @mout0, i32 {{[a-zA-Z0-9@%]+}})
   asm("foo %1,%0" : "=r,A,m" (mout0) : "r,A,m" (min1));
 }
 
@@ -285,14 +285,14 @@ void multi_u()
 // CHECK: @multi_y
 void multi_y()
 {
-  // CHECK: asm "foo $1,$0", "=*r|y|m,r|y|m[[CLOBBERS]](double* @dout0, double {{[a-zA-Z0-9@%]+}})
+  // CHECK: asm "foo $1,$0", "=*r|y|m,r|y|m[[CLOBBERS]](double* elementtype(double) @dout0, double {{[a-zA-Z0-9@%]+}})
   asm("foo %1,%0" : "=r,y,m" (dout0) : "r,y,m" (din1));
 }
 
 // CHECK: @multi_x
 void multi_x()
 {
-  // CHECK: asm "foo $1,$0", "=*r|x|m,r|x|m[[CLOBBERS]](double* @dout0, double {{[a-zA-Z0-9@%]+}})
+  // CHECK: asm "foo $1,$0", "=*r|x|m,r|x|m[[CLOBBERS]](double* elementtype(double) @dout0, double {{[a-zA-Z0-9@%]+}})
   asm("foo %1,%0" : "=r,x,m" (dout0) : "r,x,m" (din1));
 }
 
@@ -310,69 +310,69 @@ void multi_Y0()
 // CHECK: @multi_I
 void multi_I()
 {
-  // CHECK: asm "foo $1,$0", "=*r|m|m,r|I|m[[CLOBBERS]](i32* @mout0, i32 1)
+  // CHECK: asm "foo $1,$0", "=*r|m|m,r|I|m[[CLOBBERS]](i32* elementtype(i32) @mout0, i32 1)
   asm("foo %1,%0" : "=r,m,m" (mout0) : "r,I,m" (1));
 }
 
 // CHECK: @multi_J
 void multi_J()
 {
-  // CHECK: asm "foo $1,$0", "=*r|m|m,r|J|m[[CLOBBERS]](i32* @mout0, i32 1)
+  // CHECK: asm "foo $1,$0", "=*r|m|m,r|J|m[[CLOBBERS]](i32* elementtype(i32) @mout0, i32 1)
   asm("foo %1,%0" : "=r,m,m" (mout0) : "r,J,m" (1));
 }
 
 // CHECK: @multi_K
 void multi_K()
 {
-  // CHECK: asm "foo $1,$0", "=*r|m|m,r|K|m[[CLOBBERS]](i32* @mout0, i32 1)
+  // CHECK: asm "foo $1,$0", "=*r|m|m,r|K|m[[CLOBBERS]](i32* elementtype(i32) @mout0, i32 1)
   asm("foo %1,%0" : "=r,m,m" (mout0) : "r,K,m" (1));
 }
 
 // CHECK: @multi_L
 void multi_L()
 {
-  // CHECK: asm "foo $1,$0", "=*r|m|m,r|L|m[[CLOBBERS]](i32* @mout0, i32 1)
+  // CHECK: asm "foo $1,$0", "=*r|m|m,r|L|m[[CLOBBERS]](i32* elementtype(i32) @mout0, i32 1)
   asm("foo %1,%0" : "=r,m,m" (mout0) : "r,L,m" (1));
 }
 
 // CHECK: @multi_M
 void multi_M()
 {
-  // CHECK: asm "foo $1,$0", "=*r|m|m,r|M|m[[CLOBBERS]](i32* @mout0, i32 1)
+  // CHECK: asm "foo $1,$0", "=*r|m|m,r|M|m[[CLOBBERS]](i32* elementtype(i32) @mout0, i32 1)
   asm("foo %1,%0" : "=r,m,m" (mout0) : "r,M,m" (1));
 }
 
 // CHECK: @multi_N
 void multi_N()
 {
-  // CHECK: asm "foo $1,$0", "=*r|m|m,r|N|m[[CLOBBERS]](i32* @mout0, i32 1)
+  // CHECK: asm "foo $1,$0", "=*r|m|m,r|N|m[[CLOBBERS]](i32* elementtype(i32) @mout0, i32 1)
   asm("foo %1,%0" : "=r,m,m" (mout0) : "r,N,m" (1));
 }
 
 // CHECK: @multi_G
 void multi_G()
 {
-  // CHECK: asm "foo $1,$0", "=*r|m|m,r|G|m[[CLOBBERS]](i32* @mout0, double {{1.[0]+e[+]*[0]+}})
+  // CHECK: asm "foo $1,$0", "=*r|m|m,r|G|m[[CLOBBERS]](i32* elementtype(i32) @mout0, double {{1.[0]+e[+]*[0]+}})
   asm("foo %1,%0" : "=r,m,m" (mout0) : "r,G,m" (1.0));
 }
 
 // CHECK: @multi_C
 void multi_C()
 {
-  // CHECK: asm "foo $1,$0", "=*r|m|m,r|C|m[[CLOBBERS]](i32* @mout0, double {{1.[0]+e[+]*[0]+}})
+  // CHECK: asm "foo $1,$0", "=*r|m|m,r|C|m[[CLOBBERS]](i32* elementtype(i32) @mout0, double {{1.[0]+e[+]*[0]+}})
   asm("foo %1,%0" : "=r,m,m" (mout0) : "r,C,m" (1.0));
 }
 
 // CHECK: @multi_e
 void multi_e()
 {
-  // CHECK: asm "foo $1,$0", "=*r|m|m,r|e|m[[CLOBBERS]](i32* @mout0, i32 1)
+  // CHECK: asm "foo $1,$0", "=*r|m|m,r|e|m[[CLOBBERS]](i32* elementtype(i32) @mout0, i32 1)
   asm("foo %1,%0" : "=r,m,m" (mout0) : "r,e,m" (1));
 }
 
 // CHECK: @multi_Z
 void multi_Z()
 {
-  // CHECK: asm "foo $1,$0", "=*r|m|m,r|Z|m[[CLOBBERS]](i32* @mout0, i32 1)
+  // CHECK: asm "foo $1,$0", "=*r|m|m,r|Z|m[[CLOBBERS]](i32* elementtype(i32) @mout0, i32 1)
   asm("foo %1,%0" : "=r,m,m" (mout0) : "r,Z,m" (1));
 }

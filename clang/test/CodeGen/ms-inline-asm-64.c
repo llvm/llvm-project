@@ -36,7 +36,7 @@ int t3() {
 // CHECK-SAME: lea ebx, $0
 // CHECK-SAME: mov eax, [ebx]
 // CHECK-SAME: mov [ebx + $$4], ecx
-// CHECK-SAME: "*m,~{eax},~{ebx},~{dirflag},~{fpsr},~{flags}"(%struct.t3_type* %{{.*}})
+// CHECK-SAME: "*m,~{eax},~{ebx},~{dirflag},~{fpsr},~{flags}"(%struct.t3_type* elementtype(%struct.t3_type) %{{.*}})
 }
 
 int t4() {
@@ -56,7 +56,7 @@ int t4() {
 // CHECK-SAME: lea ebx, $0
 // CHECK-SAME: mov eax, [ebx]
 // CHECK-SAME: mov [ebx + $$4], ecx
-// CHECK-SAME: "*m,~{eax},~{ebx},~{dirflag},~{fpsr},~{flags}"(%struct.t3_type* %{{.*}})
+// CHECK-SAME: "*m,~{eax},~{ebx},~{dirflag},~{fpsr},~{flags}"(%struct.t3_type* elementtype(%struct.t3_type) %{{.*}})
 }
 
 void bar() {}
@@ -70,5 +70,5 @@ void t5() {
   // CHECK: call void asm sideeffect inteldialect
   // CHECK-SAME: call qword ptr ${0:P}
   // CHECK-SAME: jmp qword ptr ${1:P}
-  // CHECK-SAME: "*m,*m,~{dirflag},~{fpsr},~{flags}"(void (...)* bitcast (void ()* @bar to void (...)*), void (...)* bitcast (void ()* @bar to void (...)*))
+  // CHECK-SAME: "*m,*m,~{dirflag},~{fpsr},~{flags}"(void (...)* elementtype(void (...)) bitcast (void ()* @bar to void (...)*), void (...)* elementtype(void (...)) bitcast (void ()* @bar to void (...)*))
 }
