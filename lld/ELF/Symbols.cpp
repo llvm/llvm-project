@@ -133,8 +133,7 @@ static uint64_t getSymVA(const Symbol &sym, int64_t addend) {
     return 0;
   case Symbol::LazyArchiveKind:
   case Symbol::LazyObjectKind:
-    assert(sym.isUsedInRegularObj && "lazy symbol reached writer");
-    return 0;
+    llvm_unreachable("lazy symbol reached writer");
   case Symbol::CommonKind:
     llvm_unreachable("common symbol reached writer");
   case Symbol::PlaceholderKind:
