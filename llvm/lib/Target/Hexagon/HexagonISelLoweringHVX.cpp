@@ -2022,8 +2022,7 @@ SDValue HexagonTargetLowering::LowerHvxFpExtend(SDValue Op,
   // This conversion only applies to QFloat.
   assert(Subtarget.useHVXQFloatOps());
 
-  unsigned Opc = Op->getOpcode();
-  assert(Opc == ISD::FP_EXTEND);
+  assert(Op->getOpcode() == ISD::FP_EXTEND);
 
   MVT VecTy = ty(Op);
   MVT ArgTy = ty(Op.getOperand(0));
