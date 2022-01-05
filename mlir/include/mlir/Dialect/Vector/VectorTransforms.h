@@ -16,6 +16,8 @@ namespace mlir {
 class MLIRContext;
 class VectorTransferOpInterface;
 class RewritePatternSet;
+class RewriterBase;
+
 using OwningRewritePatternList = RewritePatternSet;
 
 namespace scf {
@@ -61,7 +63,7 @@ namespace vector {
 ///  must be equal. This will be relaxed in the future but requires
 ///  rank-reducing subviews.
 LogicalResult splitFullAndPartialTransfer(
-    OpBuilder &b, VectorTransferOpInterface xferOp,
+    RewriterBase &b, VectorTransferOpInterface xferOp,
     VectorTransformsOptions options = VectorTransformsOptions(),
     scf::IfOp *ifOp = nullptr);
 
