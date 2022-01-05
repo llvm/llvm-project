@@ -3759,7 +3759,7 @@ static bool TryToSinkInstruction(Instruction *I, BasicBlock *DestBlock,
   if (I->mayWriteToMemory()) {
     // Check for case where the call writes to an otherwise dead alloca.  This
     // shows up for unused out-params in idiomatic C/C++ code.
-    auto *CB = cast<CallBase>(I);
+    auto *CB = dyn_cast<CallBase>(I);
     if (!CB)
       // TODO: handle e.g. store to alloca here - only worth doing if we extend
       // to allow reload along used path as described below.  Otherwise, this
