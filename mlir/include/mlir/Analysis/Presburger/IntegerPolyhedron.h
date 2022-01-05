@@ -50,6 +50,13 @@ namespace mlir {
 ///
 class IntegerPolyhedron {
 public:
+  /// All derived classes of IntegerPolyhedron.
+  enum class Kind {
+    FlatAffineConstraints,
+    FlatAffineValueConstraints,
+    IntegerPolyhedron
+  };
+
   /// Kind of identifier (column).
   enum IdKind { Dimension, Symbol, Local };
 
@@ -76,6 +83,11 @@ public:
                           numDims, numSymbols, numLocals) {}
 
   virtual ~IntegerPolyhedron() = default;
+
+  /// Return the kind of this IntegerPolyhedron.
+  virtual Kind getKind() const { return Kind::IntegerPolyhedron; }
+
+  static bool classof(const IntegerPolyhedron *cst) { return true; }
 
   // Clones this object.
   std::unique_ptr<IntegerPolyhedron> clone() const;
@@ -188,6 +200,9 @@ public:
   /// Sets the `values.size()` identifiers starting at `po`s to the specified
   /// values and removes them.
   void setAndEliminate(unsigned pos, ArrayRef<int64_t> values);
+
+  /// Replaces the contents of this IntegerPolyhedron with `other`.
+  virtual void clearAndCopyFrom(const IntegerPolyhedron &other);
 
   /// Gather positions of all lower and upper bounds of the identifier at `pos`,
   /// and optionally any equalities on it. In addition, the bounds are to be
