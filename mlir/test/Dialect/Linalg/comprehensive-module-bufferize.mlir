@@ -1000,6 +1000,34 @@ func @equivalent_func_arg_2(%t0: tensor<?xf32> {linalg.inplaceable = true},
 
 // -----
 
+// CHECK-LABEL: func @inner_func(
+//  CHECK-SAME:     %[[arg0:.*]]: memref<?xf32
+func @inner_func(%t: tensor<?xf32>) -> (tensor<?xf32>, f32) {
+  // CHECK-NOT: copy
+  %f = arith.constant 1.0 : f32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  // CHECK: memref.store %{{.*}}, %[[arg0]]
+  %0 = tensor.insert %f into %t[%c0] : tensor<?xf32>
+  // CHECK: %[[load:.*]] = memref.load %[[arg0]]
+  %1 = tensor.extract %0[%c1] : tensor<?xf32>
+  // CHECK: return %[[load]] : f32
+  return %0, %1 : tensor<?xf32>, f32
+}
+
+// CHECK-LABEL: func @call_func_with_non_tensor_return(
+//  CHECK-SAME:     %[[arg0:.*]]: memref<?xf32
+func @call_func_with_non_tensor_return(
+    %t0: tensor<?xf32> {linalg.inplaceable = true}) -> (f32, tensor<?xf32>) {
+  // CHECK-NOT: copy
+  // CHECK: %[[call:.*]] = call @inner_func(%[[arg0]])
+  %0, %1 = call @inner_func(%t0) : (tensor<?xf32>) -> (tensor<?xf32>, f32)
+  // CHECK: return %[[call]] : f32
+  return %1, %0 : f32, tensor<?xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @func_without_tensor_args
 func @func_without_tensor_args(%v : vector<10xf32>) -> () {
   // CHECK: %[[alloc:.*]] = memref.alloc()
