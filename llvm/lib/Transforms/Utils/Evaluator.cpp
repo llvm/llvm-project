@@ -192,8 +192,10 @@ bool Evaluator::MutableValue::write(Constant *V, APInt Offset,
     MV->Val = ConstantExpr::getIntToPtr(V, MVType);
   else if (Ty->isPointerTy() && MVType->isIntegerTy())
     MV->Val = ConstantExpr::getPtrToInt(V, MVType);
-  else
+  else if (Ty != MVType)
     MV->Val = ConstantExpr::getBitCast(V, MVType);
+  else
+    MV->Val = V;
   return true;
 }
 
