@@ -150,6 +150,18 @@ define <vscale x 8 x i8> @select_nxv8i8(<vscale x 8 x i1> %a, <vscale x 8 x i8> 
   ret <vscale x 8 x i8> %v
 }
 
+declare <vscale x 14 x i8> @llvm.vp.select.nxv14i8(<vscale x 14 x i1>, <vscale x 14 x i8>, <vscale x 14 x i8>, i32)
+
+define <vscale x 14 x i8> @select_nxv14i8(<vscale x 14 x i1> %a, <vscale x 14 x i8> %b, <vscale x 14 x i8> %c, i32 zeroext %evl) {
+; CHECK-LABEL: select_nxv14i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, mu
+; CHECK-NEXT:    vmerge.vvm v8, v10, v8, v0
+; CHECK-NEXT:    ret
+  %v = call <vscale x 14 x i8> @llvm.vp.select.nxv14i8(<vscale x 14 x i1> %a, <vscale x 14 x i8> %b, <vscale x 14 x i8> %c, i32 %evl)
+  ret <vscale x 14 x i8> %v
+}
+
 declare <vscale x 16 x i8> @llvm.vp.select.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>, <vscale x 16 x i8>, i32)
 
 define <vscale x 16 x i8> @select_nxv16i8(<vscale x 16 x i1> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c, i32 zeroext %evl) {

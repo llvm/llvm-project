@@ -98,6 +98,18 @@ define <4 x i8> @select_v4i8(<4 x i1> %a, <4 x i8> %b, <4 x i8> %c, i32 zeroext 
   ret <4 x i8> %v
 }
 
+declare <5 x i8> @llvm.vp.select.v5i8(<5 x i1>, <5 x i8>, <5 x i8>, i32)
+
+define <5 x i8> @select_v5i8(<5 x i1> %a, <5 x i8> %b, <5 x i8> %c, i32 zeroext %evl) {
+; CHECK-LABEL: select_v5i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, mu
+; CHECK-NEXT:    vmerge.vvm v8, v9, v8, v0
+; CHECK-NEXT:    ret
+  %v = call <5 x i8> @llvm.vp.select.v5i8(<5 x i1> %a, <5 x i8> %b, <5 x i8> %c, i32 %evl)
+  ret <5 x i8> %v
+}
+
 declare <8 x i8> @llvm.vp.select.v8i8(<8 x i1>, <8 x i8>, <8 x i8>, i32)
 
 define <8 x i8> @select_v8i8(<8 x i1> %a, <8 x i8> %b, <8 x i8> %c, i32 zeroext %evl) {
