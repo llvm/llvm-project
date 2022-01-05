@@ -89,7 +89,6 @@ class DS_Real <DS_Pseudo ps> :
                     !if(!or(ps.has_data0, ps.has_gws_data0), data0{9}, 0));
 }
 
-
 // DS Pseudo instructions
 
 class DS_0A1D_NORET<string opName, RegisterClass rc = VGPR_32>
