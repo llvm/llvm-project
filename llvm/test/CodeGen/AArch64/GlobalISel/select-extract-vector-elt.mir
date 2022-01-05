@@ -22,8 +22,8 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.dsub
-    ; CHECK-NEXT: [[CPYi32_:%[0-9]+]]:fpr32 = CPYi32 [[INSERT_SUBREG]], 1
-    ; CHECK-NEXT: $s0 = COPY [[CPYi32_]]
+    ; CHECK-NEXT: [[DUPi32_:%[0-9]+]]:fpr32 = DUPi32 [[INSERT_SUBREG]], 1
+    ; CHECK-NEXT: $s0 = COPY [[DUPi32_]]
     ; CHECK-NEXT: RET_ReallyLR implicit $s0
     %0:fpr(<2 x s32>) = COPY $d0
     %2:gpr(s64) = G_CONSTANT i64 1
@@ -76,8 +76,8 @@ body:             |
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
-    ; CHECK-NEXT: [[CPYi64_:%[0-9]+]]:fpr64 = CPYi64 [[COPY]], 2
-    ; CHECK-NEXT: $d0 = COPY [[CPYi64_]]
+    ; CHECK-NEXT: [[DUPi64_:%[0-9]+]]:fpr64 = DUPi64 [[COPY]], 2
+    ; CHECK-NEXT: $d0 = COPY [[DUPi64_]]
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:fpr(<2 x s64>) = COPY $q0
     %2:gpr(s64) = G_CONSTANT i64 2
@@ -108,8 +108,8 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.dsub
-    ; CHECK-NEXT: [[CPYi16_:%[0-9]+]]:fpr16 = CPYi16 [[INSERT_SUBREG]], 1
-    ; CHECK-NEXT: $h0 = COPY [[CPYi16_]]
+    ; CHECK-NEXT: [[DUPi16_:%[0-9]+]]:fpr16 = DUPi16 [[INSERT_SUBREG]], 1
+    ; CHECK-NEXT: $h0 = COPY [[DUPi16_]]
     ; CHECK-NEXT: RET_ReallyLR implicit $h0
     %0:fpr(<4 x s16>) = COPY $d0
     %2:gpr(s64) = G_CONSTANT i64 1
@@ -132,8 +132,8 @@ body:             |
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
-    ; CHECK-NEXT: [[CPYi16_:%[0-9]+]]:fpr16 = CPYi16 [[COPY]], 1
-    ; CHECK-NEXT: $h0 = COPY [[CPYi16_]]
+    ; CHECK-NEXT: [[DUPi16_:%[0-9]+]]:fpr16 = DUPi16 [[COPY]], 1
+    ; CHECK-NEXT: $h0 = COPY [[DUPi16_]]
     ; CHECK-NEXT: RET_ReallyLR implicit $h0
     %0:fpr(<8 x s16>) = COPY $q0
     %2:gpr(s64) = G_CONSTANT i64 1
@@ -156,8 +156,8 @@ body:             |
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
-    ; CHECK-NEXT: [[CPYi16_:%[0-9]+]]:fpr16 = CPYi16 [[COPY]], 1
-    ; CHECK-NEXT: $h0 = COPY [[CPYi16_]]
+    ; CHECK-NEXT: [[DUPi16_:%[0-9]+]]:fpr16 = DUPi16 [[COPY]], 1
+    ; CHECK-NEXT: $h0 = COPY [[DUPi16_]]
     ; CHECK-NEXT: RET_ReallyLR implicit $h0
     %0:fpr(<8 x s16>) = COPY $q0
     %1:gpr(s32) = G_CONSTANT i32 1
@@ -181,8 +181,8 @@ body:             |
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
-    ; CHECK-NEXT: [[CPYi16_:%[0-9]+]]:fpr16 = CPYi16 [[COPY]], 1
-    ; CHECK-NEXT: $h0 = COPY [[CPYi16_]]
+    ; CHECK-NEXT: [[DUPi16_:%[0-9]+]]:fpr16 = DUPi16 [[COPY]], 1
+    ; CHECK-NEXT: $h0 = COPY [[DUPi16_]]
     ; CHECK-NEXT: RET_ReallyLR implicit $h0
     %0:fpr(<8 x s16>) = COPY $q0
     %1:gpr(s32) = G_CONSTANT i32 1
@@ -206,8 +206,8 @@ body:             |
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
-    ; CHECK-NEXT: [[CPYi16_:%[0-9]+]]:fpr16 = CPYi16 [[COPY]], 1
-    ; CHECK-NEXT: $h0 = COPY [[CPYi16_]]
+    ; CHECK-NEXT: [[DUPi16_:%[0-9]+]]:fpr16 = DUPi16 [[COPY]], 1
+    ; CHECK-NEXT: $h0 = COPY [[DUPi16_]]
     ; CHECK-NEXT: RET_ReallyLR implicit $h0
     %0:fpr(<8 x s16>) = COPY $q0
     %1:gpr(s64) = G_CONSTANT i64 1
@@ -290,8 +290,8 @@ body:             |
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
-    ; CHECK-NEXT: [[CPYi64_:%[0-9]+]]:fpr64 = CPYi64 [[COPY]], 1
-    ; CHECK-NEXT: $d0 = COPY [[CPYi64_]]
+    ; CHECK-NEXT: [[DUPi64_:%[0-9]+]]:fpr64 = DUPi64 [[COPY]], 1
+    ; CHECK-NEXT: $d0 = COPY [[DUPi64_]]
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:fpr(<2 x p0>) = COPY $q0
     %2:gpr(s64) = G_CONSTANT i64 1

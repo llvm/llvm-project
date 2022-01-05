@@ -7700,10 +7700,10 @@ multiclass SIMDTableLookupTied<bit op, string asm> {
 
 
 //----------------------------------------------------------------------------
-// AdvSIMD scalar CPY
+// AdvSIMD scalar DUP
 //----------------------------------------------------------------------------
 let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in
-class BaseSIMDScalarCPY<RegisterClass regtype, RegisterOperand vectype,
+class BaseSIMDScalarDUP<RegisterClass regtype, RegisterOperand vectype,
                         string asm, string kind, Operand idxtype>
   : I<(outs regtype:$dst), (ins vectype:$src, idxtype:$idx), asm,
        "{\t$dst, $src" # kind # "$idx" #
@@ -7717,30 +7717,30 @@ class BaseSIMDScalarCPY<RegisterClass regtype, RegisterOperand vectype,
   let Inst{4-0}   = dst;
 }
 
-class SIMDScalarCPYAlias<string asm, string size, Instruction inst,
+class SIMDScalarDUPAlias<string asm, string size, Instruction inst,
       RegisterClass regtype, RegisterOperand vectype, Operand idxtype>
     : InstAlias<asm # "{\t$dst, $src" # size # "$index"
                     # "|\t$dst, $src$index}",
                 (inst regtype:$dst, vectype:$src, idxtype:$index), 0>;
 
 
-multiclass SIMDScalarCPY<string asm> {
-  def i8  : BaseSIMDScalarCPY<FPR8,  V128, asm, ".b", VectorIndexB> {
+multiclass SIMDScalarDUP<string asm> {
+  def i8  : BaseSIMDScalarDUP<FPR8,  V128, asm, ".b", VectorIndexB> {
     bits<4> idx;
     let Inst{20-17} = idx;
     let Inst{16} = 1;
   }
-  def i16 : BaseSIMDScalarCPY<FPR16, V128, asm, ".h", VectorIndexH> {
+  def i16 : BaseSIMDScalarDUP<FPR16, V128, asm, ".h", VectorIndexH> {
     bits<3> idx;
     let Inst{20-18} = idx;
     let Inst{17-16} = 0b10;
   }
-  def i32 : BaseSIMDScalarCPY<FPR32, V128, asm, ".s", VectorIndexS> {
+  def i32 : BaseSIMDScalarDUP<FPR32, V128, asm, ".s", VectorIndexS> {
     bits<2> idx;
     let Inst{20-19} = idx;
     let Inst{18-16} = 0b100;
   }
-  def i64 : BaseSIMDScalarCPY<FPR64, V128, asm, ".d", VectorIndexD> {
+  def i64 : BaseSIMDScalarDUP<FPR64, V128, asm, ".d", VectorIndexD> {
     bits<1> idx;
     let Inst{20} = idx;
     let Inst{19-16} = 0b1000;
@@ -7751,16 +7751,16 @@ multiclass SIMDScalarCPY<string asm> {
             (!cast<Instruction>(NAME # i64) V128:$src, VectorIndexD:$idx)>;
 
   // 'DUP' mnemonic aliases.
-  def : SIMDScalarCPYAlias<"dup", ".b",
+  def : SIMDScalarDUPAlias<"dup", ".b",
                            !cast<Instruction>(NAME#"i8"),
                            FPR8, V128, VectorIndexB>;
-  def : SIMDScalarCPYAlias<"dup", ".h",
+  def : SIMDScalarDUPAlias<"dup", ".h",
                            !cast<Instruction>(NAME#"i16"),
                            FPR16, V128, VectorIndexH>;
-  def : SIMDScalarCPYAlias<"dup", ".s",
+  def : SIMDScalarDUPAlias<"dup", ".s",
                            !cast<Instruction>(NAME#"i32"),
                            FPR32, V128, VectorIndexS>;
-  def : SIMDScalarCPYAlias<"dup", ".d",
+  def : SIMDScalarDUPAlias<"dup", ".d",
                            !cast<Instruction>(NAME#"i64"),
                            FPR64, V128, VectorIndexD>;
 }

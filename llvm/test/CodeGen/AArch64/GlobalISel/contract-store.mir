@@ -92,7 +92,7 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY]], 0 :: (dereferenceable load (<2 x s64>))
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY [[LDRQui]].dsub
-    ; CHECK-NEXT: [[CPYi64_:%[0-9]+]]:fpr64 = CPYi64 [[LDRQui]], 1
+    ; CHECK-NEXT: [[DUPi64_:%[0-9]+]]:fpr64 = DUPi64 [[LDRQui]], 1
     ; CHECK-NEXT: STRDui [[COPY1]], [[COPY]], 0 :: (store (s64))
     %0:gpr(p0) = COPY $x0
     %1:fpr(<2 x s64>) = G_LOAD %0:gpr(p0) :: (dereferenceable load (<2 x s64>))
@@ -112,8 +112,8 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY]], 0 :: (dereferenceable load (<2 x s64>))
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY [[LDRQui]].dsub
-    ; CHECK-NEXT: [[CPYi64_:%[0-9]+]]:fpr64 = CPYi64 [[LDRQui]], 1
-    ; CHECK-NEXT: STRDui [[CPYi64_]], [[COPY]], 0 :: (store (s64))
+    ; CHECK-NEXT: [[DUPi64_:%[0-9]+]]:fpr64 = DUPi64 [[LDRQui]], 1
+    ; CHECK-NEXT: STRDui [[DUPi64_]], [[COPY]], 0 :: (store (s64))
     %0:gpr(p0) = COPY $x0
     %1:fpr(<2 x s64>) = G_LOAD %0:gpr(p0) :: (dereferenceable load (<2 x s64>))
     %2:fpr(s64), %3:fpr(s64) = G_UNMERGE_VALUES %1:fpr(<2 x s64>)
