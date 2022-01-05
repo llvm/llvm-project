@@ -334,8 +334,7 @@ private:
   SDValue PromoteIntRes_MGATHER(MaskedGatherSDNode *N);
   SDValue PromoteIntRes_Overflow(SDNode *N);
   SDValue PromoteIntRes_SADDSUBO(SDNode *N, unsigned ResNo);
-  SDValue PromoteIntRes_SELECT(SDNode *N);
-  SDValue PromoteIntRes_VSELECT(SDNode *N);
+  SDValue PromoteIntRes_Select(SDNode *N);
   SDValue PromoteIntRes_SELECT_CC(SDNode *N);
   SDValue PromoteIntRes_SETCC(SDNode *N);
   SDValue PromoteIntRes_SHL(SDNode *N, bool IsVP);
