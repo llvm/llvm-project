@@ -742,7 +742,7 @@ private:
     //
     // Example:
     //   Vec<R<int>(*[2])(A<char>)> is a Vec of arrays of pointers to functions,
-    //                              which accept A<int> and return R<char>.
+    //                              which accept A<char> and return R<int>.
     // The TypeLoc hierarchy:
     //   Vec<R<int>(*[2])(A<char>)> m;
     //   Vec<--------------------->      TemplateSpecialization Vec
@@ -753,7 +753,7 @@ private:
     //       R<--->                              |-TemplateSpecialization R
     //         int                               | `-Builtin int
     //                    A<---->                `-TemplateSpecialization A
-    //                      char                   `-Builtin int
+    //                      char                   `-Builtin char
     //
     // In each row, --- represents unclaimed parts of the SourceRange.
     // For declarator types, we are careful never to claim these.
