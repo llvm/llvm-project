@@ -292,3 +292,33 @@ func @parallel_loop_with_invariant() {
   return
 }
 
+// -----
+
+func private @make_val() -> (index)
+
+// CHECK-LABEL: func @nested_uses_inside
+func @nested_uses_inside(%lb: index, %ub: index, %step: index) {
+  %true = arith.constant true
+
+  // Check that ops that contain nested uses to values not defiend outside 
+  // remain in the loop.
+  // CHECK-NEXT: arith.constant
+  // CHECK-NEXT: scf.for
+  // CHECK-NEXT:   call @
+  // CHECK-NEXT:   call @
+  // CHECK-NEXT:   scf.if
+  // CHECK-NEXT:     scf.yield
+  // CHECK-NEXT:   else
+  // CHECK-NEXT:     scf.yield
+  scf.for %i = %lb to %ub step %step {
+    %val = call @make_val() : () -> (index)
+    %val2 = call @make_val() : () -> (index)
+    %r = scf.if %true -> (index) {
+      scf.yield %val: index
+    } else {
+      scf.yield %val2: index
+    }
+  }
+  return 
+}
+
