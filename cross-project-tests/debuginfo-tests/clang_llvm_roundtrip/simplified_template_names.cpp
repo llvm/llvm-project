@@ -217,6 +217,8 @@ int main() {
   f1<decltype(L)>();
   t3<decltype(L)> v1;
   f1<int(float)>();
+  f1<void(...)>();
+  f1<void(int, ...)>();
   f1<const int &>();
   f1<const int *&>();
   f1<t5>();
