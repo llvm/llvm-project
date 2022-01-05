@@ -29,4 +29,3 @@ add.b	#0, (%a3)
 ; CHECK:      add.l  #-1, (%a2)
 ; CHECK-SAME: encoding: [0x06,0x92,0xff,0xff,0xff,0xff]
 add.l	#-1, (%a2)
-
