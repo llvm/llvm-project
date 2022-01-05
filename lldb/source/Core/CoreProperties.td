@@ -62,6 +62,10 @@ let Definition = "debugger" in {
     DefaultEnumValue<"eScriptLanguagePython">,
     EnumValues<"OptionEnumValues(g_language_enumerators)">,
     Desc<"The script language to be used for evaluating user-written scripts.">;
+  def REPLLanguage: Property<"repl-lang", "Language">,
+    Global,
+    DefaultEnumValue<"eLanguageTypeUnknown">,
+    Desc<"The language to use for the REPL.">;
   def StopDisassemblyCount: Property<"stop-disassembly-count", "SInt64">,
     Global,
     DefaultUnsignedValue<4>,
