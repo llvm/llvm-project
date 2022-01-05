@@ -22,8 +22,10 @@ namespace clang {
 namespace clangd {
 class ParsedAST;
 
-// Compute and return all inlay hints for a file.
-std::vector<InlayHint> inlayHints(ParsedAST &AST);
+/// Compute and return inlay hints for a file.
+/// If RestrictRange is set, return only hints whose location is in that range.
+std::vector<InlayHint> inlayHints(ParsedAST &AST,
+                                  llvm::Optional<Range> RestrictRange);
 
 } // namespace clangd
 } // namespace clang

@@ -327,8 +327,14 @@ opt<bool> FoldingRanges{
     Hidden,
 };
 
-opt<bool> InlayHints{"inlay-hints", cat(Features),
-                     desc("Enable preview of InlayHints feature"), init(false)};
+opt<bool> InlayHints{
+    "inlay-hints",
+    cat(Features),
+    desc("Enable InlayHints feature"),
+    init(ClangdLSPServer::Options().InlayHints),
+    // FIXME: allow inlayHints to be disabled in Config and remove this option.
+    Hidden,
+};
 
 opt<unsigned> WorkerThreadsCount{
     "j",

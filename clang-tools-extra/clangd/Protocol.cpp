@@ -1317,7 +1317,7 @@ llvm::json::Value toJSON(const CallHierarchyOutgoingCall &C) {
 bool fromJSON(const llvm::json::Value &Params, InlayHintsParams &R,
               llvm::json::Path P) {
   llvm::json::ObjectMapper O(Params, P);
-  return O && O.map("textDocument", R.textDocument);
+  return O && O.map("textDocument", R.textDocument) && O.map("range", R.range);
 }
 
 llvm::json::Value toJSON(InlayHintKind K) {
@@ -1331,16 +1331,18 @@ llvm::json::Value toJSON(InlayHintKind K) {
 }
 
 llvm::json::Value toJSON(const InlayHint &H) {
-  return llvm::json::Object{
-      {"range", H.range}, {"kind", H.kind}, {"label", H.label}};
+  return llvm::json::Object{{"position", H.position},
+                            {"range", H.range},
+                            {"kind", H.kind},
+                            {"label", H.label}};
 }
 bool operator==(const InlayHint &A, const InlayHint &B) {
-  return std::tie(A.kind, A.range, A.label) ==
-         std::tie(B.kind, B.range, B.label);
+  return std::tie(A.position, A.range, A.kind, A.label) ==
+         std::tie(B.position, B.range, B.kind, B.label);
 }
 bool operator<(const InlayHint &A, const InlayHint &B) {
-  return std::tie(A.kind, A.range, A.label) <
-         std::tie(B.kind, B.range, B.label);
+  return std::tie(A.position, A.range, A.kind, A.label) <
+         std::tie(B.position, B.range, B.kind, B.label);
 }
 
 static const char *toString(OffsetEncoding OE) {

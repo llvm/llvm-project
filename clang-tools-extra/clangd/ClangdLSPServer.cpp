@@ -608,6 +608,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
   if (Opts.FoldingRanges)
     ServerCaps["foldingRangeProvider"] = true;
 
+  // FIXME: once inlayHints can be disabled in config, always advertise.
   if (Opts.InlayHints)
     ServerCaps["clangdInlayHintsProvider"] = true;
 
@@ -1210,7 +1211,8 @@ void ClangdLSPServer::onCallHierarchyIncomingCalls(
 
 void ClangdLSPServer::onInlayHints(const InlayHintsParams &Params,
                                    Callback<std::vector<InlayHint>> Reply) {
-  Server->inlayHints(Params.textDocument.uri.file(), std::move(Reply));
+  Server->inlayHints(Params.textDocument.uri.file(), Params.range,
+                     std::move(Reply));
 }
 
 void ClangdLSPServer::applyConfiguration(
