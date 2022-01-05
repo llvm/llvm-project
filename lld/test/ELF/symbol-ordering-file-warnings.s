@@ -64,11 +64,11 @@
 # RUN: ld.lld %t1.o %t2.o -o %t --symbol-ordering-file %t-order-weak.txt \
 # RUN:   --unresolved-symbols=ignore-all 2>&1 | FileCheck %s --check-prefixes=WARN --allow-empty
 
-# Check that symbols only in unused archive members result in a warning.
+# Check that symbols only in unused archive members does not result in a warning.
 # RUN: rm -f %t.a
 # RUN: llvm-ar rc %t.a %t3.o
 # RUN: ld.lld %t1.o %t.a -o %t --symbol-ordering-file %t-order-missing.txt \
-# RUN:   --unresolved-symbols=ignore-all 2>&1 | FileCheck %s --check-prefixes=WARN,MISSING --allow-empty
+# RUN:   --unresolved-symbols=ignore-all 2>&1 | count 0
 
 # Check that a warning for each same-named symbol with an issue.
 # RUN: echo "multi" > %t-order-same-name.txt
