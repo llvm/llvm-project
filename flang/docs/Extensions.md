@@ -200,6 +200,10 @@ end
 * Multiple specifications of the SAVE attribute on the same object
   are allowed, with a warning.
 * Specific intrinsic functions BABS, IIABS, JIABS, KIABS, ZABS, and CDABS.
+* A `POINTER` component's type need not be a sequence type when
+  the component appears in a derived type with `SEQUENCE`.
+  (This case should probably be an exception to constraint C740 in
+  the standard.)
 
 ### Extensions supported when enabled by options
 
