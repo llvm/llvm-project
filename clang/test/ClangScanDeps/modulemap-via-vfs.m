@@ -15,7 +15,7 @@
 [
 {
   "directory": "DIR",
-  "command": "clang DIR/main.m -Imodules/A -fmodules -fmodules-cache-path=module-cache -fimplicit-modules -fimplicit-module-maps -ivfsoverlay build/vfs.yaml",
+  "command": "clang DIR/main.m -Imodules/A -fmodules -fmodules-cache-path=DIR/module-cache -fimplicit-modules -fimplicit-module-maps -ivfsoverlay build/vfs.yaml",
   "file": "DIR/main.m"
 }
 ]
