@@ -75,8 +75,13 @@ static bool setOnlyReadsMemory(Function &F) {
 static bool setDoesNotReadMemory(Function &F) {
   if (F.doesNotReadMemory()) // writeonly or readnone
     return false;
-  F.setDoesNotReadMemory();
   ++NumWriteOnly;
+  if (F.hasFnAttribute(Attribute::ReadOnly)) {
+    F.removeFnAttr(Attribute::ReadOnly);
+    F.setDoesNotAccessMemory();
+  } else {
+    F.setDoesNotReadMemory();
+  }
   return true;
 }
 
