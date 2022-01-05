@@ -1,4 +1,5 @@
 add_mlir_dialect_library(MLIRSparseTensorTransforms
+  CodegenUtils.cpp
   Sparsification.cpp
   SparseTensorConversion.cpp
   SparseTensorPasses.cpp

@@ -1812,7 +1812,6 @@ cc_library(
         ":SideEffectInterfaces",
         ":SparseTensorAttrDefsIncGen",
         ":SparseTensorOpsIncGen",
-        ":SparseTensorUtils",
         ":StandardOps",
         "//llvm:Support",
     ],
@@ -1827,17 +1826,17 @@ cc_library(
         ":ArithmeticDialect",
         ":IR",
         ":LinalgOps",
-        ":SideEffectInterfaces",
-        ":SparseTensorAttrDefsIncGen",
-        ":SparseTensorOpsIncGen",
-        ":StandardOps",
+        ":SparseTensor",
         "//llvm:Support",
     ],
 )
 
 cc_library(
     name = "SparseTensorTransforms",
-    srcs = glob(["lib/Dialect/SparseTensor/Transforms/*.cpp"]),
+    srcs = glob([
+        "lib/Dialect/SparseTensor/Transforms/*.cpp",
+        "lib/Dialect/SparseTensor/Transforms/*.h",
+    ]),
     hdrs = [
         "include/mlir/Dialect/SparseTensor/Transforms/Passes.h",
         "include/mlir/ExecutionEngine/SparseTensorUtils.h",
