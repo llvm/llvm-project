@@ -322,14 +322,14 @@ void InitShadow() {
 THREADLOCAL int in_loader;
 Mutex shadow_update_lock;
 
-void EnterLoader() NO_THREAD_SAFETY_ANALYSIS {
+void EnterLoader() SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   if (in_loader == 0) {
     shadow_update_lock.Lock();
   }
   ++in_loader;
 }
 
-void ExitLoader() NO_THREAD_SAFETY_ANALYSIS {
+void ExitLoader() SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   CHECK(in_loader > 0);
   --in_loader;
   UpdateShadow();

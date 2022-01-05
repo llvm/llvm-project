@@ -86,7 +86,7 @@ class ThreadContextBase {
 
 typedef ThreadContextBase* (*ThreadContextFactory)(u32 tid);
 
-class MUTEX ThreadRegistry {
+class SANITIZER_MUTEX ThreadRegistry {
  public:
   ThreadRegistry(ThreadContextFactory factory);
   ThreadRegistry(ThreadContextFactory factory, u32 max_threads,
@@ -95,9 +95,9 @@ class MUTEX ThreadRegistry {
                           uptr *alive = nullptr);
   uptr GetMaxAliveThreads();
 
-  void Lock() ACQUIRE() { mtx_.Lock(); }
-  void CheckLocked() const CHECK_LOCKED() { mtx_.CheckLocked(); }
-  void Unlock() RELEASE() { mtx_.Unlock(); }
+  void Lock() SANITIZER_ACQUIRE() { mtx_.Lock(); }
+  void CheckLocked() const SANITIZER_CHECK_LOCKED() { mtx_.CheckLocked(); }
+  void Unlock() SANITIZER_RELEASE() { mtx_.Unlock(); }
 
   // Should be guarded by ThreadRegistryLock.
   ThreadContextBase *GetThreadLocked(u32 tid) {

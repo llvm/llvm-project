@@ -332,12 +332,12 @@ struct Context {
   Mutex slot_mtx;
   uptr global_epoch;  // guarded by slot_mtx and by all slot mutexes
   bool resetting;     // global reset is in progress
-  IList<TidSlot, &TidSlot::node> slot_queue GUARDED_BY(slot_mtx);
+  IList<TidSlot, &TidSlot::node> slot_queue SANITIZER_GUARDED_BY(slot_mtx);
   IList<TraceHeader, &TraceHeader::global, TracePart> trace_part_recycle
-      GUARDED_BY(slot_mtx);
-  uptr trace_part_total_allocated GUARDED_BY(slot_mtx);
-  uptr trace_part_recycle_finished GUARDED_BY(slot_mtx);
-  uptr trace_part_finished_excess GUARDED_BY(slot_mtx);
+      SANITIZER_GUARDED_BY(slot_mtx);
+  uptr trace_part_total_allocated SANITIZER_GUARDED_BY(slot_mtx);
+  uptr trace_part_recycle_finished SANITIZER_GUARDED_BY(slot_mtx);
+  uptr trace_part_finished_excess SANITIZER_GUARDED_BY(slot_mtx);
 };
 
 extern Context *ctx;  // The one and the only global runtime context.
@@ -566,10 +566,10 @@ uptr ALWAYS_INLINE HeapEnd() {
 }
 #endif
 
-void SlotAttachAndLock(ThreadState *thr) ACQUIRE(thr->slot->mtx);
+void SlotAttachAndLock(ThreadState *thr) SANITIZER_ACQUIRE(thr->slot->mtx);
 void SlotDetach(ThreadState *thr);
-void SlotLock(ThreadState *thr) ACQUIRE(thr->slot->mtx);
-void SlotUnlock(ThreadState *thr) RELEASE(thr->slot->mtx);
+void SlotLock(ThreadState *thr) SANITIZER_ACQUIRE(thr->slot->mtx);
+void SlotUnlock(ThreadState *thr) SANITIZER_RELEASE(thr->slot->mtx);
 void DoReset(ThreadState *thr, uptr epoch);
 void FlushShadowMemory();
 

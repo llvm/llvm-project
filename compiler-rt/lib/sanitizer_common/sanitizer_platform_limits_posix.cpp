@@ -170,13 +170,9 @@ typedef struct user_fpregs elf_fpregset_t;
 #endif
 
 // Include these after system headers to avoid name clashes and ambiguities.
-#include "sanitizer_internal_defs.h"
-#include "sanitizer_platform_limits_posix.h"
-
-// To prevent macro redefinition warning between our sanitizer_thread_safety.h
-// and system's scsi.h.
-#  undef RELEASE
 #  include "sanitizer_common.h"
+#  include "sanitizer_internal_defs.h"
+#  include "sanitizer_platform_limits_posix.h"
 
 namespace __sanitizer {
   unsigned struct_utsname_sz = sizeof(struct utsname);

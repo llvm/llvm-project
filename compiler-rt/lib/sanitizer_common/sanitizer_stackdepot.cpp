@@ -94,8 +94,8 @@ class CompressThread {
   constexpr CompressThread() = default;
   void NewWorkNotify();
   void Stop();
-  void LockAndStop() NO_THREAD_SAFETY_ANALYSIS;
-  void Unlock() NO_THREAD_SAFETY_ANALYSIS;
+  void LockAndStop() SANITIZER_NO_THREAD_SAFETY_ANALYSIS;
+  void Unlock() SANITIZER_NO_THREAD_SAFETY_ANALYSIS;
 
  private:
   enum class State {
@@ -114,8 +114,8 @@ class CompressThread {
 
   Semaphore semaphore_ = {};
   StaticSpinMutex mutex_ = {};
-  State state_ GUARDED_BY(mutex_) = State::NotStarted;
-  void *thread_ GUARDED_BY(mutex_) = nullptr;
+  State state_ SANITIZER_GUARDED_BY(mutex_) = State::NotStarted;
+  void *thread_ SANITIZER_GUARDED_BY(mutex_) = nullptr;
   atomic_uint8_t run_ = {};
 };
 

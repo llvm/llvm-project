@@ -521,7 +521,7 @@ int Finalize(ThreadState *thr) {
 }
 
 #if !SANITIZER_GO
-void ForkBefore(ThreadState *thr, uptr pc) NO_THREAD_SAFETY_ANALYSIS {
+void ForkBefore(ThreadState *thr, uptr pc) SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   ctx->thread_registry.Lock();
   ctx->report_mtx.Lock();
   ScopedErrorReportLock::Lock();
@@ -543,7 +543,8 @@ void ForkBefore(ThreadState *thr, uptr pc) NO_THREAD_SAFETY_ANALYSIS {
   __tsan_test_only_on_fork();
 }
 
-void ForkParentAfter(ThreadState *thr, uptr pc) NO_THREAD_SAFETY_ANALYSIS {
+void ForkParentAfter(ThreadState *thr,
+                     uptr pc) SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   thr->suppress_reports--;  // Enabled in ForkBefore.
   thr->ignore_interceptors--;
   thr->ignore_reads_and_writes--;
@@ -554,7 +555,7 @@ void ForkParentAfter(ThreadState *thr, uptr pc) NO_THREAD_SAFETY_ANALYSIS {
 }
 
 void ForkChildAfter(ThreadState *thr, uptr pc,
-                    bool start_thread) NO_THREAD_SAFETY_ANALYSIS {
+                    bool start_thread) SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   thr->suppress_reports--;  // Enabled in ForkBefore.
   thr->ignore_interceptors--;
   thr->ignore_reads_and_writes--;
