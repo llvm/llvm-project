@@ -219,6 +219,7 @@ static void equivalenceAnalysis(FuncOp funcOp,
 /// originate from an op with an Alloc effect, they could be hoisted in the
 /// future.
 static LogicalResult bufferizeFuncOpBoundary(FuncOp funcOp,
+                                             RewriterBase &rewriter,
                                              BufferizationState &state) {
   ModuleBufferizationState &moduleState = getModuleBufferizationState(state);
 
@@ -277,7 +278,8 @@ static LogicalResult bufferizeFuncOpBoundary(FuncOp funcOp,
       continue;
 
     // Cast values at the call site if necessary.
-    returnValues.push_back(getNonCastedValue(state.lookupBuffer(returnVal)));
+    returnValues.push_back(
+        getNonCastedValue(state.lookupBuffer(rewriter, returnVal)));
   }
 
   // 2. Rewrite the terminator without the inPlace bufferizable values.
@@ -510,7 +512,7 @@ struct CallOpInterface
   /// In a first approximation, all the function arguments of a FuncOp are
   /// marked inplaceable. For now, it is the responsibility of the `callOp`
   /// bufferization to allow FuncOp that are inplaceable to write inPlace.
-  LogicalResult bufferize(Operation *op, OpBuilder &b,
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           BufferizationState &state) const {
     CallOp callOp = cast<CallOp>(op);
     FuncOp funcOp = getCalledFunction(callOp);
@@ -552,13 +554,13 @@ struct CallOpInterface
               moduleState
                   .equivalentFuncArgs[funcOp][returnOperand.getOperandNumber()];
           Value oldRes = callOp->getResult(returnOperand.getOperandNumber());
-          Value buffer = state.lookupBuffer(callOp->getOperand(idx));
+          Value buffer = state.lookupBuffer(rewriter, callOp->getOperand(idx));
           // Add a ToTensorOp to kill all uses of the CallOp return.
           // Replace all uses of the CallOp results so we can erase the CallOp.
           // This ToTensorOp must fold/DCE away or bufferization should be
           // considered failed.
-          Value toTensorOp =
-              b.create<bufferization::ToTensorOp>(callOp.getLoc(), buffer);
+          Value toTensorOp = rewriter.create<bufferization::ToTensorOp>(
+              callOp.getLoc(), buffer);
           oldRes.replaceAllUsesWith(toTensorOp);
           continue;
         }
@@ -588,7 +590,7 @@ struct CallOpInterface
 
       // Tensor operands are guaranteed to have been buferized.
       int64_t idx = opOperand.getOperandNumber();
-      Value buffer = state.lookupBuffer(tensorOperand);
+      Value buffer = state.lookupBuffer(rewriter, tensorOperand);
 
       // Caller / callee type mistmatch is handled with a CastOp.
       auto memRefType = bufferizedFuncType.getInput(idx);
@@ -598,16 +600,16 @@ struct CallOpInterface
       // that will either canonicalize away or fail compilation until we can do
       // something better.
       if (buffer.getType() != memRefType) {
-        Value castBuffer =
-            b.create<memref::CastOp>(callOp.getLoc(), memRefType, buffer);
+        Value castBuffer = rewriter.create<memref::CastOp>(callOp.getLoc(),
+                                                           memRefType, buffer);
         buffer = castBuffer;
       }
       newOperands.push_back(buffer);
     }
 
     // 4. Create the new CallOp.
-    Operation *newCallOp = b.create<CallOp>(callOp.getLoc(), funcOp.sym_name(),
-                                            resultTypes, newOperands);
+    Operation *newCallOp = rewriter.create<CallOp>(
+        callOp.getLoc(), funcOp.sym_name(), resultTypes, newOperands);
     newCallOp->setAttrs(callOp->getAttrs());
 
     // 5. Delete the op at the end of bufferization.
@@ -635,7 +637,7 @@ struct ReturnOpInterface
     return OpResult();
   }
 
-  LogicalResult bufferize(Operation *op, OpBuilder &b,
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           BufferizationState &state) const {
     auto returnOp = cast<ReturnOp>(op);
     assert(isa<FuncOp>(returnOp->getParentOp()) &&
@@ -645,9 +647,9 @@ struct ReturnOpInterface
       auto tensorType = operand.get().getType().dyn_cast<TensorType>();
       if (!tensorType)
         continue;
-      Value v = state.lookupBuffer(operand.get());
-      Value returnTensor = b.create<bufferization::ToTensorOp>(
-          returnOp.getLoc(), v);
+      Value v = state.lookupBuffer(rewriter, operand.get());
+      Value returnTensor =
+          rewriter.create<bufferization::ToTensorOp>(returnOp.getLoc(), v);
       operand.set(returnTensor);
     }
     return success();
@@ -656,12 +658,12 @@ struct ReturnOpInterface
 
 struct FuncOpInterface
     : public BufferizableOpInterface::ExternalModel<FuncOpInterface, FuncOp> {
-  LogicalResult bufferize(Operation *op, OpBuilder &b,
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           BufferizationState &state) const {
     auto funcOp = cast<FuncOp>(op);
 
     // Bufferize function body.
-    return comprehensive_bufferize::bufferize(&funcOp.body(), state);
+    return comprehensive_bufferize::bufferize(rewriter, &funcOp.body(), state);
   }
 
   /// Return `true` if the given function argument is writable.
@@ -726,7 +728,7 @@ static void annotateOpsWithBufferizationMarkers(FuncOp funcOp,
 LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
     ModuleOp moduleOp, std::unique_ptr<BufferizationOptions> options) {
   IRRewriter rewriter(moduleOp.getContext());
-  BufferizationState state(moduleOp, *options, rewriter);
+  BufferizationState state(moduleOp, *options);
   ModuleBufferizationState &moduleState = getModuleBufferizationState(state);
   BufferizationAliasInfo &aliasInfo = state.aliasInfo;
 
@@ -766,7 +768,7 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
   for (FuncOp funcOp : moduleState.orderedFuncOps) {
     // Note: It would be good to apply cleanups here but we cannot as aliasInfo
     // would be invalidated.
-    if (failed(bufferizeFuncOpBoundary(funcOp, state)))
+    if (failed(bufferizeFuncOpBoundary(funcOp, rewriter, state)))
       return failure();
 
     if (!options->allowReturnMemref &&
