@@ -34,6 +34,7 @@ STATISTIC(NumReadNone, "Number of functions inferred as readnone");
 STATISTIC(NumInaccessibleMemOnly,
           "Number of functions inferred as inaccessiblememonly");
 STATISTIC(NumReadOnly, "Number of functions inferred as readonly");
+STATISTIC(NumWriteOnly, "Number of functions inferred as writeonly");
 STATISTIC(NumArgMemOnly, "Number of functions inferred as argmemonly");
 STATISTIC(NumInaccessibleMemOrArgMemOnly,
           "Number of functions inferred as inaccessiblemem_or_argmemonly");
@@ -68,6 +69,19 @@ static bool setOnlyReadsMemory(Function &F) {
     return false;
   F.setOnlyReadsMemory();
   ++NumReadOnly;
+  return true;
+}
+
+static bool setDoesNotReadMemory(Function &F) {
+  if (F.doesNotReadMemory()) // writeonly or readnone
+    return false;
+  // Turn readonly and writeonly into readnone.
+  if (F.hasFnAttribute(Attribute::ReadOnly)) {
+    F.removeFnAttr(Attribute::ReadOnly);
+    return setDoesNotAccessMemory(F);
+  }
+  ++NumWriteOnly;
+  F.setDoesNotReadMemory();
   return true;
 }
 
@@ -1171,6 +1185,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
   case LibFunc_truncl:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotFreeMemory(F);
+    Changed |= setDoesNotReadMemory(F);
     Changed |= setWillReturn(F);
     return Changed;
   default:
