@@ -739,6 +739,24 @@ llvm.func @omp_atomic_read(%arg0 : !llvm.ptr<i32>) -> () {
 
 // -----
 
+// CHECK-LABEL: @omp_atomic_write
+// CHECK-SAME: (i32* %[[x:.*]], i32 %[[expr:.*]])
+llvm.func @omp_atomic_write(%x: !llvm.ptr<i32>, %expr: i32) -> () {
+  // CHECK: store atomic i32 %[[expr]], i32* %[[x]] monotonic, align 4
+  omp.atomic.write %x = %expr : !llvm.ptr<i32>, i32
+  // CHECK: store atomic i32 %[[expr]], i32* %[[x]] seq_cst, align 4
+  // CHECK: call void @__kmpc_flush(%struct.ident_t* @{{.*}})
+  omp.atomic.write %x = %expr memory_order(seq_cst) : !llvm.ptr<i32>, i32
+  // CHECK: store atomic i32 %[[expr]], i32* %[[x]] release, align 4
+  // CHECK: call void @__kmpc_flush(%struct.ident_t* @{{.*}})
+  omp.atomic.write %x = %expr memory_order(release) : !llvm.ptr<i32>, i32
+  // CHECK: store atomic i32 %[[expr]], i32* %[[x]] monotonic, align 4
+  omp.atomic.write %x = %expr memory_order(relaxed) : !llvm.ptr<i32>, i32
+  llvm.return
+}
+
+// -----
+
 // CHECK-LABEL: @omp_sections_empty
 llvm.func @omp_sections_empty() -> () {
   omp.sections {

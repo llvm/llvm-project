@@ -511,16 +511,16 @@ func @omp_atomic_read(%addr : memref<i32>) {
 // CHECK-LABEL: omp_atomic_write
 // CHECK-SAME: (%[[ADDR:.*]]: memref<i32>, %[[VAL:.*]]: i32)
 func @omp_atomic_write(%addr : memref<i32>, %val : i32) {
-  // CHECK: omp.atomic.write %[[ADDR]], %[[VAL]] : memref<i32>, i32
-  omp.atomic.write %addr, %val : memref<i32>, i32
-  // CHECK: omp.atomic.write %[[ADDR]], %[[VAL]] memory_order(seq_cst) : memref<i32>, i32
-  omp.atomic.write %addr, %val memory_order(seq_cst) : memref<i32>, i32
-  // CHECK: omp.atomic.write %[[ADDR]], %[[VAL]] memory_order(release) : memref<i32>, i32
-  omp.atomic.write %addr, %val memory_order(release) : memref<i32>, i32
-  // CHECK: omp.atomic.write %[[ADDR]], %[[VAL]] memory_order(relaxed) : memref<i32>, i32
-  omp.atomic.write %addr, %val memory_order(relaxed) : memref<i32>, i32
-  // CHECK: omp.atomic.write %[[ADDR]], %[[VAL]] hint(uncontended, speculative) : memref<i32>, i32
-  omp.atomic.write %addr, %val hint(speculative, uncontended) : memref<i32>, i32
+  // CHECK: omp.atomic.write %[[ADDR]] = %[[VAL]] : memref<i32>, i32
+  omp.atomic.write %addr = %val : memref<i32>, i32
+  // CHECK: omp.atomic.write %[[ADDR]] = %[[VAL]] memory_order(seq_cst) : memref<i32>, i32
+  omp.atomic.write %addr = %val memory_order(seq_cst) : memref<i32>, i32
+  // CHECK: omp.atomic.write %[[ADDR]] = %[[VAL]] memory_order(release) : memref<i32>, i32
+  omp.atomic.write %addr = %val memory_order(release) : memref<i32>, i32
+  // CHECK: omp.atomic.write %[[ADDR]] = %[[VAL]] memory_order(relaxed) : memref<i32>, i32
+  omp.atomic.write %addr = %val memory_order(relaxed) : memref<i32>, i32
+  // CHECK: omp.atomic.write %[[ADDR]] = %[[VAL]] hint(uncontended, speculative) : memref<i32>, i32
+  omp.atomic.write %addr = %val hint(speculative, uncontended) : memref<i32>, i32
   return
 }
 

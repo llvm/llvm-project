@@ -909,6 +909,29 @@ convertOmpAtomicRead(Operation &opInst, llvm::IRBuilderBase &builder,
   return success();
 }
 
+/// Converts an omp.atomic.write operation to LLVM IR.
+static LogicalResult
+convertOmpAtomicWrite(Operation &opInst, llvm::IRBuilderBase &builder,
+                      LLVM::ModuleTranslation &moduleTranslation) {
+  auto writeOp = cast<omp::AtomicWriteOp>(opInst);
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+
+  // Set up the source location value for OpenMP runtime.
+  llvm::DISubprogram *subprogram =
+      builder.GetInsertBlock()->getParent()->getSubprogram();
+  const llvm::DILocation *diLoc =
+      moduleTranslation.translateLoc(opInst.getLoc(), subprogram);
+  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder.saveIP(),
+                                                    llvm::DebugLoc(diLoc));
+  llvm::AtomicOrdering ao = convertAtomicOrdering(writeOp.memory_order());
+  llvm::Value *expr = moduleTranslation.lookupValue(writeOp.value());
+  llvm::Value *dest = moduleTranslation.lookupValue(writeOp.address());
+  llvm::OpenMPIRBuilder::AtomicOpValue x = {dest, /*isSigned=*/false,
+                                            /*isVolatile=*/false};
+  builder.restoreIP(ompBuilder->createAtomicWrite(ompLoc, x, expr, ao));
+  return success();
+}
+
 /// Converts an OpenMP reduction operation using OpenMPIRBuilder. Expects the
 /// mapping between reduction variables and their private equivalents to have
 /// been stored on the ModuleTranslation stack. Currently only supports
@@ -1032,6 +1055,9 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
       })
       .Case([&](omp::AtomicReadOp) {
         return convertOmpAtomicRead(*op, builder, moduleTranslation);
+      })
+      .Case([&](omp::AtomicWriteOp) {
+        return convertOmpAtomicWrite(*op, builder, moduleTranslation);
       })
       .Case([&](omp::SectionsOp) {
         return convertOmpSections(*op, builder, moduleTranslation);

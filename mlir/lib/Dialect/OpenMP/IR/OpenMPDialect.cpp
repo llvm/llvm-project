@@ -1389,7 +1389,7 @@ static ParseResult parseAtomicWriteOp(OpAsmParser &parser,
   SmallVector<ClauseType> clauses = {memoryOrderClause, hintClause};
   SmallVector<int> segments;
 
-  if (parser.parseOperand(address) || parser.parseComma() ||
+  if (parser.parseOperand(address) || parser.parseEqual() ||
       parser.parseOperand(value) ||
       parseClauses(parser, result, clauses, segments) ||
       parser.parseColonType(addrType) || parser.parseComma() ||
@@ -1402,7 +1402,7 @@ static ParseResult parseAtomicWriteOp(OpAsmParser &parser,
 
 /// Printer for AtomicWriteOp
 static void printAtomicWriteOp(OpAsmPrinter &p, AtomicWriteOp op) {
-  p << " " << op.address() << ", " << op.value() << " ";
+  p << " " << op.address() << " = " << op.value() << " ";
   if (op.memory_order())
     p << "memory_order(" << op.memory_order() << ") ";
   if (op.hintAttr())
