@@ -1313,8 +1313,7 @@ static DenseMap<const InputSectionBase *, int> buildSectionOrder() {
   // We want both global and local symbols. We get the global ones from the
   // symbol table and iterate the object files for the local ones.
   for (Symbol *sym : symtab->symbols())
-    if (!sym->isLazy())
-      addSym(*sym);
+    addSym(*sym);
 
   for (ELFFileBase *file : objectFiles)
     for (Symbol *sym : file->getSymbols()) {
