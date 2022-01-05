@@ -33,36 +33,13 @@ def shiftand_to_mak : GICombineRule<
          [{ return matchShiftAndToMak(*${root}, MRI, ${matchinfo}); }]),
   (apply [{ applyShiftAndToMak(*${root}, MRI, ${matchinfo}); }])>;
 
-// Lower
-//   G_AND $dst, $src, ~((2**width - 1) << offset)
-// to
-//   CLRrwo $dst, $src, width<offset>
-def and_to_clr_matchdata : GIDefMatchData<"std::tuple<Register, uint32_t, uint32_t>">;
-def and_to_clr : GICombineRule<
-  (defs root:$root, and_to_clr_matchdata:$matchinfo),
-  (match (wip_match_opcode G_AND):$root,
-         [{ return matchAndToClr(*${root}, MRI, ${matchinfo}); }]),
-  (apply [{ applyAndToClr(*${root}, MRI, ${matchinfo}); }])>;
-
-// Lower
-//   G_OR $dst, $src, ((2**width - 1) << offset
-// to
-//   SETrwo $dst, $src, width<offset>
-def or_to_set_matchdata : GIDefMatchData<"std::tuple<Register, uint32_t, uint32_t>">;
-def or_to_set : GICombineRule<
-  (defs root:$root, or_to_set_matchdata:$matchinfo),
-  (match (wip_match_opcode G_OR):$root,
-         [{ return matchOrToSet(*${root}, MRI, ${matchinfo}); }]),
-  (apply [{ applyOrToSet(*${root}, MRI, ${matchinfo}); }])>;
-
 
 // Post-legalization combines which should happen at all optimization levels.
 // (E.g. ones that facilitate matching for the selector) For example, matching
 // pseudos.
 def M88kPostLegalizerLoweringHelper
     : GICombinerHelper<"M88kGenPostLegalizerLoweringHelper",
-                       [andshift_to_extu, shiftand_to_mak, and_to_clr,
-                        or_to_set]> {
+                       [andshift_to_extu, shiftand_to_mak]> {
   let DisableRuleOption = "m88kpostlegalizerlowering-disable-rule";
 }
 

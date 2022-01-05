@@ -20,6 +20,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "GISel/M88kLegalizerInfo.h"
+#include "GISel/M88kGlobalISelUtils.h"
 #include "M88kTargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
@@ -39,19 +40,8 @@
 #define DEBUG_TYPE "M88K-postlegalizer-lowering"
 
 using namespace llvm;
+using namespace M88kGISelUtils;
 using namespace MIPatternMatch;
-
-// If I is a shifted mask, set the size (Width) and the first bit of the
-// mask (Offset), and return true.
-// For example, if I is 0x003e, then sez (Width, Offset) = (5, 1).
-static bool isShiftedMask(uint64_t I, uint64_t &Width, uint64_t &Offset) {
-  if (!isShiftedMask_64(I))
-    return false;
-
-  Width = countPopulation(I);
-  Offset = countTrailingZeros(I);
-  return true;
-}
 
 // Replace the generic instruction with a m88k instruction, which has a
 // width/offset field.
@@ -160,87 +150,6 @@ bool applyShiftAndToMak(MachineInstr &MI, MachineRegisterInfo &MRI,
                         std::tuple<Register, uint32_t, uint32_t> &MatchInfo) {
   assert(MI.getOpcode() == TargetOpcode::G_SHL);
   replaceMI(M88k::MAKrwo, MI, MRI, MatchInfo);
-  return true;
-}
-
-// Match G_AND $dst, $src, ~((2**width - 1) << offset)
-static bool matchAndToClr(MachineInstr &MI, MachineRegisterInfo &MRI,
-                          std::tuple<Register, uint32_t, uint32_t> &MatchInfo) {
-  assert(MI.getOpcode() == TargetOpcode::G_AND);
-
-  Register DstReg = MI.getOperand(0).getReg();
-  if (!MRI.getType(DstReg).isScalar())
-    return false;
-
-  Register SrcReg = MI.getOperand(1).getReg();
-  Register MskReg = MI.getOperand(2).getReg();
-  int64_t Mask;
-  if (!mi_match(MskReg, MRI, m_ICst(Mask))) {
-    std::swap(MskReg, SrcReg);
-    if (!mi_match(MskReg, MRI, m_ICst(Mask)))
-      return false;
-  }
-
-  // Check that the mask is a negated shifted mask.
-  uint64_t NegMask = ~static_cast<uint64_t>(Mask) & 0xFFFFFFFF;
-  uint64_t MaskWidth, MaskOffset;
-  if (!isShiftedMask(NegMask, MaskWidth, MaskOffset))
-    return false;
-
-  assert(MaskWidth >= 0 && MaskWidth < 32 && "Width out of range");
-  assert(MaskOffset >= 0 && MaskOffset < 32 && "Offset out of range");
-
-  MatchInfo = std::make_tuple(SrcReg, static_cast<uint32_t>(MaskWidth),
-                              static_cast<uint32_t>(MaskOffset));
-
-  return true;
-}
-
-// Lower to CLRrwo $dst, $src, width<offset>
-bool applyAndToClr(MachineInstr &MI, MachineRegisterInfo &MRI,
-                   std::tuple<Register, uint32_t, uint32_t> &MatchInfo) {
-  assert(MI.getOpcode() == TargetOpcode::G_AND);
-  replaceMI(M88k::CLRrwo, MI, MRI, MatchInfo);
-  return true;
-}
-
-// Match G_OR $dst, $src, ((2**width - 1) << offset
-static bool matchOrToSet(MachineInstr &MI, MachineRegisterInfo &MRI,
-                         std::tuple<Register, uint32_t, uint32_t> &MatchInfo) {
-  assert(MI.getOpcode() == TargetOpcode::G_OR);
-
-  Register DstReg = MI.getOperand(0).getReg();
-  if (!MRI.getType(DstReg).isScalar())
-    return false;
-
-  Register SrcReg = MI.getOperand(1).getReg();
-  Register MskReg = MI.getOperand(2).getReg();
-  int64_t Mask;
-  if (!mi_match(MskReg, MRI, m_ICst(Mask))) {
-    std::swap(MskReg, SrcReg);
-    if (!mi_match(MskReg, MRI, m_ICst(Mask)))
-      return false;
-  }
-
-  // Check that the mask is a shifted mask.
-  uint64_t MaskWidth, MaskOffset;
-  if (!isShiftedMask(Mask, MaskWidth, MaskOffset))
-    return false;
-
-  assert(MaskWidth >= 0 && MaskWidth < 32 && "Width out of range");
-  assert(MaskOffset >= 0 && MaskOffset < 32 && "Offset out of range");
-
-  MatchInfo = std::make_tuple(SrcReg, static_cast<uint32_t>(MaskWidth),
-                              static_cast<uint32_t>(MaskOffset));
-
-  return true;
-}
-
-// Lower to SETrwo $dst, $src, width<offset>
-bool applyOrToSet(MachineInstr &MI, MachineRegisterInfo &MRI,
-                  std::tuple<Register, uint32_t, uint32_t> &MatchInfo) {
-  assert(MI.getOpcode() == TargetOpcode::G_OR);
-  replaceMI(M88k::SETrwo, MI, MRI, MatchInfo);
   return true;
 }
 
