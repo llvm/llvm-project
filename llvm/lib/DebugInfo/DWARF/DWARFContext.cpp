@@ -1098,6 +1098,7 @@ static Optional<uint64_t> getTypeSize(DWARFDie Type, uint64_t PointerSize) {
     return PointerSize;
   }
   case DW_TAG_const_type:
+  case DW_TAG_immutable_type:
   case DW_TAG_volatile_type:
   case DW_TAG_restrict_type:
   case DW_TAG_typedef: {

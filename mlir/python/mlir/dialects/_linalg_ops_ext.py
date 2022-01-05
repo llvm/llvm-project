@@ -34,8 +34,7 @@ class FillOp:
         loc=loc,
         ip=ip)
     OpView.__init__(self, op)
-    linalgDialect = Context.current.get_dialect_descriptor("linalg")
-    fill_builtin_region(linalgDialect, self.operation)
+    fill_builtin_region(self.operation)
 
 class InitTensorOp:
   """Extends the linalg.init_tensor op."""

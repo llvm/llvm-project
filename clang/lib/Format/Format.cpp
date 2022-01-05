@@ -2596,8 +2596,9 @@ tooling::Replacements sortCppIncludes(const FormatStyle &Style, StringRef Code,
   bool MainIncludeFound = false;
   bool FormattingOff = false;
 
+  // '[' must be the first and '-' the last character inside [...].
   llvm::Regex RawStringRegex(
-      "R\"(([\\[A-Za-z0-9_{}#<>%:;.?*+/^&\\$|~!=,'\\-]|])*)\\(");
+      "R\"([][A-Za-z0-9_{}#<>%:;.?*+/^&\\$|~!=,'-]*)\\(");
   SmallVector<StringRef, 2> RawStringMatches;
   std::string RawStringTermination = ")\"";
 

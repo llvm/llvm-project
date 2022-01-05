@@ -509,10 +509,10 @@ public:
   }
 
   /// Determine if the function does not access or only writes memory.
-  bool doesNotReadMemory() const {
+  bool onlyWritesMemory() const {
     return doesNotAccessMemory() || hasFnAttribute(Attribute::WriteOnly);
   }
-  void setDoesNotReadMemory() {
+  void setOnlyWritesMemory() {
     addFnAttr(Attribute::WriteOnly);
   }
 

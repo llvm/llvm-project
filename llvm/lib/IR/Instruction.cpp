@@ -585,7 +585,7 @@ bool Instruction::mayReadFromMemory() const {
   case Instruction::Call:
   case Instruction::Invoke:
   case Instruction::CallBr:
-    return !cast<CallBase>(this)->doesNotReadMemory();
+    return !cast<CallBase>(this)->onlyWritesMemory();
   case Instruction::Store:
     return !cast<StoreInst>(this)->isUnordered();
   }

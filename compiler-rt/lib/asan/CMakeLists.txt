@@ -34,7 +34,6 @@ set(ASAN_SOURCES
 
 if (NOT WIN32 AND NOT APPLE)
   list(APPEND ASAN_SOURCES
-    asan_rtl_x86_64.S
     asan_interceptors_vfork.S
     )
 endif()
@@ -42,6 +41,16 @@ endif()
 set(ASAN_CXX_SOURCES
   asan_new_delete.cpp
   )
+
+set(ASAN_STATIC_SOURCES
+  asan_rtl_static.cpp
+  )
+
+if (NOT WIN32 AND NOT APPLE)
+  list(APPEND ASAN_STATIC_SOURCES
+    asan_rtl_x86_64.S
+  )
+endif()
 
 set(ASAN_PREINIT_SOURCES
   asan_preinit.cpp
@@ -135,6 +144,12 @@ if(NOT APPLE)
     ADDITIONAL_HEADERS ${ASAN_HEADERS}
     CFLAGS ${ASAN_CFLAGS}
     DEFS ${ASAN_COMMON_DEFINITIONS})
+  add_compiler_rt_object_libraries(RTAsan_static
+    ARCHS ${ASAN_SUPPORTED_ARCH}
+    SOURCES ${ASAN_STATIC_SOURCES}
+    ADDITIONAL_HEADERS ${ASAN_HEADERS}
+    CFLAGS ${ASAN_CFLAGS}
+    DEFS ${ASAN_COMMON_DEFINITIONS})
   add_compiler_rt_object_libraries(RTAsan_preinit
     ARCHS ${ASAN_SUPPORTED_ARCH}
     SOURCES ${ASAN_PREINIT_SOURCES}
@@ -176,6 +191,14 @@ if(APPLE)
     LINK_FLAGS ${WEAK_SYMBOL_LINK_FLAGS}
     DEFS ${ASAN_DYNAMIC_DEFINITIONS}
     PARENT_TARGET asan)
+
+  add_compiler_rt_runtime(clang_rt.asan_static
+    STATIC
+    ARCHS ${ASAN_SUPPORTED_ARCH}
+    OBJECT_LIBS RTAsan_static
+    CFLAGS ${ASAN_CFLAGS}
+    DEFS ${ASAN_COMMON_DEFINITIONS}
+    PARENT_TARGET asan)
 else()
   # Build separate libraries for each target.
 
@@ -203,6 +226,14 @@ else()
     ARCHS ${ASAN_SUPPORTED_ARCH}
     OBJECT_LIBS RTAsan_cxx
                 RTUbsan_cxx
+    CFLAGS ${ASAN_CFLAGS}
+    DEFS ${ASAN_COMMON_DEFINITIONS}
+    PARENT_TARGET asan)
+
+  add_compiler_rt_runtime(clang_rt.asan_static
+    STATIC
+    ARCHS ${ASAN_SUPPORTED_ARCH}
+    OBJECT_LIBS RTAsan_static
     CFLAGS ${ASAN_CFLAGS}
     DEFS ${ASAN_COMMON_DEFINITIONS}
     PARENT_TARGET asan)

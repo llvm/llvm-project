@@ -25,6 +25,8 @@ declare_mlir_python_sources(MLIRPythonSources.Core
     _mlir_libs/_mlir/__init__.pyi
     _mlir_libs/_mlir/ir.pyi
     _mlir_libs/_mlir/passmanager.pyi
+    # TODO: this should be split out into a separate library.
+    _mlir_libs/_mlir/dialects/quant.pyi
 )
 
 declare_mlir_python_sources(MLIRPythonSources.ExecutionEngine
@@ -115,6 +117,13 @@ declare_mlir_dialect_python_bindings(
     dialects/_memref_ops_ext.py
   DIALECT_NAME memref)
 
+declare_mlir_python_sources(
+  MLIRPythonSources.Dialects.quant
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  SOURCES
+    dialects/quant.py)
+
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
@@ -184,6 +193,7 @@ declare_mlir_python_extension(MLIRPythonExtension.Core
   SOURCES
     DialectLinalg.cpp  # TODO: Break this out.
     DialectSparseTensor.cpp  # TODO: Break this out.
+    DialectQuant.cpp # TODO: Break this out.
     MainModule.cpp
     IRAffine.cpp
     IRAttributes.cpp
@@ -212,6 +222,7 @@ declare_mlir_python_extension(MLIRPythonExtension.Core
     MLIRCAPILinalg  # TODO: Remove when above is removed.
     MLIRCAPISparseTensor  # TODO: Remove when above is removed.
     MLIRCAPIStandard
+    MLIRCAPIQuant  # TODO: Remove when above is removed.
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.AllPassesRegistration

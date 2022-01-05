@@ -72,11 +72,16 @@ static bool setOnlyReadsMemory(Function &F) {
   return true;
 }
 
-static bool setDoesNotReadMemory(Function &F) {
-  if (F.doesNotReadMemory()) // writeonly or readnone
+static bool setOnlyWritesMemory(Function &F) {
+  if (F.onlyWritesMemory()) // writeonly or readnone
     return false;
-  F.setDoesNotReadMemory();
+  // Turn readonly and writeonly into readnone.
+  if (F.hasFnAttribute(Attribute::ReadOnly)) {
+    F.removeFnAttr(Attribute::ReadOnly);
+    return setDoesNotAccessMemory(F);
+  }
   ++NumWriteOnly;
+  F.setOnlyWritesMemory();
   return true;
 }
 
@@ -1180,7 +1185,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
   case LibFunc_truncl:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotFreeMemory(F);
-    Changed |= setDoesNotReadMemory(F);
+    Changed |= setOnlyWritesMemory(F);
     Changed |= setWillReturn(F);
     return Changed;
   default:

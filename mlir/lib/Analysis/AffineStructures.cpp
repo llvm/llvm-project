@@ -2643,25 +2643,35 @@ void FlatAffineConstraints::removeTrivialRedundancy() {
   // the savings.
 }
 
-void FlatAffineConstraints::clearAndCopyFrom(
-    const FlatAffineConstraints &other) {
+void FlatAffineConstraints::clearAndCopyFrom(const IntegerPolyhedron &other) {
   if (auto *otherValueSet = dyn_cast<const FlatAffineValueConstraints>(&other))
     assert(!otherValueSet->hasValues() &&
            "cannot copy associated Values into FlatAffineConstraints");
-  // Note: Assigment operator does not vtable pointer, so kind does not change.
-  *this = other;
+
+  // Note: Assigment operator does not vtable pointer, so kind does not
+  // change.
+  if (auto *otherValueSet = dyn_cast<const FlatAffineConstraints>(&other))
+    *this = *otherValueSet;
+  else
+    *static_cast<IntegerPolyhedron *>(this) = other;
 }
 
 void FlatAffineValueConstraints::clearAndCopyFrom(
-    const FlatAffineConstraints &other) {
+    const IntegerPolyhedron &other) {
+
   if (auto *otherValueSet =
           dyn_cast<const FlatAffineValueConstraints>(&other)) {
     *this = *otherValueSet;
-  } else {
-    *static_cast<FlatAffineConstraints *>(this) = other;
-    values.clear();
-    values.resize(numIds, None);
+    return;
   }
+
+  if (auto *otherValueSet = dyn_cast<const FlatAffineValueConstraints>(&other))
+    *static_cast<FlatAffineConstraints *>(this) = *otherValueSet;
+  else
+    *static_cast<IntegerPolyhedron *>(this) = other;
+
+  values.clear();
+  values.resize(numIds, None);
 }
 
 static std::pair<unsigned, unsigned>

@@ -26,16 +26,9 @@ using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf;
 
-// Returns a symbol for an error message.
-static std::string demangle(StringRef symName) {
-  if (elf::config->demangle)
-    return demangleItanium(symName);
-  return std::string(symName);
-}
-
 std::string lld::toString(const elf::Symbol &sym) {
   StringRef name = sym.getName();
-  std::string ret = demangle(name);
+  std::string ret = demangle(name, config->demangle);
 
   const char *suffix = sym.getVersionSuffix();
   if (*suffix == '@')
@@ -44,7 +37,7 @@ std::string lld::toString(const elf::Symbol &sym) {
 }
 
 std::string lld::toELFString(const Archive::Symbol &b) {
-  return demangle(b.getName());
+  return demangle(b.getName(), config->demangle);
 }
 
 Defined *ElfSym::bss;
@@ -140,8 +133,7 @@ static uint64_t getSymVA(const Symbol &sym, int64_t addend) {
     return 0;
   case Symbol::LazyArchiveKind:
   case Symbol::LazyObjectKind:
-    assert(sym.isUsedInRegularObj && "lazy symbol reached writer");
-    return 0;
+    llvm_unreachable("lazy symbol reached writer");
   case Symbol::CommonKind:
     llvm_unreachable("common symbol reached writer");
   case Symbol::PlaceholderKind:

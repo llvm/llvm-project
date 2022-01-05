@@ -61,11 +61,11 @@ struct CastOpInterface
     return BufferRelation::Equivalent;
   }
 
-  LogicalResult bufferize(Operation *op, OpBuilder &b,
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           BufferizationState &state) const {
     auto castOp = cast<tensor::CastOp>(op);
 
-    Value resultBuffer = state.getResultBuffer(castOp->getResult(0));
+    Value resultBuffer = state.getResultBuffer(rewriter, castOp->getResult(0));
     if (!resultBuffer)
       return failure();
     Type sourceType = resultBuffer.getType();
@@ -82,7 +82,8 @@ struct CastOpInterface
             : MemRefLayoutAttrInterface();
     Type memRefType = getContiguousOrUnrankedMemRefType(
         castOp.getResult().getType(), layout, memorySpace);
-    state.replaceOpWithNewOp<memref::CastOp>(b, op, memRefType, resultBuffer);
+    state.replaceOpWithNewOp<memref::CastOp>(rewriter, op, memRefType,
+                                             resultBuffer);
     return success();
   }
 };
@@ -105,13 +106,13 @@ struct DimOpInterface
     return OpResult();
   }
 
-  LogicalResult bufferize(Operation *op, OpBuilder &b,
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           BufferizationState &state) const {
     auto dimOp = cast<tensor::DimOp>(op);
     if (!dimOp.source().getType().isa<RankedTensorType>())
       return dimOp.emitError("unranked tensor not supported");
-    Value v = state.lookupBuffer(dimOp.source());
-    state.replaceOpWithNewOp<memref::DimOp>(b, op, v, dimOp.index());
+    Value v = state.lookupBuffer(rewriter, dimOp.source());
+    state.replaceOpWithNewOp<memref::DimOp>(rewriter, op, v, dimOp.index());
     return success();
   }
 };
@@ -142,11 +143,11 @@ struct ExtractSliceOpInterface
     return BufferRelation::None;
   }
 
-  LogicalResult bufferize(Operation *op, OpBuilder &b,
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           BufferizationState &state) const {
     auto extractSliceOp = cast<tensor::ExtractSliceOp>(op);
     Location loc = extractSliceOp.getLoc();
-    Value srcMemref = state.lookupBuffer(extractSliceOp.source());
+    Value srcMemref = state.lookupBuffer(rewriter, extractSliceOp.source());
     auto srcMemrefType = srcMemref.getType().cast<MemRefType>();
     auto dstTensorType =
         extractSliceOp.result().getType().cast<RankedTensorType>();
@@ -155,7 +156,8 @@ struct ExtractSliceOpInterface
     bool inplace = state.isInPlace(extractSliceOp->getResult(0));
     Value alloc;
     if (!inplace)
-      alloc = state.createAllocDeallocPair(b, loc, extractSliceOp.result());
+      alloc =
+          state.createAllocDeallocPair(rewriter, loc, extractSliceOp.result());
 
     // Bufferize to subview.
     auto subviewMemRefType =
@@ -164,7 +166,7 @@ struct ExtractSliceOpInterface
             extractSliceOp.getMixedOffsets(), extractSliceOp.getMixedSizes(),
             extractSliceOp.getMixedStrides())
             .cast<MemRefType>();
-    Value subView = b.create<memref::SubViewOp>(
+    Value subView = rewriter.create<memref::SubViewOp>(
         loc, subviewMemRefType, srcMemref, extractSliceOp.getMixedOffsets(),
         extractSliceOp.getMixedSizes(), extractSliceOp.getMixedStrides());
 
@@ -172,11 +174,11 @@ struct ExtractSliceOpInterface
     if (!inplace) {
       // Do not copy if the copied data is never read.
       if (state.isValueRead(extractSliceOp.result()))
-        state.createMemCpy(b, extractSliceOp.getLoc(), subView, alloc);
+        state.createMemCpy(rewriter, extractSliceOp.getLoc(), subView, alloc);
       subView = alloc;
     }
 
-    state.replaceOp(op, subView);
+    state.replaceOp(rewriter, op, subView);
     return success();
   }
 };
@@ -199,11 +201,11 @@ struct ExtractOpInterface
     return OpResult();
   }
 
-  LogicalResult bufferize(Operation *op, OpBuilder &b,
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           BufferizationState &state) const {
     auto extractOp = cast<tensor::ExtractOp>(op);
-    Value srcMemref = state.lookupBuffer(extractOp.tensor());
-    state.replaceOpWithNewOp<memref::LoadOp>(b, op, srcMemref,
+    Value srcMemref = state.lookupBuffer(rewriter, extractOp.tensor());
+    state.replaceOpWithNewOp<memref::LoadOp>(rewriter, op, srcMemref,
                                              extractOp.indices());
     return success();
   }
@@ -235,14 +237,15 @@ struct InsertOpInterface
     return {&op->getOpOperand(1) /*dest*/};
   }
 
-  LogicalResult bufferize(Operation *op, OpBuilder &b,
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           BufferizationState &state) const {
     auto insertOp = cast<tensor::InsertOp>(op);
     Location loc = insertOp.getLoc();
-    Value destMemref = state.getResultBuffer(insertOp->getOpResult(0));
-    b.create<memref::StoreOp>(loc, insertOp.scalar(), destMemref,
-                              insertOp.indices());
-    state.replaceOp(op, destMemref);
+    Value destMemref =
+        state.getResultBuffer(rewriter, insertOp->getOpResult(0));
+    rewriter.create<memref::StoreOp>(loc, insertOp.scalar(), destMemref,
+                                     insertOp.indices());
+    state.replaceOp(rewriter, op, destMemref);
     return success();
   }
 
@@ -407,7 +410,7 @@ struct InsertSliceOpInterface
     return false;
   }
 
-  LogicalResult bufferize(Operation *op, OpBuilder &b,
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           BufferizationState &state) const {
     // insert_slice ops arise from tiling and bufferizing them out-of-place is
     // generally a deal breaker. When used with loops, this ends up cloning the
@@ -419,7 +422,8 @@ struct InsertSliceOpInterface
     TensorBufferizationState &tensorState = getTensorBufferizationState(state);
 
     // When bufferizing out-of-place, `getResultBuffer` allocates.
-    Value dstMemref = state.getResultBuffer(insertSliceOp->getResult(0));
+    Value dstMemref =
+        state.getResultBuffer(rewriter, insertSliceOp->getResult(0));
     if (!dstMemref)
       return failure();
 
@@ -434,15 +438,15 @@ struct InsertSliceOpInterface
               insertSliceOp.getMixedOffsets(), insertSliceOp.getMixedSizes(),
               insertSliceOp.getMixedStrides())
               .cast<MemRefType>();
-      Value subView = b.create<memref::SubViewOp>(
+      Value subView = rewriter.create<memref::SubViewOp>(
           loc, subviewMemRefType, dstMemref, insertSliceOp.getMixedOffsets(),
           insertSliceOp.getMixedSizes(), insertSliceOp.getMixedStrides());
       // Copy tensor.
-      Value srcMemref = state.lookupBuffer(insertSliceOp.source());
-      state.createMemCpy(b, insertSliceOp.getLoc(), srcMemref, subView);
+      Value srcMemref = state.lookupBuffer(rewriter, insertSliceOp.source());
+      state.createMemCpy(rewriter, insertSliceOp.getLoc(), srcMemref, subView);
     }
 
-    state.replaceOp(op, dstMemref);
+    state.replaceOp(rewriter, op, dstMemref);
     return success();
   }
 };

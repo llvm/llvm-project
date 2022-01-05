@@ -124,6 +124,7 @@ static bool isTypeTag(uint16_t Tag) {
   case dwarf::DW_TAG_interface_type:
   case dwarf::DW_TAG_unspecified_type:
   case dwarf::DW_TAG_shared_type:
+  case dwarf::DW_TAG_immutable_type:
     return true;
   default:
     break;

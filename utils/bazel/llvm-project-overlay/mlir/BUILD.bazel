@@ -497,6 +497,24 @@ mlir_c_api_cc_library(
 )
 
 mlir_c_api_cc_library(
+    name = "CAPIQuant",
+    srcs = [
+        "lib/CAPI/Dialect/Quant.cpp",
+    ],
+    hdrs = [
+        "include/mlir-c/Dialect/Quant.h",
+    ],
+    header_deps = [
+        ":CAPIIRHeaders",
+    ],
+    includes = ["include"],
+    deps = [
+        ":CAPIIR",
+        ":QuantOps",
+    ],
+)
+
+mlir_c_api_cc_library(
     name = "CAPIConversion",
     srcs = ["lib/CAPI/Conversion/Passes.cpp"],
     hdrs = ["include/mlir-c/Conversion.h"],
@@ -632,6 +650,7 @@ cc_library(
 MLIR_PYTHON_BINDINGS_SOURCES = [
     "lib/Bindings/Python/DialectLinalg.cpp",
     "lib/Bindings/Python/DialectSparseTensor.cpp",
+    "lib/Bindings/Python/DialectQuant.cpp",
     "lib/Bindings/Python/IRAffine.cpp",
     "lib/Bindings/Python/IRAttributes.cpp",
     "lib/Bindings/Python/IRCore.cpp",
@@ -665,6 +684,7 @@ cc_library(
         ":CAPIIR",
         ":CAPIInterfaces",
         ":CAPILinalg",
+        ":CAPIQuant",
         ":CAPIRegistration",
         ":CAPISparseTensor",
         ":MLIRBindingsPythonHeadersAndDeps",
@@ -696,6 +716,7 @@ cc_library(
         ":CAPIGPUHeaders",
         ":CAPIIRHeaders",
         ":CAPILinalgHeaders",
+        ":CAPIQuantHeaders",
         ":CAPIRegistrationHeaders",
         ":CAPISparseTensorHeaders",
         ":MLIRBindingsPythonHeaders",
@@ -720,6 +741,7 @@ cc_library(
         ":CAPIIRObjects",
         ":CAPIInterfacesObjects",
         ":CAPILinalgObjects",
+        ":CAPIQuantObjects",
         ":CAPIRegistrationObjects",
         ":CAPISparseTensorObjects",
     ],
@@ -1812,7 +1834,6 @@ cc_library(
         ":SideEffectInterfaces",
         ":SparseTensorAttrDefsIncGen",
         ":SparseTensorOpsIncGen",
-        ":SparseTensorUtils",
         ":StandardOps",
         "//llvm:Support",
     ],
@@ -1827,17 +1848,17 @@ cc_library(
         ":ArithmeticDialect",
         ":IR",
         ":LinalgOps",
-        ":SideEffectInterfaces",
-        ":SparseTensorAttrDefsIncGen",
-        ":SparseTensorOpsIncGen",
-        ":StandardOps",
+        ":SparseTensor",
         "//llvm:Support",
     ],
 )
 
 cc_library(
     name = "SparseTensorTransforms",
-    srcs = glob(["lib/Dialect/SparseTensor/Transforms/*.cpp"]),
+    srcs = glob([
+        "lib/Dialect/SparseTensor/Transforms/*.cpp",
+        "lib/Dialect/SparseTensor/Transforms/*.h",
+    ]),
     hdrs = [
         "include/mlir/Dialect/SparseTensor/Transforms/Passes.h",
         "include/mlir/ExecutionEngine/SparseTensorUtils.h",

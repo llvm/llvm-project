@@ -13,4 +13,3 @@ negx.b	%d0
 ; CHECK:      negx.l  %d0
 ; CHECK-SAME: encoding: [0x40,0x80]
 negx.l	%d0
-

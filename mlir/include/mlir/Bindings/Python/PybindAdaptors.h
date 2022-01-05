@@ -309,6 +309,8 @@ public:
     return *this;
   }
 
+  py::object get_class() const { return thisClass; }
+
 protected:
   py::object superClass;
   py::object thisClass;

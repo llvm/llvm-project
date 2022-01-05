@@ -605,7 +605,7 @@ static int AddModuleSegments(const char *module_name, dl_phdr_info *info,
                                  writable);
     } else if (phdr->p_type == PT_NOTE) {
       uptr off = 0;
-      while (off < phdr->p_memsz - sizeof(ElfW(Nhdr))) {
+      while (off + sizeof(ElfW(Nhdr)) < phdr->p_memsz) {
         auto *nhdr = reinterpret_cast<const ElfW(Nhdr) *>(info->dlpi_addr +
                                                           phdr->p_vaddr + off);
         constexpr auto kGnuNamesz = 4;  // "GNU" with NUL-byte.

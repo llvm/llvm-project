@@ -60,7 +60,7 @@ struct ExecuteRegionOpInterface
     return true;
   }
 
-  LogicalResult bufferize(Operation *op, OpBuilder &b,
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           BufferizationState &state) const {
     // TODO: Add bufferization support when needed. scf.execute_region should be
     // bufferized similar to scf.if.
@@ -70,8 +70,8 @@ struct ExecuteRegionOpInterface
     if (hasTensorReturnType)
       return op->emitError(
           "scf.execute_region with tensor result not supported");
-    return comprehensive_bufferize::bufferize(&executeRegionOp.getRegion(),
-                                              state);
+    return comprehensive_bufferize::bufferize(
+        rewriter, &executeRegionOp.getRegion(), state);
   }
 
   BufferRelation bufferRelation(Operation *op, OpResult opResult,
@@ -135,14 +135,9 @@ struct IfOpInterface
     return true;
   }
 
-  LogicalResult bufferize(Operation *op, OpBuilder &b,
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           BufferizationState &state) const {
     auto ifOp = cast<scf::IfOp>(op);
-
-    // Use IRRewriter instead of OpBuilder because it has additional helper
-    // functions.
-    IRRewriter rewriter(op->getContext());
-    rewriter.setInsertionPoint(ifOp);
 
     // Compute new types of the bufferized scf.if op.
     SmallVector<Type> newTypes;
@@ -199,12 +194,14 @@ struct IfOpInterface
     }
 
     // Replace op results.
-    state.replaceOp(op, newIfOp->getResults());
+    state.replaceOp(rewriter, op, newIfOp->getResults());
 
     // Bufferize then/else blocks.
-    if (failed(comprehensive_bufferize::bufferize(newIfOp.thenBlock(), state)))
+    if (failed(comprehensive_bufferize::bufferize(rewriter, newIfOp.thenBlock(),
+                                                  state)))
       return failure();
-    if (failed(comprehensive_bufferize::bufferize(newIfOp.elseBlock(), state)))
+    if (failed(comprehensive_bufferize::bufferize(rewriter, newIfOp.elseBlock(),
+                                                  state)))
       return failure();
 
     return success();
@@ -276,15 +273,10 @@ struct ForOpInterface
     return true;
   }
 
-  LogicalResult bufferize(Operation *op, OpBuilder & /*b*/,
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           BufferizationState &state) const {
     auto forOp = cast<scf::ForOp>(op);
     Block *oldLoopBody = &forOp.getLoopBody().front();
-
-    // Use IRRewriter instead of OpBuilder because it has additional helper
-    // functions.
-    IRRewriter rewriter(op->getContext());
-    rewriter.setInsertionPoint(forOp);
 
     // Indices of all iter_args that have tensor type. These are the ones that
     // are bufferized.
@@ -309,7 +301,7 @@ struct ForOpInterface
     // Construct a new scf.for op with memref instead of tensor values.
     SmallVector<Value> initArgs =
         convert(forOp.getInitArgs(), [&](Value val, int64_t index) {
-          return state.getResultBuffer(forOp->getOpResult(index));
+          return state.getResultBuffer(rewriter, forOp->getOpResult(index));
         });
     auto newForOp = rewriter.create<scf::ForOp>(
         forOp.getLoc(), forOp.getLowerBound(), forOp.getUpperBound(),
@@ -343,10 +335,10 @@ struct ForOpInterface
     yieldOp.getResultsMutable().assign(yieldValues);
 
     // Replace loop results.
-    state.replaceOp(op, newForOp->getResults());
+    state.replaceOp(rewriter, op, newForOp->getResults());
 
     // Bufferize loop body.
-    if (failed(comprehensive_bufferize::bufferize(loopBody, state)))
+    if (failed(comprehensive_bufferize::bufferize(rewriter, loopBody, state)))
       return failure();
 
     return success();
@@ -438,7 +430,7 @@ struct YieldOpInterface
     return OpResult();
   }
 
-  LogicalResult bufferize(Operation *op, OpBuilder &b,
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           BufferizationState &state) const {
     auto yieldOp = cast<scf::YieldOp>(op);
     if (!isa<scf::ExecuteRegionOp, scf::IfOp, scf::ForOp>(

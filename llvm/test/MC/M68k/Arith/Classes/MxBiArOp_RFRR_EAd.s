@@ -12,4 +12,3 @@ eor.l	%d1, %d0
 ; CHECK:      eor.l  %d1, %d7
 ; CHECK-SAME: encoding: [0xb3,0x87]
 eor.l	%d1, %d7
-

@@ -46,4 +46,3 @@ add.b	(%a0), %d0
 ; CHECK:      adda.l  (%a1), %a3
 ; CHECK-SAME: encoding: [0xd7,0xd1]
 adda.l	(%a1), %a3
-

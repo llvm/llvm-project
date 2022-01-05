@@ -85,4 +85,3 @@ bgt	$3fc
 ; CHECK:      ble  $3fc
 ; CHECK-SAME: encoding: [0x6f,0x00,0x03,0xfc]
 ble	$3fc
-

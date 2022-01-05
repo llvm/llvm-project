@@ -14,6 +14,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/SetVector.h"
@@ -382,21 +383,22 @@ public:
 
   /// Replace an op with replacement values. The op is deleted. Tensor OpResults
   /// must be replaced with memref values.
-  void replaceOp(Operation *op, ValueRange values);
+  void replaceOp(RewriterBase &rewriter, Operation *op, ValueRange values);
 
   /// Replace an op with a new op. Tensor OpResults must be replaced with memref
   /// values.
   template <typename OpTy, typename... Args>
-  OpTy replaceOpWithNewOp(OpBuilder &b, Operation *op, Args &&...args) {
+  OpTy replaceOpWithNewOp(RewriterBase &rewriter, Operation *op,
+                          Args &&...args) {
     Operation *newOp =
-        b.create<OpTy>(op->getLoc(), std::forward<Args>(args)...);
-    replaceOp(op, newOp->getResults());
+        rewriter.create<OpTy>(op->getLoc(), std::forward<Args>(args)...);
+    replaceOp(rewriter, op, newOp->getResults());
     return cast<OpTy>(newOp);
   }
 
   /// Lookup the memref buffer that is associated to the given tensor value.
   /// Asserts if no buffer is associated.
-  Value lookupBuffer(Value tensor);
+  Value lookupBuffer(RewriterBase &rewriter, Value tensor);
 
   /// Return `true` if the given OpResult has been decided to bufferize inplace.
   bool isInPlace(OpResult opResult) const;
@@ -404,7 +406,7 @@ public:
   /// Return the result buffer (memref) for a given OpResult (tensor). Allocate
   /// a new buffer and copy over data from the existing buffer if out-of-place
   /// bufferization is necessary.
-  Value getResultBuffer(OpResult result);
+  Value getResultBuffer(RewriterBase &rewriter, OpResult result);
 
   /// Return dialect-specific bufferization state.
   template <typename StateT> StateT &getDialectState(StringRef name) {
@@ -417,18 +419,14 @@ public:
   /// Return a reference to the BufferizationOptions.
   const BufferizationOptions &getOptions() const { return options; }
 
-  /// Return a reference to the OpBuilder.
-  OpBuilder &getBuilder() { return builder; }
-
 private:
   friend LogicalResult
   runComprehensiveBufferize(Operation *op, const BufferizationOptions &options,
-                            BufferizationState &state,
-                            const PostAnalysisStepList &extraSteps);
+                            BufferizationState &state);
 
   friend LogicalResult
   runComprehensiveBufferize(ModuleOp moduleOp,
-                            const BufferizationOptions &options);
+                            std::unique_ptr<BufferizationOptions> options);
 
   /// `aliasInfo` keeps track of aliasing and equivalent values. Only internal
   /// functions and `runComprehensiveBufferize` may access this object.
@@ -439,21 +437,21 @@ private:
 
   /// A reference to current bufferization options.
   const BufferizationOptions &options;
-
-  /// The OpBuilder used during bufferization.
-  OpBuilder builder;
 };
 
 /// Bufferize all ops in the given region.
-LogicalResult bufferize(Region *region, BufferizationState &state);
+LogicalResult bufferize(RewriterBase &rewriter, Region *region,
+                        BufferizationState &state);
 
 /// Bufferize all ops in the given block.
-LogicalResult bufferize(Block *block, BufferizationState &state);
+LogicalResult bufferize(RewriterBase &rewriter, Block *block,
+                        BufferizationState &state);
 
 /// Bufferize the given op. If the op has no tensor OpOperands/OpResults, this
 /// function returns immediately. Otherwise, it calls the `bufferize` interface
 /// method of `BufferizableOpInterface`.
-LogicalResult bufferize(Operation *op, BufferizationState &state);
+LogicalResult bufferize(RewriterBase &rewriter, Operation *op,
+                        BufferizationState &state);
 
 /// Return a contiguous MemRefType (i.e. with canonical/empty layout map)
 /// with the same shape as `shapedType` and specified `layout` and
@@ -524,7 +522,7 @@ struct AllocationHoistingBarrierOnly
     return false;
   }
 
-  LogicalResult bufferize(Operation *op, OpBuilder &b,
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           BufferizationState &state) const {
     auto isaTensor = [](Type t) { return t.isa<TensorType>(); };
     if (any_of(op->getOperandTypes(), isaTensor) ||
@@ -533,7 +531,7 @@ struct AllocationHoistingBarrierOnly
         return op->emitError() << "unsupported op with tensors";
 
     for (Region &region : op->getRegions())
-      if (failed(comprehensive_bufferize::bufferize(&region, state)))
+      if (failed(comprehensive_bufferize::bufferize(rewriter, &region, state)))
         return failure();
 
     return success();
