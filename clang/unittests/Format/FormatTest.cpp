@@ -16427,6 +16427,11 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                "  double        bar();\n"
                "};\n",
                Alignment);
+  // http://llvm.org/PR52914
+  verifyFormat("char *a[]     = {\"a\", // comment\n"
+               "                 \"bb\"};\n"
+               "int   bbbbbbb = 0;",
+               Alignment);
 
   // PAS_Right
   EXPECT_EQ("void SomeFunction(int parameter = 0) {\n"
