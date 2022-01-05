@@ -1080,7 +1080,6 @@ void BitcodeFile::parse() {
 }
 
 void BitcodeFile::parseLazy() {
-  std::unique_ptr<lto::InputFile> obj = CHECK(lto::InputFile::create(mb), this);
   for (const lto::InputFile::Symbol &sym : obj->symbols())
     if (!sym.isUndefined())
       ctx.symtab.addLazyObject(this, sym.getName());
