@@ -6,4 +6,3 @@ btst	%d1, %d0
 ; CHECK:      btst  %d0, %d3
 ; CHECK-SAME: encoding: [0x01,0x03]
 btst	%d0, %d3
-

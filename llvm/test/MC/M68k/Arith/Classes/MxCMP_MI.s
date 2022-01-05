@@ -64,4 +64,3 @@ cmpi.l	#-1, (%a6)
 ; CHECK:      cmpi.l  #42, (%a1)
 ; CHECK-SAME: encoding: [0x0c,0x91,0x00,0x00,0x00,0x2a]
 cmpi.l	#42, (%a1)
-

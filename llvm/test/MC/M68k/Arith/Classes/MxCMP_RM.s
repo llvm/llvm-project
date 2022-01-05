@@ -43,4 +43,3 @@ cmp.b	(%a0), %d0
 ; CHECK:      cmp.l  (%a1), %d3
 ; CHECK-SAME: encoding: [0xb6,0x91]
 cmp.l	(%a1), %d3
-

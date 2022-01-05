@@ -18,4 +18,3 @@ add.l	%a1, %d7
 ; CHECK:      adda.l  %d1, %a0
 ; CHECK-SAME: encoding: [0xd1,0xc1]
 adda.l	%d1, %a0
-

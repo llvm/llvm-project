@@ -12,4 +12,3 @@ addx.l	%d1, %d0
 ; CHECK:      addx.l  %d1, %d7
 ; CHECK-SAME: encoding: [0xdf,0x81]
 addx.l	%d1, %d7
-

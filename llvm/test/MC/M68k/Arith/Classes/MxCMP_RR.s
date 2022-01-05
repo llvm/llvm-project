@@ -12,4 +12,3 @@ cmp.l	%d0, %d1
 ; CHECK:      cmp.l  %d7, %d1
 ; CHECK-SAME: encoding: [0xb2,0x87]
 cmp.l	%d7, %d1
-

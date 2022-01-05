@@ -12,4 +12,3 @@ cmpi.l	#13, %d7
 ; CHECK:      cmpi.l  #42, %d1
 ; CHECK-SAME: encoding: [0x0c,0x81,0x00,0x00,0x00,0x2a]
 cmpi.l	#42, %d1
-

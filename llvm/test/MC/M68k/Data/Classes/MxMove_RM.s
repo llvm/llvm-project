@@ -87,4 +87,3 @@ move.l	$0, %d3
 ; CHECK:      move.l  $0, %a4
 ; CHECK-SAME: encoding: [0x28,0x79,0x00,0x00,0x00,0x00]
 move.l	$0, %a4
-

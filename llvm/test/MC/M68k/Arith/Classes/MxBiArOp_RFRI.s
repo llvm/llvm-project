@@ -15,4 +15,3 @@ eori.l	#131071, %d0
 ; CHECK:      eori.l  #458752, %d7
 ; CHECK-SAME: encoding: [0x0a,0x87,0x00,0x07,0x00,0x00]
 eori.l	#458752, %d7
-

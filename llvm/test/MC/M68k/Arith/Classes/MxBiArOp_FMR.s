@@ -26,4 +26,3 @@ add.b	%d0, (%a0)
 ; CHECK:      add.l  %d3, (%a1)
 ; CHECK-SAME: encoding: [0xd7,0x91]
 add.l	%d3, (%a1)
-
