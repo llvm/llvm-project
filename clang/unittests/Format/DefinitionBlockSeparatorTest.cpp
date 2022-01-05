@@ -57,8 +57,9 @@ protected:
       InverseStyle.SeparateDefinitionBlocks = FormatStyle::SDS_Always;
     EXPECT_EQ(ExpectedCode.str(), separateDefinitionBlocks(ExpectedCode, Style))
         << "Expected code is not stable";
-    std::string InverseResult = separateDefinitionBlocks(Code, InverseStyle);
-    EXPECT_NE(Code.str(), InverseResult)
+    std::string InverseResult =
+        separateDefinitionBlocks(ExpectedCode, InverseStyle);
+    EXPECT_NE(ExpectedCode.str(), InverseResult)
         << "Inverse formatting makes no difference";
     std::string CodeToFormat =
         HasOriginalCode ? Code.str() : removeEmptyLines(Code);
@@ -129,49 +130,166 @@ TEST_F(DefinitionBlockSeparatorTest, Basic) {
                Style);
 }
 
+TEST_F(DefinitionBlockSeparatorTest, UntouchBlockStartStyle) {
+  // Returns a std::pair of two strings, with the first one for passing into
+  // Always test and the second one be the expected result of the first string.
+  auto MakeUntouchTest = [&](std::string BlockHeader, std::string BlockChanger,
+                             std::string BlockFooter, bool BlockEndNewLine) {
+    std::string CodePart1 = "enum Foo { FOO, BAR };\n"
+                            "\n"
+                            "/*\n"
+                            "test1\n"
+                            "test2\n"
+                            "*/\n"
+                            "int foo(int i, int j) {\n"
+                            "  int r = i + j;\n"
+                            "  return r;\n"
+                            "}\n";
+    std::string CodePart2 = "/* Comment block in one line*/\n"
+                            "enum Bar { FOOBAR, BARFOO };\n"
+                            "\n"
+                            "int bar3(int j, int k) {\n"
+                            "  // A comment\n"
+                            "  int r = j % k;\n"
+                            "  return r;\n"
+                            "}\n";
+    std::string CodePart3 = "int bar2(int j, int k) {\n"
+                            "  int r = j / k;\n"
+                            "  return r;\n"
+                            "}\n";
+    std::string ConcatAll = BlockHeader + CodePart1 + BlockChanger + CodePart2 +
+                            BlockFooter + (BlockEndNewLine ? "\n" : "") +
+                            CodePart3;
+    return std::make_pair(BlockHeader + removeEmptyLines(CodePart1) +
+                              BlockChanger + removeEmptyLines(CodePart2) +
+                              BlockFooter + removeEmptyLines(CodePart3),
+                          ConcatAll);
+  };
+
+  FormatStyle AlwaysStyle = getLLVMStyle();
+  AlwaysStyle.SeparateDefinitionBlocks = FormatStyle::SDS_Always;
+
+  FormatStyle NeverStyle = getLLVMStyle();
+  NeverStyle.SeparateDefinitionBlocks = FormatStyle::SDS_Never;
+
+  auto TestKit = MakeUntouchTest("#ifdef FOO\n\n", "\n#elifndef BAR\n\n",
+                                 "\n#endif\n\n", false);
+  verifyFormat(TestKit.first, AlwaysStyle, TestKit.second);
+  verifyFormat(TestKit.second, NeverStyle, removeEmptyLines(TestKit.second));
+
+  TestKit =
+      MakeUntouchTest("#ifdef FOO\n", "#elifndef BAR\n", "#endif\n", false);
+  verifyFormat(TestKit.first, AlwaysStyle, TestKit.second);
+  verifyFormat(TestKit.second, NeverStyle, removeEmptyLines(TestKit.second));
+
+  TestKit = MakeUntouchTest("namespace Ns {\n\n",
+                            "\n} // namespace Ns\n\n"
+                            "namespace {\n\n",
+                            "\n} // namespace\n", true);
+  verifyFormat(TestKit.first, AlwaysStyle, TestKit.second);
+  verifyFormat(TestKit.second, NeverStyle, removeEmptyLines(TestKit.second));
+
+  TestKit = MakeUntouchTest("namespace Ns {\n",
+                            "} // namespace Ns\n\n"
+                            "namespace {\n",
+                            "} // namespace\n", true);
+  verifyFormat(TestKit.first, AlwaysStyle, TestKit.second);
+  verifyFormat(TestKit.second, NeverStyle, removeEmptyLines(TestKit.second));
+}
+
 TEST_F(DefinitionBlockSeparatorTest, Always) {
   FormatStyle Style = getLLVMStyle();
   Style.SeparateDefinitionBlocks = FormatStyle::SDS_Always;
   std::string Prefix = "namespace {\n";
-  std::string Postfix = "enum Foo { FOO, BAR };\n"
+  std::string Infix = "\n"
+                      "// Enum test1\n"
+                      "// Enum test2\n"
+                      "enum Foo { FOO, BAR };\n"
+                      "\n"
+                      "/*\n"
+                      "test1\n"
+                      "test2\n"
+                      "*/\n"
+                      "int foo(int i, int j) {\n"
+                      "  int r = i + j;\n"
+                      "  return r;\n"
+                      "}\n"
+                      "\n"
+                      "// Foobar\n"
+                      "int i, j, k;\n"
+                      "\n"
+                      "// Comment for function\n"
+                      "// Comment line 2\n"
+                      "// Comment line 3\n"
+                      "int bar(int j, int k) {\n"
+                      "  int r = j * k;\n"
+                      "  return r;\n"
+                      "}\n"
+                      "\n"
+                      "int bar2(int j, int k) {\n"
+                      "  int r = j / k;\n"
+                      "  return r;\n"
+                      "}\n"
+                      "\n"
+                      "/* Comment block in one line*/\n"
+                      "enum Bar { FOOBAR, BARFOO };\n"
+                      "\n"
+                      "int bar3(int j, int k) {\n"
+                      "  // A comment\n"
+                      "  int r = j % k;\n"
+                      "  return r;\n"
+                      "}\n";
+  std::string Postfix = "\n"
+                        "} // namespace\n"
                         "\n"
-                        "int foo(int i, int j) {\n"
-                        "  int r = i + j;\n"
-                        "  return r;\n"
-                        "}\n"
-                        "\n"
+                        "namespace T {\n"
                         "int i, j, k;\n"
-                        "\n"
-                        "int bar(int j, int k) {\n"
-                        "  int r = j * k;\n"
-                        "  return r;\n"
-                        "}\n"
-                        "\n"
-                        "enum Bar { FOOBAR, BARFOO };\n"
-                        "} // namespace";
-  verifyFormat(Prefix + "\n\n\n" + removeEmptyLines(Postfix), Style,
-               Prefix + Postfix);
+                        "} // namespace T";
+  verifyFormat(Prefix + removeEmptyLines(Infix) + removeEmptyLines(Postfix),
+               Style, Prefix + Infix + Postfix);
 }
 
 TEST_F(DefinitionBlockSeparatorTest, Never) {
   FormatStyle Style = getLLVMStyle();
   Style.SeparateDefinitionBlocks = FormatStyle::SDS_Never;
   std::string Prefix = "namespace {\n";
-  std::string Postfix = "enum Foo { FOO, BAR };\n"
+  std::string Postfix = "// Enum test1\n"
+                        "// Enum test2\n"
+                        "enum Foo { FOO, BAR };\n"
                         "\n"
+                        "/*\n"
+                        "test1\n"
+                        "test2\n"
+                        "*/\n"
                         "int foo(int i, int j) {\n"
                         "  int r = i + j;\n"
                         "  return r;\n"
                         "}\n"
                         "\n"
+                        "// Foobar\n"
                         "int i, j, k;\n"
                         "\n"
+                        "// Comment for function\n"
+                        "// Comment line 2\n"
+                        "// Comment line 3\n"
                         "int bar(int j, int k) {\n"
                         "  int r = j * k;\n"
                         "  return r;\n"
                         "}\n"
                         "\n"
+                        "int bar2(int j, int k) {\n"
+                        "  int r = j / k;\n"
+                        "  return r;\n"
+                        "}\n"
+                        "\n"
+                        "/* Comment block in one line*/\n"
                         "enum Bar { FOOBAR, BARFOO };\n"
+                        "\n"
+                        "int bar3(int j, int k) {\n"
+                        "  // A comment\n"
+                        "  int r = j % k;\n"
+                        "  return r;\n"
+                        "}\n"
                         "} // namespace";
   verifyFormat(Prefix + "\n\n\n" + Postfix, Style,
                Prefix + removeEmptyLines(Postfix));
@@ -181,23 +299,41 @@ TEST_F(DefinitionBlockSeparatorTest, OpeningBracketOwnsLine) {
   FormatStyle Style = getLLVMStyle();
   Style.BreakBeforeBraces = FormatStyle::BS_Allman;
   Style.SeparateDefinitionBlocks = FormatStyle::SDS_Always;
-  verifyFormat("enum Foo\n"
+  verifyFormat("namespace NS\n"
+               "{\n"
+               "// Enum test1\n"
+               "// Enum test2\n"
+               "enum Foo\n"
                "{\n"
                "  FOO,\n"
                "  BAR\n"
                "};\n"
                "\n"
+               "/*\n"
+               "test1\n"
+               "test2\n"
+               "*/\n"
                "int foo(int i, int j)\n"
                "{\n"
                "  int r = i + j;\n"
                "  return r;\n"
                "}\n"
                "\n"
+               "// Foobar\n"
                "int i, j, k;\n"
                "\n"
+               "// Comment for function\n"
+               "// Comment line 2\n"
+               "// Comment line 3\n"
                "int bar(int j, int k)\n"
                "{\n"
                "  int r = j * k;\n"
+               "  return r;\n"
+               "}\n"
+               "\n"
+               "int bar2(int j, int k)\n"
+               "{\n"
+               "  int r = j / k;\n"
                "  return r;\n"
                "}\n"
                "\n"
@@ -205,7 +341,15 @@ TEST_F(DefinitionBlockSeparatorTest, OpeningBracketOwnsLine) {
                "{\n"
                "  FOOBAR,\n"
                "  BARFOO\n"
-               "};",
+               "};\n"
+               "\n"
+               "int bar3(int j, int k)\n"
+               "{\n"
+               "  // A comment\n"
+               "  int r = j % k;\n"
+               "  return r;\n"
+               "}\n"
+               "} // namespace NS",
                Style);
 }
 
@@ -215,21 +359,42 @@ TEST_F(DefinitionBlockSeparatorTest, Leave) {
   Style.MaxEmptyLinesToKeep = 3;
   std::string LeaveAs = "namespace {\n"
                         "\n"
+                        "// Enum test1\n"
+                        "// Enum test2\n"
                         "enum Foo { FOO, BAR };\n"
                         "\n\n\n"
+                        "/*\n"
+                        "test1\n"
+                        "test2\n"
+                        "*/\n"
                         "int foo(int i, int j) {\n"
                         "  int r = i + j;\n"
                         "  return r;\n"
                         "}\n"
                         "\n"
+                        "// Foobar\n"
                         "int i, j, k;\n"
                         "\n"
+                        "// Comment for function\n"
+                        "// Comment line 2\n"
+                        "// Comment line 3\n"
                         "int bar(int j, int k) {\n"
                         "  int r = j * k;\n"
                         "  return r;\n"
                         "}\n"
                         "\n"
+                        "int bar2(int j, int k) {\n"
+                        "  int r = j / k;\n"
+                        "  return r;\n"
+                        "}\n"
+                        "\n"
+                        "// Comment for inline enum\n"
                         "enum Bar { FOOBAR, BARFOO };\n"
+                        "int bar3(int j, int k) {\n"
+                        "  // A comment\n"
+                        "  int r = j % k;\n"
+                        "  return r;\n"
+                        "}\n"
                         "} // namespace";
   verifyFormat(LeaveAs, Style, LeaveAs);
 }
@@ -251,6 +416,7 @@ TEST_F(DefinitionBlockSeparatorTest, CSharp) {
                "internal static String toString() {\r\n"
                "}\r\n"
                "\r\n"
+               "// Comment for enum\r\n"
                "public enum var {\r\n"
                "  none,\r\n"
                "  @string,\r\n"
@@ -258,6 +424,7 @@ TEST_F(DefinitionBlockSeparatorTest, CSharp) {
                "  @enum\r\n"
                "}\r\n"
                "\r\n"
+               "// Test\r\n"
                "[STAThread]\r\n"
                "static void Main(string[] args) {\r\n"
                "  Console.WriteLine(\"HelloWorld\");\r\n"
