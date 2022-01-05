@@ -5,7 +5,6 @@
 from typing import Dict, List, Sequence, Tuple, Union
 
 from .....ir import *
-from ....._mlir_libs._mlir.dialects.linalg import fill_builtin_region
 
 from .... import linalg
 from .... import std
@@ -173,7 +172,7 @@ def emit_named_structured_op(op_config: LinalgStructuredOpConfig, op_name: str,
         f"Unknown named op_name / op_class_name: {op_name} / {op_class_name}")
 
   named_op = getattr(linalg, op_class_name)(ins, outs, result_types)
-  fill_builtin_region(named_op.operation)
+  linalg.fill_builtin_region(named_op.operation)
   # Note: mlir-linalg-ods-yaml-gen.cpp uses a special linalg.memoized_indexing_maps
   # attribute that the non-yaml path does not. The non-yaml path hardcodes the
   # indexing_maps in C++ directly.

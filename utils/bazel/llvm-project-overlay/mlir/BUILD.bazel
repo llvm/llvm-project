@@ -647,10 +647,18 @@ cc_library(
     ],
 )
 
+# These flags are needed for pybind11 to work.
+PYBIND11_COPTS = [
+    "-fexceptions",
+    "-frtti",
+]
+
+PYBIND11_FEATURES = [
+    # Cannot use header_modules (parse_headers feature fails).
+    "-use_header_modules",
+]
+
 MLIR_PYTHON_BINDINGS_SOURCES = [
-    "lib/Bindings/Python/DialectLinalg.cpp",
-    "lib/Bindings/Python/DialectSparseTensor.cpp",
-    "lib/Bindings/Python/DialectQuant.cpp",
     "lib/Bindings/Python/IRAffine.cpp",
     "lib/Bindings/Python/IRAttributes.cpp",
     "lib/Bindings/Python/IRCore.cpp",
@@ -664,15 +672,8 @@ MLIR_PYTHON_BINDINGS_SOURCES = [
 cc_library(
     name = "MLIRBindingsPythonCore",
     srcs = MLIR_PYTHON_BINDINGS_SOURCES,
-    # These flags are needed for pybind11 to work.
-    copts = [
-        "-fexceptions",
-        "-frtti",
-    ],
-    features = [
-        # Cannot use header_modules (parse_headers feature fails).
-        "-use_header_modules",
-    ],
+    copts = PYBIND11_COPTS,
+    features = PYBIND11_FEATURES,
     tags = [
         "manual",  # External dependency
         "nobuildkite",  # TODO(gcmn): Add support for this target
@@ -683,10 +684,7 @@ cc_library(
         ":CAPIGPU",
         ":CAPIIR",
         ":CAPIInterfaces",
-        ":CAPILinalg",
-        ":CAPIQuant",
         ":CAPIRegistration",
-        ":CAPISparseTensor",
         ":MLIRBindingsPythonHeadersAndDeps",
         "//llvm:Support",
         "@pybind11",
@@ -697,15 +695,8 @@ cc_library(
 cc_library(
     name = "MLIRBindingsPythonCoreNoCAPI",
     srcs = MLIR_PYTHON_BINDINGS_SOURCES,
-    # These flags are needed for pybind11 to work.
-    copts = [
-        "-fexceptions",
-        "-frtti",
-    ],
-    features = [
-        # Cannot use header_modules (parse_headers feature fails).
-        "-use_header_modules",
-    ],
+    copts = PYBIND11_COPTS,
+    features = PYBIND11_FEATURES,
     tags = [
         "manual",  # External dependency
         "nobuildkite",  # TODO(gcmn): Add support for this target
@@ -715,10 +706,7 @@ cc_library(
         ":CAPIDebugHeaders",
         ":CAPIGPUHeaders",
         ":CAPIIRHeaders",
-        ":CAPILinalgHeaders",
-        ":CAPIQuantHeaders",
         ":CAPIRegistrationHeaders",
-        ":CAPISparseTensorHeaders",
         ":MLIRBindingsPythonHeaders",
         "//llvm:Support",
         "@pybind11",
@@ -740,22 +728,9 @@ cc_library(
         ":CAPIGPUObjects",
         ":CAPIIRObjects",
         ":CAPIInterfacesObjects",
-        ":CAPILinalgObjects",
-        ":CAPIQuantObjects",
         ":CAPIRegistrationObjects",
-        ":CAPISparseTensorObjects",
     ],
 )
-
-PYBIND11_COPTS = [
-    "-fexceptions",
-    "-frtti",
-]
-
-PYBIND11_FEATURES = [
-    # Cannot use header_modules (parse_headers feature fails).
-    "-use_header_modules",
-]
 
 # Dynamic library with the MLIR Python extension.
 cc_binary(
@@ -772,6 +747,63 @@ cc_binary(
     ],
     deps = [
         ":MLIRBindingsPythonCore",
+        ":MLIRBindingsPythonHeadersAndDeps",
+    ],
+)
+
+cc_binary(
+    name = "_mlirDialectsLinalg.so",
+    srcs = ["lib/Bindings/Python/DialectLinalg.cpp"],
+    copts = PYBIND11_COPTS,
+    features = PYBIND11_FEATURES,
+    linkshared = 1,
+    linkstatic = 0,
+    tags = [
+        "manual",  # External dependency
+        "nobuildkite",  # TODO(gcmn): Add support for this target
+    ],
+    deps = [
+        ":CAPIIR",
+        ":CAPILinalg",
+        ":CAPIRegistration",
+        ":MLIRBindingsPythonHeadersAndDeps",
+    ],
+)
+
+cc_binary(
+    name = "_mlirDialectsQuant.so",
+    srcs = ["lib/Bindings/Python/DialectQuant.cpp"],
+    copts = PYBIND11_COPTS,
+    features = PYBIND11_FEATURES,
+    linkshared = 1,
+    linkstatic = 0,
+    tags = [
+        "manual",  # External dependency
+        "nobuildkite",  # TODO(gcmn): Add support for this target
+    ],
+    deps = [
+        ":CAPIIR",
+        ":CAPIQuant",
+        ":CAPIRegistration",
+        ":MLIRBindingsPythonHeadersAndDeps",
+    ],
+)
+
+cc_binary(
+    name = "_mlirDialectsSparseTensor.so",
+    srcs = ["lib/Bindings/Python/DialectSparseTensor.cpp"],
+    copts = PYBIND11_COPTS,
+    features = PYBIND11_FEATURES,
+    linkshared = 1,
+    linkstatic = 0,
+    tags = [
+        "manual",  # External dependency
+        "nobuildkite",  # TODO(gcmn): Add support for this target
+    ],
+    deps = [
+        ":CAPIIR",
+        ":CAPISparseTensor",
+        ":CAPIRegistration",
         ":MLIRBindingsPythonHeadersAndDeps",
     ],
 )
