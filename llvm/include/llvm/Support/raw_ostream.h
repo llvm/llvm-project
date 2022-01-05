@@ -444,6 +444,7 @@ class raw_fd_ostream : public raw_pwrite_stream {
   int FD;
   bool ShouldClose;
   bool SupportsSeeking = false;
+  bool IsRegularFile = false;
   mutable Optional<bool> HasColors;
 
 #ifdef _WIN32
@@ -513,6 +514,8 @@ public:
   void close();
 
   bool supportsSeeking() const { return SupportsSeeking; }
+
+  bool isRegularFile() const { return IsRegularFile; }
 
   /// Flushes the stream and repositions the underlying file descriptor position
   /// to the offset specified from the beginning of the file.
