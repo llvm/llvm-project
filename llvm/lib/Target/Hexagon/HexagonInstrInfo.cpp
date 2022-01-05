@@ -2799,6 +2799,11 @@ bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
   case Hexagon::S4_storeirit_io:
   case Hexagon::S4_storeirif_io:
     return isShiftedUInt<6,2>(Offset);
+  // Handle these two compare instructions that are not extendable.
+  case Hexagon::A4_cmpbeqi:
+    return isUInt<8>(Offset);
+  case Hexagon::A4_cmpbgti:
+    return isInt<8>(Offset);
   }
 
   if (Extend)
