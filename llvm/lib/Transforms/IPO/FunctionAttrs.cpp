@@ -133,7 +133,7 @@ static MemoryAccessKind checkFunctionMemoryAccess(Function &F, bool ThisBody,
     if (AliasAnalysis::onlyReadsMemory(MRB))
       return MAK_ReadOnly;
 
-    if (AliasAnalysis::doesNotReadMemory(MRB))
+    if (AliasAnalysis::onlyWritesMemory(MRB))
       return MAK_WriteOnly;
 
     // Conservatively assume it reads and writes to memory.
@@ -295,7 +295,7 @@ static void addReadAttrs(const SCCNodeSet &SCCNodes, AARGetterT &&AARGetter,
       // No change.
       continue;
 
-    if (F->doesNotReadMemory() && WritesMemory)
+    if (F->onlyWritesMemory() && WritesMemory)
       continue;
 
     Changed.insert(F);

@@ -1076,7 +1076,7 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
     for (Instruction &I : BB->instructionsWithoutDebug())
       if (CallInst *CI = dyn_cast<CallInst>(&I)) {
         // readnone functions do not prevent interchanging.
-        if (CI->doesNotReadMemory())
+        if (CI->onlyWritesMemory())
           continue;
         LLVM_DEBUG(
             dbgs() << "Loops with call instructions cannot be interchanged "

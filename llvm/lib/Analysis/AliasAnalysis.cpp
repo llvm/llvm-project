@@ -242,7 +242,7 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call,
 
   if (onlyReadsMemory(MRB))
     Result = clearMod(Result);
-  else if (doesNotReadMemory(MRB))
+  else if (onlyWritesMemory(MRB))
     Result = clearRef(Result);
 
   if (onlyAccessesArgPointees(MRB) || onlyAccessesInaccessibleOrArgMem(MRB)) {
@@ -320,7 +320,7 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call1,
   // from Call1 reading memory written by Call2.
   if (onlyReadsMemory(Call1B))
     Result = clearMod(Result);
-  else if (doesNotReadMemory(Call1B))
+  else if (onlyWritesMemory(Call1B))
     Result = clearRef(Result);
 
   // If Call2 only access memory through arguments, accumulate the mod/ref
