@@ -159,13 +159,17 @@ llvm::DenseSet<const NamedDecl *> locateDeclAt(ParsedAST &AST,
   return Result;
 }
 
-// By default, we exclude C++ standard symbols and protobuf symbols as rename
-// these symbols would change system/generated files which are unlikely to be
-// modified.
+// By default, we exclude symbols from system headers and protobuf symbols as
+// renaming these symbols would change system/generated files which are unlikely
+// to be good candidates for modification.
 bool isExcluded(const NamedDecl &RenameDecl) {
-  if (isProtoFile(RenameDecl.getLocation(),
-                  RenameDecl.getASTContext().getSourceManager()))
+  const auto &SM = RenameDecl.getASTContext().getSourceManager();
+  if (SM.isInSystemHeader(RenameDecl.getLocation()))
     return true;
+  if (isProtoFile(RenameDecl.getLocation(), SM))
+    return true;
+  // FIXME: Remove this std symbol list, as they should be covered by the
+  // above isInSystemHeader check.
   static const auto *StdSymbols = new llvm::DenseSet<llvm::StringRef>({
 #define SYMBOL(Name, NameSpace, Header) {#NameSpace #Name},
 #include "StdSymbolMap.inc"
