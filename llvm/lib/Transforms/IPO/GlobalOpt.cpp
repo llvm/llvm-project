@@ -303,11 +303,11 @@ static bool CleanupConstantGlobalUsers(GlobalVariable *GV,
     else if (auto *GEP = dyn_cast<GEPOperator>(U))
       append_range(WorkList, GEP->users());
     else if (auto *LI = dyn_cast<LoadInst>(U)) {
-      // A load from zeroinitializer is always zeroinitializer, regardless of
-      // any applied offset.
+      // A load from a uniform value is always the same, regardless of any
+      // applied offset.
       Type *Ty = LI->getType();
-      if (Init->isNullValue() && !Ty->isX86_MMXTy() && !Ty->isX86_AMXTy()) {
-        LI->replaceAllUsesWith(Constant::getNullValue(Ty));
+      if (Constant *Res = ConstantFoldLoadFromUniformValue(Init, Ty)) {
+        LI->replaceAllUsesWith(Res);
         EraseFromParent(LI);
         continue;
       }

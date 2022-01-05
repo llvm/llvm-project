@@ -704,15 +704,13 @@ Constant *llvm::ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,
                                                        Offset, DL))
         return Result;
 
-  // If this load comes from anywhere in a constant global, and if the global
-  // is all undef or zero, we know what it loads.
+  // If this load comes from anywhere in a uniform constant global, the value
+  // is always the same, regardless of the loaded offset.
   if (auto *GV = dyn_cast<GlobalVariable>(getUnderlyingObject(C))) {
     if (GV->isConstant() && GV->hasDefinitiveInitializer()) {
-      if (GV->getInitializer()->isNullValue() && !Ty->isX86_MMXTy() &&
-          !Ty->isX86_AMXTy())
-        return Constant::getNullValue(Ty);
-      if (isa<UndefValue>(GV->getInitializer()))
-        return UndefValue::get(Ty);
+      if (Constant *Res =
+              ConstantFoldLoadFromUniformValue(GV->getInitializer(), Ty))
+        return Res;
     }
   }
 
@@ -723,6 +721,19 @@ Constant *llvm::ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,
                                              const DataLayout &DL) {
   APInt Offset(DL.getIndexTypeSizeInBits(C->getType()), 0);
   return ConstantFoldLoadFromConstPtr(C, Ty, Offset, DL);
+}
+
+Constant *llvm::ConstantFoldLoadFromUniformValue(Constant *C, Type *Ty) {
+  if (isa<PoisonValue>(C))
+    return PoisonValue::get(Ty);
+  if (isa<UndefValue>(C))
+    return UndefValue::get(Ty);
+  if (C->isNullValue() && !Ty->isX86_MMXTy() && !Ty->isX86_AMXTy())
+    return Constant::getNullValue(Ty);
+  if (C->isAllOnesValue() &&
+      (Ty->isIntOrIntVectorTy() || Ty->isFPOrFPVectorTy()))
+    return Constant::getAllOnesValue(Ty);
+  return nullptr;
 }
 
 namespace {
