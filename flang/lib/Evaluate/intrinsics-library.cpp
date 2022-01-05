@@ -202,13 +202,12 @@ template <typename HostT, LibraryVersion> struct HostRuntimeLibrary {
 using HostRuntimeMap = common::StaticMultimapView<HostRuntimeFunction>;
 
 // Map numerical intrinsic to  <cmath>/<complex> functions
+// (Note: ABS() is folded in fold-real.cpp.)
 template <typename HostT>
 struct HostRuntimeLibrary<HostT, LibraryVersion::Libm> {
   using F = FuncPointer<HostT, HostT>;
   using F2 = FuncPointer<HostT, HostT, HostT>;
-  using ComplexToRealF = FuncPointer<HostT, const std::complex<HostT> &>;
   static constexpr HostRuntimeFunction table[]{
-      FolderFactory<ComplexToRealF, ComplexToRealF{std::abs}>::Create("abs"),
       FolderFactory<F, F{std::acos}>::Create("acos"),
       FolderFactory<F, F{std::acosh}>::Create("acosh"),
       FolderFactory<F, F{std::asin}>::Create("asin"),

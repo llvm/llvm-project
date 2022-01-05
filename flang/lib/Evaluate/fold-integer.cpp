@@ -413,7 +413,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
   auto *intrinsic{std::get_if<SpecificIntrinsic>(&funcRef.proc().u)};
   CHECK(intrinsic);
   std::string name{intrinsic->name};
-  if (name == "abs") {
+  if (name == "abs") { // incl. babs, iiabs, jiaabs, & kiabs
     return FoldElementalIntrinsic<T, T>(context, std::move(funcRef),
         ScalarFunc<T, T>([&context](const Scalar<T> &i) -> Scalar<T> {
           typename Scalar<T>::ValueWithOverflow j{i.ABS()};

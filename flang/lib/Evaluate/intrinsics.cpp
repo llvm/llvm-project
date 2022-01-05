@@ -87,11 +87,13 @@ ENUM_CLASS(KindCode, none, defaultIntegerKind,
     size, // default KIND= for SIZE(), UBOUND, &c.
     addressable, // for PRESENT(), &c.; anything (incl. procedure) but BOZ
     nullPointerType, // for ASSOCIATED(NULL())
+    exactKind, // a single explicit exactKindValue
 )
 
 struct TypePattern {
   CategorySet categorySet;
   KindCode kindCode{KindCode::none};
+  int exactKindValue{0}; // for KindCode::exactBind
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 };
 
@@ -914,6 +916,9 @@ static const SpecificIntrinsicInterface specificIntrinsicFunction[]{
     {{"asin", {{"x", DefaultReal}}, DefaultReal}},
     {{"atan", {{"x", DefaultReal}}, DefaultReal}},
     {{"atan2", {{"y", DefaultReal}, {"x", DefaultReal}}, DefaultReal}},
+    {{"babs", {{"a", TypePattern{IntType, KindCode::exactKind, 1}}},
+         TypePattern{IntType, KindCode::exactKind, 1}},
+        "abs"},
     {{"cabs", {{"a", DefaultComplex}}, DefaultReal}, "abs"},
     {{"ccos", {{"a", DefaultComplex}}, DefaultComplex}, "cos"},
     {{"cdabs", {{"a", DoublePrecisionComplex}}, DoublePrecision}, "abs"},
@@ -988,9 +993,18 @@ static const SpecificIntrinsicInterface specificIntrinsicFunction[]{
     {{"idint", {{"a", AnyReal}}, DefaultInt}, "int", true},
     {{"idnint", {{"a", DoublePrecision}}, DefaultInt}, "nint"},
     {{"ifix", {{"a", AnyReal}}, DefaultInt}, "int", true},
+    {{"iiabs", {{"a", TypePattern{IntType, KindCode::exactKind, 2}}},
+         TypePattern{IntType, KindCode::exactKind, 2}},
+        "abs"},
     {{"index", {{"string", DefaultChar}, {"substring", DefaultChar}},
         DefaultInt}},
     {{"isign", {{"a", DefaultInt}, {"b", DefaultInt}}, DefaultInt}, "sign"},
+    {{"jiabs", {{"a", TypePattern{IntType, KindCode::exactKind, 4}}},
+         TypePattern{IntType, KindCode::exactKind, 4}},
+        "abs"},
+    {{"kiabs", {{"a", TypePattern{IntType, KindCode::exactKind, 8}}},
+         TypePattern{IntType, KindCode::exactKind, 8}},
+        "abs"},
     {{"len", {{"string", DefaultChar, Rank::anyOrAssumedRank}}, DefaultInt,
         Rank::scalar}},
     {{"lge", {{"string_a", DefaultChar}, {"string_b", DefaultChar}},
@@ -1036,6 +1050,9 @@ static const SpecificIntrinsicInterface specificIntrinsicFunction[]{
     {{"sqrt", {{"x", DefaultReal}}, DefaultReal}},
     {{"tan", {{"x", DefaultReal}}, DefaultReal}},
     {{"tanh", {{"x", DefaultReal}}, DefaultReal}},
+    {{"zabs", {{"a", TypePattern{ComplexType, KindCode::exactKind, 8}}},
+         TypePattern{RealType, KindCode::exactKind, 8}},
+        "abs"},
 };
 
 static const IntrinsicInterface intrinsicSubroutine[]{
@@ -1424,6 +1441,9 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     case KindCode::nullPointerType:
       argOk = true;
       break;
+    case KindCode::exactKind:
+      argOk = type->kind() == d.typePattern.exactKindValue;
+      break;
     default:
       CRASH_NO_CASE;
     }
@@ -1693,6 +1713,9 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       CHECK(*category == TypeCategory::Derived);
       resultType = DynamicType{
           GetBuiltinDerivedType(builtinsScope, "__builtin_team_type")};
+      break;
+    case KindCode::exactKind:
+      resultType = DynamicType{*category, result.exactKindValue};
       break;
     case KindCode::defaultCharKind:
     case KindCode::typeless:

@@ -64,7 +64,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
             name, KIND);
       }
     }
-  } else if (name == "abs") {
+  } else if (name == "abs") { // incl. zabs & cdabs
     // Argument can be complex or real
     if (auto *x{UnwrapExpr<Expr<SomeReal>>(args[0])}) {
       return FoldElementalIntrinsic<T, T>(
