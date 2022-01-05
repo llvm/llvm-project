@@ -1624,7 +1624,6 @@ static void genResult(Merger &merger, CodeGen &codegen,
                       PatternRewriter &rewriter, linalg::GenericOp op) {
   OpOperand *lhs = op.getOutputOperand(0);
   Type resType = lhs->get().getType();
-  Value result;
   if (getSparseTensorEncoding(resType)) {
     // The sparse tensor rematerializes from the original sparse tensor's
     // underlying sparse storage format.

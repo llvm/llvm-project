@@ -179,7 +179,7 @@ int main(int, char**)
 
     {
         std::vector<adl::S> s;
-        s.insert(s.end(), cpp17_input_iterator<adl::S*>(), cpp17_input_iterator<adl::S*>());
+        s.insert(s.end(), cpp17_input_iterator<adl::S*>(nullptr), cpp17_input_iterator<adl::S*>(nullptr));
     }
 
   return 0;

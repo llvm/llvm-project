@@ -3818,6 +3818,15 @@ the configuration (without a prefix: ``Auto``).
        IF (...)                        vs.    IF(...)
          <conditional-body>                     <conditional-body>
 
+  * ``bool AfterOverloadedOperator`` If ``true``, put a space between operator overloading and opening
+    parentheses.
+
+    .. code-block:: c++
+
+       true:                                  false:
+       void operator++ (int a);        vs.    void operator++(int a);
+       object.operator++ (10);                object.operator++(10);
+
   * ``bool BeforeNonEmptyParentheses`` If ``true``, put a space before opening parentheses only if the
     parentheses are not empty.
 

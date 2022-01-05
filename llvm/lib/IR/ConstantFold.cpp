@@ -1541,12 +1541,7 @@ static ICmpInst::Predicate evaluateICmpRelation(Constant *V1, Constant *V2,
             return ICmpInst::ICMP_UGT;
         }
       } else if (const GlobalValue *GV2 = dyn_cast<GlobalValue>(V2)) {
-        if (isa<ConstantPointerNull>(CE1Op0)) {
-          // If its not weak linkage, the GVal must have a non-zero address
-          // so the result is less-than
-          if (!GV2->hasExternalWeakLinkage())
-            return ICmpInst::ICMP_ULT;
-        } else if (const GlobalValue *GV = dyn_cast<GlobalValue>(CE1Op0)) {
+        if (const GlobalValue *GV = dyn_cast<GlobalValue>(CE1Op0)) {
           if (GV != GV2) {
             if (CE1GEP->hasAllZeroIndices())
               return areGlobalsPotentiallyEqual(GV, GV2);
@@ -1979,31 +1974,13 @@ static Constant *foldGEPOfGEP(GEPOperator *GEP, Type *PointeeTy, bool InBounds,
        I != E; ++I)
     LastI = I;
 
-  // We cannot combine indices if doing so would take us outside of an
-  // array or vector.  Doing otherwise could trick us if we evaluated such a
-  // GEP as part of a load.
-  //
-  // e.g. Consider if the original GEP was:
-  // i8* getelementptr ({ [2 x i8], i32, i8, [3 x i8] }* @main.c,
-  //                    i32 0, i32 0, i64 0)
-  //
-  // If we then tried to offset it by '8' to get to the third element,
-  // an i8, we should *not* get:
-  // i8* getelementptr ({ [2 x i8], i32, i8, [3 x i8] }* @main.c,
-  //                    i32 0, i32 0, i64 8)
-  //
-  // This GEP tries to index array element '8  which runs out-of-bounds.
-  // Subsequent evaluation would get confused and produce erroneous results.
-  //
-  // The following prohibits such a GEP from being formed by checking to see
-  // if the index is in-range with respect to an array.
+  // We can't combine GEPs if the last index is a struct type.
   if (!LastI.isSequential())
     return nullptr;
+  // We could perform the transform with non-constant index, but prefer leaving
+  // it as GEP of GEP rather than GEP of add for now.
   ConstantInt *CI = dyn_cast<ConstantInt>(Idx0);
   if (!CI)
-    return nullptr;
-  if (LastI.isBoundedSequential() &&
-      !isIndexInRangeOfArrayType(LastI.getSequentialNumElements(), CI))
     return nullptr;
 
   // TODO: This code may be extended to handle vectors as well.

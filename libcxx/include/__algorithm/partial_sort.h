@@ -31,8 +31,10 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Compare, class _RandomAccessIterator>
 _LIBCPP_CONSTEXPR_AFTER_CXX17 void
 __partial_sort(_RandomAccessIterator __first, _RandomAccessIterator __middle, _RandomAccessIterator __last,
-             _Compare __comp)
+               _Compare __comp)
 {
+    if (__first == __middle)
+        return;
     _VSTD::__make_heap<_Compare>(__first, __middle, __comp);
     typename iterator_traits<_RandomAccessIterator>::difference_type __len = __middle - __first;
     for (_RandomAccessIterator __i = __middle; __i != __last; ++__i)
@@ -64,7 +66,7 @@ void
 partial_sort(_RandomAccessIterator __first, _RandomAccessIterator __middle, _RandomAccessIterator __last)
 {
     _VSTD::partial_sort(__first, __middle, __last,
-                       __less<typename iterator_traits<_RandomAccessIterator>::value_type>());
+                        __less<typename iterator_traits<_RandomAccessIterator>::value_type>());
 }
 
 _LIBCPP_END_NAMESPACE_STD

@@ -508,6 +508,7 @@ CodeCompleteConsumer::OverloadCandidate::getFunctionType() const {
     return Type;
 
   case CK_Template:
+  case CK_Aggregate:
     return nullptr;
   }
 
@@ -517,9 +518,78 @@ CodeCompleteConsumer::OverloadCandidate::getFunctionType() const {
 unsigned CodeCompleteConsumer::OverloadCandidate::getNumParams() const {
   if (Kind == CK_Template)
     return Template->getTemplateParameters()->size();
-  if (const auto *FPT = dyn_cast_or_null<FunctionProtoType>(getFunctionType()))
-    return FPT->getNumParams();
+
+  if (Kind == CK_Aggregate) {
+    unsigned Count =
+        std::distance(AggregateType->field_begin(), AggregateType->field_end());
+    if (const auto *CRD = dyn_cast<CXXRecordDecl>(AggregateType))
+      Count += CRD->getNumBases();
+    return Count;
+  }
+
+  if (const auto *FT = getFunctionType())
+    if (const auto *FPT = dyn_cast<FunctionProtoType>(FT))
+      return FPT->getNumParams();
+
   return 0;
+}
+
+QualType
+CodeCompleteConsumer::OverloadCandidate::getParamType(unsigned N) const {
+  if (Kind == CK_Aggregate) {
+    if (const auto *CRD = dyn_cast<CXXRecordDecl>(AggregateType)) {
+      if (N < CRD->getNumBases())
+        return std::next(CRD->bases_begin(), N)->getType();
+      N -= CRD->getNumBases();
+    }
+    for (const auto *Field : AggregateType->fields())
+      if (N-- == 0)
+        return Field->getType();
+    return QualType();
+  }
+
+  if (Kind == CK_Template) {
+    TemplateParameterList *TPL = getTemplate()->getTemplateParameters();
+    if (N < TPL->size())
+      if (const auto *D = dyn_cast<NonTypeTemplateParmDecl>(TPL->getParam(N)))
+        return D->getType();
+    return QualType();
+  }
+
+  if (const auto *FT = getFunctionType())
+    if (const auto *FPT = dyn_cast<FunctionProtoType>(FT))
+      if (N < FPT->getNumParams())
+        return FPT->getParamType(N);
+  return QualType();
+}
+
+const NamedDecl *
+CodeCompleteConsumer::OverloadCandidate::getParamDecl(unsigned N) const {
+  if (Kind == CK_Aggregate) {
+    if (const auto *CRD = dyn_cast<CXXRecordDecl>(AggregateType)) {
+      if (N < CRD->getNumBases())
+        return std::next(CRD->bases_begin(), N)->getType()->getAsTagDecl();
+      N -= CRD->getNumBases();
+    }
+    for (const auto *Field : AggregateType->fields())
+      if (N-- == 0)
+        return Field;
+    return nullptr;
+  }
+
+  if (Kind == CK_Template) {
+    TemplateParameterList *TPL = getTemplate()->getTemplateParameters();
+    if (N < TPL->size())
+      return TPL->getParam(N);
+    return nullptr;
+  }
+
+  // Note that if we only have a FunctionProtoType, we don't have param decls.
+  if (const auto *FD = getFunction()) {
+    if (N < FD->param_size())
+      return FD->getParamDecl(N);
+  }
+  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//

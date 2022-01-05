@@ -67,6 +67,11 @@ feature_test_macros = [ add_version_header(x) for x in [
     "values": { "c++17": 201603 },
     "headers": ["memory"],
   }, {
+    "name": "__cpp_lib_allocate_at_least",
+    "values": { "c++2b": 202106 },
+    "headers": ["memory"],
+    "unimplemented": True,
+  }, {
     "name": "__cpp_lib_allocator_traits_is_always_equal",
     "values": { "c++17": 201411 },
     "headers": ["deque", "forward_list", "list", "map", "memory", "scoped_allocator", "set", "string", "unordered_map", "unordered_set", "vector"],
@@ -86,6 +91,11 @@ feature_test_macros = [ add_version_header(x) for x in [
     "name": "__cpp_lib_as_const",
     "values": { "c++17": 201510 },
     "headers": ["utility"],
+  }, {
+    "name": "__cpp_lib_associative_heterogeneous_erasure",
+    "values": { "c++2b": 202110 },
+    "headers": ["map", "set", "unordered_map", "unordered_set"],
+    "unimplemented": True,
   }, {
     "name": "__cpp_lib_assume_aligned",
     "values": { "c++20": 201811 },
@@ -236,6 +246,11 @@ feature_test_macros = [ add_version_header(x) for x in [
     "values": { "c++20": 201811 },
     "headers": ["tuple"],
   }, {
+    "name": "__cpp_lib_constexpr_typeinfo",
+    "values": { "c++2b": 202106 },
+    "headers": ["typeinfo"],
+    "unimplemented": True,
+  }, {
     "name": "__cpp_lib_constexpr_utility",
     "values": { "c++20": 201811 },
     "headers": ["utility"],
@@ -344,6 +359,11 @@ feature_test_macros = [ add_version_header(x) for x in [
     "values": { "c++17": 201411 },
     "headers": ["functional"],
   }, {
+    "name": "__cpp_lib_invoke_r",
+    "values": { "c++2b": 202106 },
+    "headers": ["functional"],
+    "unimplemented": True,
+  }, {
     "name": "__cpp_lib_is_aggregate",
     "values": { "c++17": 201703 },
     "headers": ["type_traits"],
@@ -447,6 +467,11 @@ feature_test_macros = [ add_version_header(x) for x in [
     "values": { "c++2b": 202110 },
     "headers": ["optional"],
   }, {
+    "name": "__cpp_lib_move_only_function",
+    "values": { "c++2b": 202110 },
+    "headers": ["functional"],
+    "unimplemented": True,
+  }, {
     "name": "__cpp_lib_node_extract",
     "values": { "c++17": 201606 },
     "headers": ["map", "set", "unordered_map", "unordered_set"],
@@ -467,6 +492,11 @@ feature_test_macros = [ add_version_header(x) for x in [
     "values": { "c++17": 201606 },
     "headers": ["optional"],
   }, {
+    "name": "__cpp_lib_out_ptr",
+    "values": { "c++2b": 202106 },
+    "headers": ["memory"],
+    "unimplemented": True,
+  }, {
     "name": "__cpp_lib_parallel_algorithm",
     "values": { "c++17": 201603 },
     "headers": ["algorithm", "numeric"],
@@ -484,6 +514,16 @@ feature_test_macros = [ add_version_header(x) for x in [
     "name": "__cpp_lib_ranges",
     "values": { "c++20": 201811 },
     "headers": ["algorithm", "functional", "iterator", "memory", "ranges"],
+    "unimplemented": True,
+  }, {
+    "name": "__cpp_lib_ranges_starts_ends_with",
+    "values": { "c++2b": 202106 },
+    "headers": ["algorithm"],
+    "unimplemented": True,
+  }, {
+    "name": "__cpp_lib_ranges_zip",
+    "values": { "c++2b": 202110 },
+    "headers": ["ranges", "tuple", "utility"],
     "unimplemented": True,
   }, {
     "name": "__cpp_lib_raw_memory_algorithms",
@@ -553,6 +593,11 @@ feature_test_macros = [ add_version_header(x) for x in [
     "name": "__cpp_lib_span",
     "values": { "c++20": 202002 },
     "headers": ["span"],
+  }, {
+    "name": "__cpp_lib_spanstream",
+    "values": { "c++2b": 202106 },
+    "headers": ["spanstream"],
+    "unimplemented": True,
   }, {
     "name": "__cpp_lib_ssize",
     "values": { "c++20": 201902 },
@@ -626,6 +671,10 @@ feature_test_macros = [ add_version_header(x) for x in [
     "name": "__cpp_lib_tuples_by_type",
     "values": { "c++14": 201304 },
     "headers": ["tuple", "utility"],
+  }, {
+    "name": "__cpp_lib_type_identity",
+    "values": { "c++20": 201806 },
+    "headers": ["type_traits"],
   }, {
     "name": "__cpp_lib_type_trait_variable_templates",
     "values": { "c++17": 201510 },

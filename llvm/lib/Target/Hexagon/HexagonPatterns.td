@@ -369,6 +369,12 @@ def Umin: pf2<umin>;  def Umax: pf2<umax>;
 
 def Rol: pf2<rotl>;
 
+def Fptosi: pf1<fp_to_sint>;
+def Fptoui: pf1<fp_to_uint>;
+def Sitofp: pf1<sint_to_fp>;
+def Uitofp: pf1<uint_to_fp>;
+
+
 // --(1) Immediate -------------------------------------------------------
 //
 

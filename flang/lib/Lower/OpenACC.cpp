@@ -926,7 +926,7 @@ static void genACC(Fortran::lower::AbstractConverter &converter,
   const auto &accClauseList =
       std::get<Fortran::parser::AccClauseList>(waitConstruct.t);
 
-  mlir::Value ifCond, asyncOperand, waitDevnum, async;
+  mlir::Value ifCond, waitDevnum, async;
   SmallVector<mlir::Value, 2> waitOperands;
 
   // Async clause have optional values but can be present with

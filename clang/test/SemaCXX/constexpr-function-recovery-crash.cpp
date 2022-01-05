@@ -74,3 +74,6 @@ struct X {} array[] = {undef()}; // expected-error {{use of undeclared identifie
 constexpr void test11() {
   for (X& e : array) {}
 }
+
+constexpr int test12() { return "wrong"; } // expected-error {{cannot initialize return object of type 'int'}}
+constexpr int force12 = test12();          // expected-error {{must be initialized by a constant}}

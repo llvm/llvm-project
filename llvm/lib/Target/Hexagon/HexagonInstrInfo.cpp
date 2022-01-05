@@ -146,6 +146,31 @@ static unsigned nonDbgMICount(MachineBasicBlock::const_instr_iterator MIB,
   return Count;
 }
 
+// Check if the A2_tfrsi instruction is cheap or not. If the operand has
+// to be constant-extendend it is not cheap since it occupies two slots
+// in a packet.
+bool HexagonInstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
+  // Enable the following steps only at Os/Oz
+  if (!(MI.getMF()->getFunction().hasOptSize()))
+    return MI.isAsCheapAsAMove();
+
+  if (MI.getOpcode() == Hexagon::A2_tfrsi) {
+    auto Op = MI.getOperand(1);
+    // If the instruction has a global address as operand, it is not cheap
+    // since the operand will be constant extended.
+    if (Op.getType() == MachineOperand::MO_GlobalAddress)
+      return false;
+    // If the instruction has an operand of size > 16bits, its will be
+    // const-extended and hence, it is not cheap.
+    if (Op.isImm()) {
+      int64_t Imm = Op.getImm();
+      if (!isInt<16>(Imm))
+        return false;
+    }
+  }
+  return MI.isAsCheapAsAMove();
+}
+
 /// Find the hardware loop instruction used to set-up the specified loop.
 /// On Hexagon, we have two instructions used to set-up the hardware loop
 /// (LOOP0, LOOP1) with corresponding endloop (ENDLOOP0, ENDLOOP1) instructions

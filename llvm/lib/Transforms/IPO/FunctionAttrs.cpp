@@ -301,7 +301,7 @@ static void addReadAttrs(const SCCNodeSet &SCCNodes, AARGetterT &&AARGetter,
     Changed.insert(F);
 
     // Clear out any existing attributes.
-    AttrBuilder AttrsToRemove;
+    AttributeMask AttrsToRemove;
     AttrsToRemove.addAttribute(Attribute::ReadOnly);
     AttrsToRemove.addAttribute(Attribute::ReadNone);
     AttrsToRemove.addAttribute(Attribute::WriteOnly);
@@ -720,10 +720,16 @@ determinePointerAccessAttrs(Argument *A,
 
       // The accessors used on call site here do the right thing for calls and
       // invokes with operand bundles.
-      if (!CB.onlyReadsMemory() && !CB.onlyReadsMemory(UseIndex))
-        return Attribute::None;
-      if (!CB.doesNotAccessMemory(UseIndex))
+      if (CB.doesNotAccessMemory(UseIndex)) {
+        /* nop */
+      } else if (CB.onlyReadsMemory() || CB.onlyReadsMemory(UseIndex)) {
         IsRead = true;
+      } else if (CB.hasFnAttr(Attribute::WriteOnly) ||
+                 CB.dataOperandHasImpliedAttr(UseIndex, Attribute::WriteOnly)) {
+        IsWrite = true;
+      } else {
+        return Attribute::None;
+      }
       break;
     }
 

@@ -16,6 +16,7 @@
 #include <__functional/invoke.h>
 #include <__functional/unary_function.h>
 #include <__iterator/iterator_traits.h>
+#include <__memory/addressof.h>
 #include <__memory/allocator_traits.h>
 #include <__memory/compressed_pair.h>
 #include <__memory/shared_ptr.h>
@@ -360,7 +361,7 @@ const void*
 __func<_Fp, _Alloc, _Rp(_ArgTypes...)>::target(const type_info& __ti) const _NOEXCEPT
 {
     if (__ti == typeid(_Fp))
-        return &__f_.__target();
+        return _VSTD::addressof(__f_.__target());
     return nullptr;
 }
 
@@ -1392,7 +1393,7 @@ const void*
 __func<_Fp, _Alloc, _Rp()>::target(const type_info& __ti) const
 {
     if (__ti == typeid(_Fp))
-        return &__f_.first();
+        return _VSTD::addressof(__f_.first());
     return (const void*)0;
 }
 

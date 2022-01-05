@@ -66,6 +66,7 @@ define i1 @ult_constexpr_constexpr_one(i8* %x) {
 @g = global [2 x i32] [i32 1, i32 2]
 @g2 = global i32 0
 @g2_weak = extern_weak global i32
+@g3 = global i8 0
 
 define i1 @global_ne_null() {
 ; CHECK-LABEL: @global_ne_null(
@@ -167,19 +168,19 @@ define i1 @null_gep_ugt_null_constant_int() {
 
 define i1 @null_gep_ne_global() {
 ; CHECK-LABEL: @null_gep_ne_global(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    ret i1 icmp ne (i8* getelementptr (i8, i8* null, i64 ptrtoint (i8* @g3 to i64)), i8* @g3)
 ;
-  %gep = getelementptr [2 x i32], [2 x i32]* null, i64 ptrtoint (i32* @g2 to i64)
-  %cmp = icmp ne [2 x i32]* %gep, @g
+  %gep = getelementptr i8, i8* null, i64 ptrtoint (i8* @g3 to i64)
+  %cmp = icmp ne i8* %gep, @g3
   ret i1 %cmp
 }
 
 define i1 @null_gep_ult_global() {
 ; CHECK-LABEL: @null_gep_ult_global(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    ret i1 icmp ult (i8* getelementptr (i8, i8* null, i64 ptrtoint (i8* @g3 to i64)), i8* @g3)
 ;
-  %gep = getelementptr [2 x i32], [2 x i32]* null, i64 ptrtoint (i32* @g2 to i64)
-  %cmp = icmp ult [2 x i32]* %gep, @g
+  %gep = getelementptr i8, i8* null, i64 ptrtoint (i8* @g3 to i64)
+  %cmp = icmp ult i8* %gep, @g3
   ret i1 %cmp
 }
 

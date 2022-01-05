@@ -157,8 +157,8 @@ static Expected<const Edge &> getRISCVPCRelHi20(const Edge &E) {
       "No HI20 PCREL relocation type be found for LO12 PCREL relocation type");
 }
 
-static uint32_t extractBits(uint64_t Num, unsigned High, unsigned Low) {
-  return (Num & ((1ULL << (High + 1)) - 1)) >> Low;
+static uint32_t extractBits(uint32_t Num, unsigned Low, unsigned Size) {
+  return (Num & (((1ULL << (Size + 1)) - 1) << Low)) >> Low;
 }
 
 class ELFJITLinker_riscv : public JITLinker<ELFJITLinker_riscv> {
@@ -238,8 +238,8 @@ private:
       int64_t Value = RelHI20->getTarget().getAddress() +
                       RelHI20->getAddend() - E.getTarget().getAddress();
       int64_t Lo = Value & 0xFFF;
-      uint32_t Imm31_25 = extractBits(Lo, 11, 5) << 25;
-      uint32_t Imm11_7 = extractBits(Lo, 4, 0) << 7;
+      uint32_t Imm31_25 = extractBits(Lo, 5, 7) << 25;
+      uint32_t Imm11_7 = extractBits(Lo, 0, 5) << 7;
       uint32_t RawInstr = *(little32_t *)FixupPtr;
 
       *(little32_t *)FixupPtr = (RawInstr & 0x1FFF07F) | Imm31_25 | Imm11_7;
