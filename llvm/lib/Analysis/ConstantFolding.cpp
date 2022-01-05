@@ -106,11 +106,8 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
          "Invalid constantexpr bitcast!");
 
   // Catch the obvious splat cases.
-  if (C->isNullValue() && !DestTy->isX86_MMXTy() && !DestTy->isX86_AMXTy())
-    return Constant::getNullValue(DestTy);
-  if (C->isAllOnesValue() && !DestTy->isX86_MMXTy() && !DestTy->isX86_AMXTy() &&
-      !DestTy->isPtrOrPtrVectorTy()) // Don't get ones for ptr types!
-    return Constant::getAllOnesValue(DestTy);
+  if (Constant *Res = ConstantFoldLoadFromUniformValue(C, DestTy))
+    return Res;
 
   if (auto *VTy = dyn_cast<VectorType>(C->getType())) {
     // Handle a vector->scalar integer/fp cast.
@@ -362,16 +359,8 @@ Constant *llvm::ConstantFoldLoadThroughBitcast(Constant *C, Type *DestTy,
 
     // Catch the obvious splat cases (since all-zeros can coerce non-integral
     // pointers legally).
-    if (C->isNullValue() && !DestTy->isX86_MMXTy() && !DestTy->isX86_AMXTy())
-      return Constant::getNullValue(DestTy);
-    if (C->isAllOnesValue() &&
-        (DestTy->isIntegerTy() || DestTy->isFloatingPointTy() ||
-         DestTy->isVectorTy()) &&
-        !DestTy->isX86_AMXTy() && !DestTy->isX86_MMXTy() &&
-        !DestTy->isPtrOrPtrVectorTy())
-      // Get ones when the input is trivial, but
-      // only for supported types inside getAllOnesValue.
-      return Constant::getAllOnesValue(DestTy);
+    if (Constant *Res = ConstantFoldLoadFromUniformValue(C, DestTy))
+      return Res;
 
     // If the type sizes are the same and a cast is legal, just directly
     // cast the constant.

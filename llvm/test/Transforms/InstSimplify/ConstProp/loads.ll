@@ -320,7 +320,7 @@ define i8 @load_neg_one_at_unknown_offset() {
 
 define i32 @load_padding() {
 ; CHECK-LABEL: @load_padding(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    ret i32 undef
 ;
   %v = load i32, i32* getelementptr (i32, i32* bitcast ({ i32, [4 x i8] }* @g_with_padding to i32*), i64 1)
   ret i32 %v
