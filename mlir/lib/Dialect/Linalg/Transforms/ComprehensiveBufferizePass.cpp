@@ -73,42 +73,42 @@ static Optional<Value> allocationFnUsingAlloca(OpBuilder &b, Location loc,
 }
 
 void LinalgComprehensiveModuleBufferize::runOnOperation() {
-  BufferizationOptions options;
+  auto options = std::make_unique<BufferizationOptions>();
   if (useAlloca) {
-    options.allocationFns->allocationFn = allocationFnUsingAlloca;
-    options.allocationFns->deallocationFn = [](OpBuilder &b, Location loc,
-                                               Value v) {};
+    options->allocationFns->allocationFn = allocationFnUsingAlloca;
+    options->allocationFns->deallocationFn = [](OpBuilder &b, Location loc,
+                                                Value v) {};
   }
   // TODO: Change to memref::CopyOp (default memCpyFn).
-  options.allocationFns->memCpyFn = [](OpBuilder &b, Location loc, Value from,
-                                       Value to) {
+  options->allocationFns->memCpyFn = [](OpBuilder &b, Location loc, Value from,
+                                        Value to) {
     b.create<linalg::CopyOp>(loc, from, to);
   };
 
-  options.allowReturnMemref = allowReturnMemref;
-  options.allowUnknownOps = allowUnknownOps;
-  options.analysisFuzzerSeed = analysisFuzzerSeed;
-  options.testAnalysisOnly = testAnalysisOnly;
-  options.printConflicts = printConflicts;
+  options->allowReturnMemref = allowReturnMemref;
+  options->allowUnknownOps = allowUnknownOps;
+  options->analysisFuzzerSeed = analysisFuzzerSeed;
+  options->testAnalysisOnly = testAnalysisOnly;
+  options->printConflicts = printConflicts;
 
   // Enable InitTensorOp elimination.
-  options.addPostAnalysisStep<
+  options->addPostAnalysisStep<
       linalg_ext::InsertSliceAnchoredInitTensorEliminationStep>();
   // TODO: Find a way to enable this step automatically when bufferizing tensor
   // dialect ops.
-  options.addPostAnalysisStep<tensor_ext::InplaceInsertSliceOpAnalysis>();
+  options->addPostAnalysisStep<tensor_ext::InplaceInsertSliceOpAnalysis>();
   if (!allowReturnMemref)
-    options.addPostAnalysisStep<scf_ext::AssertDestinationPassingStyle>();
+    options->addPostAnalysisStep<scf_ext::AssertDestinationPassingStyle>();
 
   ModuleOp moduleOp = getOperation();
   applyEnablingTransformations(moduleOp);
 
-  if (failed(runComprehensiveBufferize(moduleOp, options))) {
+  if (failed(runComprehensiveBufferize(moduleOp, std::move(options)))) {
     signalPassFailure();
     return;
   }
 
-  if (options.testAnalysisOnly)
+  if (testAnalysisOnly)
     return;
 
   OpPassManager cleanupPipeline("builtin.module");

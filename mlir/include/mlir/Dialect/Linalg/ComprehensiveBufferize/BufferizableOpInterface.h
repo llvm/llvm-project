@@ -423,12 +423,11 @@ public:
 private:
   friend LogicalResult
   runComprehensiveBufferize(Operation *op, const BufferizationOptions &options,
-                            BufferizationState &state,
-                            const PostAnalysisStepList &extraSteps);
+                            BufferizationState &state);
 
   friend LogicalResult
   runComprehensiveBufferize(ModuleOp moduleOp,
-                            const BufferizationOptions &options);
+                            std::unique_ptr<BufferizationOptions> options);
 
   /// `aliasInfo` keeps track of aliasing and equivalent values. Only internal
   /// functions and `runComprehensiveBufferize` may access this object.

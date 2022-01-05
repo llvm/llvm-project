@@ -94,30 +94,30 @@ struct TestComprehensiveFunctionBufferize
 } // namespace
 
 void TestComprehensiveFunctionBufferize::runOnFunction() {
-  BufferizationOptions options;
+  auto options = std::make_unique<BufferizationOptions>();
 
   // Enable InitTensorOp elimination.
-  options.addPostAnalysisStep<
+  options->addPostAnalysisStep<
       linalg_ext::InsertSliceAnchoredInitTensorEliminationStep>();
   // TODO: Find a way to enable this step automatically when bufferizing
   // tensor dialect ops.
-  options.addPostAnalysisStep<tensor_ext::InplaceInsertSliceOpAnalysis>();
+  options->addPostAnalysisStep<tensor_ext::InplaceInsertSliceOpAnalysis>();
   if (!allowReturnMemref)
-    options.addPostAnalysisStep<scf_ext::AssertDestinationPassingStyle>();
+    options->addPostAnalysisStep<scf_ext::AssertDestinationPassingStyle>();
 
-  options.allowReturnMemref = allowReturnMemref;
-  options.allowUnknownOps = allowUnknownOps;
-  options.testAnalysisOnly = testAnalysisOnly;
-  options.analysisFuzzerSeed = analysisFuzzerSeed;
+  options->allowReturnMemref = allowReturnMemref;
+  options->allowUnknownOps = allowUnknownOps;
+  options->testAnalysisOnly = testAnalysisOnly;
+  options->analysisFuzzerSeed = analysisFuzzerSeed;
 
   if (dialectFilter.hasValue()) {
-    options.dialectFilter.emplace();
+    options->dialectFilter.emplace();
     for (const std::string &dialectNamespace : dialectFilter)
-      options.dialectFilter->insert(dialectNamespace);
+      options->dialectFilter->insert(dialectNamespace);
   }
 
   Operation *op = getFunction().getOperation();
-  if (failed(runComprehensiveBufferize(op, options)))
+  if (failed(runComprehensiveBufferize(op, std::move(options))))
     return;
 
   OpPassManager cleanupPipeline("builtin.func");

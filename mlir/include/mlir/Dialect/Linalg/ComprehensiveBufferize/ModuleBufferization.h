@@ -9,6 +9,8 @@
 #ifndef MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_MODULE_BUFFERIZATION_H
 #define MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_MODULE_BUFFERIZATION_H
 
+#include <memory>
+
 namespace mlir {
 
 class DialectRegistry;
@@ -22,8 +24,9 @@ struct BufferizationOptions;
 
 /// Bufferize the given module. This bufferizations performs a simple function
 /// call analysis to determine which function arguments are inplaceable.
-LogicalResult runComprehensiveBufferize(ModuleOp moduleOp,
-                                        const BufferizationOptions &options);
+LogicalResult
+runComprehensiveBufferize(ModuleOp moduleOp,
+                          std::unique_ptr<BufferizationOptions> options);
 
 namespace std_ext {
 

@@ -724,8 +724,8 @@ static void annotateOpsWithBufferizationMarkers(FuncOp funcOp,
 }
 
 LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
-    ModuleOp moduleOp, const BufferizationOptions &options) {
-  BufferizationState state(moduleOp, options);
+    ModuleOp moduleOp, std::unique_ptr<BufferizationOptions> options) {
+  BufferizationState state(moduleOp, *options);
   ModuleBufferizationState &moduleState = getModuleBufferizationState(state);
   BufferizationAliasInfo &aliasInfo = state.aliasInfo;
 
@@ -743,24 +743,23 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
     if (funcOp.body().empty())
       continue;
 
-    // Register extra post analysis steps. These cannot be stored in `options`
-    // because `options` is immutable.
-    PostAnalysisStepList extraSteps;
-    extraSteps.emplace_back(std::make_unique<EquivalentFuncOpBBArgsAnalysis>());
+    // Collect bbArg/return value information after the analysis.
+    options->postAnalysisSteps.emplace_back(
+        std::make_unique<EquivalentFuncOpBBArgsAnalysis>());
 
     // Gather equivalence info for CallOps.
     equivalenceAnalysis(funcOp, aliasInfo, moduleState);
 
     // Analyze and bufferize funcOp.
-    if (failed(runComprehensiveBufferize(funcOp, options, state, extraSteps)))
+    if (failed(runComprehensiveBufferize(funcOp, *options, state)))
       return failure();
 
     // Add annotations to function arguments.
-    if (options.testAnalysisOnly)
+    if (options->testAnalysisOnly)
       annotateOpsWithBufferizationMarkers(funcOp, state);
   }
 
-  if (options.testAnalysisOnly)
+  if (options->testAnalysisOnly)
     return success();
 
   for (FuncOp funcOp : moduleState.orderedFuncOps) {
@@ -769,7 +768,7 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
     if (failed(bufferizeFuncOpBoundary(funcOp, state)))
       return failure();
 
-    if (!options.allowReturnMemref &&
+    if (!options->allowReturnMemref &&
         llvm::any_of(funcOp.getType().getResults(), [](Type t) {
           return t.isa<MemRefType, UnrankedMemRefType>();
         })) {
