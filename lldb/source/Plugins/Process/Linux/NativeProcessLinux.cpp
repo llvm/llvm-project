@@ -485,34 +485,16 @@ void NativeProcessLinux::MonitorCallback(NativeThreadLinux &thread,
     } else {
       // ptrace(GETSIGINFO) failed (but not due to group-stop).
 
-      // A return value of ESRCH means the thread/process is no longer on the
-      // system, so it was killed somehow outside of our control.  Either way,
-      // we can't do anything with it anymore.
-
-      // Stop tracking the metadata for the thread since it's entirely off the
-      // system now.
-      StopTrackingThread(thread);
+      // A return value of ESRCH means the thread/process has died in the mean
+      // time. This can (e.g.) happen when another thread does an exit_group(2)
+      // or the entire process get SIGKILLed.
+      // We can't do anything with this thread anymore, but we keep it around
+      // until we get the WIFEXITED event.
 
       LLDB_LOG(log,
-               "GetSignalInfo failed: {0}, tid = {1}, status = {2}, "
-               "status = {3}, main_thread = {4}",
-               info_err, thread.GetID(), status, status, is_main_thread);
-
-      if (is_main_thread) {
-        // Notify the delegate - our process is not available but appears to
-        // have been killed outside our control.  Is eStateExited the right
-        // exit state in this case?
-        SetExitStatus(status, true);
-        SetState(StateType::eStateExited, true);
-      } else {
-        // This thread was pulled out from underneath us.  Anything to do here?
-        // Do we want to do an all stop?
-        LLDB_LOG(log,
-                 "pid {0} tid {1} non-main thread exit occurred, didn't "
-                 "tell delegate anything since thread disappeared out "
-                 "from underneath us",
-                 GetID(), thread.GetID());
-      }
+               "GetSignalInfo({0}) failed: {1}, status = {2}, main_thread = "
+               "{3}. Expecting WIFEXITED soon.",
+               thread.GetID(), info_err, status, is_main_thread);
     }
   }
 }
