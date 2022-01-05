@@ -99,6 +99,7 @@ static_library("CodeGen") {
     "MIRSampleProfile.cpp",
     "MIRVRegNamerUtils.cpp",
     "MIRYamlMapping.cpp",
+    "MLRegallocEvictAdvisor.cpp",
     "MachineBasicBlock.cpp",
     "MachineBlockFrequencyInfo.cpp",
     "MachineBlockPlacement.cpp",
