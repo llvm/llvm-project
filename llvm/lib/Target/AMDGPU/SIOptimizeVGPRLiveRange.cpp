@@ -371,47 +371,42 @@ void SIOptimizeVGPRLiveRange::collectWaterfallCandidateRegisters(
 // Re-calculate the liveness of \p Reg in the THEN-region
 void SIOptimizeVGPRLiveRange::updateLiveRangeInThenRegion(
     Register Reg, MachineBasicBlock *If, MachineBasicBlock *Flow) const {
+  SetVector<MachineBasicBlock *> Blocks;
+  SmallVector<MachineBasicBlock *> WorkList({If});
 
-  SmallPtrSet<MachineBasicBlock *, 16> PHIIncoming;
-
-  MachineBasicBlock *ThenEntry = nullptr;
-  for (auto *Succ : If->successors()) {
-    if (Succ != Flow) {
-      ThenEntry = Succ;
-      break;
+  // Collect all successors until we see the flow block, where we should
+  // reconverge.
+  while (!WorkList.empty()) {
+    auto *MBB = WorkList.pop_back_val();
+    for (auto *Succ : MBB->successors()) {
+      if (Succ != Flow && !Blocks.contains(Succ)) {
+        WorkList.push_back(Succ);
+        Blocks.insert(Succ);
+      }
     }
   }
-  assert(ThenEntry && "No successor in Then region?");
 
   LiveVariables::VarInfo &OldVarInfo = LV->getVarInfo(Reg);
-  df_iterator_default_set<MachineBasicBlock *, 16> Visited;
-
-  for (MachineBasicBlock *MBB : depth_first_ext(ThenEntry, Visited)) {
-    if (MBB == Flow)
-      break;
-
+  for (MachineBasicBlock *MBB : Blocks) {
     // Clear Live bit, as we will recalculate afterwards
     LLVM_DEBUG(dbgs() << "Clear AliveBlock " << printMBBReference(*MBB)
                       << '\n');
     OldVarInfo.AliveBlocks.reset(MBB->getNumber());
   }
 
+  SmallPtrSet<MachineBasicBlock *, 4> PHIIncoming;
+
   // Get the blocks the Reg should be alive through
   for (auto I = MRI->use_nodbg_begin(Reg), E = MRI->use_nodbg_end(); I != E;
        ++I) {
     auto *UseMI = I->getParent();
     if (UseMI->isPHI() && I->readsReg()) {
-      if (Visited.contains(UseMI->getParent()))
+      if (Blocks.contains(UseMI->getParent()))
         PHIIncoming.insert(UseMI->getOperand(I.getOperandNo() + 1).getMBB());
     }
   }
 
-  Visited.clear();
-
-  for (MachineBasicBlock *MBB : depth_first_ext(ThenEntry, Visited)) {
-    if (MBB == Flow)
-      break;
-
+  for (MachineBasicBlock *MBB : Blocks) {
     SmallVector<MachineInstr *> Uses;
     // PHI instructions has been processed before.
     findNonPHIUsesInBlock(Reg, MBB, Uses);
@@ -438,7 +433,7 @@ void SIOptimizeVGPRLiveRange::updateLiveRangeInThenRegion(
 
   // Set the isKilled flag if we get new Kills in the THEN region.
   for (auto *MI : OldVarInfo.Kills) {
-    if (Visited.contains(MI->getParent()))
+    if (Blocks.contains(MI->getParent()))
       MI->addRegisterKilled(Reg, TRI);
   }
 }
