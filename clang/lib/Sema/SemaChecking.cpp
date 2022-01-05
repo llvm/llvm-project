@@ -2237,8 +2237,10 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     break;
   }
 
-  // __builtin_reduce_xor supports vector of integers only.
-  case Builtin::BI__builtin_reduce_xor: {
+  // These builtins support vectors of integers only.
+  case Builtin::BI__builtin_reduce_xor:
+  case Builtin::BI__builtin_reduce_or:
+  case Builtin::BI__builtin_reduce_and: {
     if (PrepareBuiltinReduceMathOneArgCall(TheCall))
       return ExprError();
 
