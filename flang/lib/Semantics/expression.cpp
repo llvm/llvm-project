@@ -1739,7 +1739,10 @@ MaybeExpr ExpressionAnalyzer::Analyze(
         } else if (IsAllocatable(*symbol) && IsBareNullPointer(&*value)) {
           // NULL() with no arguments allowed by 7.5.10 para 6 for ALLOCATABLE
         } else if (auto symType{DynamicType::From(symbol)}) {
-          if (valueType) {
+          if (IsAllocatable(*symbol) && symType->IsUnlimitedPolymorphic() &&
+              valueType) {
+            // ok
+          } else if (valueType) {
             AttachDeclaration(
                 Say(expr.source,
                     "Value in structure constructor of type %s is "
