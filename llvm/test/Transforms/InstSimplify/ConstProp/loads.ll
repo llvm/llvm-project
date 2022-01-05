@@ -315,3 +315,13 @@ define i8 @load_neg_one_at_unknown_offset() {
   %v = load i8, i8* getelementptr (<4 x i8>, <4 x i8>* @g_neg_one_vec, i64 0, i64 ptrtoint (i64* @g_offset to i64))
   ret i8 %v
 }
+
+@g_with_padding = constant { i32, [4 x i8] } { i32 0, [4 x i8] undef }
+
+define i32 @load_padding() {
+; CHECK-LABEL: @load_padding(
+; CHECK-NEXT:    ret i32 0
+;
+  %v = load i32, i32* getelementptr (i32, i32* bitcast ({ i32, [4 x i8] }* @g_with_padding to i32*), i64 1)
+  ret i32 %v
+}
