@@ -650,15 +650,14 @@ annotateOpsWithBufferizationMarkers(Operation *op,
 }
 
 LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
-    Operation *op, const BufferizationOptions &options) {
-  BufferizationState state(op, options);
-  PostAnalysisStepList extraSteps;
-  return runComprehensiveBufferize(op, options, state, extraSteps);
+    Operation *op, std::unique_ptr<BufferizationOptions> options) {
+  BufferizationState state(op, *options);
+  return runComprehensiveBufferize(op, *options, state);
 }
 
 LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
     Operation *op, const BufferizationOptions &options,
-    BufferizationState &state, const PostAnalysisStepList &extraSteps) {
+    BufferizationState &state) {
 
   DominanceInfo domInfo(op);
   BufferizationAliasInfo &aliasInfo = state.aliasInfo;
@@ -672,23 +671,16 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
     return failure();
   equivalenceAnalysis(op, aliasInfo, state);
 
-  auto runPostAnalysisSteps = [&](const PostAnalysisStepList &steps) {
-    for (const std::unique_ptr<PostAnalysisStep> &step : steps) {
-      SmallVector<Operation *> newOps;
-      if (failed(step->run(op, state, aliasInfo, newOps)))
-        return failure();
-      // Analyze ops that were created by the PostAnalysisStep.
-      if (failed(inPlaceAnalysis(newOps, aliasInfo, state, domInfo)))
-        return failure();
-      equivalenceAnalysis(newOps, aliasInfo, state);
-    }
-    return success();
-  };
-
-  if (failed(runPostAnalysisSteps(extraSteps)))
-    return failure();
-  if (failed(runPostAnalysisSteps(options.postAnalysisSteps)))
-    return failure();
+  for (const std::unique_ptr<PostAnalysisStep> &step :
+       options.postAnalysisSteps) {
+    SmallVector<Operation *> newOps;
+    if (failed(step->run(op, state, aliasInfo, newOps)))
+      return failure();
+    // Analyze ops that were created by the PostAnalysisStep.
+    if (failed(inPlaceAnalysis(newOps, aliasInfo, state, domInfo)))
+      return failure();
+    equivalenceAnalysis(newOps, aliasInfo, state);
+  }
 
   // Annotate operations if we only want to report the analysis.
   if (options.testAnalysisOnly) {
