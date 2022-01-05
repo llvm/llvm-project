@@ -1212,9 +1212,9 @@ findOrphanPos(SmallVectorImpl<SectionCommand *>::iterator b,
     auto *os = dyn_cast<OutputSection>(cmd);
     return os && os->hasInputSections;
   };
-  auto j = std::find_if(llvm::make_reverse_iterator(i),
-                        llvm::make_reverse_iterator(b),
-                        isOutputSecWithInputSections);
+  auto j =
+      std::find_if(std::make_reverse_iterator(i), std::make_reverse_iterator(b),
+                   isOutputSecWithInputSections);
   i = j.base();
 
   // As a special case, if the orphan section is the last section, put
