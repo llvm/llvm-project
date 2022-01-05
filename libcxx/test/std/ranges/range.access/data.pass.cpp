@@ -176,6 +176,11 @@ constexpr bool testViaRangesBegin() {
   return true;
 }
 
+// Test ADL-proofing.
+struct Incomplete;
+template<class T> struct Holder { T t; };
+static_assert(!std::is_invocable_v<RangeDataT, Holder<Incomplete>*>);
+
 struct RandomButNotContiguous {
   random_access_iterator<int*> begin() const;
   random_access_iterator<int*> end() const;

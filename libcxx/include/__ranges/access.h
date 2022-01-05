@@ -9,6 +9,7 @@
 #ifndef _LIBCPP___RANGES_ACCESS_H
 #define _LIBCPP___RANGES_ACCESS_H
 
+#include <__concepts/class_or_enum.h>
 #include <__config>
 #include <__iterator/concepts.h>
 #include <__iterator/readable_traits.h>
@@ -39,6 +40,7 @@ namespace __begin {
   template <class _Tp>
   concept __member_begin =
     __can_borrow<_Tp> &&
+    __workaround_52970<_Tp> &&
     requires(_Tp&& __t) {
       { _LIBCPP_AUTO_CAST(__t.begin()) } -> input_or_output_iterator;
     };
@@ -102,6 +104,7 @@ namespace __end {
   template <class _Tp>
   concept __member_end =
     __can_borrow<_Tp> &&
+    __workaround_52970<_Tp> &&
     requires(_Tp&& __t) {
       typename iterator_t<_Tp>;
       { _LIBCPP_AUTO_CAST(__t.end()) } -> sentinel_for<iterator_t<_Tp>>;

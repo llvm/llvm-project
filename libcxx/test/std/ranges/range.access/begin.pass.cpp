@@ -303,6 +303,12 @@ struct BeginReturnsArrayRef {
 static_assert(noexcept(std::ranges::begin(brar)));
 static_assert(noexcept(std::ranges::cbegin(brar)));
 
+// Test ADL-proofing.
+struct Incomplete;
+template<class T> struct Holder { T t; };
+static_assert(!std::is_invocable_v<RangeBeginT, Holder<Incomplete>*>);
+static_assert(!std::is_invocable_v<RangeCBeginT, Holder<Incomplete>*>);
+
 int main(int, char**) {
   static_assert(testReturnTypes());
 
