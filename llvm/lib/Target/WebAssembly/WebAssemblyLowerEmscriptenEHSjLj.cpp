@@ -817,6 +817,32 @@ static bool containsLongjmpableCalls(const Function *F) {
   return false;
 }
 
+// When a function contains a setjmp call but not other calls that can longjmp,
+// we don't do setjmp transformation for that setjmp. But we need to convert the
+// setjmp calls into "i32 0" so they don't cause link time errors. setjmp always
+// returns 0 when called directly.
+static void nullifySetjmp(Function *F) {
+  Module &M = *F->getParent();
+  IRBuilder<> IRB(M.getContext());
+  Function *SetjmpF = M.getFunction("setjmp");
+  SmallVector<Instruction *, 1> ToErase;
+
+  for (User *U : SetjmpF->users()) {
+    auto *CI = dyn_cast<CallInst>(U);
+    // FIXME 'invoke' to setjmp can happen when we use Wasm EH + Wasm SjLj, but
+    // we don't support two being used together yet.
+    if (!CI)
+      report_fatal_error("Wasm EH + Wasm SjLj is not fully supported yet");
+    BasicBlock *BB = CI->getParent();
+    if (BB->getParent() != F) // in other function
+      continue;
+    ToErase.push_back(CI);
+    CI->replaceAllUsesWith(IRB.getInt32(0));
+  }
+  for (auto *I : ToErase)
+    I->eraseFromParent();
+}
+
 bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
   LLVM_DEBUG(dbgs() << "********** Lower Emscripten EH & SjLj **********\n");
 
@@ -886,6 +912,10 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
     EHTypeIDF = getEmscriptenFunction(EHTypeIDTy, "llvm_eh_typeid_for", &M);
   }
 
+  // Functions that contains calls to setjmp but don't have other longjmpable
+  // calls within them.
+  SmallPtrSet<Function *, 4> SetjmpUsersToNullify;
+
   if ((EnableEmSjLj || EnableWasmSjLj) && SetjmpF) {
     // Precompute setjmp users
     for (User *U : SetjmpF->users()) {
@@ -896,6 +926,8 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
         // so can ignore it
         if (containsLongjmpableCalls(UserF))
           SetjmpUsers.insert(UserF);
+        else
+          SetjmpUsersToNullify.insert(UserF);
       } else {
         std::string S;
         raw_string_ostream SS(S);
@@ -973,6 +1005,14 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
     if (SetjmpF)
       for (Function *F : SetjmpUsers)
         runSjLjOnFunction(*F);
+  }
+
+  // Replace unnecessary setjmp calls with 0
+  if ((EnableEmSjLj || EnableWasmSjLj) && !SetjmpUsersToNullify.empty()) {
+    Changed = true;
+    assert(SetjmpF);
+    for (Function *F : SetjmpUsersToNullify)
+      nullifySetjmp(F);
   }
 
   if (!Changed) {
