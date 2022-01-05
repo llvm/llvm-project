@@ -58,4 +58,4 @@ CHECK-HEX: {{^}}     28 nine
 
 ## Show that an invalid value is rejected.
 RUN: not llvm-strings --radix z %t/a.txt 2>&1 | FileCheck %s --check-prefix=INVALID
-INVALID: llvm-strings: error: --radix value should be one of: '' (no offset), 'o' (octal), 'd' (decimal), 'x' (hexadecimal)
+INVALID: error: --radix value should be one of: '' (no offset), 'o' (octal), 'd' (decimal), 'x' (hexadecimal)
