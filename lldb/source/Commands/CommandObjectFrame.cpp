@@ -394,19 +394,7 @@ public:
             interpreter, "frame variable",
             "Show variables for the current stack frame. Defaults to all "
             "arguments and local variables in scope. Names of argument, "
-            "local, file static and file global variables can be specified. "
-            "Children of aggregate variables can be specified such as "
-            "'var->child.x'.  The -> and [] operators in 'frame variable' do "
-            "not invoke operator overloads if they exist, but directly access "
-            "the specified element.  If you want to trigger operator overloads "
-            "use the expression command to print the variable instead."
-            "\nIt is worth noting that except for overloaded "
-            "operators, when printing local variables 'expr local_var' and "
-            "'frame var local_var' produce the same "
-            "results.  However, 'frame variable' is more efficient, since it "
-            "uses debug information and memory reads directly, rather than "
-            "parsing and evaluating an expression, which may even involve "
-            "JITing and running code in the target program.",
+            "local, file static and file global variables can be specified.",
             nullptr,
             eCommandRequiresFrame | eCommandTryTargetAPILock |
                 eCommandProcessMustBeLaunched | eCommandProcessMustBePaused |
@@ -415,6 +403,18 @@ public:
         m_option_variable(
             true), // Include the frame specific options by passing "true"
         m_option_format(eFormatDefault), m_varobj_options() {
+    SetHelpLong(R"(
+Children of aggregate variables can be specified such as 'var->child.x'.  In
+'frame variable', the operators -> and [] do not invoke operator overloads if
+they exist, but directly access the specified element.  If you want to trigger
+operator overloads use the expression command to print the variable instead.
+
+It is worth noting that except for overloaded operators, when printing local
+variables 'expr local_var' and 'frame var local_var' produce the same results.
+However, 'frame variable' is more efficient, since it uses debug information and
+memory reads directly, rather than parsing and evaluating an expression, which
+may even involve JITing and running code in the target program.)");
+
     CommandArgumentEntry arg;
     CommandArgumentData var_name_arg;
 
