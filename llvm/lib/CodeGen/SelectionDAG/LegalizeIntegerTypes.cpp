@@ -75,8 +75,11 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
     break;
   case ISD::MGATHER:     Res = PromoteIntRes_MGATHER(cast<MaskedGatherSDNode>(N));
     break;
-  case ISD::SELECT:      Res = PromoteIntRes_SELECT(N); break;
-  case ISD::VSELECT:     Res = PromoteIntRes_VSELECT(N); break;
+  case ISD::SELECT:
+  case ISD::VSELECT:
+  case ISD::VP_SELECT:
+    Res = PromoteIntRes_Select(N);
+    break;
   case ISD::SELECT_CC:   Res = PromoteIntRes_SELECT_CC(N); break;
   case ISD::STRICT_FSETCC:
   case ISD::STRICT_FSETCCS:
@@ -1127,20 +1130,18 @@ SDValue DAGTypeLegalizer::PromoteIntRes_SADDSUBO(SDNode *N, unsigned ResNo) {
   return Res;
 }
 
-SDValue DAGTypeLegalizer::PromoteIntRes_SELECT(SDNode *N) {
-  SDValue LHS = GetPromotedInteger(N->getOperand(1));
-  SDValue RHS = GetPromotedInteger(N->getOperand(2));
-  return DAG.getSelect(SDLoc(N),
-                       LHS.getValueType(), N->getOperand(0), LHS, RHS);
-}
-
-SDValue DAGTypeLegalizer::PromoteIntRes_VSELECT(SDNode *N) {
+SDValue DAGTypeLegalizer::PromoteIntRes_Select(SDNode *N) {
   SDValue Mask = N->getOperand(0);
 
   SDValue LHS = GetPromotedInteger(N->getOperand(1));
   SDValue RHS = GetPromotedInteger(N->getOperand(2));
-  return DAG.getNode(ISD::VSELECT, SDLoc(N),
-                     LHS.getValueType(), Mask, LHS, RHS);
+
+  unsigned Opcode = N->getOpcode();
+  return Opcode == ISD::VP_SELECT
+             ? DAG.getNode(Opcode, SDLoc(N), LHS.getValueType(), Mask, LHS, RHS,
+                           N->getOperand(3))
+             : DAG.getNode(Opcode, SDLoc(N), LHS.getValueType(), Mask, LHS,
+                           RHS);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_SELECT_CC(SDNode *N) {
