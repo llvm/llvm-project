@@ -356,6 +356,10 @@ bool SymbolCollector::shouldCollectSymbol(const NamedDecl &ND,
   // Avoid indexing internal symbols in protobuf generated headers.
   if (isPrivateProtoDecl(ND))
     return false;
+  if (!Opts.CollectReserved &&
+      (hasReservedName(ND) || hasReservedScope(*ND.getDeclContext())))
+    return false;
+
   return true;
 }
 
