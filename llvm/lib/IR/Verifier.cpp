@@ -1059,6 +1059,7 @@ void Verifier::visitDIDerivedType(const DIDerivedType &N) {
                N.getTag() == dwarf::DW_TAG_reference_type ||
                N.getTag() == dwarf::DW_TAG_rvalue_reference_type ||
                N.getTag() == dwarf::DW_TAG_const_type ||
+               N.getTag() == dwarf::DW_TAG_immutable_type ||
                N.getTag() == dwarf::DW_TAG_volatile_type ||
                N.getTag() == dwarf::DW_TAG_restrict_type ||
                N.getTag() == dwarf::DW_TAG_atomic_type ||
