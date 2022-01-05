@@ -38,6 +38,7 @@ add_lld_library(lldMachO
   BitReader
   Core
   DebugInfoDWARF
+  Demangle
   LTO
   MC
   ObjCARCOpts
