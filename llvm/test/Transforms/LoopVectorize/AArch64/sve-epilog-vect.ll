@@ -31,30 +31,30 @@ define void @f1(i8* %A) #0 {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 32
-; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 32
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP5]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 16
-; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[TMP8]], 0
-; CHECK-NEXT:    [[TMP10:%.*]] = mul i64 [[TMP9]], 1
-; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[INDEX]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, i8* [[A:%.*]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, i8* [[A]], i64 [[TMP11]]
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, i8* [[TMP12]], i32 0
-; CHECK-NEXT:    [[TMP15:%.*]] = bitcast i8* [[TMP14]] to <vscale x 16 x i8>*
-; CHECK-NEXT:    store <vscale x 16 x i8> shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 1, i32 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer), <vscale x 16 x i8>* [[TMP15]], align 1
-; CHECK-NEXT:    [[TMP16:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP17:%.*]] = mul i32 [[TMP16]], 16
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, i8* [[TMP12]], i32 [[TMP17]]
-; CHECK-NEXT:    [[TMP19:%.*]] = bitcast i8* [[TMP18]] to <vscale x 16 x i8>*
-; CHECK-NEXT:    store <vscale x 16 x i8> shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 1, i32 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer), <vscale x 16 x i8>* [[TMP19]], align 1
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP5]], 16
+; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[TMP6]], 0
+; CHECK-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 1
+; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[INDEX]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, i8* [[A:%.*]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, i8* [[A]], i64 [[TMP9]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, i8* [[TMP10]], i32 0
+; CHECK-NEXT:    [[TMP13:%.*]] = bitcast i8* [[TMP12]] to <vscale x 16 x i8>*
+; CHECK-NEXT:    store <vscale x 16 x i8> shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 1, i32 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer), <vscale x 16 x i8>* [[TMP13]], align 1
+; CHECK-NEXT:    [[TMP14:%.*]] = call i32 @llvm.vscale.i32()
+; CHECK-NEXT:    [[TMP15:%.*]] = mul i32 [[TMP14]], 16
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, i8* [[TMP10]], i32 [[TMP15]]
+; CHECK-NEXT:    [[TMP17:%.*]] = bitcast i8* [[TMP16]] to <vscale x 16 x i8>*
+; CHECK-NEXT:    store <vscale x 16 x i8> shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 1, i32 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer), <vscale x 16 x i8>* [[TMP17]], align 1
+; CHECK-NEXT:    [[TMP18:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP19:%.*]] = mul i64 [[TMP18]], 32
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP19]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
@@ -68,18 +68,18 @@ define void @f1(i8* %A) #0 {
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; CHECK:       vec.epilog.vector.body:
-; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP21:%.*]] = add i64 [[INDEX1]], 0
+; CHECK-NEXT:    [[INDEX4:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT3:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP21:%.*]] = add i64 [[INDEX4]], 0
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i8, i8* [[A]], i64 [[TMP21]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i8, i8* [[TMP22]], i32 0
 ; CHECK-NEXT:    [[TMP24:%.*]] = bitcast i8* [[TMP23]] to <8 x i8>*
 ; CHECK-NEXT:    store <8 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>, <8 x i8>* [[TMP24]], align 1
-; CHECK-NEXT:    [[INDEX_NEXT2]] = add nuw i64 [[INDEX1]], 8
-; CHECK-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT2]], 1024
+; CHECK-NEXT:    [[INDEX_NEXT3]] = add nuw i64 [[INDEX4]], 8
+; CHECK-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT3]], 1024
 ; CHECK-NEXT:    br i1 [[TMP25]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
-; CHECK-NEXT:    [[CMP_N3:%.*]] = icmp eq i64 1024, 1024
-; CHECK-NEXT:    br i1 [[CMP_N3]], label [[EXIT_LOOPEXIT:%.*]], label [[VEC_EPILOG_SCALAR_PH]]
+; CHECK-NEXT:    [[CMP_N1:%.*]] = icmp eq i64 1024, 1024
+; CHECK-NEXT:    br i1 [[CMP_N1]], label [[EXIT_LOOPEXIT:%.*]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -94,6 +94,7 @@ define void @f1(i8* %A) #0 {
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
+;
 
 entry:
   br label %for.body

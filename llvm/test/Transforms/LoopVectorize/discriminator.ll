@@ -47,8 +47,8 @@ define void @_Z3foov() local_unnamed_addr #0 !dbg !6 {
 ;LOOPUNROLL_5: discriminator: 21
 ; When unrolling after loop vectorize, both vec_body and remainder loop
 ; are unrolled.
-;LOOPVEC_UNROLL: discriminator: 385
 ;LOOPVEC_UNROLL: discriminator: 9
+;LOOPVEC_UNROLL: discriminator: 385
 ;DBG_VALUE: ![[DBG]] = {{.*}}, scope: ![[TOP]]
 
 !llvm.dbg.cu = !{!0}
