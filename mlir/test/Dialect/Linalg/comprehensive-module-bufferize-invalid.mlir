@@ -187,3 +187,26 @@ func @to_memref_op_is_writing(
 
   return %r1, %r2 : vector<5xf32>, vector<5xf32>
 }
+
+// -----
+
+func private @foo(%t : tensor<?xf32>) -> (f32, tensor<?xf32>, f32)
+
+func @call_to_unknown_tensor_returning_func(%t : tensor<?xf32>) {
+  // expected-error @+1 {{call to FuncOp that returns non-equivalent tensors not supported}}
+  call @foo(%t) : (tensor<?xf32>) -> (f32, tensor<?xf32>, f32)
+  return
+}
+
+// -----
+
+func @foo(%t : tensor<5xf32>) -> (tensor<5xf32>) {
+  %0 = linalg.init_tensor [5] : tensor<5xf32>
+  return %0 : tensor<5xf32>
+}
+
+func @call_to_func_returning_non_equiv_tensor(%t : tensor<5xf32>) {
+  // expected-error @+1 {{call to FuncOp that returns non-equivalent tensors not supported}}
+  call @foo(%t) : (tensor<5xf32>) -> (tensor<5xf32>)
+  return
+}
