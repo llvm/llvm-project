@@ -719,3 +719,67 @@ define <3 x i14> @lshr_sext_i1_to_i14_splat_vec_use1(<3 x i1> %a) {
   %lshr = lshr <3 x i14> %sext, <i14 4, i14 4, i14 4>
   ret <3 x i14> %lshr
 }
+
+define i1 @icmp_ule(i32 %x, i32 %y) {
+; CHECK-LABEL: @icmp_ule(
+; CHECK-NEXT:    ret i1 true
+;
+  %x.shifted = lshr i32 %x, %y
+  %cmp = icmp ule i32 %x.shifted, %x
+  ret i1 %cmp
+}
+
+define i1 @icmp_ult(i32 %x, i32 %y) {
+; CHECK-LABEL: @icmp_ult(
+; CHECK-NEXT:    [[X_SHIFTED:%.*]] = lshr i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X_SHIFTED]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.shifted = lshr i32 %x, %y
+  %cmp = icmp ult i32 %x.shifted, %x
+  ret i1 %cmp
+}
+
+define i1 @icmp_eq(i32 %x, i32 %y) {
+; CHECK-LABEL: @icmp_eq(
+; CHECK-NEXT:    [[X_SHIFTED:%.*]] = lshr i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X_SHIFTED]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.shifted = lshr i32 %x, %y
+  %cmp = icmp eq i32 %x.shifted, %x
+  ret i1 %cmp
+}
+
+define i1 @icmp_ne(i32 %x, i32 %y) {
+; CHECK-LABEL: @icmp_ne(
+; CHECK-NEXT:    [[X_SHIFTED:%.*]] = lshr i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[X_SHIFTED]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.shifted = lshr i32 %x, %y
+  %cmp = icmp ne i32 %x.shifted, %x
+  ret i1 %cmp
+}
+
+define i1 @icmp_ugt(i32 %x, i32 %y) {
+; CHECK-LABEL: @icmp_ugt(
+; CHECK-NEXT:    ret i1 false
+;
+  %x.shifted = lshr i32 %x, %y
+  %cmp = icmp ugt i32 %x.shifted, %x
+  ret i1 %cmp
+}
+
+define i1 @icmp_uge(i32 %x, i32 %y) {
+; CHECK-LABEL: @icmp_uge(
+; CHECK-NEXT:    [[X_SHIFTED:%.*]] = lshr i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i32 [[X_SHIFTED]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.shifted = lshr i32 %x, %y
+  %cmp = icmp uge i32 %x.shifted, %x
+  ret i1 %cmp
+}
+
+
