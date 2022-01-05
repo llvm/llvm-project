@@ -39,9 +39,9 @@ public:
       : ES(ES), RegisterEHFrameWrapperFnAddr(RegisterEHFrameWrapperFnAddr),
         DeregisterEHFrameWrapperFnAddr(DeregisterEHFRameWrapperFnAddr) {}
 
-  Error registerEHFrames(JITTargetAddress EHFrameSectionAddr,
+  Error registerEHFrames(ExecutorAddr EHFrameSectionAddr,
                          size_t EHFrameSectionSize) override;
-  Error deregisterEHFrames(JITTargetAddress EHFrameSectionAddr,
+  Error deregisterEHFrames(ExecutorAddr EHFrameSectionAddr,
                            size_t EHFrameSectionSize) override;
 
 private:

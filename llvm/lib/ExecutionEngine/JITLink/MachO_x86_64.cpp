@@ -119,7 +119,7 @@ private:
   // returns the edge kind and addend to be used.
   Expected<PairRelocInfo> parsePairRelocation(
       Block &BlockToFix, MachONormalizedRelocationType SubtractorKind,
-      const MachO::relocation_info &SubRI, JITTargetAddress FixupAddress,
+      const MachO::relocation_info &SubRI, orc::ExecutorAddr FixupAddress,
       const char *FixupContent, object::relocation_iterator &UnsignedRelItr,
       object::relocation_iterator &RelEnd) {
     using namespace support;
@@ -172,7 +172,7 @@ private:
         return ToSymbolSec.takeError();
       ToSymbol = getSymbolByAddress(*ToSymbolSec, ToSymbolSec->Address);
       assert(ToSymbol && "No symbol for section");
-      FixupValue -= ToSymbol->getAddress();
+      FixupValue -= ToSymbol->getAddress().getValue();
     }
 
     Edge::Kind DeltaKind;
@@ -206,7 +206,7 @@ private:
 
     for (auto &S : Obj.sections()) {
 
-      JITTargetAddress SectionAddress = S.getAddress();
+      orc::ExecutorAddr SectionAddress(S.getAddress());
 
       // Skip relocations virtual sections.
       if (S.isVirtual()) {
@@ -241,7 +241,7 @@ private:
         MachO::relocation_info RI = getRelocationInfo(RelItr);
 
         // Find the address of the value to fix up.
-        JITTargetAddress FixupAddress = SectionAddress + (uint32_t)RI.r_address;
+        auto FixupAddress = SectionAddress + (uint32_t)RI.r_address;
 
         LLVM_DEBUG({
           dbgs() << "  " << NSec->SectName << " + "
@@ -257,7 +257,7 @@ private:
           BlockToFix = &SymbolToFixOrErr->getBlock();
         }
 
-        if (FixupAddress + static_cast<JITTargetAddress>(1ULL << RI.r_length) >
+        if (FixupAddress + orc::ExecutorAddrDiff(1ULL << RI.r_length) >
             BlockToFix->getAddress() + BlockToFix->getContent().size())
           return make_error<JITLinkError>(
               "Relocation extends past end of fixup block");
@@ -343,7 +343,7 @@ private:
           Kind = x86_64::Pointer64;
           break;
         case MachOPointer64Anon: {
-          JITTargetAddress TargetAddress = *(const ulittle64_t *)FixupContent;
+          orc::ExecutorAddr TargetAddress(*(const ulittle64_t *)FixupContent);
           auto TargetNSec = findSectionByIndex(RI.r_symbolnum - 1);
           if (!TargetNSec)
             return TargetNSec.takeError();
@@ -367,8 +367,8 @@ private:
           Kind = x86_64::Delta32;
           break;
         case MachOPCRel32Anon: {
-          JITTargetAddress TargetAddress =
-              FixupAddress + 4 + *(const little32_t *)FixupContent;
+          orc::ExecutorAddr TargetAddress(FixupAddress + 4 +
+                                          *(const little32_t *)FixupContent);
           auto TargetNSec = findSectionByIndex(RI.r_symbolnum - 1);
           if (!TargetNSec)
             return TargetNSec.takeError();
@@ -384,10 +384,10 @@ private:
         case MachOPCRel32Minus1Anon:
         case MachOPCRel32Minus2Anon:
         case MachOPCRel32Minus4Anon: {
-          JITTargetAddress Delta =
-              4 + static_cast<JITTargetAddress>(
+          orc::ExecutorAddrDiff Delta =
+              4 + orc::ExecutorAddrDiff(
                       1ULL << (*MachORelocKind - MachOPCRel32Minus1Anon));
-          JITTargetAddress TargetAddress =
+          orc::ExecutorAddr TargetAddress =
               FixupAddress + Delta + *(const little32_t *)FixupContent;
           auto TargetNSec = findSectionByIndex(RI.r_symbolnum - 1);
           if (!TargetNSec)

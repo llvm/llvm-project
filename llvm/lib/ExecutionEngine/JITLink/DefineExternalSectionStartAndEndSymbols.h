@@ -52,13 +52,13 @@ public:
         auto &SR = getSectionRange(*D.Sec);
         if (D.IsStart) {
           if (SR.empty())
-            G.makeAbsolute(*Sym, 0);
+            G.makeAbsolute(*Sym, orc::ExecutorAddr());
           else
             G.makeDefined(*Sym, *SR.getFirstBlock(), 0, 0, Linkage::Strong,
                           Scope::Local, false);
         } else {
           if (SR.empty())
-            G.makeAbsolute(*Sym, 0);
+            G.makeAbsolute(*Sym, orc::ExecutorAddr());
           else
             G.makeDefined(*Sym, *SR.getLastBlock(),
                           SR.getLastBlock()->getSize(), 0, Linkage::Strong,
