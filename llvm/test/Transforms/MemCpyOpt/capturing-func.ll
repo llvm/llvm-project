@@ -57,8 +57,7 @@ define void @test_lifetime_end() {
 ; CHECK-NEXT:    [[PTR1:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    [[PTR2:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 1, i8* [[PTR2]])
-; CHECK-NEXT:    call void @foo(i8* [[PTR2]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* [[PTR1]], i8* [[PTR2]], i32 1, i1 false)
+; CHECK-NEXT:    call void @foo(i8* [[PTR1]])
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 1, i8* [[PTR2]])
 ; CHECK-NEXT:    call void @foo(i8* [[PTR1]])
 ; CHECK-NEXT:    ret void
@@ -101,8 +100,7 @@ define void @test_function_end() {
 ; CHECK-LABEL: define {{[^@]+}}@test_function_end() {
 ; CHECK-NEXT:    [[PTR1:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    [[PTR2:%.*]] = alloca i8, align 1
-; CHECK-NEXT:    call void @foo(i8* [[PTR2]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* [[PTR1]], i8* [[PTR2]], i32 1, i1 false)
+; CHECK-NEXT:    call void @foo(i8* [[PTR1]])
 ; CHECK-NEXT:    ret void
 ;
   %ptr1 = alloca i8
