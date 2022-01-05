@@ -253,13 +253,23 @@ define i64 @test_array_of_zero_size_array() {
   ret i64 %v
 }
 
-@g10 = constant {i128} {i128 undef}
+@g_undef = constant { i128 } undef
 
 define i32* @test_undef_aggregate() {
 ; CHECK-LABEL: @test_undef_aggregate(
 ; CHECK-NEXT:    ret i32* undef
 ;
-  %v = load i32*, i32** bitcast ({i128}* @g10 to i32**)
+  %v = load i32*, i32** bitcast ({i128}* @g_undef to i32**)
+  ret i32* %v
+}
+
+@g_poison = constant { i128 } poison
+
+define i32* @test_poison_aggregate() {
+; CHECK-LABEL: @test_poison_aggregate(
+; CHECK-NEXT:    ret i32* undef
+;
+  %v = load i32*, i32** bitcast ({i128}* @g_poison to i32**)
   ret i32* %v
 }
 
@@ -292,4 +302,17 @@ define x86_mmx @load_mmx() {
 ;
   %temp = load x86_mmx, x86_mmx* bitcast (i64* getelementptr ([2 x i64], [2 x i64]* @m64, i64 0, i64 ptrtoint (i32* @idx to i64)) to x86_mmx*)
   ret x86_mmx %temp
+}
+
+@g_offset = external global i64
+
+@g_neg_one_vec = constant <4 x i8> <i8 -1, i8 -1, i8 -1, i8 -1>
+
+define i8 @load_neg_one_at_unknown_offset() {
+; CHECK-LABEL: @load_neg_one_at_unknown_offset(
+; CHECK-NEXT:    [[V:%.*]] = load i8, i8* getelementptr (<4 x i8>, <4 x i8>* @g_neg_one_vec, i64 0, i64 ptrtoint (i64* @g_offset to i64)), align 1
+; CHECK-NEXT:    ret i8 [[V]]
+;
+  %v = load i8, i8* getelementptr (<4 x i8>, <4 x i8>* @g_neg_one_vec, i64 0, i64 ptrtoint (i64* @g_offset to i64))
+  ret i8 %v
 }
