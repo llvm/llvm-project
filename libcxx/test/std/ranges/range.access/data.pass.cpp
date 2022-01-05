@@ -15,6 +15,7 @@
 #include <ranges>
 
 #include <cassert>
+#include <type_traits>
 #include "test_macros.h"
 #include "test_iterators.h"
 
@@ -116,9 +117,10 @@ struct BeginMemberRandomAccess {
 
   random_access_iterator<const int*> begin() const;
 };
-static_assert(!std::is_invocable_v<RangeDataT, BeginMemberRandomAccess>);
-static_assert(!std::is_invocable_v<RangeDataT, BeginMemberRandomAccess const>);
-static_assert(!std::is_invocable_v<RangeDataT, BeginMemberRandomAccess const&>);
+static_assert(!std::is_invocable_v<RangeDataT, BeginMemberRandomAccess&>);
+static_assert(!std::is_invocable_v<RangeDataT, BeginMemberRandomAccess&&>);
+static_assert(!std::is_invocable_v<RangeDataT, const BeginMemberRandomAccess&>);
+static_assert(!std::is_invocable_v<RangeDataT, const BeginMemberRandomAccess&&>);
 
 struct BeginFriendContiguousIterator {
   int buff[8];
@@ -135,9 +137,10 @@ static_assert(!std::is_invocable_v<RangeDataT, BeginMemberContiguousIterator con
 struct BeginFriendRandomAccess {
   friend random_access_iterator<const int*> begin(const BeginFriendRandomAccess iter);
 };
-static_assert(!std::is_invocable_v<RangeDataT, BeginFriendRandomAccess>);
-static_assert(!std::is_invocable_v<RangeDataT, BeginFriendRandomAccess const>);
-static_assert(!std::is_invocable_v<RangeDataT, BeginFriendRandomAccess const&>);
+static_assert(!std::is_invocable_v<RangeDataT, BeginFriendRandomAccess&>);
+static_assert(!std::is_invocable_v<RangeDataT, BeginFriendRandomAccess&&>);
+static_assert(!std::is_invocable_v<RangeDataT, const BeginFriendRandomAccess&>);
+static_assert(!std::is_invocable_v<RangeDataT, const BeginFriendRandomAccess&&>);
 
 struct BeginMemberRvalue {
   int buff[8];
@@ -172,6 +175,12 @@ constexpr bool testViaRangesBegin() {
 
   return true;
 }
+
+struct RandomButNotContiguous {
+  random_access_iterator<int*> begin() const;
+  random_access_iterator<int*> end() const;
+};
+static_assert(!std::is_invocable_v<RangeDataT, RandomButNotContiguous>);
 
 int main(int, char**) {
   testDataMember();
