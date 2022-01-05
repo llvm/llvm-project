@@ -728,7 +728,8 @@ TEST(TargetParserTest, ARMArchExtFeature) {
                               {"sb", "nosb", "+sb", "-sb"},
                               {"i8mm", "noi8mm", "+i8mm", "-i8mm"},
                               {"mve", "nomve", "+mve", "-mve"},
-                              {"mve.fp", "nomve.fp", "+mve.fp", "-mve.fp"}};
+                              {"mve.fp", "nomve.fp", "+mve.fp", "-mve.fp"},
+                              {"pmuv3p4", "nopmuv3p4", "+perfmon", "-perfmon"}};
 
   for (unsigned i = 0; i < array_lengthof(ArchExt); i++) {
     EXPECT_EQ(StringRef(ArchExt[i][2]), ARM::getArchExtFeature(ArchExt[i][0]));
@@ -1428,17 +1429,14 @@ TEST(TargetParserTest, testAArch64Extension) {
 
 TEST(TargetParserTest, AArch64ExtensionFeatures) {
   std::vector<uint64_t> Extensions = {
-    AArch64::AEK_CRC,      AArch64::AEK_CRYPTO,
-    AArch64::AEK_FP,       AArch64::AEK_SIMD,
-    AArch64::AEK_FP16,     AArch64::AEK_PROFILE,
-    AArch64::AEK_RAS,      AArch64::AEK_LSE,
-    AArch64::AEK_RDM,      AArch64::AEK_DOTPROD,
-    AArch64::AEK_SVE,      AArch64::AEK_SVE2,
-    AArch64::AEK_SVE2AES,  AArch64::AEK_SVE2SM4,
-    AArch64::AEK_SVE2SHA3, AArch64::AEK_SVE2BITPERM,
-    AArch64::AEK_RCPC,     AArch64::AEK_FP16FML,
-    AArch64::AEK_SME,      AArch64::AEK_SMEF64,
-    AArch64::AEK_SMEI64 };
+      AArch64::AEK_CRC,         AArch64::AEK_CRYPTO,  AArch64::AEK_FP,
+      AArch64::AEK_SIMD,        AArch64::AEK_FP16,    AArch64::AEK_PROFILE,
+      AArch64::AEK_RAS,         AArch64::AEK_LSE,     AArch64::AEK_RDM,
+      AArch64::AEK_DOTPROD,     AArch64::AEK_SVE,     AArch64::AEK_SVE2,
+      AArch64::AEK_SVE2AES,     AArch64::AEK_SVE2SM4, AArch64::AEK_SVE2SHA3,
+      AArch64::AEK_SVE2BITPERM, AArch64::AEK_RCPC,    AArch64::AEK_FP16FML,
+      AArch64::AEK_SME,         AArch64::AEK_SMEF64,  AArch64::AEK_SMEI64,
+      AArch64::AEK_PERFMON};
 
   std::vector<StringRef> Features;
 
@@ -1473,6 +1471,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+sme"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sme-f64"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sme-i64"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+perfmon"));
 }
 
 TEST(TargetParserTest, AArch64ArchFeatures) {
@@ -1485,43 +1484,41 @@ TEST(TargetParserTest, AArch64ArchFeatures) {
 }
 
 TEST(TargetParserTest, AArch64ArchExtFeature) {
-  const char *ArchExt[][4] = {{"crc", "nocrc", "+crc", "-crc"},
-                              {"crypto", "nocrypto", "+crypto", "-crypto"},
-                              {"flagm", "noflagm", "+flagm", "-flagm"},
-                              {"fp", "nofp", "+fp-armv8", "-fp-armv8"},
-                              {"simd", "nosimd", "+neon", "-neon"},
-                              {"fp16", "nofp16", "+fullfp16", "-fullfp16"},
-                              {"fp16fml", "nofp16fml", "+fp16fml", "-fp16fml"},
-                              {"profile", "noprofile", "+spe", "-spe"},
-                              {"ras", "noras", "+ras", "-ras"},
-                              {"lse", "nolse", "+lse", "-lse"},
-                              {"rdm", "nordm", "+rdm", "-rdm"},
-                              {"sve", "nosve", "+sve", "-sve"},
-                              {"sve2", "nosve2", "+sve2", "-sve2"},
-                              {"sve2-aes", "nosve2-aes", "+sve2-aes",
-                               "-sve2-aes"},
-                              {"sve2-sm4", "nosve2-sm4", "+sve2-sm4",
-                               "-sve2-sm4"},
-                              {"sve2-sha3", "nosve2-sha3", "+sve2-sha3",
-                               "-sve2-sha3"},
-                              {"sve2-bitperm", "nosve2-bitperm",
-                               "+sve2-bitperm", "-sve2-bitperm"},
-                              {"dotprod", "nodotprod", "+dotprod", "-dotprod"},
-                              {"rcpc", "norcpc", "+rcpc", "-rcpc" },
-                              {"rng", "norng", "+rand", "-rand"},
-                              {"memtag", "nomemtag", "+mte", "-mte"},
-                              {"tme", "notme", "+tme", "-tme"},
-                              {"pauth", "nopauth", "+pauth", "-pauth"},
-                              {"ssbs", "nossbs", "+ssbs", "-ssbs"},
-                              {"sb", "nosb", "+sb", "-sb"},
-                              {"predres", "nopredres", "+predres", "-predres"},
-                              {"i8mm", "noi8mm", "+i8mm", "-i8mm"},
-                              {"f32mm", "nof32mm", "+f32mm", "-f32mm"},
-                              {"f64mm", "nof64mm", "+f64mm", "-f64mm"},
-                              {"sme", "nosme", "+sme", "-sme"},
-                              {"sme-f64", "nosme-f64", "+sme-f64", "-sme-f64"},
-                              {"sme-i64", "nosme-i64", "+sme-i64", "-sme-i64"},
-};
+  const char *ArchExt[][4] = {
+      {"crc", "nocrc", "+crc", "-crc"},
+      {"crypto", "nocrypto", "+crypto", "-crypto"},
+      {"flagm", "noflagm", "+flagm", "-flagm"},
+      {"fp", "nofp", "+fp-armv8", "-fp-armv8"},
+      {"simd", "nosimd", "+neon", "-neon"},
+      {"fp16", "nofp16", "+fullfp16", "-fullfp16"},
+      {"fp16fml", "nofp16fml", "+fp16fml", "-fp16fml"},
+      {"profile", "noprofile", "+spe", "-spe"},
+      {"ras", "noras", "+ras", "-ras"},
+      {"lse", "nolse", "+lse", "-lse"},
+      {"rdm", "nordm", "+rdm", "-rdm"},
+      {"sve", "nosve", "+sve", "-sve"},
+      {"sve2", "nosve2", "+sve2", "-sve2"},
+      {"sve2-aes", "nosve2-aes", "+sve2-aes", "-sve2-aes"},
+      {"sve2-sm4", "nosve2-sm4", "+sve2-sm4", "-sve2-sm4"},
+      {"sve2-sha3", "nosve2-sha3", "+sve2-sha3", "-sve2-sha3"},
+      {"sve2-bitperm", "nosve2-bitperm", "+sve2-bitperm", "-sve2-bitperm"},
+      {"dotprod", "nodotprod", "+dotprod", "-dotprod"},
+      {"rcpc", "norcpc", "+rcpc", "-rcpc"},
+      {"rng", "norng", "+rand", "-rand"},
+      {"memtag", "nomemtag", "+mte", "-mte"},
+      {"tme", "notme", "+tme", "-tme"},
+      {"pauth", "nopauth", "+pauth", "-pauth"},
+      {"ssbs", "nossbs", "+ssbs", "-ssbs"},
+      {"sb", "nosb", "+sb", "-sb"},
+      {"predres", "nopredres", "+predres", "-predres"},
+      {"i8mm", "noi8mm", "+i8mm", "-i8mm"},
+      {"f32mm", "nof32mm", "+f32mm", "-f32mm"},
+      {"f64mm", "nof64mm", "+f64mm", "-f64mm"},
+      {"sme", "nosme", "+sme", "-sme"},
+      {"sme-f64", "nosme-f64", "+sme-f64", "-sme-f64"},
+      {"sme-i64", "nosme-i64", "+sme-i64", "-sme-i64"},
+      {"pmuv3p4", "nopmuv3p4", "+perfmon", "-perfmon"},
+  };
 
   for (unsigned i = 0; i < array_lengthof(ArchExt); i++) {
     EXPECT_EQ(StringRef(ArchExt[i][2]),
