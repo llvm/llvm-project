@@ -1,7 +1,7 @@
 ; Tests that a coroutine is split, inlined into the caller and devirtualized.
 ; RUN: opt < %s -S -enable-coroutines -passes='default<O2>' | FileCheck %s
 
-define i8* @f() {
+define i8* @f() "coroutine.presplit"="0" {
 entry:
   %id = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* null)
   %need.dyn.alloc = call i1 @llvm.coro.alloc(token %id)

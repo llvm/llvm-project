@@ -36,6 +36,11 @@ void initializeCoroCleanupLegacyPass(PassRegistry &);
 // adds coroutine subfunctions to the SCC to be processed by IPO pipeline.
 // Async lowering similarily triggers a restart of the pipeline after it has
 // split the coroutine.
+//
+// FIXME: Refactor these attributes as LLVM attributes instead of string
+// attributes since these attributes are already used outside LLVM's
+// coroutine module.
+// FIXME: Remove these values once we remove the Legacy PM.
 #define CORO_PRESPLIT_ATTR "coroutine.presplit"
 #define UNPREPARED_FOR_SPLIT "0"
 #define PREPARED_FOR_SPLIT "1"
