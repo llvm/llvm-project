@@ -32,6 +32,9 @@ namespace sparse_tensor {
 /// Converts an overhead storage bitwidth to its internal type-encoding.
 OverheadType overheadTypeEncoding(unsigned width);
 
+/// Converts an overhead storage type to its internal type-encoding.
+OverheadType overheadTypeEncoding(Type tp);
+
 /// Converts the internal type-encoding for overhead storage to an mlir::Type.
 Type getOverheadType(Builder &builder, OverheadType ot);
 
@@ -43,8 +46,20 @@ Type getPointerOverheadType(Builder &builder,
 Type getIndexOverheadType(Builder &builder,
                           const SparseTensorEncodingAttr &enc);
 
+/// Convert OverheadType to its function-name suffix.
+StringRef overheadTypeFunctionSuffix(OverheadType ot);
+
+/// Converts an overhead storage type to its function-name suffix.
+StringRef overheadTypeFunctionSuffix(Type overheadTp);
+
 /// Converts a primary storage type to its internal type-encoding.
 PrimaryType primaryTypeEncoding(Type elemTp);
+
+/// Convert PrimaryType to its function-name suffix.
+StringRef primaryTypeFunctionSuffix(PrimaryType pt);
+
+/// Converts a primary storage type to its function-name suffix.
+StringRef primaryTypeFunctionSuffix(Type elemTp);
 
 /// Converts the IR's dimension level type to its internal type-encoding.
 DimLevelType dimLevelTypeEncoding(SparseTensorEncodingAttr::DimLevelType dlt);
