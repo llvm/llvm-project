@@ -1162,7 +1162,8 @@ unsigned UnwrappedLineFormatter::format(
   bool FirstLine = true;
   for (const AnnotatedLine *Line =
            Joiner.getNextMergedLine(DryRun, IndentTracker);
-       Line; Line = NextLine, FirstLine = false) {
+       Line; PrevPrevLine = PreviousLine, PreviousLine = Line, Line = NextLine,
+                           FirstLine = false) {
     const AnnotatedLine &TheLine = *Line;
     unsigned Indent = IndentTracker.getIndent();
 
@@ -1252,8 +1253,6 @@ unsigned UnwrappedLineFormatter::format(
     }
     if (!DryRun)
       markFinalized(TheLine.First);
-    PrevPrevLine = PreviousLine;
-    PreviousLine = &TheLine;
   }
   PenaltyCache[CacheKey] = Penalty;
   return Penalty;
