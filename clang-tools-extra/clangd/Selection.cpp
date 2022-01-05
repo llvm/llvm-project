@@ -745,19 +745,19 @@ private:
     //                              which accept A<char> and return R<int>.
     // The TypeLoc hierarchy:
     //   Vec<R<int>(*[2])(A<char>)> m;
-    //   Vec<--------------------->      TemplateSpecialization Vec
+    //   Vec<#####################>      TemplateSpecialization Vec
     //       --------[2]----------       `-Array
     //       -------*-------------         `-Pointer
     //       ------(----)---------           `-Paren
-    //       ------------(-------)             `-Function
-    //       R<--->                              |-TemplateSpecialization R
+    //       ------------(#######)             `-Function
+    //       R<###>                              |-TemplateSpecialization R
     //         int                               | `-Builtin int
-    //                    A<---->                `-TemplateSpecialization A
+    //                    A<####>                `-TemplateSpecialization A
     //                      char                   `-Builtin char
     //
-    // In each row, --- represents unclaimed parts of the SourceRange.
-    // For declarator types, we are careful never to claim these.
-    // For non-declarator types, children are guaranteed to claim them first.
+    // In each row
+    //   --- represents unclaimed parts of the SourceRange.
+    //   ### represents parts that children already claimed.
     if (const auto *TL = N.get<TypeLoc>()) {
       if (auto PTL = TL->getAs<ParenTypeLoc>()) {
         claimRange(PTL.getLParenLoc(), Result);
