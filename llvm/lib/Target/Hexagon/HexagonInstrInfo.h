@@ -335,6 +335,7 @@ public:
   getSerializableBitmaskMachineOperandTargetFlags() const override;
 
   bool isTailCall(const MachineInstr &MI) const override;
+  bool isAsCheapAsAMove(const MachineInstr &MI) const override;
 
   /// HexagonInstrInfo specifics.
 
