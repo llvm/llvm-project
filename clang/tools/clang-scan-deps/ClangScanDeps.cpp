@@ -480,7 +480,7 @@ int main(int argc, const char **argv) {
               llvm::is_contained(Args, "--driver-mode=cl");
 
           // Reverse scan, starting at the end or at the element before "--".
-          auto R = llvm::make_reverse_iterator(FlagsEnd);
+          auto R = std::make_reverse_iterator(FlagsEnd);
           for (auto I = R, E = Args.rend(); I != E; ++I) {
             StringRef Arg = *I;
             if (ClangCLMode) {

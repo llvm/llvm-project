@@ -707,7 +707,7 @@ class CFGBlock {
 
     template <bool IsOtherConst>
     ElementRefIterator(ElementRefIterator<true, IsOtherConst> E)
-        : ElementRefIterator(E.Parent, llvm::make_reverse_iterator(E.Pos)) {}
+        : ElementRefIterator(E.Parent, std::make_reverse_iterator(E.Pos)) {}
 
     bool operator<(ElementRefIterator Other) const {
       assert(Parent == Other.Parent);
