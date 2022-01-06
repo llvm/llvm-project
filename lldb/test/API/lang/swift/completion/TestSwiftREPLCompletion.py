@@ -52,19 +52,19 @@ class SwiftCompletionTest(PExpectTest):
 
         # Try completing something already complete.
         self.child.send(":b\t")
-        self.child.expect_exact(":b ")
+        # Use list of strings to work when there are embedded ansi sequences.
+        self.child.expect_exact([":", "b "])
         self.child.sendline("")
 
         # Try completing something that only has one result "vers" -> "version".
         self.child.send(":vers\t")
-        # Use list of strings to work when there are embedded ansi sequences.
         self.child.expect_exact([":", "version"])
         self.child.sendline("")
 
         # Try completing something that has multiple completions.
         self.child.send(":\t")
         self.child.expect_exact("Available completions:")
-        self.child.expect_exact(":help")
+        self.child.expect_exact([":", "help"])
         self.child.expect_exact("More (Y/n/a)")
         self.child.send("n")
         self.child.sendline("help")
