@@ -79,11 +79,6 @@ void AVRFrameLowering::emitPrologue(MachineFunction &MF,
         .addReg(AVR::R0, RegState::Kill)
         .setMIFlag(MachineInstr::FrameSetup);
     BuildMI(MBB, MBBI, DL, TII.get(AVR::EORRdRr))
-        .addReg(AVR::R0, RegState::Define)
-        .addReg(AVR::R0, RegState::Kill)
-        .addReg(AVR::R0, RegState::Kill)
-        .setMIFlag(MachineInstr::FrameSetup);
-    BuildMI(MBB, MBBI, DL, TII.get(AVR::EORRdRr))
         .addReg(AVR::R1, RegState::Define)
         .addReg(AVR::R1, RegState::Kill)
         .addReg(AVR::R1, RegState::Kill)
