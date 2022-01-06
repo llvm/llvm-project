@@ -760,7 +760,8 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
     Type type = processType(inst->getType());
     if (!type)
       return failure();
-    v = b.create<GEPOp>(loc, type, ops);
+    v = b.create<GEPOp>(loc, type, ops[0],
+                        llvm::makeArrayRef(ops).drop_front());
     return success();
   }
   }
