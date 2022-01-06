@@ -6,98 +6,37 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Perform inplace bufferization within function boundaries.
-// This is a specialized pass that supports inplace analysis for a fixed subset
-// of ops that have well-defined inplace semantics.
+// Comprehensive Bufferize bufferizes function bodies. Function boundaries
+// (FuncOp bbArgs, CallOps, ReturnOps) are treated as "unknown" ops.
+// ModuleBufferization.cpp is an extension of Comprehensive Bufferize for simple
+// call graphs.
+//
+// Comprehensive Bufferize consists of two phases.
+//
+// 1. Analyze ops to decide which OpResults can bufferize inplace, i.e., without
+//    inserting buffer copies. The analysis queries op bufferization semantics
+//    via `BufferizableOpInterface`.
+// 2. Bufferize ops by calling `BufferizableOpInterface::bufferize`. This
+//    function does not generate buffer copies for OpResults that were decided
+//    to bufferize inplace during the analysis phase.
+//
+// Inplace bufferization decisions are passed from the analysis to the
+// bufferization phase via `BufferizationState` and `BufferizationAliasInfo`.
+// They can be printed for debugging purposes with `testAnalysisOnly`.
+//
+// Ops that do not implement `BufferizableOpInterface` can be analyzed but are
+// treated conservatively. E.g., the analysis has to assume that their
+// OpOperands bufferize to memory writes. While such ops can be analyzed, they
+// are not bufferized and remain in the IR. to_tensor and to_memref ops are
+// inserted at the bufferization boundary.
+//
+// Note: If `allowUnknownOps` is set to false, bufferization fails when an
+// unknown op (that does not implement `BufferizableOpInterface`) is found. No
+// to_tensor/to_memref ops are inserted.
+//
 // This pass caters to high-performance codegen where buffer reuse is deemed
 // critical: the pass should fail if the bufferized form of the function needs
-// to return any buffer.
-// Generic control-flow and branching are unsupported.
-// Composability with extensible set of ops is not a first-class concern.
-//
-// Bufferization occurs by:
-//  a. performing an inPlace analysis `inPlaceAnalysis` which marks each
-//     operation within the op with the `kInPlaceResultsAttrName` attribute.
-//  b. traversing each operation in the op and rewriting it in
-//     buffer form and keeping a BlockAndValueMapping mapping of the
-//     rewrites. New allocations are introduced during this step.
-//     TODO: Allocation + depending op hoisting to outermost enclosing
-//     sequential scope.
-//  c. at the end of this bufferization, 3 cases may occur:
-//     i. inplaceable function arguments may be reused in place after the
-//        function itself has been bufferized. This is encoded by IR resembling:
-//
-//        ```
-//          #map = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
-//           func @foo(%A: tensor<?xf32> {linalg.inplaceable = true})
-//              -> tensor<?xf32> {
-//            %0 = bufferization.to_memref %A : memref<?xf32, #map>
-//            // ... uses of %0
-//            %res = bufferization.to_tensor %0 : memref<?xf32, #map>
-//            return %res : tensor<?xf32>
-//          }
-//        ```
-//
-//        this is the cue for the bufferization of the function foo (and calls
-//        to it) may bufferize to `func @foo(%A: memref<?xf32, some_layout>)`.
-//        To fully achieve bufferization, an additional analysis is needed to
-//        determine whether function argument/operand pairs bufferize to a
-//        single inplace buffer argument (i.e. functions may return tensors in
-//        arbitrary order that may not match argument numbers).
-//
-//    ii. results that don't map to an inplaceable function argument are
-//        generally allocated. Since memref semantics wrt ownership of the
-//        underlying memory region are not well-defined, comprehensive
-//        bufferization chooses to perform allocations in a scoped fashion:
-//        returning memrefs is always considered illegal.
-//        Such scenarios are encoded by IR resembling:
-//
-//        ```
-//          #map = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
-//          func @foo(%A: tensor<?xf32> {linalg.inplaceable = true})
-//              -> tensor<?xf32> {
-//            %0 = bufferization.to_memref %A : memref<?xf32, #map>
-//            %1 = memref.dim %0, %c0 : memref<?xf32, #map>
-//            %2 = memref.alloc(%1) : memref<?xf32>
-//            %3 = memref.cast %2 : memref<?xf32> to memref<?xf32, #map>
-//            // ... uses of %3
-//            memref.dealloc %2 : memref<?xf32, #map>
-//            %res = bufferization.to_tensor %3 : memref<?xf32, #map>
-//            return %res : tensor<?xf32>
-//          }
-//       ```
-//
-//        this is the cue for the bufferization of the function foo (and calls
-//        to it) that it must bufferize to `func @foo(%A: memref<?xf32,
-//        some_layout>,
-//                   %B: memref<?xf32, some_layout>)` (i.e. make a cloned
-//        allocation of the result tensor)
-//        To fully achieve bufferization, the alloc/dealloc pair must be lifted
-//        out of the function at each call site.
-//
-//   iii. as an optimization over ii., it may be possible to reuse an argument
-//        and only want to return a slice.
-//        This may forego allocation by letting *all* callers decide whether to
-//        pass a new *aliasing* memref function argument (i.e. a subview).
-//        Without loss of generality, callers may agree to allocate a new buffer
-//        to avoid this aliasing. Such scenarios are encoded by IR resembling:
-//
-//        ```
-//          #map = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
-//          func @foo(%arg0: tensor<?xf32> {linalg.inplaceable = true})
-//              -> tensor<4xf32> {
-//            %0 = bufferization.to_memref %arg0 : memref<?xf32, #map>
-//            %1 = memref.subview %0[0] [4] [1] : memref<?xf32, #map> to
-//                                                memref<4xf32, #map>
-//            // ... inplace computes into %1
-//            %3 = bufferization.to_tensor %1 : memref<4xf32, #map>
-//            return %3 : tensor<4xf32>
-//          }
-//        ```
-//
-//  Note: In the future, it may be worthwhile to design special bufferization
-//  ops to encode the desired semantics at function boundaries for i., ii. and
-//  iii.
+// to return any buffer, unless `allowReturnMemref` is enabled.
 //
 //  Lastly, note that layout map chosen to bufferize is the most dynamic
 //  canonical strided layout of the proper rank. This ensures compatibility with

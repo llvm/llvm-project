@@ -64,9 +64,9 @@ static void applyEnablingTransformations(ModuleOp moduleOp) {
   (void)applyPatternsAndFoldGreedily(moduleOp, std::move(patterns));
 }
 
-static Optional<Value> allocationFnUsingAlloca(OpBuilder &b, Location loc,
-                                               MemRefType type,
-                                               ArrayRef<Value> dynShape) {
+static FailureOr<Value> allocationFnUsingAlloca(OpBuilder &b, Location loc,
+                                                MemRefType type,
+                                                ArrayRef<Value> dynShape) {
   Value allocated = b.create<memref::AllocaOp>(
       loc, type, dynShape, b.getI64IntegerAttr(kBufferAlignments));
   return allocated;

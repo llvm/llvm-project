@@ -41,7 +41,7 @@ struct PostAnalysisStep;
 // TODO: Could be replaced with a "bufferization strategy" object with virtual
 // functions in the future.
 struct AllocationCallbacks {
-  using AllocationFn = std::function<Optional<Value>(
+  using AllocationFn = std::function<FailureOr<Value>(
       OpBuilder &, Location, MemRefType, ArrayRef<Value>)>;
   using DeallocationFn = std::function<void(OpBuilder &, Location, Value)>;
   using MemCpyFn = std::function<void(OpBuilder &, Location, Value, Value)>;
@@ -64,14 +64,14 @@ struct AllocationCallbacks {
 std::unique_ptr<AllocationCallbacks> defaultAllocationCallbacks();
 
 /// PostAnalysisSteps can be registered with `BufferizationOptions` and are
-/// executed after the analysis, but before bufferization. They can be used
+/// executed after the analysis, but before bufferization. They can be used to
 /// implement custom dialect-specific optimizations.
 struct PostAnalysisStep {
   virtual ~PostAnalysisStep() {}
 
   /// Run the post analysis step. This function may modify the IR, but must keep
-  /// `aliasInfo` (inside `state`) consistent. Newly created operations and
-  /// operations that should be re-analyzed must be stored in `newOps`.
+  /// `aliasInfo` consistent. Newly created operations and operations that
+  /// should be re-analyzed must be added to `newOps`.
   virtual LogicalResult run(Operation *op, BufferizationState &state,
                             BufferizationAliasInfo &aliasInfo,
                             SmallVector<Operation *> &newOps) = 0;
@@ -102,7 +102,8 @@ struct BufferizationOptions {
   }
 
   /// Allow-list the given dialects in the dialect filter. Only ops from
-  /// allow-listed dialects will be bufferized.
+  /// allow-listed dialects will be bufferized. If no dialect is added, ops from
+  /// any dialect will be bufferized.
   template <typename... DialectTs>
   void addToDialectFilter() {
     // The following expands a call to addToDialectFilterImpl for each dialect
@@ -132,6 +133,10 @@ struct BufferizationOptions {
   /// bufferization.to_memref and bufferization.to_tensor ops are inserted at
   /// the boundaries.
   bool allowUnknownOps = false;
+
+  /// Specifies whether dealloc ops should be generated along with alloc ops. If
+  /// not, new memory allocations will leak.
+  bool createDeallocs = true;
 
   /// Seed for the analysis fuzzer. If set to `0`, the fuzzer is deactivated.
   /// Should be used only with `testAnalysisOnly = true`.
@@ -284,17 +289,7 @@ struct DialectBufferizationState {
 };
 
 /// BufferizationState provides a variety of helper functions for dealing with
-/// tensor values and memref buffers. In particular,
-/// `BufferizableOpInterface::bufferize` implementation should utilize the
-/// following helper functions.
-///
-/// * `createAlloc` / `createDealloc` / `createAllocDeallocPair` creates ops
-///   that allocate and/or deallocate memref buffers.
-/// * `lookupBuffer` returns the memref buffer of a given tensor value.
-/// * `getResultBuffer` returns the memref buffer for a given tensor OpResult.
-///   Based on inplace bufferization decisions of the analysis, it may either
-///   directly return a mapped buffer or allocate a new brand new buffer.
-/// * `replaceOp` replaces an op with new values.
+/// tensor values and memref buffers.
 class BufferizationState {
 public:
   BufferizationState(Operation *op, const BufferizationOptions &options);
@@ -365,13 +360,15 @@ public:
   Value findLastPrecedingWrite(Value value) const;
 
   /// Creates a memref allocation.
-  Optional<Value> createAlloc(OpBuilder &b, Location loc, MemRefType type,
-                              ArrayRef<Value> dynShape) const;
+  FailureOr<Value> createAlloc(OpBuilder &b, Location loc, MemRefType type,
+                               ArrayRef<Value> dynShape) const;
 
-  /// Creates an alloc-dealloc pair. This function may perform additional
-  /// optimizations such as buffer allocation hoisting.
-  Value createAllocDeallocPair(OpBuilder &builder, Location loc,
-                               Value shapedValue) const;
+  /// Creates a memref allocation for the given shaped value. This function may
+  /// perform additional optimizations such as buffer allocation hoisting. If
+  /// `createDealloc`, a deallocation op is inserted at the point where the
+  /// allocation goes out of scope.
+  FailureOr<Value> createAlloc(OpBuilder &b, Location loc, Value shapedValue,
+                               bool deallocMemref) const;
 
   /// Creates a memref deallocation. The given memref buffer must have been
   /// allocated using `createAlloc`.
@@ -390,7 +387,8 @@ public:
   /// Return the result buffer (memref) for a given OpResult (tensor). Allocate
   /// a new buffer and copy over data from the existing buffer if out-of-place
   /// bufferization is necessary.
-  Value getResultBuffer(RewriterBase &rewriter, OpResult result) const;
+  FailureOr<Value> getResultBuffer(RewriterBase &rewriter,
+                                   OpResult result) const;
 
   /// Return dialect-specific bufferization state.
   template <typename StateT>
@@ -449,12 +447,9 @@ MemRefType getContiguousMemRefType(ShapedType shapedType,
                                    MemRefLayoutAttrInterface layout = {},
                                    Attribute memorySpace = {});
 
-/// Return a contiguous MemRefType (i.e. with canonical/empty layout map)
-/// with the same shape as `shapedType` and specified `layout` and
-/// `addressSpace` or an UnrankedMemRefType otherwise.
-Type getContiguousOrUnrankedMemRefType(Type type,
-                                       MemRefLayoutAttrInterface layout = {},
-                                       Attribute memorySpace = {});
+/// Return an UnrankedMemRefType with the given element type and memory space.
+UnrankedMemRefType getUnrankedMemRefType(Type elementType,
+                                         Attribute memorySpace = {});
 
 /// Return a MemRefType to which the `tensorType` can be bufferized in a
 /// composable fashion. The layout must be the most dynamic possible and
@@ -487,7 +482,7 @@ struct AllocationHoistingBarrierOnly
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
                                const BufferizationState &state) const {
-    return false;
+    return true;
   }
 
   SmallVector<OpOperand *>

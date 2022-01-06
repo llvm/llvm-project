@@ -41,9 +41,9 @@ using namespace linalg::comprehensive_bufferize;
 
 /// Default allocation function that is used by the comprehensive bufferization
 /// pass. The default currently creates a ranked memref using `memref.alloc`.
-static Optional<Value> defaultAllocationFn(OpBuilder &b, Location loc,
-                                           MemRefType type,
-                                           ArrayRef<Value> dynShape) {
+static FailureOr<Value> defaultAllocationFn(OpBuilder &b, Location loc,
+                                            MemRefType type,
+                                            ArrayRef<Value> dynShape) {
   Value allocated = b.create<memref::AllocOp>(
       loc, type, dynShape, b.getI64IntegerAttr(kBufferAlignments));
   return allocated;
@@ -73,6 +73,21 @@ mlir::linalg::comprehensive_bufferize::defaultAllocationCallbacks() {
 // callbacks to their default functions.
 BufferizationOptions::BufferizationOptions()
     : allocationFns(defaultAllocationCallbacks()) {}
+
+BufferizableOpInterface mlir::linalg::comprehensive_bufferize::
+    BufferizationOptions::dynCastBufferizableOp(Operation *op) const {
+  if (isOpAllowed(op))
+    return dyn_cast<BufferizableOpInterface>(op);
+  return nullptr;
+}
+
+BufferizableOpInterface mlir::linalg::comprehensive_bufferize::
+    BufferizationOptions::dynCastBufferizableOp(Value value) const {
+  if (auto bufferizableOp = value.getDefiningOp<BufferizableOpInterface>())
+    if (isOpAllowed(bufferizableOp.getOperation()))
+      return bufferizableOp;
+  return nullptr;
+}
 
 //===----------------------------------------------------------------------===//
 // BufferizationAliasInfo
@@ -178,21 +193,6 @@ static void setInsertionPointAfter(OpBuilder &b, Value value) {
   } else {
     b.setInsertionPointAfter(value.getDefiningOp());
   }
-}
-
-BufferizableOpInterface mlir::linalg::comprehensive_bufferize::
-    BufferizationOptions::dynCastBufferizableOp(Operation *op) const {
-  if (isOpAllowed(op))
-    return dyn_cast<BufferizableOpInterface>(op);
-  return nullptr;
-}
-
-BufferizableOpInterface mlir::linalg::comprehensive_bufferize::
-    BufferizationOptions::dynCastBufferizableOp(Value value) const {
-  if (auto bufferizableOp = value.getDefiningOp<BufferizableOpInterface>())
-    if (isOpAllowed(bufferizableOp.getOperation()))
-      return bufferizableOp;
-  return nullptr;
 }
 
 /// Determine which OpOperand* will alias with `result` if the op is bufferized
@@ -358,8 +358,9 @@ mlir::linalg::comprehensive_bufferize::BufferizationState::BufferizationState(
 /// Return the result buffer (memref) for a given OpResult (tensor). Allocate
 /// a new buffer and copy over data from the existing buffer if out-of-place
 /// bufferization is necessary.
-Value mlir::linalg::comprehensive_bufferize::BufferizationState::
-    getResultBuffer(RewriterBase &rewriter, OpResult result) const {
+FailureOr<Value>
+mlir::linalg::comprehensive_bufferize::BufferizationState::getResultBuffer(
+    RewriterBase &rewriter, OpResult result) const {
   OpBuilder::InsertionGuard guard(rewriter);
   Operation *op = result.getOwner();
   SmallVector<OpOperand *> aliasingOperands = getAliasingOpOperand(result);
@@ -375,10 +376,8 @@ Value mlir::linalg::comprehensive_bufferize::BufferizationState::
   if (aliasingOperands.size() > 1 &&
       !llvm::all_of(aliasingOperands, [&](OpOperand *o) {
         return lookupBuffer(rewriter, o->get()) == operandBuffer;
-      })) {
-    op->emitError("result buffer is ambiguous");
-    return Value();
-  }
+      }))
+    return FailureOr<Value>(op->emitError("result buffer is ambiguous"));
 
   // If bufferizing out-of-place, allocate a new buffer.
   if (!aliasInfo.isInPlace(result)) {
@@ -392,7 +391,10 @@ Value mlir::linalg::comprehensive_bufferize::BufferizationState::
     // allocation should be inserted (in the absence of allocation hoisting).
     setInsertionPointAfter(rewriter, operandBuffer);
     // Allocate the result buffer.
-    Value resultBuffer = createAllocDeallocPair(rewriter, loc, operandBuffer);
+    FailureOr<Value> resultBuffer =
+        createAlloc(rewriter, loc, operandBuffer, options.createDeallocs);
+    if (failed(resultBuffer))
+      return failure();
     bool skipCopy = false;
     // Do not copy if the last preceding write of `operand` is an op that does
     // not write (skipping ops that merely create aliases). E.g., InitTensorOp.
@@ -413,7 +415,7 @@ Value mlir::linalg::comprehensive_bufferize::BufferizationState::
     if (!skipCopy) {
       // The copy happens right before the op that is bufferized.
       rewriter.setInsertionPoint(op);
-      createMemCpy(rewriter, loc, operandBuffer, resultBuffer);
+      createMemCpy(rewriter, loc, operandBuffer, *resultBuffer);
     }
     return resultBuffer;
   }
@@ -534,12 +536,12 @@ static MemRefType getAllocationTypeAndShape(OpBuilder &b, Location loc,
   return allocMemRefType;
 }
 
-/// Create an Allocop/DeAllocOp pair, where the AllocOp is after
+/// Create an AllocOp/DeallocOp pair, where the AllocOp is after
 /// `shapedValue.getDefiningOp` (or at the top of the block in case of a
 /// bbArg) and the DeallocOp is at the end of the block.
-Value mlir::linalg::comprehensive_bufferize::BufferizationState::
-    createAllocDeallocPair(OpBuilder &b, Location loc,
-                           Value shapedValue) const {
+FailureOr<Value>
+mlir::linalg::comprehensive_bufferize::BufferizationState::createAlloc(
+    OpBuilder &b, Location loc, Value shapedValue, bool deallocMemref) const {
   // Take a guard before anything else.
   OpBuilder::InsertionGuard g(b);
 
@@ -550,23 +552,25 @@ Value mlir::linalg::comprehensive_bufferize::BufferizationState::
   // Note: getAllocationTypeAndShape also sets the insertion point.
   MemRefType allocMemRefType =
       getAllocationTypeAndShape(b, loc, shapedValue, dynShape);
-  Optional<Value> allocated = createAlloc(b, loc, allocMemRefType, dynShape);
-  // TODO: For now just assert the value is returned. Eventually need to
-  // error-propagate.
-  assert(allocated && "allocation failed");
+  FailureOr<Value> allocated = createAlloc(b, loc, allocMemRefType, dynShape);
+  if (failed(allocated))
+    return failure();
   Value casted = allocated.getValue();
   if (memRefType && memRefType != allocMemRefType) {
     casted = b.create<memref::CastOp>(loc, memRefType, allocated.getValue());
   }
 
-  // 2. Create memory deallocation.
-  b.setInsertionPoint(allocated.getValue().getParentBlock()->getTerminator());
-  createDealloc(b, loc, allocated.getValue());
+  if (deallocMemref) {
+    // 2. Create memory deallocation.
+    b.setInsertionPoint(allocated.getValue().getParentBlock()->getTerminator());
+    createDealloc(b, loc, allocated.getValue());
+  }
+
   return casted;
 }
 
 /// Create a memref allocation.
-Optional<Value>
+FailureOr<Value>
 mlir::linalg::comprehensive_bufferize::BufferizationState::createAlloc(
     OpBuilder &b, Location loc, MemRefType type,
     ArrayRef<Value> dynShape) const {
@@ -607,10 +611,13 @@ Value mlir::linalg::comprehensive_bufferize::BufferizationState::lookupBuffer(
   // Insert to_memref op.
   OpBuilder::InsertionGuard g(rewriter);
   setInsertionPointAfter(rewriter, tensor);
-  Type memrefType =
-      tensor.getType().isa<RankedTensorType>()
-          ? getDynamicMemRefType(tensor.getType().cast<RankedTensorType>())
-          : getContiguousOrUnrankedMemRefType(tensor.getType());
+  Type memrefType;
+  if (auto rankedTensorType = tensor.getType().dyn_cast<RankedTensorType>()) {
+    memrefType = getDynamicMemRefType(rankedTensorType);
+  } else {
+    memrefType = getUnrankedMemRefType(
+        tensor.getType().cast<TensorType>().getElementType());
+  }
   return rewriter.create<bufferization::ToMemrefOp>(tensor.getLoc(), memrefType,
                                                     tensor);
 }
@@ -627,13 +634,9 @@ MemRefType mlir::linalg::comprehensive_bufferize::getContiguousMemRefType(
                          layout, memorySpace);
 }
 
-Type mlir::linalg::comprehensive_bufferize::getContiguousOrUnrankedMemRefType(
-    Type type, MemRefLayoutAttrInterface layout, Attribute memorySpace) {
-  if (type.isa<RankedTensorType, MemRefType>())
-    return getContiguousMemRefType(type.cast<ShapedType>(), layout,
-                                   memorySpace);
-  assert(!layout && "expected empty layout with UnrankedMemRefType");
-  return UnrankedMemRefType::get(getElementTypeOrSelf(type), memorySpace);
+UnrankedMemRefType mlir::linalg::comprehensive_bufferize::getUnrankedMemRefType(
+    Type elementType, Attribute memorySpace) {
+  return UnrankedMemRefType::get(elementType, memorySpace);
 }
 
 MemRefType mlir::linalg::comprehensive_bufferize::getDynamicMemRefType(

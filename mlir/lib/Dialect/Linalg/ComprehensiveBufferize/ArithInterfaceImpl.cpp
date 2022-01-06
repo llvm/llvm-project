@@ -20,23 +20,30 @@ namespace linalg {
 namespace comprehensive_bufferize {
 namespace arith_ext {
 
+/// Bufferization of arith.constant. Replace with memref.get_global.
 struct ConstantOpInterface
     : public BufferizableOpInterface::ExternalModel<ConstantOpInterface,
                                                     arith::ConstantOp> {
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationState &state) const {
     auto constantOp = cast<arith::ConstantOp>(op);
-    assert(constantOp.getType().dyn_cast<RankedTensorType>() &&
-           "not a constant ranked tensor");
+
+    // Only ranked tensors are supported.
+    if (!constantOp.getType().isa<RankedTensorType>())
+      return failure();
+
+    // Only constants inside a module are supported.
     auto moduleOp = constantOp->getParentOfType<ModuleOp>();
     if (!moduleOp)
-      return constantOp.emitError(
-          "cannot bufferize constants not within builtin.module op");
+      return failure();
 
+    // Create global memory segment and replace tensor with memref pointing to
+    // that memory segment.
     GlobalCreator globalCreator(moduleOp);
     auto globalMemref = globalCreator.getGlobalFor(constantOp);
     replaceOpWithNewBufferizedOp<memref::GetGlobalOp>(
         rewriter, op, globalMemref.type(), globalMemref.getName());
+
     return success();
   }
 

@@ -332,9 +332,9 @@ static void MoveOrigin(const void *dst, const void *src, uptr size,
   // origins by copying origins in a reverse order; otherwise, copy origins in
   // a normal order. The orders of origin transfer are consistent with the
   // orders of how memcpy and memmove transfer user data.
-  uptr src_aligned_beg = reinterpret_cast<uptr>(src) & ~3UL;
-  uptr src_aligned_end = (reinterpret_cast<uptr>(src) + size) & ~3UL;
-  uptr dst_aligned_beg = reinterpret_cast<uptr>(dst) & ~3UL;
+  uptr src_aligned_beg = OriginAlignDown((uptr)src);
+  uptr src_aligned_end = OriginAlignDown((uptr)src + size);
+  uptr dst_aligned_beg = OriginAlignDown((uptr)dst);
   if (dst_aligned_beg < src_aligned_end && dst_aligned_beg >= src_aligned_beg)
     return ReverseCopyOrigin(dst, src, size, stack);
   return CopyOrigin(dst, src, size, stack);
