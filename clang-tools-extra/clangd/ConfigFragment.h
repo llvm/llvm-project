@@ -283,6 +283,18 @@ struct Fragment {
     llvm::Optional<Located<bool>> ShowAKA;
   };
   HoverBlock Hover;
+
+  /// Configures labels shown inline with the code.
+  struct InlayHintsBlock {
+    /// Enables/disables the inlay-hints feature.
+    llvm::Optional<Located<bool>> Enabled;
+
+    /// Show parameter names before function arguments.
+    llvm::Optional<Located<bool>> ParameterNames;
+    /// Show deduced types for `auto`.
+    llvm::Optional<Located<bool>> DeducedTypes;
+  };
+  InlayHintsBlock InlayHints;
 };
 
 } // namespace config

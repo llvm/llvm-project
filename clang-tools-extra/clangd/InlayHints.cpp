@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "InlayHints.h"
+#include "Config.h"
 #include "HeuristicResolver.h"
 #include "ParsedAST.h"
 #include "clang/AST/DeclarationName.h"
@@ -23,8 +24,8 @@ enum class HintSide { Left, Right };
 class InlayHintVisitor : public RecursiveASTVisitor<InlayHintVisitor> {
 public:
   InlayHintVisitor(std::vector<InlayHint> &Results, ParsedAST &AST,
-                   llvm::Optional<Range> RestrictRange)
-      : Results(Results), AST(AST.getASTContext()),
+                   const Config &Cfg, llvm::Optional<Range> RestrictRange)
+      : Results(Results), AST(AST.getASTContext()), Cfg(Cfg),
         RestrictRange(std::move(RestrictRange)),
         MainFileID(AST.getSourceManager().getMainFileID()),
         Resolver(AST.getHeuristicResolver()),
@@ -65,6 +66,9 @@ public:
   }
 
   bool VisitCallExpr(CallExpr *E) {
+    if (!Cfg.InlayHints.Parameters)
+      return true;
+
     // Do not show parameter hints for operator calls written using operator
     // syntax or user-defined literals. (Among other reasons, the resulting
     // hints can look awkard, e.g. the expression can itself be a function
@@ -135,7 +139,7 @@ private:
   // the entire argument list likely appears in the main file and can be hinted.
   void processCall(SourceLocation Anchor, const FunctionDecl *Callee,
                    llvm::ArrayRef<const Expr *const> Args) {
-    if (Args.size() == 0 || !Callee)
+    if (!Cfg.InlayHints.Parameters || Args.size() == 0 || !Callee)
       return;
 
     // If the anchor location comes from a macro defintion, there's nowhere to
@@ -323,6 +327,23 @@ private:
   void addInlayHint(SourceRange R, HintSide Side, InlayHintKind Kind,
                     llvm::StringRef Prefix, llvm::StringRef Label,
                     llvm::StringRef Suffix) {
+    // We shouldn't get as far as adding a hint if the category is disabled.
+    // We'd like to disable as much of the analysis as possible above instead.
+    // Assert in debug mode but add a dynamic check in production.
+    assert(Cfg.InlayHints.Enabled && "Shouldn't get here if disabled!");
+    switch (Kind) {
+#define CHECK_KIND(Enumerator, ConfigProperty)                                 \
+  case InlayHintKind::Enumerator:                                              \
+    assert(Cfg.InlayHints.ConfigProperty &&                                    \
+           "Shouldn't get here if kind is disabled!");                         \
+    if (!Cfg.InlayHints.ConfigProperty)                                        \
+      return;                                                                  \
+    break
+      CHECK_KIND(ParameterHint, Parameters);
+      CHECK_KIND(TypeHint, DeducedTypes);
+#undef CHECK_KIND
+    }
+
     auto FileRange =
         toHalfOpenFileRange(AST.getSourceManager(), AST.getLangOpts(), R);
     if (!FileRange)
@@ -348,8 +369,7 @@ private:
 
   void addTypeHint(SourceRange R, QualType T, llvm::StringRef Prefix,
                    const PrintingPolicy &Policy) {
-    // Do not print useless "NULL TYPE" hint.
-    if (!T.getTypePtrOrNull())
+    if (!Cfg.InlayHints.DeducedTypes || T.isNull())
       return;
 
     std::string TypeName = T.getAsString(Policy);
@@ -360,6 +380,7 @@ private:
 
   std::vector<InlayHint> &Results;
   ASTContext &AST;
+  const Config &Cfg;
   llvm::Optional<Range> RestrictRange;
   FileID MainFileID;
   StringRef MainFileBuf;
@@ -381,7 +402,10 @@ private:
 std::vector<InlayHint> inlayHints(ParsedAST &AST,
                                   llvm::Optional<Range> RestrictRange) {
   std::vector<InlayHint> Results;
-  InlayHintVisitor Visitor(Results, AST, std::move(RestrictRange));
+  const auto &Cfg = Config::current();
+  if (!Cfg.InlayHints.Enabled)
+    return Results;
+  InlayHintVisitor Visitor(Results, AST, Cfg, std::move(RestrictRange));
   Visitor.TraverseAST(AST.getASTContext());
 
   // De-duplicate hints. Duplicates can sometimes occur due to e.g. explicit

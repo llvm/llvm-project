@@ -228,6 +228,23 @@ Hover:
   ASSERT_EQ(Results.size(), 1u);
   EXPECT_THAT(Results[0].Hover.ShowAKA, llvm::ValueIs(Val(true)));
 }
+
+TEST(ParseYAML, InlayHints) {
+  CapturedDiags Diags;
+  Annotations YAML(R"yaml(
+InlayHints:
+  Enabled: No
+  ParameterNames: Yes
+  )yaml");
+  auto Results =
+      Fragment::parseYAML(YAML.code(), "config.yaml", Diags.callback());
+  ASSERT_THAT(Diags.Diagnostics, IsEmpty());
+  ASSERT_EQ(Results.size(), 1u);
+  EXPECT_THAT(Results[0].InlayHints.Enabled, llvm::ValueIs(Val(false)));
+  EXPECT_THAT(Results[0].InlayHints.ParameterNames, llvm::ValueIs(Val(true)));
+  EXPECT_EQ(Results[0].InlayHints.DeducedTypes, llvm::None);
+}
+
 } // namespace
 } // namespace config
 } // namespace clangd
