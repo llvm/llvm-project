@@ -26,6 +26,13 @@ define void @not_indirect(i32* %p, i32* %x) {
   ret void
 }
 
+; CHECK: Operand for indirect constraint must have elementtype attribute
+; CHECK-NEXT: call void asm "addl $1, $0", "=*rm,r"(i32* %p, i32 %x)
+define void @missing_elementtype(i32* %p, i32 %x) {
+	call void asm "addl $1, $0", "=*rm,r"(i32* %p, i32 %x)
+  ret void
+}
+
 ; CHECK: Operand for indirect constraint must have pointer type
 ; CHECK-NEXT: invoke void asm "addl $1, $0", "=*rm,r"(i32 %p, i32 %x)
 define void @not_pointer_arg_invoke(i32 %p, i32 %x) personality i8* null {
