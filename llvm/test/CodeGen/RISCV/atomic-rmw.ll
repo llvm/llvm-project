@@ -11118,7 +11118,7 @@ define i32 @atomicrmw_max_i32_monotonic(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a0
-; RV64I-NEXT:    lwu a3, 0(a0)
+; RV64I-NEXT:    lw a3, 0(a0)
 ; RV64I-NEXT:    mv s2, a1
 ; RV64I-NEXT:    sext.w s1, a1
 ; RV64I-NEXT:    j .LBB145_2
@@ -11208,7 +11208,7 @@ define i32 @atomicrmw_max_i32_acquire(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a0
-; RV64I-NEXT:    lwu a3, 0(a0)
+; RV64I-NEXT:    lw a3, 0(a0)
 ; RV64I-NEXT:    mv s2, a1
 ; RV64I-NEXT:    sext.w s1, a1
 ; RV64I-NEXT:    j .LBB146_2
@@ -11298,7 +11298,7 @@ define i32 @atomicrmw_max_i32_release(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a0
-; RV64I-NEXT:    lwu a3, 0(a0)
+; RV64I-NEXT:    lw a3, 0(a0)
 ; RV64I-NEXT:    mv s2, a1
 ; RV64I-NEXT:    sext.w s1, a1
 ; RV64I-NEXT:    j .LBB147_2
@@ -11388,7 +11388,7 @@ define i32 @atomicrmw_max_i32_acq_rel(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a0
-; RV64I-NEXT:    lwu a3, 0(a0)
+; RV64I-NEXT:    lw a3, 0(a0)
 ; RV64I-NEXT:    mv s2, a1
 ; RV64I-NEXT:    sext.w s1, a1
 ; RV64I-NEXT:    j .LBB148_2
@@ -11478,7 +11478,7 @@ define i32 @atomicrmw_max_i32_seq_cst(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a0
-; RV64I-NEXT:    lwu a3, 0(a0)
+; RV64I-NEXT:    lw a3, 0(a0)
 ; RV64I-NEXT:    mv s2, a1
 ; RV64I-NEXT:    sext.w s1, a1
 ; RV64I-NEXT:    j .LBB149_2
@@ -11568,7 +11568,7 @@ define i32 @atomicrmw_min_i32_monotonic(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a0
-; RV64I-NEXT:    lwu a3, 0(a0)
+; RV64I-NEXT:    lw a3, 0(a0)
 ; RV64I-NEXT:    mv s2, a1
 ; RV64I-NEXT:    sext.w s1, a1
 ; RV64I-NEXT:    j .LBB150_2
@@ -11658,7 +11658,7 @@ define i32 @atomicrmw_min_i32_acquire(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a0
-; RV64I-NEXT:    lwu a3, 0(a0)
+; RV64I-NEXT:    lw a3, 0(a0)
 ; RV64I-NEXT:    mv s2, a1
 ; RV64I-NEXT:    sext.w s1, a1
 ; RV64I-NEXT:    j .LBB151_2
@@ -11748,7 +11748,7 @@ define i32 @atomicrmw_min_i32_release(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a0
-; RV64I-NEXT:    lwu a3, 0(a0)
+; RV64I-NEXT:    lw a3, 0(a0)
 ; RV64I-NEXT:    mv s2, a1
 ; RV64I-NEXT:    sext.w s1, a1
 ; RV64I-NEXT:    j .LBB152_2
@@ -11838,7 +11838,7 @@ define i32 @atomicrmw_min_i32_acq_rel(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a0
-; RV64I-NEXT:    lwu a3, 0(a0)
+; RV64I-NEXT:    lw a3, 0(a0)
 ; RV64I-NEXT:    mv s2, a1
 ; RV64I-NEXT:    sext.w s1, a1
 ; RV64I-NEXT:    j .LBB153_2
@@ -11928,7 +11928,7 @@ define i32 @atomicrmw_min_i32_seq_cst(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a0
-; RV64I-NEXT:    lwu a3, 0(a0)
+; RV64I-NEXT:    lw a3, 0(a0)
 ; RV64I-NEXT:    mv s2, a1
 ; RV64I-NEXT:    sext.w s1, a1
 ; RV64I-NEXT:    j .LBB154_2
@@ -12018,7 +12018,7 @@ define i32 @atomicrmw_umax_i32_monotonic(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a0
-; RV64I-NEXT:    lwu a3, 0(a0)
+; RV64I-NEXT:    lw a3, 0(a0)
 ; RV64I-NEXT:    mv s2, a1
 ; RV64I-NEXT:    sext.w s1, a1
 ; RV64I-NEXT:    j .LBB155_2
@@ -12108,7 +12108,7 @@ define i32 @atomicrmw_umax_i32_acquire(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a0
-; RV64I-NEXT:    lwu a3, 0(a0)
+; RV64I-NEXT:    lw a3, 0(a0)
 ; RV64I-NEXT:    mv s2, a1
 ; RV64I-NEXT:    sext.w s1, a1
 ; RV64I-NEXT:    j .LBB156_2
@@ -12198,7 +12198,7 @@ define i32 @atomicrmw_umax_i32_release(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a0
-; RV64I-NEXT:    lwu a3, 0(a0)
+; RV64I-NEXT:    lw a3, 0(a0)
 ; RV64I-NEXT:    mv s2, a1
 ; RV64I-NEXT:    sext.w s1, a1
 ; RV64I-NEXT:    j .LBB157_2
@@ -12288,7 +12288,7 @@ define i32 @atomicrmw_umax_i32_acq_rel(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a0
-; RV64I-NEXT:    lwu a3, 0(a0)
+; RV64I-NEXT:    lw a3, 0(a0)
 ; RV64I-NEXT:    mv s2, a1
 ; RV64I-NEXT:    sext.w s1, a1
 ; RV64I-NEXT:    j .LBB158_2
@@ -12378,7 +12378,7 @@ define i32 @atomicrmw_umax_i32_seq_cst(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a0
-; RV64I-NEXT:    lwu a3, 0(a0)
+; RV64I-NEXT:    lw a3, 0(a0)
 ; RV64I-NEXT:    mv s2, a1
 ; RV64I-NEXT:    sext.w s1, a1
 ; RV64I-NEXT:    j .LBB159_2
@@ -12468,7 +12468,7 @@ define i32 @atomicrmw_umin_i32_monotonic(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a0
-; RV64I-NEXT:    lwu a3, 0(a0)
+; RV64I-NEXT:    lw a3, 0(a0)
 ; RV64I-NEXT:    mv s2, a1
 ; RV64I-NEXT:    sext.w s1, a1
 ; RV64I-NEXT:    j .LBB160_2
@@ -12558,7 +12558,7 @@ define i32 @atomicrmw_umin_i32_acquire(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a0
-; RV64I-NEXT:    lwu a3, 0(a0)
+; RV64I-NEXT:    lw a3, 0(a0)
 ; RV64I-NEXT:    mv s2, a1
 ; RV64I-NEXT:    sext.w s1, a1
 ; RV64I-NEXT:    j .LBB161_2
@@ -12648,7 +12648,7 @@ define i32 @atomicrmw_umin_i32_release(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a0
-; RV64I-NEXT:    lwu a3, 0(a0)
+; RV64I-NEXT:    lw a3, 0(a0)
 ; RV64I-NEXT:    mv s2, a1
 ; RV64I-NEXT:    sext.w s1, a1
 ; RV64I-NEXT:    j .LBB162_2
@@ -12738,7 +12738,7 @@ define i32 @atomicrmw_umin_i32_acq_rel(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a0
-; RV64I-NEXT:    lwu a3, 0(a0)
+; RV64I-NEXT:    lw a3, 0(a0)
 ; RV64I-NEXT:    mv s2, a1
 ; RV64I-NEXT:    sext.w s1, a1
 ; RV64I-NEXT:    j .LBB163_2
@@ -12828,7 +12828,7 @@ define i32 @atomicrmw_umin_i32_seq_cst(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a0
-; RV64I-NEXT:    lwu a3, 0(a0)
+; RV64I-NEXT:    lw a3, 0(a0)
 ; RV64I-NEXT:    mv s2, a1
 ; RV64I-NEXT:    sext.w s1, a1
 ; RV64I-NEXT:    j .LBB164_2

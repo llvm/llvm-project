@@ -1174,10 +1174,11 @@ bool RISCVTargetLowering::isTruncateFree(EVT SrcVT, EVT DstVT) const {
 
 bool RISCVTargetLowering::isZExtFree(SDValue Val, EVT VT2) const {
   // Zexts are free if they can be combined with a load.
+  // Don't advertise i32->i64 zextload as being free for RV64. It interacts
+  // poorly with type legalization of compares preferring sext.
   if (auto *LD = dyn_cast<LoadSDNode>(Val)) {
     EVT MemVT = LD->getMemoryVT();
-    if ((MemVT == MVT::i8 || MemVT == MVT::i16 ||
-         (Subtarget.is64Bit() && MemVT == MVT::i32)) &&
+    if ((MemVT == MVT::i8 || MemVT == MVT::i16) &&
         (LD->getExtensionType() == ISD::NON_EXTLOAD ||
          LD->getExtensionType() == ISD::ZEXTLOAD))
       return true;

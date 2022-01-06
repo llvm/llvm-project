@@ -19,7 +19,7 @@ define i32 @constraint_r(i32 %a) nounwind {
 ; RV64I-LABEL: constraint_r:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a1, %hi(gi)
-; RV64I-NEXT:    lwu a1, %lo(gi)(a1)
+; RV64I-NEXT:    lw a1, %lo(gi)(a1)
 ; RV64I-NEXT:    #APP
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    #NO_APP
