@@ -1537,7 +1537,7 @@ static ICmpInst::Predicate evaluateICmpRelation(Constant *V1, Constant *V2,
         if (const GlobalValue *GV = dyn_cast<GlobalValue>(CE1Op0)) {
           // If its not weak linkage, the GVal must have a non-zero address
           // so the result is greater-than
-          if (!GV->hasExternalWeakLinkage())
+          if (!GV->hasExternalWeakLinkage() && CE1GEP->isInBounds())
             return ICmpInst::ICMP_UGT;
         }
       } else if (const GlobalValue *GV2 = dyn_cast<GlobalValue>(V2)) {
