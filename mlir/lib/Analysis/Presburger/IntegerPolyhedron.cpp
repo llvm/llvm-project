@@ -303,6 +303,10 @@ void IntegerPolyhedron::setAndEliminate(unsigned pos,
   removeIdRange(pos, pos + values.size());
 }
 
+void IntegerPolyhedron::clearAndCopyFrom(const IntegerPolyhedron &other) {
+  *this = other;
+}
+
 void IntegerPolyhedron::printSpace(raw_ostream &os) const {
   os << "\nConstraints (" << getNumDimIds() << " dims, " << getNumSymbolIds()
      << " symbols, " << getNumLocalIds() << " locals), (" << getNumConstraints()
