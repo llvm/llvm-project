@@ -245,7 +245,7 @@ private:
   /// as described by \p CellDescs.
   void alignArrayInitializersRightJustified(CellDescriptions &&CellDescs);
 
-  /// Align Array Initializers being careful to leftt justify the columns
+  /// Align Array Initializers being careful to left justify the columns
   /// as described by \p CellDescs.
   void alignArrayInitializersLeftJustified(CellDescriptions &&CellDescs);
 
