@@ -308,7 +308,11 @@ Optional<unsigned> SimplexBase::findPivotRow(Optional<unsigned> skipRow,
                                              Direction direction,
                                              unsigned col) const {
   Optional<unsigned> retRow;
-  int64_t retElem, retConst;
+  // Initialize these to zero in order to silence a warning about retElem and
+  // retConst being used uninitialized in the initialization of `diff` below. In
+  // reality, these are always initialized when that line is reached since these
+  // are set whenever retRow is set.
+  int64_t retElem = 0, retConst = 0;
   for (unsigned row = nRedundant; row < nRow; ++row) {
     if (skipRow && row == *skipRow)
       continue;
