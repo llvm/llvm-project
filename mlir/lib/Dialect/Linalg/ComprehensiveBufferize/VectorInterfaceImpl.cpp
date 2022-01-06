@@ -100,6 +100,8 @@ struct TransferWriteOpInterface
     // this point.
     FailureOr<Value> resultBuffer =
         state.getResultBuffer(rewriter, op->getResult(0));
+    if (failed(resultBuffer))
+      return failure();
     rewriter.create<vector::TransferWriteOp>(
         writeOp.getLoc(), writeOp.vector(), *resultBuffer, writeOp.indices(),
         writeOp.permutation_mapAttr(), writeOp.in_boundsAttr());

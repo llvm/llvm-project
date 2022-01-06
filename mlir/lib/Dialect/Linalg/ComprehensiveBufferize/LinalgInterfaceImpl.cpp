@@ -55,6 +55,8 @@ static LogicalResult bufferizeLinalgOp(RewriterBase &rewriter, LinalgOp op,
     OpResult opResult = op.getTiedOpResult(opOperand);
     assert(opResult && "could not find correspond OpResult");
     FailureOr<Value> resultBuffer = state.getResultBuffer(rewriter, opResult);
+    if (failed(resultBuffer))
+      return failure();
     newOutputBuffers.push_back(*resultBuffer);
   }
 
@@ -210,10 +212,12 @@ struct InitTensorOpInterface
     if (initTensorOp->getUses().empty())
       return success();
 
-    Value alloc = state.createAlloc(rewriter, initTensorOp->getLoc(),
-                                    initTensorOp.result(),
-                                    state.getOptions().createDeallocs);
-    replaceOpWithBufferizedValues(rewriter, op, alloc);
+    FailureOr<Value> alloc = state.createAlloc(
+        rewriter, initTensorOp->getLoc(), initTensorOp.result(),
+        state.getOptions().createDeallocs);
+    if (failed(alloc))
+      return failure();
+    replaceOpWithBufferizedValues(rewriter, op, *alloc);
     return success();
   }
 };
@@ -287,6 +291,8 @@ struct TiledLoopOpInterface
       if (value.getType().isa<TensorType>()) {
         FailureOr<Value> buffer = state.getResultBuffer(
             rewriter, tiledLoopOp->getResult(nextResultNum++));
+        if (failed(buffer))
+          return failure();
         newOutputs.push_back(*buffer);
         newResults.push_back(*buffer);
       } else {
