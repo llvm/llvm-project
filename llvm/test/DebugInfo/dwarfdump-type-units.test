@@ -1,5 +1,5 @@
 RUN: llvm-dwarfdump -v %p/Inputs/dwarfdump-type-units.elf-x86-64 | FileCheck -check-prefix=INFO -check-prefix=CHECK -check-prefix=LONG %s
-RUN: llvm-dwarfdump -debug-types %p/Inputs/dwarfdump-type-units.elf-x86-64 -summarize-types | FileCheck -implicit-check-not=DW_ -check-prefix=CHECK -check-prefix=SHORT %s
+RUN: llvm-dwarfdump -debug-types -debug-info %p/Inputs/dwarfdump-type-units.elf-x86-64 -summarize-types | FileCheck -implicit-check-not=DW_ -check-prefix=CHECK -check-prefix=SHORT %s
 RUN: llvm-dwarfdump -v -debug-types %p/Inputs/dwarfdump-type-units.elf-x86-64 | FileCheck -check-prefix=TYPES %s
 
 INFO: debug_info contents:
