@@ -9571,8 +9571,7 @@ bool SLPVectorizerPass::vectorizeInsertValueInst(InsertValueInst *IVI,
     return false;
 
   LLVM_DEBUG(dbgs() << "SLP: array mappable to vector: " << *IVI << "\n");
-  // Aggregate value is unlikely to be processed in vector register, we need to
-  // extract scalars into scalar registers, so NeedExtraction is set true.
+  // Aggregate value is unlikely to be processed in vector register.
   return tryToVectorizeList(BuildVectorOpds, R);
 }
 
