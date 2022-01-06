@@ -16,3 +16,23 @@ TEST_F(RuntimeCallTest, genCommandArgumentCountTest) {
   checkCallOp(result.getDefiningOp(), "_FortranAArgumentCount", /*nbArgs=*/0,
       /*addLocArgs=*/false);
 }
+
+TEST_F(RuntimeCallTest, genGetCommandArgument) {
+  mlir::Location loc = firBuilder->getUnknownLoc();
+  mlir::Type intTy = firBuilder->getDefaultIntegerType();
+  mlir::Type charTy = fir::BoxType::get(firBuilder->getNoneType());
+  mlir::Value number = firBuilder->create<fir::UndefOp>(loc, intTy);
+  mlir::Value value = firBuilder->create<fir::UndefOp>(loc, charTy);
+  mlir::Value errmsg = firBuilder->create<fir::UndefOp>(loc, charTy);
+  // genGetCommandArgument expects `length` and `status` to be memory references
+  mlir::Value length = firBuilder->create<fir::AllocaOp>(loc, intTy);
+  mlir::Value status = firBuilder->create<fir::AllocaOp>(loc, intTy);
+
+  fir::runtime::genGetCommandArgument(
+      *firBuilder, loc, number, value, length, status, errmsg);
+  checkCallOpFromResultBox(
+      value, "_FortranAArgumentValue", /*nbArgs=*/3, /*addLocArgs=*/false);
+  mlir::Block *block = firBuilder->getBlock();
+  EXPECT_TRUE(block) << "Failed to retrieve the block!";
+  checkBlockForCallOp(block, "_FortranAArgumentLength", /*nbArgs=*/1);
+}
