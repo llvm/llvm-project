@@ -2902,8 +2902,18 @@ bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
   case Hexagon::S2_pstorerdt_io:
   case Hexagon::S2_pstorerdf_io:
     return isShiftedUInt<6,3>(Offset);
+
+  case Hexagon::L2_loadbsw2_io:
+  case Hexagon::L2_loadbzw2_io:
+    return isShiftedInt<11,1>(Offset);
+
+  case Hexagon::L2_loadbsw4_io:
+  case Hexagon::L2_loadbzw4_io:
+    return isShiftedInt<11,2>(Offset);
   } // switch
 
+  dbgs() << "Failed Opcode is : " << Opcode << " (" << getName(Opcode)
+         << ")\n";
   llvm_unreachable("No offset range is defined for this opcode. "
                    "Please define it in the above switch statement!");
 }
