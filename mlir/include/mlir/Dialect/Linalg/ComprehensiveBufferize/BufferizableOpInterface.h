@@ -133,6 +133,10 @@ struct BufferizationOptions {
   /// the boundaries.
   bool allowUnknownOps = false;
 
+  /// Specifies whether dealloc ops should be generated along with alloc ops. If
+  /// not, new memory allocations will leak.
+  bool createDeallocs = true;
+
   /// Seed for the analysis fuzzer. If set to `0`, the fuzzer is deactivated.
   /// Should be used only with `testAnalysisOnly = true`.
   unsigned analysisFuzzerSeed = 0;
@@ -368,10 +372,12 @@ public:
   Optional<Value> createAlloc(OpBuilder &b, Location loc, MemRefType type,
                               ArrayRef<Value> dynShape) const;
 
-  /// Creates an alloc-dealloc pair. This function may perform additional
-  /// optimizations such as buffer allocation hoisting.
-  Value createAllocDeallocPair(OpBuilder &builder, Location loc,
-                               Value shapedValue) const;
+  /// Creates a memref allocation for the given shaped value. This function may
+  /// perform additional optimizations such as buffer allocation hoisting. If
+  /// `createDealloc`, a deallocation op is inserted at the point where the
+  /// allocation goes out of scope.
+  Value createAlloc(OpBuilder &b, Location loc, Value shapedValue,
+                    bool deallocMemref) const;
 
   /// Creates a memref deallocation. The given memref buffer must have been
   /// allocated using `createAlloc`.

@@ -142,8 +142,8 @@ struct ExtractSliceOpInterface
     bool inplace = state.isInPlace(extractSliceOp->getResult(0));
     Value alloc;
     if (!inplace)
-      alloc =
-          state.createAllocDeallocPair(rewriter, loc, extractSliceOp.result());
+      alloc = state.createAlloc(rewriter, loc, extractSliceOp.result(),
+                                state.getOptions().createDeallocs);
 
     // Bufferize to subview.
     auto subviewMemRefType =
