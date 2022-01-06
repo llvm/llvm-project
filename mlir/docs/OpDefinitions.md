@@ -964,6 +964,16 @@ Note that `extraClassDeclaration` is a mechanism intended for long-tail cases by
 power users; for not-yet-implemented widely-applicable cases, improving the
 infrastructure is preferable.
 
+### Extra definitions
+
+When defining base op classes in TableGen that are inherited many times by
+different ops, users may want to provide common definitions of utility and
+interface functions. However, many of these definitions may not be desirable or
+possible in `extraClassDeclaration`, which append them to the op's C++ class
+declaration. In these cases, users can add an `extraClassDefinition` to define
+code that is added to the generated source file inside the op's C++ namespace.
+The substitution `$cppClass` is replaced by the op's C++ class name.
+
 ### Generated C++ code
 
 [OpDefinitionsGen][OpDefinitionsGen] processes the op definition spec file and
