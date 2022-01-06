@@ -782,4 +782,46 @@ define i1 @icmp_uge(i32 %x, i32 %y) {
   ret i1 %cmp
 }
 
+define i1 @icmp_sle(i32 %x, i32 %y) {
+; CHECK-LABEL: @icmp_sle(
+; CHECK-NEXT:    [[X_SHIFTED:%.*]] = lshr i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i32 [[X_SHIFTED]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.shifted = lshr i32 %x, %y
+  %cmp = icmp sle i32 %x.shifted, %x
+  ret i1 %cmp
+}
 
+define i1 @icmp_slt(i32 %x, i32 %y) {
+; CHECK-LABEL: @icmp_slt(
+; CHECK-NEXT:    [[X_SHIFTED:%.*]] = lshr i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X_SHIFTED]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.shifted = lshr i32 %x, %y
+  %cmp = icmp slt i32 %x.shifted, %x
+  ret i1 %cmp
+}
+
+define i1 @icmp_sgt(i32 %x, i32 %y) {
+; CHECK-LABEL: @icmp_sgt(
+; CHECK-NEXT:    [[X_SHIFTED:%.*]] = lshr i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X_SHIFTED]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.shifted = lshr i32 %x, %y
+  %cmp = icmp sgt i32 %x.shifted, %x
+  ret i1 %cmp
+}
+
+define i1 @icmp_sge(i32 %x, i32 %y) {
+; CHECK-LABEL: @icmp_sge(
+; CHECK-NEXT:    [[X_SHIFTED:%.*]] = lshr i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[X_SHIFTED]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.shifted = lshr i32 %x, %y
+  %cmp = icmp sge i32 %x.shifted, %x
+  ret i1 %cmp
+}
