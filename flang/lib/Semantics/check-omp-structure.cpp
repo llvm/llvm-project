@@ -844,25 +844,62 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
         common::visitors{
             [&](const parser::Designator &) {
               if (const auto *name{parser::Unwrap<parser::Name>(ompObject)}) {
-                const auto &scope{context_.FindScope(name->symbol->name())};
-                if (FindCommonBlockContaining(*name->symbol)) {
+                const auto &declScope{
+                    GetProgramUnitContaining(name->symbol->GetUltimate())};
+                const auto *sym =
+                    declScope.parent().FindSymbol(name->symbol->name());
+                if (sym &&
+                    (sym->has<MainProgramDetails>() ||
+                        sym->has<ModuleDetails>())) {
+                  context_.Say(name->source,
+                      "The module name or main program name cannot be in a %s "
+                      "directive"_err_en_US,
+                      ContextDirectiveAsFortran());
+                } else if (name->symbol->GetUltimate().IsSubprogram()) {
+                  if (GetContext().directive ==
+                      llvm::omp::Directive::OMPD_threadprivate)
+                    context_.Say(name->source,
+                        "The procedure name cannot be in a %s "
+                        "directive"_err_en_US,
+                        ContextDirectiveAsFortran());
+                  // TODO: Check for procedure name in declare target directive.
+                } else if (name->symbol->attrs().test(Attr::PARAMETER)) {
+                  if (GetContext().directive ==
+                      llvm::omp::Directive::OMPD_threadprivate)
+                    context_.Say(name->source,
+                        "The entity with PARAMETER attribute cannot be in a %s "
+                        "directive"_err_en_US,
+                        ContextDirectiveAsFortran());
+                  else if (GetContext().directive ==
+                      llvm::omp::Directive::OMPD_declare_target)
+                    context_.Say(name->source,
+                        "The entity with PARAMETER attribute is used in a %s "
+                        "directive"_en_US,
+                        ContextDirectiveAsFortran());
+                } else if (FindCommonBlockContaining(*name->symbol)) {
                   context_.Say(name->source,
                       "A variable in a %s directive cannot be an element of a "
                       "common block"_err_en_US,
                       ContextDirectiveAsFortran());
                 } else if (!IsSave(*name->symbol) &&
-                    scope.kind() != Scope::Kind::MainProgram &&
-                    scope.kind() != Scope::Kind::Module) {
+                    declScope.kind() != Scope::Kind::MainProgram &&
+                    declScope.kind() != Scope::Kind::Module) {
                   context_.Say(name->source,
                       "A variable that appears in a %s directive must be "
                       "declared in the scope of a module or have the SAVE "
                       "attribute, either explicitly or implicitly"_err_en_US,
                       ContextDirectiveAsFortran());
-                }
-                if (FindEquivalenceSet(*name->symbol)) {
+                } else if (FindEquivalenceSet(*name->symbol)) {
                   context_.Say(name->source,
                       "A variable in a %s directive cannot appear in an "
                       "EQUIVALENCE statement"_err_en_US,
+                      ContextDirectiveAsFortran());
+                } else if (name->symbol->test(Symbol::Flag::OmpThreadprivate) &&
+                    GetContext().directive ==
+                        llvm::omp::Directive::OMPD_declare_target) {
+                  context_.Say(name->source,
+                      "A THREADPRIVATE variable cannot appear in a %s "
+                      "directive"_err_en_US,
                       ContextDirectiveAsFortran());
                 }
               }
@@ -1405,6 +1442,49 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &) {
   if (GetContext().directive == llvm::omp::Directive::OMPD_end_single) {
     CheckNotAllowedIfClause(
         llvm::omp::Clause::OMPC_copyprivate, {llvm::omp::Clause::OMPC_nowait});
+  }
+
+  auto testThreadprivateVarErr = [&](Symbol sym, parser::Name name,
+                                     llvmOmpClause clauseTy) {
+    if (sym.test(Symbol::Flag::OmpThreadprivate))
+      context_.Say(name.source,
+          "A THREADPRIVATE variable cannot be in %s clause"_err_en_US,
+          parser::ToUpperCaseLetters(getClauseName(clauseTy).str()));
+  };
+
+  // [5.1] 2.21.2 Threadprivate Directive Restriction
+  OmpClauseSet threadprivateAllowedSet{llvm::omp::Clause::OMPC_copyin,
+      llvm::omp::Clause::OMPC_copyprivate, llvm::omp::Clause::OMPC_schedule,
+      llvm::omp::Clause::OMPC_num_threads, llvm::omp::Clause::OMPC_thread_limit,
+      llvm::omp::Clause::OMPC_if};
+  for (auto it : GetContext().clauseInfo) {
+    llvmOmpClause type = it.first;
+    const auto *clause = it.second;
+    if (!threadprivateAllowedSet.test(type)) {
+      if (const auto *objList{GetOmpObjectList(*clause)}) {
+        for (const auto &ompObject : objList->v) {
+          std::visit(
+              common::visitors{
+                  [&](const parser::Designator &) {
+                    if (const auto *name{
+                            parser::Unwrap<parser::Name>(ompObject)})
+                      testThreadprivateVarErr(
+                          name->symbol->GetUltimate(), *name, type);
+                  },
+                  [&](const parser::Name &name) {
+                    if (name.symbol) {
+                      for (const auto &mem :
+                          name.symbol->get<CommonBlockDetails>().objects()) {
+                        testThreadprivateVarErr(mem->GetUltimate(), name, type);
+                        break;
+                      }
+                    }
+                  },
+              },
+              ompObject.u);
+        }
+      }
+    }
   }
 
   CheckRequireAtLeastOneOf();
