@@ -32,7 +32,7 @@ DialectRegistry::DialectRegistry() { insert<BuiltinDialect>(); }
 
 void DialectRegistry::addDialectInterface(
     StringRef dialectName, TypeID interfaceTypeID,
-    DialectInterfaceAllocatorFunction allocator) {
+    const DialectInterfaceAllocatorFunction &allocator) {
   assert(allocator && "unexpected null interface allocation function");
   auto it = registry.find(dialectName.str());
   assert(it != registry.end() &&
@@ -57,7 +57,7 @@ void DialectRegistry::addDialectInterface(
 
 void DialectRegistry::addObjectInterface(
     StringRef dialectName, TypeID objectID, TypeID interfaceTypeID,
-    ObjectInterfaceAllocatorFunction allocator) {
+    const ObjectInterfaceAllocatorFunction &allocator) {
   assert(allocator && "unexpected null interface allocation function");
 
   auto it = registry.find(dialectName.str());
@@ -88,7 +88,7 @@ DialectRegistry::getDialectAllocator(StringRef name) const {
 }
 
 void DialectRegistry::insert(TypeID typeID, StringRef name,
-                             DialectAllocatorFunction ctor) {
+                             const DialectAllocatorFunction &ctor) {
   auto inserted = registry.insert(
       std::make_pair(std::string(name), std::make_pair(typeID, ctor)));
   if (!inserted.second && inserted.first->second.first != typeID) {

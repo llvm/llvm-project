@@ -45,7 +45,7 @@ extern unsigned struct_stack_t_sz;
 extern unsigned struct_sched_param_sz;
 extern unsigned struct_statfs_sz;
 extern unsigned struct_sockaddr_sz;
-extern unsigned ucontext_t_sz;
+unsigned ucontext_t_sz(void *ctx);
 
 extern unsigned struct_rlimit_sz;
 extern unsigned struct_utimbuf_sz;

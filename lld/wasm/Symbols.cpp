@@ -22,6 +22,7 @@
 using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::wasm;
+using namespace lld::wasm;
 
 namespace lld {
 std::string toString(const wasm::Symbol &sym) {
@@ -33,9 +34,8 @@ std::string maybeDemangleSymbol(StringRef name) {
   // `main` in the case where we need to pass it arguments.
   if (name == "__main_argc_argv")
     return "main";
-  if (wasm::config->demangle)
-    return demangleItanium(name);
-  return std::string(name);
+
+  return demangle(name, config->demangle);
 }
 
 std::string toString(wasm::Symbol::Kind kind) {
@@ -154,7 +154,7 @@ bool Symbol::isLive() const {
 void Symbol::markLive() {
   assert(!isDiscarded());
   referenced = true;
-  if (file != NULL && isDefined())
+  if (file != nullptr && isDefined())
     file->markLive();
   if (auto *g = dyn_cast<DefinedGlobal>(this))
     g->global->live = true;

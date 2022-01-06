@@ -623,6 +623,72 @@ define i1 @add_nsw_neg_const1(i32 %x) {
   ret i1 %cmp
 }
 
+define i1 @add_nsw_sgt(i8 %x) {
+; CHECK-LABEL: @add_nsw_sgt(
+; CHECK-NEXT:    ret i1 true
+;
+  %add = add nsw i8 %x, 5
+  %cmp = icmp sgt i8 %add, -124
+  ret i1 %cmp
+}
+
+; nuw should not inhibit the fold.
+
+define i1 @add_nsw_nuw_sgt(i8 %x) {
+; CHECK-LABEL: @add_nsw_nuw_sgt(
+; CHECK-NEXT:    ret i1 true
+;
+  %add = add nsw nuw i8 %x, 5
+  %cmp = icmp sgt i8 %add, -124
+  ret i1 %cmp
+}
+
+; negative test - minimum x is -128, so add could be -124.
+
+define i1 @add_nsw_sgt_limit(i8 %x) {
+; CHECK-LABEL: @add_nsw_sgt_limit(
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[X:%.*]], 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[ADD]], -124
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add = add nsw i8 %x, 4
+  %cmp = icmp sgt i8 %add, -124
+  ret i1 %cmp
+}
+
+define i1 @add_nsw_slt(i8 %x) {
+; CHECK-LABEL: @add_nsw_slt(
+; CHECK-NEXT:    ret i1 false
+;
+  %add = add nsw i8 %x, 5
+  %cmp = icmp slt i8 %add, -123
+  ret i1 %cmp
+}
+
+; nuw should not inhibit the fold.
+
+define i1 @add_nsw_nuw_slt(i8 %x) {
+; CHECK-LABEL: @add_nsw_nuw_slt(
+; CHECK-NEXT:    ret i1 false
+;
+  %add = add nsw nuw i8 %x, 5
+  %cmp = icmp slt i8 %add, -123
+  ret i1 %cmp
+}
+
+; negative test - minimum x is -128, so add could be -123.
+
+define i1 @add_nsw_slt_limit(i8 %x) {
+; CHECK-LABEL: @add_nsw_slt_limit(
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[X:%.*]], 5
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[ADD]], -122
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add = add nsw i8 %x, 5
+  %cmp = icmp slt i8 %add, -122
+  ret i1 %cmp
+}
+
 ; InstCombine can fold this, but not InstSimplify.
 
 define i1 @add_nsw_neg_const2(i32 %x) {

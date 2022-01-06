@@ -10,8 +10,8 @@ body:             |
     liveins: $x0, $x1
     ; CHECK-LABEL: name: contract_s64_gpr
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK: STRXui [[COPY1]], [[COPY]], 0 :: (store (s64))
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
+    ; CHECK-NEXT: STRXui [[COPY1]], [[COPY]], 0 :: (store (s64))
     %0:gpr(p0) = COPY $x0
     %1:gpr(s64) = COPY $x1
     %2:fpr(s64) = COPY %1
@@ -26,8 +26,8 @@ body:             |
     liveins: $x0, $w1
     ; CHECK-LABEL: name: contract_s32_gpr
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK: STRWui [[COPY1]], [[COPY]], 0 :: (store (s32))
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
+    ; CHECK-NEXT: STRWui [[COPY1]], [[COPY]], 0 :: (store (s32))
     %0:gpr(p0) = COPY $x0
     %1:gpr(s32) = COPY $w1
     %2:fpr(s32) = COPY %1
@@ -42,8 +42,8 @@ body:             |
     liveins: $x0, $d1
     ; CHECK-LABEL: name: contract_s64_fpr
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:fpr64 = COPY $d1
-    ; CHECK: STRDui [[COPY1]], [[COPY]], 0 :: (store (s64))
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY $d1
+    ; CHECK-NEXT: STRDui [[COPY1]], [[COPY]], 0 :: (store (s64))
     %0:gpr(p0) = COPY $x0
     %1:fpr(s64) = COPY $d1
     %2:gpr(s64) = COPY %1
@@ -58,8 +58,8 @@ body:             |
     liveins: $x0, $s1
     ; CHECK-LABEL: name: contract_s32_fpr
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:fpr32 = COPY $s1
-    ; CHECK: STRSui [[COPY1]], [[COPY]], 0 :: (store (s32))
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr32 = COPY $s1
+    ; CHECK-NEXT: STRSui [[COPY1]], [[COPY]], 0 :: (store (s32))
     %0:gpr(p0) = COPY $x0
     %1:fpr(s32) = COPY $s1
     %2:gpr(s32) = COPY %1
@@ -74,8 +74,8 @@ body:             |
     liveins: $x0, $h1
     ; CHECK-LABEL: name: contract_s16_fpr
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:fpr16 = COPY $h1
-    ; CHECK: STRHui [[COPY1]], [[COPY]], 0 :: (store (s16))
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr16 = COPY $h1
+    ; CHECK-NEXT: STRHui [[COPY1]], [[COPY]], 0 :: (store (s16))
     %0:gpr(p0) = COPY $x0
     %1:fpr(s16) = COPY $h1
     %2:gpr(s16) = COPY %1
@@ -90,10 +90,10 @@ body:             |
     liveins: $x0, $x1
     ; CHECK-LABEL: name: contract_g_unmerge_values_first
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY]], 0 :: (dereferenceable load (<2 x s64>))
-    ; CHECK: [[COPY1:%[0-9]+]]:fpr64 = COPY [[LDRQui]].dsub
-    ; CHECK: [[CPYi64_:%[0-9]+]]:fpr64 = CPYi64 [[LDRQui]], 1
-    ; CHECK: STRDui [[COPY1]], [[COPY]], 0 :: (store (s64))
+    ; CHECK-NEXT: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY]], 0 :: (dereferenceable load (<2 x s64>))
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY [[LDRQui]].dsub
+    ; CHECK-NEXT: [[DUPi64_:%[0-9]+]]:fpr64 = DUPi64 [[LDRQui]], 1
+    ; CHECK-NEXT: STRDui [[COPY1]], [[COPY]], 0 :: (store (s64))
     %0:gpr(p0) = COPY $x0
     %1:fpr(<2 x s64>) = G_LOAD %0:gpr(p0) :: (dereferenceable load (<2 x s64>))
     %2:fpr(s64), %3:fpr(s64) = G_UNMERGE_VALUES %1:fpr(<2 x s64>)
@@ -110,10 +110,10 @@ body:             |
     liveins: $x0, $x1
     ; CHECK-LABEL: name: contract_g_unmerge_values_second
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY]], 0 :: (dereferenceable load (<2 x s64>))
-    ; CHECK: [[COPY1:%[0-9]+]]:fpr64 = COPY [[LDRQui]].dsub
-    ; CHECK: [[CPYi64_:%[0-9]+]]:fpr64 = CPYi64 [[LDRQui]], 1
-    ; CHECK: STRDui [[CPYi64_]], [[COPY]], 0 :: (store (s64))
+    ; CHECK-NEXT: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY]], 0 :: (dereferenceable load (<2 x s64>))
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY [[LDRQui]].dsub
+    ; CHECK-NEXT: [[DUPi64_:%[0-9]+]]:fpr64 = DUPi64 [[LDRQui]], 1
+    ; CHECK-NEXT: STRDui [[DUPi64_]], [[COPY]], 0 :: (store (s64))
     %0:gpr(p0) = COPY $x0
     %1:fpr(<2 x s64>) = G_LOAD %0:gpr(p0) :: (dereferenceable load (<2 x s64>))
     %2:fpr(s64), %3:fpr(s64) = G_UNMERGE_VALUES %1:fpr(<2 x s64>)
@@ -130,9 +130,9 @@ body:             |
     liveins: $x0, $s1
     ; CHECK-LABEL: name: contract_s16_truncstore
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:fpr32 = COPY $s1
-    ; CHECK: [[COPY2:%[0-9]+]]:fpr16 = COPY [[COPY1]].hsub
-    ; CHECK: STRHui [[COPY2]], [[COPY]], 0 :: (store (s16))
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr32 = COPY $s1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr16 = COPY [[COPY1]].hsub
+    ; CHECK-NEXT: STRHui [[COPY2]], [[COPY]], 0 :: (store (s16))
     %0:gpr(p0) = COPY $x0
     %1:fpr(s32) = COPY $s1
     %2:gpr(s32) = COPY %1

@@ -381,13 +381,20 @@ static Value getPHISourceValue(Block *current, Block *pred,
     // the case branch that was taken.
     if (switchOp.getDefaultDestination() == current)
       return switchOp.getDefaultOperands()[index];
-    for (auto i : llvm::enumerate(switchOp.getCaseDestinations()))
+    for (const auto &i : llvm::enumerate(switchOp.getCaseDestinations()))
       if (i.value() == current)
         return switchOp.getCaseOperands(i.index())[index];
   }
 
-  llvm_unreachable("only branch or switch operations can be terminators of a "
-                   "block that has successors");
+  if (auto invokeOp = dyn_cast<LLVM::InvokeOp>(terminator)) {
+    return invokeOp.getNormalDest() == current
+               ? invokeOp.getNormalDestOperands()[index]
+               : invokeOp.getUnwindDestOperands()[index];
+  }
+
+  llvm_unreachable(
+      "only branch, switch or invoke operations can be terminators "
+      "of a block that has successors");
 }
 
 /// Connect the PHI nodes to the results of preceding blocks.

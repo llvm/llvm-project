@@ -134,6 +134,16 @@ struct Fragment {
   ///
   /// This section modifies how the compile command is constructed.
   struct CompileFlagsBlock {
+    /// Override the compiler executable name to simulate.
+    ///
+    /// The name can affect how flags are parsed (clang++ vs clang).
+    /// If the executable name is in the --query-driver allowlist, then it will
+    /// be invoked to extract include paths.
+    ///
+    /// (That this simply replaces argv[0], and may mangle commands that use
+    /// more complicated drivers like ccache).
+    llvm::Optional<Located<std::string>> Compiler;
+
     /// List of flags to append to the compile command.
     std::vector<Located<std::string>> Add;
     /// List of flags to remove from the compile command.

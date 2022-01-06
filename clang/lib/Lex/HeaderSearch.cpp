@@ -29,6 +29,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Capacity.h"
 #include "llvm/Support/Errc.h"
@@ -1779,11 +1780,8 @@ void HeaderSearch::collectAllModules(SmallVectorImpl<Module *> &Modules) {
   }
 
   // Populate the list of modules.
-  for (ModuleMap::module_iterator M = ModMap.module_begin(),
-                               MEnd = ModMap.module_end();
-       M != MEnd; ++M) {
-    Modules.push_back(M->getValue());
-  }
+  llvm::transform(ModMap.modules(), std::back_inserter(Modules),
+                  [](const auto &NameAndMod) { return NameAndMod.second; });
 }
 
 void HeaderSearch::loadTopLevelSystemModules() {

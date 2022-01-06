@@ -77,10 +77,12 @@ public:
   RecurrenceDescriptor(Value *Start, Instruction *Exit, RecurKind K,
                        FastMathFlags FMF, Instruction *ExactFP, Type *RT,
                        bool Signed, bool Ordered,
-                       SmallPtrSetImpl<Instruction *> &CI)
+                       SmallPtrSetImpl<Instruction *> &CI,
+                       unsigned MinWidthCastToRecurTy)
       : StartValue(Start), LoopExitInstr(Exit), Kind(K), FMF(FMF),
         ExactFPMathInst(ExactFP), RecurrenceType(RT), IsSigned(Signed),
-        IsOrdered(Ordered) {
+        IsOrdered(Ordered),
+        MinWidthCastToRecurrenceType(MinWidthCastToRecurTy) {
     CastInsts.insert(CI.begin(), CI.end());
   }
 
@@ -251,6 +253,11 @@ public:
   /// recurrence.
   const SmallPtrSet<Instruction *, 8> &getCastInsts() const { return CastInsts; }
 
+  /// Returns the minimum width used by the recurrence in bits.
+  unsigned getMinWidthCastToRecurrenceTypeInBits() const {
+    return MinWidthCastToRecurrenceType;
+  }
+
   /// Returns true if all source operands of the recurrence are SExtInsts.
   bool isSigned() const { return IsSigned; }
 
@@ -291,6 +298,8 @@ private:
   bool IsOrdered = false;
   // Instructions used for type-promoting the recurrence.
   SmallPtrSet<Instruction *, 8> CastInsts;
+  // The minimum width used by the recurrence.
+  unsigned MinWidthCastToRecurrenceType;
 };
 
 /// A struct for saving information about induction variables.

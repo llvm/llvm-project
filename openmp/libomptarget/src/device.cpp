@@ -91,6 +91,9 @@ int DeviceTy::disassociatePtr(void *HstPtrBegin) {
              "count\n");
     } else if (search->isDynRefCountInf()) {
       DP("Association found, removing it\n");
+      void *Event = search->getEvent();
+      if (Event)
+        destroyEvent(Event);
       HostDataToTargetMap.erase(search);
       DataMapMtx.unlock();
       return OFFLOAD_SUCCESS;
@@ -264,20 +267,64 @@ DeviceTy::getTargetPointer(void *HstPtrBegin, void *HstPtrBase, int64_t Size,
        DPxPTR(HstPtrBegin), DPxPTR(TargetPointer));
 
     int Ret = submitData(TargetPointer, HstPtrBegin, Size, AsyncInfo);
-
-    // Unlock the entry immediately after the data movement is issued.
-    Entry->unlock();
-
     if (Ret != OFFLOAD_SUCCESS) {
+      Entry->unlock();
       REPORT("Copying data to device failed.\n");
       // We will also return nullptr if the data movement fails because that
       // pointer points to a corrupted memory region so it doesn't make any
       // sense to continue to use it.
       TargetPointer = nullptr;
     }
+
+    void *Event = Entry->getEvent();
+    bool NeedNewEvent = Event == nullptr;
+    if (NeedNewEvent && createEvent(&Event) != OFFLOAD_SUCCESS) {
+      Entry->unlock();
+      REPORT("Failed to create event\n");
+      return {{false /* IsNewEntry */, false /* IsHostPointer */},
+              {} /* MapTableEntry */,
+              nullptr /* TargetPointer */};
+    }
+    // We cannot assume the event should not be nullptr because we don't
+    // know if the target support event. But if a target doesn't,
+    // recordEvent should always return success.
+    Ret = recordEvent(Event, AsyncInfo);
+    if (Ret != OFFLOAD_SUCCESS) {
+      Entry->unlock();
+      REPORT("Failed to set dependence on event " DPxMOD "\n", DPxPTR(Event));
+      return {{false /* IsNewEntry */, false /* IsHostPointer */},
+              {} /* MapTableEntry */,
+              nullptr /* TargetPointer */};
+    }
+    if (NeedNewEvent)
+      Entry->setEvent(Event);
+    // We're done with the entry. Release the entry.
+    Entry->unlock();
   } else {
     // Release the mapping table lock directly.
     DataMapMtx.unlock();
+    // If not a host pointer and no present modifier, we need to wait for the
+    // event if it exists.
+    // Note: Entry might be nullptr because of zero length array section.
+    if (Entry != HostDataToTargetListTy::iterator() && !IsHostPtr &&
+        !HasPresentModifier) {
+      Entry->lock();
+      void *Event = Entry->getEvent();
+      if (Event) {
+        int Ret = waitEvent(Event, AsyncInfo);
+        Entry->unlock();
+        if (Ret != OFFLOAD_SUCCESS) {
+          // If it fails to wait for the event, we need to return nullptr in
+          // case of any data race.
+          REPORT("Failed to wait for event " DPxMOD ".\n", DPxPTR(Event));
+          return {{false /* IsNewEntry */, false /* IsHostPointer */},
+                  {} /* MapTableEntry */,
+                  nullptr /* TargetPointer */};
+        }
+      } else {
+        Entry->unlock();
+      }
+    }
   }
 
   return {{IsNew, IsHostPtr}, Entry, TargetPointer};
@@ -365,7 +412,7 @@ void *DeviceTy::getTgtPtrBegin(void *HstPtrBegin, int64_t Size) {
 int DeviceTy::deallocTgtPtr(void *HstPtrBegin, int64_t Size,
                             bool HasHoldModifier) {
   // Check if the pointer is contained in any sub-nodes.
-  int rc;
+  int Ret = OFFLOAD_SUCCESS;
   DataMapMtx.lock();
   LookupResult lr = lookupMapping(HstPtrBegin, Size);
   if (lr.Flags.IsContained || lr.Flags.ExtendsBefore || lr.Flags.ExtendsAfter) {
@@ -380,18 +427,22 @@ int DeviceTy::deallocTgtPtr(void *HstPtrBegin, int64_t Size,
            DPxPTR(HT.HstPtrBegin), DPxPTR(HT.TgtPtrBegin), Size,
            (HT.HstPtrName) ? getNameFromMapping(HT.HstPtrName).c_str()
                            : "unknown");
+      void *Event = lr.Entry->getEvent();
       HostDataToTargetMap.erase(lr.Entry);
+      if (Event && destroyEvent(Event) != OFFLOAD_SUCCESS) {
+        REPORT("Failed to destroy event " DPxMOD "\n", DPxPTR(Event));
+        Ret = OFFLOAD_FAIL;
+      }
     }
-    rc = OFFLOAD_SUCCESS;
   } else {
     REPORT("Section to delete (hst addr " DPxMOD ") does not exist in the"
            " allocated memory\n",
            DPxPTR(HstPtrBegin));
-    rc = OFFLOAD_FAIL;
+    Ret = OFFLOAD_FAIL;
   }
 
   DataMapMtx.unlock();
-  return rc;
+  return Ret;
 }
 
 /// Init device, should not be called directly.

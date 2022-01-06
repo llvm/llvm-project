@@ -587,7 +587,7 @@ void FrameTypeBuilder::addFieldForAllocas(const Function &F,
     }
   });
 
-  if (!Shape.ReuseFrameSlot && !EnableReuseStorageInFrame) {
+  if (!Shape.OptimizeFrame && !EnableReuseStorageInFrame) {
     for (const auto &A : FrameData.Allocas) {
       AllocaInst *Alloca = A.Alloca;
       NonOverlapedAllocas.emplace_back(AllocaSetType(1, Alloca));
@@ -1659,7 +1659,7 @@ static Instruction *insertSpills(const FrameDataInfo &FrameData,
                              &*Builder.GetInsertPoint());
           // This dbg.declare is for the main function entry point.  It
           // will be deleted in all coro-split functions.
-          coro::salvageDebugInfo(DbgPtrAllocaCache, DDI, Shape.ReuseFrameSlot);
+          coro::salvageDebugInfo(DbgPtrAllocaCache, DDI, Shape.OptimizeFrame);
         }
       }
 
@@ -2506,7 +2506,7 @@ static void collectFrameAllocas(Function &F, coro::Shape &Shape,
 
 void coro::salvageDebugInfo(
     SmallDenseMap<llvm::Value *, llvm::AllocaInst *, 4> &DbgPtrAllocaCache,
-    DbgVariableIntrinsic *DVI, bool ReuseFrameSlot) {
+    DbgVariableIntrinsic *DVI, bool OptimizeFrame) {
   Function *F = DVI->getFunction();
   IRBuilder<> Builder(F->getContext());
   auto InsertPt = F->getEntryBlock().getFirstInsertionPt();
@@ -2558,7 +2558,7 @@ void coro::salvageDebugInfo(
   //
   // Avoid to create the alloca would be eliminated by optimization
   // passes and the corresponding dbg.declares would be invalid.
-  if (!ReuseFrameSlot && !EnableReuseStorageInFrame)
+  if (!OptimizeFrame && !EnableReuseStorageInFrame)
     if (auto *Arg = dyn_cast<llvm::Argument>(Storage)) {
       auto &Cached = DbgPtrAllocaCache[Storage];
       if (!Cached) {

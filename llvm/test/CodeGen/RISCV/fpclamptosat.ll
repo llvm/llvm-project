@@ -1072,10 +1072,9 @@ define i16 @utesth_f16i16(half %x) {
 ; RV64-NEXT:    call __gnu_h2f_ieee@plt
 ; RV64-NEXT:    fmv.w.x ft0, a0
 ; RV64-NEXT:    fcvt.lu.s a0, ft0, rtz
-; RV64-NEXT:    sext.w a2, a0
 ; RV64-NEXT:    lui a1, 16
 ; RV64-NEXT:    addiw a1, a1, -1
-; RV64-NEXT:    bltu a2, a1, .LBB16_2
+; RV64-NEXT:    bltu a0, a1, .LBB16_2
 ; RV64-NEXT:  # %bb.1: # %entry
 ; RV64-NEXT:    mv a0, a1
 ; RV64-NEXT:  .LBB16_2: # %entry

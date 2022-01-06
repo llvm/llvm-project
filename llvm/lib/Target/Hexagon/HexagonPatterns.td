@@ -87,18 +87,6 @@ def V8I8:   PatLeaf<(v8i8    DoubleRegs:$R)>;
 def V4I16:  PatLeaf<(v4i16   DoubleRegs:$R)>;
 def V2I32:  PatLeaf<(v2i32   DoubleRegs:$R)>;
 
-def HQ8:    PatLeaf<(VecQ8   HvxQR:$R)>;
-def HQ16:   PatLeaf<(VecQ16  HvxQR:$R)>;
-def HQ32:   PatLeaf<(VecQ32  HvxQR:$R)>;
-
-def HVI8:   PatLeaf<(VecI8   HvxVR:$R)>;
-def HVI16:  PatLeaf<(VecI16  HvxVR:$R)>;
-def HVI32:  PatLeaf<(VecI32  HvxVR:$R)>;
-
-def HWI8:   PatLeaf<(VecPI8  HvxWR:$R)>;
-def HWI16:  PatLeaf<(VecPI16 HvxWR:$R)>;
-def HWI32:  PatLeaf<(VecPI32 HvxWR:$R)>;
-
 def SDTVecLeaf:
   SDTypeProfile<1, 0, [SDTCisVec<0>]>;
 def SDTVecVecIntOp:
@@ -269,6 +257,9 @@ def anyimm3: PatLeaf<(i32 AnyImm3:$Addr)>;
 
 def f32ImmPred : PatLeaf<(f32 fpimm:$F)>;
 def f64ImmPred : PatLeaf<(f64 fpimm:$F)>;
+def f32zero: PatLeaf<(f32 fpimm:$F), [{
+  return N->isExactlyValue(APFloat::getZero(APFloat::IEEEsingle(), false));
+}]>;
 
 // This complex pattern is really only to detect various forms of
 // sign-extension i32->i64. The selected value will be of type i64
@@ -377,6 +368,12 @@ def Smin: pf2<smin>;  def Smax: pf2<smax>;
 def Umin: pf2<umin>;  def Umax: pf2<umax>;
 
 def Rol: pf2<rotl>;
+
+def Fptosi: pf1<fp_to_sint>;
+def Fptoui: pf1<fp_to_uint>;
+def Sitofp: pf1<sint_to_fp>;
+def Uitofp: pf1<uint_to_fp>;
+
 
 // --(1) Immediate -------------------------------------------------------
 //
@@ -2083,7 +2080,7 @@ let AddedComplexity = 20 in {
   defm: Loadxi_pat<sextloadi8,      i32,   anyimm0, L2_loadrb_io>;
   defm: Loadxi_pat<sextloadi16,     i32,   anyimm1, L2_loadrh_io>;
   defm: Loadxi_pat<sextloadv2i8,    v2i16, anyimm1, L2_loadbsw2_io>;
-  defm: Loadxi_pat<sextloadv4i8,    v4i16, anyimm2, L2_loadbzw4_io>;
+  defm: Loadxi_pat<sextloadv4i8,    v4i16, anyimm2, L2_loadbsw4_io>;
   defm: Loadxi_pat<zextloadi1,      i32,   anyimm0, L2_loadrub_io>;
   defm: Loadxi_pat<zextloadi8,      i32,   anyimm0, L2_loadrub_io>;
   defm: Loadxi_pat<zextloadi16,     i32,   anyimm1, L2_loadruh_io>;
@@ -2135,7 +2132,7 @@ let AddedComplexity  = 60 in {
   def: Loadxu_pat<sextloadi8,   i32,   anyimm0, L4_loadrb_ur>;
   def: Loadxu_pat<sextloadi16,  i32,   anyimm1, L4_loadrh_ur>;
   def: Loadxu_pat<sextloadv2i8, v2i16, anyimm1, L4_loadbsw2_ur>;
-  def: Loadxu_pat<sextloadv4i8, v4i16, anyimm2, L4_loadbzw4_ur>;
+  def: Loadxu_pat<sextloadv4i8, v4i16, anyimm2, L4_loadbsw4_ur>;
   def: Loadxu_pat<zextloadi1,   i32,   anyimm0, L4_loadrub_ur>;
   def: Loadxu_pat<zextloadi8,   i32,   anyimm0, L4_loadrub_ur>;
   def: Loadxu_pat<zextloadi16,  i32,   anyimm1, L4_loadruh_ur>;

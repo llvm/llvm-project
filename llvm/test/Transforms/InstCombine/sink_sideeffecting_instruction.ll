@@ -111,21 +111,147 @@ bb14:                                             ; preds = %bb12, %bb
 }
 
 declare i32 @unknown(i32* %dest)
+declare i32 @unknown.as2(i32 addrspace(2)* %dest)
 
-define i32 @sink_to_use(i1 %c) {
-; CHECK-LABEL: @sink_to_use(
+define i32 @sink_write_to_use(i1 %c) {
+; CHECK-LABEL: @sink_write_to_use(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAR:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[VAR3:%.*]] = call i32 @unknown(i32* nonnull [[VAR]]) #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[EARLY_RETURN:%.*]], label [[USE_BLOCK:%.*]]
 ; CHECK:       early_return:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       use_block:
+; CHECK-NEXT:    [[VAR3:%.*]] = call i32 @unknown(i32* nonnull writeonly [[VAR]]) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    ret i32 [[VAR3]]
+;
+entry:
+  %var = alloca i32, align 4
+  %var3 = call i32 @unknown(i32* writeonly %var) argmemonly nounwind willreturn
+  br i1 %c, label %early_return, label %use_block
+
+early_return:
+  ret i32 0
+
+use_block:
+  ret i32 %var3
+}
+
+define i32 @sink_readwrite_to_use(i1 %c) {
+; CHECK-LABEL: @sink_readwrite_to_use(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAR:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[EARLY_RETURN:%.*]], label [[USE_BLOCK:%.*]]
+; CHECK:       early_return:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       use_block:
+; CHECK-NEXT:    [[VAR3:%.*]] = call i32 @unknown(i32* nonnull [[VAR]]) #[[ATTR1]]
 ; CHECK-NEXT:    ret i32 [[VAR3]]
 ;
 entry:
   %var = alloca i32, align 4
   %var3 = call i32 @unknown(i32* %var) argmemonly nounwind willreturn
+  br i1 %c, label %early_return, label %use_block
+
+early_return:
+  ret i32 0
+
+use_block:
+  ret i32 %var3
+}
+
+define i32 @sink_bitcast(i1 %c) {
+; CHECK-LABEL: @sink_bitcast(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAR:%.*]] = alloca i8, align 8
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[EARLY_RETURN:%.*]], label [[USE_BLOCK:%.*]]
+; CHECK:       early_return:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       use_block:
+; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast i8* [[VAR]] to i32*
+; CHECK-NEXT:    [[VAR3:%.*]] = call i32 @unknown(i32* nonnull [[BITCAST]]) #[[ATTR1]]
+; CHECK-NEXT:    ret i32 [[VAR3]]
+;
+entry:
+  %var = alloca i8, align 8
+  %bitcast = bitcast i8* %var to i32*
+  %var3 = call i32 @unknown(i32* %bitcast) argmemonly nounwind willreturn
+  br i1 %c, label %early_return, label %use_block
+
+early_return:
+  ret i32 0
+
+use_block:
+  ret i32 %var3
+}
+
+
+define i32 @sink_gep1(i1 %c) {
+; CHECK-LABEL: @sink_gep1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAR1:%.*]] = alloca [2 x i32], align 8
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[EARLY_RETURN:%.*]], label [[USE_BLOCK:%.*]]
+; CHECK:       early_return:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       use_block:
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[VAR1]], i64 0, i64 1
+; CHECK-NEXT:    [[VAR3:%.*]] = call i32 @unknown(i32* nonnull [[GEP]]) #[[ATTR1]]
+; CHECK-NEXT:    ret i32 [[VAR3]]
+;
+entry:
+  %var = alloca i64, align 8
+  %bitcast = bitcast i64* %var to i32*
+  %gep = getelementptr i32, i32* %bitcast, i32 1
+  %var3 = call i32 @unknown(i32* %gep) argmemonly nounwind willreturn
+  br i1 %c, label %early_return, label %use_block
+
+early_return:
+  ret i32 0
+
+use_block:
+  ret i32 %var3
+}
+
+define i32 @sink_gep2(i1 %c) {
+; CHECK-LABEL: @sink_gep2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAR1:%.*]] = alloca [2 x i32], align 8
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[EARLY_RETURN:%.*]], label [[USE_BLOCK:%.*]]
+; CHECK:       early_return:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       use_block:
+; CHECK-NEXT:    [[VAR1_SUB:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[VAR1]], i64 0, i64 0
+; CHECK-NEXT:    [[VAR3:%.*]] = call i32 @unknown(i32* nonnull [[VAR1_SUB]]) #[[ATTR1]]
+; CHECK-NEXT:    ret i32 [[VAR3]]
+;
+entry:
+  %var = alloca i64, align 8
+  %bitcast = bitcast i64* %var to i32*
+  %var3 = call i32 @unknown(i32* %bitcast) argmemonly nounwind willreturn
+  br i1 %c, label %early_return, label %use_block
+
+early_return:
+  ret i32 0
+
+use_block:
+  ret i32 %var3
+}
+
+define i32 @sink_addrspacecast(i1 %c) {
+; CHECK-LABEL: @sink_addrspacecast(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAR:%.*]] = alloca i32, align 8
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[EARLY_RETURN:%.*]], label [[USE_BLOCK:%.*]]
+; CHECK:       early_return:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       use_block:
+; CHECK-NEXT:    [[CAST:%.*]] = addrspacecast i32* [[VAR]] to i32 addrspace(2)*
+; CHECK-NEXT:    [[VAR3:%.*]] = call i32 @unknown.as2(i32 addrspace(2)* [[CAST]]) #[[ATTR1]]
+; CHECK-NEXT:    ret i32 [[VAR3]]
+;
+entry:
+  %var = alloca i32, align 8
+  %cast = addrspacecast i32* %var to i32 addrspace(2)*
+  %var3 = call i32 @unknown.as2(i32 addrspace(2)* %cast) argmemonly nounwind willreturn
   br i1 %c, label %early_return, label %use_block
 
 early_return:
@@ -204,6 +330,180 @@ use_block:
   ret i32 %var3
 }
 
+define i32 @sink_lifetime1(i1 %c) {
+; CHECK-LABEL: @sink_lifetime1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAR:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast i32* [[VAR]] to i8*
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull [[BITCAST]])
+; CHECK-NEXT:    [[VAR3:%.*]] = call i32 @unknown(i32* nonnull [[VAR]]) #[[ATTR1]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[EARLY_RETURN:%.*]], label [[USE_BLOCK:%.*]]
+; CHECK:       early_return:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       use_block:
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull [[BITCAST]])
+; CHECK-NEXT:    ret i32 [[VAR3]]
+;
+entry:
+  %var = alloca i32, align 4
+  %bitcast = bitcast i32* %var to i8*
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %bitcast)
+  %var3 = call i32 @unknown(i32* %var) argmemonly nounwind willreturn
+  br i1 %c, label %early_return, label %use_block
+
+early_return:
+  ret i32 0
+
+use_block:
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* %bitcast)
+  ret i32 %var3
+}
+
+define i32 @sink_lifetime2(i1 %c) {
+; CHECK-LABEL: @sink_lifetime2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAR:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast i32* [[VAR]] to i8*
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull [[BITCAST]])
+; CHECK-NEXT:    [[VAR3:%.*]] = call i32 @unknown(i32* nonnull [[VAR]]) #[[ATTR1]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[MERGE:%.*]], label [[USE_BLOCK:%.*]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[RET:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[VAR3]], [[USE_BLOCK]] ]
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull [[BITCAST]])
+; CHECK-NEXT:    ret i32 [[RET]]
+; CHECK:       use_block:
+; CHECK-NEXT:    br label [[MERGE]]
+;
+entry:
+  %var = alloca i32, align 4
+  %bitcast = bitcast i32* %var to i8*
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %bitcast)
+  %var3 = call i32 @unknown(i32* %var) argmemonly nounwind willreturn
+  br i1 %c, label %merge, label %use_block
+
+merge:
+  %ret = phi i32 [0, %entry], [%var3, %use_block]
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* %bitcast)
+  ret i32 %ret
+
+use_block:
+  br label %merge
+}
+
+define i32 @sink_lifetime3(i1 %c) {
+; CHECK-LABEL: @sink_lifetime3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAR:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[EARLY_RETURN:%.*]], label [[USE_BLOCK:%.*]]
+; CHECK:       early_return:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       use_block:
+; CHECK-NEXT:    [[VAR3:%.*]] = call i32 @unknown(i32* nonnull [[VAR]]) #[[ATTR1]]
+; CHECK-NEXT:    ret i32 [[VAR3]]
+;
+entry:
+  %var = alloca i32, align 4
+  %bitcast = bitcast i32* %var to i8*
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %bitcast)
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* %bitcast)
+  ; If unknown accesses %var, that's UB
+  %var3 = call i32 @unknown(i32* %var) argmemonly nounwind willreturn
+  br i1 %c, label %early_return, label %use_block
+
+early_return:
+  ret i32 0
+
+use_block:
+  ret i32 %var3
+}
+
+define i32 @sink_lifetime4a(i1 %c) {
+; CHECK-LABEL: @sink_lifetime4a(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAR:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast i32* [[VAR]] to i8*
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull [[BITCAST]])
+; CHECK-NEXT:    [[VAR3:%.*]] = call i32 @unknown(i32* nonnull [[VAR]]) #[[ATTR1]]
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull [[BITCAST]])
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[EARLY_RETURN:%.*]], label [[USE_BLOCK:%.*]]
+; CHECK:       early_return:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       use_block:
+; CHECK-NEXT:    ret i32 [[VAR3]]
+;
+entry:
+  %var = alloca i32, align 4
+  %bitcast = bitcast i32* %var to i8*
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %bitcast)
+  %var3 = call i32 @unknown(i32* %var) argmemonly nounwind willreturn
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* %bitcast)
+  br i1 %c, label %early_return, label %use_block
+
+early_return:
+  ret i32 0
+
+use_block:
+  ret i32 %var3
+}
+
+; Version which only writes to var, and thus can't rely on may-read scan for
+; clobbers to prevent the transform
+define i32 @sink_lifetime4b(i1 %c) {
+; CHECK-LABEL: @sink_lifetime4b(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAR:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast i32* [[VAR]] to i8*
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull [[BITCAST]])
+; CHECK-NEXT:    [[VAR3:%.*]] = call i32 @unknown(i32* nonnull writeonly [[VAR]]) #[[ATTR1]]
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull [[BITCAST]])
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[EARLY_RETURN:%.*]], label [[USE_BLOCK:%.*]]
+; CHECK:       early_return:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       use_block:
+; CHECK-NEXT:    ret i32 [[VAR3]]
+;
+entry:
+  %var = alloca i32, align 4
+  %bitcast = bitcast i32* %var to i8*
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %bitcast)
+  %var3 = call i32 @unknown(i32* writeonly %var) argmemonly nounwind willreturn
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* %bitcast)
+  br i1 %c, label %early_return, label %use_block
+
+early_return:
+  ret i32 0
+
+use_block:
+  ret i32 %var3
+}
+; Mostly checking that trying to sink a non-call doesn't crash (i.e. prior bug)
+define i32 @sink_atomicrmw_to_use(i1 %c) {
+; CHECK-LABEL: @sink_atomicrmw_to_use(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAR:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 0, i32* [[VAR]], align 4
+; CHECK-NEXT:    [[VAR3:%.*]] = atomicrmw add i32* [[VAR]], i32 1 seq_cst, align 4
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[EARLY_RETURN:%.*]], label [[USE_BLOCK:%.*]]
+; CHECK:       early_return:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       use_block:
+; CHECK-NEXT:    ret i32 [[VAR3]]
+;
+entry:
+  %var = alloca i32, align 4
+  store i32 0, i32* %var
+  %var3 = atomicrmw add i32* %var, i32 1 seq_cst, align 4
+  br i1 %c, label %early_return, label %use_block
+
+early_return:
+  ret i32 0
+
+use_block:
+  ret i32 %var3
+}
+
+
 declare i32 @bar()
 declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
 declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
+

@@ -40,7 +40,7 @@ __partial_sort_copy(_InputIterator __first, _InputIterator __last,
             if (__comp(*__first, *__result_first))
             {
                 *__result_first = *__first;
-                _VSTD::__sift_down<_Compare>(__result_first, __r, __comp, __len, __result_first);
+                _VSTD::__sift_down<_Compare>(__result_first, __comp, __len, __result_first);
             }
         _VSTD::__sort_heap<_Compare>(__result_first, __r, __comp);
     }

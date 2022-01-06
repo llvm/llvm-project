@@ -1296,6 +1296,64 @@ llvm.func @invokeLandingpad() -> i32 attributes { personality = @__gxx_personali
   %8 = llvm.invoke @bar(%6) to ^bb2 unwind ^bb1 : (!llvm.ptr<i8>) -> !llvm.ptr<i8>
 }
 
+// -----
+
+llvm.func @foo() -> i8
+llvm.func @__gxx_personality_v0(...) -> i32
+
+// CHECK-LABEL: @invoke_result
+// CHECK-SAME: %[[a0:[0-9]+]]
+llvm.func @invoke_result(%arg0 : !llvm.ptr<i8>) attributes { personality = @__gxx_personality_v0 } {
+// CHECK: %[[a1:[0-9]+]] = invoke i8 @foo()
+// CHECK-NEXT: to label %[[normal:[0-9]+]] unwind label %[[unwind:[0-9]+]]
+    %0 = llvm.invoke @foo() to ^bb1 unwind ^bb2 : () -> i8
+
+// CHECK: [[normal]]:
+// CHECK-NEXT: store i8 %[[a1]], i8* %[[a0]]
+// CHECK-NEXT: ret void
+^bb1:
+    llvm.store %0, %arg0 : !llvm.ptr<i8>
+    llvm.return
+
+// CHECK: [[unwind]]:
+// CHECK-NEXT: landingpad { i8*, i32 }
+// CHECK-NEXT: cleanup
+// CHECK-NEXT: ret void
+^bb2:
+    %7 = llvm.landingpad cleanup : !llvm.struct<(ptr<i8>, i32)>
+    llvm.return
+}
+
+// -----
+
+llvm.func @foo()
+llvm.func @__gxx_personality_v0(...) -> i32
+
+// CHECK-LABEL: @invoke_phis
+llvm.func @invoke_phis() -> i32 attributes { personality = @__gxx_personality_v0 } {
+// CHECK: invoke void @foo()
+// CHECK-NEXT: to label %[[normal:[0-9]+]] unwind label %[[unwind:[0-9]+]]
+    %0 = llvm.mlir.constant(0 : i32) : i32
+    llvm.invoke @foo() to ^bb1(%0 : i32) unwind ^bb2 : () -> ()
+
+// CHECK: [[normal]]:
+// CHECK-NEXT: %[[a1:[0-9]+]] = phi i32 [ 1, %[[unwind]] ], [ 0, %0 ]
+// CHECK-NEXT: ret i32 %[[a1]]
+^bb1(%1 : i32):
+    llvm.return %1 : i32
+
+// CHECK: [[unwind]]:
+// CHECK-NEXT: landingpad { i8*, i32 }
+// CHECK-NEXT: cleanup
+// CHECK-NEXT: br label %[[normal]]
+^bb2:
+    %2 = llvm.landingpad cleanup : !llvm.struct<(ptr<i8>, i32)>
+    %3 = llvm.mlir.constant(1 : i32) : i32
+    llvm.br ^bb1(%3 : i32)
+}
+
+// -----
+
 // CHECK-LABEL: @callFreezeOp
 llvm.func @callFreezeOp(%x : i32) {
   // CHECK: freeze i32 %{{[0-9]+}}

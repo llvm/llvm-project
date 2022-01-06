@@ -41,15 +41,22 @@ public:
         getTensorUntyped(static_cast<size_t>(FeatureID)));
   }
 
-protected:
-  MLModelRunner(LLVMContext &Ctx) : Ctx(Ctx) {}
-  virtual void *evaluateUntyped() = 0;
   virtual void *getTensorUntyped(size_t Index) = 0;
   const void *getTensorUntyped(size_t Index) const {
     return (const_cast<MLModelRunner *>(this))->getTensorUntyped(Index);
   }
 
+  enum class Kind : int { Unknown, Release, Development, NoOp };
+  Kind getKind() const { return Type; }
+
+protected:
+  MLModelRunner(LLVMContext &Ctx, Kind Type) : Ctx(Ctx), Type(Type) {
+    assert(Type != Kind::Unknown);
+  }
+  virtual void *evaluateUntyped() = 0;
+
   LLVMContext &Ctx;
+  const Kind Type;
 };
 } // namespace llvm
 

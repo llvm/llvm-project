@@ -1,4 +1,4 @@
-//===-- M68kBaseInfo.h - Top level definitions for M68k MC --*- C++ -*-----===//
+//===-- M68kBaseInfo.h - Top level definitions for M68k MC ------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.

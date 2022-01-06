@@ -697,8 +697,8 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
   CharUnits VTablePtrAlign =
     CGF.CGM.getDynamicOffsetAlignment(ThisAddr.getAlignment(), RD,
                                       CGF.getPointerAlign());
-  llvm::Value *VTable =
-    CGF.GetVTablePtr(Address(This, VTablePtrAlign), VTableTy, RD);
+  llvm::Value *VTable = CGF.GetVTablePtr(
+      Address(This, ThisAddr.getElementType(), VTablePtrAlign), VTableTy, RD);
 
   // Apply the offset.
   // On ARM64, to reserve extra space in virtual member function pointers,

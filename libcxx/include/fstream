@@ -187,6 +187,7 @@ typedef basic_fstream<wchar_t> wfstream;
 #include <cstdlib>
 #include <istream>
 #include <ostream>
+#include <version>
 
 #if !defined(_LIBCPP_HAS_NO_FILESYSTEM_LIBRARY)
 #   include <filesystem>

@@ -40,7 +40,6 @@ using llvm::SmallVector;
 using llvm::SMLoc;
 using llvm::StringMap;
 using llvm::StringRef;
-using llvm::Twine;
 using mlir::tblgen::Attribute;
 using mlir::tblgen::EnumAttr;
 using mlir::tblgen::EnumAttrCase;

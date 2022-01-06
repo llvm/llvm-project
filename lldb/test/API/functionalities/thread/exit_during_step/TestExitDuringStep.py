@@ -17,7 +17,7 @@ class ExitDuringStepTestCase(TestBase):
     @skipIfWindows # This is flakey on Windows: llvm.org/pr38373
     def test(self):
         """Test thread exit during step handling."""
-        self.build(dictionary=self.getBuildFlags())
+        self.build()
         self.exit_during_step_base(
             "thread step-inst -m all-threads",
             'stop reason = instruction step',
@@ -26,7 +26,7 @@ class ExitDuringStepTestCase(TestBase):
     @skipIfWindows # This is flakey on Windows: llvm.org/pr38373
     def test_step_over(self):
         """Test thread exit during step-over handling."""
-        self.build(dictionary=self.getBuildFlags())
+        self.build()
         self.exit_during_step_base(
             "thread step-over -m all-threads",
             'stop reason = step over',
@@ -35,7 +35,7 @@ class ExitDuringStepTestCase(TestBase):
     @skipIfWindows # This is flakey on Windows: llvm.org/pr38373
     def test_step_in(self):
         """Test thread exit during step-in handling."""
-        self.build(dictionary=self.getBuildFlags())
+        self.build()
         self.exit_during_step_base(
             "thread step-in -m all-threads",
             'stop reason = step in',

@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <utility>
+
 #include "PassDetail.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Passes.h"
@@ -179,7 +181,7 @@ tileLinalgOpImpl(OpBuilder &b, LinalgOp op, ValueRange tileSizes,
       b, op.getLoc(), shapeSizesToLoopsMap, allShapeSizes, tileSizes);
 
   SmallVector<Attribute, 4> iteratorTypes;
-  for (auto attr :
+  for (const auto &attr :
        enumerate(op.iterator_types().cast<ArrayAttr>().getValue())) {
     if (loopIndexToRangeIndex.count(attr.index()))
       iteratorTypes.push_back(attr.value());
@@ -392,7 +394,7 @@ static LogicalResult tilePadTensorOp(OpBuilder &builder, PadTensorOp op,
 namespace {
 struct PadTensorOpTilingPattern : public OpRewritePattern<PadTensorOp> {
   PadTensorOpTilingPattern(MLIRContext *ctx, LinalgTilingOptions opt)
-      : OpRewritePattern<PadTensorOp>(ctx), options(opt) {}
+      : OpRewritePattern<PadTensorOp>(ctx), options(std::move(opt)) {}
 
   LogicalResult matchAndRewrite(PadTensorOp op,
                                 PatternRewriter &rewriter) const override {

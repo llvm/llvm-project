@@ -128,4 +128,40 @@ def IndexCastOfExtSI :
 def BitcastOfBitcast :
     Pat<(Arith_BitcastOp (Arith_BitcastOp $x)), (replaceWithValue $x)>;
 
+//===----------------------------------------------------------------------===//
+// ExtSIOp
+//===----------------------------------------------------------------------===//
+
+// extsi(extui(x iN : iM) : iL) -> extui(x : iL)
+def ExtSIOfExtUI :
+    Pat<(Arith_ExtSIOp (Arith_ExtUIOp $x)), (Arith_ExtUIOp $x)>;
+
+//===----------------------------------------------------------------------===//
+// AndIOp
+//===----------------------------------------------------------------------===//
+
+// and extui(x), extui(y) -> extui(and(x,y))
+def AndOfExtUI :
+    Pat<(Arith_AndIOp (Arith_ExtUIOp $x), (Arith_ExtUIOp $y)), (Arith_ExtUIOp (Arith_AndIOp $x, $y)),
+      [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y)]>;
+
+// and extsi(x), extsi(y) -> extsi(and(x,y))
+def AndOfExtSI :
+    Pat<(Arith_AndIOp (Arith_ExtSIOp $x), (Arith_ExtSIOp $y)), (Arith_ExtSIOp (Arith_AndIOp $x, $y)),
+      [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y)]>;
+
+//===----------------------------------------------------------------------===//
+// OrIOp
+//===----------------------------------------------------------------------===//
+
+// or extui(x), extui(y) -> extui(or(x,y))
+def OrOfExtUI :
+    Pat<(Arith_OrIOp (Arith_ExtUIOp $x), (Arith_ExtUIOp $y)), (Arith_ExtUIOp (Arith_OrIOp $x, $y)),
+      [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y)]>;
+
+// or extsi(x), extsi(y) -> extsi(or(x,y))
+def OrOfExtSI :
+    Pat<(Arith_OrIOp (Arith_ExtSIOp $x), (Arith_ExtSIOp $y)), (Arith_ExtSIOp (Arith_OrIOp $x, $y)),
+      [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y)]>;
+
 #endif // ARITHMETIC_PATTERNS

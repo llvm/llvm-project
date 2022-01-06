@@ -198,9 +198,9 @@ public:
         maxTypeRangeMemoryIndex(maxTypeRangeMemoryIndex),
         maxValueRangeMemoryIndex(maxValueRangeMemoryIndex),
         maxLoopLevel(maxLoopLevel) {
-    for (auto it : llvm::enumerate(constraintFns))
+    for (const auto &it : llvm::enumerate(constraintFns))
       constraintToMemIndex.try_emplace(it.value().first(), it.index());
-    for (auto it : llvm::enumerate(rewriteFns))
+    for (const auto &it : llvm::enumerate(rewriteFns))
       externalRewriterToMemIndex.try_emplace(it.value().first(), it.index());
   }
 
@@ -551,10 +551,22 @@ void Generator::allocateMemoryIndices(FuncOp matcherFunc,
   // finding the minimal number of overlapping live ranges. This is essentially
   // a simplified form of register allocation where we don't necessarily have a
   // limited number of registers, but we still want to minimize the number used.
-  DenseMap<Operation *, unsigned> opToIndex;
-  matcherFunc.getBody().walk([&](Operation *op) {
-    opToIndex.insert(std::make_pair(op, opToIndex.size()));
-  });
+  DenseMap<Operation *, unsigned> opToFirstIndex;
+  DenseMap<Operation *, unsigned> opToLastIndex;
+
+  // A custom walk that marks the first and the last index of each operation.
+  // The entry marks the beginning of the liveness range for this operation,
+  // followed by nested operations, followed by the end of the liveness range.
+  unsigned index = 0;
+  llvm::unique_function<void(Operation *)> walk = [&](Operation *op) {
+    opToFirstIndex.try_emplace(op, index++);
+    for (Region &region : op->getRegions())
+      for (Block &block : region.getBlocks())
+        for (Operation &nested : block)
+          walk(&nested);
+    opToLastIndex.try_emplace(op, index++);
+  };
+  walk(matcherFunc);
 
   // Liveness info for each of the defs within the matcher.
   ByteCodeLiveRange::Allocator allocator;
@@ -578,8 +590,8 @@ void Generator::allocateMemoryIndices(FuncOp matcherFunc,
       // Set indices for the range of this block that the value is used.
       auto defRangeIt = valueDefRanges.try_emplace(value, allocator).first;
       defRangeIt->second.liveness->insert(
-          opToIndex[firstUseOrDef],
-          opToIndex[info->getEndOperation(value, firstUseOrDef)],
+          opToFirstIndex[firstUseOrDef],
+          opToLastIndex[info->getEndOperation(value, firstUseOrDef)],
           /*dummyValue*/ 0);
 
       // Check to see if this value is a range type.
@@ -631,7 +643,7 @@ void Generator::allocateMemoryIndices(FuncOp matcherFunc,
     ByteCodeLiveRange &defRange = defIt.second;
 
     // Try to allocate to an existing index.
-    for (auto existingIndexIt : llvm::enumerate(allocatedIndices)) {
+    for (const auto &existingIndexIt : llvm::enumerate(allocatedIndices)) {
       ByteCodeLiveRange &existingRange = existingIndexIt.value();
       if (!defRange.overlaps(existingRange)) {
         existingRange.unionWith(defRange);

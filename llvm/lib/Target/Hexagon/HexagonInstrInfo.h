@@ -335,6 +335,13 @@ public:
   getSerializableBitmaskMachineOperandTargetFlags() const override;
 
   bool isTailCall(const MachineInstr &MI) const override;
+  bool isAsCheapAsAMove(const MachineInstr &MI) const override;
+
+  // Return true if the instruction should be sunk by MachineSink.
+  // MachineSink determines on its own whether the instruction is safe to sink;
+  // this gives the target a hook to override the default behavior with regards
+  // to which instructions should be sunk.
+  bool shouldSink(const MachineInstr &MI) const override;
 
   /// HexagonInstrInfo specifics.
 

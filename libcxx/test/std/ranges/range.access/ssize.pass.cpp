@@ -25,8 +25,6 @@ static_assert( std::is_invocable_v<RangeSSizeT, int[1]>);
 static_assert( std::is_invocable_v<RangeSSizeT, int (&&)[1]>);
 static_assert( std::is_invocable_v<RangeSSizeT, int (&)[1]>);
 
-static_assert(std::semiregular<std::remove_cv_t<RangeSSizeT>>);
-
 struct SizeMember {
   constexpr size_t size() { return 42; }
 };
@@ -79,6 +77,11 @@ constexpr bool test() {
 
   return true;
 }
+
+// Test ADL-proofing.
+struct Incomplete;
+template<class T> struct Holder { T t; };
+static_assert(!std::is_invocable_v<RangeSSizeT, Holder<Incomplete>*>);
 
 int main(int, char**) {
   test();

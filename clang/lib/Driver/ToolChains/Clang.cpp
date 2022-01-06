@@ -1929,6 +1929,11 @@ void Clang::AddMIPSTargetArgs(const ArgList &Args,
     }
   }
 
+  if (Args.getLastArg(options::OPT_mfix4300)) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-mfix4300");
+  }
+
   if (Arg *A = Args.getLastArg(options::OPT_G)) {
     StringRef v = A->getValue();
     CmdArgs.push_back("-mllvm");
@@ -3217,9 +3222,7 @@ static void RenderSSPOptions(const Driver &D, const ToolChain &TC,
         return;
       }
       // Check whether the target subarch supports the hardware TLS register
-      if (arm::getARMSubArchVersionNumber(EffectiveTriple) < 7 &&
-          llvm::ARM::parseArch(EffectiveTriple.getArchName()) !=
-              llvm::ARM::ArchKind::ARMV6T2) {
+      if (!arm::isHardTPSupported(EffectiveTriple)) {
         D.Diag(diag::err_target_unsupported_tp_hard)
             << EffectiveTriple.getArchName();
         return;

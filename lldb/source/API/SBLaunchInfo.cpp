@@ -23,8 +23,7 @@ using namespace lldb_private;
 
 class lldb_private::SBLaunchInfoImpl : public ProcessLaunchInfo {
 public:
-  SBLaunchInfoImpl()
-      : ProcessLaunchInfo(), m_envp(GetEnvironment().getEnvp()) {}
+  SBLaunchInfoImpl() : m_envp(GetEnvironment().getEnvp()) {}
 
   const char *const *GetEnvp() const { return m_envp; }
   void RegenerateEnvp() { m_envp = GetEnvironment().getEnvp(); }

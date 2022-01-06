@@ -93,9 +93,7 @@ static Status AttachToProcess(ProcessAttachInfo &attach_info, Target &target) {
 }
 
 // SBTarget constructor
-SBTarget::SBTarget() : m_opaque_sp() {
-  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBTarget);
-}
+SBTarget::SBTarget() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBTarget); }
 
 SBTarget::SBTarget(const SBTarget &rhs) : m_opaque_sp(rhs.m_opaque_sp) {
   LLDB_RECORD_CONSTRUCTOR(SBTarget, (const lldb::SBTarget &), rhs);

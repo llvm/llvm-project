@@ -18,7 +18,6 @@
 
 namespace llvm {
 class ARMSubtarget;
-class ScheduleHazardRecognizer;
 
 class Thumb2InstrInfo : public ARMBaseInstrInfo {
   ThumbRegisterInfo RI;

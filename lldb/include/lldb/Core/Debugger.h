@@ -306,6 +306,10 @@ public:
 
   bool SetScriptLanguage(lldb::ScriptLanguage script_lang);
 
+  lldb::LanguageType GetREPLLanguage() const;
+
+  bool SetREPLLanguage(lldb::LanguageType repl_lang);
+
   uint32_t GetTerminalWidth() const;
 
   bool SetTerminalWidth(uint32_t term_width);

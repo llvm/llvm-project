@@ -41,7 +41,7 @@ private:
     StringRef name;
     uint32_t           attributes = 0;
     bool               isFunction = 0;
-    const GlobalValue *symbol = 0;
+    const GlobalValue *symbol = nullptr;
   };
 
   std::unique_ptr<LLVMContext> OwnedContext;

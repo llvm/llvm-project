@@ -635,7 +635,7 @@ void SectionChunk::printDiscardedMessage() const {
   // Removed by dead-stripping. If it's removed by ICF, ICF already
   // printed out the name, so don't repeat that here.
   if (sym && this == repl)
-    message("Discarded " + sym->getName());
+    log("Discarded " + sym->getName());
 }
 
 StringRef SectionChunk::getDebugName() const {

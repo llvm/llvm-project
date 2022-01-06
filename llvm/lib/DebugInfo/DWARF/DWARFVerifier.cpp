@@ -322,12 +322,19 @@ unsigned DWARFVerifier::verifyUnits(const DWARFUnitVector &Units) {
   unsigned NumDebugInfoErrors = 0;
   ReferenceMap CrossUnitReferences;
 
+  unsigned Index = 1;
   for (const auto &Unit : Units) {
-      ReferenceMap UnitLocalReferences;
-      NumDebugInfoErrors +=
-          verifyUnitContents(*Unit, UnitLocalReferences, CrossUnitReferences);
-      NumDebugInfoErrors += verifyDebugInfoReferences(
-          UnitLocalReferences, [&](uint64_t Offset) { return Unit.get(); });
+    OS << "Verifying unit: " << Index << " / " << Units.getNumUnits();
+    if (const char* Name = Unit->getUnitDIE(true).getShortName())
+      OS << ", \"" << Name << '\"';
+    OS << '\n';
+    OS.flush();
+    ReferenceMap UnitLocalReferences;
+    NumDebugInfoErrors +=
+        verifyUnitContents(*Unit, UnitLocalReferences, CrossUnitReferences);
+    NumDebugInfoErrors += verifyDebugInfoReferences(
+        UnitLocalReferences, [&](uint64_t Offset) { return Unit.get(); });
+    ++Index;
   }
 
   NumDebugInfoErrors += verifyDebugInfoReferences(

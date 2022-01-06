@@ -16,7 +16,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBTypeSynthetic::SBTypeSynthetic() : m_opaque_sp() {
+SBTypeSynthetic::SBTypeSynthetic() {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBTypeSynthetic);
 }
 

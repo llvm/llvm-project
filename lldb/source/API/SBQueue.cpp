@@ -27,11 +27,10 @@ namespace lldb_private {
 
 class QueueImpl {
 public:
-  QueueImpl() : m_queue_wp(), m_threads(), m_pending_items() {}
+  QueueImpl() {}
 
   QueueImpl(const lldb::QueueSP &queue_sp)
-      : m_queue_wp(), m_threads(), m_thread_list_fetched(false),
-        m_pending_items(), m_pending_items_fetched(false) {
+      : m_thread_list_fetched(false), m_pending_items_fetched(false) {
     m_queue_wp = queue_sp;
   }
 

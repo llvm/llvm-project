@@ -46,7 +46,7 @@ protected:
 
   /// Checks that optimal branching on graph has the given cost and
   /// its preorder traversal results in the specified edges.
-  void check(unsigned cost, OptimalBranching::EdgeList edges) {
+  void check(unsigned cost, const OptimalBranching::EdgeList &edges) {
     OptimalBranching opt(graph, v[0]);
     EXPECT_EQ(opt.solve(), cost);
     EXPECT_EQ(opt.preOrderTraversal({v, v + edges.size()}), edges);

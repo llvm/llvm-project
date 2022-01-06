@@ -1595,9 +1595,9 @@ void CodeGenFunction::EmitBranchToCounterBlock(
   if (!InstrumentRegions || !isInstrumentedCondition(Cond))
     return EmitBranchOnBoolExpr(Cond, TrueBlock, FalseBlock, TrueCount, LH);
 
-  llvm::BasicBlock *ThenBlock = NULL;
-  llvm::BasicBlock *ElseBlock = NULL;
-  llvm::BasicBlock *NextBlock = NULL;
+  llvm::BasicBlock *ThenBlock = nullptr;
+  llvm::BasicBlock *ElseBlock = nullptr;
+  llvm::BasicBlock *NextBlock = nullptr;
 
   // Create the block we'll use to increment the appropriate counter.
   llvm::BasicBlock *CounterIncrBlock = createBasicBlock("lop.rhscnt");

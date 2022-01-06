@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <utility>
+
 #include "mlir/IR/AffineExpr.h"
 #include "AffineExprDetail.h"
 #include "mlir/IR/AffineExprVisitor.h"
@@ -28,7 +30,7 @@ void AffineExpr::walk(std::function<void(AffineExpr)> callback) const {
     std::function<void(AffineExpr)> callback;
 
     AffineExprWalker(std::function<void(AffineExpr)> callback)
-        : callback(callback) {}
+        : callback(std::move(callback)) {}
 
     void visitAffineBinaryOpExpr(AffineBinaryOpExpr expr) { callback(expr); }
     void visitConstantExpr(AffineConstantExpr expr) { callback(expr); }
@@ -36,7 +38,7 @@ void AffineExpr::walk(std::function<void(AffineExpr)> callback) const {
     void visitSymbolExpr(AffineSymbolExpr expr) { callback(expr); }
   };
 
-  AffineExprWalker(callback).walkPostOrder(*this);
+  AffineExprWalker(std::move(callback)).walkPostOrder(*this);
 }
 
 // Dispatch affine expression construction based on kind.
@@ -1020,7 +1022,7 @@ static AffineExpr getSemiAffineExprFromFlatForm(ArrayRef<int64_t> flatExprs,
   // as lhs/rhs, and store the indices, constant coefficient corresponding to
   // the indices in `coefficients` map, and affine expression corresponding to
   // in indices in `indexToExprMap` map.
-  for (auto it : llvm::enumerate(localExprs)) {
+  for (const auto &it : llvm::enumerate(localExprs)) {
     AffineExpr expr = it.value();
     if (flatExprs[numDims + numSymbols + it.index()] == 0)
       continue;

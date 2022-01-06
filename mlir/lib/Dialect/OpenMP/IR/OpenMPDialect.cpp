@@ -105,7 +105,7 @@ static void printOperandAndTypeList(OpAsmPrinter &p, OperandRange operands) {
 /// Print data variables corresponding to a data-sharing clause `name`
 static void printDataVars(OpAsmPrinter &p, OperandRange operands,
                           StringRef name) {
-  if (operands.size()) {
+  if (!operands.empty()) {
     p << name;
     printOperandAndTypeList(p, operands);
   }
@@ -249,7 +249,7 @@ verifyScheduleModifiers(OpAsmParser &parser,
                         SmallVectorImpl<SmallString<12>> &modifiers) {
   if (modifiers.size() > 2)
     return parser.emitError(parser.getNameLoc()) << " unexpected modifier(s)";
-  for (auto mod : modifiers) {
+  for (const auto &mod : modifiers) {
     // Translate the string. If it has no value, then it was not a valid
     // modifier!
     auto symbol = symbolizeScheduleModifier(mod);
@@ -390,7 +390,7 @@ static void printReductionVarList(OpAsmPrinter &p,
 static LogicalResult verifyReductionVarList(Operation *op,
                                             Optional<ArrayAttr> reductions,
                                             OperandRange reductionVars) {
-  if (reductionVars.size() != 0) {
+  if (!reductionVars.empty()) {
     if (!reductions || reductions->size() != reductionVars.size())
       return op->emitOpError()
              << "expected as many reduction symbol references "
@@ -863,7 +863,7 @@ static ParseResult parseClauses(OpAsmParser &parser, OperationState &result,
     schedule[0] = llvm::toUpper(schedule[0]);
     auto attr = parser.getBuilder().getStringAttr(schedule);
     result.addAttribute("schedule_val", attr);
-    if (modifiers.size() > 0) {
+    if (!modifiers.empty()) {
       auto mod = parser.getBuilder().getStringAttr(modifiers[0]);
       result.addAttribute("schedule_modifier", mod);
       // Only SIMD attribute is allowed here!
@@ -1072,7 +1072,7 @@ static void printWsLoopOp(OpAsmPrinter &p, WsLoopOp op) {
   printDataVars(p, op.firstprivate_vars(), "firstprivate");
   printDataVars(p, op.lastprivate_vars(), "lastprivate");
 
-  if (op.linear_vars().size())
+  if (!op.linear_vars().empty())
     printLinearClause(p, op.linear_vars(), op.linear_step_vars());
 
   if (auto sched = op.schedule_val())
@@ -1185,8 +1185,8 @@ void WsLoopOp::build(OpBuilder &builder, OperationState &state,
                      ValueRange lowerBound, ValueRange upperBound,
                      ValueRange step, ArrayRef<NamedAttribute> attributes) {
   build(builder, state, TypeRange(), lowerBound, upperBound, step,
-        /*private_vars=*/ValueRange(),
-        /*firstprivate_vars=*/ValueRange(), /*lastprivate_vars=*/ValueRange(),
+        /*privateVars=*/ValueRange(),
+        /*firstprivateVars=*/ValueRange(), /*lastprivate_vars=*/ValueRange(),
         /*linear_vars=*/ValueRange(), /*linear_step_vars=*/ValueRange(),
         /*reduction_vars=*/ValueRange(), /*schedule_val=*/nullptr,
         /*schedule_chunk_var=*/nullptr, /*collapse_val=*/nullptr,
@@ -1359,7 +1359,6 @@ static void printAtomicReadOp(OpAsmPrinter &p, AtomicReadOp op) {
   if (op.hintAttr())
     printSynchronizationHint(p << " ", op, op.hintAttr());
   p << ": " << op.address().getType() << " -> " << op.getType();
-  return;
 }
 
 /// Verifier for AtomicReadOp
@@ -1409,7 +1408,6 @@ static void printAtomicWriteOp(OpAsmPrinter &p, AtomicWriteOp op) {
   if (op.hintAttr())
     printSynchronizationHint(p, op, op.hintAttr());
   p << ": " << op.address().getType() << ", " << op.value().getType();
-  return;
 }
 
 /// Verifier for AtomicWriteOp

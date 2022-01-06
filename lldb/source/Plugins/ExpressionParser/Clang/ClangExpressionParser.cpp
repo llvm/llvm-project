@@ -995,7 +995,8 @@ public:
   void ProcessOverloadCandidates(Sema &S, unsigned CurrentArg,
                                  OverloadCandidate *Candidates,
                                  unsigned NumCandidates,
-                                 SourceLocation OpenParLoc) override {
+                                 SourceLocation OpenParLoc,
+                                 bool Braced) override {
     // At the moment we don't filter out any overloaded candidates.
   }
 

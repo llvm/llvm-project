@@ -26,7 +26,6 @@
 namespace llvm {
 
 class MachineBasicBlock;
-class MachineBlockFrequencyInfo;
 class MachineBranchProbabilityInfo;
 class MachineFunction;
 class MachineInstr;

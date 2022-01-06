@@ -20,6 +20,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -406,6 +407,58 @@ void foo();
   EXPECT_TRUE(Includes.isSelfContained(getID("includeguarded.h", Includes)));
   EXPECT_FALSE(Includes.isSelfContained(getID("nonguarded.h", Includes)));
   EXPECT_FALSE(Includes.isSelfContained(getID("pp_depend.h", Includes)));
+}
+
+TEST(StdlibTest, All) {
+  auto VectorH = stdlib::Header::named("<vector>");
+  EXPECT_TRUE(VectorH);
+  EXPECT_EQ(llvm::to_string(*VectorH), "<vector>");
+  EXPECT_FALSE(stdlib::Header::named("HeadersTests.cpp"));
+
+  auto Vector = stdlib::Symbol::named("std::", "vector");
+  EXPECT_TRUE(Vector);
+  EXPECT_EQ(llvm::to_string(*Vector), "std::vector");
+  EXPECT_FALSE(stdlib::Symbol::named("std::", "dongle"));
+  EXPECT_FALSE(stdlib::Symbol::named("clang::", "ASTContext"));
+
+  EXPECT_EQ(Vector->header(), *VectorH);
+  EXPECT_THAT(Vector->headers(), ElementsAre(*VectorH));
+}
+
+TEST(StdlibTest, Recognizer) {
+  auto TU = TestTU::withCode(R"cpp(
+    namespace std {
+    inline namespace inl {
+
+    template <typename>
+    struct vector { class nested {}; };
+
+    class secret {};
+
+    } // inl
+    } // std
+
+    class vector {};
+    std::vector<int> vec;
+    std::vector<int>::nested nest;
+    std::secret sec;
+  )cpp");
+
+  auto AST = TU.build();
+  auto &vector_nonstd = findDecl(AST, "vector");
+  auto *vec =
+      cast<VarDecl>(findDecl(AST, "vec")).getType()->getAsCXXRecordDecl();
+  auto *nest =
+      cast<VarDecl>(findDecl(AST, "nest")).getType()->getAsCXXRecordDecl();
+  auto *sec =
+      cast<VarDecl>(findDecl(AST, "sec")).getType()->getAsCXXRecordDecl();
+
+  stdlib::Recognizer recognizer;
+
+  EXPECT_EQ(recognizer(&vector_nonstd), llvm::None);
+  EXPECT_EQ(recognizer(vec), stdlib::Symbol::named("std::", "vector"));
+  EXPECT_EQ(recognizer(nest), stdlib::Symbol::named("std::", "vector"));
+  EXPECT_EQ(recognizer(sec), llvm::None);
 }
 
 } // namespace

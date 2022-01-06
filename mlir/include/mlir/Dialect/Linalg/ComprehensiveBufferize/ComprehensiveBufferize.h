@@ -18,17 +18,17 @@ namespace comprehensive_bufferize {
 
 struct BufferizationOptions;
 class BufferizationState;
-struct PostAnalysisStep;
 
 /// Bufferize the given operation. Reuses an existing BufferizationState object.
-LogicalResult runComprehensiveBufferize(
-    Operation *op, const BufferizationOptions &options,
-    BufferizationState &state,
-    const std::vector<std::unique_ptr<PostAnalysisStep>> &extraSteps);
+/// This function overload is for internal usage only.
+LogicalResult runComprehensiveBufferize(Operation *op,
+                                        const BufferizationOptions &options,
+                                        BufferizationState &state);
 
 /// Bufferize the given operation.
-LogicalResult runComprehensiveBufferize(Operation *op,
-                                        const BufferizationOptions &options);
+LogicalResult
+runComprehensiveBufferize(Operation *op,
+                          std::unique_ptr<BufferizationOptions> options);
 
 } // namespace comprehensive_bufferize
 } // namespace linalg

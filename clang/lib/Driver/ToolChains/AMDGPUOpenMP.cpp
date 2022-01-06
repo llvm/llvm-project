@@ -131,9 +131,8 @@ const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
   }
 
   AddStaticDeviceLibsLinking(C, *this, JA, Inputs, Args, CmdArgs, "amdgcn",
-                      SubArchName,
-                      /* bitcode SDL?*/ true,
-                      /* PostClang Link? */ false);
+                             SubArchName, /*isBitCodeSDL=*/true,
+                             /*postClangLink=*/false);
   // Add an intermediate output file.
   CmdArgs.push_back("-o");
   const char *OutputFileName =

@@ -1060,15 +1060,30 @@ define <3 x i42> @and_2_vars(<3 x i42> %v0, <3 x i42> %v1) {
 define <4 x i32> @or_2_vars(<4 x i32> %v0, <4 x i32> %v1) {
 ; CHECK-LABEL: @or_2_vars(
 ; CHECK-NEXT:    [[T1:%.*]] = or <4 x i32> [[V0:%.*]], <i32 1, i32 2, i32 3, i32 4>
+; CHECK-NEXT:    call void @use_v4i32(<4 x i32> [[T1]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[V1:%.*]], <4 x i32> [[V0]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP2:%.*]] = or <4 x i32> [[TMP1]], <i32 5, i32 6, i32 3, i32 4>
-; CHECK-NEXT:    call void @use_v4i32(<4 x i32> [[T1]])
 ; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
   %t1 = or <4 x i32> %v0, <i32 1, i32 2, i32 3, i32 4>
+  call void @use_v4i32(<4 x i32> %t1)
   %t2 = or <4 x i32> %v1, <i32 5, i32 6, i32 7, i32 8>
   %t3 = shufflevector <4 x i32> %t1, <4 x i32> %t2, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+  ret <4 x i32> %t3
+}
+
+define <4 x i32> @or_2_vars_undef_mask_elt(<4 x i32> %v0, <4 x i32> %v1) {
+; CHECK-LABEL: @or_2_vars_undef_mask_elt(
+; CHECK-NEXT:    [[T1:%.*]] = or <4 x i32> [[V0:%.*]], <i32 1, i32 2, i32 3, i32 4>
+; CHECK-NEXT:    call void @use_v4i32(<4 x i32> [[T1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[V1:%.*]], <4 x i32> [[V0]], <4 x i32> <i32 0, i32 1, i32 6, i32 undef>
+; CHECK-NEXT:    [[TMP2:%.*]] = or <4 x i32> [[TMP1]], <i32 5, i32 6, i32 3, i32 undef>
+; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
+;
+  %t1 = or <4 x i32> %v0, <i32 1, i32 2, i32 3, i32 4>
   call void @use_v4i32(<4 x i32> %t1)
+  %t2 = or <4 x i32> %v1, <i32 5, i32 6, i32 7, i32 8>
+  %t3 = shufflevector <4 x i32> %t1, <4 x i32> %t2, <4 x i32> <i32 4, i32 5, i32 2, i32 undef>
   ret <4 x i32> %t3
 }
 
@@ -1077,17 +1092,17 @@ define <4 x i32> @or_2_vars(<4 x i32> %v0, <4 x i32> %v1) {
 define <4 x i32> @xor_2_vars(<4 x i32> %v0, <4 x i32> %v1) {
 ; CHECK-LABEL: @xor_2_vars(
 ; CHECK-NEXT:    [[T1:%.*]] = xor <4 x i32> [[V0:%.*]], <i32 1, i32 2, i32 3, i32 4>
-; CHECK-NEXT:    [[T2:%.*]] = xor <4 x i32> [[V1:%.*]], <i32 5, i32 6, i32 7, i32 8>
-; CHECK-NEXT:    [[T3:%.*]] = shufflevector <4 x i32> [[T1]], <4 x i32> [[T2]], <4 x i32> <i32 0, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    call void @use_v4i32(<4 x i32> [[T1]])
+; CHECK-NEXT:    [[T2:%.*]] = xor <4 x i32> [[V1:%.*]], <i32 5, i32 6, i32 7, i32 8>
 ; CHECK-NEXT:    call void @use_v4i32(<4 x i32> [[T2]])
+; CHECK-NEXT:    [[T3:%.*]] = shufflevector <4 x i32> [[T1]], <4 x i32> [[T2]], <4 x i32> <i32 0, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    ret <4 x i32> [[T3]]
 ;
   %t1 = xor <4 x i32> %v0, <i32 1, i32 2, i32 3, i32 4>
-  %t2 = xor <4 x i32> %v1, <i32 5, i32 6, i32 7, i32 8>
-  %t3 = shufflevector <4 x i32> %t1, <4 x i32> %t2, <4 x i32> <i32 0, i32 5, i32 2, i32 3>
   call void @use_v4i32(<4 x i32> %t1)
+  %t2 = xor <4 x i32> %v1, <i32 5, i32 6, i32 7, i32 8>
   call void @use_v4i32(<4 x i32> %t2)
+  %t3 = shufflevector <4 x i32> %t1, <4 x i32> %t2, <4 x i32> <i32 0, i32 5, i32 2, i32 3>
   ret <4 x i32> %t3
 }
 

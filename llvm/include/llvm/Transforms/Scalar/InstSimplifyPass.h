@@ -18,8 +18,6 @@
 
 namespace llvm {
 
-class FunctionPass;
-
 /// Run instruction simplification across each instruction in the function.
 ///
 /// Instruction simplification has useful constraints in some contexts:

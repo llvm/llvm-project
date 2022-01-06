@@ -1146,26 +1146,30 @@ define double @roundeven_f64(double %a) nounwind {
   ret double %1
 }
 
-declare iXLen @llvm.lrint.iXLen.f64(float)
+declare iXLen @llvm.lrint.iXLen.f64(double)
 
-define iXLen @lrint_f64(float %a) nounwind {
+define iXLen @lrint_f64(double %a) nounwind {
 ; RV32IFD-LABEL: lrint_f64:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    fmv.w.x ft0, a0
-; RV32IFD-NEXT:    fcvt.w.s a0, ft0
+; RV32IFD-NEXT:    addi sp, sp, -16
+; RV32IFD-NEXT:    sw a0, 8(sp)
+; RV32IFD-NEXT:    sw a1, 12(sp)
+; RV32IFD-NEXT:    fld ft0, 8(sp)
+; RV32IFD-NEXT:    fcvt.w.d a0, ft0
+; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: lrint_f64:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    fmv.w.x ft0, a0
-; RV64IFD-NEXT:    fcvt.l.s a0, ft0
+; RV64IFD-NEXT:    fmv.d.x ft0, a0
+; RV64IFD-NEXT:    fcvt.l.d a0, ft0
 ; RV64IFD-NEXT:    ret
 ;
 ; RV32I-LABEL: lrint_f64:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    call lrintf@plt
+; RV32I-NEXT:    call lrint@plt
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -1174,34 +1178,38 @@ define iXLen @lrint_f64(float %a) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call lrintf@plt
+; RV64I-NEXT:    call lrint@plt
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
-  %1 = call iXLen @llvm.lrint.iXLen.f64(float %a)
+  %1 = call iXLen @llvm.lrint.iXLen.f64(double %a)
   ret iXLen %1
 }
 
-declare iXLen @llvm.lround.iXLen.f64(float)
+declare iXLen @llvm.lround.iXLen.f64(double)
 
-define iXLen @lround_f64(float %a) nounwind {
+define iXLen @lround_f64(double %a) nounwind {
 ; RV32IFD-LABEL: lround_f64:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    fmv.w.x ft0, a0
-; RV32IFD-NEXT:    fcvt.w.s a0, ft0, rmm
+; RV32IFD-NEXT:    addi sp, sp, -16
+; RV32IFD-NEXT:    sw a0, 8(sp)
+; RV32IFD-NEXT:    sw a1, 12(sp)
+; RV32IFD-NEXT:    fld ft0, 8(sp)
+; RV32IFD-NEXT:    fcvt.w.d a0, ft0, rmm
+; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: lround_f64:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    fmv.w.x ft0, a0
-; RV64IFD-NEXT:    fcvt.l.s a0, ft0, rmm
+; RV64IFD-NEXT:    fmv.d.x ft0, a0
+; RV64IFD-NEXT:    fcvt.l.d a0, ft0, rmm
 ; RV64IFD-NEXT:    ret
 ;
 ; RV32I-LABEL: lround_f64:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    call lroundf@plt
+; RV32I-NEXT:    call lround@plt
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -1210,37 +1218,37 @@ define iXLen @lround_f64(float %a) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call lroundf@plt
+; RV64I-NEXT:    call lround@plt
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
-  %1 = call iXLen @llvm.lround.iXLen.f64(float %a)
+  %1 = call iXLen @llvm.lround.iXLen.f64(double %a)
   ret iXLen %1
 }
 
-declare i64 @llvm.llrint.i64.f64(float)
+declare i64 @llvm.llrint.i64.f64(double)
 
-define i64 @llrint_f64(float %a) nounwind {
+define i64 @llrint_f64(double %a) nounwind {
 ; RV32IFD-LABEL: llrint_f64:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
 ; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IFD-NEXT:    call llrintf@plt
+; RV32IFD-NEXT:    call llrint@plt
 ; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: llrint_f64:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    fmv.w.x ft0, a0
-; RV64IFD-NEXT:    fcvt.l.s a0, ft0
+; RV64IFD-NEXT:    fmv.d.x ft0, a0
+; RV64IFD-NEXT:    fcvt.l.d a0, ft0
 ; RV64IFD-NEXT:    ret
 ;
 ; RV32I-LABEL: llrint_f64:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    call llrintf@plt
+; RV32I-NEXT:    call llrint@plt
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -1249,37 +1257,37 @@ define i64 @llrint_f64(float %a) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call llrintf@plt
+; RV64I-NEXT:    call llrint@plt
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
-  %1 = call i64 @llvm.llrint.i64.f64(float %a)
+  %1 = call i64 @llvm.llrint.i64.f64(double %a)
   ret i64 %1
 }
 
-declare i64 @llvm.llround.i64.f64(float)
+declare i64 @llvm.llround.i64.f64(double)
 
-define i64 @llround_f64(float %a) nounwind {
+define i64 @llround_f64(double %a) nounwind {
 ; RV32IFD-LABEL: llround_f64:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
 ; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IFD-NEXT:    call llroundf@plt
+; RV32IFD-NEXT:    call llround@plt
 ; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: llround_f64:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    fmv.w.x ft0, a0
-; RV64IFD-NEXT:    fcvt.l.s a0, ft0, rmm
+; RV64IFD-NEXT:    fmv.d.x ft0, a0
+; RV64IFD-NEXT:    fcvt.l.d a0, ft0, rmm
 ; RV64IFD-NEXT:    ret
 ;
 ; RV32I-LABEL: llround_f64:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    call llroundf@plt
+; RV32I-NEXT:    call llround@plt
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -1288,10 +1296,10 @@ define i64 @llround_f64(float %a) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call llroundf@plt
+; RV64I-NEXT:    call llround@plt
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
-  %1 = call i64 @llvm.llround.i64.f64(float %a)
+  %1 = call i64 @llvm.llround.i64.f64(double %a)
   ret i64 %1
 }

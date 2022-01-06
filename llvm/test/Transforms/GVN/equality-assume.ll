@@ -149,7 +149,7 @@ merge:
 
 define i32 @conflicting_constants(i32* %p) {
 ; CHECK-LABEL: @conflicting_constants(
-; CHECK-NEXT:    store i8 undef, i8* null
+; CHECK-NEXT:    store i8 poison, i8* null
 ; CHECK-NEXT:    br i1 undef, label [[TAKEN:%.*]], label [[MERGE:%.*]]
 ; CHECK:       taken:
 ; CHECK-NEXT:    br label [[MERGE]]

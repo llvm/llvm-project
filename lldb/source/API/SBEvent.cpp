@@ -22,7 +22,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBEvent::SBEvent() : m_event_sp() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBEvent); }
+SBEvent::SBEvent() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBEvent); }
 
 SBEvent::SBEvent(uint32_t event_type, const char *cstr, uint32_t cstr_len)
     : m_event_sp(new Event(event_type, new EventDataBytes(cstr, cstr_len))),
@@ -36,7 +36,7 @@ SBEvent::SBEvent(EventSP &event_sp)
   LLDB_RECORD_CONSTRUCTOR(SBEvent, (lldb::EventSP &), event_sp);
 }
 
-SBEvent::SBEvent(Event *event_ptr) : m_event_sp(), m_opaque_ptr(event_ptr) {
+SBEvent::SBEvent(Event *event_ptr) : m_opaque_ptr(event_ptr) {
   LLDB_RECORD_CONSTRUCTOR(SBEvent, (lldb_private::Event *), event_ptr);
 }
 

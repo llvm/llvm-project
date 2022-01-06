@@ -1540,7 +1540,7 @@ namespace llvm {
     unsigned GetAlignedArgumentStackSize(unsigned StackSize,
                                          SelectionDAG &DAG) const;
 
-    unsigned getAddressSpace(void) const;
+    unsigned getAddressSpace() const;
 
     SDValue FP_TO_INTHelper(SDValue Op, SelectionDAG &DAG, bool IsSigned,
                             SDValue &Chain) const;

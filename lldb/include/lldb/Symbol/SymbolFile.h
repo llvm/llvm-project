@@ -67,8 +67,7 @@ public:
 
   // Constructors and Destructors
   SymbolFile(lldb::ObjectFileSP objfile_sp)
-      : m_objfile_sp(std::move(objfile_sp)), m_abilities(0),
-        m_calculated_abilities(false) {}
+      : m_objfile_sp(std::move(objfile_sp)) {}
 
   ~SymbolFile() override = default;
 
@@ -326,6 +325,29 @@ public:
   /// hasn't been indexed yet, or a valid duration if it has.
   virtual StatsDuration GetDebugInfoIndexTime() { return StatsDuration(0.0); }
 
+  /// Accessors for the bool that indicates if the debug info index was loaded
+  /// from, or saved to the module index cache.
+  ///
+  /// In statistics it is handy to know if a module's debug info was loaded from
+  /// or saved to the cache. When the debug info index is loaded from the cache
+  /// startup times can be faster. When the cache is enabled and the debug info
+  /// index is saved to the cache, debug sessions can be slower. These accessors
+  /// can be accessed by the statistics and emitted to help track these costs.
+  /// \{
+  bool GetDebugInfoIndexWasLoadedFromCache() const {
+    return m_index_was_loaded_from_cache;
+  }
+  void SetDebugInfoIndexWasLoadedFromCache() {
+    m_index_was_loaded_from_cache = true;
+  }
+  bool GetDebugInfoIndexWasSavedToCache() const {
+    return m_index_was_saved_to_cache;
+  }
+  void SetDebugInfoIndexWasSavedToCache() {
+    m_index_was_saved_to_cache = true;
+  }
+  /// \}
+
 protected:
   void AssertModuleLock();
   virtual uint32_t CalculateNumCompileUnits() = 0;
@@ -341,8 +363,10 @@ protected:
   llvm::Optional<std::vector<lldb::CompUnitSP>> m_compile_units;
   TypeList m_type_list;
   Symtab *m_symtab = nullptr;
-  uint32_t m_abilities;
-  bool m_calculated_abilities;
+  uint32_t m_abilities = 0;
+  bool m_calculated_abilities = false;
+  bool m_index_was_loaded_from_cache = false;
+  bool m_index_was_saved_to_cache = false;
 
 private:
   SymbolFile(const SymbolFile &) = delete;

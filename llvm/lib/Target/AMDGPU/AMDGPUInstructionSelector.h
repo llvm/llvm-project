@@ -30,7 +30,6 @@ namespace AMDGPU {
 struct ImageDimIntrinsicInfo;
 }
 
-class AMDGPUInstrInfo;
 class AMDGPURegisterBankInfo;
 class AMDGPUTargetMachine;
 class BlockFrequencyInfo;
@@ -42,7 +41,6 @@ class MachineOperand;
 class MachineRegisterInfo;
 class RegisterBank;
 class SIInstrInfo;
-class SIMachineFunctionInfo;
 class SIRegisterInfo;
 class TargetRegisterClass;
 

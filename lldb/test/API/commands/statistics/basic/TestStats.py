@@ -164,8 +164,12 @@ class TestCase(TestBase):
             'targets',
             'totalSymbolTableParseTime',
             'totalSymbolTableIndexTime',
+            'totalSymbolTablesLoadedFromCache',
+            'totalSymbolTablesSavedToCache',
             'totalDebugInfoByteSize',
             'totalDebugInfoIndexTime',
+            'totalDebugInfoIndexLoadedFromCache',
+            'totalDebugInfoIndexSavedToCache',
             'totalDebugInfoParseTime',
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
@@ -227,8 +231,12 @@ class TestCase(TestBase):
             'targets',
             'totalSymbolTableParseTime',
             'totalSymbolTableIndexTime',
+            'totalSymbolTablesLoadedFromCache',
+            'totalSymbolTablesSavedToCache',
             'totalDebugInfoByteSize',
             'totalDebugInfoIndexTime',
+            'totalDebugInfoIndexLoadedFromCache',
+            'totalDebugInfoIndexSavedToCache',
             'totalDebugInfoParseTime',
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
@@ -265,8 +273,12 @@ class TestCase(TestBase):
             'targets',
             'totalSymbolTableParseTime',
             'totalSymbolTableIndexTime',
+            'totalSymbolTablesLoadedFromCache',
+            'totalSymbolTablesSavedToCache',
             'totalDebugInfoParseTime',
             'totalDebugInfoIndexTime',
+            'totalDebugInfoIndexLoadedFromCache',
+            'totalDebugInfoIndexSavedToCache',
             'totalDebugInfoByteSize'
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
@@ -278,12 +290,16 @@ class TestCase(TestBase):
         exe_module = self.find_module_in_metrics(exe, debug_stats)
         module_keys = [
             'debugInfoByteSize',
+            'debugInfoIndexLoadedFromCache',
             'debugInfoIndexTime',
+            'debugInfoIndexSavedToCache',
             'debugInfoParseTime',
             'identifier',
             'path',
             'symbolTableIndexTime',
+            'symbolTableLoadedFromCache',
             'symbolTableParseTime',
+            'symbolTableSavedToCache',
             'triple',
             'uuid',
         ]
@@ -343,8 +359,12 @@ class TestCase(TestBase):
             'targets',
             'totalSymbolTableParseTime',
             'totalSymbolTableIndexTime',
+            'totalSymbolTablesLoadedFromCache',
+            'totalSymbolTablesSavedToCache',
             'totalDebugInfoParseTime',
             'totalDebugInfoIndexTime',
+            'totalDebugInfoIndexLoadedFromCache',
+            'totalDebugInfoIndexSavedToCache',
             'totalDebugInfoByteSize',
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)

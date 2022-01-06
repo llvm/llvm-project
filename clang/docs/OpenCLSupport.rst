@@ -18,15 +18,16 @@ OpenCL Support
 ==================
 
 Clang has complete support of OpenCL C versions from 1.0 to 2.0.
+There is an ongoing work to support :ref:`OpenCL 3.0 <opencl_300>`.
 
 Clang also supports :ref:`the C++ for OpenCL kernel language <cxx_for_opencl_impl>`.
 
-There is an ongoing work to support :ref:`OpenCL 3.0 <opencl_300>`.
+There are also other :ref:`new and experimental features <opencl_experimenal>`
+available.
 
-There are also other :ref:`new and experimental features <opencl_experimenal>` available.
-
-For general issues and bugs with OpenCL in clang refer to `Bugzilla
-<https://bugs.llvm.org/buglist.cgi?component=OpenCL&list_id=172679&product=clang&resolution=--->`__.
+For general issues and bugs with OpenCL in clang refer to `the GitHub issue
+list
+<https://github.com/llvm/llvm-project/issues?q=is%3Aopen+is%3Aissue+label%3Aopencl>`__.
 
 Internals Manual
 ================
@@ -127,7 +128,7 @@ To enable modules for OpenCL:
 
    .. code-block:: console
 
-     $ clang -target spir-unknown-unknown -c -emit-llvm -Xclang -finclude-default-header -fmodules -fimplicit-module-maps -fm     odules-cache-path=<path to the generated module> test.cl
+     $ clang -target spir-unknown-unknown -c -emit-llvm -Xclang -finclude-default-header -fmodules -fimplicit-module-maps -fmodules-cache-path=<path to the generated module> test.cl
 
 Another way to circumvent long parsing latency for the OpenCL builtin
 declarations is to use mechanism enabled by :ref:`-fdeclare-opencl-builtins
@@ -319,23 +320,31 @@ specified in the Clang's source code.
 C++ for OpenCL Implementation Status
 ====================================
 
-Clang implements language version 1.0 published in `the official
+Clang implements language versions 1.0 and 2021 published in `the official
 release of C++ for OpenCL Documentation
-<https://github.com/KhronosGroup/OpenCL-Docs/releases/tag/cxxforopencl-v1.0-r2>`_.
+<https://github.com/KhronosGroup/OpenCL-Docs/releases/tag/cxxforopencl-docrev2021.12>`_.
 
 Limited support of experimental C++ libraries is described in the :ref:`experimental features <opencl_experimenal>`.
 
-Bugzilla bugs for this functionality are typically prefixed
+GitHub issues for this functionality are typically prefixed
 with '[C++4OpenCL]' - click `here
-<https://bugs.llvm.org/buglist.cgi?component=OpenCL&list_id=204139&product=clang&query_format=advanced&resolution=---&short_desc=%5BC%2B%2B4OpenCL%5D&short_desc_type=allwordssubstr>`__
+<https://github.com/llvm/llvm-project/issues?q=is%3Aissue+is%3Aopen+%5BC%2B%2B4OpenCL%5D>`__
 to view the full bug list.
 
 
 Missing features or with limited support
 ----------------------------------------
 
-- IR generation for global destructors is incomplete (See:
+- Support of C++ for OpenCL 2021 is currently in experimental phase. Refer to
+  :ref:`OpenCL 3.0 status <opencl_300>` for details of common missing
+  functionality from OpenCL 3.0.
+
+- IR generation for non-trivial global destructors is incomplete (See:
   `PR48047 <https://llvm.org/PR48047>`_).
+
+- Support of `destrutors with non-default address spaces
+  <https://www.khronos.org/opencl/assets/CXX_for_OpenCL.html#_construction_initialization_and_destruction>`_
+  is incomplete (See: `D109609 <https://reviews.llvm.org/D109609>`_).
 
 .. _opencl_300:
 
@@ -408,8 +417,8 @@ Experimental features
 Clang provides the following new WIP features for the developers to experiment
 and provide early feedback or contribute with further improvements.
 Feel free to contact us on `cfe-dev
-<https://lists.llvm.org/mailman/listinfo/cfe-dev>`_ or via `Bugzilla
-<https://bugs.llvm.org/>`__.
+<https://lists.llvm.org/mailman/listinfo/cfe-dev>`_ or file `a GitHub issue
+<https://github.com/llvm/llvm-project/issues/new>`_.
 
 .. _opencl_experimental_cxxlibs:
 

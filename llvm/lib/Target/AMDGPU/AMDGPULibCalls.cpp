@@ -58,9 +58,6 @@ private:
   // "FuncName" exists. It may create a new function prototype in pre-link mode.
   FunctionCallee getFunction(Module *M, const FuncInfo &fInfo);
 
-  // Replace a normal function with its native version.
-  bool replaceWithNative(CallInst *CI, const FuncInfo &FInfo);
-
   bool parseFunctionName(const StringRef &FMangledName, FuncInfo &FInfo);
 
   bool TDOFold(CallInst *CI, const FuncInfo &FInfo);
@@ -89,24 +86,6 @@ private:
   bool evaluateScalarMathFunc(const FuncInfo &FInfo, double& Res0,
     double& Res1, Constant *copr0, Constant *copr1, Constant *copr2);
   bool evaluateCall(CallInst *aCI, const FuncInfo &FInfo);
-
-  // exp
-  bool fold_exp(CallInst *CI, IRBuilder<> &B, const FuncInfo &FInfo);
-
-  // exp2
-  bool fold_exp2(CallInst *CI, IRBuilder<> &B, const FuncInfo &FInfo);
-
-  // exp10
-  bool fold_exp10(CallInst *CI, IRBuilder<> &B, const FuncInfo &FInfo);
-
-  // log
-  bool fold_log(CallInst *CI, IRBuilder<> &B, const FuncInfo &FInfo);
-
-  // log2
-  bool fold_log2(CallInst *CI, IRBuilder<> &B, const FuncInfo &FInfo);
-
-  // log10
-  bool fold_log10(CallInst *CI, IRBuilder<> &B, const FuncInfo &FInfo);
 
   // sqrt
   bool fold_sqrt(CallInst *CI, IRBuilder<> &B, const FuncInfo &FInfo);
@@ -623,7 +602,8 @@ bool AMDGPULibCalls::fold(CallInst *CI, AliasAnalysis *AA) {
   Function *Callee = CI->getCalledFunction();
 
   // Ignore indirect calls.
-  if (Callee == 0) return false;
+  if (Callee == nullptr)
+    return false;
 
   BasicBlock *BB = CI->getParent();
   LLVMContext &Context = CI->getParent()->getContext();
@@ -775,27 +755,6 @@ bool AMDGPULibCalls::TDOFold(CallInst *CI, const FuncInfo &FInfo) {
     }
   }
 
-  return false;
-}
-
-bool AMDGPULibCalls::replaceWithNative(CallInst *CI, const FuncInfo &FInfo) {
-  Module *M = CI->getModule();
-  if (getArgType(FInfo) != AMDGPULibFunc::F32 ||
-      FInfo.getPrefix() != AMDGPULibFunc::NOPFX ||
-      !HasNative(FInfo.getId()))
-    return false;
-
-  AMDGPULibFunc nf = FInfo;
-  nf.setPrefix(AMDGPULibFunc::NATIVE);
-  if (FunctionCallee FPExpr = getFunction(M, nf)) {
-    LLVM_DEBUG(dbgs() << "AMDIC: " << *CI << " ---> ");
-
-    CI->setCalledFunction(FPExpr);
-
-    LLVM_DEBUG(dbgs() << *CI << '\n');
-
-    return true;
-  }
   return false;
 }
 
@@ -1402,8 +1361,8 @@ AllocaInst* AMDGPULibCalls::insertAlloca(CallInst *UI, IRBuilder<> &B,
   Function *UCallee = UI->getCalledFunction();
   Type *RetType = UCallee->getReturnType();
   B.SetInsertPoint(&*ItNew);
-  AllocaInst *Alloc = B.CreateAlloca(RetType, 0,
-    std::string(prefix) + UI->getName());
+  AllocaInst *Alloc =
+      B.CreateAlloca(RetType, nullptr, std::string(prefix) + UI->getName());
   Alloc->setAlignment(
       Align(UCallee->getParent()->getDataLayout().getTypeAllocSize(RetType)));
   return Alloc;
@@ -1724,7 +1683,8 @@ bool AMDGPUSimplifyLibCalls::runOnFunction(Function &F) {
 
       // Ignore indirect calls.
       Function *Callee = CI->getCalledFunction();
-      if (Callee == 0) continue;
+      if (Callee == nullptr)
+        continue;
 
       LLVM_DEBUG(dbgs() << "AMDIC: try folding " << *CI << "\n";
                  dbgs().flush());
@@ -1757,7 +1717,7 @@ PreservedAnalyses AMDGPUSimplifyLibCallsPass::run(Function &F,
 
       // Ignore indirect calls.
       Function *Callee = CI->getCalledFunction();
-      if (Callee == 0)
+      if (Callee == nullptr)
         continue;
 
       LLVM_DEBUG(dbgs() << "AMDIC: try folding " << *CI << "\n";
@@ -1783,9 +1743,10 @@ bool AMDGPUUseNativeCalls::runOnFunction(Function &F) {
 
       // Ignore indirect calls.
       Function *Callee = CI->getCalledFunction();
-      if (Callee == 0) continue;
+      if (Callee == nullptr)
+        continue;
 
-      if(Simplifier.useNative(CI))
+      if (Simplifier.useNative(CI))
         Changed = true;
     }
   }
@@ -1811,7 +1772,7 @@ PreservedAnalyses AMDGPUUseNativeCallsPass::run(Function &F,
 
       // Ignore indirect calls.
       Function *Callee = CI->getCalledFunction();
-      if (Callee == 0)
+      if (Callee == nullptr)
         continue;
 
       if (Simplifier.useNative(CI))

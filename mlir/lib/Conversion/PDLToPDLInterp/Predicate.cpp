@@ -48,4 +48,6 @@ OperandGroupPosition::OperandGroupPosition(const KeyTy &key) : Base(key) {
 //===----------------------------------------------------------------------===//
 // OperationPosition
 
-constexpr unsigned OperationPosition::kDown;
+bool OperationPosition::isOperandDefiningOp() const {
+  return isa_and_nonnull<OperandPosition, OperandGroupPosition>(parent);
+}

@@ -330,10 +330,10 @@ bool HexagonShuffler::ValidResourceUsage(HexagonPacketSummary const &Summary) {
   // create vector of hvx instructions to check
   HVXInstsT hvxInsts;
   hvxInsts.clear();
-  for (const_iterator I = cbegin(); I != cend(); ++I) {
+  for (const auto &I : *this) {
     struct CVIUnits inst;
-    inst.Units = I->CVI.getUnits();
-    inst.Lanes = I->CVI.getLanes();
+    inst.Units = I.CVI.getUnits();
+    inst.Lanes = I.CVI.getLanes();
     if (inst.Units == 0)
       continue; // not an hvx inst or an hvx inst that doesn't uses any pipes
     hvxInsts.push_back(inst);

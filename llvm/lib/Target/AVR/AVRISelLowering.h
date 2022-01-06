@@ -38,12 +38,15 @@ enum NodeType {
   LSL,     ///< Logical shift left.
   LSLBN,   ///< Byte logical shift left N bits.
   LSLWN,   ///< Word logical shift left N bits.
+  LSLHI,   ///< Higher 8-bit of word logical shift left.
   LSR,     ///< Logical shift right.
   LSRBN,   ///< Byte logical shift right N bits.
   LSRWN,   ///< Word logical shift right N bits.
+  LSRLO,   ///< Lower 8-bit of word logical shift right.
   ASR,     ///< Arithmetic shift right.
   ASRBN,   ///< Byte arithmetic shift right N bits.
   ASRWN,   ///< Word arithmetic shift right N bits.
+  ASRLO,   ///< Lower 8-bit of word arithmetic shift right.
   ROR,     ///< Bit rotate right.
   ROL,     ///< Bit rotate left.
   LSLLOOP, ///< A loop of single logical shift left instructions.

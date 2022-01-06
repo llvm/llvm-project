@@ -582,7 +582,7 @@ void SILowerControlFlow::optimizeEndCf() {
   if (!RemoveRedundantEndcf)
     return;
 
-  for (MachineInstr *MI : LoweredEndCf) {
+  for (MachineInstr *MI : reverse(LoweredEndCf)) {
     MachineBasicBlock &MBB = *MI->getParent();
     auto Next =
       skipIgnoreExecInstsTrivialSucc(MBB, std::next(MI->getIterator()));

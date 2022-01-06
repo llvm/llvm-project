@@ -227,8 +227,8 @@ int main() {
 // CHECK1-NEXT:    store i8* [[TMP0]], i8** [[DOTADDR]], align 8
 // CHECK1-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK1:       arraydestroy.body:
-// CHECK1-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi %struct.S* [ getelementptr inbounds ([[STRUCT_S:%.*]], %struct.S* getelementptr inbounds ([2 x %struct.S], [2 x %struct.S]* @s_arr, i32 0, i32 0), i64 2), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
-// CHECK1-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
+// CHECK1-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi %struct.S* [ getelementptr inbounds ([2 x %struct.S], [2 x %struct.S]* @s_arr, i64 1, i64 0), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
+// CHECK1-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S:%.*]], %struct.S* [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
 // CHECK1-NEXT:    call void @_ZN1SIfED1Ev(%struct.S* nonnull align 4 dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR2]]
 // CHECK1-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq %struct.S* [[ARRAYDESTROY_ELEMENT]], getelementptr inbounds ([2 x %struct.S], [2 x %struct.S]* @s_arr, i32 0, i32 0)
 // CHECK1-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE1:%.*]], label [[ARRAYDESTROY_BODY]]
@@ -820,8 +820,8 @@ int main() {
 // CHECK2-NEXT:    store i8* [[TMP0]], i8** [[DOTADDR]], align 8
 // CHECK2-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK2:       arraydestroy.body:
-// CHECK2-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi %struct.S* [ getelementptr inbounds ([[STRUCT_S:%.*]], %struct.S* getelementptr inbounds ([2 x %struct.S], [2 x %struct.S]* @s_arr, i32 0, i32 0), i64 2), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
-// CHECK2-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
+// CHECK2-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi %struct.S* [ getelementptr inbounds ([2 x %struct.S], [2 x %struct.S]* @s_arr, i64 1, i64 0), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
+// CHECK2-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S:%.*]], %struct.S* [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
 // CHECK2-NEXT:    call void @_ZN1SIfED1Ev(%struct.S* nonnull align 4 dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR2]]
 // CHECK2-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq %struct.S* [[ARRAYDESTROY_ELEMENT]], getelementptr inbounds ([2 x %struct.S], [2 x %struct.S]* @s_arr, i32 0, i32 0)
 // CHECK2-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE1:%.*]], label [[ARRAYDESTROY_BODY]]
@@ -1413,8 +1413,8 @@ int main() {
 // CHECK3-NEXT:    store i8* [[TMP0]], i8** [[DOTADDR]], align 8
 // CHECK3-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK3:       arraydestroy.body:
-// CHECK3-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi %struct.S* [ getelementptr inbounds ([[STRUCT_S:%.*]], %struct.S* getelementptr inbounds ([2 x %struct.S], [2 x %struct.S]* @s_arr, i32 0, i32 0), i64 2), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
-// CHECK3-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
+// CHECK3-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi %struct.S* [ getelementptr inbounds ([2 x %struct.S], [2 x %struct.S]* @s_arr, i64 1, i64 0), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
+// CHECK3-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S:%.*]], %struct.S* [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
 // CHECK3-NEXT:    call void @_ZN1SIfED1Ev(%struct.S* nonnull align 4 dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR2]]
 // CHECK3-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq %struct.S* [[ARRAYDESTROY_ELEMENT]], getelementptr inbounds ([2 x %struct.S], [2 x %struct.S]* @s_arr, i32 0, i32 0)
 // CHECK3-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE1:%.*]], label [[ARRAYDESTROY_BODY]]
@@ -1638,8 +1638,8 @@ int main() {
 // CHECK4-NEXT:    store i8* [[TMP0]], i8** [[DOTADDR]], align 8
 // CHECK4-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK4:       arraydestroy.body:
-// CHECK4-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi %struct.S* [ getelementptr inbounds ([[STRUCT_S:%.*]], %struct.S* getelementptr inbounds ([2 x %struct.S], [2 x %struct.S]* @s_arr, i32 0, i32 0), i64 2), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
-// CHECK4-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
+// CHECK4-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi %struct.S* [ getelementptr inbounds ([2 x %struct.S], [2 x %struct.S]* @s_arr, i64 1, i64 0), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
+// CHECK4-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S:%.*]], %struct.S* [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
 // CHECK4-NEXT:    call void @_ZN1SIfED1Ev(%struct.S* nonnull align 4 dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR2]]
 // CHECK4-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq %struct.S* [[ARRAYDESTROY_ELEMENT]], getelementptr inbounds ([2 x %struct.S], [2 x %struct.S]* @s_arr, i32 0, i32 0)
 // CHECK4-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE1:%.*]], label [[ARRAYDESTROY_BODY]]
@@ -1847,5 +1847,4 @@ int main() {
 // CHECK4-NEXT:    call void @__cxx_global_var_init.1()
 // CHECK4-NEXT:    call void @__cxx_global_var_init.2()
 // CHECK4-NEXT:    ret void
-//
 //

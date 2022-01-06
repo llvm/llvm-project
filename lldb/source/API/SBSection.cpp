@@ -20,18 +20,15 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBSection::SBSection() : m_opaque_wp() {
-  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBSection);
-}
+SBSection::SBSection() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBSection); }
 
 SBSection::SBSection(const SBSection &rhs) : m_opaque_wp(rhs.m_opaque_wp) {
   LLDB_RECORD_CONSTRUCTOR(SBSection, (const lldb::SBSection &), rhs);
 }
 
-SBSection::SBSection(const lldb::SectionSP &section_sp)
-    : m_opaque_wp() // Don't init with section_sp otherwise this will throw if
-                    // section_sp doesn't contain a valid Section *
-{
+SBSection::SBSection(const lldb::SectionSP &section_sp) {
+  // Don't init with section_sp otherwise this will throw if
+  // section_sp doesn't contain a valid Section *
   if (section_sp)
     m_opaque_wp = section_sp;
 }

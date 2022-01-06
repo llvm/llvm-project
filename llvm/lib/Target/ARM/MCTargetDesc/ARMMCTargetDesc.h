@@ -36,8 +36,6 @@ class MCTargetStreamer;
 class StringRef;
 class Target;
 class Triple;
-class raw_ostream;
-class raw_pwrite_stream;
 
 namespace ARM_MC {
 std::string ParseARMTriple(const Triple &TT, StringRef CPU);

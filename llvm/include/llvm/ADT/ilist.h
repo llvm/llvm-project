@@ -103,7 +103,7 @@ template <class TraitsT, class NodeT> struct HasGetNext {
   template <size_t N> struct SFINAE {};
 
   template <class U>
-  static Yes &test(U *I, decltype(I->getNext(&make<NodeT>())) * = 0);
+  static Yes &test(U *I, decltype(I->getNext(&make<NodeT>())) * = nullptr);
   template <class> static No &test(...);
 
 public:
@@ -117,7 +117,7 @@ template <class TraitsT> struct HasCreateSentinel {
   typedef char No[2];
 
   template <class U>
-  static Yes &test(U *I, decltype(I->createSentinel()) * = 0);
+  static Yes &test(U *I, decltype(I->createSentinel()) * = nullptr);
   template <class> static No &test(...);
 
 public:

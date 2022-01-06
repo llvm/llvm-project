@@ -4294,31 +4294,18 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   // Finally, if we can prove that the top bits of the result are 0's or 1's,
   // use this information.
   KnownBits Known = computeKnownBits(Op, DemandedElts, Depth);
-
-  APInt Mask;
-  if (Known.isNonNegative()) {        // sign bit is 0
-    Mask = Known.Zero;
-  } else if (Known.isNegative()) {  // sign bit is 1;
-    Mask = Known.One;
-  } else {
-    // Nothing known.
-    return FirstAnswer;
-  }
-
-  // Okay, we know that the sign bit in Mask is set.  Use CLO to determine
-  // the number of identical bits in the top of the input value.
-  Mask <<= Mask.getBitWidth()-VTBits;
-  return std::max(FirstAnswer, Mask.countLeadingOnes());
+  return std::max(FirstAnswer, Known.countMinSignBits());
 }
 
-unsigned SelectionDAG::ComputeMinSignedBits(SDValue Op, unsigned Depth) const {
+unsigned SelectionDAG::ComputeMaxSignificantBits(SDValue Op,
+                                                 unsigned Depth) const {
   unsigned SignBits = ComputeNumSignBits(Op, Depth);
   return Op.getScalarValueSizeInBits() - SignBits + 1;
 }
 
-unsigned SelectionDAG::ComputeMinSignedBits(SDValue Op,
-                                            const APInt &DemandedElts,
-                                            unsigned Depth) const {
+unsigned SelectionDAG::ComputeMaxSignificantBits(SDValue Op,
+                                                 const APInt &DemandedElts,
+                                                 unsigned Depth) const {
   unsigned SignBits = ComputeNumSignBits(Op, DemandedElts, Depth);
   return Op.getScalarValueSizeInBits() - SignBits + 1;
 }
@@ -6358,7 +6345,7 @@ static SDValue getMemsetStringVal(EVT VT, const SDLoc &dl, SelectionDAG &DAG,
   Type *Ty = VT.getTypeForEVT(*DAG.getContext());
   if (TLI.shouldConvertConstantLoadToIntImm(Val, Ty))
     return DAG.getConstant(Val, dl, VT);
-  return SDValue(nullptr, 0);
+  return SDValue();
 }
 
 SDValue SelectionDAG::getMemBasePlusOffset(SDValue Base, TypeSize Offset,

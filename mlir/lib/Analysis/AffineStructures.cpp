@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/AffineStructures.h"
-#include "mlir/Analysis/LinearTransform.h"
+#include "mlir/Analysis/Presburger/LinearTransform.h"
 #include "mlir/Analysis/Presburger/Simplex.h"
 #include "mlir/Analysis/Presburger/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
@@ -47,7 +47,7 @@ public:
   // inequalities.
   FlatAffineConstraints localVarCst;
 
-  AffineExprFlattener(unsigned nDims, unsigned nSymbols, MLIRContext *ctx)
+  AffineExprFlattener(unsigned nDims, unsigned nSymbols)
       : SimpleAffineExprFlattener(nDims, nSymbols) {
     localVarCst.reset(nDims, nSymbols, /*numLocals=*/0);
   }
@@ -81,7 +81,7 @@ getFlattenedAffineExprs(ArrayRef<AffineExpr> exprs, unsigned numDims,
     return success();
   }
 
-  AffineExprFlattener flattener(numDims, numSymbols, exprs[0].getContext());
+  AffineExprFlattener flattener(numDims, numSymbols);
   // Use the same flattener to simplify each expression successively. This way
   // local identifiers / expressions are shared.
   for (auto expr : exprs) {
@@ -747,19 +747,6 @@ void FlatAffineConstraints::normalizeConstraintsByGCD() {
   }
 }
 
-bool FlatAffineConstraints::hasConsistentState() const {
-  if (!inequalities.hasConsistentState())
-    return false;
-  if (!equalities.hasConsistentState())
-    return false;
-
-  // Catches errors where numDims, numSymbols, numIds aren't consistent.
-  if (numDims > numIds || numSymbols > numIds || numDims + numSymbols > numIds)
-    return false;
-
-  return true;
-}
-
 bool FlatAffineValueConstraints::hasConsistentState() const {
   return FlatAffineConstraints::hasConsistentState() &&
          values.size() == getNumIds();
@@ -1103,11 +1090,11 @@ FlatAffineConstraints::findIntegerSample() const {
       LinearTransform::makeTransformToColumnEchelon(std::move(m));
   const LinearTransform &transform = result.second;
   // 1) Apply T to S to obtain S*T.
-  FlatAffineConstraints transformedSet = transform.applyTo(*this);
+  IntegerPolyhedron transformedSet = transform.applyTo(*this);
 
   // 2) Remove the unbounded dimensions and constraints involving them to
   // obtain a bounded set.
-  FlatAffineConstraints boundedSet = transformedSet;
+  FlatAffineConstraints boundedSet(transformedSet);
   unsigned numBoundedDims = result.first;
   unsigned numUnboundedDims = getNumIds() - numBoundedDims;
   removeConstraintsInvolvingSuffixDims(boundedSet, numUnboundedDims);
@@ -1124,7 +1111,7 @@ FlatAffineConstraints::findIntegerSample() const {
   // 4) Substitute the values of the bounded dimensions into S*T to obtain a
   // full-dimensional cone, which necessarily contains an integer sample.
   transformedSet.setAndEliminate(0, *boundedSample);
-  FlatAffineConstraints &cone = transformedSet;
+  IntegerPolyhedron &cone = transformedSet;
 
   // 5) Obtain an integer sample from the cone.
   //
@@ -1152,10 +1139,10 @@ FlatAffineConstraints::findIntegerSample() const {
   // negative a_i, so we accomodate this by shifting the inequality by this
   // amount for the shrunken cone.
   for (unsigned i = 0, e = cone.getNumInequalities(); i < e; ++i) {
-    for (unsigned j = 0; j < cone.numIds; ++j) {
+    for (unsigned j = 0; j < cone.getNumIds(); ++j) {
       int64_t coeff = cone.atIneq(i, j);
       if (coeff < 0)
-        cone.atIneq(i, cone.numIds) += coeff;
+        cone.atIneq(i, cone.getNumIds()) += coeff;
     }
   }
 
@@ -2316,24 +2303,6 @@ static int findEqualityToConstant(const FlatAffineConstraints &cst,
   return -1;
 }
 
-void FlatAffineConstraints::setAndEliminate(unsigned pos,
-                                            ArrayRef<int64_t> values) {
-  if (values.empty())
-    return;
-  assert(pos + values.size() <= getNumIds() &&
-         "invalid position or too many values");
-  // Setting x_j = p in sum_i a_i x_i + c is equivalent to adding p*a_j to the
-  // constant term and removing the id x_j. We do this for all the ids
-  // pos, pos + 1, ... pos + values.size() - 1.
-  for (unsigned r = 0, e = getNumInequalities(); r < e; r++)
-    for (unsigned i = 0, numVals = values.size(); i < numVals; ++i)
-      atIneq(r, getNumCols() - 1) += atIneq(r, pos + i) * values[i];
-  for (unsigned r = 0, e = getNumEqualities(); r < e; r++)
-    for (unsigned i = 0, numVals = values.size(); i < numVals; ++i)
-      atEq(r, getNumCols() - 1) += atEq(r, pos + i) * values[i];
-  removeIdRange(pos, pos + values.size());
-}
-
 LogicalResult FlatAffineConstraints::constantFoldId(unsigned pos) {
   assert(pos < getNumIds() && "invalid position");
   int rowIdx;
@@ -2587,11 +2556,8 @@ bool FlatAffineConstraints::isHyperRectangular(unsigned pos,
   return true;
 }
 
-void FlatAffineConstraints::print(raw_ostream &os) const {
-  assert(hasConsistentState());
-  os << "\nConstraints (" << getNumDimIds() << " dims, " << getNumSymbolIds()
-     << " symbols, " << getNumLocalIds() << " locals), (" << getNumConstraints()
-     << " constraints)\n";
+void FlatAffineConstraints::printSpace(raw_ostream &os) const {
+  IntegerPolyhedron::printSpace(os);
   os << "(";
   for (unsigned i = 0, e = getNumIds(); i < e; i++) {
     if (auto *valueCstr = dyn_cast<const FlatAffineValueConstraints>(this)) {
@@ -2604,22 +2570,7 @@ void FlatAffineConstraints::print(raw_ostream &os) const {
     }
   }
   os << " const)\n";
-  for (unsigned i = 0, e = getNumEqualities(); i < e; ++i) {
-    for (unsigned j = 0, f = getNumCols(); j < f; ++j) {
-      os << atEq(i, j) << " ";
-    }
-    os << "= 0\n";
-  }
-  for (unsigned i = 0, e = getNumInequalities(); i < e; ++i) {
-    for (unsigned j = 0, f = getNumCols(); j < f; ++j) {
-      os << atIneq(i, j) << " ";
-    }
-    os << ">= 0\n";
-  }
-  os << '\n';
 }
-
-void FlatAffineConstraints::dump() const { print(llvm::errs()); }
 
 /// Removes duplicate constraints, trivially true constraints, and constraints
 /// that can be detected as redundant as a result of differing only in their
@@ -2692,25 +2643,35 @@ void FlatAffineConstraints::removeTrivialRedundancy() {
   // the savings.
 }
 
-void FlatAffineConstraints::clearAndCopyFrom(
-    const FlatAffineConstraints &other) {
+void FlatAffineConstraints::clearAndCopyFrom(const IntegerPolyhedron &other) {
   if (auto *otherValueSet = dyn_cast<const FlatAffineValueConstraints>(&other))
     assert(!otherValueSet->hasValues() &&
            "cannot copy associated Values into FlatAffineConstraints");
-  // Note: Assigment operator does not vtable pointer, so kind does not change.
-  *this = other;
+
+  // Note: Assigment operator does not vtable pointer, so kind does not
+  // change.
+  if (auto *otherValueSet = dyn_cast<const FlatAffineConstraints>(&other))
+    *this = *otherValueSet;
+  else
+    *static_cast<IntegerPolyhedron *>(this) = other;
 }
 
 void FlatAffineValueConstraints::clearAndCopyFrom(
-    const FlatAffineConstraints &other) {
+    const IntegerPolyhedron &other) {
+
   if (auto *otherValueSet =
           dyn_cast<const FlatAffineValueConstraints>(&other)) {
     *this = *otherValueSet;
-  } else {
-    *static_cast<FlatAffineConstraints *>(this) = other;
-    values.clear();
-    values.resize(numIds, None);
+    return;
   }
+
+  if (auto *otherValueSet = dyn_cast<const FlatAffineValueConstraints>(&other))
+    *static_cast<FlatAffineConstraints *>(this) = *otherValueSet;
+  else
+    *static_cast<IntegerPolyhedron *>(this) = other;
+
+  values.clear();
+  values.resize(numIds, None);
 }
 
 static std::pair<unsigned, unsigned>
@@ -3377,7 +3338,7 @@ AffineMap mlir::alignAffineMapWithValues(AffineMap map, ValueRange operands,
     newSyms->append(syms.begin(), syms.end());
   }
 
-  for (auto operand : llvm::enumerate(operands)) {
+  for (const auto &operand : llvm::enumerate(operands)) {
     // Compute replacement dim/sym of operand.
     AffineExpr replacement;
     auto dimIt = std::find(dims.begin(), dims.end(), operand.value());

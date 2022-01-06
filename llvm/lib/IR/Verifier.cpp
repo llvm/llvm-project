@@ -551,11 +551,12 @@ private:
   void checkUnsignedBaseTenFuncAttr(AttributeList Attrs, StringRef Attr,
                                     const Value *V);
   void verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
-                           const Value *V, bool IsIntrinsic);
+                           const Value *V, bool IsIntrinsic, bool IsInlineAsm);
   void verifyFunctionMetadata(ArrayRef<std::pair<unsigned, MDNode *>> MDs);
 
   void visitConstantExprsRecursively(const Constant *EntryC);
   void visitConstantExpr(const ConstantExpr *CE);
+  void verifyInlineAsmCall(const CallBase &Call);
   void verifyStatepoint(const CallBase &Call);
   void verifyFrameRecoverIndices();
   void verifySiblingFuncletUnwinds();
@@ -1058,6 +1059,7 @@ void Verifier::visitDIDerivedType(const DIDerivedType &N) {
                N.getTag() == dwarf::DW_TAG_reference_type ||
                N.getTag() == dwarf::DW_TAG_rvalue_reference_type ||
                N.getTag() == dwarf::DW_TAG_const_type ||
+               N.getTag() == dwarf::DW_TAG_immutable_type ||
                N.getTag() == dwarf::DW_TAG_volatile_type ||
                N.getTag() == dwarf::DW_TAG_restrict_type ||
                N.getTag() == dwarf::DW_TAG_atomic_type ||
@@ -1792,7 +1794,7 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
          "'noinline and alwaysinline' are incompatible!",
          V);
 
-  AttrBuilder IncompatibleAttrs = AttributeFuncs::typeIncompatible(Ty);
+  AttributeMask IncompatibleAttrs = AttributeFuncs::typeIncompatible(Ty);
   for (Attribute Attr : Attrs) {
     if (!Attr.isStringAttribute() &&
         IncompatibleAttrs.contains(Attr.getKindAsEnum())) {
@@ -1870,7 +1872,8 @@ void Verifier::checkUnsignedBaseTenFuncAttr(AttributeList Attrs, StringRef Attr,
 // Check parameter attributes against a function type.
 // The value V is printed in error messages.
 void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
-                                   const Value *V, bool IsIntrinsic) {
+                                   const Value *V, bool IsIntrinsic,
+                                   bool IsInlineAsm) {
   if (Attrs.isEmpty())
     return;
 
@@ -1913,8 +1916,10 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
     if (!IsIntrinsic) {
       Assert(!ArgAttrs.hasAttribute(Attribute::ImmArg),
              "immarg attribute only applies to intrinsics",V);
-      Assert(!ArgAttrs.hasAttribute(Attribute::ElementType),
-             "Attribute 'elementtype' can only be applied to intrinsics.", V);
+      if (!IsInlineAsm)
+        Assert(!ArgAttrs.hasAttribute(Attribute::ElementType),
+               "Attribute 'elementtype' can only be applied to intrinsics"
+               " and inline asm.", V);
     }
 
     verifyParameterAttrs(ArgAttrs, Ty, V);
@@ -2141,6 +2146,33 @@ bool Verifier::verifyAttributeCount(AttributeList Attrs, unsigned Params) {
   return Attrs.getNumAttrSets() <= Params + 2;
 }
 
+void Verifier::verifyInlineAsmCall(const CallBase &Call) {
+  const InlineAsm *IA = cast<InlineAsm>(Call.getCalledOperand());
+  unsigned ArgNo = 0;
+  for (const InlineAsm::ConstraintInfo &CI : IA->ParseConstraints()) {
+    // Only deal with constraints that correspond to call arguments.
+    bool HasArg = CI.Type == InlineAsm::isInput ||
+                  (CI.Type == InlineAsm::isOutput && CI.isIndirect);
+    if (!HasArg)
+      continue;
+
+    if (CI.isIndirect) {
+      const Value *Arg = Call.getArgOperand(ArgNo);
+      Assert(Arg->getType()->isPointerTy(),
+             "Operand for indirect constraint must have pointer type",
+             &Call);
+
+      // TODO: Require elementtype attribute here.
+    } else {
+      Assert(!Call.paramHasAttr(ArgNo, Attribute::ElementType),
+             "Elementtype attribute can only be applied for indirect "
+             "constraints", &Call);
+    }
+
+    ArgNo++;
+  }
+}
+
 /// Verify that statepoint intrinsic is well formed.
 void Verifier::verifyStatepoint(const CallBase &Call) {
   assert(Call.getCalledFunction() &&
@@ -2364,7 +2396,7 @@ void Verifier::visitFunction(const Function &F) {
   bool IsIntrinsic = F.isIntrinsic();
 
   // Check function attributes.
-  verifyFunctionAttrs(FT, Attrs, &F, IsIntrinsic);
+  verifyFunctionAttrs(FT, Attrs, &F, IsIntrinsic, /* IsInlineAsm */ false);
 
   // On function declarations/definitions, we do not support the builtin
   // attribute. We do not check this in VerifyFunctionAttrs since that is
@@ -2779,6 +2811,7 @@ void Verifier::visitCallBrInst(CallBrInst &CBI) {
       Assert(ArgBBs.count(BB), "Indirect label missing from arglist.", &CBI);
   }
 
+  verifyInlineAsmCall(CBI);
   visitTerminator(CBI);
 }
 
@@ -3123,7 +3156,7 @@ void Verifier::visitCallBase(CallBase &Call) {
   }
 
   // Verify call attributes.
-  verifyFunctionAttrs(FTy, Attrs, &Call, IsIntrinsic);
+  verifyFunctionAttrs(FTy, Attrs, &Call, IsIntrinsic, Call.isInlineAsm());
 
   // Conservatively check the inalloca argument.
   // We have a bug if we can find that there is an underlying alloca without
@@ -3315,6 +3348,9 @@ void Verifier::visitCallBase(CallBase &Call) {
              "inlinable function call in a function with "
              "debug info must have a !dbg location",
              Call);
+
+  if (Call.isInlineAsm())
+    verifyInlineAsmCall(Call);
 
   visitInstruction(Call);
 }

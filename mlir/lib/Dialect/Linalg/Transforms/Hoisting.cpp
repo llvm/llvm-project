@@ -346,7 +346,7 @@ void mlir::linalg::hoistRedundantVectorTransfersOnTensor(FuncOp func) {
     changed = false;
     func.walk([&](scf::ForOp forOp) {
       Operation *yield = forOp.getBody()->getTerminator();
-      for (auto it : llvm::enumerate(forOp.getRegionIterArgs())) {
+      for (const auto &it : llvm::enumerate(forOp.getRegionIterArgs())) {
         OpOperand &ret = yield->getOpOperand(it.index());
         HoistableWrite write =
             getLoopInvariantTransferWriteOpDefining(forOp, ret);

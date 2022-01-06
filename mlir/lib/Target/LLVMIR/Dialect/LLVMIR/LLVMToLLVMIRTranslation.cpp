@@ -340,30 +340,39 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
   }
 
   if (auto invOp = dyn_cast<LLVM::InvokeOp>(opInst)) {
-    auto operands = moduleTranslation.lookupValues(opInst.getOperands());
+    auto operands = moduleTranslation.lookupValues(invOp.getCalleeOperands());
     ArrayRef<llvm::Value *> operandsRef(operands);
+    llvm::Instruction *result;
     if (auto attr = opInst.getAttrOfType<FlatSymbolRefAttr>("callee")) {
-      builder.CreateInvoke(moduleTranslation.lookupFunction(attr.getValue()),
-                           moduleTranslation.lookupBlock(invOp.getSuccessor(0)),
-                           moduleTranslation.lookupBlock(invOp.getSuccessor(1)),
-                           operandsRef);
+      result = builder.CreateInvoke(
+          moduleTranslation.lookupFunction(attr.getValue()),
+          moduleTranslation.lookupBlock(invOp.getSuccessor(0)),
+          moduleTranslation.lookupBlock(invOp.getSuccessor(1)), operandsRef);
     } else {
       auto *calleePtrType =
           cast<llvm::PointerType>(operandsRef.front()->getType());
       auto *calleeType =
           cast<llvm::FunctionType>(calleePtrType->getElementType());
-      builder.CreateInvoke(calleeType, operandsRef.front(),
-                           moduleTranslation.lookupBlock(invOp.getSuccessor(0)),
-                           moduleTranslation.lookupBlock(invOp.getSuccessor(1)),
-                           operandsRef.drop_front());
+      result = builder.CreateInvoke(
+          calleeType, operandsRef.front(),
+          moduleTranslation.lookupBlock(invOp.getSuccessor(0)),
+          moduleTranslation.lookupBlock(invOp.getSuccessor(1)),
+          operandsRef.drop_front());
     }
-    return success();
+    moduleTranslation.mapBranch(invOp, result);
+    // InvokeOp can only have 0 or 1 result
+    if (invOp->getNumResults() != 0) {
+      moduleTranslation.mapValue(opInst.getResult(0), result);
+      return success();
+    }
+    return success(result->getType()->isVoidTy());
   }
 
   if (auto lpOp = dyn_cast<LLVM::LandingpadOp>(opInst)) {
     llvm::Type *ty = moduleTranslation.convertType(lpOp.getType());
     llvm::LandingPadInst *lpi =
         builder.CreateLandingPad(ty, lpOp.getNumOperands());
+    lpi->setCleanup(lpOp.getCleanup());
 
     // Add clauses
     for (llvm::Value *operand :

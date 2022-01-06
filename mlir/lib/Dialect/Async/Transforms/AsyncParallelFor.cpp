@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <utility>
+
 #include "PassDetail.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Async/IR/Async.h"
@@ -111,7 +113,7 @@ public:
       AsyncMinTaskSizeComputationFunction computeMinTaskSize)
       : OpRewritePattern(ctx), asyncDispatch(asyncDispatch),
         numWorkerThreads(numWorkerThreads),
-        computeMinTaskSize(computeMinTaskSize) {}
+        computeMinTaskSize(std::move(computeMinTaskSize)) {}
 
   LogicalResult matchAndRewrite(scf::ParallelOp op,
                                 PatternRewriter &rewriter) const override;
@@ -244,7 +246,7 @@ getParallelComputeFunctionType(scf::ParallelOp op, PatternRewriter &rewriter) {
 
 // Create a parallel compute fuction from the parallel operation.
 static ParallelComputeFunction createParallelComputeFunction(
-    scf::ParallelOp op, ParallelComputeFunctionBounds bounds,
+    scf::ParallelOp op, const ParallelComputeFunctionBounds &bounds,
     unsigned numBlockAlignedInnerLoops, PatternRewriter &rewriter) {
   OpBuilder::InsertionGuard guard(rewriter);
   ImplicitLocOpBuilder b(op.getLoc(), rewriter);
@@ -902,7 +904,7 @@ std::unique_ptr<Pass> mlir::createAsyncParallelForPass(bool asyncDispatch,
 
 void mlir::async::populateAsyncParallelForPatterns(
     RewritePatternSet &patterns, bool asyncDispatch, int32_t numWorkerThreads,
-    AsyncMinTaskSizeComputationFunction computeMinTaskSize) {
+    const AsyncMinTaskSizeComputationFunction &computeMinTaskSize) {
   MLIRContext *ctx = patterns.getContext();
   patterns.add<AsyncParallelForRewrite>(ctx, asyncDispatch, numWorkerThreads,
                                         computeMinTaskSize);

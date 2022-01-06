@@ -175,6 +175,7 @@ def Builtin_DenseIntOrFPElementsAttr : Builtin_Attr<
   let extraClassDeclaration = [{
     using DenseElementsAttr::empty;
     using DenseElementsAttr::getNumElements;
+    using DenseElementsAttr::getElementType;
     using DenseElementsAttr::getValues;
     using DenseElementsAttr::isSplat;
     using DenseElementsAttr::size;
@@ -312,6 +313,7 @@ def Builtin_DenseStringElementsAttr : Builtin_Attr<
   let extraClassDeclaration = [{
     using DenseElementsAttr::empty;
     using DenseElementsAttr::getNumElements;
+    using DenseElementsAttr::getElementType;
     using DenseElementsAttr::getValues;
     using DenseElementsAttr::isSplat;
     using DenseElementsAttr::size;

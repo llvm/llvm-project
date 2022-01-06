@@ -54,16 +54,16 @@ arguments are processed once for each time they are seen.
 OPTIONS
 ^^^^^^^
 
-.. option:: -help
+.. option:: --help
 
  Print a summary of command line options.
 
-.. option:: -output=output, -o=output
+.. option:: --output=<output>, -o
 
  Specify the output file name.  *Output* cannot be ``-`` as the resulting
  indexed profile data can't be written to standard output.
 
-.. option:: -weighted-input=weight,filename
+.. option:: --weighted-input=<weight,filename>
 
  Specify an input file name along with a weight. The profile counts of the
  supplied ``filename`` will be scaled (multiplied) by the supplied
@@ -71,13 +71,13 @@ OPTIONS
  Input files specified without using this option are assigned a default
  weight of 1. Examples are shown below.
 
-.. option:: -input-files=path, -f=path
+.. option:: --input-files=<path>, -f
 
   Specify a file which contains a list of files to merge. The entries in this
   file are newline-separated. Lines starting with '#' are skipped. Entries may
   be of the form <filename> or <weight>,<filename>.
 
-.. option:: -remapping-file=path, -r=path
+.. option:: --remapping-file=<path>, -r
 
   Specify a file which contains a remapping from symbol names in the input
   profile to the symbol names that should be used in the output profile. The
@@ -87,51 +87,51 @@ OPTIONS
   The :doc:`llvm-cxxmap <llvm-cxxmap>` tool can be used to generate the symbol
   remapping file.
 
-.. option:: -instr (default)
+.. option:: --instr (default)
 
  Specify that the input profile is an instrumentation-based profile.
 
-.. option:: -sample
+.. option:: --sample
 
  Specify that the input profile is a sample-based profile.
 
  The format of the generated file can be generated in one of three ways:
 
- .. option:: -binary (default)
+ .. option:: --binary (default)
 
  Emit the profile using a binary encoding. For instrumentation-based profile
  the output format is the indexed binary format.
 
- .. option:: -extbinary
+ .. option:: --extbinary
 
  Emit the profile using an extensible binary encoding. This option can only
  be used with sample-based profile. The extensible binary encoding can be
  more compact with compression enabled and can be loaded faster than the
  default binary encoding.
 
- .. option:: -text
+ .. option:: --text
 
  Emit the profile in text mode. This option can also be used with both
  sample-based and instrumentation-based profile. When this option is used
  the profile will be dumped in the text format that is parsable by the profile
  reader.
 
- .. option:: -gcc
+ .. option:: --gcc
 
  Emit the profile using GCC's gcov format (Not yet supported).
 
-.. option:: -sparse[=true|false]
+.. option:: --sparse[=true|false]
 
  Do not emit function records with 0 execution count. Can only be used in
  conjunction with -instr. Defaults to false, since it can inhibit compiler
  optimization during PGO.
 
-.. option:: -num-threads=N, -j=N
+.. option:: --num-threads=<N>, -j
 
  Use N threads to perform profile merging. When N=0, llvm-profdata auto-detects
  an appropriate number of threads to use. This is the default.
 
-.. option:: -failure-mode=[any|all]
+.. option:: --failure-mode=[any|all]
 
  Set the failure mode. There are two options: 'any' causes the merge command to
  fail if any profiles are invalid, and 'all' causes the merge command to fail
@@ -139,51 +139,58 @@ OPTIONS
  invalid profiles is excluded from the final merged product. The default
  failure mode is 'any'.
 
-.. option:: -prof-sym-list=path
+.. option:: --prof-sym-list=<path>
 
  Specify a file which contains a list of symbols to generate profile symbol
  list in the profile. This option can only be used with sample-based profile
  in extbinary format. The entries in this file are newline-separated.
 
-.. option:: -compress-all-sections=[true|false]
+.. option:: --compress-all-sections=[true|false]
 
  Compress all sections when writing the profile. This option can only be used
  with sample-based profile in extbinary format.
 
-.. option:: -use-md5=[true|false]
+.. option:: --use-md5=[true|false]
 
  Use MD5 to represent string in name table when writing the profile.
  This option can only be used with sample-based profile in extbinary format.
 
-.. option:: -gen-partial-profile=[true|false]
+.. option:: --gen-partial-profile=[true|false]
 
  Mark the profile to be a partial profile which only provides partial profile
  coverage for the optimized target. This option can only be used with
  sample-based profile in extbinary format.
 
-.. option:: -supplement-instr-with-sample=path_to_sample_profile
+.. option:: --supplement-instr-with-sample=<file>
 
  Supplement an instrumentation profile with sample profile. The sample profile
  is the input of the flag. Output will be in instrumentation format (only works
  with -instr).
 
-.. option:: -zero-counter-threshold=threshold_float_number
+.. option:: --zero-counter-threshold=<float>
 
  For the function which is cold in instr profile but hot in sample profile, if
  the ratio of the number of zero counters divided by the the total number of
  counters is above the threshold, the profile of the function will be regarded
  as being harmful for performance and will be dropped.
 
-.. option:: -instr-prof-cold-threshold=threshold_int_number
+.. option:: --instr-prof-cold-threshold=<int>
 
  User specified cold threshold for instr profile which will override the cold
  threshold got from profile summary.
 
-.. option:: -suppl-min-size-threshold=threshold_int_number
+.. option:: --suppl-min-size-threshold=<int>
 
  If the size of a function is smaller than the threshold, assume it can be
  inlined by PGO early inliner and it will not be adjusted based on sample
  profile.
+
+.. option:: --debug-info=<path>
+
+ Specify the executable or ``.dSYM`` that contains debug info for the raw profile.
+ When ``-debug-info-correlate`` was used for instrumentation, use this option
+ to correlate the raw profile.
+
 
 EXAMPLES
 ^^^^^^^^
@@ -197,17 +204,17 @@ Merge three profiles:
 
 Weighted Input
 ++++++++++++++
-The input file `foo.profdata` is especially important, multiply its counts by 10:
+The input file ``foo.profdata`` is especially important, multiply its counts by 10:
 
 ::
 
-    llvm-profdata merge -weighted-input=10,foo.profdata bar.profdata baz.profdata -output merged.profdata
+    llvm-profdata merge --weighted-input=10,foo.profdata bar.profdata baz.profdata --output merged.profdata
 
 Exactly equivalent to the previous invocation (explicit form; useful for programmatic invocation):
 
 ::
 
-    llvm-profdata merge -weighted-input=10,foo.profdata -weighted-input=1,bar.profdata -weighted-input=1,baz.profdata -output merged.profdata
+    llvm-profdata merge --weighted-input=10,foo.profdata --weighted-input=1,bar.profdata --weighted-input=1,baz.profdata --output merged.profdata
 
 .. program:: llvm-profdata show
 
@@ -234,73 +241,73 @@ input from standard input.
 OPTIONS
 ^^^^^^^
 
-.. option:: -all-functions
+.. option:: --all-functions
 
  Print details for every function.
 
-.. option:: -counts
+.. option:: --counts
 
  Print the counter values for the displayed functions.
 
-.. option:: -function=string
+.. option:: --function=<string>
 
  Print details for a function if the function's name contains the given string.
 
-.. option:: -help
+.. option:: --help
 
  Print a summary of command line options.
 
-.. option:: -output=output, -o=output
+.. option:: --output=<output>, -o
 
  Specify the output file name.  If *output* is ``-`` or it isn't specified,
  then the output is sent to standard output.
 
-.. option:: -instr (default)
+.. option:: --instr (default)
 
  Specify that the input profile is an instrumentation-based profile.
 
-.. option:: -text
+.. option:: --text
 
  Instruct the profile dumper to show profile counts in the text format of the
  instrumentation-based profile data representation. By default, the profile
  information is dumped in a more human readable form (also in text) with
  annotations.
 
-.. option:: -topn=n
+.. option:: --topn=<n>
 
  Instruct the profile dumper to show the top ``n`` functions with the
  hottest basic blocks in the summary section. By default, the topn functions
  are not dumped.
 
-.. option:: -sample
+.. option:: --sample
 
  Specify that the input profile is a sample-based profile.
 
-.. option:: -memop-sizes
+.. option:: --memop-sizes
 
  Show the profiled sizes of the memory intrinsic calls for shown functions.
 
-.. option:: -value-cutoff=n
+.. option:: --value-cutoff=<n>
 
  Show only those functions whose max count values are greater or equal to ``n``.
  By default, the value-cutoff is set to 0.
 
-.. option:: -list-below-cutoff
+.. option:: --list-below-cutoff
 
  Only output names of functions whose max count value are below the cutoff
  value.
 
-.. option:: -showcs
+.. option:: --showcs
 
  Only show context sensitive profile counts. The default is to filter all
  context sensitive profile counts.
 
-.. option:: -show-prof-sym-list=[true|false]
+.. option:: --show-prof-sym-list=[true|false]
 
  Show profile symbol list if it exists in the profile. This option is only
  meaningful for sample-based profile in extbinary format.
 
-.. option:: -show-sec-info-only=[true|false]
+.. option:: --show-sec-info-only=[true|false]
 
  Show basic information about each section in the profile. This option is
  only meaningful for sample-based profile in extbinary format.
@@ -347,25 +354,25 @@ Here is an example, if *base profile file* has counts of {400, 600}, and
 OPTIONS
 ^^^^^^^
 
-.. option:: -function=string
+.. option:: --function=<string>
 
  Print details for a function if the function's name contains the given string.
 
-.. option:: -help
+.. option:: --help
 
  Print a summary of command line options.
 
-.. option:: -o=output or -o output
+.. option:: --output=<output>, -o
 
  Specify the output file name.  If *output* is ``-`` or it isn't specified,
  then the output is sent to standard output.
 
-.. option:: -value-cutoff=n
+.. option:: --value-cutoff=<n>
 
  Show only those functions whose max count values are greater or equal to ``n``.
  By default, the value-cutoff is set to max of unsigned long long.
 
-.. option:: -cs
+.. option:: --cs
 
  Only show overlap for the context sensitive profile counts. The default is to show
  non-context sensitive profile counts.

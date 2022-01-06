@@ -19,18 +19,17 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBDeclaration::SBDeclaration() : m_opaque_up() {
+SBDeclaration::SBDeclaration() {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBDeclaration);
 }
 
-SBDeclaration::SBDeclaration(const SBDeclaration &rhs) : m_opaque_up() {
+SBDeclaration::SBDeclaration(const SBDeclaration &rhs) {
   LLDB_RECORD_CONSTRUCTOR(SBDeclaration, (const lldb::SBDeclaration &), rhs);
 
   m_opaque_up = clone(rhs.m_opaque_up);
 }
 
-SBDeclaration::SBDeclaration(const lldb_private::Declaration *lldb_object_ptr)
-    : m_opaque_up() {
+SBDeclaration::SBDeclaration(const lldb_private::Declaration *lldb_object_ptr) {
   if (lldb_object_ptr)
     m_opaque_up = std::make_unique<Declaration>(*lldb_object_ptr);
 }

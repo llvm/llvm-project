@@ -3307,12 +3307,16 @@ static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
     Str += "ARMv8.6a";
   else if (FBS[AArch64::HasV8_7aOps])
     Str += "ARMv8.7a";
+  else if (FBS[AArch64::HasV8_8aOps])
+    Str += "ARMv8.8a";
   else if (FBS[AArch64::HasV9_0aOps])
     Str += "ARMv9-a";
   else if (FBS[AArch64::HasV9_1aOps])
     Str += "ARMv9.1a";
   else if (FBS[AArch64::HasV9_2aOps])
     Str += "ARMv9.2a";
+  else if (FBS[AArch64::HasV9_3aOps])
+    Str += "ARMv9.3a";
   else if (FBS[AArch64::HasV8_0rOps])
     Str += "ARMv8r";
   else {
@@ -4531,7 +4535,7 @@ bool AArch64AsmParser::ParseInstruction(ParseInstructionInfo &Info,
   Mnemonic = Head;
 
   // Handle condition codes for a branch mnemonic
-  if (Head == "b" && Next != StringRef::npos) {
+  if ((Head == "b" || Head == "bc") && Next != StringRef::npos) {
     Start = Next;
     Next = Name.find('.', Start + 1);
     Head = Name.slice(Start + 1, Next);
@@ -4862,6 +4866,177 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
   }
   }
 
+  // Check v8.8-A memops instructions.
+  switch (Inst.getOpcode()) {
+  case AArch64::CPYFP:
+  case AArch64::CPYFPWN:
+  case AArch64::CPYFPRN:
+  case AArch64::CPYFPN:
+  case AArch64::CPYFPWT:
+  case AArch64::CPYFPWTWN:
+  case AArch64::CPYFPWTRN:
+  case AArch64::CPYFPWTN:
+  case AArch64::CPYFPRT:
+  case AArch64::CPYFPRTWN:
+  case AArch64::CPYFPRTRN:
+  case AArch64::CPYFPRTN:
+  case AArch64::CPYFPT:
+  case AArch64::CPYFPTWN:
+  case AArch64::CPYFPTRN:
+  case AArch64::CPYFPTN:
+  case AArch64::CPYFM:
+  case AArch64::CPYFMWN:
+  case AArch64::CPYFMRN:
+  case AArch64::CPYFMN:
+  case AArch64::CPYFMWT:
+  case AArch64::CPYFMWTWN:
+  case AArch64::CPYFMWTRN:
+  case AArch64::CPYFMWTN:
+  case AArch64::CPYFMRT:
+  case AArch64::CPYFMRTWN:
+  case AArch64::CPYFMRTRN:
+  case AArch64::CPYFMRTN:
+  case AArch64::CPYFMT:
+  case AArch64::CPYFMTWN:
+  case AArch64::CPYFMTRN:
+  case AArch64::CPYFMTN:
+  case AArch64::CPYFE:
+  case AArch64::CPYFEWN:
+  case AArch64::CPYFERN:
+  case AArch64::CPYFEN:
+  case AArch64::CPYFEWT:
+  case AArch64::CPYFEWTWN:
+  case AArch64::CPYFEWTRN:
+  case AArch64::CPYFEWTN:
+  case AArch64::CPYFERT:
+  case AArch64::CPYFERTWN:
+  case AArch64::CPYFERTRN:
+  case AArch64::CPYFERTN:
+  case AArch64::CPYFET:
+  case AArch64::CPYFETWN:
+  case AArch64::CPYFETRN:
+  case AArch64::CPYFETN:
+  case AArch64::CPYP:
+  case AArch64::CPYPWN:
+  case AArch64::CPYPRN:
+  case AArch64::CPYPN:
+  case AArch64::CPYPWT:
+  case AArch64::CPYPWTWN:
+  case AArch64::CPYPWTRN:
+  case AArch64::CPYPWTN:
+  case AArch64::CPYPRT:
+  case AArch64::CPYPRTWN:
+  case AArch64::CPYPRTRN:
+  case AArch64::CPYPRTN:
+  case AArch64::CPYPT:
+  case AArch64::CPYPTWN:
+  case AArch64::CPYPTRN:
+  case AArch64::CPYPTN:
+  case AArch64::CPYM:
+  case AArch64::CPYMWN:
+  case AArch64::CPYMRN:
+  case AArch64::CPYMN:
+  case AArch64::CPYMWT:
+  case AArch64::CPYMWTWN:
+  case AArch64::CPYMWTRN:
+  case AArch64::CPYMWTN:
+  case AArch64::CPYMRT:
+  case AArch64::CPYMRTWN:
+  case AArch64::CPYMRTRN:
+  case AArch64::CPYMRTN:
+  case AArch64::CPYMT:
+  case AArch64::CPYMTWN:
+  case AArch64::CPYMTRN:
+  case AArch64::CPYMTN:
+  case AArch64::CPYE:
+  case AArch64::CPYEWN:
+  case AArch64::CPYERN:
+  case AArch64::CPYEN:
+  case AArch64::CPYEWT:
+  case AArch64::CPYEWTWN:
+  case AArch64::CPYEWTRN:
+  case AArch64::CPYEWTN:
+  case AArch64::CPYERT:
+  case AArch64::CPYERTWN:
+  case AArch64::CPYERTRN:
+  case AArch64::CPYERTN:
+  case AArch64::CPYET:
+  case AArch64::CPYETWN:
+  case AArch64::CPYETRN:
+  case AArch64::CPYETN: {
+    unsigned Xd_wb = Inst.getOperand(0).getReg();
+    unsigned Xs_wb = Inst.getOperand(1).getReg();
+    unsigned Xn_wb = Inst.getOperand(2).getReg();
+    unsigned Xd = Inst.getOperand(3).getReg();
+    unsigned Xs = Inst.getOperand(4).getReg();
+    unsigned Xn = Inst.getOperand(5).getReg();
+    if (Xd_wb != Xd)
+      return Error(Loc[0],
+                   "invalid CPY instruction, Xd_wb and Xd do not match");
+    if (Xs_wb != Xs)
+      return Error(Loc[0],
+                   "invalid CPY instruction, Xs_wb and Xs do not match");
+    if (Xn_wb != Xn)
+      return Error(Loc[0],
+                   "invalid CPY instruction, Xn_wb and Xn do not match");
+    if (Xd == Xs)
+      return Error(Loc[0], "invalid CPY instruction, destination and source"
+                           " registers are the same");
+    if (Xd == Xn)
+      return Error(Loc[0], "invalid CPY instruction, destination and size"
+                           " registers are the same");
+    if (Xs == Xn)
+      return Error(Loc[0], "invalid CPY instruction, source and size"
+                           " registers are the same");
+    break;
+  }
+  case AArch64::SETP:
+  case AArch64::SETPT:
+  case AArch64::SETPN:
+  case AArch64::SETPTN:
+  case AArch64::SETM:
+  case AArch64::SETMT:
+  case AArch64::SETMN:
+  case AArch64::SETMTN:
+  case AArch64::SETE:
+  case AArch64::SETET:
+  case AArch64::SETEN:
+  case AArch64::SETETN:
+  case AArch64::SETGP:
+  case AArch64::SETGPT:
+  case AArch64::SETGPN:
+  case AArch64::SETGPTN:
+  case AArch64::SETGM:
+  case AArch64::SETGMT:
+  case AArch64::SETGMN:
+  case AArch64::SETGMTN:
+  case AArch64::MOPSSETGE:
+  case AArch64::MOPSSETGET:
+  case AArch64::MOPSSETGEN:
+  case AArch64::MOPSSETGETN: {
+    unsigned Xd_wb = Inst.getOperand(0).getReg();
+    unsigned Xn_wb = Inst.getOperand(1).getReg();
+    unsigned Xd = Inst.getOperand(2).getReg();
+    unsigned Xn = Inst.getOperand(3).getReg();
+    unsigned Xm = Inst.getOperand(4).getReg();
+    if (Xd_wb != Xd)
+      return Error(Loc[0],
+                   "invalid SET instruction, Xd_wb and Xd do not match");
+    if (Xn_wb != Xn)
+      return Error(Loc[0],
+                   "invalid SET instruction, Xn_wb and Xn do not match");
+    if (Xd == Xn)
+      return Error(Loc[0], "invalid SET instruction, destination and size"
+                           " registers are the same");
+    if (Xd == Xm)
+      return Error(Loc[0], "invalid SET instruction, destination and source"
+                           " registers are the same");
+    if (Xn == Xm)
+      return Error(Loc[0], "invalid SET instruction, source and size"
+                           " registers are the same");
+    break;
+  }
+  }
 
   // Now check immediate ranges. Separate from the above as there is overlap
   // in the instructions being checked and this keeps the nested conditionals
@@ -5931,9 +6106,11 @@ static void ExpandCryptoAEK(AArch64::ArchKind ArchKind,
     case AArch64::ArchKind::ARMV8_5A:
     case AArch64::ArchKind::ARMV8_6A:
     case AArch64::ArchKind::ARMV8_7A:
+    case AArch64::ArchKind::ARMV8_8A:
     case AArch64::ArchKind::ARMV9A:
     case AArch64::ArchKind::ARMV9_1A:
     case AArch64::ArchKind::ARMV9_2A:
+    case AArch64::ArchKind::ARMV9_3A:
     case AArch64::ArchKind::ARMV8R:
       RequestedExtensions.push_back("sm4");
       RequestedExtensions.push_back("sha3");
@@ -5956,6 +6133,7 @@ static void ExpandCryptoAEK(AArch64::ArchKind ArchKind,
     case AArch64::ArchKind::ARMV8_5A:
     case AArch64::ArchKind::ARMV8_6A:
     case AArch64::ArchKind::ARMV8_7A:
+    case AArch64::ArchKind::ARMV8_8A:
     case AArch64::ArchKind::ARMV9A:
     case AArch64::ArchKind::ARMV9_1A:
     case AArch64::ArchKind::ARMV9_2A:

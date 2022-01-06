@@ -122,129 +122,114 @@ isSimpleEnoughValueToCommit(Constant *C,
   return isSimpleEnoughValueToCommitHelper(C, SimpleConstants, DL);
 }
 
-/// Return true if this constant is simple enough for us to understand.  In
-/// particular, if it is a cast to anything other than from one pointer type to
-/// another pointer type, we punt.  We basically just support direct accesses to
-/// globals and GEP's of globals.  This should be kept up to date with
-/// CommitValueTo.
-static bool isSimpleEnoughPointerToCommit(Constant *C, const DataLayout &DL) {
-  if (GlobalVariable *GV = dyn_cast<GlobalVariable>(C))
-    // Do not allow weak/*_odr/linkonce linkage or external globals.
-    return GV->hasUniqueInitializer();
-
-  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(C)) {
-    // Handle a constantexpr gep.
-    if (CE->getOpcode() == Instruction::GetElementPtr &&
-        isa<GlobalVariable>(CE->getOperand(0)) &&
-        cast<GEPOperator>(CE)->isInBounds()) {
-      GlobalVariable *GV = cast<GlobalVariable>(CE->getOperand(0));
-      // Do not allow weak/*_odr/linkonce/dllimport/dllexport linkage or
-      // external globals.
-      if (!GV->hasUniqueInitializer())
-        return false;
-
-      // The first index must be zero.
-      ConstantInt *CI = dyn_cast<ConstantInt>(*std::next(CE->op_begin()));
-      if (!CI || !CI->isZero()) return false;
-
-      // The remaining indices must be compile-time known integers within the
-      // notional bounds of the corresponding static array types.
-      if (!CE->isGEPWithNoNotionalOverIndexing())
-        return false;
-
-      return ConstantFoldLoadThroughGEPConstantExpr(
-          GV->getInitializer(), CE,
-          cast<GEPOperator>(CE)->getResultElementType(), DL);
-    } else if (CE->getOpcode() == Instruction::BitCast &&
-               isa<GlobalVariable>(CE->getOperand(0))) {
-      // A constantexpr bitcast from a pointer to another pointer is a no-op,
-      // and we know how to evaluate it by moving the bitcast from the pointer
-      // operand to the value operand.
-      // Do not allow weak/*_odr/linkonce/dllimport/dllexport linkage or
-      // external globals.
-      return cast<GlobalVariable>(CE->getOperand(0))->hasUniqueInitializer();
-    }
-  }
-
-  return false;
+void Evaluator::MutableValue::clear() {
+  if (auto *Agg = Val.dyn_cast<MutableAggregate *>())
+    delete Agg;
+  Val = nullptr;
 }
 
-/// Apply \p TryLoad to Ptr. If this returns \p nullptr, introspect the
-/// pointer's type and walk down through the initial elements to obtain
-/// additional pointers to try. Returns the first non-null return value from
-/// \p TryLoad, or \p nullptr if the type can't be introspected further.
-static Constant *
-evaluateBitcastFromPtr(Constant *Ptr, const DataLayout &DL,
-                       const TargetLibraryInfo *TLI,
-                       std::function<Constant *(Constant *)> TryLoad) {
-  Constant *Val;
-  while (!(Val = TryLoad(Ptr))) {
-    // If Ty is a non-opaque struct, we can convert the pointer to the struct
-    // into a pointer to its first member.
-    // FIXME: This could be extended to support arrays as well.
-    Type *Ty = cast<PointerType>(Ptr->getType())->getElementType();
-    if (!isa<StructType>(Ty) || cast<StructType>(Ty)->isOpaque())
-      break;
+Constant *Evaluator::MutableValue::read(Type *Ty, APInt Offset,
+                                        const DataLayout &DL) const {
+  TypeSize TySize = DL.getTypeStoreSize(Ty);
+  const MutableValue *V = this;
+  while (const auto *Agg = V->Val.dyn_cast<MutableAggregate *>()) {
+    Type *AggTy = Agg->Ty;
+    Optional<APInt> Index = DL.getGEPIndexForOffset(AggTy, Offset);
+    if (!Index || Index->uge(Agg->Elements.size()) ||
+        !TypeSize::isKnownLE(TySize, DL.getTypeStoreSize(AggTy)))
+      return nullptr;
 
-    IntegerType *IdxTy = IntegerType::get(Ty->getContext(), 32);
-    Constant *IdxZero = ConstantInt::get(IdxTy, 0, false);
-    Constant *const IdxList[] = {IdxZero, IdxZero};
-
-    Ptr = ConstantExpr::getGetElementPtr(Ty, Ptr, IdxList);
-    Ptr = ConstantFoldConstant(Ptr, DL, TLI);
+    V = &Agg->Elements[Index->getZExtValue()];
   }
-  return Val;
+
+  return ConstantFoldLoadFromConst(V->Val.get<Constant *>(), Ty, Offset, DL);
 }
 
-static Constant *getInitializer(Constant *C) {
-  auto *GV = dyn_cast<GlobalVariable>(C);
-  return GV && GV->hasDefinitiveInitializer() ? GV->getInitializer() : nullptr;
+bool Evaluator::MutableValue::makeMutable() {
+  Constant *C = Val.get<Constant *>();
+  Type *Ty = C->getType();
+  unsigned NumElements;
+  if (auto *VT = dyn_cast<FixedVectorType>(Ty)) {
+    NumElements = VT->getNumElements();
+  } else if (auto *AT = dyn_cast<ArrayType>(Ty))
+    NumElements = AT->getNumElements();
+  else if (auto *ST = dyn_cast<StructType>(Ty))
+    NumElements = ST->getNumElements();
+  else
+    return false;
+
+  MutableAggregate *MA = new MutableAggregate(Ty);
+  MA->Elements.reserve(NumElements);
+  for (unsigned I = 0; I < NumElements; ++I)
+    MA->Elements.push_back(C->getAggregateElement(I));
+  Val = MA;
+  return true;
+}
+
+bool Evaluator::MutableValue::write(Constant *V, APInt Offset,
+                                    const DataLayout &DL) {
+  Type *Ty = V->getType();
+  TypeSize TySize = DL.getTypeStoreSize(Ty);
+  MutableValue *MV = this;
+  while (Offset != 0 ||
+         !CastInst::isBitOrNoopPointerCastable(Ty, MV->getType(), DL)) {
+    if (MV->Val.is<Constant *>() && !MV->makeMutable())
+      return false;
+
+    MutableAggregate *Agg = MV->Val.get<MutableAggregate *>();
+    Type *AggTy = Agg->Ty;
+    Optional<APInt> Index = DL.getGEPIndexForOffset(AggTy, Offset);
+    if (!Index || Index->uge(Agg->Elements.size()) ||
+        !TypeSize::isKnownLE(TySize, DL.getTypeStoreSize(AggTy)))
+      return false;
+
+    MV = &Agg->Elements[Index->getZExtValue()];
+  }
+
+  Type *MVType = MV->getType();
+  MV->clear();
+  if (Ty->isIntegerTy() && MVType->isPointerTy())
+    MV->Val = ConstantExpr::getIntToPtr(V, MVType);
+  else if (Ty->isPointerTy() && MVType->isIntegerTy())
+    MV->Val = ConstantExpr::getPtrToInt(V, MVType);
+  else if (Ty != MVType)
+    MV->Val = ConstantExpr::getBitCast(V, MVType);
+  else
+    MV->Val = V;
+  return true;
+}
+
+Constant *Evaluator::MutableAggregate::toConstant() const {
+  SmallVector<Constant *, 32> Consts;
+  for (const MutableValue &MV : Elements)
+    Consts.push_back(MV.toConstant());
+
+  if (auto *ST = dyn_cast<StructType>(Ty))
+    return ConstantStruct::get(ST, Consts);
+  if (auto *AT = dyn_cast<ArrayType>(Ty))
+    return ConstantArray::get(AT, Consts);
+  assert(isa<FixedVectorType>(Ty) && "Must be vector");
+  return ConstantVector::get(Consts);
 }
 
 /// Return the value that would be computed by a load from P after the stores
 /// reflected by 'memory' have been performed.  If we can't decide, return null.
 Constant *Evaluator::ComputeLoadResult(Constant *P, Type *Ty) {
-  // If this memory location has been recently stored, use the stored value: it
-  // is the most up-to-date.
-  auto TryFindMemLoc = [this](Constant *Ptr) {
-    return MutatedMemory.lookup(Ptr);
-  };
-
-  if (Constant *Val = TryFindMemLoc(P))
-    return Val;
-
-  // Access it.
-  if (GlobalVariable *GV = dyn_cast<GlobalVariable>(P)) {
-    if (GV->hasDefinitiveInitializer())
-      return GV->getInitializer();
+  APInt Offset(DL.getIndexTypeSizeInBits(P->getType()), 0);
+  P = cast<Constant>(P->stripAndAccumulateConstantOffsets(
+      DL, Offset, /* AllowNonInbounds */ true));
+  Offset = Offset.sextOrTrunc(DL.getIndexTypeSizeInBits(P->getType()));
+  auto *GV = dyn_cast<GlobalVariable>(P);
+  if (!GV)
     return nullptr;
-  }
 
-  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(P)) {
-    switch (CE->getOpcode()) {
-    // Handle a constantexpr getelementptr.
-    case Instruction::GetElementPtr:
-      if (auto *I = getInitializer(CE->getOperand(0)))
-        return ConstantFoldLoadThroughGEPConstantExpr(I, CE, Ty, DL);
-      break;
-    // Handle a constantexpr bitcast.
-    case Instruction::BitCast:
-      // We're evaluating a load through a pointer that was bitcast to a
-      // different type. See if the "from" pointer has recently been stored.
-      // If it hasn't, we may still be able to find a stored pointer by
-      // introspecting the type.
-      Constant *Val =
-          evaluateBitcastFromPtr(CE->getOperand(0), DL, TLI, TryFindMemLoc);
-      if (!Val)
-        Val = getInitializer(CE->getOperand(0));
-      if (Val)
-        return ConstantFoldLoadThroughBitcast(
-            Val, P->getType()->getPointerElementType(), DL);
-      break;
-    }
-  }
+  auto It = MutatedMemory.find(GV);
+  if (It != MutatedMemory.end())
+    return It->second.read(Ty, Offset, DL);
 
-  return nullptr;  // don't know how to evaluate.
+  if (!GV->hasDefinitiveInitializer())
+    return nullptr;
+  return ConstantFoldLoadFromConst(GV->getInitializer(), Ty, Offset, DL);
 }
 
 static Function *getFunction(Constant *C) {
@@ -337,68 +322,30 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
         Ptr = FoldedPtr;
         LLVM_DEBUG(dbgs() << "; To: " << *Ptr << "\n");
       }
-      // Conservatively, avoid aggregate types. This is because we don't
-      // want to worry about them partially overlapping other stores.
-      if (!SI->getValueOperand()->getType()->isSingleValueType() ||
-          !isSimpleEnoughPointerToCommit(Ptr, DL)) {
-        // If this is too complex for us to commit, reject it.
-        LLVM_DEBUG(
-            dbgs() << "Pointer is too complex for us to evaluate store.");
+
+      APInt Offset(DL.getIndexTypeSizeInBits(Ptr->getType()), 0);
+      Ptr = cast<Constant>(Ptr->stripAndAccumulateConstantOffsets(
+          DL, Offset, /* AllowNonInbounds */ true));
+      Offset = Offset.sextOrTrunc(DL.getIndexTypeSizeInBits(Ptr->getType()));
+      auto *GV = dyn_cast<GlobalVariable>(Ptr);
+      if (!GV || !GV->hasUniqueInitializer()) {
+        LLVM_DEBUG(dbgs() << "Store is not to global with unique initializer: "
+                          << *Ptr << "\n");
         return false;
       }
 
-      Constant *Val = getVal(SI->getOperand(0));
-
       // If this might be too difficult for the backend to handle (e.g. the addr
       // of one global variable divided by another) then we can't commit it.
+      Constant *Val = getVal(SI->getOperand(0));
       if (!isSimpleEnoughValueToCommit(Val, SimpleConstants, DL)) {
         LLVM_DEBUG(dbgs() << "Store value is too complex to evaluate store. "
                           << *Val << "\n");
         return false;
       }
 
-      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(Ptr)) {
-        if (CE->getOpcode() == Instruction::BitCast) {
-          LLVM_DEBUG(dbgs()
-                     << "Attempting to resolve bitcast on constant ptr.\n");
-          // If we're evaluating a store through a bitcast, then we need
-          // to pull the bitcast off the pointer type and push it onto the
-          // stored value. In order to push the bitcast onto the stored value,
-          // a bitcast from the pointer's element type to Val's type must be
-          // legal. If it's not, we can try introspecting the type to find a
-          // legal conversion.
-
-          auto TryCastValTy = [&](Constant *P) -> Constant * {
-            // The conversion is illegal if the store is wider than the
-            // pointee proposed by `evaluateBitcastFromPtr`, since that would
-            // drop stores to other struct elements when the caller attempts to
-            // look through a struct's 0th element.
-            Type *NewTy = cast<PointerType>(P->getType())->getElementType();
-            Type *STy = Val->getType();
-            if (DL.getTypeSizeInBits(NewTy) < DL.getTypeSizeInBits(STy))
-              return nullptr;
-
-            if (Constant *FV = ConstantFoldLoadThroughBitcast(Val, NewTy, DL)) {
-              Ptr = P;
-              return FV;
-            }
-            return nullptr;
-          };
-
-          Constant *NewVal =
-              evaluateBitcastFromPtr(CE->getOperand(0), DL, TLI, TryCastValTy);
-          if (!NewVal) {
-            LLVM_DEBUG(dbgs() << "Failed to bitcast constant ptr, can not "
-                                 "evaluate.\n");
-            return false;
-          }
-
-          Val = NewVal;
-          LLVM_DEBUG(dbgs() << "Evaluated bitcast: " << *Val << "\n");
-        }
-      }
-
-      MutatedMemory[Ptr] = Val;
+      auto Res = MutatedMemory.try_emplace(GV, GV->getInitializer());
+      if (!Res.first->second.write(Val, Offset, DL))
+        return false;
     } else if (BinaryOperator *BO = dyn_cast<BinaryOperator>(CurInst)) {
       InstResult = ConstantExpr::get(BO->getOpcode(),
                                      getVal(BO->getOperand(0)),

@@ -34,7 +34,8 @@ using namespace lldb_private;
 Symtab::Symtab(ObjectFile *objfile)
     : m_objfile(objfile), m_symbols(), m_file_addr_to_index(*this),
       m_name_to_symbol_indices(), m_mutex(),
-      m_file_addr_to_index_computed(false), m_name_indexes_computed(false) {
+      m_file_addr_to_index_computed(false), m_name_indexes_computed(false),
+      m_loaded_from_cache(false), m_saved_to_cache(false) {
   m_name_to_symbol_indices.emplace(std::make_pair(
       lldb::eFunctionNameTypeNone, UniqueCStringMap<uint32_t>()));
   m_name_to_symbol_indices.emplace(std::make_pair(
@@ -1179,7 +1180,8 @@ void Symtab::SaveToCache() {
   // Encode will return false if the symbol table's object file doesn't have
   // anything to make a signature from.
   if (Encode(file))
-    cache->SetCachedData(GetCacheKey(), file.GetData());
+    if (cache->SetCachedData(GetCacheKey(), file.GetData()))
+      SetWasSavedToCache();
 }
 
 constexpr llvm::StringLiteral kIdentifierCStrMap("CMAP");
@@ -1343,5 +1345,7 @@ bool Symtab::LoadFromCache() {
   const bool result = Decode(data, &offset, signature_mismatch);
   if (signature_mismatch)
     cache->RemoveCacheFile(GetCacheKey());
+  if (result)
+    SetWasLoadedFromCache();
   return result;
 }

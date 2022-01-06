@@ -146,6 +146,9 @@ func @ops(%arg0: i32, %arg1: f32,
 // CHECK: "llvm.intr.pow"(%[[FLOAT]], %[[FLOAT]]) : (f32, f32) -> f32
   %31 = "llvm.intr.pow"(%arg1, %arg1) : (f32, f32) -> f32
 
+// CHECK: "llvm.intr.powi"(%[[FLOAT]], %[[I32]]) : (f32, i32) -> f32
+  %a31 = "llvm.intr.powi"(%arg1, %arg0) : (f32, i32) -> f32
+
 // CHECK: "llvm.intr.bitreverse"(%{{.*}}) : (i32) -> i32
   %32 = "llvm.intr.bitreverse"(%arg0) : (i32) -> i32
 
@@ -329,9 +332,11 @@ llvm.func @invokeLandingpad() -> i32 attributes { personality = @__gxx_personali
 
 // CHECK: ^[[BB1]]:
 // CHECK:   %[[lp:.*]] = llvm.landingpad cleanup (catch %[[a3]] : !llvm.ptr<ptr<i8>>) (catch %[[a6]] : !llvm.ptr<i8>) (filter %[[a2]] : !llvm.array<1 x i8>) : !llvm.struct<(ptr<i8>, i32)>
+// CHECK:   %{{.*}} = llvm.intr.eh.typeid.for %6 : i32
 // CHECK:   llvm.resume %[[lp]] : !llvm.struct<(ptr<i8>, i32)>
 ^bb1:
   %10 = llvm.landingpad cleanup (catch %3 : !llvm.ptr<ptr<i8>>) (catch %6 : !llvm.ptr<i8>) (filter %2 : !llvm.array<1 x i8>) : !llvm.struct<(ptr<i8>, i32)>
+  %11 = llvm.intr.eh.typeid.for %6 : i32
   llvm.resume %10 : !llvm.struct<(ptr<i8>, i32)>
 
 // CHECK: ^[[BB2]]:

@@ -20,7 +20,7 @@ target triple = "nvptx64"
 define dso_local void @foo() {
 entry:
   %c = call i32 @__kmpc_target_init(%struct.ident_t* @1, i8 1, i1 true, i1 true)
-  %x = call i8* @__kmpc_alloc_shared(i64 4)
+  %x = call align 4 i8* @__kmpc_alloc_shared(i64 4)
   call void @unknown_no_openmp()
   %x_on_stack = bitcast i8* %x to i32*
   %0 = bitcast i32* %x_on_stack to i8*
@@ -36,7 +36,7 @@ define void @bar() {
   %cmp = icmp eq i32 %c, -1
   br i1 %cmp, label %master1, label %exit
 master1:
-  %x = call i8* @__kmpc_alloc_shared(i64 16), !dbg !11
+  %x = call align 4 i8* @__kmpc_alloc_shared(i64 16), !dbg !11
   %x_on_stack = bitcast i8* %x to [4 x i32]*
   %a0 = bitcast [4 x i32]* %x_on_stack to i8*
   call void @use(i8* %a0)
@@ -47,7 +47,7 @@ next:
   %b0 = icmp eq i32 %c, -1
   br i1 %b0, label %master2, label %exit
 master2:
-  %y = call i8* @__kmpc_alloc_shared(i64 4), !dbg !12
+  %y = call align 4 i8* @__kmpc_alloc_shared(i64 4), !dbg !12
   %y_on_stack = bitcast i8* %y to [4 x i32]*
   %b1 = bitcast [4 x i32]* %y_on_stack to i8*
   call void @use(i8* %b1)
@@ -64,7 +64,7 @@ define void @baz_spmd() {
   %c0 = icmp eq i32 %c, -1
   br i1 %c0, label %master3, label %exit
 master3:
-  %z = call i8* @__kmpc_alloc_shared(i64 24), !dbg !12
+  %z = call align 4 i8* @__kmpc_alloc_shared(i64 24), !dbg !12
   %z_on_stack = bitcast i8* %z to [6 x i32]*
   %c1 = bitcast [6 x i32]* %z_on_stack to i8*
   call void @use(i8* %c1)
@@ -119,15 +119,15 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ; CHECK: @[[S:[a-zA-Z0-9_$"\\.-]+]] = external local_unnamed_addr global i8*
 ; CHECK: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [113 x i8] c"
 ; CHECK: @[[GLOB1:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([113 x i8], [113 x i8]* @[[GLOB0]], i32 0, i32 0) }, align 8
-; CHECK: @[[X:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [16 x i8] undef, align 32
-; CHECK: @[[Y:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [4 x i8] undef, align 32
+; CHECK: @[[X:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [16 x i8] undef, align 4
+; CHECK: @[[Y:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [4 x i8] undef, align 4
 ;.
 ; CHECK-LABEL: define {{[^@]+}}@foo() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i8 1, i1 false, i1 true)
-; CHECK-NEXT:    [[X:%.*]] = call i8* @__kmpc_alloc_shared(i64 4) #[[ATTR5:[0-9]+]]
-; CHECK-NEXT:    call void @unknown_no_openmp()
-; CHECK-NEXT:    call void @use.internalized(i8* nofree writeonly [[X]]) #[[ATTR6:[0-9]+]]
+; CHECK-NEXT:    [[X:%.*]] = call align 4 i8* @__kmpc_alloc_shared(i64 4) #[[ATTR5:[0-9]+]]
+; CHECK-NEXT:    call void @unknown_no_openmp() #[[ATTR4:[0-9]+]]
+; CHECK-NEXT:    call void @use.internalized(i8* nofree writeonly align 4 [[X]]) #[[ATTR6:[0-9]+]]
 ; CHECK-NEXT:    call void @__kmpc_free_shared(i8* [[X]], i64 4) #[[ATTR5]]
 ; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1, i1 true)
 ; CHECK-NEXT:    ret void
@@ -135,17 +135,17 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ;
 ; CHECK-LABEL: define {{[^@]+}}@bar() {
 ; CHECK-NEXT:    [[C:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i8 1, i1 false, i1 true)
-; CHECK-NEXT:    call void @unknown_no_openmp()
+; CHECK-NEXT:    call void @unknown_no_openmp() #[[ATTR4]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C]], -1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[MASTER1:%.*]], label [[EXIT:%.*]]
 ; CHECK:       master1:
-; CHECK-NEXT:    call void @use.internalized(i8* nofree addrspacecast (i8 addrspace(3)* getelementptr inbounds ([16 x i8], [16 x i8] addrspace(3)* @x, i32 0, i32 0) to i8*)) #[[ATTR6]]
+; CHECK-NEXT:    call void @use.internalized(i8* nofree align 4 addrspacecast (i8 addrspace(3)* getelementptr inbounds ([16 x i8], [16 x i8] addrspace(3)* @x, i32 0, i32 0) to i8*)) #[[ATTR6]]
 ; CHECK-NEXT:    br label [[NEXT:%.*]]
 ; CHECK:       next:
-; CHECK-NEXT:    call void @unknown_no_openmp()
+; CHECK-NEXT:    call void @unknown_no_openmp() #[[ATTR4]]
 ; CHECK-NEXT:    br label [[MASTER2:%.*]]
 ; CHECK:       master2:
-; CHECK-NEXT:    call void @use.internalized(i8* nofree addrspacecast (i8 addrspace(3)* getelementptr inbounds ([4 x i8], [4 x i8] addrspace(3)* @y, i32 0, i32 0) to i8*)) #[[ATTR6]]
+; CHECK-NEXT:    call void @use.internalized(i8* nofree align 4 addrspacecast (i8 addrspace(3)* getelementptr inbounds ([4 x i8], [4 x i8] addrspace(3)* @y, i32 0, i32 0) to i8*)) #[[ATTR6]]
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1, i1 true)
@@ -154,12 +154,12 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ;
 ; CHECK-LABEL: define {{[^@]+}}@baz_spmd() {
 ; CHECK-NEXT:    [[C:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i8 2, i1 true, i1 true)
-; CHECK-NEXT:    call void @unknown_no_openmp()
+; CHECK-NEXT:    call void @unknown_no_openmp() #[[ATTR4]]
 ; CHECK-NEXT:    [[C0:%.*]] = icmp eq i32 [[C]], -1
 ; CHECK-NEXT:    br i1 [[C0]], label [[MASTER3:%.*]], label [[EXIT:%.*]]
 ; CHECK:       master3:
-; CHECK-NEXT:    [[Z:%.*]] = call i8* @__kmpc_alloc_shared(i64 24) #[[ATTR5]], !dbg [[DBG9:![0-9]+]]
-; CHECK-NEXT:    call void @use.internalized(i8* nofree [[Z]]) #[[ATTR6]]
+; CHECK-NEXT:    [[Z:%.*]] = call align 4 i8* @__kmpc_alloc_shared(i64 24) #[[ATTR5]], !dbg [[DBG9:![0-9]+]]
+; CHECK-NEXT:    call void @use.internalized(i8* nofree align 4 [[Z]]) #[[ATTR6]]
 ; CHECK-NEXT:    call void @__kmpc_free_shared(i8* [[Z]], i64 24) #[[ATTR5]]
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
@@ -169,7 +169,7 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ;
 ; CHECK: Function Attrs: nofree nosync nounwind willreturn writeonly
 ; CHECK-LABEL: define {{[^@]+}}@use.internalized
-; CHECK-SAME: (i8* nofree writeonly [[X:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (i8* nofree writeonly align 4 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store i8* [[X]], i8** @S, align 8
 ; CHECK-NEXT:    ret void
@@ -186,7 +186,7 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { nosync nounwind }
 ; CHECK: attributes #[[ATTR2:[0-9]+]] = { nounwind readnone speculatable }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { nofree nosync nounwind readnone speculatable willreturn }
-; CHECK: attributes #[[ATTR4:[0-9]+]] = { "llvm.assume"="omp_no_openmp" }
+; CHECK: attributes #[[ATTR4]] = { "llvm.assume"="omp_no_openmp" }
 ; CHECK: attributes #[[ATTR5]] = { nounwind }
 ; CHECK: attributes #[[ATTR6]] = { nounwind writeonly }
 ;.

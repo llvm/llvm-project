@@ -1345,9 +1345,7 @@ static bool areInnerBoundsInvariant(AffineForOp forOp) {
     }
     return WalkResult::advance();
   });
-  if (walkResult.wasInterrupted())
-    return false;
-  return true;
+  return !walkResult.wasInterrupted();
 }
 
 // Gathers all maximal sub-blocks of operations that do not themselves
@@ -1551,7 +1549,7 @@ LogicalResult mlir::loopUnrollJamByFactor(AffineForOp forOp,
       for (unsigned i = unrollJamFactor - 1; i >= 1; --i) {
         rhs = forOp.getResult(i * oldNumResults + pos);
         // Create ops based on reduction type.
-        lhs = getReductionOp(reduction.kind, builder, loc, lhs, rhs);
+        lhs = arith::getReductionOp(reduction.kind, builder, loc, lhs, rhs);
         if (!lhs)
           return failure();
         Operation *op = lhs.getDefiningOp();
@@ -2882,8 +2880,8 @@ static LogicalResult generateCopy(
                                  /*extraIndices=*/{}, indexRemap,
                                  /*extraOperands=*/regionSymbols,
                                  /*symbolOperands=*/{},
-                                 /*domInstFilter=*/&*begin,
-                                 /*postDomInstFilter=*/&*postDomFilter);
+                                 /*domOpFilter=*/&*begin,
+                                 /*postDomOpFilter=*/&*postDomFilter);
 
   *nBegin = isBeginAtStartOfBlock ? block->begin() : std::next(prevOfBegin);
 
@@ -3258,7 +3256,7 @@ static AffineIfOp createSeparationCondition(MutableArrayRef<AffineForOp> loops,
                                1);
     unsigned fullTileLbPos, fullTileUbPos;
     if (!cst.getConstantBoundOnDimSize(0, /*lb=*/nullptr,
-                                       /*lbFloorDivisor=*/nullptr,
+                                       /*boundFloorDivisor=*/nullptr,
                                        /*ub=*/nullptr, &fullTileLbPos,
                                        &fullTileUbPos)) {
       LLVM_DEBUG(llvm::dbgs() << "Can't get constant diff pair for a loop\n");
@@ -3355,7 +3353,7 @@ createFullTiles(MutableArrayRef<AffineForOp> inputNest,
 
   // Add the body for the full tile loop nest.
   BlockAndValueMapping operandMap;
-  for (auto loopEn : llvm::enumerate(inputNest))
+  for (const auto &loopEn : llvm::enumerate(inputNest))
     operandMap.map(loopEn.value().getInductionVar(),
                    fullTileLoops[loopEn.index()].getInductionVar());
   b = OpBuilder::atBlockTerminator(fullTileLoops.back().getBody());

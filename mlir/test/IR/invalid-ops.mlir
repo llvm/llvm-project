@@ -130,30 +130,6 @@ func @invalid_splat(%v : f32) { // expected-note {{prior use here}}
 
 // -----
 
-func @atomic_rmw_idxs_rank_mismatch(%I: memref<16x10xf32>, %i : index, %val : f32) {
-  // expected-error@+1 {{expects the number of subscripts to be equal to memref rank}}
-  %x = atomic_rmw addf %val, %I[%i] : (f32, memref<16x10xf32>) -> f32
-  return
-}
-
-// -----
-
-func @atomic_rmw_expects_float(%I: memref<16x10xi32>, %i : index, %val : i32) {
-  // expected-error@+1 {{expects a floating-point type}}
-  %x = atomic_rmw addf %val, %I[%i, %i] : (i32, memref<16x10xi32>) -> i32
-  return
-}
-
-// -----
-
-func @atomic_rmw_expects_int(%I: memref<16x10xf32>, %i : index, %val : f32) {
-  // expected-error@+1 {{expects an integer type}}
-  %x = atomic_rmw addi %val, %I[%i, %i] : (f32, memref<16x10xf32>) -> f32
-  return
-}
-
-// -----
-
 func @generic_atomic_rmw_wrong_arg_num(%I: memref<10xf32>, %i : index) {
   // expected-error@+1 {{expected single number of entry block arguments}}
   %x = generic_atomic_rmw %I[%i] : memref<10xf32> {
@@ -209,13 +185,5 @@ func @atomic_yield_type_mismatch(%I: memref<10xf32>, %i : index) {
       %c1 = arith.constant 1 : i32
       atomic_yield %c1 : i32
   }
-  return
-}
-
-// -----
-
-func @no_zero_bit_integer_attrs() {
-  // expected-error @+1 {{integer constant out of range for attribute}}
-  %x = "some.op"(){value = 0 : i0} : () -> f32
   return
 }

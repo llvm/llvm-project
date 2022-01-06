@@ -435,7 +435,7 @@ struct InstructionsState {
   }
 
   /// Some of the instructions in the list have alternate opcodes.
-  bool isAltShuffle() const { return getOpcode() != getAltOpcode(); }
+  bool isAltShuffle() const { return AltOp != MainOp; }
 
   bool isOpcodeOrAlt(Instruction *I) const {
     unsigned CheckedOpcode = I->getOpcode();
@@ -2019,9 +2019,7 @@ private:
     }
 
     /// Some of the instructions in the list have alternate opcodes.
-    bool isAltShuffle() const {
-      return getOpcode() != getAltOpcode();
-    }
+    bool isAltShuffle() const { return MainOp != AltOp; }
 
     bool isOpcodeOrAlt(Instruction *I) const {
       unsigned CheckedOpcode = I->getOpcode();
@@ -3040,7 +3038,7 @@ Optional<BoUpSLP::OrdersType> BoUpSLP::getReorderingData(const TreeEntry &TE,
 
 void BoUpSLP::reorderTopToBottom() {
   // Maps VF to the graph nodes.
-  DenseMap<unsigned, SmallPtrSet<TreeEntry *, 4>> VFToOrderedEntries;
+  DenseMap<unsigned, SetVector<TreeEntry *>> VFToOrderedEntries;
   // ExtractElement gather nodes which can be vectorized and need to handle
   // their ordering.
   DenseMap<const TreeEntry *, OrdersType> GathersToOrders;
@@ -3066,7 +3064,7 @@ void BoUpSLP::reorderTopToBottom() {
     // Try to find the most profitable order. We just are looking for the most
     // used order and reorder scalar elements in the nodes according to this
     // mostly used order.
-    const SmallPtrSetImpl<TreeEntry *> &OrderedEntries = It->getSecond();
+    ArrayRef<TreeEntry *> OrderedEntries = It->second.getArrayRef();
     // All operands are reordered and used only in this node - propagate the
     // most used order to the user node.
     MapVector<OrdersType, unsigned,
@@ -4459,6 +4457,8 @@ bool BoUpSLP::canReuseExtract(ArrayRef<Value *> VL, Value *OpValue,
     CurrentOrder.clear();
     return false;
   }
+  if (ShouldKeepOrder)
+    CurrentOrder.clear();
 
   return ShouldKeepOrder;
 }

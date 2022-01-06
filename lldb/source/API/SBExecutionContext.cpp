@@ -19,7 +19,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBExecutionContext::SBExecutionContext() : m_exe_ctx_sp() {
+SBExecutionContext::SBExecutionContext() {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBExecutionContext);
 }
 

@@ -50,6 +50,13 @@ namespace mlir {
 ///
 class IntegerPolyhedron {
 public:
+  /// All derived classes of IntegerPolyhedron.
+  enum class Kind {
+    FlatAffineConstraints,
+    FlatAffineValueConstraints,
+    IntegerPolyhedron
+  };
+
   /// Kind of identifier (column).
   enum IdKind { Dimension, Symbol, Local };
 
@@ -76,6 +83,11 @@ public:
                           numDims, numSymbols, numLocals) {}
 
   virtual ~IntegerPolyhedron() = default;
+
+  /// Return the kind of this IntegerPolyhedron.
+  virtual Kind getKind() const { return Kind::IntegerPolyhedron; }
+
+  static bool classof(const IntegerPolyhedron *cst) { return true; }
 
   // Clones this object.
   std::unique_ptr<IntegerPolyhedron> clone() const;
@@ -185,6 +197,13 @@ public:
   /// Removes all equalities and inequalities.
   void clearConstraints();
 
+  /// Sets the `values.size()` identifiers starting at `po`s to the specified
+  /// values and removes them.
+  void setAndEliminate(unsigned pos, ArrayRef<int64_t> values);
+
+  /// Replaces the contents of this IntegerPolyhedron with `other`.
+  virtual void clearAndCopyFrom(const IntegerPolyhedron &other);
+
   /// Gather positions of all lower and upper bounds of the identifier at `pos`,
   /// and optionally any equalities on it. In addition, the bounds are to be
   /// independent of identifiers in position range [`offset`, `offset` + `num`).
@@ -195,7 +214,19 @@ public:
                                SmallVectorImpl<unsigned> *eqIndices = nullptr,
                                unsigned offset = 0, unsigned num = 0) const;
 
+  void print(raw_ostream &os) const;
+  void dump() const;
+
 protected:
+  /// Returns false if the fields corresponding to various identifier counts, or
+  /// equality/inequality buffer sizes aren't consistent; true otherwise. This
+  /// is meant to be used within an assert internally.
+  virtual bool hasConsistentState() const;
+
+  /// Prints the number of constraints, dimensions, symbols and locals in the
+  /// IntegerPolyhedron.
+  virtual void printSpace(raw_ostream &os) const;
+
   /// Return the index at which the specified kind of id starts.
   unsigned getIdKindOffset(IdKind kind) const;
 

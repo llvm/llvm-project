@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Functionality to perform analysis on FlatAffineConstraints. In particular,
+// Functionality to perform analysis on an IntegerPolyhedron. In particular,
 // support for performing emptiness checks and redundancy checks.
 //
 //===----------------------------------------------------------------------===//
@@ -14,10 +14,9 @@
 #ifndef MLIR_ANALYSIS_PRESBURGER_SIMPLEX_H
 #define MLIR_ANALYSIS_PRESBURGER_SIMPLEX_H
 
-#include "mlir/Analysis/AffineStructures.h"
 #include "mlir/Analysis/Presburger/Fraction.h"
+#include "mlir/Analysis/Presburger/IntegerPolyhedron.h"
 #include "mlir/Analysis/Presburger/Matrix.h"
-#include "mlir/IR/Location.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
@@ -39,7 +38,7 @@ class GBRSimplex;
 /// sets. Furthermore, it can find a subset of these constraints that are
 /// redundant, i.e. a subset of constraints that doesn't constrain the affine
 /// set further after adding the non-redundant constraints. Simplex can also be
-/// constructed from a FlatAffineConstraints object.
+/// constructed from an IntegerPolyhedron object.
 ///
 /// The implementation of the Simplex and SimplexBase classes, other than the
 /// functionality for sampling, is based on the paper
@@ -146,7 +145,7 @@ public:
 
   SimplexBase() = delete;
   explicit SimplexBase(unsigned nVar);
-  explicit SimplexBase(const FlatAffineConstraints &constraints);
+  explicit SimplexBase(const IntegerPolyhedron &constraints);
 
   /// Returns true if the tableau is empty (has conflicting constraints),
   /// false otherwise.
@@ -180,8 +179,8 @@ public:
   /// Rollback to a snapshot. This invalidates all later snapshots.
   void rollback(unsigned snapshot);
 
-  /// Add all the constraints from the given FlatAffineConstraints.
-  void intersectFlatAffineConstraints(const FlatAffineConstraints &fac);
+  /// Add all the constraints from the given IntegerPolyhedron.
+  void intersectIntegerPolyhedron(const IntegerPolyhedron &poly);
 
   /// Returns a rational sample point. This should not be called when Simplex is
   /// empty.
@@ -330,7 +329,7 @@ class Simplex : public SimplexBase {
 public:
   Simplex() = delete;
   explicit Simplex(unsigned nVar) : SimplexBase(nVar) {}
-  explicit Simplex(const FlatAffineConstraints &constraints)
+  explicit Simplex(const IntegerPolyhedron &constraints)
       : SimplexBase(constraints) {}
 
   /// Compute the maximum or minimum value of the given row, depending on
@@ -387,9 +386,9 @@ public:
   /// Check if the specified equality already holds in the polytope.
   bool isRedundantEquality(ArrayRef<int64_t> coeffs);
 
-  /// Returns true if this Simplex's polytope is a rational subset of `fac`.
+  /// Returns true if this Simplex's polytope is a rational subset of `poly`.
   /// Otherwise, returns false.
-  bool isRationalSubsetOf(const FlatAffineConstraints &fac);
+  bool isRationalSubsetOf(const IntegerPolyhedron &poly);
 
 private:
   friend class GBRSimplex;

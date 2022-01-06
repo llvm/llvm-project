@@ -646,6 +646,20 @@ def TosaToLinalg : FunctionPass<"tosa-to-linalg"> {
 }
 
 //===----------------------------------------------------------------------===//
+// TosaToLinalgNamed
+//===----------------------------------------------------------------------===//
+
+def TosaToLinalgNamed : FunctionPass<"tosa-to-linalg-named"> {
+  let summary = "Lower TOSA to LinAlg named operations";
+  let description = [{
+    Pass that converts TOSA operations to the equivalent operations using the
+    Linalg named operations.
+  }];
+
+  let constructor = "tosa::createTosaToLinalgNamed()";
+}
+
+//===----------------------------------------------------------------------===//
 // TosaToSCF
 //===----------------------------------------------------------------------===//
 

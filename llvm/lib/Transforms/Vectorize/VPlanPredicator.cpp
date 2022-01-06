@@ -231,7 +231,7 @@ void VPlanPredicator::linearizeRegionRec(VPRegionBlock *Region) {
 }
 
 // Entry point. The driver function for the predicator.
-void VPlanPredicator::predicate(void) {
+void VPlanPredicator::predicate() {
   // Predicate the blocks within Region.
   predicateRegionRec(cast<VPRegionBlock>(Plan.getEntry()));
 

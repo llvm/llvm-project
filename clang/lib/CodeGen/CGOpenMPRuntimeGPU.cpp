@@ -1402,10 +1402,14 @@ void CGOpenMPRuntimeGPU::emitGenericVarsProlog(CodeGenFunction &CGF,
 
     // Allocate space for the variable to be globalized
     llvm::Value *AllocArgs[] = {CGF.getTypeSize(VD->getType())};
-    llvm::Instruction *VoidPtr =
+    llvm::CallBase *VoidPtr =
         CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
                                 CGM.getModule(), OMPRTL___kmpc_alloc_shared),
                             AllocArgs, VD->getName());
+    // FIXME: We should use the variables actual alignment as an argument.
+    VoidPtr->addRetAttr(llvm::Attribute::get(
+        CGM.getLLVMContext(), llvm::Attribute::Alignment,
+        CGM.getContext().getTargetInfo().getNewAlign() / 8));
 
     // Cast the void pointer and get the address of the globalized variable.
     llvm::PointerType *VarPtrTy = CGF.ConvertTypeForMem(VarTy)->getPointerTo();
@@ -1438,10 +1442,13 @@ void CGOpenMPRuntimeGPU::emitGenericVarsProlog(CodeGenFunction &CGF,
 
     // Allocate space for this VLA object to be globalized.
     llvm::Value *AllocArgs[] = {CGF.getTypeSize(VD->getType())};
-    llvm::Instruction *VoidPtr =
+    llvm::CallBase *VoidPtr =
         CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
                                 CGM.getModule(), OMPRTL___kmpc_alloc_shared),
                             AllocArgs, VD->getName());
+    VoidPtr->addRetAttr(
+        llvm::Attribute::get(CGM.getLLVMContext(), llvm::Attribute::Alignment,
+                             CGM.getContext().getTargetInfo().getNewAlign()));
 
     I->getSecond().EscapedVariableLengthDeclsAddrs.emplace_back(
         std::pair<llvm::Value *, llvm::Value *>(

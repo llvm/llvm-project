@@ -1365,8 +1365,7 @@ class BitPermutationSelector {
 
     ValueBit(SDValue V, unsigned I, Kind K = Variable)
       : V(V), Idx(I), K(K) {}
-    ValueBit(Kind K = Variable)
-      : V(SDValue(nullptr, 0)), Idx(UINT32_MAX), K(K) {}
+    ValueBit(Kind K = Variable) : Idx(UINT32_MAX), K(K) {}
 
     bool isZero() const {
       return K == ConstZero || K == VariableKnownToBeZero;
@@ -4438,7 +4437,7 @@ bool PPCDAGToDAGISel::trySETCC(SDNode *N) {
   // Force the ccreg into CR7.
   SDValue CR7Reg = CurDAG->getRegister(PPC::CR7, MVT::i32);
 
-  SDValue InFlag(nullptr, 0);  // Null incoming flag value.
+  SDValue InFlag;  // Null incoming flag value.
   CCReg = CurDAG->getCopyToReg(CurDAG->getEntryNode(), dl, CR7Reg, CCReg,
                                InFlag).getValue(1);
 

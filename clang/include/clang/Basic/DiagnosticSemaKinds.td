@@ -5785,7 +5785,7 @@ def err_typecheck_invalid_restrict_invalid_pointee : Error<
 def ext_typecheck_zero_array_size : Extension<
   "zero size arrays are an extension">, InGroup<ZeroLengthArray>;
 def err_typecheck_zero_array_size : Error<
-  "zero-length arrays are not permitted in C++">;
+  "zero-length arrays are not permitted in %select{C++|SYCL device code}0">;
 def err_array_size_non_int : Error<"size of array has non-integer type %0">;
 def err_init_element_not_constant : Error<
   "initializer element is not a compile-time constant">;
@@ -11047,7 +11047,7 @@ def warn_deprecated_coroutine_namespace : Warning<
   "use std::%0 instead">,
   InGroup<DeprecatedExperimentalCoroutine>;
 def err_mixed_use_std_and_experimental_namespace_for_coroutine : Error<
-  "mixed use of std and std::experimental namespaces for "
+  "conflicting mixed use of std and std::experimental namespaces for "
   "coroutine components">;
 def err_implicit_coroutine_std_nothrow_type_not_found : Error<
   "std::nothrow was not found; include <new> before defining a coroutine which "

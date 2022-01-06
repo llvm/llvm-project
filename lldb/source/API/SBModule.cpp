@@ -29,13 +29,11 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBModule::SBModule() : m_opaque_sp() {
-  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBModule);
-}
+SBModule::SBModule() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBModule); }
 
 SBModule::SBModule(const lldb::ModuleSP &module_sp) : m_opaque_sp(module_sp) {}
 
-SBModule::SBModule(const SBModuleSpec &module_spec) : m_opaque_sp() {
+SBModule::SBModule(const SBModuleSpec &module_spec) {
   LLDB_RECORD_CONSTRUCTOR(SBModule, (const lldb::SBModuleSpec &), module_spec);
 
   ModuleSP module_sp;
@@ -49,8 +47,7 @@ SBModule::SBModule(const SBModule &rhs) : m_opaque_sp(rhs.m_opaque_sp) {
   LLDB_RECORD_CONSTRUCTOR(SBModule, (const lldb::SBModule &), rhs);
 }
 
-SBModule::SBModule(lldb::SBProcess &process, lldb::addr_t header_addr)
-    : m_opaque_sp() {
+SBModule::SBModule(lldb::SBProcess &process, lldb::addr_t header_addr) {
   LLDB_RECORD_CONSTRUCTOR(SBModule, (lldb::SBProcess &, lldb::addr_t), process,
                           header_addr);
 

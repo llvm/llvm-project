@@ -1584,51 +1584,6 @@ class Base(unittest2.TestCase):
             command += ["--max-size=%d" % max_size]
         self.runBuildCommand(command)
 
-    def getBuildFlags(
-            self,
-            use_cpp11=True,
-            use_libcxx=False,
-            use_libstdcxx=False):
-        """ Returns a dictionary (which can be provided to build* functions above) which
-            contains OS-specific build flags.
-        """
-        cflags = ""
-        ldflags = ""
-
-        # On Mac OS X, unless specifically requested to use libstdc++, use
-        # libc++
-        if not use_libstdcxx and self.platformIsDarwin():
-            use_libcxx = True
-
-        if use_libcxx and self.libcxxPath:
-            cflags += "-stdlib=libc++ "
-            if self.libcxxPath:
-                libcxxInclude = os.path.join(self.libcxxPath, "include")
-                libcxxLib = os.path.join(self.libcxxPath, "lib")
-                if os.path.isdir(libcxxInclude) and os.path.isdir(libcxxLib):
-                    cflags += "-nostdinc++ -I%s -L%s -Wl,-rpath,%s " % (
-                        libcxxInclude, libcxxLib, libcxxLib)
-
-        if use_cpp11:
-            cflags += "-std="
-            if "gcc" in self.getCompiler() and "4.6" in self.getCompilerVersion():
-                cflags += "c++0x"
-            else:
-                cflags += "c++11"
-        if self.platformIsDarwin() or self.getPlatform() == "freebsd":
-            cflags += " -stdlib=libc++"
-        elif self.getPlatform() == "openbsd":
-            cflags += " -stdlib=libc++"
-        elif self.getPlatform() == "netbsd":
-            # NetBSD defaults to libc++
-            pass
-        elif "clang" in self.getCompiler():
-            cflags += " -stdlib=libstdc++"
-
-        return {'CFLAGS_EXTRAS': cflags,
-                'LD_EXTRAS': ldflags,
-                }
-
     def cleanup(self, dictionary=None):
         """Platform specific way to do cleanup after build."""
         module = builder_module()

@@ -56,8 +56,6 @@ public:
   bool isTileLoad(MachineInstr &MI);
   bool isTileStore(MachineInstr &MI);
   bool isAMXInstr(MachineInstr &MI);
-  void getTileStoreShape(MachineInstr &MI,
-                         SmallVector<MachineOperand *> &ShapedTiles);
 
   MachineInstr *getKeyAMXInstr(MachineInstr *MI);
   void getTileShapesCfg(MachineInstr *MI,

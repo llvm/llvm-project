@@ -24,7 +24,6 @@ class DominatorTree;
 class Instruction;
 class LoadInst;
 class Loop;
-class MDNode;
 class MemoryLocation;
 class ScalarEvolution;
 class TargetLibraryInfo;

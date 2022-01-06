@@ -213,11 +213,11 @@ MemRefDescriptor ConvertToLLVMPattern::createMemRefDescriptor(
                              createIndexConstant(rewriter, loc, 0));
 
   // Fields 4: Sizes.
-  for (auto en : llvm::enumerate(sizes))
+  for (const auto &en : llvm::enumerate(sizes))
     memRefDescriptor.setSize(rewriter, loc, en.index(), en.value());
 
   // Field 5: Strides.
-  for (auto en : llvm::enumerate(strides))
+  for (const auto &en : llvm::enumerate(strides))
     memRefDescriptor.setStride(rewriter, loc, en.index(), en.value());
 
   return memRefDescriptor;

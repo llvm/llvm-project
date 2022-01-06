@@ -494,7 +494,7 @@ public:
     return StackIdxesToPos.find(Idx)->second;
   }
 
-  unsigned getNumLocs(void) const { return LocIdxToIDNum.size(); }
+  unsigned getNumLocs() const { return LocIdxToIDNum.size(); }
 
   /// Reset all locations to contain a PHI value at the designated block. Used
   /// sometimes for actual PHI values, othertimes to indicate the block entry
@@ -516,7 +516,7 @@ public:
   }
 
   /// Wipe any un-necessary location records after traversing a block.
-  void reset(void) {
+  void reset() {
     // We could reset all the location values too; however either loadFromArray
     // or setMPhis should be called before this object is re-used. Just
     // clear Masks, they're definitely not needed.
@@ -525,7 +525,7 @@ public:
 
   /// Clear all data. Destroys the LocID <=> LocIdx map, which makes most of
   /// the information in this pass uninterpretable.
-  void clear(void) {
+  void clear() {
     reset();
     LocIDToLocIdx.clear();
     LocIdxToLocID.clear();

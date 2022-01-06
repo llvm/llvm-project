@@ -107,7 +107,7 @@ SBTypeSummaryOptions::SBTypeSummaryOptions(
                           lldb_object);
 }
 
-SBTypeSummary::SBTypeSummary() : m_opaque_sp() {
+SBTypeSummary::SBTypeSummary() {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBTypeSummary);
 }
 

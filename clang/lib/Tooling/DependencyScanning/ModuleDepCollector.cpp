@@ -237,13 +237,7 @@ ModuleID ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
                                    .getHeaderSearchInfo()
                                    .getModuleMap()
                                    .getModuleMapFileForUniquing(M);
-
-  if (ModuleMap) {
-    StringRef Path = ModuleMap->tryGetRealPathName();
-    if (Path.empty())
-      Path = ModuleMap->getName();
-    MD.ClangModuleMapFile = std::string(Path);
-  }
+  MD.ClangModuleMapFile = std::string(ModuleMap ? ModuleMap->getName() : "");
 
   serialization::ModuleFile *MF =
       MDC.ScanInstance.getASTReader()->getModuleManager().lookup(
