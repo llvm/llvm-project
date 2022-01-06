@@ -92,8 +92,16 @@ define i1 @global_sgt_null() {
   ret i1 %cmp
 }
 
-define i1 @global_gep_ne_null() {
-; CHECK-LABEL: @global_gep_ne_null(
+define i1 @global_out_of_bounds_gep_ne_null() {
+; CHECK-LABEL: @global_out_of_bounds_gep_ne_null(
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp = icmp ne i8* getelementptr (i8, i8* @g3, i64 sub (i64 0, i64 ptrtoint (i8* @g3 to i64))), null
+  ret i1 %cmp
+}
+
+define i1 @global_inbounds_gep_ne_null() {
+; CHECK-LABEL: @global_inbounds_gep_ne_null(
 ; CHECK-NEXT:    ret i1 true
 ;
   %gep = getelementptr inbounds [2 x i32], [2 x i32]* @g, i64 1
