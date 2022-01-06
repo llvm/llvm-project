@@ -55,6 +55,10 @@ void StringList::AppendString(llvm::StringRef str) {
   m_strings.push_back(str.str());
 }
 
+void StringList::AppendString(const llvm::Twine &str) {
+  m_strings.push_back(str.str());
+}
+
 void StringList::AppendList(const char **strv, int strc) {
   for (int i = 0; i < strc; ++i) {
     if (strv[i])

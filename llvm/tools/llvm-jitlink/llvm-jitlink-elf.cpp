@@ -120,8 +120,8 @@ Error registerELFGraphInfo(Session &S, LinkGraph &G) {
         // then add it to the GOT entry info table.
         if (Sym->getSize() != 0) {
           if (auto TS = getELFGOTTarget(G, Sym->getBlock()))
-            FileInfo.GOTEntryInfos[TS->getName()] = {Sym->getSymbolContent(),
-                                                     Sym->getAddress()};
+            FileInfo.GOTEntryInfos[TS->getName()] = {
+                Sym->getSymbolContent(), Sym->getAddress().getValue()};
           else
             return TS.takeError();
         }
@@ -133,7 +133,7 @@ Error registerELFGraphInfo(Session &S, LinkGraph &G) {
 
         if (auto TS = getELFStubTarget(G, Sym->getBlock()))
           FileInfo.StubInfos[TS->getName()] = {Sym->getSymbolContent(),
-                                               Sym->getAddress()};
+                                               Sym->getAddress().getValue()};
         else
           return TS.takeError();
         SectionContainsContent = true;
@@ -141,18 +141,19 @@ Error registerELFGraphInfo(Session &S, LinkGraph &G) {
 
       if (Sym->hasName()) {
         if (Sym->isSymbolZeroFill()) {
-          S.SymbolInfos[Sym->getName()] = {Sym->getSize(), Sym->getAddress()};
+          S.SymbolInfos[Sym->getName()] = {Sym->getSize(),
+                                           Sym->getAddress().getValue()};
           SectionContainsZeroFill = true;
         } else {
           S.SymbolInfos[Sym->getName()] = {Sym->getSymbolContent(),
-                                           Sym->getAddress()};
+                                           Sym->getAddress().getValue()};
           SectionContainsContent = true;
         }
       }
     }
 
-    JITTargetAddress SecAddr = FirstSym->getAddress();
-    uint64_t SecSize =
+    auto SecAddr = FirstSym->getAddress();
+    auto SecSize =
         (LastSym->getBlock().getAddress() + LastSym->getBlock().getSize()) -
         SecAddr;
 
@@ -161,11 +162,11 @@ Error registerELFGraphInfo(Session &S, LinkGraph &G) {
                                      "supported yet",
                                      inconvertibleErrorCode());
     if (SectionContainsZeroFill)
-      FileInfo.SectionInfos[Sec.getName()] = {SecSize, SecAddr};
+      FileInfo.SectionInfos[Sec.getName()] = {SecSize, SecAddr.getValue()};
     else
       FileInfo.SectionInfos[Sec.getName()] = {
           ArrayRef<char>(FirstSym->getBlock().getContent().data(), SecSize),
-          SecAddr};
+          SecAddr.getValue()};
   }
 
   return Error::success();

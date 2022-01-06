@@ -120,8 +120,7 @@ llvm_orc_registerJITLoaderGDBWrapper(const char *Data, uint64_t Size) {
   return WrapperFunction<void(SPSExecutorAddrRange)>::handle(
              Data, Size,
              [](ExecutorAddrRange R) {
-               registerJITLoaderGDBImpl(R.Start.toPtr<char *>(),
-                                        R.size().getValue());
+               registerJITLoaderGDBImpl(R.Start.toPtr<char *>(), R.size());
              })
       .release();
 }
