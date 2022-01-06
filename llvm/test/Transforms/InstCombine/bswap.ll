@@ -919,10 +919,7 @@ declare i64 @llvm.bswap.i64(i64)
 
 define i32 @PR50910(i64 %t0) {
 ; CHECK-LABEL: @PR50910(
-; CHECK-NEXT:    [[T2:%.*]] = and i64 [[T0:%.*]], 72057594037927935
-; CHECK-NEXT:    [[T3:%.*]] = call i64 @llvm.bswap.i64(i64 [[T2]])
-; CHECK-NEXT:    [[T4:%.*]] = lshr i64 [[T0]], 56
-; CHECK-NEXT:    [[T5:%.*]] = or i64 [[T3]], [[T4]]
+; CHECK-NEXT:    [[T5:%.*]] = call i64 @llvm.bswap.i64(i64 [[T0:%.*]])
 ; CHECK-NEXT:    [[T6:%.*]] = trunc i64 [[T5]] to i32
 ; CHECK-NEXT:    ret i32 [[T6]]
 ;
