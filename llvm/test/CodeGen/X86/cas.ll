@@ -29,7 +29,7 @@ entry:
   %2 = load float, float* %1, align 4
   %3 = load float, float* %desired.addr, align 4
   %4 = load float*, float** %p.addr, align 8
-  %5 = call i8 asm sideeffect "lock; cmpxchg $3, $4; mov $2, $1; sete $0", "={ax},=*rm,{ax},q,*m,~{memory},~{cc},~{dirflag},~{fpsr},~{flags}"(float* %0, float %2, float %3, float* %4) nounwind
+  %5 = call i8 asm sideeffect "lock; cmpxchg $3, $4; mov $2, $1; sete $0", "={ax},=*rm,{ax},q,*m,~{memory},~{cc},~{dirflag},~{fpsr},~{flags}"(float* elementtype(float) %0, float %2, float %3, float* elementtype(float) %4) nounwind
   store i8 %5, i8* %success, align 1
   %6 = load i8, i8* %success, align 1
   %tobool = trunc i8 %6 to i1
@@ -59,7 +59,7 @@ entry:
   %3 = load i8, i8* %desired.addr, align 1
   %tobool1 = trunc i8 %3 to i1
   %4 = load i8*, i8** %p.addr, align 8
-  %5 = call i8 asm sideeffect "lock; cmpxchg $3, $4; mov $2, $1; sete $0", "={ax},=*rm,{ax},q,*m,~{memory},~{cc},~{dirflag},~{fpsr},~{flags}"(i8* %0, i1 %tobool, i1 %tobool1, i8* %4) nounwind
+  %5 = call i8 asm sideeffect "lock; cmpxchg $3, $4; mov $2, $1; sete $0", "={ax},=*rm,{ax},q,*m,~{memory},~{cc},~{dirflag},~{fpsr},~{flags}"(i8* elementtype(i8) %0, i1 %tobool, i1 %tobool1, i8* elementtype(i8) %4) nounwind
   store i8 %5, i8* %success, align 1
   %6 = load i8, i8* %success, align 1
   %tobool2 = trunc i8 %6 to i1

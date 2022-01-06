@@ -156,15 +156,18 @@ define i32* @test_custom_malloc(i32 %n) {
 ; CHECK-NEXT:    [[EXITCMP:%.*]] = icmp eq i8* [[GUARD]], null
 ; CHECK-NEXT:    br i1 [[EXITCMP]], label [[FOR_BODY]], label [[EARLY_EXIT:%.*]]
 ; CHECK:       early-exit:
+; CHECK-NEXT:    [[NEW1_LCSSA:%.*]] = phi i32 [ [[NEW1]], [[FOR_HEADER]] ]
+; CHECK-NEXT:    store i32 [[NEW1_LCSSA]], i32* [[ADDR]], align 4
 ; CHECK-NEXT:    ret i32* null
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[NEW]] = add i32 [[NEW1]], 1
-; CHECK-NEXT:    store i32 [[NEW]], i32* [[ADDR]], align 4
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_02]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[INC]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_HEADER]], label [[FOR_COND_FOR_END_CRIT_EDGE:%.*]]
 ; CHECK:       for.cond.for.end_crit_edge:
+; CHECK-NEXT:    [[NEW_LCSSA:%.*]] = phi i32 [ [[NEW]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[SPLIT:%.*]] = phi i32* [ [[ADDR]], [[FOR_BODY]] ]
+; CHECK-NEXT:    store i32 [[NEW_LCSSA]], i32* [[ADDR]], align 4
 ; CHECK-NEXT:    ret i32* null
 ;
 entry:
