@@ -261,6 +261,7 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS AND NOT ANDROID)
       set(ASAN_TEST_RUNTIME_OBJECTS
         $<TARGET_OBJECTS:RTAsan.${arch}>
         $<TARGET_OBJECTS:RTAsan_cxx.${arch}>
+        $<TARGET_OBJECTS:RTAsan_static.${arch}>
         $<TARGET_OBJECTS:RTInterception.${arch}>
         $<TARGET_OBJECTS:RTSanitizerCommon.${arch}>
         $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>
@@ -286,6 +287,7 @@ if(ANDROID)
     # Test w/o ASan instrumentation. Link it with ASan statically.
     add_executable(AsanNoinstTest # FIXME: .arch?
       $<TARGET_OBJECTS:RTAsan.${arch}>
+      $<TARGET_OBJECTS:RTAsan_static.${arch}>
       $<TARGET_OBJECTS:RTInterception.${arch}>
       $<TARGET_OBJECTS:RTSanitizerCommon.${arch}>
       $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>
