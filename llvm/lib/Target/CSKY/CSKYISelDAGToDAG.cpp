@@ -68,6 +68,13 @@ void CSKYDAGToDAGISel::Select(SDNode *N) {
   case ISD::SUBCARRY:
     IsSelected = selectSubCarry(N);
     break;
+  case ISD::GLOBAL_OFFSET_TABLE: {
+    Register GP = Subtarget->getInstrInfo()->getGlobalBaseReg(*MF);
+    ReplaceNode(N, CurDAG->getRegister(GP, N->getValueType(0)).getNode());
+
+    IsSelected = true;
+    break;
+  }
   case ISD::FrameIndex: {
     SDValue Imm = CurDAG->getTargetConstant(0, Dl, MVT::i32);
     int FI = cast<FrameIndexSDNode>(N)->getIndex();
