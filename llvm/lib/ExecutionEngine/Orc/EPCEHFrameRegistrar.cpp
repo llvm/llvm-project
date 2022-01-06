@@ -56,17 +56,17 @@ EPCEHFrameRegistrar::Create(ExecutionSession &ES) {
       ExecutorAddr(DeregisterEHFrameWrapperFnAddr));
 }
 
-Error EPCEHFrameRegistrar::registerEHFrames(ExecutorAddr EHFrameSectionAddr,
+Error EPCEHFrameRegistrar::registerEHFrames(JITTargetAddress EHFrameSectionAddr,
                                             size_t EHFrameSectionSize) {
   return ES.callSPSWrapper<void(SPSExecutorAddr, uint64_t)>(
-      RegisterEHFrameWrapperFnAddr, EHFrameSectionAddr,
+      RegisterEHFrameWrapperFnAddr, ExecutorAddr(EHFrameSectionAddr),
       static_cast<uint64_t>(EHFrameSectionSize));
 }
 
-Error EPCEHFrameRegistrar::deregisterEHFrames(ExecutorAddr EHFrameSectionAddr,
-                                              size_t EHFrameSectionSize) {
+Error EPCEHFrameRegistrar::deregisterEHFrames(
+    JITTargetAddress EHFrameSectionAddr, size_t EHFrameSectionSize) {
   return ES.callSPSWrapper<void(SPSExecutorAddr, uint64_t)>(
-      DeregisterEHFrameWrapperFnAddr, EHFrameSectionAddr,
+      DeregisterEHFrameWrapperFnAddr, ExecutorAddr(EHFrameSectionAddr),
       static_cast<uint64_t>(EHFrameSectionSize));
 }
 

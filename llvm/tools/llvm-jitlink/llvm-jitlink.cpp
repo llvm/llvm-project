@@ -327,7 +327,7 @@ static uint64_t computeTotalBlockSizes(LinkGraph &G) {
 }
 
 static void dumpSectionContents(raw_ostream &OS, LinkGraph &G) {
-  constexpr orc::ExecutorAddrDiff DumpWidth = 16;
+  constexpr JITTargetAddress DumpWidth = 16;
   static_assert(isPowerOf2_64(DumpWidth), "DumpWidth must be a power of two");
 
   // Put sections in address order.
@@ -360,13 +360,12 @@ static void dumpSectionContents(raw_ostream &OS, LinkGraph &G) {
       return LHS->getAddress() < RHS->getAddress();
     });
 
-    orc::ExecutorAddr NextAddr(Syms.front()->getAddress().getValue() &
-                               ~(DumpWidth - 1));
+    JITTargetAddress NextAddr = Syms.front()->getAddress() & ~(DumpWidth - 1);
     for (auto *Sym : Syms) {
       bool IsZeroFill = Sym->getBlock().isZeroFill();
-      auto SymStart = Sym->getAddress();
-      auto SymSize = Sym->getSize();
-      auto SymEnd = SymStart + SymSize;
+      JITTargetAddress SymStart = Sym->getAddress();
+      JITTargetAddress SymSize = Sym->getSize();
+      JITTargetAddress SymEnd = SymStart + SymSize;
       const uint8_t *SymData = IsZeroFill ? nullptr
                                           : reinterpret_cast<const uint8_t *>(
                                                 Sym->getSymbolContent().data());
@@ -434,8 +433,8 @@ public:
         assert(BL.graphAllocActions().empty() &&
                "Support function calls not supported yet");
 
-        OnFinalized(
-            FinalizedAlloc(ExecutorAddr::fromPtr(new FinalizedAllocInfo())));
+        OnFinalized(FinalizedAlloc(
+            pointerToJITTargetAddress(new FinalizedAllocInfo())));
       }
 
       void abandon(OnAbandonedFunction OnAbandoned) override {
@@ -501,8 +500,8 @@ public:
     sys::MemoryBlock FinalizeSegs(AllocBase + SegsSizes->StandardSegs,
                                   SegsSizes->FinalizeSegs);
 
-    auto NextStandardSegAddr = ExecutorAddr::fromPtr(StandardSegs.base());
-    auto NextFinalizeSegAddr = ExecutorAddr::fromPtr(FinalizeSegs.base());
+    auto NextStandardSegAddr = pointerToJITTargetAddress(StandardSegs.base());
+    auto NextFinalizeSegAddr = pointerToJITTargetAddress(FinalizeSegs.base());
 
     LLVM_DEBUG({
       dbgs() << "JITLinkSlabAllocator allocated:\n";
@@ -533,7 +532,7 @@ public:
         dbgs() << "  " << Group << " -> " << formatv("{0:x16}", SegAddr)
                << "\n";
       });
-      Seg.WorkingMem = SegAddr.toPtr<char *>();
+      Seg.WorkingMem = jitTargetAddressToPointer<char *>(SegAddr);
       Seg.Addr = SegAddr + NextSlabDelta;
 
       SegAddr += alignTo(Seg.ContentSize + Seg.ZeroFillSize, PageSize);
@@ -560,7 +559,7 @@ public:
     Error Err = Error::success();
     for (auto &FA : FinalizedAllocs) {
       std::unique_ptr<FinalizedAllocInfo> FAI(
-          FA.release().toPtr<FinalizedAllocInfo *>());
+          jitTargetAddressToPointer<FinalizedAllocInfo *>(FA.release()));
 
       // FIXME: Run dealloc actions.
 
@@ -614,8 +613,8 @@ private:
     // Calculate the target address delta to link as-if slab were at
     // SlabAddress.
     if (SlabAddress != ~0ULL)
-      NextSlabDelta = ExecutorAddr(SlabAddress) -
-                      ExecutorAddr::fromPtr(SlabRemaining.base());
+      NextSlabDelta =
+          SlabAddress - pointerToJITTargetAddress(SlabRemaining.base());
   }
 
   Error freeBlock(sys::MemoryBlock MB) {

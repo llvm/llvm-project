@@ -322,12 +322,10 @@ template <typename ELFT> Error ELFLinkGraphBuilder<ELFT>::graphifySections() {
       if (!Data)
         return Data.takeError();
 
-      G->createContentBlock(GraphSec, *Data, orc::ExecutorAddr(Sec.sh_addr),
-                            Sec.sh_addralign, 0);
+      G->createContentBlock(GraphSec, *Data, Sec.sh_addr, Sec.sh_addralign, 0);
     } else
-      G->createZeroFillBlock(GraphSec, Sec.sh_size,
-                             orc::ExecutorAddr(Sec.sh_addr), Sec.sh_addralign,
-                             0);
+      G->createZeroFillBlock(GraphSec, Sec.sh_size, Sec.sh_addr,
+                             Sec.sh_addralign, 0);
 
     setGraphSection(SecIndex, GraphSec);
   }
@@ -395,9 +393,9 @@ template <typename ELFT> Error ELFLinkGraphBuilder<ELFT>::graphifySymbols() {
 
     // Handle common symbols specially.
     if (Sym.isCommon()) {
-      Symbol &GSym = G->addCommonSymbol(*Name, Scope::Default,
-                                        getCommonSection(), orc::ExecutorAddr(),
-                                        Sym.st_size, Sym.getValue(), false);
+      Symbol &GSym =
+          G->addCommonSymbol(*Name, Scope::Default, getCommonSection(), 0,
+                             Sym.st_size, Sym.getValue(), false);
       setGraphSymbol(SymIndex, GSym);
       continue;
     }

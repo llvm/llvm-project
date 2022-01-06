@@ -222,7 +222,7 @@ public:
 private:
 
   struct EHFrameRange {
-    orc::ExecutorAddr Addr;
+    JITTargetAddress Addr = 0;
     size_t Size;
   };
 

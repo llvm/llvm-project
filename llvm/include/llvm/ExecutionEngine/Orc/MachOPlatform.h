@@ -239,7 +239,7 @@ private:
   std::mutex PlatformMutex;
   DenseMap<JITDylib *, MachOJITDylibInitializers> InitSeqs;
 
-  DenseMap<ExecutorAddr, JITDylib *> HeaderAddrToJITDylib;
+  DenseMap<JITTargetAddress, JITDylib *> HeaderAddrToJITDylib;
   DenseMap<JITDylib *, uint64_t> JITDylibToPThreadKey;
 };
 
