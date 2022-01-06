@@ -40,18 +40,18 @@ struct ToMemrefOpInterface
     : public BufferizableOpInterface::ExternalModel<ToMemrefOpInterface,
                                                     bufferization::ToMemrefOp> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
-                              BufferizationState &state) const {
+                              const BufferizationState &state) const {
     // It is unknown whether the resulting MemRef will be read or not.
     return true;
   }
 
   OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand,
-                               BufferizationState &state) const {
+                               const BufferizationState &state) const {
     return OpResult();
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          BufferizationState &state) const {
+                          const BufferizationState &state) const {
     auto toMemrefOp = cast<bufferization::ToMemrefOp>(op);
 
     // Fold to_memref(to_tensor(x)) to x.
@@ -86,11 +86,12 @@ struct ToTensorOpInterface
     : public BufferizableOpInterface::ExternalModel<ToTensorOpInterface,
                                                     bufferization::ToTensorOp> {
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          BufferizationState &state) const {
+                          const BufferizationState &state) const {
     return success();
   }
 
-  bool isWritable(Operation *op, Value value, BufferizationState &state) const {
+  bool isWritable(Operation *op, Value value,
+                  const BufferizationState &state) const {
     // It is unknown whether the MemRef operand is writable or not.
     return false;
   }

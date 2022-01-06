@@ -24,7 +24,7 @@ struct ConstantOpInterface
     : public BufferizableOpInterface::ExternalModel<ConstantOpInterface,
                                                     arith::ConstantOp> {
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          BufferizationState &state) const {
+                          const BufferizationState &state) const {
     auto constantOp = cast<arith::ConstantOp>(op);
     assert(constantOp.getType().dyn_cast<RankedTensorType>() &&
            "not a constant ranked tensor");
@@ -40,7 +40,8 @@ struct ConstantOpInterface
     return success();
   }
 
-  bool isWritable(Operation *op, Value value, BufferizationState &state) const {
+  bool isWritable(Operation *op, Value value,
+                  const BufferizationState &state) const {
     // Memory locations returned by memref::GetGlobalOp may not be written to.
     assert(value.isa<OpResult>());
     return false;

@@ -304,29 +304,29 @@ public:
 
   /// Determine which OpOperand* will alias with `result` if the op is
   /// bufferized in place. Return an empty vector if the op is not bufferizable.
-  SmallVector<OpOperand *> getAliasingOpOperand(OpResult result);
+  SmallVector<OpOperand *> getAliasingOpOperand(OpResult result) const;
 
   /// Determine which OpResult will alias with `opOperand` if the op is
   /// bufferized in place. Return an empty OpResult if the op is not
   /// bufferizable.
-  OpResult getAliasingOpResult(OpOperand &opOperand);
+  OpResult getAliasingOpResult(OpOperand &opOperand) const;
 
   /// Return true if `opOperand` bufferizes to a memory read. Return `true` if
   /// the op is not bufferizable.
-  bool bufferizesToMemoryRead(OpOperand &opOperand);
+  bool bufferizesToMemoryRead(OpOperand &opOperand) const;
 
   /// Return true if `opOperand` bufferizes to a memory write. Return true` if
   /// the op is not bufferizable.
-  bool bufferizesToMemoryWrite(OpOperand &opOperand);
+  bool bufferizesToMemoryWrite(OpOperand &opOperand) const;
 
   /// Return true if `opOperand` does neither read nor write but bufferizes to
   /// an alias. Return false if the op is not bufferizable.
-  bool bufferizesToAliasOnly(OpOperand &opOperand);
+  bool bufferizesToAliasOnly(OpOperand &opOperand) const;
 
   /// Return true if the given value is read by an op that bufferizes to a
   /// memory read. Also takes into account ops that create an alias but do not
   /// read by themselves (e.g., ExtractSliceOp).
-  bool isValueRead(Value value);
+  bool isValueRead(Value value) const;
 
   /// Starting from `value`, follow the use-def chain in reverse, always
   /// selecting the aliasing OpOperands. Find and return Values for which
@@ -351,9 +351,8 @@ public:
   /// In the above example, Values with a star satisfy the condition. When
   /// starting the traversal from Value 1, the resulting SetVector is:
   /// { 2, 7, 8, 5 }
-  llvm::SetVector<Value>
-  findValueInReverseUseDefChain(Value value,
-                                llvm::function_ref<bool(Value)> condition);
+  llvm::SetVector<Value> findValueInReverseUseDefChain(
+      Value value, llvm::function_ref<bool(Value)> condition) const;
 
   /// Find the Value of the last preceding write of a given Value.
   ///
@@ -363,33 +362,34 @@ public:
   ///
   /// Note: When reaching an end of the reverse SSA use-def chain, that value
   /// is returned regardless of whether it is a memory write or not.
-  Value findLastPrecedingWrite(Value value);
+  Value findLastPrecedingWrite(Value value) const;
 
   /// Creates a memref allocation.
   Optional<Value> createAlloc(OpBuilder &b, Location loc, MemRefType type,
-                              ArrayRef<Value> dynShape);
+                              ArrayRef<Value> dynShape) const;
 
   /// Creates an alloc-dealloc pair. This function may perform additional
   /// optimizations such as buffer allocation hoisting.
   Value createAllocDeallocPair(OpBuilder &builder, Location loc,
-                               Value shapedValue);
+                               Value shapedValue) const;
 
   /// Creates a memref deallocation. The given memref buffer must have been
   /// allocated using `createAlloc`.
-  void createDealloc(OpBuilder &b, Location loc, Value allocatedBuffer);
+  void createDealloc(OpBuilder &b, Location loc, Value allocatedBuffer) const;
 
   /// Creates a memcpy between two given buffers.
-  void createMemCpy(OpBuilder &b, Location loc, Value from, Value to);
+  void createMemCpy(OpBuilder &b, Location loc, Value from, Value to) const;
 
   /// Replace an op with replacement values. The op is deleted. Tensor OpResults
   /// must be replaced with memref values.
-  void replaceOp(RewriterBase &rewriter, Operation *op, ValueRange values);
+  void replaceOp(RewriterBase &rewriter, Operation *op,
+                 ValueRange values) const;
 
   /// Replace an op with a new op. Tensor OpResults must be replaced with memref
   /// values.
   template <typename OpTy, typename... Args>
   OpTy replaceOpWithNewOp(RewriterBase &rewriter, Operation *op,
-                          Args &&...args) {
+                          Args &&...args) const {
     Operation *newOp =
         rewriter.create<OpTy>(op->getLoc(), std::forward<Args>(args)...);
     replaceOp(rewriter, op, newOp->getResults());
@@ -398,7 +398,7 @@ public:
 
   /// Lookup the memref buffer that is associated to the given tensor value.
   /// Asserts if no buffer is associated.
-  Value lookupBuffer(RewriterBase &rewriter, Value tensor);
+  Value lookupBuffer(RewriterBase &rewriter, Value tensor) const;
 
   /// Return `true` if the given OpResult has been decided to bufferize inplace.
   bool isInPlace(OpResult opResult) const;
@@ -406,10 +406,19 @@ public:
   /// Return the result buffer (memref) for a given OpResult (tensor). Allocate
   /// a new buffer and copy over data from the existing buffer if out-of-place
   /// bufferization is necessary.
-  Value getResultBuffer(RewriterBase &rewriter, OpResult result);
+  Value getResultBuffer(RewriterBase &rewriter, OpResult result) const;
 
   /// Return dialect-specific bufferization state.
-  template <typename StateT> StateT &getDialectState(StringRef name) {
+  template <typename StateT>
+  Optional<const StateT *> getDialectState(StringRef name) const {
+    auto it = dialectState.find(name);
+    if (it == dialectState.end())
+      return None;
+    return static_cast<const StateT *>(it->getSecond().get());
+  }
+
+  /// Return dialect-specific bufferization state or create one if none exists.
+  template <typename StateT> StateT &getOrCreateDialectState(StringRef name) {
     // Create state if it does not exist yet.
     if (!dialectState.count(name))
       dialectState[name] = std::make_unique<StateT>();
@@ -419,15 +428,10 @@ public:
   /// Return a reference to the BufferizationOptions.
   const BufferizationOptions &getOptions() const { return options; }
 
+  /// Return a reference to the BufferizationAliasInfo.
+  BufferizationAliasInfo &getAliasInfo() { return aliasInfo; }
+
 private:
-  friend LogicalResult
-  runComprehensiveBufferize(Operation *op, const BufferizationOptions &options,
-                            BufferizationState &state);
-
-  friend LogicalResult
-  runComprehensiveBufferize(ModuleOp moduleOp,
-                            std::unique_ptr<BufferizationOptions> options);
-
   /// `aliasInfo` keeps track of aliasing and equivalent values. Only internal
   /// functions and `runComprehensiveBufferize` may access this object.
   BufferizationAliasInfo aliasInfo;
@@ -441,17 +445,17 @@ private:
 
 /// Bufferize all ops in the given region.
 LogicalResult bufferize(RewriterBase &rewriter, Region *region,
-                        BufferizationState &state);
+                        const BufferizationState &state);
 
 /// Bufferize all ops in the given block.
 LogicalResult bufferize(RewriterBase &rewriter, Block *block,
-                        BufferizationState &state);
+                        const BufferizationState &state);
 
 /// Bufferize the given op. If the op has no tensor OpOperands/OpResults, this
 /// function returns immediately. Otherwise, it calls the `bufferize` interface
 /// method of `BufferizableOpInterface`.
 LogicalResult bufferize(RewriterBase &rewriter, Operation *op,
-                        BufferizationState &state);
+                        const BufferizationState &state);
 
 /// Return a contiguous MemRefType (i.e. with canonical/empty layout map)
 /// with the same shape as `shapedType` and specified `layout` and
@@ -492,38 +496,39 @@ struct AllocationHoistingBarrierOnly
     : public BufferizableOpInterface::ExternalModel<
           AllocationHoistingBarrierOnly<OpTy>, OpTy> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
-                              BufferizationState &state) const {
+                              const BufferizationState &state) const {
     return true;
   }
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
-                               BufferizationState &state) const {
+                               const BufferizationState &state) const {
     return false;
   }
 
   SmallVector<OpOperand *>
   getAliasingOpOperand(Operation *op, OpResult opResult,
-                       BufferizationState &state) const {
+                       const BufferizationState &state) const {
     return {};
   }
 
   OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand,
-                               BufferizationState &state) const {
+                               const BufferizationState &state) const {
     return OpResult();
   }
 
   BufferRelation bufferRelation(Operation *op, OpResult opResult,
                                 const BufferizationAliasInfo &aliasInfo,
-                                BufferizationState &state) const {
+                                const BufferizationState &state) const {
     return BufferRelation::None;
   }
 
-  bool isWritable(Operation *op, Value value, BufferizationState &state) const {
+  bool isWritable(Operation *op, Value value,
+                  const BufferizationState &state) const {
     return false;
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          BufferizationState &state) const {
+                          const BufferizationState &state) const {
     auto isaTensor = [](Type t) { return t.isa<TensorType>(); };
     if (any_of(op->getOperandTypes(), isaTensor) ||
         any_of(op->getResultTypes(), isaTensor))
