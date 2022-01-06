@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Dialects.h"
 #include "mlir-c/Dialect/Quant.h"
 #include "mlir-c/IR.h"
 #include "mlir/Bindings/Python/PybindAdaptors.h"
@@ -16,16 +15,13 @@ using namespace llvm;
 using namespace mlir;
 using namespace mlir::python::adaptors;
 
-void mlir::python::populateDialectQuantSubmodule(const py::module &m,
-                                                 const py::module &irModule) {
-  auto typeClass = irModule.attr("Type");
-
+static void populateDialectQuantSubmodule(const py::module &m) {
   //===-------------------------------------------------------------------===//
   // QuantizedType
   //===-------------------------------------------------------------------===//
 
-  auto quantizedType = mlir_type_subclass(m, "QuantizedType",
-                                          mlirTypeIsAQuantizedType, typeClass);
+  auto quantizedType =
+      mlir_type_subclass(m, "QuantizedType", mlirTypeIsAQuantizedType);
   quantizedType.def_staticmethod(
       "default_minimum_for_integer",
       [](bool isSigned, unsigned integralWidth) {
@@ -304,4 +300,10 @@ void mlir::python::populateDialectQuantSubmodule(const py::module &m,
   calibratedQuantizedType.def_property_readonly("max", [](MlirType type) {
     return mlirCalibratedQuantizedTypeGetMax(type);
   });
+}
+
+PYBIND11_MODULE(_mlirDialectsQuant, m) {
+  m.doc() = "MLIR Quantization dialect";
+
+  populateDialectQuantSubmodule(m);
 }

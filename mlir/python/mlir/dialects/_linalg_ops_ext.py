@@ -6,7 +6,7 @@ try:
   from typing import Optional, Sequence, Union
   from ..ir import *
   from ._ods_common import get_default_loc_context
-  from .._mlir_libs._mlir.dialects.linalg import fill_builtin_region
+  from .._mlir_libs._mlirDialectsLinalg import fill_builtin_region
 except ImportError as e:
   raise RuntimeError("Error loading imports from extension module") from e
 
