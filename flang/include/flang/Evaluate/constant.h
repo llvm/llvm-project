@@ -183,6 +183,9 @@ public:
   // Apply subscripts, if any.
   Scalar<Result> At(const ConstantSubscripts &) const;
 
+  // Extract substring(s); returns nullopt for errors.
+  std::optional<Constant> Substring(ConstantSubscript, ConstantSubscript) const;
+
   Constant Reshape(ConstantSubscripts &&) const;
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
   static constexpr DynamicType GetType() {

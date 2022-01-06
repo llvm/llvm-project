@@ -331,8 +331,8 @@ template <typename T> Expr<T> Folder<T>::Folding(Designator<T> &&designator) {
     if (auto *substring{common::Unwrap<Substring>(designator.u)}) {
       if (std::optional<Expr<SomeCharacter>> folded{
               substring->Fold(context_)}) {
-        if (auto value{GetScalarConstantValue<T>(*folded)}) {
-          return Expr<T>{*value};
+        if (const auto *specific{std::get_if<Expr<T>>(&folded->u)}) {
+          return std::move(*specific);
         }
       }
       if (auto length{ToInt64(Fold(context_, substring->LEN()))}) {
