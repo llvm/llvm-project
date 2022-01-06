@@ -101,6 +101,7 @@ std::ostream &operator<<(std::ostream &OS, const ValueLattice &L) {
   case ValueLattice::ValueState::Defined:
     return OS << "Any";
   }
+  llvm_unreachable("unknown ValueState!");
 }
 
 using ConstantPropagationLattice = VarMapLattice<ValueLattice>;
