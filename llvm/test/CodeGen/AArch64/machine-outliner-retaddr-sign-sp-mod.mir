@@ -81,7 +81,6 @@ body:             |
     STRXui killed renamable $x9, killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
     $sp = frame-destroy ADDXri $sp, 16, 0
     frame-destroy AUTIASP implicit-def $lr, implicit killed $lr, implicit $sp
-    frame-destroy CFI_INSTRUCTION negate_ra_sign_state
     RET undef $lr
 
 # CHECK-LABEL:    name:            legal0
@@ -92,7 +91,6 @@ body:             |
 # CHECK-NEXT:           frame-setup CFI_INSTRUCTION negate_ra_sign_state
 # CHECK:                BL @[[OUTLINED_FUNC:OUTLINED_FUNCTION_[0-9]+]]
 # CHECK:                frame-destroy AUTIASP implicit-def $lr, implicit killed $lr, implicit $sp
-# CHECK-NEXT:           frame-destroy CFI_INSTRUCTION negate_ra_sign_state
 # CHECK-NEXT:           RET undef $lr
 
 ...
@@ -116,7 +114,6 @@ body:             |
     STRXui killed renamable $x9, killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
     $sp = frame-destroy ADDXri $sp, 16, 0
     frame-destroy AUTIASP implicit-def $lr, implicit killed $lr, implicit $sp
-    frame-destroy CFI_INSTRUCTION negate_ra_sign_state
     RET undef $lr
 
 # CHECK-LABEL:    name:            legal1
@@ -127,7 +124,6 @@ body:             |
 # CHECK-NEXT:           frame-setup CFI_INSTRUCTION negate_ra_sign_state
 # CHECK:                BL @[[OUTLINED_FUNC]]
 # CHECK:                frame-destroy AUTIASP implicit-def $lr, implicit killed $lr, implicit $sp
-# CHECK-NEXT:           frame-destroy CFI_INSTRUCTION negate_ra_sign_state
 # CHECK-NEXT:           RET undef $lr
 
 ...
@@ -151,7 +147,6 @@ body:             |
     STRXui killed renamable $x9, killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
     $sp = frame-destroy ADDXri $sp, 12, 0
     frame-destroy AUTIASP implicit-def $lr, implicit killed $lr, implicit $sp
-    frame-destroy CFI_INSTRUCTION negate_ra_sign_state
     RET undef $lr
 
 ...
@@ -175,7 +170,6 @@ body:             |
     STRXui killed renamable $x9, killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
     $sp = frame-destroy ADDXri $sp, 12, 0
     frame-destroy AUTIASP implicit-def $lr, implicit killed $lr, implicit $sp
-    frame-destroy CFI_INSTRUCTION negate_ra_sign_state
     RET undef $lr
 
 # CHECK-LABEL:    name:            illegal0
@@ -186,7 +180,6 @@ body:             |
 # CHECK-NEXT:           frame-setup CFI_INSTRUCTION negate_ra_sign_state
 # CHECK-NOT:            BL @OUTLINED_FUNCTION_{{.*}}
 # CHECK:                frame-destroy AUTIASP implicit-def $lr, implicit killed $lr, implicit $sp
-# CHECK-NEXT:           frame-destroy CFI_INSTRUCTION negate_ra_sign_state
 # CHECK-NEXT:           RET undef $lr
 
 # CHECK-LABEL:    name:            illegal1
@@ -197,7 +190,6 @@ body:             |
 # CHECK-NEXT:           frame-setup CFI_INSTRUCTION negate_ra_sign_state
 # CHECK-NOT:            BL @OUTLINED_FUNCTION_{{.*}}
 # CHECK:                frame-destroy AUTIASP implicit-def $lr, implicit killed $lr, implicit $sp
-# CHECK-NEXT:           frame-destroy CFI_INSTRUCTION negate_ra_sign_state
 # CHECK-NEXT:           RET undef $lr
 
 # Outlined function that contains only legal sp modifications
@@ -211,5 +203,4 @@ body:             |
 # CHECK-NEXT:         $sp = frame-setup SUBXri $sp, 16, 0
 # CHECK:              $sp = frame-destroy ADDXri $sp, 16, 0
 # CHECK-NEXT:         frame-destroy AUTIASP implicit-def $lr, implicit $lr, implicit $sp
-# CHECK-NEXT:         frame-destroy CFI_INSTRUCTION negate_ra_sign_state
 # CHECK-NEXT:         RET $lr

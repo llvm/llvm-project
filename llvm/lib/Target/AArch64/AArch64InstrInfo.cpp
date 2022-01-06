@@ -7350,8 +7350,7 @@ static void signOutlinedFunction(MachineFunction &MF, MachineBasicBlock &MBB,
         .setMIFlags(MachineInstr::FrameSetup);
 
     // If v8.3a features are available we can replace a RET instruction by
-    // RETAA or RETAB and omit the AUT instructions. In this case the
-    // DW_CFA_AARCH64_negate_ra_state can't be emitted.
+    // RETAA or RETAB and omit the AUT instructions
     if (Subtarget.hasPAuth() && MBBAUT != MBB.end() &&
         MBBAUT->getOpcode() == AArch64::RET) {
       BuildMI(MBB, MBBAUT, DL,
@@ -7364,11 +7363,6 @@ static void signOutlinedFunction(MachineFunction &MF, MachineBasicBlock &MBB,
               TII->get(ShouldSignReturnAddrWithAKey ? AArch64::AUTIASP
                                                     : AArch64::AUTIBSP))
           .setMIFlag(MachineInstr::FrameDestroy);
-      unsigned CFIIndexAuth =
-          MF.addFrameInst(MCCFIInstruction::createNegateRAState(nullptr));
-      BuildMI(MBB, MBBAUT, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
-          .addCFIIndex(CFIIndexAuth)
-          .setMIFlags(MachineInstr::FrameDestroy);
     }
   }
 }
