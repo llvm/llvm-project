@@ -323,7 +323,7 @@ public:
   FixedStreamArrayIterator(const FixedStreamArray<T> &Array, uint32_t Index)
       : Array(Array), Index(Index) {}
 
-  FixedStreamArrayIterator<T>(const FixedStreamArrayIterator<T> &Other)
+  FixedStreamArrayIterator(const FixedStreamArrayIterator<T> &Other)
       : Array(Other.Array), Index(Other.Index) {}
   FixedStreamArrayIterator<T> &
   operator=(const FixedStreamArrayIterator<T> &Other) {
