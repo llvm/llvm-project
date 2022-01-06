@@ -28,6 +28,7 @@ else()
   set(CMAKE_CFG_RESOLVED_INTDIR "")
 endif()
 
+include(SetPlatformToolchainTools)
 include(base-config-ix)
 include(CompilerRTUtils)
 
@@ -572,15 +573,6 @@ if (CMAKE_LINKER MATCHES "link.exe$")
   # individual static libraries, so we enable the suppression flag for
   # the whole compiler-rt project.
   set(CMAKE_STATIC_LINKER_FLAGS "${CMAKE_STATIC_LINKER_FLAGS} /IGNORE:4221")
-endif()
-
-if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
-  set(CMAKE_C_ARCHIVE_CREATE "<CMAKE_AR> -X32_64 qc <TARGET> <LINK_FLAGS> <OBJECTS>")
-  set(CMAKE_CXX_ARCHIVE_CREATE "<CMAKE_AR> -X32_64 qc <TARGET> <LINK_FLAGS> <OBJECTS>")
-  set(CMAKE_C_ARCHIVE_APPEND "<CMAKE_AR> -X32_64 q <TARGET> <LINK_FLAGS> <OBJECTS>")
-  set(CMAKE_CXX_ARCHIVE_APPEND "<CMAKE_AR> -X32_64 q <TARGET> <LINK_FLAGS> <OBJECTS>")
-  set(CMAKE_C_ARCHIVE_FINISH "<CMAKE_RANLIB> -X32_64 <TARGET>")
-  set(CMAKE_CXX_ARCHIVE_FINISH "<CMAKE_RANLIB> -X32_64 <TARGET>")
 endif()
 
 add_subdirectory(include)
