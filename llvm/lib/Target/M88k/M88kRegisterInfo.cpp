@@ -69,7 +69,6 @@ void M88kRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   MachineInstr &MI = *II;
   MachineFunction &MF = *MI.getParent()->getParent();
-  MachineFrameInfo &MFI = MF.getFrameInfo();
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
 
   Register FrameReg;

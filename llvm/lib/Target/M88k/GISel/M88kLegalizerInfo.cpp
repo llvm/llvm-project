@@ -27,7 +27,6 @@ M88kLegalizerInfo::M88kLegalizerInfo(const M88kSubtarget &ST) {
   const LLT S32 = LLT::scalar(32);
   const LLT S64 = LLT::scalar(64);
   const LLT S80 = LLT::scalar(80);
-  const LLT S128 = LLT::scalar(128);
   const LLT P0 = LLT::pointer(0, 32);
   getActionDefinitionsBuilder(G_PHI).legalFor({S32});
   getActionDefinitionsBuilder({G_IMPLICIT_DEF, G_FREEZE}).legalFor({S32});
@@ -49,7 +48,6 @@ M88kLegalizerInfo::M88kLegalizerInfo(const M88kSubtarget &ST) {
   getActionDefinitionsBuilder(G_PTR_ADD)
       .legalFor({{P0, S32}})
       .clampScalar(1, S32, S32);
-  getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({P0});
   getActionDefinitionsBuilder(G_ADD).legalFor({S32});
   getActionDefinitionsBuilder(G_SUB).legalFor({S32});
   getActionDefinitionsBuilder(G_MUL).legalFor({S32});

@@ -17,8 +17,6 @@ class M88kTargetMachine;
 class M88kSubtarget;
 
 class M88kFrameLowering : public TargetFrameLowering {
-  IndexedMap<unsigned> RegSpillOffsets;
-
 protected:
   const M88kSubtarget &STI;
 

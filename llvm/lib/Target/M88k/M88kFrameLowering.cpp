@@ -70,7 +70,7 @@ M88kFrameLowering::M88kFrameLowering(const M88kSubtarget &Subtarget)
     : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, Align(16),
                           /*LocalAreaOffset=*/0, Align(8),
                           /*StackRealignable=*/false),
-      STI(Subtarget), RegSpillOffsets(0) {}
+      STI(Subtarget) {}
 
 bool M88kFrameLowering::hasFP(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
