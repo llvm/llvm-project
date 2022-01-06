@@ -23,7 +23,7 @@ entry:
 
 define i64 @test2() nounwind {
 entry:
-  %0 = tail call i64 asm sideeffect "movq $1, $0", "={xmm7},*m,~{dirflag},~{fpsr},~{flags}"(i64* null) nounwind
+  %0 = tail call i64 asm sideeffect "movq $1, $0", "={xmm7},*m,~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) null) nounwind
   ret i64 %0
   ; CHECK: test2
 	; CHECK: movq {{.*}}, %xmm7
