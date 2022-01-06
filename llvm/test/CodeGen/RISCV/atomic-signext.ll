@@ -2549,7 +2549,7 @@ define signext i32 @atomicrmw_max_i32_monotonic(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a0
-; RV64I-NEXT:    lwu a3, 0(a0)
+; RV64I-NEXT:    lw a3, 0(a0)
 ; RV64I-NEXT:    mv s2, a1
 ; RV64I-NEXT:    sext.w s1, a1
 ; RV64I-NEXT:    j .LBB32_2
@@ -2639,7 +2639,7 @@ define signext i32 @atomicrmw_min_i32_monotonic(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a0
-; RV64I-NEXT:    lwu a3, 0(a0)
+; RV64I-NEXT:    lw a3, 0(a0)
 ; RV64I-NEXT:    mv s2, a1
 ; RV64I-NEXT:    sext.w s1, a1
 ; RV64I-NEXT:    j .LBB33_2
@@ -2729,7 +2729,7 @@ define signext i32 @atomicrmw_umax_i32_monotonic(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a0
-; RV64I-NEXT:    lwu a3, 0(a0)
+; RV64I-NEXT:    lw a3, 0(a0)
 ; RV64I-NEXT:    mv s2, a1
 ; RV64I-NEXT:    sext.w s1, a1
 ; RV64I-NEXT:    j .LBB34_2
@@ -2819,7 +2819,7 @@ define signext i32 @atomicrmw_umin_i32_monotonic(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a0
-; RV64I-NEXT:    lwu a3, 0(a0)
+; RV64I-NEXT:    lw a3, 0(a0)
 ; RV64I-NEXT:    mv s2, a1
 ; RV64I-NEXT:    sext.w s1, a1
 ; RV64I-NEXT:    j .LBB35_2
