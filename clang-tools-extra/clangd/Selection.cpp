@@ -60,21 +60,6 @@ void recordMetrics(const SelectionTree &S, const LangOptions &Lang) {
 
 // Return the range covering a node and all its children.
 SourceRange getSourceRange(const DynTypedNode &N) {
-  // DeclTypeTypeLoc::getSourceRange() is incomplete, which would lead to
-  // failing to descend into the child expression.
-  // decltype(2+2);
-  // ~~~~~~~~~~~~~ <-- correct range
-  // ~~~~~~~~      <-- range reported by getSourceRange()
-  // ~~~~~~~~~~~~  <-- range with this hack(i.e, missing closing paren)
-  // FIXME: Alter DecltypeTypeLoc to contain parentheses locations and get
-  // rid of this patch.
-  if (const auto *TL = N.get<TypeLoc>()) {
-    if (auto DT = TL->getAs<DecltypeTypeLoc>()) {
-      SourceRange S = DT.getSourceRange();
-      S.setEnd(DT.getUnderlyingExpr()->getEndLoc());
-      return S;
-    }
-  }
   // MemberExprs to implicitly access anonymous fields should not claim any
   // tokens for themselves. Given:
   //   struct A { struct { int b; }; };

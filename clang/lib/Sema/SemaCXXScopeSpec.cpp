@@ -881,7 +881,8 @@ bool Sema::ActOnCXXNestedNameSpecifierDecltype(CXXScopeSpec &SS,
 
   TypeLocBuilder TLB;
   DecltypeTypeLoc DecltypeTL = TLB.push<DecltypeTypeLoc>(T);
-  DecltypeTL.setNameLoc(DS.getTypeSpecTypeLoc());
+  DecltypeTL.setDecltypeLoc(DS.getTypeSpecTypeLoc());
+  DecltypeTL.setRParenLoc(DS.getTypeofParensRange().getEnd());
   SS.Extend(Context, SourceLocation(), TLB.getTypeLocInContext(Context, T),
             ColonColonLoc);
   return false;

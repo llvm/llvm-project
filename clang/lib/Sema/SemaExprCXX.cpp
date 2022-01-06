@@ -7767,7 +7767,8 @@ ExprResult Sema::ActOnPseudoDestructorExpr(Scope *S, Expr *Base,
 
   TypeLocBuilder TLB;
   DecltypeTypeLoc DecltypeTL = TLB.push<DecltypeTypeLoc>(T);
-  DecltypeTL.setNameLoc(DS.getTypeSpecTypeLoc());
+  DecltypeTL.setDecltypeLoc(DS.getTypeSpecTypeLoc());
+  DecltypeTL.setRParenLoc(DS.getTypeofParensRange().getEnd());
   TypeSourceInfo *DestructedTypeInfo = TLB.getTypeSourceInfo(Context, T);
   PseudoDestructorTypeStorage Destructed(DestructedTypeInfo);
 
