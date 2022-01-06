@@ -549,8 +549,7 @@ define dso_local signext i32 @f2(float* noalias %A, float* noalias %B, i32 signe
 ; VF-TWO-CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt i64 [[TMP1]], 4294967295
 ; VF-TWO-CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP7]], [[TMP8]]
 ; VF-TWO-CHECK-NEXT:    [[TMP10:%.*]] = or i1 [[TMP9]], [[MUL_OVERFLOW]]
-; VF-TWO-CHECK-NEXT:    [[TMP11:%.*]] = or i1 false, [[TMP10]]
-; VF-TWO-CHECK-NEXT:    br i1 [[TMP11]], label [[VEC_EPILOG_SCALAR_PH]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
+; VF-TWO-CHECK-NEXT:    br i1 [[TMP10]], label [[VEC_EPILOG_SCALAR_PH]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
 ; VF-TWO-CHECK:       vector.main.loop.iter.check:
 ; VF-TWO-CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], 32
 ; VF-TWO-CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
@@ -780,8 +779,7 @@ define dso_local signext i32 @f2(float* noalias %A, float* noalias %B, i32 signe
 ; VF-FOUR-CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt i64 [[TMP1]], 4294967295
 ; VF-FOUR-CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP7]], [[TMP8]]
 ; VF-FOUR-CHECK-NEXT:    [[TMP10:%.*]] = or i1 [[TMP9]], [[MUL_OVERFLOW]]
-; VF-FOUR-CHECK-NEXT:    [[TMP11:%.*]] = or i1 false, [[TMP10]]
-; VF-FOUR-CHECK-NEXT:    br i1 [[TMP11]], label [[VEC_EPILOG_SCALAR_PH]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
+; VF-FOUR-CHECK-NEXT:    br i1 [[TMP10]], label [[VEC_EPILOG_SCALAR_PH]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
 ; VF-FOUR-CHECK:       vector.main.loop.iter.check:
 ; VF-FOUR-CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], 32
 ; VF-FOUR-CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
