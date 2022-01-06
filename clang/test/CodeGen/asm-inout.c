@@ -5,7 +5,7 @@ int *foo(void);
 // CHECK: @test1
 void test1() {
   // CHECK: [[REGCALLRESULT:%[a-zA-Z0-9\.]+]] = call i32* @foo()
-  // CHECK: call void asm "foobar", "=*m,*m,~{dirflag},~{fpsr},~{flags}"(i32* [[REGCALLRESULT]], i32* [[REGCALLRESULT]])
+  // CHECK: call void asm "foobar", "=*m,*m,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) [[REGCALLRESULT]], i32* elementtype(i32) [[REGCALLRESULT]])
   asm ("foobar" : "+m"(*foo()));
 }
 
