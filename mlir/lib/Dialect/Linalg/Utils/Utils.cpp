@@ -169,7 +169,7 @@ Value createOrFoldDimOp(OpBuilder &b, Location loc, Value source, int64_t dim) {
 SmallVector<Value, 4> getDynOperands(Location loc, Value val, OpBuilder &b) {
   SmallVector<Value, 4> dynOperands;
   auto shapedType = val.getType().cast<ShapedType>();
-  for (auto dim : llvm::enumerate(shapedType.getShape())) {
+  for (const auto &dim : llvm::enumerate(shapedType.getShape())) {
     if (dim.value() == ShapedType::kDynamicSize)
       dynOperands.push_back(createOrFoldDimOp(b, loc, val, dim.index()));
   }
@@ -310,7 +310,7 @@ tensor::ExtractSliceOp makeComposedExtractSliceOp(
   SmallVector<OpFoldResult> foldedOffsets(offsets.begin(), offsets.end());
   AffineExpr dim1, dim2;
   bindDims(b.getContext(), dim1, dim2);
-  for (auto en : enumerate(producerOp.getMixedOffsets())) {
+  for (const auto &en : enumerate(producerOp.getMixedOffsets())) {
     SmallVector<Value> offsetValues = {
         getValueOrCreateConstantIndexOp(b, loc, foldedOffsets[en.index()]),
         getValueOrCreateConstantIndexOp(b, loc, en.value())};
@@ -403,7 +403,7 @@ void GenerateLoopNest<scf::ForOp>::doit(
   if (distributionOptions.hasValue()) {
     // Collect loop ranges for parallel dimensions.
     SmallVector<Range, 2> parallelLoopRanges;
-    for (auto iteratorType : enumerate(iteratorTypes))
+    for (const auto &iteratorType : enumerate(iteratorTypes))
       if (isParallelIterator(iteratorType.value()))
         parallelLoopRanges.push_back(loopRanges[iteratorType.index()]);
 
@@ -435,7 +435,7 @@ void GenerateLoopNest<scf::ForOp>::doit(
 
   // Filter out scf.for loops that were created out of parallel dimensions.
   SmallVector<scf::ForOp, 4> loops;
-  for (auto iteratorType : enumerate(iteratorTypes))
+  for (const auto &iteratorType : enumerate(iteratorTypes))
     if (isParallelIterator(iteratorType.value()))
       loops.push_back(loopNest.loops[iteratorType.index()]);
 
@@ -677,7 +677,7 @@ void GenerateLoopNest<scf::ParallelOp>::doit(
     distributionMethod.assign(distributionOptions->distributionMethod.begin(),
                               distributionOptions->distributionMethod.end());
     SmallVector<Range, 2> parallelLoopRanges;
-    for (auto iteratorType : enumerate(iteratorTypes)) {
+    for (const auto &iteratorType : enumerate(iteratorTypes)) {
       if (isParallelIterator(iteratorType.value()))
         parallelLoopRanges.push_back(loopRanges[iteratorType.index()]);
     }
@@ -686,7 +686,7 @@ void GenerateLoopNest<scf::ParallelOp>::doit(
     SmallVector<ProcInfo, 2> procInfo =
         options.procInfo(b, loc, parallelLoopRanges);
     unsigned index = 0;
-    for (auto iteratorType : enumerate(iteratorTypes)) {
+    for (const auto &iteratorType : enumerate(iteratorTypes)) {
       if (index >= procInfo.size())
         break;
       if (isParallelIterator(iteratorType.value())) {

@@ -43,6 +43,7 @@ using namespace lld::elf;
 bool InputFile::isInGroup;
 uint32_t InputFile::nextGroupId;
 
+SmallVector<std::unique_ptr<MemoryBuffer>> elf::memoryBuffers;
 SmallVector<ArchiveFile *, 0> elf::archiveFiles;
 SmallVector<BinaryFile *, 0> elf::binaryFiles;
 SmallVector<BitcodeFile *, 0> elf::bitcodeFiles;
@@ -122,9 +123,8 @@ Optional<MemoryBufferRef> elf::readFile(StringRef path) {
     return None;
   }
 
-  std::unique_ptr<MemoryBuffer> &mb = *mbOrErr;
-  MemoryBufferRef mbref = mb->getMemBufferRef();
-  make<std::unique_ptr<MemoryBuffer>>(std::move(mb)); // take MB ownership
+  MemoryBufferRef mbref = (*mbOrErr)->getMemBufferRef();
+  memoryBuffers.push_back(std::move(*mbOrErr)); // take MB ownership
 
   if (tar)
     tar->append(relativeToRoot(path), mbref.getBuffer());
@@ -879,8 +879,8 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
       // to work. In a full implementation we would merge all attribute
       // sections.
       if (in.attributes == nullptr) {
-        in.attributes = make<InputSection>(*this, sec, name);
-        return in.attributes;
+        in.attributes = std::make_unique<InputSection>(*this, sec, name);
+        return in.attributes.get();
       }
       return &InputSection::discarded;
     }
@@ -901,8 +901,8 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
       // standard extensions to enable. In a full implementation we would merge
       // all attribute sections.
       if (in.attributes == nullptr) {
-        in.attributes = make<InputSection>(*this, sec, name);
-        return in.attributes;
+        in.attributes = std::make_unique<InputSection>(*this, sec, name);
+        return in.attributes.get();
       }
       return &InputSection::discarded;
     }
@@ -1680,34 +1680,42 @@ static uint8_t mapVisibility(GlobalValue::VisibilityTypes gvVisibility) {
 }
 
 template <class ELFT>
-static Symbol *createBitcodeSymbol(const std::vector<bool> &keptComdats,
-                                   const lto::InputFile::Symbol &objSym,
-                                   BitcodeFile &f) {
-  StringRef name = saver.save(objSym.getName());
+static void
+createBitcodeSymbol(Symbol *&sym, const std::vector<bool> &keptComdats,
+                    const lto::InputFile::Symbol &objSym, BitcodeFile &f) {
   uint8_t binding = objSym.isWeak() ? STB_WEAK : STB_GLOBAL;
   uint8_t type = objSym.isTLS() ? STT_TLS : STT_NOTYPE;
   uint8_t visibility = mapVisibility(objSym.getVisibility());
   bool canOmitFromDynSym = objSym.canBeOmittedFromSymbolTable();
+
+  StringRef name;
+  if (sym) {
+    name = sym->getName();
+  } else {
+    name = saver.save(objSym.getName());
+    sym = symtab->insert(name);
+  }
 
   int c = objSym.getComdatIndex();
   if (objSym.isUndefined() || (c != -1 && !keptComdats[c])) {
     Undefined newSym(&f, name, binding, visibility, type);
     if (canOmitFromDynSym)
       newSym.exportDynamic = false;
-    Symbol *ret = symtab->addSymbol(newSym);
-    ret->referenced = true;
-    return ret;
+    sym->resolve(newSym);
+    sym->referenced = true;
+    return;
   }
 
-  if (objSym.isCommon())
-    return symtab->addSymbol(
-        CommonSymbol{&f, name, binding, visibility, STT_OBJECT,
-                     objSym.getCommonAlignment(), objSym.getCommonSize()});
-
-  Defined newSym(&f, name, binding, visibility, type, 0, 0, nullptr);
-  if (canOmitFromDynSym)
-    newSym.exportDynamic = false;
-  return symtab->addSymbol(newSym);
+  if (objSym.isCommon()) {
+    sym->resolve(CommonSymbol{&f, name, binding, visibility, STT_OBJECT,
+                              objSym.getCommonAlignment(),
+                              objSym.getCommonSize()});
+  } else {
+    Defined newSym(&f, name, binding, visibility, type, 0, 0, nullptr);
+    if (canOmitFromDynSym)
+      newSym.exportDynamic = false;
+    sym->resolve(newSym);
+  }
 }
 
 template <class ELFT> void BitcodeFile::parse() {
@@ -1719,10 +1727,11 @@ template <class ELFT> void BitcodeFile::parse() {
             .second);
   }
 
-  symbols.assign(obj->symbols().size(), nullptr);
-  for (auto it : llvm::enumerate(obj->symbols()))
-    symbols[it.index()] =
-        createBitcodeSymbol<ELFT>(keptComdats, it.value(), *this);
+  symbols.resize(obj->symbols().size());
+  for (auto it : llvm::enumerate(obj->symbols())) {
+    Symbol *&sym = symbols[it.index()];
+    createBitcodeSymbol<ELFT>(sym, keptComdats, it.value(), *this);
+  }
 
   for (auto l : obj->getDependentLibraries())
     addDependentLibrary(l, this);
@@ -1730,9 +1739,11 @@ template <class ELFT> void BitcodeFile::parse() {
 
 void BitcodeFile::parseLazy() {
   SymbolTable &symtab = *elf::symtab;
-  for (const lto::InputFile::Symbol &sym : obj->symbols())
-    if (!sym.isUndefined())
-      symtab.addSymbol(LazyObject{*this, saver.save(sym.getName())});
+  symbols.resize(obj->symbols().size());
+  for (auto it : llvm::enumerate(obj->symbols()))
+    if (!it.value().isUndefined())
+      symbols[it.index()] =
+          symtab.addSymbol(LazyObject{*this, saver.save(it.value().getName())});
 }
 
 void BinaryFile::parse() {

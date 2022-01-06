@@ -54,8 +54,7 @@ static void getLoadAndStoreMemRefAccesses(Operation *opA,
 static bool isDependentLoadOrStoreOp(Operation *op,
                                      DenseMap<Value, bool> &values) {
   if (auto loadOp = dyn_cast<AffineReadOpInterface>(op)) {
-    return values.count(loadOp.getMemRef()) > 0 &&
-           values[loadOp.getMemRef()] == true;
+    return values.count(loadOp.getMemRef()) > 0 && values[loadOp.getMemRef()];
   }
   if (auto storeOp = dyn_cast<AffineWriteOpInterface>(op)) {
     return values.count(storeOp.getMemRef()) > 0;

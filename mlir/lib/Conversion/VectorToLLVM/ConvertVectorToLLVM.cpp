@@ -497,7 +497,7 @@ public:
       eltType = llvmType.cast<VectorType>().getElementType();
     Value insert = rewriter.create<LLVM::UndefOp>(loc, llvmType);
     int64_t insPos = 0;
-    for (auto en : llvm::enumerate(maskArrayAttr)) {
+    for (const auto &en : llvm::enumerate(maskArrayAttr)) {
       int64_t extPos = en.value().cast<IntegerAttr>().getInt();
       Value value = adaptor.v1();
       if (extPos >= v1Dim) {
@@ -883,7 +883,8 @@ public:
     desc.setOffset(rewriter, loc, zero);
 
     // Fill size and stride descriptors in memref.
-    for (auto indexedSize : llvm::enumerate(targetMemRefType.getShape())) {
+    for (const auto &indexedSize :
+         llvm::enumerate(targetMemRefType.getShape())) {
       int64_t index = indexedSize.index();
       auto sizeAttr =
           rewriter.getIntegerAttr(rewriter.getIndexType(), indexedSize.value());

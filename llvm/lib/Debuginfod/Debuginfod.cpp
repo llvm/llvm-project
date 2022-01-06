@@ -36,7 +36,7 @@ static std::string buildIDToString(BuildIDRef ID) {
 
 Expected<SmallVector<StringRef>> getDefaultDebuginfodUrls() {
   const char *DebuginfodUrlsEnv = std::getenv("DEBUGINFOD_URLS");
-  if (DebuginfodUrlsEnv == NULL)
+  if (DebuginfodUrlsEnv == nullptr)
     return SmallVector<StringRef>();
 
   SmallVector<StringRef> DebuginfodUrls;

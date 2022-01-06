@@ -18,12 +18,12 @@ using namespace mlir;
 #include "mlir/Interfaces/ViewLikeInterface.cpp.inc"
 
 LogicalResult mlir::verifyListOfOperandsOrIntegers(
-    Operation *op, StringRef name, unsigned maxNumElements, ArrayAttr attr,
+    Operation *op, StringRef name, unsigned numElements, ArrayAttr attr,
     ValueRange values, llvm::function_ref<bool(int64_t)> isDynamic) {
   /// Check static and dynamic offsets/sizes/strides does not overflow type.
-  if (attr.size() > maxNumElements)
-    return op->emitError("expected <= ")
-           << maxNumElements << " " << name << " values";
+  if (attr.size() != numElements)
+    return op->emitError("expected ")
+           << numElements << " " << name << " values";
   unsigned expectedNumDynamicEntries =
       llvm::count_if(attr.getValue(), [&](Attribute attr) {
         return isDynamic(attr.cast<IntegerAttr>().getInt());

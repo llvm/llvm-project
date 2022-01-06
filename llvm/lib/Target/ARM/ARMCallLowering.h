@@ -23,7 +23,6 @@
 namespace llvm {
 
 class ARMTargetLowering;
-class MachineFunction;
 class MachineInstrBuilder;
 class MachineIRBuilder;
 class Value;

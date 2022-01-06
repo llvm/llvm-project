@@ -180,10 +180,10 @@ def AArch64asr_p  : SDNode<"AArch64ISD::SRA_PRED",  SDT_AArch64Arith>;
 def AArch64fadd_p : SDNode<"AArch64ISD::FADD_PRED", SDT_AArch64Arith>;
 def AArch64fdiv_p : SDNode<"AArch64ISD::FDIV_PRED", SDT_AArch64Arith>;
 def AArch64fma_p  : SDNode<"AArch64ISD::FMA_PRED",  SDT_AArch64FMA>;
-def AArch64fmaxnm_p : SDNode<"AArch64ISD::FMAXNM_PRED", SDT_AArch64Arith>;
-def AArch64fminnm_p : SDNode<"AArch64ISD::FMINNM_PRED", SDT_AArch64Arith>;
 def AArch64fmax_p : SDNode<"AArch64ISD::FMAX_PRED", SDT_AArch64Arith>;
+def AArch64fmaxnm_p : SDNode<"AArch64ISD::FMAXNM_PRED", SDT_AArch64Arith>;
 def AArch64fmin_p : SDNode<"AArch64ISD::FMIN_PRED", SDT_AArch64Arith>;
+def AArch64fminnm_p : SDNode<"AArch64ISD::FMINNM_PRED", SDT_AArch64Arith>;
 def AArch64fmul_p : SDNode<"AArch64ISD::FMUL_PRED", SDT_AArch64Arith>;
 def AArch64fsub_p : SDNode<"AArch64ISD::FSUB_PRED", SDT_AArch64Arith>;
 def AArch64lsl_p  : SDNode<"AArch64ISD::SHL_PRED",  SDT_AArch64Arith>;
@@ -277,8 +277,11 @@ def AArch64mul_p_oneuse : PatFrag<(ops node:$pred, node:$src1, node:$src2),
   return N->hasOneUse();
 }]>;
 
+def AArch64fabd_p : PatFrag<(ops node:$pg, node:$op1, node:$op2),
+                            (AArch64fabs_mt node:$pg, (AArch64fsub_p node:$pg, node:$op1, node:$op2), undef)>;
+
 def AArch64fneg_mt_nsz : PatFrag<(ops node:$pred, node:$op, node:$pt),
-                                  (AArch64fneg_mt node:$pred, node:$op, node:$pt), [{
+                                 (AArch64fneg_mt node:$pred, node:$op, node:$pt), [{
   return N->getFlags().hasNoSignedZeros();
 }]>;
 
@@ -469,6 +472,7 @@ let Predicates = [HasSVEorStreamingSVE] in {
   defm FMINNM_ZPZZ : sve_fp_bin_pred_hfd<AArch64fminnm_p>;
   defm FMAX_ZPZZ   : sve_fp_bin_pred_hfd<AArch64fmax_p>;
   defm FMIN_ZPZZ   : sve_fp_bin_pred_hfd<AArch64fmin_p>;
+  defm FABD_ZPZZ   : sve_fp_bin_pred_hfd<AArch64fabd_p>;
   defm FDIV_ZPZZ   : sve_fp_bin_pred_hfd<AArch64fdiv_p>;
 } // End HasSVEorStreamingSVE
 
@@ -642,11 +646,11 @@ let Predicates = [HasSVEorStreamingSVE] in {
             (DUP_ZI_D $a, $b)>;
 
   // Duplicate immediate FP into all vector elements.
- def : Pat<(nxv2f32 (AArch64dup (f32 fpimm:$val))),
+  def : Pat<(nxv2f32 (AArch64dup (f32 fpimm:$val))),
             (DUP_ZR_S (MOVi32imm (bitcast_fpimm_to_i32 f32:$val)))>;
- def : Pat<(nxv4f32 (AArch64dup (f32 fpimm:$val))),
+  def : Pat<(nxv4f32 (AArch64dup (f32 fpimm:$val))),
             (DUP_ZR_S (MOVi32imm (bitcast_fpimm_to_i32 f32:$val)))>;
- def : Pat<(nxv2f64 (AArch64dup (f64 fpimm:$val))),
+  def : Pat<(nxv2f64 (AArch64dup (f64 fpimm:$val))),
             (DUP_ZR_D (MOVi64imm (bitcast_fpimm_to_i64 f64:$val)))>;
 
   // Duplicate FP immediate into all vector elements
@@ -1418,6 +1422,16 @@ let Predicates = [HasSVEorStreamingSVE] in {
   def : Pat<(nxv2i64 (vector_splice (nxv2i64 ZPR:$Z1), (nxv2i64 ZPR:$Z2), (i64 -1))),
             (INSR_ZV_D ZPR:$Z2, (INSERT_SUBREG (IMPLICIT_DEF),
             (LASTB_VPZ_D (PTRUE_D 31), ZPR:$Z1), dsub))>;
+
+  // Splice with lane bigger or equal to 0
+  def : Pat<(nxv16i8 (vector_splice (nxv16i8 ZPR:$Z1), (nxv16i8 ZPR:$Z2), (i64 (sve_ext_imm_0_255 i32:$index)))),
+            (EXT_ZZI  ZPR:$Z1, ZPR:$Z2, imm0_255:$index)>;
+  def : Pat<(nxv8i16 (vector_splice (nxv8i16 ZPR:$Z1), (nxv8i16 ZPR:$Z2), (i64 (sve_ext_imm_0_127 i32:$index)))),
+            (EXT_ZZI  ZPR:$Z1, ZPR:$Z2, imm0_255:$index)>;
+  def : Pat<(nxv4i32 (vector_splice (nxv4i32 ZPR:$Z1), (nxv4i32 ZPR:$Z2), (i64 (sve_ext_imm_0_63 i32:$index)))),
+            (EXT_ZZI  ZPR:$Z1, ZPR:$Z2, imm0_255:$index)>;
+  def : Pat<(nxv2i64 (vector_splice (nxv2i64 ZPR:$Z1), (nxv2i64 ZPR:$Z2), (i64 (sve_ext_imm_0_31 i32:$index)))),
+            (EXT_ZZI  ZPR:$Z1, ZPR:$Z2, imm0_255:$index)>;
 
   defm CMPHS_PPzZZ : sve_int_cmp_0<0b000, "cmphs", SETUGE, SETULE>;
   defm CMPHI_PPzZZ : sve_int_cmp_0<0b001, "cmphi", SETUGT, SETULT>;
@@ -2496,6 +2510,7 @@ let Predicates = [HasSVEorStreamingSVE] in {
   // 16-element contiguous store
   defm : st1<ST1B, ST1B_IMM,   nxv16i8, AArch64st1, nxv16i1, nxv16i8, am_sve_regreg_lsl0>;
 
+  // Insert scalar into undef[0]
   def : Pat<(nxv16i8 (vector_insert (nxv16i8 (undef)), (i32 FPR32:$src), 0)),
             (INSERT_SUBREG (nxv16i8 (IMPLICIT_DEF)), FPR32:$src, ssub)>;
   def : Pat<(nxv8i16 (vector_insert (nxv8i16 (undef)), (i32 FPR32:$src), 0)),
@@ -2691,17 +2706,6 @@ let Predicates = [HasSVEorStreamingSVE] in {
   def : Pat<(vector_extract (nxv2f64 ZPR:$Zs), (i64 0)),
             (f64 (EXTRACT_SUBREG ZPR:$Zs, dsub))>;
   }
-
-  // Splice with lane bigger or equal to 0
-  def : Pat<(nxv16i8 (vector_splice (nxv16i8 ZPR:$Z1), (nxv16i8 ZPR:$Z2), (i64 (sve_ext_imm_0_255 i32:$index)))),
-            (EXT_ZZI  ZPR:$Z1, ZPR:$Z2, imm0_255:$index)>;
-  def : Pat<(nxv8i16 (vector_splice (nxv8i16 ZPR:$Z1), (nxv8i16 ZPR:$Z2), (i64 (sve_ext_imm_0_127 i32:$index)))),
-            (EXT_ZZI  ZPR:$Z1, ZPR:$Z2, imm0_255:$index)>;
-  def : Pat<(nxv4i32 (vector_splice (nxv4i32 ZPR:$Z1), (nxv4i32 ZPR:$Z2), (i64 (sve_ext_imm_0_63 i32:$index)))),
-            (EXT_ZZI  ZPR:$Z1, ZPR:$Z2, imm0_255:$index)>;
-  def : Pat<(nxv2i64 (vector_splice (nxv2i64 ZPR:$Z1), (nxv2i64 ZPR:$Z2), (i64 (sve_ext_imm_0_31 i32:$index)))),
-            (EXT_ZZI  ZPR:$Z1, ZPR:$Z2, imm0_255:$index)>;
-
 } // End HasSVEorStreamingSVE
 
 let Predicates = [HasSVE, HasMatMulInt8] in {

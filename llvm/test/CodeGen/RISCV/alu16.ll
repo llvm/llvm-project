@@ -62,6 +62,24 @@ define i16 @sltiu(i16 %a) nounwind {
   ret i16 %2
 }
 
+; Make sure we avoid an AND, if the input of an unsigned compare is known
+; to be sign extended. This can occur due to InstCombine canonicalizing
+; x s>= 0 && x s< 10 to x u< 10.
+define i16 @sltiu_signext(i16 signext %a) nounwind {
+; RV32I-LABEL: sltiu_signext:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    sltiu a0, a0, 10
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: sltiu_signext:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    sltiu a0, a0, 10
+; RV64I-NEXT:    ret
+  %1 = icmp ult i16 %a, 10
+  %2 = zext i1 %1 to i16
+  ret i16 %2
+}
+
 define i16 @xori(i16 %a) nounwind {
 ; RV32I-LABEL: xori:
 ; RV32I:       # %bb.0:

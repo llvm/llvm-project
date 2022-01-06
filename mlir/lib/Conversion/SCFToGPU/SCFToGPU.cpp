@@ -261,7 +261,7 @@ void AffineLoopToGpuConverter::createLaunch(AffineForOp rootForOp,
   builder.setInsertionPointToStart(&launchOp.body().front());
   auto *lbArgumentIt = lbs.begin();
   auto *stepArgumentIt = steps.begin();
-  for (auto en : llvm::enumerate(ivs)) {
+  for (const auto &en : llvm::enumerate(ivs)) {
     Value id =
         en.index() < numBlockDims
             ? getDim3Value(launchOp.getBlockIds(), en.index())

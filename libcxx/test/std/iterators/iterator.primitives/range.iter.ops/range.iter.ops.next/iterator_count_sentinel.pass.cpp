@@ -13,18 +13,19 @@
 
 #include <iterator>
 #include <cassert>
+#include <type_traits>
 
 #include "test_iterators.h"
 
-template <std::input_or_output_iterator It>
-constexpr void check(It it, std::ptrdiff_t n, It last) {
+template <class It, class Sent = It>
+constexpr void check(It it, std::ptrdiff_t n, Sent last) {
   {
     It result = std::ranges::next(it, n, last);
     assert(result == last);
   }
 
   // Count the number of operations
-  {
+  if constexpr (std::is_same_v<It, Sent>) {
     stride_counting_iterator<It> strided_it(it);
     stride_counting_iterator<It> strided_last(last);
     stride_counting_iterator<It> result = std::ranges::next(strided_it, n, strided_last);
@@ -46,13 +47,13 @@ constexpr void check(It it, std::ptrdiff_t n, It last) {
 constexpr bool test() {
   int range[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 
-  check(cpp17_input_iterator(&range[0]), 1, cpp17_input_iterator(&range[1]));
+  check(cpp17_input_iterator(&range[0]), 1, sentinel_wrapper(cpp17_input_iterator(&range[1])));
   check(forward_iterator(&range[0]), 2, forward_iterator(&range[2]));
   check(bidirectional_iterator(&range[2]), 6, bidirectional_iterator(&range[8]));
   check(random_access_iterator(&range[3]), 2, random_access_iterator(&range[5]));
   check(contiguous_iterator(&range[0]), 5, contiguous_iterator(&range[5]));
 
-  check(cpp17_input_iterator(&range[0]), 0, cpp17_input_iterator(&range[0]));
+  check(cpp17_input_iterator(&range[0]), 0, sentinel_wrapper(cpp17_input_iterator(&range[0])));
   check(forward_iterator(&range[0]), 0, forward_iterator(&range[0]));
   check(bidirectional_iterator(&range[2]), 0, bidirectional_iterator(&range[2]));
   check(random_access_iterator(&range[3]), 0, random_access_iterator(&range[3]));

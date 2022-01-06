@@ -22,7 +22,6 @@ using llvm::Clause;
 using llvm::ClauseVal;
 using llvm::raw_ostream;
 using llvm::RecordKeeper;
-using llvm::Twine;
 
 // LLVM has multiple places (Clang, Flang, MLIR) where information about
 // the directives (OpenMP/OpenACC), and clauses are needed. It is good software
@@ -43,18 +42,18 @@ using llvm::Twine;
 static bool emitDecls(const RecordKeeper &recordKeeper, raw_ostream &os) {
   const auto &directiveLanguages =
       recordKeeper.getAllDerivedDefinitions("DirectiveLanguage");
-  assert(directiveLanguages.size() != 0 && "DirectiveLanguage missing.");
+  assert(!directiveLanguages.empty() && "DirectiveLanguage missing.");
 
   const auto &clauses = recordKeeper.getAllDerivedDefinitions("Clause");
 
   for (const auto &r : clauses) {
     Clause c{r};
     const auto &clauseVals = c.getClauseVals();
-    if (clauseVals.size() <= 0)
+    if (clauseVals.empty())
       continue;
 
     const auto enumName = c.getEnumName();
-    assert(enumName.size() != 0 && "enumClauseValue field not set.");
+    assert(!enumName.empty() && "enumClauseValue field not set.");
 
     std::vector<std::string> cvDefs;
     for (const auto &cv : clauseVals) {

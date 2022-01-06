@@ -64,7 +64,7 @@ using namespace mlir;
 /// Walks over all immediate return-like terminators in the given region.
 static LogicalResult
 walkReturnOperations(Region *region,
-                     std::function<LogicalResult(Operation *)> func) {
+                     llvm::function_ref<LogicalResult(Operation *)> func) {
   for (Block &block : *region) {
     Operation *terminator = block.getTerminator();
     // Skip non region-return-like terminators.

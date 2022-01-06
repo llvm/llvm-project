@@ -150,6 +150,7 @@ template <> struct hash<std::error_condition>;
 #include <stdexcept>
 #include <string>
 #include <type_traits>
+#include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header

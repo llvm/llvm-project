@@ -246,6 +246,49 @@ private:
   std::vector<syntax::Token> MainFileTokens;
 };
 
+// Find -W<group> and -Wno-<group> options in ExtraArgs and apply them to Diags.
+//
+// This is used to handle ExtraArgs in clang-tidy configuration.
+// We don't use clang's standard handling of this as we want slightly different
+// behavior (e.g. we want to exclude these from -Wno-error).
+void applyWarningOptions(llvm::ArrayRef<std::string> ExtraArgs,
+                         DiagnosticsEngine &Diags) {
+  for (llvm::StringRef Group : ExtraArgs) {
+    // Only handle args that are of the form -W[no-]<group>.
+    // Other flags are possible but rare and deliberately out of scope.
+    llvm::SmallVector<diag::kind> Members;
+    if (!Group.consume_front("-W") || Group.empty())
+      continue;
+    bool Enable = !Group.consume_front("no-");
+    if (Diags.getDiagnosticIDs()->getDiagnosticsInGroup(
+            diag::Flavor::WarningOrError, Group, Members))
+      continue;
+
+    // Upgrade (or downgrade) the severity of each diagnostic in the group.
+    // If -Werror is on, newly added warnings will be treated as errors.
+    // We don't want this, so keep track of them to fix afterwards.
+    bool NeedsWerrorExclusion = false;
+    for (diag::kind ID : Members) {
+      if (Enable) {
+        if (Diags.getDiagnosticLevel(ID, SourceLocation()) <
+            DiagnosticsEngine::Warning) {
+          Diags.setSeverity(ID, diag::Severity::Warning, SourceLocation());
+          if (Diags.getWarningsAsErrors())
+            NeedsWerrorExclusion = true;
+        }
+      } else {
+        Diags.setSeverity(ID, diag::Severity::Ignored, SourceLocation());
+      }
+    }
+    if (NeedsWerrorExclusion) {
+      // FIXME: there's no API to suppress -Werror for single diagnostics.
+      // In some cases with sub-groups, we may end up erroneously
+      // downgrading diagnostics that were -Werror in the compile command.
+      Diags.setDiagnosticGroupWarningAsError(Group, false);
+    }
+  }
+}
+
 } // namespace
 
 llvm::Optional<ParsedAST>
@@ -311,7 +354,32 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
                         : "unknown error");
     return None;
   }
-  if (!PreserveDiags) {
+  tidy::ClangTidyOptions ClangTidyOpts;
+  if (PreserveDiags) {
+    trace::Span Tracer("ClangTidyOpts");
+    ClangTidyOpts = getTidyOptionsForFile(Inputs.ClangTidyProvider, Filename);
+    dlog("ClangTidy configuration for file {0}: {1}", Filename,
+         tidy::configurationAsText(ClangTidyOpts));
+
+    // If clang-tidy is configured to emit clang warnings, we should too.
+    //
+    // Such clang-tidy configuration consists of two parts:
+    //   - ExtraArgs: ["-Wfoo"] causes clang to produce the warnings
+    //   - Checks: "clang-diagnostic-foo" prevents clang-tidy filtering them out
+    //
+    // We treat these as clang warnings, so the Checks part is not relevant.
+    // We must enable the warnings specified in ExtraArgs.
+    //
+    // We *don't* want to change the compile command directly. this can have
+    // too many unexpected effects: breaking the command, interactions with
+    // -- and -Werror, etc. Besides, we've already parsed the command.
+    // Instead we parse the -W<group> flags and handle them directly.
+    auto &Diags = Clang->getDiagnostics();
+    if (ClangTidyOpts.ExtraArgsBefore)
+      applyWarningOptions(*ClangTidyOpts.ExtraArgsBefore, Diags);
+    if (ClangTidyOpts.ExtraArgs)
+      applyWarningOptions(*ClangTidyOpts.ExtraArgs, Diags);
+  } else {
     // Skips some analysis.
     Clang->getDiagnosticOpts().IgnoreWarnings = true;
   }
@@ -348,10 +416,6 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   // diagnostics.
   if (PreserveDiags) {
     trace::Span Tracer("ClangTidyInit");
-    tidy::ClangTidyOptions ClangTidyOpts =
-        getTidyOptionsForFile(Inputs.ClangTidyProvider, Filename);
-    dlog("ClangTidy configuration for file {0}: {1}", Filename,
-         tidy::configurationAsText(ClangTidyOpts));
     tidy::ClangTidyCheckFactories CTFactories;
     for (const auto &E : tidy::ClangTidyModuleRegistry::entries())
       E.instantiate()->addCheckFactories(CTFactories);

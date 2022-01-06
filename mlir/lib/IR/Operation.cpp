@@ -995,7 +995,7 @@ LogicalResult OpTrait::impl::verifyValueSizeAttr(Operation *op,
 
   size_t totalCount = std::accumulate(
       sizeAttr.begin(), sizeAttr.end(), 0,
-      [](unsigned all, APInt one) { return all + one.getZExtValue(); });
+      [](unsigned all, const APInt &one) { return all + one.getZExtValue(); });
 
   if (totalCount != expectedCount)
     return op->emitOpError()

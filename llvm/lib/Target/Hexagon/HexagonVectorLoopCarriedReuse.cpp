@@ -659,8 +659,7 @@ void HexagonVectorLoopCarriedReuse::findLoopCarriedDeps() {
       delete D;
   }
   LLVM_DEBUG(dbgs() << "Found " << Dependences.size() << " dependences\n");
-  LLVM_DEBUG(for (size_t i = 0; i < Dependences.size();
-                  ++i) { dbgs() << *Dependences[i] << "\n"; });
+  LLVM_DEBUG(for (const DepChain *D : Dependences) dbgs() << *D << "\n";);
 }
 
 Pass *llvm::createHexagonVectorLoopCarriedReuseLegacyPass() {

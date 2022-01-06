@@ -17,7 +17,7 @@ class ConcurrentSignalDelayWatch(ConcurrentEventsBase):
     @add_test_categories(["watchpoint"])
     def test(self):
         """Test a (1 second delay) watchpoint and a signal in multiple threads."""
-        self.build(dictionary=self.getBuildFlags())
+        self.build()
         self.do_thread_actions(
             num_signal_threads=1,
             num_delay_watchpoint_threads=1)

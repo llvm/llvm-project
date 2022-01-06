@@ -96,14 +96,15 @@ public:
     VPVReplicateSC,
     VPVWidenSC,
     VPVWidenCallSC,
+    VPVWidenCanonicalIVSC,
     VPVWidenGEPSC,
     VPVWidenSelectSC,
 
     // Phi-like VPValues. Need to be kept together.
     VPVBlendSC,
+    VPVCanonicalIVPHISC,
     VPVFirstOrderRecurrencePHISC,
     VPVWidenPHISC,
-    VPVWidenCanonicalIVSC,
     VPVWidenIntOrFpInductionSC,
     VPVPredInstPHI,
     VPVReductionPHISC,
@@ -325,6 +326,7 @@ public:
     VPReductionSC,
     VPReplicateSC,
     VPWidenCallSC,
+    VPWidenCanonicalIVSC,
     VPWidenGEPSC,
     VPWidenMemoryInstructionSC,
     VPWidenSC,
@@ -332,9 +334,9 @@ public:
 
     // Phi-like recipes. Need to be kept together.
     VPBlendSC,
+    VPCanonicalIVPHISC,
     VPFirstOrderRecurrencePHISC,
     VPWidenPHISC,
-    VPWidenCanonicalIVSC,
     VPWidenIntOrFpInductionSC,
     VPPredInstPHISC,
     VPReductionPHISC,

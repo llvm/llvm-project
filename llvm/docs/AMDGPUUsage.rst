@@ -2016,9 +2016,10 @@ Debugger Information Entry Attributes
 -------------------------------------
 
 This section describes how certain debugger information entry attributes are
-used by AMDGPU. See the sections in DWARF Version 5 section 2 which are updated
-by *DWARF Extensions For Heterogeneous Debugging* section
-:ref:`amdgpu-dwarf-debugging-information-entry-attributes`.
+used by AMDGPU. See the sections in DWARF Version 5 section 3.3.5 and 3.1.1
+which are updated by *DWARF Extensions For Heterogeneous Debugging* section
+:ref:`amdgpu-dwarf-low-level-information` and
+:ref:`amdgpu-dwarf-full-and-partial-compilation-unit-entries`.
 
 .. _amdgpu-dwarf-dw-at-llvm-lane-pc:
 

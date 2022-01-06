@@ -416,8 +416,8 @@ void HexagonFrameLowering::findShrunkPrologEpilog(MachineFunction &MF,
   UnsignedMap RPO;
   RPOTType RPOT(&MF);
   unsigned RPON = 0;
-  for (RPOTType::rpo_iterator I = RPOT.begin(), E = RPOT.end(); I != E; ++I)
-    RPO[(*I)->getNumber()] = RPON++;
+  for (auto &I : RPOT)
+    RPO[I->getNumber()] = RPON++;
 
   // Don't process functions that have loops, at least for now. Placement
   // of prolog and epilog must take loop structure into account. For simpli-

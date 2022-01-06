@@ -98,12 +98,14 @@ static bool DecodeAArch64Features(const Driver &D, StringRef text,
       Features.push_back("-sve2-sm4");
     }
 
-    // +sve implies +f32mm if the base architecture is v8.6A, v8.7A, v9.1A or
-    // v9.2A. It isn't the case in general that sve implies both f64mm and f32mm
+    // +sve implies +f32mm if the base architecture is >= v8.6A (except v9A)
+    // It isn't the case in general that sve implies both f64mm and f32mm
     if ((ArchKind == llvm::AArch64::ArchKind::ARMV8_6A ||
          ArchKind == llvm::AArch64::ArchKind::ARMV8_7A ||
+         ArchKind == llvm::AArch64::ArchKind::ARMV8_8A ||
          ArchKind == llvm::AArch64::ArchKind::ARMV9_1A ||
-         ArchKind == llvm::AArch64::ArchKind::ARMV9_2A) &&
+         ArchKind == llvm::AArch64::ArchKind::ARMV9_2A ||
+         ArchKind == llvm::AArch64::ArchKind::ARMV9_3A) &&
         Feature == "sve")
       Features.push_back("+f32mm");
   }
@@ -390,9 +392,11 @@ fp16_fml_fallthrough:
   }
 
   if (std::find(ItBegin, ItEnd, "+v8.4a") != ItEnd ||
+      std::find(ItBegin, ItEnd, "+v8.8a") != ItEnd ||
       std::find(ItBegin, ItEnd, "+v9a") != ItEnd ||
       std::find(ItBegin, ItEnd, "+v9.1a") != ItEnd ||
-      std::find(ItBegin, ItEnd, "+v9.2a") != ItEnd) {
+      std::find(ItBegin, ItEnd, "+v9.2a") != ItEnd ||
+      std::find(ItBegin, ItEnd, "+v9.3a") != ItEnd) {
     if (HasCrypto && !NoCrypto) {
       // Check if we have NOT disabled an algorithm with something like:
       //   +crypto, -algorithm
@@ -451,7 +455,8 @@ fp16_fml_fallthrough:
     }
   }
 
-  const char *Archs[] = {"+v8.6a", "+v8.7a", "+v9.1a", "+v9.2a"};
+  const char *Archs[] = {"+v8.6a", "+v8.7a", "+v8.8a",
+                         "+v9.1a", "+v9.2a", "+v9.3a"};
   auto Pos = std::find_first_of(Features.begin(), Features.end(),
                                 std::begin(Archs), std::end(Archs));
   if (Pos != std::end(Features))

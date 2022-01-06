@@ -58,6 +58,24 @@ define i8 @sltiu(i8 %a) nounwind {
   ret i8 %2
 }
 
+; Make sure we avoid an AND, if the input of an unsigned compare is known
+; to be sign extended. This can occur due to InstCombine canonicalizing
+; x s>= 0 && x s< 10 to x u< 10.
+define i8 @sltiu_signext(i8 signext %a) nounwind {
+; RV32I-LABEL: sltiu_signext:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    sltiu a0, a0, 10
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: sltiu_signext:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    sltiu a0, a0, 10
+; RV64I-NEXT:    ret
+  %1 = icmp ult i8 %a, 10
+  %2 = zext i1 %1 to i8
+  ret i8 %2
+}
+
 define i8 @xori(i8 %a) nounwind {
 ; RV32I-LABEL: xori:
 ; RV32I:       # %bb.0:

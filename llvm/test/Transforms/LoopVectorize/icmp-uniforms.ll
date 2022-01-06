@@ -39,9 +39,11 @@ for.end:
 ; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT: loop:
+; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
 ; CHECK-NEXT:   WIDEN ir<%cond0> = icmp ir<%iv>, ir<13>
 ; CHECK-NEXT:   WIDEN-SELECT ir<%s> = select ir<%cond0>, ir<10>, ir<20>
+; CHECK-NEXT:   EMIT vp<{{.+}}> = VF * UF + vp<[[CAN_IV]]>
 ; CHECK-NEXT: No successor
 ; CHECK-NEXT: }
 define void @test() {

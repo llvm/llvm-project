@@ -228,7 +228,9 @@ bool HexagonSubtarget::isTypeForHVX(Type *VecTy, bool IncludeBool) const {
   if (!VecTy->isVectorTy() || isa<ScalableVectorType>(VecTy))
     return false;
   // Avoid types like <2 x i32*>.
-  if (!cast<VectorType>(VecTy)->getElementType()->isIntegerTy())
+  Type *ScalTy = VecTy->getScalarType();
+  if (!ScalTy->isIntegerTy() &&
+      !(ScalTy->isFloatingPointTy() && useHVXFloatingPoint()))
     return false;
   // The given type may be something like <17 x i32>, which is not MVT,
   // but can be represented as (non-simple) EVT.
@@ -466,28 +468,46 @@ void HexagonSubtarget::adjustSchedDependency(SUnit *Src, int SrcOpIdx,
     return;
   }
 
-  if (!hasV60Ops())
-    return;
-
-  // Set the latency for a copy to zero since we hope that is will get removed.
+  // Set the latency for a copy to zero since we hope that is will get
+  // removed.
   if (DstInst->isCopy())
     Dep.setLatency(0);
 
   // If it's a REG_SEQUENCE/COPY, use its destination instruction to determine
   // the correct latency.
-  if ((DstInst->isRegSequence() || DstInst->isCopy()) && Dst->NumSuccs == 1) {
+  // If there are multiple uses of the def of COPY/REG_SEQUENCE, set the latency
+  // only if the latencies on all the uses are equal, otherwise set it to
+  // default.
+  if ((DstInst->isRegSequence() || DstInst->isCopy())) {
     Register DReg = DstInst->getOperand(0).getReg();
-    MachineInstr *DDst = Dst->Succs[0].getSUnit()->getInstr();
-    unsigned UseIdx = -1;
-    for (unsigned OpNum = 0; OpNum < DDst->getNumOperands(); OpNum++) {
-      const MachineOperand &MO = DDst->getOperand(OpNum);
-      if (MO.isReg() && MO.getReg() && MO.isUse() && MO.getReg() == DReg) {
-        UseIdx = OpNum;
+    int DLatency = -1;
+    for (const auto &DDep : Dst->Succs) {
+      MachineInstr *DDst = DDep.getSUnit()->getInstr();
+      int UseIdx = -1;
+      for (unsigned OpNum = 0; OpNum < DDst->getNumOperands(); OpNum++) {
+        const MachineOperand &MO = DDst->getOperand(OpNum);
+        if (MO.isReg() && MO.getReg() && MO.isUse() && MO.getReg() == DReg) {
+          UseIdx = OpNum;
+          break;
+        }
+      }
+
+      if (UseIdx == -1)
+        continue;
+
+      int Latency = (InstrInfo.getOperandLatency(&InstrItins, *SrcInst, 0,
+                                                 *DDst, UseIdx));
+      // Set DLatency for the first time.
+      DLatency = (DLatency == -1) ? Latency : DLatency;
+
+      // For multiple uses, if the Latency is different across uses, reset
+      // DLatency.
+      if (DLatency != Latency) {
+        DLatency = -1;
         break;
       }
     }
-    int DLatency = (InstrInfo.getOperandLatency(&InstrItins, *SrcInst,
-                                                0, *DDst, UseIdx));
+
     DLatency = std::max(DLatency, 0);
     Dep.setLatency((unsigned)DLatency);
   }
@@ -500,8 +520,10 @@ void HexagonSubtarget::adjustSchedDependency(SUnit *Src, int SrcOpIdx,
     Dep.setLatency(0);
     return;
   }
-
-  updateLatency(*SrcInst, *DstInst, Dep);
+  int Latency = Dep.getLatency();
+  bool IsArtificial = Dep.isArtificial();
+  Latency = updateLatency(*SrcInst, *DstInst, IsArtificial, Latency);
+  Dep.setLatency(Latency);
 }
 
 void HexagonSubtarget::getPostRAMutations(
@@ -530,21 +552,19 @@ bool HexagonSubtarget::usePredicatedCalls() const {
   return EnablePredicatedCalls;
 }
 
-void HexagonSubtarget::updateLatency(MachineInstr &SrcInst,
-      MachineInstr &DstInst, SDep &Dep) const {
-  if (Dep.isArtificial()) {
-    Dep.setLatency(1);
-    return;
-  }
-
+int HexagonSubtarget::updateLatency(MachineInstr &SrcInst,
+                                    MachineInstr &DstInst, bool IsArtificial,
+                                    int Latency) const {
+  if (IsArtificial)
+    return 1;
   if (!hasV60Ops())
-    return;
+    return Latency;
 
-  auto &QII = static_cast<const HexagonInstrInfo&>(*getInstrInfo());
-
+  auto &QII = static_cast<const HexagonInstrInfo &>(*getInstrInfo());
   // BSB scheduling.
   if (QII.isHVXVec(SrcInst) || useBSBScheduling())
-    Dep.setLatency((Dep.getLatency() + 1) >> 1);
+    Latency = (Latency + 1) >> 1;
+  return Latency;
 }
 
 void HexagonSubtarget::restoreLatency(SUnit *Src, SUnit *Dst) const {
@@ -580,9 +600,9 @@ void HexagonSubtarget::restoreLatency(SUnit *Src, SUnit *Dst) const {
         // For some instructions (ex: COPY), we might end up with < 0 latency
         // as they don't have any Itinerary class associated with them.
         Latency = std::max(Latency, 0);
-
+        bool IsArtificial = I.isArtificial();
+        Latency = updateLatency(*SrcI, *DstI, IsArtificial, Latency);
         I.setLatency(Latency);
-        updateLatency(*SrcI, *DstI, I);
       }
     }
 

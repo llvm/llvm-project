@@ -1713,6 +1713,15 @@ private:
                                      bool IsSubExpr,
                                      bool AllowPredicates = false);
 
+  /// Variant of previous which takes the components representing an ICmp
+  /// as opposed to the ICmpInst itself.  Note that the prior version can
+  /// return more precise results in some cases and is preferred when caller
+  /// has a materialized ICmp.
+  ExitLimit computeExitLimitFromICmp(const Loop *L, ICmpInst::Predicate Pred,
+                                     const SCEV *LHS, const SCEV *RHS,
+                                     bool IsSubExpr,
+                                     bool AllowPredicates = false);
+
   /// Compute the number of times the backedge of the specified loop will
   /// execute if its exit condition were a switch with a single exiting case
   /// to ExitingBB.

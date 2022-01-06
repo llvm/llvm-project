@@ -48,3 +48,15 @@ struct coroutine_traits {
 // CHECK: [[CAST3:%[0-9]+]] = bitcast %"struct.std::awaitable"* %ref.tmp{{.*}} to i8*
 // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 1, i8* [[CAST3]])
 void foo() { co_return; }
+
+// Check that bar is not inlined even it's marked as always_inline.
+
+// CHECK-LABEL:   define {{.*}} void @_Z3bazv()
+// CHECK:         call void @_Z3barv(
+__attribute__((__always_inline__)) void bar() {
+  co_return;
+}
+void baz() {
+  bar();
+  co_return;
+}

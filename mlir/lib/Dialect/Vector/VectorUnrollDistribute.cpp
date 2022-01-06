@@ -52,7 +52,7 @@ sliceTransferIndices(int64_t index, ArrayRef<int64_t> originalShape,
       getVectorOffset(originalShape, targetShape, index);
   // Compute 'sliceIndices' by adding 'sliceOffsets[i]' to 'indices[i]'.
   SmallVector<Value> slicedIndices(indices.begin(), indices.end());
-  for (auto dim : llvm::enumerate(permutationMap.getResults())) {
+  for (const auto &dim : llvm::enumerate(permutationMap.getResults())) {
     if (isBroadcast(dim.value()))
       continue;
     unsigned pos = dim.value().cast<AffineDimExpr>().getPosition();
@@ -429,7 +429,7 @@ struct ContractExtractPattern : public OpRewritePattern<vector::ExtractMapOp> {
     for (unsigned i : llvm::seq(unsigned(0), affineMap.getNumResults()))
       map[affineMap.getDimPosition(i)] = extract.getResultType().getDimSize(i);
     SmallVector<Value, 4> extractOperands;
-    for (auto it : llvm::enumerate(contract.getIndexingMaps())) {
+    for (const auto &it : llvm::enumerate(contract.getIndexingMaps())) {
       // For each operands calculate the new vector type after distribution.
       Value operand = contract->getOperand(it.index());
       auto vecType = operand.getType().cast<VectorType>();

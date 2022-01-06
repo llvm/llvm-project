@@ -695,14 +695,30 @@ void DWARFContext::dump(
 
 DWARFTypeUnit *DWARFContext::getTypeUnitForHash(uint16_t Version, uint64_t Hash,
                                                 bool IsDWO) {
-  // FIXME: Check for/use the tu_index here, if there is one.
-  for (const auto &U : IsDWO ? dwo_units() : normal_units()) {
-    if (DWARFTypeUnit *TU = dyn_cast<DWARFTypeUnit>(U.get())) {
-      if (TU->getTypeHash() == Hash)
-        return TU;
+  parseDWOUnits(LazyParse);
+
+  if (const auto &TUI = getTUIndex()) {
+    if (const auto *R = TUI.getFromHash(Hash))
+      return dyn_cast_or_null<DWARFTypeUnit>(
+          DWOUnits.getUnitForIndexEntry(*R));
+    return nullptr;
+  }
+
+  struct UnitContainers {
+    const DWARFUnitVector &Units;
+    Optional<DenseMap<uint64_t, DWARFTypeUnit *>> &Map;
+  };
+  UnitContainers Units = IsDWO ? UnitContainers{DWOUnits, DWOTypeUnits}
+                               : UnitContainers{NormalUnits, NormalTypeUnits};
+  if (!Units.Map) {
+    Units.Map.emplace();
+    for (const auto &U : IsDWO ? dwo_units() : normal_units()) {
+      if (DWARFTypeUnit *TU = dyn_cast<DWARFTypeUnit>(U.get()))
+        (*Units.Map)[TU->getTypeHash()] = TU;
     }
   }
-  return nullptr;
+
+  return (*Units.Map)[Hash];
 }
 
 DWARFCompileUnit *DWARFContext::getDWOCompileUnitForHash(uint64_t Hash) {
@@ -1098,6 +1114,7 @@ static Optional<uint64_t> getTypeSize(DWARFDie Type, uint64_t PointerSize) {
     return PointerSize;
   }
   case DW_TAG_const_type:
+  case DW_TAG_immutable_type:
   case DW_TAG_volatile_type:
   case DW_TAG_restrict_type:
   case DW_TAG_typedef: {

@@ -26,8 +26,6 @@
 using namespace llvm;
 using namespace polly;
 
-extern bool polly::PollyAllowFullFunction;
-
 namespace {
 class ScopInliner : public CallGraphSCCPass {
   using llvm::Pass::doInitialization;

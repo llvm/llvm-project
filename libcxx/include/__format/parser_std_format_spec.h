@@ -214,7 +214,7 @@ __parse_arg_id(const _CharT* __begin, const _CharT* __end, auto& __parse_ctx) {
       __format::__parse_arg_id(__begin, __end, __parse_ctx);
 
   if (__r.__ptr == __end || *__r.__ptr != _CharT('}'))
-    __throw_format_error("A format-spec arg-id should terminate at a '}'");
+    __throw_format_error("Invalid arg-id");
 
   ++__r.__ptr;
   return __r;
@@ -362,17 +362,6 @@ protected:
     ++__begin;
     if (__begin == __end)
       __throw_format_error("End of input while parsing format-spec precision");
-
-    if (*__begin == _CharT('0')) {
-      ++__begin;
-      if (__begin != __end && *__begin >= '0' && *__begin <= '9')
-        __throw_format_error(
-            "A format-spec precision field shouldn't have a leading zero");
-
-      __precision = 0;
-      __precision_as_arg = 0;
-      return __begin;
-    }
 
     if (*__begin == _CharT('{')) {
       __format::__parse_number_result __arg_id =

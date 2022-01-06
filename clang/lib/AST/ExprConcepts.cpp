@@ -57,9 +57,9 @@ ConceptSpecializationExpr::ConceptSpecializationExpr(
 }
 
 ConceptSpecializationExpr::ConceptSpecializationExpr(EmptyShell Empty,
-    unsigned NumTemplateArgs)
-    : Expr(ConceptSpecializationExprClass, Empty), ConceptReference(),
-      NumTemplateArgs(NumTemplateArgs) { }
+                                                     unsigned NumTemplateArgs)
+    : Expr(ConceptSpecializationExprClass, Empty),
+      NumTemplateArgs(NumTemplateArgs) {}
 
 void ConceptSpecializationExpr::setTemplateArguments(
     ArrayRef<TemplateArgument> Converted) {

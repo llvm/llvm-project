@@ -182,7 +182,7 @@ LogicalResult ProcessInterfaceVarABI::matchAndRewrite(
   auto indexType = typeConverter.getIndexType();
 
   auto attrName = spirv::getInterfaceVarABIAttrName();
-  for (auto argType : llvm::enumerate(funcOp.getType().getInputs())) {
+  for (const auto &argType : llvm::enumerate(funcOp.getType().getInputs())) {
     auto abiInfo = funcOp.getArgAttrOfType<spirv::InterfaceVarABIAttr>(
         argType.index(), attrName);
     if (!abiInfo) {

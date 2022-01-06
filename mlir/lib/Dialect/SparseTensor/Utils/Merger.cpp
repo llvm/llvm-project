@@ -137,7 +137,7 @@ unsigned Merger::mapSet(Kind kind, unsigned s0, Value v) {
 
 unsigned Merger::optimizeSet(unsigned s0) {
   unsigned s = addSet();
-  assert(latSets[s0].size() != 0);
+  assert(!latSets[s0].empty());
   unsigned p0 = latSets[s0][0];
   for (unsigned p1 : latSets[s0]) {
     bool add = true;

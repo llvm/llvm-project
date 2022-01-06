@@ -15,6 +15,7 @@
 
 #include <array>
 #include <cassert>
+#include <cstddef>
 
 #include "test_iterators.h"
 
@@ -44,61 +45,103 @@ private:
   std::ptrdiff_t count_ = 0;
 };
 
-template <std::input_or_output_iterator It, std::sentinel_for<It> Sent = It>
-constexpr void check_assignable_case(std::ptrdiff_t const n) {
+template <class It, class Sent = It>
+constexpr void check_assignable_case() {
   auto range = range_t{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-  auto first = stride_counting_iterator(It(range.begin()));
-  std::ranges::advance(first, stride_counting_iterator(Sent(It(range.begin() + n))));
-  assert(first.base().base() == range.begin() + n);
-  assert(first.stride_count() == 0); // because we got here by assigning from last, not by incrementing
-}
 
-template <std::input_or_output_iterator It>
-constexpr void check_sized_sentinel_case(std::ptrdiff_t const n) {
-  auto range = range_t{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-  auto first = stride_counting_iterator(It(range.begin()));
-  std::ranges::advance(first, distance_apriori_sentinel(n));
+  for (std::ptrdiff_t n = 0; n != 9; ++n) {
+    {
+      It first(range.begin());
+      Sent last(It(range.begin() + n));
+      std::ranges::advance(first, last);
+      assert(base(first) == range.begin() + n);
+    }
 
-  assert(first.base().base() == range.begin() + n);
-  if constexpr (std::random_access_iterator<It>) {
-    assert(first.stride_count() == 1);
-    assert(first.stride_displacement() == 1);
-  } else {
-    assert(first.stride_count() == n);
-    assert(first.stride_displacement() == n);
+    // Count operations
+    if constexpr (std::is_same_v<It, Sent>) {
+      stride_counting_iterator<It> first(It(range.begin()));
+      stride_counting_iterator<It> last(It(range.begin() + n));
+      std::ranges::advance(first, last);
+      assert(first.base().base() == range.begin() + n);
+      assert(first.stride_count() == 0); // because we got here by assigning from last, not by incrementing
+    }
   }
 }
 
-template <std::input_or_output_iterator It>
-constexpr void check_sentinel_case(std::ptrdiff_t const n) {
+template <class It>
+constexpr void check_sized_sentinel_case() {
   auto range = range_t{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-  auto first = stride_counting_iterator(It(range.begin()));
-  auto const last = It(range.begin() + n);
-  std::ranges::advance(first, sentinel_wrapper(last));
-  assert(first.base() == last);
-  assert(first.stride_count() == n);
+
+  for (std::ptrdiff_t n = 0; n != 9; ++n) {
+    {
+      It first(range.begin());
+      distance_apriori_sentinel last(n);
+      std::ranges::advance(first, last);
+      assert(base(first) == range.begin() + n);
+    }
+
+    // Count operations
+    {
+      stride_counting_iterator<It> first(It(range.begin()));
+      distance_apriori_sentinel last(n);
+      std::ranges::advance(first, last);
+
+      assert(first.base().base() == range.begin() + n);
+      if constexpr (std::random_access_iterator<It>) {
+        assert(first.stride_count() == 1);
+        assert(first.stride_displacement() == 1);
+      } else {
+        assert(first.stride_count() == n);
+        assert(first.stride_displacement() == n);
+      }
+    }
+  }
+}
+
+template <class It>
+constexpr void check_sentinel_case() {
+  auto range = range_t{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+
+  for (std::ptrdiff_t n = 0; n != 9; ++n) {
+    {
+      It first(range.begin());
+      sentinel_wrapper<It> last(It(range.begin() + n));
+      std::ranges::advance(first, last);
+      assert(base(first) == range.begin() + n);
+    }
+
+    // Count operations
+    {
+      stride_counting_iterator<It> first(It(range.begin()));
+      sentinel_wrapper<It> last(It(range.begin() + n));
+      std::ranges::advance(first, last);
+      assert(first.base() == last);
+      assert(first.stride_count() == n);
+    }
+  }
 }
 
 constexpr bool test() {
-  check_assignable_case<cpp17_input_iterator<range_t::const_iterator> >(1);
-  check_assignable_case<forward_iterator<range_t::const_iterator> >(3);
-  check_assignable_case<bidirectional_iterator<range_t::const_iterator> >(4);
-  check_assignable_case<random_access_iterator<range_t::const_iterator> >(5);
-  check_assignable_case<contiguous_iterator<range_t::const_iterator> >(6);
+  using It = range_t::const_iterator;
+  check_assignable_case<cpp17_input_iterator<It>, sentinel_wrapper<cpp17_input_iterator<It>>>();
+  check_assignable_case<forward_iterator<It>>();
+  check_assignable_case<bidirectional_iterator<It>>();
+  check_assignable_case<random_access_iterator<It>>();
+  check_assignable_case<contiguous_iterator<It>>();
 
-  check_sized_sentinel_case<cpp17_input_iterator<range_t::const_iterator> >(7);
-  check_sized_sentinel_case<cpp20_input_iterator<range_t::const_iterator> >(6);
-  check_sized_sentinel_case<forward_iterator<range_t::const_iterator> >(5);
-  check_sized_sentinel_case<bidirectional_iterator<range_t::const_iterator> >(4);
-  check_sized_sentinel_case<random_access_iterator<range_t::const_iterator> >(3);
-  check_sized_sentinel_case<contiguous_iterator<range_t::const_iterator> >(2);
+  check_sized_sentinel_case<cpp17_input_iterator<It>>();
+  check_sized_sentinel_case<cpp20_input_iterator<It>>();
+  check_sized_sentinel_case<forward_iterator<It>>();
+  check_sized_sentinel_case<bidirectional_iterator<It>>();
+  check_sized_sentinel_case<random_access_iterator<It>>();
+  check_sized_sentinel_case<contiguous_iterator<It>>();
 
-  check_sentinel_case<cpp17_input_iterator<range_t::const_iterator> >(1);
+  check_sentinel_case<cpp17_input_iterator<It>>();
   // cpp20_input_iterator not copyable, so is omitted
-  check_sentinel_case<forward_iterator<range_t::const_iterator> >(3);
-  check_sentinel_case<bidirectional_iterator<range_t::const_iterator> >(4);
-  check_sentinel_case<random_access_iterator<range_t::const_iterator> >(5);
-  check_sentinel_case<contiguous_iterator<range_t::const_iterator> >(6);
+  check_sentinel_case<forward_iterator<It>>();
+  check_sentinel_case<bidirectional_iterator<It>>();
+  check_sentinel_case<random_access_iterator<It>>();
+  check_sentinel_case<contiguous_iterator<It>>();
   return true;
 }
 

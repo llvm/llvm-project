@@ -236,10 +236,10 @@ void MultiplexASTMutationListener::AddedAttributeToRecord(
 
 MultiplexConsumer::MultiplexConsumer(
     std::vector<std::unique_ptr<ASTConsumer>> C)
-    : Consumers(std::move(C)), MutationListener(), DeserializationListener() {
+    : Consumers(std::move(C)) {
   // Collect the mutation listeners and deserialization listeners of all
   // children, and create a multiplex listener each if so.
-  std::vector<ASTMutationListener*> mutationListeners;
+  std::vector<ASTMutationListener *> mutationListeners;
   std::vector<ASTDeserializationListener*> serializationListeners;
   for (auto &Consumer : Consumers) {
     if (auto *mutationListener = Consumer->GetASTMutationListener())

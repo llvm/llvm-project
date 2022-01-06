@@ -3655,7 +3655,6 @@ static bool hasSameNumEltsOnAllVectorOperands(
     if (!Ty.isVector()) {
       if (!is_contained(NonVecOpIndices, OpIdx))
         return false;
-      is_contained(NonVecOpIndices, OpIdx);
       continue;
     }
 

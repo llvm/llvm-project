@@ -2217,7 +2217,7 @@ private:
   /// attribute.
   void handleTypesMatchConstraint(
       llvm::StringMap<TypeResolutionInstance> &variableTyResolver,
-      llvm::Record def);
+      const llvm::Record &def);
 
   /// Returns an argument or attribute with the given name that has been seen
   /// within the format.
@@ -2345,9 +2345,16 @@ LogicalResult FormatParser::parse() {
       handleSameTypesConstraint(variableTyResolver, /*includeResults=*/true);
     } else if (def.isSubClassOf("TypesMatchWith")) {
       handleTypesMatchConstraint(variableTyResolver, def);
-    } else if (def.getName() == "InferTypeOpInterface" &&
-               !op.allResultTypesKnown()) {
-      canInferResultTypes = true;
+    } else if (!op.allResultTypesKnown()) {
+      // This doesn't check the name directly to handle
+      //    DeclareOpInterfaceMethods<InferTypeOpInterface>
+      // and the like.
+      // TODO: Add hasCppInterface check.
+      if (auto name = def.getValueAsOptionalString("cppClassName")) {
+        if (*name == "InferTypeOpInterface" &&
+            def.getValueAsString("cppNamespace") == "::mlir")
+          canInferResultTypes = true;
+      }
     }
   }
 
@@ -2621,7 +2628,7 @@ void FormatParser::handleSameTypesConstraint(
 
 void FormatParser::handleTypesMatchConstraint(
     llvm::StringMap<TypeResolutionInstance> &variableTyResolver,
-    llvm::Record def) {
+    const llvm::Record &def) {
   StringRef lhsName = def.getValueAsString("lhs");
   StringRef rhsName = def.getValueAsString("rhs");
   StringRef transformer = def.getValueAsString("transformer");

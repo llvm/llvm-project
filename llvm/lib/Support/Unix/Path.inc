@@ -273,7 +273,7 @@ std::string getMainExecutable(const char *argv0, void *MainAddr) {
     // the program, and not the eventual binary file. Therefore, call realpath
     // so this behaves the same on all platforms.
 #if _POSIX_VERSION >= 200112 || defined(__GLIBC__)
-    if (char *real_path = realpath(exe_path, NULL)) {
+    if (char *real_path = realpath(exe_path, nullptr)) {
       std::string ret = std::string(real_path);
       free(real_path);
       return ret;
@@ -868,6 +868,17 @@ mapped_file_region::mapped_file_region(int fd, mapmode mode, size_t length,
 void mapped_file_region::unmapImpl() {
   if (Mapping)
     ::munmap(Mapping, Size);
+}
+
+void mapped_file_region::dontNeedImpl() {
+  assert(Mode == mapped_file_region::readonly);
+#if defined(__MVS__) || defined(_AIX)
+  // If we don't have madvise, or it isn't beneficial, treat this as a no-op.
+  return;
+#else
+  if (Mapping)
+    ::madvise(Mapping, Size, MADV_DONTNEED);
+#endif
 }
 
 int mapped_file_region::alignment() {

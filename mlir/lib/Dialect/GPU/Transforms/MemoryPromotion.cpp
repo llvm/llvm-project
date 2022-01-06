@@ -89,7 +89,7 @@ static void insertCopyLoops(ImplicitLocOpBuilder &b, Value from, Value to) {
       });
 
   // Map the innermost loops to threads in reverse order.
-  for (auto en :
+  for (const auto &en :
        llvm::enumerate(llvm::reverse(llvm::makeArrayRef(ivs).take_back(
            GPUDialect::getNumWorkgroupDimensions())))) {
     Value v = en.value();

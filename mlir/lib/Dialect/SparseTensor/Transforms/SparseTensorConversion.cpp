@@ -14,6 +14,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CodegenUtils.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
@@ -38,113 +39,6 @@ enum class EmitCInterface : bool { Off = false, On = true };
 //===----------------------------------------------------------------------===//
 // Helper methods.
 //===----------------------------------------------------------------------===//
-
-/// Generates a constant zero of the given type.
-inline static Value constantZero(ConversionPatternRewriter &rewriter,
-                                 Location loc, Type t) {
-  return rewriter.create<arith::ConstantOp>(loc, t, rewriter.getZeroAttr(t));
-}
-
-/// Generates a constant of `index` type.
-inline static Value constantIndex(ConversionPatternRewriter &rewriter,
-                                  Location loc, int64_t i) {
-  return rewriter.create<arith::ConstantIndexOp>(loc, i);
-}
-
-/// Generates a constant of `i32` type.
-inline static Value constantI32(ConversionPatternRewriter &rewriter,
-                                Location loc, int32_t i) {
-  return rewriter.create<arith::ConstantIntOp>(loc, i, 32);
-}
-
-/// Generates a constant of `i8` type.
-inline static Value constantI8(ConversionPatternRewriter &rewriter,
-                               Location loc, int8_t i) {
-  return rewriter.create<arith::ConstantIntOp>(loc, i, 8);
-}
-
-/// Generates a constant of the given `Action`.
-static Value constantAction(ConversionPatternRewriter &rewriter, Location loc,
-                            Action action) {
-  return constantI32(rewriter, loc, static_cast<uint32_t>(action));
-}
-
-/// Generates a constant of the internal type encoding for overhead storage.
-static Value constantOverheadTypeEncoding(ConversionPatternRewriter &rewriter,
-                                          Location loc, unsigned width) {
-  OverheadType sec;
-  switch (width) {
-  default:
-    sec = OverheadType::kU64;
-    break;
-  case 32:
-    sec = OverheadType::kU32;
-    break;
-  case 16:
-    sec = OverheadType::kU16;
-    break;
-  case 8:
-    sec = OverheadType::kU8;
-    break;
-  }
-  return constantI32(rewriter, loc, static_cast<uint32_t>(sec));
-}
-
-/// Generates a constant of the internal type encoding for pointer
-/// overhead storage.
-static Value constantPointerTypeEncoding(ConversionPatternRewriter &rewriter,
-                                         Location loc,
-                                         SparseTensorEncodingAttr &enc) {
-  return constantOverheadTypeEncoding(rewriter, loc, enc.getPointerBitWidth());
-}
-
-/// Generates a constant of the internal type encoding for index overhead
-/// storage.
-static Value constantIndexTypeEncoding(ConversionPatternRewriter &rewriter,
-                                       Location loc,
-                                       SparseTensorEncodingAttr &enc) {
-  return constantOverheadTypeEncoding(rewriter, loc, enc.getIndexBitWidth());
-}
-
-/// Generates a constant of the internal type encoding for primary storage.
-static Value constantPrimaryTypeEncoding(ConversionPatternRewriter &rewriter,
-                                         Location loc, Type tp) {
-  PrimaryType primary;
-  if (tp.isF64())
-    primary = PrimaryType::kF64;
-  else if (tp.isF32())
-    primary = PrimaryType::kF32;
-  else if (tp.isInteger(64))
-    primary = PrimaryType::kI64;
-  else if (tp.isInteger(32))
-    primary = PrimaryType::kI32;
-  else if (tp.isInteger(16))
-    primary = PrimaryType::kI16;
-  else if (tp.isInteger(8))
-    primary = PrimaryType::kI8;
-  else
-    llvm_unreachable("Unknown element type");
-  return constantI32(rewriter, loc, static_cast<uint32_t>(primary));
-}
-
-/// Generates a constant of the internal dimension level type encoding.
-static Value
-constantDimLevelTypeEncoding(ConversionPatternRewriter &rewriter, Location loc,
-                             SparseTensorEncodingAttr::DimLevelType dlt) {
-  DimLevelType dlt2;
-  switch (dlt) {
-  case SparseTensorEncodingAttr::DimLevelType::Dense:
-    dlt2 = DimLevelType::kDense;
-    break;
-  case SparseTensorEncodingAttr::DimLevelType::Compressed:
-    dlt2 = DimLevelType::kCompressed;
-    break;
-  case SparseTensorEncodingAttr::DimLevelType::Singleton:
-    dlt2 = DimLevelType::kSingleton;
-    break;
-  }
-  return constantI8(rewriter, loc, static_cast<uint8_t>(dlt2));
-}
 
 /// Returns the equivalent of `void*` for opaque arguments to the
 /// execution engine.
@@ -336,22 +230,6 @@ static void newParams(ConversionPatternRewriter &rewriter,
   params.push_back(ptr);
 }
 
-/// Generates the comparison `v != 0` where `v` is of numeric type `t`.
-/// For floating types, we use the "unordered" comparator (i.e., returns
-/// true if `v` is NaN).
-static Value genIsNonzero(ConversionPatternRewriter &rewriter, Location loc,
-                          Value v) {
-  Type t = v.getType();
-  Value zero = constantZero(rewriter, loc, t);
-  if (t.isa<FloatType>())
-    return rewriter.create<arith::CmpFOp>(loc, arith::CmpFPredicate::UNE, v,
-                                          zero);
-  if (t.isIntOrIndex())
-    return rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ne, v,
-                                          zero);
-  llvm_unreachable("Unknown element type");
-}
-
 /// Generates the code to read the value from tensor[ivs], and conditionally
 /// stores the indices ivs to the memory in ind. The generated code looks like
 /// the following and the insertion point after this routine is inside the
@@ -382,21 +260,7 @@ static Value genIndexAndValueForDense(ConversionPatternRewriter &rewriter,
 static void genAddEltCall(ConversionPatternRewriter &rewriter, Operation *op,
                           Type eltType, Value ptr, Value val, Value ind,
                           Value perm) {
-  StringRef name;
-  if (eltType.isF64())
-    name = "addEltF64";
-  else if (eltType.isF32())
-    name = "addEltF32";
-  else if (eltType.isInteger(64))
-    name = "addEltI64";
-  else if (eltType.isInteger(32))
-    name = "addEltI32";
-  else if (eltType.isInteger(16))
-    name = "addEltI16";
-  else if (eltType.isInteger(8))
-    name = "addEltI8";
-  else
-    llvm_unreachable("Unknown element type");
+  SmallString<9> name{"addElt", primaryTypeFunctionSuffix(eltType)};
   SmallVector<Value, 4> params{ptr, val, ind, perm};
   Type pTp = getOpaquePointerType(rewriter);
   createFuncCall(rewriter, op, name, pTp, params, EmitCInterface::On);
@@ -409,21 +273,7 @@ static void genAddEltCall(ConversionPatternRewriter &rewriter, Operation *op,
 static Value genGetNextCall(ConversionPatternRewriter &rewriter, Operation *op,
                             Value iter, Value ind, Value elemPtr) {
   Type elemTp = elemPtr.getType().cast<ShapedType>().getElementType();
-  StringRef name;
-  if (elemTp.isF64())
-    name = "getNextF64";
-  else if (elemTp.isF32())
-    name = "getNextF32";
-  else if (elemTp.isInteger(64))
-    name = "getNextI64";
-  else if (elemTp.isInteger(32))
-    name = "getNextI32";
-  else if (elemTp.isInteger(16))
-    name = "getNextI16";
-  else if (elemTp.isInteger(8))
-    name = "getNextI8";
-  else
-    llvm_unreachable("Unknown element type");
+  SmallString<10> name{"getNext", primaryTypeFunctionSuffix(elemTp)};
   SmallVector<Value, 3> params{iter, ind, elemPtr};
   Type i1 = rewriter.getI1Type();
   return createFuncCall(rewriter, op, name, i1, params, EmitCInterface::On)
@@ -790,20 +640,8 @@ public:
   matchAndRewrite(ToPointersOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Type resType = op.getType();
-    Type eltType = resType.cast<ShapedType>().getElementType();
-    StringRef name;
-    if (eltType.isIndex())
-      name = "sparsePointers";
-    else if (eltType.isInteger(64))
-      name = "sparsePointers64";
-    else if (eltType.isInteger(32))
-      name = "sparsePointers32";
-    else if (eltType.isInteger(16))
-      name = "sparsePointers16";
-    else if (eltType.isInteger(8))
-      name = "sparsePointers8";
-    else
-      return failure();
+    Type ptrType = resType.cast<ShapedType>().getElementType();
+    SmallString<16> name{"sparsePointers", overheadTypeFunctionSuffix(ptrType)};
     replaceOpWithFuncCall(rewriter, op, name, resType, adaptor.getOperands(),
                           EmitCInterface::On);
     return success();
@@ -818,20 +656,8 @@ public:
   matchAndRewrite(ToIndicesOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Type resType = op.getType();
-    Type eltType = resType.cast<ShapedType>().getElementType();
-    StringRef name;
-    if (eltType.isIndex())
-      name = "sparseIndices";
-    else if (eltType.isInteger(64))
-      name = "sparseIndices64";
-    else if (eltType.isInteger(32))
-      name = "sparseIndices32";
-    else if (eltType.isInteger(16))
-      name = "sparseIndices16";
-    else if (eltType.isInteger(8))
-      name = "sparseIndices8";
-    else
-      return failure();
+    Type indType = resType.cast<ShapedType>().getElementType();
+    SmallString<15> name{"sparseIndices", overheadTypeFunctionSuffix(indType)};
     replaceOpWithFuncCall(rewriter, op, name, resType, adaptor.getOperands(),
                           EmitCInterface::On);
     return success();
@@ -847,21 +673,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     Type resType = op.getType();
     Type eltType = resType.cast<ShapedType>().getElementType();
-    StringRef name;
-    if (eltType.isF64())
-      name = "sparseValuesF64";
-    else if (eltType.isF32())
-      name = "sparseValuesF32";
-    else if (eltType.isInteger(64))
-      name = "sparseValuesI64";
-    else if (eltType.isInteger(32))
-      name = "sparseValuesI32";
-    else if (eltType.isInteger(16))
-      name = "sparseValuesI16";
-    else if (eltType.isInteger(8))
-      name = "sparseValuesI8";
-    else
-      return failure();
+    SmallString<15> name{"sparseValues", primaryTypeFunctionSuffix(eltType)};
     replaceOpWithFuncCall(rewriter, op, name, resType, adaptor.getOperands(),
                           EmitCInterface::On);
     return success();
@@ -894,23 +706,8 @@ public:
   LogicalResult
   matchAndRewrite(LexInsertOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    Type srcType = op.tensor().getType();
-    Type eltType = srcType.cast<ShapedType>().getElementType();
-    StringRef name;
-    if (eltType.isF64())
-      name = "lexInsertF64";
-    else if (eltType.isF32())
-      name = "lexInsertF32";
-    else if (eltType.isInteger(64))
-      name = "lexInsertI64";
-    else if (eltType.isInteger(32))
-      name = "lexInsertI32";
-    else if (eltType.isInteger(16))
-      name = "lexInsertI16";
-    else if (eltType.isInteger(8))
-      name = "lexInsertI8";
-    else
-      llvm_unreachable("Unknown element type");
+    Type elemTp = op.tensor().getType().cast<ShapedType>().getElementType();
+    SmallString<12> name{"lexInsert", primaryTypeFunctionSuffix(elemTp)};
     TypeRange noTp;
     replaceOpWithFuncCall(rewriter, op, name, noTp, adaptor.getOperands(),
                           EmitCInterface::On);
@@ -965,23 +762,8 @@ public:
     // all-zero/false by only iterating over the set elements, so the
     // complexity remains proportional to the sparsity of the expanded
     // access pattern.
-    Type srcType = op.tensor().getType();
-    Type eltType = srcType.cast<ShapedType>().getElementType();
-    StringRef name;
-    if (eltType.isF64())
-      name = "expInsertF64";
-    else if (eltType.isF32())
-      name = "expInsertF32";
-    else if (eltType.isInteger(64))
-      name = "expInsertI64";
-    else if (eltType.isInteger(32))
-      name = "expInsertI32";
-    else if (eltType.isInteger(16))
-      name = "expInsertI16";
-    else if (eltType.isInteger(8))
-      name = "expInsertI8";
-    else
-      return failure();
+    Type elemTp = op.tensor().getType().cast<ShapedType>().getElementType();
+    SmallString<12> name{"expInsert", primaryTypeFunctionSuffix(elemTp)};
     TypeRange noTp;
     replaceOpWithFuncCall(rewriter, op, name, noTp, adaptor.getOperands(),
                           EmitCInterface::On);

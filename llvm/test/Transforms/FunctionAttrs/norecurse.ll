@@ -50,7 +50,7 @@ declare i32 @k() readnone
 ; CHECK: Function Attrs
 ; CHECK-SAME: nounwind
 ; CHECK-NOT: norecurse
-; CHECK-NEXT: define void @intrinsic(i8* nocapture %dest, i8* nocapture readonly %src, i32 %len)
+; CHECK-NEXT: define void @intrinsic(i8* nocapture writeonly %dest, i8* nocapture readonly %src, i32 %len)
 define void @intrinsic(i8* %dest, i8* %src, i32 %len) {
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dest, i8* %src, i32 %len, i1 false)
   ret void

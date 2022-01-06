@@ -430,13 +430,14 @@ public:
       // initialization of the result values.
       Attribute reduction = std::get<0>(pair);
       Type resultType = std::get<1>(pair);
-      Optional<AtomicRMWKind> reductionOp = symbolizeAtomicRMWKind(
-          static_cast<uint64_t>(reduction.cast<IntegerAttr>().getInt()));
+      Optional<arith::AtomicRMWKind> reductionOp =
+          arith::symbolizeAtomicRMWKind(
+              static_cast<uint64_t>(reduction.cast<IntegerAttr>().getInt()));
       assert(reductionOp.hasValue() &&
              "Reduction operation cannot be of None Type");
-      AtomicRMWKind reductionOpValue = reductionOp.getValue();
+      arith::AtomicRMWKind reductionOpValue = reductionOp.getValue();
       identityVals.push_back(
-          getIdentityValue(reductionOpValue, resultType, rewriter, loc));
+          arith::getIdentityValue(reductionOpValue, resultType, rewriter, loc));
     }
     parOp = rewriter.create<scf::ParallelOp>(
         loc, lowerBoundTuple, upperBoundTuple, steps, identityVals,
@@ -450,16 +451,17 @@ public:
            "Unequal number of reductions and operands.");
     for (unsigned i = 0, end = reductions.size(); i < end; i++) {
       // For each of the reduction operations get the respective mlir::Value.
-      Optional<AtomicRMWKind> reductionOp =
-          symbolizeAtomicRMWKind(reductions[i].cast<IntegerAttr>().getInt());
+      Optional<arith::AtomicRMWKind> reductionOp =
+          arith::symbolizeAtomicRMWKind(
+              reductions[i].cast<IntegerAttr>().getInt());
       assert(reductionOp.hasValue() &&
              "Reduction Operation cannot be of None Type");
-      AtomicRMWKind reductionOpValue = reductionOp.getValue();
+      arith::AtomicRMWKind reductionOpValue = reductionOp.getValue();
       rewriter.setInsertionPoint(&parOp.getBody()->back());
       auto reduceOp = rewriter.create<scf::ReduceOp>(
           loc, affineParOpTerminator->getOperand(i));
       rewriter.setInsertionPointToEnd(&reduceOp.getReductionOperator().front());
-      Value reductionResult = getReductionOp(
+      Value reductionResult = arith::getReductionOp(
           reductionOpValue, rewriter, loc,
           reduceOp.getReductionOperator().front().getArgument(0),
           reduceOp.getReductionOperator().front().getArgument(1));

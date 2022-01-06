@@ -478,6 +478,11 @@ static SectionKind getELFKindForNamedSection(StringRef Name, SectionKind K) {
   return K;
 }
 
+static bool hasPrefix(StringRef SectionName, StringRef Prefix) {
+  return SectionName.consume_front(Prefix) &&
+         (SectionName.empty() || SectionName[0] == '.');
+}
+
 static unsigned getELFSectionType(StringRef Name, SectionKind K) {
   // Use SHT_NOTE for section whose name starts with ".note" to allow
   // emitting ELF notes from C variable declaration.
@@ -485,13 +490,13 @@ static unsigned getELFSectionType(StringRef Name, SectionKind K) {
   if (Name.startswith(".note"))
     return ELF::SHT_NOTE;
 
-  if (Name == ".init_array")
+  if (hasPrefix(Name, ".init_array"))
     return ELF::SHT_INIT_ARRAY;
 
-  if (Name == ".fini_array")
+  if (hasPrefix(Name, ".fini_array"))
     return ELF::SHT_FINI_ARRAY;
 
-  if (Name == ".preinit_array")
+  if (hasPrefix(Name, ".preinit_array"))
     return ELF::SHT_PREINIT_ARRAY;
 
   if (K.isBSS() || K.isThreadBSS())

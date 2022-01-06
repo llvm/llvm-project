@@ -12,7 +12,7 @@ define void @tinkywinky() {
 ; CHECK:       bb90:
 ; CHECK-NEXT:    br label [[BB90]]
 ; CHECK:       bb138:
-; CHECK-NEXT:    store i8 undef, i8* null
+; CHECK-NEXT:    store i8 poison, i8* null
 ; CHECK-NEXT:    br label [[BB138:%.*]]
 ;
 bb:

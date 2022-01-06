@@ -317,7 +317,8 @@ public:
   /// Add a new dialect constructor to the registry. The constructor must be
   /// calling MLIRContext::getOrLoadDialect in order for the context to take
   /// ownership of the dialect and for delayed interface registration to happen.
-  void insert(TypeID typeID, StringRef name, DialectAllocatorFunction ctor);
+  void insert(TypeID typeID, StringRef name,
+              const DialectAllocatorFunction &ctor);
 
   /// Return an allocation function for constructing the dialect identified by
   /// its namespace, or nullptr if the namespace is not in this registry.
@@ -397,13 +398,13 @@ private:
   /// Add an interface constructed with the given allocation function to the
   /// dialect identified by its namespace.
   void addDialectInterface(StringRef dialectName, TypeID interfaceTypeID,
-                           DialectInterfaceAllocatorFunction allocator);
+                           const DialectInterfaceAllocatorFunction &allocator);
 
   /// Add an attribute/operation/type interface constructible with the given
   /// allocation function to the dialect identified by its namespace.
   void addObjectInterface(StringRef dialectName, TypeID objectID,
                           TypeID interfaceTypeID,
-                          ObjectInterfaceAllocatorFunction allocator);
+                          const ObjectInterfaceAllocatorFunction &allocator);
 
   /// Add an external model for an attribute/type interface to the dialect
   /// identified by its namespace.

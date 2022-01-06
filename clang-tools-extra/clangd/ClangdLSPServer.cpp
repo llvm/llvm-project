@@ -555,7 +555,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
        }},
       {"signatureHelpProvider",
        llvm::json::Object{
-           {"triggerCharacters", {"(", ",", ")"}},
+           {"triggerCharacters", {"(", ")", "{", "}", "<", ">", ","}},
        }},
       {"declarationProvider", true},
       {"definitionProvider", true},

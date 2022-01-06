@@ -84,7 +84,7 @@ static bool doubleBuffer(Value oldMemRef, AffineForOp forOp) {
   OpBuilder bOuter(forOp);
   // Put together alloc operands for any dynamic dimensions of the memref.
   SmallVector<Value, 4> allocOperands;
-  for (auto dim : llvm::enumerate(oldMemRefType.getShape())) {
+  for (const auto &dim : llvm::enumerate(oldMemRefType.getShape())) {
     if (dim.value() == ShapedType::kDynamicSize)
       allocOperands.push_back(bOuter.createOrFold<memref::DimOp>(
           forOp.getLoc(), oldMemRef, dim.index()));
@@ -110,7 +110,7 @@ static bool doubleBuffer(Value oldMemRef, AffineForOp forOp) {
           /*indexRemap=*/AffineMap(),
           /*extraOperands=*/{},
           /*symbolOperands=*/{},
-          /*domInstFilter=*/&*forOp.getBody()->begin()))) {
+          /*domOpFilter=*/&*forOp.getBody()->begin()))) {
     LLVM_DEBUG(
         forOp.emitError("memref replacement for double buffering failed"));
     ivModTwoOp.erase();

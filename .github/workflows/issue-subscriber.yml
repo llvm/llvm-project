@@ -1,0 +1,35 @@
+name: Issue Subscriber
+
+on:
+  issues:
+    types:
+      - labeled
+
+jobs:
+  auto-subscribe:
+    runs-on: ubuntu-latest
+    if: github.repository == 'llvm/llvm-project'
+    steps:
+    - name: Update watchers
+      uses: actions/github-script@v5
+      with:
+        github-token: ${{ secrets.ISSUE_MENTION_SECRET }}
+        script: |
+            const teamname = "issue-subscribers-" + context.payload.label.name.replace(/ /g, "-").replace(":","-").replace("/","-");
+            const comment = "@llvm/" + teamname;
+            try {
+              // This will throw an exception if the team does not exist and no
+              // comment will be created.
+              team = await github.rest.teams.getByName({
+                org: context.repo.owner,
+                team_slug: teamname
+              });
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            } catch (e){
+              console.log(e);
+            }

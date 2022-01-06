@@ -2477,7 +2477,8 @@ void AsmPrinter::emitLabelPlusOffset(const MCSymbol *Label, uint64_t Offset,
 // two boundary.  If a global value is specified, and if that global has
 // an explicit alignment requested, it will override the alignment request
 // if required for correctness.
-void AsmPrinter::emitAlignment(Align Alignment, const GlobalObject *GV) const {
+void AsmPrinter::emitAlignment(Align Alignment, const GlobalObject *GV,
+                               unsigned MaxBytesToEmit) const {
   if (GV)
     Alignment = getGVAlignment(GV, GV->getParent()->getDataLayout(), Alignment);
 
@@ -2490,9 +2491,9 @@ void AsmPrinter::emitAlignment(Align Alignment, const GlobalObject *GV) const {
       STI = &getSubtargetInfo();
     else
       STI = TM.getMCSubtargetInfo();
-    OutStreamer->emitCodeAlignment(Alignment.value(), STI);
+    OutStreamer->emitCodeAlignment(Alignment.value(), STI, MaxBytesToEmit);
   } else
-    OutStreamer->emitValueToAlignment(Alignment.value());
+    OutStreamer->emitValueToAlignment(Alignment.value(), 0, 1, MaxBytesToEmit);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3286,7 +3287,7 @@ void AsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
   // Emit an alignment directive for this block, if needed.
   const Align Alignment = MBB.getAlignment();
   if (Alignment != Align(1))
-    emitAlignment(Alignment);
+    emitAlignment(Alignment, nullptr, MBB.getMaxBytesForAlignment());
 
   // Switch to a new section if this basic block must begin a section. The
   // entry block is always placed in the function section and is handled

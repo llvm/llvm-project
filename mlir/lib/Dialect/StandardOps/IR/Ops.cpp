@@ -132,123 +132,6 @@ LogicalResult AssertOp::canonicalize(AssertOp op, PatternRewriter &rewriter) {
 }
 
 //===----------------------------------------------------------------------===//
-// AtomicRMWOp
-//===----------------------------------------------------------------------===//
-
-static LogicalResult verify(AtomicRMWOp op) {
-  if (op.getMemRefType().getRank() != op.getNumOperands() - 2)
-    return op.emitOpError(
-        "expects the number of subscripts to be equal to memref rank");
-  switch (op.getKind()) {
-  case AtomicRMWKind::addf:
-  case AtomicRMWKind::maxf:
-  case AtomicRMWKind::minf:
-  case AtomicRMWKind::mulf:
-    if (!op.getValue().getType().isa<FloatType>())
-      return op.emitOpError()
-             << "with kind '" << stringifyAtomicRMWKind(op.getKind())
-             << "' expects a floating-point type";
-    break;
-  case AtomicRMWKind::addi:
-  case AtomicRMWKind::maxs:
-  case AtomicRMWKind::maxu:
-  case AtomicRMWKind::mins:
-  case AtomicRMWKind::minu:
-  case AtomicRMWKind::muli:
-    if (!op.getValue().getType().isa<IntegerType>())
-      return op.emitOpError()
-             << "with kind '" << stringifyAtomicRMWKind(op.getKind())
-             << "' expects an integer type";
-    break;
-  default:
-    break;
-  }
-  return success();
-}
-
-/// Returns the identity value attribute associated with an AtomicRMWKind op.
-Attribute mlir::getIdentityValueAttr(AtomicRMWKind kind, Type resultType,
-                                     OpBuilder &builder, Location loc) {
-  switch (kind) {
-  case AtomicRMWKind::maxf:
-    return builder.getFloatAttr(
-        resultType,
-        APFloat::getInf(resultType.cast<FloatType>().getFloatSemantics(),
-                        /*Negative=*/true));
-  case AtomicRMWKind::addf:
-  case AtomicRMWKind::addi:
-  case AtomicRMWKind::maxu:
-    return builder.getZeroAttr(resultType);
-  case AtomicRMWKind::maxs:
-    return builder.getIntegerAttr(
-        resultType,
-        APInt::getSignedMinValue(resultType.cast<IntegerType>().getWidth()));
-  case AtomicRMWKind::minf:
-    return builder.getFloatAttr(
-        resultType,
-        APFloat::getInf(resultType.cast<FloatType>().getFloatSemantics(),
-                        /*Negative=*/false));
-  case AtomicRMWKind::mins:
-    return builder.getIntegerAttr(
-        resultType,
-        APInt::getSignedMaxValue(resultType.cast<IntegerType>().getWidth()));
-  case AtomicRMWKind::minu:
-    return builder.getIntegerAttr(
-        resultType,
-        APInt::getMaxValue(resultType.cast<IntegerType>().getWidth()));
-  case AtomicRMWKind::muli:
-    return builder.getIntegerAttr(resultType, 1);
-  case AtomicRMWKind::mulf:
-    return builder.getFloatAttr(resultType, 1);
-  // TODO: Add remaining reduction operations.
-  default:
-    (void)emitOptionalError(loc, "Reduction operation type not supported");
-    break;
-  }
-  return nullptr;
-}
-
-/// Returns the identity value associated with an AtomicRMWKind op.
-Value mlir::getIdentityValue(AtomicRMWKind op, Type resultType,
-                             OpBuilder &builder, Location loc) {
-  Attribute attr = getIdentityValueAttr(op, resultType, builder, loc);
-  return builder.create<arith::ConstantOp>(loc, attr);
-}
-
-/// Return the value obtained by applying the reduction operation kind
-/// associated with a binary AtomicRMWKind op to `lhs` and `rhs`.
-Value mlir::getReductionOp(AtomicRMWKind op, OpBuilder &builder, Location loc,
-                           Value lhs, Value rhs) {
-  switch (op) {
-  case AtomicRMWKind::addf:
-    return builder.create<arith::AddFOp>(loc, lhs, rhs);
-  case AtomicRMWKind::addi:
-    return builder.create<arith::AddIOp>(loc, lhs, rhs);
-  case AtomicRMWKind::mulf:
-    return builder.create<arith::MulFOp>(loc, lhs, rhs);
-  case AtomicRMWKind::muli:
-    return builder.create<arith::MulIOp>(loc, lhs, rhs);
-  case AtomicRMWKind::maxf:
-    return builder.create<arith::MaxFOp>(loc, lhs, rhs);
-  case AtomicRMWKind::minf:
-    return builder.create<arith::MinFOp>(loc, lhs, rhs);
-  case AtomicRMWKind::maxs:
-    return builder.create<arith::MaxSIOp>(loc, lhs, rhs);
-  case AtomicRMWKind::mins:
-    return builder.create<arith::MinSIOp>(loc, lhs, rhs);
-  case AtomicRMWKind::maxu:
-    return builder.create<arith::MaxUIOp>(loc, lhs, rhs);
-  case AtomicRMWKind::minu:
-    return builder.create<arith::MinUIOp>(loc, lhs, rhs);
-  // TODO: Add remaining reduction operations.
-  default:
-    (void)emitOptionalError(loc, "Reduction operation type not supported");
-    break;
-  }
-  return nullptr;
-}
-
-//===----------------------------------------------------------------------===//
 // GenericAtomicRMWOp
 //===----------------------------------------------------------------------===//
 
@@ -957,9 +840,43 @@ struct SelectToNot : public OpRewritePattern<SelectOp> {
   }
 };
 
+//  select %arg, %c1, %c0 => extui %arg
+struct SelectToExtUI : public OpRewritePattern<SelectOp> {
+  using OpRewritePattern<SelectOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(SelectOp op,
+                                PatternRewriter &rewriter) const override {
+    // Cannot extui i1 to i1, or i1 to f32
+    if (!op.getType().isa<IntegerType>() || op.getType().isInteger(1))
+      return failure();
+
+    // select %x, c1, %c0 => extui %arg
+    if (matchPattern(op.getTrueValue(), m_One()))
+      if (matchPattern(op.getFalseValue(), m_Zero())) {
+        rewriter.replaceOpWithNewOp<arith::ExtUIOp>(op, op.getType(),
+                                                    op.getCondition());
+        return success();
+      }
+
+    // select %x, c0, %c1 => extui (xor %arg, true)
+    if (matchPattern(op.getTrueValue(), m_Zero()))
+      if (matchPattern(op.getFalseValue(), m_One())) {
+        rewriter.replaceOpWithNewOp<arith::ExtUIOp>(
+            op, op.getType(),
+            rewriter.create<arith::XOrIOp>(
+                op.getLoc(), op.getCondition(),
+                rewriter.create<arith::ConstantIntOp>(
+                    op.getLoc(), 1, op.getCondition().getType())));
+        return success();
+      }
+
+    return failure();
+  }
+};
+
 void SelectOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
                                            MLIRContext *context) {
-  results.insert<SelectToNot>(context);
+  results.insert<SelectToNot, SelectToExtUI>(context);
 }
 
 OpFoldResult SelectOp::fold(ArrayRef<Attribute> operands) {
@@ -977,6 +894,12 @@ OpFoldResult SelectOp::fold(ArrayRef<Attribute> operands) {
   // select false, %0, %1 => %1
   if (matchPattern(condition, m_Zero()))
     return falseVal;
+
+  // select %x, true, false => %x
+  if (getType().isInteger(1))
+    if (matchPattern(getTrueValue(), m_One()))
+      if (matchPattern(getFalseValue(), m_Zero()))
+        return condition;
 
   if (auto cmp = dyn_cast_or_null<arith::CmpIOp>(condition.getDefiningOp())) {
     auto pred = cmp.getPredicate();
@@ -1163,7 +1086,7 @@ static void printSwitchOpCases(
     OpAsmPrinter &p, SwitchOp op, Type flagType, Block *defaultDestination,
     OperandRange defaultOperands, TypeRange defaultOperandTypes,
     DenseIntElementsAttr caseValues, SuccessorRange caseDestinations,
-    OperandRangeRange caseOperands, TypeRangeRange caseOperandTypes) {
+    OperandRangeRange caseOperands, const TypeRangeRange &caseOperandTypes) {
   p << "  default: ";
   p.printSuccessorAndUseList(defaultDestination, defaultOperands);
 
@@ -1289,7 +1212,7 @@ dropSwitchCasesThatMatchDefault(SwitchOp op, PatternRewriter &rewriter) {
 /// ]
 /// -> br ^bb2
 static void foldSwitch(SwitchOp op, PatternRewriter &rewriter,
-                       APInt caseValue) {
+                       const APInt &caseValue) {
   auto caseValues = op.getCaseValues();
   for (const auto &it : llvm::enumerate(caseValues->getValues<APInt>())) {
     if (it.value() == caseValue) {

@@ -16,6 +16,7 @@
 #include "Protocol.h"
 #include "support/Context.h"
 #include "support/ThreadsafeFS.h"
+#include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
@@ -27,7 +28,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/SHA1.h"
 #include <string>
 
 namespace clang {
@@ -329,6 +329,13 @@ bool isProtoFile(SourceLocation Loc, const SourceManager &SourceMgr);
 /// Prefer to access the cache in IncludeStructure::isSelfContained if you can.
 bool isSelfContainedHeader(const FileEntry *FE, FileID ID,
                            const SourceManager &SM, HeaderSearch &HeaderInfo);
+
+/// Returns true if Name is reserved, like _Foo or __Vector_base.
+inline bool isReservedName(llvm::StringRef Name) {
+  // This doesn't catch all cases, but the most common.
+  return Name.size() >= 2 && Name[0] == '_' &&
+         (isUppercase(Name[1]) || Name[1] == '_');
+}
 
 } // namespace clangd
 } // namespace clang

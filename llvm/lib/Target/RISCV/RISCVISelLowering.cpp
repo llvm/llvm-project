@@ -330,6 +330,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::LLRINT, MVT::f16, Legal);
     setOperationAction(ISD::LROUND, MVT::f16, Legal);
     setOperationAction(ISD::LLROUND, MVT::f16, Legal);
+    setOperationAction(ISD::STRICT_LRINT, MVT::f16, Legal);
+    setOperationAction(ISD::STRICT_LLRINT, MVT::f16, Legal);
+    setOperationAction(ISD::STRICT_LROUND, MVT::f16, Legal);
+    setOperationAction(ISD::STRICT_LLROUND, MVT::f16, Legal);
     setOperationAction(ISD::STRICT_FADD, MVT::f16, Legal);
     setOperationAction(ISD::STRICT_FMA, MVT::f16, Legal);
     setOperationAction(ISD::STRICT_FSUB, MVT::f16, Legal);
@@ -363,6 +367,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FLOG2,      MVT::f16, Promote);
     setOperationAction(ISD::FLOG10,     MVT::f16, Promote);
 
+    // FIXME: Need to promote f16 STRICT_* to f32 libcalls, but we don't have
+    // complete support for all operations in LegalizeDAG.
+
     // We need to custom promote this.
     if (Subtarget.is64Bit())
       setOperationAction(ISD::FPOWI, MVT::i32, Custom);
@@ -375,6 +382,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::LLRINT, MVT::f32, Legal);
     setOperationAction(ISD::LROUND, MVT::f32, Legal);
     setOperationAction(ISD::LLROUND, MVT::f32, Legal);
+    setOperationAction(ISD::STRICT_LRINT, MVT::f32, Legal);
+    setOperationAction(ISD::STRICT_LLRINT, MVT::f32, Legal);
+    setOperationAction(ISD::STRICT_LROUND, MVT::f32, Legal);
+    setOperationAction(ISD::STRICT_LLROUND, MVT::f32, Legal);
     setOperationAction(ISD::STRICT_FADD, MVT::f32, Legal);
     setOperationAction(ISD::STRICT_FMA, MVT::f32, Legal);
     setOperationAction(ISD::STRICT_FSUB, MVT::f32, Legal);
@@ -402,6 +413,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::LLRINT, MVT::f64, Legal);
     setOperationAction(ISD::LROUND, MVT::f64, Legal);
     setOperationAction(ISD::LLROUND, MVT::f64, Legal);
+    setOperationAction(ISD::STRICT_LRINT, MVT::f64, Legal);
+    setOperationAction(ISD::STRICT_LLRINT, MVT::f64, Legal);
+    setOperationAction(ISD::STRICT_LROUND, MVT::f64, Legal);
+    setOperationAction(ISD::STRICT_LLROUND, MVT::f64, Legal);
     setOperationAction(ISD::STRICT_FMA, MVT::f64, Legal);
     setOperationAction(ISD::STRICT_FADD, MVT::f64, Legal);
     setOperationAction(ISD::STRICT_FSUB, MVT::f64, Legal);
@@ -546,6 +561,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SELECT, VT, Custom);
       setOperationAction(ISD::SELECT_CC, VT, Expand);
       setOperationAction(ISD::VSELECT, VT, Expand);
+      setOperationAction(ISD::VP_SELECT, VT, Expand);
 
       setOperationAction(ISD::VP_AND, VT, Custom);
       setOperationAction(ISD::VP_OR, VT, Custom);
@@ -8393,7 +8409,8 @@ static bool CC_RISCV(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
         LocVT = XLenVT;
         LocInfo = CCValAssign::Indirect;
       } else if (ValVT.isScalableVector()) {
-        report_fatal_error("Unable to pass scalable vector types on the stack");
+        LocVT = XLenVT;
+        LocInfo = CCValAssign::Indirect;
       } else {
         // Pass fixed-length vectors on the stack.
         LocVT = ValVT;
@@ -8592,6 +8609,12 @@ static SDValue unpackFromMemLoc(SelectionDAG &DAG, SDValue Chain,
   EVT LocVT = VA.getLocVT();
   EVT ValVT = VA.getValVT();
   EVT PtrVT = MVT::getIntegerVT(DAG.getDataLayout().getPointerSizeInBits(0));
+  if (ValVT.isScalableVector()) {
+    // When the value is a scalable vector, we save the pointer which points to
+    // the scalable vector value in the stack. The ValVT will be the pointer
+    // type, instead of the scalable vector type.
+    ValVT = LocVT;
+  }
   int FI = MFI.CreateFixedObject(ValVT.getStoreSize(), VA.getLocMemOffset(),
                                  /*Immutable=*/true);
   SDValue FIN = DAG.getFrameIndex(FI, PtrVT);

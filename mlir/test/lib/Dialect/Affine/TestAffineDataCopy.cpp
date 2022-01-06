@@ -34,7 +34,7 @@ struct TestAffineDataCopy
     return "Tests affine data copy utility functions.";
   }
   TestAffineDataCopy() = default;
-  TestAffineDataCopy(const TestAffineDataCopy &pass){};
+  TestAffineDataCopy(const TestAffineDataCopy &pass) : PassWrapper(pass){};
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<memref::MemRefDialect>();
@@ -59,7 +59,7 @@ void TestAffineDataCopy::runOnFunction() {
   // Gather all AffineForOps by loop depth.
   std::vector<SmallVector<AffineForOp, 2>> depthToLoops;
   gatherLoops(getFunction(), depthToLoops);
-  assert(depthToLoops.size() && "Loop nest not found");
+  assert(!depthToLoops.empty() && "Loop nest not found");
 
   // Only support tests with a single loop nest and a single innermost loop
   // for now.

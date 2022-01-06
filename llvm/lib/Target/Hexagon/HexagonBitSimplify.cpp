@@ -3260,13 +3260,12 @@ bool HexagonLoopRescheduling::processLoop(LoopCand &C) {
       dbgs() << "Group[" << i << "] inp: "
              << printReg(G.Inp.Reg, HRI, G.Inp.Sub)
              << "  out: " << printReg(G.Out.Reg, HRI, G.Out.Sub) << "\n";
-      for (unsigned j = 0, m = G.Ins.size(); j < m; ++j)
-        dbgs() << "  " << *G.Ins[j];
+      for (const MachineInstr *MI : G.Ins)
+        dbgs() << "  " << MI;
     }
   });
 
-  for (unsigned i = 0, n = Groups.size(); i < n; ++i) {
-    InstrGroup &G = Groups[i];
+  for (InstrGroup &G : Groups) {
     if (!isShuffleOf(G.Out.Reg, G.Inp.Reg))
       continue;
     auto LoopInpEq = [G] (const PhiInfo &P) -> bool {

@@ -307,7 +307,7 @@ public:
     std::shared_ptr<llvm::Regex> Regex;
 
     /// By default, optimization remark is missing.
-    OptRemark() : Kind(RK_Missing), Pattern(""), Regex(nullptr) {}
+    OptRemark() : Kind(RK_Missing), Regex(nullptr) {}
 
     /// Returns true iff the optimization remark holds a valid regular
     /// expression.

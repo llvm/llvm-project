@@ -90,6 +90,10 @@ private:
 
   void parse(Fragment::CompileFlagsBlock &F, Node &N) {
     DictParser Dict("CompileFlags", this);
+    Dict.handle("Compiler", [&](Node &N) {
+      if (auto Value = scalarValue(N, "Compiler"))
+        F.Compiler = std::move(*Value);
+    });
     Dict.handle("Add", [&](Node &N) {
       if (auto Values = scalarValues(N))
         F.Add = std::move(*Values);

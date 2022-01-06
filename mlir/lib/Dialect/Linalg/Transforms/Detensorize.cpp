@@ -16,6 +16,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include <iterator>
 #include <memory>
+#include <utility>
 
 using namespace mlir;
 using namespace mlir::linalg;
@@ -23,18 +24,14 @@ using namespace mlir::linalg;
 static Value sourceMaterializationCallback(OpBuilder &builder, Type type,
                                            ValueRange inputs, Location loc) {
   assert(inputs.size() == 1);
-  if (inputs[0].getType().isa<TensorType>())
+  auto inputType = inputs[0].getType();
+  if (inputType.isa<TensorType>())
     return nullptr;
 
   // A detensored value is converted back by creating a new tensor from its
   // element(s).
-  auto createNewTensorOp =
-      builder.create<tensor::FromElementsOp>(loc, inputs[0]);
-
-  // FromElementsOp results in a tensor<1xdtype>, we need to reshape that to
-  // a tensor<dtype> instead.
-  return builder.create<tensor::CollapseShapeOp>(
-      loc, type, createNewTensorOp, ArrayRef<ReassociationExprs>{});
+  return builder.create<tensor::FromElementsOp>(
+      loc, RankedTensorType::get({}, inputType), inputs[0]);
 }
 
 namespace {
@@ -97,7 +94,7 @@ struct FunctionNonEntryBlockConversion : public ConversionPattern {
       : ConversionPattern(converter, MatchTraitOpTypeTag(),
                           TypeID::get<OpTrait::FunctionLike>(), /*benefit=*/1,
                           ctx),
-        blockArgsToDetensor(blockArgsToDetensor) {}
+        blockArgsToDetensor(std::move(blockArgsToDetensor)) {}
 
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
@@ -160,44 +157,9 @@ public:
   }
 };
 
-/// Canonicalizes the pattern of the form
-///
-/// %tensor = tensor.from_elements(%element) : (i32) -> tensor<1xi32>
-/// %reshaped_tensor = tensor.collapse_shape %tensor []
-///     : tensor<1xi32> into tensor<i32>
-/// %extracted_element = tensor.extract %reshaped_tensor[] : tensor<i32>
-///
-/// to just %element.
-struct ExtractFromReshapeFromElements
-    : public OpRewritePattern<tensor::ExtractOp> {
-  using OpRewritePattern<tensor::ExtractOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(tensor::ExtractOp extract,
-                                PatternRewriter &rewriter) const final {
-    if (!extract.indices().empty())
-      return failure();
-
-    auto tensorReshape =
-        extract.tensor().getDefiningOp<tensor::CollapseShapeOp>();
-    if (tensorReshape == nullptr)
-      return failure();
-
-    auto tensorFromElements =
-        tensorReshape.getOperand()
-            .getDefiningOp<mlir::tensor::FromElementsOp>();
-    if (tensorFromElements == nullptr)
-      return failure();
-
-    rewriter.replaceOp(extract, tensorFromElements.getOperand(0));
-    return success();
-  }
-};
-
 /// @see LinalgDetensorize in Linalg/Passes.td for more details.
 struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
   LinalgDetensorize() = default;
-  LinalgDetensorize(const LinalgDetensorize &pass)
-      : LinalgDetensorizeBase<LinalgDetensorize>() {}
 
   class CostModel {
   public:
@@ -544,14 +506,11 @@ struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
       if (op->hasTrait<OpTrait::FunctionLike>()) {
         auto &body = function_like_impl::getFunctionBody(op);
         return llvm::all_of(llvm::drop_begin(body, 1), [&](Block &block) {
-          if (llvm::any_of(
-                  blockArgsToDetensor, [&](BlockArgument blockArgument) {
-                    return blockArgument.getOwner() == &block &&
-                           !typeConverter.isLegal(blockArgument.getType());
-                  })) {
-            return false;
-          }
-          return true;
+          return !llvm::any_of(
+              blockArgsToDetensor, [&](BlockArgument blockArgument) {
+                return blockArgument.getOwner() == &block &&
+                       !typeConverter.isLegal(blockArgument.getType());
+              });
         });
       }
 
@@ -595,16 +554,11 @@ struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
       signalPassFailure();
 
     RewritePatternSet canonPatterns(context);
-    canonPatterns.add<ExtractFromReshapeFromElements>(context);
+    tensor::FromElementsOp::getCanonicalizationPatterns(canonPatterns, context);
     if (failed(applyPatternsAndFoldGreedily(getOperation(),
                                             std::move(canonPatterns))))
       signalPassFailure();
   }
-
-  Option<bool> aggressiveMode{
-      *this, "aggressive-mode",
-      llvm::cl::desc("Detensorize all ops that qualify for detensoring along "
-                     "with branch operands and basic-block arguments.")};
 };
 } // namespace
 

@@ -27,8 +27,6 @@ class Instruction;
 class IntrinsicInst;
 class Value;
 class OptimizationRemarkEmitter;
-class OptimizationRemarkMissed;
-class OptimizationRemarkAnalysis;
 class StoreInst;
 
 // FIXME: Once we get to more remarks like this one, we need to re-evaluate how

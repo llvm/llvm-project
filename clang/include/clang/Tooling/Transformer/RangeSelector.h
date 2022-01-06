@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_REFACTOR_RANGE_SELECTOR_H_
-#define LLVM_CLANG_TOOLING_REFACTOR_RANGE_SELECTOR_H_
+#ifndef LLVM_CLANG_TOOLING_TRANSFORMER_RANGESELECTOR_H
+#define LLVM_CLANG_TOOLING_TRANSFORMER_RANGESELECTOR_H
 
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/SourceLocation.h"
@@ -105,4 +105,4 @@ RangeSelector expansion(RangeSelector S);
 } // namespace transformer
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLING_REFACTOR_RANGE_SELECTOR_H_
+#endif // LLVM_CLANG_TOOLING_TRANSFORMER_RANGESELECTOR_H

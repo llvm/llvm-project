@@ -611,7 +611,7 @@ LLVMErrorRef LLVMOrcCreateDynamicLibrarySearchGeneratorForProcess(
       DynamicLibrarySearchGenerator::GetForCurrentProcess(GlobalPrefix, Pred);
 
   if (!ProcessSymsGenerator) {
-    *Result = 0;
+    *Result = nullptr;
     return wrap(ProcessSymsGenerator.takeError());
   }
 
@@ -637,7 +637,7 @@ LLVMErrorRef LLVMOrcCreateDynamicLibrarySearchGeneratorForPath(
       DynamicLibrarySearchGenerator::Load(FileName, GlobalPrefix, Pred);
 
   if (!LibrarySymsGenerator) {
-    *Result = 0;
+    *Result = nullptr;
     return wrap(LibrarySymsGenerator.takeError());
   }
 
@@ -657,7 +657,7 @@ LLVMErrorRef LLVMOrcCreateStaticLibrarySearchGeneratorForPath(
     auto LibrarySymsGenerator =
         StaticLibraryDefinitionGenerator::Load(*unwrap(ObjLayer), FileName, TT);
     if (!LibrarySymsGenerator) {
-      *Result = 0;
+      *Result = nullptr;
       return wrap(LibrarySymsGenerator.takeError());
     }
     *Result = wrap(LibrarySymsGenerator->release());
@@ -666,7 +666,7 @@ LLVMErrorRef LLVMOrcCreateStaticLibrarySearchGeneratorForPath(
     auto LibrarySymsGenerator =
         StaticLibraryDefinitionGenerator::Load(*unwrap(ObjLayer), FileName);
     if (!LibrarySymsGenerator) {
-      *Result = 0;
+      *Result = nullptr;
       return wrap(LibrarySymsGenerator.takeError());
     }
     *Result = wrap(LibrarySymsGenerator->release());
@@ -712,7 +712,7 @@ LLVMErrorRef LLVMOrcJITTargetMachineBuilderDetectHost(
 
   auto JTMB = JITTargetMachineBuilder::detectHost();
   if (!JTMB) {
-    Result = 0;
+    Result = nullptr;
     return wrap(JTMB.takeError());
   }
 
@@ -876,7 +876,7 @@ LLVMErrorRef LLVMOrcCreateLLJIT(LLVMOrcLLJITRef *Result,
   LLVMOrcDisposeLLJITBuilder(Builder);
 
   if (!J) {
-    Result = 0;
+    Result = nullptr;
     return wrap(J.takeError());
   }
 

@@ -1550,8 +1550,9 @@ public:
   }
 
   template <class T> void addValue(const T &V) {
-    assert(Location != 0 && "cl::location(...) not specified for a command "
-                            "line option with external storage!");
+    assert(Location != nullptr &&
+           "cl::location(...) not specified for a command "
+           "line option with external storage!");
     Location->push_back(V);
   }
 };
@@ -1754,8 +1755,9 @@ public:
   }
 
   template <class T> void addValue(const T &V) {
-    assert(Location != 0 && "cl::location(...) not specified for a command "
-                            "line option with external storage!");
+    assert(Location != nullptr &&
+           "cl::location(...) not specified for a command "
+           "line option with external storage!");
     *Location |= Bit(V);
   }
 
@@ -2080,7 +2082,8 @@ void tokenizeConfigFile(StringRef Source, StringSaver &Saver,
 ///
 /// It reads content of the specified file, tokenizes it and expands "@file"
 /// commands resolving file names in them relative to the directory where
-/// CfgFilename resides.
+/// CfgFilename resides. It also expands "<CFGDIR>" to the base path of the
+/// current config file.
 ///
 bool readConfigFile(StringRef CfgFileName, StringSaver &Saver,
                     SmallVectorImpl<const char *> &Argv);
@@ -2100,13 +2103,15 @@ bool readConfigFile(StringRef CfgFileName, StringSaver &Saver,
 /// with nullptrs in the Argv vector.
 /// \param [in] RelativeNames true if names of nested response files must be
 /// resolved relative to including file.
+/// \param [in] ExpandBasePath If true, "<CFGDIR>" expands to the base path of
+/// the current response file.
 /// \param [in] FS File system used for all file access when running the tool.
 /// \param [in] CurrentDir Path used to resolve relative rsp files. If set to
 /// None, process' cwd is used instead.
 /// \return true if all @files were expanded successfully or there were none.
 bool ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
                          SmallVectorImpl<const char *> &Argv, bool MarkEOLs,
-                         bool RelativeNames,
+                         bool RelativeNames, bool ExpandBasePath,
                          llvm::Optional<llvm::StringRef> CurrentDir,
                          llvm::vfs::FileSystem &FS);
 
@@ -2115,7 +2120,7 @@ bool ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
 bool ExpandResponseFiles(
     StringSaver &Saver, TokenizerCallback Tokenizer,
     SmallVectorImpl<const char *> &Argv, bool MarkEOLs = false,
-    bool RelativeNames = false,
+    bool RelativeNames = false, bool ExpandBasePath = false,
     llvm::Optional<llvm::StringRef> CurrentDir = llvm::None);
 
 /// A convenience helper which concatenates the options specified by the

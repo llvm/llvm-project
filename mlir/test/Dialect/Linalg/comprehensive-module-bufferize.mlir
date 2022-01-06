@@ -576,6 +576,7 @@ func @tiled_dot(%A: tensor<?xf32>, %B: tensor<?xf32>, %c: tensor<f32> {linalg.in
   %0 = tensor.dim %A, %c0 : tensor<?xf32>
 
   //     CHECK: linalg.tiled_loop {{.*}} to (%[[M]]) {{.*}} %[[A]]{{.*}}%[[B]]{{.*}}outs{{.*}}%[[c]]
+  // CHECK-NOT: copy
   %1 = linalg.tiled_loop (%arg3) = (%c0) to (%0) step (%c3)
        ins (%arg4 = %A: tensor<?xf32>, %use = %effecting : memref<?xf32>, %arg5 = %B: tensor<?xf32>)
       outs (%arg6 = %c: tensor<f32>)
@@ -644,6 +645,40 @@ func @tiled_fill(%A: tensor<?xf32> {linalg.inplaceable = true}) -> tensor<?xf32>
     %6 = tensor.insert_slice %5 into %arg1[%arg3] [%3] [1] : tensor<?xf32> into tensor<?xf32>
 
     linalg.yield %6 : tensor<?xf32>
+    //     CHECK:   linalg.yield
+    // CHECK-NOT:   tensor
+  }
+
+  //     CHECK: return
+  // CHECK-NOT: tensor
+  return %1 : tensor<?xf32>
+}
+
+// -----
+
+//      CHECK:  func @tiled_loop_yield_out_of_place(
+// CHECK-SAME:    %[[A:[a-zA-Z0-9]*]]: memref<?xf32, #{{.*}}>,
+// CHECK-SAME:    %[[B:[a-zA-Z0-9]*]]: memref<?xf32, #{{.*}}>
+func @tiled_loop_yield_out_of_place(
+    %A: tensor<?xf32> {linalg.inplaceable = true},
+    %B: tensor<?xf32> {linalg.inplaceable = true})
+  -> tensor<?xf32>
+{
+  %c3 = arith.constant 3 : index
+  %c0 = arith.constant 0 : index
+  %f0 = arith.constant 0.0 : f32
+
+  //     CHECK: %[[M:.*]] = memref.dim %[[A]], {{.*}} : memref<?xf32, #[[$DYN_MAP:.*]]>
+  %0 = tensor.dim %A, %c0 : tensor<?xf32>
+
+  //     CHECK: linalg.tiled_loop {{.*}} to (%[[M]]) {{.*}} outs{{.*}}%[[A]]
+  %1 = linalg.tiled_loop (%arg3) = (%c0) to (%0) step (%c3)
+      outs (%arg1 = %A: tensor<?xf32>)
+      iterators["parallel"]
+  {
+    // CHECK-NOT:   alloc
+    //     CHECK:   linalg.copy(%[[B]], %[[A]])
+    linalg.yield %B : tensor<?xf32>
     //     CHECK:   linalg.yield
     // CHECK-NOT:   tensor
   }
@@ -996,6 +1031,34 @@ func @equivalent_func_arg_2(%t0: tensor<?xf32> {linalg.inplaceable = true},
     scf.yield %t1 : tensor<?xf32>
   }
   return %1: tensor<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @inner_func(
+//  CHECK-SAME:     %[[arg0:.*]]: memref<?xf32
+func @inner_func(%t: tensor<?xf32>) -> (tensor<?xf32>, f32) {
+  // CHECK-NOT: copy
+  %f = arith.constant 1.0 : f32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  // CHECK: memref.store %{{.*}}, %[[arg0]]
+  %0 = tensor.insert %f into %t[%c0] : tensor<?xf32>
+  // CHECK: %[[load:.*]] = memref.load %[[arg0]]
+  %1 = tensor.extract %0[%c1] : tensor<?xf32>
+  // CHECK: return %[[load]] : f32
+  return %0, %1 : tensor<?xf32>, f32
+}
+
+// CHECK-LABEL: func @call_func_with_non_tensor_return(
+//  CHECK-SAME:     %[[arg0:.*]]: memref<?xf32
+func @call_func_with_non_tensor_return(
+    %t0: tensor<?xf32> {linalg.inplaceable = true}) -> (f32, tensor<?xf32>) {
+  // CHECK-NOT: copy
+  // CHECK: %[[call:.*]] = call @inner_func(%[[arg0]])
+  %0, %1 = call @inner_func(%t0) : (tensor<?xf32>) -> (tensor<?xf32>, f32)
+  // CHECK: return %[[call]] : f32
+  return %1, %0 : f32, tensor<?xf32>
 }
 
 // -----

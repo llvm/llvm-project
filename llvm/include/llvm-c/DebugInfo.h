@@ -1102,7 +1102,7 @@ LLVMMetadataRef LLVMDIBuilderGetOrCreateArray(LLVMDIBuilderRef Builder,
  * \param Length      Length of the address operation array.
  */
 LLVMMetadataRef LLVMDIBuilderCreateExpression(LLVMDIBuilderRef Builder,
-                                              int64_t *Addr, size_t Length);
+                                              uint64_t *Addr, size_t Length);
 
 /**
  * Create a new descriptor for the specified variable that does not have an
@@ -1112,7 +1112,7 @@ LLVMMetadataRef LLVMDIBuilderCreateExpression(LLVMDIBuilderRef Builder,
  */
 LLVMMetadataRef
 LLVMDIBuilderCreateConstantValueExpression(LLVMDIBuilderRef Builder,
-                                           int64_t Value);
+                                           uint64_t Value);
 
 /**
  * Create a new descriptor for the specified variable.

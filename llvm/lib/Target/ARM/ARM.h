@@ -29,8 +29,6 @@ struct BasicBlockInfo;
 class Function;
 class FunctionPass;
 class InstructionSelector;
-class MachineBasicBlock;
-class MachineFunction;
 class MachineInstr;
 class MCInst;
 class PassRegistry;

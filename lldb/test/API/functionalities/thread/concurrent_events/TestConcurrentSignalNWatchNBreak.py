@@ -23,7 +23,7 @@ class ConcurrentSignalNWatchNBreak(ConcurrentEventsBase):
     @add_test_categories(["watchpoint"])
     def test(self):
         """Test one signal thread with 5 watchpoint and breakpoint threads."""
-        self.build(dictionary=self.getBuildFlags())
+        self.build()
         self.do_thread_actions(num_signal_threads=1,
                                num_watchpoint_threads=5,
                                num_breakpoint_threads=5)

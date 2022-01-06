@@ -79,7 +79,7 @@ const llvm::Record *CombinedPred::getCombinerDef() const {
   return def->getValueAsDef("kind");
 }
 
-const std::vector<llvm::Record *> CombinedPred::getChildren() const {
+std::vector<llvm::Record *> CombinedPred::getChildren() const {
   assert(def->getValue("children") &&
          "CombinedPred must have a value 'children'");
   return def->getValueAsListOfDefs("children");
@@ -286,7 +286,8 @@ propagateGroundTruth(PredNode *node,
 // Combine a list of predicate expressions using a binary combiner.  If a list
 // is empty, return "init".
 static std::string combineBinary(ArrayRef<std::string> children,
-                                 std::string combiner, std::string init) {
+                                 const std::string &combiner,
+                                 std::string init) {
   if (children.empty())
     return init;
 

@@ -131,7 +131,7 @@ verifyTypesAlongAllEdges(Operation *op, Optional<unsigned> sourceNo,
                                  << succInputsTypes.size();
     }
 
-    for (auto typesIdx :
+    for (const auto &typesIdx :
          llvm::enumerate(llvm::zip(*sourceTypes, succInputsTypes))) {
       Type sourceType = std::get<0>(typesIdx.value());
       Type inputType = std::get<1>(typesIdx.value());
@@ -266,7 +266,7 @@ bool mlir::insideMutuallyExclusiveRegions(Operation *a, Operation *b) {
             return false;
           // Compute index of region.
           int64_t beginIndex = -1;
-          for (auto it : llvm::enumerate(branchOp->getRegions()))
+          for (const auto &it : llvm::enumerate(branchOp->getRegions()))
             if (&it.value() == begin)
               beginIndex = it.index();
           assert(beginIndex != -1 && "could not find region in op");

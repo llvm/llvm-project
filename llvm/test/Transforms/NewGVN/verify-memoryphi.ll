@@ -7,7 +7,7 @@
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT:   br i1 false, label %body, label %end
 ; CHECK:      body:
-; CHECK-NEXT:   store i8 undef, i8* null
+; CHECK-NEXT:   store i8 poison, i8* null
 ; CHECK-NEXT:   br label %end
 ; CHECK:      end:
 ; CHECK-NEXT:   ret void

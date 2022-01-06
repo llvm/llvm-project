@@ -44,7 +44,6 @@ class TargetLowering;
 class TargetPassConfig;
 class TargetRegisterInfo;
 class TargetRegisterClass;
-class ConstantInt;
 class ConstantFP;
 class APFloat;
 class MachineIRBuilder;
