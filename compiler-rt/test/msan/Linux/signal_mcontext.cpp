@@ -3,6 +3,7 @@
 #include <pthread.h>
 #include <sanitizer/msan_interface.h>
 #include <signal.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <ucontext.h>
 #include <unistd.h>
@@ -12,7 +13,11 @@ void handler(int sig, siginfo_t *info, void *uctx) {
 #if defined(__x86_64__)
   auto *mctx = &static_cast<ucontext_t *>(uctx)->uc_mcontext;
   if (auto *fpregs = mctx->fpregs) {
-    if (fpregs->__glibc_reserved1[12] == FP_XSTATE_MAGIC1) {
+    // The member names differ across header versions, but the actual layout
+    // is always the same.  So avoid using members, just use arithmetic.
+    const uint32_t *after_xmm =
+        reinterpret_cast<const uint32_t *>(fpregs + 1) - 24;
+    if (after_xmm[12] == FP_XSTATE_MAGIC1) {
       auto *xstate = reinterpret_cast<_xstate *>(mctx->fpregs);
       __msan_check_mem_is_initialized(xstate, sizeof(*xstate));
     }
