@@ -178,4 +178,4 @@ interesting areas to contribute to lldb.
 
    Source Code <https://github.com/llvm/llvm-project>
    Code Reviews <https://reviews.llvm.org>
-   Bug Reports <https://bugs.llvm.org/>
+   Bug Reports <https://github.com/llvm/llvm-project/issues/labels/lldb/>

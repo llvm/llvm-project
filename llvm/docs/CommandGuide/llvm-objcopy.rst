@@ -536,7 +536,7 @@ Otherwise, it exits with code 0.
 BUGS
 ----
 
-To report bugs, please visit <https://bugs.llvm.org/>.
+To report bugs, please visit <https://github.com/llvm/llvm-project/labels/tools:llvm-objcopy/strip/>.
 
 There is a known issue with :option:`--input-target` and :option:`--target`
 causing only ``binary`` and ``ihex`` formats to have any effect. Other values
