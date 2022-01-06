@@ -660,20 +660,12 @@ struct ReturnOpInterface
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationState &state) const {
+#ifndef NDEBUG
     auto returnOp = cast<ReturnOp>(op);
     assert(isa<FuncOp>(returnOp->getParentOp()) &&
            "only support FuncOp parent for ReturnOp");
-
-    for (OpOperand &operand : returnOp->getOpOperands()) {
-      auto tensorType = operand.get().getType().dyn_cast<TensorType>();
-      if (!tensorType)
-        continue;
-      Value v = state.lookupBuffer(rewriter, operand.get());
-      Value returnTensor =
-          rewriter.create<bufferization::ToTensorOp>(returnOp.getLoc(), v);
-      operand.set(returnTensor);
-    }
-    return success();
+#endif // NDEBUG
+    return failure();
   }
 };
 
@@ -681,10 +673,7 @@ struct FuncOpInterface
     : public BufferizableOpInterface::ExternalModel<FuncOpInterface, FuncOp> {
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationState &state) const {
-    auto funcOp = cast<FuncOp>(op);
-
-    // Bufferize function body.
-    return comprehensive_bufferize::bufferize(rewriter, &funcOp.body(), state);
+    return failure();
   }
 
   /// Return `true` if the given function argument is writable.

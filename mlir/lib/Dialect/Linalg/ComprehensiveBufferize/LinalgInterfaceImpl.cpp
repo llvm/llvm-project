@@ -64,14 +64,12 @@ static LogicalResult bufferizeLinalgOp(RewriterBase &rewriter, LinalgOp op,
 
   // Set insertion point now that potential alloc/dealloc are introduced.
   rewriter.setInsertionPoint(op);
-  auto bufferizedOp = cast<LinalgOp>(op.clone(
-      rewriter, op.getLoc(), /*resultTypes=*/TypeRange{}, newOperands));
+  op.clone(rewriter, op.getLoc(), /*resultTypes=*/TypeRange{}, newOperands);
 
   // Replace the results of the old op with the new output buffers.
   state.replaceOp(rewriter, op, newOutputBuffers);
 
-  return comprehensive_bufferize::bufferize(rewriter, bufferizedOp.getBlock(),
-                                            state);
+  return success();
 }
 
 /// Linalg OpResults usually bufferize inplace with their tied (output
@@ -310,7 +308,7 @@ struct TiledLoopOpInterface
     for (auto it : llvm::zip(oldRegionInOutArgs, newRegionInOutArgs)) {
       Value oldArg = std::get<0>(it);
       Value newArg = std::get<1>(it);
-      rewriter.setInsertionPointToStart(newTiledLoopOp->getBlock());
+      rewriter.setInsertionPointToStart(newTiledLoopOp.getBody());
       if (oldArg.getType().isa<TensorType>()) {
         newBlockArgs.push_back(rewriter.create<bufferization::ToTensorOp>(
             oldArg.getLoc(), newArg));
@@ -346,9 +344,7 @@ struct TiledLoopOpInterface
     // Replace results and delete old op.
     state.replaceOp(rewriter, op, newResults);
 
-    // Bufferize loop body.
-    return comprehensive_bufferize::bufferize(rewriter,
-                                              newTiledLoopOp.getBody(), state);
+    return success();
   }
 };
 

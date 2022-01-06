@@ -443,20 +443,6 @@ private:
   const BufferizationOptions &options;
 };
 
-/// Bufferize all ops in the given region.
-LogicalResult bufferize(RewriterBase &rewriter, Region *region,
-                        const BufferizationState &state);
-
-/// Bufferize all ops in the given block.
-LogicalResult bufferize(RewriterBase &rewriter, Block *block,
-                        const BufferizationState &state);
-
-/// Bufferize the given op. If the op has no tensor OpOperands/OpResults, this
-/// function returns immediately. Otherwise, it calls the `bufferize` interface
-/// method of `BufferizableOpInterface`.
-LogicalResult bufferize(RewriterBase &rewriter, Operation *op,
-                        const BufferizationState &state);
-
 /// Return a contiguous MemRefType (i.e. with canonical/empty layout map)
 /// with the same shape as `shapedType` and specified `layout` and
 /// `addressSpace`.
@@ -529,17 +515,7 @@ struct AllocationHoistingBarrierOnly
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationState &state) const {
-    auto isaTensor = [](Type t) { return t.isa<TensorType>(); };
-    if (any_of(op->getOperandTypes(), isaTensor) ||
-        any_of(op->getResultTypes(), isaTensor))
-      if (!state.getOptions().allowUnknownOps)
-        return op->emitError() << "unsupported op with tensors";
-
-    for (Region &region : op->getRegions())
-      if (failed(comprehensive_bufferize::bufferize(rewriter, &region, state)))
-        return failure();
-
-    return success();
+    return failure();
   }
 
   bool isAllocationHoistingBarrier(Operation *op) const { return true; }

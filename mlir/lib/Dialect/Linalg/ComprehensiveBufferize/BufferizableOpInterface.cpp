@@ -452,59 +452,6 @@ void mlir::linalg::comprehensive_bufferize::BufferizationState::replaceOp(
   rewriter.eraseOp(op);
 }
 
-LogicalResult mlir::linalg::comprehensive_bufferize::bufferize(
-    RewriterBase &rewriter, Region *region, const BufferizationState &state) {
-  for (Block &block : *region)
-    if (failed(bufferize(rewriter, &block, state)))
-      return failure();
-  return success();
-}
-
-LogicalResult mlir::linalg::comprehensive_bufferize::bufferize(
-    RewriterBase &rewriter, Block *block, const BufferizationState &state) {
-  // Ops may get deleted during the traversal, so do not iterate over `block`
-  // directly.
-  SmallVector<Operation *> ops;
-  ops.reserve(block->getOperations().size());
-  for (Operation &op : *block)
-    ops.push_back(&op);
-  for (Operation *op : ops)
-    if (failed(bufferize(rewriter, op, state)))
-      return failure();
-  return success();
-}
-
-LogicalResult mlir::linalg::comprehensive_bufferize::bufferize(
-    RewriterBase &rewriter, Operation *op, const BufferizationState &state) {
-  // Check if op has tensor results or operands.
-  auto isaTensor = [](Type t) { return t.isa<TensorType>(); };
-  bool hasTensorResult = any_of(op->getResultTypes(), isaTensor);
-  bool hasTensorOperand = any_of(op->getOperandTypes(), isaTensor);
-  bool hasRegions = !op->getRegions().empty();
-
-  // No tensor results/operands or regions. We are done.
-  if (!hasTensorResult && !hasTensorOperand && !hasRegions)
-    return success();
-
-  // Bufferize using `BufferizableOpInterface`. Interface implementations are
-  // responsible for bufferizing nested ops.
-  if (auto bufferizableOp = state.getOptions().dynCastBufferizableOp(op)) {
-    rewriter.setInsertionPoint(op);
-    return bufferizableOp.bufferize(rewriter, state);
-  }
-
-  // `op` is an unbufferizable tensor op.
-  if (!state.getOptions().allowUnknownOps)
-    return op->emitError() << "unsupported op with tensors";
-
-  // Bufferize all regions.
-  for (Region &region : op->getRegions())
-    if (failed(bufferize(rewriter, &region, state)))
-      return failure();
-
-  return success();
-}
-
 //===----------------------------------------------------------------------===//
 // Bufferization-specific scoped alloc/dealloc insertion support.
 //===----------------------------------------------------------------------===//
@@ -657,28 +604,15 @@ Value mlir::linalg::comprehensive_bufferize::BufferizationState::lookupBuffer(
   if (auto toTensorOp = tensor.getDefiningOp<bufferization::ToTensorOp>())
     return toTensorOp.memref();
 
-  if (!isFunctionArgument(tensor)) {
-    if (static_cast<bool>(options.dynCastBufferizableOp(tensor))) {
-      // Dump tensor for easier debugging.
-      tensor.dump();
-      llvm_unreachable("op is known, but has not been bufferized yet");
-      return Value();
-    }
-    if (!options.allowUnknownOps) {
-      // Dump tensor for easier debugging.
-      tensor.dump();
-      // Note: An assertion should already have failed earlier.
-      llvm_unreachable("unknown ops are not allowed");
-      return Value();
-    }
-  }
-
   // Insert to_memref op.
   OpBuilder::InsertionGuard g(rewriter);
   setInsertionPointAfter(rewriter, tensor);
-  return rewriter.create<bufferization::ToMemrefOp>(
-      tensor.getLoc(),
-      getDynamicMemRefType(tensor.getType().cast<RankedTensorType>()), tensor);
+  Type memrefType =
+      tensor.getType().isa<RankedTensorType>()
+          ? getDynamicMemRefType(tensor.getType().cast<RankedTensorType>())
+          : getContiguousOrUnrankedMemRefType(tensor.getType());
+  return rewriter.create<bufferization::ToMemrefOp>(tensor.getLoc(), memrefType,
+                                                    tensor);
 }
 
 bool mlir::linalg::comprehensive_bufferize::BufferizationState::isInPlace(

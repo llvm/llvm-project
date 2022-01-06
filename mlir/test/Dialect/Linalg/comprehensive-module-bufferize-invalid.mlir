@@ -142,7 +142,7 @@ func @scf_yield(%b : i1, %A : tensor<4xf32>, %B : tensor<4xf32>) -> tensor<4xf32
 
 func @unknown_op(%A : tensor<4xf32>) -> tensor<4xf32>
 {
-  // expected-error @+1 {{unsupported op with tensors}}
+  // expected-error @+1 {{op was not bufferized}}
   %r = "marklar"(%A) : (tensor<4xf32>) -> (tensor<4xf32>)
   return %r: tensor<4xf32>
 }
@@ -193,7 +193,8 @@ func @to_memref_op_is_writing(
 func private @foo(%t : tensor<?xf32>) -> (f32, tensor<?xf32>, f32)
 
 func @call_to_unknown_tensor_returning_func(%t : tensor<?xf32>) {
-  // expected-error @+1 {{call to FuncOp that returns non-equivalent tensors not supported}}
+  // expected-error @+2 {{call to FuncOp that returns non-equivalent tensors not supported}}
+  // expected-error @+1 {{op was not bufferized}}
   call @foo(%t) : (tensor<?xf32>) -> (f32, tensor<?xf32>, f32)
   return
 }
@@ -206,7 +207,8 @@ func @foo(%t : tensor<5xf32>) -> (tensor<5xf32>) {
 }
 
 func @call_to_func_returning_non_equiv_tensor(%t : tensor<5xf32>) {
-  // expected-error @+1 {{call to FuncOp that returns non-equivalent tensors not supported}}
+  // expected-error @+2 {{call to FuncOp that returns non-equivalent tensors not supported}}
+  // expected-error @+1 {{op was not bufferized}}
   call @foo(%t) : (tensor<5xf32>) -> (tensor<5xf32>)
   return
 }
