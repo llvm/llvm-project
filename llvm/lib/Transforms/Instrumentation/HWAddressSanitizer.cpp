@@ -1403,16 +1403,16 @@ bool HWAddressSanitizer::instrumentStack(
 
     size_t Size = getAllocaSizeInBytes(*AI);
     size_t AlignedSize = alignTo(Size, Mapping.getObjectAlignment());
+    auto TagEnd = [&](Instruction *Node) {
+      IRB.SetInsertPoint(Node);
+      Value *UARTag = getUARTag(IRB, StackTag);
+      tagAlloca(IRB, AI, UARTag, AlignedSize);
+    };
     bool StandardLifetime =
         UnrecognizedLifetimes.empty() && isStandardLifetime(Info, GetDT());
     if (DetectUseAfterScope && StandardLifetime) {
       IntrinsicInst *Start = Info.LifetimeStart[0];
       IRB.SetInsertPoint(Start->getNextNode());
-      auto TagEnd = [&](Instruction *Node) {
-        IRB.SetInsertPoint(Node);
-        Value *UARTag = getUARTag(IRB, StackTag);
-        tagAlloca(IRB, AI, UARTag, AlignedSize);
-      };
       tagAlloca(IRB, AI, Tag, Size);
       if (!forAllReachableExits(GetDT(), GetPDT(), Start, Info.LifetimeEnd,
                                 RetVec, TagEnd)) {
@@ -1421,11 +1421,8 @@ bool HWAddressSanitizer::instrumentStack(
       }
     } else {
       tagAlloca(IRB, AI, Tag, Size);
-      for (auto *RI : RetVec) {
-        IRB.SetInsertPoint(RI);
-        Value *UARTag = getUARTag(IRB, StackTag);
-        tagAlloca(IRB, AI, UARTag, AlignedSize);
-      }
+      for (auto *RI : RetVec)
+        TagEnd(RI);
       if (!StandardLifetime) {
         for (auto &II : Info.LifetimeStart)
           II->eraseFromParent();
