@@ -348,8 +348,7 @@ define void @test_stride_loopinvar_4i32(i32* readonly %data, i32* noalias nocapt
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:
 ; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[STRIDE:%.*]], 1
-; CHECK-NEXT:    [[TMP0:%.*]] = or i1 false, [[IDENT_CHECK]]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br i1 [[IDENT_CHECK]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N:%.*]], 3
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 4

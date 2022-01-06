@@ -7,8 +7,7 @@ define void @test(float* %A, i32 %x) {
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:
 ; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[TMP0:%.*]] = or i1 false, [[IDENT_CHECK]]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br i1 [[IDENT_CHECK]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:

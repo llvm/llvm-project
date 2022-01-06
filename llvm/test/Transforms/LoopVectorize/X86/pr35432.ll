@@ -60,8 +60,7 @@ define i32 @main() local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp ugt i32 [[TMP9]], 255
 ; CHECK-NEXT:    [[TMP17:%.*]] = or i1 [[TMP15]], [[TMP16]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = or i1 [[TMP17]], [[MUL_OVERFLOW]]
-; CHECK-NEXT:    [[TMP19:%.*]] = or i1 false, [[TMP18]]
-; CHECK-NEXT:    br i1 [[TMP19]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br i1 [[TMP18]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP6]], 8
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP6]], [[N_MOD_VF]]

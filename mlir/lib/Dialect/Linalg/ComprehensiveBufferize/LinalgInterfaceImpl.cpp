@@ -24,7 +24,7 @@ namespace {
 
 /// Generic conversion for any LinalgOp on tensors.
 static LogicalResult bufferizeLinalgOp(RewriterBase &rewriter, LinalgOp op,
-                                       BufferizationState &state) {
+                                       const BufferizationState &state) {
   // Take a guard before anything else.
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(op);
@@ -142,13 +142,13 @@ struct LinalgOpInterface
     : public BufferizableOpInterface::ExternalModel<LinalgOpInterface<OpTy>,
                                                     OpTy> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
-                              BufferizationState &state) const {
+                              const BufferizationState &state) const {
     auto genericOp = cast<linalg::LinalgOp>(op);
     return genericOp.payloadUsesValueFromOperand(&opOperand);
   }
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
-                               BufferizationState &state) const {
+                               const BufferizationState &state) const {
     auto bufferizableOp = cast<BufferizableOpInterface>(op);
     return static_cast<bool>(
         bufferizableOp.getAliasingOpResult(opOperand, state));
@@ -156,7 +156,7 @@ struct LinalgOpInterface
 
   SmallVector<OpOperand *>
   getAliasingOpOperand(Operation *op, OpResult opResult,
-                       BufferizationState &state) const {
+                       const BufferizationState &state) const {
     auto genericOp = cast<linalg::LinalgOp>(op);
     DenseMap<OpOperand *, OpResult> pairs = computeAliasingPairs(genericOp);
     for (OpOperand *opOperand : genericOp.getInputAndOutputOperands())
@@ -166,7 +166,7 @@ struct LinalgOpInterface
   }
 
   OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand,
-                               BufferizationState &state) const {
+                               const BufferizationState &state) const {
     auto genericOp = cast<linalg::LinalgOp>(op);
     DenseMap<OpOperand *, OpResult> pairs = computeAliasingPairs(genericOp);
     return pairs[&opOperand];
@@ -174,12 +174,12 @@ struct LinalgOpInterface
 
   BufferRelation bufferRelation(Operation *op, OpResult opResult,
                                 const BufferizationAliasInfo &aliasInfo,
-                                BufferizationState &state) const {
+                                const BufferizationState &state) const {
     return BufferRelation::Equivalent;
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          BufferizationState &state) const {
+                          const BufferizationState &state) const {
     return bufferizeLinalgOp(rewriter, cast<LinalgOp>(op), state);
   }
 };
@@ -188,13 +188,13 @@ struct InitTensorOpInterface
     : public BufferizableOpInterface::ExternalModel<InitTensorOpInterface,
                                                     linalg::InitTensorOp> {
   bool isMemoryWrite(Operation *op, OpResult opResult,
-                     BufferizationState &state) const {
+                     const BufferizationState &state) const {
     // InitTensorOps allocate but do not write.
     return false;
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          BufferizationState &state) const {
+                          const BufferizationState &state) const {
     auto initTensorOp = cast<linalg::InitTensorOp>(op);
 
     // The InitTensorOp may have been eliminated.
@@ -212,7 +212,7 @@ struct TiledLoopOpInterface
     : public BufferizableOpInterface::ExternalModel<TiledLoopOpInterface,
                                                     linalg::TiledLoopOp> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
-                              BufferizationState &state) const {
+                              const BufferizationState &state) const {
     // TiledLoop alone doesn't bufferize to a memory read, one of the uses of
     // its matching bbArg may.
     auto tiledLoopOp = cast<linalg::TiledLoopOp>(op);
@@ -220,7 +220,7 @@ struct TiledLoopOpInterface
   }
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
-                               BufferizationState &state) const {
+                               const BufferizationState &state) const {
     // TiledLoop alone doesn't bufferize to a memory write, one of the uses of
     // its matching bbArg may.
     auto bufferizableOp = cast<BufferizableOpInterface>(op);
@@ -229,18 +229,19 @@ struct TiledLoopOpInterface
   }
 
   OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand,
-                               BufferizationState &state) const {
+                               const BufferizationState &state) const {
     auto tiledLoopOp = cast<linalg::TiledLoopOp>(op);
     return tiledLoopOp.getTiedOpResult(opOperand);
   }
 
   BufferRelation bufferRelation(Operation *op, OpResult opResult,
                                 const BufferizationAliasInfo &aliasInfo,
-                                BufferizationState &state) const {
+                                const BufferizationState &state) const {
     return BufferRelation::Equivalent;
   }
 
-  bool isWritable(Operation *op, Value value, BufferizationState &state) const {
+  bool isWritable(Operation *op, Value value,
+                  const BufferizationState &state) const {
     // Interestingly, linalg::TiledLoopOp's bbArg can **always** be viewed
     // inplace from the perspective of ops nested under:
     //   1. Either the matching iter operand is not bufferized inplace and an
@@ -253,7 +254,7 @@ struct TiledLoopOpInterface
   bool isAllocationHoistingBarrier(Operation *op) const { return true; }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          BufferizationState &state) const {
+                          const BufferizationState &state) const {
     auto tiledLoopOp = cast<linalg::TiledLoopOp>(op);
 
     // Compute new inputs, outputs and results.
@@ -323,9 +324,23 @@ struct TiledLoopOpInterface
                          newBlockArgs);
 
     // Replace previous terminator with a new one that does not yield anything.
-    Operation *oldTerminator = newTiledLoopOp.getBody()->getTerminator();
+    auto oldTerminator =
+        cast<linalg::YieldOp>(newTiledLoopOp.getBody()->getTerminator());
     rewriter.setInsertionPointToEnd(newTiledLoopOp.getBody());
-    rewriter.create<linalg::YieldOp>(oldTerminator->getLoc());
+    auto newTerminator =
+        rewriter.create<linalg::YieldOp>(oldTerminator->getLoc());
+
+    // Copy buffer of yielded tensor to output buffer. If everything bufferized
+    // inplace, this copy will fold away.
+    rewriter.setInsertionPoint(newTerminator);
+    for (auto it : llvm::zip(oldTerminator.values(), newOutputs)) {
+      Value output = std::get<1>(it);
+      Value toMemrefOp = rewriter.create<bufferization::ToMemrefOp>(
+          newTerminator.getLoc(), output.getType(), std::get<0>(it));
+      state.createMemCpy(rewriter, newTerminator.getLoc(), toMemrefOp, output);
+    }
+
+    // Erase old terminator.
     rewriter.eraseOp(oldTerminator);
 
     // Replace results and delete old op.
@@ -341,22 +356,22 @@ struct YieldOpInterface
     : public BufferizableOpInterface::ExternalModel<YieldOpInterface,
                                                     linalg::YieldOp> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
-                              BufferizationState &state) const {
+                              const BufferizationState &state) const {
     return true;
   }
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
-                               BufferizationState &state) const {
+                               const BufferizationState &state) const {
     return false;
   }
 
   OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand,
-                               BufferizationState &state) const {
+                               const BufferizationState &state) const {
     return OpResult();
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          BufferizationState &state) const {
+                          const BufferizationState &state) const {
     auto yieldOp = cast<linalg::YieldOp>(op);
 
     if (!yieldOp->getParentOfType<TiledLoopOp>())

@@ -688,7 +688,7 @@ struct LinalgGenericTilingPattern : public LinalgBaseTilingPattern {
 /// Apply the `padding` transformation as a pattern.
 /// `filter` controls LinalgTransformMarker matching and update when specified.
 /// See `padding` for more details.
-struct LinalgPaddingPattern : public RewritePattern {
+struct LinalgPaddingPattern : public OpInterfaceRewritePattern<LinalgOp> {
   // Entry point to match any LinalgOp OpInterface.
   LinalgPaddingPattern(
       MLIRContext *context,
@@ -701,7 +701,7 @@ struct LinalgPaddingPattern : public RewritePattern {
       LinalgPaddingOptions options = LinalgPaddingOptions(),
       LinalgTransformationFilter filter = LinalgTransformationFilter(),
       PatternBenefit benefit = 1);
-  LogicalResult matchAndRewrite(Operation *op,
+  LogicalResult matchAndRewrite(LinalgOp,
                                 PatternRewriter &rewriter) const override;
 
 private:

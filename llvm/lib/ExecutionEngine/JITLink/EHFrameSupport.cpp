@@ -416,7 +416,8 @@ Error EHFrameEdgeFixer::processFDE(ParseContext &PC, Block &B,
     // Process the CIE pointer field.
     auto CIEEdgeItr = BlockEdges.find(RecordOffset + CIEDeltaFieldOffset);
     orc::ExecutorAddr CIEAddress =
-        RecordAddress + orc::ExecutorAddrDiff(CIEDeltaFieldOffset - CIEDelta);
+        RecordAddress + orc::ExecutorAddrDiff(CIEDeltaFieldOffset) -
+        orc::ExecutorAddrDiff(CIEDelta);
     if (CIEEdgeItr == BlockEdges.end()) {
 
       LLVM_DEBUG({

@@ -15,6 +15,6 @@ define void @func2() nounwind {
 ; CHECK-NEXT:    ## InlineAsm End
 ; CHECK-NEXT:    retl
 entry:
-	tail call void asm "mov $1,%gs:$0", "=*m,ri,~{dirflag},~{fpsr},~{flags}"(i8** inttoptr (i32 152 to i8**), i8* bitcast (i8** @main_q to i8*)) nounwind
+	tail call void asm "mov $1,%gs:$0", "=*m,ri,~{dirflag},~{fpsr},~{flags}"(i8** elementtype(i8*) inttoptr (i32 152 to i8**), i8* bitcast (i8** @main_q to i8*)) nounwind
 	ret void
 }

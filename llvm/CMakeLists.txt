@@ -176,6 +176,10 @@ if(LLVM_CCACHE_BUILD)
   endif()
 endif()
 
+set(LLVM_EXTERNAL_PROJECT_BUILD_TOOL_ARGS "" CACHE STRING
+  "Optional arguments for the native tool used in CMake --build invocations for external projects.")
+mark_as_advanced(LLVM_EXTERNAL_PROJECT_BUILD_TOOL_ARGS)
+
 option(LLVM_DEPENDENCY_DEBUGGING "Dependency debugging mode to verify correctly expressed library dependencies (Darwin only)" OFF)
 
 # Some features of the LLVM build may be disallowed when dependency debugging is
@@ -234,7 +238,7 @@ option(LLVM_APPEND_VC_REV
 
 set(PACKAGE_NAME LLVM)
 set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
-set(PACKAGE_BUGREPORT "https://bugs.llvm.org/")
+set(PACKAGE_BUGREPORT "https://github.com/llvm/llvm-project/issues/")
 
 set(BUG_REPORT_URL "${PACKAGE_BUGREPORT}" CACHE STRING
   "Default URL where bug reports are to be submitted.")
@@ -593,7 +597,7 @@ endif(LLVM_BUILD_EXAMPLES)
 option(LLVM_BUILD_TESTS
   "Build LLVM unit tests. If OFF, just generate build targets." OFF)
 option(LLVM_INCLUDE_TESTS "Generate build targets for the LLVM unit tests." ON)
-option(LLVM_INCLUDE_GO_TESTS "Include the Go bindings tests in test build targets." ON)
+option(LLVM_INCLUDE_GO_TESTS "Include the Go bindings tests in test build targets." OFF)
 
 option(LLVM_BUILD_BENCHMARKS "Add LLVM benchmark targets to the list of default
 targets. If OFF, benchmarks still could be built using Benchmarks target." OFF)
