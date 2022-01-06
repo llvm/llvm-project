@@ -507,3 +507,26 @@ func @unit_dim_reshape_expansion_full
 //    FOLDUNITDIM-SAME:     ins(%[[ARG0]], %[[RESHAPE]] : tensor<1x?x1x2x1x4xf32>, tensor<1x?x1x2x1x4xf32>)
 //    FOLDUNITDIM-SAME:     outs(%{{.+}} : tensor<1x?x1x2x1x4xf32>)
 
+// -----
+
+func @no_fuse_dynamic_dims(%arg0: tensor<?x?xf32>) -> tensor<?xf32> {
+  %c0 = arith.constant 0 : index
+  %0 = tensor.collapse_shape %arg0 [[0, 1]] : tensor<?x?xf32> into tensor<?xf32>
+  %1 = tensor.dim %0, %c0 : tensor<?xf32>
+  %2 = linalg.init_tensor [%1] : tensor<?xf32>
+  %3 = linalg.generic {
+    indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> (d0)>],
+    iterator_types = ["parallel"]}
+    ins(%0 : tensor<?xf32>) outs(%2 : tensor<?xf32>) {
+      ^bb0(%arg1 : f32, %arg2: f32):
+        %4 = arith.addf %arg1, %arg1 : f32
+        linalg.yield %4 : f32
+    } -> tensor<?xf32>
+  return %3 : tensor<?xf32>
+}
+//      CHECK: func @no_fuse_dynamic_dims
+// CHECK-SAME:     %[[ARG0:.+]]: tensor<?x?xf32>
+//      CHECK:   %[[RESHAPE:.+]] = tensor.collapse_shape %[[ARG0]]
+//      CHECK:   %[[GENERIC:.+]] = linalg.generic
+// CHECK-SAME:       ins(%[[RESHAPE]] : tensor<?xf32>)
+//      CHECK:   return %[[GENERIC]]
