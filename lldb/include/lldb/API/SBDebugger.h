@@ -306,6 +306,10 @@ public:
 
   void SetScriptLanguage(lldb::ScriptLanguage script_lang);
 
+  lldb::LanguageType GetREPLLanguage() const;
+
+  void SetREPLLanguage(lldb::LanguageType repl_lang);
+
   bool GetCloseInputOnEOF() const;
 
   void SetCloseInputOnEOF(bool b);

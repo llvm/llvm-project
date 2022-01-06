@@ -5374,10 +5374,10 @@ def : Pat<(v16i8 (int_aarch64_neon_tbx1 (v16i8 V128:$Rd),
 
 
 //----------------------------------------------------------------------------
-// AdvSIMD scalar CPY instruction
+// AdvSIMD scalar DUP instruction
 //----------------------------------------------------------------------------
 
-defm CPY : SIMDScalarCPY<"mov">;
+defm DUP : SIMDScalarDUP<"mov">;
 
 //----------------------------------------------------------------------------
 // AdvSIMD scalar pairwise instructions
@@ -5788,7 +5788,7 @@ defm : Neon_INS_elt_pattern<v2f64, v1f64, f64, INSvi64lane>;
 
 
 // Floating point vector extractions are codegen'd as either a sequence of
-// subregister extractions, or a MOV (aka CPY here, alias for DUP) if
+// subregister extractions, or a MOV (aka DUP here) if
 // the lane number is anything other than zero.
 def : Pat<(vector_extract (v2f64 V128:$Rn), 0),
           (f64 (EXTRACT_SUBREG V128:$Rn, dsub))>;
@@ -5801,13 +5801,13 @@ def : Pat<(vector_extract (v8bf16 V128:$Rn), 0),
 
 
 def : Pat<(vector_extract (v2f64 V128:$Rn), VectorIndexD:$idx),
-          (f64 (CPYi64 V128:$Rn, VectorIndexD:$idx))>;
+          (f64 (DUPi64 V128:$Rn, VectorIndexD:$idx))>;
 def : Pat<(vector_extract (v4f32 V128:$Rn), VectorIndexS:$idx),
-          (f32 (CPYi32 V128:$Rn, VectorIndexS:$idx))>;
+          (f32 (DUPi32 V128:$Rn, VectorIndexS:$idx))>;
 def : Pat<(vector_extract (v8f16 V128:$Rn), VectorIndexH:$idx),
-          (f16 (CPYi16 V128:$Rn, VectorIndexH:$idx))>;
+          (f16 (DUPi16 V128:$Rn, VectorIndexH:$idx))>;
 def : Pat<(vector_extract (v8bf16 V128:$Rn), VectorIndexH:$idx),
-          (bf16 (CPYi16 V128:$Rn, VectorIndexH:$idx))>;
+          (bf16 (DUPi16 V128:$Rn, VectorIndexH:$idx))>;
 
 // All concat_vectors operations are canonicalised to act on i64 vectors for
 // AArch64. In the general case we need an instruction, which had just as well be
@@ -8104,7 +8104,7 @@ class NTStore128Pat<ValueType VT> :
   Pat<(nontemporalstore (VT FPR128:$Rt),
         (am_indexed7s64 GPR64sp:$Rn, simm7s8:$offset)),
       (STNPDi (EXTRACT_SUBREG FPR128:$Rt, dsub),
-              (CPYi64 FPR128:$Rt, (i64 1)),
+              (DUPi64 FPR128:$Rt, (i64 1)),
               GPR64sp:$Rn, simm7s8:$offset)>;
 
 def : NTStore128Pat<v2i64>;
@@ -8116,7 +8116,7 @@ class NTStore64Pat<ValueType VT> :
   Pat<(nontemporalstore (VT FPR64:$Rt),
         (am_indexed7s32 GPR64sp:$Rn, simm7s4:$offset)),
       (STNPSi (EXTRACT_SUBREG FPR64:$Rt, ssub),
-              (CPYi32 (SUBREG_TO_REG (i64 0), FPR64:$Rt, dsub), (i64 1)),
+              (DUPi32 (SUBREG_TO_REG (i64 0), FPR64:$Rt, dsub), (i64 1)),
               GPR64sp:$Rn, simm7s4:$offset)>;
 
 // FIXME: Shouldn't v1f64 loads/stores be promoted to v1i64?

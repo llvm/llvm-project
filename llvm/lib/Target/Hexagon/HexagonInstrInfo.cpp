@@ -2799,6 +2799,11 @@ bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
   case Hexagon::S4_storeirit_io:
   case Hexagon::S4_storeirif_io:
     return isShiftedUInt<6,2>(Offset);
+  // Handle these two compare instructions that are not extendable.
+  case Hexagon::A4_cmpbeqi:
+    return isUInt<8>(Offset);
+  case Hexagon::A4_cmpbgti:
+    return isInt<8>(Offset);
   }
 
   if (Extend)
@@ -2836,6 +2841,8 @@ bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
   case Hexagon::L4_isub_memopw_io:
   case Hexagon::L4_add_memopw_io:
   case Hexagon::L4_sub_memopw_io:
+  case Hexagon::L4_iand_memopw_io:
+  case Hexagon::L4_ior_memopw_io:
   case Hexagon::L4_and_memopw_io:
   case Hexagon::L4_or_memopw_io:
     return (0 <= Offset && Offset <= 255);
@@ -2844,6 +2851,8 @@ bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
   case Hexagon::L4_isub_memoph_io:
   case Hexagon::L4_add_memoph_io:
   case Hexagon::L4_sub_memoph_io:
+  case Hexagon::L4_iand_memoph_io:
+  case Hexagon::L4_ior_memoph_io:
   case Hexagon::L4_and_memoph_io:
   case Hexagon::L4_or_memoph_io:
     return (0 <= Offset && Offset <= 127);
@@ -2852,6 +2861,8 @@ bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
   case Hexagon::L4_isub_memopb_io:
   case Hexagon::L4_add_memopb_io:
   case Hexagon::L4_sub_memopb_io:
+  case Hexagon::L4_iand_memopb_io:
+  case Hexagon::L4_ior_memopb_io:
   case Hexagon::L4_and_memopb_io:
   case Hexagon::L4_or_memopb_io:
     return (0 <= Offset && Offset <= 63);
@@ -2896,8 +2907,18 @@ bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
   case Hexagon::S2_pstorerdt_io:
   case Hexagon::S2_pstorerdf_io:
     return isShiftedUInt<6,3>(Offset);
+
+  case Hexagon::L2_loadbsw2_io:
+  case Hexagon::L2_loadbzw2_io:
+    return isShiftedInt<11,1>(Offset);
+
+  case Hexagon::L2_loadbsw4_io:
+  case Hexagon::L2_loadbzw4_io:
+    return isShiftedInt<11,2>(Offset);
   } // switch
 
+  dbgs() << "Failed Opcode is : " << Opcode << " (" << getName(Opcode)
+         << ")\n";
   llvm_unreachable("No offset range is defined for this opcode. "
                    "Please define it in the above switch statement!");
 }
@@ -3564,6 +3585,10 @@ int HexagonInstrInfo::getDotCurOp(const MachineInstr &MI) const {
     return Hexagon::V6_vL32b_nt_cur_pi;
   case Hexagon::V6_vL32b_nt_ai:
     return Hexagon::V6_vL32b_nt_cur_ai;
+  case Hexagon::V6_vL32b_ppu:
+    return Hexagon::V6_vL32b_cur_ppu;
+  case Hexagon::V6_vL32b_nt_ppu:
+    return Hexagon::V6_vL32b_nt_cur_ppu;
   }
   return 0;
 }
@@ -3580,6 +3605,10 @@ int HexagonInstrInfo::getNonDotCurOp(const MachineInstr &MI) const {
     return Hexagon::V6_vL32b_nt_pi;
   case Hexagon::V6_vL32b_nt_cur_ai:
     return Hexagon::V6_vL32b_nt_ai;
+  case Hexagon::V6_vL32b_cur_ppu:
+    return Hexagon::V6_vL32b_ppu;
+  case Hexagon::V6_vL32b_nt_cur_ppu:
+    return Hexagon::V6_vL32b_nt_ppu;
   }
   return 0;
 }

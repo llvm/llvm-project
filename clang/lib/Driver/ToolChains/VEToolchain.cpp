@@ -48,7 +48,8 @@ VEToolChain::VEToolChain(const Driver &D, const llvm::Triple &Triple,
   //   ${BINPATH}/../lib/ve-unknown-linux-gnu, (== getStdlibPath)
   //   ${RESOURCEDIR}/lib/linux/ve, (== getArchSpecificLibPath)
   //   ${SYSROOT}/opt/nec/ve/lib,
-  getFilePaths().push_back(getStdlibPath());
+  for (auto &Path : getStdlibPaths())
+    getFilePaths().push_back(std::move(Path));
   getFilePaths().push_back(getArchSpecificLibPath());
   getFilePaths().push_back(computeSysRoot() + "/opt/nec/ve/lib");
 }

@@ -600,6 +600,60 @@ dfsan_has_label(dfsan_label label, dfsan_label elem) {
   return (label & elem) == elem;
 }
 
+namespace __dfsan {
+
+typedef void (*dfsan_conditional_callback_t)(dfsan_label label,
+                                             dfsan_origin origin);
+static dfsan_conditional_callback_t conditional_callback = nullptr;
+static dfsan_label labels_in_signal_conditional = 0;
+
+static void ConditionalCallback(dfsan_label label, dfsan_origin origin) {
+  // Programs have many branches. For efficiency the conditional sink callback
+  // handler needs to ignore as many as possible as early as possible.
+  if (label == 0) {
+    return;
+  }
+  if (conditional_callback == nullptr) {
+    return;
+  }
+
+  // This initial ConditionalCallback handler needs to be in here in dfsan
+  // runtime (rather than being an entirely user implemented hook) so that it
+  // has access to dfsan thread information.
+  DFsanThread *t = GetCurrentThread();
+  // A callback operation which does useful work (like record the flow) will
+  // likely be too long executed in a signal handler.
+  if (t && t->InSignalHandler()) {
+    // Record set of labels used in signal handler for completeness.
+    labels_in_signal_conditional |= label;
+    return;
+  }
+
+  conditional_callback(label, origin);
+}
+
+}  // namespace __dfsan
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
+__dfsan_conditional_callback_origin(dfsan_label label, dfsan_origin origin) {
+  __dfsan::ConditionalCallback(label, origin);
+}
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_conditional_callback(
+    dfsan_label label) {
+  __dfsan::ConditionalCallback(label, 0);
+}
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void dfsan_set_conditional_callback(
+    __dfsan::dfsan_conditional_callback_t callback) {
+  __dfsan::conditional_callback = callback;
+}
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE dfsan_label
+dfsan_get_labels_in_signal_conditional() {
+  return __dfsan::labels_in_signal_conditional;
+}
+
 class Decorator : public __sanitizer::SanitizerCommonDecorator {
  public:
   Decorator() : SanitizerCommonDecorator() {}
@@ -898,6 +952,7 @@ extern "C" void dfsan_flush() {
       Die();
     }
   }
+  __dfsan::labels_in_signal_conditional = 0;
 }
 
 // TODO: CheckMemoryLayoutSanity is based on msan.

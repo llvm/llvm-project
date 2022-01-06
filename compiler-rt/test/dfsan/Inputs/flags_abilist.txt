@@ -7,3 +7,9 @@ fun:main=discard
 
 fun:dfsan_set_label=uninstrumented
 fun:dfsan_set_label=discard
+
+fun:my_dfsan_conditional_callback=uninstrumented
+fun:my_dfsan_conditional_callback=discard
+
+fun:dfsan_set_conditional_callback=uninstrumented
+fun:dfsan_set_conditional_callback=discard
