@@ -648,9 +648,13 @@ mlir::linalg::LinalgGeneralizationPattern::LinalgGeneralizationPattern(
 
 LogicalResult mlir::linalg::LinalgGeneralizationPattern::matchAndRewrite(
     Operation *op, PatternRewriter &rewriter) const {
+  // TODO: Interface pattern.
+  LinalgOp linalgOp = dyn_cast<LinalgOp>(op);
+  if (!linalgOp)
+    return failure();
   if (failed(filter.checkAndNotify(rewriter, op)))
     return failure();
-  FailureOr<GenericOp> genericOp = generalizeNamedOp(rewriter, op);
+  FailureOr<GenericOp> genericOp = generalizeNamedOp(rewriter, linalgOp);
   if (failed(genericOp))
     return failure();
   filter.replaceLinalgTransformationFilter(rewriter, *genericOp);
