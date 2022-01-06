@@ -651,16 +651,6 @@ Module::LookupInfo::LookupInfo(ConstString name,
   llvm::StringRef basename;
   llvm::StringRef context;
 
-  // FIXME: The commit that introduced GetFunctionNameInfo
-  // will require us to implement that function in the SwiftLanguage
-  // plugin.  However, there's a revert commit following on to
-  // this one, which would force us to remove this again.  Instead,
-  // I'm going to accept the llvm side of the change w/o implementing
-  // the SwiftLanguage functions for now.  But when the revert is
-  // again reverted, we'll have to implement this function, or if
-  // the patch gets abandoned, we'll have to put the code back the
-  // way it was before this commit.
-
   if (name_type_mask & eFunctionNameTypeAuto) {
     if (CPlusPlusLanguage::IsCPPMangledName(name_cstr))
       m_name_type_mask = eFunctionNameTypeFull;
@@ -668,6 +658,10 @@ Module::LookupInfo::LookupInfo(ConstString name,
               Language::LanguageIsObjC(language)) &&
              ObjCLanguage::IsPossibleObjCMethodName(name_cstr))
       m_name_type_mask = eFunctionNameTypeFull;
+#ifdef LLDB_ENABLE_SWIFT
+    else if (SwiftLanguageRuntime::IsSwiftMangledName(name.GetStringRef()))
+      m_name_type_mask = eFunctionNameTypeFull;
+#endif // LLDB_ENABLE_SWIFT
     else if (Language::LanguageIsC(language)) {
       m_name_type_mask = eFunctionNameTypeFull;
     } else {
@@ -677,7 +671,20 @@ Module::LookupInfo::LookupInfo(ConstString name,
         m_name_type_mask |= eFunctionNameTypeSelector;
 
       CPlusPlusLanguage::MethodName cpp_method(name);
-      basename = cpp_method.GetBasename();
+
+#ifdef LLDB_ENABLE_SWIFT
+      SwiftLanguageRuntime::MethodName swift_method(name, true);
+
+      if ((language == eLanguageTypeUnknown ||
+           language == eLanguageTypeSwift) &&
+          swift_method.IsValid())
+        basename = swift_method.GetBasename();
+#endif // LLDB_ENABLE_SWIFT
+      if ((language == eLanguageTypeUnknown ||
+           Language::LanguageIsCFamily(language)) &&
+           cpp_method.IsValid())
+        basename = cpp_method.GetBasename();
+
       if (basename.empty()) {
         if (CPlusPlusLanguage::ExtractContextAndIdentifier(name_cstr, context,
                                                            basename))
@@ -695,6 +702,13 @@ Module::LookupInfo::LookupInfo(ConstString name,
       // If they've asked for a CPP method or function name and it can't be
       // that, we don't even need to search for CPP methods or names.
       CPlusPlusLanguage::MethodName cpp_method(name);
+
+#ifdef LLDB_ENABLE_SWIFT
+      SwiftLanguageRuntime::MethodName swift_method(name, true);
+      if (swift_method.IsValid())
+        basename = swift_method.GetBasename();
+#endif // LLDB_ENABLE_SWIFT
+
       if (cpp_method.IsValid()) {
         basename = cpp_method.GetBasename();
 
