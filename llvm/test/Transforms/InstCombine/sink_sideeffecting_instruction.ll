@@ -417,8 +417,8 @@ use_block:
   ret i32 %var3
 }
 
-define i32 @sink_lifetime4(i1 %c) {
-; CHECK-LABEL: @sink_lifetime4(
+define i32 @sink_lifetime4a(i1 %c) {
+; CHECK-LABEL: @sink_lifetime4a(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAR:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast i32* [[VAR]] to i8*
@@ -446,6 +446,36 @@ use_block:
   ret i32 %var3
 }
 
+; Version which only writes to var, and thus can't rely on may-read scan for
+; clobbers to prevent the transform
+define i32 @sink_lifetime4b(i1 %c) {
+; CHECK-LABEL: @sink_lifetime4b(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAR:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast i32* [[VAR]] to i8*
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull [[BITCAST]])
+; CHECK-NEXT:    [[VAR3:%.*]] = call i32 @unknown(i32* nonnull writeonly [[VAR]]) #[[ATTR1]]
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull [[BITCAST]])
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[EARLY_RETURN:%.*]], label [[USE_BLOCK:%.*]]
+; CHECK:       early_return:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       use_block:
+; CHECK-NEXT:    ret i32 [[VAR3]]
+;
+entry:
+  %var = alloca i32, align 4
+  %bitcast = bitcast i32* %var to i8*
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %bitcast)
+  %var3 = call i32 @unknown(i32* writeonly %var) argmemonly nounwind willreturn
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* %bitcast)
+  br i1 %c, label %early_return, label %use_block
+
+early_return:
+  ret i32 0
+
+use_block:
+  ret i32 %var3
+}
 ; Mostly checking that trying to sink a non-call doesn't crash (i.e. prior bug)
 define i32 @sink_atomicrmw_to_use(i1 %c) {
 ; CHECK-LABEL: @sink_atomicrmw_to_use(
