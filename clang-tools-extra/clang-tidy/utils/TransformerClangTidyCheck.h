@@ -54,7 +54,7 @@ public:
                             StringRef Name, ClangTidyContext *Context);
 
   /// Convenience overload of the constructor when the rule doesn't have any
-  /// dependies.
+  /// dependencies.
   TransformerClangTidyCheck(transformer::RewriteRule R, StringRef Name,
                             ClangTidyContext *Context);
 
