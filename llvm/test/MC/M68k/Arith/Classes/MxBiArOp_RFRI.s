@@ -1,5 +1,11 @@
 ; RUN: llvm-mc -triple=m68k -show-encoding %s | FileCheck %s
 
+; CHECK:      eori.b  #0, %d1
+; CHECK-SAME: encoding: [0x0a,0x01,0x00,0x00]
+eori.b	#0, %d1
+; CHECK:      eori.b  #-1, %d2
+; CHECK-SAME: encoding: [0x0a,0x02,0x00,0xff]
+eori.b	#-1, %d2
 ; CHECK:      eori.w  #0, %d0
 ; CHECK-SAME: encoding: [0x0a,0x40,0x00,0x00]
 eori.w	#0, %d0

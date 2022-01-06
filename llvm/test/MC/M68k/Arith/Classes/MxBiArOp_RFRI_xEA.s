@@ -1,5 +1,11 @@
 ; RUN: llvm-mc -triple=m68k -show-encoding %s | FileCheck %s
 
+; CHECK:      add.b  #0, %d1
+; CHECK-SAME: encoding: [0xd2,0x3c,0x00,0x00]
+add.b	#0, %d1
+; CHECK:      add.b  #-1, %d2
+; CHECK-SAME: encoding: [0xd4,0x3c,0x00,0xff]
+add.b	#-1, %d2
 ; CHECK:      add.w  #0, %d0
 ; CHECK-SAME: encoding: [0xd0,0x7c,0x00,0x00]
 add.w	#0, %d0
