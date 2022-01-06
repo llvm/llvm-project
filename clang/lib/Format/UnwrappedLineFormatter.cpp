@@ -393,11 +393,24 @@ private:
 
     // Try to merge a block with left brace wrapped that wasn't yet covered
     if (TheLine->Last->is(tok::l_brace)) {
-      return !Style.BraceWrapping.AfterFunction ||
-                     (I[1]->First->is(tok::r_brace) &&
-                      !Style.BraceWrapping.SplitEmptyRecord)
-                 ? tryMergeSimpleBlock(I, E, Limit)
-                 : 0;
+      const FormatToken *Tok = TheLine->First;
+      bool ShouldMerge = false;
+      if (Tok->is(tok::kw_typedef)) {
+        Tok = Tok->getNextNonComment();
+        assert(Tok);
+      }
+      if (Tok->isOneOf(tok::kw_class, tok::kw_struct)) {
+        ShouldMerge = !Style.BraceWrapping.AfterClass ||
+                      (I[1]->First->is(tok::r_brace) &&
+                       !Style.BraceWrapping.SplitEmptyRecord);
+      } else if (Tok->is(tok::kw_enum)) {
+        ShouldMerge = Style.AllowShortEnumsOnASingleLine;
+      } else {
+        ShouldMerge = !Style.BraceWrapping.AfterFunction ||
+                      (I[1]->First->is(tok::r_brace) &&
+                       !Style.BraceWrapping.SplitEmptyFunction);
+      }
+      return ShouldMerge ? tryMergeSimpleBlock(I, E, Limit) : 0;
     }
     // Try to merge a function block with left brace wrapped
     if (I[1]->First->is(TT_FunctionLBrace) &&

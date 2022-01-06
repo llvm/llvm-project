@@ -516,7 +516,7 @@ void DwarfDebug::addSubprogramNames(const DICompileUnit &CU,
   // well into the name table. Only do that if we are going to actually emit
   // that name.
   if (SP->getLinkageName() != "" && SP->getName() != SP->getLinkageName() &&
-      (useAllLinkageNames() || InfoHolder.getAbstractScopeDIEs().lookup(SP)))
+      (useAllLinkageNames() || InfoHolder.getAbstractSPDies().lookup(SP)))
     addAccelName(CU, SP->getLinkageName(), Die);
 
   // If this is an Objective-C selector name add it to the ObjC accelerator
@@ -1067,45 +1067,6 @@ void DwarfDebug::finishUnitAttributes(const DICompileUnit *DIUnit,
     }
   }
 }
-
-// Collect local scopes that contain any local declarations
-// (excluding local variables) to be sure they will be emitted
-// (see DwarfCompileUnit::createAndAddScopeChildren() for details).
-static void collectLocalScopesWithDeclsFromCU(const DICompileUnit *CUNode,
-                                              DwarfCompileUnit &CU) {
-  auto getLocalScope = [](const DIScope *S) -> const DILocalScope * {
-    if (!S)
-      return nullptr;
-    if (isa<DICommonBlock>(S))
-      S = S->getScope();
-    if (const auto *LScope = dyn_cast_or_null<DILocalScope>(S))
-      return LScope->getNonLexicalBlockFileScope();
-    return nullptr;
-  };
-
-  for (auto *GVE : CUNode->getGlobalVariables())
-    if (auto *LScope = getLocalScope(GVE->getVariable()->getScope()))
-      CU.recordLocalScopeWithDecls(LScope);
-
-  for (auto *Ty : CUNode->getEnumTypes())
-    if (auto *LScope = getLocalScope(Ty->getScope()))
-      CU.recordLocalScopeWithDecls(LScope);
-
-  for (auto *Ty : CUNode->getRetainedTypes())
-    if (DIType *RT = dyn_cast<DIType>(Ty))
-      if (auto *LScope = getLocalScope(RT->getScope()))
-        CU.recordLocalScopeWithDecls(LScope);
-
-  for (auto *IE : CUNode->getImportedEntities())
-    if (auto *LScope = getLocalScope(IE->getScope()))
-      CU.recordLocalScopeWithDecls(LScope);
-
-  // FIXME: We know nothing about local records and typedefs here.
-  // since nothing but local variables (and members of local records)
-  // references them. So that they will be emitted in a first available
-  // parent scope DIE.
-}
-
 // Create new DwarfCompileUnit for the given metadata node with tag
 // DW_TAG_compile_unit.
 DwarfCompileUnit &
@@ -1119,6 +1080,9 @@ DwarfDebug::getOrCreateDwarfCompileUnit(const DICompileUnit *DIUnit) {
       InfoHolder.getUnits().size(), DIUnit, Asm, this, &InfoHolder);
   DwarfCompileUnit &NewCU = *OwnedUnit;
   InfoHolder.addUnit(std::move(OwnedUnit));
+
+  for (auto *IE : DIUnit->getImportedEntities())
+    NewCU.addImportedEntity(IE);
 
   // LTO with assembly output shares a single line table amongst multiple CUs.
   // To avoid the compilation directory being ambiguous, let the line table
@@ -1139,12 +1103,42 @@ DwarfDebug::getOrCreateDwarfCompileUnit(const DICompileUnit *DIUnit) {
 
   CUMap.insert({DIUnit, &NewCU});
   CUDieMap.insert({&NewCU.getUnitDie(), &NewCU});
-
-  // Record local scopes, that have some globals (static locals),
-  // imports or types declared within.
-  collectLocalScopesWithDeclsFromCU(DIUnit, NewCU);
-
   return NewCU;
+}
+
+void DwarfDebug::constructAndAddImportedEntityDIE(DwarfCompileUnit &TheCU,
+                                                  const DIImportedEntity *N) {
+  if (isa<DILocalScope>(N->getScope()))
+    return;
+  if (DIE *D = TheCU.getOrCreateContextDIE(N->getScope()))
+    D->addChild(TheCU.constructImportedEntityDIE(N));
+}
+
+/// Sort and unique GVEs by comparing their fragment offset.
+static SmallVectorImpl<DwarfCompileUnit::GlobalExpr> &
+sortGlobalExprs(SmallVectorImpl<DwarfCompileUnit::GlobalExpr> &GVEs) {
+  llvm::sort(
+      GVEs, [](DwarfCompileUnit::GlobalExpr A, DwarfCompileUnit::GlobalExpr B) {
+        // Sort order: first null exprs, then exprs without fragment
+        // info, then sort by fragment offset in bits.
+        // FIXME: Come up with a more comprehensive comparator so
+        // the sorting isn't non-deterministic, and so the following
+        // std::unique call works correctly.
+        if (!A.Expr || !B.Expr)
+          return !!B.Expr;
+        auto FragmentA = A.Expr->getFragmentInfo();
+        auto FragmentB = B.Expr->getFragmentInfo();
+        if (!FragmentA || !FragmentB)
+          return !!FragmentB;
+        return FragmentA->OffsetInBits < FragmentB->OffsetInBits;
+      });
+  GVEs.erase(std::unique(GVEs.begin(), GVEs.end(),
+                         [](DwarfCompileUnit::GlobalExpr A,
+                            DwarfCompileUnit::GlobalExpr B) {
+                           return A.Expr == B.Expr;
+                         }),
+             GVEs.end());
+  return GVEs;
 }
 
 // Emit all Dwarf sections that should come prior to the content. Create
@@ -1162,6 +1156,14 @@ void DwarfDebug::beginModule(Module *M) {
   assert(MMI->hasDebugInfo() &&
          "DebugInfoAvailabilty unexpectedly not initialized");
   SingleCU = NumDebugCUs == 1;
+  DenseMap<DIGlobalVariable *, SmallVector<DwarfCompileUnit::GlobalExpr, 1>>
+      GVMap;
+  for (const GlobalVariable &Global : M->globals()) {
+    SmallVector<DIGlobalVariableExpression *, 1> GVs;
+    Global.getDebugInfo(GVs);
+    for (auto *GVE : GVs)
+      GVMap[GVE->getVariable()].push_back({&Global, GVE->getExpression()});
+  }
 
   // Create the symbol that designates the start of the unit's contribution
   // to the string offsets table. In a split DWARF scenario, only the skeleton
@@ -1187,6 +1189,56 @@ void DwarfDebug::beginModule(Module *M) {
   // address table (.debug_addr) header.
   AddrPool.setLabel(Asm->createTempSymbol("addr_table_base"));
   DebugLocs.setSym(Asm->createTempSymbol("loclists_table_base"));
+
+  for (DICompileUnit *CUNode : M->debug_compile_units()) {
+    // FIXME: Move local imported entities into a list attached to the
+    // subprogram, then this search won't be needed and a
+    // getImportedEntities().empty() test should go below with the rest.
+    bool HasNonLocalImportedEntities = llvm::any_of(
+        CUNode->getImportedEntities(), [](const DIImportedEntity *IE) {
+          return !isa<DILocalScope>(IE->getScope());
+        });
+
+    if (!HasNonLocalImportedEntities && CUNode->getEnumTypes().empty() &&
+        CUNode->getRetainedTypes().empty() &&
+        CUNode->getGlobalVariables().empty() && CUNode->getMacros().empty())
+      continue;
+
+    DwarfCompileUnit &CU = getOrCreateDwarfCompileUnit(CUNode);
+
+    // Global Variables.
+    for (auto *GVE : CUNode->getGlobalVariables()) {
+      // Don't bother adding DIGlobalVariableExpressions listed in the CU if we
+      // already know about the variable and it isn't adding a constant
+      // expression.
+      auto &GVMapEntry = GVMap[GVE->getVariable()];
+      auto *Expr = GVE->getExpression();
+      if (!GVMapEntry.size() || (Expr && Expr->isConstant()))
+        GVMapEntry.push_back({nullptr, Expr});
+    }
+
+    DenseSet<DIGlobalVariable *> Processed;
+    for (auto *GVE : CUNode->getGlobalVariables()) {
+      DIGlobalVariable *GV = GVE->getVariable();
+      if (Processed.insert(GV).second)
+        CU.getOrCreateGlobalVariableDIE(GV, sortGlobalExprs(GVMap[GV]));
+    }
+
+    for (auto *Ty : CUNode->getEnumTypes())
+      CU.getOrCreateTypeDIE(cast<DIType>(Ty));
+
+    for (auto *Ty : CUNode->getRetainedTypes()) {
+      // The retained types array by design contains pointers to
+      // MDNodes rather than DIRefs. Unique them here.
+      if (DIType *RT = dyn_cast<DIType>(Ty))
+        // There is no point in force-emitting a forward declaration.
+        CU.getOrCreateTypeDIE(RT);
+    }
+    // Emit imported_modules last so that the relevant context is already
+    // available.
+    for (auto *IE : CUNode->getImportedEntities())
+      constructAndAddImportedEntityDIE(CU, IE);
+  }
 }
 
 void DwarfDebug::finishEntityDefinitions() {
@@ -1351,48 +1403,6 @@ void DwarfDebug::finalizeModuleInfo() {
     SkeletonHolder.computeSizeAndOffsets();
 }
 
-/// Sort and unique GVEs by comparing their fragment offset.
-static SmallVectorImpl<DwarfCompileUnit::GlobalExpr> &
-sortGlobalExprs(SmallVectorImpl<DwarfCompileUnit::GlobalExpr> &GVEs) {
-  llvm::sort(
-      GVEs, [](DwarfCompileUnit::GlobalExpr A, DwarfCompileUnit::GlobalExpr B) {
-        // Sort order: first null exprs, then exprs without fragment
-        // info, then sort by fragment offset in bits.
-        // FIXME: Come up with a more comprehensive comparator so
-        // the sorting isn't non-deterministic, and so the following
-        // std::unique call works correctly.
-        if (!A.Expr || !B.Expr)
-          return !!B.Expr;
-        auto FragmentA = A.Expr->getFragmentInfo();
-        auto FragmentB = B.Expr->getFragmentInfo();
-        if (!FragmentA || !FragmentB)
-          return !!FragmentB;
-        return FragmentA->OffsetInBits < FragmentB->OffsetInBits;
-      });
-  GVEs.erase(std::unique(GVEs.begin(), GVEs.end(),
-                         [](DwarfCompileUnit::GlobalExpr A,
-                            DwarfCompileUnit::GlobalExpr B) {
-                           return A.Expr == B.Expr;
-                         }),
-             GVEs.end());
-  return GVEs;
-}
-
-/// Create a DIE for \p Ty if it doesn't already exist. If type units are
-/// enabled, try to emit a type unit without a CU skeleton DIE.
-static void createMaybeUnusedType(DwarfDebug &DD, DwarfCompileUnit &CU,
-                                  DIType &Ty) {
-  // Try to generate a type unit without creating a skeleton DIE in this CU.
-  if (DICompositeType const *CTy = dyn_cast<DICompositeType>(&Ty)) {
-    MDString const *TypeId = CTy->getRawIdentifier();
-    if (DD.generateTypeUnits() && TypeId && !Ty.isForwardDecl())
-      if (DD.getOrCreateDwarfTypeUnit(CU, TypeId->getString(), CTy))
-        return;
-  }
-  // We couldn't or shouldn't add a type unit so create the DIE normally.
-  CU.getOrCreateTypeDIE(&Ty);
-}
-
 // Emit all Dwarf sections that should come after the content.
 void DwarfDebug::endModule() {
   // Terminate the pending line table.
@@ -1402,69 +1412,9 @@ void DwarfDebug::endModule() {
   assert(CurFn == nullptr);
   assert(CurMI == nullptr);
 
-  // Collect global variables info.
-  DenseMap<DIGlobalVariable *, SmallVector<DwarfCompileUnit::GlobalExpr, 1>>
-      GVMap;
-  for (const GlobalVariable &Global : MMI->getModule()->globals()) {
-    SmallVector<DIGlobalVariableExpression *, 1> GVs;
-    Global.getDebugInfo(GVs);
-    for (auto *GVE : GVs)
-      GVMap[GVE->getVariable()].push_back({&Global, GVE->getExpression()});
-  }
-
-  for (DICompileUnit *CUNode : MMI->getModule()->debug_compile_units()) {
-    auto *CU = CUMap.lookup(CUNode);
-
-    // If this CU hasn't been emitted yet, create it here unless it is empty.
-    if (!CU) {
-      // FIXME: Move local imported entities into a list attached to the
-      // subprogram, then this search won't be needed and a
-      // getImportedEntities().empty() test should go below with the rest.
-      bool HasNonLocalImportedEntities = llvm::any_of(
-          CUNode->getImportedEntities(), [](const DIImportedEntity *IE) {
-            return !isa<DILocalScope>(IE->getScope());
-          });
-
-      if (!HasNonLocalImportedEntities && CUNode->getEnumTypes().empty() &&
-          CUNode->getRetainedTypes().empty() &&
-          CUNode->getGlobalVariables().empty() && CUNode->getMacros().empty())
-        continue;
-
-      CU = &getOrCreateDwarfCompileUnit(CUNode);
-    }
-
-    // Global Variables.
-    for (auto *GVE : CUNode->getGlobalVariables()) {
-      // Don't bother adding DIGlobalVariableExpressions listed in the CU if we
-      // already know about the variable and it isn't adding a constant
-      // expression.
-      auto &GVMapEntry = GVMap[GVE->getVariable()];
-      auto *Expr = GVE->getExpression();
-      if (!GVMapEntry.size() || (Expr && Expr->isConstant()))
-        GVMapEntry.push_back({nullptr, Expr});
-    }
-
-    DenseSet<DIGlobalVariable *> Processed;
-    for (auto *GVE : CUNode->getGlobalVariables()) {
-      DIGlobalVariable *GV = GVE->getVariable();
-      if (Processed.insert(GV).second)
-        CU->getOrCreateGlobalVariableDIE(GV, sortGlobalExprs(GVMap[GV]));
-    }
-
-    for (auto *Ty : CUNode->getEnumTypes())
-      createMaybeUnusedType(*this, *CU, *Ty);
-
-    for (auto *Ty : CUNode->getRetainedTypes()) {
-      if (DIType *RT = dyn_cast<DIType>(Ty))
-        createMaybeUnusedType(*this, *CU, *RT);
-    }
-
-    // Emit imported entities last so that the relevant context
-    // is already available.
-    for (auto *IE : CUNode->getImportedEntities())
-      CU->createAndAddImportedEntityDIE(IE);
-
-    CU->createBaseTypeDIEs();
+  for (const auto &P : CUMap) {
+    auto &CU = *P.second;
+    CU.createBaseTypeDIEs();
   }
 
   // If we aren't actually generating debug info (check beginModule -
@@ -2589,14 +2539,7 @@ void DwarfDebug::emitDebugLocEntry(ByteStreamer &Streamer,
       if (Op.getDescription().Op[I] == Encoding::SizeNA)
         continue;
       if (Op.getDescription().Op[I] == Encoding::BaseTypeRef) {
-        uint64_t Offset =
-            CU->ExprRefedBaseTypes[Op.getRawOperand(I)].Die->getOffset();
-        assert(Offset < (1ULL << (ULEB128PadSize * 7)) && "Offset wont fit");
-        Streamer.emitULEB128(Offset, "", ULEB128PadSize);
-        // Make sure comments stay aligned.
-        for (unsigned J = 0; J < ULEB128PadSize; ++J)
-          if (Comment != End)
-            Comment++;
+        Streamer.emitDIERef(*CU->ExprRefedBaseTypes[Op.getRawOperand(I)].Die);
       } else {
         for (uint64_t J = Offset; J < Op.getOperandEndOffset(I); ++J)
           Streamer.emitInt8(Data.getData()[J], Comment != End ? *(Comment++) : "");
@@ -3416,30 +3359,17 @@ uint64_t DwarfDebug::makeTypeSignature(StringRef Identifier) {
 void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
                                       StringRef Identifier, DIE &RefDie,
                                       const DICompositeType *CTy) {
-  bool TopLevelType = TypeUnitsUnderConstruction.empty();
-  if (auto Signature = getOrCreateDwarfTypeUnit(CU, Identifier, CTy)) {
-    CU.addDIETypeSignature(RefDie, *Signature);
-  } else if (TopLevelType) {
-    // Construct this type in the CU directly.
-    // This is inefficient because all the dependent types will be rebuilt
-    // from scratch, including building them in type units, discovering that
-    // they depend on addresses, throwing them out and rebuilding them.
-    CU.constructTypeDIE(RefDie, cast<DICompositeType>(CTy));
-  }
-}
-
-Optional<uint64_t>
-DwarfDebug::getOrCreateDwarfTypeUnit(DwarfCompileUnit &CU, StringRef Identifier,
-                                     const DICompositeType *CTy) {
   // Fast path if we're building some type units and one has already used the
   // address pool we know we're going to throw away all this work anyway, so
   // don't bother building dependent types.
   if (!TypeUnitsUnderConstruction.empty() && AddrPool.hasBeenUsed())
-    return None;
+    return;
 
   auto Ins = TypeSignatures.insert(std::make_pair(CTy, 0));
-  if (!Ins.second)
-    return Ins.first->second;
+  if (!Ins.second) {
+    CU.addDIETypeSignature(RefDie, Ins.first->second);
+    return;
+  }
 
   bool TopLevelType = TypeUnitsUnderConstruction.empty();
   AddrPool.resetUsedFlag();
@@ -3493,7 +3423,13 @@ DwarfDebug::getOrCreateDwarfTypeUnit(DwarfCompileUnit &CU, StringRef Identifier,
       // the type that used an address.
       for (const auto &TU : TypeUnitsToAdd)
         TypeSignatures.erase(TU.second);
-      return None;
+
+      // Construct this type in the CU directly.
+      // This is inefficient because all the dependent types will be rebuilt
+      // from scratch, including building them in type units, discovering that
+      // they depend on addresses, throwing them out and rebuilding them.
+      CU.constructTypeDIE(RefDie, cast<DICompositeType>(CTy));
+      return;
     }
 
     // If the type wasn't dependent on fission addresses, finish adding the type
@@ -3503,7 +3439,7 @@ DwarfDebug::getOrCreateDwarfTypeUnit(DwarfCompileUnit &CU, StringRef Identifier,
       InfoHolder.emitUnit(TU.first.get(), useSplitDwarf());
     }
   }
-  return Signature;
+  CU.addDIETypeSignature(RefDie, Signature);
 }
 
 DwarfDebug::NonTypeUnitContext::NonTypeUnitContext(DwarfDebug *DD)

@@ -141,7 +141,7 @@ public:
     return false;
   }
 
-  virtual void SymbolsDidLoad(const ModuleList &module_list) { return; }
+  virtual void SymbolsDidLoad(const ModuleList &module_list) {}
 
   virtual lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
                                                           bool stop_others) = 0;

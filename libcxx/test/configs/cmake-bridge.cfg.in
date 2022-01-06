@@ -2,6 +2,8 @@
 
 @SERIALIZED_LIT_PARAMS@
 
+import shlex
+
 #
 # This file performs the bridge between the CMake configuration and the Lit
 # configuration files by setting up the LitConfig object and various Lit
@@ -23,9 +25,10 @@ config.recursiveExpansionLimit = 10
 config.test_exec_root = '@CMAKE_BINARY_DIR@'
 
 # Add substitutions for bootstrapping the test suite configuration
-config.substitutions.append(('%{cxx}', '@CMAKE_CXX_COMPILER@'))
+config.substitutions.append(('%{cxx}', shlex.quote('@CMAKE_CXX_COMPILER@')))
 config.substitutions.append(('%{libcxx}', '@LIBCXX_SOURCE_DIR@'))
 config.substitutions.append(('%{install}', '@CMAKE_BINARY_DIR@'))
 config.substitutions.append(('%{include}', '%{install}/@LIBCXX_INSTALL_INCLUDE_DIR@'))
 config.substitutions.append(('%{target-include}', '%{install}/@LIBCXX_INSTALL_INCLUDE_TARGET_DIR@'))
 config.substitutions.append(('%{lib}', '%{install}/@LIBCXX_INSTALL_LIBRARY_DIR@'))
+config.substitutions.append(('%{executor}', '@LIBCXX_EXECUTOR@'))

@@ -350,6 +350,14 @@ llvm.func @memcpy_test(%arg0: i32, %arg2: !llvm.ptr<i8>, %arg3: !llvm.ptr<i8>) {
   llvm.return
 }
 
+// CHECK-LABEL: @memmove_test
+llvm.func @memmove_test(%arg0: i32, %arg2: !llvm.ptr<i8>, %arg3: !llvm.ptr<i8>) {
+  %i1 = llvm.mlir.constant(false) : i1
+  // CHECK: call void @llvm.memmove.p0i8.p0i8.i32(i8* %{{.*}}, i8* %{{.*}}, i32 %{{.*}}, i1 {{.*}})
+  "llvm.intr.memmove"(%arg2, %arg3, %arg0, %i1) : (!llvm.ptr<i8>, !llvm.ptr<i8>, i32, i1) -> ()
+  llvm.return
+}
+
 // CHECK-LABEL: @memset_test
 llvm.func @memset_test(%arg0: i32, %arg2: !llvm.ptr<i8>, %arg3: i8) {
   %i1 = llvm.mlir.constant(false) : i1

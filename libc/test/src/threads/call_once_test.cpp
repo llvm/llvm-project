@@ -18,7 +18,7 @@
 
 #include <stdatomic.h>
 
-static constexpr unsigned int num_threads = 5;
+static constexpr unsigned int NUM_THREADS = 5;
 static atomic_uint thread_count;
 
 static unsigned int call_count;
@@ -38,13 +38,13 @@ TEST(LlvmLibcCallOnceTest, CallFrom5Threads) {
   call_count = 0;
   thread_count = 0;
 
-  thrd_t threads[num_threads];
-  for (unsigned int i = 0; i < num_threads; ++i) {
+  thrd_t threads[NUM_THREADS];
+  for (unsigned int i = 0; i < NUM_THREADS; ++i) {
     ASSERT_EQ(__llvm_libc::thrd_create(threads + i, func, nullptr),
               static_cast<int>(thrd_success));
   }
 
-  for (unsigned int i = 0; i < num_threads; ++i) {
+  for (unsigned int i = 0; i < NUM_THREADS; ++i) {
     int retval;
     ASSERT_EQ(__llvm_libc::thrd_join(threads + i, &retval),
               static_cast<int>(thrd_success));

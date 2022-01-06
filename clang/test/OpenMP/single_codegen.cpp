@@ -1031,9 +1031,9 @@ void array_func(int n, int a[n], St s[2]) {
 // CHECK1-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP7]], align 4
 // CHECK1-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP8]], 1
 // CHECK1-NEXT:    store i32 [[INC]], i32* [[TMP7]], align 4
-// CHECK1-NEXT:    [[TMP9:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK1-NEXT:    [[TMP9:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK1-NEXT:    [[DEC:%.*]] = add nsw i32 [[TMP9]], -1
-// CHECK1-NEXT:    store i32 [[DEC]], i32* [[CONV1]], align 8
+// CHECK1-NEXT:    store i32 [[DEC]], i32* [[CONV1]], align 4
 // CHECK1-NEXT:    [[TMP10:%.*]] = load i32*, i32** [[_TMP5]], align 8
 // CHECK1-NEXT:    [[TMP11:%.*]] = load i32, i32* [[TMP10]], align 4
 // CHECK1-NEXT:    [[DIV:%.*]] = sdiv i32 [[TMP11]], 1
@@ -1867,9 +1867,9 @@ void array_func(int n, int a[n], St s[2]) {
 // CHECK2-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP7]], align 4
 // CHECK2-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP8]], 1
 // CHECK2-NEXT:    store i32 [[INC]], i32* [[TMP7]], align 4
-// CHECK2-NEXT:    [[TMP9:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK2-NEXT:    [[TMP9:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK2-NEXT:    [[DEC:%.*]] = add nsw i32 [[TMP9]], -1
-// CHECK2-NEXT:    store i32 [[DEC]], i32* [[CONV1]], align 8
+// CHECK2-NEXT:    store i32 [[DEC]], i32* [[CONV1]], align 4
 // CHECK2-NEXT:    [[TMP10:%.*]] = load i32*, i32** [[_TMP5]], align 8
 // CHECK2-NEXT:    [[TMP11:%.*]] = load i32, i32* [[TMP10]], align 4
 // CHECK2-NEXT:    [[DIV:%.*]] = sdiv i32 [[TMP11]], 1
@@ -3049,9 +3049,9 @@ void array_func(int n, int a[n], St s[2]) {
 // CHECK3-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP7]], align 4
 // CHECK3-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP8]], 1
 // CHECK3-NEXT:    store i32 [[INC]], i32* [[TMP7]], align 4
-// CHECK3-NEXT:    [[TMP9:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK3-NEXT:    [[TMP9:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK3-NEXT:    [[DEC:%.*]] = add nsw i32 [[TMP9]], -1
-// CHECK3-NEXT:    store i32 [[DEC]], i32* [[CONV1]], align 8
+// CHECK3-NEXT:    store i32 [[DEC]], i32* [[CONV1]], align 4
 // CHECK3-NEXT:    [[TMP10:%.*]] = load i32*, i32** [[_TMP5]], align 8
 // CHECK3-NEXT:    [[TMP11:%.*]] = load i32, i32* [[TMP10]], align 4
 // CHECK3-NEXT:    [[DIV:%.*]] = sdiv i32 [[TMP11]], 1
@@ -3873,9 +3873,9 @@ void array_func(int n, int a[n], St s[2]) {
 // CHECK4-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP7]], align 4
 // CHECK4-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP8]], 1
 // CHECK4-NEXT:    store i32 [[INC]], i32* [[TMP7]], align 4
-// CHECK4-NEXT:    [[TMP9:%.*]] = load i32, i32* [[CONV1]], align 8
+// CHECK4-NEXT:    [[TMP9:%.*]] = load i32, i32* [[CONV1]], align 4
 // CHECK4-NEXT:    [[DEC:%.*]] = add nsw i32 [[TMP9]], -1
-// CHECK4-NEXT:    store i32 [[DEC]], i32* [[CONV1]], align 8
+// CHECK4-NEXT:    store i32 [[DEC]], i32* [[CONV1]], align 4
 // CHECK4-NEXT:    [[TMP10:%.*]] = load i32*, i32** [[_TMP5]], align 8
 // CHECK4-NEXT:    [[TMP11:%.*]] = load i32, i32* [[TMP10]], align 4
 // CHECK4-NEXT:    [[DIV:%.*]] = sdiv i32 [[TMP11]], 1
@@ -4170,129 +4170,129 @@ void array_func(int n, int a[n], St s[2]) {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 8
 // CHECK5-NEXT:    store i8* [[TMP0]], i8** [[DOTADDR]], align 8
-// CHECK5-NEXT:    [[TMP1:%.*]] = load i8*, i8** [[DOTADDR]], align 8, !dbg [[DBG9:![0-9]+]]
-// CHECK5-NEXT:    [[TMP2:%.*]] = bitcast i8* [[TMP1]] to %class.TestClass*, !dbg [[DBG9]]
-// CHECK5-NEXT:    call void @_ZN9TestClassC1Ev(%class.TestClass* nonnull align 4 dereferenceable(4) [[TMP2]]), !dbg [[DBG10:![0-9]+]]
-// CHECK5-NEXT:    [[TMP3:%.*]] = load i8*, i8** [[DOTADDR]], align 8, !dbg [[DBG9]]
-// CHECK5-NEXT:    ret i8* [[TMP3]], !dbg [[DBG9]]
+// CHECK5-NEXT:    [[TMP1:%.*]] = load i8*, i8** [[DOTADDR]], align 8, !dbg [[DBG10:![0-9]+]]
+// CHECK5-NEXT:    [[TMP2:%.*]] = bitcast i8* [[TMP1]] to %class.TestClass*, !dbg [[DBG10]]
+// CHECK5-NEXT:    call void @_ZN9TestClassC1Ev(%class.TestClass* nonnull align 4 dereferenceable(4) [[TMP2]]), !dbg [[DBG11:![0-9]+]]
+// CHECK5-NEXT:    [[TMP3:%.*]] = load i8*, i8** [[DOTADDR]], align 8, !dbg [[DBG10]]
+// CHECK5-NEXT:    ret i8* [[TMP3]], !dbg [[DBG10]]
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@_ZN9TestClassC1Ev
-// CHECK5-SAME: (%class.TestClass* nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] align 2 !dbg [[DBG11:![0-9]+]] {
+// CHECK5-SAME: (%class.TestClass* nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] align 2 !dbg [[DBG12:![0-9]+]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[THIS_ADDR:%.*]] = alloca %class.TestClass*, align 8
 // CHECK5-NEXT:    store %class.TestClass* [[THIS]], %class.TestClass** [[THIS_ADDR]], align 8
 // CHECK5-NEXT:    [[THIS1:%.*]] = load %class.TestClass*, %class.TestClass** [[THIS_ADDR]], align 8
-// CHECK5-NEXT:    call void @_ZN9TestClassC2Ev(%class.TestClass* nonnull align 4 dereferenceable(4) [[THIS1]]), !dbg [[DBG12:![0-9]+]]
-// CHECK5-NEXT:    ret void, !dbg [[DBG13:![0-9]+]]
+// CHECK5-NEXT:    call void @_ZN9TestClassC2Ev(%class.TestClass* nonnull align 4 dereferenceable(4) [[THIS1]]), !dbg [[DBG13:![0-9]+]]
+// CHECK5-NEXT:    ret void, !dbg [[DBG14:![0-9]+]]
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.__kmpc_global_dtor_.
-// CHECK5-SAME: (i8* [[TMP0:%.*]]) #[[ATTR0]] section "__TEXT,__StaticInit,regular,pure_instructions" !dbg [[DBG14:![0-9]+]] {
+// CHECK5-SAME: (i8* [[TMP0:%.*]]) #[[ATTR0]] section "__TEXT,__StaticInit,regular,pure_instructions" !dbg [[DBG15:![0-9]+]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 8
 // CHECK5-NEXT:    store i8* [[TMP0]], i8** [[DOTADDR]], align 8
-// CHECK5-NEXT:    [[TMP1:%.*]] = load i8*, i8** [[DOTADDR]], align 8, !dbg [[DBG15:![0-9]+]]
-// CHECK5-NEXT:    [[TMP2:%.*]] = bitcast i8* [[TMP1]] to %class.TestClass*, !dbg [[DBG15]]
-// CHECK5-NEXT:    call void @_ZN9TestClassD1Ev(%class.TestClass* nonnull align 4 dereferenceable(4) [[TMP2]]) #[[ATTR3:[0-9]+]], !dbg [[DBG15]]
-// CHECK5-NEXT:    ret void, !dbg [[DBG16:![0-9]+]]
+// CHECK5-NEXT:    [[TMP1:%.*]] = load i8*, i8** [[DOTADDR]], align 8, !dbg [[DBG16:![0-9]+]]
+// CHECK5-NEXT:    [[TMP2:%.*]] = bitcast i8* [[TMP1]] to %class.TestClass*, !dbg [[DBG16]]
+// CHECK5-NEXT:    call void @_ZN9TestClassD1Ev(%class.TestClass* nonnull align 4 dereferenceable(4) [[TMP2]]) #[[ATTR3:[0-9]+]], !dbg [[DBG16]]
+// CHECK5-NEXT:    ret void, !dbg [[DBG17:![0-9]+]]
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@_ZN9TestClassD1Ev
-// CHECK5-SAME: (%class.TestClass* nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR2:[0-9]+]] align 2 !dbg [[DBG17:![0-9]+]] {
+// CHECK5-SAME: (%class.TestClass* nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR2:[0-9]+]] align 2 !dbg [[DBG18:![0-9]+]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[THIS_ADDR:%.*]] = alloca %class.TestClass*, align 8
 // CHECK5-NEXT:    store %class.TestClass* [[THIS]], %class.TestClass** [[THIS_ADDR]], align 8
 // CHECK5-NEXT:    [[THIS1:%.*]] = load %class.TestClass*, %class.TestClass** [[THIS_ADDR]], align 8
-// CHECK5-NEXT:    call void @_ZN9TestClassD2Ev(%class.TestClass* nonnull align 4 dereferenceable(4) [[THIS1]]) #[[ATTR3]], !dbg [[DBG18:![0-9]+]]
-// CHECK5-NEXT:    ret void, !dbg [[DBG19:![0-9]+]]
+// CHECK5-NEXT:    call void @_ZN9TestClassD2Ev(%class.TestClass* nonnull align 4 dereferenceable(4) [[THIS1]]) #[[ATTR3]], !dbg [[DBG19:![0-9]+]]
+// CHECK5-NEXT:    ret void, !dbg [[DBG20:![0-9]+]]
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.__omp_threadprivate_init_.
-// CHECK5-SAME: () #[[ATTR0]] section "__TEXT,__StaticInit,regular,pure_instructions" !dbg [[DBG20:![0-9]+]] {
+// CHECK5-SAME: () #[[ATTR0]] section "__TEXT,__StaticInit,regular,pure_instructions" !dbg [[DBG21:![0-9]+]] {
 // CHECK5-NEXT:  entry:
-// CHECK5-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1:[0-9]+]]), !dbg [[DBG21:![0-9]+]]
-// CHECK5-NEXT:    call void @__kmpc_threadprivate_register(%struct.ident_t* @[[GLOB1]], i8* bitcast (%class.TestClass* @tc to i8*), i8* (i8*)* @.__kmpc_global_ctor_., i8* (i8*, i8*)* null, void (i8*)* @.__kmpc_global_dtor_.), !dbg [[DBG21]]
-// CHECK5-NEXT:    ret void, !dbg [[DBG21]]
+// CHECK5-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1:[0-9]+]]), !dbg [[DBG22:![0-9]+]]
+// CHECK5-NEXT:    call void @__kmpc_threadprivate_register(%struct.ident_t* @[[GLOB1]], i8* bitcast (%class.TestClass* @tc to i8*), i8* (i8*)* @.__kmpc_global_ctor_., i8* (i8*, i8*)* null, void (i8*)* @.__kmpc_global_dtor_.), !dbg [[DBG22]]
+// CHECK5-NEXT:    ret void, !dbg [[DBG22]]
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.__kmpc_global_ctor_..1
-// CHECK5-SAME: (i8* [[TMP0:%.*]]) #[[ATTR0]] section "__TEXT,__StaticInit,regular,pure_instructions" personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) !dbg [[DBG22:![0-9]+]] {
+// CHECK5-SAME: (i8* [[TMP0:%.*]]) #[[ATTR0]] section "__TEXT,__StaticInit,regular,pure_instructions" personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) !dbg [[DBG23:![0-9]+]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 8
 // CHECK5-NEXT:    [[EXN_SLOT:%.*]] = alloca i8*, align 8
 // CHECK5-NEXT:    [[EHSELECTOR_SLOT:%.*]] = alloca i32, align 4
 // CHECK5-NEXT:    store i8* [[TMP0]], i8** [[DOTADDR]], align 8
-// CHECK5-NEXT:    [[TMP1:%.*]] = load i8*, i8** [[DOTADDR]], align 8, !dbg [[DBG23:![0-9]+]]
-// CHECK5-NEXT:    [[TMP2:%.*]] = bitcast i8* [[TMP1]] to [2 x %class.TestClass]*, !dbg [[DBG23]]
-// CHECK5-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x %class.TestClass], [2 x %class.TestClass]* [[TMP2]], i32 0, i32 0, !dbg [[DBG24:![0-9]+]]
-// CHECK5-NEXT:    [[ARRAYCTOR_END:%.*]] = getelementptr inbounds [[CLASS_TESTCLASS:%.*]], %class.TestClass* [[ARRAY_BEGIN]], i64 2, !dbg [[DBG24]]
-// CHECK5-NEXT:    br label [[ARRAYCTOR_LOOP:%.*]], !dbg [[DBG24]]
+// CHECK5-NEXT:    [[TMP1:%.*]] = load i8*, i8** [[DOTADDR]], align 8, !dbg [[DBG24:![0-9]+]]
+// CHECK5-NEXT:    [[TMP2:%.*]] = bitcast i8* [[TMP1]] to [2 x %class.TestClass]*, !dbg [[DBG24]]
+// CHECK5-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x %class.TestClass], [2 x %class.TestClass]* [[TMP2]], i32 0, i32 0, !dbg [[DBG25:![0-9]+]]
+// CHECK5-NEXT:    [[ARRAYCTOR_END:%.*]] = getelementptr inbounds [[CLASS_TESTCLASS:%.*]], %class.TestClass* [[ARRAY_BEGIN]], i64 2, !dbg [[DBG25]]
+// CHECK5-NEXT:    br label [[ARRAYCTOR_LOOP:%.*]], !dbg [[DBG25]]
 // CHECK5:       arrayctor.loop:
-// CHECK5-NEXT:    [[ARRAYCTOR_CUR:%.*]] = phi %class.TestClass* [ [[ARRAY_BEGIN]], [[ENTRY:%.*]] ], [ [[ARRAYCTOR_NEXT:%.*]], [[INVOKE_CONT:%.*]] ], !dbg [[DBG24]]
+// CHECK5-NEXT:    [[ARRAYCTOR_CUR:%.*]] = phi %class.TestClass* [ [[ARRAY_BEGIN]], [[ENTRY:%.*]] ], [ [[ARRAYCTOR_NEXT:%.*]], [[INVOKE_CONT:%.*]] ], !dbg [[DBG25]]
 // CHECK5-NEXT:    invoke void @_ZN9TestClassC1Ev(%class.TestClass* nonnull align 4 dereferenceable(4) [[ARRAYCTOR_CUR]])
-// CHECK5-NEXT:    to label [[INVOKE_CONT]] unwind label [[LPAD:%.*]], !dbg [[DBG24]]
+// CHECK5-NEXT:    to label [[INVOKE_CONT]] unwind label [[LPAD:%.*]], !dbg [[DBG25]]
 // CHECK5:       invoke.cont:
-// CHECK5-NEXT:    [[ARRAYCTOR_NEXT]] = getelementptr inbounds [[CLASS_TESTCLASS]], %class.TestClass* [[ARRAYCTOR_CUR]], i64 1, !dbg [[DBG24]]
-// CHECK5-NEXT:    [[ARRAYCTOR_DONE:%.*]] = icmp eq %class.TestClass* [[ARRAYCTOR_NEXT]], [[ARRAYCTOR_END]], !dbg [[DBG24]]
-// CHECK5-NEXT:    br i1 [[ARRAYCTOR_DONE]], label [[ARRAYCTOR_CONT:%.*]], label [[ARRAYCTOR_LOOP]], !dbg [[DBG24]]
+// CHECK5-NEXT:    [[ARRAYCTOR_NEXT]] = getelementptr inbounds [[CLASS_TESTCLASS]], %class.TestClass* [[ARRAYCTOR_CUR]], i64 1, !dbg [[DBG25]]
+// CHECK5-NEXT:    [[ARRAYCTOR_DONE:%.*]] = icmp eq %class.TestClass* [[ARRAYCTOR_NEXT]], [[ARRAYCTOR_END]], !dbg [[DBG25]]
+// CHECK5-NEXT:    br i1 [[ARRAYCTOR_DONE]], label [[ARRAYCTOR_CONT:%.*]], label [[ARRAYCTOR_LOOP]], !dbg [[DBG25]]
 // CHECK5:       arrayctor.cont:
-// CHECK5-NEXT:    [[TMP3:%.*]] = load i8*, i8** [[DOTADDR]], align 8, !dbg [[DBG23]]
-// CHECK5-NEXT:    ret i8* [[TMP3]], !dbg [[DBG23]]
+// CHECK5-NEXT:    [[TMP3:%.*]] = load i8*, i8** [[DOTADDR]], align 8, !dbg [[DBG24]]
+// CHECK5-NEXT:    ret i8* [[TMP3]], !dbg [[DBG24]]
 // CHECK5:       lpad:
 // CHECK5-NEXT:    [[TMP4:%.*]] = landingpad { i8*, i32 }
-// CHECK5-NEXT:    cleanup, !dbg [[DBG25:![0-9]+]]
-// CHECK5-NEXT:    [[TMP5:%.*]] = extractvalue { i8*, i32 } [[TMP4]], 0, !dbg [[DBG25]]
-// CHECK5-NEXT:    store i8* [[TMP5]], i8** [[EXN_SLOT]], align 8, !dbg [[DBG25]]
-// CHECK5-NEXT:    [[TMP6:%.*]] = extractvalue { i8*, i32 } [[TMP4]], 1, !dbg [[DBG25]]
-// CHECK5-NEXT:    store i32 [[TMP6]], i32* [[EHSELECTOR_SLOT]], align 4, !dbg [[DBG25]]
-// CHECK5-NEXT:    [[ARRAYDESTROY_ISEMPTY:%.*]] = icmp eq %class.TestClass* [[ARRAY_BEGIN]], [[ARRAYCTOR_CUR]], !dbg [[DBG24]]
-// CHECK5-NEXT:    br i1 [[ARRAYDESTROY_ISEMPTY]], label [[ARRAYDESTROY_DONE1:%.*]], label [[ARRAYDESTROY_BODY:%.*]], !dbg [[DBG24]]
+// CHECK5-NEXT:    cleanup, !dbg [[DBG26:![0-9]+]]
+// CHECK5-NEXT:    [[TMP5:%.*]] = extractvalue { i8*, i32 } [[TMP4]], 0, !dbg [[DBG26]]
+// CHECK5-NEXT:    store i8* [[TMP5]], i8** [[EXN_SLOT]], align 8, !dbg [[DBG26]]
+// CHECK5-NEXT:    [[TMP6:%.*]] = extractvalue { i8*, i32 } [[TMP4]], 1, !dbg [[DBG26]]
+// CHECK5-NEXT:    store i32 [[TMP6]], i32* [[EHSELECTOR_SLOT]], align 4, !dbg [[DBG26]]
+// CHECK5-NEXT:    [[ARRAYDESTROY_ISEMPTY:%.*]] = icmp eq %class.TestClass* [[ARRAY_BEGIN]], [[ARRAYCTOR_CUR]], !dbg [[DBG25]]
+// CHECK5-NEXT:    br i1 [[ARRAYDESTROY_ISEMPTY]], label [[ARRAYDESTROY_DONE1:%.*]], label [[ARRAYDESTROY_BODY:%.*]], !dbg [[DBG25]]
 // CHECK5:       arraydestroy.body:
-// CHECK5-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi %class.TestClass* [ [[ARRAYCTOR_CUR]], [[LPAD]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ], !dbg [[DBG24]]
-// CHECK5-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[CLASS_TESTCLASS]], %class.TestClass* [[ARRAYDESTROY_ELEMENTPAST]], i64 -1, !dbg [[DBG24]]
-// CHECK5-NEXT:    call void @_ZN9TestClassD1Ev(%class.TestClass* nonnull align 4 dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR3]], !dbg [[DBG24]]
-// CHECK5-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq %class.TestClass* [[ARRAYDESTROY_ELEMENT]], [[ARRAY_BEGIN]], !dbg [[DBG24]]
-// CHECK5-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE1]], label [[ARRAYDESTROY_BODY]], !dbg [[DBG24]]
+// CHECK5-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi %class.TestClass* [ [[ARRAYCTOR_CUR]], [[LPAD]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ], !dbg [[DBG25]]
+// CHECK5-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[CLASS_TESTCLASS]], %class.TestClass* [[ARRAYDESTROY_ELEMENTPAST]], i64 -1, !dbg [[DBG25]]
+// CHECK5-NEXT:    call void @_ZN9TestClassD1Ev(%class.TestClass* nonnull align 4 dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR3]], !dbg [[DBG25]]
+// CHECK5-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq %class.TestClass* [[ARRAYDESTROY_ELEMENT]], [[ARRAY_BEGIN]], !dbg [[DBG25]]
+// CHECK5-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE1]], label [[ARRAYDESTROY_BODY]], !dbg [[DBG25]]
 // CHECK5:       arraydestroy.done1:
-// CHECK5-NEXT:    br label [[EH_RESUME:%.*]], !dbg [[DBG24]]
+// CHECK5-NEXT:    br label [[EH_RESUME:%.*]], !dbg [[DBG25]]
 // CHECK5:       eh.resume:
-// CHECK5-NEXT:    [[EXN:%.*]] = load i8*, i8** [[EXN_SLOT]], align 8, !dbg [[DBG24]]
-// CHECK5-NEXT:    [[SEL:%.*]] = load i32, i32* [[EHSELECTOR_SLOT]], align 4, !dbg [[DBG24]]
-// CHECK5-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { i8*, i32 } undef, i8* [[EXN]], 0, !dbg [[DBG24]]
-// CHECK5-NEXT:    [[LPAD_VAL2:%.*]] = insertvalue { i8*, i32 } [[LPAD_VAL]], i32 [[SEL]], 1, !dbg [[DBG24]]
-// CHECK5-NEXT:    resume { i8*, i32 } [[LPAD_VAL2]], !dbg [[DBG24]]
+// CHECK5-NEXT:    [[EXN:%.*]] = load i8*, i8** [[EXN_SLOT]], align 8, !dbg [[DBG25]]
+// CHECK5-NEXT:    [[SEL:%.*]] = load i32, i32* [[EHSELECTOR_SLOT]], align 4, !dbg [[DBG25]]
+// CHECK5-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { i8*, i32 } undef, i8* [[EXN]], 0, !dbg [[DBG25]]
+// CHECK5-NEXT:    [[LPAD_VAL2:%.*]] = insertvalue { i8*, i32 } [[LPAD_VAL]], i32 [[SEL]], 1, !dbg [[DBG25]]
+// CHECK5-NEXT:    resume { i8*, i32 } [[LPAD_VAL2]], !dbg [[DBG25]]
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.__kmpc_global_dtor_..2
-// CHECK5-SAME: (i8* [[TMP0:%.*]]) #[[ATTR0]] section "__TEXT,__StaticInit,regular,pure_instructions" !dbg [[DBG26:![0-9]+]] {
+// CHECK5-SAME: (i8* [[TMP0:%.*]]) #[[ATTR0]] section "__TEXT,__StaticInit,regular,pure_instructions" !dbg [[DBG27:![0-9]+]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 8
 // CHECK5-NEXT:    store i8* [[TMP0]], i8** [[DOTADDR]], align 8
-// CHECK5-NEXT:    [[TMP1:%.*]] = load i8*, i8** [[DOTADDR]], align 8, !dbg [[DBG27:![0-9]+]]
-// CHECK5-NEXT:    [[ARRAY_BEGIN:%.*]] = bitcast i8* [[TMP1]] to %class.TestClass*, !dbg [[DBG27]]
-// CHECK5-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[CLASS_TESTCLASS:%.*]], %class.TestClass* [[ARRAY_BEGIN]], i64 2, !dbg [[DBG27]]
-// CHECK5-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]], !dbg [[DBG27]]
+// CHECK5-NEXT:    [[TMP1:%.*]] = load i8*, i8** [[DOTADDR]], align 8, !dbg [[DBG28:![0-9]+]]
+// CHECK5-NEXT:    [[ARRAY_BEGIN:%.*]] = bitcast i8* [[TMP1]] to %class.TestClass*, !dbg [[DBG28]]
+// CHECK5-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[CLASS_TESTCLASS:%.*]], %class.TestClass* [[ARRAY_BEGIN]], i64 2, !dbg [[DBG28]]
+// CHECK5-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]], !dbg [[DBG28]]
 // CHECK5:       arraydestroy.body:
-// CHECK5-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi %class.TestClass* [ [[TMP2]], [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ], !dbg [[DBG27]]
-// CHECK5-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[CLASS_TESTCLASS]], %class.TestClass* [[ARRAYDESTROY_ELEMENTPAST]], i64 -1, !dbg [[DBG27]]
-// CHECK5-NEXT:    call void @_ZN9TestClassD1Ev(%class.TestClass* nonnull align 4 dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR3]], !dbg [[DBG27]]
-// CHECK5-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq %class.TestClass* [[ARRAYDESTROY_ELEMENT]], [[ARRAY_BEGIN]], !dbg [[DBG27]]
-// CHECK5-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE1:%.*]], label [[ARRAYDESTROY_BODY]], !dbg [[DBG27]]
+// CHECK5-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi %class.TestClass* [ [[TMP2]], [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ], !dbg [[DBG28]]
+// CHECK5-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[CLASS_TESTCLASS]], %class.TestClass* [[ARRAYDESTROY_ELEMENTPAST]], i64 -1, !dbg [[DBG28]]
+// CHECK5-NEXT:    call void @_ZN9TestClassD1Ev(%class.TestClass* nonnull align 4 dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR3]], !dbg [[DBG28]]
+// CHECK5-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq %class.TestClass* [[ARRAYDESTROY_ELEMENT]], [[ARRAY_BEGIN]], !dbg [[DBG28]]
+// CHECK5-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE1:%.*]], label [[ARRAYDESTROY_BODY]], !dbg [[DBG28]]
 // CHECK5:       arraydestroy.done1:
-// CHECK5-NEXT:    ret void, !dbg [[DBG28:![0-9]+]]
+// CHECK5-NEXT:    ret void, !dbg [[DBG29:![0-9]+]]
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.__omp_threadprivate_init_..3
-// CHECK5-SAME: () #[[ATTR0]] section "__TEXT,__StaticInit,regular,pure_instructions" !dbg [[DBG29:![0-9]+]] {
+// CHECK5-SAME: () #[[ATTR0]] section "__TEXT,__StaticInit,regular,pure_instructions" !dbg [[DBG30:![0-9]+]] {
 // CHECK5-NEXT:  entry:
-// CHECK5-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB3:[0-9]+]]), !dbg [[DBG30:![0-9]+]]
-// CHECK5-NEXT:    call void @__kmpc_threadprivate_register(%struct.ident_t* @[[GLOB3]], i8* bitcast ([2 x %class.TestClass]* @tc2 to i8*), i8* (i8*)* @.__kmpc_global_ctor_..1, i8* (i8*, i8*)* null, void (i8*)* @.__kmpc_global_dtor_..2), !dbg [[DBG30]]
-// CHECK5-NEXT:    ret void, !dbg [[DBG30]]
+// CHECK5-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB3:[0-9]+]]), !dbg [[DBG31:![0-9]+]]
+// CHECK5-NEXT:    call void @__kmpc_threadprivate_register(%struct.ident_t* @[[GLOB3]], i8* bitcast ([2 x %class.TestClass]* @tc2 to i8*), i8* (i8*)* @.__kmpc_global_ctor_..1, i8* (i8*, i8*)* null, void (i8*)* @.__kmpc_global_dtor_..2), !dbg [[DBG31]]
+// CHECK5-NEXT:    ret void, !dbg [[DBG31]]
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@__cxx_global_var_init
-// CHECK5-SAME: () #[[ATTR0]] section "__TEXT,__StaticInit,regular,pure_instructions" !dbg [[DBG31:![0-9]+]] {
+// CHECK5-SAME: () #[[ATTR0]] section "__TEXT,__StaticInit,regular,pure_instructions" !dbg [[DBG32:![0-9]+]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    call void @_ZN9TestClassC1Ev(%class.TestClass* nonnull align 4 dereferenceable(4) @tc), !dbg [[DBG33:![0-9]+]]
 // CHECK5-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(void (i8*)* bitcast (void (%class.TestClass*)* @_ZN9TestClassD1Ev to void (i8*)*), i8* bitcast (%class.TestClass* @tc to i8*), i8* @__dso_handle) #[[ATTR3]], !dbg [[DBG35:![0-9]+]]
@@ -5053,9 +5053,9 @@ void array_func(int n, int a[n], St s[2]) {
 // CHECK5-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP7]], align 4, !dbg [[DBG168:![0-9]+]]
 // CHECK5-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP8]], 1, !dbg [[DBG168]]
 // CHECK5-NEXT:    store i32 [[INC]], i32* [[TMP7]], align 4, !dbg [[DBG168]]
-// CHECK5-NEXT:    [[TMP9:%.*]] = load i32, i32* [[CONV1]], align 8, !dbg [[DBG169:![0-9]+]]
+// CHECK5-NEXT:    [[TMP9:%.*]] = load i32, i32* [[CONV1]], align 4, !dbg [[DBG169:![0-9]+]]
 // CHECK5-NEXT:    [[DEC:%.*]] = add nsw i32 [[TMP9]], -1, !dbg [[DBG169]]
-// CHECK5-NEXT:    store i32 [[DEC]], i32* [[CONV1]], align 8, !dbg [[DBG169]]
+// CHECK5-NEXT:    store i32 [[DEC]], i32* [[CONV1]], align 4, !dbg [[DBG169]]
 // CHECK5-NEXT:    [[TMP10:%.*]] = load i32*, i32** [[_TMP5]], align 8, !dbg [[DBG167]]
 // CHECK5-NEXT:    [[TMP11:%.*]] = load i32, i32* [[TMP10]], align 4, !dbg [[DBG170:![0-9]+]]
 // CHECK5-NEXT:    [[DIV:%.*]] = sdiv i32 [[TMP11]], 1, !dbg [[DBG170]]
@@ -5237,5 +5237,4 @@ void array_func(int n, int a[n], St s[2]) {
 // CHECK6-NEXT:    [[TMP19:%.*]] = load %struct.St*, %struct.St** [[TMP18]], align 8
 // CHECK6-NEXT:    store %struct.St* [[TMP19]], %struct.St** [[TMP15]], align 8
 // CHECK6-NEXT:    ret void
-//
 //

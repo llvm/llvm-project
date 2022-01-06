@@ -217,7 +217,7 @@ public:
   /// Finishes insertion.
   virtual void endInsert() = 0;
 
-  virtual ~SparseTensorStorageBase() {}
+  virtual ~SparseTensorStorageBase() = default;
 
 private:
   void fatal(const char *tp) {
@@ -277,7 +277,7 @@ public:
     }
   }
 
-  virtual ~SparseTensorStorage() {}
+  virtual ~SparseTensorStorage() = default;
 
   /// Get the rank of the tensor.
   uint64_t getRank() const { return sizes.size(); }
@@ -574,7 +574,7 @@ static void readMMEHeader(FILE *file, char *filename, char *line,
     exit(1);
   }
   // Skip comments.
-  while (1) {
+  while (true) {
     if (!fgets(line, kColWidth, file)) {
       fprintf(stderr, "Cannot find data in %s\n", filename);
       exit(1);
@@ -598,7 +598,7 @@ static void readMMEHeader(FILE *file, char *filename, char *line,
 static void readExtFROSTTHeader(FILE *file, char *filename, char *line,
                                 uint64_t *idata) {
   // Skip comments.
-  while (1) {
+  while (true) {
     if (!fgets(line, kColWidth, file)) {
       fprintf(stderr, "Cannot find data in %s\n", filename);
       exit(1);

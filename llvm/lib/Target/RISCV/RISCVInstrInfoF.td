@@ -19,9 +19,9 @@ def SDT_RISCVFMV_W_X_RV64
     : SDTypeProfile<1, 1, [SDTCisVT<0, f32>, SDTCisVT<1, i64>]>;
 def SDT_RISCVFMV_X_ANYEXTW_RV64
     : SDTypeProfile<1, 1, [SDTCisVT<0, i64>, SDTCisVT<1, f32>]>;
-def STD_RISCVFCVT_W_RV64
+def SDT_RISCVFCVT_W_RV64
     : SDTypeProfile<1, 1, [SDTCisVT<0, i64>, SDTCisFP<1>]>;
-def STD_RISCVFCVT_X
+def SDT_RISCVFCVT_X
     : SDTypeProfile<1, 1, [SDTCisVT<0, XLenVT>, SDTCisFP<1>]>;
 
 def riscv_fmv_w_x_rv64
@@ -29,13 +29,27 @@ def riscv_fmv_w_x_rv64
 def riscv_fmv_x_anyextw_rv64
     : SDNode<"RISCVISD::FMV_X_ANYEXTW_RV64", SDT_RISCVFMV_X_ANYEXTW_RV64>;
 def riscv_fcvt_w_rtz_rv64
-    : SDNode<"RISCVISD::FCVT_W_RTZ_RV64", STD_RISCVFCVT_W_RV64>;
+    : SDNode<"RISCVISD::FCVT_W_RTZ_RV64", SDT_RISCVFCVT_W_RV64>;
 def riscv_fcvt_wu_rtz_rv64
-    : SDNode<"RISCVISD::FCVT_WU_RTZ_RV64", STD_RISCVFCVT_W_RV64>;
+    : SDNode<"RISCVISD::FCVT_WU_RTZ_RV64", SDT_RISCVFCVT_W_RV64>;
 def riscv_fcvt_x_rtz
-    : SDNode<"RISCVISD::FCVT_X_RTZ", STD_RISCVFCVT_X>;
+    : SDNode<"RISCVISD::FCVT_X_RTZ", SDT_RISCVFCVT_X>;
 def riscv_fcvt_xu_rtz
-    : SDNode<"RISCVISD::FCVT_XU_RTZ", STD_RISCVFCVT_X>;
+    : SDNode<"RISCVISD::FCVT_XU_RTZ", SDT_RISCVFCVT_X>;
+
+def riscv_strict_fcvt_w_rtz_rv64
+    : SDNode<"RISCVISD::STRICT_FCVT_W_RTZ_RV64", SDT_RISCVFCVT_W_RV64,
+             [SDNPHasChain]>;
+def riscv_strict_fcvt_wu_rtz_rv64
+    : SDNode<"RISCVISD::STRICT_FCVT_WU_RTZ_RV64", SDT_RISCVFCVT_W_RV64,
+             [SDNPHasChain]>;
+
+def riscv_any_fcvt_w_rtz_rv64 : PatFrags<(ops node:$src),
+                                         [(riscv_strict_fcvt_w_rtz_rv64 node:$src),
+                                          (riscv_fcvt_w_rtz_rv64 node:$src)]>;
+def riscv_any_fcvt_wu_rtz_rv64 : PatFrags<(ops node:$src),
+                                          [(riscv_strict_fcvt_wu_rtz_rv64 node:$src),
+                                           (riscv_fcvt_wu_rtz_rv64 node:$src)]>;
 
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
@@ -58,6 +72,22 @@ def frmarg : Operand<XLenVT> {
 //===----------------------------------------------------------------------===//
 // Instruction class templates
 //===----------------------------------------------------------------------===//
+
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
+class FPLoad_r<bits<3> funct3, string opcodestr, RegisterClass rty,
+               SchedWrite sw>
+    : RVInstI<funct3, OPC_LOAD_FP, (outs rty:$rd),
+              (ins GPR:$rs1, simm12:$imm12),
+              opcodestr, "$rd, ${imm12}(${rs1})">,
+      Sched<[sw, ReadFMemBase]>;
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
+class FPStore_r<bits<3> funct3, string opcodestr, RegisterClass rty,
+                SchedWrite sw>
+    : RVInstS<funct3, OPC_STORE_FP, (outs),
+              (ins rty:$rs2, GPR:$rs1, simm12:$imm12),
+              opcodestr, "$rs2, ${imm12}(${rs1})">,
+      Sched<[sw, ReadStoreData, ReadFMemBase]>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, mayRaiseFPException = 1,
     UseNamedOperandTable = 1, hasPostISelHook = 1 in
@@ -124,20 +154,12 @@ class FPCmp_rr<bits<7> funct7, bits<3> funct3, string opcodestr,
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtF] in {
-let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
-def FLW : RVInstI<0b010, OPC_LOAD_FP, (outs FPR32:$rd),
-                  (ins GPR:$rs1, simm12:$imm12),
-                   "flw", "$rd, ${imm12}(${rs1})">,
-          Sched<[WriteFLD32, ReadFMemBase]>;
+def FLW : FPLoad_r<0b010, "flw", FPR32, WriteFLD32>;
 
 // Operands for stores are in the order srcreg, base, offset rather than
 // reflecting the order these fields are specified in the instruction
 // encoding.
-let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
-def FSW : RVInstS<0b010, OPC_STORE_FP, (outs),
-                  (ins FPR32:$rs2, GPR:$rs1, simm12:$imm12),
-                   "fsw", "$rs2, ${imm12}(${rs1})">,
-          Sched<[WriteFST32, ReadStoreData, ReadFMemBase]>;
+def FSW : FPStore_r<0b010, "fsw", FPR32, WriteFST32>;
 
 let SchedRW = [WriteFMA32, ReadFMA32, ReadFMA32, ReadFMA32] in {
 def FMADD_S  : FPFMA_rrr_frm<OPC_MADD,  0b00, "fmadd.s",  FPR32>;
@@ -375,8 +397,8 @@ def : Pat<(bitconvert (i32 GPR:$rs1)), (FMV_W_X GPR:$rs1)>;
 def : Pat<(i32 (bitconvert FPR32:$rs1)), (FMV_X_W FPR32:$rs1)>;
 
 // float->[u]int. Round-to-zero must be used.
-def : Pat<(i32 (fp_to_sint FPR32:$rs1)), (FCVT_W_S $rs1, 0b001)>;
-def : Pat<(i32 (fp_to_uint FPR32:$rs1)), (FCVT_WU_S $rs1, 0b001)>;
+def : Pat<(i32 (any_fp_to_sint FPR32:$rs1)), (FCVT_W_S $rs1, 0b001)>;
+def : Pat<(i32 (any_fp_to_uint FPR32:$rs1)), (FCVT_WU_S $rs1, 0b001)>;
 
 // Saturating float->[u]int32.
 def : Pat<(i32 (riscv_fcvt_x_rtz FPR32:$rs1)), (FCVT_W_S $rs1, 0b001)>;
@@ -389,8 +411,8 @@ def : Pat<(i32 (lrint FPR32:$rs1)), (FCVT_W_S $rs1, 0b111)>;
 def : Pat<(i32 (lround FPR32:$rs1)), (FCVT_W_S $rs1, 0b100)>;
 
 // [u]int->float. Match GCC and default to using dynamic rounding mode.
-def : Pat<(sint_to_fp (i32 GPR:$rs1)), (FCVT_S_W $rs1, 0b111)>;
-def : Pat<(uint_to_fp (i32 GPR:$rs1)), (FCVT_S_WU $rs1, 0b111)>;
+def : Pat<(any_sint_to_fp (i32 GPR:$rs1)), (FCVT_S_W $rs1, 0b111)>;
+def : Pat<(any_uint_to_fp (i32 GPR:$rs1)), (FCVT_S_WU $rs1, 0b111)>;
 } // Predicates = [HasStdExtF, IsRV32]
 
 let Predicates = [HasStdExtF, IsRV64] in {
@@ -403,12 +425,12 @@ def : Pat<(sext_inreg (riscv_fmv_x_anyextw_rv64 FPR32:$src), i32),
 // Use target specific isd nodes to help us remember the result is sign
 // extended. Matching sext_inreg+fptoui/fptosi may cause the conversion to be
 // duplicated if it has another user that didn't need the sign_extend.
-def : Pat<(riscv_fcvt_w_rtz_rv64 FPR32:$rs1),  (FCVT_W_S $rs1, 0b001)>;
-def : Pat<(riscv_fcvt_wu_rtz_rv64 FPR32:$rs1), (FCVT_WU_S $rs1, 0b001)>;
+def : Pat<(riscv_any_fcvt_w_rtz_rv64 FPR32:$rs1),  (FCVT_W_S $rs1, 0b001)>;
+def : Pat<(riscv_any_fcvt_wu_rtz_rv64 FPR32:$rs1), (FCVT_WU_S $rs1, 0b001)>;
 
 // float->[u]int64. Round-to-zero must be used.
-def : Pat<(i64 (fp_to_sint FPR32:$rs1)), (FCVT_L_S $rs1, 0b001)>;
-def : Pat<(i64 (fp_to_uint FPR32:$rs1)), (FCVT_LU_S $rs1, 0b001)>;
+def : Pat<(i64 (any_fp_to_sint FPR32:$rs1)), (FCVT_L_S $rs1, 0b001)>;
+def : Pat<(i64 (any_fp_to_uint FPR32:$rs1)), (FCVT_LU_S $rs1, 0b001)>;
 
 // Saturating float->[u]int64.
 def : Pat<(i64 (riscv_fcvt_x_rtz FPR32:$rs1)), (FCVT_L_S $rs1, 0b001)>;
@@ -423,8 +445,8 @@ def : Pat<(i64 (lround FPR32:$rs1)), (FCVT_L_S $rs1, 0b100)>;
 def : Pat<(i64 (llround FPR32:$rs1)), (FCVT_L_S $rs1, 0b100)>;
 
 // [u]int->fp. Match GCC and default to using dynamic rounding mode.
-def : Pat<(sint_to_fp (i64 (sexti32 (i64 GPR:$rs1)))), (FCVT_S_W $rs1, 0b111)>;
-def : Pat<(uint_to_fp (i64 (zexti32 (i64 GPR:$rs1)))), (FCVT_S_WU $rs1, 0b111)>;
-def : Pat<(sint_to_fp (i64 GPR:$rs1)), (FCVT_S_L $rs1, 0b111)>;
-def : Pat<(uint_to_fp (i64 GPR:$rs1)), (FCVT_S_LU $rs1, 0b111)>;
+def : Pat<(any_sint_to_fp (i64 (sexti32 (i64 GPR:$rs1)))), (FCVT_S_W $rs1, 0b111)>;
+def : Pat<(any_uint_to_fp (i64 (zexti32 (i64 GPR:$rs1)))), (FCVT_S_WU $rs1, 0b111)>;
+def : Pat<(any_sint_to_fp (i64 GPR:$rs1)), (FCVT_S_L $rs1, 0b111)>;
+def : Pat<(any_uint_to_fp (i64 GPR:$rs1)), (FCVT_S_LU $rs1, 0b111)>;
 } // Predicates = [HasStdExtF, IsRV64]

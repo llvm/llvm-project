@@ -1017,14 +1017,15 @@ def int_codeview_annotation : DefaultAttrsIntrinsic<[], [llvm_metadata_ty],
 
 //===------------------------ Trampoline Intrinsics -----------------------===//
 //
-def int_init_trampoline : Intrinsic<[],
-                                    [llvm_ptr_ty, llvm_ptr_ty, llvm_ptr_ty],
-                                    [IntrArgMemOnly, NoCapture<ArgIndex<0>>]>,
-                                    GCCBuiltin<"__builtin_init_trampoline">;
+def int_init_trampoline : DefaultAttrsIntrinsic<
+    [], [llvm_ptr_ty, llvm_ptr_ty, llvm_ptr_ty],
+    [IntrArgMemOnly, NoCapture<ArgIndex<0>>, WriteOnly<ArgIndex<0>>,
+     ReadNone<ArgIndex<1>>, ReadNone<ArgIndex<2>>]>,
+    GCCBuiltin<"__builtin_init_trampoline">;
 
-def int_adjust_trampoline : Intrinsic<[llvm_ptr_ty], [llvm_ptr_ty],
-                                      [IntrReadMem, IntrArgMemOnly]>,
-                                      GCCBuiltin<"__builtin_adjust_trampoline">;
+def int_adjust_trampoline : DefaultAttrsIntrinsic<
+    [llvm_ptr_ty], [llvm_ptr_ty], [IntrReadMem, IntrArgMemOnly]>,
+    GCCBuiltin<"__builtin_adjust_trampoline">;
 
 //===------------------------ Overflow Intrinsics -------------------------===//
 //

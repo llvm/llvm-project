@@ -559,9 +559,9 @@ void parallel_master_allocate() {
 // CHECK13-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], 0
 // CHECK13-NEXT:    br i1 [[TMP3]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_END:%.*]]
 // CHECK13:       omp_if.then:
-// CHECK13-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK13-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK13-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP4]], 1
-// CHECK13-NEXT:    store i32 [[INC]], i32* [[CONV]], align 8
+// CHECK13-NEXT:    store i32 [[INC]], i32* [[CONV]], align 4
 // CHECK13-NEXT:    call void @__kmpc_end_master(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]])
 // CHECK13-NEXT:    br label [[OMP_IF_END]]
 // CHECK13:       omp_if.end:
@@ -597,9 +597,9 @@ void parallel_master_allocate() {
 // CHECK14-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], 0
 // CHECK14-NEXT:    br i1 [[TMP3]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_END:%.*]]
 // CHECK14:       omp_if.then:
-// CHECK14-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK14-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK14-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP4]], 1
-// CHECK14-NEXT:    store i32 [[INC]], i32* [[CONV]], align 8
+// CHECK14-NEXT:    store i32 [[INC]], i32* [[CONV]], align 4
 // CHECK14-NEXT:    call void @__kmpc_end_master(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]])
 // CHECK14-NEXT:    br label [[OMP_IF_END]]
 // CHECK14:       omp_if.end:
@@ -658,9 +658,9 @@ void parallel_master_allocate() {
 // CHECK17-NEXT:    [[TMP6:%.*]] = load i32, i32* [[B]], align 4
 // CHECK17-NEXT:    [[ADD2:%.*]] = add nsw i32 [[TMP6]], 1
 // CHECK17-NEXT:    store i32 [[ADD2]], i32* [[B]], align 4
-// CHECK17-NEXT:    [[TMP7:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK17-NEXT:    [[TMP7:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK17-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP7]], 1
-// CHECK17-NEXT:    store i32 [[INC]], i32* [[CONV]], align 8
+// CHECK17-NEXT:    store i32 [[INC]], i32* [[CONV]], align 4
 // CHECK17-NEXT:    [[TMP8:%.*]] = load i32, i32* @_ZN2St1yE, align 4
 // CHECK17-NEXT:    [[INC3:%.*]] = add nsw i32 [[TMP8]], 1
 // CHECK17-NEXT:    store i32 [[INC3]], i32* @_ZN2St1yE, align 4
@@ -754,9 +754,9 @@ void parallel_master_allocate() {
 // CHECK18-NEXT:    [[TMP6:%.*]] = load i32, i32* [[B]], align 4
 // CHECK18-NEXT:    [[ADD2:%.*]] = add nsw i32 [[TMP6]], 1
 // CHECK18-NEXT:    store i32 [[ADD2]], i32* [[B]], align 4
-// CHECK18-NEXT:    [[TMP7:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK18-NEXT:    [[TMP7:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK18-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP7]], 1
-// CHECK18-NEXT:    store i32 [[INC]], i32* [[CONV]], align 8
+// CHECK18-NEXT:    store i32 [[INC]], i32* [[CONV]], align 4
 // CHECK18-NEXT:    [[TMP8:%.*]] = load i32, i32* @_ZN2St1yE, align 4
 // CHECK18-NEXT:    [[INC3:%.*]] = add nsw i32 [[TMP8]], 1
 // CHECK18-NEXT:    store i32 [[INC3]], i32* @_ZN2St1yE, align 4
@@ -827,9 +827,9 @@ void parallel_master_allocate() {
 // CHECK21-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], 0
 // CHECK21-NEXT:    br i1 [[TMP3]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_END:%.*]]
 // CHECK21:       omp_if.then:
-// CHECK21-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK21-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK21-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP4]], 1
-// CHECK21-NEXT:    store i32 [[INC]], i32* [[CONV]], align 8
+// CHECK21-NEXT:    store i32 [[INC]], i32* [[CONV]], align 4
 // CHECK21-NEXT:    call void @__kmpc_end_master(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]])
 // CHECK21-NEXT:    br label [[OMP_IF_END]]
 // CHECK21:       omp_if.end:
@@ -865,9 +865,9 @@ void parallel_master_allocate() {
 // CHECK22-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], 0
 // CHECK22-NEXT:    br i1 [[TMP3]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_END:%.*]]
 // CHECK22:       omp_if.then:
-// CHECK22-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV]], align 8
+// CHECK22-NEXT:    [[TMP4:%.*]] = load i32, i32* [[CONV]], align 4
 // CHECK22-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP4]], 1
-// CHECK22-NEXT:    store i32 [[INC]], i32* [[CONV]], align 8
+// CHECK22-NEXT:    store i32 [[INC]], i32* [[CONV]], align 4
 // CHECK22-NEXT:    call void @__kmpc_end_master(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]])
 // CHECK22-NEXT:    br label [[OMP_IF_END]]
 // CHECK22:       omp_if.end:
@@ -1004,5 +1004,4 @@ void parallel_master_allocate() {
 // CHECK29-LABEL: define {{[^@]+}}@_ZTW1a
 // CHECK29-SAME: () #[[ATTR4:[0-9]+]] comdat {
 // CHECK29-NEXT:    ret i32* @a
-//
 //

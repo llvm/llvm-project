@@ -84,7 +84,7 @@ public:
     ScopDetection &SD = FAM.getResult<ScopAnalysis>(*F);
 
     const bool HasScopAsTopLevelRegion =
-        SD.ValidRegions.count(RI.getTopLevelRegion()) > 0;
+        SD.ValidRegions.contains(RI.getTopLevelRegion());
 
     bool Changed = false;
     if (HasScopAsTopLevelRegion) {

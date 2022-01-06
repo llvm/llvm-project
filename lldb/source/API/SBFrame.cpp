@@ -119,15 +119,13 @@ SBSymbolContext SBFrame::GetSymbolContext(uint32_t resolve_scope) const {
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
   SymbolContextItem scope = static_cast<SymbolContextItem>(resolve_scope);
-  StackFrame *frame = nullptr;
   Target *target = exe_ctx.GetTargetPtr();
   Process *process = exe_ctx.GetProcessPtr();
   if (target && process) {
     Process::StopLocker stop_locker;
     if (stop_locker.TryLock(&process->GetRunLock())) {
-      frame = exe_ctx.GetFramePtr();
-      if (frame)
-        sb_sym_ctx.SetSymbolContext(&frame->GetSymbolContext(scope));
+      if (StackFrame *frame = exe_ctx.GetFramePtr())
+        sb_sym_ctx = frame->GetSymbolContext(scope);
     }
   }
 

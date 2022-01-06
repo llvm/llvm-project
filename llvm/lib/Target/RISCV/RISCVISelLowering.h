@@ -282,6 +282,11 @@ enum NodeType : unsigned {
   // the value read before the modification and the new chain pointer.
   SWAP_CSR,
 
+  // FP to 32 bit int conversions for RV64. These are used to keep track of the
+  // result being sign extended to 64 bit. These saturate out of range inputs.
+  STRICT_FCVT_W_RTZ_RV64 = ISD::FIRST_TARGET_STRICTFP_OPCODE,
+  STRICT_FCVT_WU_RTZ_RV64,
+
   // Memory opcodes start here.
   VLE_VL = ISD::FIRST_TARGET_MEMORY_OPCODE,
   VSE_VL,
@@ -315,7 +320,7 @@ public:
   bool isSExtCheaperThanZExt(EVT SrcVT, EVT DstVT) const override;
   bool isCheapToSpeculateCttz() const override;
   bool isCheapToSpeculateCtlz() const override;
-  bool hasAndNot(SDValue Y) const override;
+  bool hasAndNotCompare(SDValue Y) const override;
   bool shouldSinkOperands(Instruction *I,
                           SmallVectorImpl<Use *> &Ops) const override;
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
@@ -596,6 +601,8 @@ private:
   SDValue lowerToScalableOp(SDValue Op, SelectionDAG &DAG, unsigned NewOpc,
                             bool HasMask = true) const;
   SDValue lowerVPOp(SDValue Op, SelectionDAG &DAG, unsigned RISCVISDOpc) const;
+  SDValue lowerLogicVPOp(SDValue Op, SelectionDAG &DAG, unsigned MaskOpc,
+                         unsigned VecOpc) const;
   SDValue lowerFixedLengthVectorExtendToRVV(SDValue Op, SelectionDAG &DAG,
                                             unsigned ExtendOpc) const;
   SDValue lowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;

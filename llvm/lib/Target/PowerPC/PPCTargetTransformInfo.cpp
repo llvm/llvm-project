@@ -328,10 +328,6 @@ static bool isMMAType(Type *Ty) {
 InstructionCost PPCTTIImpl::getUserCost(const User *U,
                                         ArrayRef<const Value *> Operands,
                                         TTI::TargetCostKind CostKind) {
-  // Set the max cost if an MMA type is present (v256i1, v512i1).
-  if (isMMAType(U->getType()))
-    return InstructionCost::getMax();
-
   // We already implement getCastInstrCost and getMemoryOpCost where we perform
   // the vector adjustment there.
   if (isa<CastInst>(U) || isa<LoadInst>(U) || isa<StoreInst>(U))
@@ -1276,23 +1272,21 @@ PPCTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 }
 
-bool PPCTTIImpl::areFunctionArgsABICompatible(
-    const Function *Caller, const Function *Callee,
-    SmallPtrSetImpl<Argument *> &Args) const {
+bool PPCTTIImpl::areTypesABICompatible(const Function *Caller,
+                                       const Function *Callee,
+                                       const ArrayRef<Type *> &Types) const {
 
   // We need to ensure that argument promotion does not
   // attempt to promote pointers to MMA types (__vector_pair
   // and __vector_quad) since these types explicitly cannot be
   // passed as arguments. Both of these types are larger than
   // the 128-bit Altivec vectors and have a scalar size of 1 bit.
-  if (!BaseT::areFunctionArgsABICompatible(Caller, Callee, Args))
+  if (!BaseT::areTypesABICompatible(Caller, Callee, Types))
     return false;
 
-  return llvm::none_of(Args, [](Argument *A) {
-    auto *EltTy = cast<PointerType>(A->getType())->getElementType();
-    if (EltTy->isSized())
-      return (EltTy->isIntOrIntVectorTy(1) &&
-              EltTy->getPrimitiveSizeInBits() > 128);
+  return llvm::none_of(Types, [](Type *Ty) {
+    if (Ty->isSized())
+      return Ty->isIntOrIntVectorTy(1) && Ty->getPrimitiveSizeInBits() > 128;
     return false;
   });
 }

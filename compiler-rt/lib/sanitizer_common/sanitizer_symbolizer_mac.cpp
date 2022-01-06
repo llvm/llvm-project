@@ -91,6 +91,7 @@ class AtosSymbolizerProcess final : public SymbolizerProcess {
       argv[i++] = "-d";
     }
     argv[i++] = nullptr;
+    CHECK_LE(i, kArgVMax);
   }
 
   char pid_str_[16];

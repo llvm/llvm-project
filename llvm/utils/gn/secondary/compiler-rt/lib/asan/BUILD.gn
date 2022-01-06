@@ -99,10 +99,7 @@ target(asan_target_type, "asan") {
     "asan_win.cpp",
   ]
   if (target_os != "mac" && target_os != "win") {
-    sources += [
-      "asan_interceptors_vfork.S",
-      "asan_rtl_x86_64.S",
-    ]
+    sources += [ "asan_interceptors_vfork.S" ]
   }
 
   # To be able to include sanitizer_common.
@@ -163,6 +160,8 @@ target(asan_target_type, "asan") {
       "-Wl,-U,___sanitizer_symbolize_data",
       "-Wl,-U,___sanitizer_symbolize_demangle",
       "-Wl,-U,___sanitizer_symbolize_flush",
+      "-Wl,-U,___sanitizer_symbolize_set_demangle",
+      "-Wl,-U,___sanitizer_symbolize_set_inline_frames",
 
       # xray
       "-Wl,-U,___start_xray_fn_idx",
@@ -198,5 +197,9 @@ source_set("unused") {
     "asan_preinit.cpp",
     "asan_win_dll_thunk.cpp",
     "asan_win_dynamic_runtime_thunk.cpp",
+
+    # FIXME: These are in clang_rt.asan_static in the CMake build.
+
+    "asan_rtl_x86_64.S",
   ]
 }

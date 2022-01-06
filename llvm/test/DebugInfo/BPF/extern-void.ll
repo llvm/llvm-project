@@ -36,8 +36,9 @@ entry:
 ; CHECK:        .quad bla1
 ; CHECK-NEXT:   DW_TAG_variable
 ;
-; CHECK:        .quad bla2
+; CHECK:        .quad   bla2
 ; CHECK-NEXT:   DW_TAG_const_type
+; CHECK-NEXT:   DW_TAG_subprogram
 
 ; Function Attrs: nounwind readnone speculatable willreturn
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1

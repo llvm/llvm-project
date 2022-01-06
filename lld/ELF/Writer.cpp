@@ -65,7 +65,7 @@ private:
   void checkExecuteOnly();
   void setReservedSymbolSections();
 
-  std::vector<PhdrEntry *> createPhdrs(Partition &part);
+  SmallVector<PhdrEntry *, 0> createPhdrs(Partition &part);
   void addPhdrForSection(Partition &part, unsigned shType, unsigned pType,
                          unsigned pFlags);
   void assignFileOffsets();
@@ -100,7 +100,7 @@ template <class ELFT> void elf::writeResult() {
   Writer<ELFT>().run();
 }
 
-static void removeEmptyPTLoad(std::vector<PhdrEntry *> &phdrs) {
+static void removeEmptyPTLoad(SmallVector<PhdrEntry *, 0> &phdrs) {
   auto it = std::stable_partition(
       phdrs.begin(), phdrs.end(), [&](const PhdrEntry *p) {
         if (p->p_type != PT_LOAD)
@@ -297,7 +297,7 @@ template <class ELFT> void elf::createSyntheticSections() {
     }
   }
 
-  auto add = [](SyntheticSection *sec) { inputSections.push_back(sec); };
+  auto add = [](SyntheticSection &sec) { inputSections.push_back(&sec); };
 
   in.shStrTab = make<StringTableSection>(".shstrtab", false);
 
@@ -311,7 +311,7 @@ template <class ELFT> void elf::createSyntheticSections() {
   }
 
   in.bss = make<BssSection>(".bss", 0, 1);
-  add(in.bss);
+  add(*in.bss);
 
   // If there is a SECTIONS command and a .data.rel.ro section name use name
   // .data.rel.ro.bss so that we match in the .data.rel.ro output section.
@@ -320,42 +320,42 @@ template <class ELFT> void elf::createSyntheticSections() {
       script->hasSectionsCommand && findSection(".data.rel.ro", 0);
   in.bssRelRo =
       make<BssSection>(hasDataRelRo ? ".data.rel.ro.bss" : ".bss.rel.ro", 0, 1);
-  add(in.bssRelRo);
+  add(*in.bssRelRo);
 
   // Add MIPS-specific sections.
   if (config->emachine == EM_MIPS) {
     if (!config->shared && config->hasDynSymTab) {
       in.mipsRldMap = make<MipsRldMapSection>();
-      add(in.mipsRldMap);
+      add(*in.mipsRldMap);
     }
     if (auto *sec = MipsAbiFlagsSection<ELFT>::create())
-      add(sec);
+      add(*sec);
     if (auto *sec = MipsOptionsSection<ELFT>::create())
-      add(sec);
+      add(*sec);
     if (auto *sec = MipsReginfoSection<ELFT>::create())
-      add(sec);
+      add(*sec);
   }
 
   StringRef relaDynName = config->isRela ? ".rela.dyn" : ".rel.dyn";
 
   for (Partition &part : partitions) {
-    auto add = [&](SyntheticSection *sec) {
-      sec->partition = part.getNumber();
-      inputSections.push_back(sec);
+    auto add = [&](SyntheticSection &sec) {
+      sec.partition = part.getNumber();
+      inputSections.push_back(&sec);
     };
 
     if (!part.name.empty()) {
       part.elfHeader = make<PartitionElfHeaderSection<ELFT>>();
       part.elfHeader->name = part.name;
-      add(part.elfHeader);
+      add(*part.elfHeader);
 
       part.programHeaders = make<PartitionProgramHeadersSection<ELFT>>();
-      add(part.programHeaders);
+      add(*part.programHeaders);
     }
 
     if (config->buildId != BuildIdKind::None) {
       part.buildId = make<BuildIdSection>();
-      add(part.buildId);
+      add(*part.buildId);
     }
 
     part.dynStrTab = make<StringTableSection>(".dynstr", true);
@@ -368,53 +368,53 @@ template <class ELFT> void elf::createSyntheticSections() {
           make<RelocationSection<ELFT>>(relaDynName, config->zCombreloc);
 
     if (config->hasDynSymTab) {
-      add(part.dynSymTab);
+      add(*part.dynSymTab);
 
       part.verSym = make<VersionTableSection>();
-      add(part.verSym);
+      add(*part.verSym);
 
       if (!namedVersionDefs().empty()) {
         part.verDef = make<VersionDefinitionSection>();
-        add(part.verDef);
+        add(*part.verDef);
       }
 
       part.verNeed = make<VersionNeedSection<ELFT>>();
-      add(part.verNeed);
+      add(*part.verNeed);
 
       if (config->gnuHash) {
         part.gnuHashTab = make<GnuHashTableSection>();
-        add(part.gnuHashTab);
+        add(*part.gnuHashTab);
       }
 
       if (config->sysvHash) {
         part.hashTab = make<HashTableSection>();
-        add(part.hashTab);
+        add(*part.hashTab);
       }
 
-      add(part.dynamic);
-      add(part.dynStrTab);
-      add(part.relaDyn);
+      add(*part.dynamic);
+      add(*part.dynStrTab);
+      add(*part.relaDyn);
     }
 
     if (config->relrPackDynRelocs) {
       part.relrDyn = make<RelrSection<ELFT>>();
-      add(part.relrDyn);
+      add(*part.relrDyn);
     }
 
     if (!config->relocatable) {
       if (config->ehFrameHdr) {
         part.ehFrameHdr = make<EhFrameHeader>();
-        add(part.ehFrameHdr);
+        add(*part.ehFrameHdr);
       }
       part.ehFrame = make<EhFrameSection>();
-      add(part.ehFrame);
+      add(*part.ehFrame);
     }
 
     if (config->emachine == EM_ARM && !config->relocatable) {
       // The ARMExidxsyntheticsection replaces all the individual .ARM.exidx
       // InputSections.
       part.armExidx = make<ARMExidxSyntheticSection>();
-      add(part.armExidx);
+      add(*part.armExidx);
     }
   }
 
@@ -424,39 +424,39 @@ template <class ELFT> void elf::createSyntheticSections() {
     // special handling (see createPhdrs() and combineEhSections()).
     in.partEnd = make<BssSection>(".part.end", config->maxPageSize, 1);
     in.partEnd->partition = 255;
-    add(in.partEnd);
+    add(*in.partEnd);
 
     in.partIndex = make<PartitionIndexSection>();
     addOptionalRegular("__part_index_begin", in.partIndex, 0);
     addOptionalRegular("__part_index_end", in.partIndex,
                        in.partIndex->getSize());
-    add(in.partIndex);
+    add(*in.partIndex);
   }
 
   // Add .got. MIPS' .got is so different from the other archs,
   // it has its own class.
   if (config->emachine == EM_MIPS) {
     in.mipsGot = make<MipsGotSection>();
-    add(in.mipsGot);
+    add(*in.mipsGot);
   } else {
     in.got = make<GotSection>();
-    add(in.got);
+    add(*in.got);
   }
 
   if (config->emachine == EM_PPC) {
     in.ppc32Got2 = make<PPC32Got2Section>();
-    add(in.ppc32Got2);
+    add(*in.ppc32Got2);
   }
 
   if (config->emachine == EM_PPC64) {
     in.ppc64LongBranchTarget = make<PPC64LongBranchTargetSection>();
-    add(in.ppc64LongBranchTarget);
+    add(*in.ppc64LongBranchTarget);
   }
 
   in.gotPlt = make<GotPltSection>();
-  add(in.gotPlt);
+  add(*in.gotPlt);
   in.igotPlt = make<IgotPltSection>();
-  add(in.igotPlt);
+  add(*in.igotPlt);
 
   // _GLOBAL_OFFSET_TABLE_ is defined relative to either .got.plt or .got. Treat
   // it as a relocation and ensure the referenced section is created.
@@ -468,13 +468,13 @@ template <class ELFT> void elf::createSyntheticSections() {
   }
 
   if (config->gdbIndex)
-    add(GdbIndexSection::create<ELFT>());
+    add(*GdbIndexSection::create<ELFT>());
 
   // We always need to add rel[a].plt to output if it has entries.
   // Even for static linking it can contain R_[*]_IRELATIVE relocations.
   in.relaPlt = make<RelocationSection<ELFT>>(
       config->isRela ? ".rela.plt" : ".rel.plt", /*sort=*/false);
-  add(in.relaPlt);
+  add(*in.relaPlt);
 
   // The relaIplt immediately follows .rel[a].dyn to ensure that the IRelative
   // relocations are processed last by the dynamic loader. We cannot place the
@@ -485,22 +485,22 @@ template <class ELFT> void elf::createSyntheticSections() {
   in.relaIplt = make<RelocationSection<ELFT>>(
       config->androidPackDynRelocs ? in.relaPlt->name : relaDynName,
       /*sort=*/false);
-  add(in.relaIplt);
+  add(*in.relaIplt);
 
   if ((config->emachine == EM_386 || config->emachine == EM_X86_64) &&
       (config->andFeatures & GNU_PROPERTY_X86_FEATURE_1_IBT)) {
     in.ibtPlt = make<IBTPltSection>();
-    add(in.ibtPlt);
+    add(*in.ibtPlt);
   }
 
   in.plt = config->emachine == EM_PPC ? make<PPC32GlinkSection>()
                                       : make<PltSection>();
-  add(in.plt);
+  add(*in.plt);
   in.iplt = make<IpltSection>();
-  add(in.iplt);
+  add(*in.iplt);
 
   if (config->andFeatures)
-    add(make<GnuPropertySection>());
+    add(*make<GnuPropertySection>());
 
   // .note.GNU-stack is always added when we are creating a re-linkable
   // object file. Other linkers are using the presence of this marker
@@ -508,15 +508,15 @@ template <class ELFT> void elf::createSyntheticSections() {
   // is irrelevant these days. Stack area should always be non-executable
   // by default. So we emit this section unconditionally.
   if (config->relocatable)
-    add(make<GnuStackSection>());
+    add(*make<GnuStackSection>());
 
   if (in.symTab)
-    add(in.symTab);
+    add(*in.symTab);
   if (in.symTabShndx)
-    add(in.symTabShndx);
-  add(in.shStrTab);
+    add(*in.symTabShndx);
+  add(*in.shStrTab);
   if (in.strTab)
-    add(in.strTab);
+    add(*in.strTab);
 }
 
 // The main function of the writer.
@@ -674,15 +674,11 @@ static bool shouldKeepInSymtab(const Defined &sym) {
 }
 
 static bool includeInSymtab(const Symbol &b) {
-  if (!b.isLocal() && !b.isUsedInRegularObj)
-    return false;
-
   if (auto *d = dyn_cast<Defined>(&b)) {
     // Always include absolute symbols.
     SectionBase *sec = d->section;
     if (!sec)
       return true;
-    sec = sec->repl;
 
     // Exclude symbols pointing to garbage-collected sections.
     if (isa<InputSectionBase>(sec) && !sec->isLive())
@@ -712,11 +708,8 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
       // No reason to keep local undefined symbol in symtab.
       if (!dr)
         continue;
-      if (!includeInSymtab(*b))
-        continue;
-      if (!shouldKeepInSymtab(*dr))
-        continue;
-      in.symTab->addSymbol(b);
+      if (includeInSymtab(*b) && shouldKeepInSymtab(*dr))
+        in.symTab->addSymbol(b);
     }
   }
 }
@@ -1177,9 +1170,9 @@ static bool shouldSkip(SectionCommand *cmd) {
 // We want to place orphan sections so that they share as much
 // characteristics with their neighbors as possible. For example, if
 // both are rw, or both are tls.
-static std::vector<SectionCommand *>::iterator
-findOrphanPos(std::vector<SectionCommand *>::iterator b,
-              std::vector<SectionCommand *>::iterator e) {
+static SmallVectorImpl<SectionCommand *>::iterator
+findOrphanPos(SmallVectorImpl<SectionCommand *>::iterator b,
+              SmallVectorImpl<SectionCommand *>::iterator e) {
   OutputSection *sec = cast<OutputSection>(*e);
 
   // Find the first element that has as close a rank as possible.
@@ -1240,7 +1233,7 @@ static void maybeShuffle(DenseMap<const InputSectionBase *, int> &order) {
   if (config->shuffleSections.empty())
     return;
 
-  std::vector<InputSectionBase *> matched, sections = inputSections;
+  SmallVector<InputSectionBase *, 0> matched, sections = inputSections;
   matched.reserve(sections.size());
   for (const auto &patAndSeed : config->shuffleSections) {
     matched.clear();
@@ -1308,7 +1301,7 @@ static DenseMap<const InputSectionBase *, int> buildSectionOrder() {
 
     if (auto *d = dyn_cast<Defined>(&sym)) {
       if (auto *sec = dyn_cast_or_null<InputSectionBase>(d->section)) {
-        int &priority = sectionOrder[cast<InputSectionBase>(sec->repl)];
+        int &priority = sectionOrder[cast<InputSectionBase>(sec)];
         priority = std::min(priority, ent.priority);
       }
     }
@@ -1339,8 +1332,8 @@ static DenseMap<const InputSectionBase *, int> buildSectionOrder() {
 static void
 sortISDBySectionOrder(InputSectionDescription *isd,
                       const DenseMap<const InputSectionBase *, int> &order) {
-  std::vector<InputSection *> unorderedSections;
-  std::vector<std::pair<InputSection *, int>> orderedSections;
+  SmallVector<InputSection *, 0> unorderedSections;
+  SmallVector<std::pair<InputSection *, int>, 0> orderedSections;
   uint64_t unorderedSize = 0;
 
   for (InputSection *isec : isd->sections) {
@@ -1475,13 +1468,6 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
     if (!os)
       continue;
     os->sortRank = getSectionRank(os);
-
-    // We want to assign rude approximation values to outSecOff fields
-    // to know the relative order of the input sections. We use it for
-    // sorting SHF_LINK_ORDER sections. See resolveShfLinkOrder().
-    uint64_t i = 0;
-    for (InputSection *sec : getInputSections(os))
-      sec->outSecOff = i++;
   }
 
   if (!script->hasSectionsCommand) {
@@ -1738,7 +1724,7 @@ static void fixSymbolsAfterShrinking() {
       if (!sec)
         return;
 
-      const InputSectionBase *inputSec = dyn_cast<InputSectionBase>(sec->repl);
+      const InputSectionBase *inputSec = dyn_cast<InputSectionBase>(sec);
       if (!inputSec || !inputSec->bytesDropped)
         return;
 
@@ -1780,10 +1766,10 @@ template <class ELFT> void Writer<ELFT>::optimizeBasicBlockJumps() {
   //      jump to the following section as it is not required.
   //   2. If there are two consecutive jump instructions, it checks
   //      if they can be flipped and one can be deleted.
-  for (OutputSection *os : outputSections) {
-    if (!(os->flags & SHF_EXECINSTR))
+  for (OutputSection *osec : outputSections) {
+    if (!(osec->flags & SHF_EXECINSTR))
       continue;
-    std::vector<InputSection *> sections = getInputSections(os);
+    SmallVector<InputSection *, 0> sections = getInputSections(*osec);
     std::vector<unsigned> result(sections.size());
     // Delete all fall through jump instructions.  Also, check if two
     // consecutive jump instructions can be flipped so that a fall
@@ -1804,11 +1790,9 @@ template <class ELFT> void Writer<ELFT>::optimizeBasicBlockJumps() {
 
   fixSymbolsAfterShrinking();
 
-  for (OutputSection *os : outputSections) {
-    std::vector<InputSection *> sections = getInputSections(os);
-    for (InputSection *is : sections)
+  for (OutputSection *osec : outputSections)
+    for (InputSection *is : getInputSections(*osec))
       is->trim();
-  }
 }
 
 // In order to allow users to manipulate linker-synthesized sections,
@@ -1985,8 +1969,9 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // Now that we have defined all possible global symbols including linker-
     // synthesized ones. Visit all symbols to give the finishing touches.
     for (Symbol *sym : symtab->symbols()) {
-      if (!includeInSymtab(*sym))
+      if (!sym->isUsedInRegularObj || !includeInSymtab(*sym))
         continue;
+      sym->binding = sym->computeBinding();
       if (in.symTab)
         in.symTab->addSymbol(sym);
 
@@ -2178,11 +2163,12 @@ template <class ELFT> void Writer<ELFT>::checkExecuteOnly() {
   if (!config->executeOnly)
     return;
 
-  for (OutputSection *os : outputSections)
-    if (os->flags & SHF_EXECINSTR)
-      for (InputSection *isec : getInputSections(os))
+  for (OutputSection *osec : outputSections)
+    if (osec->flags & SHF_EXECINSTR)
+      for (InputSection *isec : getInputSections(*osec))
         if (!(isec->flags & SHF_EXECINSTR))
-          error("cannot place " + toString(isec) + " into " + toString(os->name) +
+          error("cannot place " + toString(isec) + " into " +
+                toString(osec->name) +
                 ": -execute-only does not support intermingling data and code");
 }
 
@@ -2272,8 +2258,8 @@ static uint64_t computeFlags(uint64_t flags) {
 // Decide which program headers to create and which sections to include in each
 // one.
 template <class ELFT>
-std::vector<PhdrEntry *> Writer<ELFT>::createPhdrs(Partition &part) {
-  std::vector<PhdrEntry *> ret;
+SmallVector<PhdrEntry *, 0> Writer<ELFT>::createPhdrs(Partition &part) {
+  SmallVector<PhdrEntry *, 0> ret;
   auto addHdr = [&](unsigned type, unsigned flags) -> PhdrEntry * {
     ret.push_back(make<PhdrEntry>(type, flags));
     return ret.back();

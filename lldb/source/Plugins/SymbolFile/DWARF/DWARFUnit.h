@@ -153,7 +153,7 @@ public:
   const DWARFAbbreviationDeclarationSet *GetAbbreviations() const;
   dw_offset_t GetAbbrevOffset() const;
   uint8_t GetAddressByteSize() const { return m_header.GetAddressByteSize(); }
-  dw_addr_t GetAddrBase() const { return m_addr_base ? *m_addr_base : 0; }
+  dw_addr_t GetAddrBase() const { return m_addr_base.getValueOr(0); }
   dw_addr_t GetBaseAddress() const { return m_base_addr; }
   dw_offset_t GetLineTableOffset();
   dw_addr_t GetRangesBase() const { return m_ranges_base; }

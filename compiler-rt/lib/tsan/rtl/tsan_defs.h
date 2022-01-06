@@ -71,40 +71,6 @@ inline Epoch EpochInc(Epoch epoch) {
 
 inline bool EpochOverflow(Epoch epoch) { return epoch == kEpochOver; }
 
-const int kClkBits = 42;
-const unsigned kMaxTidReuse = (1 << (64 - kClkBits)) - 1;
-
-struct ClockElem {
-  u64 epoch  : kClkBits;
-  u64 reused : 64 - kClkBits;  // tid reuse count
-};
-
-struct ClockBlock {
-  static const uptr kSize = 512;
-  static const uptr kTableSize = kSize / sizeof(u32);
-  static const uptr kClockCount = kSize / sizeof(ClockElem);
-  static const uptr kRefIdx = kTableSize - 1;
-  static const uptr kBlockIdx = kTableSize - 2;
-
-  union {
-    u32       table[kTableSize];
-    ClockElem clock[kClockCount];
-  };
-
-  ClockBlock() {
-  }
-};
-
-const int kTidBits = 13;
-// Reduce kMaxTid by kClockCount because one slot in ClockBlock table is
-// occupied by reference counter, so total number of elements we can store
-// in SyncClock is kClockCount * (kTableSize - 1).
-const unsigned kMaxTid = (1 << kTidBits) - ClockBlock::kClockCount;
-#if !SANITIZER_GO
-const unsigned kMaxTidInClock = kMaxTid * 2;  // This includes msb 'freed' bit.
-#else
-const unsigned kMaxTidInClock = kMaxTid;  // Go does not track freed memory.
-#endif
 const uptr kShadowStackSize = 64 * 1024;
 
 // Count of shadow values in a shadow cell.

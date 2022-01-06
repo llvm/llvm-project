@@ -120,33 +120,6 @@ MemoryLocation MemoryLocation::getForDest(const AnyMemIntrinsic *MI) {
 
 Optional<MemoryLocation>
 MemoryLocation::getForDest(const CallBase *CB, const TargetLibraryInfo &TLI) {
-  if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(CB)) {
-    if (auto *MemInst = dyn_cast<AnyMemIntrinsic>(CB))
-      return getForDest(MemInst);
-
-    switch (II->getIntrinsicID()) {
-    default:
-      return None;
-    case Intrinsic::init_trampoline:
-      return MemoryLocation::getForArgument(CB, 0, TLI);
-    case Intrinsic::masked_store:
-      return MemoryLocation::getForArgument(CB, 1, TLI);
-    }
-  }
-
-  LibFunc LF;
-  if (TLI.getLibFunc(*CB, LF) && TLI.has(LF)) {
-    switch (LF) {
-    case LibFunc_strncpy:
-    case LibFunc_strcpy:
-    case LibFunc_strcat:
-    case LibFunc_strncat:
-      return getForArgument(CB, 0, &TLI);
-    default:
-      break;
-    }
-  }
-
   if (!CB->onlyAccessesArgMemory())
     return None;
 
@@ -159,9 +132,6 @@ MemoryLocation::getForDest(const CallBase *CB, const TargetLibraryInfo &TLI) {
   for (unsigned i = 0; i < CB->arg_size(); i++) {
     if (!CB->getArgOperand(i)->getType()->isPointerTy())
       continue;
-    if (!CB->doesNotCapture(i))
-      // capture would allow the address to be read back in an untracked manner
-      return None;
      if (CB->onlyReadsMemory(i))
        continue;
     if (!UsedV) {

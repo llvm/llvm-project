@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/threads/thrd_create.h"
-#include "config/linux/syscall.h" // For syscall function.
-#include "include/errno.h"        // For E* error values.
-#include "include/sys/mman.h"     // For PROT_* and MAP_* definitions.
-#include "include/sys/syscall.h"  // For syscall numbers.
-#include "include/threads.h"      // For thrd_* type definitions.
+#include "include/errno.h"                // For E* error values.
+#include "include/sys/mman.h"             // For PROT_* and MAP_* definitions.
+#include "include/sys/syscall.h"          // For syscall numbers.
+#include "include/threads.h"              // For thrd_* type definitions.
+#include "src/__support/OSUtil/syscall.h" // For syscall function.
 #include "src/__support/common.h"
 #include "src/errno/llvmlibc_errno.h"
 #include "src/sys/mman/mmap.h"

@@ -100,11 +100,11 @@ void elf::reportRangeError(uint8_t *loc, const Relocation &rel, const Twine &v,
                            int64_t min, uint64_t max) {
   ErrorPlace errPlace = getErrorPlace(loc);
   std::string hint;
-  if (rel.sym && !rel.sym->isLocal())
+  if (rel.sym && !rel.sym->isSection())
     hint = "; references " + lld::toString(*rel.sym);
   if (!errPlace.srcLoc.empty())
     hint += "\n>>> referenced by " + errPlace.srcLoc;
-  if (rel.sym && !rel.sym->isLocal())
+  if (rel.sym && !rel.sym->isSection())
     hint += getDefinedLocation(*rel.sym);
 
   if (errPlace.isec && errPlace.isec->name.startswith(".debug"))
@@ -295,12 +295,12 @@ static SmallSet<SharedSymbol *, 4> getSymbolsAt(SharedSymbol &ss) {
 // in .bss and in the case of a canonical plt entry it is in .plt. This function
 // replaces the existing symbol with a Defined pointing to the appropriate
 // location.
-static void replaceWithDefined(Symbol &sym, SectionBase *sec, uint64_t value,
+static void replaceWithDefined(Symbol &sym, SectionBase &sec, uint64_t value,
                                uint64_t size) {
   Symbol old = sym;
 
   sym.replace(Defined{sym.file, sym.getName(), sym.binding, sym.stOther,
-                      sym.type, value, size, sec});
+                      sym.type, value, size, &sec});
 
   sym.pltIndex = old.pltIndex;
   sym.gotIndex = old.gotIndex;
@@ -379,9 +379,9 @@ template <class ELFT> static void addCopyRelSymbolImpl(SharedSymbol &ss) {
   // dynamic symbol for each one. This causes the copy relocation to correctly
   // interpose any aliases.
   for (SharedSymbol *sym : getSymbolsAt<ELFT>(ss))
-    replaceWithDefined(*sym, sec, 0, sym->size);
+    replaceWithDefined(*sym, *sec, 0, sym->size);
 
-  mainPart->relaDyn->addSymbolReloc(target->copyRel, sec, 0, ss);
+  mainPart->relaDyn->addSymbolReloc(target->copyRel, *sec, 0, ss);
 }
 
 static void addCopyRelSymbol(SharedSymbol &ss) {
@@ -472,8 +472,8 @@ static std::string maybeReportDiscarded(Undefined &sym) {
   if (!file || !sym.discardedSecIdx ||
       file->getSections()[sym.discardedSecIdx] != &InputSection::discarded)
     return "";
-  ArrayRef<Elf_Shdr_Impl<ELFT>> objSections =
-      CHECK(file->getObj().sections(), file);
+  ArrayRef<typename ELFT::Shdr> objSections =
+      file->template getELFShdrs<ELFT>();
 
   std::string msg;
   if (sym.type == ELF::STT_SECTION) {
@@ -741,7 +741,7 @@ static bool maybeReportUndefined(Symbol &sym, InputSectionBase &sec,
                                  uint64_t offset) {
   // If versioned, issue an error (even if the symbol is weak) because we don't
   // know the defining filename which is required to construct a Verneed entry.
-  if (*sym.getVersionSuffix() == '@') {
+  if (sym.hasVersionSuffix) {
     undefs.push_back({&sym, {{&sec, offset}}, false});
     return true;
   }
@@ -833,10 +833,10 @@ private:
 };
 } // namespace
 
-static void addRelativeReloc(InputSectionBase *isec, uint64_t offsetInSec,
+static void addRelativeReloc(InputSectionBase &isec, uint64_t offsetInSec,
                              Symbol &sym, int64_t addend, RelExpr expr,
                              RelType type) {
-  Partition &part = isec->getPartition();
+  Partition &part = isec.getPartition();
 
   // Add a relative relocation. If relrDyn section is enabled, and the
   // relocation offset is guaranteed to be even, add the relocation to
@@ -844,9 +844,9 @@ static void addRelativeReloc(InputSectionBase *isec, uint64_t offsetInSec,
   // relrDyn sections don't support odd offsets. Also, relrDyn sections
   // don't store the addend values, so we must write it to the relocated
   // address.
-  if (part.relrDyn && isec->alignment >= 2 && offsetInSec % 2 == 0) {
-    isec->relocations.push_back({expr, type, offsetInSec, addend, &sym});
-    part.relrDyn->relocs.push_back({isec, offsetInSec});
+  if (part.relrDyn && isec.alignment >= 2 && offsetInSec % 2 == 0) {
+    isec.relocations.push_back({expr, type, offsetInSec, addend, &sym});
+    part.relrDyn->relocs.push_back({&isec, offsetInSec});
     return;
   }
   part.relaDyn->addRelativeReloc(target->relativeRel, isec, offsetInSec, sym,
@@ -854,14 +854,14 @@ static void addRelativeReloc(InputSectionBase *isec, uint64_t offsetInSec,
 }
 
 template <class PltSection, class GotPltSection>
-static void addPltEntry(PltSection *plt, GotPltSection *gotPlt,
-                        RelocationBaseSection *rel, RelType type, Symbol &sym) {
-  plt->addEntry(sym);
-  gotPlt->addEntry(sym);
-  rel->addReloc({type, gotPlt, sym.getGotPltOffset(),
-                 sym.isPreemptible ? DynamicReloc::AgainstSymbol
-                                   : DynamicReloc::AddendOnlyWithTargetVA,
-                 sym, 0, R_ABS});
+static void addPltEntry(PltSection &plt, GotPltSection &gotPlt,
+                        RelocationBaseSection &rel, RelType type, Symbol &sym) {
+  plt.addEntry(sym);
+  gotPlt.addEntry(sym);
+  rel.addReloc({type, &gotPlt, sym.getGotPltOffset(),
+                sym.isPreemptible ? DynamicReloc::AgainstSymbol
+                                  : DynamicReloc::AddendOnlyWithTargetVA,
+                sym, 0, R_ABS});
 }
 
 static void addGotEntry(Symbol &sym) {
@@ -880,7 +880,7 @@ static void addGotEntry(Symbol &sym) {
   if (!config->isPic || isAbsolute(sym))
     in.got->relocations.push_back({R_ABS, target->symbolicRel, off, 0, &sym});
   else
-    addRelativeReloc(in.got, off, sym, 0, R_ABS, target->symbolicRel);
+    addRelativeReloc(*in.got, off, sym, 0, R_ABS, target->symbolicRel);
 }
 
 static void addTpOffsetGotEntry(Symbol &sym) {
@@ -891,7 +891,7 @@ static void addTpOffsetGotEntry(Symbol &sym) {
     return;
   }
   mainPart->relaDyn->addAddendOnlyRelocIfNonPreemptible(
-      target->tlsGotRel, in.got, off, sym, target->symbolicRel);
+      target->tlsGotRel, *in.got, off, sym, target->symbolicRel);
 }
 
 // Return true if we can define a symbol in the executable that
@@ -1019,12 +1019,12 @@ static void processRelocAux(InputSectionBase &sec, RelExpr expr, RelType type,
   if (canWrite) {
     RelType rel = target->getDynRel(type);
     if (expr == R_GOT || (rel == target->symbolicRel && !sym.isPreemptible)) {
-      addRelativeReloc(&sec, offset, sym, addend, expr, type);
+      addRelativeReloc(sec, offset, sym, addend, expr, type);
       return;
     } else if (rel != 0) {
       if (config->emachine == EM_MIPS && rel == target->symbolicRel)
         rel = target->relativeRel;
-      sec.getPartition().relaDyn->addSymbolReloc(rel, &sec, offset, sym, addend,
+      sec.getPartition().relaDyn->addSymbolReloc(rel, sec, offset, sym, addend,
                                                  type);
 
       // MIPS ABI turns using of GOT and dynamic relocations inside out.
@@ -1145,10 +1145,9 @@ static unsigned handleMipsTlsRelocation(RelType type, Symbol &sym,
 // symbol in TLS block.
 //
 // Returns the number of relocations processed.
-template <class ELFT>
-static unsigned
-handleTlsRelocation(RelType type, Symbol &sym, InputSectionBase &c,
-                    typename ELFT::uint offset, int64_t addend, RelExpr expr) {
+static unsigned handleTlsRelocation(RelType type, Symbol &sym,
+                                    InputSectionBase &c, uint64_t offset,
+                                    int64_t addend, RelExpr expr) {
   if (!sym.isTls())
     return 0;
 
@@ -1158,13 +1157,10 @@ handleTlsRelocation(RelType type, Symbol &sym, InputSectionBase &c,
   if (oneof<R_AARCH64_TLSDESC_PAGE, R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC,
             R_TLSDESC_GOTPLT>(expr) &&
       config->shared) {
-    if (in.got->addDynTlsEntry(sym)) {
-      uint64_t off = in.got->getGlobalDynOffset(sym);
-      mainPart->relaDyn->addAddendOnlyRelocIfNonPreemptible(
-          target->tlsDescRel, in.got, off, sym, target->tlsDescRel);
-    }
-    if (expr != R_TLSDESC_CALL)
+    if (expr != R_TLSDESC_CALL) {
+      sym.needsTlsDesc = true;
       c.relocations.push_back({expr, type, offset, addend, &sym});
+    }
     return 1;
   }
 
@@ -1200,14 +1196,7 @@ handleTlsRelocation(RelType type, Symbol &sym, InputSectionBase &c,
     }
     if (expr == R_TLSLD_HINT)
       return 1;
-    if (in.got->addTlsIndex()) {
-      if (isLocalInExecutable)
-        in.got->relocations.push_back(
-            {R_ADDEND, target->symbolicRel, in.got->getTlsIndexOff(), 1, &sym});
-      else
-        mainPart->relaDyn->addReloc(
-            {target->tlsModuleIndexRel, in.got, in.got->getTlsIndexOff()});
-    }
+    sym.needsTlsLd = true;
     c.relocations.push_back({expr, type, offset, addend, &sym});
     return 1;
   }
@@ -1223,12 +1212,7 @@ handleTlsRelocation(RelType type, Symbol &sym, InputSectionBase &c,
   // Local-Dynamic sequence where offset of tls variable relative to dynamic
   // thread pointer is stored in the got. This cannot be relaxed to Local-Exec.
   if (expr == R_TLSLD_GOT_OFF) {
-    if (!sym.isInGot()) {
-      in.got->addEntry(sym);
-      uint64_t off = sym.getGotOffset();
-      in.got->relocations.push_back(
-          {R_ABS, target->tlsOffsetRel, off, 0, &sym});
-    }
+    sym.needsGotDtprel = true;
     c.relocations.push_back({expr, type, offset, addend, &sym});
     return 1;
   }
@@ -1236,27 +1220,7 @@ handleTlsRelocation(RelType type, Symbol &sym, InputSectionBase &c,
   if (oneof<R_AARCH64_TLSDESC_PAGE, R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC,
             R_TLSDESC_GOTPLT, R_TLSGD_GOT, R_TLSGD_GOTPLT, R_TLSGD_PC>(expr)) {
     if (!toExecRelax) {
-      if (in.got->addDynTlsEntry(sym)) {
-        uint64_t off = in.got->getGlobalDynOffset(sym);
-
-        if (isLocalInExecutable)
-          // Write one to the GOT slot.
-          in.got->relocations.push_back(
-              {R_ADDEND, target->symbolicRel, off, 1, &sym});
-        else
-          mainPart->relaDyn->addSymbolReloc(target->tlsModuleIndexRel, in.got,
-                                            off, sym);
-
-        // If the symbol is preemptible we need the dynamic linker to write
-        // the offset too.
-        uint64_t offsetOff = off + config->wordsize;
-        if (sym.isPreemptible)
-          mainPart->relaDyn->addSymbolReloc(target->tlsOffsetRel, in.got,
-                                            offsetOff, sym);
-        else
-          in.got->relocations.push_back(
-              {R_ABS, target->tlsOffsetRel, offsetOff, 0, &sym});
-      }
+      sym.needsTlsGd = true;
       c.relocations.push_back({expr, type, offset, addend, &sym});
       return 1;
     }
@@ -1264,14 +1228,10 @@ handleTlsRelocation(RelType type, Symbol &sym, InputSectionBase &c,
     // Global-Dynamic relocs can be relaxed to Initial-Exec or Local-Exec
     // depending on the symbol being locally defined or not.
     if (sym.isPreemptible) {
+      sym.needsTlsGdToIe = true;
       c.relocations.push_back(
           {target->adjustTlsExpr(type, R_RELAX_TLS_GD_TO_IE), type, offset,
            addend, &sym});
-      if (!sym.isInGot()) {
-        in.got->addEntry(sym);
-        mainPart->relaDyn->addSymbolReloc(target->tlsGotRel, in.got,
-                                          sym.getGotOffset(), sym);
-      }
     } else {
       c.relocations.push_back(
           {target->adjustTlsExpr(type, R_RELAX_TLS_GD_TO_LE), type, offset,
@@ -1288,11 +1248,10 @@ handleTlsRelocation(RelType type, Symbol &sym, InputSectionBase &c,
       c.relocations.push_back(
           {R_RELAX_TLS_IE_TO_LE, type, offset, addend, &sym});
     } else if (expr != R_TLSIE_HINT) {
-      if (!sym.isInGot())
-        addTpOffsetGotEntry(sym);
+      sym.needsTlsIe = true;
       // R_GOT needs a relative relocation for PIC on i386 and Hexagon.
       if (expr == R_GOT && config->isPic && !target->usesOnlyLowPageBits(type))
-        addRelativeReloc(&c, offset, sym, addend, expr, type);
+        addRelativeReloc(c, offset, sym, addend, expr, type);
       else
         c.relocations.push_back({expr, type, offset, addend, &sym});
     }
@@ -1304,7 +1263,7 @@ handleTlsRelocation(RelType type, Symbol &sym, InputSectionBase &c,
 
 template <class ELFT, class RelTy>
 static void scanReloc(InputSectionBase &sec, OffsetGetter &getOffset, RelTy *&i,
-                      RelTy *start, RelTy *end) {
+                      RelTy *end) {
   const RelTy &rel = *i;
   uint32_t symIndex = rel.getSymbol(config->isMips64EL);
   Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIndex);
@@ -1394,8 +1353,8 @@ static void scanReloc(InputSectionBase &sec, OffsetGetter &getOffset, RelTy *&i,
                   getLocation(sec, sym, offset));
       return;
     }
-  } else if (unsigned processed = handleTlsRelocation<ELFT>(
-                 type, sym, sec, offset, addend, expr)) {
+  } else if (unsigned processed =
+                 handleTlsRelocation(type, sym, sec, offset, addend, expr)) {
     i += (processed - 1);
     return;
   }
@@ -1430,7 +1389,7 @@ static void scanReloc(InputSectionBase &sec, OffsetGetter &getOffset, RelTy *&i,
   // direct relocation on through.
   if (sym.isGnuIFunc() && config->zIfuncNoplt) {
     sym.exportDynamic = true;
-    mainPart->relaDyn->addSymbolReloc(type, &sec, offset, sym, addend, type);
+    mainPart->relaDyn->addSymbolReloc(type, sec, offset, sym, addend, type);
     return;
   }
 
@@ -1511,7 +1470,7 @@ static void scanRelocs(InputSectionBase &sec, ArrayRef<RelTy> rels) {
     rels = sortRels(rels, storage);
 
   for (auto i = rels.begin(), end = rels.end(); i != end;)
-    scanReloc<ELFT>(sec, getOffset, i, rels.begin(), end);
+    scanReloc<ELFT>(sec, getOffset, i, end);
 
   // Sort relocations by offset for more efficient searching for
   // R_RISCV_PCREL_HI20 and R_PPC64_ADDR64.
@@ -1585,7 +1544,7 @@ static bool handleNonPreemptibleIfunc(Symbol &sym) {
   // may alter section/value, so create a copy of the symbol to make
   // section/value fixed.
   auto *directSym = makeDefined(cast<Defined>(sym));
-  addPltEntry(in.iplt, in.igotPlt, in.relaIplt, target->iRelativeRel,
+  addPltEntry(*in.iplt, *in.igotPlt, *in.relaIplt, target->iRelativeRel,
               *directSym);
   sym.pltIndex = directSym->pltIndex;
 
@@ -1615,7 +1574,7 @@ void elf::postScanRelocations() {
     if (sym.needsGot)
       addGotEntry(sym);
     if (sym.needsPlt)
-      addPltEntry(in.plt, in.gotPlt, in.relaPlt, target->pltRel, sym);
+      addPltEntry(*in.plt, *in.gotPlt, *in.relaPlt, target->pltRel, sym);
     if (sym.needsCopy) {
       if (sym.isObject()) {
         addCopyRelSymbol(cast<SharedSymbol>(sym));
@@ -1626,18 +1585,73 @@ void elf::postScanRelocations() {
         assert(sym.isFunc() && sym.needsPlt);
         if (!sym.isDefined()) {
           replaceWithDefined(
-              sym, in.plt,
+              sym, *in.plt,
               target->pltHeaderSize + target->pltEntrySize * sym.pltIndex, 0);
           sym.needsCopy = true;
           if (config->emachine == EM_PPC) {
             // PPC32 canonical PLT entries are at the beginning of .glink
             cast<Defined>(sym).value = in.plt->headerSize;
             in.plt->headerSize += 16;
-            cast<PPC32GlinkSection>(in.plt)->canonical_plts.push_back(&sym);
+            cast<PPC32GlinkSection>(*in.plt).canonical_plts.push_back(&sym);
           }
         }
       }
     }
+
+    if (!sym.isTls())
+      return;
+    bool isLocalInExecutable = !sym.isPreemptible && !config->shared;
+
+    if (sym.needsTlsDesc) {
+      in.got->addDynTlsEntry(sym);
+      mainPart->relaDyn->addAddendOnlyRelocIfNonPreemptible(
+          target->tlsDescRel, *in.got, in.got->getGlobalDynOffset(sym), sym,
+          target->tlsDescRel);
+    }
+    if (sym.needsTlsGd && !sym.needsTlsDesc) {
+      // TODO Support mixed TLSDESC and TLS GD.
+      in.got->addDynTlsEntry(sym);
+      uint64_t off = in.got->getGlobalDynOffset(sym);
+      if (isLocalInExecutable)
+        // Write one to the GOT slot.
+        in.got->relocations.push_back(
+            {R_ADDEND, target->symbolicRel, off, 1, &sym});
+      else
+        mainPart->relaDyn->addSymbolReloc(target->tlsModuleIndexRel, *in.got,
+                                          off, sym);
+
+      // If the symbol is preemptible we need the dynamic linker to write
+      // the offset too.
+      uint64_t offsetOff = off + config->wordsize;
+      if (sym.isPreemptible)
+        mainPart->relaDyn->addSymbolReloc(target->tlsOffsetRel, *in.got,
+                                          offsetOff, sym);
+      else
+        in.got->relocations.push_back(
+            {R_ABS, target->tlsOffsetRel, offsetOff, 0, &sym});
+    }
+    if (sym.needsTlsGdToIe) {
+      in.got->addEntry(sym);
+      mainPart->relaDyn->addSymbolReloc(target->tlsGotRel, *in.got,
+                                        sym.getGotOffset(), sym);
+    }
+
+    if (sym.needsTlsLd && in.got->addTlsIndex()) {
+      if (isLocalInExecutable)
+        in.got->relocations.push_back(
+            {R_ADDEND, target->symbolicRel, in.got->getTlsIndexOff(), 1, &sym});
+      else
+        mainPart->relaDyn->addReloc(
+            {target->tlsModuleIndexRel, in.got, in.got->getTlsIndexOff()});
+    }
+    if (sym.needsGotDtprel) {
+      in.got->addEntry(sym);
+      in.got->relocations.push_back(
+          {R_ABS, target->tlsOffsetRel, sym.getGotOffset(), 0, &sym});
+    }
+
+    if (sym.needsTlsIe && !sym.needsTlsGdToIe)
+      addTpOffsetGotEntry(sym);
   };
   for (Symbol *sym : symtab->symbols())
     fn(*sym);
@@ -1802,7 +1816,7 @@ void ThunkCreator::mergeThunks(ArrayRef<OutputSection *> outputSections) {
                           });
 
         // Merge sorted vectors of Thunks and InputSections by outSecOff
-        std::vector<InputSection *> tmp;
+        SmallVector<InputSection *, 0> tmp;
         tmp.reserve(isd->sections.size() + newThunks.size());
 
         std::merge(isd->sections.begin(), isd->sections.end(),
@@ -2004,8 +2018,8 @@ std::pair<Thunk *, bool> ThunkCreator::getThunk(InputSection *isec,
   // non-Thunk target, so we cannot fold offset + addend.
   if (auto *d = dyn_cast<Defined>(rel.sym))
     if (!d->isInPlt() && d->section)
-      thunkVec = &thunkedSymbolsBySectionAndAddend[{
-          {d->section->repl, d->value}, keyAddend}];
+      thunkVec = &thunkedSymbolsBySectionAndAddend[{{d->section, d->value},
+                                                    keyAddend}];
   if (!thunkVec)
     thunkVec = &thunkedSymbols[{rel.sym, keyAddend}];
 
@@ -2159,7 +2173,7 @@ void elf::hexagonTLSSymbolUpdate(ArrayRef<OutputSection *> outputSections) {
           for (Relocation &rel : isec->relocations)
             if (rel.sym->type == llvm::ELF::STT_TLS && rel.expr == R_PLT_PC) {
               if (needEntry) {
-                addPltEntry(in.plt, in.gotPlt, in.relaPlt, target->pltRel,
+                addPltEntry(*in.plt, *in.gotPlt, *in.relaPlt, target->pltRel,
                             *sym);
                 needEntry = false;
               }

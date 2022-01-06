@@ -47,7 +47,7 @@ using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::elf;
 
-LinkerScript *elf::script;
+std::unique_ptr<LinkerScript> elf::script;
 
 static bool isSectionPrefix(StringRef prefix, StringRef name) {
   return name.consume_front(prefix) && (name.empty() || name[0] == '.');
@@ -270,8 +270,8 @@ using SymbolAssignmentMap =
 
 // Collect section/value pairs of linker-script-defined symbols. This is used to
 // check whether symbol values converge.
-static SymbolAssignmentMap getSymbolAssignmentValues(
-    const std::vector<SectionCommand *> &sectionCommands) {
+static SymbolAssignmentMap
+getSymbolAssignmentValues(ArrayRef<SectionCommand *> sectionCommands) {
   SymbolAssignmentMap ret;
   for (SectionCommand *cmd : sectionCommands) {
     if (auto *assign = dyn_cast<SymbolAssignment>(cmd)) {
@@ -306,7 +306,7 @@ getChangedSymbolAssignment(const SymbolAssignmentMap &oldValues) {
 // Process INSERT [AFTER|BEFORE] commands. For each command, we move the
 // specified output section to the designated place.
 void LinkerScript::processInsertCommands() {
-  std::vector<OutputSection *> moves;
+  SmallVector<OutputSection *, 0> moves;
   for (const InsertCommand &cmd : insertCommands) {
     for (StringRef name : cmd.names) {
       // If base is empty, it may have been discarded by
@@ -486,11 +486,11 @@ static void sortInputSections(MutableArrayRef<InputSectionBase *> vec,
 }
 
 // Compute and remember which sections the InputSectionDescription matches.
-std::vector<InputSectionBase *>
+SmallVector<InputSectionBase *, 0>
 LinkerScript::computeInputSections(const InputSectionDescription *cmd,
                                    ArrayRef<InputSectionBase *> sections) {
-  std::vector<InputSectionBase *> ret;
-  std::vector<size_t> indexes;
+  SmallVector<InputSectionBase *, 0> ret;
+  SmallVector<size_t, 0> indexes;
   DenseSet<size_t> seen;
   auto sortByPositionThenCommandLine = [&](size_t begin, size_t end) {
     llvm::sort(MutableArrayRef<size_t>(indexes).slice(begin, end - begin));
@@ -560,22 +560,22 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
   return ret;
 }
 
-void LinkerScript::discard(InputSectionBase *s) {
-  if (s == in.shStrTab || s == mainPart->relrDyn)
-    error("discarding " + s->name + " section is not allowed");
+void LinkerScript::discard(InputSectionBase &s) {
+  if (&s == in.shStrTab || &s == mainPart->relrDyn)
+    error("discarding " + s.name + " section is not allowed");
 
   // You can discard .hash and .gnu.hash sections by linker scripts. Since
   // they are synthesized sections, we need to handle them differently than
   // other regular sections.
-  if (s == mainPart->gnuHashTab)
+  if (&s == mainPart->gnuHashTab)
     mainPart->gnuHashTab = nullptr;
-  if (s == mainPart->hashTab)
+  if (&s == mainPart->hashTab)
     mainPart->hashTab = nullptr;
 
-  s->markDead();
-  s->parent = nullptr;
-  for (InputSection *ds : s->dependentSections)
-    discard(ds);
+  s.markDead();
+  s.parent = nullptr;
+  for (InputSection *sec : s.dependentSections)
+    discard(*sec);
 }
 
 void LinkerScript::discardSynthetic(OutputSection &outCmd) {
@@ -585,18 +585,15 @@ void LinkerScript::discardSynthetic(OutputSection &outCmd) {
     std::vector<InputSectionBase *> secs(part.armExidx->exidxSections.begin(),
                                          part.armExidx->exidxSections.end());
     for (SectionCommand *cmd : outCmd.commands)
-      if (auto *isd = dyn_cast<InputSectionDescription>(cmd)) {
-        std::vector<InputSectionBase *> matches =
-            computeInputSections(isd, secs);
-        for (InputSectionBase *s : matches)
-          discard(s);
-      }
+      if (auto *isd = dyn_cast<InputSectionDescription>(cmd))
+        for (InputSectionBase *s : computeInputSections(isd, secs))
+          discard(*s);
   }
 }
 
-std::vector<InputSectionBase *>
+SmallVector<InputSectionBase *, 0>
 LinkerScript::createInputSectionList(OutputSection &outCmd) {
-  std::vector<InputSectionBase *> ret;
+  SmallVector<InputSectionBase *, 0> ret;
 
   for (SectionCommand *cmd : outCmd.commands) {
     if (auto *isd = dyn_cast<InputSectionDescription>(cmd)) {
@@ -612,13 +609,13 @@ LinkerScript::createInputSectionList(OutputSection &outCmd) {
 // Create output sections described by SECTIONS commands.
 void LinkerScript::processSectionCommands() {
   auto process = [this](OutputSection *osec) {
-    std::vector<InputSectionBase *> v = createInputSectionList(*osec);
+    SmallVector<InputSectionBase *, 0> v = createInputSectionList(*osec);
 
     // The output section name `/DISCARD/' is special.
     // Any input section assigned to it is discarded.
     if (osec->name == "/DISCARD/") {
       for (InputSectionBase *s : v)
-        discard(s);
+        discard(*s);
       discardSynthetic(*osec);
       osec->commands.clear();
       return false;
@@ -830,7 +827,7 @@ addInputSec(StringMap<TinyPtrVector<OutputSection *>> &map,
 // Add sections that didn't match any sections command.
 void LinkerScript::addOrphanSections() {
   StringMap<TinyPtrVector<OutputSection *>> map;
-  std::vector<OutputSection *> v;
+  SmallVector<OutputSection *, 0> v;
 
   std::function<void(InputSectionBase *)> add;
   add = [&](InputSectionBase *s) {
@@ -1113,7 +1110,7 @@ bool LinkerScript::isDiscarded(const OutputSection *sec) const {
 }
 
 static void maybePropagatePhdrs(OutputSection &sec,
-                                std::vector<StringRef> &phdrs) {
+                                SmallVector<StringRef, 0> &phdrs) {
   if (sec.phdrs.empty()) {
     // To match the bfd linker script behaviour, only propagate program
     // headers to sections that are allocated.
@@ -1147,7 +1144,7 @@ void LinkerScript::adjustSectionsBeforeSorting() {
   // the previous sections. Only a few flags are needed to keep the impact low.
   uint64_t flags = SHF_ALLOC;
 
-  std::vector<StringRef> defPhdrs;
+  SmallVector<StringRef, 0> defPhdrs;
   for (SectionCommand *&cmd : sectionCommands) {
     auto *sec = dyn_cast<OutputSection>(cmd);
     if (!sec)
@@ -1218,7 +1215,7 @@ void LinkerScript::adjustSectionsAfterSorting() {
   // Below is an example of such linker script:
   // PHDRS { seg PT_LOAD; }
   // SECTIONS { .aaa : { *(.aaa) } }
-  std::vector<StringRef> defPhdrs;
+  SmallVector<StringRef, 0> defPhdrs;
   auto firstPtLoad = llvm::find_if(phdrsCommands, [](const PhdrsCommand &cmd) {
     return cmd.type == PT_LOAD;
   });
@@ -1248,7 +1245,7 @@ static uint64_t computeBase(uint64_t min, bool allocateHeaders) {
 // We check if the headers fit below the first allocated section. If there isn't
 // enough space for these sections, we'll remove them from the PT_LOAD segment,
 // and we'll also remove the PT_PHDR segment.
-void LinkerScript::allocateHeaders(std::vector<PhdrEntry *> &phdrs) {
+void LinkerScript::allocateHeaders(SmallVector<PhdrEntry *, 0> &phdrs) {
   uint64_t min = std::numeric_limits<uint64_t>::max();
   for (OutputSection *sec : outputSections)
     if (sec->flags & SHF_ALLOC)
@@ -1332,13 +1329,13 @@ const Defined *LinkerScript::assignAddresses() {
 }
 
 // Creates program headers as instructed by PHDRS linker script command.
-std::vector<PhdrEntry *> LinkerScript::createPhdrs() {
-  std::vector<PhdrEntry *> ret;
+SmallVector<PhdrEntry *, 0> LinkerScript::createPhdrs() {
+  SmallVector<PhdrEntry *, 0> ret;
 
   // Process PHDRS and FILEHDR keywords because they are not
   // real output sections and cannot be added in the following loop.
   for (const PhdrsCommand &cmd : phdrsCommands) {
-    PhdrEntry *phdr = make<PhdrEntry>(cmd.type, cmd.flags ? *cmd.flags : PF_R);
+    PhdrEntry *phdr = make<PhdrEntry>(cmd.type, cmd.flags.getValueOr(PF_R));
 
     if (cmd.hasFilehdr)
       phdr->add(Out::elfHeader);
@@ -1415,8 +1412,8 @@ static Optional<size_t> getPhdrIndex(ArrayRef<PhdrsCommand> vec,
 
 // Returns indices of ELF headers containing specific section. Each index is a
 // zero based number of ELF header listed within PHDRS {} script block.
-std::vector<size_t> LinkerScript::getPhdrIndices(OutputSection *cmd) {
-  std::vector<size_t> ret;
+SmallVector<size_t, 0> LinkerScript::getPhdrIndices(OutputSection *cmd) {
+  SmallVector<size_t, 0> ret;
 
   for (StringRef s : cmd->phdrs) {
     if (Optional<size_t> idx = getPhdrIndex(phdrsCommands, s))

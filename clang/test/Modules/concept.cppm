@@ -1,7 +1,7 @@
 // RUN: rm -rf %t
 // RUN: mkdir %t
-// RUN: %clang -std=c++20 %S/Inputs/concept/A.cppm --precompile -o %t/A.pcm
-// RUN: %clang -std=c++20 -fprebuilt-module-path=%t -I%S/Inputs/concept %s -c -Xclang -verify
+// RUN: %clang_cc1 -x c++ -std=c++20 %S/Inputs/concept/A.cppm -emit-module-interface -o %t/A.pcm
+// RUN: %clang_cc1 -x c++ -std=c++20 -fprebuilt-module-path=%t -I%S/Inputs/concept %s -fsyntax-only -verify
 // expected-no-diagnostics
 
 module;

@@ -177,8 +177,10 @@ static bool isReserved(InputSectionBase *sec) {
     // SHT_NOTE sections in a group are subject to garbage collection.
     return !sec->nextInSectionGroup;
   default:
+    // Support SHT_PROGBITS .init_array for a while
+    // (https://golang.org/issue/50295).
     StringRef s = sec->name;
-    return s == ".init" || s == ".fini" || s == ".jcr" ||
+    return s == ".init" || s == ".fini" || s == ".init_array" || s == ".jcr" ||
            s.startswith(".ctors") || s.startswith(".dtors");
   }
 }
@@ -242,8 +244,6 @@ template <class ELFT> void MarkLive<ELFT>::run() {
   for (StringRef s : script->referencedSymbols)
     markSymbol(symtab->find(s));
 
-  // Preserve special sections and those which are specified in linker
-  // script KEEP command.
   for (InputSectionBase *sec : inputSections) {
     // Mark .eh_frame sections as live because there are usually no relocations
     // that point to .eh_frames. Otherwise, the garbage collector would drop
@@ -257,6 +257,7 @@ template <class ELFT> void MarkLive<ELFT>::run() {
         scanEhFrameSection(*eh, rels.rels);
       else if (rels.relas.size())
         scanEhFrameSection(*eh, rels.relas);
+      continue;
     }
 
     if (sec->flags & SHF_GNU_RETAIN) {
@@ -266,6 +267,39 @@ template <class ELFT> void MarkLive<ELFT>::run() {
     if (sec->flags & SHF_LINK_ORDER)
       continue;
 
+    // Usually, non-SHF_ALLOC sections are not removed even if they are
+    // unreachable through relocations because reachability is not a good signal
+    // whether they are garbage or not (e.g. there is usually no section
+    // referring to a .comment section, but we want to keep it.) When a
+    // non-SHF_ALLOC section is retained, we also retain sections dependent on
+    // it.
+    //
+    // Note on SHF_LINK_ORDER: Such sections contain metadata and they
+    // have a reverse dependency on the InputSection they are linked with.
+    // We are able to garbage collect them.
+    //
+    // Note on SHF_REL{,A}: Such sections reach here only when -r
+    // or --emit-reloc were given. And they are subject of garbage
+    // collection because, if we remove a text section, we also
+    // remove its relocation section.
+    //
+    // Note on nextInSectionGroup: The ELF spec says that group sections are
+    // included or omitted as a unit. We take the interpretation that:
+    //
+    // - Group members (nextInSectionGroup != nullptr) are subject to garbage
+    //   collection.
+    // - Groups members are retained or discarded as a unit.
+    if (!(sec->flags & SHF_ALLOC)) {
+      bool isRel = sec->type == SHT_REL || sec->type == SHT_RELA;
+      if (!isRel && !sec->nextInSectionGroup) {
+        sec->markLive();
+        for (InputSection *isec : sec->dependentSections)
+          isec->markLive();
+      }
+    }
+
+    // Preserve special sections and those which are specified in linker
+    // script KEEP command.
     if (isReserved(sec) || script->shouldKeep(sec)) {
       enqueue(sec, 0);
     } else if ((!config->zStartStopGC || sec->name.startswith("__libc_")) &&
@@ -345,46 +379,6 @@ template <class ELFT> void elf::markLive() {
         if (s->isUsedInRegularObj && !s->isWeak())
           s->getFile().isNeeded = true;
     return;
-  }
-
-  // Otherwise, do mark-sweep GC.
-  //
-  // The --gc-sections option works only for SHF_ALLOC sections (sections that
-  // are memory-mapped at runtime). So we can unconditionally make non-SHF_ALLOC
-  // sections alive except SHF_LINK_ORDER, SHT_REL/SHT_RELA sections, and
-  // sections in a group.
-  //
-  // Usually, non-SHF_ALLOC sections are not removed even if they are
-  // unreachable through relocations because reachability is not a good signal
-  // whether they are garbage or not (e.g. there is usually no section referring
-  // to a .comment section, but we want to keep it.) When a non-SHF_ALLOC
-  // section is retained, we also retain sections dependent on it.
-  //
-  // Note on SHF_LINK_ORDER: Such sections contain metadata and they
-  // have a reverse dependency on the InputSection they are linked with.
-  // We are able to garbage collect them.
-  //
-  // Note on SHF_REL{,A}: Such sections reach here only when -r
-  // or --emit-reloc were given. And they are subject of garbage
-  // collection because, if we remove a text section, we also
-  // remove its relocation section.
-  //
-  // Note on nextInSectionGroup: The ELF spec says that group sections are
-  // included or omitted as a unit. We take the interpretation that:
-  //
-  // - Group members (nextInSectionGroup != nullptr) are subject to garbage
-  //   collection.
-  // - Groups members are retained or discarded as a unit.
-  for (InputSectionBase *sec : inputSections) {
-    bool isAlloc = (sec->flags & SHF_ALLOC);
-    bool isLinkOrder = (sec->flags & SHF_LINK_ORDER);
-    bool isRel = (sec->type == SHT_REL || sec->type == SHT_RELA);
-
-    if (!isAlloc && !isLinkOrder && !isRel && !sec->nextInSectionGroup) {
-      sec->markLive();
-      for (InputSection *isec : sec->dependentSections)
-        isec->markLive();
-    }
   }
 
   // Follow the graph to mark all live sections.

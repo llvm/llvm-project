@@ -5,6 +5,7 @@ add_header_library(
   HDRS
     io.h
     quick_exit.h
+    syscall.h
   DEPENDS
     libc.src.__support.OSUtil.linux.linux_util
 )

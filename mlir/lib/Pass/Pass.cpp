@@ -182,9 +182,9 @@ void OpPassManagerImpl::coalesceAdjacentAdaptorPasses() {
 
   // Walk the pass list and merge adjacent adaptors.
   OpToOpPassAdaptor *lastAdaptor = nullptr;
-  for (auto it = passes.begin(), e = passes.end(); it != e; ++it) {
+  for (auto &passe : passes) {
     // Check to see if this pass is an adaptor.
-    if (auto *currentAdaptor = dyn_cast<OpToOpPassAdaptor>(it->get())) {
+    if (auto *currentAdaptor = dyn_cast<OpToOpPassAdaptor>(passe.get())) {
       // If it is the first adaptor in a possible chain, remember it and
       // continue.
       if (!lastAdaptor) {
@@ -194,7 +194,7 @@ void OpPassManagerImpl::coalesceAdjacentAdaptorPasses() {
 
       // Otherwise, merge into the existing adaptor and delete the current one.
       currentAdaptor->mergeInto(*lastAdaptor);
-      it->reset();
+      passe.reset();
     } else if (lastAdaptor) {
       // If this pass is not an adaptor, then coalesce and forget any existing
       // adaptor.
@@ -236,7 +236,7 @@ OpPassManager &OpPassManager::operator=(const OpPassManager &rhs) {
   return *this;
 }
 
-OpPassManager::~OpPassManager() {}
+OpPassManager::~OpPassManager() = default;
 
 OpPassManager::pass_iterator OpPassManager::begin() {
   return MutableArrayRef<std::unique_ptr<Pass>>{impl->passes}.begin();
@@ -634,7 +634,7 @@ PassManager::PassManager(MLIRContext *ctx, Nesting nesting,
       initializationKey(DenseMapInfo<llvm::hash_code>::getTombstoneKey()),
       passTiming(false), verifyPasses(true) {}
 
-PassManager::~PassManager() {}
+PassManager::~PassManager() = default;
 
 void PassManager::enableVerifier(bool enabled) { verifyPasses = enabled; }
 
@@ -771,7 +771,7 @@ void detail::NestedAnalysisMap::invalidate(
 // PassInstrumentation
 //===----------------------------------------------------------------------===//
 
-PassInstrumentation::~PassInstrumentation() {}
+PassInstrumentation::~PassInstrumentation() = default;
 
 //===----------------------------------------------------------------------===//
 // PassInstrumentor
@@ -790,7 +790,7 @@ struct PassInstrumentorImpl {
 } // namespace mlir
 
 PassInstrumentor::PassInstrumentor() : impl(new PassInstrumentorImpl()) {}
-PassInstrumentor::~PassInstrumentor() {}
+PassInstrumentor::~PassInstrumentor() = default;
 
 /// See PassInstrumentation::runBeforePipeline for details.
 void PassInstrumentor::runBeforePipeline(

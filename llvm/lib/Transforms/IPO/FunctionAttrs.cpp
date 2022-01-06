@@ -681,58 +681,42 @@ determinePointerAccessAttrs(Argument *A,
 
     case Instruction::Call:
     case Instruction::Invoke: {
-      bool Captures = true;
-
-      if (I->getType()->isVoidTy())
-        Captures = false;
-
-      auto AddUsersToWorklistIfCapturing = [&] {
-        if (Captures)
-          for (Use &UU : I->uses())
-            if (Visited.insert(&UU).second)
-              Worklist.push_back(&UU);
-      };
-
       CallBase &CB = cast<CallBase>(*I);
       if (CB.isCallee(U)) {
         IsRead = true;
-        Captures = false; // See comment in CaptureTracking for context
+        // Note that indirect calls do not capture, see comment in
+        // CaptureTracking for context
         continue;
-      }
-      if (CB.doesNotAccessMemory()) {
-        AddUsersToWorklistIfCapturing();
-        continue;
-      }
-
-      Function *F = CB.getCalledFunction();
-      if (!F) {
-        if (CB.onlyReadsMemory()) {
-          IsRead = true;
-          AddUsersToWorklistIfCapturing();
-          continue;
-        }
-        return Attribute::None;
       }
 
       // Given we've explictily handled the callee operand above, what's left
       // must be a data operand (e.g. argument or operand bundle)
       const unsigned UseIndex = CB.getDataOperandNo(U);
-      const bool IsOperandBundleUse = UseIndex >= CB.arg_size();
 
-      if (UseIndex >= F->arg_size() && !IsOperandBundleUse) {
-        assert(F->isVarArg() && "More params than args in non-varargs call");
-        return Attribute::None;
+      if (!CB.doesNotCapture(UseIndex)) {
+        if (!CB.onlyReadsMemory())
+          // If the callee can save a copy into other memory, then simply
+          // scanning uses of the call is insufficient.  We have no way
+          // of tracking copies of the pointer through memory to see
+          // if a reloaded copy is written to, thus we must give up.
+          return Attribute::None;
+        // Push users for processing once we finish this one
+        if (!I->getType()->isVoidTy())
+          for (Use &UU : I->uses())
+            if (Visited.insert(&UU).second)
+              Worklist.push_back(&UU);
       }
+      
+      if (CB.doesNotAccessMemory())
+        continue;
 
-      Captures &= !CB.doesNotCapture(UseIndex);
-
-      if (CB.isArgOperand(U) && SCCNodes.count(F->getArg(UseIndex))) {
-        // This is an argument which is part of the speculative SCC.  Note that
-        // only operands corresponding to formal arguments of the callee can
-        // participate in the speculation.
-        AddUsersToWorklistIfCapturing();
-        break;
-      }
+      if (Function *F = CB.getCalledFunction())
+        if (CB.isArgOperand(U) && UseIndex < F->arg_size() &&
+            SCCNodes.count(F->getArg(UseIndex)))
+          // This is an argument which is part of the speculative SCC.  Note
+          // that only operands corresponding to formal arguments of the callee
+          // can participate in the speculation.
+          break;
 
       // The accessors used on call site here do the right thing for calls and
       // invokes with operand bundles.
@@ -740,7 +724,6 @@ determinePointerAccessAttrs(Argument *A,
         return Attribute::None;
       if (!CB.doesNotAccessMemory(UseIndex))
         IsRead = true;
-      AddUsersToWorklistIfCapturing();
       break;
     }
 
@@ -995,6 +978,13 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
         A->addAttr(Attribute::NoCapture);
         ++NumNoCapture;
         Changed.insert(A->getParent());
+
+        // Infer the access attributes given the new nocapture one
+        SmallPtrSet<Argument *, 8> Self;
+        Self.insert(&*A);
+        Attribute::AttrKind R = determinePointerAccessAttrs(&*A, Self);
+        if (R != Attribute::None)
+          addAccessAttr(A, R);
       }
       continue;
     }

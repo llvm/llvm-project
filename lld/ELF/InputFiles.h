@@ -41,6 +41,7 @@ namespace elf {
 
 using llvm::object::Archive;
 
+class InputSection;
 class Symbol;
 
 // If --reproduce is specified, all input files are written to this tar archive.
@@ -90,9 +91,7 @@ public:
 
   // Returns object file symbols. It is a runtime error to call this
   // function on files of other types.
-  ArrayRef<Symbol *> getSymbols() { return getMutableSymbols(); }
-
-  MutableArrayRef<Symbol *> getMutableSymbols() {
+  ArrayRef<Symbol *> getSymbols() const {
     assert(fileKind == BinaryKind || fileKind == ObjKind ||
            fileKind == BitcodeKind);
     return symbols;
@@ -100,6 +99,10 @@ public:
 
   // Get filename to use for linker script processing.
   StringRef getNameForScript() const;
+
+  // Check if a non-common symbol should be extracted to override a common
+  // definition.
+  bool shouldExtractForCommon(StringRef name);
 
   // If not empty, this stores the name of the archive containing this file.
   // We use this string for creating error messages.
@@ -110,12 +113,12 @@ public:
 
   SmallVector<Symbol *, 0> symbols;
 
-  // Index of MIPS GOT built for this file.
-  llvm::Optional<uint32_t> mipsGotIndex;
+  // .got2 in the current file. This is used by PPC32 -fPIC/-fPIE to compute
+  // offsets in PLT call stubs.
+  InputSection *ppc32Got2 = nullptr;
 
-  // outSecOff of .got2 in the current file. This is used by PPC32 -fPIC/-fPIE
-  // to compute offsets in PLT call stubs.
-  uint32_t ppc32Got2OutSecOff = 0;
+  // Index of MIPS GOT built for this file.
+  uint32_t mipsGotIndex = -1;
 
   // groupId is used for --warn-backrefs which is an optional error
   // checking feature. All files within the same --{start,end}-group or
@@ -132,6 +135,11 @@ public:
   ELFKind ekind = ELFNoneKind;
   uint8_t osabi = 0;
   uint8_t abiVersion = 0;
+
+  // True if this is a relocatable object file/bitcode file between --start-lib
+  // and --end-lib.
+  bool lazy = false;
+
   // True if this is an argument for --just-symbols. Usually false.
   bool justSymbols = false;
 
@@ -176,7 +184,15 @@ public:
   ArrayRef<Symbol *> getGlobalSymbols() {
     return llvm::makeArrayRef(symbols).slice(firstGlobal);
   }
+  MutableArrayRef<Symbol *> getMutableGlobalSymbols() {
+    return llvm::makeMutableArrayRef(symbols.data(), symbols.size())
+        .slice(firstGlobal);
+  }
 
+  template <typename ELFT> typename ELFT::ShdrRange getELFShdrs() const {
+    return typename ELFT::ShdrRange(
+        reinterpret_cast<const typename ELFT::Shdr *>(elfShdrs), numELFShdrs);
+  }
   template <typename ELFT> typename ELFT::SymRange getELFSyms() const {
     return typename ELFT::SymRange(
         reinterpret_cast<const typename ELFT::Sym *>(elfSyms), numELFSyms);
@@ -189,10 +205,15 @@ protected:
   // Initializes this class's member variables.
   template <typename ELFT> void init();
 
+  StringRef stringTable;
+  const void *elfShdrs = nullptr;
   const void *elfSyms = nullptr;
+  uint32_t numELFShdrs = 0;
   uint32_t numELFSyms = 0;
   uint32_t firstGlobal = 0;
-  StringRef stringTable;
+
+public:
+  bool hasCommonSyms = false;
 };
 
 // .o file.
@@ -211,6 +232,7 @@ public:
   }
 
   void parse(bool ignoreComdats = false);
+  void parseLazy();
 
   StringRef getShtGroupSignature(ArrayRef<Elf_Shdr> sections,
                                  const Elf_Shdr &sec);
@@ -294,36 +316,6 @@ private:
   llvm::once_flag initDwarf;
 };
 
-// LazyObjFile is analogous to ArchiveFile in the sense that
-// the file contains lazy symbols. The difference is that
-// LazyObjFile wraps a single file instead of multiple files.
-//
-// This class is used for --start-lib and --end-lib options which
-// instruct the linker to link object files between them with the
-// archive file semantics.
-class LazyObjFile : public InputFile {
-public:
-  LazyObjFile(MemoryBufferRef m, StringRef archiveName,
-              uint64_t offsetInArchive)
-      : InputFile(LazyObjKind, m), offsetInArchive(offsetInArchive) {
-    this->archiveName = archiveName;
-  }
-
-  static bool classof(const InputFile *f) { return f->kind() == LazyObjKind; }
-
-  template <class ELFT> void parse();
-  void extract();
-
-  // Check if a non-common symbol should be extracted to override a common
-  // definition.
-  bool shouldExtractForCommon(const StringRef &name);
-
-  bool extracted = false;
-
-private:
-  uint64_t offsetInArchive;
-};
-
 // An ArchiveFile object represents a .a file.
 class ArchiveFile : public InputFile {
 public:
@@ -354,9 +346,10 @@ private:
 class BitcodeFile : public InputFile {
 public:
   BitcodeFile(MemoryBufferRef m, StringRef archiveName,
-              uint64_t offsetInArchive);
+              uint64_t offsetInArchive, bool lazy);
   static bool classof(const InputFile *f) { return f->kind() == BitcodeKind; }
   template <class ELFT> void parse();
+  void parseLazy();
   std::unique_ptr<llvm::lto::InputFile> obj;
 };
 
@@ -406,6 +399,8 @@ public:
 
 InputFile *createObjectFile(MemoryBufferRef mb, StringRef archiveName = "",
                             uint64_t offsetInArchive = 0);
+InputFile *createLazyFile(MemoryBufferRef mb, StringRef archiveName,
+                          uint64_t offsetInArchive);
 
 inline bool isBitcode(MemoryBufferRef mb) {
   return identify_magic(mb.getBuffer()) == llvm::file_magic::bitcode;
@@ -413,12 +408,12 @@ inline bool isBitcode(MemoryBufferRef mb) {
 
 std::string replaceThinLTOSuffix(StringRef path);
 
-extern std::vector<ArchiveFile *> archiveFiles;
-extern std::vector<BinaryFile *> binaryFiles;
-extern std::vector<BitcodeFile *> bitcodeFiles;
-extern std::vector<LazyObjFile *> lazyObjFiles;
-extern std::vector<ELFFileBase *> objectFiles;
-extern std::vector<SharedFile *> sharedFiles;
+extern SmallVector<ArchiveFile *, 0> archiveFiles;
+extern SmallVector<BinaryFile *, 0> binaryFiles;
+extern SmallVector<BitcodeFile *, 0> bitcodeFiles;
+extern SmallVector<BitcodeFile *, 0> lazyBitcodeFiles;
+extern SmallVector<ELFFileBase *, 0> objectFiles;
+extern SmallVector<SharedFile *, 0> sharedFiles;
 
 } // namespace elf
 } // namespace lld

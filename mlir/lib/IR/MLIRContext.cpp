@@ -321,7 +321,7 @@ MLIRContext::MLIRContext(const DialectRegistry &registry, Threading setting)
   impl->affineUniquer.registerParametricStorageType<IntegerSetStorage>();
 }
 
-MLIRContext::~MLIRContext() {}
+MLIRContext::~MLIRContext() = default;
 
 /// Copy the specified array of elements into memory managed by the provided
 /// bump pointer allocator.  This assumes the elements are all PODs.
@@ -516,6 +516,16 @@ void MLIRContext::setThreadPool(llvm::ThreadPool &pool) {
   impl->threadPool = &pool;
   impl->ownedThreadPool.reset();
   enableMultithreading();
+}
+
+unsigned MLIRContext::getNumThreads() {
+  if (isMultithreadingEnabled()) {
+    assert(impl->threadPool &&
+           "multi-threading is enabled but threadpool not set");
+    return impl->threadPool->getThreadCount();
+  }
+  // No multithreading or active thread pool. Return 1 thread.
+  return 1;
 }
 
 llvm::ThreadPool &MLIRContext::getThreadPool() {

@@ -262,8 +262,8 @@ TEST_F(FormatTest, RemovesEmptyLines) {
                    "}",
                    getGoogleStyle()));
 
-  auto CustomStyle = clang::format::getLLVMStyle();
-  CustomStyle.BreakBeforeBraces = clang::format::FormatStyle::BS_Custom;
+  auto CustomStyle = getLLVMStyle();
+  CustomStyle.BreakBeforeBraces = FormatStyle::BS_Custom;
   CustomStyle.BraceWrapping.AfterNamespace = true;
   CustomStyle.KeepEmptyLinesAtTheStartOfBlocks = false;
   EXPECT_EQ("namespace N\n"
@@ -2504,11 +2504,26 @@ TEST_F(FormatTest, ShortEnums) {
   FormatStyle Style = getLLVMStyle();
   Style.AllowShortEnumsOnASingleLine = true;
   verifyFormat("enum { A, B, C } ShortEnum1, ShortEnum2;", Style);
+  verifyFormat("typedef enum { A, B, C } ShortEnum1, ShortEnum2;", Style);
   Style.AllowShortEnumsOnASingleLine = false;
   verifyFormat("enum {\n"
                "  A,\n"
                "  B,\n"
                "  C\n"
+               "} ShortEnum1, ShortEnum2;",
+               Style);
+  verifyFormat("typedef enum {\n"
+               "  A,\n"
+               "  B,\n"
+               "  C\n"
+               "} ShortEnum1, ShortEnum2;",
+               Style);
+  verifyFormat("enum {\n"
+               "  A,\n"
+               "} ShortEnum1, ShortEnum2;",
+               Style);
+  verifyFormat("typedef enum {\n"
+               "  A,\n"
                "} ShortEnum1, ShortEnum2;",
                Style);
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
@@ -3555,6 +3570,11 @@ TEST_F(FormatTest, FormatsNamespaces) {
                "namespace B {\n"
                "struct b_struct {};\n"
                "} // namespace B\n",
+               Style);
+  verifyFormat("template <int I> constexpr void foo requires(I == 42) {}\n"
+               "namespace ns {\n"
+               "void foo() {}\n"
+               "} // namespace ns\n",
                Style);
 }
 
@@ -12200,6 +12220,38 @@ TEST_F(FormatTest, SplitEmptyFunction) {
                "}",
                Style);
 }
+
+TEST_F(FormatTest, SplitEmptyFunctionButNotRecord) {
+  FormatStyle Style = getLLVMStyle();
+  Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_None;
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterFunction = true;
+  Style.BraceWrapping.SplitEmptyFunction = true;
+  Style.BraceWrapping.SplitEmptyRecord = false;
+  Style.ColumnLimit = 40;
+
+  verifyFormat("class C {};", Style);
+  verifyFormat("struct C {};", Style);
+  verifyFormat("void f(int aaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+               "       int bbbbbbbbbbbbbbbbbbbbbbbb)\n"
+               "{\n"
+               "}",
+               Style);
+  verifyFormat("class C {\n"
+               "  C()\n"
+               "      : aaaaaaaaaaaaaaaaaaaaaaaaaaaa(),\n"
+               "        bbbbbbbbbbbbbbbbbbb()\n"
+               "  {\n"
+               "  }\n"
+               "  void\n"
+               "  m(int aaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+               "    int bbbbbbbbbbbbbbbbbbbbbbbb)\n"
+               "  {\n"
+               "  }\n"
+               "};",
+               Style);
+}
+
 TEST_F(FormatTest, KeepShortFunctionAfterPPElse) {
   FormatStyle Style = getLLVMStyle();
   Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_All;
@@ -21558,7 +21610,7 @@ TEST_F(ReplacementTest, FormatCodeAfterReplacements) {
        tooling::Replacement(Context.Sources, Context.getLocation(ID, 4, 13), 1,
                             "nullptr")});
 
-  format::FormatStyle Style = format::getLLVMStyle();
+  FormatStyle Style = getLLVMStyle();
   Style.ColumnLimit = 20; // Set column limit to 20 to increase readibility.
   auto FormattedReplaces = formatReplacements(Code, Replaces, Style);
   EXPECT_TRUE(static_cast<bool>(FormattedReplaces))
@@ -21587,7 +21639,7 @@ TEST_F(ReplacementTest, SortIncludesAfterReplacement) {
       {tooling::Replacement(Context.Sources, Context.getLocation(ID, 1, 1), 0,
                             "#include \"b.h\"\n")});
 
-  format::FormatStyle Style = format::getLLVMStyle();
+  FormatStyle Style = getLLVMStyle();
   Style.SortIncludes = FormatStyle::SI_CaseSensitive;
   auto FormattedReplaces = formatReplacements(Code, Replaces, Style);
   EXPECT_TRUE(static_cast<bool>(FormattedReplaces))
@@ -21606,7 +21658,7 @@ TEST_F(FormatTest, FormatSortsUsingDeclarations) {
 }
 
 TEST_F(FormatTest, UTF8CharacterLiteralCpp03) {
-  format::FormatStyle Style = format::getLLVMStyle();
+  FormatStyle Style = getLLVMStyle();
   Style.Standard = FormatStyle::LS_Cpp03;
   // cpp03 recognize this string as identifier u8 and literal character 'a'
   EXPECT_EQ("auto c = u8 'a';", format("auto c = u8'a';", Style));
@@ -21686,7 +21738,7 @@ TEST_F(FormatTest, StructuredBindings) {
   EXPECT_EQ("auto const &&[x, y]{expr};",
             format("auto  const  &&  [x,y]  {expr};"));
 
-  format::FormatStyle Spaces = format::getLLVMStyle();
+  FormatStyle Spaces = getLLVMStyle();
   Spaces.SpacesInSquareBrackets = true;
   verifyFormat("auto [ a, b ] = f();", Spaces);
   verifyFormat("auto &&[ a, b ] = f();", Spaces);

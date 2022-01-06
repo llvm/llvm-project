@@ -144,6 +144,9 @@ public:
   // True if this symbol is specified by --trace-symbol option.
   uint8_t traced : 1;
 
+  // True if the name contains '@'.
+  uint8_t hasVersionSuffix : 1;
+
   inline void replace(const Symbol &newSym);
 
   bool includeInDynsym() const;
@@ -246,10 +249,13 @@ protected:
         type(type), stOther(stOther), symbolKind(k), visibility(stOther & 3),
         isUsedInRegularObj(!file || file->kind() == InputFile::ObjKind),
         exportDynamic(isExportDynamic(k, visibility)), inDynamicList(false),
-        canInline(false), referenced(false), traced(false), isInIplt(false),
-        gotInIgot(false), isPreemptible(false), used(!config->gcSections),
+        canInline(false), referenced(false), traced(false),
+        hasVersionSuffix(false), isInIplt(false), gotInIgot(false),
+        isPreemptible(false), used(!config->gcSections), folded(false),
         needsTocRestore(false), scriptDefined(false), needsCopy(false),
-        needsGot(false), needsPlt(false), hasDirectReloc(false) {}
+        needsGot(false), needsPlt(false), needsTlsDesc(false),
+        needsTlsGd(false), needsTlsGdToIe(false), needsTlsLd(false),
+        needsGotDtprel(false), needsTlsIe(false), hasDirectReloc(false) {}
 
 public:
   // True if this symbol is in the Iplt sub-section of the Plt and the Igot
@@ -269,6 +275,9 @@ public:
   // which are referenced by relocations when -r or --emit-relocs is given.
   uint8_t used : 1;
 
+  // True if defined relative to a section discarded by ICF.
+  uint8_t folded : 1;
+
   // True if a call to this symbol needs to be followed by a restore of the
   // PPC64 toc pointer.
   uint8_t needsTocRestore : 1;
@@ -284,6 +293,12 @@ public:
   // entries during postScanRelocations();
   uint8_t needsGot : 1;
   uint8_t needsPlt : 1;
+  uint8_t needsTlsDesc : 1;
+  uint8_t needsTlsGd : 1;
+  uint8_t needsTlsGdToIe : 1;
+  uint8_t needsTlsLd : 1;
+  uint8_t needsGotDtprel : 1;
+  uint8_t needsTlsIe : 1;
   uint8_t hasDirectReloc : 1;
 
   // The partition whose dynamic symbol table contains this symbol's definition.
@@ -430,7 +445,9 @@ class LazyObject : public Symbol {
 public:
   LazyObject(InputFile &file, StringRef name)
       : Symbol(LazyObjectKind, &file, name, llvm::ELF::STB_GLOBAL,
-               llvm::ELF::STV_DEFAULT, llvm::ELF::STT_NOTYPE) {}
+               llvm::ELF::STV_DEFAULT, llvm::ELF::STT_NOTYPE) {
+    isUsedInRegularObj = false;
+  }
 
   static bool classof(const Symbol *s) { return s->kind() == LazyObjectKind; }
 };
@@ -487,9 +504,9 @@ union SymbolUnion {
 };
 
 // It is important to keep the size of SymbolUnion small for performance and
-// memory usage reasons. 72 bytes is a soft limit based on the size of Defined
+// memory usage reasons. 80 bytes is a soft limit based on the size of Defined
 // on a 64-bit system.
-static_assert(sizeof(SymbolUnion) <= 72, "SymbolUnion too large");
+static_assert(sizeof(SymbolUnion) <= 80, "SymbolUnion too large");
 
 template <typename T> struct AssertSymbol {
   static_assert(std::is_trivially_destructible<T>(),
@@ -562,6 +579,7 @@ void Symbol::replace(const Symbol &newSym) {
   canInline = old.canInline;
   referenced = old.referenced;
   traced = old.traced;
+  hasVersionSuffix = old.hasVersionSuffix;
   isPreemptible = old.isPreemptible;
   scriptDefined = old.scriptDefined;
   partition = old.partition;

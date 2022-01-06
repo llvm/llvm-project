@@ -22,7 +22,7 @@
 namespace lld {
 namespace elf {
 
-extern class LinkerDriver *driver;
+extern std::unique_ptr<class LinkerDriver> driver;
 
 class LinkerDriver {
 public:

@@ -274,14 +274,17 @@ class LLVMSymbolizerProcess final : public SymbolizerProcess {
     const char* const kSymbolizerArch = "--default-arch=unknown";
 #endif
 
-    const char *const inline_flag = common_flags()->symbolize_inline_frames
-                                        ? "--inlines"
-                                        : "--no-inlines";
+    const char *const demangle_flag =
+        common_flags()->demangle ? "--demangle" : "--no-demangle";
+    const char *const inline_flag =
+        common_flags()->symbolize_inline_frames ? "--inlines" : "--no-inlines";
     int i = 0;
     argv[i++] = path_to_binary;
+    argv[i++] = demangle_flag;
     argv[i++] = inline_flag;
     argv[i++] = kSymbolizerArch;
     argv[i++] = nullptr;
+    CHECK_LE(i, kArgVMax);
   }
 };
 

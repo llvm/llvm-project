@@ -7,7 +7,7 @@ add_mlir_unittest(MLIRAnalysisTests
 )
 
 target_link_libraries(MLIRAnalysisTests
-  PRIVATE 
+  PRIVATE
   MLIRLoopAnalysis
   MLIRParser
   )

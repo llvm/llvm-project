@@ -4378,6 +4378,32 @@ def : Pat<(v4i16 (trunc (smax (smin (v4i32 V128:$Vn), (v4i32 VImm7FFF)),
                               (v4i32 VImm8000)))),
           (SQXTNv4i16 V128:$Vn)>;
 
+// concat_vectors(Vd, trunc(smin(smax Vm, -128), 127) ~> SQXTN2(Vd, Vn)
+// with reversed min/max
+def : Pat<(v16i8 (concat_vectors
+                 (v8i8 V64:$Vd),
+                 (v8i8 (trunc (smin (smax (v8i16 V128:$Vn), (v8i16 VImm80)),
+                                          (v8i16 VImm7F)))))),
+          (SQXTNv16i8 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
+def : Pat<(v16i8 (concat_vectors
+                 (v8i8 V64:$Vd),
+                 (v8i8 (trunc (smax (smin (v8i16 V128:$Vn), (v8i16 VImm7F)),
+                                          (v8i16 VImm80)))))),
+          (SQXTNv16i8 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
+
+// concat_vectors(Vd, trunc(smin(smax Vm, -32768), 32767) ~> SQXTN2(Vd, Vn)
+// with reversed min/max
+def : Pat<(v8i16 (concat_vectors
+                 (v4i16 V64:$Vd),
+                 (v4i16 (trunc (smin (smax (v4i32 V128:$Vn), (v4i32 VImm8000)),
+                                           (v4i32 VImm7FFF)))))),
+          (SQXTNv8i16 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
+def : Pat<(v8i16 (concat_vectors
+                 (v4i16 V64:$Vd),
+                 (v4i16 (trunc (smax (smin (v4i32 V128:$Vn), (v4i32 VImm7FFF)),
+                                           (v4i32 VImm8000)))))),
+          (SQXTNv8i16 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
+
 //===----------------------------------------------------------------------===//
 // Advanced SIMD three vector instructions.
 //===----------------------------------------------------------------------===//
@@ -5315,6 +5341,19 @@ def : Pat<(v8i16 (concat_vectors (v4i16 (trunc (v4i32 V128:$Vn))),
 def : Pat<(v4i32 (concat_vectors (v2i32 (trunc (v2i64 V128:$Vn))),
                                  (v2i32 (trunc (v2i64 V128:$Vm))))),
           (UZP1v4i32 V128:$Vn, V128:$Vm)>;
+
+def : Pat<(v16i8 (concat_vectors
+                 (v8i8 (trunc (AArch64vlshr (v8i16 V128:$Vn), (i32 8)))),
+                 (v8i8 (trunc (AArch64vlshr (v8i16 V128:$Vm), (i32 8)))))),
+          (UZP2v16i8 V128:$Vn, V128:$Vm)>;
+def : Pat<(v8i16 (concat_vectors
+                 (v4i16 (trunc (AArch64vlshr (v4i32 V128:$Vn), (i32 16)))),
+                 (v4i16 (trunc (AArch64vlshr (v4i32 V128:$Vm), (i32 16)))))),
+          (UZP2v8i16 V128:$Vn, V128:$Vm)>;
+def : Pat<(v4i32 (concat_vectors
+                 (v2i32 (trunc (AArch64vlshr (v2i64 V128:$Vn), (i32 32)))),
+                 (v2i32 (trunc (AArch64vlshr (v2i64 V128:$Vm), (i32 32)))))),
+          (UZP2v4i32 V128:$Vn, V128:$Vm)>;
 
 //----------------------------------------------------------------------------
 // AdvSIMD TBL/TBX instructions
@@ -6563,6 +6602,34 @@ defm USHLL   : SIMDVectorLShiftLongBHSD<1, 0b10100, "ushll",
 defm USHR    : SIMDVectorRShiftBHSD<1, 0b00000, "ushr", AArch64vlshr>;
 defm USRA    : SIMDVectorRShiftBHSDTied<1, 0b00010, "usra",
                 TriOpFrag<(add node:$LHS, (AArch64vlshr node:$MHS, node:$RHS))> >;
+
+// RADDHN patterns for when RSHRN shifts by half the size of the vector element
+def : Pat<(v8i8 (int_aarch64_neon_rshrn (v8i16 V128:$Vn), (i32 8))),
+          (RADDHNv8i16_v8i8 V128:$Vn, (v8i16 (MOVIv2d_ns (i32 0))))>;
+def : Pat<(v4i16 (int_aarch64_neon_rshrn (v4i32 V128:$Vn), (i32 16))),
+          (RADDHNv4i32_v4i16 V128:$Vn, (v4i32 (MOVIv2d_ns (i32 0))))>;
+def : Pat<(v2i32 (int_aarch64_neon_rshrn (v2i64 V128:$Vn), (i32 32))),
+          (RADDHNv2i64_v2i32 V128:$Vn, (v2i64 (MOVIv2d_ns (i32 0))))>;
+
+// RADDHN2 patterns for when RSHRN shifts by half the size of the vector element
+def : Pat<(v16i8 (concat_vectors
+                 (v8i8 V64:$Vd),
+                 (v8i8 (int_aarch64_neon_rshrn (v8i16 V128:$Vn), (i32 8))))),
+          (RADDHNv8i16_v16i8
+                 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn,
+                 (v8i16 (MOVIv2d_ns (i32 0))))>;
+def : Pat<(v8i16 (concat_vectors
+                 (v4i16 V64:$Vd),
+                 (v4i16 (int_aarch64_neon_rshrn (v4i32 V128:$Vn), (i32 16))))),
+          (RADDHNv4i32_v8i16
+                 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn,
+                 (v4i32 (MOVIv2d_ns (i32 0))))>;
+def : Pat<(v4i32 (concat_vectors
+                 (v2i32 V64:$Vd),
+                 (v2i32 (int_aarch64_neon_rshrn (v2i64 V128:$Vn), (i32 32))))),
+          (RADDHNv2i64_v4i32
+                 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn,
+                 (v2i64 (MOVIv2d_ns (i32 0))))>;
 
 // SHRN patterns for when a logical right shift was used instead of arithmetic
 // (the immediate guarantees no sign bits actually end up in the result so it

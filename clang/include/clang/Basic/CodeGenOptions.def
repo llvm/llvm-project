@@ -368,9 +368,6 @@ ENUM_CODEGENOPT(DebuggerTuning, llvm::DebuggerKind, 3,
 /// emitted.
 VALUE_CODEGENOPT(DwarfVersion, 3, 0)
 
-/// Whether to use experimental new variable location tracking.
-CODEGENOPT(ValueTrackingVariableLocations, 1, 0)
-
 /// Whether we should emit CodeView debug information. It's possible to emit
 /// CodeView and DWARF into the same object.
 CODEGENOPT(EmitCodeView, 1, 0)

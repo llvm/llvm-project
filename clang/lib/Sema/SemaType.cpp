@@ -6541,7 +6541,6 @@ static void HandleBTFTypeTagAttribute(QualType &Type, const ParsedAttr &Attr,
   StringRef BTFTypeTag = StrLiteral->getString();
   Type = State.getAttributedType(
       ::new (Ctx) BTFTypeTagAttr(Ctx, Attr, BTFTypeTag), Type, Type);
-  return;
 }
 
 /// HandleAddressSpaceTypeAttribute - Process an address_space attribute on the

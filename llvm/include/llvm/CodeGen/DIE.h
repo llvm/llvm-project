@@ -774,8 +774,16 @@ public:
   unsigned getAbbrevNumber() const { return AbbrevNumber; }
   dwarf::Tag getTag() const { return Tag; }
   /// Get the compile/type unit relative offset of this DIE.
-  unsigned getOffset() const { return Offset; }
-  unsigned getSize() const { return Size; }
+  unsigned getOffset() const {
+    // A real Offset can't be zero because the unit headers are at offset zero.
+    assert(Offset && "Offset being queried before it's been computed.");
+    return Offset;
+  }
+  unsigned getSize() const {
+    // A real Size can't be zero because it includes the non-empty abbrev code.
+    assert(Size && "Size being queried before it's been ocmputed.");
+    return Size;
+  }
   bool hasChildren() const { return ForceChildren || !Children.empty(); }
   void setForceChildren(bool B) { ForceChildren = B; }
 

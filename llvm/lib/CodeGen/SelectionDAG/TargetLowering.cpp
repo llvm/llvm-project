@@ -3136,6 +3136,19 @@ bool TargetLowering::isKnownNeverNaNForTargetNode(SDValue Op,
   return false;
 }
 
+bool TargetLowering::isSplatValueForTargetNode(SDValue Op,
+                                               const APInt &DemandedElts,
+                                               APInt &UndefElts,
+                                               unsigned Depth) const {
+  assert((Op.getOpcode() >= ISD::BUILTIN_OP_END ||
+          Op.getOpcode() == ISD::INTRINSIC_WO_CHAIN ||
+          Op.getOpcode() == ISD::INTRINSIC_W_CHAIN ||
+          Op.getOpcode() == ISD::INTRINSIC_VOID) &&
+         "Should use isSplatValue if you don't know whether Op"
+         " is a target node!");
+  return false;
+}
+
 // FIXME: Ideally, this would use ISD::isConstantSplatVector(), but that must
 // work with truncating build vectors and vectors with elements of less than
 // 8 bits.
@@ -6644,9 +6657,10 @@ SDValue TargetLowering::expandROT(SDNode *Node, bool AllowVectorOps,
   EVT ShVT = Op1.getValueType();
   SDValue Zero = DAG.getConstant(0, DL, ShVT);
 
-  // If a rotate in the other direction is supported, use it.
+  // If a rotate in the other direction is more supported, use it.
   unsigned RevRot = IsLeft ? ISD::ROTR : ISD::ROTL;
-  if (isOperationLegalOrCustom(RevRot, VT) && isPowerOf2_32(EltSizeInBits)) {
+  if (!isOperationLegalOrCustom(Node->getOpcode(), VT) &&
+      isOperationLegalOrCustom(RevRot, VT) && isPowerOf2_32(EltSizeInBits)) {
     SDValue Sub = DAG.getNode(ISD::SUB, DL, ShVT, Zero, Op1);
     return DAG.getNode(RevRot, DL, VT, Op0, Sub);
   }

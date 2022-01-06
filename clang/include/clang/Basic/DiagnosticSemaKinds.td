@@ -10509,7 +10509,7 @@ def err_omp_atomic_capture_not_compound_statement : Error<
 def note_omp_atomic_capture: Note<
   "%select{expected assignment expression|expected compound statement|expected exactly two expression statements|expected in right hand side of the first expression}0">;
 def err_omp_atomic_several_clauses : Error<
-  "directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update' or 'capture' clause">;
+  "directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update', 'capture', or 'compare' clause">;
 def err_omp_several_mem_order_clauses : Error<
   "directive '#pragma omp %0' cannot contain more than one %select{'seq_cst', 'relaxed', |}1'acq_rel', 'acquire' or 'release' clause">;
 def err_omp_atomic_incompatible_mem_order_clause : Error<
@@ -11071,8 +11071,6 @@ def err_coroutine_type_missing_specialization : Error<
   "specialization %0">;
 def err_coroutine_promise_incompatible_return_functions : Error<
   "the coroutine promise type %0 declares both 'return_value' and 'return_void'">;
-def err_coroutine_promise_requires_return_function : Error<
-  "the coroutine promise type %0 must declare either 'return_value' or 'return_void'">;
 def note_coroutine_promise_implicit_await_transform_required_here : Note<
   "call to 'await_transform' implicitly required by 'co_await' here">;
 def note_coroutine_promise_suspend_implicitly_required : Note<
@@ -11378,7 +11376,8 @@ def err_builtin_invalid_arg_type: Error <
   "%select{vector, integer or floating point type|matrix|"
   "pointer to a valid matrix element type|"
   "signed integer or floating point type|vector type|"
-  "floating point type}1 (was %2)">;
+  "floating point type|"
+  "vector of integers}1 (was %2)">;
 
 def err_builtin_matrix_disabled: Error<
   "matrix types extension is disabled. Pass -fenable-matrix to enable it">;

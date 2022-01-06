@@ -527,11 +527,15 @@ public:
   /// binary is exactly which removes ambiguity when there are multiple
   /// binaries present in the captured memory pages.
   ///
-  /// \param[out] address
-  ///   If the address of the binary is specified, this will be set.
-  ///   This is an address is the virtual address space of the core file
-  ///   memory segments; it is not an offset into the object file.
-  ///   If no address is available, will be set to LLDB_INVALID_ADDRESS.
+  /// \param[out] value
+  ///   The address or offset (slide) where the binary is loaded in memory.
+  ///   LLDB_INVALID_ADDRESS for unspecified.  If an offset is given,
+  ///   this offset should be added to the binary's file address to get
+  ///   the load address.
+  ///
+  /// \param[out] value_is_offset
+  ///   Specifies if \b value is a load address, or an offset to calculate
+  ///   the load address.
   ///
   /// \param[out] uuid
   ///   If the uuid of the binary is specified, this will be set.
@@ -543,9 +547,11 @@ public:
   ///
   /// \return
   ///   Returns true if either address or uuid has been set.
-  virtual bool GetCorefileMainBinaryInfo(lldb::addr_t &address, UUID &uuid,
+  virtual bool GetCorefileMainBinaryInfo(lldb::addr_t &value,
+                                         bool &value_is_offset, UUID &uuid,
                                          ObjectFile::BinaryType &type) {
-    address = LLDB_INVALID_ADDRESS;
+    value = LLDB_INVALID_ADDRESS;
+    value_is_offset = false;
     uuid.Clear();
     return false;
   }

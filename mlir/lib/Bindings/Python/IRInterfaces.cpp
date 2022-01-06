@@ -175,8 +175,7 @@ public:
     auto *data = static_cast<AppendResultsCallbackData *>(userData);
     data->inferredTypes.reserve(data->inferredTypes.size() + nTypes);
     for (intptr_t i = 0; i < nTypes; ++i) {
-      data->inferredTypes.push_back(
-          PyType(data->pyMlirContext.getRef(), types[i]));
+      data->inferredTypes.emplace_back(data->pyMlirContext.getRef(), types[i]);
     }
   }
 

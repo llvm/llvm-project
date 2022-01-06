@@ -316,13 +316,11 @@ class DwarfDebug : public DebugHandlerBase {
   /// can refer to them in spite of insertions into this list.
   DebugLocStream DebugLocs;
 
-  using SubprogramSetVector =
-      SetVector<const DISubprogram *, SmallVector<const DISubprogram *, 16>,
-                SmallPtrSet<const DISubprogram *, 16>>;
-
   /// This is a collection of subprogram MDNodes that are processed to
   /// create DIEs.
-  SubprogramSetVector ProcessedSPNodes;
+  SetVector<const DISubprogram *, SmallVector<const DISubprogram *, 16>,
+            SmallPtrSet<const DISubprogram *, 16>>
+      ProcessedSPNodes;
 
   /// If nonnull, stores the current machine function we're processing.
   const MachineFunction *CurFn = nullptr;
@@ -600,6 +598,10 @@ private:
   void finishUnitAttributes(const DICompileUnit *DIUnit,
                             DwarfCompileUnit &NewCU);
 
+  /// Construct imported_module or imported_declaration DIE.
+  void constructAndAddImportedEntityDIE(DwarfCompileUnit &TheCU,
+                                        const DIImportedEntity *N);
+
   /// Register a source line with debug info. Returns the unique
   /// label that was emitted and which provides correspondence to the
   /// source line list.
@@ -664,12 +666,6 @@ public:
   /// type units.
   void addDwarfTypeUnitType(DwarfCompileUnit &CU, StringRef Identifier,
                             DIE &Die, const DICompositeType *CTy);
-
-  /// Return the type unit signature of \p CTy after finding or creating its
-  /// type unit. Return None if a type unit cannot be created for \p CTy.
-  Optional<uint64_t> getOrCreateDwarfTypeUnit(DwarfCompileUnit &CU,
-                                              StringRef Identifier,
-                                              const DICompositeType *CTy);
 
   class NonTypeUnitContext {
     DwarfDebug *DD;

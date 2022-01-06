@@ -76,6 +76,20 @@ cc_test(
 )
 
 cc_test(
+    name = "rewrite_tests",
+    size = "small",
+    srcs = glob([
+        "Rewrite/*.cpp",
+        "Rewrite/*.h",
+    ]),
+    deps = [
+        "//llvm:gtest_main",
+        "//mlir:IR",
+        "//mlir:Rewrite",
+    ],
+)
+
+cc_test(
     name = "dialect_tests",
     size = "small",
     srcs = glob([
@@ -101,6 +115,21 @@ cc_test(
         "//llvm:gtest_main",
         "//mlir:QuantOps",
         "//mlir:Transforms",
+    ],
+)
+
+cc_test(
+    name = "scf_tests",
+    size = "small",
+    srcs = glob([
+        "Dialect/SCF/*.cpp",
+        "Dialect/SCF/*.h",
+    ]),
+    deps = [
+        "//llvm:gtest_main",
+        "//mlir:Parser",
+        "//mlir:SCFDialect",
+        "//mlir:StandardOps",
     ],
 )
 
@@ -229,6 +258,23 @@ cc_test(
 )
 
 cc_test(
+    name = "transforms_test",
+    size = "small",
+    srcs = glob([
+        "Transforms/*.cpp",
+        "Transforms/*.h",
+    ]),
+    deps = [
+        "//llvm:gtest_main",
+        "//mlir:IR",
+        "//mlir:Parser",
+        "//mlir:Pass",
+        "//mlir:TransformUtils",
+        "//mlir:Transforms",
+    ],
+)
+
+cc_test(
     name = "analysis_tests",
     size = "small",
     srcs = glob([
@@ -242,6 +288,22 @@ cc_test(
         "//llvm:gtest_main",
         "//mlir:Analysis",
         "//mlir:IR",
+    ],
+)
+
+cc_test(
+    name = "conversion_tests",
+    size = "small",
+    srcs = glob([
+        "Conversion/*.cpp",
+        "Conversion/*.h",
+        "Conversion/*/*.cpp",
+        "Conversion/*/*.h",
+    ]),
+    deps = [
+        "//llvm:gtest_main",
+        "//mlir:ArithmeticDialect",
+        "//mlir:PDLToPDLInterp",
     ],
 )
 

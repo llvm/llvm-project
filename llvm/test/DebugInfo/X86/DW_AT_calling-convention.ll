@@ -21,6 +21,10 @@
 
 ; CHECK: .debug_info contents:
 
+; CHECK:  DW_TAG_subroutine_type [[subroutine_abbrev]] *
+; CHECK-NEXT:         DW_AT_type [DW_FORM_ref4]       {{.*}}
+; CHECK-NEXT:         DW_AT_calling_convention [DW_FORM_data1]        (DW_CC_BORLAND_msfastcall)
+
 ; CHECK: DW_TAG_subprogram [{{.*}}] *
 ; CHECK:                 DW_AT_low_pc
 ; CHECK:                 DW_AT_high_pc
@@ -32,10 +36,6 @@
 ; CHECK:                 DW_AT_calling_convention [DW_FORM_data1]        (DW_CC_BORLAND_msfastcall)
 ; CHECK:                 DW_AT_type
 ; CHECK:                 DW_AT_external
-
-; CHECK:  DW_TAG_subroutine_type [[subroutine_abbrev]] *
-; CHECK-NEXT:         DW_AT_type [DW_FORM_ref4]       {{.*}}
-; CHECK-NEXT:         DW_AT_calling_convention [DW_FORM_data1]        (DW_CC_BORLAND_msfastcall)
 
 ; ModuleID = 't.cpp'
 source_filename = "t.cpp"

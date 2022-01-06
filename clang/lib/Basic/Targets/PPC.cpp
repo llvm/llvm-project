@@ -623,14 +623,11 @@ void PPCTargetInfo::addP10SpecificFeatures(
   Features["pcrelative-memops"] = true;
   Features["prefix-instrs"] = true;
   Features["isa-v31-instructions"] = true;
-  return;
 }
 
 // Add features specific to the "Future" CPU.
 void PPCTargetInfo::addFutureSpecificFeatures(
-    llvm::StringMap<bool> &Features) const {
-  return;
-}
+    llvm::StringMap<bool> &Features) const {}
 
 bool PPCTargetInfo::hasFeature(StringRef Feature) const {
   return llvm::StringSwitch<bool>(Feature)

@@ -663,7 +663,7 @@ LogicalResult InlinerPass::optimizeSCC(CallGraph &cg, CGUseList &useList,
 
   // Optimize each of the nodes within the SCC in parallel.
   if (failed(optimizeSCCAsync(nodesToVisit, context)))
-      return failure();
+    return failure();
 
   // Recompute the uses held by each of the nodes.
   for (CallGraphNode *node : nodesToVisit)
@@ -674,11 +674,12 @@ LogicalResult InlinerPass::optimizeSCC(CallGraph &cg, CGUseList &useList,
 LogicalResult
 InlinerPass::optimizeSCCAsync(MutableArrayRef<CallGraphNode *> nodesToVisit,
                               MLIRContext *ctx) {
-  // Ensure that there are enough pipeline maps for the optimizer to run in
-  // parallel. Note: The number of pass managers here needs to remain constant
+  // We must maintain a fixed pool of pass managers which is at least as large
+  // as the maximum parallelism of the failableParallelForEach below.
+  // Note: The number of pass managers here needs to remain constant
   // to prevent issues with pass instrumentations that rely on having the same
   // pass manager for the main thread.
-  size_t numThreads = llvm::hardware_concurrency().compute_thread_count();
+  size_t numThreads = ctx->getNumThreads();
   if (opPipelines.size() < numThreads) {
     // Reserve before resizing so that we can use a reference to the first
     // element.
@@ -700,6 +701,8 @@ InlinerPass::optimizeSCCAsync(MutableArrayRef<CallGraphNode *> nodesToVisit,
       bool expectedInactive = false;
       return isActive.compare_exchange_strong(expectedInactive, true);
     });
+    assert(it != activePMs.end() &&
+           "could not find inactive pass manager for thread");
     unsigned pmIndex = it - activePMs.begin();
 
     // Optimize this callable node.
