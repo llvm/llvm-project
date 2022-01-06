@@ -71,12 +71,12 @@ private:
   };
 
   using BlockEdgeMap = DenseMap<Edge::OffsetT, EdgeTarget>;
-  using CIEInfosMap = DenseMap<orc::ExecutorAddr, CIEInformation>;
+  using CIEInfosMap = DenseMap<JITTargetAddress, CIEInformation>;
 
   struct ParseContext {
     ParseContext(LinkGraph &G) : G(G) {}
 
-    Expected<CIEInformation *> findCIEInfo(orc::ExecutorAddr Address) {
+    Expected<CIEInformation *> findCIEInfo(JITTargetAddress Address) {
       auto I = CIEInfos.find(Address);
       if (I == CIEInfos.end())
         return make_error<JITLinkError>("No CIE found at address " +
@@ -102,13 +102,12 @@ private:
 
   static bool isSupportedPointerEncoding(uint8_t PointerEncoding);
   unsigned getPointerEncodingDataSize(uint8_t PointerEncoding);
-  Expected<std::pair<orc::ExecutorAddr, Edge::Kind>>
+  Expected<std::pair<JITTargetAddress, Edge::Kind>>
   readEncodedPointer(uint8_t PointerEncoding,
-                     orc::ExecutorAddr PointerFieldAddress,
+                     JITTargetAddress PointerFieldAddress,
                      BinaryStreamReader &RecordReader);
 
-  Expected<Symbol &> getOrCreateSymbol(ParseContext &PC,
-                                       orc::ExecutorAddr Addr);
+  Expected<Symbol &> getOrCreateSymbol(ParseContext &PC, JITTargetAddress Addr);
 
   StringRef EHFrameSectionName;
   unsigned PointerSize;

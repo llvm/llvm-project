@@ -80,7 +80,7 @@ public:
           } else if (FinalizeErr)
             OnFinalize(std::move(FinalizeErr));
           else
-            OnFinalize(FinalizedAlloc(AllocAddr));
+            OnFinalize(FinalizedAlloc(AllocAddr.getValue()));
         },
         Parent.SAs.Allocator, std::move(FR));
   }
@@ -161,7 +161,7 @@ void EPCGenericJITLinkMemoryManager::completeAllocation(
     const auto &AG = KV.first;
     auto &Seg = KV.second;
 
-    Seg.Addr = NextSegAddr;
+    Seg.Addr = NextSegAddr.getValue();
     KV.second.WorkingMem = BL.getGraph().allocateBuffer(Seg.ContentSize).data();
     NextSegAddr += ExecutorAddrDiff(
         alignTo(Seg.ContentSize + Seg.ZeroFillSize, EPC.getPageSize()));

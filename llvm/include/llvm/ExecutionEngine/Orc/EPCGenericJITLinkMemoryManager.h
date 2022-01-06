@@ -85,7 +85,7 @@ public:
     ExecutorAddr A;
     if (!SPSArgList<SPSExecutorAddr>::deserialize(IB, A))
       return false;
-    FA = jitlink::JITLinkMemoryManager::FinalizedAlloc(A);
+    FA = jitlink::JITLinkMemoryManager::FinalizedAlloc(A.getValue());
     return true;
   }
 };

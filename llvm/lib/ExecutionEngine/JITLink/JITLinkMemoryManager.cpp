@@ -66,10 +66,10 @@ JITLinkMemoryManager::InFlightAlloc::~InFlightAlloc() = default;
 
 static Error runAllocAction(AllocActionCall &C) {
   using WrapperFnTy = CWrapperFunctionResult (*)(const void *, size_t);
-  auto *Fn = C.FnAddr.toPtr<WrapperFnTy>();
+  auto *Fn = jitTargetAddressToPointer<WrapperFnTy>(C.FnAddr);
 
-  return toError(
-      Fn(C.CtxAddr.toPtr<const void *>(), static_cast<size_t>(C.CtxSize)));
+  return toError(Fn(jitTargetAddressToPointer<const void *>(C.CtxAddr),
+                    static_cast<size_t>(C.CtxSize)));
 }
 
 BasicLayout::BasicLayout(LinkGraph &G) : G(G) {
@@ -207,7 +207,7 @@ void SimpleSegmentAlloc::Create(JITLinkMemoryManager &MemMgr,
       std::make_unique<LinkGraph>("", Triple(), 0, support::native, nullptr);
   AllocGroupSmallMap<Block *> ContentBlocks;
 
-  orc::ExecutorAddr NextAddr(0x100000);
+  JITTargetAddress NextAddr = 0x100000;
   for (auto &KV : Segments) {
     auto &AG = KV.first;
     auto &Seg = KV.second;
@@ -220,8 +220,7 @@ void SimpleSegmentAlloc::Create(JITLinkMemoryManager &MemMgr,
     Sec.setMemDeallocPolicy(AG.getMemDeallocPolicy());
 
     if (Seg.ContentSize != 0) {
-      NextAddr =
-          orc::ExecutorAddr(alignTo(NextAddr.getValue(), Seg.ContentAlign));
+      NextAddr = alignTo(NextAddr, Seg.ContentAlign);
       auto &B =
           G->createMutableContentBlock(Sec, G->allocateBuffer(Seg.ContentSize),
                                        NextAddr, Seg.ContentAlign.value(), 0);
@@ -427,8 +426,8 @@ void InProcessMemoryManager::allocate(const JITLinkDylib *JD, LinkGraph &G,
                        static_cast<size_t>(SegsSizes->FinalizeSegs)};
   }
 
-  auto NextStandardSegAddr = orc::ExecutorAddr::fromPtr(StandardSegsMem.base());
-  auto NextFinalizeSegAddr = orc::ExecutorAddr::fromPtr(FinalizeSegsMem.base());
+  auto NextStandardSegAddr = pointerToJITTargetAddress(StandardSegsMem.base());
+  auto NextFinalizeSegAddr = pointerToJITTargetAddress(FinalizeSegsMem.base());
 
   LLVM_DEBUG({
     dbgs() << "InProcessMemoryManager allocated:\n";
@@ -455,7 +454,7 @@ void InProcessMemoryManager::allocate(const JITLinkDylib *JD, LinkGraph &G,
                         ? NextStandardSegAddr
                         : NextFinalizeSegAddr;
 
-    Seg.WorkingMem = SegAddr.toPtr<char *>();
+    Seg.WorkingMem = jitTargetAddressToPointer<char *>(SegAddr);
     Seg.Addr = SegAddr;
 
     SegAddr += alignTo(Seg.ContentSize + Seg.ZeroFillSize, PageSize);
@@ -479,7 +478,8 @@ void InProcessMemoryManager::deallocate(std::vector<FinalizedAlloc> Allocs,
   {
     std::lock_guard<std::mutex> Lock(FinalizedAllocsMutex);
     for (auto &Alloc : Allocs) {
-      auto *FA = Alloc.release().toPtr<FinalizedAllocInfo *>();
+      auto *FA =
+          jitTargetAddressToPointer<FinalizedAllocInfo *>(Alloc.release());
       StandardSegmentsList.push_back(std::move(FA->StandardSegments));
       if (!FA->DeallocActions.empty())
         DeallocActionsList.push_back(std::move(FA->DeallocActions));
@@ -520,7 +520,7 @@ InProcessMemoryManager::createFinalizedAlloc(
   auto *FA = FinalizedAllocInfos.Allocate<FinalizedAllocInfo>();
   new (FA) FinalizedAllocInfo(
       {std::move(StandardSegments), std::move(DeallocActions)});
-  return FinalizedAlloc(orc::ExecutorAddr::fromPtr(FA));
+  return FinalizedAlloc(pointerToJITTargetAddress(FA));
 }
 
 } // end namespace jitlink

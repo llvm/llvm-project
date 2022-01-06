@@ -192,7 +192,7 @@ JITLinkContext::LookupMap JITLinkerBase::getExternalSymbolNames() const {
   // Identify unresolved external symbols.
   JITLinkContext::LookupMap UnresolvedExternals;
   for (auto *Sym : G->external_symbols()) {
-    assert(!Sym->getAddress() &&
+    assert(Sym->getAddress() == 0 &&
            "External has already been assigned an address");
     assert(Sym->getName() != StringRef() && Sym->getName() != "" &&
            "Externals must be named");
@@ -209,12 +209,11 @@ void JITLinkerBase::applyLookupResult(AsyncLookupResult Result) {
   for (auto *Sym : G->external_symbols()) {
     assert(Sym->getOffset() == 0 &&
            "External symbol is not at the start of its addressable block");
-    assert(!Sym->getAddress() && "Symbol already resolved");
+    assert(Sym->getAddress() == 0 && "Symbol already resolved");
     assert(!Sym->isDefined() && "Symbol being resolved is already defined");
     auto ResultI = Result.find(Sym->getName());
     if (ResultI != Result.end())
-      Sym->getAddressable().setAddress(
-          orc::ExecutorAddr(ResultI->second.getAddress()));
+      Sym->getAddressable().setAddress(ResultI->second.getAddress());
     else
       assert(Sym->getLinkage() == Linkage::Weak &&
              "Failed to resolve non-weak reference");
@@ -224,7 +223,7 @@ void JITLinkerBase::applyLookupResult(AsyncLookupResult Result) {
     dbgs() << "Externals after applying lookup result:\n";
     for (auto *Sym : G->external_symbols())
       dbgs() << "  " << Sym->getName() << ": "
-             << formatv("{0:x16}", Sym->getAddress().getValue()) << "\n";
+             << formatv("{0:x16}", Sym->getAddress()) << "\n";
   });
 }
 

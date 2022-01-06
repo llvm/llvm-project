@@ -119,12 +119,10 @@ Error EPCTrampolinePool::grow() {
   unsigned NumTrampolines = TrampolinesPerPage;
 
   auto SegInfo = Alloc->getSegInfo(MemProt::Read | MemProt::Exec);
-  EPCIU.getABISupport().writeTrampolines(SegInfo.WorkingMem.data(),
-                                         SegInfo.Addr.getValue(),
-                                         ResolverAddress, NumTrampolines);
+  EPCIU.getABISupport().writeTrampolines(
+      SegInfo.WorkingMem.data(), SegInfo.Addr, ResolverAddress, NumTrampolines);
   for (unsigned I = 0; I < NumTrampolines; ++I)
-    AvailableTrampolines.push_back(SegInfo.Addr.getValue() +
-                                   (I * TrampolineSize));
+    AvailableTrampolines.push_back(SegInfo.Addr + (I * TrampolineSize));
 
   auto FA = Alloc->finalize();
   if (!FA)
@@ -302,15 +300,15 @@ EPCIndirectionUtils::writeResolverBlock(JITTargetAddress ReentryFnAddr,
     return Alloc.takeError();
 
   auto SegInfo = Alloc->getSegInfo(MemProt::Read | MemProt::Exec);
-  ABI->writeResolverCode(SegInfo.WorkingMem.data(), SegInfo.Addr.getValue(),
-                         ReentryFnAddr, ReentryCtxAddr);
+  ABI->writeResolverCode(SegInfo.WorkingMem.data(), SegInfo.Addr, ReentryFnAddr,
+                         ReentryCtxAddr);
 
   auto FA = Alloc->finalize();
   if (!FA)
     return FA.takeError();
 
   ResolverBlock = std::move(*FA);
-  return SegInfo.Addr.getValue();
+  return SegInfo.Addr;
 }
 
 std::unique_ptr<IndirectStubsManager>
@@ -371,9 +369,8 @@ EPCIndirectionUtils::getIndirectStubs(unsigned NumStubs) {
     auto StubSeg = Alloc->getSegInfo(StubProt);
     auto PtrSeg = Alloc->getSegInfo(PtrProt);
 
-    ABI->writeIndirectStubsBlock(StubSeg.WorkingMem.data(),
-                                 StubSeg.Addr.getValue(),
-                                 PtrSeg.Addr.getValue(), NumStubsToAllocate);
+    ABI->writeIndirectStubsBlock(StubSeg.WorkingMem.data(), StubSeg.Addr,
+                                 PtrSeg.Addr, NumStubsToAllocate);
 
     auto FA = Alloc->finalize();
     if (!FA)
@@ -384,8 +381,8 @@ EPCIndirectionUtils::getIndirectStubs(unsigned NumStubs) {
     auto StubExecutorAddr = StubSeg.Addr;
     auto PtrExecutorAddr = PtrSeg.Addr;
     for (unsigned I = 0; I != NumStubsToAllocate; ++I) {
-      AvailableIndirectStubs.push_back(IndirectStubInfo(
-          StubExecutorAddr.getValue(), PtrExecutorAddr.getValue()));
+      AvailableIndirectStubs.push_back(
+          IndirectStubInfo(StubExecutorAddr, PtrExecutorAddr));
       StubExecutorAddr += ABI->getStubSize();
       PtrExecutorAddr += ABI->getPointerSize();
     }

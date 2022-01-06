@@ -13,10 +13,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_SHARED_EXECUTORADDRESS_H
 #define LLVM_EXECUTIONENGINE_ORC_SHARED_EXECUTORADDRESS_H
 
-#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimplePackedSerialization.h"
-#include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/raw_ostream.h"
 
 #include <cassert>
 #include <type_traits>
@@ -32,7 +29,7 @@ public:
   ExecutorAddr() = default;
 
   /// Create an ExecutorAddr from the given value.
-  explicit constexpr ExecutorAddr(uint64_t Addr) : Addr(Addr) {}
+  explicit ExecutorAddr(uint64_t Addr) : Addr(Addr) {}
 
   /// Create an ExecutorAddr from the given pointer.
   /// Warning: This should only be used when JITing in-process.
@@ -91,12 +88,12 @@ public:
   ExecutorAddr operator++(int) { return ExecutorAddr(Addr++); }
   ExecutorAddr operator--(int) { return ExecutorAddr(Addr--); }
 
-  ExecutorAddr &operator+=(const ExecutorAddrDiff &Delta) {
+  ExecutorAddr &operator+=(const ExecutorAddrDiff Delta) {
     Addr += Delta;
     return *this;
   }
 
-  ExecutorAddr &operator-=(const ExecutorAddrDiff &Delta) {
+  ExecutorAddr &operator-=(const ExecutorAddrDiff Delta) {
     Addr -= Delta;
     return *this;
   }
@@ -121,18 +118,6 @@ inline ExecutorAddr operator+(const ExecutorAddr &LHS,
 inline ExecutorAddr operator+(const ExecutorAddrDiff &LHS,
                               const ExecutorAddr &RHS) {
   return ExecutorAddr(LHS + RHS.getValue());
-}
-
-/// Subtracting an offset from an address yields an address.
-inline ExecutorAddr operator-(const ExecutorAddr &LHS,
-                              const ExecutorAddrDiff &RHS) {
-  return ExecutorAddr(LHS.getValue() - RHS);
-}
-
-/// Taking the modulus of an address and a diff yields a diff.
-inline ExecutorAddrDiff operator%(const ExecutorAddr &LHS,
-                                  const ExecutorAddrDiff &RHS) {
-  return ExecutorAddrDiff(LHS.getValue() % RHS);
 }
 
 /// Represents an address range in the exceutor process.
@@ -162,10 +147,6 @@ struct ExecutorAddrRange {
   ExecutorAddr Start;
   ExecutorAddr End;
 };
-
-inline raw_ostream &operator<<(raw_ostream &OS, const ExecutorAddr &A) {
-  return OS << formatv("{0:x}", A.getValue());
-}
 
 namespace shared {
 
@@ -217,26 +198,6 @@ using SPSExecutorAddrRangeSequence = SPSSequence<SPSExecutorAddrRange>;
 
 } // End namespace shared.
 } // End namespace orc.
-
-// Provide DenseMapInfo for ExecutorAddrs.
-template <> struct DenseMapInfo<orc::ExecutorAddr> {
-  static inline orc::ExecutorAddr getEmptyKey() {
-    return orc::ExecutorAddr(DenseMapInfo<uint64_t>::getEmptyKey());
-  }
-  static inline orc::ExecutorAddr getTombstoneKey() {
-    return orc::ExecutorAddr(DenseMapInfo<uint64_t>::getTombstoneKey());
-  }
-
-  static unsigned getHashValue(const orc::ExecutorAddr &Addr) {
-    return DenseMapInfo<uint64_t>::getHashValue(Addr.getValue());
-  }
-
-  static bool isEqual(const orc::ExecutorAddr &LHS,
-                      const orc::ExecutorAddr &RHS) {
-    return DenseMapInfo<uint64_t>::isEqual(LHS.getValue(), RHS.getValue());
-  }
-};
-
 } // End namespace llvm.
 
 #endif // LLVM_EXECUTIONENGINE_ORC_SHARED_EXECUTORADDRESS_H
