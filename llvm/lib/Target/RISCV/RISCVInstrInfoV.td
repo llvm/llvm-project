@@ -77,6 +77,9 @@ def simm5_plus1 : Operand<XLenVT>, ImmLeaf<XLenVT,
   }];
 }
 
+def simm5_plus1_nonzero : ImmLeaf<XLenVT,
+  [{return Imm != 0 && ((isInt<5>(Imm) && Imm != -16) || Imm == 16);}]>;
+
 //===----------------------------------------------------------------------===//
 // Scheduling definitions.
 //===----------------------------------------------------------------------===//

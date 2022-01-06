@@ -3700,23 +3700,24 @@ multiclass VPatConversionVF_WF <string intrinsic, string instruction> {
   }
 }
 
-multiclass VPatCompare_VI<string intrinsic, string inst> {
+multiclass VPatCompare_VI<string intrinsic, string inst,
+                          ImmLeaf ImmType = simm5_plus1> {
   foreach vti = AllIntegerVectors in {
     defvar Intr = !cast<Intrinsic>(intrinsic);
     defvar Pseudo = !cast<Instruction>(inst#"_VI_"#vti.LMul.MX);
     def : Pat<(vti.Mask (Intr (vti.Vector vti.RegClass:$rs1),
-                              (vti.Scalar simm5_plus1:$rs2),
+                              (vti.Scalar ImmType:$rs2),
                               VLOpFrag)),
-              (Pseudo vti.RegClass:$rs1, (DecImm simm5_plus1:$rs2),
+              (Pseudo vti.RegClass:$rs1, (DecImm ImmType:$rs2),
                       GPR:$vl, vti.Log2SEW)>;
     defvar IntrMask = !cast<Intrinsic>(intrinsic # "_mask");
     defvar PseudoMask = !cast<Instruction>(inst#"_VI_"#vti.LMul.MX#"_MASK");
     def : Pat<(vti.Mask (IntrMask (vti.Mask VR:$merge),
                                   (vti.Vector vti.RegClass:$rs1),
-                                  (vti.Scalar simm5_plus1:$rs2),
+                                  (vti.Scalar ImmType:$rs2),
                                   (vti.Mask V0),
                                   VLOpFrag)),
-              (PseudoMask VR:$merge, vti.RegClass:$rs1, (DecImm simm5_plus1:$rs2),
+              (PseudoMask VR:$merge, vti.RegClass:$rs1, (DecImm ImmType:$rs2),
                           (vti.Mask V0), GPR:$vl, vti.Log2SEW)>;
   }
 }
@@ -4521,15 +4522,12 @@ defm : VPatBinarySwappedM_VV<"int_riscv_vmsge", "PseudoVMSLE", AllIntegerVectors
 // avoids the user needing to know that there is no vmslt(u).vi instruction.
 // Similar for vmsge(u).vx intrinsics using vmslt(u).vi.
 defm : VPatCompare_VI<"int_riscv_vmslt", "PseudoVMSLE">;
-defm : VPatCompare_VI<"int_riscv_vmsltu", "PseudoVMSLEU">;
-// Special cases to avoid matching vmsltu.vi 0 (always false) to
-// vmsleu.vi -1 (always true). Instead match to vmsne.vv.
-defm : VPatCompareUnsignedZero<"int_riscv_vmsltu", "PseudoVMSNE">;
+defm : VPatCompare_VI<"int_riscv_vmsltu", "PseudoVMSLEU", simm5_plus1_nonzero>;
 
 defm : VPatCompare_VI<"int_riscv_vmsge", "PseudoVMSGT">;
-defm : VPatCompare_VI<"int_riscv_vmsgeu", "PseudoVMSGTU">;
-// Special cases to avoid matching vmsgeu.vi 0 (always true) to
-// vmsgtu.vi -1 (always false). Instead match to vmsne.vv.
+defm : VPatCompare_VI<"int_riscv_vmsgeu", "PseudoVMSGTU", simm5_plus1_nonzero>;
+// Special cases for vmsgeu.vi 0 (always true). Instead match to vmsne.vv.
+// FIXME: We could match this to vmset.m or vmset.m+vmand.mm.
 defm : VPatCompareUnsignedZero<"int_riscv_vmsgeu", "PseudoVMSEQ">;
 
 //===----------------------------------------------------------------------===//
