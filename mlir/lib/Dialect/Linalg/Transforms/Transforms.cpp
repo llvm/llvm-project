@@ -623,16 +623,14 @@ LogicalResult mlir::linalg::GenericOpInterchangePattern::matchAndRewrite(
     GenericOp genericOp, PatternRewriter &rewriter) const {
   if (failed(filter.checkAndNotify(rewriter, genericOp)))
     return failure();
-  if (failed(interchangeGenericOpPrecondition(genericOp, interchangeVector)))
+
+  FailureOr<GenericOp> transformedOp =
+      interchangeGenericOp(rewriter, genericOp, interchangeVector);
+  if (failed(transformedOp))
     return failure();
 
-  // TODO: figure out how this interplays with named ops. In particular this
-  // should break the named op property.
-  rewriter.updateRootInPlace(genericOp, [&]() {
-    interchangeGenericOp(rewriter, genericOp, interchangeVector);
-    // New filter if specified.
-    filter.replaceLinalgTransformationFilter(rewriter, genericOp);
-  });
+  // New filter if specified.
+  filter.replaceLinalgTransformationFilter(rewriter, genericOp);
   return success();
 }
 
@@ -652,12 +650,10 @@ LogicalResult mlir::linalg::LinalgGeneralizationPattern::matchAndRewrite(
     Operation *op, PatternRewriter &rewriter) const {
   if (failed(filter.checkAndNotify(rewriter, op)))
     return failure();
-  if (failed(generalizeNamedOpPrecondition(op)))
+  FailureOr<GenericOp> genericOp = generalizeNamedOp(rewriter, op);
+  if (failed(genericOp))
     return failure();
-
-  GenericOp genericOp = generalizeNamedOp(rewriter, op);
-  rewriter.replaceOp(op, genericOp.getResults());
-  filter.replaceLinalgTransformationFilter(rewriter, genericOp);
+  filter.replaceLinalgTransformationFilter(rewriter, *genericOp);
   return success();
 }
 
@@ -708,19 +704,13 @@ mlir::linalg::LinalgBaseVectorizationPattern::LinalgBaseVectorizationPattern(
 
 LogicalResult mlir::linalg::LinalgBaseVectorizationPattern::matchAndRewrite(
     Operation *op, PatternRewriter &rewriter) const {
+  // TODO: Interface-based rewrite.
   LinalgOp linalgOp = dyn_cast<LinalgOp>(op);
   if (!linalgOp)
     return failure();
-  if (failed(filter.checkAndNotify(rewriter, linalgOp)))
+  if (failed(filter.checkAndNotify(rewriter, op)))
     return failure();
-  SmallVector<Value> newResults;
-  if (failed(vectorizeLinalgOp(rewriter, op, newResults)))
-    return failure();
-  if (!newResults.empty())
-    rewriter.replaceOp(op, newResults);
-  else
-    rewriter.eraseOp(op);
-  return success();
+  return vectorize(rewriter, linalgOp);
 }
 
 LogicalResult mlir::linalg::applyStagedPatterns(
@@ -758,8 +748,8 @@ static SmallVector<StringRef> getNParallelLoopsAttrs(unsigned nParallelLoops) {
   return SmallVector<StringRef>(nParallelLoops, getParallelIteratorTypeName());
 }
 
-/// Rewrite a PadTensorOp into a sequence of InitTensorOp, FillOp (to initialize
-/// with pad_val) and GenericOp (to copy contents).
+/// Rewrite a PadTensorOp into a sequence of InitTensorOp, FillOp (to
+/// initialize with pad_val) and GenericOp (to copy contents).
 LogicalResult PadTensorOpTransformationPattern::matchAndRewrite(
     linalg::PadTensorOp padOp, PatternRewriter &rewriter) const {
 

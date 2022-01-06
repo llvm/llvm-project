@@ -29,7 +29,7 @@
 using namespace mlir;
 using namespace mlir::linalg;
 
-LogicalResult mlir::linalg::generalizeNamedOpPrecondition(Operation *op) {
+static LogicalResult generalizeNamedOpPrecondition(Operation *op) {
   LinalgOp namedOp = dyn_cast<LinalgOp>(op);
   // Check if the operation is a LinalgOp but not a GenericOp.
   if (!namedOp || isa<GenericOp>(op))
@@ -40,8 +40,11 @@ LogicalResult mlir::linalg::generalizeNamedOpPrecondition(Operation *op) {
   return success();
 }
 
-GenericOp mlir::linalg::generalizeNamedOp(PatternRewriter &rewriter,
-                                          LinalgOp namedOp) {
+FailureOr<GenericOp> mlir::linalg::generalizeNamedOp(RewriterBase &rewriter,
+                                                     LinalgOp namedOp) {
+  if (failed(generalizeNamedOpPrecondition(namedOp)))
+    return rewriter.notifyMatchFailure(namedOp, "preconditions not met");
+
   SmallVector<Value> inputOperands = namedOp.getInputOperands();
   SmallVector<Value> outputOperands = namedOp.getOutputOperands();
   SmallVector<AffineMap> indexingMaps = namedOp.getIndexingMaps();
@@ -58,6 +61,7 @@ GenericOp mlir::linalg::generalizeNamedOp(PatternRewriter &rewriter,
                                  outputOperands, indexingMaps, iterators);
   rewriter.inlineRegionBefore(namedOp->getRegion(0), genericOp.region(),
                               genericOp.region().begin());
+  rewriter.replaceOp(namedOp, genericOp->getResults());
   return genericOp;
 }
 
