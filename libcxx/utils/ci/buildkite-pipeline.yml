@@ -162,32 +162,32 @@ steps:
 
   # TODO: Due to ongoing CI outage on our Linux nodes, most configurations running on Linux
   #       are disabled. We are currently running off of a much smaller fleet than normally.
-  # # Tests with the supported compilers.
-  # - label: "GCC 11 / C++11"
-  #   command: "libcxx/utils/ci/run-buildbot generic-gcc-cxx11"
-  #   artifact_paths:
-  #     - "**/test-results.xml"
-  #   agents:
-  #     queue: "libcxx-builders"
-  #     os: "linux"
-  #   retry:
-  #     automatic:
-  #       - exit_status: -1  # Agent was lost
-  #         limit: 2
-  #   timeout_in_minutes: 120
+  # Tests with the supported compilers.
+  - label: "GCC 11 / C++11"
+    command: "libcxx/utils/ci/run-buildbot generic-gcc-cxx11"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders"
+      os: "linux"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120
 
-  # - label: "Clang 12"
-  #   command: "libcxx/utils/ci/run-buildbot generic-clang-12"
-  #   artifact_paths:
-  #     - "**/test-results.xml"
-  #   agents:
-  #     queue: "libcxx-builders"
-  #     os: "linux"
-  #   retry:
-  #     automatic:
-  #       - exit_status: -1  # Agent was lost
-  #         limit: 2
-  #   timeout_in_minutes: 120
+  - label: "Clang 12"
+    command: "libcxx/utils/ci/run-buildbot generic-clang-12"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders"
+      os: "linux"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120
 
   # - label: "Clang 13"
   #   command: "libcxx/utils/ci/run-buildbot generic-clang-13"
@@ -202,19 +202,19 @@ steps:
   #         limit: 2
   #   timeout_in_minutes: 120
 
-  # # Tests with the sanitizers.
-  # - label: "ASAN"
-  #   command: "libcxx/utils/ci/run-buildbot generic-asan"
-  #   artifact_paths:
-  #     - "**/test-results.xml"
-  #   agents:
-  #     queue: "libcxx-builders"
-  #     os: "linux"
-  #   retry:
-  #     automatic:
-  #       - exit_status: -1  # Agent was lost
-  #         limit: 2
-  #   timeout_in_minutes: 120
+  # Tests with the sanitizers.
+  - label: "ASAN"
+    command: "libcxx/utils/ci/run-buildbot generic-asan"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders"
+      os: "linux"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120
 
   # - label: "TSAN"
   #   command: "libcxx/utils/ci/run-buildbot generic-tsan"

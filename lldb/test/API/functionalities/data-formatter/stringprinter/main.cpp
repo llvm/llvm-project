@@ -62,7 +62,7 @@ int main (int argc, char const *argv[])
     //%
     //% for c in ["", "const"]:
     //%   for v in ["", "volatile"]:
-    //%     for s in ["", "signed", "unsigned"]:
+    //%     for s in ["", "unsigned"]:
     //%       summary = '"'+c+v+s+'char"'
     //%       self.expect_var_path(c+v+s+"chararray", summary=summary)
     //% # These should be printed normally

@@ -730,7 +730,7 @@ void FormatManager::LoadSystemFormatters() {
       GetCategory(m_system_category_name);
 
   sys_category_sp->GetRegexTypeSummariesContainer()->Add(
-      RegularExpression(R"(^((un)?signed )?char ?(\*|\[\])$)"), string_format);
+      RegularExpression(R"(^(unsigned )?char ?(\*|\[\])$)"), string_format);
 
   sys_category_sp->GetRegexTypeSummariesContainer()->Add(
       std::move(any_size_char_arr), string_array_format);

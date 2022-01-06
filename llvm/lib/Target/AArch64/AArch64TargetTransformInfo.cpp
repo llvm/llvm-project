@@ -331,6 +331,25 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   }
+  case Intrinsic::smul_with_overflow:
+  case Intrinsic::umul_with_overflow: {
+    static const CostTblEntry WithOverflowCostTbl[] = {
+        {Intrinsic::smul_with_overflow, MVT::i8, 5},
+        {Intrinsic::umul_with_overflow, MVT::i8, 4},
+        {Intrinsic::smul_with_overflow, MVT::i16, 5},
+        {Intrinsic::umul_with_overflow, MVT::i16, 4},
+        {Intrinsic::smul_with_overflow, MVT::i32, 2}, // eg umull;tst
+        {Intrinsic::umul_with_overflow, MVT::i32, 2}, // eg umull;cmp sxtw
+        {Intrinsic::smul_with_overflow, MVT::i64, 3}, // eg mul;smulh;cmp
+        {Intrinsic::umul_with_overflow, MVT::i64, 3}, // eg mul;umulh;cmp asr
+    };
+    EVT MTy = TLI->getValueType(DL, RetTy->getContainedType(0), true);
+    if (MTy.isSimple())
+      if (const auto *Entry = CostTableLookup(WithOverflowCostTbl, ICA.getID(),
+                                              MTy.getSimpleVT()))
+        return Entry->Cost;
+    break;
+  }
   default:
     break;
   }
