@@ -422,8 +422,8 @@ Value mlir::linalg::comprehensive_bufferize::BufferizationState::
   return operandBuffer;
 }
 
-void mlir::linalg::comprehensive_bufferize::BufferizationState::replaceOp(
-    RewriterBase &rewriter, Operation *op, ValueRange values) const {
+void mlir::linalg::comprehensive_bufferize::replaceOpWithBufferizedValues(
+    RewriterBase &rewriter, Operation *op, ValueRange values) {
   OpBuilder::InsertionGuard g(rewriter);
 
   // Replace all OpResults with the given values.

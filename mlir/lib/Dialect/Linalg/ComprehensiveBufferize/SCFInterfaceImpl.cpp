@@ -192,7 +192,7 @@ struct IfOpInterface
     }
 
     // Replace op results.
-    state.replaceOp(rewriter, op, newIfOp->getResults());
+    replaceOpWithBufferizedValues(rewriter, op, newIfOp->getResults());
 
     return success();
   }
@@ -326,7 +326,7 @@ struct ForOpInterface
     yieldOp.getResultsMutable().assign(yieldValues);
 
     // Replace loop results.
-    state.replaceOp(rewriter, op, newForOp->getResults());
+    replaceOpWithBufferizedValues(rewriter, op, newForOp->getResults());
 
     return success();
   }

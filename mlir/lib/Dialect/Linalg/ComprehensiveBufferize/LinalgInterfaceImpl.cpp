@@ -67,7 +67,7 @@ static LogicalResult bufferizeLinalgOp(RewriterBase &rewriter, LinalgOp op,
   op.clone(rewriter, op.getLoc(), /*resultTypes=*/TypeRange{}, newOperands);
 
   // Replace the results of the old op with the new output buffers.
-  state.replaceOp(rewriter, op, newOutputBuffers);
+  replaceOpWithBufferizedValues(rewriter, op, newOutputBuffers);
 
   return success();
 }
@@ -201,7 +201,7 @@ struct InitTensorOpInterface
 
     Value alloc = state.createAllocDeallocPair(rewriter, initTensorOp->getLoc(),
                                                initTensorOp.result());
-    state.replaceOp(rewriter, op, alloc);
+    replaceOpWithBufferizedValues(rewriter, op, alloc);
     return success();
   }
 };
@@ -342,7 +342,7 @@ struct TiledLoopOpInterface
     rewriter.eraseOp(oldTerminator);
 
     // Replace results and delete old op.
-    state.replaceOp(rewriter, op, newResults);
+    replaceOpWithBufferizedValues(rewriter, op, newResults);
 
     return success();
   }

@@ -634,7 +634,7 @@ struct CallOpInterface
     }
 
     // 5. Replace the old op with the new op.
-    state.replaceOp(rewriter, callOp, replacementValues);
+    replaceOpWithBufferizedValues(rewriter, callOp, replacementValues);
 
     return success();
   }

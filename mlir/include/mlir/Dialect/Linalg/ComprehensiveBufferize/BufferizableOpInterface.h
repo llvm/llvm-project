@@ -380,22 +380,6 @@ public:
   /// Creates a memcpy between two given buffers.
   void createMemCpy(OpBuilder &b, Location loc, Value from, Value to) const;
 
-  /// Replace an op with replacement values. The op is deleted. Tensor OpResults
-  /// must be replaced with memref values.
-  void replaceOp(RewriterBase &rewriter, Operation *op,
-                 ValueRange values) const;
-
-  /// Replace an op with a new op. Tensor OpResults must be replaced with memref
-  /// values.
-  template <typename OpTy, typename... Args>
-  OpTy replaceOpWithNewOp(RewriterBase &rewriter, Operation *op,
-                          Args &&...args) const {
-    Operation *newOp =
-        rewriter.create<OpTy>(op->getLoc(), std::forward<Args>(args)...);
-    replaceOp(rewriter, op, newOp->getResults());
-    return cast<OpTy>(newOp);
-  }
-
   /// Lookup the memref buffer that is associated to the given tensor value.
   /// Asserts if no buffer is associated.
   Value lookupBuffer(RewriterBase &rewriter, Value tensor) const;
@@ -442,6 +426,21 @@ private:
   /// A reference to current bufferization options.
   const BufferizationOptions &options;
 };
+
+/// Replace an op with replacement values. The op is deleted. Tensor OpResults
+/// must be replaced with memref values.
+void replaceOpWithBufferizedValues(RewriterBase &rewriter, Operation *op,
+                                   ValueRange values);
+
+/// Replace an op with a new op. Tensor OpResults must be replaced with memref
+/// values.
+template <typename OpTy, typename... Args>
+OpTy replaceOpWithNewBufferizedOp(RewriterBase &rewriter, Operation *op,
+                                  Args &&...args) {
+  auto newOp = rewriter.create<OpTy>(op->getLoc(), std::forward<Args>(args)...);
+  replaceOpWithBufferizedValues(rewriter, op, newOp->getResults());
+  return newOp;
+}
 
 /// Return a contiguous MemRefType (i.e. with canonical/empty layout map)
 /// with the same shape as `shapedType` and specified `layout` and

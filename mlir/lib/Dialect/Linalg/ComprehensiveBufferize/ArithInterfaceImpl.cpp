@@ -35,7 +35,7 @@ struct ConstantOpInterface
 
     GlobalCreator globalCreator(moduleOp);
     auto globalMemref = globalCreator.getGlobalFor(constantOp);
-    state.replaceOpWithNewOp<memref::GetGlobalOp>(
+    replaceOpWithNewBufferizedOp<memref::GetGlobalOp>(
         rewriter, op, globalMemref.type(), globalMemref.getName());
     return success();
   }
