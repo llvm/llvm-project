@@ -176,9 +176,7 @@ void format_test_string(T world, T universe, TestFunction check,
       "Using automatic argument numbering in manual argument numbering mode",
       STR("hello {0:{}}"), world, 1);
   // Arg-id may not have leading zeros.
-  check_exception(
-      "A format-spec arg-id should terminate at a '}'",
-      STR("hello {0:{01}}"), world, 1);
+  check_exception("Invalid arg-id", STR("hello {0:{01}}"), world, 1);
 
   // *** precision ***
 #if _LIBCPP_VERSION
@@ -214,9 +212,7 @@ void format_test_string(T world, T universe, TestFunction check,
       "Using automatic argument numbering in manual argument numbering mode",
       STR("hello {0:.{}}"), world, 1);
   // Arg-id may not have leading zeros.
-  check_exception(
-      "A format-spec arg-id should terminate at a '}'",
-      STR("hello {0:.{01}}"), world, 1);
+  check_exception("Invalid arg-id", STR("hello {0:.{01}}"), world, 1);
 
   // *** locale-specific form ***
   check_exception("The format-spec should consume the input or end with a '}'",
