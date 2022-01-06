@@ -793,7 +793,6 @@ bool LoopInterchangeLegality::findInductionAndReductions(
 // This function indicates the current limitations in the transform as a result
 // of which we do not proceed.
 bool LoopInterchangeLegality::currentLimitations() {
-  BasicBlock *InnerLoopPreHeader = InnerLoop->getLoopPreheader();
   BasicBlock *InnerLoopLatch = InnerLoop->getLoopLatch();
 
   // transform currently expects the loop latches to also be the exiting
