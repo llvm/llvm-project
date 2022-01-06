@@ -634,7 +634,7 @@ mlir::linalg::GenericOpInterchangePattern::returningMatchAndRewrite(
 
   // New filter if specified.
   filter.replaceLinalgTransformationFilter(rewriter, genericOp);
-  return success();
+  return transformedOp;
 }
 
 /// Linalg generalization pattern.
