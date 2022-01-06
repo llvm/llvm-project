@@ -47,11 +47,10 @@ struct TransferReadOpInterface
 
     // TransferReadOp always reads from the bufferized op.source().
     Value buffer = state.lookupBuffer(rewriter, readOp.source());
-    Value read = rewriter.create<vector::TransferReadOp>(
-        readOp.getLoc(), readOp.getVectorType(), buffer, readOp.indices(),
+    replaceOpWithNewBufferizedOp<vector::TransferReadOp>(
+        rewriter, readOp, readOp.getVectorType(), buffer, readOp.indices(),
         readOp.permutation_map(), readOp.padding(), readOp.mask(),
         readOp.in_boundsAttr());
-    state.replaceOp(rewriter, op, read);
     return success();
   }
 };
@@ -101,7 +100,7 @@ struct TransferWriteOpInterface
     rewriter.create<vector::TransferWriteOp>(
         writeOp.getLoc(), writeOp.vector(), resultBuffer, writeOp.indices(),
         writeOp.permutation_mapAttr(), writeOp.in_boundsAttr());
-    state.replaceOp(rewriter, op, resultBuffer);
+    replaceOpWithBufferizedValues(rewriter, op, resultBuffer);
 
     return success();
   }
