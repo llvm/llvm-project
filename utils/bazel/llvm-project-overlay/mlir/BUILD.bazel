@@ -6778,6 +6778,7 @@ cc_library(
         ":Pass",
         ":StandardOps",
         ":Support",
+        ":Transforms",
         "//llvm:Support",
     ],
 )

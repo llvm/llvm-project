@@ -64,14 +64,12 @@ struct ExecuteRegionOpInterface
                           const BufferizationState &state) const {
     // TODO: Add bufferization support when needed. scf.execute_region should be
     // bufferized similar to scf.if.
-    auto executeRegionOp = cast<scf::ExecuteRegionOp>(op);
     bool hasTensorReturnType = any_of(
         op->getResultTypes(), [](Type t) { return t.isa<TensorType>(); });
     if (hasTensorReturnType)
       return op->emitError(
           "scf.execute_region with tensor result not supported");
-    return comprehensive_bufferize::bufferize(
-        rewriter, &executeRegionOp.getRegion(), state);
+    return success();
   }
 
   BufferRelation bufferRelation(Operation *op, OpResult opResult,
@@ -195,14 +193,6 @@ struct IfOpInterface
 
     // Replace op results.
     state.replaceOp(rewriter, op, newIfOp->getResults());
-
-    // Bufferize then/else blocks.
-    if (failed(comprehensive_bufferize::bufferize(rewriter, newIfOp.thenBlock(),
-                                                  state)))
-      return failure();
-    if (failed(comprehensive_bufferize::bufferize(rewriter, newIfOp.elseBlock(),
-                                                  state)))
-      return failure();
 
     return success();
   }
@@ -337,10 +327,6 @@ struct ForOpInterface
 
     // Replace loop results.
     state.replaceOp(rewriter, op, newForOp->getResults());
-
-    // Bufferize loop body.
-    if (failed(comprehensive_bufferize::bufferize(rewriter, loopBody, state)))
-      return failure();
 
     return success();
   }
