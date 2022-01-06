@@ -187,12 +187,12 @@ public:
   virtual void getValues(std::vector<int8_t> **) { fatal("vali8"); }
 
   /// Element-wise insertion in lexicographic index order.
-  virtual void lexInsert(uint64_t *, double) { fatal("insf64"); }
-  virtual void lexInsert(uint64_t *, float) { fatal("insf32"); }
-  virtual void lexInsert(uint64_t *, int64_t) { fatal("insi64"); }
-  virtual void lexInsert(uint64_t *, int32_t) { fatal("insi32"); }
-  virtual void lexInsert(uint64_t *, int16_t) { fatal("ins16"); }
-  virtual void lexInsert(uint64_t *, int8_t) { fatal("insi8"); }
+  virtual void lexInsert(const uint64_t *, double) { fatal("insf64"); }
+  virtual void lexInsert(const uint64_t *, float) { fatal("insf32"); }
+  virtual void lexInsert(const uint64_t *, int64_t) { fatal("insi64"); }
+  virtual void lexInsert(const uint64_t *, int32_t) { fatal("insi32"); }
+  virtual void lexInsert(const uint64_t *, int16_t) { fatal("ins16"); }
+  virtual void lexInsert(const uint64_t *, int8_t) { fatal("insi8"); }
 
   /// Expanded insertion.
   virtual void expInsert(uint64_t *, double *, bool *, uint64_t *, uint64_t) {
@@ -300,7 +300,7 @@ public:
   void getValues(std::vector<V> **out) override { *out = &values; }
 
   /// Partially specialize lexicographical insertions based on template types.
-  void lexInsert(uint64_t *cursor, V val) override {
+  void lexInsert(const uint64_t *cursor, V val) override {
     // First, wrap up pending insertion path.
     uint64_t diff = 0;
     uint64_t top = 0;
@@ -499,7 +499,7 @@ private:
   }
 
   /// Continues a single insertion path, outer to inner.
-  void insPath(uint64_t *cursor, uint64_t diff, uint64_t top, V val) {
+  void insPath(const uint64_t *cursor, uint64_t diff, uint64_t top, V val) {
     uint64_t rank = getRank();
     assert(diff < rank);
     for (uint64_t d = diff; d < rank; d++) {
@@ -517,7 +517,7 @@ private:
   }
 
   /// Finds the lexicographic differing dimension.
-  uint64_t lexDiff(uint64_t *cursor) {
+  uint64_t lexDiff(const uint64_t *cursor) {
     for (uint64_t r = 0, rank = getRank(); r < rank; r++)
       if (cursor[r] > idx[r])
         return r;
