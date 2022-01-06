@@ -16,6 +16,7 @@ libCppLib.dylib: CppLib/CppLib.cpp
 libWrapper.dylib: libCppLib.dylib
 	$(MAKE) -f $(MAKEFILE_RULES) \
 		DYLIB_NAME=Wrapper DYLIB_SWIFT_SOURCES=wrapper.swift \
+		LD_EXTRAS="$(LD_EXTRAS)" \
 		SWIFTFLAGS_EXTRAS="-I$(SRCDIR) -L. -lCppLib -module-link-name Wrapper"
 
 # Make sure Makefile and test agree on the SDK.
