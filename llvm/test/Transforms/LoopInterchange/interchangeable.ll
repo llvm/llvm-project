@@ -146,23 +146,33 @@ for.end11:
 define void @interchange_10() {
 ; CHECK-LABEL: @interchange_10(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR2_PREHEADER:%.*]]
+; CHECK:       for1.header.preheader:
 ; CHECK-NEXT:    br label [[FOR1_HEADER:%.*]]
 ; CHECK:       for1.header:
-; CHECK-NEXT:    [[J23:%.*]] = phi i64 [ 1, [[ENTRY:%.*]] ], [ [[J_NEXT24:%.*]], [[FOR1_INC10:%.*]] ]
+; CHECK-NEXT:    [[J23:%.*]] = phi i64 [ [[J_NEXT24:%.*]], [[FOR1_INC10:%.*]] ], [ 1, [[FOR1_HEADER_PREHEADER:%.*]] ]
 ; CHECK-NEXT:    [[J_NEXT24]] = add nuw nsw i64 [[J23]], 1
+; CHECK-NEXT:    br label [[FOR2_SPLIT1:%.*]]
+; CHECK:       for2.preheader:
 ; CHECK-NEXT:    br label [[FOR2:%.*]]
 ; CHECK:       for2:
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[J_NEXT:%.*]], [[FOR2]] ], [ 1, [[FOR1_HEADER]] ]
-; CHECK-NEXT:    [[J_NEXT]] = add nuw nsw i64 [[J]], 1
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[TMP0:%.*]], [[FOR2_SPLIT:%.*]] ], [ 1, [[FOR2_PREHEADER]] ]
+; CHECK-NEXT:    br label [[FOR1_HEADER_PREHEADER]]
+; CHECK:       for2.split1:
+; CHECK-NEXT:    [[J_NEXT:%.*]] = add nuw nsw i64 [[J]], 1
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds [100 x [100 x i64]], [100 x [100 x i64]]* @A, i64 0, i64 [[J]], i64 [[J23]]
 ; CHECK-NEXT:    store i64 [[J]], i64* [[ARRAYIDX5]]
 ; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds [100 x [100 x i64]], [100 x [100 x i64]]* @A, i64 0, i64 [[J]], i64 [[J_NEXT24]]
 ; CHECK-NEXT:    store i64 [[J23]], i64* [[ARRAYIDX10]]
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[J]], 99
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR1_INC10]], label [[FOR2]]
+; CHECK-NEXT:    br label [[FOR1_INC10]]
+; CHECK:       for2.split:
+; CHECK-NEXT:    [[TMP0]] = add nuw nsw i64 [[J]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[J]], 99
+; CHECK-NEXT:    br i1 [[TMP1]], label [[FOR_END12:%.*]], label [[FOR2]]
 ; CHECK:       for1.inc10:
 ; CHECK-NEXT:    [[EXITCOND26:%.*]] = icmp eq i64 [[J23]], 98
-; CHECK-NEXT:    br i1 [[EXITCOND26]], label [[FOR_END12:%.*]], label [[FOR1_HEADER]]
+; CHECK-NEXT:    br i1 [[EXITCOND26]], label [[FOR2_SPLIT]], label [[FOR1_HEADER]]
 ; CHECK:       for.end12:
 ; CHECK-NEXT:    ret void
 ;
