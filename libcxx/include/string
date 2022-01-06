@@ -158,6 +158,9 @@ public:
     void resize(size_type n, value_type c);
     void resize(size_type n);
 
+    template<class Operation>
+    constexpr void resize_and_overwrite(size_type n, Operation op); // since C++23
+
     void reserve(size_type res_arg);
     void reserve(); // deprecated in C++20
     void shrink_to_fit();
@@ -973,6 +976,17 @@ public:
     _LIBCPP_INLINE_VISIBILITY void resize(size_type __n) {resize(__n, value_type());}
 
     void reserve(size_type __requested_capacity);
+
+#if _LIBCPP_STD_VER > 20
+    template <class _Op>
+    _LIBCPP_HIDE_FROM_ABI constexpr
+    void resize_and_overwrite(size_type __n, _Op __op) {
+      __resize_default_init(__n);
+      pointer __data = data();
+      __erase_to_end(_VSTD::move(__op)(__data, __n));
+    }
+#endif
+
     _LIBCPP_INLINE_VISIBILITY void __resize_default_init(size_type __n);
 
     _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_INLINE_VISIBILITY

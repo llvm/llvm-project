@@ -155,6 +155,7 @@ __cpp_lib_stacktrace                                    202011L <stacktrace>
 __cpp_lib_starts_ends_with                              201711L <string> <string_view>
 __cpp_lib_stdatomic_h                                   202011L <stdatomic.h>
 __cpp_lib_string_contains                               202011L <string> <string_view>
+__cpp_lib_string_resize_and_overwrite                   202110L <string>
 __cpp_lib_string_udls                                   201304L <string>
 __cpp_lib_string_view                                   201803L <string> <string_view>
                                                         201606L // C++17
@@ -375,6 +376,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 // # define __cpp_lib_stacktrace                           202011L
 // # define __cpp_lib_stdatomic_h                          202011L
 # define __cpp_lib_string_contains                      202011L
+# define __cpp_lib_string_resize_and_overwrite          202110L
 # define __cpp_lib_to_underlying                        202102L
 #endif
 
