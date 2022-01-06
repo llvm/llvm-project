@@ -661,7 +661,7 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
 
   IRRewriter rewriter(op->getContext());
   DominanceInfo domInfo(op);
-  BufferizationAliasInfo &aliasInfo = state.aliasInfo;
+  BufferizationAliasInfo &aliasInfo = state.getAliasInfo();
 
   if (failed(checkAliasInfoConsistency(op, domInfo, state, aliasInfo)))
     return failure();
