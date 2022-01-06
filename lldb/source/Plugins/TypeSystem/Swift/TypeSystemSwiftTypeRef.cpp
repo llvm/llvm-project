@@ -342,7 +342,6 @@ static swift::Demangle::NodePointer GetType(swift::Demangle::NodePointer n) {
 /// Demangle a mangled type name and return the child of the \p Type node.
 static swift::Demangle::NodePointer
 GetDemangledType(swift::Demangle::Demangler &dem, StringRef name) {
-  LLDB_SCOPED_TIMER();
   return GetType(dem.demangleSymbol(name));
 }
 
@@ -641,7 +640,6 @@ TypeSystemSwiftTypeRef::GetCanonicalNode(swift::Demangle::Demangler &dem,
 /// (type aliases resolved) type.
 swift::Demangle::NodePointer TypeSystemSwiftTypeRef::GetCanonicalDemangleTree(
     swift::Demangle::Demangler &dem, StringRef mangled_name) {
-  LLDB_SCOPED_TIMER();
   auto *node = dem.demangleSymbol(mangled_name);
   return GetCanonicalNode(dem, node);
 }
