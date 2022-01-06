@@ -13,9 +13,10 @@
 #ifndef LLVM_EXECUTIONENGINE_JITLINK_JITLINKMEMORYMANAGER_H
 #define LLVM_EXECUTIONENGINE_JITLINK_JITLINKMEMORYMANAGER_H
 
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkDylib.h"
 #include "llvm/ExecutionEngine/JITLink/MemoryFlags.h"
-#include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
@@ -49,9 +50,9 @@ class Section;
 /// executor-side implementation code is responsible for freeing the error
 /// string).
 struct AllocActionCall {
-  JITTargetAddress FnAddr = 0;
-  JITTargetAddress CtxAddr = 0;
-  JITTargetAddress CtxSize = 0;
+  orc::ExecutorAddr FnAddr;
+  orc::ExecutorAddr CtxAddr;
+  orc::ExecutorAddrDiff CtxSize;
 };
 
 /// A pair of AllocActionCalls, one to be run at finalization time, one to be
@@ -93,47 +94,48 @@ public:
   class FinalizedAlloc {
     friend class JITLinkMemoryManager;
 
-  public:
-    static constexpr JITTargetAddress InvalidAddr = ~JITTargetAddress(0);
+    static constexpr auto InvalidAddr = ~uint64_t(0);
 
+  public:
     FinalizedAlloc() = default;
-    explicit FinalizedAlloc(JITTargetAddress A) : A(A) {
-      assert(A != 0 && "Explicitly creating an invalid allocation?");
+    explicit FinalizedAlloc(orc::ExecutorAddr A) : A(A) {
+      assert(A && "Explicitly creating an invalid allocation?");
     }
     FinalizedAlloc(const FinalizedAlloc &) = delete;
     FinalizedAlloc(FinalizedAlloc &&Other) : A(Other.A) {
-      Other.A = InvalidAddr;
+      Other.A.setValue(InvalidAddr);
     }
     FinalizedAlloc &operator=(const FinalizedAlloc &) = delete;
     FinalizedAlloc &operator=(FinalizedAlloc &&Other) {
-      assert(A == InvalidAddr &&
+      assert(A.getValue() == InvalidAddr &&
              "Cannot overwrite active finalized allocation");
       std::swap(A, Other.A);
       return *this;
     }
     ~FinalizedAlloc() {
-      assert(A == InvalidAddr && "Finalized allocation was not deallocated");
+      assert(A.getValue() == InvalidAddr &&
+             "Finalized allocation was not deallocated");
     }
 
     /// FinalizedAllocs convert to false for default-constructed, and
     /// true otherwise. Default-constructed allocs need not be deallocated.
-    explicit operator bool() const { return A != InvalidAddr; }
+    explicit operator bool() const { return A.getValue() != InvalidAddr; }
 
     /// Returns the address associated with this finalized allocation.
     /// The allocation is unmodified.
-    JITTargetAddress getAddress() const { return A; }
+    orc::ExecutorAddr getAddress() const { return A; }
 
     /// Returns the address associated with this finalized allocation and
     /// resets this object to the default state.
     /// This should only be used by allocators when deallocating memory.
-    JITTargetAddress release() {
-      JITTargetAddress Tmp = A;
-      A = InvalidAddr;
+    orc::ExecutorAddr release() {
+      orc::ExecutorAddr Tmp = A;
+      A.setValue(InvalidAddr);
       return Tmp;
     }
 
   private:
-    JITTargetAddress A = InvalidAddr;
+    orc::ExecutorAddr A{InvalidAddr};
   };
 
   /// Represents an allocation which has not been finalized yet.
@@ -263,7 +265,7 @@ public:
     Align Alignment;
     size_t ContentSize;
     uint64_t ZeroFillSize;
-    JITTargetAddress Addr;
+    orc::ExecutorAddr Addr;
     char *WorkingMem = nullptr;
 
   private:
@@ -341,7 +343,7 @@ public:
 
   /// Describes the segment working memory and executor address.
   struct SegmentInfo {
-    JITTargetAddress Addr = 0;
+    orc::ExecutorAddr Addr;
     MutableArrayRef<char> WorkingMem;
   };
 
