@@ -557,10 +557,18 @@ static void genAttributeVerifier(
   }
 }
 
+/// Op extra class definitions have a `$cppClass` substitution that is to be
+/// replaced by the C++ class name.
+static std::string formatExtraDefinitions(const Operator &op) {
+  FmtContext ctx = FmtContext().addSubst("cppClass", op.getCppClassName());
+  return tgfmt(op.getExtraClassDefinition(), &ctx).str();
+}
+
 OpEmitter::OpEmitter(const Operator &op,
                      const StaticVerifierFunctionEmitter &staticVerifierEmitter)
     : def(op.getDef()), op(op),
-      opClass(op.getCppClassName(), op.getExtraClassDeclaration()),
+      opClass(op.getCppClassName(), op.getExtraClassDeclaration(),
+              formatExtraDefinitions(op)),
       staticVerifierEmitter(staticVerifierEmitter) {
   verifyCtx.withOp("(*this->getOperation())");
   verifyCtx.addSubst("_ctxt", "this->getOperation()->getContext()");
