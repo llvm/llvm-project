@@ -281,27 +281,10 @@ public:
   /// Interface for setting the file search paths.
   void SetSearchPaths(std::vector<DirectoryLookup> dirs, unsigned angledDirIdx,
                       unsigned systemDirIdx, bool noCurDirSearch,
-                      llvm::DenseMap<unsigned, unsigned> searchDirToHSEntry) {
-    assert(angledDirIdx <= systemDirIdx && systemDirIdx <= dirs.size() &&
-        "Directory indices are unordered");
-    SearchDirs = std::move(dirs);
-    SearchDirsUsage.assign(SearchDirs.size(), false);
-    AngledDirIdx = angledDirIdx;
-    SystemDirIdx = systemDirIdx;
-    NoCurDirSearch = noCurDirSearch;
-    SearchDirToHSEntry = std::move(searchDirToHSEntry);
-    //LookupFileCache.clear();
-  }
+                      llvm::DenseMap<unsigned, unsigned> searchDirToHSEntry);
 
   /// Add an additional search path.
-  void AddSearchPath(const DirectoryLookup &dir, bool isAngled) {
-    unsigned idx = isAngled ? SystemDirIdx : AngledDirIdx;
-    SearchDirs.insert(SearchDirs.begin() + idx, dir);
-    SearchDirsUsage.insert(SearchDirsUsage.begin() + idx, false);
-    if (!isAngled)
-      AngledDirIdx++;
-    SystemDirIdx++;
-  }
+  void AddSearchPath(const DirectoryLookup &dir, bool isAngled);
 
   /// Set the list of system header prefixes.
   void SetSystemHeaderPrefixes(ArrayRef<std::pair<std::string, bool>> P) {

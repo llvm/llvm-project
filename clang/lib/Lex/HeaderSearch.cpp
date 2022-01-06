@@ -109,6 +109,30 @@ void HeaderSearch::PrintStats() {
                << NumSubFrameworkLookups << " subframework lookups.\n";
 }
 
+void HeaderSearch::SetSearchPaths(
+    std::vector<DirectoryLookup> dirs, unsigned int angledDirIdx,
+    unsigned int systemDirIdx, bool noCurDirSearch,
+    llvm::DenseMap<unsigned int, unsigned int> searchDirToHSEntry) {
+  assert(angledDirIdx <= systemDirIdx && systemDirIdx <= dirs.size() &&
+         "Directory indices are unordered");
+  SearchDirs = std::move(dirs);
+  SearchDirsUsage.assign(SearchDirs.size(), false);
+  AngledDirIdx = angledDirIdx;
+  SystemDirIdx = systemDirIdx;
+  NoCurDirSearch = noCurDirSearch;
+  SearchDirToHSEntry = std::move(searchDirToHSEntry);
+  //LookupFileCache.clear();
+}
+
+void HeaderSearch::AddSearchPath(const DirectoryLookup &dir, bool isAngled) {
+  unsigned idx = isAngled ? SystemDirIdx : AngledDirIdx;
+  SearchDirs.insert(SearchDirs.begin() + idx, dir);
+  SearchDirsUsage.insert(SearchDirsUsage.begin() + idx, false);
+  if (!isAngled)
+    AngledDirIdx++;
+  SystemDirIdx++;
+}
+
 std::vector<bool> HeaderSearch::computeUserEntryUsage() const {
   std::vector<bool> UserEntryUsage(HSOpts->UserEntries.size());
   for (unsigned I = 0, E = SearchDirsUsage.size(); I < E; ++I) {
