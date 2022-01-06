@@ -107,4 +107,6 @@ PYBIND11_MODULE(_mlir, m) {
   populateDialectLinalgSubmodule(linalgModule);
   populateDialectSparseTensorSubmodule(
       dialectsModule.def_submodule("sparse_tensor"), irModule);
+  populateDialectQuantSubmodule(dialectsModule.def_submodule("quant"),
+                                irModule);
 }

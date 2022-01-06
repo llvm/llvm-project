@@ -34,4 +34,3 @@ btst	#0, (%a1)
 ; CHECK:      btst  #-1, (%a0)
 ; CHECK-SAME: encoding: [0x08,0x10,0x00,0xff]
 btst	#-1, (%a0)
-

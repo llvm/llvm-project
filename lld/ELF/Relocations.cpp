@@ -1659,7 +1659,7 @@ void elf::postScanRelocations() {
   // Local symbols may need the aforementioned non-preemptible ifunc and GOT
   // handling. They don't need regular PLT.
   for (ELFFileBase *file : objectFiles)
-    for (Symbol *sym : cast<ELFFileBase>(file)->getLocalSymbols())
+    for (Symbol *sym : file->getLocalSymbols())
       fn(*sym);
 }
 

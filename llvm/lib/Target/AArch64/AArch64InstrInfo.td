@@ -200,8 +200,10 @@ def HasBRBE          : Predicate<"Subtarget->hasBRBE()">,
                        AssemblerPredicate<(all_of FeatureBRBE), "brbe">;
 def HasSPE_EEF       : Predicate<"Subtarget->hasSPE_EEF()">,
                        AssemblerPredicate<(all_of FeatureSPE_EEF), "spe-eef">;
-def HasHBC            : Predicate<"Subtarget->hasHBC()">,
+def HasHBC           : Predicate<"Subtarget->hasHBC()">,
                        AssemblerPredicate<(all_of FeatureHBC), "hbc">;
+def HasMOPS          : Predicate<"Subtarget->hasMOPS()">,
+                       AssemblerPredicate<(all_of FeatureMOPS), "mops">;
 def IsLE             : Predicate<"Subtarget->isLittleEndian()">;
 def IsBE             : Predicate<"!Subtarget->isLittleEndian()">;
 def IsWindows        : Predicate<"Subtarget->isTargetWindows()">;
@@ -8313,6 +8315,26 @@ let Predicates = [HasLS64] in {
   def : ST64BPattern<int_aarch64_st64b, ST64B>;
   def : ST64BPattern<int_aarch64_st64bv, ST64BV>;
   def : ST64BPattern<int_aarch64_st64bv0, ST64BV0>;
+}
+
+let Predicates = [HasMOPS] in {
+  defm CPYFP : MOPSMemoryCopyInsns<0b00, "cpyfp">;
+  defm CPYFM : MOPSMemoryCopyInsns<0b01, "cpyfm">;
+  defm CPYFE : MOPSMemoryCopyInsns<0b10, "cpyfe">;
+
+  defm CPYP : MOPSMemoryMoveInsns<0b00, "cpyp">;
+  defm CPYM : MOPSMemoryMoveInsns<0b01, "cpym">;
+  defm CPYE : MOPSMemoryMoveInsns<0b10, "cpye">;
+
+  defm SETP : MOPSMemorySetInsns<0b00, "setp">;
+  defm SETM : MOPSMemorySetInsns<0b01, "setm">;
+  defm SETE : MOPSMemorySetInsns<0b10, "sete">;
+}
+let Predicates = [HasMOPS, HasMTE] in {
+  defm SETGP     : MOPSMemorySetTaggingInsns<0b00, "setgp">;
+  defm SETGM     : MOPSMemorySetTaggingInsns<0b01, "setgm">;
+  // Can't use SETGE because it's a reserved name in TargetSelectionDAG.td
+  defm MOPSSETGE : MOPSMemorySetTaggingInsns<0b10, "setge">;
 }
 
 let Defs = [X16, X17], mayStore = 1, isCodeGenOnly = 1 in

@@ -36,6 +36,11 @@ void initializeCoroCleanupLegacyPass(PassRegistry &);
 // adds coroutine subfunctions to the SCC to be processed by IPO pipeline.
 // Async lowering similarily triggers a restart of the pipeline after it has
 // split the coroutine.
+//
+// FIXME: Refactor these attributes as LLVM attributes instead of string
+// attributes since these attributes are already used outside LLVM's
+// coroutine module.
+// FIXME: Remove these values once we remove the Legacy PM.
 #define CORO_PRESPLIT_ATTR "coroutine.presplit"
 #define UNPREPARED_FOR_SPLIT "0"
 #define PREPARED_FOR_SPLIT "1"
@@ -54,7 +59,7 @@ void updateCallGraph(Function &Caller, ArrayRef<Function *> Funcs,
 /// holding a pointer to the coroutine frame.
 void salvageDebugInfo(
     SmallDenseMap<llvm::Value *, llvm::AllocaInst *, 4> &DbgPtrAllocaCache,
-    DbgVariableIntrinsic *DVI, bool ReuseFrameSlot);
+    DbgVariableIntrinsic *DVI, bool OptimizeFrame);
 
 // Keeps data and helper functions for lowering coroutine intrinsics.
 struct LowererBase {
@@ -126,7 +131,7 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
   BasicBlock *AllocaSpillBlock;
 
   /// This would only be true if optimization are enabled.
-  bool ReuseFrameSlot;
+  bool OptimizeFrame;
 
   struct SwitchLoweringStorage {
     SwitchInst *ResumeSwitch;
@@ -272,8 +277,8 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
   void emitDealloc(IRBuilder<> &Builder, Value *Ptr, CallGraph *CG) const;
 
   Shape() = default;
-  explicit Shape(Function &F, bool ReuseFrameSlot = false)
-      : ReuseFrameSlot(ReuseFrameSlot) {
+  explicit Shape(Function &F, bool OptimizeFrame = false)
+      : OptimizeFrame(OptimizeFrame) {
     buildFrom(F);
   }
   void buildFrom(Function &F);

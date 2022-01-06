@@ -1206,7 +1206,7 @@ LogicalResult tosa::ResizeOp::inferReturnTypeComponents(
     inWidth = inputShape.getDimSize(2);
   }
 
-  int32_t shift = adaptor.shift().getValue().getSExtValue();
+  int32_t shift = adaptor.shift();
   llvm::SmallVector<int64_t> newShape;
   getI64Values(adaptor.output_size(), newShape);
   outputShape[1] = newShape[0];

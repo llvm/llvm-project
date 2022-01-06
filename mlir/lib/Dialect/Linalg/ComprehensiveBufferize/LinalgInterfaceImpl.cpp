@@ -23,11 +23,11 @@ namespace {
 // TODO: Ops in the linalg dialect can directly implement this interface.
 
 /// Generic conversion for any LinalgOp on tensors.
-static LogicalResult bufferizeLinalgOp(OpBuilder &b, LinalgOp op,
+static LogicalResult bufferizeLinalgOp(RewriterBase &rewriter, LinalgOp op,
                                        BufferizationState &state) {
   // Take a guard before anything else.
-  OpBuilder::InsertionGuard g(b);
-  b.setInsertionPoint(op);
+  OpBuilder::InsertionGuard g(rewriter);
+  rewriter.setInsertionPoint(op);
 
   // Nothing to do. This op is already bufferized.
   if (op.hasBufferSemantics())
@@ -45,14 +45,14 @@ static LogicalResult bufferizeLinalgOp(OpBuilder &b, LinalgOp op,
       newInputBuffers.push_back(opOperand->get());
       continue;
     }
-    newInputBuffers.push_back(state.lookupBuffer(opOperand->get()));
+    newInputBuffers.push_back(state.lookupBuffer(rewriter, opOperand->get()));
   }
 
   SmallVector<Value> newOutputBuffers;
   for (OpOperand *opOperand : op.getOutputOperands()) {
     OpResult opResult = op.getTiedOpResult(opOperand);
     assert(opResult && "could not find correspond OpResult");
-    Value resultBuffer = state.getResultBuffer(opResult);
+    Value resultBuffer = state.getResultBuffer(rewriter, opResult);
     if (!resultBuffer)
       return failure();
     newOutputBuffers.push_back(resultBuffer);
@@ -63,14 +63,15 @@ static LogicalResult bufferizeLinalgOp(OpBuilder &b, LinalgOp op,
   newOperands.append(newOutputBuffers.begin(), newOutputBuffers.end());
 
   // Set insertion point now that potential alloc/dealloc are introduced.
-  b.setInsertionPoint(op);
-  auto bufferizedOp = cast<LinalgOp>(
-      op.clone(b, op.getLoc(), /*resultTypes=*/TypeRange{}, newOperands));
+  rewriter.setInsertionPoint(op);
+  auto bufferizedOp = cast<LinalgOp>(op.clone(
+      rewriter, op.getLoc(), /*resultTypes=*/TypeRange{}, newOperands));
 
   // Replace the results of the old op with the new output buffers.
-  state.replaceOp(op, newOutputBuffers);
+  state.replaceOp(rewriter, op, newOutputBuffers);
 
-  return comprehensive_bufferize::bufferize(bufferizedOp.getBlock(), state);
+  return comprehensive_bufferize::bufferize(rewriter, bufferizedOp.getBlock(),
+                                            state);
 }
 
 /// Linalg OpResults usually bufferize inplace with their tied (output
@@ -177,9 +178,9 @@ struct LinalgOpInterface
     return BufferRelation::Equivalent;
   }
 
-  LogicalResult bufferize(Operation *op, OpBuilder &b,
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           BufferizationState &state) const {
-    return bufferizeLinalgOp(b, cast<LinalgOp>(op), state);
+    return bufferizeLinalgOp(rewriter, cast<LinalgOp>(op), state);
   }
 };
 
@@ -192,7 +193,7 @@ struct InitTensorOpInterface
     return false;
   }
 
-  LogicalResult bufferize(Operation *op, OpBuilder &b,
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           BufferizationState &state) const {
     auto initTensorOp = cast<linalg::InitTensorOp>(op);
 
@@ -200,9 +201,9 @@ struct InitTensorOpInterface
     if (initTensorOp->getUses().empty())
       return success();
 
-    Value alloc = state.createAllocDeallocPair(b, initTensorOp->getLoc(),
+    Value alloc = state.createAllocDeallocPair(rewriter, initTensorOp->getLoc(),
                                                initTensorOp.result());
-    state.replaceOp(op, alloc);
+    state.replaceOp(rewriter, op, alloc);
     return success();
   }
 };
@@ -251,20 +252,15 @@ struct TiledLoopOpInterface
 
   bool isAllocationHoistingBarrier(Operation *op) const { return true; }
 
-  LogicalResult bufferize(Operation *op, OpBuilder &b,
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           BufferizationState &state) const {
     auto tiledLoopOp = cast<linalg::TiledLoopOp>(op);
-
-    // Use IRRewriter instead of OpBuilder because it has additional helper
-    // functions.
-    IRRewriter rewriter(op->getContext());
-    rewriter.setInsertionPoint(tiledLoopOp);
 
     // Compute new inputs, outputs and results.
     SmallVector<Value> newInputs, newOutputs, newResults;
     for (Value value : tiledLoopOp.inputs()) {
       if (value.getType().isa<TensorType>()) {
-        newInputs.push_back(state.lookupBuffer(value));
+        newInputs.push_back(state.lookupBuffer(rewriter, value));
       } else {
         newInputs.push_back(value);
       }
@@ -272,8 +268,8 @@ struct TiledLoopOpInterface
     int nextResultNum = 0;
     for (Value value : tiledLoopOp.outputs()) {
       if (value.getType().isa<TensorType>()) {
-        Value buffer =
-            state.getResultBuffer(tiledLoopOp->getResult(nextResultNum++));
+        Value buffer = state.getResultBuffer(
+            rewriter, tiledLoopOp->getResult(nextResultNum++));
         newOutputs.push_back(buffer);
         newResults.push_back(buffer);
       } else {
@@ -333,10 +329,11 @@ struct TiledLoopOpInterface
     rewriter.eraseOp(oldTerminator);
 
     // Replace results and delete old op.
-    state.replaceOp(op, newResults);
+    state.replaceOp(rewriter, op, newResults);
 
     // Bufferize loop body.
-    return comprehensive_bufferize::bufferize(newTiledLoopOp.getBody(), state);
+    return comprehensive_bufferize::bufferize(rewriter,
+                                              newTiledLoopOp.getBody(), state);
   }
 };
 
@@ -358,7 +355,7 @@ struct YieldOpInterface
     return OpResult();
   }
 
-  LogicalResult bufferize(Operation *op, OpBuilder &b,
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           BufferizationState &state) const {
     auto yieldOp = cast<linalg::YieldOp>(op);
 

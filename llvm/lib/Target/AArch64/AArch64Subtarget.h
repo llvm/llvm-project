@@ -192,6 +192,7 @@ protected:
 
   // Armv8.8-A Extensions
   bool HasHBC = false;
+  bool HasMOPS = false;
 
   // Arm SVE2 extensions
   bool HasSVE2 = false;
@@ -279,6 +280,7 @@ protected:
   unsigned MaxPrefetchIterationsAhead = UINT_MAX;
   unsigned PrefFunctionLogAlignment = 0;
   unsigned PrefLoopLogAlignment = 0;
+  unsigned MaxBytesForLoopAlignment = 0;
   unsigned MaxJumpTableSize = 0;
   unsigned WideningBaseCost = 0;
 
@@ -470,6 +472,10 @@ public:
   }
   unsigned getPrefLoopLogAlignment() const { return PrefLoopLogAlignment; }
 
+  unsigned getMaxBytesForLoopAlignment() const {
+    return MaxBytesForLoopAlignment;
+  }
+
   unsigned getMaximumJumpTableSize() const { return MaxJumpTableSize; }
 
   unsigned getWideningBaseCost() const { return WideningBaseCost; }
@@ -579,6 +585,7 @@ public:
   bool hasEL2VMSA() const { return HasEL2VMSA; }
   bool hasEL3() const { return HasEL3; }
   bool hasHBC() const { return HasHBC; }
+  bool hasMOPS() const { return HasMOPS; }
 
   bool fixCortexA53_835769() const { return FixCortexA53_835769; }
 

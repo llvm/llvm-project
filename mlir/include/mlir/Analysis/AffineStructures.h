@@ -59,9 +59,6 @@ struct MutableAffineMap;
 ///
 class FlatAffineConstraints : public IntegerPolyhedron {
 public:
-  /// All derived classes of FlatAffineConstraints.
-  enum class Kind { FlatAffineConstraints, FlatAffineValueConstraints };
-
   /// Constructs a constraint system reserving memory for the specified number
   /// of constraints and identifiers.
   FlatAffineConstraints(unsigned numReservedInequalities,
@@ -99,9 +96,11 @@ public:
   virtual ~FlatAffineConstraints() = default;
 
   /// Return the kind of this FlatAffineConstraints.
-  virtual Kind getKind() const { return Kind::FlatAffineConstraints; }
+  Kind getKind() const override { return Kind::FlatAffineConstraints; }
 
-  static bool classof(const FlatAffineConstraints *cst) { return true; }
+  static bool classof(const IntegerPolyhedron *cst) {
+    return cst->getKind() == Kind::FlatAffineConstraints;
+  }
 
   /// Checks for emptiness by performing variable elimination on all
   /// identifiers, running the GCD test on each equality constraint, and
@@ -250,7 +249,7 @@ public:
   LogicalResult unionBoundingBox(const FlatAffineConstraints &other);
 
   /// Replaces the contents of this FlatAffineConstraints with `other`.
-  virtual void clearAndCopyFrom(const FlatAffineConstraints &other);
+  void clearAndCopyFrom(const IntegerPolyhedron &other) override;
 
   /// Returns the smallest known constant bound for the extent of the specified
   /// identifier (pos^th), i.e., the smallest known constant that is greater
@@ -499,7 +498,7 @@ public:
   /// Return the kind of this FlatAffineConstraints.
   Kind getKind() const override { return Kind::FlatAffineValueConstraints; }
 
-  static bool classof(const FlatAffineConstraints *cst) {
+  static bool classof(const IntegerPolyhedron *cst) {
     return cst->getKind() == Kind::FlatAffineValueConstraints;
   }
 
@@ -698,7 +697,7 @@ public:
   bool areIdsAlignedWithOther(const FlatAffineValueConstraints &other);
 
   /// Replaces the contents of this FlatAffineValueConstraints with `other`.
-  void clearAndCopyFrom(const FlatAffineConstraints &other) override;
+  void clearAndCopyFrom(const IntegerPolyhedron &other) override;
 
   /// Returns the Value associated with the pos^th identifier. Asserts if
   /// no Value identifier was associated.

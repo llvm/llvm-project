@@ -5508,9 +5508,9 @@ define i32 @sink_into_replication_region(i32 %y) {
 ; UNROLL-NO-IC-NEXT:    [[TMP46:%.*]] = shufflevector <4 x i32> [[TMP24]], <4 x i32> [[TMP44]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; UNROLL-NO-IC-NEXT:    [[TMP47]] = add <4 x i32> [[VEC_PHI]], [[TMP45]]
 ; UNROLL-NO-IC-NEXT:    [[TMP48]] = add <4 x i32> [[VEC_PHI2]], [[TMP46]]
+; UNROLL-NO-IC-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 8
 ; UNROLL-NO-IC-NEXT:    [[TMP49:%.*]] = select <4 x i1> [[TMP3]], <4 x i32> [[TMP47]], <4 x i32> [[VEC_PHI]]
 ; UNROLL-NO-IC-NEXT:    [[TMP50:%.*]] = select <4 x i1> [[TMP4]], <4 x i32> [[TMP48]], <4 x i32> [[VEC_PHI2]]
-; UNROLL-NO-IC-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 8
 ; UNROLL-NO-IC-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[STEP_ADD]], <i32 -4, i32 -4, i32 -4, i32 -4>
 ; UNROLL-NO-IC-NEXT:    [[TMP51:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; UNROLL-NO-IC-NEXT:    br i1 [[TMP51]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !prof [[PROF52:![0-9]+]], !llvm.loop [[LOOP53:![0-9]+]]
@@ -5578,9 +5578,9 @@ define i32 @sink_into_replication_region(i32 %y) {
 ; UNROLL-NO-VF-NEXT:    [[TMP8]] = phi i32 [ poison, [[PRED_UDIV_CONTINUE]] ], [ [[TMP7]], [[PRED_UDIV_IF4]] ]
 ; UNROLL-NO-VF-NEXT:    [[TMP9]] = add i32 [[VEC_PHI]], [[VECTOR_RECUR]]
 ; UNROLL-NO-VF-NEXT:    [[TMP10]] = add i32 [[VEC_PHI2]], [[TMP6]]
+; UNROLL-NO-VF-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 2
 ; UNROLL-NO-VF-NEXT:    [[TMP11:%.*]] = select i1 [[TMP3]], i32 [[TMP9]], i32 [[VEC_PHI]]
 ; UNROLL-NO-VF-NEXT:    [[TMP12:%.*]] = select i1 [[TMP4]], i32 [[TMP10]], i32 [[VEC_PHI2]]
-; UNROLL-NO-VF-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 2
 ; UNROLL-NO-VF-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; UNROLL-NO-VF-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !prof [[PROF51:![0-9]+]], !llvm.loop [[LOOP52:![0-9]+]]
 ; UNROLL-NO-VF:       middle.block:
@@ -5671,8 +5671,8 @@ define i32 @sink_into_replication_region(i32 %y) {
 ; SINK-AFTER-NEXT:    [[TMP23]] = phi <4 x i32> [ [[TMP18]], [[PRED_UDIV_CONTINUE6]] ], [ [[TMP22]], [[PRED_UDIV_IF7]] ]
 ; SINK-AFTER-NEXT:    [[TMP24:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR]], <4 x i32> [[TMP23]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; SINK-AFTER-NEXT:    [[TMP25]] = add <4 x i32> [[VEC_PHI]], [[TMP24]]
-; SINK-AFTER-NEXT:    [[TMP26:%.*]] = select <4 x i1> [[TMP3]], <4 x i32> [[TMP25]], <4 x i32> [[VEC_PHI]]
 ; SINK-AFTER-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
+; SINK-AFTER-NEXT:    [[TMP26:%.*]] = select <4 x i1> [[TMP3]], <4 x i32> [[TMP25]], <4 x i32> [[VEC_PHI]]
 ; SINK-AFTER-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], <i32 -4, i32 -4, i32 -4, i32 -4>
 ; SINK-AFTER-NEXT:    [[TMP27:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; SINK-AFTER-NEXT:    br i1 [[TMP27]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !prof [[PROF52:![0-9]+]], !llvm.loop [[LOOP53:![0-9]+]]
@@ -5766,8 +5766,8 @@ define i32 @sink_into_replication_region(i32 %y) {
 ; NO-SINK-AFTER-NEXT:    [[TMP23]] = phi <4 x i32> [ [[TMP18]], [[PRED_UDIV_CONTINUE6]] ], [ [[TMP22]], [[PRED_UDIV_IF7]] ]
 ; NO-SINK-AFTER-NEXT:    [[TMP24:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR]], <4 x i32> [[TMP23]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; NO-SINK-AFTER-NEXT:    [[TMP25]] = add <4 x i32> [[VEC_PHI]], [[TMP24]]
-; NO-SINK-AFTER-NEXT:    [[TMP26:%.*]] = select <4 x i1> [[TMP3]], <4 x i32> [[TMP25]], <4 x i32> [[VEC_PHI]]
 ; NO-SINK-AFTER-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
+; NO-SINK-AFTER-NEXT:    [[TMP26:%.*]] = select <4 x i1> [[TMP3]], <4 x i32> [[TMP25]], <4 x i32> [[VEC_PHI]]
 ; NO-SINK-AFTER-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], <i32 -4, i32 -4, i32 -4, i32 -4>
 ; NO-SINK-AFTER-NEXT:    [[TMP27:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-SINK-AFTER-NEXT:    br i1 [[TMP27]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !prof [[PROF52:![0-9]+]], !llvm.loop [[LOOP53:![0-9]+]]
@@ -6278,9 +6278,9 @@ define i32 @sink_into_replication_region_multiple(i32 *%x, i32 %y) {
 ; UNROLL-NO-IC-NEXT:    store i32 [[TMP10]], i32* [[TMP72]], align 4
 ; UNROLL-NO-IC-NEXT:    br label [[PRED_STORE_CONTINUE35]]
 ; UNROLL-NO-IC:       pred.store.continue35:
+; UNROLL-NO-IC-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 8
 ; UNROLL-NO-IC-NEXT:    [[TMP73:%.*]] = select <4 x i1> [[TMP11]], <4 x i32> [[TMP47]], <4 x i32> [[VEC_PHI]]
 ; UNROLL-NO-IC-NEXT:    [[TMP74:%.*]] = select <4 x i1> [[TMP12]], <4 x i32> [[TMP48]], <4 x i32> [[VEC_PHI7]]
-; UNROLL-NO-IC-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 8
 ; UNROLL-NO-IC-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[STEP_ADD]], <i32 -4, i32 -4, i32 -4, i32 -4>
 ; UNROLL-NO-IC-NEXT:    [[VEC_IND_NEXT6]] = add <4 x i32> [[STEP_ADD4]], <i32 4, i32 4, i32 4, i32 4>
 ; UNROLL-NO-IC-NEXT:    [[TMP75:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
@@ -6366,9 +6366,9 @@ define i32 @sink_into_replication_region_multiple(i32 *%x, i32 %y) {
 ; UNROLL-NO-VF-NEXT:    store i32 [[INDUCTION2]], i32* [[TMP12]], align 4
 ; UNROLL-NO-VF-NEXT:    br label [[PRED_STORE_CONTINUE9]]
 ; UNROLL-NO-VF:       pred.store.continue9:
+; UNROLL-NO-VF-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 2
 ; UNROLL-NO-VF-NEXT:    [[TMP13:%.*]] = select i1 [[TMP3]], i32 [[TMP9]], i32 [[VEC_PHI]]
 ; UNROLL-NO-VF-NEXT:    [[TMP14:%.*]] = select i1 [[TMP4]], i32 [[TMP10]], i32 [[VEC_PHI5]]
-; UNROLL-NO-VF-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 2
 ; UNROLL-NO-VF-NEXT:    [[TMP15:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; UNROLL-NO-VF-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !prof [[PROF51]], !llvm.loop [[LOOP55:![0-9]+]]
 ; UNROLL-NO-VF:       middle.block:
@@ -6494,8 +6494,8 @@ define i32 @sink_into_replication_region_multiple(i32 *%x, i32 %y) {
 ; SINK-AFTER-NEXT:    store i32 [[TMP6]], i32* [[TMP37]], align 4
 ; SINK-AFTER-NEXT:    br label [[PRED_STORE_CONTINUE15]]
 ; SINK-AFTER:       pred.store.continue15:
-; SINK-AFTER-NEXT:    [[TMP38:%.*]] = select <4 x i1> [[TMP7]], <4 x i32> [[TMP25]], <4 x i32> [[VEC_PHI]]
 ; SINK-AFTER-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
+; SINK-AFTER-NEXT:    [[TMP38:%.*]] = select <4 x i1> [[TMP7]], <4 x i32> [[TMP25]], <4 x i32> [[VEC_PHI]]
 ; SINK-AFTER-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], <i32 -4, i32 -4, i32 -4, i32 -4>
 ; SINK-AFTER-NEXT:    [[VEC_IND_NEXT3]] = add <4 x i32> [[VEC_IND2]], <i32 4, i32 4, i32 4, i32 4>
 ; SINK-AFTER-NEXT:    [[TMP39:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
@@ -6625,8 +6625,8 @@ define i32 @sink_into_replication_region_multiple(i32 *%x, i32 %y) {
 ; NO-SINK-AFTER-NEXT:    store i32 [[TMP6]], i32* [[TMP37]], align 4
 ; NO-SINK-AFTER-NEXT:    br label [[PRED_STORE_CONTINUE15]]
 ; NO-SINK-AFTER:       pred.store.continue15:
-; NO-SINK-AFTER-NEXT:    [[TMP38:%.*]] = select <4 x i1> [[TMP7]], <4 x i32> [[TMP25]], <4 x i32> [[VEC_PHI]]
 ; NO-SINK-AFTER-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
+; NO-SINK-AFTER-NEXT:    [[TMP38:%.*]] = select <4 x i1> [[TMP7]], <4 x i32> [[TMP25]], <4 x i32> [[VEC_PHI]]
 ; NO-SINK-AFTER-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], <i32 -4, i32 -4, i32 -4, i32 -4>
 ; NO-SINK-AFTER-NEXT:    [[VEC_IND_NEXT3]] = add <4 x i32> [[VEC_IND2]], <i32 4, i32 4, i32 4, i32 4>
 ; NO-SINK-AFTER-NEXT:    [[TMP39:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]

@@ -20,7 +20,7 @@ using namespace llvm;
 
 NoInferenceModelRunner::NoInferenceModelRunner(
     LLVMContext &Ctx, const std::vector<TensorSpec> &Inputs)
-    : MLModelRunner(Ctx) {
+    : MLModelRunner(Ctx, MLModelRunner::Kind::NoOp) {
   ValuesBuffer.reserve(Inputs.size());
   for (const auto &TS : Inputs)
     ValuesBuffer.push_back(std::make_unique<char[]>(TS.getElementCount() *

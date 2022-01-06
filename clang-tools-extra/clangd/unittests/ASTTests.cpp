@@ -427,6 +427,29 @@ TEST(ClangdAST, GetAttributes) {
               Contains(attrKind(attr::Unlikely)));
 }
 
+TEST(ClangdAST, HasReservedName) {
+  ParsedAST AST = TestTU::withCode(R"cpp(
+    void __foo();
+    namespace std {
+      inline namespace __1 { class error_code; }
+      namespace __detail { int secret; }
+    }
+  )cpp")
+                      .build();
+
+  EXPECT_TRUE(hasReservedName(findUnqualifiedDecl(AST, "__foo")));
+  EXPECT_FALSE(
+      hasReservedScope(*findUnqualifiedDecl(AST, "__foo").getDeclContext()));
+
+  EXPECT_FALSE(hasReservedName(findUnqualifiedDecl(AST, "error_code")));
+  EXPECT_FALSE(hasReservedScope(
+      *findUnqualifiedDecl(AST, "error_code").getDeclContext()));
+
+  EXPECT_FALSE(hasReservedName(findUnqualifiedDecl(AST, "secret")));
+  EXPECT_TRUE(
+      hasReservedScope(*findUnqualifiedDecl(AST, "secret").getDeclContext()));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

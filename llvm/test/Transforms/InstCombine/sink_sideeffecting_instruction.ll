@@ -117,11 +117,11 @@ define i32 @sink_write_to_use(i1 %c) {
 ; CHECK-LABEL: @sink_write_to_use(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAR:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[VAR3:%.*]] = call i32 @unknown(i32* nonnull writeonly [[VAR]]) #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[EARLY_RETURN:%.*]], label [[USE_BLOCK:%.*]]
 ; CHECK:       early_return:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       use_block:
+; CHECK-NEXT:    [[VAR3:%.*]] = call i32 @unknown(i32* nonnull writeonly [[VAR]]) #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    ret i32 [[VAR3]]
 ;
 entry:
@@ -140,11 +140,11 @@ define i32 @sink_readwrite_to_use(i1 %c) {
 ; CHECK-LABEL: @sink_readwrite_to_use(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAR:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[VAR3:%.*]] = call i32 @unknown(i32* nonnull [[VAR]]) #[[ATTR1]]
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[EARLY_RETURN:%.*]], label [[USE_BLOCK:%.*]]
 ; CHECK:       early_return:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       use_block:
+; CHECK-NEXT:    [[VAR3:%.*]] = call i32 @unknown(i32* nonnull [[VAR]]) #[[ATTR1]]
 ; CHECK-NEXT:    ret i32 [[VAR3]]
 ;
 entry:
@@ -163,12 +163,12 @@ define i32 @sink_bitcast(i1 %c) {
 ; CHECK-LABEL: @sink_bitcast(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAR:%.*]] = alloca i8, align 8
-; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast i8* [[VAR]] to i32*
-; CHECK-NEXT:    [[VAR3:%.*]] = call i32 @unknown(i32* nonnull [[BITCAST]]) #[[ATTR1]]
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[EARLY_RETURN:%.*]], label [[USE_BLOCK:%.*]]
 ; CHECK:       early_return:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       use_block:
+; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast i8* [[VAR]] to i32*
+; CHECK-NEXT:    [[VAR3:%.*]] = call i32 @unknown(i32* nonnull [[BITCAST]]) #[[ATTR1]]
 ; CHECK-NEXT:    ret i32 [[VAR3]]
 ;
 entry:
@@ -189,12 +189,12 @@ define i32 @sink_gep1(i1 %c) {
 ; CHECK-LABEL: @sink_gep1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAR1:%.*]] = alloca [2 x i32], align 8
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[VAR1]], i64 0, i64 1
-; CHECK-NEXT:    [[VAR3:%.*]] = call i32 @unknown(i32* nonnull [[GEP]]) #[[ATTR1]]
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[EARLY_RETURN:%.*]], label [[USE_BLOCK:%.*]]
 ; CHECK:       early_return:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       use_block:
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[VAR1]], i64 0, i64 1
+; CHECK-NEXT:    [[VAR3:%.*]] = call i32 @unknown(i32* nonnull [[GEP]]) #[[ATTR1]]
 ; CHECK-NEXT:    ret i32 [[VAR3]]
 ;
 entry:
@@ -215,12 +215,12 @@ define i32 @sink_gep2(i1 %c) {
 ; CHECK-LABEL: @sink_gep2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAR1:%.*]] = alloca [2 x i32], align 8
-; CHECK-NEXT:    [[VAR1_SUB:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[VAR1]], i64 0, i64 0
-; CHECK-NEXT:    [[VAR3:%.*]] = call i32 @unknown(i32* nonnull [[VAR1_SUB]]) #[[ATTR1]]
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[EARLY_RETURN:%.*]], label [[USE_BLOCK:%.*]]
 ; CHECK:       early_return:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       use_block:
+; CHECK-NEXT:    [[VAR1_SUB:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[VAR1]], i64 0, i64 0
+; CHECK-NEXT:    [[VAR3:%.*]] = call i32 @unknown(i32* nonnull [[VAR1_SUB]]) #[[ATTR1]]
 ; CHECK-NEXT:    ret i32 [[VAR3]]
 ;
 entry:
@@ -240,12 +240,12 @@ define i32 @sink_addrspacecast(i1 %c) {
 ; CHECK-LABEL: @sink_addrspacecast(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAR:%.*]] = alloca i32, align 8
-; CHECK-NEXT:    [[CAST:%.*]] = addrspacecast i32* [[VAR]] to i32 addrspace(2)*
-; CHECK-NEXT:    [[VAR3:%.*]] = call i32 @unknown.as2(i32 addrspace(2)* [[CAST]]) #[[ATTR1]]
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[EARLY_RETURN:%.*]], label [[USE_BLOCK:%.*]]
 ; CHECK:       early_return:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       use_block:
+; CHECK-NEXT:    [[CAST:%.*]] = addrspacecast i32* [[VAR]] to i32 addrspace(2)*
+; CHECK-NEXT:    [[VAR3:%.*]] = call i32 @unknown.as2(i32 addrspace(2)* [[CAST]]) #[[ATTR1]]
 ; CHECK-NEXT:    ret i32 [[VAR3]]
 ;
 entry:
@@ -394,11 +394,11 @@ define i32 @sink_lifetime3(i1 %c) {
 ; CHECK-LABEL: @sink_lifetime3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAR:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[VAR3:%.*]] = call i32 @unknown(i32* nonnull [[VAR]]) #[[ATTR1]]
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[EARLY_RETURN:%.*]], label [[USE_BLOCK:%.*]]
 ; CHECK:       early_return:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       use_block:
+; CHECK-NEXT:    [[VAR3:%.*]] = call i32 @unknown(i32* nonnull [[VAR]]) #[[ATTR1]]
 ; CHECK-NEXT:    ret i32 [[VAR3]]
 ;
 entry:
@@ -445,6 +445,33 @@ early_return:
 use_block:
   ret i32 %var3
 }
+
+; Mostly checking that trying to sink a non-call doesn't crash (i.e. prior bug)
+define i32 @sink_atomicrmw_to_use(i1 %c) {
+; CHECK-LABEL: @sink_atomicrmw_to_use(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAR:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 0, i32* [[VAR]], align 4
+; CHECK-NEXT:    [[VAR3:%.*]] = atomicrmw add i32* [[VAR]], i32 1 seq_cst, align 4
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[EARLY_RETURN:%.*]], label [[USE_BLOCK:%.*]]
+; CHECK:       early_return:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       use_block:
+; CHECK-NEXT:    ret i32 [[VAR3]]
+;
+entry:
+  %var = alloca i32, align 4
+  store i32 0, i32* %var
+  %var3 = atomicrmw add i32* %var, i32 1 seq_cst, align 4
+  br i1 %c, label %early_return, label %use_block
+
+early_return:
+  ret i32 0
+
+use_block:
+  ret i32 %var3
+}
+
 
 declare i32 @bar()
 declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)

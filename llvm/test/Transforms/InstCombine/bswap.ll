@@ -37,6 +37,42 @@ define <2 x i32> @test1_vector(<2 x i32> %i) {
   ret <2 x i32> %t12
 }
 
+define i16 @test1_trunc(i32 %i) {
+; CHECK-LABEL: @test1_trunc(
+; CHECK-NEXT:    [[T1:%.*]] = lshr i32 [[I:%.*]], 24
+; CHECK-NEXT:    [[T3:%.*]] = lshr i32 [[I]], 8
+; CHECK-NEXT:    [[T4:%.*]] = and i32 [[T3]], 65280
+; CHECK-NEXT:    [[T5:%.*]] = or i32 [[T1]], [[T4]]
+; CHECK-NEXT:    [[T13:%.*]] = trunc i32 [[T5]] to i16
+; CHECK-NEXT:    ret i16 [[T13]]
+;
+  %t1 = lshr i32 %i, 24
+  %t3 = lshr i32 %i, 8
+  %t4 = and i32 %t3, 65280
+  %t5 = or i32 %t1, %t4
+  %t13 = trunc i32 %t5 to i16
+  ret i16 %t13
+}
+
+define i16 @test1_trunc_extra_use(i32 %i) {
+; CHECK-LABEL: @test1_trunc_extra_use(
+; CHECK-NEXT:    [[T1:%.*]] = lshr i32 [[I:%.*]], 24
+; CHECK-NEXT:    [[T3:%.*]] = lshr i32 [[I]], 8
+; CHECK-NEXT:    [[T4:%.*]] = and i32 [[T3]], 65280
+; CHECK-NEXT:    [[T5:%.*]] = or i32 [[T1]], [[T4]]
+; CHECK-NEXT:    call void @extra_use(i32 [[T5]])
+; CHECK-NEXT:    [[T13:%.*]] = trunc i32 [[T5]] to i16
+; CHECK-NEXT:    ret i16 [[T13]]
+;
+  %t1 = lshr i32 %i, 24
+  %t3 = lshr i32 %i, 8
+  %t4 = and i32 %t3, 65280
+  %t5 = or i32 %t1, %t4
+  call void @extra_use(i32 %t5)
+  %t13 = trunc i32 %t5 to i16
+  ret i16 %t13
+}
+
 define i32 @test2(i32 %arg) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    [[T14:%.*]] = call i32 @llvm.bswap.i32(i32 [[ARG:%.*]])
@@ -877,4 +913,20 @@ define i64 @PR47191_problem4(i64 %0) {
   %21 = and i64 %20, 1095216660480
   %22 = add i64 %19, %21
   ret i64 %22
+}
+
+declare i64 @llvm.bswap.i64(i64)
+
+define i32 @PR50910(i64 %t0) {
+; CHECK-LABEL: @PR50910(
+; CHECK-NEXT:    [[T5:%.*]] = call i64 @llvm.bswap.i64(i64 [[T0:%.*]])
+; CHECK-NEXT:    [[T6:%.*]] = trunc i64 [[T5]] to i32
+; CHECK-NEXT:    ret i32 [[T6]]
+;
+  %t2 = and i64 %t0, 72057594037927935
+  %t3 = call i64 @llvm.bswap.i64(i64 %t2)
+  %t4 = lshr i64 %t0, 56
+  %t5 = or i64 %t3, %t4
+  %t6 = trunc i64 %t5 to i32
+  ret i32 %t6
 }
