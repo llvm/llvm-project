@@ -592,12 +592,12 @@ TEST(FlatAffineConstraintsTest, computeLocalReprConstantFloorDiv) {
   fac.addInequality({1, 2, -8, 1, 10});
   fac.addEquality({1, 2, -4, 1, 10});
 
-  fac.addLocalFloorDiv({0, 0, 0, 0, 10}, 30);
-  fac.addLocalFloorDiv({0, 0, 0, 0, 0, 99}, 101);
+  fac.addLocalFloorDiv({0, 0, 0, 0, 100}, 30);
+  fac.addLocalFloorDiv({0, 0, 0, 0, 0, 206}, 101);
 
-  std::vector<SmallVector<int64_t, 8>> divisions = {{0, 0, 0, 0, 0, 0, 10},
-                                                    {0, 0, 0, 0, 0, 0, 99}};
-  SmallVector<unsigned, 8> denoms = {30, 101};
+  std::vector<SmallVector<int64_t, 8>> divisions = {{0, 0, 0, 0, 0, 0, 3},
+                                                    {0, 0, 0, 0, 0, 0, 2}};
+  SmallVector<unsigned, 8> denoms = {1, 1};
 
   // Check if floordivs with constant numerator can be computed.
   checkDivisionRepresentation(fac, divisions, denoms);
@@ -750,6 +750,31 @@ TEST(FlatAffineConstraintsTest, mergeDivisionsSimple) {
     EXPECT_EQ(fac1.getNumLocalIds(), 2u);
     EXPECT_EQ(fac2.getNumLocalIds(), 2u);
   }
+
+  {
+    // Division Normalization test.
+    // (x) : (exists z, y  = [x / 2] : x = 3y and x + z + 1 >= 0).
+    FlatAffineConstraints fac1(1, 0, 1);
+    // This division would be normalized.
+    fac1.addLocalFloorDiv({3, 0, 0}, 6); // y = [3x / 6] -> [x/2].
+    fac1.addEquality({1, 0, -3, 0});     // x = 3z.
+    fac1.addInequality({1, 1, 0, 1});    // x + y + 1 >= 0.
+
+    // (x) : (exists y = [x / 2], z : x = 5y).
+    FlatAffineConstraints fac2(1);
+    fac2.addLocalFloorDiv({1, 0}, 2); // y = [x / 2].
+    fac2.addEquality({1, -5, 0});     // x = 5y.
+    fac2.appendLocalId();             // Add local id z.
+
+    fac1.mergeLocalIds(fac2);
+
+    // Local space should be same.
+    EXPECT_EQ(fac1.getNumLocalIds(), fac2.getNumLocalIds());
+
+    // One division should be matched + 2 unmatched local ids.
+    EXPECT_EQ(fac1.getNumLocalIds(), 3u);
+    EXPECT_EQ(fac2.getNumLocalIds(), 3u);
+  }
 }
 
 TEST(FlatAffineConstraintsTest, mergeDivisionsNestedDivsions) {
@@ -800,6 +825,29 @@ TEST(FlatAffineConstraintsTest, mergeDivisionsNestedDivsions) {
     EXPECT_EQ(fac1.getNumLocalIds(), 3u);
     EXPECT_EQ(fac2.getNumLocalIds(), 3u);
   }
+  {
+    // (x) : (exists y = [x / 2], z = [x + y / 3]: y + z >= x).
+    FlatAffineConstraints fac1(1);
+    fac1.addLocalFloorDiv({2, 0}, 4);    // y = [2x / 4] -> [x / 2].
+    fac1.addLocalFloorDiv({1, 1, 0}, 3); // z = [x + y / 3].
+    fac1.addInequality({-1, 1, 1, 0});   // y + z >= x.
+
+    // (x) : (exists y = [x / 2], z = [x + y / 3]: y + z <= x).
+    FlatAffineConstraints fac2(1);
+    fac2.addLocalFloorDiv({1, 0}, 2); // y = [x / 2].
+    // This division would be normalized.
+    fac2.addLocalFloorDiv({3, 3, 0}, 9); // z = [3x + 3y / 9] -> [x + y / 3].
+    fac2.addInequality({1, -1, -1, 0});  // y + z <= x.
+
+    fac1.mergeLocalIds(fac2);
+
+    // Local space should be same.
+    EXPECT_EQ(fac1.getNumLocalIds(), fac2.getNumLocalIds());
+
+    // 2 divisions should be matched.
+    EXPECT_EQ(fac1.getNumLocalIds(), 2u);
+    EXPECT_EQ(fac2.getNumLocalIds(), 2u);
+  }
 }
 
 TEST(FlatAffineConstraintsTest, mergeDivisionsConstants) {
@@ -813,6 +861,30 @@ TEST(FlatAffineConstraintsTest, mergeDivisionsConstants) {
     // (x) : (exists y = [x + 1 / 3], z = [x + 2 / 3]: y + z <= x).
     FlatAffineConstraints fac2(1);
     fac2.addLocalFloorDiv({1, 1}, 2);    // y = [x + 1 / 2].
+    fac2.addLocalFloorDiv({1, 0, 2}, 3); // z = [x + 2 / 3].
+    fac2.addInequality({1, -1, -1, 0});  // y + z <= x.
+
+    fac1.mergeLocalIds(fac2);
+
+    // Local space should be same.
+    EXPECT_EQ(fac1.getNumLocalIds(), fac2.getNumLocalIds());
+
+    // 2 divisions should be matched.
+    EXPECT_EQ(fac1.getNumLocalIds(), 2u);
+    EXPECT_EQ(fac2.getNumLocalIds(), 2u);
+  }
+  {
+    // (x) : (exists y = [x + 1 / 3], z = [x + 2 / 3]: y + z >= x).
+    FlatAffineConstraints fac1(1);
+    fac1.addLocalFloorDiv({1, 1}, 2); // y = [x + 1 / 2].
+    // Normalization test.
+    fac1.addLocalFloorDiv({3, 0, 6}, 9); // z = [3x + 6 / 9] -> [x + 2 / 3].
+    fac1.addInequality({-1, 1, 1, 0});   // y + z >= x.
+
+    // (x) : (exists y = [x + 1 / 3], z = [x + 2 / 3]: y + z <= x).
+    FlatAffineConstraints fac2(1);
+    // Normalization test.
+    fac2.addLocalFloorDiv({2, 2}, 4);    // y = [2x + 2 / 4] -> [x + 1 / 2].
     fac2.addLocalFloorDiv({1, 0, 2}, 3); // z = [x + 2 / 3].
     fac2.addInequality({1, -1, -1, 0});  // y + z <= x.
 
