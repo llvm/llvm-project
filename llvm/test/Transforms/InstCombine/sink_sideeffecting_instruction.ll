@@ -446,6 +446,33 @@ use_block:
   ret i32 %var3
 }
 
+; Mostly checking that trying to sink a non-call doesn't crash (i.e. prior bug)
+define i32 @sink_atomicrmw_to_use(i1 %c) {
+; CHECK-LABEL: @sink_atomicrmw_to_use(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAR:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 0, i32* [[VAR]], align 4
+; CHECK-NEXT:    [[VAR3:%.*]] = atomicrmw add i32* [[VAR]], i32 1 seq_cst, align 4
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[EARLY_RETURN:%.*]], label [[USE_BLOCK:%.*]]
+; CHECK:       early_return:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       use_block:
+; CHECK-NEXT:    ret i32 [[VAR3]]
+;
+entry:
+  %var = alloca i32, align 4
+  store i32 0, i32* %var
+  %var3 = atomicrmw add i32* %var, i32 1 seq_cst, align 4
+  br i1 %c, label %early_return, label %use_block
+
+early_return:
+  ret i32 0
+
+use_block:
+  ret i32 %var3
+}
+
+
 declare i32 @bar()
 declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
 declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
