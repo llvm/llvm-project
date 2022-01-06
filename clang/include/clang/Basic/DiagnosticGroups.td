@@ -241,6 +241,7 @@ def Documentation : DiagGroup<"documentation",
 
 def EmptyBody : DiagGroup<"empty-body">;
 def Exceptions : DiagGroup<"exceptions">;
+def DeclarationAfterStatement : DiagGroup<"declaration-after-statement">;
 
 def GNUEmptyInitializer : DiagGroup<"gnu-empty-initializer">;
 def GNUEmptyStruct : DiagGroup<"gnu-empty-struct">;

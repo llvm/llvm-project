@@ -9861,8 +9861,11 @@ def err_constant_integer_arg_type : Error<
   "argument to %0 must be a constant integer">;
 
 def ext_mixed_decls_code : Extension<
-  "ISO C90 forbids mixing declarations and code">,
-  InGroup<DiagGroup<"declaration-after-statement">>;
+  "mixing declarations and code is a C99 extension">,
+  InGroup<DeclarationAfterStatement>;
+def warn_mixed_decls_code : Warning<
+  "mixing declarations and code is incompatible with standards before C99">,
+  InGroup<DeclarationAfterStatement>, DefaultIgnore;
 
 def err_non_local_variable_decl_in_for : Error<
   "declaration of non-local variable in 'for' loop">;
