@@ -3727,12 +3727,13 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
 /// beginning of DestBlock, which can only happen if it's safe to move the
 /// instruction past all of the instructions between it and the end of its
 /// block.
-static bool TryToSinkInstruction(Instruction *I, BasicBlock *DestBlock) {
+static bool TryToSinkInstruction(Instruction *I, BasicBlock *DestBlock,
+                                 TargetLibraryInfo &TLI) {
   assert(I->getUniqueUndroppableUser() && "Invariants didn't hold!");
   BasicBlock *SrcBlock = I->getParent();
 
   // Cannot move control-flow-involving, volatile loads, vaarg, etc.
-  if (isa<PHINode>(I) || I->isEHPad() || I->mayHaveSideEffects() ||
+  if (isa<PHINode>(I) || I->isEHPad() || I->mayThrow() || !I->willReturn() ||
       I->isTerminator())
     return false;
 
@@ -3752,6 +3753,51 @@ static bool TryToSinkInstruction(Instruction *I, BasicBlock *DestBlock) {
     if (CI->isConvergent())
       return false;
   }
+
+  // Unless we can prove that the memory write isn't visibile except on the
+  // path we're sinking to, we must bail.
+  if (I->mayWriteToMemory()) {
+    // Check for case where the call writes to an otherwise dead alloca.  This
+    // shows up for unused out-params in idiomatic C/C++ code.
+    auto *CB = cast<CallBase>(I);
+    if (!CB)
+      // TODO: handle e.g. store to alloca here - only worth doing if we extend
+      // to allow reload along used path as described below.  Otherwise, this
+      // is simply a store to a dead allocation which will be removed.
+      return false;
+    Optional<MemoryLocation> Dest = MemoryLocation::getForDest(CB, TLI);
+    if (!Dest)
+      return false;
+    auto *AI = dyn_cast<AllocaInst>(getUnderlyingObject(Dest->Ptr));
+    if (!AI)
+      // TODO: allow malloc?
+      return false;
+    // TODO: allow memory access dominated by move point?  Note that since AI
+    // could have a reference to itself captured by the call, we would need to
+    // account for cycles in doing so.
+    SmallVector<const User *> AllocaUsers;
+    SmallPtrSet<const User *, 4> Visited;
+    auto pushUsers = [&](const Instruction &I) {
+      for (const User *U : I.users()) {
+        if (Visited.insert(U).second)
+          AllocaUsers.push_back(U);
+      }
+    };
+    pushUsers(*AI);
+    while (!AllocaUsers.empty()) {
+      auto *UserI = cast<Instruction>(AllocaUsers.pop_back_val());
+      if (isa<BitCastInst>(UserI) || isa<GetElementPtrInst>(UserI) ||
+          isa<AddrSpaceCastInst>(UserI)) {
+        pushUsers(*UserI);
+        continue;
+      }
+      if (UserI == CB)
+        continue;
+      // TODO: support lifetime.start/end here
+      return false;
+    }
+  }
+
   // We can only sink load instructions if there is nothing between the load and
   // the end of block that could change the value.
   if (I->mayReadFromMemory()) {
@@ -3760,7 +3806,7 @@ static bool TryToSinkInstruction(Instruction *I, BasicBlock *DestBlock) {
     // successor block.
     if (DestBlock->getUniquePredecessor() != I->getParent())
       return false;
-    for (BasicBlock::iterator Scan = I->getIterator(),
+    for (BasicBlock::iterator Scan = std::next(I->getIterator()),
                               E = I->getParent()->end();
          Scan != E; ++Scan)
       if (Scan->mayWriteToMemory())
@@ -3936,7 +3982,7 @@ bool InstCombinerImpl::run() {
     if (OptBB) {
       auto *UserParent = *OptBB;
       // Okay, the CFG is simple enough, try to sink this instruction.
-      if (TryToSinkInstruction(I, UserParent)) {
+      if (TryToSinkInstruction(I, UserParent, TLI)) {
         LLVM_DEBUG(dbgs() << "IC: Sink: " << *I << '\n');
         MadeIRChange = true;
         // We'll add uses of the sunk instruction below, but since
