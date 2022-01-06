@@ -25,6 +25,9 @@ namespace bufferization_ext {
 // TODO: These ops should implement BufferizableOpInterface directly when moved
 // to the Bufferization dialect.
 
+/// Bufferization of bufferization.to_memref. to_memref(to_tensor(x)) is folded
+/// to x. Other to_memref ops are ignored during bufferization.
+///
 /// ToMemrefOp casts a tensor into a memref. The resulting memref is the memory
 /// location of the incoming tensor once it will be bufferized. In the anlysis,
 /// the incoming tensor is assumed to bufferize to a memory read and to an
@@ -41,7 +44,7 @@ struct ToMemrefOpInterface
                                                     bufferization::ToMemrefOp> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
                               const BufferizationState &state) const {
-    // It is unknown whether the resulting MemRef will be read or not.
+    // It is unknown whether the resulting memref will be read or not.
     return true;
   }
 
@@ -58,10 +61,13 @@ struct ToMemrefOpInterface
     if (auto toTensorOp =
             toMemrefOp.tensor().getDefiningOp<bufferization::ToTensorOp>()) {
       Value buffer = toTensorOp.memref();
+
+      // Insert cast in case to_memref(to_tensor(x))'s type is different from
+      // x's type.
       if (toTensorOp.memref().getType() != toMemrefOp.getType())
         buffer = rewriter.create<memref::CastOp>(toMemrefOp.getLoc(), buffer,
                                                  toMemrefOp.getType());
-      rewriter.replaceOp(toMemrefOp, buffer);
+      replaceOpWithBufferizedValues(rewriter, toMemrefOp, buffer);
       return success();
     }
 
@@ -69,16 +75,19 @@ struct ToMemrefOpInterface
   }
 };
 
-/// ToTensorOp conceptually loads a tensor from a memory location. Such ops do
-/// not lower any further, and they should have disappeared by the time the
-/// input is fully bufferized.
+/// Bufferization of bufferization.to_tensor. Such ops cannot be bufferized.
+/// However, other ops that are using to_tensor's result will eventually be
+/// bufferized. At that point, they will start using to_tensor's memref operand.
+/// Once all users of to_tensor are bufferized, the op will not have any users
+/// anymore and DCE away.
 ///
-/// The analysis has no information about the memref that is loaded from by the
-/// ToTensorOp. We have to assume that the loaded tensor may after bufferization
-/// potentially alias with any other bufferized tensor. Since ToTensorOp and
-/// ToMemrefOp have no aliasing OpOperand/OpResult pairs, this cannot be encoded
-/// directly in the analysis. However, declaring ToTensorOp results as not
-/// writable also enforces a buffer copy and has the same effect.
+/// ToTensorOp conceptually loads a tensor from a memory location. The analysis
+/// has no information about the memref that is loaded from by ToTensorOp. We
+/// have to assume that the loaded tensor may after bufferization potentially
+/// alias with any other bufferized tensor. Since ToTensorOp and ToMemrefOp have
+/// no aliasing OpOperand/OpResult pairs, this cannot be encoded directly in the
+/// analysis. However, declaring ToTensorOp results as not writable enforces a
+/// buffer copy and has the same effect.
 struct ToTensorOpInterface
     : public BufferizableOpInterface::ExternalModel<ToTensorOpInterface,
                                                     bufferization::ToTensorOp> {
@@ -89,7 +98,7 @@ struct ToTensorOpInterface
 
   bool isWritable(Operation *op, Value value,
                   const BufferizationState &state) const {
-    // It is unknown whether the MemRef operand is writable or not.
+    // It is unknown whether the memref operand is writable or not.
     return false;
   }
 };

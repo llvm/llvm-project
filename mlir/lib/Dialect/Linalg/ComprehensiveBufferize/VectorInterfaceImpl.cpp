@@ -17,6 +17,8 @@ namespace linalg {
 namespace comprehensive_bufferize {
 namespace vector_ext {
 
+/// Bufferization of vector.transfer_read. Replaced with a new
+/// vector.transfer_read that operates on a memref.
 struct TransferReadOpInterface
     : public BufferizableOpInterface::ExternalModel<TransferReadOpInterface,
                                                     vector::TransferReadOp> {
@@ -55,6 +57,8 @@ struct TransferReadOpInterface
   }
 };
 
+/// Bufferization of vector.transfer_write. Replace with a new
+/// vector.transfer_write that operates on a memref.
 struct TransferWriteOpInterface
     : public BufferizableOpInterface::ExternalModel<TransferWriteOpInterface,
                                                     vector::TransferWriteOp> {
@@ -94,13 +98,12 @@ struct TransferWriteOpInterface
     // Create a new transfer_write on buffer that doesn't have a return value.
     // Leave the previous transfer_write to dead code as it still has uses at
     // this point.
-    Value resultBuffer = state.getResultBuffer(rewriter, op->getResult(0));
-    if (!resultBuffer)
-      return failure();
+    FailureOr<Value> resultBuffer =
+        state.getResultBuffer(rewriter, op->getResult(0));
     rewriter.create<vector::TransferWriteOp>(
-        writeOp.getLoc(), writeOp.vector(), resultBuffer, writeOp.indices(),
+        writeOp.getLoc(), writeOp.vector(), *resultBuffer, writeOp.indices(),
         writeOp.permutation_mapAttr(), writeOp.in_boundsAttr());
-    replaceOpWithBufferizedValues(rewriter, op, resultBuffer);
+    replaceOpWithBufferizedValues(rewriter, op, *resultBuffer);
 
     return success();
   }

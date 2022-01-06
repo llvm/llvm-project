@@ -5,6 +5,88 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Module bufferization is an extension of Comprehensive Bufferize that
+// bufferizes function boundaries. It provides `BufferizableOpInterface`
+// implementations for FuncOp, CallOp and ReturnOp, along with a few helper
+// functions that control the order in which functions are bufferized.
+//
+// Three cases can occur during bufferization of FuncOps.
+//
+//     i. inplaceable function arguments may be reused in place after the
+//        function itself has been bufferized. This is encoded by IR resembling:
+//
+//        ```
+//          #map = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
+//           func @foo(%A: tensor<?xf32> {linalg.inplaceable = true})
+//              -> tensor<?xf32> {
+//            %0 = bufferization.to_memref %A : memref<?xf32, #map>
+//            // ... uses of %0
+//            %res = bufferization.to_tensor %0 : memref<?xf32, #map>
+//            return %res : tensor<?xf32>
+//          }
+//        ```
+//
+//        this is the cue for the bufferization of the function foo (and calls
+//        to it) may bufferize to `func @foo(%A: memref<?xf32, some_layout>)`.
+//        To fully achieve bufferization, an additional analysis is needed to
+//        determine whether function argument/operand pairs bufferize to a
+//        single inplace buffer argument (i.e. functions may return tensors in
+//        arbitrary order that may not match argument numbers).
+//
+//    ii. results that don't map to an inplaceable function argument are
+//        generally allocated. Since memref semantics wrt ownership of the
+//        underlying memory region are not well-defined, comprehensive
+//        bufferization chooses to perform allocations in a scoped fashion:
+//        returning memrefs is always considered illegal.
+//        Such scenarios are encoded by IR resembling:
+//
+//        ```
+//          #map = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
+//          func @foo(%A: tensor<?xf32> {linalg.inplaceable = true})
+//              -> tensor<?xf32> {
+//            %0 = bufferization.to_memref %A : memref<?xf32, #map>
+//            %1 = memref.dim %0, %c0 : memref<?xf32, #map>
+//            %2 = memref.alloc(%1) : memref<?xf32>
+//            %3 = memref.cast %2 : memref<?xf32> to memref<?xf32, #map>
+//            // ... uses of %3
+//            memref.dealloc %2 : memref<?xf32, #map>
+//            %res = bufferization.to_tensor %3 : memref<?xf32, #map>
+//            return %res : tensor<?xf32>
+//          }
+//       ```
+//
+//        this is the cue for the bufferization of the function foo (and calls
+//        to it) that it must bufferize to `func @foo(%A: memref<?xf32,
+//        some_layout>,
+//                   %B: memref<?xf32, some_layout>)` (i.e. make a cloned
+//        allocation of the result tensor)
+//        To fully achieve bufferization, the alloc/dealloc pair must be lifted
+//        out of the function at each call site.
+//
+//   iii. as an optimization over ii., it may be possible to reuse an argument
+//        and only want to return a slice.
+//        This may forego allocation by letting *all* callers decide whether to
+//        pass a new *aliasing* memref function argument (i.e. a subview).
+//        Without loss of generality, callers may agree to allocate a new buffer
+//        to avoid this aliasing. Such scenarios are encoded by IR resembling:
+//
+//        ```
+//          #map = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
+//          func @foo(%arg0: tensor<?xf32> {linalg.inplaceable = true})
+//              -> tensor<4xf32> {
+//            %0 = bufferization.to_memref %arg0 : memref<?xf32, #map>
+//            %1 = memref.subview %0[0] [4] [1] : memref<?xf32, #map> to
+//                                                memref<4xf32, #map>
+//            // ... inplace computes into %1
+//            %3 = bufferization.to_tensor %1 : memref<4xf32, #map>
+//            return %3 : tensor<4xf32>
+//          }
+//        ```
+//
+//  Note: In the future, it may be worthwhile to design special bufferization
+//  ops to encode the desired semantics at function boundaries for i., ii. and
+//  iii.
 
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/ModuleBufferization.h"
 
@@ -161,7 +243,7 @@ static FunctionType getBufferizedFunctionType(MLIRContext *ctx,
     if (auto rankedTensorType = t.dyn_cast<RankedTensorType>())
       return getDynamicMemRefType(rankedTensorType);
     if (auto tensorType = t.dyn_cast<TensorType>())
-      return getContiguousOrUnrankedMemRefType(tensorType);
+      return getUnrankedMemRefType(tensorType.getElementType());
     return t;
   };
   auto argTypes = llvm::to_vector<4>(llvm::map_range(argumentTypes, rewrite));

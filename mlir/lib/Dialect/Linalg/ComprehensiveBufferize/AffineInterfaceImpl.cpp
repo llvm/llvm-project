@@ -13,6 +13,8 @@
 
 void mlir::linalg::comprehensive_bufferize::affine_ext::
     registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry) {
+  // AffineParallelOp bufferization not implemented yet. However, never hoist
+  // memref allocations across AffineParallelOp boundaries.
   registry.addOpInterface<AffineParallelOp,
                           AllocationHoistingBarrierOnly<AffineParallelOp>>();
 }

@@ -19,6 +19,8 @@ namespace linalg {
 namespace comprehensive_bufferize {
 namespace scf_ext {
 
+/// Bufferization of scf.execute_region. Can be analyzed, but bufferization not
+/// fully implemented at the moment.
 struct ExecuteRegionOpInterface
     : public BufferizableOpInterface::ExternalModel<ExecuteRegionOpInterface,
                                                     scf::ExecuteRegionOp> {
@@ -79,6 +81,7 @@ struct ExecuteRegionOpInterface
   }
 };
 
+/// Bufferization of scf.if. Replace with a new scf.if that yields memrefs.
 struct IfOpInterface
     : public BufferizableOpInterface::ExternalModel<IfOpInterface, scf::IfOp> {
   SmallVector<OpOperand *>
@@ -212,6 +215,8 @@ struct IfOpInterface
   }
 };
 
+/// Bufferization of scf.for. Replace with a new scf.for that operates on
+/// memrefs.
 struct ForOpInterface
     : public BufferizableOpInterface::ExternalModel<ForOpInterface,
                                                     scf::ForOp> {
@@ -292,7 +297,7 @@ struct ForOpInterface
     // Construct a new scf.for op with memref instead of tensor values.
     SmallVector<Value> initArgs =
         convert(forOp.getInitArgs(), [&](Value val, int64_t index) {
-          return state.getResultBuffer(rewriter, forOp->getOpResult(index));
+          return *state.getResultBuffer(rewriter, forOp->getOpResult(index));
         });
     auto newForOp = rewriter.create<scf::ForOp>(
         forOp.getLoc(), forOp.getLowerBound(), forOp.getUpperBound(),
@@ -399,6 +404,8 @@ LogicalResult mlir::linalg::comprehensive_bufferize::scf_ext::
   return status;
 }
 
+/// Bufferization of scf.yield. Bufferized as part of their enclosing ops, so
+/// this is for analysis only.
 struct YieldOpInterface
     : public BufferizableOpInterface::ExternalModel<YieldOpInterface,
                                                     scf::YieldOp> {
