@@ -12,7 +12,7 @@ entry:
   %b_addr = alloca i8, align 1                    ; <i8*> [#uses=2]
   store i16 %a, i16* %a_addr
   store i8 %b, i8* %b_addr
-  call void asm "\09\09movw\09$2, %ax\09\09\0A\09\09divb\09$3\09\09\09\0A\09\09movb\09%al, $0\09\0A\09\09movb %ah, ($4)", "=*m,=*m,*m,*m,R,~{dirflag},~{fpsr},~{flags},~{ax}"(i8* %quotient, i8* %remainder, i16* %a_addr, i8* %b_addr, i8* %remainder) nounwind
+  call void asm "\09\09movw\09$2, %ax\09\09\0A\09\09divb\09$3\09\09\09\0A\09\09movb\09%al, $0\09\0A\09\09movb %ah, ($4)", "=*m,=*m,*m,*m,R,~{dirflag},~{fpsr},~{flags},~{ax}"(i8* elementtype(i8) %quotient, i8* elementtype(i8) %remainder, i16* elementtype(i16) %a_addr, i8* elementtype(i8) %b_addr, i8* %remainder) nounwind
   ret void
 ; CHECK: ret
 }

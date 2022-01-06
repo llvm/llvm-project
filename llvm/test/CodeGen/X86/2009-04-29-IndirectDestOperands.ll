@@ -36,7 +36,7 @@ entry:
 	%tmp15 = load i32, i32* %arrayidx14		; <i32> [#uses=1]
 	%arrayidx17 = getelementptr i32, i32* %data, i32 8		; <i32*> [#uses=1]
 	%tmp18 = load i32, i32* %arrayidx17		; <i32> [#uses=1]
-	%0 = call i32 asm "cpuid", "={ax},=*{bx},=*{cx},=*{dx},{ax},{bx},{cx},{dx},~{dirflag},~{fpsr},~{flags}"(i32* %arrayidx2, i32* %arrayidx4, i32* %arrayidx6, i32 %tmp9, i32 %tmp12, i32 %tmp15, i32 %tmp18) nounwind		; <i32> [#uses=1]
+	%0 = call i32 asm "cpuid", "={ax},=*{bx},=*{cx},=*{dx},{ax},{bx},{cx},{dx},~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) %arrayidx2, i32* elementtype(i32) %arrayidx4, i32* elementtype(i32) %arrayidx6, i32 %tmp9, i32 %tmp12, i32 %tmp15, i32 %tmp18) nounwind		; <i32> [#uses=1]
 	store i32 %0, i32* %arrayidx
 	ret void
 }

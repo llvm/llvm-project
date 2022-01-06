@@ -5,7 +5,7 @@ target triple = "i386-apple-darwin8"
 
 define void @atomic_store_rel_int(i32* %p, i32 %v) nounwind  {
 entry:
-	%asmtmp = tail call i32 asm sideeffect "xchgl $1,$0", "=*m,=r,*m,1,~{dirflag},~{fpsr},~{flags}"( i32* %p, i32* %p, i32 %v ) nounwind 		; <i32> [#uses=0]
+	%asmtmp = tail call i32 asm sideeffect "xchgl $1,$0", "=*m,=r,*m,1,~{dirflag},~{fpsr},~{flags}"( i32* elementtype( i32) %p, i32* elementtype(i32) %p, i32 %v ) nounwind 		; <i32> [#uses=0]
 	ret void
 }
 

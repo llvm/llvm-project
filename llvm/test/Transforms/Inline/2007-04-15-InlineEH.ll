@@ -15,7 +15,7 @@ declare void @c()
 define void @f() {
 ; CHECK-LABEL: define void @f()
 entry:
-  call void asm "rdtsc\0A\09movl %eax, $0\0A\09movl %edx, $1", "=*imr,=*imr,~{dirflag},~{fpsr},~{flags},~{dx},~{ax}"( i32* null, i32* null ) nounwind
+  call void asm "rdtsc\0A\09movl %eax, $0\0A\09movl %edx, $1", "=*imr,=*imr,~{dirflag},~{fpsr},~{flags},~{dx},~{ax}"( i32* elementtype( i32) null, i32* elementtype(i32) null ) nounwind
 ; CHECK: call void asm
   unreachable
 }

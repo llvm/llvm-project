@@ -9,7 +9,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define fastcc i32 @bc_divide(%struct.bc_struct* %n1, %struct.bc_struct* %n2, %struct.bc_struct** %quot, i32 %scale) nounwind {
 entry:
-	%tmp7.i46 = tail call i64 asm sideeffect ".byte 0x0f,0x31", "={dx},=*{ax},~{dirflag},~{fpsr},~{flags}"( i64* getelementptr (%struct.CycleCount, %struct.CycleCount* @_programStartTime, i32 0, i32 1) )		; <i64> [#uses=0]
+	%tmp7.i46 = tail call i64 asm sideeffect ".byte 0x0f,0x31", "={dx},=*{ax},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) getelementptr (%struct.CycleCount, %struct.CycleCount* @_programStartTime, i32 0, i32 1) )		; <i64> [#uses=0]
 	%tmp221 = sdiv i32 10, 0		; <i32> [#uses=1]
 	tail call fastcc void @_one_mult( i8* null, i32 0, i32 %tmp221, i8* null )
 	ret i32 0

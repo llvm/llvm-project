@@ -48,7 +48,7 @@ entry:
   %conv5 = zext i1 %cmp4 to i32
   %conv6 = trunc i32 %conv5 to i8
   store i8 %conv6, i8* %flagDA, align 1
-  call void asm sideeffect "mov\09\09\09$0,\09\09\09\09\09\09\09\09\09\09%rsi\0Amov\09\09\09$2,\09\09\09\09\09\09\09\09\09\09%rcx\0Amov\09\09\09$1,\09\09\09\09\09\09\09\09\09\09%rdi\0Amov\09\09\09$8,\09\09\09\09\09\09\09\09\09\09%rax\0A", "*m,*m,*m,*m,*m,*m,*m,*m,*m,~{rsi},~{rdi},~{rax},~{rcx},~{rdx},~{memory},~{dirflag},~{fpsr},~{flags}"(i8** %S.addr, i8** %D.addr, i32* %pS.addr, i32* %pDiffS, i32* %pDiffD, i32* %sr, i8* %flagSA, i8* %flagDA, i32* %h.addr) #1
+  call void asm sideeffect "mov\09\09\09$0,\09\09\09\09\09\09\09\09\09\09%rsi\0Amov\09\09\09$2,\09\09\09\09\09\09\09\09\09\09%rcx\0Amov\09\09\09$1,\09\09\09\09\09\09\09\09\09\09%rdi\0Amov\09\09\09$8,\09\09\09\09\09\09\09\09\09\09%rax\0A", "*m,*m,*m,*m,*m,*m,*m,*m,*m,~{rsi},~{rdi},~{rax},~{rcx},~{rdx},~{memory},~{dirflag},~{fpsr},~{flags}"(i8** elementtype(i8*) %S.addr, i8** elementtype(i8*) %D.addr, i32* elementtype(i32) %pS.addr, i32* elementtype(i32) %pDiffS, i32* elementtype(i32) %pDiffD, i32* elementtype(i32) %sr, i8* elementtype(i8) %flagSA, i8* elementtype(i8) %flagDA, i32* elementtype(i32) %h.addr) #1
   ret void
 }
 

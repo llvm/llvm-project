@@ -8,7 +8,7 @@ define void @ZC(i32 *%p) nounwind {
 entry:
   ; ALL-LABEL: ZC:
 
-  call void asm sideeffect "lw $$1, $0", "*^ZC,~{$1}"(i32* getelementptr inbounds ([8193 x i32], [8193 x i32]* @data, i32 0, i32 0))
+  call void asm sideeffect "lw $$1, $0", "*^ZC,~{$1}"(i32* elementtype(i32) getelementptr inbounds ([8193 x i32], [8193 x i32]* @data, i32 0, i32 0))
 
   ; ALL: lw $[[BASEPTR:[0-9]+]], %got(data)(
   ; ALL: #APP
@@ -22,7 +22,7 @@ define void @ZC_offset_n4(i32 *%p) nounwind {
 entry:
   ; ALL-LABEL: ZC_offset_n4:
 
-  call void asm sideeffect "lw $$1, $0", "*^ZC,~{$1}"(i32* getelementptr inbounds ([8193 x i32], [8193 x i32]* @data, i32 0, i32 -1))
+  call void asm sideeffect "lw $$1, $0", "*^ZC,~{$1}"(i32* elementtype(i32) getelementptr inbounds ([8193 x i32], [8193 x i32]* @data, i32 0, i32 -1))
 
   ; ALL: lw $[[BASEPTR:[0-9]+]], %got(data)(
   ; ALL: #APP
@@ -36,7 +36,7 @@ define void @ZC_offset_4(i32 *%p) nounwind {
 entry:
   ; ALL-LABEL: ZC_offset_4:
 
-  call void asm sideeffect "lw $$1, $0", "*^ZC,~{$1}"(i32* getelementptr inbounds ([8193 x i32], [8193 x i32]* @data, i32 0, i32 1))
+  call void asm sideeffect "lw $$1, $0", "*^ZC,~{$1}"(i32* elementtype(i32) getelementptr inbounds ([8193 x i32], [8193 x i32]* @data, i32 0, i32 1))
 
   ; ALL: lw $[[BASEPTR:[0-9]+]], %got(data)(
   ; ALL: #APP
@@ -50,7 +50,7 @@ define void @ZC_offset_252(i32 *%p) nounwind {
 entry:
   ; ALL-LABEL: ZC_offset_252:
 
-  call void asm sideeffect "lw $$1, $0", "*^ZC,~{$1}"(i32* getelementptr inbounds ([8193 x i32], [8193 x i32]* @data, i32 0, i32 63))
+  call void asm sideeffect "lw $$1, $0", "*^ZC,~{$1}"(i32* elementtype(i32) getelementptr inbounds ([8193 x i32], [8193 x i32]* @data, i32 0, i32 63))
 
   ; ALL: lw $[[BASEPTR:[0-9]+]], %got(data)(
   ; ALL: #APP
@@ -64,7 +64,7 @@ define void @ZC_offset_256(i32 *%p) nounwind {
 entry:
   ; ALL-LABEL: ZC_offset_256:
 
-  call void asm sideeffect "lw $$1, $0", "*^ZC,~{$1}"(i32* getelementptr inbounds ([8193 x i32], [8193 x i32]* @data, i32 0, i32 64))
+  call void asm sideeffect "lw $$1, $0", "*^ZC,~{$1}"(i32* elementtype(i32) getelementptr inbounds ([8193 x i32], [8193 x i32]* @data, i32 0, i32 64))
 
   ; ALL: lw $[[BASEPTR:[0-9]+]], %got(data)(
 
@@ -85,7 +85,7 @@ define void @ZC_offset_2044(i32 *%p) nounwind {
 entry:
   ; ALL-LABEL: ZC_offset_2044:
 
-  call void asm sideeffect "lw $$1, $0", "*^ZC,~{$1}"(i32* getelementptr inbounds ([8193 x i32], [8193 x i32]* @data, i32 0, i32 511))
+  call void asm sideeffect "lw $$1, $0", "*^ZC,~{$1}"(i32* elementtype(i32) getelementptr inbounds ([8193 x i32], [8193 x i32]* @data, i32 0, i32 511))
 
   ; ALL: lw $[[BASEPTR:[0-9]+]], %got(data)(
 
@@ -106,7 +106,7 @@ define void @ZC_offset_2048(i32 *%p) nounwind {
 entry:
   ; ALL-LABEL: ZC_offset_2048:
 
-  call void asm sideeffect "lw $$1, $0", "*^ZC,~{$1}"(i32* getelementptr inbounds ([8193 x i32], [8193 x i32]* @data, i32 0, i32 512))
+  call void asm sideeffect "lw $$1, $0", "*^ZC,~{$1}"(i32* elementtype(i32) getelementptr inbounds ([8193 x i32], [8193 x i32]* @data, i32 0, i32 512))
 
   ; ALL: lw $[[BASEPTR:[0-9]+]], %got(data)(
 
@@ -128,7 +128,7 @@ define void @ZC_offset_32764(i32 *%p) nounwind {
 entry:
   ; ALL-LABEL: ZC_offset_32764:
 
-  call void asm sideeffect "lw $$1, $0", "*^ZC,~{$1}"(i32* getelementptr inbounds ([8193 x i32], [8193 x i32]* @data, i32 0, i32 8191))
+  call void asm sideeffect "lw $$1, $0", "*^ZC,~{$1}"(i32* elementtype(i32) getelementptr inbounds ([8193 x i32], [8193 x i32]* @data, i32 0, i32 8191))
 
   ; ALL-DAG: lw $[[BASEPTR:[0-9]+]], %got(data)(
 
@@ -150,7 +150,7 @@ define void @ZC_offset_32768(i32 *%p) nounwind {
 entry:
   ; ALL-LABEL: ZC_offset_32768:
 
-  call void asm sideeffect "lw $$1, $0", "*^ZC,~{$1}"(i32* getelementptr inbounds ([8193 x i32], [8193 x i32]* @data, i32 0, i32 8192))
+  call void asm sideeffect "lw $$1, $0", "*^ZC,~{$1}"(i32* elementtype(i32) getelementptr inbounds ([8193 x i32], [8193 x i32]* @data, i32 0, i32 8192))
 
   ; ALL-DAG: lw $[[BASEPTR:[0-9]+]], %got(data)(
   ; ALL-DAG: ori $[[T0:[0-9]+]], $zero, 32768

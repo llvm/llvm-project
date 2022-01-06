@@ -100,7 +100,7 @@ define void @asm_indirect_output() {
 entry:
   %ap = alloca i8*, align 8
   %0 = load i8*, i8** %ap, align 8
-  call void asm sideeffect "", "=*r|m,0,~{memory}"(i8** %ap, i8* %0)
+  call void asm sideeffect "", "=*r|m,0,~{memory}"(i8** elementtype(i8*) %ap, i8* %0)
   ret void
 }
 

@@ -10,7 +10,6 @@ entry:
         %tmp12 = trunc i64 %tmp1 to i32         ; <i32> [#uses=2]
         store i32 %tmp12, i32* %lines, align 4
         %tmp6 = call i64* asm sideeffect "foo",
-"=r,=*r,=*r,r,0,1,2,~{dirflag},~{fpsr},~{flags},~{memory}"( i64** %p2_addr,
-i32* %lines, i64 256, i64* %p1, i64* %p2, i32 %tmp12 )              ; <i64*> [#uses=0]
+"=r,=*r,=*r,r,0,1,2,~{dirflag},~{fpsr},~{flags},~{memory}"(i64** elementtype(i64*) %p2_addr, i32* elementtype(i32) %lines, i64 256, i64* %p1, i64* %p2, i32 %tmp12 )              ; <i64*> [#uses=0]
         ret void
 }

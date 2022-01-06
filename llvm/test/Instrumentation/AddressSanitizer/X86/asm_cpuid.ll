@@ -12,7 +12,7 @@ define void @MyCPUID(i32 %fxn, i32* %out) sanitize_address {
   %c.ptr = alloca i32
   %d.ptr = alloca i32
   store i32 %fxn, i32* %fxn.ptr
-  call void asm sideeffect inteldialect "xchg ebx, esi\0A\09mov eax, dword ptr $4\0A\09cpuid\0A\09mov dword ptr $0, eax\0A\09mov dword ptr $1, ebx\0A\09mov dword ptr $2, ecx\0A\09mov dword ptr $3, edx\0A\09xchg ebx, esi", "=*m,=*m,=*m,=*m,*m,~{eax},~{ebx},~{ecx},~{edx},~{esi},~{dirflag},~{fpsr},~{flags}"(i32* %a.ptr, i32* %b.ptr, i32* %c.ptr, i32* %d.ptr, i32* %fxn.ptr)
+  call void asm sideeffect inteldialect "xchg ebx, esi\0A\09mov eax, dword ptr $4\0A\09cpuid\0A\09mov dword ptr $0, eax\0A\09mov dword ptr $1, ebx\0A\09mov dword ptr $2, ecx\0A\09mov dword ptr $3, edx\0A\09xchg ebx, esi", "=*m,=*m,=*m,=*m,*m,~{eax},~{ebx},~{ecx},~{edx},~{esi},~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) %a.ptr, i32* elementtype(i32) %b.ptr, i32* elementtype(i32) %c.ptr, i32* elementtype(i32) %d.ptr, i32* elementtype(i32) %fxn.ptr)
 
   %a = load i32, i32* %a.ptr
   %a.out = getelementptr inbounds i32, i32* %out, i32 0

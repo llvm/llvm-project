@@ -76,11 +76,11 @@ bb4:                                              ; preds = %bb3, %bb2
   %29 = insertelement <4 x float> %28, float %23, i32 1 ; <<4 x float>> [#uses=1]
   %30 = insertelement <4 x float> %29, float %25, i32 2 ; <<4 x float>> [#uses=1]
   %31 = insertelement <4 x float> %30, float %27, i32 3 ; <<4 x float>> [#uses=5]
-  %asmtmp.i = call <4 x float> asm "movss $1, $0\09\0Apshufd $$0, $0, $0", "=x,*m,~{dirflag},~{fpsr},~{flags}"(float* %times4) nounwind ; <<4 x float>> [#uses=3]
+  %asmtmp.i = call <4 x float> asm "movss $1, $0\09\0Apshufd $$0, $0, $0", "=x,*m,~{dirflag},~{fpsr},~{flags}"(float* elementtype(float) %times4) nounwind ; <<4 x float>> [#uses=3]
   %32 = fadd <4 x float> %31, %asmtmp.i           ; <<4 x float>> [#uses=3]
   %33 = fadd <4 x float> %32, %asmtmp.i           ; <<4 x float>> [#uses=3]
   %34 = fadd <4 x float> %33, %asmtmp.i           ; <<4 x float>> [#uses=2]
-  %asmtmp.i18 = call <4 x float> asm "movss $1, $0\09\0Apshufd $$0, $0, $0", "=x,*m,~{dirflag},~{fpsr},~{flags}"(float* %timesN) nounwind ; <<4 x float>> [#uses=8]
+  %asmtmp.i18 = call <4 x float> asm "movss $1, $0\09\0Apshufd $$0, $0, $0", "=x,*m,~{dirflag},~{fpsr},~{flags}"(float* elementtype(float) %timesN) nounwind ; <<4 x float>> [#uses=8]
   %35 = icmp sgt i64 %N_addr.0, 15                ; <i1> [#uses=2]
   br i1 %3, label %bb6.preheader, label %bb8
 
@@ -158,7 +158,7 @@ bb7:                                              ; preds = %bb6.bb7_crit_edge, 
   %O_addr.1.lcssa = phi float* [ %scevgep125, %bb6.bb7_crit_edge ], [ %O_addr.0, %bb6.preheader ] ; <float*> [#uses=1]
   %vX0.0.lcssa = phi <4 x float> [ %41, %bb6.bb7_crit_edge ], [ %31, %bb6.preheader ] ; <<4 x float>> [#uses=1]
   %N_addr.1.lcssa = phi i64 [ %tmp136, %bb6.bb7_crit_edge ], [ %N_addr.0, %bb6.preheader ] ; <i64> [#uses=1]
-  %asmtmp.i17 = call <4 x float> asm "movss $1, $0\09\0Apshufd $$0, $0, $0", "=x,*m,~{dirflag},~{fpsr},~{flags}"(float* %times4) nounwind ; <<4 x float>> [#uses=0]
+  %asmtmp.i17 = call <4 x float> asm "movss $1, $0\09\0Apshufd $$0, $0, $0", "=x,*m,~{dirflag},~{fpsr},~{flags}"(float* elementtype(float) %times4) nounwind ; <<4 x float>> [#uses=0]
   br label %bb11
 
 bb8:                                              ; preds = %bb4

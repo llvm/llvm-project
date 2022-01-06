@@ -10,6 +10,6 @@ entry:
   store i16 %source, i16* %source_addr
   store i32 4, i32* @i, align 4
   call void asm sideeffect "# top of block", "~{dirflag},~{fpsr},~{flags},~{edi},~{esi},~{edx},~{ecx},~{eax}"() nounwind
-  %asmtmp = call i16 asm sideeffect "movw $1, $0", "=={ax},*m,~{dirflag},~{fpsr},~{flags},~{memory}"(i16* %source_addr) nounwind ; <i16> [#uses=0]
+  %asmtmp = call i16 asm sideeffect "movw $1, $0", "=={ax},*m,~{dirflag},~{fpsr},~{flags},~{memory}"(i16* elementtype(i16) %source_addr) nounwind ; <i16> [#uses=0]
   ret void
 }

@@ -127,135 +127,135 @@ entry:
 
 define void @single_I() nounwind {
 entry:
-  call void asm "foo $1,$0", "=*m,I,~{dirflag},~{fpsr},~{flags}"(i32* @mout0, i32 1) nounwind
+  call void asm "foo $1,$0", "=*m,I,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @mout0, i32 1) nounwind
   ret void
 }
 
 define void @single_J() nounwind {
 entry:
-  call void asm "foo $1,$0", "=*m,J,~{dirflag},~{fpsr},~{flags}"(i32* @mout0, i32 1) nounwind
+  call void asm "foo $1,$0", "=*m,J,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @mout0, i32 1) nounwind
   ret void
 }
 
 define void @single_K() nounwind {
 entry:
-  call void asm "foo $1,$0", "=*m,K,~{dirflag},~{fpsr},~{flags}"(i32* @mout0, i32 1) nounwind
+  call void asm "foo $1,$0", "=*m,K,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @mout0, i32 1) nounwind
   ret void
 }
 
 define void @single_L() nounwind {
 entry:
 ; Missing lowering support for 'L'.
-;  call void asm "foo $1,$0", "=*m,L,~{dirflag},~{fpsr},~{flags}"(i32* @mout0, i32 1) nounwind
+;  call void asm "foo $1,$0", "=*m,L,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @mout0, i32 1) nounwind
   ret void
 }
 
 define void @single_M() nounwind {
 entry:
 ; Missing lowering support for 'M'.
-;  call void asm "foo $1,$0", "=*m,M,~{dirflag},~{fpsr},~{flags}"(i32* @mout0, i32 1) nounwind
+;  call void asm "foo $1,$0", "=*m,M,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @mout0, i32 1) nounwind
   ret void
 }
 
 define void @single_N() nounwind {
 entry:
-  call void asm "foo $1,$0", "=*m,N,~{dirflag},~{fpsr},~{flags}"(i32* @mout0, i32 1) nounwind
+  call void asm "foo $1,$0", "=*m,N,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @mout0, i32 1) nounwind
   ret void
 }
 
 define void @single_G() nounwind {
 entry:
 ; Missing lowering support for 'G'.
-;  call void asm "foo $1,$0", "=*m,G,~{dirflag},~{fpsr},~{flags}"(i32* @mout0, double 1.000000e+000) nounwind
+;  call void asm "foo $1,$0", "=*m,G,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @mout0, double 1.000000e+000) nounwind
   ret void
 }
 
 define void @single_C() nounwind {
 entry:
 ; Missing lowering support for 'C'.
-;  call void asm "foo $1,$0", "=*m,C,~{dirflag},~{fpsr},~{flags}"(i32* @mout0, double 1.000000e+000) nounwind
+;  call void asm "foo $1,$0", "=*m,C,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @mout0, double 1.000000e+000) nounwind
   ret void
 }
 
 define void @single_e() nounwind {
 entry:
-  call void asm "foo $1,$0", "=*m,e,~{dirflag},~{fpsr},~{flags}"(i32* @mout0, i32 1) nounwind
+  call void asm "foo $1,$0", "=*m,e,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @mout0, i32 1) nounwind
   ret void
 }
 
 define void @single_Z() nounwind {
 entry:
-  call void asm "foo $1,$0", "=*m,Z,~{dirflag},~{fpsr},~{flags}"(i32* @mout0, i32 1) nounwind
+  call void asm "foo $1,$0", "=*m,Z,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @mout0, i32 1) nounwind
   ret void
 }
 
 define void @multi_R() nounwind {
 entry:
   %tmp = load i32, i32* @min1, align 4
-  call void asm "foo $1,$0", "=*r|R|m,r|R|m,~{dirflag},~{fpsr},~{flags}"(i32* @mout0, i32 %tmp) nounwind
+  call void asm "foo $1,$0", "=*r|R|m,r|R|m,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @mout0, i32 %tmp) nounwind
   ret void
 }
 
 define void @multi_q() nounwind {
 entry:
   %tmp = load i32, i32* @min1, align 4
-  call void asm "foo $1,$0", "=*r|q|m,r|q|m,~{dirflag},~{fpsr},~{flags}"(i32* @mout0, i32 %tmp) nounwind
+  call void asm "foo $1,$0", "=*r|q|m,r|q|m,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @mout0, i32 %tmp) nounwind
   ret void
 }
 
 define void @multi_Q() nounwind {
 entry:
   %tmp = load i32, i32* @min1, align 4
-  call void asm "foo $1,$0", "=*r|Q|m,r|Q|m,~{dirflag},~{fpsr},~{flags}"(i32* @mout0, i32 %tmp) nounwind
+  call void asm "foo $1,$0", "=*r|Q|m,r|Q|m,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @mout0, i32 %tmp) nounwind
   ret void
 }
 
 define void @multi_a() nounwind {
 entry:
   %tmp = load i32, i32* @min1, align 4
-  call void asm "foo $1,$0", "=*r|{ax}|m,r|{ax}|m,~{dirflag},~{fpsr},~{flags}"(i32* @mout0, i32 %tmp) nounwind
+  call void asm "foo $1,$0", "=*r|{ax}|m,r|{ax}|m,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @mout0, i32 %tmp) nounwind
   ret void
 }
 
 define void @multi_b() nounwind {
 entry:
   %tmp = load i32, i32* @min1, align 4
-  call void asm "foo $1,$0", "=*r|{bx}|m,r|{bx}|m,~{dirflag},~{fpsr},~{flags}"(i32* @mout0, i32 %tmp) nounwind
+  call void asm "foo $1,$0", "=*r|{bx}|m,r|{bx}|m,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @mout0, i32 %tmp) nounwind
   ret void
 }
 
 define void @multi_c() nounwind {
 entry:
   %tmp = load i32, i32* @min1, align 4
-  call void asm "foo $1,$0", "=*r|{cx}|m,r|{cx}|m,~{dirflag},~{fpsr},~{flags}"(i32* @mout0, i32 %tmp) nounwind
+  call void asm "foo $1,$0", "=*r|{cx}|m,r|{cx}|m,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @mout0, i32 %tmp) nounwind
   ret void
 }
 
 define void @multi_d() nounwind {
 entry:
   %tmp = load i32, i32* @min1, align 4
-  call void asm "foo $1,$0", "=*r|{dx}|m,r|{dx},~{dirflag},~{fpsr},~{flags}"(i32* @mout0, i32 %tmp) nounwind
+  call void asm "foo $1,$0", "=*r|{dx}|m,r|{dx},~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @mout0, i32 %tmp) nounwind
   ret void
 }
 
 define void @multi_S() nounwind {
 entry:
   %tmp = load i32, i32* @min1, align 4
-  call void asm "foo $1,$0", "=*r|{si}|m,r|{si}|m,~{dirflag},~{fpsr},~{flags}"(i32* @mout0, i32 %tmp) nounwind
+  call void asm "foo $1,$0", "=*r|{si}|m,r|{si}|m,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @mout0, i32 %tmp) nounwind
   ret void
 }
 
 define void @multi_D() nounwind {
 entry:
   %tmp = load i32, i32* @min1, align 4
-  call void asm "foo $1,$0", "=*r|{di}|m,r|{di}|m,~{dirflag},~{fpsr},~{flags}"(i32* @mout0, i32 %tmp) nounwind
+  call void asm "foo $1,$0", "=*r|{di}|m,r|{di}|m,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @mout0, i32 %tmp) nounwind
   ret void
 }
 
 define void @multi_A() nounwind {
 entry:
   %tmp = load i32, i32* @min1, align 4
-  call void asm "foo $1,$0", "=*r|A|m,r|A|m,~{dirflag},~{fpsr},~{flags}"(i32* @mout0, i32 %tmp) nounwind
+  call void asm "foo $1,$0", "=*r|A|m,r|A|m,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @mout0, i32 %tmp) nounwind
   ret void
 }
 
@@ -277,14 +277,14 @@ entry:
 define void @multi_y() nounwind {
 entry:
   %tmp = load double, double* @din1, align 8
-  call void asm "foo $1,$0", "=*r|y|m,r|y|m,~{dirflag},~{fpsr},~{flags}"(double* @dout0, double %tmp) nounwind
+  call void asm "foo $1,$0", "=*r|y|m,r|y|m,~{dirflag},~{fpsr},~{flags}"(double* elementtype(double) @dout0, double %tmp) nounwind
   ret void
 }
 
 define void @multi_x() nounwind {
 entry:
   %tmp = load double, double* @din1, align 8
-  call void asm "foo $1,$0", "=*r|x|m,r|x|m,~{dirflag},~{fpsr},~{flags}"(double* @dout0, double %tmp) nounwind
+  call void asm "foo $1,$0", "=*r|x|m,r|x|m,~{dirflag},~{fpsr},~{flags}"(double* elementtype(double) @dout0, double %tmp) nounwind
   ret void
 }
 
@@ -295,64 +295,64 @@ entry:
 
 define void @multi_I() nounwind {
 entry:
-  call void asm "foo $1,$0", "=*r|m|m,r|I|m,~{dirflag},~{fpsr},~{flags}"(i32* @mout0, i32 1) nounwind
+  call void asm "foo $1,$0", "=*r|m|m,r|I|m,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @mout0, i32 1) nounwind
   ret void
 }
 
 define void @multi_J() nounwind {
 entry:
-  call void asm "foo $1,$0", "=*r|m|m,r|J|m,~{dirflag},~{fpsr},~{flags}"(i32* @mout0, i32 1) nounwind
+  call void asm "foo $1,$0", "=*r|m|m,r|J|m,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @mout0, i32 1) nounwind
   ret void
 }
 
 define void @multi_K() nounwind {
 entry:
-  call void asm "foo $1,$0", "=*r|m|m,r|K|m,~{dirflag},~{fpsr},~{flags}"(i32* @mout0, i32 1) nounwind
+  call void asm "foo $1,$0", "=*r|m|m,r|K|m,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @mout0, i32 1) nounwind
   ret void
 }
 
 define void @multi_L() nounwind {
 entry:
 ; Missing lowering support for 'L'.
-;  call void asm "foo $1,$0", "=*r|m|m,r|L|m,~{dirflag},~{fpsr},~{flags}"(i32* @mout0, i32 1) nounwind
+;  call void asm "foo $1,$0", "=*r|m|m,r|L|m,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @mout0, i32 1) nounwind
   ret void
 }
 
 define void @multi_M() nounwind {
 entry:
 ; Missing lowering support for 'M'.
-;  call void asm "foo $1,$0", "=*r|m|m,r|M|m,~{dirflag},~{fpsr},~{flags}"(i32* @mout0, i32 1) nounwind
+;  call void asm "foo $1,$0", "=*r|m|m,r|M|m,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @mout0, i32 1) nounwind
   ret void
 }
 
 define void @multi_N() nounwind {
 entry:
-  call void asm "foo $1,$0", "=*r|m|m,r|N|m,~{dirflag},~{fpsr},~{flags}"(i32* @mout0, i32 1) nounwind
+  call void asm "foo $1,$0", "=*r|m|m,r|N|m,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @mout0, i32 1) nounwind
   ret void
 }
 
 define void @multi_G() nounwind {
 entry:
 ; Missing lowering support for 'G'.
-;  call void asm "foo $1,$0", "=*r|m|m,r|G|m,~{dirflag},~{fpsr},~{flags}"(i32* @mout0, double 1.000000e+000) nounwind
+;  call void asm "foo $1,$0", "=*r|m|m,r|G|m,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @mout0, double 1.000000e+000) nounwind
   ret void
 }
 
 define void @multi_C() nounwind {
 entry:
 ; Missing lowering support for 'C'.
-;  call void asm "foo $1,$0", "=*r|m|m,r|C|m,~{dirflag},~{fpsr},~{flags}"(i32* @mout0, double 1.000000e+000) nounwind
+;  call void asm "foo $1,$0", "=*r|m|m,r|C|m,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @mout0, double 1.000000e+000) nounwind
   ret void
 }
 
 define void @multi_e() nounwind {
 entry:
-  call void asm "foo $1,$0", "=*r|m|m,r|e|m,~{dirflag},~{fpsr},~{flags}"(i32* @mout0, i32 1) nounwind
+  call void asm "foo $1,$0", "=*r|m|m,r|e|m,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @mout0, i32 1) nounwind
   ret void
 }
 
 define void @multi_Z() nounwind {
 entry:
-  call void asm "foo $1,$0", "=*r|m|m,r|Z|m,~{dirflag},~{fpsr},~{flags}"(i32* @mout0, i32 1) nounwind
+  call void asm "foo $1,$0", "=*r|m|m,r|Z|m,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @mout0, i32 1) nounwind
   ret void
 }

@@ -25,7 +25,7 @@ define dso_local signext i32 @test_lwarx(i32* readnone %a) {
 ; CHECK-32-NEXT:    #NO_APP
 ; CHECK-32-NEXT:    blr
 entry:
-  %0 = call i32 asm sideeffect "lwarx $0, ${1:y}", "=r,*Z,~{memory}"(i32* %a)
+  %0 = call i32 asm sideeffect "lwarx $0, ${1:y}", "=r,*Z,~{memory}"(i32* elementtype(i32) %a)
   ret i32 %0
 }
 
@@ -113,7 +113,7 @@ define dso_local signext i16 @test_lharx(i16* %a) {
 ; CHECK-32-NEXT:    extsh 3, 3
 ; CHECK-32-NEXT:    blr
 entry:
-  %0 = tail call i16 asm sideeffect "lharx $0, ${1:y}", "=r,*Z,~{memory}"(i16* %a)
+  %0 = tail call i16 asm sideeffect "lharx $0, ${1:y}", "=r,*Z,~{memory}"(i16* elementtype(i16) %a)
   ret i16 %0
 }
 
@@ -135,6 +135,6 @@ define dso_local zeroext i8 @test_lbarx(i8* %a) {
 ; CHECK-32-NEXT:    clrlwi 3, 3, 24
 ; CHECK-32-NEXT:    blr
 entry:
-  %0 = tail call i8 asm sideeffect "lbarx $0, ${1:y}", "=r,*Z,~{memory}"(i8* %a)
+  %0 = tail call i8 asm sideeffect "lbarx $0, ${1:y}", "=r,*Z,~{memory}"(i8* elementtype(i8) %a)
   ret i8 %0
 }

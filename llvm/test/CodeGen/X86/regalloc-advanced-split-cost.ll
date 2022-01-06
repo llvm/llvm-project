@@ -48,7 +48,7 @@ entry:
 if.then:                                          ; preds = %entry
   %arrayidx7 = getelementptr inbounds i32, i32* %array, i32 6
   store i32 %shl, i32* %arrayidx7, align 4, !tbaa !7
-  call void asm "nop", "=*m,r,r,r,r,r,*m,~{dirflag},~{fpsr},~{flags}"(i32** nonnull %array.addr, i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32** nonnull %array.addr) #1, !srcloc !9
+  call void asm "nop", "=*m,r,r,r,r,r,*m,~{dirflag},~{fpsr},~{flags}"(i32** elementtype(i32*) nonnull %array.addr, i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32** elementtype(i32*) nonnull %array.addr) #1, !srcloc !9
   %6 = load i32*, i32** %array.addr, align 4, !tbaa !3
   %arrayidx8 = getelementptr inbounds i32, i32* %6, i32 7
   br label %if.end
@@ -58,7 +58,7 @@ if.else:                                          ; preds = %entry
   %7 = load i32, i32* %arrayidx5, align 4, !tbaa !7
   %arrayidx9 = getelementptr inbounds i32, i32* %array, i32 8
   store i32 %shl, i32* %arrayidx9, align 4, !tbaa !7
-  call void asm "nop", "=*m,{ax},{bx},{cx},{dx},{di},{si},{ebp},*m,~{dirflag},~{fpsr},~{flags}"(i32** nonnull %array.addr, i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %7, i32* undef, i32** nonnull %array.addr) #1, !srcloc !10
+  call void asm "nop", "=*m,{ax},{bx},{cx},{dx},{di},{si},{ebp},*m,~{dirflag},~{fpsr},~{flags}"(i32** elementtype(i32*) nonnull %array.addr, i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %7, i32* undef, i32** elementtype(i32*) nonnull %array.addr) #1, !srcloc !10
   %8 = load i32*, i32** %array.addr, align 4, !tbaa !3
   %arrayidx10 = getelementptr inbounds i32, i32* %8, i32 9
   br label %if.end

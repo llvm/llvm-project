@@ -75,7 +75,7 @@ define void @ScaleFilterCols_SSSE3(i8* %dst_ptr, i8* %src_ptr, i32 %dst_width, i
 entry:
   %dst_width.addr = alloca i32, align 4
   store i32 %dst_width, i32* %dst_width.addr, align 4
-  %0 = call { i8*, i8*, i32, i32, i32 } asm sideeffect "", "=r,=r,={ax},=r,=r,=*rm,rm,rm,0,1,2,3,4,5,~{memory},~{cc},~{xmm0},~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{dirflag},~{fpsr},~{flags}"(i32* nonnull %dst_width.addr, i32 %x, i32 %dx, i8* %dst_ptr, i8* %src_ptr, i32 0, i32 0, i32 0, i32 %dst_width)
+  %0 = call { i8*, i8*, i32, i32, i32 } asm sideeffect "", "=r,=r,={ax},=r,=r,=*rm,rm,rm,0,1,2,3,4,5,~{memory},~{cc},~{xmm0},~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) nonnull %dst_width.addr, i32 %x, i32 %dx, i8* %dst_ptr, i8* %src_ptr, i32 0, i32 0, i32 0, i32 %dst_width)
   ret void
 }
 

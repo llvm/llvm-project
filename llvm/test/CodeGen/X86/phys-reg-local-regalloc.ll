@@ -27,16 +27,16 @@ entry:
   store i32 1, i32* %x, align 4
   store i32 2, i32* %y, align 4
   call void asm sideeffect alignstack "# top of block", "~{dirflag},~{fpsr},~{flags},~{edi},~{esi},~{edx},~{ecx},~{eax}"() nounwind
-  %asmtmp = call i32 asm sideeffect alignstack "movl $1, $0", "=={eax},*m,~{dirflag},~{fpsr},~{flags},~{memory}"(i32* %x) nounwind ; <i32> [#uses=1]
+  %asmtmp = call i32 asm sideeffect alignstack "movl $1, $0", "=={eax},*m,~{dirflag},~{fpsr},~{flags},~{memory}"(i32* elementtype(i32) %x) nounwind ; <i32> [#uses=1]
   store i32 %asmtmp, i32* %"%eax"
-  %asmtmp1 = call i32 asm sideeffect alignstack "movl $1, $0", "=={ebx},*m,~{dirflag},~{fpsr},~{flags},~{memory}"(i32* %y) nounwind ; <i32> [#uses=1]
+  %asmtmp1 = call i32 asm sideeffect alignstack "movl $1, $0", "=={ebx},*m,~{dirflag},~{fpsr},~{flags},~{memory}"(i32* elementtype(i32) %y) nounwind ; <i32> [#uses=1]
   store i32 %asmtmp1, i32* %"%ebx"
   %1 = call i32 asm "", "={bx}"() nounwind        ; <i32> [#uses=1]
   %2 = call i32 asm "", "={ax}"() nounwind        ; <i32> [#uses=1]
   %asmtmp2 = call i32 asm sideeffect alignstack "addl $1, $0", "=={eax},{ebx},{eax},~{dirflag},~{fpsr},~{flags},~{memory}"(i32 %1, i32 %2) nounwind ; <i32> [#uses=1]
   store i32 %asmtmp2, i32* %"%eax"
   %3 = call i32 asm "", "={ax}"() nounwind        ; <i32> [#uses=1]
-  call void asm sideeffect alignstack "movl $0, $1", "{eax},*m,~{dirflag},~{fpsr},~{flags},~{memory}"(i32 %3, i32* %result) nounwind
+  call void asm sideeffect alignstack "movl $0, $1", "{eax},*m,~{dirflag},~{fpsr},~{flags},~{memory}"(i32 %3, i32* elementtype(i32) %result) nounwind
   %4 = load i32, i32* %result, align 4                 ; <i32> [#uses=1]
   %5 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i32 0, i32 0), i32 %4) nounwind ; <i32> [#uses=0]
   store i32 0, i32* %0, align 4

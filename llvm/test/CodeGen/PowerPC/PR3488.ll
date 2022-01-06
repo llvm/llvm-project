@@ -98,7 +98,7 @@ module asm "\09.previous\09\09\09\09\09"
 ; Function Attrs: nounwind
 define void @__alloc_pages_nodemask() #0 {
 entry:
-  %0 = call i64 asm sideeffect "ld${1:U}${1:X} $0,$1", "=r,*m"(i64* undef)
+  %0 = call i64 asm sideeffect "ld${1:U}${1:X} $0,$1", "=r,*m"(i64* elementtype(i64) undef)
   br i1 undef, label %do.body.lr.ph.i.i.i, label %zone_page_state_snapshot.exit.i.i
 ; CHECK: ld 3, 0(3)
 

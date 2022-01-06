@@ -20,9 +20,9 @@ define void @not_pointer_arg(i32 %p, i32 %x) {
 }
 
 ; CHECK: Elementtype attribute can only be applied for indirect constraints
-; CHECK-NEXT: call void asm "addl $1, $0", "=*rm,r"(i32* %p, i32* elementtype(i32) %x)
+; CHECK-NEXT: call void asm "addl $1, $0", "=*rm,r"(i32* elementtype(i32) %p, i32* elementtype(i32) %x)
 define void @not_indirect(i32* %p, i32* %x) {
-	call void asm "addl $1, $0", "=*rm,r"(i32* %p, i32* elementtype(i32) %x)
+	call void asm "addl $1, $0", "=*rm,r"(i32* elementtype(i32) %p, i32* elementtype(i32) %x)
   ret void
 }
 

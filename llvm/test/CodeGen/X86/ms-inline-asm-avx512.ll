@@ -9,7 +9,7 @@ target triple = "x86_64-pc-windows-msvc"
 define void @ignore_fe_size() #0 {
 entry:
   %c = alloca i8, align 1
-  call void asm sideeffect inteldialect "vaddps xmm1, xmm2, $1{1to4}\0A\09vaddps xmm1, xmm2, $2\0A\09mov eax, $3\0A\09mov $0, rax", "=*m,*m,*m,*m,~{eax},~{xmm1},~{dirflag},~{fpsr},~{flags}"(i8* %c, i8* %c, i8* %c, i8* %c) #1
+  call void asm sideeffect inteldialect "vaddps xmm1, xmm2, $1{1to4}\0A\09vaddps xmm1, xmm2, $2\0A\09mov eax, $3\0A\09mov $0, rax", "=*m,*m,*m,*m,~{eax},~{xmm1},~{dirflag},~{fpsr},~{flags}"(i8* elementtype(i8) %c, i8* elementtype(i8) %c, i8* elementtype(i8) %c, i8* elementtype(i8) %c) #1
   ret void
 }
 

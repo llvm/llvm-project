@@ -5,7 +5,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define i32 @kernel_init(i8* %unused) {
 entry:
-	call void asm sideeffect "foo ${0:q}", "=*imr"( i64* null )
+	call void asm sideeffect "foo ${0:q}", "=*imr"( i64* elementtype( i64) null )
 	ret i32 0
 }
 
